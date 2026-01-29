@@ -191,7 +191,7 @@ const BANNED_WORDS_REPLACEMENTS: Array<{ pattern: RegExp; replacement: string }>
   { pattern: /즉각적인\s*/g, replacement: '빠른 ' },
   { pattern: /즉시\s*/g, replacement: '바로 ' },
   
-  // ===== 4. 의료광고법 위반 표현 → 완화 =====
+  // ===== 4. 의료광고법 위반 표현 → 완화 또는 삭제 =====
   { pattern: /확실히\s*효과가\s*있습니다/g, replacement: '도움이 될 수 있습니다' },
   { pattern: /반드시\s*효과가/g, replacement: '도움이 될 수' },
   { pattern: /무조건\s*/g, replacement: '' },
@@ -200,6 +200,30 @@ const BANNED_WORDS_REPLACEMENTS: Array<{ pattern: RegExp; replacement: string }>
   { pattern: /가장\s*좋은\s*방법/g, replacement: '좋은 방법' },
   { pattern: /부작용\s*없이/g, replacement: '' },
   { pattern: /완전히\s*안전하게/g, replacement: '' },
+  
+  // 🚨🚨🚨 호전/기대 관련 표현 - 의료광고법 위반! 🚨🚨🚨
+  { pattern: /호전을\s*기대할\s*수\s*있습니다/g, replacement: '나아질 수 있습니다' },
+  { pattern: /호전이\s*기대됩니다/g, replacement: '나아질 수 있습니다' },
+  { pattern: /호전을\s*기대한다/g, replacement: '나아질 수 있다' },
+  { pattern: /호전을\s*기대/g, replacement: '나아지기를 바람' },
+  { pattern: /호전이\s*예상/g, replacement: '나아질 수' },
+  { pattern: /호전될\s*수\s*있습니다/g, replacement: '나아질 수 있습니다' },
+  { pattern: /호전됩니다/g, replacement: '나아집니다' },
+  { pattern: /호전된다/g, replacement: '나아진다' },
+  { pattern: /호전/g, replacement: '나아짐' },
+  { pattern: /기대할\s*수\s*있습니다/g, replacement: '가능합니다' },
+  { pattern: /기대됩니다/g, replacement: '가능합니다' },
+  { pattern: /기대해\s*볼\s*수\s*있습니다/g, replacement: '시도해 볼 수 있습니다' },
+  { pattern: /효과를\s*기대/g, replacement: '도움을 받을 수' },
+  { pattern: /개선을\s*기대/g, replacement: '나아지기를 바람' },
+  { pattern: /개선이\s*기대/g, replacement: '나아질 수' },
+  { pattern: /개선됩니다/g, replacement: '나아집니다' },
+  { pattern: /개선될\s*수\s*있습니다/g, replacement: '나아질 수 있습니다' },
+  { pattern: /개선된다/g, replacement: '나아진다' },
+  { pattern: /치료\s*효과/g, replacement: '도움' },
+  { pattern: /치료됩니다/g, replacement: '나아집니다' },
+  { pattern: /치료될\s*수\s*있습니다/g, replacement: '나아질 수 있습니다' },
+  { pattern: /완치/g, replacement: '회복' },
   
   // ===== 5. 감정 과잉 표현 (완화) =====
   { pattern: /정말\s*정말/g, replacement: '정말' },
