@@ -121,8 +121,8 @@ async function callGeminiWithFallback<T>(
 
 // 🎯 Gemini API 상수
 const GEMINI_MODEL = {
-  PRO: 'gemini-3-pro-preview',
-  FLASH: 'gemini-3-pro-preview',
+  PRO: 'gemini-3-pro-preview',      // 글 생성, 채팅 보정 등 고품질 작업
+  FLASH: 'gemini-3-flash-preview',  // 검색, 자동 보정 등 빠른 작업
 } as const;
 
 const TIMEOUTS = {
