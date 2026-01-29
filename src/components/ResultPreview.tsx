@@ -1478,7 +1478,6 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
       color: #1a1a1a;
       margin-bottom: 20px;
       padding-bottom: 10px;
-      border-bottom: 2px solid #787fff;
     }
     h3 {
       font-size: 14pt;
@@ -1619,7 +1618,6 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
               margin: 0 0 20px 0;
               padding-bottom: 15px;
               color: #1a1a1a; 
-              border-bottom: 3px solid #10b981;
               line-height: 1.4;
             }
             /* 소제목 */
@@ -2033,7 +2031,7 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
   return (
     <div className={`rounded-[48px] shadow-2xl border h-full flex flex-col overflow-hidden relative transition-colors duration-300 ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'}`}>
       <style>{`
-        .naver-preview .main-title { font-size: 32px; font-weight: 900; margin-bottom: 30px; color: #000; line-height: 1.4; border-bottom: 3px solid #10b981; padding-bottom: 20px; }
+        .naver-preview .main-title { font-size: 32px; font-weight: 900; margin-bottom: 30px; color: #000; line-height: 1.4; padding-bottom: 20px; }
         .naver-preview h2:not(.main-title):not(.hidden-title):not(.press-subtitle), .naver-preview h3 { font-size: 24px; font-weight: bold; margin-top: 50px; margin-bottom: 20px; color: #000; padding-left: 15px; border-left: 4px solid #787fff; }
         .naver-preview p { font-size: 16px; margin-bottom: 20px; color: #333; line-height: 1.8; }
         .naver-preview .content-image-wrapper { position: relative; margin: 90px 0; }
