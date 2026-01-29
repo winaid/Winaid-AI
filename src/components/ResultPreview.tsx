@@ -1429,250 +1429,107 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
     }
   };
 
-  // 워드 다운로드 함수 - 실제 .docx 생성 (개선된 정렬)
+  // 워드 다운로드 함수 - 미리보기 화면 그대로 HTML로 내보내기 (Word에서 열 수 있음)
   const handleDownloadWord = async () => {
     setEditProgress('Word 문서 생성 중...');
     
     try {
-      // docx 동적 로드
-      if (!docxModule) {
-        docxModule = await import('docx');
-      }
-      const { Document, Packer, Paragraph, TextRun, HeadingLevel, ImageRun, BorderStyle, AlignmentType } = docxModule;
-      // HTML을 파싱해서 텍스트와 이미지 추출
-      const tempDiv = document.createElement('div');
-      tempDiv.innerHTML = localHtml;
+      // 🎯 미리보기 CSS 그대로 적용
+      let styledHtml = applyInlineStylesForNaver(localHtml, currentTheme);
       
-      const docChildren: any[] = [];
-      const processedTexts = new Set<string>(); // 중복 방지
-      
-      // 제목 추출
-      const mainTitle = tempDiv.querySelector('.main-title, h2');
-      if (mainTitle) {
-        const titleText = cleanText(mainTitle.textContent);
-        if (titleText) {
-          processedTexts.add(titleText);
-          docChildren.push(
-            new (Paragraph as any)({
-              children: [
-                new TextRun({
-                  text: titleText,
-                  bold: true,
-                  size: 48, // 24pt
-                  font: '맑은 고딕',
-                  color: '1a1a1a',
-                }),
-              ],
-              heading: HeadingLevel.HEADING_1,
-              spacing: { after: 400, line: 360 },
-              alignment: AlignmentType.LEFT,
-            })
-          );
-          // 제목 아래 구분선 효과
-          docChildren.push(
-            new Paragraph({
-              spacing: { after: 300 },
-              border: {
-                bottom: { style: BorderStyle.SINGLE, size: 12, color: '10b981' }
-              }
-            })
-          );
-        }
-      }
-      
-      // 순서대로 모든 요소 처리 (깊이 우선 탐색 대신 순차 처리)
-      const processElements = async (container: Element) => {
-        const elements = container.querySelectorAll('h3, p, li, img, ul, div.cta-box, div.content-image-wrapper');
-        
-        for (const element of Array.from(elements)) {
-          const tagName = element.tagName?.toLowerCase();
-          const classList = element.classList;
-          
-          // 이미 처리된 제목은 스킵
-          if (classList?.contains('main-title') || (tagName === 'h2')) continue;
-          
-          // CTA 박스 처리
-          if (classList?.contains('cta-box')) {
-            const ctaText = cleanText(element.textContent);
-            if (ctaText && !processedTexts.has(ctaText)) {
-              processedTexts.add(ctaText);
-              docChildren.push(
-                new Paragraph({
-                  children: [
-                    new TextRun({
-                      text: '💡 ' + ctaText,
-                      size: 24,
-                      font: '맑은 고딕',
-                      italics: true,
-                      color: '059669',
-                    }),
-                  ],
-                  spacing: { before: 300, after: 300, line: 360 },
-                  indent: { left: 400, right: 400 },
-                  shading: { fill: 'f0fdf4' },
-                })
-              );
-            }
-            continue;
-          }
-          
-          // 이미지 wrapper 처리
-          if (classList?.contains('content-image-wrapper')) {
-            const img = element.querySelector('img');
-            if (img) {
-              const src = img.src;
-              if (src) {
-                const imageData = await fetchImageAsArrayBuffer(src);
-                if (imageData) {
-                  docChildren.push(
-                    new Paragraph({
-                      children: [
-                        new ImageRun({
-                          data: imageData,
-                          transformation: {
-                            width: 450,
-                            height: 253, // 16:9 비율 유지
-                          },
-                          type: 'png',
-                        }),
-                      ],
-                      spacing: { before: 400, after: 400 },
-                      alignment: AlignmentType.CENTER,
-                    })
-                  );
-                }
-              }
-            }
-            continue;
-          }
-          
-          // h3 제목 처리
-          if (tagName === 'h3') {
-            const text = cleanText(element.textContent);
-            if (text && !processedTexts.has(text)) {
-              processedTexts.add(text);
-              docChildren.push(
-                new Paragraph({
-                  children: [
-                    new TextRun({
-                      text: text,
-                      bold: true,
-                      size: 32, // 16pt
-                      font: '맑은 고딕',
-                      color: '1e40af',
-                    }),
-                  ],
-                  heading: HeadingLevel.HEADING_2,
-                  spacing: { before: 500, after: 200, line: 360 },
-                })
-              );
-            }
-          }
-          
-          // 단락 처리
-          else if (tagName === 'p') {
-            // 부모가 CTA 박스면 스킵 (이미 처리됨)
-            if (element.closest('.cta-box')) continue;
-            
-            const text = cleanText(element.textContent);
-            if (text && text.length > 2 && !processedTexts.has(text)) {
-              processedTexts.add(text);
-              docChildren.push(
-                new Paragraph({
-                  children: [
-                    new TextRun({
-                      text: text,
-                      size: 24, // 12pt
-                      font: '맑은 고딕',
-                    }),
-                  ],
-                  spacing: { after: 240, line: 400 }, // 1.5배 줄간격
-                  alignment: AlignmentType.BOTH, // 양쪽 정렬
-                })
-              );
-            }
-          }
-          
-          // 리스트 아이템 처리
-          else if (tagName === 'li') {
-            const text = cleanText(element.textContent);
-            if (text && !processedTexts.has(text)) {
-              processedTexts.add(text);
-              docChildren.push(
-                new Paragraph({
-                  children: [
-                    new TextRun({
-                      text: '• ' + text,
-                      size: 24,
-                      font: '맑은 고딕',
-                    }),
-                  ],
-                  spacing: { after: 150, line: 360 },
-                  indent: { left: 500 },
-                })
-              );
-            }
-          }
-          
-          // 단독 이미지 처리
-          else if (tagName === 'img') {
-            // 이미 wrapper로 처리된 이미지는 스킵
-            if (element.closest('.content-image-wrapper')) continue;
-            
-            const src = (element as HTMLImageElement).src;
-            if (src) {
-              const imageData = await fetchImageAsArrayBuffer(src);
-              if (imageData) {
-                docChildren.push(
-                  new Paragraph({
-                    children: [
-                      new ImageRun({
-                        data: imageData,
-                        transformation: {
-                          width: 450,
-                          height: 253,
-                        },
-                        type: 'png',
-                      }),
-                    ],
-                    spacing: { before: 400, after: 400 },
-                    alignment: AlignmentType.CENTER,
-                  })
-                );
-              }
-            }
-          }
-        }
-      };
-      
-      // 컨테이너 안의 모든 요소 처리
-      const container = tempDiv.querySelector('.naver-post-container') || tempDiv;
-      await processElements(container);
-      
-      // 문서 생성 - 페이지 설정 포함
-      const doc = new Document({
-        sections: [{
-          properties: {
-            page: {
-              margin: {
-                top: 1440,    // 1 inch = 1440 twips
-                right: 1440,
-                bottom: 1440,
-                left: 1440,
-              },
-            },
-          },
-          children: docChildren.length > 0 ? docChildren : [
-            new Paragraph({
-              children: [new TextRun({ text: tempDiv.textContent || '', font: '맑은 고딕' })],
-            }),
-          ],
-        }],
-      });
-      
-      // .docx 파일로 저장
-      const blob = await Packer.toBlob(doc);
-      saveAs(blob, `hospital-ai-content-${Date.now()}.docx`);
+      // Word용 HTML 문서 생성 (mso 태그로 Word 호환성 확보)
+      const wordHtml = `
+<!DOCTYPE html>
+<html xmlns:o="urn:schemas-microsoft-com:office:office" 
+      xmlns:w="urn:schemas-microsoft-com:office:word" 
+      xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+  <meta charset="utf-8">
+  <meta name="ProgId" content="Word.Document">
+  <meta name="Generator" content="Microsoft Word 15">
+  <meta name="Originator" content="Microsoft Word 15">
+  <!--[if gte mso 9]>
+  <xml>
+    <o:DocumentProperties>
+      <o:Author>Hospital AI</o:Author>
+    </o:DocumentProperties>
+    <w:WordDocument>
+      <w:View>Print</w:View>
+      <w:Zoom>100</w:Zoom>
+      <w:DoNotOptimizeForBrowser/>
+    </w:WordDocument>
+  </xml>
+  <![endif]-->
+  <style>
+    @page {
+      size: A4;
+      margin: 2.5cm;
+    }
+    body {
+      font-family: '맑은 고딕', Malgun Gothic, sans-serif;
+      font-size: 11pt;
+      line-height: 1.8;
+      color: #333;
+      max-width: 100%;
+    }
+    h2 {
+      font-size: 18pt;
+      font-weight: bold;
+      color: #1a1a1a;
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #787fff;
+    }
+    h3 {
+      font-size: 14pt;
+      font-weight: bold;
+      color: #1e40af;
+      margin-top: 25px;
+      margin-bottom: 10px;
+      padding-left: 12px;
+      border-left: 4px solid #787fff;
+    }
+    p {
+      font-size: 11pt;
+      color: #333;
+      margin-bottom: 15px;
+      line-height: 1.8;
+      text-align: justify;
+    }
+    ul, ol {
+      margin: 15px 0;
+      padding-left: 25px;
+    }
+    li {
+      font-size: 11pt;
+      margin-bottom: 8px;
+      line-height: 1.6;
+    }
+    img {
+      max-width: 100%;
+      height: auto;
+      margin: 20px 0;
+    }
+    .naver-post-container {
+      max-width: 100%;
+      padding: 0;
+    }
+    /* Word에서 박스로 보이는 스타일 제거 */
+    div {
+      border: none !important;
+      box-shadow: none !important;
+      border-radius: 0 !important;
+    }
+  </style>
+</head>
+<body>
+  ${styledHtml}
+</body>
+</html>`;
+
+      // .doc 파일로 저장 (Word에서 바로 열 수 있음)
+      const blob = new Blob([wordHtml], { type: 'application/msword' });
+      saveAs(blob, `hospital-ai-content-${Date.now()}.doc`);
       
     } catch (e) {
       console.error('Word 생성 오류:', e);
