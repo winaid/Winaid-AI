@@ -8136,7 +8136,7 @@ async function getTextEmbedding(text: string): Promise<number[]> {
     });
     
     const embedPromise = ai.models.embedContent({
-      model: 'text-embedding-005',
+      model: 'text-embedding-004',  // 지원되는 임베딩 모델
       contents: cleanText,
     });
     const result = await Promise.race([embedPromise, timeoutPromise]);
