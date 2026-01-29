@@ -136,11 +136,22 @@ const TIMEOUTS = {
 // ⚠️ 대체어 분산: 모습/상태/경우/느낌/변화 등 다양하게!
 const BANNED_WORDS_REPLACEMENTS: Array<{ pattern: RegExp; replacement: string }> = [
   // ===== 1. AI 냄새나는 도입/마무리 표현 (삭제) =====
-  { pattern: /오늘은\s*[^.]*에\s*대해\s*알아보겠습니다\.?\s*/g, replacement: '' },
+  // 🔥 "오늘은" 시작 문장 전체 삭제 (모든 변형 포함)
+  { pattern: /오늘은\s*[^.]*보겠습니다\.?\s*/g, replacement: '' },
+  { pattern: /오늘은\s*[^.]*이야기[를\s]*나누어?\s*보겠습니다\.?\s*/g, replacement: '' },
+  { pattern: /오늘은\s*[^.]*다루어?\s*보겠습니다\.?\s*/g, replacement: '' },
+  { pattern: /오늘은\s*[^.]*설명해?\s*드리겠습니다\.?\s*/g, replacement: '' },
+  { pattern: /오늘은\s*[^.]*말씀드리겠습니다\.?\s*/g, replacement: '' },
   { pattern: /[^.]*에\s*대해\s*알아보겠습니다\.?\s*/g, replacement: '' },
   { pattern: /[^.]*에\s*대해\s*살펴보겠습니다\.?\s*/g, replacement: '' },
+  { pattern: /[^.]*에\s*대해\s*이야기[를\s]*나누어?\s*보겠습니다\.?\s*/g, replacement: '' },
+  { pattern: /[^.]*에\s*대하여\s*[^.]*보겠습니다\.?\s*/g, replacement: '' },
+  { pattern: /[^.]*관련하여\s*[^.]*보겠습니다\.?\s*/g, replacement: '' },
+  { pattern: /[^.]*관해\s*[^.]*보겠습니다\.?\s*/g, replacement: '' },
   { pattern: /이번\s*글에서는\s*[^.]*살펴보겠습니다\.?\s*/g, replacement: '' },
+  { pattern: /이번\s*시간에는\s*[^.]*보겠습니다\.?\s*/g, replacement: '' },
   { pattern: /지금부터\s*[^.]*알아보겠습니다\.?\s*/g, replacement: '' },
+  { pattern: /지금부터\s*[^.]*살펴보겠습니다\.?\s*/g, replacement: '' },
   { pattern: /결론적으로[,\s]*/g, replacement: '' },
   { pattern: /종합하면[,\s]*/g, replacement: '' },
   { pattern: /마무리하며[,\s]*/g, replacement: '' },

@@ -7,6 +7,21 @@ import type { CssTheme } from '../types';
 
 // 🚨🚨🚨 AI 금지어 후처리 함수 - "양상/양태" → 상태/경우/변화/느낌 분산 🚨🚨🚨
 const BANNED_WORDS_REPLACEMENTS: Array<{ pattern: RegExp; replacement: string }> = [
+  // ===== AI 냄새나는 도입부 표현 (완전 삭제!) =====
+  { pattern: /오늘은\s*[^.]*보겠습니다\.?\s*/g, replacement: '' },
+  { pattern: /오늘은\s*[^.]*이야기[를\s]*나누어?\s*보겠습니다\.?\s*/g, replacement: '' },
+  { pattern: /오늘은\s*[^.]*다루어?\s*보겠습니다\.?\s*/g, replacement: '' },
+  { pattern: /오늘은\s*[^.]*설명해?\s*드리겠습니다\.?\s*/g, replacement: '' },
+  { pattern: /오늘은\s*[^.]*말씀드리겠습니다\.?\s*/g, replacement: '' },
+  { pattern: /[^.]*에\s*대해\s*알아보겠습니다\.?\s*/g, replacement: '' },
+  { pattern: /[^.]*에\s*대해\s*살펴보겠습니다\.?\s*/g, replacement: '' },
+  { pattern: /[^.]*에\s*대해\s*이야기[를\s]*나누어?\s*보겠습니다\.?\s*/g, replacement: '' },
+  { pattern: /[^.]*관련하여\s*[^.]*보겠습니다\.?\s*/g, replacement: '' },
+  { pattern: /[^.]*관해\s*[^.]*보겠습니다\.?\s*/g, replacement: '' },
+  { pattern: /이번\s*글에서는\s*[^.]*보겠습니다\.?\s*/g, replacement: '' },
+  { pattern: /이번\s*시간에는\s*[^.]*보겠습니다\.?\s*/g, replacement: '' },
+  { pattern: /지금부터\s*[^.]*알아보겠습니다\.?\s*/g, replacement: '' },
+  
   // ===== 호전/기대 관련 표현 - 의료광고법 위반! =====
   { pattern: /호전을\s*기대할\s*수\s*있습니다/g, replacement: '나아질 수 있습니다' },
   { pattern: /호전이\s*기대됩니다/g, replacement: '나아질 수 있습니다' },
