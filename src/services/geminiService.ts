@@ -159,6 +159,18 @@ const BANNED_WORDS_REPLACEMENTS: Array<{ pattern: RegExp; replacement: string }>
   { pattern: /이상으로\s*[가-힣\s]{0,30}마치겠습니다\.?\s*/g, replacement: '' },
   { pattern: /지금까지\s*[가-힣\s]{0,30}알아보았습니다\.?\s*/g, replacement: '' },
   
+  // 🆕 메타 설명 문장 삭제 (AI가 쓴 티 폭발!)
+  { pattern: /[가-힣\s]{0,30}미리\s*알아두면\s*도움이\s*될\s*[가-힣\s]{0,20}정리해\s*보았습니다\.?\s*/g, replacement: '' },
+  { pattern: /[가-힣\s]{0,30}도움이\s*될\s*[가-힣\s]{0,20}정리해\s*보았습니다\.?\s*/g, replacement: '' },
+  { pattern: /[가-힣\s]{0,30}정리해\s*보았습니다\.?\s*/g, replacement: '' },
+  { pattern: /[가-힣\s]{0,30}알아보도록\s*하겠습니다\.?\s*/g, replacement: '' },
+  { pattern: /[가-힣\s]{0,30}살펴보도록\s*하겠습니다\.?\s*/g, replacement: '' },
+  { pattern: /이\s*글에서는\s*[가-힣\s]{0,40}다루[어겠]?[습니다보겠습니다]*\.?\s*/g, replacement: '' },
+  { pattern: /이번\s*글에서는\s*[가-힣\s]{0,40}다루[어겠]?[습니다보겠습니다]*\.?\s*/g, replacement: '' },
+  { pattern: /자세히\s*설명해\s*드리겠습니다\.?\s*/g, replacement: '' },
+  { pattern: /함께\s*살펴보겠습니다\.?\s*/g, replacement: '' },
+  { pattern: /함께\s*알아보겠습니다\.?\s*/g, replacement: '' },
+  
   // ===== 2. 번역투/딱딱한 표현 → 자연스러운 표현 =====
   { pattern: /해당\s*증상/g, replacement: '이런 증상' },
   { pattern: /해당\s*질환/g, replacement: '이 질환' },
