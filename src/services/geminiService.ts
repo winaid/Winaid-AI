@@ -242,6 +242,22 @@ const BANNED_WORDS_REPLACEMENTS: Array<{ pattern: RegExp; replacement: string }>
   { pattern: /!!+/g, replacement: '!' },
   { pattern: /\?!+/g, replacement: '?' },
   
+  // ===== 6. AI 냄새나는 단어들 (자연스러운 표현으로 교체) =====
+  { pattern: /찬찬히/g, replacement: '천천히' },
+  { pattern: /복기해\s*보/g, replacement: '다시 살펴보' },
+  { pattern: /복기하/g, replacement: '다시 생각하' },
+  { pattern: /복기/g, replacement: '되돌아보기' },
+  { pattern: /짐작하/g, replacement: '생각하' },
+  { pattern: /짐작이\s*됩니다/g, replacement: '그럴 것 같습니다' },
+  { pattern: /짐작됩니다/g, replacement: '그럴 것 같습니다' },
+  { pattern: /짐작할\s*수\s*있/g, replacement: '예상할 수 있' },
+  { pattern: /짐작/g, replacement: '예상' },
+  { pattern: /바람직합니다/g, replacement: '좋습니다' },
+  { pattern: /바람직한\s*방법/g, replacement: '좋은 방법' },
+  { pattern: /바람직한\s*선택/g, replacement: '좋은 선택' },
+  { pattern: /바람직하/g, replacement: '좋' },
+  { pattern: /바람직/g, replacement: '좋은' },
+  
   // ===== 6. 양상/양태 계열 - 문맥에 맞는 다양한 대체어 사용! =====
   { pattern: /다양한\s*양상/g, replacement: '여러 경우' },
   { pattern: /복잡한\s*양상/g, replacement: '복잡한 상태' },
