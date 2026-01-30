@@ -237,7 +237,18 @@ const BANNED_WORDS_REPLACEMENTS: Array<{ pattern: RegExp; replacement: string }>
   { pattern: /치료될\s*수\s*있습니다/g, replacement: '나아질 수 있습니다' },
   { pattern: /완치/g, replacement: '회복' },
   
-  // ===== 5. 감정 과잉 표현 (완화) =====
+  // ===== 5. 의료인 전용 표현 → 일반인 표현 =====
+  { pattern: /진료실에서/g, replacement: '병원에서' },
+  { pattern: /진료실을/g, replacement: '병원을' },
+  { pattern: /진료실/g, replacement: '병원' },
+  { pattern: /내원하/g, replacement: '병원에 가' },
+  { pattern: /내원을/g, replacement: '병원 방문을' },
+  { pattern: /내원/g, replacement: '병원 방문' },
+  { pattern: /환자분들/g, replacement: '이런 증상을 겪는 분들' },
+  { pattern: /환자들/g, replacement: '이런 증상을 겪는 분들' },
+  { pattern: /환자/g, replacement: '이런 증상을 겪는 분' },
+  
+  // ===== 6. 감정 과잉 표현 (완화) =====
   { pattern: /정말\s*정말/g, replacement: '정말' },
   { pattern: /너무\s*너무/g, replacement: '너무' },
   { pattern: /!!+/g, replacement: '!' },
@@ -7997,6 +8008,16 @@ export const refineContentByMedicalLaw = async (
   
   const prompt = `당신은 **의료 블로그 보정 전문가**입니다.
 외부에서 가져온 글을 의료광고법에 맞게 다듬으면서, 사람이 쓴 것처럼 자연스럽게 만드세요.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📚 시스템 규칙 (최신 의료광고법 반영)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${dynamicSystemPrompt}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🚨 AI 냄새 제거 + 의료광고법 준수 가이드
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${stage2Prompt}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🎯 미션: 문제 문장만 골라서 수정하기

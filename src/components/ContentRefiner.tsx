@@ -47,6 +47,17 @@ const BANNED_WORDS_REPLACEMENTS: Array<{ pattern: RegExp; replacement: string }>
   { pattern: /치료될\s*수\s*있습니다/g, replacement: '나아질 수 있습니다' },
   { pattern: /완치/g, replacement: '회복' },
   
+  // ===== 의료인 전용 표현 → 일반인 표현 =====
+  { pattern: /진료실에서/g, replacement: '병원에서' },
+  { pattern: /진료실을/g, replacement: '병원을' },
+  { pattern: /진료실/g, replacement: '병원' },
+  { pattern: /내원하/g, replacement: '병원에 가' },
+  { pattern: /내원을/g, replacement: '병원 방문을' },
+  { pattern: /내원/g, replacement: '병원 방문' },
+  { pattern: /환자분들/g, replacement: '이런 증상을 겪는 분들' },
+  { pattern: /환자들/g, replacement: '이런 증상을 겪는 분들' },
+  { pattern: /환자/g, replacement: '이런 증상을 겪는 분' },
+  
   // ===== AI 냄새나는 단어들 (자연스러운 표현으로 교체) =====
   { pattern: /찬찬히/g, replacement: '천천히' },
   { pattern: /복기해\s*보/g, replacement: '다시 살펴보' },
