@@ -8,19 +8,20 @@ import type { CssTheme } from '../types';
 // 🚨🚨🚨 AI 금지어 후처리 함수 - "양상/양태" → 상태/경우/변화/느낌 분산 🚨🚨🚨
 const BANNED_WORDS_REPLACEMENTS: Array<{ pattern: RegExp; replacement: string }> = [
   // ===== AI 냄새나는 도입부 표현 (완전 삭제!) =====
-  { pattern: /오늘은\s*[^.]*보겠습니다\.?\s*/g, replacement: '' },
-  { pattern: /오늘은\s*[^.]*이야기[를\s]*나누어?\s*보겠습니다\.?\s*/g, replacement: '' },
-  { pattern: /오늘은\s*[^.]*다루어?\s*보겠습니다\.?\s*/g, replacement: '' },
-  { pattern: /오늘은\s*[^.]*설명해?\s*드리겠습니다\.?\s*/g, replacement: '' },
-  { pattern: /오늘은\s*[^.]*말씀드리겠습니다\.?\s*/g, replacement: '' },
-  { pattern: /[^.]*에\s*대해\s*알아보겠습니다\.?\s*/g, replacement: '' },
-  { pattern: /[^.]*에\s*대해\s*살펴보겠습니다\.?\s*/g, replacement: '' },
-  { pattern: /[^.]*에\s*대해\s*이야기[를\s]*나누어?\s*보겠습니다\.?\s*/g, replacement: '' },
-  { pattern: /[^.]*관련하여\s*[^.]*보겠습니다\.?\s*/g, replacement: '' },
-  { pattern: /[^.]*관해\s*[^.]*보겠습니다\.?\s*/g, replacement: '' },
-  { pattern: /이번\s*글에서는\s*[^.]*보겠습니다\.?\s*/g, replacement: '' },
-  { pattern: /이번\s*시간에는\s*[^.]*보겠습니다\.?\s*/g, replacement: '' },
-  { pattern: /지금부터\s*[^.]*알아보겠습니다\.?\s*/g, replacement: '' },
+  // 🔧 [^.]{0,50} 로 제한해서 문장 전체를 날리지 않도록 함
+  { pattern: /오늘은\s+[^.]{0,50}에\s*대해[^.]{0,30}보겠습니다\.?\s*/g, replacement: '' },
+  { pattern: /오늘은\s+[^.]{0,50}이야기[를\s]*나누어?\s*보겠습니다\.?\s*/g, replacement: '' },
+  { pattern: /오늘은\s+[^.]{0,50}다루어?\s*보겠습니다\.?\s*/g, replacement: '' },
+  { pattern: /오늘은\s+[^.]{0,50}설명해?\s*드리겠습니다\.?\s*/g, replacement: '' },
+  { pattern: /오늘은\s+[^.]{0,50}말씀드리겠습니다\.?\s*/g, replacement: '' },
+  { pattern: /[가-힣\s]{5,40}에\s*대해\s*알아보겠습니다\.?\s*/g, replacement: '' },
+  { pattern: /[가-힣\s]{5,40}에\s*대해\s*살펴보겠습니다\.?\s*/g, replacement: '' },
+  { pattern: /[가-힣\s]{5,40}에\s*대해\s*이야기[를\s]*나누어?\s*보겠습니다\.?\s*/g, replacement: '' },
+  { pattern: /[가-힣\s]{5,40}관련하여\s*[가-힣\s]{0,20}보겠습니다\.?\s*/g, replacement: '' },
+  { pattern: /[가-힣\s]{5,40}관해\s*[가-힣\s]{0,20}보겠습니다\.?\s*/g, replacement: '' },
+  { pattern: /이번\s*글에서는\s*[가-힣\s]{0,30}보겠습니다\.?\s*/g, replacement: '' },
+  { pattern: /이번\s*시간에는\s*[가-힣\s]{0,30}보겠습니다\.?\s*/g, replacement: '' },
+  { pattern: /지금부터\s*[가-힣\s]{0,30}알아보겠습니다\.?\s*/g, replacement: '' },
   
   // ===== 호전/기대 관련 표현 - 의료광고법 위반! =====
   { pattern: /호전을\s*기대할\s*수\s*있습니다/g, replacement: '나아질 수 있습니다' },
@@ -181,20 +182,12 @@ function removeDuplicateContent(content: string): string {
     }
   }
   
-  // 3. 2번 이상 등장하는 구절 처리
+  // 3. 2번 이상 등장하는 구절 처리 - 삭제 대신 로그만 (문장 이상하게 만들지 않기 위해)
   phrases.forEach((count, phrase) => {
-    if (count >= 2) {
-      const escapedPhrase = phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const regex = new RegExp(escapedPhrase, 'g');
-      let matchIndex = 0;
-      result = result.replace(regex, (match) => {
-        matchIndex++;
-        if (matchIndex > 1) {
-          duplicateCount++;
-          return '이런 경우';
-        }
-        return match;
-      });
+    if (count >= 3) { // 3번 이상 등장하는 경우만 로그
+      console.log(`⚠️ 반복 구절 감지 (${count}회): "${phrase}"`);
+      // 🚨 문장 구조를 이상하게 만들 수 있어서 자동 대체 제거
+      // 대신 사용자가 직접 수정하도록 로그만 남김
     }
   });
   
