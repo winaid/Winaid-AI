@@ -4244,36 +4244,23 @@ ${medicalLawPrompt}
 
 ${gpt52Stage1}
 
-[🚨🚨🚨 글자 수 제한 - 최우선 규칙! 반드시 지켜야 함! 🚨🚨🚨]
+[📏 글자 수 가이드 - 목표 근처에서 자연스럽게!]
 
-🎯 목표 글자 수: **정확히 ${targetLength}자** (공백 제외)
-📏 허용 범위: ${Math.floor(targetLength * 0.9)}자 ~ ${Math.floor(targetLength * 1.1)}자 (±10% 이내!)
+🎯 목표: **약 ${targetLength}자** (공백 제외)
+📏 허용 범위: ${Math.floor(targetLength * 0.85)}자 ~ ${Math.floor(targetLength * 1.15)}자 (±15%)
 
-🔴🔴🔴 글자수 부족 = 즉시 탈락! 🔴🔴🔴
-- ${Math.floor(targetLength * 0.9)}자 미만 = 불합격! 내용이 너무 빈약함!
-- 목표 ${targetLength}자인데 1300자만 쓰면? → 670자 부족 → 탈락!
-- **부족하면 더 써야 함! 절대 짧게 끝내지 마세요!**
+⚠️ 핵심: 글자수에 집착하지 말고, **자연스러운 마무리**가 더 중요!
+- 목표 근처에서 내용이 자연스럽게 끝나면 OK
+- 억지로 늘리거나 자르면 글이 어색해짐
 
-🔴 너무 길어도 탈락:
-- ${Math.floor(targetLength * 1.1)}자 초과 = 불합격! 글이 너무 김!
-
-💡 글자수 채우는 방법 (부족할 때):
-1. 각 소제목 아래 문단을 2~3개씩 충분히 작성
-2. 구체적인 상황/예시 추가 (예: "아침에 일어났을 때", "계단을 오를 때")
-3. 감각 표현 추가 (예: "뻐근한 느낌", "묵직한 느낌")
-4. 독자 공감 문장 추가 (예: "이런 경험이 있는 분들이 많습니다")
-
-📐 분량 계산법 (${targetLength}자 기준):
+📐 분량 가이드 (${targetLength}자 기준):
 - 소제목 3~4개
-- 소제목당 문단 2~3개 (총 8~12개 문단)
-- 문단당 2~3문장 (총 20~30문장)
-- 문장당 평균 50~70자
-- 이렇게 하면 ${targetLength}자 이상 나옵니다!
+- 소제목당 문단 2개 정도
+- 문단당 2~3문장
+- 이 구조로 쓰면 자연스럽게 ${targetLength}자 근처가 됩니다
 
-⚠️ 작성 완료 전 필수 체크:
-□ 글자 수가 ${Math.floor(targetLength * 0.9)}자 이상인가? (미달 시 내용 추가!)
-□ 글자 수가 ${Math.floor(targetLength * 1.1)}자 이하인가? (초과 시 줄이기!)
-□ 각 소제목 아래 최소 2문단 이상 있는가?
+✅ 자연스러운 글 = 좋은 글
+❌ 글자수 맞추려고 억지로 늘린 글 = 나쁜 글
 
 [작성 요청] 진료과: ${request.category} / 주제: ${request.topic} / SEO 키워드: ${request.keywords || '없음'} / 이미지: ${targetImageCount}장
 
@@ -5225,9 +5212,9 @@ ${JSON.stringify(searchResults, null, 2)}
         console.log(`   - HTML 제거: ${textWithoutHtml.length}자 (공백 포함)`);
         console.log(`   - 순수 텍스트: ${charCountNoSpaces}자 (공백 제외) ✅`);
         
-        // 🔍 글자수 목표 대비 검증
-        const targetMin = targetLength - 50;
-        const targetMax = targetLength + 50;
+        // 🔍 글자수 목표 대비 검증 (±15% 허용)
+        const targetMin = Math.floor(targetLength * 0.85);
+        const targetMax = Math.floor(targetLength * 1.15);
         const deviation = charCountNoSpaces - targetLength;
         const deviationPercent = ((deviation / targetLength) * 100).toFixed(1);
         
