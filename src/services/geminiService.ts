@@ -4249,20 +4249,13 @@ ${gpt52Stage1}
 🎯 목표: **${targetLength}자** (공백 제외)
 📏 허용: ${Math.floor(targetLength * 0.85)}자 ~ ${Math.floor(targetLength * 1.15)}자
 
-📐 이 구조대로 쓰면 ${targetLength}자가 됩니다:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-• 도입부: 2~3문단 (약 ${Math.floor(targetLength * 0.15)}자)
-• 소제목 1 + 본문 2~3문단 (약 ${Math.floor(targetLength * 0.25)}자)
-• 소제목 2 + 본문 2~3문단 (약 ${Math.floor(targetLength * 0.25)}자)  
-• 소제목 3 + 본문 2~3문단 (약 ${Math.floor(targetLength * 0.25)}자)
-• 마무리: 1~2문단 (약 ${Math.floor(targetLength * 0.1)}자)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-총합: 약 ${targetLength}자
+💡 글자수 맞추는 팁 (구조는 자유롭게!):
+- 소제목 개수, 문단 개수는 자유 (2개든 4개든 OK)
+- 단, 전체 글자수가 ${targetLength}자 근처면 됨
+- 짧으면 → 구체적 상황/예시 추가
+- 길면 → 반복 내용 정리
 
-⚠️ 주의:
-- 소제목 3개 + 각각 본문 2~3문단 = 기본!
-- 너무 짧으면 → 각 소제목 아래 내용을 더 구체적으로!
-- 너무 길면 → 반복되는 내용 줄이기!
+⚠️ 핵심: 구조는 매번 다르게 해도 OK! 글자수만 맞추면 됨!
 
 [작성 요청] 진료과: ${request.category} / 주제: ${request.topic} / SEO 키워드: ${request.keywords || '없음'} / 이미지: ${targetImageCount}장
 
