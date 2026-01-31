@@ -4238,15 +4238,15 @@ ${crawlData.content.substring(0, 3000)}
   
   // 🚀 v8.5 의료광고법 준수 + humanWritingPrompts + GPT-5.2 통합
   const blogPrompt = `
+🚨🚨🚨 [최우선] 글자 수: ${targetLength}자 (${Math.floor(targetLength * 0.95)}~${Math.floor(targetLength * 1.05)}자) 🚨🚨🚨
+
 한국 병·의원 네이버 블로그용 의료 콘텐츠를 작성하세요.
+
+[작성 요청] 진료과: ${request.category} / 주제: ${request.topic} / SEO 키워드: ${request.keywords || '없음'} / 이미지: ${targetImageCount}장
 
 ${medicalLawPrompt}
 
 ${gpt52Stage1}
-
-[📏 글자 수: ${targetLength}자 (±5%)]
-
-[작성 요청] 진료과: ${request.category} / 주제: ${request.topic} / SEO 키워드: ${request.keywords || '없음'} / 이미지: ${targetImageCount}장
 
 🚨🚨🚨 [키워드 사용 규칙 - 절대 준수!] 🚨🚨🚨
 ✅ 사용할 키워드: "${request.keywords || request.topic}" (이것만 사용!)
@@ -4324,9 +4324,7 @@ ${PARAGRAPH_STRUCTURE_GUIDE}
 - 사람들이 실제로 쓰는 말로!
 
 🚨 [문장 호흡 규칙] - 만연체 금지!
-- 한 문장은 40자 이내 권장, 60자 초과 금지!
-- 쉼표(,)가 3개 이상이면 문장 나누기!
-- "~하고, ~하며, ~해서, ~하는" 이어붙이기 금지 → 짧게 끊어서!
+- 너무 긴 문장은 나누기 (쉼표 3개 이상이면 나누기)
 - ❌ "통증이 심해지면서 일상생활에 불편함을 느끼게 되고, 이로 인해 활동량이 줄어들면서 근력까지 약해지는 악순환이 생길 수 있습니다."
 - ✅ "통증이 심해지면 일상이 불편해집니다. 활동량이 줄고, 근력도 약해지기 쉽습니다."
 
