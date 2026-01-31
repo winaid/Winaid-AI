@@ -1527,8 +1527,19 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
 </html>`;
 
       // .doc 파일로 저장 (Word에서 바로 열 수 있음)
-      const blob = new Blob([wordHtml], { type: 'application/msword' });
-      saveAs(blob, `hospital-ai-content-${Date.now()}.doc`);
+      const blob = new Blob(['\ufeff' + wordHtml], { type: 'application/msword;charset=utf-8' });
+      const fileName = `hospital-ai-content-${Date.now()}.doc`;
+      
+      // 강제 다운로드 (웹에서 열리는 문제 해결)
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = fileName;
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
       
     } catch (e) {
       console.error('Word 생성 오류:', e);
