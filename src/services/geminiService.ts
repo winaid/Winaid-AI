@@ -4244,23 +4244,25 @@ ${medicalLawPrompt}
 
 ${gpt52Stage1}
 
-[📏 글자 수 가이드 - 목표 근처에서 자연스럽게!]
+[📏 글자 수 가이드]
 
-🎯 목표: **약 ${targetLength}자** (공백 제외)
-📏 허용 범위: ${Math.floor(targetLength * 0.85)}자 ~ ${Math.floor(targetLength * 1.15)}자 (±15%)
+🎯 목표: **${targetLength}자** (공백 제외)
+📏 허용: ${Math.floor(targetLength * 0.85)}자 ~ ${Math.floor(targetLength * 1.15)}자
 
-⚠️ 핵심: 글자수에 집착하지 말고, **자연스러운 마무리**가 더 중요!
-- 목표 근처에서 내용이 자연스럽게 끝나면 OK
-- 억지로 늘리거나 자르면 글이 어색해짐
+📐 이 구조대로 쓰면 ${targetLength}자가 됩니다:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+• 도입부: 2~3문단 (약 ${Math.floor(targetLength * 0.15)}자)
+• 소제목 1 + 본문 2~3문단 (약 ${Math.floor(targetLength * 0.25)}자)
+• 소제목 2 + 본문 2~3문단 (약 ${Math.floor(targetLength * 0.25)}자)  
+• 소제목 3 + 본문 2~3문단 (약 ${Math.floor(targetLength * 0.25)}자)
+• 마무리: 1~2문단 (약 ${Math.floor(targetLength * 0.1)}자)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+총합: 약 ${targetLength}자
 
-📐 분량 가이드 (${targetLength}자 기준):
-- 소제목 3~4개
-- 소제목당 문단 2개 정도
-- 문단당 2~3문장
-- 이 구조로 쓰면 자연스럽게 ${targetLength}자 근처가 됩니다
-
-✅ 자연스러운 글 = 좋은 글
-❌ 글자수 맞추려고 억지로 늘린 글 = 나쁜 글
+⚠️ 주의:
+- 소제목 3개 + 각각 본문 2~3문단 = 기본!
+- 너무 짧으면 → 각 소제목 아래 내용을 더 구체적으로!
+- 너무 길면 → 반복되는 내용 줄이기!
 
 [작성 요청] 진료과: ${request.category} / 주제: ${request.topic} / SEO 키워드: ${request.keywords || '없음'} / 이미지: ${targetImageCount}장
 
