@@ -4244,18 +4244,7 @@ ${medicalLawPrompt}
 
 ${gpt52Stage1}
 
-[📏 글자 수 가이드]
-
-🎯 목표: **${targetLength}자** (공백 제외)
-📏 허용: ${Math.floor(targetLength * 0.85)}자 ~ ${Math.floor(targetLength * 1.15)}자
-
-💡 글자수 맞추는 팁 (구조는 자유롭게!):
-- 소제목 개수, 문단 개수는 자유 (2개든 4개든 OK)
-- 단, 전체 글자수가 ${targetLength}자 근처면 됨
-- 짧으면 → 구체적 상황/예시 추가
-- 길면 → 반복 내용 정리
-
-⚠️ 핵심: 구조는 매번 다르게 해도 OK! 글자수만 맞추면 됨!
+[📏 글자 수: ${targetLength}자 (±15%)]
 
 [작성 요청] 진료과: ${request.category} / 주제: ${request.topic} / SEO 키워드: ${request.keywords || '없음'} / 이미지: ${targetImageCount}장
 

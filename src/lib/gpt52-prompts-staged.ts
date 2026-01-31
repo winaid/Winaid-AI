@@ -1172,18 +1172,7 @@ export const getStage1_ContentGeneration = (textLength: number = 1500) => {
 🎯 1단계: 콘텐츠 생성 - 즉시 실행
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-🎯 [ 분량 목표: ${textLength}자 ]
-
-📏 글자수 가이드:
-   • 목표: ${textLength}자 (공백 제외)
-   • 허용: ${Math.round(textLength * 0.85)}자 ~ ${Math.round(textLength * 1.15)}자
-   
-💡 구조는 자유! (매번 다르게 써도 OK)
-   • 소제목 2개로 길게 써도 됨
-   • 소제목 4개로 짧게 나눠도 됨
-   • 핵심: 전체 글자수가 ${textLength}자 근처면 OK!
-   
-⚠️ 체크: 글 다 쓰고 너무 짧으면 → 구체적 상황/예시 추가!
+🎯 [ 글자 수: ${textLength}자 (±15%) ]
 
 👤 [역할 리마인더] 
 당신은 10년 경력 병의원 마케터입니다. 의료광고법 위반으로 과태료 맞은 경험이 있어서, 
