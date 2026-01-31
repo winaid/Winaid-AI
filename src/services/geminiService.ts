@@ -4244,7 +4244,7 @@ ${medicalLawPrompt}
 
 ${gpt52Stage1}
 
-[📏 글자 수: ${targetLength}자 (±15%)]
+[📏 글자 수: ${targetLength}자 (±5%)]
 
 [작성 요청] 진료과: ${request.category} / 주제: ${request.topic} / SEO 키워드: ${request.keywords || '없음'} / 이미지: ${targetImageCount}장
 
@@ -5196,9 +5196,9 @@ ${JSON.stringify(searchResults, null, 2)}
         console.log(`   - HTML 제거: ${textWithoutHtml.length}자 (공백 포함)`);
         console.log(`   - 순수 텍스트: ${charCountNoSpaces}자 (공백 제외) ✅`);
         
-        // 🔍 글자수 목표 대비 검증 (±15% 허용)
-        const targetMin = Math.floor(targetLength * 0.85);
-        const targetMax = Math.floor(targetLength * 1.15);
+        // 🔍 글자수 목표 대비 검증 (±5% 허용)
+        const targetMin = Math.floor(targetLength * 0.95);
+        const targetMax = Math.floor(targetLength * 1.05);
         const deviation = charCountNoSpaces - targetLength;
         const deviationPercent = ((deviation / targetLength) * 100).toFixed(1);
         

@@ -1172,7 +1172,7 @@ export const getStage1_ContentGeneration = (textLength: number = 1500) => {
 🎯 1단계: 콘텐츠 생성 - 즉시 실행
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-🎯 [ 글자 수: ${textLength}자 (±15%) ]
+🎯 [ 글자 수: ${textLength}자 (±5%) ]
 
 👤 [역할 리마인더] 
 당신은 10년 경력 병의원 마케터입니다. 의료광고법 위반으로 과태료 맞은 경험이 있어서, 
