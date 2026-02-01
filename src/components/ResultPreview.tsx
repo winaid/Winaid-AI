@@ -1810,12 +1810,12 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
       /<h2[^>]*>(.*?)<\/h2>/gi,
       (match, content) => {
         const textContent = content.replace(/<[^>]*>/g, '').trim();
-        return `<table style="width: 100%; border-collapse: collapse; margin: 0 0 30px 0;">
+        return `<table style="width: 100%; border-collapse: collapse; margin: 0 0 30px 0; border: none;">
           <tr>
-            <td style="padding: 0 0 15px 0; font-size: 32px; font-weight: bold; color: #1a1a1a; font-family: '맑은 고딕', Malgun Gothic, sans-serif; line-height: 1.4;">${textContent}</td>
+            <td style="padding: 0 0 15px 0; font-size: 32px; font-weight: bold; color: #1a1a1a; font-family: '맑은 고딕', Malgun Gothic, sans-serif; line-height: 1.4; border: none;">${textContent}</td>
           </tr>
           <tr>
-            <td style="height: 4px; background-color: #787fff;"></td>
+            <td style="height: 4px; background-color: #787fff; border: none;"></td>
           </tr>
         </table>`;
       }
@@ -1823,14 +1823,15 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
 
     // 🎯 1-2. h3 소제목을 테이블로 변환 (Word 2016에서 border-left 안 먹음)
     // 네이버 블로그에서는 border-left로 보이지만, 워드 복사용으로 테이블 변환
+    // ⚠️ 밑줄 없이 왼쪽 세로줄만 표시
     result = result.replace(
       /<h3[^>]*>(.*?)<\/h3>/gi,
       (match, content) => {
         const textContent = content.replace(/<[^>]*>/g, '').trim();
-        return `<table style="width: 100%; border-collapse: collapse; margin: 25px 0 15px 0;">
+        return `<table style="width: 100%; border-collapse: collapse; margin: 25px 0 15px 0; border: none;">
           <tr>
-            <td style="width: 4px; background-color: #787fff;"></td>
-            <td style="padding: 12px 16px; font-size: 18px; font-weight: bold; color: #1e40af; font-family: '맑은 고딕', Malgun Gothic, sans-serif;">${textContent}</td>
+            <td style="width: 4px; background-color: #787fff; border: none;"></td>
+            <td style="padding: 12px 16px; font-size: 18px; font-weight: bold; color: #1e40af; font-family: '맑은 고딕', Malgun Gothic, sans-serif; border: none;">${textContent}</td>
           </tr>
         </table>`;
       }
@@ -1906,27 +1907,27 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
       doc.querySelectorAll('h2').forEach(h2 => {
         const textContent = h2.textContent?.trim() || '';
         const table = document.createElement('table');
-        table.style.cssText = 'width: 100%; border-collapse: collapse; margin: 0 0 30px 0;';
+        table.style.cssText = 'width: 100%; border-collapse: collapse; margin: 0 0 30px 0; border: none;';
         table.innerHTML = `
           <tr>
-            <td style="padding: 0 0 15px 0; font-size: 32px; font-weight: bold; color: #1a1a1a; font-family: '맑은 고딕', Malgun Gothic, sans-serif; line-height: 1.4;">${textContent}</td>
+            <td style="padding: 0 0 15px 0; font-size: 32px; font-weight: bold; color: #1a1a1a; font-family: '맑은 고딕', Malgun Gothic, sans-serif; line-height: 1.4; border: none;">${textContent}</td>
           </tr>
           <tr>
-            <td style="height: 4px; background-color: #787fff;"></td>
+            <td style="height: 4px; background-color: #787fff; border: none;"></td>
           </tr>
         `;
         h2.parentNode?.replaceChild(table, h2);
       });
 
-      // 🎯 h3 소제목을 테이블로 변환 (왼쪽 #787fff 세로줄)
+      // 🎯 h3 소제목을 테이블로 변환 (왼쪽 #787fff 세로줄, 밑줄 없음)
       doc.querySelectorAll('h3').forEach(h3 => {
         const textContent = h3.textContent?.trim() || '';
         const table = document.createElement('table');
-        table.style.cssText = 'width: 100%; border-collapse: collapse; margin: 25px 0 15px 0;';
+        table.style.cssText = 'width: 100%; border-collapse: collapse; margin: 25px 0 15px 0; border: none;';
         table.innerHTML = `
           <tr>
-            <td style="width: 4px; background-color: #787fff;"></td>
-            <td style="padding: 12px 16px; font-size: 18px; font-weight: bold; color: #1e40af; font-family: '맑은 고딕', Malgun Gothic, sans-serif;">${textContent}</td>
+            <td style="width: 4px; background-color: #787fff; border: none;"></td>
+            <td style="padding: 12px 16px; font-size: 18px; font-weight: bold; color: #1e40af; font-family: '맑은 고딕', Malgun Gothic, sans-serif; border: none;">${textContent}</td>
           </tr>
         `;
         h3.parentNode?.replaceChild(table, h3);
