@@ -5478,6 +5478,20 @@ JSON 형식으로 응답:
     // 불필요한 텍스트 및 이모지 제거 (전문 의료 콘텐츠 톤 유지)
     if (result.content && typeof result.content === 'string') {
       result.content = result.content
+        // 🚨 JSON 이스케이프 문자 정리
+        .replace(/<\\\/p>/g, '</p>')
+        .replace(/<\\\/h2>/g, '</h3>')  // h2→h3 변환도 함께
+        .replace(/<\\\/h3>/g, '</h3>')
+        .replace(/<\\\/div>/g, '</div>')
+        .replace(/<\\\/span>/g, '</span>')
+        .replace(/<\\\/strong>/g, '</strong>')
+        .replace(/<\\\/em>/g, '</em>')
+        .replace(/\\\//g, '/')  // 남은 \/ 제거
+        // 🚨 h2 → h3 변환 (소제목은 h3이어야 함)
+        .replace(/<h2([^>]*)>/g, '<h3$1>')
+        .replace(/<\/h2>/g, '</h3>')
+        // 🚨 해시태그 제거
+        .replace(/#[가-힣a-zA-Z0-9_]+(\s*#[가-힣a-zA-Z0-9_]+)*/g, '')
         // 🚨 JSON 형식 잔여물 제거 (AI가 JSON을 content에 포함시킨 경우)
         .replace(/^\s*\{\s*"title"\s*:\s*"[^"]*"\s*,\s*"content"\s*:\s*"/i, '')  // 시작부 JSON
         .replace(/"\s*,\s*"imagePrompts"\s*:\s*\[.*?\]\s*\}\s*$/i, '')  // 끝부분 JSON
