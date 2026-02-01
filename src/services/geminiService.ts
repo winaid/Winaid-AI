@@ -4238,7 +4238,7 @@ ${crawlData.content.substring(0, 3000)}
   
   // 🚀 v8.5 의료광고법 준수 + humanWritingPrompts + GPT-5.2 통합
   const blogPrompt = `
-🚨🚨🚨 [최우선] 글자 수: ${targetLength}자 (${Math.floor(targetLength * 0.95)}~${Math.floor(targetLength * 1.05)}자) 🚨🚨🚨
+🚨🚨🚨 [최우선] 글자 수: ${targetLength}자 이상 (${targetLength}~${Math.floor(targetLength * 1.05)}자, 짧으면 안 됨!) 🚨🚨🚨
 
 한국 병·의원 네이버 블로그용 의료 콘텐츠를 작성하세요.
 
@@ -5183,8 +5183,8 @@ ${JSON.stringify(searchResults, null, 2)}
         console.log(`   - HTML 제거: ${textWithoutHtml.length}자 (공백 포함)`);
         console.log(`   - 순수 텍스트: ${charCountNoSpaces}자 (공백 제외) ✅`);
         
-        // 🔍 글자수 목표 대비 검증 (±5% 허용)
-        const targetMin = Math.floor(targetLength * 0.95);
+        // 🔍 글자수 목표 대비 검증 (100%~105% 허용, 짧으면 안 됨!)
+        const targetMin = targetLength; // 하한선: 100% (목표 이상 필수!)
         const targetMax = Math.floor(targetLength * 1.05);
         const deviation = charCountNoSpaces - targetLength;
         const deviationPercent = ((deviation / targetLength) * 100).toFixed(1);

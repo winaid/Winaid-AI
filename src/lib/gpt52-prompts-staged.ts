@@ -1141,10 +1141,10 @@ export const getStage1_ContentGeneration = (textLength: number = 1500) => {
   
   🎯 **목표: ${textLength}자 채우기** (순수 텍스트 기준, HTML 태그 제외)
   
-  🚨🚨🚨 **글자수 반드시 채우기!**:
+  🚨🚨🚨 **글자수 반드시 채우기! (짧으면 안 됨!)**:
   ┌─────────────────────────────────────────┐
-  │ ⚠️ 허용 범위: ${Math.round(textLength * 0.95)}자 ~ ${Math.round(textLength * 1.05)}자   │
-  │ ❌ ${Math.round(textLength * 0.95)}자 미달 = 내용 부족!             │
+  │ ⚠️ 허용 범위: ${textLength}자 ~ ${Math.round(textLength * 1.05)}자 (100%~105%)  │
+  │ ❌ ${textLength}자 미만 = 절대 금지! 목표 이상 필수!   │
   └─────────────────────────────────────────┘
   
   📐 **구조 가이드** (유연하게 적용):
