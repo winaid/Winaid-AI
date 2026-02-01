@@ -1148,27 +1148,27 @@ export const getStage1_ContentGeneration = (textLength: number = 1500) => {
   ✓ 🚨 적극적 관리 조언 절대 금지
 
 [P2] ⚠️ 반드시 준수 - 분량 규칙:
-  
-  🎯 **목표: 정확히 ${textLength}~${Math.round(textLength * 1.05)}자** (순수 텍스트, HTML 제외)
+
+  🎯 **목표: ${textLength}자 ~ ${textLength + 200}자** (순수 텍스트, HTML 제외)
 
   🚨🚨🚨 **글자수 = 가장 중요한 규칙!**:
   ┌─────────────────────────────────────────┐
-  │ ✅ 허용 범위: ${textLength}자 ~ ${Math.round(textLength * 1.05)}자         │
-  │ ❌ ${textLength}자 미만 = 탈락!                         │
-  │ ❌ ${Math.round(textLength * 1.05)}자 초과 = 탈락!                       │
+  │ ✅ 허용 범위: ${textLength}자 ~ ${textLength + 200}자     │
+  │ ❌ ${textLength}자 미만 = 너무 짧음!                    │
+  │ ⚠️ ${textLength + 250}자 초과 시 자동 압축됨            │
   └─────────────────────────────────────────┘
 
   ⚠️ 글자수 맞추는 게 최우선! 내용은 글자수에 맞춰서 조절!
-  
+
   📐 **구조 가이드** (유연하게 적용):
   ┌─────────────────────────────────────────┐
   │ ✅ 소제목(<h2>): 2~3개                       │
   │ ✅ 글자수만 맞추면 문단/문장 개수는 자유!      │
   │ ✅ 내용이 자연스럽게 흐르도록 작성            │
   └─────────────────────────────────────────┘
-  
+
   ✓ 소제목: 2~3개
-  ✓ 글자수: ${textLength}자 채우기 (문단/문장 개수 제한 없음)
+  ✓ 글자수: ${textLength}~${textLength + 200}자 (문단/문장 개수 제한 없음)
   ✓ 소제목은 반드시 생활 장면형 (시스템 프롬프트 참조)
   
   ⚠️ 마지막 소제목 주의:
@@ -1402,13 +1402,13 @@ STEP 4. 최종 출력
 
 7. □ 🚨🚨🚨 분량 확인 (최우선!):
    
-   🎯 목표: ${textLength}자 (순수 텍스트, HTML 제외)
-   ⚠️ 허용 범위: ${Math.round(textLength * 0.9)}자 ~ ${Math.round(textLength * 1.1)}자
-   ❌ ${Math.round(textLength * 1.1)}자 초과 = 즉시 탈락!
-   
+   🎯 목표: ${textLength}자 ~ ${textLength + 200}자 (순수 텍스트, HTML 제외)
+   ✅ 허용 범위: ${textLength}자 ~ ${textLength + 200}자
+   ⚠️ ${textLength + 250}자 초과 시 자동 압축됨
+
    📐 **체크리스트**:
    □ 현재 글자수: ___자 (HTML 태그 제외하고 계산!)
-   □ 허용 범위 내인가? (${Math.round(textLength * 0.9)}~${Math.round(textLength * 1.1)}자)
+   □ 허용 범위 내인가? (${textLength}~${textLength + 200}자)
    □ 소제목(<h2>) 개수: ${Math.max(3, Math.round(textLength / 450))}개
    □ 총 문단(<p>) 개수: ${Math.max(6, Math.round(textLength / 200))}개
    □ 각 문단에 문장이 2~3개씩 있는가? (3개 초과 금지!)

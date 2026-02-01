@@ -4292,9 +4292,10 @@ ${crawlData.content.substring(0, 3000)}
   // 🚀 v8.5 의료광고법 준수 + humanWritingPrompts + GPT-5.2 통합
   const blogPrompt = `
 🚨🚨🚨 [최우선] 글자 수 엄격 제한! 🚨🚨🚨
-📏 목표: 정확히 ${targetLength}자 ~ ${Math.floor(targetLength * 1.05)}자 (공백 제외)
-❌ ${Math.floor(targetLength * 1.05)}자 초과 = 탈락!
-❌ ${targetLength}자 미만 = 탈락!
+📏 목표: ${targetLength}자 ~ ${targetLength + 200}자 (공백 제외)
+✅ ${targetLength + 200}자까지 OK
+⚠️ ${targetLength + 250}자 초과 시 자동 압축됨
+❌ ${targetLength}자 미만 = 너무 짧음!
 ⚠️ 글자수 지키는 게 가장 중요! 내용은 글자수에 맞춰서!
 
 한국 병·의원 네이버 블로그용 의료 콘텐츠를 작성하세요.
