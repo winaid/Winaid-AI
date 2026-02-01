@@ -439,15 +439,27 @@ function removeDuplicateContent(content: string): string {
       // 정규식 특수문자 이스케이프
       const escapedPhrase = phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       const regex = new RegExp(escapedPhrase, 'g');
-      
+
+      // 다양한 대체어 목록 (반복 방지)
+      const alternatives = [
+        '이런 상황',
+        '이런 경험',
+        '이런 변화',
+        '비슷한 느낌',
+        '이런 느낌',
+        '이런 순간'
+      ];
+      let altIndex = 0;
+
       let matchIndex = 0;
       result = result.replace(regex, (match) => {
         matchIndex++;
         if (matchIndex > 1) {
           duplicateCount++;
-          // 두 번째 이후는 빈 문자열로 대체 (문장 자체를 제거하지 않고 구절만 제거)
-          // 문맥이 깨질 수 있으므로 "이런 경우" 같은 대체어로 변경
-          return '이런 경우';
+          // 두 번째 이후는 다양한 대체어로 순환 사용 (반복 방지)
+          const alt = alternatives[altIndex % alternatives.length];
+          altIndex++;
+          return alt;
         }
         return match;
       });
