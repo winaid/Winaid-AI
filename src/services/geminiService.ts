@@ -4250,7 +4250,11 @@ ${crawlData.content.substring(0, 3000)}
   
   // 🚀 v8.5 의료광고법 준수 + humanWritingPrompts + GPT-5.2 통합
   const blogPrompt = `
-🚨🚨🚨 [최우선] 글자 수: ${targetLength}자 이상 (${targetLength}~${Math.floor(targetLength * 1.05)}자, 짧으면 안 됨!) 🚨🚨🚨
+🚨🚨🚨 [최우선] 글자 수 엄격 제한! 🚨🚨🚨
+📏 목표: 정확히 ${targetLength}자 ~ ${Math.floor(targetLength * 1.05)}자 (공백 제외)
+❌ ${Math.floor(targetLength * 1.05)}자 초과 = 탈락!
+❌ ${targetLength}자 미만 = 탈락!
+⚠️ 글자수 지키는 게 가장 중요! 내용은 글자수에 맞춰서!
 
 한국 병·의원 네이버 블로그용 의료 콘텐츠를 작성하세요.
 
@@ -5167,9 +5171,26 @@ ${JSON.stringify(searchResults, null, 2)}
           required: ["title", "content"]
         };
 
-        // 🚀 1단계: Flash로 빠르게 초안 생성
+        // 🚀 1단계: Flash로 빠르게 초안 생성 (목표의 85%로 짧게!)
+        const draftTargetLength = Math.floor(targetLength * 0.85);
+        const draftPromptModified = (isCardNews ? cardNewsPrompt : blogPrompt)
+          .replace(
+            new RegExp(`정확히 ${targetLength}자 ~ ${Math.floor(targetLength * 1.05)}자`, 'g'),
+            `정확히 ${draftTargetLength}자 ~ ${Math.floor(draftTargetLength * 1.05)}자`
+          )
+          .replace(
+            new RegExp(`${Math.floor(targetLength * 1.05)}자 초과 = 탈락!`, 'g'),
+            `${Math.floor(draftTargetLength * 1.05)}자 초과 = 탈락!`
+          )
+          .replace(
+            new RegExp(`${targetLength}자 미만 = 탈락!`, 'g'),
+            `${draftTargetLength}자 미만 = 탈락!`
+          );
+
+        console.log(`📏 [1단계] Flash 초안 목표: ${draftTargetLength}자 (최종 목표의 85%)`);
+
         const draftResponse = await callGemini({
-          prompt: isCardNews ? cardNewsPrompt : blogPrompt,
+          prompt: draftPromptModified,
           systemPrompt,
           model: GEMINI_MODEL.FLASH,  // Flash로 빠르게 초안!
           googleSearch: useGoogleSearch,
@@ -5182,59 +5203,71 @@ ${JSON.stringify(searchResults, null, 2)}
         const draftTitle = draftResponse.title || '';
         const draftImagePrompts = draftResponse.imagePrompts || [];
 
-        console.log('✅ [1단계] Flash 초안 완료:', draftContent.length, 'chars');
+        // 📏 초안 글자수 측정 (공백 제외)
+        const draftTextOnly = draftContent.replace(/<[^>]+>/g, '').replace(/\s/g, '');
+        const draftCharCount = draftTextOnly.length;
+        const charDiff = draftCharCount - targetLength;
+        const needsCompression = draftCharCount > targetLength;
+
+        console.log('✅ [1단계] Flash 초안 완료:', draftCharCount, '자 (공백 제외)');
+        console.log(`📊 초안 vs 목표: ${draftCharCount}자 / ${targetLength}자 (${charDiff > 0 ? '+' : ''}${charDiff}자)`);
         safeProgress('✨ [4/4] Pro로 자연스럽게 다듬는 중... (~20초)');
 
         // 🚀 2단계: Pro로 자연스럽게 다듬기
         console.log('🚀 [2단계] Pro 다듬기 시작...');
 
+        // 📏 압축 지시 (초안이 길면 더 강력하게)
+        const compressionInstruction = needsCompression
+          ? `
+🚨🚨🚨 경고: 초안이 ${draftCharCount}자로 목표(${targetLength}자)보다 ${charDiff}자 깁니다! 🚨🚨🚨
+❌ 반드시 ${charDiff + 50}자 이상 삭제/압축해야 합니다!
+⚠️ 불필요한 부연 설명 삭제
+⚠️ 중복되는 내용 병합
+⚠️ 장황한 표현 → 간결하게
+`
+          : `📏 초안 글자수 적정 (${draftCharCount}자). 목표 범위 내로 유지하세요.`;
+
         const refinePrompt = `당신은 **사람처럼 자연스러운 글쓰기 전문가**입니다.
 아래 초안을 더 자연스럽고 사람이 쓴 것처럼 다듬어주세요.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🚨🚨🚨 글자수 절대 준수! 🚨🚨🚨
+🚨🚨🚨 글자수 = 가장 중요한 규칙! 🚨🚨🚨
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📏 **목표 글자수: ${targetLength}자** (공백 제외)
-✅ **허용 범위: ${targetLength}자 ~ ${Math.floor(targetLength * 1.05)}자**
-❌ **${Math.floor(targetLength * 1.05)}자 초과 절대 금지!**
+📏 **최종 목표: 정확히 ${targetLength}~${Math.floor(targetLength * 1.05)}자** (공백 제외)
+❌ **${Math.floor(targetLength * 1.05)}자 초과 = 실패!**
+❌ **${targetLength}자 미만 = 실패!**
 
-⚠️ 초안이 목표보다 길면 → 내용 압축/삭제 필수!
-⚠️ 다듬으면서 늘리지 말 것! 줄이거나 유지!
+${compressionInstruction}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🎯 다듬기 규칙
+🎯 다듬기 우선순위
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-1️⃣ **글자수 ${targetLength}~${Math.floor(targetLength * 1.05)}자 맞추기** (최우선!)
-2️⃣ **구조 유지**: 소제목, 문단 구조 그대로
-3️⃣ **핵심 정보 유지**: 내용 왜곡 금지
+1️⃣ **글자수 ${targetLength}~${Math.floor(targetLength * 1.05)}자 맞추기** (최우선! 이것만 지키면 성공!)
+2️⃣ 구조 유지: 소제목, 문단 구조 그대로
+3️⃣ 핵심 정보 유지
 
 🔥 자연스럽게 만드는 포인트:
 • 너무 정돈된 문장 → 약간 느슨하게
-• 반복되는 종결어미 → 다양하게 ("~습니다" 과다 금지!)
-• AI 냄새 나는 표현 → 사람 말투로
-• "이런 경우" 반복 → 다양한 대체어 (이런 상황/경험/변화)
-• 급마무리 → 자연스러운 마무리 (최소 3~4문장)
+• 반복되는 종결어미 → 다양하게
+• "이런 경우" 반복 → 다양한 대체어
 
-🚫 절대 금지:
-• **글자수 ${Math.floor(targetLength * 1.05)}자 초과** (가장 중요!)
-• "이런 경우" 3회 이상 사용
-• "개인차가 있을 수 있습니다" 단독 사용
-• "~할 수 있습니다" 5회 이상 반복
-• 의료광고법 위반 표현
+🚫 금지:
+• **글자수 ${Math.floor(targetLength * 1.05)}자 초과**
+• "이런 경우" 3회 이상
 
 [초안 제목]
 ${draftTitle}
 
-[초안 내용]
+[초안 내용 - 현재 ${draftCharCount}자]
 ${draftContent}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📝 응답 형식 (JSON)
+📝 응답 (JSON) - 글자수 ${targetLength}~${Math.floor(targetLength * 1.05)}자 필수!
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 {
-  "title": "다듬은 제목 (15자 이내)",
-  "content": "다듬은 HTML 내용 (${targetLength}~${Math.floor(targetLength * 1.05)}자)",
+  "title": "다듬은 제목",
+  "content": "다듬은 HTML (${targetLength}~${Math.floor(targetLength * 1.05)}자 필수!)",
   "imagePrompts": ${JSON.stringify(draftImagePrompts)}
 }`;
 
@@ -5287,11 +5320,62 @@ ${draftContent}
 
         console.log('✅ Gemini 응답 수신:', contentText.length || 0, 'chars');
 
-        if (!geminiResponse || typeof geminiResponse !== 'object') {
+        // 🚀 3단계: 글자수 초과 시 자동 압축 (최대 20% 초과까지 시도)
+        let finalResponse = geminiResponse;
+        if (charCountNoSpaces > targetMax && charCountNoSpaces <= targetLength * 1.2) {
+          console.log('🔧 [3단계] 글자수 초과 → 자동 압축 시작...');
+          safeProgress('🔧 글자수 조정 중...');
+
+          const excessChars = charCountNoSpaces - targetMax;
+          const trimPrompt = `글자수가 ${excessChars + 50}자 초과되었습니다. 아래 글을 압축해주세요.
+
+🎯 목표: 정확히 ${targetLength}~${targetMax}자 (공백 제외)
+⚠️ 현재: ${charCountNoSpaces}자 → ${excessChars + 50}자 이상 삭제 필요!
+
+압축 방법:
+- 중복/불필요한 부연 설명 삭제
+- 장황한 표현 → 간결하게
+- 핵심만 남기고 압축
+
+[현재 내용]
+${contentText}
+
+JSON 형식으로 응답:
+{
+  "title": "${geminiResponse.title || ''}",
+  "content": "압축된 HTML (${targetLength}~${targetMax}자)",
+  "imagePrompts": ${JSON.stringify(geminiResponse.imagePrompts || [])}
+}`;
+
+          try {
+            const trimmedResponse = await callGemini({
+              prompt: trimPrompt,
+              model: GEMINI_MODEL.FLASH,  // Flash로 빠르게 압축
+              responseType: 'json',
+              schema: responseSchema,
+              timeout: 60000
+            });
+
+            const trimmedContent = trimmedResponse.content || '';
+            const trimmedCharCount = trimmedContent.replace(/<[^>]+>/g, '').replace(/\s/g, '').length;
+            console.log(`📏 [3단계] 압축 완료: ${charCountNoSpaces}자 → ${trimmedCharCount}자`);
+
+            if (trimmedCharCount <= targetMax) {
+              finalResponse = trimmedResponse;
+              safeProgress(`✅ 글자수 조정 완료: ${trimmedCharCount}자`);
+            } else {
+              console.warn(`⚠️ 압축 후에도 초과: ${trimmedCharCount}자 (목표: ${targetMax}자)`);
+            }
+          } catch (trimError) {
+            console.warn('⚠️ 압축 단계 실패, 원본 사용:', trimError);
+          }
+        }
+
+        if (!finalResponse || typeof finalResponse !== 'object') {
           throw new Error('Gemini가 빈 응답을 반환했습니다. 다시 시도해주세요.');
         }
 
-        result = geminiResponse;
+        result = finalResponse;
         console.log('✅ Gemini JSON 응답 사용 완료');
 
       } catch (geminiError: any) {
