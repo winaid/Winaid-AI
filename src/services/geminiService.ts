@@ -5194,7 +5194,8 @@ ${JSON.stringify(searchResults, null, 2)}
           googleSearch: useGoogleSearch,
           responseType: 'json',
           schema: responseSchema,
-          timeout: TIMEOUTS.GENERATION
+          timeout: TIMEOUTS.GENERATION,
+          maxOutputTokens: 16384  // 충분한 응답 길이 확보
         });
 
         const draftContent = draftResponse.content || draftResponse.text || '';
@@ -5274,7 +5275,8 @@ ${draftContent}
           model: GEMINI_MODEL.PRO,  // Pro로 고품질 다듬기!
           responseType: 'json',
           schema: responseSchema,
-          timeout: TIMEOUTS.GENERATION
+          timeout: TIMEOUTS.GENERATION,
+          maxOutputTokens: 16384  // 충분한 응답 길이 확보
         });
 
         console.log('✅ [2단계] Pro 다듬기 완료');
@@ -5351,7 +5353,8 @@ JSON 형식으로 응답:
               model: GEMINI_MODEL.FLASH,  // Flash로 빠르게 압축
               responseType: 'json',
               schema: responseSchema,
-              timeout: 60000
+              timeout: 60000,
+              maxOutputTokens: 16384
             });
 
             const trimmedContent = trimmedResponse.content || '';
