@@ -5147,17 +5147,16 @@ ${JSON.stringify(searchResults, null, 2)}
       console.log('📦 전체 프롬프트 (시스템+유저) 길이:', (systemPrompt?.length || 0) + (finalPrompt?.length || 0));
       console.log('📦 프롬프트 미리보기 (처음 1000자):', `${systemPrompt}\n\n${finalPrompt}`.substring(0, 1000));
       
-      // 🎬 일반 generateContent 사용 (타임아웃 제거 - Gemini가 알아서 처리)
-      safeProgress('✍️ [3/3] AI가 콘텐츠를 작성하고 있습니다... (~30초)');
+      // 🎬 2단계 생성: Flash 초안 → Pro 다듬기 (품질 향상!)
+      safeProgress('✍️ [3/4] Flash로 초안 작성 중... (~15초)');
 
       try {
         // 🔍 Google Search 최적화: 필요한 경우에만 활성화
         const useGoogleSearch = needsGoogleSearch(request);
-        
-        console.log('🚀 Gemini generateContent 호출 직전...');
-        console.log('🚀 모델:', GEMINI_MODEL.PRO);
+
+        console.log('🚀 [1단계] Flash 초안 생성 시작...');
         console.log('🔍 Google Search:', useGoogleSearch ? '활성화' : '비활성화 (속도 최적화)');
-        
+
         const responseSchema = {
           type: Type.OBJECT,
           properties: {
@@ -5167,16 +5166,79 @@ ${JSON.stringify(searchResults, null, 2)}
           },
           required: ["title", "content"]
         };
-        
-        const geminiResponse = await callGemini({
+
+        // 🚀 1단계: Flash로 빠르게 초안 생성
+        const draftResponse = await callGemini({
           prompt: isCardNews ? cardNewsPrompt : blogPrompt,
           systemPrompt,
-          model: GEMINI_MODEL.PRO,
+          model: GEMINI_MODEL.FLASH,  // Flash로 빠르게 초안!
           googleSearch: useGoogleSearch,
           responseType: 'json',
           schema: responseSchema,
           timeout: TIMEOUTS.GENERATION
         });
+
+        const draftContent = draftResponse.content || draftResponse.text || '';
+        const draftTitle = draftResponse.title || '';
+        const draftImagePrompts = draftResponse.imagePrompts || [];
+
+        console.log('✅ [1단계] Flash 초안 완료:', draftContent.length, 'chars');
+        safeProgress('✨ [4/4] Pro로 자연스럽게 다듬는 중... (~20초)');
+
+        // 🚀 2단계: Pro로 자연스럽게 다듬기
+        console.log('🚀 [2단계] Pro 다듬기 시작...');
+
+        const refinePrompt = `당신은 **사람처럼 자연스러운 글쓰기 전문가**입니다.
+아래 초안을 더 자연스럽고 사람이 쓴 것처럼 다듬어주세요.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎯 다듬기 규칙 (중요!)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1️⃣ **글자수 유지**: 초안과 비슷하게 (±5% 이내)
+2️⃣ **구조 유지**: 소제목, 문단 구조 그대로
+3️⃣ **핵심 정보 유지**: 내용 왜곡 금지
+
+🔥 자연스럽게 만드는 포인트:
+• 너무 정돈된 문장 → 약간 느슨하게
+• 반복되는 종결어미 → 다양하게 ("~습니다" 과다 금지!)
+• AI 냄새 나는 표현 → 사람 말투로
+• "이런 경우" 반복 → 다양한 대체어 (이런 상황/경험/변화)
+• 급마무리 → 자연스러운 마무리 (최소 3~4문장)
+
+🚫 절대 금지:
+• "이런 경우" 3회 이상 사용
+• "개인차가 있을 수 있습니다" 단독 사용
+• "~할 수 있습니다" 5회 이상 반복
+• 의료광고법 위반 표현
+
+[초안 제목]
+${draftTitle}
+
+[초안 내용]
+${draftContent}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📝 응답 형식 (JSON)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+{
+  "title": "다듬은 제목 (15자 이내)",
+  "content": "다듬은 HTML 내용",
+  "imagePrompts": ${JSON.stringify(draftImagePrompts)}
+}`;
+
+        const refinedResponse = await callGemini({
+          prompt: refinePrompt,
+          model: GEMINI_MODEL.PRO,  // Pro로 고품질 다듬기!
+          responseType: 'json',
+          schema: responseSchema,
+          timeout: TIMEOUTS.GENERATION
+        });
+
+        console.log('✅ [2단계] Pro 다듬기 완료');
+
+        // 최종 응답 사용
+        const geminiResponse = refinedResponse;
         
         // 🚨 callGemini가 responseType='json'일 때는 이미 파싱된 객체를 반환
         // geminiResponse 자체가 파싱된 JSON 객체
