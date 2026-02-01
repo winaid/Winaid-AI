@@ -1804,7 +1804,24 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
     result = result.replace(/<div[^>]*class="naver-post-container"[^>]*>/gi, '');
     result = result.replace(/<\/div>\s*$/gi, ''); // 마지막 닫는 태그 제거
     
-    // 🎯 1. h3 소제목을 테이블로 변환 (Word 2016에서 border-left 안 먹음)
+    // 🎯 1-1. h2 메인 제목에 밑줄 추가 (Word 2016 호환)
+    // 제목 아래 #787fff 색상 밑줄 (테이블로 변환하여 Word 호환성 확보)
+    result = result.replace(
+      /<h2[^>]*>(.*?)<\/h2>/gi,
+      (match, content) => {
+        const textContent = content.replace(/<[^>]*>/g, '').trim();
+        return `<table style="width: 100%; border-collapse: collapse; margin: 0 0 30px 0;">
+          <tr>
+            <td style="padding: 0 0 15px 0; font-size: 32px; font-weight: bold; color: #1a1a1a; font-family: '맑은 고딕', Malgun Gothic, sans-serif; line-height: 1.4;">${textContent}</td>
+          </tr>
+          <tr>
+            <td style="height: 4px; background-color: #787fff;"></td>
+          </tr>
+        </table>`;
+      }
+    );
+
+    // 🎯 1-2. h3 소제목을 테이블로 변환 (Word 2016에서 border-left 안 먹음)
     // 네이버 블로그에서는 border-left로 보이지만, 워드 복사용으로 테이블 변환
     result = result.replace(
       /<h3[^>]*>(.*?)<\/h3>/gi,
@@ -1885,13 +1902,36 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
         container.setAttribute('style', cleanStyle);
       }
       
-      // 🎯 h2 메인 제목의 border-bottom 제거 (밑줄이 박스로 보임)
+      // 🎯 h2 메인 제목을 테이블로 변환 (제목 + #787fff 밑줄)
       doc.querySelectorAll('h2').forEach(h2 => {
-        const style = h2.getAttribute('style') || '';
-        const cleanStyle = style.replace(/border-bottom\s*:[^;]+;?/gi, '');
-        h2.setAttribute('style', cleanStyle);
+        const textContent = h2.textContent?.trim() || '';
+        const table = document.createElement('table');
+        table.style.cssText = 'width: 100%; border-collapse: collapse; margin: 0 0 30px 0;';
+        table.innerHTML = `
+          <tr>
+            <td style="padding: 0 0 15px 0; font-size: 32px; font-weight: bold; color: #1a1a1a; font-family: '맑은 고딕', Malgun Gothic, sans-serif; line-height: 1.4;">${textContent}</td>
+          </tr>
+          <tr>
+            <td style="height: 4px; background-color: #787fff;"></td>
+          </tr>
+        `;
+        h2.parentNode?.replaceChild(table, h2);
       });
-      
+
+      // 🎯 h3 소제목을 테이블로 변환 (왼쪽 #787fff 세로줄)
+      doc.querySelectorAll('h3').forEach(h3 => {
+        const textContent = h3.textContent?.trim() || '';
+        const table = document.createElement('table');
+        table.style.cssText = 'width: 100%; border-collapse: collapse; margin: 25px 0 15px 0;';
+        table.innerHTML = `
+          <tr>
+            <td style="width: 4px; background-color: #787fff;"></td>
+            <td style="padding: 12px 16px; font-size: 18px; font-weight: bold; color: #1e40af; font-family: '맑은 고딕', Malgun Gothic, sans-serif;">${textContent}</td>
+          </tr>
+        `;
+        h3.parentNode?.replaceChild(table, h3);
+      });
+
       let finalHtml = doc.body.innerHTML;
       
       // 임시 div 생성하여 HTML 복사 (팝업 없이 복사)
