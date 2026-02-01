@@ -5443,6 +5443,11 @@ JSON 형식으로 응답:
     // 불필요한 텍스트 및 이모지 제거 (전문 의료 콘텐츠 톤 유지)
     if (result.content && typeof result.content === 'string') {
       result.content = result.content
+        // 🚨 JSON 형식 잔여물 제거 (AI가 JSON을 content에 포함시킨 경우)
+        .replace(/^\s*\{\s*"title"\s*:\s*"[^"]*"\s*,\s*"content"\s*:\s*"/i, '')  // 시작부 JSON
+        .replace(/"\s*,\s*"imagePrompts"\s*:\s*\[.*?\]\s*\}\s*$/i, '')  // 끝부분 JSON
+        .replace(/^\s*\{\s*"content"\s*:\s*"/i, '')  // content만 있는 경우
+        .replace(/"\s*\}\s*$/i, '')  // 끝 괄호
         .replace(/\(이미지 없음\)/g, '')
         .replace(/\(이미지가 없습니다\)/g, '')
         .replace(/\[이미지 없음\]/g, '')
