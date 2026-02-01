@@ -359,8 +359,33 @@ function removeBannedWords(content: string): string {
     replacementCount++;
     return alt;
   });
-  
-  // 4. 🚨 출처/인용 표현 제거 (질병관리청에서는~, ~라고 합니다 등)
+
+  // 4. 🚨 "이런 경우/상황" 반복 방지 (2회까지 허용, 3회 이상은 대체)
+  const situationAlternatives = ['이런 경험', '이런 변화', '비슷한 느낌', '이런 순간', '이런 흐름'];
+  let situationCount = 0;
+  let situationIndex = 0;
+
+  // "이런 경우" 처리
+  result = result.replace(/이런\s*경우/g, (match) => {
+    situationCount++;
+    if (situationCount <= 2) return match; // 2회까지 유지
+    const alt = situationAlternatives[situationIndex % situationAlternatives.length];
+    situationIndex++;
+    replacementCount++;
+    return alt;
+  });
+
+  // "이런 상황" 처리 (이런 경우와 합산)
+  result = result.replace(/이런\s*상황/g, (match) => {
+    situationCount++;
+    if (situationCount <= 2) return match; // 2회까지 유지
+    const alt = situationAlternatives[situationIndex % situationAlternatives.length];
+    situationIndex++;
+    replacementCount++;
+    return alt;
+  });
+
+  // 5. 🚨 출처/인용 표현 제거 (질병관리청에서는~, ~라고 합니다 등)
   const sourcePatterns = [
     /질병관리청에서는\s*/g,
     /질병관리청에\s*따르면[,\s]*/g,
