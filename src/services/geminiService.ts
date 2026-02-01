@@ -385,7 +385,14 @@ function removeBannedWords(content: string): string {
     return alt;
   });
 
-  // 5. 🚨 출처/인용 표현 제거 (질병관리청에서는~, ~라고 합니다 등)
+  // 5. 🚨 조사 오류 수정 (받침 없는 단어 + 은 → 는)
+  result = result
+    .replace(/변화은/g, '변화는')
+    .replace(/순간은/g, '순간은')  // 순간은 받침 있어서 OK
+    .replace(/경험이\s/g, '경험이 ')
+    .replace(/느낌이\s/g, '느낌이 ');
+
+  // 6. 🚨 출처/인용 표현 제거 (질병관리청에서는~, ~라고 합니다 등)
   const sourcePatterns = [
     /질병관리청에서는\s*/g,
     /질병관리청에\s*따르면[,\s]*/g,
