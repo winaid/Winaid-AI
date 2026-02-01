@@ -4761,7 +4761,7 @@ ${hospitalInfo}
     console.log('📍 onProgress 호출 직전...');
     try {
       if (typeof onProgress === 'function') {
-        safeProgress('🔍 [1/4] 질병관리청 최신 정보 검색 중... (~10초)');
+        safeProgress('🔍 [1/3] 질병관리청 최신 정보 검색 중... (~10초)');
       } else {
         console.warn('⚠️ onProgress가 함수가 아님:', typeof onProgress);
       }
@@ -5095,12 +5095,12 @@ JSON 형식으로 응답:
     // 📍 Step 2: AI가 검색 결과를 바탕으로 글 작성
     console.log('📍 Step 2 시작: AI 글쓰기...');
     if (typeof onProgress === 'function') {
-      safeProgress('✍️ [2/4] 의료광고법 규칙 적용 중...');
+      safeProgress('✍️ [2/3] 의료광고법 규칙 적용 중...');
     }
     
     // Gemini 전용 동적 프롬프트 사용 - v6.7 업데이트 (최신 의료광고법 자동 반영)
     const geminiSystemPrompt = await getDynamicSystemPrompt();
-    safeProgress('✅ [2/4] 의료광고법 규칙 적용 완료');
+    safeProgress('✅ [2/3] 의료광고법 규칙 적용 완료');
     
     // 크로스체크 상태에 따른 신뢰도 안내 (둘 다 실패는 이미 위에서 throw됨)
     // crossCheckGuide 제거 (GPT 없으므로 불필요)
@@ -5183,14 +5183,14 @@ ${JSON.stringify(searchResults, null, 2)}
       console.log('📦 전체 프롬프트 (시스템+유저) 길이:', (systemPrompt?.length || 0) + (finalPrompt?.length || 0));
       console.log('📦 프롬프트 미리보기 (처음 1000자):', `${systemPrompt}\n\n${finalPrompt}`.substring(0, 1000));
 
-      // 🎬 2단계 생성: Flash 초안 → Pro 다듬기 (품질 향상!)
-      safeProgress('✍️ [3/4] Flash로 초안 작성 중... (~15초)');
+      // 🎬 Pro로 바로 생성 (단일 단계)
+      safeProgress('✍️ [3/3] Pro로 글 작성 중... (~30초)');
 
       try {
         // 🔍 Google Search 최적화: 필요한 경우에만 활성화
         const useGoogleSearch = needsGoogleSearch(request);
 
-        console.log('🚀 [1단계] Flash 초안 생성 시작...');
+        console.log('🚀 Pro 생성 시작...');
         console.log('🔍 Google Search:', useGoogleSearch ? '활성화' : '비활성화 (속도 최적화)');
 
         const responseSchema = {
@@ -5203,28 +5203,11 @@ ${JSON.stringify(searchResults, null, 2)}
           required: ["title", "content"]
         };
 
-        // 🚀 1단계: Flash로 빠르게 초안 생성 (목표의 85%로 짧게!)
-        const draftTargetLength = Math.floor(targetLength * 0.85);
-        const draftPromptModified = (isCardNews ? cardNewsPrompt : blogPrompt)
-          .replace(
-            new RegExp(`정확히 ${targetLength}자 ~ ${Math.floor(targetLength * 1.05)}자`, 'g'),
-            `정확히 ${draftTargetLength}자 ~ ${Math.floor(draftTargetLength * 1.05)}자`
-          )
-          .replace(
-            new RegExp(`${Math.floor(targetLength * 1.05)}자 초과 = 탈락!`, 'g'),
-            `${Math.floor(draftTargetLength * 1.05)}자 초과 = 탈락!`
-          )
-          .replace(
-            new RegExp(`${targetLength}자 미만 = 탈락!`, 'g'),
-            `${draftTargetLength}자 미만 = 탈락!`
-          );
-
-        console.log(`📏 [1단계] Flash 초안 목표: ${draftTargetLength}자 (최종 목표의 85%)`);
-
-        const draftResponse = await callGemini({
-          prompt: draftPromptModified,
+        // 🚀 Pro로 바로 생성
+        const geminiResponse = await callGemini({
+          prompt: isCardNews ? cardNewsPrompt : blogPrompt,
           systemPrompt,
-          model: GEMINI_MODEL.FLASH,  // Flash로 빠르게 초안!
+          model: GEMINI_MODEL.PRO,  // Pro로 고품질 생성!
           googleSearch: useGoogleSearch,
           responseType: 'json',
           schema: responseSchema,
@@ -5232,133 +5215,43 @@ ${JSON.stringify(searchResults, null, 2)}
           maxOutputTokens: 16384  // 충분한 응답 길이 확보
         });
 
-        const draftContent = draftResponse.content || draftResponse.text || '';
-        const draftTitle = draftResponse.title || '';
-        const draftImagePrompts = draftResponse.imagePrompts || [];
-
-        // 📏 초안 글자수 측정 (공백 제외)
-        const draftTextOnly = draftContent.replace(/<[^>]+>/g, '').replace(/\s/g, '');
-        const draftCharCount = draftTextOnly.length;
-        const charDiff = draftCharCount - targetLength;
-        const needsCompression = draftCharCount > targetLength;
-
-        console.log('✅ [1단계] Flash 초안 완료:', draftCharCount, '자 (공백 제외)');
-        console.log(`📊 초안 vs 목표: ${draftCharCount}자 / ${targetLength}자 (${charDiff > 0 ? '+' : ''}${charDiff}자)`);
-        safeProgress('✨ [4/4] Pro로 자연스럽게 다듬는 중... (~20초)');
-
-        // 🚀 2단계: Pro로 자연스럽게 다듬기
-        console.log('🚀 [2단계] Pro 다듬기 시작...');
-
-        // 📏 압축 지시 (초안이 길면 더 강력하게)
-        const compressionInstruction = needsCompression
-          ? `
-🚨🚨🚨 경고: 초안이 ${draftCharCount}자로 목표(${targetLength}자)보다 ${charDiff}자 깁니다! 🚨🚨🚨
-❌ 반드시 ${charDiff + 50}자 이상 삭제/압축해야 합니다!
-⚠️ 불필요한 부연 설명 삭제
-⚠️ 중복되는 내용 병합
-⚠️ 장황한 표현 → 간결하게
-`
-          : `📏 초안 글자수 적정 (${draftCharCount}자). 목표 범위 내로 유지하세요.`;
-
-        const refinePrompt = `당신은 **사람처럼 자연스러운 글쓰기 전문가**입니다.
-아래 초안을 더 자연스럽고 사람이 쓴 것처럼 다듬어주세요.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🚨🚨🚨 글자수 = 가장 중요한 규칙! 🚨🚨🚨
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📏 **최종 목표: 정확히 ${targetLength}~${Math.floor(targetLength * 1.05)}자** (공백 제외)
-❌ **${Math.floor(targetLength * 1.05)}자 초과 = 실패!**
-❌ **${targetLength}자 미만 = 실패!**
-
-${compressionInstruction}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🎯 다듬기 우선순위
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-1️⃣ **글자수 ${targetLength}~${Math.floor(targetLength * 1.05)}자 맞추기** (최우선! 이것만 지키면 성공!)
-2️⃣ 구조 유지: 소제목, 문단 구조 그대로
-3️⃣ 핵심 정보 유지
-
-🔥 자연스럽게 만드는 포인트:
-• 너무 정돈된 문장 → 약간 느슨하게
-• 반복되는 종결어미 → 다양하게
-• "이런 경우" 반복 → 다양한 대체어
-
-🚫 금지:
-• **글자수 ${Math.floor(targetLength * 1.05)}자 초과**
-• "이런 경우" 3회 이상
-
-[초안 제목]
-${draftTitle}
-
-[초안 내용 - 현재 ${draftCharCount}자]
-${draftContent}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📝 응답 (JSON) - 글자수 ${targetLength}~${Math.floor(targetLength * 1.05)}자 필수!
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-{
-  "title": "다듬은 제목",
-  "content": "다듬은 HTML (${targetLength}~${Math.floor(targetLength * 1.05)}자 필수!)",
-  "imagePrompts": ${JSON.stringify(draftImagePrompts)}
-}`;
-
-        const refinedResponse = await callGemini({
-          prompt: refinePrompt,
-          model: GEMINI_MODEL.PRO,  // Pro로 고품질 다듬기!
-          responseType: 'json',
-          schema: responseSchema,
-          timeout: TIMEOUTS.GENERATION,
-          maxOutputTokens: 16384  // 충분한 응답 길이 확보
-        });
-
-        console.log('✅ [2단계] Pro 다듬기 완료');
-
-        // 최종 응답 사용
-        const geminiResponse = refinedResponse;
-        
-        // 🚨 callGemini가 responseType='json'일 때는 이미 파싱된 객체를 반환
-        // geminiResponse 자체가 파싱된 JSON 객체
+        console.log('✅ Pro 생성 완료');
         console.log('✅ Gemini 응답 타입:', typeof geminiResponse);
         console.log('✅ Gemini 응답 키:', Object.keys(geminiResponse || {}));
-        
+
         // content가 있는지 확인
         const contentText = geminiResponse.content || geminiResponse.text || JSON.stringify(geminiResponse);
-        
+
         // 🔍 정확한 글자수 계산: HTML 태그 제거 → 공백 제거
         const textWithoutHtml = contentText.replace(/<[^>]+>/g, ''); // HTML 태그 제거
         const charCountNoSpaces = textWithoutHtml.replace(/\s/g, '').length; // 공백 제거
-        
+
         console.log(`📊 글자수 계산:`);
         console.log(`   - HTML 포함: ${contentText.length}자`);
         console.log(`   - HTML 제거: ${textWithoutHtml.length}자 (공백 포함)`);
         console.log(`   - 순수 텍스트: ${charCountNoSpaces}자 (공백 제외) ✅`);
-        
+
         // 🔍 글자수 목표 대비 검증 (200자 초과까지 OK, 250자 초과 시 압축)
-        const targetMin = targetLength; // 하한선: 100% (목표 이상 필수!)
-        const targetMax = targetLength + 200;  // 200자 초과까지 허용
-        const trimThreshold = targetLength + 250;  // 250자 초과 시 압축
+        const targetMin = targetLength;
+        const targetMax = targetLength + 200;
+        const trimThreshold = targetLength + 250;
         const deviation = charCountNoSpaces - targetLength;
-        const deviationPercent = ((deviation / targetLength) * 100).toFixed(1);
 
         if (charCountNoSpaces < targetMin) {
-          console.warn(`⚠️ 글자수 부족: 목표=${targetLength}자, 실제=${charCountNoSpaces}자 (${deviation}자 부족, ${deviationPercent}%)`);
+          console.warn(`⚠️ 글자수 부족: 목표=${targetLength}자, 실제=${charCountNoSpaces}자 (${deviation}자 부족)`);
           safeProgress(`⚠️ 생성 완료: ${charCountNoSpaces}자 (목표보다 ${Math.abs(deviation)}자 짧음)`);
         } else if (charCountNoSpaces > targetMax) {
           console.warn(`⚠️ 글자수 초과: 목표=${targetLength}자, 실제=${charCountNoSpaces}자 (+${deviation}자)`);
           safeProgress(`⚠️ 생성 완료: ${charCountNoSpaces}자 (목표보다 ${deviation}자 길음)`);
         } else {
-          console.log(`✅ 글자수 적정 범위: 목표=${targetLength}자, 실제=${charCountNoSpaces}자 (+${deviation}자)`);
-          safeProgress(`✅ 생성 완료: ${charCountNoSpaces}자 (목표 ${targetLength}자 달성)`);
+          console.log(`✅ 글자수 적정: 목표=${targetLength}자, 실제=${charCountNoSpaces}자`);
+          safeProgress(`✅ 생성 완료: ${charCountNoSpaces}자`);
         }
 
-        console.log('✅ Gemini 응답 수신:', contentText.length || 0, 'chars');
-
-        // 🚀 3단계: 250자 초과 시 자동 압축
+        // 🚀 250자 초과 시 자동 압축
         let finalResponse = geminiResponse;
         if (charCountNoSpaces > trimThreshold) {
-          console.log('🔧 [3단계] 250자 초과 → 자동 압축 시작...');
+          console.log('🔧 글자수 초과 → 자동 압축 시작...');
           safeProgress('🔧 글자수 조정 중...');
 
           const excessChars = charCountNoSpaces - targetLength;
@@ -5385,7 +5278,7 @@ JSON 형식으로 응답:
           try {
             const trimmedResponse = await callGemini({
               prompt: trimPrompt,
-              model: GEMINI_MODEL.FLASH,  // Flash로 빠르게 압축
+              model: GEMINI_MODEL.FLASH,
               responseType: 'json',
               schema: responseSchema,
               timeout: 60000,
@@ -5394,13 +5287,13 @@ JSON 형식으로 응답:
 
             const trimmedContent = trimmedResponse.content || '';
             const trimmedCharCount = trimmedContent.replace(/<[^>]+>/g, '').replace(/\s/g, '').length;
-            console.log(`📏 [3단계] 압축 완료: ${charCountNoSpaces}자 → ${trimmedCharCount}자`);
+            console.log(`📏 압축 완료: ${charCountNoSpaces}자 → ${trimmedCharCount}자`);
 
             if (trimmedCharCount <= targetMax) {
               finalResponse = trimmedResponse;
               safeProgress(`✅ 글자수 조정 완료: ${trimmedCharCount}자`);
             } else {
-              console.warn(`⚠️ 압축 후에도 초과: ${trimmedCharCount}자 (목표: ${targetMax}자)`);
+              console.warn(`⚠️ 압축 후에도 초과: ${trimmedCharCount}자`);
             }
           } catch (trimError) {
             console.warn('⚠️ 압축 단계 실패, 원본 사용:', trimError);
@@ -5487,6 +5380,9 @@ JSON 형식으로 응답:
         .replace(/<\\\/strong>/g, '</strong>')
         .replace(/<\\\/em>/g, '</em>')
         .replace(/\\\//g, '/')  // 남은 \/ 제거
+        // 🚨 \n 리터럴 문자열 제거 (JSON 이스케이프 문제)
+        .replace(/\\n/g, '')
+        .replace(/\n\n+/g, '\n')  // 연속 줄바꿈 정리
         // 🚨 h2 → h3 변환 (소제목은 h3이어야 함)
         .replace(/<h2([^>]*)>/g, '<h3$1>')
         .replace(/<\/h2>/g, '</h3>')
