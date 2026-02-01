@@ -216,6 +216,15 @@ const BANNED_WORDS_REPLACEMENTS: Array<{ pattern: RegExp; replacement: string }>
   { pattern: /즉시\s*/g, replacement: '바로 ' },
   
   // ===== 4. 의료광고법 위반 표현 → 완화 또는 삭제 =====
+  { pattern: /검사를\s*받/g, replacement: '확인해 보' },
+  { pattern: /검사를\s*통해/g, replacement: '확인을 통해' },
+  { pattern: /검사가\s*필요/g, replacement: '확인이 필요' },
+  { pattern: /검사해\s*보/g, replacement: '확인해 보' },
+  { pattern: /검사/g, replacement: '확인' },
+  { pattern: /방치하면/g, replacement: '그대로 두면' },
+  { pattern: /방치할\s*경우/g, replacement: '그대로 둘 경우' },
+  { pattern: /방치하지\s*말/g, replacement: '그냥 넘기지 말' },
+  { pattern: /방치/g, replacement: '그대로 두는 것' },
   { pattern: /확실히\s*효과가\s*있습니다/g, replacement: '도움이 될 수 있습니다' },
   { pattern: /반드시\s*효과가/g, replacement: '도움이 될 수' },
   { pattern: /무조건\s*/g, replacement: '' },
