@@ -1155,7 +1155,7 @@ export const getStage1_ContentGeneration = (textLength: number = 1500) => {
   ┌─────────────────────────────────────────┐
   │ ✅ 허용 범위: ${textLength}자 ~ ${textLength + 200}자     │
   │ ❌ ${textLength}자 미만 = 너무 짧음!                    │
-  │ ⚠️ ${textLength + 250}자 초과 시 자동 압축됨            │
+  │ ❌ ${textLength + 200}자 초과 = 너무 길음!              │
   └─────────────────────────────────────────┘
 
   ⚠️ 글자수 맞추는 게 최우선! 내용은 글자수에 맞춰서 조절!
@@ -1404,7 +1404,7 @@ STEP 4. 최종 출력
    
    🎯 목표: ${textLength}자 ~ ${textLength + 200}자 (순수 텍스트, HTML 제외)
    ✅ 허용 범위: ${textLength}자 ~ ${textLength + 200}자
-   ⚠️ ${textLength + 250}자 초과 시 자동 압축됨
+   ❌ ${textLength + 200}자 초과 = 너무 길음!
 
    📐 **체크리스트**:
    □ 현재 글자수: ___자 (HTML 태그 제외하고 계산!)

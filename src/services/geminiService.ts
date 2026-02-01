@@ -4294,7 +4294,6 @@ ${crawlData.content.substring(0, 3000)}
 🚨🚨🚨 [최우선] 글자 수 엄격 제한! 🚨🚨🚨
 📏 목표: ${targetLength}자 ~ ${targetLength + 200}자 (공백 제외)
 ✅ ${targetLength + 200}자까지 OK
-⚠️ ${targetLength + 250}자 초과 시 자동 압축됨
 ❌ ${targetLength}자 미만 = 너무 짧음!
 ⚠️ 글자수 지키는 게 가장 중요! 내용은 글자수에 맞춰서!
 
@@ -5239,10 +5238,9 @@ ${JSON.stringify(searchResults, null, 2)}
         console.log(`   - HTML 제거: ${textWithoutHtml.length}자 (공백 포함)`);
         console.log(`   - 순수 텍스트: ${charCountNoSpaces}자 (공백 제외) ✅`);
 
-        // 🔍 글자수 목표 대비 검증 (200자 초과까지 OK, 250자 초과 시 압축)
+        // 🔍 글자수 목표 대비 검증 (200자 초과까지 OK)
         const targetMin = targetLength;
         const targetMax = targetLength + 200;
-        const trimThreshold = targetLength + 250;
         const deviation = charCountNoSpaces - targetLength;
 
         if (charCountNoSpaces < targetMin) {
@@ -5256,57 +5254,8 @@ ${JSON.stringify(searchResults, null, 2)}
           safeProgress(`✅ 생성 완료: ${charCountNoSpaces}자`);
         }
 
-        // 🚀 250자 초과 시 자동 압축
-        let finalResponse = geminiResponse;
-        if (charCountNoSpaces > trimThreshold) {
-          console.log('🔧 글자수 초과 → 자동 압축 시작...');
-          safeProgress('🔧 글자수 조정 중...');
-
-          const excessChars = charCountNoSpaces - targetLength;
-          const trimPrompt = `글자수가 ${excessChars}자 초과되었습니다. 아래 글을 압축해주세요.
-
-🎯 목표: ${targetLength}~${targetMax}자 (공백 제외)
-⚠️ 현재: ${charCountNoSpaces}자 → ${excessChars - 150}자 이상 삭제 필요!
-
-압축 방법:
-- 중복/불필요한 부연 설명 삭제
-- 장황한 표현 → 간결하게
-- 핵심만 남기고 압축
-
-[현재 내용]
-${contentText}
-
-JSON 형식으로 응답:
-{
-  "title": "${geminiResponse.title || ''}",
-  "content": "압축된 HTML (${targetLength}~${targetMax}자)",
-  "imagePrompts": ${JSON.stringify(geminiResponse.imagePrompts || [])}
-}`;
-
-          try {
-            const trimmedResponse = await callGemini({
-              prompt: trimPrompt,
-              model: GEMINI_MODEL.FLASH,
-              responseType: 'json',
-              schema: responseSchema,
-              timeout: 60000,
-              maxOutputTokens: 16384
-            });
-
-            const trimmedContent = trimmedResponse.content || '';
-            const trimmedCharCount = trimmedContent.replace(/<[^>]+>/g, '').replace(/\s/g, '').length;
-            console.log(`📏 압축 완료: ${charCountNoSpaces}자 → ${trimmedCharCount}자`);
-
-            if (trimmedCharCount <= targetMax) {
-              finalResponse = trimmedResponse;
-              safeProgress(`✅ 글자수 조정 완료: ${trimmedCharCount}자`);
-            } else {
-              console.warn(`⚠️ 압축 후에도 초과: ${trimmedCharCount}자`);
-            }
-          } catch (trimError) {
-            console.warn('⚠️ 압축 단계 실패, 원본 사용:', trimError);
-          }
-        }
+        // 자동 압축 제거 - 원본 그대로 사용
+        const finalResponse = geminiResponse;
 
         if (!finalResponse || typeof finalResponse !== 'object') {
           throw new Error('Gemini가 빈 응답을 반환했습니다. 다시 시도해주세요.');
