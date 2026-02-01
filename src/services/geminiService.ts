@@ -5301,36 +5301,37 @@ ${draftContent}
         console.log(`   - HTML 제거: ${textWithoutHtml.length}자 (공백 포함)`);
         console.log(`   - 순수 텍스트: ${charCountNoSpaces}자 (공백 제외) ✅`);
         
-        // 🔍 글자수 목표 대비 검증 (100%~105% 허용, 짧으면 안 됨!)
+        // 🔍 글자수 목표 대비 검증 (200자 초과까지 OK, 250자 초과 시 압축)
         const targetMin = targetLength; // 하한선: 100% (목표 이상 필수!)
-        const targetMax = Math.floor(targetLength * 1.05);
+        const targetMax = targetLength + 200;  // 200자 초과까지 허용
+        const trimThreshold = targetLength + 250;  // 250자 초과 시 압축
         const deviation = charCountNoSpaces - targetLength;
         const deviationPercent = ((deviation / targetLength) * 100).toFixed(1);
-        
+
         if (charCountNoSpaces < targetMin) {
           console.warn(`⚠️ 글자수 부족: 목표=${targetLength}자, 실제=${charCountNoSpaces}자 (${deviation}자 부족, ${deviationPercent}%)`);
           safeProgress(`⚠️ 생성 완료: ${charCountNoSpaces}자 (목표보다 ${Math.abs(deviation)}자 짧음)`);
         } else if (charCountNoSpaces > targetMax) {
-          console.warn(`⚠️ 글자수 초과: 목표=${targetLength}자, 실제=${charCountNoSpaces}자 (${deviation}자 초과, +${deviationPercent}%)`);
+          console.warn(`⚠️ 글자수 초과: 목표=${targetLength}자, 실제=${charCountNoSpaces}자 (+${deviation}자)`);
           safeProgress(`⚠️ 생성 완료: ${charCountNoSpaces}자 (목표보다 ${deviation}자 길음)`);
         } else {
-          console.log(`✅ 글자수 적정 범위: 목표=${targetLength}자, 실제=${charCountNoSpaces}자 (오차: ${deviation > 0 ? '+' : ''}${deviation}자, ${deviationPercent}%)`);
+          console.log(`✅ 글자수 적정 범위: 목표=${targetLength}자, 실제=${charCountNoSpaces}자 (+${deviation}자)`);
           safeProgress(`✅ 생성 완료: ${charCountNoSpaces}자 (목표 ${targetLength}자 달성)`);
         }
 
         console.log('✅ Gemini 응답 수신:', contentText.length || 0, 'chars');
 
-        // 🚀 3단계: 글자수 초과 시 자동 압축 (최대 20% 초과까지 시도)
+        // 🚀 3단계: 250자 초과 시 자동 압축
         let finalResponse = geminiResponse;
-        if (charCountNoSpaces > targetMax && charCountNoSpaces <= targetLength * 1.2) {
-          console.log('🔧 [3단계] 글자수 초과 → 자동 압축 시작...');
+        if (charCountNoSpaces > trimThreshold) {
+          console.log('🔧 [3단계] 250자 초과 → 자동 압축 시작...');
           safeProgress('🔧 글자수 조정 중...');
 
-          const excessChars = charCountNoSpaces - targetMax;
-          const trimPrompt = `글자수가 ${excessChars + 50}자 초과되었습니다. 아래 글을 압축해주세요.
+          const excessChars = charCountNoSpaces - targetLength;
+          const trimPrompt = `글자수가 ${excessChars}자 초과되었습니다. 아래 글을 압축해주세요.
 
-🎯 목표: 정확히 ${targetLength}~${targetMax}자 (공백 제외)
-⚠️ 현재: ${charCountNoSpaces}자 → ${excessChars + 50}자 이상 삭제 필요!
+🎯 목표: ${targetLength}~${targetMax}자 (공백 제외)
+⚠️ 현재: ${charCountNoSpaces}자 → ${excessChars - 150}자 이상 삭제 필요!
 
 압축 방법:
 - 중복/불필요한 부연 설명 삭제
