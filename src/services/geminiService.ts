@@ -131,46 +131,16 @@ const TIMEOUTS = {
   QUICK_OPERATION: 60000,   // 60초 (임베딩 API 타임아웃 대응)
 } as const;
 
-// ========================================
-// 🎯 대수술 버전: 핵심만 남긴 후처리 패턴
-// ========================================
-// 원칙: AI가 자연스럽게 쓰도록 두고, 정말 문제되는 것만 후처리
-const BANNED_WORDS_REPLACEMENTS: Array<{ pattern: RegExp; replacement: string }> = [
-  // ===== 1. 의료광고법 핵심 위반 (이것만!) =====
-  { pattern: /완치/g, replacement: '회복' },
-  { pattern: /치료\s*효과/g, replacement: '도움' },
-  { pattern: /골든타임/g, replacement: '' },
-  { pattern: /치명적/g, replacement: '심한' },
-
-  // ===== 2. AI 티 확실한 것만 =====
-  { pattern: /양상/g, replacement: '상태' },
-  { pattern: /양태/g, replacement: '상태' },
-  { pattern: /불편감/g, replacement: '불편함' },
-];
-
 /**
- * 🎯 대수술 버전: 최소한의 후처리만
- * - AI를 믿고, 정말 문제되는 것만 수정
- * - 조사/표현 등은 AI에게 맡김 (과도한 개입 금지)
+ * 🎯 맞춤법 교정만 (단어 대체 완전 삭제)
+ * - AI가 처음부터 잘 쓰도록 프롬프트에서 유도
+ * - 후처리는 확실한 맞춤법 오류만 교정
  */
 function removeBannedWords(content: string): string {
   if (!content) return content;
 
-  let result = content;
-  let replacementCount = 0;
-
-  // 1. 핵심 패턴만 대체 (의료광고법 위반 + AI 티 확실한 것)
-  for (const { pattern, replacement } of BANNED_WORDS_REPLACEMENTS) {
-    const before = result;
-    result = result.replace(pattern, replacement);
-    if (before !== result) {
-      const matches = before.match(pattern);
-      replacementCount += matches ? matches.length : 0;
-    }
-  }
-
-  // 2. 맞춤법 교정만 (굽히다/돼다 등 확실한 오류)
-  result = result
+  // 맞춤법 교정만 (확실한 오류)
+  return content
     // 굽히다 (to bend) - "굽기다"는 틀림
     .replace(/굽기고/g, '굽히고')
     .replace(/굽기면/g, '굽히면')
@@ -192,12 +162,6 @@ function removeBannedWords(content: string): string {
     .replace(/되서/g, '돼서')
     .replace(/안되/g, '안 돼')
     .replace(/안돼요/g, '안 돼요');
-
-  if (replacementCount > 0) {
-    console.log(`🎯 후처리 완료: ${replacementCount}개 교체 (최소 개입)`);
-  }
-
-  return result;
 }
 
 /**
