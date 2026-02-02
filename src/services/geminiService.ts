@@ -225,6 +225,32 @@ const BANNED_WORDS_REPLACEMENTS: Array<{ pattern: RegExp; replacement: string }>
   { pattern: /방치할\s*경우/g, replacement: '그대로 둘 경우' },
   { pattern: /방치하지\s*말/g, replacement: '그냥 넘기지 말' },
   { pattern: /방치/g, replacement: '그대로 두는 것' },
+
+  // 🚨🚨🚨 공포 조장 표현 - 의료광고법 위반! 🚨🚨🚨
+  { pattern: /위험합니다/g, replacement: '주의가 필요합니다' },
+  { pattern: /위험할\s*수\s*있습니다/g, replacement: '주의가 필요할 수 있습니다' },
+  { pattern: /위험하다/g, replacement: '주의가 필요하다' },
+  { pattern: /위험한\s*상황/g, replacement: '신경 써야 할 상황' },
+  { pattern: /위험이\s*있/g, replacement: '주의가 필요할 수 있' },
+  { pattern: /심각합니다/g, replacement: '신경 써야 합니다' },
+  { pattern: /심각할\s*수\s*있습니다/g, replacement: '신경 써야 할 수 있습니다' },
+  { pattern: /심각한\s*문제/g, replacement: '신경 써야 할 부분' },
+  { pattern: /심각해/g, replacement: '심해' },
+  { pattern: /악화됩니다/g, replacement: '심해질 수 있습니다' },
+  { pattern: /악화될\s*수\s*있습니다/g, replacement: '심해질 수 있습니다' },
+  { pattern: /악화되면/g, replacement: '심해지면' },
+  { pattern: /악화/g, replacement: '심해짐' },
+  { pattern: /골든타임/g, replacement: '' },
+  { pattern: /생명을\s*위협/g, replacement: '건강에 영향을 줄 수' },
+  { pattern: /생명\s*위협/g, replacement: '건강 영향' },
+  { pattern: /즉시\s*병원/g, replacement: '병원' },
+  { pattern: /빨리\s*병원/g, replacement: '병원' },
+  { pattern: /서둘러\s*병원/g, replacement: '병원' },
+  { pattern: /무섭/g, replacement: '걱정되' },
+  { pattern: /두렵/g, replacement: '걱정되' },
+  { pattern: /공포/g, replacement: '걱정' },
+  { pattern: /치명적/g, replacement: '심한' },
+  { pattern: /돌이킬\s*수\s*없/g, replacement: '신경 써야 할' },
   { pattern: /확실히\s*효과가\s*있습니다/g, replacement: '도움이 될 수 있습니다' },
   { pattern: /반드시\s*효과가/g, replacement: '도움이 될 수' },
   { pattern: /무조건\s*/g, replacement: '' },
@@ -7279,6 +7305,14 @@ ${PARAGRAPH_STRUCTURE_GUIDE}
 □ 받침 없는 단어 + 이 ❌ → 가 ✅ (예: 허리이 ❌ → 허리가 ✅)
 □ 받침 없는 단어 + 을 ❌ → 를 ✅ (예: 자세을 ❌ → 자세를 ✅)
 
+🚫🚫🚫 공포 조장 절대 금지! (의료광고법 위반) 🚫🚫🚫
+❌ "위험합니다", "심각합니다", "악화됩니다"
+❌ "방치하면 ~", "빨리 ~", "즉시 ~", "서둘러 ~"
+❌ "골든타임", "생명 위협", "치명적"
+❌ "무섭다", "두렵다", "공포"
+✅ 대신: "신경 써야 합니다", "주의가 필요합니다", "심해질 수 있습니다"
+✅ 독자 스스로 판단하게! 불안 조장 ❌
+
 [참고 예시]
 ${FEW_SHOT_EXAMPLES}
 
@@ -8277,6 +8311,14 @@ ${textContent}
 • 받침 없는 단어 + 을 ❌ → 를 ✅
   - 상태을 ❌ → 상태를 ✅
   - 치료을 ❌ → 치료를 ✅
+
+🚫🚫🚫 공포 조장 절대 금지! (의료광고법 위반) 🚫🚫🚫
+• ❌ "위험합니다", "심각합니다", "악화됩니다"
+• ❌ "방치하면 ~", "빨리 ~", "즉시 ~", "서둘러 ~"
+• ❌ "골든타임", "생명 위협", "치명적", "돌이킬 수 없는"
+• ❌ "무섭다", "두렵다", "공포"
+• ✅ 대체: "신경 써야 합니다", "주의가 필요합니다", "심해질 수 있습니다"
+• ✅ 독자 스스로 판단하게 유도! 불안/공포 조장 절대 금지!
 
 🚫 마무리 급마무리 금지!
 • ❌ "개인차가 있을 수 있습니다." 단독 사용 금지! (뜬금없음)
