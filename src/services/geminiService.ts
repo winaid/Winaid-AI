@@ -2203,12 +2203,55 @@ export const rankSeoTitles = async (
     type: t.type
   })), null, 2);
 
-  // 새 프롬프트 추가 예정
-  const prompt = `제목 목록: ${titlesJson}
+  const prompt = `[입력 정보]
+제목 목록:
+${titlesJson}
+
 주제: ${topic}
 키워드: ${keywords}
+시즌: ${currentSeason}
 
-각 제목의 적합도를 평가하고 순위를 매겨주세요.`;
+────────────────────
+[역할]
+
+너는 병원 블로그 제목의 품질을 평가하는 AI다.
+각 제목을 아래 기준에 따라 점수를 매기고 순위를 정한다.
+
+────────────────────
+[평가 기준]
+
+1. 의료광고법 안전성 (legalSafety: 0~25)
+   - 금지 표현 사용 여부: 전문가, 전문의, 치료, 진료, 효과, 개선, 해결
+   - 병명 확정, 결과 암시, 예측 표현 여부
+   - 불안 조장 표현 여부
+
+2. 자연스러움 (naturalness: 0~25)
+   - 실제 검색어처럼 느껴지는가
+   - 마케팅 문구처럼 과장되지 않았는가
+   - 존댓말, 적절한 톤 유지
+
+3. 키워드 적합도 (relevance: 0~25)
+   - 주제와 키워드가 자연스럽게 포함되었는가
+   - 문장형 구조인가 (나열형 X)
+
+4. 클릭 유도력 (ctr: 0~25)
+   - 궁금증을 유발하는가
+   - 질문형 구조가 적절한가
+   - 블로그 제목으로 적합한가
+
+────────────────────
+[점수 계산]
+
+finalScore = legalSafety + naturalness + relevance + ctr
+
+────────────────────
+[출력 규칙]
+
+- 모든 제목을 평가
+- finalScore 기준 내림차순 정렬
+- rank는 1부터 시작
+- reason: 한 줄로 평가 이유 요약
+- recommendation: "추천" | "보통" | "비추천"`;
 
   const response = await ai.models.generateContent({
     model: 'gemini-3-pro-preview',
