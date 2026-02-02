@@ -283,14 +283,35 @@ const BANNED_WORDS_REPLACEMENTS: Array<{ pattern: RegExp; replacement: string }>
   { pattern: /치료됩니다/g, replacement: '나아집니다' },
   { pattern: /치료될\s*수\s*있습니다/g, replacement: '나아질 수 있습니다' },
   { pattern: /완치/g, replacement: '회복' },
-  
-  // ===== 5. 의료인 전용 표현 → 일반인 표현 =====
-  { pattern: /진료실에서/g, replacement: '병원에서' },
-  { pattern: /진료실을/g, replacement: '병원을' },
-  { pattern: /진료실/g, replacement: '병원' },
-  { pattern: /내원하/g, replacement: '병원에 가' },
-  { pattern: /내원을/g, replacement: '병원 방문을' },
-  { pattern: /내원/g, replacement: '병원 방문' },
+
+  // 🚨🚨🚨 병원/전문가 표현 - 의료광고법 위반! 🚨🚨🚨
+  { pattern: /병원에\s*가/g, replacement: '' },
+  { pattern: /병원을\s*방문/g, replacement: '' },
+  { pattern: /병원에서\s*확인/g, replacement: '확인' },
+  { pattern: /병원에서/g, replacement: '' },
+  { pattern: /병원을/g, replacement: '' },
+  { pattern: /병원/g, replacement: '' },
+  { pattern: /전문의와\s*상담/g, replacement: '' },
+  { pattern: /전문의에게/g, replacement: '' },
+  { pattern: /전문의/g, replacement: '' },
+  { pattern: /전문가와\s*상담/g, replacement: '' },
+  { pattern: /전문가에게/g, replacement: '' },
+  { pattern: /전문가/g, replacement: '' },
+  { pattern: /전문적인\s*도움/g, replacement: '도움' },
+  { pattern: /전문적인/g, replacement: '' },
+  { pattern: /전문\s*상담/g, replacement: '' },
+  { pattern: /전문/g, replacement: '' },
+  { pattern: /의사와\s*상담/g, replacement: '' },
+  { pattern: /의사에게/g, replacement: '' },
+  { pattern: /의료진/g, replacement: '' },
+
+  // ===== 5. 의료인 전용 표현 → 삭제 =====
+  { pattern: /진료실에서/g, replacement: '' },
+  { pattern: /진료실을/g, replacement: '' },
+  { pattern: /진료실/g, replacement: '' },
+  { pattern: /내원하/g, replacement: '' },
+  { pattern: /내원을/g, replacement: '' },
+  { pattern: /내원/g, replacement: '' },
   { pattern: /환자분들/g, replacement: '이런 증상을 겪는 분들' },
   { pattern: /환자들/g, replacement: '이런 증상을 겪는 분들' },
   { pattern: /환자/g, replacement: '이런 증상을 겪는 분' },
@@ -7313,6 +7334,12 @@ ${PARAGRAPH_STRUCTURE_GUIDE}
 ✅ 대신: "신경 써야 합니다", "주의가 필요합니다", "심해질 수 있습니다"
 ✅ 독자 스스로 판단하게! 불안 조장 ❌
 
+🚫🚫🚫 병원/전문가 표현 절대 금지! 🚫🚫🚫
+❌ "병원", "병원에 가", "병원 방문"
+❌ "전문", "전문가", "전문의", "전문적인"
+❌ "의사", "의료진", "진료실", "내원"
+✅ 이런 표현 나오면 삭제하거나 다른 표현으로!
+
 [참고 예시]
 ${FEW_SHOT_EXAMPLES}
 
@@ -8319,6 +8346,13 @@ ${textContent}
 • ❌ "무섭다", "두렵다", "공포"
 • ✅ 대체: "신경 써야 합니다", "주의가 필요합니다", "심해질 수 있습니다"
 • ✅ 독자 스스로 판단하게 유도! 불안/공포 조장 절대 금지!
+
+🚫🚫🚫 병원/전문가 표현 절대 금지! (의료광고법 위반) 🚫🚫🚫
+• ❌ "병원", "병원에 가", "병원 방문", "병원을 찾아"
+• ❌ "전문", "전문가", "전문의", "전문적인", "전문 치료"
+• ❌ "의사", "의료진", "진료실", "내원", "진단"
+• ✅ 이런 표현 나오면 삭제하거나 자연스럽게 다른 문장으로!
+• ✅ "관리가 필요합니다", "신경 써주세요", "꾸준히 케어해주세요" 사용!
 
 🚫 마무리 급마무리 금지!
 • ❌ "개인차가 있을 수 있습니다." 단독 사용 금지! (뜬금없음)
