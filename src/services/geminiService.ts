@@ -131,230 +131,35 @@ const TIMEOUTS = {
   QUICK_OPERATION: 60000,   // 60초 (임베딩 API 타임아웃 대응)
 } as const;
 
-// 🚨🚨🚨 AI 금지어 후처리 함수 - 생성된 모든 콘텐츠에 적용 🚨🚨🚨
-// "양상", "양태" 등 AI스러운 표현을 자연스러운 표현으로 강제 교체
-// ⚠️ 대체어 분산: 모습/상태/경우/느낌/변화 등 다양하게!
+// ========================================
+// 🎯 대수술 버전: 핵심만 남긴 후처리 패턴
+// ========================================
+// 원칙: AI가 자연스럽게 쓰도록 두고, 정말 문제되는 것만 후처리
 const BANNED_WORDS_REPLACEMENTS: Array<{ pattern: RegExp; replacement: string }> = [
-  // ===== 1. AI 냄새나는 도입/마무리 표현 (삭제) =====
-  // 🔥 "오늘은" 시작 문장 전체 삭제 (모든 변형 포함)
-  // 🔧 [^.]{0,50} 또는 [가-힣\s]{5,40} 로 제한해서 문장 전체를 날리지 않도록 함
-  { pattern: /오늘은\s+[^.]{0,50}에\s*대해[^.]{0,30}보겠습니다\.?\s*/g, replacement: '' },
-  { pattern: /오늘은\s+[^.]{0,50}이야기[를\s]*나누어?\s*보겠습니다\.?\s*/g, replacement: '' },
-  { pattern: /오늘은\s+[^.]{0,50}다루어?\s*보겠습니다\.?\s*/g, replacement: '' },
-  { pattern: /오늘은\s+[^.]{0,50}설명해?\s*드리겠습니다\.?\s*/g, replacement: '' },
-  { pattern: /오늘은\s+[^.]{0,50}말씀드리겠습니다\.?\s*/g, replacement: '' },
-  { pattern: /[가-힣\s]{5,40}에\s*대해\s*알아보겠습니다\.?\s*/g, replacement: '' },
-  { pattern: /[가-힣\s]{5,40}에\s*대해\s*살펴보겠습니다\.?\s*/g, replacement: '' },
-  { pattern: /[가-힣\s]{5,40}에\s*대해\s*이야기[를\s]*나누어?\s*보겠습니다\.?\s*/g, replacement: '' },
-  { pattern: /[가-힣\s]{5,40}에\s*대하여\s*[가-힣\s]{0,20}보겠습니다\.?\s*/g, replacement: '' },
-  { pattern: /[가-힣\s]{5,40}관련하여\s*[가-힣\s]{0,20}보겠습니다\.?\s*/g, replacement: '' },
-  { pattern: /[가-힣\s]{5,40}관해\s*[가-힣\s]{0,20}보겠습니다\.?\s*/g, replacement: '' },
-  { pattern: /이번\s*글에서는\s*[가-힣\s]{0,30}살펴보겠습니다\.?\s*/g, replacement: '' },
-  { pattern: /이번\s*시간에는\s*[가-힣\s]{0,30}보겠습니다\.?\s*/g, replacement: '' },
-  { pattern: /지금부터\s*[가-힣\s]{0,30}알아보겠습니다\.?\s*/g, replacement: '' },
-  { pattern: /지금부터\s*[가-힣\s]{0,30}살펴보겠습니다\.?\s*/g, replacement: '' },
-  { pattern: /결론적으로[,\s]*/g, replacement: '' },
-  { pattern: /종합하면[,\s]*/g, replacement: '' },
-  { pattern: /마무리하며[,\s]*/g, replacement: '' },
-  { pattern: /이상으로\s*[가-힣\s]{0,30}마치겠습니다\.?\s*/g, replacement: '' },
-  { pattern: /지금까지\s*[가-힣\s]{0,30}알아보았습니다\.?\s*/g, replacement: '' },
-  
-  // 🆕 메타 설명 문장 삭제 (AI가 쓴 티 폭발!)
-  { pattern: /[가-힣\s]{0,30}미리\s*알아두면\s*도움이\s*될\s*[가-힣\s]{0,20}정리해\s*보았습니다\.?\s*/g, replacement: '' },
-  { pattern: /[가-힣\s]{0,30}도움이\s*될\s*[가-힣\s]{0,20}정리해\s*보았습니다\.?\s*/g, replacement: '' },
-  { pattern: /[가-힣\s]{0,30}정리해\s*보았습니다\.?\s*/g, replacement: '' },
-  { pattern: /[가-힣\s]{0,30}알아보도록\s*하겠습니다\.?\s*/g, replacement: '' },
-  { pattern: /[가-힣\s]{0,30}살펴보도록\s*하겠습니다\.?\s*/g, replacement: '' },
-  { pattern: /이\s*글에서는\s*[가-힣\s]{0,40}다루[어겠]?[습니다보겠습니다]*\.?\s*/g, replacement: '' },
-  { pattern: /이번\s*글에서는\s*[가-힣\s]{0,40}다루[어겠]?[습니다보겠습니다]*\.?\s*/g, replacement: '' },
-  { pattern: /자세히\s*설명해\s*드리겠습니다\.?\s*/g, replacement: '' },
-  { pattern: /함께\s*살펴보겠습니다\.?\s*/g, replacement: '' },
-  { pattern: /함께\s*알아보겠습니다\.?\s*/g, replacement: '' },
-  
-  // ===== 2. 번역투/딱딱한 표현 → 자연스러운 표현 =====
-  { pattern: /해당\s*증상/g, replacement: '이런 증상' },
-  { pattern: /해당\s*질환/g, replacement: '이 질환' },
-  { pattern: /해당\s*부위/g, replacement: '그 부위' },
-  { pattern: /해당\s*/g, replacement: '이 ' },
-  { pattern: /본\s*질환/g, replacement: '이 질환' },
-  { pattern: /적절한\s*관리가\s*필요합니다/g, replacement: '신경 써야 합니다' },
-  { pattern: /불편감이\s*발생합니다/g, replacement: '불편해집니다' },
-  { pattern: /불편감을\s*느끼/g, replacement: '불편함을 느끼' },
-  { pattern: /불편감/g, replacement: '불편함' },
-  { pattern: /증상이\s*나타날\s*수\s*있습니다/g, replacement: '이런 느낌이 생길 수 있습니다' },
-  { pattern: /권장드립니다/g, replacement: '좋습니다' },
-  { pattern: /추천드립니다/g, replacement: '좋습니다' },
-  { pattern: /유의해야\s*합니다/g, replacement: '조심해야 합니다' },
-  { pattern: /하시는\s*것이\s*좋습니다/g, replacement: '하면 좋습니다' },
-  { pattern: /하시는\s*것이\s*바람직합니다/g, replacement: '하면 좋습니다' },
-  { pattern: /요인/g, replacement: '이유' },
-  { pattern: /요소/g, replacement: '부분' },
-  { pattern: /발생하다/g, replacement: '생기다' },
-  { pattern: /발생합니다/g, replacement: '생깁니다' },
-  { pattern: /발생할\s*수/g, replacement: '생길 수' },
-  { pattern: /진행하다/g, replacement: '하다' },
-  { pattern: /수행하다/g, replacement: '하다' },
-  { pattern: /활용하다/g, replacement: '쓰다' },
-  { pattern: /활용합니다/g, replacement: '씁니다' },
-  { pattern: /~에\s*있어서/g, replacement: '~에서' },
-  { pattern: /~함에\s*따라/g, replacement: '~하면서' },
-  { pattern: /~로\s*인하여/g, replacement: '~ 때문에' },
-  { pattern: /~측면에서/g, replacement: '~쪽에서 보면' },
-  { pattern: /영향을\s*미치다/g, replacement: '~하게 만들다' },
-  { pattern: /영향을\s*미칩니다/g, replacement: '~하게 됩니다' },
-  
-  // ===== 3. 과장/신뢰도 하락 표현 (삭제 또는 완화) =====
-  { pattern: /놀라운\s*/g, replacement: '' },
-  { pattern: /놀랍게도\s*/g, replacement: '' },
-  { pattern: /획기적인\s*/g, replacement: '' },
-  { pattern: /혁신적인\s*/g, replacement: '' },
-  { pattern: /드라마틱한\s*/g, replacement: '' },
-  { pattern: /극적인\s*/g, replacement: '' },
-  { pattern: /마법같은\s*/g, replacement: '' },
-  { pattern: /기적같은\s*/g, replacement: '' },
-  { pattern: /즉각적인\s*/g, replacement: '빠른 ' },
-  { pattern: /즉시\s*/g, replacement: '바로 ' },
-  
-  // ===== 4. 의료광고법 위반 표현 → 완화 또는 삭제 =====
-  { pattern: /검사를\s*받/g, replacement: '확인해 보' },
-  { pattern: /검사를\s*통해/g, replacement: '확인을 통해' },
-  { pattern: /검사가\s*필요/g, replacement: '확인이 필요' },
-  { pattern: /검사해\s*보/g, replacement: '확인해 보' },
-  { pattern: /검사/g, replacement: '확인' },
-  { pattern: /방치하면/g, replacement: '그대로 두면' },
-  { pattern: /방치할\s*경우/g, replacement: '그대로 둘 경우' },
-  { pattern: /방치하지\s*말/g, replacement: '그냥 넘기지 말' },
-  { pattern: /방치/g, replacement: '그대로 두는 것' },
-
-  // 🚨🚨🚨 공포 조장 표현 - 의료광고법 위반! 🚨🚨🚨
-  { pattern: /위험합니다/g, replacement: '주의가 필요합니다' },
-  { pattern: /위험할\s*수\s*있습니다/g, replacement: '주의가 필요할 수 있습니다' },
-  { pattern: /위험하다/g, replacement: '주의가 필요하다' },
-  { pattern: /위험한\s*상황/g, replacement: '신경 써야 할 상황' },
-  { pattern: /위험이\s*있/g, replacement: '주의가 필요할 수 있' },
-  { pattern: /심각합니다/g, replacement: '신경 써야 합니다' },
-  { pattern: /심각할\s*수\s*있습니다/g, replacement: '신경 써야 할 수 있습니다' },
-  { pattern: /심각한\s*문제/g, replacement: '신경 써야 할 부분' },
-  { pattern: /심각해/g, replacement: '심해' },
-  { pattern: /악화됩니다/g, replacement: '심해질 수 있습니다' },
-  { pattern: /악화될\s*수\s*있습니다/g, replacement: '심해질 수 있습니다' },
-  { pattern: /악화되면/g, replacement: '심해지면' },
-  { pattern: /악화/g, replacement: '심해짐' },
-  { pattern: /골든타임/g, replacement: '' },
-  { pattern: /생명을\s*위협/g, replacement: '건강에 영향을 줄 수' },
-  { pattern: /생명\s*위협/g, replacement: '건강 영향' },
-  { pattern: /즉시\s*병원/g, replacement: '병원' },
-  { pattern: /빨리\s*병원/g, replacement: '병원' },
-  { pattern: /서둘러\s*병원/g, replacement: '병원' },
-  { pattern: /무섭/g, replacement: '걱정되' },
-  { pattern: /두렵/g, replacement: '걱정되' },
-  { pattern: /공포/g, replacement: '걱정' },
-  { pattern: /치명적/g, replacement: '심한' },
-  { pattern: /돌이킬\s*수\s*없/g, replacement: '신경 써야 할' },
-  { pattern: /확실히\s*효과가\s*있습니다/g, replacement: '도움이 될 수 있습니다' },
-  { pattern: /반드시\s*효과가/g, replacement: '도움이 될 수' },
-  { pattern: /무조건\s*/g, replacement: '' },
-  { pattern: /최고의\s*/g, replacement: '' },
-  { pattern: /최상의\s*/g, replacement: '' },
-  { pattern: /가장\s*좋은\s*방법/g, replacement: '좋은 방법' },
-  { pattern: /부작용\s*없이/g, replacement: '' },
-  { pattern: /완전히\s*안전하게/g, replacement: '' },
-  
-  // 🚨🚨🚨 호전/기대 관련 표현 - 의료광고법 위반! 🚨🚨🚨
-  { pattern: /호전을\s*기대할\s*수\s*있습니다/g, replacement: '나아질 수 있습니다' },
-  { pattern: /호전이\s*기대됩니다/g, replacement: '나아질 수 있습니다' },
-  { pattern: /호전을\s*기대한다/g, replacement: '나아질 수 있다' },
-  { pattern: /호전을\s*기대/g, replacement: '나아지기를 바람' },
-  { pattern: /호전이\s*예상/g, replacement: '나아질 수' },
-  { pattern: /호전될\s*수\s*있습니다/g, replacement: '나아질 수 있습니다' },
-  { pattern: /호전됩니다/g, replacement: '나아집니다' },
-  { pattern: /호전된다/g, replacement: '나아진다' },
-  { pattern: /호전/g, replacement: '나아짐' },
-  { pattern: /기대할\s*수\s*있습니다/g, replacement: '가능합니다' },
-  { pattern: /기대됩니다/g, replacement: '가능합니다' },
-  { pattern: /기대해\s*볼\s*수\s*있습니다/g, replacement: '시도해 볼 수 있습니다' },
-  { pattern: /효과를\s*기대/g, replacement: '도움을 받을 수' },
-  { pattern: /개선을\s*기대/g, replacement: '나아지기를 바람' },
-  { pattern: /개선이\s*기대/g, replacement: '나아질 수' },
-  { pattern: /개선됩니다/g, replacement: '나아집니다' },
-  { pattern: /개선될\s*수\s*있습니다/g, replacement: '나아질 수 있습니다' },
-  { pattern: /개선된다/g, replacement: '나아진다' },
-  { pattern: /치료\s*효과/g, replacement: '도움' },
-  { pattern: /치료됩니다/g, replacement: '나아집니다' },
-  { pattern: /치료될\s*수\s*있습니다/g, replacement: '나아질 수 있습니다' },
+  // ===== 1. 의료광고법 핵심 위반 (이것만!) =====
   { pattern: /완치/g, replacement: '회복' },
+  { pattern: /치료\s*효과/g, replacement: '도움' },
+  { pattern: /골든타임/g, replacement: '' },
+  { pattern: /치명적/g, replacement: '심한' },
 
-  // ===== 5. 의료인 전용 표현 → 자연스러운 대체 =====
-  { pattern: /환자분들/g, replacement: '이런 증상을 겪는 분들' },
-  { pattern: /환자들/g, replacement: '이런 증상을 겪는 분들' },
-  { pattern: /환자/g, replacement: '이런 증상을 겪는 분' },
-
-  // ===== 6. 감정 과잉 표현 (완화) =====
-  { pattern: /정말\s*정말/g, replacement: '정말' },
-  { pattern: /너무\s*너무/g, replacement: '너무' },
-  { pattern: /!!+/g, replacement: '!' },
-  { pattern: /\?!+/g, replacement: '?' },
-  
-  // ===== 6. AI 냄새나는 단어들 (자연스러운 표현으로 교체) =====
-  { pattern: /찬찬히/g, replacement: '천천히' },
-  { pattern: /복기해\s*보/g, replacement: '다시 살펴보' },
-  { pattern: /복기하/g, replacement: '다시 생각하' },
-  { pattern: /복기/g, replacement: '되돌아보기' },
-  { pattern: /짐작하/g, replacement: '생각하' },
-  { pattern: /짐작이\s*됩니다/g, replacement: '그럴 것 같습니다' },
-  { pattern: /짐작됩니다/g, replacement: '그럴 것 같습니다' },
-  { pattern: /짐작할\s*수\s*있/g, replacement: '예상할 수 있' },
-  { pattern: /짐작/g, replacement: '예상' },
-  { pattern: /바람직합니다/g, replacement: '좋습니다' },
-  { pattern: /바람직한\s*방법/g, replacement: '좋은 방법' },
-  { pattern: /바람직한\s*선택/g, replacement: '좋은 선택' },
-  { pattern: /바람직하/g, replacement: '좋' },
-  { pattern: /바람직/g, replacement: '좋은' },
-  
-  // ===== 6. 양상/양태 계열 - 문맥에 맞는 다양한 대체어 사용! =====
-  { pattern: /다양한\s*양상/g, replacement: '여러 경우' },
-  { pattern: /복잡한\s*양상/g, replacement: '복잡한 상태' },
-  { pattern: /특이한\s*양상/g, replacement: '독특한 느낌' },
-  { pattern: /비슷한\s*양상/g, replacement: '비슷한 상태' },
-  { pattern: /다른\s*양상/g, replacement: '다른 경우' },
-  { pattern: /새로운\s*양상/g, replacement: '새로운 변화' },
-  { pattern: /이러한\s*양상/g, replacement: '이런 상태' },
-  { pattern: /그러한\s*양상/g, replacement: '그런 경우' },
-  { pattern: /양상을\s*보이/g, replacement: '변화를 보이' },
-  { pattern: /양상이\s*나타나/g, replacement: '변화가 나타나' },
-  { pattern: /양상으로\s*나타나/g, replacement: '형태로 나타나' },
-  { pattern: /양상을\s*띠/g, replacement: '상태를 보이' },
-  { pattern: /양상이\s*있/g, replacement: '경우가 있' },
-  { pattern: /양상에\s*따라/g, replacement: '상태에 따라' },
-  { pattern: /양상의\s*변화/g, replacement: '상태 변화' },
-  { pattern: /양상과\s*/g, replacement: '상태와 ' },
-  { pattern: /양태를\s*보이/g, replacement: '상태를 보이' },
-  { pattern: /양태가\s*/g, replacement: '상태가 ' },
-  { pattern: /(\s)양상(\s)/g, replacement: '$1상태$2' },
-  { pattern: /(\s)양상([을를])/g, replacement: '$1변화$2' },
-  { pattern: /(\s)양상([이가])/g, replacement: '$1상태$2' },
-  { pattern: /(\s)양태(\s)/g, replacement: '$1상태$2' },
-  { pattern: /(\s)양태([을를이가])/g, replacement: '$1상태$2' },
-  // 남은 양상/양태 (앞뒤 문맥 없이 단독) - 랜덤하게 분산
-  // 마지막 폴백은 removeBannedWords 함수에서 순환 대체
+  // ===== 2. AI 티 확실한 것만 =====
+  { pattern: /양상/g, replacement: '상태' },
+  { pattern: /양태/g, replacement: '상태' },
+  { pattern: /불편감/g, replacement: '불편함' },
 ];
 
-// 폴백용 대체어 목록 (순환 사용)
-const YANGSNAG_ALTERNATIVES = ['상태', '경우', '변화', '느낌'];
-let yangSangIndex = 0;
-
 /**
- * 🚨 AI 금지어 후처리 - 생성된 콘텐츠에서 금지어 제거
- * @param content 원본 콘텐츠 (HTML 또는 텍스트)
- * @returns 금지어가 제거된 콘텐츠
+ * 🎯 대수술 버전: 최소한의 후처리만
+ * - AI를 믿고, 정말 문제되는 것만 수정
+ * - 조사/표현 등은 AI에게 맡김 (과도한 개입 금지)
  */
 function removeBannedWords(content: string): string {
   if (!content) return content;
-  
+
   let result = content;
   let replacementCount = 0;
-  
-  // 1. 패턴 기반 대체 (문맥에 맞는 대체어)
+
+  // 1. 핵심 패턴만 대체 (의료광고법 위반 + AI 티 확실한 것)
   for (const { pattern, replacement } of BANNED_WORDS_REPLACEMENTS) {
     const before = result;
     result = result.replace(pattern, replacement);
@@ -363,102 +168,8 @@ function removeBannedWords(content: string): string {
       replacementCount += matches ? matches.length : 0;
     }
   }
-  
-  // 2. 남은 "양상" 순환 대체 (모습/상태/경우/변화 분산)
-  result = result.replace(/양상/g, () => {
-    const alt = YANGSNAG_ALTERNATIVES[yangSangIndex % YANGSNAG_ALTERNATIVES.length];
-    yangSangIndex++;
-    replacementCount++;
-    return alt;
-  });
-  
-  // 3. 남은 "양태" 순환 대체
-  result = result.replace(/양태/g, () => {
-    const alt = YANGSNAG_ALTERNATIVES[yangSangIndex % YANGSNAG_ALTERNATIVES.length];
-    yangSangIndex++;
-    replacementCount++;
-    return alt;
-  });
 
-  // 4. 🚨 "이런 경우/상황" 반복 방지 (2회까지 허용, 3회 이상은 대체)
-  const situationAlternatives = ['이런 경험', '이런 변화', '비슷한 느낌', '이런 순간', '이런 흐름'];
-  let situationCount = 0;
-  let situationIndex = 0;
-
-  // "이런 경우" 처리
-  result = result.replace(/이런\s*경우/g, (match) => {
-    situationCount++;
-    if (situationCount <= 2) return match; // 2회까지 유지
-    const alt = situationAlternatives[situationIndex % situationAlternatives.length];
-    situationIndex++;
-    replacementCount++;
-    return alt;
-  });
-
-  // "이런 상황" 처리 (이런 경우와 합산)
-  result = result.replace(/이런\s*상황/g, (match) => {
-    situationCount++;
-    if (situationCount <= 2) return match; // 2회까지 유지
-    const alt = situationAlternatives[situationIndex % situationAlternatives.length];
-    situationIndex++;
-    replacementCount++;
-    return alt;
-  });
-
-  // 5. 🚨 조사 오류 수정 (받침 없는 단어 + 은/이/을 → 는/가/를)
-  // 받침 없이 끝나는 흔한 단어들의 조사 오류 수정
-  result = result
-    // 은 → 는 (받침 없는 단어)
-    .replace(/변화은/g, '변화는')
-    .replace(/피로은/g, '피로는')
-    .replace(/자세은/g, '자세는')
-    .replace(/상태은/g, '상태는')
-    .replace(/허리은/g, '허리는')
-    .replace(/어깨은/g, '어깨는')
-    .replace(/다리은/g, '다리는')
-    .replace(/무게은/g, '무게는')
-    .replace(/기침은/g, '기침은') // 받침 있음 OK
-    .replace(/두통은/g, '두통은') // 받침 있음 OK
-    .replace(/경우은/g, '경우는')
-    .replace(/느낌은/g, '느낌은') // 받침 있음 OK
-    .replace(/시간은/g, '시간은') // 받침 있음 OK
-    .replace(/원인은/g, '원인은') // 받침 있음 OK
-    .replace(/이유은/g, '이유는')
-    .replace(/정도은/g, '정도는')
-    .replace(/부위은/g, '부위는')
-    .replace(/치료은/g, '치료는')
-    .replace(/관리은/g, '관리는')
-    .replace(/증상은/g, '증상은') // 받침 있음 OK
-    // 이 → 가 (받침 없는 단어)
-    .replace(/변화이\s/g, '변화가 ')
-    .replace(/피로이\s/g, '피로가 ')
-    .replace(/자세이\s/g, '자세가 ')
-    .replace(/상태이\s/g, '상태가 ')
-    .replace(/허리이\s/g, '허리가 ')
-    .replace(/어깨이\s/g, '어깨가 ')
-    .replace(/다리이\s/g, '다리가 ')
-    .replace(/경우이\s/g, '경우가 ')
-    .replace(/이유이\s/g, '이유가 ')
-    .replace(/정도이\s/g, '정도가 ')
-    .replace(/부위이\s/g, '부위가 ')
-    .replace(/치료이\s/g, '치료가 ')
-    .replace(/관리이\s/g, '관리가 ')
-    // 을 → 를 (받침 없는 단어)
-    .replace(/변화을/g, '변화를')
-    .replace(/피로을/g, '피로를')
-    .replace(/자세을/g, '자세를')
-    .replace(/상태을/g, '상태를')
-    .replace(/허리을/g, '허리를')
-    .replace(/어깨을/g, '어깨를')
-    .replace(/다리을/g, '다리를')
-    .replace(/경우을/g, '경우를')
-    .replace(/이유을/g, '이유를')
-    .replace(/정도을/g, '정도를')
-    .replace(/부위을/g, '부위를')
-    .replace(/치료을/g, '치료를')
-    .replace(/관리을/g, '관리를');
-
-  // 5-2. 🚨 맞춤법 오류 수정 (굽히다/굽기다, 접히다/접기다 등)
+  // 2. 맞춤법 교정만 (굽히다/돼다 등 확실한 오류)
   result = result
     // 굽히다 (to bend) - "굽기다"는 틀림
     .replace(/굽기고/g, '굽히고')
@@ -466,65 +177,26 @@ function removeBannedWords(content: string): string {
     .replace(/굽기는/g, '굽히는')
     .replace(/굽기다/g, '굽히다')
     .replace(/굽길/g, '굽힐')
-    // 접히다 (to be folded) - "접기다"는 틀림
+    // 접히다 - "접기다"는 틀림
     .replace(/접기고/g, '접히고')
     .replace(/접기면/g, '접히면')
     .replace(/접기는/g, '접히는')
     .replace(/접기다/g, '접히다')
-    // 꺾이다 (to be bent) - "꺾기다"는 틀림
+    // 꺾이다 - "꺾기다"는 틀림
     .replace(/꺾기고/g, '꺾이고')
     .replace(/꺾기면/g, '꺾이면')
     .replace(/꺾기는/g, '꺾이는')
     .replace(/꺾기다/g, '꺾이다')
-    // 펴다/펴지다 vs 펴기다
-    .replace(/펴기고/g, '펴고')
-    .replace(/펴기면/g, '펴면')
-    // 늘이다 vs 늘리다
-    .replace(/늘이다/g, '늘리다')
-    .replace(/늘이고/g, '늘리고')
-    .replace(/늘이면/g, '늘리면')
-    // 줄이다 (맞음) - 확인용
-    // 기타 흔한 맞춤법 오류
-    .replace(/움직이다/g, '움직이다')  // 이건 맞음 (확인용)
-    .replace(/되/g, (match, offset, str) => {
-      // "되" vs "돼" 구분 (간단 버전)
-      const nextChar = str[offset + 1];
-      if (nextChar === '어' || nextChar === '었') {
-        return '돼';  // 되어 → 돼, 되었 → 됐
-      }
-      return match;
-    })
+    // 되/돼 구분
     .replace(/되요/g, '돼요')
     .replace(/되서/g, '돼서')
     .replace(/안되/g, '안 돼')
     .replace(/안돼요/g, '안 돼요');
 
-  // 6. 🚨 출처/인용 표현 제거 (질병관리청에서는~, ~라고 합니다 등)
-  const sourcePatterns = [
-    /질병관리청에서는\s*/g,
-    /질병관리청에\s*따르면[,\s]*/g,
-    /질병관리청은\s*/g,
-    /[가-힣]+에서는\s+[^.]*라고\s+(합니다|했습니다|밝혔습니다|전했습니다)[.]/g,
-    /[가-힣]+에\s*따르면[,\s]*/g,
-    /연구에\s*따르면[,\s]*/g,
-    /전문가들은\s*/g,
-    /전문가에\s*따르면[,\s]*/g,
-    /라고\s+(합니다|알려져\s*있습니다|전해집니다|밝혔습니다)/g,
-    /[가-힣]+에서\s+발표한\s+[^에]*에\s*따르면[,\s]*/g,
-    /통계에\s*따르면[,\s]*/g,
-    /자료에\s*따르면[,\s]*/g,
-  ];
-  
-  for (const pattern of sourcePatterns) {
-    const before = result;
-    result = result.replace(pattern, '');
-    if (before !== result) replacementCount++;
-  }
-  
   if (replacementCount > 0) {
-    console.log(`🚨 금지어 후처리 완료: ${replacementCount}개 표현 교체됨 (양상/양태/출처 표현 제거)`);
+    console.log(`🎯 후처리 완료: ${replacementCount}개 교체 (최소 개입)`);
   }
-  
+
   return result;
 }
 
