@@ -305,6 +305,27 @@ const BANNED_WORDS_REPLACEMENTS: Array<{ pattern: RegExp; replacement: string }>
   { pattern: /의사에게/g, replacement: '' },
   { pattern: /의료진/g, replacement: '' },
 
+  // 🚨🚨🚨 어체 통일 - "합니다/있습니다" 체만 사용! 🚨🚨🚨
+  // "~하세요", "~하시죠", "~드세요", "~보세요" → "합니다" 체로 변환
+  { pattern: /해\s*보세요/g, replacement: '해 볼 수 있습니다' },
+  { pattern: /드셔\s*보세요/g, replacement: '드시면 좋습니다' },
+  { pattern: /받아\s*보세요/g, replacement: '받아 볼 수 있습니다' },
+  { pattern: /확인해\s*보세요/g, replacement: '확인해 볼 수 있습니다' },
+  { pattern: /시도해\s*보세요/g, replacement: '시도해 볼 수 있습니다' },
+  { pattern: /살펴보세요/g, replacement: '살펴볼 수 있습니다' },
+  { pattern: /챙겨\s*보세요/g, replacement: '챙기면 좋습니다' },
+  { pattern: /보세요/g, replacement: '볼 수 있습니다' },
+  { pattern: /하세요/g, replacement: '하면 좋습니다' },
+  { pattern: /드세요/g, replacement: '드시면 좋습니다' },
+  { pattern: /주세요/g, replacement: '주는 것이 좋습니다' },
+  { pattern: /가세요/g, replacement: '가면 좋습니다' },
+  { pattern: /하시죠/g, replacement: '하면 좋습니다' },
+  { pattern: /하시길/g, replacement: '하면' },
+  { pattern: /권합니다/g, replacement: '좋습니다' },
+  { pattern: /권해\s*드립니다/g, replacement: '좋습니다' },
+  { pattern: /추천합니다/g, replacement: '도움이 됩니다' },
+  { pattern: /추천드립니다/g, replacement: '도움이 됩니다' },
+
   // ===== 5. 의료인 전용 표현 → 삭제 =====
   { pattern: /진료실에서/g, replacement: '' },
   { pattern: /진료실을/g, replacement: '' },
@@ -7340,6 +7361,12 @@ ${PARAGRAPH_STRUCTURE_GUIDE}
 ❌ "의사", "의료진", "진료실", "내원"
 ✅ 이런 표현 나오면 삭제하거나 다른 표현으로!
 
+🚫🚫🚫 어체 통일 - "합니다/있습니다" 체만! 🚫🚫🚫
+❌ "~하세요", "~보세요", "~드세요", "~주세요" (명령형 ❌)
+❌ "~하시죠", "~하시길", "~권합니다", "~추천합니다"
+✅ "~합니다", "~있습니다", "~좋습니다", "~됩니다" 체만 사용!
+✅ "~하면 좋습니다", "~할 수 있습니다", "~도움이 됩니다"
+
 [참고 예시]
 ${FEW_SHOT_EXAMPLES}
 
@@ -8352,7 +8379,13 @@ ${textContent}
 • ❌ "전문", "전문가", "전문의", "전문적인", "전문 치료"
 • ❌ "의사", "의료진", "진료실", "내원", "진단"
 • ✅ 이런 표현 나오면 삭제하거나 자연스럽게 다른 문장으로!
-• ✅ "관리가 필요합니다", "신경 써주세요", "꾸준히 케어해주세요" 사용!
+• ✅ "관리가 필요합니다", "신경 쓰면 좋습니다", "꾸준히 케어하면 좋습니다" 사용!
+
+🚫🚫🚫 어체 통일 - "합니다/있습니다" 체만! 🚫🚫🚫
+• ❌ "~하세요", "~보세요", "~드세요", "~주세요" (명령형 금지!)
+• ❌ "~하시죠", "~하시길", "~권합니다", "~추천합니다"
+• ✅ "~합니다", "~있습니다", "~좋습니다", "~됩니다" 체만 사용!
+• ✅ "~하면 좋습니다", "~할 수 있습니다", "~도움이 됩니다"
 
 🚫 마무리 급마무리 금지!
 • ❌ "개인차가 있을 수 있습니다." 단독 사용 금지! (뜬금없음)

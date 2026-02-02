@@ -1854,7 +1854,7 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
     
     // 6. border-radius 제거 (Word 2016에서 지원 안 함 - 네모 박스 문제 원인!)
     result = result.replace(/border-radius:\s*[^;]+;/gi, '');
-    
+
     // 7. border 속성 완전 제거 (Word 네모 박스 문제 완전 해결!)
     // 테이블 소제목의 border는 background-color로 대체됨
     result = result.replace(/border\s*:\s*[^;]+;/gi, '');
@@ -1862,6 +1862,15 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
     result = result.replace(/border-bottom\s*:\s*[^;]+;/gi, '');
     result = result.replace(/border-left\s*:\s*[^;]+;/gi, '');
     result = result.replace(/border-right\s*:\s*[^;]+;/gi, '');
+
+    // 8. p 태그 박스 문제 해결: background, padding 제거 (Word에서 박스로 보임)
+    result = result.replace(/<p([^>]*)style="([^"]*)">/gi, (match, before, style) => {
+      const cleanStyle = style
+        .replace(/background\s*:[^;]+;?/gi, '')
+        .replace(/background-color\s*:[^;]+;?/gi, '')
+        .replace(/padding\s*:[^;]+;?/gi, '');
+      return `<p${before}style="${cleanStyle}">`;
+    });
     
     // 8. aspect-ratio 제거 (Word에서 지원 안 함)
     result = result.replace(/aspect-ratio:\s*[^;]+;/gi, '');
@@ -1890,6 +1899,19 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
           .replace(/box-shadow\s*:[^;]+;?/gi, '')
           .replace(/outline\s*:[^;]+;?/gi, '');
         el.setAttribute('style', cleanStyle);
+      });
+
+      // 🎯 p 태그 박스 문제 해결: background, padding, border 완전 제거
+      doc.querySelectorAll('p').forEach(p => {
+        const style = p.getAttribute('style') || '';
+        const cleanStyle = style
+          .replace(/background\s*:[^;]+;?/gi, '')
+          .replace(/background-color\s*:[^;]+;?/gi, '')
+          .replace(/padding\s*:[^;]+;?/gi, '')
+          .replace(/border\s*:[^;]+;?/gi, '')
+          .replace(/border-radius\s*:[^;]+;?/gi, '');
+        // 기본 스타일만 유지
+        p.setAttribute('style', cleanStyle + ' border: none;');
       });
       
       // 🎯 컨테이너의 border만 제거 (전체 박스 테두리)
