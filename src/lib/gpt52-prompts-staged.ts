@@ -432,6 +432,7 @@ export const getStage1_ContentGeneration = (textLength: number = 1500) => {
 [12-3. 쓰기 중 강제 제약 규칙]
 
 - 한 소제목당 문단은 최대 2~3개
+- ⭐ 마지막 소제목은 문단 최대 2개 (3개 이상 금지)
 - 한 문단당 문장은 최대 3문장
 - 문단이 늘어나면 반드시 줄인다
 
