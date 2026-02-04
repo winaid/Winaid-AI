@@ -7882,21 +7882,12 @@ async function checkSimilarityWithOwnBlogs(
     // Supabase 클라이언트 가져오기
     const { supabase } = await import('../lib/supabase');
     
-    // 현재 사용자 ID 가져오기
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    let query = supabase
+    // 모든 블로그 히스토리 조회 (로그인 없이 사용)
+    const { data: blogHistory, error } = await supabase
       .from('blog_history')
       .select('*')
       .order('published_at', { ascending: false })
       .limit(100);
-    
-    // 로그인한 사용자의 경우 본인 글만, 아니면 모든 글
-    if (user?.id) {
-      query = query.eq('user_id', user.id);
-    }
-    
-    const { data: blogHistory, error } = await query;
     
     if (error) {
       console.error('❌ Supabase 쿼리 실패:', error);
