@@ -1864,9 +1864,56 @@ const searchNewsForTrends = async (category: string, _month: number): Promise<st
       const newsContext = newsItems.slice(0, 5).map((item, idx) => {
         return `${idx + 1}. ${item.title}\n   - ${item.description.substring(0, 100)}...`;
       }).join('\n\n');
-      
+
       console.log(`[뉴스 트렌드] 네이버 뉴스 검색 완료: ${newsItems.length}개 기사`);
-      return `[최신 뉴스 트렌드 - 네이버 뉴스 검색 결과]\n\n${newsContext}`;
+
+      // 🔥 Gemini 3 Flash로 뉴스 분석하여 최적화된 인사이트 추출
+      try {
+        const ai = getAiClient();
+        const analysisResponse = await ai.models.generateContent({
+          model: GEMINI_MODEL.FLASH, // gemini-3-flash-preview
+          contents: `아래는 "${category}" 관련 네이버 뉴스 검색 결과입니다. 이를 분석하여 블로그 작성에 활용할 수 있는 최적의 인사이트를 추출해주세요.
+
+[네이버 뉴스 검색 결과]
+${newsContext}
+
+[분석 요청]
+1. 핵심 트렌드 (3가지): 현재 가장 주목받는 건강/의료 이슈
+2. 블로그 키워드 추천 (5개): SEO에 효과적인 롱테일 키워드
+3. 콘텐츠 각도 제안: 이 트렌드를 활용한 블로그 글감 아이디어 2가지
+4. 주의사항: 의료법 위반 가능성이 있는 표현이나 주제
+
+[출력 형식]
+📌 핵심 트렌드
+1. (트렌드1)
+2. (트렌드2)
+3. (트렌드3)
+
+🔑 추천 키워드
+- (키워드1), (키워드2), ...
+
+💡 콘텐츠 아이디어
+1. (아이디어1)
+2. (아이디어2)
+
+⚠️ 주의사항
+- (주의할 점)`,
+          config: {
+            responseMimeType: "text/plain",
+            temperature: 0.4,
+            thinkingConfig: { thinkingLevel: "low" }
+          }
+        });
+
+        const analysisResult = analysisResponse.text || '';
+        console.log(`[뉴스 트렌드] Gemini Flash 분석 완료`);
+
+        return `[최신 뉴스 트렌드 - 네이버 뉴스 + Gemini 분석]\n\n${analysisResult}\n\n[원본 뉴스]\n${newsContext}`;
+
+      } catch (analysisError) {
+        console.warn('[뉴스 트렌드] Gemini 분석 실패, 원본 뉴스만 반환:', analysisError);
+        return `[최신 뉴스 트렌드 - 네이버 뉴스 검색 결과]\n\n${newsContext}`;
+      }
     }
     
     throw new Error('네이버 뉴스 결과 없음');
