@@ -437,8 +437,8 @@ export async function generateFaqSection(
 
     const naverQuestions = naverResponse.text || '';
 
-    // 3단계: FAQ HTML 생성 (전용 프롬프트 적용)
-    safeProgress('📝 FAQ 답변 생성 중...');
+    // 3단계: FAQ HTML 생성 (전용 프롬프트 + AEO 로직 적용)
+    safeProgress('📝 FAQ 답변 생성 중... (AEO 최적화)');
     const faqResponse = await ai.models.generateContent({
       model: GEMINI_MODEL.PRO,
       contents: `당신은 병·의원 홈페이지에 사용되는 FAQ 콘텐츠를 작성하는 의료 정보 AI입니다.
@@ -453,7 +453,36 @@ ${naverQuestions}
 [질병관리청 공식 정보]
 ${kdcaInfo || '정보 없음'}
 
+────────────────────
+[AEO (Answer Engine Optimization) 필수 적용]
+────────────────────
+
+⭐ AEO 핵심 원칙:
+AI 검색 엔진(ChatGPT, Perplexity, Google AI Overview)이 답변으로 채택할 수 있도록 최적화
+
+1. [핵심 답변] - 첫 문장에서 질문에 직접 답변
+   - 검색 엔진이 Featured Snippet으로 추출할 수 있는 형태
+   - 30자 이내의 명확한 핵심 답변
+   - 예: "Q. 두통이 지속되면?" → "[핵심 답변] 2주 이상 지속되는 두통은 전문 상담이 필요할 수 있습니다."
+
+2. [일반적 설명] - 배경 지식 제공
+   - 일반인이 이해할 수 있는 쉬운 설명
+   - 2~3문장으로 간결하게
+
+3. [주의사항] - 오해 방지
+   - 과장될 수 있는 부분 정리
+   - 개인차가 있음을 명시
+
+⭐ AEO 표현 규칙:
+- 단정형 표현 금지 → 가능성 표현 사용
+  × "~입니다" → ○ "~일 수 있습니다"
+  × "~때문입니다" → ○ "~과 관련이 있을 수 있습니다"
+- 결론을 닫지 않음 → 독자가 스스로 판단하게 유도
+- 질문은 실제 검색창에 입력될 법한 자연어 형태
+
+────────────────────
 [데이터 수집 규칙]
+────────────────────
 1. 네이버에서 실제로 많이 검색·질문되는 표현을 기준으로
    동일 질환 관련 질문 3~5개를 생성합니다.
    (환자 일상 언어 그대로 사용)
@@ -461,31 +490,39 @@ ${kdcaInfo || '정보 없음'}
 2. 각 질문에 대한 답변은
    질병관리청(KDCA) 공개 자료의 정보 범위 내에서만 작성합니다.
 
-[출력 구조 – 반드시 준수]
+────────────────────
+[출력 구조 – AEO 최적화]
+────────────────────
 각 질문마다 아래 형식으로 작성하세요.
 
 <div class="faq-section">
   <h3 class="faq-title">❓ 자주 묻는 질문</h3>
   <div class="faq-item">
-    <p class="faq-question">Q. (네이버 이용자가 실제로 검색할 법한 질문 문장)</p>
+    <p class="faq-question">Q. (실제 검색창에 입력될 법한 자연어 질문)</p>
     <div class="faq-answer">
-      <p><strong>[확실함]</strong> 질병관리청 기준으로 명확히 확인되는 사실</p>
-      <p><strong>[일반적 설명]</strong> 일반인이 이해할 수 있는 배경 설명</p>
+      <p class="faq-core-answer"><strong>[핵심 답변]</strong> (30자 이내 직접 답변 - AI 검색 채택용)</p>
+      <p><strong>[일반적 설명]</strong> 일반인이 이해할 수 있는 배경 설명 (2~3문장)</p>
       <p><strong>[주의사항]</strong> 오해하거나 과장될 수 있는 부분 정리</p>
     </div>
   </div>
   <!-- 3~5개 반복 -->
 </div>
 
+────────────────────
 [금지 규칙]
+────────────────────
 - 치료 권유, 검사 권유, 병원 방문 유도 문장 금지
 - "도움이 됩니다", "효과적입니다", "권장합니다" 사용 금지
 - 특정 진료과, 치료법, 시술, 약물 언급 금지
 - 광고로 오인될 수 있는 결론 문장 금지
 - 출처 언급 금지! "질병관리청에 따르면" 같은 표현 사용 금지!
+- 단정적 표현 금지! "~입니다", "~해야 합니다" 금지!
 
+────────────────────
 [목표]
-- 검색 유입용 FAQ
+────────────────────
+- AEO: AI 검색 엔진 답변 채택 최적화
+- SEO: 검색 유입용 FAQ
 - 의료법 제56조 위반 소지 없음
 - 정보 신뢰도 우선`,
       config: {
@@ -551,6 +588,18 @@ ${kdcaInfo || '정보 없음'}
 .faq-answer strong {
   color: #1e293b;
   font-weight: 600;
+}
+.faq-core-answer {
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  padding: 12px 16px;
+  border-radius: 8px;
+  border-left: 4px solid #3b82f6;
+  margin-bottom: 12px !important;
+  font-weight: 500;
+}
+.faq-core-answer strong {
+  color: #1d4ed8;
+  font-weight: 700;
 }
 </style>
 `;
