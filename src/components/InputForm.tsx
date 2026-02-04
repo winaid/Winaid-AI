@@ -337,7 +337,7 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange 
                         onClick={() => setIncludeFaq(!includeFaq)}
                         className={`relative w-12 h-6 rounded-full transition-colors ${includeFaq ? 'bg-amber-500' : 'bg-slate-300'}`}
                       >
-                        <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${includeFaq ? 'translate-x-7' : 'translate-x-1'}`} />
+                        <span className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow transition-all duration-200 ${includeFaq ? 'translate-x-6' : 'translate-x-0'}`} />
                       </button>
                     </div>
                     {/* FAQ 개수 선택 (토글 ON일 때만) */}
