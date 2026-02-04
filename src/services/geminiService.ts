@@ -390,6 +390,7 @@ async function searchHospitalSites(query: string, category: string): Promise<str
 export async function generateFaqSection(
   topic: string,
   keywords: string,
+  faqCount: number = 3,
   onProgress?: (msg: string) => void
 ): Promise<string> {
   const safeProgress = onProgress || ((msg: string) => console.log('📍 FAQ Progress:', msg));
@@ -438,7 +439,7 @@ export async function generateFaqSection(
     const naverQuestions = naverResponse.text || '';
 
     // 3단계: FAQ HTML 생성 (전용 프롬프트 + AEO 로직 적용)
-    safeProgress('📝 FAQ 답변 생성 중... (AEO 최적화)');
+    safeProgress(`📝 FAQ ${faqCount}개 생성 중... (AEO 최적화)`);
     const faqResponse = await ai.models.generateContent({
       model: GEMINI_MODEL.PRO,
       contents: `당신은 병·의원 홈페이지에 사용되는 FAQ 콘텐츠를 작성하는 의료 정보 AI입니다.
@@ -460,17 +461,16 @@ ${kdcaInfo || '정보 없음'}
 ⭐ AEO 핵심 원칙:
 AI 검색 엔진(ChatGPT, Perplexity, Google AI Overview)이 답변으로 채택할 수 있도록 최적화
 
-1. [핵심 답변] - 첫 문장에서 질문에 직접 답변
-   - 검색 엔진이 Featured Snippet으로 추출할 수 있는 형태
-   - 30자 이내의 명확한 핵심 답변
-   - 예: "Q. 두통이 지속되면?" → "[핵심 답변] 2주 이상 지속되는 두통은 전문 상담이 필요할 수 있습니다."
+⭐ 답변 구조 (자연스러운 흐름):
+1. 본문 답변 - 레이블 없이 자연스럽게 작성
+   - 첫 문장: 질문에 대한 직접적인 핵심 답변 (AI 검색 채택용)
+   - 이어서: 일반인이 이해할 수 있는 배경 설명 (2~3문장)
+   - ⚠️ "[핵심 답변]", "[일반적 설명]" 같은 레이블 사용 금지!
+   - 하나의 자연스러운 문단으로 이어서 작성
 
-2. [일반적 설명] - 배경 지식 제공
-   - 일반인이 이해할 수 있는 쉬운 설명
-   - 2~3문장으로 간결하게
-
-3. [주의사항] - 오해 방지
-   - 과장될 수 있는 부분 정리
+2. 주의사항 - 레이블 표시 ⭐
+   - "[주의사항]" 레이블만 표시
+   - 오해하거나 과장될 수 있는 부분 정리
    - 개인차가 있음을 명시
 
 ⭐ AEO 표현 규칙:
@@ -484,7 +484,7 @@ AI 검색 엔진(ChatGPT, Perplexity, Google AI Overview)이 답변으로 채택
 [데이터 수집 규칙]
 ────────────────────
 1. 네이버에서 실제로 많이 검색·질문되는 표현을 기준으로
-   동일 질환 관련 질문 3~5개를 생성합니다.
+   질문 ${faqCount}개를 생성합니다.
    (환자 일상 언어 그대로 사용)
 
 2. 각 질문에 대한 답변은
@@ -493,19 +493,18 @@ AI 검색 엔진(ChatGPT, Perplexity, Google AI Overview)이 답변으로 채택
 ────────────────────
 [출력 구조 – AEO 최적화]
 ────────────────────
-각 질문마다 아래 형식으로 작성하세요.
+⚠️ 정확히 ${faqCount}개의 FAQ만 생성하세요!
 
 <div class="faq-section">
   <h3 class="faq-title">❓ 자주 묻는 질문</h3>
   <div class="faq-item">
     <p class="faq-question">Q. (실제 검색창에 입력될 법한 자연어 질문)</p>
     <div class="faq-answer">
-      <p class="faq-core-answer"><strong>[핵심 답변]</strong> (30자 이내 직접 답변 - AI 검색 채택용)</p>
-      <p><strong>[일반적 설명]</strong> 일반인이 이해할 수 있는 배경 설명 (2~3문장)</p>
-      <p><strong>[주의사항]</strong> 오해하거나 과장될 수 있는 부분 정리</p>
+      <p>(핵심 답변 + 배경 설명을 자연스럽게 이어서 작성. 레이블 없이!)</p>
+      <p class="faq-warning"><strong>[주의사항]</strong> 오해하거나 과장될 수 있는 부분 정리</p>
     </div>
   </div>
-  <!-- 3~5개 반복 -->
+  <!-- ${faqCount}개 반복 -->
 </div>
 
 ────────────────────
@@ -517,6 +516,7 @@ AI 검색 엔진(ChatGPT, Perplexity, Google AI Overview)이 답변으로 채택
 - 광고로 오인될 수 있는 결론 문장 금지
 - 출처 언급 금지! "질병관리청에 따르면" 같은 표현 사용 금지!
 - 단정적 표현 금지! "~입니다", "~해야 합니다" 금지!
+- "[핵심 답변]", "[일반적 설명]" 레이블 사용 금지! (주의사항만 레이블 표시)
 
 ────────────────────
 [목표]
@@ -541,7 +541,7 @@ AI 검색 엔진(ChatGPT, Perplexity, Google AI Overview)이 답변으로 채택
 
     safeProgress('✅ FAQ 섹션 생성 완료!');
 
-    // FAQ 스타일 추가 (확실함/일반적 설명/주의사항 구조 지원)
+    // FAQ 스타일 추가 (자연스러운 답변 + 주의사항만 강조)
     const faqStyles = `
 <style>
 .faq-section {
@@ -589,16 +589,16 @@ AI 검색 엔진(ChatGPT, Perplexity, Google AI Overview)이 답변으로 채택
   color: #1e293b;
   font-weight: 600;
 }
-.faq-core-answer {
-  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+.faq-warning {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
   padding: 12px 16px;
   border-radius: 8px;
-  border-left: 4px solid #3b82f6;
-  margin-bottom: 12px !important;
-  font-weight: 500;
+  border-left: 4px solid #f59e0b;
+  margin-top: 12px !important;
+  font-size: 14px;
 }
-.faq-core-answer strong {
-  color: #1d4ed8;
+.faq-warning strong {
+  color: #b45309;
   font-weight: 700;
 }
 </style>
@@ -6483,6 +6483,7 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
       const faqHtml = await generateFaqSection(
         request.topic,
         request.keywords || '',
+        request.faqCount || 3,
         safeProgress
       );
 

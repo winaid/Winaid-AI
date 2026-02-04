@@ -58,6 +58,7 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange 
 
   // FAQ 옵션
   const [includeFaq, setIncludeFaq] = useState<boolean>(false);
+  const [faqCount, setFaqCount] = useState<number>(3);
   
   const [trendingItems, setTrendingItems] = useState<TrendingItem[]>([]);
   const [isLoadingTrends, setIsLoadingTrends] = useState(false);
@@ -105,6 +106,7 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange 
       customSubheadings: customSubheadings.trim() || undefined,
       // ❓ FAQ 옵션
       includeFaq: postType === 'blog' ? includeFaq : undefined,
+      faqCount: postType === 'blog' && includeFaq ? faqCount : undefined,
       // 🗞️ 보도자료용 필드
       hospitalName: postType === 'press_release' ? hospitalName : undefined,
       hospitalWebsite: postType === 'press_release' ? hospitalWebsite : undefined,
@@ -321,21 +323,45 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange 
                   </div>
 
                   {/* FAQ 토글 */}
-                  <div className="flex items-center justify-between p-3 bg-amber-50 border border-amber-200 rounded-xl">
-                    <div className="flex items-center gap-2">
-                      <span className="text-lg">❓</span>
-                      <div>
-                        <span className="text-xs font-black text-amber-700">FAQ 섹션 추가</span>
-                        <p className="text-[10px] text-amber-600">네이버 실제 질문 + 질병관리청 정보</p>
+                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">❓</span>
+                        <div>
+                          <span className="text-xs font-black text-amber-700">FAQ 섹션 추가</span>
+                          <p className="text-[10px] text-amber-600">네이버 실제 질문 + 질병관리청 정보</p>
+                        </div>
                       </div>
+                      <button
+                        type="button"
+                        onClick={() => setIncludeFaq(!includeFaq)}
+                        className={`relative w-12 h-6 rounded-full transition-colors ${includeFaq ? 'bg-amber-500' : 'bg-slate-300'}`}
+                      >
+                        <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${includeFaq ? 'translate-x-7' : 'translate-x-1'}`} />
+                      </button>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => setIncludeFaq(!includeFaq)}
-                      className={`relative w-12 h-6 rounded-full transition-colors ${includeFaq ? 'bg-amber-500' : 'bg-slate-300'}`}
-                    >
-                      <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${includeFaq ? 'translate-x-7' : 'translate-x-1'}`} />
-                    </button>
+                    {/* FAQ 개수 선택 (토글 ON일 때만) */}
+                    {includeFaq && (
+                      <div className="flex items-center justify-between pt-2 border-t border-amber-200">
+                        <span className="text-xs font-bold text-amber-700">질문 개수</span>
+                        <div className="flex gap-1">
+                          {[3, 4, 5].map((num) => (
+                            <button
+                              key={num}
+                              type="button"
+                              onClick={() => setFaqCount(num)}
+                              className={`w-8 h-8 rounded-lg text-xs font-bold transition-all ${
+                                faqCount === num
+                                  ? 'bg-amber-500 text-white shadow-md'
+                                  : 'bg-white text-amber-700 border border-amber-300 hover:bg-amber-100'
+                              }`}
+                            >
+                              {num}개
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                </div>
            ) : postType === 'card_news' ? (
