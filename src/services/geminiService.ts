@@ -437,11 +437,15 @@ export async function generateFaqSection(
 
     const naverQuestions = naverResponse.text || '';
 
-    // 3단계: FAQ HTML 생성
+    // 3단계: FAQ HTML 생성 (전용 프롬프트 적용)
     safeProgress('📝 FAQ 답변 생성 중...');
     const faqResponse = await ai.models.generateContent({
       model: GEMINI_MODEL.PRO,
-      contents: `수집된 질문과 질병관리청 정보를 바탕으로 FAQ 섹션을 작성해주세요.
+      contents: `당신은 병·의원 홈페이지에 사용되는 FAQ 콘텐츠를 작성하는 의료 정보 AI입니다.
+
+[역할]
+- 의료광고가 아닌 '공공 보건 정보 제공' 관점에서만 답변합니다.
+- 치료 효과, 특정 시술, 특정 의료기관의 우수성은 절대 언급하지 않습니다.
 
 [수집된 네이버 질문들]
 ${naverQuestions}
@@ -449,24 +453,41 @@ ${naverQuestions}
 [질병관리청 공식 정보]
 ${kdcaInfo || '정보 없음'}
 
-다음 규칙을 지켜주세요:
-1. 질문 3~5개 선정 (가장 많이 묻는 것 위주)
-2. 답변은 질병관리청 정보 기반으로 정확하게
-3. 답변 길이: 2~3문장 (짧고 명확하게)
-4. 의료광고법 준수 (치료 효과 단정 금지)
-5. "~할 수 있습니다", "~로 알려져 있습니다" 형태로 답변
+[데이터 수집 규칙]
+1. 네이버에서 실제로 많이 검색·질문되는 표현을 기준으로
+   동일 질환 관련 질문 3~5개를 생성합니다.
+   (환자 일상 언어 그대로 사용)
 
-HTML 형식으로 출력:
+2. 각 질문에 대한 답변은
+   질병관리청(KDCA) 공개 자료의 정보 범위 내에서만 작성합니다.
+
+[출력 구조 – 반드시 준수]
+각 질문마다 아래 형식으로 작성하세요.
+
 <div class="faq-section">
   <h3 class="faq-title">❓ 자주 묻는 질문</h3>
   <div class="faq-item">
-    <p class="faq-question">Q. 질문내용?</p>
-    <p class="faq-answer">A. 답변내용</p>
+    <p class="faq-question">Q. (네이버 이용자가 실제로 검색할 법한 질문 문장)</p>
+    <div class="faq-answer">
+      <p><strong>[확실함]</strong> 질병관리청 기준으로 명확히 확인되는 사실</p>
+      <p><strong>[일반적 설명]</strong> 일반인이 이해할 수 있는 배경 설명</p>
+      <p><strong>[주의사항]</strong> 오해하거나 과장될 수 있는 부분 정리</p>
+    </div>
   </div>
-  <!-- 반복 -->
+  <!-- 3~5개 반복 -->
 </div>
 
-⚠️ 출처 언급 금지! "질병관리청에 따르면" 같은 표현 사용 금지!`,
+[금지 규칙]
+- 치료 권유, 검사 권유, 병원 방문 유도 문장 금지
+- "도움이 됩니다", "효과적입니다", "권장합니다" 사용 금지
+- 특정 진료과, 치료법, 시술, 약물 언급 금지
+- 광고로 오인될 수 있는 결론 문장 금지
+- 출처 언급 금지! "질병관리청에 따르면" 같은 표현 사용 금지!
+
+[목표]
+- 검색 유입용 FAQ
+- 의료법 제56조 위반 소지 없음
+- 정보 신뢰도 우선`,
       config: {
         responseMimeType: "text/plain",
         temperature: 0.4
@@ -483,7 +504,7 @@ HTML 형식으로 출력:
 
     safeProgress('✅ FAQ 섹션 생성 완료!');
 
-    // FAQ 스타일 추가
+    // FAQ 스타일 추가 (확실함/일반적 설명/주의사항 구조 지원)
     const faqStyles = `
 <style>
 .faq-section {
@@ -502,8 +523,8 @@ HTML 형식으로 출력:
   border-bottom: 2px solid #e2e8f0;
 }
 .faq-item {
-  margin-bottom: 16px;
-  padding: 16px;
+  margin-bottom: 20px;
+  padding: 20px;
   background: white;
   border-radius: 12px;
   border: 1px solid #e2e8f0;
@@ -512,16 +533,24 @@ HTML 형식으로 출력:
   margin-bottom: 0;
 }
 .faq-question {
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 700;
   color: #3b82f6;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px dashed #e2e8f0;
 }
 .faq-answer {
   font-size: 15px;
   color: #475569;
-  line-height: 1.7;
-  margin: 0;
+  line-height: 1.8;
+}
+.faq-answer p {
+  margin: 8px 0;
+}
+.faq-answer strong {
+  color: #1e293b;
+  font-weight: 600;
 }
 </style>
 `;
