@@ -55,6 +55,9 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange 
   
   // 커스텀 소제목
   const [customSubheadings, setCustomSubheadings] = useState<string>('');
+
+  // FAQ 옵션
+  const [includeFaq, setIncludeFaq] = useState<boolean>(false);
   
   const [trendingItems, setTrendingItems] = useState<TrendingItem[]>([]);
   const [isLoadingTrends, setIsLoadingTrends] = useState(false);
@@ -100,6 +103,8 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange 
       learnedStyleId,
       // 📋 커스텀 소제목
       customSubheadings: customSubheadings.trim() || undefined,
+      // ❓ FAQ 옵션
+      includeFaq: postType === 'blog' ? includeFaq : undefined,
       // 🗞️ 보도자료용 필드
       hospitalName: postType === 'press_release' ? hospitalName : undefined,
       hospitalWebsite: postType === 'press_release' ? hospitalWebsite : undefined,
@@ -313,6 +318,24 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange 
                        <span>0장</span>
                        <span>5장</span>
                     </div>
+                  </div>
+
+                  {/* FAQ 토글 */}
+                  <div className="flex items-center justify-between p-3 bg-amber-50 border border-amber-200 rounded-xl">
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg">❓</span>
+                      <div>
+                        <span className="text-xs font-black text-amber-700">FAQ 섹션 추가</span>
+                        <p className="text-[10px] text-amber-600">네이버 실제 질문 + 질병관리청 정보</p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setIncludeFaq(!includeFaq)}
+                      className={`relative w-12 h-6 rounded-full transition-colors ${includeFaq ? 'bg-amber-500' : 'bg-slate-300'}`}
+                    >
+                      <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${includeFaq ? 'translate-x-7' : 'translate-x-1'}`} />
+                    </button>
                   </div>
                </div>
            ) : postType === 'card_news' ? (

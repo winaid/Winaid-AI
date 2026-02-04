@@ -386,6 +386,155 @@ async function searchHospitalSites(query: string, category: string): Promise<str
   }
 }
 
+// ❓ FAQ 섹션 생성 함수 (네이버 질문 + 질병관리청 정보)
+export async function generateFaqSection(
+  topic: string,
+  keywords: string,
+  onProgress?: (msg: string) => void
+): Promise<string> {
+  const safeProgress = onProgress || ((msg: string) => console.log('📍 FAQ Progress:', msg));
+
+  try {
+    safeProgress('❓ FAQ 섹션 생성 중... (네이버 질문 수집)');
+    const ai = getAiClient();
+
+    // 1단계: 네이버에서 실제 사람들이 묻는 질문 수집
+    safeProgress('🔍 네이버에서 실제 질문 검색 중...');
+    const naverQuestionsPromise = ai.models.generateContent({
+      model: GEMINI_MODEL.FLASH, // 빠른 검색용
+      contents: `네이버 지식iN, 네이버 블로그, 네이버 카페에서 "${topic}" ${keywords ? `"${keywords}"` : ''}에 대해 실제 사람들이 자주 묻는 질문을 검색해주세요.
+
+검색 대상:
+- 네이버 지식iN (kin.naver.com)
+- 네이버 블로그 (blog.naver.com)
+- 네이버 카페 (cafe.naver.com)
+
+다음 형식으로 실제 질문 5개를 추출해주세요:
+1. [질문1]
+2. [질문2]
+3. [질문3]
+4. [질문4]
+5. [질문5]
+
+⚠️ 실제로 사람들이 궁금해하는 것 위주로! AI가 만든 질문 금지!`,
+      config: {
+        tools: [{ googleSearch: {} }],
+        responseMimeType: "text/plain",
+        temperature: 0.5,
+        thinkingConfig: { thinkingLevel: "low" }
+      }
+    });
+
+    // 2단계: 질병관리청에서 정확한 정보 수집
+    safeProgress('🏥 질병관리청에서 정확한 정보 수집 중...');
+    const kdcaInfoPromise = searchKDCA(topic);
+
+    // 병렬 실행
+    const [naverResponse, kdcaInfo] = await Promise.all([
+      naverQuestionsPromise,
+      kdcaInfoPromise
+    ]);
+
+    const naverQuestions = naverResponse.text || '';
+
+    // 3단계: FAQ HTML 생성
+    safeProgress('📝 FAQ 답변 생성 중...');
+    const faqResponse = await ai.models.generateContent({
+      model: GEMINI_MODEL.PRO,
+      contents: `수집된 질문과 질병관리청 정보를 바탕으로 FAQ 섹션을 작성해주세요.
+
+[수집된 네이버 질문들]
+${naverQuestions}
+
+[질병관리청 공식 정보]
+${kdcaInfo || '정보 없음'}
+
+다음 규칙을 지켜주세요:
+1. 질문 3~5개 선정 (가장 많이 묻는 것 위주)
+2. 답변은 질병관리청 정보 기반으로 정확하게
+3. 답변 길이: 2~3문장 (짧고 명확하게)
+4. 의료광고법 준수 (치료 효과 단정 금지)
+5. "~할 수 있습니다", "~로 알려져 있습니다" 형태로 답변
+
+HTML 형식으로 출력:
+<div class="faq-section">
+  <h3 class="faq-title">❓ 자주 묻는 질문</h3>
+  <div class="faq-item">
+    <p class="faq-question">Q. 질문내용?</p>
+    <p class="faq-answer">A. 답변내용</p>
+  </div>
+  <!-- 반복 -->
+</div>
+
+⚠️ 출처 언급 금지! "질병관리청에 따르면" 같은 표현 사용 금지!`,
+      config: {
+        responseMimeType: "text/plain",
+        temperature: 0.4
+      }
+    });
+
+    const faqHtml = faqResponse.text || '';
+
+    // FAQ가 비어있으면 빈 문자열 반환
+    if (!faqHtml.includes('faq-section')) {
+      console.warn('⚠️ FAQ 생성 실패 - HTML 구조 없음');
+      return '';
+    }
+
+    safeProgress('✅ FAQ 섹션 생성 완료!');
+
+    // FAQ 스타일 추가
+    const faqStyles = `
+<style>
+.faq-section {
+  margin: 40px 0;
+  padding: 24px;
+  background: #f8fafc;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+}
+.faq-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: #1e293b;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #e2e8f0;
+}
+.faq-item {
+  margin-bottom: 16px;
+  padding: 16px;
+  background: white;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+}
+.faq-item:last-child {
+  margin-bottom: 0;
+}
+.faq-question {
+  font-size: 16px;
+  font-weight: 700;
+  color: #3b82f6;
+  margin-bottom: 8px;
+}
+.faq-answer {
+  font-size: 15px;
+  color: #475569;
+  line-height: 1.7;
+  margin: 0;
+}
+</style>
+`;
+
+    return faqStyles + faqHtml;
+
+  } catch (error) {
+    console.error('❌ FAQ 생성 실패:', error);
+    safeProgress('⚠️ FAQ 생성 실패 (스킵)');
+    return '';
+  }
+}
+
 // 🔍 callGeminiWithSearch - 1차: 질병관리청, 2차: 병원 사이트
 async function callGeminiWithSearch(
   prompt: string, 
@@ -6198,6 +6347,34 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
 </style>
 `;
     finalHtml = blogStyles + finalHtml;
+  }
+
+  // ============================================
+  // ❓ FAQ 섹션 생성 (옵션)
+  // ============================================
+  if (request.postType === 'blog' && request.includeFaq) {
+    safeProgress('❓ FAQ 섹션 생성 시작...');
+    try {
+      const faqHtml = await generateFaqSection(
+        request.topic,
+        request.keywords || '',
+        safeProgress
+      );
+
+      if (faqHtml) {
+        // FAQ를 본문 마지막 </div> 앞에 삽입
+        if (finalHtml.includes('</div>')) {
+          // naver-post-container 닫는 태그 앞에 삽입
+          const lastDivIndex = finalHtml.lastIndexOf('</div>');
+          finalHtml = finalHtml.slice(0, lastDivIndex) + faqHtml + finalHtml.slice(lastDivIndex);
+        } else {
+          finalHtml += faqHtml;
+        }
+        safeProgress('✅ FAQ 섹션 추가 완료!');
+      }
+    } catch (faqError) {
+      console.warn('⚠️ FAQ 생성 실패 (스킵):', faqError);
+    }
   }
 
   // ============================================

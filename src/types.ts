@@ -73,6 +73,8 @@ export interface GenerationRequest {
   styleCopyMode?: boolean; // true=레이아웃 복제, false=느낌만 참고
   learnedStyleId?: string; // 학습된 말투 스타일 ID
   customSubheadings?: string; // 사용자가 직접 입력한 소제목들 (줄바꿈으로 구분)
+  // FAQ 옵션
+  includeFaq?: boolean; // FAQ 섹션 포함 여부 (네이버 질문 + 질병관리청 정보)
   // 보도자료용 필드
   hospitalName?: string; // 병원명
   hospitalWebsite?: string; // 병원 웹사이트 URL (크롤링용)
