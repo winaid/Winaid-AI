@@ -160,9 +160,9 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange 
       </h2>
 
       {/* 탭 메뉴 - 1줄 5개 그리드로 변경 (넓게 정렬) */}
-      <div className="grid grid-cols-5 p-2 bg-slate-100 rounded-2xl mb-8 gap-2">
-        <button 
-          type="button" 
+      <div className="grid grid-cols-5 p-1.5 bg-slate-100 rounded-2xl mb-8 gap-1.5">
+        <button
+          type="button"
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -174,29 +174,29 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange 
               window.scrollTo(0, scrollY);
             });
           }}
-          className={`py-3 px-2 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 ${postType === 'blog' ? 'bg-white text-emerald-600 shadow-md' : 'text-slate-400 hover:text-slate-600'}`}
+          className={`py-2.5 px-1 rounded-xl text-sm font-bold transition-all flex flex-col items-center justify-center gap-0.5 ${postType === 'blog' ? 'bg-white text-emerald-600 shadow-md' : 'text-slate-400 hover:text-slate-600'}`}
         >
-          <span className="text-sm">📝</span> 
-          <span>블로그</span>
+          <span className="text-base">📝</span>
+          <span className="text-[11px]">블로그</span>
         </button>
-        <button 
-          type="button" 
+        <button
+          type="button"
           onClick={() => onTabChange?.('similarity')}
-          className={`py-3 px-2 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 text-slate-400 hover:text-slate-600`}
+          className={`py-2.5 px-1 rounded-xl text-sm font-bold transition-all flex flex-col items-center justify-center gap-0.5 text-slate-400 hover:text-slate-600`}
         >
-          <span className="text-sm">🔍</span> 
-          <span>유사도</span>
+          <span className="text-base">🔍</span>
+          <span className="text-[11px]">유사도</span>
         </button>
-        <button 
-          type="button" 
+        <button
+          type="button"
           onClick={() => onTabChange?.('refine')}
-          className={`py-3 px-2 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 text-slate-400 hover:text-slate-600`}
+          className={`py-2.5 px-1 rounded-xl text-sm font-bold transition-all flex flex-col items-center justify-center gap-0.5 text-slate-400 hover:text-slate-600`}
         >
-          <span className="text-sm">✨</span> 
-          <span>AI보정</span>
+          <span className="text-base">✨</span>
+          <span className="text-[11px]">AI보정</span>
         </button>
-        <button 
-          type="button" 
+        <button
+          type="button"
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -208,13 +208,13 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange 
               window.scrollTo(0, scrollY);
             });
           }}
-          className={`py-3 px-2 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 ${postType === 'card_news' ? 'bg-white text-blue-600 shadow-md' : 'text-slate-400 hover:text-slate-600'}`}
+          className={`py-2.5 px-1 rounded-xl text-sm font-bold transition-all flex flex-col items-center justify-center gap-0.5 ${postType === 'card_news' ? 'bg-white text-blue-600 shadow-md' : 'text-slate-400 hover:text-slate-600'}`}
         >
-          <span className="text-sm">🎨</span> 
-          <span>카드뉴스</span>
+          <span className="text-base">🎨</span>
+          <span className="text-[11px]">카드뉴스</span>
         </button>
-        <button 
-          type="button" 
+        <button
+          type="button"
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -226,10 +226,10 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange 
               window.scrollTo(0, scrollY);
             });
           }}
-          className={`py-3 px-2 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 ${postType === 'press_release' ? 'bg-white text-purple-600 shadow-md' : 'text-slate-400 hover:text-slate-600'}`}
+          className={`py-2.5 px-1 rounded-xl text-sm font-bold transition-all flex flex-col items-center justify-center gap-0.5 ${postType === 'press_release' ? 'bg-white text-purple-600 shadow-md' : 'text-slate-400 hover:text-slate-600'}`}
         >
-          <span className="text-sm">🗞️</span> 
-          <span>보도자료</span>
+          <span className="text-base">🗞️</span>
+          <span className="text-[11px]">보도자료</span>
         </button>
       </div>
       
