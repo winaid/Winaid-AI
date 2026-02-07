@@ -55,16 +55,26 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
     const searchHtml = await searchResponse.text();
 
-    // 블로그 URL + 제목 추출 (crawl-search.ts와 동일한 패턴 사용)
+    // 디버깅: 검색 결과 HTML 분석
+    console.log(`[crawl-top-blog] HTML 길이: ${searchHtml.length}`);
+    console.log(`[crawl-top-blog] HTML 시작 500자: ${searchHtml.substring(0, 500)}`);
+
+    // HTML에서 href 속성이 포함된 모든 URL 패턴 확인
+    const allHrefs = searchHtml.match(/href="([^"]+)"/g) || [];
+    const blogHrefs = allHrefs.filter(h => h.includes('blog.naver.com') || h.includes('tistory.com'));
+    console.log(`[crawl-top-blog] 전체 href: ${allHrefs.length}개, 블로그 href: ${blogHrefs.length}개`);
+    if (blogHrefs.length > 0) {
+      console.log(`[crawl-top-blog] 블로그 href 샘플:`, blogHrefs.slice(0, 3));
+    }
+
+    // 블로그 URL 추출 - 여러 전략 시도
     let topBlogUrl: string | null = null;
     let topBlogTitle = '';
 
+    // 전략 1: 제목+링크 패턴 (crawl-search.ts와 동일)
     const titleLinkPatterns = [
-      // 패턴 1: data-heatmap-target
       /<a[^>]*href="(https:\/\/(?:blog\.naver\.com|.*?\.tistory\.com|brunch\.co\.kr)\/[^"]*)"[^>]*data-heatmap-target="\.link"[^>]*>[\s\S]*?<span[^>]*headline1[^>]*>([\s\S]*?)<\/span>/g,
-      // 패턴 2: title_link 클래스
       /<a[^>]*class="[^"]*title_link[^"]*"[^>]*href="(https:\/\/(?:blog\.naver\.com|.*?\.tistory\.com|brunch\.co\.kr)\/[^"]*)"[^>]*>([\s\S]*?)<\/a>/g,
-      // 패턴 3: 단순 URL과 제목
       /<a[^>]*href="(https:\/\/(?:blog\.naver\.com|.*?\.tistory\.com|brunch\.co\.kr)\/[^"]*)"[^>]*>([^<]+)</g,
     ];
 
@@ -77,20 +87,37 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
           .replace(/<mark>/g, '').replace(/<\/mark>/g, '')
           .replace(/<b>/g, '').replace(/<\/b>/g, '')
           .replace(/<[^>]*>/g, '').trim();
+        console.log(`[crawl-top-blog] 전략1 성공: ${topBlogUrl}`);
         break;
       }
     }
 
-    // 패턴 매칭 실패 시 → URL만이라도 추출
+    // 전략 2: URL만 추출 (패턴 매칭 실패 시)
     if (!topBlogUrl) {
-      const urlPattern = /https:\/\/(?:blog\.naver\.com|[a-zA-Z0-9-]+\.tistory\.com|brunch\.co\.kr)\/[^\s"<>]*/g;
+      const urlPattern = /https:\/\/(?:blog\.naver\.com|[a-zA-Z0-9-]+\.tistory\.com|brunch\.co\.kr)\/[^\s"<>']*/g;
       const match = urlPattern.exec(searchHtml);
       if (match && match[0].length > 30) {
         topBlogUrl = match[0];
+        console.log(`[crawl-top-blog] 전략2 성공: ${topBlogUrl}`);
+      }
+    }
+
+    // 전략 3: href에서 blog URL 추출 (인코딩된 URL 포함)
+    if (!topBlogUrl) {
+      for (const href of allHrefs) {
+        const decoded = decodeURIComponent(href);
+        const blogMatch = decoded.match(/(https:\/\/blog\.naver\.com\/[^\s"<>'&]+)/);
+        if (blogMatch) {
+          topBlogUrl = blogMatch[1];
+          console.log(`[crawl-top-blog] 전략3 성공 (디코딩): ${topBlogUrl}`);
+          break;
+        }
       }
     }
 
     if (!topBlogUrl) {
+      // 디버깅: 실패 시 HTML 중간 부분도 로그
+      console.log(`[crawl-top-blog] URL 추출 실패. HTML 중간 500자: ${searchHtml.substring(Math.floor(searchHtml.length / 2), Math.floor(searchHtml.length / 2) + 500)}`);
       return jsonResponse({ success: false, keyword, topBlog: null, error: 'No blog found in search results' });
     }
 
