@@ -4038,17 +4038,13 @@ ${HUMAN_WRITING_RULES}
 
 ${MEDICAL_LAW_HUMAN_PROMPT}
 
-${PARAGRAPH_STRUCTURE_GUIDE}
-
 [진료과별 맞춤 가이드]
-${request.category && CATEGORY_SPECIFIC_PROMPTS[request.category as unknown as keyof typeof CATEGORY_SPECIFIC_PROMPTS] 
-  ? CATEGORY_SPECIFIC_PROMPTS[request.category as unknown as keyof typeof CATEGORY_SPECIFIC_PROMPTS] 
+${request.category && CATEGORY_SPECIFIC_PROMPTS[request.category as unknown as keyof typeof CATEGORY_SPECIFIC_PROMPTS]
+  ? CATEGORY_SPECIFIC_PROMPTS[request.category as unknown as keyof typeof CATEGORY_SPECIFIC_PROMPTS]
   : ''}
 
 [참고 예시 - 좋은 글 vs 나쁜 글]
 ${FEW_SHOT_EXAMPLES}
-
-${PARAGRAPH_STRUCTURE_GUIDE}
 
 [글쓰기 원칙]
 1. 톤: 구어체 친근 (병원 홍보 ❌, 교과서처럼 딱딱 ❌)
@@ -6963,9 +6959,7 @@ ${HUMAN_WRITING_RULES}
 
 ${MEDICAL_LAW_HUMAN_PROMPT}
 
-${PARAGRAPH_STRUCTURE_GUIDE}
-
-✅ 체크: □ 요청 부분만 수정? □ 길이 ±20%? □ 의료광고법 준수?
+체크: 요청 부분만 수정? 길이 ±20%? 의료광고법 준수?
 
 🚫🚫🚫 추가 체크 (AI 냄새 방지!) 🚫🚫🚫
 □ "이런 경우" 최대 2회만! (3회 이상 = AI 냄새!)

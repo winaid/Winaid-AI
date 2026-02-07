@@ -81,14 +81,12 @@ export const FORBIDDEN_WORDS_DATABASE: ForbiddenWord[] = [
   { word: '의료적', severity: 'critical', replacement: ['(사용 금지)', '(사용 금지)'], reason: '의료적 표현 금지 (의료광고법) - 완전 금지', category: 'medical_law' },
   { word: '치료', severity: 'critical', replacement: ['(사용 금지)', '(사용 금지)'], reason: '치료 직접 표현 금지 (의료광고법) - 완전 금지', category: 'medical_law' },
   
-  // 🚨 진단/질환 관련 단어 완전 금지 강화
+  // 진단/질환 관련 단어 금지 (증상, 질환은 허용)
   { word: '진단', severity: 'critical', replacement: ['(사용 금지)', '(사용 금지)'], reason: '진단 표현 완전 금지 (의료광고법) - 완전 금지', category: 'medical_law' },
   { word: '의심', severity: 'critical', replacement: ['(사용 금지)', '(사용 금지)'], reason: '진단 유도 완전 금지 (의료광고법) - 완전 금지', category: 'medical_law' },
   { word: '판단', severity: 'critical', replacement: ['(사용 금지)', '(사용 금지)'], reason: '판단 표현 완전 금지 (의료광고법) - 완전 금지', category: 'medical_law' },
-  { word: '질환', severity: 'critical', replacement: ['(사용 금지)', '(사용 금지)'], reason: '질환 직접 표현 금지 (의료광고법) - 완전 금지', category: 'medical_law' },
   { word: '질병', severity: 'critical', replacement: ['(사용 금지)', '(사용 금지)'], reason: '질병 직접 표현 금지 (의료광고법) - 완전 금지', category: 'medical_law' },
   { word: '병', severity: 'critical', replacement: ['(사용 금지)', '(사용 금지)'], reason: '병 직접 표현 금지 (의료광고법) - 완전 금지', category: 'medical_law' },
-  { word: '증상', severity: 'critical', replacement: ['(사용 금지)', '(사용 금지)'], reason: '증상 직접 표현 금지 (의료광고법) - 완전 금지', category: 'medical_law' },
   { word: '처방', severity: 'critical', replacement: ['(사용 금지)', '(사용 금지)'], reason: '처방 표현 완전 금지 (의료광고법) - 완전 금지', category: 'medical_law' },
   { word: '검사', severity: 'critical', replacement: ['(사용 금지)', '(사용 금지)'], reason: '검사 유도 완전 금지 (의료광고법) - 완전 금지', category: 'medical_law' },
   { word: '체크', severity: 'critical', replacement: ['(사용 금지)', '(사용 금지)'], reason: '자가진단 유도 금지 (의료광고법) - 완전 금지', category: 'medical_law' },
@@ -142,7 +140,6 @@ export const FORBIDDEN_WORDS_DATABASE: ForbiddenWord[] = [
   { word: '~을 통해 호전', severity: 'critical', replacement: ['~을 통해 변화 확인', '~방법을 고려'], reason: '효과 보장 문장 구조 금지 (의료광고법)', category: 'guarantee' },
   
   // 진단/판단 유도 문장 패턴
-  { word: '~일 수 있습니다', severity: 'critical', replacement: ['~으로 알려져 있습니다', '~경우도 있습니다'], reason: '진단 유도 문장 구조 금지 (의료광고법)', category: 'medical_law' },
   { word: '~이라면', severity: 'critical', replacement: ['~상황에서는', '~경우에는'], reason: '진단 유도 문장 구조 금지 (의료광고법)', category: 'medical_law' },
   { word: '~인지 확인', severity: 'critical', replacement: ['~상황을 살펴보기', '~경과 확인'], reason: '자가진단 유도 문장 구조 금지 (의료광고법)', category: 'medical_law' },
   { word: '셀프 체크', severity: 'critical', replacement: ['상황 확인', '경과 살펴보기'], reason: '자가진단 유도 문장 구조 금지 (의료광고법)', category: 'medical_law' },
