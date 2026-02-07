@@ -23,42 +23,86 @@ export interface CompetitorAnalysis {
 }
 
 /**
- * 네이버 통합탭 1위 블로그 분석
- * crawl-top-blog API를 호출하여 경쟁 블로그 정보를 가져온다
+ * 네이버 1위 블로그 분석 (2단계 방식)
+ *
+ * Step 1: searchNaverBlogsByCrawling()으로 블로그 URL 목록 확보 (crawl-search 사용)
+ * Step 2: crawl-top-blog API에 URL 직접 전달 → 본문 구조 분석 (소제목, 글자수, 이미지 등)
+ *
+ * 2026년 기준 네이버 검색 CSR 이슈 대응: 검색은 기존 crawl-search 인프라 재활용
  */
 export async function getTopCompetitorAnalysis(keyword: string): Promise<CompetitorAnalysis | null> {
   try {
     const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 
-    console.log(`[경쟁분석] 키워드 "${keyword}" 통합탭 1위 블로그 분석 시작`);
+    console.log(`[경쟁분석] 키워드 "${keyword}" 1위 블로그 분석 시작`);
 
+    // Step 1: 기존 crawl-search로 블로그 URL 목록 확보
+    console.log(`[경쟁분석] Step 1: crawl-search로 블로그 URL 검색...`);
+    const blogUrls = await searchNaverBlogsByCrawling(keyword, 5);
+
+    if (!blogUrls || blogUrls.length === 0) {
+      console.warn(`[경쟁분석] Step 1 실패: 검색 결과 없음, crawl-top-blog 키워드 모드로 폴백`);
+      // 폴백: crawl-top-blog에 keyword 전달 (자체 검색 시도)
+      const fallbackResponse = await fetch(`${API_BASE_URL}/api/naver/crawl-top-blog`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ keyword }),
+      });
+      if (fallbackResponse.ok) {
+        const result: CompetitorAnalysis = await fallbackResponse.json();
+        if (result.success && result.topBlog) {
+          console.log(`[경쟁분석] 폴백 성공:`, result.topBlog.title);
+          return result;
+        }
+      }
+      return { success: false, keyword, topBlog: null, error: 'No blogs found in search' };
+    }
+
+    const topBlog = blogUrls[0];
+    console.log(`[경쟁분석] Step 1 성공: 1위 블로그 = ${topBlog.link}`);
+
+    // Step 2: crawl-top-blog에 URL 직접 전달하여 본문 구조 분석
+    console.log(`[경쟁분석] Step 2: 본문 구조 분석...`);
     const response = await fetch(`${API_BASE_URL}/api/naver/crawl-top-blog`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ keyword }),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: topBlog.link }),
     });
 
     if (!response.ok) {
-      console.warn(`[경쟁분석] API 실패: ${response.status}`);
-      return null;
+      console.warn(`[경쟁분석] Step 2 실패: crawl-top-blog ${response.status}`);
+      // 구조 분석 실패해도 기본 정보는 반환
+      return {
+        success: true, keyword,
+        topBlog: {
+          title: topBlog.title,
+          link: topBlog.link,
+          bloggername: topBlog.bloggername || '',
+          content: topBlog.description || '',
+          subtitles: [],
+          charCount: 0,
+          paragraphCount: 0,
+          imageCount: 0,
+        },
+        error: 'Content analysis failed, basic info only'
+      };
     }
 
     const result: CompetitorAnalysis = await response.json();
 
     if (result.success && result.topBlog) {
-      console.log(`[경쟁분석] 1위 블로그 분석 완료:`, {
+      // crawl-search에서 받은 제목/블로거 정보 보강
+      if (!result.topBlog.title && topBlog.title) result.topBlog.title = topBlog.title;
+      if (!result.topBlog.bloggername && topBlog.bloggername) result.topBlog.bloggername = topBlog.bloggername;
+
+      console.log(`[경쟁분석] 분석 완료:`, {
         title: result.topBlog.title,
         charCount: result.topBlog.charCount,
         subtitles: result.topBlog.subtitles.length,
         imageCount: result.topBlog.imageCount,
       });
     } else {
-      console.warn(`[경쟁분석] 블로그 미발견:`, result.error);
-      if ((result as any)._debug) {
-        console.warn(`[경쟁분석] 디버그 정보:`, (result as any)._debug);
-      }
+      console.warn(`[경쟁분석] 본문 분석 실패:`, result.error);
     }
 
     return result;
