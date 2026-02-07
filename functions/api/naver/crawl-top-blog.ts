@@ -1,9 +1,12 @@
 /**
- * 네이버 블로그탭에서 키워드 검색 → 1위 블로그 URL 추출 → 본문 크롤링
+ * 네이버 블로그 검색 → 1위 블로그 URL 추출 → 본문 크롤링
  * 경쟁 블로그 분석용 API
  *
- * 통합탭(nexearch)은 JS 렌더링이라 fetch로 블로그 URL을 못 잡음.
- * 블로그탭(where=blog) 1위 ≈ 통합탭 블로그 영역 1위이므로 블로그탭 사용.
+ * PC 블로그탭(where=blog)은 2026년 기준 완전 CSR이라 fetch로 URL 추출 불가.
+ * 전략:
+ *  1) 모바일 블로그 검색(m.search.naver.com) - 모바일은 SSR 가능성
+ *  2) script 태그 내 JSON 데이터 파싱
+ *  3) PC 검색 HTML 내 인코딩/이스케이프된 URL 탐색
  */
 
 interface Env {}
@@ -15,11 +18,11 @@ interface TopBlogResult {
     title: string;
     link: string;
     bloggername: string;
-    content: string;       // 본문 텍스트
-    subtitles: string[];   // 소제목 목록
-    charCount: number;     // 글자 수
-    paragraphCount: number; // 문단 수
-    imageCount: number;    // 이미지 수
+    content: string;
+    subtitles: string[];
+    charCount: number;
+    paragraphCount: number;
+    imageCount: number;
   } | null;
   error?: string;
 }
@@ -37,146 +40,76 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
     console.log(`[crawl-top-blog] 키워드: "${keyword}" 1위 블로그 분석 시작`);
 
-    // Step 1: 네이버 블로그탭 검색 → 1위 블로그 URL 찾기
-    // 정확도순(so:sim) 으로 검색하여 가장 관련도 높은 결과 확보
-    const searchUrl = `https://search.naver.com/search.naver?where=blog&query=${encodeURIComponent(keyword)}&sm=tab_opt&nso=so:sim`;
-
-    const searchResponse = await fetch(searchUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-        'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
-      },
-    });
-
-    if (!searchResponse.ok) {
-      return jsonResponse({ success: false, keyword, topBlog: null, error: `Naver search failed: ${searchResponse.status}` });
-    }
-
-    const searchHtml = await searchResponse.text();
-
-    // 디버깅: 검색 결과 HTML 분석
-    console.log(`[crawl-top-blog] HTML 길이: ${searchHtml.length}`);
-    console.log(`[crawl-top-blog] HTML 시작 500자: ${searchHtml.substring(0, 500)}`);
-
-    // HTML에서 href 속성이 포함된 모든 URL 패턴 확인
-    const allHrefs = searchHtml.match(/href="([^"]+)"/g) || [];
-    const blogHrefs = allHrefs.filter(h => h.includes('blog.naver.com') || h.includes('tistory.com'));
-    console.log(`[crawl-top-blog] 전체 href: ${allHrefs.length}개, 블로그 href: ${blogHrefs.length}개`);
-    if (blogHrefs.length > 0) {
-      console.log(`[crawl-top-blog] 블로그 href 샘플:`, blogHrefs.slice(0, 3));
-    }
-
-    // 블로그 URL 추출 - 여러 전략 시도
+    // ===== 1위 블로그 URL 찾기 (다중 전략) =====
     let topBlogUrl: string | null = null;
     let topBlogTitle = '';
 
-    // 전략 1: 제목+링크 패턴 (crawl-search.ts와 동일)
-    const titleLinkPatterns = [
-      /<a[^>]*href="(https:\/\/(?:blog\.naver\.com|.*?\.tistory\.com|brunch\.co\.kr)\/[^"]*)"[^>]*data-heatmap-target="\.link"[^>]*>[\s\S]*?<span[^>]*headline1[^>]*>([\s\S]*?)<\/span>/g,
-      /<a[^>]*class="[^"]*title_link[^"]*"[^>]*href="(https:\/\/(?:blog\.naver\.com|.*?\.tistory\.com|brunch\.co\.kr)\/[^"]*)"[^>]*>([\s\S]*?)<\/a>/g,
-      /<a[^>]*href="(https:\/\/(?:blog\.naver\.com|.*?\.tistory\.com|brunch\.co\.kr)\/[^"]*)"[^>]*>([^<]+)</g,
-    ];
+    // 전략 A: 모바일 블로그 검색 (SSR 기대)
+    topBlogUrl = await tryMobileSearch(keyword);
+    if (topBlogUrl) {
+      console.log(`[crawl-top-blog] 전략A(모바일) 성공: ${topBlogUrl}`);
+    }
 
-    for (const pattern of titleLinkPatterns) {
-      pattern.lastIndex = 0;
-      const match = pattern.exec(searchHtml);
-      if (match) {
-        topBlogUrl = match[1];
-        topBlogTitle = match[2]
-          .replace(/<mark>/g, '').replace(/<\/mark>/g, '')
-          .replace(/<b>/g, '').replace(/<\/b>/g, '')
-          .replace(/<[^>]*>/g, '').trim();
-        console.log(`[crawl-top-blog] 전략1 성공: ${topBlogUrl}`);
-        break;
+    // 전략 B: PC 블로그 검색 → script 태그 내 JSON 파싱
+    if (!topBlogUrl) {
+      const pcResult = await tryPcSearchWithJsonParsing(keyword);
+      if (pcResult) {
+        topBlogUrl = pcResult.url;
+        topBlogTitle = pcResult.title;
+        console.log(`[crawl-top-blog] 전략B(PC JSON) 성공: ${topBlogUrl}`);
       }
     }
 
-    // 전략 2: URL만 추출 (패턴 매칭 실패 시)
+    // 전략 C: PC 블로그 검색 → 모든 가능한 URL 패턴 탐색
     if (!topBlogUrl) {
-      const urlPattern = /https:\/\/(?:blog\.naver\.com|[a-zA-Z0-9-]+\.tistory\.com|brunch\.co\.kr)\/[^\s"<>']*/g;
-      const match = urlPattern.exec(searchHtml);
-      if (match && match[0].length > 30) {
-        topBlogUrl = match[0];
-        console.log(`[crawl-top-blog] 전략2 성공: ${topBlogUrl}`);
-      }
-    }
-
-    // 전략 3: href에서 blog URL 추출 (인코딩된 URL 포함)
-    if (!topBlogUrl) {
-      for (const href of allHrefs) {
-        const decoded = decodeURIComponent(href);
-        const blogMatch = decoded.match(/(https:\/\/blog\.naver\.com\/[^\s"<>'&]+)/);
-        if (blogMatch) {
-          topBlogUrl = blogMatch[1];
-          console.log(`[crawl-top-blog] 전략3 성공 (디코딩): ${topBlogUrl}`);
-          break;
+      const pcHtml = await fetchPcSearchHtml(keyword);
+      if (pcHtml) {
+        const extracted = extractBlogUrlFromHtml(pcHtml);
+        if (extracted) {
+          topBlogUrl = extracted.url;
+          topBlogTitle = extracted.title || '';
+          console.log(`[crawl-top-blog] 전략C(PC 패턴) 성공: ${topBlogUrl}`);
+        } else {
+          // 디버그 정보 반환
+          const debugInfo = buildDebugInfo(pcHtml);
+          return jsonResponse({
+            success: false, keyword, topBlog: null,
+            error: 'No blog found in search results',
+            _debug: debugInfo
+          } as any);
         }
       }
     }
 
     if (!topBlogUrl) {
-      // href 샘플 10개 + blog/naver 관련 문자열 탐색
-      const hrefSamples = allHrefs.slice(0, 15);
-
-      // HTML 전체에서 "blog" 문자열이 포함된 부분 찾기
-      const blogMentions: string[] = [];
-      const blogRegex = /.{0,80}blog\.naver\.com.{0,80}/g;
-      let blogMatch;
-      while ((blogMatch = blogRegex.exec(searchHtml)) !== null && blogMentions.length < 5) {
-        blogMentions.push(blogMatch[0]);
-      }
-
-      // "post.naver.com" 등 다른 네이버 URL 형태도 확인
-      const naverUrls: string[] = [];
-      const naverUrlRegex = /https?:\/\/[a-zA-Z0-9.-]*naver\.com\/[^\s"<>']{5,60}/g;
-      let naverMatch;
-      while ((naverMatch = naverUrlRegex.exec(searchHtml)) !== null && naverUrls.length < 10) {
-        if (!naverUrls.includes(naverMatch[0])) {
-          naverUrls.push(naverMatch[0]);
-        }
-      }
-
-      const debugInfo = {
-        htmlLength: searchHtml.length,
-        totalHrefs: allHrefs.length,
-        blogHrefs: blogHrefs.length,
-        hrefSamples,
-        blogMentionsInHtml: blogMentions,
-        naverUrlsInHtml: naverUrls,
-      };
-      console.log(`[crawl-top-blog] URL 추출 실패. debug:`, JSON.stringify(debugInfo));
-      return jsonResponse({ success: false, keyword, topBlog: null, error: 'No blog found in search results', _debug: debugInfo } as any);
+      return jsonResponse({ success: false, keyword, topBlog: null, error: 'All search strategies failed' });
     }
 
-    console.log(`[crawl-top-blog] 1위 블로그 발견: ${topBlogUrl} (${topBlogTitle || '제목 미추출'})`);
+    // ===== 블로그 본문 크롤링 =====
+    console.log(`[crawl-top-blog] 1위 블로그 본문 크롤링: ${topBlogUrl}`);
 
-    // Step 2: 블로그 본문 크롤링 (모바일 버전 사용 - 인라인 콘텐츠)
     let fetchUrl = topBlogUrl;
-    if (topBlogUrl.includes('blog.naver.com')) {
+    if (topBlogUrl.includes('blog.naver.com') && !topBlogUrl.includes('m.blog.naver.com')) {
       fetchUrl = topBlogUrl.replace('blog.naver.com', 'm.blog.naver.com');
     }
 
     const blogResponse = await fetch(fetchUrl, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept': 'text/html,application/xhtml+xml',
         'Accept-Language': 'ko-KR,ko;q=0.9',
       },
     });
 
     if (!blogResponse.ok) {
       return jsonResponse({
-        success: true,
-        keyword,
+        success: true, keyword,
         topBlog: { title: topBlogTitle, link: topBlogUrl, bloggername: '', content: '', subtitles: [], charCount: 0, paragraphCount: 0, imageCount: 0 },
         error: 'Blog content fetch failed, returning URL only'
       });
     }
 
     const blogHtml = await blogResponse.text();
-
-    // Step 3: 본문 파싱
     const parsed = parseBlogContent(blogHtml, topBlogUrl, topBlogTitle);
 
     console.log(`[crawl-top-blog] 분석 완료 - ${parsed.charCount}자, 소제목 ${parsed.subtitles.length}개, 이미지 ${parsed.imageCount}개`);
@@ -192,8 +125,190 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   }
 };
 
+// ===== 전략 A: 모바일 블로그 검색 =====
+async function tryMobileSearch(keyword: string): Promise<string | null> {
+  try {
+    const url = `https://m.search.naver.com/search.naver?where=m_blog&query=${encodeURIComponent(keyword)}&sm=mtb_opt&sortby=sim`;
+
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1',
+        'Accept': 'text/html,application/xhtml+xml',
+        'Accept-Language': 'ko-KR,ko;q=0.9',
+      },
+    });
+
+    if (!response.ok) return null;
+    const html = await response.text();
+
+    // 모바일 검색 결과에서 블로그 URL 추출
+    const patterns = [
+      // 직접 블로그 URL
+      /href="(https:\/\/(?:blog\.naver\.com|m\.blog\.naver\.com)\/[^"]+)"/,
+      // 티스토리
+      /href="(https:\/\/[a-zA-Z0-9-]+\.tistory\.com\/[^"]+)"/,
+      // data-url 속성
+      /data-url="(https:\/\/(?:blog\.naver\.com|m\.blog\.naver\.com)\/[^"]+)"/,
+      // JSON 내 URL
+      /"link"\s*:\s*"(https:\/\/(?:blog\.naver\.com|m\.blog\.naver\.com)\/[^"]+)"/,
+      /"url"\s*:\s*"(https:\/\/(?:blog\.naver\.com|m\.blog\.naver\.com)\/[^"]+)"/,
+      // 일반 URL 패턴 (HTML 어딘가)
+      /(https:\/\/(?:blog\.naver\.com|m\.blog\.naver\.com)\/[^\s"<>'\\]{10,})/,
+    ];
+
+    for (const pattern of patterns) {
+      const match = pattern.exec(html);
+      if (match) {
+        let blogUrl = match[1];
+        // 모바일 URL을 PC URL로 정규화
+        blogUrl = blogUrl.replace('m.blog.naver.com', 'blog.naver.com');
+        return blogUrl;
+      }
+    }
+
+    console.log(`[crawl-top-blog] 모바일: blog URL 미발견 (HTML ${html.length}자)`);
+    return null;
+  } catch (e) {
+    console.error('[crawl-top-blog] 모바일 검색 에러:', e);
+    return null;
+  }
+}
+
+// ===== 전략 B: PC 검색 → script 태그 내 JSON 파싱 =====
+async function tryPcSearchWithJsonParsing(keyword: string): Promise<{ url: string; title: string } | null> {
+  try {
+    const html = await fetchPcSearchHtml(keyword);
+    if (!html) return null;
+
+    // script 태그 안에 JSON 형태로 블로그 데이터가 있는지 탐색
+    const scriptBlocks = html.match(/<script[^>]*>([\s\S]*?)<\/script>/gi) || [];
+
+    for (const block of scriptBlocks) {
+      const content = block.replace(/<\/?script[^>]*>/gi, '');
+
+      // blog.naver.com URL이 JSON 값으로 포함된 경우
+      const jsonUrlPatterns = [
+        /"(?:url|link|blogUrl|postUrl|href)"\s*:\s*"(https?:\/\/blog\.naver\.com\/[^"]+)"/,
+        /"(?:url|link|blogUrl|postUrl|href)"\s*:\s*"(https?:\/\/[a-zA-Z0-9-]+\.tistory\.com\/[^"]+)"/,
+        // 이스케이프된 URL: https:\/\/blog.naver.com\/...
+        /https?:\\\/\\\/blog\.naver\.com\\\/[^"'\s\\]+/,
+        // unicode escaped
+        /https?:\/\/blog\u002enaver\u002ecom\/[^"'\s]+/,
+      ];
+
+      for (const pattern of jsonUrlPatterns) {
+        const match = pattern.exec(content);
+        if (match) {
+          let url = match[1] || match[0];
+          // 이스케이프 해제
+          url = url.replace(/\\\//g, '/');
+          // 제목 추출 시도 (같은 JSON 객체에서)
+          const titleMatch = content.substring(Math.max(0, (match.index || 0) - 300), (match.index || 0) + 300)
+            .match(/"(?:title|blogTitle|postTitle)"\s*:\s*"([^"]+)"/);
+          return {
+            url,
+            title: titleMatch ? titleMatch[1].replace(/\\u[\dA-Fa-f]{4}/g, (m) => String.fromCharCode(parseInt(m.slice(2), 16))) : '',
+          };
+        }
+      }
+    }
+
+    return null;
+  } catch (e) {
+    console.error('[crawl-top-blog] PC JSON 파싱 에러:', e);
+    return null;
+  }
+}
+
+// ===== 전략 C: PC HTML에서 모든 가능한 URL 패턴 추출 =====
+function extractBlogUrlFromHtml(html: string): { url: string; title?: string } | null {
+  // 1. href 속성에서 직접 추출
+  const hrefPatterns = [
+    /href="(https:\/\/(?:blog\.naver\.com|m\.blog\.naver\.com|[a-zA-Z0-9-]+\.tistory\.com|brunch\.co\.kr)\/[^"]+)"/,
+    /data-url="(https:\/\/(?:blog\.naver\.com|m\.blog\.naver\.com)\/[^"]+)"/,
+  ];
+  for (const p of hrefPatterns) {
+    const m = p.exec(html);
+    if (m) return { url: m[1].replace('m.blog.naver.com', 'blog.naver.com') };
+  }
+
+  // 2. HTML 전체에서 블로그 URL 문자열 탐색 (어디든)
+  const rawPatterns = [
+    /(https:\/\/blog\.naver\.com\/[a-zA-Z0-9_-]+\/\d+)/,
+    /(https:\/\/blog\.naver\.com\/PostView\.naver\?blogId=[^&"'\s]+&logNo=\d+)/,
+    /(https:\/\/blog\.naver\.com\/[a-zA-Z0-9_-]+)/,
+    /(https:\/\/[a-zA-Z0-9-]+\.tistory\.com\/\d+)/,
+  ];
+  for (const p of rawPatterns) {
+    const m = p.exec(html);
+    if (m) return { url: m[1] };
+  }
+
+  // 3. 이스케이프된 URL (\/ → /)
+  const escapedMatch = html.match(/https?:\\\/\\\/blog\.naver\.com\\\/[^"'\s\\]+/);
+  if (escapedMatch) {
+    return { url: escapedMatch[0].replace(/\\\//g, '/') };
+  }
+
+  return null;
+}
+
+// ===== 유틸리티 함수들 =====
+let _cachedPcHtml: string | null = null;
+
+async function fetchPcSearchHtml(keyword: string): Promise<string | null> {
+  if (_cachedPcHtml) return _cachedPcHtml;
+  try {
+    const searchUrl = `https://search.naver.com/search.naver?where=blog&query=${encodeURIComponent(keyword)}&sm=tab_opt&nso=so:sim`;
+    const response = await fetch(searchUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
+      },
+    });
+    if (!response.ok) return null;
+    _cachedPcHtml = await response.text();
+    return _cachedPcHtml;
+  } catch (e) {
+    return null;
+  }
+}
+
+function buildDebugInfo(html: string) {
+  const allHrefs = html.match(/href="([^"]+)"/g) || [];
+
+  // blog 관련 문자열 탐색 (어디든)
+  const blogAny: string[] = [];
+  const blogAnyRegex = /.{0,60}blog[._]naver.{0,60}/gi;
+  let m;
+  while ((m = blogAnyRegex.exec(html)) !== null && blogAny.length < 5) {
+    blogAny.push(m[0].substring(0, 120));
+  }
+
+  // script 태그 내 URL 패턴
+  const scriptUrls: string[] = [];
+  const scripts = html.match(/<script[^>]*>([\s\S]*?)<\/script>/gi) || [];
+  for (const s of scripts) {
+    const urlMatch = s.match(/blog\.naver\.com|tistory\.com|brunch\.co\.kr/);
+    if (urlMatch) {
+      const idx = s.indexOf(urlMatch[0]);
+      scriptUrls.push(s.substring(Math.max(0, idx - 40), idx + 80));
+    }
+  }
+
+  return {
+    htmlLength: html.length,
+    totalHrefs: allHrefs.length,
+    hrefSamples: allHrefs.slice(0, 10),
+    blogAnyMentions: blogAny,
+    scriptBlogUrls: scriptUrls,
+    hasBlogInHtml: html.includes('blog.naver.com'),
+    hasBlogEscaped: html.includes('blog\\.naver\\.com') || html.includes('blog\\/naver'),
+  };
+}
+
 function parseBlogContent(html: string, url: string, fallbackTitle: string) {
-  // 제목 추출
   let title = fallbackTitle;
   const titlePatterns = [
     /<meta property="og:title" content="([^"]+)"/,
@@ -205,7 +320,6 @@ function parseBlogContent(html: string, url: string, fallbackTitle: string) {
     if (m) { title = m[1].replace(/<[^>]*>/g, '').trim(); break; }
   }
 
-  // 블로거명 추출
   let bloggername = '';
   const bloggerPatterns = [
     /<meta property="og:author" content="([^"]+)"/,
@@ -216,7 +330,6 @@ function parseBlogContent(html: string, url: string, fallbackTitle: string) {
     if (m) { bloggername = m[1].trim(); break; }
   }
 
-  // 본문 영역 추출 (SmartEditor 3 / 구버전)
   let contentArea = '';
   const contentPatterns = [
     /<div[^>]*class="[^"]*se-main-container[^"]*"[^>]*>([\s\S]*?)<\/div>\s*<\/div>\s*<\/div>/,
@@ -229,13 +342,11 @@ function parseBlogContent(html: string, url: string, fallbackTitle: string) {
     if (m) { contentArea = m[1]; break; }
   }
 
-  // 본문이 못 잡히면 전체 body에서 추출
   if (!contentArea) {
     const bodyMatch = /<body[^>]*>([\s\S]*?)<\/body>/.exec(html);
     contentArea = bodyMatch ? bodyMatch[1] : html;
   }
 
-  // 소제목 추출
   const subtitles: string[] = [];
   const subtitlePatterns = [
     /<h[2-4][^>]*>([\s\S]*?)<\/h[2-4]>/g,
@@ -252,10 +363,8 @@ function parseBlogContent(html: string, url: string, fallbackTitle: string) {
     }
   }
 
-  // 이미지 수
   const imageCount = (contentArea.match(/<img[^>]*>/g) || []).length;
 
-  // 텍스트 추출 (태그 제거)
   const content = contentArea
     .replace(/<script[\s\S]*?<\/script>/gi, '')
     .replace(/<style[\s\S]*?<\/style>/gi, '')
@@ -267,14 +376,13 @@ function parseBlogContent(html: string, url: string, fallbackTitle: string) {
     .replace(/\s+/g, ' ')
     .trim();
 
-  // 문단 수 (p 태그 기준)
   const paragraphCount = (contentArea.match(/<p[^>]*>/g) || []).length || Math.ceil(content.length / 200);
 
   return {
     title,
     link: url,
     bloggername,
-    content: content.substring(0, 3000), // 토큰 절약을 위해 3000자까지만
+    content: content.substring(0, 3000),
     subtitles,
     charCount: content.replace(/\s/g, '').length,
     paragraphCount,
