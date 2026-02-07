@@ -23,6 +23,7 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange 
   const [cssTheme, setCssTheme] = useState<CssTheme>('modern');
   const [topic, setTopic] = useState('');
   const [keywords, setKeywords] = useState('');
+  const [disease, setDisease] = useState('');
   const [referenceUrl, setReferenceUrl] = useState('');
   
   // 커스텀 이미지 프롬프트
@@ -79,11 +80,12 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange 
       return;
     }
     
-    const requestData = { 
-      category, 
-      topic, 
-      keywords, 
-      tone, 
+    const requestData = {
+      category,
+      topic,
+      keywords,
+      disease: disease.trim() || undefined,
+      tone,
       audienceMode, 
       persona, 
       imageStyle, 
@@ -537,7 +539,10 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange 
             2단계. {postType === 'press_release' ? '기사 제목' : '블로그 제목'}
           </label>
           <input type="text" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder={postType === 'press_release' ? '기사 주제를 입력하세요 (예: 겨울철 피부건조 주의보)' : '블로그 글 제목을 입력하세요 (예: 겨울철 피부건조 원인과 해결법)'} className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold mb-3 focus:border-emerald-500 outline-none text-lg" required />
-          <input type="text" value={keywords} onChange={(e) => setKeywords(e.target.value)} placeholder="SEO 키워드 (쉼표 구분, 예: 피부건조, 겨울철 피부관리, 보습)" className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl font-medium mb-4 focus:border-emerald-500 outline-none" />
+          <input type="text" value={keywords} onChange={(e) => setKeywords(e.target.value)} placeholder="SEO 키워드 (예: 영등포 정형외과)" className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl font-medium mb-3 focus:border-emerald-500 outline-none" />
+          {postType === 'blog' && (
+            <input type="text" value={disease} onChange={(e) => setDisease(e.target.value)} placeholder="질환명 (예: 석회성건염) - 글의 실제 주제가 됩니다" className="w-full p-4 bg-amber-50 border border-amber-200 rounded-2xl font-medium mb-4 focus:border-amber-500 outline-none" />
+          )}
           
           {/* 소제목 직접 입력 영역 */}
           <div className="mt-4 p-4 bg-blue-50 rounded-2xl border border-blue-200">

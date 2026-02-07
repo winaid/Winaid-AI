@@ -28,6 +28,7 @@ import {
 import { autoFixMedicalLaw as _autoFixMedicalLaw } from "../utils/autoMedicalLawFixer";
 import { contentCache as _contentCache } from "../utils/contentCache";
 import { calculateOverallSimilarity } from "./similarityService";
+import { getTopCompetitorAnalysis, CompetitorAnalysis } from "./naverSearchService";
 
 // 현재 년도 - getWritingStylePrompts()에서 동적으로 사용
 const _CURRENT_YEAR = new Date().getFullYear();
@@ -4008,6 +4009,47 @@ ${crawlData.content.substring(0, 3000)}
   const gpt52Stage1 = getStage1_ContentGeneration(targetLength);
   const dynamicSystemPrompt = await getDynamicSystemPrompt();
   safeProgress('✅ 동적 프롬프트 준비 완료 (최신 의료광고법 반영)');
+
+  // 경쟁 블로그 분석 (disease 또는 keyword 기준)
+  let competitorInstruction = '';
+  if (!isCardNews && request.keywords) {
+    safeProgress('🔍 네이버 통합탭 1위 블로그 분석 중...');
+    try {
+      const competitorData = await getTopCompetitorAnalysis(request.keywords);
+      if (competitorData?.success && competitorData.topBlog) {
+        const tb = competitorData.topBlog;
+        competitorInstruction = `
+[경쟁 블로그 분석 결과 - 이 글보다 상위에 노출되어야 함]
+현재 "${request.keywords}" 통합탭 1위 블로그:
+- 제목: ${tb.title}
+- 블로거: ${tb.bloggername}
+- 글자 수: ${tb.charCount}자
+- 소제목 수: ${tb.subtitles.length}개
+- 이미지 수: ${tb.imageCount}개
+${tb.subtitles.length > 0 ? `- 소제목 목록: ${tb.subtitles.join(' / ')}` : ''}
+
+[경쟁 분석 기반 작성 전략]
+1. 글자 수: 경쟁 글(${tb.charCount}자)보다 충분한 분량 확보
+2. 소제목: 경쟁 글(${tb.subtitles.length}개)보다 더 다양한 관점 제공
+3. 이미지: 경쟁 글(${tb.imageCount}개)과 동등 이상
+4. 차별화: 경쟁 글이 다루지 않는 관점/정보 추가
+5. 구조: 더 읽기 쉽고 체류 시간이 길어지는 구조 설계
+
+[경쟁 글 본문 요약 (참고용)]
+${tb.content.substring(0, 1500)}
+
+위 경쟁 글을 분석했으니, 이보다 더 깊이 있고 읽기 편한 글을 작성한다.
+경쟁 글의 내용을 그대로 베끼지 말고, 더 나은 관점과 구조로 작성한다.
+`;
+        safeProgress(`✅ 경쟁 분석 완료: ${tb.charCount}자, 소제목 ${tb.subtitles.length}개`);
+      } else {
+        safeProgress('⚠️ 경쟁 블로그 미발견 - 자체 최적화로 진행');
+      }
+    } catch (error) {
+      console.warn('[경쟁분석] 에러 무시:', error);
+      safeProgress('⚠️ 경쟁 분석 스킵 - 자체 최적화로 진행');
+    }
+  }
   
   // 🚀 v8.5 의료광고법 준수 + humanWritingPrompts + GPT-5.2 통합
   const blogPrompt = `
@@ -4019,19 +4061,29 @@ ${crawlData.content.substring(0, 3000)}
 
 한국 병·의원 네이버 블로그용 의료 콘텐츠를 작성하세요.
 
-[작성 요청] 진료과: ${request.category} / 주제: ${request.topic} / SEO 키워드: ${request.keywords || '없음'} / 이미지: ${targetImageCount}장
+[작성 요청]
+- 진료과: ${request.category}
+- 제목/주제: ${request.topic}
+- SEO 키워드: ${request.keywords || '없음'}${request.disease ? `\n- 질환(글의 핵심 주제): ${request.disease}` : ''}
+- 이미지: ${targetImageCount}장
 
 ${medicalLawPrompt}
 
 ${gpt52Stage1}
 
-🚨🚨🚨 [키워드 사용 규칙 - 절대 준수!] 🚨🚨🚨
-✅ 사용할 키워드: "${request.keywords || request.topic}" (이것만 사용!)
-❌ 관련 질환/키워드 추가 금지!
-   - 예: "월경통"이 키워드면 → "자궁근종", "난소낭종" 등 다른 질환 언급 금지!
-   - 예: "어깨통증"이 키워드면 → "오십견", "회전근개" 등 다른 질환 언급 금지!
-⚠️ 검색으로 관련 정보를 찾아도, 입력된 키워드 주제에만 집중!
-⚠️ 다른 질환명이 1개라도 들어가면 글 전체가 불합격!
+${request.disease ? `[키워드·질환 역할 분리 - 필수 적용!]
+SEO 키워드: "${request.keywords}" → 소제목마다 자연스럽게 녹이기 (전체 3~5회)
+질환: "${request.disease}" → 이 글의 실제 주제, 모든 내용은 이 질환 중심
+- 소제목에 키워드를 자연스럽게 포함하되, 내용은 질환("${request.disease}") 중심
+- 예시 소제목: "${request.keywords}에서 보는 ${request.disease} 증상"
+- 질환과 무관한 다른 질환명 추가 금지!
+` : `[키워드 사용 규칙 - 절대 준수!]
+사용할 키워드: "${request.keywords || request.topic}" (이것만 사용!)
+- 관련 질환/키워드 추가 금지!
+- 검색으로 관련 정보를 찾아도, 입력된 키워드 주제에만 집중!
+- 다른 질환명이 1개라도 들어가면 글 전체가 불합격!
+`}
+${competitorInstruction}
 ${learnedStyleInstruction || ''}${customSubheadingInstruction || ''}
 
 ${HUMAN_WRITING_RULES}

@@ -56,6 +56,7 @@ export interface GenerationRequest {
   category: ContentCategory;
   topic: string;
   keywords: string;
+  disease?: string; // 질환명 (예: 석회성건염) - 글의 실제 주제
   tone: string;
   audienceMode: AudienceMode;
   persona: string;

@@ -2,7 +2,68 @@
  * 구글 검색 서비스 (Google Custom Search API)
  * - 네이버 블로그, 티스토리, 브런치 등 모든 블로그 검색
  * - 검색 결과와 유사도 비교
+ * - 네이버 통합탭 1위 블로그 경쟁 분석
  */
+
+// 경쟁 블로그 분석 결과 타입
+export interface CompetitorAnalysis {
+  success: boolean;
+  keyword: string;
+  topBlog: {
+    title: string;
+    link: string;
+    bloggername: string;
+    content: string;
+    subtitles: string[];
+    charCount: number;
+    paragraphCount: number;
+    imageCount: number;
+  } | null;
+  error?: string;
+}
+
+/**
+ * 네이버 통합탭 1위 블로그 분석
+ * crawl-top-blog API를 호출하여 경쟁 블로그 정보를 가져온다
+ */
+export async function getTopCompetitorAnalysis(keyword: string): Promise<CompetitorAnalysis | null> {
+  try {
+    const API_BASE_URL = import.meta.env.VITE_API_URL || '';
+
+    console.log(`[경쟁분석] 키워드 "${keyword}" 통합탭 1위 블로그 분석 시작`);
+
+    const response = await fetch(`${API_BASE_URL}/api/naver/crawl-top-blog`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ keyword }),
+    });
+
+    if (!response.ok) {
+      console.warn(`[경쟁분석] API 실패: ${response.status}`);
+      return null;
+    }
+
+    const result: CompetitorAnalysis = await response.json();
+
+    if (result.success && result.topBlog) {
+      console.log(`[경쟁분석] 1위 블로그 분석 완료:`, {
+        title: result.topBlog.title,
+        charCount: result.topBlog.charCount,
+        subtitles: result.topBlog.subtitles.length,
+        imageCount: result.topBlog.imageCount,
+      });
+    } else {
+      console.warn(`[경쟁분석] 블로그 미발견:`, result.error);
+    }
+
+    return result;
+  } catch (error) {
+    console.error('[경쟁분석] 에러:', error);
+    return null;
+  }
+}
 
 // 🚀 요청 큐 시스템 추가 (Rate Limit 회피)
 class RequestQueue {
