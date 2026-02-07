@@ -1,6 +1,9 @@
 /**
- * 네이버 통합탭에서 키워드 검색 → 1위 블로그 URL 추출 → 본문 크롤링
+ * 네이버 블로그탭에서 키워드 검색 → 1위 블로그 URL 추출 → 본문 크롤링
  * 경쟁 블로그 분석용 API
+ *
+ * 통합탭(nexearch)은 JS 렌더링이라 fetch로 블로그 URL을 못 잡음.
+ * 블로그탭(where=blog) 1위 ≈ 통합탭 블로그 영역 1위이므로 블로그탭 사용.
  */
 
 interface Env {}
@@ -32,15 +35,16 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       });
     }
 
-    console.log(`[crawl-top-blog] 키워드: "${keyword}" 통합탭 1위 블로그 분석 시작`);
+    console.log(`[crawl-top-blog] 키워드: "${keyword}" 1위 블로그 분석 시작`);
 
-    // Step 1: 네이버 통합탭 검색 → 1위 블로그 URL 찾기
-    const searchUrl = `https://search.naver.com/search.naver?where=nexearch&query=${encodeURIComponent(keyword)}`;
+    // Step 1: 네이버 블로그탭 검색 → 1위 블로그 URL 찾기
+    // 정확도순(so:sim) 으로 검색하여 가장 관련도 높은 결과 확보
+    const searchUrl = `https://search.naver.com/search.naver?where=blog&query=${encodeURIComponent(keyword)}&sm=tab_opt&nso=so:sim`;
 
     const searchResponse = await fetch(searchUrl, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
         'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
       },
     });
@@ -51,42 +55,54 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
     const searchHtml = await searchResponse.text();
 
-    // 통합탭에서 블로그 URL 추출 (네이버 블로그, 티스토리)
-    const blogUrlPatterns = [
-      // 통합탭 블로그 섹션의 링크
-      /href="(https:\/\/blog\.naver\.com\/[^"]+)"/g,
-      /href="(https:\/\/[a-zA-Z0-9-]+\.tistory\.com\/[^"]+)"/g,
-    ];
-
+    // 블로그 URL + 제목 추출 (crawl-search.ts와 동일한 패턴 사용)
     let topBlogUrl: string | null = null;
     let topBlogTitle = '';
 
-    for (const pattern of blogUrlPatterns) {
+    const titleLinkPatterns = [
+      // 패턴 1: data-heatmap-target
+      /<a[^>]*href="(https:\/\/(?:blog\.naver\.com|.*?\.tistory\.com|brunch\.co\.kr)\/[^"]*)"[^>]*data-heatmap-target="\.link"[^>]*>[\s\S]*?<span[^>]*headline1[^>]*>([\s\S]*?)<\/span>/g,
+      // 패턴 2: title_link 클래스
+      /<a[^>]*class="[^"]*title_link[^"]*"[^>]*href="(https:\/\/(?:blog\.naver\.com|.*?\.tistory\.com|brunch\.co\.kr)\/[^"]*)"[^>]*>([\s\S]*?)<\/a>/g,
+      // 패턴 3: 단순 URL과 제목
+      /<a[^>]*href="(https:\/\/(?:blog\.naver\.com|.*?\.tistory\.com|brunch\.co\.kr)\/[^"]*)"[^>]*>([^<]+)</g,
+    ];
+
+    for (const pattern of titleLinkPatterns) {
+      pattern.lastIndex = 0;
       const match = pattern.exec(searchHtml);
       if (match) {
         topBlogUrl = match[1];
+        topBlogTitle = match[2]
+          .replace(/<mark>/g, '').replace(/<\/mark>/g, '')
+          .replace(/<b>/g, '').replace(/<\/b>/g, '')
+          .replace(/<[^>]*>/g, '').trim();
         break;
       }
     }
 
-    // 제목도 같이 추출 시도
-    const titlePattern = /<a[^>]*href="(https:\/\/blog\.naver\.com\/[^"]+)"[^>]*>[\s\S]*?<span[^>]*>([\s\S]*?)<\/span>/;
-    const titleMatch = titlePattern.exec(searchHtml);
-    if (titleMatch) {
-      topBlogUrl = topBlogUrl || titleMatch[1];
-      topBlogTitle = titleMatch[2].replace(/<[^>]*>/g, '').trim();
+    // 패턴 매칭 실패 시 → URL만이라도 추출
+    if (!topBlogUrl) {
+      const urlPattern = /https:\/\/(?:blog\.naver\.com|[a-zA-Z0-9-]+\.tistory\.com|brunch\.co\.kr)\/[^\s"<>]*/g;
+      const match = urlPattern.exec(searchHtml);
+      if (match && match[0].length > 30) {
+        topBlogUrl = match[0];
+      }
     }
 
     if (!topBlogUrl) {
-      return jsonResponse({ success: false, keyword, topBlog: null, error: 'No blog found in top results' });
+      return jsonResponse({ success: false, keyword, topBlog: null, error: 'No blog found in search results' });
     }
 
-    console.log(`[crawl-top-blog] 1위 블로그 발견: ${topBlogUrl}`);
+    console.log(`[crawl-top-blog] 1위 블로그 발견: ${topBlogUrl} (${topBlogTitle || '제목 미추출'})`);
 
     // Step 2: 블로그 본문 크롤링 (모바일 버전 사용 - 인라인 콘텐츠)
-    const mobileUrl = topBlogUrl.replace('blog.naver.com', 'm.blog.naver.com');
+    let fetchUrl = topBlogUrl;
+    if (topBlogUrl.includes('blog.naver.com')) {
+      fetchUrl = topBlogUrl.replace('blog.naver.com', 'm.blog.naver.com');
+    }
 
-    const blogResponse = await fetch(mobileUrl, {
+    const blogResponse = await fetch(fetchUrl, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
