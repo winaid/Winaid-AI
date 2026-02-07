@@ -116,13 +116,34 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     }
 
     if (!topBlogUrl) {
+      // href 샘플 10개 + blog/naver 관련 문자열 탐색
+      const hrefSamples = allHrefs.slice(0, 15);
+
+      // HTML 전체에서 "blog" 문자열이 포함된 부분 찾기
+      const blogMentions: string[] = [];
+      const blogRegex = /.{0,80}blog\.naver\.com.{0,80}/g;
+      let blogMatch;
+      while ((blogMatch = blogRegex.exec(searchHtml)) !== null && blogMentions.length < 5) {
+        blogMentions.push(blogMatch[0]);
+      }
+
+      // "post.naver.com" 등 다른 네이버 URL 형태도 확인
+      const naverUrls: string[] = [];
+      const naverUrlRegex = /https?:\/\/[a-zA-Z0-9.-]*naver\.com\/[^\s"<>']{5,60}/g;
+      let naverMatch;
+      while ((naverMatch = naverUrlRegex.exec(searchHtml)) !== null && naverUrls.length < 10) {
+        if (!naverUrls.includes(naverMatch[0])) {
+          naverUrls.push(naverMatch[0]);
+        }
+      }
+
       const debugInfo = {
         htmlLength: searchHtml.length,
         totalHrefs: allHrefs.length,
         blogHrefs: blogHrefs.length,
-        blogHrefSamples: blogHrefs.slice(0, 5),
-        htmlSnippetStart: searchHtml.substring(0, 300),
-        htmlSnippetMid: searchHtml.substring(Math.floor(searchHtml.length / 2), Math.floor(searchHtml.length / 2) + 300),
+        hrefSamples,
+        blogMentionsInHtml: blogMentions,
+        naverUrlsInHtml: naverUrls,
       };
       console.log(`[crawl-top-blog] URL 추출 실패. debug:`, JSON.stringify(debugInfo));
       return jsonResponse({ success: false, keyword, topBlog: null, error: 'No blog found in search results', _debug: debugInfo } as any);
