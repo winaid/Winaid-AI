@@ -56,6 +56,9 @@ export async function getTopCompetitorAnalysis(keyword: string): Promise<Competi
       });
     } else {
       console.warn(`[경쟁분석] 블로그 미발견:`, result.error);
+      if ((result as any)._debug) {
+        console.warn(`[경쟁분석] 디버그 정보:`, (result as any)._debug);
+      }
     }
 
     return result;

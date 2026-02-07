@@ -116,9 +116,16 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     }
 
     if (!topBlogUrl) {
-      // 디버깅: 실패 시 HTML 중간 부분도 로그
-      console.log(`[crawl-top-blog] URL 추출 실패. HTML 중간 500자: ${searchHtml.substring(Math.floor(searchHtml.length / 2), Math.floor(searchHtml.length / 2) + 500)}`);
-      return jsonResponse({ success: false, keyword, topBlog: null, error: 'No blog found in search results' });
+      const debugInfo = {
+        htmlLength: searchHtml.length,
+        totalHrefs: allHrefs.length,
+        blogHrefs: blogHrefs.length,
+        blogHrefSamples: blogHrefs.slice(0, 5),
+        htmlSnippetStart: searchHtml.substring(0, 300),
+        htmlSnippetMid: searchHtml.substring(Math.floor(searchHtml.length / 2), Math.floor(searchHtml.length / 2) + 300),
+      };
+      console.log(`[crawl-top-blog] URL 추출 실패. debug:`, JSON.stringify(debugInfo));
+      return jsonResponse({ success: false, keyword, topBlog: null, error: 'No blog found in search results', _debug: debugInfo } as any);
     }
 
     console.log(`[crawl-top-blog] 1위 블로그 발견: ${topBlogUrl} (${topBlogTitle || '제목 미추출'})`);
