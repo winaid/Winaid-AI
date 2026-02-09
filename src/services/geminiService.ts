@@ -5077,13 +5077,31 @@ ${contentText}
             });
 
             if (trimmedContent && typeof trimmedContent === 'string' && trimmedContent.length > 200) {
-              const trimmedText = trimmedContent.replace(/<[^>]+>/g, '');
+              // AI가 JSON으로 감싸서 반환할 수 있음 → content 필드 추출
+              let cleanedTrimContent = trimmedContent;
+              try {
+                const parsed = JSON.parse(trimmedContent);
+                if (parsed.content && typeof parsed.content === 'string') {
+                  cleanedTrimContent = parsed.content;
+                  console.log('✂️ 축약 응답에서 JSON wrapper 제거');
+                }
+              } catch {
+                // JSON이 아님 → 그대로 사용 (정상)
+              }
+              // 혹시 { "content": " 로 시작하면 정규식으로도 제거
+              cleanedTrimContent = cleanedTrimContent
+                .replace(/^\s*\{\s*"content"\s*:\s*"/i, '')
+                .replace(/"\s*\}\s*$/i, '')
+                .replace(/^\s*\{\s*"title"\s*:\s*"[^"]*"\s*,\s*"content"\s*:\s*"/i, '')
+                .replace(/"\s*,\s*"imagePrompts"\s*:\s*\[.*?\]\s*\}\s*$/i, '');
+
+              const trimmedText = cleanedTrimContent.replace(/<[^>]+>/g, '');
               const trimmedCharCount = trimmedText.replace(/\s/g, '').length;
               console.log(`✂️ 축약 결과: ${charCountNoSpaces}자 → ${trimmedCharCount}자`);
 
               // 축약이 실제로 줄어들었고, 너무 짧지 않으면 적용
               if (trimmedCharCount < charCountNoSpaces && trimmedCharCount >= targetLength * 0.9) {
-                finalResponse = { ...geminiResponse, content: trimmedContent };
+                finalResponse = { ...geminiResponse, content: cleanedTrimContent };
                 safeProgress(`✅ 축약 완료: ${trimmedCharCount}자`);
               } else {
                 console.warn(`✂️ 축약 결과 부적절 (${trimmedCharCount}자), 원본 유지`);
