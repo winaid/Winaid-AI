@@ -5043,8 +5043,58 @@ ${JSON.stringify(searchResults, null, 2)}
           safeProgress(`✅ 생성 완료: ${charCountNoSpaces}자`);
         }
 
-        // 자동 압축 제거 - 원본 그대로 사용
-        const finalResponse = geminiResponse;
+        // 글자수 초과 시 AI에게 축약 요청 (1회)
+        let finalResponse = geminiResponse;
+        if (charCountNoSpaces > targetMax && !isCardNews) {
+          const excessChars = charCountNoSpaces - targetLength;
+          safeProgress(`✂️ 글자수 초과(+${excessChars}자), AI 축약 중...`);
+          console.log(`✂️ 글자수 축약 시작: ${charCountNoSpaces}자 → 목표 ${targetLength}~${targetMax}자`);
+
+          try {
+            const trimPrompt = `아래 HTML 블로그 글이 현재 ${charCountNoSpaces}자(공백 제외)인데, ${targetLength}~${targetMax}자로 줄여야 한다.
+
+[축약 규칙]
+- 각 소제목 섹션에서 불필요한 설명 문장을 줄여서 전체 분량을 맞춘다
+- 소제목 개수는 절대 줄이지 않는다
+- 소제목 제목(h2, h3)은 그대로 유지한다
+- HTML 구조(<h2>, <h3>, <p>, <img> 태그)를 그대로 유지한다
+- 문장을 중간에 자르지 말고, 통째로 삭제하거나 짧은 문장으로 교체한다
+- 도입부와 마무리는 최대한 유지하고, 본문 소제목 섹션에서 줄인다
+- 의미가 자연스럽게 이어지도록 한다
+- 현재보다 ${excessChars}자 이상 줄여야 한다
+
+[현재 글]
+${contentText}
+
+위 글을 축약하여 HTML만 반환하라. JSON 아님, HTML 본문만 출력.`;
+
+            const trimmedContent = await callGemini({
+              prompt: trimPrompt,
+              model: GEMINI_MODEL.PRO,
+              responseType: 'text',
+              timeout: 60000,
+              maxOutputTokens: 16384,
+            });
+
+            if (trimmedContent && typeof trimmedContent === 'string' && trimmedContent.length > 200) {
+              const trimmedText = trimmedContent.replace(/<[^>]+>/g, '');
+              const trimmedCharCount = trimmedText.replace(/\s/g, '').length;
+              console.log(`✂️ 축약 결과: ${charCountNoSpaces}자 → ${trimmedCharCount}자`);
+
+              // 축약이 실제로 줄어들었고, 너무 짧지 않으면 적용
+              if (trimmedCharCount < charCountNoSpaces && trimmedCharCount >= targetLength * 0.9) {
+                finalResponse = { ...geminiResponse, content: trimmedContent };
+                safeProgress(`✅ 축약 완료: ${trimmedCharCount}자`);
+              } else {
+                console.warn(`✂️ 축약 결과 부적절 (${trimmedCharCount}자), 원본 유지`);
+                safeProgress(`⚠️ 축약 실패, 원본 유지: ${charCountNoSpaces}자`);
+              }
+            }
+          } catch (trimError) {
+            console.warn('✂️ 축약 실패, 원본 유지:', trimError);
+            safeProgress(`⚠️ 축약 실패, 원본 유지: ${charCountNoSpaces}자`);
+          }
+        }
 
         if (!finalResponse || typeof finalResponse !== 'object') {
           throw new Error('Gemini가 빈 응답을 반환했습니다. 다시 시도해주세요.');
