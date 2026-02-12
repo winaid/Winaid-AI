@@ -26,6 +26,7 @@ import { autoFixMedicalLaw as _autoFixMedicalLaw } from "../utils/autoMedicalLaw
 import { contentCache as _contentCache } from "../utils/contentCache";
 import { calculateOverallSimilarity } from "./similarityService";
 import { getTopCompetitorAnalysis, CompetitorAnalysis } from "./naverSearchService";
+import { analyzeCompetitorVocabulary, buildForbiddenWordsPrompt } from "./competitorVocabService";
 
 // 현재 년도 - getWritingStylePrompts()에서 동적으로 사용
 const _CURRENT_YEAR = new Date().getFullYear();
@@ -3219,7 +3220,25 @@ ${tb.content.substring(0, 1500)}
       safeProgress('⚠️ 경쟁 분석 스킵 - 자체 최적화로 진행');
     }
   }
-  
+
+  // 🔍 경쟁사 어휘 분석 (하이브리드: 하드코딩 A + 동적 B)
+  let forbiddenWordsBlock = '';
+  if (!isCardNews) {
+    safeProgress('🔍 경쟁사 어휘 패턴 분석 중...');
+    try {
+      const vocabAnalysis = request.keywords
+        ? await analyzeCompetitorVocabulary(request.keywords, safeProgress)
+        : null;
+      forbiddenWordsBlock = buildForbiddenWordsPrompt(vocabAnalysis);
+      safeProgress('✅ 경쟁사 어휘 분석 완료 - 금지 표현 목록 준비됨');
+    } catch (error) {
+      console.warn('[어휘분석] 에러 무시:', error);
+      // 방법 A만이라도 적용
+      forbiddenWordsBlock = buildForbiddenWordsPrompt(null);
+      safeProgress('⚠️ 동적 어휘 분석 실패 - 기본 금지 목록 사용');
+    }
+  }
+
   // 🚀 v8.5 의료광고법 준수 + humanWritingPrompts + GPT-5.2 통합
   const blogPrompt = `
 🚨🚨🚨 [최우선] 글자 수 엄격 제한! 🚨🚨🚨
@@ -3258,6 +3277,7 @@ SEO 키워드: "${request.keywords}"
 - 다른 질환명이 1개라도 들어가면 글 전체가 불합격!
 `}
 ${competitorInstruction}
+${forbiddenWordsBlock}
 ${learnedStyleInstruction || ''}${customSubheadingInstruction || ''}
 
 ${HUMAN_WRITING_RULES}
