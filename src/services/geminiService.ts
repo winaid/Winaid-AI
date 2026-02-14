@@ -4423,7 +4423,45 @@ ${contentText}
     if (analyzedBgColor) {
       result.analyzedStyle = { backgroundColor: analyzedBgColor };
     }
-    
+
+    // ──────────────────────────────────────────────
+    // 🔄 Stage 2: AI 냄새 자동 보정 (생성 후 1회 정밀 보정)
+    // ──────────────────────────────────────────────
+    if (!isCardNews && result.content && typeof result.content === 'string' && result.content.length > 300) {
+      safeProgress('🔄 Stage 2: AI 냄새 제거 및 말맛 보정 중...');
+      try {
+        const stage2Prompt = getStage2_AiRemovalAndCompliance(targetLength);
+        const refinedContent = await callGemini({
+          prompt: `아래 글을 보정해주세요. 보정 규칙을 엄격히 따르세요.\n\n[보정 대상 글]\n${result.content}`,
+          model: GEMINI_MODEL.PRO,
+          systemInstruction: stage2Prompt,
+          responseType: 'text',
+          timeout: TIMEOUTS.CONTENT_GENERATION,
+          temperature: 0.3,
+        });
+
+        if (refinedContent && typeof refinedContent === 'string' && refinedContent.length > 300) {
+          // 보정 결과가 원본의 90~105% 범위 안에 있는지 확인
+          const originalLen = result.content.replace(/<[^>]*>/g, '').length;
+          const refinedLen = refinedContent.replace(/<[^>]*>/g, '').length;
+          const ratio = refinedLen / originalLen;
+
+          if (ratio >= 0.90 && ratio <= 1.05) {
+            result.content = refinedContent;
+            safeProgress(`✅ Stage 2 보정 완료 (${Math.round(ratio * 100)}% 유지)`);
+          } else {
+            console.warn(`⚠️ Stage 2 보정 결과 범위 초과 (${Math.round(ratio * 100)}%), 원본 유지`);
+            safeProgress('⚠️ Stage 2 보정 범위 초과 - 원본 유지');
+          }
+        } else {
+          console.warn('⚠️ Stage 2 보정 결과 부족, 원본 유지');
+        }
+      } catch (stage2Error) {
+        console.warn('⚠️ Stage 2 보정 실패, 원본 유지:', stage2Error);
+        safeProgress('⚠️ Stage 2 보정 스킵 - 원본 유지');
+      }
+    }
+
     // 🔧 fact_check 기본값 설정 (Gemini가 반환하지 않은 필드 보완) - 정확성 강화로 기준 상향
     if (!result.fact_check) {
       result.fact_check = {};
