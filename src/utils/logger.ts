@@ -169,20 +169,16 @@ class Logger {
    */
   private async sendErrorToServer(entry: LogEntry): Promise<void> {
     try {
-      // TODO: 실제 에러 로깅 서비스 (Sentry, LogRocket 등) 연동
-      // 현재는 비활성화 (API 엔드포인트 없음)
-      // await fetch('/api/log-error', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(entry),
-      // }).catch(() => {
-      //   // 에러 전송 실패 시 무시 (무한 루프 방지)
-      // });
-      
-      // 개발자 콘솔에만 출력
-      console.error('[Error Log]', entry);
+      // Supabase 기반 에러 모니터링 연동
+      const { trackError } = await import('../services/errorMonitoringService');
+      trackError(
+        'unknown',
+        entry.data instanceof Error ? entry.data : new Error(entry.message),
+        { source: 'logger', ...(entry.data && typeof entry.data === 'object' ? entry.data : {}) },
+        'medium'
+      );
     } catch {
-      // Silent fail
+      // 에러 전송 실패 시 무시 (무한 루프 방지)
     }
   }
 

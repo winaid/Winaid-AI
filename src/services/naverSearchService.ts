@@ -108,6 +108,9 @@ export async function getTopCompetitorAnalysis(keyword: string): Promise<Competi
     return result;
   } catch (error) {
     console.error('[경쟁분석] 에러:', error);
+    import('./errorMonitoringService').then(({ trackError }) => {
+      trackError('crawling', error, { keyword, source: 'getTopCompetitorAnalysis' });
+    }).catch(() => {});
     return null;
   }
 }
@@ -236,6 +239,9 @@ export async function searchNaverBlogsByCrawling(
     return result.items;
   } catch (error) {
     console.error('네이버 검색 크롤링 오류:', error);
+    import('./errorMonitoringService').then(({ trackError }) => {
+      trackError('crawling', error, { query, source: 'searchNaverBlogsByCrawling' });
+    }).catch(() => {});
     return null;
   }
 }

@@ -269,9 +269,14 @@ export async function callGemini(config: GeminiCallConfig): Promise<any> {
     }
   } catch (error) {
     console.error('❌ Gemini API 호출 실패:', error);
-    console.error('   - 모델:', config.model);
-    console.error('   - responseType:', config.responseType);
-    console.error('   - 프롬프트 길이:', config.prompt?.length);
+    // 에러 모니터링 (비동기, 실패해도 무시)
+    import('./errorMonitoringService').then(({ trackError }) => {
+      trackError('gemini_api', error, {
+        model: config.model,
+        responseType: config.responseType,
+        promptLength: config.prompt?.length,
+      }, 'high');
+    }).catch(() => {});
     throw error;
   }
 }
