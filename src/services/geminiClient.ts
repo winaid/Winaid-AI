@@ -34,6 +34,7 @@ export interface GeminiCallConfig {
   schema?: any;
   timeout?: number;
   systemPrompt?: string;
+  systemInstruction?: string;  // Gemini API의 별도 system instruction으로 전송
   temperature?: number;
   topP?: number;
   maxOutputTokens?: number;
@@ -159,17 +160,27 @@ export const getAiProviderSettings = (): { textGeneration: 'gemini', imageGenera
 export async function callGemini(config: GeminiCallConfig): Promise<any> {
   const ai = getAiClient();
 
+  // systemInstruction이 있으면 Gemini API의 별도 system instruction으로 분리
+  // systemPrompt는 기존 호환성 유지 (contents에 합침)
+  const systemText = config.systemInstruction || config.systemPrompt || '';
+  const userText = config.systemInstruction
+    ? config.prompt  // systemInstruction 사용 시 prompt만 contents에
+    : (config.systemPrompt ? `${config.systemPrompt}\n\n${config.prompt}` : config.prompt);
+
   const apiConfig: any = {
     model: config.model || GEMINI_MODEL.PRO,
-    contents: config.systemPrompt
-      ? `${config.systemPrompt}\n\n${config.prompt}`
-      : config.prompt,
+    contents: userText,
     config: {
-      temperature: config.temperature || 0.85,  // 유려한 글쓰기를 위한 온도
+      temperature: config.temperature || 0.85,
       topP: config.topP || 0.95,
       maxOutputTokens: config.maxOutputTokens || 8192
     }
   };
+
+  // Gemini API system instruction 분리 전송
+  if (config.systemInstruction) {
+    apiConfig.config.systemInstruction = systemText;
+  }
 
   // Google Search 설정
   if (config.googleSearch) {

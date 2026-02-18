@@ -4428,11 +4428,24 @@ ${contentText}
     // 🔄 Stage 2: AI 냄새 자동 보정 (생성 후 1회 정밀 보정)
     // ──────────────────────────────────────────────
     if (!isCardNews && result.content && typeof result.content === 'string' && result.content.length > 300) {
-      safeProgress('🔄 Stage 2: AI 냄새 제거 및 말맛 보정 중...');
+      safeProgress('🔄 Stage 2: AI 냄새 감지 중...');
       try {
+        // AI 냄새 감지 → 결과를 Stage 2에 전달
+        const plainText = result.content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+        const smellResult = detectAiSmell(plainText);
+
+        let smellGuide = '';
+        if (smellResult.detected && smellResult.patterns.length > 0) {
+          smellGuide = `\n\n[AI 냄새 감지 결과 - 아래 표현을 우선 수정하세요]\n`;
+          smellGuide += smellResult.patterns.slice(0, 15).map(p => `- ${p}`).join('\n');
+          smellGuide += `\n→ 위 표현들을 문맥에 맞게 자연스럽게 고치세요. 단순 삭제하지 말고 자연스러운 대체 표현으로 바꾸세요.`;
+          safeProgress(`🔍 AI 냄새 ${smellResult.patterns.length}개 감지 (점수: ${smellResult.score})`);
+        }
+
+        safeProgress('🔄 Stage 2: 보정 중...');
         const stage2Prompt = getStage2_AiRemovalAndCompliance(targetLength);
         const refinedContent = await callGemini({
-          prompt: `아래 글을 보정해주세요. 보정 규칙을 엄격히 따르세요.\n\n[보정 대상 글]\n${result.content}`,
+          prompt: `아래 글을 보정해주세요. 보정 규칙을 엄격히 따르세요.${smellGuide}\n\n[보정 대상 글]\n${result.content}`,
           model: GEMINI_MODEL.PRO,
           systemInstruction: stage2Prompt,
           responseType: 'text',

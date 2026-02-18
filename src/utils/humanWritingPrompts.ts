@@ -195,5 +195,120 @@ export function generateHumanWritingPrompt(): string {
 }
 
 export function detectAiSmell(text: string): { detected: boolean; patterns: string[]; score: number } {
-  return { detected: false, patterns: [], score: 0 };
+  const patterns: string[] = [];
+  let score = 0;
+
+  // ── 1. 절대 금지 표현 (critical: +5점) ──
+  const critical: [RegExp, string][] = [
+    [/의료진/g, '의료진'],
+    [/전문의/g, '전문의'],
+    [/전문가/g, '전문가'],
+    [/라고\s*알려져\s*있습니다/g, '~라고 알려져 있습니다'],
+    [/일반적으로\s*.{1,20}합니다/g, '일반적으로 ~합니다'],
+    [/대부분의\s*경우/g, '대부분의 경우'],
+    [/해보세요/g, '~해보세요 (독자 말 걸기)'],
+    [/해보시는\s*건/g, '~해보시는 건 (독자 말 걸기)'],
+    [/확인해\s*보세요/g, '~확인해 보세요 (독자 말 걸기)'],
+    [/추천합니다/g, '~추천합니다 (독자 말 걸기)'],
+    [/추천드립니다/g, '~추천드립니다 (독자 말 걸기)'],
+    [/살펴보세요/g, '~살펴보세요 (독자 말 걸기)'],
+    [/기억해\s*두세요/g, '~기억해 두세요 (독자 말 걸기)'],
+    [/참고하세요/g, '~참고하세요 (독자 말 걸기)'],
+    [/어떨까요/g, '~어떨까요 (독자 말 걸기)'],
+    [/궁금하실\s*겁니다/g, '~궁금하실 겁니다 (독자 질문)'],
+    [/하신\s*적\s*있으실/g, '~하신 적 있으실 (독자 질문)'],
+    [/알아보겠습니다/g, '~알아보겠습니다 (메타 설명)'],
+    [/살펴보겠습니다/g, '~살펴보겠습니다 (메타 설명)'],
+    [/정리해\s*봅니다/g, '~정리해 봅니다 (메타 설명)'],
+    [/도움이\s*되길\s*바랍니다/g, '도움이 되길 바랍니다 (AI 마무리)'],
+    [/도움이\s*되셨으면/g, '도움이 되셨으면 (AI 마무리)'],
+  ];
+
+  for (const [regex, label] of critical) {
+    const matches = text.match(regex);
+    if (matches) {
+      patterns.push(`[심각] "${label}" (${matches.length}회)`);
+      score += matches.length * 5;
+    }
+  }
+
+  // ── 2. 논문/교과서 어투 (high: +3점) ──
+  const academic: [RegExp, string][] = [
+    [/전반적으로/g, '전반적으로'],
+    [/종합적으로/g, '종합적으로'],
+    [/근본적으로/g, '근본적으로'],
+    [/궁극적으로/g, '궁극적으로'],
+    [/도모하다|도모할/g, '도모하다'],
+    [/모색하다|모색할/g, '모색하다'],
+    [/수행하다|수행할/g, '수행하다'],
+    [/시사하다|시사할/g, '시사하다'],
+    [/유발하다|유발할|유발합니다/g, '유발하다'],
+    [/초래하다|초래할|초래합니다/g, '초래하다'],
+    [/야기하다|야기할|야기합니다/g, '야기하다'],
+    [/호발/g, '호발 (논문 용어)'],
+    [/에\s*있어서/g, '~에 있어서'],
+    [/에\s*해당합니다/g, '~에 해당합니다'],
+  ];
+
+  for (const [regex, label] of academic) {
+    const matches = text.match(regex);
+    if (matches) {
+      patterns.push(`[논문투] "${label}" (${matches.length}회)`);
+      score += matches.length * 3;
+    }
+  }
+
+  // ── 3. AI 특유 전환어/연결어 (medium: +2점) ──
+  const aiTransitions: [RegExp, string][] = [
+    [/이처럼/g, '이처럼'],
+    [/이러한/g, '이러한'],
+    [/이와\s*같이/g, '이와 같이'],
+    [/나아가/g, '나아가'],
+    [/무엇보다/g, '무엇보다'],
+    [/결론적으로/g, '결론적으로'],
+    [/요약하자면/g, '요약하자면'],
+    [/다시\s*말해/g, '다시 말해'],
+    [/핵심적인/g, '핵심적인'],
+    [/필수적인/g, '필수적인'],
+    [/획기적인/g, '획기적인'],
+    [/적절한/g, '적절한'],
+    [/효과적/g, '효과적'],
+    [/체계적/g, '체계적'],
+  ];
+
+  for (const [regex, label] of aiTransitions) {
+    const matches = text.match(regex);
+    if (matches) {
+      patterns.push(`[AI어투] "${label}" (${matches.length}회)`);
+      score += matches.length * 2;
+    }
+  }
+
+  // ── 4. 영어 괄호 번역 (+4점) ──
+  const engParenMatches = text.match(/[가-힣]+\s*\([a-zA-Z]+\)/g);
+  if (engParenMatches) {
+    patterns.push(`[영어괄호] 한국어(English) 패턴 (${engParenMatches.length}회)`);
+    score += engParenMatches.length * 4;
+  }
+
+  // ── 5. 문장 시작 반복 패턴 (+2점) ──
+  const sentences = text.split(/[.!?]\s+/).filter(s => s.length > 5);
+  if (sentences.length > 4) {
+    let repeatCount = 0;
+    for (let i = 1; i < sentences.length; i++) {
+      const prev = sentences[i - 1].trim().slice(0, 6);
+      const curr = sentences[i].trim().slice(0, 6);
+      if (prev && curr && prev === curr) repeatCount++;
+    }
+    if (repeatCount >= 2) {
+      patterns.push(`[반복] 연속 문장 같은 패턴 시작 (${repeatCount}회)`);
+      score += repeatCount * 2;
+    }
+  }
+
+  return {
+    detected: score > 0,
+    patterns,
+    score,
+  };
 }
