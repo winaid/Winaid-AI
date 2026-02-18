@@ -1081,7 +1081,7 @@ const App: React.FC = () => {
                 </div>
               )}
               
-              {(state.error.includes('네트워크') || state.error.includes('인터넷')) && (
+              {((getCurrentState().error || state.error || '').includes('네트워크') || (getCurrentState().error || state.error || '').includes('인터넷')) && (
                 <div className={`text-xs space-y-1 ${darkMode ? 'text-red-400' : 'text-red-600'}`}>
                   <p>• 인터넷 연결을 확인해주세요.</p>
                   <p>• VPN을 사용 중이라면 끄고 다시 시도해주세요.</p>
@@ -1092,7 +1092,7 @@ const App: React.FC = () => {
             <button
               onClick={() => setState(prev => ({ ...prev, error: null }))}
               className={`w-full px-4 py-3 font-bold rounded-xl transition-all ${
-                state.error.includes('API 사용량') || state.error.includes('quota') || state.error.includes('limit')
+                (getCurrentState().error || state.error || '').includes('API 사용량') || (getCurrentState().error || state.error || '').includes('quota') || (getCurrentState().error || state.error || '').includes('limit')
                   ? 'bg-amber-500 hover:bg-amber-600 text-white'
                   : 'bg-emerald-500 hover:bg-emerald-600 text-white'
               }`}
