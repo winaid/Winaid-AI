@@ -4189,7 +4189,7 @@ ${JSON.stringify(searchResults, null, 2)}
           required: ["title", "content"]
         };
 
-        // 🚀 Pro로 바로 생성 (thinkingLevel: medium으로 규칙 준수율 향상)
+        // 🚀 Pro로 바로 생성
         const geminiResponse = await callGemini({
           prompt: isCardNews ? cardNewsPrompt : blogPrompt,
           systemPrompt,
@@ -4199,7 +4199,6 @@ ${JSON.stringify(searchResults, null, 2)}
           schema: responseSchema,
           timeout: TIMEOUTS.GENERATION,
           maxOutputTokens: 16384,  // 충분한 응답 길이 확보
-          thinkingLevel: 'medium',  // 20+규칙 동시 준수를 위한 사고 예산
         });
 
         console.log('✅ Pro 생성 완료');
