@@ -302,6 +302,7 @@ export function detectAiSmell(text: string): { detected: boolean; patterns: stri
     [/정리해\s*봅니다/g, '~정리해 봅니다 (메타 설명)'],
     [/도움이\s*되길\s*바랍니다/g, '도움이 되길 바랍니다 (AI 마무리)'],
     [/도움이\s*되셨으면/g, '도움이 되셨으면 (AI 마무리)'],
+    [/진단/g, '진단 (의료광고법 금지)'],
   ];
 
   for (const [regex, label] of critical) {
