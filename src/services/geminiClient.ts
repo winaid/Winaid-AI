@@ -36,6 +36,7 @@ export interface GeminiCallConfig {
   systemPrompt?: string;
   systemInstruction?: string;  // Gemini API의 별도 system instruction으로 전송
   temperature?: number;
+  thinkingLevel?: 'none' | 'low' | 'medium' | 'high';  // Gemini thinking budget
   topP?: number;
   maxOutputTokens?: number;
 }
@@ -180,6 +181,11 @@ export async function callGemini(config: GeminiCallConfig): Promise<any> {
   // Gemini API system instruction 분리 전송
   if (config.systemInstruction) {
     apiConfig.config.systemInstruction = systemText;
+  }
+
+  // Thinking level 설정
+  if (config.thinkingLevel && config.thinkingLevel !== 'none') {
+    apiConfig.config.thinkingConfig = { thinkingBudget: config.thinkingLevel === 'low' ? 1024 : config.thinkingLevel === 'medium' ? 4096 : 8192 };
   }
 
   // Google Search 설정

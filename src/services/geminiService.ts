@@ -3017,7 +3017,7 @@ style 속성에 background: ${bgGradient}; 반드시 포함!
     ? Array.from({length: targetImageCount}, (_, i) => `[IMG_${i+1}]`).join(', ')
     : ''; // 향후 이미지 위치 지정에 활용 가능
   const writingStyle = request.writingStyle || 'empathy'; // 기본값: 공감형
-  const _writingStylePrompt = getWritingStylePrompts()[writingStyle]; // 향후 스타일 프롬프트에 활용 가능
+  const writingStylePrompt = getWritingStylePrompts()[writingStyle]; // 스타일별 프롬프트 주입
   const imageStyle = request.imageStyle || 'illustration'; // 기본값: 3D 일러스트
   
   // 학습된 말투 스타일 적용
@@ -3278,6 +3278,7 @@ SEO 키워드: "${request.keywords}"
 `}
 ${competitorInstruction}
 ${forbiddenWordsBlock}
+${writingStylePrompt || ''}
 ${learnedStyleInstruction || ''}${customSubheadingInstruction || ''}
 
 ${HUMAN_WRITING_RULES}
@@ -4188,7 +4189,7 @@ ${JSON.stringify(searchResults, null, 2)}
           required: ["title", "content"]
         };
 
-        // 🚀 Pro로 바로 생성
+        // 🚀 Pro로 바로 생성 (thinkingLevel: medium으로 규칙 준수율 향상)
         const geminiResponse = await callGemini({
           prompt: isCardNews ? cardNewsPrompt : blogPrompt,
           systemPrompt,
@@ -4197,7 +4198,8 @@ ${JSON.stringify(searchResults, null, 2)}
           responseType: 'json',
           schema: responseSchema,
           timeout: TIMEOUTS.GENERATION,
-          maxOutputTokens: 16384  // 충분한 응답 길이 확보
+          maxOutputTokens: 16384,  // 충분한 응답 길이 확보
+          thinkingLevel: 'medium',  // 20+규칙 동시 준수를 위한 사고 예산
         });
 
         console.log('✅ Pro 생성 완료');
@@ -4422,6 +4424,71 @@ ${contentText}
     // 분석된 스타일 정보 추가
     if (analyzedBgColor) {
       result.analyzedStyle = { backgroundColor: analyzedBgColor };
+    }
+
+    // ──────────────────────────────────────────────
+    // 🔍 Stage 1.5: 도입부 품질 게이트 (3요소 검증 → 미달 시 도입부만 재생성)
+    // ──────────────────────────────────────────────
+    if (!isCardNews && result.content && typeof result.content === 'string' && result.content.length > 300) {
+      try {
+        // 도입부 추출: 첫 번째 <h2> 또는 <h3> 전까지의 <p> 태그들
+        const firstHeadingIdx = result.content.search(/<h[23][^>]*>/);
+        const introHtml = firstHeadingIdx > 0 ? result.content.slice(0, firstHeadingIdx) : '';
+        const introText = introHtml.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+
+        if (introText.length > 30) {
+          // 3요소 검증: 장소/동작/감각 각각 최소 1개 단서가 있는지
+          const placeSignals = /엘리베이터|마트|횡단보도|주차장|세탁기|편의점|약국|버스|식탁|화장실|거울|공원|벤치|카페|지하철|계단|옷장|현관|신발장|사무실|식당|냉장고|침실|세면대|탈의실|회의실|노래방|모니터|운전석|침대/.test(introText);
+          const actionSignals = /누르|들다|묶|돌리|내려놓|올려|꺼내|접다|기대|쪼그|뻗|돌아보|일어서|걸치|비틀|팔을|짐을|손잡이|빨래|씹|양치|마시|앉|걷|눕|숙이|서다|읽|깜빡|바르/.test(introText);
+          const sensationSignals = /멈칫|찌릿|뻣뻣|묵직|시큰|뜨끔|먹먹|어질|뻑뻑|걸리는|당기는|힘이 안|뻐근|욱신|무겁|까끌|따가|가려|붉|건조|더부룩|쓰린|답답|울렁|콕콕|빵빵|시린|흔들|침침|뿌연|칼칼|막히|간지|갈라|울리|두근|나른|갑갑|후끈/.test(introText);
+
+          const score = (placeSignals ? 1 : 0) + (actionSignals ? 1 : 0) + (sensationSignals ? 1 : 0);
+
+          // 정의형/메타설명형 도입부 감지
+          const isBadPattern = /이란|질환입니다|알아보겠|살펴보겠|에 대해|많은 분들이|누구나 한 번/.test(introText);
+
+          if (score < 2 || isBadPattern) {
+            safeProgress('🔍 Stage 1.5: 도입부 품질 미달 → 재생성 중...');
+            const introRegenPrompt = `아래 블로그 글의 도입부(첫 문단들)가 품질 기준에 미달합니다.
+도입부만 새로 작성해주세요.
+
+[필수 3요소 - 모두 포함]
+1. 구체적 장소 (그림이 떠오르는 곳): 주차장, 마트, 세탁기 앞, 편의점 등
+2. 사소한 동작 (구체적인 한 가지): 팔 뻗다, 짐 들다, 쪼그리다 등
+3. 예상 밖의 감각 (질환 연결): 찌릿, 뻣뻣, 묵직, 걸리는 느낌 등
+
+[금지]
+- 질환명으로 시작
+- "~이란", "~에 대해", "알아보겠습니다", "많은 분들이"
+- 독자에게 질문하거나 말 걸기
+- "습니다" 체 유지
+
+[현재 도입부]
+${introHtml}
+
+[글의 주제]
+${request.topic}${request.disease ? `, 질환: ${request.disease}` : ''}
+
+새 도입부를 HTML(<p> 태그)로 작성하세요. 1~2문단, 150자 내외.`;
+
+            const newIntro = await callGemini({
+              prompt: introRegenPrompt,
+              model: GEMINI_MODEL.FLASH,
+              responseType: 'text',
+              timeout: TIMEOUTS.QUICK_OPERATION,
+              temperature: 0.9,  // 창의적 도입부를 위해 높은 temperature
+            });
+
+            if (newIntro && typeof newIntro === 'string' && newIntro.includes('<p>') && newIntro.length > 50) {
+              const cleanIntro = newIntro.trim();
+              result.content = cleanIntro + result.content.slice(firstHeadingIdx);
+              safeProgress('✅ Stage 1.5: 도입부 재생성 완료');
+            }
+          }
+        }
+      } catch (introError) {
+        console.warn('⚠️ Stage 1.5 도입부 검증 스킵:', introError);
+      }
     }
 
     // ──────────────────────────────────────────────
