@@ -286,40 +286,34 @@ export async function callGemini(config: GeminiCallConfig): Promise<any> {
       return result;
     }
   } catch (error: any) {
-    // 503 서버 과부하 → 재시도 (최대 2회, 지수 백오프)
+    // 503 서버 과부하 또는 타임아웃 → FLASH 폴백 재시도
     const is503 = error?.status === 503 || error?.message?.includes('503') || error?.message?.includes('UNAVAILABLE');
-    if (is503) {
-      for (let retry = 0; retry < 2; retry++) {
-        const waitMs = (retry + 1) * 2000; // 2초, 4초
-        console.warn(`⚠️ 503 서버 과부하 - ${waitMs/1000}초 후 재시도 (${retry + 1}/2)...`);
-        await new Promise(resolve => setTimeout(resolve, waitMs));
+    const isTimeout = error?.message?.includes('timeout') || error?.message?.includes('Timeout');
+    const shouldRetry = is503 || isTimeout;
 
-        try {
-          // 재시도 시 바로 FLASH 모델로 폴백
-          const retryConfig = { ...apiConfig };
-          if (apiConfig.model === GEMINI_MODEL.PRO) {
-            retryConfig.model = GEMINI_MODEL.FLASH;
-            console.warn('⚠️ PRO 모델 503 → FLASH 모델로 폴백');
+    if (shouldRetry && apiConfig.model === GEMINI_MODEL.PRO) {
+      console.warn(`⚠️ PRO 모델 ${is503 ? '503 과부하' : '타임아웃'} → FLASH 폴백 시도...`);
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      try {
+        const retryConfig = { ...apiConfig, model: GEMINI_MODEL.FLASH };
+        const retryResult: any = await Promise.race([
+          ai.models.generateContent(retryConfig),
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('FLASH 폴백도 타임아웃')), 90000) // 90초
+          )
+        ]);
+        if (retryResult) {
+          console.log('✅ FLASH 폴백 성공');
+          if (config.responseType === 'text') {
+            return retryResult.text || '';
+          } else if (config.responseType === 'json') {
+            try { return JSON.parse(retryResult.text || '{}'); } catch { return retryResult; }
           }
-          const retryResult: any = await Promise.race([
-            ai.models.generateContent(retryConfig),
-            new Promise((_, reject) =>
-              setTimeout(() => reject(new Error('Gemini API timeout (retry)')), timeout)
-            )
-          ]);
-          if (retryResult) {
-            console.log(`✅ 503 재시도 ${retry + 1}회차 성공`);
-            // 응답 처리 (text/json)
-            if (config.responseType === 'text') {
-              return retryResult.text || '';
-            } else if (config.responseType === 'json') {
-              try { return JSON.parse(retryResult.text || '{}'); } catch { return retryResult; }
-            }
-            return retryResult;
-          }
-        } catch (retryError: any) {
-          console.warn(`⚠️ 503 재시도 ${retry + 1}회차 실패:`, retryError?.message?.substring(0, 100));
+          return retryResult;
         }
+      } catch (retryError: any) {
+        console.warn('⚠️ FLASH 폴백도 실패:', retryError?.message?.substring(0, 100));
       }
     }
 
