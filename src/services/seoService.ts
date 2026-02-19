@@ -768,16 +768,17 @@ ${safeHtmlContent.substring(0, 8000)}
 JSON 형식으로 응답해주세요.`;
 
   try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-3-pro-preview',
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            total: { type: Type.INTEGER },
-            title: {
+    const response: any = await Promise.race([
+      ai.models.generateContent({
+        model: 'gemini-3-flash-preview',  // FLASH로 빠른 평가
+        contents: prompt,
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              total: { type: Type.INTEGER },
+              title: {
               type: Type.OBJECT,
               properties: {
                 score: { type: Type.INTEGER },
@@ -844,7 +845,11 @@ JSON 형식으로 응답해주세요.`;
           required: ["total", "title", "keyword_structure", "user_retention", "medical_safety", "conversion", "improvement_suggestions"]
         }
       }
-    });
+    }),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('SEO 평가 타임아웃 (60초)')), 60000)
+      )
+    ]);
 
     const result = JSON.parse(response.text || "{}");
 
