@@ -20,7 +20,8 @@ export const GEMINI_MODEL = {
 } as const;
 
 export const TIMEOUTS = {
-  GENERATION: 300000,      // 5분
+  GENERATION: 120000,       // 2분 (기존 5분 → 단축)
+  CONTENT_GENERATION: 120000, // 2분
   IMAGE_GENERATION: 180000, // 3분
   QUICK_OPERATION: 60000,   // 60초 (임베딩 API 타임아웃 대응)
 } as const;
@@ -289,16 +290,16 @@ export async function callGemini(config: GeminiCallConfig): Promise<any> {
     const is503 = error?.status === 503 || error?.message?.includes('503') || error?.message?.includes('UNAVAILABLE');
     if (is503) {
       for (let retry = 0; retry < 2; retry++) {
-        const waitMs = (retry + 1) * 3000; // 3초, 6초
+        const waitMs = (retry + 1) * 2000; // 2초, 4초
         console.warn(`⚠️ 503 서버 과부하 - ${waitMs/1000}초 후 재시도 (${retry + 1}/2)...`);
         await new Promise(resolve => setTimeout(resolve, waitMs));
 
         try {
-          // 재시도 시 FLASH 모델로 폴백 (2번째 시도부터)
+          // 재시도 시 바로 FLASH 모델로 폴백
           const retryConfig = { ...apiConfig };
-          if (retry >= 1 && apiConfig.model === GEMINI_MODEL.PRO) {
+          if (apiConfig.model === GEMINI_MODEL.PRO) {
             retryConfig.model = GEMINI_MODEL.FLASH;
-            console.warn('⚠️ PRO 모델 503 지속 → FLASH 모델로 폴백');
+            console.warn('⚠️ PRO 모델 503 → FLASH 모델로 폴백');
           }
           const retryResult: any = await Promise.race([
             ai.models.generateContent(retryConfig),
