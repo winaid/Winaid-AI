@@ -284,7 +284,44 @@ export async function callGemini(config: GeminiCallConfig): Promise<any> {
       // responseType이 없으면 전체 객체 반환 (기존 동작 유지)
       return result;
     }
-  } catch (error) {
+  } catch (error: any) {
+    // 503 서버 과부하 → 재시도 (최대 2회, 지수 백오프)
+    const is503 = error?.status === 503 || error?.message?.includes('503') || error?.message?.includes('UNAVAILABLE');
+    if (is503) {
+      for (let retry = 0; retry < 2; retry++) {
+        const waitMs = (retry + 1) * 3000; // 3초, 6초
+        console.warn(`⚠️ 503 서버 과부하 - ${waitMs/1000}초 후 재시도 (${retry + 1}/2)...`);
+        await new Promise(resolve => setTimeout(resolve, waitMs));
+
+        try {
+          // 재시도 시 FLASH 모델로 폴백 (2번째 시도부터)
+          const retryConfig = { ...apiConfig };
+          if (retry >= 1 && apiConfig.model === GEMINI_MODEL.PRO) {
+            retryConfig.model = GEMINI_MODEL.FLASH;
+            console.warn('⚠️ PRO 모델 503 지속 → FLASH 모델로 폴백');
+          }
+          const retryResult: any = await Promise.race([
+            ai.models.generateContent(retryConfig),
+            new Promise((_, reject) =>
+              setTimeout(() => reject(new Error('Gemini API timeout (retry)')), timeout)
+            )
+          ]);
+          if (retryResult) {
+            console.log(`✅ 503 재시도 ${retry + 1}회차 성공`);
+            // 응답 처리 (text/json)
+            if (config.responseType === 'text') {
+              return retryResult.text || '';
+            } else if (config.responseType === 'json') {
+              try { return JSON.parse(retryResult.text || '{}'); } catch { return retryResult; }
+            }
+            return retryResult;
+          }
+        } catch (retryError: any) {
+          console.warn(`⚠️ 503 재시도 ${retry + 1}회차 실패:`, retryError?.message?.substring(0, 100));
+        }
+      }
+    }
+
     console.error('❌ Gemini API 호출 실패:', error);
     // 에러 모니터링 (비동기, 실패해도 무시)
     import('./errorMonitoringService').then(({ trackError }) => {
