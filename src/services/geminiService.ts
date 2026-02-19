@@ -4199,16 +4199,16 @@ ${JSON.stringify(searchResults, null, 2)}
           required: ["title", "content"]
         };
 
-        // 🚀 Pro로 바로 생성
+        // 🚀 Pro로 생성 시도 (60초), 실패 시 FLASH 자동 폴백
         const geminiResponse = await callGemini({
           prompt: isCardNews ? cardNewsPrompt : blogPrompt,
           systemPrompt,
-          model: GEMINI_MODEL.PRO,  // Pro로 고품질 생성!
+          model: GEMINI_MODEL.PRO,
           googleSearch: useGoogleSearch,
           responseType: 'json',
           schema: responseSchema,
-          timeout: TIMEOUTS.GENERATION,
-          maxOutputTokens: 16384,  // 충분한 응답 길이 확보
+          timeout: 60000,  // PRO 60초 제한 → 타임아웃 시 FLASH 폴백
+          maxOutputTokens: 16384,
         });
 
         console.log('✅ Pro 생성 완료');
@@ -4525,7 +4525,7 @@ ${request.topic}${request.disease ? `, 질환: ${request.disease}` : ''}
           model: GEMINI_MODEL.PRO,
           systemInstruction: stage2Prompt,
           responseType: 'text',
-          timeout: TIMEOUTS.CONTENT_GENERATION,
+          timeout: 60000,  // 60초 → 타임아웃 시 FLASH 폴백
           temperature: 0.3,
         });
 
