@@ -313,6 +313,12 @@ export function detectAiSmell(text: string): { detected: boolean; patterns: stri
     [/경고입니다/g, '경고입니다 (공포)'],
     [/위험이\s*생길/g, '위험이 생길 (공포)'],
     [/합병증/g, '합병증 (공포 유발)'],
+    [/병원/g, '병원 (방문 유도)'],
+    [/선생님/g, '선생님 (의료진 유도)'],
+    [/해야\s*합니다/g, '~해야 합니다 (지시)'],
+    [/바랍니다/g, '~바랍니다 (지시)'],
+    [/마시길/g, '~마시길 (지시)'],
+    [/것이\s*필요합니다/g, '~것이 필요합니다 (지시)'],
   ];
 
   for (const [regex, label] of critical) {
@@ -373,6 +379,11 @@ export function detectAiSmell(text: string): { detected: boolean; patterns: stri
     [/작은\s*신호/g, '작은 신호 (AI 클리셰)'],
     [/보내는\s*신호/g, '보내는 신호 (AI 클리셰)'],
     [/첫걸음/g, '첫걸음 (AI 클리셰)'],
+    [/편입니다/g, '~편입니다 (AI 어미)'],
+    [/셈입니다/g, '~셈입니다 (AI 어미)'],
+    [/것입니다/g, '~것입니다 (AI 어미)'],
+    [/동반됩니다/g, '동반됩니다 (논문투)'],
+    [/조성됩니다|조성되는/g, '조성 (논문투)'],
   ];
 
   for (const [regex, label] of aiTransitions) {
