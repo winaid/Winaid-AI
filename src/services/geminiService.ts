@@ -3757,7 +3757,7 @@ ${hospitalInfo}
     console.log('📍 onProgress 호출 직전...');
     try {
       if (typeof onProgress === 'function') {
-        safeProgress('🔍 [1/3] 질병관리청 최신 정보 검색 중... (~10초)');
+        safeProgress('🔍 [1/2] 최신 정보 검색 중... (~10초)');
       } else {
         console.warn('⚠️ onProgress가 함수가 아님:', typeof onProgress);
       }
@@ -4090,13 +4090,8 @@ JSON 형식으로 응답:
     
     // 📍 Step 2: AI가 검색 결과를 바탕으로 글 작성
     console.log('📍 Step 2 시작: AI 글쓰기...');
-    if (typeof onProgress === 'function') {
-      safeProgress('✍️ [2/3] 의료광고법 규칙 적용 중...');
-    }
-    
     // Gemini 전용 동적 프롬프트 사용 - v6.7 업데이트 (최신 의료광고법 자동 반영)
     const geminiSystemPrompt = await getDynamicSystemPrompt();
-    safeProgress('✅ [2/3] 의료광고법 규칙 적용 완료');
     
     // 크로스체크 상태에 따른 신뢰도 안내 (둘 다 실패는 이미 위에서 throw됨)
     // crossCheckGuide 제거 (GPT 없으므로 불필요)
@@ -4180,7 +4175,7 @@ ${JSON.stringify(searchResults, null, 2)}
       console.log('📦 프롬프트 미리보기 (처음 1000자):', `${systemPrompt}\n\n${finalPrompt}`.substring(0, 1000));
 
       // 🎬 Pro로 바로 생성 (단일 단계)
-      safeProgress('✍️ [3/3] Pro로 글 작성 중... (~30초)');
+      safeProgress('✍️ [2/2] 글 작성 중... (~30초)');
 
       try {
         // 🔍 Google Search 최적화: 필요한 경우에만 활성화
