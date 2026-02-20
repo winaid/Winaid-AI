@@ -169,7 +169,7 @@ JSON 형식으로 답변:
 
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-3-pro-preview',
+      model: 'gemini-3.1-pro-preview',  // 카드뉴스 슬라이드 수정은 3.1 PRO
       contents: prompt,
       config: {
         responseMimeType: "application/json",
@@ -330,7 +330,7 @@ JSON 형식:
 
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-3-pro-preview',
+      model: 'gemini-3.1-pro-preview',  // 카드뉴스 표지 재생성은 3.1 PRO
       contents: prompt,
       config: {
         responseMimeType: "application/json",
@@ -443,7 +443,7 @@ ${FEW_SHOT_EXAMPLES}
 `;
 
       const response = await ai.models.generateContent({
-        model: "gemini-3-pro-preview",  // 고품질 글쓰기용 pro 모델
+        model: "gemini-3.1-pro-preview",  // 고품질 글쓰기용 3.1 PRO 모델
         contents: modifyPrompt,
         config: { 
           responseMimeType: "application/json", 
@@ -712,7 +712,7 @@ JSON 형식으로 응답해주세요.`;
     
     // 📊 스키마 단순화
     const analysisPromise = ai.models.generateContent({
-      model: 'gemini-3-pro-preview',
+      model: 'gemini-3-flash-preview',  // AI 냄새 분석은 FLASH
       contents: prompt,
       config: {
         responseMimeType: "application/json",
@@ -843,7 +843,7 @@ JSON 형식으로 응답해주세요.`;
     const RECHECK_TIMEOUT = 60000;
     
     const analysisPromise = ai.models.generateContent({
-      model: 'gemini-3-pro-preview',
+      model: 'gemini-3-flash-preview',  // 재검증 분석은 FLASH
       contents: prompt,
       config: {
         responseMimeType: "application/json",

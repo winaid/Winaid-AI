@@ -1584,7 +1584,7 @@ export const analyzeStyleReferenceImage = async (base64Image: string, isCover: b
   
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-3-pro-preview',
+      model: 'gemini-3-flash-preview',  // 스타일 분석은 FLASH
       contents: [
         {
           role: 'user',
@@ -1981,7 +1981,7 @@ ${slideCount >= 7 ? `**5~${slideCount-2}장 - 시점 고정 (🔥 핵심! 🔥)*
 
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-3-pro-preview',
+      model: 'gemini-3.1-pro-preview',  // 카드뉴스 스크립트 생성은 3.1 PRO
       contents: prompt,
       config: {
         tools: [{ googleSearch: {} }],
@@ -2261,7 +2261,7 @@ ${hasWindowButtons ? '- 브라우저 창 버튼(빨/노/초) 포함' : ''}
 
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-3-pro-preview',
+      model: 'gemini-3-flash-preview',  // 이미지 프롬프트 생성은 FLASH
       contents: prompt,
       config: {
         responseMimeType: "application/json",
@@ -2402,7 +2402,7 @@ const _imagePromptAgent = async (
 
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-3-pro-preview',
+      model: 'gemini-3-flash-preview',  // 이미지 프롬프트 생성은 FLASH
       contents: prompt,
       config: {
         responseMimeType: "application/json",
@@ -2576,7 +2576,7 @@ ${slideCount >= 7 ? `**5~${slideCount-2}장 - 추가 정보/사례**
 
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-3-pro-preview',
+      model: 'gemini-3.1-pro-preview',  // 카드뉴스 생성은 3.1 PRO
       contents: prompt,
       config: {
         tools: [{ googleSearch: {} }],
@@ -4747,7 +4747,7 @@ ${getStylePromptForGeneration(learnedStyle)}
           // AI로 병원 강점 분석
           const ai = getAiClient();
           const analysisResult = await ai.models.generateContent({
-            model: 'gemini-3-pro-preview',
+            model: 'gemini-3-flash-preview',  // 병원 정보 분석은 FLASH
             contents: `다음은 ${hospitalName}의 웹사이트 내용입니다. 
             
 웹사이트 내용:

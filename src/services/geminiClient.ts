@@ -15,7 +15,7 @@ import {
 
 // 🎯 Gemini API 상수
 export const GEMINI_MODEL = {
-  PRO: 'gemini-3-pro-preview',      // 글 생성, 채팅 보정 등 고품질 작업
+  PRO: 'gemini-3.1-pro-preview',    // 글 생성, 채팅 보정 등 고품질 작업 (3.1 Pro)
   FLASH: 'gemini-3-flash-preview',  // 검색, 자동 보정 등 빠른 작업
 } as const;
 

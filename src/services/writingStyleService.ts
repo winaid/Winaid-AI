@@ -2,7 +2,7 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { LearnedWritingStyle } from "../types";
 
 const GEMINI_MODEL = {
-  PRO: 'gemini-3-pro-preview',
+  PRO: 'gemini-3.1-pro-preview',
 } as const;
 
 const getAiClient = () => {

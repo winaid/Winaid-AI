@@ -344,7 +344,7 @@ ${wantsHumanize ? `
 ❌ "수정했습니다" 같은 메타 설명 금지!`;
 
       const result = await ai.models.generateContent({
-        model: 'gemini-3-pro-preview',
+        model: 'gemini-3.1-pro-preview',  // 채팅 보정은 3.1 PRO
         contents: prompt,
         config: {
           tools: [{ googleSearch: {} }] // Google Search 활성화
