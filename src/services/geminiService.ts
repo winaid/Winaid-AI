@@ -3757,7 +3757,7 @@ ${hospitalInfo}
     console.log('📍 onProgress 호출 직전...');
     try {
       if (typeof onProgress === 'function') {
-        safeProgress('🔍 [1/2] 최신 정보 검색 중... (~10초)');
+        safeProgress('🔍 최신 정보 검색 중...');
       } else {
         console.warn('⚠️ onProgress가 함수가 아님:', typeof onProgress);
       }
@@ -4175,7 +4175,7 @@ ${JSON.stringify(searchResults, null, 2)}
       console.log('📦 프롬프트 미리보기 (처음 1000자):', `${systemPrompt}\n\n${finalPrompt}`.substring(0, 1000));
 
       // 🎬 Pro로 바로 생성 (단일 단계)
-      safeProgress('✍️ [2/2] 글 작성 중... (~30초)');
+      safeProgress('✍️ 글 작성 중...');
 
       try {
         // 🔍 Google Search 최적화: 필요한 경우에만 활성화
