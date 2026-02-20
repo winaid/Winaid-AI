@@ -106,8 +106,8 @@ const searchNewsForTrends = async (category: string, _month: number): Promise<st
       // Gemini 3 Flash로 뉴스 분석하여 최적화된 인사이트 추출
       try {
         const ai = getAiClient();
-        const analysisResponse = await ai.models.generateContent({
-          model: GEMINI_MODEL.FLASH, // gemini-3-flash-preview
+        const analysisResponse: any = await Promise.race([ai.models.generateContent({
+          model: GEMINI_MODEL.FLASH,
           contents: `아래는 "${category}" 관련 네이버 뉴스 검색 결과입니다. 이를 분석하여 블로그 작성에 활용할 수 있는 최적의 인사이트를 추출해주세요.
 
 [네이버 뉴스 검색 결과]
@@ -139,7 +139,7 @@ ${newsContext}
             temperature: 0.4,
             thinkingConfig: { thinkingLevel: "low" }
           }
-        });
+        }), new Promise((_, reject) => setTimeout(() => reject(new Error('뉴스 분석 타임아웃')), 30000))]);
 
         const analysisResult = analysisResponse.text || '';
         console.log(`[뉴스 트렌드] Gemini Flash 분석 완료`);
@@ -161,8 +161,8 @@ ${newsContext}
     try {
       const ai = getAiClient();
 
-      const response = await ai.models.generateContent({
-        model: 'gemini-3-pro-preview',
+      const response: any = await Promise.race([ai.models.generateContent({
+        model: 'gemini-3-flash-preview',
         contents: `최근 한국 뉴스에서 "${searchKeyword}" 관련 기사를 검색하고,
 가장 많이 다뤄지는 건강/의료 이슈 3가지를 요약해주세요.
 
@@ -177,7 +177,7 @@ ${newsContext}
           responseMimeType: "text/plain",
           temperature: 0.3
         }
-      });
+      }), new Promise((_, reject) => setTimeout(() => reject(new Error('뉴스 검색 타임아웃')), 30000))]);
 
       const newsContext = response.text || '';
       console.log(`[뉴스 트렌드] Gemini 검색 완료`);
@@ -241,8 +241,9 @@ export const getTrendingTopics = async (category: string): Promise<TrendingItem[
   const newsContext = await searchNewsForTrends(category, month);
 
   // Gemini AI 기반 트렌드 분석 (구글 검색 + 뉴스 컨텍스트 기반)
-  const response = await ai.models.generateContent({
-    model: 'gemini-3-pro-preview',
+  const response: any = await Promise.race([
+    ai.models.generateContent({
+      model: 'gemini-3-flash-preview',  // FLASH로 빠른 응답
     contents: `[🕐 정확한 현재 시각: ${dateStr} 기준 (한국 표준시)]
 [🎲 다양성 시드: ${randomSeed}]
 
@@ -296,7 +297,11 @@ ${newsContext ? '6. **뉴스 트렌드 반영 필수**: 위 뉴스에서 언급�
       },
       temperature: 0.9 // 다양성을 위해 temperature 높임
     }
-  });
+  }),
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('인기 키워드 조회 타임아웃 (60초)')), 60000)
+    )
+  ]);
   return JSON.parse(response.text || "[]");
 };
 
@@ -451,8 +456,8 @@ JSON 배열로 출력한다. 각 항목은 다음 구조를 따른다:
   "type": "증상질환형" | "변화원인형" | "확인형" | "정상범위형"
 }`;
 
-  const response = await ai.models.generateContent({
-    model: 'gemini-3-pro-preview',
+  const response: any = await Promise.race([ai.models.generateContent({
+    model: 'gemini-3-flash-preview',
     contents: prompt,
     config: {
       responseMimeType: "application/json",
@@ -469,7 +474,7 @@ JSON 배열로 출력한다. 각 항목은 다음 구조를 따른다:
         }
       }
     }
-  });
+  }), new Promise((_, reject) => setTimeout(() => reject(new Error('SEO 제목 추천 타임아웃')), 60000))]);
   return JSON.parse(response.text || "[]");
 };
 
@@ -548,8 +553,8 @@ finalScore = legalSafety + naturalness + relevance + ctr
 - reason: 한 줄로 평가 이유 요약
 - recommendation: "추천" | "보통" | "비추천"`;
 
-  const response = await ai.models.generateContent({
-    model: 'gemini-3-pro-preview',
+  const response: any = await Promise.race([ai.models.generateContent({
+    model: 'gemini-3-flash-preview',
     contents: prompt,
     config: {
       responseMimeType: "application/json",
@@ -572,7 +577,7 @@ finalScore = legalSafety + naturalness + relevance + ctr
         }
       }
     }
-  });
+  }), new Promise((_, reject) => setTimeout(() => reject(new Error('SEO 제목 랭킹 타임아웃')), 60000))]);
 
   const rankedTitles = JSON.parse(response.text || "[]");
 
