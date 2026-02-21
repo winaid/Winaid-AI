@@ -28,6 +28,9 @@ async function getTextEmbedding(text: string): Promise<number[]> {
     const embedPromise = ai.models.embedContent({
       model: 'gemini-embedding-001',
       contents: cleanText,
+      config: {
+        outputDimensionality: 768,  // DB 컬럼이 768차원
+      },
     });
     const result = await Promise.race([embedPromise, timeoutPromise]);
 
