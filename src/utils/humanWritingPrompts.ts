@@ -461,14 +461,21 @@ export function detectAiSmell(text: string): { detected: boolean; patterns: stri
     }
   }
 
-  // ── 7. "~기도 합니다" 남발 체크 (+3점) ──
+  // ── 7. "~해야 합니다" 금지 어미 체크 (+4점) ──
+  const haeyaMatches = text.match(/해야\s*합니다/g);
+  if (haeyaMatches && haeyaMatches.length >= 1) {
+    patterns.push(`[금지어미] "~해야 합니다" ${haeyaMatches.length}회 (3대 금지 어미)`);
+    score += haeyaMatches.length * 4;
+  }
+
+  // ── 9. "~기도 합니다" 남발 체크 (+3점) ──
   const gidoMatches = text.match(/기도\s*합니다/g);
   if (gidoMatches && gidoMatches.length >= 4) {
     patterns.push(`[남발] "~기도 합니다" ${gidoMatches.length}회 (최대 3회 권장)`);
     score += (gidoMatches.length - 3) * 3;
   }
 
-  // ── 8. "~게 됩니다" 피동형 남발 체크 (+3점) ──
+  // ── 10. "~게 됩니다" 피동형 남발 체크 (+3점) ──
   const passiveMatches = text.match(/게\s*됩니다/g);
   if (passiveMatches && passiveMatches.length >= 3) {
     patterns.push(`[남발] "~게 됩니다" ${passiveMatches.length}회 (피동형 반복)`);
