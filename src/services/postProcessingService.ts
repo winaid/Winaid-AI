@@ -1148,10 +1148,10 @@ ${textContent}
   try {
     safeProgress('⚖️ 의료광고법 준수 여부 검증 중...');
     
-    // 🔧 자동 보정은 Flash 모델 사용 (빠른 처리)
+    // 🔧 자동 보정도 PRO 사용 (글쓰기 품질 우선)
     const result = await callGemini({
       prompt,
-      model: GEMINI_MODEL.FLASH,  // 자동 보정: Flash (빠름)
+      model: GEMINI_MODEL.PRO,  // 자동 보정: PRO (글쓰기 품질)
       responseType: 'json',
       timeout: TIMEOUTS.GENERATION,
       tools: [{ googleSearch: {} }] // Google Search 활성화
