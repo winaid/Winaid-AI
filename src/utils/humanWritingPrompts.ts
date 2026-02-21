@@ -334,7 +334,7 @@ export function detectAiSmell(text: string): { detected: boolean; patterns: stri
 
   // ── 2. 논문/교과서 어투 (high: +3점) ──
   const academic: [RegExp, string][] = [
-    [/전반적으로/g, '전반적으로'],
+    [/전반적/g, '전반적으로/전반적인'],
     [/종합적으로/g, '종합적으로'],
     [/근본적으로/g, '근본적으로'],
     [/궁극적으로/g, '궁극적으로'],
@@ -346,6 +346,7 @@ export function detectAiSmell(text: string): { detected: boolean; patterns: stri
     [/초래하다|초래할|초래합니다/g, '초래하다'],
     [/야기하다|야기할|야기합니다/g, '야기하다'],
     [/호발/g, '호발 (논문 용어)'],
+    [/유익합니다|유익한/g, '유익합니다 (교과서 표현)'],
     [/에\s*있어서/g, '~에 있어서'],
     [/에\s*해당합니다/g, '~에 해당합니다'],
   ];
@@ -376,7 +377,7 @@ export function detectAiSmell(text: string): { detected: boolean; patterns: stri
     [/적절한/g, '적절한'],
     [/효과적/g, '효과적'],
     [/체계적/g, '체계적'],
-    [/마련입니다/g, '~마련입니다'],
+    [/마련입니다|마련이지만|마련이다/g, '~마련이다/마련입니다/마련이지만'],
     [/든든한\s*방패/g, '든든한 방패 (AI 클리셰)'],
     [/귀를\s*기울이/g, '귀를 기울이고 (AI 클리셰)'],
     [/작은\s*신호/g, '작은 신호 (AI 클리셰)'],
@@ -386,6 +387,7 @@ export function detectAiSmell(text: string): { detected: boolean; patterns: stri
     [/것입니다/g, '~것입니다 (AI 어미)'],
     [/동반됩니다/g, '동반됩니다 (논문투)'],
     [/조성됩니다|조성되는/g, '조성 (논문투)'],
+    [/때문입니다/g, '~때문입니다 (원인 확정)'],
   ];
 
   for (const [regex, label] of aiTransitions) {
@@ -457,6 +459,20 @@ export function detectAiSmell(text: string): { detected: boolean; patterns: stri
       patterns.push(`[어미단조] "~${dominantEnding[0]}" 사용률 ${Math.round(dominantEnding[1] / endings.length * 100)}%`);
       score += 4;
     }
+  }
+
+  // ── 7. "~기도 합니다" 남발 체크 (+3점) ──
+  const gidoMatches = text.match(/기도\s*합니다/g);
+  if (gidoMatches && gidoMatches.length >= 4) {
+    patterns.push(`[남발] "~기도 합니다" ${gidoMatches.length}회 (최대 3회 권장)`);
+    score += (gidoMatches.length - 3) * 3;
+  }
+
+  // ── 8. "~게 됩니다" 피동형 남발 체크 (+3점) ──
+  const passiveMatches = text.match(/게\s*됩니다/g);
+  if (passiveMatches && passiveMatches.length >= 3) {
+    patterns.push(`[남발] "~게 됩니다" ${passiveMatches.length}회 (피동형 반복)`);
+    score += (passiveMatches.length - 2) * 3;
   }
 
   return {
