@@ -185,17 +185,13 @@ export function fixMissingSource(text: string): {
   let fixed = text;
   const changes: FixResult['changes'] = [];
 
-  // 🚨 숫자 완전 제거/대체 (P1 규칙)
+  // 숫자 제거 - 의료광고법 위반 가능성 높은 패턴만 (본문 의학 정보 숫자는 보존)
   const numberReplacements: [RegExp, string, string][] = [
     [/(\d+(?:\.\d+)?%)/g, '상당수', '퍼센트 수치 금지'],
     [/(\d+(?:,\d+)*명)/g, '많은 분들이', '인원 수치 금지'],
     [/(\d+(?:,\d+)*건)/g, '여러 사례에서', '건수 수치 금지'],
     [/(\d+배)/g, '상당히 높은', '배수 표현 금지'],
     [/(\d+여\s*종)/g, '다양한', '수량 표현 금지'],
-    [/(\d+~\d+일)/g, '며칠', '기간 수치 금지'],
-    [/(\d+주)/g, '일정 기간', '기간 수치 금지'],
-    [/(\d+시간)/g, '일정 시간', '시간 수치 금지'],
-    [/(\d+대)/g, '중년층/젊은 분들', '연령대 수치 금지'],
   ];
 
   for (const [pattern, replacement, reason] of numberReplacements) {

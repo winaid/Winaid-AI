@@ -8,7 +8,7 @@ import { Type } from "@google/genai";
 import { ImageStyle, FactCheckReport } from "../types";
 import { GEMINI_MODEL, TIMEOUTS, callGemini, getAiClient } from "./geminiClient";
 import { SYSTEM_PROMPT, getStage2_AiRemovalAndCompliance, getDynamicSystemPrompt } from "../lib/gpt52-prompts-staged";
-import { detectAiSmell, HUMAN_WRITING_RULES, MEDICAL_LAW_HUMAN_PROMPT, FEW_SHOT_EXAMPLES, CATEGORY_SPECIFIC_PROMPTS, PARAGRAPH_STRUCTURE_GUIDE } from "../utils/humanWritingPrompts";
+import { detectAiSmell, FEW_SHOT_EXAMPLES, CATEGORY_SPECIFIC_PROMPTS, PARAGRAPH_STRUCTURE_GUIDE } from "../utils/humanWritingPrompts";
 
 // STYLE_KEYWORDS (geminiService.ts에서 순환참조 방지를 위해 직접 정의)
 const STYLE_KEYWORDS: Record<ImageStyle, string> = {
@@ -397,10 +397,6 @@ ${SYSTEM_PROMPT}
 ❌ 요청 외 부분 수정 → 탈락!
 ❌ 길이 ±20% 초과 → 탈락!
 ❌ 소제목/도입부/마무리 추가 → 탈락!
-
-${HUMAN_WRITING_RULES}
-
-${MEDICAL_LAW_HUMAN_PROMPT}
 
 체크: 요청 부분만 수정? 길이 ±20%? 의료광고법 준수?
 
