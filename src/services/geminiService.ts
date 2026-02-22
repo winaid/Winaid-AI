@@ -4240,48 +4240,42 @@ ${JSON.stringify(searchResults, null, 2)}
         const introText = introHtml.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
 
         if (introText.length > 30) {
-          // 3요소 검증: 장소/동작/감각 각각 최소 1개 단서가 있는지
-          const placeSignals = /엘리베이터|마트|횡단보도|주차장|세탁기|편의점|약국|버스|식탁|화장실|거울|공원|벤치|카페|지하철|계단|옷장|현관|신발장|사무실|식당|냉장고|침실|세면대|탈의실|회의실|노래방|모니터|운전석|침대/.test(introText);
-          const actionSignals = /누르|들다|묶|돌리|내려놓|올려|꺼내|접다|기대|쪼그|뻗|돌아보|일어서|걸치|비틀|팔을|짐을|손잡이|빨래|씹|양치|마시|앉|걷|눕|숙이|서다|읽|깜빡|바르/.test(introText);
-          const sensationSignals = /멈칫|찌릿|뻣뻣|묵직|시큰|뜨끔|먹먹|어질|뻑뻑|걸리는|당기는|힘이 안|뻐근|욱신|무겁|까끌|따가|가려|붉|건조|더부룩|쓰린|답답|울렁|콕콕|빵빵|시린|흔들|침침|뿌연|칼칼|막히|간지|갈라|울리|두근|나른|갑갑|후끈/.test(introText);
-
-          const score = (placeSignals ? 1 : 0) + (actionSignals ? 1 : 0) + (sensationSignals ? 1 : 0);
-
-          // 정의형/메타설명형 도입부 감지
+          // 정의형/메타설명형 도입부 감지 (절대 금지)
           const isBadPattern = /이란|질환입니다|알아보겠|살펴보겠|에 대해|많은 분들이|누구나 한 번/.test(introText);
 
-          // 브릿지 부재 감지: 도입부가 검색 의도와 단절되어 있는지 확인
-          // 모호한 연결어만 있고 구체적 주제 연결이 없는 경우
+          // 브릿지 부재 감지: 모호한 연결어만 있고 구체적 주제 연결이 없는 경우
           const hasVagueBridge = /관련된\s*요인|환경과\s*관련|차근차근\s*짚어|짚어볼\s*필요|살펴볼\s*필요|알아볼\s*필요/.test(introText);
+
           // 도입부가 3문단 이상이면 과잉 (2문단까지 허용)
           const introParagraphs = introHtml.match(/<p[^>]*>/g);
           const isTooManyParagraphs = introParagraphs && introParagraphs.length > 2;
 
-          const needsRegen = score < 2 || isBadPattern || hasVagueBridge || isTooManyParagraphs;
-          const regenReason = score < 2 ? '3요소 미달' : isBadPattern ? '금지 패턴' : hasVagueBridge ? '브릿지 모호' : '3문단 이상';
+          const needsRegen = isBadPattern || hasVagueBridge || isTooManyParagraphs;
+          const regenReason = isBadPattern ? '금지 패턴' : hasVagueBridge ? '브릿지 모호' : '3문단 이상';
 
           if (needsRegen) {
             safeProgress(`🔍 Stage 1.5: 도입부 품질 미달(${regenReason}) → 재생성 중...`);
             const introRegenPrompt = `아래 블로그 글의 도입부가 품질 기준에 미달합니다.
 도입부만 새로 작성해주세요.
 
-[필수 3요소 - 모두 포함]
-1. 구체적 장소 (그림이 떠오르는 곳): 주차장, 마트, 세탁기 앞, 편의점 등
-2. 사소한 동작 (구체적인 한 가지): 팔 뻗다, 짐 들다, 쪼그리다 등
-3. 예상 밖의 감각 (질환 연결): 찌릿, 뻣뻣, 묵직, 걸리는 느낌 등
+[시작 방식 - 주제에 맞는 것을 골라 쓰세요]
+A. 일상 장면형: 장소+동작+감각 (정형외과, 재활 등에 적합)
+B. 상황 제시형: 주변 상황 → 나에게 영향 (감염병 등에 적합)
+C. 변화 관찰형: 평소와 다른 점 발견 (내과, 피부과 등에 적합)
+D. 비교형: 같은 환경인데 나만 다름 (알레르기, 체질 등에 적합)
 
 [필수 - 검색 의도 브릿지]
-마지막 1~2문장에서 반드시 글의 주제와 연결해야 합니다.
+마지막 1~2문장에서 반드시 글의 주제(키워드)와 연결해야 합니다.
 독자가 "아, 이 글이 그 얘기구나"라고 3초 안에 파악할 수 있어야 합니다.
-❌ "주변 환경과 관련된 요인에서 시작되기도 합니다" → 모호해서 무슨 글인지 모름
-✅ "같은 음식을 먹은 사람은 괜찮은데 나만 이런 반응이 나타났다면, 접촉 경로로 감염이 시작된 경우일 수 있습니다" → 주제 직결
+브릿지에는 키워드/질환명을 자연스럽게 포함해도 됩니다.
+❌ "주변 환경과 관련된 요인에서 시작되기도 합니다" → 모호
+✅ "접촉을 통해 노로바이러스에 감염된 경우일 수 있습니다" → 직결
 
 [금지]
-- 질환명으로 시작
+- 질환명으로 시작 (브릿지에서는 OK)
 - "~이란", "~에 대해", "알아보겠습니다", "많은 분들이"
 - 독자에게 질문하거나 말 걸기
 - "습니다" 체 유지
-- 2문단 이상 (반드시 1문단으로!)
 
 [현재 도입부]
 ${introHtml}
