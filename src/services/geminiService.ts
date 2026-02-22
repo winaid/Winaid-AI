@@ -4253,12 +4253,12 @@ ${JSON.stringify(searchResults, null, 2)}
           // 브릿지 부재 감지: 도입부가 검색 의도와 단절되어 있는지 확인
           // 모호한 연결어만 있고 구체적 주제 연결이 없는 경우
           const hasVagueBridge = /관련된\s*요인|환경과\s*관련|차근차근\s*짚어|짚어볼\s*필요|살펴볼\s*필요|알아볼\s*필요/.test(introText);
-          // 도입부가 2문단 이상인지 확인 (감성 과잉)
+          // 도입부가 3문단 이상이면 과잉 (2문단까지 허용)
           const introParagraphs = introHtml.match(/<p[^>]*>/g);
-          const isTooManyParagraphs = introParagraphs && introParagraphs.length > 1;
+          const isTooManyParagraphs = introParagraphs && introParagraphs.length > 2;
 
-          const needsRegen = score < 2 || isBadPattern || (hasVagueBridge && isTooManyParagraphs);
-          const regenReason = score < 2 ? '3요소 미달' : isBadPattern ? '금지 패턴' : '브릿지 부재/감성 과잉';
+          const needsRegen = score < 2 || isBadPattern || hasVagueBridge || isTooManyParagraphs;
+          const regenReason = score < 2 ? '3요소 미달' : isBadPattern ? '금지 패턴' : hasVagueBridge ? '브릿지 모호' : '3문단 이상';
 
           if (needsRegen) {
             safeProgress(`🔍 Stage 1.5: 도입부 품질 미달(${regenReason}) → 재생성 중...`);
@@ -4289,7 +4289,7 @@ ${introHtml}
 [글의 주제]
 ${request.topic}${request.disease ? `, 질환: ${request.disease}` : ''}
 
-새 도입부를 HTML(<p> 태그 1개)로 작성하세요. 3~5문장, 1문단.`;
+새 도입부를 HTML(<p> 태그)로 작성하세요. 3~5문장, 1~2문단. 마지막 문장은 반드시 주제 브릿지.`;
 
             const newIntro = await callGemini({
               prompt: introRegenPrompt,
