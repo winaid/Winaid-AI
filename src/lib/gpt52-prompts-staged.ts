@@ -1176,16 +1176,43 @@ export const REFINEMENT_PROMPT = `너는 이미 작성된 병·의원 건강 정
 요청 없이 문단 수 바꾸면 실패.`;
 
 // 보정 프롬프트 (글자수 포함)
-export const getStage2_AiRemovalAndCompliance = (textLength: number = 1500) => {
-  return `${REFINEMENT_PROMPT}
+export const getStage2_AiRemovalAndCompliance = (textLength: number = 1500, currentCharCount?: number) => {
+  const targetMin = textLength;
+  const targetMax = textLength + 200;
+  const isOverLength = currentCharCount ? currentCharCount > targetMax : false;
+  const excessChars = currentCharCount ? currentCharCount - textLength : 0;
+
+  const charControlSection = isOverLength
+    ? `────────────────────
+[11. 글자 수 정밀 제어 규칙 - ⚠️ 현재 초과 상태]
+
+현재 글자 수: ${currentCharCount}자 (목표보다 +${excessChars}자 초과)
+목표 글자 수: ${targetMin}~${targetMax}자 (공백 제외)
+
+이 글은 현재 목표보다 ${excessChars}자 길다.
+AI 냄새 보정과 동시에 글자 수를 목표 범위로 줄여야 한다.
 
 ────────────────────
+[11-1. 축약 + 보정 통합 규칙]
+
+1단계: AI 냄새 표현 수정 (어색한 표현 → 자연스러운 대체)
+2단계: 수정하면서 동시에 불필요한 문장을 축약
+
+- 각 소제목 섹션에서 반복·중복 문장을 줄여 전체 분량 조정
+- 소제목 개수는 절대 줄이지 않는다
+- 소제목 제목(h3)은 그대로 유지한다
+- 도입부와 마무리는 최대한 유지, 본문 소제목 섹션에서 줄인다
+- 문장을 중간에 자르지 말고, 통째로 삭제하거나 짧은 문장으로 교체
+- 현재보다 최소 ${excessChars}자 이상 줄여야 한다
+
+최종 결과는 반드시 ${targetMin}~${targetMax}자 범위 안에 들어와야 한다.`
+    : `────────────────────
 [11. 글자 수 정밀 제어 규칙]
 
 보정 후 글은 목표 글자 수의
 100~105% 범위 안에 들어와야 한다.
 
-- 목표 글자 수: ${textLength}자
+- 목표 글자 수: ${textLength}자${currentCharCount ? `\n- 현재 글자 수: ${currentCharCount}자` : ''}
 
 ────────────────────
 [11-1. 보정 시 글자 수 조정]
@@ -1200,6 +1227,10 @@ export const getStage2_AiRemovalAndCompliance = (textLength: number = 1500) => {
 최종 결과는
 반드시 목표 글자 수의
 100~105% 범위 안에 들어와야 한다.`;
+
+  return `${REFINEMENT_PROMPT}
+
+${charControlSection}`;
 };
 
 export const getStage2_RemoveAiSmell = getStage2_AiRemovalAndCompliance;

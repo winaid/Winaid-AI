@@ -4100,75 +4100,12 @@ ${JSON.stringify(searchResults, null, 2)}
           safeProgress(`✅ 생성 완료: ${charCountNoSpaces}자`);
         }
 
-        // 글자수 초과 시 AI에게 축약 요청 (1회)
+        // 글자수 초과 여부 기록 → Stage 2에서 보정과 동시에 축약
         let finalResponse = geminiResponse;
         if (charCountNoSpaces > targetMax && !isCardNews) {
           const excessChars = charCountNoSpaces - targetLength;
-          safeProgress(`✂️ 글자수 초과(+${excessChars}자), AI 축약 중...`);
-          console.log(`✂️ 글자수 축약 시작: ${charCountNoSpaces}자 → 목표 ${targetLength}~${targetMax}자`);
-
-          try {
-            const trimPrompt = `아래 HTML 블로그 글이 현재 ${charCountNoSpaces}자(공백 제외)인데, ${targetLength}~${targetMax}자로 줄여야 한다.
-
-[축약 규칙]
-- 각 소제목 섹션에서 불필요한 설명 문장을 줄여서 전체 분량을 맞춘다
-- 소제목 개수는 절대 줄이지 않는다
-- 소제목 제목(h2, h3)은 그대로 유지한다
-- HTML 구조(<h2>, <h3>, <p>, <img> 태그)를 그대로 유지한다
-- 문장을 중간에 자르지 말고, 통째로 삭제하거나 짧은 문장으로 교체한다
-- 도입부와 마무리는 최대한 유지하고, 본문 소제목 섹션에서 줄인다
-- 의미가 자연스럽게 이어지도록 한다
-- 현재보다 ${excessChars}자 이상 줄여야 한다
-
-[현재 글]
-${contentText}
-
-위 글을 축약하여 HTML만 반환하라. JSON 아님, HTML 본문만 출력.`;
-
-            const trimmedContent = await callGemini({
-              prompt: trimPrompt,
-              model: GEMINI_MODEL.PRO,
-              responseType: 'text',
-              timeout: 60000,
-              maxOutputTokens: 16384,
-            });
-
-            if (trimmedContent && typeof trimmedContent === 'string' && trimmedContent.length > 200) {
-              // AI가 JSON으로 감싸서 반환할 수 있음 → content 필드 추출
-              let cleanedTrimContent = trimmedContent;
-              try {
-                const parsed = JSON.parse(trimmedContent);
-                if (parsed.content && typeof parsed.content === 'string') {
-                  cleanedTrimContent = parsed.content;
-                  console.log('✂️ 축약 응답에서 JSON wrapper 제거');
-                }
-              } catch {
-                // JSON이 아님 → 그대로 사용 (정상)
-              }
-              // 혹시 { "content": " 로 시작하면 정규식으로도 제거
-              cleanedTrimContent = cleanedTrimContent
-                .replace(/^\s*\{\s*"content"\s*:\s*"/i, '')
-                .replace(/"\s*\}\s*$/i, '')
-                .replace(/^\s*\{\s*"title"\s*:\s*"[^"]*"\s*,\s*"content"\s*:\s*"/i, '')
-                .replace(/"\s*,\s*"imagePrompts"\s*:\s*\[.*?\]\s*\}\s*$/i, '');
-
-              const trimmedText = cleanedTrimContent.replace(/<[^>]+>/g, '');
-              const trimmedCharCount = trimmedText.replace(/\s/g, '').length;
-              console.log(`✂️ 축약 결과: ${charCountNoSpaces}자 → ${trimmedCharCount}자`);
-
-              // 축약이 실제로 줄어들었고, 너무 짧지 않으면 적용
-              if (trimmedCharCount < charCountNoSpaces && trimmedCharCount >= targetLength * 0.9) {
-                finalResponse = { ...geminiResponse, content: cleanedTrimContent };
-                safeProgress(`✅ 축약 완료: ${trimmedCharCount}자`);
-              } else {
-                console.warn(`✂️ 축약 결과 부적절 (${trimmedCharCount}자), 원본 유지`);
-                safeProgress(`⚠️ 축약 실패, 원본 유지: ${charCountNoSpaces}자`);
-              }
-            }
-          } catch (trimError) {
-            console.warn('✂️ 축약 실패, 원본 유지:', trimError);
-            safeProgress(`⚠️ 축약 실패, 원본 유지: ${charCountNoSpaces}자`);
-          }
+          console.log(`📝 글자수 초과(+${excessChars}자) → Stage 2에서 보정과 동시에 축약 예정`);
+          safeProgress(`📝 글자수 초과(+${excessChars}자), Stage 2에서 축약 예정`);
         }
 
         if (!finalResponse || typeof finalResponse !== 'object') {
@@ -4375,29 +4312,57 @@ ${request.topic}${request.disease ? `, 질환: ${request.disease}` : ''}
           safeProgress(`🔍 AI 냄새 ${smellResult.patterns.length}개 감지 (점수: ${smellResult.score})`);
         }
 
-        safeProgress('🔄 Stage 2: 보정 중...');
-        const stage2Prompt = getStage2_AiRemovalAndCompliance(targetLength);
+        // 현재 글자수 계산 (Stage 2에 전달하여 초과 시 축약도 동시 수행)
+        const currentText = result.content.replace(/<[^>]+>/g, '');
+        const currentCharCount = currentText.replace(/\s/g, '').length;
+        const isOverLength = currentCharCount > targetLength + 200;
+
+        if (isOverLength) {
+          safeProgress(`🔄 Stage 2: 보정 + 축약 통합 중... (현재 ${currentCharCount}자 → 목표 ${targetLength}~${targetLength + 200}자)`);
+        } else {
+          safeProgress('🔄 Stage 2: 보정 중...');
+        }
+
+        const stage2Prompt = getStage2_AiRemovalAndCompliance(targetLength, currentCharCount);
         const refinedContent = await callGemini({
           prompt: `아래 글을 보정해주세요. 보정 규칙을 엄격히 따르세요.${smellGuide}\n\n[보정 대상 글]\n${result.content}`,
           model: GEMINI_MODEL.PRO,
           systemInstruction: stage2Prompt,
           responseType: 'text',
-          timeout: 60000,  // 60초 → 타임아웃 시 FLASH 폴백
+          timeout: 60000,
           temperature: 0.3,
         });
 
         if (refinedContent && typeof refinedContent === 'string' && refinedContent.length > 300) {
-          // 보정 결과가 원본의 90~105% 범위 안에 있는지 확인
           const originalLen = result.content.replace(/<[^>]*>/g, '').length;
           const refinedLen = refinedContent.replace(/<[^>]*>/g, '').length;
+          const refinedCharCount = refinedContent.replace(/<[^>]+>/g, '').replace(/\s/g, '').length;
           const ratio = refinedLen / originalLen;
 
-          if (ratio >= 0.90 && ratio <= 1.05) {
-            result.content = refinedContent;
-            safeProgress(`✅ Stage 2 보정 완료 (${Math.round(ratio * 100)}% 유지)`);
+          if (isOverLength) {
+            // 글자수 초과 상태: 목표 범위 기준으로 검증 (축약 + 보정 통합)
+            const targetMin = targetLength * 0.9;  // 목표의 90% 이상이면 OK
+            const targetMaxVal = targetLength + 200;
+            if (refinedCharCount >= targetMin && refinedCharCount <= targetMaxVal) {
+              result.content = refinedContent;
+              safeProgress(`✅ Stage 2 보정+축약 완료: ${currentCharCount}자 → ${refinedCharCount}자`);
+            } else if (refinedCharCount < currentCharCount && refinedCharCount >= targetMin) {
+              // 목표 범위를 약간 벗어나도, 원본보다 줄었고 최소치 이상이면 수용
+              result.content = refinedContent;
+              safeProgress(`✅ Stage 2 보정+축약 완료: ${currentCharCount}자 → ${refinedCharCount}자 (범위 근접)`);
+            } else {
+              console.warn(`⚠️ Stage 2 축약 결과 부적절 (${refinedCharCount}자), 원본 유지`);
+              safeProgress(`⚠️ Stage 2 축약 범위 초과 - 원본 유지 (${refinedCharCount}자)`);
+            }
           } else {
-            console.warn(`⚠️ Stage 2 보정 결과 범위 초과 (${Math.round(ratio * 100)}%), 원본 유지`);
-            safeProgress('⚠️ Stage 2 보정 범위 초과 - 원본 유지');
+            // 글자수 정상: 기존 ratio 검증 유지
+            if (ratio >= 0.90 && ratio <= 1.05) {
+              result.content = refinedContent;
+              safeProgress(`✅ Stage 2 보정 완료 (${Math.round(ratio * 100)}% 유지)`);
+            } else {
+              console.warn(`⚠️ Stage 2 보정 결과 범위 초과 (${Math.round(ratio * 100)}%), 원본 유지`);
+              safeProgress('⚠️ Stage 2 보정 범위 초과 - 원본 유지');
+            }
           }
         } else {
           console.warn('⚠️ Stage 2 보정 결과 부족, 원본 유지');
