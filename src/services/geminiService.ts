@@ -4250,9 +4250,19 @@ ${JSON.stringify(searchResults, null, 2)}
           // 정의형/메타설명형 도입부 감지
           const isBadPattern = /이란|질환입니다|알아보겠|살펴보겠|에 대해|많은 분들이|누구나 한 번/.test(introText);
 
-          if (score < 2 || isBadPattern) {
-            safeProgress('🔍 Stage 1.5: 도입부 품질 미달 → 재생성 중...');
-            const introRegenPrompt = `아래 블로그 글의 도입부(첫 문단들)가 품질 기준에 미달합니다.
+          // 브릿지 부재 감지: 도입부가 검색 의도와 단절되어 있는지 확인
+          // 모호한 연결어만 있고 구체적 주제 연결이 없는 경우
+          const hasVagueBridge = /관련된\s*요인|환경과\s*관련|차근차근\s*짚어|짚어볼\s*필요|살펴볼\s*필요|알아볼\s*필요/.test(introText);
+          // 도입부가 2문단 이상인지 확인 (감성 과잉)
+          const introParagraphs = introHtml.match(/<p[^>]*>/g);
+          const isTooManyParagraphs = introParagraphs && introParagraphs.length > 1;
+
+          const needsRegen = score < 2 || isBadPattern || (hasVagueBridge && isTooManyParagraphs);
+          const regenReason = score < 2 ? '3요소 미달' : isBadPattern ? '금지 패턴' : '브릿지 부재/감성 과잉';
+
+          if (needsRegen) {
+            safeProgress(`🔍 Stage 1.5: 도입부 품질 미달(${regenReason}) → 재생성 중...`);
+            const introRegenPrompt = `아래 블로그 글의 도입부가 품질 기준에 미달합니다.
 도입부만 새로 작성해주세요.
 
 [필수 3요소 - 모두 포함]
@@ -4260,11 +4270,18 @@ ${JSON.stringify(searchResults, null, 2)}
 2. 사소한 동작 (구체적인 한 가지): 팔 뻗다, 짐 들다, 쪼그리다 등
 3. 예상 밖의 감각 (질환 연결): 찌릿, 뻣뻣, 묵직, 걸리는 느낌 등
 
+[필수 - 검색 의도 브릿지]
+마지막 1~2문장에서 반드시 글의 주제와 연결해야 합니다.
+독자가 "아, 이 글이 그 얘기구나"라고 3초 안에 파악할 수 있어야 합니다.
+❌ "주변 환경과 관련된 요인에서 시작되기도 합니다" → 모호해서 무슨 글인지 모름
+✅ "같은 음식을 먹은 사람은 괜찮은데 나만 이런 반응이 나타났다면, 접촉 경로로 감염이 시작된 경우일 수 있습니다" → 주제 직결
+
 [금지]
 - 질환명으로 시작
 - "~이란", "~에 대해", "알아보겠습니다", "많은 분들이"
 - 독자에게 질문하거나 말 걸기
 - "습니다" 체 유지
+- 2문단 이상 (반드시 1문단으로!)
 
 [현재 도입부]
 ${introHtml}
@@ -4272,7 +4289,7 @@ ${introHtml}
 [글의 주제]
 ${request.topic}${request.disease ? `, 질환: ${request.disease}` : ''}
 
-새 도입부를 HTML(<p> 태그)로 작성하세요. 1~2문단, 150자 내외.`;
+새 도입부를 HTML(<p> 태그 1개)로 작성하세요. 3~5문장, 1문단.`;
 
             const newIntro = await callGemini({
               prompt: introRegenPrompt,
