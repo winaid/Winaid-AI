@@ -108,10 +108,7 @@ const EXAGGERATION_REPLACEMENTS: Record<string, string> = {
   '위험이 생길 수 있습니다': '변화가 나타날 수 있습니다',
   '합병증으로 이어질 수': '다른 변화와 관련될 수',
   '주의하는 것이 좋습니다': '살펴볼 수 있는 부분입니다',
-  '것이 좋습니다': '수 있습니다',
-  '것도 좋습니다': '수도 있습니다',
-  '것도 좋은 방법입니다': '수도 있습니다',
-  '좋은 방법입니다': '방법일 수 있습니다',
+  // ⚠️ '것이 좋습니다' 일괄 치환 제거 → fixExaggeration에서 의료 맥락만 regex로 처리
   '주의가 필요합니다': '살펴볼 수 있는 부분입니다',
   '노력이 필요합니다': '노력이 도움이 될 수 있습니다',
   '과정이 필요합니다': '과정이 도움이 될 수 있습니다',
@@ -167,6 +164,30 @@ export function fixExaggeration(text: string): {
         original,
         fixed: replacement,
         reason: '의료광고법: 과장 표현 완화'
+      });
+    }
+  }
+
+  // 🆕 "것이 좋습니다" 맥락 의존 필터링
+  // 의료 행위/건강 지시 맥락에서만 완화, 일반 문맥("수칙을 지켜주시는 것이 좋습니다")은 허용
+  const medicalVerbs = '확인|검사|치료|상담|진료|방문|검진|관리|섭취|복용|조심|주의|피하|삼가|자제|중단|금연|금주|운동|수면|휴식|절제|감량|진찰|처방|투약|접종';
+  const contextualReplacements: [RegExp, string, string][] = [
+    [new RegExp(`(${medicalVerbs})([가-힣\\s]{0,20})(것이 좋습니다)`, 'g'), '$1$2수 있습니다', '의료 권유 완화'],
+    [new RegExp(`(${medicalVerbs})([가-힣\\s]{0,20})(것도 좋습니다)`, 'g'), '$1$2수도 있습니다', '의료 권유 완화'],
+    [new RegExp(`(${medicalVerbs})([가-힣\\s]{0,20})(것도 좋은 방법입니다)`, 'g'), '$1$2방법일 수도 있습니다', '의료 권유 완화'],
+    [new RegExp(`(${medicalVerbs})([가-힣\\s]{0,20})(좋은 방법입니다)`, 'g'), '$1$2방법일 수 있습니다', '의료 권유 완화'],
+  ];
+
+  for (const [pattern, replacement, reason] of contextualReplacements) {
+    const matches = Array.from(fixed.matchAll(pattern));
+    for (const m of matches) {
+      const replaced = m[0].replace(pattern, replacement);
+      fixed = fixed.replace(m[0], replaced);
+      changes.push({
+        type: 'replace',
+        original: m[0],
+        fixed: replaced,
+        reason: `의료광고법: ${reason}`
       });
     }
   }
