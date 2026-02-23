@@ -175,8 +175,8 @@ export function fixExaggeration(text: string): {
 }
 
 /**
- * 숫자/통계 완전 제거 (gpt52-prompts-staged.ts P1 규칙과 일관성 유지)
- * ⚠️ 숫자는 출처 추가가 아닌 완전 대체 필요!
+ * 통계/마케팅성 수치 제거 (의료광고법 위반 패턴만 대상)
+ * ⚠️ 의학적 사실 숫자(검진 주기, 연령 기준, 잠복기 등)는 보존!
  */
 export function fixMissingSource(text: string): {
   fixed: string;
