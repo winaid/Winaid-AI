@@ -4375,8 +4375,11 @@ ${request.topic}${request.disease ? `, 질환: ${request.disease}` : ''}
         }
 
         const stage2Prompt = getStage2_AiRemovalAndCompliance(targetLength, currentCharCount);
+        const trimNote = isOverLength
+          ? `\n\n🚨 [축약 필수] 현재 ${currentCharCount}자 → 목표 ${targetLength}~${targetLength + 200}자. 반드시 ${currentCharCount - targetLength}자 이상 줄이세요!`
+          : '';
         const refinedContent = await callGemini({
-          prompt: `아래 글을 보정해주세요. 보정 규칙을 엄격히 따르세요.${smellGuide}\n\n[보정 대상 글]\n${result.content}`,
+          prompt: `아래 글을 보정해주세요. 보정 규칙을 엄격히 따르세요.${smellGuide}${trimNote}\n\n[보정 대상 글]\n${result.content}`,
           model: GEMINI_MODEL.PRO,
           systemInstruction: stage2Prompt,
           responseType: 'text',
@@ -4391,19 +4394,24 @@ ${request.topic}${request.disease ? `, 질환: ${request.disease}` : ''}
           const ratio = refinedLen / originalLen;
 
           if (isOverLength) {
-            // 글자수 초과 상태: 목표 범위 기준으로 검증 (축약 + 보정 통합)
+            // 글자수 초과 상태: 축약 결과 검증
             const targetMin = targetLength * 0.9;  // 목표의 90% 이상이면 OK
             const targetMaxVal = targetLength + 200;
             if (refinedCharCount >= targetMin && refinedCharCount <= targetMaxVal) {
+              // 목표 범위 안에 들어옴 → 완벽
               result.content = refinedContent;
               safeProgress(`✅ Stage 2 보정+축약 완료: ${currentCharCount}자 → ${refinedCharCount}자`);
             } else if (refinedCharCount < currentCharCount && refinedCharCount >= targetMin) {
-              // 목표 범위를 약간 벗어나도, 원본보다 줄었고 최소치 이상이면 수용
+              // 목표 범위 약간 초과하지만, 원본보다 줄었고 최소치 이상 → 수용
               result.content = refinedContent;
               safeProgress(`✅ Stage 2 보정+축약 완료: ${currentCharCount}자 → ${refinedCharCount}자 (범위 근접)`);
+            } else if (refinedCharCount < currentCharCount) {
+              // 목표까지는 못 줄였지만, 원본보다는 줄었음 → 그래도 수용 (안 하면 더 긴 원본 유지됨)
+              result.content = refinedContent;
+              safeProgress(`⚠️ Stage 2 축약 부분 성공: ${currentCharCount}자 → ${refinedCharCount}자 (목표 ${targetMin}~${targetMaxVal}자)`);
             } else {
-              console.warn(`⚠️ Stage 2 축약 결과 부적절 (${refinedCharCount}자), 원본 유지`);
-              safeProgress(`⚠️ Stage 2 축약 범위 초과 - 원본 유지 (${refinedCharCount}자)`);
+              console.warn(`⚠️ Stage 2 축약 실패 - 오히려 늘어남 (${refinedCharCount}자), 원본 유지`);
+              safeProgress(`⚠️ Stage 2 축약 실패 - 원본 유지`);
             }
           } else {
             // 글자수 정상: 기존 ratio 검증 유지
