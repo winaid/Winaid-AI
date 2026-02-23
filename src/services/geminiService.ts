@@ -4274,16 +4274,12 @@ ${JSON.stringify(searchResults, null, 2)}
           const listingEndings = introText.match(/경우가 있습니다|하기도 합니다|찾아옵니다|나타나기도|겪기도 합니다|보이기도 합니다/g);
           const isListingPattern = listingEndings && listingEndings.length >= 2;
 
-          // 팸플릿체 감지: 장면에 가능성/사례 어미 과다 사용 (브릿지 제외)
-          const pamphletEndings = introText.match(/상황이 생길 수 있습니다|경우가 있습니다|시점일 수 있습니다|나타날 수 있습니다/g);
-          const isPamphletStyle = pamphletEndings && pamphletEndings.length >= 2;
-
           // 도입부가 3문단 이상이면 과잉 (2문단까지 허용)
           const introParagraphs = introHtml.match(/<p[^>]*>/g);
           const isTooManyParagraphs = introParagraphs && introParagraphs.length > 2;
 
-          const needsRegen = isBadPattern || hasVagueBridge || isTooManyParagraphs || isListingPattern || isPamphletStyle;
-          const regenReason = isBadPattern ? '금지 패턴' : hasVagueBridge ? '브릿지 모호' : isListingPattern ? '나열형 도입' : isPamphletStyle ? '팸플릿체' : '3문단 이상';
+          const needsRegen = isBadPattern || hasVagueBridge || isTooManyParagraphs || isListingPattern;
+          const regenReason = isBadPattern ? '금지 패턴' : hasVagueBridge ? '브릿지 모호' : isListingPattern ? '나열형 도입' : '3문단 이상';
 
           if (needsRegen) {
             safeProgress(`🔍 Stage 1.5: 도입부 품질 미달(${regenReason}) → 재생성 중...`);
@@ -4303,13 +4299,8 @@ D. 비교형: 같은 환경인데 나만 다름 (알레르기, 체질 등에 적
 ❌ "주변 환경과 관련된 요인에서 시작되기도 합니다" → 모호
 ✅ "접촉을 통해 노로바이러스에 감염된 경우일 수 있습니다" → 직결
 
-[핵심 - 직접 서술체 + 하나의 흐름]
-도입부는 실제로 일어난 일처럼 직접 서술체로 씁니다.
-"~했습니다", "~시작했습니다", "~느껴졌습니다" ← 이야기
-"~경우가 있습니다", "~수 있습니다", "~상황이 생길 수 있습니다" ← 팸플릿 (금지!)
-(단, 마지막 브릿지 문장에서는 "~일 수 있습니다" 허용)
-
-하나의 사건이 시간 순서대로 전개되는 이야기여야 합니다.
+[핵심 - 하나의 장면, 하나의 흐름]
+하나의 사건이 자연스럽게 전개되는 이야기여야 합니다.
 여러 상황을 나열하지 마세요.
 
 [금지]
@@ -4318,7 +4309,6 @@ D. 비교형: 같은 환경인데 나만 다름 (알레르기, 체질 등에 적
 - 독자에게 질문하거나 말 걸기
 - "습니다" 체 유지
 - 여러 상황 나열 (각 문장이 별개의 경우/사례이면 실패)
-- 장면 문장에 "~경우가 있습니다", "~상황이 생길 수 있습니다", "~시점일 수 있습니다" 사용 금지
 
 [현재 도입부]
 ${introHtml}
