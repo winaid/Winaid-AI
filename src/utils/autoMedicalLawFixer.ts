@@ -143,36 +143,6 @@ const EXAGGERATION_REPLACEMENTS: Record<string, string> = {
   '경쟁 병원보다': '',
   '업계 최초': '새로운',
   '국내 최초': '새로운',
-
-  // 🏥 병원 소개 특화 - 등급 비교
-  '대학병원급': '',
-  '종합병원급': '',
-  '대형병원급': '',
-  '대학병원 수준': '',
-  '종합병원 수준': '',
-
-  // 🏥 병원 소개 특화 - 장비/시설 과장
-  '최신 장비': '장비',
-  '첨단 장비': '장비',
-  '최신 시설': '시설',
-  '첨단 시설': '시설',
-  '최첨단': '',
-  '최신 시스템': '시스템',
-  '첨단 시스템': '시스템',
-
-  // 🏥 병원 소개 특화 - 경험 과장
-  '풍부한 경험': '경험',
-  '풍부한 시술 경험': '시술 경험',
-  '풍부한 임상 경험': '임상 경험',
-  '수많은 경험': '경험',
-  '오랜 경험': '경험',
-
-  // 🏥 병원 소개 특화 - 의료진 주관적 평가
-  '실력 있는': '',
-  '실력파': '',
-  '베테랑': '',
-  '명의': '',
-  '권위자': '',
 };
 
 /**
@@ -222,15 +192,6 @@ export function fixMissingSource(text: string): {
     [/(\d+(?:,\d+)*건)/g, '', '건수 수치 금지'],
     [/(\d+배)/g, '상당히 높은', '배수 표현 금지'],
     [/(\d+여\s*종)/g, '다양한', '수량 표현 금지'],
-    // 🏥 병원 소개 - 한글 수량어+건 (만 건, 수천 건, 수만 건 등)
-    [/(누적\s*)?\d[\d,.]*만?\s*건\s*(이상|이하|달성|돌파)?의?/g, '', '시술 건수 금지'],
-    [/(수천|수만|수백)\s*건\s*(이상|이하)?의?/g, '', '시술 건수(한글) 금지'],
-    [/만\s*건\s*(이상|이하)?의?/g, '', '만 건 표현 금지'],
-    [/연간\s*\d[\d,.]*\s*건/g, '', '연간 건수 금지'],
-    // 🏥 병원 소개 - 경력 연수 ("15년 경력", "20년 노하우" 등)
-    [/\d+년\s*(경력|경험|노하우|전통)/g, '', '경력 연수 금지'],
-    [/\d+년\s*(이상|넘는|넘게)\s*(경력|경험|노하우)?/g, '', '경력 연수 금지'],
-    [/\d+년\s*차/g, '', '경력 연차 금지'],
   ];
 
   for (const [pattern, replacement, reason] of numberReplacements) {
@@ -245,6 +206,91 @@ export function fixMissingSource(text: string): {
       });
     }
   }
+
+  return { fixed, changes };
+}
+
+/**
+ * 🏥 병원 소개 섹션 전용 필터링
+ * HTML에서 병원 소개 섹션(마지막 h3 기준)을 찾아 해당 부분에만 적용.
+ * 본문의 의학 정보("15년 이상 흡연", "최신 연구" 등)는 건드리지 않음.
+ */
+export function fixHospitalIntroSection(html: string): {
+  fixed: string;
+  changes: FixResult['changes'];
+} {
+  const changes: FixResult['changes'] = [];
+
+  // 병원 소개 섹션 찾기: 마지막 <h3> 이후 (소제목에 "병원", "소개", "안내", "찾아" 등 포함)
+  const hospitalHeadingPattern = /<h3[^>]*>([^<]*(?:병원|소개|안내|찾아|오시|위치|진료)[^<]*)<\/h3>/gi;
+  let lastMatch: RegExpExecArray | null = null;
+  let match: RegExpExecArray | null;
+  while ((match = hospitalHeadingPattern.exec(html)) !== null) {
+    lastMatch = match;
+  }
+
+  if (!lastMatch) {
+    return { fixed: html, changes };
+  }
+
+  const sectionStart = lastMatch.index;
+  const sectionContent = html.substring(sectionStart);
+  let fixedSection = sectionContent;
+
+  // 문자열 치환 패턴 (병원 소개 전용)
+  const hospitalReplacements: [string, string][] = [
+    // 등급 비교
+    ['대학병원급', ''], ['종합병원급', ''], ['대형병원급', ''],
+    ['대학병원 수준', ''], ['종합병원 수준', ''],
+    // 장비/시설 과장
+    ['최신 장비', '장비'], ['첨단 장비', '장비'],
+    ['최신 시설', '시설'], ['첨단 시설', '시설'],
+    ['최첨단', ''], ['최신 시스템', '시스템'], ['첨단 시스템', '시스템'],
+    // 경험 과장
+    ['풍부한 시술 경험', ''], ['풍부한 임상 경험', ''],
+    ['풍부한 경험', ''], ['수많은 경험', ''], ['오랜 경험', ''],
+    // 의료진 주관적 평가
+    ['실력 있는', ''], ['실력파', ''], ['베테랑', ''], ['명의', ''], ['권위자', ''],
+  ];
+
+  // 긴 패턴부터 처리
+  const sorted = [...hospitalReplacements].sort((a, b) => b[0].length - a[0].length);
+  for (const [original, replacement] of sorted) {
+    if (fixedSection.includes(original)) {
+      fixedSection = fixedSection.replace(new RegExp(original, 'g'), replacement);
+      changes.push({
+        type: 'replace', original, fixed: replacement || '(제거됨)',
+        reason: '의료광고법(병원소개): 과장 표현'
+      });
+    }
+  }
+
+  // 정규식 패턴 (병원 소개 전용)
+  const hospitalRegexPatterns: [RegExp, string, string][] = [
+    // 시술 건수
+    [/(누적\s*)?\d[\d,.]*만?\s*건\s*(이상|이하|달성|돌파)?의?/g, '', '시술 건수'],
+    [/(수천|수만|수백)\s*건\s*(이상|이하)?의?/g, '', '시술 건수(한글)'],
+    [/만\s*건\s*(이상|이하)?의?/g, '', '만 건 표현'],
+    [/연간\s*\d[\d,.]*\s*건/g, '', '연간 건수'],
+    // 경력 연수
+    [/\d+년\s*(경력|경험|노하우|전통)/g, '', '경력 연수'],
+    [/\d+년\s*(이상|넘는|넘게)\s*(경력|경험|노하우)/g, '', '경력 연수'],
+    [/\d+년\s*차/g, '', '경력 연차'],
+  ];
+
+  for (const [pattern, replacement, reason] of hospitalRegexPatterns) {
+    const matches = Array.from(fixedSection.matchAll(pattern));
+    for (const m of matches) {
+      fixedSection = fixedSection.replace(m[0], replacement);
+      changes.push({
+        type: 'replace', original: m[0], fixed: replacement || '(제거됨)',
+        reason: `의료광고법(병원소개): ${reason}`
+      });
+    }
+  }
+
+  // 원본 HTML에서 병원 소개 섹션만 교체
+  const fixed = html.substring(0, sectionStart) + fixedSection;
 
   return { fixed, changes };
 }
@@ -579,6 +625,11 @@ export function autoFixMedicalLaw(content: string): FixResult {
   const aiSmellResult = removeAiSmell(fixedText);
   fixedText = aiSmellResult.fixed;
   allChanges.push(...aiSmellResult.changes);
+
+  // 🏥 11. 병원 소개 섹션 전용 필터링 (본문 의학 정보는 보존)
+  const hospitalIntroResult = fixHospitalIntroSection(fixedText);
+  fixedText = hospitalIntroResult.fixed;
+  allChanges.push(...hospitalIntroResult.changes);
 
   // 성공률 계산
   const successRate = allChanges.length > 0
