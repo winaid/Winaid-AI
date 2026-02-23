@@ -4316,7 +4316,10 @@ ${introHtml}
 [글의 주제]
 ${request.topic}${request.disease ? `, 질환: ${request.disease}` : ''}
 
-새 도입부를 HTML(<p> 태그)로 작성하세요. 3~5문장, 1~2문단. 마지막 문장은 반드시 주제 브릿지.`;
+새 도입부를 HTML(<p> 태그)로 작성하세요. 3~5문장, 2문단 권장.
+· 1문단(<p>): 장면/상황 전개 (2~3문장)
+· 2문단(<p>): 검색 의도 브릿지 (1~2문장)
+장면과 브릿지를 별도 <p>로 분리해야 호흡이 생깁니다.`;
 
             const newIntro = await callGemini({
               prompt: introRegenPrompt,
