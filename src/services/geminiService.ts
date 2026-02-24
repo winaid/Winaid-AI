@@ -3428,7 +3428,7 @@ ${FEW_SHOT_EXAMPLES}
 </div>
 
 ⚠️ **이미지 ${targetImageCount}장 필수!** imagePrompts 배열에 정확히 ${targetImageCount}개 프롬프트 작성!
-🚨 일반 소제목: <p> 2~3개 / 마지막 소제목: <p> 1~2개 (절대 3개 쓰지 말 것!)
+🚨 일반 소제목: <p> 2~3개 / 마무리: <p> 2개 (도입부와 비슷한 분량)
 
 [이미지 프롬프트 규칙] 🚨 정확히 ${targetImageCount}개 필수!
 🚨 imagePrompts 배열에 반드시 **${targetImageCount}개** 프롬프트 작성! (한국어)
