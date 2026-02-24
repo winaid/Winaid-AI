@@ -4419,13 +4419,9 @@ ${request.topic}${request.disease ? `, 질환: ${request.disease}` : ''}
               // 목표 범위 약간 초과하지만, 원본보다 줄었고 최소치 이상 → 수용
               result.content = refinedContent;
               safeProgress(`✅ Stage 2 보정+축약 완료: ${currentCharCount}자 → ${refinedCharCount}자 (범위 근접)`);
-            } else if (refinedCharCount < currentCharCount) {
-              // 목표까지는 못 줄였지만, 원본보다는 줄었음 → 그래도 수용 (안 하면 더 긴 원본 유지됨)
-              result.content = refinedContent;
-              safeProgress(`⚠️ Stage 2 축약 부분 성공: ${currentCharCount}자 → ${refinedCharCount}자 (목표 ${targetMin}~${targetMaxVal}자)`);
             } else {
-              console.warn(`⚠️ Stage 2 축약 실패 - 오히려 늘어남 (${refinedCharCount}자), 원본 유지`);
-              safeProgress(`⚠️ Stage 2 축약 실패 - 원본 유지`);
+              console.warn(`⚠️ Stage 2 축약 결과 부적절 (${refinedCharCount}자, 목표 ${targetMin}~${targetMaxVal}자), 원본 유지`);
+              safeProgress(`⚠️ Stage 2 축약 실패 - 원본 유지 (${refinedCharCount}자)`);
             }
           } else {
             // 글자수 정상: 기존 ratio 검증 유지
