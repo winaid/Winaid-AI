@@ -1461,69 +1461,15 @@ export const REFINEMENT_PROMPT = `너는 이미 작성된 병·의원 건강 정
 
 // 보정 프롬프트 (글자수 포함)
 export const getStage2_AiRemovalAndCompliance = (textLength: number = 1500, currentCharCount?: number) => {
-  const targetMin = textLength;
-  const targetMax = textLength + 200;
-  const isOverLength = currentCharCount ? currentCharCount > targetMax : false;
-  const excessChars = currentCharCount ? currentCharCount - textLength : 0;
-
-  const charControlSection = isOverLength
-    ? `────────────────────
-🚨🚨🚨 [축약 모드 활성화] 아래 규칙이 최우선! 🚨🚨🚨
-
-⚠️ 이 글은 현재 목표보다 ${excessChars}자 초과 상태입니다.
-"95~100% 유지" 규칙과 "10% 이하 수정" 규칙은 이번에 적용하지 않습니다.
-대신 아래 축약 규칙을 따르세요.
-
-현재 글자 수: ${currentCharCount}자 (목표보다 +${excessChars}자 초과)
-목표 글자 수: ${targetMin}~${targetMax}자 (공백 제외)
+  return `${REFINEMENT_PROMPT}
 
 ────────────────────
-[11-1. 축약 + 보정 통합 규칙]
-
-1단계: AI 냄새 표현 수정 (어색한 표현 → 자연스러운 대체)
-2단계: 수정하면서 동시에 불필요한 문장을 축약
-
-- 각 소제목 섹션에서 반복·중복 문장을 줄여 전체 분량 조정
-- 소제목 개수는 절대 줄이지 않는다
-- 소제목 제목(h3)은 그대로 유지한다
-- 도입부와 마무리는 최대한 유지, 본문 소제목 섹션에서 줄인다
-- 문장을 중간에 자르지 말고, 통째로 삭제하거나 짧은 문장으로 교체
-- 각 소제목 본문에서 가장 정보량이 낮은 문장부터 삭제
-- 현재보다 최소 ${excessChars}자 이상 줄여야 한다
-
-🚨🚨🚨 [절대 금지] 파괴적 축약!
-- 소제목을 통째로 삭제하면 실패!
-- 문단을 통째로 날리면 실패!
-- 결과가 ${targetMin}자 미만이면 실패! (줄이되 너무 많이 줄이지 마라)
-- 글의 전체 구조(도입-소제목들-마무리)를 반드시 보존할 것
-
-🚨 최종 결과는 반드시 ${targetMin}~${targetMax}자 범위 안에 들어와야 한다.
-${targetMin}자 미만도 실패, ${targetMax}자 초과도 실패!`
-    : `────────────────────
-[11. 글자 수 정밀 제어 규칙]
-
-보정 후 글은 목표 글자 수의
-100~105% 범위 안에 들어와야 한다.
+[11. 글자 수 참고]
 
 - 목표 글자 수: ${textLength}자${currentCharCount ? `\n- 현재 글자 수: ${currentCharCount}자` : ''}
 
-────────────────────
-[11-1. 보정 시 글자 수 조정]
-
-- 목표 범위를 초과하면:
-  · 중복 문장부터 삭제
-  · 의미가 유지되는 선에서 축약
-- 목표 범위보다 부족하면:
-  · 새 정보 추가 금지
-  · 기존 문장만 약간 확장
-
-최종 결과는
-반드시 목표 글자 수의
-100~105% 범위 안에 들어와야 한다.`;
-
-  return `${REFINEMENT_PROMPT}
-
-${charControlSection}`;
+⚠️ 보정 시 내용을 축약하지 않는다. 글자 수가 초과되어도 그대로 둔다.
+보정은 표현만 다듬는 것이지, 분량을 줄이는 것이 아니다.`;
 };
 
 export const getStage2_RemoveAiSmell = getStage2_AiRemovalAndCompliance;

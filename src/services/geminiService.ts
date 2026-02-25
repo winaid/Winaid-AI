@@ -4139,12 +4139,11 @@ ${JSON.stringify(searchResults, null, 2)}
           safeProgress(`✅ 생성 완료: ${charCountNoSpaces}자`);
         }
 
-        // 글자수 초과 여부 기록 → Stage 2에서 보정과 동시에 축약
+        // 글자수 초과 여부 로그
         let finalResponse = geminiResponse;
         if (charCountNoSpaces > targetMax && !isCardNews) {
           const excessChars = charCountNoSpaces - targetLength;
-          console.log(`📝 글자수 초과(+${excessChars}자) → Stage 2에서 보정과 동시에 축약 예정`);
-          safeProgress(`📝 글자수 초과(+${excessChars}자), Stage 2에서 축약 예정`);
+          console.log(`📝 글자수 초과(+${excessChars}자) — 그대로 진행`);
         }
 
         if (!finalResponse || typeof finalResponse !== 'object') {
@@ -4378,23 +4377,15 @@ ${request.topic}${request.disease ? `, 질환: ${request.disease}` : ''}
           safeProgress(`🔍 AI 냄새 ${smellResult.patterns.length}개 감지 (점수: ${smellResult.score})`);
         }
 
-        // 현재 글자수 계산 (Stage 2에 전달하여 초과 시 축약도 동시 수행)
+        // 현재 글자수 계산
         const currentText = result.content.replace(/<[^>]+>/g, '');
         const currentCharCount = currentText.replace(/\s/g, '').length;
-        const isOverLength = currentCharCount > targetLength + 200;
 
-        if (isOverLength) {
-          safeProgress(`🔄 Stage 2: 보정 + 축약 통합 중... (현재 ${currentCharCount}자 → 목표 ${targetLength}~${targetLength + 200}자)`);
-        } else {
-          safeProgress('🔄 Stage 2: 보정 중...');
-        }
+        safeProgress('🔄 Stage 2: 보정 중...');
 
         const stage2Prompt = getStage2_AiRemovalAndCompliance(targetLength, currentCharCount);
-        const trimNote = isOverLength
-          ? `\n\n🚨 [축약 필수] 현재 ${currentCharCount}자 → 목표 ${targetLength}~${targetLength + 200}자. 반드시 ${currentCharCount - targetLength}자 이상 줄이세요!`
-          : '';
         const refinedContent = await callGemini({
-          prompt: `아래 글을 보정해주세요. 보정 규칙을 엄격히 따르세요.${smellGuide}${trimNote}\n\n[보정 대상 글]\n${result.content}`,
+          prompt: `아래 글을 보정해주세요. 보정 규칙을 엄격히 따르세요.${smellGuide}\n\n[보정 대상 글]\n${result.content}`,
           model: GEMINI_MODEL.PRO,
           systemInstruction: stage2Prompt,
           responseType: 'text',
@@ -4408,31 +4399,13 @@ ${request.topic}${request.disease ? `, 질환: ${request.disease}` : ''}
           const refinedCharCount = refinedContent.replace(/<[^>]+>/g, '').replace(/\s/g, '').length;
           const ratio = refinedLen / originalLen;
 
-          if (isOverLength) {
-            // 글자수 초과 상태: 축약 결과 검증
-            const targetMin = targetLength * 0.9;  // 목표의 90% 이상이면 OK
-            const targetMaxVal = targetLength + 200;
-            if (refinedCharCount >= targetMin && refinedCharCount <= targetMaxVal) {
-              // 목표 범위 안에 들어옴 → 완벽
-              result.content = refinedContent;
-              safeProgress(`✅ Stage 2 보정+축약 완료: ${currentCharCount}자 → ${refinedCharCount}자`);
-            } else if (refinedCharCount < currentCharCount && refinedCharCount >= targetMin) {
-              // 목표 범위 약간 초과하지만, 원본보다 줄었고 최소치 이상 → 수용
-              result.content = refinedContent;
-              safeProgress(`✅ Stage 2 보정+축약 완료: ${currentCharCount}자 → ${refinedCharCount}자 (범위 근접)`);
-            } else {
-              console.warn(`⚠️ Stage 2 축약 결과 부적절 (${refinedCharCount}자, 목표 ${targetMin}~${targetMaxVal}자), 원본 유지`);
-              safeProgress(`⚠️ Stage 2 축약 실패 - 원본 유지 (${refinedCharCount}자)`);
-            }
+          // 보정만 수행 (축약 없음) — ratio 검증
+          if (ratio >= 0.85 && ratio <= 1.05) {
+            result.content = refinedContent;
+            safeProgress(`✅ Stage 2 보정 완료 (${Math.round(ratio * 100)}% 유지)`);
           } else {
-            // 글자수 정상: 기존 ratio 검증 유지
-            if (ratio >= 0.90 && ratio <= 1.05) {
-              result.content = refinedContent;
-              safeProgress(`✅ Stage 2 보정 완료 (${Math.round(ratio * 100)}% 유지)`);
-            } else {
-              console.warn(`⚠️ Stage 2 보정 결과 범위 초과 (${Math.round(ratio * 100)}%), 원본 유지`);
-              safeProgress('⚠️ Stage 2 보정 범위 초과 - 원본 유지');
-            }
+            console.warn(`⚠️ Stage 2 보정 결과 범위 초과 (${Math.round(ratio * 100)}%), 원본 유지`);
+            safeProgress('⚠️ Stage 2 보정 범위 초과 - 원본 유지');
           }
         } else {
           console.warn('⚠️ Stage 2 보정 결과 부족, 원본 유지');
