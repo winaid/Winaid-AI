@@ -359,8 +359,11 @@ const App: React.FC = () => {
     setCurrentPage(page);
   };
 
-  // 로그아웃 핸들러 (TODO: UI에 연결 필요)
-  const _handleLogout = async () => {
+  // 사용자 메뉴 드롭다운 상태
+  const [showUserMenu, setShowUserMenu] = useState(false);
+
+  // 로그아웃 핸들러
+  const handleLogout = async () => {
     try {
       await signOut();
     } catch (error) {
@@ -847,7 +850,33 @@ const App: React.FC = () => {
           </a>
           
           <div className="flex items-center gap-3">
-             {/* 모든 버튼 숨김 - 깔끔한 UI */}
+             {isLoggedIn && supabaseUser && (
+               <div className="relative">
+                 <button
+                   onClick={() => setShowUserMenu(!showUserMenu)}
+                   className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold transition-all ${darkMode ? 'bg-slate-700 text-emerald-400 hover:bg-slate-600' : 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'}`}
+                   title={supabaseUser.email || '사용자'}
+                 >
+                   {(supabaseUser.email || 'U')[0].toUpperCase()}
+                 </button>
+                 {showUserMenu && (
+                   <>
+                     <div className="fixed inset-0 z-40" onClick={() => setShowUserMenu(false)} />
+                     <div className={`absolute right-0 top-12 w-48 rounded-xl shadow-xl border z-50 overflow-hidden ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'}`}>
+                       <div className={`px-4 py-3 text-xs truncate ${darkMode ? 'text-slate-400 border-b border-slate-700' : 'text-slate-500 border-b border-slate-100'}`}>
+                         {supabaseUser.email}
+                       </div>
+                       <button
+                         onClick={() => { setShowUserMenu(false); handleLogout(); }}
+                         className={`w-full text-left px-4 py-3 text-sm transition-colors ${darkMode ? 'text-red-400 hover:bg-slate-700' : 'text-red-500 hover:bg-red-50'}`}
+                       >
+                         로그아웃
+                       </button>
+                     </div>
+                   </>
+                 )}
+               </div>
+             )}
           </div>
         </div>
       </header>

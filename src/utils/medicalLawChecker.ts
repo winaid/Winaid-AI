@@ -859,7 +859,7 @@ export function analyzeAiSmell(html: string): AiSmellAnalysisResult {
       description: `인칭 대명사 과다 (${totalPersonal}회) - 체험담/광고 느낌`,
       examples: [...firstPersonMatches.slice(0, 2), ...secondPersonMatches.slice(0, 2)],
       severity: 'high',
-      fixSuggestion: '3인칭 관찰자 시점으로 변경 (예: "저는" → 삭제, "여러분은" → "~하는 분들은")'
+      fixSuggestion: '3인칭 질환 경험자 공감 시점으로 변경 (예: "저는" → 삭제, "여러분은" → "~하는 분들은"). 도입부는 반복성/시간 흐름이 드러나는 질환 경험자 관점으로 작성'
     });
   }
 
@@ -919,7 +919,7 @@ export function analyzeAiSmell(html: string): AiSmellAnalysisResult {
     suggestions.push('문장 길이를 다양하게 (짧음/중간/긴 문장 섞기)');
   }
   if (issues.some(i => i.description.includes('인칭 대명사'))) {
-    suggestions.push('1인칭/2인칭 제거하고 3인칭 관찰자 시점으로 작성');
+    suggestions.push('1인칭/2인칭 제거하고 3인칭 질환 경험자 공감 시점으로 작성 (도입부에 반복성·시간 흐름 포함)');
   }
   if (issues.some(i => i.description.includes('감정 과도'))) {
     suggestions.push('과장된 감정 표현 대신 구체적 상황으로 표현');

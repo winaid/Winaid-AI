@@ -374,9 +374,8 @@ export function handleTestimonials(text: string): {
 
   for (const pattern of PROHIBITED_PATTERNS.testimonial) {
     if (fixed.includes(pattern)) {
-      // 후기/사례 문장에 경고 추가
       const replacement = `[의료광고법 주의: 환자 후기 사용 제한]`;
-
+      fixed = fixed.replace(new RegExp(pattern, 'g'), replacement);
       changes.push({
         type: 'replace',
         original: pattern,
@@ -401,14 +400,42 @@ export function removeAiSmell(text: string): {
 
   // 🚨 gpt52-prompts-staged.ts와 일관성 유지
   const aiPatterns: Record<string, string> = {
+    // 메타 설명 금지
     '에 대해 알아보겠습니다': '',
     '에 대해 살펴보겠습니다': '',
+    '에 대해 이야기해봅니다': '',
+    '의 흐름을 알아봅니다': '',
+    '를 정리해 봅니다': '',
+    '를 살펴봅니다': '',
+    '지금부터 ': '',
+    // AI 전환어
+    '이처럼 ': '',
+    '이러한 ': '이런 ',
+    '이와 같이 ': '',
+    '이로 인해 ': '그래서 ',
+    '나아가 ': '',
+    '무엇보다 ': '',
+    // AI 마무리 패턴
     '라고 할 수 있습니다': '경우가 있습니다',
     '것으로 나타났습니다': '경향을 보입니다',
     '것으로 알려져 있습니다': '언급되기도 합니다',
-    '여러분': '', // 🚨 '환자분들' 대신 삭제 (환자 표현 금지!)
-    '환자분들': '~을 겪는 분들', // 환자 표현 대체
-    '환자': '~을 겪는 분',
+    '라는 점을 기억하면 좋겠습니다': '',
+    '해보는 것도 방법입니다': '는 방법이 있습니다',
+    // 독자 말 걸기 금지
+    '여러분': '',
+    '궁금하실 겁니다': '',
+    // 환자 표현 대체
+    '환자분들': '겪는 분들',
+    '환자': '겪는 분',
+    // AI 감성 클리셰
+    '귀를 기울이고': '',
+    '든든한 방패': '',
+    '작은 신호': '초기 증상',
+    '보내는 신호': '나타나는 반응',
+    '건강한 첫걸음': '',
+    '소중한 시간': '',
+    '함께하는 여정': '',
+    '불청객': '',
   };
 
   for (const [original, replacement] of Object.entries(aiPatterns)) {
@@ -527,8 +554,8 @@ export function fixMedicalAdvice(text: string): {
   const replacements: [RegExp, string][] = [
     [/확인이\s*필요한\s*시점(입니다)?/g, '변화가 나타나는 경우입니다'],
     [/살펴볼\s*때(입니다)?/g, '관찰할 수 있습니다'],
-    [/검사(받으세요|하세요)/g, '기록해두세요'],
-    [/병원(가세요|방문하세요)/g, '변화를 관찰하세요'],
+    [/검사(받으세요|하세요)/g, '확인하는 방법이 있습니다'],
+    [/병원(가세요|방문하세요)/g, '의료진의 확인이 필요할 수 있습니다'],
   ];
 
   for (const [pattern, replacement] of replacements) {

@@ -240,6 +240,42 @@ export class ContentValidator {
       reasons.push('메타 설명 포함');
     }
 
+    // 6. AI 전환어/접속어 체크 (gpt52-prompts-staged.ts 금지 패턴)
+    const aiConnectors = (text.match(/이처럼|이러한|이와 같이|이로 인해|나아가|무엇보다/g) || []);
+    if (aiConnectors.length >= 2) {
+      deductions += aiConnectors.length * 3;
+      reasons.push(`AI 전환어 과다 (${aiConnectors.length}개)`);
+    }
+
+    // 7. ~기도 합니다 남발 체크 (글 전체 3회 이하)
+    const gidoMatches = text.match(/기도 합니다/g) || [];
+    if (gidoMatches.length > 3) {
+      deductions += (gidoMatches.length - 3) * 5;
+      reasons.push(`"~기도 합니다" 남발 (${gidoMatches.length}회, 3회 이하 권장)`);
+    }
+
+    // 8. ~게 됩니다 남발 체크 (글 전체 2회 이하)
+    const gedoeMatches = text.match(/게 됩니다/g) || [];
+    if (gedoeMatches.length > 2) {
+      deductions += (gedoeMatches.length - 2) * 5;
+      reasons.push(`"~게 됩니다" 남발 (${gedoeMatches.length}회, 2회 이하 권장)`);
+    }
+
+    // 9. 도입부 질환 경험자 공감 검증 (반복성 마커 체크)
+    const introSection = text.substring(0, Math.min(text.length, 400));
+    const hasRepetitionMarker = /며칠째|몇 주째|몇 달째|계속|반복|매번|요며칠|부쩍|처음엔.*?(는데|지만)|줄 알았는데/.test(introSection);
+    if (!hasRepetitionMarker && text.length > 500) {
+      deductions += 8;
+      reasons.push('도입부에 반복성/시간 흐름 마커 부족 (질환 경험자 공감 약함)');
+    }
+
+    // 10. 딱딱한 단어 체크 (금지 목록)
+    const stiffWords = (text.match(/측면|관점|맥락|양상|경향|파악하다|인지하다|고려하다|유발하다|초래하다|야기하다|체계적|효과적/g) || []);
+    if (stiffWords.length >= 3) {
+      deductions += stiffWords.length * 2;
+      reasons.push(`딱딱한 단어 과다 (${stiffWords.length}개)`);
+    }
+
     const score = Math.max(0, 100 - deductions);
     return { score, reasons };
   }

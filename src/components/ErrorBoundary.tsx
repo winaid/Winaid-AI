@@ -39,12 +39,24 @@ class ErrorBoundary extends Component<Props, State> {
   }
 
   logErrorToService = (error: Error, errorInfo: React.ErrorInfo) => {
-    // TODO: Sentry, LogRocket 등의 에러 로깅 서비스 연동
-    console.log('📤 Error logged:', {
+    const errorLog = {
       message: error.message,
-      stack: error.stack,
-      componentStack: errorInfo.componentStack
-    });
+      stack: error.stack?.substring(0, 500),
+      componentStack: errorInfo.componentStack?.substring(0, 300),
+      timestamp: new Date().toISOString(),
+      url: window.location.href,
+    };
+
+    console.log('📤 Error logged:', errorLog);
+
+    // localStorage에 최근 에러 5개 저장 (디버깅용)
+    try {
+      const stored = JSON.parse(localStorage.getItem('error_logs') || '[]');
+      stored.unshift(errorLog);
+      localStorage.setItem('error_logs', JSON.stringify(stored.slice(0, 5)));
+    } catch {
+      // 저장 실패해도 무시
+    }
   };
 
   handleReset = () => {
