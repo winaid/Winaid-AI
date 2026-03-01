@@ -1,6 +1,7 @@
 import React, { useState, useEffect, lazy, Suspense, useRef } from 'react';
 import { GenerationRequest, GenerationState, CardNewsScript, CardPromptData } from './types';
 import { generateFullPost, generateCardNewsScript, convertScriptToCardNews, generateSingleImage } from './services/geminiService';
+import { getKoreanErrorMessage } from './services/geminiClient';
 import { saveContentToServer, deleteAllContent, getContentList } from './services/apiService';
 import { calculateOverallSimilarity, getSimilarityLevel } from './services/similarityService';
 import { prepareNaverBlogsForComparison } from './services/naverSearchService';
@@ -509,7 +510,7 @@ const App: React.FC = () => {
         setScriptProgress('');
       } catch (err: any) {
         setScriptProgress('');
-        setState(prev => ({ ...prev, error: err.message }));
+        setState(prev => ({ ...prev, error: getKoreanErrorMessage(err) }));
       } finally {
         setIsGeneratingScript(false);
       }
@@ -606,11 +607,7 @@ const App: React.FC = () => {
         console.warn('⚠️ 서버 저장 중 오류 (무시하고 계속):', saveErr);
       }
     } catch (err: any) {
-       const errorMsg = err.message || '알 수 없는 오류가 발생했습니다.';
-       const isNetworkError = errorMsg.includes('Failed to fetch') || errorMsg.includes('NetworkError') || errorMsg.includes('네트워크');
-       const friendlyError = isNetworkError 
-         ? '⚠️ 인터넷 연결이 불안정합니다. 네트워크 상태를 확인하고 다시 시도해주세요.'
-         : `❌ 오류 발생: ${errorMsg}`;
+       const friendlyError = getKoreanErrorMessage(err);
        targetSetState(prev => ({ ...prev, isLoading: false, error: friendlyError }));
        setMobileTab('input');
     }
@@ -629,7 +626,7 @@ const App: React.FC = () => {
       setScriptProgress('');
     } catch (err: any) {
       setScriptProgress('');
-      setState(prev => ({ ...prev, error: err.message }));
+      setState(prev => ({ ...prev, error: getKoreanErrorMessage(err) }));
     } finally {
       setIsGeneratingScript(false);
     }
@@ -657,7 +654,7 @@ const App: React.FC = () => {
       
     } catch (err: any) {
       setScriptProgress('');
-      setState(prev => ({ ...prev, error: err.message }));
+      setState(prev => ({ ...prev, error: getKoreanErrorMessage(err) }));
     } finally {
       setIsGeneratingScript(false);
     }
@@ -758,7 +755,7 @@ const App: React.FC = () => {
       
     } catch (err: any) {
       setScriptProgress('');
-      setState(prev => ({ ...prev, error: err.message }));
+      setState(prev => ({ ...prev, error: getKoreanErrorMessage(err) }));
     } finally {
       setIsGeneratingScript(false);
     }
@@ -1118,16 +1115,31 @@ const App: React.FC = () => {
               )}
             </div>
             
-            <button
-              onClick={() => setState(prev => ({ ...prev, error: null }))}
-              className={`w-full px-4 py-3 font-bold rounded-xl transition-all ${
-                (getCurrentState().error || state.error || '').includes('API 사용량') || (getCurrentState().error || state.error || '').includes('quota') || (getCurrentState().error || state.error || '').includes('limit')
-                  ? 'bg-amber-500 hover:bg-amber-600 text-white'
-                  : 'bg-emerald-500 hover:bg-emerald-600 text-white'
-              }`}
-            >
-              확인
-            </button>
+            <div className="flex gap-3">
+              {pendingRequest && !((getCurrentState().error || state.error || '').includes('API 사용량') || (getCurrentState().error || state.error || '').includes('quota') || (getCurrentState().error || state.error || '').includes('API 키')) && (
+                <button
+                  onClick={() => {
+                    getCurrentSetState()(prev => ({ ...prev, error: null }));
+                    setState(prev => ({ ...prev, error: null }));
+                    handleGenerate(pendingRequest);
+                  }}
+                  className="flex-1 px-4 py-3 font-bold rounded-xl transition-all bg-emerald-500 hover:bg-emerald-600 text-white"
+                >
+                  다시 시도
+                </button>
+              )}
+              <button
+                onClick={() => {
+                  getCurrentSetState()(prev => ({ ...prev, error: null }));
+                  setState(prev => ({ ...prev, error: null }));
+                }}
+                className={`${pendingRequest && !((getCurrentState().error || state.error || '').includes('API 사용량') || (getCurrentState().error || state.error || '').includes('quota') || (getCurrentState().error || state.error || '').includes('API 키')) ? 'flex-1' : 'w-full'} px-4 py-3 font-bold rounded-xl transition-all ${
+                  darkMode ? 'bg-slate-700 hover:bg-slate-600 text-slate-300' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                }`}
+              >
+                닫기
+              </button>
+            </div>
           </div>
         </div>
       )}

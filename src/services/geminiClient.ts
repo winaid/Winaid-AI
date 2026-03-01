@@ -156,10 +156,107 @@ export const getAiProviderSettings = (): { textGeneration: 'gemini', imageGenera
 };
 
 /**
+ * 사용자 친화적 에러 메시지 변환
+ */
+export function getKoreanErrorMessage(error: any): string {
+  const msg = error?.message || '';
+  const status = error?.status;
+
+  if (status === 429 || msg.includes('quota') || msg.includes('RESOURCE_EXHAUSTED') || msg.includes('limit')) {
+    return '⚠️ API 사용량 한도에 도달했습니다. 잠시 후 다시 시도해주세요.';
+  }
+  if (msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('ERR_NETWORK')) {
+    return '📡 인터넷 연결이 불안정합니다. 네트워크 상태를 확인해주세요.';
+  }
+  if (msg.includes('timeout') || msg.includes('Timeout')) {
+    return '⏱️ 응답 시간이 초과되었습니다. 다시 시도해주세요.';
+  }
+  if (status === 503 || msg.includes('503') || msg.includes('UNAVAILABLE') || msg.includes('overloaded')) {
+    return '🔧 AI 서버가 일시적으로 과부하 상태입니다. 잠시 후 다시 시도해주세요.';
+  }
+  if (status === 500 || msg.includes('500') || msg.includes('INTERNAL')) {
+    return '🔧 AI 서버에 일시적인 문제가 발생했습니다. 다시 시도해주세요.';
+  }
+  if (msg.includes('API Key') || msg.includes('API_KEY') || msg.includes('apiKey')) {
+    return '🔑 API 키가 설정되지 않았거나 유효하지 않습니다. 설정을 확인해주세요.';
+  }
+  if (msg.includes('빈 응답') || msg.includes('빈 텍스트')) {
+    return '📭 AI가 빈 응답을 반환했습니다. 다시 시도해주세요.';
+  }
+  return `❌ 오류 발생: ${msg.substring(0, 100)}`;
+}
+
+/**
+ * 재시도 가능한 에러인지 판별
+ */
+function isRetryableError(error: any): boolean {
+  const msg = error?.message || '';
+  const status = error?.status;
+  return (
+    status === 500 || status === 503 ||
+    msg.includes('500') || msg.includes('503') ||
+    msg.includes('UNAVAILABLE') || msg.includes('INTERNAL') ||
+    msg.includes('overloaded') ||
+    msg.includes('timeout') || msg.includes('Timeout') ||
+    msg.includes('Failed to fetch') || msg.includes('NetworkError') ||
+    msg.includes('ERR_NETWORK')
+  );
+}
+
+/**
  * Gemini API 통합 호출 함수
  * - 모델 선택, 타임아웃, JSON/Text 응답 처리를 하나로 통합
+ * - 재시도 가능한 에러 시 지수 백오프 retry (최대 3회)
+ * - PRO 모델 실패 시 FLASH 폴백
  */
 export async function callGemini(config: GeminiCallConfig): Promise<any> {
+  const maxRetries = 3;
+  let lastError: any = null;
+
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      const result = await _callGeminiOnce(config);
+      return result;
+    } catch (error: any) {
+      lastError = error;
+
+      // 재시도 불가능한 에러 (API 키 문제, 할당량 초과 등)는 즉시 던지기
+      if (!isRetryableError(error)) {
+        throw error;
+      }
+
+      // 마지막 시도였으면 던지기
+      if (attempt >= maxRetries - 1) {
+        break;
+      }
+
+      // 지수 백오프: 2초, 4초
+      const delay = Math.pow(2, attempt + 1) * 1000;
+      console.warn(`⚠️ Gemini API 호출 실패 (시도 ${attempt + 1}/${maxRetries}), ${delay / 1000}초 후 재시도...`, error?.message?.substring(0, 80));
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+
+  // 모든 retry 실패 → 에러 모니터링 후 사용자 친화적 메시지로 던지기
+  import('./errorMonitoringService').then(({ trackError }) => {
+    trackError('gemini_api_all_retries_failed', lastError, {
+      model: config.model,
+      responseType: config.responseType,
+      promptLength: config.prompt?.length,
+      retries: maxRetries,
+    }, 'high');
+  }).catch(() => {});
+
+  const friendlyError = new Error(getKoreanErrorMessage(lastError));
+  (friendlyError as any).originalError = lastError;
+  throw friendlyError;
+}
+
+/**
+ * 단일 Gemini API 호출 (retry 없이 1회 실행)
+ * - PRO 모델 503/timeout 시 FLASH 폴백은 여기서 처리
+ */
+async function _callGeminiOnce(config: GeminiCallConfig): Promise<any> {
   const ai = getAiClient();
 
   // systemInstruction이 있으면 Gemini API의 별도 system instruction으로 분리
@@ -221,26 +318,7 @@ export async function callGemini(config: GeminiCallConfig): Promise<any> {
       throw new Error('Gemini가 빈 응답을 반환했습니다. 다시 시도해주세요.');
     }
 
-    // 디버깅: 응답 구조 확인
-    console.log('📦 Gemini 응답 타입:', typeof result);
-    console.log('📦 Gemini 응답 키:', Object.keys(result || {}));
-    console.log('📦 result.text 존재:', !!result.text);
-    console.log('📦 result.text 길이:', result.text?.length || 0);
-
-    // 🔍 candidates 구조 확인 (Gemini SDK 응답 구조)
-    if (result.candidates && result.candidates.length > 0) {
-      console.log('📦 candidates[0] 구조:', Object.keys(result.candidates[0] || {}));
-      const firstCandidate = result.candidates[0];
-      if (firstCandidate.content) {
-        console.log('📦 content 구조:', Object.keys(firstCandidate.content || {}));
-        if (firstCandidate.content.parts) {
-          console.log('📦 parts 개수:', firstCandidate.content.parts.length);
-          console.log('📦 parts[0] 구조:', Object.keys(firstCandidate.content.parts[0] || {}));
-        }
-      }
-    }
-
-    // 🚨 responseType에 따라 적절한 값 반환
+    // responseType에 따라 적절한 값 반환
     if (config.responseType === 'text') {
       // text 타입일 때는 문자열 반환
       const textContent = result.text || '';
@@ -317,15 +395,6 @@ export async function callGemini(config: GeminiCallConfig): Promise<any> {
       }
     }
 
-    console.error('❌ Gemini API 호출 실패:', error);
-    // 에러 모니터링 (비동기, 실패해도 무시)
-    import('./errorMonitoringService').then(({ trackError }) => {
-      trackError('gemini_api', error, {
-        model: config.model,
-        responseType: config.responseType,
-        promptLength: config.prompt?.length,
-      }, 'high');
-    }).catch(() => {});
     throw error;
   }
 }
