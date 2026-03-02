@@ -365,9 +365,9 @@ ${description ? `description: "${description}"` : ''}
 비주얼: (여기에 배경 이미지 내용만 한국어로 작성)
 
 [🚨 프롬프트 언어 규칙 - 반드시 준수!]
-- 모든 프롬프트는 **한국어**로만 작성하세요!
-- 영어 프롬프트 금지! (DSLR, 3D render, illustration 등 영어 금지)
-- 예: "3D 일러스트, 파스텔톤 배경" (✅) vs "3D illustration, pastel background" (❌)
+- **비주얼 설명**(무엇을 그릴지)은 **한국어**로만 작성하세요!
+- 스타일 키워드(3D, DSLR 등)는 영어/한국어 모두 허용
+- 예: "심장 아이콘과 파란 그라데이션 배경" (✅) vs "heart icon blue gradient" (❌)
 
 [규칙]
 1. subtitle, mainTitle, description은 위 텍스트 그대로 유지
