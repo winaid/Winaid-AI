@@ -15,6 +15,7 @@ import { analyzeCompetitorVocabulary, buildForbiddenWordsPrompt } from "./compet
 import { STYLE_NAMES, generateBlogImage, analyzeStyleReferenceImage } from "./imageGenerationService";
 import { generateCardNewsWithAgents } from "./cardNewsService";
 import { generatePressRelease } from "./pressReleaseService";
+import { saveBlogHistory } from "./contentSimilarityService";
 
 // Gemini API 핵심 인프라는 geminiClient.ts에서 import됨
 
