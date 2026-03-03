@@ -16,6 +16,8 @@ const PasswordLogin = lazy(() => import('./components/PasswordLogin'));
 const SimilarityChecker = lazy(() => import('./components/SimilarityChecker'));
 const ContentRefiner = lazy(() => import('./components/ContentRefiner'));
 const MedicalLawSearch = lazy(() => import('./components/MedicalLawSearch').then(module => ({ default: module.MedicalLawSearch })));
+const ImageGenerator = lazy(() => import('./components/ImageGenerator'));
+const VideoGenerator = lazy(() => import('./components/VideoGenerator'));
 
 type PageType = 'app' | 'admin' | 'auth';
 
@@ -72,7 +74,7 @@ const App: React.FC = () => {
   const leftPanelRef = useRef<HTMLDivElement>(null);
   
   // 오른쪽 콘텐츠 탭
-  const [contentTab, setContentTab] = useState<'blog' | 'similarity' | 'refine' | 'card_news' | 'press'>('blog');
+  const [contentTab, setContentTab] = useState<'blog' | 'similarity' | 'refine' | 'card_news' | 'press' | 'image' | 'video'>('blog');
   
   // 현재 탭에 맞는 state 가져오기
   const getCurrentState = (): GenerationState => {
@@ -887,7 +889,7 @@ const App: React.FC = () => {
       <main className="flex-1 max-w-[1600px] w-full mx-auto p-4 lg:p-8 flex flex-col lg:flex-row gap-8 overflow-hidden h-[calc(100vh-64px)]">
         
         {/* AI 정밀보정과 유사도 검사는 전체 화면 사용 */}
-        {contentTab === 'refine' || contentTab === 'similarity' ? (
+        {contentTab === 'refine' || contentTab === 'similarity' || contentTab === 'image' || contentTab === 'video' ? (
           <div className="w-full h-full flex flex-col gap-4 overflow-hidden">
             {/* 탭 메뉴 */}
             <div className={`flex gap-2 p-2 rounded-2xl ${darkMode ? 'bg-slate-800' : 'bg-white'} shadow-lg w-full max-w-5xl mx-auto`}>
@@ -951,6 +953,30 @@ const App: React.FC = () => {
               >
                 📰 언론보도
               </button>
+              <button
+                onClick={() => setContentTab('image')}
+                className={`flex-1 py-3 px-4 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${
+                  contentTab === 'image'
+                    ? 'bg-gradient-to-r from-purple-500 to-indigo-500 text-white shadow-lg'
+                    : darkMode
+                    ? 'text-slate-400 hover:bg-slate-700'
+                    : 'text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                🖼️ 이미지
+              </button>
+              <button
+                onClick={() => setContentTab('video')}
+                className={`flex-1 py-3 px-4 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${
+                  contentTab === 'video'
+                    ? 'bg-gradient-to-r from-rose-500 to-orange-500 text-white shadow-lg'
+                    : darkMode
+                    ? 'text-slate-400 hover:bg-slate-700'
+                    : 'text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                🎬 동영상
+              </button>
             </div>
 
             {/* 전체 화면 콘텐츠 */}
@@ -958,20 +984,32 @@ const App: React.FC = () => {
               {contentTab === 'similarity' ? (
                 <div className={`h-full rounded-2xl shadow-lg border p-6 ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-100'}`}>
                   <Suspense fallback={<div className="flex items-center justify-center h-full"><div className="w-12 h-12 border-4 border-purple-200 border-t-purple-500 rounded-full animate-spin"></div></div>}>
-                    <SimilarityChecker 
-                      onClose={() => setContentTab('blog')} 
-                      darkMode={darkMode} 
+                    <SimilarityChecker
+                      onClose={() => setContentTab('blog')}
+                      darkMode={darkMode}
                       initialContent={getCurrentState().data ? stripHtml(getCurrentState().data!.htmlContent) : ''}
                     />
+                  </Suspense>
+                </div>
+              ) : contentTab === 'image' ? (
+                <div className={`h-full rounded-2xl shadow-lg border p-6 overflow-y-auto ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-100'}`}>
+                  <Suspense fallback={<div className="flex items-center justify-center h-full"><div className="w-12 h-12 border-4 border-purple-200 border-t-purple-500 rounded-full animate-spin"></div></div>}>
+                    <ImageGenerator />
+                  </Suspense>
+                </div>
+              ) : contentTab === 'video' ? (
+                <div className={`h-full rounded-2xl shadow-lg border p-6 overflow-y-auto ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-100'}`}>
+                  <Suspense fallback={<div className="flex items-center justify-center h-full"><div className="w-12 h-12 border-4 border-rose-200 border-t-rose-500 rounded-full animate-spin"></div></div>}>
+                    <VideoGenerator />
                   </Suspense>
                 </div>
               ) : (
                 <div className={`h-full rounded-2xl shadow-lg border p-6 ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-100'}`}>
                   <Suspense fallback={<div className="flex items-center justify-center h-full"><div className="w-12 h-12 border-4 border-pink-200 border-t-pink-500 rounded-full animate-spin"></div></div>}>
-                    <ContentRefiner 
-                      onClose={() => setContentTab('blog')} 
+                    <ContentRefiner
+                      onClose={() => setContentTab('blog')}
                       onNavigate={(tab) => setContentTab(tab)}
-                      darkMode={darkMode} 
+                      darkMode={darkMode}
                     />
                   </Suspense>
                 </div>
