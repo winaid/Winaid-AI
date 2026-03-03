@@ -1,16 +1,11 @@
 import React, { useState, useEffect, lazy, Suspense, useRef } from 'react';
 import { GenerationRequest, GenerationState, CardNewsScript, CardPromptData } from './types';
-import { generateFullPost, generateCardNewsScript, convertScriptToCardNews, generateSingleImage } from './services/geminiService';
-import { getKoreanErrorMessage } from './services/geminiClient';
-import { saveContentToServer, deleteAllContent, getContentList } from './services/apiService';
-import { calculateOverallSimilarity, getSimilarityLevel } from './services/similarityService';
-import { prepareNaverBlogsForComparison } from './services/naverSearchService';
-import InputForm from './components/InputForm';
 import { supabase, signOut } from './lib/supabase';
 import type { User } from '@supabase/supabase-js';
 import ErrorBoundary from './components/ErrorBoundary';
 
 // Lazy load heavy components
+const InputForm = lazy(() => import('./components/InputForm'));
 const ResultPreview = lazy(() => import('./components/ResultPreview'));
 const ScriptPreview = lazy(() => import('./components/ScriptPreview'));
 const PromptPreview = lazy(() => import('./components/PromptPreview'));
@@ -505,11 +500,13 @@ const App: React.FC = () => {
       setState(prev => ({ ...prev, isLoading: false, data: null, error: null }));
       
       try {
+        const { generateCardNewsScript } = await import('./services/cardNewsService');
         const script = await generateCardNewsScript(request, setScriptProgress);
         setCardNewsScript(script);
         setScriptProgress('');
       } catch (err: any) {
         setScriptProgress('');
+        const { getKoreanErrorMessage } = await import('./services/geminiClient');
         setState(prev => ({ ...prev, error: getKoreanErrorMessage(err) }));
       } finally {
         setIsGeneratingScript(false);
@@ -533,12 +530,14 @@ const App: React.FC = () => {
     
     console.log('🚀 generateFullPost 호출 시작');
     try {
+      const { generateFullPost } = await import('./services/geminiService');
       const result = await generateFullPost(request, (p) => targetSetState(prev => ({ ...prev, progress: p })));
       targetSetState({ isLoading: false, error: null, data: result, progress: '' });
       
       // 🆕 API 서버에 자동 저장
       try {
         console.log('💾 API 서버에 콘텐츠 저장 중...');
+        const { saveContentToServer } = await import('./services/apiService');
         const saveResult = await saveContentToServer({
           title: result.title,
           content: result.htmlContent,
@@ -607,6 +606,7 @@ const App: React.FC = () => {
         console.warn('⚠️ 서버 저장 중 오류 (무시하고 계속):', saveErr);
       }
     } catch (err: any) {
+       const { getKoreanErrorMessage } = await import('./services/geminiClient');
        const friendlyError = getKoreanErrorMessage(err);
        targetSetState(prev => ({ ...prev, isLoading: false, error: friendlyError }));
        setMobileTab('input');
@@ -616,16 +616,18 @@ const App: React.FC = () => {
   // 카드뉴스 원고 재생성
   const handleRegenerateScript = async () => {
     if (!pendingRequest) return;
-    
+
     setIsGeneratingScript(true);
     setCardNewsScript(null);
-    
+
     try {
+      const { generateCardNewsScript } = await import('./services/cardNewsService');
       const script = await generateCardNewsScript(pendingRequest, setScriptProgress);
       setCardNewsScript(script);
       setScriptProgress('');
     } catch (err: any) {
       setScriptProgress('');
+      const { getKoreanErrorMessage } = await import('./services/geminiClient');
       setState(prev => ({ ...prev, error: getKoreanErrorMessage(err) }));
     } finally {
       setIsGeneratingScript(false);
@@ -641,6 +643,7 @@ const App: React.FC = () => {
     
     try {
       // 원고를 디자인으로 변환 (프롬프트만 생성, 이미지는 아직!)
+      const { convertScriptToCardNews } = await import('./services/cardNewsService');
       const designResult = await convertScriptToCardNews(
         cardNewsScript, 
         pendingRequest, 
@@ -654,12 +657,13 @@ const App: React.FC = () => {
       
     } catch (err: any) {
       setScriptProgress('');
+      const { getKoreanErrorMessage } = await import('./services/geminiClient');
       setState(prev => ({ ...prev, error: getKoreanErrorMessage(err) }));
     } finally {
       setIsGeneratingScript(false);
     }
   };
-  
+
   // 🆕 프롬프트 수정
   const handleEditPrompts = (updatedPrompts: CardPromptData[]) => {
     setCardNewsPrompts(updatedPrompts);
@@ -679,6 +683,7 @@ const App: React.FC = () => {
       const copyMode = pendingRequest.styleCopyMode;
       
       // 🆕 확인된 프롬프트로 이미지 생성!
+      const { generateSingleImage } = await import('./services/imageGenerationService');
       const imagePromises = cardNewsPrompts.map((promptData, i) => {
         setScriptProgress(`🖼️ 이미지 ${i + 1}/${cardNewsPrompts.length}장 생성 중...`);
         return generateSingleImage(
@@ -755,12 +760,13 @@ const App: React.FC = () => {
       
     } catch (err: any) {
       setScriptProgress('');
+      const { getKoreanErrorMessage } = await import('./services/geminiClient');
       setState(prev => ({ ...prev, error: getKoreanErrorMessage(err) }));
     } finally {
       setIsGeneratingScript(false);
     }
   };
-  
+
   // 🆕 이전 단계로 돌아가기
   const handleBackToScript = () => {
     setCardNewsPrompts(null);
@@ -979,11 +985,13 @@ const App: React.FC = () => {
           {/* 콘텐츠 */}
           <div ref={leftPanelRef} className="flex-1 overflow-y-auto custom-scrollbar">
             {/* 블로그/카드뉴스/언론보도 입력 폼 */}
-            <InputForm 
-              onSubmit={handleGenerate} 
-              isLoading={state.isLoading || isGeneratingScript}
-              onTabChange={setContentTab}
-            />
+            <Suspense fallback={<div className="flex items-center justify-center h-64"><div className="w-12 h-12 border-4 border-emerald-200 border-t-emerald-500 rounded-full animate-spin"></div></div>}>
+              <InputForm
+                onSubmit={handleGenerate}
+                isLoading={state.isLoading || isGeneratingScript}
+                onTabChange={setContentTab}
+              />
+            </Suspense>
           </div>
         </div>
 

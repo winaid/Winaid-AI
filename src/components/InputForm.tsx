@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { CATEGORIES, TONES, PERSONAS } from '../constants';
 import { GenerationRequest, ContentCategory, TrendingItem, SeoTitleItem, AudienceMode, ImageStyle, PostType, CssTheme, WritingStyle } from '../types';
-import { getTrendingTopics, recommendSeoTitles } from '../services/geminiService';
+import { getTrendingTopics, recommendSeoTitles } from '../services/seoService';
 import WritingStyleLearner from './WritingStyleLearner';
 
 // localStorage 키

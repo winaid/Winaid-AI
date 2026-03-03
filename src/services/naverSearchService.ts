@@ -177,7 +177,7 @@ interface GoogleSearchResult {
   };
 }
 
-import { extractSearchKeywords } from './geminiService';
+import { extractSearchKeywords } from './seoService';
 
 /**
  * 네이버 검색 페이지 크롤링으로 블로그 URL 검색 (API 키 불필요)

@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { GeneratedContent, ImageStyle as _ImageStyle, CssTheme, SeoScoreReport, FactCheckReport, SimilarityCheckResult } from '../types';
-import { modifyPostWithAI, generateSingleImage, generateBlogImage, recommendImagePrompt, recommendCardNewsPrompt, regenerateCardSlide as _regenerateCardSlide, evaluateSeoScore, recheckAiSmell, checkContentSimilarity, saveBlogHistory, CARD_LAYOUT_RULE as _CARD_LAYOUT_RULE, STYLE_KEYWORDS } from '../services/geminiService';
+import { modifyPostWithAI, regenerateCardSlide as _regenerateCardSlide, recheckAiSmell } from '../services/postProcessingService';
+import { generateSingleImage, generateBlogImage, recommendImagePrompt, recommendCardNewsPrompt, CARD_LAYOUT_RULE as _CARD_LAYOUT_RULE, STYLE_KEYWORDS } from '../services/imageGenerationService';
+import { evaluateSeoScore } from '../services/seoService';
+import { checkContentSimilarity, saveBlogHistory } from '../services/contentSimilarityService';
 import { CSS_THEMES as _CSS_THEMES, applyThemeToHtml } from '../utils/cssThemes';
 import { optimizeAllImagesInHtml, formatFileSize } from '../utils/imageOptimizer';
 import { saveAs } from 'file-saver';

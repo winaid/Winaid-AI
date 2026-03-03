@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { CardNewsScript, CardNewsSlideScript } from '../types';
-import { regenerateSlideContent, SlideRegenMode } from '../services/geminiService';
+import { regenerateSlideContent } from '../services/postProcessingService';
+import type { SlideRegenMode } from '../services/postProcessingService';
 
 // AI 재생성 옵션 정의
 const REGEN_OPTIONS: { mode: SlideRegenMode; label: string; emoji: string; desc: string }[] = [

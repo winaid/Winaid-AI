@@ -5,7 +5,7 @@ import {
   findSimilarSentences,
 } from '../services/similarityService';
 import { prepareNaverBlogsForComparison } from '../services/naverSearchService';
-import { checkContentSimilarity } from '../services/geminiService';
+import { checkContentSimilarity } from '../services/contentSimilarityService';
 
 interface SimilarityCheckerProps {
   onClose: () => void;

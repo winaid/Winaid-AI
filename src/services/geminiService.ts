@@ -1,56 +1,20 @@
 import { Type } from "@google/genai";
 import { GEMINI_MODEL, TIMEOUTS, callGemini, callGeminiWithFallback, getAiClient, getAiProviderSettings, GEMINI_API_KEYS } from "./geminiClient";
 import type { GeminiCallConfig } from "./geminiClient";
-import { checkContentSimilarity as _csCheckContentSimilarity, saveBlogHistory as _csSaveBlogHistory } from "./contentSimilarityService";
-import { extractSearchKeywords as _seoExtractSearchKeywords, getTrendingTopics as _seoGetTrendingTopics, recommendSeoTitles as _seoRecommendSeoTitles, rankSeoTitles as _seoRankSeoTitles, evaluateSeoScore as _seoEvaluateSeoScore } from "./seoService";
 import { GenerationRequest, GeneratedContent, TrendingItem, FactCheckReport, SeoScoreReport, SeoTitleItem, ImageStyle, WritingStyle, CardPromptData, CardNewsScript, SimilarityCheckResult, BlogHistory, OwnBlogMatch, WebSearchMatch } from "../types";
 import { SYSTEM_PROMPT, getStage1_ContentGeneration, getStage2_AiRemovalAndCompliance, getDynamicSystemPrompt } from "../lib/gpt52-prompts-staged";
 import { loadMedicalLawForGeneration } from "./medicalLawService";
-// API 키 매니저는 geminiClient.ts에서 초기화됨
-// 📦 글 저장 서비스 (Supabase)
 import { saveGeneratedPost } from "./postStorageService";
-// 🚀 콘텐츠 최적화 시스템
-// 프롬프트 최적화 (향후 활용 가능성 있음)
-import { optimizePrompt as _optimizePrompt, estimateTokens as _estimateTokens } from "../utils/promptOptimizer";
 import {
-  generateHumanWritingPrompt as _generateHumanWritingPrompt,
   detectAiSmell,
-  IMAGE_TEXT_MEDICAL_LAW as _IMAGE_TEXT_MEDICAL_LAW,  // 향후 활용 가능
   FEW_SHOT_EXAMPLES,
   CATEGORY_SPECIFIC_PROMPTS,
-  PARAGRAPH_STRUCTURE_GUIDE
 } from "../utils/humanWritingPrompts";
-import { autoFixMedicalLaw as _autoFixMedicalLaw } from "../utils/autoMedicalLawFixer";
-import { contentCache as _contentCache } from "../utils/contentCache";
-import { calculateOverallSimilarity } from "./similarityService";
 import { getTopCompetitorAnalysis, CompetitorAnalysis } from "./naverSearchService";
 import { analyzeCompetitorVocabulary, buildForbiddenWordsPrompt } from "./competitorVocabService";
-
-// 🖼️ 이미지 생성 서비스 (분리됨)
-import {
-  CARD_LAYOUT_RULE as _imgCardLayoutRule,
-  STYLE_NAMES as _imgStyleNames,
-  STYLE_KEYWORDS as _imgStyleKeywords,
-  generateBlogImage as _imgGenerateBlogImage,
-  generateSingleImage as _imgGenerateSingleImage,
-  analyzeStyleReferenceImage as _imgAnalyzeStyleReferenceImage,
-  recommendImagePrompt as _imgRecommendImagePrompt,
-  recommendCardNewsPrompt as _imgRecommendCardNewsPrompt,
-  cleanImagePromptText as _imgCleanImagePromptText,
-} from "./imageGenerationService";
-
-// 🎴 카드뉴스 서비스 (분리됨)
-import {
-  generateCardNewsScript as _cnGenerateCardNewsScript,
-  convertScriptToCardNews as _cnConvertScriptToCardNews,
-  generateCardNewsWithAgents as _cnGenerateCardNewsWithAgents,
-} from "./cardNewsService";
-
-// 🗞️ 보도자료 서비스 (분리됨)
-import { generatePressRelease as _prGeneratePressRelease } from "./pressReleaseService";
-
-// 현재 년도 - getWritingStylePrompts()에서 동적으로 사용
-const _CURRENT_YEAR = new Date().getFullYear();
+import { STYLE_NAMES, generateBlogImage, analyzeStyleReferenceImage } from "./imageGenerationService";
+import { generateCardNewsWithAgents } from "./cardNewsService";
+import { generatePressRelease } from "./pressReleaseService";
 
 // Gemini API 핵심 인프라는 geminiClient.ts에서 import됨
 
@@ -802,35 +766,6 @@ C. "증상만으로는 구분하기 어려운 경우가 많습니다"
 D. "개인차가 있을 수 있습니다"
 E. "변화를 기록해두는 것도 방법입니다"
 `;
-
-// extractSearchKeywords → seoService.ts로 분리됨
-
-
-// SEO 함수 re-export (기존 import 호환)
-export const extractSearchKeywords = _seoExtractSearchKeywords;
-export const getTrendingTopics = _seoGetTrendingTopics;
-export const recommendSeoTitles = _seoRecommendSeoTitles;
-export const rankSeoTitles = _seoRankSeoTitles;
-export const evaluateSeoScore = _seoEvaluateSeoScore;
-
-// 이미지 서비스 re-export (기존 import 호환)
-export const CARD_LAYOUT_RULE = _imgCardLayoutRule;
-export const STYLE_NAMES = _imgStyleNames;
-export const STYLE_KEYWORDS = _imgStyleKeywords;
-export const generateBlogImage = _imgGenerateBlogImage;
-export const generateSingleImage = _imgGenerateSingleImage;
-export const analyzeStyleReferenceImage = _imgAnalyzeStyleReferenceImage;
-export const recommendImagePrompt = _imgRecommendImagePrompt;
-export const recommendCardNewsPrompt = _imgRecommendCardNewsPrompt;
-export const cleanImagePromptText = _imgCleanImagePromptText;
-
-// 카드뉴스 서비스 re-export (기존 import 호환)
-export const generateCardNewsScript = _cnGenerateCardNewsScript;
-export const convertScriptToCardNews = _cnConvertScriptToCardNews;
-export const generateCardNewsWithAgents = _cnGenerateCardNewsWithAgents;
-
-// 보도자료 서비스 re-export (기존 import 호환)
-export const generatePressRelease = _prGeneratePressRelease;
 
 // ============================================
 // 기존 블로그 포스트 생성 함수 (유지)
@@ -3407,26 +3342,6 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
     cssTheme: request.cssTheme || 'modern' // CSS 테마 (기본값: modern)
   };
 };
-
-// 후처리 함수들 → postProcessingService.ts로 분리됨
-import { regenerateCardSlide as _ppRegenerateCardSlide, regenerateSlideContent as _ppRegenerateSlideContent, modifyPostWithAI as _ppModifyPostWithAI, analyzeAiSmell as _ppAnalyzeAiSmell, recheckAiSmell as _ppRecheckAiSmell, refineContentByMedicalLaw as _ppRefineContentByMedicalLaw } from "./postProcessingService";
-import type { SlideRegenMode as _ppSlideRegenMode } from "./postProcessingService";
-
-// re-export
-export const regenerateCardSlide = _ppRegenerateCardSlide;
-export type SlideRegenMode = _ppSlideRegenMode;
-export const regenerateSlideContent = _ppRegenerateSlideContent;
-export const modifyPostWithAI = _ppModifyPostWithAI;
-export const analyzeAiSmell = _ppAnalyzeAiSmell;
-export const recheckAiSmell = _ppRecheckAiSmell;
-export const refineContentByMedicalLaw = _ppRefineContentByMedicalLaw;
-
-
-// 📊 블로그 유사도 검사 시스템 → contentSimilarityService.ts로 분리됨
-// 기존 export 호환을 위한 re-export
-export const checkContentSimilarity = _csCheckContentSimilarity;
-export const saveBlogHistory = _csSaveBlogHistory;
-
 
 // 구글 검색 API 호출
 const searchGoogle = async (query: string, num: number = 5): Promise<{ title: string; link: string; snippet: string }[]> => {
