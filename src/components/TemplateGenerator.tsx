@@ -400,7 +400,7 @@ export default function TemplateGenerator() {
           </div>
         </div>
 
-        {/* 스타일 프리셋 */}
+        {/* 스타일 프리셋 (미니 샘플 미리보기) */}
         <div>
           <label className="block text-xs font-semibold text-slate-600 mb-2">스타일</label>
           <div className="grid grid-cols-2 gap-2">
@@ -408,20 +408,49 @@ export default function TemplateGenerator() {
               <button
                 key={preset.id}
                 onClick={() => setColorTheme(preset.id)}
-                className={`p-3 rounded-xl border-2 transition-all text-left ${
+                className={`rounded-xl border-2 transition-all overflow-hidden ${
                   colorTheme === preset.id
-                    ? 'border-slate-800 shadow-md'
+                    ? 'border-slate-800 shadow-md ring-1 ring-slate-800'
                     : 'border-slate-200 hover:border-slate-300'
                 }`}
               >
-                <div className="flex items-center gap-2 mb-1">
+                {/* 미니 캘린더 샘플 */}
+                <div className="w-full">
+                  {/* 헤더 */}
                   <div
-                    className="w-5 h-5 rounded-full"
+                    className="px-3 py-2 text-center"
                     style={{ background: `linear-gradient(135deg, ${preset.color}, ${preset.accent})` }}
-                  />
-                  <span className="text-sm font-bold text-slate-700">{preset.name}</span>
+                  >
+                    <div className="text-[10px] font-bold text-white opacity-80">{preset.name}</div>
+                    <div className="text-xs font-extrabold text-white">{month}월 휴진 안내</div>
+                  </div>
+                  {/* 미니 그리드 */}
+                  <div className="px-2 py-1.5 bg-white">
+                    <div className="flex justify-between mb-0.5">
+                      {['일','월','화','수','목','금','토'].map((d,i) => (
+                        <span key={d} className={`text-[7px] font-bold w-4 text-center ${i===0?'text-red-400':i===6?'text-blue-400':'text-slate-400'}`}>{d}</span>
+                      ))}
+                    </div>
+                    <div className="flex justify-between">
+                      {[1,2,3,4,5,6,7].map(d => (
+                        <span key={d} className={`text-[7px] w-4 text-center ${d===1?'text-red-400':d===7?'text-blue-400':'text-slate-500'} ${d===3?'bg-red-50 text-red-500 rounded font-bold':''}`}>
+                          {d}
+                        </span>
+                      ))}
+                    </div>
+                    <div className="flex justify-between">
+                      {[8,9,10,11,12,13,14].map(d => (
+                        <span key={d} className={`text-[7px] w-4 text-center ${d===8?'text-red-400':d===14?'text-blue-400':'text-slate-500'}`}>
+                          {d}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
                 </div>
-                <span className="text-[10px] text-slate-400">{preset.desc}</span>
+                {/* 설명 */}
+                <div className="px-3 py-1.5 bg-slate-50 border-t border-slate-100">
+                  <span className="text-[10px] text-slate-500">{preset.desc}</span>
+                </div>
               </button>
             ))}
           </div>
