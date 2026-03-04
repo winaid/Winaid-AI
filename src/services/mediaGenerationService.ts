@@ -209,48 +209,35 @@ export async function generateCustomImage(
   const ai = getAiClient();
   const progress = (msg: string) => onProgress?.(msg);
 
-  // 달력/진료안내 감지 → HTML 템플릿으로 100% 정확한 달력 생성
+  // 달력/진료안내 감지 → HTML 템플릿 또는 AI 포스터 생성
   const dateCtxCheck = detectDateContext(request.prompt);
   if (dateCtxCheck.needsCalendar) {
-    // 1차: AI로 달력 데이터 파싱 → HTML 템플릿 렌더링 (가장 예쁘고 정확)
-    let parsedClosedDays: number[] = [];
+    // 1차: HTML 템플릿 렌더링 시도 (프로그래밍으로 100% 정확한 달력)
     try {
       const { parseCalendarPrompt, buildCalendarHTML, renderCalendarToImage } = await import('./calendarTemplateService');
       const calendarData = await parseCalendarPrompt(request.prompt);
       if (calendarData) {
-        parsedClosedDays = calendarData.closedDays.map(cd => cd.day);
         try {
           progress('달력 디자인 렌더링 중...');
           const html = buildCalendarHTML(calendarData);
           const imageDataUrl = await renderCalendarToImage(html);
           return { imageDataUrl, mimeType: 'image/png' };
         } catch {
-          progress('HTML 렌더링 실패, Canvas 달력으로 전환...');
+          progress('HTML 렌더링 실패, AI 포스터 생성으로 전환...');
         }
       }
     } catch {
-      progress('달력 데이터 파싱 실패, Canvas 달력으로 전환...');
+      progress('달력 데이터 파싱 실패, AI 포스터 생성으로 전환...');
     }
-
-    // 2차: Canvas 달력 직접 반환 (AI가 날짜를 틀리게 그리는 문제 방지)
-    if (dateCtxCheck.months.length > 0) {
-      const month = dateCtxCheck.months[0];
-      const holidays = getKoreanHolidays(dateCtxCheck.year, month);
-      try {
-        const canvasDataUrl = generateCalendarImage(dateCtxCheck.year, month, holidays, parsedClosedDays);
-        progress('Canvas 달력 생성 완료');
-        return { imageDataUrl: canvasDataUrl, mimeType: 'image/png' };
-      } catch {
-        progress('Canvas 달력도 실패, AI 이미지 생성으로 전환...');
-      }
-    }
+    // HTML 실패 시 → 아래 AI 이미지 생성으로 fall-through (Canvas 참조 이미지 포함)
   }
 
   const aspectInstruction = getAspectInstruction(request.aspectRatio);
 
-  // 날짜/달력 컨텍스트 (달력 자체는 위에서 HTML/Canvas로 처리 완료, 여기는 일반 이미지 생성용)
+  // 날짜/달력 컨텍스트 자동 감지 + Canvas 참조 이미지 생성
   const dateCtx = detectDateContext(request.prompt);
   let calendarContext = '';
+  let calendarImageDataUrl: string | null = null;
   if (dateCtx.needsCalendar && dateCtx.months.length > 0) {
     const parts: string[] = [];
     for (const month of dateCtx.months) {
@@ -259,9 +246,19 @@ export async function generateCustomImage(
       if (holidays.length > 0) {
         parts.push(`공휴일: ${holidays.join(', ')}`);
       }
+      // Canvas 달력 참조 이미지 생성 (첫 번째 월만)
+      if (!calendarImageDataUrl) {
+        try {
+          calendarImageDataUrl = generateCalendarImage(dateCtx.year, month, holidays);
+        } catch { /* canvas 미지원 환경에서는 텍스트만 사용 */ }
+      }
     }
     calendarContext = `[정확한 달력 데이터]\n${parts.join('\n')}`;
   }
+
+  const calendarInstruction = calendarImageDataUrl
+    ? '[중요] 첨부된 달력 참조 이미지의 날짜-요일 배치를 반드시 정확히 따르세요. 각 날짜가 올바른 요일 칸에 위치해야 합니다. 날짜를 중복하거나 빠뜨리지 마세요. 달력의 숫자는 참조 이미지와 1:1로 동일해야 합니다.'
+    : '';
 
   const logoInstruction = request.logoBase64
     ? '첨부된 로고 이미지를 참고하여 디자인 안에 이 로고를 자연스럽게 포함시켜 주세요. 로고의 형태와 스타일을 최대한 유지하면서 전체 디자인과 조화롭게 배치해주세요.'
@@ -269,6 +266,7 @@ export async function generateCustomImage(
 
   const fullPrompt = [
     `[규칙] 사용자의 프롬프트에 충실하세요. 사용자가 요청하지 않은 정보를 임의로 추가하지 마세요.`,
+    calendarInstruction,
     calendarContext,
     request.prompt,
     aspectInstruction,
@@ -279,6 +277,16 @@ export async function generateCustomImage(
 
   // 멀티모달 contents 구성
   const contents: any[] = [{ text: fullPrompt }];
+
+  // 달력 참조 이미지 추가 (AI가 날짜 배치를 정확히 따르도록)
+  if (calendarImageDataUrl) {
+    const calMatch = calendarImageDataUrl.match(/^data:(image\/\w+);base64,(.+)$/);
+    if (calMatch) {
+      contents.push({
+        inlineData: { mimeType: calMatch[1], data: calMatch[2] },
+      });
+    }
+  }
 
   // 로고 이미지 추가
   if (request.logoBase64) {
