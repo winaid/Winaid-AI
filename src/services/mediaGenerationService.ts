@@ -290,6 +290,13 @@ export interface ChatMessage {
   prompt?: GeneratedPrompt; // AI 응답일 때만 존재
 }
 
+/** 채팅 응답 JSON 스키마 */
+interface ChatResponseJson {
+  message: string;
+  korean?: string;
+  english?: string;
+}
+
 const SYSTEM_INSTRUCTIONS: Record<PromptMediaType, string> = {
   image: `당신은 AI 이미지 생성 프롬프트 전문가이자 친절한 어시스턴트입니다.
 사용자와 대화하며 Gemini Image Generation에 최적화된 프롬프트를 함께 만들어갑니다.
@@ -300,11 +307,13 @@ const SYSTEM_INSTRUCTIONS: Record<PromptMediaType, string> = {
 - 텍스트가 필요한 경우 정확한 한국어 렌더링 지시
 - 의료 광고 가이드라인 준수 (과장/허위 표현 금지)
 
-대화 규칙:
-- 사용자의 요청에 자연스럽게 응답하세요.
-- 프롬프트를 제안하거나 수정할 때는 반드시 JSON 블록을 포함하세요.
-- 단순한 질문이나 인사에는 JSON 없이 텍스트로만 응답해도 됩니다.
-- 프롬프트를 제안할 때의 JSON 형식: {"korean": "...", "english": "..."}`,
+응답 규칙:
+- 반드시 JSON으로만 응답하세요. 다른 형식은 절대 사용하지 마세요.
+- message: 사용자에게 보여줄 대화 텍스트 (항상 필수)
+- korean: 한국어 최적화 프롬프트 (프롬프트를 제안/수정할 때만 포함)
+- english: 영어 최적화 프롬프트 (프롬프트를 제안/수정할 때만 포함)
+- 단순 대화(인사, 질문 등)에는 message만 포함하고 korean/english는 생략하세요.
+- 프롬프트를 제안할 때는 message + korean + english 모두 포함하세요.`,
 
   video: `당신은 AI 동영상 생성 프롬프트 전문가이자 친절한 어시스턴트입니다.
 사용자와 대화하며 VEO 3.1 영상 생성에 최적화된 프롬프트를 함께 만들어갑니다.
@@ -315,11 +324,13 @@ const SYSTEM_INSTRUCTIONS: Record<PromptMediaType, string> = {
 - 5~8초 짧은 영상에 적합한 하나의 장면 중심
 - 시네마틱하고 고품질의 영상미
 
-대화 규칙:
-- 사용자의 요청에 자연스럽게 응답하세요.
-- 프롬프트를 제안하거나 수정할 때는 반드시 JSON 블록을 포함하세요.
-- 단순한 질문이나 인사에는 JSON 없이 텍스트로만 응답해도 됩니다.
-- 프롬프트를 제안할 때의 JSON 형식: {"korean": "...", "english": "..."}`,
+응답 규칙:
+- 반드시 JSON으로만 응답하세요. 다른 형식은 절대 사용하지 마세요.
+- message: 사용자에게 보여줄 대화 텍스트 (항상 필수)
+- korean: 한국어 최적화 프롬프트 (프롬프트를 제안/수정할 때만 포함)
+- english: 영어 최적화 프롬프트 (프롬프트를 제안/수정할 때만 포함)
+- 단순 대화(인사, 질문 등)에는 message만 포함하고 korean/english는 생략하세요.
+- 프롬프트를 제안할 때는 message + korean + english 모두 포함하세요.`,
 };
 
 export async function chatPromptGenerator(
@@ -330,10 +341,14 @@ export async function chatPromptGenerator(
 ): Promise<ChatMessage> {
   const ai = getAiClient();
 
-  // Gemini contents 형식으로 변환
+  // Gemini contents 형식으로 변환 (assistant → model의 JSON 응답 원형 복원)
   const contents: any[] = history.map((msg) => ({
     role: msg.role === 'assistant' ? 'model' : 'user',
-    parts: [{ text: msg.text + (msg.prompt ? `\n\n${JSON.stringify(msg.prompt)}` : '') }],
+    parts: [{
+      text: msg.role === 'assistant'
+        ? JSON.stringify({ message: msg.text, ...(msg.prompt || {}) })
+        : msg.text,
+    }],
   }));
 
   // 새 사용자 메시지 추가
@@ -350,33 +365,41 @@ export async function chatPromptGenerator(
 
   const response = await ai.models.generateContent({
     model: 'gemini-3.1-pro-preview',
-    config: { systemInstruction: SYSTEM_INSTRUCTIONS[mediaType] },
+    config: {
+      systemInstruction: SYSTEM_INSTRUCTIONS[mediaType],
+      responseMimeType: 'application/json',
+      responseSchema: {
+        type: 'object' as any,
+        properties: {
+          message: { type: 'string' as any, description: '사용자에게 보여줄 대화 텍스트' },
+          korean: { type: 'string' as any, description: '한국어 최적화 프롬프트 (제안할 때만)' },
+          english: { type: 'string' as any, description: '영어 최적화 프롬프트 (제안할 때만)' },
+        },
+        required: ['message'],
+      },
+    },
     contents,
   });
 
   const text = response.text?.trim() || '';
 
-  // JSON 프롬프트가 포함되어 있으면 파싱
-  let prompt: GeneratedPrompt | undefined;
-  const jsonMatch = text.match(/\{[\s\S]*?"korean"\s*:[\s\S]*?"english"\s*:[\s\S]*?\}/);
-  if (jsonMatch) {
-    try {
-      const parsed = JSON.parse(jsonMatch[0]);
-      if (parsed.korean && parsed.english) {
-        prompt = { korean: parsed.korean, english: parsed.english };
-      }
-    } catch { /* JSON 파싱 실패 시 무시 */ }
+  // JSON 모드이므로 바로 파싱
+  let parsed: ChatResponseJson;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    // JSON 파싱 실패 시 텍스트 그대로 반환
+    return { role: 'assistant', text: text || '응답을 처리할 수 없습니다.' };
   }
 
-  // JSON 부분 제거하여 깔끔한 텍스트만 남기기
-  let cleanText = text;
-  if (jsonMatch) {
-    cleanText = text.replace(jsonMatch[0], '').replace(/```json\s*```/g, '').replace(/```\s*```/g, '').trim();
-  }
+  const prompt: GeneratedPrompt | undefined =
+    parsed.korean && parsed.english
+      ? { korean: parsed.korean, english: parsed.english }
+      : undefined;
 
   return {
     role: 'assistant',
-    text: cleanText || (prompt ? '프롬프트를 생성했습니다!' : ''),
+    text: parsed.message || (prompt ? '프롬프트를 생성했습니다!' : ''),
     prompt,
   };
 }
