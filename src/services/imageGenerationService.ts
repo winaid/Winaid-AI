@@ -502,7 +502,7 @@ ${promptText}
       console.log(`🎨 블로그 이미지 생성 시도 ${attempt}/${MAX_RETRIES}...`);
 
       const result = await ai.models.generateContent({
-        model: "gemini-3.1-flash-image-preview",
+        model: "gemini-3-pro-image-preview",  // Nano Banana Pro
         contents: [{ text: finalPrompt }],
         config: {
           responseModalities: ["IMAGE", "TEXT"],
@@ -722,15 +722,15 @@ ${cleanPromptText}
 
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
-      console.log(`🎨 이미지 생성 시도 ${attempt}/${MAX_RETRIES} (gemini-3.1-flash-image-preview)...`);
+      console.log(`🎨 이미지 생성 시도 ${attempt}/${MAX_RETRIES} (gemini-3-pro-image-preview)...`);
 
-      // Nano Banana 2 (Gemini 3.1 Flash Image) - 이미지 생성 전용 모델
+      // Nano Banana Pro (Gemini 3 Pro Image) - 이미지 생성 전용 모델
       const contents: any[] = refImagePart
         ? [refImagePart, { text: finalPrompt }]
         : [{ text: finalPrompt }];
 
       const result = await ai.models.generateContent({
-        model: "gemini-3.1-flash-image-preview",
+        model: "gemini-3-pro-image-preview",  // Nano Banana Pro
         contents: contents,
         config: {
           responseModalities: ["IMAGE", "TEXT"],

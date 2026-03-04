@@ -1,6 +1,6 @@
 /**
  * 범용 이미지/동영상 생성 서비스
- * - 이미지: gemini-3.1-flash-image-preview
+ * - 이미지: gemini-3-pro-image-preview (Nano Banana Pro)
  * - 동영상: veo-3.1-fast-generate-preview
  */
 import { getAiClient, getApiKeyValue } from "./geminiClient";
@@ -271,7 +271,7 @@ export async function generateCustomImage(
       progress(`이미지 생성 시도 ${attempt}/${MAX_RETRIES}...`);
 
       const result = await ai.models.generateContent({
-        model: "gemini-3.1-flash-image-preview",
+        model: "gemini-3-pro-image-preview",  // Nano Banana Pro
         contents,
         config: {
           responseModalities: ["IMAGE", "TEXT"],
