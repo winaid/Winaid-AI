@@ -15,8 +15,8 @@ import {
 
 // 🎯 Gemini API 상수
 export const GEMINI_MODEL = {
-  PRO: 'gemini-3.1-pro-preview',    // 글 생성, 채팅 보정 등 고품질 작업 (3.1 Pro)
-  FLASH: 'gemini-3-flash-preview',  // 검색, 자동 보정 등 빠른 작업
+  PRO: 'gemini-3.1-pro-preview',    // 글 생성 등 고품질 작업 (3.1 Pro)
+  FLASH: 'gemini-3-flash-preview',  // 검색, 자동 보정, 채팅 등 빠른 작업 (3 Flash)
 } as const;
 
 export const TIMEOUTS = {
@@ -238,8 +238,8 @@ export async function callGemini(config: GeminiCallConfig): Promise<any> {
         break;
       }
 
-      // 지수 백오프: 2초, 4초
-      const delay = Math.pow(2, attempt + 1) * 1000;
+      // 백오프: 1초, 2초 (기존 2초, 4초에서 단축)
+      const delay = Math.pow(2, attempt) * 1000;
       console.warn(`⚠️ Gemini API 호출 실패 (시도 ${attempt + 1}/${maxRetries}), ${delay / 1000}초 후 재시도...`, error?.message?.substring(0, 80));
       await new Promise(resolve => setTimeout(resolve, delay));
     }
@@ -379,14 +379,14 @@ async function _callGeminiOnce(config: GeminiCallConfig): Promise<any> {
 
     if (shouldRetry && apiConfig.model === GEMINI_MODEL.PRO) {
       console.warn(`⚠️ PRO 모델 ${is503 ? '503 과부하' : '타임아웃'} → FLASH 폴백 시도...`);
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // 폴백 전 대기 제거 — 바로 FLASH 시도 (속도 개선)
 
       try {
         const retryConfig = { ...apiConfig, model: GEMINI_MODEL.FLASH };
         const retryResult: any = await Promise.race([
           ai.models.generateContent(retryConfig),
           new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('FLASH 폴백도 타임아웃')), 90000) // 90초
+            setTimeout(() => reject(new Error('FLASH 폴백도 타임아웃')), 60000) // 90초 → 60초
           )
         ]);
         if (retryResult) {

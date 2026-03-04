@@ -1168,12 +1168,24 @@ ${request.keyword ? `9. 🚨 **핵심: 키워드("${request.keyword}")와 자연
   const dynamicSystemPrompt = await getDynamicSystemPrompt();
   safeProgress('✅ 동적 프롬프트 준비 완료 (최신 의료광고법 반영)');
 
-  // 경쟁 블로그 분석 (disease 또는 keyword 기준)
+  // 🚀 경쟁 분석 + 어휘 분석 병렬 실행 (속도 최적화)
   let competitorInstruction = '';
+  let forbiddenWordsBlock = '';
+
   if (!isCardNews && request.keywords) {
-    safeProgress('🔍 네이버 통합탭 1위 블로그 분석 중...');
-    try {
-      const competitorData = await getTopCompetitorAnalysis(request.keywords);
+    safeProgress('🔍 경쟁 분석 + 어휘 분석 병렬 실행 중...');
+
+    // 병렬로 두 분석 동시 실행
+    const [competitorResult, vocabResult] = await Promise.allSettled([
+      // 경쟁 블로그 분석
+      getTopCompetitorAnalysis(request.keywords),
+      // 경쟁사 어휘 분석
+      analyzeCompetitorVocabulary(request.keywords, safeProgress),
+    ]);
+
+    // 경쟁 블로그 결과 처리
+    if (competitorResult.status === 'fulfilled') {
+      const competitorData = competitorResult.value;
       if (competitorData?.success && competitorData.topBlog) {
         const tb = competitorData.topBlog;
         competitorInstruction = `
@@ -1203,28 +1215,21 @@ ${tb.content.substring(0, 1500)}
       } else {
         safeProgress('⚠️ 경쟁 블로그 미발견 - 자체 최적화로 진행');
       }
-    } catch (error) {
-      console.warn('[경쟁분석] 에러 무시:', error);
+    } else {
+      console.warn('[경쟁분석] 에러 무시:', competitorResult.reason);
       safeProgress('⚠️ 경쟁 분석 스킵 - 자체 최적화로 진행');
     }
-  }
 
-  // 🔍 경쟁사 어휘 분석 (하이브리드: 하드코딩 A + 동적 B)
-  let forbiddenWordsBlock = '';
-  if (!isCardNews) {
-    safeProgress('🔍 경쟁사 어휘 패턴 분석 중...');
-    try {
-      const vocabAnalysis = request.keywords
-        ? await analyzeCompetitorVocabulary(request.keywords, safeProgress)
-        : null;
-      forbiddenWordsBlock = buildForbiddenWordsPrompt(vocabAnalysis);
-      safeProgress('✅ 경쟁사 어휘 분석 완료 - 금지 표현 목록 준비됨');
-    } catch (error) {
-      console.warn('[어휘분석] 에러 무시:', error);
-      // 방법 A만이라도 적용
-      forbiddenWordsBlock = buildForbiddenWordsPrompt(null);
-      safeProgress('⚠️ 동적 어휘 분석 실패 - 기본 금지 목록 사용');
+    // 어휘 분석 결과 처리
+    const vocabAnalysis = vocabResult.status === 'fulfilled' ? vocabResult.value : null;
+    if (vocabResult.status === 'rejected') {
+      console.warn('[어휘분석] 에러 무시:', vocabResult.reason);
     }
+    forbiddenWordsBlock = buildForbiddenWordsPrompt(vocabAnalysis);
+    safeProgress('✅ 경쟁 분석 + 어휘 분석 완료');
+  } else if (!isCardNews) {
+    // keywords 없는 경우 기본 금지 목록만
+    forbiddenWordsBlock = buildForbiddenWordsPrompt(null);
   }
 
   // 🚀 v8.5 의료광고법 준수 + humanWritingPrompts + GPT-5.2 통합
@@ -2415,10 +2420,10 @@ ${request.topic}${request.disease ? `, 질환: ${request.disease}` : ''}
         const stage2Prompt = getStage2_AiRemovalAndCompliance(targetLength, currentCharCount);
         const refinedContent = await callGemini({
           prompt: `아래 글을 보정해주세요. 보정 규칙을 엄격히 따르세요.${smellGuide}\n\n[보정 대상 글]\n${result.content}`,
-          model: GEMINI_MODEL.PRO,
+          model: GEMINI_MODEL.FLASH,  // PRO → FLASH (보정 작업은 Flash로 충분, 속도 2~3배 개선)
           systemInstruction: stage2Prompt,
           responseType: 'text',
-          timeout: 60000,
+          timeout: 45000,  // 60초 → 45초 (Flash는 더 빠름)
           temperature: 0.3,
         });
 
