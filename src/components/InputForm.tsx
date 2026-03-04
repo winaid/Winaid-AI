@@ -406,11 +406,6 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange 
                         <span className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow transition-all duration-200 ${medicalLawMode === 'relaxed' ? 'translate-x-6' : 'translate-x-0'}`} />
                       </button>
                     </div>
-                    {medicalLawMode === 'relaxed' && (
-                      <p className="text-[10px] text-red-600 bg-red-100 rounded-lg px-2 py-1">
-                        "완치", "최고" 등 critical 금지어는 여전히 차단됩니다. high/medium 수준의 표현만 허용됩니다.
-                      </p>
-                    )}
                   </div>
                </div>
            ) : postType === 'card_news' ? (
