@@ -11,6 +11,8 @@ export interface CalendarData {
   year: number;
   title: string;            // "5월 진료 안내" 등
   closedDays: ClosedDay[];  // 휴진일
+  shortenedDays?: ShortenedDay[];  // 단축 진료일
+  vacationDays?: VacationDay[];    // 휴가일
   hospitalName?: string;
   notices?: string[];       // 하단 안내 문구
   colorTheme?: 'blue' | 'green' | 'pink' | 'purple';
@@ -22,7 +24,55 @@ export interface ClosedDay {
   reason?: string; // "어린이날", "원장님 학회" 등
 }
 
+export interface ShortenedDay {
+  day: number;
+  hours?: string;  // "10:00~14:00"
+  reason?: string;
+}
+
+export interface VacationDay {
+  day: number;
+  reason?: string;
+}
+
 // ── 프롬프트에서 달력 데이터 추출 (AI 텍스트) ──
+
+/**
+ * 특정 월에서 특정 요일의 모든 날짜를 반환 (JS로 정확한 계산)
+ * dayOfWeek: 0=일, 1=월, ..., 6=토
+ */
+function getAllDaysOfWeekInMonth(year: number, month: number, dayOfWeek: number): number[] {
+  const days: number[] = [];
+  const lastDate = new Date(year, month, 0).getDate();
+  for (let d = 1; d <= lastDate; d++) {
+    if (new Date(year, month - 1, d).getDay() === dayOfWeek) {
+      days.push(d);
+    }
+  }
+  return days;
+}
+
+/**
+ * 해당 월의 달력 그리드 텍스트 생성 (AI에게 정확한 날짜-요일 매핑 제공)
+ */
+function buildCalendarGridText(year: number, month: number): string {
+  const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+  const firstDay = new Date(year, month - 1, 1).getDay();
+  const lastDate = new Date(year, month, 0).getDate();
+
+  let grid = `${year}년 ${month}월 달력:\n`;
+  grid += dayNames.join('  ') + '\n';
+
+  let line = '    '.repeat(firstDay);
+  let dow = firstDay;
+  for (let d = 1; d <= lastDate; d++) {
+    line += String(d).padStart(2, ' ') + '  ';
+    dow++;
+    if (dow === 7) { grid += line.trimEnd() + '\n'; line = ''; dow = 0; }
+  }
+  if (line.trim()) grid += line.trimEnd() + '\n';
+  return grid;
+}
 
 export async function parseCalendarPrompt(prompt: string): Promise<CalendarData | null> {
   const ai = getAiClient();
@@ -31,6 +81,9 @@ export async function parseCalendarPrompt(prompt: string): Promise<CalendarData 
   const currentYear = now.getFullYear();
   const currentMonth = now.getMonth() + 1;
 
+  // AI에게 정확한 달력 그리드를 제공하여 날짜-요일 오류 방지
+  const calendarGrid = buildCalendarGridText(currentYear, currentMonth);
+
   const systemPrompt = `당신은 사용자의 병원 달력 요청을 분석하여 JSON으로 변환하는 전문가입니다.
 반드시 아래 JSON 형식으로만 응답하세요. 다른 텍스트 없이 JSON만 출력하세요.
 
@@ -38,16 +91,20 @@ export async function parseCalendarPrompt(prompt: string): Promise<CalendarData 
   "month": 숫자(1-12),
   "title": "달력 제목 문자열",
   "closedDays": [{"day": 숫자, "reason": "사유"}],
+  "closedWeekday": "반복 휴진 요일명 또는 null",
   "hospitalName": "병원명 또는 null",
   "notices": ["안내문구1", "안내문구2"] 또는 [],
   "colorTheme": "blue" | "green" | "pink" | "purple"
 }
 
+📅 참고: 현재 달력 (날짜-요일 정확한 매핑):
+${calendarGrid}
+
 규칙:
 - month: 프롬프트에서 언급된 월. 없으면 ${currentMonth}
 - title: 프롬프트에서 파악되는 제목. 없으면 "N월 진료 안내"
-- closedDays: 휴진/휴무로 언급된 날짜들. "매주 X요일"은 해당 월의 모든 X요일 날짜로 변환하세요.
-  - ${currentYear}년 기준으로 요일을 계산하세요.
+- closedDays: 개별 휴진/휴무 날짜만 포함 (예: "5일 휴진" → {"day": 5, "reason": "휴진"})
+- closedWeekday: "매주 X요일" 패턴이면 요일명만 반환 (예: "수요일"). 날짜 계산은 하지 마세요!
 - hospitalName: 병원명이 언급되면 포함
 - notices: "진료시간", "점심시간" 등 안내 문구
 - colorTheme: 분위기에 맞는 색상. 기본 "blue"`;
@@ -65,19 +122,44 @@ export async function parseCalendarPrompt(prompt: string): Promise<CalendarData 
     const text = response.text?.trim();
     if (!text) return null;
 
-    // JSON 추출 (```json ... ``` 감싸기 대응)
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (!jsonMatch) return null;
 
     const parsed = JSON.parse(jsonMatch[0]);
+    const month = parsed.month || currentMonth;
+
+    // closedDays 구성: 개별 날짜 + 반복 요일 (JS로 정확히 계산)
+    const closedDays: ClosedDay[] = (parsed.closedDays || [])
+      .map((d: any) => ({ day: Number(d.day), reason: d.reason || undefined }))
+      .filter((d: ClosedDay) => d.day >= 1 && d.day <= new Date(currentYear, month, 0).getDate());
+
+    // "매주 X요일" → JS로 정확한 날짜 계산 (AI에게 맡기지 않음)
+    if (parsed.closedWeekday) {
+      const weekdayMap: Record<string, number> = {
+        '일요일': 0, '월요일': 1, '화요일': 2, '수요일': 3,
+        '목요일': 4, '금요일': 5, '토요일': 6,
+        '일': 0, '월': 1, '화': 2, '수': 3, '목': 4, '금': 5, '토': 6,
+      };
+      const dowIndex = weekdayMap[parsed.closedWeekday];
+      if (dowIndex !== undefined) {
+        const weekdayDays = getAllDaysOfWeekInMonth(currentYear, month, dowIndex);
+        const existingDays = new Set(closedDays.map(d => d.day));
+        for (const day of weekdayDays) {
+          if (!existingDays.has(day)) {
+            closedDays.push({ day, reason: `매주 ${parsed.closedWeekday} 휴진` });
+          }
+        }
+      }
+    }
+
+    // 날짜순 정렬
+    closedDays.sort((a, b) => a.day - b.day);
+
     return {
-      month: parsed.month || currentMonth,
+      month,
       year: currentYear,
-      title: parsed.title || `${parsed.month || currentMonth}월 진료 안내`,
-      closedDays: (parsed.closedDays || []).map((d: any) => ({
-        day: Number(d.day),
-        reason: d.reason || undefined,
-      })),
+      title: parsed.title || `${month}월 진료 안내`,
+      closedDays,
       hospitalName: parsed.hospitalName || undefined,
       notices: parsed.notices || [],
       colorTheme: parsed.colorTheme || 'blue',
@@ -115,7 +197,7 @@ const THEMES = {
 // ── HTML 달력 생성 ──
 
 export function buildCalendarHTML(data: CalendarData): string {
-  const { month, year, title, closedDays, hospitalName, notices, colorTheme, logoBase64 } = data;
+  const { month, year, title, closedDays, shortenedDays, vacationDays, hospitalName, notices, colorTheme, logoBase64 } = data;
   const theme = THEMES[colorTheme || 'blue'];
 
   const firstDay = new Date(year, month - 1, 1).getDay();
@@ -124,6 +206,14 @@ export function buildCalendarHTML(data: CalendarData): string {
   const closedSet = new Map<number, string>();
   for (const cd of closedDays) {
     closedSet.set(cd.day, cd.reason || '휴진');
+  }
+  const shortenedSet = new Map<number, string>();
+  for (const sd of (shortenedDays || [])) {
+    shortenedSet.set(sd.day, sd.hours || '단축');
+  }
+  const vacationSet = new Map<number, string>();
+  for (const vd of (vacationDays || [])) {
+    vacationSet.set(vd.day, vd.reason || '휴가');
   }
 
   // 주 단위로 날짜 배열 생성
@@ -151,11 +241,13 @@ export function buildCalendarHTML(data: CalendarData): string {
       const isSaturday = col === 6;
       const isHoliday = holidays.has(d);
       const isClosed = closedSet.has(d);
+      const isShortened = shortenedSet.has(d);
+      const isVacation = vacationSet.has(d);
       const holidayName = holidays.get(d);
-      const closedReason = closedSet.get(d);
 
       let color = '#333333';
-      if (isClosed) color = '#ef4444'; // 휴진일은 무조건 빨간색으로 통일
+      if (isClosed || isVacation) color = '#ef4444';
+      else if (isShortened) color = '#d97706';
       else if (isSunday || isHoliday) color = '#ef4444';
       else if (isSaturday) color = '#3b82f6';
 
@@ -165,6 +257,13 @@ export function buildCalendarHTML(data: CalendarData): string {
       if (isClosed) {
         bgColor = '#fef2f2';
         badge = `<div style="margin-top:2px;font-size:11px;color:#ef4444;font-weight:700;">휴진</div>`;
+      } else if (isVacation) {
+        bgColor = '#f5f3ff';
+        badge = `<div style="margin-top:2px;font-size:11px;color:#7c3aed;font-weight:700;">휴가</div>`;
+        color = '#7c3aed';
+      } else if (isShortened) {
+        bgColor = '#fffbeb';
+        badge = `<div style="margin-top:2px;font-size:10px;color:#d97706;font-weight:700;">단축</div>`;
       }
       if (isHoliday) {
         badge = `<div style="margin-top:2px;font-size:11px;color:#ef4444;font-weight:600;">${holidayName}</div>${isClosed ? '<div style="font-size:11px;color:#ef4444;font-weight:700;">휴진</div>' : ''}`;
@@ -199,14 +298,28 @@ export function buildCalendarHTML(data: CalendarData): string {
       </div>`
     : '';
 
-  // 휴진일 범례
-  const closedLegend = closedDays.length > 0
-    ? `<div style="margin-top:12px;display:flex;flex-wrap:wrap;gap:8px;justify-content:center;">
-        ${closedDays.map(cd => `<span style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:#fef2f2;border-radius:20px;font-size:12px;color:#ef4444;font-weight:600;">
-          <span style="width:6px;height:6px;background:#ef4444;border-radius:50%;display:inline-block;"></span>
-          ${cd.day}일 ${cd.reason || '휴진'}
-        </span>`).join('')}
-      </div>`
+  // 범례 (휴진 + 단축 + 휴가)
+  const legendItems: string[] = [];
+  closedDays.forEach(cd => {
+    legendItems.push(`<span style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:#fef2f2;border-radius:20px;font-size:12px;color:#ef4444;font-weight:600;">
+      <span style="width:6px;height:6px;background:#ef4444;border-radius:50%;display:inline-block;"></span>
+      ${cd.day}일 ${cd.reason || '휴진'}
+    </span>`);
+  });
+  (shortenedDays || []).forEach(sd => {
+    legendItems.push(`<span style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:#fffbeb;border-radius:20px;font-size:12px;color:#d97706;font-weight:600;">
+      <span style="width:6px;height:6px;background:#d97706;border-radius:50%;display:inline-block;"></span>
+      ${sd.day}일 단축${sd.hours ? ` (${sd.hours})` : ''}
+    </span>`);
+  });
+  (vacationDays || []).forEach(vd => {
+    legendItems.push(`<span style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:#f5f3ff;border-radius:20px;font-size:12px;color:#7c3aed;font-weight:600;">
+      <span style="width:6px;height:6px;background:#7c3aed;border-radius:50%;display:inline-block;"></span>
+      ${vd.day}일 ${vd.reason || '휴가'}
+    </span>`);
+  });
+  const closedLegend = legendItems.length > 0
+    ? `<div style="margin-top:12px;display:flex;flex-wrap:wrap;gap:8px;justify-content:center;">${legendItems.join('')}</div>`
     : '';
 
   return `<div id="calendar-render-target" style="width:700px;background:#ffffff;border-radius:20px;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Noto Sans KR',sans-serif;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
