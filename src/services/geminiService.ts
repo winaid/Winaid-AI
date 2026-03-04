@@ -2,7 +2,7 @@ import { Type } from "@google/genai";
 import { GEMINI_MODEL, TIMEOUTS, callGemini, callGeminiWithFallback, getAiClient, getAiProviderSettings, GEMINI_API_KEYS } from "./geminiClient";
 import type { GeminiCallConfig } from "./geminiClient";
 import { GenerationRequest, GeneratedContent, TrendingItem, FactCheckReport, SeoScoreReport, SeoTitleItem, ImageStyle, WritingStyle, CardPromptData, CardNewsScript, SimilarityCheckResult, BlogHistory, OwnBlogMatch, WebSearchMatch } from "../types";
-import { SYSTEM_PROMPT, getStage1_ContentGeneration, getStage2_AiRemovalAndCompliance, getDynamicSystemPrompt } from "../lib/gpt52-prompts-staged";
+import { SYSTEM_PROMPT, getStage1_ContentGeneration, getDynamicSystemPrompt } from "../lib/gpt52-prompts-staged";
 import { loadMedicalLawForGeneration } from "./medicalLawService";
 import { saveGeneratedPost } from "./postStorageService";
 import {
@@ -2393,62 +2393,7 @@ ${request.topic}${request.disease ? `, 질환: ${request.disease}` : ''}
       }
     }
 
-    // ──────────────────────────────────────────────
-    // 🔄 Stage 2: AI 냄새 자동 보정 (생성 후 1회 정밀 보정)
-    // ──────────────────────────────────────────────
-    if (!isCardNews && result.content && typeof result.content === 'string' && result.content.length > 300) {
-      safeProgress('🔄 Stage 2: AI 냄새 감지 중...');
-      try {
-        // AI 냄새 감지 → 결과를 Stage 2에 전달
-        const plainText = result.content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
-        const smellResult = detectAiSmell(plainText);
-
-        let smellGuide = '';
-        if (smellResult.detected && smellResult.patterns.length > 0) {
-          smellGuide = `\n\n[AI 냄새 감지 결과 - 아래 표현을 우선 수정하세요]\n`;
-          smellGuide += smellResult.patterns.slice(0, 15).map(p => `- ${p}`).join('\n');
-          smellGuide += `\n→ 위 표현들을 문맥에 맞게 자연스럽게 고치세요. 단순 삭제하지 말고 자연스러운 대체 표현으로 바꾸세요.`;
-          safeProgress(`🔍 AI 냄새 ${smellResult.patterns.length}개 감지 (점수: ${smellResult.score})`);
-        }
-
-        // 현재 글자수 계산
-        const currentText = result.content.replace(/<[^>]+>/g, '');
-        const currentCharCount = currentText.replace(/\s/g, '').length;
-
-        safeProgress('🔄 Stage 2: 보정 중...');
-
-        const stage2Prompt = getStage2_AiRemovalAndCompliance(targetLength, currentCharCount);
-        const refinedContent = await callGemini({
-          prompt: `아래 글을 보정해주세요. 보정 규칙을 엄격히 따르세요.${smellGuide}\n\n[보정 대상 글]\n${result.content}`,
-          model: GEMINI_MODEL.FLASH,  // PRO → FLASH (보정 작업은 Flash로 충분, 속도 2~3배 개선)
-          systemInstruction: stage2Prompt,
-          responseType: 'text',
-          timeout: 45000,  // 60초 → 45초 (Flash는 더 빠름)
-          temperature: 0.3,
-        });
-
-        if (refinedContent && typeof refinedContent === 'string' && refinedContent.length > 300) {
-          const originalLen = result.content.replace(/<[^>]*>/g, '').length;
-          const refinedLen = refinedContent.replace(/<[^>]*>/g, '').length;
-          const refinedCharCount = refinedContent.replace(/<[^>]+>/g, '').replace(/\s/g, '').length;
-          const ratio = refinedLen / originalLen;
-
-          // 보정만 수행 (축약 없음) — ratio 검증
-          if (ratio >= 0.85 && ratio <= 1.05) {
-            result.content = refinedContent;
-            safeProgress(`✅ Stage 2 보정 완료 (${Math.round(ratio * 100)}% 유지)`);
-          } else {
-            console.warn(`⚠️ Stage 2 보정 결과 범위 초과 (${Math.round(ratio * 100)}%), 원본 유지`);
-            safeProgress('⚠️ Stage 2 보정 범위 초과 - 원본 유지');
-          }
-        } else {
-          console.warn('⚠️ Stage 2 보정 결과 부족, 원본 유지');
-        }
-      } catch (stage2Error) {
-        console.warn('⚠️ Stage 2 보정 실패, 원본 유지:', stage2Error);
-        safeProgress('⚠️ Stage 2 보정 스킵 - 원본 유지');
-      }
-    }
+    // Stage 2 (AI 냄새 보정) 제거 — PRO 생성 프롬프트에서 이미 처리, 별도 API 호출 불필요
 
     // 🔧 fact_check 기본값 설정 (Gemini가 반환하지 않은 필드 보완) - 정확성 강화로 기준 상향
     if (!result.fact_check) {
