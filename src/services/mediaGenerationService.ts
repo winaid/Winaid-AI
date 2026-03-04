@@ -339,8 +339,13 @@ function getSystemInstruction(mediaType: PromptMediaType): string {
 - message: 사용자에게 보여줄 대화 텍스트 (항상 필수)
 - korean: 한국어 최적화 프롬프트 (프롬프트를 제안/수정할 때만 포함)
 - english: 영어 최적화 프롬프트 (프롬프트를 제안/수정할 때만 포함)
-- 단순 대화(인사, 질문 등)에는 message만 포함하고 korean/english는 생략하세요.
-- 프롬프트를 제안할 때는 message + korean + english 모두 포함하세요.`;
+
+⚡ 핵심 원칙: 사용자가 이미지/영상 주제, 장면, 키워드를 조금이라도 언급하면 즉시 프롬프트를 생성하세요!
+- 사용자가 원하는 것을 되물어보지 말고, 바로 프롬프트를 만들어주세요.
+- "어떤 스타일을 원하시나요?", "더 구체적으로 알려주세요" 같은 되묻기는 최소화하세요.
+- 정보가 부족해도 합리적으로 추론하여 프롬프트를 먼저 제안하고, message에서 수정 가능하다고 안내하세요.
+- 프롬프트를 제안할 때는 message + korean + english 모두 포함하세요.
+- message만 단독으로 반환하는 경우는 "안녕", "고마워" 같은 순수 인사/감사 표현일 때만입니다.`;
 }
 
 export async function chatPromptGenerator(
