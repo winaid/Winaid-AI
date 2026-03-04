@@ -19,6 +19,71 @@ export interface ImageGenerationResult {
   mimeType: string;
 }
 
+// 해당 월의 달력 그리드 텍스트 생성
+function buildCalendarGrid(year: number, month: number): string {
+  const firstDay = new Date(year, month - 1, 1).getDay(); // 0=일, 1=월, ...
+  const lastDate = new Date(year, month, 0).getDate();
+  const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+
+  let grid = `${year}년 ${month}월 달력:\n`;
+  grid += dayNames.join('  ') + '\n';
+
+  // 첫째 주 빈칸
+  let line = '    '.repeat(firstDay);
+  let dayOfWeek = firstDay;
+
+  for (let d = 1; d <= lastDate; d++) {
+    line += String(d).padStart(2, ' ') + '  ';
+    dayOfWeek++;
+    if (dayOfWeek === 7) {
+      grid += line.trimEnd() + '\n';
+      line = '';
+      dayOfWeek = 0;
+    }
+  }
+  if (line.trim()) grid += line.trimEnd() + '\n';
+
+  return grid;
+}
+
+// 한국 공휴일 (고정 공휴일만)
+function getKoreanHolidays(year: number, month: number): string[] {
+  const holidays: Record<string, string> = {
+    '1-1': '신정', '3-1': '삼일절', '5-5': '어린이날',
+    '6-6': '현충일', '8-15': '광복절', '10-3': '개천절',
+    '10-9': '한글날', '12-25': '성탄절',
+  };
+  const result: string[] = [];
+  for (const [key, name] of Object.entries(holidays)) {
+    const [m] = key.split('-').map(Number);
+    if (m === month) result.push(`${key} ${name}`);
+  }
+  return result;
+}
+
+// 프롬프트에서 날짜/달력 관련 키워드 감지
+function detectDateContext(prompt: string): { needsCalendar: boolean; months: number[]; year: number } {
+  const now = new Date();
+  const year = now.getFullYear();
+  const calendarKeywords = /달력|캘린더|calendar|일정|스케줄|진료\s*안내|휴진|휴무|공휴일|진료\s*시간/i;
+  const needsCalendar = calendarKeywords.test(prompt);
+
+  const months: number[] = [];
+  // "3월", "12월" 등 월 감지
+  const monthMatches = prompt.matchAll(/(\d{1,2})\s*월/g);
+  for (const m of monthMatches) {
+    const num = parseInt(m[1], 10);
+    if (num >= 1 && num <= 12) months.push(num);
+  }
+
+  // 월 언급이 없으면 현재 월
+  if (months.length === 0 && needsCalendar) {
+    months.push(now.getMonth() + 1);
+  }
+
+  return { needsCalendar, months, year };
+}
+
 export async function generateCustomImage(
   request: ImageGenerationRequest,
   onProgress?: (msg: string) => void
@@ -29,7 +94,22 @@ export async function generateCustomImage(
   const aspectInstruction = getAspectInstruction(request.aspectRatio);
 
   const now = new Date();
-  const dateInfo = `[현재 날짜: ${now.getFullYear()}년 ${now.getMonth() + 1}월 ${now.getDate()}일]`;
+  const dateInfo = `[현재 날짜: ${now.getFullYear()}년 ${now.getMonth() + 1}월 ${now.getDate()}일 (${['일','월','화','수','목','금','토'][now.getDay()]}요일)]`;
+
+  // 날짜/달력 컨텍스트 자동 감지 및 추가
+  const dateCtx = detectDateContext(request.prompt);
+  let calendarContext = '';
+  if (dateCtx.needsCalendar && dateCtx.months.length > 0) {
+    const parts: string[] = [];
+    for (const month of dateCtx.months) {
+      parts.push(buildCalendarGrid(dateCtx.year, month));
+      const holidays = getKoreanHolidays(dateCtx.year, month);
+      if (holidays.length > 0) {
+        parts.push(`공휴일: ${holidays.join(', ')}`);
+      }
+    }
+    calendarContext = `[달력/날짜 참고 정보 - 날짜와 요일을 정확하게 렌더링하세요!]\n${parts.join('\n')}\n위 달력 데이터를 참고하여 날짜, 요일, 공휴일을 정확하게 표시해주세요. 날짜와 요일이 틀리면 안 됩니다!`;
+  }
 
   const logoInstruction = request.logoBase64
     ? '첨부된 로고 이미지를 참고하여 디자인 안에 이 로고를 자연스럽게 포함시켜 주세요. 로고의 형태와 스타일을 최대한 유지하면서 전체 디자인과 조화롭게 배치해주세요.'
@@ -37,6 +117,7 @@ export async function generateCustomImage(
 
   const fullPrompt = [
     dateInfo,
+    calendarContext,
     request.prompt,
     aspectInstruction,
     '고해상도, 선명하고 깨끗한 이미지로 생성해주세요. 텍스트와 그래픽 요소가 또렷하고 흐림 없이 렌더링되어야 합니다. professional quality, sharp details, crisp edges, no blur, no artifacts.',
