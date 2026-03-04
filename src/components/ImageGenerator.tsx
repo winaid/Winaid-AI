@@ -68,75 +68,6 @@ export default function ImageGenerator({ onProgress }: Props) {
     try { localStorage.removeItem(LOGO_STORAGE_KEY); } catch {}
   }, []);
 
-  // 로고+병원명을 Canvas로 이미지 위에 합성
-  const overlayLogoOnImage = useCallback(async (
-    imageDataUrl: string,
-    logo: string | null,
-    name: string,
-    position: 'top' | 'bottom',
-  ): Promise<string> => {
-    return new Promise((resolve) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        canvas.width = img.width;
-        canvas.height = img.height;
-        const ctx = canvas.getContext('2d')!;
-        ctx.drawImage(img, 0, 0);
-
-        const hasLogo = !!logo;
-        const hasName = !!name.trim();
-        if (!hasLogo && !hasName) { resolve(imageDataUrl); return; }
-
-        // 바 높이 / 여백 계산
-        const barHeight = Math.max(60, Math.round(img.height * 0.08));
-        const padding = Math.round(barHeight * 0.2);
-        const barY = position === 'top' ? 0 : img.height - barHeight;
-
-        // 반투명 배경 바
-        ctx.fillStyle = 'rgba(255,255,255,0.85)';
-        ctx.fillRect(0, barY, img.width, barHeight);
-
-        let logoDrawWidth = 0;
-        const drawContent = (logoImg?: HTMLImageElement) => {
-          const centerY = barY + barHeight / 2;
-          // 로고 그리기
-          if (logoImg) {
-            const maxLogoH = barHeight - padding * 2;
-            const scale = maxLogoH / logoImg.height;
-            logoDrawWidth = logoImg.width * scale;
-            const logoX = padding * 2;
-            const logoY = centerY - maxLogoH / 2;
-            ctx.drawImage(logoImg, logoX, logoY, logoDrawWidth, maxLogoH);
-          }
-
-          // 병원명 텍스트
-          if (hasName) {
-            const fontSize = Math.round(barHeight * 0.38);
-            ctx.font = `bold ${fontSize}px "Pretendard", "Noto Sans KR", sans-serif`;
-            ctx.fillStyle = '#1F2937';
-            ctx.textBaseline = 'middle';
-            const textX = hasLogo ? padding * 2 + logoDrawWidth + padding : padding * 2;
-            ctx.fillText(name, textX, centerY);
-          }
-
-          resolve(canvas.toDataURL('image/png'));
-        };
-
-        if (hasLogo && logo) {
-          const logoImg = new Image();
-          logoImg.onload = () => drawContent(logoImg);
-          logoImg.onerror = () => drawContent(); // 로고 로드 실패 시 텍스트만
-          logoImg.src = logo;
-        } else {
-          drawContent();
-        }
-      };
-      img.onerror = () => resolve(imageDataUrl);
-      img.src = imageDataUrl;
-    });
-  }, []);
-
   const handleGenerate = useCallback(async () => {
     if (!prompt.trim()) return;
 
@@ -148,28 +79,32 @@ export default function ImageGenerator({ onProgress }: Props) {
     try {
       const { generateCustomImage } = await import('../services/mediaGenerationService');
 
-      // 로고/병원명은 AI에 넘기지 않음 - 생성 후 Canvas로 합성
+      let finalPrompt = prompt.trim();
+
+      // 로고+병원명: AI에게 함께 배치하도록 지시
+      if (logoEnabled && hospitalName.trim()) {
+        const posLabel = logoPosition === 'top' ? '상단' : '하단';
+        finalPrompt += `\n\n[로고+병원명 배치 규칙 - 반드시 준수!]
+첨부된 로고 이미지와 "${hospitalName}" 병원명 텍스트를 반드시 하나의 세트로 묶어서 디자인의 ${posLabel}에 배치해주세요.
+- 로고 이미지 바로 옆에 "${hospitalName}" 텍스트를 나란히 배치 (로고 왼쪽 + 텍스트 오른쪽, 또는 로고 위 + 텍스트 아래)
+- 로고와 병원명은 절대 떨어뜨리지 말고, 항상 함께 붙어있어야 합니다
+- 이미지 전체에서 로고+병원명은 딱 한 번만 표시 (중복 금지!)
+- ${posLabel} 한 곳에만 배치하고, 다른 위치에 또 넣지 마세요`;
+      } else if (logoEnabled && logoDataUrl) {
+        const posLabel = logoPosition === 'top' ? '상단' : '하단';
+        finalPrompt += `\n\n첨부된 로고 이미지를 디자인의 ${posLabel}에 자연스럽게 한 번만 배치해주세요. 다른 위치에 중복으로 넣지 마세요.`;
+      }
+
       const res = await generateCustomImage(
         {
-          prompt: prompt.trim(),
+          prompt: finalPrompt,
           aspectRatio,
+          logoBase64: logoEnabled && logoDataUrl ? logoDataUrl : undefined,
         },
         (msg) => { setProgress(msg); onProgress?.(msg); }
       );
 
-      // 로고/병원명이 있으면 Canvas로 오버레이 합성
-      let finalImage = res.imageDataUrl;
-      if (logoEnabled && (logoDataUrl || hospitalName.trim())) {
-        setProgress('로고 합성 중...');
-        finalImage = await overlayLogoOnImage(
-          res.imageDataUrl,
-          logoDataUrl,
-          hospitalName,
-          logoPosition,
-        );
-      }
-
-      setResult(finalImage);
+      setResult(res.imageDataUrl);
       setProgress('');
     } catch (err: any) {
       setError(err?.message || '이미지 생성에 실패했습니다.');
@@ -177,7 +112,7 @@ export default function ImageGenerator({ onProgress }: Props) {
     } finally {
       setGenerating(false);
     }
-  }, [prompt, aspectRatio, onProgress, logoEnabled, logoDataUrl, hospitalName, logoPosition, overlayLogoOnImage]);
+  }, [prompt, aspectRatio, onProgress, logoEnabled, logoDataUrl, hospitalName, logoPosition]);
 
   const handleDownload = useCallback(() => {
     if (!result) return;
