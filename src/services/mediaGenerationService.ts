@@ -211,9 +211,7 @@ export async function generateVideo(
   const ai = getAiClient();
   const progress = (msg: string) => onProgress?.(msg);
 
-  const now = new Date();
-  const dateInfo = `[현재 날짜: ${now.getFullYear()}년 ${now.getMonth() + 1}월 ${now.getDate()}일]`;
-  const fullPrompt = `${dateInfo}\n\n${request.prompt}`;
+  const fullPrompt = request.prompt;
 
   progress('동영상 생성 요청 중...');
 
@@ -323,23 +321,25 @@ export async function generateOptimizedPrompt(
   const ai = getAiClient();
 
   const now = new Date();
-  const dateInfo = `${now.getFullYear()}년 ${now.getMonth() + 1}월 ${now.getDate()}일`;
+  const dateInfo = `${now.getFullYear()}년 ${now.getMonth() + 1}월`;
 
   const baseInstruction = mediaType === 'image'
-    ? `[현재 날짜: ${dateInfo}]
+    ? `[시기 참고: ${dateInfo} - 계절/시기 맥락 파악용이며, 생성 프롬프트에 날짜를 포함하지 마세요]
 당신은 AI 이미지 생성 프롬프트 전문가입니다.
 Gemini Image Generation에 최적화된 상세 프롬프트를 작성합니다.
 - 병원/의료 콘텐츠에 적합한 전문적이고 깔끔한 스타일
 - 조명, 색감, 구도, 분위기 등 시각적 디테일 포함
 - 텍스트가 필요한 경우 정확한 한국어 렌더링 지시 포함
-- 의료 광고 가이드라인 준수 (과장/허위 표현 금지)`
-    : `[현재 날짜: ${dateInfo}]
+- 의료 광고 가이드라인 준수 (과장/허위 표현 금지)
+- 중요: 사용자가 명시적으로 요청한 내용만 프롬프트에 포함. 날짜, 숫자 등을 임의로 추가하지 마세요.`
+    : `[시기 참고: ${dateInfo} - 계절/시기 맥락 파악용이며, 생성 프롬프트에 날짜를 포함하지 마세요]
 당신은 AI 동영상 생성 프롬프트 전문가입니다.
 VEO 3.1 영상 생성에 최적화된 상세 프롬프트를 작성합니다.
 - 병원/의료 콘텐츠에 적합한 전문적이고 깔끔한 스타일
 - 카메라 움직임(팬, 틸트, 줌 등), 조명, 분위기 설명 포함
 - 5~8초 짧은 영상에 적합한 하나의 장면 중심
-- 시네마틱하고 고품질의 영상미 지시 포함`;
+- 시네마틱하고 고품질의 영상미 지시 포함
+- 중요: 사용자가 명시적으로 요청한 내용만 프롬프트에 포함. 날짜, 숫자 등을 임의로 추가하지 마세요.`;
 
   const imageContext = referenceImageBase64
     ? '\n\n참고 이미지가 첨부되어 있습니다. 이 이미지의 스타일, 구도, 색감, 분위기를 분석하여 비슷한 결과물을 만들 수 있는 프롬프트를 작성하세요.'
@@ -410,10 +410,10 @@ interface ChatResponseJson {
 
 function getSystemInstruction(mediaType: PromptMediaType): string {
   const now = new Date();
-  const dateInfo = `${now.getFullYear()}년 ${now.getMonth() + 1}월 ${now.getDate()}일`;
+  const dateInfo = `${now.getFullYear()}년 ${now.getMonth() + 1}월`;
 
   const base = mediaType === 'image'
-    ? `[현재 날짜: ${dateInfo}]
+    ? `[시기 참고: ${dateInfo} - 계절/시기 맥락 파악용이며, 생성 프롬프트에 오늘 날짜를 넣지 마세요. 사용자가 요청한 월/날짜만 사용하세요.]
 당신은 AI 이미지 생성 프롬프트 전문가이자 친절한 어시스턴트입니다.
 사용자와 대화하며 Gemini Image Generation에 최적화된 프롬프트를 함께 만들어갑니다.
 
@@ -422,7 +422,7 @@ function getSystemInstruction(mediaType: PromptMediaType): string {
 - 조명, 색감, 구도, 분위기 등 시각적 디테일
 - 텍스트가 필요한 경우 정확한 한국어 렌더링 지시
 - 의료 광고 가이드라인 준수 (과장/허위 표현 금지)`
-    : `[현재 날짜: ${dateInfo}]
+    : `[시기 참고: ${dateInfo} - 계절/시기 맥락 파악용이며, 생성 프롬프트에 오늘 날짜를 넣지 마세요. 사용자가 요청한 월/날짜만 사용하세요.]
 당신은 AI 동영상 생성 프롬프트 전문가이자 친절한 어시스턴트입니다.
 사용자와 대화하며 VEO 3.1 영상 생성에 최적화된 프롬프트를 함께 만들어갑니다.
 
