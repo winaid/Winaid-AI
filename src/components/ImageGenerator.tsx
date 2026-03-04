@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import type { ImageTemplate, ImageAspectRatio } from '../services/mediaGenerationService';
+import PromptGenerator from './PromptGenerator';
 
 const TEMPLATES: { value: ImageTemplate; label: string; placeholder: string }[] = [
   { value: 'free', label: '자유 생성', placeholder: '원하는 이미지를 설명해주세요...' },
@@ -105,6 +106,13 @@ export default function ImageGenerator({ onProgress }: Props) {
           disabled={generating}
         />
       </div>
+
+      {/* AI 프롬프트 생성기 */}
+      <PromptGenerator
+        mediaType="image"
+        onApplyPrompt={(p) => setPrompt(p)}
+        disabled={generating}
+      />
 
       {/* 비율 선택 */}
       <div>

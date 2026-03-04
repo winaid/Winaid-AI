@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useRef } from 'react';
 import type { VideoAspectRatio } from '../services/mediaGenerationService';
+import PromptGenerator from './PromptGenerator';
 
 const EXAMPLE_PROMPTS = [
   '병원 로비에서 환자가 접수하는 깔끔한 장면, 밝고 따뜻한 조명',
@@ -73,6 +74,13 @@ export default function VideoGenerator({ onProgress }: Props) {
           disabled={generating}
         />
       </div>
+
+      {/* AI 프롬프트 생성기 */}
+      <PromptGenerator
+        mediaType="video"
+        onApplyPrompt={(p) => setPrompt(p)}
+        disabled={generating}
+      />
 
       {/* 예시 프롬프트 */}
       <div>

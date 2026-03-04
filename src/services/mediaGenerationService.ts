@@ -215,3 +215,58 @@ export async function generateVideo(
     throw error;
   }
 }
+
+
+// ── AI 프롬프트 생성기 ──
+
+export type PromptMediaType = 'image' | 'video';
+
+export interface GeneratedPrompt {
+  korean: string;
+  english: string;
+}
+
+export async function generateOptimizedPrompt(
+  userInput: string,
+  mediaType: PromptMediaType,
+): Promise<GeneratedPrompt> {
+  const ai = getAiClient();
+
+  const systemInstruction = mediaType === 'image'
+    ? `당신은 AI 이미지 생성 프롬프트 전문가입니다.
+사용자의 간단한 설명을 받아 Gemini Image Generation에 최적화된 상세 프롬프트를 작성합니다.
+- 병원/의료 콘텐츠에 적합한 전문적이고 깔끔한 스타일
+- 조명, 색감, 구도, 분위기 등 시각적 디테일 포함
+- 텍스트가 필요한 경우 정확한 한국어 렌더링 지시 포함
+- 의료 광고 가이드라인 준수 (과장/허위 표현 금지)`
+    : `당신은 AI 동영상 생성 프롬프트 전문가입니다.
+사용자의 간단한 설명을 받아 VEO 3.1 영상 생성에 최적화된 상세 프롬프트를 작성합니다.
+- 병원/의료 콘텐츠에 적합한 전문적이고 깔끔한 스타일
+- 카메라 움직임(팬, 틸트, 줌 등), 조명, 분위기 설명 포함
+- 5~8초 짧은 영상에 적합한 하나의 장면 중심
+- 시네마틱하고 고품질의 영상미 지시 포함`;
+
+  const response = await ai.models.generateContent({
+    model: 'gemini-2.5-flash-preview-05-20',
+    contents: `${systemInstruction}
+
+사용자 입력: "${userInput}"
+
+반드시 아래 JSON 형식으로만 응답하세요. 다른 텍스트 없이 JSON만 출력하세요:
+{"korean": "한국어 최적화 프롬프트", "english": "English optimized prompt"}`,
+  });
+
+  const text = response.text?.trim() || '';
+
+  // JSON 파싱 (코드블록 감싸져 있을 수 있음)
+  const jsonMatch = text.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) {
+    throw new Error('프롬프트 생성 결과를 파싱할 수 없습니다.');
+  }
+
+  const parsed = JSON.parse(jsonMatch[0]);
+  return {
+    korean: parsed.korean || '',
+    english: parsed.english || '',
+  };
+}
