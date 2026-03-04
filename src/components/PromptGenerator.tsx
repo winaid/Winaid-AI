@@ -82,7 +82,7 @@ export default function PromptGenerator({ mediaType, onApplyPrompt, disabled }: 
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
           </svg>
           AI 프롬프트 생성기
-          <span className="text-xs font-normal text-gray-500">(Gemini 2.5 Flash)</span>
+          <span className="text-xs font-normal text-gray-500">(Gemini 2.5 Pro)</span>
         </span>
         <svg
           className={`w-4 h-4 text-gray-500 transition-transform ${isOpen ? 'rotate-180' : ''}`}
