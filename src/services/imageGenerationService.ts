@@ -447,7 +447,11 @@ export const generateBlogImage = async (
   const styleBlock = buildStyleBlock(style, customStylePrompt);
 
   // 블로그용 프롬프트: 텍스트 없는 순수 이미지! (한국어로 생성)
+  const now = new Date();
+  const dateInfo = `${now.getFullYear()}년 ${now.getMonth() + 1}월 ${now.getDate()}일`;
+
   const finalPrompt = `
+[현재 날짜: ${dateInfo}]
 블로그 포스트용 전문적인 의료/건강 이미지를 생성해주세요.
 
 ${styleBlock}
@@ -623,7 +627,11 @@ export const generateSingleImage = async (
   }
 
   // 🔧 텍스트가 없으면 원본 프롬프트 그대로 사용 (라벨 없이!)
+  const now = new Date();
+  const dateInfo = `${now.getFullYear()}년 ${now.getMonth() + 1}월 ${now.getDate()}일`;
+
   const finalPrompt = hasValidText ? `
+[현재 날짜: ${dateInfo}]
 🚨 RENDER THIS EXACT KOREAN TEXT IN THE IMAGE 🚨
 
 [TEXT HIERARCHY - MUST FOLLOW EXACTLY!]
@@ -667,6 +675,7 @@ ${extractedVisual ? `✅ ILLUSTRATION must follow the visual description EXACTLY
 🚨 금지: "완치", "상담하세요", "방문하세요", "조기 발견", "전문의", 수치(%)
 ✅ 허용: 증상명, 질환명, 정보성 표현, 질문형 제목
 `.trim() : `
+[현재 날짜: ${dateInfo}]
 Generate a 1:1 square social media card image.
 
 ${frameBlock}

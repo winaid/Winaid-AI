@@ -27,7 +27,11 @@ export async function generateCustomImage(
 
   const aspectInstruction = getAspectInstruction(request.aspectRatio);
 
+  const now = new Date();
+  const dateInfo = `[현재 날짜: ${now.getFullYear()}년 ${now.getMonth() + 1}월 ${now.getDate()}일]`;
+
   const fullPrompt = [
+    dateInfo,
     request.prompt,
     aspectInstruction,
     '한국어 텍스트가 포함된 경우 오타 없이 정확하게 렌더링해주세요.',
@@ -112,7 +116,9 @@ export async function generateVideo(
   const ai = getAiClient();
   const progress = (msg: string) => onProgress?.(msg);
 
-  const fullPrompt = request.prompt;
+  const now = new Date();
+  const dateInfo = `[현재 날짜: ${now.getFullYear()}년 ${now.getMonth() + 1}월 ${now.getDate()}일]`;
+  const fullPrompt = `${dateInfo}\n\n${request.prompt}`;
 
   progress('동영상 생성 요청 중...');
 
