@@ -52,7 +52,7 @@ export default function VideoGenerator({ onProgress }: Props) {
       {/* 헤더 */}
       <div className="bg-gradient-to-r from-rose-50 to-orange-50 rounded-2xl p-6 border border-rose-100">
         <h2 className="text-xl font-bold text-gray-800 mb-1">동영상 생성기</h2>
-        <p className="text-sm text-gray-500">VEO 3.1 Fast로 병원 홍보 영상을 만들어보세요 (5~8초)</p>
+        <p className="text-sm text-gray-500">병원 홍보 영상을 만들어보세요 (5~8초)</p>
       </div>
 
       {/* 프롬프트 입력 */}
