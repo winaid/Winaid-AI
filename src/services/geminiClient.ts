@@ -150,6 +150,14 @@ export const getAiClient = () => {
   return new GoogleGenAI({ apiKey });
 };
 
+export const getApiKeyValue = (): string => {
+  let apiKey = getApiKey();
+  if (!apiKey) apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+  if (!apiKey) apiKey = localStorage.getItem('GEMINI_API_KEY');
+  if (!apiKey) throw new Error("API Key가 설정되지 않았습니다.");
+  return apiKey;
+};
+
 // AI Provider 설정 읽기 - Gemini만 사용
 export const getAiProviderSettings = (): { textGeneration: 'gemini', imageGeneration: 'gemini' } => {
   return { textGeneration: 'gemini', imageGeneration: 'gemini' };

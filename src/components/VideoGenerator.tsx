@@ -45,21 +45,12 @@ export default function VideoGenerator({ onProgress }: Props) {
     }
   }, [prompt, aspectRatio, onProgress]);
 
-  const handleDownload = useCallback(async () => {
+  const handleDownload = useCallback(() => {
     if (!videoUrl) return;
-    try {
-      const response = await fetch(videoUrl);
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `hospital-video-${Date.now()}.mp4`;
-      link.click();
-      URL.revokeObjectURL(url);
-    } catch {
-      // fallback: 새 탭에서 열기
-      window.open(videoUrl, '_blank');
-    }
+    const link = document.createElement('a');
+    link.href = videoUrl;
+    link.download = `hospital-video-${Date.now()}.mp4`;
+    link.click();
   }, [videoUrl]);
 
   return (

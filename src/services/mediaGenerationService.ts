@@ -3,7 +3,7 @@
  * - 이미지: gemini-3.1-flash-image-preview
  * - 동영상: veo-3.1-fast-generate-preview
  */
-import { getAiClient } from "./geminiClient";
+import { getAiClient, getApiKeyValue } from "./geminiClient";
 
 // ── 이미지 생성 ──
 
@@ -180,13 +180,26 @@ export async function generateVideo(
 
     const video = generatedVideos[0].video;
 
-    // 브라우저에서 video URI로 접근
-    if (video?.uri) {
-      progress('동영상 생성 완료!');
-      return { videoUrl: video.uri };
+    if (!video?.name) {
+      throw new Error('동영상 파일 정보를 가져올 수 없습니다.');
     }
 
-    throw new Error('동영상 URL을 가져올 수 없습니다.');
+    // Google API에서 실제 동영상 바이너리 다운로드
+    progress('동영상 다운로드 중...');
+    const apiKey = getApiKeyValue();
+    const downloadUrl = `https://generativelanguage.googleapis.com/v1beta/${video.name}?alt=media&key=${apiKey}`;
+    const response = await fetch(downloadUrl);
+
+    if (!response.ok) {
+      throw new Error(`동영상 다운로드 실패 (${response.status})`);
+    }
+
+    const blob = await response.blob();
+    const videoBlob = new Blob([blob], { type: 'video/mp4' });
+    const blobUrl = URL.createObjectURL(videoBlob);
+
+    progress('동영상 생성 완료!');
+    return { videoUrl: blobUrl };
 
   } catch (error: any) {
     console.error('동영상 생성 에러:', error?.message || error);
