@@ -112,11 +112,7 @@ export async function generateVideo(
   const ai = getAiClient();
   const progress = (msg: string) => onProgress?.(msg);
 
-  const fullPrompt = [
-    request.prompt,
-    '한국어 텍스트가 포함된 경우 정확하게 렌더링해주세요.',
-    '전문적이고 깔끔한 의료 콘텐츠 스타일입니다.',
-  ].join('\n\n');
+  const fullPrompt = request.prompt;
 
   progress('동영상 생성 요청 중...');
 
