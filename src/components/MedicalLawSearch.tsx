@@ -131,9 +131,14 @@ export function MedicalLawSearch() {
             {/* 최신 업데이트 알림 */}
             {hasUpdates && updateInfo?.latestUpdate && (
               <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                <p className="text-sm font-semibold text-yellow-800 mb-1">
-                  📰 최신 업데이트
-                </p>
+                <div className="flex items-center justify-between mb-1">
+                  <p className="text-sm font-semibold text-yellow-800">
+                    📰 보건복지부 보도자료
+                  </p>
+                  <span className="text-[10px] text-gray-400">
+                    게시일 {updateInfo.latestUpdate.date}
+                  </span>
+                </div>
                 <p className="text-xs text-yellow-700 mb-2">
                   {updateInfo.latestUpdate.title}
                 </p>
@@ -145,6 +150,23 @@ export function MedicalLawSearch() {
                 >
                   자세히 보기 →
                 </a>
+                {updateInfo.recentNews?.length > 1 && (
+                  <div className="mt-2 pt-2 border-t border-yellow-200 space-y-1">
+                    {updateInfo.recentNews.slice(1, 4).map((item: any, i: number) => (
+                      <div key={i} className="flex items-start gap-2">
+                        <span className="text-[10px] text-gray-400 whitespace-nowrap mt-0.5">{item.date}</span>
+                        <a
+                          href={item.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-gray-600 hover:text-blue-600 hover:underline line-clamp-1"
+                        >
+                          {item.title}
+                        </a>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 

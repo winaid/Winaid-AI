@@ -88,7 +88,7 @@ export async function onRequestGet(context: { request: Request; env: Env }) {
 }
 
 /**
- * HTML에서 의료광고 관련 뉴스 추출
+ * HTML에서 의료광고 관련 뉴스 추출 (보건복지부 보도자료 테이블 파싱)
  */
 function extractMedicalAdNews(html: string): Array<{
   date: string;
@@ -97,61 +97,61 @@ function extractMedicalAdNews(html: string): Array<{
   summary: string;
 }> {
   const news: Array<{ date: string; title: string; url: string; summary: string }> = [];
-  
-  // 간단한 패턴 매칭으로 뉴스 추출
-  const medicalAdKeywords = ['의료광고', '의료법', '불법 광고', '의료기관 광고'];
-  
-  // 실제로는 더 정교한 HTML 파싱이 필요하지만, 여기서는 간단히 처리
-  // (실제 프로덕션에서는 jsdom 등의 라이브러리 사용 권장)
-  
-  medicalAdKeywords.forEach(keyword => {
-    if (html.includes(keyword)) {
-      news.push({
-        date: new Date().toISOString().split('T')[0],
-        title: `${keyword} 관련 최신 정보`,
-        url: 'https://www.mohw.go.kr/board.es?mid=a10503000000&bid=0027',
-        summary: `${keyword}에 대한 최신 보건복지부 보도자료입니다.`
-      });
-    }
-  });
+  const medicalAdKeywords = ['의료광고', '의료법', '불법광고', '불법 광고', '의료기관 광고', '의료광고법'];
 
-  return news;
+  // 보건복지부 보도자료 테이블 행 파싱
+  // 각 행: <tr>...<td><a href="...">제목</a></td>...<td>YYYY-MM-DD</td>...</tr>
+  const rowRegex = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
+  let rowMatch;
+
+  while ((rowMatch = rowRegex.exec(html)) !== null) {
+    const rowHtml = rowMatch[1];
+
+    // 링크와 제목 추출
+    const linkMatch = rowHtml.match(/<a\s+href=["']([^"']*list_no=\d+[^"']*)["'][^>]*>([\s\S]*?)<\/a>/i);
+    if (!linkMatch) continue;
+
+    const href = linkMatch[1];
+    // HTML 태그 제거하고 제목 텍스트만 추출
+    const title = linkMatch[2].replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+    if (!title) continue;
+
+    // 날짜 추출 (YYYY-MM-DD 패턴)
+    const dateMatch = rowHtml.match(/(\d{4}-\d{2}-\d{2})/);
+    if (!dateMatch) continue;
+    const date = dateMatch[1];
+
+    // 의료광고 관련 키워드 필터링
+    const isRelevant = medicalAdKeywords.some(kw => title.includes(kw));
+    if (!isRelevant) continue;
+
+    // 상대경로 → 절대경로 변환
+    const url = href.startsWith('http')
+      ? href
+      : `https://www.mohw.go.kr${href.startsWith('/') ? '' : '/'}${href}`;
+
+    news.push({
+      date,
+      title,
+      url,
+      summary: `${date} 보건복지부 보도자료: ${title}`
+    });
+  }
+
+  // 날짜 최신순 정렬
+  news.sort((a, b) => b.date.localeCompare(a.date));
+
+  return news.slice(0, 10);
 }
 
 /**
- * Mock 데이터 (API 실패 시 기본값)
+ * 크롤링 실패 시 기본 응답 (하드코딩된 가짜 데이터 대신 솔직한 실패 표시)
  */
 function getMockUpdateInfo(): UpdateInfo {
   return {
-    hasUpdates: true,
-    latestUpdate: {
-      date: '2024-03-11',
-      title: '자발적 후기 가장 치료경험담 등 불법의료광고 366건 적발',
-      url: 'https://www.mohw.go.kr/board.es?mid=a10503000000&bid=0027&list_no=1480602',
-      summary: '보건복지부가 불법 의료광고 366건을 적발했으며, 치료경험담을 가장한 광고가 183건으로 가장 많았습니다.'
-    },
-    recentNews: [
-      {
-        date: '2024-03-11',
-        title: '자발적 후기 가장 치료경험담 등 불법의료광고 366건 적발',
-        url: 'https://www.mohw.go.kr/board.es?mid=a10503000000&bid=0027&list_no=1480602'
-      },
-      {
-        date: '2023-12-11',
-        title: '보건복지부와 의료계, 불법 의료광고 집중 단속',
-        url: 'https://www.mohw.go.kr/board.es?mid=a10503000000&bid=0027&list_no=1479210'
-      },
-      {
-        date: '2022-04-18',
-        title: '치료경험담 등 불법의료광고 286건 적발',
-        url: 'https://www.mohw.go.kr/board.es?mid=a10503000000&bid=0027&list_no=371102'
-      },
-      {
-        date: '2020-07-06',
-        title: '건강한 의료광고 우리 함께 만들어요',
-        url: 'https://www.mohw.go.kr/board.es?mid=a10503010100&bid=0027&act=view&list_no=355295'
-      }
-    ]
+    hasUpdates: false,
+    latestUpdate: undefined,
+    recentNews: []
   };
 }
 
