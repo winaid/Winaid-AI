@@ -229,31 +229,53 @@ export interface GeneratedPrompt {
 export async function generateOptimizedPrompt(
   userInput: string,
   mediaType: PromptMediaType,
+  referenceImageBase64?: string,
 ): Promise<GeneratedPrompt> {
   const ai = getAiClient();
 
-  const systemInstruction = mediaType === 'image'
+  const baseInstruction = mediaType === 'image'
     ? `당신은 AI 이미지 생성 프롬프트 전문가입니다.
-사용자의 간단한 설명을 받아 Gemini Image Generation에 최적화된 상세 프롬프트를 작성합니다.
+Gemini Image Generation에 최적화된 상세 프롬프트를 작성합니다.
 - 병원/의료 콘텐츠에 적합한 전문적이고 깔끔한 스타일
 - 조명, 색감, 구도, 분위기 등 시각적 디테일 포함
 - 텍스트가 필요한 경우 정확한 한국어 렌더링 지시 포함
 - 의료 광고 가이드라인 준수 (과장/허위 표현 금지)`
     : `당신은 AI 동영상 생성 프롬프트 전문가입니다.
-사용자의 간단한 설명을 받아 VEO 3.1 영상 생성에 최적화된 상세 프롬프트를 작성합니다.
+VEO 3.1 영상 생성에 최적화된 상세 프롬프트를 작성합니다.
 - 병원/의료 콘텐츠에 적합한 전문적이고 깔끔한 스타일
 - 카메라 움직임(팬, 틸트, 줌 등), 조명, 분위기 설명 포함
 - 5~8초 짧은 영상에 적합한 하나의 장면 중심
 - 시네마틱하고 고품질의 영상미 지시 포함`;
 
-  const response = await ai.models.generateContent({
-    model: 'gemini-2.5-flash-preview-05-20',
-    contents: `${systemInstruction}
+  const imageContext = referenceImageBase64
+    ? '\n\n참고 이미지가 첨부되어 있습니다. 이 이미지의 스타일, 구도, 색감, 분위기를 분석하여 비슷한 결과물을 만들 수 있는 프롬프트를 작성하세요.'
+    : '';
 
-사용자 입력: "${userInput}"
+  const userContext = userInput
+    ? `\n\n사용자 추가 요청: "${userInput}"`
+    : '';
+
+  const promptText = `${baseInstruction}${imageContext}${userContext}
 
 반드시 아래 JSON 형식으로만 응답하세요. 다른 텍스트 없이 JSON만 출력하세요:
-{"korean": "한국어 최적화 프롬프트", "english": "English optimized prompt"}`,
+{"korean": "한국어 최적화 프롬프트", "english": "English optimized prompt"}`;
+
+  // 멀티모달 contents 구성
+  const parts: any[] = [{ text: promptText }];
+
+  if (referenceImageBase64) {
+    // data:image/png;base64,xxxx 에서 mimeType과 data 추출
+    const match = referenceImageBase64.match(/^data:(image\/\w+);base64,(.+)$/);
+    if (match) {
+      parts.unshift({
+        inlineData: { mimeType: match[1], data: match[2] },
+      });
+    }
+  }
+
+  const response = await ai.models.generateContent({
+    model: 'gemini-2.5-flash-preview-05-20',
+    contents: [{ role: 'user', parts }],
   });
 
   const text = response.text?.trim() || '';
