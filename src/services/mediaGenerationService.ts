@@ -39,6 +39,7 @@ export async function generateCustomImage(
     dateInfo,
     request.prompt,
     aspectInstruction,
+    '고해상도, 선명하고 깨끗한 이미지로 생성해주세요. 텍스트와 그래픽 요소가 또렷하고 흐림 없이 렌더링되어야 합니다. professional quality, sharp details, crisp edges, no blur, no artifacts.',
     '한국어 텍스트가 포함된 경우 오타 없이 정확하게 렌더링해주세요.',
     logoInstruction,
   ].filter(Boolean).join('\n\n');
@@ -378,9 +379,14 @@ function getSystemInstruction(mediaType: PromptMediaType): string {
 6. 타이포그래피: 둥근 고딕체, 굵은 제목, 깔끔한 본문 등
 7. 조명/질감: 자연광, 소프트 라이팅, 매끈한 질감, 그림자 등
 8. 전체적인 용도: 병원 공지 포스터, SNS 홍보, 진료 안내 등
+9. 품질: 반드시 "high resolution, sharp details, crisp text, no blur, no artifacts, professional quality" 등의 고품질 지시를 영어 프롬프트 끝에 포함하세요.
+
+🔥 품질 필수 규칙:
+- 영어 프롬프트에 반드시 포함: "high resolution, ultra sharp, crisp edges, clean details, professional graphic design quality, no compression artifacts, no blur"
+- 한국어 프롬프트에 반드시 포함: "고해상도, 선명하고 깨끗한 디테일, 흐림 없는 또렷한 텍스트와 그래픽"
 
 예시 (좋은 프롬프트):
-"밝고 따뜻한 파스텔 핑크-노랑 그라데이션 배경의 산부인과 진료 안내 포스터. 상단 중앙에 '삼일절 진료안내' 제목을 굵은 둥근 고딕체로 배치하고, 무궁화 아이콘을 제목 옆에 장식. 중앙에 둥근 모서리 사각형 안에 진료 일정 정보(3월 1일 10시-14시, 3월 2일 10시-20시)를 깔끔하게 정리. 하단에 미니멀한 달력 그리드 배치. 전체적으로 부드럽고 친근한 느낌의 병원 공지 디자인."
+"밝고 따뜻한 파스텔 핑크-노랑 그라데이션 배경의 산부인과 진료 안내 포스터. 상단 중앙에 '삼일절 진료안내' 제목을 굵은 둥근 고딕체로 배치하고, 무궁화 아이콘을 제목 옆에 장식. 중앙에 둥근 모서리 사각형 안에 진료 일정 정보(3월 1일 10시-14시, 3월 2일 10시-20시)를 깔끔하게 정리. 하단에 미니멀한 달력 그리드 배치. 전체적으로 부드럽고 친근한 느낌의 병원 공지 디자인. 고해상도, 선명하고 깨끗한 디테일, 흐림 없는 또렷한 텍스트와 그래픽."
 
 ⚡ 핵심 원칙: 사용자가 이미지/영상 주제, 장면, 키워드를 조금이라도 언급하면 즉시 프롬프트를 생성하세요!
 - 사용자가 원하는 것을 되물어보지 말고, 바로 프롬프트를 만들어주세요.

@@ -258,6 +258,8 @@ export default function ImageGenerator({ onProgress }: Props) {
               src={result}
               alt="생성된 이미지"
               className="w-full h-auto"
+              style={{ imageRendering: 'auto' }}
+              draggable={false}
             />
           </div>
           <div className="flex gap-3">
