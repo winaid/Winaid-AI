@@ -279,18 +279,24 @@ export interface FullScanReport {
 
 /**
  * 텍스트에서 금지어 스캔
+ * @param medicalLawMode - 'strict' (기본, 전체 스캔) | 'relaxed' (critical만 스캔)
  */
-export function scanForbiddenWords(text: string): FullScanReport {
+export function scanForbiddenWords(text: string, medicalLawMode: 'strict' | 'relaxed' = 'strict'): FullScanReport {
   const violations: ScanResult[] = [];
   let criticalCount = 0;
   let highCount = 0;
   let mediumCount = 0;
   let lowCount = 0;
-  
+
   // HTML 태그 제거하고 텍스트만 추출
   const plainText = text.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ');
-  
-  FORBIDDEN_WORDS_DATABASE.forEach(fw => {
+
+  // relaxed 모드: critical만 스캔
+  const wordsToScan = medicalLawMode === 'relaxed'
+    ? FORBIDDEN_WORDS_DATABASE.filter(fw => fw.severity === 'critical')
+    : FORBIDDEN_WORDS_DATABASE;
+
+  wordsToScan.forEach(fw => {
     // 단어 위치 찾기 (정규식으로 모든 매치 찾기)
     const regex = new RegExp(escapeRegex(fw.word), 'gi');
     const positions: { start: number; end: number }[] = [];
@@ -954,11 +960,12 @@ export interface FullAnalysisReport {
  * 통합 분석
  */
 export function analyzeContent(
-  html: string, 
-  title: string, 
-  keyword: string
+  html: string,
+  title: string,
+  keyword: string,
+  medicalLawMode: 'strict' | 'relaxed' = 'strict'
 ): FullAnalysisReport {
-  const medicalLaw = scanForbiddenWords(html);
+  const medicalLaw = scanForbiddenWords(html, medicalLawMode);
   const seo = analyzeSeo(html, title, keyword);
   const aiSmell = analyzeAiSmell(html);
   

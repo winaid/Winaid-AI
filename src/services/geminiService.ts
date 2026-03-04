@@ -1157,16 +1157,26 @@ ${request.keyword ? `9. 🚨 **핵심: 키워드("${request.keyword}")와 자연
     ? '의학 3D 일러스트, 해부학적 렌더링, 해부학적 구조, 장기 단면도, 반투명 장기, 임상 조명, 의료 색상 팔레트 (⛔금지: 귀여운 만화, 실사 얼굴)'
     : '실사 DSLR 사진, 진짜 사진, 35mm 렌즈, 자연스러운 부드러운 조명, 얕은 피사계심도, 전문 병원 환경 (⛔금지: 3D 렌더, 일러스트, 만화, 애니메이션)';
   
+  // 의료광고법 모드 확인
+  const medicalLawMode = request.medicalLawMode || 'strict';
+  const isRelaxedMode = medicalLawMode === 'relaxed';
+
   // 의료광고법 프롬프트 - 실시간 공식 정보 로드
-  safeProgress('⚖️ Step 0: 의료광고법 정보 로드 중...');
-  const medicalLawPrompt = await loadMedicalLawForGeneration();
-  safeProgress('✅ Step 0 완료: 의료광고법 정보 준비 완료');
-  
+  let medicalLawPrompt = '';
+  if (isRelaxedMode) {
+    safeProgress('🔥 의료광고법 자유 모드 - critical 금지어만 필터링');
+    medicalLawPrompt = ''; // relaxed 모드에서는 별도 의료광고법 프롬프트 스킵
+  } else {
+    safeProgress('⚖️ Step 0: 의료광고법 정보 로드 중...');
+    medicalLawPrompt = await loadMedicalLawForGeneration();
+    safeProgress('✅ Step 0 완료: 의료광고법 정보 준비 완료');
+  }
+
   // 🚀 GPT-5.2 동적 프롬프트 연결 (Stage 1) - v6.7 업데이트
   safeProgress('🔄 동적 금지어 테이블 로딩 중...');
-  const gpt52Stage1 = getStage1_ContentGeneration(targetLength);
-  const dynamicSystemPrompt = await getDynamicSystemPrompt();
-  safeProgress('✅ 동적 프롬프트 준비 완료 (최신 의료광고법 반영)');
+  const gpt52Stage1 = getStage1_ContentGeneration(targetLength, medicalLawMode);
+  const dynamicSystemPrompt = await getDynamicSystemPrompt(medicalLawMode);
+  safeProgress(isRelaxedMode ? '✅ 자유 모드 프롬프트 준비 완료' : '✅ 동적 프롬프트 준비 완료 (최신 의료광고법 반영)');
 
   // 🚀 경쟁 분석 + 어휘 분석 병렬 실행 (속도 최적화)
   let competitorInstruction = '';
@@ -2018,7 +2028,7 @@ JSON 형식으로 응답:
     // 📍 Step 2: AI가 검색 결과를 바탕으로 글 작성
     console.log('📍 Step 2 시작: AI 글쓰기...');
     // Gemini 전용 동적 프롬프트 사용 - v6.7 업데이트 (최신 의료광고법 자동 반영)
-    const geminiSystemPrompt = await getDynamicSystemPrompt();
+    const geminiSystemPrompt = await getDynamicSystemPrompt(request.medicalLawMode || 'strict');
     
     // 크로스체크 상태에 따른 신뢰도 안내 (둘 다 실패는 이미 위에서 throw됨)
     // crossCheckGuide 제거 (GPT 없으므로 불필요)

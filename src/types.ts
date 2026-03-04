@@ -74,6 +74,8 @@ export interface GenerationRequest {
   styleCopyMode?: boolean; // true=레이아웃 복제, false=느낌만 참고
   learnedStyleId?: string; // 학습된 말투 스타일 ID
   customSubheadings?: string; // 사용자가 직접 입력한 소제목들 (줄바꿈으로 구분)
+  // 의료광고법 모드
+  medicalLawMode?: 'strict' | 'relaxed'; // strict=엄격 준수(기본), relaxed=아슬아슬 모드
   // FAQ 옵션
   includeFaq?: boolean; // FAQ 섹션 포함 여부 (네이버 질문 + 질병관리청 정보)
   faqCount?: number; // FAQ 질문 개수 (3~5개)

@@ -43,6 +43,9 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange 
   const [slideCount, setSlideCount] = useState<number>(6);
   const [imageCount, setImageCount] = useState<number>(0); // 기본값 0장
   const [writingStyle, setWritingStyle] = useState<WritingStyle>('empathy'); // 기본값: 공감형
+  const [medicalLawMode, setMedicalLawMode] = useState<'strict' | 'relaxed'>(() => {
+    return (localStorage.getItem('medicalLawMode') as 'strict' | 'relaxed') || 'strict';
+  });
   
   // 말투 학습 스타일
   const [learnedStyleId, setLearnedStyleId] = useState<string | undefined>(undefined);
@@ -96,6 +99,7 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange 
       slideCount,
       imageCount,
       writingStyle,
+      medicalLawMode,
       // 🎨 커스텀 스타일 선택 시에만 커스텀 프롬프트 전달!
       customImagePrompt: (() => {
         const result = imageStyle === 'custom' ? (customPrompt?.trim() || undefined) : undefined;
@@ -373,6 +377,39 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange 
                           ))}
                         </div>
                       </div>
+                    )}
+                  </div>
+
+                  {/* 의료광고법 모드 토글 */}
+                  <div className={`p-3 rounded-xl space-y-2 ${medicalLawMode === 'relaxed' ? 'bg-red-50 border border-red-200' : 'bg-emerald-50 border border-emerald-200'}`}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">{medicalLawMode === 'strict' ? '⚖️' : '🔥'}</span>
+                        <div>
+                          <span className={`text-xs font-black ${medicalLawMode === 'relaxed' ? 'text-red-700' : 'text-emerald-700'}`}>
+                            의료광고법 {medicalLawMode === 'strict' ? '엄격 준수' : '자유 모드'}
+                          </span>
+                          <p className={`text-[10px] ${medicalLawMode === 'relaxed' ? 'text-red-500' : 'text-emerald-600'}`}>
+                            {medicalLawMode === 'strict' ? '금지어 자동 필터링 + 안전 표현 사용' : '아슬아슬 경계선 표현 허용 (주의!)'}
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newMode = medicalLawMode === 'strict' ? 'relaxed' : 'strict';
+                          setMedicalLawMode(newMode);
+                          localStorage.setItem('medicalLawMode', newMode);
+                        }}
+                        className={`relative w-12 h-6 rounded-full transition-colors ${medicalLawMode === 'relaxed' ? 'bg-red-500' : 'bg-emerald-500'}`}
+                      >
+                        <span className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow transition-all duration-200 ${medicalLawMode === 'relaxed' ? 'translate-x-6' : 'translate-x-0'}`} />
+                      </button>
+                    </div>
+                    {medicalLawMode === 'relaxed' && (
+                      <p className="text-[10px] text-red-600 bg-red-100 rounded-lg px-2 py-1">
+                        "완치", "최고" 등 critical 금지어는 여전히 차단됩니다. high/medium 수준의 표현만 허용됩니다.
+                      </p>
                     )}
                   </div>
                </div>

@@ -1535,9 +1535,43 @@ Google SGE, Naver Cue: 등 생성형 검색이 인용하게!
 3. 공포("위험", "경고")나 과장("반드시", "꼭")이 없는가?
 4. 제목만 보고 "어떤 글인지" 3초 안에 파악 가능한가?`;
 
+// 의료광고법 relaxed 모드 프롬프트 오버라이드
+const RELAXED_MEDICAL_LAW_OVERRIDE = `
+────────────────────
+[🔥 의료광고법 자유 모드 (RELAXED)]
+
+이 글은 "자유 모드"로 작성합니다. 아래 규칙이 기본 의료광고법 규칙을 **부분적으로 오버라이드**합니다.
+
+[여전히 절대 금지 (critical - 법적 처벌 대상)]
+- "완치", "100% 효과", "반드시 낫는다", "영구적 효과" → 이건 진짜 걸림
+- "최고", "1위", "타 병원보다 우수" → 비교 광고는 여전히 금지
+- 환자 치료 전후 사진, 구체적 치료 사례/후기 → 절대 금지
+- "특효약", "기적의 치료" → 허위 과대광고
+
+[이제 허용되는 표현 (high/medium → 아슬아슬하지만 사용 가능)]
+- "효과적인 치료", "좋은 결과를 기대할 수 있습니다" → ✅ 허용
+- "증상 완화에 도움", "통증 개선", "호전" → ✅ 허용 (완치만 아니면 됨)
+- "빠른 회복", "높은 만족도" → ✅ 허용 (수치 없이)
+- "전문 의료진", "풍부한 경험", "체계적인 진료" → ✅ 허용
+- "조기 발견이 중요합니다", "정기 검진을 권합니다" → ✅ 허용
+- "~해야 합니다", "~하는 것이 좋습니다" → ✅ 허용 (부드러운 행동 유도)
+- "~에 효과가 있습니다", "~에 도움이 됩니다" → ✅ 허용
+- "검증된", "입증된" (구체적 수치 없이) → ✅ 허용
+- "안전하고 효과적인" → ✅ 허용
+
+[톤 가이드 - 자유 모드]
+- "~수 있습니다"를 매 문장에 붙이지 말 것. 자신감 있게 서술해도 됨
+- "~입니다", "~합니다"로 직접 서술 OK
+- 다만 "무조건", "반드시", "100%" 같은 확정 표현은 여전히 피할 것
+- 전문적이면서도 설득력 있는 톤 유지
+- 환자가 "이 병원 가봐야겠다"고 느낄 수 있는 수준의 어필 OK
+`;
+
 // 본문 생성 프롬프트 (글자수 포함)
-export const getStage1_ContentGeneration = (textLength: number = 1500) => {
+export const getStage1_ContentGeneration = (textLength: number = 1500, medicalLawMode: 'strict' | 'relaxed' = 'strict') => {
+  const relaxedOverride = medicalLawMode === 'relaxed' ? RELAXED_MEDICAL_LAW_OVERRIDE : '';
   return `${SYSTEM_PROMPT}
+${relaxedOverride}
 
 ────────────────────
 [13. 글자 수 정밀 제어 규칙]
@@ -1945,12 +1979,15 @@ export const getStage2_AiRemovalAndCompliance = (textLength: number = 1500, curr
 
 export const getStage2_RemoveAiSmell = getStage2_AiRemovalAndCompliance;
 
-export const getDynamicSystemPrompt = async (): Promise<string> => {
+export const getDynamicSystemPrompt = async (medicalLawMode: 'strict' | 'relaxed' = 'strict'): Promise<string> => {
+  if (medicalLawMode === 'relaxed') {
+    return SYSTEM_PROMPT + RELAXED_MEDICAL_LAW_OVERRIDE;
+  }
   return SYSTEM_PROMPT;
 };
 
-export const getStagePrompt = (stageNumber: 1 | 2, textLength: number = 1500): string => {
-  if (stageNumber === 1) return getStage1_ContentGeneration(textLength);
+export const getStagePrompt = (stageNumber: 1 | 2, textLength: number = 1500, medicalLawMode: 'strict' | 'relaxed' = 'strict'): string => {
+  if (stageNumber === 1) return getStage1_ContentGeneration(textLength, medicalLawMode);
   if (stageNumber === 2) return getStage2_AiRemovalAndCompliance(textLength);
   return '';
 };
