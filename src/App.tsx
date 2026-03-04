@@ -18,7 +18,6 @@ const ContentRefiner = lazy(() => import('./components/ContentRefiner'));
 const MedicalLawSearch = lazy(() => import('./components/MedicalLawSearch').then(module => ({ default: module.MedicalLawSearch })));
 const ImageGenerator = lazy(() => import('./components/ImageGenerator'));
 const VideoGenerator = lazy(() => import('./components/VideoGenerator'));
-const TemplateGenerator = lazy(() => import('./components/TemplateGenerator'));
 
 type PageType = 'app' | 'admin' | 'auth';
 
@@ -75,7 +74,7 @@ const App: React.FC = () => {
   const leftPanelRef = useRef<HTMLDivElement>(null);
   
   // 오른쪽 콘텐츠 탭
-  const [contentTab, setContentTab] = useState<'blog' | 'similarity' | 'refine' | 'card_news' | 'press' | 'image' | 'video' | 'template'>('blog');
+  const [contentTab, setContentTab] = useState<'blog' | 'similarity' | 'refine' | 'card_news' | 'press' | 'image' | 'video'>('blog');
   
   // 현재 탭에 맞는 state 가져오기
   const getCurrentState = (): GenerationState => {
@@ -890,7 +889,7 @@ const App: React.FC = () => {
       <main className="flex-1 max-w-[1600px] w-full mx-auto p-4 lg:p-8 flex flex-col lg:flex-row gap-8 overflow-hidden h-[calc(100vh-64px)]">
         
         {/* AI 정밀보정과 유사도 검사는 전체 화면 사용 */}
-        {contentTab === 'refine' || contentTab === 'similarity' || contentTab === 'image' || contentTab === 'video' || contentTab === 'template' ? (
+        {contentTab === 'refine' || contentTab === 'similarity' || contentTab === 'image' || contentTab === 'video' ? (
           <div className="w-full h-full flex flex-col gap-4 overflow-hidden">
             {/* 탭 메뉴 */}
             <div className={`flex gap-2 p-2 rounded-2xl ${darkMode ? 'bg-slate-800' : 'bg-white'} shadow-lg w-full max-w-5xl mx-auto`}>
@@ -978,18 +977,6 @@ const App: React.FC = () => {
               >
                 🎬 동영상
               </button>
-              <button
-                onClick={() => setContentTab('template')}
-                className={`flex-1 py-3 px-4 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${
-                  contentTab === 'template'
-                    ? 'bg-gradient-to-r from-teal-500 to-cyan-500 text-white shadow-lg'
-                    : darkMode
-                    ? 'text-slate-400 hover:bg-slate-700'
-                    : 'text-slate-600 hover:bg-slate-100'
-                }`}
-              >
-                📋 템플릿
-              </button>
             </div>
 
             {/* 전체 화면 콘텐츠 */}
@@ -1014,12 +1001,6 @@ const App: React.FC = () => {
                 <div className={`h-full rounded-2xl shadow-lg border p-6 overflow-y-auto ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-100'}`}>
                   <Suspense fallback={<div className="flex items-center justify-center h-full"><div className="w-12 h-12 border-4 border-rose-200 border-t-rose-500 rounded-full animate-spin"></div></div>}>
                     <VideoGenerator />
-                  </Suspense>
-                </div>
-              ) : contentTab === 'template' ? (
-                <div className={`h-full rounded-2xl shadow-lg border p-6 overflow-y-auto ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-100'}`}>
-                  <Suspense fallback={<div className="flex items-center justify-center h-full"><div className="w-12 h-12 border-4 border-teal-200 border-t-teal-500 rounded-full animate-spin"></div></div>}>
-                    <TemplateGenerator />
                   </Suspense>
                 </div>
               ) : (

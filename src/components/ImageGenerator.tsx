@@ -1,6 +1,8 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef, useEffect, lazy, Suspense } from 'react';
 import type { ImageAspectRatio } from '../services/mediaGenerationService';
 import PromptGenerator from './PromptGenerator';
+
+const TemplateGenerator = lazy(() => import('./TemplateGenerator'));
 
 const ASPECT_RATIOS: { value: ImageAspectRatio; label: string; icon: string }[] = [
   { value: '1:1', label: '정사각형', icon: '⬜' },
@@ -17,6 +19,7 @@ interface Props {
 }
 
 export default function ImageGenerator({ onProgress }: Props) {
+  const [mode, setMode] = useState<'free' | 'template'>('free');
   const [prompt, setPrompt] = useState('');
   const [aspectRatio, setAspectRatio] = useState<ImageAspectRatio>('1:1');
   const [generating, setGenerating] = useState(false);
@@ -122,12 +125,59 @@ export default function ImageGenerator({ onProgress }: Props) {
     link.click();
   }, [result]);
 
+  // 템플릿 모드
+  if (mode === 'template') {
+    return (
+      <div className="h-full flex flex-col">
+        {/* 모드 토글 */}
+        <div className="flex items-center gap-3 mb-4">
+          <div className="flex bg-gray-100 rounded-xl p-1">
+            <button
+              onClick={() => setMode('free')}
+              className="px-4 py-2 rounded-lg text-sm font-bold transition-all text-gray-500 hover:bg-white hover:shadow-sm"
+            >
+              ✏️ 자유 입력
+            </button>
+            <button
+              className="px-4 py-2 rounded-lg text-sm font-bold transition-all bg-white text-teal-700 shadow-sm"
+            >
+              📋 템플릿
+            </button>
+          </div>
+          <span className="text-xs text-gray-400">칸만 채우면 바로 이미지 생성</span>
+        </div>
+        <div className="flex-1 overflow-hidden">
+          <Suspense fallback={<div className="flex items-center justify-center h-64"><div className="w-10 h-10 border-4 border-teal-200 border-t-teal-500 rounded-full animate-spin" /></div>}>
+            <TemplateGenerator />
+          </Suspense>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      {/* 헤더 */}
+      {/* 헤더 + 모드 토글 */}
       <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-2xl p-6 border border-purple-100">
-        <h2 className="text-xl font-bold text-gray-800 mb-1">이미지 생성기</h2>
-        <p className="text-sm text-gray-500">병원 콘텐츠 이미지를 만들어보세요</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-bold text-gray-800 mb-1">이미지 생성기</h2>
+            <p className="text-sm text-gray-500">병원 콘텐츠 이미지를 만들어보세요</p>
+          </div>
+          <div className="flex bg-white rounded-xl p-1 shadow-sm border border-purple-100">
+            <button
+              className="px-4 py-2 rounded-lg text-sm font-bold transition-all bg-purple-600 text-white shadow-sm"
+            >
+              ✏️ 자유 입력
+            </button>
+            <button
+              onClick={() => setMode('template')}
+              className="px-4 py-2 rounded-lg text-sm font-bold transition-all text-gray-500 hover:bg-gray-50"
+            >
+              📋 템플릿
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* 프롬프트 입력 */}
