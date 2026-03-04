@@ -93,10 +93,7 @@ export async function generateCustomImage(
 
   const aspectInstruction = getAspectInstruction(request.aspectRatio);
 
-  const now = new Date();
-  const dateInfo = `[현재 날짜: ${now.getFullYear()}년 ${now.getMonth() + 1}월 ${now.getDate()}일 (${['일','월','화','수','목','금','토'][now.getDay()]}요일)]`;
-
-  // 날짜/달력 컨텍스트 자동 감지 및 추가
+  // 날짜/달력 컨텍스트 자동 감지 및 추가 (참고용 데이터)
   const dateCtx = detectDateContext(request.prompt);
   let calendarContext = '';
   if (dateCtx.needsCalendar && dateCtx.months.length > 0) {
@@ -108,19 +105,19 @@ export async function generateCustomImage(
         parts.push(`공휴일: ${holidays.join(', ')}`);
       }
     }
-    calendarContext = `[달력/날짜 참고 정보 - 날짜와 요일을 정확하게 렌더링하세요!]\n${parts.join('\n')}\n위 달력 데이터를 참고하여 날짜, 요일, 공휴일을 정확하게 표시해주세요. 날짜와 요일이 틀리면 안 됩니다!`;
+    calendarContext = `[REFERENCE DATA - for accuracy only, do NOT add extra dates or info to the image]\n${parts.join('\n')}`;
   }
 
   const logoInstruction = request.logoBase64
     ? '첨부된 로고 이미지를 참고하여 디자인 안에 이 로고를 자연스럽게 포함시켜 주세요. 로고의 형태와 스타일을 최대한 유지하면서 전체 디자인과 조화롭게 배치해주세요.'
-    : '워터마크, 로고, 해시태그 없이 깔끔하게 생성해주세요.';
+    : '';
 
   const fullPrompt = [
-    dateInfo,
+    `[CRITICAL RULE] Generate EXACTLY what the user describes below. Do NOT add any extra text, dates, numbers, or information that the user did not explicitly request. Only render content that appears in the user's prompt.`,
     calendarContext,
     request.prompt,
     aspectInstruction,
-    '고해상도, 선명하고 깨끗한 이미지로 생성해주세요. 텍스트와 그래픽 요소가 또렷하고 흐림 없이 렌더링되어야 합니다. professional quality, sharp details, crisp edges, no blur, no artifacts.',
+    'professional quality, sharp details, crisp edges, no blur, no artifacts.',
     '한국어 텍스트가 포함된 경우 오타 없이 정확하게 렌더링해주세요.',
     logoInstruction,
   ].filter(Boolean).join('\n\n');
