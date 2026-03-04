@@ -161,94 +161,88 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange 
         Hospital<span className="text-emerald-600">AI</span>
       </h2>
 
-      {/* 탭 메뉴 - 1줄 5개 그리드로 변경 (넓게 정렬) */}
-      <div className="grid grid-cols-5 p-1.5 bg-slate-100 rounded-2xl mb-8 gap-1.5">
-        <button
-          type="button"
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            const scrollY = window.scrollY;
-            setPostType('blog');
-            // blog도 탭 전환하지 않고 postType만 변경
-            // 스크롤 위치 유지 (리렌더링 후)
-            requestAnimationFrame(() => {
-              window.scrollTo(0, scrollY);
-            });
-          }}
-          className={`py-2.5 px-1 rounded-xl text-sm font-bold transition-all flex flex-col items-center justify-center gap-0.5 ${postType === 'blog' ? 'bg-white text-emerald-600 shadow-md' : 'text-slate-400 hover:text-slate-600'}`}
-        >
-          <span className="text-base">📝</span>
-          <span className="text-[11px]">블로그</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => onTabChange?.('similarity')}
-          className={`py-2.5 px-1 rounded-xl text-sm font-bold transition-all flex flex-col items-center justify-center gap-0.5 text-slate-400 hover:text-slate-600`}
-        >
-          <span className="text-base">🔍</span>
-          <span className="text-[11px]">유사도</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => onTabChange?.('refine')}
-          className={`py-2.5 px-1 rounded-xl text-sm font-bold transition-all flex flex-col items-center justify-center gap-0.5 text-slate-400 hover:text-slate-600`}
-        >
-          <span className="text-base">✨</span>
-          <span className="text-[11px]">AI보정</span>
-        </button>
-        <button
-          type="button"
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            const scrollY = window.scrollY;
-            setPostType('card_news');
-            // card_news는 탭 전환하지 않고 postType만 변경
-            // 스크롤 위치 유지 (리렌더링 후)
-            requestAnimationFrame(() => {
-              window.scrollTo(0, scrollY);
-            });
-          }}
-          className={`py-2.5 px-1 rounded-xl text-sm font-bold transition-all flex flex-col items-center justify-center gap-0.5 ${postType === 'card_news' ? 'bg-white text-blue-600 shadow-md' : 'text-slate-400 hover:text-slate-600'}`}
-        >
-          <span className="text-base">🎨</span>
-          <span className="text-[11px]">카드뉴스</span>
-        </button>
-        <button
-          type="button"
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            const scrollY = window.scrollY;
-            setPostType('press_release');
-            // press도 탭 전환하지 않고 postType만 변경
-            // 스크롤 위치 유지 (리렌더링 후)
-            requestAnimationFrame(() => {
-              window.scrollTo(0, scrollY);
-            });
-          }}
-          className={`py-2.5 px-1 rounded-xl text-sm font-bold transition-all flex flex-col items-center justify-center gap-0.5 ${postType === 'press_release' ? 'bg-white text-purple-600 shadow-md' : 'text-slate-400 hover:text-slate-600'}`}
-        >
-          <span className="text-base">🗞️</span>
-          <span className="text-[11px]">보도자료</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => onTabChange?.('image')}
-          className={`py-2.5 px-1 rounded-xl text-sm font-bold transition-all flex flex-col items-center justify-center gap-0.5 text-slate-400 hover:text-slate-600`}
-        >
-          <span className="text-base">🖼️</span>
-          <span className="text-[11px]">이미지</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => onTabChange?.('video')}
-          className={`py-2.5 px-1 rounded-xl text-sm font-bold transition-all flex flex-col items-center justify-center gap-0.5 text-slate-400 hover:text-slate-600`}
-        >
-          <span className="text-base">🎬</span>
-          <span className="text-[11px]">동영상</span>
-        </button>
+      {/* 탭 메뉴 - 2행 구성 */}
+      <div className="mb-8 space-y-2">
+        {/* 1행: 콘텐츠 생성 */}
+        <div className="grid grid-cols-3 p-1 bg-slate-100 rounded-2xl gap-1">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              const scrollY = window.scrollY;
+              setPostType('blog');
+              requestAnimationFrame(() => window.scrollTo(0, scrollY));
+            }}
+            className={`py-2.5 px-2 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-1.5 ${postType === 'blog' ? 'bg-white text-emerald-600 shadow-md' : 'text-slate-400 hover:text-slate-600'}`}
+          >
+            <span>📝</span>
+            <span className="text-xs">블로그</span>
+          </button>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              const scrollY = window.scrollY;
+              setPostType('card_news');
+              requestAnimationFrame(() => window.scrollTo(0, scrollY));
+            }}
+            className={`py-2.5 px-2 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-1.5 ${postType === 'card_news' ? 'bg-white text-blue-600 shadow-md' : 'text-slate-400 hover:text-slate-600'}`}
+          >
+            <span>🎨</span>
+            <span className="text-xs">카드뉴스</span>
+          </button>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              const scrollY = window.scrollY;
+              setPostType('press_release');
+              requestAnimationFrame(() => window.scrollTo(0, scrollY));
+            }}
+            className={`py-2.5 px-2 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-1.5 ${postType === 'press_release' ? 'bg-white text-purple-600 shadow-md' : 'text-slate-400 hover:text-slate-600'}`}
+          >
+            <span>🗞️</span>
+            <span className="text-xs">보도자료</span>
+          </button>
+        </div>
+        {/* 2행: 도구 */}
+        <div className="grid grid-cols-4 p-1 bg-slate-50 rounded-2xl gap-1">
+          <button
+            type="button"
+            onClick={() => onTabChange?.('similarity')}
+            className="py-2 px-2 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-1.5 text-slate-400 hover:text-slate-600 hover:bg-white"
+          >
+            <span>🔍</span>
+            <span className="text-xs">유사도</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => onTabChange?.('refine')}
+            className="py-2 px-2 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-1.5 text-slate-400 hover:text-slate-600 hover:bg-white"
+          >
+            <span>✨</span>
+            <span className="text-xs">AI보정</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => onTabChange?.('image')}
+            className="py-2 px-2 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-1.5 text-slate-400 hover:text-slate-600 hover:bg-white"
+          >
+            <span>🖼️</span>
+            <span className="text-xs">이미지</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => onTabChange?.('video')}
+            className="py-2 px-2 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-1.5 text-slate-400 hover:text-slate-600 hover:bg-white"
+          >
+            <span>🎬</span>
+            <span className="text-xs">동영상</span>
+          </button>
+        </div>
       </div>
       
       <form onSubmit={handleSubmit} className="space-y-6">
