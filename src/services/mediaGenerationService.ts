@@ -364,7 +364,7 @@ export async function chatPromptGenerator(
   contents.push({ role: 'user', parts: userParts });
 
   const response = await ai.models.generateContent({
-    model: 'gemini-3.1-pro-preview',
+    model: 'gemini-2.5-flash',
     config: {
       systemInstruction: SYSTEM_INSTRUCTIONS[mediaType],
       responseMimeType: 'application/json',
