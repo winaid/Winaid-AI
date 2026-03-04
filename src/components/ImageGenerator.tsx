@@ -127,7 +127,7 @@ export default function ImageGenerator({ onProgress }: Props) {
       {/* 헤더 */}
       <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-2xl p-6 border border-purple-100">
         <h2 className="text-xl font-bold text-gray-800 mb-1">이미지 생성기</h2>
-        <p className="text-sm text-gray-500">Gemini 3.1 Flash Image로 병원 콘텐츠 이미지를 만들어보세요</p>
+        <p className="text-sm text-gray-500">병원 콘텐츠 이미지를 만들어보세요</p>
       </div>
 
       {/* 프롬프트 입력 */}
