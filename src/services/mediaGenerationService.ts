@@ -19,6 +19,95 @@ export interface ImageGenerationResult {
   mimeType: string;
 }
 
+// 달력 이미지를 Canvas로 직접 생성 (AI가 텍스트 데이터를 무시하므로 이미지로 전달)
+function generateCalendarImage(year: number, month: number, holidays: string[]): string {
+  const canvas = document.createElement('canvas');
+  const cellW = 100, cellH = 70;
+  const cols = 7;
+  const headerH = 80; // 제목 영역
+  const dayHeaderH = 40; // 요일 헤더
+  const firstDay = new Date(year, month - 1, 1).getDay();
+  const lastDate = new Date(year, month, 0).getDate();
+  const rows = Math.ceil((firstDay + lastDate) / 7);
+
+  canvas.width = cols * cellW;
+  canvas.height = headerH + dayHeaderH + rows * cellH;
+
+  const ctx = canvas.getContext('2d')!;
+
+  // 배경
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // 제목: "2026년 5월"
+  ctx.fillStyle = '#222222';
+  ctx.font = 'bold 32px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(`${year}년 ${month}월`, canvas.width / 2, 50);
+
+  // 공휴일 목록 파싱 (예: "5-5 어린이날" → { day: 5 })
+  const holidayDays = new Set<number>();
+  for (const h of holidays) {
+    const m = h.match(/^\d+-(\d+)/);
+    if (m) holidayDays.add(parseInt(m[1], 10));
+  }
+
+  // 요일 헤더
+  const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+  ctx.font = 'bold 18px sans-serif';
+  for (let i = 0; i < 7; i++) {
+    const x = i * cellW + cellW / 2;
+    const y = headerH + 25;
+    ctx.fillStyle = i === 0 ? '#e53e3e' : i === 6 ? '#3182ce' : '#555555';
+    ctx.fillText(dayNames[i], x, y);
+  }
+
+  // 구분선
+  ctx.strokeStyle = '#dddddd';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(0, headerH + dayHeaderH);
+  ctx.lineTo(canvas.width, headerH + dayHeaderH);
+  ctx.stroke();
+
+  // 날짜 그리기
+  ctx.font = '22px sans-serif';
+  for (let d = 1; d <= lastDate; d++) {
+    const idx = firstDay + d - 1;
+    const col = idx % 7;
+    const row = Math.floor(idx / 7);
+    const x = col * cellW + cellW / 2;
+    const y = headerH + dayHeaderH + row * cellH + 40;
+
+    const isHoliday = holidayDays.has(d);
+    const isSunday = col === 0;
+    const isSaturday = col === 6;
+
+    ctx.fillStyle = (isSunday || isHoliday) ? '#e53e3e' : isSaturday ? '#3182ce' : '#222222';
+    ctx.font = (isHoliday) ? 'bold 22px sans-serif' : '22px sans-serif';
+    ctx.fillText(String(d), x, y);
+  }
+
+  // 그리드 선
+  ctx.strokeStyle = '#eeeeee';
+  for (let r = 1; r <= rows; r++) {
+    const y = headerH + dayHeaderH + r * cellH;
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(canvas.width, y);
+    ctx.stroke();
+  }
+  for (let c = 1; c < cols; c++) {
+    const x = c * cellW;
+    ctx.beginPath();
+    ctx.moveTo(x, headerH + dayHeaderH);
+    ctx.lineTo(x, canvas.height);
+    ctx.stroke();
+  }
+
+  return canvas.toDataURL('image/png');
+}
+
 // 해당 월의 달력 그리드 텍스트 생성
 function buildCalendarGrid(year: number, month: number): string {
   const firstDay = new Date(year, month - 1, 1).getDay(); // 0=일, 1=월, ...
@@ -93,9 +182,10 @@ export async function generateCustomImage(
 
   const aspectInstruction = getAspectInstruction(request.aspectRatio);
 
-  // 날짜/달력 컨텍스트 자동 감지 및 추가 (참고용 데이터)
+  // 날짜/달력 컨텍스트 자동 감지 + 달력 이미지 생성
   const dateCtx = detectDateContext(request.prompt);
   let calendarContext = '';
+  let calendarImageDataUrl: string | null = null;
   if (dateCtx.needsCalendar && dateCtx.months.length > 0) {
     const parts: string[] = [];
     for (const month of dateCtx.months) {
@@ -104,16 +194,27 @@ export async function generateCustomImage(
       if (holidays.length > 0) {
         parts.push(`공휴일: ${holidays.join(', ')}`);
       }
+      // 달력 이미지 생성 (첫 번째 월 기준)
+      if (!calendarImageDataUrl) {
+        try {
+          calendarImageDataUrl = generateCalendarImage(dateCtx.year, month, holidays);
+        } catch { /* SSR 등 canvas 사용 불가 환경에서는 텍스트만 사용 */ }
+      }
     }
-    calendarContext = `[REFERENCE DATA - for accuracy only, do NOT add extra dates or info to the image]\n${parts.join('\n')}`;
+    calendarContext = `[정확한 달력 데이터]\n${parts.join('\n')}`;
   }
+
+  const calendarInstruction = calendarImageDataUrl
+    ? '첨부된 달력 이미지를 참고하세요. 이 달력의 날짜-요일 배치를 정확히 그대로 따라야 합니다. 날짜와 요일이 틀리면 안 됩니다.'
+    : '';
 
   const logoInstruction = request.logoBase64
     ? '첨부된 로고 이미지를 참고하여 디자인 안에 이 로고를 자연스럽게 포함시켜 주세요. 로고의 형태와 스타일을 최대한 유지하면서 전체 디자인과 조화롭게 배치해주세요.'
     : '';
 
   const fullPrompt = [
-    `[CRITICAL RULE] Generate EXACTLY what the user describes below. Do NOT add any extra text, dates, numbers, or information that the user did not explicitly request. Only render content that appears in the user's prompt.`,
+    `[규칙] 사용자의 프롬프트에 충실하세요. 사용자가 요청하지 않은 정보를 임의로 추가하지 마세요.`,
+    calendarInstruction,
     calendarContext,
     request.prompt,
     aspectInstruction,
@@ -124,6 +225,18 @@ export async function generateCustomImage(
 
   // 멀티모달 contents 구성
   const contents: any[] = [{ text: fullPrompt }];
+
+  // 달력 참고 이미지 추가
+  if (calendarImageDataUrl) {
+    const calMatch = calendarImageDataUrl.match(/^data:(image\/\w+);base64,(.+)$/);
+    if (calMatch) {
+      contents.push({
+        inlineData: { mimeType: calMatch[1], data: calMatch[2] },
+      });
+    }
+  }
+
+  // 로고 이미지 추가
   if (request.logoBase64) {
     const match = request.logoBase64.match(/^data:(image\/\w+);base64,(.+)$/);
     if (match) {
