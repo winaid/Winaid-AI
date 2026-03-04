@@ -360,8 +360,11 @@ export async function chatPromptGenerator(
 ): Promise<ChatMessage> {
   const ai = getAiClient();
 
+  // 최근 6개 메시지만 유지 (3턴) → 토큰 절약 + 속도 유지
+  const recentHistory = history.slice(-6);
+
   // Gemini contents 형식으로 변환 (assistant → model의 JSON 응답 원형 복원)
-  const contents: any[] = history.map((msg) => ({
+  const contents: any[] = recentHistory.map((msg) => ({
     role: msg.role === 'assistant' ? 'model' : 'user',
     parts: [{
       text: msg.role === 'assistant'
@@ -391,10 +394,10 @@ export async function chatPromptGenerator(
         type: 'object' as any,
         properties: {
           message: { type: 'string' as any, description: '사용자에게 보여줄 대화 텍스트' },
-          korean: { type: 'string' as any, description: '한국어 최적화 프롬프트 (제안할 때만)' },
-          english: { type: 'string' as any, description: '영어 최적화 프롬프트 (제안할 때만)' },
+          korean: { type: 'string' as any, description: '한국어 최적화 프롬프트 (필수)' },
+          english: { type: 'string' as any, description: '영어 최적화 프롬프트 (필수)' },
         },
-        required: ['message'],
+        required: ['message', 'korean', 'english'],
       },
     },
     contents,
