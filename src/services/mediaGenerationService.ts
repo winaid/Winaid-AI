@@ -39,11 +39,11 @@ function generateCalendarImage(year: number, month: number, holidays: string[]):
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // 제목: "2026년 5월"
+  // 제목: "5월"
   ctx.fillStyle = '#222222';
   ctx.font = 'bold 32px sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText(`${year}년 ${month}월`, canvas.width / 2, 50);
+  ctx.fillText(`${month}월`, canvas.width / 2, 50);
 
   // 공휴일 목록 파싱 (예: "5-5 어린이날" → { day: 5 })
   const holidayDays = new Set<number>();
@@ -114,7 +114,7 @@ function buildCalendarGrid(year: number, month: number): string {
   const lastDate = new Date(year, month, 0).getDate();
   const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
 
-  let grid = `${year}년 ${month}월 달력:\n`;
+  let grid = `${month}월 달력:\n`;
   grid += dayNames.join('  ') + '\n';
 
   // 첫째 주 빈칸
@@ -434,7 +434,7 @@ export async function generateOptimizedPrompt(
   const ai = getAiClient();
 
   const now = new Date();
-  const dateInfo = `${now.getFullYear()}년 ${now.getMonth() + 1}월`;
+  const dateInfo = `${now.getMonth() + 1}월`;
 
   const baseInstruction = mediaType === 'image'
     ? `[시기 참고: ${dateInfo} - 계절/시기 맥락 파악용이며, 생성 프롬프트에 날짜를 포함하지 마세요]
@@ -523,7 +523,7 @@ interface ChatResponseJson {
 
 function getSystemInstruction(mediaType: PromptMediaType): string {
   const now = new Date();
-  const dateInfo = `${now.getFullYear()}년 ${now.getMonth() + 1}월`;
+  const dateInfo = `${now.getMonth() + 1}월`;
 
   const base = mediaType === 'image'
     ? `[시기 참고: ${dateInfo} - 계절/시기 맥락 파악용이며, 생성 프롬프트에 오늘 날짜를 넣지 마세요. 사용자가 요청한 월/날짜만 사용하세요.]
