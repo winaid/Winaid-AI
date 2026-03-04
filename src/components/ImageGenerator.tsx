@@ -28,6 +28,7 @@ export default function ImageGenerator({ onProgress }: Props) {
   const [logoDataUrl, setLogoDataUrl] = useState<string | null>(null);
   const [hospitalName, setHospitalName] = useState('');
   const [logoEnabled, setLogoEnabled] = useState(false);
+  const [logoPosition, setLogoPosition] = useState<'top' | 'bottom'>('bottom');
   const logoInputRef = useRef<HTMLInputElement>(null);
 
   // localStorage에서 로고/병원명 복원
@@ -81,7 +82,8 @@ export default function ImageGenerator({ onProgress }: Props) {
       // 병원명이 있으면 프롬프트에 자연스럽게 포함
       let finalPrompt = prompt.trim();
       if (logoEnabled && hospitalName.trim()) {
-        finalPrompt += `\n\n디자인 하단에 "${hospitalName}" 병원명을 자연스럽게 포함하여 디자인의 일부로 렌더링해주세요. 별도의 로고 박스가 아니라 전체 디자인과 어울리는 타이포그래피로 배치해주세요.`;
+        const posLabel = logoPosition === 'top' ? '상단' : '하단';
+        finalPrompt += `\n\n디자인 ${posLabel}에 "${hospitalName}" 병원명을 자연스럽게 포함하여 디자인의 일부로 렌더링해주세요. 별도의 로고 박스가 아니라 전체 디자인과 어울리는 타이포그래피로 배치해주세요.`;
       }
 
       const res = await generateCustomImage(
@@ -101,7 +103,7 @@ export default function ImageGenerator({ onProgress }: Props) {
     } finally {
       setGenerating(false);
     }
-  }, [prompt, aspectRatio, onProgress, logoEnabled, logoDataUrl, hospitalName]);
+  }, [prompt, aspectRatio, onProgress, logoEnabled, logoDataUrl, hospitalName, logoPosition]);
 
   const handleDownload = useCallback(() => {
     if (!result) return;
@@ -208,15 +210,33 @@ export default function ImageGenerator({ onProgress }: Props) {
 
         {/* 병원명 + 위치 (로고가 있을 때만) */}
         {logoDataUrl && (
-          <div className="flex gap-3">
-            <div className="flex-1">
-              <input
-                type="text"
-                value={hospitalName}
-                onChange={(e) => handleHospitalNameChange(e.target.value)}
-                placeholder="병원명 (선택사항)"
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-              />
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={hospitalName}
+              onChange={(e) => handleHospitalNameChange(e.target.value)}
+              placeholder="병원명 (선택사항)"
+              className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            />
+            <div className="flex bg-gray-100 rounded-lg p-0.5">
+              <button
+                type="button"
+                onClick={() => setLogoPosition('top')}
+                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                  logoPosition === 'top' ? 'bg-white text-purple-700 shadow-sm' : 'text-gray-500'
+                }`}
+              >
+                상단
+              </button>
+              <button
+                type="button"
+                onClick={() => setLogoPosition('bottom')}
+                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                  logoPosition === 'bottom' ? 'bg-white text-purple-700 shadow-sm' : 'text-gray-500'
+                }`}
+              >
+                하단
+              </button>
             </div>
           </div>
         )}
