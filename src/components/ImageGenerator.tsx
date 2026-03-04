@@ -12,23 +12,10 @@ const ASPECT_RATIOS: { value: ImageAspectRatio; label: string; icon: string }[] 
 const LOGO_STORAGE_KEY = 'hospital-logo-dataurl';
 const HOSPITAL_NAME_KEY = 'hospital-logo-name';
 
-type LogoPosition = 'bottom-center' | 'top-center' | 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
-
-const LOGO_POSITIONS: { value: LogoPosition; label: string }[] = [
-  { value: 'bottom-center', label: '하단 중앙' },
-  { value: 'top-center', label: '상단 중앙' },
-  { value: 'bottom-right', label: '우하단' },
-  { value: 'bottom-left', label: '좌하단' },
-  { value: 'top-right', label: '우상단' },
-  { value: 'top-left', label: '좌상단' },
-];
-
-/** Canvas 위에 로고+병원명을 합성 */
-async function compositeLogoOnImage(
+/** Canvas 위에 로고 아이콘만 작게 합성 (병원명은 프롬프트로 생성) */
+async function compositeLogoIcon(
   imageDataUrl: string,
   logoDataUrl: string,
-  hospitalName: string,
-  position: LogoPosition,
 ): Promise<string> {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -40,67 +27,18 @@ async function compositeLogoOnImage(
         canvas.height = img.height;
         const ctx = canvas.getContext('2d')!;
 
-        // 원본 이미지
         ctx.drawImage(img, 0, 0);
 
-        // 로고 크기: 이미지 높이의 5% (최소 24px, 최대 64px)
-        const logoH = Math.max(24, Math.min(64, Math.round(img.height * 0.05)));
+        // 로고 아이콘만 우하단에 작게 (이미지 높이 3.5%)
+        const logoH = Math.max(18, Math.min(48, Math.round(img.height * 0.035)));
         const logoW = Math.round(logoH * (logo.width / logo.height));
+        const padding = Math.round(img.width * 0.02);
+        const x = img.width - logoW - padding;
+        const y = img.height - logoH - padding;
 
-        const padding = Math.round(img.width * 0.025);
-        const gap = Math.round(padding * 0.4);
-
-        // 병원명 폰트
-        const fontSize = Math.max(12, Math.min(28, Math.round(logoH * 0.5)));
-        ctx.font = `600 ${fontSize}px -apple-system, "Noto Sans KR", sans-serif`;
-        const textMetrics = ctx.measureText(hospitalName);
-        const textW = hospitalName ? textMetrics.width : 0;
-
-        // 전체 블록 크기
-        const blockW = logoW + (hospitalName ? gap + textW : 0);
-        const blockH = logoH;
-
-        // 위치 계산
-        const isBottom = position.startsWith('bottom');
-        const isCenter = position.endsWith('center');
-
-        let x: number, y: number;
-        const barH = blockH + padding * 2;
-
-        if (isCenter) {
-          x = Math.round((img.width - blockW) / 2);
-        } else if (position.endsWith('left')) {
-          x = padding;
-        } else {
-          x = img.width - blockW - padding;
-        }
-
-        // 자연스러운 그라데이션 바
-        const gradY = isBottom ? img.height - barH : 0;
-        const grad = ctx.createLinearGradient(0, isBottom ? gradY - barH * 0.5 : 0, 0, isBottom ? img.height : barH * 1.5);
-        grad.addColorStop(0, isBottom ? 'rgba(0,0,0,0)' : 'rgba(0,0,0,0.5)');
-        grad.addColorStop(isBottom ? 0.4 : 0.6, isBottom ? 'rgba(0,0,0,0.45)' : 'rgba(0,0,0,0.45)');
-        grad.addColorStop(1, isBottom ? 'rgba(0,0,0,0.6)' : 'rgba(0,0,0,0)');
-        ctx.fillStyle = grad;
-        ctx.fillRect(0, isBottom ? gradY - barH * 0.5 : 0, img.width, barH * 1.5);
-
-        y = isBottom ? img.height - blockH - padding : padding;
-
-        // 로고
+        ctx.globalAlpha = 0.7;
         ctx.drawImage(logo, x, y, logoW, logoH);
-
-        // 병원명 (흰색 텍스트 + 그림자)
-        if (hospitalName) {
-          ctx.save();
-          ctx.shadowColor = 'rgba(0,0,0,0.5)';
-          ctx.shadowBlur = 4;
-          ctx.shadowOffsetX = 1;
-          ctx.shadowOffsetY = 1;
-          ctx.fillStyle = '#FFFFFF';
-          ctx.textBaseline = 'middle';
-          ctx.fillText(hospitalName, x + logoW + gap, y + logoH / 2);
-          ctx.restore();
-        }
+        ctx.globalAlpha = 1.0;
 
         resolve(canvas.toDataURL('image/png'));
       };
@@ -128,7 +66,6 @@ export default function ImageGenerator({ onProgress }: Props) {
   const [logoDataUrl, setLogoDataUrl] = useState<string | null>(null);
   const [hospitalName, setHospitalName] = useState('');
   const [logoEnabled, setLogoEnabled] = useState(false);
-  const [logoPosition, setLogoPosition] = useState<LogoPosition>('bottom-center');
   const logoInputRef = useRef<HTMLInputElement>(null);
 
   // localStorage에서 로고/병원명 복원
@@ -178,18 +115,25 @@ export default function ImageGenerator({ onProgress }: Props) {
 
     try {
       const { generateCustomImage } = await import('../services/mediaGenerationService');
+
+      // 병원명이 있으면 프롬프트에 자연스럽게 포함
+      let finalPrompt = prompt.trim();
+      if (logoEnabled && hospitalName.trim()) {
+        finalPrompt += `\n\n디자인 하단에 "${hospitalName}" 병원명을 자연스럽게 포함하여 디자인의 일부로 렌더링해주세요. 별도의 로고 박스가 아니라 전체 디자인과 어울리는 타이포그래피로 배치해주세요.`;
+      }
+
       const res = await generateCustomImage(
-        { prompt: prompt.trim(), aspectRatio },
+        { prompt: finalPrompt, aspectRatio },
         (msg) => { setProgress(msg); onProgress?.(msg); }
       );
 
       let finalImage = res.imageDataUrl;
 
-      // 로고 합성
+      // 로고 아이콘만 작게 합성 (병원명은 프롬프트에서 AI가 렌더링)
       if (logoEnabled && logoDataUrl) {
         setProgress('로고 합성 중...');
         try {
-          finalImage = await compositeLogoOnImage(finalImage, logoDataUrl, hospitalName, logoPosition);
+          finalImage = await compositeLogoIcon(finalImage, logoDataUrl);
         } catch (err) {
           console.warn('로고 합성 실패, 원본 사용:', err);
         }
@@ -203,7 +147,7 @@ export default function ImageGenerator({ onProgress }: Props) {
     } finally {
       setGenerating(false);
     }
-  }, [prompt, aspectRatio, onProgress, logoEnabled, logoDataUrl, hospitalName, logoPosition]);
+  }, [prompt, aspectRatio, onProgress, logoEnabled, logoDataUrl, hospitalName]);
 
   const handleDownload = useCallback(() => {
     if (!result) return;
@@ -320,15 +264,6 @@ export default function ImageGenerator({ onProgress }: Props) {
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               />
             </div>
-            <select
-              value={logoPosition}
-              onChange={(e) => setLogoPosition(e.target.value as LogoPosition)}
-              className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-purple-500"
-            >
-              {LOGO_POSITIONS.map((p) => (
-                <option key={p.value} value={p.value}>{p.label}</option>
-              ))}
-            </select>
           </div>
         )}
       </div>
