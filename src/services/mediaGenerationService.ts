@@ -151,21 +151,35 @@ export async function generateVideo(
       throw new Error('동영상 생성 시간이 초과되었습니다. 다시 시도해주세요.');
     }
 
-    const generatedVideos = operation.response?.generatedVideos;
+    // operation 자체에 generatedVideos가 있을 수도 있고, response 안에 있을 수도 있음
+    const generatedVideos =
+      operation.response?.generatedVideos ??
+      (operation as any).generatedVideos;
+
     if (!generatedVideos || generatedVideos.length === 0) {
+      console.error('Video operation result:', JSON.stringify(operation, null, 2));
       throw new Error('동영상을 생성하지 못했습니다.');
     }
 
-    const video = generatedVideos[0].video;
+    const videoEntry = generatedVideos[0];
+    const videoUri =
+      videoEntry?.video?.uri ??
+      videoEntry?.video?.name ??
+      videoEntry?.uri ??
+      videoEntry?.name;
 
-    if (!video?.name) {
+    if (!videoUri) {
+      console.error('Video entry structure:', JSON.stringify(videoEntry, null, 2));
       throw new Error('동영상 파일 정보를 가져올 수 없습니다.');
     }
 
     // Google API에서 실제 동영상 바이너리 다운로드
     progress('동영상 다운로드 중...');
     const apiKey = getApiKeyValue();
-    const downloadUrl = `https://generativelanguage.googleapis.com/v1beta/${video.name}?alt=media&key=${apiKey}`;
+    // uri가 전체 URL일 수도 있고, 리소스 이름일 수도 있음
+    const downloadUrl = videoUri.startsWith('http')
+      ? `${videoUri}${videoUri.includes('?') ? '&' : '?'}key=${apiKey}`
+      : `https://generativelanguage.googleapis.com/v1beta/${videoUri}?alt=media&key=${apiKey}`;
     const response = await fetch(downloadUrl);
 
     if (!response.ok) {
