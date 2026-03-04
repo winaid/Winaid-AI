@@ -275,17 +275,21 @@ VEO 3.1 영상 생성에 최적화된 상세 프롬프트를 작성합니다.
   const response = await ai.models.generateContent({
     model: 'gemini-3-flash-preview',
     contents: [{ role: 'user', parts }],
+    config: {
+      responseMimeType: 'application/json',
+      responseSchema: {
+        type: 'object' as any,
+        properties: {
+          korean: { type: 'string' as any, description: '한국어 최적화 프롬프트' },
+          english: { type: 'string' as any, description: 'English optimized prompt' },
+        },
+        required: ['korean', 'english'],
+      },
+    },
   });
 
   const text = response.text?.trim() || '';
-
-  // JSON 파싱 (코드블록 감싸져 있을 수 있음)
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) {
-    throw new Error('프롬프트 생성 결과를 파싱할 수 없습니다.');
-  }
-
-  const parsed = JSON.parse(jsonMatch[0]);
+  const parsed = JSON.parse(text);
   return {
     korean: parsed.korean || '',
     english: parsed.english || '',

@@ -202,7 +202,7 @@ export const translateStylePromptToKorean = async (englishPrompt: string): Promi
   try {
     const ai = getAiClient();
     const response = await ai.models.generateContent({
-      model: GEMINI_MODEL.PRO,
+      model: GEMINI_MODEL.FLASH,
       contents: `다음 이미지 스타일 프롬프트를 자연스러운 한국어로 번역해주세요.
 전문 용어는 유지하고, 의미를 정확히 전달해주세요.
 
@@ -312,7 +312,7 @@ ${imageStyle === 'illustration'
 
     const response = await callGemini({
       prompt,
-      model: GEMINI_MODEL.PRO,
+      model: GEMINI_MODEL.FLASH,
       googleSearch: false,  // 프롬프트 추천은 Google Search 불필요
       responseType: 'text',
       timeout: TIMEOUTS.QUICK_OPERATION
@@ -393,7 +393,7 @@ ${description ? `description: "${description}"` : ''}
 
     const response = await callGemini({
       prompt,
-      model: GEMINI_MODEL.PRO,
+      model: GEMINI_MODEL.FLASH,
       googleSearch: false,  // 프롬프트 추천은 Google Search 불필요
       responseType: 'text',
       timeout: TIMEOUTS.QUICK_OPERATION
