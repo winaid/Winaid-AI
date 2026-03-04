@@ -587,6 +587,18 @@ function getSystemInstruction(mediaType: PromptMediaType): string {
 8. 전체적인 용도: 병원 공지 포스터, SNS 홍보, 진료 안내 등
 9. 품질: 반드시 "high resolution, sharp details, crisp text, no blur, no artifacts, professional quality" 등의 고품질 지시를 영어 프롬프트 끝에 포함하세요.
 
+🎨 색상 다양성 규칙 (매우 중요!):
+- "고급스러운", "럭셔리", "프리미엄" 요청 시 금색/골드만 사용하지 마세요! 다양한 고급 팔레트를 활용하세요:
+  · 딥 네이비 + 화이트 (클래식 고급감)
+  · 차콜 + 실버 그레이 (모던 프리미엄)
+  · 버건디/와인 + 크림 (따뜻한 고급감)
+  · 포레스트 그린 + 아이보리 (자연스러운 품격)
+  · 미드나이트 블루 + 로즈골드 (세련된 고급감)
+  · 블랙 + 화이트 미니멀 (심플 럭셔리)
+  · 딥 퍼플 + 라벤더 (우아한 고급감)
+  · 골드/금색도 가능하지만, 매번 기본값으로 사용 금지! 다른 팔레트를 먼저 고려하세요.
+- 같은 사용자에게 반복 요청이 오면 이전과 다른 색상 팔레트를 제안하세요.
+
 🔥 품질 필수 규칙:
 - 영어 프롬프트에 반드시 포함: "high resolution, ultra sharp, crisp edges, clean details, professional graphic design quality, no compression artifacts, no blur"
 - 한국어 프롬프트에 반드시 포함: "고해상도, 선명하고 깨끗한 디테일, 흐림 없는 또렷한 텍스트와 그래픽"
