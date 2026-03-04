@@ -4,6 +4,7 @@
  * - 동영상: veo-3.1-fast-generate-preview
  */
 import { getAiClient, getApiKeyValue } from "./geminiClient";
+import { generateCalendarFromPrompt } from "./calendarTemplateService";
 
 // ── 이미지 생성 ──
 
@@ -179,6 +180,20 @@ export async function generateCustomImage(
 ): Promise<ImageGenerationResult> {
   const ai = getAiClient();
   const progress = (msg: string) => onProgress?.(msg);
+
+  // 달력/진료안내 감지 → HTML 템플릿으로 100% 정확한 달력 생성
+  const dateCtxCheck = detectDateContext(request.prompt);
+  if (dateCtxCheck.needsCalendar) {
+    try {
+      const calResult = await generateCalendarFromPrompt(request.prompt, onProgress);
+      if (calResult) {
+        return calResult;
+      }
+    } catch {
+      // HTML 렌더링 실패 시 기존 AI 경로로 fallback
+      progress('달력 템플릿 생성 실패, AI로 전환...');
+    }
+  }
 
   const aspectInstruction = getAspectInstruction(request.aspectRatio);
 
