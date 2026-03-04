@@ -221,14 +221,19 @@ export async function generateOptimizedPrompt(
 ): Promise<GeneratedPrompt> {
   const ai = getAiClient();
 
+  const now = new Date();
+  const dateInfo = `${now.getFullYear()}년 ${now.getMonth() + 1}월 ${now.getDate()}일`;
+
   const baseInstruction = mediaType === 'image'
-    ? `당신은 AI 이미지 생성 프롬프트 전문가입니다.
+    ? `[현재 날짜: ${dateInfo}]
+당신은 AI 이미지 생성 프롬프트 전문가입니다.
 Gemini Image Generation에 최적화된 상세 프롬프트를 작성합니다.
 - 병원/의료 콘텐츠에 적합한 전문적이고 깔끔한 스타일
 - 조명, 색감, 구도, 분위기 등 시각적 디테일 포함
 - 텍스트가 필요한 경우 정확한 한국어 렌더링 지시 포함
 - 의료 광고 가이드라인 준수 (과장/허위 표현 금지)`
-    : `당신은 AI 동영상 생성 프롬프트 전문가입니다.
+    : `[현재 날짜: ${dateInfo}]
+당신은 AI 동영상 생성 프롬프트 전문가입니다.
 VEO 3.1 영상 생성에 최적화된 상세 프롬프트를 작성합니다.
 - 병원/의료 콘텐츠에 적합한 전문적이고 깔끔한 스타일
 - 카메라 움직임(팬, 틸트, 줌 등), 조명, 분위기 설명 포함
@@ -297,32 +302,31 @@ interface ChatResponseJson {
   english?: string;
 }
 
-const SYSTEM_INSTRUCTIONS: Record<PromptMediaType, string> = {
-  image: `당신은 AI 이미지 생성 프롬프트 전문가이자 친절한 어시스턴트입니다.
+function getSystemInstruction(mediaType: PromptMediaType): string {
+  const now = new Date();
+  const dateInfo = `${now.getFullYear()}년 ${now.getMonth() + 1}월 ${now.getDate()}일`;
+
+  const base = mediaType === 'image'
+    ? `[현재 날짜: ${dateInfo}]
+당신은 AI 이미지 생성 프롬프트 전문가이자 친절한 어시스턴트입니다.
 사용자와 대화하며 Gemini Image Generation에 최적화된 프롬프트를 함께 만들어갑니다.
 
 전문 분야:
 - 병원/의료 콘텐츠에 적합한 전문적이고 깔끔한 스타일
 - 조명, 색감, 구도, 분위기 등 시각적 디테일
 - 텍스트가 필요한 경우 정확한 한국어 렌더링 지시
-- 의료 광고 가이드라인 준수 (과장/허위 표현 금지)
-
-응답 규칙:
-- 반드시 JSON으로만 응답하세요. 다른 형식은 절대 사용하지 마세요.
-- message: 사용자에게 보여줄 대화 텍스트 (항상 필수)
-- korean: 한국어 최적화 프롬프트 (프롬프트를 제안/수정할 때만 포함)
-- english: 영어 최적화 프롬프트 (프롬프트를 제안/수정할 때만 포함)
-- 단순 대화(인사, 질문 등)에는 message만 포함하고 korean/english는 생략하세요.
-- 프롬프트를 제안할 때는 message + korean + english 모두 포함하세요.`,
-
-  video: `당신은 AI 동영상 생성 프롬프트 전문가이자 친절한 어시스턴트입니다.
+- 의료 광고 가이드라인 준수 (과장/허위 표현 금지)`
+    : `[현재 날짜: ${dateInfo}]
+당신은 AI 동영상 생성 프롬프트 전문가이자 친절한 어시스턴트입니다.
 사용자와 대화하며 VEO 3.1 영상 생성에 최적화된 프롬프트를 함께 만들어갑니다.
 
 전문 분야:
 - 병원/의료 콘텐츠에 적합한 전문적이고 깔끔한 스타일
 - 카메라 움직임(팬, 틸트, 줌 등), 조명, 분위기 설명
 - 5~8초 짧은 영상에 적합한 하나의 장면 중심
-- 시네마틱하고 고품질의 영상미
+- 시네마틱하고 고품질의 영상미`;
+
+  return `${base}
 
 응답 규칙:
 - 반드시 JSON으로만 응답하세요. 다른 형식은 절대 사용하지 마세요.
@@ -330,8 +334,8 @@ const SYSTEM_INSTRUCTIONS: Record<PromptMediaType, string> = {
 - korean: 한국어 최적화 프롬프트 (프롬프트를 제안/수정할 때만 포함)
 - english: 영어 최적화 프롬프트 (프롬프트를 제안/수정할 때만 포함)
 - 단순 대화(인사, 질문 등)에는 message만 포함하고 korean/english는 생략하세요.
-- 프롬프트를 제안할 때는 message + korean + english 모두 포함하세요.`,
-};
+- 프롬프트를 제안할 때는 message + korean + english 모두 포함하세요.`;
+}
 
 export async function chatPromptGenerator(
   history: ChatMessage[],
@@ -366,7 +370,7 @@ export async function chatPromptGenerator(
   const response = await ai.models.generateContent({
     model: 'gemini-3-flash-preview',
     config: {
-      systemInstruction: SYSTEM_INSTRUCTIONS[mediaType],
+      systemInstruction: getSystemInstruction(mediaType),
       responseMimeType: 'application/json',
       responseSchema: {
         type: 'object' as any,

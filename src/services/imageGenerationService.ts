@@ -275,7 +275,12 @@ export const recommendImagePrompt = async (blogContent: string, currentImageAlt:
   }
 
   try {
-    const prompt = `다음은 병원 블로그 글 내용입니다:
+    const now = new Date();
+    const dateInfo = `${now.getFullYear()}년 ${now.getMonth() + 1}월 ${now.getDate()}일`;
+
+    const prompt = `[현재 날짜: ${dateInfo}]
+
+다음은 병원 블로그 글 내용입니다:
 
 ${blogContent}
 
@@ -346,7 +351,12 @@ export const recommendCardNewsPrompt = async (
   const isCustomStyle = imageStyle === 'custom' && customStylePrompt;
 
   try {
-    const prompt = `당신은 카드뉴스 이미지 프롬프트 전문가입니다.
+    const now = new Date();
+    const dateInfo = `${now.getFullYear()}년 ${now.getMonth() + 1}월 ${now.getDate()}일`;
+
+    const prompt = `[현재 날짜: ${dateInfo}]
+
+당신은 카드뉴스 이미지 프롬프트 전문가입니다.
 
 다음 카드뉴스 텍스트에 어울리는 **배경 이미지 내용**을 **한국어로** 추천해주세요.
 
