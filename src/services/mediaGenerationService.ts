@@ -222,12 +222,16 @@ export async function generateCustomImage(
           const html = buildCalendarHTML(calendarData);
           const imageDataUrl = await renderCalendarToImage(html);
           return { imageDataUrl, mimeType: 'image/png' };
-        } catch {
-          progress('HTML 렌더링 실패, AI 포스터 생성으로 전환...');
+        } catch (htmlErr) {
+          console.warn('[CalendarTemplate] HTML 렌더링 실패:', htmlErr);
+          progress('AI 포스터 디자인 생성으로 전환...');
         }
+      } else {
+        console.warn('[CalendarTemplate] 달력 데이터 파싱 결과 null');
       }
-    } catch {
-      progress('달력 데이터 파싱 실패, AI 포스터 생성으로 전환...');
+    } catch (parseErr) {
+      console.warn('[CalendarTemplate] 모듈 로드/파싱 실패:', parseErr);
+      progress('AI 포스터 디자인 생성으로 전환...');
     }
     // HTML 실패 시 → 아래 AI 이미지 생성으로 fall-through (Canvas 참조 이미지 포함)
   }
@@ -257,28 +261,32 @@ export async function generateCustomImage(
   }
 
   const calendarInstruction = calendarImageDataUrl
-    ? '[중요] 첨부된 달력 참조 이미지의 날짜-요일 배치를 반드시 정확히 따르세요. 각 날짜가 올바른 요일 칸에 위치해야 합니다. 날짜를 중복하거나 빠뜨리지 마세요. 달력의 숫자는 참조 이미지와 1:1로 동일해야 합니다.'
+    ? '[달력 규칙] 첨부된 달력 참조 이미지의 날짜-요일 배치를 반드시 정확히 따르세요. 각 날짜가 올바른 요일 칸에 위치해야 합니다. 날짜를 중복하거나 빠뜨리지 마세요. 달력의 숫자는 참조 이미지와 1:1로 동일해야 합니다.'
     : '';
 
   const logoInstruction = request.logoBase64
-    ? '첨부된 로고 이미지를 디자인 상단 또는 자연스러운 위치에 포함시켜 주세요. 로고 주변에 충분한 여백을 두고, 로고가 배경과 어울리도록 크기와 위치를 조절하세요. 로고 원본의 형태와 색상을 그대로 유지하되, 전체 디자인의 색상 톤과 조화를 이루도록 배치해주세요. 로고 위에 다른 요소를 겹치지 마세요.'
+    ? '[로고 규칙] 첨부된 로고를 포스터 상단 중앙에 배치하세요. 로고를 왼쪽이나 오른쪽으로 치우치게 놓지 말고, 반드시 중앙 정렬하세요. 로고 원본의 형태와 색상을 그대로 유지하고, 로고 위에 다른 요소를 겹치지 마세요.'
     : '';
 
   // 사용자 프롬프트의 언어 감지
   const hasEnglishRequest = /\b(english|영어로)\b/i.test(request.prompt);
   const languageRule = hasEnglishRequest
     ? ''
-    : '[필수 규칙] 이미지 안에 들어가는 모든 텍스트는 반드시 한국어로만 작성하세요. 영어 텍스트를 절대 사용하지 마세요. 제목, 부제목, 안내문, 요일 표기 등 모든 글자는 한국어여야 합니다. 요일은 일/월/화/수/목/금/토로 표기하세요.';
+    : '[언어 규칙] 이미지 안의 모든 텍스트는 반드시 한국어로만 작성하세요. 영어를 절대 사용하지 마세요. 요일은 일/월/화/수/목/금/토로 표기하세요.';
+
+  const designRule = `[디자인 규칙]
+1. 사용자가 프롬프트에서 지정한 색상, 위치, 레이아웃, 분위기를 정확히 따르세요.
+2. 휴진/휴무 표시는 프롬프트에 지정된 색상(예: 붉은색)을 사용하세요. 모든 휴진 날짜에 동일한 색상과 스타일을 적용하세요.
+3. 색상이 지정된 요소는 해당 색상만 사용하세요. 임의로 다른 색으로 바꾸지 마세요.`;
 
   const fullPrompt = [
-    `[규칙] 사용자의 프롬프트에 충실하세요. 사용자가 요청하지 않은 정보를 임의로 추가하지 마세요.`,
+    designRule,
     languageRule,
     calendarInstruction,
     calendarContext,
     request.prompt,
     aspectInstruction,
     '4K ultra high resolution, professional quality, sharp details, crisp edges, no blur, no artifacts.',
-    '한국어 텍스트가 포함된 경우 오타 없이 정확하게 렌더링해주세요.',
     logoInstruction,
   ].filter(Boolean).join('\n\n');
 
