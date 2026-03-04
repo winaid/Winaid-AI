@@ -68,6 +68,75 @@ export default function ImageGenerator({ onProgress }: Props) {
     try { localStorage.removeItem(LOGO_STORAGE_KEY); } catch {}
   }, []);
 
+  // 로고+병원명을 Canvas로 이미지 위에 합성
+  const overlayLogoOnImage = useCallback(async (
+    imageDataUrl: string,
+    logo: string | null,
+    name: string,
+    position: 'top' | 'bottom',
+  ): Promise<string> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d')!;
+        ctx.drawImage(img, 0, 0);
+
+        const hasLogo = !!logo;
+        const hasName = !!name.trim();
+        if (!hasLogo && !hasName) { resolve(imageDataUrl); return; }
+
+        // 바 높이 / 여백 계산
+        const barHeight = Math.max(60, Math.round(img.height * 0.08));
+        const padding = Math.round(barHeight * 0.2);
+        const barY = position === 'top' ? 0 : img.height - barHeight;
+
+        // 반투명 배경 바
+        ctx.fillStyle = 'rgba(255,255,255,0.85)';
+        ctx.fillRect(0, barY, img.width, barHeight);
+
+        let logoDrawWidth = 0;
+        const drawContent = (logoImg?: HTMLImageElement) => {
+          const centerY = barY + barHeight / 2;
+          // 로고 그리기
+          if (logoImg) {
+            const maxLogoH = barHeight - padding * 2;
+            const scale = maxLogoH / logoImg.height;
+            logoDrawWidth = logoImg.width * scale;
+            const logoX = padding * 2;
+            const logoY = centerY - maxLogoH / 2;
+            ctx.drawImage(logoImg, logoX, logoY, logoDrawWidth, maxLogoH);
+          }
+
+          // 병원명 텍스트
+          if (hasName) {
+            const fontSize = Math.round(barHeight * 0.38);
+            ctx.font = `bold ${fontSize}px "Pretendard", "Noto Sans KR", sans-serif`;
+            ctx.fillStyle = '#1F2937';
+            ctx.textBaseline = 'middle';
+            const textX = hasLogo ? padding * 2 + logoDrawWidth + padding : padding * 2;
+            ctx.fillText(name, textX, centerY);
+          }
+
+          resolve(canvas.toDataURL('image/png'));
+        };
+
+        if (hasLogo && logo) {
+          const logoImg = new Image();
+          logoImg.onload = () => drawContent(logoImg);
+          logoImg.onerror = () => drawContent(); // 로고 로드 실패 시 텍스트만
+          logoImg.src = logo;
+        } else {
+          drawContent();
+        }
+      };
+      img.onerror = () => resolve(imageDataUrl);
+      img.src = imageDataUrl;
+    });
+  }, []);
+
   const handleGenerate = useCallback(async () => {
     if (!prompt.trim()) return;
 
@@ -79,23 +148,28 @@ export default function ImageGenerator({ onProgress }: Props) {
     try {
       const { generateCustomImage } = await import('../services/mediaGenerationService');
 
-      // 병원명이 있으면 프롬프트에 자연스럽게 포함
-      let finalPrompt = prompt.trim();
-      if (logoEnabled && hospitalName.trim()) {
-        const posLabel = logoPosition === 'top' ? '상단' : '하단';
-        finalPrompt += `\n\n디자인 ${posLabel}에 "${hospitalName}" 병원명을 자연스럽게 포함하여 디자인의 일부로 렌더링해주세요. 별도의 로고 박스가 아니라 전체 디자인과 어울리는 타이포그래피로 배치해주세요.`;
-      }
-
+      // 로고/병원명은 AI에 넘기지 않음 - 생성 후 Canvas로 합성
       const res = await generateCustomImage(
         {
-          prompt: finalPrompt,
+          prompt: prompt.trim(),
           aspectRatio,
-          logoBase64: logoEnabled && logoDataUrl ? logoDataUrl : undefined,
         },
         (msg) => { setProgress(msg); onProgress?.(msg); }
       );
 
-      setResult(res.imageDataUrl);
+      // 로고/병원명이 있으면 Canvas로 오버레이 합성
+      let finalImage = res.imageDataUrl;
+      if (logoEnabled && (logoDataUrl || hospitalName.trim())) {
+        setProgress('로고 합성 중...');
+        finalImage = await overlayLogoOnImage(
+          res.imageDataUrl,
+          logoDataUrl,
+          hospitalName,
+          logoPosition,
+        );
+      }
+
+      setResult(finalImage);
       setProgress('');
     } catch (err: any) {
       setError(err?.message || '이미지 생성에 실패했습니다.');
@@ -103,7 +177,7 @@ export default function ImageGenerator({ onProgress }: Props) {
     } finally {
       setGenerating(false);
     }
-  }, [prompt, aspectRatio, onProgress, logoEnabled, logoDataUrl, hospitalName, logoPosition]);
+  }, [prompt, aspectRatio, onProgress, logoEnabled, logoDataUrl, hospitalName, logoPosition, overlayLogoOnImage]);
 
   const handleDownload = useCallback(() => {
     if (!result) return;
