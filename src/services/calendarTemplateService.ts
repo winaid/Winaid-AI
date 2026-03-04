@@ -154,7 +154,8 @@ export function buildCalendarHTML(data: CalendarData): string {
       const closedReason = closedSet.get(d);
 
       let color = '#333333';
-      if (isSunday || isHoliday) color = '#ef4444';
+      if (isClosed) color = '#ef4444'; // 휴진일은 무조건 빨간색으로 통일
+      else if (isSunday || isHoliday) color = '#ef4444';
       else if (isSaturday) color = '#3b82f6';
 
       let bgColor = 'transparent';
@@ -244,7 +245,7 @@ export async function renderCalendarToImage(html: string): Promise<string> {
   try {
     const html2canvas = (await import('html2canvas')).default;
     const canvas = await html2canvas(target, {
-      scale: 2,
+      scale: 6, // 700px * 6 = 4200px (4K급 해상도)
       useCORS: true,
       allowTaint: true,
       backgroundColor: '#ffffff',

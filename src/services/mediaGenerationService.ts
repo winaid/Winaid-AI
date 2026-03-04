@@ -4,7 +4,6 @@
  * - 동영상: veo-3.1-fast-generate-preview
  */
 import { getAiClient, getApiKeyValue } from "./geminiClient";
-import { generateCalendarFromPrompt } from "./calendarTemplateService";
 
 // ── 이미지 생성 ──
 
@@ -20,18 +19,20 @@ export interface ImageGenerationResult {
   mimeType: string;
 }
 
-// 달력 이미지를 Canvas로 직접 생성 (AI가 텍스트 데이터를 무시하므로 이미지로 전달)
-function generateCalendarImage(year: number, month: number, holidays: string[]): string {
+// 달력 이미지를 Canvas로 직접 생성 (4K 해상도, 휴진일 색상 통일)
+function generateCalendarImage(year: number, month: number, holidays: string[], closedDays?: number[]): string {
   const canvas = document.createElement('canvas');
-  const cellW = 100, cellH = 70;
+  // 4K 해상도: 기본 셀 크기를 크게 잡아 고해상도 출력
+  const scale = 4;
+  const cellW = 100 * scale, cellH = 70 * scale;
   const cols = 7;
-  const headerH = 80; // 제목 영역
-  const dayHeaderH = 40; // 요일 헤더
+  const headerH = 80 * scale;
+  const dayHeaderH = 40 * scale;
   const firstDay = new Date(year, month - 1, 1).getDay();
   const lastDate = new Date(year, month, 0).getDate();
   const rows = Math.ceil((firstDay + lastDate) / 7);
 
-  canvas.width = cols * cellW;
+  canvas.width = cols * cellW;   // 2800px
   canvas.height = headerH + dayHeaderH + rows * cellH;
 
   const ctx = canvas.getContext('2d')!;
@@ -42,9 +43,9 @@ function generateCalendarImage(year: number, month: number, holidays: string[]):
 
   // 제목: "5월"
   ctx.fillStyle = '#222222';
-  ctx.font = 'bold 32px sans-serif';
+  ctx.font = `bold ${32 * scale}px sans-serif`;
   ctx.textAlign = 'center';
-  ctx.fillText(`${month}월`, canvas.width / 2, 50);
+  ctx.fillText(`${month}월`, canvas.width / 2, 50 * scale);
 
   // 공휴일 목록 파싱 (예: "5-5 어린이날" → { day: 5 })
   const holidayDays = new Set<number>();
@@ -53,44 +54,71 @@ function generateCalendarImage(year: number, month: number, holidays: string[]):
     if (m) holidayDays.add(parseInt(m[1], 10));
   }
 
+  // 휴진일 Set
+  const closedSet = new Set<number>(closedDays || []);
+
   // 요일 헤더
   const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
-  ctx.font = 'bold 18px sans-serif';
+  ctx.font = `bold ${18 * scale}px sans-serif`;
   for (let i = 0; i < 7; i++) {
     const x = i * cellW + cellW / 2;
-    const y = headerH + 25;
+    const y = headerH + 25 * scale;
     ctx.fillStyle = i === 0 ? '#e53e3e' : i === 6 ? '#3182ce' : '#555555';
     ctx.fillText(dayNames[i], x, y);
   }
 
   // 구분선
   ctx.strokeStyle = '#dddddd';
-  ctx.lineWidth = 1;
+  ctx.lineWidth = scale;
   ctx.beginPath();
   ctx.moveTo(0, headerH + dayHeaderH);
   ctx.lineTo(canvas.width, headerH + dayHeaderH);
   ctx.stroke();
 
   // 날짜 그리기
-  ctx.font = '22px sans-serif';
   for (let d = 1; d <= lastDate; d++) {
     const idx = firstDay + d - 1;
     const col = idx % 7;
     const row = Math.floor(idx / 7);
     const x = col * cellW + cellW / 2;
-    const y = headerH + dayHeaderH + row * cellH + 40;
+    const y = headerH + dayHeaderH + row * cellH + 40 * scale;
 
     const isHoliday = holidayDays.has(d);
+    const isClosed = closedSet.has(d);
     const isSunday = col === 0;
     const isSaturday = col === 6;
 
-    ctx.fillStyle = (isSunday || isHoliday) ? '#e53e3e' : isSaturday ? '#3182ce' : '#222222';
-    ctx.font = (isHoliday) ? 'bold 22px sans-serif' : '22px sans-serif';
+    // 휴진일 배경
+    if (isClosed) {
+      ctx.fillStyle = '#fef2f2';
+      ctx.fillRect(col * cellW, headerH + dayHeaderH + row * cellH, cellW, cellH);
+    }
+
+    // 휴진일은 무조건 빨간색으로 통일
+    if (isClosed) {
+      ctx.fillStyle = '#e53e3e';
+    } else if (isSunday || isHoliday) {
+      ctx.fillStyle = '#e53e3e';
+    } else if (isSaturday) {
+      ctx.fillStyle = '#3182ce';
+    } else {
+      ctx.fillStyle = '#222222';
+    }
+
+    ctx.font = (isHoliday || isClosed) ? `bold ${22 * scale}px sans-serif` : `${22 * scale}px sans-serif`;
     ctx.fillText(String(d), x, y);
+
+    // 휴진 뱃지
+    if (isClosed) {
+      ctx.fillStyle = '#e53e3e';
+      ctx.font = `bold ${11 * scale}px sans-serif`;
+      ctx.fillText('휴진', x, y + 16 * scale);
+    }
   }
 
   // 그리드 선
   ctx.strokeStyle = '#eeeeee';
+  ctx.lineWidth = scale;
   for (let r = 1; r <= rows; r++) {
     const y = headerH + dayHeaderH + r * cellH;
     ctx.beginPath();
@@ -184,22 +212,32 @@ export async function generateCustomImage(
   // 달력/진료안내 감지 → HTML 템플릿으로 100% 정확한 달력 생성
   const dateCtxCheck = detectDateContext(request.prompt);
   if (dateCtxCheck.needsCalendar) {
+    // 1차: AI로 달력 데이터 파싱 → HTML 템플릿 렌더링 (가장 예쁘고 정확)
+    let parsedClosedDays: number[] = [];
     try {
-      const calResult = await generateCalendarFromPrompt(request.prompt, onProgress);
-      if (calResult) {
-        return calResult;
+      const { parseCalendarPrompt, buildCalendarHTML, renderCalendarToImage } = await import('./calendarTemplateService');
+      const calendarData = await parseCalendarPrompt(request.prompt);
+      if (calendarData) {
+        parsedClosedDays = calendarData.closedDays.map(cd => cd.day);
+        try {
+          progress('달력 디자인 렌더링 중...');
+          const html = buildCalendarHTML(calendarData);
+          const imageDataUrl = await renderCalendarToImage(html);
+          return { imageDataUrl, mimeType: 'image/png' };
+        } catch {
+          progress('HTML 렌더링 실패, Canvas 달력으로 전환...');
+        }
       }
     } catch {
-      // HTML 렌더링 실패 시 Canvas 달력으로 fallback (AI는 숫자를 정확하게 못 그리므로)
-      progress('달력 템플릿 생성 실패, Canvas 달력으로 전환...');
+      progress('달력 데이터 파싱 실패, Canvas 달력으로 전환...');
     }
 
-    // AI 이미지 생성 대신 Canvas 달력 직접 반환 (AI가 날짜를 틀리게 그리는 문제 방지)
+    // 2차: Canvas 달력 직접 반환 (AI가 날짜를 틀리게 그리는 문제 방지)
     if (dateCtxCheck.months.length > 0) {
       const month = dateCtxCheck.months[0];
       const holidays = getKoreanHolidays(dateCtxCheck.year, month);
       try {
-        const canvasDataUrl = generateCalendarImage(dateCtxCheck.year, month, holidays);
+        const canvasDataUrl = generateCalendarImage(dateCtxCheck.year, month, holidays, parsedClosedDays);
         progress('Canvas 달력 생성 완료');
         return { imageDataUrl: canvasDataUrl, mimeType: 'image/png' };
       } catch {
@@ -234,7 +272,7 @@ export async function generateCustomImage(
     calendarContext,
     request.prompt,
     aspectInstruction,
-    'professional quality, sharp details, crisp edges, no blur, no artifacts.',
+    '4K ultra high resolution, professional quality, sharp details, crisp edges, no blur, no artifacts.',
     '한국어 텍스트가 포함된 경우 오타 없이 정확하게 렌더링해주세요.',
     logoInstruction,
   ].filter(Boolean).join('\n\n');
@@ -576,7 +614,7 @@ function getSystemInstruction(mediaType: PromptMediaType): string {
 6. 타이포그래피: 둥근 고딕체, 굵은 제목, 깔끔한 본문 등
 7. 조명/질감: 자연광, 소프트 라이팅, 매끈한 질감, 그림자 등
 8. 전체적인 용도: 병원 공지 포스터, SNS 홍보, 진료 안내 등
-9. 품질: 반드시 "high resolution, sharp details, crisp text, no blur, no artifacts, professional quality" 등의 고품질 지시를 영어 프롬프트 끝에 포함하세요.
+9. 품질: 반드시 "4K ultra high resolution, sharp details, crisp text, no blur, no artifacts, professional quality" 등의 고품질 지시를 영어 프롬프트 끝에 포함하세요.
 
 🎨 색상 다양성 규칙 (매우 중요!):
 - "고급스러운", "럭셔리", "프리미엄" 요청 시 금색/골드만 사용하지 마세요! 다양한 고급 팔레트를 활용하세요:
@@ -591,7 +629,7 @@ function getSystemInstruction(mediaType: PromptMediaType): string {
 - 같은 사용자에게 반복 요청이 오면 이전과 다른 색상 팔레트를 제안하세요.
 
 🔥 품질 필수 규칙:
-- 영어 프롬프트에 반드시 포함: "high resolution, ultra sharp, crisp edges, clean details, professional graphic design quality, no compression artifacts, no blur"
+- 영어 프롬프트에 반드시 포함: "4K ultra high resolution, ultra sharp, crisp edges, clean details, professional graphic design quality, no compression artifacts, no blur"
 - 한국어 프롬프트에 반드시 포함: "고해상도, 선명하고 깨끗한 디테일, 흐림 없는 또렷한 텍스트와 그래픽"
 
 예시 (좋은 프롬프트):

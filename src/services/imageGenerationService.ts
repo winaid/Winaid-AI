@@ -64,7 +64,7 @@ const PHOTO_STYLE_RULE = `
 - natural lighting, soft studio lighting, professional photography
 - shallow depth of field, bokeh background, lens blur
 - realistic skin texture, real fabric texture, authentic materials
-- high resolution, 8K quality, professional stock photo style
+- 4K ultra high resolution, 8K quality, professional stock photo style
 
 ✅ 피사체 표현:
 - 실제 한국인 인물 (의료진, 환자 등)
