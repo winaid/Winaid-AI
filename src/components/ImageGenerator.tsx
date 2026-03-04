@@ -61,41 +61,45 @@ async function compositeLogoOnImage(
         const blockH = logoH;
 
         // 위치 계산
+        const isBottom = position.startsWith('bottom');
+        const isCenter = position.endsWith('center');
+
         let x: number, y: number;
-        switch (position) {
-          case 'top-center':
-            x = Math.round((img.width - blockW) / 2); y = padding; break;
-          case 'bottom-center':
-            x = Math.round((img.width - blockW) / 2); y = img.height - blockH - padding; break;
-          case 'top-left':
-            x = padding; y = padding; break;
-          case 'top-right':
-            x = img.width - blockW - padding; y = padding; break;
-          case 'bottom-left':
-            x = padding; y = img.height - blockH - padding; break;
-          default: // bottom-right
-            x = img.width - blockW - padding; y = img.height - blockH - padding; break;
+        const barH = blockH + padding * 2;
+
+        if (isCenter) {
+          x = Math.round((img.width - blockW) / 2);
+        } else if (position.endsWith('left')) {
+          x = padding;
+        } else {
+          x = img.width - blockW - padding;
         }
 
-        // 반투명 배경 (가독성)
-        const bgPadX = Math.round(padding * 0.4);
-        const bgPadY = Math.round(padding * 0.3);
-        ctx.fillStyle = 'rgba(255,255,255,0.75)';
-        ctx.beginPath();
-        const r = Math.round(fontSize * 0.4);
-        const bx = x - bgPadX, by = y - bgPadY;
-        const bw = blockW + bgPadX * 2, bh = blockH + bgPadY * 2;
-        ctx.roundRect(bx, by, bw, bh, r);
-        ctx.fill();
+        // 자연스러운 그라데이션 바
+        const gradY = isBottom ? img.height - barH : 0;
+        const grad = ctx.createLinearGradient(0, isBottom ? gradY - barH * 0.5 : 0, 0, isBottom ? img.height : barH * 1.5);
+        grad.addColorStop(0, isBottom ? 'rgba(0,0,0,0)' : 'rgba(0,0,0,0.5)');
+        grad.addColorStop(isBottom ? 0.4 : 0.6, isBottom ? 'rgba(0,0,0,0.45)' : 'rgba(0,0,0,0.45)');
+        grad.addColorStop(1, isBottom ? 'rgba(0,0,0,0.6)' : 'rgba(0,0,0,0)');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, isBottom ? gradY - barH * 0.5 : 0, img.width, barH * 1.5);
+
+        y = isBottom ? img.height - blockH - padding : padding;
 
         // 로고
         ctx.drawImage(logo, x, y, logoW, logoH);
 
-        // 병원명
+        // 병원명 (흰색 텍스트 + 그림자)
         if (hospitalName) {
-          ctx.fillStyle = '#1F2937';
+          ctx.save();
+          ctx.shadowColor = 'rgba(0,0,0,0.5)';
+          ctx.shadowBlur = 4;
+          ctx.shadowOffsetX = 1;
+          ctx.shadowOffsetY = 1;
+          ctx.fillStyle = '#FFFFFF';
           ctx.textBaseline = 'middle';
           ctx.fillText(hospitalName, x + logoW + gap, y + logoH / 2);
+          ctx.restore();
         }
 
         resolve(canvas.toDataURL('image/png'));

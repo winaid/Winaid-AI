@@ -256,11 +256,9 @@ VEO 3.1 영상 생성에 최적화된 상세 프롬프트를 작성합니다.
 
   const promptText = `${baseInstruction}${imageContext}${userContext}
 
-반드시 아래 JSON 형식으로만 응답하세요. korean/english 값은 구조화된 JSON 문자열이어야 합니다:
-{
-  "korean": "{\"image_meta\":{\"category\":\"카테고리\",\"purpose\":\"용도\"},\"visual_style\":{\"mood_keywords\":[\"분위기1\",\"분위기2\"],\"color_palette\":{\"primary_background\":\"배경색\",\"accent_color\":\"#HEX\"},\"graphic_elements\":[{\"object\":\"요소\",\"location\":\"위치\",\"style\":\"스타일\"}],\"layout_structure\":{\"header\":\"상단\",\"body\":\"본문\"}},\"content_summary\":{\"title\":\"제목\",\"key_points\":[\"내용1\"]}}",
-  "english": "{\"image_meta\":{\"category\":\"Category\",\"purpose\":\"Purpose\"},\"visual_style\":{\"mood_keywords\":[\"mood1\",\"mood2\"],\"color_palette\":{\"primary_background\":\"bg color\",\"accent_color\":\"#HEX\"},\"graphic_elements\":[{\"object\":\"element\",\"location\":\"position\",\"style\":\"style\"}],\"layout_structure\":{\"header\":\"top\",\"body\":\"main\"}},\"content_summary\":{\"title\":\"Title\",\"key_points\":[\"point1\"]}}"
-}`;
+반드시 아래 JSON 형식으로만 응답하세요. 다른 텍스트 없이 JSON만 출력하세요.
+프롬프트는 분위기, 색상, 구도, 그래픽 요소, 텍스트 내용, 타이포그래피, 조명, 용도 등을 구체적으로 서술하세요:
+{"korean": "상세한 한국어 프롬프트", "english": "Detailed English prompt"}`;
 
   // 멀티모달 contents 구성
   const parts: any[] = [{ text: promptText }];
@@ -342,45 +340,31 @@ function getSystemInstruction(mediaType: PromptMediaType): string {
   return `${base}
 
 응답 규칙:
+- 반드시 JSON으로만 응답하세요. 다른 형식은 절대 사용하지 마세요.
 - message: 사용자에게 보여줄 대화 텍스트 (항상 필수)
-- korean: 구조화된 JSON 형식의 한국어 프롬프트 (항상 필수!)
-- english: 구조화된 JSON 형식의 영어 프롬프트 (항상 필수!)
+- korean: 한국어 최적화 프롬프트 (항상 필수! 빈 문자열 금지!)
+- english: 영어 최적화 프롬프트 (항상 필수! 빈 문자열 금지!)
 
-🚨 프롬프트 형식 (korean/english 필드 안에 이 JSON 구조를 문자열로 넣으세요!):
-korean/english 필드의 값은 반드시 아래와 같은 구조화된 JSON 문자열이어야 합니다:
-{
-  "image_meta": {
-    "category": "이미지 카테고리 (예: Medical_Poster, Hospital_Interior, Treatment_Info)",
-    "purpose": "이미지 용도 설명"
-  },
-  "visual_style": {
-    "mood_keywords": ["분위기1", "분위기2", "분위기3"],
-    "color_palette": {
-      "primary_background": "배경색 설명",
-      "accent_color": "#HEX코드",
-      "text_color": "#HEX코드"
-    },
-    "typography": {
-      "font_style": "폰트 스타일",
-      "characteristics": ["특징1", "특징2"]
-    },
-    "graphic_elements": [
-      {"object": "요소명", "location": "위치", "style": "스타일"}
-    ],
-    "layout_structure": {
-      "header": "상단 레이아웃",
-      "body": "본문 레이아웃",
-      "footer": "하단 레이아웃"
-    }
-  },
-  "content_summary": {
-    "title": "제목",
-    "key_points": ["핵심 내용1", "핵심 내용2"]
-  }
-}
-
-⚠️ 중요: korean 필드에는 한국어 JSON, english 필드에는 영어 JSON을 넣으세요.
+🚨 JSON 구조 규칙 (절대 위반 금지!):
+- korean 필드에는 반드시 한국어 프롬프트를 넣으세요.
+- english 필드에는 반드시 영어 프롬프트를 넣으세요.
 - 절대로 message 필드에 프롬프트를 넣지 마세요! message는 대화 텍스트만!
+- "안녕", "고마워" 같은 인사에도 간단한 예시 프롬프트를 korean/english에 넣으세요.
+
+📝 프롬프트 작성 상세 가이드 (korean/english 필드):
+프롬프트는 일반 문장 형태로 작성하되, 아래 항목들을 최대한 구체적으로 포함하세요:
+
+1. 전체 분위기/스타일: 따뜻한, 전문적인, 모던한, 밝은, 고급스러운 등
+2. 색상/색감: 구체적 컬러 톤 (파스텔 핑크, 밝은 베이지, 하늘색 그라데이션 등)
+3. 구도/레이아웃: 중앙 배치, 상단 제목/하단 정보, 좌우 분할 등
+4. 그래픽 요소: 일러스트 스타일, 아이콘, 장식 요소, 패턴 등
+5. 텍스트 내용: 포스터에 들어갈 제목, 날짜, 시간, 정보 등 (한국어 정확하게)
+6. 타이포그래피: 둥근 고딕체, 굵은 제목, 깔끔한 본문 등
+7. 조명/질감: 자연광, 소프트 라이팅, 매끈한 질감, 그림자 등
+8. 전체적인 용도: 병원 공지 포스터, SNS 홍보, 진료 안내 등
+
+예시 (좋은 프롬프트):
+"밝고 따뜻한 파스텔 핑크-노랑 그라데이션 배경의 산부인과 진료 안내 포스터. 상단 중앙에 '삼일절 진료안내' 제목을 굵은 둥근 고딕체로 배치하고, 무궁화 아이콘을 제목 옆에 장식. 중앙에 둥근 모서리 사각형 안에 진료 일정 정보(3월 1일 10시-14시, 3월 2일 10시-20시)를 깔끔하게 정리. 하단에 미니멀한 달력 그리드 배치. 전체적으로 부드럽고 친근한 느낌의 병원 공지 디자인."
 
 ⚡ 핵심 원칙: 사용자가 이미지/영상 주제, 장면, 키워드를 조금이라도 언급하면 즉시 프롬프트를 생성하세요!
 - 사용자가 원하는 것을 되물어보지 말고, 바로 프롬프트를 만들어주세요.

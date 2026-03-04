@@ -317,20 +317,6 @@ export default function PromptGenerator({ mediaType, onApplyPrompt, disabled }: 
   );
 }
 
-/** JSON 문자열을 예쁘게 포맷팅 */
-function formatPromptDisplay(text: string): React.ReactNode {
-  try {
-    const parsed = JSON.parse(text);
-    return (
-      <pre className="text-xs text-gray-700 leading-relaxed whitespace-pre-wrap font-mono bg-white/50 rounded p-2 overflow-x-auto max-h-48 overflow-y-auto">
-        {JSON.stringify(parsed, null, 2)}
-      </pre>
-    );
-  } catch {
-    return <p className="text-xs text-gray-700 leading-relaxed">{text}</p>;
-  }
-}
-
 /** 프롬프트 카드: AI가 제안한 한국어/영어 프롬프트 + 적용 버튼 */
 function PromptCard({
   prompt,
@@ -357,7 +343,7 @@ function PromptCard({
             적용
           </button>
         </div>
-        {formatPromptDisplay(prompt.korean)}
+        <p className="text-xs text-gray-700 leading-relaxed">{prompt.korean}</p>
       </div>
 
       {/* 영어 */}
@@ -372,7 +358,7 @@ function PromptCard({
             적용
           </button>
         </div>
-        {formatPromptDisplay(prompt.english)}
+        <p className="text-xs text-gray-700 leading-relaxed">{prompt.english}</p>
       </div>
     </div>
   );
