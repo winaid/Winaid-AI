@@ -2,13 +2,6 @@ import React, { useState, useCallback, useRef } from 'react';
 import type { VideoAspectRatio } from '../services/mediaGenerationService';
 import PromptGenerator from './PromptGenerator';
 
-const EXAMPLE_PROMPTS = [
-  '병원 로비에서 환자가 접수하는 깔끔한 장면, 밝고 따뜻한 조명',
-  '의료진이 친절하게 상담하는 모습, 전문적이고 신뢰감 있는 분위기',
-  '깨끗한 진료실 내부를 보여주는 시네마틱 영상, 부드러운 카메라 이동',
-  '봄 벚꽃이 날리는 병원 외관, 따뜻하고 평화로운 분위기',
-];
-
 interface Props {
   onProgress?: (msg: string) => void;
 }
@@ -81,23 +74,6 @@ export default function VideoGenerator({ onProgress }: Props) {
         onApplyPrompt={(p) => setPrompt(p)}
         disabled={generating}
       />
-
-      {/* 예시 프롬프트 */}
-      <div>
-        <label className="block text-sm font-medium text-gray-500 mb-2">예시 프롬프트</label>
-        <div className="flex flex-wrap gap-2">
-          {EXAMPLE_PROMPTS.map((ex, i) => (
-            <button
-              key={i}
-              onClick={() => setPrompt(ex)}
-              className="text-xs px-3 py-1.5 bg-gray-50 hover:bg-rose-50 text-gray-600 hover:text-rose-700 rounded-lg border border-gray-200 hover:border-rose-200 transition-all"
-              disabled={generating}
-            >
-              {ex.length > 30 ? ex.slice(0, 30) + '...' : ex}
-            </button>
-          ))}
-        </div>
-      </div>
 
       {/* 비율 선택 */}
       <div>
