@@ -273,7 +273,7 @@ VEO 3.1 영상 생성에 최적화된 상세 프롬프트를 작성합니다.
   }
 
   const response = await ai.models.generateContent({
-    model: 'gemini-3.1-pro-preview',
+    model: 'gemini-3-flash-preview',
     contents: [{ role: 'user', parts }],
   });
 
