@@ -8,28 +8,8 @@ import { getAiClient, getApiKeyValue } from "./geminiClient";
 // ── 이미지 생성 ──
 
 export type ImageAspectRatio = '1:1' | '16:9' | '9:16' | '4:3';
-export type ImageTemplate = 'free' | 'closure' | 'schedule' | 'event' | 'sns';
-
-const IMAGE_TEMPLATE_PROMPTS: Record<ImageTemplate, string> = {
-  free: '',
-  closure: `병원/의원 휴진 공지 이미지를 만들어주세요.
-깔끔하고 전문적인 디자인으로, 배경은 밝고 부드러운 톤입니다.
-텍스트는 한국어로 크고 읽기 쉽게 배치합니다.
-의료기관다운 신뢰감 있는 디자인이어야 합니다.`,
-  schedule: `병원/의원 진료 일정 안내 이미지를 만들어주세요.
-깔끔한 표 형태 또는 캘린더 형태로, 요일과 시간이 명확히 보여야 합니다.
-전문적이면서도 따뜻한 느낌의 의료 디자인입니다.`,
-  event: `병원/의원 이벤트 또는 할인 안내 이미지를 만들어주세요.
-시선을 끄는 디자인이되 의료기관의 신뢰감을 유지합니다.
-한국어 텍스트가 중심이며, 밝고 긍정적인 느낌입니다.`,
-  sns: `병원/의원 SNS 게시용 이미지를 만들어주세요.
-모바일에서 보기 좋은 레이아웃, 간결한 텍스트, 눈에 띄는 컬러.
-전문적이면서도 친근한 느낌의 의료 콘텐츠입니다.`,
-};
-
 export interface ImageGenerationRequest {
   prompt: string;
-  template: ImageTemplate;
   aspectRatio: ImageAspectRatio;
 }
 
@@ -45,11 +25,9 @@ export async function generateCustomImage(
   const ai = getAiClient();
   const progress = (msg: string) => onProgress?.(msg);
 
-  const templatePrompt = IMAGE_TEMPLATE_PROMPTS[request.template];
   const aspectInstruction = getAspectInstruction(request.aspectRatio);
 
   const fullPrompt = [
-    templatePrompt,
     request.prompt,
     aspectInstruction,
     '한국어 텍스트가 포함된 경우 오타 없이 정확하게 렌더링해주세요.',

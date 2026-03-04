@@ -1,13 +1,13 @@
 import React, { useState, useCallback } from 'react';
-import type { ImageTemplate, ImageAspectRatio } from '../services/mediaGenerationService';
+import type { ImageAspectRatio } from '../services/mediaGenerationService';
 import PromptGenerator from './PromptGenerator';
 
-const TEMPLATES: { value: ImageTemplate; label: string; placeholder: string }[] = [
-  { value: 'free', label: '자유 생성', placeholder: '원하는 이미지를 설명해주세요...' },
-  { value: 'closure', label: '휴진 공지', placeholder: '예: 2024년 1월 1일~3일 설 연휴 휴진' },
-  { value: 'schedule', label: '진료 일정', placeholder: '예: 월~금 09:00~18:00, 토 09:00~13:00, 일·공휴일 휴진' },
-  { value: 'event', label: '이벤트/할인', placeholder: '예: 3월 개원기념 스케일링 30% 할인 이벤트' },
-  { value: 'sns', label: 'SNS 포스트', placeholder: '예: 봄철 알레르기 예방법 5가지 카드 이미지' },
+const EXAMPLE_PROMPTS = [
+  '2024년 1월 1일~3일 설 연휴 휴진 안내, 깔끔하고 전문적인 병원 공지 디자인',
+  '월~금 09:00~18:00, 토 09:00~13:00 진료 일정 안내, 표 형태의 깔끔한 레이아웃',
+  '3월 개원기념 스케일링 30% 할인 이벤트, 밝고 시선을 끄는 디자인',
+  '봄철 알레르기 예방법 5가지, SNS 카드 이미지 스타일',
+  '깨끗하고 현대적인 치과 진료실 내부 사진, 밝은 조명과 따뜻한 분위기',
 ];
 
 const ASPECT_RATIOS: { value: ImageAspectRatio; label: string; icon: string }[] = [
@@ -22,15 +22,12 @@ interface Props {
 }
 
 export default function ImageGenerator({ onProgress }: Props) {
-  const [template, setTemplate] = useState<ImageTemplate>('free');
   const [prompt, setPrompt] = useState('');
   const [aspectRatio, setAspectRatio] = useState<ImageAspectRatio>('1:1');
   const [generating, setGenerating] = useState(false);
   const [progress, setProgress] = useState('');
   const [result, setResult] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-
-  const selectedTemplate = TEMPLATES.find(t => t.value === template)!;
 
   const handleGenerate = useCallback(async () => {
     if (!prompt.trim()) return;
@@ -43,7 +40,7 @@ export default function ImageGenerator({ onProgress }: Props) {
     try {
       const { generateCustomImage } = await import('../services/mediaGenerationService');
       const res = await generateCustomImage(
-        { prompt: prompt.trim(), template, aspectRatio },
+        { prompt: prompt.trim(), aspectRatio },
         (msg) => { setProgress(msg); onProgress?.(msg); }
       );
       setResult(res.imageDataUrl);
@@ -54,7 +51,7 @@ export default function ImageGenerator({ onProgress }: Props) {
     } finally {
       setGenerating(false);
     }
-  }, [prompt, template, aspectRatio, onProgress]);
+  }, [prompt, aspectRatio, onProgress]);
 
   const handleDownload = useCallback(() => {
     if (!result) return;
@@ -72,35 +69,13 @@ export default function ImageGenerator({ onProgress }: Props) {
         <p className="text-sm text-gray-500">Gemini 3.1 Flash Image로 병원 콘텐츠 이미지를 만들어보세요</p>
       </div>
 
-      {/* 템플릿 선택 */}
-      <div>
-        <label className="block text-sm font-semibold text-gray-700 mb-2">템플릿</label>
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-          {TEMPLATES.map((t) => (
-            <button
-              key={t.value}
-              onClick={() => setTemplate(t.value)}
-              className={`px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                template === t.value
-                  ? 'bg-purple-600 text-white shadow-md shadow-purple-200'
-                  : 'bg-white text-gray-600 border border-gray-200 hover:border-purple-300 hover:bg-purple-50'
-              }`}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
       {/* 프롬프트 입력 */}
       <div>
-        <label className="block text-sm font-semibold text-gray-700 mb-2">
-          {template === 'free' ? '이미지 설명' : '내용 입력'}
-        </label>
+        <label className="block text-sm font-semibold text-gray-700 mb-2">이미지 설명</label>
         <textarea
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
-          placeholder={selectedTemplate.placeholder}
+          placeholder="어떤 이미지를 만들고 싶으신가요? 내용, 스타일, 분위기를 자세히 설명해주세요..."
           rows={4}
           className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none text-sm"
           disabled={generating}
@@ -113,6 +88,23 @@ export default function ImageGenerator({ onProgress }: Props) {
         onApplyPrompt={(p) => setPrompt(p)}
         disabled={generating}
       />
+
+      {/* 예시 프롬프트 */}
+      <div>
+        <label className="block text-sm font-medium text-gray-500 mb-2">예시 프롬프트</label>
+        <div className="flex flex-wrap gap-2">
+          {EXAMPLE_PROMPTS.map((ex, i) => (
+            <button
+              key={i}
+              onClick={() => setPrompt(ex)}
+              className="text-xs px-3 py-1.5 bg-gray-50 hover:bg-purple-50 text-gray-600 hover:text-purple-700 rounded-lg border border-gray-200 hover:border-purple-200 transition-all"
+              disabled={generating}
+            >
+              {ex.length > 25 ? ex.slice(0, 25) + '...' : ex}
+            </button>
+          ))}
+        </div>
+      </div>
 
       {/* 비율 선택 */}
       <div>
