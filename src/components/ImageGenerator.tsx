@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import type { ImageAspectRatio } from '../services/mediaGenerationService';
 import PromptGenerator from './PromptGenerator';
 
@@ -8,6 +8,99 @@ const ASPECT_RATIOS: { value: ImageAspectRatio; label: string; icon: string }[] 
   { value: '9:16', label: '세로형', icon: '📱' },
   { value: '4:3', label: '4:3', icon: '🖼️' },
 ];
+
+const LOGO_STORAGE_KEY = 'hospital-logo-dataurl';
+const HOSPITAL_NAME_KEY = 'hospital-logo-name';
+
+type LogoPosition = 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
+
+const LOGO_POSITIONS: { value: LogoPosition; label: string }[] = [
+  { value: 'bottom-right', label: '우하단' },
+  { value: 'bottom-left', label: '좌하단' },
+  { value: 'top-right', label: '우상단' },
+  { value: 'top-left', label: '좌상단' },
+];
+
+/** Canvas 위에 로고+병원명을 합성 */
+async function compositeLogoOnImage(
+  imageDataUrl: string,
+  logoDataUrl: string,
+  hospitalName: string,
+  position: LogoPosition,
+): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const logo = new Image();
+      logo.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d')!;
+
+        // 원본 이미지
+        ctx.drawImage(img, 0, 0);
+
+        // 로고 크기: 이미지 높이의 5% (최소 24px, 최대 64px)
+        const logoH = Math.max(24, Math.min(64, Math.round(img.height * 0.05)));
+        const logoW = Math.round(logoH * (logo.width / logo.height));
+
+        const padding = Math.round(img.width * 0.025);
+        const gap = Math.round(padding * 0.4);
+
+        // 병원명 폰트
+        const fontSize = Math.max(12, Math.min(28, Math.round(logoH * 0.5)));
+        ctx.font = `600 ${fontSize}px -apple-system, "Noto Sans KR", sans-serif`;
+        const textMetrics = ctx.measureText(hospitalName);
+        const textW = hospitalName ? textMetrics.width : 0;
+
+        // 전체 블록 크기
+        const blockW = logoW + (hospitalName ? gap + textW : 0);
+        const blockH = logoH;
+
+        // 위치 계산
+        let x: number, y: number;
+        switch (position) {
+          case 'top-left':
+            x = padding; y = padding; break;
+          case 'top-right':
+            x = img.width - blockW - padding; y = padding; break;
+          case 'bottom-left':
+            x = padding; y = img.height - blockH - padding; break;
+          default: // bottom-right
+            x = img.width - blockW - padding; y = img.height - blockH - padding; break;
+        }
+
+        // 반투명 배경 (가독성)
+        const bgPadX = Math.round(padding * 0.4);
+        const bgPadY = Math.round(padding * 0.3);
+        ctx.fillStyle = 'rgba(255,255,255,0.75)';
+        ctx.beginPath();
+        const r = Math.round(fontSize * 0.4);
+        const bx = x - bgPadX, by = y - bgPadY;
+        const bw = blockW + bgPadX * 2, bh = blockH + bgPadY * 2;
+        ctx.roundRect(bx, by, bw, bh, r);
+        ctx.fill();
+
+        // 로고
+        ctx.drawImage(logo, x, y, logoW, logoH);
+
+        // 병원명
+        if (hospitalName) {
+          ctx.fillStyle = '#1F2937';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(hospitalName, x + logoW + gap, y + logoH / 2);
+        }
+
+        resolve(canvas.toDataURL('image/png'));
+      };
+      logo.onerror = () => reject(new Error('로고 이미지 로드 실패'));
+      logo.src = logoDataUrl;
+    };
+    img.onerror = () => reject(new Error('원본 이미지 로드 실패'));
+    img.src = imageDataUrl;
+  });
+}
 
 interface Props {
   onProgress?: (msg: string) => void;
@@ -20,6 +113,50 @@ export default function ImageGenerator({ onProgress }: Props) {
   const [progress, setProgress] = useState('');
   const [result, setResult] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // 로고 관련
+  const [logoDataUrl, setLogoDataUrl] = useState<string | null>(null);
+  const [hospitalName, setHospitalName] = useState('');
+  const [logoEnabled, setLogoEnabled] = useState(false);
+  const [logoPosition, setLogoPosition] = useState<LogoPosition>('bottom-right');
+  const logoInputRef = useRef<HTMLInputElement>(null);
+
+  // localStorage에서 로고/병원명 복원
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(LOGO_STORAGE_KEY);
+      const savedName = localStorage.getItem(HOSPITAL_NAME_KEY);
+      if (saved) { setLogoDataUrl(saved); setLogoEnabled(true); }
+      if (savedName) setHospitalName(savedName);
+    } catch {}
+  }, []);
+
+  const handleLogoUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      setLogoDataUrl(dataUrl);
+      setLogoEnabled(true);
+      try { localStorage.setItem(LOGO_STORAGE_KEY, dataUrl); } catch {}
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  }, []);
+
+  const handleHospitalNameChange = useCallback((name: string) => {
+    setHospitalName(name);
+    try { localStorage.setItem(HOSPITAL_NAME_KEY, name); } catch {}
+  }, []);
+
+  const removeLogo = useCallback(() => {
+    setLogoDataUrl(null);
+    setLogoEnabled(false);
+    try { localStorage.removeItem(LOGO_STORAGE_KEY); } catch {}
+  }, []);
 
   const handleGenerate = useCallback(async () => {
     if (!prompt.trim()) return;
@@ -35,7 +172,20 @@ export default function ImageGenerator({ onProgress }: Props) {
         { prompt: prompt.trim(), aspectRatio },
         (msg) => { setProgress(msg); onProgress?.(msg); }
       );
-      setResult(res.imageDataUrl);
+
+      let finalImage = res.imageDataUrl;
+
+      // 로고 합성
+      if (logoEnabled && logoDataUrl) {
+        setProgress('로고 합성 중...');
+        try {
+          finalImage = await compositeLogoOnImage(finalImage, logoDataUrl, hospitalName, logoPosition);
+        } catch (err) {
+          console.warn('로고 합성 실패, 원본 사용:', err);
+        }
+      }
+
+      setResult(finalImage);
       setProgress('');
     } catch (err: any) {
       setError(err?.message || '이미지 생성에 실패했습니다.');
@@ -43,7 +193,7 @@ export default function ImageGenerator({ onProgress }: Props) {
     } finally {
       setGenerating(false);
     }
-  }, [prompt, aspectRatio, onProgress]);
+  }, [prompt, aspectRatio, onProgress, logoEnabled, logoDataUrl, hospitalName, logoPosition]);
 
   const handleDownload = useCallback(() => {
     if (!result) return;
@@ -100,6 +250,77 @@ export default function ImageGenerator({ onProgress }: Props) {
             </button>
           ))}
         </div>
+      </div>
+
+      {/* 로고 설정 */}
+      <div className="bg-white border border-gray-200 rounded-2xl p-5 space-y-4">
+        <div className="flex items-center justify-between">
+          <label className="text-sm font-semibold text-gray-700">병원 로고 삽입</label>
+          <button
+            onClick={() => setLogoEnabled(!logoEnabled)}
+            className={`relative w-11 h-6 rounded-full transition-colors ${logoEnabled && logoDataUrl ? 'bg-purple-600' : 'bg-gray-300'}`}
+          >
+            <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${logoEnabled && logoDataUrl ? 'translate-x-5' : ''}`} />
+          </button>
+        </div>
+
+        {/* 로고 업로드 / 미리보기 */}
+        <div className="flex items-center gap-3">
+          {logoDataUrl ? (
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-lg border border-gray-200 bg-gray-50 flex items-center justify-center overflow-hidden">
+                <img src={logoDataUrl} alt="로고" className="max-w-full max-h-full object-contain" />
+              </div>
+              <button
+                onClick={removeLogo}
+                className="text-xs text-red-500 hover:text-red-700"
+              >
+                삭제
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => logoInputRef.current?.click()}
+              className="flex items-center gap-2 px-4 py-2.5 border border-dashed border-gray-300 rounded-xl text-sm text-gray-500 hover:border-purple-400 hover:text-purple-600 transition-all"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              로고 업로드
+            </button>
+          )}
+          <input
+            ref={logoInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleLogoUpload}
+            className="hidden"
+          />
+        </div>
+
+        {/* 병원명 + 위치 (로고가 있을 때만) */}
+        {logoDataUrl && (
+          <div className="flex gap-3">
+            <div className="flex-1">
+              <input
+                type="text"
+                value={hospitalName}
+                onChange={(e) => handleHospitalNameChange(e.target.value)}
+                placeholder="병원명 (선택사항)"
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              />
+            </div>
+            <select
+              value={logoPosition}
+              onChange={(e) => setLogoPosition(e.target.value as LogoPosition)}
+              className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-purple-500"
+            >
+              {LOGO_POSITIONS.map((p) => (
+                <option key={p.value} value={p.value}>{p.label}</option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
 
       {/* 생성 버튼 */}
