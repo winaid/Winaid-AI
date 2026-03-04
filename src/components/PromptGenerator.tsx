@@ -106,7 +106,7 @@ export default function PromptGenerator({ mediaType, onApplyPrompt, disabled }: 
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
           </svg>
           AI 프롬프트 채팅
-          <span className="text-xs font-normal text-gray-500">(Gemini 3.1 Pro)</span>
+          <span className="text-xs font-normal text-gray-500">(Gemini 3 Flash)</span>
         </span>
         <div className="flex items-center gap-2">
           {messages.length > 0 && (
