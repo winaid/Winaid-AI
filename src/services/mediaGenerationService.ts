@@ -261,11 +261,18 @@ export async function generateCustomImage(
     : '';
 
   const logoInstruction = request.logoBase64
-    ? '첨부된 로고 이미지를 참고하여 디자인 안에 이 로고를 자연스럽게 포함시켜 주세요. 로고의 형태와 스타일을 최대한 유지하면서 전체 디자인과 조화롭게 배치해주세요.'
+    ? '첨부된 로고 이미지를 디자인 상단 또는 자연스러운 위치에 포함시켜 주세요. 로고 주변에 충분한 여백을 두고, 로고가 배경과 어울리도록 크기와 위치를 조절하세요. 로고 원본의 형태와 색상을 그대로 유지하되, 전체 디자인의 색상 톤과 조화를 이루도록 배치해주세요. 로고 위에 다른 요소를 겹치지 마세요.'
     : '';
+
+  // 사용자 프롬프트의 언어 감지
+  const hasEnglishRequest = /\b(english|영어로)\b/i.test(request.prompt);
+  const languageRule = hasEnglishRequest
+    ? ''
+    : '[필수 규칙] 이미지 안에 들어가는 모든 텍스트는 반드시 한국어로만 작성하세요. 영어 텍스트를 절대 사용하지 마세요. 제목, 부제목, 안내문, 요일 표기 등 모든 글자는 한국어여야 합니다. 요일은 일/월/화/수/목/금/토로 표기하세요.';
 
   const fullPrompt = [
     `[규칙] 사용자의 프롬프트에 충실하세요. 사용자가 요청하지 않은 정보를 임의로 추가하지 마세요.`,
+    languageRule,
     calendarInstruction,
     calendarContext,
     request.prompt,
