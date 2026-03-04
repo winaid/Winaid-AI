@@ -12,9 +12,11 @@ const ASPECT_RATIOS: { value: ImageAspectRatio; label: string; icon: string }[] 
 const LOGO_STORAGE_KEY = 'hospital-logo-dataurl';
 const HOSPITAL_NAME_KEY = 'hospital-logo-name';
 
-type LogoPosition = 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
+type LogoPosition = 'bottom-center' | 'top-center' | 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
 
 const LOGO_POSITIONS: { value: LogoPosition; label: string }[] = [
+  { value: 'bottom-center', label: '하단 중앙' },
+  { value: 'top-center', label: '상단 중앙' },
   { value: 'bottom-right', label: '우하단' },
   { value: 'bottom-left', label: '좌하단' },
   { value: 'top-right', label: '우상단' },
@@ -61,6 +63,10 @@ async function compositeLogoOnImage(
         // 위치 계산
         let x: number, y: number;
         switch (position) {
+          case 'top-center':
+            x = Math.round((img.width - blockW) / 2); y = padding; break;
+          case 'bottom-center':
+            x = Math.round((img.width - blockW) / 2); y = img.height - blockH - padding; break;
           case 'top-left':
             x = padding; y = padding; break;
           case 'top-right':
@@ -118,7 +124,7 @@ export default function ImageGenerator({ onProgress }: Props) {
   const [logoDataUrl, setLogoDataUrl] = useState<string | null>(null);
   const [hospitalName, setHospitalName] = useState('');
   const [logoEnabled, setLogoEnabled] = useState(false);
-  const [logoPosition, setLogoPosition] = useState<LogoPosition>('bottom-right');
+  const [logoPosition, setLogoPosition] = useState<LogoPosition>('bottom-center');
   const logoInputRef = useRef<HTMLInputElement>(null);
 
   // localStorage에서 로고/병원명 복원
