@@ -12,44 +12,6 @@ const ASPECT_RATIOS: { value: ImageAspectRatio; label: string; icon: string }[] 
 const LOGO_STORAGE_KEY = 'hospital-logo-dataurl';
 const HOSPITAL_NAME_KEY = 'hospital-logo-name';
 
-/** Canvas 위에 로고 아이콘만 작게 합성 (병원명은 프롬프트로 생성) */
-async function compositeLogoIcon(
-  imageDataUrl: string,
-  logoDataUrl: string,
-): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => {
-      const logo = new Image();
-      logo.onload = () => {
-        const canvas = document.createElement('canvas');
-        canvas.width = img.width;
-        canvas.height = img.height;
-        const ctx = canvas.getContext('2d')!;
-
-        ctx.drawImage(img, 0, 0);
-
-        // 로고 아이콘만 우하단에 작게 (이미지 높이 3.5%)
-        const logoH = Math.max(18, Math.min(48, Math.round(img.height * 0.035)));
-        const logoW = Math.round(logoH * (logo.width / logo.height));
-        const padding = Math.round(img.width * 0.02);
-        const x = img.width - logoW - padding;
-        const y = img.height - logoH - padding;
-
-        ctx.globalAlpha = 0.7;
-        ctx.drawImage(logo, x, y, logoW, logoH);
-        ctx.globalAlpha = 1.0;
-
-        resolve(canvas.toDataURL('image/png'));
-      };
-      logo.onerror = () => reject(new Error('로고 이미지 로드 실패'));
-      logo.src = logoDataUrl;
-    };
-    img.onerror = () => reject(new Error('원본 이미지 로드 실패'));
-    img.src = imageDataUrl;
-  });
-}
-
 interface Props {
   onProgress?: (msg: string) => void;
 }
@@ -123,23 +85,15 @@ export default function ImageGenerator({ onProgress }: Props) {
       }
 
       const res = await generateCustomImage(
-        { prompt: finalPrompt, aspectRatio },
+        {
+          prompt: finalPrompt,
+          aspectRatio,
+          logoBase64: logoEnabled && logoDataUrl ? logoDataUrl : undefined,
+        },
         (msg) => { setProgress(msg); onProgress?.(msg); }
       );
 
-      let finalImage = res.imageDataUrl;
-
-      // 로고 아이콘만 작게 합성 (병원명은 프롬프트에서 AI가 렌더링)
-      if (logoEnabled && logoDataUrl) {
-        setProgress('로고 합성 중...');
-        try {
-          finalImage = await compositeLogoIcon(finalImage, logoDataUrl);
-        } catch (err) {
-          console.warn('로고 합성 실패, 원본 사용:', err);
-        }
-      }
-
-      setResult(finalImage);
+      setResult(res.imageDataUrl);
       setProgress('');
     } catch (err: any) {
       setError(err?.message || '이미지 생성에 실패했습니다.');

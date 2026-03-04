@@ -11,6 +11,7 @@ export type ImageAspectRatio = '1:1' | '16:9' | '9:16' | '4:3';
 export interface ImageGenerationRequest {
   prompt: string;
   aspectRatio: ImageAspectRatio;
+  logoBase64?: string; // data:image/...;base64,xxx 형식의 로고 이미지
 }
 
 export interface ImageGenerationResult {
@@ -30,13 +31,28 @@ export async function generateCustomImage(
   const now = new Date();
   const dateInfo = `[현재 날짜: ${now.getFullYear()}년 ${now.getMonth() + 1}월 ${now.getDate()}일]`;
 
+  const logoInstruction = request.logoBase64
+    ? '첨부된 로고 이미지를 참고하여 디자인 안에 이 로고를 자연스럽게 포함시켜 주세요. 로고의 형태와 스타일을 최대한 유지하면서 전체 디자인과 조화롭게 배치해주세요.'
+    : '워터마크, 로고, 해시태그 없이 깔끔하게 생성해주세요.';
+
   const fullPrompt = [
     dateInfo,
     request.prompt,
     aspectInstruction,
     '한국어 텍스트가 포함된 경우 오타 없이 정확하게 렌더링해주세요.',
-    '워터마크, 로고, 해시태그 없이 깔끔하게 생성해주세요.',
+    logoInstruction,
   ].filter(Boolean).join('\n\n');
+
+  // 멀티모달 contents 구성
+  const contents: any[] = [{ text: fullPrompt }];
+  if (request.logoBase64) {
+    const match = request.logoBase64.match(/^data:(image\/\w+);base64,(.+)$/);
+    if (match) {
+      contents.push({
+        inlineData: { mimeType: match[1], data: match[2] },
+      });
+    }
+  }
 
   progress('이미지 생성 중...');
 
@@ -49,7 +65,7 @@ export async function generateCustomImage(
 
       const result = await ai.models.generateContent({
         model: "gemini-3.1-flash-image-preview",
-        contents: [{ text: fullPrompt }],
+        contents,
         config: {
           responseModalities: ["IMAGE", "TEXT"],
           temperature: 0.6,
