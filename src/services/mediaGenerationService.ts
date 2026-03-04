@@ -190,17 +190,29 @@ export async function generateCustomImage(
         return calResult;
       }
     } catch {
-      // HTML 렌더링 실패 시 기존 AI 경로로 fallback
-      progress('달력 템플릿 생성 실패, AI로 전환...');
+      // HTML 렌더링 실패 시 Canvas 달력으로 fallback (AI는 숫자를 정확하게 못 그리므로)
+      progress('달력 템플릿 생성 실패, Canvas 달력으로 전환...');
+    }
+
+    // AI 이미지 생성 대신 Canvas 달력 직접 반환 (AI가 날짜를 틀리게 그리는 문제 방지)
+    if (dateCtxCheck.months.length > 0) {
+      const month = dateCtxCheck.months[0];
+      const holidays = getKoreanHolidays(dateCtxCheck.year, month);
+      try {
+        const canvasDataUrl = generateCalendarImage(dateCtxCheck.year, month, holidays);
+        progress('Canvas 달력 생성 완료');
+        return { imageDataUrl: canvasDataUrl, mimeType: 'image/png' };
+      } catch {
+        progress('Canvas 달력도 실패, AI 이미지 생성으로 전환...');
+      }
     }
   }
 
   const aspectInstruction = getAspectInstruction(request.aspectRatio);
 
-  // 날짜/달력 컨텍스트 자동 감지 + 달력 이미지 생성
+  // 날짜/달력 컨텍스트 (달력 자체는 위에서 HTML/Canvas로 처리 완료, 여기는 일반 이미지 생성용)
   const dateCtx = detectDateContext(request.prompt);
   let calendarContext = '';
-  let calendarImageDataUrl: string | null = null;
   if (dateCtx.needsCalendar && dateCtx.months.length > 0) {
     const parts: string[] = [];
     for (const month of dateCtx.months) {
@@ -209,19 +221,9 @@ export async function generateCustomImage(
       if (holidays.length > 0) {
         parts.push(`공휴일: ${holidays.join(', ')}`);
       }
-      // 달력 이미지 생성 (첫 번째 월 기준)
-      if (!calendarImageDataUrl) {
-        try {
-          calendarImageDataUrl = generateCalendarImage(dateCtx.year, month, holidays);
-        } catch { /* SSR 등 canvas 사용 불가 환경에서는 텍스트만 사용 */ }
-      }
     }
     calendarContext = `[정확한 달력 데이터]\n${parts.join('\n')}`;
   }
-
-  const calendarInstruction = calendarImageDataUrl
-    ? '첨부된 달력 이미지를 참고하세요. 이 달력의 날짜-요일 배치를 정확히 그대로 따라야 합니다. 날짜와 요일이 틀리면 안 됩니다.'
-    : '';
 
   const logoInstruction = request.logoBase64
     ? '첨부된 로고 이미지를 참고하여 디자인 안에 이 로고를 자연스럽게 포함시켜 주세요. 로고의 형태와 스타일을 최대한 유지하면서 전체 디자인과 조화롭게 배치해주세요.'
@@ -229,7 +231,6 @@ export async function generateCustomImage(
 
   const fullPrompt = [
     `[규칙] 사용자의 프롬프트에 충실하세요. 사용자가 요청하지 않은 정보를 임의로 추가하지 마세요.`,
-    calendarInstruction,
     calendarContext,
     request.prompt,
     aspectInstruction,
@@ -240,16 +241,6 @@ export async function generateCustomImage(
 
   // 멀티모달 contents 구성
   const contents: any[] = [{ text: fullPrompt }];
-
-  // 달력 참고 이미지 추가
-  if (calendarImageDataUrl) {
-    const calMatch = calendarImageDataUrl.match(/^data:(image\/\w+);base64,(.+)$/);
-    if (calMatch) {
-      contents.push({
-        inlineData: { mimeType: calMatch[1], data: calMatch[2] },
-      });
-    }
-  }
 
   // 로고 이미지 추가
   if (request.logoBase64) {
