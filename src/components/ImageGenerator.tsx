@@ -2,14 +2,6 @@ import React, { useState, useCallback } from 'react';
 import type { ImageAspectRatio } from '../services/mediaGenerationService';
 import PromptGenerator from './PromptGenerator';
 
-const EXAMPLE_PROMPTS = [
-  '2024년 1월 1일~3일 설 연휴 휴진 안내, 깔끔하고 전문적인 병원 공지 디자인',
-  '월~금 09:00~18:00, 토 09:00~13:00 진료 일정 안내, 표 형태의 깔끔한 레이아웃',
-  '3월 개원기념 스케일링 30% 할인 이벤트, 밝고 시선을 끄는 디자인',
-  '봄철 알레르기 예방법 5가지, SNS 카드 이미지 스타일',
-  '깨끗하고 현대적인 치과 진료실 내부 사진, 밝은 조명과 따뜻한 분위기',
-];
-
 const ASPECT_RATIOS: { value: ImageAspectRatio; label: string; icon: string }[] = [
   { value: '1:1', label: '정사각형', icon: '⬜' },
   { value: '16:9', label: '가로형', icon: '🖥️' },
@@ -88,23 +80,6 @@ export default function ImageGenerator({ onProgress }: Props) {
         onApplyPrompt={(p) => setPrompt(p)}
         disabled={generating}
       />
-
-      {/* 예시 프롬프트 */}
-      <div>
-        <label className="block text-sm font-medium text-gray-500 mb-2">예시 프롬프트</label>
-        <div className="flex flex-wrap gap-2">
-          {EXAMPLE_PROMPTS.map((ex, i) => (
-            <button
-              key={i}
-              onClick={() => setPrompt(ex)}
-              className="text-xs px-3 py-1.5 bg-gray-50 hover:bg-purple-50 text-gray-600 hover:text-purple-700 rounded-lg border border-gray-200 hover:border-purple-200 transition-all"
-              disabled={generating}
-            >
-              {ex.length > 25 ? ex.slice(0, 25) + '...' : ex}
-            </button>
-          ))}
-        </div>
-      </div>
 
       {/* 비율 선택 */}
       <div>
