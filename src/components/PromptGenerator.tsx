@@ -106,7 +106,6 @@ export default function PromptGenerator({ mediaType, onApplyPrompt, disabled }: 
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
           </svg>
           AI 프롬프트 채팅
-          <span className="text-xs font-normal text-gray-500">(Gemini 3 Flash)</span>
         </span>
         <div className="flex items-center gap-2">
           {messages.length > 0 && (
@@ -318,6 +317,20 @@ export default function PromptGenerator({ mediaType, onApplyPrompt, disabled }: 
   );
 }
 
+/** JSON 문자열을 예쁘게 포맷팅 */
+function formatPromptDisplay(text: string): React.ReactNode {
+  try {
+    const parsed = JSON.parse(text);
+    return (
+      <pre className="text-xs text-gray-700 leading-relaxed whitespace-pre-wrap font-mono bg-white/50 rounded p-2 overflow-x-auto max-h-48 overflow-y-auto">
+        {JSON.stringify(parsed, null, 2)}
+      </pre>
+    );
+  } catch {
+    return <p className="text-xs text-gray-700 leading-relaxed">{text}</p>;
+  }
+}
+
 /** 프롬프트 카드: AI가 제안한 한국어/영어 프롬프트 + 적용 버튼 */
 function PromptCard({
   prompt,
@@ -344,7 +357,7 @@ function PromptCard({
             적용
           </button>
         </div>
-        <p className="text-xs text-gray-700 leading-relaxed">{prompt.korean}</p>
+        {formatPromptDisplay(prompt.korean)}
       </div>
 
       {/* 영어 */}
@@ -359,7 +372,7 @@ function PromptCard({
             적용
           </button>
         </div>
-        <p className="text-xs text-gray-700 leading-relaxed">{prompt.english}</p>
+        {formatPromptDisplay(prompt.english)}
       </div>
     </div>
   );

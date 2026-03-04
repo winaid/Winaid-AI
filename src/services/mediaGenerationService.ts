@@ -256,8 +256,11 @@ VEO 3.1 영상 생성에 최적화된 상세 프롬프트를 작성합니다.
 
   const promptText = `${baseInstruction}${imageContext}${userContext}
 
-반드시 아래 JSON 형식으로만 응답하세요. 다른 텍스트 없이 JSON만 출력하세요:
-{"korean": "한국어 최적화 프롬프트", "english": "English optimized prompt"}`;
+반드시 아래 JSON 형식으로만 응답하세요. korean/english 값은 구조화된 JSON 문자열이어야 합니다:
+{
+  "korean": "{\"image_meta\":{\"category\":\"카테고리\",\"purpose\":\"용도\"},\"visual_style\":{\"mood_keywords\":[\"분위기1\",\"분위기2\"],\"color_palette\":{\"primary_background\":\"배경색\",\"accent_color\":\"#HEX\"},\"graphic_elements\":[{\"object\":\"요소\",\"location\":\"위치\",\"style\":\"스타일\"}],\"layout_structure\":{\"header\":\"상단\",\"body\":\"본문\"}},\"content_summary\":{\"title\":\"제목\",\"key_points\":[\"내용1\"]}}",
+  "english": "{\"image_meta\":{\"category\":\"Category\",\"purpose\":\"Purpose\"},\"visual_style\":{\"mood_keywords\":[\"mood1\",\"mood2\"],\"color_palette\":{\"primary_background\":\"bg color\",\"accent_color\":\"#HEX\"},\"graphic_elements\":[{\"object\":\"element\",\"location\":\"position\",\"style\":\"style\"}],\"layout_structure\":{\"header\":\"top\",\"body\":\"main\"}},\"content_summary\":{\"title\":\"Title\",\"key_points\":[\"point1\"]}}"
+}`;
 
   // 멀티모달 contents 구성
   const parts: any[] = [{ text: promptText }];
@@ -339,16 +342,45 @@ function getSystemInstruction(mediaType: PromptMediaType): string {
   return `${base}
 
 응답 규칙:
-- 반드시 JSON으로만 응답하세요. 다른 형식은 절대 사용하지 마세요.
 - message: 사용자에게 보여줄 대화 텍스트 (항상 필수)
-- korean: 한국어 최적화 프롬프트 (항상 필수! 빈 문자열 금지!)
-- english: 영어 최적화 프롬프트 (항상 필수! 빈 문자열 금지!)
+- korean: 구조화된 JSON 형식의 한국어 프롬프트 (항상 필수!)
+- english: 구조화된 JSON 형식의 영어 프롬프트 (항상 필수!)
 
-🚨 JSON 구조 규칙 (절대 위반 금지!):
-- korean 필드에는 반드시 한국어 프롬프트를 넣으세요.
-- english 필드에는 반드시 영어 프롬프트를 넣으세요.
+🚨 프롬프트 형식 (korean/english 필드 안에 이 JSON 구조를 문자열로 넣으세요!):
+korean/english 필드의 값은 반드시 아래와 같은 구조화된 JSON 문자열이어야 합니다:
+{
+  "image_meta": {
+    "category": "이미지 카테고리 (예: Medical_Poster, Hospital_Interior, Treatment_Info)",
+    "purpose": "이미지 용도 설명"
+  },
+  "visual_style": {
+    "mood_keywords": ["분위기1", "분위기2", "분위기3"],
+    "color_palette": {
+      "primary_background": "배경색 설명",
+      "accent_color": "#HEX코드",
+      "text_color": "#HEX코드"
+    },
+    "typography": {
+      "font_style": "폰트 스타일",
+      "characteristics": ["특징1", "특징2"]
+    },
+    "graphic_elements": [
+      {"object": "요소명", "location": "위치", "style": "스타일"}
+    ],
+    "layout_structure": {
+      "header": "상단 레이아웃",
+      "body": "본문 레이아웃",
+      "footer": "하단 레이아웃"
+    }
+  },
+  "content_summary": {
+    "title": "제목",
+    "key_points": ["핵심 내용1", "핵심 내용2"]
+  }
+}
+
+⚠️ 중요: korean 필드에는 한국어 JSON, english 필드에는 영어 JSON을 넣으세요.
 - 절대로 message 필드에 프롬프트를 넣지 마세요! message는 대화 텍스트만!
-- "안녕", "고마워" 같은 인사에도 간단한 예시 프롬프트를 korean/english에 넣으세요.
 
 ⚡ 핵심 원칙: 사용자가 이미지/영상 주제, 장면, 키워드를 조금이라도 언급하면 즉시 프롬프트를 생성하세요!
 - 사용자가 원하는 것을 되물어보지 말고, 바로 프롬프트를 만들어주세요.
