@@ -217,6 +217,10 @@ export async function generateCustomImage(
       const { parseCalendarPrompt, buildCalendarHTML, renderCalendarToImage } = await import('./calendarTemplateService');
       const calendarData = await parseCalendarPrompt(request.prompt);
       if (calendarData) {
+        // 로고가 있으면 calendarData에 전달
+        if (request.logoBase64) {
+          calendarData.logoBase64 = request.logoBase64;
+        }
         try {
           progress('달력 디자인 렌더링 중...');
           const html = buildCalendarHTML(calendarData);
@@ -265,7 +269,7 @@ export async function generateCustomImage(
     : '';
 
   const logoInstruction = request.logoBase64
-    ? '[로고 규칙] 첨부된 로고를 포스터 상단 중앙에 배치하세요. 로고 바로 아래에 제목/본문을 이어서 배치하여 로고와 콘텐츠 사이에 불필요한 빈 공간이 생기지 않도록 하세요. 로고 원본의 형태와 색상을 그대로 유지하고, 로고 위에 다른 요소를 겹치지 마세요.'
+    ? '[로고 규칙] 첨부된 로고를 포스터 상단 중앙에 배치하세요. 로고 바로 아래에 제목을 바짝 붙여서 배치하세요 (로고와 제목 사이 간격은 최소화, 로고 높이의 15% 이하). 로고와 콘텐츠 사이에 빈 공간이 절대 생기지 않도록 하세요. 로고 원본의 형태와 색상을 그대로 유지하고, 로고 위에 다른 요소를 겹치지 마세요.'
     : '';
 
   // 사용자 프롬프트의 언어 감지
@@ -278,7 +282,7 @@ export async function generateCustomImage(
 1. 사용자가 프롬프트에서 지정한 색상, 위치, 레이아웃, 분위기를 정확히 따르세요.
 2. 휴진/휴무 표시는 프롬프트에 지정된 색상(예: 붉은색)을 사용하세요. 모든 휴진 날짜에 동일한 색상과 스타일을 적용하세요.
 3. 색상이 지정된 요소는 해당 색상만 사용하세요. 임의로 다른 색으로 바꾸지 마세요.
-4. 요소 간 간격을 자연스럽게 유지하세요. 로고, 제목, 달력, 안내문 등 요소 사이에 과도한 빈 공간을 두지 말고 균형 잡힌 레이아웃으로 배치하세요.`;
+4. 요소 간 간격을 최소화하세요. 특히 로고와 제목 사이는 바짝 붙여주세요 (빈 공간 금지). 로고, 제목, 달력, 안내문 등 모든 요소를 콤팩트하게 배치하세요.`;
 
   const fullPrompt = [
     designRule,

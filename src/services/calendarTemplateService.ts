@@ -14,6 +14,7 @@ export interface CalendarData {
   hospitalName?: string;
   notices?: string[];       // 하단 안내 문구
   colorTheme?: 'blue' | 'green' | 'pink' | 'purple';
+  logoBase64?: string;      // data:image/...;base64,xxx 형식의 로고 이미지
 }
 
 export interface ClosedDay {
@@ -114,7 +115,7 @@ const THEMES = {
 // ── HTML 달력 생성 ──
 
 export function buildCalendarHTML(data: CalendarData): string {
-  const { month, year, title, closedDays, hospitalName, notices, colorTheme } = data;
+  const { month, year, title, closedDays, hospitalName, notices, colorTheme, logoBase64 } = data;
   const theme = THEMES[colorTheme || 'blue'];
 
   const firstDay = new Date(year, month - 1, 1).getDay();
@@ -184,6 +185,10 @@ export function buildCalendarHTML(data: CalendarData): string {
     return `<th style="padding:12px 8px;font-size:14px;font-weight:700;color:${color};text-align:center;border-bottom:2px solid ${theme.primary};">${name}</th>`;
   }).join('');
 
+  const logoHTML = logoBase64
+    ? `<img src="${logoBase64}" style="max-height:48px;margin-bottom:6px;object-fit:contain;" />`
+    : '';
+
   const hospitalLine = hospitalName
     ? `<div style="font-size:14px;color:rgba(255,255,255,0.9);margin-top:4px;font-weight:400;">${hospitalName}</div>`
     : '';
@@ -206,7 +211,8 @@ export function buildCalendarHTML(data: CalendarData): string {
 
   return `<div id="calendar-render-target" style="width:700px;background:#ffffff;border-radius:20px;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Noto Sans KR',sans-serif;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
     <!-- 헤더 -->
-    <div style="background:linear-gradient(135deg, ${theme.primary}, ${theme.accent});padding:28px 32px;text-align:center;">
+    <div style="background:linear-gradient(135deg, ${theme.primary}, ${theme.accent});padding:${logoBase64 ? '20px' : '28px'} 32px;text-align:center;">
+      ${logoHTML}
       <div style="font-size:26px;font-weight:800;color:#ffffff;letter-spacing:-0.5px;">${title}</div>
       ${hospitalLine}
     </div>
