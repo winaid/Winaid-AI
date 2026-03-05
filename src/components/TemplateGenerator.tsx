@@ -28,9 +28,22 @@ const STYLE_PRESETS = [
   { id: 'green', name: '프레시 그린', color: '#16a34a', accent: '#15803d', bg: '#f0fdf4', desc: '건강 \u00B7 자연' },
   { id: 'pink', name: '소프트 핑크', color: '#db2777', accent: '#be185d', bg: '#fdf2f8', desc: '따뜻한 \u00B7 부드러운' },
   { id: 'purple', name: '모던 퍼플', color: '#7c3aed', accent: '#6d28d9', bg: '#f5f3ff', desc: '세련된 \u00B7 트렌디' },
+  { id: 'navy', name: '딥 네이비', color: '#1e3a5f', accent: '#0f2942', bg: '#f0f4f8', desc: '고급 \u00B7 클래식' },
+  { id: 'coral', name: '코랄 레드', color: '#e74c3c', accent: '#c0392b', bg: '#fef5f4', desc: '활기 \u00B7 에너지' },
+  { id: 'teal', name: '티 그린', color: '#0d9488', accent: '#0f766e', bg: '#f0fdfa', desc: '청결 \u00B7 치유' },
+  { id: 'charcoal', name: '차콜 그레이', color: '#374151', accent: '#1f2937', bg: '#f9fafb', desc: '미니멀 \u00B7 모던' },
 ] as const;
 
 type ColorTheme = typeof STYLE_PRESETS[number]['id'];
+
+const IMAGE_SIZES = [
+  { id: 'square', label: '정사각형', width: 700, height: 700, icon: '\u2B1C' },
+  { id: 'landscape', label: '가로형', width: 700, height: 500, icon: '\uD83D\uDDA5\uFE0F' },
+  { id: 'portrait', label: '세로형', width: 700, height: 900, icon: '\uD83D\uDCF1' },
+  { id: 'auto', label: '자동', width: 700, height: 0, icon: '\u2728' },
+] as const;
+
+type ImageSize = typeof IMAGE_SIZES[number]['id'];
 
 const inputCls = 'w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-400';
 const textareaCls = `${inputCls} resize-none`;
@@ -46,6 +59,7 @@ export default function TemplateGenerator() {
   const [logoBase64, setLogoBase64] = useState<string | null>(null);
   const [customMessage, setCustomMessage] = useState('');
   const [extraPrompt, setExtraPrompt] = useState('');
+  const [imageSize, setImageSize] = useState<ImageSize>('auto');
 
   // 진료 일정
   const [month, setMonth] = useState(now.getMonth() + 1);
@@ -138,9 +152,11 @@ export default function TemplateGenerator() {
         html = buildGreetingHTML({ holiday: greetHoliday, greeting: greetMsg, closurePeriod: greetClosure || undefined, ...common });
       }
 
-      // 추가 프롬프트가 있으면 AI로 이미지 보강 (향후 구현)
-      // 현재는 HTML 기반으로 바로 렌더링
-      const imageDataUrl = await renderCalendarToImage(html);
+      const sizeConfig = [...IMAGE_SIZES].find(s => s.id === imageSize) || IMAGE_SIZES[3];
+      const imageDataUrl = await renderCalendarToImage(html, {
+        width: sizeConfig.width,
+        height: sizeConfig.height,
+      });
       setResultImage(imageDataUrl);
     } catch (err: any) {
       setError(err.message || '이미지 생성에 실패했습니다.');
@@ -301,28 +317,30 @@ export default function TemplateGenerator() {
           <textarea value={extraPrompt} onChange={e=>setExtraPrompt(e.target.value)} placeholder={"예: 벚꽃 느낌으로 꾸며줘\n예: 하단에 전화번호 크게 넣어줘\n예: 더 고급스럽고 모던하게"} rows={2} className="w-full px-3 py-2 border border-indigo-200 rounded-lg text-sm focus:outline-none focus:border-indigo-400 resize-none bg-white" />
         </div>
 
+        {/* 이미지 사이즈 */}
+        <div>
+          <label className="block text-xs font-semibold text-slate-600 mb-2">이미지 사이즈</label>
+          <div className="grid grid-cols-4 gap-1.5">
+            {IMAGE_SIZES.map(s => (
+              <button key={s.id} onClick={() => setImageSize(s.id)} className={`py-2.5 px-1 rounded-xl text-center transition-all ${imageSize === s.id ? 'bg-slate-800 text-white shadow-md' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>
+                <div className="text-base leading-none">{s.icon}</div>
+                <div className="text-[10px] font-bold mt-1 leading-tight">{s.label}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* 스타일 */}
         <div>
           <label className="block text-xs font-semibold text-slate-600 mb-2">스타일</label>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-4 gap-1.5">
             {STYLE_PRESETS.map(p => (
               <button key={p.id} onClick={()=>setColorTheme(p.id)} className={`rounded-xl border-2 transition-all overflow-hidden ${colorTheme===p.id?'border-slate-800 shadow-lg scale-[1.02]':'border-slate-200 hover:border-slate-300'}`}>
-                <div className="flex items-stretch">
-                  <div className="w-16 flex-shrink-0" style={{background:`linear-gradient(135deg, ${p.color}, ${p.accent})`}}>
-                    <div className="h-full flex flex-col items-center justify-center py-3">
-                      <div className="w-6 h-6 rounded-full bg-white/30 mb-1" />
-                      <div className="w-8 h-1 rounded bg-white/50 mb-0.5" />
-                      <div className="w-6 h-1 rounded bg-white/30" />
-                    </div>
-                  </div>
-                  <div className="flex-1 p-2.5 bg-white">
-                    <div className="text-xs font-bold text-slate-700">{p.name}</div>
-                    <div className="text-[10px] text-slate-400 mt-0.5">{p.desc}</div>
-                    <div className="flex gap-1 mt-1.5">
-                      <div className="w-3 h-3 rounded-full" style={{background:p.color}} />
-                      <div className="w-3 h-3 rounded-full" style={{background:p.accent}} />
-                      <div className="w-3 h-3 rounded-full" style={{background:p.bg}} />
-                    </div>
+                <div className="flex flex-col items-center">
+                  <div className="w-full h-8" style={{background:`linear-gradient(135deg, ${p.color}, ${p.accent})`}} />
+                  <div className="p-1.5 bg-white w-full text-center">
+                    <div className="text-[10px] font-bold text-slate-700 leading-tight">{p.name}</div>
+                    <div className="text-[9px] text-slate-400 mt-0.5">{p.desc}</div>
                   </div>
                 </div>
               </button>
