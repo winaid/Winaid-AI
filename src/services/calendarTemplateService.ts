@@ -338,7 +338,7 @@ export function buildCalendarHTML(data: CalendarData): string {
       </div>`
     : '';
 
-  return `<div id="calendar-render-target" style="width:700px;background:#ffffff;border-radius:24px;overflow:hidden;font-family:'Noto Sans KR',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;box-shadow:0 8px 40px rgba(0,0,0,0.08),0 1px 3px rgba(0,0,0,0.04);">
+  return `<div id="calendar-render-target" style="width:100%;background:#ffffff;border-radius:24px;overflow:hidden;font-family:'Noto Sans KR',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;box-shadow:0 8px 40px rgba(0,0,0,0.08),0 1px 3px rgba(0,0,0,0.04);">
     <!-- 헤더 -->
     <div style="background:${theme.headerBg};padding:${logoBase64 ? '28px 36px 24px' : '36px 36px 28px'};text-align:center;position:relative;overflow:hidden;">
       <div style="position:absolute;top:-30px;right:-30px;width:120px;height:120px;background:rgba(255,255,255,0.06);border-radius:50%;"></div>
@@ -365,7 +365,27 @@ export function buildCalendarHTML(data: CalendarData): string {
 
 // ── HTML → 이미지 변환 ──
 
-export async function renderCalendarToImage(html: string, options?: { width?: number; height?: number }): Promise<string> {
+/**
+ * HTML을 정확한 타겟 해상도의 이미지로 렌더링
+ *
+ * 동작 방식:
+ * 1. HTML을 CSS_WIDTH(디자인 뷰포트)에서 렌더링
+ * 2. html2canvas로 고해상도 캡처
+ * 3. 타겟 해상도(1080x1080 등)의 새 캔버스에 콘텐츠를 fit하여 그리기
+ *
+ * options.width/height = 0이면 콘텐츠 크기 그대로 출력 (auto)
+ */
+export async function renderCalendarToImage(
+  html: string,
+  options?: { width?: number; height?: number },
+): Promise<string> {
+  const targetW = options?.width || 0;
+  const targetH = options?.height || 0;
+  const isAuto = targetW === 0 && targetH === 0;
+
+  // CSS 디자인 뷰포트: 가로형이면 넓게, 아닌 경우 1080 기반
+  const CSS_WIDTH = (targetW > targetH && targetH > 0) ? 960 : 540;
+
   const container = document.createElement('div');
   container.style.position = 'fixed';
   container.style.left = '-9999px';
@@ -380,27 +400,66 @@ export async function renderCalendarToImage(html: string, options?: { width?: nu
     throw new Error('Calendar render target not found');
   }
 
-  // 사이즈 설정: 고정 높이가 지정되면 적용
-  if (options?.width) target.style.width = `${options.width}px`;
-  if (options?.height && options.height > 0) {
-    target.style.minHeight = `${options.height}px`;
-    target.style.display = 'flex';
-    target.style.flexDirection = 'column';
-    target.style.justifyContent = 'center';
+  // CSS 뷰포트 크기 설정
+  target.style.width = `${CSS_WIDTH}px`;
+  target.style.boxSizing = 'border-box';
+
+  // auto가 아니면 최소 높이 설정 (콘텐츠가 타겟 비율에 맞게)
+  if (!isAuto && targetH > 0) {
+    const cssHeight = Math.round(CSS_WIDTH * (targetH / targetW));
+    target.style.minHeight = `${cssHeight}px`;
   }
 
   try {
     const html2canvas = (await import('html2canvas')).default;
-    const canvas = await html2canvas(target, {
-      scale: 6,
+
+    // 캡처 scale: 타겟 해상도에 정확히 맞추기
+    // auto면 scale=2 (고품질 기본), 아니면 타겟W / CSS_WIDTH
+    const captureScale = isAuto ? 2 : targetW / CSS_WIDTH;
+
+    const sourceCanvas = await html2canvas(target, {
+      scale: captureScale,
       useCORS: true,
       allowTaint: true,
       backgroundColor: '#ffffff',
       logging: false,
     });
 
-    const dataUrl = canvas.toDataURL('image/png');
-    return dataUrl;
+    if (isAuto) {
+      // 자동: 캡처된 그대로 반환
+      return sourceCanvas.toDataURL('image/png');
+    }
+
+    // 고정 사이즈: 타겟 캔버스에 콘텐츠를 중앙 배치
+    const finalCanvas = document.createElement('canvas');
+    finalCanvas.width = targetW;
+    finalCanvas.height = targetH;
+    const ctx = finalCanvas.getContext('2d')!;
+
+    // 배경 흰색
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, targetW, targetH);
+
+    // 콘텐츠를 타겟 캔버스에 fit (가로 꽉 채우고 세로 중앙)
+    const contentW = sourceCanvas.width;
+    const contentH = sourceCanvas.height;
+
+    // 가로는 타겟에 맞추고, 세로가 넘치면 축소
+    let drawW = targetW;
+    let drawH = Math.round(contentH * (targetW / contentW));
+
+    if (drawH > targetH) {
+      // 세로가 넘치면 세로에 맞추고 가로 중앙
+      drawH = targetH;
+      drawW = Math.round(contentW * (targetH / contentH));
+    }
+
+    const offsetX = Math.round((targetW - drawW) / 2);
+    const offsetY = Math.round((targetH - drawH) / 2);
+
+    ctx.drawImage(sourceCanvas, offsetX, offsetY, drawW, drawH);
+
+    return finalCanvas.toDataURL('image/png');
   } finally {
     document.body.removeChild(container);
   }
@@ -455,7 +514,7 @@ export function buildEventHTML(data: EventTemplateData): string {
         <div style="font-size:12px;color:#94a3b8;font-weight:600;letter-spacing:2px;">${esc(data.hospitalName)}</div>
       </div>` : '';
 
-  return `<div id="calendar-render-target" style="width:700px;background:#ffffff;border-radius:24px;overflow:hidden;font-family:'Noto Sans KR',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;box-shadow:0 8px 40px rgba(0,0,0,0.08),0 1px 3px rgba(0,0,0,0.04);">
+  return `<div id="calendar-render-target" style="width:100%;background:#ffffff;border-radius:24px;overflow:hidden;font-family:'Noto Sans KR',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;box-shadow:0 8px 40px rgba(0,0,0,0.08),0 1px 3px rgba(0,0,0,0.04);">
     <div style="background:${theme.headerBg};padding:40px 36px 36px;text-align:center;position:relative;overflow:hidden;">
       <div style="position:absolute;top:-40px;right:-40px;width:150px;height:150px;background:rgba(255,255,255,0.06);border-radius:50%;"></div>
       <div style="position:absolute;bottom:-30px;left:-20px;width:100px;height:100px;background:rgba(255,255,255,0.04);border-radius:50%;"></div>
@@ -509,7 +568,7 @@ export function buildDoctorHTML(data: DoctorTemplateData): string {
         <div style="font-size:12px;color:#94a3b8;font-weight:600;letter-spacing:2px;">${esc(data.hospitalName)}</div>
       </div>` : '';
 
-  return `<div id="calendar-render-target" style="width:700px;background:#ffffff;border-radius:24px;overflow:hidden;font-family:'Noto Sans KR',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;box-shadow:0 8px 40px rgba(0,0,0,0.08),0 1px 3px rgba(0,0,0,0.04);">
+  return `<div id="calendar-render-target" style="width:100%;background:#ffffff;border-radius:24px;overflow:hidden;font-family:'Noto Sans KR',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;box-shadow:0 8px 40px rgba(0,0,0,0.08),0 1px 3px rgba(0,0,0,0.04);">
     <div style="background:${theme.headerBg};padding:36px;text-align:center;position:relative;overflow:hidden;">
       <div style="position:absolute;top:-30px;right:-30px;width:120px;height:120px;background:rgba(255,255,255,0.06);border-radius:50%;"></div>
       <div style="position:absolute;bottom:-40px;left:-20px;width:100px;height:100px;background:rgba(255,255,255,0.04);border-radius:50%;"></div>
@@ -569,7 +628,7 @@ export function buildNoticeHTML(data: NoticeTemplateData): string {
         <div style="font-size:12px;color:#94a3b8;font-weight:600;letter-spacing:2px;">${esc(data.hospitalName)}</div>
       </div>` : '';
 
-  return `<div id="calendar-render-target" style="width:700px;background:#ffffff;border-radius:24px;overflow:hidden;font-family:'Noto Sans KR',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;box-shadow:0 8px 40px rgba(0,0,0,0.08),0 1px 3px rgba(0,0,0,0.04);">
+  return `<div id="calendar-render-target" style="width:100%;background:#ffffff;border-radius:24px;overflow:hidden;font-family:'Noto Sans KR',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;box-shadow:0 8px 40px rgba(0,0,0,0.08),0 1px 3px rgba(0,0,0,0.04);">
     <div style="background:${theme.headerBg};padding:36px;text-align:center;position:relative;overflow:hidden;">
       <div style="position:absolute;top:-30px;right:-30px;width:120px;height:120px;background:rgba(255,255,255,0.06);border-radius:50%;"></div>
       <div style="position:absolute;bottom:-40px;left:-20px;width:100px;height:100px;background:rgba(255,255,255,0.04);border-radius:50%;"></div>
@@ -619,7 +678,7 @@ export function buildGreetingHTML(data: GreetingTemplateData): string {
         </div>
       </div>` : '';
 
-  return `<div id="calendar-render-target" style="width:700px;background:linear-gradient(180deg, ${theme.light} 0%, #ffffff 40%, ${theme.light} 100%);border-radius:24px;overflow:hidden;font-family:'Noto Sans KR',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;box-shadow:0 8px 40px rgba(0,0,0,0.08),0 1px 3px rgba(0,0,0,0.04);position:relative;">
+  return `<div id="calendar-render-target" style="width:100%;background:linear-gradient(180deg, ${theme.light} 0%, #ffffff 40%, ${theme.light} 100%);border-radius:24px;overflow:hidden;font-family:'Noto Sans KR',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;box-shadow:0 8px 40px rgba(0,0,0,0.08),0 1px 3px rgba(0,0,0,0.04);position:relative;">
     <!-- 장식 원형 -->
     <div style="position:absolute;top:-60px;right:-60px;width:200px;height:200px;background:${theme.primary}08;border-radius:50%;"></div>
     <div style="position:absolute;bottom:-40px;left:-40px;width:160px;height:160px;background:${theme.primary}06;border-radius:50%;"></div>
@@ -658,7 +717,7 @@ export async function generateCalendarFromPrompt(
 
   progress('달력 디자인 렌더링 중...');
   const html = buildCalendarHTML(calendarData);
-  const imageDataUrl = await renderCalendarToImage(html);
+  const imageDataUrl = await renderCalendarToImage(html, { width: 1080, height: 1080 });
 
   return { imageDataUrl, mimeType: 'image/png' };
 }
