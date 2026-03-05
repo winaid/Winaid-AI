@@ -204,7 +204,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
               href="https://winaid.co.kr"
               target="_blank"
               rel="noopener noreferrer"
-              className="px-8 py-4 text-slate-400 font-semibold text-lg hover:text-slate-700 transition-colors"
+              className="px-8 py-4 text-slate-900 font-semibold text-lg hover:text-blue-600 transition-colors"
             >
               윈에이드 알아보기
             </a>
