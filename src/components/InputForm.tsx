@@ -372,33 +372,6 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange 
                     )}
                   </div>
 
-                  {/* 의료광고법 모드 토글 */}
-                  <div className={`p-3 rounded-xl space-y-2 ${medicalLawMode === 'relaxed' ? 'bg-red-50 border border-red-200' : 'bg-emerald-50 border border-emerald-200'}`}>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="text-lg">{medicalLawMode === 'strict' ? '⚖️' : '🔥'}</span>
-                        <div>
-                          <span className={`text-xs font-black ${medicalLawMode === 'relaxed' ? 'text-red-700' : 'text-emerald-700'}`}>
-                            의료광고법 {medicalLawMode === 'strict' ? '엄격 준수' : '자유 모드'}
-                          </span>
-                          <p className={`text-[10px] ${medicalLawMode === 'relaxed' ? 'text-red-500' : 'text-emerald-600'}`}>
-                            {medicalLawMode === 'strict' ? '금지어 자동 필터링 + 안전 표현 사용' : '아슬아슬 경계선 표현 허용 (주의!)'}
-                          </p>
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const newMode = medicalLawMode === 'strict' ? 'relaxed' : 'strict';
-                          setMedicalLawMode(newMode);
-                          localStorage.setItem('medicalLawMode', newMode);
-                        }}
-                        className={`relative w-12 h-6 rounded-full transition-colors ${medicalLawMode === 'relaxed' ? 'bg-red-500' : 'bg-emerald-500'}`}
-                      >
-                        <span className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow transition-all duration-200 ${medicalLawMode === 'relaxed' ? 'translate-x-6' : 'translate-x-0'}`} />
-                      </button>
-                    </div>
-                  </div>
                </div>
            ) : postType === 'card_news' ? (
                <div className="space-y-4">
@@ -572,10 +545,10 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange 
           <label className="block text-xs font-black text-slate-400 mb-2 uppercase tracking-widest">
             2단계. {postType === 'press_release' ? '기사 제목' : '블로그 제목'}
           </label>
-          <input type="text" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder={postType === 'press_release' ? '기사 주제를 입력하세요 (예: 겨울철 피부건조 주의보)' : '블로그 글 제목을 입력하세요 (예: 겨울철 피부건조 원인과 해결법)'} className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold mb-3 focus:border-emerald-500 outline-none text-lg" required />
-          <input type="text" value={keywords} onChange={(e) => setKeywords(e.target.value)} placeholder="SEO 키워드 (예: 영등포 정형외과)" className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl font-medium mb-3 focus:border-emerald-500 outline-none" />
+          <input type="text" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder={postType === 'press_release' ? '기사 주제를 입력하세요 (예: 겨울철 피부건조 주의보)' : '블로그 글 제목을 입력하세요 (예: 치아미백 종류와 비용 총정리)'} className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold mb-3 focus:border-emerald-500 outline-none text-lg" required />
+          <input type="text" value={keywords} onChange={(e) => setKeywords(e.target.value)} placeholder="SEO 키워드 (예: 강남 치과)" className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl font-medium mb-3 focus:border-emerald-500 outline-none" />
           {postType === 'blog' && (
-            <input type="text" value={disease} onChange={(e) => setDisease(e.target.value)} placeholder="질환명 (예: 석회성건염) - 글의 실제 주제가 됩니다" className="w-full p-4 bg-amber-50 border border-amber-200 rounded-2xl font-medium mb-4 focus:border-amber-500 outline-none" />
+            <input type="text" value={disease} onChange={(e) => setDisease(e.target.value)} placeholder="질환명 (예: 치주염) - 글의 실제 주제가 됩니다" className="w-full p-4 bg-amber-50 border border-amber-200 rounded-2xl font-medium mb-4 focus:border-amber-500 outline-none" />
           )}
           
           {/* 소제목 직접 입력 영역 */}
