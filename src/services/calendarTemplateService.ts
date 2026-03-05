@@ -851,10 +851,11 @@ export function resizeImageToThumbnail(dataUrl: string, maxSize: number = 120): 
 
 interface AiTemplateRequest {
   category: 'schedule' | 'event' | 'doctor' | 'notice' | 'greeting';
-  stylePrompt: string; // 분리된 스타일 프롬프트 (프리셋 or 커스텀 or 히스토리)
-  textContent: string; // 이미지에 들어갈 텍스트 정보 요약
+  stylePrompt: string;
+  textContent: string;
   hospitalName?: string;
   logoBase64?: string | null;
+  brandingPosition?: 'top' | 'bottom';
   extraPrompt?: string;
   imageSize?: { width: number; height: number };
 }
@@ -889,9 +890,26 @@ ${stylePrompt}
 [TEXT CONTENT PROMPT - EXACT TEXT TO RENDER]
 ${textContent}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
-${hospitalName ? `\n[HOSPITAL BRANDING - MUST APPEAR TOGETHER!]
+${hospitalName ? (() => {
+  const pos = req.brandingPosition || 'top';
+  const posLabel = pos === 'top' ? 'HEADER (top of image)' : 'FOOTER (bottom of image)';
+  const posDetail = pos === 'top'
+    ? 'Place branding at the TOP of the image, above all content. It should be the first visual element.'
+    : 'Place branding at the BOTTOM of the image, below all content. It should be the last visual element.';
+  const logoInstructions = req.logoBase64
+    ? `- Show hospital LOGO (small, 24-32px) and hospital NAME side by side horizontally: [LOGO] [NAME]
+- They must be visually grouped as ONE unit with consistent alignment
+- Logo on the left, name on the right, vertically centered to each other`
+    : `- Display hospital name "${hospitalName}" in a clean, readable font`;
+  return `
+[HOSPITAL BRANDING - POSITION: ${posLabel}]
 Hospital name: "${hospitalName}"
-${req.logoBase64 ? '- Place hospital LOGO and hospital NAME side by side (logo left, name right) in the header area\n- They must be visually grouped together as one unit, not separated' : `- Display hospital name "${hospitalName}" prominently in the header`}` : ''}
+${posDetail}
+${logoInstructions}
+- Use subtle styling that matches the overall design (not too large, not too small)
+- Branding should feel integrated into the design, not floating or disconnected
+- Recommended: 12-16px font size for name, clean sans-serif font`;
+})() : ''}
 
 [IMAGE SPECIFICATIONS]
 - Aspect ratio: ${aspectDesc}
@@ -1008,10 +1026,11 @@ function buildGreetingTextContent(data: {
 export async function generateTemplateWithAI(
   category: 'schedule' | 'event' | 'doctor' | 'notice' | 'greeting',
   templateData: Record<string, any>,
-  stylePrompt: string, // 분리된 스타일 프롬프트 (프리셋.aiPrompt 또는 히스토리에서 가져온 것)
+  stylePrompt: string,
   options?: {
     hospitalName?: string;
     logoBase64?: string | null;
+    brandingPosition?: 'top' | 'bottom';
     extraPrompt?: string;
     imageSize?: { width: number; height: number };
   }
@@ -1046,6 +1065,7 @@ export async function generateTemplateWithAI(
     textContent,
     hospitalName: options?.hospitalName,
     logoBase64: options?.logoBase64,
+    brandingPosition: options?.brandingPosition,
     extraPrompt: options?.extraPrompt,
     imageSize: options?.imageSize,
   });
