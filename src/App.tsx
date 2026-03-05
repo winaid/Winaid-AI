@@ -867,12 +867,15 @@ const App: React.FC = () => {
         <div className="max-w-[1600px] w-full mx-auto px-6 flex justify-between items-center">
           <a href="#" className="flex items-center gap-2.5 hover:opacity-80 transition-opacity">
             <svg className="w-9 h-9" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-              <path d="M5 20L18 80h2L30 35l10 45h2L55 20h-8L38 62 28 20H22L12 62 5 20z" fill="#3B82F6"/>
-              <path d="M52 80L68 20h4L88 80h-8L76 64H64l-4 16h-8zm14-24h10L71 32 66 56z" fill={darkMode ? '#e2e8f0' : '#1E293B'}/>
+              <path d="M2 84L28 16h12L16 84H2z" fill={darkMode ? '#e2e8f0' : '#3C3C3C'}/>
+              <path d="M28 16L54 84H42L28 16z" fill={darkMode ? '#e2e8f0' : '#3C3C3C'}/>
+              <path d="M10 60h28v9H10z" fill={darkMode ? '#e2e8f0' : '#3C3C3C'}/>
+              <path d="M50 16h8v68h-8z" fill="#3B82F6"/>
+              <path d="M58 16h12c16 0 28 15 28 34s-12 34-28 34H58V74h12c11 0 18-9 18-24s-7-24-18-24H58V16z" fill={darkMode ? '#e2e8f0' : '#3C3C3C'}/>
             </svg>
             <div className="flex flex-col leading-none">
-              <span className={`font-black text-lg tracking-tight ${darkMode ? 'text-slate-100' : 'text-slate-800'}`}><span className="text-blue-500">W</span>INAID</span>
-              <span className={`text-[9px] font-medium tracking-wider ${darkMode ? 'text-slate-400' : 'text-slate-400'}`}>AI Hospital Marketing</span>
+              <span className={`font-black text-lg tracking-tight ${darkMode ? 'text-slate-100' : 'text-slate-800'}`}>WIN<span className="text-blue-500">AID</span></span>
+              <span className={`text-[9px] font-medium tracking-wider ${darkMode ? 'text-slate-400' : 'text-slate-400'}`}>Advertising Company</span>
             </div>
           </a>
           

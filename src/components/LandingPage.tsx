@@ -263,10 +263,13 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart, darkMode = false }) 
           <div className="flex flex-col md:flex-row justify-between items-center gap-6">
             <div className="flex items-center gap-2">
               <svg className="w-7 h-7" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-                <path d="M5 20L18 80h2L30 35l10 45h2L55 20h-8L38 62 28 20H22L12 62 5 20z" fill="#3B82F6"/>
-                <path d="M52 80L68 20h4L88 80h-8L76 64H64l-4 16h-8zm14-24h10L71 32 66 56z" fill="#e2e8f0"/>
+                <path d="M2 84L28 16h12L16 84H2z" fill="#e2e8f0"/>
+                <path d="M28 16L54 84H42L28 16z" fill="#e2e8f0"/>
+                <path d="M10 60h28v9H10z" fill="#e2e8f0"/>
+                <path d="M50 16h8v68h-8z" fill="#3B82F6"/>
+                <path d="M58 16h12c16 0 28 15 28 34s-12 34-28 34H58V74h12c11 0 18-9 18-24s-7-24-18-24H58V16z" fill="#e2e8f0"/>
               </svg>
-              <span className="font-black text-lg text-white"><span className="text-blue-400">W</span>INAID</span>
+              <span className="font-black text-lg text-white">WIN<span className="text-blue-400">AID</span></span>
             </div>
             <div className="flex items-center gap-6 text-sm text-slate-400">
               <span>winaid@daum.net</span>
