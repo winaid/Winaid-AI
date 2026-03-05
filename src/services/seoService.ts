@@ -162,7 +162,7 @@ ${newsContext}
       const ai = getAiClient();
 
       const response: any = await Promise.race([ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
+        model: 'gemini-3.1-flash-lite-preview',
         contents: `최근 한국 뉴스에서 "${searchKeyword}" 관련 기사를 검색하고,
 가장 많이 다뤄지는 건강/의료 이슈 3가지를 요약해주세요.
 
@@ -243,7 +243,7 @@ export const getTrendingTopics = async (category: string): Promise<TrendingItem[
   // Gemini AI 기반 트렌드 분석 (구글 검색 + 뉴스 컨텍스트 기반)
   const response: any = await Promise.race([
     ai.models.generateContent({
-      model: 'gemini-3-flash-preview',  // FLASH로 빠른 응답
+      model: 'gemini-3.1-flash-lite-preview',  // FLASH로 빠른 응답
     contents: `[🕐 정확한 현재 시각: ${dateStr} 기준 (한국 표준시)]
 [🎲 다양성 시드: ${randomSeed}]
 
@@ -457,7 +457,7 @@ JSON 배열로 출력한다. 각 항목은 다음 구조를 따른다:
 }`;
 
   const response: any = await Promise.race([ai.models.generateContent({
-    model: 'gemini-3-flash-preview',
+    model: 'gemini-3.1-flash-lite-preview',
     contents: prompt,
     config: {
       responseMimeType: "application/json",
@@ -554,7 +554,7 @@ finalScore = legalSafety + naturalness + relevance + ctr
 - recommendation: "추천" | "보통" | "비추천"`;
 
   const response: any = await Promise.race([ai.models.generateContent({
-    model: 'gemini-3-flash-preview',
+    model: 'gemini-3.1-flash-lite-preview',
     contents: prompt,
     config: {
       responseMimeType: "application/json",
@@ -775,7 +775,7 @@ JSON 형식으로 응답해주세요.`;
   try {
     const response: any = await Promise.race([
       ai.models.generateContent({
-        model: 'gemini-3-flash-preview',  // FLASH로 빠른 평가
+        model: 'gemini-3.1-flash-lite-preview',  // FLASH로 빠른 평가
         contents: prompt,
         config: {
           responseMimeType: "application/json",

@@ -15,8 +15,7 @@ export const CREDIT_COSTS: Record<string, number> = {
 // Gemini 모델별 토큰 단가 (USD per 1M tokens, 2026-03 기준 추정)
 const TOKEN_PRICING: Record<string, { input: number; output: number }> = {
   'gemini-3.1-pro-preview': { input: 1.25, output: 5.0 },
-  'gemini-3-flash-preview': { input: 0.075, output: 0.3 },
-  'gemini-3.1-flash-lite-preview': { input: 0.0375, output: 0.15 },
+  'gemini-3.1-flash-lite-preview': { input: 0.25, output: 1.5 },
 };
 
 export interface CreditStatus {
@@ -161,7 +160,7 @@ export function trackApiUsage(record: ApiUsageRecord): void {
  * 토큰 수에서 비용 계산
  */
 export function calculateCost(model: string, inputTokens: number, outputTokens: number): number {
-  const pricing = TOKEN_PRICING[model] || TOKEN_PRICING['gemini-3-flash-preview'];
+  const pricing = TOKEN_PRICING[model] || TOKEN_PRICING['gemini-3.1-flash-lite-preview'];
   return (inputTokens * pricing.input + outputTokens * pricing.output) / 1_000_000;
 }
 

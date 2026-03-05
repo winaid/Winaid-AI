@@ -444,7 +444,7 @@ VEO 3.1 영상 생성에 최적화된 상세 프롬프트를 작성합니다.
   }
 
   const response = await ai.models.generateContent({
-    model: 'gemini-3-flash-preview',
+    model: 'gemini-3.1-flash-lite-preview',
     contents: [{ role: 'user', parts }],
     config: {
       responseMimeType: 'application/json',
@@ -593,7 +593,7 @@ export async function chatPromptGenerator(
   contents.push({ role: 'user', parts: userParts });
 
   const response = await ai.models.generateContent({
-    model: 'gemini-3-flash-preview',
+    model: 'gemini-3.1-flash-lite-preview',
     config: {
       systemInstruction: getSystemInstruction(mediaType),
       responseMimeType: 'application/json',

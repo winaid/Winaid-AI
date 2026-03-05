@@ -1929,7 +1929,7 @@ JSON 형식으로 응답:
           // ⚠️ Google Search와 responseMimeType: "application/json"은 동시 사용 불가!
           // 텍스트로 받고 후처리로 JSON 파싱
           const searchResponse = await ai.models.generateContent({
-            model: "gemini-3-flash-preview",  // 검색용 모델 (빠름)
+            model: "gemini-3.1-flash-lite-preview",  // 검색용 모델 (빠름)
             contents: searchPrompt,
             config: {
               tools: [{ googleSearch: {} }]
@@ -2836,7 +2836,7 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
       let pipelineSearchResults: any = {};
       try {
         const searchResponse = await ai.models.generateContent({
-          model: "gemini-3-flash-preview",
+          model: "gemini-3.1-flash-lite-preview",
           contents: `"${request.topic}" 관련 최신 치과 의료 정보 검색. health.kdca.go.kr 우선. JSON: {"collected_facts": [{"fact": "...", "source": "..."}]}`,
           config: { tools: [{ googleSearch: {} }] }
         });

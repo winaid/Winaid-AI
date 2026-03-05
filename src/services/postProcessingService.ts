@@ -734,7 +734,7 @@ JSON 형식으로 응답해주세요.`;
     
     // 📊 스키마 단순화
     const analysisPromise = ai.models.generateContent({
-      model: 'gemini-3-flash-preview',  // AI 냄새 분석은 FLASH
+      model: 'gemini-3.1-flash-lite-preview',  // AI 냄새 분석은 FLASH
       contents: prompt,
       config: {
         responseMimeType: "application/json",
@@ -865,7 +865,7 @@ JSON 형식으로 응답해주세요.`;
     const RECHECK_TIMEOUT = 60000;
     
     const analysisPromise = ai.models.generateContent({
-      model: 'gemini-3-flash-preview',  // 재검증 분석은 FLASH
+      model: 'gemini-3.1-flash-lite-preview',  // 재검증 분석은 FLASH
       contents: prompt,
       config: {
         responseMimeType: "application/json",

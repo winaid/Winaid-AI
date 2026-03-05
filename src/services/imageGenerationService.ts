@@ -820,7 +820,7 @@ export const analyzeStyleReferenceImage = async (base64Image: string, isCover: b
 
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',  // 스타일 분석은 FLASH
+      model: 'gemini-3.1-flash-lite-preview',  // 스타일 분석은 FLASH
       contents: [
         {
           role: 'user',

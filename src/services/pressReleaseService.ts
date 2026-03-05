@@ -256,7 +256,7 @@ ${getStylePromptForGeneration(learnedStyle)}
           // AI로 병원 강점 분석
           const ai = getAiClient();
           const analysisResult = await ai.models.generateContent({
-            model: 'gemini-3-flash-preview',  // 병원 정보 분석은 FLASH
+            model: 'gemini-3.1-flash-lite-preview',  // 병원 정보 분석은 FLASH
             contents: `다음은 ${hospitalName}의 웹사이트 내용입니다.
 
 웹사이트 내용:
