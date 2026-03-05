@@ -10,7 +10,7 @@ const CUSTOM_PROMPT_KEY = 'hospital_custom_image_prompt';
 interface InputFormProps {
   onSubmit: (data: GenerationRequest) => void;
   isLoading: boolean;
-  onTabChange?: (tab: 'blog' | 'similarity' | 'refine' | 'card_news' | 'press' | 'image' | 'video') => void;
+  onTabChange?: (tab: 'blog' | 'similarity' | 'refine' | 'card_news' | 'press' | 'image') => void;
 }
 
 const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange }) => {
@@ -237,14 +237,6 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange 
           >
             <span>🖼️</span>
             <span className="text-xs">이미지</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => onTabChange?.('video')}
-            className="py-2 px-2 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-1.5 text-slate-400 hover:text-slate-600 hover:bg-white"
-          >
-            <span>🎬</span>
-            <span className="text-xs">동영상</span>
           </button>
         </div>
       </div>
