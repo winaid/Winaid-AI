@@ -39,7 +39,14 @@ const stripHtml = (html: string) => {
 const App: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<PageType>(() => {
     const hash = window.location.hash;
-    return hash === '#app' ? 'app' : 'landing';
+    if (hash === '#admin') return 'admin';
+    if (hash === '#auth') return 'auth';
+    if (hash === '#app') return 'app';
+    // 해시 없이 접속하면 랜딩 페이지 표시
+    // sessionStorage로 "이미 앱 진입했음"을 기억
+    const entered = sessionStorage.getItem('winaid_entered');
+    if (entered) return 'app';
+    return 'landing';
   });
   const [apiKeyReady, setApiKeyReady] = useState<boolean>(false);
   const [state, setState] = useState<GenerationState>({
@@ -783,6 +790,22 @@ const App: React.FC = () => {
     setCardNewsScript(updatedScript);
   };
 
+  // 랜딩 페이지 (모든 체크 전에 먼저 표시)
+  if (currentPage === 'landing') {
+    return (
+      <Suspense fallback={<div className="min-h-screen flex items-center justify-center">로딩 중...</div>}>
+        <LandingPage
+          onStart={() => {
+            sessionStorage.setItem('winaid_entered', 'true');
+            window.location.hash = '#app';
+            setCurrentPage('app');
+          }}
+          darkMode={darkMode}
+        />
+      </Suspense>
+    );
+  }
+
   // 로딩 중 (admin/pricing 페이지는 로딩 화면 없이 바로 표시)
   // app 페이지는 로딩 중에도 UI 표시 (apiKeyReady 체크에서 처리)
   if (authLoading && currentPage !== 'admin' && (currentPage as string) !== 'pricing' && currentPage !== 'app') {
@@ -812,21 +835,6 @@ const App: React.FC = () => {
     return (
       <Suspense fallback={<div className="min-h-screen bg-slate-50 flex items-center justify-center"><div className="w-16 h-16 border-4 border-emerald-200 border-t-emerald-500 rounded-full animate-spin"></div></div>}>
         <AdminPage onAdminVerified={() => setIsAdmin(true)} />
-      </Suspense>
-    );
-  }
-
-  // 랜딩 페이지 (API Key 체크 전에 표시)
-  if (currentPage === 'landing') {
-    return (
-      <Suspense fallback={<div className="min-h-screen flex items-center justify-center">로딩 중...</div>}>
-        <LandingPage
-          onStart={() => {
-            window.location.hash = '#app';
-            setCurrentPage('app');
-          }}
-          darkMode={darkMode}
-        />
       </Suspense>
     );
   }
