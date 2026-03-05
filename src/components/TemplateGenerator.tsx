@@ -122,6 +122,7 @@ export default function TemplateGenerator() {
   const [generating, setGenerating] = useState(false);
   const [resultImage, setResultImage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [previewStyleImage, setPreviewStyleImage] = useState<{ url: string; name: string } | null>(null);
 
   useEffect(() => {
     const s = localStorage.getItem('uploaded_logo'); if (s) setLogoBase64(s);
@@ -568,7 +569,7 @@ export default function TemplateGenerator() {
               }} />
             </label>
             {styleHistory.map(h => (
-              <button key={h.id} onClick={() => { setSelectedHistory(selectedHistory?.id === h.id ? null : h); }} className={`relative flex-shrink-0 w-16 rounded-xl overflow-hidden border-2 transition-all group ${selectedHistory?.id === h.id ? 'border-violet-500 shadow-lg scale-105 ring-2 ring-violet-200' : 'border-slate-200 hover:border-slate-300'}`}>
+              <button key={h.id} onClick={() => { setSelectedHistory(selectedHistory?.id === h.id ? null : h); }} onDoubleClick={() => setPreviewStyleImage({ url: h.referenceImageUrl, name: h.name })} className={`relative flex-shrink-0 w-16 rounded-xl overflow-hidden border-2 transition-all group ${selectedHistory?.id === h.id ? 'border-violet-500 shadow-lg scale-105 ring-2 ring-violet-200' : 'border-slate-200 hover:border-slate-300'}`}>
                 <img src={h.thumbnailDataUrl} alt={h.name} className="w-16 h-16 object-cover" />
                 <div className="absolute inset-x-0 bottom-0 bg-black/60 px-1 py-0.5">
                   <div className="text-[8px] text-white font-medium truncate">{h.name}</div>
@@ -624,6 +625,14 @@ export default function TemplateGenerator() {
               <button onClick={handleDownload} className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-sm transition-colors shadow-lg">다운로드</button>
               <button onClick={handleGenerate} disabled={generating} className="px-6 py-2.5 bg-slate-600 hover:bg-slate-700 text-white rounded-xl font-bold text-sm transition-colors">다시 생성</button>
             </div>
+          </div>
+        ): previewStyleImage ? (
+          <div className="space-y-4 w-full flex flex-col items-center">
+            <div className="text-center">
+              <p className="text-xs font-semibold text-violet-600 mb-2">내 스타일 미리보기: {previewStyleImage.name}</p>
+            </div>
+            <img src={previewStyleImage.url} alt={previewStyleImage.name} className="max-w-full max-h-[70vh] rounded-2xl shadow-2xl border-2 border-violet-200" />
+            <button onClick={() => setPreviewStyleImage(null)} className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-600 rounded-xl text-sm font-medium transition-colors">닫기</button>
           </div>
         ):(
           <div className="text-center space-y-4">
