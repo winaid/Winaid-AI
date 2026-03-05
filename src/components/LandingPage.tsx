@@ -252,15 +252,16 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
         </div>
       </section>
 
-      {/* Stats */}
-      <section className="py-16 border-b border-slate-100">
+      {/* Stats - 윈에이드 수치 */}
+      <section className="py-20 bg-white border-b border-slate-100">
         <div className="max-w-5xl mx-auto px-6">
+          <p className="text-center text-slate-400 text-sm font-semibold mb-10 tracking-wider">윈에이드는 수치로 증명합니다</p>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-0 md:divide-x divide-slate-200">
             {[
-              { number: '13', unit: '년+', label: '마케팅 경력' },
-              { number: '300', unit: '+', label: '병원 클라이언트' },
-              { number: '1', unit: '분', label: '콘텐츠 생성' },
-              { number: '100', unit: '%', label: '의료광고법 준수' },
+              { number: '13', unit: '년+', label: '병원마케팅 노하우' },
+              { number: '300', unit: '+', label: '병원 진행건' },
+              { number: '95', unit: '%', label: '거래처 재계약률' },
+              { number: '1', unit: '분', label: 'AI 콘텐츠 생성' },
             ].map((stat, i) => (
               <div key={i} className="text-center px-4">
                 <div className="text-3xl md:text-4xl font-black text-slate-900">
@@ -279,21 +280,23 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
           <div className="text-center mb-20">
             <p className="text-blue-500 font-bold text-sm tracking-wider uppercase mb-3">Problem & Solution</p>
             <h2 className="text-3xl md:text-5xl font-black leading-tight">
-              병원 블로그,<br />이런 고민 있으셨죠?
+              매년 감소하는 신규 환자,<br />줄어드는 매출...
             </h2>
+            <p className="text-lg text-slate-400 mt-4">이제 원장님은 진료에만 집중하세요!</p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-6">
             {[
-              { pain: '블로그 쓸 시간이 없다', solution: 'AI가 1분 만에 작성', icon: '✏️', color: 'bg-blue-100 text-blue-600' },
-              { pain: '의료광고법이 복잡하다', solution: '자동 법률 검증 시스템', icon: '🛡️', color: 'bg-emerald-100 text-emerald-600' },
-              { pain: '이미지 만들기 귀찮다', solution: 'AI 이미지 자동 생성', icon: '🎨', color: 'bg-violet-100 text-violet-600' },
+              { pain: '블로그 쓸 시간이 없다', solution: 'AI가 1분 만에 작성', desc: '키워드 하나면 네이버 스마트블록 최적화 원고가 자동 완성', icon: '✏️', color: 'bg-blue-100 text-blue-600' },
+              { pain: '의료광고법이 복잡하다', solution: '자동 법률 검증 시스템', desc: '과장·비교·보장성 표현을 실시간 감지하고 자동 수정', icon: '🛡️', color: 'bg-emerald-100 text-emerald-600' },
+              { pain: '이미지 만들기 귀찮다', solution: 'AI 이미지 자동 생성', desc: '저작권 걱정 없는 고품질 이미지를 원클릭으로 생성', icon: '🎨', color: 'bg-violet-100 text-violet-600' },
             ].map((item, i) => (
               <div key={i} className="group relative">
                 <div className="bg-slate-50 rounded-2xl p-8 h-full border border-slate-100 hover:border-blue-200 hover:bg-blue-50/30 transition-all">
                   <div className={`w-14 h-14 rounded-2xl ${item.color} flex items-center justify-center text-2xl mb-6`}>{item.icon}</div>
                   <p className="text-slate-400 text-sm line-through mb-2">{item.pain}</p>
-                  <p className="text-xl font-bold text-slate-900">{item.solution}</p>
+                  <p className="text-xl font-bold text-slate-900 mb-2">{item.solution}</p>
+                  <p className="text-sm text-slate-500 leading-relaxed">{item.desc}</p>
                 </div>
               </div>
             ))}
@@ -306,14 +309,14 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
         <div className="max-w-5xl mx-auto px-6">
           <div className="text-center mb-20">
             <p className="text-blue-500 font-bold text-sm tracking-wider uppercase mb-3">Features</p>
-            <h2 className="text-3xl md:text-5xl font-black">이런 걸 할 수 있어요</h2>
+            <h2 className="text-3xl md:text-5xl font-black">실력으로 승부하는<br />고집 있는 AI 마케팅</h2>
           </div>
 
           <div className="space-y-24">
             {[
               {
                 title: '키워드 하나로\n블로그 자동 생성',
-                desc: '병원명과 키워드만 입력하면 네이버 스마트블록에 최적화된 블로그 원고가 완성됩니다. 제목, 소제목, 본문까지 한 번에.',
+                desc: '병원명과 키워드만 입력하면 네이버 스마트블록에 최적화된 블로그 원고가 완성됩니다. 환자 유치에 필수인 가장 빠른 경로, 네이버 블로그를 AI가 대신 운영합니다.',
                 tag: 'AI Writing',
                 color: 'from-blue-500 to-cyan-500',
               },
@@ -352,7 +355,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
         <div className="max-w-5xl mx-auto px-6">
           <div className="text-center mb-20">
             <p className="text-blue-500 font-bold text-sm tracking-wider uppercase mb-3">How it works</p>
-            <h2 className="text-3xl md:text-5xl font-black">3단계면 끝</h2>
+            <h2 className="text-3xl md:text-5xl font-black">믿고 맡기는 서비스,<br />3단계면 끝</h2>
           </div>
 
           <div className="grid md:grid-cols-3 gap-8">
@@ -379,16 +382,16 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
       </section>
 
       {/* Trust / About WINAID */}
-      <section className="py-24 bg-slate-900 text-white">
+      <section className="py-24 bg-gradient-to-b from-slate-900 to-blue-950 text-white">
         <div className="max-w-5xl mx-auto px-6">
           <div className="text-center mb-16">
             <p className="text-blue-400 font-bold text-sm tracking-wider uppercase mb-3">About WINAID</p>
             <h2 className="text-3xl md:text-5xl font-black">
-              병원마케팅 전문 기업이<br />직접 만들었습니다
+              누구보다 병원을 잘 아니까,<br />직접 만들었습니다
             </h2>
-            <p className="text-lg text-slate-400 mt-6 max-w-2xl mx-auto">
-              2017년부터 치과, 성형외과, 피부과 등 300곳 이상의 병원과 함께한<br className="hidden md:block" />
-              윈에이드의 노하우가 AI에 담겨있습니다.
+            <p className="text-lg text-slate-400 mt-6 max-w-2xl mx-auto leading-relaxed">
+              2017년 설립 이후 치과, 성형외과, 피부과, 정형외과, 한의원 등<br className="hidden md:block" />
+              300곳 이상의 병원과 함께해온 윈에이드의 13년 노하우가 AI에 담겨있습니다.
             </p>
           </div>
 
@@ -396,10 +399,10 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
             {[
               '300+ 병원 마케팅 운영 경험',
               '네이버 플레이스 상위노출 전략',
-              '의료광고법 전문 컨설팅',
-              '맞춤형 환자 유치 마케팅',
+              '거래처 재계약률 95%의 신뢰',
+              '의료광고법 전문 컨설팅 & AI 검증',
             ].map((item, i) => (
-              <div key={i} className="flex items-center gap-3 bg-white/5 rounded-xl px-5 py-4">
+              <div key={i} className="flex items-center gap-3 bg-white/[0.08] border border-white/10 rounded-xl px-5 py-4">
                 <svg className="w-5 h-5 text-blue-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                 </svg>
@@ -418,10 +421,10 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
         </div>
         <div className="relative max-w-4xl mx-auto px-6 text-center">
           <h2 className="text-3xl md:text-5xl font-black text-white mb-6 leading-tight">
-            오늘부터 블로그 고민,<br />끝내세요
+            클라이언트의 성장이<br />윈에이드의 목표입니다
           </h2>
           <p className="text-xl text-blue-200 mb-12">
-            원장님은 진료에만 집중하세요. 마케팅은 WINAID가.
+            원장님은 진료에만 집중하세요. 마케팅은 WINAID AI가 책임집니다.
           </p>
           <button
             onClick={onStart}
@@ -434,20 +437,20 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
       </section>
 
       {/* Footer */}
-      <footer className="py-12 bg-slate-950">
+      <footer className="py-12 bg-white border-t border-slate-200">
         <div className="max-w-6xl mx-auto px-6">
           <div className="flex flex-col md:flex-row justify-between items-center gap-6">
             <div className="flex items-center gap-2">
               <img src="/280_logo.png" alt="WINAID" className="h-8" />
-              <span className="font-black text-lg text-white tracking-tight">WIN<span className="text-blue-400">AID</span></span>
+              <span className="font-black text-lg text-slate-800 tracking-tight">WIN<span className="text-blue-500">AID</span></span>
             </div>
-            <div className="flex items-center gap-6 text-sm text-slate-500">
-              <span>winaid@daum.net</span>
-              <span>02-584-9400</span>
-              <a href="https://winaid.co.kr" target="_blank" rel="noopener noreferrer" className="hover:text-blue-400 transition-colors">winaid.co.kr</a>
+            <div className="flex items-center gap-6 text-sm text-slate-600 font-medium">
+              <a href="mailto:winaid@daum.net" className="hover:text-blue-500 transition-colors">winaid@daum.net</a>
+              <a href="tel:025849400" className="hover:text-blue-500 transition-colors">02-584-9400</a>
+              <a href="https://winaid.co.kr" target="_blank" rel="noopener noreferrer" className="hover:text-blue-500 transition-colors">winaid.co.kr</a>
             </div>
           </div>
-          <div className="mt-8 pt-8 border-t border-slate-800 text-center text-sm text-slate-600">
+          <div className="mt-8 pt-8 border-t border-slate-100 text-center text-sm text-slate-400">
             &copy; {new Date().getFullYear()} WINAID. All rights reserved.
           </div>
         </div>
