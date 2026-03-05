@@ -425,14 +425,14 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
       </section>
 
       {/* Trust / About WINAID */}
-      <section className="py-24 bg-gradient-to-b from-slate-900 to-blue-950 text-white">
+      <section className="py-24 bg-gradient-to-b from-blue-50 to-white">
         <div className="max-w-5xl mx-auto px-6">
           <div className="text-center mb-16">
-            <p className="text-blue-400 font-bold text-sm tracking-wider uppercase mb-3">About WINAID</p>
-            <h2 className="text-3xl md:text-5xl font-black">
+            <p className="text-blue-500 font-bold text-sm tracking-wider uppercase mb-3">About WINAID</p>
+            <h2 className="text-3xl md:text-5xl font-black text-slate-900">
               누구보다 병원을 잘 아니까,<br />직접 만들었습니다
             </h2>
-            <p className="text-lg text-slate-400 mt-6 max-w-2xl mx-auto leading-relaxed">
+            <p className="text-lg text-slate-500 mt-6 max-w-2xl mx-auto leading-relaxed">
               2017년 설립 이후 치과, 성형외과, 피부과, 정형외과, 한의원 등<br className="hidden md:block" />
               300곳 이상의 병원과 함께해온 윈에이드의 13년 노하우가 AI에 담겨있습니다.
             </p>
@@ -445,11 +445,11 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
               '거래처 재계약률 95%의 신뢰',
               '의료광고법 전문 컨설팅 & AI 검증',
             ].map((item, i) => (
-              <div key={i} className="flex items-center gap-3 bg-white/[0.08] border border-white/10 rounded-xl px-5 py-4">
-                <svg className="w-5 h-5 text-blue-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <div key={i} className="flex items-center gap-3 bg-white rounded-xl px-5 py-4 border border-slate-200 shadow-sm">
+                <svg className="w-5 h-5 text-blue-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                 </svg>
-                <span className="font-medium">{item}</span>
+                <span className="font-medium text-slate-700">{item}</span>
               </div>
             ))}
           </div>
