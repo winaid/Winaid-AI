@@ -927,11 +927,14 @@ ${logoInstructions}
 ${extraPrompt ? `\n[ADDITIONAL USER REQUEST]\n${extraPrompt}` : ''}
 
 ⛔ FORBIDDEN:
+- Do NOT render instruction labels like "날짜:", "제목:", "TITLE:", "SUBTITLE:", "[MAIN TITLE]", etc.
+- Only render the actual content text inside the quotes ("...")
 - Do NOT change or translate any Korean text
 - No watermarks, no logos (unless hospital logo provided)
 - No English text (except decorative labels like "SCHEDULE", "INFORMATION")
 - No generic stock photo feel - must look like designed template
-- No blurry or hard-to-read text`.trim();
+- No blurry or hard-to-read text
+- No raw data labels or metadata in the image`.trim();
 }
 
 function buildScheduleTextContent(data: {
@@ -963,7 +966,7 @@ function buildScheduleTextContent(data: {
     calGrid += line.trimEnd() + '\n';
   }
 
-  let content = `제목: "${title}"\n날짜: ${year}. ${String(month).padStart(2, '0')}\n\n${calGrid}`;
+  let content = `"${title}"\n${year}년 ${month}월\n\n${calGrid}`;
 
   if (closedDays && closedDays.length > 0) {
     content += `\n🔴 휴진일: ${closedDays.map(d => `${d.day}일`).join(', ')}`;
@@ -985,41 +988,52 @@ function buildEventTextContent(data: {
   title: string; subtitle?: string; price?: string; originalPrice?: string;
   discount?: string; period?: string; description?: string;
 }): string {
-  let content = `메인 제목: "${data.title}"`;
-  if (data.subtitle) content += `\n부제목: "${data.subtitle}"`;
-  if (data.discount) content += `\n할인 배지: "${data.discount}"`;
-  if (data.originalPrice) content += `\n정가 (취소선): "${data.originalPrice}"`;
-  if (data.price) content += `\n이벤트 가격 (크게 강조): "${data.price}"`;
-  if (data.period) content += `\n기간: "${data.period}"`;
-  if (data.description) content += `\n상세:\n${data.description}`;
+  // AI에게 레이아웃 힌트를 주되 "라벨:" 형태가 이미지에 나오지 않게!
+  let content = `[MAIN TITLE - largest, bold, center] "${data.title}"`;
+  if (data.subtitle) content += `\n[SUBTITLE - smaller, above title] "${data.subtitle}"`;
+  if (data.discount) content += `\n[BADGE - eye-catching accent color] "${data.discount}"`;
+  if (data.originalPrice) content += `\n[STRIKETHROUGH price] "${data.originalPrice}"`;
+  if (data.price) content += `\n[HIGHLIGHT price - large, bold, accent color] "${data.price}"`;
+  if (data.period) content += `\n[PERIOD - small text] "${data.period}"`;
+  if (data.description) content += `\n[DETAILS]\n${data.description}`;
   return content;
 }
 
 function buildDoctorTextContent(data: {
   doctorName: string; specialty: string; career: string[]; greeting?: string;
 }): string {
-  let content = `의사 이름 (크게): "${data.doctorName}"`;
-  content += `\n전문 분야: "${data.specialty}"`;
-  if (data.career.length > 0) content += `\n경력/학력:\n${data.career.map(c => `• ${c}`).join('\n')}`;
-  if (data.greeting) content += `\n인사말: "${data.greeting}"`;
+  let content = `[NAME - largest, bold] "${data.doctorName}"`;
+  content += `\n[SPECIALTY - accent color badge] "${data.specialty}"`;
+  if (data.career.length > 0) content += `\n[CAREER LIST - clean bullet points]\n${data.career.map(c => `• ${c}`).join('\n')}`;
+  if (data.greeting) content += `\n[GREETING - italic or light weight] "${data.greeting}"`;
   return content;
 }
 
 function buildNoticeTextContent(data: {
   title: string; content: string[]; effectiveDate?: string;
 }): string {
-  let text = `공지 제목 (크게): "${data.title}"`;
-  if (data.content.length > 0) text += `\n내용:\n${data.content.map((c, i) => `${i + 1}. ${c}`).join('\n')}`;
-  if (data.effectiveDate) text += `\n적용일: "${data.effectiveDate}"`;
+  let text = `[TITLE - largest, bold, center] "${data.title}"`;
+  if (data.content.length > 0) text += `\n[CONTENT - numbered list, readable]\n${data.content.map((c, i) => `${i + 1}. ${c}`).join('\n')}`;
+  if (data.effectiveDate) text += `\n[EFFECTIVE DATE - subtle, bottom] "${data.effectiveDate}"`;
   return text;
 }
 
 function buildGreetingTextContent(data: {
   holiday: string; greeting: string; closurePeriod?: string;
 }): string {
-  let content = `명절: "${data.holiday}"`;
-  content += `\n인사말 (크게, 중앙):\n"${data.greeting}"`;
-  if (data.closurePeriod) content += `\n휴진 기간: "${data.closurePeriod}"`;
+  // 명절별 테마 장식 힌트
+  const holidayDecorations: Record<string, string> = {
+    '설날': 'Traditional Korean New Year theme: lucky bags (복주머니), Korean patterns, red/gold accents, plum blossoms',
+    '추석': 'Korean Chuseok/Harvest Moon theme: full moon, songpyeon rice cakes, autumn leaves, warm golden tones',
+    '새해': 'New Year celebration theme: fireworks, confetti, champagne vibes, midnight blue and gold',
+    '어버이날': 'Korean Parents Day theme: carnation flowers, warm pink/red tones, heartfelt and tender mood',
+    '크리스마스': 'Christmas theme: snowflakes, Christmas tree, red/green/gold, festive and warm, winter wonderland',
+  };
+  const deco = holidayDecorations[data.holiday] || 'Festive holiday theme with appropriate seasonal decorations';
+
+  let content = `[HOLIDAY VISUAL THEME - decorate the image with these elements]\n${deco}`;
+  content += `\n\n[GREETING MESSAGE - largest, bold, center, beautiful typography]\n"${data.greeting}"`;
+  if (data.closurePeriod) content += `\n\n[CLOSURE INFO - small, subtle, bottom area] "휴진 안내: ${data.closurePeriod}"`;
   return content;
 }
 

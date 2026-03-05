@@ -100,6 +100,31 @@ export default function TemplateGenerator() {
   useEffect(() => { setDayMarks(new Map()); setShortenedHours(new Map()); setVacationReasons(new Map()); setResultImage(null); }, [month, year]);
   useEffect(() => { setResultImage(null); setError(null); }, [category]);
 
+  // 명절 자동 기본값
+  const HOLIDAY_DEFAULTS: Record<string, { msg: string; closure: string; style?: string }> = {
+    '설날': { msg: '새해 복 많이 받으세요\n건강하고 행복한 한 해 되시길 바랍니다', closure: '1/28(화) ~ 1/30(목)' },
+    '추석': { msg: '풍성한 한가위 보내세요\n가족과 함께 행복한 추석 되세요', closure: '10/5(일) ~ 10/7(화)' },
+    '새해': { msg: 'Happy New Year!\n새해에도 건강하시길 바랍니다', closure: '1/1(수)' },
+    '어버이날': { msg: '감사합니다, 사랑합니다\n어버이날을 진심으로 축하드립니다', closure: '' },
+    '크리스마스': { msg: 'Merry Christmas!\n따뜻하고 행복한 성탄절 보내세요', closure: '12/25(목)' },
+  };
+  useEffect(() => {
+    const defaults = HOLIDAY_DEFAULTS[greetHoliday];
+    if (defaults && category === 'greeting') {
+      if (!greetMsg) setGreetMsg(defaults.msg);
+      if (!greetClosure) setGreetClosure(defaults.closure);
+    }
+  }, [greetHoliday]);
+
+  // 카테고리 전환 시 명절 기본값 리셋
+  useEffect(() => {
+    if (category === 'greeting') {
+      const defaults = HOLIDAY_DEFAULTS[greetHoliday];
+      if (defaults && !greetMsg) setGreetMsg(defaults.msg);
+      if (defaults && !greetClosure) setGreetClosure(defaults.closure);
+    }
+  }, [category]);
+
   // 달력 그리드
   const firstDay = new Date(year, month - 1, 1).getDay();
   const lastDate = new Date(year, month, 0).getDate();
@@ -350,7 +375,7 @@ export default function TemplateGenerator() {
         {category === 'greeting' && (
           <div className="space-y-3">
             <div><label className={labelCls}>명절 종류</label>
-              <div className="flex gap-1.5">{['설날','추석','새해','어버이날','크리스마스'].map(h => (<button key={h} onClick={()=>setGreetHoliday(h)} className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${greetHoliday===h?'bg-slate-800 text-white shadow-md':'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>{h}</button>))}</div>
+              <div className="flex gap-1.5">{['설날','추석','새해','어버이날','크리스마스'].map(h => (<button key={h} onClick={()=>{ setGreetHoliday(h); const d = HOLIDAY_DEFAULTS[h]; if (d) { setGreetMsg(d.msg); setGreetClosure(d.closure); } }} className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${greetHoliday===h?'bg-slate-800 text-white shadow-md':'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>{h}</button>))}</div>
             </div>
             <div><label className={labelCls}>인사말</label><textarea value={greetMsg} onChange={e=>setGreetMsg(e.target.value)} placeholder={"풍성한 한가위 보내시고\n건강하고 행복한 추석 되세요"} rows={3} className={textareaCls} /></div>
             <div><label className={labelCls}>휴진 기간 <span className="text-slate-400 font-normal">(선택)</span></label><input type="text" value={greetClosure} onChange={e=>setGreetClosure(e.target.value)} placeholder="9/28(토) ~ 10/1(화)" className={inputCls} /></div>
