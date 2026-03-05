@@ -19,12 +19,6 @@ import { saveBlogHistory } from "./contentSimilarityService";
 
 // Gemini API 핵심 인프라는 geminiClient.ts에서 import됨
 
-// 🔍 Google Search 필요 여부 판단
-function needsGoogleSearch(request: GenerationRequest): boolean {
-  // 🔍 모든 콘텐츠에서 Google Search 활성화 (최신 의료 정보 반영)
-  console.log('🔍 Google Search 활성화 - 최신 정보 검색');
-  return true;
-}
 
 // 🏥 질병관리청 검색 함수 (1차 검색) - 타임아웃 120초
 async function searchKDCA(query: string): Promise<string> {
@@ -1129,18 +1123,10 @@ ${request.keyword ? `9. 🚨 **핵심: 키워드("${request.keyword}")와 자연
   const medicalLawMode = request.medicalLawMode || 'strict';
   const isRelaxedMode = medicalLawMode === 'relaxed';
 
-  // 의료광고법은 gpt52Stage1의 MEDICAL_LAW_COMMON에 포함됨 (중복 로드 방지)
-  // medicalLawService 동적 크롤링은 별도 추가 금지어용으로만 사용
-  const medicalLawPrompt = ''; // gpt52Stage1에 이미 포함
-  if (!isRelaxedMode) {
-    safeProgress('⚖️ 의료광고법 기본 규칙 적용');
-  } else {
-    safeProgress('🔥 의료광고법 자유 모드');
-  }
-
-  // 🚀 GPT-5.2 동적 프롬프트 연결 (Stage 1) - v6.7 업데이트
-  safeProgress('🔄 동적 금지어 테이블 로딩 중...');
+  safeProgress(isRelaxedMode ? '🔥 의료광고법 자유 모드' : '⚖️ 의료광고법 기본 규칙 적용');
+  safeProgress('🔄 프롬프트 로딩 중...');
   const gpt52Stage1 = getStage1_ContentGeneration(targetLength, medicalLawMode);
+  // dynamicSystemPrompt는 검색 결과 기반 systemPrompt 구성에 사용
   const dynamicSystemPrompt = await getDynamicSystemPrompt(medicalLawMode);
   safeProgress(isRelaxedMode ? '✅ 자유 모드 프롬프트 준비 완료' : '✅ 동적 프롬프트 준비 완료 (최신 의료광고법 반영)');
 
@@ -1218,8 +1204,6 @@ ${tb.content.substring(0, 1500)}
 - SEO 키워드: ${request.keywords || '없음'}${request.disease ? `\n- 질환(글의 핵심 주제): ${request.disease}` : ''}
 - 이미지: ${targetImageCount}장
 - 목표 글자 수: ${targetLength}자 ~ ${targetLength + 200}자
-
-${medicalLawPrompt}
 
 ${gpt52Stage1}
 
@@ -1614,12 +1598,10 @@ JSON 형식으로 응답:
     console.log('📊 검색 결과 상세:');
     console.log(`   🔵 Gemini: ${geminiResult.success ? '성공' : '실패'} - 팩트 ${geminiFactCount}개, 통계 ${geminiStatCount}개`);
     
-    // GPT 검색 비활성화 (Gemini만 사용)
+    // GPT 검색 비활성화 (Gemini 단독 사용)
     const gptResults: any = null;
     const gptFactCount = 0;
     const gptStatCount = 0;
-    
-    // 🔀 크로스체크: 두 결과 병합 및 검증
     
     // health.kdca.go.kr 우선순위 정렬 함수 (1순위: health.kdca.go.kr)
     const sortByKdcaHealthPriority = (items: any[]) => {
@@ -1817,46 +1799,26 @@ JSON 형식으로 응답:
       };
       safeProgress(`✅ Gemini 검색 완료: ${geminiFactCount + geminiStatCount}개 정보 수집`);
       
-    } else if (gptResults) {
-      // GPT만 성공 (현재 비활성화)
-      console.log('🟢 GPT 검색 성공');
-      searchResults = {
-        collected_facts: sortByKdcaHealthPriority(gptResults.collected_facts || []),
-        key_statistics: sortByKdcaHealthPriority(gptResults.key_statistics || []),
-        latest_guidelines: sortByKdcaHealthPriority(gptResults.latest_guidelines || []),
-        sources: gptResults.sources || [],
-        gpt_found: gptFactCount + gptStatCount
-      };
-      safeProgress(`✅ GPT 검색 완료: ${gptFactCount + gptStatCount}개 정보 수집`);
-      
     } else {
-      // 둘 다 실패 - 단순화된 에러 처리 (크로스체크 필드 제거)
+      // 검색 실패
       console.error('❌ 검색 실패');
       safeProgress('⚠️ 검색 실패 - AI 학습 데이터 기반으로 진행');
       searchResults = {};
     }
     
-    // 📍 Step 2: AI가 검색 결과를 바탕으로 글 작성
-    console.log('📍 Step 2 시작: AI 글쓰기...');
-    // Gemini 전용 동적 프롬프트 사용 - v6.7 업데이트 (최신 의료광고법 자동 반영)
+    // Step 2: AI가 검색 결과를 바탕으로 글 작성
+    console.log('Step 2: AI 글쓰기...');
     const geminiSystemPrompt = await getDynamicSystemPrompt(request.medicalLawMode || 'strict');
-    
-    // 크로스체크 상태에 따른 신뢰도 안내 (둘 다 실패는 이미 위에서 throw됨)
-    // crossCheckGuide 제거 (GPT 없으므로 불필요)
-    
+
     const systemPrompt = `${geminiSystemPrompt}
 
-[📚 검색 결과 - 최신 정보]
-
-아래는 Google Search로 수집한 최신 정보입니다.
-신뢰할 수 있는 출처의 정보를 우선적으로 활용하세요.
+[검색 결과 - 최신 정보]
+아래는 Google Search로 수집한 최신 정보입니다. 신뢰할 수 있는 출처 우선 활용.
 
 ${JSON.stringify(searchResults, null, 2)}
 
-[⚠️ 크로스체크 기반 작성 규칙]
-1. ${searchResults.cross_check_status === 'dual_verified' 
-    ? '🎯 교차 검증된 정보(cross_verified=true)를 최우선으로 사용하세요 - 가장 신뢰도 높음!' 
-    : '단일 소스 검색 결과이므로 신뢰도 높은 정보 우선 사용'}
+[작성 규칙]
+1. 신뢰도 높은 정보 우선 사용
 2. 🔥 출처/기관명 절대 언급 금지! (질병관리청, 보건복지부 등 모두 금지)
 3. 🔥 숫자/수치 사용 규칙 (의료광고법 기준 구분!)
    ❌ 금지 (통계·마케팅성 수치):
@@ -1897,48 +1859,16 @@ ${JSON.stringify(searchResults, null, 2)}
     console.log('📍 프롬프트 길이:', (isCardNews ? cardNewsPrompt : blogPrompt).length);
     console.log('📍 시스템 프롬프트(검색 결과) 길이:', JSON.stringify(searchResults, null, 2).length);
     
-    // 🚀 새로운 단계별 처리 시스템 사용 (향후 컨텍스트 확장 시 활용)
-    // contextData는 이미 위의 systemPrompt에 포함됨 (중복 제거)
-    
-    // GPT 호출 부분 주석 처리 (Gemini만 사용)
-    /*
-    const responseText = await callOpenAI_Staged(
-      isCardNews ? cardNewsPrompt : blogPrompt, 
-      contextData,
-      request.textLength || 2000,
-      safeProgress
-    );
-    console.log('📍 callOpenAI_Staged 응답 받음, 길이:', responseText?.length);
-    
-    result = JSON.parse(responseText);
-    
-    console.log('✅ GPT-5.2 작성 완료');
-    */
-    
-    // Gemini 사용 (기본값)
-    console.log('🔵 Using Gemini for text generation');
-    console.log('📏 프롬프트 길이:', (isCardNews ? cardNewsPrompt : blogPrompt).length, 'chars');
-    console.log('📋 프롬프트 미리보기:', (isCardNews ? cardNewsPrompt : blogPrompt).substring(0, 200));
+    // Gemini API 호출
+    const finalPrompt = isCardNews ? cardNewsPrompt : blogPrompt;
+    console.log('🔵 Gemini 텍스트 생성 시작, 프롬프트:', finalPrompt.length, 'chars');
     try {
-      console.log('🔄 Gemini API 호출 시작...');
-      console.log('📦 systemPrompt 길이:', systemPrompt?.length || 0);
-      console.log('📦 blogPrompt 길이:', blogPrompt?.length || 0);
-      console.log('📦 cardNewsPrompt 길이:', cardNewsPrompt?.length || 0);
-      console.log('📦 isCardNews:', isCardNews);
-      const finalPrompt = isCardNews ? cardNewsPrompt : blogPrompt;
-      console.log('📦 최종 프롬프트 길이:', finalPrompt?.length || 0);
-      console.log('📦 전체 프롬프트 (시스템+유저) 길이:', (systemPrompt?.length || 0) + (finalPrompt?.length || 0));
-      console.log('📦 프롬프트 미리보기 (처음 1000자):', `${systemPrompt}\n\n${finalPrompt}`.substring(0, 1000));
 
       // 🎬 Pro로 바로 생성 (단일 단계)
       safeProgress('✍️ 글 작성 중...');
 
       try {
-        // 🔍 Google Search 최적화: 필요한 경우에만 활성화
-        const useGoogleSearch = needsGoogleSearch(request);
-
-        console.log('🚀 Pro 생성 시작...');
-        console.log('🔍 Google Search:', useGoogleSearch ? '활성화' : '비활성화 (속도 최적화)');
+        const useGoogleSearch = true; // 항상 최신 의료 정보 검색
 
         const responseSchema = {
           type: Type.OBJECT,
@@ -1962,21 +1892,11 @@ ${JSON.stringify(searchResults, null, 2)}
           maxOutputTokens: 16384,
         });
 
-        console.log('✅ Pro 생성 완료');
-        console.log('✅ Gemini 응답 타입:', typeof geminiResponse);
-        console.log('✅ Gemini 응답 키:', Object.keys(geminiResponse || {}));
-
-        // content가 있는지 확인
+        console.log('Pro 생성 완료');
         const contentText = geminiResponse.content || geminiResponse.text || JSON.stringify(geminiResponse);
-
-        // 🔍 정확한 글자수 계산: HTML 태그 제거 → 공백 제거
-        const textWithoutHtml = contentText.replace(/<[^>]+>/g, ''); // HTML 태그 제거
-        const charCountNoSpaces = textWithoutHtml.replace(/\s/g, '').length; // 공백 제거
-
-        console.log(`📊 글자수 계산:`);
-        console.log(`   - HTML 포함: ${contentText.length}자`);
-        console.log(`   - HTML 제거: ${textWithoutHtml.length}자 (공백 포함)`);
-        console.log(`   - 순수 텍스트: ${charCountNoSpaces}자 (공백 제외) ✅`);
+        const textWithoutHtml = contentText.replace(/<[^>]+>/g, '');
+        const charCountNoSpaces = textWithoutHtml.replace(/\s/g, '').length;
+        console.log(`글자수: ${charCountNoSpaces}자 (목표: ${targetLength}자)`);
 
         // 🔍 글자수 목표 대비 검증 (200자 초과까지 OK)
         const targetMin = targetLength;
@@ -2214,9 +2134,7 @@ ${request.topic}${request.disease ? `, 질환: ${request.disease}` : ''}
       }
     }
 
-    // Stage 2 (AI 냄새 보정) 제거 — PRO 생성 프롬프트에서 이미 처리, 별도 API 호출 불필요
-
-    // 🔧 fact_check 기본값 설정 (Gemini가 반환하지 않은 필드 보완) - 정확성 강화로 기준 상향
+    // fact_check 기본값 설정 (Gemini가 반환하지 않은 필드 보완) - 정확성 강화로 기준 상향
     if (!result.fact_check) {
       result.fact_check = {};
     }
