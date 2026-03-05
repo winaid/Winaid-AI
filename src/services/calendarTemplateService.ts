@@ -1131,9 +1131,7 @@ The reference image text is OLD/WRONG - IGNORE IT. Use ONLY the new text data in
 
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
-      // 400 에러 발생 시 imageSize 제거하여 재시도
-      const useImageSize = attempt <= 2 ? '4K' : undefined;
-      console.log(`🎨 템플릿 AI 이미지 생성 시도 ${attempt}/${MAX_RETRIES} (${category}, ref=${!!styleRefPart}, size=${useImageSize || 'default'})...`);
+      console.log(`🎨 템플릿 AI 이미지 생성 시도 ${attempt}/${MAX_RETRIES} (${category}, ref=${!!styleRefPart})...`);
 
       const result = await ai.models.generateContent({
         model: 'gemini-3-pro-image-preview',
@@ -1141,7 +1139,7 @@ The reference image text is OLD/WRONG - IGNORE IT. Use ONLY the new text data in
         config: {
           responseModalities: ['IMAGE', 'TEXT'],
           temperature: 0.5,
-          ...(useImageSize ? { imageSize: useImageSize } : {}),
+          imageSize: '4K',
         },
       });
 
