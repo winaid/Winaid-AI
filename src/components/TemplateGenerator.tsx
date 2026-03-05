@@ -618,21 +618,19 @@ export default function TemplateGenerator() {
       {/* 오른쪽: 미리보기 */}
       <div className="flex-1 flex flex-col items-center justify-center overflow-y-auto">
         {error&&<div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">{error}</div>}
-        {resultImage?(
+        {previewStyleImage ? (
+          <div className="space-y-4 w-full flex flex-col items-center">
+            <p className="text-xs font-semibold text-violet-600">내 스타일 미리보기: {previewStyleImage.name}</p>
+            <img src={previewStyleImage.url} alt={previewStyleImage.name} className="max-w-full max-h-[70vh] rounded-2xl shadow-2xl border-2 border-violet-200" />
+            <button onClick={() => setPreviewStyleImage(null)} className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-600 rounded-xl text-sm font-medium transition-colors">{resultImage ? '생성 결과로 돌아가기' : '닫기'}</button>
+          </div>
+        ): resultImage?(
           <div className="space-y-4 w-full flex flex-col items-center">
             <img src={resultImage} alt="생성된 이미지" className="max-w-full max-h-[70vh] rounded-2xl shadow-2xl" />
             <div className="flex gap-3">
               <button onClick={handleDownload} className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-sm transition-colors shadow-lg">다운로드</button>
               <button onClick={handleGenerate} disabled={generating} className="px-6 py-2.5 bg-slate-600 hover:bg-slate-700 text-white rounded-xl font-bold text-sm transition-colors">다시 생성</button>
             </div>
-          </div>
-        ): previewStyleImage ? (
-          <div className="space-y-4 w-full flex flex-col items-center">
-            <div className="text-center">
-              <p className="text-xs font-semibold text-violet-600 mb-2">내 스타일 미리보기: {previewStyleImage.name}</p>
-            </div>
-            <img src={previewStyleImage.url} alt={previewStyleImage.name} className="max-w-full max-h-[70vh] rounded-2xl shadow-2xl border-2 border-violet-200" />
-            <button onClick={() => setPreviewStyleImage(null)} className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-600 rounded-xl text-sm font-medium transition-colors">닫기</button>
           </div>
         ):(
           <div className="text-center space-y-4">
