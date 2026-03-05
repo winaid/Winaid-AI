@@ -30,7 +30,8 @@ const CATEGORIES: { id: TemplateCategory; name: string; icon: string; desc: stri
 const IMAGE_SIZES = [
   { id: 'square', label: '1080x1080', width: 1080, height: 1080, icon: '\u2B1C', desc: '\uC778\uC2A4\uD0C0 \uD53C\uB4DC' },
   { id: 'landscape', label: '1920x1080', width: 1920, height: 1080, icon: '\uD83D\uDDA5\uFE0F', desc: '\uAC00\uB85C\uD615 \uBC30\uB108' },
-  { id: 'portrait', label: '1080x1920', width: 1080, height: 1920, icon: '\uD83D\uDCF1', desc: '\uC138\uB85C\uD615 \uC2A4\uD1A0\uB9AC' },
+  { id: 'portrait34', label: '1080x1440', width: 1080, height: 1440, icon: '\uD83D\uDCCB', desc: '3:4 \uC138\uB85C' },
+  { id: 'portrait', label: '1080x1920', width: 1080, height: 1920, icon: '\uD83D\uDCF1', desc: '9:16 \uC138\uB85C' },
   { id: 'auto', label: '\uC790\uB3D9', width: 0, height: 0, icon: '\u2728', desc: '\uCF58\uD150\uCE20 \uB9DE\uCDA4' },
 ] as const;
 
@@ -525,7 +526,7 @@ export default function TemplateGenerator() {
         {/* 이미지 사이즈 */}
         <div>
           <label className="block text-xs font-semibold text-slate-600 mb-2">이미지 사이즈</label>
-          <div className="grid grid-cols-4 gap-1.5">
+          <div className="grid grid-cols-5 gap-1.5">
             {IMAGE_SIZES.map(s => (
               <button key={s.id} onClick={() => setImageSize(s.id)} className={`py-2 px-1 rounded-xl text-center transition-all ${imageSize === s.id ? 'bg-slate-800 text-white shadow-md' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>
                 <div className="text-sm leading-none">{s.icon}</div>

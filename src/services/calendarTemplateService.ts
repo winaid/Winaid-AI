@@ -881,8 +881,11 @@ function buildTemplateAiPrompt(req: AiTemplateRequest): string {
     greeting: 'holiday greeting / seasonal message from hospital',
   };
 
+  const isPortrait = imageSize && imageSize.width > 0 && imageSize.height > 0 && imageSize.height > imageSize.width;
   const aspectDesc = imageSize && imageSize.width > 0 && imageSize.height > 0
-    ? (imageSize.width > imageSize.height ? 'landscape (wide)' : imageSize.width < imageSize.height ? 'portrait (tall)' : 'square 1:1')
+    ? (imageSize.width > imageSize.height ? 'landscape (wide)'
+      : imageSize.width < imageSize.height ? `portrait (tall, ${imageSize.width}:${imageSize.height} ratio ~${(imageSize.width / imageSize.height).toFixed(2)})`
+      : 'square 1:1')
     : 'square 1:1';
 
   // 추가 프롬프트를 상단 우선순위로
@@ -918,13 +921,17 @@ Use these colors for headings, backgrounds, accents, and key UI elements. These 
       : 'Place branding at the BOTTOM, below all content.';
     const logoInstructions = req.logoBase64
       ? `- Hospital LOGO and NAME side by side: [LOGO] [NAME]
-- Grouped as ONE unit, logo left, name right, vertically centered`
+- Grouped as ONE TIGHT unit with NO gap between them, logo left, name right, vertically centered
+- ⚠️ Logo and hospital name MUST be adjacent/touching - never separated by other content`
       : `- Display "${hospitalName}" in a clean font`;
+    const portraitWarning = isPortrait
+      ? `\n⚠️ PORTRAIT FORMAT: Logo and hospital name MUST stay together as one compact group. Do NOT spread them apart vertically.`
+      : '';
     return `
 [HOSPITAL BRANDING - ${posLabel}]
 "${hospitalName}"
 ${posDetail}
-${logoInstructions}`;
+${logoInstructions}${portraitWarning}`;
   })() : '';
 
   // 병원 기본 정보 블록 (진료시간, 전화, 주소)
