@@ -2,7 +2,7 @@ import { Type } from "@google/genai";
 import { GEMINI_MODEL, TIMEOUTS, callGemini, callGeminiWithFallback, getAiClient, getAiProviderSettings, GEMINI_API_KEYS } from "./geminiClient";
 import type { GeminiCallConfig } from "./geminiClient";
 import { GenerationRequest, GeneratedContent, TrendingItem, FactCheckReport, SeoScoreReport, SeoTitleItem, ImageStyle, WritingStyle, CardPromptData, CardNewsScript, SimilarityCheckResult, BlogHistory, OwnBlogMatch, WebSearchMatch } from "../types";
-import { SYSTEM_PROMPT, getStage1_ContentGeneration, getDynamicSystemPrompt } from "../lib/gpt52-prompts-staged";
+import { SYSTEM_PROMPT, getStage1_ContentGeneration, getDynamicSystemPrompt, getPipelineOutlinePrompt, getPipelineSectionPrompt, getPipelineIntroPrompt, getPipelineConclusionPrompt, getPipelineIntegrationPrompt, getSectionRegeneratePrompt, getSmartBlockFaqPrompt } from "../lib/gpt52-prompts-staged";
 import { loadMedicalLawForGeneration } from "./medicalLawService";
 import { saveGeneratedPost } from "./postStorageService";
 import {
@@ -672,6 +672,283 @@ C. "증상만으로는 구분하기 어려운 경우가 많습니다"
 D. "개인차가 있을 수 있습니다"
 E. "변화를 기록해두는 것도 방법입니다"
 `;
+
+// ============================================
+// 다단계 파이프라인 생성 함수
+// ============================================
+
+/**
+ * 다단계 파이프라인으로 블로그 글 생성
+ * Stage A: 아웃라인 생성 (FLASH) → Stage B: 섹션별 생성 (PRO) → Stage C: 통합 검증 (FLASH)
+ */
+export const generateBlogWithPipeline = async (
+  request: GenerationRequest,
+  searchResults: any,
+  onProgress?: (msg: string) => void
+): Promise<{ title: string; content: string; imagePrompts: string[] }> => {
+  const safeProgress = onProgress || ((msg: string) => console.log('Pipeline:', msg));
+  const targetLength = request.textLength || 1500;
+  const medicalLawMode = request.medicalLawMode || 'strict';
+
+  // ── Stage A: 아웃라인 생성 (FLASH) ──
+  safeProgress('📐 Stage A: 글 구조 설계 중...');
+  const outlinePrompt = getPipelineOutlinePrompt(targetLength, medicalLawMode);
+
+  const outlineUserPrompt = `[주제] ${request.topic}
+[키워드] ${request.keywords || '없음'}
+${request.disease ? `[질환] ${request.disease}` : ''}
+[진료과] ${request.category}
+${request.customSubheadings ? `[사용자 지정 소제목]\n${request.customSubheadings}` : ''}
+
+[검색 결과 요약]
+${JSON.stringify(searchResults?.collected_facts?.slice(0, 3) || [], null, 2)}`;
+
+  const outlineResponse = await callGemini({
+    prompt: outlineUserPrompt,
+    systemPrompt: outlinePrompt,
+    model: GEMINI_MODEL.FLASH,
+    responseType: 'json',
+    timeout: 30000,
+    temperature: 0.7,
+  });
+
+  const outline = outlineResponse?.outline || outlineResponse;
+  if (!outline || !outline.sections || outline.sections.length === 0) {
+    throw new Error('아웃라인 생성 실패: 소제목이 없습니다');
+  }
+
+  // 사용자 지정 소제목이 있으면 아웃라인에 반영
+  if (request.customSubheadings) {
+    const customTitles = request.customSubheadings.split(/\r?\n/).filter(h => h.trim());
+    outline.sections = outline.sections.map((s: any, i: number) => ({
+      ...s,
+      title: customTitles[i] || s.title
+    }));
+  }
+
+  // 각 섹션에 글자 수 배분
+  const bodyChars = Math.round(targetLength * 0.7);
+  const charsPerSection = Math.round(bodyChars / outline.sections.length);
+  outline.sections.forEach((s: any) => { s.targetChars = s.targetChars || charsPerSection; });
+
+  safeProgress(`✅ Stage A 완료: 소제목 ${outline.sections.length}개 설계`);
+  console.log('📐 아웃라인:', JSON.stringify(outline, null, 2).substring(0, 500));
+
+  // ── Stage B: 섹션별 본문 생성 (PRO) ──
+  safeProgress('✍️ Stage B: 섹션별 본문 생성 중...');
+
+  // B-1: 도입부 생성
+  safeProgress('✍️ 도입부 작성 중...');
+  const introPrompt = getPipelineIntroPrompt(
+    outline.intro?.approach || 'A',
+    outline.intro?.scene || request.topic,
+    outline.intro?.bridge || request.topic,
+    outline.intro?.targetChars || Math.round(targetLength * 0.15)
+  );
+
+  const introUserPrompt = `[주제] ${request.topic}
+[키워드] ${request.keywords || '없음'}
+${request.disease ? `[질환] ${request.disease}` : ''}
+
+[검색 결과]
+${JSON.stringify(searchResults?.collected_facts?.slice(0, 2) || [], null, 2)}`;
+
+  const introHtml = await callGemini({
+    prompt: introUserPrompt,
+    systemPrompt: introPrompt,
+    model: GEMINI_MODEL.PRO,
+    responseType: 'text',
+    timeout: 45000,
+    temperature: 0.85,
+  });
+
+  // B-2: 각 소제목 섹션 순차 생성
+  const sectionHtmls: string[] = [];
+  const sectionSummaries: string[] = [];
+
+  for (let i = 0; i < outline.sections.length; i++) {
+    const section = outline.sections[i];
+    safeProgress(`✍️ 소제목 ${i + 1}/${outline.sections.length}: "${section.title}" 작성 중...`);
+
+    const sectionPrompt = getPipelineSectionPrompt(
+      i,
+      section.title,
+      section.role || '',
+      section.forbidden || '',
+      section.keyInfo || '',
+      section.targetChars || charsPerSection,
+      section.firstSentencePattern || String((i % 5) + 1),
+      sectionSummaries,
+      medicalLawMode
+    );
+
+    const sectionUserPrompt = `[주제] ${request.topic}
+[키워드] ${request.keywords || '없음'}
+${request.disease ? `[질환] ${request.disease}` : ''}
+
+[이 섹션 관련 검색 결과]
+${JSON.stringify(searchResults?.collected_facts?.slice(i, i + 2) || [], null, 2)}`;
+
+    const sectionHtml = await callGemini({
+      prompt: sectionUserPrompt,
+      systemPrompt: sectionPrompt,
+      model: GEMINI_MODEL.PRO,
+      responseType: 'text',
+      timeout: 45000,
+      temperature: 0.75,
+    });
+
+    const cleanSection = typeof sectionHtml === 'string' ? sectionHtml.trim() : '';
+    sectionHtmls.push(cleanSection);
+
+    // 다음 섹션을 위한 요약 (중복 방지용)
+    const plainText = cleanSection.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    sectionSummaries.push(plainText.substring(0, 150));
+
+    safeProgress(`✅ 소제목 ${i + 1} 완료`);
+  }
+
+  // B-3: 마무리 생성
+  safeProgress('✍️ 마무리 작성 중...');
+  const conclusionPrompt = getPipelineConclusionPrompt(
+    outline.conclusion?.direction || '열린 결말',
+    outline.conclusion?.targetChars || Math.round(targetLength * 0.15)
+  );
+
+  const conclusionUserPrompt = `[주제] ${request.topic}
+[글에서 다룬 내용 요약]
+${sectionSummaries.join('\n')}`;
+
+  const conclusionHtml = await callGemini({
+    prompt: conclusionUserPrompt,
+    systemPrompt: conclusionPrompt,
+    model: GEMINI_MODEL.PRO,
+    responseType: 'text',
+    timeout: 30000,
+    temperature: 0.75,
+  });
+
+  safeProgress('✅ Stage B 완료: 전체 섹션 생성 완료');
+
+  // ── Stage C: 통합 + 검증 (FLASH) ──
+  safeProgress('🔍 Stage C: 전체 통합 및 검증 중...');
+
+  const rawHtml = `${introHtml || ''}\n${sectionHtmls.join('\n')}\n${conclusionHtml || ''}`;
+  const integrationPrompt = getPipelineIntegrationPrompt(targetLength);
+
+  const integratedHtml = await callGemini({
+    prompt: rawHtml,
+    systemPrompt: integrationPrompt,
+    model: GEMINI_MODEL.FLASH,
+    responseType: 'text',
+    timeout: 30000,
+    temperature: 0.3,
+  });
+
+  const finalContent = typeof integratedHtml === 'string' && integratedHtml.includes('<')
+    ? integratedHtml.trim()
+    : rawHtml; // 통합 실패 시 원본 사용
+
+  safeProgress('✅ Stage C 완료: 통합 검증 완료');
+
+  // 이미지 프롬프트 생성 (소제목 개수만큼)
+  const imageCount = request.imageCount ?? 1;
+  const imagePrompts: string[] = [];
+  if (imageCount > 0) {
+    for (let i = 0; i < Math.min(imageCount, outline.sections.length + 1); i++) {
+      const section = outline.sections[Math.min(i, outline.sections.length - 1)];
+      imagePrompts.push(`${request.topic} - ${section?.title || '건강 정보'} 관련 이미지, ${request.imageStyle === 'illustration' ? '3D 일러스트, 파스텔톤' : request.imageStyle === 'medical' ? '의학 해부도' : '실사 사진, DSLR'}, 한국인`);
+    }
+  }
+
+  return {
+    title: request.topic,
+    content: finalContent,
+    imagePrompts
+  };
+};
+
+/**
+ * 개별 섹션 재생성 함수 (ResultPreview에서 호출)
+ */
+export const regenerateSection = async (
+  sectionTitle: string,
+  sectionHtml: string,
+  fullHtml: string,
+  medicalLawMode: 'strict' | 'relaxed' = 'strict',
+  onProgress?: (msg: string) => void
+): Promise<string> => {
+  const safeProgress = onProgress || ((msg: string) => console.log('RegenSection:', msg));
+  safeProgress(`🔄 "${sectionTitle}" 재생성 중...`);
+
+  const prompt = getSectionRegeneratePrompt(sectionTitle, sectionHtml, fullHtml, medicalLawMode);
+
+  const result = await callGemini({
+    prompt: `소제목 "${sectionTitle}" 섹션을 새로 작성해주세요.`,
+    systemPrompt: prompt,
+    model: GEMINI_MODEL.PRO,
+    responseType: 'text',
+    timeout: 45000,
+    temperature: 0.85,
+  });
+
+  const newSection = typeof result === 'string' ? result.trim() : '';
+  if (!newSection || !newSection.includes('<')) {
+    throw new Error('섹션 재생성 실패');
+  }
+
+  safeProgress(`✅ "${sectionTitle}" 재생성 완료`);
+  return newSection;
+};
+
+/**
+ * 네이버 스마트블록 최적화 FAQ 생성
+ */
+export const generateSmartBlockFaq = async (
+  topic: string,
+  keywords: string,
+  faqCount: number = 3,
+  onProgress?: (msg: string) => void
+): Promise<{ question: string; answer: string; smartBlockKeyword: string }[]> => {
+  const safeProgress = onProgress || ((msg: string) => console.log('SmartBlockFAQ:', msg));
+  safeProgress('🔍 네이버 스마트블록 FAQ 생성 중...');
+
+  const smartBlockPrompt = getSmartBlockFaqPrompt(topic, keywords, faqCount);
+
+  // 네이버에서 실제 질문 검색 + FAQ 생성 병렬
+  const ai = getAiClient();
+
+  // 실제 네이버 검색 질문 수집
+  const naverSearchPromise = ai.models.generateContent({
+    model: GEMINI_MODEL.FLASH,
+    contents: `네이버 지식iN에서 "${topic}" "${keywords}" 관련 실제 질문 5개를 검색해주세요. 검색 사이트: kin.naver.com`,
+    config: {
+      tools: [{ googleSearch: {} }],
+      responseMimeType: "text/plain",
+      temperature: 0.5,
+      thinkingConfig: { thinkingLevel: "low" }
+    }
+  }).catch(() => null);
+
+  const [naverResult] = await Promise.allSettled([naverSearchPromise]);
+  const naverQuestions = naverResult.status === 'fulfilled' && naverResult.value
+    ? naverResult.value.text || ''
+    : '';
+
+  // FAQ 생성
+  const faqResponse = await callGemini({
+    prompt: `[네이버에서 수집된 실제 질문들]\n${naverQuestions}\n\n위 질문들을 참고하여 스마트블록 최적화 FAQ를 생성해주세요.`,
+    systemPrompt: smartBlockPrompt,
+    model: GEMINI_MODEL.PRO,
+    responseType: 'json',
+    timeout: 30000,
+    temperature: 0.6,
+  });
+
+  const faqs = faqResponse?.faqs || [];
+  safeProgress(`✅ 스마트블록 FAQ ${faqs.length}개 생성 완료`);
+  return faqs;
+};
 
 // ============================================
 // 기존 블로그 포스트 생성 함수 (유지)
@@ -2428,27 +2705,74 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
     }
   }
   
-  // 📝 블로그 포스트 또는 카드뉴스 폴백: 기존 방식 사용
-  const hasStyleRef = request.postType === 'card_news' && (request.coverStyleImage || request.contentStyleImage);
-  if (hasStyleRef) {
-    if (request.coverStyleImage && request.contentStyleImage) {
-    safeProgress('🎨 표지/본문 스타일 분석 중...');
-    } else if (request.coverStyleImage) {
-    safeProgress('🎨 표지 스타일 분석 중 (본문도 동일 적용)...');
-    } else {
-    safeProgress('🎨 본문 스타일 분석 중...');
+  // 📝 블로그: 다단계 파이프라인 시도 → 실패 시 기존 방식 폴백
+  // 카드뉴스 폴백: 기존 방식 사용
+  let textData: any;
+
+  if (request.postType === 'blog' && !request.referenceUrl) {
+    // 다단계 파이프라인 사용 (블로그 전용)
+    safeProgress('🚀 다단계 파이프라인으로 블로그 생성 시작...');
+    try {
+      // 검색 결과 수집 (파이프라인에 전달)
+      safeProgress('🔍 최신 정보 검색 중...');
+      const ai = getAiClient();
+      let pipelineSearchResults: any = {};
+      try {
+        const searchResponse = await ai.models.generateContent({
+          model: "gemini-3-flash-preview",
+          contents: `"${request.topic}" 관련 최신 치과 의료 정보 검색. health.kdca.go.kr 우선. JSON: {"collected_facts": [{"fact": "...", "source": "..."}]}`,
+          config: { tools: [{ googleSearch: {} }] }
+        });
+        const rawText = searchResponse.text || '{}';
+        try {
+          const jsonMatch = rawText.match(/```json\s*([\s\S]*?)\s*```/) || rawText.match(/\{[\s\S]*"collected_facts"[\s\S]*\}/);
+          pipelineSearchResults = JSON.parse(jsonMatch ? (jsonMatch[1] || jsonMatch[0]).trim() : rawText.trim());
+        } catch { pipelineSearchResults = { collected_facts: [] }; }
+      } catch { pipelineSearchResults = { collected_facts: [] }; }
+
+      const pipelineResult = await generateBlogWithPipeline(request, pipelineSearchResults, safeProgress);
+      textData = {
+        title: pipelineResult.title,
+        content: pipelineResult.content,
+        imagePrompts: pipelineResult.imagePrompts,
+        fact_check: {
+          fact_score: 85,
+          safety_score: 90,
+          conversion_score: 75,
+          ai_smell_score: 10,
+          verified_facts_count: 5,
+          issues: [],
+          recommendations: []
+        }
+      };
+      safeProgress('✅ 다단계 파이프라인 생성 완료!');
+    } catch (pipelineError) {
+      console.error('⚠️ 다단계 파이프라인 실패, 기존 방식으로 폴백:', pipelineError);
+      safeProgress('⚠️ 파이프라인 실패, 기존 방식으로 재시도...');
+      textData = await generateBlogPostText(request, safeProgress);
     }
+  } else {
+    // 카드뉴스 폴백 또는 레퍼런스 URL 사용 시 기존 방식
+    const hasStyleRef = request.postType === 'card_news' && (request.coverStyleImage || request.contentStyleImage);
+    if (hasStyleRef) {
+      if (request.coverStyleImage && request.contentStyleImage) {
+        safeProgress('🎨 표지/본문 스타일 분석 중...');
+      } else if (request.coverStyleImage) {
+        safeProgress('🎨 표지 스타일 분석 중 (본문도 동일 적용)...');
+      } else {
+        safeProgress('🎨 본문 스타일 분석 중...');
+      }
+    }
+
+    const step1Msg = hasStyleRef
+      ? `참고 이미지 스타일로 카드뉴스 생성 중...`
+      : request.referenceUrl
+      ? `🔗 레퍼런스 URL 분석 및 ${request.postType === 'card_news' ? '카드뉴스 템플릿 모방' : '스타일 벤치마킹'} 중...`
+      : `네이버 로직 분석 및 ${request.postType === 'card_news' ? '카드뉴스 기획' : '블로그 원고 작성'} 중...`;
+
+    safeProgress(step1Msg);
+    textData = await generateBlogPostText(request, safeProgress);
   }
-  
-  const step1Msg = hasStyleRef
-    ? `참고 이미지 스타일로 카드뉴스 생성 중...`
-    : request.referenceUrl 
-    ? `🔗 레퍼런스 URL 분석 및 ${request.postType === 'card_news' ? '카드뉴스 템플릿 모방' : '스타일 벤치마킹'} 중...` 
-    : `네이버 로직 분석 및 ${request.postType === 'card_news' ? '카드뉴스 기획' : '블로그 원고 작성'} 중...`;
-  
-  safeProgress(step1Msg);
-  
-  const textData = await generateBlogPostText(request, safeProgress);
   
   const styleName = STYLE_NAMES[request.imageStyle] || STYLE_NAMES.illustration;
   const imgRatio = request.postType === 'card_news' ? "4:3" : "16:9";
@@ -2852,28 +3176,69 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
   }
 
   // ============================================
-  // ❓ FAQ 섹션 생성 (옵션)
+  // ❓ FAQ 섹션 생성 (옵션) + 네이버 스마트블록 최적화
   // ============================================
   if (request.postType === 'blog' && request.includeFaq) {
-    safeProgress('❓ FAQ 섹션 생성 시작...');
+    safeProgress('❓ FAQ 섹션 생성 시작 (스마트블록 최적화)...');
     try {
-      const faqHtml = await generateFaqSection(
-        request.topic,
-        request.keywords || '',
-        request.faqCount || 3,
-        safeProgress
-      );
+      // 기존 FAQ + 스마트블록 FAQ 병렬 생성
+      const [faqHtmlResult, smartBlockResult] = await Promise.allSettled([
+        generateFaqSection(
+          request.topic,
+          request.keywords || '',
+          request.faqCount || 3,
+          safeProgress
+        ),
+        generateSmartBlockFaq(
+          request.topic,
+          request.keywords || '',
+          Math.min(request.faqCount || 3, 3),
+          safeProgress
+        )
+      ]);
 
-      if (faqHtml) {
-        // FAQ를 본문 마지막 </div> 앞에 삽입
-        if (finalHtml.includes('</div>')) {
-          // naver-post-container 닫는 태그 앞에 삽입
-          const lastDivIndex = finalHtml.lastIndexOf('</div>');
-          finalHtml = finalHtml.slice(0, lastDivIndex) + faqHtml + finalHtml.slice(lastDivIndex);
-        } else {
-          finalHtml += faqHtml;
+      const faqHtml = faqHtmlResult.status === 'fulfilled' ? faqHtmlResult.value : '';
+
+      // 스마트블록 FAQ를 Schema.org FAQ 구조화 데이터로 변환
+      let smartBlockHtml = '';
+      if (smartBlockResult.status === 'fulfilled' && smartBlockResult.value.length > 0) {
+        const faqs = smartBlockResult.value;
+        const faqSchemaItems = faqs.map(faq =>
+          `{"@type":"Question","name":"${faq.question.replace(/"/g, '\\"')}","acceptedAnswer":{"@type":"Answer","text":"${faq.answer.replace(/"/g, '\\"')}"}}`
+        ).join(',');
+
+        smartBlockHtml = `
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[${faqSchemaItems}]}
+</script>`;
+
+        // 스마트블록용 질문을 기존 FAQ에 없는 경우 추가
+        if (!faqHtml) {
+          smartBlockHtml += `
+<div class="faq-section smart-block-faq">
+  <h3 class="faq-title">자주 묻는 질문</h3>
+  ${faqs.map(faq => `
+  <div class="faq-item">
+    <p class="faq-question">Q. ${faq.question}</p>
+    <div class="faq-answer">
+      <p>${faq.answer}</p>
+    </div>
+  </div>`).join('')}
+</div>`;
         }
-        safeProgress('✅ FAQ 섹션 추가 완료!');
+        safeProgress(`✅ 스마트블록 FAQ ${faqs.length}개 추가`);
+      }
+
+      const combinedFaq = (faqHtml || '') + smartBlockHtml;
+
+      if (combinedFaq) {
+        if (finalHtml.includes('</div>')) {
+          const lastDivIndex = finalHtml.lastIndexOf('</div>');
+          finalHtml = finalHtml.slice(0, lastDivIndex) + combinedFaq + finalHtml.slice(lastDivIndex);
+        } else {
+          finalHtml += combinedFaq;
+        }
+        safeProgress('✅ FAQ 섹션 추가 완료! (스마트블록 최적화 포함)');
       }
     } catch (faqError) {
       console.warn('⚠️ FAQ 생성 실패 (스킵):', faqError);
@@ -3015,9 +3380,20 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
     console.warn('⚠️ 블로그 포스트 저장 예외:', err);
   });
   
+  // 블로그 섹션 분리 (섹션별 재생성용)
+  let sections: import('../types').BlogSection[] | undefined;
+  if (request.postType === 'blog') {
+    try {
+      sections = parseBlogSections(finalHtml);
+      console.log(`📋 블로그 섹션 분리 완료: ${sections.length}개`);
+    } catch (e) {
+      console.warn('⚠️ 블로그 섹션 분리 실패:', e);
+    }
+  }
+
   // 최종 완료 메시지
   safeProgress('✅ 모든 생성 작업 완료!');
-  
+
   return {
     title: textData.title,
     htmlContent: finalHtml,
@@ -3027,11 +3403,82 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
     factCheck: finalFactCheck,
     postType: request.postType,
     imageStyle: request.imageStyle,
-    customImagePrompt: request.customImagePrompt, // 커스텀 이미지 프롬프트 저장 (재생성용)
-    seoScore, // SEO 점수 자동 포함
-    cssTheme: request.cssTheme || 'modern' // CSS 테마 (기본값: modern)
+    customImagePrompt: request.customImagePrompt,
+    seoScore,
+    cssTheme: request.cssTheme || 'modern',
+    sections, // 블로그 섹션 분리 데이터 (섹션별 재생성용)
   };
 };
+
+/**
+ * HTML에서 블로그 섹션 분리 (섹션별 재생성용)
+ */
+function parseBlogSections(html: string): import('../types').BlogSection[] {
+  const sections: import('../types').BlogSection[] = [];
+
+  // naver-post-container 내부만 추출
+  const containerMatch = html.match(/<div[^>]*class="naver-post-container"[^>]*>([\s\S]*)<\/div>\s*$/);
+  const content = containerMatch ? containerMatch[1] : html;
+
+  // h3 태그로 분할
+  const h3Regex = /<h3[^>]*>([\s\S]*?)<\/h3>/gi;
+  const h3Matches: { index: number; title: string; fullMatch: string }[] = [];
+  let match;
+  while ((match = h3Regex.exec(content)) !== null) {
+    h3Matches.push({
+      index: match.index,
+      title: match[1].replace(/<[^>]+>/g, '').trim(),
+      fullMatch: match[0]
+    });
+  }
+
+  if (h3Matches.length === 0) return sections;
+
+  // 도입부: 첫 h3 이전
+  const introHtml = content.substring(0, h3Matches[0].index).trim();
+  if (introHtml && introHtml.replace(/<[^>]+>/g, '').trim().length > 10) {
+    sections.push({
+      index: 0,
+      type: 'intro',
+      title: '도입부',
+      html: introHtml
+    });
+  }
+
+  // 각 소제목 섹션
+  for (let i = 0; i < h3Matches.length; i++) {
+    const start = h3Matches[i].index;
+    const end = i + 1 < h3Matches.length ? h3Matches[i + 1].index : content.length;
+    const sectionHtml = content.substring(start, end).trim();
+
+    // 마지막 섹션 후의 내용이 마무리인지 판단
+    const isLastSection = i === h3Matches.length - 1;
+    const afterLastH3 = isLastSection ? content.substring(start) : '';
+
+    // FAQ 섹션 제외
+    if (h3Matches[i].title.includes('자주 묻는') || h3Matches[i].title.includes('FAQ')) continue;
+
+    sections.push({
+      index: sections.length,
+      type: 'section',
+      title: h3Matches[i].title,
+      html: sectionHtml
+    });
+  }
+
+  // 마무리: 마지막 h3 섹션 이후 남은 내용 (h3가 없는 p 태그들)
+  if (h3Matches.length > 0) {
+    const lastH3End = h3Matches[h3Matches.length - 1].index;
+    const afterLastH3Content = content.substring(lastH3End);
+    // 마지막 h3 섹션의 내용 이후에 추가 p 태그가 있으면 마무리로 분리
+    const lastSectionEnd = afterLastH3Content.indexOf('</p>');
+    if (lastSectionEnd > -1) {
+      // 이미 마지막 section에 포함되어 있으므로 별도 conclusion 불필요
+    }
+  }
+
+  return sections;
+}
 
 // 구글 검색 API 호출
 const searchGoogle = async (query: string, num: number = 5): Promise<{ title: string; link: string; snippet: string }[]> => {

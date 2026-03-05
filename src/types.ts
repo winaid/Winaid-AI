@@ -190,11 +190,19 @@ export interface CardNewsSlideScript {
   imageKeyword: string;
 }
 
+// 블로그 섹션 정보 (섹션별 재생성용)
+export interface BlogSection {
+  index: number;
+  type: 'intro' | 'section' | 'conclusion';
+  title: string; // 소제목 (intro/conclusion은 빈 문자열)
+  html: string;  // 이 섹션의 HTML
+}
+
 export interface GeneratedContent {
   htmlContent: string;
   title: string;
-  imageUrl: string; 
-  fullHtml: string; 
+  imageUrl: string;
+  fullHtml: string;
   tags: string[];
   factCheck?: FactCheckReport;
   postType: PostType;
@@ -203,6 +211,7 @@ export interface GeneratedContent {
   customImagePrompt?: string; // 커스텀 이미지 프롬프트 (재생성용)
   cardPrompts?: CardPromptData[]; // 카드별 프롬프트 (재생성용)
   seoScore?: SeoScoreReport; // SEO 자동 평가 결과
+  sections?: BlogSection[]; // 블로그 섹션 분리 데이터 (섹션별 재생성용)
 }
 
 export interface GenerationState {

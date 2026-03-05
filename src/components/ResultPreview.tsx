@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { GeneratedContent, ImageStyle as _ImageStyle, CssTheme, SeoScoreReport, FactCheckReport, SimilarityCheckResult } from '../types';
+import { GeneratedContent, ImageStyle as _ImageStyle, CssTheme, SeoScoreReport, FactCheckReport, SimilarityCheckResult, BlogSection } from '../types';
 import { modifyPostWithAI, regenerateCardSlide as _regenerateCardSlide, recheckAiSmell } from '../services/postProcessingService';
+import { regenerateSection } from '../services/geminiService';
 import { generateSingleImage, generateBlogImage, recommendImagePrompt, recommendCardNewsPrompt, CARD_LAYOUT_RULE as _CARD_LAYOUT_RULE, STYLE_KEYWORDS } from '../services/imageGenerationService';
 import { evaluateSeoScore } from '../services/seoService';
 import { checkContentSimilarity, saveBlogHistory } from '../services/contentSimilarityService';
@@ -98,6 +99,11 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
   const [isCheckingSimilarity, setIsCheckingSimilarity] = useState(false);
   const [similarityResult, setSimilarityResult] = useState<SimilarityCheckResult | null>(null);
   const [showSimilarityModal, setShowSimilarityModal] = useState(false);
+
+  // 📝 섹션별 재생성 상태
+  const [blogSections, setBlogSections] = useState<BlogSection[]>(content.sections || []);
+  const [regeneratingSection, setRegeneratingSection] = useState<number | null>(null);
+  const [showSectionPanel, setShowSectionPanel] = useState(false);
   
   // content.seoScore가 있으면 자동으로 설정
   useEffect(() => {
@@ -106,6 +112,14 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
       setSeoScore(content.seoScore);
     }
   }, [content.seoScore]);
+
+  // 블로그 섹션 데이터 업데이트
+  useEffect(() => {
+    if (content.sections && content.sections.length > 0) {
+      setBlogSections(content.sections);
+      setShowSectionPanel(true); // 섹션이 있으면 패널 자동 표시
+    }
+  }, [content.sections]);
   
   // 디버깅: factCheck 상태 확인
   useEffect(() => {
@@ -1033,6 +1047,57 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
     if (editorRef.current) {
       isInternalChange.current = true;
       setLocalHtml(editorRef.current.innerHTML);
+    }
+  };
+
+  // 📝 섹션별 재생성 핸들러
+  const handleSectionRegenerate = async (sectionIndex: number) => {
+    const section = blogSections[sectionIndex];
+    if (!section || regeneratingSection !== null) return;
+
+    setRegeneratingSection(sectionIndex);
+    try {
+      // Undo를 위해 현재 상태 저장
+      setHtmlHistory(prev => [...prev, localHtml]);
+      setCanUndo(true);
+
+      const newSectionHtml = await regenerateSection(
+        section.title,
+        section.html,
+        localHtml,
+        'strict',
+        (msg) => setEditProgress(msg)
+      );
+
+      // HTML에서 해당 섹션을 교체
+      let updatedHtml = localHtml;
+      const oldSectionHtml = section.html;
+      if (updatedHtml.includes(oldSectionHtml)) {
+        updatedHtml = updatedHtml.replace(oldSectionHtml, newSectionHtml);
+      } else {
+        // 정확한 매칭 실패 시 h3 태그 기반으로 교체 시도
+        const escapedTitle = section.title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const sectionRegex = new RegExp(
+          `<h3[^>]*>${escapedTitle}<\\/h3>[\\s\\S]*?(?=<h3|<div class="faq|$)`,
+          'i'
+        );
+        updatedHtml = updatedHtml.replace(sectionRegex, newSectionHtml);
+      }
+
+      setLocalHtml(updatedHtml);
+
+      // 섹션 목록도 업데이트
+      setBlogSections(prev => prev.map((s, i) =>
+        i === sectionIndex ? { ...s, html: newSectionHtml } : s
+      ));
+
+      setEditProgress(`✅ "${section.title}" 재생성 완료`);
+    } catch (error) {
+      console.error('섹션 재생성 실패:', error);
+      setEditProgress('❌ 재생성 실패');
+    } finally {
+      setRegeneratingSection(null);
+      setTimeout(() => setEditProgress(''), 3000);
     }
   };
 
@@ -2528,8 +2593,64 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
 
       <div ref={scrollContainerRef} className={`flex-1 overflow-y-auto p-8 lg:p-16 custom-scrollbar transition-colors duration-300 ${darkMode ? 'bg-slate-900' : 'bg-slate-50'}`}>
         {activeTab === 'preview' ? (
-          <div className={`mx-auto bg-white shadow-lg border border-slate-100 p-12 naver-preview min-h-[800px] ${content.postType === 'card_news' ? 'max-w-xl' : 'max-w-3xl'}`}>
-              <div 
+          <div className={`flex gap-4 ${content.postType === 'card_news' ? 'max-w-xl' : 'max-w-5xl'} mx-auto`}>
+            {/* 섹션별 재생성 패널 (블로그 전용) */}
+            {content.postType === 'blog' && blogSections.length > 0 && showSectionPanel && (
+              <div className={`w-64 flex-shrink-0 rounded-xl p-4 space-y-2 h-fit sticky top-4 ${darkMode ? 'bg-slate-800 border border-slate-700' : 'bg-white border border-slate-200 shadow-sm'}`}>
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className={`text-sm font-bold ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>
+                    섹션별 재생성
+                  </h4>
+                  <button onClick={() => setShowSectionPanel(false)} className="text-xs text-slate-400 hover:text-slate-600">
+                    닫기
+                  </button>
+                </div>
+                {blogSections.map((section, idx) => (
+                  <div key={idx} className={`p-3 rounded-lg text-sm ${darkMode ? 'bg-slate-700 hover:bg-slate-600' : 'bg-slate-50 hover:bg-slate-100'} transition-colors`}>
+                    <div className={`font-medium mb-1 truncate ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>
+                      {section.type === 'intro' ? '도입부' : section.title}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-xs ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                        {section.html.replace(/<[^>]+>/g, '').length}자
+                      </span>
+                      <button
+                        onClick={() => handleSectionRegenerate(idx)}
+                        disabled={regeneratingSection !== null}
+                        className={`ml-auto text-xs px-3 py-1 rounded-md font-medium transition-all ${
+                          regeneratingSection === idx
+                            ? 'bg-blue-100 text-blue-600 animate-pulse'
+                            : regeneratingSection !== null
+                            ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                            : 'bg-violet-100 text-violet-700 hover:bg-violet-200 active:scale-95'
+                        }`}
+                      >
+                        {regeneratingSection === idx ? '재생성 중...' : '재생성'}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                {regeneratingSection !== null && editProgress && (
+                  <div className="mt-2 p-2 bg-blue-50 rounded-lg text-xs text-blue-700 animate-pulse">
+                    {editProgress}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 섹션 패널 토글 버튼 (블로그 전용) */}
+            {content.postType === 'blog' && blogSections.length > 0 && !showSectionPanel && (
+              <button
+                onClick={() => setShowSectionPanel(true)}
+                className={`fixed left-4 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full shadow-lg ${darkMode ? 'bg-slate-700 text-slate-300 hover:bg-slate-600' : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200'}`}
+                title="섹션별 재생성 패널 열기"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+              </button>
+            )}
+
+          <div className={`flex-1 bg-white shadow-lg border border-slate-100 p-12 naver-preview min-h-[800px]`}>
+              <div
                 ref={editorRef}
                 contentEditable
                 suppressContentEditableWarning
@@ -2575,6 +2696,7 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
                 }}
                 className="focus:outline-none"
               />
+          </div>
           </div>
         ) : (
           <div className="max-w-3xl mx-auto h-full">

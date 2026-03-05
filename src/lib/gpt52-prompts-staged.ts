@@ -422,3 +422,270 @@ export const getAllStages = async (textLength: number = 1500) => {
     stage2: getStage2_AiRemovalAndCompliance(textLength)
   };
 };
+
+// ═══════════════════════════════════════════
+// 다단계 파이프라인 프롬프트
+// ═══════════════════════════════════════════
+
+/**
+ * Pipeline Stage A: 아웃라인 생성 (FLASH 모델용)
+ * 소제목 설계 + 각 섹션 역할 정의 + 글자 수 배분
+ */
+export const getPipelineOutlinePrompt = (
+  textLength: number = 1500,
+  medicalLawMode: 'strict' | 'relaxed' = 'strict'
+) => {
+  const medicalLawBlock = medicalLawMode === 'relaxed' ? RELAXED_MEDICAL_LAW : MEDICAL_LAW_COMMON;
+  return `너는 병원 블로그 글의 구조를 설계하는 에디터다.
+${IDENTITY}
+${STRUCTURE}
+
+${medicalLawBlock}
+
+[미션] 아래 주제에 맞는 블로그 글의 아웃라인을 설계하라.
+
+[글자 수 배분]
+- 전체 목표: ${textLength}자
+- 도입부: ${Math.round(textLength * 0.15)}자 (15%)
+- 본문 소제목별: 균등 배분 (70%)
+- 마무리: ${Math.round(textLength * 0.15)}자 (15%)
+
+[JSON 출력 형식]
+{
+  "outline": {
+    "intro": {
+      "approach": "A~E 중 택1 (도입부 방식)",
+      "scene": "구체적 장면 1줄 설명",
+      "bridge": "브릿지 문장 방향",
+      "targetChars": ${Math.round(textLength * 0.15)}
+    },
+    "sections": [
+      {
+        "title": "소제목 (구어체 10~20자)",
+        "role": "이 섹션에서 다룰 내용 (2~3가지)",
+        "forbidden": "이 섹션에서 절대 다루지 않을 내용",
+        "keyInfo": "독자가 '어, 이건 몰랐는데?' 할 정보 1개",
+        "paragraphs": 2,
+        "targetChars": 0,
+        "firstSentencePattern": "1~5 중 택1 (소제목 첫 문장 패턴)"
+      }
+    ],
+    "conclusion": {
+      "direction": "마무리 방향 1줄",
+      "targetChars": ${Math.round(textLength * 0.15)}
+    },
+    "seoKeywordPlan": {
+      "mainKeyword": "메인 키워드",
+      "lsiKeywords": ["LSI 키워드 2~3개"],
+      "keywordPlacement": "키워드 배치 계획 (어느 소제목에 몇 회)"
+    }
+  }
+}`;
+};
+
+/**
+ * Pipeline Stage B: 섹션별 본문 생성 (PRO 모델용)
+ * 아웃라인의 특정 섹션 1개를 본문으로 생성
+ */
+export const getPipelineSectionPrompt = (
+  sectionIndex: number,
+  sectionTitle: string,
+  sectionRole: string,
+  sectionForbidden: string,
+  sectionKeyInfo: string,
+  targetChars: number,
+  firstSentencePattern: string,
+  previousSections: string[],
+  medicalLawMode: 'strict' | 'relaxed' = 'strict'
+) => {
+  const medicalLawBlock = medicalLawMode === 'relaxed' ? RELAXED_MEDICAL_LAW : MEDICAL_LAW_COMMON;
+  return `${IDENTITY}
+${TONE}
+${medicalLawBlock}
+
+[미션] 블로그 글의 소제목 ${sectionIndex + 1}번 섹션만 작성하라.
+
+[소제목] ${sectionTitle}
+[이 섹션의 역할] ${sectionRole}
+[절대 다루지 않을 내용] ${sectionForbidden}
+[독자가 놀랄 정보] ${sectionKeyInfo}
+[목표 글자 수] ${targetChars}자
+[첫 문장 패턴] ${firstSentencePattern}번 패턴 사용
+
+${previousSections.length > 0 ? `[이전 섹션에서 이미 다룬 내용 - 절대 반복 금지]
+${previousSections.map((s, i) => `섹션 ${i + 1}: ${s}`).join('\n')}` : ''}
+
+[규칙]
+- 2~3문단, 문단당 3~4문장
+- 문단마다 구체적 의학 정보 최소 1개
+- 어미 3회 연속 금지
+- HTML <p> 태그로 출력 (소제목 h3 태그 포함)
+- 소제목 태그 포함: <h3>${sectionTitle}</h3>
+
+[출력] HTML만 출력. 설명/코멘트 금지.`;
+};
+
+/**
+ * Pipeline Stage C: 도입부 생성 (PRO 모델용)
+ */
+export const getPipelineIntroPrompt = (
+  approach: string,
+  scene: string,
+  bridge: string,
+  targetChars: number
+) => {
+  return `${IDENTITY}
+${INTRO}
+${TONE}
+
+[미션] 블로그 글의 도입부만 작성하라.
+
+[도입부 방식] ${approach}
+[구체적 장면] ${scene}
+[브릿지 방향] ${bridge}
+[목표 글자 수] ${targetChars}자
+
+[규칙]
+- 1~2문단, 3~5문장
+- 1문단: 장면/상황 전개
+- 2문단: 검색 의도 브릿지
+- HTML <p> 태그로 출력
+
+[출력] HTML만 출력. 설명/코멘트 금지.`;
+};
+
+/**
+ * Pipeline Stage D: 마무리 생성 (PRO 모델용)
+ */
+export const getPipelineConclusionPrompt = (
+  direction: string,
+  targetChars: number
+) => {
+  return `${IDENTITY}
+${TONE}
+
+[미션] 블로그 글의 마무리만 작성하라.
+
+[마무리 방향] ${direction}
+[목표 글자 수] ${targetChars}자
+
+[규칙]
+- 2문단, 3~5문장
+- 결론을 닫지 않는다. 판단은 독자에게 남긴다
+- "~수 있습니다"로 열어두고 끝낸다
+- 본문 요약 금지. 새 정보 추가 금지. 행동 유도 금지
+- HTML <p> 태그로 출력
+
+[출력] HTML만 출력. 설명/코멘트 금지.`;
+};
+
+/**
+ * Pipeline Stage E: 통합 검증 + 보정 (FLASH 모델용)
+ * 섹션별로 생성된 본문을 합친 후 전체 흐름 검증
+ */
+export const getPipelineIntegrationPrompt = (
+  textLength: number = 1500
+) => {
+  return `${IDENTITY}
+${TONE}
+${WRITING_QUALITY}
+
+[미션] 아래 블로그 글은 섹션별로 나눠 작성한 뒤 합친 글이다.
+전체 흐름을 검증하고 최소한의 보정만 수행하라.
+
+[검증 항목]
+1. 소제목 간 내용 중복 → 중복 문장 삭제
+2. 어미 연속 3회 → 가운데 어미 변경
+3. 소제목 간 전환이 자연스러운지 → 전환 문장 1개 추가/수정
+4. 전체 글자 수 확인 → 목표: ${textLength}자 ~ ${textLength + 200}자
+
+[절대 금지]
+- 새 정보 추가
+- 소제목 추가/삭제
+- 문단 구조 변경
+- 30% 이상 수정
+
+[출력] 수정된 전체 HTML만 출력. 수정 이유/코멘트 출력 금지.`;
+};
+
+/**
+ * 섹션별 재생성 프롬프트 (개별 소제목 재생성용)
+ */
+export const getSectionRegeneratePrompt = (
+  sectionTitle: string,
+  sectionHtml: string,
+  fullContext: string,
+  medicalLawMode: 'strict' | 'relaxed' = 'strict'
+) => {
+  const medicalLawBlock = medicalLawMode === 'relaxed' ? RELAXED_MEDICAL_LAW : MEDICAL_LAW_COMMON;
+  return `${IDENTITY}
+${TONE}
+${medicalLawBlock}
+
+[미션] 아래 소제목 섹션만 새로 작성하라. 나머지 글과의 흐름은 유지.
+
+[소제목] ${sectionTitle}
+[현재 내용]
+${sectionHtml}
+
+[전체 글 맥락 (참고용)]
+${fullContext.substring(0, 2000)}
+
+[규칙]
+- 현재 내용과 다른 관점/표현으로 재작성
+- 같은 정보를 다루되 문장 구조와 어미를 변경
+- 2~3문단 유지
+- HTML <h3>과 <p> 태그로 출력
+
+[출력] <h3>${sectionTitle}</h3>부터 시작하는 HTML만 출력.`;
+};
+
+// ═══════════════════════════════════════════
+// 네이버 스마트블록 최적화 프롬프트
+// ═══════════════════════════════════════════
+
+/**
+ * 네이버 건강 Q&A 스마트블록 진입용 FAQ 프롬프트
+ */
+export const getSmartBlockFaqPrompt = (
+  topic: string,
+  keywords: string,
+  faqCount: number = 3
+) => {
+  return `너는 네이버 건강 Q&A 스마트블록에 노출될 수 있는 FAQ를 작성하는 AI다.
+
+[네이버 스마트블록이란]
+네이버 검색 결과 상단에 노출되는 '건강 Q&A' 영역.
+질문-답변 형식의 콘텐츠가 노출되며, 클릭률이 매우 높다.
+
+[스마트블록 진입 조건]
+1. 질문이 실제 검색창에 입력될 법한 자연어
+2. 답변 첫 문장이 질문에 대한 직접적 답변
+3. 답변이 2~4문장으로 완결
+4. 의료광고법 준수 (단정 표현 금지)
+
+[주제] ${topic}
+[키워드] ${keywords}
+
+[출력 형식] 정확히 ${faqCount}개의 FAQ를 JSON으로 출력
+{
+  "faqs": [
+    {
+      "question": "네이버 검색창에 칠 법한 자연어 질문",
+      "answer": "직접적 핵심 답변 1문장. 배경 설명 1~2문장. 주의사항 1문장.",
+      "smartBlockKeyword": "이 FAQ가 타겟하는 검색 키워드"
+    }
+  ]
+}
+
+[질문 작성 규칙]
+- "~ 인가요?", "~ 해도 되나요?", "~ 때 어떻게 하나요?" 식의 환자 언어
+- 치과 예시: "임플란트 후 술 마셔도 되나요?", "치아 미백 부작용 있나요?"
+- 의학 용어보다 일상어 우선 ("치주질환" → "잇몸병")
+
+[답변 작성 규칙]
+- 첫 문장: 질문에 대한 직접 답변 (AI 검색 채택용)
+- 2~3문장: 이유/배경 설명
+- 마지막: "개인차가 있을 수 있습니다" 류의 안전 장치
+- 단정 금지: "~입니다" → "~일 수 있습니다"`;
+};
