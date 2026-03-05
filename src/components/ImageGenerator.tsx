@@ -34,15 +34,39 @@ export default function ImageGenerator({ onProgress }: Props) {
   const [logoPosition, setLogoPosition] = useState<'top' | 'bottom'>('bottom');
   const logoInputRef = useRef<HTMLInputElement>(null);
 
-  // localStorage에서 로고/병원명 복원
+  // 병원 기본 정보 / 브랜드 컬러
+  const [clinicPhone, setClinicPhone] = useState('');
+  const [clinicHours, setClinicHours] = useState('');
+  const [clinicAddress, setClinicAddress] = useState('');
+  const [brandColor, setBrandColor] = useState('');
+  const [brandAccent, setBrandAccent] = useState('');
+  const [showHospitalInfo, setShowHospitalInfo] = useState(false);
+
+  // localStorage에서 로고/병원명/병원정보 복원
   useEffect(() => {
     try {
       const saved = localStorage.getItem(LOGO_STORAGE_KEY);
       const savedName = localStorage.getItem(HOSPITAL_NAME_KEY);
       if (saved) { setLogoDataUrl(saved); setLogoEnabled(true); }
       if (savedName) setHospitalName(savedName);
+      const info = localStorage.getItem('hospital_info');
+      if (info) {
+        const p = JSON.parse(info);
+        if (p.phone) setClinicPhone(p.phone);
+        if (p.hours) setClinicHours(p.hours);
+        if (p.address) setClinicAddress(p.address);
+        if (p.brandColor) setBrandColor(p.brandColor);
+        if (p.brandAccent) setBrandAccent(p.brandAccent);
+      }
     } catch {}
   }, []);
+
+  const saveHospitalInfo = useCallback(() => {
+    localStorage.setItem('hospital_info', JSON.stringify({
+      phone: clinicPhone, hours: clinicHours, address: clinicAddress,
+      brandColor, brandAccent,
+    }));
+  }, [clinicPhone, clinicHours, clinicAddress, brandColor, brandAccent]);
 
   const handleLogoUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -98,6 +122,20 @@ export default function ImageGenerator({ onProgress }: Props) {
         finalPrompt += `\n\n첨부된 로고 이미지를 디자인의 ${posLabel}에 자연스럽게 한 번만 배치해주세요. 다른 위치에 중복으로 넣지 마세요.`;
       }
 
+      // 병원 기본 정보 삽입
+      const infoLines = [clinicPhone, clinicHours, clinicAddress].filter(Boolean);
+      if (infoLines.length > 0) {
+        finalPrompt += `\n\n[병원 기본 정보 - 이미지 하단에 작지만 읽을 수 있는 크기로 표시]\n${infoLines.map(l => `"${l}"`).join('\n')}`;
+      }
+
+      // 브랜드 컬러 반영
+      if (brandColor || brandAccent) {
+        finalPrompt += `\n\n[브랜드 컬러 - 디자인의 메인 컬러로 사용]`;
+        if (brandColor) finalPrompt += `\nMain color: ${brandColor}`;
+        if (brandAccent) finalPrompt += `\nAccent color: ${brandAccent}`;
+        finalPrompt += `\n이 색상을 헤딩, 배경, 강조 요소에 우선 적용해주세요.`;
+      }
+
       const res = await generateCustomImage(
         {
           prompt: finalPrompt,
@@ -115,7 +153,7 @@ export default function ImageGenerator({ onProgress }: Props) {
     } finally {
       setGenerating(false);
     }
-  }, [prompt, aspectRatio, onProgress, logoEnabled, logoDataUrl, hospitalName, logoPosition]);
+  }, [prompt, aspectRatio, onProgress, logoEnabled, logoDataUrl, hospitalName, logoPosition, clinicPhone, clinicHours, clinicAddress, brandColor, brandAccent]);
 
   const handleDownload = useCallback(() => {
     if (!result) return;
@@ -297,6 +335,43 @@ export default function ImageGenerator({ onProgress }: Props) {
                 하단
               </button>
             </div>
+          </div>
+        )}
+      </div>
+
+      {/* 병원 기본 정보 / 브랜드 컬러 */}
+      <div className="bg-white border border-gray-200 rounded-2xl p-5 space-y-3">
+        <button
+          type="button"
+          onClick={() => setShowHospitalInfo(!showHospitalInfo)}
+          className="w-full flex items-center justify-between"
+        >
+          <label className="text-sm font-semibold text-gray-700 cursor-pointer">병원 기본 정보 / 브랜드 컬러</label>
+          <svg className={`w-4 h-4 text-gray-400 transition-transform ${showHospitalInfo ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+        </button>
+        {showHospitalInfo && (
+          <div className="space-y-3 pt-1">
+            <input type="text" value={clinicPhone} onChange={e => setClinicPhone(e.target.value)} onBlur={saveHospitalInfo} placeholder="전화번호: 02-1234-5678" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent" />
+            <input type="text" value={clinicHours} onChange={e => setClinicHours(e.target.value)} onBlur={saveHospitalInfo} placeholder="진료시간: 평일 09:00~18:00 / 토 09:00~13:00" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent" />
+            <input type="text" value={clinicAddress} onChange={e => setClinicAddress(e.target.value)} onBlur={saveHospitalInfo} placeholder="주소: 서울시 강남구 테헤란로 123" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent" />
+            <div className="flex gap-3">
+              <div className="flex-1 flex items-center gap-2">
+                <label className="text-xs text-gray-500 whitespace-nowrap">메인 컬러</label>
+                <input type="color" value={brandColor || '#4F46E5'} onChange={e => setBrandColor(e.target.value)} onBlur={saveHospitalInfo} className="w-8 h-8 rounded border border-gray-200 cursor-pointer p-0.5" />
+                <input type="text" value={brandColor} onChange={e => setBrandColor(e.target.value)} onBlur={saveHospitalInfo} placeholder="#4F46E5" className="flex-1 px-2 py-1.5 border border-gray-200 rounded-lg text-xs font-mono focus:ring-2 focus:ring-purple-500 focus:border-transparent" />
+              </div>
+              <div className="flex-1 flex items-center gap-2">
+                <label className="text-xs text-gray-500 whitespace-nowrap">포인트</label>
+                <input type="color" value={brandAccent || '#F59E0B'} onChange={e => setBrandAccent(e.target.value)} onBlur={saveHospitalInfo} className="w-8 h-8 rounded border border-gray-200 cursor-pointer p-0.5" />
+                <input type="text" value={brandAccent} onChange={e => setBrandAccent(e.target.value)} onBlur={saveHospitalInfo} placeholder="#F59E0B" className="flex-1 px-2 py-1.5 border border-gray-200 rounded-lg text-xs font-mono focus:ring-2 focus:ring-purple-500 focus:border-transparent" />
+              </div>
+            </div>
+            {(brandColor || brandAccent) && (
+              <div className="flex gap-2 items-center">
+                <div className="h-5 flex-1 rounded-lg" style={{ background: `linear-gradient(135deg, ${brandColor || '#4F46E5'}, ${brandAccent || '#F59E0B'})` }} />
+                <button type="button" onClick={() => { setBrandColor(''); setBrandAccent(''); saveHospitalInfo(); }} className="text-xs text-gray-400 hover:text-red-500">초기화</button>
+              </div>
+            )}
           </div>
         )}
       </div>
