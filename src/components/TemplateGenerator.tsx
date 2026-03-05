@@ -66,11 +66,28 @@ export default function TemplateGenerator() {
   // 이벤트
   const [evTitle, setEvTitle] = useState('');
   const [evSubtitle, setEvSubtitle] = useState('');
-  const [evPrice, setEvPrice] = useState('');
-  const [evOrigPrice, setEvOrigPrice] = useState('');
+  const [evPriceRaw, setEvPriceRaw] = useState('');
+  const [evOrigPriceRaw, setEvOrigPriceRaw] = useState('');
   const [evDiscount, setEvDiscount] = useState('');
   const [evPeriod, setEvPeriod] = useState('');
   const [evDesc, setEvDesc] = useState('');
+
+  // 숫자만 추출
+  const parseNum = (s: string) => Number(s.replace(/[^0-9]/g, '')) || 0;
+  // 숫자 → 쉼표 포맷
+  const fmtWon = (s: string) => { const n = parseNum(s); return n > 0 ? n.toLocaleString() + '원' : ''; };
+  // 표시용 가격
+  const evPrice = fmtWon(evPriceRaw);
+  const evOrigPrice = fmtWon(evOrigPriceRaw);
+  // 자동 할인율 계산
+  const autoDiscount = (() => {
+    const price = parseNum(evPriceRaw), orig = parseNum(evOrigPriceRaw);
+    if (orig > 0 && price > 0 && price < orig) {
+      const pct = Math.round((1 - price / orig) * 100);
+      return `${pct}% OFF`;
+    }
+    return '';
+  })();
 
   // 의사 소개
   const [docName, setDocName] = useState('');
@@ -178,7 +195,7 @@ export default function TemplateGenerator() {
       if (category === 'schedule') {
         templateData = { month, year, title: scheduleTitle || `${month}월 휴진 안내`, closedDays: closed, shortenedDays: shortened.length > 0 ? shortened : undefined, vacationDays: vacation.length > 0 ? vacation : undefined, notices: notices.split('\n').filter(Boolean) };
       } else if (category === 'event') {
-        templateData = { title: evTitle, subtitle: evSubtitle || undefined, price: evPrice || undefined, originalPrice: evOrigPrice || undefined, discount: evDiscount || undefined, period: evPeriod || undefined, description: evDesc || undefined };
+        templateData = { title: evTitle, subtitle: evSubtitle || undefined, price: evPrice || undefined, originalPrice: evOrigPrice || undefined, discount: evDiscount || autoDiscount || undefined, period: evPeriod || undefined, description: evDesc || undefined };
       } else if (category === 'doctor') {
         templateData = { doctorName: docName, specialty: docSpecialty, career: docCareer.split('\n').filter(Boolean), greeting: docGreeting || undefined, doctorPhotoBase64: docPhotoBase64 || undefined };
       } else if (category === 'notice') {
@@ -353,11 +370,23 @@ export default function TemplateGenerator() {
             <div><label className={labelCls}>이벤트 제목</label><input type="text" value={evTitle} onChange={e=>setEvTitle(e.target.value)} placeholder="예: 보톡스 50단위 이벤트" className={inputCls} /></div>
             <div><label className={labelCls}>부제목 <span className="text-slate-400 font-normal">(선택)</span></label><input type="text" value={evSubtitle} onChange={e=>setEvSubtitle(e.target.value)} placeholder="예: 봄맞이 특별 이벤트" className={inputCls} /></div>
             <div className="flex gap-3">
-              <div className="flex-1"><label className={labelCls}>이벤트 가격</label><input type="text" value={evPrice} onChange={e=>setEvPrice(e.target.value)} placeholder="99,000원" className={inputCls} /></div>
-              <div className="flex-1"><label className={labelCls}>정가 <span className="text-slate-400 font-normal">(취소선)</span></label><input type="text" value={evOrigPrice} onChange={e=>setEvOrigPrice(e.target.value)} placeholder="150,000원" className={inputCls} /></div>
+              <div className="flex-1">
+                <label className={labelCls}>이벤트 가격</label>
+                <input type="text" inputMode="numeric" value={evPriceRaw} onChange={e=>setEvPriceRaw(e.target.value)} placeholder="300000" className={inputCls} />
+                {evPrice && <p className="text-xs text-blue-500 mt-0.5 font-medium">{evPrice}</p>}
+              </div>
+              <div className="flex-1">
+                <label className={labelCls}>정가 <span className="text-slate-400 font-normal">(취소선)</span></label>
+                <input type="text" inputMode="numeric" value={evOrigPriceRaw} onChange={e=>setEvOrigPriceRaw(e.target.value)} placeholder="150000" className={inputCls} />
+                {evOrigPrice && <p className="text-xs text-slate-400 mt-0.5 line-through">{evOrigPrice}</p>}
+              </div>
             </div>
             <div className="flex gap-3">
-              <div className="flex-1"><label className={labelCls}>할인율 <span className="text-slate-400 font-normal">(뱃지)</span></label><input type="text" value={evDiscount} onChange={e=>setEvDiscount(e.target.value)} placeholder="30% OFF" className={inputCls} /></div>
+              <div className="flex-1">
+                <label className={labelCls}>할인율 <span className="text-slate-400 font-normal">(자동계산)</span></label>
+                <input type="text" value={evDiscount || autoDiscount} onChange={e=>setEvDiscount(e.target.value)} placeholder={autoDiscount || '자동 계산됨'} className={inputCls} />
+                {autoDiscount && !evDiscount && <p className="text-xs text-emerald-500 mt-0.5 font-medium">자동: {autoDiscount}</p>}
+              </div>
               <div className="flex-1"><label className={labelCls}>이벤트 기간</label><input type="text" value={evPeriod} onChange={e=>setEvPeriod(e.target.value)} placeholder="3/1 ~ 3/31" className={inputCls} /></div>
             </div>
             <div><label className={labelCls}>상세 설명 <span className="text-slate-400 font-normal">(선택)</span></label><textarea value={evDesc} onChange={e=>setEvDesc(e.target.value)} placeholder={"리프팅+보톡스 패키지\n첫 방문 고객 한정"} rows={3} className={textareaCls} /></div>
