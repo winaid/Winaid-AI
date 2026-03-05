@@ -362,8 +362,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
                 color: 'from-emerald-500 to-teal-500',
               },
               {
-                title: 'AI 이미지 &\n카드뉴스 생성',
-                desc: '블로그에 딱 맞는 고품질 이미지와 카드뉴스를 AI가 자동 생성합니다. 저작권 걱정 없이 바로 사용 가능.',
+                title: 'AI 이미지 &\n콘텐츠 자동 생성',
+                desc: '블로그 썸네일, 카드뉴스는 물론 진료 일정표, 시술 안내 이미지까지 AI가 자동 생성합니다. 저작권 걱정 없이 바로 사용 가능.',
                 tag: 'AI Image',
                 color: 'from-violet-500 to-purple-500',
               },
