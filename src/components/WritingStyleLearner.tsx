@@ -25,10 +25,10 @@ const WritingStyleLearner: React.FC<WritingStyleLearnerProps> = ({
   const _contentLabel = isPress ? '보도자료' : '블로그 글'; // 향후 UI 라벨에 활용
   const contentExample = isPress 
     ? '기존 보도자료를 붙여넣기 해주세요...\n\n예시:\n[보도자료] OO병원, 첨단 의료장비 도입으로 진료 서비스 강화\n\nOO병원(원장 홍길동)은 최신 의료장비를 도입하여 환자 진료 서비스를 한층 강화했다고 밝혔다.'
-    : '학습시킬 블로그 글을 붙여넣기 해주세요...\n\n예시:\n겨울철 피부 관리에 대해 살펴보겠습니다.\n요즘 날씨가 정말 건조합니다. 매일 아침 일어나면 얼굴이 당기는 분들이 많습니다.';
+    : '학습시킬 블로그 글을 붙여넣기 해주세요...\n\n예시:\n임플란트 수명에 대해 알아보겠습니다.\n임플란트를 심고 나면 관리가 정말 중요합니다. 자연 치아처럼 꼼꼼한 양치와 정기검진이 필요합니다.';
   const styleNamePlaceholder = isPress 
     ? '스타일 이름 (예: 공식 보도자료, 친근한 홍보문)'
-    : '말투 이름 (예: 따뜻한 선생님, 친근한 언니)';
+    : '말투 이름 (예: 친절한 원장님, 동네 치과언니)';
   const [isExpanded, setIsExpanded] = useState(false);
   const [inputMethod, setInputMethod] = useState<InputMethod>('text');
   const [textInput, setTextInput] = useState('');
