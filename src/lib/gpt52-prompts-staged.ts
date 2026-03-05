@@ -384,9 +384,22 @@ ${IDENTITY}
 ${TONE}
 ${REFINEMENT_RULES}`;
 
-export const getStage2_AiRemovalAndCompliance = (textLength: number = 1500, currentCharCount?: number) => {
+export const getStage2_AiRemovalAndCompliance = (
+  textLength: number = 1500,
+  currentCharCount?: number,
+  context?: { audienceMode?: string; persona?: string; tone?: string }
+) => {
+  let contextBlock = '';
+  if (context) {
+    contextBlock = `
+[보정 시 유지해야 할 원본 컨텍스트]
+${context.audienceMode ? `- 청중: ${context.audienceMode} → 이 청중에 맞는 정보 깊이/관점 유지` : ''}
+${context.persona ? `- 페르소나: ${context.persona} → 시점(1인칭/3인칭) 절대 변경 금지. 원본 화자 유지` : ''}
+${context.tone ? `- 말투: ${context.tone} → 보정 시 톤 변경 금지. 원본 어조 유지` : ''}
+⚠️ 보정은 어미 다양화/금지 표현 제거만. 시점·톤·청중 관점은 원본 그대로 보존`;
+  }
   return `${REFINEMENT_PROMPT}
-
+${contextBlock}
 [글자 수 참고]
 - 목표: ${textLength}자${currentCharCount ? `\n- 현재: ${currentCharCount}자` : ''}
 - 보정 시 내용 축약 금지. 글자 수 초과해도 그대로 둔다`;
@@ -434,14 +447,30 @@ export const getAllStages = async (textLength: number = 1500) => {
  */
 export const getPipelineOutlinePrompt = (
   textLength: number = 1500,
-  medicalLawMode: 'strict' | 'relaxed' = 'strict'
+  medicalLawMode: 'strict' | 'relaxed' = 'strict',
+  context?: { audienceMode?: string; persona?: string; tone?: string }
 ) => {
   const medicalLawBlock = medicalLawMode === 'relaxed' ? RELAXED_MEDICAL_LAW : MEDICAL_LAW_COMMON;
+  let contextBlock = '';
+  if (context) {
+    contextBlock = `
+[청중/페르소나/말투에 맞는 아웃라인 설계]
+${context.audienceMode ? `- 청중: ${context.audienceMode}
+  → 환자용: 증상 공감 → 원인 이해 → 관리법 순서
+  → 보호자용: 관찰 포인트 → 병원 방문 시점 → 보호자 역할 순서
+  → 전문가용: 메커니즘 → 감별진단 → 최신 가이드라인 순서` : ''}
+${context.persona ? `- 페르소나: ${context.persona}
+  → hospital_info: 객관적 정보 전달형 소제목 (질문형/정의형)
+  → director_1st: 임상 경험 기반 소제목 ("진료실에서 자주 보는~" 느낌)
+  → coordinator: 상담 시 자주 묻는 질문 기반 소제목` : ''}
+${context.tone ? `- 말투: ${context.tone}` : ''}`;
+  }
   return `너는 병원 블로그 글의 구조를 설계하는 에디터다.
 ${IDENTITY}
 ${STRUCTURE}
 
 ${medicalLawBlock}
+${contextBlock}
 
 [미션] 아래 주제에 맞는 블로그 글의 아웃라인을 설계하라.
 

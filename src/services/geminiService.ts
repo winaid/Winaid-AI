@@ -1474,14 +1474,22 @@ ${tb.subtitles.length > 0 ? `- 소제목 목록: ${tb.subtitles.join(' / ')}` : 
 1. 글자 수: 경쟁 글(${tb.charCount}자)보다 충분한 분량 확보
 2. 소제목: 경쟁 글(${tb.subtitles.length}개)보다 더 다양한 관점 제공
 3. 이미지: 경쟁 글(${tb.imageCount}개)과 동등 이상
-4. 차별화: 경쟁 글이 다루지 않는 관점/정보 추가
-5. 구조: 더 읽기 쉽고 체류 시간이 길어지는 구조 설계
+4. 구조: 더 읽기 쉽고 체류 시간이 길어지는 구조 설계
 
-[경쟁 글 본문 요약 (참고용)]
+[차별화 앵글 설계 - 경쟁 글과 다른 관점 필수]
+경쟁 글 소제목: ${tb.subtitles.join(' / ')}
+
+위 소제목이 이미 다루는 내용은 "같은 말 다시 하기"가 아니라 "더 깊은 메커니즘/숫자"로 차별화.
+경쟁 글이 빠뜨린 앵글을 최소 1~2개 추가:
+- 빠진 관점 후보: 자가 관리법, 연령대별 차이, 시술 후 관리, 비용/기간 현실 정보, 잘못 알려진 상식 바로잡기
+- 경쟁 글이 "~이란?"+"원인"+"증상"+"치료" 나열형이면 → 우리는 "독자 상황별 분기"나 "흔한 오해" 앵글로 차별화
+- 경쟁 글이 감성 위주면 → 우리는 구체적 숫자/메커니즘으로 차별화
+- 경쟁 글이 정보 나열형이면 → 우리는 상황 시나리오 + 정보 조합으로 차별화
+
+[경쟁 글 본문 요약 (참고용 - 베끼기 금지)]
 ${tb.content.substring(0, 1500)}
 
-위 경쟁 글을 분석했으니, 이보다 더 깊이 있고 읽기 편한 글을 작성한다.
-경쟁 글의 내용을 그대로 베끼지 말고, 더 나은 관점과 구조로 작성한다.
+⚠️ 경쟁 글을 참고만 하되, 문장/구조를 그대로 가져오면 안 됨. 더 나은 앵글과 깊이로 작성
 `;
         safeProgress(`✅ 경쟁 분석 완료: ${tb.charCount}자, 소제목 ${tb.subtitles.length}개`);
       } else {
@@ -1515,6 +1523,12 @@ ${tb.content.substring(0, 1500)}
 - 이미지: ${targetImageCount}장
 - 목표 글자 수: ${targetLength}자 ~ ${targetLength + 200}자
 
+[📅 현재 시점 - 시의성 있는 콘텐츠 작성]
+${timeContext}
+- ${currentSeason}철 특성이 주제와 관련 있으면 자연스럽게 반영 (강제 아님)
+- 계절성 치과 이슈 예: 겨울(턱관절/입술 건조), 여름(음료로 인한 충치), 봄가을(검진 시즌)
+- 🚨 연도/날짜 직접 표기 금지! "올해", "${currentYear}년" 사용 금지. 계절 일반 표현만 허용
+
 ${gpt52Stage1}
 
 ${request.disease ? `[키워드·질환 역할 분리]
@@ -1529,6 +1543,28 @@ ${writingStylePrompt || ''}
 ${audiencePrompt || ''}
 ${tonePrompt || ''}
 ${personaPrompt || ''}
+
+[도입부 방식 × 청중 조합 가이드]
+- 환자용(친절/공감): A(반복 인지형) 또는 C(변화 축적형) 우선. 본인이 겪는 증상 장면
+- 보호자용(가족걱정): B(불안 확인형) 또는 D(유독 나만형) 우선. 가족 걱정 장면
+- 전문가용(신뢰/정보): E(검색 계기형) 우선. 최신 가이드라인/연구 계기
+
+[마무리 전략 × 청중/페르소나 분기]
+- 환자용 + 병원 공식: 열린 결말. "~일 수 있습니다" 정보 제공형 마무리
+- 환자용 + 대표원장: "진료실에서 확인하면 더 정확합니다" 식의 부드러운 내원 유도
+- 환자용 + 상담실장: "궁금하신 점은 편하게 연락 주세요" 식의 상담 연결
+- 보호자용: 보호자가 해야 할 것 / 하지 않아도 될 것 정리형 마무리
+- 전문가용: 핵심 포인트 요약 + 최신 동향 언급으로 마무리
+- 공통: 본문 요약 금지. 새 정보 추가 금지
+
+[스타일 우선순위 규칙 - 충돌 시]
+1순위: 학습된 말투(learnedStyle) - 있으면 tone/persona보다 우선
+2순위: 페르소나(persona) - 시점(1인칭/3인칭) 결정
+3순위: 말투(tone) - 어조/분위기 결정
+4순위: 글 스타일(writingStyle) - expert/empathy/conversion
+- 충돌 예: writingStyle=expert + tone=warm → 정보는 깊게, 톤만 따뜻하게. 전문가 톤으로 바꾸지 않음
+- 충돌 예: persona=coordinator + tone=premium → 상담실장 시점은 유지, 말투만 격조있게 조절
+
 ${learnedStyleInstruction || ''}${customSubheadingInstruction || ''}
 ${request.category && CATEGORY_SPECIFIC_PROMPTS[request.category as unknown as keyof typeof CATEGORY_SPECIFIC_PROMPTS]
   ? `[진료과별 맞춤 가이드]\n${CATEGORY_SPECIFIC_PROMPTS[request.category as unknown as keyof typeof CATEGORY_SPECIFIC_PROMPTS]}`
