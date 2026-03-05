@@ -42,10 +42,7 @@ const App: React.FC = () => {
     if (hash === '#admin') return 'admin';
     if (hash === '#auth') return 'auth';
     if (hash === '#app') return 'app';
-    // 해시 없이 접속하면 랜딩 페이지 표시
-    // sessionStorage로 "이미 앱 진입했음"을 기억
-    const entered = sessionStorage.getItem('winaid_entered');
-    if (entered) return 'app';
+    // 해시 없이 접속 = 무조건 랜딩 페이지
     return 'landing';
   });
   const [apiKeyReady, setApiKeyReady] = useState<boolean>(false);
@@ -799,7 +796,6 @@ const App: React.FC = () => {
       <Suspense fallback={<div className="min-h-screen flex items-center justify-center">로딩 중...</div>}>
         <LandingPage
           onStart={() => {
-            sessionStorage.setItem('winaid_entered', 'true');
             window.location.hash = '#app';
             setCurrentPage('app');
           }}
@@ -878,11 +874,11 @@ const App: React.FC = () => {
         <div className="max-w-[1600px] w-full mx-auto px-6 flex justify-between items-center">
           <a href="#" className="flex items-center gap-2.5 hover:opacity-80 transition-opacity">
             <svg className="w-9 h-9" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-              <path d="M2 86L26 14h14L16 86H2z" fill={darkMode ? '#e2e8f0' : '#3C3C3C'}/>
-              <path d="M26 14L54 86H40L26 14z" fill={darkMode ? '#e2e8f0' : '#3C3C3C'}/>
-              <path d="M9 54h28v11H9z" fill={darkMode ? '#e2e8f0' : '#3C3C3C'}/>
-              <path d="M47 14h11v72H47z" fill="#3B82F6"/>
-              <path d="M58 14h11c17 0 29 16 29 34s-12 34-29 34H58V72h11c10 0 17-10 17-24s-7-24-17-24H58V14z" fill={darkMode ? '#e2e8f0' : '#3C3C3C'}/>
+              <path d="M0 92L27 6h14L15 92H0z" fill={darkMode ? '#e2e8f0' : '#3C3C3C'}/>
+              <path d="M27 6L58 92H38L27 6z" fill={darkMode ? '#e2e8f0' : '#3C3C3C'}/>
+              <path d="M8 56h30v12H8z" fill={darkMode ? '#e2e8f0' : '#3C3C3C'}/>
+              <path d="M46 6h13v86H46z" fill="#3B82F6"/>
+              <path d="M58 6h12c17 0 29 22 29 43s-12 43-29 43H58V74h12c10 0 17-11 17-26s-7-26-17-26H58V6z" fill={darkMode ? '#e2e8f0' : '#3C3C3C'}/>
             </svg>
             <div className="flex flex-col leading-none">
               <span className={`font-black text-lg tracking-[-0.02em] ${darkMode ? 'text-slate-100' : 'text-slate-800'}`}>WIN<span className="text-blue-500">AID</span></span>
