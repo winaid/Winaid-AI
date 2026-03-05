@@ -881,66 +881,67 @@ function buildTemplateAiPrompt(req: AiTemplateRequest): string {
     ? (imageSize.width > imageSize.height ? 'landscape (wide)' : imageSize.width < imageSize.height ? 'portrait (tall)' : 'square 1:1')
     : 'square 1:1';
 
-  // 스타일 프롬프트와 텍스트 프롬프트를 명확히 분리
-  return `🚨 RENDER ALL KOREAN TEXT EXACTLY AS PROVIDED - DO NOT TRANSLATE OR CHANGE! 🚨
+  // 추가 프롬프트를 상단 우선순위로
+  const userRequestBlock = extraPrompt ? `
+🚨🚨🚨 [USER'S SPECIAL REQUEST - HIGHEST PRIORITY!] 🚨🚨🚨
+The user specifically asked for the following. YOU MUST follow this:
+${extraPrompt}
+This request OVERRIDES default sizing, positioning, and styling rules.
+🚨🚨🚨 END OF USER REQUEST 🚨🚨🚨
+` : '';
 
+  // 달력 카테고리일 때 날짜 정확성 강조
+  const calendarAccuracyBlock = category === 'schedule' ? `
+🔢 [CALENDAR DATA ACCURACY - CRITICAL!]
+The calendar grid below contains the ONLY correct data. Do NOT guess or use data from reference images.
+Every single date number, day-of-week alignment, and marked day MUST match exactly.
+If a reference image was provided, its calendar dates are from a DIFFERENT month - IGNORE them completely.
+` : '';
+
+  // 브랜딩 블록
+  const brandingBlock = hospitalName ? (() => {
+    const pos = req.brandingPosition || 'top';
+    const posLabel = pos === 'top' ? 'HEADER (top of image)' : 'FOOTER (bottom of image)';
+    const posDetail = pos === 'top'
+      ? 'Place branding at the TOP, above all content.'
+      : 'Place branding at the BOTTOM, below all content.';
+    const logoInstructions = req.logoBase64
+      ? `- Hospital LOGO and NAME side by side: [LOGO] [NAME]
+- Grouped as ONE unit, logo left, name right, vertically centered`
+      : `- Display "${hospitalName}" in a clean font`;
+    return `
+[HOSPITAL BRANDING - ${posLabel}]
+"${hospitalName}"
+${posDetail}
+${logoInstructions}`;
+  })() : '';
+
+  return `🚨 RENDER ALL KOREAN TEXT EXACTLY AS PROVIDED - DO NOT TRANSLATE OR CHANGE! 🚨
+${userRequestBlock}
 [IMAGE TYPE]
 ${categoryLabels[category] || 'hospital announcement'}
-
+${calendarAccuracyBlock}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
 [DESIGN STYLE PROMPT - VISUAL LOOK & FEEL]
 ${stylePrompt}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
-[TEXT CONTENT PROMPT - EXACT TEXT TO RENDER]
+[TEXT CONTENT - THE ONLY SOURCE OF TRUTH FOR ALL TEXT AND NUMBERS]
 ${textContent}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
-${hospitalName ? (() => {
-  const pos = req.brandingPosition || 'top';
-  const posLabel = pos === 'top' ? 'HEADER (top of image)' : 'FOOTER (bottom of image)';
-  const posDetail = pos === 'top'
-    ? 'Place branding at the TOP of the image, above all content. It should be the first visual element.'
-    : 'Place branding at the BOTTOM of the image, below all content. It should be the last visual element.';
-  const logoInstructions = req.logoBase64
-    ? `- Show hospital LOGO (small, 24-32px) and hospital NAME side by side horizontally: [LOGO] [NAME]
-- They must be visually grouped as ONE unit with consistent alignment
-- Logo on the left, name on the right, vertically centered to each other`
-    : `- Display hospital name "${hospitalName}" in a clean, readable font`;
-  return `
-[HOSPITAL BRANDING - POSITION: ${posLabel}]
-Hospital name: "${hospitalName}"
-${posDetail}
-${logoInstructions}
-- Use subtle styling that matches the overall design (not too large, not too small)
-- Branding should feel integrated into the design, not floating or disconnected
-- Recommended: 12-16px font size for name, clean sans-serif font`;
-})() : ''}
+${brandingBlock}
 
 [IMAGE SPECIFICATIONS]
 - Aspect ratio: ${aspectDesc}
 - Resolution: high quality, crisp text
-- Professional hospital/clinic announcement image
-- All text must be in Korean, rendered clearly and legibly
-- Clean layout with proper visual hierarchy
-
-[DESIGN RULES]
-✅ Korean text must be pixel-perfect and readable
-✅ Professional medical/hospital aesthetic
-✅ Calendar dates and numbers must be ACCURATE
-✅ Clean visual hierarchy: title → content → footer
-✅ Use the design style keywords above for mood and atmosphere
-${extraPrompt ? `\n[ADDITIONAL USER REQUEST]\n${extraPrompt}` : ''}
+- All text in Korean, clearly legible
 
 ⛔ FORBIDDEN:
-- Do NOT render instruction labels like "날짜:", "제목:", "TITLE:", "SUBTITLE:", "[MAIN TITLE]", etc.
-- Only render the actual content text inside the quotes ("...")
-- Do NOT change or translate any Korean text
-- No watermarks, no logos (unless hospital logo provided)
-- No English text (except decorative labels like "SCHEDULE", "INFORMATION")
-- No generic stock photo feel - must look like designed template
-- No blurry or hard-to-read text
-- No raw data labels or metadata in the image`.trim();
+- Do NOT render labels like "날짜:", "제목:", "[MAIN TITLE]" - only render content in quotes
+- Do NOT copy text/numbers/dates from reference images - use ONLY the data above
+- No watermarks, no English text (except decorative), no stock photo feel
+- No blurry text, no raw metadata labels`.trim();
 }
 
 function buildScheduleTextContent(data: {
@@ -1113,15 +1114,20 @@ export async function generateTemplateWithAI(
       const contents: any[] = [];
       if (styleRefPart) {
         contents.push(styleRefPart);
-        contents.push({ text: `[STYLE REFERENCE IMAGE - COPY THE ENTIRE VISUAL STYLE FROM THIS IMAGE!]
-🚨 CRITICAL: Replicate EVERYTHING from this reference image:
-- The exact illustration style (characters, objects, decorations, drawings)
-- Color palette, gradients, textures
-- Layout structure and spacing
-- Typography style and hierarchy
-- Decorative elements (icons, patterns, borders, shapes)
-- Overall mood and atmosphere
-ONLY change the TEXT CONTENT to match the new request below. Keep ALL visual elements the same style.
+        contents.push({ text: `[STYLE REFERENCE IMAGE - COPY VISUAL STYLE ONLY!]
+🚨 COPY from this reference image:
+✅ illustration style, characters, decorative objects, drawings
+✅ color palette, gradients, textures
+✅ layout structure, spacing, frame design
+✅ typography style (font weight, size hierarchy)
+✅ decorative elements (icons, patterns, borders, shapes)
+✅ overall mood and atmosphere
+
+🚨🚨🚨 DO NOT COPY from this reference image:
+⛔ ANY text, numbers, dates, or calendar data from the reference
+⛔ ANY month names, day numbers, hospital names from the reference
+⛔ The reference image's TEXT CONTENT is OLD and WRONG - IGNORE IT COMPLETELY
+⛔ Use ONLY the new text data provided in the prompt below
 
 ` });
       }
