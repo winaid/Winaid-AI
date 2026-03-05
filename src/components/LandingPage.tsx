@@ -147,12 +147,12 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
 
   return (
     <div className="min-h-screen bg-white text-slate-900 overflow-x-hidden">
-      {/* Sticky Nav */}
+      {/* Sticky Nav - 스크롤 후에만 로고 표시 */}
       <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrollY > 50 ? 'bg-white/90 backdrop-blur-xl shadow-sm' : 'bg-transparent'}`}>
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <img src="/280_logo.png" alt="" className="h-8 w-8 border-0 outline-none block" style={{ imageRendering: 'auto' }} />
-            <span className="font-black text-xl tracking-tight text-slate-800">
+          <div className={`flex items-center gap-2 transition-opacity duration-300 ${scrollY > 50 ? 'opacity-100' : 'opacity-0'}`}>
+            <img src="/280_logo.png" alt="" className="h-7 w-7 border-0 outline-none block" />
+            <span className="font-black text-lg tracking-tight text-slate-800">
               WIN<span className="text-blue-500">AID</span>
             </span>
           </div>
@@ -175,6 +175,14 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
         </div>
 
         <div className="relative max-w-5xl mx-auto px-6 text-center pt-24 pb-32">
+          {/* 로고 - 히어로 가운데 */}
+          <div className="flex items-center justify-center gap-3 mb-8">
+            <img src="/280_logo.png" alt="" className="h-12 w-12 border-0 outline-none block" />
+            <span className="font-black text-3xl tracking-tight text-slate-800">
+              WIN<span className="text-blue-500">AID</span>
+            </span>
+          </div>
+
           <div className="inline-flex items-center gap-2 bg-blue-50 border border-blue-100 rounded-full px-5 py-2.5 mb-10">
             <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
             <span className="text-slate-500 text-sm">13년 병원마케팅 노하우 + AI</span>
