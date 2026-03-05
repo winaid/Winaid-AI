@@ -40,6 +40,9 @@ export default function TemplateGenerator() {
   // 휴가 사유
   const [vacationReasons, setVacationReasons] = useState<Map<number, string>>(new Map());
 
+  // 추가 메시지
+  const [customMessage, setCustomMessage] = useState('');
+
   // 현재 마킹 모드
   const [markMode, setMarkMode] = useState<DayMark>('closed');
 
@@ -135,6 +138,7 @@ export default function TemplateGenerator() {
         notices: notices.split('\n').filter(Boolean),
         colorTheme,
         logoBase64: logoBase64 || undefined,
+        customMessage: customMessage.trim() || undefined,
       };
 
       const html = buildCalendarHTML(data);
@@ -374,6 +378,20 @@ export default function TemplateGenerator() {
             onChange={e => setNotices(e.target.value)}
             placeholder={"진료시간: 평일 09:00~18:00\n점심시간: 13:00~14:00\n토요일: 09:00~13:00"}
             rows={3}
+            className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-400 resize-none"
+          />
+        </div>
+
+        {/* 추가 메시지 (자유 입력) */}
+        <div>
+          <label className="block text-xs font-semibold text-slate-600 mb-1">
+            추가 문구 <span className="text-slate-400 font-normal">(선택 - 이미지 하단에 표시)</span>
+          </label>
+          <textarea
+            value={customMessage}
+            onChange={e => setCustomMessage(e.target.value)}
+            placeholder={"예: 불편을 드려 죄송합니다.\n예: 응급 시 ☎ 010-1234-5678"}
+            rows={2}
             className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-400 resize-none"
           />
         </div>

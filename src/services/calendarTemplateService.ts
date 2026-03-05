@@ -17,6 +17,7 @@ export interface CalendarData {
   notices?: string[];       // 하단 안내 문구
   colorTheme?: 'blue' | 'green' | 'pink' | 'purple';
   logoBase64?: string;      // data:image/...;base64,xxx 형식의 로고 이미지
+  customMessage?: string;   // 사용자가 자유롭게 추가하는 하단 메시지
 }
 
 export interface ClosedDay {
@@ -197,7 +198,7 @@ const THEMES = {
 // ── HTML 달력 생성 ──
 
 export function buildCalendarHTML(data: CalendarData): string {
-  const { month, year, title, closedDays, shortenedDays, vacationDays, hospitalName, notices, colorTheme, logoBase64 } = data;
+  const { month, year, title, closedDays, shortenedDays, vacationDays, hospitalName, notices, colorTheme, logoBase64, customMessage } = data;
   const theme = THEMES[colorTheme || 'blue'];
 
   const firstDay = new Date(year, month - 1, 1).getDay();
@@ -298,6 +299,12 @@ export function buildCalendarHTML(data: CalendarData): string {
       </div>`
     : '';
 
+  const customMsgHTML = customMessage?.trim()
+    ? `<div style="margin-top:16px;padding:14px 20px;background:linear-gradient(135deg, ${theme.light}, #ffffff);border-radius:12px;border:1px solid ${theme.primary}20;text-align:center;">
+        <div style="font-size:14px;color:#334155;line-height:1.7;white-space:pre-line;">${customMessage.trim().replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
+      </div>`
+    : '';
+
   // 범례 (휴진 + 단축 + 휴가)
   const legendItems: string[] = [];
   closedDays.forEach(cd => {
@@ -339,6 +346,7 @@ export function buildCalendarHTML(data: CalendarData): string {
 
       ${closedLegend}
       ${noticesHTML}
+      ${customMsgHTML}
     </div>
   </div>`;
 }
