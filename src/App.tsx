@@ -231,12 +231,13 @@ const App: React.FC = () => {
         
         // 세션이 있고 현재 auth 페이지면 app으로 이동
         const currentHash = window.location.hash;
-        if (currentHash === '#auth' || currentHash === '' || currentHash === '#') {
+        if (currentHash === '#auth') {
           window.location.hash = 'app';
           setCurrentPage('app');
-        } else if (currentHash === '#app' || !currentHash.includes('#')) {
+        } else if (currentHash === '#app') {
           setCurrentPage('app');
         }
+        // 해시가 비어있으면(landing) → 그대로 유지
       }
       setAuthLoading(false);
     };
@@ -333,18 +334,17 @@ const App: React.FC = () => {
     const handleHashChange = () => {
       const hash = window.location.hash;
       
-      let newPage: PageType = 'app';
-      
+      let newPage: PageType;
+
       if (hash === '#admin') {
         newPage = 'admin';
       } else if (hash === '#auth' || hash === '#login' || hash === '#register') {
         newPage = 'auth';
-      } else {
-        // 🚀 기본적으로 앱 페이지로 (로그인 불필요)
+      } else if (hash === '#app') {
         newPage = 'app';
-        if (!hash || hash === '#') {
-          window.location.hash = 'app';
-        }
+      } else {
+        // 해시 없음 = 현재 페이지 유지 (landing일 수 있음)
+        return;
       }
       
       // 페이지가 실제로 바뀔 때만 스크롤을 맨 위로 (같은 페이지 내 동작 시 스크롤 유지)
@@ -356,7 +356,10 @@ const App: React.FC = () => {
       });
     };
 
-    handleHashChange();
+    // 해시가 있을 때만 초기 실행 (landing 보호)
+    if (window.location.hash && window.location.hash !== '#') {
+      handleHashChange();
+    }
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
