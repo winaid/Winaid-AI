@@ -808,10 +808,10 @@ export const AI_STYLE_PRESETS: StylePreset[] = [
     aiPrompt: 'Late autumn serene design, muted warm gray and soft brown tones, dry fallen leaves scattered softly, bare tree branch silhouettes, quiet contemplative mood, gentle fog atmosphere, warm tea and book aesthetic, calm and peaceful, subtle vintage texture',
   },
   {
-    id: 'snowflake_glow', name: '눈꽃 조명', color: '#1e40af', accent: '#1e3a8a', bg: '#eff6ff',
+    id: 'snowflake_glow', name: '눈꽃 조명', color: '#b91c1c', accent: '#d4a017', bg: '#fef9f0',
     desc: '눈꽃 · 포근한',
     mood: '눈꽃과 따뜻한 조명이 어우러진 포근한 느낌',
-    aiPrompt: 'Winter holiday design, deep navy blue and sparkling white, delicate snowflake patterns, warm golden fairy lights, cozy winter night mood, frosted glass effect, soft snow falling, warm candlelight glow against cold blue, festive yet elegant atmosphere',
+    aiPrompt: 'Winter holiday design, warm crimson red and shimmering gold accents, delicate white snowflake patterns on warm background, cozy Christmas fairy lights glow, rich red and gold color palette, festive ornament decorations, warm candlelight ambiance, soft falling snow, elegant holiday atmosphere with warmth',
   },
 ];
 
