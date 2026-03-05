@@ -386,6 +386,174 @@ export async function renderCalendarToImage(html: string): Promise<string> {
   }
 }
 
+// ── 이벤트/프로모션 템플릿 ──
+
+export interface EventTemplateData {
+  title: string;
+  subtitle?: string;
+  description?: string;
+  price?: string;
+  originalPrice?: string;
+  discount?: string;
+  period?: string;
+  hospitalName?: string;
+  logoBase64?: string;
+  colorTheme?: 'blue' | 'green' | 'pink' | 'purple';
+  customMessage?: string;
+}
+
+export function buildEventHTML(data: EventTemplateData): string {
+  const theme = THEMES[data.colorTheme || 'blue'];
+  const esc = (s: string) => s.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const logoHTML = data.logoBase64 ? `<img src="${data.logoBase64}" style="max-height:40px;margin-bottom:8px;object-fit:contain;" />` : '';
+  const hospitalFooter = data.hospitalName ? `<div style="margin-top:24px;padding-top:16px;border-top:1px solid #e2e8f0;text-align:center;font-size:13px;color:#64748b;">${esc(data.hospitalName)}</div>` : '';
+  const customMsgHTML = data.customMessage?.trim()
+    ? `<div style="margin-top:16px;padding:12px 16px;background:${theme.light};border-radius:10px;text-align:center;font-size:13px;color:#475569;line-height:1.6;white-space:pre-line;">${esc(data.customMessage.trim())}</div>` : '';
+  const priceSection = (data.price || data.discount) ? `
+    <div style="margin:24px 0;text-align:center;padding:24px;background:${theme.light};border-radius:16px;">
+      ${data.originalPrice ? `<div style="font-size:16px;color:#94a3b8;text-decoration:line-through;margin-bottom:4px;">${esc(data.originalPrice)}</div>` : ''}
+      ${data.price ? `<div style="font-size:36px;font-weight:800;color:${theme.primary};letter-spacing:-1px;">${esc(data.price)}</div>` : ''}
+      ${data.discount ? `<div style="display:inline-block;margin-top:8px;padding:6px 16px;background:${theme.primary};color:white;border-radius:20px;font-size:14px;font-weight:700;">${esc(data.discount)}</div>` : ''}
+    </div>` : '';
+  const descSection = data.description?.trim()
+    ? `<div style="margin:16px 0;font-size:15px;color:#475569;line-height:1.8;text-align:center;white-space:pre-line;">${esc(data.description.trim())}</div>` : '';
+  const periodSection = data.period?.trim()
+    ? `<div style="margin:16px 0;text-align:center;"><div style="display:inline-block;padding:10px 20px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;font-size:14px;color:#334155;">&#128197; ${esc(data.period)}</div></div>` : '';
+
+  return `<div id="calendar-render-target" style="width:700px;background:#ffffff;border-radius:20px;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Noto Sans KR',sans-serif;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+    <div style="background:linear-gradient(135deg, ${theme.primary}, ${theme.accent});padding:32px;text-align:center;">
+      ${logoHTML}
+      <div style="font-size:28px;font-weight:800;color:#ffffff;letter-spacing:-0.5px;">${esc(data.title || '이벤트')}</div>
+      ${data.subtitle ? `<div style="font-size:16px;color:rgba(255,255,255,0.85);margin-top:8px;">${esc(data.subtitle)}</div>` : ''}
+    </div>
+    <div style="padding:24px 32px;text-align:center;">
+      ${priceSection}${descSection}${periodSection}${customMsgHTML}${hospitalFooter}
+    </div>
+  </div>`;
+}
+
+// ── 의사 소개 템플릿 ──
+
+export interface DoctorTemplateData {
+  doctorName: string;
+  specialty: string;
+  career?: string[];
+  greeting?: string;
+  hospitalName?: string;
+  logoBase64?: string;
+  colorTheme?: 'blue' | 'green' | 'pink' | 'purple';
+  customMessage?: string;
+}
+
+export function buildDoctorHTML(data: DoctorTemplateData): string {
+  const theme = THEMES[data.colorTheme || 'blue'];
+  const esc = (s: string) => s.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const logoHTML = data.logoBase64 ? `<img src="${data.logoBase64}" style="max-height:40px;margin-bottom:8px;object-fit:contain;" />` : '';
+  const hospitalLine = data.hospitalName ? `<div style="font-size:14px;color:rgba(255,255,255,0.9);margin-top:4px;">${esc(data.hospitalName)}</div>` : '';
+  const customMsgHTML = data.customMessage?.trim()
+    ? `<div style="margin-top:16px;padding:12px 16px;background:${theme.light};border-radius:10px;text-align:center;font-size:13px;color:#475569;line-height:1.6;white-space:pre-line;">${esc(data.customMessage.trim())}</div>` : '';
+  const careerHTML = (data.career && data.career.length > 0)
+    ? `<div style="margin:20px 0;text-align:left;">
+        <div style="font-size:13px;font-weight:700;color:${theme.primary};margin-bottom:10px;">&#128218; 주요 경력</div>
+        ${data.career.map(c => `<div style="font-size:14px;color:#475569;line-height:2.2;padding-left:14px;position:relative;"><span style="position:absolute;left:0;">&#8226;</span>${esc(c)}</div>`).join('')}
+      </div>` : '';
+  const greetingHTML = data.greeting?.trim()
+    ? `<div style="margin:20px 0;padding:16px 20px;background:#f8fafc;border-radius:12px;font-size:14px;color:#334155;line-height:1.7;text-align:center;font-style:italic;white-space:pre-line;">"${esc(data.greeting.trim())}"</div>` : '';
+
+  return `<div id="calendar-render-target" style="width:700px;background:#ffffff;border-radius:20px;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Noto Sans KR',sans-serif;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+    <div style="background:linear-gradient(135deg, ${theme.primary}, ${theme.accent});padding:28px 32px;text-align:center;">
+      ${logoHTML}
+      <div style="font-size:24px;font-weight:800;color:#ffffff;">&#9889; &#49888;&#44508; &#51204;&#47928;&#51032; &#48512;&#51076; &#50504;&#45236;</div>
+      ${hospitalLine}
+    </div>
+    <div style="padding:28px 32px;">
+      <div style="text-align:center;margin-bottom:20px;">
+        <div style="display:inline-block;width:80px;height:80px;background:${theme.light};border-radius:50%;line-height:80px;font-size:36px;margin-bottom:12px;">&#129489;&#8205;&#9877;&#65039;</div>
+        <div style="font-size:28px;font-weight:800;color:#1e293b;">${esc(data.doctorName || '홍길동')} <span style="font-size:16px;font-weight:500;color:#64748b;">전문의</span></div>
+        <div style="display:inline-block;margin-top:8px;padding:6px 16px;background:${theme.primary};color:white;border-radius:20px;font-size:13px;font-weight:600;">${esc(data.specialty || '전문 분야')}</div>
+      </div>
+      ${careerHTML}${greetingHTML}${customMsgHTML}
+    </div>
+  </div>`;
+}
+
+// ── 공지사항 템플릿 ──
+
+export interface NoticeTemplateData {
+  title: string;
+  content: string[];
+  effectiveDate?: string;
+  hospitalName?: string;
+  logoBase64?: string;
+  colorTheme?: 'blue' | 'green' | 'pink' | 'purple';
+  customMessage?: string;
+}
+
+export function buildNoticeHTML(data: NoticeTemplateData): string {
+  const theme = THEMES[data.colorTheme || 'blue'];
+  const esc = (s: string) => s.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const logoHTML = data.logoBase64 ? `<img src="${data.logoBase64}" style="max-height:40px;margin-bottom:8px;object-fit:contain;" />` : '';
+  const customMsgHTML = data.customMessage?.trim()
+    ? `<div style="margin-top:16px;padding:12px 16px;background:${theme.light};border-radius:10px;text-align:center;font-size:13px;color:#475569;line-height:1.6;white-space:pre-line;">${esc(data.customMessage.trim())}</div>` : '';
+  const contentHTML = data.content.length > 0
+    ? `<div style="margin:20px 0;padding:20px;background:#f8fafc;border-radius:12px;border:1px solid #e2e8f0;">
+        ${data.content.map(line => `<div style="font-size:15px;color:#334155;line-height:2.2;padding-left:14px;position:relative;"><span style="position:absolute;left:0;">&#8226;</span>${esc(line)}</div>`).join('')}
+      </div>` : '';
+  const dateHTML = data.effectiveDate?.trim()
+    ? `<div style="margin:16px 0;text-align:center;"><div style="display:inline-block;padding:10px 20px;background:${theme.light};border:1px solid ${theme.primary}30;border-radius:10px;font-size:14px;color:${theme.primary};font-weight:600;">&#128197; 적용일: ${esc(data.effectiveDate)}</div></div>` : '';
+  const hospitalFooter = data.hospitalName ? `<div style="margin-top:24px;padding-top:16px;border-top:1px solid #e2e8f0;text-align:center;font-size:13px;color:#64748b;">${esc(data.hospitalName)}</div>` : '';
+
+  return `<div id="calendar-render-target" style="width:700px;background:#ffffff;border-radius:20px;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Noto Sans KR',sans-serif;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+    <div style="background:linear-gradient(135deg, ${theme.primary}, ${theme.accent});padding:28px 32px;text-align:center;">
+      ${logoHTML}
+      <div style="font-size:14px;color:rgba(255,255,255,0.8);margin-bottom:4px;">&#128227; 공지사항</div>
+      <div style="font-size:26px;font-weight:800;color:#ffffff;">${esc(data.title || '공지사항')}</div>
+    </div>
+    <div style="padding:24px 32px;">
+      ${contentHTML}${dateHTML}${customMsgHTML}${hospitalFooter}
+    </div>
+  </div>`;
+}
+
+// ── 명절 인사 템플릿 ──
+
+export interface GreetingTemplateData {
+  holiday: string;
+  greeting: string;
+  closurePeriod?: string;
+  hospitalName?: string;
+  logoBase64?: string;
+  colorTheme?: 'blue' | 'green' | 'pink' | 'purple';
+  customMessage?: string;
+}
+
+const HOLIDAY_EMOJI: Record<string, string> = {
+  '설날': '&#127982;', '추석': '&#127765;', '새해': '&#127882;',
+  '어버이날': '&#127801;', '크리스마스': '&#127876;',
+};
+
+export function buildGreetingHTML(data: GreetingTemplateData): string {
+  const theme = THEMES[data.colorTheme || 'blue'];
+  const esc = (s: string) => s.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const emoji = HOLIDAY_EMOJI[data.holiday] || '&#127881;';
+  const logoHTML = data.logoBase64 ? `<img src="${data.logoBase64}" style="max-height:36px;margin-bottom:8px;object-fit:contain;" />` : '';
+  const customMsgHTML = data.customMessage?.trim()
+    ? `<div style="margin-top:16px;padding:12px 16px;background:rgba(255,255,255,0.6);border-radius:10px;text-align:center;font-size:13px;color:#475569;line-height:1.6;white-space:pre-line;">${esc(data.customMessage.trim())}</div>` : '';
+  const closureHTML = data.closurePeriod?.trim()
+    ? `<div style="margin:24px auto;text-align:center;"><div style="display:inline-block;padding:12px 24px;background:rgba(255,255,255,0.9);border-radius:12px;font-size:14px;color:#334155;font-weight:600;box-shadow:0 2px 8px rgba(0,0,0,0.06);">&#127973; 휴진 안내: ${esc(data.closurePeriod)}</div></div>` : '';
+
+  return `<div id="calendar-render-target" style="width:700px;background:linear-gradient(180deg, ${theme.light} 0%, #ffffff 100%);border-radius:20px;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Noto Sans KR',sans-serif;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+    <div style="padding:48px 32px;text-align:center;">
+      ${logoHTML}
+      <div style="font-size:64px;margin-bottom:16px;">${emoji}</div>
+      <div style="font-size:18px;color:${theme.primary};font-weight:600;margin-bottom:8px;">${esc(data.holiday || '명절')}</div>
+      <div style="font-size:28px;font-weight:800;color:#1e293b;line-height:1.5;white-space:pre-line;">${esc(data.greeting || '행복한 명절 되세요')}</div>
+      ${closureHTML}${customMsgHTML}
+      ${data.hospitalName ? `<div style="margin-top:32px;font-size:16px;color:#64748b;font-weight:500;">${esc(data.hospitalName)}</div>` : ''}
+    </div>
+  </div>`;
+}
+
 // ── 통합 함수: 프롬프트 → 달력 이미지 ──
 
 export async function generateCalendarFromPrompt(
