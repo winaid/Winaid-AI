@@ -148,21 +148,17 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
   return (
     <div className="min-h-screen bg-slate-950 text-white overflow-x-hidden">
       {/* Sticky Nav */}
-      <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrollY > 50 ? 'bg-slate-950/90 backdrop-blur-xl shadow-lg shadow-black/20' : 'bg-transparent'}`}>
+      <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrollY > 50 ? 'bg-white shadow-lg shadow-black/5' : 'bg-white'}`}>
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <img src="/280_logo.png" alt="WINAID" className="h-9" />
-            <span className="font-black text-lg tracking-tight text-white">
-              WIN<span className="text-blue-400">AID</span>
+            <span className="font-black text-lg tracking-tight text-slate-800">
+              WIN<span className="text-blue-500">AID</span>
             </span>
           </div>
           <button
             onClick={onStart}
-            className={`px-5 py-2 rounded-lg font-semibold text-sm transition-all ${
-              scrollY > 50
-                ? 'bg-blue-500 text-white hover:bg-blue-400'
-                : 'bg-white/10 text-white border border-white/20 hover:bg-white/20'
-            }`}
+            className="px-5 py-2 rounded-lg font-semibold text-sm transition-all bg-blue-600 text-white hover:bg-blue-700"
           >
             무료 시작
           </button>
@@ -441,20 +437,20 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
       </section>
 
       {/* Footer */}
-      <footer className="py-12 bg-black/30">
+      <footer className="py-12 bg-white">
         <div className="max-w-6xl mx-auto px-6">
           <div className="flex flex-col md:flex-row justify-between items-center gap-6">
             <div className="flex items-center gap-2">
               <img src="/280_logo.png" alt="WINAID" className="h-8" />
-              <span className="font-black text-lg text-white tracking-tight">WIN<span className="text-blue-400">AID</span></span>
+              <span className="font-black text-lg text-slate-800 tracking-tight">WIN<span className="text-blue-500">AID</span></span>
             </div>
-            <div className="flex items-center gap-6 text-sm text-slate-500">
+            <div className="flex items-center gap-6 text-sm text-slate-400">
               <span>winaid@daum.net</span>
               <span>02-584-9400</span>
-              <a href="https://winaid.co.kr" target="_blank" rel="noopener noreferrer" className="hover:text-blue-400 transition-colors">winaid.co.kr</a>
+              <a href="https://winaid.co.kr" target="_blank" rel="noopener noreferrer" className="hover:text-blue-500 transition-colors">winaid.co.kr</a>
             </div>
           </div>
-          <div className="mt-8 pt-8 border-t border-white/5 text-center text-sm text-slate-600">
+          <div className="mt-8 pt-8 border-t border-slate-100 text-center text-sm text-slate-400">
             &copy; {new Date().getFullYear()} WINAID. All rights reserved.
           </div>
         </div>
