@@ -5,32 +5,32 @@ interface LandingPageProps {
   darkMode?: boolean;
 }
 
-// 다크 테마 일러스트 컴포넌트들
+// 라이트 테마 일러스트
 const IllustBlog = () => (
-  <div className="aspect-[4/3] rounded-2xl bg-gradient-to-br from-blue-950/80 to-slate-900 border border-blue-500/20 p-6 flex flex-col justify-center items-center relative overflow-hidden">
-    <div className="absolute top-4 right-4 w-20 h-20 bg-blue-500/10 rounded-full blur-2xl" />
+  <div className="aspect-[4/3] rounded-2xl bg-gradient-to-br from-blue-50 to-cyan-50 border border-blue-100 p-6 flex flex-col justify-center items-center relative overflow-hidden">
+    <div className="absolute top-4 right-4 w-20 h-20 bg-blue-100 rounded-full blur-2xl" />
     <div className="relative w-full max-w-[260px]">
-      <div className="bg-slate-800/90 rounded-xl shadow-lg p-4 border border-slate-700">
+      <div className="bg-white rounded-xl shadow-lg p-4 border border-slate-200">
         <div className="flex items-center gap-1.5 mb-3">
-          <div className="w-2 h-2 rounded-full bg-red-400/60" />
-          <div className="w-2 h-2 rounded-full bg-yellow-400/60" />
-          <div className="w-2 h-2 rounded-full bg-green-400/60" />
+          <div className="w-2 h-2 rounded-full bg-red-300" />
+          <div className="w-2 h-2 rounded-full bg-yellow-300" />
+          <div className="w-2 h-2 rounded-full bg-green-300" />
         </div>
-        <div className="h-2.5 bg-white/20 rounded w-3/4 mb-3" />
+        <div className="h-2.5 bg-slate-800 rounded w-3/4 mb-3" />
         <div className="space-y-1.5">
-          <div className="h-1.5 bg-white/10 rounded w-full" />
-          <div className="h-1.5 bg-white/10 rounded w-5/6" />
-          <div className="h-1.5 bg-white/10 rounded w-full" />
-          <div className="h-1.5 bg-white/10 rounded w-2/3" />
+          <div className="h-1.5 bg-slate-200 rounded w-full" />
+          <div className="h-1.5 bg-slate-200 rounded w-5/6" />
+          <div className="h-1.5 bg-slate-200 rounded w-full" />
+          <div className="h-1.5 bg-slate-200 rounded w-2/3" />
         </div>
-        <div className="mt-3 h-12 bg-gradient-to-r from-blue-500/20 to-cyan-500/20 rounded-lg flex items-center justify-center">
-          <svg className="w-5 h-5 text-blue-400/60" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <div className="mt-3 h-12 bg-gradient-to-r from-blue-100 to-cyan-100 rounded-lg flex items-center justify-center">
+          <svg className="w-5 h-5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0022.5 18.75V5.25A2.25 2.25 0 0020.25 3H3.75A2.25 2.25 0 001.5 5.25v13.5A2.25 2.25 0 003.75 21z" />
           </svg>
         </div>
         <div className="mt-2 space-y-1.5">
-          <div className="h-1.5 bg-white/10 rounded w-full" />
-          <div className="h-1.5 bg-white/10 rounded w-4/5" />
+          <div className="h-1.5 bg-slate-200 rounded w-full" />
+          <div className="h-1.5 bg-slate-200 rounded w-4/5" />
         </div>
       </div>
       <div className="absolute -top-2 -right-2 bg-blue-500 text-white text-[10px] font-bold px-2 py-1 rounded-lg shadow-lg">
@@ -42,84 +42,84 @@ const IllustBlog = () => (
 );
 
 const IllustCompliance = () => (
-  <div className="aspect-[4/3] rounded-2xl bg-gradient-to-br from-emerald-950/80 to-slate-900 border border-emerald-500/20 p-6 flex flex-col justify-center items-center relative overflow-hidden">
-    <div className="absolute bottom-4 left-4 w-24 h-24 bg-emerald-500/10 rounded-full blur-2xl" />
+  <div className="aspect-[4/3] rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-100 p-6 flex flex-col justify-center items-center relative overflow-hidden">
+    <div className="absolute bottom-4 left-4 w-24 h-24 bg-emerald-100 rounded-full blur-2xl" />
     <div className="relative w-full max-w-[260px]">
-      <div className="bg-slate-800/90 rounded-xl shadow-lg p-4 border border-slate-700">
+      <div className="bg-white rounded-xl shadow-lg p-4 border border-slate-200">
         <div className="flex items-center gap-2 mb-3">
-          <svg className="w-4 h-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <svg className="w-4 h-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
           </svg>
-          <span className="text-xs font-bold text-slate-300">의료광고법 검증</span>
+          <span className="text-xs font-bold text-slate-700">의료광고법 검증</span>
         </div>
         <div className="space-y-2.5">
-          {[0, 1, 3].map((idx) => (
+          {[0, 1, 2].map((idx) => (
             <div key={idx} className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded-full bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
-                <svg className="w-2.5 h-2.5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+              <div className="w-4 h-4 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                <svg className="w-2.5 h-2.5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
                 </svg>
               </div>
-              <div className="h-1.5 bg-white/10 rounded flex-1" />
+              <div className="h-1.5 bg-slate-200 rounded flex-1" />
             </div>
           ))}
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded-full bg-amber-500/20 flex items-center justify-center flex-shrink-0">
-              <svg className="w-2.5 h-2.5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+            <div className="w-4 h-4 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
+              <svg className="w-2.5 h-2.5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126z" />
               </svg>
             </div>
             <div className="flex-1">
-              <div className="h-1.5 bg-amber-500/30 rounded w-full" />
-              <div className="h-1.5 bg-emerald-500/30 rounded w-full mt-1" />
+              <div className="h-1.5 bg-amber-200 rounded w-full" />
+              <div className="h-1.5 bg-emerald-200 rounded w-full mt-1" />
             </div>
-            <span className="text-[9px] text-emerald-400 font-bold">수정됨</span>
+            <span className="text-[9px] text-emerald-500 font-bold">수정됨</span>
           </div>
         </div>
-        <div className="mt-3 bg-emerald-500/10 rounded-lg p-2 text-center border border-emerald-500/20">
-          <span className="text-[10px] font-bold text-emerald-400">검증 완료 - 위반 요소 0건</span>
+        <div className="mt-3 bg-emerald-50 rounded-lg p-2 text-center">
+          <span className="text-[10px] font-bold text-emerald-600">검증 완료 - 위반 요소 0건</span>
         </div>
       </div>
     </div>
-    <p className="text-xs text-emerald-400 font-semibold mt-4">자동으로 안전하게</p>
+    <p className="text-xs text-emerald-500 font-semibold mt-4">자동으로 안전하게</p>
   </div>
 );
 
 const IllustImage = () => (
-  <div className="aspect-[4/3] rounded-2xl bg-gradient-to-br from-violet-950/80 to-slate-900 border border-violet-500/20 p-6 flex flex-col justify-center items-center relative overflow-hidden">
-    <div className="absolute top-8 left-8 w-20 h-20 bg-violet-500/10 rounded-full blur-2xl" />
+  <div className="aspect-[4/3] rounded-2xl bg-gradient-to-br from-violet-50 to-purple-50 border border-violet-100 p-6 flex flex-col justify-center items-center relative overflow-hidden">
+    <div className="absolute top-8 left-8 w-20 h-20 bg-violet-100 rounded-full blur-2xl" />
     <div className="relative w-full max-w-[260px]">
       <div className="grid grid-cols-2 gap-3">
-        <div className="bg-slate-800/90 rounded-xl shadow-lg overflow-hidden border border-slate-700">
-          <div className="h-20 bg-gradient-to-br from-blue-600/30 via-blue-500/20 to-cyan-500/30 flex items-center justify-center">
-            <svg className="w-8 h-8 text-blue-400/40" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
+        <div className="bg-white rounded-xl shadow-lg overflow-hidden border border-slate-200">
+          <div className="h-20 bg-gradient-to-br from-blue-200 via-blue-100 to-cyan-200 flex items-center justify-center">
+            <svg className="w-8 h-8 text-blue-400/60" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0022.5 18.75V5.25A2.25 2.25 0 0020.25 3H3.75A2.25 2.25 0 001.5 5.25v13.5A2.25 2.25 0 003.75 21z" />
             </svg>
           </div>
           <div className="p-2">
-            <div className="h-1.5 bg-white/10 rounded w-3/4" />
+            <div className="h-1.5 bg-slate-200 rounded w-3/4" />
           </div>
         </div>
-        <div className="bg-slate-800/90 rounded-xl shadow-lg overflow-hidden border border-slate-700">
-          <div className="h-20 bg-gradient-to-br from-violet-600/30 via-purple-500/20 to-pink-500/30 flex items-center justify-center">
-            <svg className="w-8 h-8 text-violet-400/40" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
+        <div className="bg-white rounded-xl shadow-lg overflow-hidden border border-slate-200">
+          <div className="h-20 bg-gradient-to-br from-violet-200 via-purple-100 to-pink-200 flex items-center justify-center">
+            <svg className="w-8 h-8 text-violet-400/60" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
             </svg>
           </div>
           <div className="p-2">
-            <div className="h-1.5 bg-white/10 rounded w-1/2" />
+            <div className="h-1.5 bg-slate-200 rounded w-1/2" />
           </div>
         </div>
-        <div className="col-span-2 bg-slate-800/90 rounded-xl shadow-lg overflow-hidden border border-slate-700 flex">
-          <div className="w-16 h-16 bg-gradient-to-br from-amber-600/30 to-orange-500/30 flex-shrink-0 flex items-center justify-center">
-            <svg className="w-6 h-6 text-amber-400/40" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <div className="col-span-2 bg-white rounded-xl shadow-lg overflow-hidden border border-slate-200 flex">
+          <div className="w-16 h-16 bg-gradient-to-br from-amber-200 to-orange-200 flex-shrink-0 flex items-center justify-center">
+            <svg className="w-6 h-6 text-amber-500/60" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
             </svg>
           </div>
           <div className="p-2.5 flex-1 space-y-1">
-            <div className="h-1.5 bg-white/10 rounded w-2/3" />
-            <div className="h-1.5 bg-white/[0.06] rounded w-full" />
-            <div className="h-1.5 bg-white/[0.06] rounded w-4/5" />
+            <div className="h-1.5 bg-slate-200 rounded w-2/3" />
+            <div className="h-1.5 bg-slate-100 rounded w-full" />
+            <div className="h-1.5 bg-slate-100 rounded w-4/5" />
           </div>
         </div>
       </div>
@@ -130,7 +130,7 @@ const IllustImage = () => (
         AI
       </div>
     </div>
-    <p className="text-xs text-violet-400 font-semibold mt-4">이미지도 AI가 생성</p>
+    <p className="text-xs text-violet-500 font-semibold mt-4">이미지도 AI가 생성</p>
   </div>
 );
 
@@ -146,31 +146,35 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
   const featureIllusts = [<IllustBlog key="blog" />, <IllustCompliance key="comp" />, <IllustImage key="img" />];
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white overflow-x-hidden">
+    <div className="min-h-screen bg-white text-slate-900 overflow-x-hidden">
       {/* Sticky Nav */}
-      <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrollY > 50 ? 'bg-white shadow-lg shadow-black/5' : 'bg-white'}`}>
+      <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrollY > 50 ? 'bg-white/90 backdrop-blur-xl shadow-sm' : 'bg-transparent'}`}>
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <img src="/280_logo.png" alt="WINAID" className="h-9" />
-            <span className="font-black text-lg tracking-tight text-slate-800">
+            <span className={`font-black text-lg tracking-tight transition-colors ${scrollY > 50 ? 'text-slate-800' : 'text-white'}`}>
               WIN<span className="text-blue-500">AID</span>
             </span>
           </div>
           <button
             onClick={onStart}
-            className="px-5 py-2 rounded-lg font-semibold text-sm transition-all bg-blue-600 text-white hover:bg-blue-700"
+            className={`px-5 py-2 rounded-lg font-semibold text-sm transition-all ${
+              scrollY > 50
+                ? 'bg-blue-600 text-white hover:bg-blue-700'
+                : 'bg-white/15 text-white border border-white/30 hover:bg-white/25'
+            }`}
           >
             무료 시작
           </button>
         </div>
       </nav>
 
-      {/* Hero */}
+      {/* Hero - 여기만 다크 */}
       <section className="relative min-h-[100vh] flex items-center justify-center overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-slate-950 via-blue-950/50 to-slate-950" />
+        <div className="absolute inset-0 bg-gradient-to-b from-slate-900 via-blue-950 to-blue-900" />
         <div className="absolute inset-0">
-          <div className="absolute top-1/4 left-1/4 w-[600px] h-[600px] bg-blue-500/15 rounded-full blur-[120px]" />
-          <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-indigo-500/10 rounded-full blur-[100px]" />
+          <div className="absolute top-1/4 left-1/4 w-[600px] h-[600px] bg-blue-500/20 rounded-full blur-[120px]" />
+          <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-indigo-500/15 rounded-full blur-[100px]" />
         </div>
         <div className="absolute inset-0 opacity-[0.03]" style={{
           backgroundImage: 'linear-gradient(rgba(255,255,255,.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.1) 1px, transparent 1px)',
@@ -256,9 +260,9 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
       </section>
 
       {/* Stats */}
-      <section className="py-16 border-b border-white/5">
+      <section className="py-16 border-b border-slate-100">
         <div className="max-w-5xl mx-auto px-6">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-0 md:divide-x divide-white/10">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-0 md:divide-x divide-slate-200">
             {[
               { number: '13', unit: '년+', label: '마케팅 경력' },
               { number: '300', unit: '+', label: '병원 클라이언트' },
@@ -266,10 +270,10 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
               { number: '100', unit: '%', label: '의료광고법 준수' },
             ].map((stat, i) => (
               <div key={i} className="text-center px-4">
-                <div className="text-3xl md:text-4xl font-black text-white">
-                  {stat.number}<span className="text-blue-400">{stat.unit}</span>
+                <div className="text-3xl md:text-4xl font-black text-slate-900">
+                  {stat.number}<span className="text-blue-500">{stat.unit}</span>
                 </div>
-                <div className="text-sm text-slate-500 mt-1 font-medium">{stat.label}</div>
+                <div className="text-sm text-slate-400 mt-1 font-medium">{stat.label}</div>
               </div>
             ))}
           </div>
@@ -280,7 +284,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
       <section className="py-24">
         <div className="max-w-5xl mx-auto px-6">
           <div className="text-center mb-20">
-            <p className="text-blue-400 font-bold text-sm tracking-wider uppercase mb-3">Problem & Solution</p>
+            <p className="text-blue-500 font-bold text-sm tracking-wider uppercase mb-3">Problem & Solution</p>
             <h2 className="text-3xl md:text-5xl font-black leading-tight">
               병원 블로그,<br />이런 고민 있으셨죠?
             </h2>
@@ -293,10 +297,10 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
               { pain: '이미지 만들기 귀찮다', solution: 'AI 이미지 자동 생성', icon: '?' },
             ].map((item, i) => (
               <div key={i} className="group relative">
-                <div className="bg-slate-900 rounded-2xl p-8 h-full border border-white/5 hover:border-blue-500/30 hover:bg-slate-900/80 transition-all">
-                  <div className="text-4xl font-black text-slate-700 mb-6">{item.icon}</div>
-                  <p className="text-slate-500 text-sm line-through mb-2">{item.pain}</p>
-                  <p className="text-xl font-bold text-white">{item.solution}</p>
+                <div className="bg-slate-50 rounded-2xl p-8 h-full border border-slate-100 hover:border-blue-200 hover:bg-blue-50/30 transition-all">
+                  <div className="text-4xl font-black text-slate-200 mb-6">{item.icon}</div>
+                  <p className="text-slate-400 text-sm line-through mb-2">{item.pain}</p>
+                  <p className="text-xl font-bold text-slate-900">{item.solution}</p>
                 </div>
               </div>
             ))}
@@ -304,11 +308,11 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
         </div>
       </section>
 
-      {/* Features - 좌우 교차 + 일러스트 */}
-      <section className="py-24 bg-slate-900/50">
+      {/* Features */}
+      <section className="py-24 bg-slate-50">
         <div className="max-w-5xl mx-auto px-6">
           <div className="text-center mb-20">
-            <p className="text-blue-400 font-bold text-sm tracking-wider uppercase mb-3">Features</p>
+            <p className="text-blue-500 font-bold text-sm tracking-wider uppercase mb-3">Features</p>
             <h2 className="text-3xl md:text-5xl font-black">이런 걸 할 수 있어요</h2>
           </div>
 
@@ -339,7 +343,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
                     {feature.tag}
                   </span>
                   <h3 className="text-3xl md:text-4xl font-black leading-tight mb-4 whitespace-pre-line">{feature.title}</h3>
-                  <p className="text-lg text-slate-400 leading-relaxed">{feature.desc}</p>
+                  <p className="text-lg text-slate-500 leading-relaxed">{feature.desc}</p>
                 </div>
                 <div className="flex-1 w-full">
                   {featureIllusts[i]}
@@ -354,7 +358,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
       <section className="py-24">
         <div className="max-w-5xl mx-auto px-6">
           <div className="text-center mb-20">
-            <p className="text-blue-400 font-bold text-sm tracking-wider uppercase mb-3">How it works</p>
+            <p className="text-blue-500 font-bold text-sm tracking-wider uppercase mb-3">How it works</p>
             <h2 className="text-3xl md:text-5xl font-black">3단계면 끝</h2>
           </div>
 
@@ -366,14 +370,14 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
             ].map((item, i) => (
               <div key={i} className="relative">
                 {i < 2 && (
-                  <div className="hidden md:block absolute top-8 left-[60%] w-[80%] h-[2px] bg-gradient-to-r from-blue-500/30 to-transparent" />
+                  <div className="hidden md:block absolute top-8 left-[60%] w-[80%] h-[2px] bg-gradient-to-r from-blue-200 to-transparent" />
                 )}
                 <div className="relative">
                   <div className="w-16 h-16 bg-blue-500 rounded-2xl flex items-center justify-center text-white text-2xl font-black mb-6 shadow-lg shadow-blue-500/20">
                     {item.step}
                   </div>
                   <h3 className="text-xl font-bold mb-2">{item.title}</h3>
-                  <p className="text-slate-400">{item.desc}</p>
+                  <p className="text-slate-500">{item.desc}</p>
                 </div>
               </div>
             ))}
@@ -382,7 +386,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
       </section>
 
       {/* Trust / About WINAID */}
-      <section className="py-24 bg-slate-900/50">
+      <section className="py-24 bg-slate-900 text-white">
         <div className="max-w-5xl mx-auto px-6">
           <div className="text-center mb-16">
             <p className="text-blue-400 font-bold text-sm tracking-wider uppercase mb-3">About WINAID</p>
@@ -437,20 +441,20 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
       </section>
 
       {/* Footer */}
-      <footer className="py-12 bg-white">
+      <footer className="py-12 bg-slate-950">
         <div className="max-w-6xl mx-auto px-6">
           <div className="flex flex-col md:flex-row justify-between items-center gap-6">
             <div className="flex items-center gap-2">
               <img src="/280_logo.png" alt="WINAID" className="h-8" />
-              <span className="font-black text-lg text-slate-800 tracking-tight">WIN<span className="text-blue-500">AID</span></span>
+              <span className="font-black text-lg text-white tracking-tight">WIN<span className="text-blue-400">AID</span></span>
             </div>
-            <div className="flex items-center gap-6 text-sm text-slate-400">
+            <div className="flex items-center gap-6 text-sm text-slate-500">
               <span>winaid@daum.net</span>
               <span>02-584-9400</span>
-              <a href="https://winaid.co.kr" target="_blank" rel="noopener noreferrer" className="hover:text-blue-500 transition-colors">winaid.co.kr</a>
+              <a href="https://winaid.co.kr" target="_blank" rel="noopener noreferrer" className="hover:text-blue-400 transition-colors">winaid.co.kr</a>
             </div>
           </div>
-          <div className="mt-8 pt-8 border-t border-slate-100 text-center text-sm text-slate-400">
+          <div className="mt-8 pt-8 border-t border-slate-800 text-center text-sm text-slate-600">
             &copy; {new Date().getFullYear()} WINAID. All rights reserved.
           </div>
         </div>
