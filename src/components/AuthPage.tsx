@@ -198,11 +198,11 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onNavigate }) => {
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-2 text-white">
             <svg className="w-12 h-12" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-              <path d="M10 82L33 18h8L17 82H10z" fill="#ffffff"/>
-              <path d="M33 18L56 82h-8L33 18z" fill="#ffffff"/>
-              <path d="M17 58h32v7H17z" fill="#ffffff"/>
-              <path d="M50 18h22c14 0 24 14 24 32s-10 32-24 32H50V18z" fill="#60A5FA"/>
-              <path d="M58 26v48h14c10 0 16-10 16-24s-6-24-16-24H58z" fill="#1e293b"/>
+              <path d="M2 84L28 16h12L16 84H2z" fill="#ffffff"/>
+              <path d="M28 16L54 84H42L28 16z" fill="#ffffff"/>
+              <path d="M10 60h28v9H10z" fill="#ffffff"/>
+              <path d="M50 16h8v68h-8z" fill="#60A5FA"/>
+              <path d="M58 16h12c16 0 28 15 28 34s-12 34-28 34H58V74h12c11 0 18-9 18-24s-7-24-18-24H58V16z" fill="#ffffff"/>
             </svg>
             <span className="text-2xl font-bold">WINAID</span>
           </div>

@@ -1,10 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-  <rect width="100" height="100" rx="16" fill="#ffffff"/>
-  <!-- A letter -->
-  <path d="M15 82L38 18h8L22 82H15z" fill="#333333"/>
-  <path d="M38 18L61 82h-8L38 18z" fill="#333333"/>
-  <path d="M22 58h32v7H22z" fill="#333333"/>
-  <!-- D letter -->
-  <path d="M52 18h20c14 0 24 14 24 32s-10 32-24 32H52V18z" fill="#3B82F6"/>
-  <path d="M60 26v48h12c10 0 16-10 16-24s-6-24-16-24H60z" fill="#ffffff"/>
+  <!-- A letter - bold -->
+  <path d="M2 84L28 16h12L16 84H2z" fill="#3C3C3C"/>
+  <path d="M28 16L54 84H42L28 16z" fill="#3C3C3C"/>
+  <path d="M10 60h28v9H10z" fill="#3C3C3C"/>
+  <!-- D letter - vertical bar blue, curve dark -->
+  <path d="M50 16h8v68h-8z" fill="#3B82F6"/>
+  <path d="M58 16h12c16 0 28 15 28 34s-12 34-28 34H58V74h12c11 0 18-9 18-24s-7-24-18-24H58V16z" fill="#3C3C3C"/>
 </svg>

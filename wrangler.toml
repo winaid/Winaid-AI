@@ -8,3 +8,9 @@ pages_build_output_dir = "dist"
 # 환경 변수는 Cloudflare Dashboard에서 설정
 # Settings > Environment variables > Production & Preview
 # - VITE_GEMINI_API_KEY = your_api_key_here
+
+# Service Binding: Rate Limiter Worker 연결
+# Worker 배포 후 아래 주석 해제
+# [[services]]
+# binding = "RATE_LIMITER"
+# service = "winaid-rate-limiter"
