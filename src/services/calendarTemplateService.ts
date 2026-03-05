@@ -792,9 +792,66 @@ export const AI_STYLE_PRESETS: StylePreset[] = [
 
 // ── AI 이미지 생성: 템플릿 데이터 → Nano Banana Pro ──
 
+// 스타일 히스토리 (localStorage에 저장)
+export interface SavedStyleHistory {
+  id: string;
+  name: string;
+  stylePrompt: string; // 재사용 가능한 스타일 프롬프트
+  thumbnailDataUrl: string; // 결과 이미지 축소 썸네일
+  presetId?: string; // 기반 프리셋 ID (있으면)
+  createdAt: number;
+}
+
+const STYLE_HISTORY_KEY = 'template_style_history';
+const MAX_STYLE_HISTORY = 20;
+
+export function loadStyleHistory(): SavedStyleHistory[] {
+  try {
+    const raw = localStorage.getItem(STYLE_HISTORY_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch { return []; }
+}
+
+export function saveStyleToHistory(entry: Omit<SavedStyleHistory, 'id' | 'createdAt'>): SavedStyleHistory {
+  const history = loadStyleHistory();
+  const newEntry: SavedStyleHistory = {
+    ...entry,
+    id: `style_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+    createdAt: Date.now(),
+  };
+  history.unshift(newEntry);
+  // 최대 개수 제한 + 썸네일 용량 관리
+  const trimmed = history.slice(0, MAX_STYLE_HISTORY);
+  localStorage.setItem(STYLE_HISTORY_KEY, JSON.stringify(trimmed));
+  return newEntry;
+}
+
+export function deleteStyleFromHistory(id: string): void {
+  const history = loadStyleHistory().filter(h => h.id !== id);
+  localStorage.setItem(STYLE_HISTORY_KEY, JSON.stringify(history));
+}
+
+// 이미지를 작은 썸네일로 리사이즈 (localStorage 용량 절약)
+export function resizeImageToThumbnail(dataUrl: string, maxSize: number = 120): Promise<string> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const scale = Math.min(maxSize / img.width, maxSize / img.height, 1);
+      canvas.width = img.width * scale;
+      canvas.height = img.height * scale;
+      const ctx = canvas.getContext('2d')!;
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      resolve(canvas.toDataURL('image/jpeg', 0.6));
+    };
+    img.onerror = () => resolve(dataUrl); // 실패시 원본
+    img.src = dataUrl;
+  });
+}
+
 interface AiTemplateRequest {
   category: 'schedule' | 'event' | 'doctor' | 'notice' | 'greeting';
-  stylePreset: StylePreset;
+  stylePrompt: string; // 분리된 스타일 프롬프트 (프리셋 or 커스텀 or 히스토리)
   textContent: string; // 이미지에 들어갈 텍스트 정보 요약
   hospitalName?: string;
   logoBase64?: string | null;
@@ -803,7 +860,7 @@ interface AiTemplateRequest {
 }
 
 function buildTemplateAiPrompt(req: AiTemplateRequest): string {
-  const { category, stylePreset, textContent, hospitalName, extraPrompt, imageSize } = req;
+  const { category, stylePrompt, textContent, hospitalName, extraPrompt, imageSize } = req;
 
   const categoryLabels: Record<string, string> = {
     schedule: 'hospital monthly schedule / clinic calendar announcement',
@@ -817,16 +874,21 @@ function buildTemplateAiPrompt(req: AiTemplateRequest): string {
     ? (imageSize.width > imageSize.height ? 'landscape (wide)' : imageSize.width < imageSize.height ? 'portrait (tall)' : 'square 1:1')
     : 'square 1:1';
 
+  // 스타일 프롬프트와 텍스트 프롬프트를 명확히 분리
   return `🚨 RENDER ALL KOREAN TEXT EXACTLY AS PROVIDED - DO NOT TRANSLATE OR CHANGE! 🚨
 
 [IMAGE TYPE]
 ${categoryLabels[category] || 'hospital announcement'}
 
-[DESIGN STYLE - MUST FOLLOW!]
-${stylePreset.aiPrompt}
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+[DESIGN STYLE PROMPT - VISUAL LOOK & FEEL]
+${stylePrompt}
+━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-[EXACT CONTENT TO RENDER IN THE IMAGE]
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+[TEXT CONTENT PROMPT - EXACT TEXT TO RENDER]
 ${textContent}
+━━━━━━━━━━━━━━━━━━━━━━━━━━
 ${hospitalName ? `\n[HOSPITAL BRANDING - MUST APPEAR TOGETHER!]
 Hospital name: "${hospitalName}"
 ${req.logoBase64 ? '- Place hospital LOGO and hospital NAME side by side (logo left, name right) in the header area\n- They must be visually grouped together as one unit, not separated' : `- Display hospital name "${hospitalName}" prominently in the header`}` : ''}
@@ -946,7 +1008,7 @@ function buildGreetingTextContent(data: {
 export async function generateTemplateWithAI(
   category: 'schedule' | 'event' | 'doctor' | 'notice' | 'greeting',
   templateData: Record<string, any>,
-  stylePreset: StylePreset,
+  stylePrompt: string, // 분리된 스타일 프롬프트 (프리셋.aiPrompt 또는 히스토리에서 가져온 것)
   options?: {
     hospitalName?: string;
     logoBase64?: string | null;
@@ -980,7 +1042,7 @@ export async function generateTemplateWithAI(
 
   const prompt = buildTemplateAiPrompt({
     category,
-    stylePreset,
+    stylePrompt,
     textContent,
     hospitalName: options?.hospitalName,
     logoBase64: options?.logoBase64,
@@ -1002,7 +1064,7 @@ export async function generateTemplateWithAI(
 
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
-      console.log(`🎨 템플릿 AI 이미지 생성 시도 ${attempt}/${MAX_RETRIES} (${category}, ${stylePreset.id})...`);
+      console.log(`🎨 템플릿 AI 이미지 생성 시도 ${attempt}/${MAX_RETRIES} (${category})...`);
 
       const contents: any[] = logoPart
         ? [logoPart, { text: `[Hospital Logo Image - place this logo NEXT TO the hospital name in the header, side by side as one unit]\n\n${prompt}` }]

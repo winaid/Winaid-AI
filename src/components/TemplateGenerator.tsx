@@ -2,10 +2,15 @@ import React, { useState, useEffect } from 'react';
 import {
   generateTemplateWithAI,
   AI_STYLE_PRESETS,
+  loadStyleHistory,
+  saveStyleToHistory,
+  deleteStyleFromHistory,
+  resizeImageToThumbnail,
   type ClosedDay,
   type ShortenedDay,
   type VacationDay,
   type StylePreset,
+  type SavedStyleHistory,
 } from '../services/calendarTemplateService';
 
 type DayMark = 'closed' | 'shortened' | 'vacation';
@@ -81,12 +86,16 @@ export default function TemplateGenerator() {
   const [greetMsg, setGreetMsg] = useState('');
   const [greetClosure, setGreetClosure] = useState('');
 
+  // 스타일 히스토리 (이전 생성 스타일 재사용)
+  const [styleHistory, setStyleHistory] = useState<SavedStyleHistory[]>([]);
+  const [selectedHistory, setSelectedHistory] = useState<SavedStyleHistory | null>(null);
+
   // 결과
   const [generating, setGenerating] = useState(false);
   const [resultImage, setResultImage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => { const s = localStorage.getItem('uploaded_logo'); if (s) setLogoBase64(s); }, []);
+  useEffect(() => { const s = localStorage.getItem('uploaded_logo'); if (s) setLogoBase64(s); setStyleHistory(loadStyleHistory()); }, []);
   useEffect(() => { setDayMarks(new Map()); setShortenedHours(new Map()); setVacationReasons(new Map()); setResultImage(null); }, [month, year]);
   useEffect(() => { setResultImage(null); setError(null); }, [category]);
 
@@ -112,6 +121,10 @@ export default function TemplateGenerator() {
     reader.onload = () => { const b = reader.result as string; setLogoBase64(b); localStorage.setItem('uploaded_logo', b); };
     reader.readAsDataURL(file);
   };
+
+  // 현재 사용할 스타일 프롬프트 결정 (히스토리 선택 > 프리셋)
+  const activeStylePrompt = selectedHistory?.stylePrompt || selectedStyle.aiPrompt;
+  const activeStyleName = selectedHistory?.name || selectedStyle.name;
 
   const handleGenerate = async () => {
     setGenerating(true); setError(null);
@@ -139,16 +152,37 @@ export default function TemplateGenerator() {
         templateData = { holiday: greetHoliday, greeting: greetMsg, closurePeriod: greetClosure || undefined };
       }
 
-      const imageDataUrl = await generateTemplateWithAI(category, templateData, selectedStyle, {
+      const imageDataUrl = await generateTemplateWithAI(category, templateData, activeStylePrompt, {
         hospitalName: hospitalName || undefined,
         logoBase64,
         extraPrompt: [customMessage.trim(), extraPrompt.trim()].filter(Boolean).join('\n') || undefined,
         imageSize: sizeConfig.width > 0 ? { width: sizeConfig.width, height: sizeConfig.height } : undefined,
       });
       setResultImage(imageDataUrl);
+
+      // 생성 성공 시 스타일 히스토리에 썸네일과 함께 저장
+      try {
+        const thumbnail = await resizeImageToThumbnail(imageDataUrl);
+        const saved = saveStyleToHistory({
+          name: activeStyleName,
+          stylePrompt: activeStylePrompt,
+          thumbnailDataUrl: thumbnail,
+          presetId: selectedHistory ? selectedHistory.presetId : selectedStyle.id,
+        });
+        setStyleHistory(loadStyleHistory());
+        console.log('📌 스타일 히스토리 저장:', saved.id);
+      } catch (e) { console.warn('스타일 히스토리 저장 실패:', e); }
+
     } catch (err: any) {
       setError(err.message || 'AI 이미지 생성에 실패했습니다. 다시 시도해주세요.');
     } finally { setGenerating(false); }
+  };
+
+  const handleDeleteHistory = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    deleteStyleFromHistory(id);
+    setStyleHistory(loadStyleHistory());
+    if (selectedHistory?.id === id) setSelectedHistory(null);
   };
 
   const handleDownload = () => {
@@ -319,12 +353,42 @@ export default function TemplateGenerator() {
           </div>
         </div>
 
-        {/* 스타일 */}
+        {/* 내 스타일 히스토리 (이전 생성 결과 재사용) */}
+        {styleHistory.length > 0 && (
+          <div>
+            <label className="block text-xs font-semibold text-slate-600 mb-2">
+              내 스타일 <span className="text-slate-400 font-normal">({styleHistory.length}개)</span>
+            </label>
+            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin">
+              {styleHistory.map(h => (
+                <button key={h.id} onClick={() => { setSelectedHistory(selectedHistory?.id === h.id ? null : h); }} className={`relative flex-shrink-0 w-16 rounded-xl overflow-hidden border-2 transition-all group ${selectedHistory?.id === h.id ? 'border-violet-500 shadow-lg scale-105 ring-2 ring-violet-200' : 'border-slate-200 hover:border-slate-300'}`}>
+                  <img src={h.thumbnailDataUrl} alt={h.name} className="w-16 h-16 object-cover" />
+                  <div className="absolute inset-x-0 bottom-0 bg-black/60 px-1 py-0.5">
+                    <div className="text-[8px] text-white font-medium truncate">{h.name}</div>
+                  </div>
+                  <button onClick={(e) => handleDeleteHistory(h.id, e)} className="absolute top-0.5 right-0.5 w-4 h-4 bg-red-500/80 text-white rounded-full text-[8px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">x</button>
+                </button>
+              ))}
+            </div>
+            {selectedHistory && (
+              <div className="mt-1.5 p-2 bg-violet-50 rounded-lg border border-violet-200">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-violet-700">이전 스타일 적용 중: {selectedHistory.name}</span>
+                  <button onClick={() => setSelectedHistory(null)} className="text-[10px] text-violet-400 hover:text-violet-600">해제</button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 디자인 스타일 프리셋 */}
         <div>
-          <label className="block text-xs font-semibold text-slate-600 mb-2">디자인 스타일</label>
-          <div className="grid grid-cols-4 gap-1.5">
+          <label className="block text-xs font-semibold text-slate-600 mb-2">
+            디자인 스타일 {selectedHistory && <span className="text-violet-400 font-normal">(내 스타일 선택 시 무시됨)</span>}
+          </label>
+          <div className={`grid grid-cols-4 gap-1.5 ${selectedHistory ? 'opacity-40 pointer-events-none' : ''}`}>
             {AI_STYLE_PRESETS.map(p => (
-              <button key={p.id} onClick={() => setSelectedStyle(p)} className={`rounded-xl border-2 transition-all overflow-hidden ${selectedStyle.id === p.id ? 'border-slate-800 shadow-lg scale-[1.02]' : 'border-slate-200 hover:border-slate-300'}`}>
+              <button key={p.id} onClick={() => { setSelectedStyle(p); setSelectedHistory(null); }} className={`rounded-xl border-2 transition-all overflow-hidden ${!selectedHistory && selectedStyle.id === p.id ? 'border-slate-800 shadow-lg scale-[1.02]' : 'border-slate-200 hover:border-slate-300'}`}>
                 <div className="flex flex-col items-center">
                   <div className="w-full h-8" style={{ background: `linear-gradient(135deg, ${p.color}, ${p.accent})` }} />
                   <div className="p-1.5 bg-white w-full text-center">
@@ -335,7 +399,7 @@ export default function TemplateGenerator() {
               </button>
             ))}
           </div>
-          <p className="text-[10px] text-slate-400 mt-1.5">{selectedStyle.mood}</p>
+          {!selectedHistory && <p className="text-[10px] text-slate-400 mt-1.5">{selectedStyle.mood}</p>}
         </div>
 
         {/* 생성 */}
