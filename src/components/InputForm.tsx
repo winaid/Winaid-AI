@@ -160,15 +160,15 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange 
 
   return (
     <div className="bg-white rounded-3xl shadow-2xl p-8 border border-slate-100">
-      <h2 className="text-2xl font-black text-slate-800 mb-6 flex items-center gap-3">
-        <svg className="w-10 h-10" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <h2 className="text-xl font-black text-slate-800 mb-6 flex items-center gap-2">
+        <svg className="w-8 h-8" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
           <path d="M2 84L28 16h12L16 84H2z" fill="#3C3C3C"/>
           <path d="M28 16L54 84H42L28 16z" fill="#3C3C3C"/>
           <path d="M10 60h28v9H10z" fill="#3C3C3C"/>
           <path d="M50 16h8v68h-8z" fill="#3B82F6"/>
           <path d="M58 16h12c16 0 28 15 28 34s-12 34-28 34H58V74h12c11 0 18-9 18-24s-7-24-18-24H58V16z" fill="#3C3C3C"/>
         </svg>
-        WIN<span className="text-blue-500">AID</span></h2>
+        <span className="tracking-[-0.02em]">WIN<span className="text-blue-500">AID</span></span></h2>
 
       {/* 탭 메뉴 - 2행 구성 */}
       <div className="mb-8 space-y-2">
