@@ -265,10 +265,8 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange 
               disabled={isLoading}
             >
               <option value="환자용(친절/공감)">환자용 (친절/공감)</option>
-              <option value="전문가용(신뢰/정보)">전문가용 (신뢰/정보)</option>
-              <option value="예비환자(검색유입)">예비환자 (검색 유입/비교 중)</option>
               <option value="보호자용(가족걱정)">보호자용 (부모님/자녀 걱정)</option>
-              <option value="재방문유도(기존환자)">기존환자 (재방문/정기검진 유도)</option>
+              <option value="전문가용(신뢰/정보)">전문가용 (신뢰/정보)</option>
             </select>
           </div>
         </div>
