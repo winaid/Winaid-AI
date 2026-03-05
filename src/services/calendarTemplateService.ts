@@ -956,7 +956,7 @@ function buildScheduleTextContent(data: {
   // 해당 월의 달력 그리드 텍스트 생성
   const firstDay = new Date(year, month - 1, 1).getDay();
   const lastDate = new Date(year, month, 0).getDate();
-  let calGrid = `${year}년 ${month}월 달력:\n일 월 화 수 목 금 토\n`;
+  let calGrid = `일 월 화 수 목 금 토\n`;
   let dayNum = 1;
   let line = '   '.repeat(firstDay);
   for (let i = firstDay; i < 7 && dayNum <= lastDate; i++) {
@@ -973,7 +973,7 @@ function buildScheduleTextContent(data: {
     calGrid += line.trimEnd() + '\n';
   }
 
-  let content = `"${title}"\n${year}년 ${month}월\n\n${calGrid}`;
+  let content = `"${title}"\n\n${calGrid}`;
 
   if (closedDays && closedDays.length > 0) {
     content += `\n🔴 휴진일: ${closedDays.map(d => `${d.day}일`).join(', ')}`;
