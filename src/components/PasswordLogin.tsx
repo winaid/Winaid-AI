@@ -75,8 +75,7 @@ const PasswordLogin: React.FC<PasswordLoginProps> = ({ onSuccess }) => {
 
         {/* 제목 */}
         <h1 className="text-2xl font-black text-center text-slate-800 mb-2">
-          WIN<span className="text-blue-500">AID</span>
-        </h1>
+          WIN<span className="text-blue-500">AID</span></h1>
         <p className="text-center text-slate-500 mb-8">
           비밀번호를 입력하세요
         </p>

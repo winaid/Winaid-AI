@@ -168,8 +168,7 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange 
           <path d="M50 16h8v68h-8z" fill="#3B82F6"/>
           <path d="M58 16h12c16 0 28 15 28 34s-12 34-28 34H58V74h12c11 0 18-9 18-24s-7-24-18-24H58V16z" fill="#3C3C3C"/>
         </svg>
-        WIN<span className="text-blue-500">AID</span>
-      </h2>
+        WIN<span className="text-blue-500">AID</span></h2>
 
       {/* 탭 메뉴 - 2행 구성 */}
       <div className="mb-8 space-y-2">
