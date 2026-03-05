@@ -213,7 +213,7 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange 
           </button>
         </div>
         {/* 2행: 도구 */}
-        <div className="grid grid-cols-4 p-1 bg-slate-50 rounded-2xl gap-1">
+        <div className="grid grid-cols-3 p-1 bg-slate-50 rounded-2xl gap-1">
           <button
             type="button"
             onClick={() => onTabChange?.('similarity')}

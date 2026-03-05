@@ -891,10 +891,10 @@ const App: React.FC = () => {
         {contentTab === 'refine' || contentTab === 'similarity' || contentTab === 'image' ? (
           <div className="w-full h-full flex flex-col gap-4 overflow-hidden">
             {/* 탭 메뉴 */}
-            <div className={`flex gap-2 p-2 rounded-2xl ${darkMode ? 'bg-slate-800' : 'bg-white'} shadow-lg w-full max-w-5xl mx-auto`}>
+            <div className={`grid grid-cols-3 gap-1.5 p-2 rounded-2xl ${darkMode ? 'bg-slate-800' : 'bg-white'} shadow-lg w-full max-w-3xl mx-auto`}>
               <button
                 onClick={() => setContentTab('blog')}
-                className={`flex-1 py-3 px-4 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${
+                className={`py-2.5 px-3 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${
                   contentTab === 'blog'
                     ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg'
                     : darkMode
@@ -905,32 +905,8 @@ const App: React.FC = () => {
                 📝 블로그
               </button>
               <button
-                onClick={() => setContentTab('similarity')}
-                className={`flex-1 py-3 px-4 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${
-                  contentTab === 'similarity'
-                    ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg'
-                    : darkMode
-                    ? 'text-slate-400 hover:bg-slate-700'
-                    : 'text-slate-600 hover:bg-slate-100'
-                }`}
-              >
-                🔍 유사도
-              </button>
-              <button
-                onClick={() => setContentTab('refine')}
-                className={`flex-1 py-3 px-4 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${
-                  contentTab === 'refine'
-                    ? 'bg-gradient-to-r from-rose-500 to-pink-500 text-white shadow-lg'
-                    : darkMode
-                    ? 'text-slate-400 hover:bg-slate-700'
-                    : 'text-slate-600 hover:bg-slate-100'
-                }`}
-              >
-                ✨ AI보정
-              </button>
-              <button
                 onClick={() => setContentTab('card_news')}
-                className={`flex-1 py-3 px-4 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${
+                className={`py-2.5 px-3 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${
                   contentTab === 'card_news'
                     ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-lg'
                     : darkMode
@@ -942,7 +918,7 @@ const App: React.FC = () => {
               </button>
               <button
                 onClick={() => setContentTab('press')}
-                className={`flex-1 py-3 px-4 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${
+                className={`py-2.5 px-3 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${
                   contentTab === 'press'
                     ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg'
                     : darkMode
@@ -953,8 +929,32 @@ const App: React.FC = () => {
                 📰 언론보도
               </button>
               <button
+                onClick={() => setContentTab('similarity')}
+                className={`py-2.5 px-3 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${
+                  contentTab === 'similarity'
+                    ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg'
+                    : darkMode
+                    ? 'text-slate-400 hover:bg-slate-700'
+                    : 'text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                🔍 유사도
+              </button>
+              <button
+                onClick={() => setContentTab('refine')}
+                className={`py-2.5 px-3 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${
+                  contentTab === 'refine'
+                    ? 'bg-gradient-to-r from-rose-500 to-pink-500 text-white shadow-lg'
+                    : darkMode
+                    ? 'text-slate-400 hover:bg-slate-700'
+                    : 'text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                ✨ AI보정
+              </button>
+              <button
                 onClick={() => setContentTab('image')}
-                className={`flex-1 py-3 px-4 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${
+                className={`py-2.5 px-3 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${
                   contentTab === 'image'
                     ? 'bg-gradient-to-r from-purple-500 to-indigo-500 text-white shadow-lg'
                     : darkMode
