@@ -1,4 +1,7 @@
 import { GEMINI_MODEL, TIMEOUTS, callGemini, getAiClient } from "./geminiClient";
+
+// 프롬프트 추천/번역에 사용할 경량 모델
+const PROMPT_RECOMMEND_MODEL = GEMINI_MODEL.FLASH_LITE;
 import type { ImageStyle } from "../types";
 
 // 현재 연도를 동적으로 가져오는 함수
@@ -202,7 +205,7 @@ export const translateStylePromptToKorean = async (englishPrompt: string): Promi
   try {
     const ai = getAiClient();
     const response = await ai.models.generateContent({
-      model: GEMINI_MODEL.FLASH,
+      model: PROMPT_RECOMMEND_MODEL,
       contents: `다음 이미지 스타일 프롬프트를 자연스러운 한국어로 번역해주세요.
 전문 용어는 유지하고, 의미를 정확히 전달해주세요.
 
@@ -313,8 +316,8 @@ ${imageStyle === 'illustration'
 
     const response = await callGemini({
       prompt,
-      model: GEMINI_MODEL.FLASH,
-      googleSearch: false,  // 프롬프트 추천은 Google Search 불필요
+      model: PROMPT_RECOMMEND_MODEL,
+      googleSearch: false,
       responseType: 'text',
       timeout: TIMEOUTS.QUICK_OPERATION
     });
@@ -398,8 +401,8 @@ ${description ? `description: "${description}"` : ''}
 
     const response = await callGemini({
       prompt,
-      model: GEMINI_MODEL.FLASH,
-      googleSearch: false,  // 프롬프트 추천은 Google Search 불필요
+      model: PROMPT_RECOMMEND_MODEL,
+      googleSearch: false,
       responseType: 'text',
       timeout: TIMEOUTS.QUICK_OPERATION
     });

@@ -15,8 +15,9 @@ import {
 
 // 🎯 Gemini API 상수
 export const GEMINI_MODEL = {
-  PRO: 'gemini-3.1-pro-preview',    // 글 생성 등 고품질 작업 (3.1 Pro)
-  FLASH: 'gemini-3-flash-preview',  // 검색, 자동 보정, 채팅 등 빠른 작업 (3 Flash)
+  PRO: 'gemini-3.1-pro-preview',           // 글 생성 등 고품질 작업 (3.1 Pro)
+  FLASH: 'gemini-3-flash-preview',         // 검색, 자동 보정, 채팅 등 빠른 작업 (3 Flash)
+  FLASH_LITE: 'gemini-3.1-flash-lite-preview', // 프롬프트 추천 등 경량 작업 (3.1 Flash Lite)
 } as const;
 
 export const TIMEOUTS = {
