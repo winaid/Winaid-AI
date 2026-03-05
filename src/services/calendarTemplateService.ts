@@ -725,3 +725,323 @@ export async function generateCalendarFromPrompt(
 
   return { imageDataUrl, mimeType: 'image/png' };
 }
+
+// ── 스타일 프리셋 (색상 + 분위기 + AI 프롬프트) ──
+
+export interface StylePreset {
+  id: string;
+  name: string;
+  color: string;
+  accent: string;
+  bg: string;
+  desc: string;
+  mood: string; // AI 프롬프트용 분위기 키워드
+  aiPrompt: string; // AI에게 전달할 디자인 지시문 (영어)
+}
+
+export const AI_STYLE_PRESETS: StylePreset[] = [
+  {
+    id: 'clean_modern', name: '클린 모던', color: '#2563eb', accent: '#1d4ed8', bg: '#eff6ff',
+    desc: '깔끔한 · 전문적',
+    mood: '미니멀하고 전문적인 병원 느낌',
+    aiPrompt: 'Clean minimal modern design, white background with subtle blue accents, professional hospital aesthetic, flat design with soft shadows, geometric shapes, sans-serif typography, calm and trustworthy mood',
+  },
+  {
+    id: 'warm_friendly', name: '따뜻한 감성', color: '#f59e0b', accent: '#d97706', bg: '#fffbeb',
+    desc: '따뜻한 · 친근한',
+    mood: '따뜻하고 친근한 동네병원 느낌',
+    aiPrompt: 'Warm friendly design with soft rounded shapes, pastel yellow and cream tones, hand-drawn feel, cozy atmosphere, watercolor texture accents, gentle and approachable mood, soft gradient background',
+  },
+  {
+    id: 'premium_elegant', name: '프리미엄', color: '#1e3a5f', accent: '#0f2942', bg: '#f0f4f8',
+    desc: '고급 · 세련된',
+    mood: '고급스럽고 세련된 프리미엄 클리닉 느낌',
+    aiPrompt: 'Premium elegant design, deep navy and gold accents, marble texture hints, sophisticated serif typography, luxury clinic aesthetic, subtle gradient, refined and exclusive mood, thin gold line decorations',
+  },
+  {
+    id: 'soft_nature', name: '내추럴 힐링', color: '#16a34a', accent: '#15803d', bg: '#f0fdf4',
+    desc: '자연 · 치유',
+    mood: '자연스럽고 치유적인 힐링 느낌',
+    aiPrompt: 'Natural healing design, soft green and earth tones, botanical leaf illustrations, organic shapes, light linen texture background, fresh and soothing mood, eco-friendly aesthetic, subtle plant decorations',
+  },
+  {
+    id: 'cute_pop', name: '귀여운 팝', color: '#ec4899', accent: '#db2777', bg: '#fdf2f8',
+    desc: '귀여운 · 발랄한',
+    mood: '귀엽고 발랄한 소아과/피부과 느낌',
+    aiPrompt: 'Cute pop design, bright pink and lavender colors, rounded bubbly shapes, playful illustrations, confetti decorations, fun and cheerful mood, kawaii aesthetic, bold colorful accents, soft pastel gradients',
+  },
+  {
+    id: 'classic_trust', name: '클래식 신뢰', color: '#7c3aed', accent: '#6d28d9', bg: '#f5f3ff',
+    desc: '전통적 · 신뢰감',
+    mood: '클래식하고 신뢰감 있는 종합병원 느낌',
+    aiPrompt: 'Classic trustworthy design, deep purple and white, clean structured layout, traditional hospital aesthetic, balanced symmetrical composition, professional medical icons, authoritative and reliable mood',
+  },
+  {
+    id: 'fresh_energy', name: '프레시 에너지', color: '#0d9488', accent: '#0f766e', bg: '#f0fdfa',
+    desc: '활기 · 청결한',
+    mood: '활기차고 청결한 건강 느낌',
+    aiPrompt: 'Fresh energetic design, teal and white gradient, dynamic angular shapes, clean modern aesthetic, bright and vibrant mood, health and wellness vibe, crisp edges, refreshing color palette',
+  },
+  {
+    id: 'minimal_mono', name: '미니멀 모노', color: '#374151', accent: '#1f2937', bg: '#f9fafb',
+    desc: '미니멀 · 모던',
+    mood: '극도로 미니멀한 흑백 모던 느낌',
+    aiPrompt: 'Ultra minimal monochrome design, black and white with subtle gray tones, lots of white space, thin line icons, modern sans-serif typography, sophisticated and understated mood, editorial magazine style',
+  },
+];
+
+// ── AI 이미지 생성: 템플릿 데이터 → Nano Banana Pro ──
+
+interface AiTemplateRequest {
+  category: 'schedule' | 'event' | 'doctor' | 'notice' | 'greeting';
+  stylePreset: StylePreset;
+  textContent: string; // 이미지에 들어갈 텍스트 정보 요약
+  hospitalName?: string;
+  logoBase64?: string | null;
+  extraPrompt?: string;
+  imageSize?: { width: number; height: number };
+}
+
+function buildTemplateAiPrompt(req: AiTemplateRequest): string {
+  const { category, stylePreset, textContent, hospitalName, extraPrompt, imageSize } = req;
+
+  const categoryLabels: Record<string, string> = {
+    schedule: 'hospital monthly schedule / clinic calendar announcement',
+    event: 'hospital promotion / medical event announcement',
+    doctor: 'doctor introduction / new physician announcement',
+    notice: 'hospital notice / important announcement',
+    greeting: 'holiday greeting / seasonal message from hospital',
+  };
+
+  const aspectDesc = imageSize && imageSize.width > 0 && imageSize.height > 0
+    ? (imageSize.width > imageSize.height ? 'landscape (wide)' : imageSize.width < imageSize.height ? 'portrait (tall)' : 'square 1:1')
+    : 'square 1:1';
+
+  return `🚨 RENDER ALL KOREAN TEXT EXACTLY AS PROVIDED - DO NOT TRANSLATE OR CHANGE! 🚨
+
+[IMAGE TYPE]
+${categoryLabels[category] || 'hospital announcement'}
+
+[DESIGN STYLE - MUST FOLLOW!]
+${stylePreset.aiPrompt}
+
+[EXACT CONTENT TO RENDER IN THE IMAGE]
+${textContent}
+${hospitalName ? `\n[HOSPITAL BRANDING - MUST APPEAR TOGETHER!]
+Hospital name: "${hospitalName}"
+${req.logoBase64 ? '- Place hospital LOGO and hospital NAME side by side (logo left, name right) in the header area\n- They must be visually grouped together as one unit, not separated' : `- Display hospital name "${hospitalName}" prominently in the header`}` : ''}
+
+[IMAGE SPECIFICATIONS]
+- Aspect ratio: ${aspectDesc}
+- Resolution: high quality, crisp text
+- Professional hospital/clinic announcement image
+- All text must be in Korean, rendered clearly and legibly
+- Clean layout with proper visual hierarchy
+
+[DESIGN RULES]
+✅ Korean text must be pixel-perfect and readable
+✅ Professional medical/hospital aesthetic
+✅ Calendar dates and numbers must be ACCURATE
+✅ Clean visual hierarchy: title → content → footer
+✅ Use the design style keywords above for mood and atmosphere
+${extraPrompt ? `\n[ADDITIONAL USER REQUEST]\n${extraPrompt}` : ''}
+
+⛔ FORBIDDEN:
+- Do NOT change or translate any Korean text
+- No watermarks, no logos (unless hospital logo provided)
+- No English text (except decorative labels like "SCHEDULE", "INFORMATION")
+- No generic stock photo feel - must look like designed template
+- No blurry or hard-to-read text`.trim();
+}
+
+function buildScheduleTextContent(data: {
+  month: number; year: number; title: string;
+  closedDays?: { day: number }[];
+  shortenedDays?: { day: number; hours?: string }[];
+  vacationDays?: { day: number; reason?: string }[];
+  notices?: string[];
+}): string {
+  const { month, year, title, closedDays, shortenedDays, vacationDays, notices } = data;
+
+  // 해당 월의 달력 그리드 텍스트 생성
+  const firstDay = new Date(year, month - 1, 1).getDay();
+  const lastDate = new Date(year, month, 0).getDate();
+  let calGrid = `${year}년 ${month}월 달력:\n일 월 화 수 목 금 토\n`;
+  let dayNum = 1;
+  let line = '   '.repeat(firstDay);
+  for (let i = firstDay; i < 7 && dayNum <= lastDate; i++) {
+    line += String(dayNum).padStart(2, ' ') + ' ';
+    dayNum++;
+  }
+  calGrid += line.trimEnd() + '\n';
+  while (dayNum <= lastDate) {
+    line = '';
+    for (let i = 0; i < 7 && dayNum <= lastDate; i++) {
+      line += String(dayNum).padStart(2, ' ') + ' ';
+      dayNum++;
+    }
+    calGrid += line.trimEnd() + '\n';
+  }
+
+  let content = `제목: "${title}"\n날짜: ${year}. ${String(month).padStart(2, '0')}\n\n${calGrid}`;
+
+  if (closedDays && closedDays.length > 0) {
+    content += `\n🔴 휴진일: ${closedDays.map(d => `${d.day}일`).join(', ')}`;
+  }
+  if (shortenedDays && shortenedDays.length > 0) {
+    content += `\n🟡 단축진료: ${shortenedDays.map(d => `${d.day}일${d.hours ? ` (${d.hours})` : ''}`).join(', ')}`;
+  }
+  if (vacationDays && vacationDays.length > 0) {
+    content += `\n🟣 휴가: ${vacationDays.map(d => `${d.day}일${d.reason ? ` (${d.reason})` : ''}`).join(', ')}`;
+  }
+  if (notices && notices.length > 0) {
+    content += `\n\n안내사항:\n${notices.map(n => `• ${n}`).join('\n')}`;
+  }
+
+  return content;
+}
+
+function buildEventTextContent(data: {
+  title: string; subtitle?: string; price?: string; originalPrice?: string;
+  discount?: string; period?: string; description?: string;
+}): string {
+  let content = `메인 제목: "${data.title}"`;
+  if (data.subtitle) content += `\n부제목: "${data.subtitle}"`;
+  if (data.discount) content += `\n할인 배지: "${data.discount}"`;
+  if (data.originalPrice) content += `\n정가 (취소선): "${data.originalPrice}"`;
+  if (data.price) content += `\n이벤트 가격 (크게 강조): "${data.price}"`;
+  if (data.period) content += `\n기간: "${data.period}"`;
+  if (data.description) content += `\n상세:\n${data.description}`;
+  return content;
+}
+
+function buildDoctorTextContent(data: {
+  doctorName: string; specialty: string; career: string[]; greeting?: string;
+}): string {
+  let content = `의사 이름 (크게): "${data.doctorName}"`;
+  content += `\n전문 분야: "${data.specialty}"`;
+  if (data.career.length > 0) content += `\n경력/학력:\n${data.career.map(c => `• ${c}`).join('\n')}`;
+  if (data.greeting) content += `\n인사말: "${data.greeting}"`;
+  return content;
+}
+
+function buildNoticeTextContent(data: {
+  title: string; content: string[]; effectiveDate?: string;
+}): string {
+  let text = `공지 제목 (크게): "${data.title}"`;
+  if (data.content.length > 0) text += `\n내용:\n${data.content.map((c, i) => `${i + 1}. ${c}`).join('\n')}`;
+  if (data.effectiveDate) text += `\n적용일: "${data.effectiveDate}"`;
+  return text;
+}
+
+function buildGreetingTextContent(data: {
+  holiday: string; greeting: string; closurePeriod?: string;
+}): string {
+  let content = `명절: "${data.holiday}"`;
+  content += `\n인사말 (크게, 중앙):\n"${data.greeting}"`;
+  if (data.closurePeriod) content += `\n휴진 기간: "${data.closurePeriod}"`;
+  return content;
+}
+
+export async function generateTemplateWithAI(
+  category: 'schedule' | 'event' | 'doctor' | 'notice' | 'greeting',
+  templateData: Record<string, any>,
+  stylePreset: StylePreset,
+  options?: {
+    hospitalName?: string;
+    logoBase64?: string | null;
+    extraPrompt?: string;
+    imageSize?: { width: number; height: number };
+  }
+): Promise<string> {
+  const ai = getAiClient();
+
+  // 카테고리별 텍스트 콘텐츠 생성
+  let textContent: string;
+  switch (category) {
+    case 'schedule':
+      textContent = buildScheduleTextContent(templateData as any);
+      break;
+    case 'event':
+      textContent = buildEventTextContent(templateData as any);
+      break;
+    case 'doctor':
+      textContent = buildDoctorTextContent(templateData as any);
+      break;
+    case 'notice':
+      textContent = buildNoticeTextContent(templateData as any);
+      break;
+    case 'greeting':
+      textContent = buildGreetingTextContent(templateData as any);
+      break;
+    default:
+      textContent = JSON.stringify(templateData);
+  }
+
+  const prompt = buildTemplateAiPrompt({
+    category,
+    stylePreset,
+    textContent,
+    hospitalName: options?.hospitalName,
+    logoBase64: options?.logoBase64,
+    extraPrompt: options?.extraPrompt,
+    imageSize: options?.imageSize,
+  });
+
+  // 로고 이미지 파트 준비
+  const logoPart = options?.logoBase64?.startsWith('data:')
+    ? (() => {
+        const [meta, base64] = options.logoBase64!.split(',');
+        const mimeType = (meta.match(/data:(.*?);base64/) || [])[1] || 'image/png';
+        return { inlineData: { data: base64, mimeType } };
+      })()
+    : null;
+
+  const MAX_RETRIES = 2;
+  let lastError: any = null;
+
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      console.log(`🎨 템플릿 AI 이미지 생성 시도 ${attempt}/${MAX_RETRIES} (${category}, ${stylePreset.id})...`);
+
+      const contents: any[] = logoPart
+        ? [logoPart, { text: `[Hospital Logo Image - place this logo NEXT TO the hospital name in the header, side by side as one unit]\n\n${prompt}` }]
+        : [{ text: prompt }];
+
+      const result = await ai.models.generateContent({
+        model: 'gemini-3-pro-image-preview',
+        contents,
+        config: {
+          responseModalities: ['IMAGE', 'TEXT'],
+          temperature: 0.5,
+          imageSize: '4K',
+        },
+      });
+
+      const parts = result?.candidates?.[0]?.content?.parts || [];
+      const imagePart = parts.find((p: any) => p.inlineData?.data);
+
+      if (imagePart?.inlineData) {
+        const mimeType = imagePart.inlineData.mimeType || 'image/png';
+        const data = imagePart.inlineData.data;
+        console.log(`✅ 템플릿 AI 이미지 생성 성공 (시도 ${attempt})`);
+        return `data:${mimeType};base64,${data}`;
+      }
+
+      lastError = new Error('이미지 데이터를 받지 못했습니다.');
+      if (attempt < MAX_RETRIES) {
+        await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+      }
+    } catch (error: any) {
+      lastError = error;
+      console.error(`❌ 템플릿 AI 이미지 생성 에러 (시도 ${attempt}):`, error?.message || error);
+      if (attempt < MAX_RETRIES) {
+        await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, attempt - 1)));
+      }
+    }
+  }
+
+  // AI 생성 실패 시 기존 HTML 방식으로 폴백
+  console.warn('⚠️ AI 이미지 생성 실패, HTML 렌더링으로 폴백:', lastError?.message);
+  throw new Error(`AI 이미지 생성 실패: ${lastError?.message || '알 수 없는 오류'}. 다시 시도해주세요.`);
+}

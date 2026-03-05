@@ -6,10 +6,13 @@ import {
   buildDoctorHTML,
   buildNoticeHTML,
   buildGreetingHTML,
+  generateTemplateWithAI,
+  AI_STYLE_PRESETS,
   type CalendarData,
   type ClosedDay,
   type ShortenedDay,
   type VacationDay,
+  type StylePreset,
 } from '../services/calendarTemplateService';
 
 type DayMark = 'closed' | 'shortened' | 'vacation';
@@ -23,18 +26,14 @@ const CATEGORIES: { id: TemplateCategory; name: string; icon: string; desc: stri
   { id: 'greeting', name: '명절 인사', icon: '\u{1F38A}', desc: '설날/추석' },
 ];
 
-const STYLE_PRESETS = [
-  { id: 'blue', name: '클린 블루', color: '#2563eb', accent: '#1d4ed8', bg: '#eff6ff', desc: '전문적 \u00B7 신뢰감' },
-  { id: 'green', name: '프레시 그린', color: '#16a34a', accent: '#15803d', bg: '#f0fdf4', desc: '건강 \u00B7 자연' },
-  { id: 'pink', name: '소프트 핑크', color: '#db2777', accent: '#be185d', bg: '#fdf2f8', desc: '따뜻한 \u00B7 부드러운' },
-  { id: 'purple', name: '모던 퍼플', color: '#7c3aed', accent: '#6d28d9', bg: '#f5f3ff', desc: '세련된 \u00B7 트렌디' },
-  { id: 'navy', name: '딥 네이비', color: '#1e3a5f', accent: '#0f2942', bg: '#f0f4f8', desc: '고급 \u00B7 클래식' },
-  { id: 'coral', name: '코랄 레드', color: '#e74c3c', accent: '#c0392b', bg: '#fef5f4', desc: '활기 \u00B7 에너지' },
-  { id: 'teal', name: '티 그린', color: '#0d9488', accent: '#0f766e', bg: '#f0fdfa', desc: '청결 \u00B7 치유' },
-  { id: 'charcoal', name: '차콜 그레이', color: '#374151', accent: '#1f2937', bg: '#f9fafb', desc: '미니멀 \u00B7 모던' },
-] as const;
+// AI 스타일 프리셋 사용 + 기존 HTML 폴백용 색상 매핑
+const STYLE_COLOR_MAP: Record<string, string> = {
+  clean_modern: 'blue', warm_friendly: 'coral', premium_elegant: 'navy',
+  soft_nature: 'green', cute_pop: 'pink', classic_trust: 'purple',
+  fresh_energy: 'teal', minimal_mono: 'charcoal',
+};
 
-type ColorTheme = typeof STYLE_PRESETS[number]['id'];
+type GenerationMode = 'ai' | 'html';
 
 const IMAGE_SIZES = [
   { id: 'square', label: '1080x1080', width: 1080, height: 1080, icon: '\u2B1C', desc: '\uC778\uC2A4\uD0C0 \uD53C\uB4DC' },
@@ -55,11 +54,12 @@ export default function TemplateGenerator() {
   // 공통
   const [category, setCategory] = useState<TemplateCategory>('schedule');
   const [hospitalName, setHospitalName] = useState('');
-  const [colorTheme, setColorTheme] = useState<ColorTheme>('blue');
+  const [selectedStyle, setSelectedStyle] = useState<StylePreset>(AI_STYLE_PRESETS[0]);
   const [logoBase64, setLogoBase64] = useState<string | null>(null);
   const [customMessage, setCustomMessage] = useState('');
   const [extraPrompt, setExtraPrompt] = useState('');
   const [imageSize, setImageSize] = useState<ImageSize>('auto');
+  const [genMode, setGenMode] = useState<GenerationMode>('ai');
 
   // 진료 일정
   const [month, setMonth] = useState(now.getMonth() + 1);
@@ -131,33 +131,63 @@ export default function TemplateGenerator() {
   const handleGenerate = async () => {
     setGenerating(true); setError(null);
     try {
-      let html: string;
-      const common = { hospitalName: hospitalName || undefined, logoBase64: logoBase64 || undefined, colorTheme, customMessage: customMessage.trim() || undefined };
+      const sizeConfig = [...IMAGE_SIZES].find(s => s.id === imageSize) || IMAGE_SIZES[3];
 
-      if (category === 'schedule') {
+      if (genMode === 'ai') {
+        // AI 이미지 생성 (Nano Banana Pro)
         const closed: ClosedDay[] = []; const shortened: ShortenedDay[] = []; const vacation: VacationDay[] = [];
         dayMarks.forEach((mark, day) => {
           if (mark === 'closed') closed.push({ day });
           else if (mark === 'shortened') shortened.push({ day, hours: shortenedHours.get(day) });
           else if (mark === 'vacation') vacation.push({ day, reason: vacationReasons.get(day) });
         });
-        html = buildCalendarHTML({ month, year, title: scheduleTitle || `${month}월 휴진 안내`, closedDays: closed, shortenedDays: shortened.length > 0 ? shortened : undefined, vacationDays: vacation.length > 0 ? vacation : undefined, notices: notices.split('\n').filter(Boolean), ...common });
-      } else if (category === 'event') {
-        html = buildEventHTML({ title: evTitle, subtitle: evSubtitle || undefined, price: evPrice || undefined, originalPrice: evOrigPrice || undefined, discount: evDiscount || undefined, period: evPeriod || undefined, description: evDesc || undefined, ...common });
-      } else if (category === 'doctor') {
-        html = buildDoctorHTML({ doctorName: docName, specialty: docSpecialty, career: docCareer.split('\n').filter(Boolean), greeting: docGreeting || undefined, ...common });
-      } else if (category === 'notice') {
-        html = buildNoticeHTML({ title: noticeTitle, content: noticeContent.split('\n').filter(Boolean), effectiveDate: noticeDate || undefined, ...common });
-      } else {
-        html = buildGreetingHTML({ holiday: greetHoliday, greeting: greetMsg, closurePeriod: greetClosure || undefined, ...common });
-      }
 
-      const sizeConfig = [...IMAGE_SIZES].find(s => s.id === imageSize) || IMAGE_SIZES[3];
-      const imageDataUrl = await renderCalendarToImage(html, {
-        width: sizeConfig.width,
-        height: sizeConfig.height,
-      });
-      setResultImage(imageDataUrl);
+        let templateData: Record<string, any>;
+        if (category === 'schedule') {
+          templateData = { month, year, title: scheduleTitle || `${month}월 휴진 안내`, closedDays: closed, shortenedDays: shortened.length > 0 ? shortened : undefined, vacationDays: vacation.length > 0 ? vacation : undefined, notices: notices.split('\n').filter(Boolean) };
+        } else if (category === 'event') {
+          templateData = { title: evTitle, subtitle: evSubtitle || undefined, price: evPrice || undefined, originalPrice: evOrigPrice || undefined, discount: evDiscount || undefined, period: evPeriod || undefined, description: evDesc || undefined };
+        } else if (category === 'doctor') {
+          templateData = { doctorName: docName, specialty: docSpecialty, career: docCareer.split('\n').filter(Boolean), greeting: docGreeting || undefined };
+        } else if (category === 'notice') {
+          templateData = { title: noticeTitle, content: noticeContent.split('\n').filter(Boolean), effectiveDate: noticeDate || undefined };
+        } else {
+          templateData = { holiday: greetHoliday, greeting: greetMsg, closurePeriod: greetClosure || undefined };
+        }
+
+        const imageDataUrl = await generateTemplateWithAI(category, templateData, selectedStyle, {
+          hospitalName: hospitalName || undefined,
+          logoBase64,
+          extraPrompt: [customMessage.trim(), extraPrompt.trim()].filter(Boolean).join('\n') || undefined,
+          imageSize: sizeConfig.width > 0 ? { width: sizeConfig.width, height: sizeConfig.height } : undefined,
+        });
+        setResultImage(imageDataUrl);
+      } else {
+        // 기존 HTML 렌더링 폴백
+        let html: string;
+        const colorTheme = STYLE_COLOR_MAP[selectedStyle.id] || 'blue';
+        const common = { hospitalName: hospitalName || undefined, logoBase64: logoBase64 || undefined, colorTheme, customMessage: customMessage.trim() || undefined };
+
+        if (category === 'schedule') {
+          const closed: ClosedDay[] = []; const shortened: ShortenedDay[] = []; const vacation: VacationDay[] = [];
+          dayMarks.forEach((mark, day) => {
+            if (mark === 'closed') closed.push({ day });
+            else if (mark === 'shortened') shortened.push({ day, hours: shortenedHours.get(day) });
+            else if (mark === 'vacation') vacation.push({ day, reason: vacationReasons.get(day) });
+          });
+          html = buildCalendarHTML({ month, year, title: scheduleTitle || `${month}월 휴진 안내`, closedDays: closed, shortenedDays: shortened.length > 0 ? shortened : undefined, vacationDays: vacation.length > 0 ? vacation : undefined, notices: notices.split('\n').filter(Boolean), ...common });
+        } else if (category === 'event') {
+          html = buildEventHTML({ title: evTitle, subtitle: evSubtitle || undefined, price: evPrice || undefined, originalPrice: evOrigPrice || undefined, discount: evDiscount || undefined, period: evPeriod || undefined, description: evDesc || undefined, ...common });
+        } else if (category === 'doctor') {
+          html = buildDoctorHTML({ doctorName: docName, specialty: docSpecialty, career: docCareer.split('\n').filter(Boolean), greeting: docGreeting || undefined, ...common });
+        } else if (category === 'notice') {
+          html = buildNoticeHTML({ title: noticeTitle, content: noticeContent.split('\n').filter(Boolean), effectiveDate: noticeDate || undefined, ...common });
+        } else {
+          html = buildGreetingHTML({ holiday: greetHoliday, greeting: greetMsg, closurePeriod: greetClosure || undefined, ...common });
+        }
+        const imageDataUrl = await renderCalendarToImage(html, { width: sizeConfig.width, height: sizeConfig.height });
+        setResultImage(imageDataUrl);
+      }
     } catch (err: any) {
       setError(err.message || '이미지 생성에 실패했습니다.');
     } finally { setGenerating(false); }
@@ -331,14 +361,28 @@ export default function TemplateGenerator() {
           </div>
         </div>
 
+        {/* 생성 모드 */}
+        <div>
+          <label className="block text-xs font-semibold text-slate-600 mb-2">생성 방식</label>
+          <div className="flex gap-2">
+            <button onClick={() => setGenMode('ai')} className={`flex-1 py-2.5 px-3 rounded-xl text-sm font-bold transition-all ${genMode === 'ai' ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-lg' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>
+              AI 디자인
+            </button>
+            <button onClick={() => setGenMode('html')} className={`flex-1 py-2.5 px-3 rounded-xl text-sm font-bold transition-all ${genMode === 'html' ? 'bg-slate-800 text-white shadow-lg' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>
+              기본 템플릿
+            </button>
+          </div>
+          {genMode === 'ai' && <p className="text-[10px] text-violet-500 mt-1.5 font-medium">Nano Banana Pro AI가 예쁘게 디자인합니다</p>}
+        </div>
+
         {/* 스타일 */}
         <div>
-          <label className="block text-xs font-semibold text-slate-600 mb-2">스타일</label>
+          <label className="block text-xs font-semibold text-slate-600 mb-2">디자인 스타일</label>
           <div className="grid grid-cols-4 gap-1.5">
-            {STYLE_PRESETS.map(p => (
-              <button key={p.id} onClick={()=>setColorTheme(p.id)} className={`rounded-xl border-2 transition-all overflow-hidden ${colorTheme===p.id?'border-slate-800 shadow-lg scale-[1.02]':'border-slate-200 hover:border-slate-300'}`}>
+            {AI_STYLE_PRESETS.map(p => (
+              <button key={p.id} onClick={() => setSelectedStyle(p)} className={`rounded-xl border-2 transition-all overflow-hidden ${selectedStyle.id === p.id ? 'border-slate-800 shadow-lg scale-[1.02]' : 'border-slate-200 hover:border-slate-300'}`}>
                 <div className="flex flex-col items-center">
-                  <div className="w-full h-8" style={{background:`linear-gradient(135deg, ${p.color}, ${p.accent})`}} />
+                  <div className="w-full h-8" style={{ background: `linear-gradient(135deg, ${p.color}, ${p.accent})` }} />
                   <div className="p-1.5 bg-white w-full text-center">
                     <div className="text-[10px] font-bold text-slate-700 leading-tight">{p.name}</div>
                     <div className="text-[9px] text-slate-400 mt-0.5">{p.desc}</div>
@@ -347,11 +391,12 @@ export default function TemplateGenerator() {
               </button>
             ))}
           </div>
+          {genMode === 'ai' && <p className="text-[10px] text-slate-400 mt-1.5">{selectedStyle.mood}</p>}
         </div>
 
         {/* 생성 */}
-        <button onClick={handleGenerate} disabled={generating} className={`w-full py-3 rounded-xl text-white font-bold text-base transition-all shadow-lg ${generating?'bg-slate-400 cursor-not-allowed':'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 active:scale-[0.98]'}`}>
-          {generating?(<span className="flex items-center justify-center gap-2"><svg className="animate-spin h-5 w-5" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" /></svg>생성 중...</span>):'이미지 생성하기'}
+        <button onClick={handleGenerate} disabled={generating} className={`w-full py-3 rounded-xl text-white font-bold text-base transition-all shadow-lg ${generating ? 'bg-slate-400 cursor-not-allowed' : genMode === 'ai' ? 'bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 active:scale-[0.98]' : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 active:scale-[0.98]'}`}>
+          {generating ? (<span className="flex items-center justify-center gap-2"><svg className="animate-spin h-5 w-5" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" /></svg>{genMode === 'ai' ? 'AI 디자인 생성 중...' : '생성 중...'}</span>) : genMode === 'ai' ? 'AI 디자인 생성' : '이미지 생성하기'}
         </button>
       </div>
 
