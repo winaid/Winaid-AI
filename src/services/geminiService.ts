@@ -692,7 +692,11 @@ export const generateBlogWithPipeline = async (
 
   // ── Stage A: 아웃라인 생성 (FLASH) ──
   safeProgress('📐 Stage A: 글 구조 설계 중...');
-  const outlinePrompt = getPipelineOutlinePrompt(targetLength, medicalLawMode);
+  const outlinePrompt = getPipelineOutlinePrompt(targetLength, medicalLawMode, {
+    audienceMode: request.audienceMode,
+    persona: request.persona,
+    tone: request.tone,
+  });
 
   const outlineUserPrompt = `[주제] ${request.topic}
 [키워드] ${request.keywords || '없음'}

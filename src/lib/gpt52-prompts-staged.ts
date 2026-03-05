@@ -418,22 +418,22 @@ export const getDynamicSystemPrompt = async (medicalLawMode: 'strict' | 'relaxed
 /**
  * 스테이지별 프롬프트 getter
  */
-export const getStagePrompt = (stageNumber: 1 | 2, textLength: number = 1500, medicalLawMode: 'strict' | 'relaxed' = 'strict'): string => {
+export const getStagePrompt = (stageNumber: 1 | 2, textLength: number = 1500, medicalLawMode: 'strict' | 'relaxed' = 'strict', context?: { audienceMode?: string; persona?: string; tone?: string }): string => {
   if (stageNumber === 1) return getStage1_ContentGeneration(textLength, medicalLawMode);
-  if (stageNumber === 2) return getStage2_AiRemovalAndCompliance(textLength);
+  if (stageNumber === 2) return getStage2_AiRemovalAndCompliance(textLength, undefined, context);
   return '';
 };
 
-export const getFullPrompt = async (stageNumber: 1 | 2, textLength: number = 1500) => {
+export const getFullPrompt = async (stageNumber: 1 | 2, textLength: number = 1500, context?: { audienceMode?: string; persona?: string; tone?: string }) => {
   if (stageNumber === 1) return getStage1_ContentGeneration(textLength);
-  if (stageNumber === 2) return getStage2_AiRemovalAndCompliance(textLength);
+  if (stageNumber === 2) return getStage2_AiRemovalAndCompliance(textLength, undefined, context);
   return '';
 };
 
-export const getAllStages = async (textLength: number = 1500) => {
+export const getAllStages = async (textLength: number = 1500, context?: { audienceMode?: string; persona?: string; tone?: string }) => {
   return {
     stage1: getStage1_ContentGeneration(textLength),
-    stage2: getStage2_AiRemovalAndCompliance(textLength)
+    stage2: getStage2_AiRemovalAndCompliance(textLength, undefined, context)
   };
 };
 
