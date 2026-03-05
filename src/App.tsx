@@ -816,27 +816,7 @@ const App: React.FC = () => {
     );
   }
 
-  // API Key 미설정 시 안내 화면
-  if (!apiKeyReady) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
-        <div className="max-w-md w-full text-center bg-white p-12 rounded-[40px] shadow-2xl border border-slate-100 relative overflow-hidden">
-          <div className="text-6xl mb-6">🛠️</div>
-          <h1 className="text-2xl font-black mb-3 text-slate-900">WINAID</h1>
-          <h2 className="text-lg font-bold text-amber-600 mb-6">서비스 준비 중</h2>
-          <p className="text-slate-500 mb-8 font-medium">서비스가 곧 오픈될 예정입니다.<br/>잠시만 기다려주세요!</p>
-          <a 
-            href="#" 
-            className="block w-full bg-gradient-to-r from-emerald-500 to-green-600 text-white font-black py-4 rounded-2xl shadow-xl shadow-emerald-100 hover:shadow-2xl transition-all active:scale-95"
-          >
-             🏠 홈으로 돌아가기
-          </a>
-        </div>
-      </div>
-    );
-  }
-
-  // 랜딩 페이지
+  // 랜딩 페이지 (API Key 체크 전에 표시)
   if (currentPage === 'landing') {
     return (
       <Suspense fallback={<div className="min-h-screen flex items-center justify-center">로딩 중...</div>}>
@@ -848,6 +828,26 @@ const App: React.FC = () => {
           darkMode={darkMode}
         />
       </Suspense>
+    );
+  }
+
+  // API Key 미설정 시 안내 화면
+  if (!apiKeyReady) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
+        <div className="max-w-md w-full text-center bg-white p-12 rounded-[40px] shadow-2xl border border-slate-100 relative overflow-hidden">
+          <div className="text-6xl mb-6">🛠️</div>
+          <h1 className="text-2xl font-black mb-3 text-slate-900">WINAID</h1>
+          <h2 className="text-lg font-bold text-amber-600 mb-6">서비스 준비 중</h2>
+          <p className="text-slate-500 mb-8 font-medium">서비스가 곧 오픈될 예정입니다.<br/>잠시만 기다려주세요!</p>
+          <a
+            href="#"
+            className="block w-full bg-gradient-to-r from-emerald-500 to-green-600 text-white font-black py-4 rounded-2xl shadow-xl shadow-emerald-100 hover:shadow-2xl transition-all active:scale-95"
+          >
+             🏠 홈으로 돌아가기
+          </a>
+        </div>
+      </div>
     );
   }
 
@@ -874,7 +874,7 @@ const App: React.FC = () => {
               <path d="M58 16h12c16 0 28 15 28 34s-12 34-28 34H58V74h12c11 0 18-9 18-24s-7-24-18-24H58V16z" fill={darkMode ? '#e2e8f0' : '#3C3C3C'}/>
             </svg>
             <div className="flex flex-col leading-none">
-              <span className={`font-black text-lg tracking-tight ${darkMode ? 'text-slate-100' : 'text-slate-800'}`}>WIN<span className="text-blue-500">AID</span></span>
+              <span className={`font-black text-lg tracking-[-0.02em] ${darkMode ? 'text-slate-100' : 'text-slate-800'}`}>WIN<span className="text-blue-500">AID</span></span>
               <span className={`text-[9px] font-medium tracking-wider ${darkMode ? 'text-slate-400' : 'text-slate-400'}`}>Advertising Company</span>
             </div>
           </a>
