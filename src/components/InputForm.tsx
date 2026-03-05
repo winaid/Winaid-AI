@@ -161,7 +161,7 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange 
   return (
     <div className="bg-white rounded-3xl shadow-2xl p-8 border border-slate-100">
       <h2 className="text-xl font-black text-slate-800 mb-6 flex items-center gap-2">
-        <img src="/logo.svg" alt="WINAID" className="h-6" />
+        <img src="/280_logo.png" alt="WINAID" className="h-6" />
         <span className="tracking-[-0.02em]">WIN<span className="text-blue-500">AID</span></span></h2>
 
       {/* 탭 메뉴 - 2행 구성 */}

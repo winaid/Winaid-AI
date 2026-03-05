@@ -20,7 +20,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
       <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrollY > 50 ? 'bg-white/90 backdrop-blur-xl shadow-sm' : 'bg-transparent'}`}>
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <img src={scrollY > 50 ? '/logo.svg' : '/logo-white.svg'} alt="WINAID" className="h-7 transition-all" />
+            <img src={scrollY > 50 ? '/280_logo.png' : '/logo-white.svg'} alt="WINAID" className="h-7 transition-all" />
             <span className={`font-black text-lg tracking-tight transition-colors ${scrollY > 50 ? 'text-slate-800' : 'text-white'}`}>
               WIN<span className="text-blue-500">AID</span>
             </span>
