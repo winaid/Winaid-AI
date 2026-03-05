@@ -878,11 +878,11 @@ const App: React.FC = () => {
         <div className="max-w-[1600px] w-full mx-auto px-6 flex justify-between items-center">
           <a href="#" className="flex items-center gap-2.5 hover:opacity-80 transition-opacity">
             <svg className="w-9 h-9" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-              <path d="M2 84L28 16h12L16 84H2z" fill={darkMode ? '#e2e8f0' : '#3C3C3C'}/>
-              <path d="M28 16L54 84H42L28 16z" fill={darkMode ? '#e2e8f0' : '#3C3C3C'}/>
-              <path d="M10 60h28v9H10z" fill={darkMode ? '#e2e8f0' : '#3C3C3C'}/>
-              <path d="M50 16h8v68h-8z" fill="#3B82F6"/>
-              <path d="M58 16h12c16 0 28 15 28 34s-12 34-28 34H58V74h12c11 0 18-9 18-24s-7-24-18-24H58V16z" fill={darkMode ? '#e2e8f0' : '#3C3C3C'}/>
+              <path d="M0 88L22 8h18L14 88H0z" fill={darkMode ? '#e2e8f0' : '#3C3C3C'}/>
+              <path d="M22 8L54 88H36L22 8z" fill={darkMode ? '#e2e8f0' : '#3C3C3C'}/>
+              <path d="M6 50h34v14H6z" fill={darkMode ? '#e2e8f0' : '#3C3C3C'}/>
+              <path d="M44 8h14v80H44z" fill="#3B82F6"/>
+              <path d="M58 8h14c20 0 34 18 34 40s-14 40-34 40H58V74h14c9 0 16-11 16-26s-7-26-16-26H58V8z" fill={darkMode ? '#e2e8f0' : '#3C3C3C'}/>
             </svg>
             <div className="flex flex-col leading-none">
               <span className={`font-black text-lg tracking-[-0.02em] ${darkMode ? 'text-slate-100' : 'text-slate-800'}`}>WIN<span className="text-blue-500">AID</span></span>
