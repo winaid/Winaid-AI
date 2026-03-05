@@ -2,7 +2,12 @@ export enum ContentCategory {
   DENTAL = '치과'
 }
 
-export type AudienceMode = '환자용(친절/공감)' | '전문가용(신뢰/정보)';
+export type AudienceMode =
+  | '환자용(친절/공감)'
+  | '전문가용(신뢰/정보)'
+  | '예비환자(검색유입)'
+  | '보호자용(가족걱정)'
+  | '재방문유도(기존환자)';
 export type ImageStyle = 'photo' | 'illustration' | 'medical' | 'custom';
 export type PostType = 'blog' | 'card_news' | 'press_release';
 export type CssTheme = 'modern' | 'premium' | 'minimal' | 'warm' | 'professional';
