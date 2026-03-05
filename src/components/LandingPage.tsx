@@ -210,46 +210,81 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
             </a>
           </div>
 
-          {/* Floating UI Preview */}
+          {/* Floating UI Preview - 블로그 생성 대시보드 */}
           <div className="mt-20 relative mx-auto max-w-3xl">
-            <div className="absolute -inset-4 bg-blue-400/20 rounded-3xl blur-2xl" />
-            <div className="relative bg-white/95 backdrop-blur rounded-2xl p-6 shadow-2xl border border-white/60">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-3 h-3 rounded-full bg-red-300" />
-                <div className="w-3 h-3 rounded-full bg-yellow-300" />
-                <div className="w-3 h-3 rounded-full bg-green-300" />
-                <div className="flex-1 bg-slate-100 rounded-lg h-6 mx-4" />
-              </div>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="col-span-1 space-y-3">
-                  <div className="bg-slate-50 rounded-xl p-3 space-y-2">
-                    <div className="h-2 bg-slate-200 rounded w-3/4" />
-                    <div className="h-6 bg-blue-100 rounded-lg" />
-                    <div className="h-2 bg-slate-200 rounded w-1/2" />
-                    <div className="h-6 bg-blue-100 rounded-lg" />
-                    <div className="h-8 bg-blue-200 rounded-lg mt-3" />
-                  </div>
+            <div className="absolute -inset-6 bg-blue-400/15 rounded-3xl blur-3xl" />
+            <div className="relative bg-white rounded-2xl shadow-2xl border border-slate-200/80 overflow-hidden">
+              {/* 상단 바 */}
+              <div className="flex items-center gap-2 px-5 py-3 bg-slate-50 border-b border-slate-100">
+                <div className="w-3 h-3 rounded-full bg-red-400" />
+                <div className="w-3 h-3 rounded-full bg-amber-400" />
+                <div className="w-3 h-3 rounded-full bg-green-400" />
+                <div className="flex-1 flex items-center justify-center">
+                  <div className="bg-white rounded-lg px-4 py-1 text-xs text-slate-400 border border-slate-200 font-mono">story-darugi.com</div>
                 </div>
-                <div className="col-span-2 bg-slate-50 rounded-xl p-4 space-y-2">
-                  <div className="h-3 bg-slate-200 rounded w-1/3 mb-3" />
-                  <div className="h-2 bg-slate-100 rounded w-full" />
-                  <div className="h-2 bg-slate-100 rounded w-5/6" />
-                  <div className="h-2 bg-slate-100 rounded w-full" />
-                  <div className="h-2 bg-slate-100 rounded w-4/6" />
-                  <div className="h-16 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-lg mt-3" />
-                  <div className="h-2 bg-slate-100 rounded w-full" />
-                  <div className="h-2 bg-slate-100 rounded w-3/4" />
+              </div>
+              {/* 콘텐츠 영역 */}
+              <div className="p-5">
+                <div className="grid grid-cols-12 gap-4">
+                  {/* 사이드바 - 입력 폼 */}
+                  <div className="col-span-4 space-y-3">
+                    <div className="bg-slate-50 rounded-xl p-4 space-y-3">
+                      <div className="flex items-center gap-2 mb-1">
+                        <div className="w-5 h-5 rounded-md bg-blue-500 flex items-center justify-center">
+                          <span className="text-white text-[8px] font-bold">AI</span>
+                        </div>
+                        <div className="h-2.5 bg-slate-700 rounded w-16" />
+                      </div>
+                      <div>
+                        <div className="h-1.5 bg-slate-300 rounded w-12 mb-1.5" />
+                        <div className="h-8 bg-white rounded-lg border border-slate-200 flex items-center px-2">
+                          <div className="h-1.5 bg-slate-300 rounded w-20" />
+                        </div>
+                      </div>
+                      <div>
+                        <div className="h-1.5 bg-slate-300 rounded w-10 mb-1.5" />
+                        <div className="h-8 bg-white rounded-lg border border-slate-200 flex items-center px-2">
+                          <div className="h-1.5 bg-blue-300 rounded w-14" />
+                        </div>
+                      </div>
+                      <div className="h-9 bg-blue-500 rounded-lg flex items-center justify-center mt-2">
+                        <span className="text-white text-[10px] font-bold">블로그 생성하기</span>
+                      </div>
+                    </div>
+                  </div>
+                  {/* 메인 - 생성된 블로그 미리보기 */}
+                  <div className="col-span-8">
+                    <div className="bg-slate-50 rounded-xl p-5 space-y-3">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="w-2 h-2 rounded-full bg-emerald-400" />
+                        <div className="h-1.5 bg-emerald-300 rounded w-20" />
+                      </div>
+                      <div className="h-4 bg-slate-800 rounded w-2/3" />
+                      <div className="space-y-1.5 mt-2">
+                        <div className="h-1.5 bg-slate-200 rounded w-full" />
+                        <div className="h-1.5 bg-slate-200 rounded w-11/12" />
+                        <div className="h-1.5 bg-slate-200 rounded w-full" />
+                      </div>
+                      <div className="h-24 bg-gradient-to-br from-blue-100 via-sky-50 to-cyan-100 rounded-xl mt-2 flex items-center justify-center">
+                        <div className="text-center">
+                          <svg className="w-6 h-6 text-blue-300 mx-auto mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0022.5 18.75V5.25A2.25 2.25 0 0020.25 3H3.75A2.25 2.25 0 001.5 5.25v13.5A2.25 2.25 0 003.75 21z" />
+                          </svg>
+                          <div className="h-1 bg-blue-200 rounded w-12 mx-auto" />
+                        </div>
+                      </div>
+                      <div className="space-y-1.5 mt-2">
+                        <div className="h-1.5 bg-slate-200 rounded w-full" />
+                        <div className="h-1.5 bg-slate-200 rounded w-4/5" />
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce">
-          <div className="w-6 h-10 border-2 border-white/30 rounded-full flex justify-center pt-2">
-            <div className="w-1 h-2 bg-white/50 rounded-full" />
-          </div>
-        </div>
       </section>
 
       {/* Stats - 윈에이드 수치 */}
