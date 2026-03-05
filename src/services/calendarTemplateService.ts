@@ -865,6 +865,9 @@ interface AiTemplateRequest {
   brandingPosition?: 'top' | 'bottom';
   extraPrompt?: string;
   imageSize?: { width: number; height: number };
+  hospitalInfo?: string[];
+  brandColor?: string;
+  brandAccent?: string;
 }
 
 function buildTemplateAiPrompt(req: AiTemplateRequest): string {
@@ -899,6 +902,13 @@ Every single date number, day-of-week alignment, and marked day MUST match exact
 If a reference image was provided, its calendar dates are from a DIFFERENT month - IGNORE them completely.
 ` : '';
 
+  // 브랜드 컬러 블록
+  const brandColorBlock = (req.brandColor || req.brandAccent) ? `
+[BRAND COLORS - USE THESE AS PRIMARY DESIGN COLORS]
+${req.brandColor ? `Main color: ${req.brandColor}` : ''}
+${req.brandAccent ? `Accent color: ${req.brandAccent}` : ''}
+Use these colors for headings, backgrounds, accents, and key UI elements. These override preset style colors.` : '';
+
   // 브랜딩 블록
   const brandingBlock = hospitalName ? (() => {
     const pos = req.brandingPosition || 'top';
@@ -917,6 +927,11 @@ ${posDetail}
 ${logoInstructions}`;
   })() : '';
 
+  // 병원 기본 정보 블록 (진료시간, 전화, 주소)
+  const hospitalInfoBlock = req.hospitalInfo && req.hospitalInfo.length > 0 ? `
+[HOSPITAL INFO - display at the bottom of the image, small but legible text]
+${req.hospitalInfo.map(line => `"${line}"`).join('\n')}` : '';
+
   return `🚨 RENDER ALL KOREAN TEXT EXACTLY AS PROVIDED - DO NOT TRANSLATE OR CHANGE! 🚨
 ${userRequestBlock}
 [IMAGE TYPE]
@@ -926,15 +941,16 @@ ${calendarAccuracyBlock}
 [DESIGN STYLE PROMPT - VISUAL LOOK & FEEL]
 ${stylePrompt}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
-
+${brandColorBlock}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
 [TEXT CONTENT - THE ONLY SOURCE OF TRUTH FOR ALL TEXT AND NUMBERS]
 ${textContent}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
 ${brandingBlock}
+${hospitalInfoBlock}
 
 [IMAGE SPECIFICATIONS]
-- Aspect ratio: ${aspectDesc}
+- Aspect ratio: ${aspectDesc} (ALWAYS use this ratio, IGNORE reference image ratio)
 - Resolution: high quality, crisp text
 - All text in Korean, clearly legible
 
@@ -1060,6 +1076,9 @@ export async function generateTemplateWithAI(
     styleReferenceImage?: string; // 이전 생성 결과 이미지 (그림체/일러스트 재현용)
     extraPrompt?: string;
     imageSize?: { width: number; height: number };
+    hospitalInfo?: string[]; // 진료시간, 전화번호, 주소
+    brandColor?: string; // 메인 브랜드 컬러 HEX
+    brandAccent?: string; // 포인트 컬러 HEX
   }
 ): Promise<string> {
   const ai = getAiClient();
@@ -1095,6 +1114,9 @@ export async function generateTemplateWithAI(
     brandingPosition: options?.brandingPosition,
     extraPrompt: options?.extraPrompt,
     imageSize: options?.imageSize,
+    hospitalInfo: options?.hospitalInfo,
+    brandColor: options?.brandColor,
+    brandAccent: options?.brandAccent,
   });
 
   // 이미지 파트 준비
@@ -1117,10 +1139,21 @@ export async function generateTemplateWithAI(
     const contents: any[] = [];
     if (styleRefPart) {
       contents.push(styleRefPart);
-      contents.push({ text: `[STYLE REFERENCE IMAGE - COPY VISUAL STYLE ONLY!]
-COPY from this reference: illustration style, color palette, layout, typography, decorative elements, mood.
-DO NOT COPY: any text, numbers, dates, calendar data, month names, or hospital names from the reference.
-The reference image text is OLD/WRONG - IGNORE IT. Use ONLY the new text data in the prompt below.
+      contents.push({ text: `[STYLE REFERENCE IMAGE - REPLICATE THIS EXACT VISUAL STYLE!]
+You MUST make the output look like it was designed by the same designer who made this reference image.
+
+COPY EXACTLY:
+- The illustration/drawing style (line weight, character style, object shapes)
+- The exact color palette and gradients
+- Typography style (font weight, font style, text decoration)
+- All decorative elements (icons, patterns, borders, shapes, stickers)
+- Background style and textures
+- Overall visual mood and aesthetic
+
+DO NOT COPY: any text, numbers, dates, or data from the reference image - these are OLD and WRONG.
+DO NOT COPY: the aspect ratio of the reference image - use the aspect ratio specified in the prompt below.
+
+Use ONLY the new text content provided in the prompt below.
 ` });
     }
     if (doctorPhotoPart) {

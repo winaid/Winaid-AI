@@ -53,6 +53,14 @@ export default function TemplateGenerator() {
   const [imageSize, setImageSize] = useState<ImageSize>('auto');
   const [brandingPos, setBrandingPos] = useState<'top' | 'bottom'>('top');
 
+  // 병원 기본 정보
+  const [clinicHours, setClinicHours] = useState('');
+  const [clinicPhone, setClinicPhone] = useState('');
+  const [clinicAddress, setClinicAddress] = useState('');
+  const [brandColor, setBrandColor] = useState('');
+  const [brandAccent, setBrandAccent] = useState('');
+  const [showHospitalInfo, setShowHospitalInfo] = useState(false);
+
   // 진료 일정
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [year, setYear] = useState(now.getFullYear());
@@ -115,7 +123,22 @@ export default function TemplateGenerator() {
   const [resultImage, setResultImage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => { const s = localStorage.getItem('uploaded_logo'); if (s) setLogoBase64(s); setStyleHistory(loadStyleHistory()); }, []);
+  useEffect(() => {
+    const s = localStorage.getItem('uploaded_logo'); if (s) setLogoBase64(s);
+    setStyleHistory(loadStyleHistory());
+    // 병원 기본 정보 복원
+    const info = localStorage.getItem('hospital_info');
+    if (info) {
+      try {
+        const p = JSON.parse(info);
+        if (p.hours) setClinicHours(p.hours);
+        if (p.phone) setClinicPhone(p.phone);
+        if (p.address) setClinicAddress(p.address);
+        if (p.brandColor) setBrandColor(p.brandColor);
+        if (p.brandAccent) setBrandAccent(p.brandAccent);
+      } catch {}
+    }
+  }, []);
   useEffect(() => { setDayMarks(new Map()); setShortenedHours(new Map()); setVacationReasons(new Map()); setResultImage(null); }, [month, year]);
   useEffect(() => { setResultImage(null); setError(null); }, [category]);
 
@@ -167,6 +190,13 @@ export default function TemplateGenerator() {
     reader.readAsDataURL(file);
   };
 
+  const saveHospitalInfo = () => {
+    localStorage.setItem('hospital_info', JSON.stringify({
+      hours: clinicHours, phone: clinicPhone, address: clinicAddress,
+      brandColor, brandAccent,
+    }));
+  };
+
   const handleDocPhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file) return;
     const reader = new FileReader();
@@ -204,13 +234,20 @@ export default function TemplateGenerator() {
         templateData = { holiday: greetHoliday, greeting: greetMsg, closurePeriod: greetClosure || undefined };
       }
 
+      // 병원 기본 정보 조합
+      const hospitalInfoLines = [clinicHours, clinicPhone, clinicAddress].filter(Boolean);
+      const allExtraPrompts = [customMessage.trim(), extraPrompt.trim()].filter(Boolean);
+
       const imageDataUrl = await generateTemplateWithAI(category, templateData, activeStylePrompt, {
         hospitalName: hospitalName || undefined,
         logoBase64,
         brandingPosition: brandingPos,
         styleReferenceImage: selectedHistory?.referenceImageUrl || undefined,
-        extraPrompt: [customMessage.trim(), extraPrompt.trim()].filter(Boolean).join('\n') || undefined,
+        extraPrompt: allExtraPrompts.join('\n') || undefined,
         imageSize: sizeConfig.width > 0 ? { width: sizeConfig.width, height: sizeConfig.height } : undefined,
+        hospitalInfo: hospitalInfoLines.length > 0 ? hospitalInfoLines : undefined,
+        brandColor: brandColor || undefined,
+        brandAccent: brandAccent || undefined,
       });
       setResultImage(imageDataUrl);
 
@@ -325,6 +362,37 @@ export default function TemplateGenerator() {
               ))}
             </div>
           </div>
+
+          {/* 병원 기본 정보 토글 */}
+          <button type="button" onClick={() => setShowHospitalInfo(!showHospitalInfo)} className="w-full flex items-center justify-between text-[10px] font-semibold text-slate-500 hover:text-slate-700 transition-colors pt-1">
+            <span>병원 기본 정보 / 브랜드 컬러</span>
+            <svg className={`w-3.5 h-3.5 transition-transform ${showHospitalInfo ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+          </button>
+          {showHospitalInfo && (
+            <div className="space-y-2 pt-1">
+              <input type="text" value={clinicPhone} onChange={e => setClinicPhone(e.target.value)} onBlur={saveHospitalInfo} placeholder="전화번호: 02-1234-5678" className="w-full px-2.5 py-1.5 border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-blue-400 bg-white" />
+              <input type="text" value={clinicHours} onChange={e => setClinicHours(e.target.value)} onBlur={saveHospitalInfo} placeholder="진료시간: 평일 09:00~18:00 / 토 09:00~13:00" className="w-full px-2.5 py-1.5 border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-blue-400 bg-white" />
+              <input type="text" value={clinicAddress} onChange={e => setClinicAddress(e.target.value)} onBlur={saveHospitalInfo} placeholder="주소: 서울시 강남구 테헤란로 123" className="w-full px-2.5 py-1.5 border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-blue-400 bg-white" />
+              <div className="flex gap-2 items-center">
+                <div className="flex-1 flex items-center gap-2">
+                  <label className="text-[10px] text-slate-500 whitespace-nowrap">메인 컬러</label>
+                  <input type="color" value={brandColor || '#4F46E5'} onChange={e => setBrandColor(e.target.value)} onBlur={saveHospitalInfo} className="w-7 h-7 rounded border border-slate-200 cursor-pointer p-0.5" />
+                  <input type="text" value={brandColor} onChange={e => setBrandColor(e.target.value)} onBlur={saveHospitalInfo} placeholder="#4F46E5" className="flex-1 px-2 py-1 border border-slate-200 rounded text-[10px] font-mono focus:outline-none focus:border-blue-400" />
+                </div>
+                <div className="flex-1 flex items-center gap-2">
+                  <label className="text-[10px] text-slate-500 whitespace-nowrap">포인트</label>
+                  <input type="color" value={brandAccent || '#F59E0B'} onChange={e => setBrandAccent(e.target.value)} onBlur={saveHospitalInfo} className="w-7 h-7 rounded border border-slate-200 cursor-pointer p-0.5" />
+                  <input type="text" value={brandAccent} onChange={e => setBrandAccent(e.target.value)} onBlur={saveHospitalInfo} placeholder="#F59E0B" className="flex-1 px-2 py-1 border border-slate-200 rounded text-[10px] font-mono focus:outline-none focus:border-blue-400" />
+                </div>
+              </div>
+              {(brandColor || brandAccent) && (
+                <div className="flex gap-1 items-center">
+                  <div className="h-4 flex-1 rounded" style={{ background: `linear-gradient(135deg, ${brandColor || '#4F46E5'}, ${brandAccent || '#F59E0B'})` }} />
+                  <button type="button" onClick={() => { setBrandColor(''); setBrandAccent(''); saveHospitalInfo(); }} className="text-[9px] text-slate-400 hover:text-red-500">초기화</button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* === 진료 일정 === */}
@@ -467,33 +535,57 @@ export default function TemplateGenerator() {
           </div>
         </div>
 
-        {/* 내 스타일 히스토리 (이전 생성 결과 재사용) */}
-        {styleHistory.length > 0 && (
-          <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-2">
-              내 스타일 <span className="text-slate-400 font-normal">({styleHistory.length}개)</span>
+        {/* 내 스타일 히스토리 (이전 생성 결과 재사용) + 이미지 업로드 */}
+        <div>
+          <label className="block text-xs font-semibold text-slate-600 mb-2">
+            내 스타일 {styleHistory.length > 0 && <span className="text-slate-400 font-normal">({styleHistory.length}개)</span>}
+          </label>
+          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin">
+            {/* 이미지 업로드 버튼 */}
+            <label className="relative flex-shrink-0 w-16 h-16 rounded-xl border-2 border-dashed border-violet-300 bg-violet-50 flex flex-col items-center justify-center cursor-pointer hover:border-violet-500 hover:bg-violet-100 transition-all">
+              <svg className="w-5 h-5 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+              <span className="text-[8px] text-violet-500 font-bold mt-0.5">업로드</span>
+              <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
+                const file = e.target.files?.[0]; if (!file) return;
+                const reader = new FileReader();
+                reader.onload = async () => {
+                  const dataUrl = reader.result as string;
+                  const [thumb, ref] = await Promise.all([
+                    resizeImageToThumbnail(dataUrl),
+                    resizeImageForReference(dataUrl),
+                  ]);
+                  saveStyleToHistory({
+                    name: '업로드 스타일',
+                    stylePrompt: 'Copy the exact visual style from the reference image. Match illustration style, colors, layout, typography, and all decorative elements as closely as possible.',
+                    thumbnailDataUrl: thumb,
+                    referenceImageUrl: ref,
+                    presetId: 'uploaded',
+                  });
+                  setStyleHistory(loadStyleHistory());
+                };
+                reader.readAsDataURL(file);
+                e.target.value = '';
+              }} />
             </label>
-            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin">
-              {styleHistory.map(h => (
-                <button key={h.id} onClick={() => { setSelectedHistory(selectedHistory?.id === h.id ? null : h); }} className={`relative flex-shrink-0 w-16 rounded-xl overflow-hidden border-2 transition-all group ${selectedHistory?.id === h.id ? 'border-violet-500 shadow-lg scale-105 ring-2 ring-violet-200' : 'border-slate-200 hover:border-slate-300'}`}>
-                  <img src={h.thumbnailDataUrl} alt={h.name} className="w-16 h-16 object-cover" />
-                  <div className="absolute inset-x-0 bottom-0 bg-black/60 px-1 py-0.5">
-                    <div className="text-[8px] text-white font-medium truncate">{h.name}</div>
-                  </div>
-                  <button onClick={(e) => handleDeleteHistory(h.id, e)} className="absolute top-0.5 right-0.5 w-4 h-4 bg-red-500/80 text-white rounded-full text-[8px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">x</button>
-                </button>
-              ))}
-            </div>
-            {selectedHistory && (
-              <div className="mt-1.5 p-2 bg-violet-50 rounded-lg border border-violet-200">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold text-violet-700">이전 스타일 적용 중: {selectedHistory.name}</span>
-                  <button onClick={() => setSelectedHistory(null)} className="text-[10px] text-violet-400 hover:text-violet-600">해제</button>
+            {styleHistory.map(h => (
+              <button key={h.id} onClick={() => { setSelectedHistory(selectedHistory?.id === h.id ? null : h); }} className={`relative flex-shrink-0 w-16 rounded-xl overflow-hidden border-2 transition-all group ${selectedHistory?.id === h.id ? 'border-violet-500 shadow-lg scale-105 ring-2 ring-violet-200' : 'border-slate-200 hover:border-slate-300'}`}>
+                <img src={h.thumbnailDataUrl} alt={h.name} className="w-16 h-16 object-cover" />
+                <div className="absolute inset-x-0 bottom-0 bg-black/60 px-1 py-0.5">
+                  <div className="text-[8px] text-white font-medium truncate">{h.name}</div>
                 </div>
-              </div>
-            )}
+                <button onClick={(e) => handleDeleteHistory(h.id, e)} className="absolute top-0.5 right-0.5 w-4 h-4 bg-red-500/80 text-white rounded-full text-[8px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">x</button>
+              </button>
+            ))}
           </div>
-        )}
+          {selectedHistory && (
+            <div className="mt-1.5 p-2 bg-violet-50 rounded-lg border border-violet-200">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold text-violet-700">스타일 적용 중: {selectedHistory.name}</span>
+                <button onClick={() => setSelectedHistory(null)} className="text-[10px] text-violet-400 hover:text-violet-600">해제</button>
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* 디자인 스타일 프리셋 */}
         <div>
