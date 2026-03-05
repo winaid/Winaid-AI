@@ -18,6 +18,7 @@ const ContentRefiner = lazy(() => import('./components/ContentRefiner'));
 const MedicalLawSearch = lazy(() => import('./components/MedicalLawSearch').then(module => ({ default: module.MedicalLawSearch })));
 const ImageGenerator = lazy(() => import('./components/ImageGenerator'));
 const LandingPage = lazy(() => import('./components/LandingPage'));
+const PostHistory = lazy(() => import('./components/PostHistory'));
 
 type PageType = 'landing' | 'app' | 'admin' | 'auth';
 
@@ -81,7 +82,7 @@ const App: React.FC = () => {
   const leftPanelRef = useRef<HTMLDivElement>(null);
   
   // 오른쪽 콘텐츠 탭
-  const [contentTab, setContentTab] = useState<'blog' | 'similarity' | 'refine' | 'card_news' | 'press' | 'image'>('blog');
+  const [contentTab, setContentTab] = useState<'blog' | 'similarity' | 'refine' | 'card_news' | 'press' | 'image' | 'history'>('blog');
   
   // 현재 탭에 맞는 state 가져오기
   const getCurrentState = (): GenerationState => {
@@ -942,7 +943,7 @@ const App: React.FC = () => {
       <main className="flex-1 max-w-[1600px] w-full mx-auto p-4 lg:p-8 flex flex-col lg:flex-row gap-8 overflow-hidden h-[calc(100vh-64px)]">
         
         {/* AI 정밀보정과 유사도 검사는 전체 화면 사용 */}
-        {contentTab === 'refine' || contentTab === 'similarity' || contentTab === 'image' ? (
+        {contentTab === 'refine' || contentTab === 'similarity' || contentTab === 'image' || contentTab === 'history' ? (
           <div className="w-full h-full flex flex-col gap-4 overflow-hidden">
             {/* 탭 메뉴 */}
             <div className={`grid grid-cols-3 gap-1.5 p-2 rounded-2xl ${darkMode ? 'bg-slate-800' : 'bg-white'} shadow-lg w-full max-w-3xl mx-auto`}>
@@ -1018,6 +1019,18 @@ const App: React.FC = () => {
               >
                 🖼️ 이미지
               </button>
+              <button
+                onClick={() => setContentTab('history')}
+                className={`py-2.5 px-3 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${
+                  contentTab === 'history'
+                    ? 'bg-gradient-to-r from-slate-500 to-gray-500 text-white shadow-lg'
+                    : darkMode
+                    ? 'text-slate-400 hover:bg-slate-700'
+                    : 'text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                📋 히스토리
+              </button>
             </div>
 
             {/* 전체 화면 콘텐츠 */}
@@ -1029,6 +1042,15 @@ const App: React.FC = () => {
                       onClose={() => setContentTab('blog')}
                       darkMode={darkMode}
                       initialContent={getCurrentState().data ? stripHtml(getCurrentState().data!.htmlContent) : ''}
+                    />
+                  </Suspense>
+                </div>
+              ) : contentTab === 'history' ? (
+                <div className={`h-full rounded-2xl shadow-lg border p-6 overflow-y-auto ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-100'}`}>
+                  <Suspense fallback={<div className="flex items-center justify-center h-full"><div className="w-12 h-12 border-4 border-slate-200 border-t-slate-500 rounded-full animate-spin"></div></div>}>
+                    <PostHistory
+                      onClose={() => setContentTab('blog')}
+                      darkMode={darkMode}
                     />
                   </Suspense>
                 </div>
