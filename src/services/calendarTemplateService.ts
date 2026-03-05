@@ -3,6 +3,7 @@
  * HTML/CSS 템플릿 + html2canvas로 100% 정확한 달력 이미지를 프로그래밍으로 생성
  */
 import { getAiClient } from './geminiClient';
+import { removeOklchFromClonedDoc } from '../components/resultPreviewUtils';
 
 // ── 타입 ──
 
@@ -423,6 +424,9 @@ export async function renderCalendarToImage(
       allowTaint: true,
       backgroundColor: '#ffffff',
       logging: false,
+      onclone: (clonedDoc: Document, clonedElement: HTMLElement) => {
+        removeOklchFromClonedDoc(clonedDoc, clonedElement);
+      },
     });
 
     if (isAuto) {
