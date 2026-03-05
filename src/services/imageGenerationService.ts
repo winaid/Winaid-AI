@@ -515,6 +515,7 @@ ${promptText}
         config: {
           responseModalities: ["IMAGE", "TEXT"],
           temperature: 0.6, // 블로그 이미지 품질 향상
+          imageSize: "4K",
         },
       });
 
@@ -743,6 +744,7 @@ ${cleanPromptText}
         config: {
           responseModalities: ["IMAGE", "TEXT"],
           temperature: 0.4, // 카드뉴스 일관성 강화
+          imageSize: "4K",
         },
       });
 
