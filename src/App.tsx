@@ -491,15 +491,33 @@ const App: React.FC = () => {
     setMobileTab('result');
     
     console.log('📋 postType 확인:', request.postType);
-    
+
     // 🚨 postType이 undefined면 에러 발생시키기 (디버깅용)
     if (!request.postType) {
       console.error('❌ postType이 undefined입니다! request:', request);
-      setState(prev => ({ 
-        ...prev, 
-        error: '콘텐츠 타입이 선택되지 않았습니다. 페이지를 새로고침 후 다시 시도해주세요.' 
+      setState(prev => ({
+        ...prev,
+        error: '콘텐츠 타입이 선택되지 않았습니다. 페이지를 새로고침 후 다시 시도해주세요.'
       }));
       return;
+    }
+
+    // 크레딧 체크 (SaaS 과금)
+    try {
+      const { checkCredits } = await import('./services/creditService');
+      const creditStatus = await checkCredits(request.postType);
+      if (!creditStatus.canGenerate) {
+        setState(prev => ({
+          ...prev,
+          error: creditStatus.message || '크레딧이 부족합니다.',
+        }));
+        return;
+      }
+      if (creditStatus.creditsRemaining >= 0 && creditStatus.planType !== 'anonymous') {
+        console.log(`💳 크레딧: ${creditStatus.creditsRemaining}/${creditStatus.creditsTotal} 남음`);
+      }
+    } catch (e) {
+      console.warn('크레딧 체크 스킵:', e);
     }
     
     // 카드뉴스: 2단계 워크플로우 (원고 생성 → 사용자 확인 → 디자인 변환)
@@ -545,7 +563,16 @@ const App: React.FC = () => {
       const { generateFullPost } = await import('./services/geminiService');
       const result = await generateFullPost(request, (p) => targetSetState(prev => ({ ...prev, progress: p })));
       targetSetState({ isLoading: false, error: null, data: result, progress: '' });
-      
+
+      // 크레딧 차감 + 사용량 저장
+      try {
+        const { deductCredit, flushSessionUsage } = await import('./services/creditService');
+        await deductCredit(request.postType);
+        await flushSessionUsage();
+      } catch (e) {
+        console.warn('크레딧 차감/사용량 저장 스킵:', e);
+      }
+
       // 🆕 API 서버에 자동 저장
       try {
         console.log('💾 API 서버에 콘텐츠 저장 중...');

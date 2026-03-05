@@ -327,6 +327,26 @@ async function _callGeminiOnce(config: GeminiCallConfig): Promise<any> {
       throw new Error('Gemini가 빈 응답을 반환했습니다. 다시 시도해주세요.');
     }
 
+    // API 사용량 추적 (비동기, 실패해도 무시)
+    try {
+      const usage = result.usageMetadata;
+      if (usage) {
+        import('./creditService').then(({ trackApiUsage, calculateCost }) => {
+          const model = apiConfig.model || 'unknown';
+          const inputTokens = usage.promptTokenCount || 0;
+          const outputTokens = usage.candidatesTokenCount || 0;
+          trackApiUsage({
+            model,
+            inputTokens,
+            outputTokens,
+            costUsd: calculateCost(model, inputTokens, outputTokens),
+            operation: config.systemPrompt?.substring(0, 30) || 'unknown',
+          });
+        }).catch(() => {});
+      }
+    } catch {}
+
+
     // responseType에 따라 적절한 값 반환
     if (config.responseType === 'text') {
       // text 타입일 때는 문자열 반환

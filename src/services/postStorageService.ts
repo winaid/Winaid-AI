@@ -271,3 +271,89 @@ export const deleteGeneratedPost = async (
     };
   }
 };
+
+// ═══════════════════════════════════════════
+// 사용자 히스토리 (SaaS용)
+// ═══════════════════════════════════════════
+
+export interface PostHistoryItem {
+  id: string;
+  title: string;
+  post_type: string;
+  category: string | null;
+  char_count: number;
+  created_at: string;
+}
+
+/**
+ * 현재 로그인한 사용자의 생성 히스토리 조회
+ */
+export const getMyPostHistory = async (
+  limit: number = 20,
+  offset: number = 0
+): Promise<{
+  success: boolean;
+  data?: PostHistoryItem[];
+  total?: number;
+  error?: string;
+}> => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return { success: false, error: '로그인이 필요합니다.' };
+    }
+
+    const { data, error, count } = await supabase
+      .from('generated_posts')
+      .select('id, title, post_type, category, char_count, created_at', { count: 'exact' })
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
+
+    if (error) {
+      if (error.code === '42P01') {
+        return { success: false, error: 'generated_posts 테이블이 없습니다.' };
+      }
+      return { success: false, error: error.message };
+    }
+
+    return {
+      success: true,
+      data: (data || []) as PostHistoryItem[],
+      total: count || 0,
+    };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : String(err) };
+  }
+};
+
+/**
+ * 특정 글의 전체 콘텐츠 조회
+ */
+export const getPostById = async (postId: string): Promise<{
+  success: boolean;
+  data?: any;
+  error?: string;
+}> => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return { success: false, error: '로그인이 필요합니다.' };
+    }
+
+    const { data, error } = await supabase
+      .from('generated_posts')
+      .select('*')
+      .eq('id', postId)
+      .eq('user_id', user.id)
+      .single();
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    return { success: true, data };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : String(err) };
+  }
+};

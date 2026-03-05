@@ -690,8 +690,8 @@ export const generateBlogWithPipeline = async (
   const targetLength = request.textLength || 1500;
   const medicalLawMode = request.medicalLawMode || 'strict';
 
-  // ── Stage A: 아웃라인 생성 (FLASH) ──
-  safeProgress('📐 Stage A: 글 구조 설계 중...');
+  // ── Stage A: 아웃라인 생성 (FLASH) ── [재시도 포함]
+  safeProgress('📐 [1/4] 글 구조 설계 중...');
   const outlinePrompt = getPipelineOutlinePrompt(targetLength, medicalLawMode, {
     audienceMode: request.audienceMode,
     persona: request.persona,
@@ -707,18 +707,28 @@ ${request.customSubheadings ? `[사용자 지정 소제목]\n${request.customSub
 [검색 결과 요약]
 ${JSON.stringify(searchResults?.collected_facts?.slice(0, 3) || [], null, 2)}`;
 
-  const outlineResponse = await callGemini({
-    prompt: outlineUserPrompt,
-    systemPrompt: outlinePrompt,
-    model: GEMINI_MODEL.FLASH,
-    responseType: 'json',
-    timeout: 30000,
-    temperature: 0.7,
-  });
+  let outlineResponse: any = null;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      outlineResponse = await callGemini({
+        prompt: outlineUserPrompt,
+        systemPrompt: outlinePrompt,
+        model: GEMINI_MODEL.FLASH,
+        responseType: 'json',
+        timeout: 30000,
+        temperature: 0.7,
+      });
+      if (outlineResponse?.outline || outlineResponse?.sections) break;
+    } catch (err) {
+      if (attempt === 1) throw err;
+      safeProgress('⚠️ 아웃라인 재시도 중...');
+      await new Promise(r => setTimeout(r, 1500));
+    }
+  }
 
   const outline = outlineResponse?.outline || outlineResponse;
   if (!outline || !outline.sections || outline.sections.length === 0) {
-    throw new Error('아웃라인 생성 실패: 소제목이 없습니다');
+    throw new Error('아웃라인 생성 실패: 소제목이 없습니다. 다시 시도해주세요.');
   }
 
   // 사용자 지정 소제목이 있으면 아웃라인에 반영
@@ -738,11 +748,11 @@ ${JSON.stringify(searchResults?.collected_facts?.slice(0, 3) || [], null, 2)}`;
   safeProgress(`✅ Stage A 완료: 소제목 ${outline.sections.length}개 설계`);
   console.log('📐 아웃라인:', JSON.stringify(outline, null, 2).substring(0, 500));
 
-  // ── Stage B: 섹션별 본문 생성 (PRO) ──
-  safeProgress('✍️ Stage B: 섹션별 본문 생성 중...');
+  // ── Stage B: 본문 생성 (PRO) ── [도입부 + 소제목 병렬 + 마무리]
+  safeProgress('✍️ [2/4] 본문 생성 중...');
 
   // B-1: 도입부 생성
-  safeProgress('✍️ 도입부 작성 중...');
+  safeProgress('✍️ [2/4] 도입부 작성 중...');
   const introPrompt = getPipelineIntroPrompt(
     outline.intro?.approach || 'A',
     outline.intro?.scene || request.topic,
@@ -766,14 +776,10 @@ ${JSON.stringify(searchResults?.collected_facts?.slice(0, 2) || [], null, 2)}`;
     temperature: 0.85,
   });
 
-  // B-2: 각 소제목 섹션 순차 생성
-  const sectionHtmls: string[] = [];
-  const sectionSummaries: string[] = [];
+  // B-2: 각 소제목 섹션 병렬 생성 (속도 3~5배 향상)
+  safeProgress(`✍️ [2/4] 소제목 ${outline.sections.length}개 병렬 생성 중...`);
 
-  for (let i = 0; i < outline.sections.length; i++) {
-    const section = outline.sections[i];
-    safeProgress(`✍️ 소제목 ${i + 1}/${outline.sections.length}: "${section.title}" 작성 중...`);
-
+  const sectionPromises = outline.sections.map((section: any, i: number) => {
     const sectionPrompt = getPipelineSectionPrompt(
       i,
       section.title,
@@ -782,7 +788,7 @@ ${JSON.stringify(searchResults?.collected_facts?.slice(0, 2) || [], null, 2)}`;
       section.keyInfo || '',
       section.targetChars || charsPerSection,
       section.firstSentencePattern || String((i % 5) + 1),
-      sectionSummaries,
+      [], // 병렬이므로 이전 섹션 요약 없음 - 아웃라인의 역할 분리로 중복 방지
       medicalLawMode
     );
 
@@ -793,27 +799,40 @@ ${request.disease ? `[질환] ${request.disease}` : ''}
 [이 섹션 관련 검색 결과]
 ${JSON.stringify(searchResults?.collected_facts?.slice(i, i + 2) || [], null, 2)}`;
 
-    const sectionHtml = await callGemini({
+    return callGemini({
       prompt: sectionUserPrompt,
       systemPrompt: sectionPrompt,
       model: GEMINI_MODEL.PRO,
       responseType: 'text',
       timeout: 45000,
       temperature: 0.75,
+    }).then(html => {
+      const clean = typeof html === 'string' ? html.trim() : '';
+      safeProgress(`✅ 소제목 ${i + 1}/${outline.sections.length} "${section.title}" 완료`);
+      return clean;
+    }).catch(err => {
+      console.error(`❌ 소제목 ${i + 1} "${section.title}" 실패:`, err?.message);
+      safeProgress(`⚠️ 소제목 ${i + 1} 재시도 중...`);
+      // 1회 재시도
+      return callGemini({
+        prompt: sectionUserPrompt,
+        systemPrompt: sectionPrompt,
+        model: GEMINI_MODEL.FLASH, // 폴백: FLASH 모델
+        responseType: 'text',
+        timeout: 45000,
+        temperature: 0.75,
+      }).then(html => typeof html === 'string' ? html.trim() : '').catch(() => '');
     });
+  });
 
-    const cleanSection = typeof sectionHtml === 'string' ? sectionHtml.trim() : '';
-    sectionHtmls.push(cleanSection);
-
-    // 다음 섹션을 위한 요약 (중복 방지용)
-    const plainText = cleanSection.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-    sectionSummaries.push(plainText.substring(0, 150));
-
-    safeProgress(`✅ 소제목 ${i + 1} 완료`);
-  }
+  const sectionHtmls = await Promise.all(sectionPromises);
+  const sectionSummaries = sectionHtmls.map(html =>
+    html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().substring(0, 150)
+  );
+  safeProgress(`✅ 소제목 ${sectionHtmls.filter(h => h).length}/${outline.sections.length}개 완료`);
 
   // B-3: 마무리 생성
-  safeProgress('✍️ 마무리 작성 중...');
+  safeProgress('✍️ [3/4] 마무리 작성 중...');
   const conclusionPrompt = getPipelineConclusionPrompt(
     outline.conclusion?.direction || '열린 결말',
     outline.conclusion?.targetChars || Math.round(targetLength * 0.15)
@@ -832,10 +851,10 @@ ${sectionSummaries.join('\n')}`;
     temperature: 0.75,
   });
 
-  safeProgress('✅ Stage B 완료: 전체 섹션 생성 완료');
+  safeProgress('✅ 본문 생성 완료');
 
   // ── Stage C: 통합 + 검증 (FLASH) ──
-  safeProgress('🔍 Stage C: 전체 통합 및 검증 중...');
+  safeProgress('🔍 [4/4] 전체 통합 및 검증 중...');
 
   const rawHtml = `${introHtml || ''}\n${sectionHtmls.join('\n')}\n${conclusionHtml || ''}`;
   const integrationPrompt = getPipelineIntegrationPrompt(targetLength);
@@ -853,15 +872,39 @@ ${sectionSummaries.join('\n')}`;
     ? integratedHtml.trim()
     : rawHtml; // 통합 실패 시 원본 사용
 
-  safeProgress('✅ Stage C 완료: 통합 검증 완료');
+  safeProgress('✅ [4/4] 통합 검증 완료');
 
-  // 이미지 프롬프트 생성 (소제목 개수만큼)
+  // 이미지 프롬프트 생성 (섹션 역할별 차별화)
   const imageCount = request.imageCount ?? 1;
   const imagePrompts: string[] = [];
   if (imageCount > 0) {
+    const styleBase = request.imageStyle === 'illustration'
+      ? '3D 일러스트, 파스텔톤, 밝은 배경'
+      : request.imageStyle === 'medical_3d'
+        ? '의학 3D 일러스트, 해부학적 정확성'
+        : '실사 사진, DSLR, 따뜻한 조명';
+
+    const sectionRoles: Record<number, string> = {
+      0: '관심을 끌 수 있는 대표 이미지. 따뜻하고 신뢰감 있는 톤',
+      // 나머지는 섹션 역할 기반
+    };
+
     for (let i = 0; i < Math.min(imageCount, outline.sections.length + 1); i++) {
       const section = outline.sections[Math.min(i, outline.sections.length - 1)];
-      imagePrompts.push(`${request.topic} - ${section?.title || '건강 정보'} 관련 이미지, ${request.imageStyle === 'illustration' ? '3D 일러스트, 파스텔톤' : request.imageStyle === 'medical' ? '의학 해부도' : '실사 사진, DSLR'}, 한국인`);
+      const role = section?.role || '';
+      let roleGuidance = sectionRoles[i] || '';
+
+      if (!roleGuidance) {
+        if (/정의|개념|이란/.test(role)) roleGuidance = '이해하기 쉬운 설명형 이미지';
+        else if (/원인/.test(role)) roleGuidance = '원인 메커니즘을 보여주는 이미지';
+        else if (/증상/.test(role)) roleGuidance = '증상을 시각적으로 표현. 과장 없이';
+        else if (/치료|관리|예방/.test(role)) roleGuidance = '긍정적이고 희망적인 톤';
+        else roleGuidance = '해당 주제를 직관적으로 전달하는 이미지';
+      }
+
+      imagePrompts.push(
+        `${request.topic} - ${section?.title || '건강 정보'}. ${roleGuidance}. 스타일: ${styleBase}. 금지: 공포/과장/의료기구 강조`
+      );
     }
   }
 
@@ -1437,8 +1480,8 @@ ${request.keyword ? `9. 🚨 **핵심: 키워드("${request.keyword}")와 자연
   const medicalLawMode = request.medicalLawMode || 'strict';
   const isRelaxedMode = medicalLawMode === 'relaxed';
 
-  safeProgress(isRelaxedMode ? '🔥 의료광고법 자유 모드' : '⚖️ 의료광고법 기본 규칙 적용');
-  safeProgress('🔄 프롬프트 로딩 중...');
+  safeProgress(isRelaxedMode ? '🔥 [준비] 의료광고법 자유 모드' : '⚖️ [준비] 의료광고법 기본 규칙 적용');
+  safeProgress('🔄 [준비] 프롬프트 로딩 중...');
   const gpt52Stage1 = getStage1_ContentGeneration(targetLength, medicalLawMode);
   // dynamicSystemPrompt는 검색 결과 기반 systemPrompt 구성에 사용
   const dynamicSystemPrompt = await getDynamicSystemPrompt(medicalLawMode);
@@ -1449,7 +1492,7 @@ ${request.keyword ? `9. 🚨 **핵심: 키워드("${request.keyword}")와 자연
   let forbiddenWordsBlock = '';
 
   if (!isCardNews && request.keywords) {
-    safeProgress('🔍 경쟁 분석 + 어휘 분석 병렬 실행 중...');
+    safeProgress('🔍 [분석] 경쟁 블로그 + 어휘 분석 중...');
 
     // 병렬로 두 분석 동시 실행
     const [competitorResult, vocabResult] = await Promise.allSettled([
