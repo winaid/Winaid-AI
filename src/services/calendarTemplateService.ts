@@ -1103,39 +1103,37 @@ export async function generateTemplateWithAI(
   const logoPart = makeImagePart(options?.logoBase64 || '');
   const styleRefPart = makeImagePart(options?.styleReferenceImage || '');
 
-  const MAX_RETRIES = 2;
+  const MAX_RETRIES = 3;
   let lastError: any = null;
+
+  // 참고 이미지 + 로고 + 프롬프트 조합 (재사용)
+  const buildContents = () => {
+    const contents: any[] = [];
+    if (styleRefPart) {
+      contents.push(styleRefPart);
+      contents.push({ text: `[STYLE REFERENCE IMAGE - COPY VISUAL STYLE ONLY!]
+COPY from this reference: illustration style, color palette, layout, typography, decorative elements, mood.
+DO NOT COPY: any text, numbers, dates, calendar data, month names, or hospital names from the reference.
+The reference image text is OLD/WRONG - IGNORE IT. Use ONLY the new text data in the prompt below.
+` });
+    }
+    if (logoPart) {
+      contents.push(logoPart);
+      contents.push({ text: '[Hospital Logo - place next to hospital name]\n\n' });
+    }
+    contents.push({ text: prompt });
+    return contents;
+  };
+
+  const contents = buildContents();
+  const totalTextLength = contents.filter((c: any) => c.text).reduce((sum: number, c: any) => sum + c.text.length, 0);
+  console.log(`📝 프롬프트 총 길이: ${totalTextLength}자, 파트 수: ${contents.length}, 이미지 파트: ${contents.filter((c: any) => c.inlineData).length}`);
 
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
-      console.log(`🎨 템플릿 AI 이미지 생성 시도 ${attempt}/${MAX_RETRIES} (${category}, ref=${!!styleRefPart})...`);
-
-      // 참고 이미지 + 로고 + 프롬프트 조합
-      const contents: any[] = [];
-      if (styleRefPart) {
-        contents.push(styleRefPart);
-        contents.push({ text: `[STYLE REFERENCE IMAGE - COPY VISUAL STYLE ONLY!]
-🚨 COPY from this reference image:
-✅ illustration style, characters, decorative objects, drawings
-✅ color palette, gradients, textures
-✅ layout structure, spacing, frame design
-✅ typography style (font weight, size hierarchy)
-✅ decorative elements (icons, patterns, borders, shapes)
-✅ overall mood and atmosphere
-
-🚨🚨🚨 DO NOT COPY from this reference image:
-⛔ ANY text, numbers, dates, or calendar data from the reference
-⛔ ANY month names, day numbers, hospital names from the reference
-⛔ The reference image's TEXT CONTENT is OLD and WRONG - IGNORE IT COMPLETELY
-⛔ Use ONLY the new text data provided in the prompt below
-
-` });
-      }
-      if (logoPart) {
-        contents.push(logoPart);
-        contents.push({ text: '[Hospital Logo - place next to hospital name]\n\n' });
-      }
-      contents.push({ text: prompt });
+      // 400 에러 발생 시 imageSize 제거하여 재시도
+      const useImageSize = attempt <= 2 ? '4K' : undefined;
+      console.log(`🎨 템플릿 AI 이미지 생성 시도 ${attempt}/${MAX_RETRIES} (${category}, ref=${!!styleRefPart}, size=${useImageSize || 'default'})...`);
 
       const result = await ai.models.generateContent({
         model: 'gemini-3-pro-image-preview',
@@ -1143,7 +1141,7 @@ export async function generateTemplateWithAI(
         config: {
           responseModalities: ['IMAGE', 'TEXT'],
           temperature: 0.5,
-          imageSize: '4K',
+          ...(useImageSize ? { imageSize: useImageSize } : {}),
         },
       });
 
@@ -1163,7 +1161,9 @@ export async function generateTemplateWithAI(
       }
     } catch (error: any) {
       lastError = error;
-      console.error(`❌ 템플릿 AI 이미지 생성 에러 (시도 ${attempt}):`, error?.message || error);
+      const errMsg = typeof error?.message === 'string' ? error.message : JSON.stringify(error);
+      const statusCode = error?.status || error?.code || error?.error?.code;
+      console.error(`❌ 템플릿 AI 이미지 생성 에러 (시도 ${attempt}, status=${statusCode}):`, errMsg);
       if (attempt < MAX_RETRIES) {
         await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, attempt - 1)));
       }
