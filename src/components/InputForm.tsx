@@ -161,13 +161,7 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange 
   return (
     <div className="bg-white rounded-3xl shadow-2xl p-8 border border-slate-100">
       <h2 className="text-xl font-black text-slate-800 mb-6 flex items-center gap-2">
-        <svg className="w-8 h-8" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-          <path d="M0 92L27 6h14L15 92H0z" fill="#3C3C3C"/>
-          <path d="M27 6L58 92H38L27 6z" fill="#3C3C3C"/>
-          <path d="M8 56h30v12H8z" fill="#3C3C3C"/>
-          <path d="M46 6h13v86H46z" fill="#3B82F6"/>
-          <path d="M58 6h12c17 0 29 22 29 43s-12 43-29 43H58V74h12c10 0 17-11 17-26s-7-26-17-26H58V6z" fill="#3C3C3C"/>
-        </svg>
+        <img src="/logo.svg" alt="WINAID" className="h-6" />
         <span className="tracking-[-0.02em]">WIN<span className="text-blue-500">AID</span></span></h2>
 
       {/* 탭 메뉴 - 2행 구성 */}

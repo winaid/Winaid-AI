@@ -20,13 +20,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
       <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrollY > 50 ? 'bg-white/90 backdrop-blur-xl shadow-sm' : 'bg-transparent'}`}>
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <svg className="w-8 h-8" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-              <path d="M0 92L27 6h14L15 92H0z" fill={scrollY > 50 ? '#3C3C3C' : '#fff'}/>
-              <path d="M27 6L58 92H38L27 6z" fill={scrollY > 50 ? '#3C3C3C' : '#fff'}/>
-              <path d="M8 56h30v12H8z" fill={scrollY > 50 ? '#3C3C3C' : '#fff'}/>
-              <path d="M46 6h13v86H46z" fill="#3B82F6"/>
-              <path d="M58 6h12c17 0 29 22 29 43s-12 43-29 43H58V74h12c10 0 17-11 17-26s-7-26-17-26H58V6z" fill={scrollY > 50 ? '#3C3C3C' : '#fff'}/>
-            </svg>
+            <img src={scrollY > 50 ? '/logo.svg' : '/logo-white.svg'} alt="WINAID" className="h-7 transition-all" />
             <span className={`font-black text-lg tracking-tight transition-colors ${scrollY > 50 ? 'text-slate-800' : 'text-white'}`}>
               WIN<span className="text-blue-500">AID</span>
             </span>
@@ -323,13 +317,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
         <div className="max-w-6xl mx-auto px-6">
           <div className="flex flex-col md:flex-row justify-between items-center gap-6">
             <div className="flex items-center gap-2">
-              <svg className="w-7 h-7" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-                <path d="M0 92L27 6h14L15 92H0z" fill="#e2e8f0"/>
-                <path d="M27 6L58 92H38L27 6z" fill="#e2e8f0"/>
-                <path d="M8 56h30v12H8z" fill="#e2e8f0"/>
-                <path d="M46 6h13v86H46z" fill="#3B82F6"/>
-                <path d="M58 6h12c17 0 29 22 29 43s-12 43-29 43H58V74h12c10 0 17-11 17-26s-7-26-17-26H58V6z" fill="#e2e8f0"/>
-              </svg>
+              <img src="/logo-white.svg" alt="WINAID" className="h-6" />
               <span className="font-black text-lg text-white tracking-tight">WIN<span className="text-blue-400">AID</span></span>
             </div>
             <div className="flex items-center gap-6 text-sm text-slate-500">

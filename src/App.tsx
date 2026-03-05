@@ -873,13 +873,7 @@ const App: React.FC = () => {
       <header className={`backdrop-blur-xl border-b sticky top-0 z-30 h-16 flex items-center shadow-sm flex-none transition-colors duration-300 ${darkMode ? 'bg-slate-800/80 border-slate-700' : 'bg-white/80 border-slate-100'}`}>
         <div className="max-w-[1600px] w-full mx-auto px-6 flex justify-between items-center">
           <a href="#" className="flex items-center gap-2.5 hover:opacity-80 transition-opacity">
-            <svg className="w-9 h-9" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-              <path d="M0 92L27 6h14L15 92H0z" fill={darkMode ? '#e2e8f0' : '#3C3C3C'}/>
-              <path d="M27 6L58 92H38L27 6z" fill={darkMode ? '#e2e8f0' : '#3C3C3C'}/>
-              <path d="M8 56h30v12H8z" fill={darkMode ? '#e2e8f0' : '#3C3C3C'}/>
-              <path d="M46 6h13v86H46z" fill="#3B82F6"/>
-              <path d="M58 6h12c17 0 29 22 29 43s-12 43-29 43H58V74h12c10 0 17-11 17-26s-7-26-17-26H58V6z" fill={darkMode ? '#e2e8f0' : '#3C3C3C'}/>
-            </svg>
+            <img src={darkMode ? '/logo-white.svg' : '/logo.svg'} alt="WINAID" className="h-7" />
             <div className="flex flex-col leading-none">
               <span className={`font-black text-lg tracking-[-0.02em] ${darkMode ? 'text-slate-100' : 'text-slate-800'}`}>WIN<span className="text-blue-500">AID</span></span>
               <span className={`text-[9px] font-medium tracking-wider ${darkMode ? 'text-slate-400' : 'text-slate-400'}`}>Advertising Company</span>
