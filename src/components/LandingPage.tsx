@@ -166,7 +166,14 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
       </nav>
 
       {/* Hero */}
-      <section className="relative min-h-[100vh] flex items-center justify-center overflow-hidden bg-gradient-to-b from-white via-blue-50/50 to-white">
+      <section className="relative min-h-[100vh] flex items-center justify-center overflow-hidden">
+        {/* 배경: 위 화이트 → 중간부터 윈에이드 블루 */}
+        <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, #ffffff 0%, #ffffff 25%, #dbeafe 40%, #3b82f6 70%, #1e3a8a 100%)' }} />
+        <div className="absolute bottom-0 left-0 right-0 h-[40%]">
+          <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-cyan-400/15 rounded-full blur-[120px]" />
+          <div className="absolute bottom-0 right-1/4 w-[300px] h-[300px] bg-indigo-300/15 rounded-full blur-[100px]" />
+        </div>
+
         <div className="relative max-w-5xl mx-auto px-6 text-center pt-24 pb-32">
           <div className="inline-flex items-center gap-2 bg-blue-50 border border-blue-100 rounded-full px-5 py-2.5 mb-10">
             <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
@@ -205,8 +212,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
 
           {/* Floating UI Preview */}
           <div className="mt-20 relative mx-auto max-w-3xl">
-            <div className="absolute -inset-4 bg-gradient-to-b from-blue-100/50 to-transparent rounded-3xl blur-2xl" />
-            <div className="relative bg-white rounded-2xl p-6 shadow-xl border border-slate-200">
+            <div className="absolute -inset-4 bg-blue-400/20 rounded-3xl blur-2xl" />
+            <div className="relative bg-white/95 backdrop-blur rounded-2xl p-6 shadow-2xl border border-white/60">
               <div className="flex items-center gap-2 mb-4">
                 <div className="w-3 h-3 rounded-full bg-red-300" />
                 <div className="w-3 h-3 rounded-full bg-yellow-300" />
@@ -239,8 +246,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
         </div>
 
         <div className="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce">
-          <div className="w-6 h-10 border-2 border-slate-300 rounded-full flex justify-center pt-2">
-            <div className="w-1 h-2 bg-slate-400 rounded-full" />
+          <div className="w-6 h-10 border-2 border-white/30 rounded-full flex justify-center pt-2">
+            <div className="w-1 h-2 bg-white/50 rounded-full" />
           </div>
         </div>
       </section>
@@ -278,13 +285,13 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
 
           <div className="grid md:grid-cols-3 gap-6">
             {[
-              { pain: '블로그 쓸 시간이 없다', solution: 'AI가 1분 만에 작성', icon: '~' },
-              { pain: '의료광고법이 복잡하다', solution: '자동 법률 검증 시스템', icon: '!' },
-              { pain: '이미지 만들기 귀찮다', solution: 'AI 이미지 자동 생성', icon: '?' },
+              { pain: '블로그 쓸 시간이 없다', solution: 'AI가 1분 만에 작성', icon: '✏️', color: 'bg-blue-100 text-blue-600' },
+              { pain: '의료광고법이 복잡하다', solution: '자동 법률 검증 시스템', icon: '🛡️', color: 'bg-emerald-100 text-emerald-600' },
+              { pain: '이미지 만들기 귀찮다', solution: 'AI 이미지 자동 생성', icon: '🎨', color: 'bg-violet-100 text-violet-600' },
             ].map((item, i) => (
               <div key={i} className="group relative">
                 <div className="bg-slate-50 rounded-2xl p-8 h-full border border-slate-100 hover:border-blue-200 hover:bg-blue-50/30 transition-all">
-                  <div className="text-4xl font-black text-slate-200 mb-6">{item.icon}</div>
+                  <div className={`w-14 h-14 rounded-2xl ${item.color} flex items-center justify-center text-2xl mb-6`}>{item.icon}</div>
                   <p className="text-slate-400 text-sm line-through mb-2">{item.pain}</p>
                   <p className="text-xl font-bold text-slate-900">{item.solution}</p>
                 </div>
