@@ -1,24 +1,5 @@
 export enum ContentCategory {
-  INTERNAL_MEDICINE = '내과',
-  SURGERY = '외과',
-  BREAST_SURGERY = '유방외과',
-  THYROID_SURGERY = '갑상선외과',
-  OBGYN = '산부인과',
-  DERMATOLOGY = '피부과',
-  DENTAL = '치과',
-  OPHTHALMOLOGY = '안과',
-  ORTHOPEDICS = '정형외과',
-  ENT = '이비인후과',
-  PEDIATRICS = '소아과',
-  KOREAN_MEDICINE = '한의원',
-  PLASTIC_SURGERY = '성형외과',
-  PSYCHIATRY = '정신건강의학과',
-  UROLOGY = '비뇨의학과',
-  NEUROLOGY = '신경과',
-  NEUROSURGERY = '신경외과',
-  REHABILITATION = '재활의학과',
-  FAMILY_MEDICINE = '가정의학과',
-  ANESTHESIOLOGY = '마취통증의학과'
+  DENTAL = '치과'
 }
 
 export type AudienceMode = '환자용(친절/공감)' | '전문가용(신뢰/정보)';
