@@ -150,8 +150,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
       {/* Sticky Nav */}
       <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrollY > 50 ? 'bg-white/90 backdrop-blur-xl shadow-sm' : 'bg-transparent'}`}>
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <img src="/280_logo.png" alt="WINAID" className="h-9" />
+          <div className="flex items-center gap-2.5">
+            <img src="/280_logo.png" alt="WINAID" className="h-7 w-7 object-contain" />
             <span className="font-black text-lg tracking-tight text-slate-800">
               WIN<span className="text-blue-500">AID</span>
             </span>
