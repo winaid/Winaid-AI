@@ -152,49 +152,35 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <img src="/280_logo.png" alt="WINAID" className="h-9" />
-            <span className={`font-black text-lg tracking-tight transition-colors ${scrollY > 50 ? 'text-slate-800' : 'text-white'}`}>
+            <span className="font-black text-lg tracking-tight text-slate-800">
               WIN<span className="text-blue-500">AID</span>
             </span>
           </div>
           <button
             onClick={onStart}
-            className={`px-5 py-2 rounded-lg font-semibold text-sm transition-all ${
-              scrollY > 50
-                ? 'bg-blue-600 text-white hover:bg-blue-700'
-                : 'bg-white/15 text-white border border-white/30 hover:bg-white/25'
-            }`}
+            className="px-5 py-2 rounded-lg font-semibold text-sm bg-blue-600 text-white hover:bg-blue-700 transition-all"
           >
             무료 시작
           </button>
         </div>
       </nav>
 
-      {/* Hero - 여기만 다크 */}
-      <section className="relative min-h-[100vh] flex items-center justify-center overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-slate-900 via-blue-950 to-blue-900" />
-        <div className="absolute inset-0">
-          <div className="absolute top-1/4 left-1/4 w-[600px] h-[600px] bg-blue-500/20 rounded-full blur-[120px]" />
-          <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-indigo-500/15 rounded-full blur-[100px]" />
-        </div>
-        <div className="absolute inset-0 opacity-[0.03]" style={{
-          backgroundImage: 'linear-gradient(rgba(255,255,255,.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.1) 1px, transparent 1px)',
-          backgroundSize: '60px 60px'
-        }} />
-
+      {/* Hero */}
+      <section className="relative min-h-[100vh] flex items-center justify-center overflow-hidden bg-gradient-to-b from-white via-blue-50/50 to-white">
         <div className="relative max-w-5xl mx-auto px-6 text-center pt-24 pb-32">
-          <div className="inline-flex items-center gap-2 bg-white/[0.07] border border-white/10 rounded-full px-5 py-2.5 mb-10">
-            <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
-            <span className="text-white/70 text-sm">13년 병원마케팅 노하우 + AI</span>
+          <div className="inline-flex items-center gap-2 bg-blue-50 border border-blue-100 rounded-full px-5 py-2.5 mb-10">
+            <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+            <span className="text-slate-500 text-sm">13년 병원마케팅 노하우 + AI</span>
           </div>
 
-          <h1 className="text-5xl md:text-7xl font-black text-white mb-8 leading-[1.1] tracking-tight">
+          <h1 className="text-5xl md:text-7xl font-black text-slate-900 mb-8 leading-[1.1] tracking-tight">
             병원 블로그,<br />
-            <span className="bg-gradient-to-r from-blue-400 to-cyan-300 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-blue-600 to-cyan-500 bg-clip-text text-transparent">
               AI가 대신 씁니다
             </span>
           </h1>
 
-          <p className="text-lg md:text-xl text-slate-400 mb-12 max-w-xl mx-auto leading-relaxed">
+          <p className="text-lg md:text-xl text-slate-500 mb-12 max-w-xl mx-auto leading-relaxed">
             키워드 하나면 의료광고법 준수 블로그와 AI 이미지가 자동 완성.<br className="hidden md:block" />
             원장님은 진료에만 집중하세요.
           </p>
@@ -202,7 +188,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <button
               onClick={onStart}
-              className="group px-8 py-4 bg-blue-500 text-white font-bold text-lg rounded-2xl hover:bg-blue-400 transition-all shadow-[0_0_40px_rgba(59,130,246,0.3)] hover:shadow-[0_0_60px_rgba(59,130,246,0.4)] hover:-translate-y-0.5"
+              className="group px-8 py-4 bg-blue-600 text-white font-bold text-lg rounded-2xl hover:bg-blue-500 transition-all shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-500/30 hover:-translate-y-0.5"
             >
               무료로 시작하기
               <span className="inline-block ml-2 group-hover:translate-x-1 transition-transform">&rarr;</span>
@@ -211,7 +197,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
               href="https://winaid.co.kr"
               target="_blank"
               rel="noopener noreferrer"
-              className="px-8 py-4 text-slate-400 font-semibold text-lg hover:text-white transition-colors"
+              className="px-8 py-4 text-slate-400 font-semibold text-lg hover:text-slate-700 transition-colors"
             >
               윈에이드 알아보기
             </a>
@@ -219,33 +205,33 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
 
           {/* Floating UI Preview */}
           <div className="mt-20 relative mx-auto max-w-3xl">
-            <div className="absolute -inset-4 bg-gradient-to-b from-blue-500/20 to-transparent rounded-3xl blur-2xl" />
-            <div className="relative bg-slate-800/80 backdrop-blur border border-white/10 rounded-2xl p-6 shadow-2xl">
+            <div className="absolute -inset-4 bg-gradient-to-b from-blue-100/50 to-transparent rounded-3xl blur-2xl" />
+            <div className="relative bg-white rounded-2xl p-6 shadow-xl border border-slate-200">
               <div className="flex items-center gap-2 mb-4">
-                <div className="w-3 h-3 rounded-full bg-red-400/60" />
-                <div className="w-3 h-3 rounded-full bg-yellow-400/60" />
-                <div className="w-3 h-3 rounded-full bg-green-400/60" />
-                <div className="flex-1 bg-white/5 rounded-lg h-6 mx-4" />
+                <div className="w-3 h-3 rounded-full bg-red-300" />
+                <div className="w-3 h-3 rounded-full bg-yellow-300" />
+                <div className="w-3 h-3 rounded-full bg-green-300" />
+                <div className="flex-1 bg-slate-100 rounded-lg h-6 mx-4" />
               </div>
               <div className="grid grid-cols-3 gap-4">
                 <div className="col-span-1 space-y-3">
-                  <div className="bg-white/5 rounded-xl p-3 space-y-2">
-                    <div className="h-2 bg-white/10 rounded w-3/4" />
-                    <div className="h-6 bg-blue-500/20 rounded-lg" />
-                    <div className="h-2 bg-white/10 rounded w-1/2" />
-                    <div className="h-6 bg-blue-500/20 rounded-lg" />
-                    <div className="h-8 bg-blue-500/40 rounded-lg mt-3" />
+                  <div className="bg-slate-50 rounded-xl p-3 space-y-2">
+                    <div className="h-2 bg-slate-200 rounded w-3/4" />
+                    <div className="h-6 bg-blue-100 rounded-lg" />
+                    <div className="h-2 bg-slate-200 rounded w-1/2" />
+                    <div className="h-6 bg-blue-100 rounded-lg" />
+                    <div className="h-8 bg-blue-200 rounded-lg mt-3" />
                   </div>
                 </div>
-                <div className="col-span-2 bg-white/5 rounded-xl p-4 space-y-2">
-                  <div className="h-3 bg-white/10 rounded w-1/3 mb-3" />
-                  <div className="h-2 bg-white/[0.06] rounded w-full" />
-                  <div className="h-2 bg-white/[0.06] rounded w-5/6" />
-                  <div className="h-2 bg-white/[0.06] rounded w-full" />
-                  <div className="h-2 bg-white/[0.06] rounded w-4/6" />
-                  <div className="h-16 bg-gradient-to-r from-blue-500/10 to-cyan-500/10 rounded-lg mt-3" />
-                  <div className="h-2 bg-white/[0.06] rounded w-full" />
-                  <div className="h-2 bg-white/[0.06] rounded w-3/4" />
+                <div className="col-span-2 bg-slate-50 rounded-xl p-4 space-y-2">
+                  <div className="h-3 bg-slate-200 rounded w-1/3 mb-3" />
+                  <div className="h-2 bg-slate-100 rounded w-full" />
+                  <div className="h-2 bg-slate-100 rounded w-5/6" />
+                  <div className="h-2 bg-slate-100 rounded w-full" />
+                  <div className="h-2 bg-slate-100 rounded w-4/6" />
+                  <div className="h-16 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-lg mt-3" />
+                  <div className="h-2 bg-slate-100 rounded w-full" />
+                  <div className="h-2 bg-slate-100 rounded w-3/4" />
                 </div>
               </div>
             </div>
@@ -253,8 +239,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
         </div>
 
         <div className="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce">
-          <div className="w-6 h-10 border-2 border-white/20 rounded-full flex justify-center pt-2">
-            <div className="w-1 h-2 bg-white/40 rounded-full" />
+          <div className="w-6 h-10 border-2 border-slate-300 rounded-full flex justify-center pt-2">
+            <div className="w-1 h-2 bg-slate-400 rounded-full" />
           </div>
         </div>
       </section>
