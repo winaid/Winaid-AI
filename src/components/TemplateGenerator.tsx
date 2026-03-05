@@ -339,31 +339,16 @@ export default function TemplateGenerator() {
             )}
             <input type="text" value={hospitalName} onChange={e => setHospitalName(e.target.value)} placeholder="병원명 입력" className="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-400 bg-white" />
           </div>
-          {/* 위치 선택 + 미니 레이아웃 미리보기 */}
+          {/* 위치 선택 */}
           <div>
             <label className="block text-[10px] font-semibold text-slate-500 mb-1.5">로고/병원명 위치</label>
             <div className="flex gap-2">
               {([
-                { pos: 'top' as const, label: '상단', desc: '헤더에 표시' },
-                { pos: 'bottom' as const, label: '하단', desc: '푸터에 표시' },
-              ]).map(({ pos, label, desc }) => (
-                <button key={pos} onClick={() => setBrandingPos(pos)} className={`flex-1 rounded-xl border-2 p-2 transition-all ${brandingPos === pos ? 'border-slate-700 bg-white shadow-md' : 'border-slate-200 bg-white hover:border-slate-300'}`}>
-                  {/* 미니 레이아웃 다이어그램 */}
-                  <div className="w-full aspect-[3/4] rounded-lg border border-slate-200 bg-slate-50 flex flex-col overflow-hidden mb-1.5">
-                    <div className={`flex items-center gap-1 px-1.5 py-1 ${pos === 'top' ? 'bg-slate-700' : 'bg-slate-100'}`}>
-                      <div className={`w-2.5 h-2.5 rounded-sm ${pos === 'top' ? 'bg-white/80' : 'bg-slate-300'}`} />
-                      <div className={`h-1.5 flex-1 rounded-sm ${pos === 'top' ? 'bg-white/60' : 'bg-slate-200'}`} />
-                    </div>
-                    <div className="flex-1 flex items-center justify-center">
-                      <div className="text-[8px] text-slate-300">콘텐츠</div>
-                    </div>
-                    <div className={`flex items-center gap-1 px-1.5 py-1 ${pos === 'bottom' ? 'bg-slate-700' : 'bg-slate-100'}`}>
-                      <div className={`w-2.5 h-2.5 rounded-sm ${pos === 'bottom' ? 'bg-white/80' : 'bg-slate-300'}`} />
-                      <div className={`h-1.5 flex-1 rounded-sm ${pos === 'bottom' ? 'bg-white/60' : 'bg-slate-200'}`} />
-                    </div>
-                  </div>
-                  <div className="text-[10px] font-bold text-slate-700">{label}</div>
-                  <div className="text-[8px] text-slate-400">{desc}</div>
+                { pos: 'top' as const, label: '상단' },
+                { pos: 'bottom' as const, label: '하단' },
+              ]).map(({ pos, label }) => (
+                <button key={pos} onClick={() => setBrandingPos(pos)} className={`flex-1 py-2 rounded-lg border text-xs font-bold transition-all ${brandingPos === pos ? 'border-slate-700 bg-slate-700 text-white' : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'}`}>
+                  {label}
                 </button>
               ))}
             </div>
