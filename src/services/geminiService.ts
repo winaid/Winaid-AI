@@ -1298,7 +1298,19 @@ ${competitorInstruction}
 ${forbiddenWordsBlock}
 ${writingStylePrompt || ''}
 ${learnedStyleInstruction || ''}${customSubheadingInstruction || ''}
-
+${request.persona === 'director_1st' ? `
+────────────────────
+🩺 [대표원장 1인칭 시점 모드 - 위 3인칭 규칙을 아래로 덮어씁니다!]
+────────────────────
+⚠️ 이 글은 대표원장이 직접 쓴 것처럼 1인칭 시점으로 작성합니다.
+- "저는", "제가", "저희" 사용 허용 (단, 과용 금지 — 전체 3~5회 이내)
+- 시점: 대표원장이 직접 환자에게 이야기하는 어조
+- 예: "저는 이런 경우를 진료하면서 느낀 점이 있습니다"
+- 예: "제가 환자분들께 자주 드리는 말씀이 있습니다"
+- "당신", "여러분" (2인칭)은 여전히 사용 금지
+- 병원 홍보/과장 표현은 여전히 금지 (의료광고법 준수)
+- 진정성 있고 전문적인 톤 유지
+` : ''}
 [진료과별 맞춤 가이드]
 ${request.category && CATEGORY_SPECIFIC_PROMPTS[request.category as unknown as keyof typeof CATEGORY_SPECIFIC_PROMPTS]
   ? CATEGORY_SPECIFIC_PROMPTS[request.category as unknown as keyof typeof CATEGORY_SPECIFIC_PROMPTS]

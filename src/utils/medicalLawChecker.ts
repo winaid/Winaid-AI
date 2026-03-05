@@ -281,7 +281,7 @@ export interface FullScanReport {
  * 텍스트에서 금지어 스캔
  * @param medicalLawMode - 'strict' (기본, 전체 스캔) | 'relaxed' (critical만 스캔)
  */
-export function scanForbiddenWords(text: string, medicalLawMode: 'strict' | 'relaxed' = 'strict'): FullScanReport {
+export function scanForbiddenWords(text: string, medicalLawMode: 'strict' | 'relaxed' = 'strict', persona?: string): FullScanReport {
   const violations: ScanResult[] = [];
   let criticalCount = 0;
   let highCount = 0;
@@ -292,9 +292,17 @@ export function scanForbiddenWords(text: string, medicalLawMode: 'strict' | 'rel
   const plainText = text.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ');
 
   // relaxed 모드: critical만 스캔
-  const wordsToScan = medicalLawMode === 'relaxed'
+  // director_1st 페르소나: 1인칭 표현 허용 (진료실/진료 현장은 여전히 차단)
+  const isDirector1st = persona === 'director_1st';
+  const wordsToScan = (medicalLawMode === 'relaxed'
     ? FORBIDDEN_WORDS_DATABASE.filter(fw => fw.severity === 'critical')
-    : FORBIDDEN_WORDS_DATABASE;
+    : FORBIDDEN_WORDS_DATABASE
+  ).filter(fw => {
+    if (isDirector1st && fw.category === 'first_person' && ['저는', '제가', '저희'].includes(fw.word)) {
+      return false; // 대표원장 1인칭 모드에서는 저는/제가/저희 허용
+    }
+    return true;
+  });
 
   wordsToScan.forEach(fw => {
     // 단어 위치 찾기 (정규식으로 모든 매치 찾기)
@@ -646,7 +654,7 @@ export interface AiSmellIssue {
 /**
  * AI 냄새 후처리 검증
  */
-export function analyzeAiSmell(html: string): AiSmellAnalysisResult {
+export function analyzeAiSmell(html: string, persona?: string): AiSmellAnalysisResult {
   const plainText = html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
   const issues: AiSmellIssue[] = [];
   const suggestions: string[] = [];
@@ -854,7 +862,9 @@ export function analyzeAiSmell(html: string): AiSmellAnalysisResult {
   }
 
   // 13. 1인칭/2인칭 직접 지칭 체크 (체험담 느낌)
-  const firstPersonMatches = plainText.match(/저는|제가|우리|저희 병원|저희는/g) || [];
+  // 대표원장 1인칭 모드에서는 1인칭 허용 (2인칭은 여전히 차단)
+  const isDirectorPersona = persona === 'director_1st';
+  const firstPersonMatches = isDirectorPersona ? [] : (plainText.match(/저는|제가|우리|저희 병원|저희는/g) || []);
   const secondPersonMatches = plainText.match(/당신은|당신의|여러분은|여러분의/g) || [];
   const totalPersonal = firstPersonMatches.length + secondPersonMatches.length;
 
@@ -865,7 +875,9 @@ export function analyzeAiSmell(html: string): AiSmellAnalysisResult {
       description: `인칭 대명사 과다 (${totalPersonal}회) - 체험담/광고 느낌`,
       examples: [...firstPersonMatches.slice(0, 2), ...secondPersonMatches.slice(0, 2)],
       severity: 'high',
-      fixSuggestion: '3인칭 질환 경험자 공감 시점으로 변경 (예: "저는" → 삭제, "여러분은" → "~하는 분들은"). 도입부는 반복성/시간 흐름이 드러나는 질환 경험자 관점으로 작성'
+      fixSuggestion: isDirectorPersona
+        ? '2인칭 표현 제거 (예: "여러분은" → "~하는 분들은")'
+        : '3인칭 질환 경험자 공감 시점으로 변경 (예: "저는" → 삭제, "여러분은" → "~하는 분들은"). 도입부는 반복성/시간 흐름이 드러나는 질환 경험자 관점으로 작성'
     });
   }
 
@@ -925,7 +937,9 @@ export function analyzeAiSmell(html: string): AiSmellAnalysisResult {
     suggestions.push('문장 길이를 다양하게 (짧음/중간/긴 문장 섞기)');
   }
   if (issues.some(i => i.description.includes('인칭 대명사'))) {
-    suggestions.push('1인칭/2인칭 제거하고 3인칭 질환 경험자 공감 시점으로 작성 (도입부에 반복성·시간 흐름 포함)');
+    suggestions.push(persona === 'director_1st'
+      ? '2인칭 표현 제거 (대표원장 1인칭 모드에서는 1인칭 허용)'
+      : '1인칭/2인칭 제거하고 3인칭 질환 경험자 공감 시점으로 작성 (도입부에 반복성·시간 흐름 포함)');
   }
   if (issues.some(i => i.description.includes('감정 과도'))) {
     suggestions.push('과장된 감정 표현 대신 구체적 상황으로 표현');
@@ -963,11 +977,12 @@ export function analyzeContent(
   html: string,
   title: string,
   keyword: string,
-  medicalLawMode: 'strict' | 'relaxed' = 'strict'
+  medicalLawMode: 'strict' | 'relaxed' = 'strict',
+  persona?: string
 ): FullAnalysisReport {
-  const medicalLaw = scanForbiddenWords(html, medicalLawMode);
+  const medicalLaw = scanForbiddenWords(html, medicalLawMode, persona);
   const seo = analyzeSeo(html, title, keyword);
-  const aiSmell = analyzeAiSmell(html);
+  const aiSmell = analyzeAiSmell(html, persona);
   
   // 종합 점수 (가중치: 의료법 40%, SEO 30%, AI냄새 30%)
   const overallScore = Math.round(
