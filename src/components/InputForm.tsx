@@ -565,7 +565,7 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange 
                 const text = e.clipboardData.getData('text/plain');
                 document.execCommand('insertText', false, text);
               }}
-              placeholder={"소제목을 한 줄에 하나씩 입력하세요\n예:\n무릎 통증의 주요 원인\n통증을 줄이는 생활 습관\n병원 방문이 필요한 시점"}
+              placeholder={"소제목을 한 줄에 하나씩 입력하세요\n예:\n충치 치료 종류와 비용\n스케일링 후 주의사항\n치과 정기검진이 중요한 이유"}
               className="w-full p-3 bg-white border border-blue-200 rounded-xl text-sm font-medium focus:border-blue-400 outline-none resize-none"
               rows={5}
             />
