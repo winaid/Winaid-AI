@@ -797,13 +797,14 @@ export interface SavedStyleHistory {
   id: string;
   name: string;
   stylePrompt: string; // 재사용 가능한 스타일 프롬프트
-  thumbnailDataUrl: string; // 결과 이미지 축소 썸네일
+  thumbnailDataUrl: string; // 결과 이미지 축소 썸네일 (120px, UI 표시용)
+  referenceImageUrl: string; // 참고 이미지 (512px, AI에 전달용 - 그림체/일러스트 재현)
   presetId?: string; // 기반 프리셋 ID (있으면)
   createdAt: number;
 }
 
 const STYLE_HISTORY_KEY = 'template_style_history';
-const MAX_STYLE_HISTORY = 20;
+const MAX_STYLE_HISTORY = 12; // 참고 이미지(512px) 포함이라 용량 관리
 
 export function loadStyleHistory(): SavedStyleHistory[] {
   try {
@@ -831,8 +832,8 @@ export function deleteStyleFromHistory(id: string): void {
   localStorage.setItem(STYLE_HISTORY_KEY, JSON.stringify(history));
 }
 
-// 이미지를 작은 썸네일로 리사이즈 (localStorage 용량 절약)
-export function resizeImageToThumbnail(dataUrl: string, maxSize: number = 120): Promise<string> {
+// 이미지를 리사이즈 (썸네일 or 참고 이미지)
+export function resizeImageToThumbnail(dataUrl: string, maxSize: number = 120, quality: number = 0.6): Promise<string> {
   return new Promise((resolve) => {
     const img = new Image();
     img.onload = () => {
@@ -842,11 +843,16 @@ export function resizeImageToThumbnail(dataUrl: string, maxSize: number = 120): 
       canvas.height = img.height * scale;
       const ctx = canvas.getContext('2d')!;
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      resolve(canvas.toDataURL('image/jpeg', 0.6));
+      resolve(canvas.toDataURL('image/jpeg', quality));
     };
-    img.onerror = () => resolve(dataUrl); // 실패시 원본
+    img.onerror = () => resolve(dataUrl);
     img.src = dataUrl;
   });
+}
+
+// AI 참고용 중간 해상도 이미지 (512px, 그림체/일러스트 재현용)
+export function resizeImageForReference(dataUrl: string): Promise<string> {
+  return resizeImageToThumbnail(dataUrl, 512, 0.75);
 }
 
 interface AiTemplateRequest {
@@ -1045,6 +1051,7 @@ export async function generateTemplateWithAI(
     hospitalName?: string;
     logoBase64?: string | null;
     brandingPosition?: 'top' | 'bottom';
+    styleReferenceImage?: string; // 이전 생성 결과 이미지 (그림체/일러스트 재현용)
     extraPrompt?: string;
     imageSize?: { width: number; height: number };
   }
@@ -1084,25 +1091,45 @@ export async function generateTemplateWithAI(
     imageSize: options?.imageSize,
   });
 
-  // 로고 이미지 파트 준비
-  const logoPart = options?.logoBase64?.startsWith('data:')
-    ? (() => {
-        const [meta, base64] = options.logoBase64!.split(',');
-        const mimeType = (meta.match(/data:(.*?);base64/) || [])[1] || 'image/png';
-        return { inlineData: { data: base64, mimeType } };
-      })()
-    : null;
+  // 이미지 파트 준비
+  const makeImagePart = (dataUrl: string) => {
+    if (!dataUrl?.startsWith('data:')) return null;
+    const [meta, base64] = dataUrl.split(',');
+    const mimeType = (meta.match(/data:(.*?);base64/) || [])[1] || 'image/png';
+    return { inlineData: { data: base64, mimeType } };
+  };
+
+  const logoPart = makeImagePart(options?.logoBase64 || '');
+  const styleRefPart = makeImagePart(options?.styleReferenceImage || '');
 
   const MAX_RETRIES = 2;
   let lastError: any = null;
 
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
-      console.log(`🎨 템플릿 AI 이미지 생성 시도 ${attempt}/${MAX_RETRIES} (${category})...`);
+      console.log(`🎨 템플릿 AI 이미지 생성 시도 ${attempt}/${MAX_RETRIES} (${category}, ref=${!!styleRefPart})...`);
 
-      const contents: any[] = logoPart
-        ? [logoPart, { text: `[Hospital Logo Image - place this logo NEXT TO the hospital name in the header, side by side as one unit]\n\n${prompt}` }]
-        : [{ text: prompt }];
+      // 참고 이미지 + 로고 + 프롬프트 조합
+      const contents: any[] = [];
+      if (styleRefPart) {
+        contents.push(styleRefPart);
+        contents.push({ text: `[STYLE REFERENCE IMAGE - COPY THE ENTIRE VISUAL STYLE FROM THIS IMAGE!]
+🚨 CRITICAL: Replicate EVERYTHING from this reference image:
+- The exact illustration style (characters, objects, decorations, drawings)
+- Color palette, gradients, textures
+- Layout structure and spacing
+- Typography style and hierarchy
+- Decorative elements (icons, patterns, borders, shapes)
+- Overall mood and atmosphere
+ONLY change the TEXT CONTENT to match the new request below. Keep ALL visual elements the same style.
+
+` });
+      }
+      if (logoPart) {
+        contents.push(logoPart);
+        contents.push({ text: '[Hospital Logo - place next to hospital name]\n\n' });
+      }
+      contents.push({ text: prompt });
 
       const result = await ai.models.generateContent({
         model: 'gemini-3-pro-image-preview',

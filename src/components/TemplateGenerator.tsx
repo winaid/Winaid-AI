@@ -6,6 +6,7 @@ import {
   saveStyleToHistory,
   deleteStyleFromHistory,
   resizeImageToThumbnail,
+  resizeImageForReference,
   type ClosedDay,
   type ShortenedDay,
   type VacationDay,
@@ -182,22 +183,27 @@ export default function TemplateGenerator() {
         hospitalName: hospitalName || undefined,
         logoBase64,
         brandingPosition: brandingPos,
+        styleReferenceImage: selectedHistory?.referenceImageUrl || undefined,
         extraPrompt: [customMessage.trim(), extraPrompt.trim()].filter(Boolean).join('\n') || undefined,
         imageSize: sizeConfig.width > 0 ? { width: sizeConfig.width, height: sizeConfig.height } : undefined,
       });
       setResultImage(imageDataUrl);
 
-      // 생성 성공 시 스타일 히스토리에 썸네일과 함께 저장
+      // 생성 성공 시 스타일 히스토리에 썸네일 + 참고 이미지 저장
       try {
-        const thumbnail = await resizeImageToThumbnail(imageDataUrl);
+        const [thumbnail, referenceImg] = await Promise.all([
+          resizeImageToThumbnail(imageDataUrl),
+          resizeImageForReference(imageDataUrl),
+        ]);
         const saved = saveStyleToHistory({
           name: activeStyleName,
           stylePrompt: activeStylePrompt,
           thumbnailDataUrl: thumbnail,
+          referenceImageUrl: referenceImg,
           presetId: selectedHistory ? selectedHistory.presetId : selectedStyle.id,
         });
         setStyleHistory(loadStyleHistory());
-        console.log('📌 스타일 히스토리 저장:', saved.id);
+        console.log('📌 스타일 히스토리 저장 (ref 512px):', saved.id);
       } catch (e) { console.warn('스타일 히스토리 저장 실패:', e); }
 
     } catch (err: any) {
