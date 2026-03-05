@@ -480,20 +480,17 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
       </section>
 
       {/* Footer */}
-      <footer className="py-12 bg-white border-t border-slate-200">
+      <footer className="py-10 bg-slate-800">
         <div className="max-w-6xl mx-auto px-6">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-6">
-            <div className="flex items-center gap-2">
-              <img src="/280_logo.png" alt="WINAID" className="h-8" />
-              <span className="font-black text-lg text-slate-800 tracking-tight">WIN<span className="text-blue-500">AID</span></span>
-            </div>
-            <div className="flex items-center gap-6 text-sm text-slate-600 font-medium">
-              <a href="mailto:winaid@daum.net" className="hover:text-blue-500 transition-colors">winaid@daum.net</a>
-              <a href="tel:025849400" className="hover:text-blue-500 transition-colors">02-584-9400</a>
-              <a href="https://winaid.co.kr" target="_blank" rel="noopener noreferrer" className="hover:text-blue-500 transition-colors">winaid.co.kr</a>
-            </div>
-          </div>
-          <div className="mt-8 pt-8 border-t border-slate-100 text-center text-sm text-slate-400">
+          <p className="text-slate-400 text-sm text-center leading-relaxed">
+            (07206) 서울 영등포구 양평로20길 16-1 2층 윈에이드&nbsp;&nbsp;|&nbsp;&nbsp;회사명 (주)윈에이드&nbsp;&nbsp;|&nbsp;&nbsp;대표 이현승&nbsp;&nbsp;|&nbsp;&nbsp;사업자등록번호 178-88-00714
+          </p>
+          <p className="text-slate-400 text-sm text-center mt-3 leading-relaxed">
+            Email&nbsp;&nbsp;<a href="mailto:winaid@daum.net" className="text-slate-300 hover:text-white transition-colors">winaid@daum.net</a>
+            &nbsp;&nbsp;|&nbsp;&nbsp;Tel&nbsp;&nbsp;<a href="tel:025849400" className="text-slate-300 hover:text-white transition-colors">02 584 9400</a>
+            &nbsp;&nbsp;|&nbsp;&nbsp;Fax.&nbsp;&nbsp;<span className="text-slate-300">02-332-9407</span>
+          </p>
+          <div className="mt-6 pt-6 border-t border-slate-700 text-center text-xs text-slate-500">
             &copy; {new Date().getFullYear()} WINAID. All rights reserved.
           </div>
         </div>
