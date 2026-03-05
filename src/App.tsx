@@ -1019,6 +1019,7 @@ const App: React.FC = () => {
               >
                 🖼️ 이미지
               </button>
+              {/* 히스토리 탭 - 추후 활성화 예정
               <button
                 onClick={() => setContentTab('history')}
                 className={`py-2.5 px-3 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${
@@ -1031,6 +1032,7 @@ const App: React.FC = () => {
               >
                 📋 히스토리
               </button>
+              */}
             </div>
 
             {/* 전체 화면 콘텐츠 */}
