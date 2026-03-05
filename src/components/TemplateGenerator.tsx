@@ -121,6 +121,7 @@ export default function TemplateGenerator() {
 
   // 결과
   const [generating, setGenerating] = useState(false);
+  const [generatingStep, setGeneratingStep] = useState(0);
   const [resultImage, setResultImage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [previewStyleImage, setPreviewStyleImage] = useState<{ url: string; name: string } | null>(null);
@@ -211,7 +212,8 @@ export default function TemplateGenerator() {
   const activeStyleName = selectedHistory?.name || selectedStyle.name;
 
   const handleGenerate = async () => {
-    setGenerating(true); setError(null);
+    setGenerating(true); setError(null); setGeneratingStep(0);
+    const stepTimer = setInterval(() => setGeneratingStep(s => s + 1), 3000);
     try {
       const sizeConfig = [...IMAGE_SIZES].find(s => s.id === imageSize) || IMAGE_SIZES[3];
 
@@ -272,7 +274,7 @@ export default function TemplateGenerator() {
 
     } catch (err: any) {
       setError(err.message || 'AI 이미지 생성에 실패했습니다. 다시 시도해주세요.');
-    } finally { setGenerating(false); }
+    } finally { clearInterval(stepTimer); setGenerating(false); }
   };
 
   const handleDeleteHistory = (id: string, e: React.MouseEvent) => {
@@ -619,7 +621,29 @@ export default function TemplateGenerator() {
       {/* 오른쪽: 미리보기 */}
       <div className="flex-1 flex flex-col items-center justify-center overflow-y-auto">
         {error&&<div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">{error}</div>}
-        {previewStyleImage ? (
+        {generating ? (
+          <div className="flex flex-col items-center justify-center gap-6 animate-fade-in">
+            <div className="relative w-24 h-24">
+              <div className="absolute inset-0 rounded-full border-4 border-violet-100" />
+              <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-violet-500 animate-spin" />
+              <div className="absolute inset-3 rounded-full border-4 border-transparent border-t-indigo-400 animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }} />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span className="text-2xl animate-pulse">{['🎨','✨','🖌️','💫'][generatingStep % 4]}</span>
+              </div>
+            </div>
+            <div className="text-center space-y-2">
+              <p className="text-base font-bold text-slate-700">
+                {['AI가 디자인 구상 중...','레이아웃 배치하는 중...','색감 입히는 중...','마무리 터치 중...','거의 다 됐어요!'][Math.min(generatingStep, 4)]}
+              </p>
+              <p className="text-xs text-slate-400">보통 10~30초 정도 걸려요</p>
+              <div className="flex justify-center gap-1 mt-3">
+                {[0,1,2,3,4].map(i => (
+                  <div key={i} className={`w-2 h-2 rounded-full transition-all duration-500 ${i <= generatingStep ? 'bg-violet-500 scale-110' : 'bg-slate-200'}`} />
+                ))}
+              </div>
+            </div>
+          </div>
+        ) : previewStyleImage ? (
           <div className="space-y-4 w-full flex flex-col items-center">
             <p className="text-xs font-semibold text-violet-600">내 스타일 미리보기: {previewStyleImage.name}</p>
             <img src={previewStyleImage.url} alt={previewStyleImage.name} className="max-w-full max-h-[70vh] rounded-2xl shadow-2xl border-2 border-violet-200" />

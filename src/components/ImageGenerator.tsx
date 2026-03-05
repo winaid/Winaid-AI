@@ -404,8 +404,31 @@ export default function ImageGenerator({ onProgress }: Props) {
         </div>
       )}
 
+      {/* 생성 중 로딩 */}
+      {generating && (
+        <div className="bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 rounded-2xl border border-purple-100 p-10 flex flex-col items-center justify-center gap-5">
+          <div className="relative w-20 h-20">
+            <div className="absolute inset-0 rounded-full border-4 border-purple-100" />
+            <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-purple-500 animate-spin" />
+            <div className="absolute inset-3 rounded-full border-4 border-transparent border-t-blue-400 animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }} />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className="text-2xl animate-pulse">🎨</span>
+            </div>
+          </div>
+          <div className="text-center space-y-1.5">
+            <p className="text-base font-bold text-gray-700">{progress || 'AI가 이미지 만드는 중...'}</p>
+            <p className="text-xs text-gray-400">잠시만 기다려주세요</p>
+          </div>
+          <div className="flex gap-1.5">
+            {[0,1,2].map(i => (
+              <div key={i} className="w-2 h-2 rounded-full bg-purple-400 animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* 결과 */}
-      {result && (
+      {!generating && result && (
         <div className="space-y-4">
           <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
             <img
