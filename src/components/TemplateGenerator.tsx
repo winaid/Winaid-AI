@@ -77,6 +77,7 @@ export default function TemplateGenerator() {
   const [docSpecialty, setDocSpecialty] = useState('');
   const [docCareer, setDocCareer] = useState('');
   const [docGreeting, setDocGreeting] = useState('');
+  const [docPhotoBase64, setDocPhotoBase64] = useState<string | null>(null);
 
   // 공지사항
   const [noticeTitle, setNoticeTitle] = useState('');
@@ -149,6 +150,13 @@ export default function TemplateGenerator() {
     reader.readAsDataURL(file);
   };
 
+  const handleDocPhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => setDocPhotoBase64(reader.result as string);
+    reader.readAsDataURL(file);
+  };
+
   // 현재 사용할 스타일 프롬프트 결정 (히스토리 선택 > 프리셋)
   const activeStylePrompt = selectedHistory?.stylePrompt || selectedStyle.aiPrompt;
   const activeStyleName = selectedHistory?.name || selectedStyle.name;
@@ -172,7 +180,7 @@ export default function TemplateGenerator() {
       } else if (category === 'event') {
         templateData = { title: evTitle, subtitle: evSubtitle || undefined, price: evPrice || undefined, originalPrice: evOrigPrice || undefined, discount: evDiscount || undefined, period: evPeriod || undefined, description: evDesc || undefined };
       } else if (category === 'doctor') {
-        templateData = { doctorName: docName, specialty: docSpecialty, career: docCareer.split('\n').filter(Boolean), greeting: docGreeting || undefined };
+        templateData = { doctorName: docName, specialty: docSpecialty, career: docCareer.split('\n').filter(Boolean), greeting: docGreeting || undefined, doctorPhotoBase64: docPhotoBase64 || undefined };
       } else if (category === 'notice') {
         templateData = { title: noticeTitle, content: noticeContent.split('\n').filter(Boolean), effectiveDate: noticeDate || undefined };
       } else {
@@ -359,9 +367,23 @@ export default function TemplateGenerator() {
         {/* === 의사 소개 === */}
         {category === 'doctor' && (
           <div className="space-y-3">
-            <div className="flex gap-3">
-              <div className="flex-1"><label className={labelCls}>의사 이름</label><input type="text" value={docName} onChange={e=>setDocName(e.target.value)} placeholder="김철수" className={inputCls} /></div>
-              <div className="flex-1"><label className={labelCls}>전문 분야</label><input type="text" value={docSpecialty} onChange={e=>setDocSpecialty(e.target.value)} placeholder="정형외과 전문의" className={inputCls} /></div>
+            <div className="flex gap-3 items-start">
+              <div className="flex flex-col items-center gap-1 flex-shrink-0">
+                <label className={labelCls}>사진</label>
+                <label className="w-20 h-24 rounded-lg border-2 border-dashed border-slate-300 bg-white flex items-center justify-center cursor-pointer hover:border-blue-400 transition-colors overflow-hidden">
+                  {docPhotoBase64 ? (
+                    <img src={docPhotoBase64} alt="의사 사진" className="w-full h-full object-cover rounded-md" />
+                  ) : (
+                    <svg className="w-8 h-8 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                  )}
+                  <input type="file" accept="image/*" className="hidden" onChange={handleDocPhotoUpload} />
+                </label>
+                {docPhotoBase64 && <button type="button" onClick={()=>setDocPhotoBase64(null)} className="text-xs text-red-400 hover:text-red-600">삭제</button>}
+              </div>
+              <div className="flex-1 space-y-2">
+                <div><label className={labelCls}>의사 이름</label><input type="text" value={docName} onChange={e=>setDocName(e.target.value)} placeholder="김철수" className={inputCls} /></div>
+                <div><label className={labelCls}>전문 분야</label><input type="text" value={docSpecialty} onChange={e=>setDocSpecialty(e.target.value)} placeholder="정형외과 전문의" className={inputCls} /></div>
+              </div>
             </div>
             <div><label className={labelCls}>경력/학력 <span className="text-slate-400 font-normal">(줄바꿈으로 구분)</span></label><textarea value={docCareer} onChange={e=>setDocCareer(e.target.value)} placeholder={"서울대학교 의과대학 졸업\n서울대병원 전공의\n대한정형외과학회 정회원"} rows={4} className={textareaCls} /></div>
             <div><label className={labelCls}>인사말 <span className="text-slate-400 font-normal">(선택)</span></label><textarea value={docGreeting} onChange={e=>setDocGreeting(e.target.value)} placeholder="환자분들의 건강한 삶을 위해 최선을 다하겠습니다." rows={2} className={textareaCls} /></div>

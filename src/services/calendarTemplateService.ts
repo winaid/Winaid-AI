@@ -540,6 +540,7 @@ export interface DoctorTemplateData {
   specialty: string;
   career?: string[];
   greeting?: string;
+  doctorPhotoBase64?: string;
   hospitalName?: string;
   logoBase64?: string;
   colorTheme?: string;
@@ -1007,9 +1008,13 @@ function buildEventTextContent(data: {
 }
 
 function buildDoctorTextContent(data: {
-  doctorName: string; specialty: string; career: string[]; greeting?: string;
+  doctorName: string; specialty: string; career: string[]; greeting?: string; hasPhoto?: boolean;
 }): string {
-  let content = `[NAME - largest, bold] "${data.doctorName}"`;
+  let content = '';
+  if (data.hasPhoto) {
+    content += `[DOCTOR PHOTO - use the provided doctor photo image, display it prominently as a professional headshot, circular or rounded frame recommended]\n`;
+  }
+  content += `[NAME - largest, bold] "${data.doctorName}"`;
   content += `\n[SPECIALTY - accent color badge] "${data.specialty}"`;
   if (data.career.length > 0) content += `\n[CAREER LIST - clean bullet points]\n${data.career.map(c => `• ${c}`).join('\n')}`;
   if (data.greeting) content += `\n[GREETING - italic or light weight] "${data.greeting}"`;
@@ -1069,7 +1074,7 @@ export async function generateTemplateWithAI(
       textContent = buildEventTextContent(templateData as any);
       break;
     case 'doctor':
-      textContent = buildDoctorTextContent(templateData as any);
+      textContent = buildDoctorTextContent({ ...(templateData as any), hasPhoto: !!templateData.doctorPhotoBase64 });
       break;
     case 'notice':
       textContent = buildNoticeTextContent(templateData as any);
@@ -1102,6 +1107,7 @@ export async function generateTemplateWithAI(
 
   const logoPart = makeImagePart(options?.logoBase64 || '');
   const styleRefPart = makeImagePart(options?.styleReferenceImage || '');
+  const doctorPhotoPart = category === 'doctor' ? makeImagePart(templateData.doctorPhotoBase64 || '') : null;
 
   const MAX_RETRIES = 3;
   let lastError: any = null;
@@ -1116,6 +1122,10 @@ COPY from this reference: illustration style, color palette, layout, typography,
 DO NOT COPY: any text, numbers, dates, calendar data, month names, or hospital names from the reference.
 The reference image text is OLD/WRONG - IGNORE IT. Use ONLY the new text data in the prompt below.
 ` });
+    }
+    if (doctorPhotoPart) {
+      contents.push(doctorPhotoPart);
+      contents.push({ text: '[DOCTOR PHOTO - This is the actual photo of the doctor. Include this photo prominently in the design as a professional headshot.]\n\n' });
     }
     if (logoPart) {
       contents.push(logoPart);
