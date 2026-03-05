@@ -151,7 +151,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
       <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrollY > 50 ? 'bg-white/90 backdrop-blur-xl shadow-sm' : 'bg-transparent'}`}>
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-1">
-            <svg viewBox="0 0 200 100" className="h-6" xmlns="http://www.w3.org/2000/svg">
+            <svg viewBox="0 0 200 100" className="h-9" xmlns="http://www.w3.org/2000/svg">
               <path d="M0 96L36 4h18l36 92H72L64 74H26L18 96H0zM31 60h28L45 18 31 60z" fill="#3C3C3C"/>
               <path d="M100 4h14v92h-14z" fill="#3B82F6"/>
               <path d="M124 4h30c28 0 46 20 46 46s-18 46-46 46h-30V4zm16 14v64h14c18 0 30-14 30-32s-12-32-30-32h-14z" fill="#3C3C3C"/>
