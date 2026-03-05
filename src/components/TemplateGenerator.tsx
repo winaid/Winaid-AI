@@ -1,14 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
-  buildCalendarHTML,
-  renderCalendarToImage,
-  buildEventHTML,
-  buildDoctorHTML,
-  buildNoticeHTML,
-  buildGreetingHTML,
   generateTemplateWithAI,
   AI_STYLE_PRESETS,
-  type CalendarData,
   type ClosedDay,
   type ShortenedDay,
   type VacationDay,
@@ -26,14 +19,7 @@ const CATEGORIES: { id: TemplateCategory; name: string; icon: string; desc: stri
   { id: 'greeting', name: '명절 인사', icon: '\u{1F38A}', desc: '설날/추석' },
 ];
 
-// AI 스타일 프리셋 사용 + 기존 HTML 폴백용 색상 매핑
-const STYLE_COLOR_MAP: Record<string, string> = {
-  clean_modern: 'blue', warm_friendly: 'coral', premium_elegant: 'navy',
-  soft_nature: 'green', cute_pop: 'pink', classic_trust: 'purple',
-  fresh_energy: 'teal', minimal_mono: 'charcoal',
-};
-
-type GenerationMode = 'ai' | 'html';
+// AI 스타일 프리셋 사용 (모든 템플릿 AI 생성)
 
 const IMAGE_SIZES = [
   { id: 'square', label: '1080x1080', width: 1080, height: 1080, icon: '\u2B1C', desc: '\uC778\uC2A4\uD0C0 \uD53C\uB4DC' },
@@ -59,7 +45,6 @@ export default function TemplateGenerator() {
   const [customMessage, setCustomMessage] = useState('');
   const [extraPrompt, setExtraPrompt] = useState('');
   const [imageSize, setImageSize] = useState<ImageSize>('auto');
-  const [genMode, setGenMode] = useState<GenerationMode>('ai');
 
   // 진료 일정
   const [month, setMonth] = useState(now.getMonth() + 1);
@@ -133,63 +118,36 @@ export default function TemplateGenerator() {
     try {
       const sizeConfig = [...IMAGE_SIZES].find(s => s.id === imageSize) || IMAGE_SIZES[3];
 
-      if (genMode === 'ai') {
-        // AI 이미지 생성 (Nano Banana Pro)
-        const closed: ClosedDay[] = []; const shortened: ShortenedDay[] = []; const vacation: VacationDay[] = [];
-        dayMarks.forEach((mark, day) => {
-          if (mark === 'closed') closed.push({ day });
-          else if (mark === 'shortened') shortened.push({ day, hours: shortenedHours.get(day) });
-          else if (mark === 'vacation') vacation.push({ day, reason: vacationReasons.get(day) });
-        });
+      // AI 이미지 생성 (Nano Banana Pro) - 모든 템플릿
+      const closed: ClosedDay[] = []; const shortened: ShortenedDay[] = []; const vacation: VacationDay[] = [];
+      dayMarks.forEach((mark, day) => {
+        if (mark === 'closed') closed.push({ day });
+        else if (mark === 'shortened') shortened.push({ day, hours: shortenedHours.get(day) });
+        else if (mark === 'vacation') vacation.push({ day, reason: vacationReasons.get(day) });
+      });
 
-        let templateData: Record<string, any>;
-        if (category === 'schedule') {
-          templateData = { month, year, title: scheduleTitle || `${month}월 휴진 안내`, closedDays: closed, shortenedDays: shortened.length > 0 ? shortened : undefined, vacationDays: vacation.length > 0 ? vacation : undefined, notices: notices.split('\n').filter(Boolean) };
-        } else if (category === 'event') {
-          templateData = { title: evTitle, subtitle: evSubtitle || undefined, price: evPrice || undefined, originalPrice: evOrigPrice || undefined, discount: evDiscount || undefined, period: evPeriod || undefined, description: evDesc || undefined };
-        } else if (category === 'doctor') {
-          templateData = { doctorName: docName, specialty: docSpecialty, career: docCareer.split('\n').filter(Boolean), greeting: docGreeting || undefined };
-        } else if (category === 'notice') {
-          templateData = { title: noticeTitle, content: noticeContent.split('\n').filter(Boolean), effectiveDate: noticeDate || undefined };
-        } else {
-          templateData = { holiday: greetHoliday, greeting: greetMsg, closurePeriod: greetClosure || undefined };
-        }
-
-        const imageDataUrl = await generateTemplateWithAI(category, templateData, selectedStyle, {
-          hospitalName: hospitalName || undefined,
-          logoBase64,
-          extraPrompt: [customMessage.trim(), extraPrompt.trim()].filter(Boolean).join('\n') || undefined,
-          imageSize: sizeConfig.width > 0 ? { width: sizeConfig.width, height: sizeConfig.height } : undefined,
-        });
-        setResultImage(imageDataUrl);
+      let templateData: Record<string, any>;
+      if (category === 'schedule') {
+        templateData = { month, year, title: scheduleTitle || `${month}월 휴진 안내`, closedDays: closed, shortenedDays: shortened.length > 0 ? shortened : undefined, vacationDays: vacation.length > 0 ? vacation : undefined, notices: notices.split('\n').filter(Boolean) };
+      } else if (category === 'event') {
+        templateData = { title: evTitle, subtitle: evSubtitle || undefined, price: evPrice || undefined, originalPrice: evOrigPrice || undefined, discount: evDiscount || undefined, period: evPeriod || undefined, description: evDesc || undefined };
+      } else if (category === 'doctor') {
+        templateData = { doctorName: docName, specialty: docSpecialty, career: docCareer.split('\n').filter(Boolean), greeting: docGreeting || undefined };
+      } else if (category === 'notice') {
+        templateData = { title: noticeTitle, content: noticeContent.split('\n').filter(Boolean), effectiveDate: noticeDate || undefined };
       } else {
-        // 기존 HTML 렌더링 폴백
-        let html: string;
-        const colorTheme = STYLE_COLOR_MAP[selectedStyle.id] || 'blue';
-        const common = { hospitalName: hospitalName || undefined, logoBase64: logoBase64 || undefined, colorTheme, customMessage: customMessage.trim() || undefined };
-
-        if (category === 'schedule') {
-          const closed: ClosedDay[] = []; const shortened: ShortenedDay[] = []; const vacation: VacationDay[] = [];
-          dayMarks.forEach((mark, day) => {
-            if (mark === 'closed') closed.push({ day });
-            else if (mark === 'shortened') shortened.push({ day, hours: shortenedHours.get(day) });
-            else if (mark === 'vacation') vacation.push({ day, reason: vacationReasons.get(day) });
-          });
-          html = buildCalendarHTML({ month, year, title: scheduleTitle || `${month}월 휴진 안내`, closedDays: closed, shortenedDays: shortened.length > 0 ? shortened : undefined, vacationDays: vacation.length > 0 ? vacation : undefined, notices: notices.split('\n').filter(Boolean), ...common });
-        } else if (category === 'event') {
-          html = buildEventHTML({ title: evTitle, subtitle: evSubtitle || undefined, price: evPrice || undefined, originalPrice: evOrigPrice || undefined, discount: evDiscount || undefined, period: evPeriod || undefined, description: evDesc || undefined, ...common });
-        } else if (category === 'doctor') {
-          html = buildDoctorHTML({ doctorName: docName, specialty: docSpecialty, career: docCareer.split('\n').filter(Boolean), greeting: docGreeting || undefined, ...common });
-        } else if (category === 'notice') {
-          html = buildNoticeHTML({ title: noticeTitle, content: noticeContent.split('\n').filter(Boolean), effectiveDate: noticeDate || undefined, ...common });
-        } else {
-          html = buildGreetingHTML({ holiday: greetHoliday, greeting: greetMsg, closurePeriod: greetClosure || undefined, ...common });
-        }
-        const imageDataUrl = await renderCalendarToImage(html, { width: sizeConfig.width, height: sizeConfig.height });
-        setResultImage(imageDataUrl);
+        templateData = { holiday: greetHoliday, greeting: greetMsg, closurePeriod: greetClosure || undefined };
       }
+
+      const imageDataUrl = await generateTemplateWithAI(category, templateData, selectedStyle, {
+        hospitalName: hospitalName || undefined,
+        logoBase64,
+        extraPrompt: [customMessage.trim(), extraPrompt.trim()].filter(Boolean).join('\n') || undefined,
+        imageSize: sizeConfig.width > 0 ? { width: sizeConfig.width, height: sizeConfig.height } : undefined,
+      });
+      setResultImage(imageDataUrl);
     } catch (err: any) {
-      setError(err.message || '이미지 생성에 실패했습니다.');
+      setError(err.message || 'AI 이미지 생성에 실패했습니다. 다시 시도해주세요.');
     } finally { setGenerating(false); }
   };
 
@@ -361,20 +319,6 @@ export default function TemplateGenerator() {
           </div>
         </div>
 
-        {/* 생성 모드 */}
-        <div>
-          <label className="block text-xs font-semibold text-slate-600 mb-2">생성 방식</label>
-          <div className="flex gap-2">
-            <button onClick={() => setGenMode('ai')} className={`flex-1 py-2.5 px-3 rounded-xl text-sm font-bold transition-all ${genMode === 'ai' ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-lg' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>
-              AI 디자인
-            </button>
-            <button onClick={() => setGenMode('html')} className={`flex-1 py-2.5 px-3 rounded-xl text-sm font-bold transition-all ${genMode === 'html' ? 'bg-slate-800 text-white shadow-lg' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>
-              기본 템플릿
-            </button>
-          </div>
-          {genMode === 'ai' && <p className="text-[10px] text-violet-500 mt-1.5 font-medium">Nano Banana Pro AI가 예쁘게 디자인합니다</p>}
-        </div>
-
         {/* 스타일 */}
         <div>
           <label className="block text-xs font-semibold text-slate-600 mb-2">디자인 스타일</label>
@@ -391,12 +335,12 @@ export default function TemplateGenerator() {
               </button>
             ))}
           </div>
-          {genMode === 'ai' && <p className="text-[10px] text-slate-400 mt-1.5">{selectedStyle.mood}</p>}
+          <p className="text-[10px] text-slate-400 mt-1.5">{selectedStyle.mood}</p>
         </div>
 
         {/* 생성 */}
-        <button onClick={handleGenerate} disabled={generating} className={`w-full py-3 rounded-xl text-white font-bold text-base transition-all shadow-lg ${generating ? 'bg-slate-400 cursor-not-allowed' : genMode === 'ai' ? 'bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 active:scale-[0.98]' : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 active:scale-[0.98]'}`}>
-          {generating ? (<span className="flex items-center justify-center gap-2"><svg className="animate-spin h-5 w-5" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" /></svg>{genMode === 'ai' ? 'AI 디자인 생성 중...' : '생성 중...'}</span>) : genMode === 'ai' ? 'AI 디자인 생성' : '이미지 생성하기'}
+        <button onClick={handleGenerate} disabled={generating} className={`w-full py-3 rounded-xl text-white font-bold text-base transition-all shadow-lg ${generating ? 'bg-slate-400 cursor-not-allowed' : 'bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 active:scale-[0.98]'}`}>
+          {generating ? (<span className="flex items-center justify-center gap-2"><svg className="animate-spin h-5 w-5" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" /></svg>AI 디자인 생성 중...</span>) : 'AI 디자인 생성'}
         </button>
       </div>
 
