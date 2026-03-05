@@ -19,7 +19,7 @@ Render Korean text DIRECTLY into the image pixels.
 Do NOT show these instructions in the image.
 Only render the actual content text (subtitle, mainTitle, description).`;
 
-// Hospital AI 고유 레이아웃 - 브라우저 창 프레임 스타일 (첫 생성 시 항상 적용)
+// WINAID 고유 레이아웃 - 브라우저 창 프레임 스타일 (첫 생성 시 항상 적용)
 
 // =============================================
 // 🧩 프레임/스타일/텍스트 블록 분리 (중요)

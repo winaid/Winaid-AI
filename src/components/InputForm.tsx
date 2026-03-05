@@ -161,8 +161,14 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange 
   return (
     <div className="bg-white rounded-3xl shadow-2xl p-8 border border-slate-100">
       <h2 className="text-2xl font-black text-slate-800 mb-6 flex items-center gap-3">
-        <span className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl flex items-center justify-center text-white text-xl shadow-lg shadow-emerald-200">H</span> 
-        Hospital<span className="text-emerald-600">AI</span>
+        <svg className="w-10 h-10" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+          <path d="M10 82L33 18h8L17 82H10z" fill="#333333"/>
+          <path d="M33 18L56 82h-8L33 18z" fill="#333333"/>
+          <path d="M17 58h32v7H17z" fill="#333333"/>
+          <path d="M50 18h22c14 0 24 14 24 32s-10 32-24 32H50V18z" fill="#3B82F6"/>
+          <path d="M58 26v48h14c10 0 16-10 16-24s-6-24-16-24H58z" fill="#ffffff"/>
+        </svg>
+        WIN<span className="text-blue-500">AID</span>
       </h2>
 
       {/* 탭 메뉴 - 2행 구성 */}

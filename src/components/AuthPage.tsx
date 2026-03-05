@@ -197,10 +197,14 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onNavigate }) => {
         {/* Logo */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-2 text-white">
-            <div className="w-12 h-12 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-xl flex items-center justify-center">
-              <span className="text-2xl font-bold text-white">H</span>
-            </div>
-            <span className="text-2xl font-bold">HospitalAI</span>
+            <svg className="w-12 h-12" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+              <path d="M10 82L33 18h8L17 82H10z" fill="#ffffff"/>
+              <path d="M33 18L56 82h-8L33 18z" fill="#ffffff"/>
+              <path d="M17 58h32v7H17z" fill="#ffffff"/>
+              <path d="M50 18h22c14 0 24 14 24 32s-10 32-24 32H50V18z" fill="#60A5FA"/>
+              <path d="M58 26v48h14c10 0 16-10 16-24s-6-24-16-24H58z" fill="#1e293b"/>
+            </svg>
+            <span className="text-2xl font-bold">WINAID</span>
           </div>
         </div>
 

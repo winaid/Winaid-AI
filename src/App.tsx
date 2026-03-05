@@ -818,7 +818,7 @@ const App: React.FC = () => {
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
         <div className="max-w-md w-full text-center bg-white p-12 rounded-[40px] shadow-2xl border border-slate-100 relative overflow-hidden">
           <div className="text-6xl mb-6">🛠️</div>
-          <h1 className="text-2xl font-black mb-3 text-slate-900">HospitalAI</h1>
+          <h1 className="text-2xl font-black mb-3 text-slate-900">WINAID</h1>
           <h2 className="text-lg font-bold text-amber-600 mb-6">서비스 준비 중</h2>
           <p className="text-slate-500 mb-8 font-medium">서비스가 곧 오픈될 예정입니다.<br/>잠시만 기다려주세요!</p>
           <a 
@@ -846,11 +846,18 @@ const App: React.FC = () => {
     <div className={`min-h-screen flex flex-col font-sans relative transition-colors duration-300 ${darkMode ? 'bg-slate-900 text-slate-100' : 'bg-slate-50 text-slate-900'}`}>
       <header className={`backdrop-blur-xl border-b sticky top-0 z-30 h-16 flex items-center shadow-sm flex-none transition-colors duration-300 ${darkMode ? 'bg-slate-800/80 border-slate-700' : 'bg-white/80 border-slate-100'}`}>
         <div className="max-w-[1600px] w-full mx-auto px-6 flex justify-between items-center">
-          <a href="#" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
-            <div className="w-9 h-9 bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-100">
-                <span className="text-white font-black text-lg">H</span>
+          <a href="#" className="flex items-center gap-2.5 hover:opacity-80 transition-opacity">
+            <svg className="w-9 h-9" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+              <path d="M10 82L33 18h8L17 82H10z" fill={darkMode ? '#e2e8f0' : '#333333'}/>
+              <path d="M33 18L56 82h-8L33 18z" fill={darkMode ? '#e2e8f0' : '#333333'}/>
+              <path d="M17 58h32v7H17z" fill={darkMode ? '#e2e8f0' : '#333333'}/>
+              <path d="M50 18h22c14 0 24 14 24 32s-10 32-24 32H50V18z" fill="#3B82F6"/>
+              <path d="M58 26v48h14c10 0 16-10 16-24s-6-24-16-24H58z" fill={darkMode ? '#1e293b' : '#ffffff'}/>
+            </svg>
+            <div className="flex flex-col leading-none">
+              <span className={`font-black text-lg tracking-tight ${darkMode ? 'text-slate-100' : 'text-slate-800'}`}>WIN<span className="text-blue-500">AID</span></span>
+              <span className={`text-[9px] font-medium tracking-wider ${darkMode ? 'text-slate-400' : 'text-slate-400'}`}>Advertising Company</span>
             </div>
-            <span className={`font-black text-xl tracking-tight ${darkMode ? 'text-slate-100' : 'text-slate-800'}`}>Hospital<span className="text-emerald-500">AI</span></span>
           </a>
           
           <div className="flex items-center gap-3">

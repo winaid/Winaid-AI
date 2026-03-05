@@ -1304,7 +1304,7 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
   <!--[if gte mso 9]>
   <xml>
     <o:DocumentProperties>
-      <o:Author>Hospital AI</o:Author>
+      <o:Author>WINAID</o:Author>
     </o:DocumentProperties>
     <w:WordDocument>
       <w:View>Print</w:View>
@@ -1435,7 +1435,7 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
         <html>
         <head>
           <meta charset="utf-8">
-          <title>Hospital AI Content - PDF</title>
+          <title>WINAID Content - PDF</title>
           <style>
             @page {
               size: A4;

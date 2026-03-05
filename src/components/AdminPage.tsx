@@ -329,7 +329,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onAdminVerified }) => {
             </div>
             <div>
               <h1 className="text-2xl font-black text-white">Admin Dashboard</h1>
-              <p className="text-slate-400 text-sm">HospitalAI 관리자 페이지</p>
+              <p className="text-slate-400 text-sm">WINAID 관리자 페이지</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -564,7 +564,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onAdminVerified }) => {
         {/* Footer */}
         <div className="text-center mt-8">
           <p className="text-slate-500 text-sm font-medium">
-            Hospital AI 어드민 페이지
+            WINAID 어드민 페이지
           </p>
         </div>
       </div>

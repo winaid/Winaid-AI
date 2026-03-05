@@ -260,7 +260,7 @@ class Logger {
     const stats = this.getStats();
 
     return `
-=== Hospital AI Error Report ===
+=== WINAID Error Report ===
 Session ID: ${this.sessionId}
 Total Logs: ${stats.totalLogs}
 Errors: ${stats.errorCount}
