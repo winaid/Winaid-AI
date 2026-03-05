@@ -16,6 +16,7 @@ import {
 
 type DayMark = 'closed' | 'shortened' | 'vacation';
 type TemplateCategory = 'schedule' | 'event' | 'doctor' | 'notice' | 'greeting';
+type ScheduleLayout = 'full_calendar' | 'week' | 'highlight';
 
 const CATEGORIES: { id: TemplateCategory; name: string; icon: string; desc: string }[] = [
   { id: 'schedule', name: '진료 일정', icon: '\u{1F4C5}', desc: '휴진/단축진료' },
@@ -66,6 +67,7 @@ export default function TemplateGenerator() {
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [year, setYear] = useState(now.getFullYear());
   const [scheduleTitle, setScheduleTitle] = useState('');
+  const [scheduleLayout, setScheduleLayout] = useState<ScheduleLayout>('full_calendar');
   const [notices, setNotices] = useState('');
   const [dayMarks, setDayMarks] = useState<Map<number, DayMark>>(new Map());
   const [shortenedHours, setShortenedHours] = useState<Map<number, string>>(new Map());
@@ -227,7 +229,7 @@ export default function TemplateGenerator() {
 
       let templateData: Record<string, any>;
       if (category === 'schedule') {
-        templateData = { month, year, title: scheduleTitle || `${month}월 휴진 안내`, closedDays: closed, shortenedDays: shortened.length > 0 ? shortened : undefined, vacationDays: vacation.length > 0 ? vacation : undefined, notices: notices.split('\n').filter(Boolean) };
+        templateData = { month, year, title: scheduleTitle || `${month}월 휴진 안내`, closedDays: closed, shortenedDays: shortened.length > 0 ? shortened : undefined, vacationDays: vacation.length > 0 ? vacation : undefined, notices: notices.split('\n').filter(Boolean), layout: scheduleLayout };
       } else if (category === 'event') {
         templateData = { title: evTitle, subtitle: evSubtitle || undefined, price: evPrice || undefined, originalPrice: evOrigPrice || undefined, discount: evDiscount || autoDiscount || undefined, period: evPeriod || undefined, description: evDesc || undefined };
       } else if (category === 'doctor') {
@@ -407,6 +409,31 @@ export default function TemplateGenerator() {
               <div className="flex-1"><label className={labelCls}>월</label><select value={month} onChange={e => setMonth(Number(e.target.value))} className={inputCls}>{Array.from({ length: 12 }, (_, i) => i + 1).map(m => <option key={m} value={m}>{m}월</option>)}</select></div>
             </div>
             <div><label className={labelCls}>제목</label><input type="text" value={scheduleTitle} onChange={e => setScheduleTitle(e.target.value)} placeholder={`${month}월 휴진 안내`} className={inputCls} /></div>
+            <div>
+              <label className={labelCls}>레이아웃 스타일</label>
+              <div className="grid grid-cols-3 gap-2">
+                {([
+                  { id: 'full_calendar' as ScheduleLayout, icon: '\u{1F4C5}', name: '전체 달력', desc: '월간 캘린더' },
+                  { id: 'week' as ScheduleLayout, icon: '\u{1F4CB}', name: '한 주', desc: '주간 캘린더' },
+                  { id: 'highlight' as ScheduleLayout, icon: '\u2B50', name: '강조형', desc: '날짜 강조' },
+                ]).map(lt => (
+                  <button
+                    key={lt.id}
+                    type="button"
+                    onClick={() => setScheduleLayout(lt.id)}
+                    className={`py-2.5 px-2 rounded-xl text-center transition-all border ${
+                      scheduleLayout === lt.id
+                        ? 'bg-blue-50 border-blue-300 ring-2 ring-blue-200 shadow-sm'
+                        : 'bg-white border-slate-200 hover:border-slate-300'
+                    }`}
+                  >
+                    <div className="text-lg">{lt.icon}</div>
+                    <div className={`text-xs font-bold ${scheduleLayout === lt.id ? 'text-blue-700' : 'text-slate-700'}`}>{lt.name}</div>
+                    <div className="text-[10px] text-slate-400">{lt.desc}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
             <div>
               <label className="block text-xs font-semibold text-slate-600 mb-2">마킹 모드 (선택 후 달력 클릭)</label>
               <div className="flex gap-2">

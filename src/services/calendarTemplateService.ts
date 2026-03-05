@@ -998,30 +998,75 @@ function buildScheduleTextContent(data: {
   shortenedDays?: { day: number; hours?: string }[];
   vacationDays?: { day: number; reason?: string }[];
   notices?: string[];
+  layout?: 'full_calendar' | 'week' | 'highlight';
 }): string {
-  const { month, year, title, closedDays, shortenedDays, vacationDays, notices } = data;
+  const { month, year, title, closedDays, shortenedDays, vacationDays, notices, layout = 'full_calendar' } = data;
 
-  // 해당 월의 달력 그리드 텍스트 생성
-  const firstDay = new Date(year, month - 1, 1).getDay();
-  const lastDate = new Date(year, month, 0).getDate();
-  let calGrid = `일 월 화 수 목 금 토\n`;
-  let dayNum = 1;
-  let line = '   '.repeat(firstDay);
-  for (let i = firstDay; i < 7 && dayNum <= lastDate; i++) {
-    line += String(dayNum).padStart(2, ' ') + ' ';
-    dayNum++;
-  }
-  calGrid += line.trimEnd() + '\n';
-  while (dayNum <= lastDate) {
-    line = '';
-    for (let i = 0; i < 7 && dayNum <= lastDate; i++) {
+  // 마킹된 모든 날짜 수집 (주간/강조형에서 사용)
+  const allMarkedDays = new Set<number>();
+  closedDays?.forEach(d => allMarkedDays.add(d.day));
+  shortenedDays?.forEach(d => allMarkedDays.add(d.day));
+  vacationDays?.forEach(d => allMarkedDays.add(d.day));
+
+  let content = `"${title}"\n\n`;
+
+  if (layout === 'full_calendar') {
+    // 전체 달력 그리드
+    content += `[LAYOUT: FULL MONTHLY CALENDAR - show complete ${month}월 calendar grid with all dates]\n\n`;
+    const firstDay = new Date(year, month - 1, 1).getDay();
+    const lastDate = new Date(year, month, 0).getDate();
+    let calGrid = `일 월 화 수 목 금 토\n`;
+    let dayNum = 1;
+    let line = '   '.repeat(firstDay);
+    for (let i = firstDay; i < 7 && dayNum <= lastDate; i++) {
       line += String(dayNum).padStart(2, ' ') + ' ';
       dayNum++;
     }
     calGrid += line.trimEnd() + '\n';
-  }
+    while (dayNum <= lastDate) {
+      line = '';
+      for (let i = 0; i < 7 && dayNum <= lastDate; i++) {
+        line += String(dayNum).padStart(2, ' ') + ' ';
+        dayNum++;
+      }
+      calGrid += line.trimEnd() + '\n';
+    }
+    content += calGrid;
 
-  let content = `"${title}"\n\n${calGrid}`;
+  } else if (layout === 'week') {
+    // 한 주 달력형: 마킹된 날짜가 포함된 주만 표시
+    content += `[LAYOUT: WEEKLY CALENDAR - show ONLY the relevant week(s) containing marked dates as a horizontal day strip]\n`;
+    content += `[Design as a clean weekly bar: 일 월 화 수 목 금 토 with date numbers, highlight marked days]\n\n`;
+
+    const firstDay = new Date(year, month - 1, 1).getDay();
+    const lastDate = new Date(year, month, 0).getDate();
+    const weeks: number[][] = [];
+    let week: number[] = new Array(firstDay).fill(0);
+    for (let d = 1; d <= lastDate; d++) {
+      week.push(d);
+      if (week.length === 7) { weeks.push(week); week = []; }
+    }
+    if (week.length > 0) { while (week.length < 7) week.push(0); weeks.push(week); }
+
+    // 마킹된 날짜가 포함된 주만 추출
+    const relevantWeeks = weeks.filter(w => w.some(d => allMarkedDays.has(d)));
+    if (relevantWeeks.length === 0 && weeks.length > 0) {
+      // 마킹 없으면 현재 주 or 첫째 주
+      relevantWeeks.push(weeks[0]);
+    }
+
+    content += `일 월 화 수 목 금 토\n`;
+    for (const w of relevantWeeks) {
+      content += w.map(d => d === 0 ? '  ' : String(d).padStart(2, ' ')).join(' ') + '\n';
+    }
+
+  } else {
+    // 강조형: 달력 그리드 없이 날짜만 크게 강조
+    content += `[LAYOUT: HIGHLIGHT STYLE - NO calendar grid! Instead, display key dates as large, bold, eye-catching elements]\n`;
+    content += `[Design: Big date numbers/ranges prominently displayed with icons and color-coded labels]\n`;
+    content += `[Think: "3일, 10일, 17일 휴진" displayed as large stylized date badges or cards]\n\n`;
+    content += `${year}년 ${month}월\n`;
+  }
 
   if (closedDays && closedDays.length > 0) {
     content += `\n🔴 휴진일: ${closedDays.map(d => `${d.day}일`).join(', ')}`;
