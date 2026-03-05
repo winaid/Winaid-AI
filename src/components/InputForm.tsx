@@ -515,11 +515,11 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange 
           <div className="bg-emerald-50 p-4 rounded-2xl border border-emerald-100 mb-4">
              <div className="flex items-center justify-between gap-3">
                 <div>
-                  <span className="text-sm font-black text-emerald-700">🔍 인기 키워드</span>
-                  <p className="text-[10px] text-emerald-600 font-medium mt-1">AI 트렌드 키워드 분석</p>
+                  <span className="text-sm font-black text-emerald-700">🔍 추천 주제</span>
+                  <p className="text-[10px] text-emerald-600 font-medium mt-1">AI 트렌드 분석 기반 글감 추천</p>
                 </div>
                 <button type="button" onClick={handleRecommendTrends} disabled={isLoadingTrends} className="text-xs font-black text-white bg-emerald-600 px-4 py-2.5 rounded-xl hover:bg-emerald-700 shadow-md transition-all active:scale-95 whitespace-nowrap">
-                  {isLoadingTrends ? '분석 중...' : '키워드 찾기'}
+                  {isLoadingTrends ? '분석 중...' : '주제 찾기'}
                 </button>
              </div>
           </div>
