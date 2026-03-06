@@ -140,6 +140,18 @@ export default function TemplateGenerator() {
     const data = [...hiringPageData]; data[index] = { ...data[index], content }; setHiringPageData(data);
   };
 
+  // 채용 - 병원 사진
+  const [hiringPhotos, setHiringPhotos] = useState<string[]>([]);
+  const handleHiringPhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files; if (!files) return;
+    Array.from(files).forEach(file => {
+      const reader = new FileReader();
+      reader.onload = () => setHiringPhotos(prev => [...prev, reader.result as string].slice(0, 5));
+      reader.readAsDataURL(file);
+    });
+    e.target.value = '';
+  };
+
   // 주의사항 (시술/진료 후)
   const [cautionType, setCautionType] = useState('시술 후');
   const [cautionTitle, setCautionTitle] = useState('');
@@ -267,7 +279,7 @@ export default function TemplateGenerator() {
       } else if (category === 'notice') {
         templateData = { title: noticeTitle, content: noticeContent.split('\n').filter(Boolean), effectiveDate: noticeDate || undefined };
       } else if (category === 'hiring') {
-        templateData = { pageData: hiringPageData.slice(0, hiringPageCount).map(p => ({ type: p.type, content: p.content })) };
+        templateData = { pageData: hiringPageData.slice(0, hiringPageCount).map(p => ({ type: p.type, content: p.content })), hospitalPhotos: hiringPhotos.length > 0 ? hiringPhotos : undefined };
       } else if (category === 'caution') {
         templateData = { type: cautionType, title: cautionTitle || `${cautionType} 주의사항`, items: cautionItems.split('\n').filter(Boolean), emergency: cautionEmergency || undefined };
       } else {
@@ -613,6 +625,30 @@ export default function TemplateGenerator() {
                 <p className="text-[10px] text-slate-400 mt-1">1장째 스타일 기준으로 나머지 페이지 톤이 통일됩니다</p>
               )}
             </div>
+            {/* 병원 사진 업로드 */}
+            <div className="bg-slate-50 rounded-xl p-3 border border-slate-200 space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-slate-600">병원 사진 <span className="text-slate-400 font-normal">(선택, 최대 5장)</span></label>
+                {hiringPhotos.length > 0 && <button type="button" onClick={() => setHiringPhotos([])} className="text-[10px] text-red-400 hover:text-red-600">전체 삭제</button>}
+              </div>
+              <div className="flex gap-2 flex-wrap">
+                {hiringPhotos.map((photo, i) => (
+                  <div key={i} className="relative group">
+                    <img src={photo} alt={`병원사진 ${i + 1}`} className="w-16 h-16 rounded-lg object-cover border border-slate-200" />
+                    <button onClick={() => setHiringPhotos(prev => prev.filter((_, j) => j !== i))} className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full text-[8px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow">x</button>
+                  </div>
+                ))}
+                {hiringPhotos.length < 5 && (
+                  <label className="w-16 h-16 rounded-lg border-2 border-dashed border-slate-300 bg-white flex flex-col items-center justify-center cursor-pointer hover:border-blue-400 transition-colors">
+                    <svg className="w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                    <span className="text-[8px] text-slate-400 mt-0.5">사진 추가</span>
+                    <input type="file" accept="image/*" multiple className="hidden" onChange={handleHiringPhotoUpload} />
+                  </label>
+                )}
+              </div>
+              <p className="text-[9px] text-slate-400">병원 외관, 내부, 장비 등 사진을 넣으면 AI가 디자인에 활용합니다</p>
+            </div>
+
             {Array.from({ length: hiringPageCount }, (_, i) => {
               const page = hiringPageData[i] || { type: 'free', content: '' };
               const typeInfo = HIRING_PAGE_TYPES.find(t => t.id === page.type) || HIRING_PAGE_TYPES[5];

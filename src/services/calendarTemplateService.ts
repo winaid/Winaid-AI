@@ -1252,7 +1252,7 @@ function buildCautionTextContent(data: {
 }
 
 export async function generateTemplateWithAI(
-  category: 'schedule' | 'event' | 'doctor' | 'notice' | 'greeting',
+  category: 'schedule' | 'event' | 'doctor' | 'notice' | 'greeting' | 'hiring' | 'caution',
   templateData: Record<string, any>,
   stylePrompt: string,
   options?: {
@@ -1322,6 +1322,9 @@ export async function generateTemplateWithAI(
   const logoPart = makeImagePart(options?.logoBase64 || '');
   const styleRefPart = makeImagePart(options?.styleReferenceImage || '');
   const doctorPhotoPart = category === 'doctor' ? makeImagePart(templateData.doctorPhotoBase64 || '') : null;
+  const hospitalPhotoParts = (category === 'hiring' && templateData.hospitalPhotos)
+    ? (templateData.hospitalPhotos as string[]).map((p: string) => makeImagePart(p)).filter(Boolean)
+    : [];
 
   const MAX_RETRIES = 3;
   let lastError: any = null;
@@ -1351,6 +1354,12 @@ Use ONLY the new text content provided in the prompt below.
     if (doctorPhotoPart) {
       contents.push(doctorPhotoPart);
       contents.push({ text: '[DOCTOR PHOTO - This is the actual photo of the doctor. Include this photo prominently in the design as a professional headshot.]\n\n' });
+    }
+    if (hospitalPhotoParts.length > 0) {
+      hospitalPhotoParts.forEach((part: any, i: number) => {
+        contents.push(part);
+        contents.push({ text: `[HOSPITAL PHOTO ${i + 1} - Real photo of the hospital (exterior, interior, or equipment). Incorporate these photos naturally into the recruitment design to showcase the workplace environment.]\n\n` });
+      });
     }
     if (logoPart) {
       contents.push(logoPart);
