@@ -903,8 +903,8 @@ function buildTemplateAiPrompt(req: AiTemplateRequest): string {
     doctor: 'doctor introduction / new physician announcement',
     notice: 'hospital notice / important announcement',
     greeting: 'holiday greeting / seasonal message from hospital',
-    hiring: 'hospital job posting / staff recruitment announcement',
-    caution: 'post-treatment / post-procedure care instructions',
+    hiring: 'hospital job posting / staff recruitment announcement - design like a professional Instagram carousel recruiting post. Bold, modern, eye-catching layout that attracts job seekers',
+    caution: 'post-treatment / post-procedure patient care instructions - design like a clean, professional medical handout. Must be highly readable with clear visual hierarchy, friendly medical illustrations',
   };
 
   const isPortrait = imageSize && imageSize.width > 0 && imageSize.height > 0 && imageSize.height > imageSize.width;
@@ -1145,25 +1145,109 @@ function buildGreetingTextContent(data: {
 
 function buildHiringTextContent(data: {
   title: string; position?: string; requirements: string[]; benefits: string[];
-  deadline?: string; contact?: string;
+  deadline?: string; contact?: string; currentPage?: number; totalPages?: number;
 }): string {
-  let content = `[MAIN TITLE - largest, bold, center] "${data.title}"`;
-  if (data.position) content += `\n[POSITION - accent color badge, prominent] "${data.position}"`;
-  if (data.requirements.length > 0) content += `\n[REQUIREMENTS - section with header "자격 요건"]\n${data.requirements.map(r => `• ${r}`).join('\n')}`;
-  if (data.benefits.length > 0) content += `\n[BENEFITS - section with header "복리후생"]\n${data.benefits.map(b => `• ${b}`).join('\n')}`;
-  if (data.deadline) content += `\n[DEADLINE - subtle, bottom area] "마감: ${data.deadline}"`;
-  if (data.contact) content += `\n[CONTACT - clear, bottom] "지원/문의: ${data.contact}"`;
-  return content;
+  const { currentPage, totalPages } = data;
+
+  // 단일 페이지: 모든 정보를 한 장에
+  if (!totalPages || totalPages <= 1) {
+    let content = `[MAIN TITLE - largest, bold, center] "${data.title}"`;
+    if (data.position) content += `\n[POSITION - accent color badge, prominent] "${data.position}"`;
+    if (data.requirements.length > 0) content += `\n[REQUIREMENTS - section with header "자격 요건"]\n${data.requirements.map(r => `• ${r}`).join('\n')}`;
+    if (data.benefits.length > 0) content += `\n[BENEFITS - section with header "복리후생"]\n${data.benefits.map(b => `• ${b}`).join('\n')}`;
+    if (data.deadline) content += `\n[DEADLINE - subtle, bottom area] "마감: ${data.deadline}"`;
+    if (data.contact) content += `\n[CONTACT - clear, bottom] "지원/문의: ${data.contact}"`;
+    return content;
+  }
+
+  // 다중 페이지 캐러셀: 페이지별 콘텐츠 분배
+  const pageLabel = `[PAGE ${currentPage} of ${totalPages} - this is a carousel post, design accordingly]`;
+
+  if (totalPages === 2) {
+    if (currentPage === 1) {
+      let content = `${pageLabel}\n[COVER PAGE - eye-catching, bold design to grab attention]`;
+      content += `\n[MAIN TITLE - largest, bold, center] "${data.title}"`;
+      if (data.position) content += `\n[POSITION - accent color badge, very prominent] "${data.position}"`;
+      content += `\n[CALL TO ACTION - "함께할 분을 찾습니다" or similar recruiting message]`;
+      return content;
+    } else {
+      let content = `${pageLabel}\n[DETAIL PAGE - organized, readable layout]`;
+      if (data.requirements.length > 0) content += `\n[REQUIREMENTS - section with header "자격 요건"]\n${data.requirements.map(r => `• ${r}`).join('\n')}`;
+      if (data.benefits.length > 0) content += `\n[BENEFITS - section with header "복리후생"]\n${data.benefits.map(b => `• ${b}`).join('\n')}`;
+      if (data.deadline) content += `\n[DEADLINE - visible] "마감: ${data.deadline}"`;
+      if (data.contact) content += `\n[CONTACT - prominent, bottom] "지원/문의: ${data.contact}"`;
+      return content;
+    }
+  }
+
+  if (totalPages === 3) {
+    if (currentPage === 1) {
+      let content = `${pageLabel}\n[COVER PAGE - eye-catching hero design]`;
+      content += `\n[MAIN TITLE - largest, bold, center] "${data.title}"`;
+      if (data.position) content += `\n[POSITION - accent color badge, very prominent] "${data.position}"`;
+      content += `\n[CALL TO ACTION - "함께할 분을 찾습니다" or similar]`;
+      return content;
+    } else if (currentPage === 2) {
+      let content = `${pageLabel}\n[REQUIREMENTS PAGE - clean list layout]`;
+      content += `\n[SECTION TITLE - "자격 요건"]`;
+      if (data.requirements.length > 0) content += `\n[REQUIREMENTS LIST - numbered, readable]\n${data.requirements.map(r => `• ${r}`).join('\n')}`;
+      return content;
+    } else {
+      let content = `${pageLabel}\n[BENEFITS & CONTACT PAGE]`;
+      if (data.benefits.length > 0) content += `\n[SECTION TITLE - "복리후생"]\n${data.benefits.map(b => `• ${b}`).join('\n')}`;
+      if (data.deadline) content += `\n[DEADLINE - visible] "마감: ${data.deadline}"`;
+      if (data.contact) content += `\n[CONTACT - prominent, bottom] "지원/문의: ${data.contact}"`;
+      return content;
+    }
+  }
+
+  // 4 pages
+  if (currentPage === 1) {
+    let content = `${pageLabel}\n[COVER PAGE - bold, attention-grabbing hero design]`;
+    content += `\n[MAIN TITLE - largest, bold, center] "${data.title}"`;
+    if (data.position) content += `\n[POSITION - accent color badge, very prominent] "${data.position}"`;
+    content += `\n[CALL TO ACTION - "함께 성장할 인재를 찾습니다" or similar]`;
+    return content;
+  } else if (currentPage === 2) {
+    let content = `${pageLabel}\n[REQUIREMENTS PAGE - clean organized layout]`;
+    content += `\n[SECTION TITLE - "자격 요건"]`;
+    if (data.requirements.length > 0) content += `\n[REQUIREMENTS LIST - numbered, spacious]\n${data.requirements.map(r => `• ${r}`).join('\n')}`;
+    return content;
+  } else if (currentPage === 3) {
+    let content = `${pageLabel}\n[BENEFITS PAGE - appealing, warm layout]`;
+    content += `\n[SECTION TITLE - "복리후생"]`;
+    if (data.benefits.length > 0) content += `\n[BENEFITS LIST - with icons/checkmarks]\n${data.benefits.map(b => `• ${b}`).join('\n')}`;
+    return content;
+  } else {
+    let content = `${pageLabel}\n[CONTACT/CLOSING PAGE - clear call to action]`;
+    if (data.deadline) content += `\n[DEADLINE - prominent] "마감: ${data.deadline}"`;
+    if (data.contact) content += `\n[CONTACT - large, clear] "지원/문의: ${data.contact}"`;
+    content += `\n[CLOSING MESSAGE - "지금 지원하세요!" or "많은 관심 부탁드립니다"]`;
+    return content;
+  }
 }
 
 function buildCautionTextContent(data: {
   type: string; title: string; items: string[]; emergency?: string;
 }): string {
-  let content = `[VISUAL THEME - medical caution/care instructions style, clean and professional, use warning-appropriate colors like amber/orange accents with white/light background]`;
+  const typeThemes: Record<string, string> = {
+    '시술 후': 'Post-procedure care theme: clean medical aesthetic, soft blue/teal accents, professional but warm. Include subtle medical/beauty icons.',
+    '진료 후': 'Post-visit care theme: warm, reassuring tone, soft green/blue accents, clean medical design.',
+    '수술 후': 'Post-surgery care theme: serious but caring, structured layout, red/navy accents for important warnings.',
+    '복약': 'Medication guidance theme: organized pill/medicine visuals, clear numbered steps, pharmacy-style clean design.',
+    '일반': 'General medical notice: professional hospital design, neutral tones with accent color highlights.',
+  };
+  const theme = typeThemes[data.type] || typeThemes['일반'];
+
+  let content = `[VISUAL THEME - ${theme}]`;
   content += `\n\n[MAIN TITLE - largest, bold, center] "${data.title}"`;
   content += `\n[TYPE BADGE - small accent tag] "${data.type}"`;
-  if (data.items.length > 0) content += `\n[CAUTION ITEMS - numbered list with warning icons, clear readable text, good spacing]\n${data.items.map((item, i) => `${i + 1}. ${item}`).join('\n')}`;
-  if (data.emergency) content += `\n[EMERGENCY CONTACT - prominent, bottom, accent color] "${data.emergency}"`;
+  if (data.items.length > 0) {
+    content += `\n\n[CAUTION ITEMS - numbered list, each item has a small warning/check icon, clear readable text with generous spacing between items]`;
+    content += `\n${data.items.map((item, i) => `${i + 1}. ${item}`).join('\n')}`;
+  }
+  if (data.emergency) content += `\n\n[EMERGENCY CONTACT - prominent box at bottom, accent color background] "${data.emergency}"`;
+  content += `\n\n[DESIGN NOTES: This is a patient handout. Text must be VERY readable - minimum 14pt equivalent. Use icons/illustrations to make it friendly, not scary. Layout should be scannable with clear visual hierarchy.]`;
   return content;
 }
 

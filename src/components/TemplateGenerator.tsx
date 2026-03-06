@@ -126,6 +126,7 @@ export default function TemplateGenerator() {
   const [hiringBenefits, setHiringBenefits] = useState('');
   const [hiringDeadline, setHiringDeadline] = useState('');
   const [hiringContact, setHiringContact] = useState('');
+  const [hiringPageCount, setHiringPageCount] = useState(1);
 
   // 주의사항 (시술/진료 후)
   const [cautionType, setCautionType] = useState('시술 후');
@@ -140,7 +141,9 @@ export default function TemplateGenerator() {
   // 결과
   const [generating, setGenerating] = useState(false);
   const [generatingStep, setGeneratingStep] = useState(0);
-  const [resultImage, setResultImage] = useState<string | null>(null);
+  const [resultImages, setResultImages] = useState<string[]>([]);
+  const [currentPage, setCurrentPage] = useState(0);
+  const [generatingPage, setGeneratingPage] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [previewStyleImage, setPreviewStyleImage] = useState<{ url: string; name: string } | null>(null);
 
@@ -160,8 +163,8 @@ export default function TemplateGenerator() {
       } catch {}
     }
   }, []);
-  useEffect(() => { setDayMarks(new Map()); setShortenedHours(new Map()); setVacationReasons(new Map()); setResultImage(null); }, [month, year]);
-  useEffect(() => { setResultImage(null); setError(null); }, [category]);
+  useEffect(() => { setDayMarks(new Map()); setShortenedHours(new Map()); setVacationReasons(new Map()); setResultImages([]); setCurrentPage(0); }, [month, year]);
+  useEffect(() => { setResultImages([]); setCurrentPage(0); setError(null); }, [category]);
 
   // 명절 자동 기본값
   const HOLIDAY_DEFAULTS: Record<string, { msg: string; closure: string; style?: string }> = {
@@ -230,12 +233,11 @@ export default function TemplateGenerator() {
   const activeStyleName = selectedHistory?.name || selectedStyle.name;
 
   const handleGenerate = async () => {
-    setGenerating(true); setError(null); setGeneratingStep(0);
+    setGenerating(true); setError(null); setGeneratingStep(0); setResultImages([]); setCurrentPage(0); setGeneratingPage(0);
     const stepTimer = setInterval(() => setGeneratingStep(s => s + 1), 3000);
     try {
       const sizeConfig = [...IMAGE_SIZES].find(s => s.id === imageSize) || IMAGE_SIZES[3];
 
-      // AI 이미지 생성 (Nano Banana Pro) - 모든 템플릿
       const closed: ClosedDay[] = []; const shortened: ShortenedDay[] = []; const vacation: VacationDay[] = [];
       dayMarks.forEach((mark, day) => {
         if (mark === 'closed') closed.push({ day });
@@ -260,30 +262,54 @@ export default function TemplateGenerator() {
         templateData = { holiday: greetHoliday, greeting: greetMsg, closurePeriod: greetClosure || undefined };
       }
 
-      // 병원 기본 정보 조합
       const hospitalInfoLines = [clinicHours, clinicPhone, clinicAddress].filter(Boolean);
       const allExtraPrompts = [customMessage.trim(), extraPrompt.trim()].filter(Boolean);
 
-      const imageDataUrl = await generateTemplateWithAI(category, templateData, activeStylePrompt, {
-        hospitalName: hospitalName || undefined,
-        logoBase64,
-        brandingPosition: brandingPos,
-        styleReferenceImage: selectedHistory?.referenceImageUrl || undefined,
-        extraPrompt: allExtraPrompts.join('\n') || undefined,
-        imageSize: sizeConfig.width > 0 ? { width: sizeConfig.width, height: sizeConfig.height } : undefined,
-        hospitalInfo: hospitalInfoLines.length > 0 ? hospitalInfoLines : undefined,
-        brandColor: brandColor || undefined,
-        brandAccent: brandAccent || undefined,
-      });
-      setResultImage(imageDataUrl);
+      const totalPages = category === 'hiring' ? hiringPageCount : 1;
+      const images: string[] = [];
+      let firstPageRef: string | undefined;
 
-      // 생성 성공 시 스타일 히스토리에 썸네일 + 참고 이미지 저장
+      for (let page = 1; page <= totalPages; page++) {
+        setGeneratingPage(page);
+
+        const pageData = totalPages > 1
+          ? { ...templateData, currentPage: page, totalPages }
+          : templateData;
+
+        // 2장째부터 1장을 스타일 참조로 사용 (톤 통일)
+        const styleRef = page === 1
+          ? (selectedHistory?.referenceImageUrl || undefined)
+          : firstPageRef;
+
+        const imageDataUrl = await generateTemplateWithAI(category, pageData, activeStylePrompt, {
+          hospitalName: hospitalName || undefined,
+          logoBase64,
+          brandingPosition: brandingPos,
+          styleReferenceImage: styleRef,
+          extraPrompt: allExtraPrompts.join('\n') || undefined,
+          imageSize: sizeConfig.width > 0 ? { width: sizeConfig.width, height: sizeConfig.height } : undefined,
+          hospitalInfo: hospitalInfoLines.length > 0 ? hospitalInfoLines : undefined,
+          brandColor: brandColor || undefined,
+          brandAccent: brandAccent || undefined,
+        });
+
+        images.push(imageDataUrl);
+        setResultImages([...images]);
+        setCurrentPage(images.length - 1);
+
+        // 1장째 결과를 스타일 참조용으로 저장
+        if (page === 1) {
+          try { firstPageRef = await resizeImageForReference(imageDataUrl); } catch {}
+        }
+      }
+
+      // 스타일 히스토리에 1장째 저장
       try {
         const [thumbnail, referenceImg] = await Promise.all([
-          resizeImageToThumbnail(imageDataUrl),
-          resizeImageForReference(imageDataUrl),
+          resizeImageToThumbnail(images[0]),
+          resizeImageForReference(images[0]),
         ]);
-        const saved = saveStyleToHistory({
+        saveStyleToHistory({
           name: activeStyleName,
           stylePrompt: activeStylePrompt,
           thumbnailDataUrl: thumbnail,
@@ -291,12 +317,11 @@ export default function TemplateGenerator() {
           presetId: selectedHistory ? selectedHistory.presetId : selectedStyle.id,
         });
         setStyleHistory(loadStyleHistory());
-        console.log('📌 스타일 히스토리 저장 (ref 512px):', saved.id);
       } catch (e) { console.warn('스타일 히스토리 저장 실패:', e); }
 
     } catch (err: any) {
       setError(err.message || 'AI 이미지 생성에 실패했습니다. 다시 시도해주세요.');
-    } finally { clearInterval(stepTimer); setGenerating(false); }
+    } finally { clearInterval(stepTimer); setGenerating(false); setGeneratingPage(0); }
   };
 
   const handleDeleteHistory = (id: string, e: React.MouseEvent) => {
@@ -306,11 +331,19 @@ export default function TemplateGenerator() {
     if (selectedHistory?.id === id) setSelectedHistory(null);
   };
 
-  const handleDownload = () => {
-    if (!resultImage) return;
-    const a = document.createElement('a'); a.href = resultImage;
+  const handleDownload = (pageIndex?: number) => {
+    if (resultImages.length === 0) return;
     const suffixes: Record<TemplateCategory, string> = { schedule: `${month}월_진료안내`, event: '이벤트', doctor: '의사소개', notice: '공지사항', greeting: '인사', hiring: '채용공고', caution: '주의사항' };
-    a.download = `${hospitalName || '병원'}_${suffixes[category]}.png`; a.click();
+    const baseName = `${hospitalName || '병원'}_${suffixes[category]}`;
+    if (pageIndex !== undefined) {
+      const a = document.createElement('a'); a.href = resultImages[pageIndex];
+      a.download = resultImages.length > 1 ? `${baseName}_${pageIndex + 1}.png` : `${baseName}.png`; a.click();
+    } else {
+      resultImages.forEach((img, i) => {
+        const a = document.createElement('a'); a.href = img;
+        a.download = resultImages.length > 1 ? `${baseName}_${i + 1}.png` : `${baseName}.png`; a.click();
+      });
+    }
   };
 
   const closedCount = [...dayMarks.values()].filter(v => v === 'closed').length;
@@ -548,6 +581,19 @@ export default function TemplateGenerator() {
         {/* === 채용/공고 === */}
         {category === 'hiring' && (
           <div className="space-y-3">
+            <div>
+              <label className={labelCls}>페이지 수</label>
+              <div className="flex gap-1.5">
+                {[1,2,3,4].map(n => (
+                  <button key={n} onClick={() => setHiringPageCount(n)} className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${hiringPageCount === n ? 'bg-slate-800 text-white shadow-md' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>
+                    {n === 1 ? '1장' : `${n}장 캐러셀`}
+                  </button>
+                ))}
+              </div>
+              {hiringPageCount > 1 && (
+                <p className="text-[10px] text-slate-400 mt-1">1장째 스타일을 기준으로 나머지 페이지가 통일됩니다</p>
+              )}
+            </div>
             <div><label className={labelCls}>공고 제목</label><input type="text" value={hiringTitle} onChange={e=>setHiringTitle(e.target.value)} placeholder="간호사 모집" className={inputCls} /></div>
             <div><label className={labelCls}>모집 직종/포지션</label><input type="text" value={hiringPosition} onChange={e=>setHiringPosition(e.target.value)} placeholder="예: 간호사 / 물리치료사 / 치위생사" className={inputCls} /></div>
             <div><label className={labelCls}>자격 요건 <span className="text-slate-400 font-normal">(줄바꿈으로 구분)</span></label><textarea value={hiringRequirements} onChange={e=>setHiringRequirements(e.target.value)} placeholder={"해당 면허 소지자\n경력 1년 이상 우대\n성실하고 책임감 있는 분"} rows={4} className={textareaCls} /></div>
@@ -693,9 +739,12 @@ export default function TemplateGenerator() {
             </div>
             <div className="text-center space-y-2">
               <p className="text-base font-bold text-slate-700">
-                {['AI가 디자인 구상 중...','레이아웃 배치하는 중...','색감 입히는 중...','마무리 터치 중...','거의 다 됐어요!'][Math.min(generatingStep, 4)]}
+                {generatingPage > 0 && hiringPageCount > 1
+                  ? `${generatingPage}/${hiringPageCount}장 생성 중...`
+                  : ['AI가 디자인 구상 중...','레이아웃 배치하는 중...','색감 입히는 중...','마무리 터치 중...','거의 다 됐어요!'][Math.min(generatingStep, 4)]
+                }
               </p>
-              <p className="text-xs text-slate-400">보통 10~30초 정도 걸려요</p>
+              <p className="text-xs text-slate-400">{hiringPageCount > 1 ? `총 ${hiringPageCount}장 생성 예정` : '보통 10~30초 정도 걸려요'}</p>
               <div className="flex justify-center gap-1 mt-3">
                 {[0,1,2,3,4].map(i => (
                   <div key={i} className={`w-2 h-2 rounded-full transition-all duration-500 ${i <= generatingStep ? 'bg-violet-500 scale-110' : 'bg-slate-200'}`} />
@@ -707,13 +756,34 @@ export default function TemplateGenerator() {
           <div className="space-y-4 w-full flex flex-col items-center">
             <p className="text-xs font-semibold text-violet-600">내 스타일 미리보기: {previewStyleImage.name}</p>
             <img src={previewStyleImage.url} alt={previewStyleImage.name} className="max-w-full max-h-[70vh] rounded-2xl shadow-2xl border-2 border-violet-200" />
-            <button onClick={() => setPreviewStyleImage(null)} className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-600 rounded-xl text-sm font-medium transition-colors">{resultImage ? '생성 결과로 돌아가기' : '닫기'}</button>
+            <button onClick={() => setPreviewStyleImage(null)} className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-600 rounded-xl text-sm font-medium transition-colors">{resultImages.length > 0 ? '생성 결과로 돌아가기' : '닫기'}</button>
           </div>
-        ): resultImage?(
+        ): resultImages.length > 0 ? (
           <div className="space-y-4 w-full flex flex-col items-center">
-            <img src={resultImage} alt="생성된 이미지" className="max-w-full max-h-[70vh] rounded-2xl shadow-2xl" />
-            <div className="flex gap-3">
-              <button onClick={handleDownload} className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-sm transition-colors shadow-lg">다운로드</button>
+            {/* 다중 페이지 네비게이션 */}
+            {resultImages.length > 1 && (
+              <div className="flex items-center gap-3">
+                <button onClick={() => setCurrentPage(Math.max(0, currentPage - 1))} disabled={currentPage === 0} className="w-8 h-8 rounded-full bg-slate-200 hover:bg-slate-300 disabled:opacity-30 flex items-center justify-center transition-colors">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+                </button>
+                <div className="flex gap-1.5">
+                  {resultImages.map((_, i) => (
+                    <button key={i} onClick={() => setCurrentPage(i)} className={`w-8 h-8 rounded-lg text-xs font-bold transition-all ${currentPage === i ? 'bg-slate-800 text-white shadow-md' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>{i + 1}</button>
+                  ))}
+                </div>
+                <button onClick={() => setCurrentPage(Math.min(resultImages.length - 1, currentPage + 1))} disabled={currentPage === resultImages.length - 1} className="w-8 h-8 rounded-full bg-slate-200 hover:bg-slate-300 disabled:opacity-30 flex items-center justify-center transition-colors">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                </button>
+              </div>
+            )}
+            <img src={resultImages[currentPage]} alt={`생성된 이미지 ${currentPage + 1}`} className="max-w-full max-h-[65vh] rounded-2xl shadow-2xl" />
+            <div className="flex gap-3 flex-wrap justify-center">
+              <button onClick={() => handleDownload(currentPage)} className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-sm transition-colors shadow-lg">
+                {resultImages.length > 1 ? `${currentPage + 1}장 다운로드` : '다운로드'}
+              </button>
+              {resultImages.length > 1 && (
+                <button onClick={() => handleDownload()} className="px-6 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-bold text-sm transition-colors">전체 다운로드</button>
+              )}
               <button onClick={handleGenerate} disabled={generating} className="px-6 py-2.5 bg-slate-600 hover:bg-slate-700 text-white rounded-xl font-bold text-sm transition-colors">다시 생성</button>
             </div>
           </div>
