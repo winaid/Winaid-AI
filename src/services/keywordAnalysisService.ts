@@ -65,7 +65,7 @@ async function generateKeywordsWithAI(
 4. 키워드 조합: "{지역} 치과", "{지역} 임플란트", "{역명} 치과", "{역명} 임플란트", "{동} 치아교정" 등
 5. 병원명 자체도 포함
 6. 실제 네이버에서 검색량이 있을 법한 키워드만 (너무 마이너한 건 제외)
-7. 최소 15개, 최대 25개
+7. 정확히 15개 생성
 
 JSON 배열로만 응답하세요. 설명 없이 키워드 문자열 배열만:
 ["키워드1", "키워드2", ...]`;
@@ -81,12 +81,68 @@ JSON 배열로만 응답하세요. 설명 없이 키워드 문자열 배열만:
 
     const parsed = typeof result === 'string' ? JSON.parse(result) : result;
     if (Array.isArray(parsed)) {
-      return parsed.filter((k: any) => typeof k === 'string' && k.trim()).slice(0, 25);
+      return parsed.filter((k: any) => typeof k === 'string' && k.trim()).slice(0, 15);
     }
     return [];
   } catch (e) {
     console.error('AI 키워드 생성 실패, fallback 사용:', e);
     return fallbackKeywordGeneration(hospitalName, address, category);
+  }
+}
+
+/**
+ * 추가 키워드 생성 (더보기)
+ * 이미 분석한 키워드를 제외하고 새로운 키워드 15개 생성
+ */
+async function generateMoreKeywordsWithAI(
+  hospitalName: string,
+  address: string,
+  existingKeywords: string[],
+  category?: string
+): Promise<string[]> {
+  const radius = isMetroArea(address) ? 2 : 5;
+
+  const prompt = `당신은 네이버 블로그 SEO 키워드 전문가입니다.
+
+아래 병원의 주소를 기반으로, 반경 ${radius}km 이내에서 실제 사람들이 네이버에 검색할 법한 지역+진료 키워드를 추가 생성해주세요.
+
+병원명: ${hospitalName}
+주소: ${address}
+진료과: ${category || '치과'}
+탐색 반경: ${radius}km
+
+이미 분석한 키워드 (중복 금지):
+${existingKeywords.map(k => `- ${k}`).join('\n')}
+
+규칙:
+1. 위 키워드와 겹치지 않는 새로운 키워드만 생성
+2. 더 넓은 지역명, 세부 시술명, 롱테일 키워드 등 다양하게
+3. 실제 네이버에서 검색량이 있을 법한 키워드만
+4. 정확히 15개 생성
+
+JSON 배열로만 응답하세요:
+["키워드1", "키워드2", ...]`;
+
+  try {
+    const result = await callGemini({
+      prompt,
+      model: GEMINI_MODEL.FLASH,
+      responseType: 'json',
+      timeout: TIMEOUTS.QUICK_OPERATION,
+      temperature: 0.4,
+    });
+
+    const parsed = typeof result === 'string' ? JSON.parse(result) : result;
+    if (Array.isArray(parsed)) {
+      const existing = new Set(existingKeywords.map(k => k.toLowerCase()));
+      return parsed
+        .filter((k: any) => typeof k === 'string' && k.trim() && !existing.has(k.trim().toLowerCase()))
+        .slice(0, 15);
+    }
+    return [];
+  } catch (e) {
+    console.error('추가 키워드 생성 실패:', e);
+    return [];
   }
 }
 
@@ -241,4 +297,30 @@ export async function analyzeHospitalKeywords(
   }
 
   return { stats: filteredStats, aiRecommendation, apiErrors };
+}
+
+/**
+ * 추가 키워드 로드 (더보기)
+ */
+export async function loadMoreKeywords(
+  hospitalName: string,
+  address: string,
+  existingStats: KeywordStat[],
+  category?: string,
+  onProgress?: (msg: string) => void
+): Promise<{ stats: KeywordStat[]; apiErrors?: string[] }> {
+  const existingKeywords = existingStats.map(s => s.keyword);
+
+  onProgress?.('추가 키워드 생성 중...');
+  const moreCandidates = await generateMoreKeywordsWithAI(hospitalName, address, existingKeywords, category);
+
+  if (moreCandidates.length === 0) {
+    return { stats: [] };
+  }
+
+  onProgress?.(`${moreCandidates.length}개 추가 키워드 분석 중...`);
+  const { stats, apiErrors } = await fetchKeywordStats(moreCandidates);
+
+  const filteredStats = stats.filter(s => s.monthlySearchVolume >= 20);
+  return { stats: filteredStats, apiErrors };
 }

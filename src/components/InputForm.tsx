@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { CATEGORIES, TONES, PERSONAS } from '../constants';
 import { TEAM_DATA, HospitalEntry } from '../constants/teamHospitals';
-import { analyzeHospitalKeywords, KeywordStat } from '../services/keywordAnalysisService';
+import { analyzeHospitalKeywords, loadMoreKeywords, KeywordStat } from '../services/keywordAnalysisService';
 import { GenerationRequest, ContentCategory, TrendingItem, SeoTitleItem, AudienceMode, ImageStyle, PostType, CssTheme, WritingStyle } from '../types';
 import { getTrendingTopics, recommendSeoTitles } from '../services/seoService';
 import WritingStyleLearner from './WritingStyleLearner';
@@ -84,6 +84,7 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
   const [keywordAiRec, setKeywordAiRec] = useState<string>('');
   const [keywordProgress, setKeywordProgress] = useState<string>('');
   const [isAnalyzingKeywords, setIsAnalyzingKeywords] = useState(false);
+  const [isLoadingMoreKeywords, setIsLoadingMoreKeywords] = useState(false);
   const [showKeywordPanel, setShowKeywordPanel] = useState(false);
   const [keywordSortBy, setKeywordSortBy] = useState<'volume' | 'blog' | 'saturation'>('volume');
   const hospitalDropdownRef = useRef<HTMLDivElement>(null);
@@ -202,6 +203,32 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
       setKeywordStats([]);
     } finally {
       setIsAnalyzingKeywords(false);
+      setKeywordProgress('');
+    }
+  };
+
+  const handleLoadMoreKeywords = async () => {
+    if (!selectedHospitalEntry?.address) return;
+    setIsLoadingMoreKeywords(true);
+    setKeywordProgress('');
+    try {
+      const { stats: moreStats, apiErrors } = await loadMoreKeywords(
+        hospitalName,
+        selectedHospitalEntry.address,
+        keywordStats,
+        category,
+        (msg) => setKeywordProgress(msg)
+      );
+      if (moreStats.length > 0) {
+        setKeywordStats(prev => [...prev, ...moreStats]);
+      }
+      if (apiErrors?.length) {
+        console.warn('[키워드분석] 더보기 API 에러:', apiErrors);
+      }
+    } catch (e: any) {
+      console.error('추가 키워드 로드 실패:', e);
+    } finally {
+      setIsLoadingMoreKeywords(false);
       setKeywordProgress('');
     }
   };
@@ -484,8 +511,16 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
                         ))}
                     </tbody>
                   </table>
-                  <div className="px-3 py-2 bg-slate-50 border-t border-slate-100">
+                  <div className="px-3 py-2 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
                     <p className="text-[10px] text-slate-400">클릭하면 키워드에 추가됩니다 | 포화도 = 발행량/검색량 (낮을수록 블루오션)</p>
+                    <button
+                      type="button"
+                      onClick={handleLoadMoreKeywords}
+                      disabled={isLoadingMoreKeywords}
+                      className="px-3 py-1 rounded-lg text-[10px] font-bold transition-all bg-blue-100 text-blue-600 hover:bg-blue-200 disabled:opacity-50"
+                    >
+                      {isLoadingMoreKeywords ? '로딩...' : `더보기 (+15)`}
+                    </button>
                   </div>
                   {/* AI 블루오션 분석 */}
                   {keywordAiRec && (
