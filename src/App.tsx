@@ -919,23 +919,32 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className={`min-h-screen flex flex-col font-sans relative transition-colors duration-300 ${darkMode ? 'bg-slate-900 text-slate-100' : 'bg-[#fafbfc] text-slate-900'}`}>
-      <header className={`backdrop-blur-2xl border-b sticky top-0 z-30 h-[72px] flex items-center flex-none transition-all duration-300 ${darkMode ? 'bg-slate-800/90 border-slate-700' : 'bg-white/80 border-slate-200/50 shadow-[0_1px_3px_rgba(0,0,0,0.04)]'}`}>
-        <div className="max-w-[1600px] w-full mx-auto px-6 flex justify-between items-center">
+    <div className={`min-h-screen flex flex-col font-sans relative transition-colors duration-300 ${darkMode ? 'bg-slate-900 text-slate-100' : 'bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 text-slate-900'}`}>
+      {/* Animated background blobs */}
+      {!darkMode && (
+        <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+          <div className="absolute -top-40 -right-40 w-[600px] h-[600px] bg-blue-100/40 rounded-full blur-[150px] animate-[pulse_8s_ease-in-out_infinite]" />
+          <div className="absolute top-1/2 -left-40 w-[500px] h-[500px] bg-violet-100/30 rounded-full blur-[130px] animate-[pulse_10s_ease-in-out_2s_infinite]" />
+          <div className="absolute -bottom-20 right-1/3 w-[400px] h-[400px] bg-cyan-100/20 rounded-full blur-[120px] animate-[pulse_12s_ease-in-out_4s_infinite]" />
+        </div>
+      )}
+
+      <header className={`backdrop-blur-2xl border-b sticky top-0 z-30 h-16 flex items-center flex-none transition-all duration-300 ${darkMode ? 'bg-slate-800/90 border-slate-700' : 'bg-white/70 border-white/50 shadow-[0_1px_3px_rgba(0,0,0,0.04)]'}`}>
+        <div className="max-w-[1600px] w-full mx-auto px-5 flex justify-between items-center">
           <a href="#app" onClick={(e) => { e.preventDefault(); setContentTab('blog'); window.location.hash = 'app'; }} className="flex items-center gap-2.5 hover:opacity-80 transition-opacity cursor-pointer">
-            <img src="/280_logo.png" alt="WINAID" className={`h-9 ${darkMode ? 'rounded-md bg-white p-0.5' : ''}`} />
+            <img src="/280_logo.png" alt="WINAID" className={`h-8 w-8 ${darkMode ? 'rounded-md bg-white p-0.5' : ''}`} />
             <div className="flex flex-col leading-none">
-              <span className={`font-black text-lg tracking-[-0.02em] ${darkMode ? 'text-slate-100' : 'text-slate-800'}`}>WIN<span className="text-blue-600">AID</span></span>
-              <span className={`text-[9px] font-semibold tracking-wider ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>AI Marketing Platform</span>
+              <span className={`font-black text-base tracking-[-0.02em] ${darkMode ? 'text-slate-100' : 'text-slate-800'}`}>WIN<span className="text-blue-600">AID</span></span>
+              <span className={`text-[8px] font-semibold tracking-wider uppercase ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>AI Marketing</span>
             </div>
           </a>
-          
+
           <div className="flex items-center gap-3">
              {isLoggedIn && supabaseUser && (
                <div className="relative">
                  <button
                    onClick={() => setShowUserMenu(!showUserMenu)}
-                   className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold transition-all ${darkMode ? 'bg-slate-700 text-emerald-400 hover:bg-slate-600' : 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'}`}
+                   className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold transition-all ${darkMode ? 'bg-slate-700 text-blue-400 hover:bg-slate-600' : 'bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-100'}`}
                    title={supabaseUser.email || '사용자'}
                  >
                    {(supabaseUser.email || 'U')[0].toUpperCase()}
@@ -943,13 +952,13 @@ const App: React.FC = () => {
                  {showUserMenu && (
                    <>
                      <div className="fixed inset-0 z-40" onClick={() => setShowUserMenu(false)} />
-                     <div className={`absolute right-0 top-12 w-48 rounded-xl shadow-xl border z-50 overflow-hidden ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'}`}>
-                       <div className={`px-4 py-3 text-xs truncate ${darkMode ? 'text-slate-400 border-b border-slate-700' : 'text-slate-500 border-b border-slate-100'}`}>
+                     <div className={`absolute right-0 top-11 w-52 rounded-xl shadow-[0_8px_30px_rgba(0,0,0,0.12)] border z-50 overflow-hidden backdrop-blur-xl ${darkMode ? 'bg-slate-800/95 border-slate-700' : 'bg-white/95 border-slate-200/60'}`}>
+                       <div className={`px-4 py-3 text-xs truncate font-medium ${darkMode ? 'text-slate-400 border-b border-slate-700' : 'text-slate-500 border-b border-slate-100'}`}>
                          {supabaseUser.email}
                        </div>
                        <button
                          onClick={() => { setShowUserMenu(false); handleLogout(); }}
-                         className={`w-full text-left px-4 py-3 text-sm transition-colors ${darkMode ? 'text-red-400 hover:bg-slate-700' : 'text-red-500 hover:bg-red-50'}`}
+                         className={`w-full text-left px-4 py-3 text-sm font-medium transition-colors ${darkMode ? 'text-red-400 hover:bg-slate-700' : 'text-red-500 hover:bg-red-50'}`}
                        >
                          로그아웃
                        </button>
@@ -962,13 +971,13 @@ const App: React.FC = () => {
         </div>
       </header>
 
-      <main className="flex-1 max-w-[1600px] w-full mx-auto p-4 lg:p-8 flex flex-col lg:flex-row gap-6 overflow-hidden h-[calc(100vh-72px)]">
-        
+      <main className="relative z-10 flex-1 max-w-[1600px] w-full mx-auto p-3 lg:p-6 flex flex-col lg:flex-row gap-5 overflow-hidden h-[calc(100vh-64px)]">
+
         {/* AI 정밀보정과 유사도 검사는 전체 화면 사용 */}
         {contentTab === 'refine' || contentTab === 'similarity' || contentTab === 'image' || contentTab === 'history' ? (
           <div className="w-full h-full flex flex-col gap-4 overflow-hidden">
             {/* 탭 메뉴 */}
-            <div className={`flex gap-1 p-1.5 rounded-xl ${darkMode ? 'bg-slate-800 border border-slate-700' : 'bg-white/90 backdrop-blur border border-slate-200/60 shadow-sm'} w-fit mx-auto`}>
+            <div className={`flex gap-1 p-1.5 rounded-2xl ${darkMode ? 'bg-slate-800 border border-slate-700' : 'bg-white/80 backdrop-blur-xl border border-white/60 shadow-[0_2px_12px_rgba(0,0,0,0.06)]'} w-fit mx-auto`}>
               {([
                 { id: 'blog' as const, label: '블로그', icon: '📝' },
                 { id: 'card_news' as const, label: '카드뉴스', icon: '🎨' },
@@ -980,10 +989,10 @@ const App: React.FC = () => {
                 <button
                   key={tab.id}
                   onClick={() => setContentTab(tab.id)}
-                  className={`py-2.5 px-5 rounded-lg text-sm font-bold transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                  className={`py-2 px-4 rounded-xl text-[13px] font-bold transition-all whitespace-nowrap flex items-center gap-1.5 ${
                     contentTab === tab.id
-                      ? darkMode ? 'bg-slate-700 text-white shadow-sm' : 'bg-slate-900 text-white shadow-sm'
-                      : darkMode ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/50' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+                      ? darkMode ? 'bg-blue-600 text-white shadow-sm' : 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md shadow-blue-500/20'
+                      : darkMode ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/50' : 'text-slate-500 hover:text-slate-700 hover:bg-white'
                   }`}
                 >
                   <span className="text-xs">{tab.icon}</span>
@@ -995,8 +1004,8 @@ const App: React.FC = () => {
             {/* 전체 화면 콘텐츠 */}
             <div className="flex-1 overflow-hidden">
               {contentTab === 'similarity' ? (
-                <div className={`h-full rounded-2xl shadow-[0_4px_24px_rgba(0,0,0,0.06)] border p-6 ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-100'}`}>
-                  <Suspense fallback={<div className="flex items-center justify-center h-full"><div className="w-12 h-12 border-4 border-purple-200 border-t-purple-500 rounded-full animate-spin"></div></div>}>
+                <div className={`h-full rounded-2xl border p-6 backdrop-blur-xl ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white/80 border-white/60 shadow-[0_4px_24px_rgba(0,0,0,0.06)]'}`}>
+                  <Suspense fallback={<div className="flex items-center justify-center h-full"><div className="w-10 h-10 border-[3px] border-blue-100 border-t-blue-500 rounded-full animate-spin"></div></div>}>
                     <SimilarityChecker
                       onClose={() => setContentTab('blog')}
                       darkMode={darkMode}
@@ -1005,8 +1014,8 @@ const App: React.FC = () => {
                   </Suspense>
                 </div>
               ) : contentTab === 'history' ? (
-                <div className={`h-full rounded-2xl shadow-[0_4px_24px_rgba(0,0,0,0.06)] border p-6 overflow-y-auto ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-100'}`}>
-                  <Suspense fallback={<div className="flex items-center justify-center h-full"><div className="w-12 h-12 border-4 border-slate-200 border-t-slate-500 rounded-full animate-spin"></div></div>}>
+                <div className={`h-full rounded-2xl border p-6 overflow-y-auto backdrop-blur-xl ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white/80 border-white/60 shadow-[0_4px_24px_rgba(0,0,0,0.06)]'}`}>
+                  <Suspense fallback={<div className="flex items-center justify-center h-full"><div className="w-10 h-10 border-[3px] border-blue-100 border-t-blue-500 rounded-full animate-spin"></div></div>}>
                     <PostHistory
                       onClose={() => setContentTab('blog')}
                       darkMode={darkMode}
@@ -1014,14 +1023,14 @@ const App: React.FC = () => {
                   </Suspense>
                 </div>
               ) : contentTab === 'image' ? (
-                <div className={`h-full rounded-2xl shadow-[0_4px_24px_rgba(0,0,0,0.06)] border p-6 overflow-y-auto ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-100'}`}>
-                  <Suspense fallback={<div className="flex items-center justify-center h-full"><div className="w-12 h-12 border-4 border-purple-200 border-t-purple-500 rounded-full animate-spin"></div></div>}>
+                <div className={`h-full rounded-2xl border p-6 overflow-y-auto backdrop-blur-xl ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white/80 border-white/60 shadow-[0_4px_24px_rgba(0,0,0,0.06)]'}`}>
+                  <Suspense fallback={<div className="flex items-center justify-center h-full"><div className="w-10 h-10 border-[3px] border-blue-100 border-t-blue-500 rounded-full animate-spin"></div></div>}>
                     <ImageGenerator />
                   </Suspense>
                 </div>
               ) : (
-                <div className={`h-full rounded-2xl shadow-[0_4px_24px_rgba(0,0,0,0.06)] border p-6 ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-100'}`}>
-                  <Suspense fallback={<div className="flex items-center justify-center h-full"><div className="w-12 h-12 border-4 border-pink-200 border-t-pink-500 rounded-full animate-spin"></div></div>}>
+                <div className={`h-full rounded-2xl border p-6 backdrop-blur-xl ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white/80 border-white/60 shadow-[0_4px_24px_rgba(0,0,0,0.06)]'}`}>
+                  <Suspense fallback={<div className="flex items-center justify-center h-full"><div className="w-10 h-10 border-[3px] border-blue-100 border-t-blue-500 rounded-full animate-spin"></div></div>}>
                     <ContentRefiner
                       onClose={() => setContentTab('blog')}
                       onNavigate={(tab) => setContentTab(tab)}
@@ -1035,11 +1044,11 @@ const App: React.FC = () => {
         ) : (
           <>
         {/* 왼쪽 영역: 콘텐츠 */}
-        <div className={`lg:w-[500px] flex flex-col gap-4 overflow-hidden pb-24 lg:pb-0 ${mobileTab === 'result' ? 'hidden lg:flex' : 'flex'}`}>
+        <div className={`lg:w-[460px] flex flex-col gap-4 overflow-hidden pb-24 lg:pb-0 ${mobileTab === 'result' ? 'hidden lg:flex' : 'flex'}`}>
           {/* 콘텐츠 */}
           <div ref={leftPanelRef} className="flex-1 overflow-y-auto custom-scrollbar">
             {/* 블로그/카드뉴스/언론보도 입력 폼 */}
-            <Suspense fallback={<div className="flex items-center justify-center h-64"><div className="w-12 h-12 border-4 border-blue-100 border-t-blue-500 rounded-full animate-spin"></div></div>}>
+            <Suspense fallback={<div className="flex items-center justify-center h-64"><div className="w-10 h-10 border-[3px] border-blue-100 border-t-blue-500 rounded-full animate-spin"></div></div>}>
               <InputForm
                 onSubmit={handleGenerate}
                 isLoading={state.isLoading || isGeneratingScript}
@@ -1055,7 +1064,7 @@ const App: React.FC = () => {
           {/* 카드뉴스 3단계 워크플로우 */}
           {/* 2단계: 프롬프트 확인 */}
           {cardNewsPrompts && cardNewsPrompts.length > 0 ? (
-            <Suspense fallback={<div className="rounded-2xl border p-20 flex items-center justify-center"><div className="w-16 h-16 border-4 border-blue-100 border-t-blue-500 rounded-full animate-spin"></div></div>}>
+            <Suspense fallback={<div className="rounded-2xl bg-white/80 backdrop-blur-xl border border-white/60 p-20 flex items-center justify-center shadow-[0_4px_24px_rgba(0,0,0,0.06)]"><div className="w-12 h-12 border-[3px] border-blue-100 border-t-blue-500 rounded-full animate-spin"></div></div>}>
               <PromptPreview
                 prompts={cardNewsPrompts}
                 onApprove={handleApprovePrompts}
@@ -1068,7 +1077,7 @@ const App: React.FC = () => {
             </Suspense>
           ) : cardNewsScript ? (
             /* 1단계: 원고 확인 */
-            <Suspense fallback={<div className="rounded-2xl border p-20 flex items-center justify-center"><div className="w-16 h-16 border-4 border-blue-100 border-t-blue-500 rounded-full animate-spin"></div></div>}>
+            <Suspense fallback={<div className="rounded-2xl bg-white/80 backdrop-blur-xl border border-white/60 p-20 flex items-center justify-center shadow-[0_4px_24px_rgba(0,0,0,0.06)]"><div className="w-12 h-12 border-[3px] border-blue-100 border-t-blue-500 rounded-full animate-spin"></div></div>}>
               <ScriptPreview
                 script={cardNewsScript}
                 onApprove={handleApproveScript}
@@ -1082,40 +1091,49 @@ const App: React.FC = () => {
               />
             </Suspense>
           ) : (getCurrentState().isLoading || isGeneratingScript) ? (
-            <div className={`rounded-2xl border p-20 flex flex-col items-center justify-center h-full text-center shadow-[0_4px_24px_rgba(0,0,0,0.06)] transition-colors duration-300 ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-100'}`}>
-              <div className="relative mb-10">
-                <div className={`w-20 h-20 border-[6px] border-t-blue-500 rounded-full animate-spin ${darkMode ? 'border-slate-700' : 'border-blue-100'}`}></div>
+            <div className={`rounded-2xl border p-16 flex flex-col items-center justify-center h-full text-center backdrop-blur-xl transition-colors duration-300 ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white/80 border-white/60 shadow-[0_4px_24px_rgba(0,0,0,0.06)]'}`}>
+              <div className="relative mb-8">
+                <div className={`w-16 h-16 border-[3px] border-t-blue-500 rounded-full animate-spin ${darkMode ? 'border-slate-700' : 'border-blue-100'}`}></div>
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${darkMode ? 'bg-slate-700' : 'bg-blue-50'}`}>
-                    <svg className="w-5 h-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" /></svg>
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${darkMode ? 'bg-slate-700' : 'bg-blue-50'}`}>
+                    <svg className="w-4 h-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" /></svg>
                   </div>
                 </div>
               </div>
-              <h2 className={`text-2xl font-black mb-4 ${darkMode ? 'text-slate-100' : 'text-slate-800'}`}>{getCurrentState().progress || scriptProgress}</h2>
-              <p className={`max-w-xs font-medium text-center ${darkMode ? 'text-slate-400' : 'text-slate-400'}`}>
-                {pendingRequest?.postType === 'card_news' 
-                  ? '카드뉴스 원고를 생성하고 있습니다...' 
+              <h2 className={`text-lg font-bold mb-3 ${darkMode ? 'text-slate-100' : 'text-slate-800'}`}>{getCurrentState().progress || scriptProgress}</h2>
+              <p className={`max-w-xs text-sm font-medium text-center ${darkMode ? 'text-slate-400' : 'text-slate-400'}`}>
+                {pendingRequest?.postType === 'card_news'
+                  ? '카드뉴스 원고를 생성하고 있습니다...'
                   : pendingRequest?.postType === 'press_release'
                   ? '언론 보도자료를 작성하고 있습니다...'
                   : <>네이버 스마트블록 노출을 위한 최적의<br/>의료 콘텐츠를 생성하고 있습니다.</>}
               </p>
             </div>
           ) : getCurrentState().data ? (
-            <Suspense fallback={<div className="rounded-2xl border p-20 flex items-center justify-center"><div className="w-16 h-16 border-4 border-blue-100 border-t-blue-500 rounded-full animate-spin"></div></div>}>
+            <Suspense fallback={<div className="rounded-2xl bg-white/80 backdrop-blur-xl border border-white/60 p-20 flex items-center justify-center shadow-[0_4px_24px_rgba(0,0,0,0.06)]"><div className="w-12 h-12 border-[3px] border-blue-100 border-t-blue-500 rounded-full animate-spin"></div></div>}>
               <ResultPreview content={getCurrentState().data!} darkMode={darkMode} />
             </Suspense>
           ) : (
-            <div className={`h-full rounded-2xl shadow-[0_4px_24px_rgba(0,0,0,0.06)] border flex flex-col items-center justify-center p-20 text-center group transition-colors duration-300 ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-100'}`}>
-               <div className={`w-20 h-20 rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform duration-500 ${darkMode ? 'bg-slate-700' : 'bg-gradient-to-br from-blue-50 to-blue-100/50'}`}>
-                 <svg className={`w-10 h-10 ${darkMode ? 'text-slate-500' : 'text-blue-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
-                   <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
-                 </svg>
-               </div>
-               <h3 className={`text-xl font-bold ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>AI 콘텐츠 생성</h3>
-               <p className={`mt-3 max-w-xs text-sm font-medium leading-relaxed ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>좌측에서 키워드를 입력하고<br/>생성 버튼을 눌러보세요</p>
-               <div className={`mt-6 flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold ${darkMode ? 'bg-slate-700 text-slate-400' : 'bg-blue-50 text-blue-500'}`}>
-                 <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse" />
-                 AI 대기 중
+            <div className={`h-full rounded-2xl border flex flex-col items-center justify-center p-16 text-center group backdrop-blur-xl transition-all duration-500 relative overflow-hidden ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white/60 border-white/60 shadow-[0_4px_24px_rgba(0,0,0,0.04)]'}`}>
+               {/* Decorative background */}
+               {!darkMode && (
+                 <div className="absolute inset-0 pointer-events-none">
+                   <div className="absolute top-8 right-8 w-32 h-32 bg-blue-100/30 rounded-full blur-[60px]" />
+                   <div className="absolute bottom-8 left-8 w-24 h-24 bg-violet-100/20 rounded-full blur-[50px]" />
+                 </div>
+               )}
+               <div className="relative">
+                 <div className={`w-20 h-20 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-500 ${darkMode ? 'bg-slate-700' : 'bg-gradient-to-br from-blue-50 to-blue-100/80 border border-blue-200/30'}`}>
+                   <svg className={`w-9 h-9 ${darkMode ? 'text-slate-500' : 'text-blue-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
+                     <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
+                   </svg>
+                 </div>
+                 <h3 className={`text-lg font-bold mb-2 ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>AI 콘텐츠 생성</h3>
+                 <p className={`text-sm font-medium leading-relaxed mb-5 ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>좌측에서 키워드를 입력하고<br/>생성 버튼을 눌러보세요</p>
+                 <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold ${darkMode ? 'bg-slate-700 text-slate-400' : 'bg-blue-50/80 text-blue-500 border border-blue-100/50'}`}>
+                   <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse" />
+                   AI 대기 중
+                 </div>
                </div>
             </div>
           )}
@@ -1125,9 +1143,9 @@ const App: React.FC = () => {
 
       </main>
 
-      <div className={`lg:hidden backdrop-blur-2xl border-t fixed bottom-0 left-0 right-0 z-30 flex gap-2 p-2.5 transition-colors duration-300 ${darkMode ? 'bg-slate-800/90 border-slate-700' : 'bg-white/90 border-slate-200/50 shadow-[0_-2px_10px_rgba(0,0,0,0.04)]'}`}>
-        <button onClick={() => setMobileTab('input')} className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all ${mobileTab === 'input' ? 'bg-slate-900 text-white shadow-sm' : darkMode ? 'text-slate-400' : 'text-slate-500'}`}>설정</button>
-        <button onClick={() => setMobileTab('result')} className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all ${mobileTab === 'result' ? 'bg-slate-900 text-white shadow-sm' : darkMode ? 'text-slate-400' : 'text-slate-500'}`}>결과</button>
+      <div className={`lg:hidden backdrop-blur-2xl border-t fixed bottom-0 left-0 right-0 z-30 flex gap-2 p-2 transition-colors duration-300 ${darkMode ? 'bg-slate-800/90 border-slate-700' : 'bg-white/70 border-white/50 shadow-[0_-4px_20px_rgba(0,0,0,0.06)]'}`}>
+        <button onClick={() => setMobileTab('input')} className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all ${mobileTab === 'input' ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md shadow-blue-500/20' : darkMode ? 'text-slate-400' : 'text-slate-500'}`}>설정</button>
+        <button onClick={() => setMobileTab('result')} className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all ${mobileTab === 'result' ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md shadow-blue-500/20' : darkMode ? 'text-slate-400' : 'text-slate-500'}`}>결과</button>
       </div>
       
 
