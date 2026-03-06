@@ -3554,16 +3554,31 @@ function parseBlogSections(html: string): import('../types').BlogSection[] {
   const containerMatch = html.match(/<div[^>]*class="naver-post-container"[^>]*>([\s\S]*)<\/div>\s*$/);
   const content = containerMatch ? containerMatch[1] : html;
 
-  // h3 태그로 분할
-  const h3Regex = /<h3[^>]*>([\s\S]*?)<\/h3>/gi;
+  // h3 태그로 분할 (없으면 h2 fallback)
+  let headingRegex = /<h3[^>]*>([\s\S]*?)<\/h3>/gi;
   const h3Matches: { index: number; title: string; fullMatch: string }[] = [];
   let match;
-  while ((match = h3Regex.exec(content)) !== null) {
+  while ((match = headingRegex.exec(content)) !== null) {
     h3Matches.push({
       index: match.index,
       title: match[1].replace(/<[^>]+>/g, '').trim(),
       fullMatch: match[0]
     });
+  }
+
+  // h3가 없으면 h2로 fallback (main-title, hidden-title 제외)
+  if (h3Matches.length === 0) {
+    headingRegex = /<h2[^>]*(?!class="[^"]*(?:main-title|hidden-title)[^"]*")[^>]*>([\s\S]*?)<\/h2>/gi;
+    while ((match = headingRegex.exec(content)) !== null) {
+      const title = match[1].replace(/<[^>]+>/g, '').trim();
+      if (title && !title.includes('FAQ') && !title.includes('자주 묻는')) {
+        h3Matches.push({
+          index: match.index,
+          title,
+          fullMatch: match[0]
+        });
+      }
+    }
   }
 
   if (h3Matches.length === 0) return sections;

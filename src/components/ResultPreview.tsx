@@ -2429,6 +2429,21 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
                 <button onClick={() => setActiveTab('preview')} className={`px-8 py-2.5 text-sm font-bold rounded-lg transition-all ${activeTab === 'preview' ? (darkMode ? 'bg-slate-600 text-emerald-400 shadow-sm' : 'bg-white text-green-600 shadow-sm') : 'text-slate-400'}`}>미리보기</button>
                 <button onClick={() => setActiveTab('html')} className={`px-8 py-2.5 text-sm font-bold rounded-lg transition-all ${activeTab === 'html' ? (darkMode ? 'bg-slate-600 text-emerald-400 shadow-sm' : 'bg-white text-green-600 shadow-sm') : 'text-slate-400'}`}>HTML</button>
             </div>
+
+            {/* 소제목별 수정 버튼 (블로그 전용) */}
+            {content.postType === 'blog' && blogSections.length > 0 && (
+              <button
+                onClick={() => setShowSectionPanel(!showSectionPanel)}
+                className={`px-4 py-2.5 text-sm font-bold rounded-xl transition-all flex items-center gap-2 ${
+                  showSectionPanel
+                    ? darkMode ? 'bg-violet-900/50 text-violet-300 border border-violet-700' : 'bg-violet-100 text-violet-700 border border-violet-300'
+                    : darkMode ? 'bg-slate-700 text-slate-300 hover:bg-slate-600 border border-slate-600' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200'
+                }`}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+                소제목별 수정
+              </button>
+            )}
             
             {/* 글자 수 표시 */}
             <div className={`flex items-center gap-2 px-4 py-2 rounded-xl border ${darkMode ? 'bg-slate-700 border-slate-600' : 'bg-slate-50 border-slate-200'}`}>
@@ -2642,10 +2657,11 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
             {content.postType === 'blog' && blogSections.length > 0 && !showSectionPanel && (
               <button
                 onClick={() => setShowSectionPanel(true)}
-                className={`fixed left-4 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full shadow-lg ${darkMode ? 'bg-slate-700 text-slate-300 hover:bg-slate-600' : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200'}`}
-                title="섹션별 재생성 패널 열기"
+                className={`fixed left-4 top-1/2 -translate-y-1/2 z-10 px-3 py-3 rounded-xl shadow-lg transition-all hover:scale-105 ${darkMode ? 'bg-violet-900 text-violet-300 hover:bg-violet-800 border border-violet-700' : 'bg-violet-100 text-violet-700 hover:bg-violet-200 border border-violet-300'}`}
+                title="소제목별 수정 패널 열기"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+                <span className="text-[10px] font-bold mt-1 block">수정</span>
               </button>
             )}
 

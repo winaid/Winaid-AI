@@ -146,9 +146,9 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
   const featureIllusts = [<IllustBlog key="blog" />, <IllustCompliance key="comp" />, <IllustImage key="img" />];
 
   return (
-    <div className="min-h-screen bg-white text-slate-900 overflow-x-hidden">
+    <div className="min-h-screen bg-slate-50 text-slate-900 overflow-x-hidden">
       {/* Sticky Nav - 스크롤 후에만 로고 표시 */}
-      <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrollY > 50 ? 'bg-white/90 backdrop-blur-xl shadow-sm' : 'bg-transparent'}`}>
+      <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrollY > 50 ? 'bg-slate-50/90 backdrop-blur-xl shadow-sm border-b border-slate-200/60' : 'bg-transparent'}`}>
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className={`flex items-center gap-2 transition-opacity duration-300 ${scrollY > 50 ? 'opacity-100' : 'opacity-0'}`}>
             <img src="/280_logo.png" alt="" className="h-7 w-7 border-0 outline-none block" />
@@ -168,7 +168,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
       {/* Hero */}
       <section className="relative min-h-[100vh] flex items-center justify-center overflow-hidden">
         {/* 배경: 위 화이트 → 중간부터 윈에이드 블루 */}
-        <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, #ffffff 0%, #ffffff 25%, #dbeafe 40%, #3b82f6 70%, #1e3a8a 100%)' }} />
+        <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, #f8fafc 0%, #f1f5f9 20%, #dbeafe 40%, #3b82f6 70%, #1e3a8a 100%)' }} />
         <div className="absolute bottom-0 left-0 right-0 h-[40%]">
           <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-cyan-400/15 rounded-full blur-[120px]" />
           <div className="absolute bottom-0 right-1/4 w-[300px] h-[300px] bg-indigo-300/15 rounded-full blur-[100px]" />
@@ -296,7 +296,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
       </section>
 
       {/* Stats - 윈에이드 수치 */}
-      <section className="py-20 bg-white border-b border-slate-100">
+      <section className="py-20 bg-white/60 backdrop-blur-sm border-b border-slate-200/60">
         <div className="max-w-5xl mx-auto px-6">
           <p className="text-center text-slate-400 text-sm font-semibold mb-10 tracking-wider">윈에이드는 수치로 증명합니다</p>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-0 md:divide-x divide-slate-200">
@@ -318,7 +318,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
       </section>
 
       {/* Pain Point -> Solution */}
-      <section className="py-24">
+      <section className="py-24 bg-gradient-to-b from-slate-50 to-slate-100/50">
         <div className="max-w-5xl mx-auto px-6">
           <div className="text-center mb-20">
             <p className="text-blue-500 font-bold text-sm tracking-wider uppercase mb-3">Problem & Solution</p>
@@ -335,7 +335,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
               { pain: '이미지 만들기 귀찮다', solution: 'AI 이미지 자동 생성', desc: '저작권 걱정 없는 고품질 이미지를 원클릭으로 생성', icon: '🎨', color: 'bg-violet-100 text-violet-600' },
             ].map((item, i) => (
               <div key={i} className="group relative">
-                <div className="bg-slate-50 rounded-2xl p-8 h-full border border-slate-100 hover:border-blue-200 hover:bg-blue-50/30 transition-all">
+                <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 h-full border border-slate-200/60 hover:border-blue-200 hover:bg-blue-50/30 hover:shadow-lg transition-all">
                   <div className={`w-14 h-14 rounded-2xl ${item.color} flex items-center justify-center text-2xl mb-6`}>{item.icon}</div>
                   <p className="text-slate-400 text-sm line-through mb-2">{item.pain}</p>
                   <p className="text-xl font-bold text-slate-900 mb-2">{item.solution}</p>
@@ -348,7 +348,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
       </section>
 
       {/* Features */}
-      <section className="py-24 bg-slate-50">
+      <section className="py-24 bg-gradient-to-b from-slate-100/50 to-slate-50">
         <div className="max-w-5xl mx-auto px-6">
           <div className="text-center mb-20">
             <p className="text-blue-500 font-bold text-sm tracking-wider uppercase mb-3">Features</p>
@@ -394,7 +394,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
       </section>
 
       {/* How it works */}
-      <section className="py-24">
+      <section className="py-24 bg-white/50">
         <div className="max-w-5xl mx-auto px-6">
           <div className="text-center mb-20">
             <p className="text-blue-500 font-bold text-sm tracking-wider uppercase mb-3">How it works</p>
@@ -411,7 +411,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
                 {i < 2 && (
                   <div className="hidden md:block absolute top-8 left-[60%] w-[80%] h-[2px] bg-gradient-to-r from-blue-200 to-transparent" />
                 )}
-                <div className="relative">
+                <div className="relative bg-white/80 backdrop-blur-sm rounded-2xl p-6 border border-slate-200/60">
                   <div className="w-16 h-16 bg-blue-500 rounded-2xl flex items-center justify-center text-white text-2xl font-black mb-6 shadow-lg shadow-blue-500/20">
                     {item.step}
                   </div>
@@ -425,7 +425,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
       </section>
 
       {/* Trust / About WINAID */}
-      <section className="py-24 bg-gradient-to-b from-blue-50 to-white">
+      <section className="py-24 bg-gradient-to-b from-blue-50 to-slate-50">
         <div className="max-w-5xl mx-auto px-6">
           <div className="text-center mb-16">
             <p className="text-blue-500 font-bold text-sm tracking-wider uppercase mb-3">About WINAID</p>
@@ -445,7 +445,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
               '거래처 재계약률 95%의 신뢰',
               '의료광고법 전문 컨설팅 & AI 검증',
             ].map((item, i) => (
-              <div key={i} className="flex items-center gap-3 bg-white rounded-xl px-5 py-4 border border-slate-200 shadow-sm">
+              <div key={i} className="flex items-center gap-3 bg-white/80 backdrop-blur-sm rounded-xl px-5 py-4 border border-slate-200/60 shadow-sm hover:shadow-md transition-shadow">
                 <svg className="w-5 h-5 text-blue-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                 </svg>
@@ -480,7 +480,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
       </section>
 
       {/* Footer */}
-      <footer className="py-10 bg-slate-800">
+      <footer className="py-10 bg-slate-900">
         <div className="max-w-6xl mx-auto px-6">
           <p className="text-slate-400 text-sm text-center leading-relaxed">
             (07206) 서울 영등포구 양평로20길 16-1 2층 윈에이드&nbsp;&nbsp;|&nbsp;&nbsp;회사명 (주)윈에이드&nbsp;&nbsp;|&nbsp;&nbsp;대표 이현승&nbsp;&nbsp;|&nbsp;&nbsp;사업자등록번호 178-88-00714
