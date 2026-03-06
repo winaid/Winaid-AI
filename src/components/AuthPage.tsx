@@ -8,7 +8,7 @@ import {
 } from '../lib/supabase';
 
 interface AuthPageProps {
-  onNavigate: (page: 'app' | 'admin' | 'auth') => void;
+  onNavigate: (page: 'blog' | 'admin' | 'auth') => void;
 }
 
 type AuthMode = 'login' | 'register' | 'forgot';
@@ -33,8 +33,8 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onNavigate }) => {
       if (hash && (hash.includes('access_token') || hash.includes('refresh_token'))) {
         console.log('[AuthPage] OAuth callback detected, redirecting to app');
         // URL 정리 후 앱으로
-        window.history.replaceState(null, '', window.location.pathname + '#app');
-        onNavigate('app');
+        window.history.replaceState(null, '', window.location.pathname + '#blog');
+        onNavigate('blog');
         return;
       }
       
@@ -42,7 +42,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onNavigate }) => {
       const { data: { session } } = await supabase.auth.getSession();
       console.log('[AuthPage] Session check:', session?.user?.email);
       if (session) {
-        onNavigate('app');
+        onNavigate('blog');
       }
     };
     checkSessionAndOAuth();
@@ -71,7 +71,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onNavigate }) => {
       
       if (data.user) {
         // 로그인 성공
-        onNavigate('app');
+        onNavigate('blog');
       }
     } catch {
       setError('로그인에 실패했습니다. 다시 시도해주세요.');
@@ -119,7 +119,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onNavigate }) => {
           setMessage('회원가입이 완료되었습니다!');
           // 약간의 딜레이 후 앱으로 이동
           setTimeout(() => {
-            onNavigate('app');
+            onNavigate('blog');
           }, 500);
         }
         // 이메일 확인이 필요한 경우

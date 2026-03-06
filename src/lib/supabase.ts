@@ -51,7 +51,7 @@ export const signUpWithEmail = async (email: string, password: string, name: str
     options: {
       data: { name },
       // 이메일 확인 없이 바로 로그인 (Supabase 대시보드에서도 설정 필요)
-      emailRedirectTo: window.location.origin + '/#app'
+      emailRedirectTo: window.location.origin + '/#blog'
     }
   });
   
