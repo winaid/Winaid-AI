@@ -881,7 +881,7 @@ export function resizeImageForReference(dataUrl: string): Promise<string> {
 }
 
 interface AiTemplateRequest {
-  category: 'schedule' | 'event' | 'doctor' | 'notice' | 'greeting';
+  category: 'schedule' | 'event' | 'doctor' | 'notice' | 'greeting' | 'hiring' | 'caution';
   stylePrompt: string;
   textContent: string;
   hospitalName?: string;
@@ -903,6 +903,8 @@ function buildTemplateAiPrompt(req: AiTemplateRequest): string {
     doctor: 'doctor introduction / new physician announcement',
     notice: 'hospital notice / important announcement',
     greeting: 'holiday greeting / seasonal message from hospital',
+    hiring: 'hospital job posting / staff recruitment announcement',
+    caution: 'post-treatment / post-procedure care instructions',
   };
 
   const isPortrait = imageSize && imageSize.width > 0 && imageSize.height > 0 && imageSize.height > imageSize.width;
@@ -1141,6 +1143,30 @@ function buildGreetingTextContent(data: {
   return content;
 }
 
+function buildHiringTextContent(data: {
+  title: string; position?: string; requirements: string[]; benefits: string[];
+  deadline?: string; contact?: string;
+}): string {
+  let content = `[MAIN TITLE - largest, bold, center] "${data.title}"`;
+  if (data.position) content += `\n[POSITION - accent color badge, prominent] "${data.position}"`;
+  if (data.requirements.length > 0) content += `\n[REQUIREMENTS - section with header "자격 요건"]\n${data.requirements.map(r => `• ${r}`).join('\n')}`;
+  if (data.benefits.length > 0) content += `\n[BENEFITS - section with header "복리후생"]\n${data.benefits.map(b => `• ${b}`).join('\n')}`;
+  if (data.deadline) content += `\n[DEADLINE - subtle, bottom area] "마감: ${data.deadline}"`;
+  if (data.contact) content += `\n[CONTACT - clear, bottom] "지원/문의: ${data.contact}"`;
+  return content;
+}
+
+function buildCautionTextContent(data: {
+  type: string; title: string; items: string[]; emergency?: string;
+}): string {
+  let content = `[VISUAL THEME - medical caution/care instructions style, clean and professional, use warning-appropriate colors like amber/orange accents with white/light background]`;
+  content += `\n\n[MAIN TITLE - largest, bold, center] "${data.title}"`;
+  content += `\n[TYPE BADGE - small accent tag] "${data.type}"`;
+  if (data.items.length > 0) content += `\n[CAUTION ITEMS - numbered list with warning icons, clear readable text, good spacing]\n${data.items.map((item, i) => `${i + 1}. ${item}`).join('\n')}`;
+  if (data.emergency) content += `\n[EMERGENCY CONTACT - prominent, bottom, accent color] "${data.emergency}"`;
+  return content;
+}
+
 export async function generateTemplateWithAI(
   category: 'schedule' | 'event' | 'doctor' | 'notice' | 'greeting',
   templateData: Record<string, any>,
@@ -1176,6 +1202,12 @@ export async function generateTemplateWithAI(
       break;
     case 'greeting':
       textContent = buildGreetingTextContent(templateData as any);
+      break;
+    case 'hiring':
+      textContent = buildHiringTextContent(templateData as any);
+      break;
+    case 'caution':
+      textContent = buildCautionTextContent(templateData as any);
       break;
     default:
       textContent = JSON.stringify(templateData);

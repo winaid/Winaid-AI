@@ -15,7 +15,7 @@ import {
 } from '../services/calendarTemplateService';
 
 type DayMark = 'closed' | 'shortened' | 'vacation';
-type TemplateCategory = 'schedule' | 'event' | 'doctor' | 'notice' | 'greeting';
+type TemplateCategory = 'schedule' | 'event' | 'doctor' | 'notice' | 'greeting' | 'hiring' | 'caution';
 type ScheduleLayout = 'full_calendar' | 'week' | 'highlight';
 
 const CATEGORIES: { id: TemplateCategory; name: string; icon: string; desc: string }[] = [
@@ -24,6 +24,8 @@ const CATEGORIES: { id: TemplateCategory; name: string; icon: string; desc: stri
   { id: 'doctor', name: '의사 소개', icon: '\u{1F9D1}\u200D\u2695\uFE0F', desc: '전문의 부임' },
   { id: 'notice', name: '공지사항', icon: '\u{1F4E2}', desc: '변경/이전' },
   { id: 'greeting', name: '명절 인사', icon: '\u{1F38A}', desc: '설날/추석' },
+  { id: 'hiring', name: '채용/공고', icon: '\u{1F4CB}', desc: '직원 모집' },
+  { id: 'caution', name: '주의사항', icon: '\u26A0\uFE0F', desc: '시술/진료 후' },
 ];
 
 // AI 스타일 프리셋 사용 (모든 템플릿 AI 생성)
@@ -116,6 +118,20 @@ export default function TemplateGenerator() {
   const [greetHoliday, setGreetHoliday] = useState('설날');
   const [greetMsg, setGreetMsg] = useState('');
   const [greetClosure, setGreetClosure] = useState('');
+
+  // 채용/공고
+  const [hiringTitle, setHiringTitle] = useState('');
+  const [hiringPosition, setHiringPosition] = useState('');
+  const [hiringRequirements, setHiringRequirements] = useState('');
+  const [hiringBenefits, setHiringBenefits] = useState('');
+  const [hiringDeadline, setHiringDeadline] = useState('');
+  const [hiringContact, setHiringContact] = useState('');
+
+  // 주의사항 (시술/진료 후)
+  const [cautionType, setCautionType] = useState('시술 후');
+  const [cautionTitle, setCautionTitle] = useState('');
+  const [cautionItems, setCautionItems] = useState('');
+  const [cautionEmergency, setCautionEmergency] = useState('');
 
   // 스타일 히스토리 (이전 생성 스타일 재사용)
   const [styleHistory, setStyleHistory] = useState<SavedStyleHistory[]>([]);
@@ -236,6 +252,10 @@ export default function TemplateGenerator() {
         templateData = { doctorName: docName, specialty: docSpecialty, career: docCareer.split('\n').filter(Boolean), greeting: docGreeting || undefined, doctorPhotoBase64: docPhotoBase64 || undefined };
       } else if (category === 'notice') {
         templateData = { title: noticeTitle, content: noticeContent.split('\n').filter(Boolean), effectiveDate: noticeDate || undefined };
+      } else if (category === 'hiring') {
+        templateData = { title: hiringTitle || '직원 모집', position: hiringPosition || undefined, requirements: hiringRequirements.split('\n').filter(Boolean), benefits: hiringBenefits.split('\n').filter(Boolean), deadline: hiringDeadline || undefined, contact: hiringContact || undefined };
+      } else if (category === 'caution') {
+        templateData = { type: cautionType, title: cautionTitle || `${cautionType} 주의사항`, items: cautionItems.split('\n').filter(Boolean), emergency: cautionEmergency || undefined };
       } else {
         templateData = { holiday: greetHoliday, greeting: greetMsg, closurePeriod: greetClosure || undefined };
       }
@@ -289,7 +309,7 @@ export default function TemplateGenerator() {
   const handleDownload = () => {
     if (!resultImage) return;
     const a = document.createElement('a'); a.href = resultImage;
-    const suffixes: Record<TemplateCategory, string> = { schedule: `${month}월_진료안내`, event: '이벤트', doctor: '의사소개', notice: '공지사항', greeting: '인사' };
+    const suffixes: Record<TemplateCategory, string> = { schedule: `${month}월_진료안내`, event: '이벤트', doctor: '의사소개', notice: '공지사항', greeting: '인사', hiring: '채용공고', caution: '주의사항' };
     a.download = `${hospitalName || '병원'}_${suffixes[category]}.png`; a.click();
   };
 
@@ -303,6 +323,8 @@ export default function TemplateGenerator() {
     doctor: { icon: '\u{1F9D1}\u200D\u2695\uFE0F', t: '의사 소개 이미지', d: '전문의 정보를 입력하세요' },
     notice: { icon: '\u{1F4E2}', t: '공지사항 이미지', d: '공지 내용을 입력하세요' },
     greeting: { icon: '\u{1F38A}', t: '명절 인사 이미지', d: '인사말을 입력하세요' },
+    hiring: { icon: '\u{1F4CB}', t: '채용/공고 이미지', d: '모집 정보를 입력하세요' },
+    caution: { icon: '\u26A0\uFE0F', t: '주의사항 이미지', d: '주의사항을 입력하세요' },
   };
 
   return (
@@ -310,9 +332,9 @@ export default function TemplateGenerator() {
       <div className="w-[420px] flex-shrink-0 overflow-y-auto space-y-4 pr-2">
 
         {/* 카테고리 */}
-        <div className="grid grid-cols-5 gap-1.5">
+        <div className="flex flex-wrap gap-1.5">
           {CATEGORIES.map(c => (
-            <button key={c.id} onClick={() => setCategory(c.id)} className={`py-2 px-1 rounded-xl text-center transition-all ${category === c.id ? 'bg-slate-800 text-white shadow-md' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>
+            <button key={c.id} onClick={() => setCategory(c.id)} className={`flex-1 min-w-[56px] py-2 px-1 rounded-xl text-center transition-all ${category === c.id ? 'bg-slate-800 text-white shadow-md' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>
               <div className="text-lg leading-none">{c.icon}</div>
               <div className="text-[10px] font-bold mt-1 leading-tight">{c.name}</div>
             </button>
@@ -520,6 +542,32 @@ export default function TemplateGenerator() {
             </div>
             <div><label className={labelCls}>인사말</label><textarea value={greetMsg} onChange={e=>setGreetMsg(e.target.value)} placeholder={"풍성한 한가위 보내시고\n건강하고 행복한 추석 되세요"} rows={3} className={textareaCls} /></div>
             <div><label className={labelCls}>휴진 기간 <span className="text-slate-400 font-normal">(선택)</span></label><input type="text" value={greetClosure} onChange={e=>setGreetClosure(e.target.value)} placeholder="9/28(토) ~ 10/1(화)" className={inputCls} /></div>
+          </div>
+        )}
+
+        {/* === 채용/공고 === */}
+        {category === 'hiring' && (
+          <div className="space-y-3">
+            <div><label className={labelCls}>공고 제목</label><input type="text" value={hiringTitle} onChange={e=>setHiringTitle(e.target.value)} placeholder="간호사 모집" className={inputCls} /></div>
+            <div><label className={labelCls}>모집 직종/포지션</label><input type="text" value={hiringPosition} onChange={e=>setHiringPosition(e.target.value)} placeholder="예: 간호사 / 물리치료사 / 치위생사" className={inputCls} /></div>
+            <div><label className={labelCls}>자격 요건 <span className="text-slate-400 font-normal">(줄바꿈으로 구분)</span></label><textarea value={hiringRequirements} onChange={e=>setHiringRequirements(e.target.value)} placeholder={"해당 면허 소지자\n경력 1년 이상 우대\n성실하고 책임감 있는 분"} rows={4} className={textareaCls} /></div>
+            <div><label className={labelCls}>복리후생/혜택 <span className="text-slate-400 font-normal">(줄바꿈으로 구분)</span></label><textarea value={hiringBenefits} onChange={e=>setHiringBenefits(e.target.value)} placeholder={"4대보험 가입\n중식 제공\n연차/월차 보장\n인센티브 지급"} rows={3} className={textareaCls} /></div>
+            <div className="flex gap-3">
+              <div className="flex-1"><label className={labelCls}>마감일 <span className="text-slate-400 font-normal">(선택)</span></label><input type="text" value={hiringDeadline} onChange={e=>setHiringDeadline(e.target.value)} placeholder="채용시 마감" className={inputCls} /></div>
+              <div className="flex-1"><label className={labelCls}>연락처/지원방법</label><input type="text" value={hiringContact} onChange={e=>setHiringContact(e.target.value)} placeholder="02-1234-5678 또는 이메일" className={inputCls} /></div>
+            </div>
+          </div>
+        )}
+
+        {/* === 주의사항 === */}
+        {category === 'caution' && (
+          <div className="space-y-3">
+            <div><label className={labelCls}>주의사항 유형</label>
+              <div className="flex gap-1.5">{['시술 후','진료 후','수술 후','복약','일반'].map(t => (<button key={t} onClick={()=>setCautionType(t)} className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${cautionType===t?'bg-slate-800 text-white shadow-md':'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>{t}</button>))}</div>
+            </div>
+            <div><label className={labelCls}>제목 <span className="text-slate-400 font-normal">(자동 생성됨)</span></label><input type="text" value={cautionTitle} onChange={e=>setCautionTitle(e.target.value)} placeholder={`${cautionType} 주의사항`} className={inputCls} /></div>
+            <div><label className={labelCls}>주의사항 항목 <span className="text-slate-400 font-normal">(줄바꿈으로 구분)</span></label><textarea value={cautionItems} onChange={e=>setCautionItems(e.target.value)} placeholder={"시술 부위를 문지르거나 만지지 마세요\n당일 음주 및 사우나는 피해주세요\n부기나 멍은 2~3일 내 자연 소실됩니다\n세안은 6시간 이후 가능합니다"} rows={5} className={textareaCls} /></div>
+            <div><label className={labelCls}>응급 연락처 <span className="text-slate-400 font-normal">(선택)</span></label><input type="text" value={cautionEmergency} onChange={e=>setCautionEmergency(e.target.value)} placeholder="이상 증상 시 연락: 02-1234-5678" className={inputCls} /></div>
           </div>
         )}
 
