@@ -946,93 +946,27 @@ const App: React.FC = () => {
         {contentTab === 'refine' || contentTab === 'similarity' || contentTab === 'image' || contentTab === 'history' ? (
           <div className="w-full h-full flex flex-col gap-4 overflow-hidden">
             {/* 탭 메뉴 */}
-            <div className={`grid grid-cols-3 gap-1.5 p-2 rounded-2xl ${darkMode ? 'bg-slate-800' : 'bg-white'} shadow-lg w-full max-w-3xl mx-auto`}>
-              <button
-                onClick={() => setContentTab('blog')}
-                className={`py-2.5 px-3 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${
-                  contentTab === 'blog'
-                    ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg'
-                    : darkMode
-                    ? 'text-slate-400 hover:bg-slate-700'
-                    : 'text-slate-600 hover:bg-slate-100'
-                }`}
-              >
-                📝 블로그
-              </button>
-              <button
-                onClick={() => setContentTab('card_news')}
-                className={`py-2.5 px-3 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${
-                  contentTab === 'card_news'
-                    ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-lg'
-                    : darkMode
-                    ? 'text-slate-400 hover:bg-slate-700'
-                    : 'text-slate-600 hover:bg-slate-100'
-                }`}
-              >
-                🎨 카드뉴스
-              </button>
-              <button
-                onClick={() => setContentTab('press')}
-                className={`py-2.5 px-3 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${
-                  contentTab === 'press'
-                    ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg'
-                    : darkMode
-                    ? 'text-slate-400 hover:bg-slate-700'
-                    : 'text-slate-600 hover:bg-slate-100'
-                }`}
-              >
-                📰 언론보도
-              </button>
-              <button
-                onClick={() => setContentTab('similarity')}
-                className={`py-2.5 px-3 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${
-                  contentTab === 'similarity'
-                    ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg'
-                    : darkMode
-                    ? 'text-slate-400 hover:bg-slate-700'
-                    : 'text-slate-600 hover:bg-slate-100'
-                }`}
-              >
-                🔍 유사도
-              </button>
-              <button
-                onClick={() => setContentTab('refine')}
-                className={`py-2.5 px-3 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${
-                  contentTab === 'refine'
-                    ? 'bg-gradient-to-r from-rose-500 to-pink-500 text-white shadow-lg'
-                    : darkMode
-                    ? 'text-slate-400 hover:bg-slate-700'
-                    : 'text-slate-600 hover:bg-slate-100'
-                }`}
-              >
-                ✨ AI보정
-              </button>
-              <button
-                onClick={() => setContentTab('image')}
-                className={`py-2.5 px-3 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${
-                  contentTab === 'image'
-                    ? 'bg-gradient-to-r from-purple-500 to-indigo-500 text-white shadow-lg'
-                    : darkMode
-                    ? 'text-slate-400 hover:bg-slate-700'
-                    : 'text-slate-600 hover:bg-slate-100'
-                }`}
-              >
-                🖼️ 이미지
-              </button>
-              {/* 히스토리 탭 - 추후 활성화 예정
-              <button
-                onClick={() => setContentTab('history')}
-                className={`py-2.5 px-3 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${
-                  contentTab === 'history'
-                    ? 'bg-gradient-to-r from-slate-500 to-gray-500 text-white shadow-lg'
-                    : darkMode
-                    ? 'text-slate-400 hover:bg-slate-700'
-                    : 'text-slate-600 hover:bg-slate-100'
-                }`}
-              >
-                📋 히스토리
-              </button>
-              */}
+            <div className={`flex gap-1 p-1 rounded-xl ${darkMode ? 'bg-slate-800' : 'bg-slate-100'} w-fit mx-auto`}>
+              {([
+                { id: 'blog' as const, label: '블로그' },
+                { id: 'card_news' as const, label: '카드뉴스' },
+                { id: 'press' as const, label: '언론보도' },
+                { id: 'similarity' as const, label: '유사도' },
+                { id: 'refine' as const, label: 'AI보정' },
+                { id: 'image' as const, label: '이미지' },
+              ]).map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setContentTab(tab.id)}
+                  className={`py-2 px-4 rounded-lg text-sm font-semibold transition-all whitespace-nowrap ${
+                    contentTab === tab.id
+                      ? darkMode ? 'bg-slate-700 text-white shadow-sm' : 'bg-white text-slate-800 shadow-sm'
+                      : darkMode ? 'text-slate-400 hover:text-slate-200' : 'text-slate-500 hover:text-slate-700'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
             </div>
 
             {/* 전체 화면 콘텐츠 */}

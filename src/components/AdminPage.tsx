@@ -265,51 +265,25 @@ const AdminPage: React.FC<AdminPageProps> = ({ onAdminVerified }) => {
   // 로그인 화면
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-6">
-        <div className="w-full max-w-md">
-          <div className="text-center mb-10">
-            <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-red-500 to-orange-600 rounded-3xl shadow-2xl shadow-red-500/30 mb-6">
-              <span className="text-4xl">🔐</span>
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
+        <div className="w-full max-w-sm">
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center w-14 h-14 bg-slate-800 rounded-2xl mb-4">
+              <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
             </div>
-            <h1 className="text-3xl font-black text-white mb-2">Admin Access</h1>
-            <p className="text-slate-400 font-medium">관리자 비밀번호를 입력하세요</p>
+            <h1 className="text-xl font-bold text-slate-800">Admin</h1>
+            <p className="text-slate-400 text-sm mt-1">관리자 비밀번호를 입력하세요</p>
           </div>
 
-          <form onSubmit={handleAdminLogin} className="bg-white/10 backdrop-blur-xl rounded-[32px] p-8 shadow-2xl border border-white/10">
-            {loginError && (
-              <div className="mb-6 p-4 bg-red-500/20 border border-red-500/30 rounded-xl text-red-400 text-sm font-medium">
-                {loginError}
-              </div>
-            )}
-            
-            <div className="mb-6">
-              <label className="text-xs font-black text-slate-300 uppercase tracking-widest mb-3 block">
-                비밀번호
-              </label>
-              <input 
-                type="password" 
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="관리자 비밀번호"
-                className="w-full p-4 bg-slate-900/50 border border-slate-700 rounded-xl font-mono text-sm text-white placeholder-slate-500 focus:border-emerald-500 outline-none transition-colors"
-                autoFocus
-              />
+          <form onSubmit={handleAdminLogin} className="bg-white rounded-2xl shadow-lg shadow-slate-200/50 border border-slate-100 p-8">
+            {loginError && <div className="mb-4 p-3 bg-red-50 border border-red-100 rounded-xl text-red-600 text-sm">{loginError}</div>}
+            <div className="mb-5">
+              <label className="text-sm font-medium text-slate-600 mb-1.5 block">비밀번호</label>
+              <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="관리자 비밀번호" className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 transition-all" autoFocus />
             </div>
-
-            <button 
-              type="submit"
-              className="w-full py-4 bg-gradient-to-r from-emerald-500 to-green-600 text-white font-bold rounded-xl hover:shadow-lg hover:shadow-emerald-500/30 transition-all"
-            >
-              로그인
-            </button>
-
-            <div className="mt-6 text-center">
-              <a 
-                href="#" 
-                className="text-sm text-slate-400 hover:text-white transition-colors"
-              >
-                ← 홈으로 돌아가기
-              </a>
+            <button type="submit" className="w-full py-3.5 bg-slate-800 text-white font-semibold rounded-xl hover:bg-slate-700 transition-all">로그인</button>
+            <div className="mt-4 text-center">
+              <a href="#" className="text-sm text-slate-400 hover:text-slate-600 transition-colors">홈으로 돌아가기</a>
             </div>
           </form>
         </div>
@@ -319,312 +293,135 @@ const AdminPage: React.FC<AdminPageProps> = ({ onAdminVerified }) => {
 
   // 관리자 대시보드
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-6">
+    <div className="min-h-screen bg-slate-50 p-4 lg:p-8">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-green-600 rounded-2xl flex items-center justify-center shadow-lg">
-              <span className="text-2xl">⚙️</span>
-            </div>
-            <div>
-              <h1 className="text-2xl font-black text-white">Admin Dashboard</h1>
-              <p className="text-slate-400 text-sm">WINAID 관리자 페이지</p>
-            </div>
+          <div>
+            <h1 className="text-xl font-bold text-slate-800">Admin Dashboard</h1>
+            <p className="text-slate-400 text-sm">WINAID 관리자</p>
           </div>
-          <div className="flex items-center gap-3">
-            <a 
-              href="#app" 
-              className="px-4 py-2 bg-emerald-500/20 text-emerald-400 font-bold rounded-xl hover:bg-emerald-500/30 transition-colors text-sm"
-            >
-              앱으로 이동 →
-            </a>
-            <button
-              onClick={handleAdminLogout}
-              className="px-4 py-2 bg-red-500/20 text-red-400 font-bold rounded-xl hover:bg-red-500/30 transition-colors text-sm"
-            >
-              로그아웃
-            </button>
+          <div className="flex items-center gap-2">
+            <a href="#app" className="px-4 py-2 bg-white border border-slate-200 text-slate-600 font-medium rounded-lg hover:bg-slate-50 transition-colors text-sm">앱으로 이동</a>
+            <button onClick={handleAdminLogout} className="px-4 py-2 bg-white border border-red-200 text-red-500 font-medium rounded-lg hover:bg-red-50 transition-colors text-sm">로그아웃</button>
           </div>
         </div>
 
-        {/* Stats Cards - 콘텐츠 및 사용 통계 */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-          <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-5 border border-white/10">
-            <div className="text-3xl mb-2">📚</div>
-            <div className="text-2xl font-black text-white">{stats.totalContents}</div>
-            <div className="text-sm text-slate-400">전체 콘텐츠</div>
-          </div>
-          <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-5 border border-white/10">
-            <div className="text-3xl mb-2">📝</div>
-            <div className="text-2xl font-black text-white">{stats.blogCount}</div>
-            <div className="text-sm text-slate-400">블로그 글</div>
-          </div>
-          <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-5 border border-white/10">
-            <div className="text-3xl mb-2">🎨</div>
-            <div className="text-2xl font-black text-white">{stats.cardnewsCount}</div>
-            <div className="text-sm text-slate-400">카드뉴스</div>
-          </div>
-          <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-5 border border-white/10">
-            <div className="text-3xl mb-2">📰</div>
-            <div className="text-2xl font-black text-white">{stats.pressCount}</div>
-            <div className="text-sm text-slate-400">언론보도</div>
-          </div>
+        {/* Stats Grid */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
+          {[
+            { label: '전체 콘텐츠', value: stats.totalContents, color: 'bg-blue-50 text-blue-600' },
+            { label: '블로그', value: stats.blogCount, color: 'bg-sky-50 text-sky-600' },
+            { label: '카드뉴스', value: stats.cardnewsCount, color: 'bg-violet-50 text-violet-600' },
+            { label: '언론보도', value: stats.pressCount, color: 'bg-emerald-50 text-emerald-600' },
+          ].map(s => (
+            <div key={s.label} className="bg-white rounded-xl p-4 border border-slate-100">
+              <div className="text-2xl font-bold text-slate-800">{s.value}</div>
+              <div className={`text-xs font-medium mt-1 inline-block px-2 py-0.5 rounded-full ${s.color}`}>{s.label}</div>
+            </div>
+          ))}
         </div>
-        
-        {/* 사용 통계 카드 */}
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
-          <div className="bg-gradient-to-br from-emerald-500/20 to-green-600/20 backdrop-blur-xl rounded-2xl p-4 border border-emerald-500/30">
-            <div className="text-xl mb-1">🏥</div>
-            <div className="text-xl font-black text-emerald-400">{stats.uniqueHospitals}</div>
-            <div className="text-xs text-slate-400">병원 수</div>
-          </div>
-          <div className="bg-gradient-to-br from-blue-500/20 to-indigo-600/20 backdrop-blur-xl rounded-2xl p-4 border border-blue-500/30">
-            <div className="text-xl mb-1">👤</div>
-            <div className="text-xl font-black text-blue-400">{stats.uniqueUsers}</div>
-            <div className="text-xs text-slate-400">사용자 수</div>
-          </div>
-          <div className="bg-gradient-to-br from-yellow-500/20 to-orange-600/20 backdrop-blur-xl rounded-2xl p-4 border border-yellow-500/30">
-            <div className="text-xl mb-1">📅</div>
-            <div className="text-xl font-black text-yellow-400">{stats.postsToday}</div>
-            <div className="text-xs text-slate-400">오늘</div>
-          </div>
-          <div className="bg-gradient-to-br from-purple-500/20 to-pink-600/20 backdrop-blur-xl rounded-2xl p-4 border border-purple-500/30">
-            <div className="text-xl mb-1">📊</div>
-            <div className="text-xl font-black text-purple-400">{stats.postsThisWeek}</div>
-            <div className="text-xs text-slate-400">이번 주</div>
-          </div>
-          <div className="bg-gradient-to-br from-cyan-500/20 to-teal-600/20 backdrop-blur-xl rounded-2xl p-4 border border-cyan-500/30">
-            <div className="text-xl mb-1">📈</div>
-            <div className="text-xl font-black text-cyan-400">{stats.postsThisMonth}</div>
-            <div className="text-xs text-slate-400">이번 달</div>
-          </div>
+        <div className="grid grid-cols-3 lg:grid-cols-5 gap-3 mb-8">
+          {[
+            { label: '병원 수', value: stats.uniqueHospitals },
+            { label: '사용자 수', value: stats.uniqueUsers },
+            { label: '오늘', value: stats.postsToday },
+            { label: '이번 주', value: stats.postsThisWeek },
+            { label: '이번 달', value: stats.postsThisMonth },
+          ].map(s => (
+            <div key={s.label} className="bg-white rounded-xl p-3 border border-slate-100 text-center">
+              <div className="text-lg font-bold text-slate-700">{s.value}</div>
+              <div className="text-[11px] text-slate-400">{s.label}</div>
+            </div>
+          ))}
         </div>
 
         {/* 콘텐츠 관리 */}
-        <div className="bg-white/10 backdrop-blur-xl rounded-[32px] p-6 lg:p-8 shadow-2xl border border-white/10">
-          
-          {/* Contents Tab - 블로그, 카드뉴스, 언론보도 통합 관리 */}
-          <div>
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
-                <h2 className="text-xl font-black text-white">콘텐츠 관리</h2>
-                <div className="flex flex-wrap gap-2">
-                  {/* 필터 버튼 */}
-                  <div className="flex gap-1 bg-slate-800/50 p-1 rounded-lg">
-                    <button
-                      onClick={() => setContentFilter('all')}
-                      className={`px-3 py-1.5 text-xs font-bold rounded-md transition-colors ${
-                        contentFilter === 'all' 
-                          ? 'bg-emerald-500 text-white' 
-                          : 'text-slate-400 hover:text-white'
-                      }`}
-                    >
-                      전체
-                    </button>
-                    <button
-                      onClick={() => setContentFilter('blog')}
-                      className={`px-3 py-1.5 text-xs font-bold rounded-md transition-colors ${
-                        contentFilter === 'blog' 
-                          ? 'bg-blue-500 text-white' 
-                          : 'text-slate-400 hover:text-white'
-                      }`}
-                    >
-                      📝 블로그
-                    </button>
-                    <button
-                      onClick={() => setContentFilter('card_news')}
-                      className={`px-3 py-1.5 text-xs font-bold rounded-md transition-colors ${
-                        contentFilter === 'card_news' 
-                          ? 'bg-purple-500 text-white' 
-                          : 'text-slate-400 hover:text-white'
-                      }`}
-                    >
-                      🎨 카드뉴스
-                    </button>
-                    <button
-                      onClick={() => setContentFilter('press_release')}
-                      className={`px-3 py-1.5 text-xs font-bold rounded-md transition-colors ${
-                        contentFilter === 'press_release' 
-                          ? 'bg-green-500 text-white' 
-                          : 'text-slate-400 hover:text-white'
-                      }`}
-                    >
-                      📰 언론보도
-                    </button>
-                  </div>
-                  <button 
-                    onClick={loadContents}
-                    disabled={loadingData}
-                    className="px-4 py-2 bg-slate-700 text-white font-bold rounded-xl hover:bg-slate-600 transition-colors text-sm disabled:opacity-50"
-                  >
-                    {loadingData ? '로딩...' : '🔄 새로고침'}
-                  </button>
-                </div>
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm">
+          <div className="p-5 border-b border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <h2 className="text-base font-bold text-slate-800">콘텐츠 관리</h2>
+            <div className="flex flex-wrap gap-2 items-center">
+              <div className="flex bg-slate-100 p-0.5 rounded-lg">
+                {([['all', '전체'], ['blog', '블로그'], ['card_news', '카드뉴스'], ['press_release', '언론보도']] as [typeof contentFilter, string][]).map(([key, label]) => (
+                  <button key={key} onClick={() => setContentFilter(key)} className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${contentFilter === key ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>{label}</button>
+                ))}
               </div>
-              
-              {dataError && (
-                <div className="mb-4 p-4 bg-red-500/20 border border-red-500/30 rounded-xl">
-                  <p className="text-red-300 text-sm font-medium">{dataError}</p>
-                </div>
-              )}
-              
-              {filteredContents.length === 0 ? (
-                <div className="text-center py-12">
-                  <div className="text-5xl mb-4">📝</div>
-                  <p className="text-slate-400 font-medium">
-                    {loadingData ? '콘텐츠를 불러오는 중...' : '아직 저장된 콘텐츠가 없습니다.'}
-                  </p>
-                  <p className="text-slate-500 text-sm mt-2">
-                    블로그 글을 생성하면 여기에 자동으로 저장됩니다.
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="text-sm text-slate-400 mb-4">
-                    {contentFilter === 'all' 
-                      ? `총 ${filteredContents.length}개의 콘텐츠가 저장되어 있습니다.`
-                      : `${getContentTypeLabel(contentFilter)} ${filteredContents.length}개가 저장되어 있습니다.`
-                    }
-                  </div>
+              <button onClick={loadContents} disabled={loadingData} className="px-3 py-1.5 bg-slate-100 text-slate-600 font-medium rounded-lg hover:bg-slate-200 transition-colors text-xs disabled:opacity-50">{loadingData ? '로딩...' : '새로고침'}</button>
+            </div>
+          </div>
+
+          <div className="p-5">
+            {dataError && <div className="mb-4 p-3 bg-red-50 border border-red-100 rounded-xl text-red-600 text-sm">{dataError}</div>}
+
+            {filteredContents.length === 0 ? (
+              <div className="text-center py-16">
+                <div className="text-4xl mb-3 opacity-30">📄</div>
+                <p className="text-slate-400 font-medium">{loadingData ? '콘텐츠를 불러오는 중...' : '저장된 콘텐츠가 없습니다.'}</p>
+                <p className="text-slate-300 text-sm mt-1">블로그 글을 생성하면 여기에 자동 저장됩니다.</p>
+              </div>
+            ) : (
+              <>
+                <p className="text-xs text-slate-400 mb-4">
+                  {contentFilter === 'all' ? `총 ${filteredContents.length}개` : `${getContentTypeLabel(contentFilter)} ${filteredContents.length}개`}
+                </p>
+                <div className="space-y-2">
                   {filteredContents.map((content) => (
-                    <div 
-                      key={content.id} 
-                      className="bg-white/5 rounded-xl p-5 border border-slate-700 hover:bg-white/10 transition-colors"
-                    >
-                      <div className="flex items-start justify-between gap-4">
+                    <div key={content.id} className="rounded-xl p-4 border border-slate-100 hover:border-slate-200 hover:bg-slate-50/50 transition-all">
+                      <div className="flex items-start justify-between gap-3">
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-2">
+                          <div className="flex items-center gap-2 mb-1.5">
                             {getContentTypeBadge(content.content_type)}
-                            <h3 className="text-lg font-bold text-white truncate">
-                              {content.title}
-                            </h3>
+                            <h3 className="text-sm font-bold text-slate-800 truncate">{content.title}</h3>
                           </div>
-                          <div className="flex flex-wrap items-center gap-3 text-sm text-slate-400 mb-3">
-                            <span>📅 {formatDate(content.created_at)}</span>
-                            {content.hospital_name && (
-                              <span className="px-2 py-1 bg-emerald-600/50 text-emerald-300 rounded-full text-xs font-bold">
-                                🏥 {content.hospital_name}
-                              </span>
-                            )}
-                            {content.category && (
-                              <span className="px-2 py-1 bg-slate-600/50 text-slate-300 rounded-full text-xs font-bold">
-                                {content.category}
-                              </span>
-                            )}
-                            {content.doctor_name && (
-                              <span className="text-xs text-slate-400">
-                                👨‍⚕️ {content.doctor_name} {content.doctor_title || ''}
-                              </span>
-                            )}
-                            {content.char_count && (
-                              <span className="text-xs text-slate-500">
-                                📝 {content.char_count.toLocaleString()}자
-                              </span>
-                            )}
+                          <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400 mb-2">
+                            <span>{formatDate(content.created_at)}</span>
+                            {content.hospital_name && <span className="px-1.5 py-0.5 bg-emerald-50 text-emerald-600 rounded text-[11px] font-medium">{content.hospital_name}</span>}
+                            {content.category && <span className="px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded text-[11px]">{content.category}</span>}
+                            {content.user_email && <span className="text-blue-400">{content.user_email}</span>}
                           </div>
-                          <div className="flex flex-wrap items-center gap-2 mb-2">
-                            {content.keywords && content.keywords.length > 0 && (
-                              <span className="text-xs text-slate-500">
-                                🏷️ {content.keywords.slice(0, 3).join(', ')}
-                                {content.keywords.length > 3 && ` +${content.keywords.length - 3}`}
-                              </span>
-                            )}
-                            {content.user_email && (
-                              <span className="text-xs text-blue-400">
-                                ✉️ {content.user_email}
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-sm text-slate-300 line-clamp-2">
-                            {content.topic || content.content?.replace(/<[^>]*>/g, '').substring(0, 150)}...
-                          </p>
+                          <p className="text-xs text-slate-400 line-clamp-1">{content.topic || content.content?.replace(/<[^>]*>/g, '').substring(0, 120)}</p>
                         </div>
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => setPreviewContent(content)}
-                            className="px-3 py-2 bg-blue-500/20 text-blue-400 font-bold rounded-lg hover:bg-blue-500/30 transition-colors text-sm whitespace-nowrap"
-                          >
-                            👁️ 보기
-                          </button>
-                          <button
-                            onClick={() => deleteContent(content.id)}
-                            className="px-3 py-2 bg-red-500/20 text-red-400 font-bold rounded-lg hover:bg-red-500/30 transition-colors text-sm whitespace-nowrap"
-                          >
-                            🗑️ 삭제
-                          </button>
+                        <div className="flex gap-1.5 flex-shrink-0">
+                          <button onClick={() => setPreviewContent(content)} className="px-3 py-1.5 bg-blue-50 text-blue-600 font-medium rounded-lg hover:bg-blue-100 transition-colors text-xs">보기</button>
+                          <button onClick={() => deleteContent(content.id)} className="px-3 py-1.5 bg-red-50 text-red-500 font-medium rounded-lg hover:bg-red-100 transition-colors text-xs">삭제</button>
                         </div>
                       </div>
                     </div>
                   ))}
                 </div>
-              )}
-            </div>
-        </div>
-
-        {/* Footer */}
-        <div className="text-center mt-8">
-          <p className="text-slate-500 text-sm font-medium">
-            WINAID 어드민 페이지
-          </p>
+              </>
+            )}
+          </div>
         </div>
       </div>
       
       {/* 콘텐츠 미리보기 모달 */}
       {previewContent && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden shadow-2xl my-8">
-            {/* 헤더 */}
-            <div className="bg-gradient-to-r from-slate-800 to-slate-700 p-6 border-b border-slate-600 flex justify-between items-start gap-4">
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto" onClick={() => setPreviewContent(null)}>
+          <div className="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden shadow-2xl my-8" onClick={e => e.stopPropagation()}>
+            <div className="p-6 border-b border-slate-100 flex justify-between items-start gap-4">
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-2">
-                  {getContentTypeBadge(previewContent.content_type)}
-                </div>
-                <h2 className="text-2xl font-bold text-white mb-2">{previewContent.title}</h2>
-                <div className="flex flex-wrap items-center gap-3 text-sm text-slate-300">
-                  <span>📅 {formatDate(previewContent.created_at)}</span>
-                  {previewContent.category && (
-                    <span className="px-2 py-1 bg-slate-600/50 text-slate-300 rounded-full text-xs font-bold">
-                      {previewContent.category}
-                    </span>
-                  )}
+                <div className="flex items-center gap-2 mb-2">{getContentTypeBadge(previewContent.content_type)}</div>
+                <h2 className="text-xl font-bold text-slate-800 mb-1">{previewContent.title}</h2>
+                <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
+                  <span>{formatDate(previewContent.created_at)}</span>
+                  {previewContent.category && <span className="px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded">{previewContent.category}</span>}
                 </div>
               </div>
-              <button
-                onClick={() => setPreviewContent(null)}
-                className="text-white hover:text-slate-300 text-3xl font-bold leading-none flex-shrink-0"
-              >
-                ×
+              <button onClick={() => setPreviewContent(null)} className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-400 transition-colors">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             </div>
-            
-            {/* 콘텐츠 */}
-            <div className="p-8 overflow-y-auto max-h-[calc(90vh-200px)] bg-slate-50">
-              <div 
-                className="prose prose-slate max-w-none"
-                dangerouslySetInnerHTML={{ __html: previewContent.content || '<p class="text-slate-400">내용이 없습니다.</p>' }}
-              />
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-180px)]">
+              <div className="prose prose-slate prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: previewContent.content || '<p class="text-slate-400">내용이 없습니다.</p>' }} />
             </div>
-            
-            {/* 푸터 */}
-            <div className="bg-slate-100 p-4 border-t border-slate-300 flex justify-between items-center gap-4">
-              <div className="flex gap-2 flex-wrap">
-                {previewContent.keywords && previewContent.keywords.length > 0 && (
-                  <div className="flex gap-2 flex-wrap">
-                    {previewContent.keywords.map((keyword: string, idx: number) => (
-                      <span key={idx} className="px-2 py-1 bg-slate-200 text-slate-700 rounded text-xs font-medium">
-                        #{keyword}
-                      </span>
-                    ))}
-                  </div>
-                )}
+            {previewContent.keywords && previewContent.keywords.length > 0 && (
+              <div className="px-6 py-3 border-t border-slate-100 flex gap-1.5 flex-wrap">
+                {previewContent.keywords.map((keyword: string, idx: number) => (
+                  <span key={idx} className="px-2 py-0.5 bg-slate-100 text-slate-500 rounded text-xs">#{keyword}</span>
+                ))}
               </div>
-              <button
-                onClick={() => setPreviewContent(null)}
-                className="px-6 py-2 bg-slate-700 hover:bg-slate-600 text-white font-bold rounded-lg transition-colors whitespace-nowrap"
-              >
-                닫기
-              </button>
-            </div>
+            )}
           </div>
         </div>
       )}
