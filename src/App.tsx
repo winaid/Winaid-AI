@@ -1097,7 +1097,7 @@ const App: React.FC = () => {
         ) : (
           <>
         {/* 블로그/카드뉴스/언론보도 - 위아래 배치 (입력 → 결과) */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:items-stretch">
           {/* 입력 폼 */}
           <div>
             <Suspense fallback={<div className="flex items-center justify-center h-64"><div className="w-10 h-10 border-[3px] border-blue-100 border-t-blue-500 rounded-full animate-spin"></div></div>}>
@@ -1111,7 +1111,7 @@ const App: React.FC = () => {
           </div>
 
           {/* 결과 영역 */}
-          <div>
+          <div className="flex flex-col">
           {cardNewsPrompts && cardNewsPrompts.length > 0 ? (
             <Suspense fallback={<div className="rounded-2xl bg-white/80 backdrop-blur-xl border border-white/60 p-20 flex items-center justify-center shadow-[0_4px_24px_rgba(0,0,0,0.06)]"><div className="w-12 h-12 border-[3px] border-blue-100 border-t-blue-500 rounded-full animate-spin"></div></div>}>
               <PromptPreview
@@ -1139,7 +1139,7 @@ const App: React.FC = () => {
               />
             </Suspense>
           ) : (getCurrentState().isLoading || isGeneratingScript) ? (
-            <div className={`rounded-2xl border p-16 flex flex-col items-center justify-center text-center backdrop-blur-xl transition-colors duration-300 ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white/80 border-white/60 shadow-[0_4px_24px_rgba(0,0,0,0.06)]'}`}>
+            <div className={`rounded-2xl border p-16 flex flex-col items-center justify-center text-center backdrop-blur-xl transition-colors duration-300 flex-1 ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white/80 border-white/60 shadow-[0_4px_24px_rgba(0,0,0,0.06)]'}`}>
               <div className="relative mb-8">
                 <div className={`w-16 h-16 border-[3px] border-t-blue-500 rounded-full animate-spin ${darkMode ? 'border-slate-700' : 'border-blue-100'}`}></div>
                 <div className="absolute inset-0 flex items-center justify-center">
@@ -1162,7 +1162,7 @@ const App: React.FC = () => {
               <ResultPreview content={getCurrentState().data!} darkMode={darkMode} />
             </Suspense>
           ) : (
-            <div className={`rounded-2xl border flex flex-col items-center justify-center p-16 text-center group backdrop-blur-xl transition-all duration-500 relative overflow-hidden min-h-[400px] ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white/60 border-white/60 shadow-[0_4px_24px_rgba(0,0,0,0.04)]'}`}>
+            <div className={`rounded-2xl border flex flex-col items-center justify-center p-16 text-center group backdrop-blur-xl transition-all duration-500 relative overflow-hidden flex-1 ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white/60 border-white/60 shadow-[0_4px_24px_rgba(0,0,0,0.04)]'}`}>
                {!darkMode && (
                  <div className="absolute inset-0 pointer-events-none">
                    <div className="absolute top-8 right-8 w-32 h-32 bg-blue-100/30 rounded-full blur-[60px]" />
