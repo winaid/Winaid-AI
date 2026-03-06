@@ -323,23 +323,46 @@ export async function loadMoreKeywords(
     return { stats: [], reachedLimit: true };
   }
 
-  const batchSize = Math.min(remaining, 15); // 한 번에 15개씩
-  onProgress?.(`추가 키워드 생성 중... (현재 ${existingKeywords.length}개 / 최대 ${MAX_KEYWORDS}개)`);
-  const moreCandidates = await generateMoreKeywordsWithAI(hospitalName, address, existingKeywords, category, batchSize);
+  const allNewStats: KeywordStat[] = [];
+  const allApiErrors: string[] = [];
+  const allUsedKeywords = new Set(existingKeywords.map(k => k.toLowerCase()));
+  const MAX_ROUNDS = 3; // 최대 3라운드까지 시도 (검색량 20 미만 필터 보충)
+  const TARGET_COUNT = Math.min(remaining, 15); // 목표: 15개 유효 키워드
 
-  if (moreCandidates.length === 0) {
-    return { stats: [] };
+  for (let round = 0; round < MAX_ROUNDS; round++) {
+    const currentExisting = [...existingKeywords, ...allNewStats.map(s => s.keyword)];
+    const batchSize = Math.min(remaining - allNewStats.length, 15);
+    if (batchSize <= 0) break;
+
+    onProgress?.(round === 0
+      ? `추가 키워드 생성 중... (현재 ${existingKeywords.length}개 / 최대 ${MAX_KEYWORDS}개)`
+      : `유효 키워드 보충 중... (${allNewStats.length}/${TARGET_COUNT}개 확보)`
+    );
+    const moreCandidates = await generateMoreKeywordsWithAI(hospitalName, address, currentExisting, category, batchSize);
+
+    if (moreCandidates.length === 0) break;
+
+    onProgress?.(`${moreCandidates.length}개 추가 키워드 분석 중...`);
+    const { stats, apiErrors } = await fetchKeywordStats(moreCandidates);
+    if (apiErrors?.length) allApiErrors.push(...apiErrors);
+
+    const roundStats = stats
+      .filter(s => s.monthlySearchVolume >= 20)
+      .filter(s => !allUsedKeywords.has(s.keyword.toLowerCase()));
+
+    for (const s of roundStats) {
+      allUsedKeywords.add(s.keyword.toLowerCase());
+      allNewStats.push(s);
+    }
+
+    // 목표 달성하면 중단
+    if (allNewStats.length >= TARGET_COUNT) break;
   }
 
-  onProgress?.(`${moreCandidates.length}개 추가 키워드 분석 중...`);
-  const { stats, apiErrors } = await fetchKeywordStats(moreCandidates);
-
-  // 중복 제거 (기존 키워드와 겹치지 않는 것만)
-  const existingSet = new Set(existingKeywords.map(k => k.toLowerCase()));
-  const filteredStats = stats
-    .filter(s => s.monthlySearchVolume >= 20)
-    .filter(s => !existingSet.has(s.keyword.toLowerCase()));
-
-  const newTotal = existingKeywords.length + filteredStats.length;
-  return { stats: filteredStats, apiErrors, reachedLimit: newTotal >= MAX_KEYWORDS };
+  const newTotal = existingKeywords.length + allNewStats.length;
+  return {
+    stats: allNewStats,
+    apiErrors: allApiErrors.length > 0 ? allApiErrors : undefined,
+    reachedLimit: newTotal >= MAX_KEYWORDS,
+  };
 }
