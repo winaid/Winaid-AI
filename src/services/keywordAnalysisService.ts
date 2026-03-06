@@ -166,7 +166,7 @@ ${dataRows}
 /**
  * 키워드 검색량 + 블로그 발행량 조회
  */
-export async function fetchKeywordStats(keywords: string[]): Promise<KeywordStat[]> {
+export async function fetchKeywordStats(keywords: string[]): Promise<{ stats: KeywordStat[]; apiErrors?: string[] }> {
   const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 
   const response = await fetch(`${API_BASE_URL}/api/naver/keyword-stats`, {
@@ -180,14 +180,20 @@ export async function fetchKeywordStats(keywords: string[]): Promise<KeywordStat
     throw new Error((error as any).error || `API 오류: ${response.status}`);
   }
 
-  const data = await response.json() as { results: KeywordStat[] };
+  const data = await response.json() as { results: KeywordStat[]; apiErrors?: string[] };
 
-  return data.results.map((item) => ({
+  if (data.apiErrors?.length) {
+    console.warn('[키워드분석] API 에러:', data.apiErrors);
+  }
+
+  const stats = data.results.map((item) => ({
     ...item,
     saturation: item.monthlySearchVolume > 0
       ? Math.round((item.blogPostCount / item.monthlySearchVolume) * 100) / 100
       : 0,
   }));
+
+  return { stats, apiErrors: data.apiErrors };
 }
 
 /**
@@ -213,7 +219,12 @@ export async function analyzeHospitalKeywords(
 
   // Step 2: 검색량 + 발행량 조회
   onProgress?.(`${candidates.length}개 키워드 검색량 분석 중...`);
-  const stats = await fetchKeywordStats(candidates);
+  const { stats, apiErrors } = await fetchKeywordStats(candidates);
+
+  if (apiErrors?.length) {
+    console.warn('[키워드분석] 네이버 API 에러:', apiErrors);
+    onProgress?.(`⚠️ 검색량 조회 에러: ${apiErrors[0]}`);
+  }
 
   // Step 3: 블루오션 분석 (검색량 데이터가 있는 키워드만)
   const hasData = stats.filter(s => s.monthlySearchVolume > 0);
@@ -221,6 +232,8 @@ export async function analyzeHospitalKeywords(
   if (hasData.length >= 3) {
     onProgress?.('블루오션 키워드 분석 중...');
     aiRecommendation = await analyzeBlueOceanWithAI(hospitalName, stats);
+  } else if (apiErrors?.length) {
+    aiRecommendation = `⚠️ 네이버 검색광고 API 오류로 검색량을 조회하지 못했습니다.\n\n**에러 내용:** ${apiErrors[0]}\n\nCloudflare 환경변수를 확인해주세요:\n- NAVER_SEARCHAD_CUSTOMER_ID\n- NAVER_SEARCHAD_API_KEY\n- NAVER_SEARCHAD_SECRET`;
   }
 
   return { stats, aiRecommendation };

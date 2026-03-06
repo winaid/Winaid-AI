@@ -30,29 +30,29 @@ async function generateSignature(timestamp: string, method: string, uri: string,
 async function getSearchVolume(
   keywords: string[],
   env: Env
-): Promise<Record<string, { monthlyPcQcCnt: number; monthlyMobileQcCnt: number }>> {
+): Promise<{ data: Record<string, { monthlyPcQcCnt: number; monthlyMobileQcCnt: number }>; error?: string }> {
+  const customerId = env.NAVER_SEARCHAD_CUSTOMER_ID?.trim();
+  const apiKey = env.NAVER_SEARCHAD_API_KEY?.trim();
+  const secret = env.NAVER_SEARCHAD_SECRET?.trim();
+
   const timestamp = String(Date.now());
   const method = 'GET';
   const uri = '/keywordstool';
-  const signature = await generateSignature(timestamp, method, uri, env.NAVER_SEARCHAD_SECRET);
+  const signature = await generateSignature(timestamp, method, uri, secret);
 
-  // hintKeywords: 각 키워드를 개행(\n)으로 구분
   const params = new URLSearchParams({
-    hintKeywords: keywords.join('\n'),
+    hintKeywords: keywords.join(','),
     showDetail: '1',
   });
 
   const url = `https://api.searchad.naver.com${uri}?${params.toString()}`;
-  console.log('[SearchAd] Request URL:', url.substring(0, 200));
-  console.log('[SearchAd] Customer ID:', env.NAVER_SEARCHAD_CUSTOMER_ID?.substring(0, 5) + '...');
-  console.log('[SearchAd] API Key exists:', !!env.NAVER_SEARCHAD_API_KEY);
 
   const response = await fetch(url, {
     method: 'GET',
     headers: {
       'X-Timestamp': timestamp,
-      'X-API-KEY': env.NAVER_SEARCHAD_API_KEY,
-      'X-Customer': env.NAVER_SEARCHAD_CUSTOMER_ID,
+      'X-API-KEY': apiKey,
+      'X-Customer': customerId,
       'X-Signature': signature,
     },
   });
@@ -60,7 +60,10 @@ async function getSearchVolume(
   if (!response.ok) {
     const errorText = await response.text();
     console.error('[SearchAd] API error:', response.status, errorText);
-    throw new Error(`검색광고 API 오류: ${response.status} - ${errorText}`);
+    return {
+      data: {},
+      error: `SearchAd ${response.status}: ${errorText}`,
+    };
   }
 
   const data = await response.json() as {
@@ -71,23 +74,21 @@ async function getSearchVolume(
     }>;
   };
 
-  console.log('[SearchAd] Got', data.keywordList?.length || 0, 'keywords');
-
   const result: Record<string, { monthlyPcQcCnt: number; monthlyMobileQcCnt: number }> = {};
   for (const item of data.keywordList || []) {
     const pc = item.monthlyPcQcCnt === '< 10' ? 5 : Number(item.monthlyPcQcCnt) || 0;
     const mobile = item.monthlyMobileQcCnt === '< 10' ? 5 : Number(item.monthlyMobileQcCnt) || 0;
     result[item.relKeyword] = { monthlyPcQcCnt: pc, monthlyMobileQcCnt: mobile };
   }
-  return result;
+  return { data: result };
 }
 
 async function getBlogPostCount(keyword: string, env: Env): Promise<number> {
   const searchUrl = `https://openapi.naver.com/v1/search/blog.json?query=${encodeURIComponent(keyword)}&display=1`;
   const response = await fetch(searchUrl, {
     headers: {
-      'X-Naver-Client-Id': env.NAVER_CLIENT_ID,
-      'X-Naver-Client-Secret': env.NAVER_CLIENT_SECRET,
+      'X-Naver-Client-Id': env.NAVER_CLIENT_ID?.trim(),
+      'X-Naver-Client-Secret': env.NAVER_CLIENT_SECRET?.trim(),
     },
   });
 
@@ -110,27 +111,22 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     const hasSearchAdKeys = context.env.NAVER_SEARCHAD_API_KEY && context.env.NAVER_SEARCHAD_SECRET && context.env.NAVER_SEARCHAD_CUSTOMER_ID;
     const hasBlogKeys = context.env.NAVER_CLIENT_ID && context.env.NAVER_CLIENT_SECRET;
 
-    console.log('[keyword-stats] SearchAd keys:', hasSearchAdKeys ? 'OK' : 'MISSING');
-    console.log('[keyword-stats] Blog keys:', hasBlogKeys ? 'OK' : 'MISSING');
-    console.log('[keyword-stats] Keywords count:', keywords.length);
-
     // 1) 검색량 조회 (5개씩 분할)
     let allVolumes: Record<string, { monthlyPcQcCnt: number; monthlyMobileQcCnt: number }> = {};
+    const errors: string[] = [];
 
-    if (hasSearchAdKeys) {
+    if (!hasSearchAdKeys) {
+      errors.push('SearchAd API 키가 설정되지 않았습니다. (NAVER_SEARCHAD_API_KEY, NAVER_SEARCHAD_SECRET, NAVER_SEARCHAD_CUSTOMER_ID)');
+    } else {
       const chunks: string[][] = [];
       for (let i = 0; i < keywords.length; i += 5) {
         chunks.push(keywords.slice(i, i + 5));
       }
 
       for (const chunk of chunks) {
-        try {
-          const volumes = await getSearchVolume(chunk, context.env);
-          allVolumes = { ...allVolumes, ...volumes };
-        } catch (e: any) {
-          console.error('[keyword-stats] SearchAd chunk error:', e.message);
-          // 한 청크 실패해도 계속 진행
-        }
+        const { data, error } = await getSearchVolume(chunk, context.env);
+        allVolumes = { ...allVolumes, ...data };
+        if (error) errors.push(error);
       }
     }
 
@@ -170,7 +166,13 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       };
     });
 
-    return new Response(JSON.stringify({ results }), {
+    // 에러가 있으면 응답에 포함 (디버깅용)
+    const responseBody: any = { results };
+    if (errors.length > 0) {
+      responseBody.apiErrors = [...new Set(errors)];
+    }
+
+    return new Response(JSON.stringify(responseBody), {
       status: 200,
       headers: {
         'Content-Type': 'application/json',
