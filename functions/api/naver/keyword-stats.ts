@@ -49,12 +49,14 @@ async function getSearchVolume(
     return { data: {}, error: 'hintKeywords: 유효한 키워드 없음 (정제 후)' };
   }
 
-  // 한글은 인코딩하지 않고 공백만 %20으로 변환, 쉼표로 연결
-  const keywordParam = cleanKeywords.map(k => k.replace(/ /g, '%20')).join(',');
+  // 공백을 제거하여 키워드를 붙여쓰기 (네이버 키워드 도구는 공백 없는 키워드도 동일 결과)
+  // 예: "다대동 치과" → "다대동치과"
+  const noSpaceKeywords = cleanKeywords.map(k => k.replace(/\s+/g, ''));
+  const keywordParam = noSpaceKeywords.join(',');
   const fetchUrl = `https://api.searchad.naver.com${uri}?hintKeywords=${keywordParam}&showDetail=1`;
 
-  console.log('[SearchAd v3] keywords:', cleanKeywords.join(', '));
-  console.log('[SearchAd v3] URL:', fetchUrl.substring(0, 500));
+  console.log('[SearchAd v4] keywords:', noSpaceKeywords.join(', '));
+  console.log('[SearchAd v4] URL:', fetchUrl.substring(0, 500));
 
   const response = await fetch(fetchUrl, {
     method: 'GET',

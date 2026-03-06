@@ -292,7 +292,7 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
             <button
               key={team.id}
               type="button"
-              onClick={() => { setSelectedTeam(selectedTeam === team.id ? null : team.id); setShowHospitalDropdown(true); }}
+              onClick={() => { setSelectedTeam(team.id); setShowHospitalDropdown(true); }}
               className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-all ${
                 selectedTeam === team.id
                   ? 'bg-white text-blue-600 shadow-sm'
@@ -306,12 +306,14 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
 
         <div className="relative" ref={hospitalDropdownRef}>
           <label className={labelCls}>병원명</label>
+          {selectedTeam !== null ? (
+          <>
           <div className="relative">
             <input
               type="text"
               value={hospitalName}
               onChange={(e) => { setHospitalName(e.target.value); localStorage.setItem('hospitalName', e.target.value); }}
-              placeholder="병원명 입력 또는 선택"
+              placeholder="병원명 선택"
               className={inputCls}
             />
             <button
@@ -322,7 +324,7 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
               <svg className={`w-4 h-4 transition-transform ${showHospitalDropdown ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
             </button>
           </div>
-          {showHospitalDropdown && selectedTeam !== null && (
+          {showHospitalDropdown && (
             <div className="absolute z-50 mt-1 w-full bg-white rounded-xl border border-slate-200 shadow-lg overflow-hidden animate-in fade-in slide-in-from-top-1 duration-150">
               {/* 팀 헤더 */}
               <div className="px-3 py-2 bg-blue-50 border-b border-blue-100">
@@ -372,6 +374,12 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
           )}
           {selectedManager && hospitalName && (
             <p className="mt-1 text-[11px] text-slate-400">담당: {selectedManager}</p>
+          )}
+          </>
+          ) : (
+            <div className="px-3 py-2.5 border border-slate-200 rounded-lg text-sm text-slate-400 bg-slate-50">
+              팀을 먼저 선택하세요
+            </div>
           )}
         </div>
 
