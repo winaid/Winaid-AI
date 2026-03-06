@@ -1,8 +1,11 @@
 /**
  * 키워드 분석 서비스
- * - 병원 주소 기반 지역 키워드 생성
+ * - Gemini 3.1 Pro로 병원 주소 기반 반경 5km 지역 키워드 생성
  * - 네이버 검색광고 API로 검색량 + 블로그 발행량 조회
+ * - Gemini로 블루오션 키워드 분석 및 추천
  */
+
+import { callGemini, GEMINI_MODEL, TIMEOUTS } from './geminiClient';
 
 export interface KeywordStat {
   keyword: string;
@@ -13,16 +16,67 @@ export interface KeywordStat {
   saturation?: number; // 발행량/검색량 비율 (낮을수록 블루오션)
 }
 
-// 주소에서 지역 키워드 추출
-export function extractLocationKeywords(address: string): string[] {
-  if (!address) return [];
+export interface KeywordAnalysisResult {
+  stats: KeywordStat[];
+  aiRecommendation?: string; // Gemini 블루오션 분석 결과
+}
 
+/**
+ * Gemini로 주소 기반 지역 키워드 후보 생성
+ * - 반경 5km 내 동네, 역, 랜드마크 기반
+ * - 실제 사람들이 검색할 법한 조합
+ */
+async function generateKeywordsWithAI(
+  hospitalName: string,
+  address: string,
+  category?: string
+): Promise<string[]> {
+  const prompt = `당신은 네이버 블로그 SEO 키워드 전문가입니다.
+
+아래 병원의 주소를 기반으로, 반경 5km 이내에서 실제 사람들이 네이버에 검색할 법한 지역+진료 키워드를 생성해주세요.
+
+병원명: ${hospitalName}
+주소: ${address}
+진료과: ${category || '치과'}
+
+규칙:
+1. 주소에서 동/구/읍/면 추출
+2. 반경 5km 이내 주요 지하철역 이름 포함 (예: 마천동 → 마천역, 거여역, 개롱역)
+3. 인근 유명 동네/지역명 포함 (예: 마천동 → 송파구, 문정동)
+4. 키워드 조합: "{지역} 치과", "{지역} 임플란트", "{역명} 치과", "{역명} 임플란트", "{동} 치아교정" 등
+5. 병원명 자체도 포함
+6. 실제 네이버에서 검색량이 있을 법한 키워드만 (너무 마이너한 건 제외)
+7. 최소 15개, 최대 25개
+
+JSON 배열로만 응답하세요. 설명 없이 키워드 문자열 배열만:
+["키워드1", "키워드2", ...]`;
+
+  try {
+    const result = await callGemini({
+      prompt,
+      model: GEMINI_MODEL.FLASH,
+      responseType: 'json',
+      timeout: TIMEOUTS.QUICK_OPERATION,
+      temperature: 0.3,
+    });
+
+    const parsed = typeof result === 'string' ? JSON.parse(result) : result;
+    if (Array.isArray(parsed)) {
+      return parsed.filter((k: any) => typeof k === 'string' && k.trim()).slice(0, 25);
+    }
+    return [];
+  } catch (e) {
+    console.error('AI 키워드 생성 실패, fallback 사용:', e);
+    return fallbackKeywordGeneration(hospitalName, address, category);
+  }
+}
+
+/**
+ * 폴백: 정적 파싱으로 키워드 생성
+ */
+function fallbackKeywordGeneration(hospitalName: string, address: string, category?: string): string[] {
   const locations: string[] = [];
 
-  // 시/도 추출
-  const cityMatch = address.match(/(서울|부산|대구|인천|광주|대전|울산|세종|경기|강원|충북|충남|전북|전남|경북|경남|제주)/);
-
-  // 구/군/시 추출
   const guMatch = address.match(/([가-힣]+[구군시])\b/g);
   if (guMatch) {
     for (const gu of guMatch) {
@@ -32,73 +86,68 @@ export function extractLocationKeywords(address: string): string[] {
     }
   }
 
-  // 동/읍/면 추출
   const dongMatch = address.match(/([가-힣]+[동읍면])\b/g);
   if (dongMatch) {
     for (const dong of dongMatch) {
-      if (dong.length >= 2 && dong.length <= 6) {
-        locations.push(dong);
-      }
+      if (dong.length >= 2 && dong.length <= 6) locations.push(dong);
     }
   }
 
-  // 역 이름 추출 (OO역 근처)
-  const stationMatch = address.match(/([가-힣]+역)\b/g);
-  if (stationMatch) locations.push(...stationMatch);
-
-  // 시/도 + 구 조합 (예: "인천 서구")
-  if (cityMatch && guMatch) {
-    locations.push(`${cityMatch[1]} ${guMatch[0]}`);
-  }
-
-  return [...new Set(locations)];
-}
-
-// 지역 + 치과 관련 키워드 조합 생성
-export function generateKeywordCandidates(
-  locationKeywords: string[],
-  hospitalName: string,
-  category?: string
-): string[] {
-  const dentalTerms = [
-    '치과', '임플란트', '치아교정', '라미네이트',
-    '치아미백', '충치치료', '스케일링', '사랑니발치',
-  ];
-
-  // 카테고리별 추가 키워드
-  const categoryTerms: Record<string, string[]> = {
-    '치과': dentalTerms,
-    '교정과': ['치아교정', '투명교정', '교정치과', '교정비용'],
-    '임플란트': ['임플란트', '임플란트비용', '임플란트추천', '원데이임플란트'],
-    '소아치과': ['소아치과', '어린이치과', '아이치과', '소아교정'],
-    '성형외과': ['성형외과', '쌍꺼풀', '코성형', '안면윤곽'],
-    '피부과': ['피부과', '여드름', '레이저', '보톡스'],
-    '안과': ['안과', '라식', '라섹', '백내장'],
-    '한의원': ['한의원', '추나요법', '침', '한약'],
-  };
-
-  const terms = categoryTerms[category || '치과'] || dentalTerms;
-  const keywords: string[] = [];
-
-  // 병원명 자체
-  keywords.push(hospitalName);
-
-  // 지역 + 진료 키워드
-  for (const loc of locationKeywords) {
-    for (const term of terms) {
+  const dentalTerms = ['치과', '임플란트', '치아교정', '스케일링'];
+  const keywords = [hospitalName];
+  for (const loc of [...new Set(locations)]) {
+    for (const term of dentalTerms) {
       keywords.push(`${loc} ${term}`);
     }
-    // 지역+치과 (기본)
-    if (!terms.includes('치과')) {
-      keywords.push(`${loc} 치과`);
-    }
   }
-
-  // 최대 20개로 제한 (API 비용)
   return [...new Set(keywords)].slice(0, 20);
 }
 
-// 키워드 검색량 + 블로그 발행량 조회
+/**
+ * Gemini로 블루오션 키워드 분석
+ */
+async function analyzeBlueOceanWithAI(
+  hospitalName: string,
+  stats: KeywordStat[]
+): Promise<string> {
+  const dataRows = stats
+    .map(s => `${s.keyword} | 검색량: ${s.monthlySearchVolume.toLocaleString()} | 발행량: ${s.blogPostCount.toLocaleString()} | 포화도: ${s.saturation?.toFixed(1)}`)
+    .join('\n');
+
+  const prompt = `당신은 네이버 블로그 SEO 전략 전문가입니다.
+
+아래는 "${hospitalName}"의 지역 키워드별 월간 검색량과 블로그 누적 발행량 데이터입니다.
+
+${dataRows}
+
+위 데이터를 분석해서 다음을 알려주세요:
+
+1. **블루오션 키워드 TOP 3** (검색량 대비 발행량이 적은 키워드 = 경쟁이 낮고 기회가 큰 키워드)
+   - 왜 이 키워드가 좋은지 한 줄 설명
+2. **레드오션 주의 키워드** (발행량이 너무 많아 경쟁이 치열한 키워드)
+3. **추천 블로그 주제 3개** (블루오션 키워드를 활용한 구체적인 블로그 글 제목)
+
+실무적이고 간결하게 답해주세요. 마크다운 사용 가능.`;
+
+  try {
+    const result = await callGemini({
+      prompt,
+      model: GEMINI_MODEL.PRO,
+      responseType: 'text',
+      timeout: TIMEOUTS.QUICK_OPERATION,
+      temperature: 0.4,
+    });
+
+    return typeof result === 'string' ? result : String(result);
+  } catch (e) {
+    console.error('AI 블루오션 분석 실패:', e);
+    return '';
+  }
+}
+
+/**
+ * 키워드 검색량 + 블로그 발행량 조회
+ */
 export async function fetchKeywordStats(keywords: string[]): Promise<KeywordStat[]> {
   const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 
@@ -115,7 +164,6 @@ export async function fetchKeywordStats(keywords: string[]): Promise<KeywordStat
 
   const data = await response.json() as { results: KeywordStat[] };
 
-  // 포화도 계산 (발행량 / 검색량)
   return data.results.map((item) => ({
     ...item,
     saturation: item.monthlySearchVolume > 0
@@ -124,18 +172,38 @@ export async function fetchKeywordStats(keywords: string[]): Promise<KeywordStat
   }));
 }
 
-// 병원 주소 기반 키워드 분석 전체 플로우
+/**
+ * 병원 주소 기반 키워드 분석 전체 플로우
+ *
+ * 1) Gemini로 지역 키워드 후보 생성 (반경 5km, 역/동/구)
+ * 2) 네이버 API로 검색량 + 발행량 조회
+ * 3) Gemini로 블루오션 분석 및 추천
+ */
 export async function analyzeHospitalKeywords(
   hospitalName: string,
   address: string,
-  category?: string
-): Promise<KeywordStat[]> {
-  const locationKeywords = extractLocationKeywords(address);
-  const candidates = generateKeywordCandidates(locationKeywords, hospitalName, category);
+  category?: string,
+  onProgress?: (msg: string) => void
+): Promise<KeywordAnalysisResult> {
+  // Step 1: AI로 키워드 후보 생성
+  onProgress?.('근처 지역 키워드 생성 중...');
+  const candidates = await generateKeywordsWithAI(hospitalName, address, category);
 
   if (candidates.length === 0) {
-    throw new Error('주소에서 지역 키워드를 추출할 수 없습니다.');
+    throw new Error('키워드를 생성할 수 없습니다.');
   }
 
-  return fetchKeywordStats(candidates);
+  // Step 2: 검색량 + 발행량 조회
+  onProgress?.(`${candidates.length}개 키워드 검색량 분석 중...`);
+  const stats = await fetchKeywordStats(candidates);
+
+  // Step 3: 블루오션 분석 (검색량 데이터가 있는 키워드만)
+  const hasData = stats.filter(s => s.monthlySearchVolume > 0);
+  let aiRecommendation = '';
+  if (hasData.length >= 3) {
+    onProgress?.('블루오션 키워드 분석 중...');
+    aiRecommendation = await analyzeBlueOceanWithAI(hospitalName, stats);
+  }
+
+  return { stats, aiRecommendation };
 }

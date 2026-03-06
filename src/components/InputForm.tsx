@@ -81,6 +81,8 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
   const [selectedManager, setSelectedManager] = useState<string>('');
   const [selectedHospitalEntry, setSelectedHospitalEntry] = useState<HospitalEntry | null>(null);
   const [keywordStats, setKeywordStats] = useState<KeywordStat[]>([]);
+  const [keywordAiRec, setKeywordAiRec] = useState<string>('');
+  const [keywordProgress, setKeywordProgress] = useState<string>('');
   const [isAnalyzingKeywords, setIsAnalyzingKeywords] = useState(false);
   const [showKeywordPanel, setShowKeywordPanel] = useState(false);
   const [keywordSortBy, setKeywordSortBy] = useState<'volume' | 'blog' | 'saturation'>('volume');
@@ -175,18 +177,23 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
     if (!selectedHospitalEntry?.address) return;
     setIsAnalyzingKeywords(true);
     setShowKeywordPanel(true);
+    setKeywordAiRec('');
+    setKeywordProgress('');
     try {
-      const stats = await analyzeHospitalKeywords(
+      const result = await analyzeHospitalKeywords(
         hospitalName,
         selectedHospitalEntry.address,
-        category
+        category,
+        (msg) => setKeywordProgress(msg)
       );
-      setKeywordStats(stats);
+      setKeywordStats(result.stats);
+      setKeywordAiRec(result.aiRecommendation || '');
     } catch (e: any) {
       console.error('키워드 분석 실패:', e);
       setKeywordStats([]);
     } finally {
       setIsAnalyzingKeywords(false);
+      setKeywordProgress('');
     }
   };
 
@@ -404,7 +411,7 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
               {isAnalyzingKeywords ? (
                 <div className="p-6 text-center">
                   <div className="w-6 h-6 border-2 border-blue-200 border-t-blue-500 rounded-full animate-spin mx-auto mb-2" />
-                  <p className="text-xs text-slate-400">검색량 분석 중...</p>
+                  <p className="text-xs text-slate-400">{keywordProgress || '검색량 분석 중...'}</p>
                 </div>
               ) : keywordStats.length > 0 ? (
                 <div className="max-h-72 overflow-y-auto">
@@ -455,6 +462,28 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
                   <div className="px-3 py-2 bg-slate-50 border-t border-slate-100">
                     <p className="text-[10px] text-slate-400">클릭하면 키워드에 추가됩니다 | 포화도 = 발행량/검색량 (낮을수록 블루오션)</p>
                   </div>
+                  {/* AI 블루오션 분석 */}
+                  {keywordAiRec && (
+                    <div className="border-t border-slate-200 p-3 bg-gradient-to-b from-blue-50 to-white">
+                      <div className="flex items-center gap-1.5 mb-2">
+                        <span className="text-sm">🎯</span>
+                        <span className="text-xs font-bold text-blue-700">AI 블루오션 분석</span>
+                      </div>
+                      <div
+                        className="text-xs text-slate-600 leading-relaxed prose prose-xs max-w-none [&_strong]:text-blue-700 [&_h2]:text-sm [&_h2]:font-bold [&_h2]:mt-2 [&_h2]:mb-1 [&_ul]:my-1 [&_li]:my-0.5"
+                        dangerouslySetInnerHTML={{
+                          __html: keywordAiRec
+                            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                            .replace(/^### (.*$)/gm, '<h2>$1</h2>')
+                            .replace(/^## (.*$)/gm, '<h2>$1</h2>')
+                            .replace(/^- (.*$)/gm, '<li>$1</li>')
+                            .replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>')
+                            .replace(/\n{2,}/g, '<br/>')
+                            .replace(/\n/g, '<br/>')
+                        }}
+                      />
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="p-4 text-center text-xs text-slate-400">분석 결과가 없습니다</div>
