@@ -136,11 +136,14 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
 
         <div className="relative max-w-5xl mx-auto text-center w-full pt-20">
           {/* Logo */}
-          <div className="flex items-center justify-center gap-3.5 mb-12">
-            <img src="/280_logo.png" alt="" className="h-14 w-14 border-0 outline-none block" />
-            <span className="font-black text-4xl tracking-tight text-slate-800">
-              WIN<span className="text-blue-600">AID</span>
-            </span>
+          <div className="flex flex-col items-center mb-12">
+            <div className="flex items-center gap-3.5 mb-2">
+              <img src="/280_logo.png" alt="" className="h-14 w-14 border-0 outline-none block" />
+              <span className="font-black text-4xl tracking-tight text-slate-800">
+                WIN<span className="text-blue-600">AID</span>
+              </span>
+            </div>
+            <span className="text-[11px] font-semibold tracking-[0.3em] uppercase text-slate-400">advertising company</span>
           </div>
 
           {/* Badge */}
@@ -264,34 +267,37 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
       {/* ═══════════════════════════════════════ */}
       {/* IMPACT - Stats with counters */}
       {/* ═══════════════════════════════════════ */}
-      <section className="py-24 bg-[#fafbfc]">
+      <section className="py-24 bg-gradient-to-br from-slate-900 via-slate-800 to-blue-900 text-white relative overflow-hidden">
+        {/* Decorative circles */}
+        <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-blue-500/10 rounded-full blur-[120px]" />
+        <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-violet-500/10 rounded-full blur-[100px]" />
         <div className="max-w-6xl mx-auto px-6 lg:px-8">
-          <div id="impact" data-animate className={getAnimClass('impact')}>
+          <div id="impact" data-animate className={`${getAnimClass('impact')} relative`}>
             <div className="text-center mb-16">
-              <p className="text-blue-600 font-bold text-sm tracking-widest uppercase mb-4">IMPACT</p>
-              <h2 className="text-3xl md:text-5xl font-black text-slate-900 leading-tight">
+              <p className="text-blue-400 font-bold text-sm tracking-widest uppercase mb-4">IMPACT</p>
+              <h2 className="text-3xl md:text-5xl font-black text-white leading-tight">
                 수치로 증명되는<br />압도적인 마케팅 성과
               </h2>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+          <div className="relative grid grid-cols-2 md:grid-cols-4 gap-5">
             {[
-              { number: '13', unit: '년+', label: '병원마케팅 노하우', sub: '2011년부터 축적', gradient: 'from-blue-500 to-blue-600' },
-              { number: '300', unit: '+', label: '병원 진행건', sub: '전국 치과 마케팅', gradient: 'from-emerald-500 to-teal-600' },
-              { number: '500', unit: '+', label: '원장님과 함께', sub: '지속적인 파트너십', gradient: 'from-violet-500 to-purple-600' },
-              { number: '1', unit: '분', label: 'AI 콘텐츠 생성', sub: '블로그 자동 완성', gradient: 'from-amber-500 to-orange-600' },
+              { number: '13', unit: '년+', label: '병원마케팅 노하우', sub: '2011년부터 축적', gradient: 'from-blue-400 to-cyan-400' },
+              { number: '300', unit: '+', label: '병원 진행건', sub: '전국 치과 마케팅', gradient: 'from-emerald-400 to-teal-400' },
+              { number: '500', unit: '+', label: '원장님과 함께', sub: '지속적인 파트너십', gradient: 'from-violet-400 to-purple-400' },
+              { number: '1', unit: '분', label: 'AI 콘텐츠 생성', sub: '블로그 자동 완성', gradient: 'from-amber-400 to-orange-400' },
             ].map((stat, i) => (
               <div
                 key={i}
                 id={`stat-${i}`}
                 data-animate
-                className={`${getAnimClass(`stat-${i}`)} bg-white rounded-2xl p-7 border border-slate-100 hover:border-slate-200 hover:shadow-lg hover:shadow-slate-200/50 transition-all duration-300 group`}
+                className={`${getAnimClass(`stat-${i}`)} bg-white/10 backdrop-blur-sm rounded-2xl p-7 border border-white/10 hover:bg-white/15 hover:border-white/20 transition-all duration-300 group`}
               >
                 <div className={`text-4xl md:text-5xl font-black bg-gradient-to-r ${stat.gradient} bg-clip-text text-transparent mb-1`}>
                   {stat.number}<span className="text-3xl md:text-4xl">{stat.unit}</span>
                 </div>
-                <div className="text-base font-bold text-slate-800 mb-1">{stat.label}</div>
+                <div className="text-base font-bold text-white mb-1">{stat.label}</div>
                 <div className="text-xs text-slate-400 font-medium">{stat.sub}</div>
               </div>
             ))}
@@ -379,17 +385,25 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
           {/* 추가 기능 그리드 */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
             {[
-              { label: 'SEO 최적화', icon: '🔍', desc: '네이버 상위노출' },
-              { label: '유사도 검사', icon: '📊', desc: '중복 콘텐츠 방지' },
-              { label: 'AI 정밀보정', icon: '✨', desc: 'AI 흔적 제거' },
-              { label: '보도자료', icon: '📰', desc: '언론보도 작성' },
+              { label: 'SEO 최적화', desc: '네이버 상위노출', color: 'text-sky-500 bg-sky-50', icon: (
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3v11.25A2.25 2.25 0 006 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0118 16.5h-2.25m-7.5 0h7.5m-7.5 0l-1 3m8.5-3l1 3m0 0l.5 1.5m-.5-1.5h-9.5m0 0l-.5 1.5M9 11.25v1.5M12 9v3.75m3-6v6" /></svg>
+              )},
+              { label: '유사도 검사', desc: '중복 콘텐츠 방지', color: 'text-orange-500 bg-orange-50', icon: (
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" /></svg>
+              )},
+              { label: 'AI 정밀보정', desc: 'AI 흔적 제거', color: 'text-pink-500 bg-pink-50', icon: (
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z" /></svg>
+              )},
+              { label: '보도자료', desc: '언론보도 작성', color: 'text-teal-500 bg-teal-50', icon: (
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 7.5h1.5m-1.5 3h1.5m-7.5 3h7.5m-7.5 3h7.5m3-9h3.375c.621 0 1.125.504 1.125 1.125V18a2.25 2.25 0 01-2.25 2.25M16.5 7.5V18a2.25 2.25 0 002.25 2.25M16.5 7.5V4.875c0-.621-.504-1.125-1.125-1.125H4.125C3.504 3.75 3 4.254 3 4.875V18a2.25 2.25 0 002.25 2.25h13.5M6 7.5h3v3H6v-3z" /></svg>
+              )},
             ].map((feat, i) => (
               <button
                 key={i}
                 onClick={onStart}
                 className="text-left p-5 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-white hover:border-slate-200 hover:shadow-md transition-all duration-300 group"
               >
-                <div className="text-2xl mb-2">{feat.icon}</div>
+                <div className={`w-10 h-10 rounded-xl ${feat.color} flex items-center justify-center mb-3`}>{feat.icon}</div>
                 <div className="text-sm font-bold text-slate-800">{feat.label}</div>
                 <div className="text-xs text-slate-400 mt-0.5">{feat.desc}</div>
               </button>
@@ -507,7 +521,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
       {/* ═══════════════════════════════════════ */}
       {/* USE CASES */}
       {/* ═══════════════════════════════════════ */}
-      <section className="py-24 bg-white">
+      <section className="py-24 bg-gradient-to-br from-blue-50 via-indigo-50/50 to-violet-50">
         <div className="max-w-6xl mx-auto px-6 lg:px-8">
           <div id="usecases" data-animate className={getAnimClass('usecases')}>
             <div className="text-center mb-16">
@@ -534,7 +548,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
                 key={i}
                 id={`usecase-${i}`}
                 data-animate
-                className={`${getAnimClass(`usecase-${i}`)} bg-[#fafbfc] rounded-2xl p-8 border border-slate-100 hover:bg-white hover:shadow-lg hover:shadow-slate-200/40 hover:border-slate-200 transition-all duration-300`}
+                className={`${getAnimClass(`usecase-${i}`)} bg-white/80 backdrop-blur-sm rounded-2xl p-8 border border-white/60 hover:bg-white hover:shadow-xl hover:shadow-blue-100/40 transition-all duration-300`}
               >
                 <div className={`w-12 h-12 rounded-xl ${item.bg} ${item.color} flex items-center justify-center mb-6`}>{item.icon}</div>
                 <p className="text-slate-400 text-sm line-through mb-2 font-medium">{item.pain}</p>
@@ -549,7 +563,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
       {/* ═══════════════════════════════════════ */}
       {/* HOW IT WORKS */}
       {/* ═══════════════════════════════════════ */}
-      <section className="py-24 bg-[#fafbfc]">
+      <section className="py-24 bg-white">
         <div className="max-w-5xl mx-auto px-6 lg:px-8">
           <div id="howitworks" data-animate className={getAnimClass('howitworks')}>
             <div className="text-center mb-20">
@@ -591,7 +605,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
       {/* ═══════════════════════════════════════ */}
       {/* ABOUT */}
       {/* ═══════════════════════════════════════ */}
-      <section className="py-24 bg-white">
+      <section className="py-24 bg-gradient-to-br from-amber-50/50 via-orange-50/30 to-yellow-50/40">
         <div className="max-w-5xl mx-auto px-6 lg:px-8">
           <div id="about" data-animate className={getAnimClass('about')}>
             <div className="text-center mb-16">
@@ -608,16 +622,24 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
 
           <div className="grid md:grid-cols-2 gap-4 max-w-3xl mx-auto">
             {[
-              { text: '300+ 치과 마케팅 운영 경험', icon: '🏥' },
-              { text: '네이버 플레이스 상위노출 전략', icon: '🔍' },
-              { text: '500+ 원장님과의 지속적 파트너십', icon: '🤝' },
-              { text: '의료광고법 전문 컨설팅 & AI 검증', icon: '⚖️' },
+              { text: '300+ 치과 마케팅 운영 경험', color: 'text-blue-500 bg-blue-50', icon: (
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12m-.75 4.5H21m-3.75 0h.008v.008h-.008V7.5z" /></svg>
+              )},
+              { text: '네이버 플레이스 상위노출 전략', color: 'text-emerald-500 bg-emerald-50', icon: (
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941" /></svg>
+              )},
+              { text: '500+ 원장님과의 지속적 파트너십', color: 'text-violet-500 bg-violet-50', icon: (
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" /></svg>
+              )},
+              { text: '의료광고법 전문 컨설팅 & AI 검증', color: 'text-amber-500 bg-amber-50', icon: (
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 3v17.25m0 0c-1.472 0-2.882.265-4.185.75M12 20.25c1.472 0 2.882.265 4.185.75M18.75 4.97A48.416 48.416 0 0012 4.5c-2.291 0-4.545.16-6.75.47m13.5 0c1.01.143 2.01.317 3 .52m-3-.52l2.62 10.726c.122.499-.106 1.028-.589 1.202a5.988 5.988 0 01-2.031.352 5.988 5.988 0 01-2.031-.352c-.483-.174-.711-.703-.59-1.202L18.75 4.971zm-16.5.52c.99-.203 1.99-.377 3-.52m0 0l2.62 10.726c.122.499-.106 1.028-.589 1.202a5.989 5.989 0 01-2.031.352 5.989 5.989 0 01-2.031-.352c-.483-.174-.711-.703-.59-1.202L5.25 4.971z" /></svg>
+              )},
             ].map((item, i) => (
               <div
                 key={i}
                 className="flex items-center gap-4 bg-[#fafbfc] rounded-xl px-6 py-5 border border-slate-100 hover:border-blue-200 hover:bg-blue-50/30 transition-all duration-300"
               >
-                <div className="text-2xl flex-shrink-0">{item.icon}</div>
+                <div className={`w-10 h-10 rounded-xl ${item.color} flex items-center justify-center flex-shrink-0`}>{item.icon}</div>
                 <span className="font-semibold text-slate-700">{item.text}</span>
               </div>
             ))}
