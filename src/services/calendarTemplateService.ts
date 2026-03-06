@@ -965,7 +965,14 @@ ${logoInstructions}${portraitWarning}`;
 [HOSPITAL INFO - display at the bottom of the image, small but legible text]
 ${req.hospitalInfo.map(line => `"${line}"`).join('\n')}` : '';
 
-  return `🚨 RENDER ALL KOREAN TEXT EXACTLY AS PROVIDED - DO NOT TRANSLATE OR CHANGE! 🚨
+  return `🚨🚨🚨 KOREAN TEXT ACCURACY - THIS IS THE #1 PRIORITY 🚨🚨🚨
+Every Korean character must be rendered PERFECTLY and EXACTLY as provided.
+- Copy each Korean character stroke-by-stroke from the quoted text below.
+- Korean characters are complex (e.g. 직 = ㅈ+ㅣ+ㄱ, 원 = ㅇ+ㅝ+ㄴ, 모 = ㅁ+ㅗ, 집 = ㅈ+ㅣ+ㅂ).
+- If you cannot render a Korean word correctly, use an ICON or ILLUSTRATION instead - do NOT show garbled/wrong Korean.
+- DOUBLE CHECK every Korean character before finalizing. Each syllable block must be a real, correctly-formed Korean character.
+- Keep Korean text MINIMAL - prefer using icons, illustrations, and visual design elements over lots of text.
+- For body content, use ICONS + SHORT Korean labels (2-4 characters each) rather than full sentences.
 ${userRequestBlock}
 [IMAGE TYPE]
 ${categoryLabels[category] || 'hospital announcement'}
@@ -977,6 +984,7 @@ ${stylePrompt}
 ${brandColorBlock}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
 [TEXT CONTENT - THE ONLY SOURCE OF TRUTH FOR ALL TEXT AND NUMBERS]
+⚠️ ONLY render text that appears inside "quotes" below. Everything else is a design instruction.
 ${textContent}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
 ${brandingBlock}
@@ -986,12 +994,16 @@ ${hospitalInfoBlock}
 - Aspect ratio: ${aspectDesc} (ALWAYS use this ratio, IGNORE reference image ratio)
 - Resolution: high quality, crisp text
 - All text in Korean, clearly legible
+- Use large, clean fonts for Korean text (sans-serif preferred for readability)
+- Prefer FEWER words with LARGER font size over many small words
 
 ⛔ FORBIDDEN:
 - Do NOT render labels like "날짜:", "제목:", "[MAIN TITLE]" - only render content in quotes
 - Do NOT copy text/numbers/dates from reference images - use ONLY the data above
+- Do NOT render "PAGE X of Y" or any page numbering on the image
 - No watermarks, no English text (except decorative), no stock photo feel
-- No blurry text, no raw metadata labels`.trim();
+- No blurry text, no raw metadata labels
+- No garbled or incorrect Korean characters - if unsure, use an icon instead`.trim();
 }
 
 function buildScheduleTextContent(data: {
@@ -1180,24 +1192,32 @@ function buildHiringTextContent(data: {
 
   const hint = typeHints[page.type] || typeHints.free;
   const isMultiPage = totalPages && totalPages > 1;
-  const pageLabel = isMultiPage
-    ? `[PAGE ${currentPage} of ${totalPages} - Instagram carousel post for hospital recruitment]\n`
+  // 페이지 정보는 디자인 지시로만 사용 - 이미지에 "PAGE X of Y" 텍스트를 렌더링하지 않도록 함
+  const pageInstruction = isMultiPage
+    ? `[DESIGN INSTRUCTION - this is page ${currentPage} of ${totalPages} in a carousel series. Do NOT render any page number or "PAGE X of Y" text on the image.]\n`
     : '';
 
-  let content = `${pageLabel}[${hint.layout}]`;
+  let content = `${pageInstruction}[${hint.layout}]`;
 
-  if (lines.length === 0) {
-    content += `\n[MAIN TITLE - largest, bold, center] "${hint.fallback}"`;
-    return content;
-  }
+  // 채용 공고 기본 콘텐츠 (사용자가 아무것도 입력하지 않은 경우)
+  const defaultContent: Record<string, string[]> = {
+    cover: ['직원 모집', '함께 성장할 인재를 찾습니다'],
+    requirements: ['자격 요건', '해당 면허 소지자', '경력 우대', '성실하고 책임감 있는 분'],
+    benefits: ['복리후생', '4대보험 가입', '중식 제공', '연차 보장', '인센티브 지급'],
+    contact: ['지원 방법', '이메일 지원', '전화 문의 가능', '채용시까지'],
+    intro: ['병원 소개', '최신 장비 보유', '쾌적한 근무 환경'],
+    free: ['채용 안내'],
+  };
+
+  const effectiveLines = lines.length > 0 ? lines : (defaultContent[page.type] || defaultContent.free);
 
   // 첫 줄 = 제목, 나머지 = 내용
-  content += `\n[HEADING - bold, prominent] "${lines[0]}"`;
-  if (lines.length > 1) {
-    const bodyLines = lines.slice(1).map(l =>
+  content += `\n[HEADING - bold, prominent] "${effectiveLines[0]}"`;
+  if (effectiveLines.length > 1) {
+    const bodyLines = effectiveLines.slice(1).map(l =>
       l.startsWith('-') || l.startsWith('*') || l.startsWith('•') ? `  ${l}` : l
     );
-    content += `\n[CONTENT - well-structured, readable, with appropriate icons/bullets]\n${bodyLines.join('\n')}`;
+    content += `\n[CONTENT - well-structured, readable, with appropriate icons/bullets]\n${bodyLines.map(l => `"${l}"`).join('\n')}`;
   }
   return content;
 }
