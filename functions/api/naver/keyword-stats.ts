@@ -71,7 +71,7 @@ async function getSearchVolume(
     console.error('[SearchAd] API error:', response.status, errorText);
     return {
       data: {},
-      error: `SearchAd ${response.status}: ${errorText}`,
+      error: `SearchAd ${response.status}: ${errorText} [URL: ${fetchUrl.substring(0, 200)}] [keywords: ${cleanKeywords.join(',')}]`,
     };
   }
 
