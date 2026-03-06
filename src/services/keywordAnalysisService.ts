@@ -65,7 +65,7 @@ async function generateKeywordsWithAI(
 4. 키워드 조합: "{지역} 치과", "{지역} 임플란트", "{역명} 치과", "{역명} 임플란트", "{동} 치아교정" 등
 5. 병원명 자체도 포함
 6. 실제 네이버에서 검색량이 있을 법한 키워드만 (너무 마이너한 건 제외)
-7. 정확히 30개 생성
+7. 정확히 15개 생성
 
 JSON 배열로만 응답하세요. 설명 없이 키워드 문자열 배열만:
 ["키워드1", "키워드2", ...]`;
@@ -81,7 +81,7 @@ JSON 배열로만 응답하세요. 설명 없이 키워드 문자열 배열만:
 
     const parsed = typeof result === 'string' ? JSON.parse(result) : result;
     if (Array.isArray(parsed)) {
-      return parsed.filter((k: any) => typeof k === 'string' && k.trim()).slice(0, 30);
+      return parsed.filter((k: any) => typeof k === 'string' && k.trim()).slice(0, 15);
     }
     return [];
   } catch (e) {

@@ -740,7 +740,7 @@ export default function TemplateGenerator() {
                   <button
                     key={lt.id}
                     type="button"
-                    onClick={() => setScheduleLayout(lt.id)}
+                    onClick={() => { setScheduleLayout(lt.id); setSelectedCatTemplate(null); }}
                     className={`py-2.5 px-2 rounded-xl text-center transition-all border ${
                       scheduleLayout === lt.id
                         ? 'bg-blue-50 border-blue-300 ring-2 ring-blue-200 shadow-sm'
@@ -851,7 +851,7 @@ export default function TemplateGenerator() {
         {category === 'greeting' && (
           <div className="space-y-3">
             <div><label className={labelCls}>명절 종류</label>
-              <div className="flex gap-1.5">{['설날','추석','새해','어버이날','크리스마스'].map(h => (<button key={h} onClick={()=>{ setGreetHoliday(h); const d = HOLIDAY_DEFAULTS[h]; if (d) { setGreetMsg(d.msg); setGreetClosure(d.closure); } }} className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${greetHoliday===h?'bg-slate-800 text-white shadow-md':'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>{h}</button>))}</div>
+              <div className="flex gap-1.5">{['설날','추석','새해','어버이날','크리스마스'].map(h => (<button key={h} onClick={()=>{ setGreetHoliday(h); setSelectedCatTemplate(null); const d = HOLIDAY_DEFAULTS[h]; if (d) { setGreetMsg(d.msg); setGreetClosure(d.closure); } }} className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${greetHoliday===h?'bg-slate-800 text-white shadow-md':'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>{h}</button>))}</div>
             </div>
             <div><label className={labelCls}>인사말</label><textarea value={greetMsg} onChange={e=>setGreetMsg(e.target.value)} placeholder={"풍성한 한가위 보내시고\n건강하고 행복한 추석 되세요"} rows={3} className={textareaCls} /></div>
             <div><label className={labelCls}>휴진 기간 <span className="text-slate-400 font-normal">(선택)</span></label><input type="text" value={greetClosure} onChange={e=>setGreetClosure(e.target.value)} placeholder="9/28(토) ~ 10/1(화)" className={inputCls} /></div>
@@ -1031,7 +1031,11 @@ export default function TemplateGenerator() {
             디자인 템플릿 {selectedHistory && <span className="text-violet-400 font-normal">(내 스타일 선택 시 무시됨)</span>}
           </label>
           <div className={`grid grid-cols-3 gap-2 ${selectedHistory ? 'opacity-40 pointer-events-none' : ''}`}>
-            {(CATEGORY_TEMPLATES[category] || []).map((tmpl) => {
+            {(CATEGORY_TEMPLATES[
+              category === 'schedule' ? `schedule_${scheduleLayout}` :
+              category === 'greeting' ? `greeting_${greetHoliday}` :
+              category
+            ] || CATEGORY_TEMPLATES[category] || []).map((tmpl) => {
               const isSelected = !selectedHistory && selectedCatTemplate?.id === tmpl.id;
               return (
                 <button

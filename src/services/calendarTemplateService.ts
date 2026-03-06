@@ -815,7 +815,11 @@ export const AI_STYLE_PRESETS: StylePreset[] = [
   },
 ];
 
-// ── 카테고리별 템플릿 프리셋 (7 카테고리 × 6개 = 42개) ──
+// ── 카테고리별 템플릿 프리셋 ──
+// 진료일정: 레이아웃별 6개씩 (3×6=18)
+// 이벤트/의사소개/공지/채용/주의: 각 6개 (5×6=30)
+// 명절: 탭별 6개씩 (5×6=30)
+// 총 78개
 
 export interface CategoryTemplate {
   id: string;
@@ -829,7 +833,127 @@ export interface CategoryTemplate {
 }
 
 export const CATEGORY_TEMPLATES: Record<string, CategoryTemplate[]> = {
-  // ─── 진료 일정 (6개) ───
+  // ─── 진료 일정: 전체 달력 레이아웃 (6개) ───
+  schedule_full_calendar: [
+    {
+      id: 'sfc_clean_grid', name: '클린 그리드', color: '#3b82f6', accent: '#1d4ed8', bg: '#eff6ff',
+      desc: '깔끔한 격자 달력',
+      layoutHint: 'calendar',
+      aiPrompt: 'Clean modern medical clinic monthly calendar design, crisp white background with soft blue accents, organized grid layout showing all dates clearly, closed days marked in red circles, shortened hours in amber badges, professional healthcare aesthetic, minimal decorations, clear sans-serif typography, thin blue grid lines, hospital logo area at top',
+    },
+    {
+      id: 'sfc_pastel_bubble', name: '파스텔 버블', color: '#ec4899', accent: '#be185d', bg: '#fdf2f8',
+      desc: '동그란 날짜 버블',
+      layoutHint: 'calendar',
+      aiPrompt: 'Soft pastel pink dental clinic calendar with each date in a soft circular bubble shape, gentle watercolor texture background, closed days in vibrant pink filled circles, normal days in white outlined circles, cute tooth icon decorations in corners, rounded playful aesthetic, handwritten-style date numbers, confetti-like dots scattered in background',
+    },
+    {
+      id: 'sfc_mint_fresh', name: '민트 프레시', color: '#14b8a6', accent: '#0f766e', bg: '#f0fdfa',
+      desc: '상쾌한 민트 달력',
+      layoutHint: 'calendar',
+      aiPrompt: 'Fresh mint and teal clinic monthly calendar, clean modern design with mint green accent borders, calendar grid with soft teal highlights for special dates, fresh hygienic healthcare aesthetic, leaf and plant decorative elements in corners, light gradient background, green cross medical symbol accent',
+    },
+    {
+      id: 'sfc_dark_premium', name: '다크 프리미엄', color: '#c084fc', accent: '#7c3aed', bg: '#faf5ff',
+      desc: '고급 다크 달력',
+      layoutHint: 'calendar',
+      aiPrompt: 'Premium dark-themed dental clinic calendar, deep charcoal/navy background with gold and purple accents, elegant serif typography for month name, glowing date cells with subtle neon outline on hover dates, luxury medical aesthetic, metallic gold borders around closed dates, star-like sparkle decorations, high-end clinic branding feel',
+    },
+    {
+      id: 'sfc_warm_kraft', name: '크래프트 내추럴', color: '#92400e', accent: '#78350f', bg: '#fffbeb',
+      desc: '따뜻한 크래프트지',
+      layoutHint: 'calendar',
+      aiPrompt: 'Warm kraft paper textured dental clinic calendar, cozy beige and brown palette, hand-drawn grid lines with slightly imperfect organic feel, date numbers in handwriting font, closed days marked with red wax-seal style stamps, botanical leaf illustrations in margins, vintage postcard aesthetic, warm golden lighting atmosphere',
+    },
+    {
+      id: 'sfc_glassmorphism', name: '글래스모피즘', color: '#6366f1', accent: '#4f46e5', bg: '#eef2ff',
+      desc: '투명 유리 효과',
+      layoutHint: 'calendar',
+      aiPrompt: 'Modern glassmorphism dental clinic calendar, frosted glass card effect with translucent white overlay, vibrant gradient background (indigo to purple), blurred colorful shapes behind glass, date cells with subtle glass borders, closed days with solid frosted red badges, contemporary UI design aesthetic, floating glass panels, soft shadow effects',
+    },
+  ],
+
+  // ─── 진료 일정: 한 주 레이아웃 (6개) ───
+  schedule_week: [
+    {
+      id: 'swk_horizontal_bar', name: '수평 바', color: '#0ea5e9', accent: '#0284c7', bg: '#f0f9ff',
+      desc: '가로 주간 스트립',
+      layoutHint: 'week',
+      aiPrompt: 'Horizontal weekly schedule strip design for dental clinic, 7-day bar layout (일~토) with equal-width cells, closed days highlighted with bold red background pill shape, clean sky blue accents, modern minimal healthcare design, each day clearly labeled with date number below day name, compact and information-dense layout',
+    },
+    {
+      id: 'swk_card_stack', name: '카드 스택', color: '#f97316', accent: '#ea580c', bg: '#fff7ed',
+      desc: '요일별 카드 나열',
+      layoutHint: 'week',
+      aiPrompt: 'Weekly dental clinic schedule with individual day cards stacked horizontally, each day as a separate rounded card with shadow, orange and warm tone accents, closed day cards flipped/rotated style with X mark, card game inspired layout, playful yet professional medical design, 3D card depth effect',
+    },
+    {
+      id: 'swk_timeline_dot', name: '타임라인 점', color: '#8b5cf6', accent: '#7c3aed', bg: '#f5f3ff',
+      desc: '점 연결 타임라인',
+      layoutHint: 'week',
+      aiPrompt: 'Timeline dot-connected weekly schedule for dental clinic, horizontal line with 7 circle nodes for each day, connected by elegant purple line, closed days as large solid red dots, normal days as outlined circles, hanging labels below with date info, modern infographic style, minimalist purple and white palette',
+    },
+    {
+      id: 'swk_pill_shape', name: '필 모양', color: '#10b981', accent: '#059669', bg: '#ecfdf5',
+      desc: '알약 모양 요일',
+      layoutHint: 'week',
+      aiPrompt: 'Pill-shaped weekly schedule for dental clinic, each day as a rounded pill/capsule shape, closed days in red pills, normal days in green-white pills, medical pharmacy inspired design, cute medicine-themed icons, clean green and white healthcare palette, fun yet professional weekly strip layout',
+    },
+    {
+      id: 'swk_ribbon_flag', name: '리본 플래그', color: '#ef4444', accent: '#dc2626', bg: '#fef2f2',
+      desc: '깃발 리본 스타일',
+      layoutHint: 'week',
+      aiPrompt: 'Ribbon flag weekly schedule for dental clinic, each day displayed as a hanging banner/pennant flag, closed days with red crossed-out flags, festive bunting decoration style, bold red accents on white, celebration-meets-information design, triangular pennant shapes connected by string, clear day labels on each flag',
+    },
+    {
+      id: 'swk_neon_glow', name: '네온 글로우', color: '#06b6d4', accent: '#0891b2', bg: '#ecfeff',
+      desc: '네온 빛 효과',
+      layoutHint: 'week',
+      aiPrompt: 'Neon glow weekly schedule for dental clinic on dark background, each day as a neon-lit sign box, closed days with red neon X or OFF text, open days with cyan/teal neon glow, retro neon sign aesthetic applied to medical schedule, glowing tube-light borders, dark navy or black background, futuristic medical design',
+    },
+  ],
+
+  // ─── 진료 일정: 강조형 레이아웃 (6개) ───
+  schedule_highlight: [
+    {
+      id: 'shl_big_number', name: '빅 넘버', color: '#dc2626', accent: '#991b1b', bg: '#fef2f2',
+      desc: '대형 날짜 숫자',
+      layoutHint: 'highlight',
+      aiPrompt: 'Bold big-number clinic closure notice, huge oversized date numbers (72pt+) as the hero element in bold red, remaining text small and secondary, stark black/white/red contrast, modern typographic poster design, dramatic hierarchy between closure dates and supporting info, industrial bold font style',
+    },
+    {
+      id: 'shl_stamp_seal', name: '도장 스탬프', color: '#b91c1c', accent: '#991b1b', bg: '#fef2f2',
+      desc: '공식 도장 스타일',
+      layoutHint: 'highlight',
+      aiPrompt: 'Official stamp/seal style clinic closure notice, closure dates displayed inside circular red rubber stamp marks, CLOSED text in bold stamp font, official document aesthetic with ruled lines, vintage government notice feel, red ink stamp texture, manila envelope background color, formal medical institution announcement',
+    },
+    {
+      id: 'shl_calendar_rip', name: '캘린더 찢기', color: '#f59e0b', accent: '#d97706', bg: '#fffbeb',
+      desc: '찢어진 달력 효과',
+      layoutHint: 'highlight',
+      aiPrompt: 'Torn calendar page effect for clinic closure notice, closure dates shown on dramatically torn/ripped calendar pages with ragged edges, torn paper texture revealing red background beneath, dynamic and eye-catching composition, amber and red color scheme, paper curl effects, dramatic shadow casting',
+    },
+    {
+      id: 'shl_slash_through', name: '사선 취소', color: '#7c3aed', accent: '#6d28d9', bg: '#f5f3ff',
+      desc: '사선으로 날짜 취소',
+      layoutHint: 'highlight',
+      aiPrompt: 'Diagonal slash-through closure date design for dental clinic, large date numbers with dramatic red diagonal lines crossing through them, grunge brush stroke cancel marks, bold and impactful visual communication, purple and red high contrast, street art meets medical notice aesthetic, spray paint texture accents',
+    },
+    {
+      id: 'shl_circle_frame', name: '원형 프레임', color: '#0891b2', accent: '#0e7490', bg: '#ecfeff',
+      desc: '원 안에 날짜 강조',
+      layoutHint: 'highlight',
+      aiPrompt: 'Circular frame emphasis closure notice for dental clinic, closure dates enclosed in large bold circle rings like target/bullseye, concentric circle decorations radiating outward, clean teal and white medical design, spotlight/focus effect on dates, infographic magnifying-glass style, important dates as focal points',
+    },
+    {
+      id: 'shl_countdown', name: '카운트다운', color: '#1e40af', accent: '#1e3a8a', bg: '#eff6ff',
+      desc: '디지털 카운트다운',
+      layoutHint: 'highlight',
+      aiPrompt: 'Digital countdown timer style clinic closure notice, dates displayed in LED/digital clock font segments, flip-clock aesthetic with mechanical digit display, dark navy background with bright LED-style numbers, tech-forward medical notice design, each digit in its own flip panel, modern dashboard/scoreboard feel',
+    },
+  ],
+
+  // ─── 진료 일정: 기본 (레이아웃 미선택 시 fallback) ───
   schedule: [
     {
       id: 'sch_clean_calendar', name: '클린 캘린더', color: '#3b82f6', accent: '#1d4ed8', bg: '#eff6ff',
@@ -989,7 +1113,207 @@ export const CATEGORY_TEMPLATES: Record<string, CategoryTemplate[]> = {
     },
   ],
 
-  // ─── 명절 인사 (6개) ───
+  // ─── 명절 인사: 설날 (6개) ───
+  greeting_설날: [
+    {
+      id: 'grt_seol_traditional', name: '전통 한복', color: '#dc2626', accent: '#991b1b', bg: '#fef2f2',
+      desc: '단청 문양 전통',
+      layoutHint: 'traditional',
+      aiPrompt: 'Traditional Korean Lunar New Year (Seollal) greeting card for dental clinic, elegant red and gold dancheong patterns, traditional Korean gate frame (대문), pine tree and plum blossom decorations, calligraphy-style 새해 복 text, Korean traditional cloud motifs, han-bok inspired color palette, lucky knot (매듭) ornaments, dignified and festive',
+    },
+    {
+      id: 'grt_seol_tteokguk', name: '떡국 일러스트', color: '#f97316', accent: '#ea580c', bg: '#fff7ed',
+      desc: '따뜻한 설 음식',
+      layoutHint: 'warm',
+      aiPrompt: 'Warm Seollal greeting with cute tteokguk (rice cake soup) illustration for dental clinic, steaming bowl of tteokguk as center piece, chopsticks and spoon, warm orange and cream watercolor, cozy family meal atmosphere, hand-drawn food illustration style, soft bokeh lights, Korean New Year feast feeling, heartwarming',
+    },
+    {
+      id: 'grt_seol_modern', name: '모던 세뱃돈', color: '#6366f1', accent: '#4f46e5', bg: '#eef2ff',
+      desc: '세련된 봉투 디자인',
+      layoutHint: 'minimal',
+      aiPrompt: 'Modern minimalist Seollal greeting with sebatdon (New Year money) envelope motif, clean indigo and gold design, single elegant Korean lucky bag illustration, contemporary typography with generous whitespace, geometric pattern frame inspired by Korean traditional patterns simplified, sophisticated medical brand holiday card',
+    },
+    {
+      id: 'grt_seol_bokjumeoni', name: '복주머니', color: '#e11d48', accent: '#be123c', bg: '#fff1f2',
+      desc: '복주머니 장식',
+      layoutHint: 'cute',
+      aiPrompt: 'Cute bokjumeoni (fortune pouch) themed Seollal greeting for dental clinic, adorable 3D-style fortune pouches with Korean patterns, gold coins floating around, kawaii tooth character wearing hanbok, cheerful pink and red palette, festive confetti, cute lucky symbols (four-leaf clover, horseshoe), playful Korean New Year celebration',
+    },
+    {
+      id: 'grt_seol_gold_luxury', name: '금박 프리미엄', color: '#d4a017', accent: '#b8860b', bg: '#fefce8',
+      desc: '고급 금박 효과',
+      layoutHint: 'luxury',
+      aiPrompt: 'Premium gold foil Seollal greeting card for dental clinic, rich burgundy background with intricate gold foil Korean traditional patterns, 복 character in elegant gold calligraphy, pine branch gold embossing, luxury paper texture, sophisticated Oriental aesthetic, high-end medical practice Lunar New Year card, VIP premium feel',
+    },
+    {
+      id: 'grt_seol_sunrise', name: '새해 일출', color: '#f59e0b', accent: '#d97706', bg: '#fffbeb',
+      desc: '해돋이 풍경',
+      layoutHint: 'nature',
+      aiPrompt: 'Beautiful New Year sunrise landscape Seollal greeting for dental clinic, golden sunrise over Korean mountains and traditional village, warm amber and golden sky gradients, silhouette of hanok rooftops, peaceful morning atmosphere, watercolor landscape style, hopeful new beginning feeling, nature-inspired Korean New Year scene',
+    },
+  ],
+
+  // ─── 명절 인사: 추석 (6개) ───
+  greeting_추석: [
+    {
+      id: 'grt_chsk_fullmoon', name: '보름달 전통', color: '#f59e0b', accent: '#d97706', bg: '#fffbeb',
+      desc: '보름달 한국풍',
+      layoutHint: 'traditional',
+      aiPrompt: 'Traditional Korean Chuseok greeting with large full moon as centerpiece, golden wheat and rice stalks framing the design, persimmon and chestnut decorations, traditional Korean pattern borders, warm amber and gold palette, harvest moon atmosphere, calligraphy-style greeting text, dignified autumn festival feeling',
+    },
+    {
+      id: 'grt_chsk_songpyeon', name: '송편 일러스트', color: '#22c55e', accent: '#15803d', bg: '#f0fdf4',
+      desc: '송편과 과일',
+      layoutHint: 'warm',
+      aiPrompt: 'Cute Chuseok greeting with songpyeon (rice cakes) illustration for dental clinic, colorful songpyeon arranged on pine needles plate, Korean pear and persimmon fruits around, soft green and earth tone watercolor, hand-drawn food illustration, warm family gathering atmosphere, harvest abundance feeling',
+    },
+    {
+      id: 'grt_chsk_modern', name: '모던 한가위', color: '#6366f1', accent: '#4f46e5', bg: '#eef2ff',
+      desc: '세련된 추석',
+      layoutHint: 'minimal',
+      aiPrompt: 'Modern minimalist Chuseok greeting card for dental clinic, clean geometric representation of full moon circle, single elegant rabbit silhouette, contemporary indigo and silver color scheme, generous whitespace, subtle autumn leaf accent, sophisticated medical brand Chuseok card, understated Korean harvest festival design',
+    },
+    {
+      id: 'grt_chsk_rabbit', name: '토끼 캐릭터', color: '#ec4899', accent: '#be185d', bg: '#fdf2f8',
+      desc: '달토끼 귀여운',
+      layoutHint: 'cute',
+      aiPrompt: 'Adorable moon rabbit (달토끼) Chuseok greeting for dental clinic, kawaii rabbit character pounding rice cakes on the moon, cute tooth fairy in Korean hanbok costume, playful pink and purple moonlit scene, festive stars and sparkles, chibi character style, cheerful family-friendly Chuseok celebration, cartoon autumn leaves falling',
+    },
+    {
+      id: 'grt_chsk_premium', name: '달빛 프리미엄', color: '#d4a017', accent: '#b8860b', bg: '#1a1a2e',
+      desc: '고급 달빛 골드',
+      layoutHint: 'luxury',
+      aiPrompt: 'Premium dark navy Chuseok greeting with golden full moon for dental clinic, deep midnight blue background with luminous gold moon, golden wheat stalks and persimmon ornaments, luxury gold foil text and borders, elegant moonlight glow effects, sophisticated Oriental harvest festival aesthetic, high-end medical practice card',
+    },
+    {
+      id: 'grt_chsk_autumn', name: '가을 풍경', color: '#ea580c', accent: '#c2410c', bg: '#fff7ed',
+      desc: '단풍 자연풍',
+      layoutHint: 'nature',
+      aiPrompt: 'Beautiful autumn landscape Chuseok greeting for dental clinic, colorful maple leaves in red orange gold, Korean countryside harvest scene with rice paddies, warm sunset atmosphere, watercolor painting style, full moon rising over autumn mountains, peaceful and abundant nature scene, nostalgic Korean autumn feeling',
+    },
+  ],
+
+  // ─── 명절 인사: 새해 (6개) ───
+  greeting_새해: [
+    {
+      id: 'grt_newy_fireworks', name: '불꽃놀이', color: '#7c3aed', accent: '#6d28d9', bg: '#f5f3ff',
+      desc: '화려한 불꽃놀이',
+      layoutHint: 'traditional',
+      aiPrompt: 'Spectacular New Year fireworks greeting for dental clinic, colorful fireworks bursting against dark night sky, 2026 in large sparkler-written numbers, gold and purple and blue firework explosions, celebration confetti, midnight countdown atmosphere, glamorous and exciting New Year party feeling, city skyline silhouette',
+    },
+    {
+      id: 'grt_newy_champagne', name: '샴페인 토스트', color: '#d4a017', accent: '#b8860b', bg: '#fefce8',
+      desc: '샴페인 파티',
+      layoutHint: 'luxury',
+      aiPrompt: 'Elegant champagne toast New Year greeting for dental clinic, clinking champagne glasses with golden bubbles, luxury gold and black color scheme, metallic gold confetti and streamers, premium celebration aesthetic, sparkle and shimmer effects, sophisticated New Year party card, high-end medical practice holiday greeting',
+    },
+    {
+      id: 'grt_newy_minimal', name: '미니멀 2026', color: '#1e40af', accent: '#1e3a8a', bg: '#eff6ff',
+      desc: '깔끔한 연도 강조',
+      layoutHint: 'minimal',
+      aiPrompt: 'Ultra-minimalist New Year 2026 greeting for dental clinic, bold oversized "2026" in clean navy typography, single thin golden line decoration, maximum whitespace, elegant sans-serif font, subtle shadow effect on numbers, contemporary graphic design aesthetic, less is more medical brand New Year card',
+    },
+    {
+      id: 'grt_newy_confetti', name: '컨페티 파티', color: '#ec4899', accent: '#be185d', bg: '#fdf2f8',
+      desc: '화려한 컨페티',
+      layoutHint: 'cute',
+      aiPrompt: 'Fun confetti party New Year greeting for dental clinic, explosion of colorful confetti and streamers, party hat and noisemaker illustrations, bright pink and multicolor palette, cute kawaii-style celebration characters, playful balloon decorations, joyful and energetic mood, family-friendly New Year party card',
+    },
+    {
+      id: 'grt_newy_sunrise', name: '첫 일출', color: '#f97316', accent: '#ea580c', bg: '#fff7ed',
+      desc: '새해 첫 일출',
+      layoutHint: 'nature',
+      aiPrompt: 'Majestic New Year first sunrise greeting for dental clinic, breathtaking sunrise over ocean horizon, golden and orange sky with dramatic cloud formations, hopeful new beginning atmosphere, watercolor landscape painting style, 2026 subtly integrated into sky, serene and inspirational New Year morning scene',
+    },
+    {
+      id: 'grt_newy_clock', name: '자정 시계', color: '#64748b', accent: '#475569', bg: '#f8fafc',
+      desc: '카운트다운 시계',
+      layoutHint: 'warm',
+      aiPrompt: 'Midnight countdown clock New Year greeting for dental clinic, elegant vintage clock face showing 12:00, ornate clock hands in gold, pocket watch aesthetic with mechanical gear details, warm sepia and gold tones, countdown to midnight atmosphere, steampunk-inspired elegant timepiece design, transitional moment captured',
+    },
+  ],
+
+  // ─── 명절 인사: 어버이날 (6개) ───
+  greeting_어버이날: [
+    {
+      id: 'grt_parent_carnation', name: '카네이션 전통', color: '#dc2626', accent: '#b91c1c', bg: '#fef2f2',
+      desc: '빨간 카네이션',
+      layoutHint: 'traditional',
+      aiPrompt: 'Beautiful red carnation Parents Day greeting for dental clinic, large realistic red carnation flower as centerpiece, green ribbon tied in bow, traditional Korean gratitude card aesthetic, warm red and cream palette, soft petal texture details, heartfelt 감사합니다 calligraphy, elegant floral frame border',
+    },
+    {
+      id: 'grt_parent_watercolor', name: '수채화 꽃다발', color: '#f472b6', accent: '#ec4899', bg: '#fdf2f8',
+      desc: '수채화 꽃다발',
+      layoutHint: 'warm',
+      aiPrompt: 'Watercolor carnation bouquet Parents Day greeting for dental clinic, loose watercolor painting of carnation bouquet in pink and red, gentle color bleeds and artistic brush strokes, soft pink and cream background, handwritten-style thankyou message, artistic and emotional, warm family love atmosphere, hand-painted aesthetic',
+    },
+    {
+      id: 'grt_parent_modern', name: '모던 감사', color: '#6366f1', accent: '#4f46e5', bg: '#eef2ff',
+      desc: '세련된 감사 카드',
+      layoutHint: 'minimal',
+      aiPrompt: 'Modern minimalist Parents Day greeting for dental clinic, single elegant carnation stem illustration in line art style, clean indigo and white, contemporary typography spelling 감사합니다, generous whitespace, subtle heart shapes, sophisticated medical brand gratitude card, refined and understated love expression',
+    },
+    {
+      id: 'grt_parent_photo', name: '포토 프레임', color: '#f97316', accent: '#ea580c', bg: '#fff7ed',
+      desc: '가족 사진 프레임',
+      layoutHint: 'cute',
+      aiPrompt: 'Cute photo frame Parents Day greeting for dental clinic, polaroid-style photo frame area with heart-shaped clips, surrounding carnation garland decoration, warm orange and cream scrapbook aesthetic, hand-drawn heart doodles, family album memory book feel, sticker and stamp decorations, playful yet touching',
+    },
+    {
+      id: 'grt_parent_gold', name: '금장 카네이션', color: '#d4a017', accent: '#b8860b', bg: '#fefce8',
+      desc: '골드 프리미엄',
+      layoutHint: 'luxury',
+      aiPrompt: 'Premium gold-accented Parents Day greeting for dental clinic, golden carnation illustration with metallic foil effect, deep burgundy and gold color scheme, ornate gold frame border, luxury ribbon with bow, premium paper embossed texture, elegant and prestigious gratitude card, refined medical practice appreciation',
+    },
+    {
+      id: 'grt_parent_garden', name: '정원 풍경', color: '#22c55e', accent: '#15803d', bg: '#f0fdf4',
+      desc: '카네이션 정원',
+      layoutHint: 'nature',
+      aiPrompt: 'Carnation garden landscape Parents Day greeting for dental clinic, lush garden full of blooming red and pink carnations, morning sunlight filtering through, green garden path with bench, watercolor botanical illustration style, peaceful and grateful atmosphere, nature-inspired gratitude scene, warm and nurturing feeling',
+    },
+  ],
+
+  // ─── 명절 인사: 크리스마스 (6개) ───
+  greeting_크리스마스: [
+    {
+      id: 'grt_xmas_tree', name: '크리스마스 트리', color: '#22c55e', accent: '#15803d', bg: '#f0fdf4',
+      desc: '화려한 트리',
+      layoutHint: 'traditional',
+      aiPrompt: 'Festive Christmas tree greeting for dental clinic, beautifully decorated Christmas tree with ornaments and star topper, colorful lights twinkling, green and red traditional Christmas palette, gift boxes under tree, golden garland decorations, warm holiday living room atmosphere, classic Christmas card aesthetic',
+    },
+    {
+      id: 'grt_xmas_snow', name: '눈 내리는 밤', color: '#0ea5e9', accent: '#0284c7', bg: '#f0f9ff',
+      desc: '눈 오는 겨울밤',
+      layoutHint: 'nature',
+      aiPrompt: 'Snowy winter night Christmas greeting for dental clinic, gentle snowflakes falling against dark blue sky, cozy village with lit windows and snow-covered rooftops, street lamp with warm golden glow, soft blue and white palette, peaceful silent night atmosphere, watercolor winter landscape, magical Christmas eve scene',
+    },
+    {
+      id: 'grt_xmas_minimal', name: '미니멀 노엘', color: '#dc2626', accent: '#b91c1c', bg: '#fef2f2',
+      desc: '심플 레드&화이트',
+      layoutHint: 'minimal',
+      aiPrompt: 'Ultra-minimalist Christmas greeting for dental clinic, single elegant red ornament ball hanging from thin line, vast white space, clean modern sans-serif Merry Christmas text, subtle snowflake pattern in background, red and white only, sophisticated graphic design Christmas card, less is more holiday elegance',
+    },
+    {
+      id: 'grt_xmas_character', name: '산타 캐릭터', color: '#ef4444', accent: '#dc2626', bg: '#fef2f2',
+      desc: '귀여운 산타',
+      layoutHint: 'cute',
+      aiPrompt: 'Cute Santa Claus character Christmas greeting for dental clinic, adorable chibi Santa with red hat carrying gift bag, cute tooth character dressed as elf or reindeer, kawaii style illustration, bright red and green with candy cane stripes, playful snowman and gingerbread decorations, cheerful Christmas party mood',
+    },
+    {
+      id: 'grt_xmas_gold', name: '골드 오너먼트', color: '#d4a017', accent: '#b8860b', bg: '#1a1a2e',
+      desc: '럭셔리 골드 장식',
+      layoutHint: 'luxury',
+      aiPrompt: 'Luxury gold ornament Christmas greeting for dental clinic, dark navy/black background with elegant gold Christmas ornaments hanging, gold ribbon bows, metallic sparkle and shimmer, crystal snowflake decorations, premium gold foil typography, high-end luxury Christmas card, sophisticated and opulent holiday greeting',
+    },
+    {
+      id: 'grt_xmas_wreath', name: '리스 장식', color: '#16a34a', accent: '#15803d', bg: '#f0fdf4',
+      desc: '초록 리스 프레임',
+      layoutHint: 'warm',
+      aiPrompt: 'Christmas wreath frame greeting for dental clinic, beautiful circular wreath of pine branches holly and berries as border frame, red bow at bottom, warm candlelight glow, cozy green and red palette, pine cone and mistletoe details, warm family Christmas atmosphere, greeting text centered in wreath circle',
+    },
+  ],
+
+  // ─── 명절 인사: 기본 fallback (구 greeting) ───
   greeting: [
     {
       id: 'grt_traditional_korean', name: '전통 한국풍', color: '#dc2626', accent: '#991b1b', bg: '#fef2f2',
@@ -1013,7 +1337,7 @@ export const CATEGORY_TEMPLATES: Record<string, CategoryTemplate[]> = {
       id: 'grt_nature_season', name: '자연 사계절', color: '#22c55e', accent: '#15803d', bg: '#f0fdf4',
       desc: '계절감 자연풍',
       layoutHint: 'nature',
-      aiPrompt: 'Nature-inspired seasonal holiday greeting from dental clinic, lush green and earth tones, beautiful seasonal landscape illustration (cherry blossoms for spring, autumn leaves for fall, snow for winter), serene natural atmosphere, watercolor botanical elements, peaceful and refreshing holiday greeting, clinic closure info elegantly placed',
+      aiPrompt: 'Nature-inspired seasonal holiday greeting from dental clinic, lush green and earth tones, beautiful seasonal landscape illustration, serene natural atmosphere, watercolor botanical elements, peaceful and refreshing holiday greeting, clinic closure info elegantly placed',
     },
     {
       id: 'grt_luxury_gold', name: '럭셔리 골드', color: '#d4a017', accent: '#b8860b', bg: '#fefce8',
