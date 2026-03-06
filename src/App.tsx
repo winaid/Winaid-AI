@@ -929,10 +929,10 @@ const App: React.FC = () => {
         </div>
       )}
 
-      <header className={`backdrop-blur-2xl border-b sticky top-0 z-30 h-16 flex items-center flex-none transition-all duration-300 ${darkMode ? 'bg-slate-800/90 border-slate-700' : 'bg-white/70 border-white/50 shadow-[0_1px_3px_rgba(0,0,0,0.04)]'}`}>
+      <header className={`backdrop-blur-2xl border-b sticky top-0 z-30 h-16 flex items-center flex-none transition-all duration-300 ${darkMode ? 'bg-slate-800/90 border-slate-700' : 'bg-white/80 border-slate-100/80 shadow-[0_1px_3px_rgba(0,0,0,0.04)]'}`}>
         <div className="max-w-[1600px] w-full mx-auto px-5 flex justify-between items-center">
-          <a href="#app" onClick={(e) => { e.preventDefault(); setContentTab('blog'); window.location.hash = 'app'; }} className="flex items-center gap-2.5 hover:opacity-80 transition-opacity cursor-pointer">
-            <img src="/280_logo.png" alt="WINAID" className={`h-8 w-8 ${darkMode ? 'rounded-md bg-white p-0.5' : ''}`} />
+          <a href="#app" onClick={(e) => { e.preventDefault(); setContentTab('blog'); window.location.hash = 'app'; }} className="flex items-center gap-2.5 hover:opacity-80 transition-opacity cursor-pointer group">
+            <img src="/280_logo.png" alt="WINAID" className={`h-8 w-8 group-hover:scale-105 transition-transform ${darkMode ? 'rounded-md bg-white p-0.5' : ''}`} />
             <div className="flex flex-col leading-none">
               <span className={`font-black text-base tracking-[-0.02em] ${darkMode ? 'text-slate-100' : 'text-slate-800'}`}>WIN<span className="text-blue-600">AID</span></span>
               <span className={`text-[8px] font-semibold tracking-wider uppercase ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>AI Marketing</span>
@@ -944,7 +944,7 @@ const App: React.FC = () => {
                <div className="relative">
                  <button
                    onClick={() => setShowUserMenu(!showUserMenu)}
-                   className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold transition-all ${darkMode ? 'bg-slate-700 text-blue-400 hover:bg-slate-600' : 'bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-100'}`}
+                   className={`w-9 h-9 rounded-xl flex items-center justify-center text-xs font-bold transition-all ${darkMode ? 'bg-slate-700 text-blue-400 hover:bg-slate-600' : 'bg-gradient-to-br from-blue-50 to-blue-100/80 text-blue-600 hover:from-blue-100 hover:to-blue-200/80 border border-blue-100/80 shadow-sm'}`}
                    title={supabaseUser.email || '사용자'}
                  >
                    {(supabaseUser.email || 'U')[0].toUpperCase()}
@@ -952,13 +952,13 @@ const App: React.FC = () => {
                  {showUserMenu && (
                    <>
                      <div className="fixed inset-0 z-40" onClick={() => setShowUserMenu(false)} />
-                     <div className={`absolute right-0 top-11 w-52 rounded-xl shadow-[0_8px_30px_rgba(0,0,0,0.12)] border z-50 overflow-hidden backdrop-blur-xl ${darkMode ? 'bg-slate-800/95 border-slate-700' : 'bg-white/95 border-slate-200/60'}`}>
-                       <div className={`px-4 py-3 text-xs truncate font-medium ${darkMode ? 'text-slate-400 border-b border-slate-700' : 'text-slate-500 border-b border-slate-100'}`}>
+                     <div className={`absolute right-0 top-12 w-56 rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.12)] border z-50 overflow-hidden backdrop-blur-2xl ${darkMode ? 'bg-slate-800/95 border-slate-700' : 'bg-white/95 border-slate-200/60'}`}>
+                       <div className={`px-4 py-3.5 text-xs truncate font-medium ${darkMode ? 'text-slate-400 border-b border-slate-700' : 'text-slate-500 border-b border-slate-100'}`}>
                          {supabaseUser.email}
                        </div>
                        <button
                          onClick={() => { setShowUserMenu(false); handleLogout(); }}
-                         className={`w-full text-left px-4 py-3 text-sm font-medium transition-colors ${darkMode ? 'text-red-400 hover:bg-slate-700' : 'text-red-500 hover:bg-red-50'}`}
+                         className={`w-full text-left px-4 py-3.5 text-sm font-medium transition-colors ${darkMode ? 'text-red-400 hover:bg-slate-700' : 'text-red-500 hover:bg-red-50'}`}
                        >
                          로그아웃
                        </button>
@@ -977,7 +977,7 @@ const App: React.FC = () => {
         {contentTab === 'refine' || contentTab === 'similarity' || contentTab === 'image' || contentTab === 'history' ? (
           <div className="w-full h-full flex flex-col gap-4 overflow-hidden">
             {/* 탭 메뉴 */}
-            <div className={`flex gap-1 p-1.5 rounded-2xl ${darkMode ? 'bg-slate-800 border border-slate-700' : 'bg-white/80 backdrop-blur-xl border border-white/60 shadow-[0_2px_12px_rgba(0,0,0,0.06)]'} w-fit mx-auto`}>
+            <div className={`flex gap-1 p-1.5 rounded-2xl ${darkMode ? 'bg-slate-800/90 backdrop-blur-xl border border-slate-700' : 'bg-white/90 backdrop-blur-2xl border border-slate-200/60 shadow-[0_2px_16px_rgba(0,0,0,0.06)]'} w-fit mx-auto`}>
               {([
                 { id: 'blog' as const, label: '블로그', icon: '📝' },
                 { id: 'card_news' as const, label: '카드뉴스', icon: '🎨' },
@@ -989,10 +989,10 @@ const App: React.FC = () => {
                 <button
                   key={tab.id}
                   onClick={() => setContentTab(tab.id)}
-                  className={`py-2 px-4 rounded-xl text-[13px] font-bold transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                  className={`py-2.5 px-4 rounded-xl text-[13px] font-bold transition-all duration-200 whitespace-nowrap flex items-center gap-1.5 ${
                     contentTab === tab.id
-                      ? darkMode ? 'bg-blue-600 text-white shadow-sm' : 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md shadow-blue-500/20'
-                      : darkMode ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/50' : 'text-slate-500 hover:text-slate-700 hover:bg-white'
+                      ? darkMode ? 'bg-blue-600 text-white shadow-sm' : 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg shadow-blue-500/25'
+                      : darkMode ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/50' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
                   }`}
                 >
                   <span className="text-xs">{tab.icon}</span>
