@@ -909,8 +909,10 @@ const App: React.FC = () => {
         </div>
       )}
 
-      <header className={`backdrop-blur-2xl border-b sticky top-0 z-30 h-16 flex items-center flex-none transition-all duration-300 ${darkMode ? 'bg-slate-800/90 border-slate-700' : 'bg-white/80 border-slate-100/80 shadow-[0_1px_3px_rgba(0,0,0,0.04)]'}`}>
-        <div className="max-w-[1600px] w-full mx-auto px-5 flex justify-between items-center">
+      {/* 상단 헤더 + 네비게이션 */}
+      <header className={`backdrop-blur-2xl border-b sticky top-0 z-30 flex-none transition-all duration-300 ${darkMode ? 'bg-slate-800/90 border-slate-700' : 'bg-white/80 border-slate-100/80 shadow-[0_1px_3px_rgba(0,0,0,0.04)]'}`}>
+        {/* 1단: 로고 + 유저 */}
+        <div className="h-14 max-w-[1200px] w-full mx-auto px-5 flex justify-between items-center">
           <a href="#blog" onClick={(e) => { e.preventDefault(); setContentTab('blog'); }} className="flex items-center gap-2.5 hover:opacity-80 transition-opacity cursor-pointer group">
             <img src="/280_logo.png" alt="WINAID" className={`h-8 w-8 group-hover:scale-105 transition-transform ${darkMode ? 'rounded-md bg-white p-0.5' : ''}`} />
             <div className="flex flex-col leading-none">
@@ -949,113 +951,50 @@ const App: React.FC = () => {
              )}
           </div>
         </div>
-      </header>
-
-      <div className="relative z-10 flex-1 flex h-[calc(100vh-64px)] overflow-hidden">
-        {/* 사이드바 네비게이션 */}
-        <nav className={`hidden lg:flex flex-col w-[72px] flex-shrink-0 border-r py-4 px-2 gap-1 overflow-y-auto transition-colors duration-300 ${darkMode ? 'bg-slate-800/50 border-slate-700 backdrop-blur-xl' : 'bg-white/60 border-slate-200/60 backdrop-blur-xl'}`}>
-          {/* 콘텐츠 생성 그룹 */}
-          <div className={`text-[9px] font-bold tracking-wider uppercase text-center mb-1 mt-1 ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>생성</div>
-          {([
-            { id: 'blog' as ContentTabType, label: '블로그', icon: <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" /></svg>, activeCls: 'bg-blue-50 text-blue-600 shadow-sm border border-blue-100/50' },
-            { id: 'card_news' as ContentTabType, label: '카드뉴스', icon: <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.41a2.25 2.25 0 013.182 0l2.909 2.91m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" /></svg>, activeCls: 'bg-pink-50 text-pink-600 shadow-sm border border-pink-100/50' },
-            { id: 'press' as ContentTabType, label: '언론보도', icon: <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 7.5h1.5m-1.5 3h1.5m-7.5 3h7.5m-7.5 3h7.5m3-9h3.375c.621 0 1.125.504 1.125 1.125V18a2.25 2.25 0 01-2.25 2.25M16.5 7.5V18a2.25 2.25 0 002.25 2.25M16.5 7.5V4.875c0-.621-.504-1.125-1.125-1.125H4.125C3.504 3.75 3 4.254 3 4.875V18a2.25 2.25 0 002.25 2.25h13.5" /></svg>, activeCls: 'bg-amber-50 text-amber-600 shadow-sm border border-amber-100/50' },
-          ]).map(item => (
-            <button
-              key={item.id}
-              onClick={() => setContentTab(item.id)}
-              className={`flex flex-col items-center gap-1 py-2.5 px-1 rounded-xl text-[10px] font-bold transition-all duration-200 ${
-                contentTab === item.id
-                  ? darkMode ? 'bg-blue-600/20 text-blue-400' : item.activeCls
-                  : darkMode ? 'text-slate-500 hover:text-slate-300 hover:bg-slate-700/50' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100/80'
-              }`}
-              title={item.label}
-            >
-              {item.icon}
-              <span className="leading-none">{item.label}</span>
-            </button>
-          ))}
-
-          <div className={`my-2 mx-2 border-t ${darkMode ? 'border-slate-700' : 'border-slate-200/80'}`} />
-
-          {/* 도구 그룹 */}
-          <div className={`text-[9px] font-bold tracking-wider uppercase text-center mb-1 ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>도구</div>
-          {([
-            { id: 'similarity' as ContentTabType, label: '유사도', icon: <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" /></svg>, activeCls: 'bg-violet-50 text-violet-600 shadow-sm border border-violet-100/50' },
-            { id: 'refine' as ContentTabType, label: 'AI보정', icon: <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z" /></svg>, activeCls: 'bg-indigo-50 text-indigo-600 shadow-sm border border-indigo-100/50' },
-            { id: 'image' as ContentTabType, label: '이미지', icon: <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9.53 16.122a3 3 0 00-5.78 1.128 2.25 2.25 0 01-2.4 2.245 4.5 4.5 0 008.4-2.245c0-.399-.078-.78-.22-1.128zm0 0a15.998 15.998 0 003.388-1.62m-5.043-.025a15.994 15.994 0 011.622-3.395m3.42 3.42a15.995 15.995 0 004.764-4.648l3.876-5.814a1.151 1.151 0 00-1.597-1.597L14.146 6.32a15.996 15.996 0 00-4.649 4.763m3.42 3.42a6.776 6.776 0 00-3.42-3.42" /></svg>, activeCls: 'bg-emerald-50 text-emerald-600 shadow-sm border border-emerald-100/50' },
-            { id: 'history' as ContentTabType, label: '히스토리', icon: <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>, activeCls: 'bg-amber-50 text-amber-600 shadow-sm border border-amber-100/50' },
-          ]).map(item => (
-            <button
-              key={item.id}
-              onClick={() => setContentTab(item.id)}
-              className={`flex flex-col items-center gap-1 py-2.5 px-1 rounded-xl text-[10px] font-bold transition-all duration-200 ${
-                contentTab === item.id
-                  ? darkMode ? 'bg-blue-600/20 text-blue-400' : item.activeCls
-                  : darkMode ? 'text-slate-500 hover:text-slate-300 hover:bg-slate-700/50' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100/80'
-              }`}
-              title={item.label}
-            >
-              {item.icon}
-              <span className="leading-none">{item.label}</span>
-            </button>
-          ))}
-
-          <div className="flex-1" />
-
-          {/* 다크모드 토글 */}
-          <button
-            onClick={toggleDarkMode}
-            className={`flex flex-col items-center gap-1 py-2.5 px-1 rounded-xl text-[10px] font-bold transition-all ${darkMode ? 'text-yellow-400 hover:bg-slate-700/50' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100/80'}`}
-            title={darkMode ? '라이트 모드' : '다크 모드'}
-          >
-            {darkMode ? (
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" /></svg>
-            ) : (
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z" /></svg>
-            )}
-            <span className="leading-none">{darkMode ? '라이트' : '다크'}</span>
-          </button>
-        </nav>
-
-        {/* 모바일 하단 네비게이션 (사이드바 대체) */}
-        <div className={`lg:hidden fixed bottom-0 left-0 right-0 z-40 border-t backdrop-blur-2xl ${darkMode ? 'bg-slate-800/95 border-slate-700' : 'bg-white/95 border-slate-200/60'}`}>
-          <div className="flex overflow-x-auto gap-0 px-1 py-1.5 custom-scrollbar">
+        {/* 2단: 탑 네비게이션 바 */}
+        <div className={`border-t ${darkMode ? 'border-slate-700/50' : 'border-slate-100/80'}`}>
+          <nav className="max-w-[1200px] w-full mx-auto px-5 flex items-center gap-1 overflow-x-auto custom-scrollbar">
             {([
               { id: 'blog' as ContentTabType, label: '블로그', icon: '📝' },
               { id: 'card_news' as ContentTabType, label: '카드뉴스', icon: '🎨' },
               { id: 'press' as ContentTabType, label: '언론보도', icon: '🗞️' },
-              { id: 'similarity' as ContentTabType, label: '유사도', icon: '🔍' },
-              { id: 'refine' as ContentTabType, label: 'AI보정', icon: '✨' },
-              { id: 'image' as ContentTabType, label: '이미지', icon: '🖼️' },
+              { id: 'similarity' as ContentTabType, label: '유사도 검사', icon: '🔍' },
+              { id: 'refine' as ContentTabType, label: 'AI 보정', icon: '✨' },
+              { id: 'image' as ContentTabType, label: '이미지 생성', icon: '🖼️' },
               { id: 'history' as ContentTabType, label: '히스토리', icon: '🕐' },
             ]).map(item => (
               <button
                 key={item.id}
                 onClick={() => setContentTab(item.id)}
-                className={`flex flex-col items-center gap-0.5 py-1.5 px-3 rounded-lg text-[10px] font-bold transition-all whitespace-nowrap ${
+                className={`relative py-3 px-4 text-[13px] font-semibold whitespace-nowrap transition-colors ${
                   contentTab === item.id
-                    ? 'text-blue-600 bg-blue-50'
-                    : darkMode ? 'text-slate-500' : 'text-slate-400'
+                    ? darkMode ? 'text-blue-400' : 'text-blue-600'
+                    : darkMode ? 'text-slate-400 hover:text-slate-200' : 'text-slate-500 hover:text-slate-800'
                 }`}
               >
-                <span className="text-sm">{item.icon}</span>
-                <span>{item.label}</span>
+                <span className="flex items-center gap-1.5">
+                  <span className="text-sm">{item.icon}</span>
+                  {item.label}
+                </span>
+                {contentTab === item.id && (
+                  <div className="absolute bottom-0 left-2 right-2 h-[2px] bg-blue-600 rounded-full" />
+                )}
               </button>
             ))}
-          </div>
+          </nav>
         </div>
+      </header>
 
-        {/* 메인 콘텐츠 영역 */}
-        <main className="flex-1 max-w-[1600px] w-full mx-auto p-3 lg:p-6 flex flex-col lg:flex-row gap-5 overflow-hidden">
+      {/* 메인 콘텐츠 - 일반 웹페이지처럼 수직 스크롤 */}
+      <main className="relative z-10 flex-1 overflow-y-auto">
+        <div className="max-w-[1200px] w-full mx-auto px-5 py-8">
 
         {/* 전체 화면 페이지들: 유사도, AI보정, 이미지, 히스토리 */}
         {contentTab === 'refine' || contentTab === 'similarity' || contentTab === 'image' || contentTab === 'history' ? (
-          <div className="w-full h-full flex flex-col gap-4 overflow-hidden pb-16 lg:pb-0">
-            <div className="flex-1 overflow-hidden">
+          <div className="w-full">
               {contentTab === 'similarity' ? (
-                <div className={`h-full rounded-2xl border p-6 backdrop-blur-xl ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white/80 border-white/60 shadow-[0_4px_24px_rgba(0,0,0,0.06)]'}`}>
-                  <Suspense fallback={<div className="flex items-center justify-center h-full"><div className="w-10 h-10 border-[3px] border-blue-100 border-t-blue-500 rounded-full animate-spin"></div></div>}>
+                <div className={`rounded-2xl border p-6 md:p-8 backdrop-blur-xl ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white/80 border-white/60 shadow-[0_4px_24px_rgba(0,0,0,0.06)]'}`}>
+                  <Suspense fallback={<div className="flex items-center justify-center py-20"><div className="w-10 h-10 border-[3px] border-blue-100 border-t-blue-500 rounded-full animate-spin"></div></div>}>
                     <SimilarityChecker
                       onClose={() => setContentTab('blog')}
                       darkMode={darkMode}
@@ -1064,8 +1003,8 @@ const App: React.FC = () => {
                   </Suspense>
                 </div>
               ) : contentTab === 'history' ? (
-                <div className={`h-full rounded-2xl border p-6 overflow-y-auto backdrop-blur-xl ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white/80 border-white/60 shadow-[0_4px_24px_rgba(0,0,0,0.06)]'}`}>
-                  <Suspense fallback={<div className="flex items-center justify-center h-full"><div className="w-10 h-10 border-[3px] border-blue-100 border-t-blue-500 rounded-full animate-spin"></div></div>}>
+                <div className={`rounded-2xl border p-6 md:p-8 backdrop-blur-xl ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white/80 border-white/60 shadow-[0_4px_24px_rgba(0,0,0,0.06)]'}`}>
+                  <Suspense fallback={<div className="flex items-center justify-center py-20"><div className="w-10 h-10 border-[3px] border-blue-100 border-t-blue-500 rounded-full animate-spin"></div></div>}>
                     <PostHistory
                       onClose={() => setContentTab('blog')}
                       darkMode={darkMode}
@@ -1073,14 +1012,14 @@ const App: React.FC = () => {
                   </Suspense>
                 </div>
               ) : contentTab === 'image' ? (
-                <div className={`h-full rounded-2xl border p-6 overflow-y-auto backdrop-blur-xl ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white/80 border-white/60 shadow-[0_4px_24px_rgba(0,0,0,0.06)]'}`}>
-                  <Suspense fallback={<div className="flex items-center justify-center h-full"><div className="w-10 h-10 border-[3px] border-blue-100 border-t-blue-500 rounded-full animate-spin"></div></div>}>
+                <div className={`rounded-2xl border p-6 md:p-8 backdrop-blur-xl ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white/80 border-white/60 shadow-[0_4px_24px_rgba(0,0,0,0.06)]'}`}>
+                  <Suspense fallback={<div className="flex items-center justify-center py-20"><div className="w-10 h-10 border-[3px] border-blue-100 border-t-blue-500 rounded-full animate-spin"></div></div>}>
                     <ImageGenerator />
                   </Suspense>
                 </div>
               ) : (
-                <div className={`h-full rounded-2xl border p-6 backdrop-blur-xl ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white/80 border-white/60 shadow-[0_4px_24px_rgba(0,0,0,0.06)]'}`}>
-                  <Suspense fallback={<div className="flex items-center justify-center h-full"><div className="w-10 h-10 border-[3px] border-blue-100 border-t-blue-500 rounded-full animate-spin"></div></div>}>
+                <div className={`rounded-2xl border p-6 md:p-8 backdrop-blur-xl ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white/80 border-white/60 shadow-[0_4px_24px_rgba(0,0,0,0.06)]'}`}>
+                  <Suspense fallback={<div className="flex items-center justify-center py-20"><div className="w-10 h-10 border-[3px] border-blue-100 border-t-blue-500 rounded-full animate-spin"></div></div>}>
                     <ContentRefiner
                       onClose={() => setContentTab('blog')}
                       onNavigate={(tab) => setContentTab(tab)}
@@ -1089,14 +1028,13 @@ const App: React.FC = () => {
                   </Suspense>
                 </div>
               )}
-            </div>
           </div>
         ) : (
           <>
-        {/* 분할 레이아웃 페이지들: 블로그, 카드뉴스, 언론보도 */}
-        {/* 왼쪽 영역: 입력 폼 */}
-        <div className={`lg:w-[460px] flex flex-col gap-4 overflow-hidden pb-16 lg:pb-0 ${mobileTab === 'result' ? 'hidden lg:flex' : 'flex'}`}>
-          <div ref={leftPanelRef} className="flex-1 overflow-y-auto custom-scrollbar">
+        {/* 블로그/카드뉴스/언론보도 - 위아래 배치 (입력 → 결과) */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* 입력 폼 */}
+          <div>
             <Suspense fallback={<div className="flex items-center justify-center h-64"><div className="w-10 h-10 border-[3px] border-blue-100 border-t-blue-500 rounded-full animate-spin"></div></div>}>
               <InputForm
                 onSubmit={handleGenerate}
@@ -1106,10 +1044,9 @@ const App: React.FC = () => {
               />
             </Suspense>
           </div>
-        </div>
 
-        {/* 오른쪽 영역: 결과 */}
-        <div className={`flex-1 h-full flex flex-col ${mobileTab === 'input' ? 'hidden lg:flex' : 'flex'} overflow-hidden`}>
+          {/* 결과 영역 */}
+          <div>
           {cardNewsPrompts && cardNewsPrompts.length > 0 ? (
             <Suspense fallback={<div className="rounded-2xl bg-white/80 backdrop-blur-xl border border-white/60 p-20 flex items-center justify-center shadow-[0_4px_24px_rgba(0,0,0,0.06)]"><div className="w-12 h-12 border-[3px] border-blue-100 border-t-blue-500 rounded-full animate-spin"></div></div>}>
               <PromptPreview
@@ -1123,7 +1060,6 @@ const App: React.FC = () => {
               />
             </Suspense>
           ) : cardNewsScript ? (
-            /* 1단계: 원고 확인 */
             <Suspense fallback={<div className="rounded-2xl bg-white/80 backdrop-blur-xl border border-white/60 p-20 flex items-center justify-center shadow-[0_4px_24px_rgba(0,0,0,0.06)]"><div className="w-12 h-12 border-[3px] border-blue-100 border-t-blue-500 rounded-full animate-spin"></div></div>}>
               <ScriptPreview
                 script={cardNewsScript}
@@ -1138,7 +1074,7 @@ const App: React.FC = () => {
               />
             </Suspense>
           ) : (getCurrentState().isLoading || isGeneratingScript) ? (
-            <div className={`rounded-2xl border p-16 flex flex-col items-center justify-center h-full text-center backdrop-blur-xl transition-colors duration-300 ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white/80 border-white/60 shadow-[0_4px_24px_rgba(0,0,0,0.06)]'}`}>
+            <div className={`rounded-2xl border p-16 flex flex-col items-center justify-center text-center backdrop-blur-xl transition-colors duration-300 ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white/80 border-white/60 shadow-[0_4px_24px_rgba(0,0,0,0.06)]'}`}>
               <div className="relative mb-8">
                 <div className={`w-16 h-16 border-[3px] border-t-blue-500 rounded-full animate-spin ${darkMode ? 'border-slate-700' : 'border-blue-100'}`}></div>
                 <div className="absolute inset-0 flex items-center justify-center">
@@ -1161,8 +1097,7 @@ const App: React.FC = () => {
               <ResultPreview content={getCurrentState().data!} darkMode={darkMode} />
             </Suspense>
           ) : (
-            <div className={`h-full rounded-2xl border flex flex-col items-center justify-center p-16 text-center group backdrop-blur-xl transition-all duration-500 relative overflow-hidden ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white/60 border-white/60 shadow-[0_4px_24px_rgba(0,0,0,0.04)]'}`}>
-               {/* Decorative background */}
+            <div className={`rounded-2xl border flex flex-col items-center justify-center p-16 text-center group backdrop-blur-xl transition-all duration-500 relative overflow-hidden min-h-[400px] ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white/60 border-white/60 shadow-[0_4px_24px_rgba(0,0,0,0.04)]'}`}>
                {!darkMode && (
                  <div className="absolute inset-0 pointer-events-none">
                    <div className="absolute top-8 right-8 w-32 h-32 bg-blue-100/30 rounded-full blur-[60px]" />
@@ -1176,7 +1111,7 @@ const App: React.FC = () => {
                    </svg>
                  </div>
                  <h3 className={`text-lg font-bold mb-2 ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>AI 콘텐츠 생성</h3>
-                 <p className={`text-sm font-medium leading-relaxed mb-5 ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>좌측에서 키워드를 입력하고<br/>생성 버튼을 눌러보세요</p>
+                 <p className={`text-sm font-medium leading-relaxed mb-5 ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>왼쪽에서 키워드를 입력하고<br/>생성 버튼을 눌러보세요</p>
                  <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold ${darkMode ? 'bg-slate-700 text-slate-400' : 'bg-blue-50/80 text-blue-500 border border-blue-100/50'}`}>
                    <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse" />
                    AI 대기 중
@@ -1184,20 +1119,13 @@ const App: React.FC = () => {
                </div>
             </div>
           )}
+          </div>
         </div>
           </>
         )}
 
-      </main>
-      </div>
-
-      {/* 모바일: 분할 레이아웃용 입력/결과 토글 (블로그/카드뉴스/언론보도에서만 표시) */}
-      {(contentTab === 'blog' || contentTab === 'card_news' || contentTab === 'press') && (
-        <div className={`lg:hidden fixed bottom-14 left-0 right-0 z-30 flex gap-2 p-2 backdrop-blur-2xl border-t transition-colors duration-300 ${darkMode ? 'bg-slate-800/90 border-slate-700' : 'bg-white/70 border-white/50 shadow-[0_-4px_20px_rgba(0,0,0,0.06)]'}`}>
-          <button onClick={() => setMobileTab('input')} className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${mobileTab === 'input' ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md shadow-blue-500/20' : darkMode ? 'text-slate-400' : 'text-slate-500'}`}>설정</button>
-          <button onClick={() => setMobileTab('result')} className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${mobileTab === 'result' ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md shadow-blue-500/20' : darkMode ? 'text-slate-400' : 'text-slate-500'}`}>결과</button>
         </div>
-      )}
+      </main>
 
       {/* API 에러 모달 */}
       {(getCurrentState().error || state.error) && (

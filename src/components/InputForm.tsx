@@ -284,55 +284,15 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
       {/* Decorative top gradient */}
       <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-violet-500 to-cyan-500" />
 
-      {/* 콘텐츠 유형 선택 */}
-      <div className="p-4 pb-0 pt-5">
-        <div className="flex gap-1 p-1 bg-slate-50 rounded-xl border border-slate-100/80">
-          {([
-            { id: 'blog' as PostType, label: '블로그', icon: '📝' },
-            { id: 'card_news' as PostType, label: '카드뉴스', icon: '🎨' },
-            { id: 'press_release' as PostType, label: '보도자료', icon: '🗞️' },
-          ]).map(tab => (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                const scrollY = window.scrollY;
-                setPostType(tab.id);
-                requestAnimationFrame(() => window.scrollTo(0, scrollY));
-              }}
-              className={`flex-1 py-2.5 rounded-lg text-xs font-bold transition-all duration-200 flex items-center justify-center gap-1.5 ${
-                postType === tab.id ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg shadow-blue-500/25' : 'text-slate-400 hover:text-slate-600 hover:bg-white'
-              }`}
-            >
-              <span>{tab.icon}</span>
-              <span>{tab.label}</span>
-            </button>
-          ))}
-        </div>
-        {/* 도구 바로가기 */}
-        <div className="flex gap-1.5 mt-2">
-          {([
-            { id: 'similarity' as const, label: '유사도', icon: '🔍' },
-            { id: 'refine' as const, label: 'AI보정', icon: '✨' },
-            { id: 'image' as const, label: '이미지', icon: '🖼️' },
-          ]).map(tool => (
-            <button
-              key={tool.id}
-              type="button"
-              onClick={() => onTabChange?.(tool.id)}
-              className="flex-1 py-2 rounded-lg text-[11px] font-bold text-slate-400 hover:text-blue-600 hover:bg-blue-50/60 border border-transparent hover:border-blue-100 transition-all flex items-center justify-center gap-1"
-            >
-              <span>{tool.icon}</span>
-              <span>{tool.label}</span>
-            </button>
-          ))}
-        </div>
+      {/* 페이지 타이틀 */}
+      <div className="px-6 pt-5 pb-0">
+        <h2 className={`text-lg font-black ${postType === 'blog' ? 'text-blue-700' : postType === 'card_news' ? 'text-pink-700' : 'text-amber-700'}`}>
+          {postType === 'blog' ? '📝 블로그 글 생성' : postType === 'card_news' ? '🎨 카드뉴스 생성' : '🗞️ 보도자료 생성'}
+        </h2>
+        <p className="text-xs text-slate-400 mt-1 font-medium">
+          {postType === 'blog' ? '네이버 스마트블록에 최적화된 의료 블로그 콘텐츠를 생성합니다.' : postType === 'card_news' ? 'SNS용 카드뉴스 원고와 이미지를 자동 생성합니다.' : '언론에 배포 가능한 보도자료를 작성합니다.'}
+        </p>
       </div>
-
-      {/* 구분선 */}
-      <div className="mx-5 mt-3 border-t border-slate-100/80"></div>
 
       {/* 메인 입력 폼 */}
       <div className="p-6 pt-4">
