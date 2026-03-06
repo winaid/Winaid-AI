@@ -129,6 +129,70 @@ function TemplateSVGPreview({ template: t, category, hospitalName }: { template:
         <text x="60" y="145" textAnchor="middle" fontSize="3.5" fill="#94a3b8">불편을 드려 죄송합니다</text>
       </>);
     }
+    if (hint === 'week') {
+      return wrap(<>
+        <text x="60" y="14" textAnchor="middle" fontSize="5" fontWeight="bold" fill={a}>{name}</text>
+        <text x="60" y="26" textAnchor="middle" fontSize="7" fontWeight="800" fill={c}>{mo}월 셋째 주</text>
+        <rect x="6" y="32" width="108" height="50" rx="4" fill="white" fillOpacity="0.85" stroke={c} strokeOpacity="0.15" strokeWidth="0.5" />
+        {['일','월','화','수','목','금','토'].map((d, i) => (
+          <g key={d}>
+            <text x={14 + i * 14} y="42" textAnchor="middle" fontSize="3.5" fontWeight="bold" fill={i === 0 ? '#ef4444' : i === 6 ? '#3b82f6' : '#94a3b8'}>{d}</text>
+            {(i === 3) ? <>
+              <circle cx={14 + i * 14} cy="56" r="7" fill={c} fillOpacity="0.15" />
+              <text x={14 + i * 14} y="59" textAnchor="middle" fontSize="6" fontWeight="800" fill={c}>{15 + i}</text>
+            </> : (i === 0) ? <>
+              <circle cx={14 + i * 14} cy="56" r="7" fill="#ef4444" fillOpacity="0.12" />
+              <text x={14 + i * 14} y="59" textAnchor="middle" fontSize="6" fontWeight="700" fill="#ef4444">{15 + i}</text>
+            </> : <>
+              <text x={14 + i * 14} y="59" textAnchor="middle" fontSize="6" fontWeight="500" fill="#64748b">{15 + i}</text>
+            </>}
+          </g>
+        ))}
+        <text x="60" y="56" textAnchor="middle" fontSize="2.5" fontWeight="700" fill={c}>휴진</text>
+        <rect x="10" y="90" width="100" height="20" rx="3" fill={c} fillOpacity="0.08" />
+        <text x="60" y="101" textAnchor="middle" fontSize="4" fill={a}>18일 (수) 휴진</text>
+        <text x="60" y="108" textAnchor="middle" fontSize="3" fill="#94a3b8">22일 (토) 단축진료</text>
+        <rect x="20" y="118" width="80" height="14" rx="4" fill={c} fillOpacity="0.1" />
+        <text x="60" y="127" textAnchor="middle" fontSize="4" fontWeight="700" fill={c}>TEL 02-1234-5678</text>
+        <text x="60" y="145" textAnchor="middle" fontSize="3.5" fill="#94a3b8">불편을 드려 죄송합니다</text>
+      </>);
+    }
+    if (hint === 'stamp' || hint === 'rip' || hint === 'slash') {
+      return wrap(<>
+        <text x="60" y="14" textAnchor="middle" fontSize="5" fontWeight="bold" fill={a}>{name}</text>
+        <text x="60" y="28" textAnchor="middle" fontSize="7" fontWeight="800" fill={c}>{mo}월 휴진 안내</text>
+        <circle cx="40" cy="60" r="20" fill="none" stroke={c} strokeWidth="1.5" strokeDasharray={hint === 'stamp' ? '0' : '3 2'} />
+        <text x="40" y="57" textAnchor="middle" fontSize="14" fontWeight="900" fill={c}>9</text>
+        <text x="40" y="72" textAnchor="middle" fontSize="4" fontWeight="700" fill={a}>휴진</text>
+        <circle cx="80" cy="60" r="20" fill="none" stroke="#ef4444" strokeWidth="1.5" strokeDasharray={hint === 'stamp' ? '0' : '3 2'} />
+        <text x="80" y="57" textAnchor="middle" fontSize="14" fontWeight="900" fill="#ef4444">15</text>
+        <text x="80" y="72" textAnchor="middle" fontSize="4" fontWeight="700" fill="#dc2626">휴진</text>
+        {hint === 'slash' && <>
+          <line x1="28" y1="43" x2="52" y2="77" stroke={c} strokeWidth="1" strokeOpacity="0.4" />
+          <line x1="68" y1="43" x2="92" y2="77" stroke="#ef4444" strokeWidth="1" strokeOpacity="0.4" />
+        </>}
+        <rect x="12" y="90" width="96" height="16" rx="3" fill="#f59e0b" fillOpacity="0.1" />
+        <text x="60" y="100" textAnchor="middle" fontSize="4.5" fontWeight="700" fill="#d97706">22일 (토) 단축진료</text>
+        <rect x="20" y="115" width="80" height="14" rx="4" fill={c} fillOpacity="0.1" />
+        <text x="60" y="124" textAnchor="middle" fontSize="4" fontWeight="700" fill={c}>TEL 02-1234-5678</text>
+        <text x="60" y="145" textAnchor="middle" fontSize="3.5" fill="#94a3b8">{name}</text>
+      </>);
+    }
+    if (hint === 'circle' || hint === 'countdown') {
+      return wrap(<>
+        <text x="60" y="14" textAnchor="middle" fontSize="5" fontWeight="bold" fill={a}>{name}</text>
+        <text x="60" y="28" textAnchor="middle" fontSize="7" fontWeight="800" fill={c}>{mo}월 휴진</text>
+        <circle cx="60" cy="65" r="28" fill="none" stroke={c} strokeWidth="1" strokeOpacity="0.2" />
+        <circle cx="60" cy="65" r="28" fill="none" stroke={c} strokeWidth="2" strokeDasharray="44 132" strokeLinecap="round" />
+        <text x="60" y="62" textAnchor="middle" fontSize="16" fontWeight="900" fill={c}>{hint === 'countdown' ? 'D-3' : '9'}</text>
+        <text x="60" y="75" textAnchor="middle" fontSize="4.5" fontWeight="600" fill={a}>{hint === 'countdown' ? '휴진까지' : mo + '월 휴진일'}</text>
+        <rect x="15" y="100" width="90" height="12" rx="3" fill={c} fillOpacity="0.08" />
+        <text x="60" y="108" textAnchor="middle" fontSize="4" fill="#64748b">15일 추가 휴진</text>
+        <rect x="20" y="120" width="80" height="14" rx="4" fill={c} fillOpacity="0.1" />
+        <text x="60" y="129" textAnchor="middle" fontSize="4" fontWeight="700" fill={c}>TEL 02-1234-5678</text>
+        <text x="60" y="150" textAnchor="middle" fontSize="3.5" fill="#94a3b8">{name}</text>
+      </>);
+    }
     // list layout
     return wrap(<>
       <text x="60" y="14" textAnchor="middle" fontSize="5" fontWeight="bold" fill={a}>{name}</text>
