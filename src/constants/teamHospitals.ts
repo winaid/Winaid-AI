@@ -13,7 +13,20 @@ export const TEAM_DATA: TeamData[] = [
   {
     id: 1,
     label: '1팀',
-    hospitals: [],
+    hospitals: [
+      { name: '맘애든어린이치과', manager: '주열' },
+      { name: '코랄치과', manager: '주열' },
+      { name: '미소모아치과', manager: '주열' },
+      { name: '에버유의원', manager: '주열' },
+      { name: '청주새롬탑치과', manager: '주열' },
+      { name: '서울삼성치과', manager: '주열' },
+      { name: '논산중앙치과', manager: '소영' },
+      { name: '코랄치과 (소영)', manager: '소영' },
+      { name: '아산베스트치과', manager: '소영' },
+      { name: '검단일등치과', manager: '소영' },
+      { name: '바른플란트치과', manager: '소영' },
+      { name: '닥터신치과', manager: '소영' },
+    ],
   },
   {
     id: 2,
