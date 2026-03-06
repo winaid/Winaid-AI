@@ -120,13 +120,25 @@ export default function TemplateGenerator() {
   const [greetClosure, setGreetClosure] = useState('');
 
   // 채용/공고
-  const [hiringTitle, setHiringTitle] = useState('');
-  const [hiringPosition, setHiringPosition] = useState('');
-  const [hiringRequirements, setHiringRequirements] = useState('');
-  const [hiringBenefits, setHiringBenefits] = useState('');
-  const [hiringDeadline, setHiringDeadline] = useState('');
-  const [hiringContact, setHiringContact] = useState('');
+  type HiringPageType = 'cover' | 'requirements' | 'benefits' | 'contact' | 'intro' | 'free';
+  interface HiringPageData { type: HiringPageType; content: string; }
+  const HIRING_PAGE_TYPES: { id: HiringPageType; label: string; placeholder: string }[] = [
+    { id: 'cover', label: '표지', placeholder: '간호사 모집합니다\n함께 성장할 인재를 찾습니다' },
+    { id: 'requirements', label: '자격요건', placeholder: '해당 면허 소지자\n경력 1년 이상 우대\n성실하고 책임감 있는 분' },
+    { id: 'benefits', label: '복리후생', placeholder: '4대보험 가입\n중식 제공\n연차/월차 보장\n인센티브 지급' },
+    { id: 'contact', label: '지원방법', placeholder: '이메일: recruit@hospital.com\n전화: 02-1234-5678\n마감: 채용시까지' },
+    { id: 'intro', label: '병원소개', placeholder: '최신 장비와 쾌적한 환경\n서울 강남 위치\n직원 만족도 95%' },
+    { id: 'free', label: '자유입력', placeholder: '원하는 내용을 자유롭게 입력하세요' },
+  ];
+  const defaultPageTypes: HiringPageType[] = ['cover', 'requirements', 'benefits', 'contact', 'intro'];
   const [hiringPageCount, setHiringPageCount] = useState(1);
+  const [hiringPageData, setHiringPageData] = useState<HiringPageData[]>([{ type: 'cover', content: '' }]);
+  const updatePageType = (index: number, type: HiringPageType) => {
+    const data = [...hiringPageData]; data[index] = { ...data[index], type }; setHiringPageData(data);
+  };
+  const updatePageContent = (index: number, content: string) => {
+    const data = [...hiringPageData]; data[index] = { ...data[index], content }; setHiringPageData(data);
+  };
 
   // 주의사항 (시술/진료 후)
   const [cautionType, setCautionType] = useState('시술 후');
@@ -255,7 +267,7 @@ export default function TemplateGenerator() {
       } else if (category === 'notice') {
         templateData = { title: noticeTitle, content: noticeContent.split('\n').filter(Boolean), effectiveDate: noticeDate || undefined };
       } else if (category === 'hiring') {
-        templateData = { title: hiringTitle || '직원 모집', position: hiringPosition || undefined, requirements: hiringRequirements.split('\n').filter(Boolean), benefits: hiringBenefits.split('\n').filter(Boolean), deadline: hiringDeadline || undefined, contact: hiringContact || undefined };
+        templateData = { pageData: hiringPageData.slice(0, hiringPageCount).map(p => ({ type: p.type, content: p.content })) };
       } else if (category === 'caution') {
         templateData = { type: cautionType, title: cautionTitle || `${cautionType} 주의사항`, items: cautionItems.split('\n').filter(Boolean), emergency: cautionEmergency || undefined };
       } else {
@@ -584,24 +596,48 @@ export default function TemplateGenerator() {
             <div>
               <label className={labelCls}>페이지 수</label>
               <div className="flex gap-1.5">
-                {[1,2,3,4].map(n => (
-                  <button key={n} onClick={() => setHiringPageCount(n)} className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${hiringPageCount === n ? 'bg-slate-800 text-white shadow-md' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>
-                    {n === 1 ? '1장' : `${n}장 캐러셀`}
+                {[1,2,3,4,5].map(n => (
+                  <button key={n} onClick={() => {
+                    setHiringPageCount(n);
+                    setHiringPageData(prev => {
+                      const data = [...prev];
+                      while (data.length < n) data.push({ type: defaultPageTypes[data.length] || 'free', content: '' });
+                      return data.slice(0, n);
+                    });
+                  }} className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${hiringPageCount === n ? 'bg-slate-800 text-white shadow-md' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>
+                    {n}장
                   </button>
                 ))}
               </div>
               {hiringPageCount > 1 && (
-                <p className="text-[10px] text-slate-400 mt-1">1장째 스타일을 기준으로 나머지 페이지가 통일됩니다</p>
+                <p className="text-[10px] text-slate-400 mt-1">1장째 스타일 기준으로 나머지 페이지 톤이 통일됩니다</p>
               )}
             </div>
-            <div><label className={labelCls}>공고 제목</label><input type="text" value={hiringTitle} onChange={e=>setHiringTitle(e.target.value)} placeholder="간호사 모집" className={inputCls} /></div>
-            <div><label className={labelCls}>모집 직종/포지션</label><input type="text" value={hiringPosition} onChange={e=>setHiringPosition(e.target.value)} placeholder="예: 간호사 / 물리치료사 / 치위생사" className={inputCls} /></div>
-            <div><label className={labelCls}>자격 요건 <span className="text-slate-400 font-normal">(줄바꿈으로 구분)</span></label><textarea value={hiringRequirements} onChange={e=>setHiringRequirements(e.target.value)} placeholder={"해당 면허 소지자\n경력 1년 이상 우대\n성실하고 책임감 있는 분"} rows={4} className={textareaCls} /></div>
-            <div><label className={labelCls}>복리후생/혜택 <span className="text-slate-400 font-normal">(줄바꿈으로 구분)</span></label><textarea value={hiringBenefits} onChange={e=>setHiringBenefits(e.target.value)} placeholder={"4대보험 가입\n중식 제공\n연차/월차 보장\n인센티브 지급"} rows={3} className={textareaCls} /></div>
-            <div className="flex gap-3">
-              <div className="flex-1"><label className={labelCls}>마감일 <span className="text-slate-400 font-normal">(선택)</span></label><input type="text" value={hiringDeadline} onChange={e=>setHiringDeadline(e.target.value)} placeholder="채용시 마감" className={inputCls} /></div>
-              <div className="flex-1"><label className={labelCls}>연락처/지원방법</label><input type="text" value={hiringContact} onChange={e=>setHiringContact(e.target.value)} placeholder="02-1234-5678 또는 이메일" className={inputCls} /></div>
-            </div>
+            {Array.from({ length: hiringPageCount }, (_, i) => {
+              const page = hiringPageData[i] || { type: 'free', content: '' };
+              const typeInfo = HIRING_PAGE_TYPES.find(t => t.id === page.type) || HIRING_PAGE_TYPES[5];
+              return (
+                <div key={i} className="bg-slate-50 rounded-xl p-3 border border-slate-200 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-600">{hiringPageCount > 1 ? `${i + 1}페이지` : '내용'}</span>
+                    <div className="flex gap-1">
+                      {HIRING_PAGE_TYPES.map(t => (
+                        <button key={t.id} onClick={() => updatePageType(i, t.id)} className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${page.type === t.id ? 'bg-slate-700 text-white' : 'bg-white text-slate-400 hover:text-slate-600 border border-slate-200'}`}>
+                          {t.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <textarea
+                    value={page.content}
+                    onChange={e => updatePageContent(i, e.target.value)}
+                    placeholder={typeInfo.placeholder}
+                    rows={hiringPageCount === 1 ? 5 : 3}
+                    className={textareaCls}
+                  />
+                </div>
+              );
+            })}
           </div>
         )}
 

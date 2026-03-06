@@ -1144,87 +1144,62 @@ function buildGreetingTextContent(data: {
 }
 
 function buildHiringTextContent(data: {
-  title: string; position?: string; requirements: string[]; benefits: string[];
-  deadline?: string; contact?: string; currentPage?: number; totalPages?: number;
+  pageData: { type: string; content: string }[]; currentPage?: number; totalPages?: number;
 }): string {
-  const { currentPage, totalPages } = data;
+  const { currentPage, totalPages, pageData } = data;
+  const pageIndex = (currentPage || 1) - 1;
+  const page = pageData[pageIndex] || pageData[0] || { type: 'cover', content: '' };
+  const lines = page.content.trim().split('\n').filter(Boolean);
 
-  // 단일 페이지: 모든 정보를 한 장에
-  if (!totalPages || totalPages <= 1) {
-    let content = `[MAIN TITLE - largest, bold, center] "${data.title}"`;
-    if (data.position) content += `\n[POSITION - accent color badge, prominent] "${data.position}"`;
-    if (data.requirements.length > 0) content += `\n[REQUIREMENTS - section with header "자격 요건"]\n${data.requirements.map(r => `• ${r}`).join('\n')}`;
-    if (data.benefits.length > 0) content += `\n[BENEFITS - section with header "복리후생"]\n${data.benefits.map(b => `• ${b}`).join('\n')}`;
-    if (data.deadline) content += `\n[DEADLINE - subtle, bottom area] "마감: ${data.deadline}"`;
-    if (data.contact) content += `\n[CONTACT - clear, bottom] "지원/문의: ${data.contact}"`;
+  const typeHints: Record<string, { layout: string; fallback: string }> = {
+    cover: {
+      layout: 'COVER PAGE - eye-catching, bold hero design. Large title, strong visual impact, recruiting energy',
+      fallback: '직원 모집',
+    },
+    requirements: {
+      layout: 'REQUIREMENTS PAGE - clean list layout with checkmark/bullet icons, organized and readable',
+      fallback: '자격 요건',
+    },
+    benefits: {
+      layout: 'BENEFITS PAGE - appealing, warm layout with icon highlights, make it feel rewarding',
+      fallback: '복리후생',
+    },
+    contact: {
+      layout: 'CONTACT/APPLICATION PAGE - clear call to action, prominent contact info, "지원하세요!" energy',
+      fallback: '지원 방법',
+    },
+    intro: {
+      layout: 'HOSPITAL INTRODUCTION PAGE - professional, trustworthy, showcase the workplace environment',
+      fallback: '병원 소개',
+    },
+    free: {
+      layout: 'CONTENT PAGE - well-organized layout matching the content provided',
+      fallback: '채용 안내',
+    },
+  };
+
+  const hint = typeHints[page.type] || typeHints.free;
+  const isMultiPage = totalPages && totalPages > 1;
+  const pageLabel = isMultiPage
+    ? `[PAGE ${currentPage} of ${totalPages} - Instagram carousel post for hospital recruitment]\n`
+    : '';
+
+  let content = `${pageLabel}[${hint.layout}]`;
+
+  if (lines.length === 0) {
+    content += `\n[MAIN TITLE - largest, bold, center] "${hint.fallback}"`;
     return content;
   }
 
-  // 다중 페이지 캐러셀: 페이지별 콘텐츠 분배
-  const pageLabel = `[PAGE ${currentPage} of ${totalPages} - this is a carousel post, design accordingly]`;
-
-  if (totalPages === 2) {
-    if (currentPage === 1) {
-      let content = `${pageLabel}\n[COVER PAGE - eye-catching, bold design to grab attention]`;
-      content += `\n[MAIN TITLE - largest, bold, center] "${data.title}"`;
-      if (data.position) content += `\n[POSITION - accent color badge, very prominent] "${data.position}"`;
-      content += `\n[CALL TO ACTION - "함께할 분을 찾습니다" or similar recruiting message]`;
-      return content;
-    } else {
-      let content = `${pageLabel}\n[DETAIL PAGE - organized, readable layout]`;
-      if (data.requirements.length > 0) content += `\n[REQUIREMENTS - section with header "자격 요건"]\n${data.requirements.map(r => `• ${r}`).join('\n')}`;
-      if (data.benefits.length > 0) content += `\n[BENEFITS - section with header "복리후생"]\n${data.benefits.map(b => `• ${b}`).join('\n')}`;
-      if (data.deadline) content += `\n[DEADLINE - visible] "마감: ${data.deadline}"`;
-      if (data.contact) content += `\n[CONTACT - prominent, bottom] "지원/문의: ${data.contact}"`;
-      return content;
-    }
+  // 첫 줄 = 제목, 나머지 = 내용
+  content += `\n[HEADING - bold, prominent] "${lines[0]}"`;
+  if (lines.length > 1) {
+    const bodyLines = lines.slice(1).map(l =>
+      l.startsWith('-') || l.startsWith('*') || l.startsWith('•') ? `  ${l}` : l
+    );
+    content += `\n[CONTENT - well-structured, readable, with appropriate icons/bullets]\n${bodyLines.join('\n')}`;
   }
-
-  if (totalPages === 3) {
-    if (currentPage === 1) {
-      let content = `${pageLabel}\n[COVER PAGE - eye-catching hero design]`;
-      content += `\n[MAIN TITLE - largest, bold, center] "${data.title}"`;
-      if (data.position) content += `\n[POSITION - accent color badge, very prominent] "${data.position}"`;
-      content += `\n[CALL TO ACTION - "함께할 분을 찾습니다" or similar]`;
-      return content;
-    } else if (currentPage === 2) {
-      let content = `${pageLabel}\n[REQUIREMENTS PAGE - clean list layout]`;
-      content += `\n[SECTION TITLE - "자격 요건"]`;
-      if (data.requirements.length > 0) content += `\n[REQUIREMENTS LIST - numbered, readable]\n${data.requirements.map(r => `• ${r}`).join('\n')}`;
-      return content;
-    } else {
-      let content = `${pageLabel}\n[BENEFITS & CONTACT PAGE]`;
-      if (data.benefits.length > 0) content += `\n[SECTION TITLE - "복리후생"]\n${data.benefits.map(b => `• ${b}`).join('\n')}`;
-      if (data.deadline) content += `\n[DEADLINE - visible] "마감: ${data.deadline}"`;
-      if (data.contact) content += `\n[CONTACT - prominent, bottom] "지원/문의: ${data.contact}"`;
-      return content;
-    }
-  }
-
-  // 4 pages
-  if (currentPage === 1) {
-    let content = `${pageLabel}\n[COVER PAGE - bold, attention-grabbing hero design]`;
-    content += `\n[MAIN TITLE - largest, bold, center] "${data.title}"`;
-    if (data.position) content += `\n[POSITION - accent color badge, very prominent] "${data.position}"`;
-    content += `\n[CALL TO ACTION - "함께 성장할 인재를 찾습니다" or similar]`;
-    return content;
-  } else if (currentPage === 2) {
-    let content = `${pageLabel}\n[REQUIREMENTS PAGE - clean organized layout]`;
-    content += `\n[SECTION TITLE - "자격 요건"]`;
-    if (data.requirements.length > 0) content += `\n[REQUIREMENTS LIST - numbered, spacious]\n${data.requirements.map(r => `• ${r}`).join('\n')}`;
-    return content;
-  } else if (currentPage === 3) {
-    let content = `${pageLabel}\n[BENEFITS PAGE - appealing, warm layout]`;
-    content += `\n[SECTION TITLE - "복리후생"]`;
-    if (data.benefits.length > 0) content += `\n[BENEFITS LIST - with icons/checkmarks]\n${data.benefits.map(b => `• ${b}`).join('\n')}`;
-    return content;
-  } else {
-    let content = `${pageLabel}\n[CONTACT/CLOSING PAGE - clear call to action]`;
-    if (data.deadline) content += `\n[DEADLINE - prominent] "마감: ${data.deadline}"`;
-    if (data.contact) content += `\n[CONTACT - large, clear] "지원/문의: ${data.contact}"`;
-    content += `\n[CLOSING MESSAGE - "지금 지원하세요!" or "많은 관심 부탁드립니다"]`;
-    return content;
-  }
+  return content;
 }
 
 function buildCautionTextContent(data: {
