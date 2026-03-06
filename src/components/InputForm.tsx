@@ -282,7 +282,7 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
   return (
     <div className="space-y-3">
       {/* 콘텐츠 유형 선택 카드 */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4">
+      <div className="bg-white rounded-2xl shadow-lg shadow-slate-200/50 border border-slate-100 p-4">
         <div className="flex gap-1.5 p-1 bg-slate-100 rounded-xl">
           {([
             { id: 'blog' as PostType, label: '블로그', icon: '📝' },
