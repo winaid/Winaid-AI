@@ -401,143 +401,27 @@ export default function TemplateGenerator() {
           ))}
         </div>
 
-        {/* 팀 선택 탭 */}
-        <div className="flex bg-slate-100 rounded-xl p-1">
-          {TEAM_DATA.map(team => (
-            <button
-              key={team.id}
-              type="button"
-              onClick={() => { setSelectedTeam(team.id); setShowHospitalDropdown(true); }}
-              className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-all ${
-                selectedTeam === team.id
-                  ? 'bg-white text-blue-600 shadow-sm'
-                  : 'text-slate-500 hover:text-slate-700'
-              }`}
-            >
-              {team.label}
-            </button>
-          ))}
-        </div>
-
-        {/* 병원 정보 (로고 + 병원명 + 위치) */}
+        {/* 병원 브랜딩 (간소화) */}
         <div className="bg-slate-50 rounded-xl p-3 border border-slate-200 space-y-3">
           <label className="block text-xs font-semibold text-slate-600">병원 브랜딩</label>
-          {/* 로고 + 병원명 입력 */}
-          <div className="flex items-center gap-3">
-            {logoBase64 ? (
-              <div className="relative group flex-shrink-0">
-                <div className="w-12 h-12 rounded-lg border border-slate-200 bg-white flex items-center justify-center overflow-hidden">
-                  <img src={logoBase64} alt="로고" className="max-w-full max-h-full object-contain" />
-                </div>
-                <button onClick={() => { setLogoBase64(null); localStorage.removeItem('uploaded_logo'); }} className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-full text-[10px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow">x</button>
-              </div>
-            ) : (
-              <label className="w-12 h-12 rounded-lg border-2 border-dashed border-slate-300 bg-white flex items-center justify-center cursor-pointer hover:border-blue-400 transition-colors flex-shrink-0">
+          <div className="flex gap-2 items-center">
+            {/* 로고 업로드 */}
+            <label className="flex-shrink-0 w-12 h-12 rounded-xl border-2 border-dashed border-slate-300 flex items-center justify-center cursor-pointer hover:border-blue-400 transition-colors overflow-hidden bg-white">
+              {logoBase64 ? (
+                <img src={logoBase64} alt="로고" className="w-full h-full object-contain" />
+              ) : (
                 <svg className="w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                <input type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
-              </label>
-            )}
-            {selectedTeam !== null ? (
-              <div className="flex-1 relative">
-                <label className="block text-[10px] font-semibold text-slate-500 mb-1">병원명</label>
-                <div className="relative">
-                  <input type="text" value={hospitalName} onChange={e => setHospitalName(e.target.value)} placeholder="병원명 선택" className="w-full px-3 py-2 pr-8 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-400 bg-white" />
-                  <button type="button" onClick={() => setShowHospitalDropdown(!showHospitalDropdown)} className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 transition-colors">
-                    <svg className={`w-3.5 h-3.5 transition-transform ${showHospitalDropdown ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-                  </button>
-                </div>
-                {/* 병원 드롭다운 */}
-                {showHospitalDropdown && (
-                  <div className="absolute z-50 mt-1 w-full bg-white rounded-xl border border-slate-200 shadow-lg overflow-hidden">
-                    <div className="px-3 py-1.5 bg-blue-50 border-b border-blue-100">
-                      <span className="text-[10px] font-bold text-blue-600">{TEAM_DATA.find(t => t.id === selectedTeam)?.label}</span>
-                    </div>
-                    {(() => {
-                      const team = TEAM_DATA.find(t => t.id === selectedTeam);
-                      if (!team || team.hospitals.length === 0) {
-                        return <div className="p-3 text-center text-xs text-slate-400">등록된 병원이 없습니다</div>;
-                      }
-                      const managers = [...new Set(team.hospitals.map(h => h.manager))];
-                      return (
-                        <div className="max-h-52 overflow-y-auto">
-                          {managers.map(manager => (
-                            <div key={manager}>
-                              <div className="px-3 py-1.5 bg-slate-50 text-[10px] font-bold text-slate-500 sticky top-0">{manager}</div>
-                              {team.hospitals.filter(h => h.manager === manager).map(hospital => {
-                                const cleanName = hospital.name.replace(/ \(.*\)$/, '');
-                                return (
-                                  <button
-                                    key={`${hospital.name}-${hospital.manager}`}
-                                    type="button"
-                                    onClick={() => { setHospitalName(cleanName); setShowHospitalDropdown(false); }}
-                                    className="w-full px-4 py-1.5 text-left text-xs text-slate-700 hover:bg-blue-50 hover:text-blue-700 transition-colors flex items-center justify-between"
-                                  >
-                                    <span>{cleanName}</span>
-                                    {hospitalName === cleanName && (
-                                      <svg className="w-3.5 h-3.5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                                    )}
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          ))}
-                        </div>
-                      );
-                    })()}
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="flex-1 flex items-center">
-                <span className="text-xs text-slate-400">← 팀을 먼저 선택하세요</span>
-              </div>
-            )}
-          </div>
-          {/* 위치 선택 */}
-          <div>
-            <label className="block text-[10px] font-semibold text-slate-500 mb-1.5">로고/병원명 위치</label>
-            <div className="flex gap-2">
-              {([
-                { pos: 'top' as const, label: '상단' },
-                { pos: 'bottom' as const, label: '하단' },
-              ]).map(({ pos, label }) => (
-                <button key={pos} onClick={() => setBrandingPos(pos)} className={`flex-1 py-2 rounded-lg border text-xs font-bold transition-all ${brandingPos === pos ? 'border-slate-700 bg-slate-700 text-white' : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'}`}>
-                  {label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* 병원 기본 정보 토글 */}
-          <button type="button" onClick={() => setShowHospitalInfo(!showHospitalInfo)} className="w-full flex items-center justify-between text-[10px] font-semibold text-slate-500 hover:text-slate-700 transition-colors pt-1">
-            <span>병원 기본 정보 / 브랜드 컬러</span>
-            <svg className={`w-3.5 h-3.5 transition-transform ${showHospitalInfo ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-          </button>
-          {showHospitalInfo && (
-            <div className="space-y-2 pt-1">
-              <input type="text" value={clinicPhone} onChange={e => setClinicPhone(e.target.value)} onBlur={saveHospitalInfo} placeholder="전화번호: 02-1234-5678" className="w-full px-2.5 py-1.5 border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-blue-400 bg-white" />
-              <input type="text" value={clinicHours} onChange={e => setClinicHours(e.target.value)} onBlur={saveHospitalInfo} placeholder="진료시간: 평일 09:00~18:00 / 토 09:00~13:00" className="w-full px-2.5 py-1.5 border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-blue-400 bg-white" />
-              <input type="text" value={clinicAddress} onChange={e => setClinicAddress(e.target.value)} onBlur={saveHospitalInfo} placeholder="주소: 서울시 강남구 테헤란로 123" className="w-full px-2.5 py-1.5 border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-blue-400 bg-white" />
-              <div className="flex gap-2 items-center">
-                <div className="flex-1 flex items-center gap-2">
-                  <label className="text-[10px] text-slate-500 whitespace-nowrap">메인 컬러</label>
-                  <input type="color" value={brandColor || '#4F46E5'} onChange={e => setBrandColor(e.target.value)} onBlur={saveHospitalInfo} className="w-7 h-7 rounded border border-slate-200 cursor-pointer p-0.5" />
-                  <input type="text" value={brandColor} onChange={e => setBrandColor(e.target.value)} onBlur={saveHospitalInfo} placeholder="#4F46E5" className="flex-1 px-2 py-1 border border-slate-200 rounded text-[10px] font-mono focus:outline-none focus:border-blue-400" />
-                </div>
-                <div className="flex-1 flex items-center gap-2">
-                  <label className="text-[10px] text-slate-500 whitespace-nowrap">포인트</label>
-                  <input type="color" value={brandAccent || '#F59E0B'} onChange={e => setBrandAccent(e.target.value)} onBlur={saveHospitalInfo} className="w-7 h-7 rounded border border-slate-200 cursor-pointer p-0.5" />
-                  <input type="text" value={brandAccent} onChange={e => setBrandAccent(e.target.value)} onBlur={saveHospitalInfo} placeholder="#F59E0B" className="flex-1 px-2 py-1 border border-slate-200 rounded text-[10px] font-mono focus:outline-none focus:border-blue-400" />
-                </div>
-              </div>
-              {(brandColor || brandAccent) && (
-                <div className="flex gap-1 items-center">
-                  <div className="h-4 flex-1 rounded" style={{ background: `linear-gradient(135deg, ${brandColor || '#4F46E5'}, ${brandAccent || '#F59E0B'})` }} />
-                  <button type="button" onClick={() => { setBrandColor(''); setBrandAccent(''); saveHospitalInfo(); }} className="text-[9px] text-slate-400 hover:text-red-500">초기화</button>
-                </div>
               )}
-            </div>
-          )}
+              <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
+                const f = e.target.files?.[0];
+                if (!f) return;
+                const reader = new FileReader();
+                reader.onload = (ev) => setLogoBase64(ev.target?.result as string);
+                reader.readAsDataURL(f);
+              }} />
+            </label>
+            <input type="text" value={hospitalName} onChange={e => setHospitalName(e.target.value)} placeholder="병원명 입력 (선택)" className="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-400 bg-white" />
+          </div>
         </div>
 
         {/* === 진료 일정 === */}

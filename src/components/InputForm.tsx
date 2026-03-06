@@ -288,6 +288,7 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
       
       <form onSubmit={handleSubmit} className="space-y-5">
 
+        {postType === 'blog' && (<>
         {/* 팀 선택 탭 (항상 보임) */}
         <div className="flex bg-slate-100 rounded-xl p-1">
           {TEAM_DATA.map(team => (
@@ -505,6 +506,8 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
               )}
             </div>
           )}
+
+        </>)}
 
         <div className="grid grid-cols-2 gap-3">
           <div>

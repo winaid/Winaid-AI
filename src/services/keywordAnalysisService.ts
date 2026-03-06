@@ -226,15 +226,18 @@ export async function analyzeHospitalKeywords(
     onProgress?.(`⚠️ 검색량 조회 에러: ${apiErrors[0]}`);
   }
 
+  // 검색량 20 이상만 필터링
+  const filteredStats = stats.filter(s => s.monthlySearchVolume >= 20);
+
   // Step 3: 블루오션 분석 (검색량 데이터가 있는 키워드만)
-  const hasData = stats.filter(s => s.monthlySearchVolume > 0);
+  const hasData = filteredStats.filter(s => s.monthlySearchVolume > 0);
   let aiRecommendation = '';
   if (hasData.length >= 3) {
     onProgress?.('블루오션 키워드 분석 중...');
-    aiRecommendation = await analyzeBlueOceanWithAI(hospitalName, stats);
+    aiRecommendation = await analyzeBlueOceanWithAI(hospitalName, filteredStats);
   } else if (apiErrors?.length) {
     aiRecommendation = `⚠️ 네이버 검색광고 API 오류로 검색량을 조회하지 못했습니다.\n\n**에러 내용:** ${apiErrors[0]}\n\nCloudflare 환경변수를 확인해주세요:\n- NAVER_SEARCHAD_CUSTOMER_ID\n- NAVER_SEARCHAD_API_KEY\n- NAVER_SEARCHAD_SECRET`;
   }
 
-  return { stats, aiRecommendation };
+  return { stats: filteredStats, aiRecommendation };
 }

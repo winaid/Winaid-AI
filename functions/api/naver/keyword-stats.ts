@@ -104,7 +104,7 @@ async function getSearchVolume(
     };
   }
 
-  // API 응답 디버깅: 입력 키워드와 매칭 상황 로깅
+  // API 응답 디버깅
   const kwList = result.data.keywordList || [];
   console.log(`[SearchAd v8] 응답 키워드 수: ${kwList.length}`);
   for (const kw of cleanKeywords) {
@@ -118,18 +118,27 @@ async function getSearchVolume(
   return { data: parseKeywordList(result.data) };
 }
 
-async function getBlogPostCount(keyword: string, env: Env): Promise<number> {
-  const searchUrl = `https://openapi.naver.com/v1/search/blog.json?query=${encodeURIComponent(keyword)}&display=1`;
-  const response = await fetch(searchUrl, {
-    headers: {
-      'X-Naver-Client-Id': env.NAVER_CLIENT_ID?.trim(),
-      'X-Naver-Client-Secret': env.NAVER_CLIENT_SECRET?.trim(),
-    },
-  });
+async function getBlogPostCount(keyword: string, env: Env): Promise<{ count: number; error?: string }> {
+  try {
+    const searchUrl = `https://openapi.naver.com/v1/search/blog.json?query=${encodeURIComponent(keyword)}&display=1`;
+    const response = await fetch(searchUrl, {
+      headers: {
+        'X-Naver-Client-Id': env.NAVER_CLIENT_ID?.trim(),
+        'X-Naver-Client-Secret': env.NAVER_CLIENT_SECRET?.trim(),
+      },
+    });
 
-  if (!response.ok) return 0;
-  const data = await response.json() as { total: number };
-  return data.total || 0;
+    if (!response.ok) {
+      const errText = await response.text().catch(() => '');
+      console.error(`[Blog] "${keyword}" 실패: ${response.status} ${errText.substring(0, 100)}`);
+      return { count: 0, error: `Blog ${response.status}: ${errText.substring(0, 50)}` };
+    }
+    const data = await response.json() as { total: number };
+    return { count: data.total || 0 };
+  } catch (e: any) {
+    console.error(`[Blog] "${keyword}" 예외:`, e.message);
+    return { count: 0, error: e.message };
+  }
 }
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {
@@ -169,15 +178,18 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     const blogCountMap: Record<string, number> = {};
 
     if (hasBlogKeys) {
+      console.log(`[Blog v8] 블로그 조회 시작: ${keywords.length}개, CLIENT_ID: ${context.env.NAVER_CLIENT_ID?.substring(0, 6)}...`);
       const blogChunks: string[][] = [];
       for (let i = 0; i < keywords.length; i += 10) {
         blogChunks.push(keywords.slice(i, i + 10));
       }
 
+      const blogErrors: string[] = [];
       for (const chunk of blogChunks) {
         const results = await Promise.all(
           chunk.map(async (kw) => {
-            const count = await getBlogPostCount(kw, context.env);
+            const { count, error } = await getBlogPostCount(kw, context.env);
+            if (error) blogErrors.push(`${kw}: ${error}`);
             return { keyword: kw, blogCount: count };
           })
         );
@@ -185,6 +197,14 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
           blogCountMap[keyword] = blogCount;
         }
       }
+      if (blogErrors.length > 0) {
+        console.error(`[Blog v8] 에러 ${blogErrors.length}건:`, blogErrors.slice(0, 3).join('; '));
+        errors.push(`Blog API 에러: ${blogErrors[0]}`);
+      }
+      console.log(`[Blog v8] 완료:`, Object.entries(blogCountMap).slice(0, 5).map(([k, v]) => `${k}=${v}`).join(', '));
+    } else {
+      console.error('[Blog v8] 블로그 API 키 미설정! CLIENT_ID:', !!context.env.NAVER_CLIENT_ID, 'CLIENT_SECRET:', !!context.env.NAVER_CLIENT_SECRET);
+      errors.push('블로그 API 키 미설정 (NAVER_CLIENT_ID, NAVER_CLIENT_SECRET)');
     }
 
     // 3) 결합 (공백 유무 관계없이 매칭)
