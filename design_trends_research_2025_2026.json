@@ -1,0 +1,500 @@
+{
+  "title": "병원/치과 카드뉴스 & 인스타그램 의료 마케팅 디자인 트렌드 리서치 (2025-2026)",
+  "research_date": "2026-03-06",
+  "general_design_trends_2025_2026": {
+    "overall_direction": "AI와 디지털 완벽주의에 대한 반작용으로, 인간적이고 유기적이며 따뜻한 디자인으로의 회귀가 두드러짐",
+    "color_of_the_year": {
+      "pantone_2026": "Cloud Dancer (소프트 오프화이트, 세련된 뉴트럴)",
+      "wgsn_2026": "Transformative Teal (트랜스포머티브 틸)"
+    },
+    "key_color_palettes": [
+      "쿨 블루 (Cool Blue) - 신선하고 모던하며 자신감 있는 느낌",
+      "크리미 뉴트럴 (Creamy Neutrals) - 오트밀크, 염색하지 않은 울, 석회석 같은 따뜻한 질감",
+      "딥 브라운 (Deep Brown) - 커피, 초콜릿 같은 안정감",
+      "네오 민트 & 파스텔 (Neo-Mint & Pastels) - 미래지향적이면서 부드러운 톤",
+      "볼드 새츄레이티드 (Bold Saturated) - 네온 코랄, 일렉트릭 블루, 비비드 퍼플",
+      "네온 느와르 (Neon-Noir) - 레드+블랙에 네온 하이라이트"
+    ],
+    "illustration_styles": [
+      {
+        "name": "나이브/핸드드로운 (Naive/Hand-Drawn)",
+        "description": "어린아이 같은 불완전한 손그림 스타일. AI 완벽주의에 대한 반작용으로 인간미를 강조"
+      },
+      {
+        "name": "기미 거미/스퀴시 (Gimme Gummy/Squishy)",
+        "description": "부드럽고 말랑말랑한 질감의 디자인. 촉각적 느낌과 깊이감"
+      },
+      {
+        "name": "그레이니 블러 (Grainy Blur)",
+        "description": "소프트 포커스에 입자감 오버레이. 노스탤지어와 모던의 결합"
+      },
+      {
+        "name": "레트로 퓨처리즘 (Retro Futurism)",
+        "description": "과거 테크 미학과 미래 비전의 매시업. 메탈릭 그라디언트, 홀로그래픽"
+      },
+      {
+        "name": "디지큐트 (Digi-Cute)",
+        "description": "픽셀 아이콘, 이모지 모티프, 채도 높은 그라디언트 배경"
+      },
+      {
+        "name": "미니맥시멀리즘 (Minimaximalism)",
+        "description": "미니멀한 여백과 단순한 선에 생생한 색상, 오버사이즈 타이포, 역동적 패턴의 조화"
+      }
+    ],
+    "ui_style_trends": {
+      "glassmorphism": {
+        "status": "여전히 인기",
+        "description": "젖빛 유리 효과. 투명도, 블러, 레이어링으로 깊이감 표현. 단, 가독성을 해치지 않는 '책임감 있는 글래스모피즘' 권장",
+        "healthcare_suitability": "세련된 느낌을 주지만 텍스트 가독성 확보에 주의 필요"
+      },
+      "neumorphism_soft_ui": {
+        "status": "2026년에는 '소프트 UI'로 진화",
+        "description": "부드러운 3D 느낌의 인터페이스. 섬세한 그림자와 하이라이트. 뮤트된 색상 팔레트",
+        "healthcare_suitability": "진정시키는 촉각적 인터페이스에 적합. 웰니스/건강 앱에서 특히 효과적"
+      },
+      "3d_elements": {
+        "status": "성장 추세",
+        "description": "Apple Vision Pro 등 공간 컴퓨팅의 영향으로 3D 아이콘과 일러스트가 더 많이 사용됨"
+      }
+    },
+    "social_media_design_trends": [
+      "모션 퍼스트 콘텐츠 - 정적 포스트보다 모션 그래픽이 주목도 높음",
+      "레이어드 컴포지션 - 겹치는 도형, 질감, 투명 요소로 깊이감",
+      "의도적 미니멀리즘 - 핵심 메시지에 집중하는 절제된 디자인",
+      "접근성 우선 디자인 - 고대비, 읽기 쉬운 폰트 크기, 명확한 위계",
+      "디자인 시스템 스케일링 - 일관된 브랜드 인지를 위한 체계적 시스템"
+    ]
+  },
+
+  "categories": {
+    "1_진료일정_안내": {
+      "description": "병원 진료시간, 휴진, 특별진료 등 일정 안내 콘텐츠",
+      "popular_layouts": [
+        {
+          "name": "캘린더형 (Calendar Grid)",
+          "description": "월별 캘린더 그리드에 진료일/휴진일을 색상으로 구분 표시. 한눈에 월간 일정 파악 가능",
+          "usage": "월간 진료일정 안내, 공휴일/연휴 진료 안내"
+        },
+        {
+          "name": "카드 분할형 (Split Card)",
+          "description": "좌우 또는 상하로 분할하여 한쪽은 날짜/요일, 다른 쪽은 진료과목/시간 표시",
+          "usage": "요일별 진료시간 안내, 의사별 진료일 안내"
+        },
+        {
+          "name": "타임라인형 (Timeline)",
+          "description": "시간 축을 중심으로 진료 가능 시간대를 세로 또는 가로로 나열",
+          "usage": "하루 진료 시간표, 점심시간 안내"
+        },
+        {
+          "name": "인포그래픽형 (Infographic)",
+          "description": "아이콘과 짧은 텍스트를 조합하여 핵심 정보를 시각적으로 전달",
+          "usage": "복잡한 진료 일정을 간결하게 정리"
+        }
+      ],
+      "illustration_icon_style": [
+        "플랫 아이콘 (시계, 달력, 체크마크) - 가장 보편적",
+        "라인 아이콘 (얇은 선으로 깔끔한 느낌)",
+        "소프트 3D 아이콘 (달력, 시계 등을 입체적으로 표현) - 트렌디"
+      ],
+      "color_palette": {
+        "primary": ["#2563EB (블루)", "#0891B2 (틸)", "#1E40AF (딥 블루)"],
+        "accent": ["#F59E0B (앰버 - 주의/변경사항)", "#EF4444 (레드 - 휴진)"],
+        "background": ["#F8FAFC (라이트 그레이)", "#FFFFFF (화이트)", "#F0F9FF (아이스 블루)"],
+        "trend_note": "2026년 트렌드에 맞춰 Cloud Dancer 같은 소프트 오프화이트 배경에 쿨 블루 포인트 추천"
+      },
+      "design_elements": [
+        "둥근 모서리 카드 프레임",
+        "미니 달력 아이콘",
+        "색상 코딩 (진료일/휴진일/특별진료)",
+        "굵은 날짜 타이포그래피",
+        "그리드 라인 (캘린더 구분선)"
+      ]
+    },
+
+    "2_이벤트_프로모션": {
+      "description": "할인 이벤트, 특별 프로모션, 무료 검진, 개원 기념 등",
+      "popular_layouts": [
+        {
+          "name": "배너 카드형 (Banner Card)",
+          "description": "상단 대형 타이틀 + 하단 프로모션 상세 정보. 시선을 끄는 대담한 타이포 사용",
+          "usage": "할인율, 이벤트명을 크게 강조"
+        },
+        {
+          "name": "비포&애프터 분할형 (Before/After Split)",
+          "description": "좌우 또는 상하 분할로 시술 전후 비교 (의료법 심의 준수 필수)",
+          "usage": "피부과, 치과 등 시각적 결과가 중요한 시술"
+        },
+        {
+          "name": "카운트다운형 (Countdown)",
+          "description": "이벤트 기간을 강조하는 D-day 카운트다운 배지 포함",
+          "usage": "기간 한정 프로모션"
+        },
+        {
+          "name": "캐러셀 슬라이드형 (Carousel)",
+          "description": "여러 장의 카드를 넘기며 이벤트 상세를 단계적으로 소개 (3-10장)",
+          "usage": "복수 이벤트 동시 소개, 이벤트 참여 방법 안내"
+        }
+      ],
+      "illustration_icon_style": [
+        "플랫 일러스트 (의료기기, 치아, 피부 등 관련 오브젝트)",
+        "소프트 3D 일러스트 (선물박스, 할인 태그 등으로 활기 부여)",
+        "글래스모피즘 효과 (할인율 배지에 반투명 유리 효과 적용)",
+        "스티커/뱃지 스타일 (가격, 할인율을 스티커처럼 표현)"
+      ],
+      "color_palette": {
+        "primary": ["#EC4899 (핑크)", "#8B5CF6 (바이올렛)", "#F97316 (오렌지)"],
+        "accent": ["#FCD34D (옐로우)", "#34D399 (에메랄드)", "#FFFFFF (화이트)"],
+        "background": ["그라디언트 (핑크→바이올렛)", "파스텔 톤 배경", "밝은 코랄/피치"],
+        "trend_note": "2025-2026 하이퍼컬러 트렌드에 맞춰 채도 높은 비비드 컬러와 대담한 대비 추천. 단, 의료 신뢰감 유지를 위해 과도한 네온 사용은 자제"
+      },
+      "design_elements": [
+        "오버사이즈 타이포그래피 (할인율, 이벤트명)",
+        "폭죽/반짝이 장식 (축제 느낌)",
+        "리본/배너 장식",
+        "CTA 버튼 (예약하기, 문의하기)",
+        "기간 표시 배지 (D-day, ~까지)"
+      ],
+      "legal_note": "비포&애프터 사진 사용 시 의료법 광고 심의 필수. 2025년부터 인스타그램 콘텐츠도 심의 대상에 포함될 수 있으므로 주의"
+    },
+
+    "3_의사_소개": {
+      "description": "의사 프로필, 전문 분야, 경력, 학력 소개 카드뉴스",
+      "popular_layouts": [
+        {
+          "name": "프로필 카드형 (Profile Card)",
+          "description": "의사 사진 + 이름/직함 + 전문분야/경력을 깔끔한 카드 형태로 배치",
+          "usage": "신규 의사 소개, 진료과별 의사 안내"
+        },
+        {
+          "name": "인터뷰/Q&A형",
+          "description": "의사에게 묻는 질문과 답변을 캐러셀 형태로 구성. 친근한 느낌",
+          "usage": "의사의 진료 철학, 환자에게 전하는 말"
+        },
+        {
+          "name": "타임라인 경력형 (Career Timeline)",
+          "description": "학력→경력→현재를 시간순으로 나열하는 타임라인 레이아웃",
+          "usage": "전문의 경력 강조, 학술 활동 소개"
+        },
+        {
+          "name": "매거진 스타일형 (Magazine Style)",
+          "description": "잡지 인터뷰 페이지처럼 큰 사진과 텍스트를 배치. 세련된 느낌",
+          "usage": "원장 소개, 대표 의사 브랜딩"
+        }
+      ],
+      "illustration_icon_style": [
+        "실제 사진 (깨끗한 배경의 프로필 사진이 가장 중요)",
+        "미니멀 라인 아이콘 (졸업모, 청진기, 메달 등 경력 아이콘)",
+        "플랫 일러스트 (의료 관련 아이콘으로 전문분야 표시)",
+        "소프트 UI/뉴모피즘 카드 효과 (프로필 카드에 부드러운 입체감)"
+      ],
+      "color_palette": {
+        "primary": ["#1E3A5F (네이비)", "#0E7490 (다크 틸)", "#374151 (차콜)"],
+        "accent": ["#3B82F6 (블루)", "#10B981 (그린)", "#D4AF37 (골드)"],
+        "background": ["#FFFFFF (화이트)", "#F9FAFB (소프트 그레이)", "#F0F4F8 (아이스 블루)"],
+        "trend_note": "신뢰감과 전문성을 주는 네이비/다크 톤 + 소프트 배경의 조합이 의료 분야에서 가장 효과적"
+      },
+      "design_elements": [
+        "원형 또는 둥근 사각형 프로필 사진 프레임",
+        "전문분야 아이콘 배지",
+        "학력/경력 리스트 (불릿 포인트)",
+        "인용 부호 (의사의 한마디 강조)",
+        "병원 로고 워터마크",
+        "따뜻하고 신뢰감 있는 톤의 사진 (차가운 임상 느낌 탈피)"
+      ]
+    },
+
+    "4_병원_공지사항": {
+      "description": "운영시간 변경, 시스템 점검, 새 서비스 안내, 코로나 방역 안내 등",
+      "popular_layouts": [
+        {
+          "name": "미니멀 공지형 (Minimal Notice)",
+          "description": "중앙 정렬 텍스트 + 심플한 아이콘. 배경은 단색 또는 은은한 그라디언트",
+          "usage": "간단한 운영 변경 공지, 긴급 안내"
+        },
+        {
+          "name": "체크리스트형 (Checklist)",
+          "description": "체크마크 또는 넘버링으로 공지 항목을 나열. 캐러셀로 확장 가능",
+          "usage": "복수 공지사항 전달, 변경사항 목록"
+        },
+        {
+          "name": "알림/벨 강조형 (Alert Style)",
+          "description": "알림 벨 또는 메가폰 아이콘을 상단에 크게 배치하여 주목도 향상",
+          "usage": "긴급 공지, 중요 변경사항"
+        },
+        {
+          "name": "FAQ 카드형",
+          "description": "질문과 답변 형태로 공지 내용을 쉽게 전달. 캐러셀 구성",
+          "usage": "자주 묻는 질문 형태의 안내"
+        }
+      ],
+      "illustration_icon_style": [
+        "플랫 아이콘 (메가폰, 알림벨, 체크마크, 느낌표)",
+        "미니멀 라인 아이콘 (깔끔하고 직관적)",
+        "소프트 3D 아이콘 (알림벨, 확성기 등 - 트렌디)"
+      ],
+      "color_palette": {
+        "primary": ["#1D4ED8 (블루)", "#7C3AED (퍼플)", "#0F766E (틸)"],
+        "accent": ["#FBBF24 (앰버/경고)", "#EF4444 (레드/긴급)", "#22C55E (그린/확인)"],
+        "background": ["#FFFFFF", "#F1F5F9 (슬레이트 50)", "#FFF7ED (오렌지 50 - 주의)"],
+        "trend_note": "공지사항은 가독성이 최우선. 배경은 밝게, 텍스트는 고대비로. 2026 접근성 우선 디자인 트렌드에 부합"
+      },
+      "design_elements": [
+        "굵은 제목 (공지사항/안내/NOTICE 등)",
+        "날짜 배지 (적용일, 기간 표시)",
+        "구분선 (항목 간 시각적 구분)",
+        "브랜드 컬러 헤더 바",
+        "QR코드 (상세 안내 링크용)"
+      ]
+    },
+
+    "5_명절_인사": {
+      "description": "설날, 추석, 새해, 어버이날, 크리스마스 등 명절/기념일 인사 카드",
+      "sub_categories": {
+        "설날_새해": {
+          "popular_layouts": [
+            "중앙 집중형 (인사말 중앙 배치 + 전통 일러스트 프레임)",
+            "포스터형 (대형 일러스트 + 하단 인사말)",
+            "캘리그래피형 (손글씨 느낌의 인사말 + 전통 패턴 배경)"
+          ],
+          "illustration_style": [
+            "전통 한국화 스타일 (소나무, 학, 매화, 복주머니)",
+            "모던 전통 믹스 (전통 모티프를 플랫 디자인으로 재해석)",
+            "귀여운 캐릭터 (떡국 먹는 캐릭터, 한복 입은 동물 등)",
+            "금박/골드 라인 (고급스러운 전통 느낌)"
+          ],
+          "color_palette": ["레드+골드 (전통)", "베이지+하늘색 (모던)", "네이비+골드 (격식)", "파스텔 핑크+크림 (부드러운 모던)"],
+          "design_elements": ["전통 문양 프레임", "복주머니/떡국/세뱃돈 일러스트", "한글 캘리그래피", "병원 로고+진료 안내 (하단)"]
+        },
+        "추석": {
+          "popular_layouts": [
+            "보름달 중심형 (큰 보름달 + 인사말)",
+            "한옥/자연 배경형 (한옥 담장, 가을 풍경 배경)",
+            "전통 패턴형 (전통 패턴 프레임 안에 인사말)"
+          ],
+          "illustration_style": [
+            "보름달+토끼 일러스트 (귀여운 스타일)",
+            "송편/과일 일러스트 (가을 수확 느낌)",
+            "한옥 실루엣 (모던한 라인아트)",
+            "가을 식물 일러스트 (코스모스, 감, 밤)"
+          ],
+          "color_palette": ["주황+베이지 (가을)", "네이비+보름달 옐로우", "브라운+크림", "딥 레드+골드 (격식)"],
+          "design_elements": ["보름달 모티프", "단풍/가을 식물 장식", "전통 패턴 테두리", "추석 연휴 진료 안내 (실용 정보 병행)"]
+        },
+        "크리스마스": {
+          "popular_layouts": [
+            "눈 내리는 효과형 (스노우 파티클 + 인사말)",
+            "트리/리스 중심형 (크리스마스 트리나 리스로 프레임)",
+            "미니멀 라인아트형 (심플한 라인으로 크리스마스 요소 표현)"
+          ],
+          "illustration_style": [
+            "플랫 일러스트 (트리, 선물, 눈사람)",
+            "소프트 3D (크리스마스 오너먼트, 선물박스)",
+            "수채화 느낌 (부드러운 겨울 풍경)",
+            "미니멀 라인아트 (트리, 별, 눈결정)"
+          ],
+          "color_palette": ["레드+그린+화이트 (클래식)", "네이비+골드+화이트 (고급)", "파스텔 블루+실버 (모던)", "화이트+골드 (미니멀)"],
+          "design_elements": ["눈 결정/스노우 플레이크", "크리스마스 트리/리스", "별/오너먼트 장식", "연말 진료 안내 병행"]
+        },
+        "어버이날": {
+          "popular_layouts": [
+            "카네이션 중심형 (카네이션 일러스트 + 감사 인사말)",
+            "가족 일러스트형 (따뜻한 가족 일러스트 + 메시지)"
+          ],
+          "illustration_style": [
+            "수채화 카네이션",
+            "플랫 카네이션 일러스트",
+            "따뜻한 가족 실루엣",
+            "손글씨 감사 메시지"
+          ],
+          "color_palette": ["핑크+화이트 (카네이션)", "레드+그린 (카네이션 꽃+잎)", "라벤더+크림 (부드러운 감성)"],
+          "design_elements": ["카네이션 일러스트", "감사 메시지 캘리그래피", "건강검진 프로모션 연계 (부모님 건강)"]
+        }
+      },
+      "general_trend_note": "2025-2026 트렌드는 과도한 장식보다 미니멀하면서도 감성적인 디자인. 전통 요소를 현대적으로 재해석하는 '모던 트래디셔널' 스타일이 인기. 핸드드로운/나이브 스타일도 따뜻한 인사 카드에 적합"
+    },
+
+    "6_채용공고": {
+      "description": "간호사, 의료진, 행정직 등 병원 직원 채용 공고",
+      "popular_layouts": [
+        {
+          "name": "구직 포스터형 (Job Poster)",
+          "description": "상단에 'We are Hiring' / '함께할 동료를 찾습니다' + 하단에 직무/자격/접수방법",
+          "usage": "전체 채용 공고"
+        },
+        {
+          "name": "캐러셀 상세형 (Carousel Detail)",
+          "description": "1장: 채용 타이틀 / 2장: 업무내용 / 3장: 자격요건 / 4장: 복리후생 / 5장: 지원방법",
+          "usage": "상세한 채용 정보 전달"
+        },
+        {
+          "name": "팀 소개 결합형 (Team + Recruit)",
+          "description": "현직 직원 사진/인터뷰와 함께 채용 안내. 직장 문화를 보여주는 비하인드 씬",
+          "usage": "병원 문화/분위기 어필"
+        },
+        {
+          "name": "인포그래픽 복리후생형",
+          "description": "아이콘과 숫자로 급여/복지/근무조건을 시각적으로 표현",
+          "usage": "복리후생 강조"
+        }
+      ],
+      "illustration_icon_style": [
+        "플랫 아이콘 (서류, 악수, 빌딩, 청진기 등)",
+        "소프트 3D 아이콘 (사람 캐릭터, 이력서, 브리프케이스)",
+        "미니멀 라인 일러스트 (의료진 실루엣, 병원 아이콘)",
+        "실제 팀 사진 (신뢰감 + 직장 문화 전달)"
+      ],
+      "color_palette": {
+        "primary": ["#2563EB (블루 - 신뢰)", "#7C3AED (퍼플 - 혁신)", "#059669 (그린 - 성장)"],
+        "accent": ["#F59E0B (앰버 - 강조)", "#EC4899 (핑크 - 활력)", "#FFFFFF"],
+        "background": ["그라디언트 (블루→퍼플 - 역동적)", "화이트+컬러 헤더", "소프트 그레이"],
+        "trend_note": "채용 포스트는 에너지와 전문성의 균형. 볼드한 컬러로 눈에 띄되, 병원 브랜드 톤 유지"
+      },
+      "design_elements": [
+        "WE ARE HIRING / 채용 중 헤더 배지",
+        "직무 카테고리 태그",
+        "마감일 강조 배지",
+        "지원 링크/QR코드",
+        "병원 브랜드 컬러 일관 적용",
+        "직원 후기/한마디 인용"
+      ]
+    },
+
+    "7_시술후_주의사항": {
+      "description": "시술/수술 후 관리 방법, 주의사항, 회복 과정 안내",
+      "popular_layouts": [
+        {
+          "name": "넘버링 스텝형 (Numbered Steps)",
+          "description": "1, 2, 3... 순서로 주의사항을 단계별 나열. 가장 직관적",
+          "usage": "시술 후 관리 순서, 회복 단계별 안내"
+        },
+        {
+          "name": "DO & DON'T 분할형",
+          "description": "좌(O)/우(X) 또는 상/하로 해야 할 것과 하지 말아야 할 것을 대비",
+          "usage": "금기사항과 권장사항을 한눈에 비교"
+        },
+        {
+          "name": "타임라인형 (Recovery Timeline)",
+          "description": "시술 후 1일→3일→1주→1개월 순으로 회복 과정과 주의사항 나열",
+          "usage": "장기적 회복 과정 안내"
+        },
+        {
+          "name": "체크리스트형 (Checklist)",
+          "description": "체크박스 형태로 주의사항을 나열. 환자가 따라가기 쉬운 형태",
+          "usage": "퇴원 시 안내, 자가관리 체크리스트"
+        },
+        {
+          "name": "캐러셀 인포그래픽형",
+          "description": "항목별로 카드를 나누어 아이콘+짧은 설명. 인스타 캐러셀로 전달",
+          "usage": "복잡한 주의사항을 분할하여 쉽게 전달"
+        }
+      ],
+      "illustration_icon_style": [
+        "플랫 아이콘 (O/X 마크, 시계, 약, 음식, 운동 등 - 가장 보편적)",
+        "라인 아이콘 (깔끔한 의료 아이콘)",
+        "귀여운 캐릭터 일러스트 (환자 캐릭터가 주의사항 시연)",
+        "미니 인포그래픽 (숫자/기간을 시각적으로 표현)",
+        "소프트 컬러 일러스트 (부드러운 톤으로 불안감 완화)"
+      ],
+      "color_palette": {
+        "primary": ["#0E7490 (틸)", "#1E40AF (블루)", "#374151 (차콜)"],
+        "accent": ["#EF4444 (레드 - 금기/경고)", "#22C55E (그린 - 권장/OK)", "#F59E0B (앰버 - 주의)"],
+        "background": ["#FFFFFF (화이트)", "#F0FDF4 (민트/그린 틴트)", "#FFF7ED (워밍 베이지)"],
+        "trend_note": "의료 정보 전달이므로 차분하고 신뢰감 있는 톤. 경고/금기는 레드, 권장은 그린으로 직관적 색상 코딩. 2026 공감 중심 디자인 트렌드에 맞춰 부드러운 색감 권장"
+      },
+      "design_elements": [
+        "O/X 또는 체크/엑스 아이콘",
+        "번호 매기기 (1, 2, 3...)",
+        "기간 배지 (당일, 3일, 1주, 1개월 등)",
+        "경고 아이콘 (삼각형 느낌표)",
+        "시술 부위 일러스트",
+        "저장/북마크 유도 CTA (나중에 참고할 수 있도록)"
+      ],
+      "legal_note": "객관적 사실에 기반한 안내. 과장된 효과 표현이나 부작용 축소 금지. 의료법 광고 심의 기준 준수"
+    }
+  },
+
+  "instagram_technical_specs": {
+    "recommended_sizes": {
+      "feed_post_square": "1080x1080px (1:1)",
+      "feed_post_portrait": "1080x1350px (4:5) - 더 많은 공간 확보에 유리",
+      "story_reel": "1080x1920px (9:16)",
+      "carousel": "최대 20장, 1080x1080px 또는 1080x1350px"
+    },
+    "safe_zone": "핵심 콘텐츠는 중앙 1080x1080px 영역 안에 배치 (그리드/탐색 탭에서 잘림 방지)",
+    "card_news_best_practices": [
+      "표지 1장 + 본문 2-10장 + CTA 마지막장 1장 구성",
+      "표지는 흥미 유발 타이틀 + 굵고 큰 폰트",
+      "행간 = 폰트 크기 x 1.618 (예: 20pt 폰트 → 32pt 행간)",
+      "브랜드 컬러 일관성 유지",
+      "마지막 장에 CTA (예약하기, 팔로우, 저장하기 등)"
+    ]
+  },
+
+  "platform_recommendations": {
+    "template_platforms": [
+      {"name": "Canva", "url": "https://www.canva.com/ko_kr/card-news/templates/", "note": "가장 다양한 한국어 의료 카드뉴스 템플릿 보유"},
+      {"name": "미리캔버스 (MiriCanvas)", "url": "https://www.miricanvas.com/ko/template/card_news", "note": "한국 특화 카드뉴스 템플릿, 병원 관련 템플릿 풍부"},
+      {"name": "망고보드", "url": "https://www.mangoboard.net/", "note": "AI 이미지 생성/편집 기능 포함 무료 템플릿"},
+      {"name": "Adobe Express", "url": "https://www.adobe.com/express/", "note": "전문 디자인 퀄리티의 템플릿"},
+      {"name": "Freepik", "url": "https://www.freepik.com/", "note": "의료 소셜미디어 벡터/PSD 소스 다수"},
+      {"name": "PosterMyWall", "url": "https://www.postermywall.com/", "note": "6,780+ 병원 관련 무료 템플릿"}
+    ],
+    "reference_platforms": [
+      {"name": "Pinterest", "url": "https://www.pinterest.com/", "note": "의료 소셜미디어 디자인 레퍼런스 수집에 유용"},
+      {"name": "Behance", "url": "https://www.behance.net/", "note": "전문 디자이너 카드뉴스 포트폴리오 참고"},
+      {"name": "doc4u", "url": "https://doc4u.co.kr/", "note": "병원 휴진안내문 자동 제작 전문"},
+      {"name": "똑닥 템플릿", "url": "https://blog.hospital.ddocdoc.com/post/print-template", "note": "병원 안내문 디자인 템플릿 (PDF)"}
+    ]
+  },
+
+  "key_insights": {
+    "2025_2026_medical_marketing_trends": [
+      "숏폼 비디오 (릴스, 30-60초) 중심 콘텐츠가 정적 카드뉴스와 병행하여 핵심 채널로 부상",
+      "AI 기반 콘텐츠 제작/분석/최적화가 보편화 (캐럿, 망고보드 등에서 AI 카드뉴스 자동 생성 가능)",
+      "진정성 있는 콘텐츠 (의료진 일상, 비하인드 씬)가 과장된 홍보보다 효과적",
+      "인스타그램이 의료 마케팅에서 가장 강력한 소셜 플랫폼 (3.7% 전환율)",
+      "20-30대 환자가 의료 정보를 소셜미디어에서 먼저 검색하는 경향 증가 (Gen Z 28%, 밀레니얼 25%)",
+      "커스텀 그래픽이 스톡 이미지보다 선호됨 - 병원 고유의 브랜드 느낌 전달",
+      "차갑고 임상적인 이미지에서 따뜻하고 환대하는 이미지로 전환",
+      "의료광고 심의가 SNS 콘텐츠까지 강화 - 블로그, 인스타그램 포함 사전 심의 필요",
+      "데이터 시각화/인포그래픽으로 복잡한 의료 정보를 쉽게 전달",
+      "공감 중심 디자인 (Empathy-Driven Design) - 환자의 감정과 니즈를 중심에 두는 시각 커뮤니케이션"
+    ],
+    "design_style_summary": {
+      "most_effective_for_hospitals": "미니멀 + 소프트 UI + 플랫/라인 아이콘 조합",
+      "color_direction": "쿨 블루/틸 기반에 소프트 뉴트럴 배경. 포인트로 따뜻한 악센트 컬러",
+      "typography": "굵은 산세리프 제목 + 가독성 높은 본문. 한글은 프리텐다드, 노토산스 등 권장",
+      "photo_style": "따뜻한 조명, 자연스러운 표정, 환대하는 분위기. 차가운 임상 사진 지양"
+    }
+  },
+
+  "sources": [
+    {"title": "키워드로 살펴본 2026 디자인 트렌드", "url": "https://design.co.kr/article/142896"},
+    {"title": "2025년 그래픽 디자인 트렌드 10가지", "url": "https://digit2sight.com/2025%EB%85%84-%EC%A3%BC%EB%AA%A9%ED%95%A0-%EA%B7%B8%EB%9E%98%ED%94%BD-%EB%94%94%EC%9E%90%EC%9D%B8-%ED%8A%B8%EB%A0%8C%EB%93%9C-10%EA%B0%80%EC%A7%80/"},
+    {"title": "2026년 UI·UX 디자인 트렌드 9가지", "url": "https://www.designdb.com/?menuno=1278&bbsno=3012&siteno=15&act=view"},
+    {"title": "Healthcare Marketing Trends 2025-2026", "url": "https://healthcaremarketingvault.com/healthcare-marketing-trends-2025-2026/"},
+    {"title": "Top 20+ Healthcare Marketing Trends 2026", "url": "https://birdeye.com/blog/healthcare-marketing-trends/"},
+    {"title": "Top Healthcare Social Media Marketing Trends 2026", "url": "https://www.wildnettechnologies.com/news/top-healthcare-social-media-marketing-trends-of-2026"},
+    {"title": "Healthcare Design Trends (Designity)", "url": "https://www.designity.com/blog/healthcare-design-what-you-need-to-know-about-the-latest-trends"},
+    {"title": "Dental Social Media Ideas 2026", "url": "https://sociolyzer.com/blog/sociolyzer-com-blog-dental-social-media-post-ideas/"},
+    {"title": "Color Palette for Dental Clinic", "url": "https://www.masterdentgroup.com/blog/color-guide-for-dental-clinics"},
+    {"title": "2026 Color Trends in Dental Practices", "url": "https://www.tecnodent.com/2026-color-trends-in-dental-practices-how-design-and-color-influence-patient-experience-and-clinic-value/"},
+    {"title": "2026 Design Trends (Yes I'm a Designer)", "url": "https://yesimadesigner.com/2026-design-trends-that-actually-matters/"},
+    {"title": "Adobe Design Trends 2026", "url": "https://www.adobe.com/express/learn/blog/design-trends-2026"},
+    {"title": "12 Graphic Design Trends 2026 (Philip VanDusen)", "url": "https://philipvandusen.com/news/2025/12/8/12-graphic-design-trends-for-2026"},
+    {"title": "Top 12 UI/UX Design Trends 2026 (Data-Backed)", "url": "https://www.index.dev/blog/ui-ux-design-trends"},
+    {"title": "15 UI UX Design Trends 2026 (Tenet)", "url": "https://www.wearetenet.com/blog/ui-ux-design-trends"},
+    {"title": "6 Social Media Design Trends 2026 (Superside)", "url": "https://www.superside.com/blog/social-media-design-trends"},
+    {"title": "Top Social Media Design Trends 2026 (Versa Creative)", "url": "https://versacreative.com/blog/top-social-media-design-trends-2026/"},
+    {"title": "Social Media Design Guide 2026 (Planable)", "url": "https://planable.io/blog/social-media-design/"},
+    {"title": "Color Trends 2026 (AND Academy)", "url": "https://www.andacademy.com/resources/blog/graphic-design/color-trends-for-designers/"},
+    {"title": "병원 광고 마케팅 트렌드 2025", "url": "https://openads.co.kr/content/contentDetail?contsId=14846"},
+    {"title": "2026 병원마케팅 전략 12가지", "url": "https://adflyercompany.com/2024-%EB%B3%91%EC%9B%90%EB%A7%88%EC%BC%80%ED%8C%85-%EC%A0%84%EB%9E%B5/"},
+    {"title": "2025년 인스타그램 마케팅 전략", "url": "https://www.dplus.kr/2025_instagram_marketing/"},
+    {"title": "카드뉴스 디자인 구성법 (툴디)", "url": "https://www.tooldi.com/social/article/81"},
+    {"title": "SNS 카드뉴스 디자인 팁 5가지 (크몽)", "url": "https://kmong.com/article/1013--SNS-%EC%B9%B4%EB%93%9C%EB%89%B4%EC%8A%A4%EB%A5%BC-%EB%A7%8C%EB%93%A4-%EB%95%8C-%EC%95%8C%EC%95%84%EC%95%BC%ED%95%A0-%EB%94%94%EC%9E%90%EC%9D%B8-%ED%8C%81-5%EA%B0%80%EC%A7%80"},
+    {"title": "카드뉴스 디자인 제작 가이드 (Pixso)", "url": "https://pixso.net/kr/news/card-news-design/"},
+    {"title": "Navigating Social Media in Healthcare Advertising 2025 (IQVIA)", "url": "https://www.iqviadigital.com/resources/blogs/navigating-social-media-in-healthcare-advertising-key-trends-for-2025"},
+    {"title": "Instagram Marketing for Doctors 2025", "url": "https://intrepy.com/1000-instagram-followers-medical-practices/"}
+  ]
+}
