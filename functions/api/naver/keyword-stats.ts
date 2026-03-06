@@ -49,15 +49,14 @@ async function getSearchVolume(
     return { data: {}, error: 'hintKeywords: 유효한 키워드 없음 (정제 후)' };
   }
 
-  // URL 객체로 파라미터 설정 (올바른 인코딩 보장)
-  const reqUrl = new URL(`https://api.searchad.naver.com${uri}`);
-  reqUrl.searchParams.set('hintKeywords', cleanKeywords.join(','));
-  reqUrl.searchParams.set('showDetail', '1');
+  // 각 키워드를 개별 인코딩하고 쉼표로 연결 (쉼표 자체는 인코딩하지 않음)
+  const encodedKeywords = cleanKeywords.map(k => encodeURIComponent(k)).join(',');
+  const fetchUrl = `https://api.searchad.naver.com${uri}?hintKeywords=${encodedKeywords}&showDetail=1`;
 
   console.log('[SearchAd] keywords:', cleanKeywords.join(', '));
-  console.log('[SearchAd] URL:', reqUrl.toString().substring(0, 300));
+  console.log('[SearchAd] URL:', fetchUrl.substring(0, 300));
 
-  const response = await fetch(reqUrl.toString(), {
+  const response = await fetch(fetchUrl, {
     method: 'GET',
     headers: {
       'X-Timestamp': timestamp,
