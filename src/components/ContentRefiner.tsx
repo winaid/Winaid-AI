@@ -74,10 +74,13 @@ const ContentRefiner: React.FC<ContentRefinerProps> = ({ onClose, onNavigate, da
     }
   };
 
+  // 채팅 보정에서 사용할 현재 콘텐츠 (자동 보정 결과 또는 원본)
+  const getWorkingContent = () => refinedContent || content;
+
   const handleChatSubmit = async () => {
     if (!chatInput.trim()) return;
-    if (!refinedContent) {
-      alert('먼저 자동 보정을 실행해주세요.');
+    if (!getWorkingContent().trim()) {
+      alert('보정할 콘텐츠를 입력해주세요.');
       return;
     }
 
@@ -143,7 +146,8 @@ const ContentRefiner: React.FC<ContentRefinerProps> = ({ onClose, onNavigate, da
       const stage2Prompt = getStage2_AiRemovalAndCompliance();
       
       // 콘텐츠를 섹션별로 분리하여 수정 대상 명확히 표시
-      const sections = refinedContent.split(/(<h[23][^>]*>.*?<\/h[23]>)/gi);
+      const workingContent = getWorkingContent();
+      const sections = workingContent.split(/(<h[23][^>]*>.*?<\/h[23]>)/gi);
       const numberedContent = sections.map((section, idx) => {
         if (section.match(/<h[23]/i)) {
           return `\n[섹션 ${Math.floor(idx/2) + 1}] ${section}`;
@@ -162,7 +166,7 @@ const ContentRefiner: React.FC<ContentRefinerProps> = ({ onClose, onNavigate, da
       
       // 현재 글자 수 계산
       const tempDiv2 = document.createElement('div');
-      tempDiv2.innerHTML = refinedContent;
+      tempDiv2.innerHTML = workingContent;
       const currentLength = (tempDiv2.textContent || '').length;
       
       const prompt = `당신은 **스마트 글 보정 AI**입니다.
@@ -568,6 +572,29 @@ ${wantsHumanize ? `
             </>
           ) : (
             <>
+              {/* 채팅 모드에서도 콘텐츠 입력 가능 (자동 보정 안 거치고 바로 사용) */}
+              {!refinedContent && (
+                <div className="flex flex-col gap-1.5 mb-2">
+                  <label className={`text-xs font-bold ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                    보정할 콘텐츠 붙여넣기
+                  </label>
+                  <textarea
+                    value={content}
+                    onChange={(e) => setContent(e.target.value)}
+                    onPaste={(e) => {
+                      e.preventDefault();
+                      const text = e.clipboardData.getData('text/plain');
+                      document.execCommand('insertText', false, text);
+                    }}
+                    placeholder="보정할 블로그 글을 붙여넣으세요..."
+                    className={`p-3 rounded-xl border resize-none text-sm h-28 ${
+                      darkMode
+                        ? 'bg-slate-900 border-slate-700 text-white placeholder-slate-500'
+                        : 'bg-white/80 border-slate-200/60 text-slate-900 placeholder-slate-400'
+                    } outline-none focus:border-blue-400`}
+                  />
+                </div>
+              )}
               <label className={`text-sm font-bold ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>
                 💬 채팅으로 수정하기
               </label>
@@ -580,7 +607,7 @@ ${wantsHumanize ? `
                     <div className="h-full flex items-center justify-center">
                       <div className="text-center">
                         <p className={`text-sm ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>
-                          수정 요청을 입력해보세요
+                          {content.trim() ? '수정 요청을 입력해보세요' : '위에 콘텐츠를 먼저 붙여넣으세요'}
                         </p>
                         <p className={`text-xs mt-2 ${darkMode ? 'text-slate-600' : 'text-slate-500'}`}>
                           예: "더 부드러운 톤으로 바꿔줘"<br/>
