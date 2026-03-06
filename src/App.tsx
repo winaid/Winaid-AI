@@ -900,7 +900,8 @@ const App: React.FC = () => {
              )}
           </div>
         </div>
-        {/* 2단: 탑 네비게이션 바 */}
+        {/* 2단: 탑 네비게이션 바 - 홈에서는 숨김 (카드 네비게이션과 중복) */}
+        {currentPage !== 'home' && (
         <div className={`border-t ${darkMode ? 'border-slate-700/50' : 'border-slate-100/80'}`}>
           <nav className="max-w-[1200px] w-full mx-auto px-5 flex items-center gap-1 overflow-x-auto custom-scrollbar">
             {([
@@ -915,7 +916,7 @@ const App: React.FC = () => {
                 key={item.id}
                 onClick={() => setContentTab(item.id)}
                 className={`relative py-3 px-4 text-[13px] font-semibold whitespace-nowrap transition-colors ${
-                  currentPage !== 'home' && contentTab === item.id
+                  contentTab === item.id
                     ? darkMode ? 'text-blue-400' : 'text-blue-600'
                     : darkMode ? 'text-slate-400 hover:text-slate-200' : 'text-slate-500 hover:text-slate-800'
                 }`}
@@ -924,13 +925,14 @@ const App: React.FC = () => {
                   <span className="text-sm">{item.icon}</span>
                   {item.label}
                 </span>
-                {currentPage !== 'home' && contentTab === item.id && (
+                {contentTab === item.id && (
                   <div className="absolute bottom-0 left-2 right-2 h-[2px] bg-blue-600 rounded-full" />
                 )}
               </button>
             ))}
           </nav>
         </div>
+        )}
       </header>
 
       {/* 메인 콘텐츠 - 일반 웹페이지처럼 수직 스크롤 */}
