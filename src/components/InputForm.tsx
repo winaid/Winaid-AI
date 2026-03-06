@@ -371,23 +371,26 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
             </div>
           )}
           {selectedManager && hospitalName && (
-            <div className="mt-1 flex items-center justify-between">
-              <p className="text-[11px] text-slate-400">담당: {selectedManager}</p>
-              {selectedHospitalEntry?.address && (
-                <button
-                  type="button"
-                  onClick={handleAnalyzeKeywords}
-                  disabled={isAnalyzingKeywords}
-                  className="text-[11px] font-semibold text-blue-500 hover:text-blue-700 transition-colors disabled:opacity-50"
-                >
-                  {isAnalyzingKeywords ? '분석 중...' : '키워드 분석'}
-                </button>
-              )}
-            </div>
+            <p className="mt-1 text-[11px] text-slate-400">담당: {selectedManager}</p>
           )}
-          {/* 키워드 분석 결과 패널 */}
-          {showKeywordPanel && (
-            <div className="mt-2 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        </div>
+
+        {/* 키워드 분석 버튼 */}
+        {selectedHospitalEntry?.address && hospitalName && (
+          <button
+            type="button"
+            onClick={handleAnalyzeKeywords}
+            disabled={isAnalyzingKeywords}
+            className="w-full py-3 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 bg-gradient-to-r from-blue-500 to-indigo-500 text-white hover:from-blue-600 hover:to-indigo-600 shadow-sm disabled:opacity-50"
+          >
+            <span>🔍</span>
+            <span>{isAnalyzingKeywords ? '키워드 분석 중...' : '키워드 분석'}</span>
+          </button>
+        )}
+
+        {/* 키워드 분석 결과 패널 */}
+        {showKeywordPanel && (
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
               <div className="flex items-center justify-between px-3 py-2 bg-slate-50 border-b border-slate-100">
                 <span className="text-xs font-bold text-slate-700">키워드 분석</span>
                 <div className="flex items-center gap-1">
@@ -492,7 +495,6 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
               )}
             </div>
           )}
-        </div>
 
         <div className="grid grid-cols-2 gap-3">
           <div>
