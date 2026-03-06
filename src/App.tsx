@@ -13,15 +13,14 @@ const AdminPage = lazy(() => import('./components/AdminPage'));
 const AuthPage = lazy(() => import('./components/AuthPage').then(module => ({ default: module.AuthPage })));
 const ApiKeySettings = lazy(() => import('./components/ApiKeySettings'));
 const PasswordLogin = lazy(() => import('./components/PasswordLogin'));
-const SimilarityChecker = lazy(() => import('./components/SimilarityChecker'));
 const ContentRefiner = lazy(() => import('./components/ContentRefiner'));
 const MedicalLawSearch = lazy(() => import('./components/MedicalLawSearch').then(module => ({ default: module.MedicalLawSearch })));
 const ImageGenerator = lazy(() => import('./components/ImageGenerator'));
 const LandingPage = lazy(() => import('./components/LandingPage'));
 const PostHistory = lazy(() => import('./components/PostHistory'));
 
-type PageType = 'landing' | 'home' | 'blog' | 'card_news' | 'press' | 'similarity' | 'refine' | 'image' | 'history' | 'admin' | 'auth';
-const contentPages: PageType[] = ['blog', 'card_news', 'press', 'similarity', 'refine', 'image', 'history'];
+type PageType = 'landing' | 'home' | 'blog' | 'card_news' | 'press' | 'refine' | 'image' | 'history' | 'admin' | 'auth';
+const contentPages: PageType[] = ['blog', 'card_news', 'press', 'refine', 'image', 'history'];
 const appPages: PageType[] = ['home', ...contentPages];
 
 // 사용자 정보 타입
@@ -84,7 +83,7 @@ const App: React.FC = () => {
   const leftPanelRef = useRef<HTMLDivElement>(null);
   
   // contentTab은 이제 currentPage에서 파생 (호환성 유지)
-  type ContentTabType = 'blog' | 'similarity' | 'refine' | 'card_news' | 'press' | 'image' | 'history';
+  type ContentTabType = 'blog' | 'refine' | 'card_news' | 'press' | 'image' | 'history';
   const contentTab: ContentTabType = contentPages.includes(currentPage) ? (currentPage as ContentTabType) : 'blog';
   const isAppPage = appPages.includes(currentPage);
 
@@ -98,7 +97,7 @@ const App: React.FC = () => {
   const getCurrentState = (): GenerationState => {
     if (contentTab === 'press') return pressState;
     if (contentTab === 'blog' || contentTab === 'card_news') return blogState;
-    return state; // similarity, refine
+    return state; // refine
   };
   
   // 현재 탭에 맞는 setState 가져오기
@@ -122,10 +121,6 @@ const App: React.FC = () => {
 
   // API 키 설정 모달 상태
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
-  
-  // 유사도 검사 모달 상태
-  const [showSimilarityChecker, setShowSimilarityChecker] = useState(false);
-  const [autoSimilarityResult, setAutoSimilarityResult] = useState<any>(null);
   
   // 비밀번호 인증 상태
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
@@ -595,52 +590,6 @@ const App: React.FC = () => {
         if (saveResult.success) {
           console.log('✅ 서버 저장 완료! ID:', saveResult.id);
           
-          // 🔍 자동 유사도 검사 비활성화 (사용자가 수동으로 실행)
-          // 이유: 크롤링 100개가 자동으로 실행되어 성능 저하 발생
-          // ResultPreview의 "🔍 유사도" 버튼으로 수동 실행 가능
-          /*
-          try {
-            console.log('🔍 구글 검색 유사도 검사 시작...');
-            
-            const searchKeywords = request.keywords || request.topic;
-            if (searchKeywords) {
-              const naverBlogs = await prepareNaverBlogsForComparison(searchKeywords, 10);
-              
-              if (naverBlogs && naverBlogs.length > 0) {
-                console.log(`📰 구글 검색 결과 ${naverBlogs.length}개 완료`);
-                
-                const similarities = naverBlogs.map((blog) => {
-                  const similarity = calculateOverallSimilarity(result.htmlContent, blog.text);
-                  const level = getSimilarityLevel(similarity);
-                  return {
-                    id: blog.id,
-                    title: blog.title,
-                    url: blog.url,
-                    blogger: blog.blogger,
-                    similarity,
-                    level,
-                  };
-                }).sort((a, b) => b.similarity - a.similarity);
-                
-                const highSimilarityContents = similarities.filter(s => s.similarity >= 40);
-                
-                if (highSimilarityContents.length > 0) {
-                  setAutoSimilarityResult({
-                    totalChecked: similarities.length,
-                    highSimilarity: highSimilarityContents,
-                    maxSimilarity: similarities[0].similarity,
-                    isNaverBlog: true,
-                  });
-                  console.log(`⚠️ 유사도 높은 웹사이트 발견: ${highSimilarityContents.length}개`);
-                } else {
-                  console.log('✅ 구글 검색 유사도 검사 완료: 중복 없음');
-                }
-              }
-            }
-          } catch (similarityErr) {
-            console.warn('⚠️ 구글 검색 유사도 검사 실패 (무시하고 계속):', similarityErr);
-          }
-          */
         } else {
           console.warn('⚠️ 서버 저장 실패:', saveResult.error);
         }
@@ -958,7 +907,6 @@ const App: React.FC = () => {
               { id: 'blog' as ContentTabType, label: '블로그', icon: '📝' },
               { id: 'card_news' as ContentTabType, label: '카드뉴스', icon: '🎨' },
               { id: 'press' as ContentTabType, label: '언론보도', icon: '🗞️' },
-              { id: 'similarity' as ContentTabType, label: '유사도 검사', icon: '🔍' },
               { id: 'refine' as ContentTabType, label: 'AI 보정', icon: '✨' },
               { id: 'image' as ContentTabType, label: '이미지 생성', icon: '🖼️' },
               { id: 'history' as ContentTabType, label: '히스토리', icon: '🕐' },
@@ -1030,9 +978,8 @@ const App: React.FC = () => {
             {/* 도구 */}
             <div>
               <h2 className={`text-lg font-black mb-4 ${darkMode ? 'text-slate-200' : 'text-slate-800'}`}>도구</h2>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 {([
-                  { id: 'similarity' as ContentTabType, title: '유사도 검사', desc: '표절 검사', icon: '🔍' },
                   { id: 'refine' as ContentTabType, title: 'AI 보정', desc: '문장 다듬기', icon: '✨' },
                   { id: 'image' as ContentTabType, title: '이미지 생성', desc: 'AI 이미지', icon: '🖼️' },
                   { id: 'history' as ContentTabType, title: '히스토리', desc: '생성 이력', icon: '🕐' },
@@ -1055,19 +1002,9 @@ const App: React.FC = () => {
         ) :
 
         /* 전체 화면 페이지들: 유사도, AI보정, 이미지, 히스토리 */
-        contentTab === 'refine' || contentTab === 'similarity' || contentTab === 'image' || contentTab === 'history' ? (
+        contentTab === 'refine' || contentTab === 'image' || contentTab === 'history' ? (
           <div className="w-full">
-              {contentTab === 'similarity' ? (
-                <div className={`rounded-2xl border p-6 md:p-8 backdrop-blur-xl ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white/80 border-white/60 shadow-[0_4px_24px_rgba(0,0,0,0.06)]'}`}>
-                  <Suspense fallback={<div className="flex items-center justify-center py-20"><div className="w-10 h-10 border-[3px] border-blue-100 border-t-blue-500 rounded-full animate-spin"></div></div>}>
-                    <SimilarityChecker
-                      onClose={() => setContentTab('blog')}
-                      darkMode={darkMode}
-                      initialContent={getCurrentState().data ? stripHtml(getCurrentState().data!.htmlContent) : ''}
-                    />
-                  </Suspense>
-                </div>
-              ) : contentTab === 'history' ? (
+              {contentTab === 'history' ? (
                 <div className={`rounded-2xl border p-6 md:p-8 backdrop-blur-xl ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white/80 border-white/60 shadow-[0_4px_24px_rgba(0,0,0,0.06)]'}`}>
                   <Suspense fallback={<div className="flex items-center justify-center py-20"><div className="w-10 h-10 border-[3px] border-blue-100 border-t-blue-500 rounded-full animate-spin"></div></div>}>
                     <PostHistory
@@ -1284,114 +1221,6 @@ const App: React.FC = () => {
         <Suspense fallback={<div>Loading...</div>}>
           <ApiKeySettings onClose={() => setShowApiKeyModal(false)} />
         </Suspense>
-      )}
-
-      {/* 유사도 검사 모달 */}
-      {showSimilarityChecker && (
-        <Suspense fallback={<div>Loading...</div>}>
-          <SimilarityChecker 
-            onClose={() => setShowSimilarityChecker(false)}
-            savedContents={[]}
-          />
-        </Suspense>
-      )}
-
-      {/* 자동 유사도 검사 결과 알림 */}
-      {autoSimilarityResult && (
-        <div className="fixed bottom-8 right-8 z-50 animate-fadeIn">
-          <div className={`rounded-2xl shadow-2xl max-w-md overflow-hidden ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
-            {/* 헤더 */}
-            <div className="bg-gradient-to-r from-orange-500 to-red-600 text-white p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="text-2xl">🔍</span>
-                  <h3 className="font-bold text-lg">웹 검색 유사도 검사</h3>
-                </div>
-                <button
-                  onClick={() => setAutoSimilarityResult(null)}
-                  className="text-white hover:bg-white hover:bg-opacity-20 rounded-full w-6 h-6 flex items-center justify-center transition"
-                >
-                  ✕
-                </button>
-              </div>
-            </div>
-
-            {/* 본문 */}
-            <div className="p-4">
-              <div className="mb-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-3xl font-bold text-orange-600">
-                    {autoSimilarityResult.maxSimilarity}%
-                  </span>
-                  <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                    최고 유사도
-                  </span>
-                </div>
-                <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                  검색 결과 {autoSimilarityResult.totalChecked}개 중 {autoSimilarityResult.highSimilarity.length}개와 유사합니다.
-                </p>
-              </div>
-
-              {/* 유사한 글 목록 */}
-              <div className="space-y-2 max-h-40 overflow-y-auto mb-4">
-                {autoSimilarityResult.highSimilarity.slice(0, 3).map((item: any, index: number) => (
-                  <a
-                    key={item.id}
-                    href={item.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={`block p-3 rounded-lg transition hover:scale-[1.02] ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-50 hover:bg-gray-100'}`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1 min-w-0">
-                        <p className={`text-sm font-semibold truncate ${darkMode ? 'text-white' : 'text-gray-800'}`}>
-                          {item.title || `글 ${index + 1}`}
-                        </p>
-                        <div className="flex items-center gap-2 mt-1">
-                          <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                            {item.blogger || '네이버 블로그'}
-                          </p>
-                          <span className={`text-xs px-2 py-0.5 rounded-full ${darkMode ? 'bg-gray-600' : 'bg-gray-200'}`}>
-                            {item.level.label}
-                          </span>
-                        </div>
-                      </div>
-                      <div
-                        className="text-xl font-bold ml-2"
-                        style={{ color: item.level.color }}
-                      >
-                        {item.similarity}%
-                      </div>
-                    </div>
-                  </a>
-                ))}
-              </div>
-
-              {/* 버튼 */}
-              <div className="flex gap-2">
-                <button
-                  onClick={() => {
-                    setAutoSimilarityResult(null);
-                    setShowSimilarityChecker(true);
-                  }}
-                  className="flex-1 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold rounded-lg hover:shadow-lg transition"
-                >
-                  자세히 보기
-                </button>
-                <button
-                  onClick={() => setAutoSimilarityResult(null)}
-                  className={`flex-1 py-2 font-semibold rounded-lg transition ${
-                    darkMode
-                      ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  닫기
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
       )}
 
       {/* 의료광고법 검색 플로팅 버튼 */}
