@@ -861,7 +861,7 @@ const App: React.FC = () => {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-emerald-200 border-t-emerald-500 rounded-full animate-spin mx-auto mb-4"></div>
+          <div className="w-16 h-16 border-4 border-blue-100 border-t-blue-500 rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-slate-500">로딩 중...</p>
         </div>
       </div>
@@ -871,7 +871,7 @@ const App: React.FC = () => {
   // Auth 페이지 렌더링
   if (currentPage === 'auth') {
     return (
-      <Suspense fallback={<div className="min-h-screen bg-slate-50 flex items-center justify-center"><div className="w-16 h-16 border-4 border-emerald-200 border-t-emerald-500 rounded-full animate-spin"></div></div>}>
+      <Suspense fallback={<div className="min-h-screen bg-slate-50 flex items-center justify-center"><div className="w-16 h-16 border-4 border-blue-100 border-t-blue-500 rounded-full animate-spin"></div></div>}>
         <AuthPage onNavigate={handleNavigate} />
       </Suspense>
     );
@@ -882,7 +882,7 @@ const App: React.FC = () => {
   // Admin 페이지 렌더링
   if (currentPage === 'admin') {
     return (
-      <Suspense fallback={<div className="min-h-screen bg-slate-50 flex items-center justify-center"><div className="w-16 h-16 border-4 border-emerald-200 border-t-emerald-500 rounded-full animate-spin"></div></div>}>
+      <Suspense fallback={<div className="min-h-screen bg-slate-50 flex items-center justify-center"><div className="w-16 h-16 border-4 border-blue-100 border-t-blue-500 rounded-full animate-spin"></div></div>}>
         <AdminPage onAdminVerified={() => setIsAdmin(true)} />
       </Suspense>
     );
@@ -891,8 +891,8 @@ const App: React.FC = () => {
   // API Key 미설정 시 안내 화면
   if (!apiKeyReady) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
-        <div className="max-w-md w-full text-center bg-white p-12 rounded-[40px] shadow-2xl border border-slate-100 relative overflow-hidden">
+      <div className="min-h-screen bg-[#fafbfc] flex items-center justify-center p-6">
+        <div className="max-w-md w-full text-center bg-white p-12 rounded-2xl shadow-[0_8px_40px_rgba(0,0,0,0.06)] border border-slate-100 relative overflow-hidden">
           <div className="text-6xl mb-6">🛠️</div>
           <h1 className="text-2xl font-black mb-3 text-slate-900">WINAID</h1>
           <h2 className="text-lg font-bold text-amber-600 mb-6">서비스 준비 중</h2>
@@ -919,14 +919,14 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className={`min-h-screen flex flex-col font-sans relative transition-colors duration-300 ${darkMode ? 'bg-slate-900 text-slate-100' : 'bg-white text-slate-900'}`}>
-      <header className={`backdrop-blur-xl border-b sticky top-0 z-30 h-16 flex items-center flex-none transition-colors duration-300 ${darkMode ? 'bg-slate-800/80 border-slate-700' : 'bg-white/90 border-slate-100'}`}>
+    <div className={`min-h-screen flex flex-col font-sans relative transition-colors duration-300 ${darkMode ? 'bg-slate-900 text-slate-100' : 'bg-[#fafbfc] text-slate-900'}`}>
+      <header className={`backdrop-blur-2xl border-b sticky top-0 z-30 h-[72px] flex items-center flex-none transition-all duration-300 ${darkMode ? 'bg-slate-800/90 border-slate-700' : 'bg-white/80 border-slate-200/50 shadow-[0_1px_3px_rgba(0,0,0,0.04)]'}`}>
         <div className="max-w-[1600px] w-full mx-auto px-6 flex justify-between items-center">
           <a href="#app" onClick={(e) => { e.preventDefault(); setContentTab('blog'); window.location.hash = 'app'; }} className="flex items-center gap-2.5 hover:opacity-80 transition-opacity cursor-pointer">
             <img src="/280_logo.png" alt="WINAID" className={`h-9 ${darkMode ? 'rounded-md bg-white p-0.5' : ''}`} />
             <div className="flex flex-col leading-none">
-              <span className={`font-black text-lg tracking-[-0.02em] ${darkMode ? 'text-slate-100' : 'text-slate-800'}`}>WIN<span className="text-blue-500">AID</span></span>
-              <span className={`text-[9px] font-medium tracking-wider ${darkMode ? 'text-slate-400' : 'text-slate-400'}`}>Advertising Company</span>
+              <span className={`font-black text-lg tracking-[-0.02em] ${darkMode ? 'text-slate-100' : 'text-slate-800'}`}>WIN<span className="text-blue-600">AID</span></span>
+              <span className={`text-[9px] font-semibold tracking-wider ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>AI Marketing Platform</span>
             </div>
           </a>
           
@@ -962,13 +962,13 @@ const App: React.FC = () => {
         </div>
       </header>
 
-      <main className="flex-1 max-w-[1600px] w-full mx-auto p-4 lg:p-8 flex flex-col lg:flex-row gap-8 overflow-hidden h-[calc(100vh-64px)]">
+      <main className="flex-1 max-w-[1600px] w-full mx-auto p-4 lg:p-8 flex flex-col lg:flex-row gap-6 overflow-hidden h-[calc(100vh-72px)]">
         
         {/* AI 정밀보정과 유사도 검사는 전체 화면 사용 */}
         {contentTab === 'refine' || contentTab === 'similarity' || contentTab === 'image' || contentTab === 'history' ? (
           <div className="w-full h-full flex flex-col gap-4 overflow-hidden">
             {/* 탭 메뉴 */}
-            <div className={`flex gap-1 p-1.5 rounded-xl ${darkMode ? 'bg-slate-800' : 'bg-slate-50 border border-slate-200/60'} w-fit mx-auto`}>
+            <div className={`flex gap-1 p-1.5 rounded-xl ${darkMode ? 'bg-slate-800 border border-slate-700' : 'bg-white/90 backdrop-blur border border-slate-200/60 shadow-sm'} w-fit mx-auto`}>
               {([
                 { id: 'blog' as const, label: '블로그', icon: '📝' },
                 { id: 'card_news' as const, label: '카드뉴스', icon: '🎨' },
@@ -980,10 +980,10 @@ const App: React.FC = () => {
                 <button
                   key={tab.id}
                   onClick={() => setContentTab(tab.id)}
-                  className={`py-2 px-4 rounded-lg text-sm font-semibold transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                  className={`py-2.5 px-5 rounded-lg text-sm font-bold transition-all whitespace-nowrap flex items-center gap-1.5 ${
                     contentTab === tab.id
-                      ? darkMode ? 'bg-blue-600 text-white shadow-sm' : 'bg-blue-600 text-white shadow-sm shadow-blue-500/20'
-                      : darkMode ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-700' : 'text-slate-500 hover:text-slate-700 hover:bg-white/60'
+                      ? darkMode ? 'bg-slate-700 text-white shadow-sm' : 'bg-slate-900 text-white shadow-sm'
+                      : darkMode ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/50' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
                   }`}
                 >
                   <span className="text-xs">{tab.icon}</span>
@@ -995,7 +995,7 @@ const App: React.FC = () => {
             {/* 전체 화면 콘텐츠 */}
             <div className="flex-1 overflow-hidden">
               {contentTab === 'similarity' ? (
-                <div className={`h-full rounded-2xl shadow-lg border p-6 ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-100'}`}>
+                <div className={`h-full rounded-2xl shadow-[0_4px_24px_rgba(0,0,0,0.06)] border p-6 ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-100'}`}>
                   <Suspense fallback={<div className="flex items-center justify-center h-full"><div className="w-12 h-12 border-4 border-purple-200 border-t-purple-500 rounded-full animate-spin"></div></div>}>
                     <SimilarityChecker
                       onClose={() => setContentTab('blog')}
@@ -1005,7 +1005,7 @@ const App: React.FC = () => {
                   </Suspense>
                 </div>
               ) : contentTab === 'history' ? (
-                <div className={`h-full rounded-2xl shadow-lg border p-6 overflow-y-auto ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-100'}`}>
+                <div className={`h-full rounded-2xl shadow-[0_4px_24px_rgba(0,0,0,0.06)] border p-6 overflow-y-auto ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-100'}`}>
                   <Suspense fallback={<div className="flex items-center justify-center h-full"><div className="w-12 h-12 border-4 border-slate-200 border-t-slate-500 rounded-full animate-spin"></div></div>}>
                     <PostHistory
                       onClose={() => setContentTab('blog')}
@@ -1014,13 +1014,13 @@ const App: React.FC = () => {
                   </Suspense>
                 </div>
               ) : contentTab === 'image' ? (
-                <div className={`h-full rounded-2xl shadow-lg border p-6 overflow-y-auto ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-100'}`}>
+                <div className={`h-full rounded-2xl shadow-[0_4px_24px_rgba(0,0,0,0.06)] border p-6 overflow-y-auto ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-100'}`}>
                   <Suspense fallback={<div className="flex items-center justify-center h-full"><div className="w-12 h-12 border-4 border-purple-200 border-t-purple-500 rounded-full animate-spin"></div></div>}>
                     <ImageGenerator />
                   </Suspense>
                 </div>
               ) : (
-                <div className={`h-full rounded-2xl shadow-lg border p-6 ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-100'}`}>
+                <div className={`h-full rounded-2xl shadow-[0_4px_24px_rgba(0,0,0,0.06)] border p-6 ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-100'}`}>
                   <Suspense fallback={<div className="flex items-center justify-center h-full"><div className="w-12 h-12 border-4 border-pink-200 border-t-pink-500 rounded-full animate-spin"></div></div>}>
                     <ContentRefiner
                       onClose={() => setContentTab('blog')}
@@ -1039,7 +1039,7 @@ const App: React.FC = () => {
           {/* 콘텐츠 */}
           <div ref={leftPanelRef} className="flex-1 overflow-y-auto custom-scrollbar">
             {/* 블로그/카드뉴스/언론보도 입력 폼 */}
-            <Suspense fallback={<div className="flex items-center justify-center h-64"><div className="w-12 h-12 border-4 border-emerald-200 border-t-emerald-500 rounded-full animate-spin"></div></div>}>
+            <Suspense fallback={<div className="flex items-center justify-center h-64"><div className="w-12 h-12 border-4 border-blue-100 border-t-blue-500 rounded-full animate-spin"></div></div>}>
               <InputForm
                 onSubmit={handleGenerate}
                 isLoading={state.isLoading || isGeneratingScript}
@@ -1055,7 +1055,7 @@ const App: React.FC = () => {
           {/* 카드뉴스 3단계 워크플로우 */}
           {/* 2단계: 프롬프트 확인 */}
           {cardNewsPrompts && cardNewsPrompts.length > 0 ? (
-            <Suspense fallback={<div className="rounded-[40px] border p-20 flex items-center justify-center"><div className="w-16 h-16 border-4 border-emerald-200 border-t-emerald-500 rounded-full animate-spin"></div></div>}>
+            <Suspense fallback={<div className="rounded-2xl border p-20 flex items-center justify-center"><div className="w-16 h-16 border-4 border-blue-100 border-t-blue-500 rounded-full animate-spin"></div></div>}>
               <PromptPreview
                 prompts={cardNewsPrompts}
                 onApprove={handleApprovePrompts}
@@ -1068,7 +1068,7 @@ const App: React.FC = () => {
             </Suspense>
           ) : cardNewsScript ? (
             /* 1단계: 원고 확인 */
-            <Suspense fallback={<div className="rounded-[40px] border p-20 flex items-center justify-center"><div className="w-16 h-16 border-4 border-emerald-200 border-t-emerald-500 rounded-full animate-spin"></div></div>}>
+            <Suspense fallback={<div className="rounded-2xl border p-20 flex items-center justify-center"><div className="w-16 h-16 border-4 border-blue-100 border-t-blue-500 rounded-full animate-spin"></div></div>}>
               <ScriptPreview
                 script={cardNewsScript}
                 onApprove={handleApproveScript}
@@ -1082,10 +1082,14 @@ const App: React.FC = () => {
               />
             </Suspense>
           ) : (getCurrentState().isLoading || isGeneratingScript) ? (
-            <div className={`rounded-[40px] border p-20 flex flex-col items-center justify-center h-full text-center shadow-2xl animate-pulse transition-colors duration-300 ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-100'}`}>
+            <div className={`rounded-2xl border p-20 flex flex-col items-center justify-center h-full text-center shadow-[0_4px_24px_rgba(0,0,0,0.06)] transition-colors duration-300 ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-100'}`}>
               <div className="relative mb-10">
-                <div className={`w-24 h-24 border-8 border-t-emerald-500 rounded-full animate-spin ${darkMode ? 'border-slate-700' : 'border-emerald-50'}`}></div>
-                <div className="absolute inset-0 flex items-center justify-center text-3xl">🏥</div>
+                <div className={`w-20 h-20 border-[6px] border-t-blue-500 rounded-full animate-spin ${darkMode ? 'border-slate-700' : 'border-blue-100'}`}></div>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${darkMode ? 'bg-slate-700' : 'bg-blue-50'}`}>
+                    <svg className="w-5 h-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" /></svg>
+                  </div>
+                </div>
               </div>
               <h2 className={`text-2xl font-black mb-4 ${darkMode ? 'text-slate-100' : 'text-slate-800'}`}>{getCurrentState().progress || scriptProgress}</h2>
               <p className={`max-w-xs font-medium text-center ${darkMode ? 'text-slate-400' : 'text-slate-400'}`}>
@@ -1097,17 +1101,21 @@ const App: React.FC = () => {
               </p>
             </div>
           ) : getCurrentState().data ? (
-            <Suspense fallback={<div className="rounded-[40px] border p-20 flex items-center justify-center"><div className="w-16 h-16 border-4 border-emerald-200 border-t-emerald-500 rounded-full animate-spin"></div></div>}>
+            <Suspense fallback={<div className="rounded-2xl border p-20 flex items-center justify-center"><div className="w-16 h-16 border-4 border-blue-100 border-t-blue-500 rounded-full animate-spin"></div></div>}>
               <ResultPreview content={getCurrentState().data!} darkMode={darkMode} />
             </Suspense>
           ) : (
-            <div className={`h-full rounded-[40px] shadow-2xl border flex flex-col items-center justify-center p-20 text-center group transition-colors duration-300 ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-gradient-to-br from-white to-blue-50/30 border-slate-100'}`}>
-               <div className={`w-28 h-28 rounded-3xl flex items-center justify-center text-5xl mb-8 group-hover:scale-110 transition-transform duration-500 ${darkMode ? 'bg-slate-700' : 'bg-blue-50'}`}>🦷</div>
-               <h3 className={`text-2xl font-black ${darkMode ? 'text-slate-400' : 'text-slate-400'}`}>치과 콘텐츠 생성</h3>
-               <p className={`mt-3 max-w-xs text-sm font-medium leading-relaxed ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>좌측에서 키워드를 입력하고<br/>블로그 원고 생성 버튼을 눌러보세요</p>
-               <div className={`mt-6 flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium ${darkMode ? 'bg-slate-700 text-slate-400' : 'bg-slate-100 text-slate-500'}`}>
-                 <div className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-pulse" />
-                 AI가 대기 중입니다
+            <div className={`h-full rounded-2xl shadow-[0_4px_24px_rgba(0,0,0,0.06)] border flex flex-col items-center justify-center p-20 text-center group transition-colors duration-300 ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-100'}`}>
+               <div className={`w-20 h-20 rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform duration-500 ${darkMode ? 'bg-slate-700' : 'bg-gradient-to-br from-blue-50 to-blue-100/50'}`}>
+                 <svg className={`w-10 h-10 ${darkMode ? 'text-slate-500' : 'text-blue-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
+                   <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+                 </svg>
+               </div>
+               <h3 className={`text-xl font-bold ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>AI 콘텐츠 생성</h3>
+               <p className={`mt-3 max-w-xs text-sm font-medium leading-relaxed ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>좌측에서 키워드를 입력하고<br/>생성 버튼을 눌러보세요</p>
+               <div className={`mt-6 flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold ${darkMode ? 'bg-slate-700 text-slate-400' : 'bg-blue-50 text-blue-500'}`}>
+                 <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse" />
+                 AI 대기 중
                </div>
             </div>
           )}
@@ -1117,9 +1125,9 @@ const App: React.FC = () => {
 
       </main>
 
-      <div className={`lg:hidden backdrop-blur-xl border-t fixed bottom-0 left-0 right-0 z-30 flex p-2 transition-colors duration-300 ${darkMode ? 'bg-slate-800/90 border-slate-700' : 'bg-white/90 border-slate-200'}`}>
-        <button onClick={() => setMobileTab('input')} className={`flex-1 py-3 rounded-2xl text-sm font-black transition-all ${mobileTab === 'input' ? 'bg-emerald-600 text-white shadow-lg' : darkMode ? 'text-slate-400' : 'text-slate-400'}`}>🛠️ 설정</button>
-        <button onClick={() => setMobileTab('result')} className={`flex-1 py-3 rounded-2xl text-sm font-black transition-all ${mobileTab === 'result' ? 'bg-emerald-600 text-white shadow-lg' : darkMode ? 'text-slate-400' : 'text-slate-400'}`}>📄 결과</button>
+      <div className={`lg:hidden backdrop-blur-2xl border-t fixed bottom-0 left-0 right-0 z-30 flex gap-2 p-2.5 transition-colors duration-300 ${darkMode ? 'bg-slate-800/90 border-slate-700' : 'bg-white/90 border-slate-200/50 shadow-[0_-2px_10px_rgba(0,0,0,0.04)]'}`}>
+        <button onClick={() => setMobileTab('input')} className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all ${mobileTab === 'input' ? 'bg-slate-900 text-white shadow-sm' : darkMode ? 'text-slate-400' : 'text-slate-500'}`}>설정</button>
+        <button onClick={() => setMobileTab('result')} className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all ${mobileTab === 'result' ? 'bg-slate-900 text-white shadow-sm' : darkMode ? 'text-slate-400' : 'text-slate-500'}`}>결과</button>
       </div>
       
 
@@ -1127,7 +1135,7 @@ const App: React.FC = () => {
       {/* API 에러 모달 */}
       {(getCurrentState().error || state.error) && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className={`rounded-3xl p-8 max-w-md w-full shadow-2xl ${darkMode ? 'bg-slate-800' : 'bg-white'}`}>
+          <div className={`rounded-2xl p-8 max-w-md w-full shadow-[0_20px_60px_rgba(0,0,0,0.15)] ${darkMode ? 'bg-slate-800' : 'bg-white'}`}>
             <div className="flex items-center justify-between mb-6">
               <h3 className={`text-xl font-black flex items-center gap-2 ${
                 (getCurrentState().error || state.error || '').includes('API 사용량') || (getCurrentState().error || state.error || '').includes('quota') || (getCurrentState().error || state.error || '').includes('limit')

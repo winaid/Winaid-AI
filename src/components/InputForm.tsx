@@ -275,15 +275,15 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
     }
   };
 
-  const labelCls = "block text-xs font-semibold text-slate-500 mb-1.5";
-  const inputCls = "w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-700 text-sm font-medium outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-500/10 transition-all";
-  const selectCls = "w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-700 text-sm font-medium outline-none focus:border-blue-400 transition-all";
+  const labelCls = "block text-xs font-bold text-slate-500 mb-2 tracking-wide";
+  const inputCls = "w-full px-4 py-3 bg-[#fafbfc] border border-slate-200 rounded-xl text-slate-700 text-sm font-medium outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-500/10 focus:bg-white transition-all";
+  const selectCls = "w-full px-4 py-3 bg-[#fafbfc] border border-slate-200 rounded-xl text-slate-700 text-sm font-medium outline-none focus:border-blue-400 focus:bg-white transition-all";
 
   return (
-    <div className="bg-white rounded-2xl shadow-lg shadow-slate-200/50 border border-slate-100">
+    <div className="bg-white rounded-2xl shadow-[0_4px_24px_rgba(0,0,0,0.06)] border border-slate-100">
       {/* 콘텐츠 유형 선택 */}
       <div className="p-4 pb-0">
-        <div className="flex gap-1.5 p-1 bg-slate-100 rounded-xl">
+        <div className="flex gap-1.5 p-1.5 bg-slate-50 border border-slate-100 rounded-xl">
           {([
             { id: 'blog' as PostType, label: '블로그', icon: '📝' },
             { id: 'card_news' as PostType, label: '카드뉴스', icon: '🎨' },
@@ -299,8 +299,8 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
                 setPostType(tab.id);
                 requestAnimationFrame(() => window.scrollTo(0, scrollY));
               }}
-              className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1 ${
-                postType === tab.id ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400 hover:text-slate-600'
+              className={`flex-1 py-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                postType === tab.id ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-400 hover:text-slate-600 hover:bg-white/60'
               }`}
             >
               <span>{tab.icon}</span>
@@ -319,7 +319,7 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
               key={tool.id}
               type="button"
               onClick={() => onTabChange?.(tool.id)}
-              className="flex-1 py-1.5 rounded-lg text-[11px] font-medium text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition-all flex items-center justify-center gap-1"
+              className="flex-1 py-2 rounded-lg text-[11px] font-semibold text-slate-400 hover:text-blue-600 hover:bg-blue-50/50 transition-all flex items-center justify-center gap-1"
             >
               <span>{tool.icon}</span>
               <span>{tool.label}</span>
@@ -337,16 +337,16 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
 
         {postType === 'blog' && (<>
         {/* 팀 선택 탭 (항상 보임) */}
-        <div className="flex bg-slate-100 rounded-xl p-1">
+        <div className="flex bg-slate-50 border border-slate-100 rounded-xl p-1.5">
           {TEAM_DATA.map(team => (
             <button
               key={team.id}
               type="button"
               onClick={() => { setSelectedTeam(team.id); setShowHospitalDropdown(true); }}
-              className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-all ${
+              className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${
                 selectedTeam === team.id
-                  ? 'bg-white text-blue-600 shadow-sm'
-                  : 'text-slate-500 hover:text-slate-700'
+                  ? 'bg-white text-slate-800 shadow-sm border border-slate-200/60'
+                  : 'text-slate-400 hover:text-slate-600'
               }`}
             >
               {team.label}
@@ -439,7 +439,7 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
             type="button"
             onClick={handleAnalyzeKeywords}
             disabled={isAnalyzingKeywords}
-            className="w-full py-3 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 bg-gradient-to-r from-blue-500 to-indigo-500 text-white hover:from-blue-600 hover:to-indigo-600 shadow-sm disabled:opacity-50"
+            className="w-full py-3 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 bg-slate-900 text-white hover:bg-slate-800 shadow-sm disabled:opacity-50"
           >
             <span>🔍</span>
             <span>{isAnalyzingKeywords ? '키워드 분석 중...' : '키워드 분석'}</span>
@@ -874,7 +874,7 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
           type="button"
           onClick={handleSubmit}
           disabled={isLoading || !topic.trim()}
-          className={`w-full py-4 rounded-xl text-white font-bold text-sm shadow-lg transition-all active:scale-[0.98] disabled:opacity-40 ${isLoading ? 'bg-slate-400' : 'bg-blue-600 hover:bg-blue-700 shadow-blue-500/25'}`}
+          className={`w-full py-4 rounded-xl text-white font-black text-sm shadow-lg transition-all active:scale-[0.98] disabled:opacity-40 ${isLoading ? 'bg-slate-400' : 'bg-slate-900 hover:bg-slate-800 shadow-slate-900/20'}`}
         >
           {isLoading ? '생성 중...' : postType === 'blog' ? '블로그 원고 생성' : postType === 'press_release' ? '보도자료 작성' : '카드뉴스 제작'}
         </button>
