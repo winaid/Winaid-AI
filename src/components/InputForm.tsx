@@ -187,7 +187,16 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
         (msg) => setKeywordProgress(msg)
       );
       setKeywordStats(result.stats);
-      setKeywordAiRec(result.aiRecommendation || '');
+      if (result.apiErrors?.length) {
+        const blogErr = result.apiErrors.find(e => e.includes('블로그') || e.includes('Blog') || e.includes('CLIENT'));
+        if (blogErr) {
+          setKeywordAiRec((result.aiRecommendation || '') + `\n\n⚠️ **블로그 발행량 오류:** ${blogErr}`);
+        } else {
+          setKeywordAiRec(result.aiRecommendation || '');
+        }
+      } else {
+        setKeywordAiRec(result.aiRecommendation || '');
+      }
     } catch (e: any) {
       console.error('키워드 분석 실패:', e);
       setKeywordStats([]);

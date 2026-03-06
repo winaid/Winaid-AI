@@ -19,6 +19,7 @@ export interface KeywordStat {
 export interface KeywordAnalysisResult {
   stats: KeywordStat[];
   aiRecommendation?: string; // Gemini 블루오션 분석 결과
+  apiErrors?: string[];
 }
 
 /**
@@ -239,5 +240,5 @@ export async function analyzeHospitalKeywords(
     aiRecommendation = `⚠️ 네이버 검색광고 API 오류로 검색량을 조회하지 못했습니다.\n\n**에러 내용:** ${apiErrors[0]}\n\nCloudflare 환경변수를 확인해주세요:\n- NAVER_SEARCHAD_CUSTOMER_ID\n- NAVER_SEARCHAD_API_KEY\n- NAVER_SEARCHAD_SECRET`;
   }
 
-  return { stats: filteredStats, aiRecommendation };
+  return { stats: filteredStats, aiRecommendation, apiErrors };
 }
