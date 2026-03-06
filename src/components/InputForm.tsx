@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { CATEGORIES, TONES, PERSONAS } from '../constants';
+import { TEAM_DATA } from '../constants/teamHospitals';
 import { GenerationRequest, ContentCategory, TrendingItem, SeoTitleItem, AudienceMode, ImageStyle, PostType, CssTheme, WritingStyle } from '../types';
 import { getTrendingTopics, recommendSeoTitles } from '../services/seoService';
 import WritingStyleLearner from './WritingStyleLearner';
@@ -72,8 +73,22 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
   // 말투 학습 스타일
   const [learnedStyleId, setLearnedStyleId] = useState<string | undefined>(undefined);
   
-  // 🗞️ 보도자료용 state
+  // 🏥 병원 선택 state
   const [hospitalName, setHospitalName] = useState<string>(() => localStorage.getItem('hospitalName') || '');
+  const [showHospitalDropdown, setShowHospitalDropdown] = useState(false);
+  const [selectedTeam, setSelectedTeam] = useState<number | null>(null);
+  const [selectedManager, setSelectedManager] = useState<string>('');
+  const hospitalDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (hospitalDropdownRef.current && !hospitalDropdownRef.current.contains(e.target as Node)) {
+        setShowHospitalDropdown(false);
+      }
+    };
+    if (showHospitalDropdown) document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showHospitalDropdown]);
   const [hospitalWebsite, setHospitalWebsite] = useState<string>('');
   const [doctorName, setDoctorName] = useState<string>('');
   const [doctorTitle, setDoctorTitle] = useState<string>('원장');
@@ -239,9 +254,88 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
       
       <form onSubmit={handleSubmit} className="space-y-5">
 
-        <div>
+        <div className="relative" ref={hospitalDropdownRef}>
           <label className={labelCls}>병원명</label>
-          <input type="text" value={hospitalName} onChange={(e) => { setHospitalName(e.target.value); localStorage.setItem('hospitalName', e.target.value); }} placeholder="서울OO치과" className={inputCls} />
+          <div className="relative">
+            <input
+              type="text"
+              value={hospitalName}
+              onChange={(e) => { setHospitalName(e.target.value); localStorage.setItem('hospitalName', e.target.value); }}
+              placeholder="병원명 입력 또는 선택"
+              className={inputCls}
+            />
+            <button
+              type="button"
+              onClick={() => setShowHospitalDropdown(!showHospitalDropdown)}
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 transition-colors"
+            >
+              <svg className={`w-4 h-4 transition-transform ${showHospitalDropdown ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+            </button>
+          </div>
+          {showHospitalDropdown && (
+            <div className="absolute z-50 mt-1 w-full bg-white rounded-xl border border-slate-200 shadow-lg overflow-hidden animate-in fade-in slide-in-from-top-1 duration-150">
+              {/* 팀 선택 탭 */}
+              <div className="flex border-b border-slate-100">
+                {TEAM_DATA.map(team => (
+                  <button
+                    key={team.id}
+                    type="button"
+                    onClick={() => setSelectedTeam(selectedTeam === team.id ? null : team.id)}
+                    className={`flex-1 py-2.5 text-xs font-semibold transition-all ${
+                      selectedTeam === team.id
+                        ? 'text-blue-600 bg-blue-50 border-b-2 border-blue-500'
+                        : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+                    }`}
+                  >
+                    {team.label}
+                  </button>
+                ))}
+              </div>
+              {/* 병원 목록 */}
+              {selectedTeam !== null && (() => {
+                const team = TEAM_DATA.find(t => t.id === selectedTeam);
+                if (!team || team.hospitals.length === 0) {
+                  return <div className="p-4 text-center text-xs text-slate-400">등록된 병원이 없습니다</div>;
+                }
+                const managers = [...new Set(team.hospitals.map(h => h.manager))];
+                return (
+                  <div className="max-h-64 overflow-y-auto">
+                    {managers.map(manager => (
+                      <div key={manager}>
+                        <div className="px-3 py-2 bg-slate-50 text-[11px] font-bold text-slate-500 sticky top-0">
+                          {manager}
+                        </div>
+                        {team.hospitals.filter(h => h.manager === manager).map(hospital => (
+                          <button
+                            key={`${hospital.name}-${hospital.manager}`}
+                            type="button"
+                            onClick={() => {
+                              setHospitalName(hospital.name.replace(/ \(.*\)$/, ''));
+                              setSelectedManager(hospital.manager);
+                              localStorage.setItem('hospitalName', hospital.name.replace(/ \(.*\)$/, ''));
+                              setShowHospitalDropdown(false);
+                            }}
+                            className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-blue-50 hover:text-blue-700 transition-colors flex items-center justify-between"
+                          >
+                            <span>{hospital.name.replace(/ \(.*\)$/, '')}</span>
+                            {hospitalName === hospital.name.replace(/ \(.*\)$/, '') && (
+                              <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+              {selectedTeam === null && (
+                <div className="p-4 text-center text-xs text-slate-400">팀을 선택해주세요</div>
+              )}
+            </div>
+          )}
+          {selectedManager && hospitalName && (
+            <p className="mt-1 text-[11px] text-slate-400">담당: {selectedManager}</p>
+          )}
         </div>
 
         <div className="grid grid-cols-2 gap-3">
