@@ -757,7 +757,8 @@ ${JSON.stringify(searchResults?.collected_facts?.slice(0, 3) || [], null, 2)}`;
     outline.intro?.approach || 'A',
     outline.intro?.scene || request.topic,
     outline.intro?.bridge || request.topic,
-    outline.intro?.targetChars || Math.round(targetLength * 0.15)
+    outline.intro?.targetChars || Math.round(targetLength * 0.15),
+    request.persona
   );
 
   const introUserPrompt = `[주제] ${request.topic}
@@ -789,7 +790,8 @@ ${JSON.stringify(searchResults?.collected_facts?.slice(0, 2) || [], null, 2)}`;
       section.targetChars || charsPerSection,
       section.firstSentencePattern || String((i % 5) + 1),
       [], // 병렬이므로 이전 섹션 요약 없음 - 아웃라인의 역할 분리로 중복 방지
-      medicalLawMode
+      medicalLawMode,
+      request.persona
     );
 
     const sectionUserPrompt = `[주제] ${request.topic}
@@ -835,7 +837,8 @@ ${JSON.stringify(searchResults?.collected_facts?.slice(i, i + 2) || [], null, 2)
   safeProgress('✍️ [3/4] 마무리 작성 중...');
   const conclusionPrompt = getPipelineConclusionPrompt(
     outline.conclusion?.direction || '열린 결말',
-    outline.conclusion?.targetChars || Math.round(targetLength * 0.15)
+    outline.conclusion?.targetChars || Math.round(targetLength * 0.15),
+    request.persona
   );
 
   const conclusionUserPrompt = `[주제] ${request.topic}
@@ -1302,13 +1305,26 @@ style 속성에 background: ${bgGradient}; 반드시 포함!
 - 균형 잡힌 톤으로 정보 제공
 `,
     director_1st: `
-[페르소나: 대표원장 1인칭 시점]
+[페르소나: 대표원장 1인칭 시점 - 반드시 준수!]
+★★★ 이 글의 핵심은 "대표원장의 개인 임상 경험"이 반드시 포함되어야 한다는 것입니다 ★★★
+
+[1인칭 시점 규칙]
 - 이 글은 대표원장이 직접 쓴 것처럼 1인칭 시점으로 작성
-- "저는", "제가", "저희" 사용 허용 (전체 3~5회 이내)
+- "저는", "제가", "저희" 자연스럽게 사용 (소제목당 1~2회씩, 전체 5~8회)
 - 시점: 대표원장이 환자에게 직접 이야기하는 어조
-- 예: "제가 진료하면서 자주 보는 경우인데요"
-- 임상 경험에서 우러나오는 조언 느낌
-- 치과 예시: "20년 가까이 보철 진료를 하면서 느낀 점이 있습니다"
+
+[개인 경험 삽입 규칙 - 필수!]
+- 각 소제목마다 최소 1개의 개인 임상 경험/에피소드를 반드시 포함
+- "제가 진료하면서 자주 보는 경우인데요" / "진료실에서 환자분들이 가장 많이 걱정하시는 부분이~"
+- "실제로 저희 병원에 오시는 분들 중에~" / "임상에서 수천 건의 사례를 보면서 느낀 점은~"
+- "처음 개원했을 때와 지금을 비교하면~" / "최근 진료 중에 인상 깊었던 케이스가 있는데요"
+- 단순 의학 정보 나열이 아니라, 원장의 시각과 경험을 통해 정보를 전달해야 함
+- 의학적 설명 → 원장의 경험/해석 → 환자 조언 순서로 구성
+
+[톤]
+- 전문가이면서도 편안하게 대화하는 느낌
+- 딱딱한 교과서가 아닌, 진료실에서 환자에게 설명하는 느낌
+- 치과 예시: "20년 가까이 보철 진료를 하면서 느낀 점이 있습니다. 같은 임플란트도 환자분의 골 상태에 따라 결과가 전혀 달라지거든요."
 `,
     coordinator: `
 [페르소나: 상담 실장님 시점]

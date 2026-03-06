@@ -103,7 +103,7 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
   // 📝 섹션별 재생성 상태
   const [blogSections, setBlogSections] = useState<BlogSection[]>(content.sections || []);
   const [regeneratingSection, setRegeneratingSection] = useState<number | null>(null);
-  const [showSectionPanel, setShowSectionPanel] = useState(false);
+  const [showSectionPanel, setShowSectionPanel] = useState(true);
   
   // content.seoScore가 있으면 자동으로 설정
   useEffect(() => {

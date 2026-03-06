@@ -19,7 +19,7 @@ interface Props {
 }
 
 export default function ImageGenerator({ onProgress }: Props) {
-  const [mode, setMode] = useState<'free' | 'template'>('free');
+  const [mode, setMode] = useState<'free' | 'template'>('template');
   const [prompt, setPrompt] = useState('');
   const [aspectRatio, setAspectRatio] = useState<ImageAspectRatio>('1:1');
   const [generating, setGenerating] = useState(false);
@@ -168,21 +168,15 @@ export default function ImageGenerator({ onProgress }: Props) {
     return (
       <div className="h-full flex flex-col">
         {/* 모드 토글 */}
-        <div className="flex items-center gap-3 mb-4">
-          <div className="flex bg-gray-100 rounded-xl p-1">
-            <button
-              onClick={() => setMode('free')}
-              className="px-4 py-2 rounded-lg text-sm font-bold transition-all text-gray-500 hover:bg-white hover:shadow-sm"
-            >
-              ✏️ 자유 입력
-            </button>
-            <button
-              className="px-4 py-2 rounded-lg text-sm font-bold transition-all bg-white text-teal-700 shadow-sm"
-            >
-              📋 템플릿
-            </button>
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-lg font-bold text-slate-800">이미지 생성</h2>
+            <p className="text-xs text-slate-400">칸만 채우면 바로 이미지 생성</p>
           </div>
-          <span className="text-xs text-gray-400">칸만 채우면 바로 이미지 생성</span>
+          <div className="flex bg-slate-100 rounded-lg p-0.5">
+            <button onClick={() => setMode('free')} className="px-3 py-1.5 rounded-md text-xs font-semibold text-slate-500 hover:text-slate-700">자유 입력</button>
+            <button className="px-3 py-1.5 rounded-md text-xs font-semibold bg-white text-slate-800 shadow-sm">템플릿</button>
+          </div>
         </div>
         <div className="flex-1 overflow-hidden">
           <Suspense fallback={<div className="flex items-center justify-center h-64"><div className="w-10 h-10 border-4 border-teal-200 border-t-teal-500 rounded-full animate-spin" /></div>}>
@@ -196,37 +190,26 @@ export default function ImageGenerator({ onProgress }: Props) {
   return (
     <div className="space-y-6">
       {/* 헤더 + 모드 토글 */}
-      <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-2xl p-6 border border-purple-100">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-xl font-bold text-gray-800 mb-1">이미지 생성기</h2>
-            <p className="text-sm text-gray-500">병원 콘텐츠 이미지를 만들어보세요</p>
-          </div>
-          <div className="flex bg-white rounded-xl p-1 shadow-sm border border-purple-100">
-            <button
-              className="px-4 py-2 rounded-lg text-sm font-bold transition-all bg-purple-600 text-white shadow-sm"
-            >
-              ✏️ 자유 입력
-            </button>
-            <button
-              onClick={() => setMode('template')}
-              className="px-4 py-2 rounded-lg text-sm font-bold transition-all text-gray-500 hover:bg-gray-50"
-            >
-              📋 템플릿
-            </button>
-          </div>
+      <div className="flex items-center justify-between mb-2">
+        <div>
+          <h2 className="text-lg font-bold text-slate-800">이미지 생성</h2>
+          <p className="text-xs text-slate-400">자유 프롬프트로 이미지 생성</p>
+        </div>
+        <div className="flex bg-slate-100 rounded-lg p-0.5">
+          <button className="px-3 py-1.5 rounded-md text-xs font-semibold bg-white text-slate-800 shadow-sm">자유 입력</button>
+          <button onClick={() => setMode('template')} className="px-3 py-1.5 rounded-md text-xs font-semibold text-slate-500 hover:text-slate-700">템플릿</button>
         </div>
       </div>
 
       {/* 프롬프트 입력 */}
       <div>
-        <label className="block text-sm font-semibold text-gray-700 mb-2">이미지 설명</label>
+        <label className="block text-xs font-semibold text-slate-500 mb-1.5">이미지 설명</label>
         <textarea
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
           placeholder="어떤 이미지를 만들고 싶으신가요? 내용, 스타일, 분위기를 자세히 설명해주세요..."
           rows={4}
-          className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none text-sm"
+          className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/10 focus:border-blue-400 resize-none text-sm outline-none"
           disabled={generating}
         />
       </div>
@@ -240,16 +223,16 @@ export default function ImageGenerator({ onProgress }: Props) {
 
       {/* 비율 선택 */}
       <div>
-        <label className="block text-sm font-semibold text-gray-700 mb-2">이미지 비율</label>
-        <div className="flex gap-2">
+        <label className="block text-xs font-semibold text-slate-500 mb-1.5">이미지 비율</label>
+        <div className="flex gap-1.5">
           {ASPECT_RATIOS.map((r) => (
             <button
               key={r.value}
               onClick={() => setAspectRatio(r.value)}
-              className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
+              className={`flex items-center gap-1 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
                 aspectRatio === r.value
-                  ? 'bg-purple-600 text-white shadow-md shadow-purple-200'
-                  : 'bg-white text-gray-600 border border-gray-200 hover:border-purple-300'
+                  ? 'bg-slate-800 text-white shadow-sm'
+                  : 'bg-white text-slate-600 border border-slate-200 hover:border-slate-300'
               }`}
             >
               <span>{r.icon}</span>
@@ -260,116 +243,78 @@ export default function ImageGenerator({ onProgress }: Props) {
       </div>
 
       {/* 로고 설정 */}
-      <div className="bg-white border border-gray-200 rounded-2xl p-5 space-y-4">
+      <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-3">
         <div className="flex items-center justify-between">
-          <label className="text-sm font-semibold text-gray-700">병원 로고 삽입</label>
+          <label className="text-xs font-semibold text-slate-600">병원 로고</label>
           <button
             onClick={() => setLogoEnabled(!logoEnabled)}
-            className={`relative w-11 h-6 rounded-full transition-colors ${logoEnabled && logoDataUrl ? 'bg-purple-600' : 'bg-gray-300'}`}
+            className={`relative rounded-full transition-colors ${logoEnabled && logoDataUrl ? 'bg-blue-500' : 'bg-slate-300'}`}
+            style={{ width: 40, height: 22 }}
           >
-            <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${logoEnabled && logoDataUrl ? 'translate-x-5' : ''}`} />
+            <span className={`absolute top-[3px] left-[3px] w-4 h-4 bg-white rounded-full shadow transition-transform ${logoEnabled && logoDataUrl ? 'translate-x-[18px]' : ''}`} />
           </button>
         </div>
 
         {/* 로고 업로드 / 미리보기 */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           {logoDataUrl ? (
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-lg border border-gray-200 bg-gray-50 flex items-center justify-center overflow-hidden">
+            <div className="flex items-center gap-2">
+              <div className="w-10 h-10 rounded-lg border border-slate-200 bg-slate-50 flex items-center justify-center overflow-hidden">
                 <img src={logoDataUrl} alt="로고" className="max-w-full max-h-full object-contain" />
               </div>
-              <button
-                onClick={removeLogo}
-                className="text-xs text-red-500 hover:text-red-700"
-              >
-                삭제
-              </button>
+              <button onClick={removeLogo} className="text-[11px] text-red-500 hover:text-red-700">삭제</button>
             </div>
           ) : (
-            <button
-              onClick={() => logoInputRef.current?.click()}
-              className="flex items-center gap-2 px-4 py-2.5 border border-dashed border-gray-300 rounded-xl text-sm text-gray-500 hover:border-purple-400 hover:text-purple-600 transition-all"
+            <button onClick={() => logoInputRef.current?.click()}
+              className="flex items-center gap-1.5 px-3 py-2 border border-dashed border-slate-300 rounded-lg text-xs text-slate-500 hover:border-blue-400 hover:text-blue-600 transition-all"
             >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
               로고 업로드
             </button>
           )}
-          <input
-            ref={logoInputRef}
-            type="file"
-            accept="image/*"
-            onChange={handleLogoUpload}
-            className="hidden"
-          />
+          <input ref={logoInputRef} type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" />
         </div>
 
-        {/* 병원명 + 위치 (로고가 있을 때만) */}
         {logoDataUrl && (
           <div className="flex gap-2">
-            <input
-              type="text"
-              value={hospitalName}
-              onChange={(e) => handleHospitalNameChange(e.target.value)}
-              placeholder="병원명 (선택사항)"
-              className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-            />
-            <div className="flex bg-gray-100 rounded-lg p-0.5">
-              <button
-                type="button"
-                onClick={() => setLogoPosition('top')}
-                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-                  logoPosition === 'top' ? 'bg-white text-purple-700 shadow-sm' : 'text-gray-500'
-                }`}
-              >
-                상단
-              </button>
-              <button
-                type="button"
-                onClick={() => setLogoPosition('bottom')}
-                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-                  logoPosition === 'bottom' ? 'bg-white text-purple-700 shadow-sm' : 'text-gray-500'
-                }`}
-              >
-                하단
-              </button>
+            <input type="text" value={hospitalName} onChange={(e) => handleHospitalNameChange(e.target.value)} placeholder="병원명 (선택)" className="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-blue-400" />
+            <div className="flex bg-slate-100 rounded-lg p-0.5">
+              <button type="button" onClick={() => setLogoPosition('top')} className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${logoPosition === 'top' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500'}`}>상단</button>
+              <button type="button" onClick={() => setLogoPosition('bottom')} className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${logoPosition === 'bottom' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500'}`}>하단</button>
             </div>
           </div>
         )}
       </div>
 
       {/* 병원 기본 정보 / 브랜드 컬러 */}
-      <div className="bg-white border border-gray-200 rounded-2xl p-5 space-y-3">
-        <button
-          type="button"
-          onClick={() => setShowHospitalInfo(!showHospitalInfo)}
-          className="w-full flex items-center justify-between"
-        >
-          <label className="text-sm font-semibold text-gray-700 cursor-pointer">병원 기본 정보 / 브랜드 컬러</label>
-          <svg className={`w-4 h-4 text-gray-400 transition-transform ${showHospitalInfo ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+      <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-3">
+        <button type="button" onClick={() => setShowHospitalInfo(!showHospitalInfo)} className="w-full flex items-center justify-between">
+          <label className="text-xs font-semibold text-slate-600 cursor-pointer">병원 정보 / 브랜드 컬러</label>
+          <svg className={`w-4 h-4 text-slate-400 transition-transform ${showHospitalInfo ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
         </button>
         {showHospitalInfo && (
-          <div className="space-y-3 pt-1">
-            <input type="text" value={clinicPhone} onChange={e => setClinicPhone(e.target.value)} onBlur={saveHospitalInfo} placeholder="전화번호: 02-1234-5678" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent" />
-            <input type="text" value={clinicHours} onChange={e => setClinicHours(e.target.value)} onBlur={saveHospitalInfo} placeholder="진료시간: 평일 09:00~18:00 / 토 09:00~13:00" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent" />
-            <input type="text" value={clinicAddress} onChange={e => setClinicAddress(e.target.value)} onBlur={saveHospitalInfo} placeholder="주소: 서울시 강남구 테헤란로 123" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent" />
+          <div className="space-y-2.5 pt-1">
+            <input type="text" value={clinicPhone} onChange={e => setClinicPhone(e.target.value)} onBlur={saveHospitalInfo} placeholder="전화번호: 02-1234-5678" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-blue-400" />
+            <input type="text" value={clinicHours} onChange={e => setClinicHours(e.target.value)} onBlur={saveHospitalInfo} placeholder="진료시간: 평일 09:00~18:00" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-blue-400" />
+            <input type="text" value={clinicAddress} onChange={e => setClinicAddress(e.target.value)} onBlur={saveHospitalInfo} placeholder="주소: 서울시 강남구 테헤란로 123" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-blue-400" />
             <div className="flex gap-3">
               <div className="flex-1 flex items-center gap-2">
-                <label className="text-xs text-gray-500 whitespace-nowrap">메인 컬러</label>
-                <input type="color" value={brandColor || '#4F46E5'} onChange={e => setBrandColor(e.target.value)} onBlur={saveHospitalInfo} className="w-8 h-8 rounded border border-gray-200 cursor-pointer p-0.5" />
-                <input type="text" value={brandColor} onChange={e => setBrandColor(e.target.value)} onBlur={saveHospitalInfo} placeholder="#4F46E5" className="flex-1 px-2 py-1.5 border border-gray-200 rounded-lg text-xs font-mono focus:ring-2 focus:ring-purple-500 focus:border-transparent" />
+                <label className="text-[11px] text-slate-500 whitespace-nowrap">메인</label>
+                <input type="color" value={brandColor || '#4F46E5'} onChange={e => setBrandColor(e.target.value)} onBlur={saveHospitalInfo} className="w-7 h-7 rounded border border-slate-200 cursor-pointer p-0.5" />
+                <input type="text" value={brandColor} onChange={e => setBrandColor(e.target.value)} onBlur={saveHospitalInfo} placeholder="#4F46E5" className="flex-1 px-2 py-1.5 border border-slate-200 rounded-lg text-xs font-mono outline-none focus:border-blue-400" />
               </div>
               <div className="flex-1 flex items-center gap-2">
-                <label className="text-xs text-gray-500 whitespace-nowrap">포인트</label>
-                <input type="color" value={brandAccent || '#F59E0B'} onChange={e => setBrandAccent(e.target.value)} onBlur={saveHospitalInfo} className="w-8 h-8 rounded border border-gray-200 cursor-pointer p-0.5" />
-                <input type="text" value={brandAccent} onChange={e => setBrandAccent(e.target.value)} onBlur={saveHospitalInfo} placeholder="#F59E0B" className="flex-1 px-2 py-1.5 border border-gray-200 rounded-lg text-xs font-mono focus:ring-2 focus:ring-purple-500 focus:border-transparent" />
+                <label className="text-[11px] text-slate-500 whitespace-nowrap">포인트</label>
+                <input type="color" value={brandAccent || '#F59E0B'} onChange={e => setBrandAccent(e.target.value)} onBlur={saveHospitalInfo} className="w-7 h-7 rounded border border-slate-200 cursor-pointer p-0.5" />
+                <input type="text" value={brandAccent} onChange={e => setBrandAccent(e.target.value)} onBlur={saveHospitalInfo} placeholder="#F59E0B" className="flex-1 px-2 py-1.5 border border-slate-200 rounded-lg text-xs font-mono outline-none focus:border-blue-400" />
               </div>
             </div>
             {(brandColor || brandAccent) && (
               <div className="flex gap-2 items-center">
-                <div className="h-5 flex-1 rounded-lg" style={{ background: `linear-gradient(135deg, ${brandColor || '#4F46E5'}, ${brandAccent || '#F59E0B'})` }} />
-                <button type="button" onClick={() => { setBrandColor(''); setBrandAccent(''); saveHospitalInfo(); }} className="text-xs text-gray-400 hover:text-red-500">초기화</button>
+                <div className="h-4 flex-1 rounded-md" style={{ background: `linear-gradient(135deg, ${brandColor || '#4F46E5'}, ${brandAccent || '#F59E0B'})` }} />
+                <button type="button" onClick={() => { setBrandColor(''); setBrandAccent(''); saveHospitalInfo(); }} className="text-[11px] text-slate-400 hover:text-red-500">초기화</button>
               </div>
             )}
           </div>
@@ -380,10 +325,10 @@ export default function ImageGenerator({ onProgress }: Props) {
       <button
         onClick={handleGenerate}
         disabled={generating || !prompt.trim()}
-        className={`w-full py-3.5 rounded-xl text-white font-semibold text-base transition-all ${
+        className={`w-full py-3.5 rounded-xl text-white font-semibold text-sm transition-all ${
           generating || !prompt.trim()
-            ? 'bg-gray-300 cursor-not-allowed'
-            : 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 shadow-lg shadow-purple-200 hover:shadow-xl'
+            ? 'bg-slate-300 cursor-not-allowed'
+            : 'bg-slate-800 hover:bg-slate-900 shadow-lg'
         }`}
       >
         {generating ? (

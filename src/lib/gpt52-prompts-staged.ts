@@ -441,7 +441,7 @@ ${context.audienceMode ? `- 청중: ${context.audienceMode}
   → 전문가용: 메커니즘 → 감별진단 → 최신 가이드라인 순서` : ''}
 ${context.persona ? `- 페르소나: ${context.persona}
   → hospital_info: 객관적 정보 전달형 소제목 (질문형/정의형)
-  → director_1st: 임상 경험 기반 소제목 ("진료실에서 자주 보는~" 느낌)
+  → director_1st: 임상 경험 기반 소제목 ("진료실에서 자주 보는~" 느낌). 각 소제목 본문에 반드시 원장의 개인 경험/에피소드 포함 필수
   → coordinator: 상담 시 자주 묻는 질문 기반 소제목` : ''}
 ${context.tone ? `- 말투: ${context.tone}` : ''}`;
   }
@@ -506,12 +506,37 @@ export const getPipelineSectionPrompt = (
   targetChars: number,
   firstSentencePattern: string,
   previousSections: string[],
-  medicalLawMode: 'strict' | 'relaxed' = 'strict'
+  medicalLawMode: 'strict' | 'relaxed' = 'strict',
+  persona?: string
 ) => {
   const medicalLawBlock = medicalLawMode === 'relaxed' ? RELAXED_MEDICAL_LAW : MEDICAL_LAW_COMMON;
+
+  let personaBlock = '';
+  if (persona === 'director_1st') {
+    personaBlock = `
+[페르소나: 대표원장 1인칭 - 이 섹션에서 반드시 적용!]
+- 1인칭 시점 ("저는", "제가") 자연스럽게 사용 (1~2회)
+- 이 섹션에서 반드시 1개 이상의 개인 임상 경험/에피소드를 포함할 것
+  예: "진료실에서 이런 경우를 자주 봅니다", "제 경험상~", "실제로 저희 병원에서~"
+- 의학 정보 → 원장의 경험/해석 → 환자 조언 순서로 구성
+`;
+  } else if (persona === 'coordinator') {
+    personaBlock = `
+[페르소나: 상담 실장님 시점]
+- 친근하고 편안한 어조 ("상담할 때 많이 여쭤보시는데요", "저희 병원 오시는 분들 중에~")
+- 과정/비용/기간 중심 서술
+`;
+  } else if (persona === 'hospital_info') {
+    personaBlock = `
+[페르소나: 병원 공식 블로그]
+- 3인칭 객관적 시점. "저", "제가" 등 1인칭 사용 금지
+`;
+  }
+
   return `${IDENTITY}
 ${TONE}
 ${medicalLawBlock}
+${personaBlock}
 
 [미션] 블로그 글의 소제목 ${sectionIndex + 1}번 섹션만 작성하라.
 
@@ -542,11 +567,20 @@ export const getPipelineIntroPrompt = (
   approach: string,
   scene: string,
   bridge: string,
-  targetChars: number
+  targetChars: number,
+  persona?: string
 ) => {
+  let personaBlock = '';
+  if (persona === 'director_1st') {
+    personaBlock = `\n[페르소나: 대표원장 1인칭]\n- 도입부에서도 1인칭 시점 사용 ("저는", "제가")\n- "진료실에서 자주 만나는~", "환자분들이 가장 많이 물어보시는~" 같은 원장의 관점으로 시작\n`;
+  } else if (persona === 'coordinator') {
+    personaBlock = `\n[페르소나: 상담 실장님]\n- "상담실에서 자주 듣는 질문이 있어요" 식의 친근한 도입\n`;
+  }
+
   return `${IDENTITY}
 ${INTRO}
 ${TONE}
+${personaBlock}
 
 [미션] 블로그 글의 도입부만 작성하라.
 
@@ -569,10 +603,19 @@ ${TONE}
  */
 export const getPipelineConclusionPrompt = (
   direction: string,
-  targetChars: number
+  targetChars: number,
+  persona?: string
 ) => {
+  let personaBlock = '';
+  if (persona === 'director_1st') {
+    personaBlock = `\n[페르소나: 대표원장 1인칭]\n- 마무리에서도 1인칭 유지. "진료실에서 확인하시면 더 정확합니다" 식의 부드러운 내원 유도\n`;
+  } else if (persona === 'coordinator') {
+    personaBlock = `\n[페르소나: 상담 실장님]\n- "궁금하신 점은 편하게 연락 주세요" 식의 상담 연결\n`;
+  }
+
   return `${IDENTITY}
 ${TONE}
+${personaBlock}
 
 [미션] 블로그 글의 마무리만 작성하라.
 
