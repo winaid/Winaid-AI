@@ -137,13 +137,18 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
         <div className="relative max-w-5xl mx-auto text-center w-full pt-20">
           {/* Logo */}
           <div className="flex flex-col items-center mb-12">
-            <div className="flex items-center gap-3.5 mb-2">
+            <div className="flex items-center gap-3.5 mb-3">
               <img src="/280_logo.png" alt="" className="h-14 w-14 border-0 outline-none block" />
-              <span className="font-black text-4xl tracking-tight text-slate-800">
-                WIN<span className="text-blue-600">AID</span>
-              </span>
+              <div className="flex items-center gap-0">
+                {'윈에이드'.split('').map((char, i) => (
+                  <span key={i} className="flex items-center">
+                    {i > 0 && <span className="w-px h-6 bg-slate-300 mx-2.5" />}
+                    <span className="font-black text-3xl text-slate-800 tracking-tight">{char}</span>
+                  </span>
+                ))}
+              </div>
             </div>
-            <span className="text-[11px] font-semibold tracking-[0.3em] uppercase text-slate-400">advertising company</span>
+            <span className="text-[11px] font-semibold tracking-[0.35em] uppercase text-slate-400">advertising company</span>
           </div>
 
           {/* Badge */}
