@@ -27,10 +27,10 @@ async function generateSignature(timestamp: string, method: string, uri: string,
   return btoa(String.fromCharCode(...new Uint8Array(signature)));
 }
 
-async function getSearchVolume(
-  keywords: string[],
+async function callSearchAdAPI(
+  keywordParam: string,
   env: Env
-): Promise<{ data: Record<string, { monthlyPcQcCnt: number; monthlyMobileQcCnt: number }>; error?: string }> {
+): Promise<{ ok: boolean; data?: any; status?: number; errorText?: string }> {
   const customerId = env.NAVER_SEARCHAD_CUSTOMER_ID?.trim();
   const apiKey = env.NAVER_SEARCHAD_API_KEY?.trim();
   const secret = env.NAVER_SEARCHAD_SECRET?.trim();
@@ -40,21 +40,8 @@ async function getSearchVolume(
   const uri = '/keywordstool';
   const signature = await generateSignature(timestamp, method, uri, secret);
 
-  // 키워드 정제: 한글, 영문, 숫자, 공백만 허용 (네이버 API 제한)
-  const cleanKeywords = keywords
-    .map(k => k.trim().replace(/[^가-힣a-zA-Z0-9\s]/g, '').trim())
-    .filter(k => k.length > 0 && k.length <= 50);
-
-  if (cleanKeywords.length === 0) {
-    return { data: {}, error: 'hintKeywords: 유효한 키워드 없음 (정제 후)' };
-  }
-
-  // 공백만 %20으로 인코딩, 한글은 raw (Cloudflare Workers fetch가 처리)
-  const keywordParam = cleanKeywords.map(k => k.replace(/ /g, '%20')).join(',');
   const fetchUrl = `https://api.searchad.naver.com${uri}?hintKeywords=${keywordParam}&showDetail=1`;
-
-  console.log('[SearchAd v6] keywords:', cleanKeywords.join(', '));
-  console.log('[SearchAd v6] URL:', fetchUrl.substring(0, 500));
+  console.log('[SearchAd v7] URL:', fetchUrl.substring(0, 300));
 
   const response = await fetch(fetchUrl, {
     method: 'GET',
@@ -68,34 +55,78 @@ async function getSearchVolume(
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error('[SearchAd] API error:', response.status, errorText);
-    return {
-      data: {},
-      error: `SearchAd ${response.status}: ${errorText} [URL: ${fetchUrl.substring(0, 200)}] [keywords: ${cleanKeywords.join(',')}]`,
-    };
+    return { ok: false, status: response.status, errorText };
   }
 
-  const data = await response.json() as {
-    keywordList: Array<{
-      relKeyword: string;
-      monthlyPcQcCnt: number | string;
-      monthlyMobileQcCnt: number | string;
-    }>;
-  };
+  const data = await response.json();
+  return { ok: true, data };
+}
 
+function parseKeywordList(data: any): Record<string, { monthlyPcQcCnt: number; monthlyMobileQcCnt: number }> {
   const result: Record<string, { monthlyPcQcCnt: number; monthlyMobileQcCnt: number }> = {};
   for (const item of data.keywordList || []) {
     const pc = item.monthlyPcQcCnt === '< 10' ? 5 : Number(item.monthlyPcQcCnt) || 0;
     const mobile = item.monthlyMobileQcCnt === '< 10' ? 5 : Number(item.monthlyMobileQcCnt) || 0;
-    // 원본 키워드(공백 포함)와 API 반환 키워드 모두 저장하여 매칭률 높임
     result[item.relKeyword] = { monthlyPcQcCnt: pc, monthlyMobileQcCnt: mobile };
-    // 공백 제거 버전도 저장 (공백 차이로 매칭 실패 방지)
+    // 공백 제거 버전도 저장
     const noSpace = item.relKeyword.replace(/\s+/g, '');
     if (noSpace !== item.relKeyword) {
       result[noSpace] = { monthlyPcQcCnt: pc, monthlyMobileQcCnt: mobile };
     }
   }
-  return { data: result };
+  return result;
+}
+
+async function getSearchVolume(
+  keywords: string[],
+  env: Env
+): Promise<{ data: Record<string, { monthlyPcQcCnt: number; monthlyMobileQcCnt: number }>; error?: string }> {
+  // 키워드 정제: 한글, 영문, 숫자, 공백만 허용
+  const cleanKeywords = keywords
+    .map(k => k.trim().replace(/[^가-힣a-zA-Z0-9\s]/g, '').trim())
+    .filter(k => k.length > 0 && k.length <= 50);
+
+  if (cleanKeywords.length === 0) {
+    return { data: {}, error: 'hintKeywords: 유효한 키워드 없음' };
+  }
+
+  // 방법1: encodeURIComponent로 완전 인코딩 (순수 ASCII URL)
+  const encodedParam = cleanKeywords.map(k => encodeURIComponent(k)).join(',');
+  console.log('[SearchAd v7] 시도1: encodeURIComponent');
+  const result1 = await callSearchAdAPI(encodedParam, env);
+
+  if (result1.ok) {
+    console.log('[SearchAd v7] 시도1 성공!');
+    return { data: parseKeywordList(result1.data) };
+  }
+
+  console.log('[SearchAd v7] 시도1 실패:', result1.status, '시도2: 키워드별 개별 조회');
+
+  // 방법2: 키워드를 1개씩 개별 조회 (공백 없는 버전)
+  const allResult: Record<string, { monthlyPcQcCnt: number; monthlyMobileQcCnt: number }> = {};
+  const errors: string[] = [];
+
+  for (const kw of cleanKeywords) {
+    // 공백 없는 버전으로 시도
+    const noSpaceKw = kw.replace(/\s+/g, '');
+    const result = await callSearchAdAPI(noSpaceKw, env);
+
+    if (result.ok) {
+      const parsed = parseKeywordList(result.data);
+      Object.assign(allResult, parsed);
+    } else {
+      errors.push(`${kw}: ${result.status}`);
+    }
+  }
+
+  if (Object.keys(allResult).length > 0) {
+    return { data: allResult, error: errors.length > 0 ? errors.join('; ') : undefined };
+  }
+
+  return {
+    data: {},
+    error: `SearchAd 모든 방법 실패. 시도1: ${result1.status} ${result1.errorText?.substring(0, 100)}`,
+  };
 }
 
 async function getBlogPostCount(keyword: string, env: Env): Promise<number> {
