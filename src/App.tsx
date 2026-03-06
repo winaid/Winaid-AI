@@ -919,8 +919,8 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className={`min-h-screen flex flex-col font-sans relative transition-colors duration-300 ${darkMode ? 'bg-slate-900 text-slate-100' : 'bg-slate-50 text-slate-900'}`}>
-      <header className={`backdrop-blur-xl border-b sticky top-0 z-30 h-16 flex items-center shadow-sm flex-none transition-colors duration-300 ${darkMode ? 'bg-slate-800/80 border-slate-700' : 'bg-white/80 border-slate-100'}`}>
+    <div className={`min-h-screen flex flex-col font-sans relative transition-colors duration-300 ${darkMode ? 'bg-slate-900 text-slate-100' : 'bg-white text-slate-900'}`}>
+      <header className={`backdrop-blur-xl border-b sticky top-0 z-30 h-16 flex items-center flex-none transition-colors duration-300 ${darkMode ? 'bg-slate-800/80 border-slate-700' : 'bg-white/90 border-slate-100'}`}>
         <div className="max-w-[1600px] w-full mx-auto px-6 flex justify-between items-center">
           <a href="#app" onClick={(e) => { e.preventDefault(); setContentTab('blog'); window.location.hash = 'app'; }} className="flex items-center gap-2.5 hover:opacity-80 transition-opacity cursor-pointer">
             <img src="/280_logo.png" alt="WINAID" className={`h-9 ${darkMode ? 'rounded-md bg-white p-0.5' : ''}`} />
@@ -968,7 +968,7 @@ const App: React.FC = () => {
         {contentTab === 'refine' || contentTab === 'similarity' || contentTab === 'image' || contentTab === 'history' ? (
           <div className="w-full h-full flex flex-col gap-4 overflow-hidden">
             {/* 탭 메뉴 */}
-            <div className={`flex gap-1 p-1.5 rounded-xl ${darkMode ? 'bg-slate-800' : 'bg-slate-100/80 border border-slate-200/60'} w-fit mx-auto`}>
+            <div className={`flex gap-1 p-1.5 rounded-xl ${darkMode ? 'bg-slate-800' : 'bg-slate-50 border border-slate-200/60'} w-fit mx-auto`}>
               {([
                 { id: 'blog' as const, label: '블로그', icon: '📝' },
                 { id: 'card_news' as const, label: '카드뉴스', icon: '🎨' },
