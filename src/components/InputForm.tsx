@@ -286,6 +286,24 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
       
       <form onSubmit={handleSubmit} className="space-y-5">
 
+        {/* 팀 선택 탭 (항상 보임) */}
+        <div className="flex bg-slate-100 rounded-xl p-1">
+          {TEAM_DATA.map(team => (
+            <button
+              key={team.id}
+              type="button"
+              onClick={() => { setSelectedTeam(selectedTeam === team.id ? null : team.id); setShowHospitalDropdown(true); }}
+              className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-all ${
+                selectedTeam === team.id
+                  ? 'bg-white text-blue-600 shadow-sm'
+                  : 'text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              {team.label}
+            </button>
+          ))}
+        </div>
+
         <div className="relative" ref={hospitalDropdownRef}>
           <label className={labelCls}>병원명</label>
           <div className="relative">
@@ -304,24 +322,11 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
               <svg className={`w-4 h-4 transition-transform ${showHospitalDropdown ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
             </button>
           </div>
-          {showHospitalDropdown && (
+          {showHospitalDropdown && selectedTeam !== null && (
             <div className="absolute z-50 mt-1 w-full bg-white rounded-xl border border-slate-200 shadow-lg overflow-hidden animate-in fade-in slide-in-from-top-1 duration-150">
-              {/* 팀 선택 탭 */}
-              <div className="flex border-b border-slate-100">
-                {TEAM_DATA.map(team => (
-                  <button
-                    key={team.id}
-                    type="button"
-                    onClick={() => setSelectedTeam(selectedTeam === team.id ? null : team.id)}
-                    className={`flex-1 py-2.5 text-xs font-semibold transition-all ${
-                      selectedTeam === team.id
-                        ? 'text-blue-600 bg-blue-50 border-b-2 border-blue-500'
-                        : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
-                    }`}
-                  >
-                    {team.label}
-                  </button>
-                ))}
+              {/* 팀 헤더 */}
+              <div className="px-3 py-2 bg-blue-50 border-b border-blue-100">
+                <span className="text-xs font-bold text-blue-600">{TEAM_DATA.find(t => t.id === selectedTeam)?.label}</span>
               </div>
               {/* 병원 목록 */}
               {selectedTeam !== null && (() => {
@@ -363,9 +368,6 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
                   </div>
                 );
               })()}
-              {selectedTeam === null && (
-                <div className="p-4 text-center text-xs text-slate-400">팀을 선택해주세요</div>
-              )}
             </div>
           )}
           {selectedManager && hospitalName && (
