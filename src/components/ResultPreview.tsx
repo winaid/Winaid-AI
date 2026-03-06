@@ -1935,7 +1935,7 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
   };
 
   return (
-    <div className={`rounded-2xl shadow-[0_4px_24px_rgba(0,0,0,0.06)] border h-full flex flex-col overflow-hidden relative transition-colors duration-300 backdrop-blur-xl ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white/80 border-white/60'}`}>
+    <div className={`rounded-2xl shadow-[0_4px_32px_rgba(0,0,0,0.06)] border h-full flex flex-col overflow-hidden relative transition-colors duration-300 backdrop-blur-2xl ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white/90 border-slate-200/60'}`}>
       <style>{`
         .naver-preview .main-title { font-size: 32px; font-weight: 900; margin-bottom: 30px; color: #000; line-height: 1.4; padding-bottom: 20px; }
         .naver-preview h2:not(.main-title):not(.hidden-title):not(.press-subtitle), .naver-preview h3 { font-size: 24px; font-weight: bold; margin-top: 50px; margin-bottom: 20px; color: #000; padding-left: 15px; border-left: 4px solid #787fff; }
@@ -2204,8 +2204,9 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
       />
 
       {/* 항상 표시: 점수 표시 & 다운로드 버튼 */}
-      <div className="bg-slate-900 p-6 flex items-center justify-between text-white flex-none">
-        <div className="flex items-center gap-4">
+      <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 p-6 flex items-center justify-between text-white flex-none relative overflow-hidden">
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMSIgY3k9IjEiIHI9IjEiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4wMykiLz48L3N2Zz4=')] opacity-60" />
+        <div className="flex items-center gap-4 relative">
           {content.factCheck ? (
             <>
               {/* 📊 SEO 점수 (블로그에만 표시) - 가장 앞에 배치 */}
@@ -2294,7 +2295,7 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
             </div>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 relative">
              {/* 🖼️ 이미지 최적화 버튼 */}
              <button 
                onClick={handleOptimizeImages} 

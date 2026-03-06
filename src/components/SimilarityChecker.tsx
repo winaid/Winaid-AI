@@ -207,24 +207,24 @@ const SimilarityChecker: React.FC<SimilarityCheckerProps> = ({ onClose, darkMode
   return (
     <div className="h-full flex flex-col">
       {/* 헤더 */}
-      <div className={`flex items-center justify-between pb-4 mb-4 border-b ${darkMode ? 'border-slate-700' : 'border-slate-200/60'}`}>
+      <div className={`flex items-center justify-between pb-4 mb-4 border-b ${darkMode ? 'border-slate-700' : 'border-slate-100'}`}>
         <div className="flex items-center gap-3">
-          <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${darkMode ? 'bg-blue-900/50' : 'bg-gradient-to-br from-violet-100 to-purple-100'}`}>
+          <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shadow-sm ${darkMode ? 'bg-violet-900/50 border border-violet-800' : 'bg-gradient-to-br from-violet-50 to-purple-50 border border-violet-100/80'}`}>
             <svg className="w-5 h-5 text-violet-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" /></svg>
           </div>
           <div>
-            <h2 className={`text-lg font-bold ${darkMode ? 'text-white' : 'text-slate-800'}`}>
+            <h2 className={`text-lg font-black ${darkMode ? 'text-white' : 'text-slate-800'}`}>
               유사도 검사
             </h2>
-            <p className={`text-xs ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+            <p className={`text-xs font-medium ${darkMode ? 'text-slate-400' : 'text-slate-400'}`}>
               웹 검색 또는 텍스트 비교로 중복 여부를 확인합니다
             </p>
           </div>
         </div>
         <button
           onClick={onClose}
-          className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
-            darkMode ? 'hover:bg-slate-700 text-slate-400' : 'hover:bg-slate-100 text-slate-400'
+          className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all ${
+            darkMode ? 'hover:bg-slate-700 text-slate-400' : 'hover:bg-slate-100 text-slate-400 border border-transparent hover:border-slate-200'
           }`}
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
@@ -234,7 +234,7 @@ const SimilarityChecker: React.FC<SimilarityCheckerProps> = ({ onClose, darkMode
       {/* 본문 */}
       <div className="flex-1 overflow-y-auto custom-scrollbar">
         {/* 모드 선택 */}
-        <div className={`flex gap-1 p-1 rounded-xl mb-4 ${darkMode ? 'bg-slate-700' : 'bg-slate-100/80'}`}>
+        <div className={`flex gap-1 p-1 rounded-xl mb-4 border ${darkMode ? 'bg-slate-700 border-slate-600' : 'bg-slate-50 border-slate-100'}`}>
           <button
             onClick={() => {
               setMode('web');

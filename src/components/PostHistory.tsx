@@ -133,23 +133,23 @@ const PostHistory: React.FC<PostHistoryProps> = ({ onClose, darkMode = false }) 
   // List view
   return (
     <div className="h-full flex flex-col">
-      <div className={`flex items-center justify-between pb-4 mb-4 border-b ${darkMode ? 'border-slate-700' : 'border-slate-200/60'}`}>
+      <div className={`flex items-center justify-between pb-4 mb-4 border-b ${darkMode ? 'border-slate-700' : 'border-slate-100'}`}>
         <div className="flex items-center gap-3">
-          <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${darkMode ? 'bg-blue-900/50' : 'bg-gradient-to-br from-amber-100 to-orange-100'}`}>
+          <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shadow-sm ${darkMode ? 'bg-amber-900/50 border border-amber-800' : 'bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-100/80'}`}>
             <svg className="w-5 h-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" /></svg>
           </div>
           <div>
-            <h2 className={`text-lg font-bold ${darkMode ? 'text-white' : 'text-slate-800'}`}>
+            <h2 className={`text-lg font-black ${darkMode ? 'text-white' : 'text-slate-800'}`}>
               작성 히스토리
             </h2>
-            <p className={`text-xs ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+            <p className={`text-xs font-medium ${darkMode ? 'text-slate-400' : 'text-slate-400'}`}>
               {total > 0 ? `총 ${total}개의 글` : '아직 작성한 글이 없습니다'}
             </p>
           </div>
         </div>
         <button
           onClick={onClose}
-          className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${darkMode ? 'hover:bg-slate-700 text-slate-400' : 'hover:bg-slate-100 text-slate-400'}`}
+          className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all ${darkMode ? 'hover:bg-slate-700 text-slate-400' : 'hover:bg-slate-100 text-slate-400 border border-transparent hover:border-slate-200'}`}
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
         </button>

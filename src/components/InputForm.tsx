@@ -275,15 +275,18 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
     }
   };
 
-  const labelCls = "block text-xs font-bold text-slate-500 mb-2 tracking-wide";
-  const inputCls = "w-full px-4 py-3 bg-white/80 border border-slate-200/60 rounded-xl text-slate-700 text-sm font-medium outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-500/10 focus:bg-white transition-all";
-  const selectCls = "w-full px-4 py-3 bg-white/80 border border-slate-200/60 rounded-xl text-slate-700 text-sm font-medium outline-none focus:border-blue-400 focus:bg-white transition-all";
+  const labelCls = "block text-[11px] font-bold text-slate-400 mb-2 tracking-wider uppercase";
+  const inputCls = "w-full px-4 py-3 bg-white border border-slate-200/80 rounded-xl text-slate-700 text-sm font-medium outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-500/10 focus:bg-white transition-all placeholder:text-slate-300";
+  const selectCls = "w-full px-4 py-3 bg-white border border-slate-200/80 rounded-xl text-slate-700 text-sm font-medium outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-500/10 focus:bg-white transition-all";
 
   return (
-    <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-[0_4px_24px_rgba(0,0,0,0.06)] border border-white/60">
+    <div className="bg-white/90 backdrop-blur-2xl rounded-2xl shadow-[0_4px_32px_rgba(0,0,0,0.06)] border border-slate-200/60 relative overflow-hidden">
+      {/* Decorative top gradient */}
+      <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-violet-500 to-cyan-500" />
+
       {/* 콘텐츠 유형 선택 */}
-      <div className="p-4 pb-0">
-        <div className="flex gap-1 p-1 bg-slate-100/60 rounded-xl">
+      <div className="p-4 pb-0 pt-5">
+        <div className="flex gap-1 p-1 bg-slate-50 rounded-xl border border-slate-100/80">
           {([
             { id: 'blog' as PostType, label: '블로그', icon: '📝' },
             { id: 'card_news' as PostType, label: '카드뉴스', icon: '🎨' },
@@ -299,8 +302,8 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
                 setPostType(tab.id);
                 requestAnimationFrame(() => window.scrollTo(0, scrollY));
               }}
-              className={`flex-1 py-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-                postType === tab.id ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md shadow-blue-500/20' : 'text-slate-400 hover:text-slate-600 hover:bg-white/60'
+              className={`flex-1 py-2.5 rounded-lg text-xs font-bold transition-all duration-200 flex items-center justify-center gap-1.5 ${
+                postType === tab.id ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg shadow-blue-500/25' : 'text-slate-400 hover:text-slate-600 hover:bg-white'
               }`}
             >
               <span>{tab.icon}</span>
@@ -309,7 +312,7 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
           ))}
         </div>
         {/* 도구 바로가기 */}
-        <div className="flex gap-1 mt-1.5">
+        <div className="flex gap-1.5 mt-2">
           {([
             { id: 'similarity' as const, label: '유사도', icon: '🔍' },
             { id: 'refine' as const, label: 'AI보정', icon: '✨' },
@@ -319,7 +322,7 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
               key={tool.id}
               type="button"
               onClick={() => onTabChange?.(tool.id)}
-              className="flex-1 py-1.5 rounded-lg text-[11px] font-semibold text-slate-400 hover:text-blue-600 hover:bg-blue-50/50 transition-all flex items-center justify-center gap-1"
+              className="flex-1 py-2 rounded-lg text-[11px] font-bold text-slate-400 hover:text-blue-600 hover:bg-blue-50/60 border border-transparent hover:border-blue-100 transition-all flex items-center justify-center gap-1"
             >
               <span>{tool.icon}</span>
               <span>{tool.label}</span>
@@ -329,7 +332,7 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
       </div>
 
       {/* 구분선 */}
-      <div className="mx-4 border-t border-slate-100"></div>
+      <div className="mx-5 mt-3 border-t border-slate-100/80"></div>
 
       {/* 메인 입력 폼 */}
       <div className="p-6 pt-4">
@@ -874,9 +877,21 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
           type="button"
           onClick={handleSubmit}
           disabled={isLoading || !topic.trim()}
-          className={`w-full py-4 rounded-xl text-white font-black text-sm shadow-lg transition-all active:scale-[0.98] disabled:opacity-40 ${isLoading ? 'bg-slate-400' : 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-blue-500/25'}`}
+          className={`w-full py-4 rounded-xl text-white font-black text-sm shadow-lg transition-all duration-300 active:scale-[0.97] disabled:opacity-40 disabled:shadow-none relative overflow-hidden group ${isLoading ? 'bg-slate-400' : 'bg-gradient-to-r from-blue-600 via-blue-700 to-blue-600 hover:from-blue-700 hover:via-blue-800 hover:to-blue-700 shadow-blue-500/30 hover:shadow-blue-500/40 hover:-translate-y-0.5'}`}
         >
-          {isLoading ? '생성 중...' : postType === 'blog' ? '블로그 원고 생성' : postType === 'press_release' ? '보도자료 작성' : '카드뉴스 제작'}
+          <span className="relative z-10 flex items-center justify-center gap-2">
+            {isLoading ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                생성 중...
+              </>
+            ) : (
+              <>
+                {postType === 'blog' ? '블로그 원고 생성' : postType === 'press_release' ? '보도자료 작성' : '카드뉴스 제작'}
+                <svg className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" /></svg>
+              </>
+            )}
+          </span>
         </button>
       </form>
       </div>

@@ -135,22 +135,23 @@ const ScriptPreview: React.FC<ScriptPreviewProps> = ({
   };
 
   return (
-    <div className={`h-full flex flex-col rounded-2xl border overflow-hidden transition-colors duration-300 backdrop-blur-xl ${
-      darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white/80 border-white/60 shadow-[0_4px_24px_rgba(0,0,0,0.06)]'
+    <div className={`h-full flex flex-col rounded-2xl border overflow-hidden transition-colors duration-300 backdrop-blur-2xl ${
+      darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white/90 border-slate-200/60 shadow-[0_4px_32px_rgba(0,0,0,0.06)]'
     }`}>
       {/* 헤더 */}
-      <div className={`px-6 py-5 border-b flex-none ${
-        darkMode ? 'bg-slate-900 border-slate-700' : 'bg-gradient-to-r from-blue-600 to-indigo-600'
+      <div className={`px-6 py-5 border-b flex-none relative overflow-hidden ${
+        darkMode ? 'bg-slate-900 border-slate-700' : 'bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-600'
       }`}>
-        <div className="flex items-center justify-between">
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMSIgY3k9IjEiIHI9IjEiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4wNSkiLz48L3N2Zz4=')] opacity-60" />
+        <div className="flex items-center justify-between relative">
           <div>
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-xl bg-white/15 backdrop-blur flex items-center justify-center border border-white/10">
                 <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg>
               </div>
               <h2 className="text-lg font-black text-white">카드뉴스 원고 미리보기</h2>
             </div>
-            <p className="text-white/70 text-xs mt-1.5 ml-12">
+            <p className="text-white/60 text-xs mt-1.5 ml-[52px] font-medium">
               {script.totalSlides}장 | {script.overallTheme}
             </p>
           </div>

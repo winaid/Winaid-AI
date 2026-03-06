@@ -68,28 +68,29 @@ const PromptPreview: React.FC<PromptPreviewProps> = ({
   };
 
   return (
-    <div className={`h-full flex flex-col rounded-2xl border overflow-hidden transition-colors duration-300 backdrop-blur-xl ${
-      darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white/80 border-white/60 shadow-[0_4px_24px_rgba(0,0,0,0.06)]'
+    <div className={`h-full flex flex-col rounded-2xl border overflow-hidden transition-colors duration-300 backdrop-blur-2xl ${
+      darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white/90 border-slate-200/60 shadow-[0_4px_32px_rgba(0,0,0,0.06)]'
     }`}>
       {/* 헤더 */}
-      <div className={`px-6 py-5 border-b flex-none ${
-        darkMode ? 'bg-slate-900 border-slate-700' : 'bg-gradient-to-r from-violet-600 to-purple-600'
+      <div className={`px-6 py-5 border-b flex-none relative overflow-hidden ${
+        darkMode ? 'bg-slate-900 border-slate-700' : 'bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600'
       }`}>
-        <div className="flex items-center justify-between">
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMSIgY3k9IjEiIHI9IjEiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4wNSkiLz48L3N2Zz4=')] opacity-60" />
+        <div className="flex items-center justify-between relative">
           <div>
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-xl bg-white/15 backdrop-blur flex items-center justify-center border border-white/10">
                 <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0022.5 18.75V5.25A2.25 2.25 0 0020.25 3H3.75A2.25 2.25 0 001.5 5.25v13.5A2.25 2.25 0 003.75 21z" /></svg>
               </div>
               <h2 className="text-lg font-black text-white">이미지 프롬프트 확인</h2>
             </div>
-            <p className="text-white/70 text-xs mt-1.5 ml-12">
+            <p className="text-white/60 text-xs mt-1.5 ml-[52px] font-medium">
               {prompts.length}장의 카드 이미지 프롬프트
             </p>
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="px-3 py-1.5 bg-white/15 backdrop-blur-sm rounded-lg text-white/90 text-xs font-bold">
+            <span className="px-3 py-1.5 bg-white/15 backdrop-blur-sm rounded-xl text-white/90 text-xs font-bold border border-white/10">
               2단계
             </span>
           </div>
