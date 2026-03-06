@@ -133,10 +133,10 @@ const PostHistory: React.FC<PostHistoryProps> = ({ onClose, darkMode = false }) 
   // List view
   return (
     <div className="h-full flex flex-col">
-      <div className={`flex items-center justify-between pb-4 mb-4 border-b ${darkMode ? 'border-slate-700' : 'border-slate-200'}`}>
+      <div className={`flex items-center justify-between pb-4 mb-4 border-b ${darkMode ? 'border-slate-700' : 'border-slate-200/60'}`}>
         <div className="flex items-center gap-3">
-          <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg ${darkMode ? 'bg-blue-900/50' : 'bg-blue-100'}`}>
-            📋
+          <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${darkMode ? 'bg-blue-900/50' : 'bg-gradient-to-br from-amber-100 to-orange-100'}`}>
+            <svg className="w-5 h-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" /></svg>
           </div>
           <div>
             <h2 className={`text-lg font-bold ${darkMode ? 'text-white' : 'text-slate-800'}`}>
@@ -149,9 +149,9 @@ const PostHistory: React.FC<PostHistoryProps> = ({ onClose, darkMode = false }) 
         </div>
         <button
           onClick={onClose}
-          className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${darkMode ? 'hover:bg-slate-700 text-slate-400' : 'hover:bg-slate-100 text-slate-500'}`}
+          className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${darkMode ? 'hover:bg-slate-700 text-slate-400' : 'hover:bg-slate-100 text-slate-400'}`}
         >
-          ✕
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
         </button>
       </div>
 
@@ -167,7 +167,9 @@ const PostHistory: React.FC<PostHistoryProps> = ({ onClose, darkMode = false }) 
         </div>
       ) : items.length === 0 ? (
         <div className={`flex-1 flex flex-col items-center justify-center ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>
-          <div className="text-4xl mb-3">📄</div>
+          <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center mb-3">
+            <svg className="w-7 h-7 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg>
+          </div>
           <p className="text-sm font-medium">아직 작성한 글이 없습니다</p>
           <p className="text-xs mt-1 opacity-60">블로그 글을 생성하면 여기에 저장됩니다</p>
         </div>
@@ -182,7 +184,7 @@ const PostHistory: React.FC<PostHistoryProps> = ({ onClose, darkMode = false }) 
                 className={`w-full text-left p-4 rounded-xl border transition-all ${
                   darkMode
                     ? 'bg-slate-800 border-slate-700 hover:border-slate-500'
-                    : 'bg-white border-slate-200 hover:border-emerald-300 hover:shadow-md'
+                    : 'bg-white/80 backdrop-blur-sm border-slate-200/60 hover:border-blue-300/60 hover:shadow-[0_4px_16px_rgba(0,0,0,0.06)]'
                 }`}
               >
                 <div className="flex items-start justify-between gap-3">

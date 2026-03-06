@@ -168,18 +168,18 @@ export default function ImageGenerator({ onProgress }: Props) {
     return (
       <div className="h-full flex flex-col">
         {/* 헤더 */}
-        <div className="flex items-center justify-between pb-4 mb-4 border-b border-slate-200">
+        <div className="flex items-center justify-between pb-4 mb-4 border-b border-slate-200/60">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center text-lg bg-blue-100">
-              🖼️
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-gradient-to-br from-emerald-100 to-teal-100">
+              <svg className="w-5 h-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0022.5 18.75V5.25A2.25 2.25 0 0020.25 3H3.75A2.25 2.25 0 001.5 5.25v13.5A2.25 2.25 0 003.75 21z" /></svg>
             </div>
             <div>
               <h2 className="text-lg font-bold text-slate-800">이미지 생성</h2>
               <p className="text-xs text-slate-500">칸만 채우면 바로 이미지 생성</p>
             </div>
           </div>
-          <div className="flex bg-slate-100 rounded-xl p-1">
-            <button className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 text-white shadow-sm">템플릿</button>
+          <div className="flex bg-slate-100/80 rounded-xl p-1">
+            <button className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md shadow-blue-500/20">템플릿</button>
             <button onClick={() => setMode('free')} className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-500 hover:text-slate-700 transition-all">자유 입력</button>
           </div>
         </div>
@@ -195,19 +195,19 @@ export default function ImageGenerator({ onProgress }: Props) {
   return (
     <div className="space-y-6">
       {/* 헤더 + 모드 토글 */}
-      <div className="flex items-center justify-between pb-4 mb-2 border-b border-slate-200">
+      <div className="flex items-center justify-between pb-4 mb-2 border-b border-slate-200/60">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center text-lg bg-blue-100">
-            🖼️
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-gradient-to-br from-emerald-100 to-teal-100">
+            <svg className="w-5 h-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0022.5 18.75V5.25A2.25 2.25 0 0020.25 3H3.75A2.25 2.25 0 001.5 5.25v13.5A2.25 2.25 0 003.75 21z" /></svg>
           </div>
           <div>
             <h2 className="text-lg font-bold text-slate-800">이미지 생성</h2>
             <p className="text-xs text-slate-500">자유 프롬프트로 이미지 생성</p>
           </div>
         </div>
-        <div className="flex bg-slate-100 rounded-xl p-1">
+        <div className="flex bg-slate-100/80 rounded-xl p-1">
           <button onClick={() => setMode('template')} className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-500 hover:text-slate-700 transition-all">템플릿</button>
-          <button className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 text-white shadow-sm">자유 입력</button>
+          <button className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md shadow-blue-500/20">자유 입력</button>
         </div>
       </div>
 
@@ -219,7 +219,7 @@ export default function ImageGenerator({ onProgress }: Props) {
           onChange={(e) => setPrompt(e.target.value)}
           placeholder="예: 임플란트 시술 과정을 설명하는 깔끔한 인포그래픽, 밝고 신뢰감 있는 치과 분위기..."
           rows={4}
-          className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/10 focus:border-blue-400 resize-none text-sm outline-none"
+          className="w-full px-4 py-3 border border-slate-200/60 rounded-xl focus:ring-2 focus:ring-blue-500/10 focus:border-blue-400 focus:bg-white resize-none text-sm outline-none bg-white/80 transition-all"
           disabled={generating}
         />
       </div>
@@ -253,7 +253,7 @@ export default function ImageGenerator({ onProgress }: Props) {
       </div>
 
       {/* 로고 설정 */}
-      <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-3">
+      <div className="bg-white/80 backdrop-blur-sm border border-slate-200/60 rounded-xl p-4 space-y-3">
         <div className="flex items-center justify-between">
           <label className="text-xs font-semibold text-slate-600">병원 로고</label>
           <button
@@ -299,7 +299,7 @@ export default function ImageGenerator({ onProgress }: Props) {
       </div>
 
       {/* 병원 기본 정보 / 브랜드 컬러 */}
-      <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-3">
+      <div className="bg-white/80 backdrop-blur-sm border border-slate-200/60 rounded-xl p-4 space-y-3">
         <button type="button" onClick={() => setShowHospitalInfo(!showHospitalInfo)} className="w-full flex items-center justify-between">
           <label className="text-xs font-semibold text-slate-600 cursor-pointer">병원 정보 / 브랜드 컬러</label>
           <svg className={`w-4 h-4 text-slate-400 transition-transform ${showHospitalInfo ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
@@ -337,8 +337,8 @@ export default function ImageGenerator({ onProgress }: Props) {
         disabled={generating || !prompt.trim()}
         className={`w-full py-3.5 rounded-xl text-white font-semibold text-sm transition-all ${
           generating || !prompt.trim()
-            ? 'bg-slate-300 cursor-not-allowed'
-            : 'bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/25'
+            ? 'bg-slate-200 cursor-not-allowed'
+            : 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-lg shadow-blue-500/25'
         }`}
       >
         {generating ? (

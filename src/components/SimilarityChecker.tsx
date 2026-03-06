@@ -207,10 +207,10 @@ const SimilarityChecker: React.FC<SimilarityCheckerProps> = ({ onClose, darkMode
   return (
     <div className="h-full flex flex-col">
       {/* 헤더 */}
-      <div className={`flex items-center justify-between pb-4 mb-4 border-b ${darkMode ? 'border-slate-700' : 'border-slate-200'}`}>
+      <div className={`flex items-center justify-between pb-4 mb-4 border-b ${darkMode ? 'border-slate-700' : 'border-slate-200/60'}`}>
         <div className="flex items-center gap-3">
-          <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg ${darkMode ? 'bg-blue-900/50' : 'bg-blue-100'}`}>
-            🔍
+          <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${darkMode ? 'bg-blue-900/50' : 'bg-gradient-to-br from-violet-100 to-purple-100'}`}>
+            <svg className="w-5 h-5 text-violet-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" /></svg>
           </div>
           <div>
             <h2 className={`text-lg font-bold ${darkMode ? 'text-white' : 'text-slate-800'}`}>
@@ -224,17 +224,17 @@ const SimilarityChecker: React.FC<SimilarityCheckerProps> = ({ onClose, darkMode
         <button
           onClick={onClose}
           className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
-            darkMode ? 'hover:bg-slate-700 text-slate-400' : 'hover:bg-slate-100 text-slate-500'
+            darkMode ? 'hover:bg-slate-700 text-slate-400' : 'hover:bg-slate-100 text-slate-400'
           }`}
         >
-          ✕
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
         </button>
       </div>
 
       {/* 본문 */}
       <div className="flex-1 overflow-y-auto custom-scrollbar">
         {/* 모드 선택 */}
-        <div className={`flex gap-1 p-1 rounded-xl mb-4 ${darkMode ? 'bg-slate-700' : 'bg-slate-100'}`}>
+        <div className={`flex gap-1 p-1 rounded-xl mb-4 ${darkMode ? 'bg-slate-700' : 'bg-slate-100/80'}`}>
           <button
             onClick={() => {
               setMode('web');
@@ -243,13 +243,13 @@ const SimilarityChecker: React.FC<SimilarityCheckerProps> = ({ onClose, darkMode
             }}
             className={`flex-1 py-2.5 px-3 rounded-lg text-xs font-bold transition-all ${
               mode === 'web'
-                ? darkMode ? 'bg-blue-600 text-white shadow-sm' : 'bg-blue-600 text-white shadow-sm'
+                ? darkMode ? 'bg-blue-600 text-white shadow-sm' : 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md shadow-blue-500/20'
                 : darkMode
                 ? 'text-slate-400 hover:text-slate-200'
                 : 'text-slate-500 hover:text-slate-700'
             }`}
           >
-            🌐 웹 검색
+            웹 검색
           </button>
           <button
             onClick={() => {
@@ -259,13 +259,13 @@ const SimilarityChecker: React.FC<SimilarityCheckerProps> = ({ onClose, darkMode
             }}
             className={`flex-1 py-2.5 px-3 rounded-lg text-xs font-bold transition-all ${
               mode === 'single'
-                ? darkMode ? 'bg-blue-600 text-white shadow-sm' : 'bg-blue-600 text-white shadow-sm'
+                ? darkMode ? 'bg-blue-600 text-white shadow-sm' : 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md shadow-blue-500/20'
                 : darkMode
                 ? 'text-slate-400 hover:text-slate-200'
                 : 'text-slate-500 hover:text-slate-700'
             }`}
           >
-            📝 텍스트 비교
+            텍스트 비교
           </button>
         </div>
 
@@ -281,8 +281,8 @@ const SimilarityChecker: React.FC<SimilarityCheckerProps> = ({ onClose, darkMode
                 onChange={(e) => setText1(e.target.value)}
                 className={`w-full h-32 p-3 text-sm border-2 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none ${
                   darkMode 
-                    ? 'bg-slate-700 border-slate-600 text-white' 
-                    : 'bg-white border-gray-300 text-gray-900'
+                    ? 'bg-slate-700 border-slate-600 text-white'
+                    : 'bg-white/80 border-slate-200/60 text-slate-900 focus:border-blue-400 focus:bg-white'
                 }`}
                 placeholder="외부 글 전문을 입력하세요..."
               />
@@ -301,8 +301,8 @@ const SimilarityChecker: React.FC<SimilarityCheckerProps> = ({ onClose, darkMode
                 onChange={(e) => setKeywords(e.target.value)}
                 className={`w-full p-3 text-sm border-2 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
                   darkMode 
-                    ? 'bg-slate-700 border-slate-600 text-white' 
-                    : 'bg-white border-gray-300 text-gray-900'
+                    ? 'bg-slate-700 border-slate-600 text-white'
+                    : 'bg-white/80 border-slate-200/60 text-slate-900 focus:border-blue-400 focus:bg-white'
                 }`}
                 placeholder='예: "임플란트 비용" 강남치과 (비워두면 자동 추출)'
               />
@@ -317,9 +317,9 @@ const SimilarityChecker: React.FC<SimilarityCheckerProps> = ({ onClose, darkMode
             <button
               onClick={handleWebCheck}
               disabled={isChecking || !text1.trim()}
-              className="w-full py-3 text-sm bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-sm hover:shadow-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-3 text-sm bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold rounded-xl shadow-lg shadow-blue-500/20 transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isChecking ? (checkingMessage || '🔍 검색 중...') : '🔍 웹 검색 시작'}
+              {isChecking ? (checkingMessage || '검색 중...') : '웹 검색 시작'}
             </button>
           </div>
         )}
@@ -348,8 +348,8 @@ const SimilarityChecker: React.FC<SimilarityCheckerProps> = ({ onClose, darkMode
                 onChange={(e) => setText1(e.target.value)}
                 className={`w-full h-28 p-3 text-sm border-2 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none ${
                   darkMode 
-                    ? 'bg-slate-700 border-slate-600 text-white' 
-                    : 'bg-white border-gray-300 text-gray-900'
+                    ? 'bg-slate-700 border-slate-600 text-white'
+                    : 'bg-white/80 border-slate-200/60 text-slate-900 focus:border-blue-400 focus:bg-white'
                 }`}
                 placeholder="첫 번째 텍스트..."
               />
@@ -367,8 +367,8 @@ const SimilarityChecker: React.FC<SimilarityCheckerProps> = ({ onClose, darkMode
                 onChange={(e) => setText2(e.target.value)}
                 className={`w-full h-28 p-3 text-sm border-2 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none ${
                   darkMode 
-                    ? 'bg-slate-700 border-slate-600 text-white' 
-                    : 'bg-white border-gray-300 text-gray-900'
+                    ? 'bg-slate-700 border-slate-600 text-white'
+                    : 'bg-white/80 border-slate-200/60 text-slate-900 focus:border-blue-400 focus:bg-white'
                 }`}
                 placeholder="두 번째 텍스트..."
               />
@@ -380,9 +380,9 @@ const SimilarityChecker: React.FC<SimilarityCheckerProps> = ({ onClose, darkMode
             <button
               onClick={handleSingleCheck}
               disabled={isChecking || !text1.trim() || !text2.trim()}
-              className="w-full py-3 text-sm bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-sm hover:shadow-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-3 text-sm bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold rounded-xl shadow-lg shadow-blue-500/20 transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isChecking ? '🔍 검사 중...' : '🔍 검사 시작'}
+              {isChecking ? '검사 중...' : '검사 시작'}
             </button>
           </div>
         )}

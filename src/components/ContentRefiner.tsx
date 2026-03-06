@@ -478,10 +478,10 @@ ${wantsHumanize ? `
   return (
     <div className="h-full flex flex-col gap-4">
       {/* 헤더 */}
-      <div className={`flex items-center justify-between pb-4 border-b ${darkMode ? 'border-slate-700' : 'border-slate-200'}`}>
+      <div className={`flex items-center justify-between pb-4 border-b ${darkMode ? 'border-slate-700' : 'border-slate-200/60'}`}>
         <div className="flex items-center gap-3">
-          <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg ${darkMode ? 'bg-blue-900/50' : 'bg-blue-100'}`}>
-            ✨
+          <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${darkMode ? 'bg-blue-900/50' : 'bg-gradient-to-br from-blue-100 to-indigo-100'}`}>
+            <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z" /></svg>
           </div>
           <div>
             <h2 className={`text-lg font-bold ${darkMode ? 'text-white' : 'text-slate-800'}`}>
@@ -495,39 +495,39 @@ ${wantsHumanize ? `
         <button
           onClick={onClose}
           className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
-            darkMode ? 'hover:bg-slate-700 text-slate-400' : 'hover:bg-slate-100 text-slate-500'
+            darkMode ? 'hover:bg-slate-700 text-slate-400' : 'hover:bg-slate-100 text-slate-400'
           }`}
         >
-          ✕
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
         </button>
       </div>
 
       {/* 모드 선택 */}
-      <div className={`flex gap-1 p-1 rounded-xl ${darkMode ? 'bg-slate-700' : 'bg-slate-100'}`}>
+      <div className={`flex gap-1 p-1 rounded-xl ${darkMode ? 'bg-slate-700' : 'bg-slate-100/80'}`}>
         <button
           onClick={() => setMode('auto')}
           className={`flex-1 py-2.5 px-4 rounded-lg font-bold text-xs transition-all ${
             mode === 'auto'
-              ? darkMode ? 'bg-blue-600 text-white shadow-sm' : 'bg-blue-600 text-white shadow-sm'
+              ? darkMode ? 'bg-blue-600 text-white shadow-sm' : 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md shadow-blue-500/20'
               : darkMode
               ? 'text-slate-400 hover:text-slate-200'
               : 'text-slate-500 hover:text-slate-700'
           }`}
         >
-          ⚡ 자동 보정
+          자동 보정
         </button>
         <button
           onClick={() => setMode('chat')}
           disabled={!refinedContent}
           className={`flex-1 py-2.5 px-4 rounded-lg font-bold text-xs transition-all disabled:opacity-40 disabled:cursor-not-allowed ${
             mode === 'chat'
-              ? darkMode ? 'bg-blue-600 text-white shadow-sm' : 'bg-blue-600 text-white shadow-sm'
+              ? darkMode ? 'bg-blue-600 text-white shadow-sm' : 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md shadow-blue-500/20'
               : darkMode
               ? 'text-slate-400 hover:text-slate-200'
               : 'text-slate-500 hover:text-slate-700'
           }`}
         >
-          💬 채팅 수정 {!refinedContent && <span className="text-[10px] ml-1">(먼저 보정 실행)</span>}
+          채팅 수정 {!refinedContent && <span className="text-[10px] ml-1">(먼저 보정 실행)</span>}
         </button>
       </div>
 
@@ -548,22 +548,22 @@ ${wantsHumanize ? `
                   document.execCommand('insertText', false, text);
                 }}
                 placeholder="수정할 블로그 글을 붙여넣으세요..."
-                className={`flex-1 p-4 rounded-xl border resize-none font-mono text-sm ${
+                className={`flex-1 p-4 rounded-xl border resize-none font-mono text-sm transition-all ${
                   darkMode
-                    ? 'bg-slate-900 border-slate-700 text-white placeholder-slate-500'
-                    : 'bg-white border-slate-300 text-slate-900 placeholder-slate-400'
-                }`}
+                    ? 'bg-slate-900 border-slate-700 text-white placeholder-slate-500 focus:border-blue-500'
+                    : 'bg-white/80 border-slate-200/60 text-slate-900 placeholder-slate-400 focus:border-blue-400 focus:bg-white'
+                } outline-none`}
               />
               <button
                 onClick={handleRefine}
                 disabled={isRefining || !content.trim()}
-                className={`py-3 px-6 rounded-xl font-bold transition-all ${
+                className={`py-3 px-6 rounded-xl font-bold text-sm transition-all ${
                   isRefining || !content.trim()
-                    ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
-                    : 'bg-blue-600 hover:bg-blue-700 text-white shadow-sm hover:shadow-lg'
+                    ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                    : 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg shadow-blue-500/20'
                 }`}
               >
-                {isRefining ? '🔄 분석 중...' : '✨ AI 정밀보정 시작'}
+                {isRefining ? '분석 중...' : 'AI 정밀보정 시작'}
               </button>
             </>
           ) : (

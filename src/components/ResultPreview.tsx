@@ -1935,7 +1935,7 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
   };
 
   return (
-    <div className={`rounded-2xl shadow-[0_4px_24px_rgba(0,0,0,0.06)] border h-full flex flex-col overflow-hidden relative transition-colors duration-300 ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-100'}`}>
+    <div className={`rounded-2xl shadow-[0_4px_24px_rgba(0,0,0,0.06)] border h-full flex flex-col overflow-hidden relative transition-colors duration-300 backdrop-blur-xl ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white/80 border-white/60'}`}>
       <style>{`
         .naver-preview .main-title { font-size: 32px; font-weight: 900; margin-bottom: 30px; color: #000; line-height: 1.4; padding-bottom: 20px; }
         .naver-preview h2:not(.main-title):not(.hidden-title):not(.press-subtitle), .naver-preview h3 { font-size: 24px; font-weight: bold; margin-top: 50px; margin-bottom: 20px; color: #000; padding-left: 15px; border-left: 4px solid #787fff; }

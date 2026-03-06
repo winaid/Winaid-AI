@@ -135,53 +135,53 @@ const ScriptPreview: React.FC<ScriptPreviewProps> = ({
   };
 
   return (
-    <div className={`h-full flex flex-col rounded-[48px] shadow-2xl border overflow-hidden transition-colors duration-300 ${
-      darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'
+    <div className={`h-full flex flex-col rounded-2xl border overflow-hidden transition-colors duration-300 backdrop-blur-xl ${
+      darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white/80 border-white/60 shadow-[0_4px_24px_rgba(0,0,0,0.06)]'
     }`}>
       {/* 헤더 */}
-      <div className={`px-8 py-6 border-b flex-none ${
-        darkMode ? 'bg-slate-900 border-slate-700' : 'bg-gradient-to-r from-blue-500 to-indigo-600'
+      <div className={`px-6 py-5 border-b flex-none ${
+        darkMode ? 'bg-slate-900 border-slate-700' : 'bg-gradient-to-r from-blue-600 to-indigo-600'
       }`}>
         <div className="flex items-center justify-between">
           <div>
             <div className="flex items-center gap-3">
-              <span className="text-2xl">📝</span>
-              <h2 className="text-xl font-black text-white">카드뉴스 원고 미리보기</h2>
+              <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center">
+                <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg>
+              </div>
+              <h2 className="text-lg font-black text-white">카드뉴스 원고 미리보기</h2>
             </div>
-            <p className="text-white/80 text-sm mt-1">
+            <p className="text-white/70 text-xs mt-1.5 ml-12">
               {script.totalSlides}장 | {script.overallTheme}
             </p>
           </div>
-          
-          {/* 단계 표시 제거 - 불필요한 정보 */}
         </div>
       </div>
 
       {/* 로딩 상태 */}
       {isLoading && (
-        <div className={`px-8 py-4 flex items-center gap-3 border-b ${
-          darkMode ? 'bg-blue-900/30 border-slate-700' : 'bg-blue-50 border-blue-100'
+        <div className={`px-6 py-3 flex items-center gap-3 border-b ${
+          darkMode ? 'bg-blue-900/30 border-slate-700' : 'bg-blue-50/80 border-blue-100/60'
         }`}>
-          <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-          <span className={`text-sm font-bold ${darkMode ? 'text-blue-400' : 'text-blue-700'}`}>
+          <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+          <span className={`text-xs font-bold ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>
             {progress}
           </span>
         </div>
       )}
 
       {/* 제목 섹션 */}
-      <div className={`px-8 py-4 border-b ${darkMode ? 'border-slate-700' : 'border-slate-100'}`}>
-        <div className={`text-xs font-bold mb-2 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-          📌 제목
+      <div className={`px-6 py-4 border-b ${darkMode ? 'border-slate-700' : 'border-slate-100/60'}`}>
+        <div className={`text-[10px] font-bold uppercase tracking-wider mb-1.5 ${darkMode ? 'text-slate-400' : 'text-slate-400'}`}>
+          제목
         </div>
-        <h3 className={`text-lg font-black ${darkMode ? 'text-slate-100' : 'text-slate-800'}`}>
+        <h3 className={`text-base font-black ${darkMode ? 'text-slate-100' : 'text-slate-800'}`}>
           {script.title}
         </h3>
       </div>
 
       {/* 슬라이드 목록 */}
-      <div className={`flex-1 overflow-y-auto px-8 py-6 space-y-4 custom-scrollbar ${
-        darkMode ? 'bg-slate-900' : 'bg-slate-50'
+      <div className={`flex-1 overflow-y-auto px-6 py-5 space-y-3 custom-scrollbar ${
+        darkMode ? 'bg-slate-900' : 'bg-slate-50/50'
       }`}>
         {script.slides.map((slide, index) => {
           const typeInfo = SLIDE_TYPE_LABELS[slide.slideType] || SLIDE_TYPE_LABELS.content;
@@ -436,33 +436,32 @@ const ScriptPreview: React.FC<ScriptPreviewProps> = ({
       </div>
 
       {/* 액션 버튼 */}
-      <div className={`px-8 py-6 border-t flex-none ${darkMode ? 'border-slate-700 bg-slate-800' : 'border-slate-100 bg-white'}`}>
-        <div className="flex flex-col sm:flex-row gap-3">
-          {/* 원고 재생성 버튼 */}
+      <div className={`px-6 py-5 border-t flex-none ${darkMode ? 'border-slate-700 bg-slate-800' : 'border-white/60 bg-white/60 backdrop-blur-sm'}`}>
+        <div className="flex flex-col sm:flex-row gap-2.5">
           <button
             onClick={onRegenerate}
             disabled={isLoading}
-            className={`flex-1 py-4 rounded-2xl font-bold text-sm transition-all disabled:opacity-50 flex items-center justify-center gap-2 ${
-              darkMode 
+            className={`flex-1 py-3.5 rounded-xl font-bold text-sm transition-all disabled:opacity-50 flex items-center justify-center gap-2 ${
+              darkMode
                 ? 'bg-slate-700 text-slate-300 hover:bg-slate-600 border border-slate-600'
-                : 'bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200'
+                : 'bg-white/80 text-slate-600 hover:bg-white border border-slate-200/60'
             }`}
           >
-            🔄 원고 재생성
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182" /></svg>
+            원고 재생성
           </button>
-          
-          {/* 승인 버튼 */}
+
           <button
             onClick={onApprove}
             disabled={isLoading}
-            className="flex-1 sm:flex-[2] py-4 rounded-2xl font-bold text-sm bg-gradient-to-r from-blue-500 to-indigo-600 text-white hover:from-blue-600 hover:to-indigo-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20"
+            className="flex-1 sm:flex-[2] py-3.5 rounded-xl font-bold text-sm bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20"
           >
-            ✅ 이 원고로 카드뉴스 만들기
+            이 원고로 카드뉴스 만들기
           </button>
         </div>
-        
-        <p className={`text-center text-[11px] mt-3 ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>
-          💡 승인하면 이미지 생성이 시작됩니다. 원고 수정이 필요하면 각 슬라이드의 '수정' 버튼을 클릭하세요.
+
+        <p className={`text-center text-[10px] mt-2.5 ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>
+          승인하면 이미지 생성이 시작됩니다. 수정이 필요하면 각 슬라이드의 '수정' 버튼을 클릭하세요.
         </p>
       </div>
     </div>
