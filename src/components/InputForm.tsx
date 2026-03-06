@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { CATEGORIES, TONES, PERSONAS } from '../constants';
-import { TEAM_DATA } from '../constants/teamHospitals';
+import { TEAM_DATA, HospitalEntry } from '../constants/teamHospitals';
+import { analyzeHospitalKeywords, KeywordStat } from '../services/keywordAnalysisService';
 import { GenerationRequest, ContentCategory, TrendingItem, SeoTitleItem, AudienceMode, ImageStyle, PostType, CssTheme, WritingStyle } from '../types';
 import { getTrendingTopics, recommendSeoTitles } from '../services/seoService';
 import WritingStyleLearner from './WritingStyleLearner';
@@ -78,6 +79,11 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
   const [showHospitalDropdown, setShowHospitalDropdown] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState<number | null>(null);
   const [selectedManager, setSelectedManager] = useState<string>('');
+  const [selectedHospitalEntry, setSelectedHospitalEntry] = useState<HospitalEntry | null>(null);
+  const [keywordStats, setKeywordStats] = useState<KeywordStat[]>([]);
+  const [isAnalyzingKeywords, setIsAnalyzingKeywords] = useState(false);
+  const [showKeywordPanel, setShowKeywordPanel] = useState(false);
+  const [keywordSortBy, setKeywordSortBy] = useState<'volume' | 'blog' | 'saturation'>('volume');
   const hospitalDropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -163,6 +169,25 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
     
     // onSubmit 호출
     onSubmit(requestData);
+  };
+
+  const handleAnalyzeKeywords = async () => {
+    if (!selectedHospitalEntry?.address) return;
+    setIsAnalyzingKeywords(true);
+    setShowKeywordPanel(true);
+    try {
+      const stats = await analyzeHospitalKeywords(
+        hospitalName,
+        selectedHospitalEntry.address,
+        category
+      );
+      setKeywordStats(stats);
+    } catch (e: any) {
+      console.error('키워드 분석 실패:', e);
+      setKeywordStats([]);
+    } finally {
+      setIsAnalyzingKeywords(false);
+    }
   };
 
   const handleRecommendTrends = async () => {
@@ -312,6 +337,9 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
                             onClick={() => {
                               setHospitalName(hospital.name.replace(/ \(.*\)$/, ''));
                               setSelectedManager(hospital.manager);
+                              setSelectedHospitalEntry(hospital);
+                              setKeywordStats([]);
+                              setShowKeywordPanel(false);
                               localStorage.setItem('hospitalName', hospital.name.replace(/ \(.*\)$/, ''));
                               setShowHospitalDropdown(false);
                             }}
@@ -334,7 +362,104 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
             </div>
           )}
           {selectedManager && hospitalName && (
-            <p className="mt-1 text-[11px] text-slate-400">담당: {selectedManager}</p>
+            <div className="mt-1 flex items-center justify-between">
+              <p className="text-[11px] text-slate-400">담당: {selectedManager}</p>
+              {selectedHospitalEntry?.address && (
+                <button
+                  type="button"
+                  onClick={handleAnalyzeKeywords}
+                  disabled={isAnalyzingKeywords}
+                  className="text-[11px] font-semibold text-blue-500 hover:text-blue-700 transition-colors disabled:opacity-50"
+                >
+                  {isAnalyzingKeywords ? '분석 중...' : '키워드 분석'}
+                </button>
+              )}
+            </div>
+          )}
+          {/* 키워드 분석 결과 패널 */}
+          {showKeywordPanel && (
+            <div className="mt-2 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+              <div className="flex items-center justify-between px-3 py-2 bg-slate-50 border-b border-slate-100">
+                <span className="text-xs font-bold text-slate-700">키워드 분석</span>
+                <div className="flex items-center gap-1">
+                  {(['volume', 'blog', 'saturation'] as const).map(sort => (
+                    <button
+                      key={sort}
+                      type="button"
+                      onClick={() => setKeywordSortBy(sort)}
+                      className={`px-2 py-0.5 rounded text-[10px] font-semibold transition-all ${
+                        keywordSortBy === sort
+                          ? 'bg-blue-500 text-white'
+                          : 'text-slate-400 hover:text-slate-600'
+                      }`}
+                    >
+                      {sort === 'volume' ? '검색량' : sort === 'blog' ? '발행량' : '포화도'}
+                    </button>
+                  ))}
+                  <button type="button" onClick={() => setShowKeywordPanel(false)} className="ml-1 text-slate-400 hover:text-slate-600">
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                  </button>
+                </div>
+              </div>
+              {isAnalyzingKeywords ? (
+                <div className="p-6 text-center">
+                  <div className="w-6 h-6 border-2 border-blue-200 border-t-blue-500 rounded-full animate-spin mx-auto mb-2" />
+                  <p className="text-xs text-slate-400">검색량 분석 중...</p>
+                </div>
+              ) : keywordStats.length > 0 ? (
+                <div className="max-h-72 overflow-y-auto">
+                  <table className="w-full text-xs">
+                    <thead className="sticky top-0 bg-slate-50">
+                      <tr className="text-slate-500">
+                        <th className="text-left px-3 py-2 font-semibold">키워드</th>
+                        <th className="text-right px-3 py-2 font-semibold">월간 검색량</th>
+                        <th className="text-right px-3 py-2 font-semibold">블로그 발행량</th>
+                        <th className="text-right px-3 py-2 font-semibold">포화도</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[...keywordStats]
+                        .sort((a, b) => {
+                          if (keywordSortBy === 'volume') return b.monthlySearchVolume - a.monthlySearchVolume;
+                          if (keywordSortBy === 'blog') return b.blogPostCount - a.blogPostCount;
+                          return (a.saturation || 0) - (b.saturation || 0);
+                        })
+                        .map((stat, idx) => (
+                          <tr
+                            key={stat.keyword}
+                            className={`border-t border-slate-50 hover:bg-blue-50 cursor-pointer transition-colors ${idx % 2 === 0 ? '' : 'bg-slate-50/50'}`}
+                            onClick={() => {
+                              setKeywords(k => k ? `${k}, ${stat.keyword}` : stat.keyword);
+                            }}
+                          >
+                            <td className="px-3 py-2 font-medium text-blue-600">{stat.keyword}</td>
+                            <td className="px-3 py-2 text-right font-semibold text-slate-700">
+                              {stat.monthlySearchVolume.toLocaleString()}
+                            </td>
+                            <td className={`px-3 py-2 text-right font-semibold ${
+                              stat.blogPostCount > 50000 ? 'text-red-500' :
+                              stat.blogPostCount > 10000 ? 'text-amber-500' : 'text-green-500'
+                            }`}>
+                              {stat.blogPostCount.toLocaleString()}
+                            </td>
+                            <td className={`px-3 py-2 text-right font-semibold ${
+                              (stat.saturation || 0) > 10 ? 'text-red-500' :
+                              (stat.saturation || 0) > 5 ? 'text-amber-500' : 'text-green-500'
+                            }`}>
+                              {stat.saturation?.toFixed(1) || '-'}
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                  <div className="px-3 py-2 bg-slate-50 border-t border-slate-100">
+                    <p className="text-[10px] text-slate-400">클릭하면 키워드에 추가됩니다 | 포화도 = 발행량/검색량 (낮을수록 블루오션)</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-4 text-center text-xs text-slate-400">분석 결과가 없습니다</div>
+              )}
+            </div>
           )}
         </div>
 
