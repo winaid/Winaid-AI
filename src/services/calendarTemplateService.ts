@@ -1517,13 +1517,30 @@ function buildTemplateAiPrompt(req: AiTemplateRequest): string {
   const { category, stylePrompt, textContent, hospitalName, extraPrompt, imageSize } = req;
 
   const categoryLabels: Record<string, string> = {
-    schedule: 'hospital monthly schedule / clinic calendar announcement',
-    event: 'hospital promotion / medical event announcement',
-    doctor: 'doctor introduction / new physician announcement',
-    notice: 'hospital notice / important announcement',
-    greeting: 'holiday greeting / seasonal message from hospital',
-    hiring: 'hospital job posting / staff recruitment announcement - design like a professional Instagram carousel recruiting post. Bold, modern, eye-catching layout. Use ICONS and VISUAL ELEMENTS to represent benefits/requirements instead of lots of text. Minimalist design with only the provided Korean text.',
-    caution: 'post-treatment / post-procedure patient care instructions - design like a clean, professional medical handout. Must be highly readable with clear visual hierarchy, friendly medical illustrations',
+    schedule: 'hospital monthly schedule / clinic calendar announcement - clean, modern, trustworthy medical design',
+    event: 'hospital promotion / medical event announcement - eye-catching yet professional, clear price hierarchy',
+    doctor: 'doctor introduction / new physician announcement - professional, trustworthy portrait-style medical profile',
+    notice: 'hospital notice / important announcement - clean, authoritative, easy to read at a glance',
+    greeting: 'holiday greeting / seasonal message from hospital - warm, heartfelt, culturally appropriate Korean design',
+    hiring: `hospital job posting / staff recruitment announcement.
+CRITICAL DESIGN RULES FOR HIRING:
+- Design like a premium Instagram recruiting post (NOT a cluttered poster)
+- Use clean ICONS and VISUAL SYMBOLS for benefits/requirements (checkmarks, briefcase, shield, heart icons)
+- Typography: Bold clean sans-serif headings, regular weight for body text
+- Layout: Clear visual sections with generous whitespace between items
+- Color: Use the style preset colors as primary, with white backgrounds for content cards
+- DO NOT add random clip art, hands holding phones, or unrelated stock imagery
+- DO NOT generate garbled or random Korean text - ONLY use the exact text provided
+- Keep it MINIMAL: icons + provided text only, no extra decorative Korean words`,
+    caution: `post-treatment / post-procedure patient care instructions.
+CRITICAL DESIGN RULES FOR CAUTION:
+- Design like a clean professional medical handout that patients take home
+- Must be HIGHLY READABLE: minimum 16pt equivalent font size for all body text
+- Clear visual hierarchy: title > numbered items > footer
+- Use friendly medical illustrations (tooth, medicine, ice pack icons)
+- Numbered list with generous line spacing between items
+- Soft, calming color palette - NOT alarming or scary
+- Emergency contact in a clearly visible box at the bottom`,
   };
 
   const isPortrait = imageSize && imageSize.width > 0 && imageSize.height > 0 && imageSize.height > imageSize.width;
@@ -1584,32 +1601,36 @@ ${logoInstructions}${portraitWarning}`;
 [HOSPITAL INFO - display at the bottom of the image, small but legible text]
 ${req.hospitalInfo.map(line => `"${line}"`).join('\n')}` : '';
 
-  return `🚨🚨🚨 CRITICAL RULE: ONLY USE THE EXACT KOREAN TEXT PROVIDED BELOW 🚨🚨🚨
-You must ONLY render Korean text that appears inside "quotes" in the [TEXT CONTENT] section.
-DO NOT INVENT, GENERATE, OR MAKE UP any Korean text that is not explicitly provided.
-If you need to fill space, use ICONS, ILLUSTRATIONS, DECORATIVE SHAPES, or PATTERNS instead of making up Korean words.
-Any Korean character you render must be copied EXACTLY from the quoted strings below - character by character.
+  return `🚨 CRITICAL: KOREAN TEXT ACCURACY 🚨
+ONLY render Korean text from "quotes" in [TEXT CONTENT] below.
+DO NOT invent/generate/guess any Korean text. Use ICONS and SHAPES to fill space instead.
 
 KOREAN TEXT RULES:
-1. ONLY render Korean words that appear in "quotes" below - nothing else
-2. Each Korean syllable must be a REAL word (e.g. 직원, 모집, 복리, 후생 are real; random syllables are NOT)
-3. Use LARGE, CLEAN sans-serif font for all Korean text
-4. Fill remaining space with ICONS and VISUAL ELEMENTS, not more text
-5. When in doubt, use FEWER Korean words, not more
+1. ONLY text in "quotes" below may appear in the image
+2. Copy each character EXACTLY - no approximations
+3. Use clean sans-serif font (Pretendard/Noto Sans KR style)
+4. Use FEWER Korean words when in doubt, not more
+5. Fill space with ICONS, ILLUSTRATIONS, DECORATIVE SHAPES - never with made-up text
 ${userRequestBlock}
 [IMAGE TYPE]
 ${categoryLabels[category] || 'hospital announcement'}
 ${calendarAccuracyBlock}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
-[DESIGN STYLE PROMPT - VISUAL LOOK & FEEL]
+[DESIGN STYLE]
 ${stylePrompt}
+
+DESIGN QUALITY REQUIREMENTS:
+- Modern, clean aesthetic inspired by premium Korean hospital/clinic SNS posts
+- Visual hierarchy: clear distinction between heading, body, and footer
+- Generous whitespace and breathing room between elements
+- Rounded corners (8-16px) on cards and containers
+- Soft shadows for depth, not harsh borders
+- Color consistency: use 2-3 colors max from the style palette
+- Typography: bold headings (700-900 weight), regular body (400-500)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
 ${brandColorBlock}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
-[TEXT CONTENT - RENDER ONLY THE TEXT IN "QUOTES"]
-⚠️ The ONLY Korean text allowed in the image is what appears inside "quotes" below.
-⚠️ Everything NOT in quotes is a design instruction - do NOT render it as text.
-⚠️ Do NOT add any extra Korean text beyond what is quoted.
+[TEXT CONTENT - ONLY render text in "quotes"]
 ${textContent}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
 ${brandingBlock}
@@ -1617,17 +1638,18 @@ ${hospitalInfoBlock}
 
 [IMAGE SPECIFICATIONS]
 - Aspect ratio: ${aspectDesc} (ALWAYS use this ratio, IGNORE reference image ratio)
-- Resolution: high quality, crisp text
-- Use large, clean sans-serif fonts for Korean text (minimum 24pt equivalent)
-- Fill empty areas with ICONS/ILLUSTRATIONS, NOT with additional text
+- Resolution: high quality, crisp rendering
+- Korean text: large, clean sans-serif (minimum 24pt equivalent)
+- Empty areas: fill with icons/illustrations, NOT text
 
-⛔ ABSOLUTELY FORBIDDEN:
-- Do NOT invent or generate ANY Korean text not provided in quotes above
-- Do NOT render instruction labels like "[MAIN TITLE]", "[HEADING]", "날짜:", "제목:"
-- Do NOT copy text/numbers/dates from reference images
-- Do NOT render "PAGE X of Y" or any page numbering
-- No garbled, random, or meaningless Korean characters (e.g. 찬당쩡, 맘보행 are WRONG)
-- No watermarks, no unnecessary English text, no stock photo feel`.trim();
+⛔ FORBIDDEN:
+- Inventing Korean text not in quotes above
+- Rendering instruction labels ("[MAIN TITLE]", "날짜:", "제목:")
+- Copying text/numbers/dates from reference images
+- Page numbering ("PAGE X of Y")
+- Garbled/random Korean (찬당쩡, 맘보행 = WRONG)
+- Watermarks, stock photo aesthetic, cluttered layouts
+- Random clip art (hands holding phones, unrelated objects)`.trim();
 }
 
 function buildScheduleTextContent(data: {
@@ -1789,27 +1811,27 @@ function buildHiringTextContent(data: {
 
   const typeHints: Record<string, { layout: string; fallback: string }> = {
     cover: {
-      layout: 'COVER PAGE - eye-catching, bold hero design. Large title, strong visual impact, recruiting energy',
+      layout: 'COVER PAGE - bold, modern hero design. Large prominent title centered, accent color background block or gradient, ONE strong visual icon (briefcase/people/plus). Keep it SIMPLE - title + subtitle + hospital name only. NO lists, NO detailed text on cover.',
       fallback: '직원 모집',
     },
     requirements: {
-      layout: 'REQUIREMENTS PAGE - clean list layout with checkmark/bullet icons, organized and readable',
+      layout: 'REQUIREMENTS PAGE - clean numbered/bulleted list with small icon per item (checkmark, star, badge). White card background with items, generous spacing between each requirement. Each line gets its own row with icon + text.',
       fallback: '자격 요건',
     },
     benefits: {
-      layout: 'BENEFITS PAGE - appealing, warm layout with icon highlights, make it feel rewarding',
+      layout: 'BENEFITS PAGE - 2x2 or 2x3 icon grid layout. Each benefit in its own card/cell with a relevant ICON above and text below (shield=insurance, utensils=meals, calendar=vacation, coin=bonus). Warm, inviting color scheme.',
       fallback: '복리후생',
     },
     contact: {
-      layout: 'CONTACT/APPLICATION PAGE - clear call to action, prominent contact info, "지원하세요!" energy',
+      layout: 'CONTACT/APPLICATION PAGE - prominent CTA button style at center, contact details in clean card below. Large "지원하기" or equivalent call-to-action. Phone/email/deadline in organized rows with icons.',
       fallback: '지원 방법',
     },
     intro: {
-      layout: 'HOSPITAL INTRODUCTION PAGE - professional, trustworthy, showcase the workplace environment',
+      layout: 'HOSPITAL INTRODUCTION PAGE - professional showcase. Key stats in large numbers, workplace description in clean typography, modern and trustworthy feel. Consider split-layout or card-based info blocks.',
       fallback: '병원 소개',
     },
     free: {
-      layout: 'CONTENT PAGE - well-organized layout matching the content provided',
+      layout: 'CONTENT PAGE - well-organized layout matching the content provided, clean card-based design',
       fallback: '채용 안내',
     },
   };
@@ -1953,21 +1975,17 @@ export async function generateTemplateWithAI(
     const contents: any[] = [];
     if (styleRefPart) {
       contents.push(styleRefPart);
-      contents.push({ text: `[STYLE REFERENCE IMAGE - REPLICATE THIS EXACT VISUAL STYLE!]
-You MUST make the output look like it was designed by the same designer who made this reference image.
+      contents.push({ text: `[STYLE REFERENCE - REPLICATE VISUAL STYLE ONLY]
+Match this reference image's visual DNA:
+- Illustration style, line weights, icon shapes
+- Color palette and gradients (EXACT same colors)
+- Typography weight/style, text decoration approach
+- Decorative elements: patterns, borders, shapes
+- Background textures, shadows, depth effects
+- Overall mood and aesthetic quality level
 
-COPY EXACTLY:
-- The illustration/drawing style (line weight, character style, object shapes)
-- The exact color palette and gradients
-- Typography style (font weight, font style, text decoration)
-- All decorative elements (icons, patterns, borders, shapes, stickers)
-- Background style and textures
-- Overall visual mood and aesthetic
-
-DO NOT COPY: any text, numbers, dates, or data from the reference image - these are OLD and WRONG.
-DO NOT COPY: the aspect ratio of the reference image - use the aspect ratio specified in the prompt below.
-
-Use ONLY the new text content provided in the prompt below.
+DO NOT COPY from reference: text, numbers, dates, data, aspect ratio.
+Use ONLY the new text content from the prompt below.
 ` });
     }
     if (doctorPhotoPart) {
@@ -2001,7 +2019,7 @@ Use ONLY the new text content provided in the prompt below.
         contents,
         config: {
           responseModalities: ['IMAGE', 'TEXT'],
-          temperature: 0.5,
+          temperature: 0.4,
           imageSize: '4K',
         },
       });
