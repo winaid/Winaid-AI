@@ -20,8 +20,9 @@ const ImageGenerator = lazy(() => import('./components/ImageGenerator'));
 const LandingPage = lazy(() => import('./components/LandingPage'));
 const PostHistory = lazy(() => import('./components/PostHistory'));
 
-type PageType = 'landing' | 'blog' | 'card_news' | 'press' | 'similarity' | 'refine' | 'image' | 'history' | 'admin' | 'auth';
+type PageType = 'landing' | 'home' | 'blog' | 'card_news' | 'press' | 'similarity' | 'refine' | 'image' | 'history' | 'admin' | 'auth';
 const contentPages: PageType[] = ['blog', 'card_news', 'press', 'similarity', 'refine', 'image', 'history'];
+const appPages: PageType[] = ['home', ...contentPages];
 
 // 사용자 정보 타입
 interface UserProfile {
@@ -43,7 +44,7 @@ const App: React.FC = () => {
     const hash = window.location.hash.replace('#', '');
     if (hash === 'admin') return 'admin';
     if (hash === 'auth' || hash === 'login' || hash === 'register') return 'auth';
-    if (hash === 'app') return 'blog'; // legacy #app → blog
+    if (hash === 'app') return 'home';
     if (contentPages.includes(hash as PageType)) return hash as PageType;
     return 'landing';
   });
@@ -85,6 +86,7 @@ const App: React.FC = () => {
   // contentTab은 이제 currentPage에서 파생 (호환성 유지)
   type ContentTabType = 'blog' | 'similarity' | 'refine' | 'card_news' | 'press' | 'image' | 'history';
   const contentTab: ContentTabType = contentPages.includes(currentPage) ? (currentPage as ContentTabType) : 'blog';
+  const isAppPage = appPages.includes(currentPage);
 
   // 페이지 전환 (탭 전환 대신 페이지 전환)
   const setContentTab = (tab: ContentTabType) => {
@@ -235,15 +237,13 @@ const App: React.FC = () => {
           name: session.user.user_metadata?.name || session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || '사용자'
         });
         
-        // 세션이 있고 현재 auth 페이지면 blog으로 이동
+        // 세션이 있고 현재 auth 페이지면 홈으로 이동
         const currentHash = window.location.hash;
         if (currentHash === '#auth') {
-          window.location.hash = 'blog';
-          setCurrentPage('blog');
-        } else if (currentHash === '#app') {
-          window.location.hash = 'blog';
-          setCurrentPage('blog');
+          window.location.hash = 'app';
+          setCurrentPage('home');
         }
+        // #app은 이미 home이므로 유지
         // 해시가 비어있으면(landing) → 그대로 유지
       }
       setAuthLoading(false);
@@ -308,16 +308,16 @@ const App: React.FC = () => {
           
           const currentHash = window.location.hash;
           
-          // OAuth 토큰이 URL에 있는 경우에만 #blog으로 리다이렉트
+          // OAuth 토큰이 URL에 있는 경우에만 홈으로 리다이렉트
           if (currentHash.includes('access_token') || currentHash.includes('refresh_token')) {
-            window.history.replaceState(null, '', window.location.pathname + '#blog');
-            window.location.hash = 'blog';
-            setCurrentPage('blog');
+            window.history.replaceState(null, '', window.location.pathname + '#app');
+            window.location.hash = 'app';
+            setCurrentPage('home');
           }
-          // auth 페이지에서 로그인한 경우 blog으로 이동
+          // auth 페이지에서 로그인한 경우 홈으로 이동
           else if (currentHash === '#auth' || currentHash === '#login' || currentHash === '#register') {
-            window.location.hash = 'blog';
-            setCurrentPage('blog');
+            window.location.hash = 'app';
+            setCurrentPage('home');
           }
           // 그 외 (admin, pricing 등)는 현재 페이지 유지
           // 페이지 전환 없이 상태만 업데이트됨
@@ -344,7 +344,7 @@ const App: React.FC = () => {
       let newPage: PageType;
       if (hash === 'admin') newPage = 'admin';
       else if (hash === 'auth' || hash === 'login' || hash === 'register') newPage = 'auth';
-      else if (hash === 'app') newPage = 'blog'; // legacy #app → blog
+      else if (hash === 'app') newPage = 'home';
       else if (contentPages.includes(hash as PageType)) newPage = hash as PageType;
       else return; // 해시 없음 = 현재 페이지 유지
 
@@ -826,8 +826,8 @@ const App: React.FC = () => {
       <Suspense fallback={<div className="min-h-screen flex items-center justify-center">로딩 중...</div>}>
         <LandingPage
           onStart={() => {
-            window.location.hash = '#blog';
-            setCurrentPage('blog');
+            window.location.hash = 'app';
+            setCurrentPage('home');
           }}
           darkMode={darkMode}
         />
@@ -837,7 +837,7 @@ const App: React.FC = () => {
 
   // 로딩 중 (admin/pricing 페이지는 로딩 화면 없이 바로 표시)
   // app 페이지는 로딩 중에도 UI 표시 (apiKeyReady 체크에서 처리)
-  if (authLoading && currentPage !== 'admin' && (currentPage as string) !== 'pricing' && !contentPages.includes(currentPage)) {
+  if (authLoading && currentPage !== 'admin' && (currentPage as string) !== 'pricing' && !appPages.includes(currentPage)) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="text-center">
@@ -913,7 +913,7 @@ const App: React.FC = () => {
       <header className={`backdrop-blur-2xl border-b sticky top-0 z-30 flex-none transition-all duration-300 ${darkMode ? 'bg-slate-800/90 border-slate-700' : 'bg-white/80 border-slate-100/80 shadow-[0_1px_3px_rgba(0,0,0,0.04)]'}`}>
         {/* 1단: 로고 + 유저 */}
         <div className="h-14 max-w-[1200px] w-full mx-auto px-5 flex justify-between items-center">
-          <a href="#blog" onClick={(e) => { e.preventDefault(); setContentTab('blog'); }} className="flex items-center gap-2.5 hover:opacity-80 transition-opacity cursor-pointer group">
+          <a href="#app" onClick={(e) => { e.preventDefault(); window.location.hash = 'app'; setCurrentPage('home'); }} className="flex items-center gap-2.5 hover:opacity-80 transition-opacity cursor-pointer group">
             <img src="/280_logo.png" alt="WINAID" className={`h-8 w-8 group-hover:scale-105 transition-transform ${darkMode ? 'rounded-md bg-white p-0.5' : ''}`} />
             <div className="flex flex-col leading-none">
               <span className={`font-black text-base tracking-[-0.02em] ${darkMode ? 'text-slate-100' : 'text-slate-800'}`}>WIN<span className="text-blue-600">AID</span></span>
@@ -967,7 +967,7 @@ const App: React.FC = () => {
                 key={item.id}
                 onClick={() => setContentTab(item.id)}
                 className={`relative py-3 px-4 text-[13px] font-semibold whitespace-nowrap transition-colors ${
-                  contentTab === item.id
+                  currentPage !== 'home' && contentTab === item.id
                     ? darkMode ? 'text-blue-400' : 'text-blue-600'
                     : darkMode ? 'text-slate-400 hover:text-slate-200' : 'text-slate-500 hover:text-slate-800'
                 }`}
@@ -976,7 +976,7 @@ const App: React.FC = () => {
                   <span className="text-sm">{item.icon}</span>
                   {item.label}
                 </span>
-                {contentTab === item.id && (
+                {currentPage !== 'home' && contentTab === item.id && (
                   <div className="absolute bottom-0 left-2 right-2 h-[2px] bg-blue-600 rounded-full" />
                 )}
               </button>
@@ -989,8 +989,73 @@ const App: React.FC = () => {
       <main className="relative z-10 flex-1 overflow-y-auto">
         <div className="max-w-[1200px] w-full mx-auto px-5 py-8">
 
-        {/* 전체 화면 페이지들: 유사도, AI보정, 이미지, 히스토리 */}
-        {contentTab === 'refine' || contentTab === 'similarity' || contentTab === 'image' || contentTab === 'history' ? (
+        {/* 홈 대시보드 (#app) */}
+        {currentPage === 'home' ? (
+          <div className="space-y-8">
+            {/* 환영 섹션 */}
+            <div className={`rounded-2xl p-8 md:p-10 relative overflow-hidden ${darkMode ? 'bg-slate-800 border border-slate-700' : 'bg-gradient-to-br from-blue-600 via-blue-700 to-violet-700 text-white shadow-xl'}`}>
+              <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2" />
+              <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2" />
+              <div className="relative">
+                <h1 className={`text-2xl md:text-3xl font-black mb-3 ${darkMode ? 'text-slate-100' : 'text-white'}`}>WINAID에 오신 것을 환영합니다</h1>
+                <p className={`text-base md:text-lg font-medium ${darkMode ? 'text-slate-400' : 'text-blue-100'}`}>AI 기반 의료 마케팅 콘텐츠를 쉽고 빠르게 생성하세요.</p>
+              </div>
+            </div>
+
+            {/* 콘텐츠 생성 */}
+            <div>
+              <h2 className={`text-lg font-black mb-4 ${darkMode ? 'text-slate-200' : 'text-slate-800'}`}>콘텐츠 생성</h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {([
+                  { id: 'blog' as ContentTabType, title: '블로그', desc: '네이버 스마트블록 최적화 의료 블로그', icon: '📝', color: 'blue' },
+                  { id: 'card_news' as ContentTabType, title: '카드뉴스', desc: 'SNS용 카드뉴스 원고 + 이미지 자동 생성', icon: '🎨', color: 'pink' },
+                  { id: 'press' as ContentTabType, title: '언론 보도자료', desc: '언론에 배포 가능한 보도자료 작성', icon: '🗞️', color: 'amber' },
+                ]).map(item => (
+                  <button
+                    key={item.id}
+                    onClick={() => setContentTab(item.id)}
+                    className={`text-left p-6 rounded-2xl border transition-all hover:scale-[1.02] hover:shadow-lg group ${
+                      darkMode ? 'bg-slate-800 border-slate-700 hover:border-slate-600' : 'bg-white border-slate-200/80 hover:border-blue-200 shadow-sm'
+                    }`}
+                  >
+                    <span className="text-3xl mb-3 block">{item.icon}</span>
+                    <h3 className={`text-base font-black mb-1.5 ${darkMode ? 'text-slate-200' : 'text-slate-800'}`}>{item.title}</h3>
+                    <p className={`text-sm font-medium ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>{item.desc}</p>
+                    <div className={`mt-4 text-xs font-bold ${darkMode ? 'text-blue-400' : 'text-blue-600'} group-hover:underline`}>시작하기 →</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 도구 */}
+            <div>
+              <h2 className={`text-lg font-black mb-4 ${darkMode ? 'text-slate-200' : 'text-slate-800'}`}>도구</h2>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {([
+                  { id: 'similarity' as ContentTabType, title: '유사도 검사', desc: '표절 검사', icon: '🔍' },
+                  { id: 'refine' as ContentTabType, title: 'AI 보정', desc: '문장 다듬기', icon: '✨' },
+                  { id: 'image' as ContentTabType, title: '이미지 생성', desc: 'AI 이미지', icon: '🖼️' },
+                  { id: 'history' as ContentTabType, title: '히스토리', desc: '생성 이력', icon: '🕐' },
+                ]).map(item => (
+                  <button
+                    key={item.id}
+                    onClick={() => setContentTab(item.id)}
+                    className={`text-left p-5 rounded-2xl border transition-all hover:scale-[1.02] hover:shadow-lg ${
+                      darkMode ? 'bg-slate-800 border-slate-700 hover:border-slate-600' : 'bg-white border-slate-200/80 hover:border-blue-200 shadow-sm'
+                    }`}
+                  >
+                    <span className="text-2xl mb-2 block">{item.icon}</span>
+                    <h3 className={`text-sm font-black mb-0.5 ${darkMode ? 'text-slate-200' : 'text-slate-800'}`}>{item.title}</h3>
+                    <p className={`text-xs font-medium ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>{item.desc}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        ) :
+
+        /* 전체 화면 페이지들: 유사도, AI보정, 이미지, 히스토리 */
+        contentTab === 'refine' || contentTab === 'similarity' || contentTab === 'image' || contentTab === 'history' ? (
           <div className="w-full">
               {contentTab === 'similarity' ? (
                 <div className={`rounded-2xl border p-6 md:p-8 backdrop-blur-xl ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white/80 border-white/60 shadow-[0_4px_24px_rgba(0,0,0,0.06)]'}`}>
