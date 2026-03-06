@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { getAllGeneratedPosts, getAdminStats, deleteGeneratedPost, PostType } from '../services/postStorageService';
+import { TEAM_DATA } from '../constants/teamHospitals';
 
 // Admin 비밀번호 - 실제로는 환경변수나 Supabase로 관리해야 함
 const ADMIN_PASSWORD = 'rosmrtl718';
@@ -74,6 +75,8 @@ const AdminPage: React.FC<AdminPageProps> = ({ onAdminVerified }) => {
   const [previewContent, setPreviewContent] = useState<ContentData | null>(null);
 
   const [dataError, setDataError] = useState<string>('');
+  const [selectedTeam, setSelectedTeam] = useState<number | null>(null);
+  const [selectedHospitalName, setSelectedHospitalName] = useState<string>('');
   
   // 콘텐츠 타입 라벨 가져오기
   const getContentTypeLabel = (type?: ContentType | string): string => {
@@ -214,9 +217,11 @@ const AdminPage: React.FC<AdminPageProps> = ({ onAdminVerified }) => {
   };
   
   // 필터링된 콘텐츠 목록
-  const filteredContents = contentFilter === 'all' 
-    ? contents 
-    : contents.filter(c => (c.content_type || 'blog') === contentFilter);
+  const filteredContents = contents.filter(c => {
+    const typeMatch = contentFilter === 'all' || (c.content_type || 'blog') === contentFilter;
+    const hospitalMatch = !selectedHospitalName || c.hospital_name === selectedHospitalName;
+    return typeMatch && hospitalMatch;
+  });
 
   // 관리자 인증 확인 - 이미 인증된 경우 콜백만 호출
   useEffect(() => {
@@ -304,6 +309,42 @@ const AdminPage: React.FC<AdminPageProps> = ({ onAdminVerified }) => {
           <div className="flex items-center gap-2">
             <a href="#app" className="px-4 py-2 bg-white border border-slate-200 text-slate-600 font-medium rounded-lg hover:bg-slate-50 transition-colors text-sm">앱으로 이동</a>
             <button onClick={handleAdminLogout} className="px-4 py-2 bg-white border border-red-200 text-red-500 font-medium rounded-lg hover:bg-red-50 transition-colors text-sm">로그아웃</button>
+          </div>
+        </div>
+
+        {/* 병원 선택 */}
+        <div className="bg-white rounded-xl border border-slate-100 p-4 mb-4">
+          <div className="flex items-center gap-3">
+            <label className="text-sm font-semibold text-slate-600 flex-shrink-0">병원 선택</label>
+            <select
+              value={selectedTeam ?? ''}
+              onChange={(e) => {
+                const val = e.target.value ? Number(e.target.value) : null;
+                setSelectedTeam(val);
+                setSelectedHospitalName('');
+              }}
+              className="flex-1 max-w-xs px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-400"
+            >
+              <option value="">팀 선택</option>
+              {TEAM_DATA.map(team => (
+                <option key={team.id} value={team.id}>{team.name}</option>
+              ))}
+            </select>
+            {selectedTeam && (
+              <select
+                value={selectedHospitalName}
+                onChange={(e) => setSelectedHospitalName(e.target.value)}
+                className="flex-1 max-w-sm px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-400"
+              >
+                <option value="">전체 병원</option>
+                {TEAM_DATA.find(t => t.id === selectedTeam)?.hospitals.map(h => (
+                  <option key={h.name} value={h.name}>{h.name}</option>
+                ))}
+              </select>
+            )}
+            {selectedHospitalName && (
+              <span className="text-xs text-blue-600 font-medium bg-blue-50 px-2 py-1 rounded-full">{selectedHospitalName}</span>
+            )}
           </div>
         </div>
 
