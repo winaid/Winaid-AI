@@ -38,12 +38,16 @@ const stripHtml = (html: string) => {
 };
 
 const App: React.FC = () => {
+  // 탭 이름 목록 (URL hash로 사용)
+  const validTabs = ['blog', 'similarity', 'refine', 'card_news', 'press', 'image', 'history'] as const;
+  type ContentTabType = typeof validTabs[number];
+
   const [currentPage, setCurrentPage] = useState<PageType>(() => {
-    const hash = window.location.hash;
-    if (hash === '#admin') return 'admin';
-    if (hash === '#auth') return 'auth';
-    if (hash === '#app') return 'app';
-    // 해시 없이 접속 = 무조건 랜딩 페이지
+    const hash = window.location.hash.replace('#', '');
+    if (hash === 'admin') return 'admin';
+    if (hash === 'auth' || hash === 'login' || hash === 'register') return 'auth';
+    // 탭 이름이면 app 페이지
+    if ((validTabs as readonly string[]).includes(hash) || hash === 'app') return 'app';
     return 'landing';
   });
   const [apiKeyReady, setApiKeyReady] = useState<boolean>(false);
@@ -81,8 +85,18 @@ const App: React.FC = () => {
   const scrollPositionRef = useRef<number>(0);
   const leftPanelRef = useRef<HTMLDivElement>(null);
   
-  // 오른쪽 콘텐츠 탭
-  const [contentTab, setContentTab] = useState<'blog' | 'similarity' | 'refine' | 'card_news' | 'press' | 'image' | 'history'>('blog');
+  // 오른쪽 콘텐츠 탭 (URL hash에서 초기값 파싱)
+  const [contentTab, setContentTabRaw] = useState<ContentTabType>(() => {
+    const hash = window.location.hash.replace('#', '');
+    if ((validTabs as readonly string[]).includes(hash)) return hash as ContentTabType;
+    return 'blog';
+  });
+
+  // contentTab 변경 시 URL hash도 함께 업데이트
+  const setContentTab = (tab: ContentTabType) => {
+    setContentTabRaw(tab);
+    window.history.replaceState(null, '', `#${tab}`);
+  };
   
   // 현재 탭에 맞는 state 가져오기
   const getCurrentState = (): GenerationState => {
@@ -330,22 +344,26 @@ const App: React.FC = () => {
   // URL hash 기반 라우팅 (로그인 체크 제거)
   useEffect(() => {
     const handleHashChange = () => {
-      const hash = window.location.hash;
-      
-      let newPage: PageType;
+      const hash = window.location.hash.replace('#', '');
 
-      if (hash === '#admin') {
-        newPage = 'admin';
-      } else if (hash === '#auth' || hash === '#login' || hash === '#register') {
-        newPage = 'auth';
-      } else if (hash === '#app') {
-        newPage = 'app';
-      } else {
-        // 해시 없음 = 현재 페이지 유지 (landing일 수 있음)
+      // 탭 이름이면 → app 페이지 + 해당 탭으로 전환
+      if ((validTabs as readonly string[]).includes(hash)) {
+        setContentTabRaw(hash as ContentTabType);
+        setCurrentPage(prevPage => {
+          if (prevPage !== 'app') {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }
+          return 'app';
+        });
         return;
       }
-      
-      // 페이지가 실제로 바뀔 때만 스크롤을 맨 위로 (같은 페이지 내 동작 시 스크롤 유지)
+
+      let newPage: PageType;
+      if (hash === 'admin') newPage = 'admin';
+      else if (hash === 'auth' || hash === 'login' || hash === 'register') newPage = 'auth';
+      else if (hash === 'app') newPage = 'app';
+      else return; // 해시 없음 = 현재 페이지 유지
+
       setCurrentPage(prevPage => {
         if (prevPage !== newPage) {
           window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -364,7 +382,11 @@ const App: React.FC = () => {
 
   // 페이지 네비게이션 헬퍼
   const handleNavigate = (page: PageType) => {
-    window.location.hash = page;
+    if (page === 'app') {
+      window.location.hash = contentTab; // #blog, #press 등
+    } else {
+      window.location.hash = page;
+    }
     setCurrentPage(page);
   };
 
