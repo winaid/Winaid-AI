@@ -745,7 +745,7 @@ export const AI_STYLE_PRESETS: StylePreset[] = [
     id: 'fresh_start', name: '상쾌한 새출발', color: '#dc2626', accent: '#b91c1c', bg: '#fef2f2',
     desc: '희망 · 새로움',
     mood: '새해 첫날 아침같은 상쾌한 희망의 느낌',
-    aiPrompt: 'Fresh new beginning design, sunrise gold and crimson red accents, rising sun motifs, crisp morning atmosphere, festive yet elegant, ribbon decorations, soft gold shimmer, hopeful and bright mood, clean white space with bold color pops',
+    aiPrompt: 'Fresh new beginning design, soft champagne gold and warm coral accents, confetti and streamer decorations, crisp morning atmosphere, festive yet elegant, gentle sparkle effects, hopeful and bright mood, clean white space with pastel color pops, no radial rays or sunburst patterns',
   },
   {
     id: 'romantic_blossom', name: '로맨틱 블로썸', color: '#e11d48', accent: '#be123c', bg: '#fff1f2',
