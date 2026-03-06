@@ -1,6 +1,6 @@
 /**
  * 키워드 분석 서비스
- * - Gemini 3.1 Pro로 병원 주소 기반 반경 5km 지역 키워드 생성
+ * - Gemini로 병원 주소 기반 지역 키워드 생성 (수도권 2km / 지방 5km)
  * - 네이버 검색광고 API로 검색량 + 블로그 발행량 조회
  * - Gemini로 블루오션 키워드 분석 및 추천
  */
@@ -22,8 +22,23 @@ export interface KeywordAnalysisResult {
 }
 
 /**
+ * 수도권 여부 판별
+ * 서울, 인천, 경기(시흥, 안산, 부천, 고양, 성남 등) → 수도권
+ */
+function isMetroArea(address: string): boolean {
+  const metroPatterns = [
+    /^서울/, /^인천/, /^경기/,
+    /안산시/, /부천시/, /고양/, /성남시/, /수원시/, /용인시/,
+    /화성시/, /시흥시/, /광명시/, /안양시/, /과천시/, /의왕시/,
+    /군포시/, /하남시/, /구리시/, /남양주/, /파주/, /김포/,
+    /양주시/, /의정부/, /동두천/, /포천/, /연천/, /가평/,
+  ];
+  return metroPatterns.some(p => p.test(address));
+}
+
+/**
  * Gemini로 주소 기반 지역 키워드 후보 생성
- * - 반경 5km 내 동네, 역, 랜드마크 기반
+ * - 수도권: 반경 2km / 지방: 반경 5km
  * - 실제 사람들이 검색할 법한 조합
  */
 async function generateKeywordsWithAI(
@@ -31,17 +46,20 @@ async function generateKeywordsWithAI(
   address: string,
   category?: string
 ): Promise<string[]> {
+  const radius = isMetroArea(address) ? 2 : 5;
+
   const prompt = `당신은 네이버 블로그 SEO 키워드 전문가입니다.
 
-아래 병원의 주소를 기반으로, 반경 5km 이내에서 실제 사람들이 네이버에 검색할 법한 지역+진료 키워드를 생성해주세요.
+아래 병원의 주소를 기반으로, 반경 ${radius}km 이내에서 실제 사람들이 네이버에 검색할 법한 지역+진료 키워드를 생성해주세요.
 
 병원명: ${hospitalName}
 주소: ${address}
 진료과: ${category || '치과'}
+탐색 반경: ${radius}km (${radius === 2 ? '수도권 - 좁은 범위로 정밀하게' : '지방 - 넓은 범위로 주변 지역 포함'})
 
 규칙:
 1. 주소에서 동/구/읍/면 추출
-2. 반경 5km 이내 주요 지하철역 이름 포함 (예: 마천동 → 마천역, 거여역, 개롱역)
+2. 반경 ${radius}km 이내 주요 지하철역 이름 포함 (예: 마천동 → 마천역, 거여역, 개롱역)
 3. 인근 유명 동네/지역명 포함 (예: 마천동 → 송파구, 문정동)
 4. 키워드 조합: "{지역} 치과", "{지역} 임플란트", "{역명} 치과", "{역명} 임플란트", "{동} 치아교정" 등
 5. 병원명 자체도 포함
@@ -175,7 +193,7 @@ export async function fetchKeywordStats(keywords: string[]): Promise<KeywordStat
 /**
  * 병원 주소 기반 키워드 분석 전체 플로우
  *
- * 1) Gemini로 지역 키워드 후보 생성 (반경 5km, 역/동/구)
+ * 1) Gemini로 지역 키워드 후보 생성 (수도권 2km / 지방 5km)
  * 2) 네이버 API로 검색량 + 발행량 조회
  * 3) Gemini로 블루오션 분석 및 추천
  */
