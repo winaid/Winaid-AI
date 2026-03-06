@@ -922,7 +922,7 @@ const App: React.FC = () => {
     <div className={`min-h-screen flex flex-col font-sans relative transition-colors duration-300 ${darkMode ? 'bg-slate-900 text-slate-100' : 'bg-slate-50 text-slate-900'}`}>
       <header className={`backdrop-blur-xl border-b sticky top-0 z-30 h-16 flex items-center shadow-sm flex-none transition-colors duration-300 ${darkMode ? 'bg-slate-800/80 border-slate-700' : 'bg-white/80 border-slate-100'}`}>
         <div className="max-w-[1600px] w-full mx-auto px-6 flex justify-between items-center">
-          <a href="#" onClick={(e) => { e.preventDefault(); window.location.reload(); }} className="flex items-center gap-2.5 hover:opacity-80 transition-opacity cursor-pointer">
+          <a href="#app" onClick={(e) => { e.preventDefault(); setContentTab('blog'); window.location.hash = 'app'; }} className="flex items-center gap-2.5 hover:opacity-80 transition-opacity cursor-pointer">
             <img src="/280_logo.png" alt="WINAID" className={`h-9 ${darkMode ? 'rounded-md bg-white p-0.5' : ''}`} />
             <div className="flex flex-col leading-none">
               <span className={`font-black text-lg tracking-[-0.02em] ${darkMode ? 'text-slate-100' : 'text-slate-800'}`}>WIN<span className="text-blue-500">AID</span></span>
