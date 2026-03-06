@@ -1,8 +1,8 @@
 /**
  * 네이버 검색광고 API - 키워드 검색량 + 블로그 발행량 조회
  *
- * 1) 검색광고 API (keywordstool) → 월간 검색량 (PC + Mobile)
- * 2) 네이버 블로그 검색 API → 블로그 누적 발행량 (total)
+ * 1) 검색광고 API (keywordstool) -> 월간 검색량 (PC + Mobile)
+ * 2) 네이버 블로그 검색 API -> 블로그 누적 발행량 (total)
  */
 
 interface Env {
@@ -36,12 +36,18 @@ async function getSearchVolume(
   const uri = '/keywordstool';
   const signature = await generateSignature(timestamp, method, uri, env.NAVER_SEARCHAD_SECRET);
 
+  // hintKeywords: 각 키워드를 개행(\n)으로 구분
   const params = new URLSearchParams({
-    hintKeywords: keywords.join(','),
+    hintKeywords: keywords.join('\n'),
     showDetail: '1',
   });
 
-  const response = await fetch(`https://api.searchad.naver.com${uri}?${params}`, {
+  const url = `https://api.searchad.naver.com${uri}?${params.toString()}`;
+  console.log('[SearchAd] Request URL:', url.substring(0, 200));
+  console.log('[SearchAd] Customer ID:', env.NAVER_SEARCHAD_CUSTOMER_ID?.substring(0, 5) + '...');
+  console.log('[SearchAd] API Key exists:', !!env.NAVER_SEARCHAD_API_KEY);
+
+  const response = await fetch(url, {
     method: 'GET',
     headers: {
       'X-Timestamp': timestamp,
@@ -53,8 +59,8 @@ async function getSearchVolume(
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error('SearchAd API error:', response.status, errorText);
-    throw new Error(`검색광고 API 오류: ${response.status}`);
+    console.error('[SearchAd] API error:', response.status, errorText);
+    throw new Error(`검색광고 API 오류: ${response.status} - ${errorText}`);
   }
 
   const data = await response.json() as {
@@ -64,6 +70,8 @@ async function getSearchVolume(
       monthlyMobileQcCnt: number | string;
     }>;
   };
+
+  console.log('[SearchAd] Got', data.keywordList?.length || 0, 'keywords');
 
   const result: Record<string, { monthlyPcQcCnt: number; monthlyMobileQcCnt: number }> = {};
   for (const item of data.keywordList || []) {
@@ -99,36 +107,53 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       });
     }
 
-    if (!context.env.NAVER_SEARCHAD_API_KEY || !context.env.NAVER_SEARCHAD_SECRET) {
-      return new Response(JSON.stringify({ error: '검색광고 API 키가 설정되지 않았습니다.' }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
+    const hasSearchAdKeys = context.env.NAVER_SEARCHAD_API_KEY && context.env.NAVER_SEARCHAD_SECRET && context.env.NAVER_SEARCHAD_CUSTOMER_ID;
+    const hasBlogKeys = context.env.NAVER_CLIENT_ID && context.env.NAVER_CLIENT_SECRET;
 
-    // 1) 검색량 조회 (한번에 최대 5개씩)
-    const chunks: string[][] = [];
-    for (let i = 0; i < keywords.length; i += 5) {
-      chunks.push(keywords.slice(i, i + 5));
-    }
+    console.log('[keyword-stats] SearchAd keys:', hasSearchAdKeys ? 'OK' : 'MISSING');
+    console.log('[keyword-stats] Blog keys:', hasBlogKeys ? 'OK' : 'MISSING');
+    console.log('[keyword-stats] Keywords count:', keywords.length);
 
+    // 1) 검색량 조회 (5개씩 분할)
     let allVolumes: Record<string, { monthlyPcQcCnt: number; monthlyMobileQcCnt: number }> = {};
-    for (const chunk of chunks) {
-      const volumes = await getSearchVolume(chunk, context.env);
-      allVolumes = { ...allVolumes, ...volumes };
+
+    if (hasSearchAdKeys) {
+      const chunks: string[][] = [];
+      for (let i = 0; i < keywords.length; i += 5) {
+        chunks.push(keywords.slice(i, i + 5));
+      }
+
+      for (const chunk of chunks) {
+        try {
+          const volumes = await getSearchVolume(chunk, context.env);
+          allVolumes = { ...allVolumes, ...volumes };
+        } catch (e: any) {
+          console.error('[keyword-stats] SearchAd chunk error:', e.message);
+          // 한 청크 실패해도 계속 진행
+        }
+      }
     }
 
-    // 2) 블로그 발행량 조회 (병렬)
-    const blogCounts = await Promise.all(
-      keywords.map(async (kw) => {
-        const count = await getBlogPostCount(kw, context.env);
-        return { keyword: kw, blogCount: count };
-      })
-    );
-
+    // 2) 블로그 발행량 조회 (병렬, 최대 10개씩)
     const blogCountMap: Record<string, number> = {};
-    for (const { keyword, blogCount } of blogCounts) {
-      blogCountMap[keyword] = blogCount;
+
+    if (hasBlogKeys) {
+      const blogChunks: string[][] = [];
+      for (let i = 0; i < keywords.length; i += 10) {
+        blogChunks.push(keywords.slice(i, i + 10));
+      }
+
+      for (const chunk of blogChunks) {
+        const results = await Promise.all(
+          chunk.map(async (kw) => {
+            const count = await getBlogPostCount(kw, context.env);
+            return { keyword: kw, blogCount: count };
+          })
+        );
+        for (const { keyword, blogCount } of results) {
+          blogCountMap[keyword] = blogCount;
+        }
+      }
     }
 
     // 3) 결합
@@ -153,7 +178,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       },
     });
   } catch (error: any) {
-    console.error('키워드 분석 오류:', error);
+    console.error('[keyword-stats] Error:', error.message, error.stack);
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
