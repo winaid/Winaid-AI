@@ -167,15 +167,20 @@ export default function ImageGenerator({ onProgress }: Props) {
   if (mode === 'template') {
     return (
       <div className="h-full flex flex-col">
-        {/* 모드 토글 */}
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h2 className="text-lg font-bold text-slate-800">이미지 생성</h2>
-            <p className="text-xs text-slate-400">칸만 채우면 바로 이미지 생성</p>
+        {/* 헤더 */}
+        <div className="flex items-center justify-between pb-4 mb-4 border-b border-slate-200">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center text-lg bg-blue-100">
+              🖼️
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-slate-800">이미지 생성</h2>
+              <p className="text-xs text-slate-500">칸만 채우면 바로 이미지 생성</p>
+            </div>
           </div>
-          <div className="flex bg-slate-100 rounded-lg p-0.5">
-            <button onClick={() => setMode('free')} className="px-3 py-1.5 rounded-md text-xs font-semibold text-slate-500 hover:text-slate-700">자유 입력</button>
-            <button className="px-3 py-1.5 rounded-md text-xs font-semibold bg-white text-slate-800 shadow-sm">템플릿</button>
+          <div className="flex bg-slate-100 rounded-xl p-1">
+            <button onClick={() => setMode('free')} className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-500 hover:text-slate-700 transition-all">자유 입력</button>
+            <button className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 text-white shadow-sm">템플릿</button>
           </div>
         </div>
         <div className="flex-1 overflow-hidden">
@@ -190,14 +195,19 @@ export default function ImageGenerator({ onProgress }: Props) {
   return (
     <div className="space-y-6">
       {/* 헤더 + 모드 토글 */}
-      <div className="flex items-center justify-between mb-2">
-        <div>
-          <h2 className="text-lg font-bold text-slate-800">이미지 생성</h2>
-          <p className="text-xs text-slate-400">자유 프롬프트로 이미지 생성</p>
+      <div className="flex items-center justify-between pb-4 mb-2 border-b border-slate-200">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center text-lg bg-blue-100">
+            🖼️
+          </div>
+          <div>
+            <h2 className="text-lg font-bold text-slate-800">이미지 생성</h2>
+            <p className="text-xs text-slate-500">자유 프롬프트로 이미지 생성</p>
+          </div>
         </div>
-        <div className="flex bg-slate-100 rounded-lg p-0.5">
-          <button className="px-3 py-1.5 rounded-md text-xs font-semibold bg-white text-slate-800 shadow-sm">자유 입력</button>
-          <button onClick={() => setMode('template')} className="px-3 py-1.5 rounded-md text-xs font-semibold text-slate-500 hover:text-slate-700">템플릿</button>
+        <div className="flex bg-slate-100 rounded-xl p-1">
+          <button className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 text-white shadow-sm">자유 입력</button>
+          <button onClick={() => setMode('template')} className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-500 hover:text-slate-700 transition-all">템플릿</button>
         </div>
       </div>
 

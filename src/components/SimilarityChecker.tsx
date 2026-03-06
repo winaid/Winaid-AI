@@ -207,31 +207,46 @@ const SimilarityChecker: React.FC<SimilarityCheckerProps> = ({ onClose, darkMode
   return (
     <div className="h-full flex flex-col">
       {/* 헤더 */}
-      <div className="mb-4">
-        <h2 className={`text-xl font-bold mb-1 ${darkMode ? 'text-white' : 'text-gray-800'}`}>
-          🔍 유사도 검사
-        </h2>
-        <p className={`text-xs ${darkMode ? 'text-slate-400' : 'text-gray-500'}`}>
-          외부 글 전문을 검사합니다
-        </p>
+      <div className={`flex items-center justify-between pb-4 mb-4 border-b ${darkMode ? 'border-slate-700' : 'border-slate-200'}`}>
+        <div className="flex items-center gap-3">
+          <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg ${darkMode ? 'bg-blue-900/50' : 'bg-blue-100'}`}>
+            🔍
+          </div>
+          <div>
+            <h2 className={`text-lg font-bold ${darkMode ? 'text-white' : 'text-slate-800'}`}>
+              유사도 검사
+            </h2>
+            <p className={`text-xs ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+              웹 검색 또는 텍스트 비교로 중복 여부를 확인합니다
+            </p>
+          </div>
+        </div>
+        <button
+          onClick={onClose}
+          className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
+            darkMode ? 'hover:bg-slate-700 text-slate-400' : 'hover:bg-slate-100 text-slate-500'
+          }`}
+        >
+          ✕
+        </button>
       </div>
 
       {/* 본문 */}
       <div className="flex-1 overflow-y-auto custom-scrollbar">
         {/* 모드 선택 */}
-        <div className="flex gap-2 mb-4">
+        <div className={`flex gap-1 p-1 rounded-xl mb-4 ${darkMode ? 'bg-slate-700' : 'bg-slate-100'}`}>
           <button
             onClick={() => {
               setMode('web');
               setResult(null);
               setWebResults([]);
             }}
-            className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all ${
+            className={`flex-1 py-2.5 px-3 rounded-lg text-xs font-bold transition-all ${
               mode === 'web'
-                ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg'
+                ? darkMode ? 'bg-blue-600 text-white shadow-sm' : 'bg-blue-600 text-white shadow-sm'
                 : darkMode
-                ? 'bg-slate-700 text-slate-400 hover:bg-slate-600'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                ? 'text-slate-400 hover:text-slate-200'
+                : 'text-slate-500 hover:text-slate-700'
             }`}
           >
             🌐 웹 검색
@@ -242,15 +257,15 @@ const SimilarityChecker: React.FC<SimilarityCheckerProps> = ({ onClose, darkMode
               setResult(null);
               setWebResults([]);
             }}
-            className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all ${
+            className={`flex-1 py-2.5 px-3 rounded-lg text-xs font-bold transition-all ${
               mode === 'single'
-                ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg'
+                ? darkMode ? 'bg-blue-600 text-white shadow-sm' : 'bg-blue-600 text-white shadow-sm'
                 : darkMode
-                ? 'bg-slate-700 text-slate-400 hover:bg-slate-600'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                ? 'text-slate-400 hover:text-slate-200'
+                : 'text-slate-500 hover:text-slate-700'
             }`}
           >
-            📝 텍스트
+            📝 텍스트 비교
           </button>
         </div>
 
@@ -289,7 +304,7 @@ const SimilarityChecker: React.FC<SimilarityCheckerProps> = ({ onClose, darkMode
                     ? 'bg-slate-700 border-slate-600 text-white' 
                     : 'bg-white border-gray-300 text-gray-900'
                 }`}
-                placeholder='예: "당뇨병 예방법" 병원이름 (비워두면 자동 추출)'
+                placeholder='예: "임플란트 비용" 강남치과 (비워두면 자동 추출)'
               />
               <p className={`text-xs mt-1 ${darkMode ? 'text-slate-400' : 'text-gray-500'}`}>
                 💡 <strong>AI 자동 추출:</strong> 비워두면 글 내용을 분석하여 자동으로 키워드를 찾습니다
@@ -302,7 +317,7 @@ const SimilarityChecker: React.FC<SimilarityCheckerProps> = ({ onClose, darkMode
             <button
               onClick={handleWebCheck}
               disabled={isChecking || !text1.trim()}
-              className="w-full py-3 text-sm bg-gradient-to-r from-purple-500 to-pink-600 text-white font-bold rounded-lg hover:shadow-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-3 text-sm bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-sm hover:shadow-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isChecking ? (checkingMessage || '🔍 검색 중...') : '🔍 웹 검색 시작'}
             </button>
@@ -365,7 +380,7 @@ const SimilarityChecker: React.FC<SimilarityCheckerProps> = ({ onClose, darkMode
             <button
               onClick={handleSingleCheck}
               disabled={isChecking || !text1.trim() || !text2.trim()}
-              className="w-full py-3 text-sm bg-gradient-to-r from-purple-500 to-pink-600 text-white font-bold rounded-lg hover:shadow-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-3 text-sm bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-sm hover:shadow-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isChecking ? '🔍 검사 중...' : '🔍 검사 시작'}
             </button>

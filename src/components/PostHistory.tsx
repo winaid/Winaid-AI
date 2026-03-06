@@ -7,9 +7,9 @@ interface PostHistoryProps {
 }
 
 const POST_TYPE_LABELS: Record<string, string> = {
-  blog: 'blog',
-  card_news: 'card',
-  press_release: 'press',
+  blog: '블로그',
+  card_news: '카드뉴스',
+  press_release: '보도자료',
 };
 
 const POST_TYPE_COLORS: Record<string, string> = {
@@ -72,9 +72,9 @@ const PostHistory: React.FC<PostHistoryProps> = ({ onClose, darkMode = false }) 
     const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
     const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
-    if (diffHours < 1) return 'just now';
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
+    if (diffHours < 1) return '방금 전';
+    if (diffHours < 24) return `${diffHours}시간 전`;
+    if (diffDays < 7) return `${diffDays}일 전`;
     return d.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' });
   };
 
@@ -84,24 +84,24 @@ const PostHistory: React.FC<PostHistoryProps> = ({ onClose, darkMode = false }) 
   if (selectedPost) {
     return (
       <div className="h-full flex flex-col">
-        <div className="flex items-center justify-between mb-4">
+        <div className={`flex items-center justify-between pb-4 mb-4 border-b ${darkMode ? 'border-slate-700' : 'border-slate-200'}`}>
           <button
             onClick={() => setSelectedPost(null)}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium ${
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
               darkMode ? 'text-slate-300 hover:bg-slate-700' : 'text-slate-600 hover:bg-slate-100'
             }`}
           >
-            &larr; Back
+            &larr; 목록으로
           </button>
           <button
             onClick={handleCopyHtml}
-            className={`px-4 py-1.5 rounded-lg text-sm font-bold ${
+            className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${
               copied
                 ? 'bg-emerald-500 text-white'
-                : 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white hover:shadow-lg'
-            } transition-all`}
+                : 'bg-blue-600 hover:bg-blue-700 text-white shadow-sm'
+            }`}
           >
-            {copied ? 'Copied!' : 'Copy HTML'}
+            {copied ? '복사 완료!' : 'HTML 복사'}
           </button>
         </div>
         <h2 className={`text-lg font-bold mb-2 ${darkMode ? 'text-white' : 'text-slate-800'}`}>
@@ -117,7 +117,7 @@ const PostHistory: React.FC<PostHistoryProps> = ({ onClose, darkMode = false }) 
             </span>
           )}
           <span className={`px-2 py-0.5 rounded text-xs ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-            {selectedPost.char_count?.toLocaleString()}chars
+            {selectedPost.char_count?.toLocaleString()}자
           </span>
         </div>
         <div
@@ -133,20 +133,25 @@ const PostHistory: React.FC<PostHistoryProps> = ({ onClose, darkMode = false }) 
   // List view
   return (
     <div className="h-full flex flex-col">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h2 className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-slate-800'}`}>
-            History
-          </h2>
-          <p className={`text-sm mt-1 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-            {total > 0 ? `${total} posts total` : 'No posts yet'}
-          </p>
+      <div className={`flex items-center justify-between pb-4 mb-4 border-b ${darkMode ? 'border-slate-700' : 'border-slate-200'}`}>
+        <div className="flex items-center gap-3">
+          <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg ${darkMode ? 'bg-blue-900/50' : 'bg-blue-100'}`}>
+            📋
+          </div>
+          <div>
+            <h2 className={`text-lg font-bold ${darkMode ? 'text-white' : 'text-slate-800'}`}>
+              작성 히스토리
+            </h2>
+            <p className={`text-xs ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+              {total > 0 ? `총 ${total}개의 글` : '아직 작성한 글이 없습니다'}
+            </p>
+          </div>
         </div>
         <button
           onClick={onClose}
-          className={`p-2 rounded-lg ${darkMode ? 'hover:bg-slate-700 text-slate-400' : 'hover:bg-slate-100 text-slate-500'}`}
+          className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${darkMode ? 'hover:bg-slate-700 text-slate-400' : 'hover:bg-slate-100 text-slate-500'}`}
         >
-          &times;
+          ✕
         </button>
       </div>
 
@@ -163,7 +168,8 @@ const PostHistory: React.FC<PostHistoryProps> = ({ onClose, darkMode = false }) 
       ) : items.length === 0 ? (
         <div className={`flex-1 flex flex-col items-center justify-center ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>
           <div className="text-4xl mb-3">📄</div>
-          <p className="text-sm">No posts yet. Generate one!</p>
+          <p className="text-sm font-medium">아직 작성한 글이 없습니다</p>
+          <p className="text-xs mt-1 opacity-60">블로그 글을 생성하면 여기에 저장됩니다</p>
         </div>
       ) : (
         <>
@@ -194,7 +200,7 @@ const PostHistory: React.FC<PostHistoryProps> = ({ onClose, darkMode = false }) 
                         </span>
                       )}
                       <span className={`text-xs ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>
-                        {item.char_count?.toLocaleString()}chars
+                        {item.char_count?.toLocaleString()}자
                       </span>
                     </div>
                   </div>
@@ -218,7 +224,7 @@ const PostHistory: React.FC<PostHistoryProps> = ({ onClose, darkMode = false }) 
                     : darkMode ? 'hover:bg-slate-700 text-slate-300' : 'hover:bg-slate-100 text-slate-600'
                 }`}
               >
-                &lt; Prev
+                &lt; 이전
               </button>
               <span className={`text-sm ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
                 {page + 1} / {totalPages}
@@ -232,7 +238,7 @@ const PostHistory: React.FC<PostHistoryProps> = ({ onClose, darkMode = false }) 
                     : darkMode ? 'hover:bg-slate-700 text-slate-300' : 'hover:bg-slate-100 text-slate-600'
                 }`}
               >
-                Next &gt;
+                다음 &gt;
               </button>
             </div>
           )}

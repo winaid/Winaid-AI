@@ -1078,10 +1078,14 @@ const App: React.FC = () => {
               <ResultPreview content={getCurrentState().data!} darkMode={darkMode} />
             </Suspense>
           ) : (
-            <div className={`h-full rounded-[40px] shadow-2xl border flex flex-col items-center justify-center p-20 text-center group transition-colors duration-300 ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-100'}`}>
-               <div className={`w-32 h-32 rounded-full flex items-center justify-center text-6xl mb-10 group-hover:scale-110 transition-transform duration-500 grayscale opacity-20 ${darkMode ? 'bg-slate-700' : 'bg-slate-50'}`}>📝</div>
-               <h3 className={`text-2xl font-black ${darkMode ? 'text-slate-500' : 'text-slate-300'}`}>콘텐츠 생성</h3>
-               <p className={`mt-4 max-w-xs font-medium ${darkMode ? 'text-slate-500' : 'text-slate-300'}`}>좌측 메뉴에서 콘텐츠 유형과 주제를 선택하면<br/>최적화된 콘텐츠가 생성됩니다.</p>
+            <div className={`h-full rounded-[40px] shadow-2xl border flex flex-col items-center justify-center p-20 text-center group transition-colors duration-300 ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-gradient-to-br from-white to-blue-50/30 border-slate-100'}`}>
+               <div className={`w-28 h-28 rounded-3xl flex items-center justify-center text-5xl mb-8 group-hover:scale-110 transition-transform duration-500 ${darkMode ? 'bg-slate-700' : 'bg-blue-50'}`}>🦷</div>
+               <h3 className={`text-2xl font-black ${darkMode ? 'text-slate-400' : 'text-slate-400'}`}>치과 콘텐츠 생성</h3>
+               <p className={`mt-3 max-w-xs text-sm font-medium leading-relaxed ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>좌측에서 키워드를 입력하고<br/>블로그 원고 생성 버튼을 눌러보세요</p>
+               <div className={`mt-6 flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium ${darkMode ? 'bg-slate-700 text-slate-400' : 'bg-slate-100 text-slate-500'}`}>
+                 <div className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-pulse" />
+                 AI가 대기 중입니다
+               </div>
             </div>
           )}
         </div>
