@@ -6,7 +6,7 @@
  */
 
 // 캐시 버전 - 배포 시 자동 업데이트를 위해 타임스탬프 사용
-const CACHE_VERSION = 'v7-' + '20260120';
+const CACHE_VERSION = 'v8-' + '20260306';
 const CACHE_NAME = 'hospitalai-' + CACHE_VERSION;
 const RUNTIME_CACHE = 'hospitalai-runtime-' + CACHE_VERSION;
 
@@ -99,12 +99,18 @@ self.addEventListener('fetch', (event) => {
     return;
   }
   
+  // 네비게이션 요청 (HTML 페이지)은 항상 네트워크 우선
+  if (request.mode === 'navigate') {
+    event.respondWith(networkFirst(request));
+    return;
+  }
+
   // API 요청은 네트워크 우선
   if (url.pathname.startsWith('/api/')) {
     event.respondWith(networkFirst(request));
     return;
   }
-  
+
   // 정적 자원은 캐시 우선
   event.respondWith(cacheFirst(request));
 });
