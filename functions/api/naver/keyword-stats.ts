@@ -40,12 +40,24 @@ async function getSearchVolume(
   const uri = '/keywordstool';
   const signature = await generateSignature(timestamp, method, uri, secret);
 
-  // 각 키워드를 개별 인코딩하고 쉼표로 연결 (쉼표 자체는 인코딩하지 않음)
-  const cleanKeywords = keywords.map(k => k.trim()).filter(Boolean);
-  const hintParam = cleanKeywords.map(k => encodeURIComponent(k)).join(',');
-  const url = `https://api.searchad.naver.com${uri}?hintKeywords=${hintParam}&showDetail=1`;
+  // 키워드 정제: 한글, 영문, 숫자, 공백만 허용 (네이버 API 제한)
+  const cleanKeywords = keywords
+    .map(k => k.trim().replace(/[^가-힣a-zA-Z0-9\s]/g, '').trim())
+    .filter(k => k.length > 0 && k.length <= 50);
 
-  const response = await fetch(url, {
+  if (cleanKeywords.length === 0) {
+    return { data: {}, error: 'hintKeywords: 유효한 키워드 없음 (정제 후)' };
+  }
+
+  // URL 객체로 파라미터 설정 (올바른 인코딩 보장)
+  const reqUrl = new URL(`https://api.searchad.naver.com${uri}`);
+  reqUrl.searchParams.set('hintKeywords', cleanKeywords.join(','));
+  reqUrl.searchParams.set('showDetail', '1');
+
+  console.log('[SearchAd] keywords:', cleanKeywords.join(', '));
+  console.log('[SearchAd] URL:', reqUrl.toString().substring(0, 300));
+
+  const response = await fetch(reqUrl.toString(), {
     method: 'GET',
     headers: {
       'X-Timestamp': timestamp,

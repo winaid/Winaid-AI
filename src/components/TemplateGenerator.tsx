@@ -775,76 +775,114 @@ export default function TemplateGenerator() {
             디자인 스타일 {selectedHistory && <span className="text-violet-400 font-normal">(내 스타일 선택 시 무시됨)</span>}
           </label>
           <div className={`grid grid-cols-3 gap-2 ${selectedHistory ? 'opacity-40 pointer-events-none' : ''}`}>
-            {AI_STYLE_PRESETS.map(p => {
+            {AI_STYLE_PRESETS.map((p, idx) => {
               const isSelected = !selectedHistory && selectedStyle.id === p.id;
-              const month = new Date().getMonth() + 1;
+              const mo = new Date().getMonth() + 1;
+              // 스타일별 레이아웃 변형: calendar, list, highlight, card
+              const layoutType = ['calendar', 'list', 'highlight', 'card'][idx % 4] as string;
+              // 스타일별 장식 이모지
+              const decoEmojis: Record<string, string[]> = {
+                fresh_start: ['🎊','✨'], romantic_blossom: ['🌸','💕'], petal_breeze: ['🌸','🍃'],
+                sprout_green: ['🌱','☘️'], warm_gratitude: ['🌷','💐'], rain_droplet: ['🌧️','💧'],
+                ocean_breeze: ['🌊','🐚'], sunflower_energy: ['🌻','☀️'], maple_romance: ['🍁','🍂'],
+                harvest_gold: ['🌾','🎃'], quiet_fog: ['🍵','📖'], snowflake_glow: ['❄️','🎄'],
+              };
+              const emojis = decoEmojis[p.id] || ['✨','🎨'];
+
               return (
                 <button
                   key={p.id}
                   onClick={() => { setSelectedStyle(p); setSelectedHistory(null); }}
-                  className={`rounded-xl border-2 transition-all overflow-hidden ${isSelected ? 'border-slate-800 shadow-lg scale-[1.03]' : 'border-slate-200 hover:border-slate-300 hover:shadow-md'}`}
+                  className={`rounded-xl border-2 transition-all overflow-hidden ${isSelected ? 'shadow-lg scale-[1.03]' : 'border-slate-200 hover:border-slate-300 hover:shadow-md'}`}
                   style={isSelected ? { borderColor: p.color } : undefined}
                 >
-                  {/* 미니 템플릿 미리보기 */}
-                  <div className="relative w-full overflow-hidden" style={{ aspectRatio: '3/4', background: `linear-gradient(160deg, ${p.bg} 0%, white 70%)` }}>
-                    {/* 배경 장식 */}
-                    <div className="absolute -top-3 -right-3 w-10 h-10 rounded-full opacity-15" style={{ background: p.color }} />
-                    <div className="absolute -bottom-2 -left-2 w-7 h-7 rounded-full opacity-10" style={{ background: p.accent }} />
+                  <div className="relative w-full overflow-hidden" style={{ aspectRatio: '3/4', background: `linear-gradient(${idx % 2 === 0 ? '160deg' : '200deg'}, ${p.bg} 0%, white 80%)` }}>
+                    {/* 장식 이모지 */}
+                    <div className="absolute top-0.5 right-1 opacity-60" style={{ fontSize: '8px' }}>{emojis[0]}</div>
+                    <div className="absolute bottom-3 left-0.5 opacity-40" style={{ fontSize: '6px' }}>{emojis[1]}</div>
+                    {/* 배경 원 - 스타일별 위치 다름 */}
+                    <div className="absolute rounded-full opacity-10" style={{ background: p.color, width: `${10 + (idx % 3) * 4}px`, height: `${10 + (idx % 3) * 4}px`, top: idx % 2 === 0 ? '-4px' : 'auto', bottom: idx % 2 === 1 ? '-4px' : 'auto', right: idx % 3 === 0 ? '-3px' : 'auto', left: idx % 3 !== 0 ? '-3px' : 'auto' }} />
 
                     {/* 병원명 */}
-                    <div className="pt-2 px-1.5">
-                      <div className="text-[5px] font-bold text-center tracking-tight" style={{ color: p.accent }}>OO치과의원</div>
+                    <div className="pt-1.5 px-1">
+                      <div className="text-[5px] font-bold text-center" style={{ color: p.accent }}>OO치과</div>
                     </div>
 
-                    {/* 제목 */}
-                    <div className="px-1.5 pt-0.5">
-                      <div className="text-[8px] font-extrabold text-center leading-tight" style={{ color: p.color }}>{month}월 진료일정</div>
+                    {/* 제목 - 스타일별 다름 */}
+                    <div className="px-1 pt-0.5">
+                      {idx % 3 === 2 ? (
+                        <div className="rounded py-0.5 text-center" style={{ background: `${p.color}20` }}>
+                          <div className="font-extrabold leading-tight" style={{ fontSize: '7px', color: p.color }}>{mo}월 진료안내</div>
+                        </div>
+                      ) : (
+                        <div className="font-extrabold text-center leading-tight" style={{ fontSize: idx % 2 === 0 ? '8px' : '7px', color: p.color }}>{mo}월 진료일정</div>
+                      )}
                     </div>
 
-                    {/* 미니 캘린더 그리드 */}
-                    <div className="px-1.5 pt-1">
-                      <div className="rounded p-0.5" style={{ background: 'rgba(255,255,255,0.85)', border: `0.5px solid ${p.color}25` }}>
-                        {/* 요일 */}
-                        <div className="grid grid-cols-7 mb-0.5">
-                          {['일','월','화','수','목','금','토'].map((d, i) => (
-                            <div key={d} className="text-center font-bold" style={{ fontSize: '3.5px', lineHeight: '7px', color: i === 0 ? '#ef4444' : i === 6 ? '#3b82f6' : '#94a3b8' }}>{d}</div>
+                    {/* 콘텐츠 - 레이아웃별 다름 */}
+                    <div className="px-1 pt-1">
+                      {layoutType === 'calendar' && (
+                        <div className="rounded p-0.5" style={{ background: 'rgba(255,255,255,0.85)', border: `0.5px solid ${p.color}20` }}>
+                          <div className="grid grid-cols-7 mb-0.5">
+                            {['일','월','화','수','목','금','토'].map((d, i) => (
+                              <div key={d} className="text-center font-bold" style={{ fontSize: '3px', lineHeight: '6px', color: i === 0 ? '#ef4444' : i === 6 ? '#3b82f6' : '#94a3b8' }}>{d}</div>
+                            ))}
+                          </div>
+                          {[0, 1, 2].map(row => (
+                            <div key={row} className="grid grid-cols-7">
+                              {Array.from({ length: 7 }, (_, i) => {
+                                const day = row * 7 + i + 1;
+                                if (day > 21) return <div key={i} />;
+                                const hl = day === 3 || day === 9;
+                                return <div key={i} className="flex justify-center" style={{ padding: '0.5px 0' }}><span className="rounded-full flex items-center justify-center" style={{ fontSize: '3px', width: '6px', height: '6px', ...(hl ? { background: p.color, color: '#fff', fontWeight: 800 } : { color: i === 0 ? '#fca5a5' : '#64748b' }) }}>{day}</span></div>;
+                              })}
+                            </div>
                           ))}
                         </div>
-                        {/* 날짜 3줄 */}
-                        {[0, 1, 2].map(row => (
-                          <div key={row} className="grid grid-cols-7">
-                            {Array.from({ length: 7 }, (_, i) => {
-                              const day = row * 7 + i + 1;
-                              if (day > 28) return <div key={i} />;
-                              const isHoliday = day === 3 || day === 9;
-                              return (
-                                <div key={i} className="flex justify-center" style={{ padding: '0.5px 0' }}>
-                                  <span
-                                    className="rounded-full flex items-center justify-center"
-                                    style={{
-                                      fontSize: '3.5px',
-                                      width: '7px',
-                                      height: '7px',
-                                      ...(isHoliday ? { background: p.color, color: '#fff', fontWeight: 800 } : { color: i === 0 ? '#fca5a5' : '#64748b' }),
-                                    }}
-                                  >{day}</span>
-                                </div>
-                              );
-                            })}
+                      )}
+                      {layoutType === 'list' && (
+                        <div className="space-y-0.5">
+                          {[{ d: '3일 (월)', s: '정상진료', c: p.color }, { d: '9일 (일)', s: '휴진', c: '#ef4444' }, { d: '15일 (토)', s: '단축', c: '#f59e0b' }].map((item, i) => (
+                            <div key={i} className="flex items-center gap-0.5 rounded" style={{ background: 'rgba(255,255,255,0.8)', padding: '1.5px 2px' }}>
+                              <span className="rounded" style={{ fontSize: '3px', background: `${item.c}20`, color: item.c, padding: '0.5px 2px', fontWeight: 700 }}>{item.d}</span>
+                              <span style={{ fontSize: '3px', color: item.c, fontWeight: 700 }}>{item.s}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {layoutType === 'highlight' && (
+                        <div className="flex flex-col items-center gap-0.5">
+                          <div className="rounded-lg w-full py-1 text-center" style={{ background: `${p.color}15` }}>
+                            <div style={{ fontSize: '6px', fontWeight: 800, color: p.color }}>3일 · 9일</div>
+                            <div style={{ fontSize: '3px', color: p.accent, fontWeight: 600 }}>휴진 안내</div>
                           </div>
-                        ))}
-                      </div>
+                          <div className="rounded-lg w-full py-0.5 text-center" style={{ background: `${p.accent}10` }}>
+                            <div style={{ fontSize: '4px', fontWeight: 700, color: p.accent }}>15일 단축진료</div>
+                          </div>
+                        </div>
+                      )}
+                      {layoutType === 'card' && (
+                        <div className="grid grid-cols-2 gap-0.5">
+                          <div className="rounded text-center py-1" style={{ background: `${p.color}15` }}>
+                            <div style={{ fontSize: '5px', fontWeight: 800, color: p.color }}>3일</div>
+                            <div style={{ fontSize: '3px', color: p.accent }}>정상진료</div>
+                          </div>
+                          <div className="rounded text-center py-1" style={{ background: '#ef444415' }}>
+                            <div style={{ fontSize: '5px', fontWeight: 800, color: '#ef4444' }}>9일</div>
+                            <div style={{ fontSize: '3px', color: '#dc2626' }}>휴진</div>
+                          </div>
+                        </div>
+                      )}
                     </div>
 
-                    {/* 하단 안내 바 */}
-                    <div className="absolute bottom-1 left-1.5 right-1.5">
-                      <div className="rounded py-0.5 text-center" style={{ background: `${p.color}18` }}>
-                        <span style={{ fontSize: '3.5px', fontWeight: 700, color: p.color }}>예약 및 내원 안내</span>
+                    {/* 하단 */}
+                    <div className="absolute bottom-0.5 left-1 right-1">
+                      <div className="rounded py-0.5 text-center" style={{ background: `${p.color}15` }}>
+                        <span style={{ fontSize: '3px', fontWeight: 700, color: p.color }}>예약 및 내원 안내</span>
                       </div>
                     </div>
                   </div>
 
-                  {/* 스타일명 */}
                   <div className="py-1.5 px-1 bg-white text-center" style={{ borderTop: `1.5px solid ${isSelected ? p.color : '#f1f5f9'}` }}>
                     <div className="text-[10px] font-bold leading-tight" style={{ color: isSelected ? p.color : '#334155' }}>{p.name}</div>
                     <div className="text-[8px] mt-0.5" style={{ color: '#94a3b8' }}>{p.desc}</div>
