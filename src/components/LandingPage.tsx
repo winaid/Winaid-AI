@@ -196,7 +196,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
           </h1>
 
           <p className="text-lg md:text-xl text-slate-500 mb-12 max-w-xl mx-auto leading-relaxed">
-            키워드 하나면 의료광고법 준수 블로그와 AI 이미지가 자동 완성.<br className="hidden md:block" />
+            '임플란트 비용' 키워드 하나면 의료광고법 준수 블로그가 자동 완성.<br className="hidden md:block" />
             원장님은 진료에만 집중하세요.
           </p>
 
@@ -296,7 +296,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
       </section>
 
       {/* Stats - 윈에이드 수치 */}
-      <section className="py-20 bg-white/60 backdrop-blur-sm border-b border-slate-200/60">
+      <section className="py-20 bg-gradient-to-r from-white/60 via-blue-50/30 to-white/60 backdrop-blur-sm border-b border-slate-200/60">
         <div className="max-w-5xl mx-auto px-6">
           <p className="text-center text-slate-400 text-sm font-semibold mb-10 tracking-wider">윈에이드는 수치로 증명합니다</p>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-0 md:divide-x divide-slate-200">
@@ -359,7 +359,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
             {[
               {
                 title: '키워드 하나로\n블로그 자동 생성',
-                desc: '병원명과 키워드만 입력하면 네이버 스마트블록에 최적화된 블로그 원고가 완성됩니다. 환자 유치에 필수인 가장 빠른 경로, 네이버 블로그를 AI가 대신 운영합니다.',
+                desc: '치과명과 "임플란트 비용" 같은 키워드만 입력하면 네이버 스마트블록에 최적화된 블로그 원고가 완성됩니다. 신환 유치의 핵심, 네이버 블로그를 AI가 대신 운영합니다.',
                 tag: 'AI Writing',
                 color: 'from-blue-500 to-cyan-500',
               },
@@ -371,7 +371,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
               },
               {
                 title: 'AI 이미지 &\n콘텐츠 자동 생성',
-                desc: '블로그 썸네일, 카드뉴스는 물론 진료 일정표, 시술 안내 이미지까지 AI가 자동 생성합니다. 저작권 걱정 없이 바로 사용 가능.',
+                desc: '블로그 썸네일, 카드뉴스는 물론 진료 안내, 시술 전후 비교 이미지까지 AI가 자동 생성합니다. 저작권 걱정 없이 바로 사용 가능.',
                 tag: 'AI Image',
                 color: 'from-violet-500 to-purple-500',
               },
@@ -403,9 +403,9 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
 
           <div className="grid md:grid-cols-3 gap-8">
             {[
-              { step: '1', title: '정보 입력', desc: '병원명, 진료 과목, 원하는 키워드를 입력합니다.' },
-              { step: '2', title: 'AI가 작성', desc: '의료광고법을 준수하는 블로그 원고와 이미지를 생성합니다.' },
-              { step: '3', title: '복사 & 게시', desc: '완성된 콘텐츠를 복사해서 블로그에 바로 게시합니다.' },
+              { step: '1', title: '정보 입력', desc: '치과명과 "임플란트 비용" 같은 키워드를 입력합니다.' },
+              { step: '2', title: 'AI가 작성', desc: '의료광고법을 준수하는 치과 블로그 원고와 이미지를 생성합니다.' },
+              { step: '3', title: '복사 & 게시', desc: '완성된 콘텐츠를 복사해서 네이버 블로그에 바로 게시합니다.' },
             ].map((item, i) => (
               <div key={i} className="relative">
                 {i < 2 && (
@@ -433,17 +433,17 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
               누구보다 병원을 잘 아니까,<br />직접 만들었습니다
             </h2>
             <p className="text-lg text-slate-500 mt-6 max-w-2xl mx-auto leading-relaxed">
-              2017년 설립 이후 치과, 성형외과, 피부과, 정형외과, 한의원 등<br className="hidden md:block" />
-              300곳 이상의 병원과 함께해온 윈에이드의 13년 노하우가 AI에 담겨있습니다.
+              2017년 설립 이후 임플란트, 교정, 심미치과 등<br className="hidden md:block" />
+              300곳 이상의 치과와 함께해온 윈에이드의 13년 노하우가 AI에 담겨있습니다.
             </p>
           </div>
 
           <div className="grid md:grid-cols-2 gap-4 max-w-3xl mx-auto">
             {[
-              '300+ 병원 마케팅 운영 경험',
+              '300+ 치과 마케팅 운영 경험',
               '네이버 플레이스 상위노출 전략',
               '거래처 재계약률 95%의 신뢰',
-              '의료광고법 전문 컨설팅 & AI 검증',
+              '치과 의료광고법 전문 컨설팅 & AI 검증',
             ].map((item, i) => (
               <div key={i} className="flex items-center gap-3 bg-white/80 backdrop-blur-sm rounded-xl px-5 py-4 border border-slate-200/60 shadow-sm hover:shadow-md transition-shadow">
                 <svg className="w-5 h-5 text-blue-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>

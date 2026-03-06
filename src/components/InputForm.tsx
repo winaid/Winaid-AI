@@ -315,7 +315,7 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange 
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className={labelCls}>병원명</label>
-                      <input type="text" value={hospitalName} onChange={(e) => setHospitalName(e.target.value)} placeholder="서울OO병원" className={inputCls} />
+                      <input type="text" value={hospitalName} onChange={(e) => setHospitalName(e.target.value)} placeholder="서울OO치과" className={inputCls} />
                     </div>
                     <div>
                       <label className={labelCls}>의료진</label>
@@ -379,7 +379,7 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange 
               <span className="text-xs font-semibold text-slate-700">추천 주제</span>
               <p className="text-[10px] text-slate-400">AI 트렌드 분석 기반</p>
             </div>
-            <button type="button" onClick={handleRecommendTrends} disabled={isLoadingTrends} className="text-xs font-semibold text-white bg-slate-800 px-3.5 py-2 rounded-lg hover:bg-slate-900 transition-all whitespace-nowrap">
+            <button type="button" onClick={handleRecommendTrends} disabled={isLoadingTrends} className="text-xs font-semibold text-white bg-blue-600 px-3.5 py-2 rounded-lg hover:bg-blue-700 transition-all whitespace-nowrap">
               {isLoadingTrends ? '분석 중...' : '주제 찾기'}
             </button>
           </div>
@@ -403,10 +403,10 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange 
         {/* 제목/키워드 입력 */}
         <div className="space-y-2.5">
           <label className={labelCls}>{postType === 'press_release' ? '기사 제목' : '블로그 제목'}</label>
-          <input type="text" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder={postType === 'press_release' ? '기사 주제 (예: 겨울철 피부건조 주의보)' : '글 제목 (예: 치아미백 종류와 비용 총정리)'} className={`${inputCls} !text-base !font-semibold`} required />
-          <input type="text" value={keywords} onChange={(e) => setKeywords(e.target.value)} placeholder="SEO 키워드 (예: 강남 치과)" className={inputCls} />
+          <input type="text" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder={postType === 'press_release' ? '기사 주제 (예: 디지털 임플란트 도입 성과)' : '글 제목 (예: 치아미백 종류와 비용 총정리)'} className={`${inputCls} !text-base !font-semibold`} required />
+          <input type="text" value={keywords} onChange={(e) => setKeywords(e.target.value)} placeholder="SEO 키워드 (예: 강남 치과, 임플란트 가격)" className={inputCls} />
           {postType === 'blog' && (
-            <input type="text" value={disease} onChange={(e) => setDisease(e.target.value)} placeholder="질환명 (예: 치주염) - 글의 실제 주제" className={inputCls} />
+            <input type="text" value={disease} onChange={(e) => setDisease(e.target.value)} placeholder="질환명 (예: 치주염, 충치, 부정교합) - 글의 실제 주제" className={inputCls} />
           )}
 
           {/* 소제목 직접 입력 */}
@@ -419,14 +419,14 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange 
               value={customSubheadings}
               onChange={(e) => setCustomSubheadings(e.target.value)}
               onPaste={(e) => { e.preventDefault(); const text = e.clipboardData.getData('text/plain'); document.execCommand('insertText', false, text); }}
-              placeholder={"소제목을 한 줄에 하나씩 입력하세요\n예:\n충치 치료 종류와 비용\n스케일링 후 주의사항"}
+              placeholder={"소제목을 한 줄에 하나씩 입력하세요\n예:\n임플란트 수술 과정과 기간\n임플란트 후 관리법\n임플란트 비용 비교"}
               className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:border-blue-400 outline-none resize-none"
               rows={4}
             />
             <p className="text-[10px] text-slate-400 mt-1">입력 시 AI가 그대로 사용합니다. 미입력 시 자동 생성.</p>
           </div>
 
-          <button type="button" onClick={handleRecommendTitles} disabled={isLoadingTitles || !topic} className="w-full py-2.5 bg-slate-800 text-white rounded-xl text-xs font-semibold hover:bg-slate-900 transition-all disabled:opacity-40">
+          <button type="button" onClick={handleRecommendTitles} disabled={isLoadingTitles || !topic} className="w-full py-2.5 bg-blue-600 text-white rounded-xl text-xs font-semibold hover:bg-blue-700 transition-all disabled:opacity-40">
             {isLoadingTitles ? '생성 중...' : 'AI 제목 추천받기'}
           </button>
 
@@ -524,7 +524,7 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange 
           type="button"
           onClick={handleSubmit}
           disabled={isLoading || !topic.trim()}
-          className={`w-full py-4 rounded-xl text-white font-bold text-sm shadow-lg transition-all active:scale-[0.98] disabled:opacity-40 ${isLoading ? 'bg-slate-400' : 'bg-slate-800 hover:bg-slate-900'}`}
+          className={`w-full py-4 rounded-xl text-white font-bold text-sm shadow-lg transition-all active:scale-[0.98] disabled:opacity-40 ${isLoading ? 'bg-slate-400' : 'bg-blue-600 hover:bg-blue-700 shadow-blue-500/25'}`}
         >
           {isLoading ? '생성 중...' : postType === 'blog' ? '블로그 원고 생성' : postType === 'press_release' ? '보도자료 작성' : '카드뉴스 제작'}
         </button>

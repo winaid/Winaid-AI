@@ -946,24 +946,25 @@ const App: React.FC = () => {
         {contentTab === 'refine' || contentTab === 'similarity' || contentTab === 'image' || contentTab === 'history' ? (
           <div className="w-full h-full flex flex-col gap-4 overflow-hidden">
             {/* 탭 메뉴 */}
-            <div className={`flex gap-1 p-1 rounded-xl ${darkMode ? 'bg-slate-800' : 'bg-slate-100'} w-fit mx-auto`}>
+            <div className={`flex gap-1 p-1.5 rounded-xl ${darkMode ? 'bg-slate-800' : 'bg-slate-100/80 border border-slate-200/60'} w-fit mx-auto`}>
               {([
-                { id: 'blog' as const, label: '블로그' },
-                { id: 'card_news' as const, label: '카드뉴스' },
-                { id: 'press' as const, label: '언론보도' },
-                { id: 'similarity' as const, label: '유사도' },
-                { id: 'refine' as const, label: 'AI보정' },
-                { id: 'image' as const, label: '이미지' },
+                { id: 'blog' as const, label: '블로그', icon: '📝' },
+                { id: 'card_news' as const, label: '카드뉴스', icon: '🎨' },
+                { id: 'press' as const, label: '언론보도', icon: '🗞️' },
+                { id: 'similarity' as const, label: '유사도', icon: '🔍' },
+                { id: 'refine' as const, label: 'AI보정', icon: '✨' },
+                { id: 'image' as const, label: '이미지', icon: '🖼️' },
               ]).map(tab => (
                 <button
                   key={tab.id}
                   onClick={() => setContentTab(tab.id)}
-                  className={`py-2 px-4 rounded-lg text-sm font-semibold transition-all whitespace-nowrap ${
+                  className={`py-2 px-4 rounded-lg text-sm font-semibold transition-all whitespace-nowrap flex items-center gap-1.5 ${
                     contentTab === tab.id
-                      ? darkMode ? 'bg-slate-700 text-white shadow-sm' : 'bg-white text-slate-800 shadow-sm'
-                      : darkMode ? 'text-slate-400 hover:text-slate-200' : 'text-slate-500 hover:text-slate-700'
+                      ? darkMode ? 'bg-blue-600 text-white shadow-sm' : 'bg-blue-600 text-white shadow-sm shadow-blue-500/20'
+                      : darkMode ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-700' : 'text-slate-500 hover:text-slate-700 hover:bg-white/60'
                   }`}
                 >
+                  <span className="text-xs">{tab.icon}</span>
                   {tab.label}
                 </button>
               ))}

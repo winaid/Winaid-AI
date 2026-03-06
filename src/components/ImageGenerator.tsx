@@ -207,7 +207,7 @@ export default function ImageGenerator({ onProgress }: Props) {
         <textarea
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
-          placeholder="어떤 이미지를 만들고 싶으신가요? 내용, 스타일, 분위기를 자세히 설명해주세요..."
+          placeholder="예: 임플란트 시술 과정을 설명하는 깔끔한 인포그래픽, 밝고 신뢰감 있는 치과 분위기..."
           rows={4}
           className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/10 focus:border-blue-400 resize-none text-sm outline-none"
           disabled={generating}
@@ -328,7 +328,7 @@ export default function ImageGenerator({ onProgress }: Props) {
         className={`w-full py-3.5 rounded-xl text-white font-semibold text-sm transition-all ${
           generating || !prompt.trim()
             ? 'bg-slate-300 cursor-not-allowed'
-            : 'bg-slate-800 hover:bg-slate-900 shadow-lg'
+            : 'bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/25'
         }`}
       >
         {generating ? (
