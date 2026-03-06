@@ -407,7 +407,7 @@ export default function TemplateGenerator() {
             <button
               key={team.id}
               type="button"
-              onClick={() => { setSelectedTeam(selectedTeam === team.id ? null : team.id); setShowHospitalDropdown(true); }}
+              onClick={() => { setSelectedTeam(team.id); setShowHospitalDropdown(true); }}
               className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-all ${
                 selectedTeam === team.id
                   ? 'bg-white text-blue-600 shadow-sm'
