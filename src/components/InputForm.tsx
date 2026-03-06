@@ -191,7 +191,7 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
       if (result.apiErrors?.length) {
         const blogErr = result.apiErrors.find(e => e.includes('블로그') || e.includes('Blog') || e.includes('CLIENT'));
         if (blogErr) {
-          setKeywordAiRec((result.aiRecommendation || '') + `\n\n⚠️ **블로그 발행량 오류:** ${blogErr}`);
+          setKeywordAiRec((result.aiRecommendation || '') + `\n\n⚠️ **발행량 조회 오류:** ${blogErr}`);
         } else {
           setKeywordAiRec(result.aiRecommendation || '');
         }
@@ -280,13 +280,9 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
   const selectCls = "w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-700 text-sm font-medium outline-none focus:border-blue-400 transition-all";
 
   return (
-    <div className="bg-white rounded-2xl shadow-lg shadow-slate-200/50 border border-slate-100 p-6">
-      {/* 콘텐츠 유형 선택 */}
-      <div className="mb-6">
-        <div className="flex items-center gap-2 mb-3">
-          <img src="/280_logo.png" alt="WINAID" className="h-7 rounded-md" />
-          <span className="text-lg font-bold text-slate-800 tracking-tight">WIN<span className="text-blue-500">AID</span></span>
-        </div>
+    <div className="space-y-3">
+      {/* 콘텐츠 유형 선택 카드 */}
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4">
         <div className="flex gap-1.5 p-1 bg-slate-100 rounded-xl">
           {([
             { id: 'blog' as PostType, label: '블로그', icon: '📝' },
@@ -331,7 +327,9 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
           ))}
         </div>
       </div>
-      
+
+      {/* 메인 입력 폼 카드 */}
+      <div className="bg-white rounded-2xl shadow-lg shadow-slate-200/50 border border-slate-100 p-6">
       <form onSubmit={handleSubmit} className="space-y-5">
 
         {postType === 'blog' && (<>
@@ -482,7 +480,7 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
                       <tr className="text-slate-500">
                         <th className="text-left px-3 py-2 font-semibold">키워드</th>
                         <th className="text-right px-3 py-2 font-semibold">월간 검색량</th>
-                        <th className="text-right px-3 py-2 font-semibold">블로그 발행량</th>
+                        <th className="text-right px-3 py-2 font-semibold">발행량</th>
                         <th className="text-right px-3 py-2 font-semibold">포화도</th>
                       </tr>
                     </thead>
@@ -878,6 +876,7 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
           {isLoading ? '생성 중...' : postType === 'blog' ? '블로그 원고 생성' : postType === 'press_release' ? '보도자료 작성' : '카드뉴스 제작'}
         </button>
       </form>
+      </div>
     </div>
   );
 };

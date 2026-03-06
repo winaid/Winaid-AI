@@ -312,40 +312,63 @@ const AdminPage: React.FC<AdminPageProps> = ({ onAdminVerified }) => {
           </div>
         </div>
 
-        {/* 병원 선택 */}
-        <div className="bg-white rounded-xl border border-slate-100 p-4 mb-4">
-          <div className="flex items-center gap-3">
-            <label className="text-sm font-semibold text-slate-600 flex-shrink-0">병원 선택</label>
-            <select
-              value={selectedTeam ?? ''}
-              onChange={(e) => {
-                const val = e.target.value ? Number(e.target.value) : null;
-                setSelectedTeam(val);
-                setSelectedHospitalName('');
-              }}
-              className="flex-1 max-w-xs px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-400"
-            >
-              <option value="">팀 선택</option>
-              {TEAM_DATA.map(team => (
-                <option key={team.id} value={team.id}>{team.name}</option>
-              ))}
-            </select>
-            {selectedTeam && (
-              <select
-                value={selectedHospitalName}
-                onChange={(e) => setSelectedHospitalName(e.target.value)}
-                className="flex-1 max-w-sm px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-400"
-              >
-                <option value="">전체 병원</option>
-                {TEAM_DATA.find(t => t.id === selectedTeam)?.hospitals.map(h => (
-                  <option key={h.name} value={h.name}>{h.name}</option>
-                ))}
-              </select>
-            )}
-            {selectedHospitalName && (
-              <span className="text-xs text-blue-600 font-medium bg-blue-50 px-2 py-1 rounded-full">{selectedHospitalName}</span>
-            )}
+        {/* 팀 & 병원 선택 */}
+        <div className="bg-white rounded-xl border border-slate-100 p-4 mb-4 space-y-3">
+          {/* 팀 탭 */}
+          <div className="flex bg-slate-100 rounded-xl p-1">
+            <button
+              onClick={() => { setSelectedTeam(null); setSelectedHospitalName(''); }}
+              className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-all ${
+                selectedTeam === null ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+              }`}
+            >전체</button>
+            {TEAM_DATA.map(team => (
+              <button
+                key={team.id}
+                onClick={() => { setSelectedTeam(team.id); setSelectedHospitalName(''); }}
+                className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-all ${
+                  selectedTeam === team.id ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                }`}
+              >{team.label}</button>
+            ))}
           </div>
+
+          {/* 병원 선택 */}
+          {selectedTeam !== null && (() => {
+            const team = TEAM_DATA.find(t => t.id === selectedTeam);
+            if (!team) return null;
+            // 병원명 기준으로 중복 제거 + 담당자 병합
+            const hospitalMap = new Map<string, string[]>();
+            for (const h of team.hospitals) {
+              const baseName = h.name.replace(/ \(.*\)$/, '');
+              const managers = hospitalMap.get(baseName) || [];
+              if (!managers.includes(h.manager)) managers.push(h.manager);
+              hospitalMap.set(baseName, managers);
+            }
+            const uniqueHospitals = Array.from(hospitalMap.entries());
+            return (
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => setSelectedHospitalName('')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all border ${
+                    !selectedHospitalName ? 'bg-blue-50 border-blue-200 text-blue-600' : 'border-slate-200 text-slate-500 hover:border-slate-300'
+                  }`}
+                >전체 ({uniqueHospitals.length})</button>
+                {uniqueHospitals.map(([name, managers]) => (
+                  <button
+                    key={name}
+                    onClick={() => setSelectedHospitalName(name)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all border ${
+                      selectedHospitalName === name ? 'bg-blue-50 border-blue-200 text-blue-600' : 'border-slate-200 text-slate-500 hover:border-slate-300'
+                    }`}
+                  >
+                    {name}
+                    <span className="ml-1 text-[10px] text-slate-400">({managers.length}명)</span>
+                  </button>
+                ))}
+              </div>
+            );
+          })()}
         </div>
 
         {/* Stats Grid */}
