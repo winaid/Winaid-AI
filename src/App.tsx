@@ -13,14 +13,13 @@ const AdminPage = lazy(() => import('./components/AdminPage'));
 const AuthPage = lazy(() => import('./components/AuthPage').then(module => ({ default: module.AuthPage })));
 const ApiKeySettings = lazy(() => import('./components/ApiKeySettings'));
 const PasswordLogin = lazy(() => import('./components/PasswordLogin'));
-const ContentRefiner = lazy(() => import('./components/ContentRefiner'));
 const MedicalLawSearch = lazy(() => import('./components/MedicalLawSearch').then(module => ({ default: module.MedicalLawSearch })));
 const ImageGenerator = lazy(() => import('./components/ImageGenerator'));
 const LandingPage = lazy(() => import('./components/LandingPage'));
 const PostHistory = lazy(() => import('./components/PostHistory'));
 
-type PageType = 'landing' | 'home' | 'blog' | 'card_news' | 'press' | 'refine' | 'image' | 'history' | 'admin' | 'auth';
-const contentPages: PageType[] = ['blog', 'card_news', 'press', 'refine', 'image', 'history'];
+type PageType = 'landing' | 'home' | 'blog' | 'card_news' | 'press' | 'image' | 'history' | 'admin' | 'auth';
+const contentPages: PageType[] = ['blog', 'card_news', 'press', 'image', 'history'];
 const appPages: PageType[] = ['home', ...contentPages];
 
 // 사용자 정보 타입
@@ -83,7 +82,7 @@ const App: React.FC = () => {
   const leftPanelRef = useRef<HTMLDivElement>(null);
   
   // contentTab은 이제 currentPage에서 파생 (호환성 유지)
-  type ContentTabType = 'blog' | 'refine' | 'card_news' | 'press' | 'image' | 'history';
+  type ContentTabType = 'blog' | 'card_news' | 'press' | 'image' | 'history';
   const contentTab: ContentTabType = contentPages.includes(currentPage) ? (currentPage as ContentTabType) : 'blog';
   const isAppPage = appPages.includes(currentPage);
 
@@ -97,7 +96,7 @@ const App: React.FC = () => {
   const getCurrentState = (): GenerationState => {
     if (contentTab === 'press') return pressState;
     if (contentTab === 'blog' || contentTab === 'card_news') return blogState;
-    return state; // refine
+    return state;
   };
   
   // 현재 탭에 맞는 setState 가져오기
@@ -907,7 +906,6 @@ const App: React.FC = () => {
               { id: 'blog' as ContentTabType, label: '블로그', icon: '📝' },
               { id: 'card_news' as ContentTabType, label: '카드뉴스', icon: '🎨' },
               { id: 'press' as ContentTabType, label: '언론보도', icon: '🗞️' },
-              { id: 'refine' as ContentTabType, label: 'AI 보정', icon: '✨' },
               { id: 'image' as ContentTabType, label: '이미지 생성', icon: '🖼️' },
               { id: 'history' as ContentTabType, label: '히스토리', icon: '🕐' },
             ]).map(item => (
@@ -978,9 +976,8 @@ const App: React.FC = () => {
             {/* 도구 */}
             <div>
               <h2 className={`text-lg font-black mb-4 ${darkMode ? 'text-slate-200' : 'text-slate-800'}`}>도구</h2>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 gap-4">
                 {([
-                  { id: 'refine' as ContentTabType, title: 'AI 보정', desc: '문장 다듬기', icon: '✨' },
                   { id: 'image' as ContentTabType, title: '이미지 생성', desc: 'AI 이미지', icon: '🖼️' },
                   { id: 'history' as ContentTabType, title: '히스토리', desc: '생성 이력', icon: '🕐' },
                 ]).map(item => (
@@ -1001,8 +998,8 @@ const App: React.FC = () => {
           </div>
         ) :
 
-        /* 전체 화면 페이지들: 유사도, AI보정, 이미지, 히스토리 */
-        contentTab === 'refine' || contentTab === 'image' || contentTab === 'history' ? (
+        /* 전체 화면 페이지들: 이미지, 히스토리 */
+        contentTab === 'image' || contentTab === 'history' ? (
           <div className="w-full">
               {contentTab === 'history' ? (
                 <div className={`rounded-2xl border p-6 md:p-8 backdrop-blur-xl ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white/80 border-white/60 shadow-[0_4px_24px_rgba(0,0,0,0.06)]'}`}>
@@ -1013,20 +1010,10 @@ const App: React.FC = () => {
                     />
                   </Suspense>
                 </div>
-              ) : contentTab === 'image' ? (
-                <div className={`rounded-2xl border p-6 md:p-8 backdrop-blur-xl ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white/80 border-white/60 shadow-[0_4px_24px_rgba(0,0,0,0.06)]'}`}>
-                  <Suspense fallback={<div className="flex items-center justify-center py-20"><div className="w-10 h-10 border-[3px] border-blue-100 border-t-blue-500 rounded-full animate-spin"></div></div>}>
-                    <ImageGenerator />
-                  </Suspense>
-                </div>
               ) : (
                 <div className={`rounded-2xl border p-6 md:p-8 backdrop-blur-xl ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white/80 border-white/60 shadow-[0_4px_24px_rgba(0,0,0,0.06)]'}`}>
                   <Suspense fallback={<div className="flex items-center justify-center py-20"><div className="w-10 h-10 border-[3px] border-blue-100 border-t-blue-500 rounded-full animate-spin"></div></div>}>
-                    <ContentRefiner
-                      onClose={() => setContentTab('blog')}
-                      onNavigate={(tab) => setContentTab(tab)}
-                      darkMode={darkMode}
-                    />
+                    <ImageGenerator />
                   </Suspense>
                 </div>
               )}
