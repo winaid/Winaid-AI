@@ -280,9 +280,9 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
   const selectCls = "w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-700 text-sm font-medium outline-none focus:border-blue-400 transition-all";
 
   return (
-    <div className="space-y-3">
-      {/* 콘텐츠 유형 선택 카드 */}
-      <div className="bg-white rounded-2xl shadow-lg shadow-slate-200/50 border border-slate-100 p-4">
+    <div className="bg-white rounded-2xl shadow-lg shadow-slate-200/50 border border-slate-100">
+      {/* 콘텐츠 유형 선택 */}
+      <div className="p-4 pb-0">
         <div className="flex gap-1.5 p-1 bg-slate-100 rounded-xl">
           {([
             { id: 'blog' as PostType, label: '블로그', icon: '📝' },
@@ -328,8 +328,11 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
         </div>
       </div>
 
-      {/* 메인 입력 폼 카드 */}
-      <div className="bg-white rounded-2xl shadow-lg shadow-slate-200/50 border border-slate-100 p-6">
+      {/* 구분선 */}
+      <div className="mx-4 border-t border-slate-100"></div>
+
+      {/* 메인 입력 폼 */}
+      <div className="p-6 pt-4">
       <form onSubmit={handleSubmit} className="space-y-5">
 
         {postType === 'blog' && (<>
