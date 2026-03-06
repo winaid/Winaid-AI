@@ -903,7 +903,7 @@ function buildTemplateAiPrompt(req: AiTemplateRequest): string {
     doctor: 'doctor introduction / new physician announcement',
     notice: 'hospital notice / important announcement',
     greeting: 'holiday greeting / seasonal message from hospital',
-    hiring: 'hospital job posting / staff recruitment announcement - design like a professional Instagram carousel recruiting post. Bold, modern, eye-catching layout that attracts job seekers',
+    hiring: 'hospital job posting / staff recruitment announcement - design like a professional Instagram carousel recruiting post. Bold, modern, eye-catching layout. Use ICONS and VISUAL ELEMENTS to represent benefits/requirements instead of lots of text. Minimalist design with only the provided Korean text.',
     caution: 'post-treatment / post-procedure patient care instructions - design like a clean, professional medical handout. Must be highly readable with clear visual hierarchy, friendly medical illustrations',
   };
 
@@ -965,14 +965,18 @@ ${logoInstructions}${portraitWarning}`;
 [HOSPITAL INFO - display at the bottom of the image, small but legible text]
 ${req.hospitalInfo.map(line => `"${line}"`).join('\n')}` : '';
 
-  return `🚨🚨🚨 KOREAN TEXT ACCURACY - THIS IS THE #1 PRIORITY 🚨🚨🚨
-Every Korean character must be rendered PERFECTLY and EXACTLY as provided.
-- Copy each Korean character stroke-by-stroke from the quoted text below.
-- Korean characters are complex (e.g. 직 = ㅈ+ㅣ+ㄱ, 원 = ㅇ+ㅝ+ㄴ, 모 = ㅁ+ㅗ, 집 = ㅈ+ㅣ+ㅂ).
-- If you cannot render a Korean word correctly, use an ICON or ILLUSTRATION instead - do NOT show garbled/wrong Korean.
-- DOUBLE CHECK every Korean character before finalizing. Each syllable block must be a real, correctly-formed Korean character.
-- Keep Korean text MINIMAL - prefer using icons, illustrations, and visual design elements over lots of text.
-- For body content, use ICONS + SHORT Korean labels (2-4 characters each) rather than full sentences.
+  return `🚨🚨🚨 CRITICAL RULE: ONLY USE THE EXACT KOREAN TEXT PROVIDED BELOW 🚨🚨🚨
+You must ONLY render Korean text that appears inside "quotes" in the [TEXT CONTENT] section.
+DO NOT INVENT, GENERATE, OR MAKE UP any Korean text that is not explicitly provided.
+If you need to fill space, use ICONS, ILLUSTRATIONS, DECORATIVE SHAPES, or PATTERNS instead of making up Korean words.
+Any Korean character you render must be copied EXACTLY from the quoted strings below - character by character.
+
+KOREAN TEXT RULES:
+1. ONLY render Korean words that appear in "quotes" below - nothing else
+2. Each Korean syllable must be a REAL word (e.g. 직원, 모집, 복리, 후생 are real; random syllables are NOT)
+3. Use LARGE, CLEAN sans-serif font for all Korean text
+4. Fill remaining space with ICONS and VISUAL ELEMENTS, not more text
+5. When in doubt, use FEWER Korean words, not more
 ${userRequestBlock}
 [IMAGE TYPE]
 ${categoryLabels[category] || 'hospital announcement'}
@@ -983,8 +987,10 @@ ${stylePrompt}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
 ${brandColorBlock}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
-[TEXT CONTENT - THE ONLY SOURCE OF TRUTH FOR ALL TEXT AND NUMBERS]
-⚠️ ONLY render text that appears inside "quotes" below. Everything else is a design instruction.
+[TEXT CONTENT - RENDER ONLY THE TEXT IN "QUOTES"]
+⚠️ The ONLY Korean text allowed in the image is what appears inside "quotes" below.
+⚠️ Everything NOT in quotes is a design instruction - do NOT render it as text.
+⚠️ Do NOT add any extra Korean text beyond what is quoted.
 ${textContent}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
 ${brandingBlock}
@@ -993,17 +999,16 @@ ${hospitalInfoBlock}
 [IMAGE SPECIFICATIONS]
 - Aspect ratio: ${aspectDesc} (ALWAYS use this ratio, IGNORE reference image ratio)
 - Resolution: high quality, crisp text
-- All text in Korean, clearly legible
-- Use large, clean fonts for Korean text (sans-serif preferred for readability)
-- Prefer FEWER words with LARGER font size over many small words
+- Use large, clean sans-serif fonts for Korean text (minimum 24pt equivalent)
+- Fill empty areas with ICONS/ILLUSTRATIONS, NOT with additional text
 
-⛔ FORBIDDEN:
-- Do NOT render labels like "날짜:", "제목:", "[MAIN TITLE]" - only render content in quotes
-- Do NOT copy text/numbers/dates from reference images - use ONLY the data above
-- Do NOT render "PAGE X of Y" or any page numbering on the image
-- No watermarks, no English text (except decorative), no stock photo feel
-- No blurry text, no raw metadata labels
-- No garbled or incorrect Korean characters - if unsure, use an icon instead`.trim();
+⛔ ABSOLUTELY FORBIDDEN:
+- Do NOT invent or generate ANY Korean text not provided in quotes above
+- Do NOT render instruction labels like "[MAIN TITLE]", "[HEADING]", "날짜:", "제목:"
+- Do NOT copy text/numbers/dates from reference images
+- Do NOT render "PAGE X of Y" or any page numbering
+- No garbled, random, or meaningless Korean characters (e.g. 찬당쩡, 맘보행 are WRONG)
+- No watermarks, no unnecessary English text, no stock photo feel`.trim();
 }
 
 function buildScheduleTextContent(data: {
