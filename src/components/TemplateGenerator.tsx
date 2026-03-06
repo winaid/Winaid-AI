@@ -401,6 +401,24 @@ export default function TemplateGenerator() {
           ))}
         </div>
 
+        {/* 팀 선택 탭 */}
+        <div className="flex bg-slate-100 rounded-xl p-1">
+          {TEAM_DATA.map(team => (
+            <button
+              key={team.id}
+              type="button"
+              onClick={() => { setSelectedTeam(selectedTeam === team.id ? null : team.id); setShowHospitalDropdown(true); }}
+              className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-all ${
+                selectedTeam === team.id
+                  ? 'bg-white text-blue-600 shadow-sm'
+                  : 'text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              {team.label}
+            </button>
+          ))}
+        </div>
+
         {/* 병원 정보 (로고 + 병원명 + 위치) */}
         <div className="bg-slate-50 rounded-xl p-3 border border-slate-200 space-y-3">
           <label className="block text-xs font-semibold text-slate-600">병원 브랜딩</label>
@@ -419,72 +437,61 @@ export default function TemplateGenerator() {
                 <input type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
               </label>
             )}
-            <div className="flex-1 relative">
-              {/* 팀 선택 탭 */}
-              <div className="flex bg-slate-100 rounded-lg p-0.5 mb-1.5">
-                {TEAM_DATA.map(team => (
-                  <button
-                    key={team.id}
-                    type="button"
-                    onClick={() => { setSelectedTeam(selectedTeam === team.id ? null : team.id); setShowHospitalDropdown(true); }}
-                    className={`flex-1 py-1 rounded-md text-[10px] font-semibold transition-all ${
-                      selectedTeam === team.id
-                        ? 'bg-white text-blue-600 shadow-sm'
-                        : 'text-slate-500 hover:text-slate-700'
-                    }`}
-                  >
-                    {team.label}
+            {selectedTeam !== null ? (
+              <div className="flex-1 relative">
+                <label className="block text-[10px] font-semibold text-slate-500 mb-1">병원명</label>
+                <div className="relative">
+                  <input type="text" value={hospitalName} onChange={e => setHospitalName(e.target.value)} placeholder="병원명 선택" className="w-full px-3 py-2 pr-8 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-400 bg-white" />
+                  <button type="button" onClick={() => setShowHospitalDropdown(!showHospitalDropdown)} className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 transition-colors">
+                    <svg className={`w-3.5 h-3.5 transition-transform ${showHospitalDropdown ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
                   </button>
-                ))}
-              </div>
-              {/* 병원명 입력/선택 */}
-              <div className="relative">
-                <input type="text" value={hospitalName} onChange={e => setHospitalName(e.target.value)} placeholder="병원명 선택 또는 입력" className="w-full px-3 py-2 pr-8 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-400 bg-white" />
-                <button type="button" onClick={() => setShowHospitalDropdown(!showHospitalDropdown)} className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 transition-colors">
-                  <svg className={`w-3.5 h-3.5 transition-transform ${showHospitalDropdown ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-                </button>
-              </div>
-              {/* 병원 드롭다운 */}
-              {showHospitalDropdown && selectedTeam !== null && (
-                <div className="absolute z-50 mt-1 w-full bg-white rounded-xl border border-slate-200 shadow-lg overflow-hidden">
-                  <div className="px-3 py-1.5 bg-blue-50 border-b border-blue-100">
-                    <span className="text-[10px] font-bold text-blue-600">{TEAM_DATA.find(t => t.id === selectedTeam)?.label}</span>
-                  </div>
-                  {(() => {
-                    const team = TEAM_DATA.find(t => t.id === selectedTeam);
-                    if (!team || team.hospitals.length === 0) {
-                      return <div className="p-3 text-center text-xs text-slate-400">등록된 병원이 없습니다</div>;
-                    }
-                    const managers = [...new Set(team.hospitals.map(h => h.manager))];
-                    return (
-                      <div className="max-h-52 overflow-y-auto">
-                        {managers.map(manager => (
-                          <div key={manager}>
-                            <div className="px-3 py-1.5 bg-slate-50 text-[10px] font-bold text-slate-500 sticky top-0">{manager}</div>
-                            {team.hospitals.filter(h => h.manager === manager).map(hospital => {
-                              const cleanName = hospital.name.replace(/ \(.*\)$/, '');
-                              return (
-                                <button
-                                  key={`${hospital.name}-${hospital.manager}`}
-                                  type="button"
-                                  onClick={() => { setHospitalName(cleanName); setShowHospitalDropdown(false); }}
-                                  className="w-full px-4 py-1.5 text-left text-xs text-slate-700 hover:bg-blue-50 hover:text-blue-700 transition-colors flex items-center justify-between"
-                                >
-                                  <span>{cleanName}</span>
-                                  {hospitalName === cleanName && (
-                                    <svg className="w-3.5 h-3.5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                                  )}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        ))}
-                      </div>
-                    );
-                  })()}
                 </div>
-              )}
-            </div>
+                {/* 병원 드롭다운 */}
+                {showHospitalDropdown && (
+                  <div className="absolute z-50 mt-1 w-full bg-white rounded-xl border border-slate-200 shadow-lg overflow-hidden">
+                    <div className="px-3 py-1.5 bg-blue-50 border-b border-blue-100">
+                      <span className="text-[10px] font-bold text-blue-600">{TEAM_DATA.find(t => t.id === selectedTeam)?.label}</span>
+                    </div>
+                    {(() => {
+                      const team = TEAM_DATA.find(t => t.id === selectedTeam);
+                      if (!team || team.hospitals.length === 0) {
+                        return <div className="p-3 text-center text-xs text-slate-400">등록된 병원이 없습니다</div>;
+                      }
+                      const managers = [...new Set(team.hospitals.map(h => h.manager))];
+                      return (
+                        <div className="max-h-52 overflow-y-auto">
+                          {managers.map(manager => (
+                            <div key={manager}>
+                              <div className="px-3 py-1.5 bg-slate-50 text-[10px] font-bold text-slate-500 sticky top-0">{manager}</div>
+                              {team.hospitals.filter(h => h.manager === manager).map(hospital => {
+                                const cleanName = hospital.name.replace(/ \(.*\)$/, '');
+                                return (
+                                  <button
+                                    key={`${hospital.name}-${hospital.manager}`}
+                                    type="button"
+                                    onClick={() => { setHospitalName(cleanName); setShowHospitalDropdown(false); }}
+                                    className="w-full px-4 py-1.5 text-left text-xs text-slate-700 hover:bg-blue-50 hover:text-blue-700 transition-colors flex items-center justify-between"
+                                  >
+                                    <span>{cleanName}</span>
+                                    {hospitalName === cleanName && (
+                                      <svg className="w-3.5 h-3.5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                                    )}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })()}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="flex-1 flex items-center">
+                <span className="text-xs text-slate-400">← 팀을 먼저 선택하세요</span>
+              </div>
+            )}
           </div>
           {/* 위치 선택 */}
           <div>
