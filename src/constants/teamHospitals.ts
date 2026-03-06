@@ -31,7 +31,16 @@ export const TEAM_DATA: TeamData[] = [
   {
     id: 2,
     label: '2팀',
-    hospitals: [],
+    hospitals: [
+      { name: '최창수치과', manager: '미정' },
+      { name: '다대치과', manager: '미정' },
+      { name: 'A플란트치과', manager: '미정' },
+      { name: '유성온치과', manager: '미정' },
+      { name: '에이스플란트치과', manager: '진희' },
+      { name: '신사이사랑치과', manager: '진희' },
+      { name: '동그라미치과', manager: '진희' },
+      { name: '청담클린치과', manager: '진희' },
+    ],
   },
   {
     id: 3,
