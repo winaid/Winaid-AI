@@ -73,7 +73,7 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
   const [learnedStyleId, setLearnedStyleId] = useState<string | undefined>(undefined);
   
   // 🗞️ 보도자료용 state
-  const [hospitalName, setHospitalName] = useState<string>('');
+  const [hospitalName, setHospitalName] = useState<string>(() => localStorage.getItem('hospitalName') || '');
   const [hospitalWebsite, setHospitalWebsite] = useState<string>('');
   const [doctorName, setDoctorName] = useState<string>('');
   const [doctorTitle, setDoctorTitle] = useState<string>('원장');
@@ -135,8 +135,8 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
       // ❓ FAQ 옵션
       includeFaq: postType === 'blog' ? includeFaq : undefined,
       faqCount: postType === 'blog' && includeFaq ? faqCount : undefined,
-      // 🗞️ 보도자료용 필드
-      hospitalName: postType === 'press_release' ? hospitalName : undefined,
+      // 🏥 병원명 (공통)
+      hospitalName: hospitalName || undefined,
       hospitalWebsite: postType === 'press_release' ? hospitalWebsite : undefined,
       doctorName: postType === 'press_release' ? doctorName : undefined,
       doctorTitle: postType === 'press_release' ? doctorTitle : undefined,
@@ -239,6 +239,11 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
       
       <form onSubmit={handleSubmit} className="space-y-5">
 
+        <div>
+          <label className={labelCls}>병원명</label>
+          <input type="text" value={hospitalName} onChange={(e) => { setHospitalName(e.target.value); localStorage.setItem('hospitalName', e.target.value); }} placeholder="서울OO치과" className={inputCls} />
+        </div>
+
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className={labelCls}>진료과</label>
@@ -334,15 +339,9 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
                   <p className="text-[11px] text-slate-500 bg-white rounded-lg p-2.5 border border-slate-200">
                     본 보도자료는 홍보 목적의 자료이며, 의학적 조언이나 언론 보도로 사용될 경우 법적 책임은 사용자에게 있습니다.
                   </p>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className={labelCls}>병원명</label>
-                      <input type="text" value={hospitalName} onChange={(e) => setHospitalName(e.target.value)} placeholder="서울OO치과" className={inputCls} />
-                    </div>
-                    <div>
-                      <label className={labelCls}>의료진</label>
-                      <input type="text" value={doctorName} onChange={(e) => setDoctorName(e.target.value)} placeholder="홍길동" className={inputCls} />
-                    </div>
+                  <div>
+                    <label className={labelCls}>의료진</label>
+                    <input type="text" value={doctorName} onChange={(e) => setDoctorName(e.target.value)} placeholder="홍길동" className={inputCls} />
                   </div>
                   <div>
                     <label className={labelCls}>병원 웹사이트 <span className="text-slate-400 font-normal">(선택)</span></label>
