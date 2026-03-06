@@ -179,8 +179,8 @@ export default function ImageGenerator({ onProgress }: Props) {
             </div>
           </div>
           <div className="flex bg-slate-100 rounded-xl p-1">
-            <button onClick={() => setMode('free')} className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-500 hover:text-slate-700 transition-all">자유 입력</button>
             <button className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 text-white shadow-sm">템플릿</button>
+            <button onClick={() => setMode('free')} className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-500 hover:text-slate-700 transition-all">자유 입력</button>
           </div>
         </div>
         <div className="flex-1 overflow-hidden">
@@ -206,8 +206,8 @@ export default function ImageGenerator({ onProgress }: Props) {
           </div>
         </div>
         <div className="flex bg-slate-100 rounded-xl p-1">
-          <button className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 text-white shadow-sm">자유 입력</button>
           <button onClick={() => setMode('template')} className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-500 hover:text-slate-700 transition-all">템플릿</button>
+          <button className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 text-white shadow-sm">자유 입력</button>
         </div>
       </div>
 
