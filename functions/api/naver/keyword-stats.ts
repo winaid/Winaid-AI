@@ -40,12 +40,11 @@ async function getSearchVolume(
   const uri = '/keywordstool';
   const signature = await generateSignature(timestamp, method, uri, secret);
 
-  const params = new URLSearchParams({
-    hintKeywords: keywords.join(','),
-    showDetail: '1',
-  });
-
-  const url = `https://api.searchad.naver.com${uri}?${params.toString()}`;
+  // URLSearchParams는 공백을 +로 인코딩 → 네이버 API가 거부
+  // encodeURIComponent 사용하여 %20으로 인코딩
+  const cleanKeywords = keywords.map(k => k.trim()).filter(Boolean);
+  const hintParam = encodeURIComponent(cleanKeywords.join(','));
+  const url = `https://api.searchad.naver.com${uri}?hintKeywords=${hintParam}&showDetail=1`;
 
   const response = await fetch(url, {
     method: 'GET',
