@@ -522,8 +522,7 @@ ${wantsHumanize ? `
         </button>
         <button
           onClick={() => setMode('chat')}
-          disabled={!refinedContent}
-          className={`flex-1 py-2.5 px-4 rounded-lg font-bold text-xs transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed ${
+          className={`flex-1 py-2.5 px-4 rounded-lg font-bold text-xs transition-all duration-200 ${
             mode === 'chat'
               ? darkMode ? 'bg-blue-600 text-white shadow-sm' : 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg shadow-blue-500/25'
               : darkMode
@@ -531,7 +530,7 @@ ${wantsHumanize ? `
               : 'text-slate-500 hover:text-slate-700 hover:bg-white'
           }`}
         >
-          채팅 수정 {!refinedContent && <span className="text-[10px] ml-1">(먼저 보정 실행)</span>}
+          채팅 수정
         </button>
       </div>
 
