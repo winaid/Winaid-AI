@@ -715,14 +715,15 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
 
         {/* 제목/키워드 입력 */}
         <div className="space-y-2.5">
-          <label className={labelCls}>{postType === 'press_release' ? '기사 제목' : '블로그 제목'}</label>
-          <input type="text" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder={postType === 'press_release' ? '기사 주제 (예: 디지털 임플란트 도입 성과)' : '글 제목 (예: 치아미백 종류와 비용 총정리)'} className={`${inputCls} !text-base !font-semibold`} required />
-          <input type="text" value={keywords} onChange={(e) => setKeywords(e.target.value)} placeholder="SEO 키워드 (예: 강남 치과, 임플란트 가격)" className={inputCls} />
+          <label className={labelCls}>{postType === 'press_release' ? '기사 제목' : postType === 'card_news' ? '카드뉴스 주제' : '블로그 제목'}</label>
+          <input type="text" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder={postType === 'press_release' ? '기사 주제 (예: 디지털 임플란트 도입 성과)' : postType === 'card_news' ? '주제 (예: 임플란트 시술 과정 안내)' : '글 제목 (예: 치아미백 종류와 비용 총정리)'} className={`${inputCls} !text-base !font-semibold`} required />
+          {postType !== 'card_news' && <input type="text" value={keywords} onChange={(e) => setKeywords(e.target.value)} placeholder="SEO 키워드 (예: 강남 치과, 임플란트 가격)" className={inputCls} />}
           {postType === 'blog' && (
             <input type="text" value={disease} onChange={(e) => setDisease(e.target.value)} placeholder="질환명 (예: 치주염, 충치, 부정교합) - 글의 실제 주제" className={inputCls} />
           )}
 
-          {/* 소제목 직접 입력 */}
+          {/* 소제목 직접 입력 - 블로그/언론보도만 */}
+          {postType !== 'card_news' && (
           <div className="p-3 bg-white rounded-xl border border-slate-200">
             <div className="flex items-center justify-between mb-1.5">
               <label className="text-xs font-semibold text-slate-600">소제목 직접 입력 <span className="text-slate-400 font-normal">(선택)</span></label>
@@ -738,9 +739,10 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
             />
             <p className="text-[10px] text-slate-400 mt-1">입력 시 AI가 그대로 사용합니다. 미입력 시 자동 생성.</p>
           </div>
+          )}
 
           <button type="button" onClick={handleRecommendTitles} disabled={isLoadingTitles || !topic} className="w-full py-2.5 bg-blue-600 text-white rounded-xl text-xs font-semibold hover:bg-blue-700 transition-all disabled:opacity-40">
-            {isLoadingTitles ? '생성 중...' : 'AI 제목 추천받기'}
+            {isLoadingTitles ? '생성 중...' : postType === 'card_news' ? 'AI 주제 추천받기' : 'AI 제목 추천받기'}
           </button>
 
           {seoTitles.length > 0 && (
