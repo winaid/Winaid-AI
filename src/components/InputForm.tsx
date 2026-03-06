@@ -211,13 +211,15 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
   };
 
   const handleRecommendTitles = async () => {
-    if (!topic || !keywords) return;
+    if (!topic) return;
     setIsLoadingTitles(true);
     setSeoTitles([]);
     try {
         // postType에 따라 블로그/카드뉴스용 제목 추천
         // press_release는 blog로 처리
-        const titles = await recommendSeoTitles(topic, keywords, postType === 'press_release' ? 'blog' : postType);
+        // keywords가 없으면 disease(질환명)을 키워드 대신 사용
+        const keywordsForSeo = keywords || disease || topic;
+        const titles = await recommendSeoTitles(topic, keywordsForSeo, postType === 'press_release' ? 'blog' : postType);
         const sortedTitles = titles.sort((a, b) => b.score - a.score);
         setSeoTitles(sortedTitles);
     } catch (e) {
@@ -667,7 +669,7 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
           {trendingItems.length > 0 && (
             <div className="space-y-1.5 mb-3">
               {trendingItems.map((item, idx) => (
-                <button key={idx} type="button" onClick={() => { setTopic(item.topic); setKeywords(item.keywords); }} className="w-full text-left p-3 bg-white border border-slate-100 rounded-xl hover:border-blue-400 transition-all group relative">
+                <button key={idx} type="button" onClick={() => { setDisease(item.topic); }} className="w-full text-left p-3 bg-white border border-slate-100 rounded-xl hover:border-blue-400 transition-all group relative">
                    <div className="absolute top-2 right-2 text-[10px] font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md">
                       SEO {item.score}
                    </div>
