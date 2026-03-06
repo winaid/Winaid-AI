@@ -761,7 +761,7 @@ export default function TemplateGenerator() {
       </div>
 
       {/* 오른쪽: 미리보기 */}
-      <div className="flex-1 flex flex-col items-center justify-center overflow-y-auto">
+      <div className="flex-1 flex flex-col items-center overflow-y-auto pt-6">
         {error&&<div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">{error}</div>}
         {generating ? (
           <div className="flex flex-col items-center justify-center gap-6 animate-fade-in">
