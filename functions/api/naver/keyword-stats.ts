@@ -49,14 +49,12 @@ async function getSearchVolume(
     return { data: {}, error: 'hintKeywords: 유효한 키워드 없음 (정제 후)' };
   }
 
-  // 공백을 제거하여 키워드를 붙여쓰기 (네이버 키워드 도구는 공백 없는 키워드도 동일 결과)
-  // 예: "다대동 치과" → "다대동치과"
-  const noSpaceKeywords = cleanKeywords.map(k => k.replace(/\s+/g, ''));
-  const keywordParam = noSpaceKeywords.join(',');
+  // 공백을 +로 변환 (application/x-www-form-urlencoded 형식)
+  const keywordParam = cleanKeywords.map(k => k.replace(/ /g, '+')).join(',');
   const fetchUrl = `https://api.searchad.naver.com${uri}?hintKeywords=${keywordParam}&showDetail=1`;
 
-  console.log('[SearchAd v4] keywords:', noSpaceKeywords.join(', '));
-  console.log('[SearchAd v4] URL:', fetchUrl.substring(0, 500));
+  console.log('[SearchAd v5] keywords:', cleanKeywords.join(', '));
+  console.log('[SearchAd v5] URL:', fetchUrl.substring(0, 500));
 
   const response = await fetch(fetchUrl, {
     method: 'GET',
@@ -89,7 +87,13 @@ async function getSearchVolume(
   for (const item of data.keywordList || []) {
     const pc = item.monthlyPcQcCnt === '< 10' ? 5 : Number(item.monthlyPcQcCnt) || 0;
     const mobile = item.monthlyMobileQcCnt === '< 10' ? 5 : Number(item.monthlyMobileQcCnt) || 0;
+    // 원본 키워드(공백 포함)와 API 반환 키워드 모두 저장하여 매칭률 높임
     result[item.relKeyword] = { monthlyPcQcCnt: pc, monthlyMobileQcCnt: mobile };
+    // 공백 제거 버전도 저장 (공백 차이로 매칭 실패 방지)
+    const noSpace = item.relKeyword.replace(/\s+/g, '');
+    if (noSpace !== item.relKeyword) {
+      result[noSpace] = { monthlyPcQcCnt: pc, monthlyMobileQcCnt: mobile };
+    }
   }
   return { data: result };
 }
@@ -163,9 +167,9 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       }
     }
 
-    // 3) 결합
+    // 3) 결합 (공백 유무 관계없이 매칭)
     const results = keywords.map((kw) => {
-      const vol = allVolumes[kw];
+      const vol = allVolumes[kw] || allVolumes[kw.replace(/\s+/g, '')];
       const pc = vol?.monthlyPcQcCnt || 0;
       const mobile = vol?.monthlyMobileQcCnt || 0;
       return {
