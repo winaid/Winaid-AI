@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   generateTemplateWithAI,
   AI_STYLE_PRESETS,
+  CATEGORY_TEMPLATES,
   loadStyleHistory,
   saveStyleToHistory,
   deleteStyleFromHistory,
@@ -11,9 +12,9 @@ import {
   type ShortenedDay,
   type VacationDay,
   type StylePreset,
+  type CategoryTemplate,
   type SavedStyleHistory,
 } from '../services/calendarTemplateService';
-import { TEAM_DATA } from '../constants/teamHospitals';
 
 type DayMark = 'closed' | 'shortened' | 'vacation';
 type TemplateCategory = 'schedule' | 'event' | 'doctor' | 'notice' | 'greeting' | 'hiring' | 'caution';
@@ -45,15 +46,310 @@ const inputCls = 'w-full px-3 py-2 border border-slate-200 rounded-lg text-sm fo
 const textareaCls = `${inputCls} resize-none`;
 const labelCls = 'block text-xs font-semibold text-slate-600 mb-1';
 
+// SVG 미리보기 - 카테고리별 다른 레이아웃
+function TemplateSVGPreview({ template: t, category, hospitalName }: { template: CategoryTemplate; category: TemplateCategory; hospitalName: string }) {
+  const c = t.color;
+  const a = t.accent;
+  const mo = new Date().getMonth() + 1;
+  const name = hospitalName || '윈에이드 치과';
+
+  // 공통 SVG 래퍼
+  const wrap = (children: React.ReactNode) => (
+    <svg viewBox="0 0 120 160" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id={`bg_${t.id}`} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor={t.bg} />
+          <stop offset="100%" stopColor="white" />
+        </linearGradient>
+      </defs>
+      <rect width="120" height="160" fill={`url(#bg_${t.id})`} rx="4" />
+      {children}
+    </svg>
+  );
+
+  if (category === 'schedule') {
+    const hint = t.layoutHint;
+    if (hint === 'calendar') {
+      return wrap(<>
+        <text x="60" y="14" textAnchor="middle" fontSize="5" fontWeight="bold" fill={a}>{name}</text>
+        <text x="60" y="24" textAnchor="middle" fontSize="7" fontWeight="800" fill={c}>{mo}월 진료안내</text>
+        <rect x="8" y="30" width="104" height="80" rx="3" fill="white" fillOpacity="0.85" stroke={c} strokeOpacity="0.2" strokeWidth="0.5" />
+        {['일','월','화','수','목','금','토'].map((d, i) => (
+          <text key={d} x={16 + i * 14} y="39" textAnchor="middle" fontSize="3.5" fontWeight="bold" fill={i === 0 ? '#ef4444' : i === 6 ? '#3b82f6' : '#94a3b8'}>{d}</text>
+        ))}
+        {[0,1,2,3,4].map(row => Array.from({length: 7}, (_, col) => {
+          const day = row * 7 + col + 1;
+          if (day > 31) return null;
+          const isClosed = day === 9 || day === 15;
+          const isShort = day === 22;
+          return <g key={`${row}-${col}`}>
+            {isClosed && <circle cx={16 + col * 14} cy={48 + row * 10} r="5" fill={c} fillOpacity="0.15" />}
+            {isShort && <circle cx={16 + col * 14} cy={48 + row * 10} r="5" fill="#f59e0b" fillOpacity="0.15" />}
+            <text x={16 + col * 14} y={50 + row * 10} textAnchor="middle" fontSize="4" fontWeight={isClosed || isShort ? '800' : '400'} fill={isClosed ? c : isShort ? '#f59e0b' : col === 0 ? '#fca5a5' : '#64748b'}>{day}</text>
+          </g>;
+        }))}
+        <rect x="15" y="118" width="90" height="10" rx="3" fill={c} fillOpacity="0.1" />
+        <text x="60" y="125" textAnchor="middle" fontSize="4" fontWeight="700" fill={c}>진료시간 안내</text>
+        <rect x="15" y="135" width="90" height="14" rx="3" fill={c} fillOpacity="0.08" />
+        <text x="60" y="144" textAnchor="middle" fontSize="3.5" fontWeight="600" fill={a}>TEL 02-1234-5678</text>
+      </>);
+    }
+    if (hint === 'card') {
+      return wrap(<>
+        <text x="60" y="14" textAnchor="middle" fontSize="5" fontWeight="bold" fill={a}>{name}</text>
+        <text x="60" y="26" textAnchor="middle" fontSize="8" fontWeight="800" fill={c}>{mo}월 휴진 안내</text>
+        <rect x="10" y="34" width="45" height="40" rx="5" fill={c} fillOpacity="0.1" />
+        <text x="32" y="52" textAnchor="middle" fontSize="14" fontWeight="800" fill={c}>9</text>
+        <text x="32" y="65" textAnchor="middle" fontSize="4" fontWeight="600" fill={a}>휴진</text>
+        <rect x="65" y="34" width="45" height="40" rx="5" fill="#ef4444" fillOpacity="0.1" />
+        <text x="87" y="52" textAnchor="middle" fontSize="14" fontWeight="800" fill="#ef4444">15</text>
+        <text x="87" y="65" textAnchor="middle" fontSize="4" fontWeight="600" fill="#dc2626">휴진</text>
+        <rect x="10" y="80" width="100" height="24" rx="4" fill="white" fillOpacity="0.8" />
+        <text x="60" y="92" textAnchor="middle" fontSize="4" fontWeight="600" fill="#64748b">22일 (토) 단축진료 10:00~14:00</text>
+        <text x="60" y="100" textAnchor="middle" fontSize="3.5" fill="#94a3b8">불편을 드려 죄송합니다</text>
+        <rect x="15" y="115" width="90" height="12" rx="4" fill={c} fillOpacity="0.12" />
+        <text x="60" y="123" textAnchor="middle" fontSize="4" fontWeight="700" fill={c}>예약 및 내원 안내</text>
+        <rect x="25" y="135" width="70" height="14" rx="4" fill={c} fillOpacity="0.08" />
+        <text x="60" y="144" textAnchor="middle" fontSize="3.5" fontWeight="600" fill={a}>TEL 02-1234-5678</text>
+      </>);
+    }
+    if (hint === 'highlight') {
+      return wrap(<>
+        <text x="60" y="14" textAnchor="middle" fontSize="5" fontWeight="bold" fill={a}>{name}</text>
+        <rect x="15" y="22" width="90" height="30" rx="6" fill={c} fillOpacity="0.12" />
+        <text x="60" y="38" textAnchor="middle" fontSize="12" fontWeight="900" fill={c}>9 / 15</text>
+        <text x="60" y="47" textAnchor="middle" fontSize="5" fontWeight="600" fill={a}>{mo}월 휴진일</text>
+        <rect x="20" y="58" width="80" height="14" rx="3" fill="#f59e0b" fillOpacity="0.1" />
+        <text x="60" y="67" textAnchor="middle" fontSize="5" fontWeight="700" fill="#d97706">22일 단축진료</text>
+        {[{y:80,t:'평일 09:30 ~ 18:00'},{y:90,t:'토요일 09:30 ~ 14:00'},{y:100,t:'점심시간 13:00 ~ 14:00'}].map(({y,t}) => (
+          <text key={y} x="60" y={y} textAnchor="middle" fontSize="4" fill="#64748b">{t}</text>
+        ))}
+        <rect x="20" y="112" width="80" height="16" rx="4" fill={c} fillOpacity="0.1" />
+        <text x="60" y="122" textAnchor="middle" fontSize="4" fontWeight="700" fill={c}>TEL 02-1234-5678</text>
+        <text x="60" y="145" textAnchor="middle" fontSize="3.5" fill="#94a3b8">불편을 드려 죄송합니다</text>
+      </>);
+    }
+    // list layout
+    return wrap(<>
+      <text x="60" y="14" textAnchor="middle" fontSize="5" fontWeight="bold" fill={a}>{name}</text>
+      <text x="60" y="26" textAnchor="middle" fontSize="7" fontWeight="800" fill={c}>{mo}월 진료 안내</text>
+      {[
+        {d:'9일 (월)', s:'휴진', sc:'#ef4444'},
+        {d:'15일 (일)', s:'휴진', sc:'#ef4444'},
+        {d:'22일 (토)', s:'단축진료', sc:'#f59e0b'},
+      ].map(({d,s,sc}, i) => (<g key={i}>
+        <rect x="12" y={36 + i * 18} width="96" height="14" rx="3" fill="white" fillOpacity="0.8" />
+        <rect x="14" y={38 + i * 18} width="30" height="10" rx="2" fill={sc} fillOpacity="0.15" />
+        <text x="29" y={45 + i * 18} textAnchor="middle" fontSize="4" fontWeight="700" fill={sc}>{d}</text>
+        <text x="70" y={45 + i * 18} textAnchor="middle" fontSize="4.5" fontWeight="700" fill={sc}>{s}</text>
+      </g>))}
+      <line x1="20" y1="95" x2="100" y2="95" stroke={c} strokeOpacity="0.2" strokeWidth="0.5" />
+      {[{y:105,t:'평일 09:30 ~ 18:00'},{y:113,t:'토요일 09:30 ~ 14:00'}].map(({y,t}) => (
+        <text key={y} x="60" y={y} textAnchor="middle" fontSize="4" fill="#64748b">{t}</text>
+      ))}
+      <rect x="20" y="125" width="80" height="14" rx="4" fill={c} fillOpacity="0.1" />
+      <text x="60" y="134" textAnchor="middle" fontSize="4" fontWeight="700" fill={c}>TEL 02-1234-5678</text>
+    </>);
+  }
+
+  if (category === 'event') {
+    return wrap(<>
+      <text x="60" y="14" textAnchor="middle" fontSize="5" fontWeight="bold" fill={a}>{name}</text>
+      <text x="60" y="28" textAnchor="middle" fontSize="8" fontWeight="800" fill={c}>임플란트 이벤트</text>
+      {t.layoutHint === 'price' && <>
+        <rect x="25" y="38" width="70" height="30" rx="6" fill={c} fillOpacity="0.1" />
+        <text x="60" y="48" textAnchor="middle" fontSize="4" fill="#94a3b8" textDecoration="line-through">990,000원</text>
+        <text x="60" y="60" textAnchor="middle" fontSize="9" fontWeight="900" fill={c}>690,000원</text>
+        <rect x="75" y="32" width="22" height="12" rx="6" fill={c} />
+        <text x="86" y="40" textAnchor="middle" fontSize="5" fontWeight="800" fill="white">30%</text>
+      </>}
+      {t.layoutHint === 'elegant' && <>
+        <line x1="30" y1="35" x2="90" y2="35" stroke={c} strokeOpacity="0.3" strokeWidth="0.5" />
+        <text x="60" y="50" textAnchor="middle" fontSize="5" fill={a}>Special Price</text>
+        <text x="60" y="65" textAnchor="middle" fontSize="10" fontWeight="800" fill={c}>690,000원</text>
+        <line x1="30" y1="72" x2="90" y2="72" stroke={c} strokeOpacity="0.3" strokeWidth="0.5" />
+      </>}
+      {t.layoutHint === 'pop' && <>
+        <circle cx="60" cy="55" r="22" fill={c} fillOpacity="0.15" />
+        <text x="60" y="51" textAnchor="middle" fontSize="6" fontWeight="800" fill={c}>30% OFF</text>
+        <text x="60" y="62" textAnchor="middle" fontSize="5" fontWeight="700" fill={a}>690,000원</text>
+      </>}
+      {!['price','elegant','pop'].includes(t.layoutHint) && <>
+        <rect x="15" y="38" width="90" height="36" rx="5" fill="white" fillOpacity="0.8" />
+        <text x="60" y="53" textAnchor="middle" fontSize="5" fill={a}>{t.layoutHint === 'minimal' ? 'Special Offer' : t.layoutHint === 'wave' ? 'Limited Time' : 'Season Event'}</text>
+        <text x="60" y="66" textAnchor="middle" fontSize="8" fontWeight="800" fill={c}>690,000원</text>
+      </>}
+      <text x="60" y="90" textAnchor="middle" fontSize="4" fill="#64748b">2025.03.01 ~ 03.31</text>
+      <rect x="20" y="100" width="80" height="12" rx="4" fill={c} fillOpacity="0.1" />
+      <text x="60" y="108" textAnchor="middle" fontSize="4" fontWeight="600" fill={c}>지금 바로 예약하세요</text>
+      <text x="60" y="135" textAnchor="middle" fontSize="3.5" fill="#94a3b8">TEL 02-1234-5678</text>
+    </>);
+  }
+
+  if (category === 'doctor') {
+    return wrap(<>
+      <text x="60" y="14" textAnchor="middle" fontSize="5" fontWeight="bold" fill={a}>{name}</text>
+      {t.layoutHint === 'split' ? <>
+        <rect x="5" y="22" width="50" height="90" rx="4" fill={c} fillOpacity="0.1" />
+        <circle cx="30" cy="55" r="16" fill={c} fillOpacity="0.15" />
+        <text x="30" y="58" textAnchor="middle" fontSize="6" fill={c}>PHOTO</text>
+        <text x="85" y="40" textAnchor="middle" fontSize="7" fontWeight="800" fill={c}>김윈에이드</text>
+        <text x="85" y="50" textAnchor="middle" fontSize="4" fill={a}>치과 전문의</text>
+        {['서울대 치대 졸업','임플란트 전문','10년 경력'].map((t2,i) => (
+          <text key={i} x="85" y={62 + i * 9} textAnchor="middle" fontSize="3.5" fill="#64748b">{t2}</text>
+        ))}
+      </> : t.layoutHint === 'luxury' ? <>
+        <rect x="5" y="20" width="110" height="120" rx="4" fill="#1a1a2e" />
+        <circle cx="60" cy="55" r="18" fill="#d4a017" fillOpacity="0.15" stroke="#d4a017" strokeOpacity="0.3" strokeWidth="0.5" />
+        <text x="60" y="58" textAnchor="middle" fontSize="6" fill="#d4a017">PHOTO</text>
+        <text x="60" y="85" textAnchor="middle" fontSize="7" fontWeight="800" fill="#d4a017">김윈에이드</text>
+        <text x="60" y="95" textAnchor="middle" fontSize="4" fill="#b8860b">치과 전문의</text>
+        <text x="60" y="108" textAnchor="middle" fontSize="3.5" fill="#94a3b8">서울대 치대 | 임플란트 전문</text>
+        <text x="60" y="130" textAnchor="middle" fontSize="3.5" fill="#d4a017">{name}</text>
+      </> : <>
+        <circle cx="60" cy="52" r="18" fill={c} fillOpacity="0.1" stroke={c} strokeOpacity="0.2" strokeWidth="0.5" />
+        <text x="60" y="55" textAnchor="middle" fontSize="6" fill={c}>PHOTO</text>
+        <text x="60" y="82" textAnchor="middle" fontSize="7" fontWeight="800" fill={c}>김윈에이드</text>
+        <text x="60" y="92" textAnchor="middle" fontSize="4.5" fill={a}>치과 전문의</text>
+        {['서울대 치의학 박사','임플란트 10,000+ 케이스','대한치과의사협회 정회원'].map((t2,i) => (
+          <text key={i} x="60" y={104 + i * 9} textAnchor="middle" fontSize="3.5" fill="#64748b">{t2}</text>
+        ))}
+        <text x="60" y="145" textAnchor="middle" fontSize="3.5" fontWeight="600" fill={a}>{name}</text>
+      </>}
+    </>);
+  }
+
+  if (category === 'notice') {
+    return wrap(<>
+      <text x="60" y="14" textAnchor="middle" fontSize="5" fontWeight="bold" fill={a}>{name}</text>
+      {t.layoutHint === 'alert' ? <>
+        <rect x="10" y="22" width="100" height="18" rx="4" fill={c} fillOpacity="0.12" />
+        <text x="60" y="34" textAnchor="middle" fontSize="7" fontWeight="800" fill={c}>진료실 이전 안내</text>
+      </> : t.layoutHint === 'formal' ? <>
+        <line x1="10" y1="22" x2="110" y2="22" stroke="#1f2937" strokeWidth="1.5" />
+        <text x="60" y="35" textAnchor="middle" fontSize="7" fontWeight="800" fill="#1f2937">공 지 사 항</text>
+        <line x1="10" y1="40" x2="110" y2="40" stroke="#1f2937" strokeWidth="0.5" />
+      </> : <>
+        <text x="60" y="32" textAnchor="middle" fontSize="7" fontWeight="800" fill={c}>진료실 이전 안내</text>
+      </>}
+      <rect x="12" y={t.layoutHint === 'formal' ? 46 : 42} width="96" height="60" rx="3" fill="white" fillOpacity="0.7" />
+      {['2025년 4월 1일부터','새로운 장소에서 진료합니다.','','신주소: 서울시 강남구 ...','문의: 02-1234-5678'].map((line, i) => (
+        <text key={i} x="60" y={(t.layoutHint === 'formal' ? 56 : 52) + i * 10} textAnchor="middle" fontSize="4" fill={i === 0 ? c : '#64748b'} fontWeight={i === 0 ? '700' : '400'}>{line}</text>
+      ))}
+      <text x="60" y="120" textAnchor="middle" fontSize="3.5" fill="#94a3b8">불편을 드려 죄송합니다</text>
+      <rect x="25" y="130" width="70" height="14" rx="4" fill={c} fillOpacity="0.1" />
+      <text x="60" y="139" textAnchor="middle" fontSize="3.5" fontWeight="600" fill={a}>{name}</text>
+    </>);
+  }
+
+  if (category === 'greeting') {
+    return wrap(<>
+      {t.layoutHint === 'traditional' ? <>
+        <rect x="8" y="8" width="104" height="144" rx="3" fill="white" fillOpacity="0.5" stroke={c} strokeOpacity="0.3" strokeWidth="1" />
+        <rect x="12" y="12" width="96" height="136" rx="2" fill="none" stroke={c} strokeOpacity="0.15" strokeWidth="0.5" strokeDasharray="2 1" />
+        <text x="60" y="40" textAnchor="middle" fontSize="9" fontWeight="800" fill={c}>새해 복</text>
+        <text x="60" y="55" textAnchor="middle" fontSize="9" fontWeight="800" fill={c}>많이 받으세요</text>
+        <text x="60" y="80" textAnchor="middle" fontSize="4" fill={a}>건강하고 행복한 한 해 되시길</text>
+        <text x="60" y="88" textAnchor="middle" fontSize="4" fill={a}>진심으로 기원합니다</text>
+        <line x1="35" y1="100" x2="85" y2="100" stroke={c} strokeOpacity="0.2" strokeWidth="0.5" />
+        <text x="60" y="112" textAnchor="middle" fontSize="4" fill="#64748b">휴진: 1/28(화) ~ 1/30(목)</text>
+        <text x="60" y="130" textAnchor="middle" fontSize="4.5" fontWeight="600" fill={a}>{name}</text>
+      </> : t.layoutHint === 'luxury' ? <>
+        <rect x="5" y="5" width="110" height="150" rx="3" fill="#1a1a2e" />
+        <text x="60" y="45" textAnchor="middle" fontSize="9" fontWeight="800" fill="#d4a017">새해 복</text>
+        <text x="60" y="60" textAnchor="middle" fontSize="9" fontWeight="800" fill="#d4a017">많이 받으세요</text>
+        <text x="60" y="85" textAnchor="middle" fontSize="4" fill="#b8860b">건강과 행복이 가득하길</text>
+        <line x1="35" y1="95" x2="85" y2="95" stroke="#d4a017" strokeOpacity="0.3" strokeWidth="0.5" />
+        <text x="60" y="110" textAnchor="middle" fontSize="3.5" fill="#94a3b8">휴진: 1/28(화) ~ 1/30(목)</text>
+        <text x="60" y="130" textAnchor="middle" fontSize="4" fontWeight="600" fill="#d4a017">{name}</text>
+      </> : <>
+        <text x="60" y="14" textAnchor="middle" fontSize="5" fontWeight="bold" fill={a}>{name}</text>
+        <text x="60" y="50" textAnchor="middle" fontSize="9" fontWeight="800" fill={c}>새해 복</text>
+        <text x="60" y="65" textAnchor="middle" fontSize="9" fontWeight="800" fill={c}>많이 받으세요</text>
+        <text x="60" y="85" textAnchor="middle" fontSize="4" fill={a}>건강하고 행복한 한 해 되시길</text>
+        <text x="60" y="93" textAnchor="middle" fontSize="4" fill={a}>진심으로 기원합니다</text>
+        <line x1="35" y1="105" x2="85" y2="105" stroke={c} strokeOpacity="0.2" strokeWidth="0.5" />
+        <text x="60" y="118" textAnchor="middle" fontSize="3.5" fill="#64748b">휴진: 1/28(화) ~ 1/30(목)</text>
+        <text x="60" y="140" textAnchor="middle" fontSize="3.5" fill="#94a3b8">{name}</text>
+      </>}
+    </>);
+  }
+
+  if (category === 'hiring') {
+    return wrap(<>
+      <text x="60" y="14" textAnchor="middle" fontSize="5" fontWeight="bold" fill={a}>{name}</text>
+      {t.layoutHint === 'urgent' ? <>
+        <rect x="15" y="20" width="90" height="18" rx="4" fill={c} />
+        <text x="60" y="32" textAnchor="middle" fontSize="7" fontWeight="800" fill="white">HIRING NOW</text>
+      </> : <>
+        <text x="60" y="32" textAnchor="middle" fontSize="7" fontWeight="800" fill={c}>간호사 모집</text>
+      </>}
+      <text x="60" y="50" textAnchor="middle" fontSize="4.5" fill={a}>함께 성장할 인재를 찾습니다</text>
+      <rect x="12" y="56" width="96" height="60" rx="4" fill="white" fillOpacity="0.7" />
+      {['정규직 / 경력 1년 이상','4대보험 / 중식 제공','인센티브 / 연차 보장','채용시까지 상시 모집'].map((line, i) => (
+        <text key={i} x="60" y={68 + i * 12} textAnchor="middle" fontSize="4" fill="#64748b">{line}</text>
+      ))}
+      <rect x="25" y="125" width="70" height="14" rx="4" fill={c} fillOpacity="0.12" />
+      <text x="60" y="134" textAnchor="middle" fontSize="4" fontWeight="700" fill={c}>지원하기</text>
+      <text x="60" y="150" textAnchor="middle" fontSize="3.5" fill="#94a3b8">TEL 02-1234-5678</text>
+    </>);
+  }
+
+  if (category === 'caution') {
+    return wrap(<>
+      <text x="60" y="14" textAnchor="middle" fontSize="5" fontWeight="bold" fill={a}>{name}</text>
+      {t.layoutHint === 'warning' ? <>
+        <rect x="15" y="20" width="90" height="16" rx="3" fill={c} fillOpacity="0.12" />
+        <text x="60" y="30" textAnchor="middle" fontSize="6" fontWeight="800" fill={c}>시술 후 주의사항</text>
+      </> : <>
+        <text x="60" y="30" textAnchor="middle" fontSize="6" fontWeight="800" fill={c}>시술 후 주의사항</text>
+      </>}
+      {t.layoutHint === 'checklist' || t.layoutHint === 'card' ? <>
+        {['시술 부위를 혀로 건드리지 마세요','당일 음주/흡연은 피해주세요','부기/출혈은 2~3일 내 소실','딱딱한 음식은 일주일간 금지'].map((item, i) => (
+          <g key={i}>
+            <rect x="12" y={40 + i * 22} width="96" height="18" rx="3" fill="white" fillOpacity="0.7" stroke={c} strokeOpacity="0.1" strokeWidth="0.3" />
+            <circle cx="22" cy={49 + i * 22} r="3" fill={c} fillOpacity="0.15" />
+            <text x="22" y={51 + i * 22} textAnchor="middle" fontSize="4" fontWeight="700" fill={c}>{i + 1}</text>
+            <text x="30" y={51 + i * 22} fontSize="3.8" fill="#475569">{item}</text>
+          </g>
+        ))}
+      </> : t.layoutHint === 'timeline' ? <>
+        <line x1="20" y1="40" x2="20" y2="120" stroke={c} strokeOpacity="0.3" strokeWidth="0.8" />
+        {[{d:'당일',t:'혀로 건드리지 마세요'},{d:'1주일',t:'딱딱한 음식 금지'},{d:'2주일',t:'정상 식사 가능'},{d:'1개월',t:'정기검진 내원'}].map((item, i) => (
+          <g key={i}>
+            <circle cx="20" cy={48 + i * 20} r="3" fill={c} />
+            <text x="20" y={50 + i * 20} textAnchor="middle" fontSize="2.5" fontWeight="800" fill="white">{i+1}</text>
+            <text x="28" y={46 + i * 20} fontSize="3.5" fontWeight="700" fill={c}>{item.d}</text>
+            <text x="28" y={53 + i * 20} fontSize="3.5" fill="#64748b">{item.t}</text>
+          </g>
+        ))}
+      </> : <>
+        {['시술 부위를 혀로 건드리지 마세요','당일 음주/흡연은 피해주세요','부기는 2~3일 내 자연 소실됩니다','딱딱한 음식은 일주일간 피해주세요'].map((item, i) => (
+          <g key={i}>
+            <rect x="12" y={40 + i * 22} width="96" height="18" rx="3" fill={i % 2 === 0 ? c : a} fillOpacity="0.06" />
+            <text x="60" y={51 + i * 22} textAnchor="middle" fontSize="3.8" fill="#475569">{item}</text>
+          </g>
+        ))}
+      </>}
+      <text x="60" y="140" textAnchor="middle" fontSize="3.5" fill={c} fontWeight="600">응급 시 TEL 02-1234-5678</text>
+      <text x="60" y="150" textAnchor="middle" fontSize="3" fill="#94a3b8">{name}</text>
+    </>);
+  }
+
+  // fallback
+  return wrap(<>
+    <text x="60" y="80" textAnchor="middle" fontSize="6" fill={c}>{t.name}</text>
+  </>);
+}
+
 export default function TemplateGenerator() {
   const now = new Date();
 
   // 공통
   const [category, setCategory] = useState<TemplateCategory>('schedule');
   const [hospitalName, setHospitalName] = useState('');
-  const [selectedTeam, setSelectedTeam] = useState<number | null>(null);
-  const [showHospitalDropdown, setShowHospitalDropdown] = useState(false);
   const [selectedStyle, setSelectedStyle] = useState<StylePreset>(AI_STYLE_PRESETS[0]);
+  const [selectedCatTemplate, setSelectedCatTemplate] = useState<CategoryTemplate | null>(null);
   const [logoBase64, setLogoBase64] = useState<string | null>(null);
   const [customMessage, setCustomMessage] = useState('');
   const [extraPrompt, setExtraPrompt] = useState('');
@@ -173,6 +469,7 @@ export default function TemplateGenerator() {
   const [generatingPage, setGeneratingPage] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [previewStyleImage, setPreviewStyleImage] = useState<{ url: string; name: string } | null>(null);
+  const [enlargedTemplate, setEnlargedTemplate] = useState<CategoryTemplate | null>(null);
 
   useEffect(() => {
     const s = localStorage.getItem('uploaded_logo'); if (s) setLogoBase64(s);
@@ -191,7 +488,7 @@ export default function TemplateGenerator() {
     }
   }, []);
   useEffect(() => { setDayMarks(new Map()); setShortenedHours(new Map()); setVacationReasons(new Map()); setResultImages([]); setCurrentPage(0); }, [month, year]);
-  useEffect(() => { setResultImages([]); setCurrentPage(0); setError(null); }, [category]);
+  useEffect(() => { setResultImages([]); setCurrentPage(0); setError(null); setSelectedCatTemplate(null); }, [category]);
 
   // 명절 자동 기본값
   const HOLIDAY_DEFAULTS: Record<string, { msg: string; closure: string; style?: string }> = {
@@ -255,9 +552,9 @@ export default function TemplateGenerator() {
     reader.readAsDataURL(file);
   };
 
-  // 현재 사용할 스타일 프롬프트 결정 (히스토리 선택 > 프리셋)
-  const activeStylePrompt = selectedHistory?.stylePrompt || selectedStyle.aiPrompt;
-  const activeStyleName = selectedHistory?.name || selectedStyle.name;
+  // 현재 사용할 스타일 프롬프트 결정 (히스토리 > 카테고리 템플릿 > 일반 프리셋)
+  const activeStylePrompt = selectedHistory?.stylePrompt || selectedCatTemplate?.aiPrompt || selectedStyle.aiPrompt;
+  const activeStyleName = selectedHistory?.name || selectedCatTemplate?.name || selectedStyle.name;
 
   const handleGenerate = async () => {
     setGenerating(true); setError(null); setGeneratingStep(0); setResultImages([]); setCurrentPage(0); setGeneratingPage(0);
@@ -728,129 +1025,43 @@ export default function TemplateGenerator() {
           )}
         </div>
 
-        {/* 디자인 스타일 프리셋 - 완성형 미리보기 */}
+        {/* 카테고리별 디자인 템플릿 (6개씩) */}
         <div>
           <label className="block text-xs font-semibold text-slate-600 mb-2">
-            디자인 스타일 {selectedHistory && <span className="text-violet-400 font-normal">(내 스타일 선택 시 무시됨)</span>}
+            디자인 템플릿 {selectedHistory && <span className="text-violet-400 font-normal">(내 스타일 선택 시 무시됨)</span>}
           </label>
           <div className={`grid grid-cols-3 gap-2 ${selectedHistory ? 'opacity-40 pointer-events-none' : ''}`}>
-            {AI_STYLE_PRESETS.map((p, idx) => {
-              const isSelected = !selectedHistory && selectedStyle.id === p.id;
-              const mo = new Date().getMonth() + 1;
-              // 스타일별 레이아웃 변형: calendar, list, highlight, card
-              const layoutType = ['calendar', 'list', 'highlight', 'card'][idx % 4] as string;
-              // 스타일별 장식 이모지
-              const decoEmojis: Record<string, string[]> = {
-                fresh_start: ['🎊','✨'], romantic_blossom: ['🌸','💕'], petal_breeze: ['🌸','🍃'],
-                sprout_green: ['🌱','☘️'], warm_gratitude: ['🌷','💐'], rain_droplet: ['🌧️','💧'],
-                ocean_breeze: ['🌊','🐚'], sunflower_energy: ['🌻','☀️'], maple_romance: ['🍁','🍂'],
-                harvest_gold: ['🌾','🎃'], quiet_fog: ['🍵','📖'], snowflake_glow: ['❄️','🎄'],
-              };
-              const emojis = decoEmojis[p.id] || ['✨','🎨'];
-
+            {(CATEGORY_TEMPLATES[category] || []).map((tmpl) => {
+              const isSelected = !selectedHistory && selectedCatTemplate?.id === tmpl.id;
               return (
                 <button
-                  key={p.id}
-                  onClick={() => { setSelectedStyle(p); setSelectedHistory(null); }}
+                  key={tmpl.id}
+                  onClick={() => { setSelectedCatTemplate(isSelected ? null : tmpl); setSelectedHistory(null); }}
+                  onDoubleClick={() => setEnlargedTemplate(tmpl)}
                   className={`rounded-xl border-2 transition-all overflow-hidden ${isSelected ? 'shadow-lg scale-[1.03]' : 'border-slate-200 hover:border-slate-300 hover:shadow-md'}`}
-                  style={isSelected ? { borderColor: p.color } : undefined}
+                  style={isSelected ? { borderColor: tmpl.color } : undefined}
                 >
-                  <div className="relative w-full overflow-hidden" style={{ aspectRatio: '3/4', background: `linear-gradient(${idx % 2 === 0 ? '160deg' : '200deg'}, ${p.bg} 0%, white 80%)` }}>
-                    {/* 장식 이모지 */}
-                    <div className="absolute top-0.5 right-1 opacity-60" style={{ fontSize: '8px' }}>{emojis[0]}</div>
-                    <div className="absolute bottom-3 left-0.5 opacity-40" style={{ fontSize: '6px' }}>{emojis[1]}</div>
-                    {/* 배경 원 - 스타일별 위치 다름 */}
-                    <div className="absolute rounded-full opacity-10" style={{ background: p.color, width: `${10 + (idx % 3) * 4}px`, height: `${10 + (idx % 3) * 4}px`, top: idx % 2 === 0 ? '-4px' : 'auto', bottom: idx % 2 === 1 ? '-4px' : 'auto', right: idx % 3 === 0 ? '-3px' : 'auto', left: idx % 3 !== 0 ? '-3px' : 'auto' }} />
-
-                    {/* 병원명 */}
-                    <div className="pt-1.5 px-1">
-                      <div className="text-[5px] font-bold text-center" style={{ color: p.accent }}>OO치과</div>
-                    </div>
-
-                    {/* 제목 - 스타일별 다름 */}
-                    <div className="px-1 pt-0.5">
-                      {idx % 3 === 2 ? (
-                        <div className="rounded py-0.5 text-center" style={{ background: `${p.color}20` }}>
-                          <div className="font-extrabold leading-tight" style={{ fontSize: '7px', color: p.color }}>{mo}월 진료안내</div>
-                        </div>
-                      ) : (
-                        <div className="font-extrabold text-center leading-tight" style={{ fontSize: idx % 2 === 0 ? '8px' : '7px', color: p.color }}>{mo}월 진료일정</div>
-                      )}
-                    </div>
-
-                    {/* 콘텐츠 - 레이아웃별 다름 */}
-                    <div className="px-1 pt-1">
-                      {layoutType === 'calendar' && (
-                        <div className="rounded p-0.5" style={{ background: 'rgba(255,255,255,0.85)', border: `0.5px solid ${p.color}20` }}>
-                          <div className="grid grid-cols-7 mb-0.5">
-                            {['일','월','화','수','목','금','토'].map((d, i) => (
-                              <div key={d} className="text-center font-bold" style={{ fontSize: '3px', lineHeight: '6px', color: i === 0 ? '#ef4444' : i === 6 ? '#3b82f6' : '#94a3b8' }}>{d}</div>
-                            ))}
-                          </div>
-                          {[0, 1, 2].map(row => (
-                            <div key={row} className="grid grid-cols-7">
-                              {Array.from({ length: 7 }, (_, i) => {
-                                const day = row * 7 + i + 1;
-                                if (day > 21) return <div key={i} />;
-                                const hl = day === 3 || day === 9;
-                                return <div key={i} className="flex justify-center" style={{ padding: '0.5px 0' }}><span className="rounded-full flex items-center justify-center" style={{ fontSize: '3px', width: '6px', height: '6px', ...(hl ? { background: p.color, color: '#fff', fontWeight: 800 } : { color: i === 0 ? '#fca5a5' : '#64748b' }) }}>{day}</span></div>;
-                              })}
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                      {layoutType === 'list' && (
-                        <div className="space-y-0.5">
-                          {[{ d: '3일 (월)', s: '정상진료', c: p.color }, { d: '9일 (일)', s: '휴진', c: '#ef4444' }, { d: '15일 (토)', s: '단축', c: '#f59e0b' }].map((item, i) => (
-                            <div key={i} className="flex items-center gap-0.5 rounded" style={{ background: 'rgba(255,255,255,0.8)', padding: '1.5px 2px' }}>
-                              <span className="rounded" style={{ fontSize: '3px', background: `${item.c}20`, color: item.c, padding: '0.5px 2px', fontWeight: 700 }}>{item.d}</span>
-                              <span style={{ fontSize: '3px', color: item.c, fontWeight: 700 }}>{item.s}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                      {layoutType === 'highlight' && (
-                        <div className="flex flex-col items-center gap-0.5">
-                          <div className="rounded-lg w-full py-1 text-center" style={{ background: `${p.color}15` }}>
-                            <div style={{ fontSize: '6px', fontWeight: 800, color: p.color }}>3일 · 9일</div>
-                            <div style={{ fontSize: '3px', color: p.accent, fontWeight: 600 }}>휴진 안내</div>
-                          </div>
-                          <div className="rounded-lg w-full py-0.5 text-center" style={{ background: `${p.accent}10` }}>
-                            <div style={{ fontSize: '4px', fontWeight: 700, color: p.accent }}>15일 단축진료</div>
-                          </div>
-                        </div>
-                      )}
-                      {layoutType === 'card' && (
-                        <div className="grid grid-cols-2 gap-0.5">
-                          <div className="rounded text-center py-1" style={{ background: `${p.color}15` }}>
-                            <div style={{ fontSize: '5px', fontWeight: 800, color: p.color }}>3일</div>
-                            <div style={{ fontSize: '3px', color: p.accent }}>정상진료</div>
-                          </div>
-                          <div className="rounded text-center py-1" style={{ background: '#ef444415' }}>
-                            <div style={{ fontSize: '5px', fontWeight: 800, color: '#ef4444' }}>9일</div>
-                            <div style={{ fontSize: '3px', color: '#dc2626' }}>휴진</div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* 하단 */}
-                    <div className="absolute bottom-0.5 left-1 right-1">
-                      <div className="rounded py-0.5 text-center" style={{ background: `${p.color}15` }}>
-                        <span style={{ fontSize: '3px', fontWeight: 700, color: p.color }}>예약 및 내원 안내</span>
-                      </div>
-                    </div>
+                  {/* SVG 미리보기 */}
+                  <div className="relative w-full overflow-hidden" style={{ aspectRatio: '3/4', background: `linear-gradient(160deg, ${tmpl.bg} 0%, white 80%)` }}>
+                    <TemplateSVGPreview template={tmpl} category={category} hospitalName={hospitalName || '윈에이드 치과'} />
                   </div>
-
-                  <div className="py-1.5 px-1 bg-white text-center" style={{ borderTop: `1.5px solid ${isSelected ? p.color : '#f1f5f9'}` }}>
-                    <div className="text-[10px] font-bold leading-tight" style={{ color: isSelected ? p.color : '#334155' }}>{p.name}</div>
-                    <div className="text-[8px] mt-0.5" style={{ color: '#94a3b8' }}>{p.desc}</div>
+                  <div className="py-1.5 px-1 bg-white text-center" style={{ borderTop: `1.5px solid ${isSelected ? tmpl.color : '#f1f5f9'}` }}>
+                    <div className="text-[10px] font-bold leading-tight" style={{ color: isSelected ? tmpl.color : '#334155' }}>{tmpl.name}</div>
+                    <div className="text-[8px] mt-0.5" style={{ color: '#94a3b8' }}>{tmpl.desc}</div>
                   </div>
                 </button>
               );
             })}
           </div>
-          {!selectedHistory && <p className="text-[10px] text-slate-400 mt-1.5">{selectedStyle.mood}</p>}
+          {selectedCatTemplate && !selectedHistory && (
+            <div className="mt-1.5 p-2 bg-blue-50 rounded-lg border border-blue-200">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold text-blue-700">템플릿: {selectedCatTemplate.name}</span>
+                <button onClick={() => setSelectedCatTemplate(null)} className="text-[10px] text-blue-400 hover:text-blue-600">해제</button>
+              </div>
+            </div>
+          )}
+          <p className="text-[10px] text-slate-400 mt-1">더블클릭하면 크게 볼 수 있습니다</p>
         </div>
 
         {/* 생성 */}
@@ -930,6 +1141,37 @@ export default function TemplateGenerator() {
           </div>
         )}
       </div>
+
+      {/* 템플릿 확대 모달 (더블클릭) */}
+      {enlargedTemplate && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-8" onClick={() => setEnlargedTemplate(null)}>
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+              <div>
+                <h3 className="font-bold text-slate-800">{enlargedTemplate.name}</h3>
+                <p className="text-xs text-slate-400">{enlargedTemplate.desc}</p>
+              </div>
+              <button onClick={() => setEnlargedTemplate(null)} className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition-colors">
+                <svg className="w-4 h-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+            <div className="p-6 flex justify-center" style={{ background: `linear-gradient(160deg, ${enlargedTemplate.bg} 0%, white 80%)` }}>
+              <div className="w-72">
+                <TemplateSVGPreview template={enlargedTemplate} category={category} hospitalName={hospitalName || '윈에이드 치과'} />
+              </div>
+            </div>
+            <div className="p-4 border-t border-slate-100 flex gap-2">
+              <button
+                onClick={() => { setSelectedCatTemplate(enlargedTemplate); setSelectedHistory(null); setEnlargedTemplate(null); }}
+                className="flex-1 py-2.5 rounded-xl text-white font-bold text-sm transition-all bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700"
+              >
+                이 템플릿 선택
+              </button>
+              <button onClick={() => setEnlargedTemplate(null)} className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium text-sm transition-colors">닫기</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

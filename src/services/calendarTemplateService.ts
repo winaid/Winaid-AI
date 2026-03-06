@@ -815,6 +815,301 @@ export const AI_STYLE_PRESETS: StylePreset[] = [
   },
 ];
 
+// ── 카테고리별 템플릿 프리셋 (7 카테고리 × 6개 = 42개) ──
+
+export interface CategoryTemplate {
+  id: string;
+  name: string;
+  color: string;      // 메인 컬러
+  accent: string;     // 악센트 컬러
+  bg: string;         // 배경 그라데이션 시작색
+  desc: string;       // 한 줄 설명
+  aiPrompt: string;   // AI 이미지 생성용 영어 프롬프트
+  layoutHint: string; // SVG 미리보기 레이아웃 힌트
+}
+
+export const CATEGORY_TEMPLATES: Record<string, CategoryTemplate[]> = {
+  // ─── 진료 일정 (6개) ───
+  schedule: [
+    {
+      id: 'sch_clean_calendar', name: '클린 캘린더', color: '#3b82f6', accent: '#1d4ed8', bg: '#eff6ff',
+      desc: '깔끔한 달력형',
+      layoutHint: 'calendar',
+      aiPrompt: 'Clean modern medical clinic monthly calendar design, crisp white background with soft blue accents, organized grid layout showing dates clearly, closed days marked in red circles, shortened hours in amber, professional healthcare aesthetic, minimal decorations, clear sans-serif typography, hospital logo area at top',
+    },
+    {
+      id: 'sch_pastel_card', name: '파스텔 카드', color: '#ec4899', accent: '#be185d', bg: '#fdf2f8',
+      desc: '부드러운 카드형',
+      layoutHint: 'card',
+      aiPrompt: 'Soft pastel pink and cream dental clinic schedule card design, rounded corners and soft shadows, important dates displayed as individual cards with icons, gentle watercolor texture background, friendly and approachable healthcare design, cute minimal illustrations of teeth or dental tools',
+    },
+    {
+      id: 'sch_bold_highlight', name: '볼드 강조형', color: '#dc2626', accent: '#991b1b', bg: '#fef2f2',
+      desc: '휴진일 대형 강조',
+      layoutHint: 'highlight',
+      aiPrompt: 'Bold and eye-catching clinic closure notice design, large prominent date numbers in red, clear hierarchy with main closure dates as hero element, strong contrast between normal and special dates, modern hospital announcement style, dark navy or charcoal text on white, accent red for closures, professional medical poster layout',
+    },
+    {
+      id: 'sch_warm_wood', name: '따뜻한 우드', color: '#92400e', accent: '#78350f', bg: '#fffbeb',
+      desc: '따뜻한 내추럴',
+      layoutHint: 'list',
+      aiPrompt: 'Warm natural wood-toned dental clinic schedule design, cozy beige and brown palette, hand-crafted feel with subtle wood grain texture, organized date list format, warm golden lighting atmosphere, friendly neighborhood clinic vibe, kraft paper aesthetic with clean modern typography',
+    },
+    {
+      id: 'sch_mint_fresh', name: '민트 프레시', color: '#14b8a6', accent: '#0f766e', bg: '#f0fdfa',
+      desc: '상쾌한 민트톤',
+      layoutHint: 'calendar',
+      aiPrompt: 'Fresh mint and teal colored medical clinic monthly schedule, clean modern design with mint green accent borders, calendar grid with soft teal highlights for special dates, fresh and hygienic healthcare aesthetic, light gradient background, professional yet refreshing mood, green cross medical symbol accent',
+    },
+    {
+      id: 'sch_dark_premium', name: '다크 프리미엄', color: '#c084fc', accent: '#7c3aed', bg: '#faf5ff',
+      desc: '고급 다크 테마',
+      layoutHint: 'card',
+      aiPrompt: 'Premium dark-themed dental clinic schedule design, deep navy or charcoal background with gold and purple accents, elegant typography, luxury medical aesthetic, sophisticated layout with dates displayed as refined cards, subtle gradient overlays, high-end clinic branding feel, metallic gold text accents',
+    },
+  ],
+
+  // ─── 이벤트 (6개) ───
+  event: [
+    {
+      id: 'evt_sale_banner', name: '할인 배너', color: '#ef4444', accent: '#b91c1c', bg: '#fef2f2',
+      desc: '가격 강조 할인형',
+      layoutHint: 'price',
+      aiPrompt: 'Eye-catching dental clinic sale banner design, bold red discount percentage badge, crossed-out original price with new price highlighted, urgent promotional feeling, modern retail-inspired medical event design, starburst or ribbon elements, clear price hierarchy, white and red color scheme',
+    },
+    {
+      id: 'evt_elegant_event', name: '엘레강스 이벤트', color: '#a855f7', accent: '#7e22ce', bg: '#faf5ff',
+      desc: '고급스러운 이벤트',
+      layoutHint: 'elegant',
+      aiPrompt: 'Elegant luxury dental clinic event promotion design, purple and gold color scheme, sophisticated serif typography mixed with modern sans-serif, refined medical aesthetic, subtle geometric patterns, premium treatment promotion feel, gentle gradient background, gold foil accent effects',
+    },
+    {
+      id: 'evt_pop_colorful', name: '팝 컬러풀', color: '#f59e0b', accent: '#d97706', bg: '#fffbeb',
+      desc: '활기찬 팝 스타일',
+      layoutHint: 'pop',
+      aiPrompt: 'Fun and colorful pop-style dental clinic event poster, vibrant yellow and orange with playful shapes, comic-book inspired burst elements, bold chunky typography, energetic and exciting mood, confetti and star decorations, attention-grabbing design with clear event details, friendly dental character illustration',
+    },
+    {
+      id: 'evt_minimal_modern', name: '미니멀 모던', color: '#64748b', accent: '#334155', bg: '#f8fafc',
+      desc: '심플 미니멀',
+      layoutHint: 'minimal',
+      aiPrompt: 'Minimalist modern dental clinic event design, clean white space with subtle gray accents, elegant thin typography, restrained color palette with single accent color, sophisticated simplicity, premium medical brand aesthetic, generous whitespace, architectural clean lines, understated luxury',
+    },
+    {
+      id: 'evt_gradient_wave', name: '그라데이션 웨이브', color: '#06b6d4', accent: '#0891b2', bg: '#ecfeff',
+      desc: '물결 그라데이션',
+      layoutHint: 'wave',
+      aiPrompt: 'Modern gradient wave dental clinic event design, flowing cyan to blue gradient waves, dynamic curved shapes, contemporary medical aesthetic, smooth transitions and soft shadows, ocean-inspired calm yet exciting feeling, clear typography floating over gradient backgrounds, tech-forward healthcare design',
+    },
+    {
+      id: 'evt_season_special', name: '시즌 스페셜', color: '#22c55e', accent: '#15803d', bg: '#f0fdf4',
+      desc: '계절 한정 이벤트',
+      layoutHint: 'season',
+      aiPrompt: 'Seasonal special event dental clinic design, fresh green and natural tones, seasonal floral or nature elements as borders, limited-time offer badge, warm and inviting healthcare promotion, seasonal fruits or flowers as decorative accents, friendly and approachable medical event poster with clear period dates',
+    },
+  ],
+
+  // ─── 의사 소개 (6개) ───
+  doctor: [
+    {
+      id: 'doc_portrait_formal', name: '정장 포트레이트', color: '#1e40af', accent: '#1e3a8a', bg: '#eff6ff',
+      desc: '공식 프로필형',
+      layoutHint: 'portrait',
+      aiPrompt: 'Formal professional doctor introduction card design, clean navy and white color scheme, large circular or rectangular photo placeholder, name and specialty in elegant serif font, career highlights in organized bullet list, medical credentials prominently displayed, professional headshot layout, hospital logo placement, trust-building authoritative design',
+    },
+    {
+      id: 'doc_friendly_curve', name: '친근한 곡선', color: '#10b981', accent: '#059669', bg: '#ecfdf5',
+      desc: '부드러운 곡선형',
+      layoutHint: 'curve',
+      aiPrompt: 'Friendly and approachable doctor profile design, soft green and cream tones, organic curved shapes and rounded elements, warm and welcoming healthcare aesthetic, doctor photo with soft circular frame, gentle botanical or leaf decorations, patient-friendly medical design, conversational greeting text area, comforting and reassuring mood',
+    },
+    {
+      id: 'doc_modern_split', name: '모던 분할', color: '#6366f1', accent: '#4f46e5', bg: '#eef2ff',
+      desc: '좌우 분할 레이아웃',
+      layoutHint: 'split',
+      aiPrompt: 'Modern split-layout doctor introduction design, left side for large photo area with indigo overlay, right side for text information on white background, bold modern typography, clean geometric division, contemporary medical profile card, specialty and career details in organized sections, sleek professional aesthetic',
+    },
+    {
+      id: 'doc_warm_story', name: '따뜻한 스토리', color: '#f97316', accent: '#ea580c', bg: '#fff7ed',
+      desc: '인사말 중심 스토리형',
+      layoutHint: 'story',
+      aiPrompt: 'Warm storytelling doctor introduction design, warm orange and cream palette, emphasis on doctor greeting message in large handwriting-style font, small photo with soft frame, personal and heartfelt narrative layout, cozy medical office atmosphere, stethoscope or heart icon accents, trust-building personal touch design',
+    },
+    {
+      id: 'doc_dark_luxury', name: '다크 럭셔리', color: '#d4a017', accent: '#b8860b', bg: '#1a1a2e',
+      desc: '프리미엄 다크',
+      layoutHint: 'luxury',
+      aiPrompt: 'Premium dark luxury doctor introduction design, deep navy or black background with gold accents, sophisticated gold typography for name and title, elegant medical professional aesthetic, refined geometric borders, premium dental specialist branding, metallic shimmer effects, high-end medical practice feel, VIP doctor profile card',
+    },
+    {
+      id: 'doc_clean_grid', name: '클린 그리드', color: '#0ea5e9', accent: '#0284c7', bg: '#f0f9ff',
+      desc: '정보 정리형 그리드',
+      layoutHint: 'grid',
+      aiPrompt: 'Clean grid-based doctor information card design, sky blue and white, organized grid sections for photo, name, specialty, education, and career, infographic-style medical credentials layout, clear data visualization aesthetic, professional healthcare dashboard feel, structured and easy-to-read medical staff profile',
+    },
+  ],
+
+  // ─── 공지사항 (6개) ───
+  notice: [
+    {
+      id: 'ntc_bulletin_board', name: '게시판 스타일', color: '#f59e0b', accent: '#d97706', bg: '#fffbeb',
+      desc: '전통 게시판형',
+      layoutHint: 'bulletin',
+      aiPrompt: 'Traditional bulletin board style dental clinic notice design, warm amber and cream colors, pin or thumbtack decorative elements, paper texture background, classic announcement board aesthetic, clear notice title with date, organized content sections, cork board or wooden frame border, familiar and easy-to-read public notice format',
+    },
+    {
+      id: 'ntc_modern_alert', name: '모던 알림', color: '#ef4444', accent: '#dc2626', bg: '#fef2f2',
+      desc: '중요 알림 강조형',
+      layoutHint: 'alert',
+      aiPrompt: 'Modern urgent alert style clinic notice design, bold red accent with clean white background, exclamation mark or bell icon, important announcement hierarchy, sharp clean lines, contemporary notification card aesthetic, clear date and effective period display, medical institution official notice feel, attention-grabbing header',
+    },
+    {
+      id: 'ntc_soft_info', name: '소프트 안내', color: '#8b5cf6', accent: '#7c3aed', bg: '#f5f3ff',
+      desc: '부드러운 안내문',
+      layoutHint: 'soft',
+      aiPrompt: 'Soft and gentle dental clinic information notice design, lavender and light purple palette, rounded shapes and soft shadows, friendly informational tone, organized content with cute icon bullets, approachable medical notice aesthetic, gentle gradient background, warm and caring communication style',
+    },
+    {
+      id: 'ntc_corporate_formal', name: '공식 문서형', color: '#1f2937', accent: '#111827', bg: '#f9fafb',
+      desc: '격식있는 공문 스타일',
+      layoutHint: 'formal',
+      aiPrompt: 'Formal corporate dental clinic official notice design, black and white with minimal accent color, document-style layout with header letterhead, professional institutional communication format, clear section dividers, serif typography for titles, clean structured content area, official stamp or seal area, authoritative medical institution announcement',
+    },
+    {
+      id: 'ntc_card_popup', name: '카드 팝업', color: '#06b6d4', accent: '#0891b2', bg: '#ecfeff',
+      desc: '팝업 카드 스타일',
+      layoutHint: 'popup',
+      aiPrompt: 'Pop-up card style clinic notice design, bright cyan and white, floating card with prominent shadow, modern UI card aesthetic, clear title bar with icon, organized body text, action-oriented design with date highlighted, contemporary digital notification inspired layout, rounded corners and modern spacing',
+    },
+    {
+      id: 'ntc_timeline', name: '타임라인형', color: '#22c55e', accent: '#16a34a', bg: '#f0fdf4',
+      desc: '변경 일정 타임라인',
+      layoutHint: 'timeline',
+      aiPrompt: 'Timeline-style dental clinic notice design, green and white with clear chronological layout, vertical timeline with date nodes, before and after comparison for changes, organized step-by-step information flow, modern infographic-inspired medical notice, clear arrows or flow indicators, effective date prominently displayed',
+    },
+  ],
+
+  // ─── 명절 인사 (6개) ───
+  greeting: [
+    {
+      id: 'grt_traditional_korean', name: '전통 한국풍', color: '#dc2626', accent: '#991b1b', bg: '#fef2f2',
+      desc: '전통 명절 디자인',
+      layoutHint: 'traditional',
+      aiPrompt: 'Traditional Korean holiday greeting card design for dental clinic, elegant red and gold colors, traditional Korean patterns (dancheong, clouds, cranes), beautiful calligraphy-style greeting text, pine tree or plum blossom decorations, festive yet dignified Asian traditional aesthetic, holiday closure period notice area, hospital name with traditional frame border',
+    },
+    {
+      id: 'grt_warm_family', name: '따뜻한 가족', color: '#f97316', accent: '#ea580c', bg: '#fff7ed',
+      desc: '가족 중심 따뜻한',
+      layoutHint: 'warm',
+      aiPrompt: 'Warm family-oriented holiday greeting from dental clinic, soft orange and cream watercolor style, gentle hand-drawn family illustration, heartfelt greeting message in warm typography, cozy home atmosphere, soft bokeh light effects, emotional and caring medical practice greeting, warm candlelight mood',
+    },
+    {
+      id: 'grt_modern_minimal', name: '모던 미니멀', color: '#6366f1', accent: '#4f46e5', bg: '#eef2ff',
+      desc: '세련된 미니멀',
+      layoutHint: 'minimal',
+      aiPrompt: 'Modern minimalist holiday greeting card from dental clinic, clean indigo and white design, single elegant holiday symbol, contemporary typography with generous whitespace, sophisticated greeting message, subtle geometric patterns, refined medical brand holiday card, understated elegance with clear closure schedule',
+    },
+    {
+      id: 'grt_nature_season', name: '자연 사계절', color: '#22c55e', accent: '#15803d', bg: '#f0fdf4',
+      desc: '계절감 자연풍',
+      layoutHint: 'nature',
+      aiPrompt: 'Nature-inspired seasonal holiday greeting from dental clinic, lush green and earth tones, beautiful seasonal landscape illustration (cherry blossoms for spring, autumn leaves for fall, snow for winter), serene natural atmosphere, watercolor botanical elements, peaceful and refreshing holiday greeting, clinic closure info elegantly placed',
+    },
+    {
+      id: 'grt_luxury_gold', name: '럭셔리 골드', color: '#d4a017', accent: '#b8860b', bg: '#fefce8',
+      desc: '프리미엄 골드',
+      layoutHint: 'luxury',
+      aiPrompt: 'Luxury premium gold holiday greeting card from dental clinic, rich gold and deep burgundy or navy, elegant metallic gold text and borders, sophisticated holiday ornaments, premium quality paper texture, high-end medical practice holiday card, refined gold foil effect decorations, prestigious and exclusive feel',
+    },
+    {
+      id: 'grt_cute_character', name: '귀여운 캐릭터', color: '#ec4899', accent: '#be185d', bg: '#fdf2f8',
+      desc: '캐릭터 일러스트',
+      layoutHint: 'cute',
+      aiPrompt: 'Cute character-based holiday greeting from dental clinic, adorable pink and pastel colors, kawaii-style tooth or dental character celebrating holiday, fun and playful holiday illustration, bright and cheerful mood, family-friendly dental practice greeting, cute speech bubble with greeting text, festive confetti and stars',
+    },
+  ],
+
+  // ─── 채용/공고 (6개) ───
+  hiring: [
+    {
+      id: 'hir_corporate_clean', name: '기업 클린', color: '#1e40af', accent: '#1e3a8a', bg: '#eff6ff',
+      desc: '공식 채용공고',
+      layoutHint: 'corporate',
+      aiPrompt: 'Professional corporate dental clinic job posting design, clean navy blue and white, structured resume-style layout, clear job title and requirements sections, organized benefits list, professional HR recruitment aesthetic, medical institution official job announcement, company logo area prominent, application method clearly displayed',
+    },
+    {
+      id: 'hir_friendly_team', name: '팀워크 친근', color: '#22c55e', accent: '#16a34a', bg: '#f0fdf4',
+      desc: '친근한 팀 소개형',
+      layoutHint: 'team',
+      aiPrompt: 'Friendly team-oriented dental clinic hiring design, warm green and white, team photo placeholder area, welcoming workplace culture emphasis, employee testimonial quotes area, benefits highlighted with friendly icons, approachable medical team recruitment, casual yet professional tone, join our family messaging',
+    },
+    {
+      id: 'hir_modern_startup', name: '모던 스타트업', color: '#8b5cf6', accent: '#7c3aed', bg: '#f5f3ff',
+      desc: '트렌디 모던',
+      layoutHint: 'modern',
+      aiPrompt: 'Modern startup-style dental clinic hiring design, trendy purple and gradient accents, bold contemporary typography, emoji or icon-based benefits list, dynamic layout with angled shapes, tech-forward medical practice recruitment, growth opportunity emphasis, modern workspace photo area, energetic and innovative feel',
+    },
+    {
+      id: 'hir_benefits_focus', name: '복리후생 강조', color: '#f59e0b', accent: '#d97706', bg: '#fffbeb',
+      desc: '혜택 중심 디자인',
+      layoutHint: 'benefits',
+      aiPrompt: 'Benefits-focused dental clinic hiring design, warm amber and cream, large icon grid showcasing workplace benefits (insurance, meals, vacation, bonuses), visual infographic-style benefit comparison, attractive employee perks highlighted, compelling workplace culture showcase, medical staff recruitment with competitive advantages emphasis',
+    },
+    {
+      id: 'hir_urgent_now', name: '급구 긴급', color: '#ef4444', accent: '#dc2626', bg: '#fef2f2',
+      desc: '긴급 채용 강조',
+      layoutHint: 'urgent',
+      aiPrompt: 'Urgent hiring notice dental clinic design, bold red and white, large HIRING NOW banner, attention-grabbing urgent recruitment aesthetic, deadline prominently displayed, immediate start emphasis, bold exclamation elements, direct and clear job requirements, quick-apply information, energetic and time-sensitive medical staff recruitment',
+    },
+    {
+      id: 'hir_premium_brand', name: '프리미엄 브랜드', color: '#78716c', accent: '#57534e', bg: '#fafaf9',
+      desc: '고급 브랜딩',
+      layoutHint: 'brand',
+      aiPrompt: 'Premium branded dental clinic hiring design, sophisticated gray and charcoal with gold accents, luxury medical practice recruitment, high-end workplace photography area, elegant typography and refined spacing, exclusive career opportunity positioning, premium clinic interior showcase, professional development emphasis, executive-level recruitment feel',
+    },
+  ],
+
+  // ─── 주의사항 (6개) ───
+  caution: [
+    {
+      id: 'cau_medical_checklist', name: '의료 체크리스트', color: '#3b82f6', accent: '#2563eb', bg: '#eff6ff',
+      desc: '체크리스트형 안내',
+      layoutHint: 'checklist',
+      aiPrompt: 'Medical checklist style post-treatment caution notice from dental clinic, clean blue and white, numbered or checkmarked list of precautions, clear medical instruction format, professional healthcare aftercare design, stethoscope or medical cross icon, easy-to-follow step-by-step care instructions, organized patient guide layout',
+    },
+    {
+      id: 'cau_warning_bold', name: '경고 강조형', color: '#ef4444', accent: '#dc2626', bg: '#fef2f2',
+      desc: '주의 경고 강조',
+      layoutHint: 'warning',
+      aiPrompt: 'Bold warning-style dental treatment caution notice, red and white with warning triangle icons, important precautions highlighted with red background bars, clear DO and DONT sections, urgent medical warning aesthetic, bold typography for critical instructions, patient safety emphasis, emergency contact prominently displayed',
+    },
+    {
+      id: 'cau_friendly_guide', name: '친절한 가이드', color: '#10b981', accent: '#059669', bg: '#ecfdf5',
+      desc: '부드러운 안내 가이드',
+      layoutHint: 'guide',
+      aiPrompt: 'Friendly patient guide style dental aftercare notice, soft green and cream, cute dental health illustrations, gentle and caring instruction tone, icon-based precaution items with friendly explanations, warm healthcare communication style, encouraging recovery message, approachable medical advice layout with smiley elements',
+    },
+    {
+      id: 'cau_timeline_recovery', name: '회복 타임라인', color: '#8b5cf6', accent: '#7c3aed', bg: '#f5f3ff',
+      desc: '회복 단계별 안내',
+      layoutHint: 'timeline',
+      aiPrompt: 'Recovery timeline dental aftercare design, purple and white, chronological recovery stages (Day 1, Week 1, Month 1), visual progress timeline, stage-by-stage care instructions, medical recovery infographic style, healing progress indicator, encouraging milestone-based patient guide, professional medical aftercare chart',
+    },
+    {
+      id: 'cau_infographic', name: '인포그래픽', color: '#f59e0b', accent: '#d97706', bg: '#fffbeb',
+      desc: '시각적 인포그래픽',
+      layoutHint: 'infographic',
+      aiPrompt: 'Visual infographic dental aftercare caution design, warm amber and white, icon-heavy visual instructions, food to avoid shown with X marks, recommended actions with checkmarks, graphical medical information design, easy-to-understand visual patient guide, pictogram-based instructions, minimal text maximum visual communication',
+    },
+    {
+      id: 'cau_clean_card', name: '클린 카드', color: '#0ea5e9', accent: '#0284c7', bg: '#f0f9ff',
+      desc: '깔끔한 카드형',
+      layoutHint: 'card',
+      aiPrompt: 'Clean card-style dental treatment caution notice, sky blue and white, individual caution items as separate cards with icons, modern UI card layout, clear and organized medical aftercare instructions, soft shadows and rounded corners, contemporary healthcare communication design, numbered instruction cards with brief clear text',
+    },
+  ],
+};
+
 // ── AI 이미지 생성: 템플릿 데이터 → Nano Banana Pro ──
 
 // 스타일 히스토리 (localStorage에 저장)

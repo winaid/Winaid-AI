@@ -174,20 +174,21 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       }
     }
 
-    // 2) 블로그 발행량 조회 (병렬, 최대 10개씩)
+    // 2) 블로그 발행량 조회 (3개씩 병렬 + 청크 간 200ms 딜레이 - 429 방지)
     const blogCountMap: Record<string, number> = {};
 
     if (hasBlogKeys) {
-      console.log(`[Blog v8] 블로그 조회 시작: ${keywords.length}개, CLIENT_ID: ${context.env.NAVER_CLIENT_ID?.substring(0, 6)}...`);
+      console.log(`[Blog v9] 블로그 조회 시작: ${keywords.length}개, CLIENT_ID: ${context.env.NAVER_CLIENT_ID?.substring(0, 6)}...`);
       const blogChunks: string[][] = [];
-      for (let i = 0; i < keywords.length; i += 10) {
-        blogChunks.push(keywords.slice(i, i + 10));
+      for (let i = 0; i < keywords.length; i += 3) {
+        blogChunks.push(keywords.slice(i, i + 3));
       }
 
       const blogErrors: string[] = [];
-      for (const chunk of blogChunks) {
+      for (let ci = 0; ci < blogChunks.length; ci++) {
+        if (ci > 0) await new Promise(r => setTimeout(r, 200));
         const results = await Promise.all(
-          chunk.map(async (kw) => {
+          blogChunks[ci].map(async (kw) => {
             const { count, error } = await getBlogPostCount(kw, context.env);
             if (error) blogErrors.push(`${kw}: ${error}`);
             return { keyword: kw, blogCount: count };
