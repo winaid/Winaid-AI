@@ -7,10 +7,12 @@ interface Env {}
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {
   try {
-    const { query, maxResults = 100 } = await context.request.json() as {
+    const body = await context.request.json() as {
       query: string;
       maxResults?: number;
+      includeCafe?: boolean;
     };
+    const { query, maxResults = 100, includeCafe = true } = body;
 
     if (!query) {
       return new Response(JSON.stringify({ error: 'Query is required' }), {
@@ -32,10 +34,10 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       return `${year}${month}${day}`; // YYYYMMDD 형식
     };
 
-    const startDate = formatNaverDate(sixMonthsAgo); // 예: 20250722
-    const endDate = formatNaverDate(today);          // 예: 20260122
+    const startDate = formatNaverDate(sixMonthsAgo);
+    const endDate = formatNaverDate(today);
 
-    console.log('🔍 네이버 검색 크롤링:', query, '(최대', maxResults, '개)');
+    console.log('🔍 네이버 검색 크롤링:', query, '(최대', maxResults, '개, 카페 포함:', includeCafe, ')');
     console.log('🎯 정렬 방식: 정확도순 (관련성 높은 순서)');
     console.log('📅 날짜 필터:', startDate, '~', endDate, '(최근 6개월)');
 
@@ -44,20 +46,29 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       link: string;
       description: string;
       bloggername: string;
+      source?: string; // 'blog' | 'cafe'
     }> = [];
 
+    // 검색 소스 설정 (블로그 + 카페)
+    const searchSources: Array<{ where: string; label: string }> = [
+      { where: 'blog', label: '블로그' },
+    ];
+    if (includeCafe) {
+      searchSources.push({ where: 'cafearticle', label: '카페' });
+    }
+
+    const perSourceMax = includeCafe ? Math.ceil(maxResults / 2) : maxResults;
+
+    for (const source of searchSources) {
     // 네이버 검색 결과는 페이지당 약 10개씩
-    const pagesNeeded = Math.ceil(maxResults / 10);
+    const pagesNeeded = Math.ceil(perSourceMax / 10);
+    const sourceResults: typeof blogUrls = [];
 
     for (let page = 1; page <= Math.min(pagesNeeded, 10); page++) {
       const start = (page - 1) * 10 + 1;
-      
-      // 정확도순 + 날짜 필터 + 정확한 문구 검색 (따옴표)
-      // so:sim = 정확도순 (Similarity)
-      // ds=시작일&de=종료일 (YYYYMMDD 형식)
-      // 따옴표로 감싸서 정확히 일치하는 문장만 검색
+
       const exactQuery = `"${query}"`;
-      const searchUrl = `https://search.naver.com/search.naver?where=blog&query=${encodeURIComponent(
+      const searchUrl = `https://search.naver.com/search.naver?where=${source.where}&query=${encodeURIComponent(
         exactQuery
       )}&start=${start}&sm=tab_opt&nso=so:sim,p:from${startDate}to${endDate}`;
 
@@ -84,8 +95,8 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
         // 블로그 검색 결과 추출 (2026년 최신 네이버 구조에 맞게)
         const pageResults: typeof blogUrls = [];
 
-        // 1. 먼저 모든 블로그 URL 추출 (더 관대한 패턴)
-        const urlPattern = /https:\/\/(?:blog\.naver\.com|[a-zA-Z0-9-]+\.tistory\.com|brunch\.co\.kr)\/[^\s"<>]*/g;
+        // 1. 먼저 모든 블로그/카페 URL 추출 (더 관대한 패턴)
+        const urlPattern = /https:\/\/(?:blog\.naver\.com|cafe\.naver\.com|[a-zA-Z0-9-]+\.tistory\.com|brunch\.co\.kr)\/[^\s"<>]*/g;
         const foundUrls: string[] = [];
         let match;
         
@@ -101,11 +112,11 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
         // 2. 블로그 URL과 제목을 함께 추출 (여러 패턴 시도)
         const titleLinkPatterns = [
           // 패턴 1: data-heatmap-target
-          /<a[^>]*href="(https:\/\/(?:blog\.naver\.com|.*?\.tistory\.com|brunch\.co\.kr)\/[^"]*)"[^>]*data-heatmap-target="\.link"[^>]*>[\s\S]*?<span[^>]*headline1[^>]*>([\s\S]*?)<\/span>/g,
+          /<a[^>]*href="(https:\/\/(?:blog\.naver\.com|cafe\.naver\.com|.*?\.tistory\.com|brunch\.co\.kr)\/[^"]*)"[^>]*data-heatmap-target="\.link"[^>]*>[\s\S]*?<span[^>]*headline1[^>]*>([\s\S]*?)<\/span>/g,
           // 패턴 2: title_link 클래스
-          /<a[^>]*class="[^"]*title_link[^"]*"[^>]*href="(https:\/\/(?:blog\.naver\.com|.*?\.tistory\.com|brunch\.co\.kr)\/[^"]*)"[^>]*>([\s\S]*?)<\/a>/g,
+          /<a[^>]*class="[^"]*title_link[^"]*"[^>]*href="(https:\/\/(?:blog\.naver\.com|cafe\.naver\.com|.*?\.tistory\.com|brunch\.co\.kr)\/[^"]*)"[^>]*>([\s\S]*?)<\/a>/g,
           // 패턴 3: 단순 URL과 제목
-          /<a[^>]*href="(https:\/\/(?:blog\.naver\.com|.*?\.tistory\.com|brunch\.co\.kr)\/[^"]*)"[^>]*>([^<]+)</g,
+          /<a[^>]*href="(https:\/\/(?:blog\.naver\.com|cafe\.naver\.com|.*?\.tistory\.com|brunch\.co\.kr)\/[^"]*)"[^>]*>([^<]+)</g,
         ];
 
         for (const pattern of titleLinkPatterns) {
@@ -135,13 +146,15 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
         }
         
         // 3. URL만 발견되고 제목이 없는 경우, 기본 제목 할당
+        const defaultTitle = source.where === 'cafearticle' ? '네이버 카페' : '네이버 블로그';
         for (const url of foundUrls) {
           if (!pageResults.find(r => r.link === url)) {
             pageResults.push({
-              title: '네이버 블로그', // 기본 제목
+              title: defaultTitle,
               link: url,
               description: '',
               bloggername: '',
+              source: source.where === 'cafearticle' ? 'cafe' : 'blog',
             });
           }
         }
@@ -213,16 +226,17 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
           }
         }
         
-        // 기본값 설정
+        // 기본값 설정 + source 태깅
         for (const result of pageResults) {
-          if (!result.bloggername) result.bloggername = '블로거';
+          if (!result.bloggername) result.bloggername = source.where === 'cafearticle' ? '카페 작성자' : '블로거';
           if (!result.description) result.description = result.title;
+          if (!result.source) result.source = source.where === 'cafearticle' ? 'cafe' : 'blog';
         }
 
-        console.log(`✅ 페이지 ${page}: ${pageResults.length}개 발견 (제목: ${pageResults.filter(r => r.title && r.title !== '네이버 블로그').length}개, URL만: ${pageResults.filter(r => r.title === '네이버 블로그').length}개)`);
-        blogUrls.push(...pageResults);
+        console.log(`✅ [${source.label}] 페이지 ${page}: ${pageResults.length}개 발견`);
+        sourceResults.push(...pageResults);
 
-        if (blogUrls.length >= maxResults || pageResults.length === 0) {
+        if (sourceResults.length >= perSourceMax || pageResults.length === 0) {
           break;
         }
 
@@ -231,17 +245,30 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
           await new Promise((resolve) => setTimeout(resolve, 1000));
         }
       } catch (error) {
-        console.error(`❌ 페이지 ${page} 크롤링 에러:`, error);
+        console.error(`❌ [${source.label}] 페이지 ${page} 크롤링 에러:`, error);
         break;
       }
     }
 
-    console.log(`📊 총 ${blogUrls.length}개 블로그 URL 추출`);
+    console.log(`📊 [${source.label}] ${sourceResults.length}개 URL 추출`);
+    blogUrls.push(...sourceResults);
+    } // end of searchSources loop
+
+    // 중복 URL 제거
+    const uniqueUrls = new Map<string, typeof blogUrls[0]>();
+    for (const item of blogUrls) {
+      if (!uniqueUrls.has(item.link)) {
+        uniqueUrls.set(item.link, item);
+      }
+    }
+    const dedupedResults = Array.from(uniqueUrls.values());
+
+    console.log(`📊 총 ${dedupedResults.length}개 URL 추출 (블로그+카페, 중복 제거 후)`);
 
     return new Response(
       JSON.stringify({
-        items: blogUrls.slice(0, maxResults),
-        total: blogUrls.length,
+        items: dedupedResults.slice(0, maxResults),
+        total: dedupedResults.length,
       }),
       {
         status: 200,

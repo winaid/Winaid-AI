@@ -65,7 +65,7 @@ async function generateKeywordsWithAI(
 4. 키워드 조합: "{지역} 치과", "{지역} 임플란트", "{역명} 치과", "{역명} 임플란트", "{동} 치아교정" 등
 5. 병원명 자체도 포함
 6. 실제 네이버에서 검색량이 있을 법한 키워드만 (너무 마이너한 건 제외)
-7. 정확히 15개 생성
+7. 정확히 30개 생성
 
 JSON 배열로만 응답하세요. 설명 없이 키워드 문자열 배열만:
 ["키워드1", "키워드2", ...]`;
@@ -81,7 +81,7 @@ JSON 배열로만 응답하세요. 설명 없이 키워드 문자열 배열만:
 
     const parsed = typeof result === 'string' ? JSON.parse(result) : result;
     if (Array.isArray(parsed)) {
-      return parsed.filter((k: any) => typeof k === 'string' && k.trim()).slice(0, 15);
+      return parsed.filter((k: any) => typeof k === 'string' && k.trim()).slice(0, 30);
     }
     return [];
   } catch (e) {
@@ -92,15 +92,18 @@ JSON 배열로만 응답하세요. 설명 없이 키워드 문자열 배열만:
 
 /**
  * 추가 키워드 생성 (더보기)
- * 이미 분석한 키워드를 제외하고 새로운 키워드 15개 생성
+ * 이미 분석한 키워드를 제외하고 새로운 키워드 생성
+ * remainingCount: 100개 한도까지 남은 개수 (실제 생성은 15개씩)
  */
 async function generateMoreKeywordsWithAI(
   hospitalName: string,
   address: string,
   existingKeywords: string[],
-  category?: string
+  category?: string,
+  remainingCount: number = 15
 ): Promise<string[]> {
   const radius = isMetroArea(address) ? 2 : 5;
+  const generateCount = Math.min(remainingCount, 15);
 
   const prompt = `당신은 네이버 블로그 SEO 키워드 전문가입니다.
 
@@ -116,9 +119,10 @@ ${existingKeywords.map(k => `- ${k}`).join('\n')}
 
 규칙:
 1. 위 키워드와 겹치지 않는 새로운 키워드만 생성
-2. 더 넓은 지역명, 세부 시술명, 롱테일 키워드 등 다양하게
+2. 더 넓은 지역명, 세부 시술명, 롱테일 키워드, 증상 관련 키워드, 비용/가격 키워드 등 다양하게
 3. 실제 네이버에서 검색량이 있을 법한 키워드만
-4. 정확히 15개 생성
+4. 정확히 ${generateCount}개 생성
+5. 이미 분석한 키워드와 절대 겹치면 안 됩니다!
 
 JSON 배열로만 응답하세요:
 ["키워드1", "키워드2", ...]`;
@@ -137,7 +141,7 @@ JSON 배열로만 응답하세요:
       const existing = new Set(existingKeywords.map(k => k.toLowerCase()));
       return parsed
         .filter((k: any) => typeof k === 'string' && k.trim() && !existing.has(k.trim().toLowerCase()))
-        .slice(0, 15);
+        .slice(0, generateCount);
     }
     return [];
   } catch (e) {
@@ -301,18 +305,27 @@ export async function analyzeHospitalKeywords(
 
 /**
  * 추가 키워드 로드 (더보기)
+ * 최대 100개까지 중복 없이 로드
  */
+export const MAX_KEYWORDS = 100;
+
 export async function loadMoreKeywords(
   hospitalName: string,
   address: string,
   existingStats: KeywordStat[],
   category?: string,
   onProgress?: (msg: string) => void
-): Promise<{ stats: KeywordStat[]; apiErrors?: string[] }> {
+): Promise<{ stats: KeywordStat[]; apiErrors?: string[]; reachedLimit?: boolean }> {
   const existingKeywords = existingStats.map(s => s.keyword);
+  const remaining = MAX_KEYWORDS - existingKeywords.length;
 
-  onProgress?.('추가 키워드 생성 중...');
-  const moreCandidates = await generateMoreKeywordsWithAI(hospitalName, address, existingKeywords, category);
+  if (remaining <= 0) {
+    return { stats: [], reachedLimit: true };
+  }
+
+  const batchSize = Math.min(remaining, 15); // 한 번에 15개씩
+  onProgress?.(`추가 키워드 생성 중... (현재 ${existingKeywords.length}개 / 최대 ${MAX_KEYWORDS}개)`);
+  const moreCandidates = await generateMoreKeywordsWithAI(hospitalName, address, existingKeywords, category, batchSize);
 
   if (moreCandidates.length === 0) {
     return { stats: [] };
@@ -321,6 +334,12 @@ export async function loadMoreKeywords(
   onProgress?.(`${moreCandidates.length}개 추가 키워드 분석 중...`);
   const { stats, apiErrors } = await fetchKeywordStats(moreCandidates);
 
-  const filteredStats = stats.filter(s => s.monthlySearchVolume >= 20);
-  return { stats: filteredStats, apiErrors };
+  // 중복 제거 (기존 키워드와 겹치지 않는 것만)
+  const existingSet = new Set(existingKeywords.map(k => k.toLowerCase()));
+  const filteredStats = stats
+    .filter(s => s.monthlySearchVolume >= 20)
+    .filter(s => !existingSet.has(s.keyword.toLowerCase()));
+
+  const newTotal = existingKeywords.length + filteredStats.length;
+  return { stats: filteredStats, apiErrors, reachedLimit: newTotal >= MAX_KEYWORDS };
 }
