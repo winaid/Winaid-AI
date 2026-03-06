@@ -49,12 +49,12 @@ async function getSearchVolume(
     return { data: {}, error: 'hintKeywords: 유효한 키워드 없음 (정제 후)' };
   }
 
-  // 공백을 +로 변환 (application/x-www-form-urlencoded 형식)
-  const keywordParam = cleanKeywords.map(k => k.replace(/ /g, '+')).join(',');
+  // 공백만 %20으로 인코딩, 한글은 raw (Cloudflare Workers fetch가 처리)
+  const keywordParam = cleanKeywords.map(k => k.replace(/ /g, '%20')).join(',');
   const fetchUrl = `https://api.searchad.naver.com${uri}?hintKeywords=${keywordParam}&showDetail=1`;
 
-  console.log('[SearchAd v5] keywords:', cleanKeywords.join(', '));
-  console.log('[SearchAd v5] URL:', fetchUrl.substring(0, 500));
+  console.log('[SearchAd v6] keywords:', cleanKeywords.join(', '));
+  console.log('[SearchAd v6] URL:', fetchUrl.substring(0, 500));
 
   const response = await fetch(fetchUrl, {
     method: 'GET',
