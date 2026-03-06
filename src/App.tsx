@@ -1044,6 +1044,7 @@ const App: React.FC = () => {
                 onSubmit={handleGenerate}
                 isLoading={state.isLoading || isGeneratingScript}
                 onTabChange={setContentTab}
+                activePostType={contentTab === 'press' ? 'press_release' : contentTab === 'card_news' ? 'card_news' : contentTab === 'blog' ? 'blog' : undefined}
               />
             </Suspense>
           </div>

@@ -11,10 +11,32 @@ interface InputFormProps {
   onSubmit: (data: GenerationRequest) => void;
   isLoading: boolean;
   onTabChange?: (tab: 'blog' | 'similarity' | 'refine' | 'card_news' | 'press' | 'image') => void;
+  activePostType?: PostType;
 }
 
-const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange }) => {
-  const [postType, setPostType] = useState<PostType>('blog');
+const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange, activePostType }) => {
+  const [postType, setPostTypeRaw] = useState<PostType>(activePostType || 'blog');
+
+  // URL hash(activePostType)와 내부 postType 동기화
+  useEffect(() => {
+    if (activePostType && activePostType !== postType) {
+      setPostTypeRaw(activePostType);
+    }
+  }, [activePostType]);
+
+  // postType 변경 시 App의 contentTab도 함께 업데이트
+  const setPostType = (type: PostType) => {
+    setPostTypeRaw(type);
+    if (onTabChange) {
+      const tabMap: Record<PostType, 'blog' | 'card_news' | 'press'> = {
+        blog: 'blog',
+        card_news: 'card_news',
+        press_release: 'press',
+      };
+      onTabChange(tabMap[type]);
+    }
+  };
+
   const [category, setCategory] = useState<ContentCategory>(CATEGORIES[0].value);
   const [audienceMode, setAudienceMode] = useState<AudienceMode>('환자용(친절/공감)');
   const [persona, setPersona] = useState(PERSONAS[0].value);
