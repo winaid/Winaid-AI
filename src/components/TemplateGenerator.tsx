@@ -1487,6 +1487,10 @@ export default function TemplateGenerator() {
   const [error, setError] = useState<string | null>(null);
   const [previewStyleImage, setPreviewStyleImage] = useState<{ url: string; name: string } | null>(null);
   const [enlargedTemplate, setEnlargedTemplate] = useState<CategoryTemplate | null>(null);
+  // 재생성 관련
+  const [showRegenMenu, setShowRegenMenu] = useState(false);
+  const [regenPrompt, setRegenPrompt] = useState('');
+  const [showRegenPromptInput, setShowRegenPromptInput] = useState(false);
 
   useEffect(() => {
     const s = localStorage.getItem('uploaded_logo'); if (s) setLogoBase64(s);
@@ -1573,8 +1577,9 @@ export default function TemplateGenerator() {
   const activeStylePrompt = selectedHistory?.stylePrompt || selectedCatTemplate?.aiPrompt || selectedStyle.aiPrompt;
   const activeStyleName = selectedHistory?.name || selectedCatTemplate?.name || selectedStyle.name;
 
-  const handleGenerate = async () => {
+  const handleGenerate = async (regenExtra?: string) => {
     setGenerating(true); setError(null); setGeneratingStep(0); setResultImages([]); setCurrentPage(0); setGeneratingPage(0);
+    setShowRegenMenu(false); setShowRegenPromptInput(false);
     const stepTimer = setInterval(() => setGeneratingStep(s => s + 1), 3000);
     try {
       const sizeConfig = [...IMAGE_SIZES].find(s => s.id === imageSize) || IMAGE_SIZES[3];
@@ -1604,7 +1609,7 @@ export default function TemplateGenerator() {
       }
 
       const hospitalInfoLines = [clinicHours, clinicPhone, clinicAddress].filter(Boolean);
-      const allExtraPrompts = [customMessage.trim(), extraPrompt.trim()].filter(Boolean);
+      const allExtraPrompts = [customMessage.trim(), extraPrompt.trim(), regenExtra?.trim()].filter(Boolean);
 
       const totalPages = category === 'hiring' ? hiringPageCount : 1;
       const images: string[] = [];
@@ -2170,8 +2175,44 @@ export default function TemplateGenerator() {
               {resultImages.length > 1 && (
                 <button onClick={() => handleDownload()} className="px-6 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-bold text-sm transition-colors">전체 다운로드</button>
               )}
-              <button onClick={handleGenerate} disabled={generating} className="px-6 py-2.5 bg-slate-600 hover:bg-slate-700 text-white rounded-xl font-bold text-sm transition-colors">다시 생성</button>
+              {/* 다시 생성 드롭다운 */}
+              <div className="relative">
+                <button onClick={() => setShowRegenMenu(!showRegenMenu)} disabled={generating} className="px-6 py-2.5 bg-slate-600 hover:bg-slate-700 text-white rounded-xl font-bold text-sm transition-colors flex items-center gap-1.5">
+                  다시 생성
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                </button>
+                {showRegenMenu && (
+                  <div className="absolute bottom-full mb-2 right-0 w-56 bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden z-10">
+                    <button onClick={() => { setShowRegenMenu(false); handleGenerate(); }} className="w-full px-4 py-3 text-left text-sm hover:bg-slate-50 transition-colors flex items-center gap-2">
+                      <svg className="w-4 h-4 text-violet-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                      <div><div className="font-bold text-slate-700">자동 재생성</div><div className="text-xs text-slate-400">같은 설정으로 새로 생성</div></div>
+                    </button>
+                    <div className="border-t border-slate-100" />
+                    <button onClick={() => { setShowRegenMenu(false); setShowRegenPromptInput(true); setRegenPrompt(''); }} className="w-full px-4 py-3 text-left text-sm hover:bg-slate-50 transition-colors flex items-center gap-2">
+                      <svg className="w-4 h-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                      <div><div className="font-bold text-slate-700">수정 후 재생성</div><div className="text-xs text-slate-400">변경 사항을 프롬프트로 지시</div></div>
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
+            {/* 수정 프롬프트 입력 */}
+            {showRegenPromptInput && (
+              <div className="w-full max-w-lg space-y-2 mt-2">
+                <textarea
+                  value={regenPrompt}
+                  onChange={e => setRegenPrompt(e.target.value)}
+                  placeholder="예: 배경색을 좀 더 따뜻하게, 글씨 크기를 키워줘, 여백을 줄여줘..."
+                  className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-violet-400 resize-none bg-white"
+                  rows={3}
+                  autoFocus
+                />
+                <div className="flex gap-2 justify-end">
+                  <button onClick={() => setShowRegenPromptInput(false)} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-sm font-medium transition-colors">취소</button>
+                  <button onClick={() => handleGenerate(regenPrompt)} disabled={!regenPrompt.trim()} className="px-5 py-2 bg-violet-600 hover:bg-violet-700 disabled:opacity-40 text-white rounded-lg text-sm font-bold transition-colors">수정 반영 재생성</button>
+                </div>
+              </div>
+            )}
           </div>
         ):(
           <div className="flex flex-col items-center justify-center py-16 relative group">
