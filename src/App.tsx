@@ -122,16 +122,8 @@ const App: React.FC = () => {
   // API 키 설정 모달 상태
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
   
-  // 비밀번호 인증 상태
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-  
-  // 앱 시작 시 인증 확인
-  useEffect(() => {
-    const auth = sessionStorage.getItem('hospital_ai_auth');
-    if (auth === 'true') {
-      setIsAuthenticated(true);
-    }
-  }, []);
+  // 비밀번호 인증 상태 - 임시로 항상 true (로그인 비활성화)
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(true);
   
 
   // 다크모드 상태
