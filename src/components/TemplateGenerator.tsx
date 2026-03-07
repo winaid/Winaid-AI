@@ -47,6 +47,23 @@ const textareaCls = `${inputCls} resize-none`;
 const labelCls = 'block text-xs font-semibold text-slate-600 mb-1';
 
 // SVG 미리보기 - 카테고리별 세련된 레이아웃
+// 미리보기용 휴진일 예시: 9, 10 (연속 2일) + 15 (단독)
+const PREVIEW_CLOSED = new Set([9, 10, 15]);
+const PREVIEW_SHORT = new Set([22]);
+
+// 연속 휴진일 감지: 같은 행에서 다음날도 휴진이면 둥근 네모로 묶기
+function closedRunLength(day: number, col: number): number {
+  let len = 1;
+  while (col + len < 7 && PREVIEW_CLOSED.has(day + len)) len++;
+  return len;
+}
+function isRunStart(day: number, col: number): boolean {
+  return PREVIEW_CLOSED.has(day) && (col === 0 || !PREVIEW_CLOSED.has(day - 1));
+}
+function isInRun(day: number, col: number): boolean {
+  return PREVIEW_CLOSED.has(day) && col > 0 && PREVIEW_CLOSED.has(day - 1);
+}
+
 function TemplateSVGPreview({ template: t, category, hospitalName }: { template: CategoryTemplate; category: TemplateCategory; hospitalName: string }) {
   const c = t.color;
   const a = t.accent;
@@ -92,12 +109,14 @@ function TemplateSVGPreview({ template: t, category, hospitalName }: { template:
         {[0,1,2,3,4].map(row => Array.from({length: 7}, (_, col) => {
           const day = row * 7 + col + 1;
           if (day > 31) return null;
-          const isClosed = day === 9 || day === 15;
-          const isShort = day === 22;
+          const closed = PREVIEW_CLOSED.has(day);
+          const short = PREVIEW_SHORT.has(day);
+          const cx = 16 + col * 14, cy = 77 + row * 10.5;
           return <g key={`${row}-${col}`}>
-            {isClosed && <rect x={16 + col * 14 - 4.5} y={77 + row * 10.5 - 4} width="9" height="9" rx="2" fill={c} fillOpacity="0.12" />}
-            {isShort && <rect x={16 + col * 14 - 4.5} y={77 + row * 10.5 - 4} width="9" height="9" rx="2" fill="#f59e0b" fillOpacity="0.1" />}
-            <text x={16 + col * 14} y={79 + row * 10.5} textAnchor="middle" fontSize="3.5" fontWeight={isClosed || isShort ? '800' : '400'} fill={isClosed ? c : isShort ? '#d97706' : col === 0 ? '#fca5a5' : '#64748b'}>{day}</text>
+            {isRunStart(day, col) && closedRunLength(day, col) > 1 && <rect x={cx - 4.5} y={cy - 4} width={14 * (closedRunLength(day, col) - 1) + 9} height="9" rx="4.5" fill={c} fillOpacity="0.15" />}
+            {isRunStart(day, col) && closedRunLength(day, col) === 1 && <circle cx={cx} cy={cy} r="5" fill={c} fillOpacity="0.15" />}
+            {short && <rect x={cx - 4.5} y={cy - 4} width="9" height="9" rx="2" fill="#f59e0b" fillOpacity="0.12" />}
+            <text x={cx} y={cy + 2} textAnchor="middle" fontSize="3.5" fontWeight={closed || short ? '800' : '400'} fill={closed ? c : short ? '#b45309' : col === 0 ? '#ef4444' : '#475569'}>{day}</text>
           </g>;
         }))}
         <line x1="12" y1="136" x2="108" y2="136" stroke={c} strokeWidth="0.3" strokeOpacity="0.2" />
@@ -131,12 +150,14 @@ function TemplateSVGPreview({ template: t, category, hospitalName }: { template:
         {[0,1,2,3,4].map(row => Array.from({length: 7}, (_, col) => {
           const day = row * 7 + col + 1;
           if (day > 31) return null;
-          const isClosed = day === 9 || day === 15;
-          const isShort = day === 22;
+          const closed = PREVIEW_CLOSED.has(day);
+          const short = PREVIEW_SHORT.has(day);
+          const cx = 20 + col * 13, cy = 70 + row * 11;
           return <g key={`${row}-${col}`}>
-            {isClosed && <circle cx={20 + col * 13} cy={70 + row * 11} r="4.5" fill="#dc2626" fillOpacity="0.12" />}
-            {isShort && <circle cx={20 + col * 13} cy={70 + row * 11} r="4.5" fill="#f59e0b" fillOpacity="0.12" />}
-            <text x={20 + col * 13} y={72 + row * 11} textAnchor="middle" fontSize="3.5" fontWeight={isClosed || isShort ? '800' : '400'} fill={isClosed ? '#dc2626' : isShort ? '#b45309' : col === 0 ? '#dc2626' : '#57534e'}>{day}</text>
+            {isRunStart(day, col) && closedRunLength(day, col) > 1 && <rect x={cx - 5} y={cy - 4.5} width={13 * (closedRunLength(day, col) - 1) + 10} height="9" rx="4.5" fill="#dc2626" fillOpacity="0.15" />}
+            {isRunStart(day, col) && closedRunLength(day, col) === 1 && <circle cx={cx} cy={cy} r="4.5" fill="#dc2626" fillOpacity="0.15" />}
+            {short && <circle cx={cx} cy={cy} r="4.5" fill="#f59e0b" fillOpacity="0.12" />}
+            <text x={cx} y={cy + 2} textAnchor="middle" fontSize="3.5" fontWeight={closed || short ? '800' : '400'} fill={closed ? '#dc2626' : short ? '#b45309' : col === 0 ? '#dc2626' : '#57534e'}>{day}</text>
           </g>;
         }))}
         {/* 하단: 휴진 스탬프 도장 느낌 범례 */}
@@ -185,11 +206,14 @@ function TemplateSVGPreview({ template: t, category, hospitalName }: { template:
         {[0,1,2,3,4].map(row => Array.from({length: 7}, (_, col) => {
           const day = row * 7 + col + 1;
           if (day > 31) return null;
-          const isClosed = day === 9 || day === 15;
-          const isShort = day === 22;
+          const closed = PREVIEW_CLOSED.has(day);
+          const short = PREVIEW_SHORT.has(day);
+          const cx = 22 + col * 12.5, cy = 68 + row * 10;
           return <g key={`${row}-${col}`}>
-            {isClosed && <circle cx={22 + col * 12.5} cy={68 + row * 10} r="4" fill={c} fillOpacity="0.18" />}
-            <text x={22 + col * 12.5} y={70 + row * 10} textAnchor="middle" fontSize="3.2" fontWeight={isClosed || isShort ? '800' : '400'} fill={isClosed ? c : isShort ? '#b45309' : col === 0 ? '#ef4444' : '#475569'}>{day}</text>
+            {isRunStart(day, col) && closedRunLength(day, col) > 1 && <rect x={cx - 4} y={cy - 4} width={12.5 * (closedRunLength(day, col) - 1) + 8} height="8" rx="4" fill={c} fillOpacity="0.18" />}
+            {isRunStart(day, col) && closedRunLength(day, col) === 1 && <circle cx={cx} cy={cy} r="4" fill={c} fillOpacity="0.18" />}
+            {short && <circle cx={cx} cy={cy} r="4" fill="#f59e0b" fillOpacity="0.12" />}
+            <text x={cx} y={cy + 2} textAnchor="middle" fontSize="3.2" fontWeight={closed || short ? '800' : '400'} fill={closed ? c : short ? '#b45309' : col === 0 ? '#ef4444' : '#475569'}>{day}</text>
           </g>;
         }))}
         {/* 범례 */}
@@ -217,12 +241,14 @@ function TemplateSVGPreview({ template: t, category, hospitalName }: { template:
         {[0,1,2,3,4].map(row => Array.from({length: 7}, (_, col) => {
           const day = row * 7 + col + 1;
           if (day > 31) return null;
-          const isClosed = day === 9 || day === 15;
-          const isShort = day === 22;
+          const closed = PREVIEW_CLOSED.has(day);
+          const short = PREVIEW_SHORT.has(day);
+          const cx = 18 + col * 13.5, cy = 60 + row * 12;
           return <g key={`${row}-${col}`}>
-            {isClosed && <circle cx={18 + col * 13.5} cy={60 + row * 12} r="5" fill={c} fillOpacity="0.15" />}
-            {isShort && <circle cx={18 + col * 13.5} cy={60 + row * 12} r="5" fill="#f59e0b" fillOpacity="0.12" />}
-            <text x={18 + col * 13.5} y={62 + row * 12} textAnchor="middle" fontSize="3.5" fontWeight={isClosed || isShort ? '800' : '400'} fill={isClosed ? c : isShort ? '#b45309' : col === 0 ? '#ef4444' : '#475569'}>{day}</text>
+            {isRunStart(day, col) && closedRunLength(day, col) > 1 && <rect x={cx - 5} y={cy - 5} width={13.5 * (closedRunLength(day, col) - 1) + 10} height="10" rx="5" fill={c} fillOpacity="0.15" />}
+            {isRunStart(day, col) && closedRunLength(day, col) === 1 && <circle cx={cx} cy={cy} r="5" fill={c} fillOpacity="0.15" />}
+            {short && <circle cx={cx} cy={cy} r="5" fill="#f59e0b" fillOpacity="0.12" />}
+            <text x={cx} y={cy + 2} textAnchor="middle" fontSize="3.5" fontWeight={closed || short ? '800' : '400'} fill={closed ? c : short ? '#b45309' : col === 0 ? '#ef4444' : '#475569'}>{day}</text>
           </g>;
         }))}
         {/* 하단 범례 - 반투명 화이트 카드 */}
@@ -267,10 +293,12 @@ function TemplateSVGPreview({ template: t, category, hospitalName }: { template:
         {[0,1,2,3,4].map(row => Array.from({length: 7}, (_, col) => {
           const day = row * 7 + col + 1;
           if (day > 31) return null;
-          const isClosed = day === 9 || day === 15;
+          const closed = PREVIEW_CLOSED.has(day);
+          const cx = 18 + col * 13.5, cy = 87 + row * 9;
           return <g key={`${row}-${col}`}>
-            {isClosed && <circle cx={18 + col * 13.5} cy={87 + row * 9} r="3.5" fill="#fee2e2" fillOpacity="0.6" />}
-            <text x={18 + col * 13.5} y={89 + row * 9} textAnchor="middle" fontSize="3" fontWeight={isClosed ? '800' : '400'} fill={isClosed ? '#dc2626' : col === 0 ? '#dc2626' : '#78350f'}>{day}</text>
+            {isRunStart(day, col) && closedRunLength(day, col) > 1 && <rect x={cx - 4} y={cy - 3.5} width={13.5 * (closedRunLength(day, col) - 1) + 8} height="7" rx="3.5" fill="#fee2e2" fillOpacity="0.7" />}
+            {isRunStart(day, col) && closedRunLength(day, col) === 1 && <circle cx={cx} cy={cy} r="3.5" fill="#fee2e2" fillOpacity="0.7" />}
+            <text x={cx} y={cy + 2} textAnchor="middle" fontSize="3" fontWeight={closed ? '800' : '400'} fill={closed ? '#dc2626' : col === 0 ? '#dc2626' : '#78350f'}>{day}</text>
           </g>;
         }))}
         {/* 스티커 */}
@@ -305,11 +333,14 @@ function TemplateSVGPreview({ template: t, category, hospitalName }: { template:
           {[0,1,2,3,4].map(row => Array.from({length: 7}, (_, col) => {
             const day = row * 7 + col + 1;
             if (day > 31) return null;
-            const isClosed = day === 9 || day === 15;
-            const isShort = day === 22;
+            const closed = PREVIEW_CLOSED.has(day);
+            const short = PREVIEW_SHORT.has(day);
+            const cx = 28 + col * 10.5, cy = 66 + row * 9;
             return <g key={`${row}-${col}`}>
-              {isClosed && <circle cx={28 + col * 10.5} cy={66 + row * 9} r="3.5" fill={c} fillOpacity="0.18" />}
-              <text x={28 + col * 10.5} y={68 + row * 9} textAnchor="middle" fontSize="2.8" fontWeight={isClosed || isShort ? '800' : '400'} fill={isClosed ? c : isShort ? '#b45309' : col === 0 ? '#ef4444' : '#475569'}>{day}</text>
+              {isRunStart(day, col) && closedRunLength(day, col) > 1 && <rect x={cx - 4} y={cy - 3.5} width={10.5 * (closedRunLength(day, col) - 1) + 8} height="7" rx="3.5" fill={c} fillOpacity="0.18" />}
+              {isRunStart(day, col) && closedRunLength(day, col) === 1 && <circle cx={cx} cy={cy} r="3.5" fill={c} fillOpacity="0.18" />}
+              {short && <circle cx={cx} cy={cy} r="3.5" fill="#f59e0b" fillOpacity="0.12" />}
+              <text x={cx} y={cy + 2} textAnchor="middle" fontSize="2.8" fontWeight={closed || short ? '800' : '400'} fill={closed ? c : short ? '#b45309' : col === 0 ? '#ef4444' : '#475569'}>{day}</text>
             </g>;
           }))}
         </g>
@@ -342,12 +373,14 @@ function TemplateSVGPreview({ template: t, category, hospitalName }: { template:
         {[0,1,2,3,4].map(row => Array.from({length: 7}, (_, col) => {
           const day = row * 7 + col + 1;
           if (day > 31) return null;
-          const isClosed = day === 9 || day === 15;
-          const isShort = day === 22;
+          const closed = PREVIEW_CLOSED.has(day);
+          const short = PREVIEW_SHORT.has(day);
+          const cx = 16 + col * 14, cy = 44 + row * 11;
           return <g key={`${row}-${col}`}>
-            {isClosed && <rect x={16 + col * 14 - 5} y={44 + row * 11 - 4} width="10" height="10" rx="3" fill={c} fillOpacity="0.12" />}
-            {isShort && <rect x={16 + col * 14 - 5} y={44 + row * 11 - 4} width="10" height="10" rx="3" fill="#f59e0b" fillOpacity="0.12" />}
-            <text x={16 + col * 14} y={47 + row * 11} textAnchor="middle" fontSize="3.8" fontWeight={isClosed || isShort ? '800' : '400'} fill={isClosed ? c : isShort ? '#f59e0b' : col === 0 ? '#fca5a5' : '#64748b'}>{day}</text>
+            {isRunStart(day, col) && closedRunLength(day, col) > 1 && <rect x={cx - 5} y={cy - 4} width={14 * (closedRunLength(day, col) - 1) + 10} height="10" rx="5" fill={c} fillOpacity="0.15" />}
+            {isRunStart(day, col) && closedRunLength(day, col) === 1 && <rect x={cx - 5} y={cy - 4} width="10" height="10" rx="3" fill={c} fillOpacity="0.15" />}
+            {short && <rect x={cx - 5} y={cy - 4} width="10" height="10" rx="3" fill="#f59e0b" fillOpacity="0.12" />}
+            <text x={cx} y={cy + 3} textAnchor="middle" fontSize="3.8" fontWeight={closed || short ? '800' : '400'} fill={closed ? c : short ? '#b45309' : col === 0 ? '#ef4444' : '#475569'}>{day}</text>
           </g>;
         }))}
         <g transform="translate(12, 114)">
