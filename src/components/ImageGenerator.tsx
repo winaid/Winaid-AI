@@ -166,9 +166,9 @@ export default function ImageGenerator({ onProgress }: Props) {
   // 템플릿 모드
   if (mode === 'template') {
     return (
-      <div className="h-full flex flex-col">
+      <div className="space-y-6">
         {/* 헤더 */}
-        <div className="flex items-center justify-between pb-4 mb-4 border-b border-slate-200/60">
+        <div className="flex items-center justify-between pb-4 border-b border-slate-200/60">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-gradient-to-br from-emerald-100 to-teal-100">
               <svg className="w-5 h-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0022.5 18.75V5.25A2.25 2.25 0 0020.25 3H3.75A2.25 2.25 0 001.5 5.25v13.5A2.25 2.25 0 003.75 21z" /></svg>
@@ -183,11 +183,9 @@ export default function ImageGenerator({ onProgress }: Props) {
             <button onClick={() => setMode('free')} className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-500 hover:text-slate-700 transition-all">자유 입력</button>
           </div>
         </div>
-        <div className="flex-1 overflow-hidden">
-          <Suspense fallback={<div className="flex items-center justify-center h-64"><div className="w-10 h-10 border-4 border-teal-200 border-t-teal-500 rounded-full animate-spin" /></div>}>
-            <TemplateGenerator />
-          </Suspense>
-        </div>
+        <Suspense fallback={<div className="flex items-center justify-center h-64"><div className="w-10 h-10 border-4 border-teal-200 border-t-teal-500 rounded-full animate-spin" /></div>}>
+          <TemplateGenerator />
+        </Suspense>
       </div>
     );
   }

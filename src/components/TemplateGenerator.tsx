@@ -1665,8 +1665,8 @@ export default function TemplateGenerator() {
   };
 
   return (
-    <div className="h-full flex gap-6 overflow-hidden">
-      <div className="w-[420px] flex-shrink-0 overflow-y-auto space-y-4 pr-2">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:items-start">
+      <div className="space-y-4">
 
         {/* 카테고리 */}
         <div className="flex flex-wrap gap-1.5">
@@ -2074,7 +2074,7 @@ export default function TemplateGenerator() {
       </div>
 
       {/* 오른쪽: 미리보기 */}
-      <div className="flex-1 flex flex-col items-center overflow-y-auto pt-6">
+      <div className="flex flex-col items-center min-h-[480px]">
         {error&&<div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">{error}</div>}
         {generating ? (
           <div className="flex flex-col items-center justify-center gap-6 animate-fade-in">
@@ -2137,10 +2137,25 @@ export default function TemplateGenerator() {
             </div>
           </div>
         ):(
-          <div className="text-center space-y-4">
-            <div className="text-6xl">{ph[category].icon}</div>
-            <div><h3 className="text-lg font-bold text-slate-700">{ph[category].t}</h3><p className="text-sm text-slate-400 mt-1">{ph[category].d}</p></div>
-            {category==='schedule'&&(<div className="flex justify-center gap-6 text-xs text-slate-400"><div className="flex items-center gap-1.5"><span className="w-3 h-3 bg-red-100 border border-red-300 rounded" /> 휴진</div><div className="flex items-center gap-1.5"><span className="w-3 h-3 bg-amber-100 border border-amber-300 rounded" /> 단축</div><div className="flex items-center gap-1.5"><span className="w-3 h-3 bg-purple-100 border border-purple-300 rounded" /> 휴가</div></div>)}
+          <div className="flex flex-col items-center justify-center py-16 relative group">
+            <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-2xl">
+              <div className="absolute top-8 right-8 w-32 h-32 bg-violet-100/30 rounded-full blur-[60px]" />
+              <div className="absolute bottom-8 left-8 w-24 h-24 bg-blue-100/20 rounded-full blur-[50px]" />
+            </div>
+            <div className="relative flex flex-col items-center">
+              <div className="w-20 h-20 rounded-2xl flex items-center justify-center mb-6 bg-gradient-to-br from-violet-50 to-indigo-100/80 border border-violet-200/30">
+                <svg className="w-9 h-9 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0022.5 18.75V5.25A2.25 2.25 0 0020.25 3H3.75A2.25 2.25 0 001.5 5.25v13.5A2.25 2.25 0 003.75 21z" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-bold text-slate-700 mb-2">{ph[category].t}</h3>
+              <p className="text-sm font-medium text-slate-400 leading-relaxed mb-5 text-center">{ph[category].d}</p>
+              {category==='schedule'&&(<div className="flex justify-center gap-4 text-xs text-slate-400 mb-4"><div className="flex items-center gap-1.5"><span className="w-3 h-3 bg-red-100 border border-red-300 rounded" /> 휴진</div><div className="flex items-center gap-1.5"><span className="w-3 h-3 bg-amber-100 border border-amber-300 rounded" /> 단축</div><div className="flex items-center gap-1.5"><span className="w-3 h-3 bg-purple-100 border border-purple-300 rounded" /> 휴가</div></div>)}
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold bg-violet-50/80 text-violet-500 border border-violet-100/50">
+                <div className="w-1.5 h-1.5 bg-violet-500 rounded-full animate-pulse" />
+                AI 대기 중
+              </div>
+            </div>
           </div>
         )}
       </div>
