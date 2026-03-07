@@ -1100,6 +1100,7 @@ export interface CategoryTemplate {
   desc: string;       // 한 줄 설명
   aiPrompt: string;   // AI 이미지 생성용 영어 프롬프트
   layoutHint: string; // SVG 미리보기 레이아웃 힌트
+  previewImage?: string; // 커스텀 미리보기 이미지 경로 (있으면 SVG 대신 이미지 표시)
 }
 
 export const CATEGORY_TEMPLATES: Record<string, CategoryTemplate[]> = {

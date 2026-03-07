@@ -70,6 +70,18 @@ function isInRun(day: number, col: number): boolean {
 }
 
 function TemplateSVGPreview({ template: t, category, hospitalName }: { template: CategoryTemplate; category: TemplateCategory; hospitalName: string }) {
+  // 커스텀 미리보기 이미지가 있으면 SVG 대신 이미지 표시
+  if (t.previewImage) {
+    return (
+      <img
+        src={t.previewImage}
+        alt={t.name}
+        className="w-full h-full object-cover"
+        loading="lazy"
+      />
+    );
+  }
+
   const c = t.color;
   const a = t.accent;
   const mo = new Date().getMonth() + 1;
@@ -1416,6 +1428,7 @@ export default function TemplateGenerator() {
   const [hospitalName, setHospitalName] = useState('');
   const [selectedStyle, setSelectedStyle] = useState<StylePreset>(AI_STYLE_PRESETS[0]);
   const [selectedCatTemplate, setSelectedCatTemplate] = useState<CategoryTemplate | null>(null);
+  const [customTemplates, setCustomTemplates] = useState<CategoryTemplate[]>([]);
   const [logoBase64, setLogoBase64] = useState<string | null>(null);
   const [customMessage, setCustomMessage] = useState('');
   const [extraPrompt, setExtraPrompt] = useState('');
@@ -1584,6 +1597,11 @@ export default function TemplateGenerator() {
   useEffect(() => {
     const s = localStorage.getItem('uploaded_logo'); if (s) setLogoBase64(s);
     setStyleHistory(loadStyleHistory());
+    // 커스텀 템플릿 이미지 복원
+    try {
+      const ct = localStorage.getItem('custom_templates');
+      if (ct) setCustomTemplates(JSON.parse(ct));
+    } catch {}
     // 병원 기본 정보 복원
     const info = localStorage.getItem('hospital_info');
     if (info) {
@@ -1712,8 +1730,10 @@ export default function TemplateGenerator() {
           : templateData;
 
         // 2장째부터 1장을 스타일 참조로 사용 (톤 통일)
+        // 커스텀 이미지 템플릿 선택 시 해당 이미지를 스타일 참조로 사용
+        const customRef = selectedCatTemplate?.previewImage || undefined;
         const styleRef = page === 1
-          ? (selectedHistory?.referenceImageUrl || undefined)
+          ? (selectedHistory?.referenceImageUrl || customRef || undefined)
           : firstPageRef;
 
         const imageDataUrl = await generateTemplateWithAI(category, pageData, activeStylePrompt, {
@@ -1759,6 +1779,56 @@ export default function TemplateGenerator() {
       const msg = typeof err?.message === 'string' ? err.message : String(err);
       setError(msg || 'AI 이미지 생성에 실패했습니다. 다시 시도해주세요.');
     } finally { clearInterval(stepTimer); setGenerating(false); setGeneratingPage(0); }
+  };
+
+  // 커스텀 템플릿 이미지 업로드
+  const handleCustomTemplateUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      // 이미지 리사이즈 (미리보기용 512px)
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const maxSize = 512;
+        const ratio = Math.min(maxSize / img.width, maxSize / img.height);
+        canvas.width = img.width * ratio;
+        canvas.height = img.height * ratio;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        const resizedUrl = canvas.toDataURL('image/jpeg', 0.85);
+        const newTemplate: CategoryTemplate = {
+          id: `custom_${Date.now()}`,
+          name: file.name.replace(/\.[^.]+$/, '').slice(0, 12) || '커스텀',
+          color: '#6366f1',
+          accent: '#8b5cf6',
+          bg: '#f8fafc',
+          desc: '내 이미지 템플릿',
+          aiPrompt: 'Use the provided reference image style exactly. Match colors, layout, typography, and design elements precisely.',
+          layoutHint: 'custom',
+          previewImage: resizedUrl,
+        };
+        const updated = [...customTemplates, newTemplate];
+        setCustomTemplates(updated);
+        localStorage.setItem('custom_templates', JSON.stringify(updated));
+        setSelectedCatTemplate(newTemplate);
+        setSelectedHistory(null);
+      };
+      img.src = dataUrl;
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  const handleDeleteCustomTemplate = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const updated = customTemplates.filter(t => t.id !== id);
+    setCustomTemplates(updated);
+    localStorage.setItem('custom_templates', JSON.stringify(updated));
+    if (selectedCatTemplate?.id === id) setSelectedCatTemplate(null);
   };
 
   const handleDeleteHistory = (id: string, e: React.MouseEvent) => {
@@ -2177,8 +2247,8 @@ export default function TemplateGenerator() {
                   className={`rounded-xl border-2 transition-all overflow-hidden ${isSelected ? 'shadow-lg scale-[1.03]' : 'border-slate-200 hover:border-slate-300 hover:shadow-md'}`}
                   style={isSelected ? { borderColor: tmpl.color } : undefined}
                 >
-                  {/* SVG 미리보기 */}
-                  <div className="relative w-full overflow-hidden" style={{ aspectRatio: '3/4', background: `linear-gradient(160deg, ${tmpl.bg} 0%, white 80%)` }}>
+                  {/* SVG/이미지 미리보기 */}
+                  <div className="relative w-full overflow-hidden" style={{ aspectRatio: '3/4', background: tmpl.previewImage ? '#f8fafc' : `linear-gradient(160deg, ${tmpl.bg} 0%, white 80%)` }}>
                     <TemplateSVGPreview template={tmpl} category={category} hospitalName={hospitalName || '윈에이드 치과'} />
                   </div>
                   <div className="py-1.5 px-1 bg-white text-center" style={{ borderTop: `1.5px solid ${isSelected ? tmpl.color : '#f1f5f9'}` }}>
@@ -2188,6 +2258,39 @@ export default function TemplateGenerator() {
                 </button>
               );
             })}
+            {/* 커스텀 이미지 템플릿 */}
+            {customTemplates.map((tmpl) => {
+              const isSelected = !selectedHistory && selectedCatTemplate?.id === tmpl.id;
+              return (
+                <button
+                  key={tmpl.id}
+                  onClick={() => { setSelectedCatTemplate(isSelected ? null : tmpl); setSelectedHistory(null); }}
+                  onDoubleClick={() => setEnlargedTemplate(tmpl)}
+                  className={`relative rounded-xl border-2 transition-all overflow-hidden group ${isSelected ? 'shadow-lg scale-[1.03] border-indigo-500 ring-2 ring-indigo-200' : 'border-dashed border-indigo-300 hover:border-indigo-400 hover:shadow-md'}`}
+                >
+                  <div className="relative w-full overflow-hidden" style={{ aspectRatio: '3/4', background: '#f8fafc' }}>
+                    <img src={tmpl.previewImage} alt={tmpl.name} className="w-full h-full object-cover" loading="lazy" />
+                    <button
+                      onClick={(ev) => handleDeleteCustomTemplate(tmpl.id, ev)}
+                      className="absolute top-1 right-1 w-5 h-5 bg-red-500/80 text-white rounded-full text-[9px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                    >x</button>
+                  </div>
+                  <div className="py-1.5 px-1 bg-white text-center" style={{ borderTop: `1.5px solid ${isSelected ? '#6366f1' : '#f1f5f9'}` }}>
+                    <div className="text-[10px] font-bold leading-tight" style={{ color: isSelected ? '#6366f1' : '#334155' }}>{tmpl.name}</div>
+                    <div className="text-[8px] mt-0.5" style={{ color: '#a78bfa' }}>내 이미지</div>
+                  </div>
+                </button>
+              );
+            })}
+            {/* 이미지 업로드 버튼 */}
+            <label className="rounded-xl border-2 border-dashed border-slate-300 hover:border-indigo-400 transition-all overflow-hidden cursor-pointer flex flex-col items-center justify-center hover:bg-indigo-50/50" style={{ aspectRatio: '3/5' }}>
+              <input type="file" accept="image/*" className="hidden" onChange={handleCustomTemplateUpload} />
+              <div className="flex flex-col items-center gap-1.5 text-slate-400">
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4v16m8-8H4" /></svg>
+                <span className="text-[9px] font-semibold">내 이미지</span>
+                <span className="text-[8px]">업로드</span>
+              </div>
+            </label>
           </div>
           {selectedCatTemplate && !selectedHistory && (
             <div className="mt-1.5 p-2 bg-blue-50 rounded-lg border border-blue-200">
@@ -2436,8 +2539,8 @@ export default function TemplateGenerator() {
                 <svg className="w-4 h-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             </div>
-            <div className="p-6 flex justify-center" style={{ background: `linear-gradient(160deg, ${enlargedTemplate.bg} 0%, white 80%)` }}>
-              <div className="w-72">
+            <div className="p-6 flex justify-center" style={{ background: enlargedTemplate.previewImage ? '#f8fafc' : `linear-gradient(160deg, ${enlargedTemplate.bg} 0%, white 80%)` }}>
+              <div className={enlargedTemplate.previewImage ? 'w-80' : 'w-72'}>
                 <TemplateSVGPreview template={enlargedTemplate} category={category} hospitalName={hospitalName || '윈에이드 치과'} />
               </div>
             </div>
