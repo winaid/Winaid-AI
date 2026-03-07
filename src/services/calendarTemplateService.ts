@@ -834,90 +834,117 @@ export interface CategoryTemplate {
 
 export const CATEGORY_TEMPLATES: Record<string, CategoryTemplate[]> = {
   // ─── 진료 일정: 전체 달력 레이아웃 (6개) ───
+  // 각 템플릿은 레이아웃 구조 자체가 완전히 다름 (색상만 다른 게 아님!)
   schedule_full_calendar: [
     {
-      id: 'sfc_clean_grid', name: '클린 그리드', color: '#3b82f6', accent: '#1d4ed8', bg: '#eff6ff',
-      desc: '깔끔한 격자 달력',
+      id: 'sfc_clean_grid', name: '클린 그리드', color: '#1e3a5f', accent: '#0f2942', bg: '#f0f4f8',
+      desc: '정통 7열 격자 달력',
       layoutHint: 'cal_grid',
-      aiPrompt: 'Clean modern medical clinic monthly calendar design, crisp white background with soft blue accents, organized grid layout showing all dates clearly, closed days marked in red circles, shortened hours in amber badges, professional healthcare aesthetic, minimal decorations, clear sans-serif typography, thin blue grid lines, hospital logo area at top',
+      aiPrompt: `LAYOUT: Traditional 7-column monthly calendar grid.
+STRUCTURE: Top header bar (deep navy gradient) with hospital name + month title in white.
+Below: 7-column grid with day headers (Sun=red, Sat=blue, rest=gray).
+Each date in its own cell with generous padding.
+Closed days: soft red background cell + red "휴진" pill badge below date number.
+Shortened days: soft amber background + amber badge.
+STYLE: Clean navy header, white grid body, thin light-gray grid lines, minimal sans-serif font.
+No decorations except a subtle gold accent line below header.
+Maximum whitespace between cells. Professional corporate medical aesthetic.
+This is the classic, traditional calendar layout - clean and authoritative.`,
     },
     {
-      id: 'sfc_pastel_bubble', name: '파스텔 버블', color: '#ec4899', accent: '#be185d', bg: '#fdf2f8',
-      desc: '동그란 날짜 버블',
+      id: 'sfc_pastel_bubble', name: '버블 카드', color: '#ec4899', accent: '#be185d', bg: '#fdf2f8',
+      desc: '날짜마다 둥근 카드',
       layoutHint: 'cal_bubble',
-      aiPrompt: 'Soft pastel pink dental clinic calendar with each date in a soft circular bubble shape, gentle watercolor texture background, closed days in vibrant pink filled circles, normal days in white outlined circles, cute tooth icon decorations in corners, rounded playful aesthetic, handwritten-style date numbers, confetti-like dots scattered in background',
+      aiPrompt: `LAYOUT: Each date is an individual floating rounded card/bubble (NOT a grid with lines).
+STRUCTURE: Hospital name at top, large bold month number.
+Below: dates arranged in 7 columns but each date is a separate rounded rectangle card with subtle shadow.
+Cards have 4px gap between them, creating a mosaic/dashboard feel.
+Closed days: solid coral-pink filled card with white text + white "휴진" text.
+Normal days: white card with thin pink border, charcoal date number.
+Saturday cards: light blue tint. Sunday cards: light red tint.
+STYLE: Soft pink gradient header, each date is its own mini card with rounded corners (12px) and micro shadow.
+Modern app dashboard aesthetic, playful yet professional. NO grid lines - cards float independently.
+This layout feels like a modern mobile app or dashboard, NOT a traditional calendar.`,
     },
     {
-      id: 'sfc_mint_fresh', name: '민트 프레시', color: '#14b8a6', accent: '#0f766e', bg: '#f0fdfa',
-      desc: '상쾌한 민트 달력',
+      id: 'sfc_split_panel', name: '좌우 분할', color: '#7c3aed', accent: '#6d28d9', bg: '#f5f3ff',
+      desc: '왼쪽 정보 + 오른쪽 달력',
       layoutHint: 'cal_nature',
-      aiPrompt: 'Fresh mint and teal clinic monthly calendar, clean modern design with mint green accent borders, calendar grid with soft teal highlights for special dates, fresh hygienic healthcare aesthetic, leaf and plant decorative elements in corners, light gradient background, green cross medical symbol accent',
+      aiPrompt: `LAYOUT: Vertical split panel - LEFT 35% info panel + RIGHT 65% calendar.
+STRUCTURE:
+LEFT PANEL: Deep purple/indigo background panel containing:
+  - Hospital name (small, white, uppercase tracking)
+  - Huge month number (72pt+ white bold)
+  - "월" text below
+  - "진료 안내" subtitle
+  - Closed dates listed as white pill badges with date numbers
+  - Bottom: operating hours in small white text
+RIGHT PANEL: White background with clean mini calendar grid.
+  - Compact 7-column grid, smaller font sizes
+  - Closed days circled in purple, shortened in amber
+  - Clean thin gray lines
+STYLE: Two-panel editorial layout like a magazine spread. Left panel acts as the "hero" with key info at a glance.
+Right panel is reference calendar. Feels like a premium clinic brochure page.
+This layout separates "what matters" (closures) from "reference" (full calendar).`,
     },
     {
-      id: 'sfc_dark_premium', name: '다크 프리미엄', color: '#c084fc', accent: '#7c3aed', bg: '#faf5ff',
-      desc: '고급 다크 달력',
+      id: 'sfc_dark_premium', name: '다크 프리미엄', color: '#c084fc', accent: '#a78bfa', bg: '#0f172a',
+      desc: '고급 다크 테마',
       layoutHint: 'cal_dark',
-      aiPrompt: 'Premium dark-themed dental clinic calendar, deep charcoal/navy background with gold and purple accents, elegant serif typography for month name, glowing date cells with subtle neon outline on hover dates, luxury medical aesthetic, metallic gold borders around closed dates, star-like sparkle decorations, high-end clinic branding feel',
+      aiPrompt: `LAYOUT: Full dark theme with date cards floating on dark background.
+STRUCTURE: Deep navy/charcoal (#0f172a) full background.
+Top: Hospital name in muted gray, month title in white with subtle gold accent.
+Center: Instead of traditional grid, dates displayed as floating translucent glass-like cards.
+Each card slightly elevated with subtle glow/border.
+Closed days: glowing red/coral border card with "휴진" badge, slightly larger than others.
+Shortened days: amber glow border. Normal days: dim white/gray card with subtle border.
+Bottom: Operating hours in a thin glass-panel strip.
+STYLE: Premium dark UI, like a luxury watch face or high-end dashboard. Subtle sparkle dots scattered.
+Metallic gold thin accent lines. Sophisticated and exclusive feel. Dark mode medical aesthetic.
+This layout feels like a premium dark-mode app or luxury brand calendar.`,
     },
     {
-      id: 'sfc_warm_kraft', name: '크래프트 내추럴', color: '#92400e', accent: '#78350f', bg: '#fffbeb',
-      desc: '따뜻한 크래프트지',
+      id: 'sfc_wall_calendar', name: '벽달력 스타일', color: '#92400e', accent: '#78350f', bg: '#fffbeb',
+      desc: '상단 일러스트 + 하단 달력',
       layoutHint: 'cal_kraft',
-      aiPrompt: 'Warm kraft paper textured dental clinic calendar, cozy beige and brown palette, hand-drawn grid lines with slightly imperfect organic feel, date numbers in handwriting font, closed days marked with red wax-seal style stamps, botanical leaf illustrations in margins, vintage postcard aesthetic, warm golden lighting atmosphere',
+      aiPrompt: `LAYOUT: Wall calendar style - TOP 45% illustration area + BOTTOM 55% compact calendar.
+STRUCTURE:
+TOP SECTION: Large illustration area (like a wall calendar's monthly art page).
+  - Cute, friendly medical/dental illustration (tooth character, clinic scene, seasonal motif)
+  - Warm beige/cream background with hand-drawn feel
+  - Hospital name overlaid on illustration in small decorative text
+  - Month title large and bold over illustration
+BOTTOM SECTION: Compact traditional calendar grid.
+  - Smaller cells, efficient use of space
+  - Kraft paper texture background
+  - Closed days: red circle stamps (like a rubber stamp mark)
+  - Hand-drawn feel grid lines (slightly imperfect, organic)
+  - Handwriting-style font for date numbers
+DIVIDER: Decorative masking tape or washi tape strip between illustration and calendar.
+STYLE: Warm, friendly, cozy neighborhood clinic feel. Like a real wall calendar you'd hang up.
+This layout mimics a physical wall calendar with its illustration + grid structure.`,
     },
     {
-      id: 'sfc_glassmorphism', name: '글래스모피즘', color: '#6366f1', accent: '#4f46e5', bg: '#eef2ff',
-      desc: '투명 유리 효과',
+      id: 'sfc_center_focus', name: '중앙 집중형', color: '#0891b2', accent: '#0e7490', bg: '#ecfeff',
+      desc: '휴진일 대형 중앙 강조',
       layoutHint: 'cal_glass',
-      aiPrompt: 'Modern glassmorphism dental clinic calendar, frosted glass card effect with translucent white overlay, vibrant gradient background (indigo to purple), blurred colorful shapes behind glass, date cells with subtle glass borders, closed days with solid frosted red badges, contemporary UI design aesthetic, floating glass panels, soft shadow effects',
-    },
-    {
-      id: 'sfc_navy_executive', name: '네이비 이그제큐티브', color: '#1e3a5f', accent: '#0f2942', bg: '#f0f4f8',
-      desc: '고급 네이비 달력',
-      layoutHint: 'cal_grid',
-      aiPrompt: 'Executive navy blue clinic monthly calendar, deep navy header with white elegant serif month title, clean white grid background, thin navy grid lines, closed days marked with coral-red filled circles, dates in clean sans-serif charcoal, subtle gold accent line separating header from grid, premium corporate medical aesthetic, generous whitespace, hospital name in small uppercase tracking at bottom, minimal and authoritative design',
-    },
-    {
-      id: 'sfc_soft_gradient', name: '소프트 그라데이션', color: '#6366f1', accent: '#818cf8', bg: '#eef2ff',
-      desc: '부드러운 그라데이션',
-      layoutHint: 'cal_grid',
-      aiPrompt: 'Soft gradient clinic calendar with gentle indigo-to-lavender gradient header, smooth color transitions throughout, each date cell has subtle rounded rectangle with very light gradient fill, closed days with vibrant coral gradient badges, modern iOS-inspired clean aesthetic, soft shadows beneath cards, floating date numbers with generous padding, dreamy yet professional medical mood',
-    },
-    {
-      id: 'sfc_minimal_line', name: '미니멀 라인', color: '#374151', accent: '#111827', bg: '#f9fafb',
-      desc: '선만으로 구성된 미니멀',
-      layoutHint: 'cal_grid',
-      aiPrompt: 'Ultra-minimal line-art clinic calendar, pure white background with only thin hairline grid borders in light gray, no fills or backgrounds, dates in clean lightweight font, closed days marked with simple red circle outline and small red dot, charcoal text, maximum whitespace, Swiss/Helvetica-inspired minimalism, zero decorative elements, surgical precision in alignment and spacing, elegant typography-only design',
-    },
-    {
-      id: 'sfc_rounded_card', name: '라운드 카드', color: '#059669', accent: '#047857', bg: '#ecfdf5',
-      desc: '둥근 카드 날짜',
-      layoutHint: 'cal_bubble',
-      aiPrompt: 'Rounded card style clinic calendar, each date displayed inside a soft rounded rectangle card with subtle shadow, emerald green accent header with white text, normal days in white cards with thin border, closed days in warm red cards with white text and rounded corners, slight card elevation effect, clean modern dashboard-like layout, generous gap between date cards, friendly yet professional healthcare aesthetic',
-    },
-    {
-      id: 'sfc_duo_tone', name: '듀오톤 컬러', color: '#7c3aed', accent: '#2563eb', bg: '#f5f3ff',
-      desc: '보라+파랑 듀오톤',
-      layoutHint: 'cal_grid',
-      aiPrompt: 'Duo-tone purple and blue clinic calendar, split-color header with deep purple on left fading to royal blue on right, clean white grid area, date numbers in dark charcoal, closed days with vibrant magenta/coral pill badges, Saturday dates in blue, Sunday dates in warm red, subtle geometric pattern decoration in header only, modern tech-meets-medical aesthetic, crisp typography',
-    },
-    {
-      id: 'sfc_warm_beige', name: '웜 베이지', color: '#92400e', accent: '#78350f', bg: '#fefce8',
-      desc: '따뜻한 베이지 톤',
-      layoutHint: 'cal_grid',
-      aiPrompt: 'Warm beige and cream clinic calendar, soft ivory/cream background with warm brown header accents, cozy cafe-like warmth, dates in warm charcoal brown, closed days with terracotta red badges, subtle linen texture in background, golden-brown thin grid lines, friendly neighborhood clinic aesthetic, warm natural lighting mood, gentle rounded corners on all elements',
-    },
-    {
-      id: 'sfc_clean_mono', name: '클린 모노', color: '#18181b', accent: '#3f3f46', bg: '#fafafa',
-      desc: '흑백 모노크롬',
-      layoutHint: 'cal_grid',
-      aiPrompt: 'Monochrome black and white clinic calendar, stark black header with white bold month title, pure white grid background, all text in black or dark gray, closed days with bright red accent as the ONLY color, creating dramatic focal point on closure dates, editorial magazine-style typography, ultra clean and sophisticated, high contrast, premium monotone aesthetic with single red accent color',
-    },
-    {
-      id: 'sfc_ocean_calm', name: '오션 캄', color: '#0284c7', accent: '#0369a1', bg: '#f0f9ff',
-      desc: '차분한 바다색',
-      layoutHint: 'cal_grid',
-      aiPrompt: 'Calm ocean-inspired clinic calendar, serene sky blue to teal gradient header reminiscent of calm sea, white clean grid area, dates in deep navy, closed days with coral/salmon badges contrasting beautifully against blue theme, subtle wave pattern decoration in header, peaceful and healing medical atmosphere, thin teal grid lines, clean and refreshing mood',
+      aiPrompt: `LAYOUT: Hero-centered design - closure dates as the MAIN focal point, mini calendar as secondary.
+STRUCTURE:
+TOP: Hospital name + month subtitle in small elegant text.
+CENTER (hero zone, 60% of space): Large closure date display.
+  - Each closed date shown as a large circle or card (diameter 80px+)
+  - Date number huge (48pt+), day of week below, "휴진" badge
+  - If multiple closed dates, arrange side by side with "/" divider
+  - This is what the viewer sees FIRST and remembers
+BOTTOM: Compact mini reference calendar (tiny, 30% of space).
+  - Small traditional 7-column grid for reference
+  - Closed dates highlighted with teal dots
+  - Very compact, utility-only purpose
+Additional: Operating hours in a clean bottom strip.
+Frosted glass card effects on the large date displays.
+Background: soft teal-to-white gradient with subtle organic blobs.
+STYLE: Information hierarchy design - most important info (closures) is HUGE, rest is small.
+This layout ensures the key message (which days are closed) is impossible to miss.`,
     },
   ],
 
