@@ -1920,7 +1920,7 @@ function buildHiringTextContent(data: {
   const { currentPage, totalPages, pageData } = data;
   const pageIndex = (currentPage || 1) - 1;
   const page = pageData[pageIndex] || pageData[0] || { type: 'cover', content: '' };
-  const lines = page.content.trim().split('\n').filter(Boolean);
+  const lines = String(page.content || '').trim().split('\n').filter(Boolean);
 
   const typeHints: Record<string, { layout: string; fallback: string }> = {
     cover: {
@@ -2156,6 +2156,7 @@ Use ONLY the new text content from the prompt below.
       const errMsg = typeof error?.message === 'string' ? error.message : JSON.stringify(error);
       const statusCode = error?.status || error?.code || error?.error?.code;
       console.error(`❌ 템플릿 AI 이미지 생성 에러 (시도 ${attempt}, status=${statusCode}):`, errMsg);
+      console.error('스택 트레이스:', error?.stack || '(no stack)');
       if (attempt < MAX_RETRIES) {
         await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, attempt - 1)));
       }

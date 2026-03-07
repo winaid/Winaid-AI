@@ -1611,7 +1611,7 @@ export default function TemplateGenerator() {
       }
 
       const hospitalInfoLines = [clinicHours, clinicPhone, clinicAddress].filter(Boolean);
-      const allExtraPrompts = [customMessage.trim(), extraPrompt.trim(), regenExtra?.trim()].filter(Boolean);
+      const allExtraPrompts = [String(customMessage || '').trim(), String(extraPrompt || '').trim(), regenExtra ? String(regenExtra).trim() : ''].filter(Boolean);
 
       const totalPages = category === 'hiring' ? hiringPageCount : 1;
       const images: string[] = [];
@@ -1668,7 +1668,9 @@ export default function TemplateGenerator() {
       } catch (e) { console.warn('스타일 히스토리 저장 실패:', e); }
 
     } catch (err: any) {
-      setError(err.message || 'AI 이미지 생성에 실패했습니다. 다시 시도해주세요.');
+      console.error('🔴 handleGenerate 에러:', err, '\n스택:', err?.stack);
+      const msg = typeof err?.message === 'string' ? err.message : String(err);
+      setError(msg || 'AI 이미지 생성에 실패했습니다. 다시 시도해주세요.');
     } finally { clearInterval(stepTimer); setGenerating(false); setGeneratingPage(0); }
   };
 
