@@ -70,8 +70,6 @@ function TemplateSVGPreview({ template: t, category, hospitalName }: { template:
         <filter id={`shadow_${t.id}`}><feDropShadow dx="0" dy="0.5" stdDeviation="0.8" floodOpacity="0.08" /></filter>
       </defs>
       <rect width="120" height="160" fill={`url(#bg_${t.id})`} rx="6" />
-      {/* 상단 얇은 액센트 라인 */}
-      <rect x="0" y="0" width="120" height="2.5" rx="6" fill={`url(#accent_${t.id})`} opacity="0.7" />
       {children}
     </svg>
   );
