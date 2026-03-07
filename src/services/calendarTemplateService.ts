@@ -1133,19 +1133,15 @@ BOTTOM (20%): Centered dental clinic logo (tooth icon) with clinic name in warm 
 Rich, warm autumn atmosphere. Professional Korean dental clinic seasonal calendar.`,
     },
     {
-      id: 'sfc_mint_fresh', name: '민트 프레시', color: '#14b8a6', accent: '#0f766e', bg: '#f0fdfa',
-      desc: '상쾌한 민트 달력',
+      id: 'sfc_mint_fresh', name: '벚꽃 봄', color: '#ec4899', accent: '#be185d', bg: '#fdf2f8',
+      desc: '벚꽃 핑크 달력',
       layoutHint: 'cal_nature',
       aiPrompt: `EXACT LAYOUT BLUEPRINT — replicate this structure precisely:
-STRUCTURE: Header + 5 horizontal card rows stacked vertically. Light mint (#f0fdfa) background.
-DECORATIONS: Top-left and top-right corners: small leaf/ellipse shapes in teal at ~10% opacity, rotated slightly. Tiny pink and purple dots near leaves. Very subtle botanical accents.
-HEADER (top 15%): Hospital name centered in small accent text (#0f766e). Below: "N월 진료안내" in bold teal (#14b8a6), medium-large size.
-BODY — 5 WEEK CARDS (75% of image): Five horizontal white rounded rectangle cards (border-radius 12px, subtle shadow) stacked vertically with ~8px gap between each. Each card structure:
-- LEFT SECTION (15% of card width): Light teal (#14b8a6 at 6%) background square area with "N주" label in small bold teal text, centered.
-- RIGHT SECTION (85% of card width): 7 date numbers evenly spaced in a horizontal row. Closed dates have a teal circle highlight (15% opacity) behind their number, number in bold teal. Shortened dates in bold amber. Sunday numbers in light red (#fca5a5), other numbers in gray (#64748b).
-Cards for week 1 show dates 1-7, week 2 shows 8-14, etc. Last card may have fewer dates.
-BOTTOM: Small leaf decorations at bottom corners matching top, very subtle.
-NO traditional 7×5 grid. This design groups dates BY WEEK in separate cards for easy scanning.`,
+BACKGROUND: Soft pink (#fdf2f8) full background. Scattered cherry blossom (벚꽃) petals in corners and edges at low opacity (30-50%), pink tones (#f9a8d4, #fbcfe8). Delicate, spring atmosphere.
+HEADER (top 30%): Hospital name in small deep pink accent (#be185d) centered at top. Thin pink divider line below. Large bold month number "N월" in dark rose (#831843), very prominent. Below: "진 료 안 내" in spaced letters, medium rose (#9d174d).
+FULL CALENDAR GRID (middle 55%): One large white card (90% opacity, border-radius 12px, soft shadow) centered. Top bar of card in light pink (#fce7f3). 7 day-name headers (일월화수목금토) — Sunday in rose red (#e11d48), Saturday in blue, weekdays in deep pink (#9d174d). Below: 5 rows × 7 columns of date numbers. CLOSED DAYS: soft pink circle (#fce7f3) behind number, number in bold rose red (#e11d48). SHORTENED DAYS: soft amber circle behind number, number in bold amber.
+BOTTOM (15%): Legend with pink circle + "휴진", amber circle + "단축". Clean spring cherry blossom theme.
+Overall: Elegant spring cherry blossom Korean dental clinic calendar. Soft, feminine, professional.`,
     },
     {
       id: 'sfc_dark_premium', name: '오로라 그라데이션', color: '#c084fc', accent: '#7c3aed', bg: '#faf5ff',
@@ -1176,21 +1172,16 @@ FOOTER (bottom 5%): ONLY 3 elements: tiny pink heart outline (♡) bottom-left, 
 Overall: MINIMAL, SIMPLE, CLEAN. Like a cute but understated Korean stationery illustration. NOT busy, NOT colorful, NOT detailed.`,
     },
     {
-      id: 'sfc_glassmorphism', name: '글래스모피즘', color: '#6366f1', accent: '#4f46e5', bg: '#eef2ff',
-      desc: '유리 효과 달력',
+      id: 'sfc_glassmorphism', name: '기와지붕 전통', color: '#92400e', accent: '#78350f', bg: '#fef3c7',
+      desc: '한국 전통 기와 달력',
       layoutHint: 'cal_glass',
       aiPrompt: `EXACT LAYOUT BLUEPRINT — replicate this structure precisely:
-BACKGROUND: Soft gradient with 4 large colorful blurred blob circles creating depth:
-- Top-left: large indigo (#6366f1) circle at 12% opacity
-- Bottom-right: large accent (#4f46e5) circle at 10% opacity
-- Top-right: medium purple (#818cf8) circle at 8% opacity
-- Bottom-left: medium pink (#f472b6) circle at 6% opacity
-HEADER (top 18%): Hospital name in small indigo accent (#4f46e5) centered. Below: large bold "N월 진료안내" in indigo (#6366f1).
-FULL CALENDAR GRID (middle 60%): One large frosted glass card (translucent white at 30%, white border at 50%, border-radius 24px, soft shadow/blur). Inside: 7 day-name headers (일월화수목금토, Sun=red, Sat=blue, others=gray). Below: 5 rows × 7 columns of date numbers showing ALL dates of the month. CLOSED DAYS: soft indigo circle behind number (#6366f1 at 15%), number in bold indigo. SHORTENED DAYS: soft amber circle behind number, number in bold amber (#d97706). Sunday numbers in light red, others in gray (#64748b).
-BOTTOM (12%): Two small frosted glass rectangular cards side by side (rounded corners 16px, white at 30%, white border):
-- Left card: colored dots + "휴진" + "단축" legend
-- Right card: "09:30~18:00" operating hours in indigo
-Modern glassmorphism UI with FULL calendar grid on frosted glass card. Translucent layers on vibrant blurred background.`,
+BACKGROUND: Warm cream/beige (#f5e6d0) full background. Traditional Korean aesthetic.
+TOP SECTION (25%): Large warm coral/salmon (#e8795a) half-circle sun shape centered behind text. Bold white month number "N월" prominently inside the sun. Below: "진료일정 안내" in white bold text. Traditional Korean tiled roof (기와지붕) silhouette in dark charcoal (#3f3f46) spanning full width below the sun, with wavy tile pattern. Thin brown bar below roof.
+DECORATIVE CORNERS: Small traditional Korean bracket ornaments (전통 문양) in warm brown (#92400e) at corners of the calendar area.
+FULL CALENDAR GRID (middle 55%): White card (95% opacity, rounded corners, soft shadow) with notebook ring holes at top edge. Dark charcoal (#3f3f46) header bar with white day-name text (일월화수목금토). Below: 5 rows × 7 columns of date numbers. CLOSED DAYS: soft coral circle (#e8795a at 15%) behind number, number in bold coral. Below closed dates: tiny "휴진" label in coral. Sunday numbers in red (#ef4444), others in dark gray (#1f2937).
+BOTTOM (20%): Traditional corner bracket ornaments matching top. Hospital name centered in warm brown (#92400e) bold text.
+Overall: Warm traditional Korean architectural theme. Professional dental clinic feel with 기와지붕 motif.`,
     },
   ],
 
