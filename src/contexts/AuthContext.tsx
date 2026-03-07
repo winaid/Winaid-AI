@@ -76,6 +76,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     initIP();
   }, []);
 
+  // 자동 로그인 해제 시: 탭/브라우저 닫으면 세션 정리
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      const sessionOnly = sessionStorage.getItem('winaid_session_only');
+      const rememberMe = localStorage.getItem('winaid_remember_me');
+      if (sessionOnly === 'true' || rememberMe === 'false') {
+        // localStorage에서 Supabase 세션 토큰 제거
+        const keys = Object.keys(localStorage);
+        keys.forEach(key => {
+          if (key.startsWith('sb-') || key.includes('supabase')) {
+            localStorage.removeItem(key);
+          }
+        });
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, []);
+
   // Supabase 설정 확인 및 인증 상태 로드
   useEffect(() => {
     const init = async () => {

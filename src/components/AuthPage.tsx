@@ -22,6 +22,9 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onNavigate }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [rememberMe, setRememberMe] = useState(() => {
+    return localStorage.getItem('winaid_remember_me') !== 'false';
+  });
 
   // 이미 로그인된 경우 또는 OAuth 콜백 처리
   useEffect(() => {
@@ -55,8 +58,11 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onNavigate }) => {
     setIsLoading(true);
     
     try {
+      // 자동 로그인 설정 저장
+      localStorage.setItem('winaid_remember_me', rememberMe ? 'true' : 'false');
+
       const { data, error } = await signInWithEmail(email, password);
-      
+
       if (error) {
         if (error.message.includes('Invalid login credentials')) {
           setError('이메일 또는 비밀번호가 올바르지 않습니다.');
@@ -68,9 +74,14 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onNavigate }) => {
         setIsLoading(false);
         return;
       }
-      
+
       if (data.user) {
-        // 로그인 성공
+        // 자동 로그인 해제 시 브라우저 닫으면 세션 만료되도록 표시
+        if (!rememberMe) {
+          sessionStorage.setItem('winaid_session_only', 'true');
+        } else {
+          sessionStorage.removeItem('winaid_session_only');
+        }
         onNavigate('blog');
       }
     } catch {
@@ -235,7 +246,25 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onNavigate }) => {
                 <label className="block text-sm font-medium text-slate-600 mb-1.5">비밀번호</label>
                 <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required className={inputCls} />
               </div>
-              <div className="flex justify-end">
+              <div className="flex items-center justify-between">
+                <label className="flex items-center gap-2 cursor-pointer select-none group">
+                  <div className="relative">
+                    <input
+                      type="checkbox"
+                      checked={rememberMe}
+                      onChange={(e) => setRememberMe(e.target.checked)}
+                      className="peer sr-only"
+                    />
+                    <div className="w-5 h-5 border-2 border-slate-300 rounded-md peer-checked:bg-blue-500 peer-checked:border-blue-500 transition-all group-hover:border-slate-400 flex items-center justify-center">
+                      {rememberMe && (
+                        <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
+                    </div>
+                  </div>
+                  <span className="text-sm text-slate-500 group-hover:text-slate-700">자동 로그인</span>
+                </label>
                 <button type="button" onClick={() => { setMode('forgot'); setError(null); setMessage(null); }} className="text-sm text-blue-500 hover:text-blue-600">비밀번호를 잊으셨나요?</button>
               </div>
               <button type="submit" disabled={isLoading} className={btnPrimaryCls}>
