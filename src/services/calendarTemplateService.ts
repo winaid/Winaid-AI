@@ -840,37 +840,88 @@ export const CATEGORY_TEMPLATES: Record<string, CategoryTemplate[]> = {
       id: 'sfc_clean_grid', name: '클린 그리드', color: '#3b82f6', accent: '#1d4ed8', bg: '#eff6ff',
       desc: '깔끔한 격자 달력',
       layoutHint: 'cal_grid',
-      aiPrompt: 'Hospital monthly calendar notice image. LAYOUT: classic 7-column calendar grid filling the main area. HEADER: solid deep blue (#1d4ed8) gradient bar across top, hospital name in small white uppercase tracking, month title large white bold (e.g. "3월 진료안내"), year badge in translucent white pill. GRID: white background, 7 columns (일~토), thin light-gray (#e2e8f0) hairlines separating cells. Day headers: Sunday=red, Saturday=blue, weekdays=gray, uppercase 2.8px bold. Date numbers: clean sans-serif, charcoal, generous 14px cell padding. CLOSED DAYS: entire cell has soft red (#fef2f2) background with 2px red (#fca5a5) border radius 12px, date number bold red, small "휴진" pill badge (red bg, white text, rounded) below number. SHORTENED DAYS: soft amber (#fffbeb) cell background, amber border, "단축" amber badge. LEGEND: below grid, colored dots + labels for 휴진/단축/휴가 in small pills. NOTICES: light blue (#eff6ff) rounded info box with ">" bullet points for operating hours. FOOTER: thin gray line, hospital name in muted gray small text center. STYLE: maximum whitespace, zero decorations, surgical alignment precision, professional corporate medical poster. Clean sans-serif (Pretendard/Noto Sans KR). Feels like a well-designed hospital website calendar widget printed as a poster.',
+      aiPrompt: `EXACT LAYOUT BLUEPRINT — replicate this structure precisely:
+STRUCTURE: 3 vertical zones stacked top-to-bottom.
+ZONE 1 — HEADER BAR (top 18% of image): Full-width rounded rectangle filled with solid blue (#3b82f6→#1d4ed8) gradient. Inside: hospital name in small white text near top, then large bold white text "N월 진료안내" centered. No other elements in this bar.
+ZONE 2 — CALENDAR GRID (middle 60%): One large white rounded card (border-radius 12px, subtle drop shadow) centered with side margins. Inside the card: Row of 7 day-name headers (일월화수목금토) — Sunday in red (#ef4444), Saturday in blue (#3b82f6), weekdays in gray (#94a3b8). Below: 5 rows × 7 columns of date numbers in regular gray (#64748b). CLOSED DAYS: soft colored circle behind the number (light blue fill at 15% opacity), number in bold blue (#3b82f6). SHORTENED DAYS: soft amber circle behind number, number in bold amber (#d97706). All numbers evenly spaced in a clean grid. Sunday column numbers in light red.
+ZONE 3 — LEGEND (bottom 8%): Below the grid card, a simple row of colored circle dots with labels: blue dot + "휴진", amber dot + "단축". Small, minimal.
+NO decorations, NO illustrations, NO borders. Pure clean corporate medical calendar. White background outside the header bar.`,
     },
     {
       id: 'sfc_pastel_bubble', name: '파스텔 버블', color: '#ec4899', accent: '#be185d', bg: '#fdf2f8',
       desc: '동그란 날짜 버블',
       layoutHint: 'cal_bubble',
-      aiPrompt: 'Hospital monthly calendar notice image. LAYOUT: large hero month display + single-week strip + closure date highlight circles. NOT a traditional grid. HEADER: hospital name in accent pink, decorative balloon/star scattered lightly. CENTER TOP: huge bold month number (e.g. "3") in 72pt+ vivid pink, "월" below, "휴진 안내" subtitle. WEEK STRIP: one horizontal row showing sample 7 days (일~토) as a white rounded card with subtle shadow, each day as a column with day name above and date below. Closed day in the strip gets a pink filled circle behind its number. BOTTOM HERO: 2-3 large circles (diameter 60px+) each showing a closure date number in huge bold font (e.g. "9", "15"), pink/red tones, with "휴진" label below each circle. Circles are the MAIN attention point. DECORATIONS: tiny stars, confetti dots, balloon strings in pastel pink/purple at edges (very subtle, never overwhelming). STYLE: soft pastel pink gradient background (#fdf2f8 to white), playful but professional, friendly dental/pediatric clinic feel. Rounded everything. This design emphasizes WHICH dates are closed with oversized visual elements rather than showing every single date.',
+      aiPrompt: `EXACT LAYOUT BLUEPRINT — replicate this structure precisely:
+STRUCTURE: 4 vertical zones stacked. Soft pastel pink (#fdf2f8) background.
+ZONE 1 — DECORATIONS (top corners, subtle): Left side: one balloon shape (oval + thin string line) in pink at ~15% opacity. Right side: 2 smaller balloons in pink/purple. Tiny star symbols (✦ ✧) scattered sparsely. Very subtle, never dominant.
+ZONE 2 — HERO TITLE (top 35%): Hospital name in small accent text (#be185d) centered. Below: HUGE bold month number (e.g. "3월") in vivid pink (#ec4899), font size ~72pt, this is the visual anchor. Below that: "휴진 안내" in medium accent text.
+ZONE 3 — WEEK STRIP (middle 20%): One horizontal white rounded card (border-radius 20px, soft shadow) spanning most of the width. Inside: 7 columns for one sample week. Each column: day name on top (일월화수목금토, Sun=red, Sat=blue, others=gray) and date number below. Closed day has a pink circle highlight behind its number, number in bold pink.
+ZONE 4 — CLOSURE DATE CIRCLES (bottom 30%): Two LARGE circles side by side (each ~60px diameter). Left circle: light pink fill at 8% opacity, huge bold number (e.g. "9") in pink (#ec4899), "휴진" label below. Right circle: light red fill at 6% opacity, huge bold number (e.g. "15") in red (#ef4444), "휴진" label below. These circles are the MAIN focal point — unmissable. Tiny star decorations at very bottom corners.
+NO calendar grid. This design shows WHICH dates are closed, not every date.`,
     },
     {
       id: 'sfc_mint_fresh', name: '민트 프레시', color: '#14b8a6', accent: '#0f766e', bg: '#f0fdfa',
       desc: '상쾌한 민트 달력',
       layoutHint: 'cal_nature',
-      aiPrompt: 'Hospital monthly calendar notice image. LAYOUT: week-by-week horizontal card list (NOT traditional grid). HEADER: hospital name in teal, small leaf/botanical decorations at corners (very subtle). Title "N월 진료안내" in bold teal. BODY: 5 horizontal card rows, one per week. Each row is a white rounded rectangle card (border-radius 12px, subtle shadow). LEFT side of each card: week number label ("1주", "2주"...) in small teal badge on light teal background. RIGHT side: 7 date numbers in a row, evenly spaced. Closed dates get a teal circle highlight behind them. Shortened dates get an amber circle. Sunday numbers in light red, Saturday in light blue. Each card is separated by 8px gap. STYLE: fresh mint/teal (#14b8a6) and white palette, clean modern healthcare aesthetic. Tiny leaf illustrations at top-left and bottom-right corners. Light mint gradient background. This design groups dates by WEEK for easy scanning, making it clear which week has closures.',
+      aiPrompt: `EXACT LAYOUT BLUEPRINT — replicate this structure precisely:
+STRUCTURE: Header + 5 horizontal card rows stacked vertically. Light mint (#f0fdfa) background.
+DECORATIONS: Top-left and top-right corners: small leaf/ellipse shapes in teal at ~10% opacity, rotated slightly. Tiny pink and purple dots near leaves. Very subtle botanical accents.
+HEADER (top 15%): Hospital name centered in small accent text (#0f766e). Below: "N월 진료안내" in bold teal (#14b8a6), medium-large size.
+BODY — 5 WEEK CARDS (75% of image): Five horizontal white rounded rectangle cards (border-radius 12px, subtle shadow) stacked vertically with ~8px gap between each. Each card structure:
+- LEFT SECTION (15% of card width): Light teal (#14b8a6 at 6%) background square area with "N주" label in small bold teal text, centered.
+- RIGHT SECTION (85% of card width): 7 date numbers evenly spaced in a horizontal row. Closed dates have a teal circle highlight (15% opacity) behind their number, number in bold teal. Shortened dates in bold amber. Sunday numbers in light red (#fca5a5), other numbers in gray (#64748b).
+Cards for week 1 show dates 1-7, week 2 shows 8-14, etc. Last card may have fewer dates.
+BOTTOM: Small leaf decorations at bottom corners matching top, very subtle.
+NO traditional 7×5 grid. This design groups dates BY WEEK in separate cards for easy scanning.`,
     },
     {
       id: 'sfc_dark_premium', name: '다크 프리미엄', color: '#c084fc', accent: '#7c3aed', bg: '#faf5ff',
       desc: '고급 다크 달력',
       layoutHint: 'cal_dark',
-      aiPrompt: 'Hospital monthly calendar notice image. LAYOUT: dark background, left-right asymmetric split. BACKGROUND: deep navy/charcoal (#0f172a) covering entire image. Tiny star-like dots scattered (white, purple, pink at 0.3 opacity). Thin purple gradient accent line at very top. HEADER: hospital name in muted gray (#94a3b8) small text center top. LEFT SIDE (40%): huge bold month number (e.g. "3") in 48pt+ soft purple (#c084fc), "월" below in gray, "휴진 안내" in purple accent text. This is the visual anchor. RIGHT SIDE (60%): 3-4 floating dark cards (dark translucent rectangles with subtle purple/red/amber glow borders), each showing one special date: "9일 (월) - 종일 휴진" in card with red glow, "15일 (일) - 종일 휴진" in card with red glow, "22일 (토) - 단축진료" in card with amber glow. Cards stacked vertically with 12px gap. BOTTOM: thin divider line at 0.1 opacity, operating hours in muted gray small text. STYLE: premium dark UI aesthetic, like a luxury app dashboard or high-end watch interface. NO traditional grid. Metallic purple glow effects. Sophisticated, exclusive, high-end clinic branding feel.',
+      aiPrompt: `EXACT LAYOUT BLUEPRINT — replicate this structure precisely:
+BACKGROUND: Full dark navy (#0f172a) rectangle covering entire image. Thin purple gradient accent line across very top edge (2px height). Tiny scattered star dots: small circles in purple, pink, gold at ~30% opacity scattered sparsely.
+HEADER (top 8%): Hospital name in muted gray (#94a3b8) small text, centered.
+MAIN AREA — LEFT-RIGHT ASYMMETRIC SPLIT:
+LEFT SIDE (40% width, centered vertically): HUGE bold month number (e.g. "3") in soft purple (#c084fc), font size ~96pt — this is the dominant visual element. Below the number: "월" in medium gray (#94a3b8). Below that: "휴진 안내" in purple (#c084fc) accent text.
+RIGHT SIDE (50% width): 3 floating dark cards stacked vertically with ~12px gaps. Each card is a dark translucent rectangle (border-radius 10px) with a subtle colored glow border (0.3 opacity stroke):
+- Card 1: purple (#c084fc) glow border → "9일 (월)" in bold purple, "종일 휴진" in gray below
+- Card 2: red (#f87171) glow border → "15일 (일)" in bold red, "종일 휴진" in gray below
+- Card 3: amber (#fbbf24) glow border → "22일 (토)" in bold amber, "단축진료" in gray below
+BOTTOM (8%): Thin horizontal divider line in purple at 8% opacity. Below: operating hours text in muted gray (#64748b), centered.
+NO calendar grid. Premium dark UI dashboard aesthetic. Luxury, sophisticated, high-end clinic feel.`,
     },
     {
       id: 'sfc_warm_kraft', name: '크래프트 내추럴', color: '#92400e', accent: '#78350f', bg: '#fffbeb',
       desc: '따뜻한 크래프트지',
       layoutHint: 'cal_kraft',
-      aiPrompt: 'Hospital monthly calendar notice image. LAYOUT: wall calendar style - top illustration zone + bottom compact calendar grid, divided by a decorative strip. TOP SECTION (45%): warm cream/beige (#fefce8) background, cute friendly illustration of a smiling tooth character with a small crown, surrounded by tiny stars and hearts. Hospital name overlaid in small decorative text. Bold month title "N월 휴진 안내" in warm brown. Small cloud and leaf decorations. Feels hand-drawn and warm. DIVIDER: a masking tape / washi tape strip (light green, slightly rotated) between illustration and calendar. BOTTOM SECTION (55%): compact traditional 7-column calendar grid on white/cream background. Kraft paper subtle texture. Day headers in warm brown (Sunday=red, Saturday=blue). Date numbers in handwriting-style font. Closed days marked with red circle stamps (rubber stamp aesthetic, slightly imperfect edges). Grid lines are thin warm brown, slightly organic/hand-drawn feel. FOOTER: small stickers (heart, clover) at corners, hospital name in italic warm brown center. STYLE: cozy, warm, friendly neighborhood clinic feel. Like a real physical wall calendar with cute monthly illustration. Beige/brown/cream warm palette. Appeals to pediatric dental or family clinic aesthetic.',
+      aiPrompt: `EXACT LAYOUT BLUEPRINT — replicate this structure precisely:
+BACKGROUND: Warm cream/beige (#fefce8) at 60% opacity covering entire image.
+TOP SECTION — ILLUSTRATION AREA (top 42%): White/cream rounded rectangle area. CENTER: A cute smiling tooth character — white rounded rectangle shape with two dot eyes and a curved smile line. Above the tooth: a small golden crown (zigzag/triangle shape in gold #fbbf24 at 50%). Around the tooth: scattered tiny decorative symbols — gold stars (★), pink hearts (♥), small teal sparkles (✦ ✧) at 30% opacity. LEFT/RIGHT sides: soft pastel cloud ellipses (light blue, light pink). Below illustration: bold text "N월 휴진 안내" in warm brown (#92400e).
+DIVIDER: A light green (#bef264 at 30%) rectangular masking tape strip, slightly rotated (-1°), placed horizontally between top and bottom sections. Looks like washi tape.
+BOTTOM SECTION — MINI CALENDAR GRID (bottom 42%): White/cream rounded rectangle. 7-column compact calendar grid. Day headers: 일(red #dc2626) 월화수목금(brown #78350f) 토(blue #2563eb), small bold text. 5 rows of date numbers in warm brown. Closed days: soft red circle (#fee2e2 at 60%) behind number, number in bold red (#dc2626). Grid is compact with tight spacing.
+FOOTER (bottom 5%): Tiny decorative stickers at corners — pink heart (♡) left, green clover (☘) right. Hospital name in italic warm brown center.
+Cozy wall calendar feel. Friendly pediatric/family clinic aesthetic. Kraft paper warmth.`,
     },
     {
       id: 'sfc_glassmorphism', name: '글래스모피즘', color: '#6366f1', accent: '#4f46e5', bg: '#eef2ff',
       desc: '투명 유리 효과',
       layoutHint: 'cal_glass',
-      aiPrompt: 'Hospital monthly calendar notice image. LAYOUT: center-focused hero design with frosted glass effects. NO traditional grid. BACKGROUND: soft gradient with large colorful blurred blobs (indigo, purple, pink circles at 0.1 opacity) creating depth. HEADER: hospital name in indigo accent, month title "N월 휴진 안내" in bold indigo. CENTER HERO (60% of space): one large frosted glass circle (translucent white, backdrop-blur effect, subtle white border). Inside the circle: closure date numbers displayed prominently (e.g. "9 / 15" in huge bold indigo/red text), "휴진일" label below, day-of-week info in muted text. This circle is the MAIN focal point - impossible to miss. BOTTOM (30%): two small frosted glass rectangular cards side by side. Left card: "22일 단축진료 ~14:00" in amber text. Right card: "진료시간 09:30~18:00" in indigo text. Both cards have translucent white background with subtle border and blur. STYLE: modern glassmorphism UI design, translucent layers, floating panels, soft shadows. Vibrant gradient background underneath glass elements. Contemporary, tech-forward medical design. This layout makes closure dates the unmissable hero element using dramatic size hierarchy.',
+      aiPrompt: `EXACT LAYOUT BLUEPRINT — replicate this structure precisely:
+BACKGROUND: Soft gradient. 4 large colorful blurred blob circles creating depth:
+- Top-left: large indigo (#6366f1) circle at 12% opacity, radius ~25% of image width
+- Bottom-right: large accent (#4f46e5) circle at 10% opacity
+- Top-right: medium purple (#818cf8) circle at 8% opacity
+- Bottom-left: medium pink (#f472b6) circle at 6% opacity
+HEADER (top 18%): Hospital name in small indigo accent (#4f46e5) centered. Below: "N월 휴진 안내" in bold indigo (#6366f1), large size.
+CENTER HERO (middle 50%): One LARGE frosted glass circle (translucent white at 30% opacity, subtle white border at 50% opacity, soft shadow/blur). Inside this circle, a slightly smaller concentric circle (white at 20%, thinner border). Inside the inner circle:
+- Two HUGE bold numbers side by side: left number (e.g. "9") in bold indigo (#6366f1), right number (e.g. "15") in bold red (#ef4444), separated by a "/" symbol in lighter accent text.
+- Below numbers: "휴진일" in bold indigo (#6366f1)
+- Below that: day-of-week info in muted gray (#94a3b8) small text
+This glass circle is THE focal point — unmissable.
+BOTTOM (22%): Two small frosted glass rectangular cards side by side (rounded corners ~16px, white at 30%, subtle white border):
+- Left card: "22일 단축진료" in amber (#d97706) + "~14:00" in gray below
+- Right card: "진료시간" in indigo (#6366f1) + "09:30~18:00" in gray below
+Modern glassmorphism UI design. NO calendar grid. Translucent floating layers on vibrant blurred background.`,
     },
   ],
 
