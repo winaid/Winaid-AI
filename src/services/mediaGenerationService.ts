@@ -4,6 +4,7 @@
  * - 동영상: veo-3.1-fast-generate-preview
  */
 import { getAiClient, getApiKeyValue } from "./geminiClient";
+import { DESIGNER_PERSONA } from "./calendarTemplateService";
 
 // ── 이미지 생성 ──
 
@@ -285,6 +286,7 @@ export async function generateCustomImage(
 4. 요소 간 간격을 최소화하세요. 특히 로고와 제목 사이는 바짝 붙여주세요 (빈 공간 금지). 로고, 제목, 달력, 안내문 등 모든 요소를 콤팩트하게 배치하세요.`;
 
   const fullPrompt = [
+    DESIGNER_PERSONA,
     designRule,
     languageRule,
     calendarInstruction,
@@ -487,6 +489,7 @@ function getSystemInstruction(mediaType: PromptMediaType): string {
   const now = new Date();
   const dateInfo = `${now.getMonth() + 1}월`;
 
+  const personaBlock = DESIGNER_PERSONA;
   const base = mediaType === 'image'
     ? `[시기 참고: ${dateInfo} - 계절/시기 맥락 파악용이며, 생성 프롬프트에 오늘 날짜를 넣지 마세요. 사용자가 요청한 월/날짜만 사용하세요.]
 당신은 AI 이미지 생성 프롬프트 전문가이자 친절한 어시스턴트입니다.
@@ -507,7 +510,9 @@ function getSystemInstruction(mediaType: PromptMediaType): string {
 - 5~8초 짧은 영상에 적합한 하나의 장면 중심
 - 시네마틱하고 고품질의 영상미`;
 
-  return `${base}
+  return `${personaBlock}
+
+${base}
 
 응답 규칙:
 - 반드시 JSON으로만 응답하세요. 다른 형식은 절대 사용하지 마세요.

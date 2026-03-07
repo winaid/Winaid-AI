@@ -871,6 +871,54 @@ export const CATEGORY_TEMPLATES: Record<string, CategoryTemplate[]> = {
       layoutHint: 'cal_glass',
       aiPrompt: 'Modern glassmorphism dental clinic calendar, frosted glass card effect with translucent white overlay, vibrant gradient background (indigo to purple), blurred colorful shapes behind glass, date cells with subtle glass borders, closed days with solid frosted red badges, contemporary UI design aesthetic, floating glass panels, soft shadow effects',
     },
+    {
+      id: 'sfc_navy_executive', name: '네이비 이그제큐티브', color: '#1e3a5f', accent: '#0f2942', bg: '#f0f4f8',
+      desc: '고급 네이비 달력',
+      layoutHint: 'cal_grid',
+      aiPrompt: 'Executive navy blue clinic monthly calendar, deep navy header with white elegant serif month title, clean white grid background, thin navy grid lines, closed days marked with coral-red filled circles, dates in clean sans-serif charcoal, subtle gold accent line separating header from grid, premium corporate medical aesthetic, generous whitespace, hospital name in small uppercase tracking at bottom, minimal and authoritative design',
+    },
+    {
+      id: 'sfc_soft_gradient', name: '소프트 그라데이션', color: '#6366f1', accent: '#818cf8', bg: '#eef2ff',
+      desc: '부드러운 그라데이션',
+      layoutHint: 'cal_grid',
+      aiPrompt: 'Soft gradient clinic calendar with gentle indigo-to-lavender gradient header, smooth color transitions throughout, each date cell has subtle rounded rectangle with very light gradient fill, closed days with vibrant coral gradient badges, modern iOS-inspired clean aesthetic, soft shadows beneath cards, floating date numbers with generous padding, dreamy yet professional medical mood',
+    },
+    {
+      id: 'sfc_minimal_line', name: '미니멀 라인', color: '#374151', accent: '#111827', bg: '#f9fafb',
+      desc: '선만으로 구성된 미니멀',
+      layoutHint: 'cal_grid',
+      aiPrompt: 'Ultra-minimal line-art clinic calendar, pure white background with only thin hairline grid borders in light gray, no fills or backgrounds, dates in clean lightweight font, closed days marked with simple red circle outline and small red dot, charcoal text, maximum whitespace, Swiss/Helvetica-inspired minimalism, zero decorative elements, surgical precision in alignment and spacing, elegant typography-only design',
+    },
+    {
+      id: 'sfc_rounded_card', name: '라운드 카드', color: '#059669', accent: '#047857', bg: '#ecfdf5',
+      desc: '둥근 카드 날짜',
+      layoutHint: 'cal_bubble',
+      aiPrompt: 'Rounded card style clinic calendar, each date displayed inside a soft rounded rectangle card with subtle shadow, emerald green accent header with white text, normal days in white cards with thin border, closed days in warm red cards with white text and rounded corners, slight card elevation effect, clean modern dashboard-like layout, generous gap between date cards, friendly yet professional healthcare aesthetic',
+    },
+    {
+      id: 'sfc_duo_tone', name: '듀오톤 컬러', color: '#7c3aed', accent: '#2563eb', bg: '#f5f3ff',
+      desc: '보라+파랑 듀오톤',
+      layoutHint: 'cal_grid',
+      aiPrompt: 'Duo-tone purple and blue clinic calendar, split-color header with deep purple on left fading to royal blue on right, clean white grid area, date numbers in dark charcoal, closed days with vibrant magenta/coral pill badges, Saturday dates in blue, Sunday dates in warm red, subtle geometric pattern decoration in header only, modern tech-meets-medical aesthetic, crisp typography',
+    },
+    {
+      id: 'sfc_warm_beige', name: '웜 베이지', color: '#92400e', accent: '#78350f', bg: '#fefce8',
+      desc: '따뜻한 베이지 톤',
+      layoutHint: 'cal_grid',
+      aiPrompt: 'Warm beige and cream clinic calendar, soft ivory/cream background with warm brown header accents, cozy cafe-like warmth, dates in warm charcoal brown, closed days with terracotta red badges, subtle linen texture in background, golden-brown thin grid lines, friendly neighborhood clinic aesthetic, warm natural lighting mood, gentle rounded corners on all elements',
+    },
+    {
+      id: 'sfc_clean_mono', name: '클린 모노', color: '#18181b', accent: '#3f3f46', bg: '#fafafa',
+      desc: '흑백 모노크롬',
+      layoutHint: 'cal_grid',
+      aiPrompt: 'Monochrome black and white clinic calendar, stark black header with white bold month title, pure white grid background, all text in black or dark gray, closed days with bright red accent as the ONLY color, creating dramatic focal point on closure dates, editorial magazine-style typography, ultra clean and sophisticated, high contrast, premium monotone aesthetic with single red accent color',
+    },
+    {
+      id: 'sfc_ocean_calm', name: '오션 캄', color: '#0284c7', accent: '#0369a1', bg: '#f0f9ff',
+      desc: '차분한 바다색',
+      layoutHint: 'cal_grid',
+      aiPrompt: 'Calm ocean-inspired clinic calendar, serene sky blue to teal gradient header reminiscent of calm sea, white clean grid area, dates in deep navy, closed days with coral/salmon badges contrasting beautifully against blue theme, subtle wave pattern decoration in header, peaceful and healing medical atmosphere, thin teal grid lines, clean and refreshing mood',
+    },
   ],
 
   // ─── 진료 일정: 한 주 레이아웃 (6개) ───
@@ -1513,6 +1561,69 @@ interface AiTemplateRequest {
   brandAccent?: string;
 }
 
+// =============================================
+// DESIGNER PERSONA - 10-year veteran graphic designer identity
+// Injected into ALL image generation prompts for consistent quality
+// =============================================
+export const DESIGNER_PERSONA = `[DESIGNER IDENTITY]
+You are a veteran graphic designer with 10+ years of experience designing for hospitals, clinics, corporations, and public institutions.
+You specialize in notice images, card news, recruitment posts, and announcement banners.
+Your work is recognized for its taste, clarity, and organization.
+
+[DESIGN CHARACTERISTICS]
+- Fresh and creative, but NEVER messy or cluttered
+- Excellent readability above all else
+- Clear information delivery with strong visual hierarchy
+- Title > Key Info > Supporting Info - always in this reading order
+- Generous whitespace for clean, organized layouts
+- Elegant but never exaggerated
+- Trustworthy medical/healthcare-appropriate aesthetic
+- Mobile-friendly legible notice images
+- Series-capable: multiple images look unified as one brand system
+
+[DESIGN STYLE]
+clean, minimal, modern, elegant, premium, readable, organized, trustworthy, medical-friendly, professional notice design
+
+[COLOR PALETTE]
+Main: navy, deep blue, clean blue
+Support: white, light gray, soft blue-gray
+Accent: soft mint, soft coral (used sparingly)
+Overall feel: clean, trustworthy hospital atmosphere with restrained color use
+
+[TYPOGRAPHY]
+- Titles: large and bold
+- Key info: clearly aligned
+- Body: easy to read
+- Generous line-height and spacing
+- Korean readability is TOP priority
+
+[VISUAL ELEMENTS]
+- Only simple icons when needed (icons support info, never dominate)
+- Decorative elements: MINIMAL
+- Backgrounds must NEVER overpower text readability
+
+[ABSOLUTE DON\'Ts]
+- Flyer-like busy designs
+- Excessive decorations
+- Garish color combinations
+- Tacky effects (drop shadows, bevels, gradients everywhere)
+- Advertisement/poster-like exaggeration
+- Backgrounds that overpower text
+- Childish graphic elements
+- Cluttered layouts with no breathing room`;
+
+// Series design rules for multi-page templates (hiring, card news)
+export const SERIES_DESIGN_RULES = `[SERIES DESIGN RULES - for multi-page templates]
+All pages in a series MUST look like they were made by the same designer, same template, same brand:
+1. Same color palette across all pages
+2. Same typography styles maintained
+3. Same layout grid rules
+4. Same icon style
+5. Same design elements repeated
+6. Same spacing/margin structure
+7. Each page differs only in ROLE, overall design tone stays identical
+8. When viewed together, they must read as ONE cohesive series`;
+
 function buildTemplateAiPrompt(req: AiTemplateRequest): string {
   const { category, stylePrompt, textContent, hospitalName, extraPrompt, imageSize } = req;
 
@@ -1523,6 +1634,7 @@ function buildTemplateAiPrompt(req: AiTemplateRequest): string {
     notice: 'hospital notice / important announcement - clean, authoritative, easy to read at a glance',
     greeting: 'holiday greeting / seasonal message from hospital - warm, heartfelt, culturally appropriate Korean design',
     hiring: `hospital job posting / staff recruitment announcement.
+${SERIES_DESIGN_RULES}
 CRITICAL DESIGN RULES FOR HIRING:
 - Design like a premium Instagram recruiting post (NOT a cluttered poster)
 - Use clean ICONS and VISUAL SYMBOLS for benefits/requirements (checkmarks, briefcase, shield, heart icons)
@@ -1601,7 +1713,9 @@ ${logoInstructions}${portraitWarning}`;
 [HOSPITAL INFO - display at the bottom of the image, small but legible text]
 ${req.hospitalInfo.map(line => `"${line}"`).join('\n')}` : '';
 
-  return `🚨 CRITICAL: KOREAN TEXT ACCURACY 🚨
+  return `${DESIGNER_PERSONA}
+
+🚨 CRITICAL: KOREAN TEXT ACCURACY 🚨
 ONLY render Korean text from "quotes" in [TEXT CONTENT] below.
 DO NOT invent/generate/guess any Korean text. Use ICONS and SHAPES to fill space instead.
 

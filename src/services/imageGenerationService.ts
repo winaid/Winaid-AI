@@ -3,6 +3,7 @@ import { GEMINI_MODEL, TIMEOUTS, callGemini, getAiClient } from "./geminiClient"
 // 프롬프트 추천/번역에 사용할 경량 모델
 const PROMPT_RECOMMEND_MODEL = GEMINI_MODEL.FLASH_LITE;
 import type { ImageStyle } from "../types";
+import { DESIGNER_PERSONA } from "./calendarTemplateService";
 
 // 현재 연도를 동적으로 가져오는 함수
 export const getCurrentYear = () => new Date().getFullYear();
@@ -459,6 +460,8 @@ export const generateBlogImage = async (
   const dateInfo = `${now.getFullYear()}년 ${now.getMonth() + 1}월 ${now.getDate()}일`;
 
   const finalPrompt = `
+${DESIGNER_PERSONA}
+
 [현재 날짜: ${dateInfo}]
 블로그 포스트용 전문적인 의료/건강 이미지를 생성해주세요.
 
@@ -640,6 +643,8 @@ export const generateSingleImage = async (
   const dateInfo = `${now.getFullYear()}년 ${now.getMonth() + 1}월 ${now.getDate()}일`;
 
   const finalPrompt = hasValidText ? `
+${DESIGNER_PERSONA}
+
 [현재 날짜: ${dateInfo}]
 🚨 RENDER THIS EXACT KOREAN TEXT IN THE IMAGE 🚨
 
@@ -684,6 +689,8 @@ ${extractedVisual ? `✅ ILLUSTRATION must follow the visual description EXACTLY
 🚨 금지: "완치", "상담하세요", "방문하세요", "조기 발견", "전문의", 수치(%)
 ✅ 허용: 증상명, 질환명, 정보성 표현, 질문형 제목
 `.trim() : `
+${DESIGNER_PERSONA}
+
 [현재 날짜: ${dateInfo}]
 Generate a 1:1 square social media card image.
 

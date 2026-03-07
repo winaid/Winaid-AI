@@ -12,6 +12,7 @@
 import { Type } from "@google/genai";
 import { getAiClient } from "./geminiClient";
 import { STYLE_KEYWORDS, cleanImagePromptText, translateStylePromptToKorean, getCurrentYear, analyzeStyleReferenceImage } from "./imageGenerationService";
+import { DESIGNER_PERSONA, SERIES_DESIGN_RULES } from "./calendarTemplateService";
 import type { GenerationRequest, ImageStyle, WritingStyle, CardPromptData, CardNewsScript } from "../types";
 import {
   FEW_SHOT_EXAMPLES as _FEW_SHOT_EXAMPLES,
@@ -499,7 +500,10 @@ ${keyFeatures ? `- 특징: ${keyFeatures}` : ''}
 ✅ 필수: 위에 명시된 "${customImagePrompt}" 스타일만 사용하세요!
 ` : '';
 
-  const prompt = `당신은 소셜미디어 카드뉴스 디자이너입니다. 이미지 1장 = 완성된 카드뉴스 1장!
+  const prompt = `${DESIGNER_PERSONA}
+${SERIES_DESIGN_RULES}
+
+당신은 소셜미디어 카드뉴스 디자이너입니다. 이미지 1장 = 완성된 카드뉴스 1장!
 ${customStyleInfo}
 ${styleRefInfo}
 [스타일] ${styleGuide}
