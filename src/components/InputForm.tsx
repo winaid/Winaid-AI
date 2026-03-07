@@ -536,6 +536,7 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
 
         </>)}
 
+        {postType !== 'press_release' && (
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className={labelCls}>진료과</label>
@@ -564,6 +565,7 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
             </select>
           </div>
         </div>
+        )}
 
         {/* 유형별 설정 */}
         <div className="space-y-3 p-4 bg-slate-50/50 rounded-xl border border-slate-100">
