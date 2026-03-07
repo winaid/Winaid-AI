@@ -889,7 +889,7 @@ Vibrant colorful gradient background contrasting with clean white calendar card.
       desc: '따뜻한 크래프트지',
       layoutHint: 'cal_kraft',
       aiPrompt: `EXACT LAYOUT BLUEPRINT — replicate this structure precisely:
-BACKGROUND: Warm cream/beige (#fefce8) at 60% opacity. Thin warm brown decorative line at very top edge.
+BACKGROUND: Warm cream/beige (#fefce8) at 60% opacity. Clean and simple, no decorative lines or borders.
 TOP SECTION — ILLUSTRATION AREA (top 42%): White/cream rounded rectangle area.
 ⚠️ CHARACTER SHAPE: The tooth character is NOT a realistic tooth/molar shape. It is a SIMPLE white ROUNDED RECTANGLE (like a marshmallow or pillow shape, aspect ratio ~1:1.2, border-radius very large ~30%). TWO small solid black dot eyes (simple circles, no detail). ONE curved smile line below eyes (simple arc path, no other facial features — no rosy cheeks, no blush, no nose). This is a MINIMAL, FLAT, GEOMETRIC character.
 ⚠️ CROWN: Small golden zigzag crown (#fbbf24 at 50% opacity) sitting directly on TOP of the rectangle. Small — about 60% width of the rectangle.
