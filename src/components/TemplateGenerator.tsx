@@ -77,14 +77,17 @@ function TemplateSVGPreview({ template: t, category, hospitalName }: { template:
   if (category === 'schedule') {
     const hint = t.layoutHint;
     if (hint === 'cal_grid') {
-      // 1) 클린 그리드 - 유일한 전통 7열 풀 달력 그리드
+      // 1) 매거진 타이포 - 거대한 월 숫자 워터마크 + 좌측정렬 타이포 + 미니 달력
       return wrap(<>
-        <rect x="5" y="4" width="110" height="28" rx="6" fill={`url(#accent_${t.id})`} />
-        <text x="60" y="14" textAnchor="middle" fontSize="3" fontWeight="600" fill="white" fillOpacity="0.8">{name}</text>
-        <text x="60" y="26" textAnchor="middle" fontSize="8" fontWeight="900" fill="white">{mo}월 진료안내</text>
-        <rect x="10" y="36" width="100" height="94" rx="6" fill="white" fillOpacity="0.95" filter={`url(#shadow_${t.id})`} />
-        {['일','월','화','수','목','금','토'].map((d, i) => (
-          <text key={d} x={18 + i * 13.5} y="46" textAnchor="middle" fontSize="2.8" fontWeight="700" fill={i === 0 ? '#ef4444' : i === 6 ? '#3b82f6' : '#94a3b8'}>{d}</text>
+        <text x="98" y="82" textAnchor="end" fontSize="72" fontWeight="900" fill={c} fillOpacity="0.05">{mo}</text>
+        <line x1="12" y1="10" x2="108" y2="10" stroke={c} strokeWidth="0.4" strokeOpacity="0.3" />
+        <text x="12" y="8" fontSize="2.2" fontWeight="600" fill={a} letterSpacing="0.8">MONTHLY SCHEDULE</text>
+        <text x="12" y="22" fontSize="3.5" fontWeight="700" fill="#94a3b8">{name}</text>
+        <text x="12" y="42" fontSize="15" fontWeight="900" fill={c}>{mo}월</text>
+        <text x="12" y="54" fontSize="5.5" fontWeight="300" fill="#475569" letterSpacing="0.8">진료안내</text>
+        <rect x="8" y="62" width="104" height="68" rx="5" fill="white" fillOpacity="0.8" filter={`url(#shadow_${t.id})`} />
+        {['S','M','T','W','T','F','S'].map((d, i) => (
+          <text key={`${d}${i}`} x={16 + i * 14} y="72" textAnchor="middle" fontSize="2.6" fontWeight="700" fill={i === 0 ? '#ef4444' : i === 6 ? '#3b82f6' : '#cbd5e1'}>{d}</text>
         ))}
         {[0,1,2,3,4].map(row => Array.from({length: 7}, (_, col) => {
           const day = row * 7 + col + 1;
@@ -92,106 +95,84 @@ function TemplateSVGPreview({ template: t, category, hospitalName }: { template:
           const isClosed = day === 9 || day === 15;
           const isShort = day === 22;
           return <g key={`${row}-${col}`}>
-            {isClosed && <circle cx={18 + col * 13.5} cy={55 + row * 13} r="5.5" fill={c} fillOpacity="0.15" />}
-            {isShort && <circle cx={18 + col * 13.5} cy={55 + row * 13} r="5.5" fill="#f59e0b" fillOpacity="0.12" />}
-            <text x={18 + col * 13.5} y={57 + row * 13} textAnchor="middle" fontSize="3.8" fontWeight={isClosed || isShort ? '800' : '400'} fill={isClosed ? c : isShort ? '#d97706' : col === 0 ? '#fca5a5' : '#64748b'}>{day}</text>
+            {isClosed && <rect x={16 + col * 14 - 4.5} y={77 + row * 10.5 - 4} width="9" height="9" rx="2" fill={c} fillOpacity="0.12" />}
+            {isShort && <rect x={16 + col * 14 - 4.5} y={77 + row * 10.5 - 4} width="9" height="9" rx="2" fill="#f59e0b" fillOpacity="0.1" />}
+            <text x={16 + col * 14} y={79 + row * 10.5} textAnchor="middle" fontSize="3.5" fontWeight={isClosed || isShort ? '800' : '400'} fill={isClosed ? c : isShort ? '#d97706' : col === 0 ? '#fca5a5' : '#64748b'}>{day}</text>
           </g>;
         }))}
-        <circle cx="20" cy="135" r="2.5" fill={c} fillOpacity="0.2" />
-        <text x="26" y="137" fontSize="2.8" fill={c} fontWeight="600">휴진</text>
-        <circle cx="50" cy="135" r="2.5" fill="#f59e0b" fillOpacity="0.15" />
-        <text x="56" y="137" fontSize="2.8" fill="#d97706" fontWeight="600">단축</text>
+        <line x1="12" y1="136" x2="108" y2="136" stroke={c} strokeWidth="0.3" strokeOpacity="0.2" />
+        <rect x="12" y="140" width="5" height="5" rx="1" fill={c} fillOpacity="0.15" />
+        <text x="20" y="144" fontSize="2.5" fill="#64748b">휴진</text>
+        <rect x="38" y="140" width="5" height="5" rx="1" fill="#f59e0b" fillOpacity="0.15" />
+        <text x="46" y="144" fontSize="2.5" fill="#64748b">단축</text>
       </>);
     }
     if (hint === 'cal_bubble') {
-      // 2) 파스텔 버블 - 풍선 장식 + 큰 타이틀 + 전체 달력 그리드
+      // 2) 빈티지 소인 - 우표+도장 느낌, 큰 원형 소인 마크 + 날짜 스탬프들
       return wrap(<>
-        {/* 풍선 장식 */}
-        <line x1="14" y1="4" x2="14" y2="18" stroke={c} strokeOpacity="0.15" strokeWidth="0.3" />
-        <ellipse cx="14" cy="4" rx="5" ry="6.5" fill={c} fillOpacity="0.15" />
-        <line x1="106" y1="6" x2="106" y2="18" stroke="#f472b6" strokeOpacity="0.15" strokeWidth="0.3" />
-        <ellipse cx="106" cy="6" rx="4" ry="5.5" fill="#f472b6" fillOpacity="0.12" />
-        {/* 별 */}
-        <text x="26" y="10" fontSize="3" fill="#fbbf24" fillOpacity="0.5">✦</text>
-        <text x="82" y="12" fontSize="2" fill={c} fillOpacity="0.3">✧</text>
-        {/* 병원명 + 타이틀 */}
-        <text x="60" y="16" textAnchor="middle" fontSize="3" fontWeight="600" fill={a}>{name}</text>
-        <text x="60" y="32" textAnchor="middle" fontSize="9" fontWeight="900" fill={c}>{mo}월 진료안내</text>
-        {/* 전체 달력 그리드 */}
-        <rect x="10" y="40" width="100" height="88" rx="10" fill="white" fillOpacity="0.9" filter={`url(#shadow_${t.id})`} />
-        {['일','월','화','수','목','금','토'].map((d, i) => (
-          <text key={d} x={18 + i * 13.5} y="50" textAnchor="middle" fontSize="2.8" fontWeight="700" fill={i === 0 ? '#ef4444' : i === 6 ? '#3b82f6' : '#94a3b8'}>{d}</text>
-        ))}
-        {[0,1,2,3,4].map(row => Array.from({length: 7}, (_, col) => {
-          const day = row * 7 + col + 1;
-          if (day > 31) return null;
-          const isClosed = day === 9 || day === 15;
-          const isShort = day === 22;
-          return <g key={`${row}-${col}`}>
-            {isClosed && <circle cx={18 + col * 13.5} cy={59 + row * 14} r="5.5" fill={c} fillOpacity="0.15" />}
-            {isShort && <circle cx={18 + col * 13.5} cy={59 + row * 14} r="5.5" fill="#f59e0b" fillOpacity="0.12" />}
-            <text x={18 + col * 13.5} y={61 + row * 14} textAnchor="middle" fontSize="3.8" fontWeight={isClosed || isShort ? '800' : '400'} fill={isClosed ? c : isShort ? '#d97706' : col === 0 ? '#fca5a5' : '#64748b'}>{day}</text>
-          </g>;
-        }))}
-        {/* 하단 범례 */}
-        <circle cx="20" cy="135" r="2.5" fill={c} fillOpacity="0.2" />
-        <text x="26" y="137" fontSize="2.8" fill={c} fontWeight="600">휴진</text>
-        <circle cx="50" cy="135" r="2.5" fill="#f59e0b" fillOpacity="0.15" />
-        <text x="56" y="137" fontSize="2.8" fill="#d97706" fontWeight="600">단축</text>
-        {/* 하단 장식 */}
-        <text x="18" y="148" fontSize="3" fill="#fbbf24" fillOpacity="0.4">★</text>
-        <text x="102" y="146" fontSize="2.5" fill={c} fillOpacity="0.3">★</text>
+        {/* 빈티지 배경 텍스처 */}
+        <rect x="6" y="4" width="108" height="152" rx="4" fill="#fef7ed" fillOpacity="0.5" />
+        {/* 톱니 모양 우표 테두리 (점선) */}
+        <rect x="10" y="8" width="100" height="144" rx="2" fill="none" stroke={c} strokeWidth="0.5" strokeOpacity="0.15" strokeDasharray="1.5 1" />
+        {/* 중앙 큰 원형 소인 */}
+        <circle cx="60" cy="42" r="28" fill="none" stroke={c} strokeWidth="1.2" strokeOpacity="0.25" />
+        <circle cx="60" cy="42" r="24" fill="none" stroke={c} strokeWidth="0.4" strokeOpacity="0.15" />
+        <text x="60" y="32" textAnchor="middle" fontSize="2.8" fontWeight="700" fill={c} fillOpacity="0.5" letterSpacing="1.5">{name}</text>
+        <text x="60" y="46" textAnchor="middle" fontSize="12" fontWeight="900" fill={c} fillOpacity="0.7">{mo}월</text>
+        <text x="60" y="56" textAnchor="middle" fontSize="3.5" fontWeight="600" fill={a} fillOpacity="0.6" letterSpacing="2">진료안내</text>
+        {/* 휴진일 스탬프 도장 */}
+        <g transform="rotate(-8 30 90)">
+          <rect x="14" y="78" width="32" height="22" rx="3" fill="none" stroke="#dc2626" strokeWidth="1" strokeOpacity="0.5" />
+          <text x="30" y="87" textAnchor="middle" fontSize="3" fontWeight="800" fill="#dc2626" fillOpacity="0.6">CLOSED</text>
+          <text x="30" y="95" textAnchor="middle" fontSize="5" fontWeight="900" fill="#dc2626" fillOpacity="0.6">9일</text>
+        </g>
+        <g transform="rotate(5 90 90)">
+          <rect x="66" y="78" width="32" height="22" rx="3" fill="none" stroke="#dc2626" strokeWidth="1" strokeOpacity="0.5" />
+          <text x="82" y="87" textAnchor="middle" fontSize="3" fontWeight="800" fill="#dc2626" fillOpacity="0.6">CLOSED</text>
+          <text x="82" y="95" textAnchor="middle" fontSize="5" fontWeight="900" fill="#dc2626" fillOpacity="0.6">15일</text>
+        </g>
+        {/* 단축 잉크 스탬프 */}
+        <g transform="rotate(-3 60 118)">
+          <ellipse cx="60" cy="118" rx="22" ry="9" fill="none" stroke="#d97706" strokeWidth="0.8" strokeOpacity="0.4" />
+          <text x="60" y="116" textAnchor="middle" fontSize="2.5" fontWeight="700" fill="#d97706" fillOpacity="0.5">단축진료</text>
+          <text x="60" y="123" textAnchor="middle" fontSize="4" fontWeight="900" fill="#d97706" fillOpacity="0.5">22일</text>
+        </g>
+        {/* 하단 빈티지 장식 */}
+        <text x="20" y="145" fontSize="2" fill="#94a3b8" letterSpacing="0.5">POST OFFICE</text>
+        <text x="100" y="145" textAnchor="end" fontSize="2" fill="#94a3b8">2026</text>
       </>);
     }
     if (hint === 'cal_nature') {
-      // 3) 주차별 카드 리스트 - 세로로 1주~5주 카드 나열 (달력 그리드X)
+      // 3) 보타니컬 프레임 - 식물 일러스트 프레임 + 중앙 핵심 정보
       return wrap(<>
-        {/* 잎사귀 장식 */}
-        <ellipse cx="10" cy="10" rx="6" ry="3" fill={c} fillOpacity="0.1" transform="rotate(-40 10 10)" />
-        <ellipse cx="110" cy="8" rx="5" ry="2.5" fill={c} fillOpacity="0.08" transform="rotate(30 110 8)" />
-        <circle cx="20" cy="6" r="1.5" fill="#fda4af" fillOpacity="0.25" />
-        <circle cx="100" cy="12" r="1" fill="#c4b5fd" fillOpacity="0.2" />
-        <text x="60" y="12" textAnchor="middle" fontSize="3.5" fontWeight="600" fill={a}>{name}</text>
-        <text x="60" y="24" textAnchor="middle" fontSize="6" fontWeight="900" fill={c}>{mo}월 진료안내</text>
-        {/* 주차별 가로 카드 5개 */}
-        {[0,1,2,3,4].map(week => {
-          const y = 32 + week * 22;
-          return <g key={week}>
-            <rect x="10" y={y} width="100" height="18" rx="6" fill="white" fillOpacity="0.9" filter={`url(#shadow_${t.id})`} />
-            <rect x="10" y={y} width="18" height="18" rx="6" fill={c} fillOpacity="0.06" />
-            <text x="19" y={y + 11} textAnchor="middle" fontSize="3" fontWeight="700" fill={c}>{week + 1}주</text>
-            {Array.from({length: 7}, (_, col) => {
-              const day = week * 7 + col + 1;
-              if (day > 31) return null;
-              const isClosed = day === 9 || day === 15;
-              const isShort = day === 22;
-              const x = 32 + col * 11;
-              return <g key={col}>
-                {isClosed && <circle cx={x} cy={y + 9} r="4" fill={c} fillOpacity="0.15" />}
-                <text x={x} y={y + 11} textAnchor="middle" fontSize="3.5" fontWeight={isClosed || isShort ? '800' : '400'} fill={isClosed ? c : isShort ? '#d97706' : col === 0 ? '#fca5a5' : '#64748b'}>{day}</text>
-              </g>;
-            })}
-          </g>;
-        })}
-        {/* 하단 */}
-        <ellipse cx="15" cy="148" rx="5" ry="2.5" fill={c} fillOpacity="0.06" transform="rotate(20 15 148)" />
-        <ellipse cx="105" cy="146" rx="4" ry="2" fill={c} fillOpacity="0.05" transform="rotate(-30 105 146)" />
-      </>);
-    }
-    if (hint === 'cal_dark') {
-      // 4) 그라데이션 오로라 - 보라/핑크 그라데이션 배경 + 화이트 카드 달력
-      return wrap(<>
-        {/* 그라데이션 배경 */}
-        <rect x="5" y="4" width="110" height="152" rx="8" fill={`url(#accent_${t.id})`} />
-        <circle cx="90" cy="30" r="40" fill="#f472b6" fillOpacity="0.25" />
-        <circle cx="25" cy="130" r="35" fill="#818cf8" fillOpacity="0.2" />
-        {/* 병원명 + 타이틀 */}
-        <text x="60" y="16" textAnchor="middle" fontSize="3.5" fontWeight="600" fill="white" fillOpacity="0.9">{name}</text>
-        <text x="60" y="30" textAnchor="middle" fontSize="8" fontWeight="900" fill="white">{mo}월 진료안내</text>
-        {/* 화이트 카드 + 전체 달력 그리드 */}
-        <rect x="10" y="38" width="100" height="90" rx="10" fill="white" fillOpacity="0.95" filter={`url(#shadow_${t.id})`} />
+        {/* 좌상단 잎줄기 */}
+        <path d="M6,40 Q6,20 20,8" fill="none" stroke={c} strokeWidth="0.8" strokeOpacity="0.2" />
+        <ellipse cx="14" cy="12" rx="7" ry="3.5" fill={c} fillOpacity="0.1" transform="rotate(-50 14 12)" />
+        <ellipse cx="8" cy="22" rx="6" ry="3" fill={c} fillOpacity="0.08" transform="rotate(-20 8 22)" />
+        <ellipse cx="10" cy="34" rx="5" ry="2.5" fill={c} fillOpacity="0.06" transform="rotate(-30 10 34)" />
+        <circle cx="20" cy="8" r="2" fill="#fda4af" fillOpacity="0.25" />
+        <circle cx="6" cy="28" r="1.5" fill="#c4b5fd" fillOpacity="0.2" />
+        {/* 우상단 잎줄기 */}
+        <path d="M114,40 Q114,20 100,8" fill="none" stroke={c} strokeWidth="0.8" strokeOpacity="0.2" />
+        <ellipse cx="106" cy="12" rx="7" ry="3.5" fill={c} fillOpacity="0.1" transform="rotate(50 106 12)" />
+        <ellipse cx="112" cy="22" rx="6" ry="3" fill={c} fillOpacity="0.08" transform="rotate(20 112 22)" />
+        <ellipse cx="110" cy="34" rx="5" ry="2.5" fill={c} fillOpacity="0.06" transform="rotate(30 110 34)" />
+        <circle cx="100" cy="8" r="1.5" fill="#fbbf24" fillOpacity="0.2" />
+        {/* 하단 잎 장식 */}
+        <path d="M6,120 Q6,140 20,152" fill="none" stroke={c} strokeWidth="0.8" strokeOpacity="0.15" />
+        <ellipse cx="10" cy="130" rx="5" ry="2.5" fill={c} fillOpacity="0.06" transform="rotate(30 10 130)" />
+        <ellipse cx="8" cy="142" rx="6" ry="3" fill={c} fillOpacity="0.05" transform="rotate(45 8 142)" />
+        <path d="M114,120 Q114,140 100,152" fill="none" stroke={c} strokeWidth="0.8" strokeOpacity="0.15" />
+        <ellipse cx="110" cy="130" rx="5" ry="2.5" fill={c} fillOpacity="0.06" transform="rotate(-30 110 130)" />
+        <ellipse cx="112" cy="142" rx="6" ry="3" fill={c} fillOpacity="0.05" transform="rotate(-45 112 142)" />
+        {/* 중앙 컨텐츠 */}
+        <text x="60" y="16" textAnchor="middle" fontSize="3" fontWeight="600" fill={a}>{name}</text>
+        <text x="60" y="32" textAnchor="middle" fontSize="9" fontWeight="900" fill={c}>{mo}월</text>
+        <text x="60" y="42" textAnchor="middle" fontSize="4" fontWeight="500" fill="#475569">진료안내</text>
+        {/* 중앙 달력 카드 */}
+        <rect x="14" y="50" width="92" height="72" rx="8" fill="white" fillOpacity="0.85" filter={`url(#shadow_${t.id})`} />
         {['일','월','화','수','목','금','토'].map((d, i) => (
-          <text key={d} x={18 + i * 13.5} y="48" textAnchor="middle" fontSize="2.8" fontWeight="700" fill={i === 0 ? '#ef4444' : i === 6 ? '#3b82f6' : '#94a3b8'}>{d}</text>
+          <text key={d} x={22 + i * 12.5} y="60" textAnchor="middle" fontSize="2.5" fontWeight="700" fill={i === 0 ? '#ef4444' : i === 6 ? '#3b82f6' : '#94a3b8'}>{d}</text>
         ))}
         {[0,1,2,3,4].map(row => Array.from({length: 7}, (_, col) => {
           const day = row * 7 + col + 1;
@@ -199,18 +180,54 @@ function TemplateSVGPreview({ template: t, category, hospitalName }: { template:
           const isClosed = day === 9 || day === 15;
           const isShort = day === 22;
           return <g key={`${row}-${col}`}>
-            {isClosed && <circle cx={18 + col * 13.5} cy={57 + row * 14} r="5.5" fill={c} fillOpacity="0.15" />}
-            {isShort && <circle cx={18 + col * 13.5} cy={57 + row * 14} r="5.5" fill="#f59e0b" fillOpacity="0.12" />}
-            <text x={18 + col * 13.5} y={59 + row * 14} textAnchor="middle" fontSize="3.8" fontWeight={isClosed || isShort ? '800' : '400'} fill={isClosed ? c : isShort ? '#d97706' : col === 0 ? '#fca5a5' : '#64748b'}>{day}</text>
+            {isClosed && <circle cx={22 + col * 12.5} cy={68 + row * 10} r="4" fill={c} fillOpacity="0.12" />}
+            <text x={22 + col * 12.5} y={70 + row * 10} textAnchor="middle" fontSize="3.2" fontWeight={isClosed || isShort ? '800' : '400'} fill={isClosed ? c : isShort ? '#d97706' : col === 0 ? '#fca5a5' : '#64748b'}>{day}</text>
+          </g>;
+        }))}
+        {/* 범례 */}
+        <circle cx="30" cy="128" r="2" fill={c} fillOpacity="0.15" />
+        <text x="35" y="130" fontSize="2.5" fill={c} fontWeight="600">휴진</text>
+        <circle cx="55" cy="128" r="2" fill="#f59e0b" fillOpacity="0.12" />
+        <text x="60" y="130" fontSize="2.5" fill="#d97706" fontWeight="600">단축</text>
+      </>);
+    }
+    if (hint === 'cal_dark') {
+      // 4) 네온 사인 - 다크 배경 + 네온 글로우 텍스트 + 미니멀 달력
+      return wrap(<>
+        <rect x="5" y="4" width="110" height="152" rx="8" fill="#0f172a" />
+        <rect x="5" y="4" width="110" height="152" rx="8" fill={`url(#accent_${t.id})`} fillOpacity="0.15" />
+        {/* 네온 글로우 원 */}
+        <circle cx="85" cy="25" r="20" fill={c} fillOpacity="0.06" />
+        <circle cx="30" cy="130" r="18" fill="#f472b6" fillOpacity="0.05" />
+        {/* 상단 얇은 네온 라인 */}
+        <line x1="15" y1="10" x2="50" y2="10" stroke={c} strokeWidth="0.6" strokeOpacity="0.4" />
+        <text x="15" y="20" fontSize="2.5" fontWeight="600" fill={c} fillOpacity="0.5" letterSpacing="1">CLINIC</text>
+        <text x="15" y="28" fontSize="3" fontWeight="500" fill="#94a3b8" fillOpacity="0.6">{name}</text>
+        {/* 네온 큰 타이틀 */}
+        <text x="60" y="52" textAnchor="middle" fontSize="18" fontWeight="900" fill={c} fillOpacity="0.85">{mo}월</text>
+        <text x="60" y="62" textAnchor="middle" fontSize="4.5" fontWeight="300" fill="white" fillOpacity="0.6" letterSpacing="3">진료안내</text>
+        {/* 미니 달력 - 네온 스타일 */}
+        <rect x="12" y="70" width="96" height="62" rx="6" fill="white" fillOpacity="0.04" stroke="white" strokeOpacity="0.08" strokeWidth="0.3" />
+        {['S','M','T','W','T','F','S'].map((d, i) => (
+          <text key={`${d}${i}`} x={20 + i * 13} y="80" textAnchor="middle" fontSize="2.5" fontWeight="700" fill={i === 0 ? '#f87171' : i === 6 ? '#60a5fa' : '#475569'}>{d}</text>
+        ))}
+        {[0,1,2,3,4].map(row => Array.from({length: 7}, (_, col) => {
+          const day = row * 7 + col + 1;
+          if (day > 31) return null;
+          const isClosed = day === 9 || day === 15;
+          const isShort = day === 22;
+          return <g key={`${row}-${col}`}>
+            {isClosed && <circle cx={20 + col * 13} cy={88 + row * 9} r="3.8" fill={c} fillOpacity="0.2" />}
+            {isShort && <circle cx={20 + col * 13} cy={88 + row * 9} r="3.8" fill="#f59e0b" fillOpacity="0.15" />}
+            <text x={20 + col * 13} y={90 + row * 9} textAnchor="middle" fontSize="3" fontWeight={isClosed || isShort ? '800' : '400'} fill={isClosed ? c : isShort ? '#fbbf24' : col === 0 ? '#f87171' : '#64748b'}>{day}</text>
           </g>;
         }))}
         {/* 하단 범례 */}
-        <rect x="14" y="132" width="92" height="16" rx="8" fill="white" fillOpacity="0.7" />
-        <circle cx="26" cy="140" r="2.5" fill={c} fillOpacity="0.3" />
-        <text x="32" y="142" fontSize="2.8" fill={c} fontWeight="600">휴진</text>
-        <circle cx="54" cy="140" r="2.5" fill="#f59e0b" fillOpacity="0.2" />
-        <text x="60" y="142" fontSize="2.8" fill="#d97706" fontWeight="600">단축</text>
-        <text x="96" y="142" textAnchor="end" fontSize="2.5" fill="#64748b">09:30~18:00</text>
+        <circle cx="22" cy="140" r="2" fill={c} fillOpacity="0.3" />
+        <text x="28" y="142" fontSize="2.5" fill={c} fillOpacity="0.6" fontWeight="600">휴진</text>
+        <circle cx="48" cy="140" r="2" fill="#f59e0b" fillOpacity="0.25" />
+        <text x="54" y="142" fontSize="2.5" fill="#fbbf24" fillOpacity="0.6" fontWeight="600">단축</text>
+        <text x="100" y="142" textAnchor="end" fontSize="2.2" fill="#475569">09:30~18:00</text>
       </>);
     }
     if (hint === 'cal_kraft') {
@@ -259,40 +276,52 @@ function TemplateSVGPreview({ template: t, category, hospitalName }: { template:
       </>);
     }
     if (hint === 'cal_glass') {
-      // 6) 글래스모피즘 - 유리 효과 카드 + 전체 달력 그리드
+      // 6) 다이어리/메모장 - 줄 노트 위에 손글씨 느낌 + 마스킹테이프
       return wrap(<>
-        {/* 배경 블롭 */}
-        <circle cx="20" cy="30" r="30" fill={c} fillOpacity="0.12" />
-        <circle cx="100" cy="110" r="25" fill={a} fillOpacity="0.1" />
-        <circle cx="90" cy="20" r="15" fill="#818cf8" fillOpacity="0.08" />
-        <circle cx="25" cy="130" r="18" fill="#f472b6" fillOpacity="0.06" />
-        {/* 타이틀 */}
-        <text x="60" y="14" textAnchor="middle" fontSize="3.5" fontWeight="600" fill={a}>{name}</text>
-        <text x="60" y="28" textAnchor="middle" fontSize="8" fontWeight="900" fill={c}>{mo}월 진료안내</text>
-        {/* 유리 카드 + 전체 달력 그리드 */}
-        <rect x="8" y="36" width="104" height="94" rx="12" fill="white" fillOpacity="0.3" stroke="white" strokeOpacity="0.5" strokeWidth="0.8" filter={`url(#shadow_${t.id})`} />
-        {['일','월','화','수','목','금','토'].map((d, i) => (
-          <text key={d} x={18 + i * 13.5} y="48" textAnchor="middle" fontSize="2.8" fontWeight="700" fill={i === 0 ? '#ef4444' : i === 6 ? '#3b82f6' : '#94a3b8'}>{d}</text>
+        {/* 노트 배경 */}
+        <rect x="8" y="4" width="104" height="152" rx="4" fill="#fffef7" />
+        {/* 노트 줄 */}
+        {Array.from({length: 14}, (_, i) => (
+          <line key={i} x1="18" y1={18 + i * 10} x2="108" y2={18 + i * 10} stroke="#e2e8f0" strokeWidth="0.3" />
         ))}
-        {[0,1,2,3,4].map(row => Array.from({length: 7}, (_, col) => {
-          const day = row * 7 + col + 1;
-          if (day > 31) return null;
-          const isClosed = day === 9 || day === 15;
-          const isShort = day === 22;
-          return <g key={`${row}-${col}`}>
-            {isClosed && <circle cx={18 + col * 13.5} cy={57 + row * 14} r="5.5" fill={c} fillOpacity="0.15" />}
-            {isShort && <circle cx={18 + col * 13.5} cy={57 + row * 14} r="5.5" fill="#f59e0b" fillOpacity="0.12" />}
-            <text x={18 + col * 13.5} y={59 + row * 14} textAnchor="middle" fontSize="3.8" fontWeight={isClosed || isShort ? '800' : '400'} fill={isClosed ? c : isShort ? '#d97706' : col === 0 ? '#fca5a5' : '#64748b'}>{day}</text>
-          </g>;
-        }))}
-        {/* 하단 유리 카드 범례 */}
-        <rect x="8" y="134" width="46" height="16" rx="8" fill="white" fillOpacity="0.3" stroke="white" strokeOpacity="0.4" strokeWidth="0.3" />
-        <circle cx="18" cy="142" r="2.5" fill={c} fillOpacity="0.2" />
-        <text x="24" y="144" fontSize="2.8" fill={c} fontWeight="600">휴진</text>
-        <circle cx="38" cy="142" r="2.5" fill="#f59e0b" fillOpacity="0.15" />
-        <text x="44" y="144" fontSize="2.8" fill="#d97706" fontWeight="600">단축</text>
-        <rect x="60" y="134" width="50" height="16" rx="8" fill="white" fillOpacity="0.3" stroke="white" strokeOpacity="0.4" strokeWidth="0.3" />
-        <text x="85" y="144" textAnchor="middle" fontSize="2.8" fill={c} fontWeight="600">09:30~18:00</text>
+        {/* 좌측 빨간 세로선 */}
+        <line x1="18" y1="4" x2="18" y2="156" stroke="#fca5a5" strokeWidth="0.4" strokeOpacity="0.5" />
+        {/* 상단 마스킹테이프 */}
+        <rect x="35" y="1" width="50" height="7" rx="0" fill={c} fillOpacity="0.15" transform="rotate(-1.5 60 4)" />
+        {/* 타이틀 - 펜글씨 느낌 */}
+        <text x="60" y="16" textAnchor="middle" fontSize="3" fontWeight="600" fill={a}>{name}</text>
+        <text x="60" y="34" textAnchor="middle" fontSize="11" fontWeight="900" fill={c}>{mo}월</text>
+        <text x="60" y="44" textAnchor="middle" fontSize="4.5" fontWeight="500" fill="#475569">진료안내</text>
+        {/* 미니 달력 - 약간 기울어진 메모 느낌 */}
+        <g transform="rotate(-0.5 60 85)">
+          <rect x="20" y="50" width="80" height="62" rx="3" fill="white" fillOpacity="0.6" stroke={c} strokeWidth="0.3" strokeOpacity="0.1" />
+          {['일','월','화','수','목','금','토'].map((d, i) => (
+            <text key={d} x={28 + i * 10.5} y="59" textAnchor="middle" fontSize="2.3" fontWeight="700" fill={i === 0 ? '#ef4444' : i === 6 ? '#3b82f6' : '#94a3b8'}>{d}</text>
+          ))}
+          {[0,1,2,3,4].map(row => Array.from({length: 7}, (_, col) => {
+            const day = row * 7 + col + 1;
+            if (day > 31) return null;
+            const isClosed = day === 9 || day === 15;
+            const isShort = day === 22;
+            return <g key={`${row}-${col}`}>
+              {isClosed && <circle cx={28 + col * 10.5} cy={66 + row * 9} r="3.5" fill={c} fillOpacity="0.12" />}
+              <text x={28 + col * 10.5} y={68 + row * 9} textAnchor="middle" fontSize="2.8" fontWeight={isClosed || isShort ? '800' : '400'} fill={isClosed ? c : isShort ? '#d97706' : col === 0 ? '#fca5a5' : '#64748b'}>{day}</text>
+            </g>;
+          }))}
+        </g>
+        {/* 스티커 느낌 범례 */}
+        <g transform="rotate(2 30 125)">
+          <rect x="20" y="118" width="28" height="12" rx="6" fill={c} fillOpacity="0.08" />
+          <text x="34" y="126" textAnchor="middle" fontSize="2.8" fill={c} fontWeight="700">휴진</text>
+        </g>
+        <g transform="rotate(-1.5 70 125)">
+          <rect x="56" y="118" width="28" height="12" rx="6" fill="#fef3c7" />
+          <text x="70" y="126" textAnchor="middle" fontSize="2.8" fill="#d97706" fontWeight="700">단축</text>
+        </g>
+        {/* 하단 작은 일러스트 */}
+        <text x="22" y="144" fontSize="3.5" fill={c} fillOpacity="0.2">✦</text>
+        <text x="98" y="142" fontSize="3" fill="#fbbf24" fillOpacity="0.3">★</text>
+        <text x="60" y="148" textAnchor="middle" fontSize="2.5" fill="#94a3b8" fontStyle="italic">양해 부탁드립니다</text>
       </>);
     }
     if (hint === 'calendar') {
