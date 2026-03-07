@@ -513,7 +513,7 @@ ${promptText}
       console.log(`🎨 블로그 이미지 생성 시도 ${attempt}/${MAX_RETRIES}...`);
 
       const result = await ai.models.generateContent({
-        model: "gemini-3-pro-image-preview",  // Nano Banana Pro
+        model: "gemini-3.1-pro-image-preview",  // Nano Banana Pro
         contents: [{ text: finalPrompt }],
         config: {
           responseModalities: ["IMAGE", "TEXT"],
@@ -738,7 +738,7 @@ ${cleanPromptText}
 
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
-      console.log(`🎨 이미지 생성 시도 ${attempt}/${MAX_RETRIES} (gemini-3-pro-image-preview)...`);
+      console.log(`🎨 이미지 생성 시도 ${attempt}/${MAX_RETRIES} (gemini-3.1-pro-image-preview)...`);
 
       // Nano Banana Pro (Gemini 3 Pro Image) - 이미지 생성 전용 모델
       const contents: any[] = refImagePart
@@ -746,7 +746,7 @@ ${cleanPromptText}
         : [{ text: finalPrompt }];
 
       const result = await ai.models.generateContent({
-        model: "gemini-3-pro-image-preview",  // Nano Banana Pro
+        model: "gemini-3.1-pro-image-preview",  // Nano Banana Pro
         contents: contents,
         config: {
           responseModalities: ["IMAGE", "TEXT"],
@@ -941,4 +941,154 @@ export const analyzeStyleReferenceImage = async (base64Image: string, isCover: b
     console.error('스타일 분석 실패:', error);
     return '{}';
   }
+};
+
+// =============================================
+// 🎨 이미지 스타일 변환 (사진→일러스트, 일러스트→3D 등)
+// Nano Banana Pro의 이미지 이해 + 생성 능력 활용
+// =============================================
+
+export type StyleTransformType = 'to_illustration' | 'to_3d_clay' | 'to_watercolor' | 'to_minimal' | 'to_photo' | 'to_anime';
+
+const STYLE_TRANSFORM_PROMPTS: Record<StyleTransformType, string> = {
+  to_illustration: 'Transform this image into a clean flat vector illustration style. Use bold outlines, flat colors, minimal shadows. Keep the same composition and subject but render it as a modern minimal illustration suitable for a medical clinic social media post.',
+  to_3d_clay: 'Transform this image into a 3D clay/Blender render style. Soft rounded shapes, pastel colors, subtle ambient occlusion, clay-like material texture, soft studio lighting. Keep the same composition but render everything as cute 3D clay figures/objects.',
+  to_watercolor: 'Transform this image into a soft watercolor painting style. Gentle color bleeds, paper texture, loose brushstrokes, warm pastel palette. Keep the same composition but render it as an artistic watercolor illustration.',
+  to_minimal: 'Transform this image into an ultra-minimalist design. Reduce to essential shapes only, use maximum 3 colors, geometric simplification, generous whitespace, clean modern aesthetic suitable for premium medical branding.',
+  to_photo: 'Transform this image into a photorealistic style. Natural lighting, DSLR quality, shallow depth of field, realistic textures and materials. Keep the same composition but render it as a professional photograph.',
+  to_anime: 'Transform this image into a soft anime/manhwa illustration style. Clean linework, cel-shading, bright pastel colors, kawaii aesthetic, large expressive eyes for characters. Suitable for friendly medical clinic social media.',
+};
+
+export const transformImageStyle = async (
+  base64Image: string,
+  transformType: StyleTransformType,
+  customPrompt?: string,
+): Promise<string> => {
+  const ai = getAiClient();
+  const stylePrompt = customPrompt || STYLE_TRANSFORM_PROMPTS[transformType];
+
+  const [meta, base64Data] = base64Image.split(',');
+  const mimeType = (meta.match(/data:(.*?);base64/) || [])[1] || 'image/png';
+
+  const MAX_RETRIES = 3;
+  let lastError: any = null;
+
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const result = await ai.models.generateContent({
+        model: 'gemini-3.1-pro-image-preview',
+        contents: [
+          { inlineData: { data: base64Data, mimeType } },
+          { text: `${DESIGNER_PERSONA}\n\n[STYLE TRANSFORMATION]\n${stylePrompt}\n\n[RULES]\n- Keep the SAME composition, subject, and layout\n- Change ONLY the rendering style/technique\n- Output should be high quality, suitable for professional medical clinic use\n- Maintain clean, readable design\n- Do NOT add any text to the image` },
+        ],
+        config: {
+          responseModalities: ['IMAGE', 'TEXT'],
+          temperature: 0.4,
+        },
+      });
+
+      const parts = result?.candidates?.[0]?.content?.parts || [];
+      const imagePart = parts.find((p: any) => p.inlineData?.data);
+      if (imagePart?.inlineData) {
+        return `data:${imagePart.inlineData.mimeType || 'image/png'};base64,${imagePart.inlineData.data}`;
+      }
+      lastError = new Error('이미지 데이터를 받지 못했습니다.');
+    } catch (error: any) {
+      lastError = error;
+      if (attempt < MAX_RETRIES) {
+        await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, attempt - 1)));
+      }
+    }
+  }
+  throw new Error(`스타일 변환 실패: ${lastError?.message || '알 수 없는 오류'}`);
+};
+
+// =============================================
+// 🖼️ 이미지 배경 변경 (의사 사진 등 배경 교체)
+// =============================================
+
+export const changeImageBackground = async (
+  base64Image: string,
+  backgroundDescription: string,
+): Promise<string> => {
+  const ai = getAiClient();
+  const [meta, base64Data] = base64Image.split(',');
+  const mimeType = (meta.match(/data:(.*?);base64/) || [])[1] || 'image/png';
+
+  const MAX_RETRIES = 3;
+  let lastError: any = null;
+
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const result = await ai.models.generateContent({
+        model: 'gemini-3.1-pro-image-preview',
+        contents: [
+          { inlineData: { data: base64Data, mimeType } },
+          { text: `[BACKGROUND REPLACEMENT]\nKeep the main subject/person in this image exactly as they are.\nRemove the existing background and replace it with: ${backgroundDescription}\n\n[RULES]\n- Do NOT modify the main subject (person, object)\n- Only change the background\n- Make the transition between subject and new background look natural\n- Maintain professional medical/clinical aesthetic\n- High quality, clean edges around the subject` },
+        ],
+        config: {
+          responseModalities: ['IMAGE', 'TEXT'],
+          temperature: 0.3,
+        },
+      });
+
+      const parts = result?.candidates?.[0]?.content?.parts || [];
+      const imagePart = parts.find((p: any) => p.inlineData?.data);
+      if (imagePart?.inlineData) {
+        return `data:${imagePart.inlineData.mimeType || 'image/png'};base64,${imagePart.inlineData.data}`;
+      }
+      lastError = new Error('이미지 데이터를 받지 못했습니다.');
+    } catch (error: any) {
+      lastError = error;
+      if (attempt < MAX_RETRIES) {
+        await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, attempt - 1)));
+      }
+    }
+  }
+  throw new Error(`배경 변경 실패: ${lastError?.message || '알 수 없는 오류'}`);
+};
+
+// =============================================
+// 🔄 이미지 부분 수정 (Inpainting - 특정 영역 텍스트/요소 변경)
+// =============================================
+
+export const editImageRegion = async (
+  base64Image: string,
+  editInstruction: string,
+): Promise<string> => {
+  const ai = getAiClient();
+  const [meta, base64Data] = base64Image.split(',');
+  const mimeType = (meta.match(/data:(.*?);base64/) || [])[1] || 'image/png';
+
+  const MAX_RETRIES = 3;
+  let lastError: any = null;
+
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const result = await ai.models.generateContent({
+        model: 'gemini-3.1-pro-image-preview',
+        contents: [
+          { inlineData: { data: base64Data, mimeType } },
+          { text: `[IMAGE EDITING INSTRUCTION]\n${editInstruction}\n\n[RULES]\n- Make ONLY the requested changes\n- Keep everything else in the image EXACTLY the same\n- Maintain the same style, colors, and quality\n- Output should look natural and seamless\n- Do NOT change the overall layout or composition` },
+        ],
+        config: {
+          responseModalities: ['IMAGE', 'TEXT'],
+          temperature: 0.3,
+        },
+      });
+
+      const parts = result?.candidates?.[0]?.content?.parts || [];
+      const imagePart = parts.find((p: any) => p.inlineData?.data);
+      if (imagePart?.inlineData) {
+        return `data:${imagePart.inlineData.mimeType || 'image/png'};base64,${imagePart.inlineData.data}`;
+      }
+      lastError = new Error('이미지 데이터를 받지 못했습니다.');
+    } catch (error: any) {
+      lastError = error;
+      if (attempt < MAX_RETRIES) {
+        await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, attempt - 1)));
+      }
+    }
+  }
+  throw new Error(`이미지 편집 실패: ${lastError?.message || '알 수 없는 오류'}`);
 };

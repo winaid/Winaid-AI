@@ -1,5 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import {
+  transformImageStyle,
+  editImageRegion,
+  type StyleTransformType,
+} from '../services/imageGenerationService';
+import {
   generateTemplateWithAI,
   AI_STYLE_PRESETS,
   CATEGORY_TEMPLATES,
@@ -1122,96 +1127,138 @@ function TemplateSVGPreview({ template: t, category, hospitalName }: { template:
   }
 
   if (category === 'greeting') {
+    // 명절별 전용 텍스트 & 장식 (템플릿 ID 접두사로 판별)
+    const tid = t.id;
+    const isSeol = tid.startsWith('grt_seol');
+    const isChsk = tid.startsWith('grt_chsk');
+    const isNewy = tid.startsWith('grt_newy');
+    const isParent = tid.startsWith('grt_parent');
+    const isXmas = tid.startsWith('grt_xmas');
+    const line1 = isSeol ? '새해 복' : isChsk ? '풍성한' : isNewy ? 'HAPPY' : isParent ? '감사합니다' : isXmas ? 'Merry' : '행복한';
+    const line2 = isSeol ? '많이 받으세요' : isChsk ? '한가위 보내세요' : isNewy ? 'NEW YEAR' : isParent ? '사랑합니다' : isXmas ? 'Christmas' : '명절 되세요';
+    const subLine = isSeol ? '건강하고 행복한 한 해' : isChsk ? '가족과 함께 행복한 추석' : isNewy ? '건강하시길 바랍니다' : isParent ? '어버이날을 축하드립니다' : isXmas ? '따뜻한 성탄절 보내세요' : '건강과 행복이 가득하길';
+    const closureText = isSeol ? '휴진: 1/28~1/30' : isChsk ? '휴진: 10/5~10/7' : isNewy ? '휴진: 1/1(수)' : isParent ? '' : isXmas ? '휴진: 12/25(목)' : '';
+    const hint = t.layoutHint;
+
+    // 설날 전용 장식
+    const seolDeco = isSeol ? <>
+      <path d="M16,20 Q18,16 20,20 Q22,24 20,24 Q18,24 16,20Z" fill="#dc2626" fillOpacity="0.12" />
+      <path d="M98,28 Q100,24 102,28 Q104,32 102,32 Q100,32 98,28Z" fill="#f59e0b" fillOpacity="0.10" />
+      <rect x="44" y="16" width="32" height="6" rx="3" fill={c} fillOpacity="0.06" />
+      <text x="60" y="21" textAnchor="middle" fontSize="3" fontWeight="700" fill={c} fillOpacity="0.4">福</text>
+    </> : null;
+    // 추석 전용 장식 (보름달)
+    const chskDeco = isChsk ? <>
+      <circle cx="60" cy="26" r="12" fill="#fbbf24" fillOpacity="0.12" />
+      <circle cx="60" cy="26" r="10" fill="#fbbf24" fillOpacity="0.08" />
+      <circle cx="56" cy="24" r="1.5" fill="#fbbf24" fillOpacity="0.1" />
+      <circle cx="63" cy="28" r="1" fill="#fbbf24" fillOpacity="0.08" />
+      <path d="M22,120 Q25,115 28,120" stroke="#ea580c" strokeWidth="0.4" strokeOpacity="0.15" fill="none" />
+      <path d="M90,115 Q93,110 96,115" stroke="#ea580c" strokeWidth="0.4" strokeOpacity="0.12" fill="none" />
+    </> : null;
+    // 새해 전용 장식 (불꽃)
+    const newyDeco = isNewy ? <>
+      <circle cx="20" cy="20" r="1" fill="#fbbf24" fillOpacity="0.3" />
+      <circle cx="100" cy="16" r="0.7" fill="#a78bfa" fillOpacity="0.4" />
+      <circle cx="30" cy="32" r="0.5" fill="#ec4899" fillOpacity="0.3" />
+      <circle cx="92" cy="38" r="0.8" fill="#fbbf24" fillOpacity="0.25" />
+      <circle cx="15" cy="50" r="0.6" fill="#60a5fa" fillOpacity="0.3" />
+      <circle cx="105" cy="55" r="0.5" fill="#34d399" fillOpacity="0.25" />
+      <text x="60" y="22" textAnchor="middle" fontSize="7" fontWeight="900" fill={c} fillOpacity="0.1">2026</text>
+    </> : null;
+    // 어버이날 전용 장식 (카네이션)
+    const parentDeco = isParent ? <>
+      <g transform="translate(22,18) scale(0.8)">
+        <circle cx="0" cy="0" r="4" fill="#e11d48" fillOpacity="0.12" />
+        <circle cx="-2" cy="-2" r="2.5" fill="#e11d48" fillOpacity="0.08" />
+        <circle cx="2" cy="-1" r="2" fill="#fb7185" fillOpacity="0.10" />
+        <line x1="0" y1="4" x2="0" y2="12" stroke="#22c55e" strokeWidth="0.5" strokeOpacity="0.15" />
+      </g>
+      <g transform="translate(98,24) scale(0.6)">
+        <circle cx="0" cy="0" r="4" fill="#e11d48" fillOpacity="0.10" />
+        <circle cx="-2" cy="-2" r="2.5" fill="#fb7185" fillOpacity="0.08" />
+        <line x1="0" y1="4" x2="0" y2="10" stroke="#22c55e" strokeWidth="0.4" strokeOpacity="0.12" />
+      </g>
+      <g transform="translate(14,90) scale(0.5)">
+        <circle cx="0" cy="0" r="3" fill="#e11d48" fillOpacity="0.08" />
+        <line x1="0" y1="3" x2="0" y2="8" stroke="#22c55e" strokeWidth="0.4" strokeOpacity="0.10" />
+      </g>
+    </> : null;
+    // 크리스마스 전용 장식 (트리 + 눈)
+    const xmasDeco = isXmas ? <>
+      <polygon points="60,14 52,28 68,28" fill="#22c55e" fillOpacity="0.10" />
+      <polygon points="60,20 50,34 70,34" fill="#22c55e" fillOpacity="0.08" />
+      <rect x="58" y="34" width="4" height="3" rx="0.5" fill="#78350f" fillOpacity="0.10" />
+      <circle cx="60" cy="14" r="1.5" fill="#fbbf24" fillOpacity="0.2" />
+      <circle cx="18" cy="22" r="0.8" fill="white" fillOpacity="0.15" />
+      <circle cx="95" cy="18" r="0.6" fill="white" fillOpacity="0.12" />
+      <circle cx="30" cy="12" r="0.5" fill="white" fillOpacity="0.10" />
+      <circle cx="88" cy="30" r="0.7" fill="white" fillOpacity="0.10" />
+      <circle cx="25" cy="40" r="0.4" fill="white" fillOpacity="0.08" />
+    </> : null;
+
     return wrap(<>
-      {t.layoutHint === 'traditional' ? <>
-        {/* 전통 프레임 */}
-        <rect x="8" y="6" width="104" height="148" rx="4" fill="white" fillOpacity="0.4" stroke={c} strokeOpacity="0.2" strokeWidth="0.8" />
-        <rect x="12" y="10" width="96" height="140" rx="3" fill="none" stroke={c} strokeOpacity="0.08" strokeWidth="0.4" strokeDasharray="2 1.5" />
-        {/* 장식 코너 */}
-        <path d="M14,14 L24,14 L24,16 L16,16 L16,24 L14,24 Z" fill={c} fillOpacity="0.15" />
-        <path d="M96,14 L106,14 L106,24 L104,24 L104,16 L96,16 Z" fill={c} fillOpacity="0.15" />
-        <text x="60" y="42" textAnchor="middle" fontSize="9" fontWeight="800" fill={c}>새해 복</text>
-        <text x="60" y="56" textAnchor="middle" fontSize="9" fontWeight="800" fill={c}>많이 받으세요</text>
-        <rect x="30" y="65" width="60" height="0.5" fill={c} fillOpacity="0.1" />
-        <text x="60" y="78" textAnchor="middle" fontSize="3.8" fill={a}>건강하고 행복한 한 해 되시길</text>
-        <text x="60" y="86" textAnchor="middle" fontSize="3.8" fill={a}>진심으로 기원합니다</text>
-        <rect x="20" y="96" width="80" height="16" rx="5" fill={c} fillOpacity="0.04" />
-        <text x="60" y="106" textAnchor="middle" fontSize="3.5" fill="#64748b">휴진: 1/28(화) ~ 1/30(목)</text>
-        <text x="60" y="130" textAnchor="middle" fontSize="4" fontWeight="600" fill={a}>{name}</text>
-      </> : t.layoutHint === 'luxury' ? <>
-        {/* 다크 럭셔리 */}
+      {seolDeco}{chskDeco}{newyDeco}{parentDeco}{xmasDeco}
+      {hint === 'traditional' ? <>
+        <rect x="8" y="6" width="104" height="148" rx="4" fill={isDark ? '#0f172a' : 'white'} fillOpacity={isDark ? 0.5 : 0.4} stroke={c} strokeOpacity="0.15" strokeWidth="0.8" />
+        <rect x="12" y="10" width="96" height="140" rx="3" fill="none" stroke={c} strokeOpacity="0.06" strokeWidth="0.4" strokeDasharray="2 1.5" />
+        <path d="M14,14 L24,14 L24,16 L16,16 L16,24 L14,24 Z" fill={c} fillOpacity="0.12" />
+        <path d="M96,14 L106,14 L106,24 L104,24 L104,16 L96,16 Z" fill={c} fillOpacity="0.12" />
+        <text x="60" y="48" textAnchor="middle" fontSize="9" fontWeight="800" fill={isDark ? '#fbbf24' : c}>{line1}</text>
+        <text x="60" y="62" textAnchor="middle" fontSize="8.5" fontWeight="800" fill={isDark ? '#fbbf24' : c}>{line2}</text>
+        <rect x="30" y="70" width="60" height="0.5" fill={c} fillOpacity="0.08" />
+        <text x="60" y="84" textAnchor="middle" fontSize="3.5" fill={isDark ? '#94a3b8' : a}>{subLine}</text>
+        {closureText && <><rect x="20" y="96" width="80" height="14" rx="5" fill={c} fillOpacity="0.04" /><text x="60" y="105" textAnchor="middle" fontSize="3.2" fill={isDark ? '#94a3b8' : '#64748b'}>{closureText}</text></>}
+        <text x="60" y="136" textAnchor="middle" fontSize="3.8" fontWeight="600" fill={isDark ? '#d4a017' : a}>{name}</text>
+      </> : hint === 'luxury' ? <>
         <rect x="5" y="4" width="110" height="152" rx="5" fill="#0f172a" />
-        <line x1="25" y1="18" x2="95" y2="18" stroke="#d4a017" strokeOpacity="0.15" strokeWidth="0.3" />
-        <text x="60" y="46" textAnchor="middle" fontSize="9.5" fontWeight="800" fill="#d4a017">새해 복</text>
-        <text x="60" y="62" textAnchor="middle" fontSize="9.5" fontWeight="800" fill="#d4a017">많이 받으세요</text>
-        <rect x="35" y="70" width="50" height="0.4" fill="#d4a017" fillOpacity="0.2" />
-        <text x="60" y="86" textAnchor="middle" fontSize="3.5" fill="#b8860b">건강과 행복이 가득하길</text>
-        <rect x="20" y="96" width="80" height="14" rx="4" fill="#d4a017" fillOpacity="0.04" />
-        <text x="60" y="105" textAnchor="middle" fontSize="3.2" fill="#94a3b8">휴진: 1/28(화) ~ 1/30(목)</text>
-        <line x1="25" y1="120" x2="95" y2="120" stroke="#d4a017" strokeOpacity="0.15" strokeWidth="0.3" />
-        <text x="60" y="135" textAnchor="middle" fontSize="3.8" fontWeight="600" fill="#d4a017">{name}</text>
-      </> : t.layoutHint === 'cute' ? <>
-        {/* 귀여운 스타일 */}
-        <text x="60" y="12" textAnchor="middle" fontSize="3.5" fontWeight="600" fill={a}>{name}</text>
-        <circle cx="35" cy="35" r="8" fill={c} fillOpacity="0.06" />
-        <circle cx="90" cy="28" r="5" fill={c} fillOpacity="0.04" />
-        <circle cx="20" cy="55" r="4" fill={c} fillOpacity="0.04" />
-        <text x="60" y="48" textAnchor="middle" fontSize="8.5" fontWeight="800" fill={c}>새해 복</text>
-        <text x="60" y="62" textAnchor="middle" fontSize="8.5" fontWeight="800" fill={c}>많이 받으세요</text>
-        <text x="60" y="80" textAnchor="middle" fontSize="3.5" fill={a}>건강하고 행복한 한 해 되시길</text>
-        <text x="60" y="88" textAnchor="middle" fontSize="3.5" fill={a}>진심으로 기원합니다</text>
-        <rect x="25" y="98" width="70" height="12" rx="6" fill={c} fillOpacity="0.06" />
-        <text x="60" y="106" textAnchor="middle" fontSize="3.2" fill="#64748b">휴진: 1/28(화) ~ 1/30(목)</text>
-        <text x="60" y="130" textAnchor="middle" fontSize="3.5" fill="#94a3b8">{name}</text>
-      </> : t.layoutHint === 'nature' ? <>
-        {/* 자연풍 */}
-        <text x="60" y="12" textAnchor="middle" fontSize="3.5" fontWeight="600" fill={a}>{name}</text>
-        <rect x="10" y="18" width="100" height="90" rx="6" fill={c} fillOpacity="0.03" />
-        <text x="60" y="45" textAnchor="middle" fontSize="9" fontWeight="800" fill={c}>새해 복</text>
-        <text x="60" y="59" textAnchor="middle" fontSize="9" fontWeight="800" fill={c}>많이 받으세요</text>
-        <text x="60" y="78" textAnchor="middle" fontSize="3.8" fill={a}>건강하고 행복한 한 해 되시길</text>
-        <text x="60" y="86" textAnchor="middle" fontSize="3.8" fill={a}>진심으로 기원합니다</text>
-        <rect x="20" y="112" width="80" height="14" rx="5" fill={c} fillOpacity="0.05" />
-        <text x="60" y="121" textAnchor="middle" fontSize="3.5" fill="#64748b">휴진: 1/28(화) ~ 1/30(목)</text>
-        <text x="60" y="145" textAnchor="middle" fontSize="3.5" fill="#94a3b8">{name}</text>
-      </> : t.layoutHint === 'minimal' ? <>
-        {/* 미니멀 - 극도의 여백 */}
-        <text x="60" y="12" textAnchor="middle" fontSize="3.5" fontWeight="600" fill={a} letterSpacing="0.5">{name}</text>
-        <line x1="45" y1="32" x2="75" y2="32" stroke={c} strokeOpacity="0.1" strokeWidth="0.3" />
-        <text x="60" y="56" textAnchor="middle" fontSize="10" fontWeight="800" fill={c}>새해 복</text>
-        <text x="60" y="72" textAnchor="middle" fontSize="10" fontWeight="800" fill={c}>많이 받으세요</text>
-        <line x1="45" y1="82" x2="75" y2="82" stroke={c} strokeOpacity="0.1" strokeWidth="0.3" />
-        <text x="60" y="100" textAnchor="middle" fontSize="3.5" fill={a} letterSpacing="1">건강하고 행복한 한 해</text>
-        <rect x="30" y="116" width="60" height="12" rx="6" fill={c} fillOpacity="0.04" />
-        <text x="60" y="124" textAnchor="middle" fontSize="3" fill="#94a3b8">휴진: 1/28(화) ~ 1/30(목)</text>
-        <text x="60" y="148" textAnchor="middle" fontSize="3.5" fill="#94a3b8">{name}</text>
-      </> : t.layoutHint === 'warm' ? <>
-        {/* 따뜻한 - 감성 스타일 */}
-        <text x="60" y="12" textAnchor="middle" fontSize="3.5" fontWeight="600" fill={a}>{name}</text>
-        <rect x="10" y="18" width="100" height="100" rx="8" fill={c} fillOpacity="0.04" />
-        {/* 장식 원 */}
-        <circle cx="25" cy="30" r="6" fill={c} fillOpacity="0.04" />
-        <circle cx="98" cy="36" r="4" fill={c} fillOpacity="0.03" />
-        <circle cx="18" cy="80" r="3" fill={c} fillOpacity="0.03" />
-        <text x="60" y="46" textAnchor="middle" fontSize="9" fontWeight="800" fill={c}>새해 복</text>
-        <text x="60" y="60" textAnchor="middle" fontSize="9" fontWeight="800" fill={c}>많이 받으세요</text>
-        <rect x="30" y="68" width="60" height="0.4" fill={c} fillOpacity="0.1" />
-        <text x="60" y="82" textAnchor="middle" fontSize="3.5" fill={a} fontStyle="italic">건강하고 행복한 한 해 되시길</text>
-        <text x="60" y="90" textAnchor="middle" fontSize="3.5" fill={a} fontStyle="italic">진심으로 기원합니다</text>
-        <rect x="15" y="106" width="90" height="14" rx="7" fill="white" fillOpacity="0.6" filter={`url(#shadow_${t.id})`} />
-        <text x="60" y="115" textAnchor="middle" fontSize="3.2" fill="#64748b">휴진: 1/28(화) ~ 1/30(목)</text>
-        <text x="60" y="140" textAnchor="middle" fontSize="3.5" fill="#94a3b8">{name}</text>
+        <line x1="25" y1="20" x2="95" y2="20" stroke="#d4a017" strokeOpacity="0.12" strokeWidth="0.3" />
+        <text x="60" y="52" textAnchor="middle" fontSize="10" fontWeight="800" fill="#d4a017">{line1}</text>
+        <text x="60" y="68" textAnchor="middle" fontSize="9" fontWeight="800" fill="#d4a017">{line2}</text>
+        <rect x="35" y="76" width="50" height="0.4" fill="#d4a017" fillOpacity="0.15" />
+        <text x="60" y="90" textAnchor="middle" fontSize="3.3" fill="#b8860b">{subLine}</text>
+        {closureText && <><rect x="20" y="100" width="80" height="14" rx="4" fill="#d4a017" fillOpacity="0.03" /><text x="60" y="109" textAnchor="middle" fontSize="3" fill="#78716c">{closureText}</text></>}
+        <line x1="25" y1="124" x2="95" y2="124" stroke="#d4a017" strokeOpacity="0.12" strokeWidth="0.3" />
+        <text x="60" y="140" textAnchor="middle" fontSize="3.5" fontWeight="600" fill="#d4a017">{name}</text>
+      </> : hint === 'cute' ? <>
+        <text x="60" y="12" textAnchor="middle" fontSize="3.2" fontWeight="600" fill={isDark ? 'rgba(255,255,255,0.5)' : a}>{name}</text>
+        <circle cx="30" cy="32" r="7" fill={c} fillOpacity="0.05" />
+        <circle cx="95" cy="26" r="4" fill={c} fillOpacity="0.04" />
+        <circle cx="18" cy="60" r="3" fill={c} fillOpacity="0.03" />
+        <text x="60" y="52" textAnchor="middle" fontSize="9" fontWeight="800" fill={isDark ? '#fbbf24' : c}>{line1}</text>
+        <text x="60" y="66" textAnchor="middle" fontSize="8" fontWeight="800" fill={isDark ? '#fbbf24' : c}>{line2}</text>
+        <text x="60" y="84" textAnchor="middle" fontSize="3.3" fill={isDark ? '#94a3b8' : a}>{subLine}</text>
+        {closureText && <><rect x="25" y="96" width="70" height="12" rx="6" fill={c} fillOpacity="0.05" /><text x="60" y="104" textAnchor="middle" fontSize="3" fill={isDark ? '#94a3b8' : '#64748b'}>{closureText}</text></>}
+        <text x="60" y="136" textAnchor="middle" fontSize="3.2" fill={isDark ? 'rgba(255,255,255,0.4)' : '#94a3b8'}>{name}</text>
+      </> : hint === 'nature' ? <>
+        <text x="60" y="12" textAnchor="middle" fontSize="3.2" fontWeight="600" fill={isDark ? 'rgba(255,255,255,0.5)' : a}>{name}</text>
+        <rect x="10" y="18" width="100" height="86" rx="6" fill={isDark ? 'rgba(255,255,255,0.03)' : `${c}05`} />
+        <text x="60" y="50" textAnchor="middle" fontSize="9" fontWeight="800" fill={isDark ? '#ffffff' : c}>{line1}</text>
+        <text x="60" y="64" textAnchor="middle" fontSize="8.5" fontWeight="800" fill={isDark ? '#ffffff' : c}>{line2}</text>
+        <text x="60" y="82" textAnchor="middle" fontSize="3.5" fill={isDark ? 'rgba(255,255,255,0.6)' : a}>{subLine}</text>
+        {closureText && <><rect x="20" y="112" width="80" height="14" rx="5" fill={c} fillOpacity="0.04" /><text x="60" y="121" textAnchor="middle" fontSize="3.2" fill={isDark ? '#94a3b8' : '#64748b'}>{closureText}</text></>}
+        <text x="60" y="148" textAnchor="middle" fontSize="3.2" fill={isDark ? 'rgba(255,255,255,0.4)' : '#94a3b8'}>{name}</text>
+      </> : hint === 'minimal' ? <>
+        <text x="60" y="12" textAnchor="middle" fontSize="3.2" fontWeight="600" fill={isDark ? 'rgba(255,255,255,0.5)' : a} letterSpacing="0.5">{name}</text>
+        <line x1="45" y1="34" x2="75" y2="34" stroke={c} strokeOpacity="0.08" strokeWidth="0.3" />
+        <text x="60" y="60" textAnchor="middle" fontSize="11" fontWeight="800" fill={isDark ? '#ffffff' : c}>{line1}</text>
+        <text x="60" y="76" textAnchor="middle" fontSize="9.5" fontWeight="800" fill={isDark ? '#ffffff' : c}>{line2}</text>
+        <line x1="45" y1="86" x2="75" y2="86" stroke={c} strokeOpacity="0.08" strokeWidth="0.3" />
+        <text x="60" y="104" textAnchor="middle" fontSize="3.3" fill={isDark ? 'rgba(255,255,255,0.5)' : a} letterSpacing="0.8">{subLine}</text>
+        {closureText && <><rect x="30" y="118" width="60" height="11" rx="5.5" fill={c} fillOpacity="0.03" /><text x="60" y="125.5" textAnchor="middle" fontSize="2.8" fill={isDark ? '#64748b' : '#94a3b8'}>{closureText}</text></>}
+        <text x="60" y="150" textAnchor="middle" fontSize="3.2" fill={isDark ? 'rgba(255,255,255,0.3)' : '#94a3b8'}>{name}</text>
       </> : <>
-        {/* 기본 fallback */}
-        <text x="60" y="12" textAnchor="middle" fontSize="3.5" fontWeight="600" fill={a} letterSpacing="0.5">{name}</text>
-        <rect x="15" y="22" width="90" height="70" rx="6" fill="white" fillOpacity="0.6" />
-        <text x="60" y="46" textAnchor="middle" fontSize="9" fontWeight="800" fill={c}>새해 복</text>
-        <text x="60" y="60" textAnchor="middle" fontSize="9" fontWeight="800" fill={c}>많이 받으세요</text>
-        <text x="60" y="80" textAnchor="middle" fontSize="3.5" fill={a}>건강하고 행복한 한 해 되시길</text>
-        <line x1="35" y1="100" x2="85" y2="100" stroke={c} strokeOpacity="0.1" strokeWidth="0.3" />
-        <rect x="20" y="108" width="80" height="14" rx="5" fill={c} fillOpacity="0.04" />
-        <text x="60" y="117" textAnchor="middle" fontSize="3.5" fill="#64748b">휴진: 1/28(화) ~ 1/30(목)</text>
-        <text x="60" y="140" textAnchor="middle" fontSize="3.5" fill="#94a3b8">{name}</text>
+        {/* warm / fallback */}
+        <text x="60" y="12" textAnchor="middle" fontSize="3.2" fontWeight="600" fill={isDark ? 'rgba(255,255,255,0.5)' : a}>{name}</text>
+        <rect x="10" y="18" width="100" height="96" rx="8" fill={isDark ? 'rgba(255,255,255,0.03)' : `${c}05`} />
+        <circle cx="25" cy="30" r="5" fill={c} fillOpacity="0.04" />
+        <circle cx="98" cy="34" r="3" fill={c} fillOpacity="0.03" />
+        <text x="60" y="50" textAnchor="middle" fontSize="9" fontWeight="800" fill={isDark ? '#ffffff' : c}>{line1}</text>
+        <text x="60" y="64" textAnchor="middle" fontSize="8.5" fontWeight="800" fill={isDark ? '#ffffff' : c}>{line2}</text>
+        <rect x="30" y="72" width="60" height="0.4" fill={c} fillOpacity="0.08" />
+        <text x="60" y="86" textAnchor="middle" fontSize="3.3" fill={isDark ? 'rgba(255,255,255,0.5)' : a} fontStyle="italic">{subLine}</text>
+        {closureText && <><rect x="15" y="104" width="90" height="12" rx="6" fill={isDark ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.6)'} /><text x="60" y="112" textAnchor="middle" fontSize="3" fill={isDark ? '#64748b' : '#64748b'}>{closureText}</text></>}
+        <text x="60" y="146" textAnchor="middle" fontSize="3.2" fill={isDark ? 'rgba(255,255,255,0.3)' : '#94a3b8'}>{name}</text>
       </>}
     </>);
   }
@@ -1475,6 +1522,46 @@ export default function TemplateGenerator() {
   const [cautionTitle, setCautionTitle] = useState('');
   const [cautionItems, setCautionItems] = useState('');
   const [cautionEmergency, setCautionEmergency] = useState('');
+
+  // 주의사항 타입별 기본 아이템
+  const CAUTION_DEFAULTS: Record<string, { title: string; items: string; emergency: string }> = {
+    '시술 후': {
+      title: '시술 후 주의사항',
+      items: '시술 부위를 혀로 건드리지 마세요\n당일 음주 및 흡연은 피해주세요\n자극적이고 뜨거운 음식은 피해주세요\n딱딱한 음식은 3일간 피해주세요\n양치 시 시술 부위 주의해서 닦아주세요\n부기나 출혈은 2~3일 내 자연 소실됩니다',
+      emergency: '이상 증상 시 연락: 02-1234-5678',
+    },
+    '진료 후': {
+      title: '진료 후 안내사항',
+      items: '마취가 풀릴 때까지 식사를 피해주세요\n마취 부위를 깨물지 않도록 주의해주세요\n처방된 약은 정해진 시간에 복용해주세요\n당일 과격한 운동은 피해주세요\n통증이 지속되면 내원해주세요',
+      emergency: '이상 증상 시 연락: 02-1234-5678',
+    },
+    '수술 후': {
+      title: '수술 후 주의사항',
+      items: '거즈는 1~2시간 후 제거해주세요\n수술 당일 침을 뱉지 마세요\n냉찜질을 20분 간격으로 해주세요\n2~3일간 부드러운 음식만 드세요\n음주와 흡연은 최소 1주일 금지입니다\n격한 운동은 1주일간 삼가주세요\n처방약은 반드시 복용해주세요',
+      emergency: '출혈·심한 통증 시 즉시 연락: 02-1234-5678',
+    },
+    '복약': {
+      title: '복약 안내',
+      items: '식후 30분에 복용해주세요\n정해진 용량을 지켜주세요\n항생제는 끝까지 복용하세요\n알레르기 반응 시 즉시 중단하세요\n두통·어지러움 시 안정을 취하세요',
+      emergency: '부작용 발생 시 연락: 02-1234-5678',
+    },
+    '일반': {
+      title: '주의사항 안내',
+      items: '안내사항을 잘 읽어주세요\n궁금한 점은 문의해주세요',
+      emergency: '',
+    },
+  };
+
+  const handleCautionTypeChange = (type: string) => {
+    setCautionType(type);
+    const defaults = CAUTION_DEFAULTS[type];
+    if (defaults) {
+      if (!cautionItems) setCautionItems(defaults.items);
+      if (!cautionTitle) setCautionTitle(defaults.title);
+      if (!cautionEmergency) setCautionEmergency(defaults.emergency);
+    }
+    setSelectedCatTemplate(null);
+  };
 
   // 스타일 히스토리 (이전 생성 스타일 재사용)
   const [styleHistory, setStyleHistory] = useState<SavedStyleHistory[]>([]);
@@ -1982,7 +2069,7 @@ export default function TemplateGenerator() {
         {category === 'caution' && (
           <div className="space-y-3">
             <div><label className={labelCls}>주의사항 유형</label>
-              <div className="flex gap-1.5">{['시술 후','진료 후','수술 후','복약','일반'].map(t => (<button key={t} onClick={()=>setCautionType(t)} className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${cautionType===t?'bg-slate-800 text-white shadow-md':'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>{t}</button>))}</div>
+              <div className="flex gap-1.5">{['시술 후','진료 후','수술 후','복약','일반'].map(t => (<button key={t} onClick={()=>handleCautionTypeChange(t)} className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${cautionType===t?'bg-slate-800 text-white shadow-md':'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>{t}</button>))}</div>
             </div>
             <div><label className={labelCls}>제목 <span className="text-slate-400 font-normal">(자동 생성됨)</span></label><input type="text" value={cautionTitle} onChange={e=>setCautionTitle(e.target.value)} placeholder={`${cautionType} 주의사항`} className={inputCls} /></div>
             <div><label className={labelCls}>주의사항 항목 <span className="text-slate-400 font-normal">(줄바꿈으로 구분)</span></label><textarea value={cautionItems} onChange={e=>setCautionItems(e.target.value)} placeholder={"시술 부위를 혀로 건드리지 마세요\n당일 음주 및 흡연은 피해주세요\n부기나 출혈은 2~3일 내 자연 소실됩니다\n딱딱한 음식은 일주일간 피해주세요"} rows={5} className={textareaCls} /></div>
@@ -2217,6 +2304,100 @@ export default function TemplateGenerator() {
                 </div>
               </div>
             )}
+            {/* AI 이미지 편집 도구 */}
+            <div className="w-full max-w-lg mt-4">
+              <details className="group">
+                <summary className="cursor-pointer flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-slate-700 transition-colors select-none">
+                  <svg className="w-4 h-4 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                  AI 이미지 편집 도구
+                  <svg className="w-3 h-3 transition-transform group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                </summary>
+                <div className="mt-3 space-y-3">
+                  {/* 스타일 변환 */}
+                  <div>
+                    <div className="text-xs font-semibold text-slate-600 mb-1.5">스타일 변환</div>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {([
+                        { id: 'to_illustration' as StyleTransformType, label: '플랫 일러스트', icon: '🎨' },
+                        { id: 'to_3d_clay' as StyleTransformType, label: '3D 클레이', icon: '🧱' },
+                        { id: 'to_watercolor' as StyleTransformType, label: '수채화', icon: '🖌️' },
+                        { id: 'to_minimal' as StyleTransformType, label: '미니멀', icon: '◻️' },
+                        { id: 'to_photo' as StyleTransformType, label: '포토리얼', icon: '📷' },
+                        { id: 'to_anime' as StyleTransformType, label: '애니/만화', icon: '✨' },
+                      ]).map(s => (
+                        <button
+                          key={s.id}
+                          disabled={generating}
+                          onClick={async () => {
+                            setGenerating(true);
+                            try {
+                              const transformed = await transformImageStyle(resultImages[currentPage], s.id);
+                              const updated = [...resultImages];
+                              updated[currentPage] = transformed;
+                              setResultImages(updated);
+                            } catch (e: any) {
+                              alert(`스타일 변환 실패: ${e.message}`);
+                            } finally { setGenerating(false); }
+                          }}
+                          className="px-2 py-2 bg-slate-50 hover:bg-violet-50 border border-slate-200 hover:border-violet-300 rounded-lg text-xs font-medium text-slate-600 hover:text-violet-700 transition-all disabled:opacity-40"
+                        >
+                          {s.icon} {s.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  {/* 자유 편집 */}
+                  <div>
+                    <div className="text-xs font-semibold text-slate-600 mb-1.5">AI 자유 편집</div>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        placeholder="예: 배경을 파란색으로, 텍스트 색상 변경..."
+                        className="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-violet-400"
+                        onKeyDown={async (e) => {
+                          if (e.key === 'Enter' && !generating) {
+                            const input = e.currentTarget;
+                            const instruction = input.value.trim();
+                            if (!instruction) return;
+                            setGenerating(true);
+                            try {
+                              const edited = await editImageRegion(resultImages[currentPage], instruction);
+                              const updated = [...resultImages];
+                              updated[currentPage] = edited;
+                              setResultImages(updated);
+                              input.value = '';
+                            } catch (err: any) {
+                              alert(`편집 실패: ${err.message}`);
+                            } finally { setGenerating(false); }
+                          }
+                        }}
+                      />
+                      <button
+                        disabled={generating}
+                        onClick={async () => {
+                          const input = document.querySelector<HTMLInputElement>('[placeholder*="배경을 파란색"]');
+                          const instruction = input?.value?.trim();
+                          if (!instruction) return;
+                          setGenerating(true);
+                          try {
+                            const edited = await editImageRegion(resultImages[currentPage], instruction);
+                            const updated = [...resultImages];
+                            updated[currentPage] = edited;
+                            setResultImages(updated);
+                            if (input) input.value = '';
+                          } catch (err: any) {
+                            alert(`편집 실패: ${err.message}`);
+                          } finally { setGenerating(false); }
+                        }}
+                        className="px-3 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg text-xs font-bold transition-colors disabled:opacity-40"
+                      >
+                        적용
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </details>
+            </div>
           </div>
         ):(
           <div className="flex flex-col items-center justify-center py-16 relative group">

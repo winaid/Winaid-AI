@@ -2168,19 +2168,44 @@ function buildNoticeTextContent(data: {
 function buildGreetingTextContent(data: {
   holiday: string; greeting: string; closurePeriod?: string;
 }): string {
-  // 명절별 테마 장식 힌트
+  // 명절별 상세 테마 장식 힌트 (구체적 오브젝트 + 컬러 팔레트 + 분위기 지시)
   const holidayDecorations: Record<string, string> = {
-    '설날': 'Traditional Korean New Year theme: lucky bags (복주머니), Korean patterns, red/gold accents, plum blossoms',
-    '추석': 'Korean Chuseok/Harvest Moon theme: full moon, songpyeon rice cakes, autumn leaves, warm golden tones',
-    '새해': 'New Year celebration theme: fireworks, confetti, champagne vibes, midnight blue and gold',
-    '어버이날': 'Korean Parents Day theme: carnation flowers, warm pink/red tones, heartfelt and tender mood',
-    '크리스마스': 'Christmas theme: snowflakes, Christmas tree, red/green/gold, festive and warm, winter wonderland',
+    '설날': `Traditional Korean Lunar New Year (설날/Seollal) theme.
+MUST-HAVE OBJECTS: 복주머니 (fortune pouches) in red/gold silk, 한복 patterns, 매화 (plum blossoms) branches, 떡국 (rice cake soup) steam illustration, 세뱃돈 envelopes, Korean knot ornaments (매듭).
+COLOR PALETTE: Deep red (#dc2626), gold (#d4a017), warm cream (#fef7ed), burgundy accents.
+PATTERNS: Traditional Korean cloud motifs (구름문양), dancheong (단청) border patterns, geometric Korean lattice.
+MOOD: Dignified, festive, warm family gathering, new beginnings, prosperity wishes.
+BACKGROUND: Warm cream or soft red gradient. NO modern/Western New Year elements.`,
+    '추석': `Korean Chuseok/Harvest Moon Festival (추석/한가위) theme.
+MUST-HAVE OBJECTS: Large luminous full moon (보름달), 송편 (half-moon rice cakes) on pine needle plate, 감 (persimmons), 밤 (chestnuts), Korean pear, 갈대 (pampas grass/silver grass) silhouettes, 달토끼 (moon rabbit) silhouette.
+COLOR PALETTE: Deep midnight blue (#1e3a5f), golden amber (#f59e0b), warm brown (#78350f), moonlight ivory.
+PATTERNS: Moon halo glow, autumn maple leaf borders, traditional Korean pattern accents.
+MOOD: Abundant harvest, family reunion, moonlit autumn night, nostalgic warmth, gratitude.
+BACKGROUND: Dark navy/midnight gradient with golden moon glow. Rich autumnal warmth.`,
+    '새해': `International/Western New Year celebration (새해/Happy New Year 2026) theme.
+MUST-HAVE OBJECTS: "2026" large typography, fireworks bursts, confetti and streamers, champagne glasses/bubbles, midnight clock at 12:00, sparklers, party poppers.
+COLOR PALETTE: Midnight purple (#4c1d95), electric violet (#7c3aed), gold sparkle (#fbbf24), silver (#c0c0c0), hot pink accents.
+PATTERNS: Starburst patterns, glitter scatter, bokeh light dots.
+MOOD: Celebration, excitement, glamorous midnight party, fresh start, countdown energy.
+BACKGROUND: Dark midnight blue/purple gradient with sparkle effects. NOT Korean traditional style.`,
+    '어버이날': `Korean Parents' Day (어버이날, May 8th) theme.
+MUST-HAVE OBJECTS: Red and pink carnation flowers (카네이션) - THE symbol of Korean Parents' Day, carnation bouquet with green ribbon bow, heart shapes, handwritten-style "감사합니다" text, warm embrace imagery.
+COLOR PALETTE: Carnation red (#e11d48), soft rose pink (#fb7185), warm cream (#fff1f2), gentle green (#22c55e) for stems/leaves.
+PATTERNS: Soft watercolor flower petals, gentle petal scatter, ribbon bows.
+MOOD: Deep gratitude (감사), warm love (사랑), tender emotion, heartfelt sincerity, touching and emotional.
+BACKGROUND: Soft pink/cream gradient. Warm, tender, NOT flashy or festive. Emphasis on sincerity.`,
+    '크리스마스': `Christmas (크리스마스/Merry Christmas) celebration theme.
+MUST-HAVE OBJECTS: Christmas tree with ornaments and star topper, snowflakes, gift boxes with ribbons, candy canes, holly and berries, Christmas wreath, golden bells, stockings, santa hat accent.
+COLOR PALETTE: Classic red (#ef4444), forest green (#166534), gold (#d4a017), snow white, warm brown (wood/gingerbread).
+PATTERNS: Snowflake patterns, plaid/tartan accents, twinkling star lights, pine branch borders.
+MOOD: Warm cozy holiday, twinkling lights, snowy winter wonderland, family warmth, magical festive feeling.
+BACKGROUND: Deep green or deep red gradient. Warm golden light effects.`,
   };
-  const deco = holidayDecorations[data.holiday] || 'Festive holiday theme with appropriate seasonal decorations';
+  const deco = holidayDecorations[data.holiday] || 'Festive holiday theme with appropriate seasonal decorations matching the holiday type.';
 
-  let content = `[HOLIDAY VISUAL THEME - decorate the image with these elements]\n${deco}`;
-  content += `\n\n[GREETING MESSAGE - largest, bold, center, beautiful typography]\n"${data.greeting}"`;
-  if (data.closurePeriod) content += `\n\n[CLOSURE INFO - small, subtle, bottom area] "휴진 안내: ${data.closurePeriod}"`;
+  let content = `[HOLIDAY VISUAL THEME - CRITICAL: decorate the image with these SPECIFIC elements]\n${deco}`;
+  content += `\n\n[GREETING MESSAGE - largest, bold, center, beautiful typography with decorative frame]\n"${data.greeting}"`;
+  if (data.closurePeriod) content += `\n\n[CLOSURE INFO - small, subtle card at bottom] "휴진 안내: ${data.closurePeriod}"`;
   return content;
 }
 
@@ -2228,13 +2253,13 @@ function buildHiringTextContent(data: {
 
   let content = `${pageInstruction}[${hint.layout}]`;
 
-  // 채용 공고 기본 콘텐츠 (사용자가 아무것도 입력하지 않은 경우)
+  // 채용 공고 치과 전용 기본 콘텐츠 (사용자가 아무것도 입력하지 않은 경우)
   const defaultContent: Record<string, string[]> = {
-    cover: ['직원 모집', '함께 성장할 인재를 찾습니다'],
-    requirements: ['자격 요건', '해당 면허 소지자', '경력 우대', '성실하고 책임감 있는 분'],
-    benefits: ['복리후생', '4대보험 가입', '중식 제공', '연차 보장', '인센티브 지급'],
-    contact: ['지원 방법', '이메일 지원', '전화 문의 가능', '채용시까지'],
-    intro: ['병원 소개', '최신 장비 보유', '쾌적한 근무 환경'],
+    cover: ['치과위생사 모집', '함께 성장할 인재를 찾습니다', '정규직 / 경력·신입 환영'],
+    requirements: ['자격 요건', '치과위생사 면허 소지자', '경력 1년 이상 우대 (신입 지원 가능)', '성실하고 친절한 환자 응대 가능자', '디지털 차트 사용 가능자 우대', '스케일링·보철·교정 진료 경험자 우대'],
+    benefits: ['복리후생', '4대보험 완비', '중식 제공', '연차·반차 자유 사용', '인센티브 분기별 지급', '명절 상여금·경조사비', '워크숍·세미나 지원', '유니폼 지급'],
+    contact: ['지원 방법', '이력서 이메일 제출', '전화 문의 환영', '채용 시까지 상시 모집', '면접 후 즉시 합류 가능'],
+    intro: ['병원 소개', '최신 디지털 장비 보유', '1일 환자 수 적정 유지', '쾌적하고 청결한 근무 환경', '원장님 직접 교육 진행'],
     free: ['채용 안내'],
   };
 
@@ -2398,7 +2423,7 @@ Use ONLY the new text content from the prompt below.
       console.log(`🎨 템플릿 AI 이미지 생성 시도 ${attempt}/${MAX_RETRIES} (${category}, ref=${!!styleRefPart})...`);
 
       const result = await ai.models.generateContent({
-        model: 'gemini-3-pro-image-preview',
+        model: 'gemini-3.1-pro-image-preview',
         contents,
         config: {
           responseModalities: ['IMAGE', 'TEXT'],
