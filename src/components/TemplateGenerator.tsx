@@ -348,10 +348,10 @@ function TemplateSVGPreview({ template: t, category, hospitalName }: { template:
       </>);
     }
     if (hint === 'week') {
+      // 기본 주간 폴백
       return wrap(<>
         <text x="60" y="13" textAnchor="middle" fontSize="4" fontWeight="600" fill={a} letterSpacing="0.5">{name}</text>
         <text x="60" y="25" textAnchor="middle" fontSize="6.5" fontWeight="800" fill={c}>{mo}월 셋째 주</text>
-        {/* 주간 카드 */}
         <rect x="6" y="31" width="108" height="56" rx="6" fill="white" fillOpacity="0.95" filter={`url(#shadow_${t.id})`} />
         {['일','월','화','수','목','금','토'].map((d, i) => (
           <g key={d}>
@@ -368,33 +368,211 @@ function TemplateSVGPreview({ template: t, category, hospitalName }: { template:
             </>}
           </g>
         ))}
-        <rect x="6" y="79" width="108" height="3" rx="1.5" fill={c} fillOpacity="0.04" />
-        {/* 안내사항 */}
-        <rect x="10" y="92" width="100" height="24" rx="5" fill={c} fillOpacity="0.05" />
-        <circle cx="20" cy="100" r="2.5" fill={c} fillOpacity="0.2" />
-        <text x="26" y="101.5" fontSize="3.5" fontWeight="600" fill={c}>18일 (수) 휴진</text>
-        <circle cx="20" cy="109" r="2.5" fill="#f59e0b" fillOpacity="0.2" />
-        <text x="26" y="110.5" fontSize="3.5" fontWeight="600" fill="#92400e">22일 (토) 단축진료</text>
         <rect x="25" y="122" width="70" height="12" rx="6" fill={`url(#accent_${t.id})`} fillOpacity="0.9" />
         <text x="60" y="130" textAnchor="middle" fontSize="3.5" fontWeight="700" fill="white">02-1234-5678</text>
-        <text x="60" y="148" textAnchor="middle" fontSize="3" fill="#94a3b8">양해 부탁드립니다</text>
       </>);
     }
-    if (hint === 'stamp' || hint === 'rip' || hint === 'slash') {
+    if (hint === 'wk_bar') {
+      // 수평 바 - 가로 스트립 형태로 요일을 나란히 배치, 휴진일 강조 바
+      return wrap(<>
+        <rect x="8" y="5" width="104" height="18" rx="4" fill={`url(#accent_${t.id})`} fillOpacity="0.9" />
+        <text x="60" y="16" textAnchor="middle" fontSize="5" fontWeight="800" fill="white">{mo}월 셋째 주</text>
+        <text x="60" y="30" textAnchor="middle" fontSize="3.5" fontWeight="600" fill={a}>{name}</text>
+        {/* 7개 수평 바 */}
+        {['일','월','화','수','목','금','토'].map((d, i) => {
+          const isClosed = i === 3;
+          const isSun = i === 0;
+          const y = 38 + i * 14;
+          return <g key={d}>
+            <rect x="10" y={y} width="100" height="12" rx="4" fill={isClosed ? c : isSun ? '#ef4444' : 'white'} fillOpacity={isClosed ? 0.15 : isSun ? 0.06 : 0.8} filter={isClosed ? undefined : `url(#shadow_${t.id})`} stroke={isClosed ? c : 'transparent'} strokeOpacity="0.2" strokeWidth="0.5" />
+            <text x="20" y={y + 8} textAnchor="middle" fontSize="3.5" fontWeight="700" fill={isSun ? '#ef4444' : isClosed ? c : '#64748b'}>{d}</text>
+            <text x="42" y={y + 8} fontSize="4.5" fontWeight={isClosed ? '900' : '500'} fill={isClosed ? c : '#475569'}>{15 + i}일</text>
+            {isClosed && <><rect x="68" y={y + 1} width="38" height="10" rx="5" fill={c} fillOpacity="0.9" /><text x="87" y={y + 8} textAnchor="middle" fontSize="3.5" fontWeight="800" fill="white">휴진</text></>}
+            {!isClosed && !isSun && <text x="100" y={y + 8} textAnchor="end" fontSize="3" fill="#94a3b8">09:30~18:00</text>}
+            {isSun && <text x="100" y={y + 8} textAnchor="end" fontSize="3" fill="#ef4444">휴무</text>}
+          </g>;
+        })}
+        <rect x="25" y="140" width="70" height="11" rx="5.5" fill={`url(#accent_${t.id})`} fillOpacity="0.9" />
+        <text x="60" y="147.5" textAnchor="middle" fontSize="3.5" fontWeight="700" fill="white">02-1234-5678</text>
+      </>);
+    }
+    if (hint === 'wk_cards') {
+      // 카드 스택 - 7개 개별 카드, 휴진 카드는 뒤집힌 느낌
+      return wrap(<>
+        <text x="60" y="14" textAnchor="middle" fontSize="5.5" fontWeight="800" fill={c}>{mo}월 셋째 주</text>
+        <text x="60" y="22" textAnchor="middle" fontSize="3" fontWeight="600" fill={a}>{name}</text>
+        {/* 7개 카드 - 2행 */}
+        {['일','월','화','수','목','금','토'].map((d, i) => {
+          const isClosed = i === 3;
+          const isSun = i === 0;
+          const col = i < 4 ? i : i - 4;
+          const row = i < 4 ? 0 : 1;
+          const x = 10 + col * 26;
+          const y = 28 + row * 54;
+          const w = 24; const h = 48;
+          return <g key={d}>
+            <rect x={x} y={y} width={w} height={h} rx="5" fill={isClosed ? c : 'white'} fillOpacity={isClosed ? 0.12 : 0.95} filter={`url(#shadow_${t.id})`} stroke={isClosed ? c : 'transparent'} strokeOpacity="0.3" strokeWidth="0.5" />
+            {isClosed && <><line x1={x+4} y1={y+4} x2={x+w-4} y2={y+h-4} stroke={c} strokeWidth="1" strokeOpacity="0.3" /><line x1={x+w-4} y1={y+4} x2={x+4} y2={y+h-4} stroke={c} strokeWidth="1" strokeOpacity="0.3" /></>}
+            <text x={x+w/2} y={y+14} textAnchor="middle" fontSize="3.5" fontWeight="700" fill={isSun ? '#ef4444' : isClosed ? c : '#94a3b8'}>{d}</text>
+            <text x={x+w/2} y={y+30} textAnchor="middle" fontSize="10" fontWeight="900" fill={isClosed ? c : isSun ? '#ef4444' : '#475569'}>{15+i}</text>
+            {isClosed && <text x={x+w/2} y={y+42} textAnchor="middle" fontSize="3" fontWeight="800" fill={c}>CLOSED</text>}
+          </g>;
+        })}
+        <rect x="25" y="140" width="70" height="11" rx="5.5" fill={`url(#accent_${t.id})`} fillOpacity="0.9" />
+        <text x="60" y="147.5" textAnchor="middle" fontSize="3.5" fontWeight="700" fill="white">02-1234-5678</text>
+      </>);
+    }
+    if (hint === 'wk_timeline') {
+      // 타임라인 점 - 수평 라인 위에 7개 노드
+      return wrap(<>
+        <text x="60" y="14" textAnchor="middle" fontSize="5.5" fontWeight="800" fill={c}>{mo}월 셋째 주</text>
+        <text x="60" y="22" textAnchor="middle" fontSize="3" fontWeight="600" fill={a}>{name}</text>
+        {/* 수직 타임라인 */}
+        <line x1="25" y1="32" x2="25" y2="130" stroke={c} strokeOpacity="0.15" strokeWidth="1" />
+        {['일','월','화','수','목','금','토'].map((d, i) => {
+          const isClosed = i === 3;
+          const isSun = i === 0;
+          const y = 36 + i * 14;
+          return <g key={d}>
+            <circle cx="25" cy={y} r={isClosed ? 5 : 3} fill={isClosed ? c : isSun ? '#ef4444' : 'white'} fillOpacity={isClosed ? 0.2 : isSun ? 0.15 : 1} stroke={isClosed ? c : isSun ? '#ef4444' : c} strokeOpacity={isClosed ? 0.5 : 0.2} strokeWidth="0.8" />
+            {isClosed && <circle cx="25" cy={y} r="2" fill={c} />}
+            <text x="34" y={y - 2} fontSize="3" fontWeight="700" fill={isSun ? '#ef4444' : isClosed ? c : '#94a3b8'}>{d}</text>
+            <text x="34" y={y + 5} fontSize="4.5" fontWeight={isClosed ? '900' : '500'} fill={isClosed ? c : '#475569'}>{15+i}일</text>
+            {isClosed && <><rect x="60" y={y - 5} width="42" height="10" rx="5" fill={c} fillOpacity="0.9" /><text x="81" y={y + 2} textAnchor="middle" fontSize="3.5" fontWeight="700" fill="white">휴진일</text></>}
+            {!isClosed && !isSun && <text x="60" y={y + 2} fontSize="3" fill="#94a3b8">09:30~18:00</text>}
+          </g>;
+        })}
+        <rect x="25" y="140" width="70" height="11" rx="5.5" fill={`url(#accent_${t.id})`} fillOpacity="0.9" />
+        <text x="60" y="147.5" textAnchor="middle" fontSize="3.5" fontWeight="700" fill="white">02-1234-5678</text>
+      </>);
+    }
+    if (hint === 'wk_pill') {
+      // 필 모양 - 알약 캡슐 형태의 요일 표시
+      return wrap(<>
+        <text x="60" y="12" textAnchor="middle" fontSize="3.5" fontWeight="600" fill={a}>{name}</text>
+        <text x="60" y="24" textAnchor="middle" fontSize="6" fontWeight="800" fill={c}>{mo}월 셋째 주</text>
+        {/* 7개 필 */}
+        {['일','월','화','수','목','금','토'].map((d, i) => {
+          const isClosed = i === 3;
+          const isSun = i === 0;
+          const y = 34 + i * 15;
+          return <g key={d}>
+            <rect x="12" y={y} width="96" height="12" rx="6" fill={isClosed ? c : isSun ? '#ef4444' : 'white'} fillOpacity={isClosed ? 0.12 : isSun ? 0.05 : 0.9} filter={`url(#shadow_${t.id})`} />
+            {/* 왼쪽 캡슐 헤드 */}
+            <rect x="12" y={y} width="22" height="12" rx="6" fill={isClosed ? c : isSun ? '#ef4444' : c} fillOpacity={isClosed ? 0.25 : isSun ? 0.12 : 0.06} />
+            <text x="23" y={y + 8} textAnchor="middle" fontSize="3.5" fontWeight="700" fill={isSun ? '#ef4444' : isClosed ? c : a}>{d}</text>
+            <text x="50" y={y + 8.5} fontSize="4" fontWeight={isClosed ? '800' : '500'} fill={isClosed ? c : '#475569'}>{15+i}일</text>
+            {isClosed && <><circle cx="80" cy={y + 6} r="4" fill={c} fillOpacity="0.15" /><text x="80" y={y + 8} textAnchor="middle" fontSize="3" fontWeight="800" fill={c}>X</text><text x="95" y={y + 8} textAnchor="middle" fontSize="3" fontWeight="700" fill={c}>휴진</text></>}
+          </g>;
+        })}
+        <rect x="25" y="142" width="70" height="11" rx="5.5" fill={`url(#accent_${t.id})`} fillOpacity="0.9" />
+        <text x="60" y="149.5" textAnchor="middle" fontSize="3.5" fontWeight="700" fill="white">02-1234-5678</text>
+      </>);
+    }
+    if (hint === 'wk_flag') {
+      // 리본 플래그 - 깃발/배너 형태
+      return wrap(<>
+        <text x="60" y="12" textAnchor="middle" fontSize="3.5" fontWeight="600" fill={a}>{name}</text>
+        <text x="60" y="24" textAnchor="middle" fontSize="6" fontWeight="800" fill={c}>{mo}월 셋째 주</text>
+        {/* 줄 */}
+        <line x1="10" y1="30" x2="110" y2="30" stroke={c} strokeOpacity="0.2" strokeWidth="0.8" />
+        {/* 7개 깃발 */}
+        {['일','월','화','수','목','금','토'].map((d, i) => {
+          const isClosed = i === 3;
+          const isSun = i === 0;
+          const cx = 16 + i * 14;
+          return <g key={d}>
+            <line x1={cx} y1="30" x2={cx} y2="36" stroke={c} strokeOpacity="0.3" strokeWidth="0.5" />
+            <polygon points={`${cx-6},36 ${cx+6},36 ${cx+6},62 ${cx},56 ${cx-6},62`} fill={isClosed ? c : isSun ? '#ef4444' : 'white'} fillOpacity={isClosed ? 0.2 : isSun ? 0.08 : 0.9} stroke={isClosed ? c : isSun ? '#ef4444' : c} strokeOpacity={isClosed ? 0.4 : 0.1} strokeWidth="0.5" />
+            <text x={cx} y="42" textAnchor="middle" fontSize="3" fontWeight="700" fill={isSun ? '#ef4444' : isClosed ? c : '#94a3b8'}>{d}</text>
+            <text x={cx} y="52" textAnchor="middle" fontSize="5" fontWeight="800" fill={isClosed ? c : isSun ? '#ef4444' : '#475569'}>{15+i}</text>
+            {isClosed && <text x={cx} y="48" textAnchor="middle" fontSize="6" fontWeight="900" fill={c} fillOpacity="0.15" transform={`rotate(-20 ${cx} 48)`}>X</text>}
+          </g>;
+        })}
+        {/* 안내 */}
+        <rect x="12" y="72" width="96" height="36" rx="6" fill="white" fillOpacity="0.9" filter={`url(#shadow_${t.id})`} />
+        <rect x="12" y="72" width="96" height="10" rx="6" fill={c} fillOpacity="0.08" />
+        <text x="60" y="79" textAnchor="middle" fontSize="3.5" fontWeight="700" fill={c}>이번 주 진료 안내</text>
+        <text x="60" y="92" textAnchor="middle" fontSize="3.5" fill="#475569">18일 (수) 정기 휴진</text>
+        <text x="60" y="101" textAnchor="middle" fontSize="3.5" fill="#d97706">22일 (토) 단축진료</text>
+        <rect x="25" y="118" width="70" height="12" rx="6" fill={`url(#accent_${t.id})`} fillOpacity="0.9" />
+        <text x="60" y="126" textAnchor="middle" fontSize="3.5" fontWeight="700" fill="white">02-1234-5678</text>
+        <text x="60" y="148" textAnchor="middle" fontSize="3" fill="#94a3b8">{name}</text>
+      </>);
+    }
+    if (hint === 'wk_neon') {
+      // 네온 글로우 - 다크 배경 + 네온 효과
+      return wrap(<>
+        <rect x="5" y="4" width="110" height="152" rx="6" fill="#0f172a" />
+        <rect x="5" y="4" width="110" height="3" rx="6" fill={c} opacity="0.5" />
+        <text x="60" y="18" textAnchor="middle" fontSize="3.5" fontWeight="500" fill="#94a3b8" letterSpacing="1">{name}</text>
+        <text x="60" y="30" textAnchor="middle" fontSize="6" fontWeight="800" fill={c}>{mo}월 셋째 주</text>
+        {/* 네온 사인 요일 박스 */}
+        {['일','월','화','수','목','금','토'].map((d, i) => {
+          const isClosed = i === 3;
+          const isSun = i === 0;
+          const y = 36 + i * 14;
+          return <g key={d}>
+            <rect x="12" y={y} width="96" height="11" rx="3" fill={isClosed ? c : 'transparent'} fillOpacity={isClosed ? 0.08 : 0} stroke={isClosed ? c : isSun ? '#ef4444' : c} strokeOpacity={isClosed ? 0.5 : isSun ? 0.3 : 0.08} strokeWidth="0.5" />
+            <text x="22" y={y + 8} textAnchor="middle" fontSize="3" fontWeight="700" fill={isSun ? '#f87171' : isClosed ? c : '#64748b'}>{d}</text>
+            <text x="45" y={y + 8} fontSize="4" fontWeight={isClosed ? '800' : '400'} fill={isClosed ? c : '#94a3b8'}>{15+i}일</text>
+            {isClosed && <><text x="80" y={y + 8} textAnchor="middle" fontSize="4" fontWeight="900" fill={c}>OFF</text><circle cx="98" cy={y + 5.5} r="2" fill={c} fillOpacity="0.4" /></>}
+            {!isClosed && !isSun && <circle cx="98" cy={y + 5.5} r="2" fill="#22c55e" fillOpacity="0.4" />}
+          </g>;
+        })}
+        <rect x="25" y="140" width="70" height="11" rx="3" fill={c} fillOpacity="0.15" stroke={c} strokeOpacity="0.3" strokeWidth="0.5" />
+        <text x="60" y="147.5" textAnchor="middle" fontSize="3.5" fontWeight="700" fill={c}>02-1234-5678</text>
+      </>);
+    }
+    if (hint === 'highlight') {
+      // 기본 하이라이트 폴백
       return wrap(<>
         <text x="60" y="13" textAnchor="middle" fontSize="4" fontWeight="600" fill={a} letterSpacing="0.5">{name}</text>
-        <text x="60" y="26" textAnchor="middle" fontSize="6.5" fontWeight="800" fill={c}>{mo}월 휴진 안내</text>
-        {/* 스탬프/도장 스타일 날짜 */}
-        <circle cx="40" cy="58" r="20" fill={c} fillOpacity="0.04" stroke={c} strokeWidth={hint === 'stamp' ? '2' : '1.5'} strokeDasharray={hint === 'stamp' ? '0' : '3 2'} />
-        <text x="40" y="55" textAnchor="middle" fontSize="14" fontWeight="900" fill={c}>9</text>
-        <text x="40" y="68" textAnchor="middle" fontSize="3.5" fontWeight="700" fill={a}>CLOSED</text>
-        <circle cx="80" cy="58" r="20" fill="#ef4444" fillOpacity="0.04" stroke="#ef4444" strokeWidth={hint === 'stamp' ? '2' : '1.5'} strokeDasharray={hint === 'stamp' ? '0' : '3 2'} />
-        <text x="80" y="55" textAnchor="middle" fontSize="14" fontWeight="900" fill="#ef4444">15</text>
-        <text x="80" y="68" textAnchor="middle" fontSize="3.5" fontWeight="700" fill="#dc2626">CLOSED</text>
-        {hint === 'slash' && <>
-          <line x1="28" y1="42" x2="52" y2="74" stroke={c} strokeWidth="1.2" strokeOpacity="0.3" />
-          <line x1="68" y1="42" x2="92" y2="74" stroke="#ef4444" strokeWidth="1.2" strokeOpacity="0.3" />
-        </>}
+        <rect x="12" y="20" width="96" height="42" rx="8" fill={c} fillOpacity="0.08" />
+        <text x="60" y="36" textAnchor="middle" fontSize="14" fontWeight="900" fill={c} letterSpacing="2">9 / 15</text>
+        <rect x="35" y="44" width="50" height="10" rx="5" fill={c} fillOpacity="0.15" />
+        <text x="60" y="51" textAnchor="middle" fontSize="4.5" fontWeight="700" fill={c}>{mo}월 휴진일</text>
+        <rect x="15" y="68" width="90" height="14" rx="4" fill="#fef3c7" />
+        <text x="60" y="77" textAnchor="middle" fontSize="4.5" fontWeight="700" fill="#92400e">22일 단축진료 10:00~14:00</text>
+        <rect x="25" y="128" width="70" height="12" rx="6" fill={`url(#accent_${t.id})`} fillOpacity="0.9" />
+        <text x="60" y="136" textAnchor="middle" fontSize="3.8" fontWeight="700" fill="white">02-1234-5678</text>
+      </>);
+    }
+    if (hint === 'hl_bignum') {
+      // 빅 넘버 - 초대형 날짜 숫자
+      return wrap(<>
+        <text x="60" y="12" textAnchor="middle" fontSize="3.5" fontWeight="600" fill={a}>{name}</text>
+        <rect x="8" y="16" width="104" height="4" rx="2" fill={`url(#accent_${t.id})`} fillOpacity="0.8" />
+        <text x="60" y="28" textAnchor="middle" fontSize="4" fontWeight="700" fill={c} letterSpacing="2">{mo}월 휴진 안내</text>
+        {/* 초대형 날짜 */}
+        <text x="36" y="76" textAnchor="middle" fontSize="36" fontWeight="900" fill={c} fillOpacity="0.9">9</text>
+        <text x="36" y="84" textAnchor="middle" fontSize="4" fontWeight="700" fill={a}>월요일</text>
+        <text x="84" y="76" textAnchor="middle" fontSize="36" fontWeight="900" fill="#ef4444" fillOpacity="0.9">15</text>
+        <text x="84" y="84" textAnchor="middle" fontSize="4" fontWeight="700" fill="#dc2626">일요일</text>
+        <rect x="50" y="38" width="0.5" height="50" fill={c} fillOpacity="0.1" />
+        <rect x="15" y="92" width="90" height="14" rx="5" fill="#fef3c7" stroke="#f59e0b" strokeOpacity="0.2" strokeWidth="0.4" />
+        <text x="60" y="101" textAnchor="middle" fontSize="4" fontWeight="700" fill="#92400e">22일 단축진료</text>
+        <rect x="15" y="112" width="90" height="16" rx="5" fill="white" fillOpacity="0.9" filter={`url(#shadow_${t.id})`} />
+        <text x="60" y="122" textAnchor="middle" fontSize="3.5" fontWeight="600" fill={c}>진료시간 09:30 ~ 18:00</text>
+        <rect x="25" y="134" width="70" height="12" rx="6" fill={`url(#accent_${t.id})`} fillOpacity="0.9" />
+        <text x="60" y="142" textAnchor="middle" fontSize="3.8" fontWeight="700" fill="white">02-1234-5678</text>
+      </>);
+    }
+    if (hint === 'hl_stamp') {
+      // 도장 스탬프 - 공식 도장 마크
+      return wrap(<>
+        <text x="60" y="12" textAnchor="middle" fontSize="3.5" fontWeight="600" fill={a}>{name}</text>
+        <text x="60" y="25" textAnchor="middle" fontSize="6" fontWeight="800" fill={c}>{mo}월 휴진 안내</text>
+        {/* 도장 1 */}
+        <circle cx="40" cy="58" r="20" fill="none" stroke={c} strokeWidth="2" />
+        <circle cx="40" cy="58" r="17" fill="none" stroke={c} strokeWidth="0.5" />
+        <text x="40" y="54" textAnchor="middle" fontSize="12" fontWeight="900" fill={c}>9</text>
+        <text x="40" y="65" textAnchor="middle" fontSize="4.5" fontWeight="800" fill={c}>CLOSED</text>
+        {/* 도장 2 */}
+        <circle cx="80" cy="58" r="20" fill="none" stroke="#ef4444" strokeWidth="2" />
+        <circle cx="80" cy="58" r="17" fill="none" stroke="#ef4444" strokeWidth="0.5" />
+        <text x="80" y="54" textAnchor="middle" fontSize="12" fontWeight="900" fill="#ef4444">15</text>
+        <text x="80" y="65" textAnchor="middle" fontSize="4.5" fontWeight="800" fill="#ef4444">CLOSED</text>
         <rect x="12" y="86" width="96" height="14" rx="4" fill="#fef3c7" />
         <text x="60" y="95" textAnchor="middle" fontSize="4" fontWeight="700" fill="#92400e">22일 (토) 단축진료</text>
         <rect x="10" y="106" width="100" height="20" rx="5" fill="white" fillOpacity="0.9" filter={`url(#shadow_${t.id})`} />
@@ -402,21 +580,128 @@ function TemplateSVGPreview({ template: t, category, hospitalName }: { template:
         <text x="60" y="148" textAnchor="middle" fontSize="3" fill="#94a3b8">{name}</text>
       </>);
     }
+    if (hint === 'hl_rip') {
+      // 캘린더 찢기 - 찢어진 달력 페이지 효과
+      return wrap(<>
+        <text x="60" y="12" textAnchor="middle" fontSize="3.5" fontWeight="600" fill={a}>{name}</text>
+        <text x="60" y="25" textAnchor="middle" fontSize="6" fontWeight="800" fill={c}>{mo}월 휴진 안내</text>
+        {/* 찢어진 카드 1 - 기울어짐 */}
+        <g transform="rotate(-5 38 65)">
+          <rect x="12" y="34" width="48" height="56" rx="4" fill="white" fillOpacity="0.95" filter={`url(#shadow_${t.id})`} />
+          <rect x="12" y="34" width="48" height="12" rx="4" fill={c} fillOpacity="0.1" />
+          <text x="36" y="42" textAnchor="middle" fontSize="3.5" fontWeight="700" fill={c}>CLOSED</text>
+          <text x="36" y="70" textAnchor="middle" fontSize="22" fontWeight="900" fill={c}>9</text>
+          <text x="36" y="84" textAnchor="middle" fontSize="3.5" fontWeight="600" fill={a}>월요일 휴진</text>
+          <path d="M12,90 Q20,88 28,92 Q36,86 44,90 Q52,87 60,90" fill="none" stroke={c} strokeOpacity="0.15" strokeWidth="0.8" />
+        </g>
+        {/* 찢어진 카드 2 - 반대쪽 기울어짐 */}
+        <g transform="rotate(4 82 65)">
+          <rect x="60" y="34" width="48" height="56" rx="4" fill="white" fillOpacity="0.95" filter={`url(#shadow_${t.id})`} />
+          <rect x="60" y="34" width="48" height="12" rx="4" fill="#ef4444" fillOpacity="0.1" />
+          <text x="84" y="42" textAnchor="middle" fontSize="3.5" fontWeight="700" fill="#ef4444">CLOSED</text>
+          <text x="84" y="70" textAnchor="middle" fontSize="22" fontWeight="900" fill="#ef4444">15</text>
+          <text x="84" y="84" textAnchor="middle" fontSize="3.5" fontWeight="600" fill="#dc2626">일요일 휴진</text>
+          <path d="M60,90 Q68,87 76,91 Q84,86 92,90 Q100,87 108,90" fill="none" stroke="#ef4444" strokeOpacity="0.15" strokeWidth="0.8" />
+        </g>
+        <rect x="12" y="100" width="96" height="14" rx="5" fill="#fef3c7" />
+        <text x="60" y="109" textAnchor="middle" fontSize="4" fontWeight="700" fill="#92400e">22일 단축진료 10:00~14:00</text>
+        <rect x="25" y="122" width="70" height="12" rx="6" fill={`url(#accent_${t.id})`} fillOpacity="0.9" />
+        <text x="60" y="130" textAnchor="middle" fontSize="3.5" fontWeight="700" fill="white">02-1234-5678</text>
+        <text x="60" y="148" textAnchor="middle" fontSize="3" fill="#94a3b8">{name}</text>
+      </>);
+    }
+    if (hint === 'hl_slash') {
+      // 사선 취소 - 대형 날짜에 사선 취소선
+      return wrap(<>
+        <text x="60" y="12" textAnchor="middle" fontSize="3.5" fontWeight="600" fill={a}>{name}</text>
+        <rect x="8" y="18" width="104" height="4" rx="2" fill={c} fillOpacity="0.1" />
+        <text x="60" y="32" textAnchor="middle" fontSize="5.5" fontWeight="800" fill={c}>{mo}월 휴진 안내</text>
+        {/* 큰 날짜 + 사선 */}
+        <rect x="10" y="38" width="46" height="52" rx="6" fill="white" fillOpacity="0.9" filter={`url(#shadow_${t.id})`} />
+        <text x="33" y="72" textAnchor="middle" fontSize="28" fontWeight="900" fill={c} fillOpacity="0.8">9</text>
+        <line x1="14" y1="42" x2="52" y2="86" stroke={c} strokeWidth="2.5" strokeOpacity="0.4" strokeLinecap="round" />
+        <line x1="14" y1="44" x2="52" y2="88" stroke="white" strokeWidth="1" strokeOpacity="0.5" />
+        <rect x="64" y="38" width="46" height="52" rx="6" fill="white" fillOpacity="0.9" filter={`url(#shadow_${t.id})`} />
+        <text x="87" y="72" textAnchor="middle" fontSize="28" fontWeight="900" fill="#ef4444" fillOpacity="0.8">15</text>
+        <line x1="68" y1="42" x2="106" y2="86" stroke="#ef4444" strokeWidth="2.5" strokeOpacity="0.4" strokeLinecap="round" />
+        <line x1="68" y1="44" x2="106" y2="88" stroke="white" strokeWidth="1" strokeOpacity="0.5" />
+        <rect x="12" y="96" width="96" height="14" rx="5" fill="#fef3c7" />
+        <text x="60" y="105" textAnchor="middle" fontSize="4" fontWeight="700" fill="#92400e">22일 단축진료</text>
+        <rect x="25" y="118" width="70" height="12" rx="6" fill={`url(#accent_${t.id})`} fillOpacity="0.9" />
+        <text x="60" y="126" textAnchor="middle" fontSize="3.8" fontWeight="700" fill="white">02-1234-5678</text>
+        <text x="60" y="148" textAnchor="middle" fontSize="3" fill="#94a3b8">{name}</text>
+      </>);
+    }
+    if (hint === 'hl_circle') {
+      // 원형 프레임 - 동심원 + 타겟 강조
+      return wrap(<>
+        <text x="60" y="12" textAnchor="middle" fontSize="3.5" fontWeight="600" fill={a}>{name}</text>
+        <text x="60" y="25" textAnchor="middle" fontSize="5.5" fontWeight="800" fill={c}>{mo}월 휴진 안내</text>
+        {/* 원형 강조 */}
+        <circle cx="60" cy="64" r="32" fill="none" stroke={c} strokeOpacity="0.06" strokeWidth="1" />
+        <circle cx="60" cy="64" r="26" fill="none" stroke={c} strokeOpacity="0.1" strokeWidth="0.8" />
+        <circle cx="60" cy="64" r="20" fill={c} fillOpacity="0.06" stroke={c} strokeOpacity="0.15" strokeWidth="0.5" />
+        {/* 날짜들 */}
+        <text x="44" y="62" textAnchor="middle" fontSize="16" fontWeight="900" fill={c}>9</text>
+        <text x="60" y="62" textAnchor="middle" fontSize="6" fontWeight="400" fill={a}>/</text>
+        <text x="76" y="62" textAnchor="middle" fontSize="16" fontWeight="900" fill="#ef4444">15</text>
+        <text x="60" y="76" textAnchor="middle" fontSize="4.5" fontWeight="700" fill={c}>휴진일</text>
+        <rect x="15" y="102" width="90" height="14" rx="5" fill="#fef3c7" />
+        <text x="60" y="111" textAnchor="middle" fontSize="4" fontWeight="700" fill="#92400e">22일 단축 10:00~14:00</text>
+        <rect x="25" y="124" width="70" height="12" rx="6" fill={`url(#accent_${t.id})`} fillOpacity="0.9" />
+        <text x="60" y="132" textAnchor="middle" fontSize="3.8" fontWeight="700" fill="white">02-1234-5678</text>
+        <text x="60" y="148" textAnchor="middle" fontSize="3" fill="#94a3b8">{name}</text>
+      </>);
+    }
+    if (hint === 'hl_countdown') {
+      // 카운트다운 - 디지털 시계 스타일
+      return wrap(<>
+        <rect x="5" y="4" width="110" height="152" rx="6" fill="#0f172a" />
+        <rect x="5" y="4" width="110" height="3" rx="6" fill={`url(#accent_${t.id})`} opacity="0.6" />
+        <text x="60" y="18" textAnchor="middle" fontSize="3.5" fontWeight="500" fill="#94a3b8" letterSpacing="1">{name}</text>
+        <text x="60" y="30" textAnchor="middle" fontSize="5" fontWeight="700" fill={c}>{mo}월 휴진 안내</text>
+        {/* 디지털 카운트다운 패널 */}
+        <rect x="15" y="36" width="90" height="50" rx="6" fill={c} fillOpacity="0.05" stroke={c} strokeOpacity="0.15" strokeWidth="0.5" />
+        <text x="60" y="50" textAnchor="middle" fontSize="5" fontWeight="700" fill="#94a3b8">다음 휴진까지</text>
+        <text x="60" y="74" textAnchor="middle" fontSize="22" fontWeight="900" fill={c} letterSpacing="3">D-3</text>
+        {/* 날짜 카드들 */}
+        <rect x="15" y="92" width="42" height="22" rx="4" fill={c} fillOpacity="0.08" stroke={c} strokeOpacity="0.15" strokeWidth="0.3" />
+        <text x="36" y="101" textAnchor="middle" fontSize="3" fontWeight="600" fill="#94a3b8">{mo}/9 (월)</text>
+        <text x="36" y="110" textAnchor="middle" fontSize="3.5" fontWeight="800" fill={c}>휴진</text>
+        <rect x="63" y="92" width="42" height="22" rx="4" fill="#ef4444" fillOpacity="0.06" stroke="#ef4444" strokeOpacity="0.15" strokeWidth="0.3" />
+        <text x="84" y="101" textAnchor="middle" fontSize="3" fontWeight="600" fill="#94a3b8">{mo}/15 (일)</text>
+        <text x="84" y="110" textAnchor="middle" fontSize="3.5" fontWeight="800" fill="#f87171">휴진</text>
+        <rect x="25" y="122" width="70" height="12" rx="4" fill={c} fillOpacity="0.15" stroke={c} strokeOpacity="0.3" strokeWidth="0.3" />
+        <text x="60" y="130" textAnchor="middle" fontSize="3.5" fontWeight="700" fill={c}>02-1234-5678</text>
+        <text x="60" y="148" textAnchor="middle" fontSize="3" fill="#64748b">{name}</text>
+      </>);
+    }
+    if (hint === 'stamp' || hint === 'rip' || hint === 'slash') {
+      // 레거시 폴백
+      return wrap(<>
+        <text x="60" y="13" textAnchor="middle" fontSize="4" fontWeight="600" fill={a} letterSpacing="0.5">{name}</text>
+        <text x="60" y="26" textAnchor="middle" fontSize="6.5" fontWeight="800" fill={c}>{mo}월 휴진 안내</text>
+        <circle cx="40" cy="58" r="20" fill={c} fillOpacity="0.04" stroke={c} strokeWidth="2" />
+        <text x="40" y="55" textAnchor="middle" fontSize="14" fontWeight="900" fill={c}>9</text>
+        <text x="40" y="68" textAnchor="middle" fontSize="3.5" fontWeight="700" fill={a}>CLOSED</text>
+        <circle cx="80" cy="58" r="20" fill="#ef4444" fillOpacity="0.04" stroke="#ef4444" strokeWidth="2" />
+        <text x="80" y="55" textAnchor="middle" fontSize="14" fontWeight="900" fill="#ef4444">15</text>
+        <text x="80" y="68" textAnchor="middle" fontSize="3.5" fontWeight="700" fill="#dc2626">CLOSED</text>
+        <rect x="10" y="106" width="100" height="20" rx="5" fill="white" fillOpacity="0.9" filter={`url(#shadow_${t.id})`} />
+        <text x="60" y="118" textAnchor="middle" fontSize="3.5" fontWeight="600" fill={c}>02-1234-5678</text>
+      </>);
+    }
     if (hint === 'circle' || hint === 'countdown') {
+      // 레거시 폴백
       return wrap(<>
         <text x="60" y="13" textAnchor="middle" fontSize="4" fontWeight="600" fill={a} letterSpacing="0.5">{name}</text>
         <text x="60" y="26" textAnchor="middle" fontSize="6.5" fontWeight="800" fill={c}>{mo}월 휴진</text>
-        {/* 프로그레스 원형 */}
         <circle cx="60" cy="64" r="28" fill="white" fillOpacity="0.5" />
-        <circle cx="60" cy="64" r="28" fill="none" stroke={c} strokeWidth="0.8" strokeOpacity="0.1" />
         <circle cx="60" cy="64" r="28" fill="none" stroke={`url(#accent_${t.id})`} strokeWidth="2.5" strokeDasharray="44 132" strokeLinecap="round" transform="rotate(-90 60 64)" />
-        <text x="60" y="61" textAnchor="middle" fontSize="16" fontWeight="900" fill={c}>{hint === 'countdown' ? 'D-3' : '9'}</text>
-        <text x="60" y="73" textAnchor="middle" fontSize="4" fontWeight="600" fill={a}>{hint === 'countdown' ? '휴진까지' : mo + '월 휴진일'}</text>
-        <rect x="15" y="98" width="90" height="12" rx="4" fill={c} fillOpacity="0.05" />
-        <text x="60" y="106" textAnchor="middle" fontSize="3.5" fill="#64748b">15일 추가 휴진</text>
+        <text x="60" y="61" textAnchor="middle" fontSize="16" fontWeight="900" fill={c}>D-3</text>
+        <text x="60" y="73" textAnchor="middle" fontSize="4" fontWeight="600" fill={a}>휴진까지</text>
         <rect x="25" y="116" width="70" height="12" rx="6" fill={`url(#accent_${t.id})`} fillOpacity="0.9" />
         <text x="60" y="124" textAnchor="middle" fontSize="3.5" fontWeight="700" fill="white">02-1234-5678</text>
-        <text x="60" y="148" textAnchor="middle" fontSize="3" fill="#94a3b8">{name}</text>
       </>);
     }
     // list layout
@@ -446,54 +731,125 @@ function TemplateSVGPreview({ template: t, category, hospitalName }: { template:
   }
 
   if (category === 'event') {
+    const h = t.layoutHint;
+    if (h === 'price') {
+      return wrap(<>
+        {/* 할인 배너 - 대형 할인율 + 가격 비교 */}
+        <rect x="8" y="5" width="104" height="24" rx="5" fill={`url(#accent_${t.id})`} fillOpacity="0.9" />
+        <text x="60" y="14" textAnchor="middle" fontSize="3.5" fontWeight="600" fill="white" letterSpacing="0.5">{name}</text>
+        <text x="60" y="24" textAnchor="middle" fontSize="5.5" fontWeight="800" fill="white">임플란트 이벤트</text>
+        {/* 대형 할인 배지 */}
+        <circle cx="60" cy="50" r="18" fill={c} fillOpacity="0.1" />
+        <circle cx="60" cy="50" r="14" fill={c} fillOpacity="0.15" />
+        <text x="60" y="48" textAnchor="middle" fontSize="12" fontWeight="900" fill={c}>30%</text>
+        <text x="60" y="56" textAnchor="middle" fontSize="4" fontWeight="800" fill={a}>OFF</text>
+        {/* 가격 비교 카드 */}
+        <rect x="12" y="72" width="96" height="32" rx="6" fill="white" fillOpacity="0.95" filter={`url(#shadow_${t.id})`} />
+        <text x="60" y="83" textAnchor="middle" fontSize="4.5" fill="#94a3b8" textDecoration="line-through">990,000원</text>
+        <text x="60" y="97" textAnchor="middle" fontSize="11" fontWeight="900" fill={c}>690,000원</text>
+        <rect x="15" y="108" width="90" height="9" rx="4.5" fill={c} fillOpacity="0.06" />
+        <text x="60" y="114.5" textAnchor="middle" fontSize="3.5" fill="#64748b">2026.03.01 ~ 03.31</text>
+        <rect x="20" y="122" width="80" height="14" rx="7" fill={`url(#accent_${t.id})`} fillOpacity="0.9" />
+        <text x="60" y="131.5" textAnchor="middle" fontSize="4" fontWeight="700" fill="white">지금 바로 예약하세요</text>
+        <text x="60" y="148" textAnchor="middle" fontSize="3.5" fontWeight="600" fill={c}>02-1234-5678</text>
+      </>);
+    }
+    if (h === 'elegant') {
+      return wrap(<>
+        {/* 엘레강스 - 골드 라인 장식 */}
+        <text x="60" y="14" textAnchor="middle" fontSize="3.5" fontWeight="600" fill={a} letterSpacing="1">{name}</text>
+        <line x1="20" y1="18" x2="100" y2="18" stroke={c} strokeOpacity="0.15" strokeWidth="0.4" />
+        <text x="60" y="32" textAnchor="middle" fontSize="3.5" fill={a} letterSpacing="2">IMPLANT EVENT</text>
+        <text x="60" y="46" textAnchor="middle" fontSize="8" fontWeight="800" fill={c}>임플란트 이벤트</text>
+        <line x1="30" y1="52" x2="90" y2="52" stroke={c} strokeOpacity="0.15" strokeWidth="0.4" />
+        {/* 우아한 가격 */}
+        <rect x="15" y="58" width="90" height="36" rx="6" fill="white" fillOpacity="0.6" stroke={c} strokeOpacity="0.08" strokeWidth="0.3" />
+        <text x="60" y="70" textAnchor="middle" fontSize="4" fill="#94a3b8" letterSpacing="1">SPECIAL PRICE</text>
+        <text x="60" y="87" textAnchor="middle" fontSize="12" fontWeight="800" fill={c}>690,000원</text>
+        <line x1="20" y1="98" x2="100" y2="98" stroke={c} strokeOpacity="0.15" strokeWidth="0.4" />
+        <text x="60" y="108" textAnchor="middle" fontSize="3.5" fill="#64748b">2026.03.01 ~ 03.31</text>
+        <rect x="25" y="116" width="70" height="12" rx="6" fill={`url(#accent_${t.id})`} fillOpacity="0.85" />
+        <text x="60" y="124" textAnchor="middle" fontSize="3.8" fontWeight="700" fill="white">예약 상담</text>
+        <text x="60" y="140" textAnchor="middle" fontSize="3.5" fontWeight="600" fill={c}>02-1234-5678</text>
+      </>);
+    }
+    if (h === 'pop') {
+      return wrap(<>
+        {/* 팝 컬러풀 - 폭발 효과 + 활기찬 */}
+        <text x="60" y="12" textAnchor="middle" fontSize="3.5" fontWeight="600" fill={a}>{name}</text>
+        {/* 폭발 배경 */}
+        {[0,45,90,135,180,225,270,315].map((angle, i) => (
+          <line key={i} x1="60" y1="58" x2={60 + Math.cos(angle * Math.PI / 180) * 32} y2={58 + Math.sin(angle * Math.PI / 180) * 32} stroke={c} strokeOpacity="0.06" strokeWidth="2" />
+        ))}
+        <circle cx="60" cy="58" r="26" fill={c} fillOpacity="0.1" />
+        <circle cx="60" cy="58" r="20" fill={c} fillOpacity="0.12" />
+        <text x="60" y="50" textAnchor="middle" fontSize="4" fontWeight="800" fill={a}>EVENT</text>
+        <text x="60" y="62" textAnchor="middle" fontSize="12" fontWeight="900" fill={c}>30%</text>
+        <text x="60" y="70" textAnchor="middle" fontSize="4" fontWeight="800" fill={a}>할인</text>
+        <text x="60" y="86" textAnchor="middle" fontSize="7" fontWeight="800" fill={c}>임플란트</text>
+        <rect x="20" y="92" width="80" height="12" rx="6" fill="white" fillOpacity="0.9" filter={`url(#shadow_${t.id})`} />
+        <text x="60" y="100.5" textAnchor="middle" fontSize="5" fontWeight="900" fill={c}>690,000원</text>
+        <text x="60" y="112" textAnchor="middle" fontSize="3.5" fill="#64748b">2026.03.01 ~ 03.31</text>
+        <rect x="20" y="118" width="80" height="14" rx="7" fill={`url(#accent_${t.id})`} fillOpacity="0.9" />
+        <text x="60" y="127.5" textAnchor="middle" fontSize="4" fontWeight="700" fill="white">지금 바로 예약!</text>
+        <text x="60" y="146" textAnchor="middle" fontSize="3.5" fontWeight="600" fill={c}>02-1234-5678</text>
+      </>);
+    }
+    if (h === 'minimal') {
+      return wrap(<>
+        {/* 미니멀 모던 - 넓은 여백 + 단순 */}
+        <text x="60" y="20" textAnchor="middle" fontSize="3" fontWeight="500" fill="#94a3b8" letterSpacing="2">IMPLANT EVENT</text>
+        <text x="60" y="42" textAnchor="middle" fontSize="7" fontWeight="800" fill={c}>임플란트</text>
+        <text x="60" y="54" textAnchor="middle" fontSize="7" fontWeight="800" fill={c}>특별 할인</text>
+        <rect x="45" y="60" width="30" height="0.5" fill={c} fillOpacity="0.2" />
+        <rect x="15" y="68" width="90" height="30" rx="6" fill="white" fillOpacity="0.95" filter={`url(#shadow_${t.id})`} />
+        <text x="60" y="80" textAnchor="middle" fontSize="3.5" fill="#94a3b8" letterSpacing="0.5">Special Offer</text>
+        <text x="60" y="93" textAnchor="middle" fontSize="11" fontWeight="800" fill={c}>690,000원</text>
+        <text x="60" y="110" textAnchor="middle" fontSize="3" fill="#94a3b8">2026.03.01 ~ 03.31</text>
+        <rect x="30" y="118" width="60" height="12" rx="6" fill={c} fillOpacity="0.08" />
+        <text x="60" y="126" textAnchor="middle" fontSize="3.5" fontWeight="600" fill={c}>예약 문의</text>
+        <text x="60" y="142" textAnchor="middle" fontSize="3.5" fontWeight="600" fill={a}>02-1234-5678</text>
+        <text x="60" y="152" textAnchor="middle" fontSize="2.5" fill="#94a3b8">{name}</text>
+      </>);
+    }
+    if (h === 'wave') {
+      return wrap(<>
+        {/* 그라데이션 웨이브 - 물결 배경 */}
+        <text x="60" y="14" textAnchor="middle" fontSize="3.5" fontWeight="600" fill={a}>{name}</text>
+        <text x="60" y="28" textAnchor="middle" fontSize="7" fontWeight="800" fill={c}>임플란트 이벤트</text>
+        {/* 물결 패턴 */}
+        <path d="M0,36 Q30,30 60,36 Q90,42 120,36 L120,50 Q90,56 60,50 Q30,44 0,50 Z" fill={c} fillOpacity="0.06" />
+        <path d="M0,44 Q30,38 60,44 Q90,50 120,44 L120,58 Q90,64 60,58 Q30,52 0,58 Z" fill={c} fillOpacity="0.04" />
+        <rect x="15" y="62" width="90" height="36" rx="8" fill="white" fillOpacity="0.85" filter={`url(#shadow_${t.id})`} />
+        <text x="60" y="74" textAnchor="middle" fontSize="3.5" fill={a} letterSpacing="0.5">Limited Time Offer</text>
+        <text x="60" y="90" textAnchor="middle" fontSize="11" fontWeight="800" fill={c}>690,000원</text>
+        <path d="M0,104 Q30,98 60,104 Q90,110 120,104 L120,118 Q90,124 60,118 Q30,112 0,118 Z" fill={c} fillOpacity="0.04" />
+        <text x="60" y="112" textAnchor="middle" fontSize="3.5" fill="#64748b">2026.03.01 ~ 03.31</text>
+        <rect x="25" y="124" width="70" height="12" rx="6" fill={`url(#accent_${t.id})`} fillOpacity="0.9" />
+        <text x="60" y="132" textAnchor="middle" fontSize="3.8" fontWeight="700" fill="white">예약하기</text>
+        <text x="60" y="148" textAnchor="middle" fontSize="3.5" fontWeight="600" fill={c}>02-1234-5678</text>
+      </>);
+    }
+    // season (fallback)
     return wrap(<>
-      <text x="60" y="13" textAnchor="middle" fontSize="4" fontWeight="600" fill={a} letterSpacing="0.5">{name}</text>
-      <text x="60" y="26" textAnchor="middle" fontSize="7" fontWeight="800" fill={c}>임플란트 이벤트</text>
-      {t.layoutHint === 'price' && <>
-        {/* 할인 배지 */}
-        <rect x="70" y="30" width="28" height="14" rx="7" fill={c} />
-        <text x="84" y="39.5" textAnchor="middle" fontSize="5.5" fontWeight="800" fill="white">30%</text>
-        {/* 가격 카드 */}
-        <rect x="15" y="38" width="90" height="34" rx="6" fill="white" fillOpacity="0.95" filter={`url(#shadow_${t.id})`} />
-        <text x="60" y="50" textAnchor="middle" fontSize="4" fill="#94a3b8" textDecoration="line-through">990,000원</text>
-        <text x="60" y="64" textAnchor="middle" fontSize="10" fontWeight="900" fill={c}>690,000원</text>
-      </>}
-      {t.layoutHint === 'elegant' && <>
-        <line x1="25" y1="34" x2="95" y2="34" stroke={c} strokeOpacity="0.15" strokeWidth="0.4" />
-        <text x="60" y="46" textAnchor="middle" fontSize="4" fill={a} letterSpacing="1">SPECIAL PRICE</text>
-        <rect x="15" y="50" width="90" height="26" rx="5" fill="white" fillOpacity="0.6" />
-        <text x="60" y="67" textAnchor="middle" fontSize="11" fontWeight="800" fill={c}>690,000원</text>
-        <line x1="25" y1="76" x2="95" y2="76" stroke={c} strokeOpacity="0.15" strokeWidth="0.4" />
-      </>}
-      {t.layoutHint === 'pop' && <>
-        <circle cx="60" cy="54" r="24" fill={c} fillOpacity="0.08" />
-        <circle cx="60" cy="54" r="18" fill={c} fillOpacity="0.06" />
-        <text x="60" y="50" textAnchor="middle" fontSize="7" fontWeight="900" fill={c}>30%</text>
-        <text x="60" y="58" textAnchor="middle" fontSize="3.5" fontWeight="700" fill={a}>OFF</text>
-        <text x="60" y="70" textAnchor="middle" fontSize="5.5" fontWeight="700" fill={c}>690,000원</text>
-      </>}
-      {t.layoutHint === 'minimal' && <>
-        <rect x="15" y="36" width="90" height="40" rx="6" fill="white" fillOpacity="0.95" filter={`url(#shadow_${t.id})`} />
-        <text x="60" y="50" textAnchor="middle" fontSize="3.5" fill={a} letterSpacing="0.5">Special Offer</text>
-        <text x="60" y="66" textAnchor="middle" fontSize="9" fontWeight="800" fill={c}>690,000원</text>
-      </>}
-      {t.layoutHint === 'wave' && <>
-        <path d="M0,50 Q30,38 60,50 Q90,62 120,50 L120,76 Q90,64 60,76 Q30,88 0,76 Z" fill={c} fillOpacity="0.06" />
-        <text x="60" y="58" textAnchor="middle" fontSize="3.5" fill={a} letterSpacing="0.5">Limited Time</text>
-        <text x="60" y="70" textAnchor="middle" fontSize="9" fontWeight="800" fill={c}>690,000원</text>
-      </>}
-      {t.layoutHint === 'season' && <>
-        <rect x="15" y="36" width="90" height="40" rx="8" fill={c} fillOpacity="0.05" stroke={c} strokeOpacity="0.1" strokeWidth="0.4" />
-        <text x="60" y="50" textAnchor="middle" fontSize="3.5" fill={a}>Season Special</text>
-        <text x="60" y="66" textAnchor="middle" fontSize="9" fontWeight="800" fill={c}>690,000원</text>
-      </>}
-      {/* 공통 하단 */}
-      <rect x="25" y="84" width="70" height="9" rx="4.5" fill={c} fillOpacity="0.06" />
-      <text x="60" y="90.5" textAnchor="middle" fontSize="3.5" fill="#64748b">2026.03.01 ~ 03.31</text>
-      <rect x="20" y="100" width="80" height="14" rx="7" fill={`url(#accent_${t.id})`} fillOpacity="0.9" />
-      <text x="60" y="109.5" textAnchor="middle" fontSize="4" fontWeight="700" fill="white">지금 바로 예약하세요</text>
-      <text x="60" y="128" textAnchor="middle" fontSize="3.5" fontWeight="600" fill={c}>02-1234-5678</text>
-      <text x="60" y="148" textAnchor="middle" fontSize="3" fill="#94a3b8">{name}</text>
+      {/* 시즌 스페셜 - 계절감 장식 */}
+      <text x="60" y="12" textAnchor="middle" fontSize="3.5" fontWeight="600" fill={a}>{name}</text>
+      {/* 상단 배너 */}
+      <rect x="10" y="16" width="100" height="26" rx="6" fill={c} fillOpacity="0.06" stroke={c} strokeOpacity="0.1" strokeWidth="0.4" />
+      <text x="60" y="26" textAnchor="middle" fontSize="3" fill={a} letterSpacing="1">SEASON SPECIAL</text>
+      <text x="60" y="37" textAnchor="middle" fontSize="6" fontWeight="800" fill={c}>임플란트 이벤트</text>
+      {/* 꽃잎/별 장식 */}
+      <circle cx="20" cy="52" r="4" fill={c} fillOpacity="0.06" />
+      <circle cx="100" cy="52" r="3" fill={c} fillOpacity="0.05" />
+      <circle cx="15" cy="90" r="2.5" fill={c} fillOpacity="0.04" />
+      <rect x="15" y="50" width="90" height="38" rx="8" fill="white" fillOpacity="0.9" filter={`url(#shadow_${t.id})`} />
+      <text x="60" y="63" textAnchor="middle" fontSize="3.5" fill={a}>Season Special</text>
+      <text x="60" y="80" textAnchor="middle" fontSize="11" fontWeight="800" fill={c}>690,000원</text>
+      <rect x="20" y="94" width="80" height="9" rx="4.5" fill={c} fillOpacity="0.06" />
+      <text x="60" y="100.5" textAnchor="middle" fontSize="3.5" fill="#64748b">2026.03.01 ~ 03.31</text>
+      <rect x="20" y="110" width="80" height="14" rx="7" fill={`url(#accent_${t.id})`} fillOpacity="0.9" />
+      <text x="60" y="119.5" textAnchor="middle" fontSize="4" fontWeight="700" fill="white">지금 바로 예약하세요</text>
+      <text x="60" y="138" textAnchor="middle" fontSize="3.5" fontWeight="600" fill={c}>02-1234-5678</text>
     </>);
   }
 
