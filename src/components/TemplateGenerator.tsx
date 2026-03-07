@@ -1651,9 +1651,28 @@ export default function TemplateGenerator() {
           ))}
         </div>
 
-        {/* 병원 브랜딩 (간소화) */}
+        {/* 병원 브랜딩 */}
         <div className="bg-slate-50 rounded-xl p-3 border border-slate-200 space-y-3">
-          <label className="block text-xs font-semibold text-slate-600">병원 브랜딩</label>
+          <div className="flex items-center justify-between">
+            <label className="block text-xs font-semibold text-slate-600">병원 브랜딩</label>
+            {/* 상단/하단 위치 토글 */}
+            <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-lg p-0.5">
+              {(['top', 'bottom'] as const).map(pos => (
+                <button
+                  key={pos}
+                  type="button"
+                  onClick={() => setBrandingPos(pos)}
+                  className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all ${
+                    brandingPos === pos
+                      ? 'bg-blue-500 text-white shadow-sm'
+                      : 'text-slate-500 hover:text-slate-700'
+                  }`}
+                >
+                  {pos === 'top' ? '▲ 상단' : '▼ 하단'}
+                </button>
+              ))}
+            </div>
+          </div>
           <div className="flex gap-2 items-center">
             {/* 로고 업로드 */}
             <label className="flex-shrink-0 w-12 h-12 rounded-xl border-2 border-dashed border-slate-300 flex items-center justify-center cursor-pointer hover:border-blue-400 transition-colors overflow-hidden bg-white">
