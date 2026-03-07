@@ -874,27 +874,32 @@ BOTTOM: Small leaf decorations at bottom corners matching top, very subtle.
 NO traditional 7×5 grid. This design groups dates BY WEEK in separate cards for easy scanning.`,
     },
     {
-      id: 'sfc_dark_premium', name: '다크 프리미엄', color: '#c084fc', accent: '#7c3aed', bg: '#faf5ff',
-      desc: '고급 다크 달력',
+      id: 'sfc_dark_premium', name: '오로라 그라데이션', color: '#c084fc', accent: '#7c3aed', bg: '#faf5ff',
+      desc: '보라 그라데이션 달력',
       layoutHint: 'cal_dark',
       aiPrompt: `EXACT LAYOUT BLUEPRINT — replicate this structure precisely:
-BACKGROUND: Full dark navy (#0f172a) rectangle covering entire image. Thin purple gradient accent line across very top edge (2px height). Tiny scattered star dots: small circles in purple, pink, gold at ~30% opacity scattered sparsely.
-HEADER (top 18%): Hospital name in muted gray (#94a3b8) small text, centered. Below: large bold "N월 진료안내" in soft purple (#c084fc).
-FULL CALENDAR GRID (middle 58%): Dark translucent card (#1e293b at 60%) with rounded corners (12px). Inside: 7 day-name headers (일월화수목금토) — Sunday in light red (#f87171), Saturday in light blue (#60a5fa), weekdays in gray (#64748b). Below: 5 rows × 7 columns of date numbers showing ALL dates of the month. Numbers in light gray (#94a3b8). CLOSED DAYS: soft purple circle behind number (#c084fc at 15%), number in bold purple. SHORTENED DAYS: soft amber circle behind number (#fbbf24 at 10%), number in bold amber. Sunday column numbers in light red.
-BOTTOM (14%): Legend row: purple dot + "휴진", amber dot + "단축". Below: thin divider line in purple at 8% opacity. Operating hours in muted gray (#64748b), centered.
-Premium dark UI dashboard aesthetic with FULL calendar grid. Sophisticated, high-end clinic feel.`,
+BACKGROUND: Full-bleed purple-to-indigo gradient (#7c3aed → #c084fc) covering entire image with rounded corners. Large soft pink blob circle (#f472b6 at 25%) in top-right area. Large soft indigo blob circle (#818cf8 at 20%) in bottom-left area. Creates an aurora/gradient effect.
+HEADER (top 18%): Hospital name in small white text (90% opacity) centered. Below: large bold "N월 진료안내" in white, prominent.
+FULL CALENDAR GRID (middle 58%): One large white card (95% opacity, border-radius 20px, soft shadow) centered. Inside: 7 day-name headers (일월화수목금토) — Sunday=red, Saturday=blue, weekdays=gray. Below: 5 rows × 7 columns of date numbers showing ALL dates of the month. CLOSED DAYS: soft purple circle behind number (#c084fc at 15%), number in bold purple. SHORTENED DAYS: soft amber circle behind number, number in bold amber. Sunday column numbers in light red, others in gray (#64748b).
+BOTTOM (14%): Small white translucent pill/card (70% opacity, rounded) containing legend: purple dot + "휴진", amber dot + "단축", and "09:30~18:00" operating hours.
+Vibrant colorful gradient background contrasting with clean white calendar card. Modern, eye-catching, premium design.`,
     },
     {
       id: 'sfc_warm_kraft', name: '크래프트 내추럴', color: '#92400e', accent: '#78350f', bg: '#fffbeb',
       desc: '따뜻한 크래프트지',
       layoutHint: 'cal_kraft',
       aiPrompt: `EXACT LAYOUT BLUEPRINT — replicate this structure precisely:
-BACKGROUND: Warm cream/beige (#fefce8) at 60% opacity covering entire image.
-TOP SECTION — ILLUSTRATION AREA (top 42%): White/cream rounded rectangle area. CENTER: A cute smiling tooth character — white rounded rectangle shape with two dot eyes and a curved smile line. Above the tooth: a small golden crown (zigzag/triangle shape in gold #fbbf24 at 50%). Around the tooth: scattered tiny decorative symbols — gold stars (★), pink hearts (♥), small teal sparkles (✦ ✧) at 30% opacity. LEFT/RIGHT sides: soft pastel cloud ellipses (light blue, light pink). Below illustration: bold text "N월 휴진 안내" in warm brown (#92400e).
-DIVIDER: A light green (#bef264 at 30%) rectangular masking tape strip, slightly rotated (-1°), placed horizontally between top and bottom sections. Looks like washi tape.
-BOTTOM SECTION — MINI CALENDAR GRID (bottom 42%): White/cream rounded rectangle. 7-column compact calendar grid. Day headers: 일(red #dc2626) 월화수목금(brown #78350f) 토(blue #2563eb), small bold text. 5 rows of date numbers in warm brown. Closed days: soft red circle (#fee2e2 at 60%) behind number, number in bold red (#dc2626). Grid is compact with tight spacing.
-FOOTER (bottom 5%): Tiny decorative stickers at corners — pink heart (♡) left, green clover (☘) right. Hospital name in italic warm brown center.
-Cozy wall calendar feel. Friendly pediatric/family clinic aesthetic. Kraft paper warmth.`,
+BACKGROUND: Warm cream/beige (#fefce8) at 60% opacity. Thin warm brown decorative line at very top edge.
+TOP SECTION — ILLUSTRATION AREA (top 42%): White/cream rounded rectangle area.
+⚠️ CHARACTER SHAPE: The tooth character is NOT a realistic tooth/molar shape. It is a SIMPLE white ROUNDED RECTANGLE (like a marshmallow or pillow shape, aspect ratio ~1:1.2, border-radius very large ~30%). TWO small solid black dot eyes (simple circles, no detail). ONE curved smile line below eyes (simple arc path, no other facial features — no rosy cheeks, no blush, no nose). This is a MINIMAL, FLAT, GEOMETRIC character.
+⚠️ CROWN: Small golden zigzag crown (#fbbf24 at 50% opacity) sitting directly on TOP of the rectangle. Small — about 60% width of the rectangle.
+⚠️ DECORATIONS — MINIMAL: Only 1 small gold star (★) to the left, 1 small sparkle (✦) to the right, at ~30% opacity. DO NOT add more than 2-3 tiny symbols total. NO hearts scattered around. NO sparkles everywhere.
+⚠️ CLOUDS — TINY: Left side: one VERY SMALL light blue horizontal ellipse (like a tiny pill, ~15px wide). Right side: one VERY SMALL light pink ellipse. These are barely visible accents, NOT prominent decorative clouds. Absolutely NO big fluffy realistic clouds.
+Below illustration: bold text "N월 휴진 안내" in warm brown (#92400e).
+DIVIDER: A light green (#bef264 at 30%) rectangular masking tape strip, slightly rotated (-1°), placed horizontally. Looks like washi tape. Thin strip.
+BOTTOM SECTION — MINI CALENDAR GRID (bottom 42%): White/cream rounded rectangle. 7-column COMPACT calendar grid. Day headers: 일(red #dc2626) 월화수목금(brown #78350f) 토(blue #2563eb), small bold text. 5 rows of date numbers in warm brown. CLOSED DAYS: soft red circle (#fee2e2 at 60%) CLEARLY VISIBLE behind the number, number in BOLD RED (#dc2626). Every closed day MUST have a visible red circle highlight. Grid is compact with tight spacing.
+FOOTER (bottom 5%): ONLY 3 elements: tiny pink heart outline (♡) bottom-left, hospital name in italic warm brown center, tiny green clover (☘) bottom-right. Nothing else.
+Overall: MINIMAL, SIMPLE, CLEAN. Like a cute but understated Korean stationery illustration. NOT busy, NOT colorful, NOT detailed.`,
     },
     {
       id: 'sfc_glassmorphism', name: '글래스모피즘', color: '#6366f1', accent: '#4f46e5', bg: '#eef2ff',

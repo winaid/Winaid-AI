@@ -181,23 +181,19 @@ function TemplateSVGPreview({ template: t, category, hospitalName }: { template:
       </>);
     }
     if (hint === 'cal_dark') {
-      // 4) 다크 프리미엄 - 다크 배경 + 전체 달력 그리드
+      // 4) 그라데이션 오로라 - 보라/핑크 그라데이션 배경 + 화이트 카드 달력
       return wrap(<>
-        <rect x="5" y="4" width="110" height="152" rx="6" fill="#0f172a" />
-        {/* 상단 그라데이션 라인 */}
-        <rect x="5" y="4" width="110" height="2" rx="6" fill={`url(#accent_${t.id})`} opacity="0.7" />
-        {/* 별 장식 */}
-        <circle cx="15" cy="10" r="0.8" fill={c} fillOpacity="0.4" />
-        <circle cx="95" cy="8" r="0.6" fill="#818cf8" fillOpacity="0.3" />
-        <circle cx="75" cy="12" r="0.5" fill="#f472b6" fillOpacity="0.25" />
-        <circle cx="105" cy="18" r="0.4" fill="#fbbf24" fillOpacity="0.3" />
+        {/* 그라데이션 배경 */}
+        <rect x="5" y="4" width="110" height="152" rx="8" fill={`url(#accent_${t.id})`} />
+        <circle cx="90" cy="30" r="40" fill="#f472b6" fillOpacity="0.25" />
+        <circle cx="25" cy="130" r="35" fill="#818cf8" fillOpacity="0.2" />
         {/* 병원명 + 타이틀 */}
-        <text x="60" y="16" textAnchor="middle" fontSize="3" fontWeight="500" fill="#94a3b8">{name}</text>
-        <text x="60" y="30" textAnchor="middle" fontSize="8" fontWeight="900" fill={c}>{mo}월 진료안내</text>
-        {/* 전체 달력 그리드 */}
-        <rect x="12" y="38" width="96" height="90" rx="6" fill="#1e293b" fillOpacity="0.6" />
+        <text x="60" y="16" textAnchor="middle" fontSize="3.5" fontWeight="600" fill="white" fillOpacity="0.9">{name}</text>
+        <text x="60" y="30" textAnchor="middle" fontSize="8" fontWeight="900" fill="white">{mo}월 진료안내</text>
+        {/* 화이트 카드 + 전체 달력 그리드 */}
+        <rect x="10" y="38" width="100" height="90" rx="10" fill="white" fillOpacity="0.95" filter={`url(#shadow_${t.id})`} />
         {['일','월','화','수','목','금','토'].map((d, i) => (
-          <text key={d} x={20 + i * 13} y="48" textAnchor="middle" fontSize="2.8" fontWeight="700" fill={i === 0 ? '#f87171' : i === 6 ? '#60a5fa' : '#64748b'}>{d}</text>
+          <text key={d} x={18 + i * 13.5} y="48" textAnchor="middle" fontSize="2.8" fontWeight="700" fill={i === 0 ? '#ef4444' : i === 6 ? '#3b82f6' : '#94a3b8'}>{d}</text>
         ))}
         {[0,1,2,3,4].map(row => Array.from({length: 7}, (_, col) => {
           const day = row * 7 + col + 1;
@@ -205,18 +201,18 @@ function TemplateSVGPreview({ template: t, category, hospitalName }: { template:
           const isClosed = day === 9 || day === 15;
           const isShort = day === 22;
           return <g key={`${row}-${col}`}>
-            {isClosed && <circle cx={20 + col * 13} cy={57 + row * 14} r="5" fill={c} fillOpacity="0.15" />}
-            {isShort && <circle cx={20 + col * 13} cy={57 + row * 14} r="5" fill="#fbbf24" fillOpacity="0.1" />}
-            <text x={20 + col * 13} y={59 + row * 14} textAnchor="middle" fontSize="3.8" fontWeight={isClosed || isShort ? '800' : '400'} fill={isClosed ? c : isShort ? '#fbbf24' : col === 0 ? '#f87171' : '#94a3b8'}>{day}</text>
+            {isClosed && <circle cx={18 + col * 13.5} cy={57 + row * 14} r="5.5" fill={c} fillOpacity="0.15" />}
+            {isShort && <circle cx={18 + col * 13.5} cy={57 + row * 14} r="5.5" fill="#f59e0b" fillOpacity="0.12" />}
+            <text x={18 + col * 13.5} y={59 + row * 14} textAnchor="middle" fontSize="3.8" fontWeight={isClosed || isShort ? '800' : '400'} fill={isClosed ? c : isShort ? '#d97706' : col === 0 ? '#fca5a5' : '#64748b'}>{day}</text>
           </g>;
         }))}
-        {/* 하단 범례 + 진료시간 */}
-        <circle cx="20" cy="136" r="2.5" fill={c} fillOpacity="0.2" />
-        <text x="26" y="138" fontSize="2.8" fill={c} fontWeight="600">휴진</text>
-        <circle cx="50" cy="136" r="2.5" fill="#fbbf24" fillOpacity="0.15" />
-        <text x="56" y="138" fontSize="2.8" fill="#fbbf24" fontWeight="600">단축</text>
-        <line x1="15" y1="144" x2="105" y2="144" stroke={c} strokeOpacity="0.08" strokeWidth="0.3" />
-        <text x="60" y="152" textAnchor="middle" fontSize="2.8" fill="#64748b">진료 09:30~18:00</text>
+        {/* 하단 범례 */}
+        <rect x="14" y="132" width="92" height="16" rx="8" fill="white" fillOpacity="0.7" />
+        <circle cx="26" cy="140" r="2.5" fill={c} fillOpacity="0.3" />
+        <text x="32" y="142" fontSize="2.8" fill={c} fontWeight="600">휴진</text>
+        <circle cx="54" cy="140" r="2.5" fill="#f59e0b" fillOpacity="0.2" />
+        <text x="60" y="142" fontSize="2.8" fill="#d97706" fontWeight="600">단축</text>
+        <text x="96" y="142" textAnchor="end" fontSize="2.5" fill="#64748b">09:30~18:00</text>
       </>);
     }
     if (hint === 'cal_kraft') {
