@@ -77,6 +77,7 @@ const App: React.FC = () => {
   const [_isAdmin, setIsAdmin] = useState<boolean>(false); // 관리자 여부
 
   const [mobileTab, setMobileTab] = useState<'input' | 'result'>('input');
+  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false);
   
   // 스크롤 위치 저장 ref
   const scrollPositionRef = useRef<number>(0);
@@ -845,7 +846,7 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className={`min-h-screen flex flex-col font-sans relative transition-colors duration-300 ${darkMode ? 'bg-slate-900 text-slate-100' : 'bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 text-slate-900'}`}>
+    <div className={`min-h-screen flex font-sans relative transition-colors duration-300 ${darkMode ? 'bg-slate-900 text-slate-100' : 'bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 text-slate-900'}`}>
       {/* Animated background blobs */}
       {!darkMode && (
         <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
@@ -855,10 +856,140 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {/* 상단 헤더 + 네비게이션 */}
-      <header className={`backdrop-blur-2xl border-b sticky top-0 z-30 flex-none transition-all duration-300 ${darkMode ? 'bg-slate-800/90 border-slate-700' : 'bg-white/80 border-slate-100/80 shadow-[0_1px_3px_rgba(0,0,0,0.04)]'}`}>
-        {/* 1단: 로고 + 유저 */}
-        <div className="h-14 max-w-[1200px] w-full mx-auto px-5 flex justify-between items-center">
+      {/* 좌측 사이드바 네비게이션 */}
+      <aside className={`hidden lg:flex flex-col flex-none h-screen sticky top-0 z-30 transition-all duration-300 border-r ${
+        sidebarCollapsed ? 'w-[68px]' : 'w-[200px]'
+      } ${darkMode ? 'bg-slate-800/95 border-slate-700' : 'bg-white/90 border-slate-200/60 shadow-[1px_0_3px_rgba(0,0,0,0.04)]'} backdrop-blur-2xl`}>
+        {/* 로고 */}
+        <div className={`h-14 flex items-center ${sidebarCollapsed ? 'justify-center px-2' : 'px-4'} border-b ${darkMode ? 'border-slate-700' : 'border-slate-100'}`}>
+          <a href="#app" onClick={(e) => { e.preventDefault(); window.location.hash = 'app'; setCurrentPage('home'); }} className="flex items-center gap-2.5 hover:opacity-80 transition-opacity cursor-pointer group">
+            <img src="/280_logo.png" alt="WINAID" className={`h-8 w-8 group-hover:scale-105 transition-transform flex-none ${darkMode ? 'rounded-md bg-white p-0.5' : ''}`} />
+            {!sidebarCollapsed && (
+              <div className="flex flex-col leading-none">
+                <span className={`font-black text-base tracking-[-0.02em] ${darkMode ? 'text-slate-100' : 'text-slate-800'}`}>WIN<span className="text-blue-600">AID</span></span>
+                <span className={`text-[8px] font-semibold tracking-wider uppercase ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>AI Marketing</span>
+              </div>
+            )}
+          </a>
+        </div>
+
+        {/* 네비게이션 메뉴 */}
+        <nav className="flex-1 py-3 px-2 space-y-1 overflow-y-auto">
+          <div className={`px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider ${sidebarCollapsed ? 'text-center' : ''} ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>
+            {sidebarCollapsed ? '···' : '콘텐츠'}
+          </div>
+          {([
+            { id: 'blog' as ContentTabType, label: '블로그', icon: '📝' },
+            { id: 'card_news' as ContentTabType, label: '카드뉴스', icon: '🎨' },
+            { id: 'press' as ContentTabType, label: '언론보도', icon: '🗞️' },
+          ]).map(item => (
+            <button
+              key={item.id}
+              onClick={() => setContentTab(item.id)}
+              title={sidebarCollapsed ? item.label : undefined}
+              className={`w-full flex items-center gap-2.5 rounded-xl transition-all text-[13px] font-semibold ${
+                sidebarCollapsed ? 'justify-center px-2 py-2.5' : 'px-3 py-2.5'
+              } ${
+                contentTab === item.id && currentPage !== 'home'
+                  ? darkMode ? 'bg-blue-500/15 text-blue-400' : 'bg-blue-50 text-blue-600 shadow-sm'
+                  : darkMode ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/50' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-100/80'
+              }`}
+            >
+              <span className="text-base flex-none">{item.icon}</span>
+              {!sidebarCollapsed && <span>{item.label}</span>}
+            </button>
+          ))}
+
+          <div className={`px-2 py-1.5 mt-4 text-[10px] font-bold uppercase tracking-wider ${sidebarCollapsed ? 'text-center' : ''} ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>
+            {sidebarCollapsed ? '···' : '도구'}
+          </div>
+          {([
+            { id: 'refine' as ContentTabType, label: 'AI 보정', icon: '✨' },
+            { id: 'image' as ContentTabType, label: '이미지 생성', icon: '🖼️' },
+            { id: 'history' as ContentTabType, label: '히스토리', icon: '🕐' },
+          ]).map(item => (
+            <button
+              key={item.id}
+              onClick={() => setContentTab(item.id)}
+              title={sidebarCollapsed ? item.label : undefined}
+              className={`w-full flex items-center gap-2.5 rounded-xl transition-all text-[13px] font-semibold ${
+                sidebarCollapsed ? 'justify-center px-2 py-2.5' : 'px-3 py-2.5'
+              } ${
+                contentTab === item.id && currentPage !== 'home'
+                  ? darkMode ? 'bg-blue-500/15 text-blue-400' : 'bg-blue-50 text-blue-600 shadow-sm'
+                  : darkMode ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/50' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-100/80'
+              }`}
+            >
+              <span className="text-base flex-none">{item.icon}</span>
+              {!sidebarCollapsed && <span>{item.label}</span>}
+            </button>
+          ))}
+        </nav>
+
+        {/* 하단: 사이드바 접기/펼치기 + 다크모드 + 유저 */}
+        <div className={`border-t py-3 px-2 space-y-1 ${darkMode ? 'border-slate-700' : 'border-slate-100'}`}>
+          {/* 다크모드 토글 */}
+          <button
+            onClick={toggleDarkMode}
+            title={darkMode ? '라이트 모드' : '다크 모드'}
+            className={`w-full flex items-center gap-2.5 rounded-xl transition-all text-[13px] font-semibold ${
+              sidebarCollapsed ? 'justify-center px-2 py-2.5' : 'px-3 py-2.5'
+            } ${darkMode ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/50' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-100/80'}`}
+          >
+            <span className="text-base flex-none">{darkMode ? '☀️' : '🌙'}</span>
+            {!sidebarCollapsed && <span>{darkMode ? '라이트 모드' : '다크 모드'}</span>}
+          </button>
+
+          {/* 유저 메뉴 */}
+          {isLoggedIn && supabaseUser && (
+            <div className="relative">
+              <button
+                onClick={() => setShowUserMenu(!showUserMenu)}
+                title={supabaseUser.email || '사용자'}
+                className={`w-full flex items-center gap-2.5 rounded-xl transition-all text-[13px] font-semibold ${
+                  sidebarCollapsed ? 'justify-center px-2 py-2.5' : 'px-3 py-2.5'
+                } ${darkMode ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/50' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-100/80'}`}
+              >
+                <span className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold flex-none ${darkMode ? 'bg-slate-700 text-blue-400' : 'bg-blue-50 text-blue-600'}`}>
+                  {(supabaseUser.email || 'U')[0].toUpperCase()}
+                </span>
+                {!sidebarCollapsed && <span className="truncate text-xs">{supabaseUser.email}</span>}
+              </button>
+              {showUserMenu && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setShowUserMenu(false)} />
+                  <div className={`absolute left-full bottom-0 ml-2 w-48 rounded-xl shadow-[0_8px_30px_rgba(0,0,0,0.12)] border z-50 overflow-hidden backdrop-blur-2xl ${darkMode ? 'bg-slate-800/95 border-slate-700' : 'bg-white/95 border-slate-200/60'}`}>
+                    <button
+                      onClick={() => { setShowUserMenu(false); handleLogout(); }}
+                      className={`w-full text-left px-4 py-3 text-sm font-medium transition-colors ${darkMode ? 'text-red-400 hover:bg-slate-700' : 'text-red-500 hover:bg-red-50'}`}
+                    >
+                      로그아웃
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* 사이드바 접기/펼치기 */}
+          <button
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            className={`w-full flex items-center gap-2.5 rounded-xl transition-all text-[13px] font-semibold ${
+              sidebarCollapsed ? 'justify-center px-2 py-2.5' : 'px-3 py-2.5'
+            } ${darkMode ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/50' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-100/80'}`}
+          >
+            <svg className={`w-4 h-4 flex-none transition-transform ${sidebarCollapsed ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+            </svg>
+            {!sidebarCollapsed && <span>사이드바 접기</span>}
+          </button>
+        </div>
+      </aside>
+
+      {/* 모바일 상단 헤더 (lg 미만에서만 표시) */}
+      <div className="flex flex-col flex-1 min-w-0">
+      <header className={`lg:hidden backdrop-blur-2xl border-b sticky top-0 z-30 flex-none transition-all duration-300 ${darkMode ? 'bg-slate-800/90 border-slate-700' : 'bg-white/80 border-slate-100/80 shadow-[0_1px_3px_rgba(0,0,0,0.04)]'}`}>
+        <div className="h-14 w-full px-5 flex justify-between items-center">
           <a href="#app" onClick={(e) => { e.preventDefault(); window.location.hash = 'app'; setCurrentPage('home'); }} className="flex items-center gap-2.5 hover:opacity-80 transition-opacity cursor-pointer group">
             <img src="/280_logo.png" alt="WINAID" className={`h-8 w-8 group-hover:scale-105 transition-transform ${darkMode ? 'rounded-md bg-white p-0.5' : ''}`} />
             <div className="flex flex-col leading-none">
@@ -866,41 +997,22 @@ const App: React.FC = () => {
               <span className={`text-[8px] font-semibold tracking-wider uppercase ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>AI Marketing</span>
             </div>
           </a>
-
           <div className="flex items-center gap-3">
              {isLoggedIn && supabaseUser && (
-               <div className="relative">
-                 <button
-                   onClick={() => setShowUserMenu(!showUserMenu)}
-                   className={`w-9 h-9 rounded-xl flex items-center justify-center text-xs font-bold transition-all ${darkMode ? 'bg-slate-700 text-blue-400 hover:bg-slate-600' : 'bg-gradient-to-br from-blue-50 to-blue-100/80 text-blue-600 hover:from-blue-100 hover:to-blue-200/80 border border-blue-100/80 shadow-sm'}`}
-                   title={supabaseUser.email || '사용자'}
-                 >
-                   {(supabaseUser.email || 'U')[0].toUpperCase()}
-                 </button>
-                 {showUserMenu && (
-                   <>
-                     <div className="fixed inset-0 z-40" onClick={() => setShowUserMenu(false)} />
-                     <div className={`absolute right-0 top-12 w-56 rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.12)] border z-50 overflow-hidden backdrop-blur-2xl ${darkMode ? 'bg-slate-800/95 border-slate-700' : 'bg-white/95 border-slate-200/60'}`}>
-                       <div className={`px-4 py-3.5 text-xs truncate font-medium ${darkMode ? 'text-slate-400 border-b border-slate-700' : 'text-slate-500 border-b border-slate-100'}`}>
-                         {supabaseUser.email}
-                       </div>
-                       <button
-                         onClick={() => { setShowUserMenu(false); handleLogout(); }}
-                         className={`w-full text-left px-4 py-3.5 text-sm font-medium transition-colors ${darkMode ? 'text-red-400 hover:bg-slate-700' : 'text-red-500 hover:bg-red-50'}`}
-                       >
-                         로그아웃
-                       </button>
-                     </div>
-                   </>
-                 )}
-               </div>
+               <button
+                 onClick={() => setShowUserMenu(!showUserMenu)}
+                 className={`w-9 h-9 rounded-xl flex items-center justify-center text-xs font-bold transition-all ${darkMode ? 'bg-slate-700 text-blue-400 hover:bg-slate-600' : 'bg-gradient-to-br from-blue-50 to-blue-100/80 text-blue-600 hover:from-blue-100 hover:to-blue-200/80 border border-blue-100/80 shadow-sm'}`}
+                 title={supabaseUser.email || '사용자'}
+               >
+                 {(supabaseUser.email || 'U')[0].toUpperCase()}
+               </button>
              )}
           </div>
         </div>
-        {/* 2단: 탑 네비게이션 바 - 홈에서는 숨김 (카드 네비게이션과 중복) */}
+        {/* 모바일 네비 탭 */}
         {currentPage !== 'home' && (
         <div className={`border-t ${darkMode ? 'border-slate-700/50' : 'border-slate-100/80'}`}>
-          <nav className="max-w-[1200px] w-full mx-auto px-5 flex items-center gap-1 overflow-x-auto custom-scrollbar">
+          <nav className="w-full px-3 flex items-center gap-1 overflow-x-auto custom-scrollbar">
             {([
               { id: 'blog' as ContentTabType, label: '블로그', icon: '📝' },
               { id: 'card_news' as ContentTabType, label: '카드뉴스', icon: '🎨' },
@@ -912,13 +1024,13 @@ const App: React.FC = () => {
               <button
                 key={item.id}
                 onClick={() => setContentTab(item.id)}
-                className={`relative py-3 px-4 text-[13px] font-semibold whitespace-nowrap transition-colors ${
+                className={`relative py-3 px-3 text-[12px] font-semibold whitespace-nowrap transition-colors ${
                   contentTab === item.id
                     ? darkMode ? 'text-blue-400' : 'text-blue-600'
                     : darkMode ? 'text-slate-400 hover:text-slate-200' : 'text-slate-500 hover:text-slate-800'
                 }`}
               >
-                <span className="flex items-center gap-1.5">
+                <span className="flex items-center gap-1">
                   <span className="text-sm">{item.icon}</span>
                   {item.label}
                 </span>
@@ -932,9 +1044,9 @@ const App: React.FC = () => {
         )}
       </header>
 
-      {/* 메인 콘텐츠 - 일반 웹페이지처럼 수직 스크롤 */}
+      {/* 메인 콘텐츠 */}
       <main className="relative z-10 flex-1 overflow-y-auto">
-        <div className="max-w-[1200px] w-full mx-auto px-5 py-8">
+        <div className="w-full px-5 lg:px-8 py-6">
 
         {/* 홈 대시보드 (#app) */}
         {currentPage === 'home' ? (
@@ -1032,10 +1144,10 @@ const App: React.FC = () => {
           </div>
         ) : (
           <>
-        {/* 블로그/카드뉴스/언론보도 - 위아래 배치 (입력 → 결과) */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:items-start">
-          {/* 입력 폼 */}
-          <div>
+        {/* 블로그/카드뉴스/언론보도 - 입력폼(좁게) + 프리뷰(넓게) */}
+        <div className="flex flex-col lg:flex-row gap-6 lg:items-start">
+          {/* 입력 폼 - 컴팩트 */}
+          <div className="w-full lg:w-[340px] xl:w-[380px] lg:flex-none">
             <Suspense fallback={<div className="flex items-center justify-center h-64"><div className="w-10 h-10 border-[3px] border-blue-100 border-t-blue-500 rounded-full animate-spin"></div></div>}>
               <InputForm
                 onSubmit={handleGenerate}
@@ -1046,8 +1158,8 @@ const App: React.FC = () => {
             </Suspense>
           </div>
 
-          {/* 결과 영역 */}
-          <div className="flex flex-col min-h-[480px]">
+          {/* 결과 영역 - 넓게 */}
+          <div className="flex flex-col min-h-[480px] lg:flex-1 min-w-0">
           {cardNewsPrompts && cardNewsPrompts.length > 0 ? (
             <Suspense fallback={<div className="rounded-2xl bg-white/80 backdrop-blur-xl border border-white/60 p-20 flex items-center justify-center shadow-[0_4px_24px_rgba(0,0,0,0.06)]"><div className="w-12 h-12 border-[3px] border-blue-100 border-t-blue-500 rounded-full animate-spin"></div></div>}>
               <PromptPreview
@@ -1127,6 +1239,7 @@ const App: React.FC = () => {
 
         </div>
       </main>
+      </div>{/* end flex-col flex-1 wrapper */}
 
       {/* API 에러 모달 */}
       {(getCurrentState().error || state.error) && (
