@@ -1937,9 +1937,11 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
   return (
     <div className={`rounded-2xl shadow-[0_4px_32px_rgba(0,0,0,0.06)] border h-full flex flex-col overflow-hidden relative transition-colors duration-300 backdrop-blur-2xl ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white/90 border-slate-200/60'}`}>
       <style>{`
-        .naver-preview .main-title { font-size: 32px; font-weight: 900; margin-bottom: 30px; color: #000; line-height: 1.4; padding-bottom: 20px; }
-        .naver-preview h2:not(.main-title):not(.hidden-title):not(.press-subtitle), .naver-preview h3 { font-size: 24px; font-weight: bold; margin-top: 50px; margin-bottom: 20px; color: #000; padding-left: 15px; border-left: 4px solid #787fff; }
-        .naver-preview p { font-size: 16px; margin-bottom: 20px; color: #333; line-height: 1.8; }
+        .naver-preview { word-break: keep-all; overflow-wrap: break-word; }
+        .naver-preview .naver-post-container { max-width: 100% !important; box-sizing: border-box; padding: 0 !important; }
+        .naver-preview .main-title { font-size: clamp(20px, 4vw, 32px); font-weight: 900; margin-bottom: 30px; color: #000; line-height: 1.4; padding-bottom: 20px; }
+        .naver-preview h2:not(.main-title):not(.hidden-title):not(.press-subtitle), .naver-preview h3 { font-size: clamp(18px, 3vw, 24px); font-weight: bold; margin-top: 50px; margin-bottom: 20px; color: #000; padding-left: 15px; border-left: 4px solid #787fff; }
+        .naver-preview p { font-size: clamp(14px, 2vw, 16px); margin-bottom: 20px; color: #333; line-height: 1.8; word-break: keep-all; }
         .naver-preview .content-image-wrapper { position: relative; margin: 90px 0; }
         .naver-preview .content-image-wrapper img { width: 100%; border-radius: 16px; display: block; box-shadow: 0 20px 50px rgba(0,0,0,0.08); cursor: pointer; transition: filter 0.3s; }
         .naver-preview .content-image-wrapper:hover img { filter: brightness(0.8); }
@@ -2607,12 +2609,12 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
 
 
 
-      <div ref={scrollContainerRef} className={`flex-1 overflow-y-auto p-8 lg:p-16 custom-scrollbar transition-colors duration-300 ${darkMode ? 'bg-slate-900' : 'bg-slate-50'}`}>
+      <div ref={scrollContainerRef} className={`flex-1 overflow-y-auto p-4 lg:p-6 custom-scrollbar transition-colors duration-300 ${darkMode ? 'bg-slate-900' : 'bg-slate-50'}`}>
         {activeTab === 'preview' ? (
-          <div className={`flex gap-4 ${content.postType === 'card_news' ? 'max-w-xl' : 'max-w-5xl'} mx-auto`}>
-            {/* 섹션별 재생성 패널 (블로그 전용) */}
+          <div className={`relative ${content.postType === 'card_news' ? 'max-w-xl' : 'max-w-5xl'} mx-auto`}>
+            {/* 섹션별 재생성 패널 (블로그 전용) - 오버레이 방식 */}
             {content.postType === 'blog' && blogSections.length > 0 && showSectionPanel && (
-              <div className={`w-64 flex-shrink-0 rounded-xl p-4 space-y-2 h-fit sticky top-4 ${darkMode ? 'bg-slate-800 border border-slate-700' : 'bg-white border border-slate-200 shadow-sm'}`}>
+              <div className={`absolute left-0 top-4 z-20 w-56 rounded-xl p-4 space-y-2 h-fit max-h-[70vh] overflow-y-auto shadow-xl ${darkMode ? 'bg-slate-800 border border-slate-700' : 'bg-white border border-slate-200 shadow-xl'}`}>
                 <div className="flex items-center justify-between mb-3">
                   <h4 className={`text-sm font-bold ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>
                     섹션별 재생성
@@ -2666,7 +2668,7 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
               </button>
             )}
 
-          <div className={`flex-1 bg-white shadow-lg border border-slate-100 p-12 naver-preview min-h-[800px]`}>
+          <div className={`flex-1 min-w-0 bg-white shadow-lg border border-slate-100 p-6 lg:p-8 naver-preview min-h-[800px]`}>
               <div
                 ref={editorRef}
                 contentEditable
