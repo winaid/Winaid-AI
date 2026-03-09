@@ -507,7 +507,8 @@ export const getPipelineSectionPrompt = (
   firstSentencePattern: string,
   previousSections: string[],
   medicalLawMode: 'strict' | 'relaxed' = 'strict',
-  persona?: string
+  persona?: string,
+  seoKeyword?: string
 ) => {
   const medicalLawBlock = medicalLawMode === 'relaxed' ? RELAXED_MEDICAL_LAW : MEDICAL_LAW_COMMON;
 
@@ -549,6 +550,11 @@ ${personaBlock}
 ${previousSections.length > 0 ? `[이전 섹션에서 이미 다룬 내용 - 절대 반복 금지]
 ${previousSections.map((s, i) => `섹션 ${i + 1}: ${s}`).join('\n')}` : ''}
 
+${seoKeyword ? `[SEO 키워드 삽입 필수]
+- 키워드: "${seoKeyword}"
+- 이 섹션 본문에 키워드를 최소 1회 자연스럽게 포함할 것
+- 키워드를 억지로 넣지 말고 문맥에 맞게 녹여서 사용
+` : ''}
 [규칙]
 - 2~3문단, 문단당 3~4문장
 - 문단마다 구체적 의학 정보 최소 1개
@@ -567,7 +573,8 @@ export const getPipelineIntroPrompt = (
   scene: string,
   bridge: string,
   targetChars: number,
-  persona?: string
+  persona?: string,
+  seoKeyword?: string
 ) => {
   let personaBlock = '';
   if (persona === 'director_1st') {
@@ -588,6 +595,10 @@ ${personaBlock}
 [브릿지 방향] ${bridge}
 [목표 글자 수] ${targetChars}자
 
+${seoKeyword ? `[SEO 키워드]
+- 키워드: "${seoKeyword}"
+- 도입부 3번째 문장 이후에 키워드를 1회 자연스럽게 포함 (첫 2문장에서는 금지)
+` : ''}
 [규칙]
 - 1~2문단, 3~5문장
 - 1문단: 장면/상황 전개

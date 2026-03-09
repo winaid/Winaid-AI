@@ -688,11 +688,13 @@ export const generateBlogWithPipeline = async (
 ): Promise<{ title: string; content: string; imagePrompts: string[] }> => {
   const safeProgress = onProgress || ((msg: string) => console.log('Pipeline:', msg));
   const targetLength = request.textLength || 1500;
+  // LLM은 글자수를 정확히 세지 못해 항상 20~30% 부족하게 생성 → 프롬프트용 목표를 1.35배로 설정
+  const promptTargetLength = Math.round(targetLength * 1.35);
   const medicalLawMode = request.medicalLawMode || 'strict';
 
   // ── Stage A: 아웃라인 생성 (FLASH) ── [재시도 포함]
   safeProgress('📐 [1/4] 글 구조 설계 중...');
-  const outlinePrompt = getPipelineOutlinePrompt(targetLength, medicalLawMode, {
+  const outlinePrompt = getPipelineOutlinePrompt(promptTargetLength, medicalLawMode, {
     audienceMode: request.audienceMode,
     persona: request.persona,
     tone: request.tone,
@@ -740,8 +742,8 @@ ${JSON.stringify(searchResults?.collected_facts?.slice(0, 3) || [], null, 2)}`;
     }));
   }
 
-  // 각 섹션에 글자 수 배분
-  const bodyChars = Math.round(targetLength * 0.7);
+  // 각 섹션에 글자 수 배분 (프롬프트용 뻥튀기 목표 기준)
+  const bodyChars = Math.round(promptTargetLength * 0.7);
   const charsPerSection = Math.round(bodyChars / outline.sections.length);
   outline.sections.forEach((s: any) => { s.targetChars = s.targetChars || charsPerSection; });
 
@@ -757,8 +759,9 @@ ${JSON.stringify(searchResults?.collected_facts?.slice(0, 3) || [], null, 2)}`;
     outline.intro?.approach || 'A',
     outline.intro?.scene || request.topic,
     outline.intro?.bridge || request.topic,
-    outline.intro?.targetChars || Math.round(targetLength * 0.15),
-    request.persona
+    outline.intro?.targetChars || Math.round(promptTargetLength * 0.15),
+    request.persona,
+    request.keywords
   );
 
   const introUserPrompt = `[주제] ${request.topic}
@@ -797,7 +800,8 @@ ${JSON.stringify(searchResults?.collected_facts?.slice(0, 2) || [], null, 2)}`;
       section.firstSentencePattern || String((i % 5) + 1),
       [], // 병렬이므로 이전 섹션 요약 없음 - 아웃라인의 역할 분리로 중복 방지
       medicalLawMode,
-      request.persona
+      request.persona,
+      request.keywords
     );
 
     const sectionUserPrompt = `[주제] ${request.topic}
@@ -844,7 +848,7 @@ ${JSON.stringify(searchResults?.collected_facts?.slice(i, i + 2) || [], null, 2)
   safeProgress('✍️ [3/4] 마무리 작성 중...');
   const conclusionPrompt = getPipelineConclusionPrompt(
     outline.conclusion?.direction || '열린 결말',
-    outline.conclusion?.targetChars || Math.round(targetLength * 0.15),
+    outline.conclusion?.targetChars || Math.round(promptTargetLength * 0.15),
     request.persona
   );
 
@@ -1030,6 +1034,8 @@ export const generateBlogPostText = async (request: GenerationRequest, onProgres
   const ai = getAiClient();
   const isCardNews = request.postType === 'card_news';
   const targetLength = request.textLength || 1500;
+  // LLM은 글자수를 정확히 세지 못해 항상 20~30% 부족하게 생성 → 프롬프트용 목표를 1.35배로 설정
+  const promptTargetLength = Math.round(targetLength * 1.35);
   const targetSlides = request.slideCount || 6;
   
   // 스타일 참고 이미지 분석 (카드뉴스일 때만 - 표지/본문 분리)
@@ -1506,7 +1512,7 @@ ${request.keyword ? `9. 🚨 **핵심: 키워드("${request.keyword}")와 자연
 
   safeProgress(isRelaxedMode ? '🔥 [준비] 의료광고법 자유 모드' : '⚖️ [준비] 의료광고법 기본 규칙 적용');
   safeProgress('🔄 [준비] 프롬프트 로딩 중...');
-  const gpt52Stage1 = getStage1_ContentGeneration(targetLength, medicalLawMode);
+  const gpt52Stage1 = getStage1_ContentGeneration(promptTargetLength, medicalLawMode);
   // dynamicSystemPrompt는 검색 결과 기반 systemPrompt 구성에 사용
   const dynamicSystemPrompt = await getDynamicSystemPrompt(medicalLawMode);
   safeProgress(isRelaxedMode ? '✅ 자유 모드 프롬프트 준비 완료' : '✅ 동적 프롬프트 준비 완료 (최신 의료광고법 반영)');
@@ -1592,7 +1598,7 @@ ${tb.content.substring(0, 1500)}
 - 제목/주제: ${request.topic}
 - SEO 키워드: ${request.keywords || '없음'}${request.disease ? `\n- 질환(글의 핵심 주제): ${request.disease}` : ''}
 - 이미지: ${targetImageCount}장
-- 목표 글자 수: ${targetLength}자 ~ ${targetLength + 200}자
+- 목표 글자 수: ${promptTargetLength}자 ~ ${promptTargetLength + 200}자
 
 [📅 현재 시점 - 시의성 있는 콘텐츠 작성]
 ${timeContext}
@@ -2316,9 +2322,9 @@ ${JSON.stringify(searchResults, null, 2)}
         const charCountNoSpaces = textWithoutHtml.replace(/\s/g, '').length;
         console.log(`글자수: ${charCountNoSpaces}자 (목표: ${targetLength}자)`);
 
-        // 🔍 글자수 목표 대비 검증 (200자 초과까지 OK)
+        // 🔍 글자수 목표 대비 검증 (뻥튀기 보정으로 약간 초과 가능 → 300자까지 OK)
         const targetMin = targetLength;
-        const targetMax = targetLength + 200;
+        const targetMax = targetLength + 300;
         const deviation = charCountNoSpaces - targetLength;
 
         if (charCountNoSpaces < targetMin) {
