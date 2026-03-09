@@ -13,6 +13,7 @@ import { Type } from "@google/genai";
 import { getAiClient } from "./geminiClient";
 import { STYLE_KEYWORDS, cleanImagePromptText, translateStylePromptToKorean, getCurrentYear, analyzeStyleReferenceImage } from "./imageGenerationService";
 import { DESIGNER_PERSONA, SERIES_DESIGN_RULES } from "./calendarTemplateService";
+import { getDesignTemplateById } from "./cardNewsDesignTemplates";
 import type { GenerationRequest, ImageStyle, WritingStyle, CardPromptData, CardNewsScript } from "../types";
 import {
   FEW_SHOT_EXAMPLES as _FEW_SHOT_EXAMPLES,
@@ -849,7 +850,15 @@ export const convertScriptToCardNews = async (
   }));
 
   let styleConfig: AnalyzedStyle | undefined;
-  if (request.coverStyleImage || request.contentStyleImage) {
+  let designTemplateStylePrompt: string | undefined;
+
+  // 🎨 디자인 템플릿 우선 적용
+  const designTemplate = request.designTemplateId ? getDesignTemplateById(request.designTemplateId) : undefined;
+  if (designTemplate) {
+    styleConfig = designTemplate.styleConfig;
+    designTemplateStylePrompt = designTemplate.stylePrompt;
+    onProgress(`🎨 디자인 템플릿 적용: ${designTemplate.icon} ${designTemplate.name}`);
+  } else if (request.coverStyleImage || request.contentStyleImage) {
     try {
       const styleImage = request.coverStyleImage || request.contentStyleImage;
       onProgress('🎨 참고 이미지 스타일 분석 중...');
@@ -866,12 +875,14 @@ export const convertScriptToCardNews = async (
   const htmlContent = assembleCardNewsHtml({ ...script, slides }, styleConfig);
 
   onProgress('🎨 카드 이미지 프롬프트 생성 중...');
+  // 디자인 템플릿의 stylePrompt를 customImagePrompt보다 우선 적용
+  const effectiveCustomPrompt = designTemplateStylePrompt || request.customImagePrompt;
   const cardPrompts = await fullImageCardPromptAgent(
     slides,
     request.imageStyle || 'illustration',
     request.category,
     styleConfig,
-    request.customImagePrompt
+    effectiveCustomPrompt
   );
 
   const imagePrompts = cardPrompts.map(c => cleanImagePromptText(c.imagePrompt));
@@ -918,7 +929,15 @@ export const generateCardNewsWithAgents = async (
   onProgress('🏗️ [2/3] 카드 구조 생성 중...');
 
   let styleConfig: AnalyzedStyle | undefined;
-  if (request.coverStyleImage || request.contentStyleImage) {
+  let designTemplateStylePrompt: string | undefined;
+
+  // 🎨 디자인 템플릿 우선 적용
+  const designTemplate = request.designTemplateId ? getDesignTemplateById(request.designTemplateId) : undefined;
+  if (designTemplate) {
+    styleConfig = designTemplate.styleConfig;
+    designTemplateStylePrompt = designTemplate.stylePrompt;
+    onProgress(`🎨 디자인 템플릿 적용: ${designTemplate.icon} ${designTemplate.name}`);
+  } else if (request.coverStyleImage || request.contentStyleImage) {
     try {
       const styleImage = request.coverStyleImage || request.contentStyleImage;
       onProgress('🎨 참고 이미지 스타일 분석 중...');
@@ -958,12 +977,13 @@ export const generateCardNewsWithAgents = async (
 
   // 3단계: 전체 이미지 카드 프롬프트 생성
   onProgress('🎨 [3/3] 카드 프롬프트 생성 중...');
+  const effectiveCustomPrompt = designTemplateStylePrompt || request.customImagePrompt;
   const cardPrompts = await fullImageCardPromptAgent(
     story.slides,
     request.imageStyle || 'illustration',
     request.category,
     styleConfig,
-    request.customImagePrompt
+    effectiveCustomPrompt
   );
 
   const imagePrompts = cardPrompts.map(c => cleanImagePromptText(c.imagePrompt));

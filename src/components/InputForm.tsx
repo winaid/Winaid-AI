@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { CATEGORIES, TONES, PERSONAS } from '../constants';
 import { TEAM_DATA, HospitalEntry } from '../constants/teamHospitals';
 import { analyzeHospitalKeywords, loadMoreKeywords, KeywordStat, MAX_KEYWORDS } from '../services/keywordAnalysisService';
-import { GenerationRequest, ContentCategory, TrendingItem, SeoTitleItem, AudienceMode, ImageStyle, PostType, CssTheme, WritingStyle } from '../types';
+import { GenerationRequest, ContentCategory, TrendingItem, SeoTitleItem, AudienceMode, ImageStyle, PostType, CssTheme, WritingStyle, CardNewsDesignTemplateId } from '../types';
+import { CARD_NEWS_DESIGN_TEMPLATES } from '../services/cardNewsDesignTemplates';
 import { getTrendingTopics, recommendSeoTitles } from '../services/seoService';
 import WritingStyleLearner from './WritingStyleLearner';
 import { toast } from './Toast';
@@ -68,6 +69,7 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
   const [slideCount, setSlideCount] = useState<number>(6);
   const [imageCount, setImageCount] = useState<number>(0); // 기본값 0장
   const [writingStyle, setWritingStyle] = useState<WritingStyle>('empathy'); // 기본값: 공감형
+  const [designTemplateId, setDesignTemplateId] = useState<CardNewsDesignTemplateId | undefined>(undefined);
   const [medicalLawMode, setMedicalLawMode] = useState<'strict' | 'relaxed'>(() => {
     return (localStorage.getItem('medicalLawMode') as 'strict' | 'relaxed') || 'strict';
   });
@@ -155,6 +157,8 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
       })(),
       // 📝 학습된 말투 스타일 ID
       learnedStyleId,
+      // 🎨 카드뉴스 디자인 템플릿
+      designTemplateId: postType === 'card_news' ? designTemplateId : undefined,
       // 📋 커스텀 소제목
       customSubheadings: customSubheadings.trim() || undefined,
       // ❓ FAQ 옵션
@@ -623,13 +627,57 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
                   </div>
                </div>
            ) : postType === 'card_news' ? (
-               <div>
-                  <div className="flex justify-between mb-1.5">
-                    <label className="text-xs font-semibold text-slate-500">카드뉴스 장수</label>
-                    <span className="text-xs font-semibold text-blue-600">{slideCount}장</span>
+               <div className="space-y-4">
+                  {/* 디자인 템플릿 선택 */}
+                  <div>
+                    <label className="text-xs font-semibold text-slate-500 mb-2 block">디자인 템플릿</label>
+                    <div className="grid grid-cols-5 gap-1.5">
+                      {CARD_NEWS_DESIGN_TEMPLATES.map((tmpl) => (
+                        <button
+                          key={tmpl.id}
+                          type="button"
+                          onClick={() => setDesignTemplateId(designTemplateId === tmpl.id ? undefined : tmpl.id)}
+                          className={`relative flex flex-col items-center gap-1 p-1.5 rounded-xl border-2 transition-all ${
+                            designTemplateId === tmpl.id
+                              ? 'border-blue-500 bg-blue-50 shadow-md shadow-blue-500/20'
+                              : 'border-slate-200 bg-white hover:border-slate-300'
+                          }`}
+                        >
+                          {designTemplateId === tmpl.id && (
+                            <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
+                              <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                            </span>
+                          )}
+                          <div
+                            className="w-full aspect-square rounded-lg overflow-hidden"
+                            dangerouslySetInnerHTML={{ __html: tmpl.previewSvg }}
+                          />
+                          <span className="text-[9px] font-semibold text-slate-600 leading-tight text-center">{tmpl.name}</span>
+                        </button>
+                      ))}
+                    </div>
+                    {designTemplateId && (
+                      <div className="mt-2 px-2.5 py-1.5 bg-blue-50 rounded-lg border border-blue-200">
+                        <p className="text-[10px] text-blue-700 font-medium">
+                          {CARD_NEWS_DESIGN_TEMPLATES.find(t => t.id === designTemplateId)?.icon}{' '}
+                          {CARD_NEWS_DESIGN_TEMPLATES.find(t => t.id === designTemplateId)?.description}
+                        </p>
+                      </div>
+                    )}
+                    {!designTemplateId && (
+                      <p className="mt-1 text-[10px] text-slate-400">선택하지 않으면 AI가 자동으로 디자인합니다.</p>
+                    )}
                   </div>
-                  <input type="range" min="4" max="10" step="1" value={slideCount} onChange={(e) => setSlideCount(parseInt(e.target.value))} className="w-full accent-blue-500 h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer" />
-                  <div className="flex justify-between mt-1 text-[10px] text-slate-400"><span>4장</span><span>10장</span></div>
+
+                  {/* 카드뉴스 장수 */}
+                  <div>
+                    <div className="flex justify-between mb-1.5">
+                      <label className="text-xs font-semibold text-slate-500">카드뉴스 장수</label>
+                      <span className="text-xs font-semibold text-blue-600">{slideCount}장</span>
+                    </div>
+                    <input type="range" min="4" max="10" step="1" value={slideCount} onChange={(e) => setSlideCount(parseInt(e.target.value))} className="w-full accent-blue-500 h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer" />
+                    <div className="flex justify-between mt-1 text-[10px] text-slate-400"><span>4장</span><span>10장</span></div>
+                  </div>
                </div>
            ) : postType === 'press_release' ? (
                <div className="space-y-3">

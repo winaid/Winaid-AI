@@ -7,6 +7,7 @@ export type AudienceMode =
   | '보호자용(가족걱정)'
   | '전문가용(신뢰/정보)';
 export type ImageStyle = 'photo' | 'illustration' | 'medical' | 'custom';
+export type CardNewsDesignTemplateId = 'medical-clean' | 'spring-floral' | 'modern-grid' | 'simple-pin' | 'medical-illust';
 export type PostType = 'blog' | 'card_news' | 'press_release';
 export type CssTheme = 'modern' | 'premium' | 'minimal' | 'warm' | 'professional';
 export type WritingStyle = 'expert' | 'empathy' | 'conversion';  // 전문가형 / 공감형 / 전환형
@@ -57,6 +58,7 @@ export interface GenerationRequest {
   customImagePrompt?: string; // 커스텀 이미지 스타일 프롬프트
   styleCopyMode?: boolean; // true=레이아웃 복제, false=느낌만 참고
   learnedStyleId?: string; // 학습된 말투 스타일 ID
+  designTemplateId?: CardNewsDesignTemplateId; // 카드뉴스 디자인 템플릿
   customSubheadings?: string; // 사용자가 직접 입력한 소제목들 (줄바꿈으로 구분)
   // 의료광고법 모드
   medicalLawMode?: 'strict' | 'relaxed'; // strict=엄격 준수(기본), relaxed=아슬아슬 모드
