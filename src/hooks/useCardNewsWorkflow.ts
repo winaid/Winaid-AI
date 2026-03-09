@@ -190,7 +190,8 @@ export function useCardNewsWorkflow(): CardNewsWorkflowState & CardNewsWorkflowA
           postType: 'card_news',
           imageStyle: pendingRequest.imageStyle,
           customImagePrompt: pendingRequest.customImagePrompt,
-          cardPrompts: cardNewsPrompts
+          cardPrompts: cardNewsPrompts,
+          designTemplateId: pendingRequest.designTemplateId
         },
         progress: ''
       });

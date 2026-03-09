@@ -8,6 +8,7 @@ import { removeOklchFromClonedDoc, AI_PROMPT_TEMPLATES, AUTOSAVE_KEY, AUTOSAVE_H
 import { SeoDetailModal, AiSmellDetailModal, SimilarityModal } from './ScoringModals';
 import { ImageDownloadModal, ImageRegenModal, CardDownloadModal } from './ExportModals';
 import { CardRegenModal } from './CardRegenModal';
+import { getDesignTemplateById } from '../services/cardNewsDesignTemplates';
 import { toast } from './Toast';
 import { useDocumentExport } from '../hooks/useDocumentExport';
 import { useContentQuality } from '../hooks/useContentQuality';
@@ -31,6 +32,10 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
   const [charCount, setCharCount] = useState(0);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [showTemplates, setShowTemplates] = useState(false);
+
+  // 디자인 템플릿 스타일 계산
+  const designTemplate = content.designTemplateId ? getDesignTemplateById(content.designTemplateId) : undefined;
+  const dtStyle = designTemplate?.styleConfig;
   
   // 자동저장 히스토리 (여러 저장본 관리)
   const [autoSaveHistory, setAutoSaveHistory] = useState<AutoSaveHistoryItem[]>([]);
@@ -771,8 +776,11 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
         
         if (cardsInHtml[cardRegenIndex]) {
           // 새 이미지로 교체 (완성형 카드이므로 전체 이미지 교체)
+          const regenBorderRadius = dtStyle?.borderRadius || '24px';
+          const regenBoxShadow = dtStyle?.boxShadow || '0 4px 16px rgba(0,0,0,0.08)';
+          const regenBorder = dtStyle?.borderWidth && dtStyle.borderWidth !== '0' ? `border: ${dtStyle.borderWidth} solid ${dtStyle.borderColor};` : '';
           const newCardHtml = `
-            <div class="card-slide" style="border-radius: 24px; overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,0.08);">
+            <div class="card-slide" style="border-radius: ${regenBorderRadius}; ${regenBorder} overflow: hidden; box-shadow: ${regenBoxShadow};">
               <img src="${newImage}" alt="${imagePromptToUse}" data-index="${cardRegenIndex + 1}" class="card-full-img" style="width: 100%; height: auto; display: block;" />
             </div>`;
           
@@ -1316,14 +1324,15 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
         .card-news-container { max-width: 480px; margin: 0 auto; }
         .card-grid-wrapper { display: flex; flex-direction: column; gap: 24px; }
         
-        .card-slide { 
-           background: linear-gradient(180deg, #E8F4FD 0%, #F0F9FF 100%); 
-           border-radius: 24px; 
-           box-shadow: 0 8px 32px rgba(0,0,0,0.06); 
-           overflow: hidden; 
-           position: relative; 
-           width: 100%; 
-                      cursor: pointer;
+        .card-slide {
+           background: ${dtStyle ? `linear-gradient(180deg, ${dtStyle.backgroundColor} 0%, ${dtStyle.backgroundColor}dd 100%)` : 'linear-gradient(180deg, #E8F4FD 0%, #F0F9FF 100%)'};
+           border-radius: ${dtStyle?.borderRadius || '24px'};
+           box-shadow: ${dtStyle?.boxShadow || '0 8px 32px rgba(0,0,0,0.06)'};
+           ${dtStyle?.borderWidth && dtStyle.borderWidth !== '0' ? `border: ${dtStyle.borderWidth} solid ${dtStyle.borderColor};` : ''}
+           overflow: hidden;
+           position: relative;
+           width: 100%;
+           cursor: pointer;
            transition: transform 0.2s, box-shadow 0.2s;
         }
         .card-slide:hover {

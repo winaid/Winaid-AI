@@ -215,6 +215,7 @@ export interface GeneratedContent {
   imageStyle?: ImageStyle;
   customImagePrompt?: string; // 커스텀 이미지 프롬프트 (재생성용)
   cardPrompts?: CardPromptData[]; // 카드별 프롬프트 (재생성용)
+  designTemplateId?: CardNewsDesignTemplateId; // 카드뉴스 디자인 템플릿 ID (재생성용)
   seoScore?: SeoScoreReport; // SEO 자동 평가 결과
   sections?: BlogSection[]; // 블로그 섹션 분리 데이터 (섹션별 재생성용)
 }
