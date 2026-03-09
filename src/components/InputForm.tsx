@@ -263,15 +263,17 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
   };
 
   const handleRecommendTitles = async () => {
-    if (!topic) return;
+    // topic이 비어있으면 disease나 keywords로 대체 (제목 추천을 받기 위해 비워둔 경우)
+    const topicForSeo = topic || disease || keywords || '';
+    if (!topicForSeo) return;
     setIsLoadingTitles(true);
     setSeoTitles([]);
     try {
         // postType에 따라 블로그/카드뉴스용 제목 추천
         // press_release는 blog로 처리
         // keywords가 없으면 disease(질환명)을 키워드 대신 사용
-        const keywordsForSeo = keywords || disease || topic;
-        const titles = await recommendSeoTitles(topic, keywordsForSeo, postType === 'press_release' ? 'blog' : postType);
+        const keywordsForSeo = keywords || disease || topicForSeo;
+        const titles = await recommendSeoTitles(topicForSeo, keywordsForSeo, postType === 'press_release' ? 'blog' : postType);
         const sortedTitles = titles.sort((a, b) => b.score - a.score);
         setSeoTitles(sortedTitles);
     } catch (e) {
@@ -795,7 +797,7 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
           </div>
           )}
 
-          <button type="button" onClick={handleRecommendTitles} disabled={isLoadingTitles || !topic} className="w-full py-2.5 bg-blue-600 text-white rounded-xl text-xs font-semibold hover:bg-blue-700 transition-all disabled:opacity-40">
+          <button type="button" onClick={handleRecommendTitles} disabled={isLoadingTitles || !(topic || disease || keywords)} className="w-full py-2.5 bg-blue-600 text-white rounded-xl text-xs font-semibold hover:bg-blue-700 transition-all disabled:opacity-40">
             {isLoadingTitles ? '생성 중...' : 'AI 제목 추천받기'}
           </button>
 
