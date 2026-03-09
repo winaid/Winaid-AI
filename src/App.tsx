@@ -20,6 +20,7 @@ const MedicalLawSearch = lazy(() => import('./components/MedicalLawSearch').then
 const ImageGenerator = lazy(() => import('./components/ImageGenerator'));
 const LandingPage = lazy(() => import('./components/LandingPage'));
 const PostHistory = lazy(() => import('./components/PostHistory'));
+const UserManual = lazy(() => import('./components/UserManual'));
 
 type PageType = 'landing' | 'home' | 'blog' | 'card_news' | 'press' | 'refine' | 'image' | 'history' | 'admin' | 'auth';
 const contentPages: PageType[] = ['blog', 'card_news', 'press', 'refine', 'image', 'history'];
@@ -157,6 +158,7 @@ const App: React.FC = () => {
 
   // API 키 설정 모달 상태
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
+  const [showUserManual, setShowUserManual] = useState(false);
   
   // 비밀번호 인증 상태 - 임시로 항상 true (로그인 비활성화)
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(true);
@@ -916,10 +918,21 @@ const App: React.FC = () => {
 
             {/* 하단 팁 & 안내 */}
             <div className={`rounded-2xl border p-6 ${darkMode ? 'bg-slate-800/50 border-slate-700/60' : 'bg-gradient-to-r from-slate-50 to-blue-50/50 border-slate-200/60'}`}>
-              <h3 className={`text-sm font-black mb-4 flex items-center gap-2 ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                <svg className="w-4 h-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 18v-5.25m0 0a6.01 6.01 0 001.5-.189m-1.5.189a6.01 6.01 0 01-1.5-.189m3.75 7.478a12.06 12.06 0 01-4.5 0m3.75 2.383a14.406 14.406 0 01-3 0M14.25 18v-.192c0-.983.658-1.823 1.508-2.316a7.5 7.5 0 10-7.517 0c.85.493 1.509 1.333 1.509 2.316V18" /></svg>
-                빠른 시작 가이드
-              </h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className={`text-sm font-black flex items-center gap-2 ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                  <svg className="w-4 h-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 18v-5.25m0 0a6.01 6.01 0 001.5-.189m-1.5.189a6.01 6.01 0 01-1.5-.189m3.75 7.478a12.06 12.06 0 01-4.5 0m3.75 2.383a14.406 14.406 0 01-3 0M14.25 18v-.192c0-.983.658-1.823 1.508-2.316a7.5 7.5 0 10-7.517 0c.85.493 1.509 1.333 1.509 2.316V18" /></svg>
+                  빠른 시작 가이드
+                </h3>
+                <button
+                  onClick={() => setShowUserManual(true)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                    darkMode ? 'bg-blue-500/15 text-blue-400 hover:bg-blue-500/25' : 'bg-blue-50 text-blue-600 hover:bg-blue-100'
+                  }`}
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" /></svg>
+                  사용 설명서
+                </button>
+              </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 {([
                   { step: '01', title: '콘텐츠 유형 선택', desc: '블로그, 카드뉴스, 보도자료 중 선택' },
@@ -1167,6 +1180,13 @@ const App: React.FC = () => {
       <Suspense fallback={null}>
         <MedicalLawSearch />
       </Suspense>
+
+      {/* 사용 설명서 모달 */}
+      {showUserManual && (
+        <Suspense fallback={null}>
+          <UserManual onClose={() => setShowUserManual(false)} darkMode={darkMode} />
+        </Suspense>
+      )}
 
       {/* 토스트 알림 */}
       <ToastContainer />
