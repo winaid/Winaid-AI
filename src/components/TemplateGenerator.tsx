@@ -1286,229 +1286,263 @@ function TemplateSVGPreview({ template: t, category, hospitalName }: { template:
     // 설날 전용 장식 — 복주머니 + 전통 문양
     const seolDeco = isSeol ? <>
       {/* 좌상단 복주머니 */}
-      <ellipse cx="18" cy="22" rx="8" ry="10" fill="#dc2626" fillOpacity="0.15" />
-      <path d="M12,16 Q18,12 24,16" fill="none" stroke="#fbbf24" strokeWidth="0.6" strokeOpacity="0.3" />
-      <text x="18" y="24" textAnchor="middle" fontSize="4" fontWeight="700" fill="#dc2626" fillOpacity="0.25">福</text>
+      <ellipse cx="18" cy="22" rx="8" ry="10" fill="#dc2626" fillOpacity="0.25" />
+      <path d="M12,16 Q18,12 24,16" fill="none" stroke="#fbbf24" strokeWidth="0.8" strokeOpacity="0.5" />
+      <text x="18" y="24" textAnchor="middle" fontSize="4" fontWeight="700" fill="#dc2626" fillOpacity="0.4">福</text>
       {/* 우상단 매듭 장식 */}
-      <circle cx="102" cy="18" r="3" fill="#dc2626" fillOpacity="0.12" />
-      <line x1="102" y1="21" x2="102" y2="32" stroke="#dc2626" strokeWidth="0.5" strokeOpacity="0.12" />
-      <path d="M99,26 Q102,24 105,26 Q102,28 99,26" fill="#dc2626" fillOpacity="0.08" />
+      <circle cx="102" cy="18" r="3" fill="#dc2626" fillOpacity="0.2" />
+      <line x1="102" y1="21" x2="102" y2="32" stroke="#dc2626" strokeWidth="0.5" strokeOpacity="0.2" />
+      <path d="M99,26 Q102,24 105,26 Q102,28 99,26" fill="#dc2626" fillOpacity="0.15" />
       {/* 하단 전통 구름 */}
-      <path d="M10,135 Q20,130 30,135 Q38,130 46,135" fill="none" stroke={c} strokeWidth="0.5" strokeOpacity="0.08" />
-      <path d="M74,140 Q84,135 94,140 Q102,135 110,140" fill="none" stroke={c} strokeWidth="0.5" strokeOpacity="0.06" />
+      <path d="M10,135 Q20,130 30,135 Q38,130 46,135" fill="none" stroke={c} strokeWidth="0.6" strokeOpacity="0.15" />
+      <path d="M74,140 Q84,135 94,140 Q102,135 110,140" fill="none" stroke={c} strokeWidth="0.6" strokeOpacity="0.12" />
       {/* 금색 동전 장식 */}
-      <circle cx="100" cy="130" r="3" fill="#fbbf24" fillOpacity="0.08" stroke="#fbbf24" strokeWidth="0.3" strokeOpacity="0.1" />
-      <rect x="98.5" y="129" width="3" height="2" rx="1" fill="#fbbf24" fillOpacity="0.06" />
+      <circle cx="100" cy="130" r="3" fill="#fbbf24" fillOpacity="0.15" stroke="#fbbf24" strokeWidth="0.4" strokeOpacity="0.2" />
+      <rect x="98.5" y="129" width="3" height="2" rx="1" fill="#fbbf24" fillOpacity="0.12" />
     </> : null;
     // 추석 전용 장식 — 대형 보름달 + 코스모스 + 벼이삭
     const chskDeco = isChsk ? <>
       {/* 대형 보름달 */}
-      <circle cx="60" cy="30" r="18" fill="#fbbf24" fillOpacity="0.1" />
-      <circle cx="60" cy="30" r="14" fill="#fbbf24" fillOpacity="0.08" />
-      <circle cx="55" cy="27" r="2" fill="#fbbf24" fillOpacity="0.06" />
-      <circle cx="64" cy="32" r="1.5" fill="#fbbf24" fillOpacity="0.05" />
+      <circle cx="60" cy="30" r="18" fill="#fbbf24" fillOpacity="0.2" />
+      <circle cx="60" cy="30" r="14" fill="#fbbf24" fillOpacity="0.15" />
+      <circle cx="55" cy="27" r="2" fill="#fbbf24" fillOpacity="0.1" />
+      <circle cx="64" cy="32" r="1.5" fill="#fbbf24" fillOpacity="0.08" />
       {/* 좌측 벼이삭 */}
-      <path d="M8,100 Q10,80 14,60" fill="none" stroke="#d97706" strokeWidth="0.5" strokeOpacity="0.15" />
-      <ellipse cx="12" cy="70" rx="3" ry="1.5" fill="#fbbf24" fillOpacity="0.08" transform="rotate(-20 12 70)" />
-      <ellipse cx="10" cy="78" rx="3" ry="1.5" fill="#fbbf24" fillOpacity="0.07" transform="rotate(-25 10 78)" />
-      <ellipse cx="13" cy="86" rx="3" ry="1.5" fill="#fbbf24" fillOpacity="0.06" transform="rotate(-15 13 86)" />
+      <path d="M8,100 Q10,80 14,60" fill="none" stroke="#d97706" strokeWidth="0.7" strokeOpacity="0.25" />
+      <ellipse cx="12" cy="70" rx="3" ry="1.5" fill="#fbbf24" fillOpacity="0.15" transform="rotate(-20 12 70)" />
+      <ellipse cx="10" cy="78" rx="3" ry="1.5" fill="#fbbf24" fillOpacity="0.12" transform="rotate(-25 10 78)" />
+      <ellipse cx="13" cy="86" rx="3" ry="1.5" fill="#fbbf24" fillOpacity="0.1" transform="rotate(-15 13 86)" />
       {/* 우측 코스모스 */}
-      <circle cx="106" cy="80" r="4" fill="#f9a8d4" fillOpacity="0.08" />
-      <circle cx="106" cy="80" r="1" fill="#fbbf24" fillOpacity="0.1" />
-      <circle cx="100" cy="90" r="3" fill="#ec4899" fillOpacity="0.06" />
-      <circle cx="100" cy="90" r="0.8" fill="#fbbf24" fillOpacity="0.08" />
+      <circle cx="106" cy="80" r="4" fill="#f9a8d4" fillOpacity="0.15" />
+      <circle cx="106" cy="80" r="1" fill="#fbbf24" fillOpacity="0.2" />
+      <circle cx="100" cy="90" r="3" fill="#ec4899" fillOpacity="0.12" />
+      <circle cx="100" cy="90" r="0.8" fill="#fbbf24" fillOpacity="0.15" />
       {/* 하단 단풍잎 라인 */}
-      <path d="M20,145 Q40,140 60,145 Q80,140 100,145" fill="none" stroke="#ea580c" strokeWidth="0.4" strokeOpacity="0.1" />
+      <path d="M20,145 Q40,140 60,145 Q80,140 100,145" fill="none" stroke="#ea580c" strokeWidth="0.6" strokeOpacity="0.2" />
     </> : null;
     // 새해 전용 장식 — 불꽃놀이 + 별
     const newyDeco = isNewy ? <>
       {/* 배경 2026 워터마크 */}
-      <text x="60" y="30" textAnchor="middle" fontSize="14" fontWeight="900" fill={c} fillOpacity="0.06">2026</text>
+      <text x="60" y="30" textAnchor="middle" fontSize="14" fontWeight="900" fill={c} fillOpacity="0.12">2026</text>
       {/* 불꽃놀이 - 좌측 */}
       {[0,60,120,180,240,300].map((deg, i) => (
-        <line key={`fl${i}`} x1="22" y1="20" x2={22 + Math.cos(deg * Math.PI / 180) * 8} y2={20 + Math.sin(deg * Math.PI / 180) * 8} stroke="#fbbf24" strokeWidth="0.6" strokeOpacity="0.2" />
+        <line key={`fl${i}`} x1="22" y1="20" x2={22 + Math.cos(deg * Math.PI / 180) * 8} y2={20 + Math.sin(deg * Math.PI / 180) * 8} stroke="#fbbf24" strokeWidth="0.8" strokeOpacity="0.35" />
       ))}
-      <circle cx="22" cy="20" r="2" fill="#fbbf24" fillOpacity="0.15" />
+      <circle cx="22" cy="20" r="2" fill="#fbbf24" fillOpacity="0.25" />
       {/* 불꽃놀이 - 우측 */}
       {[0,45,90,135,180,225,270,315].map((deg, i) => (
-        <line key={`fr${i}`} x1="98" y1="18" x2={98 + Math.cos(deg * Math.PI / 180) * 6} y2={18 + Math.sin(deg * Math.PI / 180) * 6} stroke="#a78bfa" strokeWidth="0.5" strokeOpacity="0.2" />
+        <line key={`fr${i}`} x1="98" y1="18" x2={98 + Math.cos(deg * Math.PI / 180) * 6} y2={18 + Math.sin(deg * Math.PI / 180) * 6} stroke="#a78bfa" strokeWidth="0.6" strokeOpacity="0.35" />
       ))}
-      <circle cx="98" cy="18" r="1.5" fill="#a78bfa" fillOpacity="0.15" />
+      <circle cx="98" cy="18" r="1.5" fill="#a78bfa" fillOpacity="0.25" />
       {/* 별/반짝임 */}
-      <text x="40" y="14" fontSize="3" fill="#fbbf24" fillOpacity="0.2">✦</text>
-      <text x="80" y="36" fontSize="2" fill="#ec4899" fillOpacity="0.15">✦</text>
-      <text x="15" y="45" fontSize="2.5" fill="#60a5fa" fillOpacity="0.15">✧</text>
-      <text x="105" y="50" fontSize="2" fill="#34d399" fillOpacity="0.12">★</text>
+      <text x="40" y="14" fontSize="3" fill="#fbbf24" fillOpacity="0.35">✦</text>
+      <text x="80" y="36" fontSize="2" fill="#ec4899" fillOpacity="0.25">✦</text>
+      <text x="15" y="45" fontSize="2.5" fill="#60a5fa" fillOpacity="0.25">✧</text>
+      <text x="105" y="50" fontSize="2" fill="#34d399" fillOpacity="0.2">★</text>
       {/* 컨페티 */}
-      <rect x="30" y="10" width="2" height="4" rx="1" fill="#ec4899" fillOpacity="0.12" transform="rotate(25 31 12)" />
-      <rect x="88" y="30" width="1.5" height="3.5" rx="0.75" fill="#fbbf24" fillOpacity="0.1" transform="rotate(-15 89 32)" />
-      <rect x="12" y="55" width="1.5" height="3" rx="0.75" fill="#60a5fa" fillOpacity="0.08" transform="rotate(35 13 56)" />
+      <rect x="30" y="10" width="2" height="4" rx="1" fill="#ec4899" fillOpacity="0.2" transform="rotate(25 31 12)" />
+      <rect x="88" y="30" width="1.5" height="3.5" rx="0.75" fill="#fbbf24" fillOpacity="0.18" transform="rotate(-15 89 32)" />
+      <rect x="12" y="55" width="1.5" height="3" rx="0.75" fill="#60a5fa" fillOpacity="0.15" transform="rotate(35 13 56)" />
     </> : null;
     // 어버이날 전용 장식 — 풍성한 카네이션
     const parentDeco = isParent ? <>
       {/* 좌상단 큰 카네이션 */}
       <g transform="translate(20,20)">
-        <circle cx="0" cy="0" r="6" fill="#e11d48" fillOpacity="0.15" />
-        <circle cx="-3" cy="-3" r="4" fill="#e11d48" fillOpacity="0.12" />
-        <circle cx="3" cy="-2" r="3.5" fill="#fb7185" fillOpacity="0.1" />
-        <circle cx="0" cy="-5" r="3" fill="#f43f5e" fillOpacity="0.08" />
-        <path d="M-1,6 Q0,14 1,22" fill="none" stroke="#22c55e" strokeWidth="0.8" strokeOpacity="0.15" />
-        <ellipse cx="-4" cy="12" rx="3" ry="1.5" fill="#22c55e" fillOpacity="0.08" transform="rotate(-30 -4 12)" />
-        <ellipse cx="4" cy="16" rx="3" ry="1.5" fill="#22c55e" fillOpacity="0.06" transform="rotate(25 4 16)" />
+        <circle cx="0" cy="0" r="6" fill="#e11d48" fillOpacity="0.3" />
+        <circle cx="-3" cy="-3" r="4" fill="#e11d48" fillOpacity="0.25" />
+        <circle cx="3" cy="-2" r="3.5" fill="#fb7185" fillOpacity="0.2" />
+        <circle cx="0" cy="-5" r="3" fill="#f43f5e" fillOpacity="0.15" />
+        <path d="M-1,6 Q0,14 1,22" fill="none" stroke="#22c55e" strokeWidth="1" strokeOpacity="0.25" />
+        <ellipse cx="-4" cy="12" rx="3" ry="1.5" fill="#22c55e" fillOpacity="0.15" transform="rotate(-30 -4 12)" />
+        <ellipse cx="4" cy="16" rx="3" ry="1.5" fill="#22c55e" fillOpacity="0.12" transform="rotate(25 4 16)" />
       </g>
       {/* 우상단 카네이션 */}
       <g transform="translate(100,24) scale(0.7)">
-        <circle cx="0" cy="0" r="5" fill="#e11d48" fillOpacity="0.12" />
-        <circle cx="-2" cy="-3" r="3.5" fill="#fb7185" fillOpacity="0.1" />
-        <circle cx="2" cy="-2" r="3" fill="#f43f5e" fillOpacity="0.08" />
-        <path d="M0,5 Q0,12 1,18" fill="none" stroke="#22c55e" strokeWidth="0.6" strokeOpacity="0.12" />
+        <circle cx="0" cy="0" r="5" fill="#e11d48" fillOpacity="0.25" />
+        <circle cx="-2" cy="-3" r="3.5" fill="#fb7185" fillOpacity="0.2" />
+        <circle cx="2" cy="-2" r="3" fill="#f43f5e" fillOpacity="0.15" />
+        <path d="M0,5 Q0,12 1,18" fill="none" stroke="#22c55e" strokeWidth="0.8" strokeOpacity="0.2" />
       </g>
       {/* 좌하단 작은 카네이션 */}
       <g transform="translate(14,120) scale(0.5)">
-        <circle cx="0" cy="0" r="5" fill="#e11d48" fillOpacity="0.1" />
-        <circle cx="-2" cy="-2" r="3" fill="#fb7185" fillOpacity="0.08" />
-        <path d="M0,5 Q0,10 0,15" fill="none" stroke="#22c55e" strokeWidth="0.5" strokeOpacity="0.1" />
+        <circle cx="0" cy="0" r="5" fill="#e11d48" fillOpacity="0.2" />
+        <circle cx="-2" cy="-2" r="3" fill="#fb7185" fillOpacity="0.15" />
+        <path d="M0,5 Q0,10 0,15" fill="none" stroke="#22c55e" strokeWidth="0.6" strokeOpacity="0.18" />
       </g>
       {/* 우하단 카네이션 잎 */}
       <g transform="translate(106,130) scale(0.4)">
-        <circle cx="0" cy="0" r="4" fill="#e11d48" fillOpacity="0.08" />
-        <path d="M0,4 Q0,8 0,12" fill="none" stroke="#22c55e" strokeWidth="0.4" strokeOpacity="0.08" />
+        <circle cx="0" cy="0" r="4" fill="#e11d48" fillOpacity="0.15" />
+        <path d="M0,4 Q0,8 0,12" fill="none" stroke="#22c55e" strokeWidth="0.5" strokeOpacity="0.15" />
       </g>
       {/* 리본 */}
-      <path d="M50,10 Q60,6 70,10" fill="none" stroke="#e11d48" strokeWidth="0.6" strokeOpacity="0.1" />
+      <path d="M50,10 Q60,6 70,10" fill="none" stroke="#e11d48" strokeWidth="0.8" strokeOpacity="0.2" />
     </> : null;
     // 크리스마스 전용 장식 — 풍성한 트리 + 오너먼트 + 눈
     const xmasDeco = isXmas ? <>
       {/* 트리 레이어 */}
-      <polygon points="60,8 48,24 72,24" fill="#22c55e" fillOpacity="0.12" />
-      <polygon points="60,16 44,34 76,34" fill="#16a34a" fillOpacity="0.1" />
-      <polygon points="60,24 40,42 80,42" fill="#15803d" fillOpacity="0.08" />
-      <rect x="57" y="42" width="6" height="5" rx="1" fill="#78350f" fillOpacity="0.12" />
+      <polygon points="60,8 48,24 72,24" fill="#22c55e" fillOpacity="0.22" />
+      <polygon points="60,16 44,34 76,34" fill="#16a34a" fillOpacity="0.18" />
+      <polygon points="60,24 40,42 80,42" fill="#15803d" fillOpacity="0.15" />
+      <rect x="57" y="42" width="6" height="5" rx="1" fill="#78350f" fillOpacity="0.2" />
       {/* 별 토퍼 */}
-      <text x="60" y="10" textAnchor="middle" fontSize="4" fill="#fbbf24" fillOpacity="0.3">★</text>
+      <text x="60" y="10" textAnchor="middle" fontSize="5" fill="#fbbf24" fillOpacity="0.5">★</text>
       {/* 오너먼트 (트리 위) */}
-      <circle cx="53" cy="22" r="1.5" fill="#ef4444" fillOpacity="0.15" />
-      <circle cx="67" cy="22" r="1.2" fill="#fbbf24" fillOpacity="0.12" />
-      <circle cx="48" cy="32" r="1.3" fill="#3b82f6" fillOpacity="0.12" />
-      <circle cx="72" cy="32" r="1.5" fill="#ef4444" fillOpacity="0.1" />
-      <circle cx="56" cy="38" r="1" fill="#fbbf24" fillOpacity="0.1" />
-      <circle cx="64" cy="36" r="1.2" fill="#22c55e" fillOpacity="0.08" />
+      <circle cx="53" cy="22" r="1.8" fill="#ef4444" fillOpacity="0.3" />
+      <circle cx="67" cy="22" r="1.5" fill="#fbbf24" fillOpacity="0.25" />
+      <circle cx="48" cy="32" r="1.5" fill="#3b82f6" fillOpacity="0.25" />
+      <circle cx="72" cy="32" r="1.8" fill="#ef4444" fillOpacity="0.2" />
+      <circle cx="56" cy="38" r="1.2" fill="#fbbf24" fillOpacity="0.2" />
+      <circle cx="64" cy="36" r="1.5" fill="#22c55e" fillOpacity="0.15" />
       {/* 눈꽃 흩날림 */}
-      <circle cx="16" cy="18" r="1" fill="white" fillOpacity="0.2" />
-      <circle cx="100" cy="14" r="0.8" fill="white" fillOpacity="0.15" />
-      <circle cx="28" cy="8" r="0.6" fill="white" fillOpacity="0.12" />
-      <circle cx="92" cy="28" r="0.7" fill="white" fillOpacity="0.12" />
-      <circle cx="10" cy="40" r="0.5" fill="white" fillOpacity="0.1" />
-      <circle cx="110" cy="45" r="0.6" fill="white" fillOpacity="0.08" />
-      <circle cx="20" cy="55" r="0.4" fill="white" fillOpacity="0.08" />
+      <circle cx="16" cy="18" r="1.2" fill="white" fillOpacity="0.35" />
+      <circle cx="100" cy="14" r="1" fill="white" fillOpacity="0.3" />
+      <circle cx="28" cy="8" r="0.8" fill="white" fillOpacity="0.25" />
+      <circle cx="92" cy="28" r="0.9" fill="white" fillOpacity="0.25" />
+      <circle cx="10" cy="40" r="0.7" fill="white" fillOpacity="0.2" />
+      <circle cx="110" cy="45" r="0.8" fill="white" fillOpacity="0.18" />
+      <circle cx="20" cy="55" r="0.6" fill="white" fillOpacity="0.15" />
       {/* 선물 박스 */}
-      <rect x="10" y="140" width="8" height="7" rx="1" fill="#ef4444" fillOpacity="0.08" />
-      <rect x="102" y="138" width="7" height="6" rx="1" fill="#22c55e" fillOpacity="0.06" />
+      <rect x="10" y="140" width="8" height="7" rx="1" fill="#ef4444" fillOpacity="0.15" />
+      <rect x="102" y="138" width="7" height="6" rx="1" fill="#22c55e" fillOpacity="0.12" />
     </> : null;
 
     return wrap(<>
       {seolDeco}{chskDeco}{newyDeco}{parentDeco}{xmasDeco}
       {hint === 'traditional' ? <>
-        {/* 전통 프레임 — 이중 테두리 + 전통 코너 장식 */}
-        <rect x="8" y="6" width="104" height="148" rx="4" fill={isDark ? '#0f172a' : 'white'} fillOpacity={isDark ? 0.5 : 0.4} stroke={c} strokeOpacity="0.2" strokeWidth="0.8" />
-        <rect x="12" y="10" width="96" height="140" rx="3" fill="none" stroke={c} strokeOpacity="0.08" strokeWidth="0.4" strokeDasharray="2 1.5" />
-        {/* 4코너 전통 문양 (ㄱ자 + 장식) */}
-        <path d="M14,14 L28,14 L28,16 L16,16 L16,28 L14,28 Z" fill={c} fillOpacity="0.15" />
-        <circle cx="22" cy="22" r="1.5" fill={c} fillOpacity="0.08" />
-        <path d="M92,14 L106,14 L106,28 L104,28 L104,16 L92,16 Z" fill={c} fillOpacity="0.15" />
-        <circle cx="98" cy="22" r="1.5" fill={c} fillOpacity="0.08" />
-        <path d="M14,132 L14,146 L28,146 L28,144 L16,144 L16,132 Z" fill={c} fillOpacity="0.1" />
-        <path d="M106,132 L106,146 L92,146 L92,144 L104,144 L104,132 Z" fill={c} fillOpacity="0.1" />
-        {/* 본문 */}
-        <text x="60" y="48" textAnchor="middle" fontSize="9" fontWeight="800" fill={isDark ? '#fbbf24' : c}>{line1}</text>
-        <text x="60" y="62" textAnchor="middle" fontSize="8.5" fontWeight="800" fill={isDark ? '#fbbf24' : c}>{line2}</text>
-        <rect x="30" y="70" width="60" height="0.5" fill={c} fillOpacity="0.1" />
-        <text x="60" y="84" textAnchor="middle" fontSize="3.5" fill={isDark ? '#94a3b8' : a}>{subLine}</text>
-        {closureText && <><rect x="20" y="96" width="80" height="14" rx="5" fill={c} fillOpacity="0.05" /><text x="60" y="105" textAnchor="middle" fontSize="3.2" fill={isDark ? '#94a3b8' : '#64748b'}>{closureText}</text></>}
-        <text x="60" y="136" textAnchor="middle" fontSize="3.8" fontWeight="600" fill={isDark ? '#d4a017' : a}>{name}</text>
+        {/* ━━ 전통 프레임 ━━ 강한 이중 테두리 + 큰 코너 장식 + 중앙 본문 */}
+        <rect x="6" y="4" width="108" height="152" rx="3" fill={isDark ? '#0f172a' : '#fef9f0'} fillOpacity={isDark ? 0.6 : 0.7} stroke={c} strokeOpacity="0.35" strokeWidth="1.2" />
+        <rect x="11" y="9" width="98" height="142" rx="2" fill="none" stroke={c} strokeOpacity="0.15" strokeWidth="0.5" strokeDasharray="3 2" />
+        {/* 4코너 전통 ㄱ자 — 크고 진하게 */}
+        <path d="M13,12 L32,12 L32,14.5 L15.5,14.5 L15.5,30 L13,30 Z" fill={c} fillOpacity="0.3" />
+        <path d="M88,12 L107,12 L107,30 L104.5,30 L104.5,14.5 L88,14.5 Z" fill={c} fillOpacity="0.3" />
+        <path d="M13,130 L13,148 L32,148 L32,145.5 L15.5,145.5 L15.5,130 Z" fill={c} fillOpacity="0.2" />
+        <path d="M107,130 L107,148 L88,148 L88,145.5 L104.5,145.5 L104.5,130 Z" fill={c} fillOpacity="0.2" />
+        {/* 코너 원 장식 */}
+        <circle cx="24" cy="24" r="2.5" fill={c} fillOpacity="0.12" />
+        <circle cx="96" cy="24" r="2.5" fill={c} fillOpacity="0.12" />
+        {/* 상단 병원명 */}
+        <text x="60" y="44" textAnchor="middle" fontSize="3.5" fontWeight="600" fill={isDark ? '#fbbf24' : a}>{name}</text>
+        {/* 굵은 인사말 */}
+        <text x="60" y="62" textAnchor="middle" fontSize="10" fontWeight="900" fill={isDark ? '#fbbf24' : c}>{line1}</text>
+        <text x="60" y="78" textAnchor="middle" fontSize="9" fontWeight="900" fill={isDark ? '#fbbf24' : c}>{line2}</text>
+        <line x1="30" y1="86" x2="90" y2="86" stroke={c} strokeOpacity="0.2" strokeWidth="0.6" />
+        <text x="60" y="98" textAnchor="middle" fontSize="3.5" fill={isDark ? '#94a3b8' : a}>{subLine}</text>
+        {closureText && <><rect x="22" y="108" width="76" height="14" rx="5" fill={c} fillOpacity="0.08" /><text x="60" y="117" textAnchor="middle" fontSize="3.2" fill={isDark ? '#94a3b8' : '#64748b'}>{closureText}</text></>}
+        <text x="60" y="140" textAnchor="middle" fontSize="3.5" fontWeight="600" fill={isDark ? '#d4a017' : a}>{name}</text>
       </> : hint === 'luxury' ? <>
-        {/* 다크 프리미엄 — 네이비 + 골드 */}
-        <rect x="5" y="4" width="110" height="152" rx="5" fill="#0f172a" />
-        {/* 골드 장식 프레임 */}
-        <line x1="20" y1="18" x2="100" y2="18" stroke="#d4a017" strokeOpacity="0.15" strokeWidth="0.4" />
-        <line x1="20" y1="20" x2="100" y2="20" stroke="#d4a017" strokeOpacity="0.08" strokeWidth="0.3" />
-        <circle cx="18" cy="19" r="1" fill="#d4a017" fillOpacity="0.1" />
-        <circle cx="102" cy="19" r="1" fill="#d4a017" fillOpacity="0.1" />
-        {/* 골드 코너 장식 */}
-        <path d="M12,12 L20,12 L20,14 L14,14 L14,20 L12,20 Z" fill="#d4a017" fillOpacity="0.08" />
-        <path d="M108,12 L100,12 L100,14 L106,14 L106,20 L108,20 Z" fill="#d4a017" fillOpacity="0.08" />
+        {/* ━━ 럭셔리 다크 ━━ 네이비 배경 + 골드 프레임 + 큰 중앙 원 */}
+        <rect x="4" y="3" width="112" height="154" rx="5" fill="#0f172a" />
+        {/* 골드 테두리 */}
+        <rect x="9" y="8" width="102" height="144" rx="4" fill="none" stroke="#d4a017" strokeOpacity="0.3" strokeWidth="0.6" />
+        {/* 코너 골드 장식 */}
+        <path d="M12,11 L24,11 L24,13 L14,13 L14,23 L12,23 Z" fill="#d4a017" fillOpacity="0.2" />
+        <path d="M108,11 L96,11 L96,13 L106,13 L106,23 L108,23 Z" fill="#d4a017" fillOpacity="0.2" />
+        <path d="M12,149 L12,137 L14,137 L14,147 L24,147 L24,149 Z" fill="#d4a017" fillOpacity="0.15" />
+        <path d="M108,149 L108,137 L106,137 L106,147 L96,147 L96,149 Z" fill="#d4a017" fillOpacity="0.15" />
+        {/* 큰 중앙 원형 장식 */}
+        <circle cx="60" cy="56" r="28" fill="none" stroke="#d4a017" strokeOpacity="0.12" strokeWidth="0.5" />
+        <circle cx="60" cy="56" r="24" fill="none" stroke="#d4a017" strokeOpacity="0.08" strokeWidth="0.3" strokeDasharray="2 2" />
+        {/* 상단 골드 라인 */}
+        <line x1="20" y1="22" x2="100" y2="22" stroke="#d4a017" strokeOpacity="0.2" strokeWidth="0.5" />
+        <circle cx="18" cy="22" r="1.2" fill="#d4a017" fillOpacity="0.15" />
+        <circle cx="102" cy="22" r="1.2" fill="#d4a017" fillOpacity="0.15" />
         {/* 본문 */}
-        <text x="60" y="52" textAnchor="middle" fontSize="10" fontWeight="800" fill="#d4a017">{line1}</text>
-        <text x="60" y="68" textAnchor="middle" fontSize="9" fontWeight="800" fill="#d4a017">{line2}</text>
-        <rect x="35" y="76" width="50" height="0.5" fill="#d4a017" fillOpacity="0.12" />
-        <text x="60" y="90" textAnchor="middle" fontSize="3.3" fill="#b8860b">{subLine}</text>
-        {closureText && <><rect x="20" y="100" width="80" height="14" rx="4" fill="#d4a017" fillOpacity="0.04" /><text x="60" y="109" textAnchor="middle" fontSize="3" fill="#78716c">{closureText}</text></>}
-        <line x1="20" y1="124" x2="100" y2="124" stroke="#d4a017" strokeOpacity="0.12" strokeWidth="0.3" />
-        <path d="M12,140 L20,140 L20,138 L14,138 L14,132 L12,132 Z" fill="#d4a017" fillOpacity="0.06" />
-        <path d="M108,140 L100,140 L100,138 L106,138 L106,132 L108,132 Z" fill="#d4a017" fillOpacity="0.06" />
-        <text x="60" y="146" textAnchor="middle" fontSize="3.5" fontWeight="600" fill="#d4a017">{name}</text>
+        <text x="60" y="46" textAnchor="middle" fontSize="10.5" fontWeight="900" fill="#d4a017">{line1}</text>
+        <text x="60" y="64" textAnchor="middle" fontSize="9.5" fontWeight="900" fill="#d4a017">{line2}</text>
+        <line x1="35" y1="74" x2="85" y2="74" stroke="#d4a017" strokeOpacity="0.2" strokeWidth="0.4" />
+        <text x="60" y="88" textAnchor="middle" fontSize="3.3" fill="#b8860b">{subLine}</text>
+        {closureText && <><rect x="22" y="98" width="76" height="14" rx="4" fill="#d4a017" fillOpacity="0.06" /><text x="60" y="107" textAnchor="middle" fontSize="3" fill="#78716c">{closureText}</text></>}
+        <line x1="20" y1="130" x2="100" y2="130" stroke="#d4a017" strokeOpacity="0.15" strokeWidth="0.3" />
+        <text x="60" y="142" textAnchor="middle" fontSize="3.8" fontWeight="700" fill="#d4a017">{name}</text>
       </> : hint === 'cute' ? <>
-        {/* 귀여운 스타일 — 큰 둥근 요소 + 별/하트 */}
-        <text x="60" y="12" textAnchor="middle" fontSize="3.2" fontWeight="600" fill={isDark ? 'rgba(255,255,255,0.5)' : a}>{name}</text>
-        {/* 배경 큰 원 */}
-        <circle cx="60" cy="55" r="32" fill={c} fillOpacity="0.04" />
-        <circle cx="60" cy="55" r="24" fill={c} fillOpacity="0.03" />
-        {/* 산개 장식 */}
-        <circle cx="22" cy="30" r="5" fill={c} fillOpacity="0.06" />
-        <circle cx="98" cy="28" r="4" fill={c} fillOpacity="0.05" />
-        <circle cx="15" cy="65" r="3" fill={c} fillOpacity="0.04" />
-        <circle cx="105" cy="72" r="2.5" fill={c} fillOpacity="0.03" />
-        <text x="18" y="46" fontSize="3" fill={c} fillOpacity="0.12">♡</text>
-        <text x="102" y="50" fontSize="2.5" fill={c} fillOpacity="0.1">✧</text>
-        <text x="26" y="80" fontSize="2" fill={c} fillOpacity="0.08">♡</text>
-        {/* 본문 */}
-        <text x="60" y="50" textAnchor="middle" fontSize="9" fontWeight="800" fill={isDark ? '#fbbf24' : c}>{line1}</text>
-        <text x="60" y="64" textAnchor="middle" fontSize="8" fontWeight="800" fill={isDark ? '#fbbf24' : c}>{line2}</text>
-        <text x="60" y="82" textAnchor="middle" fontSize="3.3" fill={isDark ? '#94a3b8' : a}>{subLine}</text>
-        {closureText && <><rect x="25" y="96" width="70" height="12" rx="6" fill={c} fillOpacity="0.06" /><text x="60" y="104" textAnchor="middle" fontSize="3" fill={isDark ? '#94a3b8' : '#64748b'}>{closureText}</text></>}
-        <text x="60" y="136" textAnchor="middle" fontSize="3.2" fill={isDark ? 'rgba(255,255,255,0.4)' : '#94a3b8'}>{name}</text>
+        {/* ━━ 귀여운 스타일 ━━ 컬러풀 큰 도트 + 하트/별 + 상단에 병원명 */}
+        {/* 파스텔 배경 서클들 — 크고 잘 보이게 */}
+        <circle cx="20" cy="20" r="14" fill={c} fillOpacity="0.12" />
+        <circle cx="100" cy="25" r="10" fill={a} fillOpacity="0.1" />
+        <circle cx="60" cy="140" r="18" fill={c} fillOpacity="0.08" />
+        <circle cx="10" cy="100" r="8" fill={a} fillOpacity="0.06" />
+        <circle cx="108" cy="90" r="12" fill={c} fillOpacity="0.07" />
+        {/* 하트/별 장식 — 잘 보이게 */}
+        <text x="14" y="50" fontSize="5" fill={c} fillOpacity="0.3">♡</text>
+        <text x="104" y="55" fontSize="4" fill={a} fillOpacity="0.25">✧</text>
+        <text x="96" y="14" fontSize="3.5" fill={c} fillOpacity="0.2">♡</text>
+        <text x="20" y="85" fontSize="3" fill={c} fillOpacity="0.2">★</text>
+        <text x="100" y="120" fontSize="4" fill={a} fillOpacity="0.15">♡</text>
+        <text x="14" y="130" fontSize="3" fill={c} fillOpacity="0.2">✧</text>
+        {/* 상단 병원명 + 리본 */}
+        <text x="60" y="14" textAnchor="middle" fontSize="3.5" fontWeight="700" fill={c}>{name}</text>
+        {/* 큰 둥근 카드 영역 */}
+        <rect x="16" y="22" width="88" height="80" rx="16" fill={c} fillOpacity="0.06" />
+        {/* 본문 — 크고 둥근 느낌 */}
+        <text x="60" y="50" textAnchor="middle" fontSize="10" fontWeight="900" fill={c}>{line1}</text>
+        <text x="60" y="66" textAnchor="middle" fontSize="9" fontWeight="900" fill={c}>{line2}</text>
+        <text x="60" y="86" textAnchor="middle" fontSize="3.5" fill={a}>{subLine}</text>
+        {closureText && <><rect x="22" y="108" width="76" height="13" rx="6.5" fill={c} fillOpacity="0.1" /><text x="60" y="117" textAnchor="middle" fontSize="3" fill="#64748b">{closureText}</text></>}
+        <text x="60" y="145" textAnchor="middle" fontSize="3" fill="#94a3b8">{name}</text>
       </> : hint === 'nature' ? <>
-        {/* 자연풍 — 그라데이션 배경 + 산/풍경 실루엣 */}
-        <text x="60" y="12" textAnchor="middle" fontSize="3.2" fontWeight="600" fill={isDark ? 'rgba(255,255,255,0.5)' : a}>{name}</text>
-        <rect x="10" y="18" width="100" height="86" rx="6" fill={isDark ? 'rgba(255,255,255,0.03)' : `${c}08`} />
-        {/* 산 실루엣 */}
-        <path d="M10,95 Q30,75 50,90 Q70,72 90,85 Q100,78 110,95 Z" fill={c} fillOpacity="0.05" />
-        <path d="M10,100 Q25,85 45,96 Q65,80 85,92 Q100,82 110,100 Z" fill={c} fillOpacity="0.04" />
-        {/* 본문 */}
-        <text x="60" y="48" textAnchor="middle" fontSize="9" fontWeight="800" fill={isDark ? '#ffffff' : c}>{line1}</text>
-        <text x="60" y="62" textAnchor="middle" fontSize="8.5" fontWeight="800" fill={isDark ? '#ffffff' : c}>{line2}</text>
-        <text x="60" y="80" textAnchor="middle" fontSize="3.5" fill={isDark ? 'rgba(255,255,255,0.6)' : a}>{subLine}</text>
-        {closureText && <><rect x="20" y="112" width="80" height="14" rx="5" fill={c} fillOpacity="0.05" /><text x="60" y="121" textAnchor="middle" fontSize="3.2" fill={isDark ? '#94a3b8' : '#64748b'}>{closureText}</text></>}
+        {/* ━━ 자연/풍경 ━━ 상단에 하늘 그라데이션 + 하단에 큰 산 실루엣 */}
+        {/* 하늘 영역 */}
+        <rect x="5" y="4" width="110" height="60" rx="4" fill={isDark ? '#1e3a5f' : c} fillOpacity={isDark ? 0.3 : 0.08} />
+        {/* 태양/달 */}
+        <circle cx="85" cy="22" r="10" fill="#fbbf24" fillOpacity="0.2" />
+        <circle cx="85" cy="22" r="7" fill="#fbbf24" fillOpacity="0.15" />
+        {/* 구름 */}
+        <ellipse cx="30" cy="18" rx="12" ry="4" fill="white" fillOpacity="0.15" />
+        <ellipse cx="24" cy="16" rx="8" ry="3.5" fill="white" fillOpacity="0.12" />
+        {/* 산 실루엣 — 크고 뚜렷하게 */}
+        <path d="M0,110 Q15,80 35,95 Q50,70 65,88 Q80,65 95,82 Q110,72 120,90 L120,160 L0,160 Z" fill={c} fillOpacity="0.12" />
+        <path d="M0,120 Q20,95 40,108 Q55,85 70,100 Q85,80 100,95 Q115,85 120,100 L120,160 L0,160 Z" fill={c} fillOpacity="0.08" />
+        {/* 나무 실루엣 */}
+        <path d="M15,120 L18,108 L21,120 Z" fill={c} fillOpacity="0.15" />
+        <path d="M95,115 L99,100 L103,115 Z" fill={c} fillOpacity="0.12" />
+        <rect x="17" y="120" width="2" height="5" fill={c} fillOpacity="0.1" />
+        <rect x="97" y="115" width="2" height="5" fill={c} fillOpacity="0.08" />
+        {/* 상단 병원명 */}
+        <text x="60" y="14" textAnchor="middle" fontSize="3.2" fontWeight="600" fill={isDark ? 'rgba(255,255,255,0.6)' : a}>{name}</text>
+        {/* 본문 — 하늘 영역 위 */}
+        <text x="60" y="38" textAnchor="middle" fontSize="9.5" fontWeight="900" fill={isDark ? '#ffffff' : c}>{line1}</text>
+        <text x="60" y="52" textAnchor="middle" fontSize="8.5" fontWeight="900" fill={isDark ? '#ffffff' : c}>{line2}</text>
+        {/* 중간 메시지 */}
+        <text x="60" y="78" textAnchor="middle" fontSize="3.5" fill={isDark ? 'rgba(255,255,255,0.6)' : a}>{subLine}</text>
+        {closureText && <><rect x="20" y="86" width="80" height="14" rx="5" fill="white" fillOpacity="0.5" /><text x="60" y="95" textAnchor="middle" fontSize="3.2" fill="#64748b">{closureText}</text></>}
         <text x="60" y="148" textAnchor="middle" fontSize="3.2" fill={isDark ? 'rgba(255,255,255,0.4)' : '#94a3b8'}>{name}</text>
       </> : hint === 'minimal' ? <>
-        {/* 미니멀 — 중앙 집중 타이포 + 최소 장식 */}
-        <text x="60" y="12" textAnchor="middle" fontSize="3.2" fontWeight="600" fill={isDark ? 'rgba(255,255,255,0.5)' : a} letterSpacing="0.5">{name}</text>
-        <line x1="40" y1="34" x2="80" y2="34" stroke={c} strokeOpacity="0.1" strokeWidth="0.3" />
-        <circle cx="38" cy="34" r="1" fill={c} fillOpacity="0.08" />
-        <circle cx="82" cy="34" r="1" fill={c} fillOpacity="0.08" />
-        <text x="60" y="60" textAnchor="middle" fontSize="11" fontWeight="800" fill={isDark ? '#ffffff' : c}>{line1}</text>
-        <text x="60" y="76" textAnchor="middle" fontSize="9.5" fontWeight="800" fill={isDark ? '#ffffff' : c}>{line2}</text>
-        <line x1="40" y1="86" x2="80" y2="86" stroke={c} strokeOpacity="0.1" strokeWidth="0.3" />
-        <circle cx="38" cy="86" r="1" fill={c} fillOpacity="0.08" />
-        <circle cx="82" cy="86" r="1" fill={c} fillOpacity="0.08" />
-        <text x="60" y="104" textAnchor="middle" fontSize="3.3" fill={isDark ? 'rgba(255,255,255,0.5)' : a} letterSpacing="0.8">{subLine}</text>
-        {closureText && <><rect x="30" y="118" width="60" height="11" rx="5.5" fill={c} fillOpacity="0.04" /><text x="60" y="125.5" textAnchor="middle" fontSize="2.8" fill={isDark ? '#64748b' : '#94a3b8'}>{closureText}</text></>}
-        <text x="60" y="150" textAnchor="middle" fontSize="3.2" fill={isDark ? 'rgba(255,255,255,0.3)' : '#94a3b8'}>{name}</text>
+        {/* ━━ 미니멀 ━━ 극대화된 타이포, 비대칭 레이아웃, 좌측 정렬 */}
+        {/* 상단 작은 병원명 + 가는 선 */}
+        <text x="16" y="16" fontSize="3" fontWeight="500" fill={isDark ? 'rgba(255,255,255,0.4)' : '#94a3b8'} letterSpacing="1">{name}</text>
+        <line x1="16" y1="20" x2="50" y2="20" stroke={c} strokeOpacity="0.2" strokeWidth="0.4" />
+        {/* 거대한 메인 텍스트 — 좌측 정렬로 차별화 */}
+        <text x="16" y="58" fontSize="14" fontWeight="900" fill={isDark ? '#ffffff' : c}>{line1}</text>
+        <text x="16" y="80" fontSize="12" fontWeight="900" fill={isDark ? '#ffffff' : c}>{line2}</text>
+        {/* 세로 악센트 바 */}
+        <rect x="12" y="44" width="2" height="44" rx="1" fill={c} fillOpacity="0.25" />
+        {/* 서브 텍스트 */}
+        <text x="16" y="102" fontSize="3.5" fill={isDark ? 'rgba(255,255,255,0.5)' : a} letterSpacing="1">{subLine}</text>
+        {closureText && <><rect x="14" y="112" width="60" height="12" rx="6" fill={c} fillOpacity="0.06" /><text x="44" y="120" textAnchor="middle" fontSize="2.8" fill={isDark ? '#64748b' : '#94a3b8'}>{closureText}</text></>}
+        {/* 하단 우측 정렬 병원명 */}
+        <text x="104" y="148" textAnchor="end" fontSize="3" fill={isDark ? 'rgba(255,255,255,0.3)' : '#94a3b8'}>{name}</text>
+        {/* 우하단 장식 점 */}
+        <circle cx="108" cy="145" r="1" fill={c} fillOpacity="0.15" />
       </> : <>
-        {/* warm / fallback — 따뜻한 곡선 + 장식 */}
-        <text x="60" y="12" textAnchor="middle" fontSize="3.2" fontWeight="600" fill={isDark ? 'rgba(255,255,255,0.5)' : a}>{name}</text>
-        <rect x="10" y="18" width="100" height="96" rx="10" fill={isDark ? 'rgba(255,255,255,0.03)' : `${c}06`} />
-        {/* 부드러운 곡선 장식 */}
-        <path d="M10,20 Q30,14 60,20 Q90,26 110,20" fill="none" stroke={c} strokeWidth="0.5" strokeOpacity="0.06" />
-        <circle cx="20" cy="28" r="4" fill={c} fillOpacity="0.05" />
-        <circle cx="100" cy="32" r="3" fill={c} fillOpacity="0.04" />
-        <circle cx="14" cy="52" r="2" fill={c} fillOpacity="0.03" />
+        {/* ━━ warm / fallback ━━ 큰 둥근 배경 + 부드러운 곡선 + 중앙 정렬 */}
+        {/* 큰 둥근 배경 카드 */}
+        <rect x="8" y="20" width="104" height="105" rx="14" fill={isDark ? 'rgba(255,255,255,0.05)' : c} fillOpacity={isDark ? 0.05 : 0.07} />
+        {/* 상단 병원명 */}
+        <text x="60" y="14" textAnchor="middle" fontSize="3.5" fontWeight="600" fill={isDark ? 'rgba(255,255,255,0.5)' : a}>{name}</text>
+        {/* 따뜻한 곡선 장식 — 눈에 잘 보이게 */}
+        <path d="M8,24 Q30,14 60,24 Q90,34 112,24" fill="none" stroke={c} strokeWidth="0.8" strokeOpacity="0.15" />
+        <path d="M8,120 Q30,130 60,120 Q90,110 112,120" fill="none" stroke={c} strokeWidth="0.8" strokeOpacity="0.12" />
+        {/* 둥근 장식 */}
+        <circle cx="18" cy="34" r="6" fill={c} fillOpacity="0.1" />
+        <circle cx="102" cy="38" r="5" fill={c} fillOpacity="0.08" />
+        <circle cx="12" cy="58" r="3" fill={c} fillOpacity="0.06" />
+        <circle cx="108" cy="100" r="4" fill={c} fillOpacity="0.05" />
         {/* 본문 */}
-        <text x="60" y="50" textAnchor="middle" fontSize="9" fontWeight="800" fill={isDark ? '#ffffff' : c}>{line1}</text>
-        <text x="60" y="64" textAnchor="middle" fontSize="8.5" fontWeight="800" fill={isDark ? '#ffffff' : c}>{line2}</text>
-        <rect x="30" y="72" width="60" height="0.5" fill={c} fillOpacity="0.1" />
-        <text x="60" y="86" textAnchor="middle" fontSize="3.3" fill={isDark ? 'rgba(255,255,255,0.5)' : a} fontStyle="italic">{subLine}</text>
-        {closureText && <><rect x="15" y="104" width="90" height="12" rx="6" fill={isDark ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.7)'} /><text x="60" y="112" textAnchor="middle" fontSize="3" fill={isDark ? '#64748b' : '#64748b'}>{closureText}</text></>}
+        <text x="60" y="54" textAnchor="middle" fontSize="9" fontWeight="800" fill={isDark ? '#ffffff' : c}>{line1}</text>
+        <text x="60" y="70" textAnchor="middle" fontSize="8.5" fontWeight="800" fill={isDark ? '#ffffff' : c}>{line2}</text>
+        <rect x="30" y="78" width="60" height="0.6" fill={c} fillOpacity="0.15" />
+        <text x="60" y="92" textAnchor="middle" fontSize="3.3" fill={isDark ? 'rgba(255,255,255,0.5)' : a} fontStyle="italic">{subLine}</text>
+        {closureText && <><rect x="14" y="104" width="92" height="14" rx="7" fill={isDark ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.7)'} /><text x="60" y="113" textAnchor="middle" fontSize="3" fill="#64748b">{closureText}</text></>}
         <text x="60" y="146" textAnchor="middle" fontSize="3.2" fill={isDark ? 'rgba(255,255,255,0.3)' : '#94a3b8'}>{name}</text>
       </>}
     </>);
