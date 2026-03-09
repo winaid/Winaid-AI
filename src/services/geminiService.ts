@@ -751,8 +751,8 @@ ${JSON.stringify(searchResults?.collected_facts?.slice(0, 3) || [], null, 2)}`;
   // ── Stage B: 본문 생성 (PRO) ── [도입부 + 소제목 병렬 + 마무리]
   safeProgress('✍️ [2/4] 본문 생성 중...');
 
-  // B-1: 도입부 생성
-  safeProgress('✍️ [2/4] 도입부 작성 중...');
+  // B-1 & B-2: 도입부 + 소제목 섹션 동시 병렬 생성 (도입부도 소제목과 병렬로 실행)
+  safeProgress('✍️ [2/4] 도입부 + 소제목 병렬 생성 중...');
   const introPrompt = getPipelineIntroPrompt(
     outline.intro?.approach || 'A',
     outline.intro?.scene || request.topic,
@@ -768,17 +768,23 @@ ${request.disease ? `[질환] ${request.disease}` : ''}
 [검색 결과]
 ${JSON.stringify(searchResults?.collected_facts?.slice(0, 2) || [], null, 2)}`;
 
-  const introHtml = await callGemini({
+  // 도입부 Promise
+  const introPromise = callGemini({
     prompt: introUserPrompt,
     systemPrompt: introPrompt,
     model: GEMINI_MODEL.PRO,
     responseType: 'text',
     timeout: 45000,
     temperature: 0.85,
+  }).then(html => {
+    safeProgress('✅ 도입부 완료');
+    return typeof html === 'string' ? html.trim() : '';
+  }).catch(err => {
+    console.error('❌ 도입부 생성 실패:', err?.message);
+    return '';
   });
 
-  // B-2: 각 소제목 섹션 병렬 생성 (속도 3~5배 향상)
-  safeProgress(`✍️ [2/4] 소제목 ${outline.sections.length}개 병렬 생성 중...`);
+  // 소제목 섹션 Promises
 
   const sectionPromises = outline.sections.map((section: any, i: number) => {
     const sectionPrompt = getPipelineSectionPrompt(
@@ -827,11 +833,12 @@ ${JSON.stringify(searchResults?.collected_facts?.slice(i, i + 2) || [], null, 2)
     });
   });
 
-  const sectionHtmls = await Promise.all(sectionPromises);
+  // 도입부 + 소제목 모두 병렬 대기
+  const [introHtml, ...sectionHtmls] = await Promise.all([introPromise, ...sectionPromises]);
   const sectionSummaries = sectionHtmls.map(html =>
     html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().substring(0, 150)
   );
-  safeProgress(`✅ 소제목 ${sectionHtmls.filter(h => h).length}/${outline.sections.length}개 완료`);
+  safeProgress(`✅ 도입부 + 소제목 ${sectionHtmls.filter(h => h).length}/${outline.sections.length}개 완료`);
 
   // B-3: 마무리 생성
   safeProgress('✍️ [3/4] 마무리 작성 중...');
