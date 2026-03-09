@@ -91,6 +91,7 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
   const [showKeywordPanel, setShowKeywordPanel] = useState(false);
   const [keywordSortBy, setKeywordSortBy] = useState<'volume' | 'blog' | 'saturation'>('volume');
   const hospitalDropdownRef = useRef<HTMLDivElement>(null);
+  const topicInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -752,7 +753,7 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
           {trendingItems.length > 0 && (
             <div className="space-y-1.5 mb-3">
               {trendingItems.map((item, idx) => (
-                <button key={idx} type="button" onClick={() => { setDisease(item.topic); }} className="w-full text-left p-3 bg-white border border-slate-100 rounded-xl hover:border-blue-400 transition-all group relative">
+                <button key={idx} type="button" onClick={() => { if (postType === 'card_news') { setTopic(item.topic); } else { setDisease(item.topic); } topicInputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }); setTimeout(() => topicInputRef.current?.focus(), 300); }} className="w-full text-left p-3 bg-white border border-slate-100 rounded-xl hover:border-blue-400 transition-all group relative">
                    <div className="absolute top-2 right-2 text-[10px] font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md">
                       SEO {item.score}
                    </div>
@@ -769,7 +770,7 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
         {/* 제목/키워드 입력 */}
         <div className="space-y-2.5">
           <label className={labelCls}>{postType === 'press_release' ? '기사 제목' : postType === 'card_news' ? '카드뉴스 주제' : '블로그 제목'}</label>
-          <input type="text" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder={postType === 'press_release' ? '기사 주제 (예: 디지털 임플란트 도입 성과)' : postType === 'card_news' ? '주제 (예: 임플란트 시술 과정 안내)' : '글 제목 (예: 치아미백 종류와 비용 총정리)'} className={`${inputCls} !text-base !font-semibold`} required />
+          <input ref={topicInputRef} type="text" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder={postType === 'press_release' ? '기사 주제 (예: 디지털 임플란트 도입 성과)' : postType === 'card_news' ? '주제 (예: 임플란트 시술 과정 안내)' : '글 제목 (예: 치아미백 종류와 비용 총정리)'} className={`${inputCls} !text-base !font-semibold`} required />
           {postType !== 'card_news' && <input type="text" value={keywords} onChange={(e) => setKeywords(e.target.value)} placeholder="SEO 키워드 (예: 강남 치과, 임플란트 가격)" className={inputCls} />}
           {postType === 'blog' && (
             <input type="text" value={disease} onChange={(e) => setDisease(e.target.value)} placeholder="질환명 (예: 치주염, 충치, 부정교합) - 글의 실제 주제" className={inputCls} />
