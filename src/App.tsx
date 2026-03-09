@@ -1,9 +1,10 @@
 import React, { useState, useEffect, lazy, Suspense, useRef } from 'react';
-import { GenerationRequest, GenerationState, CardNewsScript, CardPromptData } from './types';
 import { supabase, signOut } from './lib/supabase';
 import type { User } from '@supabase/supabase-js';
 import ErrorBoundary from './components/ErrorBoundary';
 import { ToastContainer } from './components/Toast';
+import { useCardNewsWorkflow } from './hooks/useCardNewsWorkflow';
+import { useContentGeneration } from './hooks/useContentGeneration';
 
 // Lazy load heavy components
 const InputForm = lazy(() => import('./components/InputForm'));
@@ -106,26 +107,6 @@ const App: React.FC = () => {
     return 'landing';
   });
   const [apiKeyReady, setApiKeyReady] = useState<boolean>(false);
-  const [state, setState] = useState<GenerationState>({
-    isLoading: false,
-    error: null,
-    data: null,
-    progress: '',
-  });
-  
-  // 각 탭별 독립적인 상태 관리
-  const [blogState, setBlogState] = useState<GenerationState>({
-    isLoading: false,
-    error: null,
-    data: null,
-    progress: '',
-  });
-  const [pressState, setPressState] = useState<GenerationState>({
-    isLoading: false,
-    error: null,
-    data: null,
-    progress: '',
-  });
   
   // Supabase 인증 상태
   const [supabaseUser, setSupabaseUser] = useState<User | null>(null);
@@ -151,32 +132,28 @@ const App: React.FC = () => {
     window.location.hash = tab;
     setCurrentPage(tab as PageType);
   };
-  
-  // 현재 탭에 맞는 state 가져오기
-  const getCurrentState = (): GenerationState => {
-    if (contentTab === 'press') return pressState;
-    if (contentTab === 'blog' || contentTab === 'card_news') return blogState;
-    return state; // refine
-  };
-  
-  // 현재 탭에 맞는 setState 가져오기
-  const getCurrentSetState = (): React.Dispatch<React.SetStateAction<GenerationState>> => {
-    if (contentTab === 'press') return setPressState;
-    if (contentTab === 'blog' || contentTab === 'card_news') return setBlogState;
-    return setState;
-  };
-  
-  // 카드뉴스 3단계 워크플로우 상태
-  // 1단계: 원고 생성 → 2단계: 프롬프트 확인 → 3단계: 이미지 생성
-  const [cardNewsScript, setCardNewsScript] = useState<CardNewsScript | null>(null);
-  const [cardNewsPrompts, setCardNewsPrompts] = useState<CardPromptData[] | null>(null); // 🆕 프롬프트 확인 단계
-  const [pendingRequest, setPendingRequest] = useState<GenerationRequest | null>(null);
-  const [scriptProgress, setScriptProgress] = useState<string>('');
-  const [isGeneratingScript, setIsGeneratingScript] = useState<boolean>(false);
-  const [_currentStep, setCurrentStep] = useState<1 | 2 | 3>(1); // 🆕 현재 단계
-  
 
-  
+  // 카드뉴스 3단계 워크플로우 (커스텀 훅)
+  const {
+    cardNewsScript, cardNewsPrompts, pendingRequest,
+    scriptProgress, isGeneratingScript,
+    handleGenerateCardNews, handleRegenerateScript,
+    handleApproveScript, handleApprovePrompts,
+    handleEditPrompts, handleBackToScript, handleEditScript,
+  } = useCardNewsWorkflow();
+
+  // 콘텐츠 생성 상태 관리 (커스텀 훅)
+  const {
+    state, setState, getCurrentState, getCurrentSetState, handleGenerate,
+  } = useContentGeneration({
+    contentTab,
+    setContentTab,
+    setMobileTab,
+    leftPanelRef,
+    scrollPositionRef,
+    handleGenerateCardNews,
+  });
+
 
   // API 키 설정 모달 상태
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
@@ -486,339 +463,6 @@ const App: React.FC = () => {
     
     loadApiKeys();
   }, [currentPage]);
-
-  const handleGenerate = async (request: GenerationRequest) => {
-    // 🔒 스크롤 위치 고정 (글 생성 시 스크롤 튀는 현상 방지)
-    const currentScrollY = window.scrollY || window.pageYOffset;
-    const currentScrollX = window.scrollX || window.pageXOffset;
-    console.log('🔒 현재 스크롤 위치 저장:', currentScrollY, currentScrollX);
-    
-    // 🔒 스크롤 잠금 함수 (이벤트 리스너로 완전 차단)
-    const lockScroll = (e: Event) => {
-      e.preventDefault();
-      window.scrollTo(currentScrollX, currentScrollY);
-    };
-    
-    // 🔒 스크롤 잠금 활성화
-    document.body.style.overflow = 'hidden';
-    window.addEventListener('scroll', lockScroll, { passive: false });
-    
-    // 🔒 100ms 후 스크롤 잠금 해제
-    setTimeout(() => {
-      window.removeEventListener('scroll', lockScroll);
-      document.body.style.overflow = '';
-      window.scrollTo(currentScrollX, currentScrollY);
-      console.log('🔓 스크롤 잠금 해제');
-    }, 200);
-    
-    // 🗑️ 새 콘텐츠 생성 시 이전 저장본 자동 삭제
-    try {
-      localStorage.removeItem('hospitalai_autosave');
-      localStorage.removeItem('hospitalai_autosave_history');
-      localStorage.removeItem('hospitalai_card_prompt_history');
-      localStorage.removeItem('hospitalai_card_ref_image');
-      console.log('🗑️ 로컬 저장본 삭제 완료');
-      
-      // 🆕 서버 저장본은 삭제하지 않음 (사용자가 이전 글을 참고할 수 있도록)
-      // const deleteResult = await deleteAllContent();
-      // if (deleteResult.success) {
-      //   console.log('🗑️ 서버 저장본 삭제 완료!');
-      // } else {
-      //   console.warn('⚠️ 서버 저장본 삭제 실패:', deleteResult.error);
-      // }
-    } catch (e) {
-      console.warn('저장본 삭제 실패:', e);
-    }
-
-    // 🔧 스크롤 위치 저장 (탭 전환 전)
-    if (leftPanelRef.current) {
-      scrollPositionRef.current = leftPanelRef.current.scrollTop;
-      console.log('📍 저장된 스크롤 위치:', scrollPositionRef.current);
-    }
-
-    console.log('📱 모바일 탭 전환: result');
-    setMobileTab('result');
-    
-    console.log('📋 postType 확인:', request.postType);
-
-    // 🚨 postType이 undefined면 에러 발생시키기 (디버깅용)
-    if (!request.postType) {
-      console.error('❌ postType이 undefined입니다! request:', request);
-      setState(prev => ({
-        ...prev,
-        error: '콘텐츠 타입이 선택되지 않았습니다. 페이지를 새로고침 후 다시 시도해주세요.'
-      }));
-      return;
-    }
-
-    // 크레딧 체크 (SaaS 과금)
-    try {
-      const { checkCredits } = await import('./services/creditService');
-      const creditStatus = await checkCredits(request.postType);
-      if (!creditStatus.canGenerate) {
-        setState(prev => ({
-          ...prev,
-          error: creditStatus.message || '크레딧이 부족합니다.',
-        }));
-        return;
-      }
-      if (creditStatus.creditsRemaining >= 0 && creditStatus.planType !== 'anonymous') {
-        console.log(`💳 크레딧: ${creditStatus.creditsRemaining}/${creditStatus.creditsTotal} 남음`);
-      }
-    } catch (e) {
-      console.warn('크레딧 체크 스킵:', e);
-    }
-    
-    // 카드뉴스: 2단계 워크플로우 (원고 생성 → 사용자 확인 → 디자인 변환)
-    if (request.postType === 'card_news') {
-      console.log('🎴 카드뉴스 모드 시작');
-      setContentTab('card_news'); // 카드뉴스 탭으로 이동
-      setIsGeneratingScript(true);
-      setCardNewsScript(null);
-      setPendingRequest(request);
-      setState(prev => ({ ...prev, isLoading: false, data: null, error: null }));
-      
-      try {
-        const { generateCardNewsScript } = await import('./services/cardNewsService');
-        const script = await generateCardNewsScript(request, setScriptProgress);
-        setCardNewsScript(script);
-        setScriptProgress('');
-      } catch (err: any) {
-        setScriptProgress('');
-        const { getKoreanErrorMessage } = await import('./services/geminiClient');
-        setState(prev => ({ ...prev, error: getKoreanErrorMessage(err) }));
-      } finally {
-        setIsGeneratingScript(false);
-      }
-      return;
-    }
-
-    // 블로그/언론보도: 기존 플로우 (한 번에 생성)
-    console.log('📝 블로그/보도자료 모드 시작');
-    
-    // 🔥 탭 자동 전환 + 언론보도는 pressState에, 블로그는 blogState에 저장
-    if (request.postType === 'press_release') {
-      setContentTab('press'); // 언론보도 탭으로 이동
-    } else {
-      setContentTab('blog'); // 블로그 탭으로 이동
-    }
-    
-    const targetSetState = request.postType === 'press_release' ? setPressState : setBlogState;
-    
-    targetSetState(prev => ({ ...prev, isLoading: true, error: null, progress: 'SEO 최적화 키워드 분석 및 이미지 생성 중...' }));
-    
-    console.log('🚀 generateFullPost 호출 시작');
-    try {
-      const { generateFullPost } = await import('./services/geminiService');
-      const result = await generateFullPost(request, (p) => targetSetState(prev => ({ ...prev, progress: p })));
-      targetSetState({ isLoading: false, error: null, data: result, progress: '' });
-
-      // 크레딧 차감 + 사용량 저장
-      try {
-        const { deductCredit, flushSessionUsage } = await import('./services/creditService');
-        await deductCredit(request.postType);
-        await flushSessionUsage();
-      } catch (e) {
-        console.warn('크레딧 차감/사용량 저장 스킵:', e);
-      }
-
-      // 🆕 API 서버에 자동 저장
-      try {
-        console.log('💾 API 서버에 콘텐츠 저장 중...');
-        const { saveContentToServer } = await import('./services/apiService');
-        const saveResult = await saveContentToServer({
-          title: result.title,
-          content: result.htmlContent,
-          category: request.category,
-          postType: request.postType,
-          metadata: {
-            keywords: request.keywords,
-            seoScore: result.seoScore?.total,
-            aiSmellScore: result.factCheck?.ai_smell_score,
-          },
-        });
-        
-        if (saveResult.success) {
-          console.log('✅ 서버 저장 완료! ID:', saveResult.id);
-          
-        } else {
-          console.warn('⚠️ 서버 저장 실패:', saveResult.error);
-        }
-      } catch (saveErr) {
-        console.warn('⚠️ 서버 저장 중 오류 (무시하고 계속):', saveErr);
-      }
-    } catch (err: any) {
-       const { getKoreanErrorMessage } = await import('./services/geminiClient');
-       const friendlyError = getKoreanErrorMessage(err);
-       targetSetState(prev => ({ ...prev, isLoading: false, error: friendlyError }));
-       setMobileTab('input');
-    }
-  };
-
-  // 카드뉴스 원고 재생성
-  const handleRegenerateScript = async () => {
-    if (!pendingRequest) return;
-
-    setIsGeneratingScript(true);
-    setCardNewsScript(null);
-
-    try {
-      const { generateCardNewsScript } = await import('./services/cardNewsService');
-      const script = await generateCardNewsScript(pendingRequest, setScriptProgress);
-      setCardNewsScript(script);
-      setScriptProgress('');
-    } catch (err: any) {
-      setScriptProgress('');
-      const { getKoreanErrorMessage } = await import('./services/geminiClient');
-      setState(prev => ({ ...prev, error: getKoreanErrorMessage(err) }));
-    } finally {
-      setIsGeneratingScript(false);
-    }
-  };
-
-  // 🆕 카드뉴스 원고 승인 → 프롬프트 확인 단계로 이동 (2단계)
-  const handleApproveScript = async () => {
-    if (!cardNewsScript || !pendingRequest) return;
-    
-    setIsGeneratingScript(true);
-    setScriptProgress('🎨 [2단계] 이미지 프롬프트 생성 중...');
-    
-    try {
-      // 원고를 디자인으로 변환 (프롬프트만 생성, 이미지는 아직!)
-      const { convertScriptToCardNews } = await import('./services/cardNewsService');
-      const designResult = await convertScriptToCardNews(
-        cardNewsScript, 
-        pendingRequest, 
-        setScriptProgress
-      );
-      
-      // 🆕 프롬프트 저장 → 사용자에게 확인받기!
-      setCardNewsPrompts(designResult.cardPrompts);
-      setCurrentStep(2);
-      setScriptProgress('');
-      
-    } catch (err: any) {
-      setScriptProgress('');
-      const { getKoreanErrorMessage } = await import('./services/geminiClient');
-      setState(prev => ({ ...prev, error: getKoreanErrorMessage(err) }));
-    } finally {
-      setIsGeneratingScript(false);
-    }
-  };
-
-  // 🆕 프롬프트 수정
-  const handleEditPrompts = (updatedPrompts: CardPromptData[]) => {
-    setCardNewsPrompts(updatedPrompts);
-  };
-  
-  // 🆕 프롬프트 승인 → 이미지 생성 (3단계)
-  const handleApprovePrompts = async () => {
-    if (!cardNewsPrompts || !pendingRequest || !cardNewsScript) return;
-    
-    setIsGeneratingScript(true);
-    setScriptProgress('🖼️ [3단계] 이미지 생성 중...');
-    setCurrentStep(3);
-    
-    try {
-      const imageStyle = pendingRequest.imageStyle || 'illustration';
-      const referenceImage = pendingRequest.coverStyleImage || pendingRequest.contentStyleImage;
-      const copyMode = pendingRequest.styleCopyMode;
-      
-      // 🆕 확인된 프롬프트로 이미지 생성!
-      const { generateSingleImage } = await import('./services/imageGenerationService');
-      const imagePromises = cardNewsPrompts.map((promptData, i) => {
-        setScriptProgress(`🖼️ 이미지 ${i + 1}/${cardNewsPrompts.length}장 생성 중...`);
-        return generateSingleImage(
-          promptData.imagePrompt, 
-          imageStyle, 
-          '1:1', 
-          pendingRequest.customImagePrompt,
-          referenceImage,
-          copyMode
-        );
-      });
-      
-      const images = await Promise.all(imagePromises);
-      
-      // HTML 생성 (카드 슬라이드 형식)
-      const cardSlides = images.map((imgUrl, i) => {
-        if (imgUrl) {
-          return `
-            <div class="card-slide" style="border-radius: 24px; overflow: hidden; aspect-ratio: 1/1; box-shadow: 0 4px 16px rgba(0,0,0,0.08);">
-              <img src="${imgUrl}" alt="카드 ${i + 1}" data-index="${i + 1}" class="card-full-img" style="width: 100%; height: 100%; object-fit: cover;" />
-            </div>`;
-        }
-        return `
-          <div class="card-slide" style="border-radius: 24px; overflow: hidden; aspect-ratio: 1/1; box-shadow: 0 4px 16px rgba(0,0,0,0.08); background: #f1f5f9; display: flex; align-items: center; justify-content: center;">
-            <div style="text-align: center; color: #64748B;">
-              <div style="font-size: 32px; margin-bottom: 8px;">🖼️</div>
-              <div>이미지 생성 실패</div>
-              <div style="font-size: 12px;">카드 클릭하여 재생성</div>
-            </div>
-          </div>`;
-      }).join('\n');
-      
-      const finalHtml = `
-        <div class="card-news-container">
-          <h2 class="hidden-title">${cardNewsScript.title}</h2>
-          <div class="card-grid-wrapper">
-            ${cardSlides}
-          </div>
-        </div>
-      `.trim();
-      
-      // 결과 저장
-      setState({
-        isLoading: false,
-        error: null,
-        data: {
-          htmlContent: finalHtml,
-          title: cardNewsScript.title,
-          imageUrl: images[0] || '',
-          fullHtml: finalHtml,
-          tags: [],
-          factCheck: {
-            fact_score: 0,
-            verified_facts_count: 0,
-            safety_score: 85,
-            conversion_score: 80,
-            issues: [],
-            recommendations: []
-          },
-          postType: 'card_news',
-          imageStyle: pendingRequest.imageStyle,
-          customImagePrompt: pendingRequest.customImagePrompt,
-          cardPrompts: cardNewsPrompts
-        },
-        progress: ''
-      });
-      
-      // 상태 초기화
-      setCardNewsScript(null);
-      setCardNewsPrompts(null);
-      setPendingRequest(null);
-      setScriptProgress('');
-      setCurrentStep(1);
-      
-    } catch (err: any) {
-      setScriptProgress('');
-      const { getKoreanErrorMessage } = await import('./services/geminiClient');
-      setState(prev => ({ ...prev, error: getKoreanErrorMessage(err) }));
-    } finally {
-      setIsGeneratingScript(false);
-    }
-  };
-
-  // 🆕 이전 단계로 돌아가기
-  const handleBackToScript = () => {
-    setCardNewsPrompts(null);
-    setCurrentStep(1);
-  };
-
-  // 원고 수정
-  const handleEditScript = (updatedScript: CardNewsScript) => {
-    setCardNewsScript(updatedScript);
-  };
 
   // 랜딩 페이지 (모든 체크 전에 먼저 표시)
   if (currentPage === 'landing') {
