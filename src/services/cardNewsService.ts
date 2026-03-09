@@ -442,7 +442,8 @@ const fullImageCardPromptAgent = async (
   imageStyle: ImageStyle,
   category: string,
   styleConfig?: AnalyzedStyle,
-  customImagePrompt?: string
+  customImagePrompt?: string,
+  designTemplateStylePrompt?: string
 ): Promise<CardPromptData[]> => {
   const ai = getAiClient();
 
@@ -588,11 +589,13 @@ ${hasWindowButtons ? '- 브라우저 창 버튼(빨/노/초) 포함' : ''}
 
       const descText = (isFirst || isLast) ? '' : (s.description ? `\ndescription: "${s.description}"` : '');
       const styleText = hasCustomStyle ? translatedCustomStyle : STYLE_KEYWORDS[imageStyle] || STYLE_KEYWORDS.illustration;
+      // 디자인 템플릿의 stylePrompt가 있으면 이미지 프롬프트에 직접 포함 (번역 거치지 않음)
+      const templateBlock = designTemplateStylePrompt ? `\n${designTemplateStylePrompt}` : '';
       const imagePrompt = `subtitle: "${s.subtitle}"
 mainTitle: "${mainTitleClean}"${descText}
 비주얼: ${s.imageKeyword}
 스타일: ${styleText}
-배경색: ${bgColor}`;
+배경색: ${bgColor}${templateBlock}`;
 
       const aiCard = result.cards?.[idx];
       const textPrompt = aiCard?.textPrompt || {
@@ -614,6 +617,7 @@ mainTitle: "${mainTitleClean}"${descText}
   } catch (error) {
     console.error('전체 이미지 카드 프롬프트 실패:', error);
     const styleText = hasCustomStyle ? translatedCustomStyle : STYLE_KEYWORDS[imageStyle] || STYLE_KEYWORDS.illustration;
+    const templateBlock = designTemplateStylePrompt ? `\n${designTemplateStylePrompt}` : '';
     const fallbackCards = slides.map((s, idx) => {
       const isFirst = idx === 0;
       const isLast = idx === slides.length - 1;
@@ -624,7 +628,7 @@ mainTitle: "${mainTitleClean}"${descText}
 mainTitle: "${mainTitleClean}"${descText}
 비주얼: ${s.imageKeyword}
 스타일: ${styleText}
-배경색: ${bgColor}`,
+배경색: ${bgColor}${templateBlock}`,
         textPrompt: {
           subtitle: s.subtitle,
           mainTitle: s.mainTitle,
@@ -836,7 +840,7 @@ export const convertScriptToCardNews = async (
   script: CardNewsScript,
   request: GenerationRequest,
   onProgress: (msg: string) => void
-): Promise<{ content: string; imagePrompts: string[]; cardPrompts: CardPromptData[]; title: string; }> => {
+): Promise<{ content: string; imagePrompts: string[]; cardPrompts: CardPromptData[]; title: string; styleConfig?: AnalyzedStyle; }> => {
   onProgress('🎨 [2단계] 카드뉴스 디자인 변환 중...');
 
   const slides: SlideStory[] = script.slides.map(s => ({
@@ -882,7 +886,8 @@ export const convertScriptToCardNews = async (
     request.imageStyle || 'illustration',
     request.category,
     styleConfig,
-    effectiveCustomPrompt
+    effectiveCustomPrompt,
+    designTemplateStylePrompt
   );
 
   const imagePrompts = cardPrompts.map(c => cleanImagePromptText(c.imagePrompt));
@@ -892,7 +897,8 @@ export const convertScriptToCardNews = async (
     content: htmlContent,
     imagePrompts,
     cardPrompts,
-    title: script.title
+    title: script.title,
+    styleConfig
   };
 };
 
@@ -900,7 +906,7 @@ export const convertScriptToCardNews = async (
 export const generateCardNewsWithAgents = async (
   request: GenerationRequest,
   onProgress: (msg: string) => void
-): Promise<{ content: string; imagePrompts: string[]; cardPrompts: CardPromptData[]; title: string; }> => {
+): Promise<{ content: string; imagePrompts: string[]; cardPrompts: CardPromptData[]; title: string; styleConfig?: AnalyzedStyle; }> => {
   const slideCount = request.slideCount || 6;
 
   // 1단계: 스토리 기획
@@ -983,7 +989,8 @@ export const generateCardNewsWithAgents = async (
     request.imageStyle || 'illustration',
     request.category,
     styleConfig,
-    effectiveCustomPrompt
+    effectiveCustomPrompt,
+    designTemplateStylePrompt
   );
 
   const imagePrompts = cardPrompts.map(c => cleanImagePromptText(c.imagePrompt));
@@ -993,6 +1000,7 @@ export const generateCardNewsWithAgents = async (
     content: htmlContent,
     imagePrompts,
     cardPrompts,
-    title: story.topic
+    title: story.topic,
+    styleConfig
   };
 };

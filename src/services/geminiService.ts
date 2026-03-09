@@ -2761,10 +2761,18 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
       .trim()
       .substring(0, 100); // alt 텍스트 길이 제한
     
+    // 디자인 템플릿의 styleConfig 적용
+    const sc = agentResult.styleConfig;
+    const cardBorderRadius = sc?.borderRadius || '24px';
+    const cardBoxShadow = sc?.boxShadow || '0 4px 16px rgba(0,0,0,0.08)';
+    const cardBorderStyle = sc?.borderWidth && sc.borderWidth !== '0'
+      ? `border: ${sc.borderWidth} solid ${sc.borderColor};`
+      : '';
+
     const cardSlides = images.map((img, _idx) => {
       if (img.data) {
         return `
-          <div class="card-slide" style="border-radius: 24px; overflow: hidden; aspect-ratio: 1/1; box-shadow: 0 4px 16px rgba(0,0,0,0.08);">
+          <div class="card-slide" style="border-radius: ${cardBorderRadius}; ${cardBorderStyle} overflow: hidden; aspect-ratio: 1/1; box-shadow: ${cardBoxShadow};">
             <img src="${img.data}" alt="${cleanAltText(img.prompt)}" data-index="${img.index}" class="card-full-img" style="width: 100%; height: 100%; object-fit: cover;" />
           </div>`;
       }
