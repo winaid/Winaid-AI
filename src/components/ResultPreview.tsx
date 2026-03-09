@@ -1985,10 +1985,10 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
 
       <div ref={scrollContainerRef} className={`flex-1 overflow-y-auto p-4 lg:p-6 custom-scrollbar transition-colors duration-300 ${darkMode ? 'bg-slate-900' : 'bg-slate-50'}`}>
         {activeTab === 'preview' ? (
-          <div className={`relative ${content.postType === 'card_news' ? 'max-w-xl' : 'max-w-5xl'} mx-auto`}>
-            {/* 섹션별 재생성 패널 (블로그 전용) - 오버레이 방식 */}
+          <div className={`relative ${content.postType === 'card_news' ? 'max-w-xl' : 'max-w-5xl'} mx-auto flex gap-4`}>
+            {/* 섹션별 재생성 패널 (블로그 전용) - 사이드 패널 */}
             {content.postType === 'blog' && blogSections.length > 0 && showSectionPanel && (
-              <div className={`absolute left-0 top-4 z-20 w-56 rounded-xl p-4 space-y-2 h-fit max-h-[70vh] overflow-y-auto shadow-xl ${darkMode ? 'bg-slate-800 border border-slate-700' : 'bg-white border border-slate-200 shadow-xl'}`}>
+              <div className={`sticky top-4 shrink-0 w-56 rounded-xl p-4 space-y-2 h-fit max-h-[70vh] overflow-y-auto shadow-xl self-start ${darkMode ? 'bg-slate-800 border border-slate-700' : 'bg-white border border-slate-200 shadow-xl'}`}>
                 <div className="flex items-center justify-between mb-3">
                   <h4 className={`text-sm font-bold ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>
                     섹션별 재생성
