@@ -2546,7 +2546,7 @@ Use ONLY the new text content from the prompt below.
       console.log(`🎨 템플릿 AI 이미지 생성 시도 ${attempt}/${MAX_RETRIES} (${category}, ref=${!!styleRefPart})...`);
 
       const result = await ai.models.generateContent({
-        model: 'gemini-3.1-pro-image-preview',
+        model: 'gemini-3-pro-image-preview',
         contents,
         config: {
           responseModalities: ['IMAGE', 'TEXT'],

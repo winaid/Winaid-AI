@@ -16,7 +16,7 @@ export const CREDIT_COSTS: Record<string, number> = {
 const TOKEN_PRICING: Record<string, { input: number; output: number }> = {
   'gemini-3.1-pro-preview': { input: 1.25, output: 5.0 },
   'gemini-3.1-flash-lite-preview': { input: 0.25, output: 1.5 },
-  'gemini-3.1-pro-image-preview': { input: 1.25, output: 5.0 },  // 이미지 생성 Pro
+  'gemini-3-pro-image-preview': { input: 1.25, output: 5.0 },  // 이미지 생성 (Nano Banana Pro)
 };
 
 export interface CreditStatus {

@@ -513,7 +513,7 @@ ${promptText}
       console.log(`🎨 블로그 이미지 생성 시도 ${attempt}/${MAX_RETRIES}...`);
 
       const result = await ai.models.generateContent({
-        model: "gemini-3.1-pro-image-preview",  // Nano Banana Pro
+        model: GEMINI_MODEL.IMAGE_PRO,  // Nano Banana Pro
         contents: [{ text: finalPrompt }],
         config: {
           responseModalities: ["IMAGE", "TEXT"],
@@ -738,7 +738,7 @@ ${cleanPromptText}
 
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
-      console.log(`🎨 이미지 생성 시도 ${attempt}/${MAX_RETRIES} (gemini-3.1-pro-image-preview)...`);
+      console.log(`🎨 이미지 생성 시도 ${attempt}/${MAX_RETRIES} (gemini-3-pro-image-preview)...`);
 
       // Nano Banana Pro (Gemini 3 Pro Image) - 이미지 생성 전용 모델
       const contents: any[] = refImagePart
@@ -746,7 +746,7 @@ ${cleanPromptText}
         : [{ text: finalPrompt }];
 
       const result = await ai.models.generateContent({
-        model: "gemini-3.1-pro-image-preview",  // Nano Banana Pro
+        model: GEMINI_MODEL.IMAGE_PRO,  // Nano Banana Pro
         contents: contents,
         config: {
           responseModalities: ["IMAGE", "TEXT"],
@@ -976,7 +976,7 @@ export const transformImageStyle = async (
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
       const result = await ai.models.generateContent({
-        model: 'gemini-3.1-pro-image-preview',
+        model: GEMINI_MODEL.IMAGE_PRO,
         contents: [
           { inlineData: { data: base64Data, mimeType } },
           { text: `${DESIGNER_PERSONA}\n\n[STYLE TRANSFORMATION]\n${stylePrompt}\n\n[RULES]\n- Keep the SAME composition, subject, and layout\n- Change ONLY the rendering style/technique\n- Output should be high quality, suitable for professional medical clinic use\n- Maintain clean, readable design\n- Do NOT add any text to the image` },
@@ -1021,7 +1021,7 @@ export const changeImageBackground = async (
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
       const result = await ai.models.generateContent({
-        model: 'gemini-3.1-pro-image-preview',
+        model: GEMINI_MODEL.IMAGE_PRO,
         contents: [
           { inlineData: { data: base64Data, mimeType } },
           { text: `[BACKGROUND REPLACEMENT]\nKeep the main subject/person in this image exactly as they are.\nRemove the existing background and replace it with: ${backgroundDescription}\n\n[RULES]\n- Do NOT modify the main subject (person, object)\n- Only change the background\n- Make the transition between subject and new background look natural\n- Maintain professional medical/clinical aesthetic\n- High quality, clean edges around the subject` },
@@ -1066,7 +1066,7 @@ export const editImageRegion = async (
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
       const result = await ai.models.generateContent({
-        model: 'gemini-3.1-pro-image-preview',
+        model: GEMINI_MODEL.IMAGE_PRO,
         contents: [
           { inlineData: { data: base64Data, mimeType } },
           { text: `[IMAGE EDITING INSTRUCTION]\n${editInstruction}\n\n[RULES]\n- Make ONLY the requested changes\n- Keep everything else in the image EXACTLY the same\n- Maintain the same style, colors, and quality\n- Output should look natural and seamless\n- Do NOT change the overall layout or composition` },
