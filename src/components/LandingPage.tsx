@@ -203,9 +203,9 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
         <div className="absolute inset-0">
           <div className="absolute inset-0 bg-gradient-to-b from-slate-50 via-blue-50/60 to-white" />
           <div className="absolute inset-0 bg-dot-pattern opacity-40" />
-          <div className="absolute top-20 left-[10%] w-[600px] h-[600px] bg-gradient-to-br from-blue-300/30 to-cyan-200/20 rounded-full blur-[150px] animate-blob" />
-          <div className="absolute bottom-20 right-[10%] w-[500px] h-[500px] bg-gradient-to-br from-violet-300/25 to-indigo-200/15 rounded-full blur-[130px] animate-blob-delay-2" />
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[900px] h-[900px] bg-gradient-to-br from-blue-100/15 to-transparent rounded-full blur-[180px] animate-blob-delay-4" />
+          <div className="absolute top-20 left-[10%] w-[300px] h-[300px] md:w-[600px] md:h-[600px] bg-gradient-to-br from-blue-300/30 to-cyan-200/20 rounded-full blur-[100px] md:blur-[150px] animate-blob" />
+          <div className="absolute bottom-20 right-[10%] w-[250px] h-[250px] md:w-[500px] md:h-[500px] bg-gradient-to-br from-violet-300/25 to-indigo-200/15 rounded-full blur-[80px] md:blur-[130px] animate-blob-delay-2" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] md:w-[900px] md:h-[900px] bg-gradient-to-br from-blue-100/15 to-transparent rounded-full blur-[100px] md:blur-[180px] animate-blob-delay-4" />
         </div>
 
         <div className="relative max-w-5xl mx-auto text-center w-full pt-20">

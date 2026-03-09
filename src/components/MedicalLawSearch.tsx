@@ -10,6 +10,7 @@ import {
   type MedicalLawInfo,
   type ProhibitionRule
 } from '../services/medicalLawService';
+import { toast } from './Toast';
 
 export function MedicalLawSearch() {
   const [isOpen, setIsOpen] = useState(false);
@@ -51,13 +52,13 @@ export function MedicalLawSearch() {
       if (info) {
         setMedicalLawInfo(info);
         cacheMedicalLawInfo(info);
-        alert('✅ 의료광고법 정보를 성공적으로 가져왔습니다.');
+        toast.success('의료광고법 정보를 성공적으로 가져왔습니다.');
       } else {
-        alert('❌ 의료광고법 정보를 가져오는데 실패했습니다.');
+        toast.error('의료광고법 정보를 가져오는데 실패했습니다.');
       }
     } catch (error) {
       console.error('의료광고법 정보 가져오기 실패:', error);
-      alert('❌ 오류가 발생했습니다.');
+      toast.error('오류가 발생했습니다.');
     } finally {
       setLoading(false);
     }
@@ -80,13 +81,13 @@ export function MedicalLawSearch() {
     try {
       const result = await updateForbiddenWordsDatabase();
       if (result.success) {
-        alert(`✅ 금지어 데이터베이스 업데이트 완료!\n새 금지어: ${result.newWords}개`);
+        toast.success(`금지어 데이터베이스 업데이트 완료! 새 금지어: ${result.newWords}개`);
       } else {
-        alert('❌ 업데이트 실패');
+        toast.error('업데이트 실패');
       }
     } catch (error) {
       console.error('데이터베이스 업데이트 실패:', error);
-      alert('❌ 오류가 발생했습니다.');
+      toast.error('오류가 발생했습니다.');
     } finally {
       setLoading(false);
     }

@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { CardNewsScript, CardNewsSlideScript } from '../types';
 import { regenerateSlideContent } from '../services/postProcessingService';
 import type { SlideRegenMode } from '../services/postProcessingService';
+import { toast } from './Toast';
 
 // AI 재생성 옵션 정의
 const REGEN_OPTIONS: { mode: SlideRegenMode; label: string; emoji: string; desc: string }[] = [
@@ -107,7 +108,7 @@ const ScriptPreview: React.FC<ScriptPreviewProps> = ({
       });
     } catch (error) {
       console.error('AI 재생성 실패:', error);
-      alert('AI 재생성 중 오류가 발생했습니다.');
+      toast.error('AI 재생성 중 오류가 발생했습니다.');
     } finally {
       setRegeneratingSlide(null);
     }

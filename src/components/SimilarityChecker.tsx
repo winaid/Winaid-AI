@@ -6,6 +6,7 @@ import {
 } from '../services/similarityService';
 import { prepareNaverBlogsForComparison } from '../services/naverSearchService';
 import { checkContentSimilarity } from '../services/contentSimilarityService';
+import { toast } from './Toast';
 
 interface SimilarityCheckerProps {
   onClose: () => void;
@@ -34,7 +35,7 @@ const SimilarityChecker: React.FC<SimilarityCheckerProps> = ({ onClose, darkMode
   // 단일 비교
   const handleSingleCheck = () => {
     if (!text1.trim() || !text2.trim()) {
-      alert('비교할 텍스트를 모두 입력해주세요.');
+      toast.error('비교할 텍스트를 모두 입력해주세요.');
       return;
     }
 
@@ -58,7 +59,7 @@ const SimilarityChecker: React.FC<SimilarityCheckerProps> = ({ onClose, darkMode
   // 웹 검색 유사도 검사 - geminiService의 강력한 로직 사용!
   const handleWebCheck = async () => {
     if (!text1.trim()) {
-      alert('검사할 텍스트를 입력해주세요.');
+      toast.error('검사할 텍스트를 입력해주세요.');
       return;
     }
 
@@ -198,7 +199,7 @@ const SimilarityChecker: React.FC<SimilarityCheckerProps> = ({ onClose, darkMode
     } catch (error) {
       console.error('웹 검색 유사도 검사 오류:', error);
       setCheckingMessage('❌ 검사 실패');
-      alert('유사도 검사에 실패했습니다.\n\n원인: ' + (error instanceof Error ? error.message : '알 수 없는 오류'));
+      toast.error('유사도 검사에 실패했습니다. 원인: ' + (error instanceof Error ? error.message : '알 수 없는 오류'));
     } finally {
       setIsChecking(false);
     }

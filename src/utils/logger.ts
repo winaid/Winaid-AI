@@ -292,8 +292,10 @@ export const log = {
     logger.trackPerformance(metric, value, unit),
 };
 
-// 전역 에러 핸들러 등록
-if (typeof window !== 'undefined') {
+// 전역 에러 핸들러 등록 (중복 등록 방지)
+if (typeof window !== 'undefined' && !(window as any).__loggerErrorHandlersRegistered) {
+  (window as any).__loggerErrorHandlersRegistered = true;
+
   window.addEventListener('error', (event) => {
     logger.error('Global error caught', {
       message: event.message,

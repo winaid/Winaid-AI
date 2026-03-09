@@ -12,6 +12,7 @@ import { removeOklchFromClonedDoc, AI_PROMPT_TEMPLATES, AUTOSAVE_KEY, AUTOSAVE_H
 import { SeoDetailModal, AiSmellDetailModal, SimilarityModal } from './ScoringModals';
 import { ImageDownloadModal, ImageRegenModal, CardDownloadModal } from './ExportModals';
 import { CardRegenModal } from './CardRegenModal';
+import { toast } from './Toast';
 
 
 // 동적 임포트: 초기 번들 크기 최적화
@@ -162,7 +163,7 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
       setIsRefImageLocked(true);
     } catch (e) {
       console.error('참고 이미지 저장 실패 (용량 초과):', e);
-      alert('참고 이미지가 너무 큽니다. 더 작은 이미지를 사용해주세요.');
+      toast.error('참고 이미지가 너무 큽니다. 더 작은 이미지를 사용해주세요.');
     }
   };
   
@@ -191,7 +192,7 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
     
     setPromptHistory(newHistory);
     localStorage.setItem(CARD_PROMPT_HISTORY_KEY, JSON.stringify(newHistory));
-    alert('✅ 프롬프트가 저장되었습니다!');
+    toast.success('프롬프트가 저장되었습니다!');
   };
   
   // 히스토리에서 불러오기
@@ -389,10 +390,10 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
     const cards = document.querySelectorAll('.naver-preview .card-slide');
     const card = cards[cardIndex] as HTMLElement;
     if (!card) {
-      alert('카드를 찾을 수 없습니다.');
+      toast.error('카드를 찾을 수 없습니다.');
       return;
     }
-    
+
     // 다운로드 진행 표시
     setDownloadingCard(true);
     setCardDownloadProgress(`${cardIndex + 1}번 카드 다운로드 준비 중...`);
@@ -464,7 +465,7 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
       if (badge) badge.style.display = '';
       
       setCardDownloadProgress('');
-      alert(`❌ 카드 다운로드에 실패했습니다.\n\n원인: ${error instanceof Error ? error.message : '알 수 없는 오류'}\n\n💡 팁: 카드에 외부 이미지가 포함된 경우 다운로드가 실패할 수 있습니다.\n카드를 재생성하면 해결될 수 있습니다.`);
+      toast.error(`카드 다운로드에 실패했습니다: ${error instanceof Error ? error.message : '알 수 없는 오류'}`);
     } finally {
       setDownloadingCard(false);
     }
@@ -528,13 +529,13 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
   // 수동 저장 함수 (사용자가 버튼 클릭 시 저장)
   const saveManually = () => {
     if (!localHtml || !localHtml.trim()) {
-      alert('저장할 내용이 없습니다.');
+      toast.warning('저장할 내용이 없습니다.');
       return;
     }
     
     // 🔧 현재 히스토리가 이미 3개면 저장 불가
     if (autoSaveHistory.length >= 3) {
-      alert('⚠️ 저장 슬롯이 가득 찼습니다!\n\n불러오기에서 기존 저장본을 삭제한 후 다시 저장해주세요.');
+      toast.warning('저장 슬롯이 가득 찼습니다! 기존 저장본을 삭제한 후 다시 저장해주세요.');
       return;
     }
     
@@ -574,7 +575,7 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
       setAutoSaveHistory([]);
       
       if (!safeLocalStorageSet(AUTOSAVE_KEY, saveDataStr)) {
-        alert('⚠️ 저장 용량이 부족합니다.\n\n이미지가 많은 콘텐츠는 용량을 많이 차지합니다.\n기존 저장본을 모두 삭제 후 다시 시도해주세요.');
+        toast.warning('저장 용량이 부족합니다. 기존 저장본을 모두 삭제 후 다시 시도해주세요.');
         return;
       }
     }
@@ -597,7 +598,7 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
       
       if (newHistory.length === 1 && !safeLocalStorageSet(AUTOSAVE_HISTORY_KEY, historyStr)) {
         // 그래도 실패하면 경고
-        alert('⚠️ 저장 용량이 부족하여 이전 저장본이 삭제되었습니다.');
+        toast.warning('저장 용량이 부족하여 이전 저장본이 삭제되었습니다.');
         newHistory = [saveData]; // 현재 것만 유지
         localStorage.setItem(AUTOSAVE_HISTORY_KEY, JSON.stringify(newHistory));
       }
@@ -606,7 +607,7 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
     });
     
     const finalUsage = getLocalStorageUsage();
-    alert(`✅ "${title}" 저장되었습니다! (${autoSaveHistory.length + 1}/3)\n\n💾 저장 공간: ${finalUsage.percent}% 사용 중`);
+    toast.success(`"${title}" 저장되었습니다! (${autoSaveHistory.length + 1}/3)`);
   };
 
   // 특정 저장본 불러오기
@@ -614,7 +615,7 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
     setLocalHtml(item.html);
     if (item.theme) setCurrentTheme(item.theme as any);
     setShowAutoSaveDropdown(false);
-    alert(`"${item.title}" 불러왔습니다!`);
+    toast.info(`"${item.title}" 불러왔습니다!`);
   };
 
   // 임시저장 삭제 (향후 UI에서 활용 가능)
@@ -623,7 +624,7 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
     localStorage.removeItem(AUTOSAVE_HISTORY_KEY);
     setAutoSaveHistory([]);
     setLastSaved(null);
-    alert('임시저장이 삭제되었습니다.');
+    toast.info('임시저장이 삭제되었습니다.');
   };
 
   // 임시저장 데이터 있는지 확인
@@ -665,7 +666,7 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
   const downloadCardAsImage = async (cardIndex: number) => {
     const cardSlides = getCardElements();
     if (!cardSlides || !cardSlides[cardIndex]) {
-      alert('카드를 찾을 수 없습니다. 카드뉴스를 먼저 생성해주세요.');
+      toast.error('카드를 찾을 수 없습니다. 카드뉴스를 먼저 생성해주세요.');
       return;
     }
     
@@ -695,19 +696,19 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
       setCardDownloadProgress('');
     } catch (error) {
       console.error('카드 다운로드 실패:', error);
-      alert('카드 다운로드 중 오류가 발생했습니다.');
+      toast.error('카드 다운로드 중 오류가 발생했습니다.');
     } finally {
       setDownloadingCard(false);
     }
   };
-  
+
   // 카드 슬라이드 재생성
   const handleCardRegenerate = async () => {
     // 편집된 프롬프트가 있는지 확인
     const hasEditedPrompt = editSubtitle || editMainTitle || editDescription || editImagePrompt || cardRegenRefImage;
     
     if (!hasEditedPrompt) {
-      alert('프롬프트를 수정하거나 참고 이미지를 업로드해주세요.');
+      toast.info('프롬프트를 수정하거나 참고 이미지를 업로드해주세요.');
       return;
     }
     
@@ -797,9 +798,9 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
         }
         
         if (isPlaceholder) {
-          alert(`⚠️ ${cardRegenIndex + 1}번 카드 이미지 생성에 실패했습니다.\nAI가 요청을 처리하지 못했습니다. 잠시 후 다시 시도해주세요.`);
+          toast.warning(`${cardRegenIndex + 1}번 카드 이미지 생성에 실패했습니다. 잠시 후 다시 시도해주세요.`);
         } else {
-          alert(`✅ ${cardRegenIndex + 1}번 카드가 재생성되었습니다!`);
+          toast.success(`${cardRegenIndex + 1}번 카드가 재생성되었습니다!`);
         }
         setCardRegenModalOpen(false);
         setCardRegenInstruction('');
@@ -810,7 +811,7 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
       
     } catch (error) {
       console.error('카드 재생성 실패:', error);
-      alert('카드 재생성 중 오류가 발생했습니다.');
+      toast.error('카드 재생성 중 오류가 발생했습니다.');
     } finally {
       setIsRegeneratingCard(false);
       setCardRegenProgress('');
@@ -891,7 +892,7 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
   const downloadAllCards = async () => {
     const cardSlides = getCardElements();
     if (!cardSlides || cardSlides.length === 0) {
-      alert('다운로드할 카드가 없습니다. 카드뉴스를 먼저 생성해주세요.');
+      toast.warning('다운로드할 카드가 없습니다. 카드뉴스를 먼저 생성해주세요.');
       return;
     }
     
@@ -998,14 +999,14 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
       // 실패한 카드가 있으면 안내
       if (failedCards.length > 0) {
         setTimeout(() => {
-          alert(`⚠️ ${failedCards.length}장의 카드 다운로드에 실패했습니다.\n(${failedCards.join(', ')}번 카드)\n\n💡 해당 카드를 재생성한 후 다시 시도해주세요.`);
+          toast.warning(`${failedCards.length}장의 카드 다운로드에 실패했습니다. (${failedCards.join(', ')}번 카드)`);
         }, 500);
       }
       
     } catch (error) {
       console.error('카드 다운로드 실패:', error);
       setCardDownloadProgress('');
-      alert(`❌ 카드 다운로드 중 오류가 발생했습니다.\n\n원인: ${error instanceof Error ? error.message : '알 수 없는 오류'}`);
+      toast.error(`카드 다운로드 중 오류가 발생했습니다. 원인: ${error instanceof Error ? error.message : '알 수 없는 오류'}`);
     } finally {
       setDownloadingCard(false);
     }
@@ -1137,7 +1138,7 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
       const recommendedPrompt = await recommendImagePrompt(textContent, regenPrompt, currentStyle, savedCustomStylePrompt);
       setRegenPrompt(recommendedPrompt);
     } catch {
-      alert('프롬프트 추천 중 오류가 발생했습니다.');
+      toast.error('프롬프트 추천 중 오류가 발생했습니다.');
     } finally {
       setIsRecommendingPrompt(false);
     }
@@ -1162,7 +1163,7 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
       setIsAIPromptApplied(true);
       setEditImagePrompt(recommendedPrompt);
     } catch {
-      alert('프롬프트 추천 중 오류가 발생했습니다.');
+      toast.error('프롬프트 추천 중 오류가 발생했습니다.');
     } finally {
       setIsRecommendingCardPrompt(false);
     }
@@ -1200,13 +1201,13 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
           imgs[regenIndex - 1].alt = regenPrompt.trim();
           setLocalHtml(tempDiv.innerHTML);
         }
-        alert('✅ 이미지가 재생성되었습니다!');
+        toast.success('이미지가 재생성되었습니다!');
         setRegenOpen(false);
       } else {
-        alert('이미지를 생성하지 못했습니다. 다시 시도해주세요.');
+        toast.error('이미지를 생성하지 못했습니다. 다시 시도해주세요.');
       }
     } catch {
-      alert('이미지 생성 중 오류가 발생했습니다.');
+      toast.error('이미지 생성 중 오류가 발생했습니다.');
     } finally {
       setIsEditingAi(false);
       setEditProgress('');
@@ -1333,15 +1334,15 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
       
       // 결과에 따라 알림
       if (result.status === 'HIGH_RISK') {
-        alert('⚠️ 유사한 콘텐츠가 발견되었습니다!\n재작성을 권장합니다.');
+        toast.warning('유사한 콘텐츠가 발견되었습니다! 재작성을 권장합니다.');
       } else if (result.status === 'MEDIUM_RISK') {
-        alert('💡 일부 유사한 표현이 있습니다.\n확인해보세요.');
+        toast.info('일부 유사한 표현이 있습니다. 확인해보세요.');
       } else if (result.status === 'ORIGINAL') {
-        alert('✅ 독창적인 콘텐츠입니다!');
+        toast.success('독창적인 콘텐츠입니다!');
       }
     } catch (error) {
       console.error('유사도 검사 실패:', error);
-      alert('유사도 검사 중 오류가 발생했습니다.\n\n💡 Google Custom Search API 키가 설정되어 있는지 확인해주세요.');
+      toast.error('유사도 검사 중 오류가 발생했습니다. Google Custom Search API 키를 확인해주세요.');
     } finally {
       setIsCheckingSimilarity(false);
     }
@@ -1461,7 +1462,7 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
       
     } catch (e) {
       console.error('Word 생성 오류:', e);
-      alert('Word 문서 생성 중 오류가 발생했습니다.');
+      toast.error('Word 문서 생성 중 오류가 발생했습니다.');
     } finally {
       setEditProgress('');
     }
@@ -1491,7 +1492,7 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
       // 새 창에서 프린트 다이얼로그 열기 (PDF로 저장 가능)
       const printWindow = window.open('', '_blank');
       if (!printWindow) {
-        alert('팝업이 차단되었습니다. 팝업을 허용해주세요.');
+        toast.warning('팝업이 차단되었습니다. 팝업을 허용해주세요.');
         return;
       }
       
@@ -1674,7 +1675,7 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
       `);
       printWindow.document.close();
     } catch {
-      alert('PDF 생성 중 오류가 발생했습니다.');
+      toast.error('PDF 생성 중 오류가 발생했습니다.');
     } finally {
       setEditProgress('');
     }
@@ -1927,7 +1928,7 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
           setEditProgress('');
       } catch (err: any) { 
           const msg = (err?.message || err?.toString || "").toString();
-          alert("AI 보정 실패: " + (msg || "Gemini API 응답을 확인해주세요.")); 
+          toast.error("AI 보정 실패: " + (msg || "Gemini API 응답을 확인해주세요.")); 
           setEditProgress('');
       } finally { 
           setIsEditingAi(false); 

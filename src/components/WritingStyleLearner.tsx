@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { LearnedWritingStyle } from '../types';
 import { analyzeWritingStyle, extractTextFromImage, extractTextFromDocument } from '../services/writingStyleService';
+import { toast } from './Toast';
 
 // localStorage 키
 const LEARNED_STYLES_KEY = 'hospital_learned_writing_styles';
@@ -153,7 +154,7 @@ const WritingStyleLearner: React.FC<WritingStyleLearnerProps> = ({
       setExtractedText('');
       setAnalyzeProgress('');
       
-      alert(`"${analyzedStyle.name}" ${isPress ? '문체' : '말투'}가 학습되었습니다!`);
+      toast.success(`"${analyzedStyle.name}" ${isPress ? '문체' : '말투'}가 학습되었습니다!`);
     } catch (err: any) {
       setError(err.message || '말투 분석 실패');
     } finally {

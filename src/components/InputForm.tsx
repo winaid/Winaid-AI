@@ -5,6 +5,7 @@ import { analyzeHospitalKeywords, loadMoreKeywords, KeywordStat, MAX_KEYWORDS } 
 import { GenerationRequest, ContentCategory, TrendingItem, SeoTitleItem, AudienceMode, ImageStyle, PostType, CssTheme, WritingStyle } from '../types';
 import { getTrendingTopics, recommendSeoTitles } from '../services/seoService';
 import WritingStyleLearner from './WritingStyleLearner';
+import { toast } from './Toast';
 
 // localStorage 키
 const CUSTOM_PROMPT_KEY = 'hospital_custom_image_prompt';
@@ -250,7 +251,7 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
       const items = await getTrendingTopics(category);
       setTrendingItems(items);
     } catch (e) {
-      alert("트렌드 로딩 실패");
+      toast.error('트렌드 로딩 실패');
     } finally {
       setIsLoadingTrends(false);
     }
@@ -269,15 +270,15 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
         const sortedTitles = titles.sort((a, b) => b.score - a.score);
         setSeoTitles(sortedTitles);
     } catch (e) {
-        alert("제목 추천 실패");
+        toast.error('제목 추천 실패');
     } finally {
         setIsLoadingTitles(false);
     }
   };
 
-  const labelCls = "block text-[11px] font-bold text-slate-400 mb-2 tracking-wider uppercase";
-  const inputCls = "w-full px-4 py-3 bg-white border border-slate-200/80 rounded-xl text-slate-700 text-sm font-medium outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-500/10 focus:bg-white transition-all placeholder:text-slate-300";
-  const selectCls = "w-full px-4 py-3 bg-white border border-slate-200/80 rounded-xl text-slate-700 text-sm font-medium outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-500/10 focus:bg-white transition-all";
+  const labelCls = "block text-[11px] font-bold text-slate-500 mb-2 tracking-wider uppercase";
+  const inputCls = "w-full px-4 py-3 bg-white border border-slate-200/80 rounded-xl text-slate-700 text-sm font-medium outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-500/10 focus:bg-white transition-all placeholder:text-slate-300 focus-visible:outline-2 focus-visible:outline-blue-500";
+  const selectCls = "w-full px-4 py-3 bg-white border border-slate-200/80 rounded-xl text-slate-700 text-sm font-medium outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-500/10 focus:bg-white transition-all focus-visible:outline-2 focus-visible:outline-blue-500";
 
   return (
     <div className="bg-white/90 backdrop-blur-2xl rounded-2xl shadow-[0_4px_32px_rgba(0,0,0,0.06)] border border-slate-200/60 relative overflow-hidden">
@@ -545,6 +546,7 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
               onChange={(e) => setCategory(e.target.value as ContentCategory)}
               className={selectCls}
               disabled={isLoading}
+              aria-label="진료과 선택"
             >
               {CATEGORIES.map((cat) => (
                 <option key={cat.value} value={cat.value}>{cat.label}</option>
@@ -558,6 +560,7 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
               onChange={(e) => setAudienceMode(e.target.value as AudienceMode)}
               className={selectCls}
               disabled={isLoading}
+              aria-label="타겟 청중 선택"
             >
               <option value="환자용(친절/공감)">환자용 (친절/공감)</option>
               <option value="보호자용(가족걱정)">보호자용 (부모님/자녀 걱정)</option>
@@ -580,7 +583,7 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
                       <label className="text-xs font-semibold text-slate-500">글자 수</label>
                       <span className="text-xs font-semibold text-blue-600">{textLength}자</span>
                     </div>
-                    <input type="range" min="1500" max="3500" step="100" value={textLength} onChange={(e) => setTextLength(parseInt(e.target.value))} className="w-full accent-blue-500 h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer" />
+                    <input type="range" min="1500" max="3500" step="100" value={textLength} onChange={(e) => setTextLength(parseInt(e.target.value))} className="w-full accent-blue-500 h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer" aria-label={`글자 수: ${textLength}자`} />
                     <div className="flex justify-between mt-1 text-[10px] text-slate-400"><span>1500</span><span>2500</span><span>3500</span></div>
                   </div>
                   <div>
@@ -588,7 +591,7 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
                       <label className="text-xs font-semibold text-slate-500">AI 이미지 수</label>
                       <span className={`text-xs font-semibold ${imageCount === 0 ? 'text-slate-400' : 'text-blue-600'}`}>{imageCount === 0 ? '없음' : `${imageCount}장`}</span>
                     </div>
-                    <input type="range" min="0" max="5" step="1" value={imageCount} onChange={(e) => setImageCount(parseInt(e.target.value))} className="w-full accent-blue-500 h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer" />
+                    <input type="range" min="0" max="5" step="1" value={imageCount} onChange={(e) => setImageCount(parseInt(e.target.value))} className="w-full accent-blue-500 h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer" aria-label={`AI 이미지 수: ${imageCount}장`} />
                     <div className="flex justify-between mt-1 text-[10px] text-slate-400"><span>0장</span><span>5장</span></div>
                   </div>
                   {/* FAQ 토글 */}
@@ -788,7 +791,7 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
                <div className="flex items-center justify-between mb-1.5">
                  <label className="text-xs font-semibold text-slate-600">커스텀 스타일 프롬프트</label>
                  {customPrompt && (
-                   <button type="button" onClick={() => { localStorage.setItem(CUSTOM_PROMPT_KEY, customPrompt); alert('프롬프트가 저장되었습니다.'); }}
+                   <button type="button" onClick={() => { localStorage.setItem(CUSTOM_PROMPT_KEY, customPrompt); toast.success('프롬프트가 저장되었습니다.'); }}
                      className="px-2.5 py-1 bg-slate-800 text-white text-[10px] font-medium rounded-md hover:bg-slate-900 transition-all"
                    >저장</button>
                  )}

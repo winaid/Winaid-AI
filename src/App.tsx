@@ -3,6 +3,7 @@ import { GenerationRequest, GenerationState, CardNewsScript, CardPromptData } fr
 import { supabase, signOut } from './lib/supabase';
 import type { User } from '@supabase/supabase-js';
 import ErrorBoundary from './components/ErrorBoundary';
+import { ToastContainer } from './components/Toast';
 
 // Lazy load heavy components
 const InputForm = lazy(() => import('./components/InputForm'));
@@ -22,6 +23,63 @@ const PostHistory = lazy(() => import('./components/PostHistory'));
 type PageType = 'landing' | 'home' | 'blog' | 'card_news' | 'press' | 'refine' | 'image' | 'history' | 'admin' | 'auth';
 const contentPages: PageType[] = ['blog', 'card_news', 'press', 'refine', 'image', 'history'];
 const appPages: PageType[] = ['home', ...contentPages];
+
+// 스켈레톤 로딩 컴포넌트들
+const SkeletonLine = ({ w = 'w-full' }: { w?: string }) => (
+  <div className={`h-3 ${w} rounded-md bg-slate-200 animate-pulse`} />
+);
+
+const LoadingSpinner = ({ size = 'w-10 h-10' }: { size?: string }) => (
+  <div className="flex items-center justify-center py-20">
+    <div className={`${size} border-[3px] border-blue-100 border-t-blue-500 rounded-full animate-spin`} />
+  </div>
+);
+
+const PageSkeleton = () => (
+  <div className="min-h-screen flex items-center justify-center bg-slate-50/50">
+    <div className="flex flex-col items-center gap-4">
+      <div className="w-12 h-12 border-[3px] border-blue-100 border-t-blue-500 rounded-full animate-spin" />
+      <div className="text-sm font-medium text-slate-400">로딩 중...</div>
+    </div>
+  </div>
+);
+
+const FormSkeleton = () => (
+  <div className="p-5 space-y-4 animate-pulse">
+    <SkeletonLine w="w-24" />
+    <div className="h-10 w-full rounded-xl bg-slate-200" />
+    <SkeletonLine w="w-20" />
+    <div className="h-10 w-full rounded-xl bg-slate-200" />
+    <SkeletonLine w="w-28" />
+    <div className="h-24 w-full rounded-xl bg-slate-200" />
+    <div className="h-11 w-full rounded-xl bg-slate-200" />
+  </div>
+);
+
+const ContentSkeleton = () => (
+  <div className="rounded-2xl bg-white/80 backdrop-blur-xl border border-white/60 p-10 shadow-[0_4px_24px_rgba(0,0,0,0.06)] animate-pulse">
+    <div className="space-y-4">
+      <SkeletonLine w="w-3/4" />
+      <SkeletonLine />
+      <SkeletonLine />
+      <SkeletonLine w="w-1/2" />
+      <div className="h-40 w-full rounded-xl bg-slate-200 mt-4" />
+      <SkeletonLine />
+      <SkeletonLine w="w-2/3" />
+    </div>
+  </div>
+);
+
+const PanelSkeleton = () => (
+  <div className="rounded-2xl border border-slate-200/60 bg-white/80 p-6 animate-pulse">
+    <div className="space-y-4">
+      <SkeletonLine w="w-40" />
+      <div className="h-32 w-full rounded-xl bg-slate-200" />
+      <SkeletonLine w="w-2/3" />
+      <SkeletonLine w="w-1/2" />
+    </div>
+  </div>
+);
 
 // 사용자 정보 타입
 interface UserProfile {
@@ -765,7 +823,7 @@ const App: React.FC = () => {
   // 랜딩 페이지 (모든 체크 전에 먼저 표시)
   if (currentPage === 'landing') {
     return (
-      <Suspense fallback={<div className="min-h-screen flex items-center justify-center">로딩 중...</div>}>
+      <Suspense fallback={<PageSkeleton />}>
         <LandingPage
           onStart={() => {
             if (isAuthenticated) {
@@ -798,7 +856,7 @@ const App: React.FC = () => {
   // Auth 페이지 렌더링
   if (currentPage === 'auth') {
     return (
-      <Suspense fallback={<div className="min-h-screen bg-slate-50 flex items-center justify-center"><div className="w-16 h-16 border-4 border-blue-100 border-t-blue-500 rounded-full animate-spin"></div></div>}>
+      <Suspense fallback={<PageSkeleton />}>
         <AuthPage onNavigate={handleNavigate} />
       </Suspense>
     );
@@ -809,7 +867,7 @@ const App: React.FC = () => {
   // Admin 페이지 렌더링
   if (currentPage === 'admin') {
     return (
-      <Suspense fallback={<div className="min-h-screen bg-slate-50 flex items-center justify-center"><div className="w-16 h-16 border-4 border-blue-100 border-t-blue-500 rounded-full animate-spin"></div></div>}>
+      <Suspense fallback={<PageSkeleton />}>
         <AdminPage onAdminVerified={() => setIsAdmin(true)} />
       </Suspense>
     );
@@ -839,7 +897,7 @@ const App: React.FC = () => {
   // 비밀번호 인증 화면 표시
   if (!isAuthenticated) {
     return (
-      <Suspense fallback={<div className="min-h-screen flex items-center justify-center">로딩 중...</div>}>
+      <Suspense fallback={<PageSkeleton />}>
         <PasswordLogin onSuccess={() => setIsAuthenticated(true)} />
       </Suspense>
     );
@@ -850,9 +908,9 @@ const App: React.FC = () => {
       {/* Animated background blobs */}
       {!darkMode && (
         <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
-          <div className="absolute -top-40 -right-40 w-[600px] h-[600px] bg-blue-100/40 rounded-full blur-[150px] animate-[pulse_8s_ease-in-out_infinite]" />
-          <div className="absolute top-1/2 -left-40 w-[500px] h-[500px] bg-violet-100/30 rounded-full blur-[130px] animate-[pulse_10s_ease-in-out_2s_infinite]" />
-          <div className="absolute -bottom-20 right-1/3 w-[400px] h-[400px] bg-cyan-100/20 rounded-full blur-[120px] animate-[pulse_12s_ease-in-out_4s_infinite]" />
+          <div className="absolute -top-40 -right-40 w-[300px] h-[300px] md:w-[600px] md:h-[600px] bg-blue-100/40 rounded-full blur-[80px] md:blur-[150px] animate-[pulse_8s_ease-in-out_infinite]" />
+          <div className="absolute top-1/2 -left-40 w-[250px] h-[250px] md:w-[500px] md:h-[500px] bg-violet-100/30 rounded-full blur-[70px] md:blur-[130px] animate-[pulse_10s_ease-in-out_2s_infinite]" />
+          <div className="absolute -bottom-20 right-1/3 w-[200px] h-[200px] md:w-[400px] md:h-[400px] bg-cyan-100/20 rounded-full blur-[60px] md:blur-[120px] animate-[pulse_12s_ease-in-out_4s_infinite]" />
         </div>
       )}
 
@@ -1012,7 +1070,7 @@ const App: React.FC = () => {
         {/* 모바일 네비 탭 */}
         {currentPage !== 'home' && (
         <div className={`border-t ${darkMode ? 'border-slate-700/50' : 'border-slate-100/80'}`}>
-          <nav className="w-full px-3 flex items-center gap-1 overflow-x-auto custom-scrollbar">
+          <nav className="w-full px-3 flex items-center gap-1 overflow-x-auto custom-scrollbar scroll-smooth" role="tablist" aria-label="콘텐츠 유형 탭">
             {([
               { id: 'blog' as ContentTabType, label: '블로그', icon: '📝' },
               { id: 'card_news' as ContentTabType, label: '카드뉴스', icon: '🎨' },
@@ -1050,62 +1108,188 @@ const App: React.FC = () => {
 
         {/* 홈 대시보드 (#app) */}
         {currentPage === 'home' ? (
-          <div className="space-y-8">
-            {/* 환영 섹션 */}
-            <div className={`rounded-2xl p-8 md:p-10 relative overflow-hidden ${darkMode ? 'bg-slate-800 border border-slate-700' : 'bg-gradient-to-br from-blue-600 via-blue-700 to-violet-700 text-white shadow-xl'}`}>
-              <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2" />
-              <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2" />
-              <div className="relative">
-                <h1 className={`text-2xl md:text-3xl font-black mb-3 ${darkMode ? 'text-slate-100' : 'text-white'}`}>WINAID에 오신 것을 환영합니다</h1>
-                <p className={`text-base md:text-lg font-medium ${darkMode ? 'text-slate-400' : 'text-blue-100'}`}>AI 기반 의료 마케팅 콘텐츠를 쉽고 빠르게 생성하세요.</p>
+          <div className="space-y-6 max-w-6xl mx-auto">
+            {/* 환영 히어로 섹션 */}
+            <div className={`rounded-2xl p-8 md:p-10 relative overflow-hidden ${darkMode ? 'bg-gradient-to-br from-slate-800 via-slate-800 to-blue-900/40 border border-slate-700/80' : 'bg-gradient-to-br from-blue-600 via-blue-700 to-violet-700 text-white shadow-xl shadow-blue-900/20'}`}>
+              {/* 배경 장식 */}
+              <div className="absolute top-0 right-0 w-80 h-80 bg-white/[0.07] rounded-full -translate-y-1/2 translate-x-1/3" />
+              <div className="absolute bottom-0 left-1/4 w-60 h-60 bg-white/[0.04] rounded-full translate-y-1/2" />
+              <div className={`absolute top-6 right-8 w-20 h-20 rounded-2xl rotate-12 ${darkMode ? 'bg-blue-500/10' : 'bg-white/10'}`} />
+              <div className={`absolute bottom-4 right-1/3 w-12 h-12 rounded-xl -rotate-6 ${darkMode ? 'bg-violet-500/10' : 'bg-white/[0.07]'}`} />
+
+              <div className="relative flex flex-col md:flex-row md:items-end md:justify-between gap-6">
+                <div>
+                  <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold mb-4 ${darkMode ? 'bg-blue-500/20 text-blue-300' : 'bg-white/20 text-white/90'}`}>
+                    <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
+                    AI 엔진 가동 중
+                  </div>
+                  <h1 className={`text-2xl md:text-3xl font-black mb-2 ${darkMode ? 'text-slate-100' : 'text-white'}`}>
+                    안녕하세요! 오늘도 좋은 콘텐츠 만들어 볼까요?
+                  </h1>
+                  <p className={`text-sm md:text-base font-medium ${darkMode ? 'text-slate-400' : 'text-blue-100/90'}`}>
+                    AI 기반 의료 마케팅 콘텐츠를 쉽고 빠르게 생성하세요.
+                  </p>
+                </div>
+
+                {/* 미니 통계 */}
+                <div className="flex gap-3 flex-shrink-0">
+                  {([
+                    { label: '블로그', value: 'SEO', sub: '최적화', color: darkMode ? 'bg-blue-500/20 text-blue-300' : 'bg-white/15 text-white' },
+                    { label: '의료광고법', value: '자동', sub: '검증', color: darkMode ? 'bg-emerald-500/20 text-emerald-300' : 'bg-white/15 text-white' },
+                    { label: '이미지', value: 'AI', sub: '생성', color: darkMode ? 'bg-violet-500/20 text-violet-300' : 'bg-white/15 text-white' },
+                  ]).map((stat, i) => (
+                    <div key={i} className={`${stat.color} rounded-xl px-4 py-3 text-center min-w-[80px] backdrop-blur-sm`}>
+                      <div className="text-lg font-black">{stat.value}</div>
+                      <div className={`text-[10px] font-semibold ${darkMode ? 'opacity-60' : 'opacity-70'}`}>{stat.sub}</div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
 
-            {/* 콘텐츠 생성 */}
+            {/* 콘텐츠 생성 섹션 */}
             <div>
-              <h2 className={`text-lg font-black mb-4 ${darkMode ? 'text-slate-200' : 'text-slate-800'}`}>콘텐츠 생성</h2>
+              <div className="flex items-center gap-2 mb-4">
+                <h2 className={`text-lg font-black ${darkMode ? 'text-slate-200' : 'text-slate-800'}`}>콘텐츠 생성</h2>
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${darkMode ? 'bg-blue-500/15 text-blue-400' : 'bg-blue-50 text-blue-600'}`}>핵심 기능</span>
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {([
-                  { id: 'blog' as ContentTabType, title: '블로그', desc: '네이버 스마트블록 최적화 의료 블로그', icon: '📝', color: 'blue' },
-                  { id: 'card_news' as ContentTabType, title: '카드뉴스', desc: 'SNS용 카드뉴스 원고 + 이미지 자동 생성', icon: '🎨', color: 'pink' },
-                  { id: 'press' as ContentTabType, title: '언론 보도자료', desc: '언론에 배포 가능한 보도자료 작성', icon: '🗞️', color: 'amber' },
+                  {
+                    id: 'blog' as ContentTabType, title: '블로그', desc: '네이버 스마트블록 최적화 의료 블로그',
+                    icon: '📝',
+                    gradient: darkMode ? 'from-blue-500/10 to-blue-600/5' : 'from-blue-50 to-blue-100/50',
+                    borderHover: darkMode ? 'hover:border-blue-500/40' : 'hover:border-blue-300',
+                    iconBg: darkMode ? 'bg-blue-500/15' : 'bg-blue-500/10',
+                    features: ['SEO 자동 최적화', '의료광고법 검증', 'AI 냄새 탐지'],
+                  },
+                  {
+                    id: 'card_news' as ContentTabType, title: '카드뉴스', desc: 'SNS용 카드뉴스 원고 + 이미지 자동 생성',
+                    icon: '🎨',
+                    gradient: darkMode ? 'from-pink-500/10 to-rose-600/5' : 'from-pink-50 to-rose-100/50',
+                    borderHover: darkMode ? 'hover:border-pink-500/40' : 'hover:border-pink-300',
+                    iconBg: darkMode ? 'bg-pink-500/15' : 'bg-pink-500/10',
+                    features: ['슬라이드 자동 구성', '디자인 템플릿', '이미지 자동 생성'],
+                  },
+                  {
+                    id: 'press' as ContentTabType, title: '언론 보도자료', desc: '언론에 배포 가능한 보도자료 작성',
+                    icon: '🗞️',
+                    gradient: darkMode ? 'from-amber-500/10 to-orange-600/5' : 'from-amber-50 to-orange-100/50',
+                    borderHover: darkMode ? 'hover:border-amber-500/40' : 'hover:border-amber-300',
+                    iconBg: darkMode ? 'bg-amber-500/15' : 'bg-amber-500/10',
+                    features: ['보도자료 포맷', '전문 어조 자동 변환', '병원 정보 연동'],
+                  },
                 ]).map(item => (
                   <button
                     key={item.id}
                     onClick={() => setContentTab(item.id)}
-                    className={`text-left p-6 rounded-2xl border transition-all hover:scale-[1.02] hover:shadow-lg group ${
-                      darkMode ? 'bg-slate-800 border-slate-700 hover:border-slate-600' : 'bg-white border-slate-200/80 hover:border-blue-200 shadow-sm'
+                    className={`text-left rounded-2xl border transition-all duration-300 hover:scale-[1.02] hover:shadow-xl group relative overflow-hidden ${item.borderHover} ${
+                      darkMode ? 'bg-slate-800/80 border-slate-700/80' : 'bg-white border-slate-200/60 shadow-sm'
                     }`}
                   >
-                    <span className="text-3xl mb-3 block">{item.icon}</span>
-                    <h3 className={`text-base font-black mb-1.5 ${darkMode ? 'text-slate-200' : 'text-slate-800'}`}>{item.title}</h3>
-                    <p className={`text-sm font-medium ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>{item.desc}</p>
-                    <div className={`mt-4 text-xs font-bold ${darkMode ? 'text-blue-400' : 'text-blue-600'} group-hover:underline`}>시작하기 →</div>
+                    {/* 배경 그라데이션 */}
+                    <div className={`absolute inset-0 bg-gradient-to-br ${item.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-300`} />
+
+                    <div className="relative p-6">
+                      {/* 아이콘 + 타이틀 */}
+                      <div className="flex items-start gap-4 mb-4">
+                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0 ${item.iconBg} group-hover:scale-110 transition-transform duration-300`}>
+                          {item.icon}
+                        </div>
+                        <div>
+                          <h3 className={`text-base font-black mb-1 ${darkMode ? 'text-slate-200' : 'text-slate-800'}`}>{item.title}</h3>
+                          <p className={`text-xs font-medium leading-relaxed ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>{item.desc}</p>
+                        </div>
+                      </div>
+
+                      {/* 기능 태그 */}
+                      <div className="flex flex-wrap gap-1.5 mb-4">
+                        {item.features.map((f, i) => (
+                          <span key={i} className={`text-[10px] font-semibold px-2 py-0.5 rounded-md ${
+                            darkMode ? 'bg-slate-700/80 text-slate-400' : 'bg-slate-100 text-slate-500'
+                          }`}>{f}</span>
+                        ))}
+                      </div>
+
+                      {/* CTA */}
+                      <div className={`flex items-center gap-1.5 text-xs font-bold ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>
+                        <span>시작하기</span>
+                        <svg className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+                        </svg>
+                      </div>
+                    </div>
                   </button>
                 ))}
               </div>
             </div>
 
-            {/* 도구 */}
+            {/* 도구 섹션 */}
             <div>
-              <h2 className={`text-lg font-black mb-4 ${darkMode ? 'text-slate-200' : 'text-slate-800'}`}>도구</h2>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              <div className="flex items-center gap-2 mb-4">
+                <h2 className={`text-lg font-black ${darkMode ? 'text-slate-200' : 'text-slate-800'}`}>도구</h2>
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${darkMode ? 'bg-violet-500/15 text-violet-400' : 'bg-violet-50 text-violet-600'}`}>유틸리티</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 {([
-                  { id: 'refine' as ContentTabType, title: 'AI 보정', desc: '문장 다듬기', icon: '✨' },
-                  { id: 'image' as ContentTabType, title: '이미지 생성', desc: 'AI 이미지', icon: '🖼️' },
-                  { id: 'history' as ContentTabType, title: '히스토리', desc: '생성 이력', icon: '🕐' },
+                  {
+                    id: 'refine' as ContentTabType, title: 'AI 보정', desc: '기존 글의 문장을 AI가 전문적으로 다듬어 줍니다',
+                    icon: '✨',
+                    iconBg: darkMode ? 'bg-emerald-500/15' : 'bg-emerald-500/10',
+                    borderHover: darkMode ? 'hover:border-emerald-500/40' : 'hover:border-emerald-300',
+                  },
+                  {
+                    id: 'image' as ContentTabType, title: '이미지 생성', desc: '블로그와 카드뉴스에 사용할 AI 이미지를 생성합니다',
+                    icon: '🖼️',
+                    iconBg: darkMode ? 'bg-cyan-500/15' : 'bg-cyan-500/10',
+                    borderHover: darkMode ? 'hover:border-cyan-500/40' : 'hover:border-cyan-300',
+                  },
+                  {
+                    id: 'history' as ContentTabType, title: '히스토리', desc: '지금까지 생성한 모든 콘텐츠를 조회하고 관리합니다',
+                    icon: '🕐',
+                    iconBg: darkMode ? 'bg-orange-500/15' : 'bg-orange-500/10',
+                    borderHover: darkMode ? 'hover:border-orange-500/40' : 'hover:border-orange-300',
+                  },
                 ]).map(item => (
                   <button
                     key={item.id}
                     onClick={() => setContentTab(item.id)}
-                    className={`text-left p-5 rounded-2xl border transition-all hover:scale-[1.02] hover:shadow-lg ${
-                      darkMode ? 'bg-slate-800 border-slate-700 hover:border-slate-600' : 'bg-white border-slate-200/80 hover:border-blue-200 shadow-sm'
+                    className={`text-left p-5 rounded-2xl border transition-all duration-300 hover:scale-[1.02] hover:shadow-lg group ${item.borderHover} ${
+                      darkMode ? 'bg-slate-800/80 border-slate-700/80' : 'bg-white border-slate-200/60 shadow-sm'
                     }`}
                   >
-                    <span className="text-2xl mb-2 block">{item.icon}</span>
-                    <h3 className={`text-sm font-black mb-0.5 ${darkMode ? 'text-slate-200' : 'text-slate-800'}`}>{item.title}</h3>
-                    <p className={`text-xs font-medium ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>{item.desc}</p>
+                    <div className="flex items-center gap-3 mb-2.5">
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-xl flex-shrink-0 ${item.iconBg} group-hover:scale-110 transition-transform duration-300`}>
+                        {item.icon}
+                      </div>
+                      <h3 className={`text-sm font-black ${darkMode ? 'text-slate-200' : 'text-slate-800'}`}>{item.title}</h3>
+                    </div>
+                    <p className={`text-xs font-medium leading-relaxed ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>{item.desc}</p>
                   </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 하단 팁 & 안내 */}
+            <div className={`rounded-2xl border p-6 ${darkMode ? 'bg-slate-800/50 border-slate-700/60' : 'bg-gradient-to-r from-slate-50 to-blue-50/50 border-slate-200/60'}`}>
+              <h3 className={`text-sm font-black mb-4 flex items-center gap-2 ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                <svg className="w-4 h-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 18v-5.25m0 0a6.01 6.01 0 001.5-.189m-1.5.189a6.01 6.01 0 01-1.5-.189m3.75 7.478a12.06 12.06 0 01-4.5 0m3.75 2.383a14.406 14.406 0 01-3 0M14.25 18v-.192c0-.983.658-1.823 1.508-2.316a7.5 7.5 0 10-7.517 0c.85.493 1.509 1.333 1.509 2.316V18" /></svg>
+                빠른 시작 가이드
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                {([
+                  { step: '01', title: '콘텐츠 유형 선택', desc: '블로그, 카드뉴스, 보도자료 중 선택' },
+                  { step: '02', title: '키워드 입력', desc: '주제와 타겟 키워드를 입력하세요' },
+                  { step: '03', title: 'AI 생성', desc: 'AI가 최적화된 콘텐츠를 자동 생성' },
+                  { step: '04', title: '검수 & 배포', desc: '의료광고법 검증 후 바로 사용 가능' },
+                ]).map((tip, i) => (
+                  <div key={i} className={`flex gap-3 items-start p-3 rounded-xl ${darkMode ? 'bg-slate-700/40' : 'bg-white/80'}`}>
+                    <span className={`text-lg font-black flex-shrink-0 ${darkMode ? 'text-blue-400/60' : 'text-blue-200'}`}>{tip.step}</span>
+                    <div>
+                      <div className={`text-xs font-bold mb-0.5 ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>{tip.title}</div>
+                      <div className={`text-[11px] font-medium ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>{tip.desc}</div>
+                    </div>
+                  </div>
                 ))}
               </div>
             </div>
@@ -1117,7 +1301,7 @@ const App: React.FC = () => {
           <div className="w-full">
               {contentTab === 'history' ? (
                 <div className={`rounded-2xl border p-6 md:p-8 backdrop-blur-xl ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white/80 border-white/60 shadow-[0_4px_24px_rgba(0,0,0,0.06)]'}`}>
-                  <Suspense fallback={<div className="flex items-center justify-center py-20"><div className="w-10 h-10 border-[3px] border-blue-100 border-t-blue-500 rounded-full animate-spin"></div></div>}>
+                  <Suspense fallback={<PanelSkeleton />}>
                     <PostHistory
                       onClose={() => setContentTab('blog')}
                       darkMode={darkMode}
@@ -1126,13 +1310,13 @@ const App: React.FC = () => {
                 </div>
               ) : contentTab === 'image' ? (
                 <div className={`rounded-2xl border p-6 md:p-8 backdrop-blur-xl ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white/80 border-white/60 shadow-[0_4px_24px_rgba(0,0,0,0.06)]'}`}>
-                  <Suspense fallback={<div className="flex items-center justify-center py-20"><div className="w-10 h-10 border-[3px] border-blue-100 border-t-blue-500 rounded-full animate-spin"></div></div>}>
+                  <Suspense fallback={<PanelSkeleton />}>
                     <ImageGenerator />
                   </Suspense>
                 </div>
               ) : (
                 <div className={`rounded-2xl border p-6 md:p-8 backdrop-blur-xl ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white/80 border-white/60 shadow-[0_4px_24px_rgba(0,0,0,0.06)]'}`}>
-                  <Suspense fallback={<div className="flex items-center justify-center py-20"><div className="w-10 h-10 border-[3px] border-blue-100 border-t-blue-500 rounded-full animate-spin"></div></div>}>
+                  <Suspense fallback={<PanelSkeleton />}>
                     <ContentRefiner
                       onClose={() => setContentTab('blog')}
                       onNavigate={(tab) => setContentTab(tab)}
@@ -1148,7 +1332,7 @@ const App: React.FC = () => {
         <div className="flex flex-col lg:flex-row gap-6 lg:items-start">
           {/* 입력 폼 - 컴팩트 */}
           <div className="w-full lg:w-[340px] xl:w-[380px] lg:flex-none">
-            <Suspense fallback={<div className="flex items-center justify-center h-64"><div className="w-10 h-10 border-[3px] border-blue-100 border-t-blue-500 rounded-full animate-spin"></div></div>}>
+            <Suspense fallback={<FormSkeleton />}>
               <InputForm
                 onSubmit={handleGenerate}
                 isLoading={state.isLoading || isGeneratingScript}
@@ -1161,7 +1345,7 @@ const App: React.FC = () => {
           {/* 결과 영역 - 넓게 */}
           <div className="flex flex-col min-h-[480px] lg:flex-1 min-w-0">
           {cardNewsPrompts && cardNewsPrompts.length > 0 ? (
-            <Suspense fallback={<div className="rounded-2xl bg-white/80 backdrop-blur-xl border border-white/60 p-20 flex items-center justify-center shadow-[0_4px_24px_rgba(0,0,0,0.06)]"><div className="w-12 h-12 border-[3px] border-blue-100 border-t-blue-500 rounded-full animate-spin"></div></div>}>
+            <Suspense fallback={<ContentSkeleton />}>
               <PromptPreview
                 prompts={cardNewsPrompts}
                 onApprove={handleApprovePrompts}
@@ -1173,7 +1357,7 @@ const App: React.FC = () => {
               />
             </Suspense>
           ) : cardNewsScript ? (
-            <Suspense fallback={<div className="rounded-2xl bg-white/80 backdrop-blur-xl border border-white/60 p-20 flex items-center justify-center shadow-[0_4px_24px_rgba(0,0,0,0.06)]"><div className="w-12 h-12 border-[3px] border-blue-100 border-t-blue-500 rounded-full animate-spin"></div></div>}>
+            <Suspense fallback={<ContentSkeleton />}>
               <ScriptPreview
                 script={cardNewsScript}
                 onApprove={handleApproveScript}
@@ -1206,7 +1390,7 @@ const App: React.FC = () => {
               </p>
             </div>
           ) : getCurrentState().data ? (
-            <Suspense fallback={<div className="rounded-2xl bg-white/80 backdrop-blur-xl border border-white/60 p-20 flex items-center justify-center shadow-[0_4px_24px_rgba(0,0,0,0.06)]"><div className="w-12 h-12 border-[3px] border-blue-100 border-t-blue-500 rounded-full animate-spin"></div></div>}>
+            <Suspense fallback={<ContentSkeleton />}>
               <ResultPreview content={getCurrentState().data!} darkMode={darkMode} />
             </Suspense>
           ) : (
@@ -1243,7 +1427,7 @@ const App: React.FC = () => {
 
       {/* API 에러 모달 */}
       {(getCurrentState().error || state.error) && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="오류 알림">
           <div className={`rounded-2xl p-8 max-w-md w-full shadow-[0_20px_60px_rgba(0,0,0,0.15)] ${darkMode ? 'bg-slate-800' : 'bg-white'}`}>
             <div className="flex items-center justify-between mb-6">
               <h3 className={`text-xl font-black flex items-center gap-2 ${
@@ -1330,7 +1514,7 @@ const App: React.FC = () => {
 
       {/* API 키 설정 모달 */}
       {showApiKeyModal && (
-        <Suspense fallback={<div>Loading...</div>}>
+        <Suspense fallback={<LoadingSpinner />}>
           <ApiKeySettings onClose={() => setShowApiKeyModal(false)} />
         </Suspense>
       )}
@@ -1339,6 +1523,9 @@ const App: React.FC = () => {
       <Suspense fallback={null}>
         <MedicalLawSearch />
       </Suspense>
+
+      {/* 토스트 알림 */}
+      <ToastContainer />
     </div>
   );
 };

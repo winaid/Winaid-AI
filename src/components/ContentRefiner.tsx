@@ -3,6 +3,7 @@ import { refineContentByMedicalLaw } from '../services/postProcessingService';
 import { getAiClient } from '../services/geminiClient';
 import { SYSTEM_PROMPT, getStage2_AiRemovalAndCompliance, getDynamicSystemPrompt } from '../lib/gpt52-prompts-staged';
 import { applyThemeToHtml } from '../utils/cssThemes';
+import { toast } from './Toast';
 import type { CssTheme } from '../types';
 
 interface ContentRefinerProps {
@@ -46,7 +47,7 @@ const ContentRefiner: React.FC<ContentRefinerProps> = ({ onClose, onNavigate, da
 
   const handleRefine = async () => {
     if (!content.trim()) {
-      alert('수정할 콘텐츠를 입력해주세요.');
+      toast.warning('수정할 콘텐츠를 입력해주세요.');
       return;
     }
 
@@ -68,7 +69,7 @@ const ContentRefiner: React.FC<ContentRefinerProps> = ({ onClose, onNavigate, da
       console.log('✅ AI 정밀보정 완료');
     } catch (error) {
       console.error('❌ AI 정밀보정 실패:', error);
-      alert('AI 정밀보정에 실패했습니다. 다시 시도해주세요.');
+      toast.error('AI 정밀보정에 실패했습니다. 다시 시도해주세요.');
     } finally {
       setIsRefining(false);
     }
@@ -80,7 +81,7 @@ const ContentRefiner: React.FC<ContentRefinerProps> = ({ onClose, onNavigate, da
   const handleChatSubmit = async () => {
     if (!chatInput.trim()) return;
     if (!getWorkingContent().trim()) {
-      alert('보정할 콘텐츠를 입력해주세요.');
+      toast.warning('보정할 콘텐츠를 입력해주세요.');
       return;
     }
 
@@ -448,7 +449,7 @@ ${wantsHumanize ? `
         
         navigator.clipboard.write([clipboardItem]).then(() => {
           console.log('✅ HTML 복사 성공 (깨끗한 형식)');
-          alert('복사 완료! 워드에 붙여넣기 하세요.');
+          toast.success('복사 완료! 워드에 붙여넣기 하세요.');
         }).catch(err => {
           console.error('Clipboard API 실패, fallback 시도:', err);
           // Fallback: execCommand 방식
@@ -470,11 +471,11 @@ ${wantsHumanize ? `
           }
           document.body.removeChild(tempDiv);
           console.log('✅ HTML 복사 성공 (fallback)');
-          alert('복사 완료! 워드에 붙여넣기 하세요.');
+          toast.success('복사 완료! 워드에 붙여넣기 하세요.');
         });
       } catch (err) {
         console.error('❌ 복사 실패:', err);
-        alert('복사에 실패했습니다.');
+        toast.error('복사에 실패했습니다.');
       }
     }
   };

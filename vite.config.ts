@@ -28,7 +28,13 @@ export default defineConfig({
     outDir: 'dist',
     emptyOutDir: true,
     copyPublicDir: true,
-    chunkSizeWarningLimit: 1000
+    chunkSizeWarningLimit: 500,
+    minify: 'esbuild',
+    target: 'es2020',
+    sourcemap: false,
+  },
+  esbuild: {
+    drop: ['console', 'debugger'],
   },
   plugins: [
     react(),

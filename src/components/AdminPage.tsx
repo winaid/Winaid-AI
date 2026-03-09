@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { getAllGeneratedPosts, getAdminStats, deleteGeneratedPost, PostType } from '../services/postStorageService';
 import { TEAM_DATA } from '../constants/teamHospitals';
+import { toast } from './Toast';
 
 // Admin 비밀번호 - 실제로는 환경변수나 Supabase로 관리해야 함
 const ADMIN_PASSWORD = 'rosmrtl718';
@@ -206,13 +207,13 @@ const AdminPage: React.FC<AdminPageProps> = ({ onAdminVerified }) => {
       const result = await deleteGeneratedPost(ADMIN_PASSWORD, contentId);
       
       if (!result.success) {
-        alert(`삭제 실패: ${result.error}`);
+        toast.error(`삭제 실패: ${result.error}`);
       } else {
-        alert('✅ 삭제 완료!');
+        toast.success('삭제 완료!');
         loadContents(); // 목록 새로고침
       }
     } catch (err) {
-      alert(`삭제 오류: ${String(err)}`);
+      toast.error(`삭제 오류: ${String(err)}`);
     }
   };
   
