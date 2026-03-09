@@ -1005,7 +1005,7 @@ const App: React.FC = () => {
             <Suspense fallback={<ContentSkeleton />}>
               <PromptPreview
                 prompts={cardNewsPrompts}
-                onApprove={handleApprovePrompts}
+                onApprove={() => handleApprovePrompts(getCurrentSetState())}
                 onBack={handleBackToScript}
                 onEditPrompts={handleEditPrompts}
                 isLoading={isGeneratingScript}
