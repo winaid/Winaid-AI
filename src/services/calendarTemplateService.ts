@@ -1935,37 +1935,73 @@ Peaceful, nurturing, nature-garden aesthetic. Watercolor botanical beauty. Warm 
       id: 'grt_xmas_tree', name: '크리스마스 트리', color: '#22c55e', accent: '#15803d', bg: '#f0fdf4',
       desc: '화려한 트리',
       layoutHint: 'traditional',
-      aiPrompt: `EXACT LAYOUT BLUEPRINT – Christmas Tree Festive 1080×1080. BACKGROUND: warm cream #F0FDF4 with subtle falling snow particle overlay at 15% opacity, soft warm indoor glow. ZONE 1 (top 20%): golden star topper with radiating light rays, "Merry Christmas" in 36px elegant red #DC2626 serif font with gold shadow, delicate holly leaf border decorations. ZONE 2 (center 50%): magnificent tall Christmas tree with lush dark green branches, decorated with red #EF4444 and gold #FFD700 ornaments (baubles, candy canes, bows), twinkling fairy lights in warm white and multicolor, golden tinsel garland spiraling, detailed pine needle texture, soft glow around tree. ZONE 3 (bottom 30%): beautifully wrapped gift boxes in red, gold, and green with ribbon bows under tree, cozy living room floor (warm wood), hospital name in 26px green serif font, "행복한 성탄절 보내세요" in 28px warm red. STYLE KEYWORDS: classic Christmas warmth, festive indoor scene, twinkling lights magic, traditional holiday card, cozy celebration`,
+      aiPrompt: `EXACT LAYOUT BLUEPRINT — replicate this structure precisely:
+BACKGROUND: Warm cream (#fffbeb) to soft white gradient. Subtle warm glow at center (radial, gold #fbbf24 at 3% opacity).
+ZONE 1 — STAR TOPPER (top 15%): Large golden star (#FFD700) at tree peak with radiating light rays (thin lines, 8% opacity). Small sparkle dots around star (gold, 3–5px, 30% opacity).
+ZONE 2 — CHRISTMAS TREE (center, 50%): Beautiful triangular evergreen tree in rich green (#22c55e to #15803d gradient). Layered branch tiers with texture. Decorated with: colorful ornament balls (red #dc2626, gold #d4a017, blue #3b82f6, 8–12px circles), twinkling light dots (white/yellow, 3px, glow effect), golden garland (#d4a017) draped in swooping curves across tree. Warm brown (#92400e) trunk at base.
+ZONE 3 — GIFTS AND GREETING (below tree, 20%): 3–4 gift boxes in red, green, and gold with ribbon bows arranged at tree base. "Merry Christmas" in red (#dc2626, 12px, weight 400, letter-spacing 2px). Below: "메리 크리스마스" in green (#15803d, 22px, weight 700). Below: hospital/clinic name in red (#b91c1c, 13px, weight 500).
+ZONE 4 — BOTTOM (bottom 10%): Soft golden glow at floor level (8% opacity). Thin green decorative line.
+Festive, traditional, warm living-room Christmas atmosphere. Classic holiday card with rich green-red-gold palette.`,
     },
     {
       id: 'grt_xmas_snow', name: '눈 내리는 밤', color: '#0ea5e9', accent: '#0284c7', bg: '#f0f9ff',
       desc: '눈 오는 겨울밤',
       layoutHint: 'nature',
-      aiPrompt: `EXACT LAYOUT BLUEPRINT – Snowy Winter Night Christmas 1080×1080. BACKGROUND: deep blue #0C1445 night sky gradient to midnight #060A24, dense soft snowfall with various snowflake sizes. ZONE 1 (top 25%): "Merry Christmas" in 38px ethereal white text with ice-blue glow #93C5FD, crescent moon partially hidden by clouds, stars twinkling above. ZONE 2 (center 45%): charming snow-covered village scene with 3-4 cozy houses with warm orange-lit windows, snow-laden rooftops and chimneys with smoke, tall street lamp casting warm golden light cone onto snowy ground, snow-covered evergreen trees flanking, gentle footprints in fresh snow. ZONE 3 (bottom 30%): smooth snow ground foreground with a small snowman wearing a scarf, hospital name in 24px soft blue #93C5FD font, "따뜻한 크리스마스 보내세요" in 28px white with subtle glow, soft snow bank at bottom edge. STYLE KEYWORDS: silent holy night, magical snowfall, cozy village, winter wonderland, peaceful Christmas eve, storybook illustration`,
+      aiPrompt: `EXACT LAYOUT BLUEPRINT — replicate this structure precisely:
+BACKGROUND: Deep winter night blue (#0c1445) to midnight (#1e1b4b) gradient.
+ZONE 1 — FALLING SNOW (full overlay): Scattered snowflake particles across entire image — mix of small dots (2–3px, white, 40–70% opacity) and larger crystal snowflakes (8–12px, white, 20–30% opacity, six-pointed). Varying sizes create depth. Slight motion blur on some for falling effect.
+ZONE 2 — VILLAGE SCENE (center-bottom, 45%): 3–4 cozy houses with snow-covered rooftops (white #f0f9ff caps, thick), warm golden light (#fbbf24) glowing from windows. Small church steeple on right with lit window. Watercolor painting style with soft edges. Snow-covered ground in soft blue-white (#e0f2fe). Single vintage street lamp on left with warm golden glow circle (radial gradient, #fbbf24 at 30% opacity, 40px radius).
+ZONE 3 — GREETING TEXT (upper-center, 25%): "Merry Christmas" in white (14px, weight 400, letter-spacing 3px, 80% opacity). Below: "메리 크리스마스" in white (22px, weight 700), soft glow (text-shadow 0 0 8px rgba(255,255,255,0.3)). Below: hospital/clinic name in ice blue (#7dd3fc, 12px, weight 500).
+ZONE 4 — GROUND SNOW (bottom 10%): Undulating snow-covered ground in blue-white, soft watercolor edge fading at bottom.
+Peaceful, magical, silent night atmosphere. Watercolor winter landscape. Cozy village Christmas eve.`,
     },
     {
       id: 'grt_xmas_minimal', name: '미니멀 노엘', color: '#dc2626', accent: '#b91c1c', bg: '#fef2f2',
       desc: '심플 레드&화이트',
       layoutHint: 'minimal',
-      aiPrompt: `EXACT LAYOUT BLUEPRINT – Minimalist Noel Christmas 1080×1080. BACKGROUND: clean warm white #FFFBFB with barely visible diagonal fine stripe pattern in #FEE2E2 at 5% opacity. ZONE 1 (top 30%): single thin red #DC2626 horizontal line, "NOEL" in 20px ultra-light tracking-wide sans-serif above line, tiny red dot decoration. ZONE 2 (center 40%): single elegant red Christmas ornament ball hanging from thin gold thread from top, realistic glass reflection and shadow on ball surface, subtle gold hook detail, generous whitespace surrounding the ornament, "Merry Christmas" in 48px bold red #B91C1C modern sans-serif to the side. ZONE 3 (bottom 30%): hospital name in 22px light gray #6B7280 sans-serif, "성탄절을 축하합니다" in 26px medium red text, single thin red line, minimal red dot pattern. STYLE KEYWORDS: Swiss minimalism, single focal point, dramatic whitespace, refined red accent, contemporary graphic design, editorial elegance`,
+      aiPrompt: `EXACT LAYOUT BLUEPRINT — replicate this structure precisely:
+BACKGROUND: Pure white (#ffffff). Extremely subtle snowflake pattern — geometric six-pointed snowflakes in light gray (#f1f5f9) at 4% opacity, scattered sparsely.
+ZONE 1 — HANGING LINE (top 30%): Single thin vertical line (1px, red #dc2626 at 40% opacity) dropping from top-center, 30% of card height. Clean, precise, geometric.
+ZONE 2 — ORNAMENT BALL (center, 25%): Single elegant Christmas ornament ball hanging from the line — perfect circle (50px diameter), solid red (#dc2626) fill, small gold (#d4a017) cap and hook at top connecting to line. Subtle highlight reflection (white arc, 15% opacity) on upper-left of ball surface. Minimal soft shadow beneath (4px blur, 5% opacity).
+ZONE 3 — TYPOGRAPHY (below ornament, 20%): "Merry Christmas" in clean sans-serif (14px, weight 400, letter-spacing 4px, red #b91c1c). Below: "메리 크리스마스" in red (#dc2626, 20px, weight 700). Below: hospital/clinic name in light gray (#d1d5db, 11px, weight 400, letter-spacing 2px).
+ZONE 4 — BOTTOM (bottom 20%): Vast white space. Nothing else. Breathing room.
+Ultra-minimalist, red-and-white only. Single ornament as focal point. Sophisticated graphic design. Less is more.`,
     },
     {
       id: 'grt_xmas_character', name: '산타 캐릭터', color: '#ef4444', accent: '#dc2626', bg: '#fef2f2',
       desc: '귀여운 산타',
       layoutHint: 'cute',
-      aiPrompt: `EXACT LAYOUT BLUEPRINT – Cute Santa Character Christmas 1080×1080. BACKGROUND: bright festive red #FEF2F2 with white polka dot pattern at 10% opacity, candy stripe border. ZONE 1 (top 20%): "Merry Christmas!" in 36px playful bold rounded font #DC2626, colorful Christmas light string illustration draped across top, small star decorations. ZONE 2 (center 50%): adorable chibi-style Santa Claus center with rosy cheeks and big smile carrying large gift sack, cute cartoon tooth character dressed as Santa's helper with elf hat and pointy shoes on one side, small cute reindeer with red nose on other side, all characters kawaii-proportioned (big heads, small bodies), candy cane props and gingerbread cookie decorations surrounding. ZONE 3 (bottom 30%): hospital name in 26px friendly rounded font #DC2626, "즐거운 크리스마스!" in 32px bold red, row of small cute gift box illustrations, snowman emoji-style decoration, confetti and star sprinkles. STYLE KEYWORDS: kawaii illustration, cute character design, cheerful children-friendly, bright festive colors, adorable cartoon style`,
+      aiPrompt: `EXACT LAYOUT BLUEPRINT — replicate this structure precisely:
+BACKGROUND: Soft warm red (#fef2f2) to white gradient. Subtle candy cane diagonal stripe pattern in red (#fca5a5) and white at 4% opacity.
+ZONE 1 — BANNER (top 15%): Scalloped red (#ef4444) banner with white text "Merry Christmas!" (14px, weight 700). Small holly leaf accents at banner ends. Tiny gold stars scattered above (5–8 stars, 4px, 30% opacity).
+ZONE 2 — CHARACTER SCENE (center, 45%): Adorable chibi Santa (round body, oversized red hat with white pom-pom, rosy cheeks, happy closed-eye smile) at center carrying red gift bag. To Santa's left: cute kawaii tooth character dressed as elf (green hat, pointy ears, big smile). To Santa's right: small round snowman with orange carrot nose and red scarf. All characters in kawaii style — simple shapes, big heads, tiny bodies, pastel shading. Small candy canes, gingerbread man cookie, and lollipop scattered around feet.
+ZONE 3 — GREETING TEXT (below characters, 20%): "메리 크리스마스" in bright red (#ef4444, 22px, weight 800). Below: "즐거운 성탄절 보내세요" in green (#16a34a, 13px, weight 400). Below: hospital/clinic name in red (#dc2626, 12px, weight 500).
+ZONE 4 — BOTTOM (bottom 10%): Row of small gift box icons (red, green, gold) with bows. Snow-like white dots along very bottom edge.
+Cute, kawaii, cheerful Christmas party. Child-friendly, adorable character illustrations. Bright and playful.`,
     },
     {
       id: 'grt_xmas_gold', name: '골드 오너먼트', color: '#d4a017', accent: '#b8860b', bg: '#1a1a2e',
       desc: '럭셔리 골드 장식',
       layoutHint: 'luxury',
-      aiPrompt: `EXACT LAYOUT BLUEPRINT – Luxury Gold Ornament Christmas 1080×1080. BACKGROUND: deep navy #0F172A to black #030712 gradient with subtle starfield sparkle at 5% opacity. ZONE 1 (top 25%): "Merry Christmas" in 40px ultra-elegant thin serif gold #D4A017 with metallic sheen, "& Happy New Year" in 24px gold below, ornate gold corner decorations with baroque flourish design. ZONE 2 (center 45%): cluster of 5-7 premium Christmas ornament balls hanging at staggered heights from gold threads, ornaments in polished gold #FFD700, rose gold #B76E79, and champagne #F5E6CC with intricate filigree patterns etched on surfaces, realistic metallic reflections and highlights, crystal snowflakes interspersed, gold ribbon curls. ZONE 3 (bottom 30%): hospital name in 26px cream #FFF8E7 elegant serif, greeting in 22px warm gold, thin double gold line frame border, subtle gold particle dust floating, small gold laurel accent. STYLE KEYWORDS: opulent luxury, dark moody elegance, metallic gold craftsmanship, premium ornament detail, high-end jeweler quality, sophisticated noir Christmas`,
+      aiPrompt: `EXACT LAYOUT BLUEPRINT — replicate this structure precisely:
+BACKGROUND: Deep navy (#1a1a2e) to black (#0a0a1a) gradient. Subtle gold dust particles (1–2px dots, gold #d4a017) scattered at 5% opacity.
+ZONE 1 — HANGING ORNAMENTS (top 40%): 5 elegant Christmas ornaments hanging from thin gold (#d4a017) lines of varying lengths from top edge. Ornament shapes: round ball, teardrop, elongated oval, star, round ball — in gold (#d4a017) and bright gold (#FFD700) with metallic sheen highlights. Each has decorative gold cap. Gold ribbon bows at suspension points. Subtle shimmer/sparkle dots (white, 2px, 50% opacity) around ornaments.
+ZONE 2 — CRYSTAL SNOWFLAKES (middle band, 15%): 3–4 large geometric crystal snowflakes in white at 10–20% opacity, intricate six-pointed fractal design. Elegant, jewel-like precision.
+ZONE 3 — GREETING TEXT (center-lower, 25%): "Merry Christmas" in gold foil effect (#FFD700 to #d4a017 gradient, 16px, weight 400, letter-spacing 3px, serif font). Below: "메리 크리스마스" in bright gold (#FFD700, 24px, weight 700). Metallic text effect with highlight. Below: hospital/clinic name in muted gold (#b8860b, 12px, weight 500).
+ZONE 4 — BOTTOM (bottom 10%): Thin gold double-line border. Small gold bow at center.
+Luxurious, opulent, premium. Gold-on-navy elegance. High-end luxury Christmas card. Metallic shimmer throughout.`,
     },
     {
       id: 'grt_xmas_wreath', name: '리스 장식', color: '#16a34a', accent: '#15803d', bg: '#f0fdf4',
       desc: '초록 리스 프레임',
       layoutHint: 'warm',
-      aiPrompt: `EXACT LAYOUT BLUEPRINT – Christmas Wreath Frame 1080×1080. BACKGROUND: soft warm cream #FFFBEB with subtle linen texture, warm candlelight ambiance glow. ZONE 1 (top portion of wreath): top arc of circular pine wreath with detailed needle texture, interwoven holly leaves with red berries, small pine cones, tiny gold bells, cinnamon stick accents, dried orange slice decorations. ZONE 2 (center - inside wreath circle): "Merry Christmas" in 40px elegant warm red #DC2626 serif calligraphy centered in wreath opening, hospital name in 24px forest green #15803D below, "행복한 성탄절" in 28px warm font, soft warm glow from behind text. ZONE 3 (bottom portion of wreath): bottom arc of wreath continuing with lush greenery, large luxurious red satin ribbon bow at bottom center with flowing ribbon tails, poinsettia flowers flanking the bow, additional berry clusters. STYLE KEYWORDS: natural botanical, cozy warmth, handcrafted wreath detail, rustic Christmas charm, inviting holiday atmosphere, traditional craft beauty`,
+      aiPrompt: `EXACT LAYOUT BLUEPRINT — replicate this structure precisely:
+BACKGROUND: Warm cream (#f0fdf4) with soft warm golden glow at center (radial, #fbbf24 at 5% opacity).
+ZONE 1 — WREATH CIRCLE (centered, 70% of card): Circular Christmas wreath — lush pine branches (#16a34a to #15803d) forming thick ring (wreath width ~15% of diameter). Branches have needle texture, layered and full. Decorated with: red holly berries (#dc2626) in clusters of 3, dark green holly leaves (#166534), 3–4 small pine cones (#92400e) at natural positions, small mistletoe sprigs with white berries. Subtle shadow behind wreath (6px blur, 8% opacity).
+ZONE 2 — RED BOW (bottom of wreath): Large decorative red (#dc2626) satin ribbon bow at 6 o'clock position of wreath. Two flowing ribbon tails hanging down. Bow is focal accent point.
+ZONE 3 — CENTER TEXT (inside wreath circle): "Merry Christmas" in dark green (#15803d, 13px, weight 400, letter-spacing 2px). Below: "메리 크리스마스" in red (#dc2626, 22px, weight 700). Below: hospital/clinic name in green (#16a34a, 12px, weight 500). Text centered within the open circle of the wreath. Warm candlelight glow behind text (radial, #fbbf24 at 6% opacity).
+ZONE 4 — CORNERS (outside wreath): Small scattered pine needles and single berries at corners, 15% opacity. Clean and uncluttered outside wreath.
+Warm, cozy, family Christmas wreath. Traditional green-and-red. Welcoming and festive.`,
     },
   ],
 
@@ -1975,37 +2011,73 @@ Peaceful, nurturing, nature-garden aesthetic. Watercolor botanical beauty. Warm 
       id: 'grt_traditional_korean', name: '전통 한국풍', color: '#dc2626', accent: '#991b1b', bg: '#fef2f2',
       desc: '전통 명절 디자인',
       layoutHint: 'traditional',
-      aiPrompt: `EXACT LAYOUT BLUEPRINT – Traditional Korean Holiday Greeting 1080×1080. BACKGROUND: deep red #8B0000 to crimson #DC2626 gradient with traditional Korean dancheong pattern border at 15% opacity, subtle hanji paper texture. ZONE 1 (top 25%): elegant traditional Korean cloud motif (구름문양) in gold #D4A017, pair of flying cranes (학) illustration in white and gold, "명절 인사" in 36px traditional Korean calligraphy brush style. ZONE 2 (center 45%): large ornate traditional frame border (전통 문양 틀) in gold with corner decorations, pine tree (소나무) and plum blossom (매화) illustrations flanking, greeting text "건강하고 행복한 명절 되세요" in 44px elegant brush calligraphy #FFD700, subtle traditional lattice pattern behind text. ZONE 3 (bottom 30%): hospital name in 28px formal Korean font with gold accent, schedule period in structured format, traditional Korean knot (매듭) decoration, lotus or chrysanthemum border at bottom edge, red and gold color harmony. STYLE KEYWORDS: Korean traditional elegance, dancheong color palette, dignified cultural aesthetic, premium calligraphy, royal palace art inspiration`,
+      aiPrompt: `EXACT LAYOUT BLUEPRINT — replicate this structure precisely:
+BACKGROUND: Warm cream (#fef2f2) with subtle hanji (Korean paper) texture at 5% opacity.
+ZONE 1 — TRADITIONAL FRAME (outer border, 8% inset): Decorative red (#dc2626) and gold (#d4a017) traditional Korean frame border — dancheong-inspired geometric patterns along edges. Corner accents with stylized cloud motifs (구름문) in gold at 60% opacity. Double-line inner border (red 1px outer, gold 1px inner, 3px gap).
+ZONE 2 — DECORATIVE ELEMENTS (top-center, 30%): Elegant plum blossom (매화) branch illustration — dark brown (#57534e) branch with red (#dc2626) and pink (#fca5a5) five-petal blossoms. 2–3 crane (학) silhouettes in gold (#d4a017) at 20% opacity flying in upper portion. Small traditional cloud patterns scattered.
+ZONE 3 — GREETING TEXT (center, 30%): Main greeting in brush calligraphy style — "명절을 축하합니다" in deep red (#991b1b, 26px, weight 800). Below: holiday closure period in warm gray (#78716c, 13px, weight 400) — "휴진 안내: OO월 OO일 ~ OO월 OO일". Below: hospital/clinic name in red (#dc2626, 14px, weight 600) with small traditional frame underline.
+ZONE 4 — BOTTOM ACCENT (bottom 15%): Pine tree (소나무) silhouette illustration in dark green (#166534) at 15% opacity. Thin red and gold decorative line. Small Korean traditional knot (매듭) ornament in red at center.
+Traditional, dignified, Korean festive aesthetic. Red-and-gold dancheong elegance. Respectful holiday greeting.`,
     },
     {
       id: 'grt_warm_family', name: '따뜻한 가족', color: '#f97316', accent: '#ea580c', bg: '#fff7ed',
       desc: '가족 중심 따뜻한',
       layoutHint: 'warm',
-      aiPrompt: `EXACT LAYOUT BLUEPRINT – Warm Family Holiday Greeting 1080×1080. BACKGROUND: soft warm orange #FFF7ED to cream #FFFBEB gradient with subtle watercolor wash texture, warm golden hour lighting effect. ZONE 1 (top 20%): soft bokeh light circles in warm gold and orange at varying opacities (10-30%), hospital name in 22px warm serif font #EA580C. ZONE 2 (center 50%): gentle hand-drawn style family illustration (parents and children) with warm soft outlines, cozy home atmosphere with warm candlelight, watercolor-style rendering in soft orange and cream tones, hearts floating above, warm cup of tea illustration, comfortable blanket and cushion details. ZONE 3 (bottom 30%): "따뜻한 명절 보내세요" in 40px warm handwritten-style brush font #F97316, caring message "가족과 함께 행복한 시간 되세요" in 24px soft brown, subtle warm watercolor splash border, tiny heart decorations. STYLE KEYWORDS: cozy warmth, gentle watercolor, family togetherness, soft golden lighting, heartfelt caring aesthetic`,
+      aiPrompt: `EXACT LAYOUT BLUEPRINT — replicate this structure precisely:
+BACKGROUND: Soft warm cream (#fff7ed) to peach (#fed7aa) gradient (top to bottom, very subtle). Soft bokeh light circles — 5–8 warm gold (#fbbf24) circles at 8–15% opacity, varying sizes (20–60px), blurred edges, scattered across background.
+ZONE 1 — WARM HEADER (top 15%): Small candle flame illustration (warm orange #f97316, gentle glow effect) at top-center. Thin hand-drawn style wavy line in orange (#fdba74) at 20% opacity below flame.
+ZONE 2 — FAMILY ILLUSTRATION (center, 40%): Gentle hand-drawn style illustration — simple, warm line art of family silhouette (2 adults, 1–2 children) holding hands, drawn in warm brown (#92400e) at 50% opacity. Watercolor wash behind figures in soft orange (#fed7aa) at 15% opacity. Cozy, simple, heartfelt — not overly detailed. Small heart shape above family group in orange at 30% opacity.
+ZONE 3 — GREETING TEXT (below illustration, 25%): "따뜻한 명절 보내세요" in warm orange-brown (#ea580c, 22px, weight 700). Below: holiday closure info in warm gray (#78716c, 12px, weight 400). Below: hospital/clinic name in orange (#f97316, 13px, weight 500).
+ZONE 4 — BOTTOM GLOW (bottom 10%): Warm candlelight glow — radial gradient in gold (#fbbf24) at 5% opacity fading outward from center-bottom. Thin hand-drawn line in peach at 15% opacity.
+Warm, emotional, family-centered. Soft watercolor candlelight mood. Caring medical practice greeting.`,
     },
     {
       id: 'grt_modern_minimal', name: '모던 미니멀', color: '#6366f1', accent: '#4f46e5', bg: '#eef2ff',
       desc: '세련된 미니멀',
       layoutHint: 'minimal',
-      aiPrompt: `EXACT LAYOUT BLUEPRINT – Modern Minimalist Holiday Greeting 1080×1080. BACKGROUND: clean white #FFFFFF to very subtle indigo tint #F5F3FF gradient, ultra-clean and airy. ZONE 1 (top 25%): hospital name in 18px ultra-light tracking-wide sans-serif #6366F1, thin indigo line divider spanning 60% width centered, small geometric diamond ornament at line center. ZONE 2 (center 40%): single elegant holiday symbol (abstract geometric snowflake or star) in clean indigo #4F46E5 line art, "행복한 명절" in 56px bold modern sans-serif #4F46E5, maximum whitespace surrounding text, subtle thin line frame inset from edges. ZONE 3 (bottom 35%): schedule information in clean 18px layout with indigo headers and gray #94A3B8 body text, thin line divider, "건강하고 행복하세요" in 24px medium weight indigo, minimal geometric dot pattern footer. STYLE KEYWORDS: Swiss international style, ultra-clean typography, geometric precision, maximum negative space, sophisticated restraint, contemporary medical brand`,
+      aiPrompt: `EXACT LAYOUT BLUEPRINT — replicate this structure precisely:
+BACKGROUND: Pure white (#ffffff). Extremely subtle geometric grid pattern in light indigo (#e0e7ff) at 3% opacity.
+ZONE 1 — TOP SPACE (top 25%): Clean white space. Single thin horizontal line in indigo (#6366f1) at 8% opacity, spanning center 40% width. Above line: small geometric holiday symbol (simple line-art star or ornament, indigo #6366f1 at 25% opacity, 24px).
+ZONE 2 — MAIN TYPOGRAPHY (center, 30%): "Happy Holidays" in clean sans-serif (14px, weight 400, letter-spacing 4px, indigo #6366f1 at 60% opacity). Below: main greeting "행복한 명절 되세요" in bold indigo (#4f46e5, 24px, weight 700). Generous whitespace between lines (20px gap).
+ZONE 3 — SCHEDULE INFO (below center, 20%): Thin indigo line (30px wide, centered, 1px, 15% opacity). Below: "휴진 안내" in indigo (#6366f1, 11px, weight 600, letter-spacing 2px). Below: closure dates in light gray (#94a3b8, 12px, weight 400). Below: hospital/clinic name in indigo (#a5b4fc, 12px, weight 400, letter-spacing 2px).
+ZONE 4 — BOTTOM (bottom 20%): Pure white space. Single small geometric dot in indigo at 10% opacity, centered.
+Modern minimalist, typographic precision. Indigo and white only. Maximum whitespace. Refined medical brand.`,
     },
     {
       id: 'grt_nature_season', name: '자연 사계절', color: '#22c55e', accent: '#15803d', bg: '#f0fdf4',
       desc: '계절감 자연풍',
       layoutHint: 'nature',
-      aiPrompt: `EXACT LAYOUT BLUEPRINT – Nature Seasonal Holiday Greeting 1080×1080. BACKGROUND: soft sky gradient from light blue #E0F2FE at top to fresh green #DCFCE7 at bottom, natural outdoor lighting feel. ZONE 1 (top 25%): gentle sky with soft white cumulus clouds, warm sunlight rays breaking through at 15% opacity, small flock of birds in V formation, seasonal tree canopy edges framing top. ZONE 2 (center 45%): beautiful seasonal landscape illustration — blooming meadow with wildflowers in various colors, gentle rolling hills in layered green shades, single elegant tree with detailed foliage as centerpiece, small stream or path winding through landscape, butterflies and dragonflies, watercolor botanical rendering style. ZONE 3 (bottom 30%): lush grass foreground with detailed wildflower illustrations, hospital name in 26px earthy forest green #15803D serif font, "자연처럼 건강한 명절 되세요" in 30px warm green calligraphy, subtle leaf and vine border decoration. STYLE KEYWORDS: botanical illustration, peaceful nature scene, fresh outdoor air, watercolor landscape, serene and refreshing, healing nature aesthetic`,
+      aiPrompt: `EXACT LAYOUT BLUEPRINT — replicate this structure precisely:
+BACKGROUND: Soft sage green (#f0fdf4) to warm cream (#fefce8) gradient (top to bottom).
+ZONE 1 — BOTANICAL HEADER (top 30%): Watercolor botanical arch — eucalyptus branches, small leaves, and seasonal foliage arranged in soft arch/garland shape across top. Colors: sage green (#22c55e), olive (#65a30d), mint (#86efac), with earth brown (#92400e) stems. Watercolor style with soft bleeds and natural imperfections. Small seasonal flowers (cherry blossoms for spring, sunflower for summer, maple for autumn, pine for winter) tucked into arrangement.
+ZONE 2 — LANDSCAPE VIGNETTE (center, 30%): Small circular vignette (watercolor, soft feathered edge) showing serene seasonal landscape — rolling green hills, single tree, gentle sky. Earth tones (#92400e, #22c55e, #38bdf8) in loose watercolor wash. Peaceful and calming miniature scene.
+ZONE 3 — GREETING TEXT (below vignette, 25%): "행복한 명절 되세요" in forest green (#15803d, 22px, weight 700). Below: closure dates in warm gray (#78716c, 12px, weight 400). Below: hospital/clinic name in green (#22c55e, 13px, weight 500).
+ZONE 4 — BOTTOM BOTANICAL (bottom 10%): Small watercolor leaf sprigs at bottom corners (sage green, 20% opacity). Thin natural-style line (hand-drawn feel) in green at 10% opacity.
+Serene, nature-inspired, seasonal. Watercolor botanical elegance. Peaceful and refreshing.`,
     },
     {
       id: 'grt_luxury_gold', name: '럭셔리 골드', color: '#d4a017', accent: '#b8860b', bg: '#fefce8',
       desc: '프리미엄 골드',
       layoutHint: 'luxury',
-      aiPrompt: `EXACT LAYOUT BLUEPRINT – Luxury Premium Gold Holiday 1080×1080. BACKGROUND: deep navy #0F172A to dark burgundy #2D0A1A gradient with subtle damask brocade pattern at 8% opacity, premium satin texture. ZONE 1 (top 25%): ornate gold #D4A017 baroque corner frame decorations with scroll flourishes, "HOLIDAY GREETINGS" in 24px thin elegant serif gold with metallic effect, double thin gold line border inset. ZONE 2 (center 45%): central elegant gold crest or monogram-style decoration with laurel wreath, "행복한 명절" in 52px bold serif gold #FFD700 with emboss/foil stamp effect, metallic gold ribbon banner below, crystal-like sparkle accents scattered, small diamond shapes and dots in gold. ZONE 3 (bottom 30%): hospital name in 28px cream #FFF8E7 serif font, schedule in 20px muted gold, ornate gold divider line with central flourish, gold laurel branches flanking bottom, subtle gold dust particle overlay. STYLE KEYWORDS: baroque luxury, gold foil stamping, premium embossing, dark opulent background, prestigious high-end brand, jeweler quality finishing`,
+      aiPrompt: `EXACT LAYOUT BLUEPRINT — replicate this structure precisely:
+BACKGROUND: Deep navy (#0f172a) to dark charcoal (#1e293b) gradient. Subtle premium linen paper texture at 4% opacity.
+ZONE 1 — GOLD BORDER (outer frame, 6% inset): Elegant gold (#d4a017) double-line frame — outer line 2px, inner line 1px, 4px gap. Corner ornamental flourishes (gold scrollwork, Art Deco style). Metallic foil effect with subtle highlight gradient across border.
+ZONE 2 — ORNAMENT DISPLAY (top-center, 35%): 3 sophisticated holiday ornaments hanging from thin gold lines — center ornament larger (round, 40px, gold with intricate engraved pattern), flanking ornaments smaller (teardrop shapes, 28px). All in gold (#d4a017 to #FFD700 gradient). Metallic sheen highlights. Small gold stars (4px, 30% opacity) scattered around ornaments.
+ZONE 3 — GREETING TEXT (center, 30%): "Happy Holidays" in gold foil serif (14px, weight 400, letter-spacing 3px, #FFD700). Below: "행복한 명절 되세요" in bright gold (#FFD700, 24px, weight 700). Metallic text shimmer effect. Below: thin gold line (40px, centered, 1px). Below: hospital/clinic name in muted gold (#b8860b, 12px, weight 500, letter-spacing 2px).
+ZONE 4 — BOTTOM (bottom 12%): Closure dates in light gold (#fde68a at 60% opacity, 11px, weight 400). Small gold bow ornament at very bottom center.
+Luxurious, prestigious, premium. Gold-on-navy. High-end medical practice. Metallic foil sophistication.`,
     },
     {
       id: 'grt_cute_character', name: '귀여운 캐릭터', color: '#ec4899', accent: '#be185d', bg: '#fdf2f8',
       desc: '캐릭터 일러스트',
       layoutHint: 'cute',
-      aiPrompt: `EXACT LAYOUT BLUEPRINT – Cute Character Holiday Greeting 1080×1080. BACKGROUND: soft pastel pink #FDF2F8 with subtle confetti dot pattern in pink, purple, and gold at 10% opacity, cheerful and bright. ZONE 1 (top 20%): colorful bunting flag banner illustration across top in pink #EC4899, purple #A855F7, and mint #34D399, small star and sparkle decorations, "Happy Holidays!" in 32px playful rounded bold font. ZONE 2 (center 50%): adorable kawaii-style tooth character as centerpiece wearing a festive holiday hat and scarf, big sparkly eyes and rosy cheeks, holding a small wrapped gift, surrounded by cute supporting characters (small star character, heart character, cloud character), speech bubble saying "건강하세요~♥" in cute handwriting, scattered confetti pieces and tiny hearts. ZONE 3 (bottom 30%): hospital name in 26px friendly rounded font #BE185D, festive message in 28px bold pink, row of small cute holiday icons (gift, star, heart, cake), pastel rainbow stripe border at very bottom. STYLE KEYWORDS: kawaii illustration, adorable characters, pastel color palette, cheerful and playful, children-friendly design, cute sticker aesthetic`,
+      aiPrompt: `EXACT LAYOUT BLUEPRINT — replicate this structure precisely:
+BACKGROUND: Soft pink (#fdf2f8) to white gradient. Tiny pastel confetti dots (pink #f9a8d4, yellow #fde68a, mint #a7f3d0, lavender #c4b5fd) scattered at 8% opacity, 2–4px circles.
+ZONE 1 — FESTIVE ACCENTS (top 15%): Small pastel star shapes and sparkle dots in pink (#ec4899), gold (#fbbf24), mint (#34d399) scattered across top — 15–30% opacity, 4–8px. Playful and scattered randomly. Thin festive bunting/flag banner in pastel colors across top edge.
+ZONE 2 — CHARACTER SCENE (center, 45%): Adorable kawaii-style tooth character at center — white tooth shape with big sparkly eyes, rosy pink cheeks, wide happy smile, wearing small festive party hat (pink with gold dot). Character holding small flag or sparkler. To character's left: small cute star companion character (yellow, happy face). To right: small heart companion (pink, happy face). All in kawaii style — simple round shapes, minimal detail, maximum cuteness. Small confetti pieces around characters.
+ZONE 3 — SPEECH BUBBLE (above or beside character, 20%): Rounded speech bubble (white fill, pink #ec4899 border 2px) with "행복한 명절 보내세요!" in pink (#be185d, 18px, weight 700). Small heart accent inside bubble. Bubble tail pointing to tooth character.
+ZONE 4 — BOTTOM (bottom 15%): Hospital/clinic name in pink (#ec4899, 13px, weight 500). Row of tiny festive icons (gift, star, heart, candy) in pastel colors at 25% opacity.
+Cute, kawaii, playful. Pastel pink celebration. Child-friendly dental practice greeting. Adorable and cheerful.`,
     },
   ],
 
