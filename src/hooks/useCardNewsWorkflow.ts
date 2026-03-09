@@ -117,6 +117,18 @@ export function useCardNewsWorkflow(): CardNewsWorkflowState & CardNewsWorkflowA
       const referenceImage = pendingRequest.coverStyleImage || pendingRequest.contentStyleImage;
       const copyMode = pendingRequest.styleCopyMode;
 
+      // 디자인 템플릿 스타일 가져오기
+      const { getDesignTemplateById } = await import('../services/cardNewsDesignTemplates');
+      const template = pendingRequest.designTemplateId
+        ? getDesignTemplateById(pendingRequest.designTemplateId)
+        : undefined;
+      const sc = template?.styleConfig;
+      const borderRadius = sc?.borderRadius || '24px';
+      const boxShadow = sc?.boxShadow || '0 4px 16px rgba(0,0,0,0.08)';
+      const borderStyle = sc?.borderWidth && sc.borderWidth !== '0'
+        ? `border: ${sc.borderWidth} solid ${sc.borderColor};`
+        : '';
+
       const { generateSingleImage } = await import('../services/imageGenerationService');
       const imagePromises = cardNewsPrompts.map((promptData, i) => {
         setScriptProgress(`🖼️ 이미지 ${i + 1}/${cardNewsPrompts.length}장 생성 중...`);
@@ -135,12 +147,12 @@ export function useCardNewsWorkflow(): CardNewsWorkflowState & CardNewsWorkflowA
       const cardSlides = images.map((imgUrl, i) => {
         if (imgUrl) {
           return `
-            <div class="card-slide" style="border-radius: 24px; overflow: hidden; aspect-ratio: 1/1; box-shadow: 0 4px 16px rgba(0,0,0,0.08);">
+            <div class="card-slide" style="border-radius: ${borderRadius}; ${borderStyle} overflow: hidden; aspect-ratio: 1/1; box-shadow: ${boxShadow};">
               <img src="${imgUrl}" alt="카드 ${i + 1}" data-index="${i + 1}" class="card-full-img" style="width: 100%; height: 100%; object-fit: cover;" />
             </div>`;
         }
         return `
-          <div class="card-slide" style="border-radius: 24px; overflow: hidden; aspect-ratio: 1/1; box-shadow: 0 4px 16px rgba(0,0,0,0.08); background: #f1f5f9; display: flex; align-items: center; justify-content: center;">
+          <div class="card-slide" style="border-radius: ${borderRadius}; ${borderStyle} overflow: hidden; aspect-ratio: 1/1; box-shadow: ${boxShadow}; background: #f1f5f9; display: flex; align-items: center; justify-content: center;">
             <div style="text-align: center; color: #64748B;">
               <div style="font-size: 32px; margin-bottom: 8px;">🖼️</div>
               <div>이미지 생성 실패</div>

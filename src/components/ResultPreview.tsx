@@ -61,7 +61,7 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
   const [editSubtitle, setEditSubtitle] = useState('');
   const [editMainTitle, setEditMainTitle] = useState('');
   const [editDescription, setEditDescription] = useState('');
-  const [_editTags, _setEditTags] = useState(''); // 향후 태그 편집 기능에 활용
+  const [editTags, setEditTags] = useState(''); // 향후 태그 편집 기능에 활용
   const [editImagePrompt, setEditImagePrompt] = useState('');
   const [cardRegenRefImage, setCardRegenRefImage] = useState(''); // 참고 이미지
   const [refImageMode, setRefImageMode] = useState<'recolor' | 'copy'>('copy'); // 참고 이미지 적용 방식: recolor=복제+색상변경, copy=완전복제
