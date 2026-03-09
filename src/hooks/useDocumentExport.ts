@@ -4,6 +4,7 @@ import { applyThemeToHtml } from '../utils/cssThemes';
 import { convertToWordCompatibleHtml } from '../components/resultPreviewUtils';
 import { saveBlogHistory } from '../services/contentSimilarityService';
 import { toast } from '../components/Toast';
+import { getDesignTemplateById } from '../services/cardNewsDesignTemplates';
 
 interface UseDocumentExportParams {
   content: GeneratedContent;
@@ -35,10 +36,17 @@ export function useDocumentExport({
     let styled = html;
 
     if (content.postType === 'card_news') {
+      const _dt = content.designTemplateId ? getDesignTemplateById(content.designTemplateId) : undefined;
+      const _dtsc = _dt?.styleConfig;
+      const _dtBg = _dtsc?.backgroundColor || '#E8F4FD';
+      const _dtBgGrad = `linear-gradient(180deg, ${_dtBg} 0%, ${_dtBg}dd 100%)`;
+      const _dtBr = _dtsc?.borderRadius || '24px';
+      const _dtBs = _dtsc?.boxShadow || '0 8px 32px rgba(0,0,0,0.06)';
+      const _dtBorder = _dtsc?.borderWidth && _dtsc.borderWidth !== '0' ? `border: ${_dtsc.borderWidth} solid ${_dtsc.borderColor};` : '';
       styled = styled
         .replace(/<div class="card-news-container"/g, '<div class="card-news-container" style="max-width: 480px; margin: 0 auto; padding: 16px;"')
         .replace(/<div class="card-grid-wrapper"/g, '<div class="card-grid-wrapper" style="display: flex; flex-direction: column; gap: 24px;"')
-        .replace(/<div class="card-slide"/g, '<div class="card-slide" style="background: linear-gradient(180deg, #E8F4FD 0%, #F0F9FF 100%); border-radius: 24px; box-shadow: 0 8px 32px rgba(0,0,0,0.06); overflow: hidden; width: 100%; aspect-ratio: 1/1; position: relative;"')
+        .replace(/<div class="card-slide"/g, `<div class="card-slide" style="background: ${_dtBgGrad}; border-radius: ${_dtBr}; box-shadow: ${_dtBs}; ${_dtBorder} overflow: hidden; width: 100%; aspect-ratio: 1/1; position: relative;"`)
         .replace(/<div class="card-border-box"/g, '<div class="card-border-box" style="border: 3px solid #1e293b; border-radius: 20px; margin: 16px; display: flex; flex-direction: column; background: #fff; overflow: hidden;"')
         .replace(/<div class="card-header-row"/g, '<div class="card-header-row" style="padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f1f5f9; position: relative; z-index: 3;"')
         .replace(/class="brand-text"/g, 'class="brand-text" style="font-size: 10px; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; color: #1e293b;"')
