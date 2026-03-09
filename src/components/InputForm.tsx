@@ -796,7 +796,7 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
           )}
 
           <button type="button" onClick={handleRecommendTitles} disabled={isLoadingTitles || !topic} className="w-full py-2.5 bg-blue-600 text-white rounded-xl text-xs font-semibold hover:bg-blue-700 transition-all disabled:opacity-40">
-            {isLoadingTitles ? '생성 중...' : postType === 'card_news' ? 'AI 주제 추천받기' : 'AI 제목 추천받기'}
+            {isLoadingTitles ? '생성 중...' : 'AI 제목 추천받기'}
           </button>
 
           {seoTitles.length > 0 && (
