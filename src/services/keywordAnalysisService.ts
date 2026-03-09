@@ -298,8 +298,8 @@ export async function analyzeHospitalKeywords(
     onProgress?.(`⚠️ 검색량 조회 에러: ${apiErrors[0]}`);
   }
 
-  // 검색량 20 이상만 필터링
-  const filteredStats = stats.filter(s => s.monthlySearchVolume >= 20);
+  // 검색량 1 이상 (데이터가 있는 키워드만 포함, 지역 키워드는 검색량이 낮아도 SEO 가치 있음)
+  const filteredStats = stats.filter(s => s.monthlySearchVolume >= 1);
 
   // Step 3: 블루오션 분석 (검색량 데이터가 있는 키워드만)
   const hasData = filteredStats.filter(s => s.monthlySearchVolume > 0);
@@ -337,7 +337,7 @@ export async function loadMoreKeywords(
   const allNewStats: KeywordStat[] = [];
   const allApiErrors: string[] = [];
   const allUsedKeywords = new Set(existingKeywords.map(k => k.toLowerCase()));
-  const MAX_ROUNDS = 3; // 최대 3라운드까지 시도 (검색량 20 미만 필터 보충)
+  const MAX_ROUNDS = 3; // 최대 3라운드까지 시도 (검색량 없는 키워드 보충)
   const TARGET_COUNT = Math.min(remaining, 15); // 목표: 15개 유효 키워드
 
   for (let round = 0; round < MAX_ROUNDS; round++) {
@@ -358,7 +358,7 @@ export async function loadMoreKeywords(
     if (apiErrors?.length) allApiErrors.push(...apiErrors);
 
     const roundStats = stats
-      .filter(s => s.monthlySearchVolume >= 20)
+      .filter(s => s.monthlySearchVolume >= 1)
       .filter(s => !allUsedKeywords.has(s.keyword.toLowerCase()));
 
     for (const s of roundStats) {
