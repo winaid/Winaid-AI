@@ -632,6 +632,16 @@ export const generateSingleImage = async (
   const extractedDescription = (descriptionMatch?.[1] || '').trim().replace(/^["']|["']$/g, '');
   const extractedVisual = (visualMatch?.[1] || '').trim();
 
+  // 🎨 프롬프트에서 배경색 추출 (디자인 템플릿 반영)
+  const bgColorMatch = (cleanPromptText && typeof cleanPromptText === 'string') ?
+    cleanPromptText.match(/배경색:\s*(#[A-Fa-f0-9]{6}|#[A-Fa-f0-9]{3})/i) : null;
+  const extractedBgColor = bgColorMatch?.[1] || '#E8F4FD';
+
+  // 🎨 프롬프트에서 디자인 템플릿 블록 추출 (있으면 [DESIGN]에 반영)
+  const templateBlockMatch = (cleanPromptText && typeof cleanPromptText === 'string') ?
+    cleanPromptText.match(/\[디자인 템플릿:[^\]]*\][\s\S]*$/m) : null;
+  const extractedTemplateBlock = templateBlockMatch?.[0] || '';
+
   // 🚨 추출 실패 시 로그 및 원본 사용
   const hasValidText = extractedSubtitle.length > 0 || extractedMainTitle.length > 0;
   if (!hasValidText) {
@@ -669,12 +679,12 @@ ${styleBlock}
 - Text hierarchy: subtitle(small) → mainTitle(BIG) → description(small)
 
 [DESIGN]
-- 1:1 square, background: #E8F4FD gradient
-- Border color: #787fff
+- 1:1 square, background: ${extractedBgColor} gradient
 - Korean text rendered with clean readable font
 - Professional Instagram-style card news design
 - Illustration at bottom, text at top/center
 ${extractedVisual ? `- ILLUSTRATION MUST MATCH: "${extractedVisual}"` : ''}
+${extractedTemplateBlock ? extractedTemplateBlock : ''}
 
 [RULES]
 ✅ MAIN TITLE must be the LARGEST and most prominent text
@@ -701,7 +711,7 @@ ${styleBlock}
 ${cleanPromptText}
 
 [DESIGN]
-- 1:1 square, background: #E8F4FD gradient
+- 1:1 square, background: ${extractedBgColor} gradient
 - Korean text rendered with clean readable font
 - Professional Instagram-style card news design
 

@@ -2726,6 +2726,11 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
     const referenceImage = request.coverStyleImage || request.contentStyleImage;
     const copyMode = request.styleCopyMode; // true=레이아웃 복제, false=느낌만 참고
 
+    // 디자인 템플릿의 stylePrompt를 customStylePrompt로 전달 (이미지 생성에 반영)
+    const { getDesignTemplateById } = await import('./cardNewsDesignTemplates');
+    const designTemplate = request.designTemplateId ? getDesignTemplateById(request.designTemplateId) : undefined;
+    const effectiveCustomStyle = designTemplate?.stylePrompt || request.customImagePrompt;
+
     // imagePrompts가 없으면 빈 배열로 초기화
     if (!agentResult.imagePrompts || !Array.isArray(agentResult.imagePrompts)) {
       agentResult.imagePrompts = [];
@@ -2741,11 +2746,11 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
     for (let i = 0; i < Math.min(maxImages, agentResult.imagePrompts.length); i++) {
       safeProgress(`🎨 카드 이미지 ${i + 1}/${maxImages}장 생성 중...`);
       const img = await generateSingleImage(
-        agentResult.imagePrompts[i], 
-        request.imageStyle, 
-        "1:1", 
-        request.customImagePrompt, 
-        referenceImage, 
+        agentResult.imagePrompts[i],
+        request.imageStyle,
+        "1:1",
+        effectiveCustomStyle,
+        referenceImage,
         copyMode
       );
       images.push({ index: i + 1, data: img, prompt: agentResult.imagePrompts[i] });

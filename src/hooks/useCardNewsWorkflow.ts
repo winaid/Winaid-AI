@@ -129,6 +129,9 @@ export function useCardNewsWorkflow(): CardNewsWorkflowState & CardNewsWorkflowA
         ? `border: ${sc.borderWidth} solid ${sc.borderColor};`
         : '';
 
+      // 디자인 템플릿의 stylePrompt를 이미지 생성에 전달 (customImagePrompt보다 우선)
+      const effectiveCustomStyle = template?.stylePrompt || pendingRequest.customImagePrompt;
+
       const { generateSingleImage } = await import('../services/imageGenerationService');
       const imagePromises = cardNewsPrompts.map((promptData, i) => {
         setScriptProgress(`🖼️ 이미지 ${i + 1}/${cardNewsPrompts.length}장 생성 중...`);
@@ -136,7 +139,7 @@ export function useCardNewsWorkflow(): CardNewsWorkflowState & CardNewsWorkflowA
           promptData.imagePrompt,
           imageStyle,
           '1:1',
-          pendingRequest.customImagePrompt,
+          effectiveCustomStyle,
           referenceImage,
           copyMode
         );
