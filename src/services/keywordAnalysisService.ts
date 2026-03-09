@@ -124,16 +124,19 @@ ${existingKeywords.map(k => `- ${k}`).join('\n')}
 
 규칙:
 1. 위 키워드와 겹치지 않는 새로운 키워드만 생성
-2. 다양한 카테고리에서 골고루 선택:
+2. 이미 분석한 키워드들은 검색량이 높은 메인 키워드입니다. 이번에는 그보다 검색량이 낮은 세부/틈새 키워드를 생성하세요.
+   - 더 구체적인 롱테일 키워드 위주로 생성 (예: "{지역} {시술} 비용", "{지역} {증상} 치과 추천", "{역명} 야간 {시술}")
+   - 세부 시술명, 구체적 증상, 특정 상황 키워드 등 니치한 키워드를 우선
+3. 다양한 카테고리에서 골고루 선택:
    - 시술: 임플란트, 치아교정, 라미네이트, 치아미백, 스케일링, 충치치료, 신경치료, 사랑니발치, 틀니, 브릿지, 크라운, 레진, 인레이
    - 증상: 치통, 잇몸출혈, 잇몸염증, 이갈이, 턱관절, 시린이, 충치, 풍치
    - 대상: 소아치과, 어린이치과
    - 기타: 비용, 가격, 추천, 잘하는곳, 야간진료, 주말진료, 무통치료, 후기
    - 롱테일: "{지역} {시술} 비용", "{지역} {증상} 치과", "{역명} 치과 추천" 등
-3. 더 넓은 지역명, 인접 동네, 랜드마크 주변 등도 활용
-4. 실제 네이버에서 검색량이 있을 법한 키워드만
-5. 정확히 ${generateCount}개 생성
-6. 이미 분석한 키워드와 절대 겹치면 안 됩니다!
+4. 더 넓은 지역명, 인접 동네, 랜드마크 주변 등도 활용
+5. 실제 네이버에서 검색량이 있을 법한 키워드만
+6. 정확히 ${generateCount}개 생성
+7. 이미 분석한 키워드와 절대 겹치면 안 됩니다!
 
 JSON 배열로만 응답하세요:
 ["키워드1", "키워드2", ...]`;
@@ -299,7 +302,10 @@ export async function analyzeHospitalKeywords(
   }
 
   // 검색량 1 이상 (데이터가 있는 키워드만 포함, 지역 키워드는 검색량이 낮아도 SEO 가치 있음)
-  const filteredStats = stats.filter(s => s.monthlySearchVolume >= 1);
+  // 검색량 내림차순 정렬 (검색량 많은 키워드부터 표시)
+  const filteredStats = stats
+    .filter(s => s.monthlySearchVolume >= 1)
+    .sort((a, b) => b.monthlySearchVolume - a.monthlySearchVolume);
 
   // Step 3: 블루오션 분석 (검색량 데이터가 있는 키워드만)
   const hasData = filteredStats.filter(s => s.monthlySearchVolume > 0);
@@ -369,6 +375,9 @@ export async function loadMoreKeywords(
     // 목표 달성하면 중단
     if (allNewStats.length >= TARGET_COUNT) break;
   }
+
+  // 검색량 내림차순 정렬 (더보기 결과도 검색량 높은 순)
+  allNewStats.sort((a, b) => b.monthlySearchVolume - a.monthlySearchVolume);
 
   const newTotal = existingKeywords.length + allNewStats.length;
   return {
