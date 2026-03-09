@@ -116,14 +116,9 @@ export async function deductCredit(postType: string = 'blog'): Promise<boolean> 
     });
 
     if (error) {
-      // RPC 없으면 직접 업데이트 (폴백)
+      // RPC 없으면 직접 업데이트 (폴백): 현재 credits_used 조회 후 +cost
       console.warn('[CreditService] RPC 실패, 직접 업데이트:', error.message);
-      const { error: updateError } = await supabase
-        .from('subscriptions')
-        .update({ credits_used: supabase.rpc ? undefined : undefined }) // placeholder
-        .eq('user_id', user.id);
 
-      // 단순 increment 폴백
       const { data: sub } = await supabase
         .from('subscriptions')
         .select('credits_used')
@@ -131,14 +126,17 @@ export async function deductCredit(postType: string = 'blog'): Promise<boolean> 
         .single();
 
       if (sub) {
-        await supabase
+        const { error: updateError } = await supabase
           .from('subscriptions')
           .update({ credits_used: (sub.credits_used || 0) + cost } as any)
           .eq('user_id', user.id);
-      }
 
-      if (updateError) {
-        console.error('[CreditService] 크레딧 차감 실패:', updateError);
+        if (updateError) {
+          console.error('[CreditService] 크레딧 차감 실패:', updateError);
+          return false;
+        }
+      } else {
+        console.error('[CreditService] 구독 정보 조회 실패');
         return false;
       }
     }

@@ -97,20 +97,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Supabase 설정 확인 및 인증 상태 로드
   useEffect(() => {
+    let isMounted = true;
+    let authSubscription: { unsubscribe: () => void } | null = null;
+
     const init = async () => {
       const isConfigured = isSupabaseConfigured();
-      setConfigured(isConfigured);
+      if (isMounted) setConfigured(isConfigured);
 
       if (!isConfigured) {
-        setLoading(false);
+        if (isMounted) setLoading(false);
         return;
       }
 
       const newClient = reinitializeSupabase();
-      setClient(newClient);
+      if (isMounted) setClient(newClient);
 
       // 현재 세션 확인
       const { data: { session } } = await newClient.auth.getSession();
+      if (!isMounted) return;
+
       if (session?.user) {
         setUser(session.user);
 
@@ -120,51 +125,53 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         session.user.user_metadata?.name ||
                         session.user.email?.split('@')[0] || null;
 
-        // 🚀 성능 개선: 병렬 쿼리 실행 (N+1 문제 해결)
         await Promise.all([
           loadProfile(session.user.id, newClient, userEmail, userName),
           loadSubscription(session.user.id, newClient)
         ]);
+        if (!isMounted) return;
       }
 
       // IP 기반 무료 사용량 확인 (필요한 경우만)
       if (ipHash) {
         await loadFreeUses(ipHash, newClient);
+        if (!isMounted) return;
       }
 
       setLoading(false);
 
       // Auth 상태 변경 리스너
       const { data: { subscription: authSub } } = newClient.auth.onAuthStateChange(async (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.email);
-        
+        if (!isMounted) return;
+
         if (session?.user) {
           setUser(session.user);
 
-          // OAuth 로그인 시 사용자 정보 추출
           const userEmail = session.user.email;
           const userName = session.user.user_metadata?.full_name ||
                           session.user.user_metadata?.name ||
                           session.user.email?.split('@')[0] || null;
 
-          // 🚀 성능 개선: 병렬 쿼리 실행
           await Promise.all([
             loadProfile(session.user.id, newClient, userEmail, userName),
             loadSubscription(session.user.id, newClient)
           ]);
-        } else {
+        } else if (isMounted) {
           setUser(null);
           setProfile(null);
           setSubscription(null);
         }
       });
 
-      return () => {
-        authSub.unsubscribe();
-      };
+      authSubscription = authSub;
     };
 
     init();
+
+    return () => {
+      isMounted = false;
+      authSubscription?.unsubscribe();
+    };
   }, [ipHash]);
 
   const loadProfile = async (userId: string, supabaseClient: typeof supabase, userEmail?: string, userName?: string) => {

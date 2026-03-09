@@ -46,7 +46,7 @@ async function getTextEmbedding(text: string): Promise<number[]> {
  * 코사인 유사도 계산
  */
 function cosineSimilarity(vecA: number[], vecB: number[]): number {
-  if (!vecA.length || !vecB.length || vecA.length !== vecB.length) {
+  if (!vecA || !vecB || !vecA.length || !vecB.length || vecA.length !== vecB.length) {
     return 0;
   }
 
