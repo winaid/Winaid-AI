@@ -303,7 +303,44 @@ END;
 $$;
 
 -- ============================================
--- 완료! 
+-- 10. Hospital Style Profiles (병원별 말투 학습)
+-- ============================================
+CREATE TABLE IF NOT EXISTS public.hospital_style_profiles (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  hospital_name TEXT NOT NULL UNIQUE,       -- 병원명 (teamHospitals.ts와 매칭)
+  team_id INTEGER,                          -- 팀 ID (1, 2, 3)
+  naver_blog_url TEXT,                      -- 네이버 블로그 URL
+  crawled_posts_count INTEGER DEFAULT 0,   -- 수집된 글 수
+  style_profile JSONB DEFAULT '{}',         -- Gemini 분석 결과 (말투 프로파일)
+  raw_sample_text TEXT,                     -- 크롤링된 샘플 텍스트 (최대 10000자)
+  last_crawled_at TIMESTAMPTZ,              -- 마지막 크롤링 시각
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- RLS 활성화
+ALTER TABLE public.hospital_style_profiles ENABLE ROW LEVEL SECURITY;
+
+-- 모든 인증 사용자가 조회 가능 (말투 적용은 로그인 사용자 전체)
+CREATE POLICY "Authenticated users can view style profiles" ON public.hospital_style_profiles
+  FOR SELECT USING (auth.role() = 'authenticated');
+
+-- 관리자(service_role)만 생성/수정/삭제 가능
+CREATE POLICY "Service role can manage style profiles" ON public.hospital_style_profiles
+  FOR ALL USING (auth.role() = 'service_role');
+
+-- 인덱스
+CREATE INDEX IF NOT EXISTS idx_hospital_style_hospital_name ON public.hospital_style_profiles(hospital_name);
+CREATE INDEX IF NOT EXISTS idx_hospital_style_team_id ON public.hospital_style_profiles(team_id);
+
+-- updated_at 자동 갱신
+DROP TRIGGER IF EXISTS update_hospital_style_profiles_updated_at ON public.hospital_style_profiles;
+CREATE TRIGGER update_hospital_style_profiles_updated_at
+  BEFORE UPDATE ON public.hospital_style_profiles
+  FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
+
+-- ============================================
+-- 완료!
 -- ============================================
 -- 다음 단계:
 -- 1. Supabase Dashboard > Authentication > Providers에서 Google, Kakao, Naver OAuth 설정

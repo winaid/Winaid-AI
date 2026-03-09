@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { crawlNaverBlogs, crawlBlogContent } = require('../services/crawler');
+const { crawlNaverBlogs, crawlBlogContent, crawlHospitalBlogPosts } = require('../services/crawler');
 
 // Rate limiting 간단 구현
 const requestCounts = new Map();
@@ -132,6 +132,52 @@ router.post('/crawl-content', async (req, res) => {
     console.error('블로그 콘텐츠 크롤링 에러:', error);
     res.status(500).json({
       error: 'Internal Server Error',
+      message: error.message,
+      ...(process.env.NODE_ENV === 'development' && { stack: error.stack })
+    });
+  }
+});
+
+/**
+ * POST /api/naver/crawl-hospital-blog
+ * 병원 네이버 블로그 전체 글 수집 (말투 학습용)
+ * body: { blogUrl: string, maxPosts?: number }
+ */
+router.post('/crawl-hospital-blog', async (req, res) => {
+  try {
+    const { blogUrl, maxPosts = 10 } = req.body;
+
+    if (!blogUrl || typeof blogUrl !== 'string') {
+      return res.status(400).json({ error: 'blogUrl is required', message: '블로그 URL을 입력해주세요.' });
+    }
+
+    if (!blogUrl.includes('blog.naver.com')) {
+      return res.status(400).json({ error: 'Invalid URL', message: '네이버 블로그 URL만 지원합니다. (blog.naver.com/...)' });
+    }
+
+    const ip = req.ip || req.connection.remoteAddress;
+    if (!checkRateLimit(ip)) {
+      return res.status(429).json({ error: 'Too Many Requests', message: '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.' });
+    }
+
+    const limitedMaxPosts = Math.min(parseInt(maxPosts) || 10, 20);
+    console.log(`🏥 병원 블로그 크롤링 시작: ${blogUrl} (최대 ${limitedMaxPosts}개)`);
+
+    const result = await crawlHospitalBlogPosts(blogUrl, limitedMaxPosts);
+
+    res.json({
+      success: true,
+      blogUrl,
+      blogId: result.blogId,
+      posts: result.posts,
+      postsCount: result.posts.length,
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('병원 블로그 크롤링 에러:', error);
+    res.status(500).json({
+      error: 'Crawling Failed',
       message: error.message,
       ...(process.env.NODE_ENV === 'development' && { stack: error.stack })
     });

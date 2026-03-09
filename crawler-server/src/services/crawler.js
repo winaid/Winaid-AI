@@ -207,6 +207,81 @@ async function crawlBlogContent(url) {
 }
 
 /**
+ * 네이버 블로그의 전체 글 목록 크롤링 (말투 학습용)
+ * blog.naver.com/{blogId} 형태의 URL을 받아 최근 글 목록과 본문을 수집
+ */
+async function crawlHospitalBlogPosts(blogUrl, maxPosts = 10) {
+  let page = null;
+  const results = [];
+
+  try {
+    // blog.naver.com/{blogId} 에서 blogId 추출
+    const blogIdMatch = blogUrl.match(/blog\.naver\.com\/([^/?#]+)/);
+    if (!blogIdMatch) {
+      throw new Error('올바른 네이버 블로그 URL이 아닙니다. (예: https://blog.naver.com/example)');
+    }
+    const blogId = blogIdMatch[1];
+
+    const browserInstance = await getBrowser();
+    page = await browserInstance.newPage();
+    await page.setUserAgent(
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    );
+
+    // 블로그 메인 페이지에서 글 목록 수집
+    const blogMainUrl = `https://blog.naver.com/PostList.naver?blogId=${blogId}&categoryNo=0&currentPage=1`;
+    console.log(`📖 병원 블로그 글 목록 수집: ${blogMainUrl}`);
+
+    await page.goto(blogMainUrl, { waitUntil: 'networkidle2', timeout: 30000 });
+
+    // 글 URL 목록 추출
+    const postUrls = await page.evaluate((blogId) => {
+      const links = [];
+      // 글 목록 링크 수집
+      const anchors = document.querySelectorAll('a[href*="PostView"], a[href*="logNo="]');
+      anchors.forEach(a => {
+        const href = a.href || '';
+        if (href.includes('blog.naver.com') && (href.includes('PostView') || href.includes('logNo='))) {
+          // 중복 제거
+          if (!links.includes(href)) links.push(href);
+        }
+      });
+      return links;
+    }, blogId);
+
+    console.log(`🔗 글 URL ${postUrls.length}개 발견`);
+
+    // 각 글의 본문 수집 (최대 maxPosts개)
+    const targetUrls = postUrls.slice(0, maxPosts);
+    for (let i = 0; i < targetUrls.length; i++) {
+      const postUrl = targetUrls[i];
+      try {
+        console.log(`📄 글 ${i + 1}/${targetUrls.length} 수집 중: ${postUrl}`);
+        const content = await crawlBlogContent(postUrl);
+        if (content && content.length > 100) {
+          results.push({ url: postUrl, content: content.slice(0, 3000) });
+        }
+        // 요청 간격 (블로킹 방지)
+        await new Promise(resolve => setTimeout(resolve, 1500));
+      } catch (e) {
+        console.error(`글 수집 실패 (${postUrl}):`, e.message);
+      }
+    }
+
+    console.log(`✅ 총 ${results.length}개 글 본문 수집 완료`);
+    return { blogId, posts: results };
+
+  } catch (error) {
+    console.error('❌ 병원 블로그 크롤링 에러:', error);
+    throw error;
+  } finally {
+    if (page) {
+      await page.close();
+    }
+  }
+}
+
+/**
  * 브라우저 종료
  */
 async function closeBrowser() {
@@ -220,5 +295,6 @@ async function closeBrowser() {
 module.exports = {
   crawlNaverBlogs,
   crawlBlogContent,
+  crawlHospitalBlogPosts,
   closeBrowser
 };

@@ -1,5 +1,6 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { LearnedWritingStyle } from "../types";
+import { supabase } from "../lib/supabase";
 
 const GEMINI_MODEL = {
   PRO: 'gemini-3.1-pro-preview',
@@ -320,4 +321,163 @@ export const getSavedStyles = (): LearnedWritingStyle[] => {
 export const getStyleById = (id: string): LearnedWritingStyle | null => {
   const styles = getSavedStyles();
   return styles.find(s => s.id === id) || null;
+};
+
+// ============================================================
+// 병원별 네이버 블로그 말투 학습 (Supabase 저장/조회)
+// ============================================================
+
+export interface HospitalStyleProfile {
+  id?: string;
+  hospital_name: string;
+  team_id?: number;
+  naver_blog_url?: string;
+  crawled_posts_count?: number;
+  style_profile?: LearnedWritingStyle | null;
+  raw_sample_text?: string;
+  last_crawled_at?: string;
+}
+
+/**
+ * 병원 블로그 크롤링 → 말투 분석 → Supabase 저장
+ */
+export const crawlAndLearnHospitalStyle = async (
+  hospitalName: string,
+  teamId: number,
+  blogUrl: string,
+  onProgress?: (msg: string) => void
+): Promise<HospitalStyleProfile> => {
+  const API_BASE_URL = (import.meta as any).env?.VITE_CRAWLER_URL || '';
+
+  // 1단계: 블로그 글 크롤링
+  onProgress?.('블로그 글 수집 중... (최대 10개)');
+  const crawlRes = await fetch(`${API_BASE_URL}/api/naver/crawl-hospital-blog`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ blogUrl, maxPosts: 10 }),
+  });
+
+  if (!crawlRes.ok) {
+    const err = await crawlRes.json().catch(() => ({}));
+    throw new Error(err.message || '블로그 크롤링에 실패했습니다.');
+  }
+
+  const crawlData = await crawlRes.json();
+  const posts: { url: string; content: string }[] = crawlData.posts || [];
+
+  if (posts.length === 0) {
+    throw new Error('수집된 블로그 글이 없습니다. URL을 다시 확인해주세요.');
+  }
+
+  // 2단계: 수집된 글 합치기 (최대 8000자)
+  onProgress?.(`${posts.length}개 글 수집 완료. 말투 분석 중...`);
+  const combinedText = posts.map(p => p.content).join('\n\n---\n\n').slice(0, 8000);
+
+  // 3단계: Gemini로 말투 분석
+  const analyzedStyle = await analyzeWritingStyle(combinedText, hospitalName);
+
+  // 4단계: Supabase에 저장 (upsert)
+  onProgress?.('말투 프로파일 저장 중...');
+  const profileData = {
+    hospital_name: hospitalName,
+    team_id: teamId,
+    naver_blog_url: blogUrl,
+    crawled_posts_count: posts.length,
+    style_profile: analyzedStyle,
+    raw_sample_text: combinedText.slice(0, 10000),
+    last_crawled_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+
+  const { data, error } = await supabase
+    .from('hospital_style_profiles')
+    .upsert(profileData, { onConflict: 'hospital_name' })
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Supabase 저장 오류:', error);
+    // 저장 실패해도 분석 결과는 반환
+    return { ...profileData, style_profile: analyzedStyle };
+  }
+
+  onProgress?.('완료!');
+  return data as HospitalStyleProfile;
+};
+
+/**
+ * Supabase에서 병원 말투 프로파일 조회
+ */
+export const getHospitalStyleProfile = async (
+  hospitalName: string
+): Promise<HospitalStyleProfile | null> => {
+  const { data, error } = await supabase
+    .from('hospital_style_profiles')
+    .select('*')
+    .eq('hospital_name', hospitalName)
+    .single();
+
+  if (error || !data) return null;
+  return data as HospitalStyleProfile;
+};
+
+/**
+ * 팀 전체 병원 말투 프로파일 조회
+ */
+export const getTeamStyleProfiles = async (
+  teamId: number
+): Promise<HospitalStyleProfile[]> => {
+  const { data, error } = await supabase
+    .from('hospital_style_profiles')
+    .select('*')
+    .eq('team_id', teamId)
+    .order('hospital_name');
+
+  if (error || !data) return [];
+  return data as HospitalStyleProfile[];
+};
+
+/**
+ * 모든 병원 말투 프로파일 조회
+ */
+export const getAllStyleProfiles = async (): Promise<HospitalStyleProfile[]> => {
+  const { data, error } = await supabase
+    .from('hospital_style_profiles')
+    .select('id, hospital_name, team_id, naver_blog_url, crawled_posts_count, last_crawled_at, style_profile')
+    .order('team_id', { ascending: true });
+
+  if (error || !data) return [];
+  return data as HospitalStyleProfile[];
+};
+
+/**
+ * 병원 블로그 URL만 저장/수정 (크롤링 없이)
+ */
+export const saveHospitalBlogUrl = async (
+  hospitalName: string,
+  teamId: number,
+  blogUrl: string
+): Promise<void> => {
+  await supabase
+    .from('hospital_style_profiles')
+    .upsert(
+      { hospital_name: hospitalName, team_id: teamId, naver_blog_url: blogUrl, updated_at: new Date().toISOString() },
+      { onConflict: 'hospital_name' }
+    );
+};
+
+/**
+ * 콘텐츠 생성 시 병원 말투 프롬프트 반환 (캐시 포함)
+ */
+const styleProfileCache: Record<string, HospitalStyleProfile | null> = {};
+
+export const getHospitalStylePromptForGeneration = async (
+  hospitalName: string
+): Promise<string | null> => {
+  if (!(hospitalName in styleProfileCache)) {
+    styleProfileCache[hospitalName] = await getHospitalStyleProfile(hospitalName);
+  }
+  const profile = styleProfileCache[hospitalName];
+  if (!profile?.style_profile) return null;
+  return getStylePromptForGeneration(profile.style_profile);
 };

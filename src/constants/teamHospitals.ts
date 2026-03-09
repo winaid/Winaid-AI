@@ -2,6 +2,7 @@ export interface HospitalEntry {
   name: string;
   manager: string;
   address?: string; // 주소 (UI에는 안 보이지만 지역 키워드 추천에 사용)
+  naverBlogUrl?: string; // 네이버 블로그 URL (말투 학습용)
 }
 
 export interface TeamData {
