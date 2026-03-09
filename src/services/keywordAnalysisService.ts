@@ -68,7 +68,7 @@ async function generateKeywordsWithAI(
    - 대상: 소아치과, 어린이치과, 노인치과
    - 기타: 치과 비용, 치과 가격, 치과 추천, 치과 잘하는곳, 야간진료 치과, 주말진료 치과, 무통치료
 5. 키워드 조합: "{지역} {시술/증상/기타}", "{역명} {시술/증상/기타}" 등
-6. 병원명 자체도 포함
+6. 병원명은 포함하지 않는다 (지역+진료 키워드만 생성)
 7. 실제 네이버에서 검색량이 있을 법한 키워드만 (너무 마이너한 건 제외)
 8. 정확히 15개 생성, 최대한 다양한 카테고리에서 골고루 선택
 
@@ -187,7 +187,7 @@ function fallbackKeywordGeneration(hospitalName: string, address: string, catego
   }
 
   const dentalTerms = ['치과', '임플란트', '치아교정', '스케일링'];
-  const keywords = [hospitalName];
+  const keywords: string[] = [];
   for (const loc of [...new Set(locations)]) {
     for (const term of dentalTerms) {
       keywords.push(`${loc} ${term}`);
