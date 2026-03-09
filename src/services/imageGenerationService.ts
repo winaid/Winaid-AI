@@ -139,6 +139,8 @@ const normalizePromptTextForImage = (raw: string | undefined | null): string => 
     /^Render Korean text DIRECTLY into the image/i,
     /^Do NOT show these instructions in the image/i,
     /^Only render the actual content text/i,
+    // 해시태그 패턴 제거 (이미지에 #텍스트가 렌더링되는 것 방지)
+    /^#\S+(\s+#\S+)*/,
   ];
 
   const cleaned = lines
@@ -692,7 +694,7 @@ ${extractedTemplateBlock ? extractedTemplateBlock : ''}
 ✅ Do NOT swap subtitle and mainTitle positions
 ✅ Do NOT use placeholder text
 ${extractedVisual ? `✅ ILLUSTRATION must follow the visual description EXACTLY` : ''}
-⛔ No hashtags, watermarks, logos
+⛔ No hashtags (#), watermarks, logos - NEVER render # symbol in the image!
 ⛔ Do NOT ignore visual instructions
 
 [의료광고법 - 이미지 텍스트 규칙]
@@ -718,7 +720,7 @@ ${cleanPromptText}
 [RULES]
 ✅ Render the Korean text from the content above
 ⛔ Do NOT render instruction text like "subtitle:" or "mainTitle:"
-⛔ No hashtags, watermarks, logos
+⛔ No hashtags (#), watermarks, logos - NEVER render # symbol in the image!
 `.trim();
 
   // • 디버그 - 프롬프트 전체 내용 확인!
