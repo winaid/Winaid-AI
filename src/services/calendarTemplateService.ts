@@ -1381,37 +1381,73 @@ Luxury, premium feel. Dark navy with gold accents. High-end Korean dental clinic
       id: 'evt_sale_banner', name: '할인 배너', color: '#ef4444', accent: '#b91c1c', bg: '#fef2f2',
       desc: '가격 강조 할인형',
       layoutHint: 'price',
-      aiPrompt: 'Eye-catching dental clinic sale banner design, bold red discount percentage badge, crossed-out original price with new price highlighted, urgent promotional feeling, modern retail-inspired medical event design, starburst or ribbon elements, clear price hierarchy, white and red color scheme',
+      aiPrompt: `EXACT LAYOUT BLUEPRINT — replicate this structure precisely:
+BACKGROUND: Clean white (#ffffff) with very subtle warm gradient at bottom.
+ZONE 1 — TOP BANNER (top 18%): Full-width rounded rectangle with bold red (#ef4444 → #b91c1c) gradient fill. Hospital name in small white text (12px). Below: event title "임플란트 특별 할인" in large bold white text (24px, heavy weight).
+ZONE 2 — DISCOUNT BADGE (middle 35%): Large circular badge centered. Outer ring: subtle red glow at 10% opacity. Inner circle: white with thin red border. Inside: massive "30%" text in bold red (#ef4444, 60px weight 900). Below: "OFF" in smaller bold red. Above the badge: thin red starburst rays radiating outward at very low opacity (5%).
+ZONE 3 — PRICE CARD (middle 25%): White rounded card (border-radius 12px, soft shadow 0 4px 20px rgba(0,0,0,0.08)). Inside: original price "990,000원" in gray (#94a3b8) with strikethrough line. Below: discounted price "690,000원" in massive bold red (#ef4444, 40px, weight 900). Clear price hierarchy — old price small, new price dominant.
+ZONE 4 — PERIOD + CTA (bottom 22%): Event period "2026.03.01 ~ 03.31" in gray text on subtle gray pill background. Below: full-width rounded CTA button with red gradient, white bold text "지금 바로 예약하세요". Hospital name small at very bottom.
+NO illustrations. Pure typographic promotional design. Urgent, attention-grabbing retail-inspired medical event.`,
     },
     {
       id: 'evt_elegant_event', name: '엘레강스 이벤트', color: '#a855f7', accent: '#7e22ce', bg: '#faf5ff',
       desc: '고급스러운 이벤트',
       layoutHint: 'elegant',
-      aiPrompt: 'Elegant luxury dental clinic event promotion design, purple and gold color scheme, sophisticated serif typography mixed with modern sans-serif, refined medical aesthetic, subtle geometric patterns, premium treatment promotion feel, gentle gradient background, gold foil accent effects',
+      aiPrompt: `EXACT LAYOUT BLUEPRINT — replicate this structure precisely:
+BACKGROUND: Soft lavender gradient (#faf5ff to white). Very subtle radial glow of purple at center (5% opacity).
+ZONE 1 — HEADER (top 12%): Hospital name in small elegant text with letter-spacing 2px, purple (#7e22ce). Thin decorative line (0.5px, purple at 15% opacity) below.
+ZONE 2 — TITLE (20%): Small caps English subtitle "IMPLANT EVENT" in purple (#a855f7), letter-spacing 3px. Below: Large elegant Korean title "임플란트 이벤트" in bold purple (#7e22ce, 32px, weight 800). Thin decorative line below.
+ZONE 3 — PRICE SHOWCASE (35%): Centered white card with very subtle purple border (0.5px, 10% opacity), border-radius 16px, soft shadow. Inside: "SPECIAL PRICE" in small gray letters with spacing. Below: huge price "690,000원" in bold purple (#a855f7, 44px, weight 800). Elegant, refined spacing.
+ZONE 4 — DETAILS + CTA (bottom 33%): Thin divider line. Period dates in gray. Below: rounded pill CTA button with purple gradient (#a855f7 → #7e22ce), white text "예약 상담". Hospital name at bottom in small purple text.
+Luxury, sophisticated, premium dental clinic promotion. Gold-foil-inspired refinement without actual gold — pure purple elegance.`,
     },
     {
       id: 'evt_pop_colorful', name: '팝 컬러풀', color: '#f59e0b', accent: '#d97706', bg: '#fffbeb',
       desc: '활기찬 팝 스타일',
       layoutHint: 'pop',
-      aiPrompt: 'Fun and colorful pop-style dental clinic event poster, vibrant yellow and orange with playful shapes, comic-book inspired burst elements, bold chunky typography, energetic and exciting mood, confetti and star decorations, attention-grabbing design with clear event details, friendly dental character illustration',
+      aiPrompt: `EXACT LAYOUT BLUEPRINT — replicate this structure precisely:
+BACKGROUND: Warm cream (#fffbeb) with scattered small confetti dots (amber, orange, yellow) at very low opacity (8-12%) around edges.
+ZONE 1 — HEADER (top 10%): Hospital name in bold amber (#d97706) text.
+ZONE 2 — BURST BADGE (35%): Large starburst/explosion shape centered — 8 radiating triangular rays from center in amber (#f59e0b) at 10% opacity, creating a burst effect. Outer ring: amber circle at 10%. Inner ring: amber circle at 12%. Inside: "EVENT" in small bold text. Below: massive "30%" in bold amber (#f59e0b, 48px, weight 900). Below: "할인" in bold.
+ZONE 3 — EVENT TITLE (10%): "임플란트" in large bold amber (#f59e0b, 28px, weight 800). Playful, chunky feel.
+ZONE 4 — PRICE + CTA (bottom 35%): White rounded card with shadow. Inside: bold price "690,000원" in amber (36px, weight 900). Below: period "2026.03.01 ~ 03.31" in gray. Below: full-width rounded CTA button with amber gradient, white bold text "지금 바로 예약!". Energetic, fun, attention-grabbing.
+Vibrant pop-art inspired promotional poster. Fun and exciting. Korean dental clinic event with comic-book energy.`,
     },
     {
       id: 'evt_minimal_modern', name: '미니멀 모던', color: '#64748b', accent: '#334155', bg: '#f8fafc',
       desc: '심플 미니멀',
       layoutHint: 'minimal',
-      aiPrompt: 'Minimalist modern dental clinic event design, clean white space with subtle gray accents, elegant thin typography, restrained color palette with single accent color, sophisticated simplicity, premium medical brand aesthetic, generous whitespace, architectural clean lines, understated luxury',
+      aiPrompt: `EXACT LAYOUT BLUEPRINT — replicate this structure precisely:
+BACKGROUND: Pure white (#ffffff) with barely visible cool gray tint.
+ZONE 1 — SPACIOUS TOP (top 15%): Maximum whitespace. Small caps "IMPLANT EVENT" in light gray (#94a3b8), letter-spacing 4px, centered.
+ZONE 2 — TITLE (25%): Very large bold Korean text "임플란트" on first line, "특별 할인" on second line. Both in charcoal (#334155, 28px, weight 800). Below: ultra-thin line (0.5px, gray at 20% opacity), width 30%, centered.
+ZONE 3 — PRICE (30%): White card with extremely subtle shadow (0 2px 12px rgba(0,0,0,0.04)), border-radius 12px. Inside: "Special Offer" in light gray small caps. Below: massive price "690,000원" in charcoal (#334155, 40px, weight 800). Generous vertical padding.
+ZONE 4 — DETAILS (bottom 30%): Period in light gray (#94a3b8). Below: subtle pill button with gray fill at 8% opacity, "예약 문의" in charcoal. Hospital name at very bottom in tiny gray text.
+Ultra-minimalist. Maximum whitespace. Architectural precision. Less is more luxury medical aesthetic.`,
     },
     {
       id: 'evt_gradient_wave', name: '그라데이션 웨이브', color: '#06b6d4', accent: '#0891b2', bg: '#ecfeff',
       desc: '물결 그라데이션',
       layoutHint: 'wave',
-      aiPrompt: 'Modern gradient wave dental clinic event design, flowing cyan to blue gradient waves, dynamic curved shapes, contemporary medical aesthetic, smooth transitions and soft shadows, ocean-inspired calm yet exciting feeling, clear typography floating over gradient backgrounds, tech-forward healthcare design',
+      aiPrompt: `EXACT LAYOUT BLUEPRINT — replicate this structure precisely:
+BACKGROUND: Light cyan (#ecfeff) to white gradient.
+ZONE 1 — HEADER (top 12%): Hospital name in teal (#0891b2) text. Below: large bold title "임플란트 이벤트" in cyan (#06b6d4, 28px, weight 800).
+ZONE 2 — WAVE DECORATION (12%): Two flowing sine-wave shapes spanning full width. First wave: cyan (#06b6d4) at 6% opacity, smooth curve. Second wave: slightly offset, 4% opacity. Creates a calm ocean-wave visual separator.
+ZONE 3 — PRICE CARD (35%): White rounded card (85% opacity, border-radius 16px, soft shadow) floating over the waves. Inside: "Limited Time Offer" in small teal text with letter-spacing. Below: huge price "690,000원" in bold cyan (#06b6d4, 40px, weight 800).
+ZONE 4 — WAVE + CTA (bottom 25%): Another set of gentle wave shapes at 4% opacity. Period "2026.03.01 ~ 03.31" in gray. Below: rounded CTA button with cyan gradient (#06b6d4 → #0891b2), white bold text "예약하기".
+Modern, flowing, dynamic. Ocean-inspired calm yet exciting. Tech-forward healthcare design.`,
     },
     {
       id: 'evt_season_special', name: '시즌 스페셜', color: '#22c55e', accent: '#15803d', bg: '#f0fdf4',
       desc: '계절 한정 이벤트',
       layoutHint: 'season',
-      aiPrompt: 'Seasonal special event dental clinic design, fresh green and natural tones, seasonal floral or nature elements as borders, limited-time offer badge, warm and inviting healthcare promotion, seasonal fruits or flowers as decorative accents, friendly and approachable medical event poster with clear period dates',
+      aiPrompt: `EXACT LAYOUT BLUEPRINT — replicate this structure precisely:
+BACKGROUND: Soft mint (#f0fdf4) to white gradient. Very subtle leaf/floral shapes at corners in green at 5-8% opacity.
+ZONE 1 — HEADER (top 10%): Hospital name in green (#15803d) text.
+ZONE 2 — SEASON BANNER (20%): Rounded rectangle with green (#22c55e) at 6% opacity fill, thin green border at 10%. Inside: "SEASON SPECIAL" in small green letters with spacing. Below: large bold "임플란트 이벤트" in green (#22c55e, 24px, weight 800). Small decorative circles in green at edges (5-6% opacity).
+ZONE 3 — PRICE CARD (35%): White rounded card (90% opacity, border-radius 16px, soft shadow). Inside: "Season Special" in small green text. Below: massive price "690,000원" in bold green (#22c55e, 40px, weight 800).
+ZONE 4 — PERIOD + CTA (bottom 25%): Period on subtle green pill background. Below: full-width rounded CTA button with green gradient (#22c55e → #15803d), white bold text "지금 바로 예약하세요".
+Fresh, natural, inviting. Seasonal limited-time offer feel. Professional Korean dental clinic event with spring/nature atmosphere.`,
     },
   ],
 
@@ -1421,37 +1457,78 @@ Luxury, premium feel. Dark navy with gold accents. High-end Korean dental clinic
       id: 'doc_portrait_formal', name: '정장 포트레이트', color: '#1e40af', accent: '#1e3a8a', bg: '#eff6ff',
       desc: '공식 프로필형',
       layoutHint: 'portrait',
-      aiPrompt: 'Formal professional doctor introduction card design, clean navy and white color scheme, large circular or rectangular photo placeholder, name and specialty in elegant serif font, career highlights in organized bullet list, medical credentials prominently displayed, professional headshot layout, hospital logo placement, trust-building authoritative design',
+      aiPrompt: `EXACT LAYOUT BLUEPRINT — replicate this structure precisely:
+BACKGROUND: Clean white with very subtle blue tint.
+ZONE 1 — PHOTO AREA (top 45%): White rounded card (border-radius 12px, soft shadow). Top section: subtle blue (#1e40af) gradient band at 6% opacity. Center: large rectangular photo placeholder (50x50px equivalent, border-radius 8px, subtle blue border at 10%). "PHOTO" watermark text inside in light blue.
+ZONE 2 — NAME + TITLE (20%): Doctor name "김윈에이드" in large bold navy (#1e40af, 28px, weight 800). Below: rounded pill with navy gradient background, white bold text "치과 전문의".
+ZONE 3 — CREDENTIALS (25%): Alternating light/white stripe rows. Each row: "서울대 치의학 박사", "임플란트 전문", "경력 10년" — centered text in gray (#64748b). Clean professional list.
+BOTTOM: Hospital name in navy text, centered.
+Formal, authoritative, trust-building. Corporate medical profile card.`,
     },
     {
       id: 'doc_friendly_curve', name: '친근한 곡선', color: '#10b981', accent: '#059669', bg: '#ecfdf5',
       desc: '부드러운 곡선형',
       layoutHint: 'curve',
-      aiPrompt: 'Friendly and approachable doctor profile design, soft green and cream tones, organic curved shapes and rounded elements, warm and welcoming healthcare aesthetic, doctor photo with soft circular frame, gentle botanical or leaf decorations, patient-friendly medical design, conversational greeting text area, comforting and reassuring mood',
+      aiPrompt: `EXACT LAYOUT BLUEPRINT — replicate this structure precisely:
+BACKGROUND: Soft mint (#ecfdf5) to white gradient. Gentle curved wave shape dividing upper and lower sections at ~35% height, green (#10b981) at 4% opacity.
+ZONE 1 — PHOTO (top 40%): Large circular photo frame (radius 22px equivalent) centered. White background with soft shadow. Subtle green (#10b981) border at 8% opacity. "PHOTO" watermark inside.
+ZONE 2 — NAME + TITLE (18%): "김윈에이드" in bold green (#10b981, 28px, weight 800). Below: rounded pill with green at 8% opacity, "치과 전문의" in green accent text.
+ZONE 3 — GREETING (30%): White rounded card with soft shadow, border-radius 16px. Inside: italic greeting text "환자분의 미소가 저의 보람입니다" in green accent color. Warm, personal, inviting.
+BOTTOM: Hospital name in green text.
+Friendly, approachable, warm. Organic curved shapes. Patient-friendly dental clinic aesthetic.`,
     },
     {
       id: 'doc_modern_split', name: '모던 분할', color: '#6366f1', accent: '#4f46e5', bg: '#eef2ff',
       desc: '좌우 분할 레이아웃',
       layoutHint: 'split',
-      aiPrompt: 'Modern split-layout doctor introduction design, left side for large photo area with indigo overlay, right side for text information on white background, bold modern typography, clean geometric division, contemporary medical profile card, specialty and career details in organized sections, sleek professional aesthetic',
+      aiPrompt: `EXACT LAYOUT BLUEPRINT — replicate this structure precisely:
+LAYOUT: Two-column split design.
+LEFT COLUMN (42% width): Full-height area with indigo (#6366f1) at 6% opacity background. Large circular photo frame centered vertically — white background, subtle indigo border. Square photo placeholder inside (border-radius 6px, indigo at 8%). "PHOTO" watermark.
+RIGHT COLUMN (58% width): White background.
+TOP-RIGHT: Doctor name "김윈에이드" in bold indigo (#6366f1, 26px, weight 800). Below: rounded pill with indigo at 8% opacity, "치과 전문의" in indigo accent.
+MIDDLE-RIGHT: Bullet list with small indigo dots: "서울대 치대 졸업", "임플란트 전문", "경력 10년" in gray (#64748b).
+BOTTOM-RIGHT: Italic quote "환자분의 미소가 저의 보람입니다" in indigo accent.
+Modern, geometric split-layout. Clean division. Contemporary medical profile.`,
     },
     {
       id: 'doc_warm_story', name: '따뜻한 스토리', color: '#f97316', accent: '#ea580c', bg: '#fff7ed',
       desc: '인사말 중심 스토리형',
       layoutHint: 'story',
-      aiPrompt: 'Warm storytelling doctor introduction design, warm orange and cream palette, emphasis on doctor greeting message in large handwriting-style font, small photo with soft frame, personal and heartfelt narrative layout, cozy medical office atmosphere, stethoscope or heart icon accents, trust-building personal touch design',
+      aiPrompt: `EXACT LAYOUT BLUEPRINT — replicate this structure precisely:
+BACKGROUND: Warm cream (#fff7ed) with subtle white overlay card at 50% opacity, border-radius 12px.
+ZONE 1 — COMPACT HEADER (top 25%): Left: small circular photo frame (radius 12px). Right: "치과 전문의" in small orange text, below: "김윈에이드" in bold orange (#f97316, 22px, weight 800). Thin divider line below in orange at 8% opacity.
+ZONE 2 — GREETING MESSAGE (45%): Rounded area with orange at 3% opacity. Large storytelling text centered: "안녕하세요. 여러분의 건강한 미소를 위해 항상 노력하겠습니다. 편안하게 찾아주세요." in warm gray (#475569). Last line "편안하게 찾아주세요." in bold orange accent. Personal, heartfelt narrative style.
+ZONE 3 — CREDENTIALS (15%): White card with soft shadow. Single line: "서울대 치대 | 임플란트 전문 | 경력 10년" in light gray, centered.
+BOTTOM: Hospital name in orange accent text.
+Warm, personal, storytelling. Emphasis on doctor's greeting over credentials. Trust-building human touch.`,
     },
     {
       id: 'doc_dark_luxury', name: '다크 럭셔리', color: '#d4a017', accent: '#b8860b', bg: '#1a1a2e',
       desc: '프리미엄 다크',
       layoutHint: 'luxury',
-      aiPrompt: 'Premium dark luxury doctor introduction design, deep navy or black background with gold accents, sophisticated gold typography for name and title, elegant medical professional aesthetic, refined geometric borders, premium dental specialist branding, metallic shimmer effects, high-end medical practice feel, VIP doctor profile card',
+      aiPrompt: `EXACT LAYOUT BLUEPRINT — replicate this structure precisely:
+BACKGROUND: Deep navy (#0f172a) full background.
+ZONE 1 — GOLD HEADER (top 8%): Thin gold (#d4a017) decorative double line spanning 70% width, centered. Elegant separator.
+ZONE 2 — PHOTO (35%): Large circular frame centered. Gold (#d4a017) border at 20% opacity, subtle gold glow at 5%. Dark inner circle with "PHOTO" in gold at 40% opacity.
+ZONE 3 — NAME + TITLE (20%): "김윈에이드" in large bold gold (#d4a017, 28px, weight 800). Below: rounded pill with gold at 8% opacity, "치과 전문의" in gold (#b8860b).
+ZONE 4 — CREDENTIALS (15%): "서울대 치대 | 임플란트 전문" in light gray (#94a3b8). Thin gold divider line below.
+BOTTOM: Hospital name in gold text. Gold decorative line.
+Premium dark luxury. Deep navy with gold accents. VIP doctor profile. High-end dental specialist branding.`,
     },
     {
       id: 'doc_clean_grid', name: '클린 그리드', color: '#0ea5e9', accent: '#0284c7', bg: '#f0f9ff',
       desc: '정보 정리형 그리드',
       layoutHint: 'grid',
-      aiPrompt: 'Clean grid-based doctor information card design, sky blue and white, organized grid sections for photo, name, specialty, education, and career, infographic-style medical credentials layout, clear data visualization aesthetic, professional healthcare dashboard feel, structured and easy-to-read medical staff profile',
+      aiPrompt: `EXACT LAYOUT BLUEPRINT — replicate this structure precisely:
+BACKGROUND: Light sky blue (#f0f9ff) to white gradient.
+ZONE 1 — COMPACT HEADER (top 25%): Left: circular photo frame (radius 14px) with white background, subtle sky blue border, soft shadow. Right: "김윈에이드" in bold sky blue (#0ea5e9, 22px). Below right: rounded pill with sky blue at 8%, "치과 전문의" in blue accent.
+ZONE 2 — INFO GRID (50%): 2x2 grid of white cards with soft shadow, border-radius 8px. Each card:
+- Top: category label in bold sky blue ("학력", "전공", "경력", "학회")
+- Bottom: value in gray ("서울대 치대", "임플란트", "10년 이상", "대한치과의사협회")
+Cards arranged in neat grid with 8px gaps.
+ZONE 3 — CTA (10%): Rounded pill button with sky blue gradient, width 60%, centered.
+BOTTOM: Hospital name in blue accent text.
+Clean, organized, infographic-style. Dashboard aesthetic. Easy-to-read structured profile.`,
     },
   ],
 
@@ -1492,31 +1569,26 @@ Warm, attention-grabbing Korean healthcare notice. Professional yet inviting.`,
       id: 'ntc_soft_info', name: '라벤더 안내', color: '#8b5cf6', accent: '#7c3aed', bg: '#f5f3ff',
       desc: '부드러운 라벤더 안내',
       layoutHint: 'soft',
-      aiPrompt: `Soft lavender Korean dental clinic notice design.
-BACKGROUND: Gentle gradient from soft lavender (#f5f3ff) to white. Subtle decorative circles/blobs in light purple at corners.
-TOP (20%): Small clinic logo. Large bold dark purple text with notice title. Lavender accent line below.
-MAIN CONTENT (60%): White card with soft purple border radius 16px. Inside: organized notice content with:
-- Icon-labeled sections (clock icon for hours, phone icon for contact, etc.)
-- Purple accent bullets or numbered list
-- Important items in bold purple
-- Friendly, approachable writing style
-BOTTOM (20%): Light purple footer with contact info and operating hours. Clinic logo and name.
-Soft, calming, gentle Korean dental clinic notice. Purple/lavender palette.`,
+      aiPrompt: `EXACT LAYOUT BLUEPRINT — replicate this structure precisely:
+BACKGROUND: Gentle gradient from soft lavender (#f5f3ff) to white. Subtle decorative circles at corners in light purple at 5-8% opacity.
+ZONE 1 — HEADER (top 15%): Rounded pill with purple at 6% opacity. Left: "i" icon circle in purple at 10%. Right: bold purple title "진료실 이전 안내" (#8b5cf6, 20px, weight 700).
+ZONE 2 — CONTENT CARDS (55%): 3 individual rounded pill cards (border-radius 14px, white 90% opacity, soft shadow), stacked vertically with 8px gaps. Each card: small purple circle (10% opacity) on left, content text in gray (#475569) on right. Cards contain: "2026년 4월 1일부터", "새 장소에서 진료합니다", "서울시 강남구 ...".
+ZONE 3 — CTA (15%): Rounded pill with purple at 6% opacity, centered text "양해 부탁드립니다" in purple accent.
+BOTTOM: Hospital name in light gray.
+Soft, calming, gentle. All rounded shapes. Approachable and friendly dental clinic notice. Lavender palette.`,
     },
     {
       id: 'ntc_corporate_formal', name: '공식 문서', color: '#1f2937', accent: '#111827', bg: '#f9fafb',
       desc: '격식있는 공문 스타일',
       layoutHint: 'formal',
-      aiPrompt: `Formal official Korean dental clinic notice design (공문 스타일).
-TOP: Thin black border frame around entire design. Clinic logo and name in formal header. Horizontal double line below header.
-TITLE: Centered bold text "공 지 사 항" with spaced characters, or specific notice title. Date in small text.
-BODY: Clean organized text content with proper Korean formal document formatting:
-- Indented paragraphs
-- Numbered items with period separators
-- Clear section headings
-- Formal, respectful language style
-BOTTOM: "위와 같이 알려드리오니 참고하시기 바랍니다." closing line. Date and clinic name with representative name. Optional official seal/stamp graphic.
-Formal, authoritative, institutional Korean notice format. Black and white with minimal color.`,
+      aiPrompt: `EXACT LAYOUT BLUEPRINT — replicate this structure precisely:
+BACKGROUND: Pure white (#ffffff).
+ZONE 1 — HEADER (top 8%): Full-width 2px solid black (#1f2937) line. Below: hospital name centered in formal font.
+ZONE 2 — TITLE (12%): Large bold text "공 지 사 항" with letter-spacing 4px in charcoal (#1f2937, 26px, weight 800), centered. Below: thin horizontal line at 30% opacity.
+ZONE 3 — CONTENT (50%): White area with thin border frame. Clean formal text layout: "2026년 4월 1일부터 새로운 장소에서 진료합니다." in dark text. Indented paragraphs. "신주소: 서울시 강남구 ..." Numbered items with proper Korean formal document formatting. Clear section headings.
+ZONE 4 — CLOSING (15%): Thin divider line at 20% opacity. "위와 같이 알려드리오니 참고하시기 바랍니다." in formal closing. Date and clinic name.
+BOTTOM: Thin black border line matching top.
+Formal, authoritative, institutional Korean official document format. Black and white with no color.`,
     },
     {
       id: 'ntc_card_popup', name: '민트 팝업', color: '#06b6d4', accent: '#0891b2', bg: '#ecfeff',
@@ -1559,37 +1631,73 @@ Infographic-style change notice. Clear before/after comparison. Green palette.`,
       id: 'grt_seol_traditional', name: '전통 한복', color: '#dc2626', accent: '#991b1b', bg: '#fef2f2',
       desc: '단청 문양 전통',
       layoutHint: 'traditional',
-      aiPrompt: 'Traditional Korean Lunar New Year (Seollal) greeting card for dental clinic, elegant red and gold dancheong patterns, traditional Korean gate frame (대문), pine tree and plum blossom decorations, calligraphy-style 새해 복 text, Korean traditional cloud motifs, han-bok inspired color palette, lucky knot (매듭) ornaments, dignified and festive',
+      aiPrompt: `EXACT LAYOUT BLUEPRINT — replicate this structure precisely:
+BACKGROUND: Deep crimson-to-burgundy gradient (#dc2626 → #991b1b) full bleed. Thin gold (#d4a017) double-line border inset 3% from edges. Subtle dancheong (단청) geometric pattern overlay at 10% opacity across entire background.
+ZONE 1 — TOP HEADER (top 20%): Traditional Korean gate roof (기와지붕) silhouette in dark burgundy (#7f1d1d) spanning full width at very top. Below roof: "새해 복 많이 받으세요" in large bold gold (#fbbf24) calligraphy-style Korean font, centered. Hospital/clinic name in smaller white text (80% opacity) directly below.
+ZONE 2 — MAIN ILLUSTRATION (middle 40%): Centered composition — a pair of Korean traditional lucky knot (매듭) ornaments in red and gold flanking a large stylized "福" / "복" character rendered in shimmering gold foil (#d4a017) inside a circular frame. Pine branch (소나무) with green needles extending from top-left, plum blossom (매화) branch with pink-white flowers from top-right, meeting behind the central character.
+ZONE 3 — GREETING MESSAGE (next 25%): White semi-transparent rounded card (85% opacity, border-radius 16px) centered with 8% side margins. Inside: 2–3 lines of New Year greeting text in dark burgundy (#7f1d1d), font-size medium, line-height 1.6. Dental clinic personalized message area. Small gold divider line above and below text.
+ZONE 4 — FOOTER (bottom 15%): Korean traditional cloud motifs (구름문) in gold (#d4a017) at 25% opacity, flowing left-to-right. Centered small tooth icon wearing a tiny hanbok (한복) hat in gold outline. Year "2026" in small elegant gold text below.
+Overall: Dignified, festive, traditional Korean Seollal atmosphere. Red-and-gold royal palette. No cartoonish elements — elegant and sophisticated for a dental clinic.`,
     },
     {
       id: 'grt_seol_tteokguk', name: '떡국 일러스트', color: '#f97316', accent: '#ea580c', bg: '#fff7ed',
       desc: '따뜻한 설 음식',
       layoutHint: 'warm',
-      aiPrompt: 'Warm Seollal greeting with cute tteokguk (rice cake soup) illustration for dental clinic, steaming bowl of tteokguk as center piece, chopsticks and spoon, warm orange and cream watercolor, cozy family meal atmosphere, hand-drawn food illustration style, soft bokeh lights, Korean New Year feast feeling, heartwarming',
+      aiPrompt: `EXACT LAYOUT BLUEPRINT — replicate this structure precisely:
+BACKGROUND: Warm cream-to-peach gradient (#fff7ed → #fed7aa) full bleed. Soft watercolor texture overlay at 15% opacity. Faint steam/bokeh light circles in warm white (#fffbeb) at 10% opacity scattered across upper half.
+ZONE 1 — TOP HEADER (top 18%): "설날 인사드립니다" in large bold warm brown (#92400e) Korean font, centered. Hospital/clinic name in smaller soft orange (#ea580c) text below. Thin dashed orange (#f97316) horizontal line as divider.
+ZONE 2 — MAIN ILLUSTRATION (middle 45%): Large hand-drawn watercolor illustration of a steaming bowl of tteokguk (떡국) centered. Bowl is white ceramic with subtle blue rim pattern. Inside: sliced rice cakes (흰 떡), green onion garnish, egg strips (지단) in yellow, seaweed flakes. Three wavy steam lines rising in warm white above the bowl. Wooden chopsticks and a metal spoon placed neatly to the right of bowl on a warm-toned wooden table surface. Small side dishes (kimchi, namul) in tiny bowls flanking left and right at smaller scale.
+ZONE 3 — GREETING TEXT (next 22%): Rounded rectangle card with very soft orange border (#fdba74, 1px) and white fill (90% opacity), border-radius 12px. Inside: warm heartfelt New Year greeting in dark brown (#78350f) text, font-size medium, line-height 1.8. "따뜻한 새해 되세요" as highlight line in bold orange (#f97316).
+ZONE 4 — FOOTER (bottom 15%): Small cute tooth character (simple rounded rectangle shape, two dot eyes, curved smile) wearing a chef hat, holding a tiny spoon — in line-drawing style, warm brown (#92400e) outline. Year "2026" and clinic info in small warm brown text centered below.
+Overall: Cozy, heartwarming, hand-drawn food illustration style. Warm orange and cream palette. Feels like a homemade family meal invitation from a friendly dental clinic.`,
     },
     {
       id: 'grt_seol_modern', name: '모던 세뱃돈', color: '#6366f1', accent: '#4f46e5', bg: '#eef2ff',
       desc: '세련된 봉투 디자인',
       layoutHint: 'minimal',
-      aiPrompt: 'Modern minimalist Seollal greeting with sebatdon (New Year money) envelope motif, clean indigo and gold design, single elegant Korean lucky bag illustration, contemporary typography with generous whitespace, geometric pattern frame inspired by Korean traditional patterns simplified, sophisticated medical brand holiday card',
+      aiPrompt: `EXACT LAYOUT BLUEPRINT — replicate this structure precisely:
+BACKGROUND: Clean off-white (#eef2ff) full bleed. Generous whitespace throughout. Subtle geometric Korean traditional pattern (격자문) in very faint indigo (#6366f1 at 5%) as background texture, barely visible.
+ZONE 1 — TOP HEADER (top 15%): Hospital/clinic name in small indigo (#4f46e5) text, left-aligned with 10% left margin. Thin indigo (#6366f1) horizontal line spanning 80% width below, centered.
+ZONE 2 — MAIN VISUAL (middle 40%): Single elegant sebatdon envelope (세뱃돈 봉투) illustration centered. Envelope is clean white with indigo (#6366f1) minimal line art, gold (#d4a017) clasp/seal at top. Korean traditional simplified geometric border pattern on envelope in thin indigo lines. Small "복" character in gold on envelope center. Envelope slightly tilted at 5° angle. Behind envelope: one thin gold circle outline as abstract decoration. No other elements — maximum negative space.
+ZONE 3 — TYPOGRAPHY (next 30%): "새해 복 많이 받으세요" in large bold indigo (#4f46e5) sans-serif modern Korean font, centered, generous letter-spacing (0.05em). Below: 2 lines of clean greeting text in medium gray (#64748b), font-size small-medium, centered. "2026 설날" in small gold (#d4a017) accent text.
+ZONE 4 — FOOTER (bottom 15%): Minimal footer — small indigo tooth icon (geometric/minimal style) centered. Clinic contact info in tiny gray (#94a3b8) text. Thin indigo line above footer matching header line.
+Overall: Ultra-clean, contemporary, corporate. Swiss/minimalist typography. Indigo and gold only. Feels like a premium medical brand holiday card — sophisticated and restrained.`,
     },
     {
       id: 'grt_seol_bokjumeoni', name: '복주머니', color: '#e11d48', accent: '#be123c', bg: '#fff1f2',
       desc: '복주머니 장식',
       layoutHint: 'cute',
-      aiPrompt: 'Cute bokjumeoni (fortune pouch) themed Seollal greeting for dental clinic, adorable 3D-style fortune pouches with Korean patterns, gold coins floating around, kawaii tooth character wearing hanbok, cheerful pink and red palette, festive confetti, cute lucky symbols (four-leaf clover, horseshoe), playful Korean New Year celebration',
+      aiPrompt: `EXACT LAYOUT BLUEPRINT — replicate this structure precisely:
+BACKGROUND: Soft rose-pink gradient (#fff1f2 → #fce7f3) full bleed. Small festive confetti dots in gold (#fbbf24), red (#e11d48), and pink (#f9a8d4) scattered randomly at 20% opacity across entire background. Subtle radial glow in center (white at 15%).
+ZONE 1 — TOP HEADER (top 15%): "복 많이 받으세요!" in large bold rose-red (#e11d48) rounded Korean font with slight text-shadow in pink. Small gold sparkle icons (✦) flanking the text left and right. Hospital name in smaller deep rose (#be123c) below.
+ZONE 2 — MAIN ILLUSTRATION (middle 45%): Three adorable 3D-style bokjumeoni (복주머니) pouches arranged in a row — left pouch in red (#dc2626) with gold drawstring, center pouch (largest, 1.3x scale) in hot pink (#e11d48) with traditional flower embroidery pattern, right pouch in coral (#fb7185) with gold drawstring. Each pouch has a small gold "복" character embroidered. Gold coins (동전) floating above and around pouches (5–7 coins with square holes). Between the pouches: a kawaii tooth character (white rounded rectangle, dot eyes, big curved smile, pink blush circles on cheeks) wearing a miniature hanbok jeogori (저고리) in pink and yellow.
+ZONE 3 — GREETING MESSAGE (next 25%): Rounded pill-shape card with pink border (#fda4af, 2px) and white fill, border-radius 24px. Inside: cheerful New Year greeting in deep rose (#9f1239) text, playful rounded font. Lucky symbols: tiny four-leaf clover (☘) and star (★) as bullet points.
+ZONE 4 — FOOTER (bottom 15%): Row of tiny bouncing lucky symbols — horseshoe, clover, star, coin — in gold outline, evenly spaced. Year "2026" in bubbly pink (#e11d48) text centered. Small clinic info in rose (#be123c).
+Overall: Cheerful, kawaii, playful. Pink-red-gold palette. Cute character-driven design perfect for a family-friendly dental clinic Seollal card.`,
     },
     {
       id: 'grt_seol_gold_luxury', name: '금박 프리미엄', color: '#d4a017', accent: '#b8860b', bg: '#fefce8',
       desc: '고급 금박 효과',
       layoutHint: 'luxury',
-      aiPrompt: 'Premium gold foil Seollal greeting card for dental clinic, rich burgundy background with intricate gold foil Korean traditional patterns, 복 character in elegant gold calligraphy, pine branch gold embossing, luxury paper texture, sophisticated Oriental aesthetic, high-end medical practice Lunar New Year card, VIP premium feel',
+      aiPrompt: `EXACT LAYOUT BLUEPRINT — replicate this structure precisely:
+BACKGROUND: Rich burgundy (#7f1d1d) full bleed with subtle luxury paper/linen texture overlay at 8% opacity. Thin gold (#d4a017) ornamental border inset 4% from all edges — double line with tiny diamond shapes at corners.
+ZONE 1 — TOP ACCENT (top 12%): Centered gold foil pine branch (소나무) illustration spanning 60% width — intricate needle detail in gold (#d4a017) with subtle gold shimmer effect. Small gold sparkle dots around branch tips.
+ZONE 2 — MAIN CENTERPIECE (middle 40%): Large circular gold frame (3px gold #d4a017 line, radius ~30% of image width) centered. Inside circle: "복" character in extra-large, elegant gold calligraphy (#fbbf24 to #d4a017 gradient), brush stroke style. Circle surrounded by intricate Korean traditional patterns (보상화문 / 연꽃문) in gold foil at 40% opacity forming a mandala-like ring. Four small gold corner ornaments (traditional Korean 모서리 장식) at diagonal positions around the circle.
+ZONE 3 — GREETING TEXT (next 28%): "새해 복 많이 받으세요" in elegant gold (#fbbf24) serif/calligraphy Korean font, centered, generous letter-spacing. Below: thin gold divider line (60% width). 2 lines of refined greeting text in soft gold (#d4a017 at 70%) on burgundy, font-size small-medium. Hospital/clinic name in small bright gold below.
+ZONE 4 — FOOTER (bottom 20%): Gold foil embossed effect — symmetric arrangement of Korean traditional motifs: two mirrored phoenix (봉황) silhouettes in gold at 25% opacity flanking a small gold tooth icon (premium shield-shaped dental emblem). Year "2026" in small gold text at very bottom.
+Overall: Ultra-premium, VIP luxury feel. Only burgundy and gold — no other colors. Gold foil metallic shimmer throughout. Feels like an exclusive invitation from a high-end dental practice.`,
     },
     {
       id: 'grt_seol_sunrise', name: '새해 일출', color: '#f59e0b', accent: '#d97706', bg: '#fffbeb',
       desc: '해돋이 풍경',
       layoutHint: 'nature',
-      aiPrompt: 'Beautiful New Year sunrise landscape Seollal greeting for dental clinic, golden sunrise over Korean mountains and traditional village, warm amber and golden sky gradients, silhouette of hanok rooftops, peaceful morning atmosphere, watercolor landscape style, hopeful new beginning feeling, nature-inspired Korean New Year scene',
+      aiPrompt: `EXACT LAYOUT BLUEPRINT — replicate this structure precisely:
+BACKGROUND: Dawn sky gradient transitioning from deep navy (#1e3a5f) at top through warm amber (#f59e0b) and soft peach (#fbbf24) to pale gold (#fffbeb) at bottom — mimicking a real Korean mountain sunrise. Faint horizontal cloud wisps in warm white at 15% opacity across the mid-section.
+ZONE 1 — TOP SKY (top 20%): Deep navy-to-indigo (#1e3a5f → #312e81) fading into warm tones. Small scattered stars in white at 30% opacity fading out as sky brightens. Thin crescent moon outline in pale gold (#fde68a) at 15% opacity, top-right corner, nearly invisible as dawn arrives.
+ZONE 2 — SUNRISE & MOUNTAINS (middle 35%): Large radiant sun disc rising from behind mountain range — sun is a luminous gradient circle (#fbbf24 → #f59e0b) with soft golden glow rays radiating outward at 20% opacity. Korean mountain silhouettes (산) in 3 layered ridges: far mountains in dusty purple (#6b5b73), mid mountains in warm brown (#92400e at 60%), near mountains in deep amber (#78350f). Between mountains: a small traditional Korean village — 3–4 hanok (한옥) rooftop silhouettes with curved eaves in dark brown, wisps of chimney smoke rising in warm white.
+ZONE 3 — GREETING TEXT (next 30%): Golden sunrise glow area. "새해 복 많이 받으세요" in large bold dark warm brown (#78350f) elegant Korean font, centered, with subtle gold text-shadow. Below: thin golden line divider (#d97706, 50% width). 2–3 lines of heartfelt New Year greeting in medium brown (#92400e) text, font-size medium, line-height 1.7. Hospital/clinic name in small amber (#d97706) text below greeting. Small sunrise icon (semicircle with rays) as decorative element.
+ZONE 4 — FOOTER (bottom 15%): Silhouette of pine trees (소나무) along bottom edge in dark amber (#92400e at 40%), creating a natural treeline. Centered: small tooth icon styled as a rising sun (tooth shape with tiny radiating lines) in gold (#d97706) outline. Year "2026" in small warm gold text. Clinic contact info in tiny brown (#78350f at 60%).
+Overall: Serene, hopeful, nature-inspired Korean sunrise landscape. Warm amber-gold-brown palette. Watercolor/painted landscape atmosphere. Evokes the feeling of a fresh new beginning — peaceful and uplifting for a dental clinic Seollal greeting.`,
     },
   ],
 
@@ -1599,37 +1707,73 @@ Infographic-style change notice. Clear before/after comparison. Green palette.`,
       id: 'grt_chsk_fullmoon', name: '보름달 전통', color: '#f59e0b', accent: '#d97706', bg: '#fffbeb',
       desc: '보름달 한국풍',
       layoutHint: 'traditional',
-      aiPrompt: 'Traditional Korean Chuseok greeting with large full moon as centerpiece, golden wheat and rice stalks framing the design, persimmon and chestnut decorations, traditional Korean pattern borders, warm amber and gold palette, harvest moon atmosphere, calligraphy-style greeting text, dignified autumn festival feeling',
+      aiPrompt: `EXACT LAYOUT BLUEPRINT — replicate this structure precisely:
+BACKGROUND: Deep warm navy (#1a1a2e) to dark amber (#451a03) gradient full bleed, evoking an autumn night sky. Subtle traditional Korean geometric pattern (팔각문) overlay at 5% opacity in gold (#d4a017). Faint golden radial glow emanating from center-top where moon will be placed.
+ZONE 1 — TOP / MOON (top 35%): Massive luminous full moon (보름달) centered — a large perfect circle with realistic moon texture in pale gold (#fde68a) to warm white gradient, soft outer glow in amber (#f59e0b at 30%) radiating outward. Inside moon: very faint silhouette of a rabbit pounding rice cake (달토끼) in slightly darker gold at 15% opacity. Thin wispy clouds in warm gold (#d4a017 at 15%) drifting across moon edges.
+ZONE 2 — HARVEST FRAME (middle 25%): Symmetrical arrangement flanking center — left side: golden wheat stalks (벼이삭) and rice grain clusters in warm gold (#d4a017) curving inward; right side: mirrored wheat stalks. Between them at center: 2–3 ripe persimmons (감) in deep orange (#ea580c) with green stems, and 2 chestnuts (밤) in warm brown (#92400e) below. Small traditional Korean knot (매듭) in red (#dc2626) and gold hanging as accent.
+ZONE 3 — GREETING TEXT (next 25%): "풍성한 한가위 보내세요" in large bold gold (#fbbf24) calligraphy-style Korean font, centered. Below: thin gold ornamental divider line with small diamond center. 2–3 lines of warm Chuseok greeting in soft gold (#d4a017 at 80%) text, font-size medium, line-height 1.7. Hospital/clinic name in small bright gold below. Traditional bracket-style (「 」) gold frame around text area.
+ZONE 4 — FOOTER (bottom 15%): Traditional Korean wave/cloud pattern (구름문) in gold (#d4a017) at 20% opacity flowing across bottom. Centered: small tooth icon with a tiny full moon motif in gold outline. Year "2026 추석" in small elegant gold text. Clinic info in tiny warm gold (#d4a017 at 50%).
+Overall: Majestic, dignified, traditional Korean Chuseok harvest festival atmosphere. Deep navy and gold palette. Rich autumn harvest abundance feeling — warm yet elegant for a dental clinic.`,
     },
     {
       id: 'grt_chsk_songpyeon', name: '송편 일러스트', color: '#22c55e', accent: '#15803d', bg: '#f0fdf4',
       desc: '송편과 과일',
       layoutHint: 'warm',
-      aiPrompt: 'Cute Chuseok greeting with songpyeon (rice cakes) illustration for dental clinic, colorful songpyeon arranged on pine needles plate, Korean pear and persimmon fruits around, soft green and earth tone watercolor, hand-drawn food illustration, warm family gathering atmosphere, harvest abundance feeling',
+      aiPrompt: `EXACT LAYOUT BLUEPRINT — replicate this structure precisely:
+BACKGROUND: Soft sage-green to warm cream gradient (#f0fdf4 → #fefce8) full bleed. Delicate watercolor wash texture at 12% opacity. Faint pine needle pattern (솔잎) scattered diagonally at 5% opacity in soft green (#86efac) across background.
+ZONE 1 — TOP HEADER (top 18%): "즐거운 추석 보내세요" in large bold forest green (#15803d) hand-lettering style Korean font, centered. Small pine branch (솔가지) illustrations flanking text left and right in soft green (#22c55e). Hospital/clinic name in smaller muted green (#166534) below. Thin dotted green line as divider.
+ZONE 2 — MAIN ILLUSTRATION (middle 45%): Large hand-drawn watercolor illustration of songpyeon (송편) arrangement centered. A round wooden plate (소반) with fresh green pine needles spread as base. On plate: 8–10 songpyeon in assorted colors — white, pale pink (#fda4af), pale green (#86efac), pale yellow (#fde68a) — half-moon shaped with sesame/bean filling visible in cross-section on one piece. Surrounding the plate: a whole Korean pear (배) in golden-brown on the left, 2 ripe persimmons (감) in orange (#ea580c) on the right, a small bunch of jujubes (대추) in dark red, and 2 chestnuts (밤). Small stack of Korean pancakes (전) on a tiny side plate in background. Rising steam wisps from freshly made songpyeon in warm white.
+ZONE 3 — GREETING TEXT (next 22%): Rounded rectangle card with soft green border (#86efac, 1.5px) and white fill (92% opacity), border-radius 14px. Inside: warm Chuseok greeting in dark green (#14532d) text, font-size medium, line-height 1.7. "건강한 한가위 되세요" as highlight line in bold green (#15803d). Small songpyeon icon as decorative bullet.
+ZONE 4 — FOOTER (bottom 15%): Small kawaii tooth character (white rounded shape, dot eyes, happy curved smile, pink cheek blush) wearing a tiny traditional Korean apron (앞치마), holding a miniature songpyeon — in simple line-drawing style, green (#15803d) outline. Year "2026" and clinic info in small forest green text centered.
+Overall: Warm, homey, hand-drawn food illustration style. Green and earth-tone palette. Feels like a heartfelt family gathering invitation from a friendly neighborhood dental clinic.`,
     },
     {
       id: 'grt_chsk_modern', name: '모던 한가위', color: '#6366f1', accent: '#4f46e5', bg: '#eef2ff',
       desc: '세련된 추석',
       layoutHint: 'minimal',
-      aiPrompt: 'Modern minimalist Chuseok greeting card for dental clinic, clean geometric representation of full moon circle, single elegant rabbit silhouette, contemporary indigo and silver color scheme, generous whitespace, subtle autumn leaf accent, sophisticated medical brand Chuseok card, understated Korean harvest festival design',
+      aiPrompt: `EXACT LAYOUT BLUEPRINT — replicate this structure precisely:
+BACKGROUND: Clean off-white (#eef2ff) full bleed. Maximum whitespace throughout. Extremely subtle geometric grid pattern in faint indigo (#6366f1 at 4%) as background texture, barely perceptible. No visual clutter.
+ZONE 1 — TOP HEADER (top 15%): Hospital/clinic name in small indigo (#4f46e5) sans-serif text, left-aligned with 10% left margin. Thin indigo (#6366f1) horizontal line spanning 80% width below, centered. Small "추석" label in tiny uppercase-style indigo text, right-aligned.
+ZONE 2 — MAIN VISUAL (middle 40%): Large perfect circle (full moon) centered — thin indigo (#6366f1, 2px) stroke outline only, no fill. Inside the circle: a single elegant rabbit silhouette in solid indigo (#4f46e5), minimalist geometric style (composed of simple shapes — circles and rounded rectangles), sitting in profile facing right, small and positioned in lower-third of circle. Below the rabbit inside circle: a tiny stylized mortar and pestle (절구) in thin indigo line art. Outside circle, bottom-right: one single maple leaf (단풍잎) in muted silver-indigo (#a5b4fc) at 40% opacity, geometric/simplified form. Maximum negative space around the circle.
+ZONE 3 — TYPOGRAPHY (next 30%): "풍성한 한가위 보내세요" in large bold indigo (#4f46e5) modern sans-serif Korean font, centered, generous letter-spacing (0.05em). Below: 2 lines of refined greeting text in medium gray (#64748b), font-size small-medium, centered, line-height 1.8. "2026 추석" in small silver (#a5b4fc) accent text below.
+ZONE 4 — FOOTER (bottom 15%): Minimal footer — small geometric tooth icon in indigo (#6366f1) outline centered. Clinic contact info in tiny gray (#94a3b8) text. Thin indigo line above footer matching header line style.
+Overall: Ultra-clean, contemporary, Swiss-inspired minimalism. Indigo and silver-gray only — absolutely no warm colors. Sophisticated medical brand Chuseok card. Restrained, intellectual, premium feel.`,
     },
     {
       id: 'grt_chsk_rabbit', name: '토끼 캐릭터', color: '#ec4899', accent: '#be185d', bg: '#fdf2f8',
       desc: '달토끼 귀여운',
       layoutHint: 'cute',
-      aiPrompt: 'Adorable moon rabbit (달토끼) Chuseok greeting for dental clinic, kawaii rabbit character pounding rice cakes on the moon, cute tooth fairy in Korean hanbok costume, playful pink and purple moonlit scene, festive stars and sparkles, chibi character style, cheerful family-friendly Chuseok celebration, cartoon autumn leaves falling',
+      aiPrompt: `EXACT LAYOUT BLUEPRINT — replicate this structure precisely:
+BACKGROUND: Soft pink-to-lavender gradient (#fdf2f8 → #f3e8ff) full bleed. Scattered small stars and sparkles (✦) in gold (#fbbf24) and pink (#f9a8d4) at 20% opacity across entire background. Soft circular bokeh lights in warm pink (#fda4af at 10%) floating in upper portion.
+ZONE 1 — TOP HEADER (top 15%): "즐거운 한가위!" in large bold hot pink (#ec4899) bubbly rounded Korean font with subtle pink text-shadow. Small crescent moon and star icons in gold (#fbbf24) flanking text. Hospital name in smaller deep pink (#be185d) below.
+ZONE 2 — MAIN ILLUSTRATION (middle 45%): Large luminous full moon circle in pale yellow (#fef3c7) as backdrop, centered. On the moon surface: an adorable kawaii moon rabbit (달토끼) character — white fluffy bunny with large round eyes, pink inner ears (#f9a8d4), pink nose, rosy cheek circles (#fda4af), wearing a tiny pastel pink hanbok jeogori (저고리). Rabbit is cheerfully pounding rice cake (떡) with a small wooden mallet (떡메) into a mortar (절구). Rice cake pieces bouncing up playfully. Next to the rabbit: a cute chibi tooth character (white rounded rectangle body, dot eyes, big curved smile, pink blush, tiny pink ribbon/bow on top) wearing a miniature hanbok치마 (chima) in lavender, holding a tiny Korean fan (부채). Floating around them: 3–4 colorful cartoon autumn leaves (maple in red #ef4444, ginkgo in yellow #fbbf24) and small floating songpyeon in pastel colors.
+ZONE 3 — GREETING MESSAGE (next 25%): Rounded pill-shape card with pink border (#f9a8d4, 2px) and white fill (95% opacity), border-radius 24px. Inside: cheerful Chuseok greeting in deep pink (#9f1239) text, playful rounded font, line-height 1.6. "달토끼와 함께 행복한 추석!" as highlight in bold pink (#ec4899). Small star (★) and moon (☽) as decorative bullet points.
+ZONE 4 — FOOTER (bottom 15%): Row of tiny bouncing characters — small rabbit, moon, songpyeon, maple leaf, tooth — as repeating icons in pink (#ec4899) outline, evenly spaced. Year "2026 추석" in bubbly pink text centered. Clinic info in small rose (#be185d).
+Overall: Adorable, kawaii, character-driven playful design. Pink-lavender-gold palette. Cheerful and family-friendly — perfect for a pediatric or family dental clinic Chuseok greeting card.`,
     },
     {
       id: 'grt_chsk_premium', name: '달빛 프리미엄', color: '#d4a017', accent: '#b8860b', bg: '#1a1a2e',
       desc: '고급 달빛 골드',
       layoutHint: 'luxury',
-      aiPrompt: 'Premium dark navy Chuseok greeting with golden full moon for dental clinic, deep midnight blue background with luminous gold moon, golden wheat stalks and persimmon ornaments, luxury gold foil text and borders, elegant moonlight glow effects, sophisticated Oriental harvest festival aesthetic, high-end medical practice card',
+      aiPrompt: `EXACT LAYOUT BLUEPRINT — replicate this structure precisely:
+BACKGROUND: Deep midnight navy (#1a1a2e) full bleed with subtle luxury silk/satin texture overlay at 6% opacity. Thin gold (#d4a017) ornamental double-line border inset 4% from all edges, with small traditional Korean corner motifs (모서리 장식) at each corner in gold.
+ZONE 1 — TOP ACCENT (top 12%): Symmetrical arrangement of golden wheat stalks (벼이삭) and grain clusters in gold foil (#d4a017) curving inward from left and right edges, meeting near center. Small gold sparkle dots at grain tips. Subtle golden light glow at center-top hinting at moonrise.
+ZONE 2 — MOONLIT CENTERPIECE (middle 40%): Massive luminous full moon centered — large perfect circle with rich gold gradient (#fbbf24 → #d4a017), realistic moon surface texture, dramatic outer glow in warm gold (#f59e0b at 25%) radiating outward creating a moonlight halo effect. Inside moon: very faint traditional rabbit silhouette in slightly deeper gold at 12% opacity. Flanking moon left and right: elegant gold foil persimmon branches (감나무) — 2 ripe persimmons each side in deep gold (#b8860b) with delicate gold leaves. Below moon: small arrangement of traditional Korean offering fruits (제수용 과일) — pears, apples, chestnuts — as gold silhouettes.
+ZONE 3 — GREETING TEXT (next 28%): "풍성한 한가위 보내세요" in large elegant gold (#fbbf24) serif/calligraphy Korean font, centered, with subtle gold shimmer effect. Below: thin gold ornamental divider with lotus motif center. 2 lines of refined greeting in soft gold (#d4a017 at 70%) on navy, font-size small-medium. Hospital/clinic name in small bright gold (#fbbf24). Traditional gold bracket frame (「 」style) around entire text zone.
+ZONE 4 — FOOTER (bottom 20%): Gold foil embossed effect — two mirrored traditional Korean phoenix (봉황) silhouettes in gold at 20% opacity flanking a premium tooth icon (shield-shaped dental emblem with crescent moon detail) in gold (#d4a017). "2026 추석" in small gold text at very bottom. Gold wave pattern (파도문) at 10% opacity along bottom edge.
+Overall: Ultra-premium, VIP luxury Chuseok card. Deep navy and gold exclusively — no other colors. Gold foil metallic shimmer throughout. Feels like an exclusive harvest festival invitation from a premium dental practice.`,
     },
     {
       id: 'grt_chsk_autumn', name: '가을 풍경', color: '#ea580c', accent: '#c2410c', bg: '#fff7ed',
       desc: '단풍 자연풍',
       layoutHint: 'nature',
-      aiPrompt: 'Beautiful autumn landscape Chuseok greeting for dental clinic, colorful maple leaves in red orange gold, Korean countryside harvest scene with rice paddies, warm sunset atmosphere, watercolor painting style, full moon rising over autumn mountains, peaceful and abundant nature scene, nostalgic Korean autumn feeling',
+      aiPrompt: `EXACT LAYOUT BLUEPRINT — replicate this structure precisely:
+BACKGROUND: Warm autumn sunset gradient — soft peach (#fff7ed) at top transitioning through warm amber (#fed7aa) to muted burnt orange (#ea580c at 20%) at bottom. Delicate watercolor wash texture at 15% opacity throughout. Faint falling leaf particles (tiny dots in red, orange, gold) at 8% opacity scattered across background.
+ZONE 1 — TOP SKY & MOON (top 25%): Warm sunset sky in soft peach-to-amber tones. A full moon rising in upper-right area — pale cream circle (#fef3c7) with soft warm glow at 20% opacity. Faint silhouettes of migrating geese (기러기) in a V-formation (3–5 birds) in warm brown (#92400e at 30%) flying across the sky near the moon.
+ZONE 2 — AUTUMN LANDSCAPE (middle 35%): Watercolor-painted Korean autumn countryside panorama. Rolling hills with colorful maple trees (단풍나무) in vivid red (#dc2626), burnt orange (#ea580c), and golden yellow (#f59e0b). A winding country path through golden rice paddies (황금 들판) ready for harvest. In the middle distance: a small traditional Korean farmhouse (초가집) with thatched roof, thin smoke from chimney. A few persimmon trees (감나무) with bright orange fruit visible. Foreground: close-up maple branches framing left and right edges with detailed colorful leaves — red, orange, gold, some still green. Soft watercolor bleeding edges for painterly effect.
+ZONE 3 — GREETING TEXT (next 25%): Semi-transparent warm white card (88% opacity) with rounded corners (border-radius 14px), subtle burnt orange border (#fb923c, 1px). Inside: "풍성한 한가위 보내세요" in large bold dark brown (#78350f) Korean font. Below: 2–3 lines of warm autumn Chuseok greeting in medium brown (#92400e) text, line-height 1.7. "건강하고 행복한 추석 되세요" as highlight in bold burnt orange (#ea580c). Small maple leaf icon as decorative accent.
+ZONE 4 — FOOTER (bottom 15%): Scattered fallen autumn leaves along bottom edge — maple leaves in red and orange, ginkgo leaves in golden yellow — in watercolor style at 40% opacity creating a natural ground cover. Centered: small tooth icon with a tiny maple leaf accent in burnt orange (#ea580c) outline. Year "2026 추석" and clinic info in small warm brown (#92400e) text.
+Overall: Nostalgic, warm, painterly Korean autumn landscape. Red-orange-gold-brown harvest palette. Watercolor painting atmosphere. Evokes the beauty and abundance of Korean autumn countryside — peaceful and heartwarming for a dental clinic Chuseok greeting.`,
     },
   ],
 
@@ -1639,37 +1783,73 @@ Infographic-style change notice. Clear before/after comparison. Green palette.`,
       id: 'grt_newy_fireworks', name: '불꽃놀이', color: '#7c3aed', accent: '#6d28d9', bg: '#f5f3ff',
       desc: '화려한 불꽃놀이',
       layoutHint: 'traditional',
-      aiPrompt: 'Spectacular New Year fireworks greeting for dental clinic, colorful fireworks bursting against dark night sky, 2026 in large sparkler-written numbers, gold and purple and blue firework explosions, celebration confetti, midnight countdown atmosphere, glamorous and exciting New Year party feeling, city skyline silhouette',
+      aiPrompt: `EXACT LAYOUT BLUEPRINT — replicate this structure precisely:
+BACKGROUND: Deep midnight navy (#0f0a2e) to dark purple (#1a0533) gradient. Scattered tiny star-like sparkles at 15% opacity across entire background.
+ZONE 1 — FIREWORKS BURST (top 40%): 3–5 large firework explosions in gold (#FFD700), purple (#7c3aed), and electric blue (#3b82f6). Each burst has radiating thin lines and glowing particle trails. Subtle smoke wisps at burst origins. Light bloom/glow effect around each explosion center.
+ZONE 2 — YEAR DISPLAY (center, 20%): "2026" in massive bold font (48px, weight 900) with sparkler-glow effect — warm gold (#FFD700) fill, outer glow (#fbbf24) at 40% opacity, 8px blur. Thin gold confetti pieces (small rectangles, circles) scattered around the number at varying angles and 30–60% opacity.
+ZONE 3 — GREETING TEXT (below center, 15%): "새해 복 많이 받으세요" in white (24px, weight 700), soft text-shadow (0 0 12px rgba(255,215,0,0.5)). Below: hospital/clinic name in gold (#FFD700, 14px, weight 500, letter-spacing 2px).
+ZONE 4 — BOTTOM ACCENT (bottom 10%): Faint city skyline silhouette in dark navy (#1a1a4e) at 20% opacity. Thin gold gradient line (1px) separating skyline from card edge. Tiny rising gold confetti particles fading upward.
+Glamorous, celebratory, midnight party atmosphere. Vibrant firework colors against deep dark sky.`,
     },
     {
       id: 'grt_newy_champagne', name: '샴페인 토스트', color: '#d4a017', accent: '#b8860b', bg: '#fefce8',
       desc: '샴페인 파티',
       layoutHint: 'luxury',
-      aiPrompt: 'Elegant champagne toast New Year greeting for dental clinic, clinking champagne glasses with golden bubbles, luxury gold and black color scheme, metallic gold confetti and streamers, premium celebration aesthetic, sparkle and shimmer effects, sophisticated New Year party card, high-end medical practice holiday greeting',
+      aiPrompt: `EXACT LAYOUT BLUEPRINT — replicate this structure precisely:
+BACKGROUND: Rich black (#0a0a0a) to deep charcoal (#1a1a1a) gradient. Subtle diagonal gold shimmer streaks at 5% opacity.
+ZONE 1 — CHAMPAGNE GLASSES (top 45%): Two elegant champagne flutes clinking at center, rendered in gold (#d4a017) line-art with metallic sheen. Golden bubbles (circles, 4–8px) rising from each glass at varying opacity (20–80%). Splash of champagne at clink point with radiating gold droplets.
+ZONE 2 — CELEBRATION ACCENTS (middle band, 15%): Thin gold (#FFD700) confetti strips and small star shapes scattered across, 30–60% opacity, rotated at random angles. Subtle gold ribbon streamers curving from sides.
+ZONE 3 — GREETING TEXT (center-lower, 20%): "Happy New Year" in elegant serif font (16px, weight 400, letter-spacing 3px, gold #d4a017). Below: "새해 복 많이 받으세요" in white (22px, weight 700). Below: hospital/clinic name in gold (#b8860b, 13px, weight 500).
+ZONE 4 — BOTTOM BORDER (bottom 8%): Ornate thin gold double-line border. Small gold bow accent at center bottom.
+Luxurious, sophisticated, premium celebration. Black-tie New Year gala aesthetic.`,
     },
     {
       id: 'grt_newy_minimal', name: '미니멀 2026', color: '#1e40af', accent: '#1e3a8a', bg: '#eff6ff',
       desc: '깔끔한 연도 강조',
       layoutHint: 'minimal',
-      aiPrompt: 'Ultra-minimalist New Year 2026 greeting for dental clinic, bold oversized "2026" in clean navy typography, single thin golden line decoration, maximum whitespace, elegant sans-serif font, subtle shadow effect on numbers, contemporary graphic design aesthetic, less is more medical brand New Year card',
+      aiPrompt: `EXACT LAYOUT BLUEPRINT — replicate this structure precisely:
+BACKGROUND: Clean white (#ffffff). No textures, no gradients — pure white.
+ZONE 1 — TOP MARGIN (top 20%): Empty white space. Single thin horizontal line in navy (#1e40af) at 8% opacity, spanning center 60% width.
+ZONE 2 — YEAR TYPOGRAPHY (center, 35%): "2026" in ultra-bold sans-serif (72px, weight 900, navy #1e40af). Tight letter-spacing (-2px). Subtle drop shadow (2px 2px 0 rgba(30,64,175,0.08)). Numbers fill the horizontal center with commanding presence.
+ZONE 3 — GREETING TEXT (below numbers, 20%): "새해 복 많이 받으세요" in navy (#1e3a8a, 18px, weight 500). Below: thin gold (#d4a017) horizontal line, 40px wide, centered, 1px height. Below line: hospital/clinic name in light navy (#93c5fd, 12px, weight 400, letter-spacing 3px).
+ZONE 4 — BOTTOM (bottom 15%): Empty white space. Clean, breathing room.
+Ultra-minimalist, typographic, contemporary graphic design. Maximum whitespace, zero clutter. Scandinavian design sensibility.`,
     },
     {
       id: 'grt_newy_confetti', name: '컨페티 파티', color: '#ec4899', accent: '#be185d', bg: '#fdf2f8',
       desc: '화려한 컨페티',
       layoutHint: 'cute',
-      aiPrompt: 'Fun confetti party New Year greeting for dental clinic, explosion of colorful confetti and streamers, party hat and noisemaker illustrations, bright pink and multicolor palette, cute kawaii-style celebration characters, playful balloon decorations, joyful and energetic mood, family-friendly New Year party card',
+      aiPrompt: `EXACT LAYOUT BLUEPRINT — replicate this structure precisely:
+BACKGROUND: Soft pink (#fdf2f8) to white gradient (top to bottom).
+ZONE 1 — CONFETTI EXPLOSION (top 35%): Dense burst of colorful confetti pieces — circles, rectangles, stars, triangles in pink (#ec4899), gold (#fbbf24), sky blue (#38bdf8), mint (#34d399), lavender (#a78bfa). Pieces at varying sizes (4–12px), random rotations, 40–90% opacity. Two small party hats (pink with gold stripes) near top corners.
+ZONE 2 — GREETING BANNER (center, 25%): Rounded rectangle banner with pink (#ec4899) fill at 90% opacity. White bold text "2026 새해 복 많이 받으세요" (22px, weight 800). Small cute star decorations (★) flanking the text. Below banner: 2 small balloon illustrations (pink and gold) with curly strings.
+ZONE 3 — CHARACTER ROW (below center, 20%): 3 small kawaii-style celebration characters (simple round faces with party hats, rosy cheeks, happy expressions) in a row, each holding a noisemaker or small flag. Pastel colored. Cute and child-friendly.
+ZONE 4 — BOTTOM (bottom 15%): Hospital/clinic name in pink (#be185d, 13px, weight 500). Scattered small confetti pieces continuing downward at 20% opacity.
+Joyful, energetic, family-friendly party mood. Kawaii-cute celebration aesthetic.`,
     },
     {
       id: 'grt_newy_sunrise', name: '첫 일출', color: '#f97316', accent: '#ea580c', bg: '#fff7ed',
       desc: '새해 첫 일출',
       layoutHint: 'nature',
-      aiPrompt: 'Majestic New Year first sunrise greeting for dental clinic, breathtaking sunrise over ocean horizon, golden and orange sky with dramatic cloud formations, hopeful new beginning atmosphere, watercolor landscape painting style, 2026 subtly integrated into sky, serene and inspirational New Year morning scene',
+      aiPrompt: `EXACT LAYOUT BLUEPRINT — replicate this structure precisely:
+BACKGROUND: Gradient sky — deep indigo (#312e81) at top fading through warm orange (#f97316) to golden yellow (#fbbf24) at horizon line (60% from top), then soft peach (#fed7aa) below.
+ZONE 1 — SKY AND CLOUDS (top 45%): Dramatic cloud formations painted in watercolor style, lit from below with golden-orange glow. Cloud edges highlighted in warm gold (#fbbf24). Upper sky transitioning from night indigo to dawn orange. 2–3 subtle star remnants fading in upper-left at 15% opacity.
+ZONE 2 — SUNRISE HORIZON (middle, 20%): Brilliant sun half-circle rising from ocean horizon line, radiating warm light rays (thin lines, gold #FFD700, 10–30% opacity) fanning upward. Ocean surface reflecting golden light with gentle horizontal ripple lines in orange (#ea580c) at 20% opacity. "2026" subtly formed in cloud wisps or light rays near sun (30% opacity, 36px).
+ZONE 3 — GREETING TEXT (lower portion, 20%): "새해 복 많이 받으세요" in warm brown (#92400e, 22px, weight 700) with soft glow. Below: hospital/clinic name in orange (#ea580c, 13px, weight 500).
+ZONE 4 — BOTTOM WATER (bottom 10%): Calm ocean surface in muted teal (#0d9488) at 30% opacity, gentle watercolor wash effect.
+Majestic, hopeful, new beginning. Watercolor landscape painting style. Serene and inspirational dawn.`,
     },
     {
       id: 'grt_newy_clock', name: '자정 시계', color: '#64748b', accent: '#475569', bg: '#f8fafc',
       desc: '카운트다운 시계',
       layoutHint: 'warm',
-      aiPrompt: 'Midnight countdown clock New Year greeting for dental clinic, elegant vintage clock face showing 12:00, ornate clock hands in gold, pocket watch aesthetic with mechanical gear details, warm sepia and gold tones, countdown to midnight atmosphere, steampunk-inspired elegant timepiece design, transitional moment captured',
+      aiPrompt: `EXACT LAYOUT BLUEPRINT — replicate this structure precisely:
+BACKGROUND: Warm off-white (#f8fafc) with subtle aged paper texture at 5% opacity.
+ZONE 1 — DECORATIVE TOP (top 10%): Thin ornate line in slate (#64748b) at 15% opacity. Small gear/cog icon centered (16px, slate at 30% opacity).
+ZONE 2 — CLOCK FACE (center, 50%): Large vintage pocket watch face — outer double-circle border in gold (#d4a017) with Roman numeral hour markers (XII at top, slate #475569, 10px). Ornate hour and minute hands pointing to 12:00 in gold (#b8860b) with decorative filigree. Inner circle with fine tick marks. Small exposed gear/mechanical details visible through sub-dial at 6 o'clock position (slate at 20% opacity). Warm sepia tone overall (#92400e at 5% wash).
+ZONE 3 — GREETING TEXT (below clock, 20%): "새해 복 많이 받으세요" in slate (#475569, 20px, weight 700). Below: "2026" in gold (#d4a017, 14px, weight 600, letter-spacing 4px). Below: hospital/clinic name in light slate (#94a3b8, 12px, weight 400).
+ZONE 4 — BOTTOM ACCENT (bottom 8%): Thin ornate line mirroring top. Two small decorative scrollwork flourishes flanking center.
+Elegant, vintage, warm. Pocket-watch steampunk aesthetic. Transitional midnight moment captured with warmth.`,
     },
   ],
 
@@ -1679,37 +1859,73 @@ Infographic-style change notice. Clear before/after comparison. Green palette.`,
       id: 'grt_parent_carnation', name: '카네이션 전통', color: '#dc2626', accent: '#b91c1c', bg: '#fef2f2',
       desc: '빨간 카네이션',
       layoutHint: 'traditional',
-      aiPrompt: 'Beautiful red carnation Parents Day greeting for dental clinic, large realistic red carnation flower as centerpiece, green ribbon tied in bow, traditional Korean gratitude card aesthetic, warm red and cream palette, soft petal texture details, heartfelt 감사합니다 calligraphy, elegant floral frame border',
+      aiPrompt: `EXACT LAYOUT BLUEPRINT — replicate this structure precisely:
+BACKGROUND: Warm cream (#fef2f2) to soft white gradient.
+ZONE 1 — FLORAL FRAME (outer border, 10% inset): Delicate red (#dc2626) carnation petal border — small carnation buds and green leaves arranged along all four edges, watercolor style, 60–80% opacity. Corner clusters slightly larger with 2–3 full blooms.
+ZONE 2 — MAIN CARNATION (center-top, 40%): Large realistic red carnation (#dc2626) as centerpiece, detailed layered petal texture with subtle pink (#fca5a5) highlights on petal edges. Dark green (#166534) stem with 2 leaves. Green satin ribbon tied in bow at stem base. Soft shadow beneath flower (4px blur, 10% opacity).
+ZONE 3 — GREETING TEXT (center-lower, 25%): "감사합니다" in elegant brush calligraphy style (28px, weight 700, deep red #991b1b). Below: "어버이날을 축하합니다" in warm gray (#78716c, 14px, weight 400). Below: hospital/clinic name in red accent (#b91c1c, 13px, weight 500).
+ZONE 4 — BOTTOM ACCENT (bottom 10%): Scattered small carnation petals falling gently (5–7 petals, rotated, 20–40% opacity). Thin red (#dc2626) line at 10% opacity.
+Traditional, heartfelt, Korean gratitude aesthetic. Warm red and cream. Respectful and loving.`,
     },
     {
       id: 'grt_parent_watercolor', name: '수채화 꽃다발', color: '#f472b6', accent: '#ec4899', bg: '#fdf2f8',
       desc: '수채화 꽃다발',
       layoutHint: 'warm',
-      aiPrompt: 'Watercolor carnation bouquet Parents Day greeting for dental clinic, loose watercolor painting of carnation bouquet in pink and red, gentle color bleeds and artistic brush strokes, soft pink and cream background, handwritten-style thankyou message, artistic and emotional, warm family love atmosphere, hand-painted aesthetic',
+      aiPrompt: `EXACT LAYOUT BLUEPRINT — replicate this structure precisely:
+BACKGROUND: Soft pink wash (#fdf2f8) with subtle watercolor paper texture (fine grain, 8% opacity).
+ZONE 1 — WATERCOLOR BOUQUET (top-center, 50%): Loose, expressive watercolor carnation bouquet — 5–7 carnations in varying pinks (#f472b6, #ec4899, #fda4af) and reds (#ef4444), painted with visible brush strokes and soft color bleeds where petals meet. Green (#86efac) stems and leaves with wet-on-wet watercolor effect. Paint drips and splashes at bouquet base (pink, 15% opacity). No hard outlines — everything soft and painterly.
+ZONE 2 — ARTISTIC SPLASHES (sides, 10% each): Small abstract watercolor dots and splashes in pink and mint green along left and right margins, 15–25% opacity, artistic accent.
+ZONE 3 — GREETING TEXT (center-lower, 25%): "감사합니다" in handwritten brush-script style (26px, weight 600, warm pink #ec4899). Slight natural variation in letter weight as if hand-painted. Below: "사랑하는 부모님께" in soft gray (#9ca3af, 13px, weight 400, handwritten style). Below: hospital/clinic name in pink (#f472b6, 12px, weight 500).
+ZONE 4 — BOTTOM (bottom 10%): Faint watercolor wash stripe in blush pink (#fce7f3) at 20% opacity, soft feathered edges.
+Artistic, emotional, hand-painted watercolor aesthetic. Warm family love expressed through painterly beauty.`,
     },
     {
       id: 'grt_parent_modern', name: '모던 감사', color: '#6366f1', accent: '#4f46e5', bg: '#eef2ff',
       desc: '세련된 감사 카드',
       layoutHint: 'minimal',
-      aiPrompt: 'Modern minimalist Parents Day greeting for dental clinic, single elegant carnation stem illustration in line art style, clean indigo and white, contemporary typography spelling 감사합니다, generous whitespace, subtle heart shapes, sophisticated medical brand gratitude card, refined and understated love expression',
+      aiPrompt: `EXACT LAYOUT BLUEPRINT — replicate this structure precisely:
+BACKGROUND: Clean white (#ffffff) to very faint indigo (#eef2ff) gradient (top to bottom, barely perceptible).
+ZONE 1 — TOP SPACE (top 20%): Pure white space. Single thin horizontal line in indigo (#6366f1) at 6% opacity, 50% width, centered.
+ZONE 2 — LINE-ART CARNATION (center, 35%): Single elegant carnation stem in fine line-art — thin indigo (#6366f1) strokes (1.5px weight), minimal detail, architectural drawing style. Flower head with simplified geometric petal shapes. Long straight stem with two leaves. Small outline heart shape (indigo, 15% opacity) floating near top-right of flower. Clean, precise, no fills — outlines only.
+ZONE 3 — TYPOGRAPHY (below flower, 25%): "감사합니다" in contemporary sans-serif (28px, weight 700, indigo #4f46e5). Generous letter-spacing (1px). Below: thin indigo line, 30px wide, centered, 1px height, 30% opacity. Below: hospital/clinic name in light indigo (#a5b4fc, 12px, weight 400, letter-spacing 2px).
+ZONE 4 — BOTTOM (bottom 15%): Two small outline hearts in indigo at 8% opacity, slightly offset from center. Clean white space.
+Modern, minimalist, refined. Line-art sophistication with maximum whitespace. Understated medical brand elegance.`,
     },
     {
       id: 'grt_parent_photo', name: '포토 프레임', color: '#f97316', accent: '#ea580c', bg: '#fff7ed',
       desc: '가족 사진 프레임',
       layoutHint: 'cute',
-      aiPrompt: 'Cute photo frame Parents Day greeting for dental clinic, polaroid-style photo frame area with heart-shaped clips, surrounding carnation garland decoration, warm orange and cream scrapbook aesthetic, hand-drawn heart doodles, family album memory book feel, sticker and stamp decorations, playful yet touching',
+      aiPrompt: `EXACT LAYOUT BLUEPRINT — replicate this structure precisely:
+BACKGROUND: Warm cream (#fff7ed) with subtle kraft paper texture at 6% opacity.
+ZONE 1 — DECORATIVE TOP (top 15%): Hand-drawn style banner with orange (#f97316) outline, scalloped edge, containing "Happy Parents Day" in playful handwritten font (14px, weight 600, orange). Small heart doodles (orange, hand-drawn style) flanking banner.
+ZONE 2 — PHOTO FRAME (center, 40%): Polaroid-style white photo frame (tilted 3° clockwise), soft drop shadow (4px, 10% opacity). Heart-shaped clip at top of frame in orange (#ea580c). Inside frame: warm gradient placeholder in peach (#fed7aa) to orange (#fdba74). Below frame: small "소중한 우리 가족" handwritten text (12px, gray #78716c). Carnation garland — small pink and red carnation buds connected by green vine — arching over top of polaroid frame.
+ZONE 3 — SCRAPBOOK ACCENTS (sides, 15% each): Hand-drawn heart doodles, small star stickers, washi tape strips (orange stripe pattern, tilted), circular stamp with "LOVE" text — scattered at 30–50% opacity. Scrapbook/journal aesthetic.
+ZONE 4 — BOTTOM (bottom 15%): Hospital/clinic name in orange (#ea580c, 13px, weight 500). Small hand-drawn arrow pointing to name. Tiny carnation sticker accent.
+Playful, warm, scrapbook aesthetic. Family album memory-book feel. Cute yet heartfelt.`,
     },
     {
       id: 'grt_parent_gold', name: '금장 카네이션', color: '#d4a017', accent: '#b8860b', bg: '#fefce8',
       desc: '골드 프리미엄',
       layoutHint: 'luxury',
-      aiPrompt: 'Premium gold-accented Parents Day greeting for dental clinic, golden carnation illustration with metallic foil effect, deep burgundy and gold color scheme, ornate gold frame border, luxury ribbon with bow, premium paper embossed texture, elegant and prestigious gratitude card, refined medical practice appreciation',
+      aiPrompt: `EXACT LAYOUT BLUEPRINT — replicate this structure precisely:
+BACKGROUND: Deep burgundy (#450a0a) to dark wine (#7f1d1d) gradient. Subtle embossed linen paper texture at 5% opacity.
+ZONE 1 — GOLD FRAME (outer border, 8% inset): Ornate double-line gold (#d4a017) frame border with decorative corner flourishes (scrollwork). Inner line thin (1px), outer line medium (2px), 4px gap between. Gold at 80% opacity with subtle metallic sheen effect.
+ZONE 2 — GOLDEN CARNATION (center-top, 40%): Elegant carnation illustration in metallic gold (#d4a017) with highlights in bright gold (#FFD700). Foil-stamped effect — subtle shine gradient across petals. Stem and leaves in dark gold (#92400e). Gold ribbon bow at stem with flowing ribbon tails. Soft gold glow (8px blur, 15% opacity) around flower.
+ZONE 3 — GREETING TEXT (center-lower, 25%): "감사합니다" in gold (#FFD700, 26px, weight 700, serif font). Metallic foil text effect with subtle highlight. Below: "어버이날을 축하합니다" in light gold (#fde68a, 13px, weight 400). Below: hospital/clinic name in gold (#d4a017, 13px, weight 500, letter-spacing 2px).
+ZONE 4 — BOTTOM ACCENT (bottom 10%): Centered gold ribbon bow illustration (small). Thin gold line at 20% opacity.
+Luxurious, prestigious, premium gold-on-burgundy. Metallic foil elegance. High-end medical practice appreciation.`,
     },
     {
       id: 'grt_parent_garden', name: '정원 풍경', color: '#22c55e', accent: '#15803d', bg: '#f0fdf4',
       desc: '카네이션 정원',
       layoutHint: 'nature',
-      aiPrompt: 'Carnation garden landscape Parents Day greeting for dental clinic, lush garden full of blooming red and pink carnations, morning sunlight filtering through, green garden path with bench, watercolor botanical illustration style, peaceful and grateful atmosphere, nature-inspired gratitude scene, warm and nurturing feeling',
+      aiPrompt: `EXACT LAYOUT BLUEPRINT — replicate this structure precisely:
+BACKGROUND: Soft morning sky blue (#f0fdf4) at top fading to garden green (#dcfce7) at bottom. Warm golden light wash at 8% opacity overall.
+ZONE 1 — SKY AND LIGHT (top 25%): Soft blue sky with 2–3 gentle white clouds. Morning sunlight rays filtering diagonally from upper-right — thin golden beams (#fbbf24) at 10% opacity fanning downward. Warm, peaceful morning atmosphere.
+ZONE 2 — CARNATION GARDEN (center, 40%): Lush garden scene — dense rows of blooming carnations in red (#dc2626), pink (#f472b6), and white, painted in watercolor botanical illustration style. Varied heights, some buds, some full bloom. Rich green (#22c55e) foliage between flowers. Small garden path (warm stone color #d6d3d1) winding through center. Wooden garden bench on right side, partially surrounded by flowers.
+ZONE 3 — GREETING TEXT (lower, 20%): "감사합니다" in forest green (#15803d, 24px, weight 700). Below: "사랑과 감사를 담아" in warm green (#4ade80, 13px, weight 400). Below: hospital/clinic name in green (#22c55e, 12px, weight 500).
+ZONE 4 — BOTTOM GARDEN EDGE (bottom 10%): Soft grass texture fading out in green (#86efac) at 15% opacity. Small butterfly silhouette in green at 20% opacity near bottom-right.
+Peaceful, nurturing, nature-garden aesthetic. Watercolor botanical beauty. Warm morning sunlight in a carnation garden.`,
     },
   ],
 
@@ -1719,37 +1935,37 @@ Infographic-style change notice. Clear before/after comparison. Green palette.`,
       id: 'grt_xmas_tree', name: '크리스마스 트리', color: '#22c55e', accent: '#15803d', bg: '#f0fdf4',
       desc: '화려한 트리',
       layoutHint: 'traditional',
-      aiPrompt: 'Festive Christmas tree greeting for dental clinic, beautifully decorated Christmas tree with ornaments and star topper, colorful lights twinkling, green and red traditional Christmas palette, gift boxes under tree, golden garland decorations, warm holiday living room atmosphere, classic Christmas card aesthetic',
+      aiPrompt: `EXACT LAYOUT BLUEPRINT – Christmas Tree Festive 1080×1080. BACKGROUND: warm cream #F0FDF4 with subtle falling snow particle overlay at 15% opacity, soft warm indoor glow. ZONE 1 (top 20%): golden star topper with radiating light rays, "Merry Christmas" in 36px elegant red #DC2626 serif font with gold shadow, delicate holly leaf border decorations. ZONE 2 (center 50%): magnificent tall Christmas tree with lush dark green branches, decorated with red #EF4444 and gold #FFD700 ornaments (baubles, candy canes, bows), twinkling fairy lights in warm white and multicolor, golden tinsel garland spiraling, detailed pine needle texture, soft glow around tree. ZONE 3 (bottom 30%): beautifully wrapped gift boxes in red, gold, and green with ribbon bows under tree, cozy living room floor (warm wood), hospital name in 26px green serif font, "행복한 성탄절 보내세요" in 28px warm red. STYLE KEYWORDS: classic Christmas warmth, festive indoor scene, twinkling lights magic, traditional holiday card, cozy celebration`,
     },
     {
       id: 'grt_xmas_snow', name: '눈 내리는 밤', color: '#0ea5e9', accent: '#0284c7', bg: '#f0f9ff',
       desc: '눈 오는 겨울밤',
       layoutHint: 'nature',
-      aiPrompt: 'Snowy winter night Christmas greeting for dental clinic, gentle snowflakes falling against dark blue sky, cozy village with lit windows and snow-covered rooftops, street lamp with warm golden glow, soft blue and white palette, peaceful silent night atmosphere, watercolor winter landscape, magical Christmas eve scene',
+      aiPrompt: `EXACT LAYOUT BLUEPRINT – Snowy Winter Night Christmas 1080×1080. BACKGROUND: deep blue #0C1445 night sky gradient to midnight #060A24, dense soft snowfall with various snowflake sizes. ZONE 1 (top 25%): "Merry Christmas" in 38px ethereal white text with ice-blue glow #93C5FD, crescent moon partially hidden by clouds, stars twinkling above. ZONE 2 (center 45%): charming snow-covered village scene with 3-4 cozy houses with warm orange-lit windows, snow-laden rooftops and chimneys with smoke, tall street lamp casting warm golden light cone onto snowy ground, snow-covered evergreen trees flanking, gentle footprints in fresh snow. ZONE 3 (bottom 30%): smooth snow ground foreground with a small snowman wearing a scarf, hospital name in 24px soft blue #93C5FD font, "따뜻한 크리스마스 보내세요" in 28px white with subtle glow, soft snow bank at bottom edge. STYLE KEYWORDS: silent holy night, magical snowfall, cozy village, winter wonderland, peaceful Christmas eve, storybook illustration`,
     },
     {
       id: 'grt_xmas_minimal', name: '미니멀 노엘', color: '#dc2626', accent: '#b91c1c', bg: '#fef2f2',
       desc: '심플 레드&화이트',
       layoutHint: 'minimal',
-      aiPrompt: 'Ultra-minimalist Christmas greeting for dental clinic, single elegant red ornament ball hanging from thin line, vast white space, clean modern sans-serif Merry Christmas text, subtle snowflake pattern in background, red and white only, sophisticated graphic design Christmas card, less is more holiday elegance',
+      aiPrompt: `EXACT LAYOUT BLUEPRINT – Minimalist Noel Christmas 1080×1080. BACKGROUND: clean warm white #FFFBFB with barely visible diagonal fine stripe pattern in #FEE2E2 at 5% opacity. ZONE 1 (top 30%): single thin red #DC2626 horizontal line, "NOEL" in 20px ultra-light tracking-wide sans-serif above line, tiny red dot decoration. ZONE 2 (center 40%): single elegant red Christmas ornament ball hanging from thin gold thread from top, realistic glass reflection and shadow on ball surface, subtle gold hook detail, generous whitespace surrounding the ornament, "Merry Christmas" in 48px bold red #B91C1C modern sans-serif to the side. ZONE 3 (bottom 30%): hospital name in 22px light gray #6B7280 sans-serif, "성탄절을 축하합니다" in 26px medium red text, single thin red line, minimal red dot pattern. STYLE KEYWORDS: Swiss minimalism, single focal point, dramatic whitespace, refined red accent, contemporary graphic design, editorial elegance`,
     },
     {
       id: 'grt_xmas_character', name: '산타 캐릭터', color: '#ef4444', accent: '#dc2626', bg: '#fef2f2',
       desc: '귀여운 산타',
       layoutHint: 'cute',
-      aiPrompt: 'Cute Santa Claus character Christmas greeting for dental clinic, adorable chibi Santa with red hat carrying gift bag, cute tooth character dressed as elf or reindeer, kawaii style illustration, bright red and green with candy cane stripes, playful snowman and gingerbread decorations, cheerful Christmas party mood',
+      aiPrompt: `EXACT LAYOUT BLUEPRINT – Cute Santa Character Christmas 1080×1080. BACKGROUND: bright festive red #FEF2F2 with white polka dot pattern at 10% opacity, candy stripe border. ZONE 1 (top 20%): "Merry Christmas!" in 36px playful bold rounded font #DC2626, colorful Christmas light string illustration draped across top, small star decorations. ZONE 2 (center 50%): adorable chibi-style Santa Claus center with rosy cheeks and big smile carrying large gift sack, cute cartoon tooth character dressed as Santa's helper with elf hat and pointy shoes on one side, small cute reindeer with red nose on other side, all characters kawaii-proportioned (big heads, small bodies), candy cane props and gingerbread cookie decorations surrounding. ZONE 3 (bottom 30%): hospital name in 26px friendly rounded font #DC2626, "즐거운 크리스마스!" in 32px bold red, row of small cute gift box illustrations, snowman emoji-style decoration, confetti and star sprinkles. STYLE KEYWORDS: kawaii illustration, cute character design, cheerful children-friendly, bright festive colors, adorable cartoon style`,
     },
     {
       id: 'grt_xmas_gold', name: '골드 오너먼트', color: '#d4a017', accent: '#b8860b', bg: '#1a1a2e',
       desc: '럭셔리 골드 장식',
       layoutHint: 'luxury',
-      aiPrompt: 'Luxury gold ornament Christmas greeting for dental clinic, dark navy/black background with elegant gold Christmas ornaments hanging, gold ribbon bows, metallic sparkle and shimmer, crystal snowflake decorations, premium gold foil typography, high-end luxury Christmas card, sophisticated and opulent holiday greeting',
+      aiPrompt: `EXACT LAYOUT BLUEPRINT – Luxury Gold Ornament Christmas 1080×1080. BACKGROUND: deep navy #0F172A to black #030712 gradient with subtle starfield sparkle at 5% opacity. ZONE 1 (top 25%): "Merry Christmas" in 40px ultra-elegant thin serif gold #D4A017 with metallic sheen, "& Happy New Year" in 24px gold below, ornate gold corner decorations with baroque flourish design. ZONE 2 (center 45%): cluster of 5-7 premium Christmas ornament balls hanging at staggered heights from gold threads, ornaments in polished gold #FFD700, rose gold #B76E79, and champagne #F5E6CC with intricate filigree patterns etched on surfaces, realistic metallic reflections and highlights, crystal snowflakes interspersed, gold ribbon curls. ZONE 3 (bottom 30%): hospital name in 26px cream #FFF8E7 elegant serif, greeting in 22px warm gold, thin double gold line frame border, subtle gold particle dust floating, small gold laurel accent. STYLE KEYWORDS: opulent luxury, dark moody elegance, metallic gold craftsmanship, premium ornament detail, high-end jeweler quality, sophisticated noir Christmas`,
     },
     {
       id: 'grt_xmas_wreath', name: '리스 장식', color: '#16a34a', accent: '#15803d', bg: '#f0fdf4',
       desc: '초록 리스 프레임',
       layoutHint: 'warm',
-      aiPrompt: 'Christmas wreath frame greeting for dental clinic, beautiful circular wreath of pine branches holly and berries as border frame, red bow at bottom, warm candlelight glow, cozy green and red palette, pine cone and mistletoe details, warm family Christmas atmosphere, greeting text centered in wreath circle',
+      aiPrompt: `EXACT LAYOUT BLUEPRINT – Christmas Wreath Frame 1080×1080. BACKGROUND: soft warm cream #FFFBEB with subtle linen texture, warm candlelight ambiance glow. ZONE 1 (top portion of wreath): top arc of circular pine wreath with detailed needle texture, interwoven holly leaves with red berries, small pine cones, tiny gold bells, cinnamon stick accents, dried orange slice decorations. ZONE 2 (center - inside wreath circle): "Merry Christmas" in 40px elegant warm red #DC2626 serif calligraphy centered in wreath opening, hospital name in 24px forest green #15803D below, "행복한 성탄절" in 28px warm font, soft warm glow from behind text. ZONE 3 (bottom portion of wreath): bottom arc of wreath continuing with lush greenery, large luxurious red satin ribbon bow at bottom center with flowing ribbon tails, poinsettia flowers flanking the bow, additional berry clusters. STYLE KEYWORDS: natural botanical, cozy warmth, handcrafted wreath detail, rustic Christmas charm, inviting holiday atmosphere, traditional craft beauty`,
     },
   ],
 
@@ -1759,37 +1975,37 @@ Infographic-style change notice. Clear before/after comparison. Green palette.`,
       id: 'grt_traditional_korean', name: '전통 한국풍', color: '#dc2626', accent: '#991b1b', bg: '#fef2f2',
       desc: '전통 명절 디자인',
       layoutHint: 'traditional',
-      aiPrompt: 'Traditional Korean holiday greeting card design for dental clinic, elegant red and gold colors, traditional Korean patterns (dancheong, clouds, cranes), beautiful calligraphy-style greeting text, pine tree or plum blossom decorations, festive yet dignified Asian traditional aesthetic, holiday closure period notice area, hospital name with traditional frame border',
+      aiPrompt: `EXACT LAYOUT BLUEPRINT – Traditional Korean Holiday Greeting 1080×1080. BACKGROUND: deep red #8B0000 to crimson #DC2626 gradient with traditional Korean dancheong pattern border at 15% opacity, subtle hanji paper texture. ZONE 1 (top 25%): elegant traditional Korean cloud motif (구름문양) in gold #D4A017, pair of flying cranes (학) illustration in white and gold, "명절 인사" in 36px traditional Korean calligraphy brush style. ZONE 2 (center 45%): large ornate traditional frame border (전통 문양 틀) in gold with corner decorations, pine tree (소나무) and plum blossom (매화) illustrations flanking, greeting text "건강하고 행복한 명절 되세요" in 44px elegant brush calligraphy #FFD700, subtle traditional lattice pattern behind text. ZONE 3 (bottom 30%): hospital name in 28px formal Korean font with gold accent, schedule period in structured format, traditional Korean knot (매듭) decoration, lotus or chrysanthemum border at bottom edge, red and gold color harmony. STYLE KEYWORDS: Korean traditional elegance, dancheong color palette, dignified cultural aesthetic, premium calligraphy, royal palace art inspiration`,
     },
     {
       id: 'grt_warm_family', name: '따뜻한 가족', color: '#f97316', accent: '#ea580c', bg: '#fff7ed',
       desc: '가족 중심 따뜻한',
       layoutHint: 'warm',
-      aiPrompt: 'Warm family-oriented holiday greeting from dental clinic, soft orange and cream watercolor style, gentle hand-drawn family illustration, heartfelt greeting message in warm typography, cozy home atmosphere, soft bokeh light effects, emotional and caring medical practice greeting, warm candlelight mood',
+      aiPrompt: `EXACT LAYOUT BLUEPRINT – Warm Family Holiday Greeting 1080×1080. BACKGROUND: soft warm orange #FFF7ED to cream #FFFBEB gradient with subtle watercolor wash texture, warm golden hour lighting effect. ZONE 1 (top 20%): soft bokeh light circles in warm gold and orange at varying opacities (10-30%), hospital name in 22px warm serif font #EA580C. ZONE 2 (center 50%): gentle hand-drawn style family illustration (parents and children) with warm soft outlines, cozy home atmosphere with warm candlelight, watercolor-style rendering in soft orange and cream tones, hearts floating above, warm cup of tea illustration, comfortable blanket and cushion details. ZONE 3 (bottom 30%): "따뜻한 명절 보내세요" in 40px warm handwritten-style brush font #F97316, caring message "가족과 함께 행복한 시간 되세요" in 24px soft brown, subtle warm watercolor splash border, tiny heart decorations. STYLE KEYWORDS: cozy warmth, gentle watercolor, family togetherness, soft golden lighting, heartfelt caring aesthetic`,
     },
     {
       id: 'grt_modern_minimal', name: '모던 미니멀', color: '#6366f1', accent: '#4f46e5', bg: '#eef2ff',
       desc: '세련된 미니멀',
       layoutHint: 'minimal',
-      aiPrompt: 'Modern minimalist holiday greeting card from dental clinic, clean indigo and white design, single elegant holiday symbol, contemporary typography with generous whitespace, sophisticated greeting message, subtle geometric patterns, refined medical brand holiday card, understated elegance with clear closure schedule',
+      aiPrompt: `EXACT LAYOUT BLUEPRINT – Modern Minimalist Holiday Greeting 1080×1080. BACKGROUND: clean white #FFFFFF to very subtle indigo tint #F5F3FF gradient, ultra-clean and airy. ZONE 1 (top 25%): hospital name in 18px ultra-light tracking-wide sans-serif #6366F1, thin indigo line divider spanning 60% width centered, small geometric diamond ornament at line center. ZONE 2 (center 40%): single elegant holiday symbol (abstract geometric snowflake or star) in clean indigo #4F46E5 line art, "행복한 명절" in 56px bold modern sans-serif #4F46E5, maximum whitespace surrounding text, subtle thin line frame inset from edges. ZONE 3 (bottom 35%): schedule information in clean 18px layout with indigo headers and gray #94A3B8 body text, thin line divider, "건강하고 행복하세요" in 24px medium weight indigo, minimal geometric dot pattern footer. STYLE KEYWORDS: Swiss international style, ultra-clean typography, geometric precision, maximum negative space, sophisticated restraint, contemporary medical brand`,
     },
     {
       id: 'grt_nature_season', name: '자연 사계절', color: '#22c55e', accent: '#15803d', bg: '#f0fdf4',
       desc: '계절감 자연풍',
       layoutHint: 'nature',
-      aiPrompt: 'Nature-inspired seasonal holiday greeting from dental clinic, lush green and earth tones, beautiful seasonal landscape illustration, serene natural atmosphere, watercolor botanical elements, peaceful and refreshing holiday greeting, clinic closure info elegantly placed',
+      aiPrompt: `EXACT LAYOUT BLUEPRINT – Nature Seasonal Holiday Greeting 1080×1080. BACKGROUND: soft sky gradient from light blue #E0F2FE at top to fresh green #DCFCE7 at bottom, natural outdoor lighting feel. ZONE 1 (top 25%): gentle sky with soft white cumulus clouds, warm sunlight rays breaking through at 15% opacity, small flock of birds in V formation, seasonal tree canopy edges framing top. ZONE 2 (center 45%): beautiful seasonal landscape illustration — blooming meadow with wildflowers in various colors, gentle rolling hills in layered green shades, single elegant tree with detailed foliage as centerpiece, small stream or path winding through landscape, butterflies and dragonflies, watercolor botanical rendering style. ZONE 3 (bottom 30%): lush grass foreground with detailed wildflower illustrations, hospital name in 26px earthy forest green #15803D serif font, "자연처럼 건강한 명절 되세요" in 30px warm green calligraphy, subtle leaf and vine border decoration. STYLE KEYWORDS: botanical illustration, peaceful nature scene, fresh outdoor air, watercolor landscape, serene and refreshing, healing nature aesthetic`,
     },
     {
       id: 'grt_luxury_gold', name: '럭셔리 골드', color: '#d4a017', accent: '#b8860b', bg: '#fefce8',
       desc: '프리미엄 골드',
       layoutHint: 'luxury',
-      aiPrompt: 'Luxury premium gold holiday greeting card from dental clinic, rich gold and deep burgundy or navy, elegant metallic gold text and borders, sophisticated holiday ornaments, premium quality paper texture, high-end medical practice holiday card, refined gold foil effect decorations, prestigious and exclusive feel',
+      aiPrompt: `EXACT LAYOUT BLUEPRINT – Luxury Premium Gold Holiday 1080×1080. BACKGROUND: deep navy #0F172A to dark burgundy #2D0A1A gradient with subtle damask brocade pattern at 8% opacity, premium satin texture. ZONE 1 (top 25%): ornate gold #D4A017 baroque corner frame decorations with scroll flourishes, "HOLIDAY GREETINGS" in 24px thin elegant serif gold with metallic effect, double thin gold line border inset. ZONE 2 (center 45%): central elegant gold crest or monogram-style decoration with laurel wreath, "행복한 명절" in 52px bold serif gold #FFD700 with emboss/foil stamp effect, metallic gold ribbon banner below, crystal-like sparkle accents scattered, small diamond shapes and dots in gold. ZONE 3 (bottom 30%): hospital name in 28px cream #FFF8E7 serif font, schedule in 20px muted gold, ornate gold divider line with central flourish, gold laurel branches flanking bottom, subtle gold dust particle overlay. STYLE KEYWORDS: baroque luxury, gold foil stamping, premium embossing, dark opulent background, prestigious high-end brand, jeweler quality finishing`,
     },
     {
       id: 'grt_cute_character', name: '귀여운 캐릭터', color: '#ec4899', accent: '#be185d', bg: '#fdf2f8',
       desc: '캐릭터 일러스트',
       layoutHint: 'cute',
-      aiPrompt: 'Cute character-based holiday greeting from dental clinic, adorable pink and pastel colors, kawaii-style tooth or dental character celebrating holiday, fun and playful holiday illustration, bright and cheerful mood, family-friendly dental practice greeting, cute speech bubble with greeting text, festive confetti and stars',
+      aiPrompt: `EXACT LAYOUT BLUEPRINT – Cute Character Holiday Greeting 1080×1080. BACKGROUND: soft pastel pink #FDF2F8 with subtle confetti dot pattern in pink, purple, and gold at 10% opacity, cheerful and bright. ZONE 1 (top 20%): colorful bunting flag banner illustration across top in pink #EC4899, purple #A855F7, and mint #34D399, small star and sparkle decorations, "Happy Holidays!" in 32px playful rounded bold font. ZONE 2 (center 50%): adorable kawaii-style tooth character as centerpiece wearing a festive holiday hat and scarf, big sparkly eyes and rosy cheeks, holding a small wrapped gift, surrounded by cute supporting characters (small star character, heart character, cloud character), speech bubble saying "건강하세요~♥" in cute handwriting, scattered confetti pieces and tiny hearts. ZONE 3 (bottom 30%): hospital name in 26px friendly rounded font #BE185D, festive message in 28px bold pink, row of small cute holiday icons (gift, star, heart, cake), pastel rainbow stripe border at very bottom. STYLE KEYWORDS: kawaii illustration, adorable characters, pastel color palette, cheerful and playful, children-friendly design, cute sticker aesthetic`,
     },
   ],
 
@@ -1799,37 +2015,81 @@ Infographic-style change notice. Clear before/after comparison. Green palette.`,
       id: 'hir_corporate_clean', name: '기업 클린', color: '#1e40af', accent: '#1e3a8a', bg: '#eff6ff',
       desc: '공식 채용공고',
       layoutHint: 'corporate',
-      aiPrompt: 'Professional corporate dental clinic job posting design, clean navy blue and white, structured resume-style layout, clear job title and requirements sections, organized benefits list, professional HR recruitment aesthetic, medical institution official job announcement, company logo area prominent, application method clearly displayed',
+      aiPrompt: `EXACT LAYOUT BLUEPRINT — replicate this structure precisely:
+BACKGROUND: Clean white.
+ZONE 1 — HEADER BAR (top 5%): Full-width 2px solid navy (#1e40af → #1e3a8a) gradient bar. Clean corporate feel.
+ZONE 2 — TITLE (15%): "RECRUITMENT" in small navy text with letter-spacing 2px. Below: large bold "간호사 모집" in navy (#1e40af, 26px, weight 800).
+ZONE 3 — SUBTITLE (5%): "함께 성장할 인재를 찾습니다" in navy accent text.
+ZONE 4 — REQUIREMENTS CARD (40%): White rounded card (border-radius 12px, soft shadow). 4 rows of requirements, each with: small navy circle (8% opacity) with inner dot (30% opacity) on left, text on right: "정규직 / 경력 1년 이상", "4대보험 완비", "중식 제공 / 인센티브", "채용시까지 상시 모집" in gray (#475569).
+ZONE 5 — CTA (12%): Full-width rounded button with navy gradient, white bold text "지원하기".
+BOTTOM: Hospital name in light gray.
+Professional, corporate, structured. Official recruitment announcement style.`,
     },
     {
       id: 'hir_friendly_team', name: '팀워크 친근', color: '#22c55e', accent: '#16a34a', bg: '#f0fdf4',
       desc: '친근한 팀 소개형',
       layoutHint: 'team',
-      aiPrompt: 'Friendly team-oriented dental clinic hiring design, warm green and white, team photo placeholder area, welcoming workplace culture emphasis, employee testimonial quotes area, benefits highlighted with friendly icons, approachable medical team recruitment, casual yet professional tone, join our family messaging',
+      aiPrompt: `EXACT LAYOUT BLUEPRINT — replicate this structure precisely:
+BACKGROUND: Soft mint (#f0fdf4) to white gradient.
+ZONE 1 — BANNER (top 18%): Rounded rectangle with green (#22c55e) at 6% opacity. "We're Hiring!" in small green text. Below: large bold "간호사 모집" in green (#22c55e, 26px, weight 800).
+ZONE 2 — SUBTITLE (5%): "함께 성장할 인재를 찾습니다" in green accent text.
+ZONE 3 — REQUIREMENTS CARD (40%): White rounded card (border-radius 12px, soft shadow). 4 rows with green circle icons and requirement text in gray. Friendly, welcoming icon style.
+ZONE 4 — CTA (12%): Full-width rounded button with green gradient (#22c55e → #16a34a), white bold text "지원하기".
+BOTTOM: Hospital name in green text.
+Friendly, approachable, welcoming. "Join our family" feeling. Warm team recruitment aesthetic.`,
     },
     {
       id: 'hir_modern_startup', name: '모던 스타트업', color: '#8b5cf6', accent: '#7c3aed', bg: '#f5f3ff',
       desc: '트렌디 모던',
       layoutHint: 'modern',
-      aiPrompt: 'Modern startup-style dental clinic hiring design, trendy purple and gradient accents, bold contemporary typography, emoji or icon-based benefits list, dynamic layout with angled shapes, tech-forward medical practice recruitment, growth opportunity emphasis, modern workspace photo area, energetic and innovative feel',
+      aiPrompt: `EXACT LAYOUT BLUEPRINT — replicate this structure precisely:
+BACKGROUND: Light lavender (#f5f3ff) to white gradient.
+ZONE 1 — BADGE (top 12%): Centered rounded pill with purple gradient (#8b5cf6 → #7c3aed) at 80%, white bold text "JOIN OUR TEAM" with letter-spacing.
+ZONE 2 — TITLE (10%): Large bold "간호사 모집" in purple (#8b5cf6, 26px, weight 800).
+ZONE 3 — SUBTITLE (5%): "함께 성장할 인재를 찾습니다" in purple accent text.
+ZONE 4 — REQUIREMENTS CARD (40%): White rounded card with soft shadow. 4 rows with circle icons in purple and requirement text. Modern, clean layout.
+ZONE 5 — CTA (12%): Full-width rounded button with purple gradient, white bold text "지원하기".
+BOTTOM: Hospital name in light gray.
+Modern, trendy, startup vibe. Bold contemporary typography. Energetic and innovative feel.`,
     },
     {
       id: 'hir_benefits_focus', name: '복리후생 강조', color: '#f59e0b', accent: '#d97706', bg: '#fffbeb',
       desc: '혜택 중심 디자인',
       layoutHint: 'benefits',
-      aiPrompt: 'Benefits-focused dental clinic hiring design, warm amber and cream, large icon grid showcasing workplace benefits (insurance, meals, vacation, bonuses), visual infographic-style benefit comparison, attractive employee perks highlighted, compelling workplace culture showcase, medical staff recruitment with competitive advantages emphasis',
+      aiPrompt: `EXACT LAYOUT BLUEPRINT — replicate this structure precisely:
+BACKGROUND: Warm cream (#fffbeb) to white gradient.
+ZONE 1 — HEADER (top 12%): "We're Hiring" in small amber text. Below: large bold "간호사 모집" in amber (#f59e0b, 26px, weight 800).
+ZONE 2 — SUBTITLE (5%): "함께 성장할 인재를 찾습니다" in amber accent text.
+ZONE 3 — BENEFITS GRID (40%): White rounded card with soft shadow. 4 rows, each: amber circle icon (8% opacity with inner dot at 30%), benefit text: "정규직 / 경력 1년 이상", "4대보험 완비", "중식 제공 / 인센티브", "채용시까지 상시 모집" in gray (#475569). Icon-heavy infographic style highlighting benefits.
+ZONE 4 — CTA (12%): Full-width rounded button with amber gradient (#f59e0b → #d97706), white bold text "지원하기".
+BOTTOM: Hospital name in amber text.
+Benefits-focused, warm, inviting. Employee perks prominently displayed. Compelling recruitment.`,
     },
     {
       id: 'hir_urgent_now', name: '급구 긴급', color: '#ef4444', accent: '#dc2626', bg: '#fef2f2',
       desc: '긴급 채용 강조',
       layoutHint: 'urgent',
-      aiPrompt: 'Urgent hiring notice dental clinic design, bold red and white, large HIRING NOW banner, attention-grabbing urgent recruitment aesthetic, deadline prominently displayed, immediate start emphasis, bold exclamation elements, direct and clear job requirements, quick-apply information, energetic and time-sensitive medical staff recruitment',
+      aiPrompt: `EXACT LAYOUT BLUEPRINT — replicate this structure precisely:
+BACKGROUND: Clean white.
+ZONE 1 — URGENT BANNER (top 18%): Full-width rounded rectangle with bold red (#ef4444) fill. "URGENT" in small white text with letter-spacing, 70% opacity. Below: large bold white text "간호사 급구" (26px, weight 900). Eye-catching, attention-grabbing red banner.
+ZONE 2 — SUBTITLE (5%): "함께 성장할 인재를 찾습니다" in red accent text.
+ZONE 3 — REQUIREMENTS CARD (40%): White rounded card with soft shadow. 4 rows with red circle indicators and requirement text in gray. Urgent, direct, clear.
+ZONE 4 — CTA (12%): Full-width rounded button with red gradient (#ef4444 → #dc2626), white bold text "지원하기".
+BOTTOM: Hospital name in light gray.
+Urgent, time-sensitive. Bold red. Attention-grabbing recruitment. Immediate action needed feel.`,
     },
     {
       id: 'hir_premium_brand', name: '프리미엄 브랜드', color: '#78716c', accent: '#57534e', bg: '#fafaf9',
       desc: '고급 브랜딩',
       layoutHint: 'brand',
-      aiPrompt: 'Premium branded dental clinic hiring design, sophisticated gray and charcoal with gold accents, luxury medical practice recruitment, high-end workplace photography area, elegant typography and refined spacing, exclusive career opportunity positioning, premium clinic interior showcase, professional development emphasis, executive-level recruitment feel',
+      aiPrompt: `EXACT LAYOUT BLUEPRINT — replicate this structure precisely:
+BACKGROUND: Warm off-white (#fafaf9).
+ZONE 1 — HEADER (top 12%): Thin decorative line in charcoal (#78716c) at 10% opacity. "CAREER OPPORTUNITY" in small charcoal text with letter-spacing 3px. Below: large bold "간호사 모집" in charcoal (#57534e, 26px, weight 800).
+ZONE 2 — SUBTITLE (5%): "함께 성장할 인재를 찾습니다" in charcoal accent text.
+ZONE 3 — REQUIREMENTS CARD (40%): White rounded card with soft shadow. 4 rows with subtle charcoal circle icons and requirement text. Refined, elegant spacing.
+ZONE 4 — CTA (12%): Full-width rounded button with charcoal gradient, white bold text "지원하기".
+BOTTOM: Hospital name in charcoal text.
+Premium, sophisticated, executive-level. Gold-inspired refinement. High-end dental clinic branding.`,
     },
   ],
 
@@ -1839,37 +2099,69 @@ Infographic-style change notice. Clear before/after comparison. Green palette.`,
       id: 'cau_medical_checklist', name: '의료 체크리스트', color: '#3b82f6', accent: '#2563eb', bg: '#eff6ff',
       desc: '체크리스트형 안내',
       layoutHint: 'checklist',
-      aiPrompt: 'Medical checklist style post-treatment caution notice from dental clinic, clean blue and white, numbered or checkmarked list of precautions, clear medical instruction format, professional healthcare aftercare design, stethoscope or medical cross icon, easy-to-follow step-by-step care instructions, organized patient guide layout',
+      aiPrompt: `EXACT LAYOUT BLUEPRINT — replicate this structure precisely:
+BACKGROUND: Clean white with very subtle blue tint.
+ZONE 1 — HEADER (top 8%): Hospital name in blue (#2563eb) text. Below: bold "시술 후 주의사항" in blue (#3b82f6, 22px, weight 800).
+ZONE 2 — CHECKLIST (65%): 4 individual white rounded cards stacked vertically with 8px gaps. Each card (border-radius 10px, soft shadow): LEFT: numbered square badge (border-radius 6px, blue at 8% opacity), bold number "1/2/3/4" in blue inside. RIGHT: instruction text in gray (#475569). Items: "혀로 건드리지 마세요", "음주/흡연 금지", "부기 2~3일 내 소실", "딱딱한 음식 금지". Clean, organized checklist format.
+BOTTOM: Hospital name in light gray.
+Professional medical checklist. Clear numbered instructions. Blue and white clinical aesthetic.`,
     },
     {
       id: 'cau_warning_bold', name: '경고 강조형', color: '#ef4444', accent: '#dc2626', bg: '#fef2f2',
       desc: '주의 경고 강조',
       layoutHint: 'warning',
-      aiPrompt: 'Bold warning-style dental treatment caution notice, red and white with warning triangle icons, important precautions highlighted with red background bars, clear DO and DONT sections, urgent medical warning aesthetic, bold typography for critical instructions, patient safety emphasis, emergency contact prominently displayed',
+      aiPrompt: `EXACT LAYOUT BLUEPRINT — replicate this structure precisely:
+BACKGROUND: Clean white.
+ZONE 1 — WARNING BANNER (top 15%): Rounded rectangle with red at 8% opacity. Warning triangle icon (▲) in red at 30% left side. Bold "시술 후 주의사항" in red (#ef4444, 22px, weight 800).
+ZONE 2 — CAUTION LIST (60%): 4 rows of instructions. Each row: horizontal bar with alternating subtle red background (4% opacity). Left: red circle with "!" inside. Right: caution text in dark gray. Items: "혀로 건드리지 마세요", "음주/흡연 금지", "부기 2~3일 내 소실", "딱딱한 음식 금지". Bold, clear, urgent formatting.
+BOTTOM: Hospital name in light gray.
+Bold warning style. Red and white. Urgent medical safety emphasis. Clear DO/DON'T instructions.`,
     },
     {
       id: 'cau_friendly_guide', name: '친절한 가이드', color: '#10b981', accent: '#059669', bg: '#ecfdf5',
       desc: '부드러운 안내 가이드',
       layoutHint: 'guide',
-      aiPrompt: 'Friendly patient guide style dental aftercare notice, soft green and cream, cute dental health illustrations, gentle and caring instruction tone, icon-based precaution items with friendly explanations, warm healthcare communication style, encouraging recovery message, approachable medical advice layout with smiley elements',
+      aiPrompt: `EXACT LAYOUT BLUEPRINT — replicate this structure precisely:
+BACKGROUND: Soft mint (#ecfdf5) to white gradient.
+ZONE 1 — HEADER (top 10%): Hospital name in green accent. Below: bold "시술 후 주의사항" in green (#10b981, 22px, weight 800).
+ZONE 2 — GUIDE CARD (60%): Large white rounded card (border-radius 16px, 70% opacity, soft shadow). Inside: 4 step-by-step items connected by a thin vertical green line on the left. Each step: outer circle (green at 6%), inner circle (green at 10%), numbered "1/2/3/4" in bold green. Right: instruction text in gray (#475569). Connecting line between circles (green at 10% opacity). Items: "혀로 건드리지 마세요", "음주/흡연 금지", "부기 2~3일 내 소실", "딱딱한 음식 금지".
+BOTTOM: Hospital name in green text.
+Friendly, caring, encouraging. Step-by-step guide format. Warm and approachable green palette.`,
     },
     {
       id: 'cau_timeline_recovery', name: '회복 타임라인', color: '#8b5cf6', accent: '#7c3aed', bg: '#f5f3ff',
       desc: '회복 단계별 안내',
       layoutHint: 'timeline',
-      aiPrompt: 'Recovery timeline dental aftercare design, purple and white, chronological recovery stages (Day 1, Week 1, Month 1), visual progress timeline, stage-by-stage care instructions, medical recovery infographic style, healing progress indicator, encouraging milestone-based patient guide, professional medical aftercare chart',
+      aiPrompt: `EXACT LAYOUT BLUEPRINT — replicate this structure precisely:
+BACKGROUND: Soft lavender (#f5f3ff) to white gradient.
+ZONE 1 — HEADER (top 12%): Purple pill badge with "시술 후 안내" at 5% opacity. Below: bold "회복 가이드" in purple (#8b5cf6, 22px, weight 800).
+ZONE 2 — TIMELINE (65%): Vertical timeline with purple line (8% opacity) on the left. 4 milestone nodes connected by the line:
+- Each node: outer circle (white, purple stroke at 30%), inner filled circle (purple at 50%). RIGHT: bold time label in purple ("당일", "1주일", "2주일", "1개월"). Below: instruction in gray ("혀로 건드리지 마세요", "딱딱한 음식 금지", "정상 식사 가능", "정기검진 내원").
+Chronological recovery stages. Clear progression from Day 1 to Month 1.
+BOTTOM: Hospital name in purple text.
+Medical recovery infographic. Purple palette. Milestone-based healing progress.`,
     },
     {
       id: 'cau_infographic', name: '인포그래픽', color: '#f59e0b', accent: '#d97706', bg: '#fffbeb',
       desc: '시각적 인포그래픽',
       layoutHint: 'infographic',
-      aiPrompt: 'Visual infographic dental aftercare caution design, warm amber and white, icon-heavy visual instructions, food to avoid shown with X marks, recommended actions with checkmarks, graphical medical information design, easy-to-understand visual patient guide, pictogram-based instructions, minimal text maximum visual communication',
+      aiPrompt: `EXACT LAYOUT BLUEPRINT — replicate this structure precisely:
+BACKGROUND: Warm cream (#fffbeb) to white gradient.
+ZONE 1 — HEADER (top 8%): Hospital name in amber accent. Below: bold "시술 후 주의사항" in amber (#f59e0b, 22px, weight 800).
+ZONE 2 — ICON GRID (65%): 2x2 grid of white cards (border-radius 10px, soft shadow). Each card: TOP: colored circle icon — red (#fef2f2) with "X" for don'ts, green (#ecfdf5) with "O" for dos. BOTTOM: short instruction text. Grid items: "혀 금지" (X), "음주 금지" (X), "냉찜질" (O), "부드러운 음식" (O). Visual-heavy, icon-dominant. Minimal text, maximum visual communication.
+BOTTOM: Hospital name in amber text.
+Visual infographic style. Icon-heavy. Easy-to-understand at a glance. Pictogram-based instructions.`,
     },
     {
       id: 'cau_clean_card', name: '클린 카드', color: '#0ea5e9', accent: '#0284c7', bg: '#f0f9ff',
       desc: '깔끔한 카드형',
       layoutHint: 'card',
-      aiPrompt: 'Clean card-style dental treatment caution notice, sky blue and white, individual caution items as separate cards with icons, modern UI card layout, clear and organized medical aftercare instructions, soft shadows and rounded corners, contemporary healthcare communication design, numbered instruction cards with brief clear text',
+      aiPrompt: `EXACT LAYOUT BLUEPRINT — replicate this structure precisely:
+BACKGROUND: Light sky blue (#f0f9ff) to white gradient.
+ZONE 1 — HEADER (top 8%): Hospital name in sky blue accent. Below: bold "시술 후 주의사항" in sky blue (#0ea5e9, 22px, weight 800).
+ZONE 2 — CARD GRID (65%): 2x2 grid of individual white cards (border-radius 12px, 95% opacity, soft shadow). Each card: colored circle icon at top — red for warnings (#fef2f2 bg, "X" in red), green for recommendations (#ecfdf5 bg, "O" in green). Below: short instruction text in gray (#475569). Cards: "혀로 건드리지 마세요" (X), "음주/흡연 금지" (X), "딱딱한 음식 금지" (X), "냉찜질 권장" (O). Modern UI card layout.
+BOTTOM: Hospital name in sky blue text.
+Clean, modern, card-based. Individual items as separate cards. Contemporary healthcare design.`,
     },
   ],
 };
