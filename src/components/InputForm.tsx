@@ -118,7 +118,7 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
   const [isLoadingTrends, setIsLoadingTrends] = useState(false);
   const [seoTitles, setSeoTitles] = useState<SeoTitleItem[]>([]);
   const [isLoadingTitles, setIsLoadingTitles] = useState(false);
-  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(true);
   
   const handleSubmit = (e: React.MouseEvent<HTMLButtonElement> | React.FormEvent) => {
     e.preventDefault();
