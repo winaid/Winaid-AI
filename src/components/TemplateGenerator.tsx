@@ -2524,9 +2524,19 @@ export default function TemplateGenerator() {
                 const themeEntry = THEME_COMPONENT_MAP[t.value];
                 const ThemeComp = themeEntry?.Component;
                 const themeSample = themeEntry?.sample;
+                // 600px 풀사이즈로 렌더링 후 CSS scale(0.42)로 축소
+                // → 600*0.42 ≈ 252px 너비, 버튼 컨테이너 너비에 맞춤
+                // → height 190px / 0.42 ≈ 452px of original → 헤더 + 달력 그리드 노출
                 const svgContent = ThemeComp && themeSample ? (
-                  <div style={{ overflow: 'hidden', height: 158, pointerEvents: 'none' }}>
-                    <ThemeComp data={themeSample} width={180} />
+                  <div style={{ overflow: 'hidden', height: 190, position: 'relative' }}>
+                    <div style={{
+                      position: 'absolute', top: 0, left: 0,
+                      transform: 'scale(0.42)',
+                      transformOrigin: 'top left',
+                      pointerEvents: 'none',
+                    }}>
+                      <ThemeComp data={themeSample} width={600} />
+                    </div>
                   </div>
                 ) : null;
 
