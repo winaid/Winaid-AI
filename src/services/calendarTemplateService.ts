@@ -448,9 +448,248 @@ function buildKoreanTraditionalCalendar(data: CalendarData): string {
 }
 
 /**
- * 오로라 그라데이션 테마 — 다크 네이비, 오로라 색상 강조
+ * 겨울 크리스마스 테마 — 연파랑 배경, 다크 네이비 헤더, 산타 썰매, 눈꽃, 크리스마스 트리
  */
 function buildWinterCalendar(data: CalendarData): string {
+  const { month, year, title, hospitalName, notices, customMessage, logoBase64 } = data;
+  const { weeks, holidays, closedSet, shortenedSet, vacationSet } = buildGridData(data);
+  const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+
+  const cellsHTML = weeks.map(w => {
+    const cells = w.map((d, col) => {
+      if (d === null) return `<td style="padding:2px;border:1px solid #e2e8f0;background:#fff;"><div style="min-height:64px;"></div></td>`;
+      const isSunday = col === 0; const isSat = col === 6;
+      const isClosed = closedSet.has(d); const isShort = shortenedSet.has(d); const isVac = vacationSet.has(d);
+      const isHol = holidays.has(d);
+      let numColor = '#1e293b';
+      if (isSunday || isHol) numColor = '#dc2626';
+      else if (isSat) numColor = '#1e40af';
+      let badge = '';
+      if (isClosed || isVac) {
+        const label = isClosed ? closedSet.get(d)! : vacationSet.get(d)!;
+        const isChristmas = isHol && holidays.get(d) === '성탄절';
+        const circleBg = isChristmas ? '#dc2626' : '#facc15';
+        const textColor = isChristmas ? '#fff' : '#713f12';
+        return `<td style="padding:2px;border:1px solid #e2e8f0;background:#fff;"><div style="min-height:64px;text-align:center;padding:6px 2px 4px;">
+          <div style="display:inline-flex;flex-direction:column;align-items:center;justify-content:center;width:36px;height:36px;background:${circleBg};border-radius:50%;">
+            <span style="font-size:15px;font-weight:800;color:${textColor};">${d}</span>
+          </div>
+          <div style="margin-top:3px;font-size:9px;font-weight:700;color:${circleBg === '#facc15' ? '#92400e' : '#dc2626'};">${esc2(label)}</div>
+        </div></td>`;
+      }
+      if (isShort) {
+        const label = shortenedSet.get(d)!;
+        return `<td style="padding:2px;border:1px solid #e2e8f0;background:#fff;"><div style="min-height:64px;text-align:center;padding:6px 2px 4px;">
+          <div style="display:inline-flex;flex-direction:column;align-items:center;justify-content:center;width:36px;height:36px;background:#dbeafe;border-radius:50%;">
+            <span style="font-size:15px;font-weight:800;color:#1e40af;">${d}</span>
+          </div>
+          <div style="margin-top:3px;font-size:9px;font-weight:700;color:#1e40af;">${esc2(label)}</div>
+        </div></td>`;
+      }
+      if (isHol) badge = `<div style="font-size:9px;color:#dc2626;font-weight:600;margin-top:2px;">${esc2(holidays.get(d)!)}</div>`;
+      return `<td style="padding:2px;border:1px solid #e2e8f0;background:#fff;"><div style="min-height:64px;text-align:center;padding:8px 2px 4px;">
+        <span style="font-size:18px;font-weight:700;color:${numColor};">${d}</span>${badge}</div></td>`;
+    }).join('');
+    return `<tr>${cells}</tr>`;
+  }).join('');
+
+  const headersHTML = dayNames.map((n, i) => {
+    const c = i === 0 ? '#fca5a5' : i === 6 ? '#bfdbfe' : '#e2e8f0';
+    return `<th style="padding:12px 4px;font-size:13px;font-weight:800;color:${c};text-align:center;">${n}</th>`;
+  }).join('');
+
+  const logoHTML = logoBase64 ? `<img src="${logoBase64}" style="max-height:34px;object-fit:contain;margin-bottom:4px;" />` : '';
+  const footerName = hospitalName ? `<div style="font-size:14px;font-weight:700;color:#1e3a8a;margin-top:4px;">${esc2(hospitalName)}</div>` : '';
+  const noticesHTML = notices?.length ? `<div style="margin-top:10px;font-size:12px;color:#374151;line-height:2;">${notices.map(n => `· ${esc2(n)}`).join('<br>')}</div>` : '';
+  const customHTML = customMessage?.trim() ? `<div style="margin-top:8px;font-size:12px;color:#334155;line-height:1.8;">${esc2(customMessage.trim())}</div>` : '';
+
+  const snowflakes = [
+    [12,8,22],[30,15,18],[55,10,14],[72,5,20],[88,12,16],[8,30,12],[45,25,18],[80,28,14],[20,45,10],
+    [65,40,16],[90,35,12],[5,55,20],[38,52,14],[75,48,18],[22,65,12]
+  ].map(([l,t,s]) =>
+    `<div style="position:absolute;left:${l}%;top:${t}%;font-size:${s}px;opacity:0.5;color:#93c5fd;">❄</div>`
+  ).join('');
+
+  return `<div id="calendar-render-target" style="width:100%;font-family:'Noto Sans KR',-apple-system,sans-serif;background:linear-gradient(160deg,#e0f2fe 0%,#bae6fd 60%,#e0f7ff 100%);border-radius:20px;overflow:hidden;min-height:700px;position:relative;">
+    ${snowflakes}
+    <div style="position:absolute;top:10px;right:14px;font-size:28px;line-height:1;z-index:2;">🛷</div>
+    <div style="background:#1e3a8a;padding:16px 24px 14px;position:relative;z-index:1;">
+      <div style="font-size:13px;font-weight:600;color:rgba(255,255,255,0.7);letter-spacing:1px;">${year}년 ${month}월</div>
+      <div style="font-size:30px;font-weight:900;color:#fff;margin-top:2px;">${esc2(title)}</div>
+      ${hospitalName ? `<div style="font-size:12px;color:rgba(255,255,255,0.75);margin-top:4px;font-weight:500;">${esc2(hospitalName)}</div>` : ''}
+    </div>
+    <div style="position:relative;z-index:1;margin:16px 14px 12px;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 4px 20px rgba(30,58,138,0.18);">
+      <table style="width:100%;border-collapse:collapse;table-layout:fixed;">
+        <thead><tr style="background:#1e3a8a;">${headersHTML}</tr></thead>
+        <tbody>${cellsHTML}</tbody>
+      </table>
+    </div>
+    <div style="position:relative;z-index:1;text-align:center;padding:4px 16px 8px;">
+      <div style="display:flex;justify-content:center;gap:16px;margin-bottom:8px;">
+        <span style="font-size:11px;color:#374151;display:flex;align-items:center;gap:4px;"><span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:#facc15;"></span>정기휴진</span>
+        <span style="font-size:11px;color:#374151;display:flex;align-items:center;gap:4px;"><span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:#dc2626;"></span>공휴일휴진</span>
+      </div>
+      ${logoHTML}${footerName}${customHTML}${noticesHTML}
+    </div>
+    <div style="text-align:center;padding:0 0 10px;font-size:28px;letter-spacing:4px;position:relative;z-index:1;">🎄⛄🎄</div>
+  </div>`;
+}
+
+/**
+ * 벚꽃 봄 테마 — 연핑크 배경, 큰 월 숫자, 벚꽃 장식
+ */
+function buildCherryBlossomCalendar(data: CalendarData): string {
+  const { month, year, title, hospitalName, notices, customMessage, logoBase64 } = data;
+  const { weeks, holidays, closedSet, shortenedSet, vacationSet } = buildGridData(data);
+  const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+
+  const cellsHTML = weeks.map(w => {
+    const cells = w.map((d, col) => {
+      if (d === null) return `<td style="padding:2px;border:1px solid #f3f4f6;background:#fff;"><div style="min-height:62px;"></div></td>`;
+      const isSunday = col === 0; const isSat = col === 6;
+      const isClosed = closedSet.has(d); const isShort = shortenedSet.has(d); const isVac = vacationSet.has(d);
+      const isHol = holidays.has(d);
+      let numColor = '#1f2937';
+      if (isSunday || isHol) numColor = '#f97316';
+      else if (isSat) numColor = '#93c5fd';
+      let circleBg = ''; let badge = '';
+      if (isClosed || isVac) {
+        circleBg = `background:#7c3aed;border-radius:50%;`;
+        numColor = '#fff';
+        const label = isClosed ? closedSet.get(d)! : vacationSet.get(d)!;
+        badge = `<div style="margin-top:4px;font-size:10px;font-weight:700;color:#7c3aed;">${esc2(label)}</div>`;
+      } else if (isShort) {
+        circleBg = `background:#7c3aed;border-radius:50%;`;
+        numColor = '#fff';
+        badge = `<div style="margin-top:4px;font-size:10px;font-weight:700;color:#7c3aed;">${esc2(shortenedSet.get(d)!)}</div>`;
+      }
+      if (isHol && !isClosed && !isVac && !isShort) badge = `<div style="margin-top:2px;font-size:9px;color:#f97316;font-weight:600;">${esc2(holidays.get(d)!)}</div>`;
+      return `<td style="padding:2px;border:1px solid #f3f4f6;background:#fff;"><div style="min-height:62px;text-align:center;padding:6px 2px 4px;">
+        <div style="display:inline-flex;flex-direction:column;align-items:center;justify-content:center;width:34px;height:34px;${circleBg}">
+          <span style="font-size:15px;font-weight:700;color:${numColor};">${d}</span>
+        </div>${badge}</div></td>`;
+    }).join('');
+    return `<tr>${cells}</tr>`;
+  }).join('');
+
+  const headersHTML = dayNames.map((n, i) => {
+    const c = i === 0 ? '#f97316' : i === 6 ? '#93c5fd' : '#1f2937';
+    return `<th style="padding:10px 4px;font-size:13px;font-weight:800;color:${c};text-align:center;background:#fff;">${n}</th>`;
+  }).join('');
+
+  const logoHTML = logoBase64 ? `<img src="${logoBase64}" style="max-height:36px;object-fit:contain;margin-bottom:4px;" />` : '';
+  const noticesHTML = notices?.length ? `<div style="margin-top:10px;font-size:12px;color:#fff;line-height:2;font-weight:600;">${notices.map(n => `· ${esc2(n)}`).join('<br>')}</div>` : '';
+  const customHTML = customMessage?.trim() ? `<div style="margin-top:8px;font-size:13px;color:#fce7f3;line-height:1.8;">${esc2(customMessage.trim())}</div>` : '';
+
+  const blobDecor = `
+    <div style="position:absolute;top:-60px;left:-60px;width:220px;height:220px;background:rgba(249,168,212,0.55);border-radius:50%;filter:blur(40px);pointer-events:none;"></div>
+    <div style="position:absolute;top:-40px;right:-50px;width:180px;height:180px;background:rgba(236,72,153,0.45);border-radius:50%;filter:blur(36px);pointer-events:none;"></div>
+  `;
+
+  return `<div id="calendar-render-target" style="width:100%;font-family:'Noto Sans KR',-apple-system,sans-serif;background:linear-gradient(160deg,#f9a8d4,#ec4899,#db2777);border-radius:20px;overflow:hidden;min-height:700px;position:relative;">
+    ${blobDecor}
+    <div style="position:relative;z-index:1;padding:32px 24px 20px;text-align:center;">
+      ${hospitalName ? `<div style="font-size:36px;font-weight:900;color:#fff;text-shadow:0 2px 8px rgba(0,0,0,0.2);line-height:1.2;">${esc2(hospitalName)}</div>` : ''}
+      <div style="font-size:42px;font-weight:900;color:#fff;text-shadow:0 2px 8px rgba(0,0,0,0.15);line-height:1.2;margin-top:4px;">${esc2(title)}</div>
+    </div>
+    <div style="position:relative;z-index:1;margin:0 16px 16px;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.15);">
+      <table style="width:100%;border-collapse:collapse;table-layout:fixed;">
+        <thead><tr style="border-bottom:1px solid #f3f4f6;">${headersHTML}</tr></thead>
+        <tbody>${cellsHTML}</tbody>
+      </table>
+    </div>
+    <div style="position:relative;z-index:1;text-align:center;padding:0 20px 28px;">${logoHTML}${customHTML}${noticesHTML}</div>
+  </div>`;
+}
+
+/**
+ * 봄 어린이 테마 — 하늘색 배경, 흰 타원, 초록 잔디 하단
+ */
+function buildSpringKidsCalendar(data: CalendarData): string {
+  const { month, year, title, hospitalName, notices, customMessage, logoBase64 } = data;
+  const { weeks, holidays, closedSet, shortenedSet, vacationSet } = buildGridData(data);
+  const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+
+  const cellsHTML = weeks.map(w => {
+    const cells = w.map((d, col) => {
+      if (d === null) return `<td style="padding:2px;border:1px solid #e2e8f0;background:#fff;"><div style="min-height:60px;"></div></td>`;
+      const isSunday = col === 0; const isSat = col === 6;
+      const isClosed = closedSet.has(d); const isShort = shortenedSet.has(d); const isVac = vacationSet.has(d);
+      const isHol = holidays.has(d);
+      let numColor = '#1e293b';
+      if (isSunday || isHol) numColor = '#ec4899';
+      else if (isSat) numColor = '#3b82f6';
+      let badge = '';
+      if (isClosed || isVac) {
+        const label = isClosed ? closedSet.get(d)! : vacationSet.get(d)!;
+        numColor = '#fff';
+        return `<td style="padding:2px;border:1px solid #e2e8f0;background:#fff;"><div style="min-height:60px;text-align:center;padding:5px 2px 4px;">
+          <div style="display:inline-flex;flex-direction:column;align-items:center;justify-content:center;width:32px;height:32px;background:#f472b6;border-radius:50%;">
+            <span style="font-size:14px;font-weight:800;color:#fff;">${d}</span>
+          </div>
+          <div style="margin-top:3px;font-size:9px;font-weight:700;color:#ec4899;">${esc2(label)}</div>
+        </div></td>`;
+      }
+      if (isShort) {
+        const label = shortenedSet.get(d)!;
+        return `<td style="padding:2px;border:1px solid #e2e8f0;background:#fff;"><div style="min-height:60px;text-align:center;padding:5px 2px 4px;">
+          <div style="display:inline-flex;flex-direction:column;align-items:center;justify-content:center;width:32px;height:32px;background:#34d399;border-radius:50%;">
+            <span style="font-size:14px;font-weight:800;color:#fff;">${d}</span>
+          </div>
+          <div style="margin-top:3px;font-size:9px;font-weight:700;color:#059669;">${esc2(label)}</div>
+        </div></td>`;
+      }
+      if (isHol) badge = `<div style="font-size:9px;color:#ec4899;font-weight:600;margin-top:2px;">${esc2(holidays.get(d)!)}</div>`;
+      return `<td style="padding:2px;border:1px solid #e2e8f0;background:#fff;"><div style="min-height:60px;text-align:center;padding:7px 2px 4px;">
+        <span style="font-size:17px;font-weight:700;color:${numColor};">${d}</span>${badge}</div></td>`;
+    }).join('');
+    return `<tr>${cells}</tr>`;
+  }).join('');
+
+  const headersHTML = dayNames.map((n, i) => {
+    const bg = i === 0 ? '#f9a8d4' : i === 6 ? '#93c5fd' : '#334155';
+    const tc = i === 0 || i === 6 ? '#fff' : '#fff';
+    return `<th style="padding:11px 4px;font-size:13px;font-weight:800;color:${tc};text-align:center;background:${bg};">${n}</th>`;
+  }).join('');
+
+  const logoHTML = logoBase64 ? `<img src="${logoBase64}" style="max-height:34px;object-fit:contain;margin-bottom:4px;" />` : '';
+  const footerName = hospitalName ? `<div style="font-size:14px;font-weight:700;color:#1e3a8a;margin-top:4px;">${esc2(hospitalName)}</div>` : '';
+  const noticesHTML = notices?.length ? `<div style="margin-top:10px;font-size:12px;color:#374151;line-height:2;">${notices.map(n => `· ${esc2(n)}`).join('<br>')}</div>` : '';
+  const customHTML = customMessage?.trim() ? `<div style="margin-top:8px;font-size:12px;color:#334155;line-height:1.8;">${esc2(customMessage.trim())}</div>` : '';
+
+  return `<div id="calendar-render-target" style="width:100%;font-family:'Noto Sans KR',-apple-system,sans-serif;background:#bfdbfe;border-radius:20px;overflow:hidden;min-height:700px;position:relative;">
+    <!-- 구름 장식 -->
+    <div style="position:absolute;top:14px;left:10px;font-size:26px;opacity:0.7;">☁️</div>
+    <div style="position:absolute;top:8px;left:60px;font-size:18px;opacity:0.6;">☁️</div>
+    <div style="position:absolute;top:18px;right:14px;font-size:22px;opacity:0.65;">☁️</div>
+    <!-- 제목 영역 -->
+    <div style="text-align:center;padding:28px 24px 12px;position:relative;z-index:1;">
+      ${hospitalName ? `<div style="display:inline-block;background:#16a34a;color:#fff;font-size:12px;font-weight:700;padding:4px 16px;border-radius:20px;margin-bottom:8px;">${esc2(hospitalName)}</div>` : ''}
+      <div style="font-size:32px;font-weight:900;color:#1e3a8a;line-height:1.2;">${esc2(title)}</div>
+    </div>
+    <!-- 달력 흰 타원/카드 -->
+    <div style="position:relative;z-index:1;margin:8px 14px 10px;background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.12);">
+      <table style="width:100%;border-collapse:collapse;table-layout:fixed;">
+        <thead><tr>${headersHTML}</tr></thead>
+        <tbody>${cellsHTML}</tbody>
+      </table>
+    </div>
+    <div style="position:relative;z-index:1;text-align:center;padding:4px 16px 8px;">${logoHTML}${footerName}${customHTML}${noticesHTML}</div>
+    <!-- 하단 초록 잔디 -->
+    <div style="height:40px;background:linear-gradient(180deg,#4ade80 0%,#16a34a 100%);position:relative;overflow:hidden;">
+      <div style="position:absolute;top:-18px;left:5%;width:70px;height:30px;background:#22c55e;border-radius:50% 50% 0 0;"></div>
+      <div style="position:absolute;top:-24px;left:22%;width:100px;height:38px;background:#16a34a;border-radius:50% 50% 0 0;"></div>
+      <div style="position:absolute;top:-16px;left:45%;width:65px;height:28px;background:#22c55e;border-radius:50% 50% 0 0;"></div>
+      <div style="position:absolute;top:-22px;left:65%;width:88px;height:34px;background:#15803d;border-radius:50% 50% 0 0;"></div>
+      <div style="position:absolute;top:-14px;right:5%;width:60px;height:26px;background:#22c55e;border-radius:50% 50% 0 0;"></div>
+    </div>
+  </div>`;
+}
+
+/**
+ * 의료 노트북 테마 — 하늘색 배경, 노란 링바인더, 여의사 캐릭터, 빨간 타일 휴진
+ */
+function buildMedicalNotebookCalendar(data: CalendarData): string {
   const { month, year, title, hospitalName, notices, customMessage, logoBase64 } = data;
   const { weeks, holidays, closedSet, shortenedSet, vacationSet } = buildGridData(data);
   const dayHeaderNames = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
@@ -523,153 +762,6 @@ function buildWinterCalendar(data: CalendarData): string {
   </div>`;
 }
 
-/**
- * 벚꽃 봄 테마 — 연핑크 배경, 큰 월 숫자, 벚꽃 장식
- */
-function buildCherryBlossomCalendar(data: CalendarData): string {
-  const { month, year, title, hospitalName, notices, customMessage, logoBase64 } = data;
-  const { weeks, holidays, closedSet, shortenedSet, vacationSet } = buildGridData(data);
-  const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
-
-  const cellsHTML = weeks.map(w => {
-    const cells = w.map((d, col) => {
-      if (d === null) return `<td style="padding:2px;border:1px solid #f3f4f6;background:#fff;"><div style="min-height:62px;"></div></td>`;
-      const isSunday = col === 0; const isSat = col === 6;
-      const isClosed = closedSet.has(d); const isShort = shortenedSet.has(d); const isVac = vacationSet.has(d);
-      const isHol = holidays.has(d);
-      let numColor = '#1f2937';
-      if (isSunday || isHol) numColor = '#f97316';
-      else if (isSat) numColor = '#93c5fd';
-      let circleBg = ''; let badge = '';
-      if (isClosed || isVac) {
-        circleBg = `background:#7c3aed;border-radius:50%;`;
-        numColor = '#fff';
-        const label = isClosed ? closedSet.get(d)! : vacationSet.get(d)!;
-        badge = `<div style="margin-top:4px;font-size:10px;font-weight:700;color:#7c3aed;">${esc2(label)}</div>`;
-      } else if (isShort) {
-        circleBg = `background:#7c3aed;border-radius:50%;`;
-        numColor = '#fff';
-        badge = `<div style="margin-top:4px;font-size:10px;font-weight:700;color:#7c3aed;">${esc2(shortenedSet.get(d)!)}</div>`;
-      }
-      if (isHol && !isClosed && !isVac && !isShort) badge = `<div style="margin-top:2px;font-size:9px;color:#f97316;font-weight:600;">${esc2(holidays.get(d)!)}</div>`;
-      return `<td style="padding:2px;border:1px solid #f3f4f6;background:#fff;"><div style="min-height:62px;text-align:center;padding:6px 2px 4px;">
-        <div style="display:inline-flex;flex-direction:column;align-items:center;justify-content:center;width:34px;height:34px;${circleBg}">
-          <span style="font-size:15px;font-weight:700;color:${numColor};">${d}</span>
-        </div>${badge}</div></td>`;
-    }).join('');
-    return `<tr>${cells}</tr>`;
-  }).join('');
-
-  const headersHTML = dayNames.map((n, i) => {
-    const c = i === 0 ? '#f97316' : i === 6 ? '#93c5fd' : '#1f2937';
-    return `<th style="padding:10px 4px;font-size:13px;font-weight:800;color:${c};text-align:center;background:#fff;">${n}</th>`;
-  }).join('');
-
-  const logoHTML = logoBase64 ? `<img src="${logoBase64}" style="max-height:36px;object-fit:contain;margin-bottom:4px;" />` : '';
-  const noticesHTML = notices?.length ? `<div style="margin-top:10px;font-size:12px;color:#fff;line-height:2;font-weight:600;">${notices.map(n => `· ${esc2(n)}`).join('<br>')}</div>` : '';
-  const customHTML = customMessage?.trim() ? `<div style="margin-top:8px;font-size:13px;color:#fce7f3;line-height:1.8;">${esc2(customMessage.trim())}</div>` : '';
-
-  const blobDecor = `
-    <div style="position:absolute;top:-60px;left:-60px;width:220px;height:220px;background:rgba(249,168,212,0.55);border-radius:50%;filter:blur(40px);pointer-events:none;"></div>
-    <div style="position:absolute;top:-40px;right:-50px;width:180px;height:180px;background:rgba(236,72,153,0.45);border-radius:50%;filter:blur(36px);pointer-events:none;"></div>
-  `;
-
-  return `<div id="calendar-render-target" style="width:100%;font-family:'Noto Sans KR',-apple-system,sans-serif;background:linear-gradient(160deg,#f9a8d4,#ec4899,#db2777);border-radius:20px;overflow:hidden;min-height:700px;position:relative;">
-    ${blobDecor}
-    <div style="position:relative;z-index:1;padding:32px 24px 20px;text-align:center;">
-      ${hospitalName ? `<div style="font-size:36px;font-weight:900;color:#fff;text-shadow:0 2px 8px rgba(0,0,0,0.2);line-height:1.2;">${esc2(hospitalName)}</div>` : ''}
-      <div style="font-size:42px;font-weight:900;color:#fff;text-shadow:0 2px 8px rgba(0,0,0,0.15);line-height:1.2;margin-top:4px;">${esc2(title)}</div>
-    </div>
-    <div style="position:relative;z-index:1;margin:0 16px 16px;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.15);">
-      <table style="width:100%;border-collapse:collapse;table-layout:fixed;">
-        <thead><tr style="border-bottom:1px solid #f3f4f6;">${headersHTML}</tr></thead>
-        <tbody>${cellsHTML}</tbody>
-      </table>
-    </div>
-    <div style="position:relative;z-index:1;text-align:center;padding:0 20px 28px;">${logoHTML}${customHTML}${noticesHTML}</div>
-  </div>`;
-}
-
-/**
- * 크래프트 내추럴 테마 — 크림/베이지, 스마일 캐릭터
- */
-function buildSpringKidsCalendar(data: CalendarData): string {
-  const { month, year, title, hospitalName, notices, customMessage, logoBase64 } = data;
-  const { weeks, holidays, closedSet, shortenedSet, vacationSet } = buildGridData(data);
-  const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
-
-  const cellsHTML = weeks.map(w => {
-    const cells = w.map((d, col) => {
-      if (d === null) return `<td style="padding:2px;border:1px solid #d1fae5;background:#fff;"><div style="min-height:62px;"></div></td>`;
-      const isSunday = col === 0; const isSat = col === 6;
-      const isClosed = closedSet.has(d); const isShort = shortenedSet.has(d); const isVac = vacationSet.has(d);
-      const isHol = holidays.has(d);
-      let numColor = '#1f2937';
-      if (isSunday || isHol) numColor = '#ec4899';
-      else if (isSat) numColor = '#0284c7';
-      let badge = '';
-      if (isClosed || isVac) {
-        const label = isClosed ? closedSet.get(d)! : vacationSet.get(d)!;
-        badge = `<div style="margin-top:3px;font-size:10px;font-weight:700;color:#fff;background:#ec4899;border-radius:8px;padding:2px 6px;display:inline-block;">${esc2(label)}</div>`;
-        numColor = '#ec4899';
-      } else if (isShort) {
-        badge = `<div style="margin-top:3px;font-size:10px;font-weight:700;color:#fff;background:#0284c7;border-radius:8px;padding:2px 6px;display:inline-block;">${esc2(shortenedSet.get(d)!)}</div>`;
-      }
-      if (isHol && !isClosed && !isVac && !isShort) badge = `<div style="margin-top:2px;font-size:9px;color:#ec4899;font-weight:600;">${esc2(holidays.get(d)!)}</div>`;
-      return `<td style="padding:2px;border:1px solid #d1fae5;background:#fff;"><div style="min-height:62px;text-align:center;padding:7px 2px 4px;">
-        <span style="font-size:16px;font-weight:700;color:${numColor};">${d}</span>${badge}</div></td>`;
-    }).join('');
-    return `<tr>${cells}</tr>`;
-  }).join('');
-
-  const headersHTML = dayNames.map((n, i) => {
-    const bg = i === 0 ? '#ec4899' : i === 6 ? '#0284c7' : '#1f2937';
-    return `<th style="padding:10px 2px;font-size:13px;font-weight:800;color:#fff;text-align:center;background:${bg};">${n}</th>`;
-  }).join('');
-
-  const logoHTML = logoBase64 ? `<img src="${logoBase64}" style="max-height:34px;object-fit:contain;margin-bottom:4px;" />` : '';
-  const footerName = hospitalName ? `<div style="font-size:13px;font-weight:700;color:#15803d;margin-bottom:4px;">${esc2(hospitalName)}</div>` : '';
-  const noticesHTML = notices?.length ? `<div style="margin-top:10px;font-size:12px;color:#166534;line-height:2;">${notices.map(n => `· ${esc2(n)}`).join('<br>')}</div>` : '';
-  const customHTML = customMessage?.trim() ? `<div style="margin-top:8px;font-size:12px;color:#166534;line-height:1.8;">${esc2(customMessage.trim())}</div>` : '';
-
-  return `<div id="calendar-render-target" style="width:100%;font-family:'Noto Sans KR',-apple-system,sans-serif;background:linear-gradient(180deg,#b3e0f7 0%,#e0f4fd 40%,#fff 100%);border-radius:20px;overflow:hidden;min-height:700px;position:relative;">
-    <div style="padding:20px 24px 0;text-align:center;position:relative;">
-      <div style="position:absolute;top:18px;left:20px;font-size:26px;opacity:0.8;">🦋</div>
-      <div style="position:absolute;top:18px;right:20px;font-size:26px;opacity:0.8;">🌼</div>
-      <div style="font-size:32px;filter:hue-rotate(90deg);">🎀</div>
-    </div>
-    <div style="margin:8px 24px 16px;background:#fff;border-radius:60% 60% 40px 40px / 30% 30% 20px 20px;padding:20px 20px 16px;box-shadow:0 2px 16px rgba(0,100,0,0.1);">
-      <div style="text-align:center;margin-bottom:8px;">
-        ${hospitalName ? `<div style="font-size:12px;font-weight:700;color:#15803d;display:flex;align-items:center;justify-content:center;gap:6px;">🌸 ${esc2(hospitalName)} 🌸</div>` : ''}
-        <div style="background:#dcfce7;border-radius:8px;padding:4px 16px;display:inline-block;margin-top:6px;">
-          <div style="font-size:30px;font-weight:900;color:#15803d;letter-spacing:-0.5px;">${esc2(title)}</div>
-        </div>
-      </div>
-      <div style="margin:8px 0;border-radius:10px;overflow:hidden;border:1px solid #d1fae5;">
-        <table style="width:100%;border-collapse:collapse;table-layout:fixed;">
-          <thead><tr>${headersHTML}</tr></thead>
-          <tbody>${cellsHTML}</tbody>
-        </table>
-      </div>
-      <div style="text-align:center;padding-top:8px;">${logoHTML}${footerName}${customHTML}${noticesHTML}</div>
-    </div>
-    <div style="height:50px;background:#22c55e;border-radius:50% 50% 0 0 / 20px 20px 0 0;margin-top:auto;position:relative;overflow:hidden;">
-      <div style="position:absolute;top:-20px;left:5%;width:60px;height:40px;background:#16a34a;border-radius:50%;"></div>
-      <div style="position:absolute;top:-14px;left:25%;width:44px;height:30px;background:#15803d;border-radius:50%;"></div>
-      <div style="position:absolute;top:-18px;left:50%;width:55px;height:36px;background:#16a34a;border-radius:50%;"></div>
-      <div style="position:absolute;top:-12px;left:72%;width:40px;height:28px;background:#15803d;border-radius:50%;"></div>
-      <div style="position:absolute;top:-16px;right:4%;width:50px;height:32px;background:#16a34a;border-radius:50%;"></div>
-    </div>
-  </div>`;
-}
-
-/**
- * 클린 그리드 — buildCleanGridCalendar 와 같은 key(medical_notebook)로 유지
- */
-function buildMedicalNotebookCalendar(data: CalendarData): string {
-  return buildCleanGridCalendar(data);
-}
-
 /** 테마 이름 → 빌더 함수 맵 */
 const THEMED_BUILDERS: Record<string, (data: CalendarData) => string> = {
   autumn:             buildAutumnCalendar,
@@ -678,25 +770,16 @@ const THEMED_BUILDERS: Record<string, (data: CalendarData) => string> = {
   cherry_blossom:     buildCherryBlossomCalendar,
   spring_kids:        buildSpringKidsCalendar,
   medical_notebook:   buildMedicalNotebookCalendar,
-  clean_grid:         buildCleanGridCalendar,
 };
 
 /** 테마 목록 (UI에서 사용) */
 export const CALENDAR_THEME_OPTIONS = [
-  { value: 'blue',               label: '기본 (파랑)',     emoji: '🔵' },
-  { value: 'green',              label: '기본 (초록)',     emoji: '🟢' },
-  { value: 'pink',               label: '기본 (핑크)',     emoji: '🌸' },
-  { value: 'purple',             label: '기본 (보라)',     emoji: '💜' },
-  { value: 'navy',               label: '기본 (네이비)',   emoji: '🌑' },
-  { value: 'coral',              label: '기본 (코랄)',     emoji: '🪸' },
-  { value: 'teal',               label: '기본 (청록)',     emoji: '🐢' },
-  { value: 'charcoal',           label: '기본 (차콜)',     emoji: '⬛' },
-  { value: 'clean_grid',         label: '🗂 클린 그리드',        emoji: '🗂' },
-  { value: 'autumn',             label: '🍁 가을 단풍',          emoji: '🍁' },
-  { value: 'cherry_blossom',     label: '🌸 벚꽃 봄',            emoji: '🌸' },
-  { value: 'winter',             label: '🌌 오로라 그라데이션',   emoji: '🌌' },
-  { value: 'spring_kids',        label: '☺ 크래프트 내추럴',     emoji: '☺' },
-  { value: 'korean_traditional', label: '🏯 기와지붕 전통',       emoji: '🏯' },
+  { value: 'autumn',             label: '🍁 가을 단풍',        emoji: '🍁' },
+  { value: 'korean_traditional', label: '🦢 한국 전통',         emoji: '🦢' },
+  { value: 'winter',             label: '❄️ 겨울 크리스마스',   emoji: '❄️' },
+  { value: 'cherry_blossom',     label: '🌸 벚꽃 봄',           emoji: '🌸' },
+  { value: 'spring_kids',        label: '🌼 봄 어린이',         emoji: '🌼' },
+  { value: 'medical_notebook',   label: '📓 의료 노트북',        emoji: '📓' },
 ];
 
 // ── HTML 달력 생성 ──

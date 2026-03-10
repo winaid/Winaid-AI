@@ -2177,22 +2177,38 @@ export default function TemplateGenerator() {
             </div>
             <div>
               <label className={labelCls}>디자인 테마</label>
-              <div className="grid grid-cols-2 gap-1.5">
-                {CALENDAR_THEME_OPTIONS.map(t => (
-                  <button
-                    key={t.value}
-                    type="button"
-                    onClick={() => setCalendarTheme(t.value)}
-                    className={`py-2 px-3 rounded-xl text-left text-xs font-semibold transition-all border flex items-center gap-2 ${
-                      calendarTheme === t.value
-                        ? 'bg-blue-50 border-blue-300 ring-2 ring-blue-200 text-blue-700'
-                        : 'bg-white border-slate-200 hover:border-slate-300 text-slate-600'
-                    }`}
-                  >
-                    <span>{t.emoji}</span>
-                    <span className="truncate">{t.label}</span>
-                  </button>
-                ))}
+              <div className="grid grid-cols-3 gap-2">
+                {CALENDAR_THEME_OPTIONS.map(t => {
+                  const THEME_PREVIEWS: Record<string, { bg: string; accent: string; decor: string }> = {
+                    autumn:             { bg: 'linear-gradient(135deg,#f97316,#ea580c)', accent: '#3d2a00', decor: '🍁🍂' },
+                    korean_traditional: { bg: 'linear-gradient(135deg,#fdfaf5,#f0e8d0)', accent: '#111827', decor: '🦢☁️' },
+                    winter:             { bg: 'linear-gradient(135deg,#e0f2fe,#bae6fd)', accent: '#1e3a8a', decor: '❄️🎄' },
+                    cherry_blossom:     { bg: 'linear-gradient(135deg,#f9a8d4,#db2777)', accent: '#fff', decor: '🌸🌸' },
+                    spring_kids:        { bg: 'linear-gradient(135deg,#bfdbfe,#93c5fd)', accent: '#1e3a8a', decor: '☁️🌿' },
+                    medical_notebook:   { bg: 'linear-gradient(135deg,#3b9fe8,#2563eb)', accent: '#fff', decor: '👩‍⚕️📓' },
+                  };
+                  const p = THEME_PREVIEWS[t.value] || { bg: '#e2e8f0', accent: '#374151', decor: '📅' };
+                  const isSelected = calendarTheme === t.value;
+                  return (
+                    <button
+                      key={t.value}
+                      type="button"
+                      onClick={() => setCalendarTheme(t.value)}
+                      className={`rounded-xl overflow-hidden transition-all border-2 ${
+                        isSelected ? 'border-blue-400 ring-2 ring-blue-200 shadow-md' : 'border-slate-200 hover:border-slate-300'
+                      }`}
+                    >
+                      {/* 미리보기 영역 */}
+                      <div style={{ background: p.bg, height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', letterSpacing: '2px' }}>
+                        {p.decor}
+                      </div>
+                      {/* 라벨 */}
+                      <div className={`px-1 py-1.5 text-center text-[10px] font-bold truncate ${isSelected ? 'bg-blue-50 text-blue-700' : 'bg-white text-slate-600'}`}>
+                        {t.label.replace(/^[^\s]+\s/, '')}
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             </div>
             <div>
