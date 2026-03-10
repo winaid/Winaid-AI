@@ -192,7 +192,33 @@ const AdminPage: React.FC<AdminPageProps> = ({ onAdminVerified }) => {
   });
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState('');
-  const [activeTab, setActiveTab] = useState<'contents' | 'style'>('contents');
+  const [activeTab, setActiveTab] = useState<'contents' | 'style' | 'users'>('contents');
+
+  // 사용자 관리 탭 state
+  const [users, setUsers] = useState<{ id: string; email: string; full_name: string; team_id: number | null; created_at: string }[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+
+  const loadUsers = useCallback(async () => {
+    setLoadingUsers(true);
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, email, full_name, team_id, created_at')
+        .order('created_at', { ascending: false });
+      if (!error && data) {
+        setUsers(data as any[]);
+      }
+    } catch (e) {
+      console.error('사용자 목록 로드 실패:', e);
+    }
+    setLoadingUsers(false);
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'users' && isAuthenticated) {
+      loadUsers();
+    }
+  }, [activeTab, isAuthenticated, loadUsers]);
 
   // 말투 학습 탭 state
   const [styleProfiles, setStyleProfiles] = useState<HospitalStyleProfile[]>([]);
@@ -539,6 +565,12 @@ const AdminPage: React.FC<AdminPageProps> = ({ onAdminVerified }) => {
               activeTab === 'style' ? 'bg-violet-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'
             }`}
           >말투 학습</button>
+          <button
+            onClick={() => setActiveTab('users')}
+            className={`px-6 py-2.5 rounded-lg text-sm font-bold transition-all ${
+              activeTab === 'users' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'
+            }`}
+          >사용자 관리</button>
         </div>
 
         {/* ===== 콘텐츠 관리 탭 ===== */}
@@ -684,6 +716,60 @@ const AdminPage: React.FC<AdminPageProps> = ({ onAdminVerified }) => {
               </div>
             </div>
           </>
+        )}
+
+        {/* ===== 사용자 관리 탭 ===== */}
+        {activeTab === 'users' && (
+          <div className="space-y-4">
+            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+              <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+                <div>
+                  <h2 className="text-base font-bold text-slate-800">가입 사용자 목록</h2>
+                  <p className="text-xs text-slate-400 mt-0.5">총 {users.length}명</p>
+                </div>
+                <button
+                  onClick={loadUsers}
+                  disabled={loadingUsers}
+                  className="px-3 py-1.5 bg-slate-100 text-slate-600 font-medium rounded-lg hover:bg-slate-200 transition-colors text-xs disabled:opacity-50"
+                >
+                  {loadingUsers ? '로딩...' : '새로고침'}
+                </button>
+              </div>
+              {loadingUsers ? (
+                <div className="py-16 text-center text-slate-400 text-sm">불러오는 중...</div>
+              ) : users.length === 0 ? (
+                <div className="py-16 text-center">
+                  <div className="text-3xl mb-2 opacity-30">👤</div>
+                  <p className="text-slate-400 text-sm">가입한 사용자가 없습니다.</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-slate-50">
+                  {users.map((user) => {
+                    const team = TEAM_DATA.find(t => t.id === user.team_id);
+                    return (
+                      <div key={user.id} className="px-5 py-4 flex items-center gap-4">
+                        <div className="w-9 h-9 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-sm font-bold flex-shrink-0">
+                          {user.full_name?.charAt(0) || '?'}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-semibold text-slate-800 text-sm">{user.full_name || '-'}</span>
+                            {team && (
+                              <span className="text-[11px] px-2 py-0.5 bg-blue-50 text-blue-600 rounded-full font-medium">{team.label}</span>
+                            )}
+                          </div>
+                          <p className="text-xs text-slate-400 truncate mt-0.5">{user.email}</p>
+                        </div>
+                        <div className="text-xs text-slate-400 flex-shrink-0">
+                          {formatDate(user.created_at)}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
         )}
 
         {/* ===== 말투 학습 탭 ===== */}

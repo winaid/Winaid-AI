@@ -346,3 +346,14 @@ CREATE TRIGGER update_hospital_style_profiles_updated_at
 -- 1. Supabase Dashboard > Authentication > Providers에서 Google, Kakao, Naver OAuth 설정
 -- 2. Edge Function 배포하여 결제 웹훅 처리
 -- 3. 환경변수 설정: SUPABASE_URL, SUPABASE_ANON_KEY
+
+-- ============================================
+-- 11. Profiles에 team_id 컬럼 추가 (팀 내부 인증용)
+-- ============================================
+-- 기존 profiles 테이블에 team_id 컬럼 추가 (없으면)
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS team_id INTEGER;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS full_name TEXT;
+-- 기존 name -> full_name 마이그레이션 (이미 full_name이 없는 경우)
+UPDATE public.profiles SET full_name = name WHERE full_name IS NULL AND name IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_profiles_team_id ON public.profiles(team_id);

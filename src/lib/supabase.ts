@@ -43,6 +43,75 @@ export const hashIP = async (ip: string): Promise<string> => {
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('').substring(0, 32);
 };
 
+// ============================================================
+// 팀 내부 전용 인증 (이름 + 팀 + 비밀번호)
+// 이메일 없이 가입 → 내부용 이메일 자동 생성
+// ============================================================
+
+/** 이름 + 팀ID → 내부용 이메일 생성 (결정적, 역산 가능) */
+export const nameTeamToEmail = (name: string, teamId: number): string => {
+  const hexName = Array.from(name.trim())
+    .map(c => c.charCodeAt(0).toString(16).toUpperCase().padStart(4, '0'))
+    .join('');
+  return `t${teamId}_${hexName}@winaid.kr`;
+};
+
+/** 팀 내부 회원가입: 팀 선택 + 이름 + 비밀번호 */
+export const signUpWithTeam = async (
+  displayName: string,
+  teamId: number,
+  password: string
+) => {
+  const email = nameTeamToEmail(displayName, teamId);
+
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      data: { name: displayName, team_id: teamId },
+      emailRedirectTo: window.location.origin + '/#blog'
+    }
+  });
+
+  if (data.user) {
+    try {
+      await supabase.from('profiles').upsert({
+        id: data.user.id,
+        email,
+        full_name: displayName,
+        team_id: teamId,
+        created_at: new Date().toISOString()
+      } as any, { onConflict: 'id' });
+
+      await supabase.from('subscriptions').upsert({
+        user_id: data.user.id,
+        plan_type: 'free',
+        credits_total: 3,
+        credits_used: 0,
+        expires_at: null
+      } as any, { onConflict: 'user_id' });
+
+      console.log('✅ 팀 회원가입 완료:', displayName, teamId);
+    } catch (e) {
+      console.error('프로필 생성 실패 (무시):', e);
+    }
+  }
+
+  return { data, error };
+};
+
+/** 팀 내부 로그인: 팀 선택 + 이름 + 비밀번호 */
+export const signInWithTeam = async (
+  displayName: string,
+  teamId: number,
+  password: string
+) => {
+  const email = nameTeamToEmail(displayName, teamId);
+  return signInWithEmail(email, password);
+};
+
+// ============================================================
+
 // 인증 헬퍼 함수들
 export const signUpWithEmail = async (email: string, password: string, name: string) => {
   const { data, error } = await supabase.auth.signUp({
