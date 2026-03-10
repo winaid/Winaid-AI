@@ -377,17 +377,29 @@ const StyleTab: React.FC<StyleTabProps> = ({
                                     {(post.law_issues?.length ?? 0) > 0 && (
                                       <div className="bg-red-50 border border-red-200 rounded-lg p-2.5">
                                         <p className="text-[11px] font-bold text-red-700 mb-1.5">🚫 의료광고법 이슈 ({post.law_issues!.length}건)</p>
-                                        <div className="space-y-1">
+                                        <div className="space-y-2.5">
                                           {post.law_issues!.map((issue, idx) => (
-                                            <div key={idx} className="text-[11px]">
-                                              <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold mr-1.5 ${issue.severity === 'critical' ? 'bg-red-200 text-red-800' : issue.severity === 'high' ? 'bg-orange-200 text-orange-800' : 'bg-yellow-100 text-yellow-800'}`}>
-                                                {issue.severity}
-                                              </span>
-                                              <span className="text-red-600 font-medium">"{issue.word}"</span>
-                                              {issue.replacement.length > 0 && (
-                                                <span className="text-slate-500 ml-1">→ {issue.replacement[0]}</span>
+                                            <div key={idx} className="text-[11px] bg-white border border-red-100 rounded-lg p-2">
+                                              <div className="flex items-center gap-1.5 flex-wrap">
+                                                <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold ${issue.severity === 'critical' ? 'bg-red-200 text-red-800' : issue.severity === 'high' ? 'bg-orange-200 text-orange-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                                                  {issue.severity}
+                                                </span>
+                                                <span className="text-red-600 font-bold">"{issue.word}"</span>
+                                                {issue.replacement?.length > 0 && (
+                                                  <span className="text-emerald-700 font-medium">→ "{issue.replacement[0]}"</span>
+                                                )}
+                                              </div>
+                                              {(issue as any).law_article && (
+                                                <div className="mt-1.5 px-2 py-1 bg-red-50 border border-red-200 rounded text-[10px] font-bold text-red-700">
+                                                  📋 {(issue as any).law_article}
+                                                </div>
                                               )}
-                                              <span className="text-slate-400 ml-1.5 text-[10px] italic truncate block mt-0.5">{issue.context}</span>
+                                              {(issue as any).reason && (
+                                                <p className="mt-1 text-[10px] text-slate-600 leading-relaxed">{(issue as any).reason}</p>
+                                              )}
+                                              {issue.context && (
+                                                <p className="mt-1 text-[10px] text-slate-400 italic pl-1 border-l-2 border-red-200">{issue.context}</p>
+                                              )}
                                             </div>
                                           ))}
                                         </div>
