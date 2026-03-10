@@ -10,6 +10,140 @@ import {
   HospitalStyleProfile,
 } from '../services/writingStyleService';
 
+// ============================================================
+// StyleTab 컴포넌트 (말투 학습 탭 - 팀 필터 포함)
+// ============================================================
+interface StyleTabProps {
+  styleProfiles: HospitalStyleProfile[];
+  blogUrlInputs: Record<string, string>;
+  setBlogUrlInputs: React.Dispatch<React.SetStateAction<Record<string, string>>>;
+  crawlingStatus: Record<string, { loading: boolean; progress: string; error?: string }>;
+  onSaveUrl: (hospitalName: string, teamId: number) => void;
+  onCrawl: (hospitalName: string, teamId: number) => void;
+}
+
+const StyleTab: React.FC<StyleTabProps> = ({
+  styleProfiles, blogUrlInputs, setBlogUrlInputs, crawlingStatus, onSaveUrl, onCrawl
+}) => {
+  const [selectedTeam, setSelectedTeam] = useState<number>(TEAM_DATA[0].id);
+
+  const team = TEAM_DATA.find(t => t.id === selectedTeam)!;
+  // 고유 병원명만 추출
+  const uniqueHospitals = Array.from(
+    new Map(team.hospitals.map(h => [h.name.replace(/ \(.*\)$/, ''), h])).entries()
+  );
+
+  return (
+    <div className="space-y-4">
+      {/* 설명 */}
+      <div className="bg-violet-50 border border-violet-200 rounded-2xl p-5">
+        <h2 className="text-base font-bold text-violet-800 mb-1">병원별 네이버 블로그 말투 학습</h2>
+        <p className="text-sm text-violet-600">
+          각 병원의 네이버 블로그 URL을 입력 후 <strong>크롤링 + 학습</strong>을 누르면 AI가 글을 읽고 말투를 자동 학습합니다.
+          학습된 말투는 콘텐츠 생성 시 해당 병원 선택 시 자동으로 적용됩니다.
+        </p>
+      </div>
+
+      {/* 팀 탭 */}
+      <div className="flex bg-white border border-slate-200 rounded-xl p-1 shadow-sm">
+        {TEAM_DATA.map(t => {
+          const learnedCount = t.hospitals.filter(h => {
+            const base = h.name.replace(/ \(.*\)$/, '');
+            return styleProfiles.some(p => p.hospital_name === base && p.last_crawled_at);
+          }).length;
+          const totalCount = new Set(t.hospitals.map(h => h.name.replace(/ \(.*\)$/, ''))).size;
+          return (
+            <button
+              key={t.id}
+              onClick={() => setSelectedTeam(t.id)}
+              className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all flex flex-col items-center gap-0.5 ${
+                selectedTeam === t.id ? 'bg-violet-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              <span>{t.label}</span>
+              <span className={`text-[10px] font-medium ${selectedTeam === t.id ? 'text-violet-200' : 'text-slate-400'}`}>
+                {learnedCount}/{totalCount} 학습됨
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* 선택된 팀의 병원 목록 */}
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+        <div className="px-5 py-3 bg-slate-50 border-b border-slate-100">
+          <span className="text-sm font-bold text-slate-700">{team.label} 병원 목록</span>
+          <span className="ml-2 text-xs text-slate-400">({uniqueHospitals.length}개)</span>
+        </div>
+        <div className="divide-y divide-slate-50">
+          {uniqueHospitals.map(([baseName, h]) => {
+            const profile = styleProfiles.find(p => p.hospital_name === baseName);
+            const status = crawlingStatus[baseName];
+            const urlVal = blogUrlInputs[baseName] || profile?.naver_blog_url || '';
+            return (
+              <div key={baseName} className="p-4">
+                {/* 병원명 + 학습 상태 */}
+                <div className="flex items-center flex-wrap gap-2 mb-3">
+                  <span className="font-semibold text-slate-800 text-sm">{baseName}</span>
+                  <span className="text-xs text-slate-400">{h.manager}</span>
+                  {profile?.last_crawled_at ? (
+                    <span className="text-[11px] px-2 py-0.5 bg-green-50 text-green-600 rounded-full font-medium">
+                      학습완료 · {new Date(profile.last_crawled_at).toLocaleDateString('ko-KR')} · {profile.crawled_posts_count}개 글
+                    </span>
+                  ) : (
+                    <span className="text-[11px] px-2 py-0.5 bg-slate-100 text-slate-400 rounded-full">미학습</span>
+                  )}
+                  {profile?.style_profile && (
+                    <span className="text-[11px] text-violet-600 bg-violet-50 border border-violet-200 rounded-lg px-2 py-0.5 max-w-xs truncate">
+                      {(profile.style_profile as any).description || '학습 완료'}
+                    </span>
+                  )}
+                </div>
+                {/* URL 입력 + 버튼 */}
+                <div className="flex gap-2">
+                  <input
+                    type="url"
+                    value={urlVal}
+                    onChange={e => setBlogUrlInputs(prev => ({ ...prev, [baseName]: e.target.value }))}
+                    placeholder="https://blog.naver.com/병원아이디"
+                    className="flex-1 px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-violet-400 transition-colors"
+                    disabled={status?.loading}
+                  />
+                  <button
+                    onClick={() => onSaveUrl(baseName, team.id)}
+                    disabled={status?.loading || !urlVal}
+                    className="px-3 py-2 text-xs font-semibold bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 transition-colors disabled:opacity-40 whitespace-nowrap"
+                  >URL 저장</button>
+                  <button
+                    onClick={() => onCrawl(baseName, team.id)}
+                    disabled={status?.loading || !urlVal}
+                    className="px-3 py-2 text-xs font-bold bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors disabled:opacity-40 whitespace-nowrap"
+                  >
+                    {status?.loading ? '학습 중...' : '크롤링 + 학습'}
+                  </button>
+                </div>
+                {/* 진행 상태 */}
+                {status?.loading && (
+                  <div className="mt-2 flex items-center gap-2 text-xs text-violet-600">
+                    <div className="w-3 h-3 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
+                    {status.progress}
+                  </div>
+                )}
+                {status?.error && <p className="mt-2 text-xs text-red-500">{status.error}</p>}
+                {status && !status.loading && !status.error && status.progress === '학습 완료!' && (
+                  <p className="mt-2 text-xs text-green-600 font-medium">학습 완료!</p>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ============================================================
+
 // Admin 비밀번호 - 실제로는 환경변수나 Supabase로 관리해야 함
 const ADMIN_PASSWORD = 'rosmrtl718';
 
@@ -380,7 +514,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onAdminVerified }) => {
     <div className="min-h-screen bg-slate-50 p-4 lg:p-8">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-xl font-bold text-slate-800">Admin Dashboard</h1>
             <p className="text-slate-400 text-sm">WINAID 관리자</p>
@@ -391,262 +525,181 @@ const AdminPage: React.FC<AdminPageProps> = ({ onAdminVerified }) => {
           </div>
         </div>
 
-        {/* 팀 & 병원 선택 */}
-        <div className="bg-white rounded-xl border border-slate-100 p-4 mb-4 space-y-3">
-          {/* 팀 탭 */}
-          <div className="flex bg-slate-100 rounded-xl p-1">
-            <button
-              onClick={() => { setSelectedTeam(null); setSelectedHospitalName(''); }}
-              className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-all ${
-                selectedTeam === null ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-              }`}
-            >전체</button>
-            {TEAM_DATA.map(team => (
-              <button
-                key={team.id}
-                onClick={() => { setSelectedTeam(team.id); setSelectedHospitalName(''); }}
-                className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-all ${
-                  selectedTeam === team.id ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-                }`}
-              >{team.label}</button>
-            ))}
-          </div>
-
-          {/* 병원 선택 */}
-          {selectedTeam !== null && (() => {
-            const team = TEAM_DATA.find(t => t.id === selectedTeam);
-            if (!team) return null;
-            // 병원명 기준으로 중복 제거 + 담당자 병합
-            const hospitalMap = new Map<string, string[]>();
-            for (const h of team.hospitals) {
-              const baseName = h.name.replace(/ \(.*\)$/, '');
-              const managers = hospitalMap.get(baseName) || [];
-              if (!managers.includes(h.manager)) managers.push(h.manager);
-              hospitalMap.set(baseName, managers);
-            }
-            const uniqueHospitals = Array.from(hospitalMap.entries());
-            return (
-              <div className="flex flex-wrap gap-2">
-                <button
-                  onClick={() => setSelectedHospitalName('')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all border ${
-                    !selectedHospitalName ? 'bg-blue-50 border-blue-200 text-blue-600' : 'border-slate-200 text-slate-500 hover:border-slate-300'
-                  }`}
-                >전체 ({uniqueHospitals.length})</button>
-                {uniqueHospitals.map(([name, managers]) => (
-                  <button
-                    key={name}
-                    onClick={() => setSelectedHospitalName(name)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all border ${
-                      selectedHospitalName === name ? 'bg-blue-50 border-blue-200 text-blue-600' : 'border-slate-200 text-slate-500 hover:border-slate-300'
-                    }`}
-                  >
-                    {name}
-                    <span className="ml-1 text-[10px] text-slate-400">({managers.length}명)</span>
-                  </button>
-                ))}
-              </div>
-            );
-          })()}
-        </div>
-
-        {/* 메인 탭 */}
-        <div className="flex bg-white border border-slate-100 rounded-xl p-1 mb-4 w-fit">
+        {/* ===== 메인 탭 (항상 최상단) ===== */}
+        <div className="flex bg-white border border-slate-200 rounded-xl p-1 mb-5 w-fit shadow-sm">
           <button
             onClick={() => setActiveTab('contents')}
-            className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all ${
+            className={`px-6 py-2.5 rounded-lg text-sm font-bold transition-all ${
               activeTab === 'contents' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'
             }`}
           >콘텐츠 관리</button>
           <button
             onClick={() => setActiveTab('style')}
-            className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all ${
+            className={`px-6 py-2.5 rounded-lg text-sm font-bold transition-all ${
               activeTab === 'style' ? 'bg-violet-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'
             }`}
           >말투 학습</button>
         </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
-          {[
-            { label: '전체 콘텐츠', value: stats.totalContents, color: 'bg-blue-50 text-blue-600' },
-            { label: '블로그', value: stats.blogCount, color: 'bg-sky-50 text-sky-600' },
-            { label: '카드뉴스', value: stats.cardnewsCount, color: 'bg-violet-50 text-violet-600' },
-            { label: '언론보도', value: stats.pressCount, color: 'bg-emerald-50 text-emerald-600' },
-          ].map(s => (
-            <div key={s.label} className="bg-white rounded-xl p-4 border border-slate-100">
-              <div className="text-2xl font-bold text-slate-800">{s.value}</div>
-              <div className={`text-xs font-medium mt-1 inline-block px-2 py-0.5 rounded-full ${s.color}`}>{s.label}</div>
-            </div>
-          ))}
-        </div>
-        <div className="grid grid-cols-3 lg:grid-cols-5 gap-3 mb-8">
-          {[
-            { label: '병원 수', value: stats.uniqueHospitals },
-            { label: '사용자 수', value: stats.uniqueUsers },
-            { label: '오늘', value: stats.postsToday },
-            { label: '이번 주', value: stats.postsThisWeek },
-            { label: '이번 달', value: stats.postsThisMonth },
-          ].map(s => (
-            <div key={s.label} className="bg-white rounded-xl p-3 border border-slate-100 text-center">
-              <div className="text-lg font-bold text-slate-700">{s.value}</div>
-              <div className="text-[11px] text-slate-400">{s.label}</div>
-            </div>
-          ))}
-        </div>
-
-        {/* 말투 학습 탭 */}
-        {activeTab === 'style' && (
-          <div className="space-y-4">
-            <div className="bg-violet-50 border border-violet-200 rounded-2xl p-5 mb-2">
-              <h2 className="text-base font-bold text-violet-800 mb-1">병원별 네이버 블로그 말투 학습</h2>
-              <p className="text-sm text-violet-600">
-                각 병원의 네이버 블로그 URL을 입력하고 크롤링하면, AI가 글을 읽고 말투를 자동으로 학습합니다.<br />
-                학습된 말투는 콘텐츠 생성 시 해당 병원 선택 시 자동으로 적용됩니다.
-              </p>
-            </div>
-
-            {TEAM_DATA.map(team => (
-              <div key={team.id} className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-                <div className="px-5 py-3 bg-slate-50 border-b border-slate-100 flex items-center gap-2">
-                  <span className="text-sm font-bold text-slate-700">{team.label}</span>
-                  <span className="text-xs text-slate-400">({team.hospitals.length}개 병원)</span>
-                </div>
-
-                <div className="divide-y divide-slate-50">
-                  {/* 팀 내 고유 병원명만 추출 */}
-                  {Array.from(new Map(team.hospitals.map(h => [h.name.replace(/ \(.*\)$/, ''), h])).entries()).map(([baseName, h]) => {
-                    const profile = styleProfiles.find(p => p.hospital_name === baseName);
-                    const status = crawlingStatus[baseName];
-                    const urlVal = blogUrlInputs[baseName] || profile?.naver_blog_url || '';
-
-                    return (
-                      <div key={baseName} className="p-4">
-                        <div className="flex items-start justify-between gap-3 mb-3">
-                          <div>
-                            <span className="font-semibold text-slate-800 text-sm">{baseName}</span>
-                            <span className="ml-2 text-xs text-slate-400">{h.manager}</span>
-                            {profile?.last_crawled_at && (
-                              <span className="ml-2 text-[11px] px-2 py-0.5 bg-green-50 text-green-600 rounded-full font-medium">
-                                마지막 학습: {new Date(profile.last_crawled_at).toLocaleDateString('ko-KR')} ({profile.crawled_posts_count}개 글)
-                              </span>
-                            )}
-                            {!profile?.last_crawled_at && (
-                              <span className="ml-2 text-[11px] px-2 py-0.5 bg-slate-100 text-slate-400 rounded-full">미학습</span>
-                            )}
-                          </div>
-                          {profile?.style_profile && (
-                            <span className="text-[11px] text-violet-600 bg-violet-50 border border-violet-200 rounded-lg px-2 py-1 max-w-[180px] truncate">
-                              {profile.style_profile.description || '학습 완료'}
-                            </span>
-                          )}
-                        </div>
-
-                        <div className="flex gap-2">
-                          <input
-                            type="url"
-                            value={urlVal}
-                            onChange={e => setBlogUrlInputs(prev => ({ ...prev, [baseName]: e.target.value }))}
-                            placeholder="https://blog.naver.com/병원아이디"
-                            className="flex-1 px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-violet-400 transition-colors"
-                            disabled={status?.loading}
-                          />
-                          <button
-                            onClick={() => handleSaveBlogUrl(baseName, team.id)}
-                            disabled={status?.loading || !urlVal}
-                            className="px-3 py-2 text-xs font-semibold bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 transition-colors disabled:opacity-40 whitespace-nowrap"
-                          >URL 저장</button>
-                          <button
-                            onClick={() => handleCrawlAndLearn(baseName, team.id)}
-                            disabled={status?.loading || !urlVal}
-                            className="px-3 py-2 text-xs font-bold bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors disabled:opacity-40 whitespace-nowrap"
-                          >
-                            {status?.loading ? '학습 중...' : '크롤링 + 학습'}
-                          </button>
-                        </div>
-
-                        {/* 진행 상태 */}
-                        {status?.loading && (
-                          <div className="mt-2 flex items-center gap-2 text-xs text-violet-600">
-                            <div className="w-3 h-3 border-2 border-violet-500 border-t-transparent rounded-full animate-spin"></div>
-                            {status.progress}
-                          </div>
-                        )}
-                        {status?.error && (
-                          <p className="mt-2 text-xs text-red-500">{status.error}</p>
-                        )}
-                        {status && !status.loading && !status.error && status.progress === '학습 완료!' && (
-                          <p className="mt-2 text-xs text-green-600 font-medium">학습 완료!</p>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* 콘텐츠 관리 */}
-        {activeTab === 'contents' && <div className="bg-white rounded-2xl border border-slate-100 shadow-sm">
-          <div className="p-5 border-b border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-            <h2 className="text-base font-bold text-slate-800">콘텐츠 관리</h2>
-            <div className="flex flex-wrap gap-2 items-center">
-              <div className="flex bg-slate-100 p-0.5 rounded-lg">
-                {([['all', '전체'], ['blog', '블로그'], ['card_news', '카드뉴스'], ['press_release', '언론보도']] as [typeof contentFilter, string][]).map(([key, label]) => (
-                  <button key={key} onClick={() => setContentFilter(key)} className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${contentFilter === key ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>{label}</button>
+        {/* ===== 콘텐츠 관리 탭 ===== */}
+        {activeTab === 'contents' && (
+          <>
+            {/* 팀 & 병원 필터 */}
+            <div className="bg-white rounded-xl border border-slate-100 p-4 mb-4 space-y-3">
+              <div className="flex bg-slate-100 rounded-xl p-1">
+                <button
+                  onClick={() => { setSelectedTeam(null); setSelectedHospitalName(''); }}
+                  className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-all ${
+                    selectedTeam === null ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                  }`}
+                >전체</button>
+                {TEAM_DATA.map(team => (
+                  <button
+                    key={team.id}
+                    onClick={() => { setSelectedTeam(team.id); setSelectedHospitalName(''); }}
+                    className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-all ${
+                      selectedTeam === team.id ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                    }`}
+                  >{team.label}</button>
                 ))}
               </div>
-              <button onClick={loadContents} disabled={loadingData} className="px-3 py-1.5 bg-slate-100 text-slate-600 font-medium rounded-lg hover:bg-slate-200 transition-colors text-xs disabled:opacity-50">{loadingData ? '로딩...' : '새로고침'}</button>
+              {selectedTeam !== null && (() => {
+                const team = TEAM_DATA.find(t => t.id === selectedTeam);
+                if (!team) return null;
+                const hospitalMap = new Map<string, string[]>();
+                for (const h of team.hospitals) {
+                  const baseName = h.name.replace(/ \(.*\)$/, '');
+                  const managers = hospitalMap.get(baseName) || [];
+                  if (!managers.includes(h.manager)) managers.push(h.manager);
+                  hospitalMap.set(baseName, managers);
+                }
+                const uniqueHospitals = Array.from(hospitalMap.entries());
+                return (
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      onClick={() => setSelectedHospitalName('')}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all border ${
+                        !selectedHospitalName ? 'bg-blue-50 border-blue-200 text-blue-600' : 'border-slate-200 text-slate-500 hover:border-slate-300'
+                      }`}
+                    >전체 ({uniqueHospitals.length})</button>
+                    {uniqueHospitals.map(([name, managers]) => (
+                      <button
+                        key={name}
+                        onClick={() => setSelectedHospitalName(name)}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all border ${
+                          selectedHospitalName === name ? 'bg-blue-50 border-blue-200 text-blue-600' : 'border-slate-200 text-slate-500 hover:border-slate-300'
+                        }`}
+                      >
+                        {name}
+                        <span className="ml-1 text-[10px] text-slate-400">({managers.length}명)</span>
+                      </button>
+                    ))}
+                  </div>
+                );
+              })()}
             </div>
-          </div>
 
-          <div className="p-5">
-            {dataError && <div className="mb-4 p-3 bg-red-50 border border-red-100 rounded-xl text-red-600 text-sm">{dataError}</div>}
-
-            {filteredContents.length === 0 ? (
-              <div className="text-center py-16">
-                <div className="text-4xl mb-3 opacity-30">📄</div>
-                <p className="text-slate-400 font-medium">{loadingData ? '콘텐츠를 불러오는 중...' : '저장된 콘텐츠가 없습니다.'}</p>
-                <p className="text-slate-300 text-sm mt-1">블로그 글을 생성하면 여기에 자동 저장됩니다.</p>
-              </div>
-            ) : (
-              <>
-                <p className="text-xs text-slate-400 mb-4">
-                  {contentFilter === 'all' ? `총 ${filteredContents.length}개` : `${getContentTypeLabel(contentFilter)} ${filteredContents.length}개`}
-                </p>
-                <div className="space-y-2">
-                  {filteredContents.map((content) => (
-                    <div key={content.id} className="rounded-xl p-4 border border-slate-100 hover:border-slate-200 hover:bg-slate-50/50 transition-all">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1.5">
-                            {getContentTypeBadge(content.content_type)}
-                            <h3 className="text-sm font-bold text-slate-800 truncate">{content.title}</h3>
-                          </div>
-                          <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400 mb-2">
-                            <span>{formatDate(content.created_at)}</span>
-                            {content.hospital_name && <span className="px-1.5 py-0.5 bg-emerald-50 text-emerald-600 rounded text-[11px] font-medium">{content.hospital_name}</span>}
-                            {content.category && <span className="px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded text-[11px]">{content.category}</span>}
-                            {content.user_email && <span className="text-blue-400">{content.user_email}</span>}
-                          </div>
-                          <p className="text-xs text-slate-400 line-clamp-1">{content.topic || content.content?.replace(/<[^>]*>/g, '').substring(0, 120)}</p>
-                        </div>
-                        <div className="flex gap-1.5 flex-shrink-0">
-                          <button onClick={() => setPreviewContent(content)} className="px-3 py-1.5 bg-blue-50 text-blue-600 font-medium rounded-lg hover:bg-blue-100 transition-colors text-xs">보기</button>
-                          <button onClick={() => deleteContent(content.id)} className="px-3 py-1.5 bg-red-50 text-red-500 font-medium rounded-lg hover:bg-red-100 transition-colors text-xs">삭제</button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+            {/* Stats Grid */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
+              {[
+                { label: '전체 콘텐츠', value: stats.totalContents, color: 'bg-blue-50 text-blue-600' },
+                { label: '블로그', value: stats.blogCount, color: 'bg-sky-50 text-sky-600' },
+                { label: '카드뉴스', value: stats.cardnewsCount, color: 'bg-violet-50 text-violet-600' },
+                { label: '언론보도', value: stats.pressCount, color: 'bg-emerald-50 text-emerald-600' },
+              ].map(s => (
+                <div key={s.label} className="bg-white rounded-xl p-4 border border-slate-100">
+                  <div className="text-2xl font-bold text-slate-800">{s.value}</div>
+                  <div className={`text-xs font-medium mt-1 inline-block px-2 py-0.5 rounded-full ${s.color}`}>{s.label}</div>
                 </div>
-              </>
-            )}
-          </div>
-        </div>}
+              ))}
+            </div>
+            <div className="grid grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
+              {[
+                { label: '병원 수', value: stats.uniqueHospitals },
+                { label: '사용자 수', value: stats.uniqueUsers },
+                { label: '오늘', value: stats.postsToday },
+                { label: '이번 주', value: stats.postsThisWeek },
+                { label: '이번 달', value: stats.postsThisMonth },
+              ].map(s => (
+                <div key={s.label} className="bg-white rounded-xl p-3 border border-slate-100 text-center">
+                  <div className="text-lg font-bold text-slate-700">{s.value}</div>
+                  <div className="text-[11px] text-slate-400">{s.label}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* 콘텐츠 목록 */}
+            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm">
+              <div className="p-5 border-b border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <h2 className="text-base font-bold text-slate-800">콘텐츠 관리</h2>
+                <div className="flex flex-wrap gap-2 items-center">
+                  <div className="flex bg-slate-100 p-0.5 rounded-lg">
+                    {([['all', '전체'], ['blog', '블로그'], ['card_news', '카드뉴스'], ['press_release', '언론보도']] as [typeof contentFilter, string][]).map(([key, label]) => (
+                      <button key={key} onClick={() => setContentFilter(key)} className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${contentFilter === key ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>{label}</button>
+                    ))}
+                  </div>
+                  <button onClick={loadContents} disabled={loadingData} className="px-3 py-1.5 bg-slate-100 text-slate-600 font-medium rounded-lg hover:bg-slate-200 transition-colors text-xs disabled:opacity-50">{loadingData ? '로딩...' : '새로고침'}</button>
+                </div>
+              </div>
+              <div className="p-5">
+                {dataError && <div className="mb-4 p-3 bg-red-50 border border-red-100 rounded-xl text-red-600 text-sm">{dataError}</div>}
+                {filteredContents.length === 0 ? (
+                  <div className="text-center py-16">
+                    <div className="text-4xl mb-3 opacity-30">📄</div>
+                    <p className="text-slate-400 font-medium">{loadingData ? '콘텐츠를 불러오는 중...' : '저장된 콘텐츠가 없습니다.'}</p>
+                    <p className="text-slate-300 text-sm mt-1">블로그 글을 생성하면 여기에 자동 저장됩니다.</p>
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-xs text-slate-400 mb-4">
+                      {contentFilter === 'all' ? `총 ${filteredContents.length}개` : `${getContentTypeLabel(contentFilter)} ${filteredContents.length}개`}
+                    </p>
+                    <div className="space-y-2">
+                      {filteredContents.map((content) => (
+                        <div key={content.id} className="rounded-xl p-4 border border-slate-100 hover:border-slate-200 hover:bg-slate-50/50 transition-all">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1.5">
+                                {getContentTypeBadge(content.content_type)}
+                                <h3 className="text-sm font-bold text-slate-800 truncate">{content.title}</h3>
+                              </div>
+                              <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400 mb-2">
+                                <span>{formatDate(content.created_at)}</span>
+                                {content.hospital_name && <span className="px-1.5 py-0.5 bg-emerald-50 text-emerald-600 rounded text-[11px] font-medium">{content.hospital_name}</span>}
+                                {content.category && <span className="px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded text-[11px]">{content.category}</span>}
+                                {content.user_email && <span className="text-blue-400">{content.user_email}</span>}
+                              </div>
+                              <p className="text-xs text-slate-400 line-clamp-1">{content.topic || content.content?.replace(/<[^>]*>/g, '').substring(0, 120)}</p>
+                            </div>
+                            <div className="flex gap-1.5 flex-shrink-0">
+                              <button onClick={() => setPreviewContent(content)} className="px-3 py-1.5 bg-blue-50 text-blue-600 font-medium rounded-lg hover:bg-blue-100 transition-colors text-xs">보기</button>
+                              <button onClick={() => deleteContent(content.id)} className="px-3 py-1.5 bg-red-50 text-red-500 font-medium rounded-lg hover:bg-red-100 transition-colors text-xs">삭제</button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* ===== 말투 학습 탭 ===== */}
+        {activeTab === 'style' && (
+          <StyleTab
+            styleProfiles={styleProfiles}
+            blogUrlInputs={blogUrlInputs}
+            setBlogUrlInputs={setBlogUrlInputs}
+            crawlingStatus={crawlingStatus}
+            onSaveUrl={handleSaveBlogUrl}
+            onCrawl={handleCrawlAndLearn}
+          />
+        )}
       </div>
 
-      {/* 콘텐츠 미리보기 모달 */}
+            {/* 콘텐츠 미리보기 모달 */}
       {previewContent && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto" onClick={() => setPreviewContent(null)}>
           <div className="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden shadow-2xl my-8" onClick={e => e.stopPropagation()}>
