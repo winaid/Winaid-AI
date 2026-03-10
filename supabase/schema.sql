@@ -325,9 +325,16 @@ ALTER TABLE public.hospital_style_profiles ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Authenticated users can view style profiles" ON public.hospital_style_profiles
   FOR SELECT USING (auth.role() = 'authenticated');
 
--- 관리자(service_role)만 생성/수정/삭제 가능
-CREATE POLICY "Service role can manage style profiles" ON public.hospital_style_profiles
-  FOR ALL USING (auth.role() = 'service_role');
+-- 인증된 사용자가 생성/수정 가능 (어드민 화면에서 URL 저장 + 학습 실행)
+CREATE POLICY "Authenticated users can insert style profiles" ON public.hospital_style_profiles
+  FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+
+CREATE POLICY "Authenticated users can update style profiles" ON public.hospital_style_profiles
+  FOR UPDATE USING (auth.role() = 'authenticated');
+
+-- 관리자(service_role)는 삭제 가능
+CREATE POLICY "Service role can delete style profiles" ON public.hospital_style_profiles
+  FOR DELETE USING (auth.role() = 'service_role');
 
 -- 인덱스
 CREATE INDEX IF NOT EXISTS idx_hospital_style_hospital_name ON public.hospital_style_profiles(hospital_name);
