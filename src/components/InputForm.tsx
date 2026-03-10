@@ -790,7 +790,7 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
            ) : null}
 
           {/* 소제목 직접 입력 */}
-          {postType !== 'card_news' && (
+          {postType !== 'card_news' && postType !== 'press_release' && (
             <div>
               <p className="text-[11px] font-semibold text-slate-500 mb-1.5">소제목 직접 입력 <span className="text-slate-400 font-normal">(선택 · 한 줄에 하나씩)</span></p>
               <textarea value={customSubheadings} onChange={(e) => setCustomSubheadings(e.target.value)}
