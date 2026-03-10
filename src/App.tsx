@@ -172,6 +172,9 @@ const App: React.FC = () => {
     }
     return false;
   });
+
+  // Genspark 스타일: 생성 시작 후 센터→좌우 분리 레이아웃 전환
+  const [hasGenerated, setHasGenerated] = useState(false);
   
   // 다크모드 토글
   const toggleDarkMode = () => {
@@ -550,22 +553,14 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className={`min-h-screen flex font-sans relative transition-colors duration-300 ${darkMode ? 'bg-slate-900 text-slate-100' : 'bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 text-slate-900'}`}>
-      {/* Animated background blobs */}
-      {!darkMode && (
-        <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
-          <div className="absolute -top-40 -right-40 w-[300px] h-[300px] md:w-[600px] md:h-[600px] bg-blue-100/40 rounded-full blur-[80px] md:blur-[150px] animate-[pulse_8s_ease-in-out_infinite]" />
-          <div className="absolute top-1/2 -left-40 w-[250px] h-[250px] md:w-[500px] md:h-[500px] bg-violet-100/30 rounded-full blur-[70px] md:blur-[130px] animate-[pulse_10s_ease-in-out_2s_infinite]" />
-          <div className="absolute -bottom-20 right-1/3 w-[200px] h-[200px] md:w-[400px] md:h-[400px] bg-cyan-100/20 rounded-full blur-[60px] md:blur-[120px] animate-[pulse_12s_ease-in-out_4s_infinite]" />
-        </div>
-      )}
+    <div className={`min-h-screen flex font-sans relative transition-colors duration-300 ${darkMode ? 'bg-[#0f1117] text-slate-100' : 'bg-[#f6f7f9] text-slate-900'}`}>
 
       {/* 좌측 사이드바 네비게이션 */}
       <aside className={`hidden lg:flex flex-col flex-none h-screen sticky top-0 z-30 transition-all duration-300 border-r ${
-        sidebarCollapsed ? 'w-[68px]' : 'w-[200px]'
-      } ${darkMode ? 'bg-slate-800/95 border-slate-700' : 'bg-white/90 border-slate-200/60 shadow-[1px_0_3px_rgba(0,0,0,0.04)]'} backdrop-blur-2xl`}>
+        sidebarCollapsed ? 'w-[68px]' : 'w-[210px]'
+      } ${darkMode ? 'bg-[#161b22] border-[#30363d]' : 'bg-white border-slate-200 shadow-[1px_0_0_0_rgba(0,0,0,0.04)]'}`}>
         {/* 로고 */}
-        <div className={`h-14 flex items-center ${sidebarCollapsed ? 'justify-center px-2' : 'px-4'} border-b ${darkMode ? 'border-slate-700' : 'border-slate-100'}`}>
+        <div className={`h-14 flex items-center ${sidebarCollapsed ? 'justify-center px-2' : 'px-4'} border-b ${darkMode ? 'border-[#30363d]' : 'border-slate-100'}`}>
           <a href="#app" onClick={(e) => { e.preventDefault(); window.location.hash = 'app'; setCurrentPage('home'); }} className="flex items-center gap-2.5 hover:opacity-80 transition-opacity cursor-pointer group">
             <img src="/280_logo.png" alt="WINAID" className={`h-8 w-8 group-hover:scale-105 transition-transform flex-none ${darkMode ? 'rounded-md bg-white p-0.5' : ''}`} />
             {!sidebarCollapsed && (
@@ -595,8 +590,8 @@ const App: React.FC = () => {
                 sidebarCollapsed ? 'justify-center px-2 py-2.5' : 'px-3 py-2.5'
               } ${
                 contentTab === item.id && currentPage !== 'home'
-                  ? darkMode ? 'bg-blue-500/15 text-blue-400' : 'bg-blue-50 text-blue-600 shadow-sm'
-                  : darkMode ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/50' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-100/80'
+                  ? darkMode ? 'bg-blue-500/20 text-blue-400 font-bold' : 'bg-blue-50 text-blue-700 font-bold'
+                  : darkMode ? 'text-slate-400 hover:text-slate-200 hover:bg-[#1c2128]' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-50'
               }`}
             >
               <span className="text-base flex-none">{item.icon}</span>
@@ -620,8 +615,8 @@ const App: React.FC = () => {
                 sidebarCollapsed ? 'justify-center px-2 py-2.5' : 'px-3 py-2.5'
               } ${
                 contentTab === item.id && currentPage !== 'home'
-                  ? darkMode ? 'bg-blue-500/15 text-blue-400' : 'bg-blue-50 text-blue-600 shadow-sm'
-                  : darkMode ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/50' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-100/80'
+                  ? darkMode ? 'bg-blue-500/20 text-blue-400 font-bold' : 'bg-blue-50 text-blue-700 font-bold'
+                  : darkMode ? 'text-slate-400 hover:text-slate-200 hover:bg-[#1c2128]' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-50'
               }`}
             >
               <span className="text-base flex-none">{item.icon}</span>
@@ -631,7 +626,7 @@ const App: React.FC = () => {
         </nav>
 
         {/* 하단: 사이드바 접기/펼치기 + 다크모드 + 유저 */}
-        <div className={`border-t py-3 px-2 space-y-1 ${darkMode ? 'border-slate-700' : 'border-slate-100'}`}>
+        <div className={`border-t py-3 px-2 space-y-1 ${darkMode ? 'border-[#30363d]' : 'border-slate-100'}`}>
           {/* 다크모드 토글 */}
           <button
             onClick={toggleDarkMode}
@@ -662,7 +657,7 @@ const App: React.FC = () => {
               {showUserMenu && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setShowUserMenu(false)} />
-                  <div className={`absolute left-full bottom-0 ml-2 w-48 rounded-xl shadow-[0_8px_30px_rgba(0,0,0,0.12)] border z-50 overflow-hidden backdrop-blur-2xl ${darkMode ? 'bg-slate-800/95 border-slate-700' : 'bg-white/95 border-slate-200/60'}`}>
+                  <div className={`absolute left-full bottom-0 ml-2 w-48 rounded-xl shadow-lg border z-50 overflow-hidden ${darkMode ? 'bg-[#161b22] border-[#30363d]' : 'bg-white border-slate-200'}`}>
                     <button
                       onClick={() => { setShowUserMenu(false); handleLogout(); }}
                       className={`w-full text-left px-4 py-3 text-sm font-medium transition-colors ${darkMode ? 'text-red-400 hover:bg-slate-700' : 'text-red-500 hover:bg-red-50'}`}
@@ -756,37 +751,29 @@ const App: React.FC = () => {
         {currentPage === 'home' ? (
           <div className="space-y-6 max-w-6xl mx-auto">
             {/* 환영 히어로 섹션 */}
-            <div className={`rounded-2xl p-8 md:p-10 relative overflow-hidden ${darkMode ? 'bg-gradient-to-br from-slate-800 via-slate-800 to-blue-900/40 border border-slate-700/80' : 'bg-gradient-to-br from-blue-600 via-blue-700 to-violet-700 text-white shadow-xl shadow-blue-900/20'}`}>
-              {/* 배경 장식 */}
-              <div className="absolute top-0 right-0 w-80 h-80 bg-white/[0.07] rounded-full -translate-y-1/2 translate-x-1/3" />
-              <div className="absolute bottom-0 left-1/4 w-60 h-60 bg-white/[0.04] rounded-full translate-y-1/2" />
-              <div className={`absolute top-6 right-8 w-20 h-20 rounded-2xl rotate-12 ${darkMode ? 'bg-blue-500/10' : 'bg-white/10'}`} />
-              <div className={`absolute bottom-4 right-1/3 w-12 h-12 rounded-xl -rotate-6 ${darkMode ? 'bg-violet-500/10' : 'bg-white/[0.07]'}`} />
-
-              <div className="relative flex flex-col md:flex-row md:items-end md:justify-between gap-6">
+            <div className={`rounded-2xl p-7 md:p-8 border ${darkMode ? 'bg-[#1a2233] border-[#2d3a4f]' : 'bg-white border-slate-200 shadow-sm'}`}>
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-5">
                 <div>
-                  <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold mb-4 ${darkMode ? 'bg-blue-500/20 text-blue-300' : 'bg-white/20 text-white/90'}`}>
-                    <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
+                  <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold mb-3 ${darkMode ? 'bg-emerald-500/15 text-emerald-400' : 'bg-emerald-50 text-emerald-600 border border-emerald-200'}`}>
+                    <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
                     AI 엔진 가동 중
                   </div>
-                  <h1 className={`text-2xl md:text-3xl font-black mb-2 ${darkMode ? 'text-slate-100' : 'text-white'}`}>
+                  <h1 className={`text-xl md:text-2xl font-black mb-1.5 ${darkMode ? 'text-slate-100' : 'text-slate-900'}`}>
                     안녕하세요! 오늘도 좋은 콘텐츠 만들어 볼까요?
                   </h1>
-                  <p className={`text-sm md:text-base font-medium ${darkMode ? 'text-slate-400' : 'text-blue-100/90'}`}>
+                  <p className={`text-sm font-medium ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
                     AI 기반 의료 마케팅 콘텐츠를 쉽고 빠르게 생성하세요.
                   </p>
                 </div>
-
-                {/* 미니 통계 */}
-                <div className="flex gap-3 flex-shrink-0">
+                <div className="flex gap-2.5 flex-shrink-0">
                   {([
-                    { label: '블로그', value: 'SEO', sub: '최적화', color: darkMode ? 'bg-blue-500/20 text-blue-300' : 'bg-white/15 text-white' },
-                    { label: '의료광고법', value: '자동', sub: '검증', color: darkMode ? 'bg-emerald-500/20 text-emerald-300' : 'bg-white/15 text-white' },
-                    { label: '이미지', value: 'AI', sub: '생성', color: darkMode ? 'bg-violet-500/20 text-violet-300' : 'bg-white/15 text-white' },
+                    { label: 'SEO 최적화', icon: '📈' },
+                    { label: '의료법 검증', icon: '✅' },
+                    { label: 'AI 이미지', icon: '🎨' },
                   ]).map((stat, i) => (
-                    <div key={i} className={`${stat.color} rounded-xl px-4 py-3 text-center min-w-[80px] backdrop-blur-sm`}>
-                      <div className="text-lg font-black">{stat.value}</div>
-                      <div className={`text-[10px] font-semibold ${darkMode ? 'opacity-60' : 'opacity-70'}`}>{stat.sub}</div>
+                    <div key={i} className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold ${darkMode ? 'bg-[#0f1117] text-slate-400 border border-[#30363d]' : 'bg-slate-50 text-slate-600 border border-slate-200'}`}>
+                      <span>{stat.icon}</span>
+                      <span>{stat.label}</span>
                     </div>
                   ))}
                 </div>
@@ -795,75 +782,67 @@ const App: React.FC = () => {
 
             {/* 콘텐츠 생성 섹션 */}
             <div>
-              <div className="flex items-center gap-2 mb-4">
-                <h2 className={`text-lg font-black ${darkMode ? 'text-slate-200' : 'text-slate-800'}`}>콘텐츠 생성</h2>
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${darkMode ? 'bg-blue-500/15 text-blue-400' : 'bg-blue-50 text-blue-600'}`}>핵심 기능</span>
+              <div className="flex items-center gap-2 mb-3">
+                <h2 className={`text-sm font-bold ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>콘텐츠 생성</h2>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 {([
                   {
                     id: 'blog' as ContentTabType, title: '블로그', desc: '네이버 스마트블록 최적화 의료 블로그',
                     icon: '📝',
-                    gradient: darkMode ? 'from-blue-500/10 to-blue-600/5' : 'from-blue-50 to-blue-100/50',
-                    borderHover: darkMode ? 'hover:border-blue-500/40' : 'hover:border-blue-300',
-                    iconBg: darkMode ? 'bg-blue-500/15' : 'bg-blue-500/10',
+                    accentLight: 'border-blue-200 hover:border-blue-400 hover:bg-blue-50/40',
+                    accentDark: 'border-[#2d3a4f] hover:border-blue-500/50 hover:bg-blue-500/5',
+                    iconBg: darkMode ? 'bg-blue-500/15 text-blue-300' : 'bg-blue-50 text-blue-600',
                     features: ['SEO 자동 최적화', '의료광고법 검증', 'AI 냄새 탐지'],
+                    cta: 'text-blue-600',
                   },
                   {
                     id: 'card_news' as ContentTabType, title: '카드뉴스', desc: 'SNS용 카드뉴스 원고 + 이미지 자동 생성',
                     icon: '🎨',
-                    gradient: darkMode ? 'from-pink-500/10 to-rose-600/5' : 'from-pink-50 to-rose-100/50',
-                    borderHover: darkMode ? 'hover:border-pink-500/40' : 'hover:border-pink-300',
-                    iconBg: darkMode ? 'bg-pink-500/15' : 'bg-pink-500/10',
+                    accentLight: 'border-pink-200 hover:border-pink-400 hover:bg-pink-50/40',
+                    accentDark: 'border-[#2d3a4f] hover:border-pink-500/50 hover:bg-pink-500/5',
+                    iconBg: darkMode ? 'bg-pink-500/15 text-pink-300' : 'bg-pink-50 text-pink-600',
                     features: ['슬라이드 자동 구성', '디자인 템플릿', '이미지 자동 생성'],
+                    cta: 'text-pink-600',
                   },
                   {
                     id: 'press' as ContentTabType, title: '언론 보도자료', desc: '언론에 배포 가능한 보도자료 작성',
                     icon: '🗞️',
-                    gradient: darkMode ? 'from-amber-500/10 to-orange-600/5' : 'from-amber-50 to-orange-100/50',
-                    borderHover: darkMode ? 'hover:border-amber-500/40' : 'hover:border-amber-300',
-                    iconBg: darkMode ? 'bg-amber-500/15' : 'bg-amber-500/10',
+                    accentLight: 'border-amber-200 hover:border-amber-400 hover:bg-amber-50/40',
+                    accentDark: 'border-[#2d3a4f] hover:border-amber-500/50 hover:bg-amber-500/5',
+                    iconBg: darkMode ? 'bg-amber-500/15 text-amber-300' : 'bg-amber-50 text-amber-600',
                     features: ['보도자료 포맷', '전문 어조 자동 변환', '병원 정보 연동'],
+                    cta: 'text-amber-600',
                   },
                 ]).map(item => (
                   <button
                     key={item.id}
                     onClick={() => setContentTab(item.id)}
-                    className={`text-left rounded-2xl border transition-all duration-300 hover:scale-[1.02] hover:shadow-xl group relative overflow-hidden ${item.borderHover} ${
-                      darkMode ? 'bg-slate-800/80 border-slate-700/80' : 'bg-white border-slate-200/60 shadow-sm'
+                    className={`text-left rounded-xl border transition-all duration-200 group p-5 ${
+                      darkMode ? `bg-[#161b22] ${item.accentDark}` : `bg-white shadow-sm ${item.accentLight}`
                     }`}
                   >
-                    {/* 배경 그라데이션 */}
-                    <div className={`absolute inset-0 bg-gradient-to-br ${item.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-300`} />
-
-                    <div className="relative p-6">
-                      {/* 아이콘 + 타이틀 */}
-                      <div className="flex items-start gap-4 mb-4">
-                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0 ${item.iconBg} group-hover:scale-110 transition-transform duration-300`}>
-                          {item.icon}
-                        </div>
-                        <div>
-                          <h3 className={`text-base font-black mb-1 ${darkMode ? 'text-slate-200' : 'text-slate-800'}`}>{item.title}</h3>
-                          <p className={`text-xs font-medium leading-relaxed ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>{item.desc}</p>
-                        </div>
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-xl flex-shrink-0 ${item.iconBg}`}>
+                        {item.icon}
                       </div>
-
-                      {/* 기능 태그 */}
-                      <div className="flex flex-wrap gap-1.5 mb-4">
-                        {item.features.map((f, i) => (
-                          <span key={i} className={`text-[10px] font-semibold px-2 py-0.5 rounded-md ${
-                            darkMode ? 'bg-slate-700/80 text-slate-400' : 'bg-slate-100 text-slate-500'
-                          }`}>{f}</span>
-                        ))}
+                      <div>
+                        <h3 className={`text-sm font-bold ${darkMode ? 'text-slate-200' : 'text-slate-800'}`}>{item.title}</h3>
+                        <p className={`text-[11px] font-medium leading-snug mt-0.5 ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>{item.desc}</p>
                       </div>
-
-                      {/* CTA */}
-                      <div className={`flex items-center gap-1.5 text-xs font-bold ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>
-                        <span>시작하기</span>
-                        <svg className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
-                        </svg>
-                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-1 mb-3">
+                      {item.features.map((f, i) => (
+                        <span key={i} className={`text-[10px] font-medium px-2 py-0.5 rounded-md ${
+                          darkMode ? 'bg-[#0f1117] text-slate-500' : 'bg-slate-100 text-slate-500'
+                        }`}>{f}</span>
+                      ))}
+                    </div>
+                    <div className={`flex items-center gap-1 text-xs font-semibold ${item.cta} dark:text-blue-400`}>
+                      <span>시작하기</span>
+                      <svg className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+                      </svg>
                     </div>
                   </button>
                 ))}
@@ -872,52 +851,36 @@ const App: React.FC = () => {
 
             {/* 도구 섹션 */}
             <div>
-              <div className="flex items-center gap-2 mb-4">
-                <h2 className={`text-lg font-black ${darkMode ? 'text-slate-200' : 'text-slate-800'}`}>도구</h2>
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${darkMode ? 'bg-violet-500/15 text-violet-400' : 'bg-violet-50 text-violet-600'}`}>유틸리티</span>
+              <div className="flex items-center gap-2 mb-3">
+                <h2 className={`text-sm font-bold ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>도구</h2>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {([
-                  {
-                    id: 'refine' as ContentTabType, title: 'AI 보정', desc: '기존 글의 문장을 AI가 전문적으로 다듬어 줍니다',
-                    icon: '✨',
-                    iconBg: darkMode ? 'bg-emerald-500/15' : 'bg-emerald-500/10',
-                    borderHover: darkMode ? 'hover:border-emerald-500/40' : 'hover:border-emerald-300',
-                  },
-                  {
-                    id: 'image' as ContentTabType, title: '이미지 생성', desc: '블로그와 카드뉴스에 사용할 AI 이미지를 생성합니다',
-                    icon: '🖼️',
-                    iconBg: darkMode ? 'bg-cyan-500/15' : 'bg-cyan-500/10',
-                    borderHover: darkMode ? 'hover:border-cyan-500/40' : 'hover:border-cyan-300',
-                  },
-                  {
-                    id: 'history' as ContentTabType, title: '히스토리', desc: '지금까지 생성한 모든 콘텐츠를 조회하고 관리합니다',
-                    icon: '🕐',
-                    iconBg: darkMode ? 'bg-orange-500/15' : 'bg-orange-500/10',
-                    borderHover: darkMode ? 'hover:border-orange-500/40' : 'hover:border-orange-300',
-                  },
+                  { id: 'refine' as ContentTabType, title: 'AI 보정', desc: '기존 글을 AI가 전문적으로 다듬어 줍니다', icon: '✨', color: 'emerald' },
+                  { id: 'image' as ContentTabType, title: '이미지 생성', desc: 'AI 이미지를 빠르게 생성합니다', icon: '🖼️', color: 'sky' },
+                  { id: 'history' as ContentTabType, title: '히스토리', desc: '생성한 모든 콘텐츠를 조회합니다', icon: '🕐', color: 'orange' },
                 ]).map(item => (
                   <button
                     key={item.id}
                     onClick={() => setContentTab(item.id)}
-                    className={`text-left p-5 rounded-2xl border transition-all duration-300 hover:scale-[1.02] hover:shadow-lg group ${item.borderHover} ${
-                      darkMode ? 'bg-slate-800/80 border-slate-700/80' : 'bg-white border-slate-200/60 shadow-sm'
+                    className={`text-left p-4 rounded-xl border transition-all duration-200 group flex items-center gap-3 ${
+                      darkMode ? 'bg-[#161b22] border-[#2d3a4f] hover:border-slate-600' : 'bg-white border-slate-200 shadow-sm hover:border-slate-300 hover:shadow-md'
                     }`}
                   >
-                    <div className="flex items-center gap-3 mb-2.5">
-                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-xl flex-shrink-0 ${item.iconBg} group-hover:scale-110 transition-transform duration-300`}>
-                        {item.icon}
-                      </div>
-                      <h3 className={`text-sm font-black ${darkMode ? 'text-slate-200' : 'text-slate-800'}`}>{item.title}</h3>
+                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center text-lg flex-shrink-0 ${darkMode ? 'bg-[#0f1117]' : 'bg-slate-50'}`}>
+                      {item.icon}
                     </div>
-                    <p className={`text-xs font-medium leading-relaxed ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>{item.desc}</p>
+                    <div>
+                      <h3 className={`text-sm font-semibold ${darkMode ? 'text-slate-200' : 'text-slate-800'}`}>{item.title}</h3>
+                      <p className={`text-[11px] mt-0.5 ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>{item.desc}</p>
+                    </div>
                   </button>
                 ))}
               </div>
             </div>
 
             {/* 하단 팁 & 안내 */}
-            <div className={`rounded-2xl border p-6 ${darkMode ? 'bg-slate-800/50 border-slate-700/60' : 'bg-gradient-to-r from-slate-50 to-blue-50/50 border-slate-200/60'}`}>
+            <div className={`rounded-xl border p-5 ${darkMode ? 'bg-[#161b22] border-[#2d3a4f]' : 'bg-white border-slate-200 shadow-sm'}`}>
               <div className="flex items-center justify-between mb-4">
                 <h3 className={`text-sm font-black flex items-center gap-2 ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>
                   <svg className="w-4 h-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 18v-5.25m0 0a6.01 6.01 0 001.5-.189m-1.5.189a6.01 6.01 0 01-1.5-.189m3.75 7.478a12.06 12.06 0 01-4.5 0m3.75 2.383a14.406 14.406 0 01-3 0M14.25 18v-.192c0-.983.658-1.823 1.508-2.316a7.5 7.5 0 10-7.517 0c.85.493 1.509 1.333 1.509 2.316V18" /></svg>
@@ -933,18 +896,18 @@ const App: React.FC = () => {
                   사용 설명서
                 </button>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
                 {([
                   { step: '01', title: '콘텐츠 유형 선택', desc: '블로그, 카드뉴스, 보도자료 중 선택' },
                   { step: '02', title: '키워드 입력', desc: '주제와 타겟 키워드를 입력하세요' },
                   { step: '03', title: 'AI 생성', desc: 'AI가 최적화된 콘텐츠를 자동 생성' },
                   { step: '04', title: '검수 & 배포', desc: '의료광고법 검증 후 바로 사용 가능' },
                 ]).map((tip, i) => (
-                  <div key={i} className={`flex gap-3 items-start p-3 rounded-xl ${darkMode ? 'bg-slate-700/40' : 'bg-white/80'}`}>
-                    <span className={`text-lg font-black flex-shrink-0 ${darkMode ? 'text-blue-400/60' : 'text-blue-200'}`}>{tip.step}</span>
+                  <div key={i} className={`flex gap-3 items-start p-3 rounded-lg ${darkMode ? 'bg-[#0f1117]' : 'bg-slate-50'}`}>
+                    <span className={`text-sm font-black flex-shrink-0 ${darkMode ? 'text-blue-500/50' : 'text-blue-300'}`}>{tip.step}</span>
                     <div>
-                      <div className={`text-xs font-bold mb-0.5 ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>{tip.title}</div>
-                      <div className={`text-[11px] font-medium ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>{tip.desc}</div>
+                      <div className={`text-xs font-semibold mb-0.5 ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>{tip.title}</div>
+                      <div className={`text-[11px] ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>{tip.desc}</div>
                     </div>
                   </div>
                 ))}
@@ -985,13 +948,21 @@ const App: React.FC = () => {
           </div>
         ) : (
           <>
-        {/* 블로그/카드뉴스/언론보도 - 입력폼(좁게) + 프리뷰(넓게) */}
-        <div className="flex flex-col lg:flex-row gap-6 lg:items-start">
-          {/* 입력 폼 - 컴팩트 */}
-          <div className="w-full lg:w-[340px] xl:w-[380px] lg:flex-none">
+        {/* 블로그/카드뉴스/언론보도 - Genspark 센터→분리 레이아웃 */}
+        <div className={`transition-all duration-500 ease-in-out ${
+          hasGenerated
+            ? 'flex flex-col lg:flex-row gap-5 lg:items-start'
+            : 'flex justify-center'
+        }`}>
+          {/* 입력 폼 */}
+          <div className={`transition-all duration-500 ease-in-out ${
+            hasGenerated
+              ? 'w-full lg:w-[340px] xl:w-[360px] lg:flex-none'
+              : 'w-full max-w-[600px]'
+          }`}>
             <Suspense fallback={<FormSkeleton />}>
               <InputForm
-                onSubmit={handleGenerate}
+                onSubmit={(req) => { setHasGenerated(true); handleGenerate(req); }}
                 isLoading={state.isLoading || isGeneratingScript}
                 onTabChange={setContentTab}
                 activePostType={contentTab === 'press' ? 'press_release' : contentTab === 'card_news' ? 'card_news' : contentTab === 'blog' ? 'blog' : undefined}
@@ -999,8 +970,8 @@ const App: React.FC = () => {
             </Suspense>
           </div>
 
-          {/* 결과 영역 - 넓게 */}
-          <div className="flex flex-col min-h-[480px] lg:flex-1 min-w-0">
+          {/* 결과 영역 - 생성 후에만 표시 */}
+          {hasGenerated && <div className="flex flex-col min-h-[480px] lg:flex-1 min-w-0">
           {cardNewsPrompts && cardNewsPrompts.length > 0 ? (
             <Suspense fallback={<ContentSkeleton />}>
               <PromptPreview
@@ -1028,7 +999,7 @@ const App: React.FC = () => {
               />
             </Suspense>
           ) : (getCurrentState().isLoading || isGeneratingScript) ? (
-            <div className={`rounded-2xl border p-16 flex flex-col items-center justify-center text-center backdrop-blur-xl transition-colors duration-300 flex-1 min-h-[480px] ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white/80 border-white/60 shadow-[0_4px_24px_rgba(0,0,0,0.06)]'}`}>
+            <div className={`rounded-xl border p-16 flex flex-col items-center justify-center text-center transition-colors duration-300 flex-1 min-h-[480px] ${darkMode ? 'bg-[#161b22] border-[#30363d]' : 'bg-white border-slate-200 shadow-sm'}`}>
               <div className="relative mb-8">
                 <div className={`w-16 h-16 border-[3px] border-t-blue-500 rounded-full animate-spin ${darkMode ? 'border-slate-700' : 'border-blue-100'}`}></div>
                 <div className="absolute inset-0 flex items-center justify-center">
@@ -1051,15 +1022,9 @@ const App: React.FC = () => {
               <ResultPreview content={getCurrentState().data!} darkMode={darkMode} />
             </Suspense>
           ) : (
-            <div className={`rounded-2xl border flex flex-col items-center justify-center p-16 text-center group backdrop-blur-xl transition-all duration-500 relative overflow-hidden flex-1 min-h-[480px] ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white/60 border-white/60 shadow-[0_4px_24px_rgba(0,0,0,0.04)]'}`}>
-               {!darkMode && (
-                 <div className="absolute inset-0 pointer-events-none">
-                   <div className="absolute top-8 right-8 w-32 h-32 bg-blue-100/30 rounded-full blur-[60px]" />
-                   <div className="absolute bottom-8 left-8 w-24 h-24 bg-violet-100/20 rounded-full blur-[50px]" />
-                 </div>
-               )}
-               <div className="relative flex flex-col items-center">
-                 <div className={`w-20 h-20 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-500 ${darkMode ? 'bg-slate-700' : 'bg-gradient-to-br from-blue-50 to-blue-100/80 border border-blue-200/30'}`}>
+            <div className={`rounded-xl border flex flex-col items-center justify-center p-16 text-center transition-all duration-300 flex-1 min-h-[480px] ${darkMode ? 'bg-[#161b22] border-[#30363d]' : 'bg-white border-slate-200 shadow-sm'}`}>
+               <div className="flex flex-col items-center">
+                 <div className={`w-16 h-16 rounded-xl flex items-center justify-center mb-5 ${darkMode ? 'bg-[#0f1117]' : 'bg-slate-50 border border-slate-200'}`}>
                    <svg className={`w-9 h-9 ${darkMode ? 'text-slate-500' : 'text-blue-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
                      <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
                    </svg>
@@ -1073,7 +1038,7 @@ const App: React.FC = () => {
                </div>
             </div>
           )}
-          </div>
+          </div>}
         </div>
           </>
         )}

@@ -288,13 +288,11 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
   const selectCls = "w-full px-4 py-3 bg-white border border-slate-200/80 rounded-xl text-slate-700 text-sm font-medium outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-500/10 focus:bg-white transition-all focus-visible:outline-2 focus-visible:outline-blue-500";
 
   return (
-    <div className="bg-white/90 backdrop-blur-2xl rounded-2xl shadow-[0_4px_32px_rgba(0,0,0,0.06)] border border-slate-200/60 relative overflow-hidden">
-      {/* Decorative top gradient */}
-      <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-violet-500 to-cyan-500" />
+    <div className="bg-white rounded-xl shadow-sm border border-slate-200 relative overflow-hidden">
 
       {/* 페이지 타이틀 */}
       <div className="px-6 pt-5 pb-0">
-        <h2 className={`text-lg font-black ${postType === 'blog' ? 'text-blue-700' : postType === 'card_news' ? 'text-pink-700' : 'text-amber-700'}`}>
+        <h2 className={`text-base font-bold ${postType === 'blog' ? 'text-blue-700' : postType === 'card_news' ? 'text-pink-600' : 'text-amber-600'}`}>
           {postType === 'blog' ? '📝 블로그 글 생성' : postType === 'card_news' ? '🎨 카드뉴스 생성' : '🗞️ 보도자료 생성'}
         </h2>
         <p className="text-xs text-slate-400 mt-1 font-medium">
@@ -410,7 +408,7 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
             type="button"
             onClick={handleAnalyzeKeywords}
             disabled={isAnalyzingKeywords}
-            className="w-full py-3 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 bg-gradient-to-r from-violet-600 to-blue-600 text-white hover:from-violet-700 hover:to-blue-700 shadow-md shadow-violet-500/20 disabled:opacity-50"
+            className="w-full py-2.5 rounded-lg text-sm font-semibold transition-all flex items-center justify-center gap-2 bg-blue-600 text-white hover:bg-blue-700 shadow-sm disabled:opacity-50"
           >
             <span>🔍</span>
             <span>{isAnalyzingKeywords ? '키워드 분석 중...' : '키워드 분석'}</span>
