@@ -175,7 +175,7 @@ export default function ImageGenerator({ onProgress }: Props) {
             </div>
             <div>
               <h2 className="text-lg font-bold text-slate-800">이미지 생성</h2>
-              <p className="text-xs text-slate-500">칸만 채우면 바로 이미지 생성</p>
+              <p className="text-xs text-slate-500">진료 일정 · 원내 안내물 · SNS 이미지 자동 제작</p>
             </div>
           </div>
           <div className="flex bg-slate-100/80 rounded-xl p-1">
