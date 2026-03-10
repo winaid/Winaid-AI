@@ -51,6 +51,7 @@ const StyleTab: React.FC<StyleTabProps> = ({
   const [expandedPosts, setExpandedPosts] = useState<Record<string, boolean>>({});
   const [expandedPost, setExpandedPost] = useState<string | null>(null); // "병원명::url"
   const [scoringId, setScoringId] = useState<string | null>(null);
+  const [scoringError, setScoringError] = useState<string | null>(null);
   const [editingContent, setEditingContent] = useState<Record<string, string>>({}); // id → 수정 중인 본문
   const [savingId, setSavingId] = useState<string | null>(null);
 
@@ -80,6 +81,7 @@ const StyleTab: React.FC<StyleTabProps> = ({
       }));
     } catch (e) {
       console.error('채점 실패:', e);
+      setScoringError(String(e instanceof Error ? e.message : e));
     } finally {
       setScoringId(null);
     }
@@ -311,13 +313,18 @@ const StyleTab: React.FC<StyleTabProps> = ({
                                   <div className="px-3 pb-3 bg-slate-50 border-t border-slate-100 space-y-3">
                                     {/* 채점 버튼 */}
                                     {!hasScore && post.id && (
-                                      <button
-                                        onClick={() => handleScorePost(post)}
-                                        disabled={isScoring}
-                                        className="mt-2 px-3 py-1.5 text-[11px] font-bold bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors flex items-center gap-1.5"
-                                      >
-                                        {isScoring ? <><div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />채점 중...</> : '📊 채점하기'}
-                                      </button>
+                                      <div className="mt-2 space-y-1">
+                                        <button
+                                          onClick={() => { setScoringError(null); handleScorePost(post); }}
+                                          disabled={isScoring}
+                                          className="px-3 py-1.5 text-[11px] font-bold bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors flex items-center gap-1.5"
+                                        >
+                                          {isScoring ? <><div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />채점 중...</> : '📊 채점하기'}
+                                        </button>
+                                        {scoringError && scoringId === null && (
+                                          <p className="text-[10px] text-red-500">채점 실패: {scoringError}</p>
+                                        )}
+                                      </div>
                                     )}
 
                                     {/* 오타/맞춤법 이슈 */}

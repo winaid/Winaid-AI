@@ -4,6 +4,7 @@ import { supabase } from "../lib/supabase";
 
 const GEMINI_MODEL = {
   PRO: 'gemini-3.1-pro-preview',
+  FLASH: 'gemini-3.1-flash-lite-preview',
 } as const;
 
 const getAiClient = () => {
