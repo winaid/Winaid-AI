@@ -22,6 +22,70 @@ import {
   type CategoryTemplate,
   type SavedStyleHistory,
 } from '../services/calendarTemplateService';
+import {
+  T1SpringKindergarten,
+  T2CherryBlossom,
+  T3Autumn,
+  T4KoreanTraditional,
+  T5Notebook,
+  T6Christmas,
+  type ScheduleData,
+} from './schedule-templates';
+
+/** 달력 테마 값 → React 컴포넌트 + 샘플 데이터 */
+const THEME_COMPONENT_MAP: Record<string, {
+  Component: React.ComponentType<{ data: ScheduleData; width?: number }>;
+  sample: ScheduleData;
+}> = {
+  spring_kids: {
+    Component: T1SpringKindergarten,
+    sample: {
+      clinicName: '윈에이드 치과', monthLabel: '4월', year: 2025, month: 4,
+      title: '4월 진료일정',
+      events: [{ date: 5, label: '정기휴진', type: 'closed' }, { date: 12, label: '정기휴진', type: 'closed' }, { date: 19, label: '정기휴진', type: 'closed' }, { date: 26, label: '정기휴진', type: 'closed' }],
+    },
+  },
+  cherry_blossom: {
+    Component: T2CherryBlossom,
+    sample: {
+      clinicName: '윈에이드 치과', monthLabel: '4월', year: 2025, month: 4,
+      title: '4월 진료일정',
+      events: [{ date: 5, label: '정기휴진', type: 'closed' }, { date: 12, label: '정기휴진', type: 'closed' }, { date: 19, label: '정기휴진', type: 'closed' }, { date: 26, label: '정기휴진', type: 'closed' }],
+    },
+  },
+  autumn: {
+    Component: T3Autumn,
+    sample: {
+      clinicName: '윈에이드 치과', monthLabel: '11월', year: 2025, month: 11,
+      title: '11월 진료일정',
+      events: [{ date: 5, label: '정기휴진', type: 'closed' }, { date: 12, label: '정기휴진', type: 'closed' }, { date: 19, label: '정기휴진', type: 'closed' }, { date: 26, label: '정기휴진', type: 'closed' }],
+    },
+  },
+  korean_traditional: {
+    Component: T4KoreanTraditional,
+    sample: {
+      clinicName: '윈에이드 치과', monthLabel: '1월', year: 2025, month: 1,
+      title: '1월 진료일정',
+      events: [{ date: 5, label: '정기휴진', type: 'closed' }, { date: 12, label: '정기휴진', type: 'closed' }, { date: 19, label: '정기휴진', type: 'closed' }, { date: 26, label: '정기휴진', type: 'closed' }],
+    },
+  },
+  medical_notebook: {
+    Component: T5Notebook,
+    sample: {
+      clinicName: '윈에이드 치과', monthLabel: '7월', year: 2025, month: 7,
+      title: '7월 진료일정',
+      events: [{ date: 5, label: '정기휴진', type: 'closed' }, { date: 12, label: '정기휴진', type: 'closed' }, { date: 19, label: '정기휴진', type: 'closed' }, { date: 26, label: '정기휴진', type: 'closed' }],
+    },
+  },
+  winter: {
+    Component: T6Christmas,
+    sample: {
+      clinicName: '윈에이드 치과', monthLabel: '12월', year: 2025, month: 12,
+      title: '12월 진료일정',
+      events: [{ date: 5, label: '정기휴진', type: 'closed' }, { date: 12, label: '정기휴진', type: 'closed' }, { date: 19, label: '정기휴진', type: 'closed' }, { date: 26, label: '정기휴진', type: 'closed' }],
+    },
+  },
+};
 
 type DayMark = 'closed' | 'shortened' | 'vacation';
 type TemplateCategory = 'schedule' | 'event' | 'doctor' | 'notice' | 'greeting' | 'hiring' | 'caution';
@@ -2456,191 +2520,15 @@ export default function TemplateGenerator() {
             <div className="grid grid-cols-3 gap-2">
               {CALENDAR_THEME_OPTIONS.map(t => {
                 const isSelected = calendarTheme === t.value;
-                // 공통 날짜 데이터: 첫째날=수요일(3), 5·12·19·26=일요일(휴진)
-                const firstDay = 3; // 수요일 시작
-                const closedDays = new Set([5, 12, 19, 26]);
-                const KO = ['일','월','화','수','목','금','토'];
-                // 날짜 그리드 생성 (null=빈칸)
-                const cells: (number|null)[] = [];
-                for (let i = 0; i < firstDay; i++) cells.push(null);
-                for (let d = 1; d <= 31; d++) cells.push(d);
-                while (cells.length % 7 !== 0) cells.push(null);
-                const rows: (number|null)[][] = [];
-                for (let i = 0; i < cells.length; i += 7) rows.push(cells.slice(i, i+7));
-                const displayRows = rows.slice(0, 5);
-
-                // 테마별 SVG 렌더링
-                const cx = (col: number) => 7 + col * 11.4 + 4.7; // 셀 중앙 x
-                const ry_base = 44; // 요일헤더 y
-                const dy = 11.5; // 행 간격
-
-                let svgContent: React.ReactNode;
-
-                if (t.value === 'autumn') {
-                  svgContent = (
-                    <svg viewBox="0 0 90 118" className="w-full" xmlns="http://www.w3.org/2000/svg">
-                      <rect width="90" height="118" fill="#f97316" />
-                      <text x="45" y="16" textAnchor="middle" fontSize="13">🍁</text>
-                      {/* 흰 카드 */}
-                      <rect x="4" y="22" width="82" height="91" rx="5" fill="white" />
-                      {/* 다크 헤더 */}
-                      <rect x="4" y="22" width="82" height="13" rx="5" fill="#3d3d3d" />
-                      <rect x="4" y="28" width="82" height="7" fill="#3d3d3d" />
-                      {/* 요일 헤더 */}
-                      {KO.map((d, i) => <text key={d} x={cx(i)} y={ry_base} textAnchor="middle" fontSize="5" fill={i===0?'#ef4444':i===6?'#93c5fd':'#fff'} fontWeight="800">{d}</text>)}
-                      {/* 날짜 */}
-                      {displayRows.map((row, ri) => row.map((d, ci) => {
-                        if (!d) return null;
-                        const y = ry_base + 4 + ri * dy;
-                        const isCl = closedDays.has(d);
-                        return (
-                          <g key={`${ri}-${ci}`}>
-                            <text x={cx(ci)} y={y + 6} textAnchor="middle" fontSize="6" fill={ci===0?'#dc2626':ci===6?'#3b82f6':'#1e293b'} fontWeight={isCl||d===5||d===12||d===19||d===26?'800':'400'}>{d}</text>
-                            {isCl && <><rect x={cx(ci)-8} y={y+8} width="16" height="6" rx="3" fill="#fcd34d"/><text x={cx(ci)} y={y+13} textAnchor="middle" fontSize="4" fill="#713f12" fontWeight="800">휴진</text></>}
-                          </g>
-                        );
-                      }))}
-                    </svg>
-                  );
-                } else if (t.value === 'korean_traditional') {
-                  svgContent = (
-                    <svg viewBox="0 0 90 118" className="w-full" xmlns="http://www.w3.org/2000/svg">
-                      <rect width="90" height="118" fill="#fdfaf5" />
-                      <text x="18" y="18" fontSize="18">🦢</text>
-                      <text x="65" y="14" fontSize="9">☁️</text>
-                      {/* 흰 카드 */}
-                      <rect x="4" y="22" width="82" height="92" rx="5" fill="white" stroke="#d1d5db" strokeWidth="0.5"/>
-                      {/* 요일 헤더 */}
-                      {KO.map((d, i) => <text key={d} x={cx(i)} y={ry_base} textAnchor="middle" fontSize="5" fill={i===0?'#9b1c1c':i===6?'#1e3a8a':'#111827'} fontWeight="800">{d}</text>)}
-                      <line x1="4" y1="ry_base+3" x2="86" y2="ry_base+3" stroke="#d1d5db" strokeWidth="0.5"/>
-                      {/* 날짜 */}
-                      {displayRows.map((row, ri) => row.map((d, ci) => {
-                        if (!d) return null;
-                        const y = ry_base + 4 + ri * dy;
-                        const isCl = closedDays.has(d);
-                        return (
-                          <g key={`${ri}-${ci}`}>
-                            {isCl && <circle cx={cx(ci)} cy={y+4} r="5" fill="#9b1c1c"/>}
-                            <text x={cx(ci)} y={y+6.5} textAnchor="middle" fontSize="6" fill={isCl?'#fff':ci===0?'#9b1c1c':ci===6?'#1e3a8a':'#111827'} fontWeight={isCl?'800':'400'}>{d}</text>
-                            {isCl && <text x={cx(ci)} y={y+14} textAnchor="middle" fontSize="4" fill="#9b1c1c" fontWeight="700">휴진</text>}
-                          </g>
-                        );
-                      }))}
-                      {/* 하단 초록 언덕 */}
-                      <rect x="4" y="110" width="82" height="4" rx="2" fill="#22c55e" opacity="0.6"/>
-                    </svg>
-                  );
-                } else if (t.value === 'winter') {
-                  svgContent = (
-                    <svg viewBox="0 0 90 118" className="w-full" xmlns="http://www.w3.org/2000/svg">
-                      <rect width="90" height="118" fill="#e0f2fe" />
-                      <text x="45" y="16" textAnchor="middle" fontSize="13">❄️</text>
-                      {/* 흰 카드 */}
-                      <rect x="4" y="22" width="82" height="91" rx="5" fill="white" />
-                      {/* 네이비 헤더 */}
-                      <rect x="4" y="22" width="82" height="13" rx="5" fill="#1e3a8a" />
-                      <rect x="4" y="28" width="82" height="7" fill="#1e3a8a" />
-                      {/* 요일 헤더 */}
-                      {KO.map((d, i) => <text key={d} x={cx(i)} y={ry_base} textAnchor="middle" fontSize="5" fill={i===0?'#fca5a5':i===6?'#bfdbfe':'#e2e8f0'} fontWeight="800">{d}</text>)}
-                      {/* 날짜 */}
-                      {displayRows.map((row, ri) => row.map((d, ci) => {
-                        if (!d) return null;
-                        const y = ry_base + 4 + ri * dy;
-                        const isCl = closedDays.has(d);
-                        return (
-                          <g key={`${ri}-${ci}`}>
-                            {isCl && <circle cx={cx(ci)} cy={y+4} r="5" fill="#facc15"/>}
-                            <text x={cx(ci)} y={y+6.5} textAnchor="middle" fontSize="6" fill={isCl?'#713f12':ci===0?'#dc2626':ci===6?'#1e40af':'#1e293b'} fontWeight={isCl?'800':'400'}>{d}</text>
-                            {isCl && <text x={cx(ci)} y={y+14} textAnchor="middle" fontSize="3.5" fill="#92400e" fontWeight="700">휴진</text>}
-                          </g>
-                        );
-                      }))}
-                    </svg>
-                  );
-                } else if (t.value === 'cherry_blossom') {
-                  svgContent = (
-                    <svg viewBox="0 0 90 118" className="w-full" xmlns="http://www.w3.org/2000/svg">
-                      <defs><linearGradient id="cb_bg" x1="0" y1="0" x2="0.3" y2="1"><stop offset="0%" stopColor="#f9a8d4"/><stop offset="100%" stopColor="#db2777"/></linearGradient></defs>
-                      <rect width="90" height="118" fill="url(#cb_bg)" />
-                      <text x="45" y="16" textAnchor="middle" fontSize="13">🌸</text>
-                      {/* 흰 카드 */}
-                      <rect x="4" y="22" width="82" height="91" rx="5" fill="white" />
-                      {/* 요일 헤더 */}
-                      {KO.map((d, i) => <text key={d} x={cx(i)} y={ry_base} textAnchor="middle" fontSize="5" fill={i===0?'#f97316':i===6?'#93c5fd':'#1f2937'} fontWeight="800">{d}</text>)}
-                      {/* 날짜 */}
-                      {displayRows.map((row, ri) => row.map((d, ci) => {
-                        if (!d) return null;
-                        const y = ry_base + 4 + ri * dy;
-                        const isCl = closedDays.has(d);
-                        return (
-                          <g key={`${ri}-${ci}`}>
-                            {isCl && <circle cx={cx(ci)} cy={y+4} r="5" fill="#7c3aed"/>}
-                            <text x={cx(ci)} y={y+6.5} textAnchor="middle" fontSize="6" fill={isCl?'#fff':ci===0?'#f97316':ci===6?'#3b82f6':'#1f2937'} fontWeight={isCl?'800':'400'}>{d}</text>
-                            {isCl && <text x={cx(ci)} y={y+14} textAnchor="middle" fontSize="3.5" fill="#7c3aed" fontWeight="700">휴진</text>}
-                          </g>
-                        );
-                      }))}
-                    </svg>
-                  );
-                } else if (t.value === 'spring_kids') {
-                  svgContent = (
-                    <svg viewBox="0 0 90 118" className="w-full" xmlns="http://www.w3.org/2000/svg">
-                      <rect width="90" height="118" fill="#bfdbfe" />
-                      <text x="45" y="16" textAnchor="middle" fontSize="13">🌼</text>
-                      {/* 흰 카드 */}
-                      <rect x="4" y="22" width="82" height="91" rx="5" fill="white" />
-                      {/* 핑크 헤더 */}
-                      <rect x="4" y="22" width="82" height="13" rx="5" fill="#f9a8d4" />
-                      <rect x="4" y="28" width="82" height="7" fill="#f9a8d4" />
-                      {/* 요일 헤더 (컬러풀) */}
-                      {KO.map((d, i) => <text key={d} x={cx(i)} y={ry_base} textAnchor="middle" fontSize="5" fill={i===0?'#ec4899':i===6?'#3b82f6':'#334155'} fontWeight="800">{d}</text>)}
-                      {/* 날짜 */}
-                      {displayRows.map((row, ri) => row.map((d, ci) => {
-                        if (!d) return null;
-                        const y = ry_base + 4 + ri * dy;
-                        const isCl = closedDays.has(d);
-                        return (
-                          <g key={`${ri}-${ci}`}>
-                            {isCl && <circle cx={cx(ci)} cy={y+4} r="5" fill="#f472b6"/>}
-                            <text x={cx(ci)} y={y+6.5} textAnchor="middle" fontSize="6" fill={isCl?'#fff':ci===0?'#ec4899':ci===6?'#3b82f6':'#1e293b'} fontWeight={isCl?'800':'400'}>{d}</text>
-                            {isCl && <text x={cx(ci)} y={y+14} textAnchor="middle" fontSize="3.5" fill="#ec4899" fontWeight="700">휴진</text>}
-                          </g>
-                        );
-                      }))}
-                      {/* 하단 잔디 */}
-                      <rect x="4" y="110" width="82" height="3" rx="2" fill="#4ade80" opacity="0.7"/>
-                    </svg>
-                  );
-                } else { // medical_notebook
-                  const EN = ['일','월','화','수','목','금','토'];
-                  svgContent = (
-                    <svg viewBox="0 0 90 118" className="w-full" xmlns="http://www.w3.org/2000/svg">
-                      <rect width="90" height="118" fill="#3b9fe8" />
-                      <text x="45" y="15" textAnchor="middle" fontSize="14">👩‍⚕️</text>
-                      {/* 흰 노트북 카드 */}
-                      <rect x="4" y="21" width="82" height="92" rx="6" fill="white" />
-                      {/* 링바인더 */}
-                      {[13,24,35,46,57,68,77].map(bx => <ellipse key={bx} cx={bx} cy={21} rx="3.5" ry="3.5" fill="#fcd34d" stroke="#f59e0b" strokeWidth="1"/>)}
-                      {/* 요일 헤더 */}
-                      {EN.map((d, i) => <text key={d} x={cx(i)} y={ry_base} textAnchor="middle" fontSize="4.5" fill={i===0?'#dc2626':i===6?'#2563eb':'#1e3a8a'} fontWeight="800">{d}</text>)}
-                      {/* 노란 밑줄 */}
-                      <rect x="10" y={ry_base+2} width="70" height="2.5" rx="1.2" fill="#fcd34d"/>
-                      {/* 날짜 */}
-                      {displayRows.map((row, ri) => row.map((d, ci) => {
-                        if (!d) return null;
-                        const y = ry_base + 7 + ri * dy;
-                        const isCl = closedDays.has(d);
-                        return (
-                          <g key={`${ri}-${ci}`}>
-                            {isCl && <rect x={cx(ci)-5.5} y={y-1} width="11" height="10" fill="#ef4444"/>}
-                            <text x={cx(ci)} y={y+6.5} textAnchor="middle" fontSize="6" fill={isCl?'#fff':ci===0?'#dc2626':ci===6?'#2563eb':'#1e3a8a'} fontWeight={isCl?'800':'400'}>{d}</text>
-                            {isCl && <text x={cx(ci)} y={y+14} textAnchor="middle" fontSize="3.5" fill="#ef4444" fontWeight="700">휴진</text>}
-                          </g>
-                        );
-                      }))}
-                    </svg>
-                  );
-                }
+                // 실제 React 템플릿 컴포넌트를 썸네일로 사용
+                const themeEntry = THEME_COMPONENT_MAP[t.value];
+                const ThemeComp = themeEntry?.Component;
+                const themeSample = themeEntry?.sample;
+                const svgContent = ThemeComp && themeSample ? (
+                  <div style={{ overflow: 'hidden', height: 158, pointerEvents: 'none' }}>
+                    <ThemeComp data={themeSample} width={180} />
+                  </div>
+                ) : null;
 
                 return (
                   <button
