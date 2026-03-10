@@ -499,7 +499,7 @@ export const getHospitalStylePromptForGeneration = async (
  * Gemini FLASH로 블로그 글 오타/맞춤법 + 의료광고법 채점
  */
 export const scoreCrawledPost = async (content: string): Promise<CrawledPostScore> => {
-  const apiKey = getApiKey() || import.meta.env.VITE_GEMINI_API_KEY || import.meta.env.VITE_GEMINI_API_KEY_2;
+  const apiKey = localStorage.getItem('GEMINI_API_KEY') || getApiKey() || import.meta.env.VITE_GEMINI_API_KEY || import.meta.env.VITE_GEMINI_API_KEY_2;
   if (!apiKey) throw new Error('GEMINI_API_KEY 없음');
   const ai = new GoogleGenAI({ apiKey });
 

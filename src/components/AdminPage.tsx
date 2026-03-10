@@ -930,18 +930,34 @@ const AdminPage: React.FC<AdminPageProps> = ({ onAdminVerified }) => {
                           !selectedHospitalName ? 'bg-blue-50 border-blue-200 text-blue-600' : 'border-slate-200 text-slate-500 hover:border-slate-300'
                         }`}
                       >전체 ({uniqueHospitals.length})</button>
-                      {uniqueHospitals.map(([name, managers]) => (
-                        <button
-                          key={name}
-                          onClick={() => setSelectedHospitalName(name)}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all border flex-none ${
-                            selectedHospitalName === name ? 'bg-blue-50 border-blue-200 text-blue-600' : 'border-slate-200 text-slate-500 hover:border-slate-300'
-                          }`}
-                        >
-                          {name}
-                          <span className="ml-1 text-[10px] text-slate-400">({managers.length}명)</span>
-                        </button>
-                      ))}
+                      {uniqueHospitals.map(([name, managers]) => {
+                        // 담당자 데이터 (이름 + 직급) 추출
+                        const hospitalEntries = team.hospitals.filter(h => h.name.replace(/ \(.*\)$/, '') === name);
+                        const uniqueManagers = Array.from(new Map(hospitalEntries.map(h => [h.manager, h])).values());
+                        return (
+                          <button
+                            key={name}
+                            onClick={() => setSelectedHospitalName(name)}
+                            className={`px-3 py-2 rounded-xl text-left transition-all border flex-none flex flex-col gap-0.5 min-w-[120px] ${
+                              selectedHospitalName === name ? 'bg-blue-50 border-blue-300 shadow-sm' : 'border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm'
+                            }`}
+                          >
+                            <span className={`text-xs font-bold block leading-tight ${selectedHospitalName === name ? 'text-blue-700' : 'text-slate-700'}`}>{name}</span>
+                            <div className="flex flex-wrap gap-1 mt-0.5">
+                              {uniqueManagers.map(h => {
+                                const parts = h.manager.replace('님', '').split(' ');
+                                const managerName = parts[0] || '';
+                                const rank = parts[1] || '';
+                                return (
+                                  <span key={h.manager} className={`text-[10px] font-medium leading-none ${selectedHospitalName === name ? 'text-blue-500' : 'text-slate-400'}`}>
+                                    {managerName} <span className={`${selectedHospitalName === name ? 'text-blue-400' : 'text-slate-300'}`}>{rank}</span>
+                                  </span>
+                                );
+                              })}
+                            </div>
+                          </button>
+                        );
+                      })}
                     </div>
                     <button
                       onClick={() => scrollHospitals(200)}
