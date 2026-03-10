@@ -815,59 +815,67 @@ const App: React.FC = () => {
             </div>
 
             {/* 콘텐츠 생성 - 대형 카드 3개 */}
-            <div className="w-full max-w-3xl grid grid-cols-3 gap-4 mt-8 mb-4">
+            <div className="w-full max-w-3xl flex flex-col gap-3 mt-8 mb-4">
               {([
                 {
                   id: 'blog' as ContentTabType,
                   label: '블로그',
-                  desc: '네이버 스마트블록 최적화\n의료 블로그 자동 생성',
-                  tags: ['SEO 최적화', '의료법 검증'],
-                  bg: darkMode ? 'bg-blue-500/10 hover:bg-blue-500/15' : 'bg-white hover:bg-blue-50/60',
-                  border: darkMode ? 'border-blue-500/20 hover:border-blue-400/40' : 'border-slate-200 hover:border-blue-200',
-                  iconBg: darkMode ? 'bg-blue-500/20' : 'bg-blue-100',
-                  iconColor: darkMode ? 'text-blue-400' : 'text-blue-600',
+                  desc: '네이버 스마트블록 최적화 의료 블로그 자동 생성',
+                  tags: ['SEO 최적화', '의료법 검증', 'AI 이미지'],
+                  accentBg: darkMode ? 'bg-blue-500/15' : 'bg-blue-50',
+                  accentColor: darkMode ? 'text-blue-400' : 'text-blue-600',
+                  accentBorder: darkMode ? 'border-r border-blue-500/20' : 'border-r border-blue-100',
+                  cardBg: darkMode ? 'bg-[#161b22] border-[#30363d] hover:border-blue-500/30' : 'bg-white border-slate-200 hover:border-blue-200 shadow-sm hover:shadow-md',
                   tagBg: darkMode ? 'bg-blue-500/15 text-blue-400' : 'bg-blue-50 text-blue-600',
-                  icon: (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" className="w-8 h-8"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>),
+                  btnBg: 'bg-blue-600 hover:bg-blue-700 text-white',
+                  icon: (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>),
                 },
                 {
                   id: 'card_news' as ContentTabType,
                   label: '카드뉴스',
-                  desc: 'SNS 이미지 슬라이드\n원고 + 이미지 자동 제작',
-                  tags: ['슬라이드 구성', '이미지 생성'],
-                  bg: darkMode ? 'bg-pink-500/10 hover:bg-pink-500/15' : 'bg-white hover:bg-pink-50/60',
-                  border: darkMode ? 'border-pink-500/20 hover:border-pink-400/40' : 'border-slate-200 hover:border-pink-200',
-                  iconBg: darkMode ? 'bg-pink-500/20' : 'bg-pink-100',
-                  iconColor: darkMode ? 'text-pink-400' : 'text-pink-600',
+                  desc: 'SNS 이미지 슬라이드 원고 + 이미지 자동 제작',
+                  tags: ['슬라이드 구성', '이미지 생성', '디자인 템플릿'],
+                  accentBg: darkMode ? 'bg-pink-500/15' : 'bg-pink-50',
+                  accentColor: darkMode ? 'text-pink-400' : 'text-pink-600',
+                  accentBorder: darkMode ? 'border-r border-pink-500/20' : 'border-r border-pink-100',
+                  cardBg: darkMode ? 'bg-[#161b22] border-[#30363d] hover:border-pink-500/30' : 'bg-white border-slate-200 hover:border-pink-200 shadow-sm hover:shadow-md',
                   tagBg: darkMode ? 'bg-pink-500/15 text-pink-400' : 'bg-pink-50 text-pink-600',
-                  icon: (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" className="w-8 h-8"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>),
+                  btnBg: 'bg-pink-600 hover:bg-pink-700 text-white',
+                  icon: (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>),
                 },
                 {
                   id: 'press' as ContentTabType,
                   label: '보도자료',
-                  desc: '언론 배포용 전문\n보도자료 작성',
-                  tags: ['전문 어조', '병원 정보 연동'],
-                  bg: darkMode ? 'bg-amber-500/10 hover:bg-amber-500/15' : 'bg-white hover:bg-amber-50/60',
-                  border: darkMode ? 'border-amber-500/20 hover:border-amber-400/40' : 'border-slate-200 hover:border-amber-200',
-                  iconBg: darkMode ? 'bg-amber-500/20' : 'bg-amber-100',
-                  iconColor: darkMode ? 'text-amber-400' : 'text-amber-600',
+                  desc: '언론 배포용 전문 보도자료 작성',
+                  tags: ['보도자료 포맷', '전문 어조', '병원 정보 연동'],
+                  accentBg: darkMode ? 'bg-amber-500/15' : 'bg-amber-50',
+                  accentColor: darkMode ? 'text-amber-400' : 'text-amber-600',
+                  accentBorder: darkMode ? 'border-r border-amber-500/20' : 'border-r border-amber-100',
+                  cardBg: darkMode ? 'bg-[#161b22] border-[#30363d] hover:border-amber-500/30' : 'bg-white border-slate-200 hover:border-amber-200 shadow-sm hover:shadow-md',
                   tagBg: darkMode ? 'bg-amber-500/15 text-amber-400' : 'bg-amber-50 text-amber-600',
-                  icon: (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" className="w-8 h-8"><path d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10l6 6v8a2 2 0 01-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>),
+                  btnBg: 'bg-amber-600 hover:bg-amber-700 text-white',
+                  icon: (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7"><path d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10l6 6v8a2 2 0 01-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>),
                 },
               ]).map(item => (
                 <button
                   key={item.id}
                   onClick={() => setContentTab(item.id)}
-                  className={`group text-left rounded-2xl border p-6 transition-all duration-200 ${item.bg} ${item.border} ${darkMode ? '' : 'shadow-sm hover:shadow-md'}`}
+                  className={`group flex items-stretch rounded-2xl border transition-all duration-200 overflow-hidden ${item.cardBg}`}
                 >
-                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-4 transition-transform duration-200 group-hover:scale-105 ${item.iconBg} ${item.iconColor}`}>
+                  <div className={`flex items-center justify-center w-20 flex-shrink-0 ${item.accentBg} ${item.accentBorder} ${item.accentColor}`}>
                     {item.icon}
                   </div>
-                  <h3 className={`text-lg font-bold mb-1.5 ${darkMode ? 'text-slate-100' : 'text-slate-900'}`}>{item.label}</h3>
-                  <p className={`text-xs leading-relaxed mb-4 whitespace-pre-line ${darkMode ? 'text-slate-500' : 'text-slate-500'}`}>{item.desc}</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {item.tags.map((t, i) => (
-                      <span key={i} className={`text-[11px] font-semibold px-2.5 py-1 rounded-lg ${item.tagBg}`}>{t}</span>
-                    ))}
+                  <div className="flex-1 flex flex-col justify-center px-5 py-4 text-left min-w-0">
+                    <h3 className={`text-base font-bold mb-1 ${darkMode ? 'text-slate-100' : 'text-slate-900'}`}>{item.label}</h3>
+                    <p className={`text-xs leading-relaxed mb-2.5 ${darkMode ? 'text-slate-500' : 'text-slate-500'}`}>{item.desc}</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {item.tags.map((t, i) => (
+                        <span key={i} className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-lg ${item.tagBg}`}>{t}</span>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="flex items-center px-5 flex-shrink-0">
+                    <span className={`text-xs font-bold px-4 py-2 rounded-xl transition-colors ${item.btnBg}`}>시작하기</span>
                   </div>
                 </button>
               ))}
@@ -936,17 +944,9 @@ const App: React.FC = () => {
         ) : (
           <>
         {/* 블로그/카드뉴스/언론보도 - Genspark 센터→분리 레이아웃 */}
-        <div className={`transition-all duration-500 ease-in-out ${
-          hasGenerated
-            ? 'flex flex-col lg:flex-row gap-5 lg:items-start'
-            : 'flex justify-center'
-        }`}>
+        <div className="flex flex-col lg:flex-row gap-5 lg:items-start">
           {/* 입력 폼 */}
-          <div className={`transition-all duration-500 ease-in-out ${
-            hasGenerated
-              ? 'w-full lg:w-[340px] xl:w-[360px] lg:flex-none'
-              : 'w-full max-w-[600px]'
-          }`}>
+          <div className="w-full lg:w-[340px] xl:w-[380px] lg:flex-none">
             <Suspense fallback={<FormSkeleton />}>
               <InputForm
                 onSubmit={(req) => { setHasGenerated(true); handleGenerate(req); }}
@@ -957,8 +957,8 @@ const App: React.FC = () => {
             </Suspense>
           </div>
 
-          {/* 결과 영역 - 생성 후에만 표시 */}
-          {hasGenerated && <div className="flex flex-col min-h-[480px] lg:flex-1 min-w-0">
+          {/* 결과 영역 - 항상 표시 */}
+          <div className="flex flex-col min-h-[480px] lg:flex-1 min-w-0">
           {cardNewsPrompts && cardNewsPrompts.length > 0 ? (
             <Suspense fallback={<ContentSkeleton />}>
               <PromptPreview
@@ -1025,7 +1025,7 @@ const App: React.FC = () => {
                </div>
             </div>
           )}
-          </div>}
+          </div>
         </div>
           </>
         )}
