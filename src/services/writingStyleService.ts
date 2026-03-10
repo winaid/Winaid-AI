@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type } from "@google/genai";
-import { LearnedWritingStyle } from "../types";
+import { LearnedWritingStyle, CrawledPost, CrawledPostScore } from "../types";
 import { supabase } from "../lib/supabase";
 
 const GEMINI_MODEL = {
@@ -481,4 +481,191 @@ export const getHospitalStylePromptForGeneration = async (
   const profile = styleProfileCache[hospitalName];
   if (!profile?.style_profile) return null;
   return getStylePromptForGeneration(profile.style_profile);
+};
+
+// ============================================================
+// 크롤링 글 채점 + DB 저장/조회
+// ============================================================
+
+/**
+ * Gemini FLASH로 블로그 글 오타/맞춤법 + 의료광고법 채점
+ */
+export const scoreCrawledPost = async (content: string): Promise<CrawledPostScore> => {
+  const apiKey = (import.meta as any).env?.VITE_GEMINI_API_KEY;
+  if (!apiKey) throw new Error('GEMINI_API_KEY 없음');
+  const ai = new GoogleGenAI({ apiKey });
+
+  const prompt = `당신은 한국어 맞춤법 전문가이자 의료광고법 전문가입니다.
+아래 블로그 글을 분석하여 정확히 JSON 형식으로만 응답하세요.
+
+[분석 항목]
+1. 오타/맞춤법: 띄어쓰기, 맞춤법, 오타 오류 (최대 10건)
+2. 의료광고법: 완치/보장/최고/유일/호전/개선/탁월/효과적/검증된 등 금지 표현 (최대 10건)
+
+[점수 기준]
+- score_typo: 오타/맞춤법이 전혀 없으면 100점, 오류 1건당 -5점
+- score_medical_law: 위반 없으면 100점, critical -20점, high -10점, medium -5점
+- score_total: (score_typo + score_medical_law) / 2
+
+[응답 JSON]
+{
+  "score_typo": 숫자,
+  "score_medical_law": 숫자,
+  "score_total": 숫자,
+  "typo_issues": [{"original": "틀린 표현", "correction": "올바른 표현", "context": "앞뒤 문장"}],
+  "law_issues": [{"word": "위반 표현", "severity": "critical|high|medium|low", "replacement": ["대체 표현1"], "context": "앞뒤 문장"}]
+}
+
+[분석할 글]
+${content.slice(0, 3000)}`;
+
+  const response = await ai.models.generateContent({
+    model: GEMINI_MODEL.FLASH,
+    contents: prompt,
+    config: { responseMimeType: 'application/json', temperature: 0.1 },
+  });
+
+  const raw = response.text || '{}';
+  try {
+    const parsed = JSON.parse(raw.match(/\{[\s\S]*\}/)?.[0] || raw);
+    return {
+      score_typo: Math.max(0, Math.min(100, parsed.score_typo ?? 100)),
+      score_medical_law: Math.max(0, Math.min(100, parsed.score_medical_law ?? 100)),
+      score_total: Math.max(0, Math.min(100, parsed.score_total ?? 100)),
+      typo_issues: parsed.typo_issues || [],
+      law_issues: parsed.law_issues || [],
+    };
+  } catch {
+    return { score_typo: 100, score_medical_law: 100, score_total: 100, typo_issues: [], law_issues: [] };
+  }
+};
+
+/**
+ * 크롤링 글을 Supabase에 저장 (upsert, 병원별 최대 10개는 DB 트리거로 자동 관리)
+ */
+export const saveCrawledPost = async (
+  hospitalName: string,
+  url: string,
+  content: string,
+  score?: CrawledPostScore
+): Promise<CrawledPost | null> => {
+  const record: Record<string, any> = {
+    hospital_name: hospitalName,
+    url,
+    content,
+    crawled_at: new Date().toISOString(),
+  };
+  if (score) {
+    record.score_typo = score.score_typo;
+    record.score_medical_law = score.score_medical_law;
+    record.score_total = score.score_total;
+    record.typo_issues = score.typo_issues;
+    record.law_issues = score.law_issues;
+    record.scored_at = new Date().toISOString();
+  }
+  const { data, error } = await supabase
+    .from('hospital_crawled_posts')
+    .upsert(record, { onConflict: 'hospital_name,url' })
+    .select()
+    .single();
+  if (error) { console.error('saveCrawledPost 오류:', error); return null; }
+  return data as CrawledPost;
+};
+
+/**
+ * 채점 결과만 업데이트
+ */
+export const updateCrawledPostScore = async (id: string, score: CrawledPostScore): Promise<void> => {
+  await supabase
+    .from('hospital_crawled_posts')
+    .update({
+      score_typo: score.score_typo,
+      score_medical_law: score.score_medical_law,
+      score_total: score.score_total,
+      typo_issues: score.typo_issues,
+      law_issues: score.law_issues,
+      scored_at: new Date().toISOString(),
+    })
+    .eq('id', id);
+};
+
+/**
+ * 수정된 본문 저장
+ */
+export const updateCrawledPostContent = async (id: string, correctedContent: string): Promise<void> => {
+  await supabase
+    .from('hospital_crawled_posts')
+    .update({ corrected_content: correctedContent })
+    .eq('id', id);
+};
+
+/**
+ * 병원별 크롤링 글 조회 (최대 10개, 최신순)
+ */
+export const getCrawledPosts = async (hospitalName: string): Promise<CrawledPost[]> => {
+  const { data } = await supabase
+    .from('hospital_crawled_posts')
+    .select('*')
+    .eq('hospital_name', hospitalName)
+    .order('crawled_at', { ascending: false })
+    .limit(10);
+  return (data || []) as CrawledPost[];
+};
+
+/**
+ * 전체 병원 크롤링 글 조회 → { 병원명: [글...] } 형태
+ */
+export const getAllCrawledPostsSummary = async (): Promise<Record<string, CrawledPost[]>> => {
+  const { data } = await supabase
+    .from('hospital_crawled_posts')
+    .select('*')
+    .order('crawled_at', { ascending: false });
+  const result: Record<string, CrawledPost[]> = {};
+  for (const post of (data || []) as CrawledPost[]) {
+    if (!result[post.hospital_name]) result[post.hospital_name] = [];
+    if (result[post.hospital_name].length < 10) result[post.hospital_name].push(post);
+  }
+  return result;
+};
+
+/**
+ * 전체 병원 자동 크롤링 + 채점
+ * URL이 등록된 병원 전체를 순차 처리
+ */
+export const crawlAndScoreAllHospitals = async (
+  onProgress?: (msg: string, done: number, total: number) => void
+): Promise<void> => {
+  const API_BASE_URL = (import.meta as any).env?.VITE_CRAWLER_URL || '';
+  const profiles = await getAllStyleProfiles();
+  const targets = profiles.filter(p => p.naver_blog_url);
+  const total = targets.length;
+
+  for (let i = 0; i < targets.length; i++) {
+    const p = targets[i];
+    onProgress?.(`[${i + 1}/${total}] ${p.hospital_name} 크롤링 중...`, i, total);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/naver/crawl-hospital-blog`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ blogUrl: p.naver_blog_url, maxPosts: 10 }),
+      });
+      if (!res.ok) continue;
+      const crawlData = await res.json();
+      const posts: { url: string; content: string }[] = crawlData.posts || [];
+
+      for (const post of posts) {
+        onProgress?.(`[${i + 1}/${total}] ${p.hospital_name} 채점 중...`, i, total);
+        try {
+          const score = await scoreCrawledPost(post.content);
+          await saveCrawledPost(p.hospital_name, post.url, post.content, score);
+        } catch {
+          await saveCrawledPost(p.hospital_name, post.url, post.content);
+        }
+        await new Promise(r => setTimeout(r, 300));
+      }
+    } catch (e) {
+      console.warn(`${p.hospital_name} 크롤링 실패:`, e);
+    }
+  }
+  onProgress?.('전체 완료!', total, total);
 };

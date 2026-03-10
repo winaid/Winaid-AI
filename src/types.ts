@@ -279,3 +279,28 @@ export interface WebSearchMatch {
   snippet: string;
   matchCount: number; // 정확히 일치하는 문장 개수
 }
+
+// 크롤링된 병원 블로그 글 채점 결과
+export interface CrawledPostScore {
+  score_typo: number;        // 오타/맞춤법 점수 (0~100, 높을수록 좋음)
+  score_medical_law: number; // 의료광고법 준수 점수 (0~100)
+  score_total: number;       // 종합 점수
+  typo_issues: Array<{ original: string; correction: string; context: string }>;
+  law_issues: Array<{ word: string; severity: 'critical' | 'high' | 'medium' | 'low'; replacement: string[]; context: string }>;
+}
+
+// 병원 크롤링 글 DB 레코드
+export interface CrawledPost {
+  id: string;
+  hospital_name: string;
+  url: string;
+  content: string;
+  score_typo?: number;
+  score_medical_law?: number;
+  score_total?: number;
+  typo_issues?: CrawledPostScore['typo_issues'];
+  law_issues?: CrawledPostScore['law_issues'];
+  corrected_content?: string;
+  crawled_at: string;
+  scored_at?: string;
+}

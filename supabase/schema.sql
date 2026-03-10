@@ -347,6 +347,59 @@ CREATE TRIGGER update_hospital_style_profiles_updated_at
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
 
 -- ============================================
+-- 11. Hospital Crawled Posts (병원별 크롤링 글 보관 + 채점)
+-- ============================================
+CREATE TABLE IF NOT EXISTS public.hospital_crawled_posts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  hospital_name TEXT NOT NULL,
+  url TEXT NOT NULL,
+  content TEXT,
+  score_typo INTEGER,
+  score_medical_law INTEGER,
+  score_total INTEGER,
+  typo_issues JSONB DEFAULT '[]',
+  law_issues JSONB DEFAULT '[]',
+  corrected_content TEXT,
+  crawled_at TIMESTAMPTZ DEFAULT NOW(),
+  scored_at TIMESTAMPTZ,
+  UNIQUE(hospital_name, url)
+);
+
+ALTER TABLE public.hospital_crawled_posts ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Authenticated users can view crawled posts" ON public.hospital_crawled_posts
+  FOR SELECT USING (auth.role() = 'authenticated');
+CREATE POLICY "Authenticated users can insert crawled posts" ON public.hospital_crawled_posts
+  FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "Authenticated users can update crawled posts" ON public.hospital_crawled_posts
+  FOR UPDATE USING (auth.role() = 'authenticated');
+CREATE POLICY "Authenticated users can delete crawled posts" ON public.hospital_crawled_posts
+  FOR DELETE USING (auth.role() = 'authenticated');
+
+CREATE INDEX IF NOT EXISTS idx_crawled_posts_hospital ON public.hospital_crawled_posts(hospital_name);
+CREATE INDEX IF NOT EXISTS idx_crawled_posts_crawled_at ON public.hospital_crawled_posts(crawled_at DESC);
+
+CREATE OR REPLACE FUNCTION limit_crawled_posts_per_hospital()
+RETURNS TRIGGER AS $$
+BEGIN
+  DELETE FROM public.hospital_crawled_posts
+  WHERE hospital_name = NEW.hospital_name
+    AND id NOT IN (
+      SELECT id FROM public.hospital_crawled_posts
+      WHERE hospital_name = NEW.hospital_name
+      ORDER BY crawled_at DESC
+      LIMIT 10
+    );
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_limit_crawled_posts ON public.hospital_crawled_posts;
+CREATE TRIGGER trg_limit_crawled_posts
+  AFTER INSERT ON public.hospital_crawled_posts
+  FOR EACH ROW EXECUTE FUNCTION limit_crawled_posts_per_hospital();
+
+-- ============================================
 -- 완료!
 -- ============================================
 -- 다음 단계:

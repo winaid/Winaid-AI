@@ -8,7 +8,23 @@ import {
   saveHospitalBlogUrl,
   crawlAndLearnHospitalStyle,
   HospitalStyleProfile,
+  scoreCrawledPost,
+  saveCrawledPost,
+  updateCrawledPostScore,
+  updateCrawledPostContent,
+  getCrawledPosts,
+  getAllCrawledPostsSummary,
+  crawlAndScoreAllHospitals,
 } from '../services/writingStyleService';
+import { CrawledPost } from '../types';
+
+// 점수 뱃지 색상
+const scoreBadgeClass = (score?: number) => {
+  if (score === undefined || score === null) return 'bg-slate-100 text-slate-400';
+  if (score >= 90) return 'bg-green-100 text-green-700';
+  if (score >= 70) return 'bg-orange-100 text-orange-700';
+  return 'bg-red-100 text-red-600';
+};
 
 // ============================================================
 // StyleTab 컴포넌트 (말투 학습 탭 - 팀 필터 포함)
@@ -19,16 +35,69 @@ interface StyleTabProps {
   setBlogUrlInputs: React.Dispatch<React.SetStateAction<Record<string, string>>>;
   crawlingStatus: Record<string, { loading: boolean; progress: string; error?: string }>;
   crawledPosts: Record<string, { url: string; content: string }[]>;
+  dbPosts: Record<string, CrawledPost[]>;
+  setDbPosts: React.Dispatch<React.SetStateAction<Record<string, CrawledPost[]>>>;
   onSaveUrl: (hospitalName: string, teamId: number) => void;
   onCrawl: (hospitalName: string, teamId: number) => void;
+  crawlAllStatus: { loading: boolean; progress: string };
+  onCrawlAll: () => void;
 }
 
 const StyleTab: React.FC<StyleTabProps> = ({
-  styleProfiles, blogUrlInputs, setBlogUrlInputs, crawlingStatus, crawledPosts, onSaveUrl, onCrawl
+  styleProfiles, blogUrlInputs, setBlogUrlInputs, crawlingStatus, crawledPosts,
+  dbPosts, setDbPosts, onSaveUrl, onCrawl, crawlAllStatus, onCrawlAll,
 }) => {
   const [selectedTeam, setSelectedTeam] = useState<number>(TEAM_DATA[0].id);
   const [expandedPosts, setExpandedPosts] = useState<Record<string, boolean>>({});
   const [expandedPost, setExpandedPost] = useState<string | null>(null); // "병원명::url"
+  const [scoringId, setScoringId] = useState<string | null>(null);
+  const [editingContent, setEditingContent] = useState<Record<string, string>>({}); // id → 수정 중인 본문
+  const [savingId, setSavingId] = useState<string | null>(null);
+
+  // 글 채점
+  const handleScorePost = async (post: CrawledPost) => {
+    setScoringId(post.id);
+    try {
+      const score = await scoreCrawledPost(post.content);
+      await updateCrawledPostScore(post.id, score);
+      setDbPosts(prev => ({
+        ...prev,
+        [post.hospital_name]: (prev[post.hospital_name] || []).map(p =>
+          p.id === post.id ? { ...p, ...score, scored_at: new Date().toISOString() } : p
+        ),
+      }));
+    } catch (e) {
+      console.error('채점 실패:', e);
+    } finally {
+      setScoringId(null);
+    }
+  };
+
+  // 오타 수정 적용
+  const applyCorrection = (postId: string, original: string, correction: string) => {
+    setEditingContent(prev => {
+      const current = prev[postId] ?? '';
+      return { ...prev, [postId]: current.replace(new RegExp(original.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), correction) };
+    });
+  };
+
+  // 수정본 저장
+  const handleSaveContent = async (post: CrawledPost) => {
+    const corrected = editingContent[post.id];
+    if (!corrected) return;
+    setSavingId(post.id);
+    try {
+      await updateCrawledPostContent(post.id, corrected);
+      setDbPosts(prev => ({
+        ...prev,
+        [post.hospital_name]: (prev[post.hospital_name] || []).map(p =>
+          p.id === post.id ? { ...p, corrected_content: corrected } : p
+        ),
+      }));
+    } finally {
+      setSavingId(null);
+    }
+  };
 
   const team = TEAM_DATA.find(t => t.id === selectedTeam)!;
   // 고유 병원명만 추출
@@ -38,13 +107,31 @@ const StyleTab: React.FC<StyleTabProps> = ({
 
   return (
     <div className="space-y-4">
-      {/* 설명 */}
+      {/* 설명 + 전체 자동 크롤링 버튼 */}
       <div className="bg-violet-50 border border-violet-200 rounded-2xl p-5">
-        <h2 className="text-base font-bold text-violet-800 mb-1">병원별 네이버 블로그 말투 학습</h2>
-        <p className="text-sm text-violet-600">
-          각 병원의 네이버 블로그 URL을 입력 후 <strong>크롤링 + 학습</strong>을 누르면 AI가 글을 읽고 말투를 자동 학습합니다.
-          학습된 말투는 콘텐츠 생성 시 해당 병원 선택 시 자동으로 적용됩니다.
-        </p>
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <div>
+            <h2 className="text-base font-bold text-violet-800 mb-1">병원별 네이버 블로그 말투 학습</h2>
+            <p className="text-sm text-violet-600">
+              각 병원의 네이버 블로그 URL을 입력 후 <strong>크롤링 + 학습</strong>을 누르면 AI가 글을 읽고 말투를 자동 학습합니다.
+              수집된 글은 오타/맞춤법·의료광고법 점수와 함께 병원별 최대 10개 보관됩니다.
+            </p>
+          </div>
+          <button
+            onClick={onCrawlAll}
+            disabled={crawlAllStatus.loading}
+            className="shrink-0 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-sm font-bold rounded-xl transition-colors flex items-center gap-2 shadow-sm"
+          >
+            {crawlAllStatus.loading ? (
+              <><div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />{crawlAllStatus.progress || '크롤링 중...'}</>
+            ) : (
+              <><span>🔄</span>전체 병원 자동 크롤링 + 채점</>
+            )}
+          </button>
+        </div>
+        {crawlAllStatus.loading && (
+          <div className="mt-2 text-xs text-indigo-600 font-medium">{crawlAllStatus.progress}</div>
+        )}
       </div>
 
       {/* 팀 탭 */}
@@ -136,60 +223,158 @@ const StyleTab: React.FC<StyleTabProps> = ({
                 {status && !status.loading && !status.error && status.progress === '학습 완료!' && (
                   <p className="mt-2 text-xs text-green-600 font-medium">학습 완료!</p>
                 )}
-                {/* 크롤링된 글 목록 */}
-                {crawledPosts[baseName] && crawledPosts[baseName].length > 0 && (
-                  <div className="mt-3">
-                    <button
-                      type="button"
-                      onClick={() => setExpandedPosts(prev => ({ ...prev, [baseName]: !prev[baseName] }))}
-                      className="flex items-center gap-1.5 text-xs font-semibold text-violet-600 hover:text-violet-800 transition-colors"
-                    >
-                      <span>{expandedPosts[baseName] ? '▼' : '▶'}</span>
-                      수집된 글 {crawledPosts[baseName].length}개 보기
-                    </button>
-                    {expandedPosts[baseName] && (
-                      <div className="mt-2 space-y-2 max-h-96 overflow-y-auto pr-1">
-                        {crawledPosts[baseName].map((post, i) => {
-                          const key = `${baseName}::${post.url}`;
-                          const isOpen = expandedPost === key;
-                          return (
-                            <div key={post.url} className="border border-slate-200 rounded-lg overflow-hidden">
-                              <button
-                                type="button"
-                                onClick={() => setExpandedPost(isOpen ? null : key)}
-                                className="w-full flex items-start gap-2 px-3 py-2 text-left hover:bg-slate-50 transition-colors"
-                              >
-                                <span className="text-[11px] font-bold text-slate-400 mt-0.5 shrink-0">#{i + 1}</span>
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-[11px] text-violet-600 truncate font-medium">{post.url}</p>
-                                  <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-2">
-                                    {post.content.slice(0, 100)}...
-                                  </p>
-                                </div>
-                                <span className="text-[10px] text-slate-400 shrink-0">{isOpen ? '접기' : '펼치기'}</span>
-                              </button>
-                              {isOpen && (
-                                <div className="px-3 pb-3 bg-slate-50 border-t border-slate-100">
-                                  <p className="text-[11px] text-slate-600 whitespace-pre-wrap mt-2 max-h-48 overflow-y-auto">
-                                    {post.content}
-                                  </p>
-                                  <a
-                                    href={post.url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="inline-block mt-2 text-[11px] text-violet-500 hover:underline"
-                                  >
-                                    블로그에서 보기 →
-                                  </a>
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                )}
+                {/* DB 보관 글 목록 (채점 포함) */}
+                {(() => {
+                  const posts = dbPosts[baseName] || [];
+                  const memPosts = crawledPosts[baseName] || [];
+                  const displayCount = posts.length || memPosts.length;
+                  if (displayCount === 0) return null;
+                  return (
+                    <div className="mt-3">
+                      <button
+                        type="button"
+                        onClick={() => setExpandedPosts(prev => ({ ...prev, [baseName]: !prev[baseName] }))}
+                        className="flex items-center gap-1.5 text-xs font-semibold text-violet-600 hover:text-violet-800 transition-colors"
+                      >
+                        <span>{expandedPosts[baseName] ? '▼' : '▶'}</span>
+                        수집된 글 {displayCount}개 보기
+                      </button>
+                      {expandedPosts[baseName] && (
+                        <div className="mt-2 space-y-2 max-h-[600px] overflow-y-auto pr-1">
+                          {(posts.length > 0 ? posts : memPosts.map(p => ({ id: p.url, hospital_name: baseName, url: p.url, content: p.content, crawled_at: '' } as CrawledPost))).map((post, i) => {
+                            const key = `${baseName}::${post.url}`;
+                            const isOpen = expandedPost === key;
+                            const isScoring = scoringId === post.id;
+                            const hasScore = post.score_total !== undefined && post.score_total !== null;
+                            const currentContent = editingContent[post.id] ?? post.corrected_content ?? post.content;
+                            return (
+                              <div key={post.url} className="border border-slate-200 rounded-lg overflow-hidden">
+                                {/* 글 헤더 */}
+                                <button
+                                  type="button"
+                                  onClick={() => setExpandedPost(isOpen ? null : key)}
+                                  className="w-full flex items-start gap-2 px-3 py-2 text-left hover:bg-slate-50 transition-colors"
+                                >
+                                  <span className="text-[11px] font-bold text-slate-400 mt-0.5 shrink-0">#{i + 1}</span>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-1.5 flex-wrap mb-0.5">
+                                      {hasScore ? (
+                                        <>
+                                          <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${scoreBadgeClass(post.score_typo)}`}>
+                                            맞춤법 {post.score_typo}점
+                                          </span>
+                                          <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${scoreBadgeClass(post.score_medical_law)}`}>
+                                            의료법 {post.score_medical_law}점
+                                          </span>
+                                          <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${scoreBadgeClass(post.score_total)}`}>
+                                            종합 {post.score_total}점
+                                          </span>
+                                        </>
+                                      ) : (
+                                        <span className="text-[10px] px-1.5 py-0.5 bg-slate-100 text-slate-400 rounded">미채점</span>
+                                      )}
+                                    </div>
+                                    <p className="text-[11px] text-violet-600 truncate font-medium">{post.url}</p>
+                                  </div>
+                                  <span className="text-[10px] text-slate-400 shrink-0">{isOpen ? '접기' : '펼치기'}</span>
+                                </button>
+
+                                {/* 펼침: 본문 + 채점 + 수정 */}
+                                {isOpen && (
+                                  <div className="px-3 pb-3 bg-slate-50 border-t border-slate-100 space-y-3">
+                                    {/* 채점 버튼 */}
+                                    {!hasScore && post.id && !post.id.startsWith('http') && (
+                                      <button
+                                        onClick={() => handleScorePost(post)}
+                                        disabled={isScoring}
+                                        className="mt-2 px-3 py-1.5 text-[11px] font-bold bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors flex items-center gap-1.5"
+                                      >
+                                        {isScoring ? <><div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />채점 중...</> : '📊 채점하기'}
+                                      </button>
+                                    )}
+
+                                    {/* 오타/맞춤법 이슈 */}
+                                    {(post.typo_issues?.length ?? 0) > 0 && (
+                                      <div className="bg-orange-50 border border-orange-200 rounded-lg p-2.5">
+                                        <p className="text-[11px] font-bold text-orange-700 mb-1.5">⚠️ 오타/맞춤법 이슈 ({post.typo_issues!.length}건)</p>
+                                        <div className="space-y-1">
+                                          {post.typo_issues!.map((issue, idx) => (
+                                            <div key={idx} className="flex items-center gap-2 text-[11px]">
+                                              <span className="text-red-600 line-through">"{issue.original}"</span>
+                                              <span className="text-slate-400">→</span>
+                                              <span className="text-green-700 font-medium">"{issue.correction}"</span>
+                                              <button
+                                                onClick={() => applyCorrection(post.id, issue.original, issue.correction)}
+                                                className="ml-auto px-2 py-0.5 bg-green-600 text-white text-[10px] rounded font-bold hover:bg-green-700"
+                                              >수정</button>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {/* 의료광고법 이슈 */}
+                                    {(post.law_issues?.length ?? 0) > 0 && (
+                                      <div className="bg-red-50 border border-red-200 rounded-lg p-2.5">
+                                        <p className="text-[11px] font-bold text-red-700 mb-1.5">🚫 의료광고법 이슈 ({post.law_issues!.length}건)</p>
+                                        <div className="space-y-1">
+                                          {post.law_issues!.map((issue, idx) => (
+                                            <div key={idx} className="text-[11px]">
+                                              <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold mr-1.5 ${issue.severity === 'critical' ? 'bg-red-200 text-red-800' : issue.severity === 'high' ? 'bg-orange-200 text-orange-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                                                {issue.severity}
+                                              </span>
+                                              <span className="text-red-600 font-medium">"{issue.word}"</span>
+                                              {issue.replacement.length > 0 && (
+                                                <span className="text-slate-500 ml-1">→ {issue.replacement[0]}</span>
+                                              )}
+                                              <span className="text-slate-400 ml-1.5 text-[10px] italic truncate block mt-0.5">{issue.context}</span>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {/* 본문 (편집 가능) */}
+                                    <div>
+                                      <p className="text-[10px] text-slate-500 mb-1 font-medium">본문 {post.corrected_content ? '(수정본)' : ''}</p>
+                                      <textarea
+                                        className="w-full text-[11px] text-slate-600 bg-white border border-slate-200 rounded-lg p-2 max-h-48 resize-y focus:outline-none focus:border-violet-400"
+                                        value={currentContent}
+                                        onChange={e => setEditingContent(prev => ({ ...prev, [post.id]: e.target.value }))}
+                                        rows={6}
+                                      />
+                                    </div>
+
+                                    {/* 저장 + 링크 */}
+                                    <div className="flex items-center gap-2">
+                                      {editingContent[post.id] !== undefined && (
+                                        <button
+                                          onClick={() => handleSaveContent(post)}
+                                          disabled={savingId === post.id}
+                                          className="px-3 py-1.5 text-[11px] font-bold bg-violet-600 text-white rounded-lg hover:bg-violet-700 disabled:opacity-50 transition-colors"
+                                        >
+                                          {savingId === post.id ? '저장 중...' : '✅ 수정본 저장'}
+                                        </button>
+                                      )}
+                                      <a
+                                        href={post.url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-[11px] text-violet-500 hover:underline"
+                                      >
+                                        블로그에서 보기 →
+                                      </a>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
             );
           })}
@@ -202,7 +387,7 @@ const StyleTab: React.FC<StyleTabProps> = ({
 // ============================================================
 
 // Admin 비밀번호 - 실제로는 환경변수나 Supabase로 관리해야 함
-const ADMIN_PASSWORD = 'rosmrtl718';
+const ADMIN_PASSWORD = 'winaid';
 
 // 콘텐츠 타입 정의 (database와 호환)
 type ContentType = 'blog' | 'card_news' | 'press_release';
@@ -282,6 +467,8 @@ const AdminPage: React.FC<AdminPageProps> = ({ onAdminVerified }) => {
   const [blogUrlInputs, setBlogUrlInputs] = useState<Record<string, string>>({});
   const [crawlingStatus, setCrawlingStatus] = useState<Record<string, { loading: boolean; progress: string; error?: string }>>({});
   const [crawledPosts, setCrawledPosts] = useState<Record<string, { url: string; content: string }[]>>({});
+  const [dbPosts, setDbPosts] = useState<Record<string, CrawledPost[]>>({});
+  const [crawlAllStatus, setCrawlAllStatus] = useState<{ loading: boolean; progress: string }>({ loading: false, progress: '' });
   
   // API 설정은 서버 환경변수로 관리 (UI 제거)
   
@@ -479,10 +666,11 @@ const AdminPage: React.FC<AdminPageProps> = ({ onAdminVerified }) => {
     setBlogUrlInputs(prev => ({ ...urlMap, ...prev }));
   }, []);
 
-  // 말투 탭 활성화 시 프로파일 로드
+  // 말투 탭 활성화 시 프로파일 + DB 글 로드
   useEffect(() => {
     if (activeTab === 'style' && isAuthenticated) {
       loadStyleProfiles();
+      getAllCrawledPostsSummary().then(setDbPosts).catch(console.warn);
     }
   }, [activeTab, isAuthenticated, loadStyleProfiles]);
 
@@ -534,6 +722,24 @@ const AdminPage: React.FC<AdminPageProps> = ({ onAdminVerified }) => {
         ...prev,
         [hospitalName]: { loading: false, progress: '', error: errMsg },
       }));
+    }
+  };
+
+  // 전체 병원 자동 크롤링 + 채점
+  const handleCrawlAllHospitals = async () => {
+    if (crawlAllStatus.loading) return;
+    setCrawlAllStatus({ loading: true, progress: '준비 중...' });
+    try {
+      await crawlAndScoreAllHospitals((msg, done, total) => {
+        setCrawlAllStatus({ loading: true, progress: `${msg} (${done}/${total})` });
+      });
+      const updated = await getAllCrawledPostsSummary();
+      setDbPosts(updated);
+      toast.success('전체 병원 크롤링 + 채점 완료!');
+    } catch (e: any) {
+      toast.error(`전체 크롤링 실패: ${e.message}`);
+    } finally {
+      setCrawlAllStatus({ loading: false, progress: '' });
     }
   };
 
@@ -841,8 +1047,12 @@ const AdminPage: React.FC<AdminPageProps> = ({ onAdminVerified }) => {
             setBlogUrlInputs={setBlogUrlInputs}
             crawlingStatus={crawlingStatus}
             crawledPosts={crawledPosts}
+            dbPosts={dbPosts}
+            setDbPosts={setDbPosts}
             onSaveUrl={handleSaveBlogUrl}
             onCrawl={handleCrawlAndLearn}
+            crawlAllStatus={crawlAllStatus}
+            onCrawlAll={handleCrawlAllHospitals}
           />
         )}
       </div>
