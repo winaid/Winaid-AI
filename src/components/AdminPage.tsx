@@ -246,16 +246,25 @@ const StyleTab: React.FC<StyleTabProps> = ({
                   const posts = dbPosts[baseName] || [];
                   const memPosts = crawledPosts[baseName] || [];
                   const displayCount = posts.length || memPosts.length;
-                  if (displayCount === 0) return null;
+                  const profileCount = profile?.crawled_posts_count || 0;
+                  if (displayCount === 0 && profileCount === 0) return null;
                   return (
                     <div className="mt-3">
                       <button
                         type="button"
-                        onClick={() => setExpandedPosts(prev => ({ ...prev, [baseName]: !prev[baseName] }))}
+                        onClick={() => {
+                          setExpandedPosts(prev => ({ ...prev, [baseName]: !prev[baseName] }));
+                          // 펼칠 때 DB에서 글 로드 (아직 로드 안 된 경우)
+                          if (!expandedPosts[baseName] && displayCount === 0 && profileCount > 0) {
+                            getCrawledPosts(baseName).then(loaded => {
+                              if (loaded.length > 0) setDbPosts(prev => ({ ...prev, [baseName]: loaded }));
+                            }).catch(console.warn);
+                          }
+                        }}
                         className="flex items-center gap-1.5 text-xs font-semibold text-violet-600 hover:text-violet-800 transition-colors"
                       >
                         <span>{expandedPosts[baseName] ? '▼' : '▶'}</span>
-                        수집된 글 {displayCount}개 보기
+                        수집된 글 {displayCount || profileCount}개 보기
                       </button>
                       {expandedPosts[baseName] && (
                         <div className="mt-2 space-y-2 max-h-[600px] overflow-y-auto pr-1">
