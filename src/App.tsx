@@ -1009,20 +1009,60 @@ const App: React.FC = () => {
               <ResultPreview content={getCurrentState().data!} darkMode={darkMode} />
             </Suspense>
           ) : (
-            <div className={`rounded-xl border flex flex-col items-center justify-center p-16 text-center transition-all duration-300 flex-1 min-h-[480px] ${darkMode ? 'bg-[#161b22] border-[#30363d]' : 'bg-white border-slate-200 shadow-sm'}`}>
-               <div className="flex flex-col items-center">
-                 <div className={`w-16 h-16 rounded-xl flex items-center justify-center mb-5 ${darkMode ? 'bg-[#0f1117]' : 'bg-slate-50 border border-slate-200'}`}>
-                   <svg className={`w-9 h-9 ${darkMode ? 'text-slate-500' : 'text-blue-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
-                     <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
-                   </svg>
-                 </div>
-                 <h3 className={`text-lg font-bold mb-2 ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>AI 콘텐츠 생성</h3>
-                 <p className={`text-sm font-medium leading-relaxed mb-5 ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>왼쪽에서 키워드를 입력하고<br/>생성 버튼을 눌러보세요</p>
-                 <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold ${darkMode ? 'bg-slate-700 text-slate-400' : 'bg-blue-50/80 text-blue-500 border border-blue-100/50'}`}>
-                   <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse" />
-                   AI 대기 중
-                 </div>
-               </div>
+            /* 빈 상태 — 문서 에디터 스타일 */
+            <div className={`rounded-2xl border flex-1 min-h-[520px] overflow-hidden flex flex-col transition-all duration-300 ${darkMode ? 'bg-[#161b22] border-[#30363d]' : 'bg-white border-slate-200 shadow-[0_2px_16px_rgba(0,0,0,0.06)]'}`}>
+              {/* 에디터 툴바 */}
+              <div className={`flex items-center gap-1 px-4 py-2.5 border-b ${darkMode ? 'border-[#30363d] bg-[#1c2128]' : 'border-slate-100 bg-slate-50/80'}`}>
+                {['B', 'I', 'U'].map(t => (
+                  <div key={t} className={`w-7 h-7 rounded flex items-center justify-center text-xs font-bold ${darkMode ? 'text-slate-600' : 'text-slate-300'}`}>{t}</div>
+                ))}
+                <div className={`w-px h-4 mx-1 ${darkMode ? 'bg-slate-700' : 'bg-slate-200'}`} />
+                {[1,2,3].map(i => (
+                  <div key={i} className={`w-7 h-7 rounded flex items-center justify-center ${darkMode ? 'text-slate-600' : 'text-slate-300'}`}>
+                    <div className="space-y-[3px]">{Array.from({length: i === 1 ? 3 : i === 2 ? 2 : 1}).map((_,j) => <div key={j} className={`h-0.5 rounded ${darkMode ? 'bg-slate-600' : 'bg-slate-300'}`} style={{width: j === 0 ? '14px' : j === 1 ? '10px' : '12px'}} />)}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* 메인 컨텐츠 영역 */}
+              <div className="flex-1 flex flex-col items-center justify-center px-12 py-16 select-none">
+                {/* 아이콘 */}
+                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-6 ${darkMode ? 'bg-[#21262d]' : 'bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100'}`}>
+                  <svg className={`w-7 h-7 ${darkMode ? 'text-slate-500' : 'text-blue-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
+                  </svg>
+                </div>
+
+                {/* 대형 타이포그래피 */}
+                <div className="max-w-sm text-center">
+                  <h2 className={`text-3xl font-black tracking-tight leading-tight mb-3 ${darkMode ? 'text-slate-200' : 'text-slate-800'}`}>
+                    AI가 작성하는<br/>
+                    <span className={`${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>의료 콘텐츠</span>
+                  </h2>
+                  <p className={`text-sm leading-relaxed ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>
+                    키워드 하나로 SEO 최적화된<br/>블로그·카드뉴스·보도자료를 자동 생성합니다
+                  </p>
+                </div>
+
+                {/* 기능 힌트 */}
+                <div className={`mt-8 flex flex-col gap-2 w-full max-w-xs`}>
+                  {[
+                    { icon: '✦', text: '병원 말투 학습 기반 생성' },
+                    { icon: '✦', text: 'SEO 키워드 자동 최적화' },
+                    { icon: '✦', text: '의료광고법 준수 검토' },
+                  ].map(item => (
+                    <div key={item.text} className={`flex items-center gap-3 px-3 py-2 rounded-lg text-xs ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>
+                      <span className={`text-[10px] ${darkMode ? 'text-blue-500' : 'text-blue-400'}`}>{item.icon}</span>
+                      {item.text}
+                    </div>
+                  ))}
+                </div>
+
+                <div className={`mt-8 inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold ${darkMode ? 'bg-[#21262d] text-slate-500 border border-[#30363d]' : 'bg-blue-50 text-blue-500 border border-blue-100'}`}>
+                  <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse" />
+                  AI 대기 중
+                </div>
+              </div>
             </div>
           )}
           </div>

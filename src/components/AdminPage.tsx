@@ -290,7 +290,10 @@ const StyleTab: React.FC<StyleTabProps> = ({
                                       {hasScore ? (
                                         <>
                                           <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${scoreBadgeClass(post.score_typo)}`}>
-                                            맞춤법 {post.score_typo}점
+                                            오타 {post.score_typo}점
+                                          </span>
+                                          <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${scoreBadgeClass(post.score_spelling ?? post.score_typo)}`}>
+                                            맞춤법 {post.score_spelling ?? '-'}점
                                           </span>
                                           <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${scoreBadgeClass(post.score_medical_law)}`}>
                                             의료법 {post.score_medical_law}점
@@ -311,21 +314,21 @@ const StyleTab: React.FC<StyleTabProps> = ({
                                 {/* 펼침: 본문 + 채점 + 수정 */}
                                 {isOpen && (
                                   <div className="px-3 pb-3 bg-slate-50 border-t border-slate-100 space-y-3">
-                                    {/* 채점 버튼 */}
-                                    {!hasScore && post.id && (
-                                      <div className="mt-2 space-y-1">
-                                        <button
-                                          onClick={() => { setScoringError(null); handleScorePost(post); }}
-                                          disabled={isScoring}
-                                          className="px-3 py-1.5 text-[11px] font-bold bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors flex items-center gap-1.5"
-                                        >
-                                          {isScoring ? <><div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />채점 중...</> : '📊 채점하기'}
-                                        </button>
-                                        {scoringError && scoringId === null && (
-                                          <p className="text-[10px] text-red-500">채점 실패: {scoringError}</p>
-                                        )}
-                                      </div>
-                                    )}
+                                    {/* 채점 / 재채점 버튼 */}
+                                    <div className="mt-2 flex items-center gap-2">
+                                      <button
+                                        onClick={() => { setScoringError(null); handleScorePost(post); }}
+                                        disabled={isScoring}
+                                        className="px-3 py-1.5 text-[11px] font-bold bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors flex items-center gap-1.5"
+                                      >
+                                        {isScoring
+                                          ? <><div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />채점 중...</>
+                                          : hasScore ? '🔄 재채점' : '📊 채점하기'}
+                                      </button>
+                                      {scoringError && scoringId === null && (
+                                        <p className="text-[10px] text-red-500">채점 실패: {scoringError}</p>
+                                      )}
+                                    </div>
 
                                     {/* 점수 이유 요약 */}
                                     {hasScore && (
@@ -333,10 +336,12 @@ const StyleTab: React.FC<StyleTabProps> = ({
                                         <p className="text-[11px] font-bold text-slate-700 mb-1">📋 채점 근거</p>
                                         <div className="flex flex-wrap gap-2 text-[11px]">
                                           <span className={`px-2 py-0.5 rounded font-bold ${scoreBadgeClass(post.score_typo)}`}>
-                                            맞춤법 {post.score_typo}점
-                                            {(post.typo_issues?.length ?? 0) > 0
-                                              ? ` — 오류 ${post.typo_issues!.length}건 × -5점`
-                                              : ' — 오류 없음'}
+                                            오타 {post.score_typo}점
+                                            {(() => { const n = (post.typo_issues || []).filter((i: any) => i.type === 'typo' || !i.type).length; return n > 0 ? ` — ${n}건 × -10점` : ' — 없음'; })()}
+                                          </span>
+                                          <span className={`px-2 py-0.5 rounded font-bold ${scoreBadgeClass(post.score_spelling ?? post.score_typo)}`}>
+                                            맞춤법 {post.score_spelling ?? '-'}점
+                                            {(() => { const n = (post.typo_issues || []).filter((i: any) => i.type === 'spelling').length; return n > 0 ? ` — ${n}건 × -5점` : ' — 없음'; })()}
                                           </span>
                                           <span className={`px-2 py-0.5 rounded font-bold ${scoreBadgeClass(post.score_medical_law)}`}>
                                             의료법 {post.score_medical_law}점
@@ -351,11 +356,14 @@ const StyleTab: React.FC<StyleTabProps> = ({
                                     {/* 오타/맞춤법 이슈 */}
                                     {(post.typo_issues?.length ?? 0) > 0 && (
                                       <div className="bg-orange-50 border border-orange-200 rounded-lg p-2.5">
-                                        <p className="text-[11px] font-bold text-orange-700 mb-1.5">⚠️ 오타/맞춤법 이슈 ({post.typo_issues!.length}건)</p>
+                                        <p className="text-[11px] font-bold text-orange-700 mb-1.5">⚠️ 오타 · 맞춤법 이슈 ({post.typo_issues!.length}건)</p>
                                         <div className="space-y-2">
                                           {post.typo_issues!.map((issue, idx) => (
                                             <div key={idx} className="text-[11px]">
-                                              <div className="flex items-center gap-2">
+                                              <div className="flex items-center gap-2 flex-wrap">
+                                                <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold ${(issue as any).type === 'spelling' ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'}`}>
+                                                  {(issue as any).type === 'spelling' ? '맞춤법' : '오타'}
+                                                </span>
                                                 <span className="text-red-600 line-through">"{issue.original}"</span>
                                                 <span className="text-slate-400">→</span>
                                                 <span className="text-green-700 font-medium">"{issue.correction}"</span>

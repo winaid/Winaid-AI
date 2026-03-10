@@ -282,10 +282,11 @@ export interface WebSearchMatch {
 
 // 크롤링된 병원 블로그 글 채점 결과
 export interface CrawledPostScore {
-  score_typo: number;        // 오타/맞춤법 점수 (0~100, 높을수록 좋음)
+  score_typo: number;        // 오타 점수 (0~100)
+  score_spelling: number;    // 맞춤법 점수 (0~100)
   score_medical_law: number; // 의료광고법 준수 점수 (0~100)
-  score_total: number;       // 종합 점수
-  typo_issues: Array<{ original: string; correction: string; context: string }>;
+  score_total: number;       // 종합 점수 (3개 평균)
+  typo_issues: Array<{ original: string; correction: string; context: string; type?: 'typo' | 'spelling' }>;
   law_issues: Array<{ word: string; severity: 'critical' | 'high' | 'medium' | 'low'; replacement: string[]; context: string }>;
 }
 
@@ -296,6 +297,7 @@ export interface CrawledPost {
   url: string;
   content: string;
   score_typo?: number;
+  score_spelling?: number;
   score_medical_law?: number;
   score_total?: number;
   typo_issues?: CrawledPostScore['typo_issues'];

@@ -506,37 +506,41 @@ export const scoreCrawledPost = async (content: string): Promise<CrawledPostScor
   const prompt = `당신은 한국어 맞춤법 전문가이자 의료광고법 전문가입니다.
 아래 블로그 글을 분석하여 정확히 JSON 형식으로만 응답하세요.
 
-[분석 항목]
-1. 오타/맞춤법: 명백한 오타, 띄어쓰기 오류, 맞춤법 오류만 포함 (최대 10건)
-   - 포함: "안녕하세요" → "안녕하세요", "되요" → "돼요", "왠지" → "웬지" 등 실제 오류
-   - 제외: 문체·어투 변경 (예: "누워있는" → "누워있다면"), 단어 선택, 표현 방식 차이
-   - 문법적으로 틀리지 않았으면 오류가 아님
-2. 의료광고법 위반: 아래 기준으로 판단하며, 반드시 구체적인 법 조항과 위반 이유를 명시 (최대 10건)
-   [의료광고법 주요 금지 조항 참고]
+[분석 항목 - 3가지 독립 채점]
+
+1. 오타 (score_typo): 실제 타이핑 실수, 잘못 입력한 단어만 (최대 10건)
+   - 포함: "왠지" → "웬지", "설레임" → "설렘", 자음/모음 오기입
+   - 제외: 맞춤법 규칙, 띄어쓰기, 문체 변경
+   - type: "typo"
+
+2. 맞춤법 (score_spelling): 맞춤법·띄어쓰기·문법 오류 (최대 10건)
+   - 포함: "되요" → "돼요", "않됩니다" → "안 됩니다", "할게요" → "할게요", 띄어쓰기
+   - 제외: 단어 선택, 문체 변경 (예: "누워있는" → "누워있다면" 같은 어투 변경은 오류 아님)
+   - type: "spelling"
+
+3. 의료광고법 (score_medical_law): 아래 조항 기준으로 판단, 반드시 법 조항과 이유 명시 (최대 10건)
    - 제56조 제1항: 치료 효과 보장, 완치 암시 ("완치", "100% 치료", "반드시 낫는다")
-   - 제56조 제2항 제1호: 최고/유일 표현 ("최고", "최상", "국내 유일", "가장 좋은")
-   - 제56조 제2항 제2호: 비교·비하 광고 (타 병원 대비 우위 주장)
-   - 제56조 제2항 제3호: 환자 치료 경험담, 후기 ("ㅇㅇ환자 OO일만에 완치")
-   - 제56조 제2항 제4호: 신문·방송 보도 내용 인용 ("TV에서 소개된")
-   - 제56조 제2항 제5호: 검증되지 않은 내용 ("안전하게", "부작용 없이", "효과 입증")
-   - 제56조 제2항 제6호: 과대·과장 표현 ("탁월한", "획기적인", "혁신적인")
-   - 제57조: 심의 미필 전문학회·기관 인증 표방
-   * "안전하게" → 제56조 제2항 제5호 위반 (안전성을 단정하는 표현)
-   * "효과적" → 제56조 제2항 제5호 위반 (효능 단정)
-   * "개선" → 제56조 제1항 위반 (치료 효과 암시)
+   - 제56조 제2항 제1호: 최고/유일 ("최고", "최상", "국내 유일", "가장 좋은")
+   - 제56조 제2항 제2호: 타 병원 비교·비하
+   - 제56조 제2항 제3호: 환자 치료 경험담 ("OO환자 OO일만에 완치")
+   - 제56조 제2항 제4호: 신문·방송 인용 ("TV에서 소개된")
+   - 제56조 제2항 제5호: 검증 안 된 표현 ("안전하게", "부작용 없이", "효과 입증")
+   - 제56조 제2항 제6호: 과대·과장 ("탁월한", "획기적인", "혁신적인")
 
 [점수 기준]
-- score_typo: 오타/맞춤법이 전혀 없으면 100점, 오류 1건당 -5점
+- score_typo: 오류 없으면 100점, 오류 1건당 -10점
+- score_spelling: 오류 없으면 100점, 오류 1건당 -5점
 - score_medical_law: 위반 없으면 100점, critical -20점, high -10점, medium -5점
-- score_total: (score_typo + score_medical_law) / 2
+- score_total: (score_typo + score_spelling + score_medical_law) / 3 (소수점 반올림)
 
 [응답 JSON]
 {
   "score_typo": 숫자,
+  "score_spelling": 숫자,
   "score_medical_law": 숫자,
   "score_total": 숫자,
-  "typo_issues": [{"original": "틀린 표현", "correction": "올바른 표현", "context": "앞뒤 문장"}],
-  "law_issues": [{"word": "위반 표현", "severity": "critical|high|medium|low", "law_article": "의료법 제56조 제2항 제5호", "reason": "안전성을 단정하는 표현으로 과장 광고에 해당", "replacement": ["대체 표현1"], "context": "앞뒤 문장"}]
+  "typo_issues": [{"original": "틀린 표현", "correction": "올바른 표현", "context": "앞뒤 문장", "type": "typo|spelling"}],
+  "law_issues": [{"word": "위반 표현", "severity": "critical|high|medium|low", "law_article": "의료법 제56조 제2항 제5호", "reason": "위반 이유", "replacement": ["대체 표현1"], "context": "앞뒤 문장"}]
 }
 
 [분석할 글]
@@ -551,15 +555,19 @@ ${content.slice(0, 3000)}`;
   const raw = response.text || '{}';
   try {
     const parsed = JSON.parse(raw.match(/\{[\s\S]*\}/)?.[0] || raw);
+    const scoreTypo = Math.max(0, Math.min(100, parsed.score_typo ?? 100));
+    const scoreSpelling = Math.max(0, Math.min(100, parsed.score_spelling ?? 100));
+    const scoreLaw = Math.max(0, Math.min(100, parsed.score_medical_law ?? 100));
     return {
-      score_typo: Math.max(0, Math.min(100, parsed.score_typo ?? 100)),
-      score_medical_law: Math.max(0, Math.min(100, parsed.score_medical_law ?? 100)),
-      score_total: Math.max(0, Math.min(100, parsed.score_total ?? 100)),
+      score_typo: scoreTypo,
+      score_spelling: scoreSpelling,
+      score_medical_law: scoreLaw,
+      score_total: Math.round((scoreTypo + scoreSpelling + scoreLaw) / 3),
       typo_issues: parsed.typo_issues || [],
       law_issues: parsed.law_issues || [],
     };
   } catch {
-    return { score_typo: 100, score_medical_law: 100, score_total: 100, typo_issues: [], law_issues: [] };
+    return { score_typo: 100, score_spelling: 100, score_medical_law: 100, score_total: 100, typo_issues: [], law_issues: [] };
   }
 };
 
@@ -620,24 +628,45 @@ export const saveCrawledPost = async (
  * 채점 결과만 업데이트
  */
 export const updateCrawledPostScore = async (id: string, score: CrawledPostScore): Promise<void> => {
+  const updatePayload: Record<string, unknown> = {
+    score_typo: score.score_typo,
+    score_medical_law: score.score_medical_law,
+    score_total: score.score_total,
+    typo_issues: score.typo_issues,
+    law_issues: score.law_issues,
+    scored_at: new Date().toISOString(),
+  };
+  // score_spelling은 DB 컬럼이 있을 때만 포함 (없으면 400 방지)
+  if (score.score_spelling !== undefined) {
+    updatePayload.score_spelling = score.score_spelling;
+  }
+
   const { error } = await supabase
     .from('hospital_crawled_posts')
-    .update({
-      score_typo: score.score_typo,
-      score_medical_law: score.score_medical_law,
-      score_total: score.score_total,
-      typo_issues: score.typo_issues,
-      law_issues: score.law_issues,
-      scored_at: new Date().toISOString(),
-    })
+    .update(updatePayload)
     .eq('id', id);
+
   if (error) {
-    // localStorage 폴백
-    const all = lsGetAll();
-    const idx = all.findIndex(p => p.id === id);
-    if (idx >= 0) {
-      all[idx] = { ...all[idx], ...score, scored_at: new Date().toISOString() };
-      lsSave(all);
+    console.warn('Supabase 채점 업데이트 실패, localStorage 폴백:', error.message);
+    // score_spelling 없이 재시도
+    const { error: error2 } = await supabase
+      .from('hospital_crawled_posts')
+      .update({
+        score_typo: score.score_typo,
+        score_medical_law: score.score_medical_law,
+        score_total: score.score_total,
+        typo_issues: score.typo_issues,
+        law_issues: score.law_issues,
+        scored_at: new Date().toISOString(),
+      })
+      .eq('id', id);
+    if (error2) {
+      const all = lsGetAll();
+      const idx = all.findIndex(p => p.id === id);
+      if (idx >= 0) {
+        all[idx] = { ...all[idx], ...score, scored_at: new Date().toISOString() };
+        lsSave(all);
+      }
     }
   }
 };
