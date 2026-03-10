@@ -112,10 +112,15 @@ const StyleTab: React.FC<StyleTabProps> = ({
   };
 
   const team = TEAM_DATA.find(t => t.id === selectedTeam)!;
-  // 고유 병원명만 추출
+  // 고유 병원명만 추출 후 팀장님 → 선임님 → 매니저님 순, 같은 직급 내 가나다 순 정렬
+  const roleOrder = (manager: string) =>
+    manager.includes('팀장') ? 0 : manager.includes('선임') ? 1 : 2;
   const uniqueHospitals = Array.from(
     new Map(team.hospitals.map(h => [h.name.replace(/ \(.*\)$/, ''), h])).entries()
-  );
+  ).sort(([nameA, hA], [nameB, hB]) => {
+    const diff = roleOrder(hA.manager) - roleOrder(hB.manager);
+    return diff !== 0 ? diff : nameA.localeCompare(nameB, 'ko');
+  });
 
   return (
     <div className="space-y-4">
