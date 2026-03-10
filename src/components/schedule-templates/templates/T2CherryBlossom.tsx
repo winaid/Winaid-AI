@@ -1,5 +1,6 @@
 import React from 'react';
-import type { ScheduleData } from '../types';
+import type { ScheduleData, TemplateColors } from '../types';
+import { DEFAULT_COLORS } from '../types';
 import { buildCalendarWeeks } from '../calendarEngine';
 
 const FONT = "'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif";
@@ -19,9 +20,11 @@ const COLORS = {
 interface Props {
   data: ScheduleData;
   width?: number;
+  colors?: TemplateColors;
 }
 
-export default function T2CherryBlossom({ data, width = 600 }: Props) {
+export default function T2CherryBlossom({ data, width = 600, colors }: Props) {
+  const C = { ...DEFAULT_COLORS, ...colors };
   const weeks = buildCalendarWeeks(data.year, data.month);
   const calH = HEADER_H + weeks.length * ROW_H;
   const noticeY = GRID_Y + calH + 24;
@@ -134,7 +137,7 @@ export default function T2CherryBlossom({ data, width = 600 }: Props) {
               if (!current) numColor = '#BDBDBD';
 
               const hasCircle = !!event && current;
-              const evColor = event?.color ?? COLORS[event?.type ?? 'normal'];
+              const evColor = event?.color ?? C[event?.type ?? 'normal'];
 
               return (
                 <g key={di}>

@@ -1,4 +1,5 @@
-export type { ScheduleData, ScheduleEvent, ScheduleRange, EventType, TemplateInfo } from './types';
+export type { ScheduleData, ScheduleEvent, ScheduleRange, EventType, TemplateInfo, TemplateColors } from './types';
+export { DEFAULT_COLORS } from './types';
 export { buildCalendarWeeks, buildCompactCalendarWeeks } from './calendarEngine';
 export { TEMPLATE_LIST, default as TemplateSelector } from './TemplateSelector';
 export {

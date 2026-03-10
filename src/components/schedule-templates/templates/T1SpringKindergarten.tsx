@@ -1,5 +1,6 @@
 import React from 'react';
-import type { ScheduleData } from '../types';
+import type { ScheduleData, TemplateColors } from '../types';
+import { DEFAULT_COLORS } from '../types';
 import { buildCalendarWeeks, getRangeBoundsInWeek } from '../calendarEngine';
 
 const FONT = "'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif";
@@ -11,9 +12,11 @@ const GRID_Y = 290;
 interface Props {
   data: ScheduleData;
   width?: number;
+  colors?: TemplateColors;
 }
 
-export default function T1SpringKindergarten({ data, width = 600 }: Props) {
+export default function T1SpringKindergarten({ data, width = 600, colors }: Props) {
+  const C = { ...DEFAULT_COLORS, ...colors };
   const weeks = buildCalendarWeeks(data.year, data.month);
   const calH = HEADER_H + weeks.length * ROW_H;
   const noticeY = GRID_Y + calH + 18;
@@ -120,7 +123,7 @@ export default function T1SpringKindergarten({ data, width = 600 }: Props) {
       {/* ── Calendar ── */}
       {/* Header */}
       {(['일', '월', '화', '수', '목', '금', '토'] as const).map((day, i) => {
-        const bg = i === 0 ? '#F06292' : i === 6 ? '#64B5F6' : '#424242';
+        const bg = i === 0 ? C.closed : i === 6 ? C.secondary : '#424242';
         return (
           <g key={day}>
             <rect x={i * COL_W} y={GRID_Y} width={COL_W} height={HEADER_H} fill={bg} />

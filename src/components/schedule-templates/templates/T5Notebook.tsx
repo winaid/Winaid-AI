@@ -1,5 +1,6 @@
 import React from 'react';
-import type { ScheduleData } from '../types';
+import type { ScheduleData, TemplateColors } from '../types';
+import { DEFAULT_COLORS } from '../types';
 import { buildCalendarWeeks } from '../calendarEngine';
 
 const FONT = "'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif";
@@ -13,6 +14,7 @@ const GRID_Y = 380; // inside card, below doctor character
 interface Props {
   data: ScheduleData;
   width?: number;
+  colors?: TemplateColors;
 }
 
 // 의사 캐릭터 (흰 가운 SVG)
@@ -54,7 +56,8 @@ function DoctorCharacter({ cx, y }: { cx: number; y: number }) {
   );
 }
 
-export default function T5Notebook({ data, width = 600 }: Props) {
+export default function T5Notebook({ data, width = 600, colors }: Props) {
+  const C = { ...DEFAULT_COLORS, ...colors };
   const weeks = buildCalendarWeeks(data.year, data.month);
   const calH = HEADER_H + weeks.length * ROW_H;
   const cardH = GRID_Y - CARD_X + calH + 40;
@@ -181,7 +184,7 @@ export default function T5Notebook({ data, width = 600 }: Props) {
                   {/* Red fill cell for closed */}
                   {isClosed && (
                     <rect x={cx + 1} y={rowY + 1} width={COL_W - 2} height={ROW_H - 2}
-                      fill="#EF5350" />
+                      fill={C.closed} />
                   )}
 
                   {/* Date number */}

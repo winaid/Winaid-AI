@@ -1,5 +1,6 @@
 import React from 'react';
-import type { ScheduleData } from '../types';
+import type { ScheduleData, TemplateColors } from '../types';
+import { DEFAULT_COLORS } from '../types';
 import { buildCalendarWeeks } from '../calendarEngine';
 
 const FONT = "'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif";
@@ -13,6 +14,7 @@ const CARD_Y = 220;
 interface Props {
   data: ScheduleData;
   width?: number;
+  colors?: TemplateColors;
 }
 
 // 6-pointed snowflake
@@ -85,7 +87,8 @@ function ChristmasTree({ x, y, h = 50 }: { x: number; y: number; h?: number }) {
   );
 }
 
-export default function T6Christmas({ data, width = 600 }: Props) {
+export default function T6Christmas({ data, width = 600, colors }: Props) {
+  const C = { ...DEFAULT_COLORS, ...colors };
   const weeks = buildCalendarWeeks(data.year, data.month);
   const calH = HEADER_H + weeks.length * ROW_H;
   const cardH = calH + 20;

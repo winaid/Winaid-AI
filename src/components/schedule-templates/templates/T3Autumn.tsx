@@ -1,5 +1,6 @@
 import React from 'react';
-import type { ScheduleData } from '../types';
+import type { ScheduleData, TemplateColors } from '../types';
+import { DEFAULT_COLORS } from '../types';
 import { buildCompactCalendarWeeks } from '../calendarEngine';
 
 const FONT = "'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif";
@@ -12,6 +13,7 @@ const ROW_H = 92;
 interface Props {
   data: ScheduleData;
   width?: number;
+  colors?: TemplateColors;
 }
 
 // Simplified maple leaf path (centered at 0,0, size ~40px)
@@ -32,7 +34,8 @@ function MapleLeaf({ x, y, size = 1, rot = 0, color = '#D84315' }: {
   );
 }
 
-export default function T3Autumn({ data, width = 600 }: Props) {
+export default function T3Autumn({ data, width = 600, colors }: Props) {
+  const C = { ...DEFAULT_COLORS, ...colors };
   const weeks = buildCompactCalendarWeeks(data.year, data.month);
   const calH = HEADER_H + weeks.length * ROW_H;
   const cardH = calH + 24;
@@ -142,7 +145,7 @@ export default function T3Autumn({ data, width = 600 }: Props) {
                   {event && current && (
                     <g>
                       <rect x={cx - 32} y={rowY + 45} width="64" height="22" rx="6"
-                        fill={event.color ?? '#F9A825'} />
+                        fill={event.color ?? C.closed} />
                       <text x={cx} y={rowY + 60}
                         textAnchor="middle" fontSize="12" fontWeight="700" fill="white">
                         {event.label}

@@ -1,5 +1,6 @@
 import React from 'react';
-import type { ScheduleData } from '../types';
+import type { ScheduleData, TemplateColors } from '../types';
+import { DEFAULT_COLORS } from '../types';
 import { buildCalendarWeeks } from '../calendarEngine';
 
 const FONT = "'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', serif";
@@ -20,6 +21,7 @@ const TYPE_COLORS: Record<string, { bg: string; text: string }> = {
 interface Props {
   data: ScheduleData;
   width?: number;
+  colors?: TemplateColors;
 }
 
 function Crane({ x, y, size = 1, flip = false }: { x: number; y: number; size?: number; flip?: boolean }) {
@@ -59,7 +61,8 @@ function TraditionalCloud({ x, y, w = 80 }: { x: number; y: number; w?: number }
   );
 }
 
-export default function T4KoreanTraditional({ data, width = 600 }: Props) {
+export default function T4KoreanTraditional({ data, width = 600, colors }: Props) {
+  const C = { ...DEFAULT_COLORS, ...colors };
   const weeks = buildCalendarWeeks(data.year, data.month);
   const CARD_Y = 260;
   const calH = HEADER_H + weeks.length * ROW_H;
@@ -182,7 +185,7 @@ export default function T4KoreanTraditional({ data, width = 600 }: Props) {
               if (!current) numColor = '#C4B8A0';
 
               const hasEvent = !!event && current;
-              const colors = hasEvent ? (TYPE_COLORS[event!.type] ?? TYPE_COLORS.custom) : null;
+              const typeColors = hasEvent ? (TYPE_COLORS[event!.type] ?? TYPE_COLORS.custom) : null;
 
               // Special: date=1 gets outline circle instead of filled
               const isSpecial = cell.day === 1 && current && specialDate;
@@ -191,7 +194,7 @@ export default function T4KoreanTraditional({ data, width = 600 }: Props) {
                 <g key={di}>
                   {/* Filled circle for events */}
                   {hasEvent && !isSpecial && (
-                    <circle cx={cx} cy={rowY + 28} r={24} fill={event!.color ?? colors!.bg} />
+                    <circle cx={cx} cy={rowY + 28} r={24} fill={event!.color ?? typeColors!.bg} />
                   )}
                   {/* Outline circle for special date */}
                   {isSpecial && (
@@ -206,7 +209,7 @@ export default function T4KoreanTraditional({ data, width = 600 }: Props) {
                   <text x={cx} y={rowY + 34}
                     textAnchor="middle" fontSize="15"
                     fontWeight={hasEvent ? '700' : '500'}
-                    fill={hasEvent ? (isSpecial ? '#C62828' : colors!.text) : numColor}
+                    fill={hasEvent ? (isSpecial ? '#C62828' : typeColors!.text) : numColor}
                   >
                     {cell.day}
                   </text>
@@ -214,7 +217,7 @@ export default function T4KoreanTraditional({ data, width = 600 }: Props) {
                   {hasEvent && (
                     <text x={cx} y={rowY + 54}
                       textAnchor="middle" fontSize="10" fontWeight="600"
-                      fill={isSpecial ? '#C62828' : (event!.color ?? colors!.bg)}
+                      fill={isSpecial ? '#C62828' : (event!.color ?? typeColors!.bg)}
                     >
                       {event!.label}
                     </text>
