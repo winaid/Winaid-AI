@@ -546,8 +546,18 @@ ${content.slice(0, 3000)}`;
   }
 };
 
+// localStorage 키
+const LS_KEY = 'winaid_crawled_posts';
+
+const lsGetAll = (): CrawledPost[] => {
+  try { return JSON.parse(localStorage.getItem(LS_KEY) || '[]'); } catch { return []; }
+};
+const lsSave = (posts: CrawledPost[]) => {
+  try { localStorage.setItem(LS_KEY, JSON.stringify(posts)); } catch {}
+};
+
 /**
- * 크롤링 글을 Supabase에 저장 (upsert, 병원별 최대 10개는 DB 트리거로 자동 관리)
+ * 크롤링 글을 Supabase에 저장 (upsert). 실패 시 localStorage 폴백.
  */
 export const saveCrawledPost = async (
   hospitalName: string,
@@ -574,15 +584,26 @@ export const saveCrawledPost = async (
     .upsert(record, { onConflict: 'hospital_name,url' })
     .select()
     .single();
-  if (error) { console.error('saveCrawledPost 오류:', error); return null; }
-  return data as CrawledPost;
+  if (!error && data) return data as CrawledPost;
+
+  // Supabase 실패(401 등) → localStorage 폴백
+  const all = lsGetAll();
+  const existing = all.findIndex(p => p.hospital_name === hospitalName && p.url === url);
+  const post: CrawledPost = { id: `ls_${Date.now()}_${Math.random()}`, ...record } as CrawledPost;
+  if (existing >= 0) all[existing] = { ...all[existing], ...post };
+  else all.unshift(post);
+  // 병원별 최대 10개
+  const byHospital = all.filter(p => p.hospital_name === hospitalName);
+  const others = all.filter(p => p.hospital_name !== hospitalName);
+  lsSave([...byHospital.slice(0, 10), ...others]);
+  return post;
 };
 
 /**
  * 채점 결과만 업데이트
  */
 export const updateCrawledPostScore = async (id: string, score: CrawledPostScore): Promise<void> => {
-  await supabase
+  const { error } = await supabase
     .from('hospital_crawled_posts')
     .update({
       score_typo: score.score_typo,
@@ -593,41 +614,58 @@ export const updateCrawledPostScore = async (id: string, score: CrawledPostScore
       scored_at: new Date().toISOString(),
     })
     .eq('id', id);
+  if (error) {
+    // localStorage 폴백
+    const all = lsGetAll();
+    const idx = all.findIndex(p => p.id === id);
+    if (idx >= 0) {
+      all[idx] = { ...all[idx], ...score, scored_at: new Date().toISOString() };
+      lsSave(all);
+    }
+  }
 };
 
 /**
  * 수정된 본문 저장
  */
 export const updateCrawledPostContent = async (id: string, correctedContent: string): Promise<void> => {
-  await supabase
+  const { error } = await supabase
     .from('hospital_crawled_posts')
     .update({ corrected_content: correctedContent })
     .eq('id', id);
+  if (error) {
+    const all = lsGetAll();
+    const idx = all.findIndex(p => p.id === id);
+    if (idx >= 0) { all[idx] = { ...all[idx], corrected_content: correctedContent }; lsSave(all); }
+  }
 };
 
 /**
- * 병원별 크롤링 글 조회 (최대 10개, 최신순)
+ * 병원별 크롤링 글 조회 (최대 10개, 최신순). Supabase 실패 시 localStorage 폴백.
  */
 export const getCrawledPosts = async (hospitalName: string): Promise<CrawledPost[]> => {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('hospital_crawled_posts')
     .select('*')
     .eq('hospital_name', hospitalName)
     .order('crawled_at', { ascending: false })
     .limit(10);
-  return (data || []) as CrawledPost[];
+  if (!error && data && data.length > 0) return data as CrawledPost[];
+  // Supabase 실패 또는 빈 결과 → localStorage
+  return lsGetAll().filter(p => p.hospital_name === hospitalName).slice(0, 10);
 };
 
 /**
  * 전체 병원 크롤링 글 조회 → { 병원명: [글...] } 형태
  */
 export const getAllCrawledPostsSummary = async (): Promise<Record<string, CrawledPost[]>> => {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('hospital_crawled_posts')
     .select('*')
     .order('crawled_at', { ascending: false });
+  const posts = (!error && data && data.length > 0) ? data as CrawledPost[] : lsGetAll();
   const result: Record<string, CrawledPost[]> = {};
-  for (const post of (data || []) as CrawledPost[]) {
+  for (const post of posts) {
     if (!result[post.hospital_name]) result[post.hospital_name] = [];
     if (result[post.hospital_name].length < 10) result[post.hospital_name].push(post);
   }
