@@ -290,29 +290,20 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
   return (
     <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
 
-      {/* 콘텐츠 타입 탭 */}
-      <div className="flex border-b border-slate-100">
-        {([
-          { type: 'blog' as PostType, label: '블로그', icon: '📝', color: 'blue' },
-          { type: 'card_news' as PostType, label: '카드뉴스', icon: '🎨', color: 'pink' },
-          { type: 'press_release' as PostType, label: '보도자료', icon: '🗞️', color: 'amber' },
-        ]).map(({ type, label, icon, color }) => (
-          <button
-            key={type}
-            type="button"
-            onClick={() => setPostType(type)}
-            className={`flex-1 py-2.5 text-xs font-bold transition-all border-b-2 flex items-center justify-center gap-1.5 ${
-              postType === type
-                ? color === 'blue' ? 'text-blue-600 border-blue-500 bg-blue-50/40'
-                : color === 'pink' ? 'text-pink-600 border-pink-500 bg-pink-50/40'
-                : 'text-amber-600 border-amber-500 bg-amber-50/40'
-                : 'text-slate-400 border-transparent hover:text-slate-600 hover:bg-slate-50'
-            }`}
-          >
-            <span>{icon}</span>{label}
-          </button>
-        ))}
-      </div>
+      {/* 현재 콘텐츠 타입 헤더 */}
+      {(() => {
+        const typeInfo = postType === 'card_news'
+          ? { label: '카드뉴스', icon: '🎨', bg: 'bg-pink-50', border: 'border-pink-100', text: 'text-pink-700' }
+          : postType === 'press_release'
+          ? { label: '보도자료', icon: '🗞️', bg: 'bg-amber-50', border: 'border-amber-100', text: 'text-amber-700' }
+          : { label: '블로그', icon: '📝', bg: 'bg-blue-50', border: 'border-blue-100', text: 'text-blue-700' };
+        return (
+          <div className={`flex items-center gap-2 px-4 py-2.5 border-b ${typeInfo.bg} ${typeInfo.border}`}>
+            <span>{typeInfo.icon}</span>
+            <span className={`text-xs font-bold ${typeInfo.text}`}>{typeInfo.label}</span>
+          </div>
+        );
+      })()}
 
       {/* 메인 입력 폼 */}
       <div className="p-4">
