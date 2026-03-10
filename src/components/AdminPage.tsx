@@ -18,14 +18,17 @@ interface StyleTabProps {
   blogUrlInputs: Record<string, string>;
   setBlogUrlInputs: React.Dispatch<React.SetStateAction<Record<string, string>>>;
   crawlingStatus: Record<string, { loading: boolean; progress: string; error?: string }>;
+  crawledPosts: Record<string, { url: string; content: string }[]>;
   onSaveUrl: (hospitalName: string, teamId: number) => void;
   onCrawl: (hospitalName: string, teamId: number) => void;
 }
 
 const StyleTab: React.FC<StyleTabProps> = ({
-  styleProfiles, blogUrlInputs, setBlogUrlInputs, crawlingStatus, onSaveUrl, onCrawl
+  styleProfiles, blogUrlInputs, setBlogUrlInputs, crawlingStatus, crawledPosts, onSaveUrl, onCrawl
 }) => {
   const [selectedTeam, setSelectedTeam] = useState<number>(TEAM_DATA[0].id);
+  const [expandedPosts, setExpandedPosts] = useState<Record<string, boolean>>({});
+  const [expandedPost, setExpandedPost] = useState<string | null>(null); // "병원명::url"
 
   const team = TEAM_DATA.find(t => t.id === selectedTeam)!;
   // 고유 병원명만 추출
@@ -133,6 +136,60 @@ const StyleTab: React.FC<StyleTabProps> = ({
                 {status && !status.loading && !status.error && status.progress === '학습 완료!' && (
                   <p className="mt-2 text-xs text-green-600 font-medium">학습 완료!</p>
                 )}
+                {/* 크롤링된 글 목록 */}
+                {crawledPosts[baseName] && crawledPosts[baseName].length > 0 && (
+                  <div className="mt-3">
+                    <button
+                      type="button"
+                      onClick={() => setExpandedPosts(prev => ({ ...prev, [baseName]: !prev[baseName] }))}
+                      className="flex items-center gap-1.5 text-xs font-semibold text-violet-600 hover:text-violet-800 transition-colors"
+                    >
+                      <span>{expandedPosts[baseName] ? '▼' : '▶'}</span>
+                      수집된 글 {crawledPosts[baseName].length}개 보기
+                    </button>
+                    {expandedPosts[baseName] && (
+                      <div className="mt-2 space-y-2 max-h-96 overflow-y-auto pr-1">
+                        {crawledPosts[baseName].map((post, i) => {
+                          const key = `${baseName}::${post.url}`;
+                          const isOpen = expandedPost === key;
+                          return (
+                            <div key={post.url} className="border border-slate-200 rounded-lg overflow-hidden">
+                              <button
+                                type="button"
+                                onClick={() => setExpandedPost(isOpen ? null : key)}
+                                className="w-full flex items-start gap-2 px-3 py-2 text-left hover:bg-slate-50 transition-colors"
+                              >
+                                <span className="text-[11px] font-bold text-slate-400 mt-0.5 shrink-0">#{i + 1}</span>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-[11px] text-violet-600 truncate font-medium">{post.url}</p>
+                                  <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-2">
+                                    {post.content.slice(0, 100)}...
+                                  </p>
+                                </div>
+                                <span className="text-[10px] text-slate-400 shrink-0">{isOpen ? '접기' : '펼치기'}</span>
+                              </button>
+                              {isOpen && (
+                                <div className="px-3 pb-3 bg-slate-50 border-t border-slate-100">
+                                  <p className="text-[11px] text-slate-600 whitespace-pre-wrap mt-2 max-h-48 overflow-y-auto">
+                                    {post.content}
+                                  </p>
+                                  <a
+                                    href={post.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-block mt-2 text-[11px] text-violet-500 hover:underline"
+                                  >
+                                    블로그에서 보기 →
+                                  </a>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             );
           })}
@@ -224,6 +281,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onAdminVerified }) => {
   const [styleProfiles, setStyleProfiles] = useState<HospitalStyleProfile[]>([]);
   const [blogUrlInputs, setBlogUrlInputs] = useState<Record<string, string>>({});
   const [crawlingStatus, setCrawlingStatus] = useState<Record<string, { loading: boolean; progress: string; error?: string }>>({});
+  const [crawledPosts, setCrawledPosts] = useState<Record<string, { url: string; content: string }[]>>({});
   
   // API 설정은 서버 환경변수로 관리 (UI 제거)
   
@@ -454,12 +512,15 @@ const AdminPage: React.FC<AdminPageProps> = ({ onAdminVerified }) => {
     }));
 
     try {
-      await crawlAndLearnHospitalStyle(hospitalName, teamId, url, (msg) => {
+      const result = await crawlAndLearnHospitalStyle(hospitalName, teamId, url, (msg) => {
         setCrawlingStatus(prev => ({
           ...prev,
           [hospitalName]: { loading: true, progress: msg },
         }));
       });
+      if (result.posts && result.posts.length > 0) {
+        setCrawledPosts(prev => ({ ...prev, [hospitalName]: result.posts! }));
+      }
       toast.success(`${hospitalName} 말투 학습 완료!`);
       setCrawlingStatus(prev => ({
         ...prev,
@@ -779,6 +840,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onAdminVerified }) => {
             blogUrlInputs={blogUrlInputs}
             setBlogUrlInputs={setBlogUrlInputs}
             crawlingStatus={crawlingStatus}
+            crawledPosts={crawledPosts}
             onSaveUrl={handleSaveBlogUrl}
             onCrawl={handleCrawlAndLearn}
           />

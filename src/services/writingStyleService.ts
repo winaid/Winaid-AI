@@ -336,6 +336,7 @@ export interface HospitalStyleProfile {
   style_profile?: LearnedWritingStyle | null;
   raw_sample_text?: string;
   last_crawled_at?: string;
+  posts?: { url: string; content: string }[]; // 크롤링 결과 (메모리에만, DB 저장 안 함)
 }
 
 /**
@@ -402,7 +403,7 @@ export const crawlAndLearnHospitalStyle = async (
   }
 
   onProgress?.('완료!');
-  return data as HospitalStyleProfile;
+  return { ...(data as HospitalStyleProfile), posts };
 };
 
 /**
