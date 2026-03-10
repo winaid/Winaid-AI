@@ -21,8 +21,11 @@ const PARTNER_HOSPITALS = [
   '예담치과', '수플란트치과', '서울S치과', '뉴욕치과',
 ];
 
+const SINCE_YEAR = 2011;
+const YEARS_OF_EXPERIENCE = new Date().getFullYear() - SINCE_YEAR;
+
 const CHAT_SYSTEM_PROMPT = `당신은 윈에이드(WINAID)의 AI 마케팅 어시스턴트입니다.
-윈에이드는 13년 경력의 병원 마케팅 전문 회사로, AI 기반 병원 콘텐츠 자동 생성 플랫폼을 운영합니다.
+윈에이드는 ${YEARS_OF_EXPERIENCE}년 경력의 병원 마케팅 전문 회사로, AI 기반 병원 콘텐츠 자동 생성 플랫폼을 운영합니다.
 
 주요 기능:
 - 블로그 글 AI 자동 생성 (의료광고법 자동 검증 포함)
@@ -231,7 +234,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" />
               <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-blue-500" />
             </span>
-            <span className="text-blue-700 font-bold text-xs tracking-wider">Since 2011, 13년 업력의 신뢰</span>
+            <span className="text-blue-700 font-bold text-xs tracking-wider">Since 2011, {YEARS_OF_EXPERIENCE}년 업력의 신뢰</span>
           </div>
 
           {/* Main headline */}
@@ -463,7 +466,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
 
           <div className="relative grid grid-cols-2 md:grid-cols-4 gap-5">
             {[
-              { number: '13', unit: '년+', label: '병원마케팅 노하우', sub: '2011년부터 축적', gradient: 'from-blue-400 to-cyan-400', icon: '🏆' },
+              { number: String(YEARS_OF_EXPERIENCE), unit: '년+', label: '병원마케팅 노하우', sub: '2011년부터 축적', gradient: 'from-blue-400 to-cyan-400', icon: '🏆' },
               { number: '300', unit: '+', label: '병원 진행건', sub: '전국 치과 마케팅', gradient: 'from-emerald-400 to-teal-400', icon: '🏥' },
               { number: '500', unit: '+', label: '원장님과 함께', sub: '지속적인 파트너십', gradient: 'from-violet-400 to-purple-400', icon: '🤝' },
               { number: '1', unit: '분', label: 'AI 콘텐츠 생성', sub: '블로그 자동 완성', gradient: 'from-amber-400 to-orange-400', icon: '⚡' },
@@ -869,7 +872,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
                 <span className="text-amber-700 font-bold text-xs tracking-widest uppercase">ABOUT WINAID</span>
               </div>
               <h2 className="text-4xl md:text-6xl font-black text-slate-900 leading-tight">
-                13년 노하우를<br />
+                {YEARS_OF_EXPERIENCE}년 노하우를<br />
                 <span className="bg-gradient-to-r from-amber-500 to-orange-500 bg-clip-text text-transparent">AI에 담았습니다</span>
               </h2>
               <p className="text-lg text-slate-500 mt-6 max-w-2xl mx-auto leading-relaxed font-medium">
