@@ -14,6 +14,7 @@ import {
   deleteStyleFromHistory,
   resizeImageToThumbnail,
   resizeImageForReference,
+  CALENDAR_THEME_OPTIONS,
   type ClosedDay,
   type ShortenedDay,
   type VacationDay,
@@ -1720,6 +1721,7 @@ export default function TemplateGenerator() {
   const [year, setYear] = useState(now.getFullYear());
   const [scheduleTitle, setScheduleTitle] = useState('');
   const [scheduleLayout, setScheduleLayout] = useState<ScheduleLayout>('full_calendar');
+  const [calendarTheme, setCalendarTheme] = useState<string>('blue');
   const [notices, setNotices] = useState('');
   const [dayMarks, setDayMarks] = useState<Map<number, DayMark>>(new Map());
   const [shortenedHours, setShortenedHours] = useState<Map<number, string>>(new Map());
@@ -1967,7 +1969,7 @@ export default function TemplateGenerator() {
 
       let templateData: Record<string, any>;
       if (category === 'schedule') {
-        templateData = { month, year, title: scheduleTitle || `${month}월 휴진 안내`, closedDays: closed, shortenedDays: shortened.length > 0 ? shortened : undefined, vacationDays: vacation.length > 0 ? vacation : undefined, notices: notices.split('\n').filter(Boolean), layout: scheduleLayout };
+        templateData = { month, year, title: scheduleTitle || `${month}월 휴진 안내`, closedDays: closed, shortenedDays: shortened.length > 0 ? shortened : undefined, vacationDays: vacation.length > 0 ? vacation : undefined, notices: notices.split('\n').filter(Boolean), layout: scheduleLayout, colorTheme: calendarTheme };
       } else if (category === 'event') {
         templateData = { title: evTitle, subtitle: evSubtitle || undefined, price: evPrice || undefined, originalPrice: evOrigPrice || undefined, discount: evDiscount || autoDiscount || undefined, period: evPeriod || undefined, description: evDesc || undefined };
       } else if (category === 'doctor') {
@@ -2169,6 +2171,26 @@ export default function TemplateGenerator() {
                     <div className="text-lg">{lt.icon}</div>
                     <div className={`text-xs font-bold ${scheduleLayout === lt.id ? 'text-blue-700' : 'text-slate-700'}`}>{lt.name}</div>
                     <div className="text-[10px] text-slate-400">{lt.desc}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className={labelCls}>디자인 테마</label>
+              <div className="grid grid-cols-2 gap-1.5">
+                {CALENDAR_THEME_OPTIONS.map(t => (
+                  <button
+                    key={t.value}
+                    type="button"
+                    onClick={() => setCalendarTheme(t.value)}
+                    className={`py-2 px-3 rounded-xl text-left text-xs font-semibold transition-all border flex items-center gap-2 ${
+                      calendarTheme === t.value
+                        ? 'bg-blue-50 border-blue-300 ring-2 ring-blue-200 text-blue-700'
+                        : 'bg-white border-slate-200 hover:border-slate-300 text-slate-600'
+                    }`}
+                  >
+                    <span>{t.emoji}</span>
+                    <span className="truncate">{t.label}</span>
                   </button>
                 ))}
               </div>
