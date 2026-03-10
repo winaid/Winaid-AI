@@ -149,10 +149,11 @@ const StyleTab: React.FC<StyleTabProps> = ({
       {/* 팀 탭 */}
       <div className="flex bg-white border border-slate-200 rounded-xl p-1 shadow-sm">
         {TEAM_DATA.map(t => {
-          const learnedCount = t.hospitals.filter(h => {
-            const base = h.name.replace(/ \(.*\)$/, '');
-            return styleProfiles.some(p => p.hospital_name === base && p.last_crawled_at);
-          }).length;
+          const learnedCount = new Set(
+            t.hospitals
+              .map(h => h.name.replace(/ \(.*\)$/, ''))
+              .filter(base => styleProfiles.some(p => p.hospital_name === base && p.last_crawled_at))
+          ).size;
           const totalCount = new Set(t.hospitals.map(h => h.name.replace(/ \(.*\)$/, ''))).size;
           return (
             <button
@@ -731,6 +732,8 @@ const AdminPage: React.FC<AdminPageProps> = ({ onAdminVerified }) => {
         [hospitalName]: { loading: false, progress: '학습 완료!' },
       }));
       loadStyleProfiles();
+      // 저장된 글 목록 갱신
+      getAllCrawledPostsSummary().then(setDbPosts).catch(console.warn);
     } catch (err: any) {
       const errMsg = err.message || '알 수 없는 오류';
       toast.error(`크롤링 실패: ${errMsg}`);

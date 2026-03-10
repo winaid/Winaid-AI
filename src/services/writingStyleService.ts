@@ -402,6 +402,12 @@ export const crawlAndLearnHospitalStyle = async (
     return { ...profileData, style_profile: analyzedStyle };
   }
 
+  // 5단계: 개별 글을 hospital_crawled_posts에 저장 (글 목록 보기용)
+  onProgress?.('수집된 글 저장 중...');
+  await Promise.allSettled(
+    posts.map(p => saveCrawledPost(hospitalName, p.url, p.content))
+  );
+
   onProgress?.('완료!');
   return { ...(data as HospitalStyleProfile), posts };
 };
