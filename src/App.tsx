@@ -159,7 +159,8 @@ const App: React.FC = () => {
   // API 키 설정 모달 상태
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
   const [showUserManual, setShowUserManual] = useState(false);
-  
+  const [quickInput, setQuickInput] = useState('');
+
   // 비밀번호 인증 상태 - 임시로 항상 true (로그인 비활성화)
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(true);
   
@@ -747,138 +748,161 @@ const App: React.FC = () => {
       <main className="relative z-10 flex-1 overflow-y-auto">
         <div className="w-full px-5 lg:px-8 py-6">
 
-        {/* 홈 대시보드 (#app) */}
+        {/* 홈 대시보드 - Genspark 스타일 */}
         {currentPage === 'home' ? (
-          <div className="max-w-4xl mx-auto pt-8 pb-16 px-2">
+          <div className={`min-h-full flex flex-col items-center justify-start pt-20 pb-20 px-4 ${darkMode ? 'bg-[#0d1117]' : 'bg-[#f7f7f8]'}`}>
 
-            {/* 히어로 - 중앙 집중형 */}
-            <div className="text-center mb-12">
-              <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold mb-5 ${darkMode ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20' : 'bg-emerald-50 text-emerald-600 border border-emerald-200'}`}>
-                <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-                AI 엔진 가동 중
+            {/* 타이틀 */}
+            <h1 className={`text-3xl md:text-4xl font-bold mb-8 text-center tracking-tight ${darkMode ? 'text-slate-100' : 'text-slate-900'}`}>
+              WINAID AI 워크스페이스
+            </h1>
+
+            {/* 입력 박스 */}
+            <div className={`w-full max-w-2xl rounded-2xl border shadow-sm mb-10 overflow-hidden ${darkMode ? 'bg-[#161b22] border-[#30363d]' : 'bg-white border-slate-200'}`}>
+              <div className="flex items-center px-4 py-3.5 gap-3">
+                <svg className={`w-5 h-5 flex-shrink-0 ${darkMode ? 'text-slate-500' : 'text-slate-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                </svg>
+                <input
+                  type="text"
+                  value={quickInput}
+                  onChange={e => setQuickInput(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' && quickInput.trim()) {
+                      setState(prev => ({ ...prev, blog: { ...prev.blog, topic: quickInput.trim() } }));
+                      setContentTab('blog');
+                    }
+                  }}
+                  placeholder="무엇이든 물어보고 만들어보세요"
+                  className={`flex-1 text-sm outline-none bg-transparent placeholder:text-slate-400 ${darkMode ? 'text-slate-100' : 'text-slate-800'}`}
+                />
+                {quickInput && (
+                  <button
+                    onClick={() => {
+                      setState(prev => ({ ...prev, blog: { ...prev.blog, topic: quickInput.trim() } }));
+                      setContentTab('blog');
+                    }}
+                    className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${darkMode ? 'bg-blue-600 hover:bg-blue-500' : 'bg-slate-900 hover:bg-slate-700'}`}
+                  >
+                    <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
+                    </svg>
+                  </button>
+                )}
               </div>
-              <h1 className={`text-3xl md:text-4xl font-black mb-3 tracking-tight ${darkMode ? 'text-slate-100' : 'text-slate-900'}`}>
-                오늘 어떤 콘텐츠를 만들까요?
-              </h1>
-              <p className={`text-base ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                병원 마케팅 콘텐츠를 AI로 빠르게 생성하세요
-              </p>
+              <div className={`flex items-center gap-2 px-4 py-2.5 border-t text-[11px] ${darkMode ? 'border-[#30363d] text-slate-500' : 'border-slate-100 text-slate-400'}`}>
+                <span className={`flex items-center gap-1 px-2 py-0.5 rounded-md font-medium ${darkMode ? 'bg-white/5 text-slate-400' : 'bg-slate-100 text-slate-600'}`}>
+                  <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse inline-block" />
+                  AI 엔진 가동 중
+                </span>
+                <span>SEO 최적화 · 의료광고법 검증 · 이미지 자동 생성 지원</span>
+              </div>
             </div>
 
-            {/* 콘텐츠 타입 선택 - 큰 카드 3개 */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            {/* 원형 아이콘 그리드 */}
+            <div className="flex flex-wrap justify-center gap-6 max-w-2xl">
               {([
                 {
                   id: 'blog' as ContentTabType,
-                  title: '블로그',
-                  desc: '네이버 스마트블록 최적화',
-                  icon: '📝',
-                  gradient: darkMode ? 'from-blue-500/10 to-blue-600/5' : 'from-blue-50 to-white',
-                  border: darkMode ? 'border-blue-500/20 hover:border-blue-400/50' : 'border-blue-100 hover:border-blue-300',
-                  badge: 'bg-blue-100 text-blue-600',
-                  cta: darkMode ? 'text-blue-400' : 'text-blue-600',
-                  tags: ['SEO 최적화', '의료법 검증', 'AI 이미지'],
+                  label: '블로그',
+                  sublabel: 'SEO 최적화',
+                  bg: darkMode ? 'bg-blue-500/15' : 'bg-blue-50',
+                  iconColor: darkMode ? 'text-blue-400' : 'text-blue-600',
+                  icon: (
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7">
+                      <path d="M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z" />
+                    </svg>
+                  ),
                 },
                 {
                   id: 'card_news' as ContentTabType,
-                  title: '카드뉴스',
-                  desc: 'SNS 이미지 슬라이드 자동 제작',
-                  icon: '🎨',
-                  gradient: darkMode ? 'from-pink-500/10 to-pink-600/5' : 'from-pink-50 to-white',
-                  border: darkMode ? 'border-pink-500/20 hover:border-pink-400/50' : 'border-pink-100 hover:border-pink-300',
-                  badge: 'bg-pink-100 text-pink-600',
-                  cta: darkMode ? 'text-pink-400' : 'text-pink-600',
-                  tags: ['디자인 템플릿', '슬라이드 구성', '이미지 생성'],
+                  label: '카드뉴스',
+                  sublabel: 'SNS 슬라이드',
+                  bg: darkMode ? 'bg-pink-500/15' : 'bg-pink-50',
+                  iconColor: darkMode ? 'text-pink-400' : 'text-pink-600',
+                  icon: (
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7">
+                      <rect x="3" y="3" width="18" height="18" rx="2" />
+                      <path d="M3 9h18M9 21V9" />
+                    </svg>
+                  ),
                 },
                 {
                   id: 'press' as ContentTabType,
-                  title: '보도자료',
-                  desc: '언론 배포용 전문 보도자료',
-                  icon: '🗞️',
-                  gradient: darkMode ? 'from-amber-500/10 to-amber-600/5' : 'from-amber-50 to-white',
-                  border: darkMode ? 'border-amber-500/20 hover:border-amber-400/50' : 'border-amber-100 hover:border-amber-300',
-                  badge: 'bg-amber-100 text-amber-600',
-                  cta: darkMode ? 'text-amber-400' : 'text-amber-600',
-                  tags: ['보도자료 포맷', '전문 어조', '병원 정보 연동'],
+                  label: '보도자료',
+                  sublabel: '언론 배포',
+                  bg: darkMode ? 'bg-amber-500/15' : 'bg-amber-50',
+                  iconColor: darkMode ? 'text-amber-400' : 'text-amber-600',
+                  icon: (
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7">
+                      <path d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10l6 6v8a2 2 0 01-2 2z" />
+                      <path d="M17 21v-8H7v8M7 3v5h8" />
+                    </svg>
+                  ),
+                },
+                {
+                  id: 'refine' as ContentTabType,
+                  label: 'AI 보정',
+                  sublabel: '글 다듬기',
+                  bg: darkMode ? 'bg-emerald-500/15' : 'bg-emerald-50',
+                  iconColor: darkMode ? 'text-emerald-400' : 'text-emerald-600',
+                  icon: (
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7">
+                      <path d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
+                      <path d="M18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z" />
+                    </svg>
+                  ),
+                },
+                {
+                  id: 'image' as ContentTabType,
+                  label: '이미지 생성',
+                  sublabel: 'AI 이미지',
+                  bg: darkMode ? 'bg-violet-500/15' : 'bg-violet-50',
+                  iconColor: darkMode ? 'text-violet-400' : 'text-violet-600',
+                  icon: (
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7">
+                      <rect x="3" y="3" width="18" height="18" rx="2" />
+                      <circle cx="8.5" cy="8.5" r="1.5" />
+                      <path d="M21 15l-5-5L5 21" />
+                    </svg>
+                  ),
+                },
+                {
+                  id: 'history' as ContentTabType,
+                  label: '히스토리',
+                  sublabel: '생성 내역',
+                  bg: darkMode ? 'bg-slate-500/15' : 'bg-slate-100',
+                  iconColor: darkMode ? 'text-slate-400' : 'text-slate-500',
+                  icon: (
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7">
+                      <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  ),
                 },
               ]).map(item => (
                 <button
                   key={item.id}
                   onClick={() => setContentTab(item.id)}
-                  className={`text-left rounded-2xl border p-6 bg-gradient-to-br transition-all duration-200 group hover:shadow-lg hover:-translate-y-0.5 ${item.gradient} ${item.border} ${darkMode ? '' : 'shadow-sm'}`}
+                  className="flex flex-col items-center gap-2.5 group"
                 >
-                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl mb-4 ${darkMode ? 'bg-white/5' : 'bg-white shadow-sm border border-white'}`}>
+                  <div className={`w-16 h-16 rounded-2xl flex items-center justify-center transition-all duration-150 group-hover:scale-105 group-hover:shadow-md ${item.bg} ${item.iconColor}`}>
                     {item.icon}
                   </div>
-                  <h3 className={`text-base font-black mb-1 ${darkMode ? 'text-slate-100' : 'text-slate-900'}`}>{item.title}</h3>
-                  <p className={`text-xs mb-4 leading-relaxed ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>{item.desc}</p>
-                  <div className="flex flex-wrap gap-1.5 mb-4">
-                    {item.tags.map((tag, i) => (
-                      <span key={i} className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${darkMode ? 'bg-white/10 text-slate-400' : item.badge}`}>{tag}</span>
-                    ))}
-                  </div>
-                  <div className={`flex items-center gap-1 text-xs font-bold ${item.cta}`}>
-                    시작하기
-                    <svg className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
-                    </svg>
+                  <div className="text-center">
+                    <div className={`text-xs font-semibold ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>{item.label}</div>
+                    <div className={`text-[10px] mt-0.5 ${darkMode ? 'text-slate-600' : 'text-slate-400'}`}>{item.sublabel}</div>
                   </div>
                 </button>
               ))}
             </div>
 
-            {/* 도구 - 가로 줄 */}
-            <div className={`rounded-2xl border p-1 flex gap-1 mb-6 ${darkMode ? 'bg-[#161b22] border-[#2d3a4f]' : 'bg-slate-100/80 border-slate-200'}`}>
-              {([
-                { id: 'refine' as ContentTabType, title: 'AI 보정', icon: '✨', desc: '기존 글 다듬기' },
-                { id: 'image' as ContentTabType, title: '이미지 생성', icon: '🖼️', desc: 'AI 이미지 제작' },
-                { id: 'history' as ContentTabType, title: '히스토리', icon: '🕐', desc: '생성 내역 조회' },
-              ]).map(item => (
-                <button
-                  key={item.id}
-                  onClick={() => setContentTab(item.id)}
-                  className={`flex-1 flex items-center justify-center gap-2.5 py-3 px-4 rounded-xl text-sm font-semibold transition-all group ${
-                    darkMode ? 'text-slate-400 hover:text-slate-200 hover:bg-white/5' : 'text-slate-500 hover:text-slate-700 hover:bg-white hover:shadow-sm'
-                  }`}
-                >
-                  <span className="text-base">{item.icon}</span>
-                  <span>{item.title}</span>
-                  <span className={`hidden sm:inline text-[11px] font-normal ${darkMode ? 'text-slate-600' : 'text-slate-400'}`}>— {item.desc}</span>
-                </button>
-              ))}
-            </div>
-
-            {/* 하단 가이드 - 미니멀 */}
-            <div className={`rounded-2xl border p-5 ${darkMode ? 'bg-[#161b22] border-[#2d3a4f]' : 'bg-white border-slate-200 shadow-sm'}`}>
-              <div className="flex items-center justify-between mb-4">
-                <span className={`text-xs font-bold tracking-wide uppercase ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>사용 방법</span>
-                <button
-                  onClick={() => setShowUserManual(true)}
-                  className={`text-xs font-semibold transition-colors ${darkMode ? 'text-blue-400 hover:text-blue-300' : 'text-blue-500 hover:text-blue-600'}`}
-                >
-                  전체 설명서 →
-                </button>
-              </div>
-              <div className="flex items-start gap-0">
-                {([
-                  { step: '01', title: '유형 선택', desc: '블로그·카드뉴스·보도자료' },
-                  { step: '02', title: '키워드 입력', desc: '주제와 타겟 키워드' },
-                  { step: '03', title: 'AI 생성', desc: '자동 최적화 콘텐츠' },
-                  { step: '04', title: '검수 · 배포', desc: '의료법 검증 후 사용' },
-                ]).map((tip, i, arr) => (
-                  <div key={i} className="flex-1 flex items-start gap-2 relative">
-                    <div className="flex flex-col items-center flex-shrink-0">
-                      <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black ${darkMode ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-100 text-blue-600'}`}>{i + 1}</div>
-                      {i < arr.length - 1 && <div className={`w-px flex-1 mt-1 h-4 ${darkMode ? 'bg-slate-700' : 'bg-slate-200'}`} />}
-                    </div>
-                    <div className="pb-1 min-w-0">
-                      <div className={`text-[11px] font-bold mb-0.5 ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>{tip.title}</div>
-                      <div className={`text-[10px] leading-snug ${darkMode ? 'text-slate-600' : 'text-slate-400'}`}>{tip.desc}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+            {/* 하단 설명서 링크 */}
+            <button
+              onClick={() => setShowUserManual(true)}
+              className={`mt-14 text-xs font-medium transition-colors ${darkMode ? 'text-slate-600 hover:text-slate-400' : 'text-slate-400 hover:text-slate-600'}`}
+            >
+              사용 설명서 보기 →
+            </button>
           </div>
         ) :
 
