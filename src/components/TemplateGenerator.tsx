@@ -2455,16 +2455,193 @@ export default function TemplateGenerator() {
             /* 진료 일정: 달력 테마 카드 */
             <div className="grid grid-cols-3 gap-2">
               {CALENDAR_THEME_OPTIONS.map(t => {
-                const THEME_META: Record<string, { bg: string; headerBg: string; headerColor: string; decor: string; cellColor: string; badgeColor: string }> = {
-                  autumn:             { bg: '#f97316', headerBg: '#3d3d3d', headerColor: '#fff',    decor: '🍁', cellColor: '#fff',    badgeColor: '#fcd34d' },
-                  korean_traditional: { bg: '#fdfaf5', headerBg: '#fff',    headerColor: '#111',   decor: '🦢', cellColor: '#fff',    badgeColor: '#9b1c1c' },
-                  winter:             { bg: '#bae6fd', headerBg: '#1e3a8a', headerColor: '#fff',    decor: '❄', cellColor: '#fff',    badgeColor: '#facc15' },
-                  cherry_blossom:     { bg: '#ec4899', headerBg: '#ec4899', headerColor: '#fff',    decor: '🌸', cellColor: '#fff',    badgeColor: '#7c3aed' },
-                  spring_kids:        { bg: '#bfdbfe', headerBg: '#f9a8d4', headerColor: '#fff',    decor: '🌼', cellColor: '#fff',    badgeColor: '#f472b6' },
-                  medical_notebook:   { bg: '#3b9fe8', headerBg: '#f8fafc', headerColor: '#1e3a8a', decor: '👩‍⚕️', cellColor: '#ef4444', badgeColor: '#ef4444' },
-                };
-                const m = THEME_META[t.value] || { bg: '#e2e8f0', headerBg: '#94a3b8', headerColor: '#fff', decor: '📅', cellColor: '#fff', badgeColor: '#ef4444' };
                 const isSelected = calendarTheme === t.value;
+                // 공통 날짜 데이터: 첫째날=수요일(3), 5·12·19·26=일요일(휴진)
+                const firstDay = 3; // 수요일 시작
+                const closedDays = new Set([5, 12, 19, 26]);
+                const KO = ['일','월','화','수','목','금','토'];
+                // 날짜 그리드 생성 (null=빈칸)
+                const cells: (number|null)[] = [];
+                for (let i = 0; i < firstDay; i++) cells.push(null);
+                for (let d = 1; d <= 31; d++) cells.push(d);
+                while (cells.length % 7 !== 0) cells.push(null);
+                const rows: (number|null)[][] = [];
+                for (let i = 0; i < cells.length; i += 7) rows.push(cells.slice(i, i+7));
+                const displayRows = rows.slice(0, 5);
+
+                // 테마별 SVG 렌더링
+                const cx = (col: number) => 7 + col * 11.4 + 4.7; // 셀 중앙 x
+                const ry_base = 44; // 요일헤더 y
+                const dy = 11.5; // 행 간격
+
+                let svgContent: React.ReactNode;
+
+                if (t.value === 'autumn') {
+                  svgContent = (
+                    <svg viewBox="0 0 90 118" className="w-full" xmlns="http://www.w3.org/2000/svg">
+                      <rect width="90" height="118" fill="#f97316" />
+                      <text x="45" y="16" textAnchor="middle" fontSize="13">🍁</text>
+                      {/* 흰 카드 */}
+                      <rect x="4" y="22" width="82" height="91" rx="5" fill="white" />
+                      {/* 다크 헤더 */}
+                      <rect x="4" y="22" width="82" height="13" rx="5" fill="#3d3d3d" />
+                      <rect x="4" y="28" width="82" height="7" fill="#3d3d3d" />
+                      {/* 요일 헤더 */}
+                      {KO.map((d, i) => <text key={d} x={cx(i)} y={ry_base} textAnchor="middle" fontSize="5" fill={i===0?'#ef4444':i===6?'#93c5fd':'#fff'} fontWeight="800">{d}</text>)}
+                      {/* 날짜 */}
+                      {displayRows.map((row, ri) => row.map((d, ci) => {
+                        if (!d) return null;
+                        const y = ry_base + 4 + ri * dy;
+                        const isCl = closedDays.has(d);
+                        return (
+                          <g key={`${ri}-${ci}`}>
+                            <text x={cx(ci)} y={y + 6} textAnchor="middle" fontSize="6" fill={ci===0?'#dc2626':ci===6?'#3b82f6':'#1e293b'} fontWeight={isCl||d===5||d===12||d===19||d===26?'800':'400'}>{d}</text>
+                            {isCl && <><rect x={cx(ci)-8} y={y+8} width="16" height="6" rx="3" fill="#fcd34d"/><text x={cx(ci)} y={y+13} textAnchor="middle" fontSize="4" fill="#713f12" fontWeight="800">휴진</text></>}
+                          </g>
+                        );
+                      }))}
+                    </svg>
+                  );
+                } else if (t.value === 'korean_traditional') {
+                  svgContent = (
+                    <svg viewBox="0 0 90 118" className="w-full" xmlns="http://www.w3.org/2000/svg">
+                      <rect width="90" height="118" fill="#fdfaf5" />
+                      <text x="18" y="18" fontSize="18">🦢</text>
+                      <text x="65" y="14" fontSize="9">☁️</text>
+                      {/* 흰 카드 */}
+                      <rect x="4" y="22" width="82" height="92" rx="5" fill="white" stroke="#d1d5db" strokeWidth="0.5"/>
+                      {/* 요일 헤더 */}
+                      {KO.map((d, i) => <text key={d} x={cx(i)} y={ry_base} textAnchor="middle" fontSize="5" fill={i===0?'#9b1c1c':i===6?'#1e3a8a':'#111827'} fontWeight="800">{d}</text>)}
+                      <line x1="4" y1="ry_base+3" x2="86" y2="ry_base+3" stroke="#d1d5db" strokeWidth="0.5"/>
+                      {/* 날짜 */}
+                      {displayRows.map((row, ri) => row.map((d, ci) => {
+                        if (!d) return null;
+                        const y = ry_base + 4 + ri * dy;
+                        const isCl = closedDays.has(d);
+                        return (
+                          <g key={`${ri}-${ci}`}>
+                            {isCl && <circle cx={cx(ci)} cy={y+4} r="5" fill="#9b1c1c"/>}
+                            <text x={cx(ci)} y={y+6.5} textAnchor="middle" fontSize="6" fill={isCl?'#fff':ci===0?'#9b1c1c':ci===6?'#1e3a8a':'#111827'} fontWeight={isCl?'800':'400'}>{d}</text>
+                            {isCl && <text x={cx(ci)} y={y+14} textAnchor="middle" fontSize="4" fill="#9b1c1c" fontWeight="700">휴진</text>}
+                          </g>
+                        );
+                      }))}
+                      {/* 하단 초록 언덕 */}
+                      <rect x="4" y="110" width="82" height="4" rx="2" fill="#22c55e" opacity="0.6"/>
+                    </svg>
+                  );
+                } else if (t.value === 'winter') {
+                  svgContent = (
+                    <svg viewBox="0 0 90 118" className="w-full" xmlns="http://www.w3.org/2000/svg">
+                      <rect width="90" height="118" fill="#e0f2fe" />
+                      <text x="45" y="16" textAnchor="middle" fontSize="13">❄️</text>
+                      {/* 흰 카드 */}
+                      <rect x="4" y="22" width="82" height="91" rx="5" fill="white" />
+                      {/* 네이비 헤더 */}
+                      <rect x="4" y="22" width="82" height="13" rx="5" fill="#1e3a8a" />
+                      <rect x="4" y="28" width="82" height="7" fill="#1e3a8a" />
+                      {/* 요일 헤더 */}
+                      {KO.map((d, i) => <text key={d} x={cx(i)} y={ry_base} textAnchor="middle" fontSize="5" fill={i===0?'#fca5a5':i===6?'#bfdbfe':'#e2e8f0'} fontWeight="800">{d}</text>)}
+                      {/* 날짜 */}
+                      {displayRows.map((row, ri) => row.map((d, ci) => {
+                        if (!d) return null;
+                        const y = ry_base + 4 + ri * dy;
+                        const isCl = closedDays.has(d);
+                        return (
+                          <g key={`${ri}-${ci}`}>
+                            {isCl && <circle cx={cx(ci)} cy={y+4} r="5" fill="#facc15"/>}
+                            <text x={cx(ci)} y={y+6.5} textAnchor="middle" fontSize="6" fill={isCl?'#713f12':ci===0?'#dc2626':ci===6?'#1e40af':'#1e293b'} fontWeight={isCl?'800':'400'}>{d}</text>
+                            {isCl && <text x={cx(ci)} y={y+14} textAnchor="middle" fontSize="3.5" fill="#92400e" fontWeight="700">휴진</text>}
+                          </g>
+                        );
+                      }))}
+                    </svg>
+                  );
+                } else if (t.value === 'cherry_blossom') {
+                  svgContent = (
+                    <svg viewBox="0 0 90 118" className="w-full" xmlns="http://www.w3.org/2000/svg">
+                      <defs><linearGradient id="cb_bg" x1="0" y1="0" x2="0.3" y2="1"><stop offset="0%" stopColor="#f9a8d4"/><stop offset="100%" stopColor="#db2777"/></linearGradient></defs>
+                      <rect width="90" height="118" fill="url(#cb_bg)" />
+                      <text x="45" y="16" textAnchor="middle" fontSize="13">🌸</text>
+                      {/* 흰 카드 */}
+                      <rect x="4" y="22" width="82" height="91" rx="5" fill="white" />
+                      {/* 요일 헤더 */}
+                      {KO.map((d, i) => <text key={d} x={cx(i)} y={ry_base} textAnchor="middle" fontSize="5" fill={i===0?'#f97316':i===6?'#93c5fd':'#1f2937'} fontWeight="800">{d}</text>)}
+                      {/* 날짜 */}
+                      {displayRows.map((row, ri) => row.map((d, ci) => {
+                        if (!d) return null;
+                        const y = ry_base + 4 + ri * dy;
+                        const isCl = closedDays.has(d);
+                        return (
+                          <g key={`${ri}-${ci}`}>
+                            {isCl && <circle cx={cx(ci)} cy={y+4} r="5" fill="#7c3aed"/>}
+                            <text x={cx(ci)} y={y+6.5} textAnchor="middle" fontSize="6" fill={isCl?'#fff':ci===0?'#f97316':ci===6?'#3b82f6':'#1f2937'} fontWeight={isCl?'800':'400'}>{d}</text>
+                            {isCl && <text x={cx(ci)} y={y+14} textAnchor="middle" fontSize="3.5" fill="#7c3aed" fontWeight="700">휴진</text>}
+                          </g>
+                        );
+                      }))}
+                    </svg>
+                  );
+                } else if (t.value === 'spring_kids') {
+                  svgContent = (
+                    <svg viewBox="0 0 90 118" className="w-full" xmlns="http://www.w3.org/2000/svg">
+                      <rect width="90" height="118" fill="#bfdbfe" />
+                      <text x="45" y="16" textAnchor="middle" fontSize="13">🌼</text>
+                      {/* 흰 카드 */}
+                      <rect x="4" y="22" width="82" height="91" rx="5" fill="white" />
+                      {/* 핑크 헤더 */}
+                      <rect x="4" y="22" width="82" height="13" rx="5" fill="#f9a8d4" />
+                      <rect x="4" y="28" width="82" height="7" fill="#f9a8d4" />
+                      {/* 요일 헤더 (컬러풀) */}
+                      {KO.map((d, i) => <text key={d} x={cx(i)} y={ry_base} textAnchor="middle" fontSize="5" fill={i===0?'#ec4899':i===6?'#3b82f6':'#334155'} fontWeight="800">{d}</text>)}
+                      {/* 날짜 */}
+                      {displayRows.map((row, ri) => row.map((d, ci) => {
+                        if (!d) return null;
+                        const y = ry_base + 4 + ri * dy;
+                        const isCl = closedDays.has(d);
+                        return (
+                          <g key={`${ri}-${ci}`}>
+                            {isCl && <circle cx={cx(ci)} cy={y+4} r="5" fill="#f472b6"/>}
+                            <text x={cx(ci)} y={y+6.5} textAnchor="middle" fontSize="6" fill={isCl?'#fff':ci===0?'#ec4899':ci===6?'#3b82f6':'#1e293b'} fontWeight={isCl?'800':'400'}>{d}</text>
+                            {isCl && <text x={cx(ci)} y={y+14} textAnchor="middle" fontSize="3.5" fill="#ec4899" fontWeight="700">휴진</text>}
+                          </g>
+                        );
+                      }))}
+                      {/* 하단 잔디 */}
+                      <rect x="4" y="110" width="82" height="3" rx="2" fill="#4ade80" opacity="0.7"/>
+                    </svg>
+                  );
+                } else { // medical_notebook
+                  const EN = ['일','월','화','수','목','금','토'];
+                  svgContent = (
+                    <svg viewBox="0 0 90 118" className="w-full" xmlns="http://www.w3.org/2000/svg">
+                      <rect width="90" height="118" fill="#3b9fe8" />
+                      <text x="45" y="15" textAnchor="middle" fontSize="14">👩‍⚕️</text>
+                      {/* 흰 노트북 카드 */}
+                      <rect x="4" y="21" width="82" height="92" rx="6" fill="white" />
+                      {/* 링바인더 */}
+                      {[13,24,35,46,57,68,77].map(bx => <ellipse key={bx} cx={bx} cy={21} rx="3.5" ry="3.5" fill="#fcd34d" stroke="#f59e0b" strokeWidth="1"/>)}
+                      {/* 요일 헤더 */}
+                      {EN.map((d, i) => <text key={d} x={cx(i)} y={ry_base} textAnchor="middle" fontSize="4.5" fill={i===0?'#dc2626':i===6?'#2563eb':'#1e3a8a'} fontWeight="800">{d}</text>)}
+                      {/* 노란 밑줄 */}
+                      <rect x="10" y={ry_base+2} width="70" height="2.5" rx="1.2" fill="#fcd34d"/>
+                      {/* 날짜 */}
+                      {displayRows.map((row, ri) => row.map((d, ci) => {
+                        if (!d) return null;
+                        const y = ry_base + 7 + ri * dy;
+                        const isCl = closedDays.has(d);
+                        return (
+                          <g key={`${ri}-${ci}`}>
+                            {isCl && <rect x={cx(ci)-5.5} y={y-1} width="11" height="10" fill="#ef4444"/>}
+                            <text x={cx(ci)} y={y+6.5} textAnchor="middle" fontSize="6" fill={isCl?'#fff':ci===0?'#dc2626':ci===6?'#2563eb':'#1e3a8a'} fontWeight={isCl?'800':'400'}>{d}</text>
+                            {isCl && <text x={cx(ci)} y={y+14} textAnchor="middle" fontSize="3.5" fill="#ef4444" fontWeight="700">휴진</text>}
+                          </g>
+                        );
+                      }))}
+                    </svg>
+                  );
+                }
+
                 return (
                   <button
                     key={t.value}
@@ -2472,41 +2649,7 @@ export default function TemplateGenerator() {
                     onClick={() => setCalendarTheme(t.value)}
                     className={`rounded-xl border-2 transition-all overflow-hidden ${isSelected ? 'shadow-lg scale-[1.02] border-blue-400 ring-2 ring-blue-200' : 'border-slate-200 hover:border-slate-300 hover:shadow-md'}`}
                   >
-                    {/* 달력 미니 SVG 미리보기 */}
-                    <svg viewBox="0 0 90 120" className="w-full" xmlns="http://www.w3.org/2000/svg">
-                      {/* 배경 */}
-                      <rect width="90" height="120" fill={m.bg} />
-                      {/* 데코 이모지 표현 (텍스트) */}
-                      <text x="50%" y="18" textAnchor="middle" fontSize="14" dominantBaseline="middle">{m.decor}</text>
-                      {/* 흰 달력 카드 */}
-                      <rect x="5" y="26" width="80" height="88" rx="5" ry="5" fill="white" />
-                      {/* 헤더 바 */}
-                      <rect x="5" y="26" width="80" height="14" rx="5" ry="5" fill={m.headerBg} />
-                      <rect x="5" y="32" width="80" height="8" fill={m.headerBg} />
-                      {/* 요일 헤더 */}
-                      {['일','월','화','수','목','금','토'].map((d, i) => (
-                        <text key={d} x={5 + i * 11.5 + 5.5} y="48" textAnchor="middle" fontSize="5" fill={m.headerColor} fontWeight="bold">{d}</text>
-                      ))}
-                      {/* 달력 셀 (5행 × 7열) */}
-                      {Array.from({length: 5}).map((_, row) =>
-                        Array.from({length: 7}).map((_, col) => {
-                          const day = row * 7 + col + 1;
-                          if (day > 31) return null;
-                          const x = 5 + col * 11.5 + 1;
-                          const y = 52 + row * 12 + 1;
-                          const isClosed = [5, 12, 19, 26].includes(day);
-                          return (
-                            <g key={`${row}-${col}`}>
-                              <rect x={x} y={y} width="10" height="10" fill={isClosed ? m.cellColor : '#f8fafc'} rx="1" />
-                              <text x={x + 5} y={y + 7} textAnchor="middle" fontSize="5.5" fill={isClosed ? (m.cellColor === '#fff' ? '#1e293b' : '#fff') : '#374151'} fontWeight={isClosed ? 'bold' : 'normal'}>{day}</text>
-                            </g>
-                          );
-                        })
-                      )}
-                      {/* 배지 예시 */}
-                      <rect x="20" y="65" width="18" height="6" rx="3" fill={m.badgeColor} opacity="0.9" />
-                      <text x="29" y="69.5" textAnchor="middle" fontSize="4" fill="white" fontWeight="bold">휴진</text>
-                    </svg>
+                    {svgContent}
                     <div className={`py-1.5 px-1 text-center ${isSelected ? 'bg-blue-50' : 'bg-white'}`} style={{ borderTop: `1.5px solid ${isSelected ? '#60a5fa' : '#f1f5f9'}` }}>
                       <div className={`text-[10px] font-bold leading-tight ${isSelected ? 'text-blue-700' : 'text-slate-600'}`}>{t.label.replace(/^[\S]+\s/, '')}</div>
                     </div>
