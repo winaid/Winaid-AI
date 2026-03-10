@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { getAllGeneratedPosts, getAdminStats, deleteGeneratedPost, PostType } from '../services/postStorageService';
 import { TEAM_DATA } from '../constants/teamHospitals';
@@ -506,6 +506,10 @@ const AdminPage: React.FC<AdminPageProps> = ({ onAdminVerified }) => {
   const [dataError, setDataError] = useState<string>('');
   const [selectedTeam, setSelectedTeam] = useState<number | null>(null);
   const [selectedHospitalName, setSelectedHospitalName] = useState<string>('');
+  const hospitalScrollRef = useRef<HTMLDivElement>(null);
+  const scrollHospitals = (delta: number) => {
+    hospitalScrollRef.current?.scrollBy({ left: delta, behavior: 'smooth' });
+  };
   
   // 콘텐츠 타입 라벨 가져오기
   const getContentTypeLabel = (type?: ContentType | string): string => {
@@ -886,25 +890,39 @@ const AdminPage: React.FC<AdminPageProps> = ({ onAdminVerified }) => {
                 }
                 const uniqueHospitals = Array.from(hospitalMap.entries());
                 return (
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex items-center gap-1">
                     <button
-                      onClick={() => setSelectedHospitalName('')}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all border ${
-                        !selectedHospitalName ? 'bg-blue-50 border-blue-200 text-blue-600' : 'border-slate-200 text-slate-500 hover:border-slate-300'
-                      }`}
-                    >전체 ({uniqueHospitals.length})</button>
-                    {uniqueHospitals.map(([name, managers]) => (
+                      onClick={() => scrollHospitals(-200)}
+                      className="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 text-base font-bold flex-none transition-colors"
+                    >‹</button>
+                    <div
+                      ref={hospitalScrollRef}
+                      className="flex gap-2 overflow-x-auto flex-1"
+                      style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                    >
                       <button
-                        key={name}
-                        onClick={() => setSelectedHospitalName(name)}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all border ${
-                          selectedHospitalName === name ? 'bg-blue-50 border-blue-200 text-blue-600' : 'border-slate-200 text-slate-500 hover:border-slate-300'
+                        onClick={() => setSelectedHospitalName('')}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all border flex-none ${
+                          !selectedHospitalName ? 'bg-blue-50 border-blue-200 text-blue-600' : 'border-slate-200 text-slate-500 hover:border-slate-300'
                         }`}
-                      >
-                        {name}
-                        <span className="ml-1 text-[10px] text-slate-400">({managers.length}명)</span>
-                      </button>
-                    ))}
+                      >전체 ({uniqueHospitals.length})</button>
+                      {uniqueHospitals.map(([name, managers]) => (
+                        <button
+                          key={name}
+                          onClick={() => setSelectedHospitalName(name)}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all border flex-none ${
+                            selectedHospitalName === name ? 'bg-blue-50 border-blue-200 text-blue-600' : 'border-slate-200 text-slate-500 hover:border-slate-300'
+                          }`}
+                        >
+                          {name}
+                          <span className="ml-1 text-[10px] text-slate-400">({managers.length}명)</span>
+                        </button>
+                      ))}
+                    </div>
+                    <button
+                      onClick={() => scrollHospitals(200)}
+                      className="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 text-base font-bold flex-none transition-colors"
+                    >›</button>
                   </div>
                 );
               })()}
