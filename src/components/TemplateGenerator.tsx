@@ -2176,42 +2176,6 @@ export default function TemplateGenerator() {
               </div>
             </div>
             <div>
-              <label className={labelCls}>디자인 테마</label>
-              <div className="grid grid-cols-3 gap-2">
-                {CALENDAR_THEME_OPTIONS.map(t => {
-                  const THEME_PREVIEWS: Record<string, { bg: string; accent: string; decor: string }> = {
-                    autumn:             { bg: 'linear-gradient(135deg,#f97316,#ea580c)', accent: '#3d2a00', decor: '🍁🍂' },
-                    korean_traditional: { bg: 'linear-gradient(135deg,#fdfaf5,#f0e8d0)', accent: '#111827', decor: '🦢☁️' },
-                    winter:             { bg: 'linear-gradient(135deg,#e0f2fe,#bae6fd)', accent: '#1e3a8a', decor: '❄️🎄' },
-                    cherry_blossom:     { bg: 'linear-gradient(135deg,#f9a8d4,#db2777)', accent: '#fff', decor: '🌸🌸' },
-                    spring_kids:        { bg: 'linear-gradient(135deg,#bfdbfe,#93c5fd)', accent: '#1e3a8a', decor: '☁️🌿' },
-                    medical_notebook:   { bg: 'linear-gradient(135deg,#3b9fe8,#2563eb)', accent: '#fff', decor: '👩‍⚕️📓' },
-                  };
-                  const p = THEME_PREVIEWS[t.value] || { bg: '#e2e8f0', accent: '#374151', decor: '📅' };
-                  const isSelected = calendarTheme === t.value;
-                  return (
-                    <button
-                      key={t.value}
-                      type="button"
-                      onClick={() => setCalendarTheme(t.value)}
-                      className={`rounded-xl overflow-hidden transition-all border-2 ${
-                        isSelected ? 'border-blue-400 ring-2 ring-blue-200 shadow-md' : 'border-slate-200 hover:border-slate-300'
-                      }`}
-                    >
-                      {/* 미리보기 영역 */}
-                      <div style={{ background: p.bg, height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', letterSpacing: '2px' }}>
-                        {p.decor}
-                      </div>
-                      {/* 라벨 */}
-                      <div className={`px-1 py-1.5 text-center text-[10px] font-bold truncate ${isSelected ? 'bg-blue-50 text-blue-700' : 'bg-white text-slate-600'}`}>
-                        {t.label.replace(/^[^\s]+\s/, '')}
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-            <div>
               <label className="block text-xs font-semibold text-slate-600 mb-2">마킹 모드 (선택 후 달력 클릭)</label>
               <div className="flex gap-2">
                 {([{ m: 'closed' as DayMark, l: '휴진', bg: 'bg-red-500', r: 'ring-red-300' }, { m: 'shortened' as DayMark, l: '단축', bg: 'bg-amber-500', r: 'ring-amber-300' }, { m: 'vacation' as DayMark, l: '휴가', bg: 'bg-purple-500', r: 'ring-purple-300' }]).map(({ m: md, l, bg, r }) => (
@@ -2487,34 +2451,98 @@ export default function TemplateGenerator() {
           <label className="block text-xs font-semibold text-slate-600 mb-2">
             디자인 템플릿 {selectedHistory && <span className="text-violet-400 font-normal">(내 스타일 선택 시 무시됨)</span>}
           </label>
-          <div className={`grid grid-cols-3 gap-2 ${selectedHistory ? 'opacity-40 pointer-events-none' : ''}`}>
-            {(CATEGORY_TEMPLATES[
-              category === 'schedule' ? `schedule_${scheduleLayout}` :
-              category === 'greeting' ? `greeting_${greetHoliday}` :
-              category
-            ] || CATEGORY_TEMPLATES[category] || []).map((tmpl) => {
-              const isSelected = !selectedHistory && selectedCatTemplate?.id === tmpl.id;
-              return (
-                <button
-                  key={tmpl.id}
-                  onClick={() => { setSelectedCatTemplate(isSelected ? null : tmpl); setSelectedHistory(null); }}
-                  onDoubleClick={() => setEnlargedTemplate(tmpl)}
-                  className={`rounded-xl border-2 transition-all overflow-hidden ${isSelected ? 'shadow-lg scale-[1.03]' : 'border-slate-200 hover:border-slate-300 hover:shadow-md'}`}
-                  style={isSelected ? { borderColor: tmpl.color } : undefined}
-                >
-                  {/* SVG/이미지 미리보기 */}
-                  <div className="relative w-full overflow-hidden" style={{ aspectRatio: '3/4', background: tmpl.previewImage ? '#f8fafc' : `linear-gradient(160deg, ${tmpl.bg} 0%, white 80%)` }}>
-                    <TemplateSVGPreview template={tmpl} category={category} hospitalName={hospitalName || '윈에이드 치과'} />
-                  </div>
-                  <div className="py-1.5 px-1 bg-white text-center" style={{ borderTop: `1.5px solid ${isSelected ? tmpl.color : '#f1f5f9'}` }}>
-                    <div className="text-[10px] font-bold leading-tight" style={{ color: isSelected ? tmpl.color : '#334155' }}>{tmpl.name}</div>
-                    <div className="text-[8px] mt-0.5" style={{ color: '#94a3b8' }}>{tmpl.desc}</div>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-          {selectedCatTemplate && !selectedHistory && (
+          {category === 'schedule' ? (
+            /* 진료 일정: 달력 테마 카드 */
+            <div className="grid grid-cols-3 gap-2">
+              {CALENDAR_THEME_OPTIONS.map(t => {
+                const THEME_META: Record<string, { bg: string; headerBg: string; headerColor: string; decor: string; cellColor: string; badgeColor: string }> = {
+                  autumn:             { bg: '#f97316', headerBg: '#3d3d3d', headerColor: '#fff',    decor: '🍁', cellColor: '#fff',    badgeColor: '#fcd34d' },
+                  korean_traditional: { bg: '#fdfaf5', headerBg: '#fff',    headerColor: '#111',   decor: '🦢', cellColor: '#fff',    badgeColor: '#9b1c1c' },
+                  winter:             { bg: '#bae6fd', headerBg: '#1e3a8a', headerColor: '#fff',    decor: '❄', cellColor: '#fff',    badgeColor: '#facc15' },
+                  cherry_blossom:     { bg: '#ec4899', headerBg: '#ec4899', headerColor: '#fff',    decor: '🌸', cellColor: '#fff',    badgeColor: '#7c3aed' },
+                  spring_kids:        { bg: '#bfdbfe', headerBg: '#f9a8d4', headerColor: '#fff',    decor: '🌼', cellColor: '#fff',    badgeColor: '#f472b6' },
+                  medical_notebook:   { bg: '#3b9fe8', headerBg: '#f8fafc', headerColor: '#1e3a8a', decor: '👩‍⚕️', cellColor: '#ef4444', badgeColor: '#ef4444' },
+                };
+                const m = THEME_META[t.value] || { bg: '#e2e8f0', headerBg: '#94a3b8', headerColor: '#fff', decor: '📅', cellColor: '#fff', badgeColor: '#ef4444' };
+                const isSelected = calendarTheme === t.value;
+                return (
+                  <button
+                    key={t.value}
+                    type="button"
+                    onClick={() => setCalendarTheme(t.value)}
+                    className={`rounded-xl border-2 transition-all overflow-hidden ${isSelected ? 'shadow-lg scale-[1.02] border-blue-400 ring-2 ring-blue-200' : 'border-slate-200 hover:border-slate-300 hover:shadow-md'}`}
+                  >
+                    {/* 달력 미니 SVG 미리보기 */}
+                    <svg viewBox="0 0 90 120" className="w-full" xmlns="http://www.w3.org/2000/svg">
+                      {/* 배경 */}
+                      <rect width="90" height="120" fill={m.bg} />
+                      {/* 데코 이모지 표현 (텍스트) */}
+                      <text x="50%" y="18" textAnchor="middle" fontSize="14" dominantBaseline="middle">{m.decor}</text>
+                      {/* 흰 달력 카드 */}
+                      <rect x="5" y="26" width="80" height="88" rx="5" ry="5" fill="white" />
+                      {/* 헤더 바 */}
+                      <rect x="5" y="26" width="80" height="14" rx="5" ry="5" fill={m.headerBg} />
+                      <rect x="5" y="32" width="80" height="8" fill={m.headerBg} />
+                      {/* 요일 헤더 */}
+                      {['일','월','화','수','목','금','토'].map((d, i) => (
+                        <text key={d} x={5 + i * 11.5 + 5.5} y="48" textAnchor="middle" fontSize="5" fill={m.headerColor} fontWeight="bold">{d}</text>
+                      ))}
+                      {/* 달력 셀 (5행 × 7열) */}
+                      {Array.from({length: 5}).map((_, row) =>
+                        Array.from({length: 7}).map((_, col) => {
+                          const day = row * 7 + col + 1;
+                          if (day > 31) return null;
+                          const x = 5 + col * 11.5 + 1;
+                          const y = 52 + row * 12 + 1;
+                          const isClosed = [5, 12, 19, 26].includes(day);
+                          return (
+                            <g key={`${row}-${col}`}>
+                              <rect x={x} y={y} width="10" height="10" fill={isClosed ? m.cellColor : '#f8fafc'} rx="1" />
+                              <text x={x + 5} y={y + 7} textAnchor="middle" fontSize="5.5" fill={isClosed ? (m.cellColor === '#fff' ? '#1e293b' : '#fff') : '#374151'} fontWeight={isClosed ? 'bold' : 'normal'}>{day}</text>
+                            </g>
+                          );
+                        })
+                      )}
+                      {/* 배지 예시 */}
+                      <rect x="20" y="65" width="18" height="6" rx="3" fill={m.badgeColor} opacity="0.9" />
+                      <text x="29" y="69.5" textAnchor="middle" fontSize="4" fill="white" fontWeight="bold">휴진</text>
+                    </svg>
+                    <div className={`py-1.5 px-1 text-center ${isSelected ? 'bg-blue-50' : 'bg-white'}`} style={{ borderTop: `1.5px solid ${isSelected ? '#60a5fa' : '#f1f5f9'}` }}>
+                      <div className={`text-[10px] font-bold leading-tight ${isSelected ? 'text-blue-700' : 'text-slate-600'}`}>{t.label.replace(/^[\S]+\s/, '')}</div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            /* 기타 카테고리: 기존 AI 스타일 템플릿 */
+            <div className={`grid grid-cols-3 gap-2 ${selectedHistory ? 'opacity-40 pointer-events-none' : ''}`}>
+              {(CATEGORY_TEMPLATES[
+                category === 'greeting' ? `greeting_${greetHoliday}` :
+                category
+              ] || CATEGORY_TEMPLATES[category] || []).map((tmpl) => {
+                const isSelected = !selectedHistory && selectedCatTemplate?.id === tmpl.id;
+                return (
+                  <button
+                    key={tmpl.id}
+                    onClick={() => { setSelectedCatTemplate(isSelected ? null : tmpl); setSelectedHistory(null); }}
+                    onDoubleClick={() => setEnlargedTemplate(tmpl)}
+                    className={`rounded-xl border-2 transition-all overflow-hidden ${isSelected ? 'shadow-lg scale-[1.03]' : 'border-slate-200 hover:border-slate-300 hover:shadow-md'}`}
+                    style={isSelected ? { borderColor: tmpl.color } : undefined}
+                  >
+                    <div className="relative w-full overflow-hidden" style={{ aspectRatio: '3/4', background: tmpl.previewImage ? '#f8fafc' : `linear-gradient(160deg, ${tmpl.bg} 0%, white 80%)` }}>
+                      <TemplateSVGPreview template={tmpl} category={category} hospitalName={hospitalName || '윈에이드 치과'} />
+                    </div>
+                    <div className="py-1.5 px-1 bg-white text-center" style={{ borderTop: `1.5px solid ${isSelected ? tmpl.color : '#f1f5f9'}` }}>
+                      <div className="text-[10px] font-bold leading-tight" style={{ color: isSelected ? tmpl.color : '#334155' }}>{tmpl.name}</div>
+                      <div className="text-[8px] mt-0.5" style={{ color: '#94a3b8' }}>{tmpl.desc}</div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+          {category !== 'schedule' && selectedCatTemplate && !selectedHistory && (
             <div className="mt-1.5 p-2 bg-blue-50 rounded-lg border border-blue-200">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-bold text-blue-700">템플릿: {selectedCatTemplate.name}</span>
@@ -2522,7 +2550,7 @@ export default function TemplateGenerator() {
               </div>
             </div>
           )}
-          <p className="text-[10px] text-slate-400 mt-1">더블클릭하면 크게 볼 수 있습니다</p>
+          {category !== 'schedule' && <p className="text-[10px] text-slate-400 mt-1">더블클릭하면 크게 볼 수 있습니다</p>}
         </div>
 
         {/* 생성 */}
