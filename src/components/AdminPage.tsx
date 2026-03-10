@@ -327,20 +327,46 @@ const StyleTab: React.FC<StyleTabProps> = ({
                                       </div>
                                     )}
 
+                                    {/* 점수 이유 요약 */}
+                                    {hasScore && (
+                                      <div className="bg-slate-50 border border-slate-200 rounded-lg p-2.5 space-y-1">
+                                        <p className="text-[11px] font-bold text-slate-700 mb-1">📋 채점 근거</p>
+                                        <div className="flex flex-wrap gap-2 text-[11px]">
+                                          <span className={`px-2 py-0.5 rounded font-bold ${scoreBadgeClass(post.score_typo)}`}>
+                                            맞춤법 {post.score_typo}점
+                                            {(post.typo_issues?.length ?? 0) > 0
+                                              ? ` — 오류 ${post.typo_issues!.length}건 × -5점`
+                                              : ' — 오류 없음'}
+                                          </span>
+                                          <span className={`px-2 py-0.5 rounded font-bold ${scoreBadgeClass(post.score_medical_law)}`}>
+                                            의료법 {post.score_medical_law}점
+                                            {(post.law_issues?.length ?? 0) > 0
+                                              ? ` — 위반 ${post.law_issues!.length}건`
+                                              : ' — 위반 없음'}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    )}
+
                                     {/* 오타/맞춤법 이슈 */}
                                     {(post.typo_issues?.length ?? 0) > 0 && (
                                       <div className="bg-orange-50 border border-orange-200 rounded-lg p-2.5">
                                         <p className="text-[11px] font-bold text-orange-700 mb-1.5">⚠️ 오타/맞춤법 이슈 ({post.typo_issues!.length}건)</p>
-                                        <div className="space-y-1">
+                                        <div className="space-y-2">
                                           {post.typo_issues!.map((issue, idx) => (
-                                            <div key={idx} className="flex items-center gap-2 text-[11px]">
-                                              <span className="text-red-600 line-through">"{issue.original}"</span>
-                                              <span className="text-slate-400">→</span>
-                                              <span className="text-green-700 font-medium">"{issue.correction}"</span>
-                                              <button
-                                                onClick={() => applyCorrection(post.id, issue.original, issue.correction)}
-                                                className="ml-auto px-2 py-0.5 bg-green-600 text-white text-[10px] rounded font-bold hover:bg-green-700"
-                                              >수정</button>
+                                            <div key={idx} className="text-[11px]">
+                                              <div className="flex items-center gap-2">
+                                                <span className="text-red-600 line-through">"{issue.original}"</span>
+                                                <span className="text-slate-400">→</span>
+                                                <span className="text-green-700 font-medium">"{issue.correction}"</span>
+                                                <button
+                                                  onClick={() => applyCorrection(post.id, issue.original, issue.correction)}
+                                                  className="ml-auto px-2 py-0.5 bg-green-600 text-white text-[10px] rounded font-bold hover:bg-green-700"
+                                                >수정</button>
+                                              </div>
+                                              {issue.context && (
+                                                <p className="text-[10px] text-slate-400 italic mt-0.5 pl-1 border-l-2 border-orange-200">{issue.context}</p>
+                                              )}
                                             </div>
                                           ))}
                                         </div>
