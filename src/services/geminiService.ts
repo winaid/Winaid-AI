@@ -692,6 +692,21 @@ export const generateBlogWithPipeline = async (
   const promptTargetLength = Math.round(targetLength * 1.35);
   const medicalLawMode = request.medicalLawMode || 'strict';
 
+  // 병원 블로그 학습 말투 로드 (learnedStyleId 없을 때만)
+  let hospitalStyleSuffix = '';
+  if (!request.learnedStyleId && request.hospitalName) {
+    try {
+      const { getHospitalStylePrompt } = await import('./writingStyleService');
+      const prompt = await getHospitalStylePrompt(request.hospitalName);
+      if (prompt) {
+        hospitalStyleSuffix = `\n\n[🏥 병원 블로그 학습 말투 - 반드시 적용]\n${prompt}`;
+        console.log('🏥 파이프라인 병원 말투 적용:', request.hospitalName);
+      }
+    } catch (e) {
+      console.warn('파이프라인 병원 말투 로드 실패:', e);
+    }
+  }
+
   // ── Stage A: 아웃라인 생성 (FLASH) ── [재시도 포함]
   safeProgress('📐 [1/4] 글 구조 설계 중...');
   const outlinePrompt = getPipelineOutlinePrompt(promptTargetLength, medicalLawMode, {
@@ -774,7 +789,7 @@ ${JSON.stringify(searchResults?.collected_facts?.slice(0, 2) || [], null, 2)}`;
   // 도입부 Promise
   const introPromise = callGemini({
     prompt: introUserPrompt,
-    systemPrompt: introPrompt,
+    systemPrompt: introPrompt + hospitalStyleSuffix,
     model: GEMINI_MODEL.PRO,
     responseType: 'text',
     timeout: 45000,
@@ -813,7 +828,7 @@ ${JSON.stringify(searchResults?.collected_facts?.slice(i, i + 2) || [], null, 2)
 
     return callGemini({
       prompt: sectionUserPrompt,
-      systemPrompt: sectionPrompt,
+      systemPrompt: sectionPrompt + hospitalStyleSuffix,
       model: GEMINI_MODEL.PRO,
       responseType: 'text',
       timeout: 45000,
@@ -858,7 +873,7 @@ ${sectionSummaries.join('\n')}`;
 
   const conclusionHtml = await callGemini({
     prompt: conclusionUserPrompt,
-    systemPrompt: conclusionPrompt,
+    systemPrompt: conclusionPrompt + hospitalStyleSuffix,
     model: GEMINI_MODEL.PRO,
     responseType: 'text',
     timeout: 30000,
@@ -1353,8 +1368,10 @@ style 속성에 background: ${bgGradient}; 반드시 포함!
   const imageStyle = request.imageStyle || 'illustration'; // 기본값: 3D 일러스트
   
   // 학습된 말투 스타일 적용
+  // 우선순위: 1) 수동 학습(localStorage) → 2) 병원 블로그 학습(Supabase)
   let learnedStyleInstruction = '';
   if (request.learnedStyleId) {
+    // 1순위: 사용자가 직접 학습시킨 스타일 (localStorage)
     try {
       const { getStyleById, getStylePromptForGeneration } = await import('./writingStyleService');
       const learnedStyle = getStyleById(request.learnedStyleId);
@@ -1368,10 +1385,30 @@ ${getStylePromptForGeneration(learnedStyle)}
 - 자주 사용하는 표현을 자연스럽게 활용하세요
 - 전체적인 어조와 분위기를 일관되게 유지하세요
 `;
-        console.log('📝 학습된 말투 적용:', learnedStyle.name);
+        console.log('📝 학습된 말투 적용 (수동):', learnedStyle.name);
       }
     } catch (e) {
       console.warn('학습된 말투 로드 실패:', e);
+    }
+  } else if (request.hospitalName) {
+    // 2순위: 병원 블로그 크롤링으로 학습한 스타일 (Supabase)
+    try {
+      const { getHospitalStylePrompt } = await import('./writingStyleService');
+      const hospitalStylePrompt = await getHospitalStylePrompt(request.hospitalName);
+      if (hospitalStylePrompt) {
+        learnedStyleInstruction = `
+[🏥🏥🏥 병원 블로그 학습 말투 - 최우선 적용! 🏥🏥🏥]
+${hospitalStylePrompt}
+
+⚠️ 위 병원 블로그에서 학습한 말투를 반드시 적용하세요!
+- 해당 병원 블로그의 문장 패턴과 어조를 따라하세요
+- 자주 쓰는 표현과 문장 구조를 자연스럽게 반영하세요
+- 전체적인 분위기를 일관되게 유지하세요
+`;
+        console.log('🏥 병원 블로그 학습 말투 적용:', request.hospitalName);
+      }
+    } catch (e) {
+      console.warn('병원 말투 프로파일 로드 실패:', e);
     }
   }
   
