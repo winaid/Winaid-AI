@@ -54,6 +54,9 @@ async function fetchPostNos(blogId: string, maxPosts: number): Promise<string[]>
     if (page > 5) break; // 최대 5페이지
   }
 
+  // logNo는 숫자가 클수록 최신 글 → 내림차순 정렬해서 최근 글부터
+  postNos.sort((a, b) => Number(b) - Number(a));
+
   return postNos.slice(0, maxPosts);
 }
 
