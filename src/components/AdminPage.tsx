@@ -58,12 +58,24 @@ const StyleTab: React.FC<StyleTabProps> = ({
   const handleScorePost = async (post: CrawledPost) => {
     setScoringId(post.id);
     try {
-      const score = await scoreCrawledPost(post.content);
-      await updateCrawledPostScore(post.id, score);
+      // 메모리 글(id가 URL)은 먼저 DB에 저장
+      let dbPost = post;
+      if (post.id.startsWith('http')) {
+        const saved = await saveCrawledPost(post.hospital_name, post.url, post.content);
+        if (saved) {
+          dbPost = saved;
+          setDbPosts(prev => ({
+            ...prev,
+            [post.hospital_name]: [saved, ...(prev[post.hospital_name] || [])],
+          }));
+        }
+      }
+      const score = await scoreCrawledPost(dbPost.content);
+      await updateCrawledPostScore(dbPost.id, score);
       setDbPosts(prev => ({
         ...prev,
-        [post.hospital_name]: (prev[post.hospital_name] || []).map(p =>
-          p.id === post.id ? { ...p, ...score, scored_at: new Date().toISOString() } : p
+        [dbPost.hospital_name]: (prev[dbPost.hospital_name] || []).map(p =>
+          p.id === dbPost.id ? { ...p, ...score, scored_at: new Date().toISOString() } : p
         ),
       }));
     } catch (e) {
@@ -283,7 +295,7 @@ const StyleTab: React.FC<StyleTabProps> = ({
                                 {isOpen && (
                                   <div className="px-3 pb-3 bg-slate-50 border-t border-slate-100 space-y-3">
                                     {/* 채점 버튼 */}
-                                    {!hasScore && post.id && !post.id.startsWith('http') && (
+                                    {!hasScore && post.id && (
                                       <button
                                         onClick={() => handleScorePost(post)}
                                         disabled={isScoring}
