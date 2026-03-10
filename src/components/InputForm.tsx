@@ -118,6 +118,7 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
   const [isLoadingTrends, setIsLoadingTrends] = useState(false);
   const [seoTitles, setSeoTitles] = useState<SeoTitleItem[]>([]);
   const [isLoadingTitles, setIsLoadingTitles] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
   
   const handleSubmit = (e: React.MouseEvent<HTMLButtonElement> | React.FormEvent) => {
     e.preventDefault();
@@ -283,36 +284,49 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
     }
   };
 
-  const labelCls = "block text-[11px] font-bold text-slate-500 mb-2 tracking-wider uppercase";
-  const inputCls = "w-full px-4 py-3 bg-white border border-slate-200/80 rounded-xl text-slate-700 text-sm font-medium outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-500/10 focus:bg-white transition-all placeholder:text-slate-300 focus-visible:outline-2 focus-visible:outline-blue-500";
-  const selectCls = "w-full px-4 py-3 bg-white border border-slate-200/80 rounded-xl text-slate-700 text-sm font-medium outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-500/10 focus:bg-white transition-all focus-visible:outline-2 focus-visible:outline-blue-500";
+  const inputCls = "w-full px-3 py-2.5 bg-white border border-slate-200 rounded-lg text-slate-700 text-sm font-medium outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-500/10 transition-all placeholder:text-slate-300";
+  const selectCls = "w-full px-3 py-2.5 bg-white border border-slate-200 rounded-lg text-slate-700 text-sm font-medium outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-500/10 transition-all";
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-slate-200 relative overflow-hidden">
+    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
 
-      {/* 페이지 타이틀 */}
-      <div className="px-6 pt-5 pb-0">
-        <h2 className={`text-base font-bold ${postType === 'blog' ? 'text-blue-700' : postType === 'card_news' ? 'text-pink-600' : 'text-amber-600'}`}>
-          {postType === 'blog' ? '📝 블로그 글 생성' : postType === 'card_news' ? '🎨 카드뉴스 생성' : '🗞️ 보도자료 생성'}
-        </h2>
-        <p className="text-xs text-slate-400 mt-1 font-medium">
-          {postType === 'blog' ? '네이버 스마트블록에 최적화된 의료 블로그 콘텐츠를 생성합니다.' : postType === 'card_news' ? 'SNS용 카드뉴스 원고와 이미지를 자동 생성합니다.' : '언론에 배포 가능한 보도자료를 작성합니다.'}
-        </p>
+      {/* 콘텐츠 타입 탭 */}
+      <div className="flex border-b border-slate-100">
+        {([
+          { type: 'blog' as PostType, label: '블로그', icon: '📝', color: 'blue' },
+          { type: 'card_news' as PostType, label: '카드뉴스', icon: '🎨', color: 'pink' },
+          { type: 'press_release' as PostType, label: '보도자료', icon: '🗞️', color: 'amber' },
+        ]).map(({ type, label, icon, color }) => (
+          <button
+            key={type}
+            type="button"
+            onClick={() => setPostType(type)}
+            className={`flex-1 py-2.5 text-xs font-bold transition-all border-b-2 flex items-center justify-center gap-1.5 ${
+              postType === type
+                ? color === 'blue' ? 'text-blue-600 border-blue-500 bg-blue-50/40'
+                : color === 'pink' ? 'text-pink-600 border-pink-500 bg-pink-50/40'
+                : 'text-amber-600 border-amber-500 bg-amber-50/40'
+                : 'text-slate-400 border-transparent hover:text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            <span>{icon}</span>{label}
+          </button>
+        ))}
       </div>
 
       {/* 메인 입력 폼 */}
-      <div className="p-6 pt-4">
-      <form onSubmit={handleSubmit} className="space-y-5">
+      <div className="p-4">
+      <form onSubmit={handleSubmit} className="space-y-3">
 
         {postType === 'blog' && (<>
-        {/* 팀 선택 탭 (항상 보임) */}
-        <div className="flex bg-slate-100/50 rounded-xl p-1">
+        {/* 팀 선택 + 병원명 */}
+        <div className="flex bg-slate-100 rounded-lg p-0.5">
           {TEAM_DATA.map(team => (
             <button
               key={team.id}
               type="button"
               onClick={() => { setSelectedTeam(team.id); setShowHospitalDropdown(true); }}
-              className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${
+              className={`flex-1 py-1.5 rounded-md text-xs font-bold transition-all ${
                 selectedTeam === team.id
                   ? 'bg-white text-blue-600 shadow-sm'
                   : 'text-slate-400 hover:text-slate-600'
@@ -324,7 +338,6 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
         </div>
 
         <div className="relative" ref={hospitalDropdownRef}>
-          <label className={labelCls}>병원명</label>
           {selectedTeam !== null ? (
           <>
           <div className="relative">
@@ -543,44 +556,91 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
         </>)}
 
         {postType !== 'press_release' && (
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className={labelCls}>진료과</label>
-            <select
-              value={category}
-              onChange={(e) => setCategory(e.target.value as ContentCategory)}
-              className={selectCls}
-              disabled={isLoading}
-              aria-label="진료과 선택"
-            >
-              {CATEGORIES.map((cat) => (
-                <option key={cat.value} value={cat.value}>{cat.label}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className={labelCls}>청중</label>
-            <select
-              value={audienceMode}
-              onChange={(e) => setAudienceMode(e.target.value as AudienceMode)}
-              className={selectCls}
-              disabled={isLoading}
-              aria-label="타겟 청중 선택"
-            >
-              <option value="환자용(친절/공감)">환자용 (친절/공감)</option>
-              <option value="보호자용(가족걱정)">보호자용 (부모님/자녀 걱정)</option>
-              <option value="전문가용(신뢰/정보)">전문가용 (신뢰/정보)</option>
-            </select>
-          </div>
+        <div className="grid grid-cols-2 gap-2">
+          <select value={category} onChange={(e) => setCategory(e.target.value as ContentCategory)} className={selectCls} disabled={isLoading} aria-label="진료과 선택">
+            {CATEGORIES.map((cat) => (<option key={cat.value} value={cat.value}>{cat.label}</option>))}
+          </select>
+          <select value={audienceMode} onChange={(e) => setAudienceMode(e.target.value as AudienceMode)} className={selectCls} disabled={isLoading} aria-label="타겟 청중 선택">
+            <option value="환자용(친절/공감)">환자용 (친절/공감)</option>
+            <option value="보호자용(가족걱정)">보호자용 (부모님/자녀 걱정)</option>
+            <option value="전문가용(신뢰/정보)">전문가용 (신뢰/정보)</option>
+          </select>
         </div>
         )}
 
+        {/* 주제 입력 - 가장 중요한 필드 */}
+        <div className="space-y-2">
+          <input ref={topicInputRef} type="text" value={topic} onChange={(e) => setTopic(e.target.value)}
+            placeholder={postType === 'press_release' ? '기사 주제 (예: 디지털 임플란트 도입 성과)' : postType === 'card_news' ? '카드뉴스 주제 (예: 임플란트 시술 과정 안내)' : '블로그 제목 (예: 치아미백 종류와 비용 총정리)'}
+            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm font-semibold outline-none focus:border-blue-400 focus:bg-white focus:ring-2 focus:ring-blue-500/10 transition-all placeholder:text-slate-300 placeholder:font-normal"
+            required
+          />
+          {postType !== 'card_news' && (
+            <input type="text" value={keywords} onChange={(e) => setKeywords(e.target.value)}
+              placeholder="SEO 키워드 (예: 강남 치과, 임플란트 가격)" className={inputCls} />
+          )}
+          {postType === 'blog' && (
+            <input type="text" value={disease} onChange={(e) => setDisease(e.target.value)}
+              placeholder="질환명 (예: 치주염, 충치) - 글의 실제 주제" className={inputCls} />
+          )}
+        </div>
+
+        {/* AI 제목 추천 + 트렌드 주제 (2버튼 가로) */}
+        <div className="flex gap-2">
+          <button type="button" onClick={handleRecommendTitles} disabled={isLoadingTitles || !(topic || disease || keywords)}
+            className="flex-1 py-2 bg-slate-100 text-slate-600 rounded-lg text-xs font-semibold hover:bg-slate-200 transition-all disabled:opacity-40 flex items-center justify-center gap-1">
+            {isLoadingTitles ? <><div className="w-3 h-3 border-2 border-slate-400 border-t-slate-600 rounded-full animate-spin" />생성 중...</> : <>✨ AI 제목 추천</>}
+          </button>
+          <button type="button" onClick={handleRecommendTrends} disabled={isLoadingTrends}
+            className="flex-1 py-2 bg-slate-100 text-slate-600 rounded-lg text-xs font-semibold hover:bg-slate-200 transition-all disabled:opacity-40 flex items-center justify-center gap-1">
+            {isLoadingTrends ? <><div className="w-3 h-3 border-2 border-slate-400 border-t-slate-600 rounded-full animate-spin" />분석 중...</> : <>🔥 트렌드 주제</>}
+          </button>
+        </div>
+
+        {/* SEO 제목 추천 결과 */}
+        {seoTitles.length > 0 && (
+          <div className="space-y-1">
+            {seoTitles.map((item, idx) => (
+              <button key={idx} type="button" onClick={() => setTopic(item.title)}
+                className="w-full text-left px-3 py-2 bg-white border border-slate-100 rounded-lg hover:border-blue-400 transition-all group relative">
+                <div className="absolute top-2 right-2 text-[10px] font-semibold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">SEO {item.score}</div>
+                <span className="text-[10px] text-slate-400 block">{item.type}</span>
+                <span className="text-xs font-medium text-slate-700 group-hover:text-blue-600 block pr-12">{item.title}</span>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* 트렌드 주제 결과 */}
+        {trendingItems.length > 0 && (
+          <div className="space-y-1">
+            {trendingItems.map((item, idx) => (
+              <button key={idx} type="button" onClick={() => { postType === 'card_news' ? setTopic(item.topic) : setDisease(item.topic); topicInputRef.current?.focus(); }}
+                className="w-full text-left px-3 py-2 bg-white border border-slate-100 rounded-lg hover:border-blue-400 transition-all group relative">
+                <div className="absolute top-2 right-2 text-[10px] font-semibold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">SEO {item.score}</div>
+                <span className="text-xs font-semibold text-slate-800 group-hover:text-blue-600 block pr-12">{item.topic}</span>
+                <p className="text-[11px] text-slate-400 truncate">{item.keywords} · {item.seasonal_factor}</p>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* 상세 설정 토글 */}
+        <button type="button" onClick={() => setShowAdvanced(!showAdvanced)}
+          className="w-full flex items-center justify-between px-3 py-2 bg-slate-50 hover:bg-slate-100 rounded-lg text-xs font-semibold text-slate-500 transition-all border border-slate-100">
+          <span>⚙️ 상세 설정</span>
+          <svg className={`w-4 h-4 transition-transform ${showAdvanced ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
+        </button>
+
+        {/* 상세 설정 패널 */}
+        {showAdvanced && (
+        <div className="space-y-4 p-3 bg-slate-50 rounded-xl border border-slate-100">
         {/* 유형별 설정 */}
-        <div className="space-y-3 p-4 bg-slate-50/50 rounded-xl border border-slate-100">
+        <div className="space-y-3">
            {postType === 'blog' ? (
                <div className="space-y-3">
                   <div>
-                    <label className={labelCls}>병원 홈페이지 <span className="text-slate-400 font-normal">(선택)</span></label>
+                    <label className="block text-[11px] font-semibold text-slate-500 mb-1">병원 홈페이지 <span className="text-slate-400 font-normal">(선택)</span></label>
                     <input type="url" value={referenceUrl} onChange={(e) => setReferenceUrl(e.target.value)} placeholder="https://www.hospital.com" className={inputCls} />
                   </div>
                   <div>
@@ -686,15 +746,15 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
                     본 보도자료는 홍보 목적의 자료이며, 의학적 조언이나 언론 보도로 사용될 경우 법적 책임은 사용자에게 있습니다.
                   </p>
                   <div>
-                    <label className={labelCls}>의료진</label>
+                    <label className="block text-[11px] font-semibold text-slate-500 mb-1">의료진</label>
                     <input type="text" value={doctorName} onChange={(e) => setDoctorName(e.target.value)} placeholder="홍길동" className={inputCls} />
                   </div>
                   <div>
-                    <label className={labelCls}>병원 웹사이트 <span className="text-slate-400 font-normal">(선택)</span></label>
+                    <label className="block text-[11px] font-semibold text-slate-500 mb-1">병원 웹사이트 <span className="text-slate-400 font-normal">(선택)</span></label>
                     <input type="url" value={hospitalWebsite} onChange={(e) => setHospitalWebsite(e.target.value)} placeholder="https://www.hospital.com" className={inputCls} />
                   </div>
                   <div>
-                    <label className={labelCls}>직함</label>
+                    <label className="block text-[11px] font-semibold text-slate-500 mb-1">직함</label>
                     <select value={doctorTitle} onChange={(e) => setDoctorTitle(e.target.value)} className={selectCls}>
                       <option value="원장">원장</option>
                       <option value="부원장">부원장</option>
@@ -706,7 +766,7 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
                     </select>
                   </div>
                   <div>
-                    <label className={labelCls}>보도 유형</label>
+                    <label className="block text-[11px] font-semibold text-slate-500 mb-1">보도 유형</label>
                     <div className="grid grid-cols-3 gap-1.5">
                       {[
                         { value: 'achievement', label: '실적/달성', icon: '🏆' },
@@ -737,177 +797,92 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
                   </div>
                </div>
            ) : null}
-        </div>
 
-        {/* 추천 주제 */}
-        <div>
-          <div className="flex items-center justify-between p-3 bg-white rounded-xl border border-slate-200 mb-3">
-            <div>
-              <span className="text-xs font-semibold text-slate-700">추천 주제</span>
-              <p className="text-[10px] text-slate-400">AI 트렌드 분석 기반</p>
-            </div>
-            <button type="button" onClick={handleRecommendTrends} disabled={isLoadingTrends} className="text-xs font-semibold text-white bg-blue-600 px-3.5 py-2 rounded-lg hover:bg-blue-700 transition-all whitespace-nowrap">
-              {isLoadingTrends ? '분석 중...' : '주제 찾기'}
-            </button>
-          </div>
-          {trendingItems.length > 0 && (
-            <div className="space-y-1.5 mb-3">
-              {trendingItems.map((item, idx) => (
-                <button key={idx} type="button" onClick={() => { if (postType === 'card_news') { setTopic(item.topic); } else { setDisease(item.topic); } topicInputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }); setTimeout(() => topicInputRef.current?.focus(), 300); }} className="w-full text-left p-3 bg-white border border-slate-100 rounded-xl hover:border-blue-400 transition-all group relative">
-                   <div className="absolute top-2 right-2 text-[10px] font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md">
-                      SEO {item.score}
-                   </div>
-                  <div className="pr-14">
-                    <span className="font-semibold text-slate-800 group-hover:text-blue-600 text-sm">{item.topic}</span>
-                    <p className="text-[11px] text-slate-400 truncate mt-0.5">{item.keywords} · {item.seasonal_factor}</p>
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* 제목/키워드 입력 */}
-        <div className="space-y-2.5">
-          <label className={labelCls}>{postType === 'press_release' ? '기사 제목' : postType === 'card_news' ? '카드뉴스 주제' : '블로그 제목'}</label>
-          <input ref={topicInputRef} type="text" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder={postType === 'press_release' ? '기사 주제 (예: 디지털 임플란트 도입 성과)' : postType === 'card_news' ? '주제 (예: 임플란트 시술 과정 안내)' : '글 제목 (예: 치아미백 종류와 비용 총정리)'} className={`${inputCls} !text-base !font-semibold`} required />
-          {postType !== 'card_news' && <input type="text" value={keywords} onChange={(e) => setKeywords(e.target.value)} placeholder="SEO 키워드 (예: 강남 치과, 임플란트 가격)" className={inputCls} />}
-          {postType === 'blog' && (
-            <input type="text" value={disease} onChange={(e) => setDisease(e.target.value)} placeholder="질환명 (예: 치주염, 충치, 부정교합) - 글의 실제 주제" className={inputCls} />
-          )}
-
-          {/* 소제목 직접 입력 - 블로그/언론보도만 */}
+          {/* 소제목 직접 입력 */}
           {postType !== 'card_news' && (
-          <div className="p-3 bg-white rounded-xl border border-slate-200">
-            <div className="flex items-center justify-between mb-1.5">
-              <label className="text-xs font-semibold text-slate-600">소제목 직접 입력 <span className="text-slate-400 font-normal">(선택)</span></label>
-              <span className="text-[10px] text-slate-400">한 줄에 하나씩</span>
-            </div>
-            <textarea
-              value={customSubheadings}
-              onChange={(e) => setCustomSubheadings(e.target.value)}
-              onPaste={(e) => { e.preventDefault(); const text = e.clipboardData.getData('text/plain'); document.execCommand('insertText', false, text); }}
-              placeholder={"소제목을 한 줄에 하나씩 입력하세요\n예:\n임플란트 수술 과정과 기간\n임플란트 후 관리법\n임플란트 비용 비교"}
-              className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:border-blue-400 outline-none resize-none"
-              rows={4}
-            />
-            <p className="text-[10px] text-slate-400 mt-1">입력 시 AI가 그대로 사용합니다. 미입력 시 자동 생성.</p>
-          </div>
-          )}
-
-          <button type="button" onClick={handleRecommendTitles} disabled={isLoadingTitles || !(topic || disease || keywords)} className="w-full py-2.5 bg-blue-600 text-white rounded-xl text-xs font-semibold hover:bg-blue-700 transition-all disabled:opacity-40">
-            {isLoadingTitles ? '생성 중...' : 'AI 제목 추천받기'}
-          </button>
-
-          {seoTitles.length > 0 && (
-            <div className="space-y-1.5">
-              {seoTitles.map((item, idx) => (
-                <button key={idx} type="button" onClick={() => setTopic(item.title)} className="w-full text-left p-3 bg-white border border-slate-100 rounded-xl hover:border-blue-400 transition-all group relative">
-                  <div className="absolute top-2 right-2 text-[10px] font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md">SEO {item.score}</div>
-                  <span className="text-[10px] font-medium text-slate-400 block">{item.type}</span>
-                  <span className="text-sm font-medium text-slate-700 group-hover:text-blue-600 block pr-14">{item.title}</span>
-                </button>
-              ))}
+            <div>
+              <p className="text-[11px] font-semibold text-slate-500 mb-1.5">소제목 직접 입력 <span className="text-slate-400 font-normal">(선택 · 한 줄에 하나씩)</span></p>
+              <textarea value={customSubheadings} onChange={(e) => setCustomSubheadings(e.target.value)}
+                onPaste={(e) => { e.preventDefault(); const text = e.clipboardData.getData('text/plain'); document.execCommand('insertText', false, text); }}
+                placeholder={"임플란트 수술 과정과 기간\n임플란트 후 관리법\n임플란트 비용 비교"}
+                className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-xs focus:border-blue-400 outline-none resize-none placeholder:text-slate-300"
+                rows={3}
+              />
             </div>
           )}
-        </div>
 
-        {/* 이미지 스타일 */}
-        {postType !== 'press_release' && (
-        <div>
-           <label className={labelCls}>이미지 스타일</label>
-           <div className="grid grid-cols-4 gap-1.5">
-              {([
-                { id: 'photo' as ImageStyle, icon: '📸', label: '실사' },
-                { id: 'illustration' as ImageStyle, icon: '🎨', label: '일러스트' },
-                { id: 'medical' as ImageStyle, icon: '🫀', label: '의학 3D' },
-                { id: 'custom' as ImageStyle, icon: '✏️', label: '커스텀' },
-              ]).map(s => (
-                <button key={s.id} type="button"
-                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); setImageStyle(s.id); setShowCustomInput(s.id === 'custom'); }}
-                  className={`py-2.5 rounded-xl border transition-all flex flex-col items-center gap-1 ${
-                    imageStyle === s.id ? 'border-blue-400 bg-blue-50 text-blue-700' : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300'
-                  }`}
-                >
-                   <span className="text-lg">{s.icon}</span>
-                   <span className="text-[11px] font-semibold">{s.label}</span>
-                </button>
-              ))}
-           </div>
-
-           {showCustomInput && imageStyle === 'custom' && (
-             <div className="mt-2.5 p-3 bg-white rounded-xl border border-slate-200">
-               <div className="flex items-center justify-between mb-1.5">
-                 <label className="text-xs font-semibold text-slate-600">커스텀 스타일 프롬프트</label>
-                 {customPrompt && (
-                   <button type="button" onClick={() => { localStorage.setItem(CUSTOM_PROMPT_KEY, customPrompt); toast.success('프롬프트가 저장되었습니다.'); }}
-                     className="px-2.5 py-1 bg-slate-800 text-white text-[10px] font-medium rounded-md hover:bg-slate-900 transition-all"
-                   >저장</button>
-                 )}
-               </div>
-               <textarea value={customPrompt} onChange={(e) => setCustomPrompt(e.target.value)}
-                 onPaste={(e) => { e.preventDefault(); const text = e.clipboardData.getData('text/plain'); document.execCommand('insertText', false, text); }}
-                 placeholder="파스텔톤, 손그림 느낌의 일러스트, 부드러운 선..."
-                 className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:border-blue-400 outline-none resize-none" rows={3}
-               />
-               <p className="text-[10px] text-slate-400 mt-1">원하는 이미지 스타일을 입력하세요. 저장하면 다음에도 사용 가능.</p>
-             </div>
-           )}
-        </div>
-        )}
-
-        {/* 블로그 스타일 설정 */}
-        {postType === 'blog' && (
-          <div className="border-t border-slate-100 pt-5 space-y-4">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-semibold text-slate-500">스타일 설정 <span className="text-slate-400 font-normal">(선택)</span></label>
-              <span className="text-[10px] text-blue-500 font-medium">말투 학습으로 나만의 스타일 적용</span>
+          {/* 이미지 스타일 */}
+          {postType !== 'press_release' && (
+            <div>
+              <p className="text-[11px] font-semibold text-slate-500 mb-1.5">이미지 스타일</p>
+              <div className="grid grid-cols-4 gap-1.5">
+                {([
+                  { id: 'photo' as ImageStyle, icon: '📸', label: '실사' },
+                  { id: 'illustration' as ImageStyle, icon: '🎨', label: '일러스트' },
+                  { id: 'medical' as ImageStyle, icon: '🫀', label: '의학 3D' },
+                  { id: 'custom' as ImageStyle, icon: '✏️', label: '커스텀' },
+                ]).map(s => (
+                  <button key={s.id} type="button"
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); setImageStyle(s.id); setShowCustomInput(s.id === 'custom'); }}
+                    className={`py-2 rounded-lg border transition-all flex flex-col items-center gap-0.5 ${imageStyle === s.id ? 'border-blue-400 bg-blue-50 text-blue-700' : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300'}`}
+                  >
+                    <span className="text-base">{s.icon}</span>
+                    <span className="text-[10px] font-semibold">{s.label}</span>
+                  </button>
+                ))}
+              </div>
+              {showCustomInput && imageStyle === 'custom' && (
+                <div className="mt-2 p-2.5 bg-white rounded-lg border border-slate-200">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[11px] font-semibold text-slate-600">커스텀 프롬프트</span>
+                    {customPrompt && (
+                      <button type="button" onClick={() => { localStorage.setItem(CUSTOM_PROMPT_KEY, customPrompt); toast.success('저장되었습니다.'); }}
+                        className="px-2 py-0.5 bg-slate-800 text-white text-[10px] font-medium rounded hover:bg-slate-900">저장</button>
+                    )}
+                  </div>
+                  <textarea value={customPrompt} onChange={(e) => setCustomPrompt(e.target.value)}
+                    onPaste={(e) => { e.preventDefault(); const text = e.clipboardData.getData('text/plain'); document.execCommand('insertText', false, text); }}
+                    placeholder="파스텔톤, 손그림 느낌의 일러스트, 부드러운 선..."
+                    className="w-full p-2 bg-slate-50 border border-slate-200 rounded text-xs focus:border-blue-400 outline-none resize-none" rows={2}
+                  />
+                </div>
+              )}
             </div>
+          )}
 
-            <WritingStyleLearner
-              onStyleSelect={(styleId) => { setLearnedStyleId(styleId); }}
-              selectedStyleId={learnedStyleId}
-              contentType="blog"
-            />
-
-            {!learnedStyleId && (
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-[11px] font-medium text-slate-400 mb-1 block">페르소나</label>
+          {/* 블로그 스타일 설정 */}
+          {postType === 'blog' && (
+            <div className="space-y-3">
+              <WritingStyleLearner onStyleSelect={(styleId) => setLearnedStyleId(styleId)} selectedStyleId={learnedStyleId} contentType="blog" />
+              {!learnedStyleId && (
+                <div className="grid grid-cols-2 gap-2">
                   <select value={persona} onChange={(e) => setPersona(e.target.value)} className={selectCls}>
                     {PERSONAS.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
                   </select>
-                </div>
-                <div>
-                  <label className="text-[11px] font-medium text-slate-400 mb-1 block">말투</label>
                   <select value={tone} onChange={(e) => setTone(e.target.value)} className={selectCls}>
                     {TONES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
                   </select>
                 </div>
-              </div>
-            )}
-          </div>
-        )}
+              )}
+            </div>
+          )}
+        </div>
+        </div>
+        )} {/* end showAdvanced */}
 
+        {/* 생성 버튼 */}
         <button
           type="button"
           onClick={handleSubmit}
           disabled={isLoading || !topic.trim()}
-          className={`w-full py-4 rounded-xl text-white font-black text-sm shadow-lg transition-all duration-300 active:scale-[0.97] disabled:opacity-40 disabled:shadow-none relative overflow-hidden group ${isLoading ? 'bg-slate-400' : 'bg-gradient-to-r from-blue-600 via-blue-700 to-blue-600 hover:from-blue-700 hover:via-blue-800 hover:to-blue-700 shadow-blue-500/30 hover:shadow-blue-500/40 hover:-translate-y-0.5'}`}
+          className={`w-full py-3.5 rounded-xl text-white font-black text-sm shadow-md transition-all duration-200 active:scale-[0.98] disabled:opacity-40 disabled:shadow-none flex items-center justify-center gap-2 group ${isLoading ? 'bg-slate-400' : 'bg-blue-600 hover:bg-blue-700 shadow-blue-500/25 hover:-translate-y-0.5'}`}
         >
-          <span className="relative z-10 flex items-center justify-center gap-2">
-            {isLoading ? (
-              <>
-                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                생성 중...
-              </>
-            ) : (
-              <>
-                {postType === 'blog' ? '블로그 원고 생성' : postType === 'press_release' ? '보도자료 작성' : '카드뉴스 제작'}
-                <svg className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" /></svg>
-              </>
-            )}
-          </span>
+          {isLoading ? (
+            <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />생성 중...</>
+          ) : (
+            <>{postType === 'blog' ? '블로그 원고 생성' : postType === 'press_release' ? '보도자료 작성' : '카드뉴스 제작'}
+            <svg className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" /></svg></>
+          )}
         </button>
       </form>
       </div>
