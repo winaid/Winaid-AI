@@ -2901,7 +2901,112 @@ interface AiTemplateRequest {
   hospitalInfo?: string[];
   brandColor?: string;
   brandAccent?: string;
+  calendarTheme?: string;
 }
+
+/** 달력 테마별 AI 스타일 프롬프트 — SVG 템플릿의 실제 디자인 특성을 반영 */
+const CALENDAR_THEME_AI_STYLE: Record<string, string> = {
+  spring_kids: `[CALENDAR THEME: Spring Kindergarten / 봄 어린이]
+MANDATORY VISUAL STYLE:
+- Background: soft sky-blue gradient (top #AEE0F5 → bottom #EAF8F0), warm and cheerful
+- Top decoration: large GREEN RIBBON BOW (forest green #5D9A3C) crossing the top like a gift wrap
+- White oval center area containing the calendar content
+- Yellow BUTTERFLY decoration on the right side
+- Small STAR-SHAPED FLOWERS (yellow petals #FFD54F, orange center) scattered as accents
+- Flower text markers (✿) beside the clinic name
+- Green BANNER RIBBON behind the month title (light green #D5E9C0 with darker edges)
+- WHITE FLUFFY CLOUDS in the sky area
+- Bottom landscape: rolling GREEN HILLS with WOODEN FENCE (brown #8D6E63), round TREES with yellow/orange foliage, small yellow GROUND FLOWERS
+- Scalloped green grass edge along the hills
+- Calendar header row: dark background with white text for day names
+- Sunday dates in pink/red, weekday dates in dark gray
+- Events shown with pencil-style dashed underlines
+- Overall mood: bright, cheerful, kindergarten-like, spring garden feel
+- Color palette: sky blue, forest green, yellow, orange, white, pink
+- NO confetti, NO party decorations — this is a nature/garden theme`,
+
+  cherry_blossom: `[CALENDAR THEME: Cherry Blossom Dental / 벚꽃 치과]
+MANDATORY VISUAL STYLE:
+- Background: soft pink gradient (#FFF0F5 → #FFE4EC), romantic spring feel
+- Large CHERRY BLOSSOM PETALS (soft pink ellipses) scattered around edges, overlapping the borders
+- Each petal cluster has 5 rounded petals with a darker pink center
+- Falling petals effect throughout the design
+- Calendar header: pink (#E91E63) background with white text
+- Event markers: colored CIRCLE BADGES with event type text inside
+- Night events: purple (#8E24AA), Seminar: dark blue (#283593), Closed: pink (#E91E63)
+- Month title in elegant serif-style font, dark pink color
+- Clinic name in a soft banner above the calendar
+- Notices at bottom with small bullet points
+- Overall mood: elegant, feminine, soft, romantic spring
+- Color palette: pink, soft pink, white, dark rose, touches of purple
+- NO cartoon characters — sophisticated floral design`,
+
+  autumn: `[CALENDAR THEME: Autumn Maple / 가을 단풍]
+MANDATORY VISUAL STYLE:
+- Background: warm cream/beige (#FFF8E7) with FALLING MAPLE LEAVES
+- Large detailed MAPLE LEAVES in various autumn colors: deep orange (#D84315), red-brown, golden yellow, burnt sienna
+- Leaves scattered around the edges, some overlapping the calendar card
+- Calendar sits inside a white rounded CARD with subtle shadow, slight inset from edges
+- Warm brown header text for month title
+- Subtitle text in warm gray below the title
+- Calendar header: warm orange/brown background
+- Event markers: golden yellow PILL-SHAPED badges with dark text
+- Closed days highlighted with warm accent colors
+- Compact 5-week layout (last row may show dual dates like "23/30")
+- Bottom area: more maple leaves and a warm gradient fade
+- Overall mood: cozy, warm, autumnal, harvest season
+- Color palette: orange, brown, golden yellow, cream, deep red
+- NO cold colors — everything warm-toned`,
+
+  korean_traditional: `[CALENDAR THEME: Korean Traditional / 한국 전통]
+MANDATORY VISUAL STYLE:
+- Background: elegant beige/parchment (#F5EDD5) with subtle texture feel
+- Traditional Korean CRANE (학) silhouettes in gray, flying gracefully (one left, one right)
+- MOUNTAIN/LANDSCAPE silhouette at bottom in soft muted blue-gray, inspired by Korean ink painting (산수화)
+- Pine tree silhouettes along the mountain edges
+- Calendar inside a clean white card with very subtle border
+- Title area: refined serif-style typography with traditional feel
+- Subtitle in classical Korean style
+- Calendar header: dark navy/charcoal (#37474F) background
+- Event markers: colored CIRCLES with Korean text — deep red (#8B1A2A) for closed, purple for night, blue for normal
+- Traditional Korean patterns as subtle border decorations (optional)
+- Overall mood: dignified, classical, refined, cultured
+- Color palette: beige, navy, deep red, soft gold (#D4A853), gray-blue
+- Inspired by Korean traditional art (한국화) — NOT cartoonish`,
+
+  medical_notebook: `[CALENDAR THEME: Medical Notebook / 의료 노트북]
+MANDATORY VISUAL STYLE:
+- Background: clean sky blue (#E3F2FD) or soft blue
+- Main content area styled like a SPIRAL NOTEBOOK page: white with blue LEFT MARGIN LINE, horizontal RULED LINES
+- SPIRAL BINDING rings along the left edge (gray circles/ovals)
+- Cute DOCTOR CHARACTER illustration: person in white coat with stethoscope, friendly smile
+- Doctor character placed prominently above or beside the calendar
+- Teal/turquoise (#26A69A) accent color for doctor's undershirt and highlights
+- Calendar below the doctor character area
+- Calendar header: teal/blue (#0097A7) background with white text
+- Event markers with clean medical-style badges
+- Font style: clean sans-serif, slightly casual/friendly
+- A small tooth or medical icon as accent
+- Overall mood: friendly, approachable, medical but not intimidating, slightly playful
+- Color palette: white, teal, sky blue, gray, touches of coral
+- Like a friendly doctor's personal notebook`,
+
+  winter: `[CALENDAR THEME: Winter Christmas / 겨울 크리스마스]
+MANDATORY VISUAL STYLE:
+- Background: deep navy blue (#1A2A4A → #2C3E6B gradient), cold winter night sky
+- SNOWFLAKES scattered throughout: 6-pointed crystal snowflakes in soft blue-white (#7BA7CF), varying sizes and opacities
+- SANTA SLEIGH with REINDEER silhouette in the upper portion (subtle, semi-transparent)
+- Pine TREE silhouettes along the bottom in dark navy/forest green
+- Small warm LIGHTS or stars twinkling in the sky
+- Calendar sits inside a white rounded card with soft shadow
+- Title area: white or light text on dark background, elegant winter typography
+- Red accent (#D32F2F) for Christmas-specific events
+- Calendar header: dark blue (#283593) or navy background
+- Snowdrift or snow-covered ground at the bottom
+- Overall mood: serene, magical, winter wonderland, festive but elegant
+- Color palette: deep navy, white, soft blue, red accent, silver
+- NOT overly cartoonish — elegant winter/holiday aesthetic`,
+};
 
 // =============================================
 // DESIGNER PERSONA - 10-year veteran graphic designer identity
@@ -2967,7 +3072,7 @@ All pages in a series MUST look like they were made by the same designer, same t
 8. When viewed together, they must read as ONE cohesive series`;
 
 function buildTemplateAiPrompt(req: AiTemplateRequest): string {
-  const { category, stylePrompt, textContent, hospitalName, extraPrompt, imageSize } = req;
+  const { category, stylePrompt, textContent, hospitalName, extraPrompt, imageSize, calendarTheme } = req;
 
   const categoryLabels: Record<string, string> = {
     schedule: 'hospital monthly schedule / clinic calendar announcement - clean, modern, trustworthy medical design',
@@ -3021,6 +3126,16 @@ Every single date number, day-of-week alignment, and marked day MUST match exact
 If a reference image was provided, its calendar dates are from a DIFFERENT month - IGNORE them completely.
 ` : '';
 
+  // 달력 테마 스타일 블록 — 선택한 테마의 디자인 특성을 AI에 전달
+  const calendarThemeBlock = (category === 'schedule' && calendarTheme && CALENDAR_THEME_AI_STYLE[calendarTheme])
+    ? `
+🎨🎨🎨 [CALENDAR DESIGN THEME - HIGHEST VISUAL PRIORITY!] 🎨🎨🎨
+${CALENDAR_THEME_AI_STYLE[calendarTheme]}
+You MUST follow this theme's visual style exactly. This OVERRIDES the generic [DESIGN STYLE] preset below.
+The calendar must look like this specific theme — not a generic hospital calendar.
+🎨🎨🎨 END OF THEME INSTRUCTIONS 🎨🎨🎨
+` : '';
+
   // 브랜드 컬러 블록
   const brandColorBlock = (req.brandColor || req.brandAccent) ? `
 [BRAND COLORS - USE THESE AS PRIMARY DESIGN COLORS]
@@ -3070,7 +3185,7 @@ KOREAN TEXT RULES:
 ${userRequestBlock}
 [IMAGE TYPE]
 ${categoryLabels[category] || 'hospital announcement'}
-${calendarAccuracyBlock}
+${calendarAccuracyBlock}${calendarThemeBlock}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
 [DESIGN STYLE]
 ${stylePrompt}
@@ -3431,6 +3546,7 @@ export async function generateTemplateWithAI(
     hospitalInfo: options?.hospitalInfo,
     brandColor: options?.brandColor,
     brandAccent: options?.brandAccent,
+    calendarTheme: category === 'schedule' ? templateData.colorTheme : undefined,
   });
 
   // 이미지 파트 준비
