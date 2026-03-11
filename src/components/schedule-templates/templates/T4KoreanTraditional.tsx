@@ -66,6 +66,7 @@ function TraditionalCloud({ x, y, w = 80 }: { x: number; y: number; w?: number }
 export default function T4KoreanTraditional({ data, width = 600, colors, mode = 'full' }: Props) {
   const C = { ...DEFAULT_COLORS, ...colors };
   const isWeekly = mode === 'weekly';
+  const isHighlight = mode === 'highlight';
   const allWeeks = buildCalendarWeeks(data.year, data.month);
   const weeks = isWeekly
     ? getEventWeeks(allWeeks, data.events.map(e => e.date))
@@ -193,12 +194,17 @@ export default function T4KoreanTraditional({ data, width = 600, colors, mode = 
 
               const hasEvent = !!event && current;
               const typeColors = hasEvent ? (TYPE_COLORS[event!.type] ?? TYPE_COLORS.custom) : null;
+              const dimmed = isHighlight && current && !hasEvent;
 
               // Special: date=1 gets outline circle instead of filled
               const isSpecial = cell.day === 1 && current && specialDate;
 
               return (
-                <g key={di}>
+                <g key={di} opacity={dimmed ? 0.25 : 1}>
+                  {/* Highlight glow */}
+                  {isHighlight && hasEvent && !isSpecial && (
+                    <circle cx={cx} cy={rowY + 28} r={30} fill={event!.color ?? typeColors!.bg} opacity={0.18} />
+                  )}
                   {/* Filled circle for events */}
                   {hasEvent && !isSpecial && (
                     <circle cx={cx} cy={rowY + 28} r={24} fill={event!.color ?? typeColors!.bg} />
@@ -223,7 +229,7 @@ export default function T4KoreanTraditional({ data, width = 600, colors, mode = 
 
                   {hasEvent && (
                     <text x={cx} y={rowY + 54}
-                      textAnchor="middle" fontSize="10" fontWeight="600"
+                      textAnchor="middle" fontSize={isHighlight ? '11.5' : '10'} fontWeight={isHighlight ? '800' : '600'}
                       fill={isSpecial ? '#C62828' : (event!.color ?? typeColors!.bg)}
                     >
                       {event!.label}

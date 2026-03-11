@@ -1,7 +1,7 @@
 export type EventType = 'closed' | 'night' | 'seminar' | 'normal' | 'custom';
 
-/** 달력 표시 모드: 전체 달력 vs 한 주(이벤트 주간만) */
-export type CalendarViewMode = 'full' | 'weekly';
+/** 달력 표시 모드: 전체 달력 / 한 주(이벤트 주간만) / 강조형(전체+이벤트 강조) */
+export type CalendarViewMode = 'full' | 'weekly' | 'highlight';
 
 export interface ScheduleEvent {
   date: number;

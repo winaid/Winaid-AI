@@ -28,6 +28,7 @@ interface Props {
 export default function T2CherryBlossom({ data, width = 600, colors, mode = 'full' }: Props) {
   const C = { ...DEFAULT_COLORS, ...colors };
   const isWeekly = mode === 'weekly';
+  const isHighlight = mode === 'highlight';
   const allWeeks = buildCalendarWeeks(data.year, data.month);
   const weeks = isWeekly
     ? getEventWeeks(allWeeks, data.events.map(e => e.date))
@@ -146,9 +147,14 @@ export default function T2CherryBlossom({ data, width = 600, colors, mode = 'ful
 
               const hasCircle = !!event && current;
               const evColor = event?.color ?? C[event?.type ?? 'normal'];
+              const dimmed = isHighlight && current && !hasCircle;
 
               return (
-                <g key={di}>
+                <g key={di} opacity={dimmed ? 0.25 : 1}>
+                  {/* Highlight glow */}
+                  {isHighlight && hasCircle && (
+                    <circle cx={cx} cy={rowY + 25} r={30} fill={evColor} opacity={0.18} />
+                  )}
                   {hasCircle && (
                     <circle cx={cx} cy={rowY + 25} r={23} fill={evColor} />
                   )}
@@ -162,7 +168,7 @@ export default function T2CherryBlossom({ data, width = 600, colors, mode = 'ful
                   </text>
                   {event && current && (
                     <text x={cx} y={rowY + 55}
-                      textAnchor="middle" fontSize="11" fill={evColor} fontWeight="600">
+                      textAnchor="middle" fontSize={isHighlight ? '12.5' : '11'} fill={evColor} fontWeight={isHighlight ? '800' : '600'}>
                       {event.label}
                     </text>
                   )}

@@ -96,6 +96,7 @@ function ChristmasTree({ x, y, h = 50 }: { x: number; y: number; h?: number }) {
 export default function T6Christmas({ data, width = 600, colors, mode = 'full' }: Props) {
   const C = { ...DEFAULT_COLORS, ...colors };
   const isWeekly = mode === 'weekly';
+  const isHighlight = mode === 'highlight';
   const allWeeks = buildCalendarWeeks(data.year, data.month);
   const weeks = isWeekly
     ? getEventWeeks(allWeeks, data.events.map(e => e.date))
@@ -211,6 +212,8 @@ export default function T6Christmas({ data, width = 600, colors, mode = 'full' }
               const cx = safeNum(CARD_X + di * COL_W + COL_W / 2);
               const event = getEvent(cell.day);
               const current = cell.isCurrentMonth;
+              const hasEvent = !!event && current;
+              const dimmed = isHighlight && current && !hasEvent;
 
               let numColor = di === 0 ? '#C62828' : '#2C3E50';
               if (!current) numColor = '#BDBDBD';
@@ -223,7 +226,12 @@ export default function T6Christmas({ data, width = 600, colors, mode = 'full' }
                 : '#F9A825'; // yellow for regular
 
               return (
-                <g key={di}>
+                <g key={di} opacity={dimmed ? 0.25 : 1}>
+                  {/* Highlight glow */}
+                  {isHighlight && hasEvent && (
+                    <circle cx={cx} cy={safeNum(rowY + 28)} r={28}
+                      fill={isSpecialClosed ? circleColor : '#F9A825'} opacity={0.18} />
+                  )}
                   {/* Circle badge */}
                   {(isSpecialClosed || isRegularClosed) && current && (
                     <circle cx={cx} cy={safeNum(rowY + 28)} r={22}
@@ -245,7 +253,7 @@ export default function T6Christmas({ data, width = 600, colors, mode = 'full' }
                   {/* Event label below circle */}
                   {event && current && (
                     <text x={cx} y={safeNum(rowY + 62)}
-                      textAnchor="middle" fontSize="12" fontWeight="700"
+                      textAnchor="middle" fontSize={isHighlight ? '13' : '12'} fontWeight={isHighlight ? '800' : '700'}
                       fill={isSpecialClosed ? event.color ?? '#D32F2F' : '#E65100'}
                     >
                       {event.label}

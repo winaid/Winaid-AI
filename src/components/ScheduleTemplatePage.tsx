@@ -468,6 +468,7 @@ export default function ScheduleTemplatePage() {
             {([
               { mode: 'full' as const, label: '전체 달력' },
               { mode: 'weekly' as const, label: '한 주' },
+              { mode: 'highlight' as const, label: '강조형' },
             ]).map(({ mode, label }) => (
               <button
                 key={mode}

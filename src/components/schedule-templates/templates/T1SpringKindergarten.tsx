@@ -20,11 +20,13 @@ interface Props {
 export default function T1SpringKindergarten({ data, width = 600, colors, mode = 'full' }: Props) {
   const C = { ...DEFAULT_COLORS, ...colors };
   const isWeekly = mode === 'weekly';
+  const isHighlight = mode === 'highlight';
   const allWeeks = buildCalendarWeeks(data.year, data.month);
   const weeks = isWeekly
     ? getEventWeeks(allWeeks, data.events.map(e => e.date), data.ranges)
     : allWeeks;
   const ROW_H = isWeekly ? ROW_H_WEEKLY : ROW_H_FULL;
+  const eventDatesSet = new Set(data.events.map(e => e.date));
   const calH = safeNum(HEADER_H + weeks.length * ROW_H);
   const noticeY = safeNum(GRID_Y + calH + 18);
   const noticeCount = data.notices?.length ?? 0;
@@ -189,19 +191,27 @@ export default function T1SpringKindergarten({ data, width = 600, colors, mode =
               const cx = di * COL_W + COL_W / 2;
               const event = getEvent(cell.day);
               const current = cell.isCurrentMonth;
+              const hasEvent = !!event && current;
+              const dimmed = isHighlight && current && !hasEvent;
               let numColor = di === 0 ? '#E91E63' : '#333';
               if (!current) numColor = '#BDBDBD';
 
               return (
-                <g key={di}>
-                  <text x={cx} y={rowY + 26} textAnchor="middle" fontSize="17" fontWeight="500" fill={numColor}>
+                <g key={di} opacity={dimmed ? 0.25 : 1}>
+                  {/* Highlight glow */}
+                  {isHighlight && hasEvent && (
+                    <circle cx={cx} cy={rowY + 22} r={26} fill={event!.color ?? C.closed} opacity={0.15} />
+                  )}
+                  <text x={cx} y={rowY + 26} textAnchor="middle" fontSize="17"
+                    fontWeight={isHighlight && hasEvent ? '800' : '500'} fill={numColor}>
                     {cell.day}
                   </text>
                   {event && current && (
                     <g>
                       <text
                         x={cx + 8} y={rowY + 45}
-                        textAnchor="middle" fontSize="10.5" fill={event.color ?? '#555'} fontWeight="500"
+                        textAnchor="middle" fontSize={isHighlight ? '12' : '10.5'}
+                        fill={event.color ?? '#555'} fontWeight={isHighlight ? '700' : '500'}
                       >
                         {event.label}
                       </text>

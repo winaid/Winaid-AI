@@ -61,6 +61,7 @@ function DoctorCharacter({ cx, y }: { cx: number; y: number }) {
 export default function T5Notebook({ data, width = 600, colors, mode = 'full' }: Props) {
   const C = { ...DEFAULT_COLORS, ...colors };
   const isWeekly = mode === 'weekly';
+  const isHighlight = mode === 'highlight';
   const allWeeks = buildCalendarWeeks(data.year, data.month);
   const weeks = isWeekly
     ? getEventWeeks(allWeeks, data.events.map(e => e.date))
@@ -180,6 +181,8 @@ export default function T5Notebook({ data, width = 600, colors, mode = 'full' }:
               const cx = CARD_X + di * COL_W;
               const event = getEvent(cell.day);
               const current = cell.isCurrentMonth;
+              const hasEvent = !!event && current;
+              const dimmed = isHighlight && current && !hasEvent;
 
               let numColor = di === 0 ? '#E53935' : di === 6 ? '#1565C0' : '#333';
               if (!current) numColor = '#BDBDBD';
@@ -187,7 +190,12 @@ export default function T5Notebook({ data, width = 600, colors, mode = 'full' }:
               const isClosed = !!event && current && event.type === 'closed';
 
               return (
-                <g key={di}>
+                <g key={di} opacity={dimmed ? 0.25 : 1}>
+                  {/* Highlight glow for event cells */}
+                  {isHighlight && hasEvent && !isClosed && (
+                    <rect x={cx + 1} y={rowY + 1} width={COL_W - 2} height={ROW_H - 2}
+                      rx={4} fill={event!.color ?? C.closed} opacity={0.12} />
+                  )}
                   {/* Red fill cell for closed */}
                   {isClosed && (
                     <rect x={cx + 1} y={rowY + 1} width={COL_W - 2} height={ROW_H - 2}
@@ -197,7 +205,7 @@ export default function T5Notebook({ data, width = 600, colors, mode = 'full' }:
                   {/* Date number */}
                   <text x={cx + COL_W / 2} y={rowY + 22}
                     textAnchor="middle" fontSize="14"
-                    fontWeight="600"
+                    fontWeight={isHighlight && hasEvent ? '800' : '600'}
                     fill={isClosed ? 'white' : numColor}
                   >
                     {cell.day}
@@ -221,7 +229,8 @@ export default function T5Notebook({ data, width = 600, colors, mode = 'full' }:
                   {/* Non-closed event */}
                   {event && current && !isClosed && (
                     <text x={cx + COL_W / 2} y={rowY + 52}
-                      textAnchor="middle" fontSize="10"
+                      textAnchor="middle" fontSize={isHighlight ? '11.5' : '10'}
+                      fontWeight={isHighlight ? '700' : undefined}
                       fill={event.color ?? '#555'}>
                       {event.label}
                     </text>

@@ -39,6 +39,7 @@ function MapleLeaf({ x, y, size = 1, rot = 0, color = '#D84315' }: {
 export default function T3Autumn({ data, width = 600, colors, mode = 'full' }: Props) {
   const C = { ...DEFAULT_COLORS, ...colors };
   const isWeekly = mode === 'weekly';
+  const isHighlight = mode === 'highlight';
   const allWeeks = buildCompactCalendarWeeks(data.year, data.month);
   const weeks = isWeekly
     ? getEventWeeks(allWeeks, data.events.map(e => e.date))
@@ -135,6 +136,8 @@ export default function T3Autumn({ data, width = 600, colors, mode = 'full' }: P
               const cx = CARD_X + di * COL_W + COL_W / 2;
               const event = getEvent(cell.day);
               const current = cell.isCurrentMonth;
+              const hasEvent = !!event && current;
+              const dimmed = isHighlight && current && !hasEvent;
 
               // Dual date text (e.g. "23/30")
               const dayText = cell.dual ? `${cell.day}/${cell.dual}` : String(cell.day);
@@ -143,9 +146,14 @@ export default function T3Autumn({ data, width = 600, colors, mode = 'full' }: P
               if (!current) numColor = '#BDBDBD';
 
               return (
-                <g key={di}>
+                <g key={di} opacity={dimmed ? 0.25 : 1}>
+                  {/* Highlight glow */}
+                  {isHighlight && hasEvent && (
+                    <rect x={cx - 38} y={rowY + 40} width="76" height="32" rx="10"
+                      fill={event!.color ?? C.closed} opacity={0.15} />
+                  )}
                   <text x={cx} y={rowY + 36} textAnchor="middle"
-                    fontSize={cell.dual ? 14 : 18} fontWeight="600" fill={numColor}>
+                    fontSize={cell.dual ? 14 : 18} fontWeight={isHighlight && hasEvent ? '800' : '600'} fill={numColor}>
                     {dayText}
                   </text>
                   {/* Yellow pill badge */}
