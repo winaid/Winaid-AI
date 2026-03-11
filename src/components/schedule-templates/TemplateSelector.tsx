@@ -1,4 +1,4 @@
-import React, { Suspense } from 'react';
+import React, { Suspense, useState } from 'react';
 import type { ScheduleData, TemplateInfo } from './types';
 import T1SpringKindergarten from './templates/T1SpringKindergarten';
 import T2CherryBlossom from './templates/T2CherryBlossom';
@@ -127,10 +127,13 @@ interface Props {
 }
 
 export default function TemplateSelector({ selectedId, onSelect, previewData }: Props) {
+  const [previewId, setPreviewId] = useState<string | null>(null);
+  const previewTpl = previewId ? TEMPLATE_LIST.find(t => t.id === previewId) : null;
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <p style={{ fontSize: 13, color: '#666', margin: 0 }}>
-        템플릿을 선택하면 오른쪽 미리보기에 반영됩니다.
+        템플릿을 선택하세요. 더블클릭하면 크게 볼 수 있습니다.
       </p>
       <div
         style={{
@@ -145,6 +148,7 @@ export default function TemplateSelector({ selectedId, onSelect, previewData }: 
             <button
               key={tpl.id}
               onClick={() => onSelect(tpl.id)}
+              onDoubleClick={(e) => { e.preventDefault(); setPreviewId(tpl.id); }}
               style={{
                 border: isSelected ? '2.5px solid #1976D2' : '2px solid #E0E0E0',
                 borderRadius: 10,
@@ -156,31 +160,135 @@ export default function TemplateSelector({ selectedId, onSelect, previewData }: 
                   ? '0 0 0 3px rgba(25,118,210,0.18)'
                   : '0 2px 6px rgba(0,0,0,0.08)',
                 transition: 'all 0.15s',
+                display: 'flex',
+                flexDirection: 'column',
               }}
             >
-              {/* Thumbnail preview */}
-              <div style={{ background: tpl.previewBg, overflow: 'hidden', height: 140 }}>
-                <Suspense fallback={<div style={{ height: 140, background: tpl.previewBg }} />}>
-                  <tpl.Component data={tpl.sample} width={190} />
+              {/* Thumbnail preview - SVG auto-sizes, no fixed height */}
+              <div className="calendar-thumb-svg" style={{
+                overflow: 'hidden',
+                borderRadius: '8px 8px 0 0',
+                lineHeight: 0,
+              }}>
+                <Suspense fallback={<div style={{ height: 120, background: tpl.previewBg }} />}>
+                  <tpl.Component data={tpl.sample} width={200} />
                 </Suspense>
               </div>
 
               {/* Label */}
-              <div style={{ padding: '8px 10px', textAlign: 'left' }}>
+              <div style={{
+                padding: '6px 10px',
+                textAlign: 'left',
+                borderTop: '1px solid #F0F0F0',
+              }}>
                 <p style={{
                   margin: 0, fontSize: 13, fontWeight: 700,
                   color: isSelected ? '#1565C0' : '#222',
                 }}>
-                  {tpl.name}
-                </p>
-                <p style={{ margin: '2px 0 0', fontSize: 11, color: '#888' }}>
-                  {tpl.description}
+                  {isSelected && '✓ '}{tpl.name}
                 </p>
               </div>
             </button>
           );
         })}
       </div>
+
+      {/* 더블클릭 미리보기 모달 */}
+      {previewTpl && (
+        <div
+          onClick={() => setPreviewId(null)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9999,
+            background: 'rgba(0,0,0,0.6)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backdropFilter: 'blur(4px)',
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: 'white',
+              borderRadius: 16,
+              padding: 20,
+              maxWidth: '90vw',
+              maxHeight: '90vh',
+              overflow: 'auto',
+              boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+              position: 'relative',
+            }}
+          >
+            <button
+              onClick={() => setPreviewId(null)}
+              style={{
+                position: 'absolute',
+                top: 10,
+                right: 10,
+                background: '#F5F5F5',
+                border: 'none',
+                borderRadius: '50%',
+                width: 32,
+                height: 32,
+                fontSize: 18,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 1,
+              }}
+            >
+              ✕
+            </button>
+            <p style={{
+              margin: '0 0 12px',
+              fontSize: 16,
+              fontWeight: 700,
+              color: '#222',
+            }}>
+              {previewTpl.name}
+            </p>
+            <div style={{ lineHeight: 0 }}>
+              <Suspense fallback={<div style={{ height: 400, background: '#f0f0f0' }} />}>
+                <previewTpl.Component data={previewTpl.sample} width={480} />
+              </Suspense>
+            </div>
+            <div style={{ marginTop: 12, display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => { onSelect(previewTpl.id); setPreviewId(null); }}
+                style={{
+                  padding: '8px 20px',
+                  background: '#1976D2',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: 8,
+                  fontSize: 14,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                이 템플릿 선택
+              </button>
+              <button
+                onClick={() => setPreviewId(null)}
+                style={{
+                  padding: '8px 20px',
+                  background: '#F5F5F5',
+                  color: '#666',
+                  border: 'none',
+                  borderRadius: 8,
+                  fontSize: 14,
+                  cursor: 'pointer',
+                }}
+              >
+                닫기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
