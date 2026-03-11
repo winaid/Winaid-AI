@@ -1,7 +1,7 @@
 import React from 'react';
 import type { ScheduleData, TemplateColors } from '../types';
 import { DEFAULT_COLORS } from '../types';
-import { buildCalendarWeeks } from '../calendarEngine';
+import { buildCalendarWeeks, safeNum, safeTranslate } from '../calendarEngine';
 
 const FONT = "'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', serif";
 const COL_W = 540 / 7;  // card inner width
@@ -27,7 +27,7 @@ interface Props {
 function Crane({ x, y, size = 1, flip = false }: { x: number; y: number; size?: number; flip?: boolean }) {
   const s = flip ? -1 : 1;
   return (
-    <g transform={`translate(${x},${y}) scale(${s * size},${size})`} opacity="0.7">
+    <g transform={`${safeTranslate(x, y)} scale(${safeNum(s * size, 1)},${safeNum(size, 1)})`} opacity="0.7">
       {/* Body */}
       <ellipse cx="0" cy="0" rx="22" ry="10" fill="#B0BEC5" transform="rotate(-10)" />
       {/* Neck */}
@@ -53,7 +53,7 @@ function Crane({ x, y, size = 1, flip = false }: { x: number; y: number; size?: 
 
 function TraditionalCloud({ x, y, w = 80 }: { x: number; y: number; w?: number }) {
   return (
-    <g transform={`translate(${x},${y})`} opacity="0.55">
+    <g transform={safeTranslate(x, y)} opacity="0.55">
       <ellipse cx="0" cy="0" rx={w * 0.5} ry={w * 0.18} fill="#D4C5A9" />
       <ellipse cx={w * 0.18} cy={w * -0.1} rx={w * 0.22} ry={w * 0.14} fill="#D4C5A9" />
       <ellipse cx={-w * 0.18} cy={w * -0.08} rx={w * 0.2} ry={w * 0.12} fill="#D4C5A9" />
@@ -65,10 +65,10 @@ export default function T4KoreanTraditional({ data, width = 600, colors }: Props
   const C = { ...DEFAULT_COLORS, ...colors };
   const weeks = buildCalendarWeeks(data.year, data.month);
   const CARD_Y = 260;
-  const calH = HEADER_H + weeks.length * ROW_H;
-  const cardH = calH + 20;
-  const svgH = CARD_Y + cardH + 90;
-  const scale = width / 600;
+  const calH = safeNum(HEADER_H + weeks.length * ROW_H);
+  const cardH = safeNum(calH + 20);
+  const svgH = safeNum(CARD_Y + cardH + 90, 600);
+  const scale = safeNum(width / 600, 1);
 
   // Find the "special" date (date=1 or any highlighted date for outline circle)
   const specialDate = data.events.find(e => e.date === 1 && e.type === 'normal');
@@ -101,7 +101,7 @@ export default function T4KoreanTraditional({ data, width = 600, colors }: Props
         const y = i < 2 ? 8 : svgH - 8;
         const r = i < 2 ? 0 : 180;
         return (
-          <g key={i} transform={`translate(${x},${y}) rotate(${r})`} opacity="0.4">
+          <g key={i} transform={`${safeTranslate(x, y)} rotate(${safeNum(r)})`} opacity="0.4">
             <rect x="0" y="0" width="22" height="22" fill="none" stroke="#8B6914" strokeWidth="1.5" />
             <rect x="3" y="3" width="16" height="16" fill="none" stroke="#8B6914" strokeWidth="1" />
             <line x1="0" y1="11" x2="8" y2="11" stroke="#8B6914" strokeWidth="1" />
@@ -230,7 +230,7 @@ export default function T4KoreanTraditional({ data, width = 600, colors }: Props
       })}
 
       {/* Footer logo area */}
-      <g transform={`translate(300,${CARD_Y + cardH + 60})`}>
+      <g transform={safeTranslate(300, CARD_Y + cardH + 60)}>
         {/* B circle icon */}
         <circle cx="-60" cy="0" r="18" fill="#1565C0" />
         <text x="-60" y="6" textAnchor="middle" fontSize="16" fontWeight="900" fill="white">B</text>

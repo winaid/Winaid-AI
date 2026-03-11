@@ -1,7 +1,7 @@
 import React from 'react';
 import type { ScheduleData, TemplateColors } from '../types';
 import { DEFAULT_COLORS } from '../types';
-import { buildCalendarWeeks } from '../calendarEngine';
+import { buildCalendarWeeks, safeNum, safeTranslate } from '../calendarEngine';
 
 const FONT = "'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif";
 const CARD_X = 18;
@@ -20,7 +20,7 @@ interface Props {
 // 의사 캐릭터 (흰 가운 SVG)
 function DoctorCharacter({ cx, y }: { cx: number; y: number }) {
   return (
-    <g transform={`translate(${cx},${y})`}>
+    <g transform={safeTranslate(cx, y)}>
       {/* Head */}
       <ellipse cx="0" cy="-60" rx="28" ry="32" fill="#FFD5B5" />
       {/* Hair */}
@@ -59,10 +59,10 @@ function DoctorCharacter({ cx, y }: { cx: number; y: number }) {
 export default function T5Notebook({ data, width = 600, colors }: Props) {
   const C = { ...DEFAULT_COLORS, ...colors };
   const weeks = buildCalendarWeeks(data.year, data.month);
-  const calH = HEADER_H + weeks.length * ROW_H;
-  const cardH = GRID_Y - CARD_X + calH + 40;
-  const svgH = cardH + 60;
-  const scale = width / 600;
+  const calH = safeNum(HEADER_H + weeks.length * ROW_H);
+  const cardH = safeNum(GRID_Y - CARD_X + calH + 40);
+  const svgH = safeNum(cardH + 60, 600);
+  const scale = safeNum(width / 600, 1);
 
   function getEvent(date: number) {
     return data.events.find(e => e.date === date);
@@ -227,7 +227,7 @@ export default function T5Notebook({ data, width = 600, colors }: Props) {
       })}
 
       {/* Drawing pen accent (bottom-right) */}
-      <g transform={`translate(520,${GRID_Y + HEADER_H + weeks.length * ROW_H + 20})`}>
+      <g transform={safeTranslate(520, GRID_Y + HEADER_H + weeks.length * ROW_H + 20)}>
         {/* Sparkle */}
         <path d="M-15,-8 L-10,0 L-15,8 L0,4 L12,10 L8,0 L12,-10 L0,-4 Z"
           fill="#1565C0" opacity="0.3" transform="scale(0.6)" />
@@ -236,7 +236,7 @@ export default function T5Notebook({ data, width = 600, colors }: Props) {
       </g>
 
       {/* Footer: hospital logo */}
-      <g transform={`translate(300,${svgH - 38})`}>
+      <g transform={safeTranslate(300, svgH - 38)}>
         {/* Tooth icon */}
         <path
           d="M-58,-12 C-64,-12 -68,-6 -68,2 C-68,12 -62,22 -56,22 C-53,22 -51,14 -46,14

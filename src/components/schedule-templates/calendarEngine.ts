@@ -1,3 +1,18 @@
+// ── SVG 좌표 안전 유틸 ──────────────────────────────────────────
+/** undefined / NaN / Infinity → fallback(기본 0)으로 치환 */
+export const safeNum = (v: unknown, fb = 0): number =>
+  typeof v === 'number' && Number.isFinite(v) ? v : fb;
+
+/** 안전한 translate 문자열 생성 */
+export const safeTranslate = (x: unknown, y: unknown) =>
+  `translate(${safeNum(x)},${safeNum(y)})`;
+
+/** 안전한 rotate 문자열 생성 */
+export const safeRotate = (deg: unknown, cx?: unknown, cy?: unknown) =>
+  cx !== undefined
+    ? `rotate(${safeNum(deg)},${safeNum(cx)},${safeNum(cy)})`
+    : `rotate(${safeNum(deg)})`;
+
 export interface CalendarCell {
   day: number;
   isCurrentMonth: boolean;

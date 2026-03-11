@@ -1,7 +1,7 @@
 import React from 'react';
 import type { ScheduleData, TemplateColors } from '../types';
 import { DEFAULT_COLORS } from '../types';
-import { buildCalendarWeeks } from '../calendarEngine';
+import { buildCalendarWeeks, safeNum, safeTranslate } from '../calendarEngine';
 
 const FONT = "'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif";
 const COL_W = 600 / 7;
@@ -26,11 +26,11 @@ interface Props {
 export default function T2CherryBlossom({ data, width = 600, colors }: Props) {
   const C = { ...DEFAULT_COLORS, ...colors };
   const weeks = buildCalendarWeeks(data.year, data.month);
-  const calH = HEADER_H + weeks.length * ROW_H;
-  const noticeY = GRID_Y + calH + 24;
+  const calH = safeNum(HEADER_H + weeks.length * ROW_H);
+  const noticeY = safeNum(GRID_Y + calH + 24);
   const noticeCount = data.notices?.length ?? 0;
-  const svgH = noticeY + noticeCount * 28 + (noticeCount > 0 ? 80 : 40);
-  const scale = width / 600;
+  const svgH = safeNum(noticeY + noticeCount * 28 + (noticeCount > 0 ? 80 : 40), 600);
+  const scale = safeNum(width / 600, 1);
 
   function getEvent(date: number) {
     return data.events.find(e => e.date === date);
@@ -76,18 +76,18 @@ export default function T2CherryBlossom({ data, width = 600, colors }: Props) {
       {/* Petal blobs */}
       {petals.map((p, i) => (
         <ellipse
-          key={i} cx={p.cx} cy={p.cy} rx={p.rx} ry={p.ry}
+          key={i} cx={safeNum(p.cx)} cy={safeNum(p.cy)} rx={safeNum(p.rx)} ry={safeNum(p.ry)}
           fill="url(#t2-petal-grad)"
-          transform={`rotate(${p.rot},${p.cx},${p.cy})`}
+          transform={`rotate(${safeNum(p.rot)},${safeNum(p.cx)},${safeNum(p.cy)})`}
           opacity="0.65"
         />
       ))}
 
       {/* Falling petal accents */}
       {[{ x: 430, y: 190, r: 25 }, { x: 148, y: 175, r: 20 }, { x: 72, y: 260, r: 22 }].map((p, i) => (
-        <ellipse key={i} cx={p.x} cy={p.y} rx={p.r} ry={p.r * 0.55}
+        <ellipse key={i} cx={safeNum(p.x)} cy={safeNum(p.y)} rx={safeNum(p.r)} ry={safeNum(p.r * 0.55)}
           fill="#F06292" opacity="0.82"
-          transform={`rotate(${30 + i * 20},${p.x},${p.y})`} />
+          transform={`rotate(${safeNum(30 + i * 20)},${safeNum(p.x)},${safeNum(p.y)})`} />
       ))}
 
       {/* Clinic name */}

@@ -1,7 +1,7 @@
 import React from 'react';
 import type { ScheduleData, TemplateColors } from '../types';
 import { DEFAULT_COLORS } from '../types';
-import { buildCompactCalendarWeeks } from '../calendarEngine';
+import { buildCompactCalendarWeeks, safeNum, safeTranslate } from '../calendarEngine';
 
 const FONT = "'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif";
 const COL_W = 560 / 7;  // inside card (card x=20, w=560)
@@ -21,7 +21,7 @@ function MapleLeaf({ x, y, size = 1, rot = 0, color = '#D84315' }: {
   x: number; y: number; size?: number; rot?: number; color?: string;
 }) {
   return (
-    <g transform={`translate(${x},${y}) rotate(${rot}) scale(${size})`}>
+    <g transform={`${safeTranslate(x, y)} rotate(${safeNum(rot)}) scale(${safeNum(size, 1)})`}>
       <path
         d="M0,-38 C5,-30 15,-22 10,-12 C18,-16 24,-4 16,0 C22,4 18,14 10,10 C14,18 6,24 0,38
            C-6,24 -14,18 -10,10 C-18,14 -22,4 -16,0 C-24,-4 -18,-16 -10,-12 C-15,-22 -5,-30 0,-38 Z"
@@ -37,10 +37,10 @@ function MapleLeaf({ x, y, size = 1, rot = 0, color = '#D84315' }: {
 export default function T3Autumn({ data, width = 600, colors }: Props) {
   const C = { ...DEFAULT_COLORS, ...colors };
   const weeks = buildCompactCalendarWeeks(data.year, data.month);
-  const calH = HEADER_H + weeks.length * ROW_H;
-  const cardH = calH + 24;
-  const svgH = CARD_Y + cardH + 70;
-  const scale = width / 600;
+  const calH = safeNum(HEADER_H + weeks.length * ROW_H);
+  const cardH = safeNum(calH + 24);
+  const svgH = safeNum(CARD_Y + cardH + 70, 600);
+  const scale = safeNum(width / 600, 1);
 
   function getEvent(date: number) {
     return data.events.find(e => e.date === date);
@@ -160,7 +160,7 @@ export default function T3Autumn({ data, width = 600, colors }: Props) {
       })}
 
       {/* Footer: tooth icon + hospital name */}
-      <g transform={`translate(300,${CARD_Y + cardH + 52})`}>
+      <g transform={safeTranslate(300, CARD_Y + cardH + 52)}>
         {/* Simple tooth shape */}
         <path
           d="M-12,-14 C-18,-14 -22,-8 -22,0 C-22,10 -16,22 -10,22 C-7,22 -5,14 0,14

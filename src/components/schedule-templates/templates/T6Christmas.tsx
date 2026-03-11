@@ -1,7 +1,7 @@
 import React from 'react';
 import type { ScheduleData, TemplateColors } from '../types';
 import { DEFAULT_COLORS } from '../types';
-import { buildCalendarWeeks } from '../calendarEngine';
+import { buildCalendarWeeks, safeNum, safeTranslate } from '../calendarEngine';
 
 const FONT = "'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif";
 const CARD_X = 22;
@@ -21,20 +21,23 @@ interface Props {
 function Snowflake({ x, y, r = 12, opacity = 0.4 }: {
   x: number; y: number; r?: number; opacity?: number;
 }) {
+  const sx = safeNum(x);
+  const sy = safeNum(y);
+  const sr = safeNum(r, 12);
   return (
-    <g transform={`translate(${x},${y})`} opacity={opacity}>
+    <g transform={safeTranslate(sx, sy)} opacity={safeNum(opacity, 0.4)}>
       {[0, 30, 60, 90, 120, 150].map((a, i) => (
         <line key={i}
-          x1="0" y1={-r} x2="0" y2={r}
+          x1="0" y1={-sr} x2="0" y2={sr}
           stroke="#7BA7CF" strokeWidth="1.5"
-          transform={`rotate(${a})`}
+          transform={`rotate(${safeNum(a)})`}
         />
       ))}
       {/* Branch ticks */}
       {[0, 60, 120, 180, 240, 300].map((a, i) => (
-        <g key={i} transform={`rotate(${a})`}>
-          <line x1="-4" y1={-r * 0.55} x2="0" y2={-r * 0.7} stroke="#7BA7CF" strokeWidth="1.2" />
-          <line x1="4" y1={-r * 0.55} x2="0" y2={-r * 0.7} stroke="#7BA7CF" strokeWidth="1.2" />
+        <g key={i} transform={`rotate(${safeNum(a)})`}>
+          <line x1="-4" y1={safeNum(-sr * 0.55)} x2="0" y2={safeNum(-sr * 0.7)} stroke="#7BA7CF" strokeWidth="1.2" />
+          <line x1="4" y1={safeNum(-sr * 0.55)} x2="0" y2={safeNum(-sr * 0.7)} stroke="#7BA7CF" strokeWidth="1.2" />
         </g>
       ))}
       <circle cx="0" cy="0" r="2.5" fill="#7BA7CF" />
@@ -45,7 +48,7 @@ function Snowflake({ x, y, r = 12, opacity = 0.4 }: {
 // Santa + reindeer silhouette (top-right)
 function SantaSilhouette({ x, y }: { x: number; y: number }) {
   return (
-    <g transform={`translate(${x},${y})`} opacity="0.22" fill="#5C7FAA">
+    <g transform={safeTranslate(x, y)} opacity="0.22" fill="#5C7FAA">
       {/* Sleigh */}
       <path d="M 0,0 Q 40,-10 80,0 Q 70,15 40,18 Q 10,15 0,0 Z" />
       <path d="M 10,18 Q 30,30 60,28 Q 70,20 80,0" fill="none"
@@ -77,12 +80,13 @@ function SantaSilhouette({ x, y }: { x: number; y: number }) {
 
 // Christmas tree (bottom)
 function ChristmasTree({ x, y, h = 50 }: { x: number; y: number; h?: number }) {
-  const w = h * 0.65;
+  const sh = safeNum(h, 50);
+  const w = safeNum(sh * 0.65);
   return (
-    <g transform={`translate(${x},${y})`} opacity="0.2" fill="#4A7FA5">
-      <polygon points={`0,${-h} ${-w},${h * 0.2} ${w},${h * 0.2}`} />
-      <polygon points={`0,${-h * 0.65} ${-w * 1.2},${h * 0.5} ${w * 1.2},${h * 0.5}`} />
-      <rect x="-8" y={h * 0.5} width="16" height={h * 0.3} fill="#4A7FA5" />
+    <g transform={safeTranslate(x, y)} opacity="0.2" fill="#4A7FA5">
+      <polygon points={`0,${safeNum(-sh)} ${safeNum(-w)},${safeNum(sh * 0.2)} ${safeNum(w)},${safeNum(sh * 0.2)}`} />
+      <polygon points={`0,${safeNum(-sh * 0.65)} ${safeNum(-w * 1.2)},${safeNum(sh * 0.5)} ${safeNum(w * 1.2)},${safeNum(sh * 0.5)}`} />
+      <rect x="-8" y={safeNum(sh * 0.5)} width="16" height={safeNum(sh * 0.3)} fill="#4A7FA5" />
     </g>
   );
 }
@@ -90,10 +94,10 @@ function ChristmasTree({ x, y, h = 50 }: { x: number; y: number; h?: number }) {
 export default function T6Christmas({ data, width = 600, colors }: Props) {
   const C = { ...DEFAULT_COLORS, ...colors };
   const weeks = buildCalendarWeeks(data.year, data.month);
-  const calH = HEADER_H + weeks.length * ROW_H;
-  const cardH = calH + 20;
-  const svgH = CARD_Y + cardH + 65;
-  const scale = width / 600;
+  const calH = safeNum(HEADER_H + weeks.length * ROW_H);
+  const cardH = safeNum(calH + 20);
+  const svgH = safeNum(CARD_Y + cardH + 65, 600);
+  const scale = safeNum(width / 600, 1);
 
   function getEvent(date: number) {
     return data.events.find(e => e.date === date);
@@ -107,16 +111,16 @@ export default function T6Christmas({ data, width = 600, colors }: Props) {
     { x: 490, y: 25, r: 18, o: 0.4 },
     { x: 555, y: 70, r: 11, o: 0.3 },
     { x: 420, y: 55, r: 8, o: 0.2 },
-    { x: 25, y: svgH - 70, r: 13, o: 0.3 },
-    { x: 570, y: svgH - 50, r: 15, o: 0.35 },
-    { x: 320, y: svgH - 30, r: 9, o: 0.2 },
+    { x: 25, y: safeNum(svgH - 70), r: 13, o: 0.3 },
+    { x: 570, y: safeNum(svgH - 50), r: 15, o: 0.35 },
+    { x: 320, y: safeNum(svgH - 30), r: 9, o: 0.2 },
   ];
 
   return (
     <svg
       viewBox={`0 0 600 ${svgH}`}
       width={width}
-      height={svgH * scale}
+      height={safeNum(svgH * scale)}
       fontFamily={FONT}
       xmlns="http://www.w3.org/2000/svg"
     >
@@ -142,11 +146,11 @@ export default function T6Christmas({ data, width = 600, colors }: Props) {
       <SantaSilhouette x={360} y={52} />
 
       {/* Christmas trees bottom */}
-      <ChristmasTree x={48} y={svgH - 40} h={65} />
-      <ChristmasTree x={110} y={svgH - 30} h={50} />
-      <ChristmasTree x={490} y={svgH - 38} h={60} />
-      <ChristmasTree x={548} y={svgH - 28} h={48} />
-      <ChristmasTree x={300} y={svgH - 22} h={40} />
+      <ChristmasTree x={48} y={safeNum(svgH - 40)} h={65} />
+      <ChristmasTree x={110} y={safeNum(svgH - 30)} h={50} />
+      <ChristmasTree x={490} y={safeNum(svgH - 38)} h={60} />
+      <ChristmasTree x={548} y={safeNum(svgH - 28)} h={48} />
+      <ChristmasTree x={300} y={safeNum(svgH - 22)} h={40} />
 
       {/* Title */}
       <text x="300" y="90" textAnchor="middle" fontSize="58"
@@ -156,7 +160,7 @@ export default function T6Christmas({ data, width = 600, colors }: Props) {
 
       {/* Subtitle (multi-line) */}
       {data.subtitle && data.subtitle.split('\n').map((line, i) => (
-        <text key={i} x="300" y={148 + i * 26}
+        <text key={i} x="300" y={safeNum(148 + i * 26)}
           textAnchor="middle" fontSize="14.5" fill="#4A6080" fontWeight="400">
           {line}
         </text>
@@ -173,7 +177,7 @@ export default function T6Christmas({ data, width = 600, colors }: Props) {
 
       {(['일', '월', '화', '수', '목', '금', '토'] as const).map((day, i) => (
         <text key={day}
-          x={CARD_X + i * COL_W + COL_W / 2} y={CARD_Y + 33}
+          x={safeNum(CARD_X + i * COL_W + COL_W / 2)} y={CARD_Y + 33}
           textAnchor="middle" fontSize="16" fontWeight="700" fill="white"
         >
           {day}
@@ -182,22 +186,22 @@ export default function T6Christmas({ data, width = 600, colors }: Props) {
 
       {/* Calendar rows */}
       {weeks.map((week, wi) => {
-        const rowY = CARD_Y + HEADER_H + wi * ROW_H;
+        const rowY = safeNum(CARD_Y + HEADER_H + wi * ROW_H);
         return (
           <g key={wi}>
             {wi < weeks.length - 1 && (
-              <line x1={CARD_X} y1={rowY + ROW_H} x2={CARD_X + CARD_W} y2={rowY + ROW_H}
+              <line x1={CARD_X} y1={safeNum(rowY + ROW_H)} x2={CARD_X + CARD_W} y2={safeNum(rowY + ROW_H)}
                 stroke="#E8EEF5" strokeWidth="1" />
             )}
             {[1, 2, 3, 4, 5, 6].map(di => (
               <line key={di}
-                x1={CARD_X + di * COL_W} y1={rowY}
-                x2={CARD_X + di * COL_W} y2={rowY + ROW_H}
+                x1={safeNum(CARD_X + di * COL_W)} y1={rowY}
+                x2={safeNum(CARD_X + di * COL_W)} y2={safeNum(rowY + ROW_H)}
                 stroke="#EEF3F8" strokeWidth="1" />
             ))}
 
             {week.map((cell, di) => {
-              const cx = CARD_X + di * COL_W + COL_W / 2;
+              const cx = safeNum(CARD_X + di * COL_W + COL_W / 2);
               const event = getEvent(cell.day);
               const current = cell.isCurrentMonth;
 
@@ -215,7 +219,7 @@ export default function T6Christmas({ data, width = 600, colors }: Props) {
                 <g key={di}>
                   {/* Circle badge */}
                   {(isSpecialClosed || isRegularClosed) && current && (
-                    <circle cx={cx} cy={rowY + 28} r={22}
+                    <circle cx={cx} cy={safeNum(rowY + 28)} r={22}
                       fill={isSpecialClosed ? circleColor : 'none'}
                       stroke={isSpecialClosed ? 'none' : '#F9A825'}
                       strokeWidth="2.5"
@@ -223,7 +227,7 @@ export default function T6Christmas({ data, width = 600, colors }: Props) {
                   )}
 
                   {/* Date number */}
-                  <text x={cx} y={rowY + 34}
+                  <text x={cx} y={safeNum(rowY + 34)}
                     textAnchor="middle" fontSize="18"
                     fontWeight={event && current ? '700' : '400'}
                     fill={isSpecialClosed ? 'white' : numColor}
@@ -233,7 +237,7 @@ export default function T6Christmas({ data, width = 600, colors }: Props) {
 
                   {/* Event label below circle */}
                   {event && current && (
-                    <text x={cx} y={rowY + 62}
+                    <text x={cx} y={safeNum(rowY + 62)}
                       textAnchor="middle" fontSize="12" fontWeight="700"
                       fill={isSpecialClosed ? event.color ?? '#D32F2F' : '#E65100'}
                     >
@@ -248,11 +252,11 @@ export default function T6Christmas({ data, width = 600, colors }: Props) {
       })}
 
       {/* Footer */}
-      <text x="300" y={CARD_Y + cardH + 52}
+      <text x="300" y={safeNum(CARD_Y + cardH + 52)}
         textAnchor="middle" fontSize="17" fontWeight="800" fill="#1A3A5C">
         {data.clinicName}
       </text>
-      <text x="300" y={CARD_Y + cardH + 70}
+      <text x="300" y={safeNum(CARD_Y + cardH + 70)}
         textAnchor="middle" fontSize="10" fontWeight="400" fill="#7A96B0" letterSpacing="1.5">
         HANDA M DENTAL CLINIC
       </text>

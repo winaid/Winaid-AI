@@ -1,7 +1,7 @@
 import React from 'react';
 import type { ScheduleData, TemplateColors } from '../types';
 import { DEFAULT_COLORS } from '../types';
-import { buildCalendarWeeks, getRangeBoundsInWeek } from '../calendarEngine';
+import { buildCalendarWeeks, getRangeBoundsInWeek, safeNum, safeTranslate } from '../calendarEngine';
 
 const FONT = "'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif";
 const COL_W = 600 / 7;
@@ -18,11 +18,11 @@ interface Props {
 export default function T1SpringKindergarten({ data, width = 600, colors }: Props) {
   const C = { ...DEFAULT_COLORS, ...colors };
   const weeks = buildCalendarWeeks(data.year, data.month);
-  const calH = HEADER_H + weeks.length * ROW_H;
-  const noticeY = GRID_Y + calH + 18;
+  const calH = safeNum(HEADER_H + weeks.length * ROW_H);
+  const noticeY = safeNum(GRID_Y + calH + 18);
   const noticeCount = data.notices?.length ?? 0;
-  const svgH = noticeY + noticeCount * 24 + (noticeCount > 0 ? 140 : 60);
-  const scale = width / 600;
+  const svgH = safeNum(noticeY + noticeCount * 24 + (noticeCount > 0 ? 140 : 60), 600);
+  const scale = safeNum(width / 600, 1);
 
   function getEvent(date: number) {
     return data.events.find(e => e.date === date);
@@ -49,7 +49,7 @@ export default function T1SpringKindergarten({ data, width = 600, colors }: Prop
 
       {/* Clouds */}
       {([{ x: 48, y: 75 }, { x: 478, y: 58 }, { x: 510, y: 98 }] as const).map((c, i) => (
-        <g key={i} transform={`translate(${c.x},${c.y})`} opacity="0.85">
+        <g key={i} transform={safeTranslate(c.x, c.y)} opacity="0.85">
           <ellipse cx="0" cy="0" rx="42" ry="20" fill="white" />
           <ellipse cx="22" cy="-8" rx="28" ry="16" fill="white" />
           <ellipse cx="-22" cy="-6" rx="26" ry="14" fill="white" />
@@ -87,7 +87,7 @@ export default function T1SpringKindergarten({ data, width = 600, colors }: Prop
 
       {/* Small star flowers */}
       {([{ x: 68, y: 200 }, { x: 530, y: 235 }] as const).map((f, i) => (
-        <g key={i} transform={`translate(${f.x},${f.y})`}>
+        <g key={i} transform={safeTranslate(f.x, f.y)}>
           {[0, 60, 120, 180, 240, 300].map((a, j) => (
             <ellipse
               key={j}
@@ -161,9 +161,9 @@ export default function T1SpringKindergarten({ data, width = 600, colors }: Prop
 
             {/* Range bars */}
             {rangeBars.map(({ r, bounds }) => {
-              const bx = bounds!.startCol * COL_W + 3;
-              const bw = (bounds!.endCol - bounds!.startCol + 1) * COL_W - 6;
-              const barY = rowY + ROW_H - 21;
+              const bx = safeNum(bounds!.startCol * COL_W + 3);
+              const bw = safeNum((bounds!.endCol - bounds!.startCol + 1) * COL_W - 6, COL_W);
+              const barY = safeNum(rowY + ROW_H - 21);
               return (
                 <g key={r.label}>
                   <rect x={bx} y={barY} width={bw} height={17} rx="4" fill={r.color ?? '#FFCDD2'} />
@@ -224,7 +224,7 @@ export default function T1SpringKindergarten({ data, width = 600, colors }: Prop
       ))}
 
       {/* ── Bottom landscape ── */}
-      <g transform={`translate(0,${svgH - 118})`}>
+      <g transform={safeTranslate(0, svgH - 118)}>
         {/* Back hill */}
         <path d="M 0,55 Q 150,18 300,38 Q 450,18 600,48 L 600,120 L 0,120 Z" fill="#66BB6A" />
         {/* Front hill */}
@@ -241,7 +241,7 @@ export default function T1SpringKindergarten({ data, width = 600, colors }: Prop
         ))}
         {/* Trees */}
         {[72, 190, 375, 516].map((tx, i) => (
-          <g key={i} transform={`translate(${tx},10)`}>
+          <g key={i} transform={safeTranslate(tx, 10)}>
             <rect x="-5" y="42" width="10" height="22" fill="#795548" />
             <circle cx="0" cy="20" r="30" fill="#F9A825" />
             {[0, 45, 90, 135, 180, 225, 270, 315].map((a, j) => (
@@ -257,7 +257,7 @@ export default function T1SpringKindergarten({ data, width = 600, colors }: Prop
         ))}
         {/* Ground flowers */}
         {[28, 128, 248, 340, 448, 568].map((fx, i) => (
-          <g key={i} transform={`translate(${fx},58)`}>
+          <g key={i} transform={safeTranslate(fx, 58)}>
             {[0, 60, 120, 180, 240, 300].map((a, j) => (
               <ellipse
                 key={j}
