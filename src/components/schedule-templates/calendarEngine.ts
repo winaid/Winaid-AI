@@ -72,6 +72,50 @@ export function buildCompactCalendarWeeks(year: number, month: number): Calendar
   return [...weeks.slice(0, 4), merged];
 }
 
+/**
+ * 이벤트가 포함된 주(week)만 추출 (한 주 모드용)
+ * 연속된 범위로 확장하고, 최소 2주를 보장
+ */
+export function getEventWeeks(
+  weeks: CalendarCell[][],
+  eventDates: number[],
+  rangeDays?: { start: number; end: number }[],
+): CalendarCell[][] {
+  if (weeks.length === 0) return weeks;
+
+  const allDates = new Set(eventDates);
+  // range 안의 날짜도 이벤트 날짜로 포함
+  (rangeDays ?? []).forEach(r => {
+    for (let d = r.start; d <= r.end; d++) allDates.add(d);
+  });
+
+  // 이벤트가 있는 주 인덱스 찾기
+  const hitIndices: number[] = [];
+  weeks.forEach((week, wi) => {
+    if (week.some(c => c.isCurrentMonth && allDates.has(c.day))) {
+      hitIndices.push(wi);
+    }
+  });
+
+  if (hitIndices.length === 0) return weeks.slice(0, 2); // fallback: 첫 2주
+
+  // 최소~최대 인덱스의 연속 범위
+  const minWi = Math.min(...hitIndices);
+  const maxWi = Math.max(...hitIndices);
+
+  // 최소 2주 보장
+  let startWi = minWi;
+  let endWi = Math.max(maxWi, minWi + 1);
+
+  // 범위를 벗어나지 않도록
+  if (endWi >= weeks.length) {
+    endWi = weeks.length - 1;
+    startWi = Math.max(0, endWi - 1);
+  }
+
+  return weeks.slice(startWi, endWi + 1);
+}
+
 /** 특정 날짜가 range 안에 있는지 */
 export function isInRange(day: number, ranges: { start: number; end: number }[]): boolean {
   return ranges.some(r => day >= r.start && day <= r.end);

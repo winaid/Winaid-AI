@@ -1,23 +1,30 @@
 import React from 'react';
-import type { ScheduleData, TemplateColors } from '../types';
+import type { ScheduleData, TemplateColors, CalendarViewMode } from '../types';
 import { DEFAULT_COLORS } from '../types';
-import { buildCalendarWeeks, getRangeBoundsInWeek, safeNum, safeTranslate } from '../calendarEngine';
+import { buildCalendarWeeks, getEventWeeks, getRangeBoundsInWeek, safeNum, safeTranslate } from '../calendarEngine';
 
 const FONT = "'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif";
 const COL_W = 600 / 7;
 const HEADER_H = 42;
-const ROW_H = 72;
+const ROW_H_FULL = 72;
+const ROW_H_WEEKLY = 100;
 const GRID_Y = 290;
 
 interface Props {
   data: ScheduleData;
   width?: number;
   colors?: TemplateColors;
+  mode?: CalendarViewMode;
 }
 
-export default function T1SpringKindergarten({ data, width = 600, colors }: Props) {
+export default function T1SpringKindergarten({ data, width = 600, colors, mode = 'full' }: Props) {
   const C = { ...DEFAULT_COLORS, ...colors };
-  const weeks = buildCalendarWeeks(data.year, data.month);
+  const isWeekly = mode === 'weekly';
+  const allWeeks = buildCalendarWeeks(data.year, data.month);
+  const weeks = isWeekly
+    ? getEventWeeks(allWeeks, data.events.map(e => e.date), data.ranges)
+    : allWeeks;
+  const ROW_H = isWeekly ? ROW_H_WEEKLY : ROW_H_FULL;
   const calH = safeNum(HEADER_H + weeks.length * ROW_H);
   const noticeY = safeNum(GRID_Y + calH + 18);
   const noticeCount = data.notices?.length ?? 0;

@@ -8,7 +8,7 @@
  */
 
 import React, { useState, useRef, useCallback, Suspense } from 'react';
-import type { ScheduleData, ScheduleEvent, ScheduleRange, EventType, TemplateColors } from './schedule-templates';
+import type { ScheduleData, ScheduleEvent, ScheduleRange, EventType, TemplateColors, CalendarViewMode } from './schedule-templates';
 import { DEFAULT_COLORS, TEMPLATE_LIST, TemplateSelector } from './schedule-templates';
 
 // ── 타입 & 상수 ──────────────────────────────────────────────────
@@ -77,6 +77,7 @@ export default function ScheduleTemplatePage() {
   const [data, setData] = useState<ScheduleData>(makeDefaultData);
   const [colors, setColors] = useState<TemplateColors>({ ...DEFAULT_COLORS });
   const [showColorPanel, setShowColorPanel] = useState(false);
+  const [viewMode, setViewMode] = useState<CalendarViewMode>('full');
 
   const [newEvent, setNewEvent] = useState({ date: '', label: '정기휴진', type: 'closed' as EventType });
   const [newRange, setNewRange] = useState({ start: '', end: '', label: '상담 주간' });
@@ -450,7 +451,7 @@ export default function ScheduleTemplatePage() {
       {/* ════ RIGHT PANEL: 미리보기 ════ */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
         {/* 헤더 */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, alignSelf: 'flex-start' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, alignSelf: 'flex-start', flexWrap: 'wrap' }}>
           <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#333' }}>
             미리보기 — {selectedTemplate.name}
           </h3>
@@ -460,6 +461,29 @@ export default function ScheduleTemplatePage() {
           }}>
             {data.year}년 {data.monthLabel}
           </span>
+          {/* 뷰 모드 토글 */}
+          <div style={{
+            display: 'flex', background: '#E3E8F0', borderRadius: 8, padding: 2,
+          }}>
+            {([
+              { mode: 'full' as const, label: '전체 달력' },
+              { mode: 'weekly' as const, label: '한 주' },
+            ]).map(({ mode, label }) => (
+              <button
+                key={mode}
+                onClick={() => setViewMode(mode)}
+                style={{
+                  padding: '5px 14px', fontSize: 12, fontWeight: 700,
+                  border: 'none', borderRadius: 6, cursor: 'pointer',
+                  background: viewMode === mode ? '#1976D2' : 'transparent',
+                  color: viewMode === mode ? 'white' : '#555',
+                  transition: 'all 0.15s',
+                }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
           {/* 월 빠른 이동 버튼 (미리보기 위) */}
           <div style={{ display: 'flex', gap: 4, marginLeft: 8 }}>
             <button
@@ -490,7 +514,7 @@ export default function ScheduleTemplatePage() {
               로딩 중...
             </div>
           }>
-            <Component data={data} width={500} colors={colors} />
+            <Component data={data} width={500} colors={colors} mode={viewMode} />
           </Suspense>
         </div>
 

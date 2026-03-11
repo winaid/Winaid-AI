@@ -1,20 +1,22 @@
 import React from 'react';
-import type { ScheduleData, TemplateColors } from '../types';
+import type { ScheduleData, TemplateColors, CalendarViewMode } from '../types';
 import { DEFAULT_COLORS } from '../types';
-import { buildCalendarWeeks, safeNum, safeTranslate } from '../calendarEngine';
+import { buildCalendarWeeks, getEventWeeks, safeNum, safeTranslate } from '../calendarEngine';
 
 const FONT = "'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif";
 const CARD_X = 22;
 const CARD_W = 556;
 const COL_W = CARD_W / 7;
 const HEADER_H = 50;
-const ROW_H = 85;
+const ROW_H_FULL = 85;
+const ROW_H_WEEKLY = 115;
 const CARD_Y = 220;
 
 interface Props {
   data: ScheduleData;
   width?: number;
   colors?: TemplateColors;
+  mode?: CalendarViewMode;
 }
 
 // 6-pointed snowflake
@@ -91,9 +93,14 @@ function ChristmasTree({ x, y, h = 50 }: { x: number; y: number; h?: number }) {
   );
 }
 
-export default function T6Christmas({ data, width = 600, colors }: Props) {
+export default function T6Christmas({ data, width = 600, colors, mode = 'full' }: Props) {
   const C = { ...DEFAULT_COLORS, ...colors };
-  const weeks = buildCalendarWeeks(data.year, data.month);
+  const isWeekly = mode === 'weekly';
+  const allWeeks = buildCalendarWeeks(data.year, data.month);
+  const weeks = isWeekly
+    ? getEventWeeks(allWeeks, data.events.map(e => e.date))
+    : allWeeks;
+  const ROW_H = isWeekly ? ROW_H_WEEKLY : ROW_H_FULL;
   const calH = safeNum(HEADER_H + weeks.length * ROW_H);
   const cardH = safeNum(calH + 20);
   const svgH = safeNum(CARD_Y + cardH + 65, 600);

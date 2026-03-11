@@ -1,12 +1,13 @@
 import React from 'react';
-import type { ScheduleData, TemplateColors } from '../types';
+import type { ScheduleData, TemplateColors, CalendarViewMode } from '../types';
 import { DEFAULT_COLORS } from '../types';
-import { buildCalendarWeeks, safeNum, safeTranslate } from '../calendarEngine';
+import { buildCalendarWeeks, getEventWeeks, safeNum, safeTranslate } from '../calendarEngine';
 
 const FONT = "'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif";
 const COL_W = 600 / 7;
 const HEADER_H = 44;
-const ROW_H = 82;
+const ROW_H_FULL = 82;
+const ROW_H_WEEKLY = 110;
 const GRID_Y = 292;
 
 const COLORS = {
@@ -21,11 +22,17 @@ interface Props {
   data: ScheduleData;
   width?: number;
   colors?: TemplateColors;
+  mode?: CalendarViewMode;
 }
 
-export default function T2CherryBlossom({ data, width = 600, colors }: Props) {
+export default function T2CherryBlossom({ data, width = 600, colors, mode = 'full' }: Props) {
   const C = { ...DEFAULT_COLORS, ...colors };
-  const weeks = buildCalendarWeeks(data.year, data.month);
+  const isWeekly = mode === 'weekly';
+  const allWeeks = buildCalendarWeeks(data.year, data.month);
+  const weeks = isWeekly
+    ? getEventWeeks(allWeeks, data.events.map(e => e.date))
+    : allWeeks;
+  const ROW_H = isWeekly ? ROW_H_WEEKLY : ROW_H_FULL;
   const calH = safeNum(HEADER_H + weeks.length * ROW_H);
   const noticeY = safeNum(GRID_Y + calH + 24);
   const noticeCount = data.notices?.length ?? 0;

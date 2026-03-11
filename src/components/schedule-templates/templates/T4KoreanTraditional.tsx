@@ -1,13 +1,14 @@
 import React from 'react';
-import type { ScheduleData, TemplateColors } from '../types';
+import type { ScheduleData, TemplateColors, CalendarViewMode } from '../types';
 import { DEFAULT_COLORS } from '../types';
-import { buildCalendarWeeks, safeNum, safeTranslate } from '../calendarEngine';
+import { buildCalendarWeeks, getEventWeeks, safeNum, safeTranslate } from '../calendarEngine';
 
 const FONT = "'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', serif";
 const COL_W = 540 / 7;  // card inner width
 const CARD_X = 30;
 const HEADER_H = 46;
-const ROW_H = 74;
+const ROW_H_FULL = 74;
+const ROW_H_WEEKLY = 105;
 
 // Event type → circle color mapping
 const TYPE_COLORS: Record<string, { bg: string; text: string }> = {
@@ -22,6 +23,7 @@ interface Props {
   data: ScheduleData;
   width?: number;
   colors?: TemplateColors;
+  mode?: CalendarViewMode;
 }
 
 function Crane({ x, y, size = 1, flip = false }: { x: number; y: number; size?: number; flip?: boolean }) {
@@ -61,9 +63,14 @@ function TraditionalCloud({ x, y, w = 80 }: { x: number; y: number; w?: number }
   );
 }
 
-export default function T4KoreanTraditional({ data, width = 600, colors }: Props) {
+export default function T4KoreanTraditional({ data, width = 600, colors, mode = 'full' }: Props) {
   const C = { ...DEFAULT_COLORS, ...colors };
-  const weeks = buildCalendarWeeks(data.year, data.month);
+  const isWeekly = mode === 'weekly';
+  const allWeeks = buildCalendarWeeks(data.year, data.month);
+  const weeks = isWeekly
+    ? getEventWeeks(allWeeks, data.events.map(e => e.date))
+    : allWeeks;
+  const ROW_H = isWeekly ? ROW_H_WEEKLY : ROW_H_FULL;
   const CARD_Y = 260;
   const calH = safeNum(HEADER_H + weeks.length * ROW_H);
   const cardH = safeNum(calH + 20);

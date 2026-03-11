@@ -1,5 +1,5 @@
 import React, { Suspense, useState } from 'react';
-import type { ScheduleData, TemplateInfo } from './types';
+import type { ScheduleData, TemplateInfo, CalendarViewMode } from './types';
 import T1SpringKindergarten from './templates/T1SpringKindergarten';
 import T2CherryBlossom from './templates/T2CherryBlossom';
 import T3Autumn from './templates/T3Autumn';
@@ -8,7 +8,7 @@ import T5Notebook from './templates/T5Notebook';
 import T6Christmas from './templates/T6Christmas';
 
 export const TEMPLATE_LIST: (TemplateInfo & {
-  Component: React.ComponentType<{ data: ScheduleData; width?: number }>;
+  Component: React.ComponentType<{ data: ScheduleData; width?: number; mode?: CalendarViewMode }>;
   sample: ScheduleData;
 })[] = [
   {

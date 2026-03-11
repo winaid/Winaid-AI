@@ -1,6 +1,6 @@
-export type { ScheduleData, ScheduleEvent, ScheduleRange, EventType, TemplateInfo, TemplateColors } from './types';
+export type { ScheduleData, ScheduleEvent, ScheduleRange, EventType, TemplateInfo, TemplateColors, CalendarViewMode } from './types';
 export { DEFAULT_COLORS } from './types';
-export { buildCalendarWeeks, buildCompactCalendarWeeks, safeNum, safeTranslate, safeRotate } from './calendarEngine';
+export { buildCalendarWeeks, buildCompactCalendarWeeks, getEventWeeks, safeNum, safeTranslate, safeRotate } from './calendarEngine';
 export { TEMPLATE_LIST, default as TemplateSelector } from './TemplateSelector';
 export {
   sampleSpring,
