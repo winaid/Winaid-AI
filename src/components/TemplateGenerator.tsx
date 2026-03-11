@@ -113,9 +113,9 @@ const IMAGE_SIZES = [
 
 type ImageSize = typeof IMAGE_SIZES[number]['id'];
 
-const inputCls = 'w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-400';
+const inputCls = 'w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-blue-400 bg-white placeholder:text-slate-300';
 const textareaCls = `${inputCls} resize-none`;
-const labelCls = 'block text-xs font-semibold text-slate-600 mb-1';
+const labelCls = 'block text-xs font-bold text-slate-500 mb-1.5';
 
 // SVG 미리보기 - 카테고리별 세련된 레이아웃
 // 미리보기용 휴진일 예시: 9, 10 (연속 2일) + 15 (단독)
@@ -2151,23 +2151,23 @@ export default function TemplateGenerator() {
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:items-start">
-      <div className="space-y-4">
+    <div className="grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-0 lg:items-stretch min-h-[600px]">
+      {/* 왼쪽: 설정 패널 */}
+      <div className="space-y-4 bg-white border-r border-slate-200/80 p-5 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 120px)' }}>
 
-        {/* 카테고리 */}
-        <div className="flex flex-wrap gap-1.5">
+        {/* 카테고리 탭 */}
+        <div className="flex items-center bg-slate-100 rounded-xl p-1 gap-0.5">
           {CATEGORIES.map(c => (
-            <button key={c.id} onClick={() => setCategory(c.id)} className={`flex-1 min-w-[56px] py-2 px-1 rounded-xl text-center transition-all ${category === c.id ? 'bg-slate-800 text-white shadow-md' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>
-              <div className="text-lg leading-none">{c.icon}</div>
-              <div className="text-[10px] font-bold mt-1 leading-tight">{c.name}</div>
+            <button key={c.id} onClick={() => setCategory(c.id)} className={`flex-1 py-2 px-1 rounded-lg text-center transition-all text-xs font-bold ${category === c.id ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
+              {c.name}
             </button>
           ))}
         </div>
 
         {/* 병원 브랜딩 */}
-        <div className="bg-slate-50 rounded-xl p-3 border border-slate-200 space-y-3">
+        <div className="bg-slate-50/60 rounded-xl p-4 border border-slate-100 space-y-3">
           <div className="flex items-center justify-between">
-            <label className="block text-xs font-semibold text-slate-600">병원 브랜딩</label>
+            <label className="block text-xs font-bold text-slate-500">병원 브랜딩</label>
             {/* 상단/하단 위치 토글 */}
             <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-lg p-0.5">
               {(['top', 'bottom'] as const).map(pos => (
@@ -2627,9 +2627,34 @@ export default function TemplateGenerator() {
         </button>
       </div>
 
-      {/* 오른쪽: 미리보기 */}
-      <div className="flex flex-col items-center min-h-[480px]">
-        {error&&<div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">{error}</div>}
+      {/* 오른쪽: 미리보기 / 에디터 영역 */}
+      <div className="flex flex-col min-h-[480px] bg-slate-50/50">
+        {/* 상단 툴바 */}
+        <div className="flex items-center gap-3 px-5 py-3 border-b border-slate-200/80 bg-white">
+          <div className="flex items-center gap-1">
+            {(['B','I','U'] as const).map(btn => (
+              <div key={btn} className="w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold text-slate-300 select-none">{btn}</div>
+            ))}
+          </div>
+          <div className="w-px h-5 bg-slate-200" />
+          <div className="flex items-center gap-1">
+            {[
+              <path key="a1" strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />,
+              <path key="a2" strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h10.5m-10.5 5.25h16.5" />,
+            ].map((icon, i) => (
+              <div key={i} className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-300">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>{icon}</svg>
+              </div>
+            ))}
+          </div>
+          <div className="w-px h-5 bg-slate-200" />
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-300">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14" /></svg>
+          </div>
+        </div>
+        {/* 콘텐츠 영역 */}
+        <div className="flex-1 flex flex-col items-center justify-center p-6">
+        {error&&<div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600 w-full max-w-lg">{error}</div>}
         {generating ? (
           <div className="flex flex-col items-center justify-center gap-6 animate-fade-in">
             <div className="relative w-24 h-24">
@@ -2821,27 +2846,59 @@ export default function TemplateGenerator() {
             </div>
           </div>
         ):(
-          <div className="flex flex-col items-center justify-center py-16 relative group">
-            <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-2xl">
-              <div className="absolute top-8 right-8 w-32 h-32 bg-violet-100/30 rounded-full blur-[60px]" />
-              <div className="absolute bottom-8 left-8 w-24 h-24 bg-blue-100/20 rounded-full blur-[50px]" />
+          /* 빈 상태 — 블로그/매거진 스타일 */
+          <div className="flex flex-col items-center justify-center py-20 px-8 max-w-md mx-auto">
+            {/* Sparkle 아이콘 */}
+            <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-8 bg-gradient-to-br from-blue-50 to-indigo-100/80 border border-blue-200/40">
+              <svg className="w-7 h-7 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z" />
+              </svg>
             </div>
-            <div className="relative flex flex-col items-center">
-              <div className="w-20 h-20 rounded-2xl flex items-center justify-center mb-6 bg-gradient-to-br from-violet-50 to-indigo-100/80 border border-violet-200/30">
-                <svg className="w-9 h-9 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0022.5 18.75V5.25A2.25 2.25 0 0020.25 3H3.75A2.25 2.25 0 001.5 5.25v13.5A2.25 2.25 0 003.75 21z" />
-                </svg>
-              </div>
-              <h3 className="text-lg font-bold text-slate-700 mb-2">{ph[category].t}</h3>
-              <p className="text-sm font-medium text-slate-400 leading-relaxed mb-5 text-center">{ph[category].d}</p>
-              {category==='schedule'&&(<div className="flex justify-center gap-4 text-xs text-slate-400 mb-4"><div className="flex items-center gap-1.5"><span className="w-3 h-3 bg-red-100 border border-red-300 rounded" /> 휴진</div><div className="flex items-center gap-1.5"><span className="w-3 h-3 bg-amber-100 border border-amber-300 rounded" /> 단축</div><div className="flex items-center gap-1.5"><span className="w-3 h-3 bg-purple-100 border border-purple-300 rounded" /> 휴가</div></div>)}
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold bg-violet-50/80 text-violet-500 border border-violet-100/50">
-                <div className="w-1.5 h-1.5 bg-violet-500 rounded-full animate-pulse" />
-                AI 대기 중
-              </div>
+            {/* 타이틀 */}
+            <h2 className="text-2xl font-extrabold text-slate-800 leading-tight text-center mb-2">
+              AI가 만드는<br /><span className="text-blue-500">{ph[category].t}</span>
+            </h2>
+            {/* 서브타이틀 */}
+            <p className="text-sm text-slate-400 text-center leading-relaxed mb-8">
+              왼쪽에서 정보를 입력하면<br />AI가 자동으로 디자인을 생성합니다
+            </p>
+            {/* 기능 불릿 */}
+            <div className="space-y-3 mb-10 w-full">
+              {(category === 'schedule' ? [
+                '테마별 달력 디자인 자동 생성',
+                '휴진/단축/야간 일정 자동 반영',
+                '병원 브랜딩 로고 삽입',
+              ] : category === 'event' ? [
+                '이벤트 내용 기반 디자인 생성',
+                '할인율/기간 자동 배치',
+                '시선을 끄는 SNS용 이미지',
+              ] : category === 'doctor' ? [
+                '전문의 프로필 이미지 생성',
+                '경력/전문분야 자동 배치',
+                '신뢰감 있는 의료 디자인',
+              ] : category === 'hiring' ? [
+                '채용 공고 카드뉴스 자동 생성',
+                '복리후생/자격요건 시각화',
+                '다장 시리즈 디자인 지원',
+              ] : [
+                '카테고리별 최적화 디자인',
+                'AI 스타일 프리셋 지원',
+                '병원 브랜딩 자동 적용',
+              ]).map((feat, i) => (
+                <div key={i} className="flex items-center gap-3">
+                  <div className="w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0" />
+                  <span className="text-sm text-slate-500">{feat}</span>
+                </div>
+              ))}
+            </div>
+            {/* AI 대기 중 뱃지 */}
+            <div className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold bg-white text-slate-500 border border-slate-200 shadow-sm">
+              <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse" />
+              AI 대기 중
             </div>
           </div>
         )}
+        </div>
       </div>
 
       {/* 템플릿 확대 모달 (더블클릭) */}
