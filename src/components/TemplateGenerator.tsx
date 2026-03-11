@@ -565,6 +565,12 @@ function TemplateSVGPreview({ template: t, category, hospitalName }: { template:
     if (hint === 'highlight') {
       return wrap(<>
         <text x="60" y="13" textAnchor="middle" fontSize="4" fontWeight="600" fill={a} letterSpacing="0.5">{name}</text>
+        {/* 방사형 선 */}
+        {Array.from({length: 12}, (_, i) => {
+          const angle = i * 30 * Math.PI / 180;
+          return <line key={i} x1="60" y1="50" x2={60 + Math.cos(angle) * 35} y2={50 + Math.sin(angle) * 35} stroke={c} strokeWidth="0.4" strokeOpacity="0.08" />;
+        })}
+        <circle cx="60" cy="50" r="24" fill={c} fillOpacity="0.04" />
         {/* 대형 날짜 강조 영역 */}
         <rect x="12" y="20" width="96" height="42" rx="8" fill={c} fillOpacity="0.08" />
         <text x="60" y="36" textAnchor="middle" fontSize="14" fontWeight="900" fill={c} letterSpacing="2">9 / 15</text>
@@ -583,26 +589,33 @@ function TemplateSVGPreview({ template: t, category, hospitalName }: { template:
       </>);
     }
     if (hint === 'week') {
-      // 기본 주간 폴백
+      // 수평 아코디언 탭 레이아웃
       return wrap(<>
         <text x="60" y="13" textAnchor="middle" fontSize="4" fontWeight="600" fill={a} letterSpacing="0.5">{name}</text>
         <text x="60" y="25" textAnchor="middle" fontSize="6.5" fontWeight="800" fill={c}>{mo}월 셋째 주</text>
-        <rect x="6" y="31" width="108" height="56" rx="6" fill="white" fillOpacity="0.95" filter={`url(#shadow_${t.id})`} />
-        {['일','월','화','수','목','금','토'].map((d, i) => (
-          <g key={d}>
-            <text x={14 + i * 14} y="41" textAnchor="middle" fontSize="3" fontWeight="700" fill={i === 0 ? '#ef4444' : i === 6 ? '#3b82f6' : '#94a3b8'}>{d}</text>
-            {(i === 3) ? <>
-              <rect x={14 + i * 14 - 7} y="46" width="14" height="14" rx="4" fill={c} fillOpacity="0.12" />
-              <text x={14 + i * 14} y="56" textAnchor="middle" fontSize="6" fontWeight="800" fill={c}>{15 + i}</text>
-              <text x={14 + i * 14} y="67" textAnchor="middle" fontSize="2.2" fontWeight="700" fill={c}>휴진</text>
-            </> : (i === 0) ? <>
-              <rect x={14 + i * 14 - 7} y="46" width="14" height="14" rx="4" fill="#ef4444" fillOpacity="0.08" />
-              <text x={14 + i * 14} y="56" textAnchor="middle" fontSize="6" fontWeight="700" fill="#ef4444">{15 + i}</text>
-            </> : <>
-              <text x={14 + i * 14} y="56" textAnchor="middle" fontSize="6" fontWeight="500" fill="#64748b">{15 + i}</text>
+        {/* 7개 수직 탭 스트립 */}
+        {['일','월','화','수','목','금','토'].map((d, i) => {
+          const isClosed = i === 3;
+          const isSun = i === 0;
+          const tx = 8 + i * 15;
+          const tabH = isClosed ? 110 : 90;
+          const tabY = 34;
+          return <g key={d}>
+            <rect x={tx} y={tabY} width="14" height={tabH} rx="4" ry="4" fill={isClosed ? c : 'white'} fillOpacity={isClosed ? 0.15 : 0.95} stroke={isClosed ? c : '#e2e8f0'} strokeWidth={isClosed ? '0.8' : '0.4'} filter={`url(#shadow_${t.id})`} />
+            {/* 탭 상단 라운드 헤더 */}
+            <rect x={tx} y={tabY} width="14" height="12" rx="4" fill={isSun ? '#fef2f2' : isClosed ? c : '#f8fafc'} />
+            <text x={tx + 7} y={tabY + 9} textAnchor="middle" fontSize="3" fontWeight="700" fill={isSun ? '#ef4444' : isClosed ? 'white' : '#94a3b8'}>{d}</text>
+            {/* 날짜 */}
+            <text x={tx + 7} y={tabY + 28} textAnchor="middle" fontSize="6" fontWeight={isClosed ? '800' : '500'} fill={isClosed ? c : isSun ? '#ef4444' : '#64748b'}>{15 + i}</text>
+            {isClosed && <>
+              <rect x={tx + 2} y={tabY + 34} width="10" height="6" rx="3" fill={c} fillOpacity="0.2" />
+              <text x={tx + 7} y={tabY + 39} textAnchor="middle" fontSize="2.2" fontWeight="700" fill={c}>휴진</text>
+              <line x1={tx + 3} y1={tabY + 50} x2={tx + 11} y2={tabY + 50} stroke={c} strokeWidth="0.3" strokeOpacity="0.3" />
+              <text x={tx + 7} y={tabY + 58} textAnchor="middle" fontSize="1.8" fill={c} fillOpacity="0.6">종일</text>
             </>}
-          </g>
-        ))}
+          </g>;
+        })}
+        <text x="60" y="154" textAnchor="middle" fontSize="2.8" fill="#94a3b8">양해 부탁드립니다</text>
       </>);
     }
     if (hint === 'wk_bar') {
