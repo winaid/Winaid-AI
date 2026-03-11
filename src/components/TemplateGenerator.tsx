@@ -1992,74 +1992,91 @@ function TemplateSVGPreview({ template: t, category, hospitalName }: { template:
       <text x="98" y={y + 11} textAnchor="end" fontSize="3" fontWeight="800" fill={c}>1588-0000</text>
     </>);
     return wrap(<>
-      <text x="60" y="12" textAnchor="middle" fontSize="4" fontWeight="700" fill={a} letterSpacing="0.5">{name}</text>
       {t.layoutHint === 'warning' ? <>
-        {/* 경고형 — 강한 삼각 아이콘 + 배너 */}
-        <rect x="14" y="18" width="92" height="26" rx="8" fill={c} fillOpacity="0.2" />
-        <path d="M50,20 L60,10 L70,20 Z" fill={c} fillOpacity="0.5" />
-        <text x="60" y="21" textAnchor="middle" fontSize="5.5" fontWeight="900" fill="white">⚠</text>
-        <text x="60" y="38" textAnchor="middle" fontSize="7" fontWeight="900" fill={c}>시술 후 주의사항</text>
-      </> : t.layoutHint === 'timeline' ? <>
-        <rect x="14" y="18" width="92" height="20" rx="8" fill={c} fillOpacity="0.12" />
-        <text x="60" y="31" textAnchor="middle" fontSize="7" fontWeight="900" fill={c}>회복 가이드</text>
-      </> : <>
-        <text x="60" y="32" textAnchor="middle" fontSize="7" fontWeight="900" fill={c}>시술 후 주의사항</text>
-      </>}
-      {t.layoutHint === 'checklist' ? <>
-        {/* 체크리스트 — 넘버링 카드 */}
+        {/* 경고형 — SOLID 배너 상단 35% + path 경고 삼각형 */}
+        <rect x="0" y="0" width="120" height="56" rx="6" fill={c} />
+        <path d="M52,14 L60,4 L68,14 Z" fill="white" fillOpacity="0.3" />
+        <path d="M55,12 L60,6 L65,12 Z" fill="white" fillOpacity="0.5" />
+        <path d="M57,10.5 L60,7 L63,10.5 Z" fill="white" />
+        <rect x="58.5" y="7.5" width="3" height="2" rx="0.3" fill={c} />
+        <circle cx="60" cy="10.5" r="0.5" fill={c} />
+        <text x="60" y="26" textAnchor="middle" fontSize="7.5" fontWeight="900" fill="white" letterSpacing="0.3">시술 후 주의사항</text>
+        <text x="60" y="34" textAnchor="middle" fontSize="3.5" fontWeight="600" fill="white" fillOpacity="0.8">{name}</text>
+        <rect x="30" y="38" width="60" height="0.8" rx="0.4" fill="white" fillOpacity="0.3" />
+        <text x="60" y="50" textAnchor="middle" fontSize="3" fontWeight="500" fill="white" fillOpacity="0.7">아래 사항을 꼭 지켜주세요</text>
         {['혀로 건드리지 마세요','음주/흡연 금지','부기 2~3일 내 소실','딱딱한 음식 금지'].map((item, i) => (
           <g key={i}>
-            <rect x="14" y={44 + i * 20} width="92" height="17" rx="8" fill="white" fillOpacity="0.95" filter={`url(#shadow_${t.id})`} />
-            <rect x="18" y={46 + i * 20} width="14" height="13" rx="5" fill={c} fillOpacity="0.15" />
-            <text x="25" y={55 + i * 20} textAnchor="middle" fontSize="4.5" fontWeight="800" fill={c}>{i + 1}</text>
-            <text x="38" y={55 + i * 20} fontSize="3.8" fontWeight="500" fill="#475569">{item}</text>
+            <text x="22" y={72 + i * 18} fontSize="5" fontWeight="900" fill={c}>{i + 1}.</text>
+            <text x="32" y={72 + i * 18} fontSize="4" fontWeight="600" fill="#1e293b">{item}</text>
+            {i < 3 && <line x1="18" y1={76 + i * 18} x2="102" y2={76 + i * 18} stroke={c} strokeOpacity="0.1" strokeWidth="0.4" />}
           </g>
         ))}
-        {emergencyBar(128)}
+        {emergencyBar(134)}
+      </> : t.layoutHint === 'checklist' ? <>
+        {/* 체크리스트 — SOLID 넘버 배지 카드 */}
+        <text x="60" y="12" textAnchor="middle" fontSize="4" fontWeight="700" fill={a} letterSpacing="0.5">{name}</text>
+        <text x="60" y="32" textAnchor="middle" fontSize="7" fontWeight="900" fill={c}>시술 후 주의사항</text>
+        {['혀로 건드리지 마세요','음주/흡연 금지','부기 2~3일 내 소실','딱딱한 음식 금지'].map((item, i) => (
+          <g key={i}>
+            <rect x="14" y={44 + i * 22} width="92" height="18" rx="8" fill="white" filter={`url(#shadow_${t.id})`} />
+            <rect x="18" y={46 + i * 22} width="14" height="14" rx="5" fill={c} />
+            <text x="25" y={56 + i * 22} textAnchor="middle" fontSize="4.5" fontWeight="800" fill="white">{i + 1}</text>
+            <text x="38" y={56 + i * 22} fontSize="3.8" fontWeight="600" fill="#1e293b">{item}</text>
+          </g>
+        ))}
+        {emergencyBar(136)}
       </> : t.layoutHint === 'card' ? <>
-        {/* 2x2 카드형 — O/X 아이콘 */}
+        {/* 2x2 카드형 — SOLID O/X 원 */}
+        <text x="60" y="12" textAnchor="middle" fontSize="4" fontWeight="700" fill={a} letterSpacing="0.5">{name}</text>
+        <text x="60" y="32" textAnchor="middle" fontSize="7" fontWeight="900" fill={c}>시술 후 주의사항</text>
         {['혀로 건드리지 마세요','음주/흡연 금지','딱딱한 음식 금지','냉찜질 권장'].map((item, i) => (
           <g key={i}>
-            <rect x={i % 2 === 0 ? 10 : 64} y={42 + Math.floor(i/2) * 32} width="50" height="28" rx="7" fill="white" fillOpacity="0.97" filter={`url(#shadow_${t.id})`} />
-            <circle cx={i % 2 === 0 ? 24 : 78} cy={52 + Math.floor(i/2) * 32} r="6.5" fill={i < 2 ? '#fef2f2' : '#ecfdf5'} />
-            <text x={i % 2 === 0 ? 24 : 78} y={55 + Math.floor(i/2) * 32} textAnchor="middle" fontSize="5" fontWeight="800" fill={i < 2 ? '#ef4444' : '#22c55e'}>{i < 2 ? 'X' : 'O'}</text>
-            <text x={i % 2 === 0 ? 42 : 98} y={59 + Math.floor(i/2) * 32} textAnchor="middle" fontSize="3.2" fontWeight="500" fill="#475569">{item}</text>
+            <rect x={i % 2 === 0 ? 10 : 64} y={42 + Math.floor(i/2) * 32} width="50" height="28" rx="7" fill="white" filter={`url(#shadow_${t.id})`} />
+            <circle cx={i % 2 === 0 ? 24 : 78} cy={52 + Math.floor(i/2) * 32} r="6.5" fill={i < 2 ? '#ef4444' : '#22c55e'} />
+            <text x={i % 2 === 0 ? 24 : 78} y={55 + Math.floor(i/2) * 32} textAnchor="middle" fontSize="5" fontWeight="800" fill="white">{i < 2 ? 'X' : 'O'}</text>
+            <text x={i % 2 === 0 ? 42 : 98} y={59 + Math.floor(i/2) * 32} textAnchor="middle" fontSize="3.2" fontWeight="600" fill="#1e293b">{item}</text>
           </g>
         ))}
         {emergencyBar(114)}
       </> : t.layoutHint === 'guide' ? <>
-        {/* 가이드형 — 단계별 */}
-        <rect x="14" y="42" width="92" height="78" rx="8" fill="white" fillOpacity="0.9" filter={`url(#shadow_${t.id})`} />
+        {/* 가이드형 — SOLID 단계 원 + 연결선 */}
+        <text x="60" y="12" textAnchor="middle" fontSize="4" fontWeight="700" fill={a} letterSpacing="0.5">{name}</text>
+        <text x="60" y="32" textAnchor="middle" fontSize="7" fontWeight="900" fill={c}>시술 후 주의사항</text>
+        <rect x="14" y="42" width="92" height="78" rx="8" fill="white" filter={`url(#shadow_${t.id})`} />
         {['혀로 건드리지 마세요','음주/흡연 금지','부기 2~3일 내 소실','딱딱한 음식 금지'].map((item, i) => (
           <g key={i}>
-            <circle cx="26" cy={54 + i * 17} r="6.5" fill={c} fillOpacity="0.15" />
-            <circle cx="26" cy={54 + i * 17} r="4" fill={c} fillOpacity="0.25" />
-            <text x="26" y={57 + i * 17} textAnchor="middle" fontSize="3.5" fontWeight="900" fill={c}>{i + 1}</text>
-            <text x="38" y={57 + i * 17} fontSize="3.8" fontWeight="500" fill="#475569">{item}</text>
-            {i < 3 && <line x1="26" y1={60 + i * 17} x2="26" y2={65 + i * 17} stroke={c} strokeOpacity="0.15" strokeWidth="0.8" />}
+            {i < 3 && <line x1="26" y1={62 + i * 17} x2="26" y2={71 + i * 17} stroke={c} strokeWidth="2" />}
+            <circle cx="26" cy={54 + i * 17} r="8" fill={c} />
+            <text x="26" y={57 + i * 17} textAnchor="middle" fontSize="4" fontWeight="900" fill="white">{i + 1}</text>
+            <text x="40" y={57 + i * 17} fontSize="3.8" fontWeight="600" fill="#1e293b">{item}</text>
           </g>
         ))}
         {emergencyBar(126)}
       </> : t.layoutHint === 'timeline' ? <>
-        {/* 타임라인 — 회복 단계 */}
-        <rect x="22" y="44" width="3" height="76" rx="1.5" fill={c} fillOpacity="0.12" />
+        {/* 타임라인 — SOLID 레일 + 큰 원 */}
+        <text x="60" y="12" textAnchor="middle" fontSize="4" fontWeight="700" fill={a} letterSpacing="0.5">{name}</text>
+        <rect x="14" y="18" width="92" height="20" rx="8" fill={c} fillOpacity="0.12" />
+        <text x="60" y="31" textAnchor="middle" fontSize="7" fontWeight="900" fill={c}>회복 가이드</text>
+        <rect x="22" y="44" width="4" height="76" rx="2" fill={c} />
         {[{d:'당일',t:'혀로 건드리지 마세요'},{d:'1주일',t:'딱딱한 음식 금지'},{d:'2주일',t:'정상 식사 가능'},{d:'1개월',t:'정기검진 내원'}].map((item, i) => (
           <g key={i}>
-            <circle cx="23.5" cy={52 + i * 19} r="6" fill="white" stroke={c} strokeWidth="1" strokeOpacity="0.4" filter={`url(#shadow_${t.id})`} />
-            <circle cx="23.5" cy={52 + i * 19} r="3" fill={c} fillOpacity="0.6" />
-            <text x="34" y={50 + i * 19} fontSize="3.5" fontWeight="800" fill={c}>{item.d}</text>
-            <text x="34" y={58 + i * 19} fontSize="3.5" fontWeight="500" fill="#475569">{item.t}</text>
+            <circle cx="24" cy={52 + i * 19} r="7" fill="white" stroke={c} strokeWidth="2" filter={`url(#shadow_${t.id})`} />
+            <circle cx="24" cy={52 + i * 19} r="4" fill={c} />
+            <text x="36" y={50 + i * 19} fontSize="3.8" fontWeight="800" fill={c}>{item.d}</text>
+            <text x="36" y={58 + i * 19} fontSize="3.5" fontWeight="500" fill="#475569">{item.t}</text>
           </g>
         ))}
         {emergencyBar(128)}
       </> : <>
-        {/* 인포그래픽 (infographic / fallback) — 2x2 아이콘 그리드 */}
+        {/* 인포그래픽 (infographic / fallback) — 2x2 SOLID 아이콘 그리드 */}
+        <text x="60" y="12" textAnchor="middle" fontSize="4" fontWeight="700" fill={a} letterSpacing="0.5">{name}</text>
+        <text x="60" y="32" textAnchor="middle" fontSize="7" fontWeight="900" fill={c}>시술 후 주의사항</text>
         {[{t:'혀 금지'},{t:'음주 금지'},{t:'냉찜질'},{t:'부드러운 음식'}].map((item, i) => (
           <g key={i}>
-            <rect x={i % 2 === 0 ? 10 : 64} y={44 + Math.floor(i/2) * 32} width="50" height="28" rx="7" fill="white" fillOpacity="0.95" filter={`url(#shadow_${t.id})`} />
-            <circle cx={i % 2 === 0 ? 24 : 78} cy={54 + Math.floor(i/2) * 32} r="6.5" fill={i < 2 ? '#fef2f2' : '#ecfdf5'} />
-            <text x={i % 2 === 0 ? 24 : 78} y={57 + Math.floor(i/2) * 32} textAnchor="middle" fontSize="5" fontWeight="800" fill={i < 2 ? '#ef4444' : '#22c55e'}>{i < 2 ? 'X' : 'O'}</text>
-            <text x={i % 2 === 0 ? 44 : 98} y={61 + Math.floor(i/2) * 32} textAnchor="middle" fontSize="3.5" fontWeight="500" fill="#475569">{item.t}</text>
+            <rect x={i % 2 === 0 ? 10 : 64} y={44 + Math.floor(i/2) * 34} width="50" height="30" rx="7" fill="white" filter={`url(#shadow_${t.id})`} />
+            <circle cx={i % 2 === 0 ? 24 : 78} cy={54 + Math.floor(i/2) * 34} r="8" fill={i < 2 ? '#ef4444' : '#22c55e'} />
+            <text x={i % 2 === 0 ? 24 : 78} y={57 + Math.floor(i/2) * 34} textAnchor="middle" fontSize="5.5" fontWeight="800" fill="white">{i < 2 ? 'X' : 'O'}</text>
+            <text x={i % 2 === 0 ? 44 : 98} y={63 + Math.floor(i/2) * 34} textAnchor="middle" fontSize="3.5" fontWeight="600" fill="#1e293b">{item.t}</text>
           </g>
         ))}
         {emergencyBar(116)}
@@ -2081,38 +2098,40 @@ function TemplateSVGPreview({ template: t, category, hospitalName }: { template:
       {isDarkTheme && <rect x="14" y="3" width="92" height="2" rx="1" fill="#f59e0b" fillOpacity="0.6" />}
       <text x="60" y="12" textAnchor="middle" fontSize="4" fontWeight="700" fill={isDarkTheme ? '#f59e0b' : a}>{name}</text>
       {t.layoutHint === 'table' ? <>
-        {/* 테이블형 — 헤더 + 교대 줄무늬 */}
+        {/* 테이블형 — SOLID 헤더 + 강한 줄무늬 */}
         <rect x="14" y="18" width="92" height="16" rx="6" fill={c} />
         <text x="60" y="29" textAnchor="middle" fontSize="5.5" fontWeight="900" fill="white">비급여 진료비 안내</text>
         <rect x="14" y="38" width="92" height="84" rx="6" fill="white" filter={`url(#shadow_${t.id})`} />
-        <rect x="14" y="38" width="92" height="12" rx="6" fill={c} fillOpacity="0.12" />
+        <rect x="14" y="38" width="92" height="12" rx="6" fill={c} fillOpacity="0.3" />
         <text x="26" y="46" fontSize="3.5" fontWeight="800" fill={c}>항목</text>
         <text x="98" y="46" textAnchor="end" fontSize="3.5" fontWeight="800" fill={c}>금액</text>
         {items.map((item, i) => (
           <g key={i}>
-            {i % 2 === 0 && <rect x="14" y={52 + i * 16} width="92" height="16" fill="#f8fafc" />}
+            {i % 2 === 0 && <rect x="14" y={52 + i * 16} width="92" height="16" fill="#f1f5f9" />}
             <text x="22" y={62 + i * 16} fontSize="4" fontWeight="500" fill="#1e293b">{item.n}</text>
             <text x="98" y={62 + i * 16} textAnchor="end" fontSize="4" fontWeight="800" fill={c}>{item.p}</text>
             {i < items.length - 1 && <line x1="18" y1={68 + i * 16} x2="102" y2={68 + i * 16} stroke="#e2e8f0" strokeWidth="0.4" />}
           </g>
         ))}
       </> : t.layoutHint === 'cards' ? <>
-        {/* 2x2 카드형 */}
+        {/* 2x2 카드형 — SOLID 상단 보더 + 진한 원 */}
         <text x="60" y="28" textAnchor="middle" fontSize="7" fontWeight="900" fill={c}>비급여 진료비 안내</text>
         {items.map((item, i) => (
           <g key={i}>
             <rect x={i % 2 === 0 ? 10 : 64} y={40 + Math.floor(i / 2) * 32} width="50" height="28" rx="7" fill="white" filter={`url(#shadow_${t.id})`} />
-            <circle cx={i % 2 === 0 ? 35 : 89} cy={49 + Math.floor(i / 2) * 32} r="6" fill={c} fillOpacity="0.18" />
-            <text x={i % 2 === 0 ? 35 : 89} y={51 + Math.floor(i / 2) * 32} textAnchor="middle" fontSize="3.5" fontWeight="700" fill="#475569">{item.n}</text>
-            <text x={i % 2 === 0 ? 35 : 89} y={61 + Math.floor(i / 2) * 32} textAnchor="middle" fontSize="4" fontWeight="900" fill={c}>{item.p}</text>
+            <rect x={i % 2 === 0 ? 10 : 64} y={40 + Math.floor(i / 2) * 32} width="50" height="4" rx="7" fill={c} />
+            <circle cx={i % 2 === 0 ? 35 : 89} cy={51 + Math.floor(i / 2) * 32} r="6" fill={c} fillOpacity="0.4" />
+            <text x={i % 2 === 0 ? 35 : 89} y={53 + Math.floor(i / 2) * 32} textAnchor="middle" fontSize="3.5" fontWeight="700" fill="#1e293b">{item.n}</text>
+            <text x={i % 2 === 0 ? 35 : 89} y={63 + Math.floor(i / 2) * 32} textAnchor="middle" fontSize="4" fontWeight="900" fill={c}>{item.p}</text>
           </g>
         ))}
       </> : isDarkTheme ? <>
-        {/* 다크 테마 */}
+        {/* 다크 테마 — 강화된 보더 + 골드 상단선 */}
+        <rect x="14" y="6" width="92" height="2" rx="1" fill="#f59e0b" fillOpacity="0.8" />
         <text x="60" y="28" textAnchor="middle" fontSize="7" fontWeight="900" fill="white">비급여 진료비 안내</text>
         {items.map((item, i) => (
           <g key={i}>
-            <rect x="14" y={42 + i * 20} width="92" height="17" rx="6" fill="#1e293b" stroke="#f59e0b" strokeWidth="0.3" strokeOpacity="0.15" />
+            <rect x="14" y={42 + i * 20} width="92" height="17" rx="6" fill="#1e293b" stroke="#f59e0b" strokeWidth="0.3" strokeOpacity="0.4" />
             <text x="22" y={53 + i * 20} fontSize="4" fontWeight="500" fill="white">{item.n}</text>
             <text x="98" y={53 + i * 20} textAnchor="end" fontSize="4" fontWeight="800" fill="#f59e0b">{item.p}</text>
             {i < items.length - 1 && <line x1="18" y1={59 + i * 20} x2="102" y2={59 + i * 20} stroke="#f59e0b" strokeWidth="0.3" strokeOpacity="0.35" />}
@@ -2120,22 +2139,24 @@ function TemplateSVGPreview({ template: t, category, hospitalName }: { template:
         ))}
         <rect x="14" y="155" width="92" height="1.5" rx="0.75" fill="#f59e0b" fillOpacity="0.5" />
       </> : t.layoutHint === 'minimal' ? <>
-        {/* 미니멀 — 점선 연결 */}
+        {/* 미니멀 — 좌우 컬러 바 + 강한 점선 */}
+        <rect x="0" y="0" width="6" height="160" rx="3" fill={c} />
+        <rect x="118" y="0" width="2" height="160" rx="1" fill={a} />
         <line x1="14" y1="16" x2="106" y2="16" stroke={a} strokeWidth="0.8" />
         <text x="60" y="30" textAnchor="middle" fontSize="7" fontWeight="900" fill="#1e293b">비급여 진료비 안내</text>
         {items.map((item, i) => (
           <g key={i}>
             <text x="20" y={52 + i * 22} fontSize="4" fontWeight="500" fill="#475569">{item.n}</text>
-            <line x1="50" y1={52 + i * 22} x2="82" y2={52 + i * 22} stroke="#cbd5e1" strokeWidth="0.5" strokeDasharray="2 1" />
+            <line x1="50" y1={52 + i * 22} x2="82" y2={52 + i * 22} stroke="#cbd5e1" strokeWidth="0.8" strokeDasharray="2 1" />
             <text x="100" y={52 + i * 22} textAnchor="end" fontSize="4" fontWeight="800" fill="#1e293b">{item.p}</text>
           </g>
         ))}
         <line x1="14" y1="148" x2="106" y2="148" stroke={a} strokeWidth="0.8" />
       </> : t.layoutHint === 'wood' ? <>
-        {/* 우드 — 카페 메뉴판 */}
+        {/* 우드 — 카페 메뉴판 강화 */}
         <rect x="0" y="0" width="120" height="160" rx="6" fill="#fef3c7" />
-        <rect x="8" y="5" width="104" height="150" rx="5" fill="#fffbeb" stroke="#d4a017" strokeOpacity="0.2" strokeWidth="0.8" />
-        <rect x="22" y="12" width="76" height="14" rx="5" fill="#92400e" fillOpacity="0.1" />
+        <rect x="8" y="5" width="104" height="150" rx="5" fill="#fffbeb" stroke="#d4a017" strokeOpacity="0.4" strokeWidth="1" />
+        <rect x="22" y="12" width="76" height="14" rx="5" fill="#92400e" fillOpacity="0.25" />
         <text x="60" y="22" textAnchor="middle" fontSize="5.5" fontWeight="900" fill="#92400e">비급여 진료비 안내</text>
         <line x1="26" y1="30" x2="94" y2="30" stroke="#d4a017" strokeWidth="0.6" strokeOpacity="0.4" />
         <text x="60" y="37" textAnchor="middle" fontSize="3" fontWeight="600" fill="#a16207" letterSpacing="1.5">PRICE LIST</text>
@@ -2143,26 +2164,26 @@ function TemplateSVGPreview({ template: t, category, hospitalName }: { template:
         {items.map((item, i) => (
           <g key={i}>
             <text x="18" y={56 + i * 22} fontSize="4" fontWeight="700" fill="#78350f">{item.n}</text>
-            <line x1="50" y1={56 + i * 22} x2="86" y2={56 + i * 22} stroke="#d4a017" strokeWidth="0.4" strokeOpacity="0.3" strokeDasharray="2 1" />
+            <line x1="50" y1={56 + i * 22} x2="86" y2={56 + i * 22} stroke="#d4a017" strokeWidth="0.6" strokeOpacity="0.4" strokeDasharray="2 1" />
             <text x="102" y={56 + i * 22} textAnchor="end" fontSize="4" fontWeight="900" fill="#d97706">{item.p}</text>
           </g>
         ))}
         <line x1="26" y1="142" x2="94" y2="142" stroke="#d4a017" strokeWidth="0.4" strokeOpacity="0.25" />
         <text x="60" y="150" textAnchor="middle" fontSize="3" fontWeight="600" fill="#a16207">{name}</text>
       </> : <>
-        {/* 라벤더 그라데이션 (gradient / fallback) */}
+        {/* 라벤더 그라데이션 (gradient / fallback) — 강화 */}
         <rect x="0" y="0" width="120" height="160" rx="6" fill="#f5f3ff" />
-        <circle cx="100" cy="14" r="24" fill="#7c3aed" fillOpacity="0.06" />
-        <circle cx="16" cy="148" r="20" fill="#a855f7" fillOpacity="0.04" />
-        <rect x="28" y="6" width="64" height="13" rx="6.5" fill={`url(#accent_${t.id})`} />
-        <text x="60" y="15" textAnchor="middle" fontSize="3.5" fontWeight="800" fill="white">비급여 안내</text>
+        <circle cx="100" cy="14" r="24" fill="#7c3aed" fillOpacity="0.15" />
+        <circle cx="16" cy="148" r="20" fill="#a855f7" fillOpacity="0.1" />
+        <rect x="22" y="4" width="76" height="15" rx="7.5" fill={`url(#accent_${t.id})`} />
+        <text x="60" y="14" textAnchor="middle" fontSize="4" fontWeight="800" fill="white">비급여 안내</text>
         <text x="60" y="30" textAnchor="middle" fontSize="7" fontWeight="900" fill="#7c3aed">진료비 안내</text>
         <text x="60" y="38" textAnchor="middle" fontSize="3" fontWeight="500" fill="#a78bfa">{name}</text>
         <rect x="14" y="44" width="92" height="86" rx="8" fill="white" fillOpacity="0.97" filter={`url(#shadow_${t.id})`} />
         {items.map((item, i) => (
           <g key={i}>
             {i % 2 === 0 && <rect x="14" y={48 + i * 20} width="92" height="20" fill="#f5f3ff" fillOpacity="0.6" />}
-            <circle cx="22" cy={60 + i * 20} r="2.5" fill="#7c3aed" fillOpacity="0.2" />
+            <circle cx="22" cy={60 + i * 20} r="2.5" fill="#7c3aed" fillOpacity="0.4" />
             <text x="28" y={62 + i * 20} fontSize="4" fontWeight="500" fill="#475569">{item.n}</text>
             <text x="98" y={62 + i * 20} textAnchor="end" fontSize="4" fontWeight="900" fill="#7c3aed">{item.p}</text>
             {i < items.length - 1 && <line x1="20" y1={68 + i * 20} x2="100" y2={68 + i * 20} stroke="#e9d5ff" strokeWidth="0.4" />}
