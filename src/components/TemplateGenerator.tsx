@@ -1807,6 +1807,80 @@ function TemplateSVGPreview({ template: t, category, hospitalName }: { template:
     </>);
   }
 
+  if (category === 'pricing') {
+    const items = [
+      { n: '임플란트', p: '1,200,000원' },
+      { n: '레진 충전', p: '150,000원' },
+      { n: '치아 미백', p: '300,000원' },
+      { n: '교정 상담', p: '무료' },
+    ];
+    const isDarkTheme = t.layoutHint === 'dark';
+    return wrap(<>
+      <text x="60" y="12" textAnchor="middle" fontSize="3.5" fontWeight="600" fill={isDarkTheme ? '#f59e0b' : a}>{name}</text>
+      {isDarkTheme && <rect x="0" y="0" width="120" height="160" rx="6" fill="#0f172a" />}
+      {isDarkTheme && <rect x="10" y="2" width="100" height="1" rx="0.5" fill="#f59e0b" fillOpacity="0.4" />}
+      {isDarkTheme && <text x="60" y="12" textAnchor="middle" fontSize="3.5" fontWeight="600" fill="#f59e0b">{name}</text>}
+      {t.layoutHint === 'table' ? <>
+        <rect x="10" y="16" width="100" height="14" rx="5" fill={c} />
+        <text x="60" y="25" textAnchor="middle" fontSize="5" fontWeight="800" fill="white">비급여 진료비 안내</text>
+        <rect x="10" y="34" width="100" height="88" rx="5" fill="white" filter={`url(#shadow_${t.id})`} />
+        <rect x="10" y="34" width="100" height="10" rx="5" fill={c} fillOpacity="0.08" />
+        <text x="22" y="41" fontSize="3" fontWeight="700" fill={c}>항목</text>
+        <text x="95" y="41" textAnchor="end" fontSize="3" fontWeight="700" fill={c}>금액</text>
+        {items.map((item, i) => (
+          <g key={i}>
+            {i % 2 === 0 && <rect x="10" y={46 + i * 16} width="100" height="16" fill="#f8fafc" />}
+            <text x="18" y={56 + i * 16} fontSize="3.5" fill="#1e293b">{item.n}</text>
+            <text x="102" y={56 + i * 16} textAnchor="end" fontSize="3.5" fontWeight="700" fill={c}>{item.p}</text>
+            {i < items.length - 1 && <line x1="14" y1={62 + i * 16} x2="106" y2={62 + i * 16} stroke="#e2e8f0" strokeWidth="0.3" />}
+          </g>
+        ))}
+      </> : t.layoutHint === 'cards' ? <>
+        <text x="60" y="28" textAnchor="middle" fontSize="5.5" fontWeight="800" fill={c}>비급여 진료비 안내</text>
+        {items.map((item, i) => (
+          <g key={i}>
+            <rect x={i % 2 === 0 ? 8 : 64} y={36 + Math.floor(i / 2) * 34} width="52" height="28" rx="6" fill="white" filter={`url(#shadow_${t.id})`} />
+            <circle cx={i % 2 === 0 ? 34 : 90} cy={46 + Math.floor(i / 2) * 34} r="4" fill={c} fillOpacity="0.1" />
+            <text x={i % 2 === 0 ? 34 : 90} y={48 + Math.floor(i / 2) * 34} textAnchor="middle" fontSize="3" fontWeight="600" fill="#475569">{item.n}</text>
+            <text x={i % 2 === 0 ? 34 : 90} y={56 + Math.floor(i / 2) * 34} textAnchor="middle" fontSize="3.5" fontWeight="800" fill={c}>{item.p}</text>
+          </g>
+        ))}
+      </> : isDarkTheme ? <>
+        <text x="60" y="28" textAnchor="middle" fontSize="5.5" fontWeight="800" fill="white">비급여 진료비 안내</text>
+        {items.map((item, i) => (
+          <g key={i}>
+            <rect x="12" y={38 + i * 20} width="96" height="16" rx="4" fill="#1e293b" fillOpacity="0.8" />
+            <text x="20" y={48 + i * 20} fontSize="3.5" fill="white">{item.n}</text>
+            <text x="100" y={48 + i * 20} textAnchor="end" fontSize="3.5" fontWeight="700" fill="#f59e0b">{item.p}</text>
+            {i < items.length - 1 && <line x1="16" y1={54 + i * 20} x2="104" y2={54 + i * 20} stroke="#f59e0b" strokeWidth="0.2" strokeOpacity="0.3" />}
+          </g>
+        ))}
+        <rect x="10" y="155" width="100" height="1" rx="0.5" fill="#f59e0b" fillOpacity="0.4" />
+      </> : t.layoutHint === 'minimal' ? <>
+        <text x="60" y="26" textAnchor="middle" fontSize="5.5" fontWeight="800" fill="#1e293b">비급여 진료비 안내</text>
+        <line x1="10" y1="15" x2="110" y2="15" stroke={a} strokeWidth="0.5" />
+        {items.map((item, i) => (
+          <g key={i}>
+            <text x="18" y={48 + i * 22} fontSize="3.5" fill="#475569">{item.n}</text>
+            <line x1="45" y1={48 + i * 22} x2="85" y2={48 + i * 22} stroke="#e2e8f0" strokeWidth="0.3" strokeDasharray="1 1" />
+            <text x="102" y={48 + i * 22} textAnchor="end" fontSize="3.5" fontWeight="700" fill="#1e293b">{item.p}</text>
+          </g>
+        ))}
+        <line x1="10" y1="150" x2="110" y2="150" stroke={a} strokeWidth="0.5" />
+      </> : <>
+        <text x="60" y="28" textAnchor="middle" fontSize="5.5" fontWeight="800" fill={c}>비급여 진료비 안내</text>
+        {items.map((item, i) => (
+          <g key={i}>
+            <circle cx="18" cy={48 + i * 20} r="2" fill={c} fillOpacity="0.15" />
+            <text x="24" y={50 + i * 20} fontSize="3.5" fill="#475569">{item.n}</text>
+            <text x="102" y={50 + i * 20} textAnchor="end" fontSize="3.5" fontWeight="700" fill={c}>{item.p}</text>
+          </g>
+        ))}
+      </>}
+      <text x="60" y="152" textAnchor="middle" fontSize="2.5" fill={isDarkTheme ? '#94a3b8' : '#94a3b8'}>* 환자 상태에 따라 금액이 달라질 수 있습니다</text>
+    </>);
+  }
+
   // fallback
   return wrap(<>
     <text x="60" y="80" textAnchor="middle" fontSize="6" fill={c}>{t.name}</text>
@@ -2212,6 +2286,7 @@ export default function TemplateGenerator({ onSwitchToFree }: { onSwitchToFree?:
     greeting: { icon: '\u{1F38A}', t: '명절 인사 이미지', d: '인사말을 입력하세요' },
     hiring: { icon: '\u{1F4CB}', t: '채용/공고 이미지', d: '모집 정보를 입력하세요' },
     caution: { icon: '\u26A0\uFE0F', t: '주의사항 이미지', d: '주의사항을 입력하세요' },
+    pricing: { icon: '\u{1F4B0}', t: '비급여 안내 이미지', d: '시술 항목과 가격을 입력하세요' },
   };
 
   return (
@@ -2972,6 +3047,10 @@ export default function TemplateGenerator({ onSwitchToFree }: { onSwitchToFree?:
                 '채용 공고 카드뉴스 자동 생성',
                 '복리후생/자격요건 시각화',
                 '다장 시리즈 디자인 지원',
+              ] : category === 'pricing' ? [
+                '비급여 항목/가격 자동 배치',
+                '깔끔한 가격표 레이아웃',
+                '병원 브랜딩 컬러 반영',
               ] : [
                 '카테고리별 최적화 디자인',
                 'AI 스타일 프리셋 지원',
