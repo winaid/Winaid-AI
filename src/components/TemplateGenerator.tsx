@@ -1184,25 +1184,28 @@ function TemplateSVGPreview({ template: t, category, hospitalName }: { template:
       {t.layoutHint === 'split' ? <>
         {/* 좌우 분할 */}
         <rect x="5" y="18" width="50" height="94" rx="6" fill={c} fillOpacity="0.06" />
-        <circle cx="30" cy="50" r="17" fill="white" fillOpacity="0.8" stroke={c} strokeOpacity="0.15" strokeWidth="0.5" />
-        <rect x="22" y="42" width="16" height="16" rx="3" fill={c} fillOpacity="0.08" />
-        <text x="30" y="52" textAnchor="middle" fontSize="5" fill={c} fillOpacity="0.5">PHOTO</text>
+        <circle cx="30" cy="48" r="17" fill="white" fillOpacity="0.9" stroke={c} strokeOpacity="0.12" strokeWidth="0.5" filter={`url(#shadow_${t.id})`} />
+        {/* 사람 실루엣 */}
+        <circle cx="30" cy="42" r="5" fill={c} fillOpacity="0.12" />
+        <ellipse cx="30" cy="56" rx="8" ry="5" fill={c} fillOpacity="0.08" />
         <text x="85" y="36" textAnchor="middle" fontSize="6.5" fontWeight="800" fill={c}>김윈에이드</text>
-        <rect x="67" y="40" width="36" height="8" rx="4" fill={c} fillOpacity="0.08" />
-        <text x="85" y="46" textAnchor="middle" fontSize="3.5" fontWeight="600" fill={a}>치과 전문의</text>
+        <rect x="67" y="40" width="36" height="8" rx="4" fill={`url(#accent_${t.id})`} fillOpacity="0.85" />
+        <text x="85" y="46" textAnchor="middle" fontSize="3.5" fontWeight="600" fill="white">치과 전문의</text>
         {['서울대 치대 졸업','임플란트 전문','경력 10년'].map((t2,i) => (
           <g key={i}>
-            <circle cx="63" cy={59 + i * 10} r="1" fill={c} fillOpacity="0.3" />
+            <circle cx="63" cy={59 + i * 10} r="1.2" fill={c} fillOpacity="0.4" />
             <text x="67" y={61 + i * 10} fontSize="3.2" fill="#64748b">{t2}</text>
           </g>
         ))}
-        <text x="85" y="100" textAnchor="middle" fontSize="3" fill={a}>"환자분의 미소가 저의 보람입니다"</text>
+        <text x="85" y="100" textAnchor="middle" fontSize="3" fill={a} fontStyle="italic">"환자분의 미소가 저의 보람입니다"</text>
       </> : t.layoutHint === 'luxury' ? <>
         {/* 다크 프리미엄 */}
         <rect x="5" y="16" width="110" height="130" rx="6" fill="#0f172a" />
         <line x1="25" y1="24" x2="95" y2="24" stroke="#d4a017" strokeOpacity="0.2" strokeWidth="0.3" />
         <circle cx="60" cy="52" r="18" fill="#d4a017" fillOpacity="0.05" stroke="#d4a017" strokeOpacity="0.2" strokeWidth="0.5" />
-        <text x="60" y="55" textAnchor="middle" fontSize="5" fill="#d4a017" fillOpacity="0.4">PHOTO</text>
+        {/* 사람 실루엣 */}
+        <circle cx="60" cy="46" r="5.5" fill="#d4a017" fillOpacity="0.12" />
+        <ellipse cx="60" cy="60" rx="9" ry="5.5" fill="#d4a017" fillOpacity="0.08" />
         <text x="60" y="82" textAnchor="middle" fontSize="7" fontWeight="800" fill="#d4a017">김윈에이드</text>
         <rect x="35" y="86" width="50" height="9" rx="4.5" fill="#d4a017" fillOpacity="0.08" />
         <text x="60" y="92.5" textAnchor="middle" fontSize="3.5" fontWeight="600" fill="#b8860b">치과 전문의</text>
@@ -1215,7 +1218,9 @@ function TemplateSVGPreview({ template: t, category, hospitalName }: { template:
         <rect x="10" y="18" width="100" height="28" rx="6" fill={c} fillOpacity="0.06" />
         {/* 사각 프로필 */}
         <rect x="35" y="22" width="50" height="50" rx="4" fill={c} fillOpacity="0.04" stroke={c} strokeOpacity="0.1" strokeWidth="0.5" />
-        <text x="60" y="50" textAnchor="middle" fontSize="5" fill={c} fillOpacity="0.3">PHOTO</text>
+        {/* 사람 실루엣 */}
+        <circle cx="60" cy="40" r="7" fill={c} fillOpacity="0.08" />
+        <ellipse cx="60" cy="58" rx="12" ry="8" fill={c} fillOpacity="0.05" />
         <text x="60" y="82" textAnchor="middle" fontSize="7" fontWeight="800" fill={c}>김윈에이드</text>
         <rect x="30" y="86" width="60" height="8" rx="4" fill={`url(#accent_${t.id})`} fillOpacity="0.9" />
         <text x="60" y="92" textAnchor="middle" fontSize="3.5" fontWeight="700" fill="white">치과 전문의</text>
@@ -1231,7 +1236,9 @@ function TemplateSVGPreview({ template: t, category, hospitalName }: { template:
         <path d="M0,55 Q60,35 120,55 L120,160 L0,160 Z" fill={c} fillOpacity="0.04" />
         <circle cx="60" cy="48" r="22" fill="white" fillOpacity="0.95" filter={`url(#shadow_${t.id})`} />
         <circle cx="60" cy="48" r="20" fill={c} fillOpacity="0.03" stroke={c} strokeOpacity="0.08" strokeWidth="0.5" />
-        <text x="60" y="51" textAnchor="middle" fontSize="5" fill={c} fillOpacity="0.3">PHOTO</text>
+        {/* 사람 실루엣 */}
+        <circle cx="60" cy="42" r="6" fill={c} fillOpacity="0.1" />
+        <ellipse cx="60" cy="56" rx="10" ry="6" fill={c} fillOpacity="0.06" />
         <text x="60" y="82" textAnchor="middle" fontSize="7" fontWeight="800" fill={c}>김윈에이드</text>
         <rect x="35" y="86" width="50" height="8" rx="4" fill={c} fillOpacity="0.08" />
         <text x="60" y="92" textAnchor="middle" fontSize="3.5" fontWeight="600" fill={a}>치과 전문의</text>
@@ -1243,7 +1250,9 @@ function TemplateSVGPreview({ template: t, category, hospitalName }: { template:
         {/* 따뜻한 스토리형 - 인사말 중심 */}
         <rect x="8" y="16" width="104" height="128" rx="6" fill="white" fillOpacity="0.5" />
         <circle cx="30" cy="32" r="12" fill={c} fillOpacity="0.04" stroke={c} strokeOpacity="0.1" strokeWidth="0.5" />
-        <text x="30" y="35" textAnchor="middle" fontSize="4" fill={c} fillOpacity="0.3">PHOTO</text>
+        {/* 사람 실루엣 */}
+        <circle cx="30" cy="28" r="4" fill={c} fillOpacity="0.1" />
+        <ellipse cx="30" cy="38" rx="6" ry="4" fill={c} fillOpacity="0.06" />
         <text x="80" y="28" fontSize="3" fontWeight="600" fill={a}>치과 전문의</text>
         <text x="80" y="38" fontSize="5.5" fontWeight="800" fill={c}>김윈에이드</text>
         <line x1="15" y1="50" x2="105" y2="50" stroke={c} strokeOpacity="0.08" strokeWidth="0.3" />
@@ -1260,7 +1269,9 @@ function TemplateSVGPreview({ template: t, category, hospitalName }: { template:
       </> : t.layoutHint === 'grid' ? <>
         {/* 클린 그리드 - 정보 정리형 */}
         <circle cx="36" cy="36" r="14" fill="white" fillOpacity="0.9" stroke={c} strokeOpacity="0.1" strokeWidth="0.5" filter={`url(#shadow_${t.id})`} />
-        <text x="36" y="39" textAnchor="middle" fontSize="4" fill={c} fillOpacity="0.3">PHOTO</text>
+        {/* 사람 실루엣 */}
+        <circle cx="36" cy="31" r="4.5" fill={c} fillOpacity="0.1" />
+        <ellipse cx="36" cy="42" rx="7" ry="4.5" fill={c} fillOpacity="0.06" />
         <text x="84" y="30" textAnchor="middle" fontSize="5.5" fontWeight="800" fill={c}>김윈에이드</text>
         <rect x="67" y="34" width="36" height="7" rx="3.5" fill={c} fillOpacity="0.08" />
         <text x="85" y="39.5" textAnchor="middle" fontSize="3" fontWeight="600" fill={a}>치과 전문의</text>
@@ -1282,7 +1293,9 @@ function TemplateSVGPreview({ template: t, category, hospitalName }: { template:
       </> : <>
         {/* 기본형 - 원형 프로필 */}
         <circle cx="60" cy="48" r="19" fill="white" fillOpacity="0.9" stroke={c} strokeOpacity="0.1" strokeWidth="0.5" filter={`url(#shadow_${t.id})`} />
-        <text x="60" y="51" textAnchor="middle" fontSize="5" fill={c} fillOpacity="0.35">PHOTO</text>
+        {/* 사람 실루엣 */}
+        <circle cx="60" cy="42" r="6" fill={c} fillOpacity="0.1" />
+        <ellipse cx="60" cy="56" rx="10" ry="6" fill={c} fillOpacity="0.06" />
         <text x="60" y="80" textAnchor="middle" fontSize="7" fontWeight="800" fill={c}>김윈에이드</text>
         <rect x="30" y="84" width="60" height="9" rx="4.5" fill={c} fillOpacity="0.06" />
         <text x="60" y="90.5" textAnchor="middle" fontSize="3.8" fontWeight="600" fill={a}>치과 전문의</text>
@@ -1706,15 +1719,15 @@ function TemplateSVGPreview({ template: t, category, hospitalName }: { template:
       {/* 조건 카드 - 아이콘 + 텍스트 */}
       <rect x="10" y="58" width="100" height="52" rx="6" fill="white" fillOpacity="0.9" filter={`url(#shadow_${t.id})`} />
       {[
-        {icon:'briefcase', t:'정규직 / 경력 1년 이상'},
-        {icon:'shield', t:'4대보험 완비'},
-        {icon:'gift', t:'중식 제공 / 인센티브'},
-        {icon:'clock', t:'채용시까지 상시 모집'},
-      ].map(({t: txt}, i) => (
+        {icon:'💼', t:'정규직 / 경력 1년 이상'},
+        {icon:'🛡', t:'4대보험 완비'},
+        {icon:'🍽', t:'중식 제공 / 인센티브'},
+        {icon:'📋', t:'채용시까지 상시 모집'},
+      ].map(({icon, t: txt}, i) => (
         <g key={i}>
-          <circle cx="20" cy={67 + i * 11} r="3" fill={c} fillOpacity="0.08" />
-          <circle cx="20" cy={67 + i * 11} r="1.2" fill={c} fillOpacity="0.3" />
-          <text x="27" y={69 + i * 11} fontSize="3.5" fill="#475569">{txt}</text>
+          <circle cx="20" cy={67 + i * 11} r="4" fill={c} fillOpacity="0.06" />
+          <text x="20" y={69 + i * 11} textAnchor="middle" fontSize="3.5">{icon}</text>
+          <text x="28" y={69 + i * 11} fontSize="3.5" fill="#475569">{txt}</text>
         </g>
       ))}
       {/* CTA 버튼 */}
@@ -1802,8 +1815,11 @@ function TemplateSVGPreview({ template: t, category, hospitalName }: { template:
         ))}
       </>}
       {/* 응급 연락처 */}
-      <rect x="15" y="130" width="90" height="14" rx="5" fill={c} fillOpacity="0.05" />
-      <text x="60" y="152" textAnchor="middle" fontSize="2.8" fill="#94a3b8">{name}</text>
+      <rect x="15" y="128" width="90" height="16" rx="5" fill={c} fillOpacity="0.05" stroke={c} strokeOpacity="0.06" strokeWidth="0.3" />
+      <text x="28" y="137" fontSize="2.5" fontWeight="600" fill={c}>📞</text>
+      <text x="36" y="137" fontSize="2.8" fontWeight="600" fill="#475569">이상 증상 시 바로 연락</text>
+      <text x="96" y="137" textAnchor="end" fontSize="2.5" fontWeight="700" fill={c}>1588-0000</text>
+      <text x="60" y="153" textAnchor="middle" fontSize="2.8" fill="#94a3b8">{name}</text>
     </>);
   }
 
@@ -1867,6 +1883,50 @@ function TemplateSVGPreview({ template: t, category, hospitalName }: { template:
           </g>
         ))}
         <line x1="10" y1="150" x2="110" y2="150" stroke={a} strokeWidth="0.5" />
+      </> : t.layoutHint === 'wood' ? <>
+        {/* 따뜻한 우드 — 카페 메뉴판 스타일 */}
+        <rect x="0" y="0" width="120" height="160" rx="6" fill="#fef3c7" />
+        <rect x="6" y="4" width="108" height="152" rx="4" fill="#fffbeb" stroke="#d4a017" strokeOpacity="0.15" strokeWidth="0.5" />
+        {/* 상단 장식 */}
+        <rect x="20" y="10" width="80" height="12" rx="3" fill="#92400e" fillOpacity="0.08" />
+        <text x="60" y="18" textAnchor="middle" fontSize="4.5" fontWeight="800" fill="#92400e">비급여 진료비 안내</text>
+        <line x1="24" y1="25" x2="96" y2="25" stroke="#d4a017" strokeWidth="0.4" strokeOpacity="0.3" />
+        <text x="60" y="32" textAnchor="middle" fontSize="2.5" fill="#a16207" letterSpacing="1">PRICE LIST</text>
+        <line x1="24" y1="35" x2="96" y2="35" stroke="#d4a017" strokeWidth="0.3" strokeOpacity="0.2" />
+        {items.map((item, i) => (
+          <g key={i}>
+            <text x="16" y={50 + i * 22} fontSize="3.5" fontWeight="600" fill="#78350f">{item.n}</text>
+            <line x1="48" y1={50 + i * 22} x2="88" y2={50 + i * 22} stroke="#d4a017" strokeWidth="0.3" strokeOpacity="0.25" strokeDasharray="1.5 1" />
+            <text x="104" y={50 + i * 22} textAnchor="end" fontSize="3.5" fontWeight="800" fill="#d97706">{item.p}</text>
+            {i < items.length - 1 && <line x1="14" y1={58 + i * 22} x2="106" y2={58 + i * 22} stroke="#92400e" strokeWidth="0.15" strokeOpacity="0.15" />}
+          </g>
+        ))}
+        {/* 하단 장식 */}
+        <line x1="24" y1="138" x2="96" y2="138" stroke="#d4a017" strokeWidth="0.3" strokeOpacity="0.2" />
+        <text x="60" y="146" textAnchor="middle" fontSize="2.5" fill="#a16207">🦷 {name}</text>
+      </> : t.layoutHint === 'gradient' ? <>
+        {/* 라벤더 그라데이션 모던 */}
+        <rect x="0" y="0" width="120" height="160" rx="6" fill="#f5f3ff" />
+        <circle cx="100" cy="12" r="22" fill="#7c3aed" fillOpacity="0.04" />
+        <circle cx="16" cy="148" r="18" fill="#a855f7" fillOpacity="0.03" />
+        {/* 헤더 배지 */}
+        <rect x="30" y="6" width="60" height="10" rx="5" fill={`url(#accent_${t.id})`} fillOpacity="0.85" />
+        <text x="60" y="13" textAnchor="middle" fontSize="3" fontWeight="700" fill="white">비급여 안내</text>
+        <text x="60" y="26" textAnchor="middle" fontSize="5.5" fontWeight="800" fill="#7c3aed">진료비 안내</text>
+        <text x="60" y="33" textAnchor="middle" fontSize="2.5" fill="#a78bfa">{name}</text>
+        {/* 가격 리스트 카드 */}
+        <rect x="10" y="38" width="100" height="90" rx="6" fill="white" fillOpacity="0.95" filter={`url(#shadow_${t.id})`} />
+        {items.map((item, i) => (
+          <g key={i}>
+            {i % 2 === 0 && <rect x="10" y={42 + i * 20} width="100" height="20" fill="#f5f3ff" fillOpacity="0.5" />}
+            <circle cx="20" cy={54 + i * 20} r="2" fill="#7c3aed" fillOpacity="0.15" />
+            <text x="26" y={56 + i * 20} fontSize="3.5" fill="#475569">{item.n}</text>
+            <text x="102" y={56 + i * 20} textAnchor="end" fontSize="3.5" fontWeight="800" fill="#7c3aed">{item.p}</text>
+            {i < items.length - 1 && <line x1="16" y1={62 + i * 20} x2="104" y2={62 + i * 20} stroke="#e9d5ff" strokeWidth="0.3" />}
+          </g>
+        ))}
+        {/* 그라데이션 악센트 라인 */}
+        <rect x="30" y="134" width="60" height="1" rx="0.5" fill={`url(#accent_${t.id})`} fillOpacity="0.4" />
       </> : <>
         <text x="60" y="28" textAnchor="middle" fontSize="5.5" fontWeight="800" fill={c}>비급여 진료비 안내</text>
         {items.map((item, i) => (
