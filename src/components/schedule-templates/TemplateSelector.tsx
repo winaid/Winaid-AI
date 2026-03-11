@@ -13,7 +13,7 @@ export const TEMPLATE_LIST: (TemplateInfo & {
 })[] = [
   {
     id: 'spring',
-    name: '봄 유치원',
+    name: '봄 동산',
     description: '하늘색 배경, 초록 리본, 꽃 장식',
     tags: ['봄', '유치원', '밝은', '귀여운'],
     previewBg: '#B3E5FC',
@@ -29,7 +29,7 @@ export const TEMPLATE_LIST: (TemplateInfo & {
   },
   {
     id: 'cherry',
-    name: '벚꽃 치과',
+    name: '벚꽃 봄',
     description: '핑크 벚꽃, 원형 이벤트 뱃지',
     tags: ['봄', '벚꽃', '핑크', '치과'],
     previewBg: '#FCE4EC',
@@ -47,7 +47,7 @@ export const TEMPLATE_LIST: (TemplateInfo & {
   },
   {
     id: 'autumn',
-    name: '단풍 치과',
+    name: '가을 단풍',
     description: '주황 단풍, 노란 pill 뱃지',
     tags: ['가을', '단풍', '따뜻한', '치과'],
     previewBg: '#FFE0B2',
@@ -84,7 +84,7 @@ export const TEMPLATE_LIST: (TemplateInfo & {
   },
   {
     id: 'notebook',
-    name: '노트 치과',
+    name: '노트북',
     description: '파란 노트 프레임, 의사 캐릭터',
     tags: ['캐주얼', '노트', '파란', '치과'],
     previewBg: '#E3F2FD',
