@@ -142,15 +142,12 @@ html {
 .calendar-thumb-svg {
   position: relative;
   overflow: hidden;
-  aspect-ratio: 3 / 4;
+  aspect-ratio: 4 / 5;
 }
 .calendar-thumb-svg svg {
-  position: absolute;
-  top: 0;
-  left: 0;
+  display: block;
   width: 100% !important;
   height: auto !important;
-  display: block;
 }
 
 /* Hide scrollbar for category tabs */
