@@ -2210,7 +2210,7 @@ export default function TemplateGenerator({ onSwitchToFree }: { onSwitchToFree?:
   return (
     <div className="flex flex-col lg:flex-row gap-5 lg:items-start">
       {/* 왼쪽: 설정 패널 — InputForm과 동일한 카드 스타일 */}
-      <div className="w-full lg:w-[340px] xl:w-[380px] lg:flex-none bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+      <div className="w-full lg:w-[400px] xl:w-[440px] lg:flex-none bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
       {/* 헤더 - InputForm과 동일한 컬러 헤더 */}
       <div className="flex items-center gap-2 px-4 py-2.5 border-b bg-emerald-50 border-emerald-100">
         <span>🖼️</span>
@@ -2224,21 +2224,21 @@ export default function TemplateGenerator({ onSwitchToFree }: { onSwitchToFree?:
       </div>
       <div className="space-y-4 p-4 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 160px)' }}>
 
-        {/* 카테고리 탭 */}
-        <div className="flex flex-wrap items-center gap-1.5">
+        {/* 카테고리 탭 — 4열 그리드 */}
+        <div className="grid grid-cols-4 gap-1.5">
           {CATEGORIES.map(c => {
             const active = category === c.id;
             return (
               <button
                 key={c.id}
                 onClick={() => setCategory(c.id)}
-                className={`flex items-center gap-1.5 py-2 px-3.5 rounded-xl text-[12px] font-bold whitespace-nowrap transition-all duration-200 border ${
+                className={`flex items-center justify-center gap-1 py-2 px-1 rounded-xl text-[11px] font-bold whitespace-nowrap transition-all duration-200 border ${
                   active
                     ? 'bg-blue-500 text-white border-blue-500 shadow-md shadow-blue-200/50'
                     : 'bg-white text-slate-500 border-slate-200 hover:border-blue-300 hover:text-blue-500 hover:shadow-sm'
                 }`}
               >
-                <span className="text-sm">{c.icon}</span>
+                <span className="text-sm leading-none">{c.icon}</span>
                 {c.name}
               </button>
             );
