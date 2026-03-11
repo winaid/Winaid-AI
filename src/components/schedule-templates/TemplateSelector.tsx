@@ -259,6 +259,9 @@ export default function TemplateSelector({ selectedId, onSelect, previewData }: 
           display: 'grid',
           gridTemplateColumns: 'repeat(3, 1fr)',
           gap: 12,
+          maxHeight: 480,
+          overflowY: 'auto',
+          paddingRight: 4,
         }}
       >
         {TEMPLATE_LIST.map(tpl => {
