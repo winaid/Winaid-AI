@@ -1386,31 +1386,39 @@ function TemplateSVGPreview({ template: t, category, hospitalName }: { template:
     </>);
     const bodyLines = ['2026년 4월 1일부터','새로운 장소에서 진료합니다.','','신주소: 서울시 강남구 ...'];
     return wrap(<>
-      <text x="60" y="12" textAnchor="middle" fontSize="4" fontWeight="700" fill={a} letterSpacing="0.5">{name}</text>
       {t.layoutHint === 'alert' ? <>
-        {/* 알림형 — 강조 배너 + 아이콘 */}
-        <rect x="0" y="0" width="120" height="64" rx="6" fill={c} />
-        <circle cx="28" cy="31" r="8" fill="white" />
-        <text x="28" y="34.5" textAnchor="middle" fontSize="7" fontWeight="900" fill={c}>!</text>
-        <text x="68" y="34" textAnchor="middle" fontSize="7" fontWeight="800" fill="white">진료실 이전 안내</text>
-        {/* 내용 카드 */}
-        <rect x="14" y="50" width="92" height="62" rx="8" fill="white" fillOpacity="0.95" filter={`url(#shadow_${t.id})`} />
-        {noticeBody(60, 62, bodyLines, c)}
-        <rect x="14" y="118" width="92" height="16" rx="8" fill={c} fillOpacity="0.3" />
-        <text x="60" y="128" textAnchor="middle" fontSize="3.5" fontWeight="500" fill={a}>양해 부탁드립니다</text>
+        {/* 알림형 — 상단 45% 솔리드 배경 + 큰 느낌표 아이콘 */}
+        <rect x="0" y="0" width="120" height="72" fill={c} />
+        <rect x="0" y="68" width="120" height="4" fill={c} fillOpacity="0.5" />
+        <circle cx="60" cy="28" r="16" fill="white" />
+        <text x="60" y="36" textAnchor="middle" fontSize="20" fontWeight="900" fill={c}>!</text>
+        <text x="60" y="56" textAnchor="middle" fontSize="7.5" fontWeight="900" fill="white">진료실 이전 안내</text>
+        <text x="60" y="65" textAnchor="middle" fontSize="3.5" fontWeight="600" fill="white" fillOpacity="0.85">{name}</text>
+        {/* 내용 카드 — 색상 영역에 겹침 */}
+        <rect x="10" y="62" width="100" height="68" rx="8" fill="white" filter={`url(#shadow_${t.id})`} />
+        {noticeBody(60, 80, bodyLines, c)}
+        <rect x="20" y="120" width="80" height="14" rx="7" fill={c} fillOpacity="0.35" />
+        <text x="60" y="129" textAnchor="middle" fontSize="3.5" fontWeight="700" fill={c}>양해 부탁드립니다</text>
+        <text x="60" y="152" textAnchor="middle" fontSize="3" fontWeight="600" fill="#94a3b8">{name}</text>
       </> : t.layoutHint === 'formal' ? <>
-        {/* 공문 스타일 — 이중 테두리 */}
-        <rect x="14" y="18" width="92" height="22" rx="4" fill="#1f2937" />
-        <text x="60" y="33" textAnchor="middle" fontSize="8" fontWeight="900" fill="white" letterSpacing="4">공 지 사 항</text>
-        <rect x="14" y="42" width="92" height="0.8" fill="#1f2937" fillOpacity="0.4" />
-        <rect x="14" y="48" width="92" height="64" rx="4" fill="white" fillOpacity="0.95" />
-        {noticeBody(60, 60, bodyLines, '#1f2937')}
-        <rect x="14" y="116" width="92" height="0.8" fill="#1f2937" fillOpacity="0.3" />
-        <text x="60" y="130" textAnchor="middle" fontSize="3.5" fontWeight="500" fill="#64748b">양해 부탁드립니다</text>
+        {/* 공문 스타일 — 다크 네이비 헤더 + 이중 프레임 */}
+        <rect x="0" y="0" width="120" height="48" fill="#1f2937" />
+        <text x="60" y="32" textAnchor="middle" fontSize="11" fontWeight="900" fill="white" letterSpacing="6">공 지 사 항</text>
+        <text x="60" y="43" textAnchor="middle" fontSize="3.5" fontWeight="600" fill="#9ca3af">{name}</text>
+        {/* 이중 테두리 콘텐츠 영역 */}
+        <rect x="10" y="54" width="100" height="96" rx="2" fill="white" stroke="#1f2937" strokeWidth="1" />
+        <rect x="13" y="57" width="94" height="90" rx="1" fill="none" stroke="#1f2937" strokeWidth="0.5" strokeOpacity="0.4" />
+        <rect x="16" y="60" width="88" height="1" fill="#1f2937" fillOpacity="0.3" />
+        {noticeBody(60, 74, bodyLines, '#1f2937')}
+        <rect x="16" y="115" width="88" height="1" fill="#1f2937" fillOpacity="0.3" />
+        <text x="60" y="130" textAnchor="middle" fontSize="3.5" fontWeight="600" fill="#64748b">양해 부탁드립니다</text>
+        <text x="60" y="140" textAnchor="middle" fontSize="3" fontWeight="500" fill="#94a3b8">{name}</text>
       </> : t.layoutHint === 'timeline' ? <>
-        {/* 타임라인 — 단계별 안내 */}
-        <text x="60" y="30" textAnchor="middle" fontSize="7" fontWeight="900" fill={c}>진료실 이전 안내</text>
-        <rect x="22" y="40" width="4" height="80" rx="2" fill={c} />
+        {/* 타임라인 — 솔리드 세로 레일 + 큰 점 */}
+        <text x="60" y="16" textAnchor="middle" fontSize="7" fontWeight="900" fill={c}>진료실 이전 안내</text>
+        <text x="60" y="25" textAnchor="middle" fontSize="3.2" fontWeight="600" fill="#94a3b8">{name}</text>
+        {/* 솔리드 세로 레일 */}
+        <rect x="20" y="34" width="5" height="108" rx="2.5" fill={c} />
         {[
           {d:'3/15', t:'이전 공지'},
           {d:'3/25', t:'새 장소 준비'},
@@ -1418,50 +1426,69 @@ function TemplateSVGPreview({ template: t, category, hospitalName }: { template:
           {d:'4/7', t:'정상 진료'},
         ].map((item, i) => (
           <g key={i}>
-            <circle cx="24" cy={50 + i * 20} r="6" fill="white" stroke={c} strokeWidth="1.5" filter={`url(#shadow_${t.id})`} />
-            <circle cx="24" cy={50 + i * 20} r="3" fill={c} />
-            <text x="34" y={48 + i * 20} fontSize="3.5" fontWeight="800" fill={c}>{item.d}</text>
-            <text x="34" y={56 + i * 20} fontSize="3.5" fontWeight="500" fill="#475569">{item.t}</text>
+            <circle cx="22.5" cy={46 + i * 24} r="7" fill={c} />
+            <circle cx="22.5" cy={46 + i * 24} r="3.5" fill="white" />
+            <text x="35" y={43 + i * 24} fontSize="4.5" fontWeight="900" fill={c}>{item.d}</text>
+            <text x="35" y={52 + i * 24} fontSize="3.8" fontWeight="500" fill="#475569">{item.t}</text>
+            <rect x="35" y={55 + i * 24} width="70" height="0.5" fill={c} fillOpacity="0.15" />
           </g>
         ))}
+        <text x="60" y="150" textAnchor="middle" fontSize="3" fontWeight="600" fill="#94a3b8">양해 부탁드립니다</text>
       </> : t.layoutHint === 'bulletin' ? <>
-        {/* 게시판 — 핀/압정 장식 */}
-        <rect x="10" y="18" width="100" height="118" rx="6" fill="#fbbf24" stroke="#d4a017" strokeOpacity="0.6" strokeWidth="1.2" />
-        <circle cx="60" cy="18" r="8" fill="#d97706" />
-        <circle cx="60" cy="18" r="4" fill="#92400e" />
-        <text x="60" y="36" textAnchor="middle" fontSize="7" fontWeight="900" fill="#92400e">진료실 이전 안내</text>
-        <rect x="18" y="42" width="84" height="0.8" fill="#d4a017" fillOpacity="0.6" />
-        {noticeBody(60, 54, bodyLines, '#92400e')}
-        <text x="60" y="112" textAnchor="middle" fontSize="3.5" fontWeight="500" fill="#a16207">양해 부탁드립니다</text>
+        {/* 게시판 — 노란 배경 전체 + 압정 + 백색 카드 */}
+        <rect x="0" y="0" width="120" height="160" rx="6" fill="#fbbf24" />
+        <rect x="0" y="0" width="120" height="160" rx="6" fill="#fbbf24" fillOpacity="0.4" />
+        {/* 압정 */}
+        <circle cx="60" cy="14" r="10" fill="#dc2626" />
+        <circle cx="60" cy="14" r="5" fill="#991b1b" />
+        <circle cx="57" cy="11" r="2" fill="white" fillOpacity="0.4" />
+        {/* 백색 종이 카드 + 그림자 */}
+        <rect x="12" y="28" width="96" height="105" rx="4" fill="white" filter={`url(#shadow_${t.id})`} />
+        <rect x="12" y="28" width="96" height="2" rx="1" fill="#f59e0b" fillOpacity="0.5" />
+        <text x="60" y="48" textAnchor="middle" fontSize="7" fontWeight="900" fill="#92400e">진료실 이전 안내</text>
+        <rect x="24" y="52" width="72" height="1" fill="#d4a017" fillOpacity="0.5" />
+        {noticeBody(60, 66, bodyLines, '#92400e')}
+        <text x="60" y="110" textAnchor="middle" fontSize="3.5" fontWeight="600" fill="#a16207">양해 부탁드립니다</text>
+        <text x="60" y="122" textAnchor="middle" fontSize="3.5" fontWeight="700" fill="#92400e">{name}</text>
+        <text x="60" y="148" textAnchor="middle" fontSize="3" fontWeight="500" fill="#92400e" fillOpacity="0.6">{name}</text>
       </> : t.layoutHint === 'soft' ? <>
-        {/* 소프트 — 부드러운 라운드 카드 */}
-        <rect x="14" y="18" width="92" height="22" rx="11" fill={c} />
-        <circle cx="28" cy="29" r="6" fill="white" />
-        <text x="28" y="32" textAnchor="middle" fontSize="5.5" fontWeight="800" fill={c}>i</text>
-        <text x="68" y="31" textAnchor="middle" fontSize="6" fontWeight="800" fill="white">진료실 이전 안내</text>
-        {['2026년 4월 1일부터','새 장소에서 진료합니다','서울시 강남구 ...'].map((line, i) => (
+        {/* 소프트 — 파스텔 배경 전체 + 정보 뱃지 + 좌측 보더 바 */}
+        <rect x="0" y="0" width="120" height="160" rx="6" fill={c} fillOpacity="0.12" />
+        {/* 상단 정보 pill 뱃지 */}
+        <rect x="30" y="10" width="60" height="20" rx="10" fill={c} />
+        <circle cx="44" cy="20" r="6" fill="white" fillOpacity="0.35" />
+        <text x="44" y="23" textAnchor="middle" fontSize="7" fontWeight="800" fill="white">i</text>
+        <text x="72" y="23" textAnchor="middle" fontSize="5" fontWeight="800" fill="white">안내</text>
+        <text x="60" y="42" textAnchor="middle" fontSize="6" fontWeight="800" fill={c}>진료실 이전 안내</text>
+        {/* 좌측 보더 바가 있는 콘텐츠 라인 */}
+        {['2026년 4월 1일부터','새 장소에서 진료합니다','서울시 강남구 ...','양해 부탁드립니다'].map((line, i) => (
           <g key={i}>
-            <rect x="14" y={46 + i * 18} width="92" height="15" rx="7.5" fill="white" fillOpacity="0.95" filter={`url(#shadow_${t.id})`} />
-            <rect x="14" y={48 + i * 18} width="3" height="11" rx="1.5" fill={c} />
-            <circle cx="24" cy={53.5 + i * 18} r="2.5" fill={c} />
-            <text x="32" y={56 + i * 18} fontSize="3.8" fontWeight="500" fill="#475569">{line}</text>
+            <rect x="16" y={52 + i * 20} width="88" height="16" rx="4" fill="white" fillOpacity="0.9" />
+            <rect x="16" y={52 + i * 20} width="4" height="16" rx="2" fill={c} />
+            <text x="28" y={63 + i * 20} fontSize="3.8" fontWeight={i === 0 ? '700' : '500'} fill={i === 0 ? c : '#475569'}>{line}</text>
           </g>
         ))}
-        <rect x="24" y="106" width="72" height="14" rx="7" fill={c} fillOpacity="0.3" />
-        <text x="60" y="115" textAnchor="middle" fontSize="3.5" fontWeight="600" fill={a}>양해 부탁드립니다</text>
+        <text x="60" y="145" textAnchor="middle" fontSize="3.5" fontWeight="700" fill={c}>{name}</text>
+        <text x="60" y="154" textAnchor="middle" fontSize="3" fontWeight="500" fill="#94a3b8">양해 부탁드립니다</text>
       </> : <>
-        {/* 카드 팝업 (popup / fallback) — 떠오르는 모달 */}
-        <rect x="14" y="20" width="92" height="114" rx="10" fill="white" fillOpacity="0.97" filter={`url(#shadow_${t.id})`} />
-        <rect x="14" y="20" width="92" height="32" rx="10" fill={`url(#accent_${t.id})`} />
-        <circle cx="28" cy="36" r="5" fill="white" fillOpacity="0.4" />
-        <text x="28" y="39.5" textAnchor="middle" fontSize="5.5" fontWeight="800" fill="white">!</text>
-        <text x="68" y="39" textAnchor="middle" fontSize="5.5" fontWeight="800" fill="white">이전 안내</text>
-        {noticeBody(60, 62, bodyLines, c)}
-        <rect x="18" y="104" width="84" height="24" rx="12" fill={`url(#accent_${t.id})`} />
-        <text x="60" y="119" textAnchor="middle" fontSize="5.2" fontWeight="700" fill="white">확인</text>
+        {/* 카드 팝업 (popup / fallback) — 모달 팝업 */}
+        {/* 어두운 오버레이 배경 */}
+        <rect x="0" y="0" width="120" height="160" fill="#0f172a" fillOpacity="0.35" />
+        {/* 모달 카드 + 강한 그림자 */}
+        <rect x="8" y="12" width="104" height="136" rx="12" fill="white" filter={`url(#shadow_${t.id})`} />
+        {/* 그라디언트 헤더 25% */}
+        <rect x="8" y="12" width="104" height="40" rx="12" fill={`url(#accent_${t.id})`} />
+        <rect x="8" y="40" width="104" height="12" fill={`url(#accent_${t.id})`} />
+        {/* 흰색 원 안의 느낌표 아이콘 */}
+        <circle cx="60" cy="28" r="12" fill="white" />
+        <text x="60" y="34" textAnchor="middle" fontSize="14" fontWeight="900" fill={c}>!</text>
+        <text x="60" y="58" textAnchor="middle" fontSize="6" fontWeight="800" fill={c}>이전 안내</text>
+        <text x="60" y="66" textAnchor="middle" fontSize="3.2" fontWeight="600" fill="#94a3b8">{name}</text>
+        {noticeBody(60, 78, bodyLines, c)}
+        {/* 큰 확인 버튼 */}
+        <rect x="16" y="114" width="88" height="28" rx="14" fill={`url(#accent_${t.id})`} />
+        <text x="60" y="132" textAnchor="middle" fontSize="7" fontWeight="800" fill="white">확인</text>
       </>}
-      <text x="60" y="142" textAnchor="middle" fontSize="3.2" fontWeight="500" fill="#64748b">양해 부탁드립니다</text>
-      <text x="60" y="154" textAnchor="middle" fontSize="3.2" fontWeight="600" fill="#64748b">{name}</text>
     </>);
   }
 
