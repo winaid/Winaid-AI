@@ -924,11 +924,9 @@ const App: React.FC = () => {
                   </Suspense>
                 </div>
               ) : contentTab === 'image' ? (
-                <div className={`rounded-2xl border p-6 md:p-8 backdrop-blur-xl ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white/80 border-white/60 shadow-[0_4px_24px_rgba(0,0,0,0.06)]'}`}>
-                  <Suspense fallback={<PanelSkeleton />}>
-                    <ImageGenerator />
-                  </Suspense>
-                </div>
+                <Suspense fallback={<PanelSkeleton />}>
+                  <ImageGenerator />
+                </Suspense>
               ) : (
                 <div className={`rounded-2xl border p-6 md:p-8 backdrop-blur-xl ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white/80 border-white/60 shadow-[0_4px_24px_rgba(0,0,0,0.06)]'}`}>
                   <Suspense fallback={<PanelSkeleton />}>
