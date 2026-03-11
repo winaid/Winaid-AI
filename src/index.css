@@ -138,6 +138,13 @@ html {
   scroll-behavior: smooth;
 }
 
+/* Calendar template thumbnails — force inline SVG to fit container */
+.calendar-thumb-svg svg {
+  width: 100% !important;
+  height: auto !important;
+  display: block;
+}
+
 /* Premium scrollbar */
 .custom-scrollbar::-webkit-scrollbar {
   width: 6px;

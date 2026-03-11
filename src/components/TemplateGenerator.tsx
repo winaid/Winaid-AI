@@ -2516,52 +2516,43 @@ export default function TemplateGenerator() {
             디자인 템플릿 {selectedHistory && <span className="text-violet-400 font-normal text-xs">(내 스타일 선택 시 무시됨)</span>}
           </label>
           {category === 'schedule' ? (
-            /* 진료 일정: 달력 테마 — 매거진/카드뉴스 스타일 */
-            <div className="flex gap-3 overflow-x-auto pb-3 snap-x snap-mandatory scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent" style={{ scrollbarWidth: 'thin' }}>
+            /* 진료 일정: 달력 테마 — 3x2 그리드, 전체 이미지 표시 */
+            <div className="grid grid-cols-3 gap-3">
               {CALENDAR_THEME_OPTIONS.map(t => {
                 const isSelected = calendarTheme === t.value;
                 const themeEntry = THEME_COMPONENT_MAP[t.value];
                 const ThemeComp = themeEntry?.Component;
                 const themeSample = themeEntry?.sample;
-                const svgContent = ThemeComp && themeSample ? (
-                  <div style={{ overflow: 'hidden', height: 220, position: 'relative', width: '100%' }}>
-                    <div style={{
-                      position: 'absolute', top: 0, left: '50%',
-                      transform: 'translateX(-50%) scale(0.48)',
-                      transformOrigin: 'top center',
-                      pointerEvents: 'none',
-                    }}>
-                      <ThemeComp data={themeSample} width={600} />
-                    </div>
-                  </div>
-                ) : null;
 
                 return (
                   <button
                     key={t.value}
                     type="button"
                     onClick={() => setCalendarTheme(t.value)}
-                    className={`group relative flex-shrink-0 snap-start rounded-2xl overflow-hidden transition-all duration-200
+                    className={`group relative rounded-2xl overflow-hidden transition-all duration-200
                       ${isSelected
-                        ? 'shadow-xl ring-2 ring-blue-400 ring-offset-2 scale-[1.02]'
-                        : 'shadow-md hover:shadow-lg hover:scale-[1.01] border border-slate-200/60'
+                        ? 'shadow-xl ring-2 ring-blue-400 ring-offset-2'
+                        : 'shadow-sm hover:shadow-md border border-slate-200/80'
                       }`}
-                    style={{ width: 240 }}
                   >
-                    {/* 썸네일 */}
-                    <div className="relative">
-                      {svgContent}
-                      {/* 오버레이 그라데이션 */}
-                      <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/50 to-transparent pointer-events-none" />
-                      {/* 선택 체크 뱃지 */}
-                      {isSelected && (
-                        <div className="absolute top-2.5 right-2.5 w-7 h-7 rounded-full bg-blue-500 flex items-center justify-center shadow-lg">
-                          <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                    <div className="relative bg-white">
+                      {/* SVG 전체 이미지 — 컨테이너 너비에 맞춤 */}
+                      {ThemeComp && themeSample && (
+                        <div className="calendar-thumb-svg" style={{ pointerEvents: 'none', lineHeight: 0 }}>
+                          <ThemeComp data={themeSample} width={600} />
                         </div>
                       )}
-                      {/* 테마 이름 (오버레이 위) */}
-                      <div className="absolute inset-x-0 bottom-0 px-3 pb-2.5">
-                        <span className="text-white font-bold text-sm drop-shadow-lg">{t.emoji} {t.label.replace(/^[\S]+\s/, '')}</span>
+                      {/* 하단 그라데이션 */}
+                      <div className="absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-black/40 to-transparent pointer-events-none" />
+                      {/* 선택 체크 뱃지 */}
+                      {isSelected && (
+                        <div className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center shadow-lg">
+                          <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                        </div>
+                      )}
+                      {/* 테마 이름 */}
+                      <div className="absolute inset-x-0 bottom-0 px-2 pb-1.5">
+                        <span className="text-white font-bold text-xs drop-shadow-lg">{t.emoji} {t.label.replace(/^[\S]+\s/, '')}</span>
                       </div>
                     </div>
                   </button>
@@ -2569,8 +2560,8 @@ export default function TemplateGenerator() {
               })}
             </div>
           ) : (
-            /* 기타 카테고리: AI 스타일 템플릿 — 카드뉴스 스타일 */
-            <div className={`flex gap-3 overflow-x-auto pb-3 snap-x snap-mandatory scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent ${selectedHistory ? 'opacity-40 pointer-events-none' : ''}`} style={{ scrollbarWidth: 'thin' }}>
+            /* 기타 카테고리: AI 스타일 템플릿 — 3x2 그리드 */
+            <div className={`grid grid-cols-3 gap-3 ${selectedHistory ? 'opacity-40 pointer-events-none' : ''}`}>
               {(CATEGORY_TEMPLATES[
                 category === 'greeting' ? `greeting_${greetHoliday}` :
                 category
@@ -2581,30 +2572,27 @@ export default function TemplateGenerator() {
                     key={tmpl.id}
                     onClick={() => { setSelectedCatTemplate(isSelected ? null : tmpl); setSelectedHistory(null); }}
                     onDoubleClick={() => setEnlargedTemplate(tmpl)}
-                    className={`group relative flex-shrink-0 snap-start rounded-2xl overflow-hidden transition-all duration-200
+                    className={`group relative rounded-2xl overflow-hidden transition-all duration-200
                       ${isSelected
-                        ? 'shadow-xl ring-2 ring-offset-2 scale-[1.02]'
-                        : 'shadow-md hover:shadow-lg hover:scale-[1.01] border border-slate-200/60'
+                        ? 'shadow-xl ring-2 ring-offset-2'
+                        : 'shadow-sm hover:shadow-md border border-slate-200/80'
                       }`}
-                    style={{
-                      width: 200,
-                      ...(isSelected ? { '--tw-ring-color': tmpl.color } as React.CSSProperties : {}),
-                    }}
+                    style={isSelected ? { '--tw-ring-color': tmpl.color } as React.CSSProperties : undefined}
                   >
                     <div className="relative w-full overflow-hidden" style={{ aspectRatio: '3/4', background: tmpl.previewImage ? '#f8fafc' : `linear-gradient(160deg, ${tmpl.bg} 0%, white 80%)` }}>
                       <TemplateSVGPreview template={tmpl} category={category} hospitalName={hospitalName || '윈에이드 치과'} />
-                      {/* 하단 그라데이션 오버레이 */}
-                      <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/50 to-transparent pointer-events-none" />
+                      {/* 하단 그라데이션 */}
+                      <div className="absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t from-black/40 to-transparent pointer-events-none" />
                       {/* 선택 체크 뱃지 */}
                       {isSelected && (
-                        <div className="absolute top-2.5 right-2.5 w-7 h-7 rounded-full flex items-center justify-center shadow-lg" style={{ backgroundColor: tmpl.color }}>
-                          <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                        <div className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full flex items-center justify-center shadow-lg" style={{ backgroundColor: tmpl.color }}>
+                          <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
                         </div>
                       )}
-                      {/* 템플릿 이름 (오버레이 위) */}
-                      <div className="absolute inset-x-0 bottom-0 px-3 pb-3">
-                        <div className="text-white font-bold text-sm drop-shadow-lg leading-tight">{tmpl.name}</div>
-                        <div className="text-white/75 text-xs mt-0.5 drop-shadow">{tmpl.desc}</div>
+                      {/* 템플릿 이름 */}
+                      <div className="absolute inset-x-0 bottom-0 px-2 pb-2">
+                        <div className="text-white font-bold text-xs drop-shadow-lg leading-tight">{tmpl.name}</div>
+                        <div className="text-white/70 text-[10px] mt-0.5 drop-shadow">{tmpl.desc}</div>
                       </div>
                     </div>
                   </button>
