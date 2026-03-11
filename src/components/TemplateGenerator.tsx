@@ -2169,10 +2169,10 @@ export default function TemplateGenerator({ onSwitchToFree }: { onSwitchToFree?:
       </div>
       <div className="space-y-4 p-4 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 160px)' }}>
 
-        {/* 카테고리 탭 — 가로 스크롤 */}
-        <div className="flex items-center bg-slate-100 rounded-xl p-1 gap-0.5 overflow-x-auto no-scrollbar">
+        {/* 카테고리 탭 */}
+        <div className="flex flex-wrap items-center bg-slate-100 rounded-xl p-1 gap-0.5">
           {CATEGORIES.map(c => (
-            <button key={c.id} onClick={() => setCategory(c.id)} className={`flex-shrink-0 py-2 px-2.5 rounded-lg text-center transition-all text-[11px] font-bold whitespace-nowrap ${category === c.id ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
+            <button key={c.id} onClick={() => setCategory(c.id)} className={`py-2 px-2.5 rounded-lg text-center transition-all text-[11px] font-bold whitespace-nowrap ${category === c.id ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
               {c.name}
             </button>
           ))}
