@@ -619,86 +619,70 @@ function TemplateSVGPreview({ template: t, category, hospitalName }: { template:
       </>);
     }
     if (hint === 'wk_bar') {
-      // 기와지붕 전통 스타일
+      // 계단식 피라미드 스타일
       return wrap(<>
-        {/* 베이지 배경 */}
-        <rect x="0" y="0" width="120" height="160" rx="6" fill="#f5e6d0" />
-        {/* 코럴 반원 해 */}
-        <ellipse cx="60" cy="20" rx="42" ry="24" fill="#e8795a" fillOpacity="0.9" />
-        <text x="60" y="16" textAnchor="middle" fontSize="8" fontWeight="900" fill="white">{mo}월</text>
-        <text x="60" y="27" textAnchor="middle" fontSize="5.5" fontWeight="800" fill="white">진료일정 안내</text>
-        {/* 기와지붕 */}
-        <path d="M8,38 Q20,32 30,38 Q40,32 50,38 Q60,32 70,38 Q80,32 90,38 Q100,32 112,38 L112,42 L8,42 Z" fill="#3f3f46" />
-        <rect x="8" y="40" width="104" height="3" fill="#57534e" />
-        {/* 전통 코너 장식 */}
-        <path d="M16,48 L22,48 L22,50" fill="none" stroke="#92400e" strokeWidth="0.6" />
-        <path d="M104,48 L98,48 L98,50" fill="none" stroke="#92400e" strokeWidth="0.6" />
-        {/* 주간 달력 카드 */}
-        <rect x="14" y="50" width="92" height="60" rx="5" fill="white" fillOpacity="0.95" filter={`url(#shadow_${t.id})`} />
-        {/* 달력 링 */}
-        {[28,36,44,52,60,68,76,84,88].map(x => <rect key={x} x={x} y="47" width="2" height="5" rx="1" fill="#94a3b8" />)}
-        {/* 요일 헤더 */}
-        <rect x="14" y="56" width="92" height="9" fill="#3f3f46" rx="0" />
-        {['일','월','화','수','목','금','토'].map((d,i) => (
-          <text key={d} x={22 + i * 12} y="63" textAnchor="middle" fontSize="3" fontWeight="700" fill="white">{d}</text>
-        ))}
-        {/* 날짜 행 */}
-        {[0,1].map(row => ['일','월','화','수','목','금','토'].map((d,i) => {
-          const day = 15 + row * 7 + i;
-          if (day > 21) return null;
-          const isClosed = (row === 0 && i === 3);
-          const cx = 22 + i * 12, cy = 76 + row * 18;
-          return <g key={`${row}-${i}`}>
-            <text x={cx} y={cy} textAnchor="middle" fontSize="5" fontWeight={isClosed ? '900' : '500'} fill={isClosed ? '#e8795a' : i === 0 ? '#ef4444' : '#1f2937'}>{day}</text>
-            {isClosed && <><rect x={cx - 8} y={cy + 2} width="16" height="5" rx="2.5" fill="#e8795a" /><text x={cx} y={cy + 6} textAnchor="middle" fontSize="2.5" fontWeight="700" fill="white">휴진</text></>}
+        <rect x="0" y="0" width="120" height="160" rx="6" fill="#f8fafc" />
+        <text x="60" y="16" textAnchor="middle" fontSize="4" fontWeight="600" fill={a}>{name}</text>
+        <text x="60" y="30" textAnchor="middle" fontSize="7" fontWeight="900" fill={c}>{mo}월 셋째 주</text>
+        {/* 7개 계단 스텝 (피라미드) */}
+        {['일','월','화','수','목','금','토'].map((d, i) => {
+          const isClosed = i === 3;
+          const isSun = i === 0;
+          // 피라미드: 높이가 가운데로 갈수록 높음
+          const heights = [50, 60, 70, 80, 70, 60, 50];
+          const stepH = heights[i];
+          const stepX = 8 + i * 15;
+          const stepY = 130 - stepH;
+          return <g key={d}>
+            <rect x={stepX} y={stepY} width="14" height={stepH} rx="2" fill={isClosed ? c : isSun ? '#fef2f2' : '#f1f5f9'} fillOpacity={isClosed ? 0.2 : 1} stroke={isClosed ? c : '#e2e8f0'} strokeWidth={isClosed ? '0.8' : '0.3'} />
+            {isClosed && <rect x={stepX} y={stepY} width="14" height={stepH} rx="2" fill={c} fillOpacity="0.06">
+              <animate attributeName="fillOpacity" values="0.04;0.1;0.04" dur="2s" repeatCount="indefinite" />
+            </rect>}
+            {/* 요일 텍스트 상단 */}
+            <text x={stepX + 7} y={stepY + 10} textAnchor="middle" fontSize="2.8" fontWeight="700" fill={isSun ? '#ef4444' : isClosed ? c : '#94a3b8'}>{d}</text>
+            {/* 날짜 */}
+            <text x={stepX + 7} y={stepY + 24} textAnchor="middle" fontSize="5" fontWeight={isClosed ? '800' : '500'} fill={isClosed ? c : isSun ? '#ef4444' : '#475569'}>{15 + i}</text>
+            {isClosed && <>
+              <rect x={stepX + 2} y={stepY + 28} width="10" height="5" rx="2.5" fill={c} fillOpacity="0.15" />
+              <text x={stepX + 7} y={stepY + 32} textAnchor="middle" fontSize="2" fontWeight="700" fill={c}>휴진</text>
+            </>}
           </g>;
-        }))}
-        {/* 하단 안내 */}
-        <text x="60" y="122" textAnchor="middle" fontSize="4" fontWeight="800" fill="#1f2937">정상진료</text>
-        {/* 병원명 */}
-        <text x="60" y="150" textAnchor="middle" fontSize="3" fontWeight="600" fill="#92400e">{name}</text>
-        {/* 전통 하단 코너 장식 */}
-        <path d="M16,142 L22,142 L22,140" fill="none" stroke="#92400e" strokeWidth="0.6" />
-        <path d="M104,142 L98,142 L98,140" fill="none" stroke="#92400e" strokeWidth="0.6" />
+        })}
+        {/* 하단 베이스 라인 */}
+        <line x1="8" y1="131" x2="113" y2="131" stroke="#e2e8f0" strokeWidth="0.5" />
+        <text x="60" y="145" textAnchor="middle" fontSize="3" fontWeight="600" fill="#64748b">진료시간 09:30~18:00</text>
+        <text x="60" y="155" textAnchor="middle" fontSize="2.8" fill="#94a3b8">{name}</text>
       </>);
     }
     if (hint === 'wk_cards') {
-      // 단풍 가을 스타일
+      // 흩어진 플로팅 회전 카드 스타일
+      const rotations = [-6, 3, -4, 5, -3, 7, -8];
+      const positions = [
+        {x: 8, y: 34}, {x: 38, y: 30}, {x: 72, y: 36},
+        {x: 10, y: 68}, {x: 44, y: 72}, {x: 78, y: 66},
+        {x: 40, y: 104}
+      ];
       return wrap(<>
-        {/* 따뜻한 그라데이션 배경 */}
-        <rect x="0" y="0" width="120" height="160" rx="6" fill="#fecaca" />
-        <rect x="0" y="0" width="120" height="90" rx="6" fill="#f97316" fillOpacity="0.85" />
-        <rect x="0" y="60" width="120" height="40" fill="#f97316" fillOpacity="0" />
-        {/* 단풍잎 장식 */}
-        <text x="6" y="18" fontSize="12" fill="#dc2626" fillOpacity="0.7">🍁</text>
-        <text x="92" y="14" fontSize="10" fill="#f59e0b" fillOpacity="0.65">🍂</text>
-        <text x="100" y="32" fontSize="7" fill="#dc2626" fillOpacity="0.55">🍁</text>
-        <text x="2" y="42" fontSize="6" fill="#f59e0b" fillOpacity="0.45">🍂</text>
-        {/* 흰 곡선 장식 */}
-        <path d="M0,50 Q40,35 80,55 Q100,62 120,48" fill="none" stroke="white" strokeWidth="0.7" strokeOpacity="0.55" />
+        <rect x="0" y="0" width="120" height="160" rx="6" fill="#fafafa" />
         {/* 타이틀 */}
-        <text x="60" y="52" textAnchor="middle" fontSize="9" fontWeight="900" fill="white">{mo}월 진료일정</text>
-        <text x="60" y="62" textAnchor="middle" fontSize="3" fontWeight="500" fill="white" fillOpacity="0.85">착오 없으시길 바랍니다</text>
-        {/* 달력 카드 */}
-        <rect x="10" y="68" width="100" height="70" rx="6" fill="white" fillOpacity="0.97" filter={`url(#shadow_${t.id})`} />
-        <rect x="10" y="68" width="100" height="10" rx="6" fill="#3f3f46" />
-        <rect x="10" y="74" width="100" height="4" fill="#3f3f46" />
-        {['일','월','화','수','목','금','토'].map((d,i) => (
-          <text key={d} x={18 + i * 13} y="76" textAnchor="middle" fontSize="2.8" fontWeight="700" fill="white">{d}</text>
-        ))}
-        {/* 날짜 행 */}
-        {[0,1].map(row => Array.from({length:7}, (_,i) => {
-          const day = 15 + row * 7 + i;
-          if (day > 28 || (row === 1 && day > 21)) return null;
-          const isClosed = (row === 0 && i === 4); // 목요일 정기휴진
-          const cx = 18 + i * 13, cy = 90 + row * 22;
-          return <g key={`${row}-${i}`}>
-            <text x={cx} y={cy} textAnchor="middle" fontSize="4.5" fontWeight={isClosed ? '800' : '400'} fill={i === 0 ? '#ef4444' : '#1f2937'}>{day}</text>
-            {isClosed && <><rect x={cx - 9} y={cy + 2} width="18" height="5" rx="2.5" fill="#fbbf24" /><text x={cx} y={cy + 6} textAnchor="middle" fontSize="2.3" fontWeight="700" fill="#78350f">정기휴진</text></>}
+        <text x="60" y="16" textAnchor="middle" fontSize="4" fontWeight="600" fill={a}>{name}</text>
+        <text x="60" y="26" textAnchor="middle" fontSize="3" fontWeight="500" fill="#94a3b8">{mo}월 셋째 주 진료일정</text>
+        {/* 7장의 개별 요일 카드 */}
+        {['일','월','화','수','목','금','토'].map((d, i) => {
+          const isClosed = i === 3;
+          const isSun = i === 0;
+          const pos = positions[i];
+          const rot = rotations[i];
+          return <g key={d} transform={`rotate(${rot} ${pos.x + 18} ${pos.y + 14})`}>
+            <rect x={pos.x} y={pos.y} width="36" height="28" rx="4" fill={isClosed ? c : 'white'} fillOpacity={isClosed ? 0.12 : 0.95} stroke={isClosed ? c : '#e2e8f0'} strokeWidth={isClosed ? '0.8' : '0.4'} filter={`url(#shadow_${t.id})`} />
+            <text x={pos.x + 18} y={pos.y + 10} textAnchor="middle" fontSize="2.8" fontWeight="700" fill={isSun ? '#ef4444' : isClosed ? c : '#94a3b8'}>{d}</text>
+            <text x={pos.x + 18} y={pos.y + 21} textAnchor="middle" fontSize="7" fontWeight={isClosed ? '800' : '500'} fill={isClosed ? c : isSun ? '#ef4444' : '#475569'}>{15 + i}</text>
+            {isClosed && <text x={pos.x + 18} y={pos.y + 27} textAnchor="middle" fontSize="2" fontWeight="700" fill={c}>휴진</text>}
           </g>;
-        }))}
-        {/* 로고 */}
-        <text x="60" y="152" textAnchor="middle" fontSize="3.2" fontWeight="700" fill="#c2410c">{name}</text>
+        })}
+        {/* 하단 */}
+        <text x="60" y="148" textAnchor="middle" fontSize="3" fontWeight="600" fill="#64748b">착오 없으시길 바랍니다</text>
+        <text x="60" y="156" textAnchor="middle" fontSize="2.8" fill="#94a3b8">{name}</text>
       </>);
     }
     if (hint === 'wk_timeline') {
@@ -769,41 +753,39 @@ function TemplateSVGPreview({ template: t, category, hospitalName }: { template:
       </>);
     }
     if (hint === 'wk_flag') {
-      // 블루 클린 스타일
+      // 빌보드/도로 표지판 스타일
       return wrap(<>
-        {/* 하얀 배경 */}
-        <rect x="0" y="0" width="120" height="160" rx="6" fill="white" />
-        {/* 블루 상단 바 */}
-        <rect x="0" y="0" width="120" height="14" rx="6" fill="#2563eb" />
-        <rect x="0" y="8" width="120" height="6" fill="#2563eb" />
-        {/* 로고/아이콘 */}
-        <rect x="52" y="3" width="16" height="8" rx="3" fill="white" fillOpacity="0.2" />
-        <text x="60" y="9" textAnchor="middle" fontSize="4" fill="white">🦷</text>
-        {/* 타이틀 */}
-        <text x="60" y="24" textAnchor="middle" fontSize="2.8" fontWeight="500" fill="#94a3b8">{name}</text>
-        <text x="60" y="36" textAnchor="middle" fontSize="7" fontWeight="900" fill="#1e293b">진료시간 안내</text>
-        {/* 정보 카드 */}
-        <rect x="12" y="42" width="96" height="72" rx="5" fill="white" stroke="#e2e8f0" strokeWidth="0.5" />
+        <rect x="0" y="0" width="120" height="160" rx="6" fill="#e2e8f0" />
+        {/* 하이웨이 사인 */}
+        <rect x="10" y="8" width="100" height="72" rx="6" fill="#115e59" filter={`url(#shadow_${t.id})`} />
+        <rect x="12" y="10" width="96" height="68" rx="5" fill="none" stroke="white" strokeWidth="0.6" strokeOpacity="0.4" />
+        {/* 사인 텍스트 */}
+        <text x="60" y="26" textAnchor="middle" fontSize="3.5" fontWeight="700" fill="white" letterSpacing="1">{name}</text>
+        <line x1="22" y1="30" x2="98" y2="30" stroke="white" strokeWidth="0.3" strokeOpacity="0.3" />
+        <text x="60" y="42" textAnchor="middle" fontSize="6" fontWeight="900" fill="white">진료시간 안내</text>
+        {/* 도로 표지판 스타일 행 */}
         {[
-          {label:'월·수·목·금', time:'09:30 - 18:30', badge:null},
-          {label:'화 요 일', time:'09:30 - 20:30', badge:'야간'},
-          {label:'토 · 일', time:'09:30 - 14:00', badge:'연속'},
-          {label:'휴 게 시 간', time:'13:00 - 14:00', badge:null},
+          {label:'평 일', time:'09:30~18:30'},
+          {label:'토요일', time:'09:30~14:00'},
+          {label:'점 심', time:'13:00~14:00'},
         ].map((row, i) => {
-          const y = 50 + i * 16;
+          const y = 50 + i * 10;
           return <g key={i}>
-            <text x="18" y={y + 4} fontSize="2.8" fontWeight="500" fill="#475569">{row.label}</text>
-            <text x="55" y={y + 4} fontSize="2.2" fill="#94a3b8">:</text>
-            <text x="60" y={y + 4} fontSize="3" fontWeight="700" fill="#1e293b">{row.time}</text>
-            {row.badge && <><rect x="90" y={y - 2} width="14" height="7" rx="3.5" fill="#dbeafe" /><text x="97" y={y + 3} textAnchor="middle" fontSize="2" fontWeight="700" fill="#2563eb">{row.badge}</text></>}
-            {i < 3 && <line x1="16" y1={y + 10} x2="104" y2={y + 10} stroke="#f1f5f9" strokeWidth="0.4" />}
+            <text x="28" y={y} fontSize="2.8" fontWeight="600" fill="#99f6e4">{row.label}</text>
+            <text x="92" y={y} textAnchor="end" fontSize="3" fontWeight="700" fill="white">{row.time}</text>
+            {i < 2 && <line x1="22" y1={y + 3} x2="98" y2={y + 3} stroke="white" strokeWidth="0.2" strokeOpacity="0.2" />}
           </g>;
         })}
-        {/* 하단 위치 정보 */}
-        <rect x="22" y="122" width="76" height="10" rx="5" fill="#f0fdf4" stroke="#86efac" strokeWidth="0.3" />
-        <text x="60" y="129" textAnchor="middle" fontSize="2.5" fontWeight="600" fill="#166534">🚇 도보 3분 거리</text>
-        {/* 하단 로고 */}
-        <text x="60" y="150" textAnchor="middle" fontSize="3" fontWeight="700" fill="#2563eb">🦷 {name}</text>
+        {/* 기둥 디테일 */}
+        <rect x="36" y="80" width="4" height="30" rx="1" fill="#94a3b8" />
+        <rect x="80" y="80" width="4" height="30" rx="1" fill="#94a3b8" />
+        <rect x="36" y="80" width="4" height="3" rx="1" fill="#64748b" />
+        <rect x="80" y="80" width="4" height="3" rx="1" fill="#64748b" />
+        {/* 하단 보조 정보 */}
+        <rect x="16" y="116" width="88" height="20" rx="4" fill="white" fillOpacity="0.9" filter={`url(#shadow_${t.id})`} />
+        <text x="60" y="128" textAnchor="middle" fontSize="3" fontWeight="600" fill="#115e59">수요일 정기휴진</text>
+        <text x="60" y="135" textAnchor="middle" fontSize="2.5" fill="#64748b">공휴일 휴진</text>
+        <text x="60" y="150" textAnchor="middle" fontSize="3" fontWeight="700" fill="#115e59">{name}</text>
       </>);
     }
     if (hint === 'wk_neon') {
@@ -853,33 +835,28 @@ function TemplateSVGPreview({ template: t, category, hospitalName }: { template:
       </>);
     }
     if (hint === 'hl_bignum') {
-      // 수묵화 휴무 스타일 (삼일절 참고)
+      // 거대 숫자 + 대각선 스플릿 배경
       return wrap(<>
-        <rect x="0" y="0" width="120" height="160" rx="6" fill="#f0ece4" />
-        {/* 수묵화 산 */}
-        <path d="M0,128 Q15,112 30,122 Q45,106 60,118 Q75,104 90,116 Q105,106 120,128 L120,160 L0,160 Z" fill="#2d2d2d" fillOpacity="0.16" />
-        <path d="M0,138 Q20,122 40,134 Q60,118 80,130 Q100,115 120,138 L120,160 L0,160 Z" fill="#1a1a1a" fillOpacity="0.2" />
-        {/* 태극기 모티프 */}
-        <text x="14" y="18" fontSize="6">🇰🇷</text>
-        <text x="100" y="20" fontSize="6">🇰🇷</text>
-        {/* 타이틀 */}
-        <text x="60" y="18" textAnchor="middle" fontSize="4.5" fontWeight="700" fill="#e8634a">대체공휴일</text>
-        <text x="60" y="34" textAnchor="middle" fontSize="11" fontWeight="900" fill="#1a1a1a">휴무 안내</text>
-        <text x="60" y="46" textAnchor="middle" fontSize="2.8" fill="#525252">착오 없으시길 바랍니다</text>
-        {/* 3일 미니 달력 */}
-        <rect x="14" y="54" width="92" height="52" rx="5" fill="white" fillOpacity="0.95" filter={`url(#shadow_${t.id})`} />
-        {[30,42,54,66,78,90].map(x => <rect key={x} x={x} y="51" width="2" height="5" rx="1" fill="#94a3b8" />)}
-        {[{d:'일요일',n:'1',cls:true},{d:'월요일',n:'2',cls:true},{d:'화요일',n:'3',cls:false}].map((item,i) => {
-          const cx = 30 + i * 30;
-          return <g key={i}>
-            <text x={cx} y="66" textAnchor="middle" fontSize="2.5" fontWeight="600" fill={item.cls ? '#e8634a' : '#525252'}>{item.d}</text>
-            {item.cls && <rect x={cx - 5} y="64" width="10" height="5" rx="2.5" fill="#e8634a" fillOpacity="0.15" />}
-            <text x={cx} y="84" textAnchor="middle" fontSize="14" fontWeight="900" fill={item.cls ? '#e8634a' : '#1a1a1a'}>{item.n}</text>
-            <text x={cx} y="98" textAnchor="middle" fontSize="3" fontWeight="700" fill={item.cls ? '#e8634a' : '#1a1a1a'}>{item.cls ? '휴무' : '정상 영업'}</text>
-            {i < 2 && <line x1={cx + 14} y1="60" x2={cx + 14} y2="102" stroke="#e5e7eb" strokeWidth="0.4" />}
-          </g>;
-        })}
-        <text x="104" y="10" textAnchor="end" fontSize="2.8" fontWeight="600" fill="#525252">{name}</text>
+        <defs>
+          <clipPath id={`diagClip_${t.id}`}>
+            <path d="M0,0 L120,0 L120,100 L0,160 Z" />
+          </clipPath>
+        </defs>
+        {/* 대각선 스플릿: 다크 절반 */}
+        <rect x="0" y="0" width="120" height="160" rx="6" fill="#1e293b" />
+        {/* 따뜻한/프라이머리 절반 */}
+        <rect x="0" y="0" width="120" height="160" rx="6" fill={c} clipPath={`url(#diagClip_${t.id})`} />
+        {/* 대각선 경계 라인 */}
+        <line x1="0" y1="160" x2="120" y2="100" stroke="white" strokeWidth="0.5" strokeOpacity="0.3" />
+        {/* 거대 날짜 숫자 - 스플릿 라인 위에 겹침 */}
+        <text x="60" y="110" textAnchor="middle" fontSize="48" fontWeight="900" fill="white" fillOpacity="0.95">9</text>
+        {/* 상단 정보 */}
+        <text x="16" y="18" fontSize="3.5" fontWeight="700" fill="white" fillOpacity="0.9">{mo}월</text>
+        <text x="16" y="28" fontSize="6" fontWeight="900" fill="white">휴진 안내</text>
+        <text x="104" y="18" textAnchor="end" fontSize="2.8" fontWeight="600" fill="white" fillOpacity="0.7">{name}</text>
+        {/* 하단 정보 */}
+        <text x="60" y="138" textAnchor="middle" fontSize="4" fontWeight="700" fill="white" fillOpacity="0.8">{mo}월 9일 (수) 휴진</text>
+        <text x="60" y="152" textAnchor="middle" fontSize="2.8" fill="white" fillOpacity="0.5">착오 없으시길 바랍니다</text>
       </>);
     }
     if (hint === 'hl_stamp') {
@@ -981,98 +958,138 @@ function TemplateSVGPreview({ template: t, category, hospitalName }: { template:
       </>);
     }
     if (hint === 'hl_circle') {
-      // 블루 진료시간표 스타일
+      // 동심원 링 정보 디스플레이
       return wrap(<>
-        <rect x="0" y="0" width="120" height="160" rx="6" fill="white" />
-        {/* 블루 상단 바 */}
-        <rect x="0" y="0" width="120" height="14" rx="6" fill="#2563eb" />
-        <rect x="0" y="8" width="120" height="6" fill="#2563eb" />
-        <text x="60" y="9" textAnchor="middle" fontSize="4" fill="white">🦷</text>
-        {/* 타이틀 */}
-        <text x="60" y="24" textAnchor="middle" fontSize="2.5" fontWeight="500" fill="#94a3b8">{name}</text>
-        <text x="60" y="36" textAnchor="middle" fontSize="7" fontWeight="900" fill="#1e293b">진료시간 안내</text>
-        {/* 정보 카드 */}
-        <rect x="12" y="42" width="96" height="72" rx="5" fill="white" stroke="#dbeafe" strokeWidth="0.5" />
-        {[
-          {l:'월·수·목·금', t:'09:30-18:30'},
-          {l:'화 요 일', t:'09:30-20:30', badge:'야간'},
-          {l:'토 · 일', t:'09:30-14:00'},
-          {l:'휴게시간', t:'13:00-14:00'},
-        ].map((r,i) => {
-          const y = 52 + i * 16;
-          return <g key={i}>
-            <text x="18" y={y} fontSize="2.8" fontWeight="500" fill="#475569">{r.l}</text>
-            <text x="56" y={y} fontSize="2.2" fill="#94a3b8">:</text>
-            <text x="62" y={y} fontSize="3" fontWeight="700" fill="#1e293b">{r.t}</text>
-            {r.badge && <><rect x="90" y={y - 5} width="13" height="6" rx="3" fill="#dbeafe" /><text x="96.5" y={y - 1} textAnchor="middle" fontSize="2" fontWeight="700" fill="#2563eb">{r.badge}</text></>}
-            {i < 3 && <line x1="16" y1={y + 6} x2="104" y2={y + 6} stroke="#f1f5f9" strokeWidth="0.4" />}
-          </g>;
-        })}
-        {/* 위치 정보 */}
-        <rect x="22" y="120" width="76" height="10" rx="5" fill="#f0fdf4" stroke="#86efac" strokeWidth="0.3" />
-        <text x="60" y="127" textAnchor="middle" fontSize="2.5" fontWeight="600" fill="#166534">🚇 1번 출구 도보 3분</text>
-        <text x="60" y="150" textAnchor="middle" fontSize="3" fontWeight="700" fill="#2563eb">🦷 {name}</text>
+        <rect x="0" y="0" width="120" height="160" rx="6" fill="#f8fafc" />
+        <text x="60" y="16" textAnchor="middle" fontSize="4" fontWeight="700" fill={c}>{name}</text>
+        <text x="60" y="26" textAnchor="middle" fontSize="3" fontWeight="500" fill="#94a3b8">진료시간 안내</text>
+        {/* 동심원 아크들 — 시계 모티프 */}
+        <circle cx="60" cy="80" r="48" fill="none" stroke={c} strokeWidth="0.8" strokeOpacity="0.08" />
+        <circle cx="60" cy="80" r="38" fill="none" stroke={c} strokeWidth="1" strokeOpacity="0.12" />
+        <circle cx="60" cy="80" r="28" fill="none" stroke={c} strokeWidth="1.2" strokeOpacity="0.18" />
+        <circle cx="60" cy="80" r="18" fill={c} fillOpacity="0.06" />
+        {/* 외곽 링 아크 — 평일 */}
+        <path d={`M ${60 + 48 * Math.cos(-Math.PI * 0.75)} ${80 + 48 * Math.sin(-Math.PI * 0.75)} A 48 48 0 0 1 ${60 + 48 * Math.cos(-Math.PI * 0.25)} ${80 + 48 * Math.sin(-Math.PI * 0.25)}`} fill="none" stroke={c} strokeWidth="3" strokeOpacity="0.2" strokeLinecap="round" />
+        {/* 중간 링 아크 — 토요일 */}
+        <path d={`M ${60 + 38 * Math.cos(-Math.PI * 0.7)} ${80 + 38 * Math.sin(-Math.PI * 0.7)} A 38 38 0 0 1 ${60 + 38 * Math.cos(-Math.PI * 0.4)} ${80 + 38 * Math.sin(-Math.PI * 0.4)}`} fill="none" stroke={a} strokeWidth="2.5" strokeOpacity="0.25" strokeLinecap="round" />
+        {/* 내부 링 아크 — 점심 */}
+        <path d={`M ${60 + 28 * Math.cos(-Math.PI * 0.55)} ${80 + 28 * Math.sin(-Math.PI * 0.55)} A 28 28 0 0 1 ${60 + 28 * Math.cos(-Math.PI * 0.45)} ${80 + 28 * Math.sin(-Math.PI * 0.45)}`} fill="none" stroke="#f59e0b" strokeWidth="2" strokeOpacity="0.3" strokeLinecap="round" />
+        {/* 중심 텍스트 */}
+        <text x="60" y="78" textAnchor="middle" fontSize="5" fontWeight="800" fill={c}>진료</text>
+        <text x="60" y="86" textAnchor="middle" fontSize="3" fontWeight="600" fill="#64748b">시간</text>
+        {/* 링 사이 라벨들 */}
+        <text x="60" y="36" textAnchor="middle" fontSize="2.5" fontWeight="600" fill={c}>평일 09:30~18:30</text>
+        <text x="18" y="80" textAnchor="middle" fontSize="2" fontWeight="600" fill={a}>토 09:30</text>
+        <text x="18" y="86" textAnchor="middle" fontSize="2" fontWeight="600" fill={a}>~14:00</text>
+        <text x="102" y="80" textAnchor="middle" fontSize="2" fontWeight="500" fill="#f59e0b">점심</text>
+        <text x="102" y="86" textAnchor="middle" fontSize="2" fontWeight="500" fill="#f59e0b">13~14</text>
+        {/* 하단 */}
+        <text x="60" y="140" textAnchor="middle" fontSize="3" fontWeight="600" fill="#475569">수요일 정기휴진</text>
+        <text x="60" y="152" textAnchor="middle" fontSize="2.8" fontWeight="600" fill={c}>{name}</text>
       </>);
     }
     if (hint === 'hl_countdown') {
-      // 네이비 프리미엄
+      // 플립클럭 스타일
       return wrap(<>
         <rect x="0" y="0" width="120" height="160" rx="6" fill="#1e293b" />
         {/* 골드 장식 */}
         <line x1="14" y1="10" x2="106" y2="10" stroke="#d4a853" strokeWidth="0.4" />
-        <line x1="14" y1="12" x2="106" y2="12" stroke="#d4a853" strokeWidth="0.2" />
         <text x="60" y="24" textAnchor="middle" fontSize="3" fontWeight="600" fill="#d4a853" letterSpacing="1">{name}</text>
-        {/* 타이틀 */}
-        <text x="60" y="42" textAnchor="middle" fontSize="10" fontWeight="900" fill="white">{mo}월 휴진</text>
-        <text x="60" y="54" textAnchor="middle" fontSize="4" fontWeight="500" fill="#d4a853" letterSpacing="2">안내</text>
-        {/* 화이트 카드 */}
-        <rect x="14" y="62" width="92" height="52" rx="5" fill="white" fillOpacity="0.97" />
-        {[{d:'월',n:9,cls:true},{d:'화',n:10},{d:'수',n:11},{d:'목',n:12},{d:'금',n:13},{d:'토',n:14},{d:'일',n:15,cls:true}].map((item,i) => {
-          const cx = 22 + i * 12;
-          return <g key={i}>
-            <text x={cx} y="72" textAnchor="middle" fontSize="2.5" fontWeight="600" fill={item.cls ? '#d4a853' : '#94a3b8'}>{item.d}</text>
-            <text x={cx} y="88" textAnchor="middle" fontSize="5" fontWeight={item.cls ? '900' : '400'} fill={item.cls ? '#1e293b' : '#64748b'}>{item.n}</text>
-            {item.cls && <rect x={cx - 7} y="92" width="14" height="5" rx="2.5" fill="#1e293b" fillOpacity="0.1" />}
-            {item.cls && <text x={cx} y="96" textAnchor="middle" fontSize="2" fontWeight="700" fill="#1e293b">휴진</text>}
-          </g>;
-        })}
-        <line x1="14" y1="108" x2="106" y2="108" stroke="#d4a853" strokeWidth="0.3" />
-        {/* 하단 */}
-        <rect x="14" y="114" width="92" height="16" rx="4" fill="#d4a853" fillOpacity="0.08" />
-        <text x="60" y="124" textAnchor="middle" fontSize="3" fontWeight="600" fill="#d4a853">진료시간 09:30~18:00</text>
+        <text x="60" y="38" textAnchor="middle" fontSize="4" fontWeight="500" fill="white" fillOpacity="0.7">다음 휴진까지</text>
+        {/* 플립클럭 디짓 패널 3개: D - 3 */}
+        {[{ch: 'D', x: 16}, {ch: '-', x: 46}, {ch: '3', x: 76}].map((panel, i) => (
+          <g key={i}>
+            {/* 패널 배경 */}
+            <rect x={panel.x} y="46" width="28" height="44" rx="3" fill="#0f172a" stroke="#334155" strokeWidth="0.5" />
+            {/* 상단 반 */}
+            <rect x={panel.x} y="46" width="28" height="22" rx="3" fill="#0f172a" />
+            <rect x={panel.x} y="65" width="28" height="3" fill="#0f172a" rx="0" />
+            {/* 플립 분할선 */}
+            <line x1={panel.x} y1="68" x2={panel.x + 28} y2="68" stroke="#1e293b" strokeWidth="1" />
+            <line x1={panel.x} y1="68.5" x2={panel.x + 28} y2="68.5" stroke="#000" strokeWidth="0.3" strokeOpacity="0.3" />
+            {/* 디짓 텍스트 */}
+            <text x={panel.x + 14} y="75" textAnchor="middle" fontSize={panel.ch === '-' ? '20' : '24'} fontWeight="900" fill="#d4a853">{panel.ch}</text>
+            {/* 좌우 힌지 */}
+            {panel.ch !== '-' && <>
+              <circle cx={panel.x} cy="68" r="1" fill="#334155" />
+              <circle cx={panel.x + 28} cy="68" r="1" fill="#334155" />
+            </>}
+          </g>
+        ))}
+        {/* 하단 정보 */}
+        <text x="60" y="104" textAnchor="middle" fontSize="4" fontWeight="700" fill="white">{mo}월 9일 (수)</text>
+        <text x="60" y="114" textAnchor="middle" fontSize="3" fontWeight="500" fill="#d4a853">정기 휴진</text>
+        {/* 진료시간 */}
+        <rect x="14" y="122" width="92" height="14" rx="4" fill="#d4a853" fillOpacity="0.08" />
+        <text x="60" y="131" textAnchor="middle" fontSize="3" fontWeight="600" fill="#d4a853">진료시간 09:30~18:00</text>
         <line x1="14" y1="148" x2="106" y2="148" stroke="#d4a853" strokeWidth="0.2" />
         <text x="60" y="155" textAnchor="middle" fontSize="2.5" fill="#d4a853">{name}</text>
       </>);
     }
     if (hint === 'stamp' || hint === 'rip' || hint === 'slash') {
-      // 레거시 폴백
+      // 공식 씰/배지 스타일
       return wrap(<>
         <text x="60" y="13" textAnchor="middle" fontSize="4" fontWeight="600" fill={a} letterSpacing="0.5">{name}</text>
         <text x="60" y="26" textAnchor="middle" fontSize="6.5" fontWeight="800" fill={c}>{mo}월 휴진 안내</text>
-        <circle cx="40" cy="58" r="20" fill={c} fillOpacity="0.04" stroke={c} strokeWidth="2" />
-        <text x="40" y="55" textAnchor="middle" fontSize="14" fontWeight="900" fill={c}>9</text>
-        <text x="40" y="68" textAnchor="middle" fontSize="3.5" fontWeight="700" fill={a}>CLOSED</text>
-        <circle cx="80" cy="58" r="20" fill="#ef4444" fillOpacity="0.04" stroke="#ef4444" strokeWidth="2" />
-        <text x="80" y="55" textAnchor="middle" fontSize="14" fontWeight="900" fill="#ef4444">15</text>
-        <text x="80" y="68" textAnchor="middle" fontSize="3.5" fontWeight="700" fill="#dc2626">CLOSED</text>
-        <rect x="10" y="106" width="100" height="20" rx="5" fill="white" fillOpacity="0.9" filter={`url(#shadow_${t.id})`} />
+        {/* 원형 씰 배지 */}
+        <circle cx="60" cy="72" r="32" fill="none" stroke={c} strokeWidth="1.5" />
+        <circle cx="60" cy="72" r="28" fill="none" stroke={c} strokeWidth="0.5" />
+        <circle cx="60" cy="72" r="34" fill="none" stroke={c} strokeWidth="0.3" strokeDasharray="2 2" />
+        {/* 씰 내부 */}
+        <circle cx="60" cy="72" r="24" fill={c} fillOpacity="0.04" />
+        {/* 원주 텍스트 - 상단 */}
+        <text x="60" y="50" textAnchor="middle" fontSize="2.5" fontWeight="700" fill={c} letterSpacing="3">OFFICIAL NOTICE</text>
+        {/* 중앙 날짜 */}
+        <text x="60" y="72" textAnchor="middle" fontSize="14" fontWeight="900" fill={c}>9·15</text>
+        {/* 원주 텍스트 - 하단 */}
+        <text x="60" y="92" textAnchor="middle" fontSize="2.5" fontWeight="700" fill={a} letterSpacing="2">CLOSED DAYS</text>
+        {/* 별 장식 */}
+        <circle cx="38" cy="56" r="1" fill={c} fillOpacity="0.4" />
+        <circle cx="82" cy="56" r="1" fill={c} fillOpacity="0.4" />
+        <circle cx="38" cy="88" r="1" fill={c} fillOpacity="0.4" />
+        <circle cx="82" cy="88" r="1" fill={c} fillOpacity="0.4" />
+        {/* 하단 정보 */}
+        <rect x="10" y="112" width="100" height="20" rx="5" fill="white" fillOpacity="0.9" filter={`url(#shadow_${t.id})`} />
+        <text x="60" y="124" textAnchor="middle" fontSize="3.5" fontWeight="600" fill="#475569">양해 부탁드립니다</text>
+        <text x="60" y="150" textAnchor="middle" fontSize="3" fill="#94a3b8">{name}</text>
       </>);
     }
     if (hint === 'circle' || hint === 'countdown') {
-      // 레거시 폴백
+      // 게이지/미터 아크 스타일
       return wrap(<>
         <text x="60" y="13" textAnchor="middle" fontSize="4" fontWeight="600" fill={a} letterSpacing="0.5">{name}</text>
         <text x="60" y="26" textAnchor="middle" fontSize="6.5" fontWeight="800" fill={c}>{mo}월 휴진</text>
-        <circle cx="60" cy="64" r="28" fill="white" fillOpacity="0.5" />
-        <circle cx="60" cy="64" r="28" fill="none" stroke={`url(#accent_${t.id})`} strokeWidth="2.5" strokeDasharray="44 132" strokeLinecap="round" transform="rotate(-90 60 64)" />
-        <text x="60" y="61" textAnchor="middle" fontSize="16" fontWeight="900" fill={c}>D-3</text>
-        <text x="60" y="73" textAnchor="middle" fontSize="4" fontWeight="600" fill={a}>휴진까지</text>
+        {/* 반원형 게이지 배경 */}
+        <path d={`M 20 90 A 40 40 0 0 1 100 90`} fill="none" stroke="#e2e8f0" strokeWidth="5" strokeLinecap="round" />
+        {/* 게이지 채움 아크 — stroke-dasharray */}
+        <path d={`M 20 90 A 40 40 0 0 1 100 90`} fill="none" stroke={`url(#accent_${t.id})`} strokeWidth="5" strokeDasharray="50 126" strokeLinecap="round" />
+        {/* 눈금 표시 */}
+        {Array.from({length: 7}, (_, i) => {
+          const angle = Math.PI + (i / 6) * Math.PI;
+          const x1 = 60 + Math.cos(angle) * 36;
+          const y1 = 90 + Math.sin(angle) * 36;
+          const x2 = 60 + Math.cos(angle) * 40;
+          const y2 = 90 + Math.sin(angle) * 40;
+          return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke="#94a3b8" strokeWidth="0.5" />;
+        })}
+        {/* 니들 인디케이터 */}
+        <line x1="60" y1="90" x2={60 + Math.cos(Math.PI + 0.4 * Math.PI) * 32} y2={90 + Math.sin(Math.PI + 0.4 * Math.PI) * 32} stroke={c} strokeWidth="1" strokeLinecap="round" />
+        <circle cx="60" cy="90" r="2.5" fill={c} />
+        <circle cx="60" cy="90" r="1" fill="white" />
+        {/* 중앙 텍스트 */}
+        <text x="60" y="82" textAnchor="middle" fontSize="14" fontWeight="900" fill={c}>D-3</text>
+        <text x="60" y="106" textAnchor="middle" fontSize="4" fontWeight="600" fill={a}>휴진까지</text>
+        {/* 하단 정보 */}
+        <text x="60" y="130" textAnchor="middle" fontSize="3.5" fontWeight="600" fill="#475569">{mo}월 9일 (수) 휴진</text>
+        <text x="60" y="150" textAnchor="middle" fontSize="3" fill="#94a3b8">{name}</text>
       </>);
     }
-    // list layout
+    // list layout — 연결된 도트 인디케이터가 있는 수직 스택
     return wrap(<>
       <text x="60" y="13" textAnchor="middle" fontSize="4" fontWeight="600" fill={a} letterSpacing="0.5">{name}</text>
       <text x="60" y="25" textAnchor="middle" fontSize="6.5" fontWeight="800" fill={c}>{mo}월 진료 안내</text>
+      {/* 수직 연결선 */}
+      <line x1="22" y1="42" x2="22" y2="82" stroke="#e2e8f0" strokeWidth="0.8" />
       {[
         {d:'9일 (월)', s:'휴진', sc:'#ef4444', bg:'#fef2f2'},
         {d:'15일 (일)', s:'휴진', sc:'#ef4444', bg:'#fef2f2'},
@@ -1080,7 +1097,8 @@ function TemplateSVGPreview({ template: t, category, hospitalName }: { template:
       ].map(({d,s,sc,bg: bgc}, i) => (<g key={i}>
         <rect x="10" y={34 + i * 20} width="100" height="16" rx="5" fill={bgc} />
         <circle cx="22" cy={42 + i * 20} r="4" fill={sc} fillOpacity="0.15" />
-        <text x="22" y={43.5 + i * 20} textAnchor="middle" fontSize="3.5" fontWeight="800" fill={sc}>{i+1}</text>
+        <circle cx="22" cy={42 + i * 20} r="1.5" fill={sc} />
+        <text x="22" y={43.5 + i * 20} textAnchor="middle" fontSize="3.5" fontWeight="800" fill="white">{i+1}</text>
         <text x="34" y={43.5 + i * 20} fontSize="3.8" fontWeight="700" fill={sc}>{d}</text>
         <rect x="75" y={37 + i * 20} width="30" height="10" rx="5" fill={sc} fillOpacity="0.12" />
         <text x="90" y={44 + i * 20} textAnchor="middle" fontSize="3.5" fontWeight="700" fill={sc}>{s}</text>
