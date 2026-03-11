@@ -2624,18 +2624,12 @@ export default function TemplateGenerator({ onSwitchToFree }: { onSwitchToFree?:
                           <ThemeComp data={themeSample} width={600} />
                         </div>
                       )}
-                      {/* 하단 그라데이션 */}
-                      <div className="absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-black/40 to-transparent pointer-events-none" />
                       {/* 선택 체크 뱃지 */}
                       {isSelected && (
                         <div className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center shadow-lg">
                           <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
                         </div>
                       )}
-                      {/* 테마 이름 */}
-                      <div className="absolute inset-x-0 bottom-0 px-2 pb-1.5">
-                        <span className="text-white font-bold text-xs drop-shadow-lg">{t.emoji} {t.label.replace(/^[\S]+\s/, '')}</span>
-                      </div>
                     </div>
                   </button>
                 );
