@@ -29,6 +29,12 @@ import {
   T4KoreanTraditional,
   T5Notebook,
   T6Christmas,
+  T7AutumnSpringNote,
+  T8AutumnHoliday,
+  T9HanokRoof,
+  T10DarkGreenClinic,
+  T11DarkBlueModern,
+  T12LavenderSparkle,
   type ScheduleData,
 } from './schedule-templates';
 
@@ -83,6 +89,54 @@ const THEME_COMPONENT_MAP: Record<string, {
       clinicName: '윈에이드 치과', monthLabel: '12월', year: 2025, month: 12,
       title: '12월 진료일정',
       events: [{ date: 5, label: '정기휴진', type: 'closed' }, { date: 12, label: '정기휴진', type: 'closed' }, { date: 19, label: '정기휴진', type: 'closed' }, { date: 26, label: '정기휴진', type: 'closed' }],
+    },
+  },
+  autumn_spring_note: {
+    Component: T7AutumnSpringNote,
+    sample: {
+      clinicName: '윈에이드 치과', monthLabel: '10월', year: 2025, month: 10,
+      title: '10월 휴진 안내',
+      events: [{ date: 5, label: '추석연휴', type: 'closed' }, { date: 6, label: '추석연휴', type: 'closed' }, { date: 7, label: '추석연휴', type: 'closed' }],
+    },
+  },
+  autumn_holiday: {
+    Component: T8AutumnHoliday,
+    sample: {
+      clinicName: '윈에이드 치과', monthLabel: '10월', year: 2025, month: 10,
+      title: '10월 휴무',
+      events: [{ date: 3, label: '개천절', type: 'closed' }, { date: 9, label: '한글날', type: 'closed' }, { date: 4, label: '정상 영업', type: 'normal' }],
+    },
+  },
+  hanok_roof: {
+    Component: T9HanokRoof,
+    sample: {
+      clinicName: '윈에이드 치과', monthLabel: '2월', year: 2025, month: 2,
+      title: '2월 진료일정 안내',
+      events: [{ date: 16, label: '휴진', type: 'closed' }, { date: 17, label: '휴진', type: 'closed' }, { date: 18, label: '휴진', type: 'closed' }],
+    },
+  },
+  dark_green_clinic: {
+    Component: T10DarkGreenClinic,
+    sample: {
+      clinicName: '윈에이드 치과', monthLabel: '10월', year: 2025, month: 10,
+      title: '10월 진료일정',
+      events: [{ date: 1, label: '정상진료', type: 'normal' }, { date: 3, label: '휴진', type: 'closed' }, { date: 9, label: '휴진', type: 'closed' }],
+    },
+  },
+  dark_blue_modern: {
+    Component: T11DarkBlueModern,
+    sample: {
+      clinicName: '윈에이드 치과', monthLabel: '10월', year: 2025, month: 10,
+      title: '10월 휴진 일정',
+      events: [{ date: 1, label: '임시공휴일', type: 'seminar' }, { date: 3, label: '개천절', type: 'closed' }, { date: 9, label: '한글날', type: 'closed' }],
+    },
+  },
+  lavender_sparkle: {
+    Component: T12LavenderSparkle,
+    sample: {
+      clinicName: '윈에이드 치과', monthLabel: '10월', year: 2025, month: 10,
+      title: '10월 진료일정',
+      events: [{ date: 1, label: '정상 진료', type: 'normal' }, { date: 3, label: '개천절 휴진', type: 'closed' }, { date: 9, label: '한글날 휴진', type: 'closed' }],
     },
   },
 };
@@ -2524,14 +2578,14 @@ export default function TemplateGenerator({ onSwitchToFree }: { onSwitchToFree?:
           )}
         </div>
 
-        {/* 카테고리별 디자인 템플릿 (6개씩) */}
+        {/* 카테고리별 디자인 템플릿 (12개) */}
         <div>
           <label className="block text-sm font-bold text-slate-700 mb-3">
             디자인 템플릿 {selectedHistory && <span className="text-violet-400 font-normal text-xs">(내 스타일 선택 시 무시됨)</span>}
           </label>
           {category === 'schedule' ? (
-            /* 진료 일정: 달력 테마 — 3x2 그리드, 전체 이미지 표시 */
-            <div className="grid grid-cols-3 gap-3">
+            /* 진료 일정: 달력 테마 — 3열 그리드, 스크롤 가능 */
+            <div className="grid grid-cols-3 gap-3 max-h-[480px] overflow-y-auto pr-1">
               {CALENDAR_THEME_OPTIONS.map(t => {
                 const isSelected = calendarTheme === t.value;
                 const themeEntry = THEME_COMPONENT_MAP[t.value];

@@ -780,6 +780,12 @@ export const CALENDAR_THEME_OPTIONS = [
   { value: 'cherry_blossom',     label: '🌸 벚꽃 봄',           emoji: '🌸' },
   { value: 'spring_kids',        label: '🌼 봄 동산',           emoji: '🌼' },
   { value: 'medical_notebook',   label: '📓 노트북',            emoji: '📓' },
+  { value: 'autumn_spring_note', label: '📒 가을 스프링노트',  emoji: '📒' },
+  { value: 'autumn_holiday',     label: '🍂 가을 Holiday',      emoji: '🍂' },
+  { value: 'hanok_roof',         label: '🏛️ 한옥 기와',        emoji: '🏛️' },
+  { value: 'dark_green_clinic',  label: '🌲 다크그린 클리닉',   emoji: '🌲' },
+  { value: 'dark_blue_modern',   label: '🌌 다크블루 모던',     emoji: '🌌' },
+  { value: 'lavender_sparkle',   label: '💜 라벤더 스파클',     emoji: '💜' },
 ];
 
 // ── HTML 달력 생성 ──
