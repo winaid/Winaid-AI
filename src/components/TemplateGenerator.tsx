@@ -2224,12 +2224,24 @@ export default function TemplateGenerator({ onSwitchToFree }: { onSwitchToFree?:
       <div className="space-y-4 p-4 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 160px)' }}>
 
         {/* 카테고리 탭 */}
-        <div className="flex flex-wrap items-center bg-slate-100 rounded-xl p-1 gap-0.5">
-          {CATEGORIES.map(c => (
-            <button key={c.id} onClick={() => setCategory(c.id)} className={`py-2 px-2.5 rounded-lg text-center transition-all text-[11px] font-bold whitespace-nowrap ${category === c.id ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
-              {c.name}
-            </button>
-          ))}
+        <div className="flex flex-wrap items-center gap-1.5">
+          {CATEGORIES.map(c => {
+            const active = category === c.id;
+            return (
+              <button
+                key={c.id}
+                onClick={() => setCategory(c.id)}
+                className={`flex items-center gap-1.5 py-2 px-3.5 rounded-xl text-[12px] font-bold whitespace-nowrap transition-all duration-200 border ${
+                  active
+                    ? 'bg-blue-500 text-white border-blue-500 shadow-md shadow-blue-200/50'
+                    : 'bg-white text-slate-500 border-slate-200 hover:border-blue-300 hover:text-blue-500 hover:shadow-sm'
+                }`}
+              >
+                <span className="text-sm">{c.icon}</span>
+                {c.name}
+              </button>
+            );
+          })}
         </div>
 
         {/* 병원 브랜딩 */}
