@@ -2856,6 +2856,74 @@ BOTTOM: Hospital name in sky blue text.
 Clean, modern, card-based. Individual items as separate cards. Contemporary healthcare design.`,
     },
   ],
+  pricing: [
+    {
+      id: 'prc_clean_table', name: '클린 테이블', color: '#3b82f6', accent: '#2563eb', bg: '#eff6ff',
+      desc: '깔끔한 가격표',
+      layoutHint: 'table',
+      aiPrompt: `EXACT LAYOUT BLUEPRINT — replicate this structure precisely:
+BACKGROUND: Clean white with very subtle blue tint.
+ZONE 1 — HEADER (top 12%): Blue gradient bar (#3b82f6→#2563eb). "비급여 진료비 안내" in bold white text centered. Hospital name in small white text above.
+ZONE 2 — PRICE TABLE (65%): White card with rounded corners and soft shadow. Inside: alternating white/#f8fafc rows. Each row: treatment name in dark gray (#1e293b) LEFT, dotted leader line in light gray, price in bold blue (#2563eb) RIGHT. Clear alignment. Row height generous for readability. Top row header in blue background: "항목" left, "금액" right.
+ZONE 3 — FOOTER (10%): Small gray text with disclaimer notice. Hospital contact info.
+Professional corporate medical fee schedule. Clean table layout. Blue and white clinical aesthetic.`,
+    },
+    {
+      id: 'prc_card_grid', name: '카드 그리드', color: '#10b981', accent: '#059669', bg: '#ecfdf5',
+      desc: '카드형 가격 안내',
+      layoutHint: 'cards',
+      aiPrompt: `EXACT LAYOUT BLUEPRINT — replicate this structure precisely:
+BACKGROUND: Soft mint gradient (#ecfdf5 → white).
+ZONE 1 — HEADER (top 10%): "비급여 진료비 안내" in bold green (#10b981, weight 800). Hospital name in small green accent.
+ZONE 2 — PRICE CARDS (70%): 2-column grid of individual white cards (border-radius 12px, soft shadow). Each card: small medical icon at top (tooth, syringe, etc. in green), treatment name in bold dark text center, price in large bold green (#059669) text below. Clean separation between cards with 8px gaps.
+ZONE 3 — FOOTER (8%): Disclaimer in small gray text.
+Modern card-based pricing. Each treatment as a separate visual card. Mint green medical aesthetic.`,
+    },
+    {
+      id: 'prc_premium_dark', name: '프리미엄 다크', color: '#1e293b', accent: '#f59e0b', bg: '#0f172a',
+      desc: '고급 다크 가격표',
+      layoutHint: 'dark',
+      aiPrompt: `EXACT LAYOUT BLUEPRINT — replicate this structure precisely:
+BACKGROUND: Dark navy (#0f172a) with subtle gradient.
+ZONE 1 — HEADER (top 12%): Gold accent line at very top. "비급여 진료비 안내" in bold white text. Hospital name in small gold (#f59e0b) text.
+ZONE 2 — PRICE LIST (65%): Semi-transparent dark cards (#1e293b at 80% opacity, border-radius 10px). Each row: treatment name in white text LEFT, gold (#f59e0b) price RIGHT. Thin gold separator line between items. Prices in bold, slightly larger font. Premium spacing.
+ZONE 3 — FOOTER (10%): Disclaimer in muted gray (#94a3b8) text. Gold accent line at bottom.
+Premium luxury aesthetic. Dark background with gold accents. High-end clinic pricing feel.`,
+    },
+    {
+      id: 'prc_warm_wood', name: '따뜻한 우드', color: '#92400e', accent: '#d97706', bg: '#fffbeb',
+      desc: '내추럴 가격판',
+      layoutHint: 'wood',
+      aiPrompt: `EXACT LAYOUT BLUEPRINT — replicate this structure precisely:
+BACKGROUND: Warm cream (#fffbeb) with subtle paper texture feel.
+ZONE 1 — HEADER (top 12%): Warm brown banner (#92400e at 10% opacity, rounded). "비급여 진료비 안내" in bold warm brown (#92400e, weight 800). Small tooth icon accent.
+ZONE 2 — PRICE MENU (65%): Styled like a premium cafe menu board. Each item row: treatment name in dark brown LEFT, series of dots connecting to amber (#d97706) bold price RIGHT. Thin warm brown divider lines between sections. Clean serif-inspired typography feel.
+ZONE 3 — FOOTER (10%): Disclaimer in warm gray text inside a subtle rounded box.
+Warm, natural, inviting aesthetic. Like a premium clinic waiting room display. Brown and cream tones.`,
+    },
+    {
+      id: 'prc_gradient_modern', name: '그라데이션 모던', color: '#7c3aed', accent: '#a855f7', bg: '#f5f3ff',
+      desc: '모던 그라데이션',
+      layoutHint: 'gradient',
+      aiPrompt: `EXACT LAYOUT BLUEPRINT — replicate this structure precisely:
+BACKGROUND: Soft lavender gradient (#f5f3ff → #ede9fe → white).
+ZONE 1 — HEADER (top 12%): Purple gradient pill badge with "비급여" tag. "진료비 안내" in bold purple (#7c3aed, weight 800). Hospital name in light purple.
+ZONE 2 — PRICE LIST (65%): Large white card (border-radius 16px, soft purple shadow). Inside: each row has a small purple circle bullet, treatment name in dark text, price in bold purple (#7c3aed) right-aligned. Alternating row backgrounds: white and lavender at 3% opacity. Clean modern spacing.
+ZONE 3 — FOOTER (10%): Notice text in muted purple. Subtle gradient accent line.
+Modern, fresh, contemporary. Purple gradient aesthetic. Clean medical pricing layout.`,
+    },
+    {
+      id: 'prc_minimal_line', name: '미니멀 라인', color: '#64748b', accent: '#0ea5e9', bg: '#f8fafc',
+      desc: '미니멀 라인 스타일',
+      layoutHint: 'minimal',
+      aiPrompt: `EXACT LAYOUT BLUEPRINT — replicate this structure precisely:
+BACKGROUND: Pure white (#ffffff).
+ZONE 1 — HEADER (top 8%): Thin sky blue (#0ea5e9) line at top edge. "비급여 진료비 안내" in bold dark gray (#1e293b, weight 800). No decoration.
+ZONE 2 — PRICE LIST (72%): Ultra-clean list. Each item: treatment name in medium gray (#475569), thin horizontal line extending across, price in bold dark (#1e293b) with sky blue (#0ea5e9) won symbol accent. Generous vertical spacing (20px between items). No cards, no backgrounds — just clean typography and lines.
+ZONE 3 — FOOTER (8%): Disclaimer in light gray (#94a3b8). Thin blue line at bottom matching top.
+Ultra-minimal. No decorations. Pure typography-driven design. Swiss design inspired. Maximum whitespace.`,
+    },
+  ],
 };
 
 // ── AI 이미지 생성: 템플릿 데이터 → Nano Banana Pro ──
@@ -2924,7 +2992,7 @@ export function resizeImageForReference(dataUrl: string): Promise<string> {
 }
 
 interface AiTemplateRequest {
-  category: 'schedule' | 'event' | 'doctor' | 'notice' | 'greeting' | 'hiring' | 'caution';
+  category: 'schedule' | 'event' | 'doctor' | 'notice' | 'greeting' | 'hiring' | 'caution' | 'pricing';
   stylePrompt: string;
   textContent: string;
   hospitalName?: string;
@@ -3223,6 +3291,17 @@ CRITICAL DESIGN RULES FOR CAUTION:
 - Numbered list with generous line spacing between items
 - Soft, calming color palette - NOT alarming or scary
 - Emergency contact in a clearly visible box at the bottom`,
+    pricing: `hospital non-covered treatment pricing / fee schedule announcement.
+CRITICAL DESIGN RULES FOR PRICING:
+- Design like a premium hospital price list or menu board
+- Clean TABLE or LIST layout with clear item-price alignment
+- Treatment names LEFT-aligned, prices RIGHT-aligned with dotted leader lines or clear spacing
+- Bold prices in accent color for visibility
+- Professional medical aesthetic — NOT like a restaurant menu
+- Clean section dividers between item groups
+- Title at top, disclaimer/notice at bottom in smaller text
+- Use medical icons (tooth, syringe, etc.) sparingly as accents
+- Generous whitespace, easy to scan at a glance`,
   };
 
   const isPortrait = imageSize && imageSize.width > 0 && imageSize.height > 0 && imageSize.height > imageSize.width;
@@ -3611,8 +3690,31 @@ function buildCautionTextContent(data: {
   return content;
 }
 
+function buildPricingTextContent(data: {
+  title: string; items: string[]; notice?: string;
+}): string {
+  let content = `[MAIN TITLE - largest, bold, center] "${data.title}"`;
+  if (data.items.length > 0) {
+    content += `\n\n[PRICING TABLE - clean list or table layout. Each row: treatment name LEFT-aligned, price RIGHT-aligned. Use dotted leader lines or clear spacing between name and price. Bold prices in accent color.]`;
+    for (const item of data.items) {
+      // "항목: 가격" 형식이면 분리, 아니면 그대로
+      const colonIdx = item.indexOf(':');
+      if (colonIdx > 0) {
+        const name = item.substring(0, colonIdx).trim();
+        const price = item.substring(colonIdx + 1).trim();
+        content += `\n- "${name}" → "${price}"`;
+      } else {
+        content += `\n- "${item}"`;
+      }
+    }
+  }
+  if (data.notice) content += `\n\n[DISCLAIMER/NOTICE - smaller text at bottom, muted color, inside a subtle box or divider] "${data.notice}"`;
+  content += `\n\n[DESIGN NOTES: This is a hospital fee schedule. Must look professional and trustworthy. Clean alignment between item names and prices is CRITICAL. Use a table-like layout. Korean text only from quotes above.]`;
+  return content;
+}
+
 export async function generateTemplateWithAI(
-  category: 'schedule' | 'event' | 'doctor' | 'notice' | 'greeting' | 'hiring' | 'caution',
+  category: 'schedule' | 'event' | 'doctor' | 'notice' | 'greeting' | 'hiring' | 'caution' | 'pricing',
   templateData: Record<string, any>,
   stylePrompt: string,
   options?: {
@@ -3652,6 +3754,9 @@ export async function generateTemplateWithAI(
       break;
     case 'caution':
       textContent = buildCautionTextContent(templateData as any);
+      break;
+    case 'pricing':
+      textContent = buildPricingTextContent(templateData as any);
       break;
     default:
       textContent = JSON.stringify(templateData);

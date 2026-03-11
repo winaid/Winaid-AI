@@ -142,7 +142,7 @@ const THEME_COMPONENT_MAP: Record<string, {
 };
 
 type DayMark = 'closed' | 'shortened' | 'vacation';
-type TemplateCategory = 'schedule' | 'event' | 'doctor' | 'notice' | 'greeting' | 'hiring' | 'caution';
+type TemplateCategory = 'schedule' | 'event' | 'doctor' | 'notice' | 'greeting' | 'hiring' | 'caution' | 'pricing';
 type ScheduleLayout = 'full_calendar' | 'week' | 'highlight';
 
 const CATEGORIES: { id: TemplateCategory; name: string; icon: string; desc: string }[] = [
@@ -153,6 +153,7 @@ const CATEGORIES: { id: TemplateCategory; name: string; icon: string; desc: stri
   { id: 'greeting', name: '명절 인사', icon: '\u{1F38A}', desc: '설날/추석' },
   { id: 'hiring', name: '채용/공고', icon: '\u{1F4CB}', desc: '직원 모집' },
   { id: 'caution', name: '주의사항', icon: '\u26A0\uFE0F', desc: '시술/진료 후' },
+  { id: 'pricing', name: '비급여 안내', icon: '\u{1F4B0}', desc: '시술 가격표' },
 ];
 
 // AI 스타일 프리셋 사용 (모든 템플릿 AI 생성)
@@ -1927,6 +1928,10 @@ export default function TemplateGenerator({ onSwitchToFree }: { onSwitchToFree?:
   const [cautionTitle, setCautionTitle] = useState('');
   const [cautionItems, setCautionItems] = useState('');
   const [cautionEmergency, setCautionEmergency] = useState('');
+  // 비급여/가격 안내
+  const [pricingTitle, setPricingTitle] = useState('비급여 진료비 안내');
+  const [pricingItems, setPricingItems] = useState('임플란트 (1개): 1,200,000원\n레진 충전: 150,000원\n치아 미백: 300,000원\n교정 상담: 무료');
+  const [pricingNotice, setPricingNotice] = useState('상기 금액은 부가세 포함 금액이며, 환자 상태에 따라 달라질 수 있습니다.');
 
   // 주의사항 타입별 기본 아이템
   const CAUTION_DEFAULTS: Record<string, { title: string; items: string; emergency: string }> = {
@@ -2101,6 +2106,8 @@ export default function TemplateGenerator({ onSwitchToFree }: { onSwitchToFree?:
         templateData = { pageData: hiringPageData.slice(0, hiringPageCount).map(p => ({ type: p.type, content: p.content })), hospitalPhotos: hiringPhotos.length > 0 ? hiringPhotos : undefined };
       } else if (category === 'caution') {
         templateData = { type: cautionType, title: cautionTitle || `${cautionType} 주의사항`, items: cautionItems.split('\n').filter(Boolean), emergency: cautionEmergency || undefined };
+      } else if (category === 'pricing') {
+        templateData = { title: pricingTitle || '비급여 진료비 안내', items: pricingItems.split('\n').filter(Boolean), notice: pricingNotice || undefined };
       } else {
         templateData = { holiday: greetHoliday, greeting: greetMsg, closurePeriod: greetClosure || undefined };
       }
@@ -2508,6 +2515,14 @@ export default function TemplateGenerator({ onSwitchToFree }: { onSwitchToFree?:
             <div><label className={labelCls}>제목 <span className="text-slate-400 font-normal">(자동 생성됨)</span></label><input type="text" value={cautionTitle} onChange={e=>setCautionTitle(e.target.value)} placeholder={`${cautionType} 주의사항`} className={inputCls} /></div>
             <div><label className={labelCls}>주의사항 항목 <span className="text-slate-400 font-normal">(줄바꿈으로 구분)</span></label><textarea value={cautionItems} onChange={e=>setCautionItems(e.target.value)} placeholder={"시술 부위를 혀로 건드리지 마세요\n당일 음주 및 흡연은 피해주세요\n부기나 출혈은 2~3일 내 자연 소실됩니다\n딱딱한 음식은 일주일간 피해주세요"} rows={5} className={textareaCls} /></div>
             <div><label className={labelCls}>응급 연락처 <span className="text-slate-400 font-normal">(선택)</span></label><input type="text" value={cautionEmergency} onChange={e=>setCautionEmergency(e.target.value)} placeholder="이상 증상 시 연락: 02-1234-5678" className={inputCls} /></div>
+          </div>
+        )}
+
+        {category === 'pricing' && (
+          <div className="space-y-3">
+            <div><label className={labelCls}>제목</label><input type="text" value={pricingTitle} onChange={e=>setPricingTitle(e.target.value)} placeholder="비급여 진료비 안내" className={inputCls} /></div>
+            <div><label className={labelCls}>항목 <span className="text-slate-400 font-normal">(줄바꿈으로 구분, "항목명: 가격" 형식)</span></label><textarea value={pricingItems} onChange={e=>setPricingItems(e.target.value)} placeholder={"임플란트 (1개): 1,200,000원\n레진 충전: 150,000원\n치아 미백: 300,000원\n교정 상담: 무료"} rows={6} className={textareaCls} /></div>
+            <div><label className={labelCls}>하단 안내 <span className="text-slate-400 font-normal">(선택)</span></label><input type="text" value={pricingNotice} onChange={e=>setPricingNotice(e.target.value)} placeholder="상기 금액은 환자 상태에 따라 달라질 수 있습니다." className={inputCls} /></div>
           </div>
         )}
 
