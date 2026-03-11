@@ -138,13 +138,19 @@ html {
   scroll-behavior: smooth;
 }
 
-/* Calendar template thumbnails — force inline SVG to fit container */
+/* Calendar template thumbnails — crop SVG to fill container uniformly */
+.calendar-thumb-svg {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 3 / 4;
+}
 .calendar-thumb-svg svg {
-  width: 110% !important;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100% !important;
   height: auto !important;
   display: block;
-  margin: -3% auto -5%;
-  margin-left: -5%;
 }
 
 /* Hide scrollbar for category tabs */

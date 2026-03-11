@@ -2550,9 +2550,9 @@ export default function TemplateGenerator({ onSwitchToFree }: { onSwitchToFree?:
                       }`}
                   >
                     <div className="relative bg-white">
-                      {/* SVG 전체 이미지 — 컨테이너 너비에 맞춤 */}
+                      {/* SVG 전체 이미지 — 고정 비율 컨테이너에 맞춤 */}
                       {ThemeComp && themeSample && (
-                        <div className="calendar-thumb-svg" style={{ pointerEvents: 'none', lineHeight: 0 }}>
+                        <div className="calendar-thumb-svg" style={{ pointerEvents: 'none' }}>
                           <ThemeComp data={themeSample} width={600} />
                         </div>
                       )}

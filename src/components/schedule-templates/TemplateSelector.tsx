@@ -164,14 +164,10 @@ export default function TemplateSelector({ selectedId, onSelect, previewData }: 
                 flexDirection: 'column',
               }}
             >
-              {/* Thumbnail preview - SVG auto-sizes, no fixed height */}
-              <div className="calendar-thumb-svg" style={{
-                overflow: 'hidden',
-                borderRadius: '8px 8px 0 0',
-                lineHeight: 0,
-              }}>
+              {/* Thumbnail preview - fixed aspect ratio, SVG fills */}
+              <div className="calendar-thumb-svg" style={{ borderRadius: '8px 8px 0 0' }}>
                 <Suspense fallback={<div style={{ height: 120, background: tpl.previewBg }} />}>
-                  <tpl.Component data={tpl.sample} width={200} />
+                  <tpl.Component data={tpl.sample} width={600} />
                 </Suspense>
               </div>
 
