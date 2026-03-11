@@ -6,6 +6,12 @@ import T3Autumn from './templates/T3Autumn';
 import T4KoreanTraditional from './templates/T4KoreanTraditional';
 import T5Notebook from './templates/T5Notebook';
 import T6Christmas from './templates/T6Christmas';
+import T7AutumnSpringNote from './templates/T7AutumnSpringNote';
+import T8AutumnHoliday from './templates/T8AutumnHoliday';
+import T9HanokRoof from './templates/T9HanokRoof';
+import T10DarkGreenClinic from './templates/T10DarkGreenClinic';
+import T11DarkBlueModern from './templates/T11DarkBlueModern';
+import T12LavenderSparkle from './templates/T12LavenderSparkle';
 
 export const TEMPLATE_LIST: (TemplateInfo & {
   Component: React.ComponentType<{ data: ScheduleData; width?: number; mode?: CalendarViewMode }>;
@@ -115,6 +121,119 @@ export const TEMPLATE_LIST: (TemplateInfo & {
       events: [
         { date: 4, label: '정기휴진', type: 'closed' },
         { date: 25, label: '성탄절휴진', type: 'closed', color: '#D32F2F' },
+      ],
+    },
+  },
+  {
+    id: 'autumn-note',
+    name: '가을 스프링노트',
+    description: '갈색 배경, 단풍잎, 스프링 바인딩 노트',
+    tags: ['가을', '노트', '따뜻한', '치과'],
+    previewBg: '#D4A574',
+    Component: T7AutumnSpringNote,
+    sample: {
+      clinicName: '윈에이드 치과',
+      monthLabel: '10월', year: 2025, month: 10,
+      title: '10월 휴진 안내',
+      subtitle: '진료 예약 및 내원에 참고 부탁 드립니다.',
+      events: [
+        { date: 5, label: '추석연휴', type: 'closed' },
+        { date: 6, label: '추석연휴', type: 'closed' },
+        { date: 7, label: '추석연휴', type: 'closed' },
+      ],
+    },
+  },
+  {
+    id: 'autumn-holiday',
+    name: '가을 Holiday',
+    description: '베이지 배경, 코너 단풍잎, 원형 뱃지',
+    tags: ['가을', '단풍', '심플', '치과'],
+    previewBg: '#FDF5EC',
+    Component: T8AutumnHoliday,
+    sample: {
+      clinicName: '윈에이드 치과',
+      monthLabel: '10월', year: 2025, month: 10,
+      title: '10월 휴무',
+      notices: ['방문 시 참고 부탁드립니다!'],
+      events: [
+        { date: 3, label: '개천절', type: 'closed' },
+        { date: 9, label: '한글날', type: 'closed' },
+        { date: 4, label: '정상 영업', type: 'normal', color: '#C62828' },
+      ],
+    },
+  },
+  {
+    id: 'hanok',
+    name: '한옥 기와',
+    description: '살구색 반원, 한옥 기와지붕, 전통 프레임',
+    tags: ['전통', '한옥', '격조', '치과'],
+    previewBg: '#F0E6D3',
+    Component: T9HanokRoof,
+    sample: {
+      clinicName: '윈에이드 치과',
+      monthLabel: '2월', year: 2025, month: 2,
+      title: '2월 진료일정 안내',
+      events: [
+        { date: 16, label: '휴진', type: 'closed' },
+        { date: 17, label: '휴진', type: 'closed' },
+        { date: 18, label: '휴진', type: 'closed' },
+      ],
+    },
+  },
+  {
+    id: 'dark-green',
+    name: '다크그린 클리닉',
+    description: '다크그린 상단, 다이아몬드 뱃지',
+    tags: ['모던', '그린', '클리닉', '치과'],
+    previewBg: '#2C4A4A',
+    Component: T10DarkGreenClinic,
+    sample: {
+      clinicName: '윈에이드 치과',
+      monthLabel: '10월', year: 2025, month: 10,
+      title: '10월 진료일정',
+      notices: ['참고하여 내원에 차질이 없으시기 바랍니다.'],
+      events: [
+        { date: 1, label: '정상진료', type: 'normal', color: '#2E7D32' },
+        { date: 3, label: '휴진', type: 'closed' },
+        { date: 9, label: '휴진', type: 'closed' },
+      ],
+    },
+  },
+  {
+    id: 'dark-blue',
+    name: '다크블루 모던',
+    description: '네이비 배경, 도트 패턴, 테이블 그리드',
+    tags: ['모던', '블루', '비즈니스', '치과'],
+    previewBg: '#0D1B3E',
+    Component: T11DarkBlueModern,
+    sample: {
+      clinicName: '윈에이드 치과',
+      monthLabel: '10월', year: 2025, month: 10,
+      title: '10월 휴진 일정',
+      notices: ['참고하여 내원에 차질 없으시기 바랍니다.'],
+      events: [
+        { date: 1, label: '임시공휴일', type: 'seminar' },
+        { date: 3, label: '개천절', type: 'closed' },
+        { date: 9, label: '한글날', type: 'closed' },
+      ],
+    },
+  },
+  {
+    id: 'lavender',
+    name: '라벤더 스파클',
+    description: '보라 그라데이션, 반짝이 별, 보라 헤더',
+    tags: ['라벤더', '보라', '심플', '치과'],
+    previewBg: '#F3E8FF',
+    Component: T12LavenderSparkle,
+    sample: {
+      clinicName: '윈에이드 치과',
+      monthLabel: '10월', year: 2025, month: 10,
+      title: '10월 진료일정',
+      notices: ['참고하여 내원에 차질이 없으시길 바랍니다.'],
+      events: [
+        { date: 1, label: '정상 진료', type: 'normal', color: '#7C3AED' },
+        { date: 3, label: '개천절 휴진', type: 'closed' },
+        { date: 9, label: '한글날 휴진', type: 'closed' },
       ],
     },
   },
