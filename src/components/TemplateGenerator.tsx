@@ -1981,6 +1981,7 @@ export default function TemplateGenerator({ onSwitchToFree }: { onSwitchToFree?:
   const [error, setError] = useState<string | null>(null);
   const [previewStyleImage, setPreviewStyleImage] = useState<{ url: string; name: string } | null>(null);
   const [enlargedTemplate, setEnlargedTemplate] = useState<CategoryTemplate | null>(null);
+  const [enlargedCalendarTheme, setEnlargedCalendarTheme] = useState<string | null>(null);
   // 재생성 관련
   const [showRegenMenu, setShowRegenMenu] = useState(false);
   const [regenPrompt, setRegenPrompt] = useState('');
@@ -2609,6 +2610,7 @@ export default function TemplateGenerator({ onSwitchToFree }: { onSwitchToFree?:
                     key={t.value}
                     type="button"
                     onClick={() => setCalendarTheme(t.value)}
+                    onDoubleClick={(e) => { e.preventDefault(); setEnlargedCalendarTheme(t.value); }}
                     className={`group relative rounded-2xl overflow-hidden transition-all duration-200
                       ${isSelected
                         ? 'shadow-xl ring-2 ring-blue-400 ring-offset-2'
@@ -2981,6 +2983,42 @@ export default function TemplateGenerator({ onSwitchToFree }: { onSwitchToFree?:
         )}
         </div>
       </div>
+
+      {/* 달력 테마 확대 모달 (더블클릭) */}
+      {enlargedCalendarTheme && (() => {
+        const themeOpt = CALENDAR_THEME_OPTIONS.find(t => t.value === enlargedCalendarTheme);
+        const themeEntry = THEME_COMPONENT_MAP[enlargedCalendarTheme];
+        if (!themeOpt || !themeEntry) return null;
+        const { Component: ThemeComp, sample: themeSample } = themeEntry;
+        return (
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-8" onClick={() => setEnlargedCalendarTheme(null)}>
+            <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden" onClick={e => e.stopPropagation()}>
+              <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+                <div>
+                  <h3 className="font-bold text-slate-800">{themeOpt.emoji} {themeOpt.label.replace(/^[\S]+\s/, '')}</h3>
+                </div>
+                <button onClick={() => setEnlargedCalendarTheme(null)} className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition-colors">
+                  <svg className="w-4 h-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+              </div>
+              <div className="p-4 flex justify-center" style={{ lineHeight: 0 }}>
+                <div style={{ width: '100%', maxWidth: 480 }}>
+                  <ThemeComp data={themeSample} width={480} />
+                </div>
+              </div>
+              <div className="p-4 border-t border-slate-100 flex gap-2">
+                <button
+                  onClick={() => { setCalendarTheme(enlargedCalendarTheme); setEnlargedCalendarTheme(null); }}
+                  className="flex-1 py-2.5 rounded-xl text-white font-bold text-sm transition-all bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700"
+                >
+                  이 템플릿 선택
+                </button>
+                <button onClick={() => setEnlargedCalendarTheme(null)} className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium text-sm transition-colors">닫기</button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* 템플릿 확대 모달 (더블클릭) */}
       {enlargedTemplate && (

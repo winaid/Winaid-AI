@@ -3040,6 +3040,95 @@ MANDATORY VISUAL STYLE:
 - Overall mood: serene, magical, winter wonderland, festive but elegant
 - Color palette: deep navy, white, soft blue, red accent, silver
 - NOT overly cartoonish — elegant winter/holiday aesthetic`,
+
+  autumn_spring_note: `[CALENDAR THEME: Autumn Spring Note / 가을 스프링노트]
+MANDATORY VISUAL STYLE:
+- Background: warm off-white/cream with subtle gradient
+- Main content area styled like a SPIRAL-BOUND NOTEBOOK: spiral binding dots/rings along the top edge
+- MAPLE LEAVES (orange-brown #D2691E) scattered around edges with 0.85 opacity
+- Decorative cloud shapes in warm cream (#F5E6C8)
+- Simplified AUTUMN TREES with brown trunks (#6B4C2A) and warm foliage crowns
+- Earth tone color palette: browns, tans, creams, warm oranges
+- Calendar sits inside the notebook page area
+- Title in warm brown/dark chocolate color
+- Event markers in warm autumn tones
+- Overall mood: cozy, nostalgic, warm autumn notebook feel
+- Color palette: cream, chocolate brown, burnt orange, tan, warm gold
+- Like a personal planner page for autumn — handcrafted feel`,
+
+  autumn_holiday: `[CALENDAR THEME: Autumn Holiday / 가을 Holiday]
+MANDATORY VISUAL STYLE:
+- Background: warm beige/cream (#FDF5EC)
+- Large AUTUMN LEAVES at corners: maple-style with stems in rust (#C0543B), golden brown (#C97B3A), and amber (#D4A24E)
+- Brush stroke accents with low opacity for East Asian ink-wash aesthetic
+- Calendar inside a white card with subtle drop shadow
+- Round leaf shapes for variety mixed with pointed maple leaves
+- Various leaf rotations creating natural scattered effect
+- Clean title typography in dark brown
+- Event markers: ROUND CIRCLE BADGES with colored backgrounds
+- Closed days in red, normal in warm accents
+- Overall mood: refined autumn with traditional East Asian artistic sensibility
+- Color palette: beige, rust brown, golden amber, dark brown (#8B6914), cream white
+- Elegant and minimal — NOT cartoonish`,
+
+  hanok_roof: `[CALENDAR THEME: Hanok Roof / 한옥 기와]
+MANDATORY VISUAL STYLE:
+- Background: warm beige (#F0E6D3)
+- Large SALMON/CORAL HALF-CIRCLE (#E8856A) at top center (stylized sun)
+- Traditional Korean HANOK ROOF TILES structure: curved ridge line with repeated tile pattern in dark gray (#4A4A4A, #3A3A3A)
+- Beige CLOUDS with 0.5 opacity in East Asian ink-painting style
+- Korean traditional CORNER PATTERNS: concentric geometric squares in brown (#8B7355)
+- Calendar inside a bordered frame with traditional feel
+- Title in dignified serif-style Korean typography
+- Event colors: red for closed, purple for night, coral for normal, brown for seminar
+- Overall mood: cultural heritage, sophisticated, celebrating Korean traditional architecture
+- Color palette: beige, coral/salmon, dark gray, brown, cream
+- Inspired by Korean hanok buildings — dignified and respectful`,
+
+  dark_green_clinic: `[CALENDAR THEME: Dark Green Clinic / 다크그린 클리닉]
+MANDATORY VISUAL STYLE:
+- Background: split design — dark teal/green header (#2C4A4A) on top, lighter area below
+- Professional medical palette: dark teals, forest greens (#3A7D5C, #2E7D52)
+- WHITE TOOTH ICON (molar silhouette) as medical branding element
+- Event markers: DIAMOND-SHAPED BADGES (45-degree rotated squares) for type differentiation
+- Layered green rectangles with low opacity suggesting healthcare facility
+- Calendar with clean grid layout on white/light background
+- Red accents (#D32F2F) for closed days
+- Title in white text on dark green header
+- Overall mood: professional, trustworthy, medical/dental clinic branding
+- Color palette: dark teal, forest green, white, red accent, light gray
+- Clean and clinical — premium healthcare aesthetic`,
+
+  dark_blue_modern: `[CALENDAR THEME: Dark Blue Modern / 다크블루 모던]
+MANDATORY VISUAL STYLE:
+- Background: DEEP NAVY gradient (#0D1B3E → #162850), dark and premium
+- QUARTER-CIRCLE HALFTONE DOT PATTERNS in all four corners: blue dots (#5A8DBF) with varying sizes, 0.25 opacity
+- Modern tech/corporate aesthetic with elegant bokeh-like dot effects
+- Calendar displayed as a TABLE GRID with clear borders on dark background
+- White or light text on dark navy background throughout
+- Clean modern sans-serif typography
+- Day headers in bold, dates in clean grid cells
+- Closed days highlighted with red or contrasting accent
+- Event text inside the calendar cells with subtle color coding
+- Overall mood: contemporary, minimalist, premium, sleek corporate
+- Color palette: deep navy, white, cool blue (#5A8DBF), subtle gray, red accent
+- Like a premium tech company's internal calendar — NOT a typical hospital design
+- NO cute illustrations — pure modern minimalist design`,
+
+  lavender_sparkle: `[CALENDAR THEME: Lavender Sparkle / 라벤더 스파클]
+MANDATORY VISUAL STYLE:
+- Background: soft LAVENDER GRADIENT (#F3E8FF → #FDFCFF), light and airy
+- SPARKLE/STAR shapes scattered throughout: four-pointed stars in various purple shades (#7C3AED, #A78BFA, #C4B5FD) with 0.7 opacity
+- Multiple sparkles in varying sizes creating magical, whimsical effect
+- Calendar header: rounded rectangle in light purple (#E8D5F5)
+- Title in deep purple (#5B21B6), elegant and bold
+- Vibrant purple (#7C3AED) as primary accent color
+- Sunday dates in red (#DC2626), other dates in dark gray
+- Clean rounded shapes throughout the design
+- Event markers with purple-toned badges
+- Overall mood: playful, magical, feminine, modern and cheerful
+- Color palette: lavender, deep purple, light violet, white, red accent
+- Sparkly and enchanting — like a magical planner design`,
 };
 
 // =============================================
