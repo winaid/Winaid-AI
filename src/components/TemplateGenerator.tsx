@@ -1095,33 +1095,40 @@ function TemplateSVGPreview({ template: t, category, hospitalName }: { template:
       </>);
     }
     if (h === 'elegant') {
-      // ━━ 엘레강스: 다크 네이비 + 골드 코너 프레임 + 다이아몬드 패턴 ━━
+      // ━━ 엘레강스: 메탈릭 그라데이션 이중선 프레임 + 노이즈 텍스처 ━━
       return wrap(<>
-        {/* 풀 다크 네이비 배경 */}
-        <rect x="0" y="0" width="120" height="160" rx="6" fill="#0f172a" />
-        {/* 골드 코너 프레임 — 얇은 L자 */}
-        <path d="M10,10 L35,10" stroke="#d4a853" strokeWidth="0.8" fill="none" />
-        <path d="M10,10 L10,35" stroke="#d4a853" strokeWidth="0.8" fill="none" />
-        <path d="M110,10 L85,10" stroke="#d4a853" strokeWidth="0.8" fill="none" />
-        <path d="M110,10 L110,35" stroke="#d4a853" strokeWidth="0.8" fill="none" />
-        <path d="M10,150 L35,150" stroke="#d4a853" strokeWidth="0.8" fill="none" />
-        <path d="M10,150 L10,125" stroke="#d4a853" strokeWidth="0.8" fill="none" />
-        <path d="M110,150 L85,150" stroke="#d4a853" strokeWidth="0.8" fill="none" />
-        <path d="M110,150 L110,125" stroke="#d4a853" strokeWidth="0.8" fill="none" />
+        <defs>
+          <linearGradient id={`gold_${t.id}`} x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#B8860B" />
+            <stop offset="35%" stopColor="#F5DEB3" />
+            <stop offset="65%" stopColor="#D4A853" />
+            <stop offset="100%" stopColor="#B8860B" />
+          </linearGradient>
+          <filter id={`grain_${t.id}`}>
+            <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch" result="noise" />
+            <feColorMatrix type="saturate" values="0" in="noise" result="grayNoise" />
+            <feBlend in="SourceGraphic" in2="grayNoise" mode="multiply" />
+          </filter>
+        </defs>
+        {/* 풀 다크 네이비 배경 + 노이즈 */}
+        <rect x="0" y="0" width="120" height="160" rx="6" fill="#0f172a" filter={`url(#grain_${t.id})`} />
+        {/* 이중선 직사각형 프레임 */}
+        <rect x="8" y="8" width="104" height="144" rx="2" fill="none" stroke={`url(#gold_${t.id})`} strokeWidth="0.8" />
+        <rect x="11" y="11" width="98" height="138" rx="1" fill="none" stroke={`url(#gold_${t.id})`} strokeWidth="0.4" />
         {/* 골드 다이아몬드 장식 — 중앙 */}
-        <rect x="52" y="52" width="16" height="16" rx="1" fill="none" stroke="#d4a853" strokeWidth="0.7" transform="rotate(45 60 60)" />
-        <rect x="55" y="55" width="10" height="10" rx="1" fill="#d4a853" fillOpacity="0.35" transform="rotate(45 60 60)" />
-        <circle cx="60" cy="60" r="2" fill="#d4a853" fillOpacity="0.8" />
+        <rect x="52" y="52" width="16" height="16" rx="1" fill="none" stroke={`url(#gold_${t.id})`} strokeWidth="0.7" transform="rotate(45 60 60)" />
+        <rect x="55" y="55" width="10" height="10" rx="1" fill={`url(#gold_${t.id})`} fillOpacity="0.35" transform="rotate(45 60 60)" />
+        <circle cx="60" cy="60" r="2" fill={`url(#gold_${t.id})`} fillOpacity="0.8" />
         {/* 타이틀 — 큰 화이트 텍스트 */}
         <text x="60" y="88" textAnchor="middle" fontSize="8" fontWeight="800" fill="white" letterSpacing="1">임플란트</text>
         <text x="60" y="100" textAnchor="middle" fontSize="8" fontWeight="800" fill="white" letterSpacing="1">특별 이벤트</text>
-        {/* 골드 가격 + 언더라인 */}
-        <text x="60" y="122" textAnchor="middle" fontSize="11" fontWeight="900" fill="#d4a853">690,000원</text>
-        <line x1="30" y1="126" x2="90" y2="126" stroke="#d4a853" strokeWidth="0.6" />
+        {/* 메탈릭 골드 가격 + 언더라인 */}
+        <text x="60" y="122" textAnchor="middle" fontSize="11" fontWeight="900" fill={`url(#gold_${t.id})`}>690,000원</text>
+        <line x1="30" y1="126" x2="90" y2="126" stroke={`url(#gold_${t.id})`} strokeWidth="0.6" />
         {/* 기간 */}
-        <text x="60" y="136" textAnchor="middle" fontSize="2.8" fontWeight="500" fill="#d4a853" fillOpacity="0.6">2026.03.01 ~ 03.31</text>
+        <text x="60" y="136" textAnchor="middle" fontSize="2.8" fontWeight="500" fill={`url(#gold_${t.id})`} fillOpacity="0.6">2026.03.01 ~ 03.31</text>
         {/* 병원명 — 하단 */}
-        <text x="60" y="146" textAnchor="middle" fontSize="3" fontWeight="600" fill="#d4a853" fillOpacity="0.5" letterSpacing="2">{name}</text>
+        <text x="60" y="146" textAnchor="middle" fontSize="3" fontWeight="600" fill={`url(#gold_${t.id})`} fillOpacity="0.5" letterSpacing="2">{name}</text>
       </>);
     }
     if (h === 'pop') {
@@ -1159,23 +1166,23 @@ function TemplateSVGPreview({ template: t, category, hospitalName }: { template:
       </>);
     }
     if (h === 'minimal') {
-      // ━━ 미니멀 모던: 거대 타이포 + 좌측 컬러 바 + 전부 좌정렬 ━━
+      // ━━ 미니멀 모던: 수평선 디바이더, 좌측 바 없음, 최대 여백 ━━
       return wrap(<>
         <rect x="0" y="0" width="120" height="160" rx="6" fill="white" />
-        {/* 좌측 얇은 컬러 바 */}
-        <rect x="0" y="0" width="6" height="160" fill={c} />
-        {/* 전부 좌정렬 */}
-        <text x="18" y="24" textAnchor="start" fontSize="3" fontWeight="500" fill="#94a3b8" letterSpacing="2">EVENT</text>
-        {/* HERO: 거대 타이포 — 중앙 무대 */}
-        <text x="18" y="56" textAnchor="start" fontSize="16" fontWeight="900" fill="#1e293b">임플란트</text>
-        <text x="18" y="76" textAnchor="start" fontSize="10" fontWeight="700" fill={c}>특별 할인</text>
+        {/* 전부 좌정렬 — 바 없음 */}
+        <text x="14" y="28" textAnchor="start" fontSize="3" fontWeight="500" fill="#94a3b8" letterSpacing="2">EVENT</text>
+        {/* HERO: 거대 타이포 */}
+        <text x="14" y="58" textAnchor="start" fontSize="16" fontWeight="900" fill="#1e293b">임플란트</text>
+        <text x="14" y="78" textAnchor="start" fontSize="10" fontWeight="700" fill={c}>특별 할인</text>
+        {/* 수평 디바이더 */}
+        <line x1="14" y1="88" x2="106" y2="88" stroke="#cbd5e1" strokeWidth="0.8" />
         {/* 가격 — 좌정렬 */}
-        <text x="18" y="98" textAnchor="start" fontSize="3.5" fill="#94a3b8" textDecoration="line-through">990,000원</text>
-        <text x="18" y="112" textAnchor="start" fontSize="10" fontWeight="900" fill="#1e293b">690,000원</text>
+        <text x="14" y="104" textAnchor="start" fontSize="3.5" fill="#94a3b8" textDecoration="line-through">990,000원</text>
+        <text x="14" y="118" textAnchor="start" fontSize="10" fontWeight="900" fill="#1e293b">690,000원</text>
         {/* 기간 */}
-        <text x="18" y="128" textAnchor="start" fontSize="3" fontWeight="500" fill="#94a3b8">2026.03.01 ~ 03.31</text>
+        <text x="14" y="136" textAnchor="start" fontSize="3" fontWeight="500" fill="#94a3b8">2026.03.01 ~ 03.31</text>
         {/* 병원명 */}
-        <text x="18" y="150" textAnchor="start" fontSize="3" fontWeight="600" fill="#94a3b8">{name}</text>
+        <text x="14" y="152" textAnchor="start" fontSize="3" fontWeight="600" fill="#94a3b8">{name}</text>
       </>);
     }
     if (h === 'wave') {
@@ -1269,39 +1276,46 @@ function TemplateSVGPreview({ template: t, category, hospitalName }: { template:
       </>);
     }
     if (h === 'luxury') {
-      // 다크 프리미엄 — 풀 네이비 + 골드
+      // 다크 프리미엄 — 동심원 골드 링 + 방사형 그라데이션
       return wrap(<>
-        <rect x="0" y="0" width="120" height="160" rx="6" fill="#0f172a" />
-        {/* 골드 코너 장식 */}
-        <path d="M8,8 L32,8 L32,10 L10,10 L10,32 L8,32 Z" fill="#d4a853" fillOpacity="0.7" />
-        <path d="M112,8 L88,8 L88,10 L110,10 L110,32 L112,32 Z" fill="#d4a853" fillOpacity="0.7" />
-        <path d="M8,152 L8,128 L10,128 L10,150 L32,150 L32,152 Z" fill="#d4a853" fillOpacity="0.5" />
-        <path d="M112,152 L112,128 L110,128 L110,150 L88,150 L88,152 Z" fill="#d4a853" fillOpacity="0.5" />
-        <text x="60" y="24" textAnchor="middle" fontSize="3.5" fontWeight="700" fill="#d4a853" letterSpacing="2">{name}</text>
-        {/* 프로필 */}
-        <circle cx="60" cy="54" r="22" fill="#d4a853" fillOpacity="0.2" stroke="#d4a853" strokeWidth="1.5" />
-        <circle cx="60" cy="48" r="7" fill="#d4a853" fillOpacity="0.5" />
-        <ellipse cx="60" cy="62" rx="10" ry="6" fill="#d4a853" fillOpacity="0.3" />
-        <text x="60" y="88" textAnchor="middle" fontSize="10" fontWeight="900" fill="#d4a853">김원장</text>
-        <rect x="24" y="94" width="72" height="12" rx="6" fill="#d4a853" fillOpacity="0.25" />
-        <text x="60" y="102.5" textAnchor="middle" fontSize="4" fontWeight="700" fill="#d4a853">치과 전문의</text>
-        <text x="60" y="118" textAnchor="middle" fontSize="3.2" fill="#94a3b8">서울대 치대 · 임플란트 전문</text>
-        <line x1="28" y1="126" x2="92" y2="126" stroke="#d4a853" strokeWidth="0.6" />
-        <text x="60" y="140" textAnchor="middle" fontSize="3.5" fontWeight="700" fill="#d4a853">{name}</text>
+        <defs>
+          <radialGradient id={`radBg_${t.id}`} cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="#1a1a2e" />
+            <stop offset="100%" stopColor="#0f172a" />
+          </radialGradient>
+        </defs>
+        <rect x="0" y="0" width="120" height="160" rx="6" fill={`url(#radBg_${t.id})`} />
+        <text x="60" y="20" textAnchor="middle" fontSize="3.5" fontWeight="700" fill="#d4a853" letterSpacing="2">{name}</text>
+        {/* 동심원 골드 링 3개 */}
+        <circle cx="60" cy="72" r="40" fill="none" stroke="#d4a853" strokeWidth="0.5" strokeOpacity="0.4" />
+        <circle cx="60" cy="72" r="30" fill="none" stroke="#d4a853" strokeWidth="0.7" strokeOpacity="0.6" />
+        <circle cx="60" cy="72" r="20" fill="none" stroke="#d4a853" strokeWidth="1" strokeOpacity="0.8" />
+        {/* 프로필 — 가장 안쪽 링 내부 */}
+        <circle cx="60" cy="66" r="7" fill="#d4a853" fillOpacity="0.5" />
+        <ellipse cx="60" cy="80" rx="10" ry="6" fill="#d4a853" fillOpacity="0.3" />
+        <text x="60" y="104" textAnchor="middle" fontSize="10" fontWeight="900" fill="#d4a853">김원장</text>
+        <rect x="24" y="110" width="72" height="12" rx="6" fill="#d4a853" fillOpacity="0.25" />
+        <text x="60" y="118.5" textAnchor="middle" fontSize="4" fontWeight="700" fill="#d4a853">치과 전문의</text>
+        <text x="60" y="134" textAnchor="middle" fontSize="3.2" fill="#94a3b8">서울대 치대 · 임플란트 전문</text>
+        <line x1="28" y1="140" x2="92" y2="140" stroke="#d4a853" strokeWidth="0.6" />
+        <text x="60" y="152" textAnchor="middle" fontSize="3.5" fontWeight="700" fill="#d4a853">{name}</text>
       </>);
     }
     if (h === 'portrait') {
-      // 상단 풀컬러 + 프로필 오버랩
+      // 상단 풀컬러 + 유기적 웨이브 경계 + 프로필 오버랩
       return wrap(<>
-        <rect x="0" y="0" width="120" height="70" rx="6" fill={c} />
-        <rect x="0" y="64" width="120" height="6" fill={c} />
+        <rect x="0" y="0" width="120" height="160" rx="6" fill="white" />
+        {/* 상단 컬러 영역 — 웨이브 하단 경계 */}
+        <path d="M0,0 L120,0 L120,65 Q90,75 60,65 Q30,55 0,65 Z" fill={c} />
         <circle cx="18" cy="14" r="12" fill="white" fillOpacity="0.1" />
-        <circle cx="104" cy="60" r="16" fill="white" fillOpacity="0.08" />
+        <circle cx="104" cy="50" r="16" fill="white" fillOpacity="0.08" />
         <text x="60" y="16" textAnchor="middle" fontSize="3.5" fontWeight="700" fill="white">{name}</text>
-        {/* 프로필 — 경계 겹침 */}
-        <circle cx="60" cy="60" r="26" fill="white" stroke="white" strokeWidth="3" filter={`url(#shadow_${t.id})`} />
-        <circle cx="60" cy="52" r="9" fill={c} fillOpacity="0.4" />
-        <ellipse cx="60" cy="68" rx="13" ry="7.5" fill={c} fillOpacity="0.2" />
+        {/* 하단 화이트 영역 (웨이브 형태) */}
+        <path d="M0,65 Q30,55 60,65 Q90,75 120,65 L120,160 L0,160 Z" fill="white" />
+        {/* 프로필 — 웨이브 꼭대기에 걸침 */}
+        <circle cx="60" cy="60" r="22" fill="white" stroke="white" strokeWidth="3" filter={`url(#shadow_${t.id})`} />
+        <circle cx="60" cy="53" r="8" fill={c} fillOpacity="0.4" />
+        <ellipse cx="60" cy="68" rx="11" ry="6.5" fill={c} fillOpacity="0.2" />
         <text x="60" y="96" textAnchor="middle" fontSize="10" fontWeight="900" fill={c}>김원장</text>
         <rect x="22" y="100" width="76" height="14" rx="7" fill={`url(#accent_${t.id})`} />
         <text x="60" y="110" textAnchor="middle" fontSize="4.5" fontWeight="700" fill="white">치과 전문의</text>
@@ -1335,7 +1349,7 @@ function TemplateSVGPreview({ template: t, category, hospitalName }: { template:
       </>);
     }
     if (h === 'story') {
-      // 스토리형 — 상단 솔리드 프로필 바
+      // 스토리형 — 매거진 에디토리얼 + 대형 인용 부호
       return wrap(<>
         <text x="60" y="12" textAnchor="middle" fontSize="3.5" fontWeight="700" fill={a}>{name}</text>
         {/* 상단 프로필 바 — 솔리드 컬러 */}
@@ -1345,12 +1359,15 @@ function TemplateSVGPreview({ template: t, category, hospitalName }: { template:
         <ellipse cx="30" cy="44" rx="7" ry="4.5" fill="white" fillOpacity="0.35" />
         <text x="80" y="32" textAnchor="middle" fontSize="3.5" fontWeight="700" fill="white" fillOpacity="0.9">치과 전문의</text>
         <text x="80" y="48" textAnchor="middle" fontSize="8" fontWeight="900" fill="white">김원장</text>
-        {/* 인사말 카드 */}
+        {/* 인사말 카드 + 대형 인용부호 배경 */}
         <rect x="10" y="64" width="100" height="52" rx="8" fill={c} fillOpacity="0.08" />
-        <text x="60" y="78" textAnchor="middle" fontSize="4" fill="#475569">"안녕하세요.</text>
+        {/* 오버사이즈 인용부호 — 에디토리얼 느낌 */}
+        <text x="16" y="94" textAnchor="start" fontSize="48" fontWeight="900" fill={c} fillOpacity="0.15">{"\u201C"}</text>
+        <text x="104" y="114" textAnchor="end" fontSize="48" fontWeight="900" fill={c} fillOpacity="0.15">{"\u201D"}</text>
+        <text x="60" y="78" textAnchor="middle" fontSize="4" fill="#475569">안녕하세요.</text>
         <text x="60" y="87" textAnchor="middle" fontSize="4" fill="#475569">여러분의 건강한 미소를</text>
         <text x="60" y="96" textAnchor="middle" fontSize="4" fill="#475569">위해 항상 노력하겠습니다.</text>
-        <text x="60" y="108" textAnchor="middle" fontSize="4" fill={a} fontWeight="700">편안하게 찾아주세요."</text>
+        <text x="60" y="108" textAnchor="middle" fontSize="4" fill={a} fontWeight="700">편안하게 찾아주세요.</text>
         <rect x="14" y="122" width="92" height="14" rx="7" fill={c} fillOpacity="0.06" />
         <text x="60" y="131" textAnchor="middle" fontSize="3" fontWeight="500" fill="#64748b">서울대 치대 · 임플란트 전문 · 경력 10년</text>
         <text x="60" y="152" textAnchor="middle" fontSize="3" fontWeight="700" fill={a}>{name}</text>
