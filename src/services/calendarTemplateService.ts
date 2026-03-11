@@ -776,10 +776,10 @@ const THEMED_BUILDERS: Record<string, (data: CalendarData) => string> = {
 export const CALENDAR_THEME_OPTIONS = [
   { value: 'autumn',             label: '🍁 가을 단풍',        emoji: '🍁' },
   { value: 'korean_traditional', label: '🦢 한국 전통',         emoji: '🦢' },
-  { value: 'winter',             label: '❄️ 겨울 크리스마스',   emoji: '❄️' },
+  { value: 'winter',             label: '❄️ 크리스마스',        emoji: '❄️' },
   { value: 'cherry_blossom',     label: '🌸 벚꽃 봄',           emoji: '🌸' },
-  { value: 'spring_kids',        label: '🌼 봄 어린이',         emoji: '🌼' },
-  { value: 'medical_notebook',   label: '📓 의료 노트북',        emoji: '📓' },
+  { value: 'spring_kids',        label: '🌼 봄 동산',           emoji: '🌼' },
+  { value: 'medical_notebook',   label: '📓 노트북',            emoji: '📓' },
 ];
 
 // ── HTML 달력 생성 ──
