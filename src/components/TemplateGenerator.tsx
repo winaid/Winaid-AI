@@ -1845,140 +1845,133 @@ function TemplateSVGPreview({ template: t, category, hospitalName }: { template:
       <text x="60" y={y + 11.5} textAnchor="middle" fontSize="4.5" fontWeight="700" fill="white">{label}</text>
     </>);
     if (h === 'urgent') {
-      // 긴급채용 — 대담한 컬러 풀 배경
+      // 긴급채용 — 전체 카드 프라이머리 배경, 대담한 화이트 텍스트
       return wrap(<>
-        <rect x="0" y="0" width="120" height="58" rx="6" fill={c} />
-        <rect x="0" y="52" width="120" height="6" fill={c} />
-        {/* 장식 원 */}
-        <circle cx="14" cy="10" r="12" fill="white" fillOpacity="0.06" />
-        <circle cx="106" cy="48" r="10" fill="white" fillOpacity="0.05" />
-        <text x="60" y="16" textAnchor="middle" fontSize="4" fontWeight="800" fill="white" fillOpacity="0.8" letterSpacing="2.5">URGENT HIRING</text>
-        <text x="60" y="34" textAnchor="middle" fontSize="10" fontWeight="900" fill="white">간호사 급구</text>
-        <text x="60" y="46" textAnchor="middle" fontSize="3.5" fill="white" fillOpacity="0.8">함께 성장할 인재를 찾습니다</text>
-        {/* 조건 — 체크 리스트 */}
-        {['정규직 / 경력 1년 이상','4대보험 완비','중식 제공 / 인센티브','채용시까지 상시 모집'].map((txt, i) => (
+        <rect x="0" y="0" width="120" height="160" rx="6" fill={c} />
+        {/* 장식 반투명 원 */}
+        <circle cx="10" cy="10" r="18" fill="white" fillOpacity="0.3" />
+        <circle cx="110" cy="150" r="22" fill="white" fillOpacity="0.3" />
+        <circle cx="105" cy="40" r="10" fill="white" fillOpacity="0.3" />
+        <text x="60" y="42" textAnchor="middle" fontSize="14" fontWeight="900" fill="white">긴급 채용</text>
+        <text x="60" y="58" textAnchor="middle" fontSize="5" fontWeight="700" fill="white" fillOpacity="0.85">치과위생사</text>
+        <rect x="30" y="64" width="60" height="0.8" rx="0.4" fill="white" fillOpacity="0.4" />
+        {['정규직 / 경력 우대','4대보험 완비','중식 제공 / 인센티브','채용시까지 상시 모집'].map((txt, i) => (
           <g key={i}>
-            <rect x="14" y={64 + i * 16} width="92" height="14" rx="7" fill={i % 2 === 0 ? c : 'white'} fillOpacity={i % 2 === 0 ? 1 : 0.95} filter={i % 2 !== 0 ? `url(#shadow_${t.id})` : undefined} />
-            <circle cx="24" cy={71 + i * 16} r="3" fill={i % 2 === 0 ? 'white' : c} />
-            <text x="24" y={73.5 + i * 16} textAnchor="middle" fontSize="4.5" fontWeight="900" fill={i % 2 === 0 ? 'white' : c}>✓</text>
-            <text x="32" y={73.5 + i * 16} fontSize="3.5" fontWeight="500" fill={i % 2 === 0 ? 'white' : '#475569'}>{txt}</text>
+            <circle cx="22" cy={78 + i * 13} r="2" fill="white" fillOpacity="0.7" />
+            <text x="28" y={80 + i * 13} fontSize="3.5" fontWeight="600" fill="white" fillOpacity="0.9">{txt}</text>
           </g>
         ))}
-        {hireCta(132, '지금 바로 지원')}
-        <text x="60" y="155" textAnchor="middle" fontSize="3" fontWeight="500" fill="#64748b">{name}</text>
+        {/* 반전 CTA — 흰색 버튼 */}
+        <rect x="14" y="132" width="92" height="18" rx="9" fill="white" />
+        <text x="60" y="143.5" textAnchor="middle" fontSize="4.5" fontWeight="700" fill={c}>지금 바로 지원</text>
+        <text x="60" y="156" textAnchor="middle" fontSize="3" fontWeight="500" fill="white" fillOpacity="0.6">{name}</text>
       </>);
     }
     if (h === 'corporate') {
-      // 기업형 클린 — 테이블 스타일
+      // 기업형 — 상단 네이비 헤더 + 하단 클린 테이블
       return wrap(<>
-        <rect x="0" y="0" width="120" height="48" rx="6" fill={c} />
-        <text x="60" y="14" textAnchor="middle" fontSize="3.5" fontWeight="700" fill="white" fillOpacity="0.8" letterSpacing="1">{name}</text>
-        <text x="60" y="26" textAnchor="middle" fontSize="3.5" fontWeight="600" fill="white" fillOpacity="0.6" letterSpacing="2">RECRUITMENT</text>
-        <text x="60" y="42" textAnchor="middle" fontSize="8.5" fontWeight="900" fill="white">간호사 모집</text>
-        {/* 테이블 */}
-        <rect x="14" y="52" width="92" height="72" rx="6" fill="white" stroke={c} strokeWidth="0.5" strokeOpacity="0.2" filter={`url(#shadow_${t.id})`} />
-        <rect x="14" y="52" width="92" height="14" rx="6" fill={c} fillOpacity="0.5" />
-        <text x="34" y="62" fontSize="3.2" fontWeight="800" fill={c}>항목</text>
-        <text x="98" y="62" textAnchor="end" fontSize="3.2" fontWeight="800" fill={c}>내용</text>
-        {[
-          {l:'고용형태', v:'정규직'},
-          {l:'자격요건', v:'경력 1년+'},
-          {l:'복리후생', v:'4대보험/중식'},
-          {l:'모집기간', v:'상시모집'},
-        ].map((item, i) => (
+        <rect x="0" y="0" width="120" height="56" rx="6" fill="#1e293b" />
+        <rect x="0" y="50" width="120" height="6" fill="#1e293b" />
+        <text x="60" y="20" textAnchor="middle" fontSize="3.5" fontWeight="600" fill="white" fillOpacity="0.5" letterSpacing="1.5">{name}</text>
+        <text x="60" y="42" textAnchor="middle" fontSize="10" fontWeight="900" fill="white">치과위생사 모집</text>
+        {/* 요구사항 — 교대 줄무늬 */}
+        {['정규직 / 경력 우대','4대보험 완비','중식 제공 / 인센티브','채용시까지 상시 모집'].map((txt, i) => (
           <g key={i}>
-            {i % 2 === 0 && <rect x="14" y={68 + i * 13} width="92" height="13" fill="#f8fafc" />}
-            <text x="22" y={77 + i * 13} fontSize="3.5" fontWeight="500" fill="#475569">{item.l}</text>
-            <text x="98" y={77 + i * 13} textAnchor="end" fontSize="3.5" fontWeight="800" fill={c}>{item.v}</text>
+            <rect x="0" y={60 + i * 16} width="120" height="16" fill={i % 2 === 0 ? '#f1f5f9' : 'white'} />
+            <text x="18" y={71 + i * 16} fontSize="3.8" fontWeight="600" fill="#334155">{txt}</text>
+          </g>
+        ))}
+        {/* 솔리드 CTA */}
+        <rect x="14" y={130} width="92" height="18" rx="9" fill={c} />
+        <text x="60" y={141.5} textAnchor="middle" fontSize="4.5" fontWeight="700" fill="white">지원하기</text>
+        <text x="60" y="155" textAnchor="middle" fontSize="3" fontWeight="500" fill="#94a3b8">{name}</text>
+      </>);
+    }
+    if (h === 'team') {
+      // 팀 친근형 — 겹치는 세 원 + 따뜻한 분위기
+      return wrap(<>
+        {/* 팀원을 상징하는 겹치는 원 */}
+        <circle cx="42" cy="32" r="18" fill={c} fillOpacity="0.3" />
+        <circle cx="60" cy="28" r="18" fill={c} fillOpacity="0.45" />
+        <circle cx="78" cy="32" r="18" fill={c} fillOpacity="0.6" />
+        <text x="60" y="62" textAnchor="middle" fontSize="7" fontWeight="900" fill={c}>함께할 팀원을</text>
+        <text x="60" y="74" textAnchor="middle" fontSize="7" fontWeight="900" fill={c}>찾습니다</text>
+        {/* 솔리드 불릿 목록 */}
+        {['치과위생사 정규직','경력 우대 / 신입 가능','4대보험 및 중식 제공','채용시까지 상시 모집'].map((txt, i) => (
+          <g key={i}>
+            <circle cx="20" cy={90 + i * 12} r="3" fill={c} />
+            <text x="27" y={92 + i * 12} fontSize="3.5" fontWeight="600" fill="#334155">{txt}</text>
+          </g>
+        ))}
+        {hireCta(140)}
+        <text x="60" y="157" textAnchor="middle" fontSize="2.8" fontWeight="500" fill="#94a3b8">{name}</text>
+      </>);
+    }
+    if (h === 'modern') {
+      // 모던 다크 — 풀 다크 배경 + 왼쪽 액센트 바
+      return wrap(<>
+        <rect x="0" y="0" width="120" height="160" rx="6" fill="#0f172a" />
+        <rect x="0" y="0" width="4" height="160" fill={a} />
+        <text x="60" y="24" textAnchor="middle" fontSize="10" fontWeight="900" fill="white" letterSpacing="3">WE ARE</text>
+        <text x="60" y="40" textAnchor="middle" fontSize="10" fontWeight="900" fill="white" letterSpacing="3">HIRING</text>
+        <rect x="30" y="46" width="60" height="1" rx="0.5" fill={a} />
+        {/* 하이라이트 마커 + 요구사항 */}
+        {['치과위생사 정규직','경력 우대 / 신입 가능','4대보험 완비','중식 제공 / 인센티브'].map((txt, i) => (
+          <g key={i}>
+            <rect x="16" y={58 + i * 16} width="88" height="12" rx="2" fill={a} fillOpacity="0.3" />
+            <text x="22" y={67 + i * 16} fontSize="3.5" fontWeight="600" fill="white">{txt}</text>
+          </g>
+        ))}
+        {hireCta(126)}
+        <text x="60" y="148" textAnchor="middle" fontSize="3" fontWeight="500" fill="#64748b">{name}</text>
+      </>);
+    }
+    if (h === 'brand') {
+      // 브랜드 — 대각선 컬러 스트라이프 + 스퀘어 마커
+      return wrap(<>
+        {/* 대각선 컬러 스트라이프 */}
+        <path d="M120,0 L120,50 L0,100 L0,50 Z" fill={c} fillOpacity="0.35" />
+        <text x="60" y="18" textAnchor="middle" fontSize="5" fontWeight="800" fill={c} letterSpacing="0.5">{name}</text>
+        <rect x="20" y="22" width="80" height="1" rx="0.5" fill={c} fillOpacity="0.4" />
+        <text x="60" y="42" textAnchor="middle" fontSize="9" fontWeight="900" fill={c}>치과위생사 모집</text>
+        <text x="60" y="54" textAnchor="middle" fontSize="3.5" fontWeight="500" fill="#475569">함께 성장할 인재를 찾습니다</text>
+        {/* 스퀘어 마커 목록 */}
+        {['정규직 / 경력 우대','4대보험 완비','중식 제공 / 인센티브','채용시까지 상시 모집'].map((txt, i) => (
+          <g key={i}>
+            <rect x="18" y={68 + i * 14} width="5" height="5" rx="1" fill={c} />
+            <text x="28" y={73 + i * 14} fontSize="3.5" fontWeight="600" fill="#334155">{txt}</text>
           </g>
         ))}
         {hireCta(130)}
         <text x="60" y="155" textAnchor="middle" fontSize="3" fontWeight="500" fill="#64748b">{name}</text>
       </>);
     }
-    if (h === 'team') {
-      // 팀 친근형 — 2x2 필 배지
-      return wrap(<>
-        <circle cx="102" cy="14" r="20" fill={c} fillOpacity="0.3" />
-        <circle cx="14" cy="148" r="16" fill={c} fillOpacity="0.3" />
-        <text x="60" y="14" textAnchor="middle" fontSize="3.5" fontWeight="700" fill={a}>{name}</text>
-        <rect x="14" y="20" width="92" height="32" rx="8" fill={c} fillOpacity="0.35" />
-        <text x="60" y="32" textAnchor="middle" fontSize="3.5" fontWeight="600" fill={a}>We're Hiring!</text>
-        <text x="60" y="46" textAnchor="middle" fontSize="8.5" fontWeight="900" fill={c}>간호사 모집</text>
-        <text x="60" y="58" textAnchor="middle" fontSize="3.5" fontWeight="500" fill="#475569">함께 성장할 인재를 찾습니다</text>
-        {['💼 정규직','🛡 4대보험','🍽 중식 제공','📋 상시 모집'].map((txt, i) => (
-          <g key={i}>
-            <rect x={i % 2 === 0 ? 10 : 64} y={66 + Math.floor(i/2) * 22} width="50" height="18" rx="9" fill="white" filter={`url(#shadow_${t.id})`} stroke={c} strokeWidth="1.2" strokeOpacity="0.6" />
-            <text x={i % 2 === 0 ? 35 : 89} y={77 + Math.floor(i/2) * 22} textAnchor="middle" fontSize="3.5" fontWeight="700" fill="#475569">{txt}</text>
-          </g>
-        ))}
-        {hireCta(116)}
-        <text x="60" y="148" textAnchor="middle" fontSize="3" fontWeight="500" fill="#64748b">{name}</text>
-      </>);
-    }
-    if (h === 'modern') {
-      // 모던 다크
-      return wrap(<>
-        <rect x="0" y="0" width="120" height="160" rx="6" fill="#0f172a" />
-        {/* 장식 원 */}
-        <circle cx="100" cy="12" r="16" fill={c} fillOpacity="0.08" />
-        <circle cx="16" cy="150" r="12" fill={c} fillOpacity="0.05" />
-        <rect x="28" y="8" width="64" height="14" rx="7" fill={`url(#accent_${t.id})`} />
-        <text x="60" y="17.5" textAnchor="middle" fontSize="3.5" fontWeight="800" fill="white" letterSpacing="1">JOIN OUR TEAM</text>
-        <text x="60" y="38" textAnchor="middle" fontSize="9.5" fontWeight="900" fill="white">간호사 모집</text>
-        <text x="60" y="50" textAnchor="middle" fontSize="3.5" fill="#94a3b8">함께 성장할 인재를 찾습니다</text>
-        {['💼 정규직 / 경력 1년+','🛡 4대보험 완비','🍽 중식 제공 / 인센티브','📋 채용시까지 상시 모집'].map((txt, i) => (
-          <g key={i}>
-            <rect x="14" y={58 + i * 17} width="92" height="14" rx="7" fill="#1e293b" stroke={c} strokeWidth="0.3" strokeOpacity="0.15" />
-            <rect x="14" y={60 + i * 17} width="3" height="10" rx="1.5" fill={c} />
-            <text x="24" y={67 + i * 17} fontSize="3.5" fontWeight="500" fill="#e2e8f0">{txt}</text>
-          </g>
-        ))}
-        {hireCta(128)}
-        <text x="60" y="155" textAnchor="middle" fontSize="3" fontWeight="500" fill="#64748b">{name}</text>
-      </>);
-    }
-    if (h === 'brand') {
-      // 프리미엄 브랜드 — 미니멀 엘레강스
-      return wrap(<>
-        <rect x="0" y="0" width="6" height="160" fill={c} />
-        <line x1="14" y1="10" x2="106" y2="10" stroke={c} strokeOpacity="0.4" strokeWidth="0.8" />
-        <text x="60" y="22" textAnchor="middle" fontSize="3.5" fontWeight="600" fill="#64748b" letterSpacing="2">{name}</text>
-        <text x="60" y="36" textAnchor="middle" fontSize="3.5" fontWeight="600" fill={a} letterSpacing="2.5">CAREER OPPORTUNITY</text>
-        <text x="60" y="54" textAnchor="middle" fontSize="9" fontWeight="900" fill={c}>간호사 모집</text>
-        <line x1="32" y1="60" x2="88" y2="60" stroke={c} strokeOpacity="0.35" strokeWidth="0.5" />
-        <text x="60" y="72" textAnchor="middle" fontSize="3.5" fontWeight="500" fill="#475569">함께 성장할 인재를 찾습니다</text>
-        {['정규직 / 경력 1년 이상','4대보험 완비','중식 제공 / 인센티브','채용시까지 상시 모집'].map((txt, i) => (
-          <g key={i}>
-            <circle cx="22" cy={88 + i * 14} r="2.5" fill={c} fillOpacity="0.4" />
-            <text x="29" y={90 + i * 14} fontSize="3.5" fontWeight="500" fill="#475569">{txt}</text>
-            {i < 3 && <line x1="18" y1={94 + i * 14} x2="102" y2={94 + i * 14} stroke="#e2e8f0" strokeWidth="0.3" />}
-          </g>
-        ))}
-        <line x1="14" y1="148" x2="106" y2="148" stroke={c} strokeOpacity="0.4" strokeWidth="0.5" />
-        <text x="60" y="155" textAnchor="middle" fontSize="3.2" fontWeight="700" fill={a}>{name}</text>
-      </>);
-    }
-    // default — 복리후생 2x2 카드 그리드
+    // default — 솔리드 헤더 + 2열 카드 그리드
     return wrap(<>
-      <text x="60" y="12" textAnchor="middle" fontSize="4" fontWeight="700" fill={a}>{name}</text>
-      <text x="60" y="24" textAnchor="middle" fontSize="3.5" fontWeight="600" fill={a}>We're Hiring</text>
-      <text x="60" y="40" textAnchor="middle" fontSize="8.5" fontWeight="900" fill={c}>간호사 모집</text>
-      <text x="60" y="52" textAnchor="middle" fontSize="3.5" fontWeight="500" fill="#475569">함께 성장할 인재를 찾습니다</text>
+      {/* 상단 30% 솔리드 헤더 */}
+      <rect x="0" y="0" width="120" height="48" rx="6" fill={c} />
+      <rect x="0" y="42" width="120" height="6" fill={c} />
+      <text x="60" y="30" textAnchor="middle" fontSize="10" fontWeight="900" fill="white">채용 공고</text>
+      <text x="60" y="42" textAnchor="middle" fontSize="3.5" fontWeight="600" fill="white" fillOpacity="0.7">{name}</text>
+      {/* 2열 카드 그리드 — 솔리드 컬러 상단 보더 */}
       {[
-        {icon:'💼', t:'정규직'},
-        {icon:'🛡', t:'4대보험'},
-        {icon:'🍽', t:'중식 제공'},
-        {icon:'📋', t:'상시 모집'},
-      ].map(({icon, t: txt}, i) => (
-        <g key={i}>
-          <rect x={i % 2 === 0 ? 10 : 64} y={60 + Math.floor(i/2) * 26} width="50" height="22" rx="6" fill="white" filter={`url(#shadow_${t.id})`} />
-          <rect x={i % 2 === 0 ? 10 : 64} y={60 + Math.floor(i/2) * 26} width="50" height="10" rx="6" fill={c} fillOpacity="0.12" />
-          <text x={i % 2 === 0 ? 35 : 89} y={68 + Math.floor(i/2) * 26} textAnchor="middle" fontSize="5.5">{icon}</text>
-          <text x={i % 2 === 0 ? 35 : 89} y={78 + Math.floor(i/2) * 26} textAnchor="middle" fontSize="3.5" fontWeight="700" fill="#475569">{txt}</text>
-        </g>
-      ))}
-      {hireCta(116)}
+        {label:'고용형태', value:'정규직'},
+        {label:'자격요건', value:'경력 우대'},
+        {label:'복리후생', value:'4대보험/중식'},
+        {label:'모집기간', value:'상시모집'},
+      ].map(({label, value}, i) => {
+        const gx = i % 2 === 0 ? 10 : 64;
+        const gy = 54 + Math.floor(i/2) * 30;
+        return (
+          <g key={i}>
+            <rect x={gx} y={gy} width="50" height="26" rx="4" fill="white" filter={`url(#shadow_${t.id})`} />
+            <rect x={gx} y={gy} width="50" height="4" rx="2" fill={c} />
+            <text x={gx + 25} y={gy + 14} textAnchor="middle" fontSize="3" fontWeight="500" fill="#94a3b8">{label}</text>
+            <text x={gx + 25} y={gy + 22} textAnchor="middle" fontSize="4" fontWeight="800" fill="#334155">{value}</text>
+          </g>
+        );
+      })}
+      {hireCta(120)}
       <text x="60" y="148" textAnchor="middle" fontSize="3" fontWeight="500" fill="#64748b">{name}</text>
     </>);
   }
