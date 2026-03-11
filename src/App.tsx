@@ -1043,13 +1043,13 @@ const App: React.FC = () => {
                 </div>
 
                 {/* 기능 힌트 */}
-                <div className={`mt-8 flex flex-col gap-2 w-full max-w-xs`}>
+                <div className={`mt-8 flex flex-col items-center gap-2`}>
                   {[
                     { icon: '✦', text: '병원 말투 학습 기반 생성' },
                     { icon: '✦', text: 'SEO 키워드 자동 최적화' },
                     { icon: '✦', text: '의료광고법 준수 검토' },
                   ].map(item => (
-                    <div key={item.text} className={`flex items-center gap-3 px-3 py-2 rounded-lg text-xs ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>
+                    <div key={item.text} className={`flex items-center gap-3 px-4 py-2 rounded-lg text-xs ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>
                       <span className={`text-[10px] ${darkMode ? 'text-blue-500' : 'text-blue-400'}`}>{item.icon}</span>
                       {item.text}
                     </div>
