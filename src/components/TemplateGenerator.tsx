@@ -1063,148 +1063,172 @@ function TemplateSVGPreview({ template: t, category, hospitalName }: { template:
 
   if (category === 'event') {
     const h = t.layoutHint;
-    // 공통: 이벤트 CTA 버튼
-    const ctaBtn = (y: number, label: string) => <>
-      <rect x="14" y={y} width="92" height="18" rx="9" fill={`url(#accent_${t.id})`} />
-      <text x="60" y={y + 12} textAnchor="middle" fontSize="4.5" fontWeight="700" fill="white">{label}</text>
-    </>;
 
     if (h === 'price') {
-      // ━━ 할인 배너: 상단 50% 솔리드 컬러 + 큰 할인 뱃지 ━━
+      // ━━ 할인 배너: 거대 30% 텍스트 + 대각선 스트라이프 패턴 ━━
       return wrap(<>
-        <rect x="0" y="0" width="120" height="70" rx="6" fill={c} />
-        <rect x="0" y="64" width="120" height="6" fill={c} />
-        {/* 장식 */}
-        <circle cx="16" cy="12" r="14" fill="white" fillOpacity="0.08" />
-        <circle cx="104" cy="60" r="18" fill="white" fillOpacity="0.06" />
-        <text x="60" y="14" textAnchor="middle" fontSize="3.5" fontWeight="700" fill="white" fillOpacity="0.9" letterSpacing="1">{name}</text>
-        <text x="60" y="30" textAnchor="middle" fontSize="8" fontWeight="900" fill="white">임플란트 이벤트</text>
-        {/* 할인 뱃지 — 화이트 원 솔리드 */}
-        <circle cx="60" cy="52" r="18" fill="white" />
-        <text x="60" y="50" textAnchor="middle" fontSize="14" fontWeight="900" fill={c}>30%</text>
-        <text x="60" y="60" textAnchor="middle" fontSize="4.5" fontWeight="800" fill={a}>OFF</text>
-        {/* 가격 카드 */}
-        <rect x="12" y="78" width="96" height="30" rx="8" fill="white" filter={`url(#shadow_${t.id})`} />
-        <text x="60" y="89" textAnchor="middle" fontSize="3.5" fill="#94a3b8" textDecoration="line-through">990,000원</text>
-        <text x="60" y="103" textAnchor="middle" fontSize="11" fontWeight="900" fill={c}>690,000원</text>
-        <rect x="20" y="112" width="80" height="10" rx="5" fill={c} fillOpacity="0.08" />
-        <text x="60" y="119" textAnchor="middle" fontSize="3" fontWeight="600" fill="#64748b">2026.03.01 ~ 03.31</text>
-        {ctaBtn(126, '지금 바로 예약하세요')}
-        <text x="60" y="154" textAnchor="middle" fontSize="2.8" fill="#94a3b8">{name}</text>
+        <defs>
+          <pattern id={`stripe_${t.id}`} width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+            <line x1="0" y1="0" x2="0" y2="6" stroke="white" strokeWidth="1.5" strokeOpacity="0.35" />
+          </pattern>
+        </defs>
+        {/* 솔리드 컬러 풀 배경 */}
+        <rect x="0" y="0" width="120" height="160" rx="6" fill={c} />
+        {/* 대각선 스트라이프 텍스처 */}
+        <rect x="0" y="0" width="120" height="160" rx="6" fill={`url(#stripe_${t.id})`} />
+        {/* 병원명 — 좌상단 작게 */}
+        <text x="8" y="12" textAnchor="start" fontSize="3" fontWeight="600" fill="white" fillOpacity="0.8">{name}</text>
+        {/* HERO: 거대 30% 텍스트 — 카드 높이 60% 차지 */}
+        <text x="60" y="62" textAnchor="middle" fontSize="48" fontWeight="900" fill="white" fillOpacity="0.95">30</text>
+        <text x="96" y="40" textAnchor="middle" fontSize="20" fontWeight="900" fill="white">%</text>
+        <text x="60" y="82" textAnchor="middle" fontSize="8" fontWeight="800" fill="white" letterSpacing="4">OFF</text>
+        {/* 시술명 */}
+        <text x="60" y="100" textAnchor="middle" fontSize="6" fontWeight="700" fill="white" fillOpacity="0.9">임플란트 이벤트</text>
+        {/* 가격 — 하단 화이트 필 */}
+        <rect x="20" y="112" width="80" height="16" rx="8" fill="white" />
+        <text x="60" y="117" textAnchor="middle" fontSize="3" fill="#94a3b8" textDecoration="line-through">990,000원</text>
+        <text x="60" y="125" textAnchor="middle" fontSize="7" fontWeight="900" fill={c}>690,000원</text>
+        {/* 기간 */}
+        <text x="60" y="140" textAnchor="middle" fontSize="3" fontWeight="600" fill="white" fillOpacity="0.7">2026.03.01 ~ 03.31</text>
+        <rect x="24" y="144" width="72" height="10" rx="5" fill="white" fillOpacity="0.3" />
+        <text x="60" y="151" textAnchor="middle" fontSize="3.5" fontWeight="700" fill="white">지금 바로 예약하세요</text>
       </>);
     }
     if (h === 'elegant') {
-      // ━━ 고급스러운 다크 테마 + 골드 악센트 ━━
+      // ━━ 엘레강스: 다크 네이비 + 골드 코너 프레임 + 다이아몬드 패턴 ━━
       return wrap(<>
-        <rect x="0" y="0" width="120" height="160" rx="6" fill="#1a1a2e" />
-        {/* 골드 코너 장식 */}
-        <path d="M8,8 L28,8 L28,10 L10,10 L10,28 L8,28 Z" fill="#d4a853" fillOpacity="0.5" />
-        <path d="M112,8 L92,8 L92,10 L110,10 L110,28 L112,28 Z" fill="#d4a853" fillOpacity="0.5" />
-        <path d="M8,152 L8,132 L10,132 L10,150 L28,150 L28,152 Z" fill="#d4a853" fillOpacity="0.4" />
-        <path d="M112,152 L112,132 L110,132 L110,150 L92,150 L92,152 Z" fill="#d4a853" fillOpacity="0.4" />
-        <text x="60" y="20" textAnchor="middle" fontSize="3.5" fontWeight="700" fill="#d4a853" letterSpacing="2">{name}</text>
-        <line x1="30" y1="24" x2="90" y2="24" stroke="#d4a853" strokeWidth="0.5" strokeOpacity="0.5" />
-        <text x="60" y="38" textAnchor="middle" fontSize="3.5" fill="#d4a853" letterSpacing="3" fillOpacity="0.8">SPECIAL EVENT</text>
-        <text x="60" y="56" textAnchor="middle" fontSize="9" fontWeight="900" fill="white">임플란트</text>
-        <text x="60" y="70" textAnchor="middle" fontSize="9" fontWeight="900" fill="white">특별 이벤트</text>
-        <line x1="30" y1="76" x2="90" y2="76" stroke="#d4a853" strokeWidth="0.5" strokeOpacity="0.5" />
-        {/* 가격 */}
-        <rect x="16" y="82" width="88" height="30" rx="6" fill="#d4a853" fillOpacity="0.12" />
-        <text x="60" y="94" textAnchor="middle" fontSize="3.5" fill="#d4a853" letterSpacing="1.5">SPECIAL PRICE</text>
-        <text x="60" y="108" textAnchor="middle" fontSize="12" fontWeight="900" fill="#d4a853">690,000원</text>
-        <rect x="24" y="116" width="72" height="10" rx="5" fill="#d4a853" fillOpacity="0.08" />
-        <text x="60" y="123" textAnchor="middle" fontSize="2.8" fontWeight="600" fill="#d4a853" fillOpacity="0.7">2026.03.01 ~ 03.31</text>
-        <rect x="20" y="130" width="80" height="14" rx="7" fill="#d4a853" />
-        <text x="60" y="140" textAnchor="middle" fontSize="4" fontWeight="700" fill="#1a1a2e">예약 상담</text>
+        {/* 풀 다크 네이비 배경 */}
+        <rect x="0" y="0" width="120" height="160" rx="6" fill="#0f172a" />
+        {/* 골드 코너 프레임 — 얇은 L자 */}
+        <path d="M10,10 L35,10" stroke="#d4a853" strokeWidth="0.8" fill="none" />
+        <path d="M10,10 L10,35" stroke="#d4a853" strokeWidth="0.8" fill="none" />
+        <path d="M110,10 L85,10" stroke="#d4a853" strokeWidth="0.8" fill="none" />
+        <path d="M110,10 L110,35" stroke="#d4a853" strokeWidth="0.8" fill="none" />
+        <path d="M10,150 L35,150" stroke="#d4a853" strokeWidth="0.8" fill="none" />
+        <path d="M10,150 L10,125" stroke="#d4a853" strokeWidth="0.8" fill="none" />
+        <path d="M110,150 L85,150" stroke="#d4a853" strokeWidth="0.8" fill="none" />
+        <path d="M110,150 L110,125" stroke="#d4a853" strokeWidth="0.8" fill="none" />
+        {/* 골드 다이아몬드 장식 — 중앙 */}
+        <rect x="52" y="52" width="16" height="16" rx="1" fill="none" stroke="#d4a853" strokeWidth="0.7" transform="rotate(45 60 60)" />
+        <rect x="55" y="55" width="10" height="10" rx="1" fill="#d4a853" fillOpacity="0.35" transform="rotate(45 60 60)" />
+        <circle cx="60" cy="60" r="2" fill="#d4a853" fillOpacity="0.8" />
+        {/* 타이틀 — 큰 화이트 텍스트 */}
+        <text x="60" y="88" textAnchor="middle" fontSize="8" fontWeight="800" fill="white" letterSpacing="1">임플란트</text>
+        <text x="60" y="100" textAnchor="middle" fontSize="8" fontWeight="800" fill="white" letterSpacing="1">특별 이벤트</text>
+        {/* 골드 가격 + 언더라인 */}
+        <text x="60" y="122" textAnchor="middle" fontSize="11" fontWeight="900" fill="#d4a853">690,000원</text>
+        <line x1="30" y1="126" x2="90" y2="126" stroke="#d4a853" strokeWidth="0.6" />
+        {/* 기간 */}
+        <text x="60" y="136" textAnchor="middle" fontSize="2.8" fontWeight="500" fill="#d4a853" fillOpacity="0.6">2026.03.01 ~ 03.31</text>
+        {/* 병원명 — 하단 */}
+        <text x="60" y="146" textAnchor="middle" fontSize="3" fontWeight="600" fill="#d4a853" fillOpacity="0.5" letterSpacing="2">{name}</text>
       </>);
     }
     if (h === 'pop') {
-      // ━━ 팝 컬러풀: 풀컬러 배경 + 대형 서클 ━━
+      // ━━ 팝 컬러풀: 겹치는 원들 + 중앙 화이트 원 + 흩뿌린 도트 ━━
       return wrap(<>
-        <rect x="0" y="0" width="120" height="160" rx="6" fill={c} fillOpacity="0.08" />
-        <rect x="0" y="0" width="120" height="90" rx="6" fill={c} fillOpacity="0.85" />
-        {/* 장식 대형 서클 */}
-        <circle cx="10" cy="10" r="16" fill="white" fillOpacity="0.1" />
-        <circle cx="110" cy="82" r="20" fill="white" fillOpacity="0.08" />
-        <circle cx="16" cy="80" r="10" fill="white" fillOpacity="0.06" />
-        <text x="60" y="14" textAnchor="middle" fontSize="3.5" fontWeight="700" fill="white" fillOpacity="0.9">{name}</text>
-        <text x="60" y="26" textAnchor="middle" fontSize="4" fontWeight="800" fill="white" fillOpacity="0.8" letterSpacing="2">EVENT</text>
-        {/* 대형 할인 원 — 화이트 솔리드 */}
-        <circle cx="60" cy="54" r="24" fill="white" />
-        <text x="60" y="50" textAnchor="middle" fontSize="16" fontWeight="900" fill={c}>30%</text>
-        <text x="60" y="62" textAnchor="middle" fontSize="5.5" fontWeight="800" fill={a}>할인</text>
-        {/* 시술명 + 가격 */}
-        <text x="60" y="86" textAnchor="middle" fontSize="4" fontWeight="700" fill="white">임플란트</text>
-        <rect x="14" y="96" width="92" height="20" rx="10" fill="white" filter={`url(#shadow_${t.id})`} />
-        <text x="60" y="97" textAnchor="middle" fontSize="3" fill="#94a3b8" textDecoration="line-through">990,000원</text>
-        <text x="60" y="110" textAnchor="middle" fontSize="7" fontWeight="900" fill={c}>690,000원</text>
-        <rect x="24" y="120" width="72" height="10" rx="5" fill={c} fillOpacity="0.08" />
-        <text x="60" y="127" textAnchor="middle" fontSize="2.8" fontWeight="600" fill="#64748b">2026.03.01 ~ 03.31</text>
-        {ctaBtn(132, '지금 바로 예약!')}
-        <text x="60" y="156" textAnchor="middle" fontSize="2.8" fill="#94a3b8">{name}</text>
+        <rect x="0" y="0" width="120" height="160" rx="6" fill="white" />
+        {/* 겹치는 대형 원들 — 다양한 크기와 투명도 */}
+        <circle cx="20" cy="25" r="28" fill={c} fillOpacity="0.3" />
+        <circle cx="95" cy="18" r="22" fill={c} fillOpacity="0.5" />
+        <circle cx="10" cy="90" r="18" fill={a} fillOpacity="0.35" />
+        <circle cx="105" cy="75" r="25" fill={c} fillOpacity="0.4" />
+        <circle cx="35" cy="130" r="20" fill={a} fillOpacity="0.3" />
+        <circle cx="100" cy="140" r="15" fill={c} fillOpacity="0.45" />
+        {/* 흩뿌린 장식 도트 */}
+        <circle cx="50" cy="12" r="2" fill={c} fillOpacity="0.5" />
+        <circle cx="75" cy="45" r="1.5" fill={a} fillOpacity="0.6" />
+        <circle cx="15" cy="60" r="1" fill={c} fillOpacity="0.4" />
+        <circle cx="108" cy="55" r="1.8" fill={a} fillOpacity="0.5" />
+        <circle cx="25" cy="110" r="1.2" fill={c} fillOpacity="0.55" />
+        <circle cx="90" cy="105" r="1.5" fill={a} fillOpacity="0.45" />
+        <circle cx="70" cy="148" r="1" fill={c} fillOpacity="0.5" />
+        {/* HERO: 큰 화이트 원 — 중앙 */}
+        <circle cx="60" cy="72" r="30" fill="white" filter={`url(#shadow_${t.id})`} />
+        <text x="60" y="68" textAnchor="middle" fontSize="18" fontWeight="900" fill={c}>30%</text>
+        <text x="60" y="82" textAnchor="middle" fontSize="5" fontWeight="800" fill={a}>할인</text>
+        {/* 시술명 */}
+        <text x="60" y="112" textAnchor="middle" fontSize="6" fontWeight="800" fill={c}>임플란트</text>
+        {/* 가격 배너 — 하단 */}
+        <rect x="10" y="122" width="100" height="16" rx="8" fill={c} />
+        <text x="60" y="128" textAnchor="middle" fontSize="3" fill="white" fillOpacity="0.8" textDecoration="line-through">990,000원</text>
+        <text x="60" y="135" textAnchor="middle" fontSize="6" fontWeight="900" fill="white">690,000원</text>
+        {/* 기간 + 병원명 */}
+        <text x="60" y="147" textAnchor="middle" fontSize="2.8" fontWeight="600" fill="#64748b">2026.03.01 ~ 03.31</text>
+        <text x="60" y="155" textAnchor="middle" fontSize="2.8" fill="#94a3b8">{name}</text>
       </>);
     }
     if (h === 'minimal') {
-      // ━━ 미니멀 모던: 좌측 컬러 스트라이프 + 클린 레이아웃 ━━
+      // ━━ 미니멀 모던: 거대 타이포 + 좌측 컬러 바 + 전부 좌정렬 ━━
       return wrap(<>
-        {/* 좌측 굵은 악센트 바 */}
-        <rect x="0" y="0" width="8" height="160" fill={c} />
-        <rect x="8" y="0" width="3" height="160" fill={a} fillOpacity="0.5" />
-        <text x="66" y="20" textAnchor="middle" fontSize="3.5" fontWeight="600" fill="#94a3b8" letterSpacing="3">IMPLANT EVENT</text>
-        <rect x="46" y="24" width="40" height="1.5" rx="0.75" fill={c} fillOpacity="0.4" />
-        <text x="66" y="48" textAnchor="middle" fontSize="10" fontWeight="900" fill={c}>임플란트</text>
-        <text x="66" y="64" textAnchor="middle" fontSize="10" fontWeight="900" fill={c}>특별 할인</text>
-        <rect x="46" y="70" width="40" height="1.5" rx="0.75" fill={c} fillOpacity="0.4" />
-        {/* 가격 카드 */}
-        <rect x="18" y="80" width="92" height="30" rx="8" fill={c} fillOpacity="0.08" />
-        <text x="66" y="91" textAnchor="middle" fontSize="3.5" fill="#94a3b8" letterSpacing="1">Special Offer</text>
-        <text x="66" y="105" textAnchor="middle" fontSize="12" fontWeight="900" fill={c}>690,000원</text>
-        <rect x="26" y="114" width="80" height="10" rx="5" fill={c} fillOpacity="0.06" />
-        <text x="66" y="121" textAnchor="middle" fontSize="2.8" fontWeight="600" fill="#64748b">2026.03.01 ~ 03.31</text>
-        <rect x="26" y="128" width="80" height="14" rx="7" fill={c} fillOpacity="0.15" />
-        <text x="66" y="138" textAnchor="middle" fontSize="4" fontWeight="700" fill={c}>예약 문의</text>
-        <text x="66" y="154" textAnchor="middle" fontSize="2.8" fill="#94a3b8">{name}</text>
+        <rect x="0" y="0" width="120" height="160" rx="6" fill="white" />
+        {/* 좌측 얇은 컬러 바 */}
+        <rect x="0" y="0" width="6" height="160" fill={c} />
+        {/* 전부 좌정렬 */}
+        <text x="18" y="24" textAnchor="start" fontSize="3" fontWeight="500" fill="#94a3b8" letterSpacing="2">EVENT</text>
+        {/* HERO: 거대 타이포 — 중앙 무대 */}
+        <text x="18" y="56" textAnchor="start" fontSize="16" fontWeight="900" fill="#1e293b">임플란트</text>
+        <text x="18" y="76" textAnchor="start" fontSize="10" fontWeight="700" fill={c}>특별 할인</text>
+        {/* 가격 — 좌정렬 */}
+        <text x="18" y="98" textAnchor="start" fontSize="3.5" fill="#94a3b8" textDecoration="line-through">990,000원</text>
+        <text x="18" y="112" textAnchor="start" fontSize="10" fontWeight="900" fill="#1e293b">690,000원</text>
+        {/* 기간 */}
+        <text x="18" y="128" textAnchor="start" fontSize="3" fontWeight="500" fill="#94a3b8">2026.03.01 ~ 03.31</text>
+        {/* 병원명 */}
+        <text x="18" y="150" textAnchor="start" fontSize="3" fontWeight="600" fill="#94a3b8">{name}</text>
       </>);
     }
     if (h === 'wave') {
-      // ━━ 그라데이션 웨이브: 대담한 물결 배경 ━━
+      // ━━ 그라데이션 웨이브: 상단/하단 큰 물결 + 중앙 여백 ━━
       return wrap(<>
-        {/* 배경 물결 — 진하게 */}
-        <path d="M0,0 L120,0 L120,50 Q90,65 60,50 Q30,35 0,50 Z" fill={c} fillOpacity="0.7" />
-        <path d="M0,0 L120,0 L120,40 Q90,55 60,40 Q30,25 0,40 Z" fill={c} />
-        <text x="60" y="16" textAnchor="middle" fontSize="3.5" fontWeight="700" fill="white" fillOpacity="0.9">{name}</text>
-        <text x="60" y="32" textAnchor="middle" fontSize="8" fontWeight="900" fill="white">임플란트 이벤트</text>
-        {/* 하단 물결 장식 */}
-        <path d="M0,120 Q30,110 60,120 Q90,130 120,120 L120,160 L0,160 Z" fill={c} fillOpacity="0.15" />
-        <path d="M0,130 Q30,120 60,130 Q90,140 120,130 L120,160 L0,160 Z" fill={c} fillOpacity="0.1" />
-        {/* 가격 카드 */}
-        <rect x="14" y="58" width="92" height="38" rx="10" fill="white" filter={`url(#shadow_${t.id})`} />
-        <text x="60" y="71" textAnchor="middle" fontSize="3.5" fill={a} letterSpacing="0.5">Limited Time Offer</text>
-        <text x="60" y="89" textAnchor="middle" fontSize="13" fontWeight="900" fill={c}>690,000원</text>
-        <rect x="24" y="100" width="72" height="10" rx="5" fill={c} fillOpacity="0.08" />
-        <text x="60" y="107" textAnchor="middle" fontSize="2.8" fontWeight="600" fill="#64748b">2026.03.01 ~ 03.31</text>
-        {ctaBtn(114, '예약하기')}
-        <text x="60" y="154" textAnchor="middle" fontSize="2.8" fill="#94a3b8">{name}</text>
+        <rect x="0" y="0" width="120" height="160" rx="6" fill="white" />
+        {/* HERO: 상단 물결 — 솔리드 프라이머리, 상단 35% 커버 */}
+        <path d="M0,0 L120,0 L120,48 Q100,60 80,52 Q60,44 40,54 Q20,64 0,56 Z" fill={c} />
+        {/* 상단 물결 위 텍스트 */}
+        <text x="60" y="18" textAnchor="middle" fontSize="3.5" fontWeight="700" fill="white" fillOpacity="0.9">{name}</text>
+        <text x="60" y="36" textAnchor="middle" fontSize="7" fontWeight="900" fill="white">임플란트 이벤트</text>
+        {/* 중앙 여백 — 타이틀+가격 */}
+        <text x="60" y="82" textAnchor="middle" fontSize="4" fill={a} fontWeight="600" letterSpacing="1">Limited Time Offer</text>
+        <text x="60" y="100" textAnchor="middle" fontSize="13" fontWeight="900" fill={c}>690,000원</text>
+        <text x="60" y="112" textAnchor="middle" fontSize="3" fontWeight="600" fill="#64748b">2026.03.01 ~ 03.31</text>
+        {/* HERO: 하단 물결 — 0.4 투명도, 하단 25% 커버 */}
+        <path d="M0,122 Q20,114 40,120 Q60,126 80,118 Q100,110 120,118 L120,160 L0,160 Z" fill={c} fillOpacity="0.4" />
+        <path d="M0,132 Q30,124 60,132 Q90,140 120,132 L120,160 L0,160 Z" fill={c} fillOpacity="0.35" />
+        {/* 하단 물결 위 CTA */}
+        <text x="60" y="148" textAnchor="middle" fontSize="4" fontWeight="700" fill="white">예약하기</text>
       </>);
     }
-    // season (fallback) — 시즌 컬러풀 배너
+    // season (fallback) — 시즌 스페셜: 대각선 리본 + 도트 그리드
     return wrap(<>
-      {/* 상단 시즌 배너 — 솔리드 컬러 */}
-      <rect x="0" y="0" width="120" height="50" rx="6" fill={`url(#accent_${t.id})`} />
-      <rect x="0" y="44" width="120" height="6" fill={`url(#accent_${t.id})`} />
-      <circle cx="14" cy="10" r="12" fill="white" fillOpacity="0.1" />
-      <circle cx="106" cy="42" r="16" fill="white" fillOpacity="0.07" />
-      <text x="60" y="14" textAnchor="middle" fontSize="3.2" fontWeight="700" fill="white" fillOpacity="0.9">{name}</text>
-      <text x="60" y="26" textAnchor="middle" fontSize="3.5" fill="white" letterSpacing="2" fontWeight="700">Season Special</text>
-      <text x="60" y="44" textAnchor="middle" fontSize="8" fontWeight="900" fill="white">임플란트 이벤트</text>
-      {/* 가격 카드 */}
-      <rect x="14" y="58" width="92" height="38" rx="10" fill="white" filter={`url(#shadow_${t.id})`} />
-      <text x="60" y="71" textAnchor="middle" fontSize="3.5" fill={a} fontWeight="600">Season Special Price</text>
-      <text x="60" y="89" textAnchor="middle" fontSize="13" fontWeight="900" fill={c}>690,000원</text>
-      <rect x="24" y="100" width="72" height="10" rx="5" fill={c} fillOpacity="0.08" />
-      <text x="60" y="107" textAnchor="middle" fontSize="2.8" fontWeight="600" fill="#64748b">2026.03.01 ~ 03.31</text>
-      {ctaBtn(114, '지금 바로 예약하세요')}
-      <text x="60" y="142" textAnchor="middle" fontSize="2.8" fill="#94a3b8">{name}</text>
+      <defs>
+        <pattern id={`dots_${t.id}`} width="10" height="10" patternUnits="userSpaceOnUse">
+          <circle cx="5" cy="5" r="0.8" fill={c} fillOpacity="0.15" />
+        </pattern>
+      </defs>
+      <rect x="0" y="0" width="120" height="160" rx="6" fill="white" />
+      {/* 도트 그리드 텍스처 배경 */}
+      <rect x="0" y="0" width="120" height="160" rx="6" fill={`url(#dots_${t.id})`} />
+      {/* HERO: 대각선 리본 — 좌상단에서 중앙우측으로 */}
+      <path d="M-10,20 L80,0 L90,16 L0,36 Z" fill={c} />
+      <path d="M-10,24 L80,4 L82,8 L-8,28 Z" fill={a} fillOpacity="0.6" />
+      {/* 리본 위 텍스트 */}
+      <text x="36" y="16" textAnchor="middle" fontSize="5" fontWeight="800" fill="white" transform="rotate(-11 36 16)">임플란트 이벤트</text>
+      {/* "시즌 한정" 뱃지 — 회전된 사각형 */}
+      <rect x="70" y="36" width="40" height="14" rx="3" fill={a} transform="rotate(-8 90 43)" />
+      <text x="90" y="45" textAnchor="middle" fontSize="4.5" fontWeight="800" fill="white" transform="rotate(-8 90 45)">시즌 한정</text>
+      {/* 병원명 */}
+      <text x="20" y="60" textAnchor="start" fontSize="3" fontWeight="600" fill="#64748b">{name}</text>
+      {/* 가격 — 큰 화이트 카드 (둥근 모서리) */}
+      <rect x="12" y="70" width="96" height="50" rx="12" fill="white" filter={`url(#shadow_${t.id})`} />
+      <text x="60" y="84" textAnchor="middle" fontSize="3.5" fill="#94a3b8" textDecoration="line-through">990,000원</text>
+      <text x="60" y="100" textAnchor="middle" fontSize="14" fontWeight="900" fill={c}>690,000원</text>
+      <text x="60" y="114" textAnchor="middle" fontSize="3" fontWeight="600" fill="#64748b">2026.03.01 ~ 03.31</text>
+      {/* CTA */}
+      <rect x="20" y="128" width="80" height="14" rx="7" fill={`url(#accent_${t.id})`} />
+      <text x="60" y="138" textAnchor="middle" fontSize="4" fontWeight="700" fill="white">지금 바로 예약하세요</text>
+      {/* 하단 장식 도트 */}
+      <circle cx="15" cy="150" r="2" fill={c} fillOpacity="0.3" />
+      <circle cx="105" cy="148" r="1.5" fill={a} fillOpacity="0.35" />
     </>);
   }
 
