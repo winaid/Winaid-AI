@@ -92,9 +92,9 @@ type TemplateCategory = 'schedule' | 'event' | 'doctor' | 'notice' | 'greeting' 
 type ScheduleLayout = 'full_calendar' | 'week' | 'highlight';
 
 const CATEGORIES: { id: TemplateCategory; name: string; icon: string; desc: string }[] = [
-  { id: 'schedule', name: '진료 일정', icon: '\u{1F4C5}', desc: '휴진/단축진료' },
+  { id: 'schedule', name: '진료일정', icon: '\u{1F4C5}', desc: '휴진/단축진료' },
   { id: 'event', name: '이벤트', icon: '\u{1F389}', desc: '시술 할인' },
-  { id: 'doctor', name: '의사 소개', icon: '\u{1F9D1}\u200D\u2695\uFE0F', desc: '전문의 부임' },
+  { id: 'doctor', name: '의사소개', icon: '\u{1F9D1}\u200D\u2695\uFE0F', desc: '전문의 부임' },
   { id: 'notice', name: '공지사항', icon: '\u{1F4E2}', desc: '변경/이전' },
   { id: 'greeting', name: '명절 인사', icon: '\u{1F38A}', desc: '설날/추석' },
   { id: 'hiring', name: '채용/공고', icon: '\u{1F4CB}', desc: '직원 모집' },
@@ -2013,9 +2013,11 @@ export default function TemplateGenerator({ onSwitchToFree }: { onSwitchToFree?:
     reader.readAsDataURL(file);
   };
 
-  // 현재 사용할 스타일 프롬프트 결정 (히스토리 > 카테고리 템플릿 > 일반 프리셋)
-  const activeStylePrompt = selectedHistory?.stylePrompt || selectedCatTemplate?.aiPrompt || selectedStyle.aiPrompt;
-  const activeStyleName = selectedHistory?.name || selectedCatTemplate?.name || selectedStyle.name;
+  // 현재 사용할 스타일 프롬프트 결정 (히스토리 > 카테고리 템플릿 > 달력테마시 빈값 > 일반 프리셋)
+  // 진료일정에서 달력 테마가 선택된 경우, 스타일 프리셋 프롬프트를 사용하지 않음 (테마 자체 프롬프트가 우선)
+  const calendarThemeActive = category === 'schedule' && calendarTheme && !['blue', 'green', 'warm'].includes(calendarTheme);
+  const activeStylePrompt = selectedHistory?.stylePrompt || selectedCatTemplate?.aiPrompt || (calendarThemeActive ? '' : selectedStyle.aiPrompt);
+  const activeStyleName = selectedHistory?.name || selectedCatTemplate?.name || (calendarThemeActive ? calendarTheme : selectedStyle.name);
 
   const handleGenerate = async (regenExtra?: string) => {
     setGenerating(true); setError(null); setGeneratingStep(0); setResultImages([]); setCurrentPage(0); setGeneratingPage(0);
@@ -2167,10 +2169,10 @@ export default function TemplateGenerator({ onSwitchToFree }: { onSwitchToFree?:
       </div>
       <div className="space-y-4 p-4 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 160px)' }}>
 
-        {/* 카테고리 탭 */}
-        <div className="flex items-center bg-slate-100 rounded-xl p-1 gap-0.5">
+        {/* 카테고리 탭 — 가로 스크롤 */}
+        <div className="flex items-center bg-slate-100 rounded-xl p-1 gap-0.5 overflow-x-auto no-scrollbar">
           {CATEGORIES.map(c => (
-            <button key={c.id} onClick={() => setCategory(c.id)} className={`flex-1 py-2 px-1 rounded-lg text-center transition-all text-xs font-bold ${category === c.id ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
+            <button key={c.id} onClick={() => setCategory(c.id)} className={`flex-shrink-0 py-2 px-2.5 rounded-lg text-center transition-all text-[11px] font-bold whitespace-nowrap ${category === c.id ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
               {c.name}
             </button>
           ))}

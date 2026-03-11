@@ -140,10 +140,16 @@ html {
 
 /* Calendar template thumbnails — force inline SVG to fit container */
 .calendar-thumb-svg svg {
-  width: 100% !important;
+  width: 110% !important;
   height: auto !important;
   display: block;
+  margin: -3% auto -5%;
+  margin-left: -5%;
 }
+
+/* Hide scrollbar for category tabs */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
 /* Premium scrollbar */
 .custom-scrollbar::-webkit-scrollbar {
