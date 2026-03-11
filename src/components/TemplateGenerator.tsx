@@ -1758,7 +1758,7 @@ function TemplateSVGPreview({ template: t, category, hospitalName }: { template:
   </>);
 }
 
-export default function TemplateGenerator() {
+export default function TemplateGenerator({ onSwitchToFree }: { onSwitchToFree?: () => void }) {
   const now = new Date();
 
   // 공통
@@ -2151,9 +2151,21 @@ export default function TemplateGenerator() {
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-0 lg:items-stretch min-h-[600px]">
-      {/* 왼쪽: 설정 패널 */}
-      <div className="space-y-4 bg-white border-r border-slate-200/80 p-5 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 120px)' }}>
+    <div className="flex flex-col lg:flex-row gap-5 lg:items-start">
+      {/* 왼쪽: 설정 패널 — InputForm과 동일한 카드 스타일 */}
+      <div className="w-full lg:w-[340px] xl:w-[380px] lg:flex-none bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+      {/* 헤더 - InputForm과 동일한 컬러 헤더 */}
+      <div className="flex items-center gap-2 px-4 py-2.5 border-b bg-emerald-50 border-emerald-100">
+        <span>🖼️</span>
+        <span className="text-xs font-bold text-emerald-700">이미지 생성</span>
+        {onSwitchToFree && (
+          <div className="ml-auto flex bg-white/80 rounded-lg p-0.5 border border-emerald-200/60">
+            <button className="px-3 py-1 rounded-md text-xs font-bold bg-blue-600 text-white shadow-sm">템플릿</button>
+            <button onClick={onSwitchToFree} className="px-3 py-1 rounded-md text-xs font-semibold text-slate-500 hover:text-slate-700 transition-all">자유 입력</button>
+          </div>
+        )}
+      </div>
+      <div className="space-y-4 p-4 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 160px)' }}>
 
         {/* 카테고리 탭 */}
         <div className="flex items-center bg-slate-100 rounded-xl p-1 gap-0.5">
@@ -2626,9 +2638,10 @@ export default function TemplateGenerator() {
           )}
         </button>
       </div>
+      </div>
 
       {/* 오른쪽: 미리보기 / 에디터 영역 */}
-      <div className="flex flex-col min-h-[480px] bg-slate-50/50">
+      <div className="flex flex-col min-h-[480px] lg:flex-1 min-w-0 rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
         {/* 상단 툴바 */}
         <div className="flex items-center gap-3 px-5 py-3 border-b border-slate-200/80 bg-white">
           <div className="flex items-center gap-1">

@@ -165,25 +165,12 @@ export default function ImageGenerator({ onProgress }: Props) {
     link.click();
   }, [result]);
 
-  // 템플릿 모드 - 전체 너비 (TemplateGenerator가 자체 레이아웃 사용)
+  // 템플릿 모드 - TemplateGenerator가 자체 좌/우 분할 레이아웃 사용
   if (mode === 'template') {
     return (
-      <div className="w-full">
-        {/* 왼쪽 입력 영역 - 모드 토글만 블로그 스타일로 */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mb-5">
-          <div className="flex items-center gap-2 px-4 py-2.5 border-b bg-emerald-50 border-emerald-100">
-            <span>🖼️</span>
-            <span className="text-xs font-bold text-emerald-700">이미지 생성</span>
-            <div className="ml-auto flex bg-white/80 rounded-lg p-0.5 border border-emerald-200/60">
-              <button className="px-3 py-1 rounded-md text-xs font-bold bg-blue-600 text-white shadow-sm">템플릿</button>
-              <button onClick={() => setMode('free')} className="px-3 py-1 rounded-md text-xs font-semibold text-slate-500 hover:text-slate-700 transition-all">자유 입력</button>
-            </div>
-          </div>
-        </div>
-        <Suspense fallback={<div className="flex items-center justify-center h-64"><div className="w-10 h-10 border-4 border-teal-200 border-t-teal-500 rounded-full animate-spin" /></div>}>
-          <TemplateGenerator />
-        </Suspense>
-      </div>
+      <Suspense fallback={<div className="flex items-center justify-center h-64"><div className="w-10 h-10 border-4 border-teal-200 border-t-teal-500 rounded-full animate-spin" /></div>}>
+        <TemplateGenerator onSwitchToFree={() => setMode('free')} />
+      </Suspense>
     );
   }
 
