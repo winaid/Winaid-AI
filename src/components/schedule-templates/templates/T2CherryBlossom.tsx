@@ -28,7 +28,8 @@ export default function T2CherryBlossom({ data, width = 600, colors }: Props) {
   const weeks = buildCalendarWeeks(data.year, data.month);
   const calH = HEADER_H + weeks.length * ROW_H;
   const noticeY = GRID_Y + calH + 24;
-  const svgH = noticeY + (data.notices?.length ?? 0) * 28 + 80;
+  const noticeCount = data.notices?.length ?? 0;
+  const svgH = noticeY + noticeCount * 28 + (noticeCount > 0 ? 80 : 40);
   const scale = width / 600;
 
   function getEvent(date: number) {

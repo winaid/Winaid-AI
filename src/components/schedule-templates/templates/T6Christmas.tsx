@@ -92,7 +92,7 @@ export default function T6Christmas({ data, width = 600, colors }: Props) {
   const weeks = buildCalendarWeeks(data.year, data.month);
   const calH = HEADER_H + weeks.length * ROW_H;
   const cardH = calH + 20;
-  const svgH = CARD_Y + cardH + 120;
+  const svgH = CARD_Y + cardH + 65;
   const scale = width / 600;
 
   function getEvent(date: number) {

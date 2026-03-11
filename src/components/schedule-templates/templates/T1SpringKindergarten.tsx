@@ -20,7 +20,8 @@ export default function T1SpringKindergarten({ data, width = 600, colors }: Prop
   const weeks = buildCalendarWeeks(data.year, data.month);
   const calH = HEADER_H + weeks.length * ROW_H;
   const noticeY = GRID_Y + calH + 18;
-  const svgH = noticeY + (data.notices?.length ?? 0) * 24 + 140;
+  const noticeCount = data.notices?.length ?? 0;
+  const svgH = noticeY + noticeCount * 24 + (noticeCount > 0 ? 140 : 60);
   const scale = width / 600;
 
   function getEvent(date: number) {

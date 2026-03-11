@@ -61,7 +61,7 @@ export default function T5Notebook({ data, width = 600, colors }: Props) {
   const weeks = buildCalendarWeeks(data.year, data.month);
   const calH = HEADER_H + weeks.length * ROW_H;
   const cardH = GRID_Y - CARD_X + calH + 40;
-  const svgH = cardH + 110;
+  const svgH = cardH + 60;
   const scale = width / 600;
 
   function getEvent(date: number) {

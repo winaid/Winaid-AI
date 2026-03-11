@@ -67,7 +67,7 @@ export default function T4KoreanTraditional({ data, width = 600, colors }: Props
   const CARD_Y = 260;
   const calH = HEADER_H + weeks.length * ROW_H;
   const cardH = calH + 20;
-  const svgH = CARD_Y + cardH + 160;
+  const svgH = CARD_Y + cardH + 90;
   const scale = width / 600;
 
   // Find the "special" date (date=1 or any highlighted date for outline circle)

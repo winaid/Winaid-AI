@@ -39,7 +39,7 @@ export default function T3Autumn({ data, width = 600, colors }: Props) {
   const weeks = buildCompactCalendarWeeks(data.year, data.month);
   const calH = HEADER_H + weeks.length * ROW_H;
   const cardH = calH + 24;
-  const svgH = CARD_Y + cardH + 120;
+  const svgH = CARD_Y + cardH + 70;
   const scale = width / 600;
 
   function getEvent(date: number) {
