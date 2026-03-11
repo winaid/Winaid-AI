@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 
 interface PasswordLoginProps {
   onSuccess: () => void;
@@ -7,44 +7,17 @@ interface PasswordLoginProps {
 const PasswordLogin: React.FC<PasswordLoginProps> = ({ onSuccess }) => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
 
-  // 비밀번호 없이 자동 인증
-  useEffect(() => {
-    sessionStorage.setItem('hospital_ai_auth', 'true');
-    onSuccess();
-  }, [onSuccess]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    setIsLoading(true);
 
-    try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://3001-i7sb1xuomdisn8dq0jtnt-c07dda5e.sandbox.novita.ai';
-      const response = await fetch(`${apiUrl}/auth/verify`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ password }),
-      });
-
-      const data = await response.json() as { success?: boolean; error?: string };
-
-      if (response.ok && data.success) {
-        // 인증 성공
-        sessionStorage.setItem('hospital_ai_auth', 'true');
-        onSuccess();
-      } else {
-        setError(data.error || '비밀번호가 올바르지 않습니다.');
-        setPassword('');
-      }
-    } catch (error) {
-      console.error('인증 오류:', error);
-      setError('서버 연결에 실패했습니다.');
-    } finally {
-      setIsLoading(false);
+    if (password === '0000') {
+      sessionStorage.setItem('hospital_ai_auth', 'true');
+      onSuccess();
+    } else {
+      setError('비밀번호가 올바르지 않습니다.');
+      setPassword('');
     }
   };
 
@@ -144,14 +117,14 @@ const PasswordLogin: React.FC<PasswordLoginProps> = ({ onSuccess }) => {
           {/* 확인 버튼 */}
           <button
             type="submit"
-            disabled={password.length !== 4 || isLoading}
+            disabled={password.length !== 4}
             className={`w-full py-4 rounded-xl font-bold text-white transition-all ${
-              password.length === 4 && !isLoading
+              password.length === 4
                 ? 'bg-emerald-600 hover:bg-emerald-700 shadow-lg'
                 : 'bg-slate-300 cursor-not-allowed'
             }`}
           >
-            {isLoading ? '확인 중...' : '확인'}
+            확인
           </button>
         </form>
       </div>

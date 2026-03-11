@@ -162,7 +162,9 @@ const App: React.FC = () => {
   const [quickInput, setQuickInput] = useState('');
 
   // 비밀번호 인증 상태 - 임시로 항상 true (로그인 비활성화)
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(true);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
+    return sessionStorage.getItem('hospital_ai_auth') === 'true';
+  });
   
 
   // 다크모드 상태
