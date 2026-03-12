@@ -516,21 +516,6 @@ interface AdminPageProps {
 }
 
 const AdminPage: React.FC<AdminPageProps> = ({ onAdminVerified }) => {
-  // Supabase Auth 로그인 상태 (크롤링/말투 학습에 필요)
-  const [supabaseUser, setSupabaseUser] = useState<any>(null);
-  const [authChecked, setAuthChecked] = useState(false);
-
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      setSupabaseUser(data.user);
-      setAuthChecked(true);
-    });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSupabaseUser(session?.user ?? null);
-    });
-    return () => subscription.unsubscribe();
-  }, []);
-
   // 초기값을 localStorage에서 직접 읽어서 설정 (useEffect 내 setState 방지)
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -785,18 +770,8 @@ const AdminPage: React.FC<AdminPageProps> = ({ onAdminVerified }) => {
     }
   }, [activeTab, isAuthenticated, loadStyleProfiles]);
 
-  // Supabase Auth 로그인 필요 체크 (크롤링/말투 기능은 RLS가 authenticated 필요)
-  const requireSupabaseAuth = (): boolean => {
-    if (!supabaseUser) {
-      toast.error('말투 학습 기능은 Supabase 로그인이 필요합니다. 먼저 로그인해주세요.');
-      return false;
-    }
-    return true;
-  };
-
   // 병원 블로그 URL 저장 (크롤링 없이)
   const handleSaveBlogUrl = async (hospitalName: string, teamId: number) => {
-    if (!requireSupabaseAuth()) return;
     const url = blogUrlInputs[hospitalName] || '';
     if (!url.includes('blog.naver.com')) {
       toast.error('네이버 블로그 URL을 입력해주세요. (blog.naver.com/...)');
@@ -813,7 +788,6 @@ const AdminPage: React.FC<AdminPageProps> = ({ onAdminVerified }) => {
 
   // 크롤링 + 말투 학습 실행
   const handleCrawlAndLearn = async (hospitalName: string, teamId: number) => {
-    if (!requireSupabaseAuth()) return;
     const url = blogUrlInputs[hospitalName] || '';
     if (!url.includes('blog.naver.com')) {
       toast.error('먼저 네이버 블로그 URL을 입력해주세요.');
@@ -855,7 +829,6 @@ const AdminPage: React.FC<AdminPageProps> = ({ onAdminVerified }) => {
 
   // 크롤링 데이터 전체 초기화 (크롤링 글 + 말투 프로파일)
   const handleResetCrawlData = async (hospitalName: string) => {
-    if (!requireSupabaseAuth()) return;
     if (!confirm(`"${hospitalName}"의 크롤링 데이터(수집 글 + 말투 프로파일)를 전부 삭제하시겠습니까?\n\n삭제 후 다시 크롤링할 수 있습니다.`)) return;
 
     try {
@@ -885,7 +858,6 @@ const AdminPage: React.FC<AdminPageProps> = ({ onAdminVerified }) => {
 
   // 전체 병원 자동 크롤링 + 채점
   const handleCrawlAllHospitals = async () => {
-    if (!requireSupabaseAuth()) return;
     if (crawlAllStatus.loading) return;
     setCrawlAllStatus({ loading: true, progress: '준비 중...' });
     try {
@@ -1249,12 +1221,6 @@ const AdminPage: React.FC<AdminPageProps> = ({ onAdminVerified }) => {
         {/* ===== 말투 학습 탭 ===== */}
         {activeTab === 'style' && (
           <>
-            {authChecked && !supabaseUser && (
-              <div className="mb-4 p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-sm">
-                <strong>Supabase 로그인 필요:</strong> 말투 학습/크롤링 기능은 데이터 저장을 위해 Supabase 로그인이 필요합니다.
-                상단 메뉴에서 먼저 로그인해주세요.
-              </div>
-            )}
             <StyleTab
               styleProfiles={styleProfiles}
               blogUrlInputs={blogUrlInputs}
