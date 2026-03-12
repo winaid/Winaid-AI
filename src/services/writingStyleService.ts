@@ -806,6 +806,81 @@ export const getAllCrawledPostsSummary = async (): Promise<Record<string, Crawle
 };
 
 /**
+ * 특정 병원의 크롤링 글 전체 삭제 (Supabase + localStorage)
+ */
+export const deleteAllCrawledPosts = async (hospitalName: string): Promise<{ deleted: number; error?: string }> => {
+  let deletedCount = 0;
+
+  // Supabase 삭제
+  const { data, error } = await supabase
+    .from('hospital_crawled_posts')
+    .delete()
+    .eq('hospital_name', hospitalName)
+    .select('id');
+
+  if (!error && data) {
+    deletedCount = data.length;
+  } else if (error) {
+    console.warn('Supabase 크롤링 삭제 실패:', error.message);
+  }
+
+  // localStorage에서도 삭제
+  const all = lsGetAll();
+  const remaining = all.filter(p => p.hospital_name !== hospitalName);
+  const lsDeleted = all.length - remaining.length;
+  if (lsDeleted > 0) {
+    lsSave(remaining);
+    deletedCount += lsDeleted;
+  }
+
+  console.log(`[Delete] ${hospitalName} 크롤링 글 ${deletedCount}개 삭제 완료`);
+  return { deleted: deletedCount, error: error?.message };
+};
+
+/**
+ * 특정 병원의 말투 프로파일 삭제 (Supabase)
+ */
+export const deleteHospitalStyleProfile = async (hospitalName: string): Promise<{ success: boolean; error?: string }> => {
+  const { error } = await supabase
+    .from('hospital_style_profiles')
+    .delete()
+    .eq('hospital_name', hospitalName);
+
+  if (error) {
+    console.warn('말투 프로파일 삭제 실패:', error.message);
+    return { success: false, error: error.message };
+  }
+
+  // 캐시 무효화
+  delete styleProfileCache[hospitalName];
+
+  console.log(`[Delete] ${hospitalName} 말투 프로파일 삭제 완료`);
+  return { success: true };
+};
+
+/**
+ * 특정 병원의 크롤링 데이터 전체 초기화 (크롤링 글 + 말투 프로파일)
+ */
+export const resetHospitalCrawlData = async (hospitalName: string): Promise<{ deletedPosts: number; profileDeleted: boolean; errors: string[] }> => {
+  const errors: string[] = [];
+
+  // 1. 크롤링 글 삭제
+  const postResult = await deleteAllCrawledPosts(hospitalName);
+  if (postResult.error) errors.push(`글 삭제: ${postResult.error}`);
+
+  // 2. 말투 프로파일 삭제
+  const profileResult = await deleteHospitalStyleProfile(hospitalName);
+  if (profileResult.error) errors.push(`프로파일 삭제: ${profileResult.error}`);
+
+  console.log(`[Reset] ${hospitalName} 전체 초기화: 글 ${postResult.deleted}개 삭제, 프로파일 ${profileResult.success ? '삭제' : '실패'}`);
+  return {
+    deletedPosts: postResult.deleted,
+    profileDeleted: profileResult.success,
+    errors,
+  };
+};
+
+/**
  * 전체 병원 자동 크롤링 + 채점
  * URL이 등록된 병원 전체를 순차 처리
  */

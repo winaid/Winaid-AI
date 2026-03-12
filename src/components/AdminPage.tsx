@@ -15,6 +15,7 @@ import {
   getCrawledPosts,
   getAllCrawledPostsSummary,
   crawlAndScoreAllHospitals,
+  resetHospitalCrawlData,
 } from '../services/writingStyleService';
 import { CrawledPost } from '../types';
 
@@ -39,13 +40,14 @@ interface StyleTabProps {
   setDbPosts: React.Dispatch<React.SetStateAction<Record<string, CrawledPost[]>>>;
   onSaveUrl: (hospitalName: string, teamId: number) => void;
   onCrawl: (hospitalName: string, teamId: number) => void;
+  onReset: (hospitalName: string) => void;
   crawlAllStatus: { loading: boolean; progress: string };
   onCrawlAll: () => void;
 }
 
 const StyleTab: React.FC<StyleTabProps> = ({
   styleProfiles, blogUrlInputs, setBlogUrlInputs, crawlingStatus, crawledPosts,
-  dbPosts, setDbPosts, onSaveUrl, onCrawl, crawlAllStatus, onCrawlAll,
+  dbPosts, setDbPosts, onSaveUrl, onCrawl, onReset, crawlAllStatus, onCrawlAll,
 }) => {
   const [selectedTeam, setSelectedTeam] = useState<number>(TEAM_DATA[0].id);
   const [expandedPosts, setExpandedPosts] = useState<Record<string, boolean>>({});
@@ -231,6 +233,15 @@ const StyleTab: React.FC<StyleTabProps> = ({
                   >
                     {status?.loading ? '학습 중...' : '크롤링 + 학습'}
                   </button>
+                  {(profile || (dbPosts[baseName] && dbPosts[baseName].length > 0)) && (
+                    <button
+                      onClick={() => onReset(baseName)}
+                      disabled={status?.loading}
+                      className="px-3 py-2 text-xs font-semibold bg-red-50 text-red-500 rounded-lg hover:bg-red-100 transition-colors disabled:opacity-40 whitespace-nowrap"
+                    >
+                      초기화
+                    </button>
+                  )}
                 </div>
                 {/* 진행 상태 */}
                 {status?.loading && (
@@ -811,6 +822,35 @@ const AdminPage: React.FC<AdminPageProps> = ({ onAdminVerified }) => {
     }
   };
 
+  // 크롤링 데이터 전체 초기화 (크롤링 글 + 말투 프로파일)
+  const handleResetCrawlData = async (hospitalName: string) => {
+    if (!confirm(`"${hospitalName}"의 크롤링 데이터(수집 글 + 말투 프로파일)를 전부 삭제하시겠습니까?\n\n삭제 후 다시 크롤링할 수 있습니다.`)) return;
+
+    try {
+      const result = await resetHospitalCrawlData(hospitalName);
+      // UI 상태 갱신
+      setDbPosts(prev => {
+        const next = { ...prev };
+        delete next[hospitalName];
+        return next;
+      });
+      setCrawlingStatus(prev => {
+        const next = { ...prev };
+        delete next[hospitalName];
+        return next;
+      });
+      loadStyleProfiles();
+
+      const msg = `${hospitalName}: 글 ${result.deletedPosts}개 삭제${result.profileDeleted ? ', 프로파일 삭제' : ''} 완료`;
+      toast.success(msg);
+      if (result.errors.length > 0) {
+        console.warn('초기화 부분 오류:', result.errors);
+      }
+    } catch (err: any) {
+      toast.error(`초기화 실패: ${err.message}`);
+    }
+  };
+
   // 전체 병원 자동 크롤링 + 채점
   const handleCrawlAllHospitals = async () => {
     if (crawlAllStatus.loading) return;
@@ -1167,6 +1207,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onAdminVerified }) => {
             setDbPosts={setDbPosts}
             onSaveUrl={handleSaveBlogUrl}
             onCrawl={handleCrawlAndLearn}
+            onReset={handleResetCrawlData}
             crawlAllStatus={crawlAllStatus}
             onCrawlAll={handleCrawlAllHospitals}
           />
