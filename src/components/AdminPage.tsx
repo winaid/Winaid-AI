@@ -18,6 +18,7 @@ import {
   resetHospitalCrawlData,
 } from '../services/writingStyleService';
 import { CrawledPost } from '../types';
+import { sanitizeHtml } from '../utils/sanitizeHtml';
 
 // 점수 뱃지 색상
 const scoreBadgeClass = (score?: number) => {
@@ -1232,7 +1233,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onAdminVerified }) => {
               </button>
             </div>
             <div className="p-6 overflow-y-auto max-h-[calc(90vh-180px)]">
-              <div className="prose prose-slate prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: previewContent.content || '<p class="text-slate-400">내용이 없습니다.</p>' }} />
+              <div className="prose prose-slate prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: sanitizeHtml(previewContent.content || '<p class="text-slate-400">내용이 없습니다.</p>') }} />
             </div>
             {previewContent.keywords && previewContent.keywords.length > 0 && (
               <div className="px-6 py-3 border-t border-slate-100 flex gap-1.5 flex-wrap">

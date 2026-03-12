@@ -3,6 +3,7 @@ import { CardNewsScript, CardNewsSlideScript } from '../types';
 import { regenerateSlideContent } from '../services/postProcessingService';
 import type { SlideRegenMode } from '../services/postProcessingService';
 import { toast } from './Toast';
+import { sanitizeHtml } from '../utils/sanitizeHtml';
 
 // AI 재생성 옵션 정의
 const REGEN_OPTIONS: { mode: SlideRegenMode; label: string; emoji: string; desc: string }[] = [
@@ -397,11 +398,11 @@ const ScriptPreview: React.FC<ScriptPreviewProps> = ({
                     <div>
                       <span className={`text-[10px] font-bold ${darkMode ? 'text-purple-400' : 'text-purple-500'}`}>메인 제목</span>
                       <p className={`text-lg font-black mt-0.5 ${darkMode ? 'text-slate-100' : 'text-slate-800'}`}
-                         dangerouslySetInnerHTML={{ 
-                           __html: slide.mainTitle
+                         dangerouslySetInnerHTML={{
+                           __html: sanitizeHtml(slide.mainTitle
                              .replace(/\\n/g, '<br/>')
                              .replace(/<highlight>/g, `<span class="${darkMode ? 'text-blue-400' : 'text-blue-600'}">`)
-                             .replace(/<\/highlight>/g, '</span>')
+                             .replace(/<\/highlight>/g, '</span>'))
                          }}
                       />
                     </div>

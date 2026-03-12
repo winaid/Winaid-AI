@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { getMyPostHistory, getPostById, type PostHistoryItem } from '../services/postStorageService';
+import { sanitizeHtml } from '../utils/sanitizeHtml';
 
 interface PostHistoryProps {
   onClose: () => void;
@@ -124,7 +125,7 @@ const PostHistory: React.FC<PostHistoryProps> = ({ onClose, darkMode = false }) 
           className={`flex-1 overflow-y-auto rounded-xl border p-4 prose prose-sm max-w-none ${
             darkMode ? 'bg-slate-900 border-slate-700 prose-invert' : 'bg-white border-slate-200'
           }`}
-          dangerouslySetInnerHTML={{ __html: selectedPost.content }}
+          dangerouslySetInnerHTML={{ __html: sanitizeHtml(selectedPost.content) }}
         />
       </div>
     );

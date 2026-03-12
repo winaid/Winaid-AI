@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { CATEGORIES, TONES, PERSONAS } from '../constants';
 import { TEAM_DATA, HospitalEntry } from '../constants/teamHospitals';
+import { sanitizeHtml } from '../utils/sanitizeHtml';
 import { analyzeHospitalKeywords, loadMoreKeywords, KeywordStat, MAX_KEYWORDS } from '../services/keywordAnalysisService';
 import { GenerationRequest, ContentCategory, TrendingItem, SeoTitleItem, AudienceMode, ImageStyle, PostType, CssTheme, WritingStyle, CardNewsDesignTemplateId } from '../types';
 import { CARD_NEWS_DESIGN_TEMPLATES } from '../services/cardNewsDesignTemplates';
@@ -525,14 +526,14 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
                       <div
                         className="text-xs text-slate-600 leading-relaxed prose prose-xs max-w-none [&_strong]:text-blue-700 [&_h2]:text-sm [&_h2]:font-bold [&_h2]:mt-2 [&_h2]:mb-1 [&_ul]:my-1 [&_li]:my-0.5"
                         dangerouslySetInnerHTML={{
-                          __html: keywordAiRec
+                          __html: sanitizeHtml(keywordAiRec
                             .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
                             .replace(/^### (.*$)/gm, '<h2>$1</h2>')
                             .replace(/^## (.*$)/gm, '<h2>$1</h2>')
                             .replace(/^- (.*$)/gm, '<li>$1</li>')
                             .replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>')
                             .replace(/\n{2,}/g, '<br/>')
-                            .replace(/\n/g, '<br/>')
+                            .replace(/\n/g, '<br/>'))
                         }}
                       />
                     </div>

@@ -5,6 +5,7 @@ import { SYSTEM_PROMPT, getStage2_AiRemovalAndCompliance, getDynamicSystemPrompt
 import { applyThemeToHtml } from '../utils/cssThemes';
 import { toast } from './Toast';
 import type { CssTheme } from '../types';
+import { sanitizeHtml } from '../utils/sanitizeHtml';
 
 interface ContentRefinerProps {
   onClose: () => void;
@@ -731,13 +732,13 @@ ${wantsHumanize ? `
               <div className="space-y-4">
                 <div 
                   className="prose prose-sm max-w-none" 
-                  dangerouslySetInnerHTML={{ 
-                    __html: (() => {
-                      // 🔥 HTML 엔티티 디코딩 (네모 문자 방지)
+                  dangerouslySetInnerHTML={{
+                    __html: sanitizeHtml((() => {
+                      // HTML 엔티티 디코딩 (네모 문자 방지)
                       const parser = new DOMParser();
                       const doc = parser.parseFromString(refinedContent, 'text/html');
                       return doc.body.innerHTML;
-                    })()
+                    })())
                   }} 
                 />
                 
