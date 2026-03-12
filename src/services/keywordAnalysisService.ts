@@ -6,6 +6,7 @@
  */
 
 import { callGemini, GEMINI_MODEL, TIMEOUTS } from './geminiClient';
+import type { ClinicContext } from './clinicContextService';
 
 export interface KeywordStat {
   keyword: string;
@@ -37,17 +38,64 @@ function isMetroArea(address: string): boolean {
   return metroPatterns.some(p => p.test(address));
 }
 
+/** 신뢰도 기준: 이 값 미만이면 컨텍스트 무시 */
+const MIN_CONTEXT_CONFIDENCE = 0.3;
+
+/**
+ * ClinicContext가 유효할 때 프롬프트에 추가할 컨텍스트 블록 생성.
+ * confidence가 낮으면 빈 문자열 반환 → 기존 프롬프트와 동일하게 작동.
+ */
+function buildClinicContextBlock(ctx: ClinicContext | null | undefined): string {
+  if (!ctx || ctx.confidence < MIN_CONTEXT_CONFIDENCE) return '';
+
+  const lines: string[] = [];
+  lines.push('\n[병원 실제 콘텐츠 분석 결과]');
+  lines.push(`분석 신뢰도: ${Math.round(ctx.confidence * 100)}%`);
+
+  if (ctx.actualServices.length > 0) {
+    lines.push(`실제 제공 서비스: ${ctx.actualServices.join(', ')}`);
+  }
+  if (ctx.specialties.length > 0) {
+    lines.push(`특화/차별화 진료: ${ctx.specialties.join(', ')}`);
+  }
+  if (ctx.locationSignals.length > 0) {
+    lines.push(`콘텐츠에서 확인된 지역: ${ctx.locationSignals.join(', ')}`);
+  }
+  const topTerms = Object.entries(ctx.recurringTerms)
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, 8)
+    .map(([term, count]) => `${term}(${count}회)`)
+    .join(', ');
+  if (topTerms) {
+    lines.push(`자주 언급된 용어: ${topTerms}`);
+  }
+
+  // 키워드 생성 지시
+  lines.push('');
+  lines.push('위 분석 결과를 참고하여 키워드를 생성하세요:');
+  lines.push('- 실제 제공 서비스와 관련된 키워드를 우선 생성');
+  lines.push('- 특화 진료가 있다면 해당 키워드를 반드시 포함');
+  lines.push('- 콘텐츠에서 확인된 지역명이 있으면 해당 지역 조합을 우선');
+  lines.push('- 콘텐츠에서 언급되지 않은 서비스 키워드(예: 야간진료, 주말진료 등)는 제외하거나 최소화');
+  lines.push('- 단, "미언급 = 미제공"이 절대적이지는 않으므로 완전히 배제하지는 말고 우선순위를 낮출 것');
+
+  return lines.join('\n');
+}
+
 /**
  * Gemini로 주소 기반 지역 키워드 후보 생성
  * - 수도권: 반경 2km / 지방: 반경 5km
  * - 실제 사람들이 검색할 법한 조합
+ * - clinicContext가 제공되면 실제 서비스/지역 기반으로 키워드 품질 향상
  */
 async function generateKeywordsWithAI(
   hospitalName: string,
   address: string,
-  category?: string
+  category?: string,
+  clinicContext?: ClinicContext | null
 ): Promise<string[]> {
   const radius = isMetroArea(address) ? 2 : 5;
+  const contextBlock = buildClinicContextBlock(clinicContext);
 
   const prompt = `당신은 네이버 블로그 SEO 키워드 전문가입니다.
 
@@ -57,7 +105,7 @@ async function generateKeywordsWithAI(
 주소: ${address}
 진료과: ${category || '치과'}
 탐색 반경: ${radius}km (${radius === 2 ? '수도권 - 좁은 범위로 정밀하게' : '지방 - 넓은 범위로 주변 지역 포함'})
-
+${contextBlock}
 규칙:
 1. 주소에서 동/구/읍/면 추출
 2. 반경 ${radius}km 이내 주요 지하철역 이름 포함 (예: 마천동 → 마천역, 거여역, 개롱역)
@@ -105,10 +153,12 @@ async function generateMoreKeywordsWithAI(
   address: string,
   existingKeywords: string[],
   category?: string,
-  remainingCount: number = 15
+  remainingCount: number = 15,
+  clinicContext?: ClinicContext | null
 ): Promise<string[]> {
   const radius = isMetroArea(address) ? 2 : 5;
   const generateCount = Math.min(remainingCount, 15);
+  const contextBlock = buildClinicContextBlock(clinicContext);
 
   const prompt = `당신은 네이버 블로그 SEO 키워드 전문가입니다.
 
@@ -118,7 +168,7 @@ async function generateMoreKeywordsWithAI(
 주소: ${address}
 진료과: ${category || '치과'}
 탐색 반경: ${radius}km
-
+${contextBlock}
 이미 분석한 키워드 (중복 금지):
 ${existingKeywords.map(k => `- ${k}`).join('\n')}
 
@@ -282,11 +332,16 @@ export async function analyzeHospitalKeywords(
   hospitalName: string,
   address: string,
   category?: string,
-  onProgress?: (msg: string) => void
+  onProgress?: (msg: string) => void,
+  clinicContext?: ClinicContext | null
 ): Promise<KeywordAnalysisResult> {
   // Step 1: AI로 키워드 후보 생성
-  onProgress?.('근처 지역 키워드 생성 중...');
-  const candidates = await generateKeywordsWithAI(hospitalName, address, category);
+  if (clinicContext && clinicContext.confidence >= MIN_CONTEXT_CONFIDENCE) {
+    onProgress?.('병원 콘텐츠 기반 키워드 생성 중...');
+  } else {
+    onProgress?.('근처 지역 키워드 생성 중...');
+  }
+  const candidates = await generateKeywordsWithAI(hospitalName, address, category, clinicContext);
 
   if (candidates.length === 0) {
     throw new Error('키워드를 생성할 수 없습니다.');
@@ -331,7 +386,8 @@ export async function loadMoreKeywords(
   address: string,
   existingStats: KeywordStat[],
   category?: string,
-  onProgress?: (msg: string) => void
+  onProgress?: (msg: string) => void,
+  clinicContext?: ClinicContext | null
 ): Promise<{ stats: KeywordStat[]; apiErrors?: string[]; reachedLimit?: boolean }> {
   const existingKeywords = existingStats.map(s => s.keyword);
   const remaining = MAX_KEYWORDS - existingKeywords.length;
@@ -355,7 +411,7 @@ export async function loadMoreKeywords(
       ? `추가 키워드 생성 중... (현재 ${existingKeywords.length}개 / 최대 ${MAX_KEYWORDS}개)`
       : `유효 키워드 보충 중... (${allNewStats.length}/${TARGET_COUNT}개 확보)`
     );
-    const moreCandidates = await generateMoreKeywordsWithAI(hospitalName, address, currentExisting, category, batchSize);
+    const moreCandidates = await generateMoreKeywordsWithAI(hospitalName, address, currentExisting, category, batchSize, clinicContext);
 
     if (moreCandidates.length === 0) break;
 
