@@ -108,11 +108,15 @@ export const getContentList = async (): Promise<any[]> => {
  */
 export const saveApiKeys = async (geminiKey?: string, openaiKey?: string): Promise<SaveContentResponse> => {
   try {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    const adminToken = sessionStorage.getItem('ADMIN_TOKEN');
+    if (adminToken) {
+      headers['Authorization'] = `Bearer ${adminToken}`;
+    }
+
     const response = await fetch(`${API_BASE_URL}/api/api-keys/save`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
       body: JSON.stringify({
         geminiKey,
         openaiKey,
@@ -170,8 +174,15 @@ export const deleteApiKeys = async (type?: 'gemini' | 'openai'): Promise<SaveCon
       ? `${API_BASE_URL}/api/api-keys/delete?type=${type}`
       : `${API_BASE_URL}/api/api-keys/delete`;
       
+    const headers: Record<string, string> = {};
+    const adminToken = sessionStorage.getItem('ADMIN_TOKEN');
+    if (adminToken) {
+      headers['Authorization'] = `Bearer ${adminToken}`;
+    }
+
     const response = await fetch(url, {
       method: 'DELETE',
+      headers,
     });
 
     if (!response.ok) {
