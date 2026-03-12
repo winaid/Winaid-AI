@@ -895,39 +895,16 @@ const AdminPage: React.FC<AdminPageProps> = ({ onAdminVerified }) => {
     setLoginError('');
     setLoginLoading(true);
     try {
-      // 0단계: Supabase 연결 확인 (빠른 health check)
-      const supabaseUrl = (supabase as any).supabaseUrl || (supabase as any).restUrl || '';
-      console.log('[Admin] Supabase URL:', supabaseUrl);
-      try {
-        const healthCheck = await Promise.race([
-          supabase.from('generated_posts').select('id', { count: 'exact', head: true }),
-          new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 6000))
-        ]);
-        console.log('[Admin] Health check 결과:', healthCheck);
-        // Supabase 응답은 왔지만 테이블이 없는 경우
-        if ((healthCheck as any)?.error?.code === '42P01') {
-          setLoginError('DB 테이블 미설정: Supabase SQL Editor에서 supabase_FULL_SETUP.sql을 실행하세요.');
-          return;
-        }
-        if ((healthCheck as any)?.error) {
-          console.warn('[Admin] Health check 에러 (계속 진행):', (healthCheck as any).error);
-        }
-      } catch (healthErr) {
-        console.error('[Admin] Supabase 연결 실패:', healthErr, 'URL:', supabaseUrl);
-        setLoginError(`Supabase 연결 실패 (${supabaseUrl ? supabaseUrl.substring(0, 30) + '...' : 'URL 없음'}). 브라우저 콘솔(F12)을 확인하세요.`);
-        return;
-      }
-
-      // 1단계: 비밀번호 검증 (getAdminStats)
+      // 비밀번호 검증 (getAdminStats)
       const result = await getAdminStats(password);
 
       if (!result.success) {
         console.error('[Admin] 로그인 실패:', result.error);
         const errMsg = result.error || '';
         if (errMsg.includes('시간 초과') || errMsg.includes('timeout')) {
-          setLoginError('Supabase 응답 시간 초과. 프로젝트가 일시정지(paused) 상태인지 확인하세요.');
-        } else if (errMsg.includes('does not exist') || errMsg.includes('function')) {
-          setLoginError('RPC 함수 미설정: Supabase SQL Editor에서 supabase_FULL_SETUP.sql을 실행하세요.');
+          setLoginError('서버 응답 시간 초과. 네트워크 상태를 확인하고 다시 시도하세요.');
+        } else if (errMsg.includes('does not exist') || errMsg.includes('function') || errMsg.includes('42883')) {
+          setLoginError('DB 함수 미설정. Supabase SQL Editor에서 supabase_FULL_SETUP.sql을 실행하세요.');
         } else if (errMsg.includes('비밀번호')) {
           setLoginError(errMsg);
         } else {

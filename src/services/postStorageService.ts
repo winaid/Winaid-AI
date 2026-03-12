@@ -206,12 +206,12 @@ export const getAdminStats = async (adminPassword: string): Promise<{
   try {
     console.log('[Admin] RPC 호출 시작...');
 
-    // 안전망: Supabase RPC가 네트워크/DB 레벨에서 hang할 경우 8초 후 강제 실패
+    // 안전망: Supabase RPC hang 방지 (15초 — 싱가포르 서버 첫 연결 고려)
     const rpcPromise = supabase.rpc('get_admin_stats', {
       admin_password: adminPassword
     });
     const timeoutPromise = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error('인증 요청 시간 초과. 네트워크 연결을 확인하세요.')), 5000)
+      setTimeout(() => reject(new Error('인증 요청 시간 초과 (15초). 네트워크 연결을 확인하세요.')), 15000)
     );
 
     const { data, error } = await Promise.race([rpcPromise, timeoutPromise]) as { data: any; error: any };
