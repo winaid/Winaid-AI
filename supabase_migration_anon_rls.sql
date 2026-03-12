@@ -16,6 +16,9 @@ CREATE POLICY "Anon can insert style profiles" ON public.hospital_style_profiles
 CREATE POLICY "Anon can update style profiles" ON public.hospital_style_profiles
   FOR UPDATE USING (true);
 
+CREATE POLICY "Anon can delete style profiles" ON public.hospital_style_profiles
+  FOR DELETE USING (true);
+
 -- 2. hospital_crawled_posts: anon 역할 허용
 CREATE POLICY "Anon can view crawled posts" ON public.hospital_crawled_posts
   FOR SELECT USING (true);

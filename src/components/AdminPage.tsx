@@ -858,10 +858,12 @@ const AdminPage: React.FC<AdminPageProps> = ({ onAdminVerified }) => {
       });
       loadStyleProfiles();
 
-      const msg = `${hospitalName}: 글 ${result.deletedPosts}개 삭제${result.profileDeleted ? ', 프로파일 삭제' : ''} 완료`;
-      toast.success(msg);
       if (result.errors.length > 0) {
         console.warn('초기화 부분 오류:', result.errors);
+        toast.error(`초기화 일부 실패: ${result.errors.join(', ')}`);
+      } else {
+        const msg = `${hospitalName}: 글 ${result.deletedPosts}개 삭제${result.profileDeleted ? ', 프로파일 삭제' : ''} 완료`;
+        toast.success(msg);
       }
     } catch (err: any) {
       toast.error(`초기화 실패: ${err.message}`);

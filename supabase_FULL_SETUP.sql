@@ -174,6 +174,9 @@ DO $$ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='hospital_style_profiles' AND policyname='Anon can update style profiles') THEN
     CREATE POLICY "Anon can update style profiles" ON public.hospital_style_profiles FOR UPDATE USING (true);
   END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='hospital_style_profiles' AND policyname='Anon can delete style profiles') THEN
+    CREATE POLICY "Anon can delete style profiles" ON public.hospital_style_profiles FOR DELETE USING (true);
+  END IF;
 END $$;
 
 CREATE INDEX IF NOT EXISTS idx_hospital_style_hospital_name ON public.hospital_style_profiles(hospital_name);
