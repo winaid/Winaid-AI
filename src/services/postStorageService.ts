@@ -199,15 +199,27 @@ export const getAdminStats = async (adminPassword: string): Promise<{
   error?: string;
 }> => {
   try {
-    const { data, error } = await supabase.rpc('get_admin_stats', {
+    console.log('[Admin] RPC 호출 시작...');
+
+    // 타임아웃 방어: Supabase RPC가 hang할 경우 10초 후 강제 실패
+    const rpcPromise = supabase.rpc('get_admin_stats', {
       admin_password: adminPassword
     });
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('인증 요청 시간 초과 (10초)')), 10000)
+    );
+
+    const { data, error } = await Promise.race([rpcPromise, timeoutPromise]) as any;
+
+    console.log('[Admin] RPC 응답:', { data: !!data, error: !!error });
 
     if (error) {
       console.error('[PostStorage] Admin 통계 조회 실패:', error);
+      // RAISE EXCEPTION 'Unauthorized' → error.message에 포함
+      const isUnauthorized = error.message?.includes('Unauthorized') || error.code === 'P0001';
       return {
         success: false,
-        error: error.message
+        error: isUnauthorized ? '비밀번호가 올바르지 않습니다.' : error.message
       };
     }
 
