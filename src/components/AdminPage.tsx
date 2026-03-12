@@ -895,35 +895,52 @@ const AdminPage: React.FC<AdminPageProps> = ({ onAdminVerified }) => {
     setLoginError('');
     setLoginLoading(true);
     try {
-      // 서버사이드 검증: Supabase RPC로 비밀번호 확인 + 콘텐츠 병렬 로드
-      const [result, contentsResult] = await Promise.all([
-        getAdminStats(password),
-        getAllGeneratedPosts(password, { limit: 100 })
-      ]);
-      if (result.success) {
-        setIsAuthenticated(true);
-        sessionStorage.setItem('ADMIN_AUTHENTICATED', 'true');
-        sessionStorage.setItem('ADMIN_TOKEN', password);
-        if (rememberMe) {
-          localStorage.setItem('ADMIN_PERSIST', 'true');
-          localStorage.setItem('ADMIN_TOKEN', password);
+      // 1단계: 비밀번호 검증 (getAdminStats만 먼저)
+      const result = await getAdminStats(password);
+
+      if (!result.success) {
+        console.error('[Admin] 로그인 실패:', result.error);
+        // 에러 메시지를 사용자 친화적으로 변환
+        const errMsg = result.error || '';
+        if (errMsg.includes('시간 초과') || errMsg.includes('timeout')) {
+          setLoginError('서버 연결 시간 초과. 네트워크를 확인하세요.');
+        } else if (errMsg.includes('does not exist') || errMsg.includes('function')) {
+          setLoginError('서버 설정 필요: Supabase SQL 마이그레이션을 실행하세요.');
+        } else if (errMsg.includes('비밀번호')) {
+          setLoginError(errMsg);
+        } else {
+          setLoginError(errMsg || '비밀번호가 올바르지 않습니다.');
         }
-        onAdminVerified?.();
-        // 로그인 시 받은 통계 즉시 반영
-        if (result.stats) {
-          setStats({
-            totalContents: result.stats.totalPosts,
-            blogCount: result.stats.blogCount,
-            cardnewsCount: result.stats.cardNewsCount,
-            pressCount: result.stats.pressReleaseCount,
-            uniqueHospitals: result.stats.uniqueHospitals,
-            uniqueUsers: result.stats.uniqueUsers,
-            postsToday: result.stats.postsToday,
-            postsThisWeek: result.stats.postsThisWeek,
-            postsThisMonth: result.stats.postsThisMonth
-          });
-        }
-        // 로그인 시 받은 콘텐츠 즉시 반영
+        return;
+      }
+
+      // 2단계: 인증 성공 — 즉시 로그인 처리
+      setIsAuthenticated(true);
+      sessionStorage.setItem('ADMIN_AUTHENTICATED', 'true');
+      sessionStorage.setItem('ADMIN_TOKEN', password);
+      if (rememberMe) {
+        localStorage.setItem('ADMIN_PERSIST', 'true');
+        localStorage.setItem('ADMIN_TOKEN', password);
+      }
+      onAdminVerified?.();
+
+      // 통계 즉시 반영
+      if (result.stats) {
+        setStats({
+          totalContents: result.stats.totalPosts,
+          blogCount: result.stats.blogCount,
+          cardnewsCount: result.stats.cardNewsCount,
+          pressCount: result.stats.pressReleaseCount,
+          uniqueHospitals: result.stats.uniqueHospitals,
+          uniqueUsers: result.stats.uniqueUsers,
+          postsToday: result.stats.postsToday,
+          postsThisWeek: result.stats.postsThisWeek,
+          postsThisMonth: result.stats.postsThisMonth
+        });
+      }
+
+      // 3단계: 콘텐츠 백그라운드 로드 (로그인 완료 후 비동기)
+      getAllGeneratedPosts(password, { limit: 100 }).then(contentsResult => {
         if (contentsResult.success && contentsResult.data) {
           setContents(contentsResult.data.map((item: any) => ({
             id: item.id,
@@ -941,13 +958,10 @@ const AdminPage: React.FC<AdminPageProps> = ({ onAdminVerified }) => {
             char_count: item.char_count
           })));
         }
-      } else {
-        console.error('[Admin] 로그인 실패:', result.error);
-        setLoginError(result.error || '비밀번호가 올바르지 않습니다.');
-      }
+      });
     } catch (err) {
       console.error('[Admin] 로그인 예외:', err);
-      setLoginError('인증 중 오류가 발생했습니다. Supabase 연결을 확인하세요.');
+      setLoginError('인증 중 오류가 발생했습니다. 네트워크 연결을 확인하세요.');
     } finally {
       setLoginLoading(false);
     }

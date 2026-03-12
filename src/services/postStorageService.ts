@@ -211,7 +211,7 @@ export const getAdminStats = async (adminPassword: string): Promise<{
       admin_password: adminPassword
     });
     const timeoutPromise = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error('인증 요청 시간 초과 (8초). 네트워크 연결을 확인하세요.')), 8000)
+      setTimeout(() => reject(new Error('인증 요청 시간 초과. 네트워크 연결을 확인하세요.')), 5000)
     );
 
     const { data, error } = await Promise.race([rpcPromise, timeoutPromise]) as { data: any; error: any };
