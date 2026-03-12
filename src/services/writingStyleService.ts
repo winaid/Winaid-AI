@@ -16,6 +16,91 @@ const getAiClient = () => {
   return new GoogleGenAI({ apiKey });
 };
 
+// ============================================================
+// Gemini 응답에서 프로필 데이터 안전 추출
+// ============================================================
+
+/** 코드펜스(```json ... ```) 제거 */
+const stripCodeFence = (text: string): string => {
+  const trimmed = text.trim();
+  const fenceMatch = trimmed.match(/^```(?:json)?\s*\n?([\s\S]*?)\n?\s*```$/);
+  return fenceMatch ? fenceMatch[1].trim() : trimmed;
+};
+
+/** 프로필 필수 필드 목록 */
+const PROFILE_REQUIRED_FIELDS = [
+  'tone', 'sentenceEndings', 'vocabulary', 'structure',
+  'emotionLevel', 'formalityLevel', 'description', 'stylePrompt',
+] as const;
+
+/** Gemini raw 응답에서 프로필 객체 추출 */
+const extractProfileFromGeminiResponse = (response: any): {
+  tone: string;
+  sentenceEndings: string[];
+  vocabulary: string[];
+  structure: string;
+  emotionLevel: string;
+  formalityLevel: string;
+  description: string;
+  stylePrompt: string;
+} => {
+  console.log('[StyleProfile] 1/5 raw response 수신:', typeof response);
+
+  // candidates[0].content.parts 에서 text 추출
+  const text = response?.candidates?.[0]?.content?.parts?.find(
+    (part: any) => typeof part?.text === 'string'
+  )?.text;
+
+  // SDK 헬퍼(.text)도 폴백으로 시도
+  const rawText = text || (typeof response?.text === 'string' ? response.text : null);
+
+  console.log('[StyleProfile] 2/5 text 추출:', rawText ? `성공 (${rawText.length}자)` : '실패');
+
+  if (!rawText || rawText.trim().length === 0) {
+    throw new Error('Gemini 응답에서 profile text를 찾을 수 없습니다.');
+  }
+
+  // 코드펜스 제거 후 JSON 파싱
+  const cleanText = stripCodeFence(rawText);
+  let parsed: any;
+  try {
+    parsed = JSON.parse(cleanText);
+  } catch (e) {
+    console.error('[StyleProfile] JSON 파싱 실패, 원본:', cleanText.substring(0, 200));
+    throw new Error('Gemini profile text JSON 파싱에 실패했습니다.');
+  }
+
+  console.log('[StyleProfile] 3/5 JSON parse 성공, 키:', Object.keys(parsed).join(', '));
+
+  // 필수 필드 검증
+  const missing = PROFILE_REQUIRED_FIELDS.filter(f => parsed[f] === undefined || parsed[f] === null);
+  if (missing.length > 0) {
+    console.warn('[StyleProfile] 4/5 누락 필드:', missing.join(', '));
+    // 누락 필드가 있어도 기본값으로 채워서 진행 (완전 실패보다 나음)
+  } else {
+    console.log('[StyleProfile] 4/5 schema validation 성공');
+  }
+
+  const profile = {
+    tone: parsed.tone ?? '',
+    sentenceEndings: Array.isArray(parsed.sentenceEndings) ? parsed.sentenceEndings : [],
+    vocabulary: Array.isArray(parsed.vocabulary) ? parsed.vocabulary : [],
+    structure: parsed.structure ?? '',
+    emotionLevel: parsed.emotionLevel ?? 'medium',
+    formalityLevel: parsed.formalityLevel ?? 'neutral',
+    description: parsed.description ?? '',
+    stylePrompt: parsed.stylePrompt ?? '',
+  };
+
+  // 최소 유효성: tone + description이 없으면 분석 실패로 간주
+  if (!profile.tone && !profile.description) {
+    throw new Error('프로필 분석 결과가 비어있습니다. 텍스트를 더 길게 입력해주세요.');
+  }
+
+  console.log('[StyleProfile] 5/5 프로필 추출 완료:', profile.tone, '/', profile.description?.substring(0, 30));
+  return profile;
+};
+
 /**
  * 이미지에서 텍스트 추출 (OCR)
  */
@@ -184,20 +269,20 @@ JSON으로 답변해주세요:
           type: Type.OBJECT,
           properties: {
             tone: { type: Type.STRING },
-            sentenceEndings: { 
-              type: Type.ARRAY, 
-              items: { type: Type.STRING } 
+            sentenceEndings: {
+              type: Type.ARRAY,
+              items: { type: Type.STRING }
             },
-            vocabulary: { 
-              type: Type.ARRAY, 
-              items: { type: Type.STRING } 
+            vocabulary: {
+              type: Type.ARRAY,
+              items: { type: Type.STRING }
             },
             structure: { type: Type.STRING },
-            emotionLevel: { 
+            emotionLevel: {
               type: Type.STRING,
               enum: ["low", "medium", "high"]
             },
-            formalityLevel: { 
+            formalityLevel: {
               type: Type.STRING,
               enum: ["casual", "neutral", "formal"]
             },
@@ -208,31 +293,33 @@ JSON으로 답변해주세요:
         }
       }
     });
-    
-    const result = JSON.parse(response.text || "{}");
-    
-    // LearnedWritingStyle 객체 생성
+
+    // Gemini 응답에서 프로필 안전 추출 (candidates[0].content.parts[0].text)
+    const result = extractProfileFromGeminiResponse(response);
+
+    // LearnedWritingStyle 객체 생성 (검증된 필드만 사용)
     const learnedStyle: LearnedWritingStyle = {
       id: `style_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       name: styleName,
       description: result.description,
-      sampleText: sampleText.substring(0, 500), // 원본 샘플 일부 저장
+      sampleText: sampleText.substring(0, 500),
       analyzedStyle: {
         tone: result.tone,
         sentenceEndings: result.sentenceEndings,
         vocabulary: result.vocabulary,
         structure: result.structure,
-        emotionLevel: result.emotionLevel,
-        formalityLevel: result.formalityLevel
+        emotionLevel: result.emotionLevel as 'low' | 'medium' | 'high',
+        formalityLevel: result.formalityLevel as 'casual' | 'neutral' | 'formal'
       },
       stylePrompt: result.stylePrompt,
       createdAt: new Date().toISOString()
     };
-    
+
+    console.log('[StyleProfile] 저장 완료:', learnedStyle.name, learnedStyle.id);
     return learnedStyle;
-  } catch (error) {
-    console.error('말투 분석 실패:', error);
-    throw new Error('말투 분석에 실패했습니다. 다시 시도해주세요.');
+  } catch (error: any) {
+    console.error('말투 분석 실패:', error?.message || error);
+    throw new Error(error?.message || '말투 분석에 실패했습니다. 다시 시도해주세요.');
   }
 };
 

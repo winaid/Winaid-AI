@@ -139,26 +139,32 @@ const WritingStyleLearner: React.FC<WritingStyleLearnerProps> = ({
     setAnalyzeProgress('말투 분석 중...');
 
     try {
+      setAnalyzeProgress('Gemini AI로 말투 분석 중...');
       const analyzedStyle = await analyzeWritingStyle(textInput, styleName);
-      
-      // 새 스타일 저장
+
+      // 프로필 저장
+      setAnalyzeProgress('프로파일 저장 중...');
       const newStyles = [...savedStyles, analyzedStyle];
       saveStyles(newStyles);
-      
+
       // 방금 학습한 스타일 선택
       onStyleSelect(analyzedStyle.id);
-      
+
       // 입력 초기화
       setTextInput('');
       setStyleName('');
       setExtractedText('');
       setAnalyzeProgress('');
-      
+
       toast.success(`"${analyzedStyle.name}" ${isPress ? '문체' : '말투'}가 학습되었습니다!`);
     } catch (err: any) {
-      setError(err.message || '말투 분석 실패');
+      console.error('[WritingStyleLearner] 분석/저장 실패:', err);
+      const errorMsg = err?.message || '말투 분석에 실패했습니다.';
+      setError(errorMsg);
+      toast.error(errorMsg);
     } finally {
       setIsAnalyzing(false);
+      setAnalyzeProgress('');
     }
   };
 
