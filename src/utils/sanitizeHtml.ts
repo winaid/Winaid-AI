@@ -26,8 +26,8 @@ const ALLOWED_ATTRS = new Set([
   'start', 'reversed', 'type', // ol 속성
 ]);
 
-// 안전한 URL 프로토콜
-const SAFE_URL_RE = /^(?:https?:|mailto:|tel:|#|\/)/i;
+// 안전한 URL 프로토콜 (//로 시작하는 protocol-relative URL은 차단)
+const SAFE_URL_RE = /^(?:https?:|mailto:|tel:|#|\/(?!\/))/i;
 
 /**
  * HTML 문자열에서 허용된 태그/속성만 남기고 나머지 제거
