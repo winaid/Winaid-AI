@@ -670,22 +670,46 @@ ${content.slice(0, 3000)}`;
     config: { responseMimeType: 'application/json', temperature: 0.1 },
   });
 
-  const raw = response.text || '{}';
+  const raw = response.text || '';
+  if (!raw.trim()) {
+    console.error('[Score] Gemini 응답 비어 있음');
+    return { score_typo: 50, score_spelling: 50, score_medical_law: 50, score_total: 50, typo_issues: [], law_issues: [] };
+  }
   try {
-    const parsed = JSON.parse(raw.match(/\{[\s\S]*\}/)?.[0] || raw);
-    const scoreTypo = Math.max(0, Math.min(100, parsed.score_typo ?? 100));
-    const scoreSpelling = Math.max(0, Math.min(100, parsed.score_spelling ?? 100));
-    const scoreLaw = Math.max(0, Math.min(100, parsed.score_medical_law ?? 100));
+    const jsonMatch = raw.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      console.error('[Score] JSON 추출 실패, 원본:', raw.slice(0, 200));
+      return { score_typo: 50, score_spelling: 50, score_medical_law: 50, score_total: 50, typo_issues: [], law_issues: [] };
+    }
+    const parsed = JSON.parse(jsonMatch[0]);
+
+    // 점수가 실제로 존재하는지 검증 — 없으면 50점 (100점 아님)
+    const hasScores = typeof parsed.score_typo === 'number'
+      || typeof parsed.score_spelling === 'number'
+      || typeof parsed.score_medical_law === 'number';
+
+    if (!hasScores) {
+      console.warn('[Score] 점수 필드 없음, parsed keys:', Object.keys(parsed));
+      return { score_typo: 50, score_spelling: 50, score_medical_law: 50, score_total: 50, typo_issues: parsed.typo_issues || [], law_issues: parsed.law_issues || [] };
+    }
+
+    const scoreTypo = Math.max(0, Math.min(100, typeof parsed.score_typo === 'number' ? parsed.score_typo : 50));
+    const scoreSpelling = Math.max(0, Math.min(100, typeof parsed.score_spelling === 'number' ? parsed.score_spelling : 50));
+    const scoreLaw = Math.max(0, Math.min(100, typeof parsed.score_medical_law === 'number' ? parsed.score_medical_law : 50));
+    const scoreTotal = Math.round((scoreTypo + scoreSpelling + scoreLaw) / 3);
+
+    console.log(`[Score] 채점 완료: 오타=${scoreTypo}, 맞춤법=${scoreSpelling}, 의료법=${scoreLaw}, 총점=${scoreTotal}`);
     return {
       score_typo: scoreTypo,
       score_spelling: scoreSpelling,
       score_medical_law: scoreLaw,
-      score_total: Math.round((scoreTypo + scoreSpelling + scoreLaw) / 3),
+      score_total: scoreTotal,
       typo_issues: parsed.typo_issues || [],
       law_issues: parsed.law_issues || [],
     };
-  } catch {
-    return { score_typo: 100, score_spelling: 100, score_medical_law: 100, score_total: 100, typo_issues: [], law_issues: [] };
+  } catch (e) {
+    console.error('[Score] JSON 파싱 실패:', e, '원본:', raw.slice(0, 200));
+    return { score_typo: 50, score_spelling: 50, score_medical_law: 50, score_total: 50, typo_issues: [], law_issues: [] };
   }
 };
 
