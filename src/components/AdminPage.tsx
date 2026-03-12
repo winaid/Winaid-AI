@@ -525,6 +525,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onAdminVerified }) => {
   });
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState('');
+  const [loginLoading, setLoginLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'contents' | 'style' | 'users'>('contents');
 
   // 사용자 관리 탭 state
@@ -871,7 +872,12 @@ const AdminPage: React.FC<AdminPageProps> = ({ onAdminVerified }) => {
 
   const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!password.trim()) {
+      setLoginError('비밀번호를 입력하세요.');
+      return;
+    }
     setLoginError('');
+    setLoginLoading(true);
     try {
       // 서버사이드 검증: Supabase RPC로 비밀번호 확인
       const result = await getAdminStats(password);
@@ -881,10 +887,14 @@ const AdminPage: React.FC<AdminPageProps> = ({ onAdminVerified }) => {
         sessionStorage.setItem('ADMIN_TOKEN', password);
         onAdminVerified?.();
       } else {
-        setLoginError('비밀번호가 올바르지 않습니다.');
+        console.error('[Admin] 로그인 실패:', result.error);
+        setLoginError(result.error || '비밀번호가 올바르지 않습니다.');
       }
-    } catch {
-      setLoginError('인증 중 오류가 발생했습니다.');
+    } catch (err) {
+      console.error('[Admin] 로그인 예외:', err);
+      setLoginError('인증 중 오류가 발생했습니다. Supabase 연결을 확인하세요.');
+    } finally {
+      setLoginLoading(false);
     }
   };
 
@@ -925,7 +935,9 @@ const AdminPage: React.FC<AdminPageProps> = ({ onAdminVerified }) => {
               <label className="text-sm font-medium text-slate-600 mb-1.5 block">비밀번호</label>
               <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="관리자 비밀번호" className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 transition-all" autoFocus />
             </div>
-            <button type="submit" className="w-full py-3.5 bg-slate-800 text-white font-semibold rounded-xl hover:bg-slate-700 transition-all">로그인</button>
+            <button type="submit" disabled={loginLoading} className="w-full py-3.5 bg-slate-800 text-white font-semibold rounded-xl hover:bg-slate-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+              {loginLoading ? '인증 중...' : '로그인'}
+            </button>
             <div className="mt-4 text-center">
               <a href="#" className="text-sm text-slate-400 hover:text-slate-600 transition-colors">홈으로 돌아가기</a>
             </div>

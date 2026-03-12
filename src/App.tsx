@@ -201,8 +201,8 @@ const App: React.FC = () => {
 
   // Supabase 인증 상태 감시
   useEffect(() => {
-    // 관리자 인증 상태 확인 (localStorage)
-    const adminAuth = localStorage.getItem('ADMIN_AUTHENTICATED');
+    // 관리자 인증 상태 확인 (sessionStorage)
+    const adminAuth = sessionStorage.getItem('ADMIN_AUTHENTICATED');
     if (adminAuth === 'true') {
       setIsAdmin(true);
     }
