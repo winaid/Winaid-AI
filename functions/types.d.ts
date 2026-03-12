@@ -2,7 +2,7 @@
 interface Env {
   API_KEYS: KVNamespace;
   CONTENT_KV: KVNamespace;
-  APP_PASSWORD: string;
+  APP_PASSWORD?: string; // deprecated — 비밀번호 인증 제거됨
 }
 
 type PagesFunction<Env = any> = (context: {

@@ -14,7 +14,7 @@ const PromptPreview = lazy(() => import('./components/PromptPreview'));
 const AdminPage = lazy(() => import('./components/AdminPage'));
 const AuthPage = lazy(() => import('./components/AuthPage').then(module => ({ default: module.AuthPage })));
 const ApiKeySettings = lazy(() => import('./components/ApiKeySettings'));
-const PasswordLogin = lazy(() => import('./components/PasswordLogin'));
+// PasswordLogin 제거됨 — 비밀번호 인증 비활성화
 const ContentRefiner = lazy(() => import('./components/ContentRefiner'));
 const MedicalLawSearch = lazy(() => import('./components/MedicalLawSearch').then(module => ({ default: module.MedicalLawSearch })));
 const ImageGenerator = lazy(() => import('./components/ImageGenerator'));
@@ -161,10 +161,8 @@ const App: React.FC = () => {
   const [showUserManual, setShowUserManual] = useState(false);
   const [quickInput, setQuickInput] = useState('');
 
-  // 비밀번호 인증 상태 - 임시로 항상 true (로그인 비활성화)
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
-    return sessionStorage.getItem('hospital_ai_auth') === 'true';
-  });
+  // 비밀번호 인증 제거됨 — 항상 인증된 상태
+  const [isAuthenticated] = useState<boolean>(true);
   
 
   // 다크모드 상태
@@ -478,13 +476,8 @@ const App: React.FC = () => {
       <Suspense fallback={<PageSkeleton />}>
         <LandingPage
           onStart={() => {
-            if (isAuthenticated) {
-              window.location.hash = 'app';
-              setCurrentPage('home');
-            } else {
-              window.location.hash = 'auth';
-              setCurrentPage('auth');
-            }
+            window.location.hash = 'app';
+            setCurrentPage('home');
           }}
           darkMode={darkMode}
         />
@@ -546,15 +539,6 @@ const App: React.FC = () => {
   }
 
   // 메인 앱 렌더링
-  // 비밀번호 인증 화면 표시
-  if (!isAuthenticated) {
-    return (
-      <Suspense fallback={<PageSkeleton />}>
-        <PasswordLogin onSuccess={() => setIsAuthenticated(true)} />
-      </Suspense>
-    );
-  }
-
   return (
     <div className={`min-h-screen flex font-sans relative transition-colors duration-300 ${darkMode ? 'bg-[#0f1117] text-slate-100' : 'bg-[#f6f7f9] text-slate-900'}`}>
 

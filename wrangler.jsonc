@@ -4,9 +4,7 @@
   "compatibility_date": "2024-12-30",
   "pages_build_output_dir": "./dist",
   "compatibility_flags": ["nodejs_compat"],
-  "vars": {
-    "APP_PASSWORD": "0000"
-  },
+  "vars": {},
   "kv_namespaces": [
     {
       "binding": "API_KEYS",

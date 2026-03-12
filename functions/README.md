@@ -56,7 +56,7 @@ https://dash.cloudflare.com/ → Workers & Pages → KV
 Dashboard → Pages → hospital-ai → Settings → Environment variables
 
 **Production 환경에 추가:**
-- `APP_PASSWORD` = `0000` (또는 원하는 비밀번호)
+- (비밀번호 인증은 제거됨)
 
 ## 🚀 배포
 
@@ -118,9 +118,7 @@ wrangler pages dev dist --kv=API_KEYS --kv=CONTENT_KV
 ### wrangler.jsonc (로컬 개발용)
 ```jsonc
 {
-  "vars": {
-    "APP_PASSWORD": "0000"
-  }
+  "vars": {}
 }
 ```
 
