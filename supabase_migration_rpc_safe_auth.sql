@@ -6,6 +6,7 @@
 --        빈 결과를 반환하여 Supabase JS 클라이언트 hang 방지
 --
 -- Supabase Dashboard > SQL Editor에서 실행하세요.
+-- 비밀번호 'winaid' 설정 완료 — 그대로 실행 가능
 -- ============================================
 
 -- 1. get_admin_stats: 틀린 비밀번호 → 빈 행 반환 (RAISE EXCEPTION 제거)
@@ -23,13 +24,13 @@ RETURNS TABLE (
 )
 LANGUAGE plpgsql
 SECURITY DEFINER
-AS $$
+AS $fn$
 DECLARE
-  valid_password TEXT := 'CHANGE_ME_IN_SUPABASE';
+  valid_password TEXT := 'winaid';
 BEGIN
   -- 비밀번호 불일치 시 빈 결과 반환 (예외 대신)
   IF admin_password IS NULL OR admin_password != valid_password THEN
-    RETURN;  -- 빈 행 반환, 예외 없음
+    RETURN;
   END IF;
 
   RETURN QUERY
@@ -45,7 +46,7 @@ BEGIN
     COUNT(*) FILTER (WHERE created_at >= CURRENT_DATE - INTERVAL '30 days')::BIGINT AS posts_this_month
   FROM public.generated_posts;
 END;
-$$;
+$fn$;
 
 -- 2. get_all_generated_posts: 틀린 비밀번호 → 빈 행 반환
 CREATE OR REPLACE FUNCTION get_all_generated_posts(
@@ -79,13 +80,12 @@ RETURNS TABLE (
 )
 LANGUAGE plpgsql
 SECURITY DEFINER
-AS $$
+AS $fn$
 DECLARE
-  valid_password TEXT := 'CHANGE_ME_IN_SUPABASE';
+  valid_password TEXT := 'winaid';
 BEGIN
-  -- 비밀번호 불일치 시 빈 결과 반환 (예외 대신)
   IF admin_password IS NULL OR admin_password != valid_password THEN
-    RETURN;  -- 빈 행 반환, 예외 없음
+    RETURN;
   END IF;
 
   RETURN QUERY
@@ -118,7 +118,7 @@ BEGIN
   LIMIT limit_count
   OFFSET offset_count;
 END;
-$$;
+$fn$;
 
 -- 3. delete_generated_post: 틀린 비밀번호 → FALSE 반환 (예외 대신)
 CREATE OR REPLACE FUNCTION delete_generated_post(
@@ -128,11 +128,10 @@ CREATE OR REPLACE FUNCTION delete_generated_post(
 RETURNS BOOLEAN
 LANGUAGE plpgsql
 SECURITY DEFINER
-AS $$
+AS $fn$
 DECLARE
-  valid_password TEXT := 'CHANGE_ME_IN_SUPABASE';
+  valid_password TEXT := 'winaid';
 BEGIN
-  -- 비밀번호 불일치 시 FALSE 반환 (예외 대신)
   IF admin_password IS NULL OR admin_password != valid_password THEN
     RETURN FALSE;
   END IF;
@@ -140,10 +139,9 @@ BEGIN
   DELETE FROM public.generated_posts WHERE id = post_id;
   RETURN FOUND;
 END;
-$$;
+$fn$;
 
 -- ============================================
 -- 완료!
--- 비밀번호는 Supabase SQL Editor에서 'CHANGE_ME_IN_SUPABASE' 부분을
--- 실제 비밀번호로 교체한 후 실행하세요.
+-- 비밀번호가 이미 설정되어 있습니다. 그대로 실행하세요.
 -- ============================================
