@@ -168,6 +168,7 @@ export const getAllGeneratedPosts = async (
       };
     }
 
+    // RPC가 빈 배열을 반환하면 인증 실패 가능성 (데이터가 진짜 0건인 경우도 있으므로 호출자가 판단)
     return {
       success: true,
       data: data || []
@@ -201,29 +202,29 @@ export const getAdminStats = async (adminPassword: string): Promise<{
   try {
     console.log('[Admin] RPC 호출 시작...');
 
-    // 타임아웃 방어: Supabase RPC가 hang할 경우 10초 후 강제 실패
-    const rpcPromise = supabase.rpc('get_admin_stats', {
+    const { data, error } = await supabase.rpc('get_admin_stats', {
       admin_password: adminPassword
-    });
-    const timeoutPromise = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error('인증 요청 시간 초과 (10초)')), 10000)
-    );
-
-    const { data, error } = await Promise.race([rpcPromise, timeoutPromise]) as any;
+    }) as { data: any; error: any };
 
     console.log('[Admin] RPC 응답:', { data: !!data, error: !!error });
 
     if (error) {
       console.error('[PostStorage] Admin 통계 조회 실패:', error);
-      // RAISE EXCEPTION 'Unauthorized' → error.message에 포함
-      const isUnauthorized = error.message?.includes('Unauthorized') || error.code === 'P0001';
       return {
         success: false,
-        error: isUnauthorized ? '비밀번호가 올바르지 않습니다.' : error.message
+        error: error.message
       };
     }
 
-    const stats = data?.[0] || {};
+    // RPC가 빈 배열을 반환하면 인증 실패 (비밀번호 불일치)
+    if (!data || (Array.isArray(data) && data.length === 0)) {
+      return {
+        success: false,
+        error: '비밀번호가 올바르지 않습니다.'
+      };
+    }
+
+    const stats = Array.isArray(data) ? data[0] : data;
     return {
       success: true,
       stats: {

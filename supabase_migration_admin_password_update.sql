@@ -1,5 +1,9 @@
 -- ============================================
--- Admin 비밀번호 변경 (비밀번호는 Supabase에서 직접 설정)
+-- [DEPRECATED] 이 파일은 supabase_migration_rpc_safe_auth.sql로 대체되었습니다.
+-- RAISE EXCEPTION 기반 인증은 Supabase JS 클라이언트 hang 문제를 유발합니다.
+-- 새 마이그레이션을 사용하세요.
+-- ============================================
+-- (원본) Admin 비밀번호 변경 (비밀번호는 Supabase에서 직접 설정)
 -- Supabase Dashboard > SQL Editor에서 실행하세요.
 -- ============================================
 
