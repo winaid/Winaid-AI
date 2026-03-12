@@ -1457,20 +1457,17 @@ ${subheadings.map((h, i) => `${i + 1}. ${h}`).join('\n')}
     shouldCrawl = true;
     crawlUrl = request.hospitalWebsite.trim();
   }
-  // 블로그의 경우: 토글 ON 또는 소제목에 "병원 소개" 포함 시 referenceUrl 크롤링
-  else if (request.referenceUrl && request.referenceUrl.trim() && (
-    request.includeHospitalIntro ||
-    (request.customSubheadings && request.customSubheadings.includes('병원 소개'))
-  )) {
+  // 블로그의 경우: 토글 ON일 때만 referenceUrl 크롤링
+  else if (request.includeHospitalIntro && request.referenceUrl && request.referenceUrl.trim()) {
     shouldCrawl = true;
     crawlUrl = request.referenceUrl.trim();
-    // 토글 ON인 경우 customSubheadings에 "병원 소개"가 없으면 내부적으로 추가
-    if (request.includeHospitalIntro && (!request.customSubheadings || !request.customSubheadings.includes('병원 소개'))) {
+    // 소제목에 "병원 소개"가 없으면 내부적으로 추가
+    if (!request.customSubheadings || !request.customSubheadings.includes('병원 소개')) {
       request.customSubheadings = request.customSubheadings
         ? `${request.customSubheadings}\n병원 소개`
         : '병원 소개';
     }
-    console.log('📋 병원 소개 섹션 활성화! 병원 정보 크롤링 시작:', crawlUrl);
+    console.log('📋 병원 소개 토글 ON! 병원 정보 크롤링 시작:', crawlUrl);
   }
   
   if (shouldCrawl) {
