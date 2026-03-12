@@ -1711,6 +1711,28 @@ ZONE 3 — LEGEND (bottom 8%): Below the grid card, a simple row of colored circ
 NO decorations, NO illustrations, NO borders. Pure clean corporate medical calendar. White background outside the header bar.`,
     },
     {
+      id: 'sfc_dark_premium', name: '오로라 그라데이션', color: '#c084fc', accent: '#7c3aed', bg: '#faf5ff',
+      desc: '보라 그라데이션 달력',
+      layoutHint: 'cal_dark',
+      aiPrompt: `EXACT LAYOUT BLUEPRINT — replicate this structure precisely:
+BACKGROUND: Full-bleed purple-to-indigo gradient (#7c3aed → #c084fc) covering entire image with rounded corners. Large soft pink blob circle (#f472b6 at 25%) in top-right area. Large soft indigo blob circle (#818cf8 at 20%) in bottom-left area. Creates an aurora/gradient effect.
+HEADER (top 18%): Hospital name in small white text (90% opacity) centered. Below: large bold "N월 진료안내" in white, prominent.
+FULL CALENDAR GRID (middle 58%): One large white card (95% opacity, border-radius 20px, soft shadow) centered. Inside: 7 day-name headers (일월화수목금토) — Sunday=red, Saturday=blue, weekdays=gray. Below: 5 rows × 7 columns of date numbers showing ALL dates of the month. CLOSED DAYS: soft purple circle behind number (#c084fc at 15%), number in bold purple. SHORTENED DAYS: soft amber circle behind number, number in bold amber. Sunday column numbers in light red, others in gray (#64748b).
+BOTTOM (14%): Small white translucent pill/card (70% opacity, rounded) containing legend: purple dot + "휴진", amber dot + "단축", and "09:30~18:00" operating hours.
+Vibrant colorful gradient background contrasting with clean white calendar card. Modern, eye-catching, premium design.`,
+    },
+    {
+      id: 'sfc_mint_fresh', name: '벚꽃 봄', color: '#ec4899', accent: '#be185d', bg: '#fdf2f8',
+      desc: '벚꽃 핑크 달력',
+      layoutHint: 'cal_nature',
+      aiPrompt: `EXACT LAYOUT BLUEPRINT — replicate this structure precisely:
+BACKGROUND: Soft pink (#fdf2f8) full background. Scattered cherry blossom (벚꽃) petals in corners and edges at low opacity (30-50%), pink tones (#f9a8d4, #fbcfe8). Delicate, spring atmosphere.
+HEADER (top 30%): Hospital name in small deep pink accent (#be185d) centered at top. Thin pink divider line below. Large bold month number "N월" in dark rose (#831843), very prominent. Below: "진 료 안 내" in spaced letters, medium rose (#9d174d).
+FULL CALENDAR GRID (middle 55%): One large white card (90% opacity, border-radius 12px, soft shadow) centered. Top bar of card in light pink (#fce7f3). 7 day-name headers (일월화수목금토) — Sunday in rose red (#e11d48), Saturday in blue, weekdays in deep pink (#9d174d). Below: 5 rows × 7 columns of date numbers. CLOSED DAYS: soft pink circle (#fce7f3) behind number, number in bold rose red (#e11d48). SHORTENED DAYS: soft amber circle behind number, number in bold amber.
+BOTTOM (15%): Legend with pink circle + "휴진", amber circle + "단축". Clean spring cherry blossom theme.
+Overall: Elegant spring cherry blossom Korean dental clinic calendar. Soft, feminine, professional.`,
+    },
+    {
       id: 'sfc_pastel_bubble', name: '가을 단풍', color: '#ea580c', accent: '#c2410c', bg: '#fff7ed',
       desc: '단풍잎 가을 달력',
       layoutHint: 'cal_bubble',
@@ -1725,45 +1747,6 @@ BOTTOM (20%): Centered dental clinic logo (tooth icon) with clinic name in warm 
 Rich, warm autumn atmosphere. Professional Korean dental clinic seasonal calendar.`,
     },
     {
-      id: 'sfc_mint_fresh', name: '벚꽃 봄', color: '#ec4899', accent: '#be185d', bg: '#fdf2f8',
-      desc: '벚꽃 핑크 달력',
-      layoutHint: 'cal_nature',
-      aiPrompt: `EXACT LAYOUT BLUEPRINT — replicate this structure precisely:
-BACKGROUND: Soft pink (#fdf2f8) full background. Scattered cherry blossom (벚꽃) petals in corners and edges at low opacity (30-50%), pink tones (#f9a8d4, #fbcfe8). Delicate, spring atmosphere.
-HEADER (top 30%): Hospital name in small deep pink accent (#be185d) centered at top. Thin pink divider line below. Large bold month number "N월" in dark rose (#831843), very prominent. Below: "진 료 안 내" in spaced letters, medium rose (#9d174d).
-FULL CALENDAR GRID (middle 55%): One large white card (90% opacity, border-radius 12px, soft shadow) centered. Top bar of card in light pink (#fce7f3). 7 day-name headers (일월화수목금토) — Sunday in rose red (#e11d48), Saturday in blue, weekdays in deep pink (#9d174d). Below: 5 rows × 7 columns of date numbers. CLOSED DAYS: soft pink circle (#fce7f3) behind number, number in bold rose red (#e11d48). SHORTENED DAYS: soft amber circle behind number, number in bold amber.
-BOTTOM (15%): Legend with pink circle + "휴진", amber circle + "단축". Clean spring cherry blossom theme.
-Overall: Elegant spring cherry blossom Korean dental clinic calendar. Soft, feminine, professional.`,
-    },
-    {
-      id: 'sfc_dark_premium', name: '오로라 그라데이션', color: '#c084fc', accent: '#7c3aed', bg: '#faf5ff',
-      desc: '보라 그라데이션 달력',
-      layoutHint: 'cal_dark',
-      aiPrompt: `EXACT LAYOUT BLUEPRINT — replicate this structure precisely:
-BACKGROUND: Full-bleed purple-to-indigo gradient (#7c3aed → #c084fc) covering entire image with rounded corners. Large soft pink blob circle (#f472b6 at 25%) in top-right area. Large soft indigo blob circle (#818cf8 at 20%) in bottom-left area. Creates an aurora/gradient effect.
-HEADER (top 18%): Hospital name in small white text (90% opacity) centered. Below: large bold "N월 진료안내" in white, prominent.
-FULL CALENDAR GRID (middle 58%): One large white card (95% opacity, border-radius 20px, soft shadow) centered. Inside: 7 day-name headers (일월화수목금토) — Sunday=red, Saturday=blue, weekdays=gray. Below: 5 rows × 7 columns of date numbers showing ALL dates of the month. CLOSED DAYS: soft purple circle behind number (#c084fc at 15%), number in bold purple. SHORTENED DAYS: soft amber circle behind number, number in bold amber. Sunday column numbers in light red, others in gray (#64748b).
-BOTTOM (14%): Small white translucent pill/card (70% opacity, rounded) containing legend: purple dot + "휴진", amber dot + "단축", and "09:30~18:00" operating hours.
-Vibrant colorful gradient background contrasting with clean white calendar card. Modern, eye-catching, premium design.`,
-    },
-    {
-      id: 'sfc_warm_kraft', name: '크래프트 내추럴', color: '#92400e', accent: '#78350f', bg: '#fffbeb',
-      desc: '따뜻한 크래프트지',
-      layoutHint: 'cal_kraft',
-      aiPrompt: `EXACT LAYOUT BLUEPRINT — replicate this structure precisely:
-BACKGROUND: Warm cream/beige (#fefce8) at 60% opacity. Clean and simple, no decorative lines or borders.
-TOP SECTION — ILLUSTRATION AREA (top 42%): White/cream rounded rectangle area.
-⚠️ CHARACTER SHAPE: The tooth character is NOT a realistic tooth/molar shape. It is a SIMPLE white ROUNDED RECTANGLE (like a marshmallow or pillow shape, aspect ratio ~1:1.2, border-radius very large ~30%). TWO small solid black dot eyes (simple circles, no detail). ONE curved smile line below eyes (simple arc path, no other facial features — no rosy cheeks, no blush, no nose). This is a MINIMAL, FLAT, GEOMETRIC character.
-⚠️ CROWN: Small golden zigzag crown (#fbbf24 at 50% opacity) sitting directly on TOP of the rectangle. Small — about 60% width of the rectangle.
-⚠️ DECORATIONS — MINIMAL: Only 1 small gold star (★) to the left, 1 small sparkle (✦) to the right, at ~30% opacity. DO NOT add more than 2-3 tiny symbols total. NO hearts scattered around. NO sparkles everywhere.
-⚠️ CLOUDS — TINY: Left side: one VERY SMALL light blue horizontal ellipse (like a tiny pill, ~15px wide). Right side: one VERY SMALL light pink ellipse. These are barely visible accents, NOT prominent decorative clouds. Absolutely NO big fluffy realistic clouds.
-Below illustration: bold text "N월 휴진 안내" in warm brown (#92400e).
-DIVIDER: A light green (#bef264 at 30%) rectangular masking tape strip, slightly rotated (-1°), placed horizontally. Looks like washi tape. Thin strip.
-BOTTOM SECTION — MINI CALENDAR GRID (bottom 42%): White/cream rounded rectangle. 7-column COMPACT calendar grid. Day headers: 일(red #dc2626) 월화수목금(brown #78350f) 토(blue #2563eb), small bold text. 5 rows of date numbers in warm brown. CLOSED DAYS: soft red circle (#fee2e2 at 60%) CLEARLY VISIBLE behind the number, number in BOLD RED (#dc2626). Every closed day MUST have a visible red circle highlight. Grid is compact with tight spacing.
-FOOTER (bottom 5%): ONLY 3 elements: tiny pink heart outline (♡) bottom-left, hospital name in italic warm brown center, tiny green clover (☘) bottom-right. Nothing else.
-Overall: MINIMAL, SIMPLE, CLEAN. Like a cute but understated Korean stationery illustration. NOT busy, NOT colorful, NOT detailed.`,
-    },
-    {
       id: 'sfc_glassmorphism', name: '기와지붕 전통', color: '#92400e', accent: '#78350f', bg: '#fef3c7',
       desc: '한국 전통 기와 달력',
       layoutHint: 'cal_glass',
@@ -1774,6 +1757,18 @@ DECORATIVE CORNERS: Small traditional Korean bracket ornaments (전통 문양) i
 FULL CALENDAR GRID (middle 55%): White card (95% opacity, rounded corners, soft shadow) with notebook ring holes at top edge. Dark charcoal (#3f3f46) header bar with white day-name text (일월화수목금토). Below: 5 rows × 7 columns of date numbers. CLOSED DAYS: soft coral circle (#e8795a at 15%) behind number, number in bold coral. Below closed dates: tiny "휴진" label in coral. Sunday numbers in red (#ef4444), others in dark gray (#1f2937).
 BOTTOM (20%): Traditional corner bracket ornaments matching top. Hospital name centered in warm brown (#92400e) bold text.
 Overall: Warm traditional Korean architectural theme. Professional dental clinic feel with 기와지붕 motif.`,
+    },
+    {
+      id: 'sfc_warm_kraft', name: '크래프트 내추럴', color: '#92400e', accent: '#78350f', bg: '#fffbeb',
+      desc: '따뜻한 크래프트지',
+      layoutHint: 'cal_kraft',
+      aiPrompt: `EXACT LAYOUT BLUEPRINT — replicate this structure precisely:
+BACKGROUND: Warm cream/beige (#fefce8) full background. Clean and simple, no decorative borders.
+TOP SECTION (top 35%): White/cream rounded rectangle area. Center: small minimal tooth icon — simple white rounded rectangle shape (like a pill/marshmallow, border-radius 30%) with two tiny dot eyes and a small curved smile. NO crown, NO hearts, NO stars, NO sparkles, NO clouds. Just the simple icon at small size (about 15% of image width). Below: bold text "N월 휴진 안내" in warm brown (#92400e).
+DIVIDER: A single thin horizontal line in light warm brown (#d4a574 at 30%), clean and straight. No tape, no washi, no rotation.
+BOTTOM SECTION — CALENDAR GRID (bottom 50%): White/cream rounded rectangle. 7-column calendar grid. Day headers: 일(red #dc2626) 월화수목금(brown #78350f) 토(blue #2563eb), small bold text. 5 rows of date numbers in warm brown. CLOSED DAYS: soft red circle (#fee2e2 at 60%) behind the number, number in BOLD RED (#dc2626). Grid is compact with even spacing.
+FOOTER (bottom 5%): Hospital name in small warm brown text, centered. Nothing else.
+Overall: MINIMAL, CLEAN, warm-toned. No characters, no decorations, no illustrations. Just typography and calendar grid on warm cream background. Professional yet approachable.`,
     },
   ],
 
@@ -1851,20 +1846,21 @@ Cold, crisp, clean winter atmosphere. Professional Korean dental clinic seasonal
   // ─── 진료 일정: 강조형 레이아웃 (6개) ───
   schedule_highlight: [
     {
-      id: 'shl_dark_green', name: '클래식 그린', color: '#2d5a4a', accent: '#1a3c32', bg: '#f5f1eb',
-      desc: '다크 그린 + 다이아몬드',
-      layoutHint: 'hl_bignum',
-      aiPrompt: `Elegant dark green Korean dental clinic monthly schedule with diamond-shaped date markers.
-BACKGROUND: Soft cream/beige (#f5f1eb) upper half. Bottom 40% is deep forest green (#2d5a4a) with subtle semi-transparent clinic interior photo overlay.
-TOP (15%): Clinic logo (tooth icon) + clinic name in dark green, centered. Small English subtitle below.
-TITLE (15%): Large green rounded rectangle banner with bold white text "N월 진료일정" in heavy Korean font.
-CENTER (45%): White card with thin border and decorative corner brackets. Inside:
-- Header row: 일 월 화 수 목 금 토 with 일 in coral, 토 in blue, rest in dark text. Thin line separator below.
-- Calendar grid showing only the 1-2 weeks that contain marked days. Large clear date numbers.
-- CLOSED DAYS: Dark green (#2d5a4a) diamond (45-degree rotated square) behind the date number in white. Below diamond: holiday name in small gray text + "휴진" in green bold text.
-- NORMAL/SPECIAL DAYS: Green circle behind date in white. Below: label + "정상진료" in green text.
-- Regular dates in gray/black, clean spacing.
-BOTTOM (25%): On green background: centered notice text in white "N월 N일 OO은 정상진료입니다. N월 N일 OO, N월 N일 OO 휴진입니다. 참고하여 내원에 차질이 없으시기 바랍니다." Clean, professional Korean dental clinic seasonal calendar.`,
+      id: 'shl_clean_minimal', name: '미니멀 화이트', color: '#374151', accent: '#111827', bg: '#ffffff',
+      desc: '깔끔한 미니멀 스타일',
+      layoutHint: 'hl_countdown',
+      aiPrompt: `Ultra-clean minimal white Korean dental clinic monthly schedule notice.
+BACKGROUND: Pure white (#ffffff) with very subtle light gray geometric shapes or thin line decorations.
+TOP (15%): Clinic logo and name centered in small dark text. Thin accent line below.
+TITLE (20%): Large bold black text "N월 진료일정" in clean sans-serif heavy Korean font. Subtle thin line below.
+CENTER (45%): Clean white card or area:
+- Header row: 일 월 화 수 목 금 토 in dark gray, clean sans-serif. 일 in red, 토 in blue.
+- Calendar grid showing 1-2 weeks with marked days. Very clean, spacious cells with thin light gray borders.
+- CLOSED DAYS: Soft gray (#f3f4f6) circle behind date number in bold black. Below: holiday name and "휴진" in red bold text.
+- NORMAL DAYS: Light blue (#dbeafe) circle behind date. "정상진료" in blue text below.
+- Regular dates in gray, minimal styling.
+BOTTOM (20%): Clean notice text in dark gray. Important dates and "휴진"/"정상진료" highlighted in bold. Thin line separator. Clinic info at bottom.
+Extremely clean, professional, modern Korean dental clinic design. No clutter, clear hierarchy. Swiss/Scandinavian minimal aesthetic.`,
     },
     {
       id: 'shl_navy_highlight', name: '네이비 모던', color: '#1e3a5f', accent: '#0f2444', bg: '#0f2444',
@@ -1882,6 +1878,22 @@ CENTER (50%): White/light card with clean table layout:
 BOTTOM (30%): Navy background continues. White text notice: "N월 N일 임시공휴일, N월 N일 개천절, N월 N일 한글날 공휴일 휴진입니다. 참고하여 내원에 차질 없으시길 바랍니다."
 Bottom-center: Clinic logo and name in sky blue/white.
 Corporate, trustworthy dark navy dental clinic design.`,
+    },
+    {
+      id: 'shl_dark_green', name: '클래식 그린', color: '#2d5a4a', accent: '#1a3c32', bg: '#f5f1eb',
+      desc: '다크 그린 + 다이아몬드',
+      layoutHint: 'hl_bignum',
+      aiPrompt: `Elegant dark green Korean dental clinic monthly schedule with diamond-shaped date markers.
+BACKGROUND: Soft cream/beige (#f5f1eb) upper half. Bottom 40% is deep forest green (#2d5a4a) with subtle semi-transparent clinic interior photo overlay.
+TOP (15%): Clinic logo (tooth icon) + clinic name in dark green, centered. Small English subtitle below.
+TITLE (15%): Large green rounded rectangle banner with bold white text "N월 진료일정" in heavy Korean font.
+CENTER (45%): White card with thin border and decorative corner brackets. Inside:
+- Header row: 일 월 화 수 목 금 토 with 일 in coral, 토 in blue, rest in dark text. Thin line separator below.
+- Calendar grid showing only the 1-2 weeks that contain marked days. Large clear date numbers.
+- CLOSED DAYS: Dark green (#2d5a4a) diamond (45-degree rotated square) behind the date number in white. Below diamond: holiday name in small gray text + "휴진" in green bold text.
+- NORMAL/SPECIAL DAYS: Green circle behind date in white. Below: label + "정상진료" in green text.
+- Regular dates in gray/black, clean spacing.
+BOTTOM (25%): On green background: centered notice text in white "N월 N일 OO은 정상진료입니다. N월 N일 OO, N월 N일 OO 휴진입니다. 참고하여 내원에 차질이 없으시기 바랍니다." Clean, professional Korean dental clinic seasonal calendar.`,
     },
     {
       id: 'shl_lavender', name: '라벤더 퍼플', color: '#7c3aed', accent: '#6d28d9', bg: '#faf5ff',
@@ -1935,23 +1947,6 @@ Inside card:
 - Notice text: "N월 N일 OO, N월 N일 OO은 공휴일로 쉽니다. N월 N일, N일은 정상적으로 영업하오니 방문 시 참고 부탁드립니다!"
 BOTTOM: Clinic name in dark text, centered.
 Artistic autumn watercolor botanical frame. Elegant, warm seasonal design.`,
-    },
-    {
-      id: 'shl_clean_minimal', name: '미니멀 화이트', color: '#374151', accent: '#111827', bg: '#ffffff',
-      desc: '깔끔한 미니멀 스타일',
-      layoutHint: 'hl_countdown',
-      aiPrompt: `Ultra-clean minimal white Korean dental clinic monthly schedule notice.
-BACKGROUND: Pure white (#ffffff) with very subtle light gray geometric shapes or thin line decorations.
-TOP (15%): Clinic logo and name centered in small dark text. Thin accent line below.
-TITLE (20%): Large bold black text "N월 진료일정" in clean sans-serif heavy Korean font. Subtle thin line below.
-CENTER (45%): Clean white card or area:
-- Header row: 일 월 화 수 목 금 토 in dark gray, clean sans-serif. 일 in red, 토 in blue.
-- Calendar grid showing 1-2 weeks with marked days. Very clean, spacious cells with thin light gray borders.
-- CLOSED DAYS: Soft gray (#f3f4f6) circle behind date number in bold black. Below: holiday name and "휴진" in red bold text.
-- NORMAL DAYS: Light blue (#dbeafe) circle behind date. "정상진료" in blue text below.
-- Regular dates in gray, minimal styling.
-BOTTOM (20%): Clean notice text in dark gray. Important dates and "휴진"/"정상진료" highlighted in bold. Thin line separator. Clinic info at bottom.
-Extremely clean, professional, modern Korean dental clinic design. No clutter, clear hierarchy. Swiss/Scandinavian minimal aesthetic.`,
     },
   ],
 
