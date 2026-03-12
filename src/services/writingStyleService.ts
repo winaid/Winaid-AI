@@ -617,47 +617,99 @@ export const getHospitalStylePromptForGeneration = async (
  * Gemini FLASH로 블로그 글 오타/맞춤법 + 의료광고법 채점
  */
 // ── 의료광고 위험표현 룰셋 (후처리용) ──
-const MEDICAL_LAW_RISK_RULES: Array<{ pattern: string; severity: 'high' | 'medium'; penalty: number; law_article: string; reason: string; replacements: string[] }> = [
+// axis: 같은 축 이슈는 감점 1회만 적용 (이슈 표시는 최대 2건)
+type RiskRule = { pattern: string; severity: 'high' | 'medium'; penalty: number; law_article: string; reason: string; replacements: string[]; axis: string };
+const MEDICAL_LAW_RISK_RULES: RiskRule[] = [
   // high (-8점)
-  { pattern: '완치', severity: 'high', penalty: 8, law_article: '의료법 제56조 제1항', reason: '치료 효과 보장 표현', replacements: ['호전', '개선'] },
-  { pattern: '100%', severity: 'high', penalty: 8, law_article: '의료법 제56조 제1항', reason: '치료 효과 보장 수치', replacements: ['높은 만족도'] },
-  { pattern: '반드시', severity: 'high', penalty: 8, law_article: '의료법 제56조 제1항', reason: '치료 결과 보장 표현', replacements: ['기대할 수 있는'] },
-  { pattern: '무조건', severity: 'high', penalty: 8, law_article: '의료법 제56조 제1항', reason: '치료 결과 단정 표현', replacements: ['대부분의 경우'] },
-  { pattern: '부작용 없', severity: 'high', penalty: 8, law_article: '의료법 제56조 제2항 제5호', reason: '부작용 부정 표현', replacements: ['부작용이 적은', '부작용 최소화'] },
-  { pattern: '통증 없', severity: 'high', penalty: 8, law_article: '의료법 제56조 제2항 제5호', reason: '통증 부정 표현', replacements: ['통증이 적은', '통증 최소화'] },
+  { pattern: '완치', severity: 'high', penalty: 8, law_article: '의료법 제56조 제1항', reason: '치료 효과 보장 표현', replacements: ['호전', '개선'], axis: '효과보장' },
+  { pattern: '100%', severity: 'high', penalty: 8, law_article: '의료법 제56조 제1항', reason: '치료 효과 보장 수치', replacements: ['높은 만족도'], axis: '효과보장' },
+  { pattern: '반드시', severity: 'high', penalty: 8, law_article: '의료법 제56조 제1항', reason: '치료 결과 보장 표현', replacements: ['기대할 수 있는'], axis: '효과보장' },
+  { pattern: '무조건', severity: 'high', penalty: 8, law_article: '의료법 제56조 제1항', reason: '치료 결과 단정 표현', replacements: ['대부분의 경우'], axis: '효과보장' },
+  { pattern: '부작용 없', severity: 'high', penalty: 8, law_article: '의료법 제56조 제2항 제5호', reason: '부작용 부정 표현', replacements: ['부작용이 적은', '부작용 최소화'], axis: '안전성단정' },
+  { pattern: '통증 없', severity: 'high', penalty: 8, law_article: '의료법 제56조 제2항 제5호', reason: '통증 부정 표현', replacements: ['통증이 적은', '통증 최소화'], axis: '안전성단정' },
   // medium (-4점)
-  { pattern: '안전하게', severity: 'medium', penalty: 4, law_article: '의료법 제56조 제2항 제5호', reason: '안전성 단정 표현', replacements: ['안전성을 고려한'] },
-  { pattern: '확실한 효과', severity: 'medium', penalty: 4, law_article: '의료법 제56조 제2항 제5호', reason: '효과 단정 표현', replacements: ['기대되는 효과'] },
-  { pattern: '검증된 결과', severity: 'medium', penalty: 4, law_article: '의료법 제56조 제2항 제5호', reason: '미검증 효과 주장', replacements: ['임상 경험'] },
-  { pattern: '최고', severity: 'medium', penalty: 4, law_article: '의료법 제56조 제2항 제1호', reason: '최상급 표현', replacements: ['우수한', '전문적인'] },
-  { pattern: '1위', severity: 'medium', penalty: 4, law_article: '의료법 제56조 제2항 제1호', reason: '순위 주장 표현', replacements: ['많은 경험'] },
-  { pattern: '유일', severity: 'medium', penalty: 4, law_article: '의료법 제56조 제2항 제1호', reason: '독점적 표현', replacements: ['전문적인'] },
-  { pattern: '가장 잘하는', severity: 'medium', penalty: 4, law_article: '의료법 제56조 제2항 제1호', reason: '최상급 비교 표현', replacements: ['풍부한 경험의'] },
-  { pattern: '환자 후기', severity: 'medium', penalty: 4, law_article: '의료법 제56조 제2항 제3호', reason: '환자 치료경험담', replacements: ['진료 안내'] },
-  { pattern: '리얼 후기', severity: 'medium', penalty: 4, law_article: '의료법 제56조 제2항 제3호', reason: '환자 치료경험담', replacements: ['진료 안내'] },
-  { pattern: '전후 사진', severity: 'medium', penalty: 4, law_article: '의료법 제56조 제2항 제3호', reason: '치료 전후 비교 광고', replacements: ['진료 과정 안내'] },
+  { pattern: '안전하게', severity: 'medium', penalty: 4, law_article: '의료법 제56조 제2항 제5호', reason: '안전성 단정 표현', replacements: ['안전성을 고려하여'], axis: '안전성단정' },
+  { pattern: '확실한 효과', severity: 'medium', penalty: 4, law_article: '의료법 제56조 제2항 제5호', reason: '효과 단정 표현', replacements: ['기대되는 효과'], axis: '효과보장' },
+  { pattern: '검증된 결과', severity: 'medium', penalty: 4, law_article: '의료법 제56조 제2항 제5호', reason: '미검증 효과 주장', replacements: ['임상 경험'], axis: '효과보장' },
+  { pattern: '최고', severity: 'medium', penalty: 4, law_article: '의료법 제56조 제2항 제1호', reason: '최상급 표현', replacements: ['우수한', '전문적인'], axis: '최상급비교' },
+  { pattern: '1위', severity: 'medium', penalty: 4, law_article: '의료법 제56조 제2항 제1호', reason: '순위 주장 표현', replacements: ['많은 경험'], axis: '최상급비교' },
+  { pattern: '유일', severity: 'medium', penalty: 4, law_article: '의료법 제56조 제2항 제1호', reason: '독점적 표현', replacements: ['전문적인'], axis: '최상급비교' },
+  { pattern: '가장 잘하는', severity: 'medium', penalty: 4, law_article: '의료법 제56조 제2항 제1호', reason: '최상급 비교 표현', replacements: ['풍부한 경험의'], axis: '최상급비교' },
+  { pattern: '환자 후기', severity: 'medium', penalty: 4, law_article: '의료법 제56조 제2항 제3호', reason: '환자 치료경험담', replacements: ['진료 안내'], axis: '후기경험담' },
+  { pattern: '리얼 후기', severity: 'medium', penalty: 4, law_article: '의료법 제56조 제2항 제3호', reason: '환자 치료경험담', replacements: ['진료 안내'], axis: '후기경험담' },
+  { pattern: '전후 사진', severity: 'medium', penalty: 4, law_article: '의료법 제56조 제2항 제3호', reason: '치료 전후 비교 광고', replacements: ['진료 과정 안내'], axis: '후기경험담' },
 ];
+
+// 수치형 치료효과 표현 감지 (예: "40~50% 줄이는", "2배 개선")
+const NUMERIC_EFFECT_REGEX = /\d+[\d~\-–.,%배]*\s*(?:%|배)\s*(?:이상\s*)?(?:줄|감소|개선|회복|완화|예방|향상|증가|효과|치료|제거|해소|해결)/g;
+const NUMERIC_EFFECT_AXIS = '수치형효과';
+const NUMERIC_EFFECT_RULE: Omit<RiskRule, 'pattern'> = {
+  severity: 'medium', penalty: 6, axis: NUMERIC_EFFECT_AXIS,
+  law_article: '의료법 제56조 제2항 제5호',
+  reason: '수치를 이용한 치료 효과 과장',
+  replacements: ['개인에 따라 결과가 다를 수 있습니다'],
+};
 
 function applyMedicalLawRiskRules(
   content: string,
   currentScore: number,
   currentIssues: CrawledPostScore['law_issues'],
 ): { score: number; issues: CrawledPostScore['law_issues'] } {
+  // 기존 Gemini 이슈의 word 목록 (중복 방지용)
   const existingWords = new Set(currentIssues.map(i => i.word));
   const newIssues: CrawledPostScore['law_issues'] = [];
+  // 축별 감점 1회 추적: 이미 감점된 축은 이슈만 추가하고 점수는 안 깎음
+  const penalizedAxes = new Set<string>();
   let penalty = 0;
 
+  // 1) 고정 룰셋
   for (const rule of MEDICAL_LAW_RISK_RULES) {
-    if (existingWords.has(rule.pattern)) continue; // Gemini가 이미 잡은 것은 skip
-    if (content.includes(rule.pattern)) {
-      penalty += rule.penalty;
-      newIssues.push({
-        word: rule.pattern,
-        severity: rule.severity,
-        replacement: rule.replacements,
-        context: rule.reason + ' (' + rule.law_article + ')',
-      });
+    if (existingWords.has(rule.pattern)) {
+      penalizedAxes.add(rule.axis); // Gemini가 잡은 것도 축 마킹
+      continue;
     }
+    if (!content.includes(rule.pattern)) continue;
+
+    // 긴 표현에 포함된 짧은 표현 중복 방지 (예: "부작용 없는" 이미 잡혔으면 "부작용 없" skip)
+    const alreadyCovered = [...existingWords, ...newIssues.map(i => i.word)].some(
+      w => w.includes(rule.pattern) || rule.pattern.includes(w)
+    );
+    if (alreadyCovered) continue;
+
+    newIssues.push({
+      word: rule.pattern,
+      severity: rule.severity,
+      replacement: rule.replacements,
+      context: rule.reason + ' (' + rule.law_article + ')',
+    });
+
+    // 같은 축 첫 건만 감점
+    if (!penalizedAxes.has(rule.axis)) {
+      penalty += rule.penalty;
+      penalizedAxes.add(rule.axis);
+    }
+  }
+
+  // 2) 수치형 치료효과 표현 (regex)
+  const numericMatches = content.match(NUMERIC_EFFECT_REGEX) || [];
+  let numericIssueCount = 0;
+  for (const match of numericMatches) {
+    const trimmed = match.trim();
+    if (existingWords.has(trimmed)) continue;
+    if (newIssues.some(i => i.word === trimmed)) continue;
+    if (numericIssueCount >= 2) break; // 이슈 표시 최대 2건
+    newIssues.push({
+      word: trimmed,
+      severity: NUMERIC_EFFECT_RULE.severity,
+      replacement: NUMERIC_EFFECT_RULE.replacements,
+      context: NUMERIC_EFFECT_RULE.reason + ' (' + NUMERIC_EFFECT_RULE.law_article + ')',
+    });
+    numericIssueCount++;
+  }
+  // 수치형 축도 감점 1회만
+  if (numericMatches.length > 0 && !penalizedAxes.has(NUMERIC_EFFECT_AXIS)) {
+    penalty += NUMERIC_EFFECT_RULE.penalty;
+    penalizedAxes.add(NUMERIC_EFFECT_AXIS);
   }
 
   return {
