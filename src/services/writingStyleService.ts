@@ -616,6 +616,56 @@ export const getHospitalStylePromptForGeneration = async (
 /**
  * Gemini FLASH로 블로그 글 오타/맞춤법 + 의료광고법 채점
  */
+// ── 의료광고 위험표현 룰셋 (후처리용) ──
+const MEDICAL_LAW_RISK_RULES: Array<{ pattern: string; severity: 'high' | 'medium'; penalty: number; law_article: string; reason: string; replacements: string[] }> = [
+  // high (-8점)
+  { pattern: '완치', severity: 'high', penalty: 8, law_article: '의료법 제56조 제1항', reason: '치료 효과 보장 표현', replacements: ['호전', '개선'] },
+  { pattern: '100%', severity: 'high', penalty: 8, law_article: '의료법 제56조 제1항', reason: '치료 효과 보장 수치', replacements: ['높은 만족도'] },
+  { pattern: '반드시', severity: 'high', penalty: 8, law_article: '의료법 제56조 제1항', reason: '치료 결과 보장 표현', replacements: ['기대할 수 있는'] },
+  { pattern: '무조건', severity: 'high', penalty: 8, law_article: '의료법 제56조 제1항', reason: '치료 결과 단정 표현', replacements: ['대부분의 경우'] },
+  { pattern: '부작용 없', severity: 'high', penalty: 8, law_article: '의료법 제56조 제2항 제5호', reason: '부작용 부정 표현', replacements: ['부작용이 적은', '부작용 최소화'] },
+  { pattern: '통증 없', severity: 'high', penalty: 8, law_article: '의료법 제56조 제2항 제5호', reason: '통증 부정 표현', replacements: ['통증이 적은', '통증 최소화'] },
+  // medium (-4점)
+  { pattern: '안전하게', severity: 'medium', penalty: 4, law_article: '의료법 제56조 제2항 제5호', reason: '안전성 단정 표현', replacements: ['안전성을 고려한'] },
+  { pattern: '확실한 효과', severity: 'medium', penalty: 4, law_article: '의료법 제56조 제2항 제5호', reason: '효과 단정 표현', replacements: ['기대되는 효과'] },
+  { pattern: '검증된 결과', severity: 'medium', penalty: 4, law_article: '의료법 제56조 제2항 제5호', reason: '미검증 효과 주장', replacements: ['임상 경험'] },
+  { pattern: '최고', severity: 'medium', penalty: 4, law_article: '의료법 제56조 제2항 제1호', reason: '최상급 표현', replacements: ['우수한', '전문적인'] },
+  { pattern: '1위', severity: 'medium', penalty: 4, law_article: '의료법 제56조 제2항 제1호', reason: '순위 주장 표현', replacements: ['많은 경험'] },
+  { pattern: '유일', severity: 'medium', penalty: 4, law_article: '의료법 제56조 제2항 제1호', reason: '독점적 표현', replacements: ['전문적인'] },
+  { pattern: '가장 잘하는', severity: 'medium', penalty: 4, law_article: '의료법 제56조 제2항 제1호', reason: '최상급 비교 표현', replacements: ['풍부한 경험의'] },
+  { pattern: '환자 후기', severity: 'medium', penalty: 4, law_article: '의료법 제56조 제2항 제3호', reason: '환자 치료경험담', replacements: ['진료 안내'] },
+  { pattern: '리얼 후기', severity: 'medium', penalty: 4, law_article: '의료법 제56조 제2항 제3호', reason: '환자 치료경험담', replacements: ['진료 안내'] },
+  { pattern: '전후 사진', severity: 'medium', penalty: 4, law_article: '의료법 제56조 제2항 제3호', reason: '치료 전후 비교 광고', replacements: ['진료 과정 안내'] },
+];
+
+function applyMedicalLawRiskRules(
+  content: string,
+  currentScore: number,
+  currentIssues: CrawledPostScore['law_issues'],
+): { score: number; issues: CrawledPostScore['law_issues'] } {
+  const existingWords = new Set(currentIssues.map(i => i.word));
+  const newIssues: CrawledPostScore['law_issues'] = [];
+  let penalty = 0;
+
+  for (const rule of MEDICAL_LAW_RISK_RULES) {
+    if (existingWords.has(rule.pattern)) continue; // Gemini가 이미 잡은 것은 skip
+    if (content.includes(rule.pattern)) {
+      penalty += rule.penalty;
+      newIssues.push({
+        word: rule.pattern,
+        severity: rule.severity,
+        replacement: rule.replacements,
+        context: rule.reason + ' (' + rule.law_article + ')',
+      });
+    }
+  }
+
+  return {
+    score: Math.max(0, currentScore - penalty),
+    issues: [...currentIssues, ...newIssues],
+  };
+}
+
 export const scoreCrawledPost = async (content: string): Promise<CrawledPostScore> => {
   console.log('[Score] scoreCrawledPost 함수 진입, content길이:', content?.length);
   const apiKey = localStorage.getItem('GEMINI_API_KEY') || getApiKey() || import.meta.env.VITE_GEMINI_API_KEY || import.meta.env.VITE_GEMINI_API_KEY_2;
@@ -703,14 +753,19 @@ ${content.slice(0, 3000)}`;
     const scoreLaw = Math.max(0, Math.min(100, typeof parsed.score_medical_law === 'number' ? parsed.score_medical_law : 50));
     const scoreTotal = Math.round((scoreTypo + scoreSpelling + scoreLaw) / 3);
 
-    console.log(`[Score] 채점 완료: 오타=${scoreTypo}, 맞춤법=${scoreSpelling}, 의료법=${scoreLaw}, 총점=${scoreTotal}`);
+    // 의료광고법 후처리: 룰셋 기반 보수적 감점
+    const lawPost = applyMedicalLawRiskRules(content, scoreLaw, parsed.law_issues || []);
+    const finalLaw = lawPost.score;
+    const finalTotal = Math.round((scoreTypo + scoreSpelling + finalLaw) / 3);
+
+    console.log(`[Score] 채점 완료: 오타=${scoreTypo}, 맞춤법=${scoreSpelling}, 의료법=${scoreLaw}→${finalLaw}, 총점=${finalTotal}`);
     return {
       score_typo: scoreTypo,
       score_spelling: scoreSpelling,
-      score_medical_law: scoreLaw,
-      score_total: scoreTotal,
+      score_medical_law: finalLaw,
+      score_total: finalTotal,
       typo_issues: parsed.typo_issues || [],
-      law_issues: parsed.law_issues || [],
+      law_issues: lawPost.issues,
     };
   } catch (e) {
     console.error('[Score] JSON 파싱 실패:', e, '원본:', raw.slice(0, 200));
