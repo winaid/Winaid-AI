@@ -895,17 +895,32 @@ const AdminPage: React.FC<AdminPageProps> = ({ onAdminVerified }) => {
     setLoginError('');
     setLoginLoading(true);
     try {
-      // 1단계: 비밀번호 검증 (getAdminStats만 먼저)
+      // 0단계: Supabase 연결 확인 (빠른 health check)
+      try {
+        const healthCheck = await Promise.race([
+          supabase.from('generated_posts').select('id', { count: 'exact', head: true }),
+          new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 4000))
+        ]);
+        // Supabase 응답은 왔지만 테이블이 없는 경우
+        if ((healthCheck as any)?.error?.code === '42P01') {
+          setLoginError('DB 테이블 미설정: Supabase SQL Editor에서 supabase_FULL_SETUP.sql을 실행하세요.');
+          return;
+        }
+      } catch {
+        setLoginError('Supabase 서버에 연결할 수 없습니다. Supabase 프로젝트가 일시정지(paused) 상태인지 확인하세요.');
+        return;
+      }
+
+      // 1단계: 비밀번호 검증 (getAdminStats)
       const result = await getAdminStats(password);
 
       if (!result.success) {
         console.error('[Admin] 로그인 실패:', result.error);
-        // 에러 메시지를 사용자 친화적으로 변환
         const errMsg = result.error || '';
         if (errMsg.includes('시간 초과') || errMsg.includes('timeout')) {
-          setLoginError('서버 연결 시간 초과. 네트워크를 확인하세요.');
+          setLoginError('Supabase 응답 시간 초과. 프로젝트가 일시정지(paused) 상태인지 확인하세요.');
         } else if (errMsg.includes('does not exist') || errMsg.includes('function')) {
-          setLoginError('서버 설정 필요: Supabase SQL 마이그레이션을 실행하세요.');
+          setLoginError('RPC 함수 미설정: Supabase SQL Editor에서 supabase_FULL_SETUP.sql을 실행하세요.');
         } else if (errMsg.includes('비밀번호')) {
           setLoginError(errMsg);
         } else {
