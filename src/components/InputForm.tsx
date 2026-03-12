@@ -411,6 +411,14 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
           )}
         </div>
 
+        {/* 병원 홈페이지 주소 (키워드 분석 + 병원 소개 공유) */}
+        {selectedHospitalEntry?.address && hospitalName && (
+          <div>
+            <label className="block text-[11px] font-semibold text-slate-500 mb-1">병원 홈페이지 주소 <span className="text-slate-400 font-normal">(선택)</span></label>
+            <input type="url" value={referenceUrl} onChange={(e) => setReferenceUrl(e.target.value)} placeholder="https://www.hospital.com" className={inputCls} />
+          </div>
+        )}
+
         {/* 키워드 분석 버튼 */}
         {selectedHospitalEntry?.address && hospitalName && (
           <button
@@ -635,10 +643,6 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
         <div className="space-y-3">
            {postType === 'blog' ? (
                <div className="space-y-3">
-                  <div>
-                    <label className="block text-[11px] font-semibold text-slate-500 mb-1">병원 홈페이지 <span className="text-slate-400 font-normal">(선택)</span></label>
-                    <input type="url" value={referenceUrl} onChange={(e) => setReferenceUrl(e.target.value)} placeholder="https://www.hospital.com" className={inputCls} />
-                  </div>
                   <div>
                     <div className="flex justify-between mb-1.5">
                       <label className="text-xs font-semibold text-slate-500">글자 수</label>
