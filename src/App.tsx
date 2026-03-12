@@ -437,24 +437,17 @@ const App: React.FC = () => {
         const { getApiKeys } = await import('./services/apiService');
         const apiKeys = await getApiKeys();
         
-        if (apiKeys.gemini && apiKeys.gemini !== '***') {
-          localStorage.setItem('GEMINI_API_KEY', apiKeys.gemini);
+        // 서버는 존재 여부만 반환 ('***' 또는 null)
+        // 실제 키는 ApiKeySettings에서 save 시 localStorage에 직접 저장됨
+        const localGemini = localStorage.getItem('GEMINI_API_KEY');
+        if (localGemini && localGemini !== '***') {
           setApiKeyReady(true);
-          console.log('✅ 서버에서 Gemini API 키 로드 완료');
+          console.log('✅ localStorage에서 API 키 사용');
+        } else if (apiKeys.gemini) {
+          // 서버에 키는 있지만 localStorage에 없음 → 설정 페이지에서 다시 입력 필요
+          console.log('⚠️ 서버에 키 설정됨, localStorage에서 키를 찾을 수 없음 - 재설정 필요');
         } else {
-          // 서버에 없으면 localStorage 확인
-          const localGemini = localStorage.getItem('GEMINI_API_KEY');
-          if (localGemini && localGemini !== '***') {
-            setApiKeyReady(true);
-            console.log('✅ localStorage에서 API 키 사용');
-          } else {
-            console.log('⚠️ API 키 없음 - 설정 필요');
-          }
-        }
-        
-        if (apiKeys.openai && apiKeys.openai !== '***') {
-          localStorage.setItem('OPENAI_API_KEY', apiKeys.openai);
-          console.log('✅ OpenAI API 키 로드 완료');
+          console.log('⚠️ API 키 없음 - 설정 필요');
         }
       } catch (error) {
         console.error('❌ API 키 로드 실패:', error);
