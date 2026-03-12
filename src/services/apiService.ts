@@ -59,11 +59,15 @@ export const saveContentToServer = async (data: SaveContentRequest): Promise<Sav
  */
 export const deleteAllContent = async (): Promise<SaveContentResponse> => {
   try {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    const adminToken = sessionStorage.getItem('ADMIN_TOKEN');
+    if (adminToken) {
+      headers['Authorization'] = `Bearer ${adminToken}`;
+    }
+
     const response = await fetch(`${API_BASE_URL}/api/content/delete-all`, {
       method: 'DELETE',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
     });
 
     if (!response.ok) {

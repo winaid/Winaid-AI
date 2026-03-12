@@ -1,50 +1,39 @@
-// DELETE /content/delete-all - 모든 콘텐츠 삭제
+// DELETE /content/delete-all - 모든 콘텐츠 삭제 (admin 인증 필수)
+
+import { verifyAdmin, CORS_HEADERS } from '../api-keys/_auth.js';
+
 export const onRequestDelete = async (context) => {
+  // admin 인증
+  const authResult = await verifyAdmin(context);
+  if (authResult) return authResult;
+
   try {
-    // 콘텐츠 목록 가져오기
     const listKey = 'content:list';
     const existingList = await context.env.CONTENT_KV.get(listKey);
     const contentIds = existingList ? JSON.parse(existingList) : [];
 
-    // 각 콘텐츠 삭제
     let deletedCount = 0;
     for (const id of contentIds) {
       try {
         await context.env.CONTENT_KV.delete(`content:${id}`);
         deletedCount++;
       } catch (e) {
-        console.warn(`콘텐츠 ${id} 삭제 실패:`, e);
+        // 개별 삭제 실패는 계속 진행
       }
     }
 
-    // 목록 초기화
     await context.env.CONTENT_KV.put(listKey, JSON.stringify([]));
-
-    console.log(`🗑️ 모든 콘텐츠 삭제 완료 - 삭제된 개수: ${deletedCount}`);
 
     return new Response(JSON.stringify({
       success: true,
       deletedCount,
       message: `${deletedCount}개의 콘텐츠가 삭제되었습니다.`
-    }), {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-      }
-    });
+    }), { status: 200, headers: CORS_HEADERS });
   } catch (error) {
-    console.error('❌ 콘텐츠 삭제 오류:', error);
     return new Response(JSON.stringify({
       success: false,
       error: '서버 오류가 발생했습니다.'
-    }), {
-      status: 500,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-      }
-    });
+    }), { status: 500, headers: CORS_HEADERS });
   }
 };
 
