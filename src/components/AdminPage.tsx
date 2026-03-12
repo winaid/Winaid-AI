@@ -896,18 +896,25 @@ const AdminPage: React.FC<AdminPageProps> = ({ onAdminVerified }) => {
     setLoginLoading(true);
     try {
       // 0단계: Supabase 연결 확인 (빠른 health check)
+      const supabaseUrl = (supabase as any).supabaseUrl || (supabase as any).restUrl || '';
+      console.log('[Admin] Supabase URL:', supabaseUrl);
       try {
         const healthCheck = await Promise.race([
           supabase.from('generated_posts').select('id', { count: 'exact', head: true }),
-          new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 4000))
+          new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 6000))
         ]);
+        console.log('[Admin] Health check 결과:', healthCheck);
         // Supabase 응답은 왔지만 테이블이 없는 경우
         if ((healthCheck as any)?.error?.code === '42P01') {
           setLoginError('DB 테이블 미설정: Supabase SQL Editor에서 supabase_FULL_SETUP.sql을 실행하세요.');
           return;
         }
-      } catch {
-        setLoginError('Supabase 서버에 연결할 수 없습니다. Supabase 프로젝트가 일시정지(paused) 상태인지 확인하세요.');
+        if ((healthCheck as any)?.error) {
+          console.warn('[Admin] Health check 에러 (계속 진행):', (healthCheck as any).error);
+        }
+      } catch (healthErr) {
+        console.error('[Admin] Supabase 연결 실패:', healthErr, 'URL:', supabaseUrl);
+        setLoginError(`Supabase 연결 실패 (${supabaseUrl ? supabaseUrl.substring(0, 30) + '...' : 'URL 없음'}). 브라우저 콘솔(F12)을 확인하세요.`);
         return;
       }
 
