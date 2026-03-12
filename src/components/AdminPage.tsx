@@ -60,6 +60,7 @@ const StyleTab: React.FC<StyleTabProps> = ({
 
   // 글 채점
   const handleScorePost = async (post: CrawledPost) => {
+    console.log('[채점] 핸들러 시작:', post.id, post.hospital_name, 'content길이:', post.content?.length);
     setScoringId(post.id);
     try {
       // 메모리 글(id가 URL)은 먼저 DB에 저장
@@ -74,7 +75,9 @@ const StyleTab: React.FC<StyleTabProps> = ({
           }));
         }
       }
+      console.log('[채점] scoreCrawledPost 호출 직전, dbPost.id:', dbPost.id, 'content길이:', dbPost.content?.length);
       const score = await scoreCrawledPost(dbPost.content);
+      console.log('[채점] scoreCrawledPost 결과:', JSON.stringify(score));
       await updateCrawledPostScore(dbPost.id, score);
       setDbPosts(prev => ({
         ...prev,

@@ -617,8 +617,13 @@ export const getHospitalStylePromptForGeneration = async (
  * Gemini FLASH로 블로그 글 오타/맞춤법 + 의료광고법 채점
  */
 export const scoreCrawledPost = async (content: string): Promise<CrawledPostScore> => {
+  console.log('[Score] scoreCrawledPost 함수 진입, content길이:', content?.length);
   const apiKey = localStorage.getItem('GEMINI_API_KEY') || getApiKey() || import.meta.env.VITE_GEMINI_API_KEY || import.meta.env.VITE_GEMINI_API_KEY_2;
-  if (!apiKey) throw new Error('GEMINI_API_KEY 없음');
+  if (!apiKey) {
+    console.error('[Score] API 키 없음 — 채점 중단');
+    throw new Error('GEMINI_API_KEY 없음');
+  }
+  console.log('[Score] API 키 확인됨, Gemini 호출 시작');
   const ai = new GoogleGenAI({ apiKey });
 
   const prompt = `당신은 한국어 맞춤법 전문가이자 의료광고법 전문가입니다.
