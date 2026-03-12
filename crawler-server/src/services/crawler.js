@@ -372,10 +372,11 @@ async function crawlHospitalBlogPosts(blogUrl, maxPosts = 10) {
       return Number(b.logNo) - Number(a.logNo);
     });
 
-    // ── 5단계: 상위 10개 선택 ──
-    const targetPosts = regularPosts.slice(0, maxPosts);
+    // ── 5단계: 여분 포함 후보 선정 (본문 빈 글 대비) ──
+    const buffer = Math.min(maxPosts + 5, regularPosts.length);
+    const targetPosts = regularPosts.slice(0, buffer);
     console.log(`[Crawl] 중복 제거 후: ${regularPosts.length}개`);
-    console.log(`[Crawl] 최종 ${targetPosts.length}개 (최신순):`);
+    console.log(`[Crawl] 후보 ${targetPosts.length}개 선정 (목표: ${maxPosts}개, 최신순):`);
     targetPosts.forEach((e, i) => {
       console.log(`  ${i + 1}. [${e.dateText || e.publishedAt || 'N/A'}] ${e.title || e.logNo}`);
     });
@@ -383,9 +384,11 @@ async function crawlHospitalBlogPosts(blogUrl, maxPosts = 10) {
       console.log(`[Crawl] ✅ 1번 글이 가장 최신: ${targetPosts[0].dateText || targetPosts[0].logNo}`);
     }
 
-    // ── 6단계: 각 글 본문 수집 ──
+    // ── 6단계: 각 글 본문 수집 — 정확히 maxPosts개 채울 때까지 ──
     const results = [];
     for (let i = 0; i < targetPosts.length; i++) {
+      if (results.length >= maxPosts) break; // 목표 개수 달성
+
       const entry = targetPosts[i];
       try {
         console.log(`📄 글 ${i + 1}/${targetPosts.length} 수집 중: ${entry.url}`);
@@ -399,6 +402,8 @@ async function crawlHospitalBlogPosts(blogUrl, maxPosts = 10) {
             summary: content.substring(0, 200).replace(/\n/g, ' ').trim(),
             thumbnail: '',
           });
+        } else {
+          console.log(`  ⚠️ 본문 부족으로 스킵: ${entry.logNo} (${content ? content.length : 0}자)`);
         }
         await new Promise(resolve => setTimeout(resolve, 1500));
       } catch (e) {
@@ -406,7 +411,7 @@ async function crawlHospitalBlogPosts(blogUrl, maxPosts = 10) {
       }
     }
 
-    console.log(`✅ 총 ${results.length}개 글 본문 수집 완료`);
+    console.log(`✅ 총 ${results.length}/${maxPosts}개 글 본문 수집 완료`);
     results.forEach((p, i) => {
       console.log(`  ${i + 1}. [${p.publishedAt?.substring(0, 10) || 'N/A'}] ${p.title?.substring(0, 40) || p.url}`);
     });

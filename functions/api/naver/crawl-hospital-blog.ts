@@ -381,13 +381,16 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     const limited = Math.min(Number(maxPosts) || 10, 20);
     console.log(`🏥 병원 블로그 수집 시작: ${blogId} (최대 ${limited}개)`);
 
-    // 1. 글 목록 수집 (메타데이터 + 공지 제외 + 최신순 정렬)
-    const postEntries = await fetchPostEntries(blogId, limited);
-    console.log(`📋 최종 ${postEntries.length}개 글 선정 완료`);
+    // 1. 글 목록 수집 (여분 포함 — 본문 빈 글 대비)
+    const buffer = Math.min(limited + 5, 20); // 최대 5개 여분 확보
+    const postEntries = await fetchPostEntries(blogId, buffer);
+    console.log(`📋 ${postEntries.length}개 후보 글 선정 완료 (목표: ${limited}개)`);
 
-    // 2. 각 글 본문 수집 (순차, 과부하 방지)
+    // 2. 각 글 본문 수집 — 정확히 limited개가 채워질 때까지 진행
     const posts: { url: string; content: string; title: string; publishedAt: string; summary: string; thumbnail: string }[] = [];
     for (const entry of postEntries) {
+      if (posts.length >= limited) break; // 목표 개수 달성 시 중단
+
       const result = await fetchPostContent(blogId, entry.logNo);
 
       if (result.content.length > 50) {
@@ -399,6 +402,8 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
           summary: result.summary || '',
           thumbnail: result.thumbnail || '',
         });
+      } else {
+        console.log(`  ⚠️ 본문 부족으로 스킵: ${entry.logNo} (${result.content.length}자)`);
       }
       await new Promise(r => setTimeout(r, 300));
     }
