@@ -632,8 +632,13 @@ const AdminPage: React.FC<AdminPageProps> = ({ onAdminVerified }) => {
     try {
       console.log('[Admin] 콘텐츠 이력 로드 시작...', retryCount > 0 ? `(재시도 ${retryCount}/${MAX_RETRIES})` : '');
       
-      // 1. 통계 먼저 로드
-      const statsResult = await getAdminStats(sessionStorage.getItem('ADMIN_TOKEN') || '');
+      // 통계 + 콘텐츠 목록 병렬 로드
+      const token = sessionStorage.getItem('ADMIN_TOKEN') || '';
+      const [statsResult, contentsResult] = await Promise.all([
+        getAdminStats(token),
+        getAllGeneratedPosts(token, { limit: 100 })
+      ]);
+
       if (statsResult.success && statsResult.stats) {
         setStats({
           totalContents: statsResult.stats.totalPosts,
@@ -646,11 +651,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onAdminVerified }) => {
           postsThisWeek: statsResult.stats.postsThisWeek,
           postsThisMonth: statsResult.stats.postsThisMonth
         });
-        console.log('[Admin] ✅ 통계 로드 완료:', statsResult.stats);
       }
-      
-      // 2. 콘텐츠 목록 로드
-      const contentsResult = await getAllGeneratedPosts(sessionStorage.getItem('ADMIN_TOKEN') || '', { limit: 100 });
       
       if (!contentsResult.success) {
         console.error('콘텐츠 이력 로드 에러:', contentsResult.error);
@@ -883,13 +884,48 @@ const AdminPage: React.FC<AdminPageProps> = ({ onAdminVerified }) => {
     setLoginError('');
     setLoginLoading(true);
     try {
-      // 서버사이드 검증: Supabase RPC로 비밀번호 확인
-      const result = await getAdminStats(password);
+      // 서버사이드 검증: Supabase RPC로 비밀번호 확인 + 콘텐츠 병렬 로드
+      const [result, contentsResult] = await Promise.all([
+        getAdminStats(password),
+        getAllGeneratedPosts(password, { limit: 100 })
+      ]);
       if (result.success) {
         setIsAuthenticated(true);
         sessionStorage.setItem('ADMIN_AUTHENTICATED', 'true');
         sessionStorage.setItem('ADMIN_TOKEN', password);
         onAdminVerified?.();
+        // 로그인 시 받은 통계 즉시 반영
+        if (result.stats) {
+          setStats({
+            totalContents: result.stats.totalPosts,
+            blogCount: result.stats.blogCount,
+            cardnewsCount: result.stats.cardNewsCount,
+            pressCount: result.stats.pressReleaseCount,
+            uniqueHospitals: result.stats.uniqueHospitals,
+            uniqueUsers: result.stats.uniqueUsers,
+            postsToday: result.stats.postsToday,
+            postsThisWeek: result.stats.postsThisWeek,
+            postsThisMonth: result.stats.postsThisMonth
+          });
+        }
+        // 로그인 시 받은 콘텐츠 즉시 반영
+        if (contentsResult.success && contentsResult.data) {
+          setContents(contentsResult.data.map((item: any) => ({
+            id: item.id,
+            title: item.title || '제목 없음',
+            content: item.content || '',
+            category: item.category,
+            content_type: item.post_type as ContentType,
+            keywords: item.keywords,
+            created_at: item.created_at,
+            hospital_name: item.hospital_name,
+            doctor_name: item.doctor_name,
+            doctor_title: item.doctor_title,
+            topic: item.topic,
+            user_email: item.user_email,
+            char_count: item.char_count
+          })));
+        }
       } else {
         console.error('[Admin] 로그인 실패:', result.error);
         setLoginError(result.error || '비밀번호가 올바르지 않습니다.');
