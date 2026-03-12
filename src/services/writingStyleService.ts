@@ -479,21 +479,33 @@ export const crawlAndLearnHospitalStyle = async (
     updated_at: new Date().toISOString(),
   };
 
-  const { data, error } = await supabase
+  const upsertPromise = supabase
     .from('hospital_style_profiles')
     .upsert(profileData, { onConflict: 'hospital_name' })
     .select()
     .single();
+  const upsertTimeout = new Promise<never>((_, reject) =>
+    setTimeout(() => reject(new Error('프로파일 저장 시간 초과 (10초)')), 10000)
+  );
 
-  if (error) {
-    console.error('Supabase 저장 오류:', error);
-    // 저장 실패해도 분석 결과는 반환
+  let data: any = null;
+  try {
+    const result = await Promise.race([upsertPromise, upsertTimeout]) as any;
+    if (result.error) {
+      console.error('Supabase 저장 오류:', result.error);
+      // 저장 실패해도 분석 결과는 반환
+      return { ...profileData, style_profile: analyzedStyle };
+    }
+    data = result.data;
+  } catch (timeoutErr) {
+    console.error('Supabase 저장 타임아웃:', timeoutErr);
+    // 타임아웃이어도 분석 결과는 반환
     return { ...profileData, style_profile: analyzedStyle };
   }
 
   // 5단계: 개별 글을 hospital_crawled_posts에 저장 (글 목록 보기용)
   onProgress?.('수집된 글 저장 중...');
-  await Promise.allSettled(
+  const savePostsPromise = Promise.allSettled(
     posts.map(p => saveCrawledPost(hospitalName, p.url, p.content, undefined, {
       title: p.title,
       publishedAt: p.publishedAt,
@@ -501,6 +513,11 @@ export const crawlAndLearnHospitalStyle = async (
       thumbnail: p.thumbnail,
     }))
   );
+  // 글 저장이 15초 내 안 끝나면 스킵 (분석 결과는 이미 저장됨)
+  await Promise.race([
+    savePostsPromise,
+    new Promise(resolve => setTimeout(resolve, 15000))
+  ]);
 
   onProgress?.('완료!');
   return { ...(data as HospitalStyleProfile), posts };
@@ -559,12 +576,21 @@ export const saveHospitalBlogUrl = async (
   teamId: number,
   blogUrl: string
 ): Promise<void> => {
-  await supabase
+  const upsertPromise = supabase
     .from('hospital_style_profiles')
     .upsert(
       { hospital_name: hospitalName, team_id: teamId, naver_blog_url: blogUrl, updated_at: new Date().toISOString() },
       { onConflict: 'hospital_name' }
     );
+  const timeoutPromise = new Promise<never>((_, reject) =>
+    setTimeout(() => reject(new Error('URL 저장 시간 초과 (10초). Supabase 테이블/RLS 설정을 확인하세요.')), 10000)
+  );
+
+  const { error } = await Promise.race([upsertPromise, timeoutPromise]) as any;
+  if (error) {
+    console.error('[WritingStyle] URL 저장 실패:', error);
+    throw new Error(`URL 저장 실패: ${error.message}`);
+  }
 };
 
 /**
