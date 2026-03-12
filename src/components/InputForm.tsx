@@ -114,6 +114,8 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
   // FAQ 옵션
   const [includeFaq, setIncludeFaq] = useState<boolean>(false);
   const [faqCount, setFaqCount] = useState<number>(3);
+  // 병원 소개 섹션
+  const [includeHospitalIntro, setIncludeHospitalIntro] = useState<boolean>(false);
   
   const [trendingItems, setTrendingItems] = useState<TrendingItem[]>([]);
   const [isLoadingTrends, setIsLoadingTrends] = useState(false);
@@ -167,6 +169,8 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
       // ❓ FAQ 옵션
       includeFaq: postType === 'blog' ? includeFaq : undefined,
       faqCount: postType === 'blog' && includeFaq ? faqCount : undefined,
+      // 🏥 병원 소개 섹션
+      includeHospitalIntro: postType === 'blog' ? includeHospitalIntro : undefined,
       // 🏥 병원명 (공통)
       hospitalName: hospitalName || undefined,
       hospitalWebsite: postType === 'press_release' ? hospitalWebsite : undefined,
@@ -677,6 +681,22 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
                         <span className={`absolute top-[3px] left-[3px] w-4 h-4 bg-white rounded-full shadow transition-all duration-200 ${includeFaq ? 'translate-x-[18px]' : 'translate-x-0'}`} />
                       </button>
                     </div>
+                  </div>
+                  {/* 병원 소개 토글 */}
+                  <div className="flex items-center justify-between p-3 bg-white rounded-xl border border-slate-200">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm">🏥</span>
+                      <div>
+                        <span className="text-xs font-semibold text-slate-700">병원 소개 섹션</span>
+                        <p className="text-[10px] text-slate-400">홈페이지 크롤링 후 자동 삽입</p>
+                      </div>
+                    </div>
+                    <button type="button" onClick={() => setIncludeHospitalIntro(!includeHospitalIntro)}
+                      className={`relative rounded-full transition-colors ${includeHospitalIntro ? 'bg-blue-500' : 'bg-slate-300'}`}
+                      style={{ width: 40, height: 22 }}
+                    >
+                      <span className={`absolute top-[3px] left-[3px] w-4 h-4 bg-white rounded-full shadow transition-all duration-200 ${includeHospitalIntro ? 'translate-x-[18px]' : 'translate-x-0'}`} />
+                    </button>
                   </div>
                </div>
            ) : postType === 'card_news' ? (

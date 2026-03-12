@@ -65,6 +65,7 @@ export interface GenerationRequest {
   // FAQ 옵션
   includeFaq?: boolean; // FAQ 섹션 포함 여부 (네이버 질문 + 질병관리청 정보)
   faqCount?: number; // FAQ 질문 개수 (3~5개)
+  includeHospitalIntro?: boolean; // 병원 소개 섹션 포함 여부 (홈페이지 크롤링 + 자동 삽입)
   // 보도자료용 필드
   hospitalName?: string; // 병원명
   hospitalWebsite?: string; // 병원 웹사이트 URL (크롤링용)
