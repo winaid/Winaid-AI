@@ -1,37 +1,29 @@
-// GET /api-keys/get - API 키 조회 (인증 필요)
+// GET /api-keys/get - API 키 조회
 export const onRequestGet = async (context) => {
   try {
-    // Authorization 헤더 확인
-    const authHeader = context.request.headers.get('Authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      // 인증 없이 요청 시 키 존재 여부만 반환 (값 노출 안 함)
-      const geminiExists = !!(await context.env.API_KEYS.get('gemini'));
-      const openaiExists = !!(await context.env.API_KEYS.get('openai'));
+    // KV namespace에서 읽기 (있으면), 없으면 환경변수 fallback
+    let geminiKey = null;
+    let openaiKey = null;
 
-      return new Response(JSON.stringify({
-        success: true,
-        apiKeys: {
-          gemini: geminiExists ? '***' : null,
-          openai: openaiExists ? '***' : null
-        }
-      }), {
-        status: 200,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-        }
-      });
+    // 1순위: KV namespace (API_KEYS)
+    if (context.env.API_KEYS) {
+      geminiKey = await context.env.API_KEYS.get('gemini');
+      openaiKey = await context.env.API_KEYS.get('openai');
     }
 
-    // 인증된 요청: 실제 키 값 반환
-    const geminiKey = await context.env.API_KEYS.get('gemini') || null;
-    const openaiKey = await context.env.API_KEYS.get('openai') || null;
+    // 2순위: 환경변수 (Cloudflare Dashboard에서 설정)
+    if (!geminiKey) {
+      geminiKey = context.env.VITE_GEMINI_API_KEY || context.env.GEMINI_API_KEY || null;
+    }
+    if (!openaiKey) {
+      openaiKey = context.env.VITE_OPENAI_API_KEY || context.env.OPENAI_API_KEY || null;
+    }
 
     return new Response(JSON.stringify({
       success: true,
       apiKeys: {
-        gemini: geminiKey,
-        openai: openaiKey
+        gemini: geminiKey || null,
+        openai: openaiKey || null
       }
     }), {
       status: 200,

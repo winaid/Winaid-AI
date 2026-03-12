@@ -59,7 +59,7 @@ export const getApiKeysFromEnv = (): string[] => {
 
   // localStorage에서도 확인 (사용자가 직접 입력한 경우)
   const localKey = localStorage.getItem('GEMINI_API_KEY');
-  if (localKey && !keys.includes(localKey)) {
+  if (localKey && localKey !== '***' && !keys.includes(localKey)) {
     keys.push(localKey);
   }
 
