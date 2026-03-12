@@ -453,7 +453,7 @@ export const crawlAndLearnHospitalStyle = async (
   }
 
   const crawlData = await crawlRes.json();
-  const posts: { url: string; content: string }[] = crawlData.posts || [];
+  const posts: { url: string; content: string; title?: string; publishedAt?: string; summary?: string; thumbnail?: string }[] = crawlData.posts || [];
 
   if (posts.length === 0) {
     throw new Error('수집된 블로그 글이 없습니다. URL을 다시 확인해주세요.');
@@ -494,7 +494,12 @@ export const crawlAndLearnHospitalStyle = async (
   // 5단계: 개별 글을 hospital_crawled_posts에 저장 (글 목록 보기용)
   onProgress?.('수집된 글 저장 중...');
   await Promise.allSettled(
-    posts.map(p => saveCrawledPost(hospitalName, p.url, p.content))
+    posts.map(p => saveCrawledPost(hospitalName, p.url, p.content, undefined, {
+      title: p.title,
+      publishedAt: p.publishedAt,
+      summary: p.summary,
+      thumbnail: p.thumbnail,
+    }))
   );
 
   onProgress?.('완료!');
@@ -675,7 +680,8 @@ export const saveCrawledPost = async (
   hospitalName: string,
   url: string,
   content: string,
-  score?: CrawledPostScore
+  score?: CrawledPostScore,
+  meta?: { title?: string; publishedAt?: string; summary?: string; thumbnail?: string }
 ): Promise<CrawledPost | null> => {
   const record: Record<string, any> = {
     hospital_name: hospitalName,
@@ -683,6 +689,10 @@ export const saveCrawledPost = async (
     content,
     crawled_at: new Date().toISOString(),
   };
+  if (meta?.title) record.title = meta.title;
+  if (meta?.publishedAt) record.published_at = meta.publishedAt;
+  if (meta?.summary) record.summary = meta.summary;
+  if (meta?.thumbnail) record.thumbnail = meta.thumbnail;
   if (score) {
     record.score_typo = score.score_typo;
     record.score_medical_law = score.score_medical_law;
@@ -781,11 +791,18 @@ export const getCrawledPosts = async (hospitalName: string): Promise<CrawledPost
     .from('hospital_crawled_posts')
     .select('*')
     .eq('hospital_name', hospitalName)
-    .order('crawled_at', { ascending: false })
+    .order('published_at', { ascending: false, nullsFirst: false })
     .limit(10);
   if (!error && data && data.length > 0) return data as CrawledPost[];
   // Supabase 실패 또는 빈 결과 → localStorage
-  return lsGetAll().filter(p => p.hospital_name === hospitalName).slice(0, 10);
+  const lsPosts = lsGetAll().filter(p => p.hospital_name === hospitalName);
+  lsPosts.sort((a, b) => {
+    if (a.published_at && b.published_at) return new Date(b.published_at).getTime() - new Date(a.published_at).getTime();
+    if (a.published_at) return -1;
+    if (b.published_at) return 1;
+    return 0;
+  });
+  return lsPosts.slice(0, 10);
 };
 
 /**
@@ -795,8 +812,17 @@ export const getAllCrawledPostsSummary = async (): Promise<Record<string, Crawle
   const { data, error } = await supabase
     .from('hospital_crawled_posts')
     .select('*')
-    .order('crawled_at', { ascending: false });
-  const posts = (!error && data && data.length > 0) ? data as CrawledPost[] : lsGetAll();
+    .order('published_at', { ascending: false, nullsFirst: false });
+  let posts = (!error && data && data.length > 0) ? data as CrawledPost[] : lsGetAll();
+  // localStorage 폴백 시 정렬
+  if (error || !data || data.length === 0) {
+    posts = [...posts].sort((a, b) => {
+      if (a.published_at && b.published_at) return new Date(b.published_at).getTime() - new Date(a.published_at).getTime();
+      if (a.published_at) return -1;
+      if (b.published_at) return 1;
+      return 0;
+    });
+  }
   const result: Record<string, CrawledPost[]> = {};
   for (const post of posts) {
     if (!result[post.hospital_name]) result[post.hospital_name] = [];
@@ -903,15 +929,16 @@ export const crawlAndScoreAllHospitals = async (
       });
       if (!res.ok) continue;
       const crawlData = await res.json();
-      const posts: { url: string; content: string }[] = crawlData.posts || [];
+      const posts: { url: string; content: string; title?: string; publishedAt?: string; summary?: string; thumbnail?: string }[] = crawlData.posts || [];
 
       for (const post of posts) {
         onProgress?.(`[${i + 1}/${total}] ${p.hospital_name} 채점 중...`, i, total);
+        const meta = { title: post.title, publishedAt: post.publishedAt, summary: post.summary, thumbnail: post.thumbnail };
         try {
           const score = await scoreCrawledPost(post.content);
-          await saveCrawledPost(p.hospital_name, post.url, post.content, score);
+          await saveCrawledPost(p.hospital_name, post.url, post.content, score, meta);
         } catch {
-          await saveCrawledPost(p.hospital_name, post.url, post.content);
+          await saveCrawledPost(p.hospital_name, post.url, post.content, undefined, meta);
         }
         await new Promise(r => setTimeout(r, 300));
       }

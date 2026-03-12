@@ -14,6 +14,10 @@ CREATE TABLE IF NOT EXISTS public.hospital_crawled_posts (
   typo_issues JSONB DEFAULT '[]',         -- [{original, correction, context}]
   law_issues JSONB DEFAULT '[]',          -- [{word, severity, replacement, context}]
   corrected_content TEXT,                 -- 사용자가 수정한 본문
+  title TEXT,                             -- 블로그 글 제목
+  published_at TIMESTAMPTZ,              -- 블로그 글 실제 작성일 (og:createdate)
+  summary TEXT,                           -- 본문 요약 (200자)
+  thumbnail TEXT,                         -- 대표 이미지 URL
   crawled_at TIMESTAMPTZ DEFAULT NOW(),
   scored_at TIMESTAMPTZ,
   UNIQUE(hospital_name, url)
@@ -38,6 +42,7 @@ CREATE POLICY "Authenticated users can delete crawled posts" ON public.hospital_
 
 -- 인덱스
 CREATE INDEX IF NOT EXISTS idx_crawled_posts_hospital ON public.hospital_crawled_posts(hospital_name);
+CREATE INDEX IF NOT EXISTS idx_crawled_posts_published_at ON public.hospital_crawled_posts(published_at DESC NULLS LAST);
 CREATE INDEX IF NOT EXISTS idx_crawled_posts_crawled_at ON public.hospital_crawled_posts(crawled_at DESC);
 
 -- 병원별 10개 초과 시 오래된 것 자동 삭제 트리거

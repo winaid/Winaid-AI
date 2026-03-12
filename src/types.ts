@@ -296,6 +296,10 @@ export interface CrawledPost {
   hospital_name: string;
   url: string;
   content: string;
+  title?: string;
+  published_at?: string;
+  summary?: string;
+  thumbnail?: string;
   score_typo?: number;
   score_spelling?: number;
   score_medical_law?: number;
