@@ -478,8 +478,7 @@ const StyleTab: React.FC<StyleTabProps> = ({
 
 // ============================================================
 
-// Admin 비밀번호 - 실제로는 환경변수나 Supabase로 관리해야 함
-const ADMIN_PASSWORD = 'winaid';
+// Admin 비밀번호는 Supabase RPC에서 서버사이드로 검증됨 (클라이언트에 노출하지 않음)
 
 // 콘텐츠 타입 정의 (database와 호환)
 type ContentType = 'blog' | 'card_news' | 'press_release';
@@ -520,7 +519,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onAdminVerified }) => {
   // 초기값을 localStorage에서 직접 읽어서 설정 (useEffect 내 setState 방지)
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
     if (typeof window !== 'undefined') {
-      return localStorage.getItem('ADMIN_AUTHENTICATED') === 'true';
+      return sessionStorage.getItem('ADMIN_AUTHENTICATED') === 'true';
     }
     return false;
   });
@@ -633,7 +632,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onAdminVerified }) => {
       console.log('[Admin] 콘텐츠 이력 로드 시작...', retryCount > 0 ? `(재시도 ${retryCount}/${MAX_RETRIES})` : '');
       
       // 1. 통계 먼저 로드
-      const statsResult = await getAdminStats(ADMIN_PASSWORD);
+      const statsResult = await getAdminStats(sessionStorage.getItem('ADMIN_TOKEN') || '');
       if (statsResult.success && statsResult.stats) {
         setStats({
           totalContents: statsResult.stats.totalPosts,
@@ -650,7 +649,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onAdminVerified }) => {
       }
       
       // 2. 콘텐츠 목록 로드
-      const contentsResult = await getAllGeneratedPosts(ADMIN_PASSWORD, { limit: 100 });
+      const contentsResult = await getAllGeneratedPosts(sessionStorage.getItem('ADMIN_TOKEN') || '', { limit: 100 });
       
       if (!contentsResult.success) {
         console.error('콘텐츠 이력 로드 에러:', contentsResult.error);
@@ -716,7 +715,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onAdminVerified }) => {
     if (!confirm('정말로 이 콘텐츠를 삭제하시겠습니까?')) return;
     
     try {
-      const result = await deleteGeneratedPost(ADMIN_PASSWORD, contentId);
+      const result = await deleteGeneratedPost(sessionStorage.getItem('ADMIN_TOKEN') || '', contentId);
       
       if (!result.success) {
         toast.error(`삭제 실패: ${result.error}`);
@@ -870,22 +869,29 @@ const AdminPage: React.FC<AdminPageProps> = ({ onAdminVerified }) => {
     }
   };
 
-  const handleAdminLogin = (e: React.FormEvent) => {
+  const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (password === ADMIN_PASSWORD) {
-      setIsAuthenticated(true);
-      localStorage.setItem('ADMIN_AUTHENTICATED', 'true');
-      setLoginError('');
-      // 관리자 인증 완료 콜백
-      onAdminVerified?.();
-    } else {
-      setLoginError('비밀번호가 올바르지 않습니다.');
+    setLoginError('');
+    try {
+      // 서버사이드 검증: Supabase RPC로 비밀번호 확인
+      const result = await getAdminStats(password);
+      if (result.success) {
+        setIsAuthenticated(true);
+        sessionStorage.setItem('ADMIN_AUTHENTICATED', 'true');
+        sessionStorage.setItem('ADMIN_TOKEN', password);
+        onAdminVerified?.();
+      } else {
+        setLoginError('비밀번호가 올바르지 않습니다.');
+      }
+    } catch {
+      setLoginError('인증 중 오류가 발생했습니다.');
     }
   };
 
   const handleAdminLogout = () => {
     setIsAuthenticated(false);
-    localStorage.removeItem('ADMIN_AUTHENTICATED');
+    sessionStorage.removeItem('ADMIN_AUTHENTICATED');
+    sessionStorage.removeItem('ADMIN_TOKEN');
   };
 
   const formatDate = (dateStr: string) => {

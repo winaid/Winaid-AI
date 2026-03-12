@@ -1,5 +1,5 @@
 -- ============================================
--- Admin 비밀번호 변경: rosmrtl718 → winaid
+-- Admin 비밀번호 변경 (비밀번호는 Supabase에서 직접 설정)
 -- Supabase Dashboard > SQL Editor에서 실행하세요.
 -- ============================================
 
@@ -37,7 +37,7 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
 DECLARE
-  valid_password TEXT := 'winaid';
+  valid_password TEXT := 'CHANGE_ME_IN_SUPABASE';
 BEGIN
   IF admin_password != valid_password THEN
     RAISE EXCEPTION 'Unauthorized: Invalid admin password';
@@ -92,7 +92,7 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
 DECLARE
-  valid_password TEXT := 'winaid';
+  valid_password TEXT := 'CHANGE_ME_IN_SUPABASE';
 BEGIN
   IF admin_password != valid_password THEN
     RAISE EXCEPTION 'Unauthorized: Invalid admin password';
@@ -123,7 +123,7 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
 DECLARE
-  valid_password TEXT := 'winaid';
+  valid_password TEXT := 'CHANGE_ME_IN_SUPABASE';
 BEGIN
   IF admin_password != valid_password THEN
     RAISE EXCEPTION 'Unauthorized: Invalid admin password';
@@ -135,5 +135,5 @@ END;
 $$;
 
 -- ============================================
--- 완료! 이제 어드민 비밀번호: winaid
+-- 완료! 비밀번호는 Supabase SQL Editor에서 직접 확인/변경하세요.
 -- ============================================

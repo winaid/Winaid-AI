@@ -120,7 +120,7 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
 DECLARE
-  valid_password TEXT := 'rosmrtl718'; -- Admin 비밀번호 (실제로는 환경변수로 관리)
+  valid_password TEXT := 'CHANGE_ME_IN_SUPABASE'; -- Admin 비밀번호 (실제로는 환경변수로 관리)
 BEGIN
   -- 비밀번호 확인
   IF admin_password != valid_password THEN
@@ -177,7 +177,7 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
 DECLARE
-  valid_password TEXT := 'rosmrtl718';
+  valid_password TEXT := 'CHANGE_ME_IN_SUPABASE';
 BEGIN
   IF admin_password != valid_password THEN
     RAISE EXCEPTION 'Unauthorized: Invalid admin password';
@@ -208,7 +208,7 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
 DECLARE
-  valid_password TEXT := 'rosmrtl718';
+  valid_password TEXT := 'CHANGE_ME_IN_SUPABASE';
 BEGIN
   IF admin_password != valid_password THEN
     RAISE EXCEPTION 'Unauthorized: Invalid admin password';

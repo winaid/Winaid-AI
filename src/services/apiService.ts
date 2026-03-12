@@ -141,8 +141,14 @@ export const saveApiKeys = async (geminiKey?: string, openaiKey?: string): Promi
  */
 export const getApiKeys = async (): Promise<{ gemini: string | null; openai: string | null }> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/api-keys/get`);
-    
+    const headers: Record<string, string> = {};
+    const adminToken = sessionStorage.getItem('ADMIN_TOKEN');
+    if (adminToken) {
+      headers['Authorization'] = `Bearer ${adminToken}`;
+    }
+
+    const response = await fetch(`${API_BASE_URL}/api/api-keys/get`, { headers });
+
     if (!response.ok) {
       throw new Error(`서버 응답 오류: ${response.status}`);
     }

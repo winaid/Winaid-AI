@@ -34,41 +34,12 @@ if (apiKeys.openai) {
   console.log('✅ OpenAI API 키 환경변수에서 로드됨');
 }
 
-// 비밀번호 설정 (0000)
-const APP_PASSWORD = '0000';
-
-// 비밀번호 확인 엔드포인트
-app.post('/auth/verify', (req, res) => {
-  try {
-    const { password } = req.body;
-    
-    if (!password) {
-      return res.status(400).json({
-        success: false,
-        error: '비밀번호를 입력해주세요.'
-      });
-    }
-    
-    if (password === APP_PASSWORD) {
-      console.log('✅ 비밀번호 인증 성공');
-      res.json({
-        success: true,
-        message: '인증 성공'
-      });
-    } else {
-      console.log('❌ 비밀번호 인증 실패');
-      res.status(401).json({
-        success: false,
-        error: '비밀번호가 올바르지 않습니다.'
-      });
-    }
-  } catch (error) {
-    console.error('❌ 인증 오류:', error);
-    res.status(500).json({
-      success: false,
-      error: '서버 오류가 발생했습니다.'
-    });
-  }
+// 비밀번호 인증 비활성화됨
+app.post('/auth/verify', (_req, res) => {
+  res.status(410).json({
+    success: false,
+    error: '비밀번호 인증이 비활성화되었습니다.'
+  });
 });
 
 // Health check
@@ -116,14 +87,14 @@ app.post('/api-keys/save', (req, res) => {
   }
 });
 
-// API 키 조회 (프론트엔드에서 사용)
-app.get('/api-keys/get', (req, res) => {
+// API 키 조회 — 키 존재 여부만 반환 (값은 노출하지 않음)
+app.get('/api-keys/get', (_req, res) => {
   try {
     res.json({
       success: true,
       apiKeys: {
-        gemini: apiKeys.gemini,
-        openai: apiKeys.openai
+        gemini: apiKeys.gemini ? '***' : null,
+        openai: apiKeys.openai ? '***' : null
       }
     });
   } catch (error) {
