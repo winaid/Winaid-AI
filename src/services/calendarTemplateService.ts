@@ -3834,7 +3834,9 @@ Use ONLY the new text content from the prompt below.
         generationConfig: {
           responseModalities: ['IMAGE', 'TEXT'],
           temperature: 0.4,
-          imageSize: '4K',
+          imageConfig: {
+            imageSize: '4K',
+          },
         },
       }, TIMEOUTS.IMAGE_GENERATION);
 
