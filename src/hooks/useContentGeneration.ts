@@ -148,13 +148,23 @@ export function useContentGeneration(deps: ContentGenerationDeps): ContentGenera
       const { generateFullPost } = await import('../services/geminiService');
       console.warn('[BLOG_FLOW] generateFullPost 호출 시작...');
       const result = await generateFullPost(request, (p) => targetSetState(prev => ({ ...prev, progress: p })));
-      console.warn(`[BLOG_FLOW] ✅ generateFullPost 반환됨 — title: "${result?.title}", htmlContent: ${result?.htmlContent?.length || 0}자, data keys: ${result ? Object.keys(result).join(',') : 'null'}`);
+      // 📋 결과물 완전성 검증 로그 — "완전한 글 1편" 기준
+      const html = result?.fullHtml || result?.htmlContent || '';
+      const textOnly = html.replace(/<[^>]+>/g, '').trim();
+      const h2Count = (html.match(/<h[23][^>]*>/gi) || []).length;
+      const hasIntro = html.indexOf('<h') > 30 || (html.indexOf('<p') >= 0 && html.indexOf('<p') < html.indexOf('<h'));
+      const hasConclusion = textOnly.length > 200; // 마무리 포함 시 최소 길이
+      console.warn(`[BLOG_FLOW] ✅ generateFullPost 반환됨`);
+      console.warn(`[BLOG_FLOW] 📋 완전성 검증: title="${result?.title}" | fullHtml=${html.length}자 | 텍스트=${textOnly.length}자 | h2/h3=${h2Count}개 | intro=${hasIntro} | conclusion=${hasConclusion}`);
+      if (!result?.title || h2Count < 2 || textOnly.length < 300) {
+        console.error(`[BLOG_FLOW] ⚠️ 완전성 미달 — title=${!!result?.title}, h2=${h2Count}, textLen=${textOnly.length}`);
+      }
       const imageWarning = result.imageFailCount && result.imageFailCount > 0
         ? `본문은 정상 생성되었습니다. 이미지 ${result.imageFailCount}장은 AI 서버 과부하로 생성에 실패했습니다.`
         : null;
       console.warn(`[BLOG_FLOW] setBlogState 호출 직전 — data 존재: ${!!result}, isLoading: false`);
       targetSetState({ isLoading: false, error: null, warning: imageWarning, data: result, progress: '' });
-      console.warn('[BLOG_FLOW] ✅ setBlogState 완료 — data 커밋됨');
+      console.warn(`[BLOG_FLOW] ✅ setBlogState 완료 — 사용자 화면 전환 대기 (RENDER_GATE에서 RESULT_PREVIEW 확인)`);
 
       // 크레딧 차감 + 사용량 저장
       try {
@@ -204,8 +214,9 @@ export function useContentGeneration(deps: ContentGenerationDeps): ContentGenera
           return { ...prev, isLoading: false, error: null, warning: friendlyError };
         }
         // data가 없으면 반드시 error 상태 — EMPTY_STATE 방지
-        console.warn('[BLOG_FLOW] data 없음 → error 상태로 전환, mobileTab=input');
-        deps.setMobileTab('input');
+        // ⚠️ mobileTab은 건드리지 않음: 에러 모달(position:fixed z-50)이 먼저 보여야 함
+        // 사용자가 모달을 닫을 때 App.tsx에서 mobileTab='input' 복귀 처리
+        console.warn('[BLOG_FLOW] data 없음 → error 상태로 전환 (에러 모달 표시 대기)');
         return { ...prev, isLoading: false, error: friendlyError, data: null };
       });
     } finally {
