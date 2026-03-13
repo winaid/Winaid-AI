@@ -31,6 +31,7 @@ interface ContentGenerationState {
 const initialState: GenerationState = {
   isLoading: false,
   error: null,
+  warning: null,
   data: null,
   progress: '',
 };
@@ -126,12 +127,15 @@ export function useContentGeneration(deps: ContentGenerationDeps): ContentGenera
 
     const targetSetState = request.postType === 'press_release' ? setPressState : setBlogState;
 
-    targetSetState(prev => ({ ...prev, isLoading: true, error: null, progress: 'SEO 최적화 키워드 분석 및 이미지 생성 중...' }));
+    targetSetState(prev => ({ ...prev, isLoading: true, error: null, warning: null, progress: 'SEO 최적화 키워드 분석 및 이미지 생성 중...' }));
 
     try {
       const { generateFullPost } = await import('../services/geminiService');
       const result = await generateFullPost(request, (p) => targetSetState(prev => ({ ...prev, progress: p })));
-      targetSetState({ isLoading: false, error: null, data: result, progress: '' });
+      const imageWarning = result.imageFailCount && result.imageFailCount > 0
+        ? `본문은 정상 생성되었습니다. 이미지 ${result.imageFailCount}장은 AI 서버 과부하로 생성에 실패했습니다.`
+        : null;
+      targetSetState({ isLoading: false, error: null, warning: imageWarning, data: result, progress: '' });
 
       // 크레딧 차감 + 사용량 저장
       try {

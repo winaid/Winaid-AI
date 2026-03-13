@@ -2943,6 +2943,7 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
   // 카드뉴스: generateSingleImage (텍스트 포함, 브라우저 프레임, 1:1)
   // ⚠️ 이미지 0장이면 생성 스킵
   let images: { index: number; data: string; prompt: string }[] = [];
+  let imageFailCount = 0;
 
   // imagePrompts가 없으면 빈 배열로 초기화 (imageCount가 0일 때 AI가 생략할 수 있음)
   if (!textData.imagePrompts || !Array.isArray(textData.imagePrompts)) {
@@ -2964,7 +2965,6 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
 
   if (maxImages > 0 && textData.imagePrompts.length > 0) {
     // 순차 생성으로 진행률 표시 (maxImages만큼 생성)
-    let imageFailCount = 0;
     for (let i = 0; i < maxImages; i++) {
       safeProgress(`🎨 이미지 ${i + 1}/${maxImages}장 생성 중...`);
       const p = textData.imagePrompts[i];
@@ -3563,6 +3563,8 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
     seoScore,
     cssTheme: request.cssTheme || 'modern',
     sections, // 블로그 섹션 분리 데이터 (섹션별 재생성용)
+    imageFailCount,
+    imagePrompts: textData.imagePrompts,
   };
 };
 

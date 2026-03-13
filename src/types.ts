@@ -219,13 +219,16 @@ export interface GeneratedContent {
   designTemplateId?: CardNewsDesignTemplateId; // 카드뉴스 디자인 템플릿 ID (재생성용)
   seoScore?: SeoScoreReport; // SEO 자동 평가 결과
   sections?: BlogSection[]; // 블로그 섹션 분리 데이터 (섹션별 재생성용)
+  imageFailCount?: number; // 이미지 생성 실패 수 (0이면 전체 성공, >0이면 부분 성공)
+  imagePrompts?: string[]; // 이미지 재생성용 프롬프트
 }
 
 export interface GenerationState {
   isLoading: boolean;
   error: string | null;
+  warning: string | null;
   data: GeneratedContent | null;
-  progress: string; 
+  progress: string;
 }
 
 export interface TrendingItem {
