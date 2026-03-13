@@ -715,7 +715,7 @@ ${JSON.stringify(searchResults?.collected_facts?.slice(0, 3) || [], null, 2)}`;
 
   safeProgress(`✅ Stage A 완료: 소제목 ${outline.sections.length}개 설계`);
   console.warn(`[PIPELINE] ✅ Stage A 완료: 소제목 ${outline.sections.length}개`);
-  console.warn('[PIPELINE] ▶ Stage B: 본문 생성 시작 (도입부 + 소제목 병렬)');
+  console.warn('[PIPELINE] ▶ Stage B: 본문 생성 시작 (도입부 → 소제목 → 마무리, 직렬)');
 
   // ── Stage B: 본문 생성 (PRO) ── [도입부 → 소제목 순차 → 마무리]
   // ⚠️ 직렬 전환 이유: 병렬 생성 시 PRO 503 → FLASH 폴백 중 빈 문자열 반환 → EMPTY_STATE 버그
@@ -842,10 +842,11 @@ ${sectionSummaries.join('\n')}`;
 
   let conclusionHtml = '';
   try {
+    // 마무리는 2문단/3~5문장으로 짧음 → FLASH로 충분 (PRO 504 위험 감소)
     const conclusionResult = await callGemini({
       prompt: conclusionUserPrompt,
       systemPrompt: conclusionPrompt + hospitalStyleSuffix,
-      model: GEMINI_MODEL.PRO,
+      model: GEMINI_MODEL.FLASH,
       responseType: 'text',
       timeout: 30000,
       temperature: 0.75,
@@ -2960,11 +2961,13 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
       console.warn(`[BLOG_FLOW] ✅ 파이프라인 textData 확보 — title: "${textData.title}", content: ${textData.content?.length || 0}자`);
     } catch (pipelineError: any) {
       console.error(`[BLOG_FLOW] ❌ 파이프라인 실패: ${pipelineError?.message}`);
+      console.warn(`[BLOG_FLOW] ⚠️ 구형 generateBlogPostText 폴백 진입 — 원인: ${pipelineError?.status || 'N/A'} ${pipelineError?.message?.substring(0, 100)}`);
       safeProgress('⚠️ 파이프라인 실패, 기존 방식으로 재시도...');
       try {
         textData = await generateBlogPostText(request, safeProgress);
+        console.warn(`[BLOG_FLOW] ✅ 구형 폴백 성공 — title: "${textData?.title}", content: ${textData?.content?.length || 0}자`);
       } catch (fallbackError: any) {
-        console.error(`[BLOG_FLOW] ❌ 기존 방식도 실패: ${fallbackError?.message}`);
+        console.error(`[BLOG_FLOW] ❌ 구형 폴백도 실패: ${fallbackError?.message}`);
         throw new Error(pipelineError?.message || '블로그 생성에 실패했습니다. 다시 시도해주세요.');
       }
     }

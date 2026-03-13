@@ -1055,8 +1055,12 @@ const App: React.FC = () => {
                   ? '📡 네트워크 오류'
                   : '❌ 오류 발생'}
               </h3>
-              <button 
+              <button
                 onClick={() => {
+                  // 🛡️ EMPTY_STATE 방지: error를 지우기 전에 data가 없으면 input 탭으로 복귀
+                  if (!getCurrentState().data) {
+                    setMobileTab('input');
+                  }
                   getCurrentSetState()(prev => ({ ...prev, error: null }));
                   setState(prev => ({ ...prev, error: null }));
                 }}
@@ -1118,6 +1122,10 @@ const App: React.FC = () => {
               )}
               <button
                 onClick={() => {
+                  // 🛡️ EMPTY_STATE 방지: error를 지우기 전에 data가 없으면 input 탭으로 복귀
+                  if (!getCurrentState().data) {
+                    setMobileTab('input');
+                  }
                   getCurrentSetState()(prev => ({ ...prev, error: null }));
                   setState(prev => ({ ...prev, error: null }));
                 }}
