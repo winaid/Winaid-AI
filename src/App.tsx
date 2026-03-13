@@ -430,8 +430,7 @@ const App: React.FC = () => {
     }
   };
 
-  // 서버 프록시 전환: API 키는 서버에서 관리하므로 항상 준비 완료
-  // callGemini()이 /api/gemini/generate 서버 프록시를 사용하므로 클라이언트 키 불필요
+  // 서버 프록시 전환: API 키는 Vercel US 프록시에서 관리하므로 클라이언트 키 불필요
   useEffect(() => {
     setApiKeyReady(true);
   }, []);

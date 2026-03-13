@@ -15,9 +15,7 @@
     "lint:fix": "eslint src --ext .ts,.tsx --fix",
     "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,json,css}\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,js,jsx,json,css}\"",
-    "worker:dev": "cd workers && wrangler dev",
-    "worker:deploy": "cd workers && wrangler deploy",
-    "worker:kv-create": "cd workers && wrangler kv namespace create RATE_LIMIT_KV && wrangler kv namespace create CACHE_KV"
+    "format:check:ci": "prettier --check \"src/**/*.{ts,tsx,js,jsx,json,css}\""
   },
   "dependencies": {
     "@google/genai": "^1.44.0",

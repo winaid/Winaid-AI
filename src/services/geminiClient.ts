@@ -29,16 +29,30 @@ export const TIMEOUTS = {
 } as const;
 
 /**
- * 프록시 URL 검증 - workers.dev 경로 차단
- * Cloudflare Pages 대시보드에 잘못된 환경변수가 남아있을 경우 방어
+ * Gemini 프록시 엔드포인트 반환 (Vercel 단일 경로)
+ *
+ * - VITE_GEMINI_PROXY_URL 필수 (Vercel US 프록시)
+ * - workers.dev / cloudfunctions.net URL 차단 (legacy 방어)
+ * - Pages Functions 폴백 제거 (HKG 리전 → Gemini 지역 제한 에러)
  */
-function getValidProxyUrl(): string | undefined {
+function getGeminiEndpoint(): string {
   const url = import.meta.env.VITE_GEMINI_PROXY_URL;
-  if (!url) return undefined;
-  if (url.includes('workers.dev')) {
-    console.warn('[BLOG_FLOW] ⛔ workers.dev 프록시 URL 차단됨 — Pages Functions로 폴백:', url);
-    return undefined;
+
+  if (!url) {
+    console.error('[BLOG_FLOW] ⛔ VITE_GEMINI_PROXY_URL 미설정 — Gemini 호출 불가');
+    throw new Error('Gemini 프록시 URL이 설정되지 않았습니다. 관리자에게 문의하세요.');
   }
+
+  if (url.includes('workers.dev')) {
+    console.error('[BLOG_FLOW] ⛔ workers.dev URL 차단됨:', url);
+    throw new Error('잘못된 Gemini 프록시 URL (workers.dev). 관리자에게 문의하세요.');
+  }
+
+  if (url.includes('cloudfunctions.net')) {
+    console.error('[BLOG_FLOW] ⛔ GCF URL 차단됨:', url);
+    throw new Error('잘못된 Gemini 프록시 URL (GCF). 관리자에게 문의하세요.');
+  }
+
   return url;
 }
 
@@ -298,91 +312,56 @@ export async function callGemini(config: GeminiCallConfig): Promise<any> {
 /**
  * Raw 모드 프록시 호출 - Gemini API 바디를 직접 전달
  * 이미지 생성/편집 등 고급 기능에 사용
+ * Vercel 단일 경로 — 폴백 없음 (호출자가 재시도 관리)
  */
 export async function callGeminiRaw(model: string, apiBody: any, timeout: number = TIMEOUTS.IMAGE_GENERATION): Promise<any> {
-  const usProxyUrl = getValidProxyUrl();
-  const pagesUrl = `${import.meta.env.VITE_API_URL || ''}/api/gemini/generate`;
-  // US 리전 프록시(GCF) 1순위, Pages Functions 폴백
-  const endpoints = usProxyUrl ? [usProxyUrl, pagesUrl] : [pagesUrl];
-  console.log(`[BLOG_FLOW] callGeminiRaw(${model}) 시작, endpoints: ${endpoints.length}개`);
+  const endpoint = getGeminiEndpoint();
+  console.log(`[BLOG_FLOW] callGeminiRaw(${model}) → ${endpoint.substring(0, 60)}...`);
 
-  let lastError: any = null;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeout + 5000);
 
-  for (const endpoint of endpoints) {
-    console.log(`[BLOG_FLOW] callGeminiRaw → ${endpoint.substring(0, 60)}...`);
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeout + 5000);
+  try {
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ raw: true, model, apiBody, timeout }),
+      signal: controller.signal,
+    });
 
-    try {
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ raw: true, model, apiBody, timeout }),
-        signal: controller.signal,
-      });
+    clearTimeout(timeoutId);
 
-      clearTimeout(timeoutId);
-
-      if (!response.ok) {
-        const errorBody = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
-        const hasNextEndpoint = endpoints.indexOf(endpoint) < endpoints.length - 1;
-
-        // 현재 엔드포인트 장애 → 다음 엔드포인트로 전환
-        // 400은 클라이언트 에러이므로 폴백해도 동일 결과 → 제외
-        if (hasNextEndpoint &&
-            (response.status === 502 || response.status === 503 || response.status === 504)) {
-          console.warn(`⚠️ 엔드포인트 장애 (${response.status}), 다음 경로로 전환...`);
-          lastError = errorBody;
-          continue;
-        }
-
-        const error: any = new Error(errorBody.error || `서버 응답 오류 (${response.status})`);
-        error.status = response.status;
-        error.details = errorBody.details;
-        throw error;
-      }
-
-      return await response.json();
-    } catch (error: any) {
-      clearTimeout(timeoutId);
-      const hasNextEndpoint = endpoints.indexOf(endpoint) < endpoints.length - 1;
-
-      // 타임아웃 또는 네트워크 에러 → 다음 엔드포인트 시도
-      if (hasNextEndpoint && (error.name === 'AbortError' || !error.status)) {
-        console.warn(`⚠️ 엔드포인트 연결 실패, 다음 경로로 전환...`);
-        lastError = error;
-        continue;
-      }
-
-      if (error.name === 'AbortError') {
-        const timeoutError: any = new Error('Gemini API timeout');
-        timeoutError.status = 504;
-        throw timeoutError;
-      }
+    if (!response.ok) {
+      const errorBody = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
+      const error: any = new Error(errorBody.error || `서버 응답 오류 (${response.status})`);
+      error.status = response.status;
+      error.details = errorBody.details;
       throw error;
     }
-  }
 
-  // 모든 엔드포인트 실패
-  if (lastError?.name === 'AbortError') {
-    const timeoutError: any = new Error('Gemini API timeout');
-    timeoutError.status = 504;
-    throw timeoutError;
+    return await response.json();
+  } catch (error: any) {
+    clearTimeout(timeoutId);
+
+    if (error.name === 'AbortError') {
+      const timeoutError: any = new Error('Gemini API timeout');
+      timeoutError.status = 504;
+      throw timeoutError;
+    }
+    throw error;
   }
-  throw lastError || new Error('모든 프록시 엔드포인트 실패');
 }
 
 /**
- * 서버 프록시를 통한 Gemini API 호출
+ * 서버 프록시를 통한 Gemini API 호출 (단일 Vercel 엔드포인트)
  * - API 키가 서버에만 존재 → 클라이언트 노출 없음
- * - /api/gemini/generate 엔드포인트 사용
- * - PRO 모델 실패 시 FLASH 폴백 (서버에서 처리)
+ * - PRO 모델 503/429/timeout → FLASH 폴백
+ * - 폴백 루프 제거 — 단일 endpoint, callGemini에서 retry 관리
  */
 async function _callGeminiOnce(config: GeminiCallConfig): Promise<any> {
   const model = config.model || GEMINI_MODEL.PRO;
   const timeout = config.timeout || TIMEOUTS.GENERATION;
 
-  // 서버 프록시 요청 구성
   const proxyRequest = {
     prompt: config.prompt,
     model,
@@ -398,130 +377,98 @@ async function _callGeminiOnce(config: GeminiCallConfig): Promise<any> {
     timeout,
   };
 
-  // US 리전 프록시(Vercel) 1순위, Pages Functions 폴백
-  const usProxyUrl = getValidProxyUrl();
-  const pagesUrl = `${import.meta.env.VITE_API_URL || ''}/api/gemini/generate`;
-  const endpoints = usProxyUrl ? [usProxyUrl, pagesUrl] : [pagesUrl];
+  const endpoint = getGeminiEndpoint();
+  console.log(`[BLOG_FLOW] _callGeminiOnce(${model}) → ${endpoint.substring(0, 60)}...`);
 
-  let lastError: any = null;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeout + 5000);
 
-  for (const endpoint of endpoints) {
-    console.log(`[BLOG_FLOW] _callGeminiOnce(${model}) → ${endpoint.substring(0, 60)}...`);
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeout + 5000);
+  try {
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(proxyRequest),
+      signal: controller.signal,
+    });
 
-    try {
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(proxyRequest),
-        signal: controller.signal,
-      });
+    clearTimeout(timeoutId);
 
-      clearTimeout(timeoutId);
+    if (!response.ok) {
+      const errorBody = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
 
-      if (!response.ok) {
-        const errorBody = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
-
-        // 1순위 프록시 장애(502/503/504) → 폴백 시도
-        // 400은 클라이언트 에러이므로 폴백해도 동일 결과 → 제외
-        const hasNext = endpoints.indexOf(endpoint) < endpoints.length - 1;
-        if (hasNext &&
-            (response.status === 502 || response.status === 503 || response.status === 504)) {
-          console.warn(`⚠️ 프록시 장애 (${response.status}), 폴백 경로로 전환...`);
-          lastError = errorBody;
-          continue;
-        }
-
-        // 503/429 → PRO → FLASH 폴백
-        if ((response.status === 503 || response.status === 429) && model === GEMINI_MODEL.PRO) {
-          console.warn(`⚠️ PRO 모델 ${response.status} → FLASH 폴백 시도...`);
-          return _callGeminiOnce({ ...config, model: GEMINI_MODEL.FLASH, timeout: 60000 });
-        }
-
-        const error: any = new Error(errorBody.error || `서버 응답 오류 (${response.status})`);
-        error.status = response.status;
-        error.details = errorBody.details;
-        throw error;
+      // 503/429 + PRO → FLASH 폴백 (모델 다운그레이드)
+      if ((response.status === 503 || response.status === 429) && model === GEMINI_MODEL.PRO) {
+        console.warn(`⚠️ PRO 모델 ${response.status} → FLASH 폴백 시도...`);
+        return _callGeminiOnce({ ...config, model: GEMINI_MODEL.FLASH, timeout: 60000 });
       }
 
-      const result = await response.json();
-
-      // 응답 검증
-      if (!result || !result.text) {
-        if (result.text === '') {
-          throw new Error('Gemini가 빈 응답을 반환했습니다. 다시 시도해주세요.');
-        }
-      }
-
-      // API 사용량 추적 (비동기, 실패해도 무시)
-      try {
-        if (result.usageMetadata) {
-          import('./creditService').then(({ trackApiUsage, calculateCost }) => {
-            const inputTokens = result.usageMetadata.promptTokenCount || 0;
-            const outputTokens = result.usageMetadata.candidatesTokenCount || 0;
-            trackApiUsage({
-              model,
-              inputTokens,
-              outputTokens,
-              costUsd: calculateCost(model, inputTokens, outputTokens),
-              operation: config.systemPrompt?.substring(0, 30) || 'unknown',
-            });
-          }).catch(() => {});
-        }
-      } catch {}
-
-      // responseType에 따라 적절한 값 반환
-      const text = result.text;
-
-      if (config.responseType === 'text') {
-        if (!text || text.trim().length === 0) {
-          throw new Error('Gemini가 빈 텍스트 응답을 반환했습니다. 다시 시도해주세요.');
-        }
-        return text;
-      } else if (config.responseType === 'json') {
-        if (!text || text.trim().length === 0) {
-          throw new Error('Gemini가 빈 JSON 응답을 반환했습니다. 다시 시도해주세요.');
-        }
-        try {
-          return JSON.parse(text);
-        } catch (e) {
-          console.warn('⚠️ JSON 파싱 실패, 원본 반환:', text.substring(0, 100));
-          return { text };
-        }
-      } else {
-        return { text, usageMetadata: result.usageMetadata };
-      }
-    } catch (error: any) {
-      clearTimeout(timeoutId);
-
-      // 1순위 프록시 네트워크 에러/타임아웃 → 폴백 시도
-      const hasNext = endpoints.indexOf(endpoint) < endpoints.length - 1;
-      if (hasNext) {
-        if (error.name === 'AbortError' || !error.status) {
-          console.warn(`⚠️ 프록시 연결 실패, 폴백 경로로 전환...`);
-          lastError = error;
-          continue;
-        }
-      }
-
-      if (error.name === 'AbortError') {
-        const timeoutError: any = new Error('Gemini API timeout');
-        timeoutError.status = 504;
-
-        // PRO 타임아웃 → FLASH 폴백
-        if (model === GEMINI_MODEL.PRO) {
-          console.warn('⚠️ PRO 모델 타임아웃 → FLASH 폴백 시도...');
-          return _callGeminiOnce({ ...config, model: GEMINI_MODEL.FLASH, timeout: 60000 });
-        }
-
-        throw timeoutError;
-      }
-
+      const error: any = new Error(errorBody.error || `서버 응답 오류 (${response.status})`);
+      error.status = response.status;
+      error.details = errorBody.details;
       throw error;
     }
-  }
 
-  // 모든 엔드포인트 실패
-  throw lastError || new Error('모든 프록시 엔드포인트 실패');
+    const result = await response.json();
+
+    // 응답 검증
+    if (!result || !result.text) {
+      if (result.text === '') {
+        throw new Error('Gemini가 빈 응답을 반환했습니다. 다시 시도해주세요.');
+      }
+    }
+
+    // API 사용량 추적 (비동기, 실패해도 무시)
+    try {
+      if (result.usageMetadata) {
+        import('./creditService').then(({ trackApiUsage, calculateCost }) => {
+          const inputTokens = result.usageMetadata.promptTokenCount || 0;
+          const outputTokens = result.usageMetadata.candidatesTokenCount || 0;
+          trackApiUsage({
+            model,
+            inputTokens,
+            outputTokens,
+            costUsd: calculateCost(model, inputTokens, outputTokens),
+            operation: config.systemPrompt?.substring(0, 30) || 'unknown',
+          });
+        }).catch(() => {});
+      }
+    } catch {}
+
+    // responseType에 따라 적절한 값 반환
+    const text = result.text;
+
+    if (config.responseType === 'text') {
+      if (!text || text.trim().length === 0) {
+        throw new Error('Gemini가 빈 텍스트 응답을 반환했습니다. 다시 시도해주세요.');
+      }
+      return text;
+    } else if (config.responseType === 'json') {
+      if (!text || text.trim().length === 0) {
+        throw new Error('Gemini가 빈 JSON 응답을 반환했습니다. 다시 시도해주세요.');
+      }
+      try {
+        return JSON.parse(text);
+      } catch (e) {
+        console.warn('⚠️ JSON 파싱 실패, 원본 반환:', text.substring(0, 100));
+        return { text };
+      }
+    } else {
+      return { text, usageMetadata: result.usageMetadata };
+    }
+  } catch (error: any) {
+    clearTimeout(timeoutId);
+
+    if (error.name === 'AbortError') {
+      // PRO 타임아웃 → FLASH 폴백
+      if (model === GEMINI_MODEL.PRO) {
+        console.warn('⚠️ PRO 모델 타임아웃 → FLASH 폴백 시도...');
+        return _callGeminiOnce({ ...config, model: GEMINI_MODEL.FLASH, timeout: 60000 });
+      }
+      const timeoutError: any = new Error('Gemini API timeout');
+      timeoutError.status = 504;
+      throw timeoutError;
+    }
+
+    throw error;
+  }
 }
