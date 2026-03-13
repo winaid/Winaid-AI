@@ -1,0 +1,11 @@
+name = "gemini-proxy"
+main = "src/index.ts"
+compatibility_date = "2024-12-30"
+compatibility_flags = ["nodejs_compat"]
+
+# US 리전 고정 — Gemini Developer API 지역 제한 우회
+placement = { mode = "smart" }
+
+[vars]
+# GEMINI_API_KEY는 Cloudflare 대시보드에서 시크릿으로 설정
+# wrangler secret put GEMINI_API_KEY

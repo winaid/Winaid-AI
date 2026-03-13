@@ -307,8 +307,12 @@ async function _callGeminiOnce(config: GeminiCallConfig): Promise<any> {
   const timeoutId = setTimeout(() => controller.abort(), timeout + 5000); // 서버 타임아웃보다 5초 여유
 
   try {
-    const apiUrl = import.meta.env.VITE_API_URL || '';
-    const response = await fetch(`${apiUrl}/api/gemini/generate`, {
+    // 별도 Gemini Proxy Worker URL 우선 사용 (US 리전 고정)
+    // Pages Functions는 아시아 edge에서 실행되어 Gemini API 지역 제한에 걸림
+    const proxyUrl = import.meta.env.VITE_GEMINI_PROXY_URL;
+    const fallbackUrl = `${import.meta.env.VITE_API_URL || ''}/api/gemini/generate`;
+    const endpoint = proxyUrl ? `${proxyUrl}/generate` : fallbackUrl;
+    const response = await fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(proxyRequest),
