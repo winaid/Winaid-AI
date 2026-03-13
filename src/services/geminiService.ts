@@ -2964,20 +2964,30 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
 
   if (maxImages > 0 && textData.imagePrompts.length > 0) {
     // 순차 생성으로 진행률 표시 (maxImages만큼 생성)
+    let imageFailCount = 0;
     for (let i = 0; i < maxImages; i++) {
       safeProgress(`🎨 이미지 ${i + 1}/${maxImages}장 생성 중...`);
       const p = textData.imagePrompts[i];
-      let img: string;
-      
-      if (request.postType === 'card_news') {
-        // 카드뉴스: 기존 함수 사용 (텍스트 포함, 브라우저 프레임)
-        img = await generateSingleImage(p, request.imageStyle, imgRatio, request.customImagePrompt, fallbackReferenceImage, fallbackCopyMode);
-      } else {
-        // 블로그: 새 함수 사용 (텍스트 없는 순수 이미지)
-        img = await generateBlogImage(p, request.imageStyle, imgRatio, request.customImagePrompt);
+      try {
+        let img: string;
+
+        if (request.postType === 'card_news') {
+          // 카드뉴스: 기존 함수 사용 (텍스트 포함, 브라우저 프레임)
+          img = await generateSingleImage(p, request.imageStyle, imgRatio, request.customImagePrompt, fallbackReferenceImage, fallbackCopyMode);
+        } else {
+          // 블로그: 새 함수 사용 (텍스트 없는 순수 이미지)
+          img = await generateBlogImage(p, request.imageStyle, imgRatio, request.customImagePrompt);
+        }
+
+        images.push({ index: i + 1, data: img, prompt: p });
+      } catch (imgErr: any) {
+        imageFailCount++;
+        console.warn(`⚠️ 이미지 ${i + 1} 생성 실패 (${imgErr.status || imgErr.message}), 텍스트만 계속 진행`);
+        // 이미지 실패해도 텍스트는 계속 반환
       }
-      
-      images.push({ index: i + 1, data: img, prompt: p });
+    }
+    if (imageFailCount > 0) {
+      safeProgress(`⚠️ 이미지 ${imageFailCount}장 생성 실패 — 텍스트만 반환합니다`);
     }
   } else {
     console.log('🖼️ 이미지 0장 설정 - 이미지 생성 스킵');
