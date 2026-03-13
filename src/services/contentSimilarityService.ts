@@ -4,7 +4,8 @@
  * Gemini 임베딩 + 웹 검색을 통한 표절 검사, 블로그 이력 저장
  * geminiService.ts에서 분리된 모듈
  */
-import { getAiClient } from "./geminiClient";
+// Note: embedContent API is not supported by the proxy server.
+// Embedding function gracefully returns empty array.
 
 // ========================================
 // 📊 블로그 유사도 검사 시스템
@@ -13,33 +14,12 @@ import { getAiClient } from "./geminiClient";
 /**
  * Gemini Embedding API로 텍스트 벡터화
  */
-async function getTextEmbedding(text: string): Promise<number[]> {
-  try {
-    const ai = getAiClient();
-
-    // 텍스트 정리 (HTML 태그 제거)
-    const cleanText = text.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
-
-    // embedContent 메서드 사용 (60초 타임아웃)
-    const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(() => reject(new Error('Embedding API timeout (60초)')), 60000);
-    });
-
-    const embedPromise = ai.models.embedContent({
-      model: 'gemini-embedding-001',
-      contents: cleanText,
-      config: {
-        outputDimensionality: 768,  // DB 컬럼이 768차원
-      },
-    });
-    const result = await Promise.race([embedPromise, timeoutPromise]);
-
-    // embeddings[0].values 배열 반환
-    return result.embeddings?.[0]?.values || [];
-  } catch (error) {
-    console.error('❌ 텍스트 임베딩 생성 실패:', error);
-    return [];
-  }
+async function getTextEmbedding(_text: string): Promise<number[]> {
+  // embedContent API is not supported by the proxy server.
+  // Gracefully return empty array - embedding is non-critical functionality.
+  // Similarity checks will still work via web search matching.
+  console.warn('⚠️ 텍스트 임베딩 비활성화: embedContent API는 프록시 서버에서 지원되지 않습니다.');
+  return [];
 }
 
 /**

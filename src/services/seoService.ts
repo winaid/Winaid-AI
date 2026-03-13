@@ -155,11 +155,8 @@ ${newsContext}
 
     // 2차: Gemini 검색으로 폴백
     try {
-      const ai = getAiClient();
-
-      const response: any = await Promise.race([ai.models.generateContent({
-        model: 'gemini-3.1-flash-lite-preview',
-        contents: `최근 한국 뉴스에서 "${searchKeyword}" 관련 기사를 검색하고,
+      const newsContext = await callGemini({
+        prompt: `최근 한국 뉴스에서 "${searchKeyword}" 관련 기사를 검색하고,
 가장 많이 다뤄지는 건강/의료 이슈 3가지를 요약해주세요.
 
 연도 불일치 설명 없이 바로 이슈만 요약하세요.
@@ -168,14 +165,12 @@ ${newsContext}
 각 이슈마다:
 - 이슈: (한 줄 요약)
 - 관련 키워드: (블로그 작성에 활용할 키워드)`,
-        config: {
-          tools: [{ googleSearch: {} }],
-          responseMimeType: "text/plain",
-          temperature: 0.3
-        }
-      }), new Promise((_, reject) => setTimeout(() => reject(new Error('뉴스 검색 타임아웃')), 30000))]);
-
-      const newsContext = response.text || '';
+        model: 'gemini-3.1-flash-lite-preview',
+        responseType: 'text',
+        googleSearch: true,
+        temperature: 0.3,
+        timeout: 30000
+      }) || '';
       console.log(`[뉴스 트렌드] Gemini 검색 완료`);
       return newsContext;
 
@@ -187,7 +182,6 @@ ${newsContext}
 };
 
 export const getTrendingTopics = async (category: string): Promise<TrendingItem[]> => {
-  const ai = getAiClient();
   const now = new Date();
   const koreaTime = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
   const year = koreaTime.getFullYear();
@@ -237,10 +231,8 @@ export const getTrendingTopics = async (category: string): Promise<TrendingItem[
   const newsContext = await searchNewsForTrends(category, month);
 
   // Gemini AI 기반 트렌드 분석 (구글 검색 + 뉴스 컨텍스트 기반)
-  const response: any = await Promise.race([
-    ai.models.generateContent({
-      model: 'gemini-3.1-flash-lite-preview',  // FLASH로 빠른 응답
-    contents: `[🕐 정확한 현재 시각: ${dateStr} 기준 (한국 표준시)]
+  return await callGemini({
+    prompt: `[🕐 정확한 현재 시각: ${dateStr} 기준 (한국 표준시)]
 [🎲 다양성 시드: ${randomSeed}]
 
 당신은 네이버/구글 검색 트렌드 분석 전문가입니다.
@@ -275,35 +267,28 @@ ${newsContext ? '6. **뉴스 트렌드 반영 필수**: 위 뉴스에서 언급�
 - keywords: 블로그 제목에 쓸 롱테일 키워드 (예: "겨울 어깨통증, 난방 어깨 뻣뻣, 아침 어깨 굳음")
 - score: SEO 점수 (70~95 사이)
 - seasonal_factor: 왜 지금 이 주제가 뜨는지 한 줄 설명 ${newsContext ? '(뉴스 기반이면 "📰 뉴스 트렌드" 표시)' : ''}`,
-    config: {
-      tools: [{ googleSearch: {} }], // 구글 검색 도구 활성화
-      responseMimeType: "application/json",
-      responseSchema: {
-        type: Type.ARRAY,
-        items: {
-          type: Type.OBJECT,
-          properties: {
-            topic: { type: Type.STRING },
-            keywords: { type: Type.STRING },
-            score: { type: Type.NUMBER },
-            seasonal_factor: { type: Type.STRING }
-          },
-          required: ["topic", "keywords", "score", "seasonal_factor"]
-        }
-      },
-      temperature: 0.9 // 다양성을 위해 temperature 높임
+    model: 'gemini-3.1-flash-lite-preview',
+    responseType: 'json',
+    googleSearch: true,
+    temperature: 0.9,
+    timeout: 60000,
+    schema: {
+      type: Type.ARRAY,
+      items: {
+        type: Type.OBJECT,
+        properties: {
+          topic: { type: Type.STRING },
+          keywords: { type: Type.STRING },
+          score: { type: Type.NUMBER },
+          seasonal_factor: { type: Type.STRING }
+        },
+        required: ["topic", "keywords", "score", "seasonal_factor"]
+      }
     }
-  }),
-    new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('인기 키워드 조회 타임아웃 (60초)')), 60000)
-    )
-  ]);
-  return JSON.parse(response.text || "[]");
+  });
 };
 
 export const recommendSeoTitles = async (topic: string, keywords: string, postType: 'blog' | 'card_news' = 'blog'): Promise<SeoTitleItem[]> => {
-  const ai = getAiClient();
-
   // 현재 날짜/계절 정보 추가 (트렌드와 동일하게)
   const now = new Date();
   const koreaTime = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
@@ -604,26 +589,24 @@ JSON 배열로 출력한다. 각 항목은 다음 구조를 따른다:
   "type": "증상질환형" | "변화원인형" | "확인형" | "정상범위형"
 }`;
 
-  const response: any = await Promise.race([ai.models.generateContent({
+  return await callGemini({
+    prompt,
     model: 'gemini-3.1-flash-lite-preview',
-    contents: prompt,
-    config: {
-      responseMimeType: "application/json",
-      responseSchema: {
-        type: Type.ARRAY,
-        items: {
-          type: Type.OBJECT,
-          properties: {
-            title: { type: Type.STRING },
-            score: { type: Type.NUMBER },
-            type: { type: Type.STRING, enum: ['증상질환형', '변화원인형', '확인형', '정상범위형'] }
-          },
-          required: ["title", "score", "type"]
-        }
+    responseType: 'json',
+    timeout: 60000,
+    schema: {
+      type: Type.ARRAY,
+      items: {
+        type: Type.OBJECT,
+        properties: {
+          title: { type: Type.STRING },
+          score: { type: Type.NUMBER },
+          type: { type: Type.STRING, enum: ['증상질환형', '변화원인형', '확인형', '정상범위형'] }
+        },
+        required: ["title", "score", "type"]
       }
     }
-  }), new Promise((_, reject) => setTimeout(() => reject(new Error('SEO 제목 추천 타임아웃')), 60000))]);
-  return JSON.parse(response.text || "[]");
+  });
 };
 
 /**
@@ -635,8 +618,6 @@ export const rankSeoTitles = async (
   keywords: string,
   postContent?: string
 ): Promise<SeoTitleItem[]> => {
-  const ai = getAiClient();
-
   // 현재 날짜 정보
   const now = new Date();
   const koreaTime = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
@@ -701,33 +682,30 @@ finalScore = legalSafety + naturalness + relevance + ctr
 - reason: 한 줄로 평가 이유 요약
 - recommendation: "추천" | "보통" | "비추천"`;
 
-  const response: any = await Promise.race([ai.models.generateContent({
+  const rankedTitles = await callGemini({
+    prompt,
     model: 'gemini-3.1-flash-lite-preview',
-    contents: prompt,
-    config: {
-      responseMimeType: "application/json",
-      responseSchema: {
-        type: Type.ARRAY,
-        items: {
-          type: Type.OBJECT,
-          properties: {
-            title: { type: Type.STRING },
-            finalScore: { type: Type.NUMBER },
-            rank: { type: Type.NUMBER },
-            legalSafety: { type: Type.NUMBER },
-            naturalness: { type: Type.NUMBER },
-            relevance: { type: Type.NUMBER },
-            ctr: { type: Type.NUMBER },
-            reason: { type: Type.STRING },
-            recommendation: { type: Type.STRING }
-          },
-          required: ["title", "finalScore", "rank", "legalSafety", "naturalness", "relevance", "ctr", "reason"]
-        }
+    responseType: 'json',
+    timeout: 60000,
+    schema: {
+      type: Type.ARRAY,
+      items: {
+        type: Type.OBJECT,
+        properties: {
+          title: { type: Type.STRING },
+          finalScore: { type: Type.NUMBER },
+          rank: { type: Type.NUMBER },
+          legalSafety: { type: Type.NUMBER },
+          naturalness: { type: Type.NUMBER },
+          relevance: { type: Type.NUMBER },
+          ctr: { type: Type.NUMBER },
+          reason: { type: Type.STRING },
+          recommendation: { type: Type.STRING }
+        },
+        required: ["title", "finalScore", "rank", "legalSafety", "naturalness", "relevance", "ctr", "reason"]
       }
     }
-  }), new Promise((_, reject) => setTimeout(() => reject(new Error('SEO 제목 랭킹 타임아웃')), 60000))]);
-
-  const rankedTitles = JSON.parse(response.text || "[]");
+  });
 
   // 원래 type 정보 병합
   return rankedTitles.map((ranked: any) => {
@@ -757,7 +735,6 @@ export const evaluateSeoScore = async (
   topic: string,
   keywords: string
 ): Promise<SeoScoreReport> => {
-  const ai = getAiClient();
   const currentYear = getCurrentYear();
 
   // 방어 코드: 필수 파라미터 검증
@@ -921,90 +898,82 @@ ${safeHtmlContent.substring(0, 8000)}
 JSON 형식으로 응답해주세요.`;
 
   try {
-    const response: any = await Promise.race([
-      ai.models.generateContent({
-        model: 'gemini-3.1-flash-lite-preview',  // FLASH로 빠른 평가
-        contents: prompt,
-        config: {
-          responseMimeType: "application/json",
-          responseSchema: {
+    const result = await callGemini({
+      prompt,
+      model: 'gemini-3.1-flash-lite-preview',
+      responseType: 'json',
+      timeout: 60000,
+      schema: {
+        type: Type.OBJECT,
+        properties: {
+          total: { type: Type.INTEGER },
+          title: {
             type: Type.OBJECT,
             properties: {
-              total: { type: Type.INTEGER },
-              title: {
-              type: Type.OBJECT,
-              properties: {
-                score: { type: Type.INTEGER },
-                keyword_natural: { type: Type.INTEGER },
-                seasonality: { type: Type.INTEGER },
-                judgment_inducing: { type: Type.INTEGER },
-                medical_law_safe: { type: Type.INTEGER },
-                feedback: { type: Type.STRING }
-              },
-              required: ["score", "keyword_natural", "seasonality", "judgment_inducing", "medical_law_safe", "feedback"]
+              score: { type: Type.INTEGER },
+              keyword_natural: { type: Type.INTEGER },
+              seasonality: { type: Type.INTEGER },
+              judgment_inducing: { type: Type.INTEGER },
+              medical_law_safe: { type: Type.INTEGER },
+              feedback: { type: Type.STRING }
             },
-            keyword_structure: {
-              type: Type.OBJECT,
-              properties: {
-                score: { type: Type.INTEGER },
-                main_keyword_exposure: { type: Type.INTEGER },
-                related_keyword_spread: { type: Type.INTEGER },
-                subheading_variation: { type: Type.INTEGER },
-                no_meaningless_repeat: { type: Type.INTEGER },
-                feedback: { type: Type.STRING }
-              },
-              required: ["score", "main_keyword_exposure", "related_keyword_spread", "subheading_variation", "no_meaningless_repeat", "feedback"]
-            },
-            user_retention: {
-              type: Type.OBJECT,
-              properties: {
-                score: { type: Type.INTEGER },
-                intro_problem_recognition: { type: Type.INTEGER },
-                relatable_examples: { type: Type.INTEGER },
-                mid_engagement_points: { type: Type.INTEGER },
-                no_info_overload: { type: Type.INTEGER },
-                feedback: { type: Type.STRING }
-              },
-              required: ["score", "intro_problem_recognition", "relatable_examples", "mid_engagement_points", "no_info_overload", "feedback"]
-            },
-            medical_safety: {
-              type: Type.OBJECT,
-              properties: {
-                score: { type: Type.INTEGER },
-                no_definitive_guarantee: { type: Type.INTEGER },
-                individual_difference: { type: Type.INTEGER },
-                self_diagnosis_limit: { type: Type.INTEGER },
-                minimal_direct_promo: { type: Type.INTEGER },
-                feedback: { type: Type.STRING }
-              },
-              required: ["score", "no_definitive_guarantee", "individual_difference", "self_diagnosis_limit", "minimal_direct_promo", "feedback"]
-            },
-            conversion: {
-              type: Type.OBJECT,
-              properties: {
-                score: { type: Type.INTEGER },
-                cta_flow_natural: { type: Type.INTEGER },
-                time_fixed_sentence: { type: Type.INTEGER },
-                feedback: { type: Type.STRING }
-              },
-              required: ["score", "cta_flow_natural", "time_fixed_sentence", "feedback"]
-            },
-            improvement_suggestions: {
-              type: Type.ARRAY,
-              items: { type: Type.STRING },
-              description: "85점 이상 달성을 위한 구체적인 개선 제안 3~5개"
-            }
+            required: ["score", "keyword_natural", "seasonality", "judgment_inducing", "medical_law_safe", "feedback"]
           },
-          required: ["total", "title", "keyword_structure", "user_retention", "medical_safety", "conversion", "improvement_suggestions"]
-        }
+          keyword_structure: {
+            type: Type.OBJECT,
+            properties: {
+              score: { type: Type.INTEGER },
+              main_keyword_exposure: { type: Type.INTEGER },
+              related_keyword_spread: { type: Type.INTEGER },
+              subheading_variation: { type: Type.INTEGER },
+              no_meaningless_repeat: { type: Type.INTEGER },
+              feedback: { type: Type.STRING }
+            },
+            required: ["score", "main_keyword_exposure", "related_keyword_spread", "subheading_variation", "no_meaningless_repeat", "feedback"]
+          },
+          user_retention: {
+            type: Type.OBJECT,
+            properties: {
+              score: { type: Type.INTEGER },
+              intro_problem_recognition: { type: Type.INTEGER },
+              relatable_examples: { type: Type.INTEGER },
+              mid_engagement_points: { type: Type.INTEGER },
+              no_info_overload: { type: Type.INTEGER },
+              feedback: { type: Type.STRING }
+            },
+            required: ["score", "intro_problem_recognition", "relatable_examples", "mid_engagement_points", "no_info_overload", "feedback"]
+          },
+          medical_safety: {
+            type: Type.OBJECT,
+            properties: {
+              score: { type: Type.INTEGER },
+              no_definitive_guarantee: { type: Type.INTEGER },
+              individual_difference: { type: Type.INTEGER },
+              self_diagnosis_limit: { type: Type.INTEGER },
+              minimal_direct_promo: { type: Type.INTEGER },
+              feedback: { type: Type.STRING }
+            },
+            required: ["score", "no_definitive_guarantee", "individual_difference", "self_diagnosis_limit", "minimal_direct_promo", "feedback"]
+          },
+          conversion: {
+            type: Type.OBJECT,
+            properties: {
+              score: { type: Type.INTEGER },
+              cta_flow_natural: { type: Type.INTEGER },
+              time_fixed_sentence: { type: Type.INTEGER },
+              feedback: { type: Type.STRING }
+            },
+            required: ["score", "cta_flow_natural", "time_fixed_sentence", "feedback"]
+          },
+          improvement_suggestions: {
+            type: Type.ARRAY,
+            items: { type: Type.STRING },
+            description: "85점 이상 달성을 위한 구체적인 개선 제안 3~5개"
+          }
+        },
+        required: ["total", "title", "keyword_structure", "user_retention", "medical_safety", "conversion", "improvement_suggestions"]
       }
-    }),
-      new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('SEO 평가 타임아웃 (60초)')), 60000)
-      )
-    ]);
-
-    const result = JSON.parse(response.text || "{}");
+    });
 
     // 총점 검증 및 재계산
     const calculatedTotal =

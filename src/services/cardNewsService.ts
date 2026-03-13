@@ -441,8 +441,6 @@ const fullImageCardPromptAgent = async (
   customImagePrompt?: string,
   designTemplateStylePrompt?: string
 ): Promise<CardPromptData[]> => {
-  const ai = getAiClient();
-
   // 🚨 photo/medical 스타일 선택 시 커스텀 프롬프트 무시! (스타일 버튼 우선)
   const isFixedStyle = imageStyle === 'photo' || imageStyle === 'medical';
   const hasCustomStyle = !isFixedStyle && customImagePrompt?.trim();
@@ -540,41 +538,38 @@ ${hasWindowButtons ? '- 브라우저 창 버튼(빨/노/초) 포함' : ''}
 ✅ 허용: 증상명, 질환명, 질문형 제목, "~일 수 있습니다"`;
 
   try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-3.1-flash-lite-preview',
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            cards: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  imagePrompt: { type: Type.STRING },
-                  textPrompt: {
-                    type: Type.OBJECT,
-                    properties: {
-                      subtitle: { type: Type.STRING },
-                      mainTitle: { type: Type.STRING },
-                      description: { type: Type.STRING },
-                      tags: { type: Type.ARRAY, items: { type: Type.STRING } }
-                    },
-                    required: ["subtitle", "mainTitle", "description", "tags"]
-                  }
-                },
-                required: ["imagePrompt", "textPrompt"]
-              }
+    const result = await callGemini({
+      prompt,
+      model: GEMINI_MODEL.FLASH,
+      responseType: 'json',
+      schema: {
+        type: Type.OBJECT,
+        properties: {
+          cards: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                imagePrompt: { type: Type.STRING },
+                textPrompt: {
+                  type: Type.OBJECT,
+                  properties: {
+                    subtitle: { type: Type.STRING },
+                    mainTitle: { type: Type.STRING },
+                    description: { type: Type.STRING },
+                    tags: { type: Type.ARRAY, items: { type: Type.STRING } }
+                  },
+                  required: ["subtitle", "mainTitle", "description", "tags"]
+                }
+              },
+              required: ["imagePrompt", "textPrompt"]
             }
-          },
-          required: ["cards"]
-        }
-      }
+          }
+        },
+        required: ["cards"]
+      },
+      timeout: TIMEOUTS.CONTENT_GENERATION,
     });
-
-    const result = JSON.parse(response.text || '{"cards":[]}');
 
     const cards = slides.map((s, idx) => {
       const isFirst = idx === 0;
@@ -644,8 +639,6 @@ const _imagePromptAgent = async (
   imageStyle: ImageStyle,
   category: string
 ): Promise<string[]> => {
-  const ai = getAiClient();
-
   const styleGuide = STYLE_KEYWORDS[imageStyle] || STYLE_KEYWORDS.illustration;
 
   const slideSummaries = slides.map((s, i) => `${i + 1}장: ${s.slideType} - ${s.imageKeyword}`).join('\n');
@@ -670,20 +663,18 @@ const _imagePromptAgent = async (
 예시: "가슴 통증을 느끼는 한국인 중년 남성, 3D 일러스트, 파란색 배경, 밝은 톤"`;
 
   try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-3.1-flash-lite-preview',
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: { prompts: { type: Type.ARRAY, items: { type: Type.STRING } } },
-          required: ["prompts"]
-        }
-      }
+    const result = await callGemini({
+      prompt,
+      model: GEMINI_MODEL.FLASH,
+      responseType: 'json',
+      schema: {
+        type: Type.OBJECT,
+        properties: { prompts: { type: Type.ARRAY, items: { type: Type.STRING } } },
+        required: ["prompts"]
+      },
+      timeout: TIMEOUTS.CONTENT_GENERATION,
     });
 
-    const result = JSON.parse(response.text || '{"prompts":[]}');
     return result.prompts || [];
   } catch (error) {
     console.error('이미지 프롬프트 에이전트 실패:', error);
@@ -700,7 +691,6 @@ export const generateCardNewsScript = async (
   request: GenerationRequest,
   onProgress: (msg: string) => void
 ): Promise<CardNewsScript> => {
-  const ai = getAiClient();
   const slideCount = request.slideCount || 6;
   const writingStyle = request.writingStyle || 'empathy';
   const writingStylePrompt = getWritingStylePrompts()[writingStyle];
@@ -776,42 +766,39 @@ ${slideCount >= 7 ? `**5~${slideCount-2}장 - 추가 정보/사례**: slideType:
 - overallTheme: 전체 구조 설명 (⚠️ 반드시 한국어! 20자 이내)`;
 
   try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-3.1-pro-preview',
-      contents: prompt,
-      config: {
-        tools: [{ googleSearch: {} }],
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            title: { type: Type.STRING },
-            topic: { type: Type.STRING },
-            totalSlides: { type: Type.INTEGER },
-            overallTheme: { type: Type.STRING },
-            slides: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  slideNumber: { type: Type.INTEGER },
-                  slideType: { type: Type.STRING },
-                  subtitle: { type: Type.STRING },
-                  mainTitle: { type: Type.STRING },
-                  description: { type: Type.STRING },
-                  speakingNote: { type: Type.STRING },
-                  imageKeyword: { type: Type.STRING }
-                },
-                required: ["slideNumber", "slideType", "subtitle", "mainTitle", "description", "speakingNote", "imageKeyword"]
-              }
+    const result = await callGemini({
+      prompt,
+      model: GEMINI_MODEL.PRO,
+      responseType: 'json',
+      schema: {
+        type: Type.OBJECT,
+        properties: {
+          title: { type: Type.STRING },
+          topic: { type: Type.STRING },
+          totalSlides: { type: Type.INTEGER },
+          overallTheme: { type: Type.STRING },
+          slides: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                slideNumber: { type: Type.INTEGER },
+                slideType: { type: Type.STRING },
+                subtitle: { type: Type.STRING },
+                mainTitle: { type: Type.STRING },
+                description: { type: Type.STRING },
+                speakingNote: { type: Type.STRING },
+                imageKeyword: { type: Type.STRING }
+              },
+              required: ["slideNumber", "slideType", "subtitle", "mainTitle", "description", "speakingNote", "imageKeyword"]
             }
-          },
-          required: ["title", "topic", "totalSlides", "slides", "overallTheme"]
-        }
-      }
+          }
+        },
+        required: ["title", "topic", "totalSlides", "slides", "overallTheme"]
+      },
+      googleSearch: true,
+      timeout: TIMEOUTS.CONTENT_GENERATION,
     });
-
-    const result = JSON.parse(response.text || "{}");
 
     // 🚨 후처리: 1장(표지)과 마지막 장의 description 강제로 빈 문자열로!
     if (result.slides && result.slides.length > 0) {

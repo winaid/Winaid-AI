@@ -558,7 +558,6 @@ export const analyzeAiSmell = async (
   cta_failure: { score: number; issues: string[]; fix_suggestions: string[] };
   priority_fixes: string[];
 }> => {
-  const ai = getAiClient();
   const currentYear = new Date().getFullYear();
   
   const today = new Date();
@@ -710,34 +709,22 @@ ${htmlContent.substring(0, 8000)}
 JSON 형식으로 응답해주세요.`;
 
   try {
-    // 🚀 타임아웃 늘림 (60초) - AI 냄새 분석에 충분한 시간 확보
-    const ANALYSIS_TIMEOUT = 60000;
-    
     // 📊 스키마 단순화
-    const analysisPromise = ai.models.generateContent({
+    const result = await callGemini({
+      prompt,
       model: 'gemini-3.1-flash-lite-preview',  // AI 냄새 분석은 FLASH
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            total_score: { type: Type.INTEGER },
-            issues: { type: Type.ARRAY, items: { type: Type.STRING } },
-            priority_fixes: { type: Type.ARRAY, items: { type: Type.STRING } }
-          },
-          required: ["total_score", "issues", "priority_fixes"]
-        }
-      }
+      responseType: 'json',
+      schema: {
+        type: Type.OBJECT,
+        properties: {
+          total_score: { type: Type.INTEGER },
+          issues: { type: Type.ARRAY, items: { type: Type.STRING } },
+          priority_fixes: { type: Type.ARRAY, items: { type: Type.STRING } }
+        },
+        required: ["total_score", "issues", "priority_fixes"]
+      },
+      timeout: 60000,  // 🚀 타임아웃 60초 - AI 냄새 분석에 충분한 시간 확보
     });
-    
-    const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(() => reject(new Error('AI 냄새 분석 타임아웃 (60초)')), ANALYSIS_TIMEOUT);  // 60초
-    });
-    
-    const response = await Promise.race([analysisPromise, timeoutPromise]);
-    
-    const result = JSON.parse(response.text || "{}");
     
     // 단순화된 스키마에서 결과 변환 (호환성 유지)
     const convertedResult = {
@@ -771,7 +758,6 @@ JSON 형식으로 응답해주세요.`;
 // AI 냄새 재검사 함수 (수동 재생성 후 사용)
 export const recheckAiSmell = async (htmlContent: string): Promise<FactCheckReport> => {
   console.log('🔄 AI 냄새 재검사 시작...');
-  const ai = getAiClient();
   
   // 🔍 먼저 detectAiSmell() 기반 즉시 검사 실행 (빠른 패턴 매칭)
   const quickCheck = runAiSmellCheck(htmlContent);
@@ -842,49 +828,37 @@ ${textContent}
 JSON 형식으로 응답해주세요.`;
 
   try {
-    // 🚀 타임아웃 설정 (60초)
-    const RECHECK_TIMEOUT = 60000;
-    
-    const analysisPromise = ai.models.generateContent({
+    const result = await callGemini({
+      prompt,
       model: 'gemini-3.1-flash-lite-preview',  // 재검증 분석은 FLASH
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            fact_check: {
-              type: Type.OBJECT,
-              properties: {
-                fact_score: { type: Type.INTEGER },
-                verified_facts_count: { type: Type.INTEGER },
-                safety_score: { type: Type.INTEGER },
-                conversion_score: { type: Type.INTEGER },
-                ai_smell_score: { type: Type.INTEGER },
-                issues: {
-                  type: Type.ARRAY,
-                  items: { type: Type.STRING }
-                },
-                recommendations: {
-                  type: Type.ARRAY,
-                  items: { type: Type.STRING }
-                }
+      responseType: 'json',
+      schema: {
+        type: Type.OBJECT,
+        properties: {
+          fact_check: {
+            type: Type.OBJECT,
+            properties: {
+              fact_score: { type: Type.INTEGER },
+              verified_facts_count: { type: Type.INTEGER },
+              safety_score: { type: Type.INTEGER },
+              conversion_score: { type: Type.INTEGER },
+              ai_smell_score: { type: Type.INTEGER },
+              issues: {
+                type: Type.ARRAY,
+                items: { type: Type.STRING }
               },
-              required: ["fact_score", "safety_score", "conversion_score", "ai_smell_score", "verified_facts_count", "issues", "recommendations"]
-            }
-          },
-          required: ["fact_check"]
-        }
-      }
+              recommendations: {
+                type: Type.ARRAY,
+                items: { type: Type.STRING }
+              }
+            },
+            required: ["fact_score", "safety_score", "conversion_score", "ai_smell_score", "verified_facts_count", "issues", "recommendations"]
+          }
+        },
+        required: ["fact_check"]
+      },
+      timeout: 60000,  // 🚀 타임아웃 60초
     });
-    
-    const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(() => reject(new Error('AI 재검사 타임아웃 (60초)')), RECHECK_TIMEOUT);  // 60초
-    });
-    
-    const response = await Promise.race([analysisPromise, timeoutPromise]);
-    
-    const result = JSON.parse(response.text || "{}");
     console.log('✅ AI 냄새 재검사 완료:', result.fact_check);
     
     // 🔍 detectAiSmell() 결과와 AI 분석 결과 통합
@@ -929,8 +903,7 @@ export const refineContentByMedicalLaw = async (
   fact_check: FactCheckReport;
 }> => {
   console.log('✨ AI 정밀보정 시작...');
-  const ai = getAiClient();
-  
+
   const safeProgress = onProgress || ((msg: string) => console.log('📍 Progress:', msg));
   
   // HTML 태그 제거

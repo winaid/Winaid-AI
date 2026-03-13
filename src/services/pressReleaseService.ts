@@ -1,4 +1,4 @@
-import { getAiClient, callGemini, GEMINI_MODEL, TIMEOUTS } from "./geminiClient";
+import { callGemini, GEMINI_MODEL, TIMEOUTS } from "./geminiClient";
 import type { GeminiCallConfig } from "./geminiClient";
 import type { GenerationRequest, GeneratedContent } from "../types";
 import { saveGeneratedPost } from "./postStorageService";
@@ -15,16 +15,8 @@ async function searchKDCA(query: string): Promise<string> {
       'nih.go.kr'
     ];
 
-    const ai = getAiClient();
-
-    // 타임아웃 120초 설정 (googleSearch + thinking 시간 고려)
-    const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(() => reject(new Error('질병관리청 검색 타임아웃 (120초)')), 120000);
-    });
-
-    const searchPromise = ai.models.generateContent({
-      model: GEMINI_MODEL.PRO,
-      contents: `질병관리청(KDCA) 공식 웹사이트에서 "${query}"에 대한 정보를 검색하고 요약해주세요.
+    const result = await callGemini({
+      prompt: `질병관리청(KDCA) 공식 웹사이트에서 "${query}"에 대한 정보를 검색하고 요약해주세요.
 
 검색 범위: ${kdcaDomains.join(', ')}
 
@@ -35,18 +27,13 @@ async function searchKDCA(query: string): Promise<string> {
 4. 공식 통계 자료 (있는 경우)
 
 신뢰할 수 있는 출처의 정보만 사용하고, 출처를 명시해주세요.`,
-      config: {
-        tools: [{ googleSearch: {} }],
-        responseMimeType: "text/plain",
-        temperature: 0.3,
-        // Gemini 3 Pro: thinkingLevel "low"로 속도 개선
-        thinkingConfig: { thinkingLevel: "low" }
-      }
-    });
-
-    const response = await Promise.race([searchPromise, timeoutPromise]);
-
-    const result = response.text || '';
+      model: GEMINI_MODEL.PRO,
+      responseType: 'text',
+      googleSearch: true,
+      temperature: 0.3,
+      thinkingLevel: 'low',
+      timeout: 120000,
+    }) || '';
     console.log('✅ 질병관리청 검색 완료');
     return result;
 
@@ -71,16 +58,8 @@ async function searchHospitalSites(query: string, category: string): Promise<str
       'yuhs.or.kr'              // 연세의료원
     ];
 
-    const ai = getAiClient();
-
-    // 타임아웃 120초 설정 (googleSearch + thinking 시간 고려)
-    const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(() => reject(new Error('병원 사이트 검색 타임아웃 (120초)')), 120000);
-    });
-
-    const searchPromise = ai.models.generateContent({
-      model: GEMINI_MODEL.PRO,
-      contents: `대학병원 공식 웹사이트에서 "${query}" (${category})에 대한 전문 의료 정보를 검색하고 요약해주세요.
+    const result = await callGemini({
+      prompt: `대학병원 공식 웹사이트에서 "${query}" (${category})에 대한 전문 의료 정보를 검색하고 요약해주세요.
 
 검색 범위: ${hospitalDomains.join(', ')}
 
@@ -96,18 +75,13 @@ async function searchHospitalSites(query: string, category: string): Promise<str
 - "완치", "100% 효과" 등의 표현 금지
 
 신뢰할 수 있는 출처의 정보만 사용하고, 출처를 명시해주세요.`,
-      config: {
-        tools: [{ googleSearch: {} }],
-        responseMimeType: "text/plain",
-        temperature: 0.3,
-        // Gemini 3 Pro: thinkingLevel "low"로 속도 개선
-        thinkingConfig: { thinkingLevel: "low" }
-      }
-    });
-
-    const response = await Promise.race([searchPromise, timeoutPromise]);
-
-    const result = response.text || '';
+      model: GEMINI_MODEL.PRO,
+      responseType: 'text',
+      googleSearch: true,
+      temperature: 0.3,
+      thinkingLevel: 'low',
+      timeout: 120000,
+    }) || '';
     console.log('✅ 병원 사이트 크롤링 완료');
     return result;
 
@@ -123,8 +97,6 @@ async function callGeminiWithSearch(
   options: { responseFormat?: string } = {}
 ): Promise<any> {
   try {
-    const ai = getAiClient();
-
     // 프롬프트에서 주제 추출
     const topicMatch = prompt.match(/주제[:\s]*[「『"]?([^」』"\n]+)[」』"]?/);
     const categoryMatch = prompt.match(/진료과[:\s]*([^\n]+)/);
@@ -161,29 +133,19 @@ ${hospitalInfo || '(검색 결과 없음)'}
 
     // Gemini API 호출
     console.log('🚀 보도자료 Gemini API 호출 시작...');
-    const response = await ai.models.generateContent({
+    const isTextPlain = options.responseFormat === "text/plain";
+    const text = await callGemini({
+      prompt: enrichedPrompt,
       model: GEMINI_MODEL.PRO,
-      contents: enrichedPrompt,
-      config: {
-        tools: [{ googleSearch: {} }],
-        responseMimeType: options.responseFormat === "text/plain" ? "text/plain" : "application/json",
-        temperature: 0.6
-      }
+      responseType: isTextPlain ? 'text' : 'json',
+      googleSearch: true,
+      temperature: 0.6,
     });
 
     console.log('✅ 보도자료 Gemini API 응답 수신');
+    console.log('📝 보도자료 텍스트 길이:', typeof text === 'string' ? text.length : JSON.stringify(text)?.length || 0);
 
-    // 응답에서 텍스트 추출
-    let text = '';
-    if (response?.text) {
-      text = response.text;
-    } else if (response?.candidates?.[0]?.content?.parts?.[0]?.text) {
-      text = response.candidates[0].content.parts[0].text;
-    }
-
-    console.log('📝 보도자료 텍스트 길이:', text?.length || 0);
-
-    return { text, response };
+    return { text, response: null };
 
   } catch (error) {
     console.error('❌ callGeminiWithSearch 실패:', error);
@@ -254,10 +216,8 @@ ${getStylePromptForGeneration(learnedStyle)}
           console.log('✅ 병원 웹사이트 크롤링 완료:', crawlData.content.substring(0, 200));
 
           // AI로 병원 강점 분석
-          const ai = getAiClient();
-          const analysisResult = await ai.models.generateContent({
-            model: 'gemini-3.1-flash-lite-preview',  // 병원 정보 분석은 FLASH
-            contents: `다음은 ${hospitalName}의 웹사이트 내용입니다.
+          const analysisResult = await callGemini({
+            prompt: `다음은 ${hospitalName}의 웹사이트 내용입니다.
 
 웹사이트 내용:
 ${crawlData.content.substring(0, 3000)}
@@ -288,10 +248,11 @@ ${crawlData.content.substring(0, 3000)}
 ...
 
 간결하게 핵심만 추출해주세요. 없는 정보는 생략하세요.`,
-            config: { responseMimeType: "text/plain" }
+            model: GEMINI_MODEL.FLASH,
+            responseType: 'text',
           });
 
-          hospitalInfo = `\n[🏥 ${hospitalName} 병원 정보 - 웹사이트 분석 결과]\n${analysisResult.text}\n\n`;
+          hospitalInfo = `\n[🏥 ${hospitalName} 병원 정보 - 웹사이트 분석 결과]\n${analysisResult}\n\n`;
           console.log('✅ 병원 강점 분석 완료:', hospitalInfo.substring(0, 200));
         }
       } else {

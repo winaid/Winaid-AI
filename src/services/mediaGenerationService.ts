@@ -3,7 +3,7 @@
  * - 이미지: gemini-3-pro-image-preview (Nano Banana Pro)
  * - 동영상: veo-3.1-fast-generate-preview
  */
-import { getAiClient, getApiKeyValue } from "./geminiClient";
+import { callGeminiRaw, TIMEOUTS } from "./geminiClient";
 import { DESIGNER_PERSONA } from "./calendarTemplateService";
 
 // ── 이미지 생성 ──
@@ -207,7 +207,6 @@ export async function generateCustomImage(
   request: ImageGenerationRequest,
   onProgress?: (msg: string) => void
 ): Promise<ImageGenerationResult> {
-  const ai = getAiClient();
   const progress = (msg: string) => onProgress?.(msg);
 
   // 달력/진료안내 감지 → HTML 템플릿 또는 AI 포스터 생성
@@ -329,14 +328,13 @@ export async function generateCustomImage(
     try {
       progress(`이미지 생성 시도 ${attempt}/${MAX_RETRIES}...`);
 
-      const result = await ai.models.generateContent({
-        model: "gemini-3-pro-image-preview",  // Nano Banana Pro
-        contents,
-        config: {
+      const result = await callGeminiRaw("gemini-3-pro-image-preview", {
+        contents: [{ role: "user", parts: contents }],
+        generationConfig: {
           responseModalities: ["IMAGE", "TEXT"],
           temperature: 0.6,
         },
-      });
+      }, TIMEOUTS.IMAGE_GENERATION);
 
       const parts = result?.candidates?.[0]?.content?.parts || [];
       const imagePart = parts.find((p: any) => p.inlineData?.data);
@@ -393,8 +391,6 @@ export async function generateOptimizedPrompt(
   mediaType: PromptMediaType,
   referenceImageBase64?: string,
 ): Promise<GeneratedPrompt> {
-  const ai = getAiClient();
-
   const now = new Date();
   const dateInfo = `${now.getMonth() + 1}월`;
 
@@ -445,10 +441,9 @@ VEO 3.1 영상 생성에 최적화된 상세 프롬프트를 작성합니다.
     }
   }
 
-  const response = await ai.models.generateContent({
-    model: 'gemini-3.1-flash-lite-preview',
+  const response = await callGeminiRaw('gemini-3.1-flash-lite-preview', {
     contents: [{ role: 'user', parts }],
-    config: {
+    generationConfig: {
       responseMimeType: 'application/json',
       responseSchema: {
         type: 'object' as any,
@@ -459,9 +454,10 @@ VEO 3.1 영상 생성에 최적화된 상세 프롬프트를 작성합니다.
         required: ['korean', 'english'],
       },
     },
-  });
+  }, TIMEOUTS.QUICK_OPERATION);
 
-  const text = response.text?.trim() || '';
+  const rawText = response?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  const text = rawText.trim();
   const parsed = JSON.parse(text);
   return {
     korean: parsed.korean || '',
@@ -570,8 +566,6 @@ export async function chatPromptGenerator(
   mediaType: PromptMediaType,
   referenceImageBase64?: string,
 ): Promise<ChatMessage> {
-  const ai = getAiClient();
-
   // 최근 6개 메시지만 유지 (3턴) → 토큰 절약 + 속도 유지
   const recentHistory = history.slice(-6);
 
@@ -597,10 +591,10 @@ export async function chatPromptGenerator(
   }
   contents.push({ role: 'user', parts: userParts });
 
-  const response = await ai.models.generateContent({
-    model: 'gemini-3.1-flash-lite-preview',
-    config: {
-      systemInstruction: getSystemInstruction(mediaType),
+  const response = await callGeminiRaw('gemini-3.1-flash-lite-preview', {
+    systemInstruction: { parts: [{ text: getSystemInstruction(mediaType) }] },
+    contents,
+    generationConfig: {
       responseMimeType: 'application/json',
       responseSchema: {
         type: 'object' as any,
@@ -612,10 +606,10 @@ export async function chatPromptGenerator(
         required: ['message', 'korean', 'english'],
       },
     },
-    contents,
-  });
+  }, TIMEOUTS.QUICK_OPERATION);
 
-  const text = response.text?.trim() || '';
+  const rawText = response?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  const text = rawText.trim();
 
   // JSON 모드이므로 바로 파싱
   let parsed: ChatResponseJson;
