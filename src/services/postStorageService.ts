@@ -206,6 +206,12 @@ export const getAdminStats = async (adminPassword: string): Promise<{
   try {
     console.log('[Admin] RPC 호출 시작...');
 
+    // stale JWT가 RPC hang을 유발할 수 있으므로 세션 갱신 시도
+    try {
+      const { error: refreshErr } = await supabase.auth.refreshSession();
+      if (refreshErr) console.warn('[Admin] 세션 갱신 실패 (무시):', refreshErr.message);
+    } catch { /* 비로그인 상태 등 — 무시 */ }
+
     // 안전망: Supabase RPC hang 방지 (30초 — 싱가포르 서버 + 대용량 테이블 고려)
     const rpcPromise = supabase.rpc('get_admin_stats', {
       admin_password: adminPassword
