@@ -1,4 +1,8 @@
 /**
+ * @deprecated Cloudflare Worker 프록시 (workers/gemini-proxy)로 대체됨.
+ * Cloud Run 배포는 503/504 불안정 문제로 더 이상 정식 경로로 사용하지 않음.
+ * 정식 프록시: workers/gemini-proxy/src/index.ts (Smart Placement, US 리전)
+ *
  * Google Cloud Functions — Gemini API Proxy
  * 리전: us-central1 (고정)
  *
