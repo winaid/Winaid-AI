@@ -24,25 +24,12 @@ import { saveBlogHistory } from "./contentSimilarityService";
 async function searchKDCA(query: string): Promise<string> {
   try {
     console.log('🔍 [1차 검색] 질병관리청에서 검색 중...', query);
-    
-    // 질병관리청 사이트 검색
-    const kdcaDomains = [
-      'kdca.go.kr',
-      'cdc.go.kr',
-      'nih.go.kr'
-    ];
-    
-    const ai = getAiClient();
-    
-    // 타임아웃 120초 설정 (googleSearch + thinking 시간 고려)
-    const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(() => reject(new Error('질병관리청 검색 타임아웃 (120초)')), 120000);
-    });
-    
-    const searchPromise = ai.models.generateContent({
-      model: GEMINI_MODEL.PRO,
-      contents: `질병관리청(KDCA) 공식 웹사이트에서 "${query}"에 대한 정보를 검색하고 요약해주세요.
-      
+
+    const kdcaDomains = ['kdca.go.kr', 'cdc.go.kr', 'nih.go.kr'];
+
+    const result = await callGemini({
+      prompt: `질병관리청(KDCA) 공식 웹사이트에서 "${query}"에 대한 정보를 검색하고 요약해주세요.
+
 검색 범위: ${kdcaDomains.join(', ')}
 
 다음 정보를 우선적으로 찾아주세요:
@@ -52,52 +39,35 @@ async function searchKDCA(query: string): Promise<string> {
 4. 공식 통계 자료 (있는 경우)
 
 신뢰할 수 있는 출처의 정보만 사용하고, 출처를 명시해주세요.`,
-      config: {
-        tools: [{ googleSearch: {} }],
-        responseMimeType: "text/plain",
-        temperature: 0.3,
-        // Gemini 3 Pro: thinkingLevel "low"로 속도 개선
-        thinkingConfig: { thinkingLevel: "low" }
-      }
+      model: GEMINI_MODEL.PRO,
+      responseType: 'text',
+      googleSearch: true,
+      temperature: 0.3,
+      thinkingLevel: 'low',
+      timeout: 120000,
     });
-    
-    const response = await Promise.race([searchPromise, timeoutPromise]);
-    
-    const result = response.text || '';
+
     console.log('✅ 질병관리청 검색 완료');
-    return result;
-    
+    return typeof result === 'string' ? result : '';
+
   } catch (error) {
     console.error('❌ 질병관리청 검색 실패:', error);
     return '';
   }
 }
 
-// 🏥 병원 사이트 크롤링 함수 (2차 검색) - 타임아웃 120초
+// 🏥 병원 사이트 크롤링 함수 (2차 검색) - 서버 프록시 경유
 async function searchHospitalSites(query: string, category: string): Promise<string> {
   try {
     console.log('🔍 [2차 검색] 병원 사이트에서 크롤링 중...', query);
-    
-    // 신뢰할 수 있는 병원 사이트 목록
+
     const hospitalDomains = [
-      'amc.seoul.kr',           // 서울아산병원
-      'snuh.org',               // 서울대학교병원
-      'severance.healthcare.or.kr', // 세브란스병원
-      'samsunghospital.com',    // 삼성서울병원
-      'cmcseoul.or.kr',         // 가톨릭대학교 서울성모병원
-      'yuhs.or.kr'              // 연세의료원
+      'amc.seoul.kr', 'snuh.org', 'severance.healthcare.or.kr',
+      'samsunghospital.com', 'cmcseoul.or.kr', 'yuhs.or.kr'
     ];
-    
-    const ai = getAiClient();
-    
-    // 타임아웃 120초 설정 (googleSearch + thinking 시간 고려)
-    const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(() => reject(new Error('병원 사이트 검색 타임아웃 (120초)')), 120000);
-    });
-    
-    const searchPromise = ai.models.generateContent({
-      model: GEMINI_MODEL.PRO,
-      contents: `대학병원 공식 웹사이트에서 "${query}" (${category})에 대한 전문 의료 정보를 검색하고 요약해주세요.
+
+    const result = await callGemini({
+      prompt: `대학병원 공식 웹사이트에서 "${query}" (${category})에 대한 전문 의료 정보를 검색하고 요약해주세요.
 
 검색 범위: ${hospitalDomains.join(', ')}
 
@@ -113,21 +83,17 @@ async function searchHospitalSites(query: string, category: string): Promise<str
 - "완치", "100% 효과" 등의 표현 금지
 
 신뢰할 수 있는 출처의 정보만 사용하고, 출처를 명시해주세요.`,
-      config: {
-        tools: [{ googleSearch: {} }],
-        responseMimeType: "text/plain",
-        temperature: 0.3,
-        // Gemini 3 Pro: thinkingLevel "low"로 속도 개선
-        thinkingConfig: { thinkingLevel: "low" }
-      }
+      model: GEMINI_MODEL.PRO,
+      responseType: 'text',
+      googleSearch: true,
+      temperature: 0.3,
+      thinkingLevel: 'low',
+      timeout: 120000,
     });
-    
-    const response = await Promise.race([searchPromise, timeoutPromise]);
-    
-    const result = response.text || '';
+
     console.log('✅ 병원 사이트 크롤링 완료');
-    return result;
-    
+    return typeof result === 'string' ? result : '';
+
   } catch (error) {
     console.error('❌ 병원 사이트 크롤링 실패:', error);
     return '';
@@ -145,13 +111,11 @@ export async function generateFaqSection(
 
   try {
     safeProgress('❓ FAQ 섹션 생성 중... (네이버 질문 수집)');
-    const ai = getAiClient();
 
-    // 1단계: 네이버에서 실제 사람들이 묻는 질문 수집
+    // 1단계: 네이버에서 실제 사람들이 묻는 질문 수집 (서버 프록시 경유)
     safeProgress('🔍 네이버에서 실제 질문 검색 중...');
-    const naverQuestionsPromise = ai.models.generateContent({
-      model: GEMINI_MODEL.FLASH, // 빠른 검색용
-      contents: `네이버 지식iN, 네이버 블로그, 네이버 카페에서 "${topic}" ${keywords ? `"${keywords}"` : ''}에 대해 실제 사람들이 자주 묻는 질문을 검색해주세요.
+    const naverQuestionsPromise = callGemini({
+      prompt: `네이버 지식iN, 네이버 블로그, 네이버 카페에서 "${topic}" ${keywords ? `"${keywords}"` : ''}에 대해 실제 사람들이 자주 묻는 질문을 검색해주세요.
 
 검색 대상:
 - 네이버 지식iN (kin.naver.com)
@@ -166,12 +130,11 @@ export async function generateFaqSection(
 5. [질문5]
 
 ⚠️ 실제로 사람들이 궁금해하는 것 위주로! AI가 만든 질문 금지!`,
-      config: {
-        tools: [{ googleSearch: {} }],
-        responseMimeType: "text/plain",
-        temperature: 0.5,
-        thinkingConfig: { thinkingLevel: "low" }
-      }
+      model: GEMINI_MODEL.FLASH,
+      responseType: 'text',
+      googleSearch: true,
+      temperature: 0.5,
+      thinkingLevel: 'low',
     });
 
     // 2단계: 질병관리청에서 정확한 정보 수집
@@ -179,25 +142,22 @@ export async function generateFaqSection(
     const kdcaInfoPromise = searchKDCA(topic);
 
     // 병렬 실행
-    const [naverResponse, kdcaInfo] = await Promise.all([
+    const [naverQuestions, kdcaInfo] = await Promise.all([
       naverQuestionsPromise,
       kdcaInfoPromise
     ]);
 
-    const naverQuestions = naverResponse.text || '';
-
     // 3단계: FAQ HTML 생성 (전용 프롬프트 + AEO 로직 적용)
     safeProgress(`📝 FAQ ${faqCount}개 생성 중... (AEO 최적화)`);
-    const faqResponse = await ai.models.generateContent({
-      model: GEMINI_MODEL.PRO,
-      contents: `당신은 병·의원 홈페이지에 사용되는 FAQ 콘텐츠를 작성하는 의료 정보 AI입니다.
+    const faqHtml = await callGemini({
+      prompt: `당신은 병·의원 홈페이지에 사용되는 FAQ 콘텐츠를 작성하는 의료 정보 AI입니다.
 
 [역할]
 - 의료광고가 아닌 '공공 보건 정보 제공' 관점에서만 답변합니다.
 - 치료 효과, 특정 시술, 특정 의료기관의 우수성은 절대 언급하지 않습니다.
 
 [수집된 네이버 질문들]
-${naverQuestions}
+${naverQuestions || '정보 없음'}
 
 [질병관리청 공식 정보]
 ${kdcaInfo || '정보 없음'}
@@ -273,13 +233,10 @@ AI 검색 엔진(ChatGPT, Perplexity, Google AI Overview)이 답변으로 채택
 - SEO: 검색 유입용 FAQ
 - 의료법 제56조 위반 소지 없음
 - 정보 신뢰도 우선`,
-      config: {
-        responseMimeType: "text/plain",
-        temperature: 0.4
-      }
-    });
-
-    const faqHtml = faqResponse.text || '';
+      model: GEMINI_MODEL.PRO,
+      responseType: 'text',
+      temperature: 0.4,
+    }) as string;
 
     // FAQ가 비어있으면 빈 문자열 반환
     if (!faqHtml.includes('faq-section')) {

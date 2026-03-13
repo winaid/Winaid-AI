@@ -3,6 +3,12 @@ interface Env {
   API_KEYS: KVNamespace;
   CONTENT_KV: KVNamespace;
   APP_PASSWORD?: string; // deprecated — 비밀번호 인증 제거됨
+  GEMINI_API_KEY?: string;
+  VITE_GEMINI_API_KEY?: string;
+  GEMINI_API_KEY_2?: string;
+  VITE_GEMINI_API_KEY_2?: string;
+  GEMINI_API_KEY_3?: string;
+  VITE_GEMINI_API_KEY_3?: string;
 }
 
 type PagesFunction<Env = any> = (context: {

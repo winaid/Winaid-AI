@@ -430,42 +430,11 @@ const App: React.FC = () => {
     }
   };
 
-  // 서버에서 API 키 로드 및 localStorage 동기화
+  // 서버 프록시 전환: API 키는 서버에서 관리하므로 항상 준비 완료
+  // callGemini()이 /api/gemini/generate 서버 프록시를 사용하므로 클라이언트 키 불필요
   useEffect(() => {
-    const loadApiKeys = async () => {
-      try {
-        // 항상 서버에서 최신 API 키를 가져옴
-        const { getApiKeys } = await import('./services/apiService');
-        const apiKeys = await getApiKeys();
-        
-        // 서버는 존재 여부만 반환 ('***' 또는 null)
-        // 실제 키는 ApiKeySettings에서 save 시 localStorage에 직접 저장됨
-        const localGemini = localStorage.getItem('GEMINI_API_KEY');
-        const defineKey = typeof __GEMINI_KEY_1__ !== 'undefined' ? __GEMINI_KEY_1__ : '';
-        const envGemini = defineKey || import.meta.env.VITE_GEMINI_API_KEY;
-        if (localGemini && localGemini !== '***') {
-          setApiKeyReady(true);
-        } else if (envGemini) {
-          // 빌드 시 환경변수에 키가 포함됨 → geminiClient.ts에서 사용 가능
-          setApiKeyReady(true);
-        } else if (apiKeys.gemini) {
-          // 서버에 키는 있지만 클라이언트에서 사용 불가 → 설정 페이지에서 입력 필요
-          console.warn('⚠️ 서버에 키 설정됨, 클라이언트에서 키를 찾을 수 없음');
-        }
-      } catch (error) {
-        console.error('❌ API 키 로드 실패:', error);
-        // 에러 시에도 로컬 체크
-        const localGemini = localStorage.getItem('GEMINI_API_KEY');
-        const defineKey2 = typeof __GEMINI_KEY_1__ !== 'undefined' ? __GEMINI_KEY_1__ : '';
-        const envGemini = defineKey2 || import.meta.env.VITE_GEMINI_API_KEY;
-        if ((localGemini && localGemini !== '***') || envGemini) {
-          setApiKeyReady(true);
-        }
-      }
-    };
-    
-    loadApiKeys();
-  }, [currentPage]);
+    setApiKeyReady(true);
+  }, []);
 
   // 랜딩 페이지 (모든 체크 전에 먼저 표시)
   if (currentPage === 'landing') {
