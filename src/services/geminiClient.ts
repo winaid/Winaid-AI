@@ -146,7 +146,8 @@ export const getAiClient = () => {
   }
 
   if (!apiKey) {
-    throw new Error("API Key가 설정되지 않았습니다. API Key를 입력해주세요.");
+    console.error('[geminiClient] 키 탐색 실패 — getApiKey():', !getApiKey(), '| env:', !import.meta.env.VITE_GEMINI_API_KEY, '| localStorage:', !localStorage.getItem('GEMINI_API_KEY'));
+    throw new Error("API Key가 설정되지 않았습니다. 환경변수 VITE_GEMINI_API_KEY 확인 후 재배포하세요.");
   }
 
   return new GoogleGenAI({ apiKey });
