@@ -252,8 +252,8 @@ function isRetryableError(error: any): boolean {
   const msg = error?.message || '';
   const status = error?.status;
   return (
-    status === 429 || status === 500 || status === 503 ||
-    msg.includes('429') || msg.includes('500') || msg.includes('503') ||
+    status === 429 || status === 500 || status === 503 || status === 504 ||
+    msg.includes('429') || msg.includes('500') || msg.includes('503') || msg.includes('504') ||
     msg.includes('UNAVAILABLE') || msg.includes('INTERNAL') ||
     msg.includes('overloaded') || msg.includes('RESOURCE_EXHAUSTED') ||
     msg.includes('timeout') || msg.includes('Timeout') ||
@@ -402,9 +402,9 @@ async function _callGeminiOnce(config: GeminiCallConfig): Promise<any> {
     if (!response.ok) {
       const errorBody = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
 
-      // 503/429 + PRO → FLASH 폴백 (모델 다운그레이드)
-      if ((response.status === 503 || response.status === 429) && model === GEMINI_MODEL.PRO) {
-        console.warn(`⚠️ PRO 모델 ${response.status} → FLASH 폴백 시도...`);
+      // 503/429/504 + PRO → FLASH 폴백 (모델 다운그레이드)
+      if ((response.status === 503 || response.status === 429 || response.status === 504) && model === GEMINI_MODEL.PRO) {
+        console.warn(`⚠️ PRO 모델 ${response.status} → FLASH 즉시 폴백 시도...`);
         return _callGeminiOnce({ ...config, model: GEMINI_MODEL.FLASH, timeout: 60000 });
       }
 
