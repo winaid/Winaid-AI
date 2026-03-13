@@ -636,6 +636,7 @@ export const generateBlogWithPipeline = async (
   onProgress?: (msg: string) => void
 ): Promise<{ title: string; content: string; imagePrompts: string[] }> => {
   const safeProgress = onProgress || ((msg: string) => console.log('Pipeline:', msg));
+  console.log(`[BLOG_FLOW] generateBlogWithPipeline 시작 — topic: ${request.topic?.substring(0, 30)}`);
   const targetLength = request.textLength || 1500;
   // LLM은 글자수를 정확히 세지 못해 항상 20~30% 부족하게 생성 → 프롬프트용 목표를 1.35배로 설정
   const promptTargetLength = Math.round(targetLength * 1.35);
@@ -2682,6 +2683,7 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
   const isCardNews = request.postType === 'card_news';
   const isPressRelease = request.postType === 'press_release';
   
+  console.log(`[BLOG_FLOW] generateFullPost 시작 — postType: ${request.postType}, topic: ${request.topic?.substring(0, 30)}`);
   // • 디버그: request에 customImagePrompt가 있는지 확인
   console.log('• generateFullPost 시작 - request.imageStyle:', request.imageStyle);
   console.log('• generateFullPost 시작 - request.customImagePrompt:', request.customImagePrompt ? request.customImagePrompt.substring(0, 50) : 'undefined/없음');

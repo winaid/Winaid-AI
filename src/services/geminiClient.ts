@@ -28,6 +28,20 @@ export const TIMEOUTS = {
   QUICK_OPERATION: 60000,   // 60초 (임베딩 API 타임아웃 대응)
 } as const;
 
+/**
+ * 프록시 URL 검증 - workers.dev 경로 차단
+ * Cloudflare Pages 대시보드에 잘못된 환경변수가 남아있을 경우 방어
+ */
+function getValidProxyUrl(): string | undefined {
+  const url = import.meta.env.VITE_GEMINI_PROXY_URL;
+  if (!url) return undefined;
+  if (url.includes('workers.dev')) {
+    console.warn('[BLOG_FLOW] ⛔ workers.dev 프록시 URL 차단됨 — Pages Functions로 폴백:', url);
+    return undefined;
+  }
+  return url;
+}
+
 // 🚀 Gemini API 호출 설정 인터페이스
 export interface GeminiCallConfig {
   prompt: string;
@@ -237,13 +251,17 @@ function isRetryableError(error: any): boolean {
 export async function callGemini(config: GeminiCallConfig): Promise<any> {
   const maxRetries = 3;
   let lastError: any = null;
+  const callId = `[BLOG_FLOW] callGemini(${config.model || 'PRO'})`;
+  console.log(`${callId} 시작 (prompt: ${config.prompt?.substring(0, 50)}...)`);
 
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     try {
       const result = await _callGeminiOnce(config);
+      console.log(`${callId} 성공 (시도 ${attempt + 1}/${maxRetries})`);
       return result;
     } catch (error: any) {
       lastError = error;
+      console.warn(`${callId} 실패 (시도 ${attempt + 1}/${maxRetries}): ${error?.status || 'N/A'} ${error?.message?.substring(0, 80)}`);
 
       // 재시도 불가능한 에러 (API 키 문제, 할당량 초과 등)는 즉시 던지기
       if (!isRetryableError(error)) {
@@ -282,14 +300,16 @@ export async function callGemini(config: GeminiCallConfig): Promise<any> {
  * 이미지 생성/편집 등 고급 기능에 사용
  */
 export async function callGeminiRaw(model: string, apiBody: any, timeout: number = TIMEOUTS.IMAGE_GENERATION): Promise<any> {
-  const usProxyUrl = import.meta.env.VITE_GEMINI_PROXY_URL;
+  const usProxyUrl = getValidProxyUrl();
   const pagesUrl = `${import.meta.env.VITE_API_URL || ''}/api/gemini/generate`;
   // US 리전 프록시(GCF) 1순위, Pages Functions 폴백
   const endpoints = usProxyUrl ? [usProxyUrl, pagesUrl] : [pagesUrl];
+  console.log(`[BLOG_FLOW] callGeminiRaw(${model}) 시작, endpoints: ${endpoints.length}개`);
 
   let lastError: any = null;
 
   for (const endpoint of endpoints) {
+    console.log(`[BLOG_FLOW] callGeminiRaw → ${endpoint.substring(0, 60)}...`);
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeout + 5000);
 
@@ -308,9 +328,9 @@ export async function callGeminiRaw(model: string, apiBody: any, timeout: number
         const hasNextEndpoint = endpoints.indexOf(endpoint) < endpoints.length - 1;
 
         // 현재 엔드포인트 장애 → 다음 엔드포인트로 전환
-        // 400(지역 제한/prompt 미지원), 502, 503, 504 모두 폴백 대상
+        // 400은 클라이언트 에러이므로 폴백해도 동일 결과 → 제외
         if (hasNextEndpoint &&
-            (response.status === 400 || response.status === 502 || response.status === 503 || response.status === 504)) {
+            (response.status === 502 || response.status === 503 || response.status === 504)) {
           console.warn(`⚠️ 엔드포인트 장애 (${response.status}), 다음 경로로 전환...`);
           lastError = errorBody;
           continue;
@@ -378,14 +398,15 @@ async function _callGeminiOnce(config: GeminiCallConfig): Promise<any> {
     timeout,
   };
 
-  // US 리전 프록시(GCF) 1순위, Pages Functions 폴백
-  const usProxyUrl = import.meta.env.VITE_GEMINI_PROXY_URL;
+  // US 리전 프록시(Vercel) 1순위, Pages Functions 폴백
+  const usProxyUrl = getValidProxyUrl();
   const pagesUrl = `${import.meta.env.VITE_API_URL || ''}/api/gemini/generate`;
   const endpoints = usProxyUrl ? [usProxyUrl, pagesUrl] : [pagesUrl];
 
   let lastError: any = null;
 
   for (const endpoint of endpoints) {
+    console.log(`[BLOG_FLOW] _callGeminiOnce(${model}) → ${endpoint.substring(0, 60)}...`);
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeout + 5000);
 
@@ -402,10 +423,11 @@ async function _callGeminiOnce(config: GeminiCallConfig): Promise<any> {
       if (!response.ok) {
         const errorBody = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
 
-        // 1순위 프록시 장애(400/502/503/504) → 폴백 시도
+        // 1순위 프록시 장애(502/503/504) → 폴백 시도
+        // 400은 클라이언트 에러이므로 폴백해도 동일 결과 → 제외
         const hasNext = endpoints.indexOf(endpoint) < endpoints.length - 1;
         if (hasNext &&
-            (response.status === 400 || response.status === 502 || response.status === 503 || response.status === 504)) {
+            (response.status === 502 || response.status === 503 || response.status === 504)) {
           console.warn(`⚠️ 프록시 장애 (${response.status}), 폴백 경로로 전환...`);
           lastError = errorBody;
           continue;
