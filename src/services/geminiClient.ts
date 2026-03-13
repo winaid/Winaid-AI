@@ -44,14 +44,24 @@ export interface GeminiCallConfig {
   maxOutputTokens?: number;
 }
 
+// Vite define으로 주입된 전역 상수 (Cloudflare Pages 빌드 호환)
+declare const __GEMINI_KEY_1__: string;
+declare const __GEMINI_KEY_2__: string;
+declare const __GEMINI_KEY_3__: string;
+
 // 🔑 Gemini API 키 목록 (환경변수에서 로드)
 export const getApiKeysFromEnv = (): string[] => {
   const keys: string[] = [];
 
-  // 환경변수에서 API 키들 가져오기
-  const key1 = import.meta.env.VITE_GEMINI_API_KEY;
-  const key2 = import.meta.env.VITE_GEMINI_API_KEY_2;
-  const key3 = import.meta.env.VITE_GEMINI_API_KEY_3;
+  // 1순위: vite.config.ts define으로 직접 주입된 키 (Cloudflare Pages 호환)
+  const dk1 = typeof __GEMINI_KEY_1__ !== 'undefined' ? __GEMINI_KEY_1__ : '';
+  const dk2 = typeof __GEMINI_KEY_2__ !== 'undefined' ? __GEMINI_KEY_2__ : '';
+  const dk3 = typeof __GEMINI_KEY_3__ !== 'undefined' ? __GEMINI_KEY_3__ : '';
+
+  // 2순위: Vite import.meta.env (로컬 dev에서 사용)
+  const key1 = dk1 || import.meta.env.VITE_GEMINI_API_KEY;
+  const key2 = dk2 || import.meta.env.VITE_GEMINI_API_KEY_2;
+  const key3 = dk3 || import.meta.env.VITE_GEMINI_API_KEY_3;
 
   if (key1) keys.push(key1);
   if (key2) keys.push(key2);
@@ -135,9 +145,10 @@ export const getAiClient = () => {
   // 1순위: 다중 API 키 시스템에서 사용 가능한 키 가져오기
   let apiKey = getApiKey();
 
-  // 2순위: 환경변수 (Cloudflare Pages)
+  // 2순위: define 주입 키 (Cloudflare Pages 빌드)
   if (!apiKey) {
-    apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+    const dk = typeof __GEMINI_KEY_1__ !== 'undefined' ? __GEMINI_KEY_1__ : '';
+    apiKey = dk || import.meta.env.VITE_GEMINI_API_KEY;
   }
 
   // 3순위: localStorage (사용자 입력)
@@ -155,7 +166,10 @@ export const getAiClient = () => {
 
 export const getApiKeyValue = (): string => {
   let apiKey = getApiKey();
-  if (!apiKey) apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+  if (!apiKey) {
+    const dk = typeof __GEMINI_KEY_1__ !== 'undefined' ? __GEMINI_KEY_1__ : '';
+    apiKey = dk || import.meta.env.VITE_GEMINI_API_KEY;
+  }
   if (!apiKey) apiKey = localStorage.getItem('GEMINI_API_KEY');
   if (!apiKey) throw new Error("API Key가 설정되지 않았습니다.");
   return apiKey;

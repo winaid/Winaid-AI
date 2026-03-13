@@ -1,3 +1,4 @@
+declare const __GEMINI_KEY_1__: string;
 import React, { useState, useEffect, lazy, Suspense, useRef } from 'react';
 import { supabase, signOut } from './lib/supabase';
 import type { User } from '@supabase/supabase-js';
@@ -440,7 +441,8 @@ const App: React.FC = () => {
         // 서버는 존재 여부만 반환 ('***' 또는 null)
         // 실제 키는 ApiKeySettings에서 save 시 localStorage에 직접 저장됨
         const localGemini = localStorage.getItem('GEMINI_API_KEY');
-        const envGemini = import.meta.env.VITE_GEMINI_API_KEY;
+        const defineKey = typeof __GEMINI_KEY_1__ !== 'undefined' ? __GEMINI_KEY_1__ : '';
+        const envGemini = defineKey || import.meta.env.VITE_GEMINI_API_KEY;
         if (localGemini && localGemini !== '***') {
           setApiKeyReady(true);
         } else if (envGemini) {
@@ -454,7 +456,8 @@ const App: React.FC = () => {
         console.error('❌ API 키 로드 실패:', error);
         // 에러 시에도 로컬 체크
         const localGemini = localStorage.getItem('GEMINI_API_KEY');
-        const envGemini = import.meta.env.VITE_GEMINI_API_KEY;
+        const defineKey2 = typeof __GEMINI_KEY_1__ !== 'undefined' ? __GEMINI_KEY_1__ : '';
+        const envGemini = defineKey2 || import.meta.env.VITE_GEMINI_API_KEY;
         if ((localGemini && localGemini !== '***') || envGemini) {
           setApiKeyReady(true);
         }
