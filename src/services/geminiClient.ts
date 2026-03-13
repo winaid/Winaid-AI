@@ -282,10 +282,10 @@ export async function callGemini(config: GeminiCallConfig): Promise<any> {
  * 이미지 생성/편집 등 고급 기능에 사용
  */
 export async function callGeminiRaw(model: string, apiBody: any, timeout: number = TIMEOUTS.IMAGE_GENERATION): Promise<any> {
-  const workerUrl = import.meta.env.VITE_GEMINI_PROXY_URL;
+  const usProxyUrl = import.meta.env.VITE_GEMINI_PROXY_URL;
   const pagesUrl = `${import.meta.env.VITE_API_URL || ''}/api/gemini/generate`;
-  // Pages Functions 1순위 (Smart Placement 안정적), Worker는 폴백
-  const endpoints = workerUrl ? [pagesUrl, workerUrl] : [pagesUrl];
+  // US 리전 프록시(GCF) 1순위, Pages Functions 폴백
+  const endpoints = usProxyUrl ? [usProxyUrl, pagesUrl] : [pagesUrl];
 
   let lastError: any = null;
 
@@ -378,10 +378,10 @@ async function _callGeminiOnce(config: GeminiCallConfig): Promise<any> {
     timeout,
   };
 
-  // Pages Functions 1순위 (Smart Placement 안정적), Worker는 폴백
-  const workerUrl = import.meta.env.VITE_GEMINI_PROXY_URL;
+  // US 리전 프록시(GCF) 1순위, Pages Functions 폴백
+  const usProxyUrl = import.meta.env.VITE_GEMINI_PROXY_URL;
   const pagesUrl = `${import.meta.env.VITE_API_URL || ''}/api/gemini/generate`;
-  const endpoints = workerUrl ? [pagesUrl, workerUrl] : [pagesUrl];
+  const endpoints = usProxyUrl ? [usProxyUrl, pagesUrl] : [pagesUrl];
 
   let lastError: any = null;
 
@@ -402,10 +402,11 @@ async function _callGeminiOnce(config: GeminiCallConfig): Promise<any> {
       if (!response.ok) {
         const errorBody = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
 
-        // Worker 장애(400/502/503/504) → fallback 시도
-        if (endpoints.length > 1 && endpoint === endpoints[0] &&
+        // 1순위 프록시 장애(400/502/503/504) → 폴백 시도
+        const hasNext = endpoints.indexOf(endpoint) < endpoints.length - 1;
+        if (hasNext &&
             (response.status === 400 || response.status === 502 || response.status === 503 || response.status === 504)) {
-          console.warn(`⚠️ Worker 장애 (${response.status}), Pages Functions fallback...`);
+          console.warn(`⚠️ 프록시 장애 (${response.status}), 폴백 경로로 전환...`);
           lastError = errorBody;
           continue;
         }
@@ -472,10 +473,11 @@ async function _callGeminiOnce(config: GeminiCallConfig): Promise<any> {
     } catch (error: any) {
       clearTimeout(timeoutId);
 
-      // Worker 네트워크 에러/타임아웃 → fallback 시도
-      if (endpoints.length > 1 && endpoint === endpoints[0]) {
+      // 1순위 프록시 네트워크 에러/타임아웃 → 폴백 시도
+      const hasNext = endpoints.indexOf(endpoint) < endpoints.length - 1;
+      if (hasNext) {
         if (error.name === 'AbortError' || !error.status) {
-          console.warn(`⚠️ Worker 연결 실패, Pages Functions fallback...`);
+          console.warn(`⚠️ 프록시 연결 실패, 폴백 경로로 전환...`);
           lastError = error;
           continue;
         }

@@ -1,117 +1,202 @@
 /**
- * @deprecated Cloudflare Worker 프록시 (workers/gemini-proxy)로 대체됨.
- * Cloud Run 배포는 503/504 불안정 문제로 더 이상 정식 경로로 사용하지 않음.
- * 정식 프록시: workers/gemini-proxy/src/index.ts (Smart Placement, US 리전)
+ * Gemini API US Proxy — Google Cloud Functions gen2
+ * 리전: us-central1 (고정, Gemini API 지역 제한 우회)
  *
- * Google Cloud Functions — Gemini API Proxy
- * 리전: us-central1 (고정)
+ * 모든 Gemini 호출(텍스트/키워드/이미지)을 이 프록시를 통해 처리.
+ * Cloudflare Smart Placement가 지역 제한을 우회하지 못하는 문제의 근본 해결책.
  *
- * 배포 명령 (gcloud CLI):
+ * 세 가지 모드:
+ * 1. 텍스트 생성: POST { prompt, model, ... }
+ * 2. Raw 모드:    POST { raw: true, model, apiBody, timeout }
+ * 3. 헬스 체크:   GET /
+ *
+ * 환경변수:
+ *   GEMINI_API_KEY    (필수)
+ *   GEMINI_API_KEY_2  (선택 - 멀티키 로테이션)
+ *   GEMINI_API_KEY_3  (선택)
+ *   ALLOWED_ORIGINS   (선택, 쉼표 구분)
+ *
+ * 배포 (gen2, 운영 설정 포함):
  *   gcloud functions deploy gemini-proxy \
- *     --runtime nodejs20 \
- *     --trigger-http \
- *     --allow-unauthenticated \
- *     --region us-central1 \
- *     --set-env-vars GEMINI_API_KEY=YOUR_KEY \
+ *     --gen2 --runtime nodejs20 --region us-central1 \
+ *     --trigger-http --allow-unauthenticated \
+ *     --memory 512MiB --timeout 300s \
+ *     --min-instances 1 --max-instances 10 \
+ *     --set-env-vars GEMINI_API_KEY=KEY1,GEMINI_API_KEY_2=KEY2 \
  *     --source .
  */
 
 const functions = require("@google-cloud/functions-framework");
 
-const ALLOWED_ORIGINS = [
+// ── CORS ──
+
+const DEFAULT_ALLOWED_ORIGINS = [
   "https://story-darugi.com",
   "https://www.story-darugi.com",
   "https://ai-hospital.pages.dev",
   "http://localhost:5173",
+  "http://localhost:3000",
 ];
 
 function getCorsOrigin(origin) {
-  if (ALLOWED_ORIGINS.includes(origin) || (origin && origin.endsWith(".pages.dev"))) {
+  const allowed = process.env.ALLOWED_ORIGINS
+    ? process.env.ALLOWED_ORIGINS.split(",").map((s) => s.trim())
+    : DEFAULT_ALLOWED_ORIGINS;
+
+  if (allowed.includes(origin) || (origin && origin.endsWith(".pages.dev"))) {
     return origin;
   }
-  return ALLOWED_ORIGINS[0];
+  return allowed[0];
 }
+
+// ── 멀티키 로테이션 ──
+
+function getKeys() {
+  const keys = [];
+  if (process.env.GEMINI_API_KEY) keys.push(process.env.GEMINI_API_KEY);
+  if (process.env.GEMINI_API_KEY_2) keys.push(process.env.GEMINI_API_KEY_2);
+  if (process.env.GEMINI_API_KEY_3) keys.push(process.env.GEMINI_API_KEY_3);
+  return keys;
+}
+
+let keyIndex = 0;
+
+async function fetchGeminiWithRotation(keys, model, apiBody, timeout) {
+  const maxAttempts = Math.min(keys.length, 3);
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeout);
+  let lastError = "";
+
+  try {
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      const currentKey = keys[(keyIndex + attempt) % keys.length];
+      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${currentKey}`;
+
+      try {
+        const response = await fetch(apiUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(apiBody),
+          signal: controller.signal,
+        });
+
+        if (response.ok) {
+          keyIndex = (keyIndex + attempt + 1) % keys.length;
+          clearTimeout(timeoutId);
+          return { ok: true, data: await response.json() };
+        }
+
+        // 429 → 다음 키로 재시도
+        if (response.status === 429 && attempt < maxAttempts - 1) {
+          lastError = await response.text();
+          continue;
+        }
+
+        // 기타 에러 → 투명 전달
+        clearTimeout(timeoutId);
+        const errorText = await response.text();
+        return {
+          ok: false,
+          status: response.status,
+          error: `Gemini API error (${response.status})`,
+          details: errorText,
+        };
+      } catch (fetchErr) {
+        if (fetchErr.name === "AbortError") {
+          clearTimeout(timeoutId);
+          return { ok: false, status: 504, error: "Gemini API timeout" };
+        }
+        lastError = fetchErr.message || String(fetchErr);
+        if (attempt >= maxAttempts - 1) break;
+      }
+    }
+
+    clearTimeout(timeoutId);
+    return { ok: false, status: 502, error: "All API keys failed", details: lastError };
+  } catch (e) {
+    clearTimeout(timeoutId);
+    return { ok: false, status: 500, error: e.message || "Internal error" };
+  }
+}
+
+// ── 메인 핸들러 ──
 
 functions.http("geminiProxy", async (req, res) => {
   const origin = req.headers.origin || "";
   const corsOrigin = getCorsOrigin(origin);
 
-  // CORS headers on every response
   res.set("Access-Control-Allow-Origin", corsOrigin);
-  res.set("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.set("Access-Control-Allow-Methods", "POST, GET, OPTIONS");
   res.set("Access-Control-Allow-Headers", "Content-Type");
 
-  // OPTIONS preflight
+  // Preflight
   if (req.method === "OPTIONS") {
     return res.status(204).send("");
+  }
+
+  // 헬스 체크 (GET /)
+  if (req.method === "GET") {
+    return res.status(200).json({
+      status: "ok",
+      region: process.env.FUNCTION_REGION || process.env.K_REVISION || "us-central1",
+      keys: getKeys().length,
+      timestamp: new Date().toISOString(),
+    });
   }
 
   if (req.method !== "POST") {
     return res.status(405).json({ error: "POST only" });
   }
 
+  const keys = getKeys();
+  if (keys.length === 0) {
+    return res.status(500).json({ error: "No Gemini API keys configured" });
+  }
+
   try {
     const body = req.body;
 
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      return res.status(500).json({ error: "API key not configured" });
-    }
-
-    // =============================================
-    // RAW 모드: 클라이언트가 Gemini API 바디를 직접 구성
-    // 이미지 생성/편집 등 고급 기능에 사용
-    // =============================================
+    // ================================================================
+    // Raw 모드: apiBody를 Gemini API에 그대로 프록시
+    // 이미지 생성/편집 등
+    // ================================================================
     if (body && body.raw === true) {
       if (!body.model) {
-        return res.status(400).json({ error: "model is required in raw mode" });
+        return res.status(400).json({ error: "raw mode requires model" });
       }
       if (!body.apiBody) {
-        return res.status(400).json({ error: "apiBody is required in raw mode" });
+        return res.status(400).json({ error: "raw mode requires apiBody" });
       }
 
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${body.model}:generateContent?key=${apiKey}`;
-
-      const controller = new AbortController();
       const timeout = Math.min(body.timeout || 180000, 300000);
-      const tid = setTimeout(() => controller.abort(), timeout);
+      const result = await fetchGeminiWithRotation(keys, body.model, body.apiBody, timeout);
 
-      const response = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body.apiBody),
-        signal: controller.signal,
-      });
-
-      clearTimeout(tid);
-
-      if (!response.ok) {
-        const errText = await response.text();
-        return res.status(response.status).json({
-          error: `Gemini API error (${response.status})`,
-          details: errText,
+      if (!result.ok) {
+        return res.status(result.status || 500).json({
+          error: result.error,
+          details: result.details,
         });
       }
 
-      // Raw 모드: Gemini API 응답을 그대로 전달
-      const result = await response.json();
-      return res.status(200).json(result);
+      return res.status(200).json(result.data);
     }
 
-    // =============================================
-    // 일반 모드: prompt 기반 텍스트 생성
-    // =============================================
+    // ================================================================
+    // 일반 모드: prompt 기반 텍스트/키워드 생성
+    // ================================================================
     if (!body || !body.prompt) {
-      return res.status(400).json({ error: "prompt is required" });
+      return res.status(400).json({
+        error: "prompt is required",
+        received: body ? Object.keys(body) : [],
+      });
     }
 
-    // Gemini REST API 요청 구성
-    const model = body.model || "gemini-2.0-flash";
-    const sysText = body.systemInstruction || body.systemPrompt || "";
+    const model = body.model || "gemini-3.1-pro-preview";
+    const systemText = body.systemInstruction || body.systemPrompt || "";
     const userText = body.systemInstruction
       ? body.prompt
-      : sysText
-        ? sysText + "\n\n" + body.prompt
+      : systemText
+        ? systemText + "\n\n" + body.prompt
         : body.prompt;
 
     const apiBody = {
@@ -126,7 +211,7 @@ functions.http("geminiProxy", async (req, res) => {
     };
 
     if (body.systemInstruction) {
-      apiBody.systemInstruction = { parts: [{ text: sysText }] };
+      apiBody.systemInstruction = { parts: [{ text: systemText }] };
     }
     if (body.schema && body.responseType === "json") {
       apiBody.generationConfig.responseSchema = body.schema;
@@ -141,36 +226,24 @@ functions.http("geminiProxy", async (req, res) => {
       };
     }
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-
-    const controller = new AbortController();
     const timeout = Math.min(body.timeout || 120000, 180000);
-    const tid = setTimeout(() => controller.abort(), timeout);
+    const result = await fetchGeminiWithRotation(keys, model, apiBody, timeout);
 
-    const response = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(apiBody),
-      signal: controller.signal,
-    });
-
-    clearTimeout(tid);
-
-    if (!response.ok) {
-      const errText = await response.text();
-      return res.status(response.status).json({
-        error: `Gemini API error (${response.status})`,
-        details: errText,
+    if (!result.ok) {
+      return res.status(result.status || 500).json({
+        error: result.error,
+        details: result.details,
       });
     }
 
-    const result = await response.json();
-    const parts = result.candidates?.[0]?.content?.parts || [];
-    const text = parts.map((p) => p.text || "").join("");
+    const candidates = result.data.candidates || [];
+    const textParts = candidates[0]?.content?.parts || [];
+    const text = textParts.map((p) => p.text || "").join("");
 
     return res.status(200).json({
       text,
-      usageMetadata: result.usageMetadata || null,
+      usageMetadata: result.data.usageMetadata || null,
+      candidates: candidates.length,
     });
   } catch (err) {
     if (err.name === "AbortError") {
