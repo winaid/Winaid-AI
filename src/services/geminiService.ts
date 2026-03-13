@@ -2996,13 +2996,35 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
 
   // 🔧 content 또는 contentHtml 필드 둘 다 지원
   let body = textData.content || (textData as any).contentHtml || '';
-  
+
   // 방어 코드: body가 없으면 에러
   if (!body || body.trim() === '') {
     console.error('❌ textData.content/contentHtml 둘 다 비어있습니다:', textData);
     console.error('   - 사용 가능한 필드:', Object.keys(textData));
     throw new Error('AI가 콘텐츠를 생성하지 못했습니다. 다시 시도해주세요.');
   }
+
+  // 🛡️ 후처리 안전망: 텍스트 성공 후 어떤 후처리 오류가 나도 본문 반환 보장
+  // body가 확보된 시점에서 최소한의 결과물을 만들어 놓음
+  const safeMinimalResult = (): GeneratedContent => {
+    const minimalHtml = body.includes('class="naver-post-container"')
+      ? body
+      : `<div class="naver-post-container">${body}</div>`;
+    return {
+      title: textData.title || request.topic,
+      htmlContent: minimalHtml,
+      imageUrl: "",
+      fullHtml: minimalHtml,
+      tags: [],
+      postType: request.postType,
+      imageStyle: request.imageStyle,
+      cssTheme: request.cssTheme || 'modern',
+      imageFailCount,
+      imagePrompts: textData.imagePrompts,
+    };
+  };
+
+  try { // 후처리 안전망 시작
   
   // 🔧 마크다운 **볼드** 처리 (AI가 실수로 남긴 마크다운 제거 또는 변환)
   // ** 로 감싼 텍스트를 <strong> 태그로 변환하거나 그냥 제거
@@ -3566,6 +3588,15 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
     imageFailCount,
     imagePrompts: textData.imagePrompts,
   };
+
+  } catch (postProcessError) {
+    // 🛡️ 후처리 실패해도 텍스트 본문은 반드시 반환
+    console.error('⚠️ 후처리 중 오류 발생, 텍스트만 반환:', postProcessError);
+    safeProgress('⚠️ 일부 처리 실패 — 텍스트 본문만 반환합니다');
+    const result = safeMinimalResult();
+    result.imageFailCount = imageFailCount > 0 ? imageFailCount : (maxImages > 0 ? maxImages : 0);
+    return result;
+  }
 };
 
 /**

@@ -538,16 +538,11 @@ ${promptText}
     }
   }
 
-  // 실패 시 플레이스홀더
+  // 실패 시 throw → generateFullPost의 per-image catch에서 imageFailCount 집계
   console.error('❌ 블로그 이미지 생성 최종 실패:', lastError?.message || lastError);
-  const placeholderSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900">
-    <rect fill="#E8F4FD" width="1600" height="900"/>
-    <rect fill="#fff" x="40" y="40" width="1520" height="820" rx="24"/>
-    <text x="800" y="430" text-anchor="middle" font-family="Arial,sans-serif" font-size="24" fill="#64748b">이미지 생성에 실패했습니다</text>
-    <text x="800" y="470" text-anchor="middle" font-family="Arial,sans-serif" font-size="16" fill="#94a3b8">이미지를 클릭하여 재생성해주세요</text>
-  </svg>`;
-  const base64Placeholder = btoa(unescape(encodeURIComponent(placeholderSvg)));
-  return `data:image/svg+xml;base64,${base64Placeholder}`;
+  const error: any = new Error(lastError?.message || '이미지 생성 실패');
+  error.status = lastError?.status || 503;
+  throw error;
 };
 
 // 🎴 기본 프레임 이미지 URL (로컬 파일 사용 - 외부 URL 403 에러 방지)

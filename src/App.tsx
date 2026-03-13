@@ -955,9 +955,17 @@ const App: React.FC = () => {
               </p>
             </div>
           ) : getCurrentState().data ? (
-            <Suspense fallback={<ContentSkeleton />}>
-              <ResultPreview content={getCurrentState().data!} darkMode={darkMode} />
-            </Suspense>
+            <>
+              {getCurrentState().warning && (
+                <div className={`rounded-xl border px-4 py-3 mb-3 flex items-center gap-3 text-sm font-medium ${darkMode ? 'bg-amber-900/30 border-amber-700 text-amber-300' : 'bg-amber-50 border-amber-200 text-amber-700'}`}>
+                  <span>⚠️</span>
+                  <span>{getCurrentState().warning}</span>
+                </div>
+              )}
+              <Suspense fallback={<ContentSkeleton />}>
+                <ResultPreview content={getCurrentState().data!} darkMode={darkMode} />
+              </Suspense>
+            </>
           ) : (
             /* 빈 상태 — 문서 에디터 스타일 */
             <div className={`rounded-2xl border flex-1 min-h-[520px] overflow-hidden flex flex-col transition-all duration-300 ${darkMode ? 'bg-[#161b22] border-[#30363d]' : 'bg-white border-slate-200 shadow-[0_2px_16px_rgba(0,0,0,0.06)]'}`}>

@@ -170,8 +170,15 @@ export function useContentGeneration(deps: ContentGenerationDeps): ContentGenera
     } catch (err: any) {
       const { getKoreanErrorMessage } = await import('../services/geminiClient');
       const friendlyError = getKoreanErrorMessage(err);
-      targetSetState(prev => ({ ...prev, isLoading: false, error: friendlyError }));
-      deps.setMobileTab('input');
+      targetSetState(prev => {
+        // 🛡️ 이미 data가 있으면(부분 성공) 보존 — error는 모달로 표시되지만 본문은 유지
+        if (prev.data) {
+          return { ...prev, isLoading: false, error: null, warning: friendlyError };
+        }
+        // data가 없으면 기존대로 에러 처리 + 모바일 input 탭 복귀
+        deps.setMobileTab('input');
+        return { ...prev, isLoading: false, error: friendlyError };
+      });
     }
   }, [deps]);
 
