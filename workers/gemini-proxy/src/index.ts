@@ -246,7 +246,11 @@ export default {
 
       if (!textBody.prompt) {
         return new Response(
-          JSON.stringify({ error: 'prompt is required' }),
+          JSON.stringify({
+            error: 'prompt is required',
+            received: Object.keys(body),
+            hint: 'raw mode? set raw:true with model and apiBody',
+          }),
           { status: 400, headers: corsHeaders }
         );
       }
