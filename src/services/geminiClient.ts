@@ -252,10 +252,10 @@ function isRetryableError(error: any): boolean {
   const msg = error?.message || '';
   const status = error?.status;
   return (
-    status === 500 || status === 503 ||
-    msg.includes('500') || msg.includes('503') ||
+    status === 429 || status === 500 || status === 503 ||
+    msg.includes('429') || msg.includes('500') || msg.includes('503') ||
     msg.includes('UNAVAILABLE') || msg.includes('INTERNAL') ||
-    msg.includes('overloaded') ||
+    msg.includes('overloaded') || msg.includes('RESOURCE_EXHAUSTED') ||
     msg.includes('timeout') || msg.includes('Timeout') ||
     msg.includes('Failed to fetch') || msg.includes('NetworkError') ||
     msg.includes('ERR_NETWORK')

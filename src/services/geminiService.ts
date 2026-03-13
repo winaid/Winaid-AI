@@ -740,6 +740,8 @@ ${request.disease ? `[질환] ${request.disease}` : ''}
 [검색 결과]
 ${JSON.stringify(searchResults?.collected_facts?.slice(0, 2) || [], null, 2)}`;
 
+  // callGemini 내부에서 이미 PRO→FLASH 폴백 + 3회 retry 처리
+  // 파이프라인 레벨에서 추가 FLASH 폴백 불필요 (호출 수만 늘림)
   let introHtml = '';
   try {
     const introResult = await callGemini({
@@ -752,24 +754,12 @@ ${JSON.stringify(searchResults?.collected_facts?.slice(0, 2) || [], null, 2)}`;
     });
     introHtml = typeof introResult === 'string' ? introResult.trim() : '';
   } catch (introErr: any) {
-    console.warn(`[PIPELINE] ⚠️ 도입부 PRO 실패 (${introErr?.status || introErr?.message}), FLASH 폴백...`);
-    safeProgress('⚠️ 도입부 재시도 중 (FLASH)...');
-    try {
-      const introFallback = await callGemini({
-        prompt: introUserPrompt,
-        systemPrompt: introPrompt + hospitalStyleSuffix,
-        model: GEMINI_MODEL.FLASH,
-        responseType: 'text',
-        timeout: 45000,
-        temperature: 0.85,
-      });
-      introHtml = typeof introFallback === 'string' ? introFallback.trim() : '';
-    } catch (introErr2: any) {
-      console.error('[PIPELINE] ❌ 도입부 FLASH도 실패:', introErr2?.message);
-    }
+    console.error(`[PIPELINE] ❌ 도입부 실패 (PRO+FLASH 내부 폴백 모두 소진): ${introErr?.message}`);
+    throw new Error(`도입부 생성에 실패했습니다. (${introErr?.status || '네트워크 오류'}) 다시 시도해주세요.`);
   }
 
   if (!introHtml || introHtml.length < 30) {
+    console.error(`[PIPELINE] ❌ 도입부 생성됐지만 너무 짧음: ${introHtml.length}자`);
     throw new Error('도입부 생성에 실패했습니다. 네트워크 상태를 확인 후 다시 시도해주세요.');
   }
   console.warn(`[PIPELINE] ✅ B-1 도입부 완료: ${introHtml.length}자`);
@@ -818,26 +808,13 @@ ${JSON.stringify(searchResults?.collected_facts?.slice(i, i + 2) || [], null, 2)
       });
       sectionHtml = typeof result === 'string' ? result.trim() : '';
     } catch (secErr: any) {
-      console.warn(`[PIPELINE] ⚠️ 소제목 ${sectionNum} PRO 실패 (${secErr?.status || secErr?.message}), FLASH 폴백...`);
-      safeProgress(`⚠️ 소제목 ${sectionNum} 재시도 중 (FLASH)...`);
-      try {
-        const fallback = await callGemini({
-          prompt: sectionUserPrompt,
-          systemPrompt: sectionPrompt + hospitalStyleSuffix,
-          model: GEMINI_MODEL.FLASH,
-          responseType: 'text',
-          timeout: 45000,
-          temperature: 0.75,
-        });
-        sectionHtml = typeof fallback === 'string' ? fallback.trim() : '';
-      } catch (secErr2: any) {
-        console.error(`[PIPELINE] ❌ 소제목 ${sectionNum} FLASH도 실패:`, secErr2?.message);
-      }
+      console.error(`[PIPELINE] ❌ 소제목 ${sectionNum} 실패 (PRO+FLASH 내부 폴백 모두 소진): ${secErr?.message}`);
+      throw new Error(`소제목 "${section.title}" 생성에 실패했습니다. (${secErr?.status || '네트워크 오류'}) 다시 시도해주세요.`);
     }
 
-    // 섹션 완전성 검사: 빈 섹션은 치명적 실패
     if (!sectionHtml || sectionHtml.length < 30) {
-      throw new Error(`소제목 "${section.title}" 생성에 실패했습니다. 네트워크 상태를 확인 후 다시 시도해주세요.`);
+      console.error(`[PIPELINE] ❌ 소제목 ${sectionNum} 생성됐지만 너무 짧음: ${sectionHtml.length}자`);
+      throw new Error(`소제목 "${section.title}" 생성에 실패했습니다. 다시 시도해주세요.`);
     }
 
     sectionHtmls.push(sectionHtml);
@@ -875,25 +852,13 @@ ${sectionSummaries.join('\n')}`;
     });
     conclusionHtml = typeof conclusionResult === 'string' ? conclusionResult.trim() : '';
   } catch (concErr: any) {
-    console.warn(`[PIPELINE] ⚠️ 마무리 PRO 실패 (${concErr?.status || concErr?.message}), FLASH 폴백...`);
-    safeProgress('⚠️ 마무리 재시도 중 (FLASH)...');
-    try {
-      const concFallback = await callGemini({
-        prompt: conclusionUserPrompt,
-        systemPrompt: conclusionPrompt + hospitalStyleSuffix,
-        model: GEMINI_MODEL.FLASH,
-        responseType: 'text',
-        timeout: 30000,
-        temperature: 0.75,
-      });
-      conclusionHtml = typeof concFallback === 'string' ? concFallback.trim() : '';
-    } catch (concErr2: any) {
-      console.error('[PIPELINE] ❌ 마무리 FLASH도 실패:', concErr2?.message);
-    }
+    console.error(`[PIPELINE] ❌ 마무리 실패 (PRO+FLASH 내부 폴백 모두 소진): ${concErr?.message}`);
+    throw new Error(`마무리 생성에 실패했습니다. (${concErr?.status || '네트워크 오류'}) 다시 시도해주세요.`);
   }
 
   if (!conclusionHtml || conclusionHtml.length < 20) {
-    throw new Error('마무리 생성에 실패했습니다. 네트워크 상태를 확인 후 다시 시도해주세요.');
+    console.error(`[PIPELINE] ❌ 마무리 생성됐지만 너무 짧음: ${conclusionHtml.length}자`);
+    throw new Error('마무리 생성에 실패했습니다. 다시 시도해주세요.');
   }
 
   safeProgress('✅ 본문 생성 완료');
