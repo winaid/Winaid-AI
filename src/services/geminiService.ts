@@ -324,28 +324,26 @@ async function callGeminiWithSearch(
   options: { responseFormat?: string } = {}
 ): Promise<any> {
   try {
-    const ai = getAiClient();
-    
     // 프롬프트에서 주제 추출
     const topicMatch = prompt.match(/주제[:\s]*[「『"]?([^」』"\n]+)[」』"]?/);
     const categoryMatch = prompt.match(/진료과[:\s]*([^\n]+)/);
     const topic = topicMatch?.[1]?.trim() || '';
     const category = categoryMatch?.[1]?.trim() || '';
-    
+
     console.log('🔍 검색 시작:', { topic, category });
-    
+
     // 1차: 질병관리청 검색
     let kdcaInfo = '';
     if (topic) {
       kdcaInfo = await searchKDCA(topic);
     }
-    
+
     // 2차: 병원 사이트 크롤링
     let hospitalInfo = '';
     if (topic && category) {
       hospitalInfo = await searchHospitalSites(topic, category);
     }
-    
+
     // 검색 결과를 프롬프트에 추가
     const enrichedPrompt = `${prompt}
 
@@ -359,32 +357,26 @@ ${hospitalInfo || '(검색 결과 없음)'}
 - 출처가 명확한 정보만 사용
 - 치료 효과 단정 금지
 - 구체적 수치는 출처와 함께 제시`;
-    
+
     // Gemini API 호출
     console.log('🚀 보도자료 Gemini API 호출 시작...');
-    const response = await ai.models.generateContent({
+    const isTextPlain = options.responseFormat === "text/plain";
+    const result = await callGemini({
+      prompt: enrichedPrompt,
       model: GEMINI_MODEL.PRO,
-      contents: enrichedPrompt,
-      config: {
-        tools: [{ googleSearch: {} }],
-        responseMimeType: options.responseFormat === "text/plain" ? "text/plain" : "application/json",
-        temperature: 0.6
-      }
+      googleSearch: true,
+      responseType: isTextPlain ? 'text' : 'json',
+      temperature: 0.6,
     });
-    
+
     console.log('✅ 보도자료 Gemini API 응답 수신');
-    
-    // 응답에서 텍스트 추출
-    let text = '';
-    if (response?.text) {
-      text = response.text;
-    } else if (response?.candidates?.[0]?.content?.parts?.[0]?.text) {
-      text = response.candidates[0].content.parts[0].text;
-    }
-    
+
+    // callGemini returns the parsed result directly
+    const text = typeof result === 'string' ? result : JSON.stringify(result);
+
     console.log('📝 보도자료 텍스트 길이:', text?.length || 0);
-    
-    return { text, response };
+
+    return { text, response: result };
     
   } catch (error) {
     console.error('❌ callGeminiWithSearch 실패:', error);
@@ -392,7 +384,7 @@ ${hospitalInfo || '(검색 결과 없음)'}
   }
 }
 
-// getAiClient, getAiProviderSettings → geminiClient.ts에서 import됨
+// getAiProviderSettings → geminiClient.ts에서 import됨
 
 
 // 의료 면책 조항 (HTML)
