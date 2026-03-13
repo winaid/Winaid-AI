@@ -1775,14 +1775,16 @@ Overall: MINIMAL, CLEAN, warm-toned. No characters, no decorations, no illustrat
   // ─── 진료 일정: 한 주 레이아웃 (6개) ───
   schedule_week: [
     {
-      id: 'swk_horizontal_bar', name: '기와지붕 전통', color: '#d97706', accent: '#92400e', bg: '#fef3c7',
-      desc: '전통 기와 + 주간 달력',
-      layoutHint: 'wk_bar',
-      aiPrompt: `Korean dental clinic weekly schedule design inspired by traditional Korean architecture.
-TOP SECTION (40%): Large warm coral/salmon (#e8795a) half-circle sun shape behind text. Bold thick Korean text "N월" in dark brown, then "진료일정 안내" below in heavy black rounded font. Traditional Korean tiled roof (기와지붕) silhouette in dark charcoal sitting below the text, with decorative 전통 문양 corner elements.
-MIDDLE SECTION (40%): Clean white rounded card with subtle shadow, containing a 2-row weekly mini calendar table. Header row: 일 월 화 수 목 금 토 in clean font. Data rows show date numbers. Closed days highlighted with coral/orange rounded pill background with white text. Normal days in black. The card has traditional decorative corner bracket ornaments.
-BOTTOM SECTION (20%): Warm beige/cream background. Important notice text in dark brown and coral red, like "OO원장님 OO일 휴진" and "정상진료" in large bold text. Hospital logo at bottom-left corner.
-Overall: Warm beige/cream background (#f5e6d0), traditional Korean aesthetic with modern clean layout. Professional dental clinic feel.`,
+      id: 'swk_ribbon_flag', name: '블루 클린', color: '#2563eb', accent: '#1d4ed8', bg: '#eff6ff',
+      desc: '클린 블루 깔끔한',
+      layoutHint: 'wk_flag',
+      aiPrompt: `Clean blue corporate Korean dental clinic weekly schedule design.
+TOP (8%): Solid blue (#2563eb) header bar spanning full width. Clinic name or logo in small white text.
+BELOW HEADER: Clean white background. Small subtle blue decorative line or shape accent.
+TITLE AREA (20%): Large bold black/dark text "N월 N주차" and "진료안내" in heavy Korean font. Subtext in gray.
+MAIN CONTENT (50%): Clean white card or table showing the week's 7 days in a horizontal layout. Each day shows: day name (요일), date number, operating hours, and status. Closed days clearly marked with red text or red background badge saying "휴진". Clean thin border lines separating columns. Day headers in blue background with white text.
+BOTTOM (20%): Hospital info section with contact details, address, operating hours listed neatly. Blue accent elements. Hospital logo centered.
+Ultra-clean, professional, corporate healthcare design. Like a modern hospital official notice.`,
     },
     {
       id: 'swk_card_stack', name: '단풍 가을', color: '#ea580c', accent: '#c2410c', bg: '#fff7ed',
@@ -1819,16 +1821,14 @@ BOTTOM (25%): Pink rounded info card showing "진료시간 안내" with hours li
 Soft, feminine, spring atmosphere. Professional Korean dental clinic aesthetic.`,
     },
     {
-      id: 'swk_ribbon_flag', name: '블루 클린', color: '#2563eb', accent: '#1d4ed8', bg: '#eff6ff',
-      desc: '클린 블루 깔끔한',
-      layoutHint: 'wk_flag',
-      aiPrompt: `Clean blue corporate Korean dental clinic weekly schedule design.
-TOP (8%): Solid blue (#2563eb) header bar spanning full width. Clinic name or logo in small white text.
-BELOW HEADER: Clean white background. Small subtle blue decorative line or shape accent.
-TITLE AREA (20%): Large bold black/dark text "N월 N주차" and "진료안내" in heavy Korean font. Subtext in gray.
-MAIN CONTENT (50%): Clean white card or table showing the week's 7 days in a horizontal layout. Each day shows: day name (요일), date number, operating hours, and status. Closed days clearly marked with red text or red background badge saying "휴진". Clean thin border lines separating columns. Day headers in blue background with white text.
-BOTTOM (20%): Hospital info section with contact details, address, operating hours listed neatly. Blue accent elements. Hospital logo centered.
-Ultra-clean, professional, corporate healthcare design. Like a modern hospital official notice.`,
+      id: 'swk_horizontal_bar', name: '기와지붕 전통', color: '#d97706', accent: '#92400e', bg: '#fef3c7',
+      desc: '전통 기와 + 주간 달력',
+      layoutHint: 'wk_bar',
+      aiPrompt: `Korean dental clinic weekly schedule design inspired by traditional Korean architecture.
+TOP SECTION (40%): Large warm coral/salmon (#e8795a) half-circle sun shape behind text. Bold thick Korean text "N월" in dark brown, then "진료일정 안내" below in heavy black rounded font. Traditional Korean tiled roof (기와지붕) silhouette in dark charcoal sitting below the text, with decorative 전통 문양 corner elements.
+MIDDLE SECTION (40%): Clean white rounded card with subtle shadow, containing a 2-row weekly mini calendar table. Header row: 일 월 화 수 목 금 토 in clean font. Data rows show date numbers. Closed days highlighted with coral/orange rounded pill background with white text. Normal days in black. The card has traditional decorative corner bracket ornaments.
+BOTTOM SECTION (20%): Warm beige/cream background. Important notice text in dark brown and coral red, like "OO원장님 OO일 휴진" and "정상진료" in large bold text. Hospital logo at bottom-left corner.
+Overall: Warm beige/cream background (#f5e6d0), traditional Korean aesthetic with modern clean layout. Professional dental clinic feel.`,
     },
     {
       id: 'swk_neon_glow', name: '눈꽃 겨울', color: '#0ea5e9', accent: '#0284c7', bg: '#f0f9ff',
@@ -1962,7 +1962,7 @@ Artistic autumn watercolor botanical frame. Elegant, warm seasonal design.`,
       id: 'sch_pastel_card', name: '파스텔 카드', color: '#ec4899', accent: '#be185d', bg: '#fdf2f8',
       desc: '부드러운 카드형',
       layoutHint: 'card',
-      aiPrompt: 'Soft pastel pink and cream dental clinic schedule card design, rounded corners and soft shadows, important dates displayed as individual cards with icons, gentle watercolor texture background, friendly and approachable healthcare design, cute minimal illustrations of teeth or dental tools',
+      aiPrompt: 'Soft pastel pink and cream dental clinic schedule card design, rounded corners and soft shadows, important dates displayed as individual clean cards, gentle watercolor texture background, friendly and approachable healthcare design, no illustrations or characters, typography-focused with clear date hierarchy',
     },
     {
       id: 'sch_bold_highlight', name: '볼드 강조형', color: '#dc2626', accent: '#991b1b', bg: '#fef2f2',
