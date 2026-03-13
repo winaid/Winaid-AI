@@ -1,5 +1,4 @@
-import { callGemini, GEMINI_MODEL, TIMEOUTS } from "./geminiClient";
-import type { GeminiCallConfig } from "./geminiClient";
+import { callGemini, GEMINI_MODEL } from "./geminiClient";
 import type { GenerationRequest, GeneratedContent } from "../types";
 import { saveGeneratedPost } from "./postStorageService";
 

@@ -2,7 +2,7 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { LearnedWritingStyle, CrawledPost, CrawledPostScore } from "../types";
 import { supabase } from "../lib/supabase";
 import { getApiKey } from "./apiKeyManager";
-import { getAiClient, GEMINI_MODEL } from "./geminiClient";
+import { callGemini, callGeminiRaw, GEMINI_MODEL, TIMEOUTS } from "./geminiClient";
 
 // ============================================================
 // Gemini 응답에서 프로필 데이터 안전 추출
