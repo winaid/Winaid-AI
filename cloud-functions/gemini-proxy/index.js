@@ -1,16 +1,11 @@
 /**
- * Google Cloud Functions — Gemini API Proxy
+ * Google Cloud Run — Gemini API Proxy
  * 리전: us-central1 (고정)
  *
- * 배포 명령:
- *   gcloud functions deploy gemini-proxy \
- *     --runtime nodejs20 \
- *     --trigger-http \
- *     --allow-unauthenticated \
- *     --region us-central1 \
- *     --set-secrets 'GEMINI_API_KEY=GEMINI_API_KEY:latest' \
- *     --source .
+ * Cloud Run 서비스로 배포 (PORT 환경변수로 listen)
  */
+
+const http = require("http");
 
 const ALLOWED_ORIGINS = [
   "https://story-darugi.com",
@@ -19,45 +14,70 @@ const ALLOWED_ORIGINS = [
   "http://localhost:5173",
 ];
 
-function getCorsOrigin(req) {
-  const origin = req.headers.origin || "";
-  if (ALLOWED_ORIGINS.includes(origin) || origin.endsWith(".pages.dev")) {
+function getCorsOrigin(origin) {
+  if (ALLOWED_ORIGINS.includes(origin) || (origin && origin.endsWith(".pages.dev"))) {
     return origin;
   }
   return ALLOWED_ORIGINS[0];
 }
 
-exports.geminiProxy = async (req, res) => {
-  // CORS
-  const allowedOrigin = getCorsOrigin(req);
-  res.set("Access-Control-Allow-Origin", allowedOrigin);
-  res.set("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.set("Access-Control-Allow-Headers", "Content-Type");
+function parseBody(req) {
+  return new Promise((resolve, reject) => {
+    let data = "";
+    req.on("data", (chunk) => (data += chunk));
+    req.on("end", () => {
+      try {
+        resolve(data ? JSON.parse(data) : {});
+      } catch (e) {
+        reject(e);
+      }
+    });
+    req.on("error", reject);
+  });
+}
 
-  // OPTIONS 프리플라이트
+function sendJson(res, status, obj, corsOrigin) {
+  res.writeHead(status, {
+    "Content-Type": "application/json",
+    "Access-Control-Allow-Origin": corsOrigin,
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type",
+  });
+  res.end(JSON.stringify(obj));
+}
+
+const server = http.createServer(async (req, res) => {
+  const origin = req.headers.origin || "";
+  const corsOrigin = getCorsOrigin(origin);
+
+  // OPTIONS preflight
   if (req.method === "OPTIONS") {
-    return res.status(204).send("");
+    res.writeHead(204, {
+      "Access-Control-Allow-Origin": corsOrigin,
+      "Access-Control-Allow-Methods": "POST, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type",
+    });
+    return res.end();
   }
 
   if (req.method !== "POST") {
-    return res.status(405).json({ error: "POST only" });
+    return sendJson(res, 405, { error: "POST only" }, corsOrigin);
   }
 
   try {
-    const body = req.body;
+    const body = await parseBody(req);
 
     if (!body || !body.prompt) {
-      return res.status(400).json({ error: "prompt is required" });
+      return sendJson(res, 400, { error: "prompt is required" }, corsOrigin);
     }
 
-    // API 키 (Secret Manager에서 주입됨)
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      return res.status(500).json({ error: "API key not configured" });
+      return sendJson(res, 500, { error: "API key not configured" }, corsOrigin);
     }
 
     // Gemini REST API 요청 구성
-    const model = body.model || "gemini-3.1-pro-preview";
+    const model = body.model || "gemini-2.0-flash";
     const sysText = body.systemInstruction || body.systemPrompt || "";
     const userText = body.systemInstruction
       ? body.prompt
@@ -110,24 +130,29 @@ exports.geminiProxy = async (req, res) => {
 
     if (!response.ok) {
       const errText = await response.text();
-      return res.status(response.status).json({
+      return sendJson(res, response.status, {
         error: `Gemini API error (${response.status})`,
         details: errText,
-      });
+      }, corsOrigin);
     }
 
     const result = await response.json();
     const parts = result.candidates?.[0]?.content?.parts || [];
     const text = parts.map((p) => p.text || "").join("");
 
-    return res.status(200).json({
+    return sendJson(res, 200, {
       text,
       usageMetadata: result.usageMetadata || null,
-    });
+    }, corsOrigin);
   } catch (err) {
     if (err.name === "AbortError") {
-      return res.status(504).json({ error: "Gemini API timeout" });
+      return sendJson(res, 504, { error: "Gemini API timeout" }, corsOrigin);
     }
-    return res.status(500).json({ error: err.message || "Internal error" });
+    return sendJson(res, 500, { error: err.message || "Internal error" }, corsOrigin);
   }
-};
+});
+
+const PORT = process.env.PORT || 8080;
+server.listen(PORT, () => {
+  console.log(`Gemini proxy listening on port ${PORT}`);
+});
