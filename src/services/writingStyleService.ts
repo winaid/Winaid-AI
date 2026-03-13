@@ -2,19 +2,7 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { LearnedWritingStyle, CrawledPost, CrawledPostScore } from "../types";
 import { supabase } from "../lib/supabase";
 import { getApiKey } from "./apiKeyManager";
-
-const GEMINI_MODEL = {
-  PRO: 'gemini-3.1-pro-preview',
-  FLASH: 'gemini-3.1-flash-lite-preview',
-} as const;
-
-const getAiClient = () => {
-  const apiKey = localStorage.getItem('GEMINI_API_KEY');
-  if (!apiKey) {
-    throw new Error("API Key가 설정되지 않았습니다.");
-  }
-  return new GoogleGenAI({ apiKey });
-};
+import { getAiClient, GEMINI_MODEL } from "./geminiClient";
 
 // ============================================================
 // Gemini 응답에서 프로필 데이터 안전 추출
