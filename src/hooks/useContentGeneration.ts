@@ -187,16 +187,26 @@ export function useContentGeneration(deps: ContentGenerationDeps): ContentGenera
         console.warn('⚠️ 서버 저장 중 오류:', saveErr);
       }
     } catch (err: any) {
-      const { getKoreanErrorMessage } = await import('../services/geminiClient');
-      const friendlyError = getKoreanErrorMessage(err);
+      console.error(`[BLOG_FLOW] ❌ 생성 실패:`, err?.message || err);
+      let friendlyError: string;
+      try {
+        const { getKoreanErrorMessage } = await import('../services/geminiClient');
+        friendlyError = getKoreanErrorMessage(err);
+      } catch {
+        // dynamic import 실패 시 안전 폴백
+        friendlyError = err?.message || '블로그 생성 중 오류가 발생했습니다. 다시 시도해주세요.';
+      }
+      console.warn(`[BLOG_FLOW] 에러 메시지: "${friendlyError}"`);
       targetSetState(prev => {
-        // 🛡️ 이미 data가 있으면(부분 성공) 보존 — error는 모달로 표시되지만 본문은 유지
+        // 🛡️ 이미 data가 있으면(부분 성공) 보존 — warning으로 표시
         if (prev.data) {
+          console.warn('[BLOG_FLOW] 기존 data 보존, warning으로 처리');
           return { ...prev, isLoading: false, error: null, warning: friendlyError };
         }
-        // data가 없으면 기존대로 에러 처리 + 모바일 input 탭 복귀
+        // data가 없으면 반드시 error 상태 — EMPTY_STATE 방지
+        console.warn('[BLOG_FLOW] data 없음 → error 상태로 전환, mobileTab=input');
         deps.setMobileTab('input');
-        return { ...prev, isLoading: false, error: friendlyError };
+        return { ...prev, isLoading: false, error: friendlyError, data: null };
       });
     } finally {
       isGeneratingRef.current = false;

@@ -717,11 +717,13 @@ ${JSON.stringify(searchResults?.collected_facts?.slice(0, 3) || [], null, 2)}`;
   console.warn(`[PIPELINE] ✅ Stage A 완료: 소제목 ${outline.sections.length}개`);
   console.warn('[PIPELINE] ▶ Stage B: 본문 생성 시작 (도입부 + 소제목 병렬)');
 
-  // ── Stage B: 본문 생성 (PRO) ── [도입부 + 소제목 병렬 + 마무리]
+  // ── Stage B: 본문 생성 (PRO) ── [도입부 → 소제목 순차 → 마무리]
+  // ⚠️ 직렬 전환 이유: 병렬 생성 시 PRO 503 → FLASH 폴백 중 빈 문자열 반환 → EMPTY_STATE 버그
   safeProgress('✍️ [2/4] 본문 생성 중...');
 
-  // B-1 & B-2: 도입부 + 소제목 섹션 동시 병렬 생성 (도입부도 소제목과 병렬로 실행)
-  safeProgress('✍️ [2/4] 도입부 + 소제목 병렬 생성 중...');
+  // ── B-1: 도입부 생성 ──
+  safeProgress('✍️ [2/4] 도입부 생성 중...');
+  console.warn('[PIPELINE] ▶ B-1: 도입부 생성 시작');
   const introPrompt = getPipelineIntroPrompt(
     outline.intro?.approach || 'A',
     outline.intro?.scene || request.topic,
@@ -738,25 +740,51 @@ ${request.disease ? `[질환] ${request.disease}` : ''}
 [검색 결과]
 ${JSON.stringify(searchResults?.collected_facts?.slice(0, 2) || [], null, 2)}`;
 
-  // 도입부 Promise
-  const introPromise = callGemini({
-    prompt: introUserPrompt,
-    systemPrompt: introPrompt + hospitalStyleSuffix,
-    model: GEMINI_MODEL.PRO,
-    responseType: 'text',
-    timeout: 45000,
-    temperature: 0.85,
-  }).then(html => {
-    safeProgress('✅ 도입부 완료');
-    return typeof html === 'string' ? html.trim() : '';
-  }).catch(err => {
-    console.error('❌ 도입부 생성 실패:', err?.message);
-    return '';
-  });
+  let introHtml = '';
+  try {
+    const introResult = await callGemini({
+      prompt: introUserPrompt,
+      systemPrompt: introPrompt + hospitalStyleSuffix,
+      model: GEMINI_MODEL.PRO,
+      responseType: 'text',
+      timeout: 45000,
+      temperature: 0.85,
+    });
+    introHtml = typeof introResult === 'string' ? introResult.trim() : '';
+  } catch (introErr: any) {
+    console.warn(`[PIPELINE] ⚠️ 도입부 PRO 실패 (${introErr?.status || introErr?.message}), FLASH 폴백...`);
+    safeProgress('⚠️ 도입부 재시도 중 (FLASH)...');
+    try {
+      const introFallback = await callGemini({
+        prompt: introUserPrompt,
+        systemPrompt: introPrompt + hospitalStyleSuffix,
+        model: GEMINI_MODEL.FLASH,
+        responseType: 'text',
+        timeout: 45000,
+        temperature: 0.85,
+      });
+      introHtml = typeof introFallback === 'string' ? introFallback.trim() : '';
+    } catch (introErr2: any) {
+      console.error('[PIPELINE] ❌ 도입부 FLASH도 실패:', introErr2?.message);
+    }
+  }
 
-  // 소제목 섹션 Promises
+  if (!introHtml || introHtml.length < 30) {
+    throw new Error('도입부 생성에 실패했습니다. 네트워크 상태를 확인 후 다시 시도해주세요.');
+  }
+  console.warn(`[PIPELINE] ✅ B-1 도입부 완료: ${introHtml.length}자`);
+  safeProgress('✅ 도입부 완료');
 
-  const sectionPromises = outline.sections.map((section: any, i: number) => {
+  // ── B-2: 소제목 섹션 직렬 생성 ──
+  const sectionHtmls: string[] = [];
+  const sectionSummaries: string[] = [];
+
+  for (let i = 0; i < outline.sections.length; i++) {
+    const section = outline.sections[i];
+    const sectionNum = `${i + 1}/${outline.sections.length}`;
+    safeProgress(`✍️ [2/4] 소제목 ${sectionNum} "${section.title}" 생성 중...`);
+    console.warn(`[PIPELINE] ▶ B-2: 소제목 ${sectionNum} "${section.title}" 시작`);
+
     const sectionPrompt = getPipelineSectionPrompt(
       i,
       section.title,
@@ -765,7 +793,7 @@ ${JSON.stringify(searchResults?.collected_facts?.slice(0, 2) || [], null, 2)}`;
       section.keyInfo || '',
       section.targetChars || charsPerSection,
       section.firstSentencePattern || String((i % 5) + 1),
-      [], // 병렬이므로 이전 섹션 요약 없음 - 아웃라인의 역할 분리로 중복 방지
+      sectionSummaries, // 직렬이므로 이전 섹션 요약 전달 가능
       medicalLawMode,
       request.persona,
       request.keywords
@@ -778,42 +806,53 @@ ${request.disease ? `[질환] ${request.disease}` : ''}
 [이 섹션 관련 검색 결과]
 ${JSON.stringify(searchResults?.collected_facts?.slice(i, i + 2) || [], null, 2)}`;
 
-    return callGemini({
-      prompt: sectionUserPrompt,
-      systemPrompt: sectionPrompt + hospitalStyleSuffix,
-      model: GEMINI_MODEL.PRO,
-      responseType: 'text',
-      timeout: 45000,
-      temperature: 0.75,
-    }).then(html => {
-      const clean = typeof html === 'string' ? html.trim() : '';
-      safeProgress(`✅ 소제목 ${i + 1}/${outline.sections.length} "${section.title}" 완료`);
-      return clean;
-    }).catch(err => {
-      console.error(`❌ 소제목 ${i + 1} "${section.title}" 실패:`, err?.message);
-      safeProgress(`⚠️ 소제목 ${i + 1} 재시도 중...`);
-      // 1회 재시도
-      return callGemini({
+    let sectionHtml = '';
+    try {
+      const result = await callGemini({
         prompt: sectionUserPrompt,
-        systemPrompt: sectionPrompt,
-        model: GEMINI_MODEL.FLASH, // 폴백: FLASH 모델
+        systemPrompt: sectionPrompt + hospitalStyleSuffix,
+        model: GEMINI_MODEL.PRO,
         responseType: 'text',
         timeout: 45000,
         temperature: 0.75,
-      }).then(html => typeof html === 'string' ? html.trim() : '').catch(() => '');
-    });
-  });
+      });
+      sectionHtml = typeof result === 'string' ? result.trim() : '';
+    } catch (secErr: any) {
+      console.warn(`[PIPELINE] ⚠️ 소제목 ${sectionNum} PRO 실패 (${secErr?.status || secErr?.message}), FLASH 폴백...`);
+      safeProgress(`⚠️ 소제목 ${sectionNum} 재시도 중 (FLASH)...`);
+      try {
+        const fallback = await callGemini({
+          prompt: sectionUserPrompt,
+          systemPrompt: sectionPrompt + hospitalStyleSuffix,
+          model: GEMINI_MODEL.FLASH,
+          responseType: 'text',
+          timeout: 45000,
+          temperature: 0.75,
+        });
+        sectionHtml = typeof fallback === 'string' ? fallback.trim() : '';
+      } catch (secErr2: any) {
+        console.error(`[PIPELINE] ❌ 소제목 ${sectionNum} FLASH도 실패:`, secErr2?.message);
+      }
+    }
 
-  // 도입부 + 소제목 모두 병렬 대기
-  const [introHtml, ...sectionHtmls] = await Promise.all([introPromise, ...sectionPromises]);
-  const sectionSummaries = sectionHtmls.map(html =>
-    html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().substring(0, 150)
-  );
-  console.warn(`[PIPELINE] ✅ Stage B-1/2 완료: 도입부 ${introHtml ? introHtml.length : 0}자, 소제목 ${sectionHtmls.filter(h => h).length}/${outline.sections.length}개`);
-  safeProgress(`✅ 도입부 + 소제목 ${sectionHtmls.filter(h => h).length}/${outline.sections.length}개 완료`);
+    // 섹션 완전성 검사: 빈 섹션은 치명적 실패
+    if (!sectionHtml || sectionHtml.length < 30) {
+      throw new Error(`소제목 "${section.title}" 생성에 실패했습니다. 네트워크 상태를 확인 후 다시 시도해주세요.`);
+    }
 
-  // B-3: 마무리 생성
+    sectionHtmls.push(sectionHtml);
+    sectionSummaries.push(
+      sectionHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().substring(0, 150)
+    );
+    console.warn(`[PIPELINE] ✅ 소제목 ${sectionNum} 완료: ${sectionHtml.length}자`);
+    safeProgress(`✅ 소제목 ${sectionNum} "${section.title}" 완료`);
+  }
+
+  console.warn(`[PIPELINE] ✅ Stage B-1/2 완료: 도입부 ${introHtml.length}자, 소제목 ${sectionHtmls.length}/${outline.sections.length}개 전부 성공`);
+
+  // ── B-3: 마무리 생성 ──
   safeProgress('✍️ [3/4] 마무리 작성 중...');
+  console.warn('[PIPELINE] ▶ B-3: 마무리 생성 시작');
   const conclusionPrompt = getPipelineConclusionPrompt(
     outline.conclusion?.direction || '열린 결말',
     outline.conclusion?.targetChars || Math.round(promptTargetLength * 0.15),
@@ -824,40 +863,92 @@ ${JSON.stringify(searchResults?.collected_facts?.slice(i, i + 2) || [], null, 2)
 [글에서 다룬 내용 요약]
 ${sectionSummaries.join('\n')}`;
 
-  const conclusionHtml = await callGemini({
-    prompt: conclusionUserPrompt,
-    systemPrompt: conclusionPrompt + hospitalStyleSuffix,
-    model: GEMINI_MODEL.PRO,
-    responseType: 'text',
-    timeout: 30000,
-    temperature: 0.75,
-  });
+  let conclusionHtml = '';
+  try {
+    const conclusionResult = await callGemini({
+      prompt: conclusionUserPrompt,
+      systemPrompt: conclusionPrompt + hospitalStyleSuffix,
+      model: GEMINI_MODEL.PRO,
+      responseType: 'text',
+      timeout: 30000,
+      temperature: 0.75,
+    });
+    conclusionHtml = typeof conclusionResult === 'string' ? conclusionResult.trim() : '';
+  } catch (concErr: any) {
+    console.warn(`[PIPELINE] ⚠️ 마무리 PRO 실패 (${concErr?.status || concErr?.message}), FLASH 폴백...`);
+    safeProgress('⚠️ 마무리 재시도 중 (FLASH)...');
+    try {
+      const concFallback = await callGemini({
+        prompt: conclusionUserPrompt,
+        systemPrompt: conclusionPrompt + hospitalStyleSuffix,
+        model: GEMINI_MODEL.FLASH,
+        responseType: 'text',
+        timeout: 30000,
+        temperature: 0.75,
+      });
+      conclusionHtml = typeof concFallback === 'string' ? concFallback.trim() : '';
+    } catch (concErr2: any) {
+      console.error('[PIPELINE] ❌ 마무리 FLASH도 실패:', concErr2?.message);
+    }
+  }
+
+  if (!conclusionHtml || conclusionHtml.length < 20) {
+    throw new Error('마무리 생성에 실패했습니다. 네트워크 상태를 확인 후 다시 시도해주세요.');
+  }
 
   safeProgress('✅ 본문 생성 완료');
-  console.warn(`[PIPELINE] ✅ Stage B-3 완료: 마무리 ${typeof conclusionHtml === 'string' ? conclusionHtml.length : 0}자`);
+  console.warn(`[PIPELINE] ✅ Stage B-3 마무리 완료: ${conclusionHtml.length}자`);
   console.warn('[PIPELINE] ▶ Stage C: 통합 검증 시작');
 
   // ── Stage C: 통합 + 검증 (FLASH) ──
   safeProgress('🔍 [4/4] 전체 통합 및 검증 중...');
 
-  const rawHtml = `${introHtml || ''}\n${sectionHtmls.join('\n')}\n${conclusionHtml || ''}`;
+  // rawHtml 조립 전 완전성 검사 — 모든 파트가 존재하는지 확인
+  console.warn(`[PIPELINE] 🔍 완전성 검사: intro=${introHtml.length}자, sections=${sectionHtmls.map(h => h.length).join('/')}, conclusion=${conclusionHtml.length}자`);
+  const emptyParts: string[] = [];
+  if (!introHtml || introHtml.length < 30) emptyParts.push('도입부');
+  sectionHtmls.forEach((h, i) => {
+    if (!h || h.length < 30) emptyParts.push(`소제목 ${i + 1} "${outline.sections[i]?.title || '?'}"`);
+  });
+  if (!conclusionHtml || conclusionHtml.length < 20) emptyParts.push('마무리');
+
+  if (emptyParts.length > 0) {
+    const msg = `본문 생성 실패: ${emptyParts.join(', ')}이(가) 비어있습니다. 다시 시도해주세요.`;
+    console.error(`[PIPELINE] ❌ 완전성 검사 실패:`, emptyParts);
+    throw new Error(msg);
+  }
+  console.warn('[PIPELINE] ✅ 완전성 검사 통과 — 모든 파트 존재 확인');
+
+  const rawHtml = `${introHtml}\n${sectionHtmls.join('\n')}\n${conclusionHtml}`;
   const integrationPrompt = getPipelineIntegrationPrompt(targetLength);
 
-  const integratedHtml = await callGemini({
-    prompt: rawHtml,
-    systemPrompt: integrationPrompt,
-    model: GEMINI_MODEL.FLASH,
-    responseType: 'text',
-    timeout: 30000,
-    temperature: 0.3,
-  });
+  let integratedHtml: any;
+  try {
+    integratedHtml = await callGemini({
+      prompt: rawHtml,
+      systemPrompt: integrationPrompt,
+      model: GEMINI_MODEL.FLASH,
+      responseType: 'text',
+      timeout: 30000,
+      temperature: 0.3,
+    });
+  } catch (intErr: any) {
+    // Stage C 실패 시 rawHtml을 그대로 사용 (본문 파트는 이미 검증됨)
+    console.warn(`[PIPELINE] ⚠️ Stage C 통합 실패 (${intErr?.message}), rawHtml 사용`);
+    integratedHtml = rawHtml;
+  }
 
   const finalContent = typeof integratedHtml === 'string' && integratedHtml.includes('<')
     ? integratedHtml.trim()
     : rawHtml; // 통합 실패 시 원본 사용
 
+  // 최종 결과물 검증
+  if (!finalContent || finalContent.replace(/<[^>]+>/g, '').trim().length < 100) {
+    throw new Error('통합된 본문이 비어있습니다. 다시 시도해주세요.');
+  }
+
   safeProgress('✅ [4/4] 통합 검증 완료');
-  console.warn(`[PIPELINE] ✅ Stage C 완료: finalContent ${finalContent.length}자`);
+  console.warn(`[PIPELINE] ✅ Stage C 완료: finalContent ${finalContent.length}자 (텍스트 ${finalContent.replace(/<[^>]+>/g, '').trim().length}자)`);
 
   // 이미지 프롬프트 생성 (섹션 역할별 차별화)
   const imageCount = request.imageCount ?? 1;
@@ -2902,10 +2993,15 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
       };
       safeProgress('✅ 다단계 파이프라인 생성 완료!');
       console.warn(`[BLOG_FLOW] ✅ 파이프라인 textData 확보 — title: "${textData.title}", content: ${textData.content?.length || 0}자`);
-    } catch (pipelineError) {
-      console.error('⚠️ 다단계 파이프라인 실패, 기존 방식으로 폴백:', pipelineError);
+    } catch (pipelineError: any) {
+      console.error(`[BLOG_FLOW] ❌ 파이프라인 실패: ${pipelineError?.message}`);
       safeProgress('⚠️ 파이프라인 실패, 기존 방식으로 재시도...');
-      textData = await generateBlogPostText(request, safeProgress);
+      try {
+        textData = await generateBlogPostText(request, safeProgress);
+      } catch (fallbackError: any) {
+        console.error(`[BLOG_FLOW] ❌ 기존 방식도 실패: ${fallbackError?.message}`);
+        throw new Error(pipelineError?.message || '블로그 생성에 실패했습니다. 다시 시도해주세요.');
+      }
     }
   } else {
     // 카드뉴스 폴백 또는 레퍼런스 URL 사용 시 기존 방식
