@@ -57,7 +57,7 @@ async function getGeminiKeys(env: Env): Promise<string[]> {
 let keyIndex = 0;
 
 interface GenerateRequest {
-  prompt: string;
+  prompt?: string;
   model?: string;
   systemPrompt?: string;
   systemInstruction?: string;
@@ -69,6 +69,9 @@ interface GenerateRequest {
   googleSearch?: boolean;
   thinkingLevel?: 'none' | 'low' | 'medium' | 'high';
   timeout?: number;
+  // Raw 모드 (이미지 생성 등)
+  raw?: boolean;
+  apiBody?: any;
 }
 
 export const onRequestOptions: PagesFunction<Env> = async () => {
@@ -82,6 +85,84 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     // 요청 파싱
     const body: GenerateRequest = await request.json();
 
+    // ── Raw 모드: apiBody를 그대로 Gemini REST API에 프록시 ──
+    if (body.raw === true) {
+      if (!body.model || !body.apiBody) {
+        return new Response(
+          JSON.stringify({ error: 'raw mode requires model and apiBody' }),
+          { status: 400, headers: CORS_HEADERS }
+        );
+      }
+
+      const keys = await getGeminiKeys(env);
+      if (keys.length === 0) {
+        return new Response(
+          JSON.stringify({ error: 'Gemini API key not configured on server' }),
+          { status: 500, headers: CORS_HEADERS }
+        );
+      }
+
+      const timeout = Math.min(body.timeout || 180000, 300000); // 최대 5분
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+      let response: Response | undefined;
+      let lastError: any = null;
+
+      for (let attempt = 0; attempt < Math.min(keys.length, 2); attempt++) {
+        const currentKey = keys[(keyIndex + attempt) % keys.length];
+        keyIndex++;
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${body.model}:generateContent?key=${currentKey}`;
+
+        try {
+          response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body.apiBody),
+            signal: controller.signal,
+          });
+
+          if (response.ok || response.status !== 429) {
+            break;
+          }
+          // 429 → 다음 키로 재시도
+          lastError = await response.text();
+        } catch (fetchErr: any) {
+          lastError = fetchErr;
+          if (fetchErr.name === 'AbortError') {
+            clearTimeout(timeoutId);
+            return new Response(
+              JSON.stringify({ error: 'Gemini API timeout' }),
+              { status: 504, headers: CORS_HEADERS }
+            );
+          }
+          if (attempt >= keys.length - 1) break;
+        }
+      }
+
+      clearTimeout(timeoutId);
+
+      if (!response) {
+        return new Response(
+          JSON.stringify({ error: 'All API keys failed', details: String(lastError) }),
+          { status: 502, headers: CORS_HEADERS }
+        );
+      }
+
+      if (!response.ok) {
+        const errorBody = await response.text();
+        return new Response(
+          JSON.stringify({ error: `Gemini API error (${response.status})`, details: errorBody }),
+          { status: response.status, headers: CORS_HEADERS }
+        );
+      }
+
+      // Raw 모드: Gemini 응답 JSON을 그대로 반환
+      const rawResult = await response.json();
+      return new Response(JSON.stringify(rawResult), { status: 200, headers: CORS_HEADERS });
+    }
+
+    // ── 일반 텍스트 생성 모드 ──
     if (!body.prompt) {
       return new Response(
         JSON.stringify({ error: 'prompt is required' }),
