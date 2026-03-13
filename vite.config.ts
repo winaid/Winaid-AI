@@ -8,6 +8,10 @@ import { resolve } from 'path'
 const geminiKey1 = process.env.VITE_GEMINI_API_KEY || '';
 const geminiKey2 = process.env.VITE_GEMINI_API_KEY_2 || '';
 const geminiKey3 = process.env.VITE_GEMINI_API_KEY_3 || '';
+
+// 빌드 버전 (배포 확인용 — UI에 표시)
+const buildHash = new Date().toISOString().slice(0,16).replace(/[-T:]/g, '') + '-' + Math.random().toString(36).slice(2,6);
+console.log(`[Build] BUILD_HASH: ${buildHash}`);
 console.log(`[Build] VITE_GEMINI_API_KEY: ${geminiKey1 ? '✅ 있음 (' + geminiKey1.slice(0,8) + '...)' : '❌ 없음'}`);
 console.log(`[Build] VITE_GEMINI_API_KEY_2: ${geminiKey2 ? '✅ 있음' : '⬜ 없음'}`);
 
@@ -27,6 +31,8 @@ export default defineConfig({
     '__GEMINI_KEY_1__': JSON.stringify(geminiKey1),
     '__GEMINI_KEY_2__': JSON.stringify(geminiKey2),
     '__GEMINI_KEY_3__': JSON.stringify(geminiKey3),
+    '__BUILD_HASH__': JSON.stringify(buildHash),
+    '__GEMINI_PROXY_URL__': JSON.stringify(process.env.VITE_GEMINI_PROXY_URL || ''),
   },
   build: {
     rollupOptions: {
@@ -48,7 +54,10 @@ export default defineConfig({
     sourcemap: false,
   },
   esbuild: {
-    drop: ['console', 'debugger'],
+    // console.error/warn은 프로덕션에서 유지 (장애 추적용)
+    // console.log/debug만 제거
+    pure: ['console.log', 'console.debug'],
+    drop: ['debugger'],
   },
   plugins: [
     react(),

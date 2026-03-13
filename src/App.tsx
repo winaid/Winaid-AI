@@ -1,4 +1,6 @@
 declare const __GEMINI_KEY_1__: string;
+declare const __BUILD_HASH__: string;
+declare const __GEMINI_PROXY_URL__: string;
 import React, { useState, useEffect, lazy, Suspense, useRef } from 'react';
 import { supabase, signOut } from './lib/supabase';
 import type { User } from '@supabase/supabase-js';
@@ -645,7 +647,7 @@ const App: React.FC = () => {
             <img src="/280_logo.png" alt="WINAID" className={`h-8 w-8 group-hover:scale-105 transition-transform ${darkMode ? 'rounded-md bg-white p-0.5' : ''}`} />
             <div className="flex flex-col leading-none">
               <span className={`font-black text-base tracking-[-0.02em] ${darkMode ? 'text-slate-100' : 'text-slate-800'}`}>WIN<span className="text-blue-600">AID</span></span>
-              <span className={`text-[8px] font-semibold tracking-wider uppercase ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>AI Marketing</span>
+              <span className={`text-[8px] font-semibold tracking-wider uppercase ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>AI Marketing <span className="opacity-50">{typeof __BUILD_HASH__ !== 'undefined' ? __BUILD_HASH__ : 'dev'}</span></span>
             </div>
           </a>
           <div className="flex items-center gap-3">
@@ -1087,6 +1089,12 @@ const App: React.FC = () => {
                   <p>• VPN을 사용 중이라면 끄고 다시 시도해주세요.</p>
                 </div>
               )}
+            </div>
+            {/* 디버깅 정보 (개발자용) */}
+            <div className={`rounded-lg px-3 py-2 mb-4 text-[10px] font-mono break-all ${darkMode ? 'bg-slate-900 text-slate-500' : 'bg-slate-50 text-slate-400'}`}>
+              <p>build: {typeof __BUILD_HASH__ !== 'undefined' ? __BUILD_HASH__ : 'dev'}</p>
+              <p>proxy: {typeof __GEMINI_PROXY_URL__ !== 'undefined' && __GEMINI_PROXY_URL__ ? __GEMINI_PROXY_URL__.substring(0, 50) : 'NOT SET'}</p>
+              <p>tab: {contentTab} | mobile: {mobileTab}</p>
             </div>
             
             <div className="flex gap-3">

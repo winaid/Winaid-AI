@@ -88,7 +88,7 @@ export function useContentGeneration(deps: ContentGenerationDeps): ContentGenera
     }
 
     deps.setMobileTab('result');
-    console.log(`[BLOG_FLOW] handleGenerate 시작 — postType: ${request.postType}, topic: ${request.topic?.substring(0, 30)}`);
+    console.warn(`[BLOG_FLOW] handleGenerate 시작 — postType: ${request.postType}, topic: ${request.topic?.substring(0, 30)}`);
 
     if (!request.postType) {
       setState(prev => ({

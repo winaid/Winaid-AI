@@ -316,7 +316,7 @@ export async function callGemini(config: GeminiCallConfig): Promise<any> {
  */
 export async function callGeminiRaw(model: string, apiBody: any, timeout: number = TIMEOUTS.IMAGE_GENERATION): Promise<any> {
   const endpoint = getGeminiEndpoint();
-  console.log(`[BLOG_FLOW] callGeminiRaw(${model}) → ${endpoint.substring(0, 60)}...`);
+  console.warn(`[BLOG_FLOW] callGeminiRaw(${model}) → ${endpoint.substring(0, 60)}...`);
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeout + 5000);
@@ -378,7 +378,7 @@ async function _callGeminiOnce(config: GeminiCallConfig): Promise<any> {
   };
 
   const endpoint = getGeminiEndpoint();
-  console.log(`[BLOG_FLOW] _callGeminiOnce(${model}) → ${endpoint.substring(0, 60)}...`);
+  console.warn(`[BLOG_FLOW] _callGeminiOnce(${model}) → ${endpoint.substring(0, 60)}...`);
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeout + 5000);
