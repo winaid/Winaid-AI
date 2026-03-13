@@ -146,11 +146,15 @@ export function useContentGeneration(deps: ContentGenerationDeps): ContentGenera
 
     try {
       const { generateFullPost } = await import('../services/geminiService');
+      console.warn('[BLOG_FLOW] generateFullPost 호출 시작...');
       const result = await generateFullPost(request, (p) => targetSetState(prev => ({ ...prev, progress: p })));
+      console.warn(`[BLOG_FLOW] ✅ generateFullPost 반환됨 — title: "${result?.title}", htmlContent: ${result?.htmlContent?.length || 0}자, data keys: ${result ? Object.keys(result).join(',') : 'null'}`);
       const imageWarning = result.imageFailCount && result.imageFailCount > 0
         ? `본문은 정상 생성되었습니다. 이미지 ${result.imageFailCount}장은 AI 서버 과부하로 생성에 실패했습니다.`
         : null;
+      console.warn(`[BLOG_FLOW] setBlogState 호출 직전 — data 존재: ${!!result}, isLoading: false`);
       targetSetState({ isLoading: false, error: null, warning: imageWarning, data: result, progress: '' });
+      console.warn('[BLOG_FLOW] ✅ setBlogState 완료 — data 커밋됨');
 
       // 크레딧 차감 + 사용량 저장
       try {

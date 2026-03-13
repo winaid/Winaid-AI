@@ -112,7 +112,13 @@ if (GEMINI_API_KEYS.length > 0) {
   console.log('🔐 다중 API 키 시스템 활성화 (총 ' + GEMINI_API_KEYS.length + '개)');
   logApiKeyStatus();
 } else {
-  console.warn('⚠️ 환경변수에 API 키가 설정되지 않았습니다. 사용자가 직접 입력해야 합니다.');
+  // 프록시 모드에서는 API 키가 서버에만 존재 → 클라이언트에 없어도 정상
+  const proxyUrl = import.meta.env.VITE_GEMINI_PROXY_URL;
+  if (proxyUrl) {
+    console.warn('ℹ️ 클라이언트 API 키 없음 — 서버 프록시 모드로 동작 (정상)');
+  } else {
+    console.warn('⚠️ API 키도 없고 프록시 URL도 없음 — Gemini 호출 불가');
+  }
 }
 
 /**

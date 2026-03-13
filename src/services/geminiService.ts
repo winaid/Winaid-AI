@@ -637,6 +637,7 @@ export const generateBlogWithPipeline = async (
 ): Promise<{ title: string; content: string; imagePrompts: string[] }> => {
   const safeProgress = onProgress || ((msg: string) => console.log('Pipeline:', msg));
   console.warn(`[BLOG_FLOW] generateBlogWithPipeline 시작 — topic: ${request.topic?.substring(0, 30)}`);
+  console.warn('[PIPELINE] ▶ Stage A: 아웃라인 생성 시작');
   const targetLength = request.textLength || 1500;
   // LLM은 글자수를 정확히 세지 못해 항상 20~30% 부족하게 생성 → 프롬프트용 목표를 1.35배로 설정
   const promptTargetLength = Math.round(targetLength * 1.35);
@@ -713,7 +714,8 @@ ${JSON.stringify(searchResults?.collected_facts?.slice(0, 3) || [], null, 2)}`;
   outline.sections.forEach((s: any) => { s.targetChars = s.targetChars || charsPerSection; });
 
   safeProgress(`✅ Stage A 완료: 소제목 ${outline.sections.length}개 설계`);
-  console.log('📐 아웃라인:', JSON.stringify(outline, null, 2).substring(0, 500));
+  console.warn(`[PIPELINE] ✅ Stage A 완료: 소제목 ${outline.sections.length}개`);
+  console.warn('[PIPELINE] ▶ Stage B: 본문 생성 시작 (도입부 + 소제목 병렬)');
 
   // ── Stage B: 본문 생성 (PRO) ── [도입부 + 소제목 병렬 + 마무리]
   safeProgress('✍️ [2/4] 본문 생성 중...');
@@ -807,6 +809,7 @@ ${JSON.stringify(searchResults?.collected_facts?.slice(i, i + 2) || [], null, 2)
   const sectionSummaries = sectionHtmls.map(html =>
     html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().substring(0, 150)
   );
+  console.warn(`[PIPELINE] ✅ Stage B-1/2 완료: 도입부 ${introHtml ? introHtml.length : 0}자, 소제목 ${sectionHtmls.filter(h => h).length}/${outline.sections.length}개`);
   safeProgress(`✅ 도입부 + 소제목 ${sectionHtmls.filter(h => h).length}/${outline.sections.length}개 완료`);
 
   // B-3: 마무리 생성
@@ -831,6 +834,8 @@ ${sectionSummaries.join('\n')}`;
   });
 
   safeProgress('✅ 본문 생성 완료');
+  console.warn(`[PIPELINE] ✅ Stage B-3 완료: 마무리 ${typeof conclusionHtml === 'string' ? conclusionHtml.length : 0}자`);
+  console.warn('[PIPELINE] ▶ Stage C: 통합 검증 시작');
 
   // ── Stage C: 통합 + 검증 (FLASH) ──
   safeProgress('🔍 [4/4] 전체 통합 및 검증 중...');
@@ -852,6 +857,7 @@ ${sectionSummaries.join('\n')}`;
     : rawHtml; // 통합 실패 시 원본 사용
 
   safeProgress('✅ [4/4] 통합 검증 완료');
+  console.warn(`[PIPELINE] ✅ Stage C 완료: finalContent ${finalContent.length}자`);
 
   // 이미지 프롬프트 생성 (섹션 역할별 차별화)
   const imageCount = request.imageCount ?? 1;
@@ -887,6 +893,7 @@ ${sectionSummaries.join('\n')}`;
     }
   }
 
+  console.warn(`[PIPELINE] ✅ generateBlogWithPipeline 완료 — title: "${request.topic}", content: ${finalContent.length}자, imagePrompts: ${imagePrompts.length}개`);
   return {
     title: request.topic,
     content: finalContent,
@@ -2894,6 +2901,7 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
         }
       };
       safeProgress('✅ 다단계 파이프라인 생성 완료!');
+      console.warn(`[BLOG_FLOW] ✅ 파이프라인 textData 확보 — title: "${textData.title}", content: ${textData.content?.length || 0}자`);
     } catch (pipelineError) {
       console.error('⚠️ 다단계 파이프라인 실패, 기존 방식으로 폴백:', pipelineError);
       safeProgress('⚠️ 파이프라인 실패, 기존 방식으로 재시도...');
@@ -2999,6 +3007,7 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
   // 🔧 content 또는 contentHtml 필드 둘 다 지원
   let body = textData.content || (textData as any).contentHtml || '';
 
+  console.warn(`[BLOG_FLOW] body 확보됨: ${body ? body.length : 0}자, title: "${textData.title}"`);
   // 방어 코드: body가 없으면 에러
   if (!body || body.trim() === '') {
     console.error('❌ textData.content/contentHtml 둘 다 비어있습니다:', textData);
@@ -3573,6 +3582,7 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
 
   // 최종 완료 메시지
   safeProgress('✅ 모든 생성 작업 완료!');
+  console.warn(`[BLOG_FLOW] ✅ generateFullPost 반환 직전 — title: "${textData.title}", htmlContent: ${finalHtml.length}자, imageFailCount: ${imageFailCount}`);
 
   return {
     title: textData.title,

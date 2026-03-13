@@ -201,6 +201,12 @@ const App: React.FC = () => {
     }
   }, [mobileTab]);
 
+  // 📊 렌더 게이트 로그 — 상태 변경 시 어떤 뷰가 보이는지 추적
+  useEffect(() => {
+    const cs = getCurrentState();
+    const renderView = cs.isLoading ? 'LOADING_SPINNER' : cs.data ? 'RESULT_PREVIEW' : cs.error ? 'ERROR_MODAL' : 'EMPTY_STATE';
+    console.warn(`[RENDER_GATE] contentTab=${contentTab} | isLoading=${cs.isLoading} | hasData=${!!cs.data} | hasError=${!!cs.error} | progress="${(cs.progress || '').substring(0, 30)}" → ${renderView}`);
+  }, [getCurrentState, contentTab]);
 
   // Supabase 인증 상태 감시
   useEffect(() => {
