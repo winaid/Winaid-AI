@@ -33,8 +33,8 @@ const scoreBadgeClass = (score?: number) => {
 // ============================================================
 interface StyleTabProps {
   styleProfiles: HospitalStyleProfile[];
-  blogUrlInputs: Record<string, string>;
-  setBlogUrlInputs: React.Dispatch<React.SetStateAction<Record<string, string>>>;
+  blogUrlInputs: Record<string, string[]>;
+  setBlogUrlInputs: React.Dispatch<React.SetStateAction<Record<string, string[]>>>;
   crawlingStatus: Record<string, { loading: boolean; progress: string; error?: string }>;
   crawledPosts: Record<string, { url: string; content: string }[]>;
   dbPosts: Record<string, CrawledPost[]>;
@@ -195,13 +195,15 @@ const StyleTab: React.FC<StyleTabProps> = ({
           {uniqueHospitals.map(([baseName, h]) => {
             const profile = styleProfiles.find(p => p.hospital_name === baseName);
             const status = crawlingStatus[baseName];
-            const urlVal = blogUrlInputs[baseName] || profile?.naver_blog_url || '';
+            const urls = blogUrlInputs[baseName] || (profile?.naver_blog_url ? [profile.naver_blog_url] : ['']);
+            const hasAnyUrl = urls.some(u => u.includes('blog.naver.com'));
             return (
               <div key={baseName} className="p-4">
                 {/* 병원명 + 학습 상태 */}
                 <div className="flex items-center flex-wrap gap-2 mb-3">
                   <span className="font-semibold text-slate-800 text-sm">{baseName}</span>
                   <span className="text-xs text-slate-400">{h.manager}</span>
+                  {h.address && <span className="text-[10px] text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded">{h.address}</span>}
                   {profile?.last_crawled_at ? (
                     <span className="text-[11px] px-2 py-0.5 bg-green-50 text-green-600 rounded-full font-medium">
                       학습완료 · {new Date(profile.last_crawled_at).toLocaleDateString('ko-KR')} · {profile.crawled_posts_count}개 글
@@ -215,37 +217,67 @@ const StyleTab: React.FC<StyleTabProps> = ({
                     </span>
                   )}
                 </div>
-                {/* URL 입력 + 버튼 */}
-                <div className="flex gap-2">
-                  <input
-                    type="url"
-                    value={urlVal}
-                    onChange={e => setBlogUrlInputs(prev => ({ ...prev, [baseName]: e.target.value }))}
-                    placeholder="https://blog.naver.com/병원아이디"
-                    className="flex-1 px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-violet-400 transition-colors"
-                    disabled={status?.loading}
-                  />
-                  <button
-                    onClick={() => onSaveUrl(baseName, team.id)}
-                    disabled={status?.loading || !urlVal}
-                    className="px-3 py-2 text-xs font-semibold bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 transition-colors disabled:opacity-40 whitespace-nowrap"
-                  >URL 저장</button>
-                  <button
-                    onClick={() => onCrawl(baseName, team.id)}
-                    disabled={status?.loading || !urlVal}
-                    className="px-3 py-2 text-xs font-bold bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors disabled:opacity-40 whitespace-nowrap"
-                  >
-                    {status?.loading ? '학습 중...' : '크롤링 + 학습'}
-                  </button>
-                  {(profile || (dbPosts[baseName] && dbPosts[baseName].length > 0)) && (
+                {/* 다중 URL 입력 */}
+                <div className="space-y-2">
+                  {urls.map((urlVal, urlIdx) => (
+                    <div key={urlIdx} className="flex gap-2 items-center">
+                      <span className="text-[10px] text-slate-400 font-mono w-4 shrink-0 text-center">{urlIdx + 1}</span>
+                      <input
+                        type="url"
+                        value={urlVal}
+                        onChange={e => {
+                          const newUrls = [...urls];
+                          newUrls[urlIdx] = e.target.value;
+                          setBlogUrlInputs(prev => ({ ...prev, [baseName]: newUrls }));
+                        }}
+                        placeholder="https://blog.naver.com/병원아이디"
+                        className="flex-1 px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-violet-400 transition-colors"
+                        disabled={status?.loading}
+                      />
+                      {urls.length > 1 && (
+                        <button
+                          onClick={() => {
+                            const newUrls = urls.filter((_, i) => i !== urlIdx);
+                            setBlogUrlInputs(prev => ({ ...prev, [baseName]: newUrls }));
+                          }}
+                          disabled={status?.loading}
+                          className="w-7 h-7 flex items-center justify-center text-xs text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-40"
+                          title="URL 삭제"
+                        >✕</button>
+                      )}
+                    </div>
+                  ))}
+                  {/* URL 추가 + 액션 버튼 */}
+                  <div className="flex gap-2 items-center">
+                    <span className="w-4 shrink-0" />
                     <button
-                      onClick={() => onReset(baseName)}
+                      onClick={() => setBlogUrlInputs(prev => ({ ...prev, [baseName]: [...urls, ''] }))}
                       disabled={status?.loading}
-                      className="px-3 py-2 text-xs font-semibold bg-red-50 text-red-500 rounded-lg hover:bg-red-100 transition-colors disabled:opacity-40 whitespace-nowrap"
+                      className="px-2.5 py-1.5 text-xs font-medium text-violet-600 border border-violet-200 bg-violet-50 rounded-lg hover:bg-violet-100 transition-colors disabled:opacity-40"
+                    >+ URL 추가</button>
+                    <div className="flex-1" />
+                    <button
+                      onClick={() => onSaveUrl(baseName, team.id)}
+                      disabled={status?.loading || !hasAnyUrl}
+                      className="px-3 py-2 text-xs font-semibold bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 transition-colors disabled:opacity-40 whitespace-nowrap"
+                    >URL 저장</button>
+                    <button
+                      onClick={() => onCrawl(baseName, team.id)}
+                      disabled={status?.loading || !hasAnyUrl}
+                      className="px-3 py-2 text-xs font-bold bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors disabled:opacity-40 whitespace-nowrap"
                     >
-                      초기화
+                      {status?.loading ? '학습 중...' : '크롤링 + 학습'}
                     </button>
-                  )}
+                    {(profile || (dbPosts[baseName] && dbPosts[baseName].length > 0)) && (
+                      <button
+                        onClick={() => onReset(baseName)}
+                        disabled={status?.loading}
+                        className="px-3 py-2 text-xs font-semibold bg-red-50 text-red-500 rounded-lg hover:bg-red-100 transition-colors disabled:opacity-40 whitespace-nowrap"
+                      >
+                        초기화
+                      </button>
+                    )}
+                  </div>
                 </div>
                 {/* 진행 상태 */}
                 {status?.loading && (
@@ -570,7 +602,22 @@ const AdminPage: React.FC<AdminPageProps> = ({ onAdminVerified }) => {
 
   // 말투 학습 탭 state
   const [styleProfiles, setStyleProfiles] = useState<HospitalStyleProfile[]>([]);
-  const [blogUrlInputs, setBlogUrlInputs] = useState<Record<string, string>>({});
+  const [blogUrlInputs, setBlogUrlInputs] = useState<Record<string, string[]>>(() => {
+    // teamHospitals.ts의 naverBlogUrls로 초기값 세팅
+    const initial: Record<string, string[]> = {};
+    TEAM_DATA.forEach(team => {
+      team.hospitals.forEach(h => {
+        const baseName = h.name.replace(/ \(.*\)$/, '');
+        if (h.naverBlogUrls && h.naverBlogUrls.length > 0) {
+          // 같은 baseName이 이미 있으면 합치기 (중복 제거)
+          const existing = initial[baseName] || [];
+          const merged = [...new Set([...existing, ...h.naverBlogUrls])];
+          initial[baseName] = merged;
+        }
+      });
+    });
+    return initial;
+  });
   const [crawlingStatus, setCrawlingStatus] = useState<Record<string, { loading: boolean; progress: string; error?: string }>>({});
   const [crawledPosts, setCrawledPosts] = useState<Record<string, { url: string; content: string }[]>>({});
   const [dbPosts, setDbPosts] = useState<Record<string, CrawledPost[]>>({});
@@ -785,15 +832,16 @@ const AdminPage: React.FC<AdminPageProps> = ({ onAdminVerified }) => {
     }
   }, [activeTab, isAuthenticated, loadStyleProfiles]);
 
-  // 병원 블로그 URL 저장 (크롤링 없이)
+  // 병원 블로그 URL 저장 (크롤링 없이) — 첫 번째 유효 URL 사용
   const handleSaveBlogUrl = async (hospitalName: string, teamId: number) => {
-    const url = blogUrlInputs[hospitalName] || '';
-    if (!url.includes('blog.naver.com')) {
+    const urls = blogUrlInputs[hospitalName] || [];
+    const validUrl = urls.find(u => u.includes('blog.naver.com'));
+    if (!validUrl) {
       toast.error('네이버 블로그 URL을 입력해주세요. (blog.naver.com/...)');
       return;
     }
     try {
-      await saveHospitalBlogUrl(hospitalName, teamId, url);
+      await saveHospitalBlogUrl(hospitalName, teamId, validUrl);
       toast.success('URL 저장 완료!');
       loadStyleProfiles();
     } catch (err: any) {
@@ -801,10 +849,11 @@ const AdminPage: React.FC<AdminPageProps> = ({ onAdminVerified }) => {
     }
   };
 
-  // 크롤링 + 말투 학습 실행
+  // 크롤링 + 말투 학습 실행 — 첫 번째 유효 URL로 크롤링
   const handleCrawlAndLearn = async (hospitalName: string, teamId: number) => {
-    const url = blogUrlInputs[hospitalName] || '';
-    if (!url.includes('blog.naver.com')) {
+    const urls = blogUrlInputs[hospitalName] || [];
+    const validUrl = urls.find(u => u.includes('blog.naver.com'));
+    if (!validUrl) {
       toast.error('먼저 네이버 블로그 URL을 입력해주세요.');
       return;
     }
@@ -815,7 +864,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onAdminVerified }) => {
     }));
 
     try {
-      const result = await crawlAndLearnHospitalStyle(hospitalName, teamId, url, (msg) => {
+      const result = await crawlAndLearnHospitalStyle(hospitalName, teamId, validUrl, (msg) => {
         setCrawlingStatus(prev => ({
           ...prev,
           [hospitalName]: { loading: true, progress: msg },
