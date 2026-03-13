@@ -901,7 +901,7 @@ const App: React.FC = () => {
             <Suspense fallback={<FormSkeleton />}>
               <InputForm
                 onSubmit={(req) => { setHasGenerated(true); handleGenerate(req); }}
-                isLoading={state.isLoading || isGeneratingScript}
+                isLoading={getCurrentState().isLoading || state.isLoading || isGeneratingScript}
                 onTabChange={setContentTab}
                 activePostType={contentTab === 'press' ? 'press_release' : contentTab === 'card_news' ? 'card_news' : contentTab === 'blog' ? 'blog' : undefined}
               />

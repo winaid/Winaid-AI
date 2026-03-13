@@ -1,4 +1,4 @@
-import { useState, useCallback, RefObject } from 'react';
+import { useState, useCallback, useRef, RefObject } from 'react';
 import { GenerationRequest, GenerationState } from '../types';
 
 type ContentTabType = 'blog' | 'refine' | 'card_news' | 'press' | 'image' | 'history';
@@ -40,6 +40,7 @@ export function useContentGeneration(deps: ContentGenerationDeps): ContentGenera
   const [state, setState] = useState<GenerationState>(initialState);
   const [blogState, setBlogState] = useState<GenerationState>(initialState);
   const [pressState, setPressState] = useState<GenerationState>(initialState);
+  const isGeneratingRef = useRef(false);
 
   const getCurrentState = useCallback((): GenerationState => {
     if (deps.contentTab === 'press') return pressState;
@@ -54,6 +55,13 @@ export function useContentGeneration(deps: ContentGenerationDeps): ContentGenera
   }, [deps.contentTab]);
 
   const handleGenerate = useCallback(async (request: GenerationRequest) => {
+    // 🛡️ 중복 실행 방지 — 생성 중 재클릭 차단
+    if (isGeneratingRef.current) {
+      console.warn('[BLOG_FLOW] ⛔ 생성 중 중복 클릭 차단됨');
+      return;
+    }
+    isGeneratingRef.current = true;
+
     // 스크롤 위치 고정
     const currentScrollY = window.scrollY || window.pageYOffset;
     const currentScrollX = window.scrollX || window.pageXOffset;
@@ -95,6 +103,7 @@ export function useContentGeneration(deps: ContentGenerationDeps): ContentGenera
         ...prev,
         error: '콘텐츠 타입이 선택되지 않았습니다. 페이지를 새로고침 후 다시 시도해주세요.'
       }));
+      isGeneratingRef.current = false;
       return;
     }
 
@@ -107,6 +116,7 @@ export function useContentGeneration(deps: ContentGenerationDeps): ContentGenera
           ...prev,
           error: creditStatus.message || '크레딧이 부족합니다.',
         }));
+        isGeneratingRef.current = false;
         return;
       }
     } catch (e) {
@@ -115,7 +125,11 @@ export function useContentGeneration(deps: ContentGenerationDeps): ContentGenera
 
     // 카드뉴스: 3단계 워크플로우
     if (request.postType === 'card_news') {
-      await deps.handleGenerateCardNews(request, setState, deps.setContentTab);
+      try {
+        await deps.handleGenerateCardNews(request, setState, deps.setContentTab);
+      } finally {
+        isGeneratingRef.current = false;
+      }
       return;
     }
 
@@ -180,6 +194,8 @@ export function useContentGeneration(deps: ContentGenerationDeps): ContentGenera
         deps.setMobileTab('input');
         return { ...prev, isLoading: false, error: friendlyError };
       });
+    } finally {
+      isGeneratingRef.current = false;
     }
   }, [deps]);
 
