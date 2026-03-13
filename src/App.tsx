@@ -440,22 +440,23 @@ const App: React.FC = () => {
         // 서버는 존재 여부만 반환 ('***' 또는 null)
         // 실제 키는 ApiKeySettings에서 save 시 localStorage에 직접 저장됨
         const localGemini = localStorage.getItem('GEMINI_API_KEY');
+        const envGemini = import.meta.env.VITE_GEMINI_API_KEY;
         if (localGemini && localGemini !== '***') {
           setApiKeyReady(true);
-          console.log('✅ localStorage에서 API 키 사용');
+        } else if (envGemini) {
+          // 빌드 시 환경변수에 키가 포함됨 → geminiClient.ts에서 사용 가능
+          setApiKeyReady(true);
         } else if (apiKeys.gemini) {
-          // 서버에 키는 있지만 localStorage에 없음 → 설정 페이지에서 다시 입력 필요
-          console.log('⚠️ 서버에 키 설정됨, localStorage에서 키를 찾을 수 없음 - 재설정 필요');
-        } else {
-          console.log('⚠️ API 키 없음 - 설정 필요');
+          // 서버에 키는 있지만 클라이언트에서 사용 불가 → 설정 페이지에서 입력 필요
+          console.warn('⚠️ 서버에 키 설정됨, 클라이언트에서 키를 찾을 수 없음');
         }
       } catch (error) {
         console.error('❌ API 키 로드 실패:', error);
-        // 에러 시에도 localStorage 체크
+        // 에러 시에도 로컬 체크
         const localGemini = localStorage.getItem('GEMINI_API_KEY');
-        if (localGemini && localGemini !== '***') {
+        const envGemini = import.meta.env.VITE_GEMINI_API_KEY;
+        if ((localGemini && localGemini !== '***') || envGemini) {
           setApiKeyReady(true);
-          console.log('✅ 로컬 백업 키 사용');
         }
       }
     };
