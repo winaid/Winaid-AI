@@ -30,6 +30,8 @@ export const TEAM_DATA: TeamData[] = [
       { name: '바른플란트치과', manager: '김소영 매니저님', address: '서울 중랑구 망우동', naverBlogUrls: ['https://blog.naver.com/brplant', 'https://blog.naver.com/wwwlsl123'] },
       { name: '검단일등치과', manager: '김소영 매니저님', address: '인천 서구 불로동', naverBlogUrls: ['https://blog.naver.com/geomdan1stdental', 'https://blog.naver.com/o48j69omlwlnj6'] },
       { name: '코랄치과 (김소영)', manager: '김소영 매니저님', address: '서울 강동구 성내동', naverBlogUrls: ['https://blog.naver.com/timber12502', 'https://blog.naver.com/ffpvksk4i', 'https://blog.naver.com/ran2hoho'] },
+      // 휘원 매니저님 (신규)
+      { name: '부천그랜드치과', manager: '휘원 매니저님', address: '경기 부천시 원미구 중동', naverBlogUrls: ['https://blog.naver.com/dnautmqq'] },
     ],
   },
   {
@@ -57,8 +59,6 @@ export const TEAM_DATA: TeamData[] = [
       { name: '연세조이플란트치과', manager: '김태광 팀장님', address: '서울 강동구 성내동', naverBlogUrls: ['https://blog.naver.com/ii24h0um'] },
       { name: '전주예일치과', manager: '김태광 팀장님', address: '전북 전주시 완산구 효자동2가', naverBlogUrls: ['https://blog.naver.com/zmkz4oeq'] },
       { name: '연세하늘치과', manager: '김태광 팀장님', address: '서울 중구 충무로2가', naverBlogUrls: ['https://blog.naver.com/skydentalgreen'] },
-      // 휘원 매니저님 (신규)
-      { name: '부천그랜드치과', manager: '휘원 매니저님', address: '경기 부천시 원미구 중동', naverBlogUrls: ['https://blog.naver.com/dnautmqq'] },
       // 이도화 선임님
       { name: '오늘안치과', manager: '이도화 선임님', address: '경기 성남시 수정구 태평동', naverBlogUrls: ['https://blog.naver.com/spssmaster77'] },
       { name: '라이프치과', manager: '이도화 선임님', address: '서울 강서구 화곡동', naverBlogUrls: ['https://blog.naver.com/bgfsdvyhd'] },
