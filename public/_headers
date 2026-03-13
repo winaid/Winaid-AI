@@ -11,12 +11,13 @@
   Pragma: no-cache
   Expires: 0
 
-# 모든 JavaScript 파일에 올바른 MIME 타입 강제 적용
-/assets/*.js
+# sw.js는 항상 최신 버전을 받아야 함 (SW 업데이트 전파)
+/sw.js
   Content-Type: application/javascript; charset=utf-8
-  Cache-Control: public, max-age=31536000, immutable
+  Cache-Control: no-cache, must-revalidate
 
-/*.js
+# 해시가 포함된 빌드 파일은 영구 캐시 (파일명이 변경되므로 안전)
+/assets/*.js
   Content-Type: application/javascript; charset=utf-8
   Cache-Control: public, max-age=31536000, immutable
 
