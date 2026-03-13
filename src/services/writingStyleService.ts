@@ -93,23 +93,10 @@ const extractProfileFromGeminiResponse = (response: any): {
  * 이미지에서 텍스트 추출 (OCR)
  */
 export const extractTextFromImage = async (base64Image: string): Promise<string> => {
-  const ai = getAiClient();
-  
   try {
-    const response = await ai.models.generateContent({
-      model: GEMINI_MODEL.PRO,
-      contents: [
-        {
-          role: 'user',
-          parts: [
-            {
-              inlineData: {
-                mimeType: base64Image.includes('png') ? 'image/png' : 'image/jpeg',
-                data: base64Image.split(',')[1]
-              }
-            },
-            {
-              text: `이 이미지에서 모든 텍스트를 추출해주세요.
+    const mimeType = base64Image.includes('png') ? 'image/png' : 'image/jpeg';
+    const data = base64Image.split(',')[1];
+    const prompt = `이 이미지에서 모든 텍스트를 추출해주세요.
 
 [요구사항]
 1. 이미지에 보이는 모든 한국어/영어 텍스트를 그대로 추출
@@ -118,17 +105,16 @@ export const extractTextFromImage = async (base64Image: string): Promise<string>
 4. 메뉴, 버튼, UI 요소 텍스트는 제외하고 본문 내용만 추출
 5. 텍스트만 출력하세요. 설명이나 부가 내용 없이!
 
-추출된 텍스트:`
-            }
-          ]
-        }
-      ],
-      config: {
-        responseMimeType: "text/plain"
-      }
-    });
-    
-    return response.text?.trim() || '';
+추출된 텍스트:`;
+
+    const result = await callGeminiRaw(GEMINI_MODEL.PRO, {
+      contents: [{role: 'user', parts: [{inlineData: {mimeType, data}}, {text: prompt}]}],
+      generationConfig: {responseMimeType: "text/plain"}
+    }, TIMEOUTS.GENERATION);
+
+    const parts = result?.candidates?.[0]?.content?.parts || [];
+    const text = parts.map((p: any) => p.text || '').join('');
+    return text.trim();
   } catch (error) {
     console.error('OCR 실패:', error);
     throw new Error('이미지에서 텍스트를 추출할 수 없습니다.');
@@ -147,35 +133,20 @@ export const extractTextFromDocument = async (file: File): Promise<string> => {
   }
   
   // PDF/Word 파일은 Gemini로 처리
-  const ai = getAiClient();
-  
   try {
     // 파일을 base64로 변환
     const arrayBuffer = await file.arrayBuffer();
     const base64 = btoa(
       new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
     );
-    
-    const mimeType = fileName.endsWith('.pdf') 
-      ? 'application/pdf' 
-      : fileName.endsWith('.docx') 
+
+    const mimeType = fileName.endsWith('.pdf')
+      ? 'application/pdf'
+      : fileName.endsWith('.docx')
         ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
         : 'application/msword';
-    
-    const response = await ai.models.generateContent({
-      model: GEMINI_MODEL.PRO,
-      contents: [
-        {
-          role: 'user',
-          parts: [
-            {
-              inlineData: {
-                mimeType,
-                data: base64
-              }
-            },
-            {
-              text: `이 문서에서 모든 텍스트를 추출해주세요.
+
+    const prompt = `이 문서에서 모든 텍스트를 추출해주세요.
 
 [요구사항]
 1. 문서에 있는 모든 한국어/영어 텍스트를 그대로 추출
@@ -184,17 +155,16 @@ export const extractTextFromDocument = async (file: File): Promise<string> => {
 4. 본문 내용만 추출
 5. 텍스트만 출력하세요. 설명이나 부가 내용 없이!
 
-추출된 텍스트:`
-            }
-          ]
-        }
-      ],
-      config: {
-        responseMimeType: "text/plain"
-      }
-    });
-    
-    return response.text?.trim() || '';
+추출된 텍스트:`;
+
+    const result = await callGeminiRaw(GEMINI_MODEL.PRO, {
+      contents: [{role: 'user', parts: [{inlineData: {mimeType, data: base64}}, {text: prompt}]}],
+      generationConfig: {responseMimeType: "text/plain"}
+    }, TIMEOUTS.GENERATION);
+
+    const parts = result?.candidates?.[0]?.content?.parts || [];
+    const text = parts.map((p: any) => p.text || '').join('');
+    return text.trim();
   } catch (error) {
     console.error('문서 텍스트 추출 실패:', error);
     throw new Error('문서에서 텍스트를 추출할 수 없습니다.');
