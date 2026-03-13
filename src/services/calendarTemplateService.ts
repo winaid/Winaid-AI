@@ -2,7 +2,7 @@
  * 병원 달력 이미지 생성 서비스
  * HTML/CSS 템플릿 + html2canvas로 100% 정확한 달력 이미지를 프로그래밍으로 생성
  */
-import { getAiClient } from './geminiClient';
+import { callGemini, callGeminiRaw, TIMEOUTS } from './geminiClient';
 import { removeOklchFromClonedDoc } from '../components/resultPreviewUtils';
 
 // ── 타입 ──
@@ -77,8 +77,6 @@ function buildCalendarGridText(year: number, month: number): string {
 }
 
 export async function parseCalendarPrompt(prompt: string): Promise<CalendarData | null> {
-  const ai = getAiClient();
-
   const now = new Date();
   const currentYear = now.getFullYear();
   const currentMonth = now.getMonth() + 1;
@@ -86,7 +84,7 @@ export async function parseCalendarPrompt(prompt: string): Promise<CalendarData 
   // AI에게 정확한 달력 그리드를 제공하여 날짜-요일 오류 방지
   const calendarGrid = buildCalendarGridText(currentYear, currentMonth);
 
-  const systemPrompt = `당신은 사용자의 병원 달력 요청을 분석하여 JSON으로 변환하는 전문가입니다.
+  const systemInstruction = `당신은 사용자의 병원 달력 요청을 분석하여 JSON으로 변환하는 전문가입니다.
 반드시 아래 JSON 형식으로만 응답하세요. 다른 텍스트 없이 JSON만 출력하세요.
 
 {
@@ -112,16 +110,15 @@ ${calendarGrid}
 - colorTheme: 분위기에 맞는 색상. 기본 "blue"`;
 
   try {
-    const response = await ai.models.generateContent({
+    const rawText = await callGemini({
+      prompt,
       model: 'gemini-3.1-flash-lite-preview',
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      config: {
-        systemInstruction: systemPrompt,
-        temperature: 0.1,
-      },
+      responseType: 'text',
+      systemInstruction,
+      temperature: 0.1,
     });
 
-    const text = response.text?.trim();
+    const text = (rawText || '').trim();
     if (!text) return null;
 
     const jsonMatch = text.match(/\{[\s\S]*\}/);
@@ -3724,8 +3721,6 @@ export async function generateTemplateWithAI(
     brandAccent?: string; // 포인트 컬러 HEX
   }
 ): Promise<string> {
-  const ai = getAiClient();
-
   // 카테고리별 텍스트 콘텐츠 생성
   let textContent: string;
   switch (category) {
@@ -3834,15 +3829,14 @@ Use ONLY the new text content from the prompt below.
     try {
       console.log(`🎨 템플릿 AI 이미지 생성 시도 ${attempt}/${MAX_RETRIES} (${category}, ref=${!!styleRefPart})...`);
 
-      const result = await ai.models.generateContent({
-        model: 'gemini-3-pro-image-preview',
-        contents,
-        config: {
+      const result = await callGeminiRaw('gemini-3-pro-image-preview', {
+        contents: [{role: 'user', parts: contents}],
+        generationConfig: {
           responseModalities: ['IMAGE', 'TEXT'],
           temperature: 0.4,
           imageSize: '4K',
         },
-      });
+      }, TIMEOUTS.IMAGE_GENERATION);
 
       const parts = result?.candidates?.[0]?.content?.parts || [];
       const imagePart = parts.find((p: any) => p.inlineData?.data);

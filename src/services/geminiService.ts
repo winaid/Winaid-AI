@@ -941,23 +941,19 @@ export const generateSmartBlockFaq = async (
   const smartBlockPrompt = getSmartBlockFaqPrompt(topic, keywords, faqCount);
 
   // 네이버에서 실제 질문 검색 + FAQ 생성 병렬
-  const ai = getAiClient();
-
   // 실제 네이버 검색 질문 수집
-  const naverSearchPromise = ai.models.generateContent({
+  const naverSearchPromise = callGemini({
+    prompt: `네이버 지식iN에서 "${topic}" "${keywords}" 관련 실제 질문 5개를 검색해주세요. 검색 사이트: kin.naver.com`,
     model: GEMINI_MODEL.FLASH,
-    contents: `네이버 지식iN에서 "${topic}" "${keywords}" 관련 실제 질문 5개를 검색해주세요. 검색 사이트: kin.naver.com`,
-    config: {
-      tools: [{ googleSearch: {} }],
-      responseMimeType: "text/plain",
-      temperature: 0.5,
-      thinkingConfig: { thinkingLevel: "low" }
-    }
+    googleSearch: true,
+    responseType: 'text',
+    temperature: 0.5,
+    thinkingLevel: 'low',
   }).catch(() => null);
 
   const [naverResult] = await Promise.allSettled([naverSearchPromise]);
   const naverQuestions = naverResult.status === 'fulfilled' && naverResult.value
-    ? naverResult.value.text || ''
+    ? (typeof naverResult.value === 'string' ? naverResult.value : naverResult.value?.text || '')
     : '';
 
   // FAQ 생성
@@ -995,7 +991,6 @@ export const generateBlogPostText = async (request: GenerationRequest, onProgres
 
   // onProgress가 없으면 콘솔 로그로 대체
   const safeProgress = onProgress || ((msg: string) => console.log('📍 BlogText Progress:', msg));
-  const ai = getAiClient();
   const isCardNews = request.postType === 'card_news';
   const targetLength = request.textLength || 1500;
   // LLM은 글자수를 정확히 세지 못해 항상 20~30% 부족하게 생성 → 프롬프트용 목표를 1.35배로 설정
@@ -1947,21 +1942,19 @@ JSON 형식으로 응답:
       const geminiSearchPromise = (async () => {
         try {
           console.log('🔵 Gemini 검색 시작... (타임아웃: 90초)');
-          const ai = getAiClient();
           // ⚠️ Google Search와 responseMimeType: "application/json"은 동시 사용 불가!
           // 텍스트로 받고 후처리로 JSON 파싱
-          const searchResponse = await ai.models.generateContent({
-            model: "gemini-3.1-flash-lite-preview",  // 검색용 모델 (빠름)
-            contents: searchPrompt,
-            config: {
-              tools: [{ googleSearch: {} }]
-              // responseMimeType 제거 - Search tool과 호환 안 됨
-            }
+          const searchResponseText = await callGemini({
+            prompt: searchPrompt,
+            model: "gemini-3.1-flash-lite-preview",
+            googleSearch: true,
+            responseType: 'text',
+            timeout: SEARCH_TIMEOUT,
           });
-          
+
           // 안전한 JSON 파싱 (텍스트 응답에서 추출)
           let result;
-          const rawText = searchResponse.text || "{}";
+          const rawText = (typeof searchResponseText === 'string' ? searchResponseText : JSON.stringify(searchResponseText)) || "{}";
           
           try {
             // JSON 블록 추출 시도 (```json ... ``` 형태일 수 있음)
@@ -2867,15 +2860,16 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
     try {
       // 검색 결과 수집 (파이프라인에 전달)
       safeProgress('🔍 최신 정보 검색 중...');
-      const ai = getAiClient();
       let pipelineSearchResults: any = {};
       try {
-        const searchResponse = await ai.models.generateContent({
+        const searchResponseText = await callGemini({
+          prompt: `"${request.topic}" 관련 최신 치과 의료 정보 검색. health.kdca.go.kr 우선. JSON: {"collected_facts": [{"fact": "...", "source": "..."}]}`,
           model: "gemini-3.1-flash-lite-preview",
-          contents: `"${request.topic}" 관련 최신 치과 의료 정보 검색. health.kdca.go.kr 우선. JSON: {"collected_facts": [{"fact": "...", "source": "..."}]}`,
-          config: { tools: [{ googleSearch: {} }] }
+          googleSearch: true,
+          responseType: 'text',
+          timeout: TIMEOUTS.QUICK_OPERATION,
         });
-        const rawText = searchResponse.text || '{}';
+        const rawText = (typeof searchResponseText === 'string' ? searchResponseText : JSON.stringify(searchResponseText)) || '{}';
         try {
           const jsonMatch = rawText.match(/```json\s*([\s\S]*?)\s*```/) || rawText.match(/\{[\s\S]*"collected_facts"[\s\S]*\}/);
           pipelineSearchResults = JSON.parse(jsonMatch ? (jsonMatch[1] || jsonMatch[0]).trim() : rawText.trim());

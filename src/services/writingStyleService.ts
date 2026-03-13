@@ -175,11 +175,9 @@ export const extractTextFromDocument = async (file: File): Promise<string> => {
  * 텍스트에서 말투/어조 분석
  */
 export const analyzeWritingStyle = async (
-  sampleText: string, 
+  sampleText: string,
   styleName: string
 ): Promise<LearnedWritingStyle> => {
-  const ai = getAiClient();
-  
   const prompt = `당신은 블로그 글의 말투와 어조를 분석하는 전문가입니다.
 
 [분석할 텍스트]
@@ -218,38 +216,36 @@ JSON으로 답변해주세요:
 }`;
 
   try {
-    const response = await ai.models.generateContent({
+    const response = await callGemini({
+      prompt,
       model: GEMINI_MODEL.PRO,
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            tone: { type: Type.STRING },
-            sentenceEndings: {
-              type: Type.ARRAY,
-              items: { type: Type.STRING }
-            },
-            vocabulary: {
-              type: Type.ARRAY,
-              items: { type: Type.STRING }
-            },
-            structure: { type: Type.STRING },
-            emotionLevel: {
-              type: Type.STRING,
-              enum: ["low", "medium", "high"]
-            },
-            formalityLevel: {
-              type: Type.STRING,
-              enum: ["casual", "neutral", "formal"]
-            },
-            description: { type: Type.STRING },
-            stylePrompt: { type: Type.STRING }
+      responseType: 'json',
+      schema: {
+        type: Type.OBJECT,
+        properties: {
+          tone: { type: Type.STRING },
+          sentenceEndings: {
+            type: Type.ARRAY,
+            items: { type: Type.STRING }
           },
-          required: ["tone", "sentenceEndings", "vocabulary", "structure", "emotionLevel", "formalityLevel", "description", "stylePrompt"]
-        }
-      }
+          vocabulary: {
+            type: Type.ARRAY,
+            items: { type: Type.STRING }
+          },
+          structure: { type: Type.STRING },
+          emotionLevel: {
+            type: Type.STRING,
+            enum: ["low", "medium", "high"]
+          },
+          formalityLevel: {
+            type: Type.STRING,
+            enum: ["casual", "neutral", "formal"]
+          },
+          description: { type: Type.STRING },
+          stylePrompt: { type: Type.STRING }
+        },
+        required: ["tone", "sentenceEndings", "vocabulary", "structure", "emotionLevel", "formalityLevel", "description", "stylePrompt"]
+      },
     });
 
     // Gemini 응답에서 프로필 안전 추출 (candidates[0].content.parts[0].text)
