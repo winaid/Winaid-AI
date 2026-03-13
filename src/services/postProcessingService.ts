@@ -6,7 +6,7 @@
  */
 import { Type } from "@google/genai";
 import { ImageStyle, FactCheckReport } from "../types";
-import { GEMINI_MODEL, TIMEOUTS, callGemini, getAiClient } from "./geminiClient";
+import { GEMINI_MODEL, TIMEOUTS, callGemini } from "./geminiClient";
 import { SYSTEM_PROMPT, getStage2_AiRemovalAndCompliance, getDynamicSystemPrompt } from "../lib/gpt52-prompts-staged";
 import { detectAiSmell, FEW_SHOT_EXAMPLES, CATEGORY_SPECIFIC_PROMPTS, PARAGRAPH_STRUCTURE_GUIDE } from "../utils/humanWritingPrompts";
 
@@ -109,8 +109,6 @@ export const regenerateCardSlide = async (
     imageStyle?: ImageStyle;
   }
 ): Promise<{ newCardHtml: string; newImagePrompt: string; message: string }> => {
-  const ai = getAiClient();
-  
   const slidePosition = cardIndex === 0 
     ? '표지 (1장)' 
     : cardIndex === context.totalSlides - 1 
@@ -168,24 +166,23 @@ JSON 형식으로 답변:
 `;
 
   try {
-    const response = await ai.models.generateContent({
+    const result = await callGemini({
+      prompt,
       model: 'gemini-3.1-pro-preview',  // 카드뉴스 슬라이드 수정은 3.1 PRO
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            newCardHtml: { type: Type.STRING },
-            newImagePrompt: { type: Type.STRING },
-            message: { type: Type.STRING }
-          },
-          required: ["newCardHtml", "newImagePrompt", "message"]
-        }
-      }
+      responseType: 'json',
+      schema: {
+        type: Type.OBJECT,
+        properties: {
+          newCardHtml: { type: Type.STRING },
+          newImagePrompt: { type: Type.STRING },
+          message: { type: Type.STRING }
+        },
+        required: ["newCardHtml", "newImagePrompt", "message"]
+      },
+      timeout: TIMEOUTS.GENERATION,
     });
-    
-    return JSON.parse(response.text || "{}");
+
+    return result;
   } catch (error) {
     console.error('카드 재생성 실패:', error);
     throw error;
@@ -223,8 +220,6 @@ export const regenerateSlideContent = async (params: {
   speakingNote: string;
   imageKeyword: string;
 }> => {
-  const ai = getAiClient();
-  
   const slidePosition = params.slideIndex === 0 
     ? '표지 (첫 번째)' 
     : params.slideIndex === params.totalSlides - 1 
@@ -333,26 +328,25 @@ JSON 형식:
 `;
 
   try {
-    const response = await ai.models.generateContent({
+    const result = await callGemini({
+      prompt,
       model: 'gemini-3.1-pro-preview',  // 카드뉴스 표지 재생성은 3.1 PRO
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            subtitle: { type: Type.STRING },
-            mainTitle: { type: Type.STRING },
-            description: { type: Type.STRING },
-            speakingNote: { type: Type.STRING },
-            imageKeyword: { type: Type.STRING }
-          },
-          required: ["subtitle", "mainTitle", "description", "speakingNote", "imageKeyword"]
-        }
-      }
+      responseType: 'json',
+      schema: {
+        type: Type.OBJECT,
+        properties: {
+          subtitle: { type: Type.STRING },
+          mainTitle: { type: Type.STRING },
+          description: { type: Type.STRING },
+          speakingNote: { type: Type.STRING },
+          imageKeyword: { type: Type.STRING }
+        },
+        required: ["subtitle", "mainTitle", "description", "speakingNote", "imageKeyword"]
+      },
+      timeout: TIMEOUTS.GENERATION,
     });
-    
-    return JSON.parse(response.text || "{}");
+
+    return result;
   } catch (error) {
     console.error('슬라이드 원고 재생성 실패:', error);
     throw error;
@@ -365,8 +359,6 @@ export const modifyPostWithAI = async (currentHtml: string, userInstruction: str
   regenerateImageIndices?: number[],
   newImagePrompts?: string[]
 }> => {
-    const ai = getAiClient();
-    
     // 이미지 URL을 플레이스홀더로 대체 (토큰 초과 방지)
     // base64 이미지나 긴 URL을 짧은 플레이스홀더로 변환
     const imageMap: Map<string, string> = new Map();
@@ -464,35 +456,24 @@ ${FEW_SHOT_EXAMPLES}
 [이미지 재생성] 이미지 관련 요청 시 regenerateImageIndices, newImagePrompts 반환
 `;
 
-      const response = await ai.models.generateContent({
+      const result = await callGemini({
+        prompt: modifyPrompt,
         model: "gemini-3.1-pro-preview",  // 고품질 글쓰기용 3.1 PRO 모델
-        contents: modifyPrompt,
-        config: { 
-          responseMimeType: "application/json", 
-          responseSchema: { 
-            type: Type.OBJECT, 
-            properties: { 
-              newHtml: { type: Type.STRING }, 
-              message: { type: Type.STRING },
-              regenerateImageIndices: { type: Type.ARRAY, items: { type: Type.NUMBER } },
-              newImagePrompts: { type: Type.ARRAY, items: { type: Type.STRING } }
-            }, 
-            required: ["newHtml", "message"] 
-          } 
-        }
+        responseType: 'json',
+        schema: {
+          type: Type.OBJECT,
+          properties: {
+            newHtml: { type: Type.STRING },
+            message: { type: Type.STRING },
+            regenerateImageIndices: { type: Type.ARRAY, items: { type: Type.NUMBER } },
+            newImagePrompts: { type: Type.ARRAY, items: { type: Type.STRING } }
+          },
+          required: ["newHtml", "message"]
+        },
+        timeout: TIMEOUTS.GENERATION,
       });
-      
-      const responseText = response.text || "{}";
-      console.log('🔄 AI 정밀보정 응답:', responseText.substring(0, 500));
-      
-      let result;
-      try {
-        result = JSON.parse(responseText);
-      } catch (parseError) {
-        console.error('❌ AI 정밀보정 JSON 파싱 실패:', parseError);
-        console.error('   - 원본 응답:', responseText.substring(0, 1000));
-        throw new Error('AI 응답을 파싱할 수 없습니다. 다시 시도해주세요.');
-      }
+
+      console.log('🔄 AI 정밀보정 응답:', JSON.stringify(result).substring(0, 500));
       
       // 🚨 방어 코드: newHtml이 없으면 에러 발생
       if (!result.newHtml) {

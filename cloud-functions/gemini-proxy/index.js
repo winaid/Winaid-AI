@@ -49,13 +49,56 @@ functions.http("geminiProxy", async (req, res) => {
   try {
     const body = req.body;
 
-    if (!body || !body.prompt) {
-      return res.status(400).json({ error: "prompt is required" });
-    }
-
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
       return res.status(500).json({ error: "API key not configured" });
+    }
+
+    // =============================================
+    // RAW 모드: 클라이언트가 Gemini API 바디를 직접 구성
+    // 이미지 생성/편집 등 고급 기능에 사용
+    // =============================================
+    if (body && body.raw === true) {
+      if (!body.model) {
+        return res.status(400).json({ error: "model is required in raw mode" });
+      }
+      if (!body.apiBody) {
+        return res.status(400).json({ error: "apiBody is required in raw mode" });
+      }
+
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${body.model}:generateContent?key=${apiKey}`;
+
+      const controller = new AbortController();
+      const timeout = Math.min(body.timeout || 180000, 300000);
+      const tid = setTimeout(() => controller.abort(), timeout);
+
+      const response = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body.apiBody),
+        signal: controller.signal,
+      });
+
+      clearTimeout(tid);
+
+      if (!response.ok) {
+        const errText = await response.text();
+        return res.status(response.status).json({
+          error: `Gemini API error (${response.status})`,
+          details: errText,
+        });
+      }
+
+      // Raw 모드: Gemini API 응답을 그대로 전달
+      const result = await response.json();
+      return res.status(200).json(result);
+    }
+
+    // =============================================
+    // 일반 모드: prompt 기반 텍스트 생성
+    // =============================================
+    if (!body || !body.prompt) {
+      return res.status(400).json({ error: "prompt is required" });
     }
 
     // Gemini REST API 요청 구성

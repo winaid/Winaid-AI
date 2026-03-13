@@ -10,7 +10,7 @@
  * - generateCardNewsWithAgents: 통합 오케스트레이터
  */
 import { Type } from "@google/genai";
-import { getAiClient } from "./geminiClient";
+import { callGemini, GEMINI_MODEL, TIMEOUTS } from "./geminiClient";
 import { STYLE_KEYWORDS, cleanImagePromptText, translateStylePromptToKorean, getCurrentYear, analyzeStyleReferenceImage } from "./imageGenerationService";
 import { DESIGNER_PERSONA, SERIES_DESIGN_RULES } from "./calendarTemplateService";
 import { getDesignTemplateById } from "./cardNewsDesignTemplates";
@@ -135,7 +135,6 @@ const storyPlannerAgent = async (
   slideCount: number,
   writingStyle: WritingStyle
 ): Promise<CardNewsStory> => {
-  const ai = getAiClient();
   const currentYear = getCurrentYear();
 
   const styleLabel = writingStyle === 'expert' ? '전문가형' : writingStyle === 'empathy' ? '공감형' : '전환형';
@@ -291,41 +290,38 @@ ${slideCount >= 7 ? `**5~${slideCount-2}장 - 시점 고정 (🔥 핵심! 🔥)*
 - slides: 슬라이드 배열`;
 
   try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-3.1-pro-preview',
-      contents: prompt,
-      config: {
-        tools: [{ googleSearch: {} }],
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            topic: { type: Type.STRING },
-            totalSlides: { type: Type.INTEGER },
-            overallTheme: { type: Type.STRING },
-            slides: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  slideNumber: { type: Type.INTEGER },
-                  slideType: { type: Type.STRING },
-                  subtitle: { type: Type.STRING },
-                  mainTitle: { type: Type.STRING },
-                  description: { type: Type.STRING },
-                  tags: { type: Type.ARRAY, items: { type: Type.STRING } },
-                  imageKeyword: { type: Type.STRING }
-                },
-                required: ["slideNumber", "slideType", "subtitle", "mainTitle", "description", "tags", "imageKeyword"]
-              }
+    const result = await callGemini({
+      prompt,
+      model: GEMINI_MODEL.PRO,
+      responseType: 'json',
+      schema: {
+        type: Type.OBJECT,
+        properties: {
+          topic: { type: Type.STRING },
+          totalSlides: { type: Type.INTEGER },
+          overallTheme: { type: Type.STRING },
+          slides: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                slideNumber: { type: Type.INTEGER },
+                slideType: { type: Type.STRING },
+                subtitle: { type: Type.STRING },
+                mainTitle: { type: Type.STRING },
+                description: { type: Type.STRING },
+                tags: { type: Type.ARRAY, items: { type: Type.STRING } },
+                imageKeyword: { type: Type.STRING }
+              },
+              required: ["slideNumber", "slideType", "subtitle", "mainTitle", "description", "tags", "imageKeyword"]
             }
-          },
-          required: ["topic", "totalSlides", "slides", "overallTheme"]
-        }
-      }
+          }
+        },
+        required: ["topic", "totalSlides", "slides", "overallTheme"]
+      },
+      googleSearch: true,
+      timeout: TIMEOUTS.CONTENT_GENERATION,
     });
-
-    const result = JSON.parse(response.text || "{}");
 
     // 🚨 후처리: 1장(표지)과 마지막 장의 description 강제로 빈 문자열로!
     if (result.slides && result.slides.length > 0) {

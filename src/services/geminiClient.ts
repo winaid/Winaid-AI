@@ -278,6 +278,48 @@ export async function callGemini(config: GeminiCallConfig): Promise<any> {
 }
 
 /**
+ * Raw 모드 프록시 호출 - Gemini API 바디를 직접 전달
+ * 이미지 생성/편집 등 고급 기능에 사용
+ */
+export async function callGeminiRaw(model: string, apiBody: any, timeout: number = TIMEOUTS.IMAGE_GENERATION): Promise<any> {
+  const proxyUrl = import.meta.env.VITE_GEMINI_PROXY_URL;
+  const fallbackUrl = `${import.meta.env.VITE_API_URL || ''}/api/gemini/generate`;
+  const endpoint = proxyUrl || fallbackUrl;
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeout + 5000);
+
+  try {
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ raw: true, model, apiBody, timeout }),
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      const errorBody = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
+      const error: any = new Error(errorBody.error || `서버 응답 오류 (${response.status})`);
+      error.status = response.status;
+      error.details = errorBody.details;
+      throw error;
+    }
+
+    return await response.json();
+  } catch (error: any) {
+    clearTimeout(timeoutId);
+    if (error.name === 'AbortError') {
+      const timeoutError: any = new Error('Gemini API timeout');
+      timeoutError.status = 504;
+      throw timeoutError;
+    }
+    throw error;
+  }
+}
+
+/**
  * 서버 프록시를 통한 Gemini API 호출
  * - API 키가 서버에만 존재 → 클라이언트 노출 없음
  * - /api/gemini/generate 엔드포인트 사용

@@ -1,4 +1,4 @@
-import { GEMINI_MODEL, TIMEOUTS, callGemini, getAiClient } from "./geminiClient";
+import { GEMINI_MODEL, TIMEOUTS, callGemini, callGeminiRaw } from "./geminiClient";
 
 // 프롬프트 추천/번역에 사용할 경량 모델
 const PROMPT_RECOMMEND_MODEL = GEMINI_MODEL.FLASH_LITE;
@@ -206,10 +206,8 @@ export const translateStylePromptToKorean = async (englishPrompt: string): Promi
   }
 
   try {
-    const ai = getAiClient();
-    const response = await ai.models.generateContent({
-      model: PROMPT_RECOMMEND_MODEL,
-      contents: `다음 이미지 스타일 프롬프트를 자연스러운 한국어로 번역해주세요.
+    const translated = await callGemini({
+      prompt: `다음 이미지 스타일 프롬프트를 자연스러운 한국어로 번역해주세요.
 전문 용어는 유지하고, 의미를 정확히 전달해주세요.
 
 영어 프롬프트:
@@ -222,12 +220,11 @@ export const translateStylePromptToKorean = async (englishPrompt: string): Promi
 - 간결하게 번역 (원문 길이와 비슷하게)
 
 번역:`,
-      config: {
-        temperature: 0.2,
-      }
-    });
-
-    const translated = response.text?.trim() || englishPrompt;
+      model: PROMPT_RECOMMEND_MODEL,
+      responseType: 'text',
+      temperature: 0.2,
+      timeout: TIMEOUTS.QUICK_OPERATION,
+    }) || englishPrompt;
     console.log('🌐 스타일 프롬프트 번역 완료:', englishPrompt.substring(0, 30), '→', translated.substring(0, 30));
     return translated;
   } catch (error) {
@@ -237,7 +234,6 @@ export const translateStylePromptToKorean = async (englishPrompt: string): Promi
 };
 
 export const recommendImagePrompt = async (blogContent: string, currentImageAlt: string, imageStyle: ImageStyle = 'illustration', customStylePrompt?: string): Promise<string> => {
-  const ai = getAiClient();
 
   // 스타일에 따른 프롬프트 가이드 (구체적으로 개선!)
   let styleGuide: string;
@@ -340,8 +336,6 @@ export const recommendCardNewsPrompt = async (
   imageStyle: ImageStyle = 'illustration',
   customStylePrompt?: string
 ): Promise<string> => {
-  const ai = getAiClient();
-
   // 스타일 가이드 결정
   let styleKeywords: string;
   if (imageStyle === 'custom' && customStylePrompt) {
@@ -452,8 +446,6 @@ export const generateBlogImage = async (
   aspectRatio: string = "16:9",
   customStylePrompt?: string
 ): Promise<string> => {
-  const ai = getAiClient();
-
   // 스타일 블록만 사용 (카드뉴스 프레임 없음!)
   const styleBlock = buildStyleBlock(style, customStylePrompt);
 
@@ -514,15 +506,13 @@ ${promptText}
     try {
       console.log(`🎨 블로그 이미지 생성 시도 ${attempt}/${MAX_RETRIES}...`);
 
-      const result = await ai.models.generateContent({
-        model: GEMINI_MODEL.IMAGE_PRO,  // Nano Banana Pro
-        contents: [{ text: finalPrompt }],
-        config: {
+      const result = await callGeminiRaw(GEMINI_MODEL.IMAGE_PRO, {
+        contents: [{ role: "user", parts: [{ text: finalPrompt }] }],
+        generationConfig: {
           responseModalities: ["IMAGE", "TEXT"],
-          temperature: 0.6, // 블로그 이미지 품질 향상
-          imageSize: "4K",
+          temperature: 0.6,
         },
-      });
+      }, TIMEOUTS.IMAGE_GENERATION);
 
       const parts = result?.candidates?.[0]?.content?.parts || [];
       const imagePart = parts.find((p: any) => p.inlineData?.data);
@@ -596,8 +586,6 @@ export const generateSingleImage = async (
   referenceImage?: string,
   copyMode?: boolean
 ): Promise<string> => {
-  const ai = getAiClient();
-
   // 1) 입력 정리: 충돌 문구 제거
   const cleanPromptText = normalizePromptTextForImage(promptText) || '';
 
@@ -753,19 +741,17 @@ ${cleanPromptText}
       console.log(`🎨 이미지 생성 시도 ${attempt}/${MAX_RETRIES} (gemini-3-pro-image-preview)...`);
 
       // Nano Banana Pro (Gemini 3 Pro Image) - 이미지 생성 전용 모델
-      const contents: any[] = refImagePart
+      const contentParts: any[] = refImagePart
         ? [refImagePart, { text: finalPrompt }]
         : [{ text: finalPrompt }];
 
-      const result = await ai.models.generateContent({
-        model: GEMINI_MODEL.IMAGE_PRO,  // Nano Banana Pro
-        contents: contents,
-        config: {
+      const result = await callGeminiRaw(GEMINI_MODEL.IMAGE_PRO, {
+        contents: [{ role: "user", parts: contentParts }],
+        generationConfig: {
           responseModalities: ["IMAGE", "TEXT"],
-          temperature: 0.4, // 카드뉴스 일관성 강화
-          imageSize: "4K",
+          temperature: 0.4,
         },
-      });
+      }, TIMEOUTS.IMAGE_GENERATION);
 
       // 안전 필터 등으로 인한 차단 확인
       const finishReason = result?.candidates?.[0]?.finishReason;
@@ -835,21 +821,16 @@ ${cleanPromptText}
 
 // 카드뉴스 스타일 참고 이미지 분석 함수 (표지/본문 구분)
 export const analyzeStyleReferenceImage = async (base64Image: string, isCover: boolean = false): Promise<string> => {
-  const ai = getAiClient();
-
   try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-3.1-flash-lite-preview',  // 스타일 분석은 FLASH
+    const mimeType = base64Image.includes('png') ? 'image/png' : 'image/jpeg';
+    const base64Data = base64Image.split(',')[1];
+
+    const result = await callGeminiRaw('gemini-3.1-flash-lite-preview', {
       contents: [
         {
           role: 'user',
           parts: [
-            {
-              inlineData: {
-                mimeType: base64Image.includes('png') ? 'image/png' : 'image/jpeg',
-                data: base64Image.split(',')[1] // base64 데이터만 추출
-              }
-            },
+            { inlineData: { mimeType, data: base64Data } },
             {
               text: `이 카드뉴스/인포그래픽 이미지의 **디자인 스타일과 일러스트 그림체**를 매우 상세히 분석해주세요.
 
@@ -943,12 +924,14 @@ export const analyzeStyleReferenceImage = async (base64Image: string, isCover: b
           ]
         }
       ],
-      config: {
+      generationConfig: {
         responseMimeType: "application/json"
       }
-    });
+    }, TIMEOUTS.QUICK_OPERATION);
 
-    return response.text || '{}';
+    const parts = result?.candidates?.[0]?.content?.parts || [];
+    const text = parts.map((p: any) => p.text || '').join('');
+    return text || '{}';
   } catch (error) {
     console.error('스타일 분석 실패:', error);
     return '{}';
@@ -976,7 +959,6 @@ export const transformImageStyle = async (
   transformType: StyleTransformType,
   customPrompt?: string,
 ): Promise<string> => {
-  const ai = getAiClient();
   const stylePrompt = customPrompt || STYLE_TRANSFORM_PROMPTS[transformType];
 
   const [meta, base64Data] = base64Image.split(',');
@@ -987,17 +969,16 @@ export const transformImageStyle = async (
 
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
-      const result = await ai.models.generateContent({
-        model: GEMINI_MODEL.IMAGE_PRO,
-        contents: [
+      const result = await callGeminiRaw(GEMINI_MODEL.IMAGE_PRO, {
+        contents: [{ role: "user", parts: [
           { inlineData: { data: base64Data, mimeType } },
           { text: `${DESIGNER_PERSONA}\n\n[STYLE TRANSFORMATION]\n${stylePrompt}\n\n[RULES]\n- Keep the SAME composition, subject, and layout\n- Change ONLY the rendering style/technique\n- Output should be high quality, suitable for professional medical clinic use\n- Maintain clean, readable design\n- Do NOT add any text to the image` },
-        ],
-        config: {
+        ] }],
+        generationConfig: {
           responseModalities: ['IMAGE', 'TEXT'],
           temperature: 0.4,
         },
-      });
+      }, TIMEOUTS.IMAGE_GENERATION);
 
       const parts = result?.candidates?.[0]?.content?.parts || [];
       const imagePart = parts.find((p: any) => p.inlineData?.data);
@@ -1023,7 +1004,6 @@ export const changeImageBackground = async (
   base64Image: string,
   backgroundDescription: string,
 ): Promise<string> => {
-  const ai = getAiClient();
   const [meta, base64Data] = base64Image.split(',');
   const mimeType = (meta.match(/data:(.*?);base64/) || [])[1] || 'image/png';
 
@@ -1032,17 +1012,16 @@ export const changeImageBackground = async (
 
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
-      const result = await ai.models.generateContent({
-        model: GEMINI_MODEL.IMAGE_PRO,
-        contents: [
+      const result = await callGeminiRaw(GEMINI_MODEL.IMAGE_PRO, {
+        contents: [{ role: "user", parts: [
           { inlineData: { data: base64Data, mimeType } },
           { text: `[BACKGROUND REPLACEMENT]\nKeep the main subject/person in this image exactly as they are.\nRemove the existing background and replace it with: ${backgroundDescription}\n\n[RULES]\n- Do NOT modify the main subject (person, object)\n- Only change the background\n- Make the transition between subject and new background look natural\n- Maintain professional medical/clinical aesthetic\n- High quality, clean edges around the subject` },
-        ],
-        config: {
+        ] }],
+        generationConfig: {
           responseModalities: ['IMAGE', 'TEXT'],
           temperature: 0.3,
         },
-      });
+      }, TIMEOUTS.IMAGE_GENERATION);
 
       const parts = result?.candidates?.[0]?.content?.parts || [];
       const imagePart = parts.find((p: any) => p.inlineData?.data);
@@ -1068,7 +1047,6 @@ export const editImageRegion = async (
   base64Image: string,
   editInstruction: string,
 ): Promise<string> => {
-  const ai = getAiClient();
   const [meta, base64Data] = base64Image.split(',');
   const mimeType = (meta.match(/data:(.*?);base64/) || [])[1] || 'image/png';
 
@@ -1077,17 +1055,16 @@ export const editImageRegion = async (
 
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
-      const result = await ai.models.generateContent({
-        model: GEMINI_MODEL.IMAGE_PRO,
-        contents: [
+      const result = await callGeminiRaw(GEMINI_MODEL.IMAGE_PRO, {
+        contents: [{ role: "user", parts: [
           { inlineData: { data: base64Data, mimeType } },
           { text: `[IMAGE EDITING INSTRUCTION]\n${editInstruction}\n\n[RULES]\n- Make ONLY the requested changes\n- Keep everything else in the image EXACTLY the same\n- Maintain the same style, colors, and quality\n- Output should look natural and seamless\n- Do NOT change the overall layout or composition` },
-        ],
-        config: {
+        ] }],
+        generationConfig: {
           responseModalities: ['IMAGE', 'TEXT'],
           temperature: 0.3,
         },
-      });
+      }, TIMEOUTS.IMAGE_GENERATION);
 
       const parts = result?.candidates?.[0]?.content?.parts || [];
       const imagePart = parts.find((p: any) => p.inlineData?.data);

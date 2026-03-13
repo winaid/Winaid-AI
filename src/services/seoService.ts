@@ -6,7 +6,7 @@
  */
 import { Type } from "@google/genai";
 import { TrendingItem, SeoTitleItem, SeoScoreReport } from "../types";
-import { GEMINI_MODEL, TIMEOUTS, callGemini, getAiClient } from "./geminiClient";
+import { GEMINI_MODEL, TIMEOUTS, callGemini } from "./geminiClient";
 
 const getCurrentYear = () => new Date().getFullYear();
 
@@ -105,10 +105,8 @@ const searchNewsForTrends = async (category: string, _month: number): Promise<st
 
       // Gemini 3 Flash로 뉴스 분석하여 최적화된 인사이트 추출
       try {
-        const ai = getAiClient();
-        const analysisResponse: any = await Promise.race([ai.models.generateContent({
-          model: GEMINI_MODEL.FLASH,
-          contents: `아래는 "${category}" 관련 네이버 뉴스 검색 결과입니다. 이를 분석하여 블로그 작성에 활용할 수 있는 최적의 인사이트를 추출해주세요.
+        const analysisResult = await callGemini({
+          prompt: `아래는 "${category}" 관련 네이버 뉴스 검색 결과입니다. 이를 분석하여 블로그 작성에 활용할 수 있는 최적의 인사이트를 추출해주세요.
 
 [네이버 뉴스 검색 결과]
 ${newsContext}
@@ -134,14 +132,12 @@ ${newsContext}
 
 ⚠️ 주의사항
 - (주의할 점)`,
-          config: {
-            responseMimeType: "text/plain",
-            temperature: 0.4,
-            thinkingConfig: { thinkingLevel: "low" }
-          }
-        }), new Promise((_, reject) => setTimeout(() => reject(new Error('뉴스 분석 타임아웃')), 30000))]);
-
-        const analysisResult = analysisResponse.text || '';
+          model: GEMINI_MODEL.FLASH,
+          responseType: 'text',
+          temperature: 0.4,
+          thinkingLevel: 'low',
+          timeout: 30000
+        }) || '';
         console.log(`[뉴스 트렌드] Gemini Flash 분석 완료`);
 
         return `[최신 뉴스 트렌드 - 네이버 뉴스 + Gemini 분석]\n\n${analysisResult}\n\n[원본 뉴스]\n${newsContext}`;
