@@ -284,39 +284,76 @@ export async function callGemini(config: GeminiCallConfig): Promise<any> {
 export async function callGeminiRaw(model: string, apiBody: any, timeout: number = TIMEOUTS.IMAGE_GENERATION): Promise<any> {
   const proxyUrl = import.meta.env.VITE_GEMINI_PROXY_URL;
   const fallbackUrl = `${import.meta.env.VITE_API_URL || ''}/api/gemini/generate`;
-  const endpoint = proxyUrl || fallbackUrl;
+  const endpoints = proxyUrl ? [proxyUrl, fallbackUrl] : [fallbackUrl];
 
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeout + 5000);
+  let lastError: any = null;
 
-  try {
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ raw: true, model, apiBody, timeout }),
-      signal: controller.signal,
-    });
+  for (const endpoint of endpoints) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeout + 5000);
 
-    clearTimeout(timeoutId);
+    try {
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ raw: true, model, apiBody, timeout }),
+        signal: controller.signal,
+      });
 
-    if (!response.ok) {
-      const errorBody = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
-      const error: any = new Error(errorBody.error || `서버 응답 오류 (${response.status})`);
-      error.status = response.status;
-      error.details = errorBody.details;
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const errorBody = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
+
+        // 프록시 자체 장애(502/503/504) 또는 raw 미지원(400 prompt required) → fallback 시도
+        if (endpoints.length > 1 && endpoint === endpoints[0] &&
+            (response.status === 502 || response.status === 503 || response.status === 504 ||
+             (response.status === 400 && errorBody.error?.includes('prompt')))) {
+          console.warn(`⚠️ 프록시 장애 (${response.status}), fallback 경로로 전환...`);
+          lastError = errorBody;
+          continue;
+        }
+
+        const error: any = new Error(errorBody.error || `서버 응답 오류 (${response.status})`);
+        error.status = response.status;
+        error.details = errorBody.details;
+        throw error;
+      }
+
+      return await response.json();
+    } catch (error: any) {
+      clearTimeout(timeoutId);
+
+      // AbortError(timeout)이고 fallback이 남아 있으면 시도
+      if (error.name === 'AbortError' && endpoints.length > 1 && endpoint === endpoints[0]) {
+        console.warn('⚠️ 프록시 타임아웃, fallback 경로로 전환...');
+        lastError = error;
+        continue;
+      }
+
+      // 네트워크 에러이고 fallback이 남아 있으면 시도
+      if (error.name !== 'AbortError' && !error.status && endpoints.length > 1 && endpoint === endpoints[0]) {
+        console.warn('⚠️ 프록시 네트워크 에러, fallback 경로로 전환...');
+        lastError = error;
+        continue;
+      }
+
+      if (error.name === 'AbortError') {
+        const timeoutError: any = new Error('Gemini API timeout');
+        timeoutError.status = 504;
+        throw timeoutError;
+      }
       throw error;
     }
-
-    return await response.json();
-  } catch (error: any) {
-    clearTimeout(timeoutId);
-    if (error.name === 'AbortError') {
-      const timeoutError: any = new Error('Gemini API timeout');
-      timeoutError.status = 504;
-      throw timeoutError;
-    }
-    throw error;
   }
+
+  // 모든 엔드포인트 실패
+  if (lastError?.name === 'AbortError') {
+    const timeoutError: any = new Error('Gemini API timeout');
+    timeoutError.status = 504;
+    throw timeoutError;
+  }
+  throw lastError || new Error('모든 프록시 엔드포인트 실패');
 }
 
 /**
