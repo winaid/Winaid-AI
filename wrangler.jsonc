@@ -4,6 +4,8 @@
   "compatibility_date": "2024-12-30",
   "pages_build_output_dir": "./dist",
   "compatibility_flags": ["nodejs_compat"],
+  // Gemini Developer API가 한국 egress를 거부 → US 리전에서 실행되도록 Smart Placement 활성화
+  "placement": { "mode": "smart" },
   "vars": {},
   "kv_namespaces": [
     {
