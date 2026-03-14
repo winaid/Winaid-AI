@@ -1694,9 +1694,10 @@ export interface CategoryTemplate {
 
 export const CATEGORY_TEMPLATES: Record<string, CategoryTemplate[]> = {
 
-  // ─── 진료 일정 (10개) ───
+  // ─── 진료 일정 (12개) ───
   // 연구 기반: 한국 병원 진료시간 안내 이미지 — 테이블/카드 레이아웃, 요일별 격자, 점심시간 표시
   // 지배적 패턴: 블루+화이트(신뢰), 민트/틸(치과), 베이지/아이보리(피부과/성형)
+  // 4계절 커버: 봄(벚꽃) / 여름(그린) / 가을(단풍) / 겨울(눈꽃) + 사계절 범용 8종
   schedule: [
     {
       id: 'sch_clean_blue', name: '클린 블루', color: '#3b82f6', accent: '#1d4ed8', bg: '#eff6ff',
@@ -1806,6 +1807,29 @@ HEADER (top 20%): Hospital name in teal (#0f766e). Large bold "N월 진료안내
 BODY (middle 60%): White card with subtle teal border. Calendar grid. Day headers in teal text. Closed days: teal (#14b8a6) circle highlight. Shortened days: amber circle. Small green cross (+) medical icon accent.
 BOTTOM (10%): "점심시간 13:00~14:00" in teal. Contact info. Green cross accent.
 Fresh, hygienic, professional. The default dental clinic aesthetic — clean and refreshing.`,
+    },
+    {
+      id: 'sch_lavender_soft', name: '라벤더 소프트', color: '#8b5cf6', accent: '#7c3aed', bg: '#f5f3ff',
+      desc: '연보라 그라데이션 + 스파클 장식 (성형/에스테틱)',
+      layoutHint: 'hl_rip',
+      aiPrompt: `Korean aesthetic clinic monthly schedule. Soft lavender purple design — preferred by plastic surgery and beauty clinics.
+BACKGROUND: Soft lavender gradient (#f3e8ff to white). Subtle abstract purple watercolor shapes at 8% opacity.
+HEADER (top 20%): Four-pointed star sparkles (✦) in purple at 15% opacity flanking title. Large bold "N월 진료일정" in dark purple (#7c3aed, weight 800) centered.
+BODY (middle 58%): Clean white area. Day headers inside light lavender (#e9d5ff) bar in bold purple. Calendar grid below. Closed/holiday days: purple circle behind white date number, "휴진" in purple bold below. Consecutive closed days: light lavender rounded rectangle spanning multiple cells.
+BOTTOM (15%): Rounded callout box with light purple border. Notice text with important words ("정상진료"/"휴진") in bold purple. Clinic name and logo at bottom.
+Feminine, elegant. Purple sparkle accents. Gentle, premium aesthetic clinic feel.`,
+    },
+    {
+      id: 'sch_classic_green', name: '클래식 그린', color: '#2d5a4a', accent: '#1a3c32', bg: '#f5f1eb',
+      desc: '크림+다크그린 분할 + 다이아몬드 마커 (한의원/내과)',
+      layoutHint: 'hl_bignum',
+      aiPrompt: `Korean traditional medicine clinic monthly schedule. Elegant dark green design — suits Korean medicine (한의원) and internal medicine clinics.
+BACKGROUND: Split — cream (#f5f1eb) upper 60%, deep forest green (#2d5a4a) lower 40%.
+HEADER (top 15%): Clinic logo (tooth/medical icon) + clinic name in dark green centered. Small English subtitle below.
+TITLE BAR (10%): Dark green (#2d5a4a) rounded rectangle banner with bold white "N월 진료일정" centered.
+BODY (middle 45%): White card with thin green border and decorative corner brackets. Day headers: Sunday coral, Saturday blue, weekdays dark. Calendar grid. Closed days: dark green diamond (rotated 45°) behind white date number, holiday name + "휴진" in green below. Normal special days: green circle behind white date.
+BOTTOM (25%): On green background. White text notice with closure dates. Professional, dignified. "참고하여 내원에 차질이 없으시기 바랍니다."
+Elegant, classic, authoritative. Dark green conveys nature and traditional medicine trust.`,
     },
   ],
 
@@ -3054,11 +3078,11 @@ function buildTemplateAiPrompt(req: AiTemplateRequest): string {
   const { category, stylePrompt, textContent, hospitalName, extraPrompt, imageSize, calendarTheme } = req;
 
   const categoryLabels: Record<string, string> = {
-    schedule: 'hospital monthly schedule / clinic calendar announcement - clean, modern, trustworthy medical design',
-    event: 'hospital promotion / medical event announcement - eye-catching yet professional, clear price hierarchy',
-    doctor: 'doctor introduction / new physician announcement - professional, trustworthy portrait-style medical profile',
-    notice: 'hospital notice / important announcement - clean, authoritative, easy to read at a glance',
-    greeting: 'holiday greeting / seasonal message from hospital - warm, heartfelt, culturally appropriate Korean design',
+    schedule: 'hospital monthly schedule / clinic calendar announcement - clean, modern, trustworthy medical design. MUST include 점심시간 (lunch break) info if provided. Use table/grid layout with clear day headers (일월화수목금토). Sunday=red, Saturday=blue. Closed days clearly marked. Mobile-readable at phone distance.',
+    event: 'hospital promotion / medical event announcement - eye-catching yet professional, clear price hierarchy. CRITICAL: discount number must be largest element (48-72pt equivalent). Show original price with strikethrough + discounted price prominently. Event period dates must be clearly visible. Korean medical advertising law: no superlatives (최고/유일/첫), no guarantees of outcome.',
+    doctor: 'doctor introduction / new physician announcement - professional, trustworthy portrait-style medical profile. CRITICAL Korean medical law compliance: NEVER use superlatives like 최고(best), 유일(only), 첫(first), 독보적(unrivaled). Only list verifiable credentials (학력, 전공, 자격증, 학회). Avoid subjective quality claims.',
+    notice: 'hospital notice / important announcement - clean, authoritative, easy to read at a glance. Centered single-card layout preferred. Structured information rows. Include resumption date (진료 재개일) if applicable. Emergency contact or alternative clinic info at bottom.',
+    greeting: 'holiday greeting / seasonal message from hospital - warm, heartfelt, culturally appropriate Korean design. Use traditional Korean motifs appropriate to the specific holiday. Calligraphic greeting text (서예체 style). Include hospital branding subtly at bottom.',
     hiring: `hospital job posting / staff recruitment announcement.
 ${SERIES_DESIGN_RULES}
 CRITICAL DESIGN RULES FOR HIRING:
