@@ -2964,13 +2964,14 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
       console.warn(`[BLOG_FLOW] ✅ 파이프라인 textData 확보 — title: "${textData.title}", content: ${textData.content?.length || 0}자`);
       console.warn(`[PIPELINE_RESULT] source=pipeline`);
     } catch (pipelineError: any) {
+      const failReason = `${pipelineError?.status || 'N/A'} ${pipelineError?.message?.substring(0, 120) || 'unknown'}`;
       console.error(`[BLOG_FLOW] ❌ 파이프라인 실패: ${pipelineError?.message}`);
-      console.warn(`[BLOG_FLOW] ⚠️ 구형 generateBlogPostText 폴백 진입 — 원인: ${pipelineError?.status || 'N/A'} ${pipelineError?.message?.substring(0, 100)}`);
+      console.warn(`[BLOG_FLOW] ⚠️ 구형 generateBlogPostText 폴백 진입 — 원인: ${failReason}`);
       safeProgress('⚠️ 파이프라인 실패, 기존 방식으로 재시도...');
       try {
         textData = await generateBlogPostText(request, safeProgress);
         console.warn(`[BLOG_FLOW] ✅ 구형 폴백 성공 — title: "${textData?.title}", content: ${textData?.content?.length || 0}자`);
-        console.warn(`[PIPELINE_RESULT] source=legacy_fallback`);
+        console.warn(`[PIPELINE_RESULT] source=legacy_fallback | reason=${failReason} | textLength=${textData?.content?.length || 0} | imagePrompts=${textData?.imagePrompts?.length || 0} | model=PRO(60s,JSON,googleSearch)`);
       } catch (fallbackError: any) {
         console.error(`[BLOG_FLOW] ❌ 구형 폴백도 실패: ${fallbackError?.message}`);
         throw new Error(pipelineError?.message || '블로그 생성에 실패했습니다. 다시 시도해주세요.');
