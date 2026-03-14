@@ -501,14 +501,12 @@ export const crawlAndLearnHospitalStyle = async (
 
   // 기존 프로파일 조회 (개별 URL 크롤링 시 naver_blog_url/crawled_posts_count 보존)
   let existingProfile: any = null;
-  try {
-    const { data: ep } = await supabase
-      .from('hospital_style_profiles')
-      .select('naver_blog_url, crawled_posts_count')
-      .eq('hospital_name', hospitalName)
-      .single();
-    if (ep) existingProfile = ep;
-  } catch { /* 없으면 무시 */ }
+  const { data: ep } = await supabase
+    .from('hospital_style_profiles')
+    .select('naver_blog_url, crawled_posts_count')
+    .eq('hospital_name', hospitalName)
+    .maybeSingle();
+  if (ep) existingProfile = ep;
 
   // naver_blog_url: 기존 URL 목록에 새 URL 병합 (중복 제거)
   const existingUrls = (existingProfile?.naver_blog_url || '').split(',').map((u: string) => u.trim()).filter(Boolean);
