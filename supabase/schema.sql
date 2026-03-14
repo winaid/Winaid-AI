@@ -381,19 +381,25 @@ CREATE INDEX IF NOT EXISTS idx_crawled_posts_hospital ON public.hospital_crawled
 CREATE INDEX IF NOT EXISTS idx_crawled_posts_crawled_at ON public.hospital_crawled_posts(crawled_at DESC);
 CREATE INDEX IF NOT EXISTS idx_crawled_posts_hospital_source ON public.hospital_crawled_posts(hospital_name, source_blog_id);
 
--- 병원 + 출처 블로그별 10개 보관 트리거 (URL별 10개씩 유지)
-CREATE OR REPLACE FUNCTION limit_crawled_posts_per_hospital()
+-- BEFORE INSERT: source_blog_id 자동 설정
+CREATE OR REPLACE FUNCTION set_crawled_post_source_blog_id()
 RETURNS TRIGGER AS $$
 BEGIN
-  -- source_blog_id 자동 설정 (NULL이면 url에서 파싱)
   IF NEW.source_blog_id IS NULL THEN
     NEW.source_blog_id := coalesce(
       (regexp_match(NEW.url, 'blog\.naver\.com/([^/?#]+)'))[1],
       'unknown'
     );
   END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
 
-  -- 같은 병원 + 같은 출처 블로그에서 10개 초과 시 오래된 것 삭제
+-- AFTER INSERT: 출처 블로그별 10개 초과 시 오래된 것 삭제
+-- upsert 충돌(ON CONFLICT DO UPDATE) 시 AFTER INSERT는 발동하지 않아 데이터 유실 없음
+CREATE OR REPLACE FUNCTION limit_crawled_posts_per_hospital()
+RETURNS TRIGGER AS $$
+BEGIN
   DELETE FROM public.hospital_crawled_posts
   WHERE hospital_name = NEW.hospital_name
     AND source_blog_id = NEW.source_blog_id
@@ -404,13 +410,19 @@ BEGIN
       ORDER BY crawled_at DESC
       LIMIT 10
     );
-  RETURN NEW;
+  RETURN NULL;
 END;
 $$ LANGUAGE plpgsql;
 
 DROP TRIGGER IF EXISTS trg_limit_crawled_posts ON public.hospital_crawled_posts;
-CREATE TRIGGER trg_limit_crawled_posts
+DROP TRIGGER IF EXISTS trg_set_source_blog_id ON public.hospital_crawled_posts;
+
+CREATE TRIGGER trg_set_source_blog_id
   BEFORE INSERT ON public.hospital_crawled_posts
+  FOR EACH ROW EXECUTE FUNCTION set_crawled_post_source_blog_id();
+
+CREATE TRIGGER trg_limit_crawled_posts
+  AFTER INSERT ON public.hospital_crawled_posts
   FOR EACH ROW EXECUTE FUNCTION limit_crawled_posts_per_hospital();
 
 -- ============================================
