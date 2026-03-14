@@ -67,23 +67,37 @@ export const AI_PROMPT_TEMPLATES = [
 
 // blob URL → base64 복원: 저장/export 시 HTML 내 blob: URL을 원본 base64로 되돌림
 // geminiService, useDocumentExport, ResultPreview(autosave) 등에서 공통 사용
+// ⚠️ src가 이미 data: (base64)이면 건드리지 않음 — 이미지 재생성 후 새 이미지 보존
 export function restoreBase64Images(
   html: string,
   generatedImages?: { index: number; data: string; prompt: string }[]
 ): string {
   if (!generatedImages || generatedImages.length === 0) return html;
   let restored = html;
+  let restoredCount = 0;
+  let skippedCount = 0;
   for (const img of generatedImages) {
     // data-image-index="N" 속성을 가진 img 태그의 src를 base64로 복원
     // src가 data-image-index 뒤에 올 수 있으므로 두 패턴 모두 처리
+    // 단, src가 이미 data: (base64)이면 건드리지 않음 (재생성 이미지 보존)
     const p1 = new RegExp(
-      `(<img[^>]*data-image-index="${img.index}"[^>]*src=")([^"]*)(")`, 'gi'
+      `(<img[^>]*data-image-index="${img.index}"[^>]*src=")(blob:[^"]*)(")`, 'gi'
     );
+    const before1 = restored;
     restored = restored.replace(p1, `$1${img.data}$3`);
     const p2 = new RegExp(
-      `(<img[^>]*src=")([^"]*?)("[^>]*data-image-index="${img.index}")`, 'gi'
+      `(<img[^>]*src=")(blob:[^"]*?)("[^>]*data-image-index="${img.index}")`, 'gi'
     );
+    const before2 = restored;
     restored = restored.replace(p2, `$1${img.data}$3`);
+    if (restored !== before1 || restored !== before2) {
+      restoredCount++;
+    } else {
+      skippedCount++;
+    }
+  }
+  if (restoredCount > 0 || skippedCount > 0) {
+    console.info(`[IMG_REGEN_SYNC] restoreBase64Images | restored=${restoredCount} | skipped=${skippedCount} (already base64 or no match)`);
   }
   return restored;
 }

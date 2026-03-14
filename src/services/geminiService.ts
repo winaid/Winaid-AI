@@ -3658,9 +3658,30 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
     .replace(/<[^>]+>/g, ' ')    // HTML 태그 제거
     .replace(/\s+/g, ' ')
     .trim();
-  const blogHistoryContent = plainTextForEmbedding || storageHtml;
+  // fallback: plainText가 비면 storageHtml에서 태그 제거한 텍스트 사용 (base64 HTML을 임베딩에 넣지 않음)
+  let blogHistoryContent: string;
+  let embedSource: string;
+  if (plainTextForEmbedding.length >= 50) {
+    blogHistoryContent = plainTextForEmbedding;
+    embedSource = 'plainText';
+  } else {
+    // storageHtml에서 순수 텍스트 추출 (base64 data URI 제거 → 태그 제거)
+    const fallbackText = storageHtml
+      .replace(/src="data:image[^"]*"/gi, 'src=""') // base64 이미지 src 제거
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (fallbackText.length >= 50) {
+      blogHistoryContent = fallbackText;
+      embedSource = 'fallbackHtml';
+    } else {
+      // 최후 fallback: 제목만 사용
+      blogHistoryContent = textData.title || request.topic || '';
+      embedSource = 'fallbackTitle';
+    }
+  }
   const hasBlobInHistory = storageHtml.includes('blob:');
-  console.info(`[STORAGE] saveBlogHistory | contentType=${plainTextForEmbedding ? 'text' : 'html'} | contentLen=${blogHistoryContent.length}자 | htmlLen=${storageHtml.length}자(${Math.round(storageHtml.length * 2 / 1024)}KB) | blob잔류=${hasBlobInHistory}`);
+  console.info(`[STORAGE] saveBlogHistory | contentType=${embedSource} | contentLen=${blogHistoryContent.length}자 | htmlLen=${storageHtml.length}자(${Math.round(storageHtml.length * 2 / 1024)}KB) | blob잔류=${hasBlobInHistory}`);
   saveBlogHistory(
     textData.title,
     blogHistoryContent,

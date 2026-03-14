@@ -586,9 +586,19 @@ export const saveBlogHistory = async (
 
     console.log(`👤 사용자 ID: ${userId || '익명'}`);
 
-    // 임베딩 생성
-    console.log('🔄 임베딩 벡터 생성 중...');
-    const embedding = await getTextEmbedding(content);
+    // 임베딩 생성 — base64 HTML이 입력되지 않도록 방어
+    const hasBase64 = content.includes('data:image');
+    const contentForEmbed = hasBase64
+      ? content.replace(/src="data:image[^"]*"/gi, 'src=""').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+      : content;
+    const embedSource = hasBase64 ? 'stripped' : 'direct';
+    console.info(`[EMBED_INPUT] len=${contentForEmbed.length}자 | source=${embedSource} | hasBase64=${hasBase64}`);
+    const embedding = contentForEmbed.length >= 20
+      ? await getTextEmbedding(contentForEmbed)
+      : [];
+    if (contentForEmbed.length < 20) {
+      console.warn(`[EMBED_INPUT] ⚠️ 임베딩 스킵 — 텍스트 너무 짧음 (${contentForEmbed.length}자)`);
+    }
 
     if (embedding.length === 0) {
       console.warn('⚠️ 임베딩 생성 실패, 임베딩 없이 저장합니다.');
