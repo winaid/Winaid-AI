@@ -954,6 +954,10 @@ const lsSave = (posts: CrawledPost[]) => {
   try { localStorage.setItem(LS_KEY, JSON.stringify(posts)); } catch {}
 };
 
+/** url에서 네이버 블로그 ID 추출 (blog.naver.com/{blogId}/... → blogId) */
+const extractBlogId = (url: string): string =>
+  url.match(/blog\.naver\.com\/([^/?#]+)/)?.[1] || 'unknown';
+
 /**
  * 크롤링 글을 Supabase에 저장 (upsert). 실패 시 localStorage 폴백.
  */
@@ -968,6 +972,7 @@ export const saveCrawledPost = async (
     hospital_name: hospitalName,
     url,
     content,
+    source_blog_id: extractBlogId(url),
     crawled_at: new Date().toISOString(),
   };
   if (meta?.title) record.title = decodeHtmlEntities(meta.title);

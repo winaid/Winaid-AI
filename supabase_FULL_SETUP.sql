@@ -191,6 +191,7 @@ CREATE TABLE IF NOT EXISTS public.hospital_crawled_posts (
   hospital_name TEXT NOT NULL,
   url TEXT NOT NULL,
   content TEXT,
+  source_blog_id TEXT,                   -- 출처 블로그 ID (blog.naver.com/{blogId})
   score_typo INTEGER,
   score_medical_law INTEGER,
   score_total INTEGER,
@@ -235,6 +236,7 @@ END $$;
 
 CREATE INDEX IF NOT EXISTS idx_crawled_posts_hospital ON public.hospital_crawled_posts(hospital_name);
 CREATE INDEX IF NOT EXISTS idx_crawled_posts_crawled_at ON public.hospital_crawled_posts(crawled_at DESC);
+CREATE INDEX IF NOT EXISTS idx_crawled_posts_hospital_source ON public.hospital_crawled_posts(hospital_name, source_blog_id);
 
 
 -- ============================================

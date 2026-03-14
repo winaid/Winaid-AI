@@ -303,6 +303,7 @@ export interface CrawledPost {
   hospital_name: string;
   url: string;
   content: string;
+  source_blog_id?: string;               // 출처 블로그 ID (blog.naver.com/{blogId})
   title?: string;
   published_at?: string;
   summary?: string;

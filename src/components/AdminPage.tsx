@@ -327,13 +327,14 @@ const StyleTab: React.FC<StyleTabProps> = ({
                   const profileCount = profile?.crawled_posts_count || 0;
                   if (allDisplayPosts.length === 0 && profileCount === 0) return null;
 
-                  // URL에서 블로그 ID 추출 (blog.naver.com/{blogId}/... → blogId)
-                  const getBlogId = (url: string) => url.match(/blog\.naver\.com\/([^/?#]+)/)?.[1] || 'unknown';
+                  // source_blog_id 우선, 없으면 url에서 파싱 (fallback)
+                  const getBlogId = (post: CrawledPost) =>
+                    post.source_blog_id || post.url.match(/blog\.naver\.com\/([^/?#]+)/)?.[1] || 'unknown';
 
                   // 블로그별 그룹핑 + 각 그룹 최신 10개
                   const blogGroups: Record<string, CrawledPost[]> = {};
                   for (const post of allDisplayPosts) {
-                    const bid = getBlogId(post.url);
+                    const bid = getBlogId(post);
                     if (!blogGroups[bid]) blogGroups[bid] = [];
                     blogGroups[bid].push(post);
                   }

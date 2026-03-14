@@ -354,6 +354,7 @@ CREATE TABLE IF NOT EXISTS public.hospital_crawled_posts (
   hospital_name TEXT NOT NULL,
   url TEXT NOT NULL,
   content TEXT,
+  source_blog_id TEXT,                   -- 출처 블로그 ID (blog.naver.com/{blogId})
   score_typo INTEGER,
   score_medical_law INTEGER,
   score_total INTEGER,
@@ -378,15 +379,28 @@ CREATE POLICY "Authenticated users can delete crawled posts" ON public.hospital_
 
 CREATE INDEX IF NOT EXISTS idx_crawled_posts_hospital ON public.hospital_crawled_posts(hospital_name);
 CREATE INDEX IF NOT EXISTS idx_crawled_posts_crawled_at ON public.hospital_crawled_posts(crawled_at DESC);
+CREATE INDEX IF NOT EXISTS idx_crawled_posts_hospital_source ON public.hospital_crawled_posts(hospital_name, source_blog_id);
 
+-- 병원 + 출처 블로그별 10개 보관 트리거 (URL별 10개씩 유지)
 CREATE OR REPLACE FUNCTION limit_crawled_posts_per_hospital()
 RETURNS TRIGGER AS $$
 BEGIN
+  -- source_blog_id 자동 설정 (NULL이면 url에서 파싱)
+  IF NEW.source_blog_id IS NULL THEN
+    NEW.source_blog_id := coalesce(
+      (regexp_match(NEW.url, 'blog\.naver\.com/([^/?#]+)'))[1],
+      'unknown'
+    );
+  END IF;
+
+  -- 같은 병원 + 같은 출처 블로그에서 10개 초과 시 오래된 것 삭제
   DELETE FROM public.hospital_crawled_posts
   WHERE hospital_name = NEW.hospital_name
+    AND source_blog_id = NEW.source_blog_id
     AND id NOT IN (
       SELECT id FROM public.hospital_crawled_posts
       WHERE hospital_name = NEW.hospital_name
+        AND source_blog_id = NEW.source_blog_id
       ORDER BY crawled_at DESC
       LIMIT 10
     );
@@ -396,7 +410,7 @@ $$ LANGUAGE plpgsql;
 
 DROP TRIGGER IF EXISTS trg_limit_crawled_posts ON public.hospital_crawled_posts;
 CREATE TRIGGER trg_limit_crawled_posts
-  AFTER INSERT ON public.hospital_crawled_posts
+  BEFORE INSERT ON public.hospital_crawled_posts
   FOR EACH ROW EXECUTE FUNCTION limit_crawled_posts_per_hospital();
 
 -- ============================================
