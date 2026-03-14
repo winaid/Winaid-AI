@@ -68,7 +68,7 @@ async function fetchLogNos(blogId: string, maxCandidates: number): Promise<strin
   const logNos: string[] = [];
   let page = 1;
 
-  while (logNos.length < maxCandidates && page <= 5) {
+  while (logNos.length < maxCandidates && page <= 10) {
     const listUrl = `https://blog.naver.com/PostList.naver?blogId=${blogId}&currentPage=${page}&categoryNo=0&postListType=&blogType=B`;
     const res = await fetch(listUrl, { headers: FETCH_HEADERS });
     if (!res.ok) break;
@@ -135,7 +135,7 @@ async function fetchPostContent(blogId: string, logNo: string): Promise<PostResu
   if (titleMatch) {
     title = titleMatch[1]
       .replace(/\s*:\s*네이버\s*블로그$/i, '')
-      .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"')
+      .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&#x27;/g, "'")
       .trim();
   }
   if (!title) {
@@ -178,33 +178,66 @@ async function fetchPostContent(blogId: string, logNo: string): Promise<PostResu
                    html.match(/<meta[^>]*content="([^"]+)"[^>]*property="og:image"/i);
   if (ogImage) thumbnail = ogImage[1];
 
-  // ── 본문 ──
+  // ── 본문 (다중 에디터 버전 지원) ──
   const paragraphs: string[] = [];
   let m: RegExpExecArray | null;
 
-  // se-text-paragraph (스마트에디터 3)
+  const cleanHtml = (raw: string) => raw
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'")
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  // 1) se-text-paragraph (스마트에디터 3 / ONE)
   const paraPattern = /<[^>]*class="[^"]*se-text-paragraph[^"]*"[^>]*>([\s\S]*?)<\/[^>]+>/g;
   while ((m = paraPattern.exec(html)) !== null) {
-    const text = m[1]
-      .replace(/<[^>]+>/g, ' ')
-      .replace(/&nbsp;/g, ' ').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&').replace(/&quot;/g, '"')
-      .replace(/\s+/g, ' ')
-      .trim();
+    const text = cleanHtml(m[1]);
     if (text.length > 10) paragraphs.push(text);
   }
 
-  // 폴백: se-module-text
+  // 2) se-module-text (스마트에디터 3 블록)
   if (paragraphs.length === 0) {
-    const fallback = /<div[^>]*class="[^"]*se-module-text[^"]*"[^>]*>([\s\S]*?)<\/div>/g;
-    while ((m = fallback.exec(html)) !== null) {
-      const text = m[1].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    const fb1 = /<div[^>]*class="[^"]*se-module-text[^"]*"[^>]*>([\s\S]*?)<\/div>/g;
+    while ((m = fb1.exec(html)) !== null) {
+      const text = cleanHtml(m[1]);
       if (text.length > 10) paragraphs.push(text);
     }
   }
 
+  // 3) postViewArea / post-view (스마트에디터 2.0 / 구버전)
+  if (paragraphs.length === 0) {
+    const fb2 = /<div[^>]*id="postViewArea"[^>]*>([\s\S]*?)<\/div>\s*(?:<\/div>|<div[^>]*class="[^"]*post_footer)/i;
+    const viewMatch = fb2.exec(html);
+    if (viewMatch) {
+      const text = cleanHtml(viewMatch[1]);
+      if (text.length > 50) paragraphs.push(text);
+    }
+  }
+
+  // 4) se_component_text / __se_component_area (스마트에디터 ONE 구형)
+  if (paragraphs.length === 0) {
+    const fb3 = /<div[^>]*class="[^"]*se_component_text[^"]*"[^>]*>([\s\S]*?)<\/div>/g;
+    while ((m = fb3.exec(html)) !== null) {
+      const text = cleanHtml(m[1]);
+      if (text.length > 10) paragraphs.push(text);
+    }
+  }
+
+  // 5) 최종 폴백: p 태그 대량 수집 (에디터 불명 시)
+  if (paragraphs.length === 0) {
+    const fb4 = /<p[^>]*>([\s\S]*?)<\/p>/g;
+    const allP: string[] = [];
+    while ((m = fb4.exec(html)) !== null) {
+      const text = cleanHtml(m[1]);
+      if (text.length > 20) allP.push(text);
+    }
+    // p 태그가 5개 이상이면 본문으로 간주
+    if (allP.length >= 5) paragraphs.push(...allP);
+  }
+
   const content = paragraphs.join('\n\n');
   if (content.length <= 50) {
-    console.log(`  ⚠️ 본문 부족 스킵: ${logNo} (${content.length}자)`);
+    console.log(`  ⚠️ 본문 부족 스킵: ${logNo} (${content.length}자, paragraphs=${paragraphs.length}개)`);
     return null;
   }
 
@@ -252,8 +285,8 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     const limited = Math.min(Number(maxPosts) || 10, 20);
     console.log(`🏥 블로그 수집 시작: ${blogId} (목표: ${limited}개)`);
 
-    // ── 1단계: logNo 수집 (여분 +10) ──
-    const candidates = Math.min(limited + 10, 30);
+    // ── 1단계: logNo 수집 (여분 ×3 — 본문 추출 실패분 고려) ──
+    const candidates = Math.min(limited * 3, 60);
     const logNos = await fetchLogNos(blogId, candidates);
 
     // ── 2단계: 각 글 본문 + 날짜 수집 (limited개가 될 때까지) ──
