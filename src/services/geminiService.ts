@@ -744,12 +744,13 @@ ${JSON.stringify(searchResults?.collected_facts?.slice(0, 2) || [], null, 2)}`;
   // 파이프라인 레벨에서 추가 FLASH 폴백 불필요 (호출 수만 늘림)
   let introHtml = '';
   try {
+    // 도입부는 1~2문단/3~5문장으로 짧음 → FLASH로 충분 (PRO 504 위험 감소)
     const introResult = await callGemini({
       prompt: introUserPrompt,
       systemPrompt: introPrompt + hospitalStyleSuffix,
-      model: GEMINI_MODEL.PRO,
+      model: GEMINI_MODEL.FLASH,
       responseType: 'text',
-      timeout: 45000,
+      timeout: 30000,
       temperature: 0.85,
     });
     introHtml = typeof introResult === 'string' ? introResult.trim() : '';
@@ -2959,6 +2960,7 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
       };
       safeProgress('✅ 다단계 파이프라인 생성 완료!');
       console.warn(`[BLOG_FLOW] ✅ 파이프라인 textData 확보 — title: "${textData.title}", content: ${textData.content?.length || 0}자`);
+      console.warn(`[PIPELINE_RESULT] source=pipeline`);
     } catch (pipelineError: any) {
       console.error(`[BLOG_FLOW] ❌ 파이프라인 실패: ${pipelineError?.message}`);
       console.warn(`[BLOG_FLOW] ⚠️ 구형 generateBlogPostText 폴백 진입 — 원인: ${pipelineError?.status || 'N/A'} ${pipelineError?.message?.substring(0, 100)}`);
@@ -2966,6 +2968,7 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
       try {
         textData = await generateBlogPostText(request, safeProgress);
         console.warn(`[BLOG_FLOW] ✅ 구형 폴백 성공 — title: "${textData?.title}", content: ${textData?.content?.length || 0}자`);
+        console.warn(`[PIPELINE_RESULT] source=legacy_fallback`);
       } catch (fallbackError: any) {
         console.error(`[BLOG_FLOW] ❌ 구형 폴백도 실패: ${fallbackError?.message}`);
         throw new Error(pipelineError?.message || '블로그 생성에 실패했습니다. 다시 시도해주세요.');
@@ -2992,6 +2995,7 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
 
     safeProgress(step1Msg);
     textData = await generateBlogPostText(request, safeProgress);
+    console.warn(`[PIPELINE_RESULT] source=legacy_direct (referenceUrl or non-blog)`);
   }
   
   const styleName = STYLE_NAMES[request.imageStyle] || STYLE_NAMES.illustration;

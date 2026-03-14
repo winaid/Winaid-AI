@@ -206,6 +206,11 @@ export function useContentGeneration(deps: ContentGenerationDeps): ContentGenera
         // dynamic import 실패 시 안전 폴백
         friendlyError = err?.message || '블로그 생성 중 오류가 발생했습니다. 다시 시도해주세요.';
       }
+      // 🛡️ friendlyError가 falsy면 에러 모달이 안 뜸 → EMPTY_STATE 노출 방지
+      if (!friendlyError?.trim()) {
+        console.error('[BLOG_FLOW] ⚠️ friendlyError가 빈 문자열! 기본 메시지로 교체');
+        friendlyError = '블로그 생성 중 오류가 발생했습니다. 다시 시도해주세요.';
+      }
       console.warn(`[BLOG_FLOW] 에러 메시지: "${friendlyError}"`);
       targetSetState(prev => {
         // 🛡️ 이미 data가 있으면(부분 성공) 보존 — warning으로 표시
