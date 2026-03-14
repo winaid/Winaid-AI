@@ -221,6 +221,7 @@ export interface GeneratedContent {
   sections?: BlogSection[]; // 블로그 섹션 분리 데이터 (섹션별 재생성용)
   imageFailCount?: number; // 이미지 생성 실패 수 (0이면 전체 성공, >0이면 부분 성공)
   imagePrompts?: string[]; // 이미지 재생성용 프롬프트
+  conclusionLength?: number; // 파이프라인 마무리(conclusionHtml) 원본 길이 (완전성 검증용)
 }
 
 export interface GenerationState {

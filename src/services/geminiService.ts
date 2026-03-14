@@ -951,11 +951,12 @@ ${sectionSummaries.join('\n')}`;
     }
   }
 
-  console.warn(`[PIPELINE] ✅ generateBlogWithPipeline 완료 — title: "${request.topic}", content: ${finalContent.length}자, imagePrompts: ${imagePrompts.length}개`);
+  console.warn(`[PIPELINE] ✅ generateBlogWithPipeline 완료 — title: "${request.topic}", content: ${finalContent.length}자, conclusionHtml: ${conclusionHtml.length}자, imagePrompts: ${imagePrompts.length}개`);
   return {
     title: request.topic,
     content: finalContent,
-    imagePrompts
+    imagePrompts,
+    conclusionLength: conclusionHtml.length
   };
 };
 
@@ -2948,6 +2949,7 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
         title: pipelineResult.title,
         content: pipelineResult.content,
         imagePrompts: pipelineResult.imagePrompts,
+        conclusionLength: pipelineResult.conclusionLength,
         fact_check: {
           fact_score: 85,
           safety_score: 90,
@@ -3667,6 +3669,7 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
     sections, // 블로그 섹션 분리 데이터 (섹션별 재생성용)
     imageFailCount,
     imagePrompts: textData.imagePrompts,
+    conclusionLength: textData.conclusionLength, // 파이프라인 마무리 원본 길이 (없으면 undefined)
   };
 
   } catch (postProcessError) {

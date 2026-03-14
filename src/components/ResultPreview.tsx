@@ -1029,7 +1029,13 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
       const styledHtml = applyInlineStylesForNaver(localHtml, currentTheme);
       if (editorRef.current.innerHTML !== styledHtml) {
         editorRef.current.innerHTML = styledHtml;
-        
+
+        // 📋 렌더 성공 로그 — innerHTML 실제 설정 직후
+        const renderedHtml = editorRef.current.innerHTML;
+        const titleMatch = renderedHtml.match(/<h[12][^>]*>(.*?)<\/h[12]>/i);
+        const h2Count = (renderedHtml.match(/<h[23][^>]*>/gi) || []).length;
+        console.warn(`[RESULT_PREVIEW] html length=${renderedHtml.length} | title visible=${!!titleMatch} | h2 count=${h2Count} | copy visible=true`);
+
         // DOM 업데이트 후 스크롤 위치 복원 (더 안정적인 방법)
         setTimeout(() => {
           if (scrollContainerRef.current && savedScrollPosition.current > 0) {

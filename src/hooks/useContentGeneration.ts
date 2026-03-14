@@ -153,9 +153,12 @@ export function useContentGeneration(deps: ContentGenerationDeps): ContentGenera
       const textOnly = html.replace(/<[^>]+>/g, '').trim();
       const h2Count = (html.match(/<h[23][^>]*>/gi) || []).length;
       const hasIntro = html.indexOf('<h') > 30 || (html.indexOf('<p') >= 0 && html.indexOf('<p') < html.indexOf('<h'));
-      const hasConclusion = textOnly.length > 200; // 마무리 포함 시 최소 길이
+      // conclusion 판정: 파이프라인 원본 길이 > 근사값 순으로 확인
+      const conclusionLength = result?.conclusionLength; // 파이프라인에서 전달된 원본 길이 (없으면 undefined)
+      const hasConclusion = conclusionLength ? conclusionLength >= 20 : textOnly.length > 200; // 근사값 fallback
+      const conclusionSource = conclusionLength ? `pipeline(${conclusionLength}자)` : `heuristic(textLen=${textOnly.length})`;
       console.warn(`[BLOG_FLOW] ✅ generateFullPost 반환됨`);
-      console.warn(`[BLOG_FLOW] 📋 완전성 검증: title="${result?.title}" | fullHtml=${html.length}자 | 텍스트=${textOnly.length}자 | h2/h3=${h2Count}개 | intro=${hasIntro} | conclusion=${hasConclusion}`);
+      console.warn(`[BLOG_FLOW] 📋 완전성 검증: title="${result?.title}" | fullHtml=${html.length}자 | 텍스트=${textOnly.length}자 | h2/h3=${h2Count}개 | intro=${hasIntro} | conclusion=${hasConclusion} [${conclusionSource}]`);
       if (!result?.title || h2Count < 2 || textOnly.length < 300) {
         console.error(`[BLOG_FLOW] ⚠️ 완전성 미달 — title=${!!result?.title}, h2=${h2Count}, textLen=${textOnly.length}`);
       }
