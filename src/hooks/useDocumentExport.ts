@@ -23,6 +23,27 @@ interface UseDocumentExportReturn {
   applyInlineStylesForNaver: (html: string, theme?: CssTheme) => string;
 }
 
+// blob URL → base64 복원: export/복사 시 HTML 내 blob: URL을 원본 base64로 되돌림
+function restoreBase64Images(html: string, generatedImages?: { index: number; data: string; prompt: string }[]): string {
+  if (!generatedImages || generatedImages.length === 0) return html;
+  let restored = html;
+  for (const img of generatedImages) {
+    // data-image-index="N" 속성을 가진 img 태그의 src를 base64로 복원
+    const pattern = new RegExp(
+      `(<img[^>]*data-image-index="${img.index}"[^>]*src=")([^"]*)(")`,
+      'gi'
+    );
+    restored = restored.replace(pattern, `$1${img.data}$3`);
+    // src가 data-image-index보다 앞에 올 수도 있으므로 역순도 처리
+    const pattern2 = new RegExp(
+      `(<img[^>]*src=")([^"]*?)("[^>]*data-image-index="${img.index}")`,
+      'gi'
+    );
+    restored = restored.replace(pattern2, `$1${img.data}$3`);
+  }
+  return restored;
+}
+
 export function useDocumentExport({
   content,
   localHtml,
@@ -75,7 +96,8 @@ export function useDocumentExport({
     setEditProgress('Word 문서 생성 중...');
 
     try {
-      const styledHtml = applyInlineStylesForNaver(localHtml, currentTheme);
+      const restoredHtml = restoreBase64Images(localHtml, content.generatedImages);
+      const styledHtml = applyInlineStylesForNaver(restoredHtml, currentTheme);
 
       const wordHtml = `
 <!DOCTYPE html>
@@ -135,13 +157,14 @@ export function useDocumentExport({
     } finally {
       setEditProgress('');
     }
-  }, [localHtml, currentTheme, applyInlineStylesForNaver]);
+  }, [localHtml, currentTheme, applyInlineStylesForNaver, content.generatedImages]);
 
   const handleDownloadPDF = useCallback(async () => {
     setEditProgress('PDF 생성 중...');
 
     try {
-      const styledHtml = applyInlineStylesForNaver(localHtml, currentTheme);
+      const restoredHtml = restoreBase64Images(localHtml, content.generatedImages);
+      const styledHtml = applyInlineStylesForNaver(restoredHtml, currentTheme);
 
       if (content.title && localHtml) {
         saveBlogHistory(
@@ -223,7 +246,8 @@ export function useDocumentExport({
 
   const handleCopy = useCallback(async () => {
     try {
-      const styledHtml = applyInlineStylesForNaver(localHtml, currentTheme);
+      const restoredHtml = restoreBase64Images(localHtml, content.generatedImages);
+      const styledHtml = applyInlineStylesForNaver(restoredHtml, currentTheme);
 
       const parser = new DOMParser();
       const doc = parser.parseFromString(styledHtml, 'text/html');
@@ -312,7 +336,8 @@ export function useDocumentExport({
       }
     } catch (err) {
       try {
-        const styledHtml = applyInlineStylesForNaver(localHtml);
+        const restoredFallback = restoreBase64Images(localHtml, content.generatedImages);
+        const styledHtml = applyInlineStylesForNaver(restoredFallback);
         const htmlForClip = convertToWordCompatibleHtml(styledHtml);
         const blob = new Blob([htmlForClip], { type: 'text/html' });
         const plainText = new Blob([editorRef.current?.innerText || ''], { type: 'text/plain' });
@@ -327,7 +352,7 @@ export function useDocumentExport({
         console.error('클립보드 복사 실패:', err);
       }
     }
-  }, [localHtml, currentTheme, editorRef, applyInlineStylesForNaver]);
+  }, [localHtml, currentTheme, editorRef, applyInlineStylesForNaver, content.generatedImages]);
 
   return {
     copied,

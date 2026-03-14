@@ -647,14 +647,20 @@ export const generateBlogWithPipeline = async (
   let hospitalStyleSuffix = '';
   if (!request.learnedStyleId && request.hospitalName) {
     try {
-      const { getHospitalStylePrompt } = await import('./writingStyleService');
-      const prompt = await getHospitalStylePrompt(request.hospitalName);
-      if (prompt) {
-        hospitalStyleSuffix = `\n\n[🏥 병원 블로그 학습 말투 - 반드시 적용]\n${prompt}`;
-        console.log('🏥 파이프라인 병원 말투 적용:', request.hospitalName);
+      const { getHospitalStylePromptForGeneration } = await import('./writingStyleService');
+      if (typeof getHospitalStylePromptForGeneration !== 'function') {
+        console.warn('[PIPELINE] 병원 말투 로드 실패: getHospitalStylePromptForGeneration is not a function');
+      } else {
+        const prompt = await getHospitalStylePromptForGeneration(request.hospitalName);
+        if (prompt) {
+          hospitalStyleSuffix = `\n\n[🏥 병원 블로그 학습 말투 - 반드시 적용]\n${prompt}`;
+          console.warn('[PIPELINE] ✅ 병원 말투 로드 성공:', request.hospitalName);
+        } else {
+          console.warn('[PIPELINE] 병원 말투 데이터 없음 (null) — 기본 말투 사용');
+        }
       }
     } catch (e) {
-      console.warn('파이프라인 병원 말투 로드 실패:', e);
+      console.warn('[PIPELINE] 병원 말투 로드 실패:', e);
     }
   }
 
@@ -3273,24 +3279,42 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
   }
   
   // 🖼️ 이미지 삽입 전 디버그
-  console.log('🖼️ 이미지 삽입 시작:', {
-    '생성된 이미지 수': images.length,
-    'body에 [IMG_1] 포함?': body.includes('[IMG_1]'),
-    'body에 [IMG_2] 포함?': body.includes('[IMG_2]'),
-    'body 길이': body.length
-  });
-  
+  const bodyLenBeforeImages = body.length;
+  console.warn(`[IMG_INSERT] 이미지 삽입 전 body: ${bodyLenBeforeImages}자, 이미지 ${images.length}장`);
+
   images.forEach(img => {
     const pattern = new RegExp(`\\[IMG_${img.index}\\]`, "gi");
     const hasMarker = body.match(pattern);
-    console.log(`🖼️ [IMG_${img.index}] 마커 존재?`, !!hasMarker, '이미지 데이터 존재?', !!img.data);
-    
+
     if (img.data) {
+    // base64 data URI → blob URL 변환 (HTML 크기 4MB → 수KB로 축소)
+    let displaySrc = img.data;
+    try {
+      const commaIdx = img.data.indexOf(',');
+      if (commaIdx > 0 && img.data.startsWith('data:')) {
+        const meta = img.data.substring(0, commaIdx);
+        const base64Data = img.data.substring(commaIdx + 1);
+        const mimeMatch = meta.match(/data:(.*?);base64/);
+        const mimeType = mimeMatch?.[1] || 'image/png';
+        const byteChars = atob(base64Data);
+        const byteArray = new Uint8Array(byteChars.length);
+        for (let i = 0; i < byteChars.length; i++) {
+          byteArray[i] = byteChars.charCodeAt(i);
+        }
+        const blob = new Blob([byteArray], { type: mimeType });
+        displaySrc = URL.createObjectURL(blob);
+        console.warn(`[IMG_INSERT] IMG_${img.index}: base64 ${img.data.length}자 → blob URL (${displaySrc.length}자)`);
+      }
+    } catch (blobErr) {
+      console.warn(`[IMG_INSERT] IMG_${img.index}: blob 변환 실패, base64 원본 사용`, blobErr);
+      displaySrc = img.data; // fallback to base64
+    }
+
     let imgHtml = "";
     if (request.postType === 'card_news') {
-        imgHtml = `<img src="${img.data}" alt="${img.prompt}" data-index="${img.index}" class="card-full-img" style="width: 100%; height: auto; display: block;" />`;
+        imgHtml = `<img src="${displaySrc}" alt="${img.prompt}" data-image-index="${img.index}" class="card-full-img" style="width: 100%; height: auto; display: block;" />`;
     } else {
-        imgHtml = `<div class="content-image-wrapper"><img src="${img.data}" alt="${img.prompt}" data-index="${img.index}" /></div>`;
+        imgHtml = `<div class="content-image-wrapper"><img src="${displaySrc}" alt="${img.prompt}" data-image-index="${img.index}" /></div>`;
     }
     body = body.replace(pattern, imgHtml);
     } else {
@@ -3298,6 +3322,7 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
     body = body.replace(pattern, '');
     }
   });
+  console.warn(`[IMG_INSERT] 이미지 삽입 후 body: ${body.length}자 (삽입 전: ${bodyLenBeforeImages}자)`);
   
   // 혹시 남아있는 [IMG_N] 마커 모두 제거
   body = body.replace(/\[IMG_\d+\]/gi, '');
@@ -3671,6 +3696,7 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
     imageFailCount,
     imagePrompts: textData.imagePrompts,
     conclusionLength: textData.conclusionLength, // 파이프라인 마무리 원본 길이 (없으면 undefined)
+    generatedImages: images, // base64 원본 이미지 (export/복사 시 blob URL → base64 복원용)
   };
 
   } catch (postProcessError) {

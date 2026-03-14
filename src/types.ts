@@ -222,6 +222,7 @@ export interface GeneratedContent {
   imageFailCount?: number; // 이미지 생성 실패 수 (0이면 전체 성공, >0이면 부분 성공)
   imagePrompts?: string[]; // 이미지 재생성용 프롬프트
   conclusionLength?: number; // 파이프라인 마무리(conclusionHtml) 원본 길이 (완전성 검증용)
+  generatedImages?: { index: number; data: string; prompt: string }[]; // base64 원본 이미지 (export용, HTML에는 blob URL 사용)
 }
 
 export interface GenerationState {
