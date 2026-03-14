@@ -139,7 +139,7 @@ const StyleTab: React.FC<StyleTabProps> = ({
             <h2 className="text-base font-bold text-violet-800 mb-1">병원별 네이버 블로그 말투 학습</h2>
             <p className="text-sm text-violet-600">
               각 병원의 네이버 블로그 URL을 입력 후 <strong>크롤링 + 학습</strong>을 누르면 AI가 글을 읽고 말투를 자동 학습합니다.
-              수집된 글은 오타/맞춤법·의료광고법 점수와 함께 병원별 최대 30개 보관됩니다. 다중 URL 입력 시 모든 블로그의 글이 함께 수집됩니다.
+              수집된 글은 오타/맞춤법·의료광고법 점수와 함께 블로그 URL별 최대 10개씩 보관됩니다. 다중 URL 입력 시 각 블로그의 글이 출처별로 구분 표시됩니다.
             </p>
           </div>
           <button
@@ -290,21 +290,37 @@ const StyleTab: React.FC<StyleTabProps> = ({
                 {status && !status.loading && !status.error && status.progress === '학습 완료!' && (
                   <p className="mt-2 text-xs text-green-600 font-medium">학습 완료!</p>
                 )}
-                {/* DB 보관 글 목록 (채점 포함) */}
+                {/* DB 보관 글 목록 — URL별 그룹 아코디언 */}
                 {(() => {
                   const posts = dbPosts[baseName] || [];
                   const memPosts = crawledPosts[baseName] || [];
-                  const displayCount = posts.length || memPosts.length;
+                  const allDisplayPosts: CrawledPost[] = posts.length > 0
+                    ? posts
+                    : memPosts.map(p => ({ id: p.url, hospital_name: baseName, url: p.url, content: p.content, crawled_at: '' } as CrawledPost));
                   const profileCount = profile?.crawled_posts_count || 0;
-                  if (displayCount === 0 && profileCount === 0) return null;
+                  if (allDisplayPosts.length === 0 && profileCount === 0) return null;
+
+                  // URL에서 블로그 ID 추출 (blog.naver.com/{blogId}/... → blogId)
+                  const getBlogId = (url: string) => url.match(/blog\.naver\.com\/([^/?#]+)/)?.[1] || 'unknown';
+
+                  // 블로그별 그룹핑 + 각 그룹 최신 10개
+                  const blogGroups: Record<string, CrawledPost[]> = {};
+                  for (const post of allDisplayPosts) {
+                    const bid = getBlogId(post.url);
+                    if (!blogGroups[bid]) blogGroups[bid] = [];
+                    blogGroups[bid].push(post);
+                  }
+                  // 각 그룹 최신 10개만
+                  const groupEntries = Object.entries(blogGroups).map(([bid, gPosts]) => [bid, gPosts.slice(0, 10)] as [string, CrawledPost[]]);
+                  const totalDisplayCount = groupEntries.reduce((sum, [, gp]) => sum + gp.length, 0);
+
                   return (
                     <div className="mt-3">
                       <button
                         type="button"
                         onClick={() => {
                           setExpandedPosts(prev => ({ ...prev, [baseName]: !prev[baseName] }));
-                          // 펼칠 때 DB에서 글 로드 (아직 로드 안 된 경우)
-                          if (!expandedPosts[baseName] && displayCount === 0 && profileCount > 0) {
+                          if (!expandedPosts[baseName] && allDisplayPosts.length === 0 && profileCount > 0) {
                             getCrawledPosts(baseName).then(loaded => {
                               if (loaded.length > 0) setDbPosts(prev => ({ ...prev, [baseName]: loaded }));
                             }).catch(console.warn);
@@ -313,11 +329,27 @@ const StyleTab: React.FC<StyleTabProps> = ({
                         className="flex items-center gap-1.5 text-xs font-semibold text-violet-600 hover:text-violet-800 transition-colors"
                       >
                         <span>{expandedPosts[baseName] ? '▼' : '▶'}</span>
-                        수집된 글 {displayCount || profileCount}개 보기{profileCount > 0 && displayCount > 0 && profileCount !== displayCount ? ` (학습 ${profileCount}개)` : ''}
+                        수집된 글 {totalDisplayCount || profileCount}개 보기
+                        {groupEntries.length > 1 && <span className="text-[10px] text-slate-400 ml-1">({groupEntries.length}개 블로그)</span>}
                       </button>
                       {expandedPosts[baseName] && (
-                        <div className="mt-2 space-y-2 max-h-[600px] overflow-y-auto pr-1">
-                          {(posts.length > 0 ? posts : memPosts.map(p => ({ id: p.url, hospital_name: baseName, url: p.url, content: p.content, crawled_at: '' } as CrawledPost))).map((post, i) => {
+                        <div className="mt-2 space-y-3 max-h-[700px] overflow-y-auto pr-1">
+                          {groupEntries.map(([blogId, groupPosts]) => (
+                            <div key={blogId} className="border border-violet-100 rounded-lg overflow-hidden bg-white">
+                              {/* URL 그룹 헤더 */}
+                              <div className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-violet-50 to-slate-50 border-b border-violet-100">
+                                <span className="text-[10px] px-1.5 py-0.5 bg-violet-100 text-violet-700 rounded font-mono font-bold">{blogId}</span>
+                                <span className="text-[10px] text-slate-500">{groupPosts.length}개 글</span>
+                                <a
+                                  href={`https://blog.naver.com/${blogId}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="ml-auto text-[10px] text-violet-400 hover:text-violet-600"
+                                >블로그 →</a>
+                              </div>
+                              {/* 해당 블로그의 글 목록 */}
+                              <div className="divide-y divide-slate-100">
+                          {groupPosts.map((post, i) => {
                             const key = `${baseName}::${post.url}`;
                             const isOpen = expandedPost === key;
                             const isScoring = scoringId === post.id;
@@ -504,6 +536,9 @@ const StyleTab: React.FC<StyleTabProps> = ({
                               </div>
                             );
                           })}
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       )}
                     </div>
