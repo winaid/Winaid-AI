@@ -182,9 +182,11 @@ export function useContentGeneration(deps: ContentGenerationDeps): ContentGenera
       // API 서버에 자동 저장 (blob URL → base64 복원 후 저장)
       try {
         const { saveContentToServer } = await import('../services/apiService');
+        const restoredContent = restoreBase64Images(result.htmlContent, result.generatedImages);
+        console.info(`[STORAGE] saveContentToServer | display=${result.htmlContent.length}자(${Math.round(result.htmlContent.length*2/1024)}KB) | storage=${restoredContent.length}자(${Math.round(restoredContent.length*2/1024)}KB) | blob잔류=${restoredContent.includes('blob:')}`);
         const saveResult = await saveContentToServer({
           title: result.title,
-          content: restoreBase64Images(result.htmlContent, result.generatedImages),
+          content: restoredContent,
           category: request.category,
           postType: request.postType,
           metadata: {

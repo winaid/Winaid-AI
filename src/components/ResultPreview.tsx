@@ -547,6 +547,7 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
     
     // blob URL → base64 복원: localStorage에 blob: URL이 남으면 재로드 시 이미지 깨짐
     const restoredHtml = restoreBase64Images(localHtml, content.generatedImages);
+    const hasBlobLeak = restoredHtml.includes('blob:');
     const saveData = {
       html: restoredHtml,
       theme: currentTheme,
@@ -555,13 +556,19 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
       savedAt: now.toISOString(),
       title: `${title} (${timeStr})` // 시간 포함하여 구분
     };
-    
+
     // 🔧 저장할 데이터 크기 확인
     const saveDataStr = JSON.stringify(saveData);
     const dataSize = saveDataStr.length * 2; // UTF-16
     const usage = getLocalStorageUsage();
-    
-    console.log(`💾 저장 시도: ${Math.round(dataSize/1024)}KB, 현재 사용량: ${usage.percent}%`);
+
+    console.info(`[STORAGE] autosave | display=${localHtml.length}자(${Math.round(localHtml.length*2/1024)}KB) | storage=${restoredHtml.length}자(${Math.round(restoredHtml.length*2/1024)}KB) | blob잔류=${hasBlobLeak} | payload=${Math.round(dataSize/1024)}KB | localStorage=${usage.percent}% (${Math.round(usage.used/1024)}/${Math.round(usage.total/1024)}KB)`);
+    if (hasBlobLeak) {
+      console.error(`[STORAGE] ❌ autosave에 blob: URL 잔류! 재로드 시 이미지 깨짐 위험`);
+    }
+    if (dataSize > 4 * 1024 * 1024) {
+      console.warn(`[STORAGE] ⚠️ autosave payload ${Math.round(dataSize/1024)}KB — localStorage 5MB 한도의 ${Math.round(dataSize/(5*1024*1024)*100)}% 사용`);
+    }
     
     // 🔧 용량 부족 시 오래된 것 자동 삭제 (최대 3번 시도)
     let retryCount = 0;
@@ -616,6 +623,16 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
 
   // 특정 저장본 불러오기
   const loadFromAutoSaveHistory = (item: AutoSaveHistoryItem) => {
+    // 📊 재로드 경로 진단: blob: URL 잔류 시 이미지 깨짐
+    const hasBlobUrl = item.html.includes('blob:');
+    const imgCount = (item.html.match(/<img[^>]+>/gi) || []).length;
+    const base64ImgCount = (item.html.match(/src="data:image/gi) || []).length;
+    console.info(
+      `[RELOAD] 저장본 불러오기 | title="${item.title}" | html=${item.html.length}자(${Math.round(item.html.length * 2 / 1024)}KB) | img=${imgCount}개 | base64=${base64ImgCount}개 | blob잔류=${hasBlobUrl}`
+    );
+    if (hasBlobUrl) {
+      console.warn('[RELOAD] ⚠️ blob: URL 포함 — 이미지가 표시되지 않을 수 있음');
+    }
     setLocalHtml(item.html);
     if (item.theme) setCurrentTheme(item.theme as any);
     setShowAutoSaveDropdown(false);

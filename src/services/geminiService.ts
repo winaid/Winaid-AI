@@ -3643,7 +3643,11 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
       const p2 = new RegExp(`(<img[^>]*src=")blob:[^"]*("[^>]*data-image-index="${img.index}")`,'gi');
       storageHtml = storageHtml.replace(p2, `$1${img.data}$2`);
     }
-    console.info(`[STORAGE] blob URL → base64 복원 완료: display=${finalHtml.length}자, storage=${storageHtml.length}자`);
+    const hasBlobLeak = storageHtml.includes('blob:');
+    console.info(`[STORAGE] blob→base64 복원 | display=${finalHtml.length}자(${Math.round(finalHtml.length*2/1024)}KB) | storage=${storageHtml.length}자(${Math.round(storageHtml.length*2/1024)}KB) | blob잔류=${hasBlobLeak}`);
+    if (hasBlobLeak) {
+      console.error(`[STORAGE] ❌ storageHtml에 blob: URL 잔류! 재로드 시 이미지 깨짐 위험`);
+    }
   }
 
   // 🔥 서버에 블로그 이력 저장 (비동기, 실패해도 무시)

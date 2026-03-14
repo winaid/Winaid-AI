@@ -98,6 +98,21 @@ export const saveGeneratedPost = async (data: SavePostData): Promise<{
       word_count: wordCount
     };
 
+    // 📊 payload 크기 진단 로그 — Supabase TEXT 컬럼 한도(1GB) 대비 실제 크기 확인
+    const contentBytes = data.content.length * 2; // UTF-16 근사
+    const plainTextBytes = plainText.length * 2;
+    const totalPayloadEstimate = contentBytes + plainTextBytes;
+    const hasBlobLeak = data.content.includes('blob:');
+    console.info(
+      `[PostStorage] 📊 payload 크기 | content=${data.content.length}자(${Math.round(contentBytes / 1024)}KB) | plainText=${plainText.length}자(${Math.round(plainTextBytes / 1024)}KB) | total≈${Math.round(totalPayloadEstimate / 1024)}KB | blob잔류=${hasBlobLeak}`
+    );
+    if (hasBlobLeak) {
+      console.warn('[PostStorage] ⚠️ blob: URL이 content에 포함됨 — 재로드 시 이미지 깨짐 위험');
+    }
+    if (contentBytes > 4 * 1024 * 1024) {
+      console.warn(`[PostStorage] ⚠️ content 크기 ${Math.round(contentBytes / 1024 / 1024)}MB — 대용량 payload 주의`);
+    }
+
     // Supabase에 저장
     const { data: result, error } = await supabase
       .from('generated_posts')
