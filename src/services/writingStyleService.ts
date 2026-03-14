@@ -530,8 +530,7 @@ export const crawlAndLearnHospitalStyle = async (
   const upsertPromise = supabase
     .from('hospital_style_profiles')
     .upsert(profileData, { onConflict: 'hospital_name' })
-    .select()
-    .single();
+    .select();
   const upsertTimeout = new Promise<never>((_, reject) =>
     setTimeout(() => reject(new Error('프로파일 저장 시간 초과 (10초)')), 10000)
   );
@@ -544,7 +543,21 @@ export const crawlAndLearnHospitalStyle = async (
       // 저장 실패해도 분석 결과는 반환
       return { ...profileData, style_profile: analyzedStyle };
     }
-    data = result.data;
+    const rows = result.data ?? [];
+    if (rows.length === 1) {
+      data = rows[0];
+    } else if (rows.length === 0) {
+      console.warn('[StyleProfile] upsert 후 반환된 행이 0개 — 저장은 됐으나 select 실패 가능');
+      data = profileData;
+    } else {
+      // 2행 이상: upsert가 중복 행을 반환 — DB unique constraint 점검 필요
+      console.error(
+        `[StyleProfile] upsert 후 ${rows.length}개 행 반환 — ` +
+        `"${hospitalName}" 중복 행 존재. DB unique constraint 점검 필요. ` +
+        `row IDs: ${rows.map((r: any) => r.id).join(', ')}`
+      );
+      data = rows[0]; // 최신 1행 사용하되, 중복 경고는 명시적으로 노출
+    }
   } catch (timeoutErr) {
     console.error('Supabase 저장 타임아웃:', timeoutErr);
     // 타임아웃이어도 분석 결과는 반환
@@ -573,6 +586,11 @@ export const crawlAndLearnHospitalStyle = async (
 
 /**
  * Supabase에서 병원 말투 프로파일 조회
+ *
+ * 배열 조회 후 행 수로 분기:
+ *   0행 → 미학습 상태 (정상) → null 반환
+ *   1행 → 정상 사용 → 프로파일 반환
+ *   2행+ → 데이터 무결성 오류 → 에러 로그 + null 반환 (중복 데이터 숨기지 않음)
  */
 export const getHospitalStyleProfile = async (
   hospitalName: string
@@ -580,11 +598,31 @@ export const getHospitalStyleProfile = async (
   const { data, error } = await supabase
     .from('hospital_style_profiles')
     .select('*')
-    .eq('hospital_name', hospitalName)
-    .single();
+    .eq('hospital_name', hospitalName);
 
-  if (error || !data) return null;
-  return data as HospitalStyleProfile;
+  if (error) {
+    console.error(`[StyleProfile] 조회 실패 (hospital: ${hospitalName}):`, error.message);
+    return null;
+  }
+
+  const rows = data ?? [];
+
+  if (rows.length === 0) {
+    // 미학습 병원 — 정상 상태
+    return null;
+  }
+
+  if (rows.length === 1) {
+    return rows[0] as HospitalStyleProfile;
+  }
+
+  // 2행 이상: 데이터 무결성 오류 — unique constraint가 누락되었거나 이중 삽입 발생
+  console.error(
+    `[StyleProfile] 데이터 무결성 오류: "${hospitalName}" 에 ${rows.length}개 중복 행 존재. ` +
+    `DB에서 hospital_style_profiles.hospital_name UNIQUE 제약을 확인하세요. ` +
+    `중복 row IDs: ${rows.map((r: any) => r.id).join(', ')}`
+  );
+  return null;
 };
 
 /**
