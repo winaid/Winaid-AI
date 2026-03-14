@@ -5,7 +5,7 @@ import { getApiKey } from "./apiKeyManager";
 import { callGemini, callGeminiRaw, GEMINI_MODEL, TIMEOUTS } from "./geminiClient";
 
 // ============================================================
-// Gemini 응답에서 프로필 데이터 안전 추출
+// Gemini 응답에서 프로필 데이터 안전 추출 (3단계 fallback)
 // ============================================================
 
 /** 코드펜스(```json ... ```) 제거 */
@@ -21,7 +21,14 @@ const PROFILE_REQUIRED_FIELDS = [
   'emotionLevel', 'formalityLevel', 'description', 'stylePrompt',
 ] as const;
 
-/** Gemini raw 응답에서 프로필 객체 추출 */
+/**
+ * callGemini 반환값에서 프로필 객체 추출 — 3단계 fallback
+ *
+ * callGemini({responseType:'json'})의 반환 형태:
+ *   1) JSON.parse 성공 → 이미 파싱된 객체 (예: {tone:"...", ...})
+ *   2) JSON.parse 실패 → {text: "raw string"}
+ *   3) 프록시 미사용(callGeminiRaw) → {candidates:[{content:{parts:[{text:"..."}]}}]}
+ */
 const extractProfileFromGeminiResponse = (response: any): {
   tone: string;
   sentenceEndings: string[];
@@ -32,60 +39,91 @@ const extractProfileFromGeminiResponse = (response: any): {
   description: string;
   stylePrompt: string;
 } => {
-  console.log('[StyleProfile] 1/5 raw response 수신:', typeof response);
+  console.log('[StyleProfile] 1/4 응답 타입:', typeof response, response ? Object.keys(response).slice(0, 8).join(',') : 'null');
 
-  // candidates[0].content.parts 에서 text 추출
-  const text = response?.candidates?.[0]?.content?.parts?.find(
-    (part: any) => typeof part?.text === 'string'
-  )?.text;
+  let parsed: any = null;
 
-  // SDK 헬퍼(.text)도 폴백으로 시도
-  const rawText = text || (typeof response?.text === 'string' ? response.text : null);
-
-  console.log('[StyleProfile] 2/5 text 추출:', rawText ? `성공 (${rawText.length}자)` : '실패');
-
-  if (!rawText || rawText.trim().length === 0) {
-    throw new Error('Gemini 응답에서 profile text를 찾을 수 없습니다.');
+  // ── 1단계: 이미 파싱된 객체인지 확인 (callGemini responseType=json 정상 경로) ──
+  if (response && typeof response === 'object' && !Array.isArray(response) && response.tone !== undefined) {
+    parsed = response;
+    console.log('[StyleProfile] 2/4 [경로A] 이미 파싱된 객체 사용');
   }
 
-  // 코드펜스 제거 후 JSON 파싱
-  const cleanText = stripCodeFence(rawText);
-  let parsed: any;
-  try {
-    parsed = JSON.parse(cleanText);
-  } catch (e) {
-    console.error('[StyleProfile] JSON 파싱 실패, 원본:', cleanText.substring(0, 200));
-    throw new Error('Gemini profile text JSON 파싱에 실패했습니다.');
+  // ── 2단계: {text: "..."} 형태 (JSON 파싱 실패 폴백 또는 다른 구조) ──
+  if (!parsed && typeof response?.text === 'string' && response.text.trim().length > 0) {
+    const cleanText = stripCodeFence(response.text);
+    try {
+      parsed = JSON.parse(cleanText);
+      console.log('[StyleProfile] 2/4 [경로B] response.text에서 JSON 파싱 성공');
+    } catch {
+      console.warn('[StyleProfile] 2/4 [경로B] response.text JSON 파싱 실패, 앞 200자:', cleanText.substring(0, 200));
+    }
   }
 
-  console.log('[StyleProfile] 3/5 JSON parse 성공, 키:', Object.keys(parsed).join(', '));
+  // ── 3단계: raw API 응답 구조 (candidates[0].content.parts) ──
+  if (!parsed) {
+    const rawText = response?.candidates?.[0]?.content?.parts?.find(
+      (part: any) => typeof part?.text === 'string'
+    )?.text;
+    if (rawText && rawText.trim().length > 0) {
+      const cleanText = stripCodeFence(rawText);
+      try {
+        parsed = JSON.parse(cleanText);
+        console.log('[StyleProfile] 2/4 [경로C] candidates.parts에서 JSON 파싱 성공');
+      } catch {
+        console.warn('[StyleProfile] 2/4 [경로C] candidates.parts JSON 파싱 실패, 앞 200자:', cleanText.substring(0, 200));
+      }
+    }
+  }
+
+  // ── 모든 경로 실패 ──
+  if (!parsed) {
+    // 디버깅용: 응답 샘플 로깅 (민감정보 마스킹)
+    const debugSample = JSON.stringify(response)?.substring(0, 300) || 'null';
+    console.error('[StyleProfile] 모든 파싱 경로 실패. 응답 샘플:', debugSample);
+    throw new Error('말투 분석 응답을 파싱할 수 없습니다. 응답 형식이 예상과 다릅니다.');
+  }
+
+  // ── 대체 키 탐색 (snake_case / 공백 키 대응) ──
+  const getField = (obj: any, ...keys: string[]) => {
+    for (const k of keys) {
+      if (obj[k] !== undefined && obj[k] !== null) return obj[k];
+    }
+    return undefined;
+  };
+
+  console.log('[StyleProfile] 3/4 파싱 키:', Object.keys(parsed).join(', '));
 
   // 필수 필드 검증
-  const missing = PROFILE_REQUIRED_FIELDS.filter(f => parsed[f] === undefined || parsed[f] === null);
+  const missing = PROFILE_REQUIRED_FIELDS.filter(f => {
+    // camelCase 외에 snake_case도 체크
+    const snakeKey = f.replace(/[A-Z]/g, m => '_' + m.toLowerCase());
+    return parsed[f] === undefined && parsed[snakeKey] === undefined;
+  });
   if (missing.length > 0) {
-    console.warn('[StyleProfile] 4/5 누락 필드:', missing.join(', '));
-    // 누락 필드가 있어도 기본값으로 채워서 진행 (완전 실패보다 나음)
+    console.warn('[StyleProfile] 3/4 누락 필드:', missing.join(', '), '(기본값으로 채움)');
   } else {
-    console.log('[StyleProfile] 4/5 schema validation 성공');
+    console.log('[StyleProfile] 3/4 필수 필드 검증 성공');
   }
 
   const profile = {
-    tone: parsed.tone ?? '',
-    sentenceEndings: Array.isArray(parsed.sentenceEndings) ? parsed.sentenceEndings : [],
-    vocabulary: Array.isArray(parsed.vocabulary) ? parsed.vocabulary : [],
-    structure: parsed.structure ?? '',
-    emotionLevel: parsed.emotionLevel ?? 'medium',
-    formalityLevel: parsed.formalityLevel ?? 'neutral',
-    description: parsed.description ?? '',
-    stylePrompt: parsed.stylePrompt ?? '',
+    tone: getField(parsed, 'tone') ?? '',
+    sentenceEndings: Array.isArray(getField(parsed, 'sentenceEndings', 'sentence_endings')) ? getField(parsed, 'sentenceEndings', 'sentence_endings') : [],
+    vocabulary: Array.isArray(getField(parsed, 'vocabulary')) ? parsed.vocabulary : [],
+    structure: getField(parsed, 'structure') ?? '',
+    emotionLevel: getField(parsed, 'emotionLevel', 'emotion_level') ?? 'medium',
+    formalityLevel: getField(parsed, 'formalityLevel', 'formality_level') ?? 'neutral',
+    description: getField(parsed, 'description') ?? '',
+    stylePrompt: getField(parsed, 'stylePrompt', 'style_prompt') ?? '',
   };
 
   // 최소 유효성: tone + description이 없으면 분석 실패로 간주
   if (!profile.tone && !profile.description) {
+    console.error('[StyleProfile] tone과 description 모두 비어있음. parsed 키:', Object.keys(parsed).join(','));
     throw new Error('프로필 분석 결과가 비어있습니다. 텍스트를 더 길게 입력해주세요.');
   }
 
-  console.log('[StyleProfile] 5/5 프로필 추출 완료:', profile.tone, '/', profile.description?.substring(0, 30));
+  console.log('[StyleProfile] 4/4 프로필 추출 완료:', profile.tone, '/', profile.description?.substring(0, 30));
   return profile;
 };
 
@@ -273,6 +311,8 @@ JSON으로 답변해주세요:
     return learnedStyle;
   } catch (error: any) {
     console.error('말투 분석 실패:', error?.message || error);
+    // 디버깅 가능한 실패 로그 — 사용자 텍스트는 앞 50자만 (개인정보 보호)
+    console.error('[StyleProfile] 실패 컨텍스트: sampleText 길이=', sampleText?.length, '앞50자=', sampleText?.substring(0, 50)?.replace(/[가-힣]{3,}/g, '***'));
     throw new Error(error?.message || '말투 분석에 실패했습니다. 다시 시도해주세요.');
   }
 };
