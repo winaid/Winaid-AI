@@ -178,65 +178,90 @@ async function fetchPostContent(blogId: string, logNo: string): Promise<PostResu
                    html.match(/<meta[^>]*content="([^"]+)"[^>]*property="og:image"/i);
   if (ogImage) thumbnail = ogImage[1];
 
-  // ── 본문 (다중 에디터 버전 지원) ──
+  // ── 본문 (다중 에디터 버전 지원 — 6단계 폴백) ──
   const paragraphs: string[] = [];
   let m: RegExpExecArray | null;
 
   const cleanHtml = (raw: string) => raw
+    .replace(/<br\s*\/?>/gi, '\n')
     .replace(/<[^>]+>/g, ' ')
     .replace(/&nbsp;/g, ' ').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'")
-    .replace(/\s+/g, ' ')
+    .replace(/[ \t]+/g, ' ')
+    .split('\n').map(l => l.trim()).filter(l => l.length > 0).join('\n')
     .trim();
 
   // 1) se-text-paragraph (스마트에디터 3 / ONE)
-  const paraPattern = /<[^>]*class="[^"]*se-text-paragraph[^"]*"[^>]*>([\s\S]*?)<\/[^>]+>/g;
-  while ((m = paraPattern.exec(html)) !== null) {
+  const p1 = /<[^>]*class="[^"]*se-text-paragraph[^"]*"[^>]*>([\s\S]*?)<\/[^>]+>/g;
+  while ((m = p1.exec(html)) !== null) {
     const text = cleanHtml(m[1]);
-    if (text.length > 10) paragraphs.push(text);
+    if (text.length > 5) paragraphs.push(text);
   }
 
   // 2) se-module-text (스마트에디터 3 블록)
   if (paragraphs.length === 0) {
-    const fb1 = /<div[^>]*class="[^"]*se-module-text[^"]*"[^>]*>([\s\S]*?)<\/div>/g;
-    while ((m = fb1.exec(html)) !== null) {
+    const p2 = /<div[^>]*class="[^"]*se-module-text[^"]*"[^>]*>([\s\S]*?)<\/div>/g;
+    while ((m = p2.exec(html)) !== null) {
       const text = cleanHtml(m[1]);
-      if (text.length > 10) paragraphs.push(text);
+      if (text.length > 5) paragraphs.push(text);
     }
   }
 
-  // 3) postViewArea / post-view (스마트에디터 2.0 / 구버전)
+  // 3) se_component_text (스마트에디터 ONE)
   if (paragraphs.length === 0) {
-    const fb2 = /<div[^>]*id="postViewArea"[^>]*>([\s\S]*?)<\/div>\s*(?:<\/div>|<div[^>]*class="[^"]*post_footer)/i;
-    const viewMatch = fb2.exec(html);
-    if (viewMatch) {
-      const text = cleanHtml(viewMatch[1]);
-      if (text.length > 50) paragraphs.push(text);
-    }
-  }
-
-  // 4) se_component_text / __se_component_area (스마트에디터 ONE 구형)
-  if (paragraphs.length === 0) {
-    const fb3 = /<div[^>]*class="[^"]*se_component_text[^"]*"[^>]*>([\s\S]*?)<\/div>/g;
-    while ((m = fb3.exec(html)) !== null) {
+    const p3 = /<div[^>]*class="[^"]*se_component_text[^"]*"[^>]*>([\s\S]*?)<\/div>/g;
+    while ((m = p3.exec(html)) !== null) {
       const text = cleanHtml(m[1]);
-      if (text.length > 10) paragraphs.push(text);
+      if (text.length > 5) paragraphs.push(text);
     }
   }
 
-  // 5) 최종 폴백: p 태그 대량 수집 (에디터 불명 시)
+  // 4) postViewArea 전체 (구버전 에디터 — greedy 매칭 후 본문만 추출)
   if (paragraphs.length === 0) {
-    const fb4 = /<p[^>]*>([\s\S]*?)<\/p>/g;
+    const areaMatch = html.match(/id="postViewArea"[^>]*>([\s\S]+)/i);
+    if (areaMatch) {
+      // postViewArea 시작부터 다음 주요 구조 태그까지 잘라냄
+      let chunk = areaMatch[1];
+      // 글 본문 끝 마커 (댓글, 공감, 태그 영역 등)
+      const endMarkers = [
+        'class="post_footer"', 'class="post-footer"', 'class="comment_area"',
+        'class="area_sympathy"', 'id="printPost1"', 'class="wrap_postdata"',
+        'class="post_tag"', 'class="post-tag"',
+      ];
+      for (const marker of endMarkers) {
+        const idx = chunk.indexOf(marker);
+        if (idx > 0) chunk = chunk.substring(0, idx);
+      }
+      const text = cleanHtml(chunk);
+      if (text.length > 30) paragraphs.push(text);
+    }
+  }
+
+  // 5) p 태그 수집 (에디터 불명 — 2개 이상이면 수집)
+  if (paragraphs.length === 0) {
+    const p5 = /<p[^>]*>([\s\S]*?)<\/p>/g;
     const allP: string[] = [];
-    while ((m = fb4.exec(html)) !== null) {
+    while ((m = p5.exec(html)) !== null) {
       const text = cleanHtml(m[1]);
-      if (text.length > 20) allP.push(text);
+      if (text.length > 15) allP.push(text);
     }
-    // p 태그가 5개 이상이면 본문으로 간주
-    if (allP.length >= 5) paragraphs.push(...allP);
+    if (allP.length >= 2) paragraphs.push(...allP);
+  }
+
+  // 6) og:description 최종 폴백 (본문 추출 모두 실패 시)
+  if (paragraphs.length === 0) {
+    const ogDesc = html.match(/<meta[^>]*property="og:description"[^>]*content="([^"]+)"/i)
+                || html.match(/<meta[^>]*content="([^"]+)"[^>]*property="og:description"/i);
+    if (ogDesc) {
+      const desc = cleanHtml(ogDesc[1]);
+      if (desc.length > 30) {
+        console.log(`  ℹ️ og:description 폴백 사용: ${logNo} (${desc.length}자)`);
+        paragraphs.push(desc);
+      }
+    }
   }
 
   const content = paragraphs.join('\n\n');
-  if (content.length <= 50) {
+  if (content.length <= 30) {
     console.log(`  ⚠️ 본문 부족 스킵: ${logNo} (${content.length}자, paragraphs=${paragraphs.length}개)`);
     return null;
   }

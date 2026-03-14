@@ -443,13 +443,15 @@ export interface HospitalStyleProfile {
 
 /**
  * 병원 블로그 크롤링 → 말투 분석 → Supabase 저장
- * blogUrl: 단일 URL string 또는 URL 배열 (다중 블로그 지원)
+ * blogUrl: 크롤링할 URL (단일 또는 배열)
+ * allBlogUrls: 프로파일에 저장할 전체 URL 목록 (개별 크롤링 시 다른 URL도 보존)
  */
 export const crawlAndLearnHospitalStyle = async (
   hospitalName: string,
   teamId: number,
   blogUrl: string | string[],
-  onProgress?: (msg: string) => void
+  onProgress?: (msg: string) => void,
+  allBlogUrls?: string[]
 ): Promise<HospitalStyleProfile> => {
   const API_BASE_URL = (import.meta as any).env?.VITE_CRAWLER_URL || '';
   const blogUrls = Array.isArray(blogUrl) ? blogUrl : [blogUrl];
@@ -496,32 +498,29 @@ export const crawlAndLearnHospitalStyle = async (
   // 3단계: Gemini로 말투 분석
   const analyzedStyle = await analyzeWritingStyle(combinedText, hospitalName);
 
-  // 4단계: Supabase에 저장 (upsert) — 기존 profile merge
+  // 4단계: Supabase에 저장 (upsert)
   onProgress?.('말투 프로파일 저장 중...');
 
-  // 기존 프로파일 조회 (개별 URL 크롤링 시 naver_blog_url/crawled_posts_count 보존)
-  let existingProfile: any = null;
-  const { data: ep } = await supabase
-    .from('hospital_style_profiles')
-    .select('naver_blog_url, crawled_posts_count')
-    .eq('hospital_name', hospitalName)
-    .maybeSingle();
-  if (ep) existingProfile = ep;
+  // crawled_posts_count: DB에 실제 저장된 이 병원의 글 수를 직접 센다 (profile 조회 의존 X)
+  let dbPostCount = allPosts.length;
+  try {
+    const { count } = await supabase
+      .from('hospital_crawled_posts')
+      .select('id', { count: 'exact', head: true })
+      .eq('hospital_name', hospitalName);
+    if (count !== null && count > 0) {
+      // DB에 이미 저장된 글 + 이번에 새로 추가될 글 (중복 upsert 감안, 최소한 현재 DB 수 이상)
+      dbPostCount = Math.max(count, allPosts.length);
+    }
+  } catch { /* count 실패해도 allPosts.length 사용 */ }
 
-  // naver_blog_url: 기존 URL 목록에 새 URL 병합 (중복 제거)
-  const existingUrls = (existingProfile?.naver_blog_url || '').split(',').map((u: string) => u.trim()).filter(Boolean);
-  const mergedUrls = [...new Set([...existingUrls, ...blogUrls])];
-  // crawled_posts_count: 기존 카운트에 새로 수집한 글 수 합산 (단, 전체 크롤링 시에는 새 값으로 교체)
-  const isFullCrawl = blogUrls.length > 1 || existingUrls.length <= 1;
-  const newPostCount = isFullCrawl
-    ? allPosts.length
-    : (existingProfile?.crawled_posts_count || 0) + allPosts.length;
-
+  // 프로파일에 저장할 URL: allBlogUrls가 있으면 그것 사용 (전체 URL 보존), 없으면 크롤링 URL
+  const profileUrls = allBlogUrls && allBlogUrls.length > 0 ? allBlogUrls : blogUrls;
   const profileData = {
     hospital_name: hospitalName,
     team_id: teamId,
-    naver_blog_url: mergedUrls.join(','),
-    crawled_posts_count: newPostCount,
+    naver_blog_url: profileUrls.join(','),
+    crawled_posts_count: dbPostCount,
     style_profile: analyzedStyle,
     raw_sample_text: combinedText.slice(0, 10000),
     last_crawled_at: new Date().toISOString(),

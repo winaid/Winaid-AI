@@ -936,12 +936,14 @@ const AdminPage: React.FC<AdminPageProps> = ({ onAdminVerified }) => {
     }));
 
     try {
+      // 전체 URL 목록 (프로파일 naver_blog_url 덮어쓰기 방지)
+      const allUrls = (blogUrlInputs[hospitalName] || []).filter(u => u.trim() && u.includes('blog.naver.com'));
       const result = await crawlAndLearnHospitalStyle(hospitalName, teamId, singleUrl, (msg) => {
         setCrawlingStatus(prev => ({
           ...prev,
           [statusKey]: { loading: true, progress: msg },
         }));
-      });
+      }, allUrls);
       if (result.posts && result.posts.length > 0) {
         setCrawledPosts(prev => ({
           ...prev,
