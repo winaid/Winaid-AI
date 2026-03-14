@@ -2467,11 +2467,11 @@ Overall: Nostalgic, warm, painterly Korean autumn landscape. Red-orange-gold-bro
       id: 'grt_newy_fireworks', name: '불꽃놀이', color: '#7c3aed', accent: '#6d28d9', bg: '#f5f3ff',
       desc: '화려한 불꽃놀이',
       layoutHint: 'traditional',
-      aiPrompt: `BACKGROUND: Deep midnight navy (#0f0a2e) to dark purple (#1a0533) gradient. Scattered tiny star-like sparkles at 15% opacity across entire background.
+      aiPrompt: `BACKGROUND: Deep midnight navy (#0f0a2e) to dark purple (#1a0533) gradient. Scattered tiny stars at 15% opacity across entire background.
 ZONE 1 — FIREWORKS BURST (top 40%): 3–5 large firework explosions in gold (#FFD700), purple (#7c3aed), and electric blue (#3b82f6). Each burst has radiating thin lines and glowing particle trails. Subtle smoke wisps at burst origins. Light bloom/glow effect around each explosion center.
-ZONE 2 — YEAR DISPLAY (center, 20%): "2026" in massive bold font (48px, weight 900) with sparkler-glow effect — warm gold (#FFD700) fill, outer glow (#fbbf24) at 40% opacity, 8px blur. Thin gold confetti pieces (small rectangles, circles) scattered around the number at varying angles and 30–60% opacity.
+ZONE 2 — YEAR DISPLAY (center, 20%): "2026" in massive bold font (48px, weight 900) with warm glow effect — warm gold (#FFD700) fill, outer glow (#fbbf24) at 40% opacity, 8px blur. Thin gold geometric accents (small rectangles, circles) scattered around the number at varying angles and 30–60% opacity.
 ZONE 3 — GREETING TEXT (below center, 15%): "새해 복 많이 받으세요" in white (24px, weight 700), soft text-shadow (0 0 12px rgba(255,215,0,0.5)). Below: hospital/clinic name in gold (#FFD700, 14px, weight 500, letter-spacing 2px).
-ZONE 4 — BOTTOM ACCENT (bottom 10%): Faint city skyline silhouette in dark navy (#1a1a4e) at 20% opacity. Thin gold gradient line (1px) separating skyline from card edge. Tiny rising gold confetti particles fading upward.
+ZONE 4 — BOTTOM ACCENT (bottom 10%): Faint city skyline silhouette in dark navy (#1a1a4e) at 20% opacity. Thin gold gradient line (1px) separating skyline from card edge. Tiny rising gold particles fading upward.
 Glamorous, celebratory, midnight party atmosphere. Vibrant firework colors against deep dark sky.`,
     },
     {
@@ -2501,11 +2501,11 @@ Ultra-minimalist, typographic, contemporary graphic design. Maximum whitespace, 
       desc: '화려한 컨페티',
       layoutHint: 'cute',
       aiPrompt: `BACKGROUND: Soft pink (#fdf2f8) to white gradient (top to bottom).
-ZONE 1 — CONFETTI EXPLOSION (top 35%): Dense burst of colorful confetti pieces — circles, rectangles, stars, triangles in pink (#ec4899), gold (#fbbf24), sky blue (#38bdf8), mint (#34d399), lavender (#a78bfa). Pieces at varying sizes (4–12px), random rotations, 40–90% opacity. Two small party hats (pink with gold stripes) near top corners.
-ZONE 2 — GREETING BANNER (center, 25%): Rounded rectangle banner with pink (#ec4899) fill at 90% opacity. White bold text "2026 새해 복 많이 받으세요" (22px, weight 800). Small cute star decorations (★) flanking the text. Below banner: 2 small balloon illustrations (pink and gold) with curly strings.
-ZONE 3 — CHARACTER ROW (below center, 20%): 3 small kawaii-style celebration characters (simple round faces with party hats, rosy cheeks, happy expressions) in a row, each holding a noisemaker or small flag. Pastel colored. Cute and child-friendly.
-ZONE 4 — BOTTOM (bottom 15%): Hospital/clinic name in pink (#be185d, 13px, weight 500). Scattered small confetti pieces continuing downward at 20% opacity.
-Joyful, energetic, family-friendly party mood. Kawaii-cute celebration aesthetic.`,
+ZONE 1 — GEOMETRIC ACCENTS (top 35%): Scattered colorful geometric shapes — circles, rounded rectangles, small triangles in pink (#ec4899), gold (#fbbf24), sky blue (#38bdf8), mint (#34d399), lavender (#a78bfa). Varying sizes (4–12px), random rotations, 40–90% opacity. Two small party hats (pink with gold stripes) near top corners.
+ZONE 2 — GREETING BANNER (center, 25%): Rounded rectangle banner with pink (#ec4899) fill at 90% opacity. White bold text "2026 새해 복 많이 받으세요" (22px, weight 800). Small star decorations flanking the text. Below banner: 2 small balloon illustrations (pink and gold) with curly strings.
+ZONE 3 — CHARACTER ROW (below center, 20%): 3 small illustrated celebration characters (simple round faces with party hats, rosy cheeks, happy expressions) in a row, each holding a noisemaker or small flag. Pastel colored. Cute and child-friendly.
+ZONE 4 — BOTTOM (bottom 15%): Hospital/clinic name in pink (#be185d, 13px, weight 500). Scattered small geometric shapes continuing downward at 20% opacity.
+Joyful, energetic, family-friendly party mood. Cute celebration aesthetic.`,
     },
     {
       id: 'grt_newy_sunrise', name: '첫 일출', color: '#f97316', accent: '#ea580c', bg: '#fff7ed',
@@ -2642,10 +2642,10 @@ Ultra-minimalist, red-and-white only. Single ornament as focal point. Sophistica
       layoutHint: 'cute',
       aiPrompt: `BACKGROUND: Soft warm red (#fef2f2) to white gradient. Subtle candy cane diagonal stripe pattern in red (#fca5a5) and white at 4% opacity.
 ZONE 1 — BANNER (top 15%): Scalloped red (#ef4444) banner with white text "Merry Christmas!" (14px, weight 700). Small holly leaf accents at banner ends. Tiny gold stars scattered above (5–8 stars, 4px, 30% opacity).
-ZONE 2 — CHARACTER SCENE (center, 45%): Adorable chibi Santa (round body, oversized red hat with white pom-pom, rosy cheeks, happy closed-eye smile) at center carrying red gift bag. To Santa's left: cute kawaii tooth character dressed as elf (green hat, pointy ears, big smile). To Santa's right: small round snowman with orange carrot nose and red scarf. All characters in kawaii style — simple shapes, big heads, tiny bodies, pastel shading. Small candy canes, gingerbread man cookie, and lollipop scattered around feet.
+ZONE 2 — CHARACTER SCENE (center, 45%): Adorable illustrated Santa (round body, oversized red hat with white pom-pom, rosy cheeks, happy closed-eye smile) at center carrying red gift bag. To Santa's left: cute illustrated tooth character dressed as elf (green hat, pointy ears, big smile). To Santa's right: small round snowman with orange carrot nose and red scarf. All characters in simple illustration style — simple shapes, big heads, tiny bodies, pastel shading. Small candy canes, gingerbread man cookie, and lollipop scattered around feet.
 ZONE 3 — GREETING TEXT (below characters, 20%): "메리 크리스마스" in bright red (#ef4444, 22px, weight 800). Below: "즐거운 성탄절 보내세요" in green (#16a34a, 13px, weight 400). Below: hospital/clinic name in red (#dc2626, 12px, weight 500).
 ZONE 4 — BOTTOM (bottom 10%): Row of small gift box icons (red, green, gold) with bows. Snow-like white dots along very bottom edge.
-Cute, kawaii, cheerful Christmas party. Child-friendly, adorable character illustrations. Bright and playful.`,
+Cute, cheerful Christmas party. Child-friendly, adorable character illustrations. Bright and playful.`,
     },
     {
       id: 'grt_xmas_gold', name: '골드 오너먼트', color: '#d4a017', accent: '#b8860b', bg: '#1a1a2e',
@@ -2732,12 +2732,12 @@ Luxurious, prestigious, premium. Gold-on-navy. High-end medical practice. Metall
       id: 'grt_cute_character', name: '귀여운 캐릭터', color: '#ec4899', accent: '#be185d', bg: '#fdf2f8',
       desc: '캐릭터 일러스트',
       layoutHint: 'cute',
-      aiPrompt: `BACKGROUND: Soft pink (#fdf2f8) to white gradient. Tiny pastel confetti dots (pink #f9a8d4, yellow #fde68a, mint #a7f3d0, lavender #c4b5fd) scattered at 8% opacity, 2–4px circles.
-ZONE 1 — FESTIVE ACCENTS (top 15%): Small pastel star shapes and sparkle dots in pink (#ec4899), gold (#fbbf24), mint (#34d399) scattered across top — 15–30% opacity, 4–8px. Playful and scattered randomly. Thin festive bunting/flag banner in pastel colors across top edge.
-ZONE 2 — CHARACTER SCENE (center, 45%): Adorable kawaii-style tooth character at center — white tooth shape with big sparkly eyes, rosy pink cheeks, wide happy smile, wearing small festive party hat (pink with gold dot). Character holding small flag or sparkler. To character's left: small cute star companion character (yellow, happy face). To right: small heart companion (pink, happy face). All in kawaii style — simple round shapes, minimal detail, maximum cuteness. Small confetti pieces around characters.
+      aiPrompt: `BACKGROUND: Soft pink (#fdf2f8) to white gradient. Tiny pastel geometric dots (pink #f9a8d4, yellow #fde68a, mint #a7f3d0, lavender #c4b5fd) scattered at 8% opacity, 2–4px circles.
+ZONE 1 — FESTIVE ACCENTS (top 15%): Small pastel star shapes and accent dots in pink (#ec4899), gold (#fbbf24), mint (#34d399) scattered across top — 15–30% opacity, 4–8px. Playful and scattered randomly. Thin festive bunting/flag banner in pastel colors across top edge.
+ZONE 2 — CHARACTER SCENE (center, 45%): Adorable illustrated tooth character at center — white tooth shape with big round eyes, rosy pink cheeks, wide happy smile, wearing small festive party hat (pink with gold dot). Character holding small flag. To character's left: small cute star companion character (yellow, happy face). To right: small heart companion (pink, happy face). All in simple illustration style — round shapes, minimal detail, maximum cuteness. Small geometric accent shapes around characters.
 ZONE 3 — SPEECH BUBBLE (above or beside character, 20%): Rounded speech bubble (white fill, pink #ec4899 border 2px) with "행복한 명절 보내세요!" in pink (#be185d, 18px, weight 700). Small heart accent inside bubble. Bubble tail pointing to tooth character.
 ZONE 4 — BOTTOM (bottom 15%): Hospital/clinic name in pink (#ec4899, 13px, weight 500). Row of tiny festive icons (gift, star, heart, candy) in pastel colors at 25% opacity.
-Cute, kawaii, playful. Pastel pink celebration. Child-friendly dental practice greeting. Adorable and cheerful.`,
+Cute, playful. Pastel pink celebration. Child-friendly dental practice greeting. Adorable and cheerful.`,
     },
   ],
 
