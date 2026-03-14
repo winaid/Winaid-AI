@@ -892,6 +892,21 @@ ${sectionSummaries.join('\n')}`;
   }
   console.info('[PIPELINE] ✅ 완전성 검사 통과 — 모든 파트 존재 확인');
 
+  // ── 균형 검증 로그 ──
+  const sectionLens = sectionHtmls.map(h => h.replace(/<[^>]+>/g, '').trim().length);
+  const introLen = introHtml.replace(/<[^>]+>/g, '').trim().length;
+  const concLen = conclusionHtml.replace(/<[^>]+>/g, '').trim().length;
+  const maxSec = Math.max(...sectionLens);
+  const minSec = Math.min(...sectionLens);
+  const balanceRatio = maxSec > 0 ? Math.round((minSec / maxSec) * 100) : 0;
+  const introParagraphs = (introHtml.match(/<p[\s>]/gi) || []).length;
+  const concParagraphs = (conclusionHtml.match(/<p[\s>]/gi) || []).length;
+  const sectionParagraphs = sectionHtmls.map(h => (h.match(/<p[\s>]/gi) || []).length);
+  console.info(`[PIPELINE] 📊 균형 검증: intro=${introLen}자(${introParagraphs}문단), sections=${sectionLens.join('/')}자, paragraphs=${sectionParagraphs.join('/')}, conclusion=${concLen}자(${concParagraphs}문단), balance=${balanceRatio}%(min/max)`);
+  if (balanceRatio < 60) {
+    console.warn(`[PIPELINE] ⚠️ 섹션 균형 경고: 최소 ${minSec}자 vs 최대 ${maxSec}자 (비율 ${balanceRatio}%) — 60% 미만`);
+  }
+
   const rawHtml = `${introHtml}\n${sectionHtmls.join('\n')}\n${conclusionHtml}`;
   const integrationPrompt = getPipelineIntegrationPrompt(targetLength);
 

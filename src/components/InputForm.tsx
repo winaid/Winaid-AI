@@ -258,6 +258,7 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
   const handleRecommendTrends = async () => {
     setIsLoadingTrends(true);
     setTrendingItems([]);
+    setSeoTitles([]); // 배타 렌더: 주제 추천 시 제목 추천 결과 clear
     try {
       const items = await getTrendingTopics(category);
       setTrendingItems(items);
@@ -274,6 +275,7 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
     if (!topicForSeo) return;
     setIsLoadingTitles(true);
     setSeoTitles([]);
+    setTrendingItems([]); // 배타 렌더: 제목 추천 시 주제 추천 결과 clear
     try {
         // postType에 따라 블로그/카드뉴스용 제목 추천
         // press_release는 blog로 처리
