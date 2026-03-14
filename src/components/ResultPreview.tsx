@@ -1227,8 +1227,14 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
         tempDiv.innerHTML = localHtml;
         const imgs = tempDiv.querySelectorAll('img');
         if (imgs[regenIndex - 1]) {
-          imgs[regenIndex - 1].src = newImageData;
-          imgs[regenIndex - 1].alt = regenPrompt.trim();
+          const targetImg = imgs[regenIndex - 1];
+          const hadIndex = targetImg.hasAttribute('data-image-index');
+          targetImg.src = newImageData;
+          targetImg.alt = regenPrompt.trim();
+          if (!hadIndex) {
+            targetImg.setAttribute('data-image-index', String(regenIndex));
+          }
+          console.info(`[IMG_REGEN] before index=${regenIndex} | after data-image-index=${targetImg.getAttribute('data-image-index')} | preserved=${hadIndex}`);
           setLocalHtml(tempDiv.innerHTML);
         }
         toast.success('이미지가 재생성되었습니다!');
@@ -1305,7 +1311,8 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
                       const imgNum = parseInt(idx, 10);
                       const newSrc = newImageMap[imgNum];
                       if (newSrc) {
-                          return `<div class="content-image-wrapper"><img src="${newSrc}" /></div>`;
+                          console.info(`[IMG_REGEN] marker [IMG_${imgNum}] → img with data-image-index="${imgNum}"`);
+                          return `<div class="content-image-wrapper"><img src="${newSrc}" data-image-index="${imgNum}" /></div>`;
                       }
                       return '';
                   });
@@ -1319,7 +1326,14 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
                     imgs.forEach((img, i) => {
                       const ordinal = i + 1;
                       const newSrc = newImageMap[ordinal];
-                      if (newSrc) img.setAttribute('src', newSrc);
+                      if (newSrc) {
+                        const hadIndex = img.hasAttribute('data-image-index');
+                        img.setAttribute('src', newSrc);
+                        if (!hadIndex) {
+                          img.setAttribute('data-image-index', String(ordinal));
+                        }
+                        console.info(`[IMG_REGEN] DOM img[${i}] src 교체 | data-image-index=${img.getAttribute('data-image-index')} | preserved=${hadIndex}`);
+                      }
                     });
                     workingHtml = doc.body.innerHTML;
                   } catch {

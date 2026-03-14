@@ -3651,9 +3651,19 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
   }
 
   // 🔥 서버에 블로그 이력 저장 (비동기, 실패해도 무시)
+  // content: 임베딩용 텍스트 (이미지 마커 [IMG_N] 제거, HTML 태그 제거)
+  // html_content: 영속 가능한 완전한 HTML (base64 이미지 포함)
+  const plainTextForEmbedding = (textData.content || '')
+    .replace(/\[IMG_\d+\]/g, '') // 이미지 마커 제거
+    .replace(/<[^>]+>/g, ' ')    // HTML 태그 제거
+    .replace(/\s+/g, ' ')
+    .trim();
+  const blogHistoryContent = plainTextForEmbedding || storageHtml;
+  const hasBlobInHistory = storageHtml.includes('blob:');
+  console.info(`[STORAGE] saveBlogHistory | contentType=${plainTextForEmbedding ? 'text' : 'html'} | contentLen=${blogHistoryContent.length}자 | htmlLen=${storageHtml.length}자(${Math.round(storageHtml.length * 2 / 1024)}KB) | blob잔류=${hasBlobInHistory}`);
   saveBlogHistory(
     textData.title,
-    textData.content || storageHtml, // content가 없으면 복원된 HTML 사용
+    blogHistoryContent,
     storageHtml,
     request.keywords?.split(',').map(k => k.trim()) || [request.topic],
     undefined, // naverUrl
