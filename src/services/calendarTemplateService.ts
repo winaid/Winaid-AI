@@ -1839,69 +1839,73 @@ Elegant, classic, authoritative. Dark green conveys nature and traditional medic
   event: [
     {
       id: 'evt_sale_banner', name: '할인 배너', color: '#ef4444', accent: '#b91c1c', bg: '#fef2f2',
-      desc: '대형 할인율 배지 + 취소선 가격비교',
+      desc: '대각선 분할 + 대형 할인숫자',
       layoutHint: 'price',
-      aiPrompt: `BACKGROUND: Clean white (#ffffff) with very subtle warm gradient at bottom.
-ZONE 1 — TOP BANNER (top 18%): Full-width rounded rectangle with bold red (#ef4444 → #b91c1c) gradient fill. Hospital name in small white text (12px). Below: event title "임플란트 특별 할인" in large bold white text (24px, heavy weight).
-ZONE 2 — DISCOUNT BADGE (middle 35%): Large circular badge centered. Outer ring: subtle red glow at 10% opacity. Inner circle: white with thin red border. Inside: massive "30%" text in bold red (#ef4444, 56px weight 900). Below: "OFF" in smaller bold red.
-ZONE 3 — PRICE CARD (middle 25%): White rounded card (border-radius 12px, soft shadow 0 4px 20px rgba(0,0,0,0.08)). Inside: original price "990,000원" in gray (#94a3b8) with strikethrough line. Below: discounted price "690,000원" in massive bold red (#ef4444, 40px, weight 900). Clear price hierarchy — old price small, new price dominant.
-ZONE 4 — PERIOD + CTA (bottom 22%): Event period "2026.03.01 ~ 03.31" in gray text on subtle gray pill background. Below: full-width rounded CTA button with red gradient, white bold text "지금 바로 예약하세요". Hospital name small at very bottom.
-NO illustrations. Pure typographic promotional design. Urgent, attention-grabbing retail-inspired medical event.`,
+      aiPrompt: `DIAGONAL SPLIT LAYOUT — bold and dynamic promotional design.
+LEFT-TOP TRIANGLE (55% area): Solid red (#ef4444) diagonal fill from top-left to bottom-right. Hospital name in small white at top-left corner. Massive discount number "30" in ultra-bold white (72px, weight 900) with "%" sign. Below: "OFF" in white with wide letter-spacing.
+RIGHT-BOTTOM TRIANGLE (45% area): Clean white. Treatment name in large bold red. "이벤트 특별가" subtitle in gray. Original price with strikethrough in small gray. Discounted price in massive bold red (40px).
+BOTTOM BAR: Full-width solid red bar with white bold CTA text "지금 바로 예약하세요".
+Ticket-stub punch-hole dots along the diagonal line for decorative effect.
+Dynamic, attention-grabbing diagonal composition. NO illustrations — pure bold typography.`,
     },
     {
       id: 'evt_elegant_event', name: '엘레강스 이벤트', color: '#a855f7', accent: '#7e22ce', bg: '#faf5ff',
       desc: '퍼플 + 세리프 타이틀 (프리미엄 시술)',
       layoutHint: 'elegant',
-      aiPrompt: `BACKGROUND: Soft lavender gradient (#faf5ff to white). Very subtle radial glow of purple at center (5% opacity).
-ZONE 1 — HEADER (top 12%): Hospital name in small elegant text with letter-spacing 2px, purple (#7e22ce). Thin decorative line (0.5px, purple at 15% opacity) below.
-ZONE 2 — TITLE (20%): Small caps English subtitle "IMPLANT EVENT" in purple (#a855f7), letter-spacing 3px. Below: Large elegant Korean title "임플란트 이벤트" in bold purple (#7e22ce, 32px, weight 800). Thin decorative line below.
-ZONE 3 — PRICE SHOWCASE (35%): Centered white card with very subtle purple border (0.5px, 10% opacity), border-radius 16px, soft shadow. Inside: "SPECIAL PRICE" in small gray letters with spacing. Below: huge price "690,000원" in bold purple (#a855f7, 44px, weight 800). Elegant, refined spacing.
-ZONE 4 — DETAILS + CTA (bottom 33%): Thin divider line. Period dates in gray. Below: rounded pill CTA button with purple gradient (#a855f7 → #7e22ce), white text "예약 상담". Hospital name at bottom in small purple text.
-Luxury, sophisticated, premium dental clinic promotion. Gold-foil-inspired refinement without actual gold — pure purple elegance.`,
+      aiPrompt: `ART DECO ARCH LAYOUT — dark navy background with golden architectural arch.
+BACKGROUND: Deep navy (#0f172a) full bleed.
+BORDER: Triple-stepped Art Deco geometric border in metallic gold (#d4a853). Corner accent lines extending outward.
+CENTER ARCH: Large golden arch shape (doorway form) drawn with gold strokes, centered vertically. Fan-shaped decorative rays at arch apex.
+INSIDE ARCH: "SPECIAL EVENT" in small gold caps with letter-spacing at top. Treatment name in large bold white (32px). Gold divider line. Massive price in metallic gold gradient (44px, weight 900). Original price with strikethrough below in gray.
+BELOW ARCH: Period dates in muted gold. Decorative gold dot-and-line ornament. Hospital name in small gold at bottom.
+Art Deco luxury. Dark and golden. Architectural precision. Premium medical promotion.`,
     },
     {
       id: 'evt_pop_colorful', name: '팝 컬러풀', color: '#f59e0b', accent: '#d97706', bg: '#fffbeb',
       desc: '앰버 원형 배지 + 대형 할인숫자',
       layoutHint: 'pop',
-      aiPrompt: `BACKGROUND: Warm cream (#fffbeb) to white gradient. Subtle geometric dot pattern at edges in amber (#f59e0b) at 6% opacity.
-ZONE 1 — HEADER (top 10%): Hospital name in bold amber (#d97706) text.
-ZONE 2 — BADGE (35%): Large rounded circle badge centered. Outer ring: amber (#f59e0b) at 8% opacity. Inner circle: white with thin amber border. Inside: "EVENT" in small bold text. Below: massive "30%" in bold amber (#f59e0b, 48px, weight 900). Below: "할인" in bold.
-ZONE 3 — EVENT TITLE (10%): "임플란트" in large bold amber (#f59e0b, 28px, weight 800). Warm, inviting feel.
-ZONE 4 — PRICE + CTA (bottom 35%): White rounded card (radius 16px) with shadow. Inside: bold price "690,000원" in amber (36px, weight 900). Below: period "2026.03.01 ~ 03.31" in gray. Below: full-width rounded CTA button (radius 24px) with amber gradient, white bold text "지금 바로 예약!".
-Warm, energetic promotional poster. Inviting and professional. Korean dental clinic event with bold amber palette.`,
+      aiPrompt: `CHECKERBOARD + STARBURST LAYOUT — playful and energetic promotional design.
+BACKGROUND: White with subtle checkerboard pattern (alternating amber-tinted and white squares at 6% opacity).
+TOP-RIGHT: Starburst/sunburst badge — circular shape with 12 radiating spike lines. Inside: massive discount number in bold white on amber (#f59e0b) fill. "%OFF" below.
+LEFT SIDE: Hospital name small at top. Treatment name in massive bold amber (36px). "이벤트" subtitle below.
+CENTER-BOTTOM: White floating card with soft shadow and thin amber border. Inside: original price strikethrough in gray, massive discounted price in bold amber (44px).
+BOTTOM: Rounded amber CTA button with white bold text. Period dates in gray below.
+Playful starburst energy meets professional medical design. Bold amber palette on clean white.`,
     },
     {
       id: 'evt_minimal_modern', name: '미니멀 모던', color: '#64748b', accent: '#334155', bg: '#f8fafc',
       desc: '타이포 중심 + 최대 여백 (고급 시술)',
       layoutHint: 'minimal',
-      aiPrompt: `BACKGROUND: Pure white (#ffffff) with barely visible cool gray tint.
-ZONE 1 — SPACIOUS TOP (top 15%): Maximum whitespace. Small caps "IMPLANT EVENT" in light gray (#94a3b8), letter-spacing 4px, centered.
-ZONE 2 — TITLE (25%): Very large bold Korean text "임플란트" on first line, "특별 할인" on second line. Both in charcoal (#334155, 28px, weight 800). Below: ultra-thin line (0.5px, gray at 20% opacity), width 30%, centered.
-ZONE 3 — PRICE (30%): White card with extremely subtle shadow (0 2px 12px rgba(0,0,0,0.04)), border-radius 12px. Inside: "Special Offer" in light gray small caps. Below: massive price "690,000원" in charcoal (#334155, 40px, weight 800). Generous vertical padding.
-ZONE 4 — DETAILS (bottom 30%): Period in light gray (#94a3b8). Below: subtle pill button with gray fill at 8% opacity, "예약 문의" in charcoal. Hospital name at very bottom in tiny gray text.
-Ultra-minimalist. Maximum whitespace. Architectural precision. Less is more luxury medical aesthetic.`,
+      aiPrompt: `SWISS GRID LAYOUT — ultra-minimal with visible grid structure.
+BACKGROUND: Off-white (#fafafa). Very faint grid lines visible — 3 vertical columns and 4 horizontal rows creating a precise Swiss-style grid at 3% opacity.
+Small grid intersection markers (tiny dots) in charcoal at 8% opacity.
+TOP-LEFT CELL: "EVENT" in tiny light gray small caps with wide letter-spacing. Short accent underline below.
+MIDDLE-LEFT: Treatment name in massive bold charcoal (#1a1a1a, 48px, weight 900). Spans two columns.
+MIDDLE-RIGHT: Price in large bold charcoal. Original price strikethrough above in light gray.
+BOTTOM-LEFT: Period dates in light gray. Hospital name in tiny gray.
+Maximum whitespace between elements. Grid-aligned precision. No decorations. Pure Swiss typographic design for premium medical aesthetics.`,
     },
     {
       id: 'evt_gradient_wave', name: '그라데이션 웨이브', color: '#06b6d4', accent: '#0891b2', bg: '#ecfeff',
       desc: '틸 물결 곡선 + 플로팅 가격 카드',
       layoutHint: 'wave',
-      aiPrompt: `BACKGROUND: Light cyan (#ecfeff) to white gradient.
-ZONE 1 — HEADER (top 12%): Hospital name in teal (#0891b2) text. Below: large bold title "임플란트 이벤트" in cyan (#06b6d4, 28px, weight 800).
-ZONE 2 — WAVE DECORATION (12%): Two flowing sine-wave shapes spanning full width. First wave: cyan (#06b6d4) at 6% opacity, smooth curve. Second wave: slightly offset, 4% opacity. Creates a calm ocean-wave visual separator.
-ZONE 3 — PRICE CARD (35%): White rounded card (85% opacity, border-radius 16px, soft shadow) floating over the waves. Inside: "Limited Time Offer" in small teal text with letter-spacing. Below: huge price "690,000원" in bold cyan (#06b6d4, 40px, weight 800).
-ZONE 4 — WAVE + CTA (bottom 25%): Another set of gentle wave shapes at 4% opacity. Period "2026.03.01 ~ 03.31" in gray. Below: rounded CTA button with cyan gradient (#06b6d4 → #0891b2), white bold text "예약하기".
-Modern, flowing, dynamic. Ocean-inspired calm yet exciting. Tech-forward healthcare design.`,
+      aiPrompt: `CONCENTRIC RINGS LAYOUT — radial composition emanating from center.
+BACKGROUND: Clean white. Multiple concentric circles centered vertically — 5-6 rings expanding outward in cyan (#06b6d4) with decreasing opacity (from 35% inner to 5% outer). Rings have thin stroke, no fill.
+CENTER CORE: Small solid circle in cyan at 15% opacity.
+TOP (above rings): Hospital name in small teal. Treatment name in large bold cyan (32px). "이벤트" subtitle.
+CENTER (on rings): Price in massive bold cyan (44px, weight 900) placed directly on the rings for visual impact.
+BOTTOM (below rings): Original price strikethrough in gray. Period dates. Rounded CTA button with cyan gradient.
+Concentric radial design creates depth and focus. Modern, tech-forward, dynamic healthcare promotion.`,
     },
     {
       id: 'evt_season_special', name: '시즌 스페셜', color: '#22c55e', accent: '#15803d', bg: '#f0fdf4',
       desc: '그린 시즌 배너 + 자연 모티프',
       layoutHint: 'season',
-      aiPrompt: `BACKGROUND: Soft mint (#f0fdf4) to white gradient. Very subtle leaf/floral shapes at corners in green at 5-8% opacity.
-ZONE 1 — HEADER (top 10%): Hospital name in green (#15803d) text.
-ZONE 2 — SEASON BANNER (20%): Rounded rectangle with green (#22c55e) at 6% opacity fill, thin green border at 10%. Inside: "SEASON SPECIAL" in small green letters with spacing. Below: large bold "임플란트 이벤트" in green (#22c55e, 24px, weight 800). Small decorative circles in green at edges (5-6% opacity).
-ZONE 3 — PRICE CARD (35%): White rounded card (90% opacity, border-radius 16px, soft shadow). Inside: "Season Special" in small green text. Below: massive price "690,000원" in bold green (#22c55e, 40px, weight 800).
-ZONE 4 — PERIOD + CTA (bottom 25%): Period on subtle green pill background. Below: full-width rounded CTA button with green gradient (#22c55e → #15803d), white bold text "지금 바로 예약하세요".
-Fresh, natural, inviting. Seasonal limited-time offer feel. Professional Korean dental clinic event with spring/nature atmosphere.`,
+      aiPrompt: `STACKED CARDS LAYOUT — three overlapping card layers creating depth.
+BACKGROUND: Light gray (#f8f8f8).
+THREE OVERLAPPING CARDS: Three white rounded cards (radius 12px) stacked at slightly different angles (-3°, 2°, 0°). Back card slightly offset right, middle card offset left, front card centered. Soft shadows between layers.
+FRONT CARD CONTENT: "시즌 한정" badge at top in rounded green pill. Hospital name small. Treatment name in large bold green (#22c55e, 32px). "이벤트" subtitle. Price area with soft green background — original price strikethrough, discounted price in massive bold green (40px). Period dates at bottom.
+Card edges visible on left/right creating paper stack depth illusion. Fresh seasonal feel with professional medical design.`,
     },
   ],
 
@@ -1911,75 +1915,81 @@ Fresh, natural, inviting. Seasonal limited-time offer feel. Professional Korean 
   // 색상: 화이트/라이트그레이 + 네이비(신뢰), 브랜드 컬러 악센트바, 베이지/크림(피부과)
   doctor: [
     {
-      id: 'doc_portrait_formal', name: '정장 포트레이트', color: '#1e40af', accent: '#1e3a8a', bg: '#eff6ff',
-      desc: '네이비 프로필 카드 + 자격 목록 (표준)',
+      id: 'doc_portrait_formal', name: '매거진 커버', color: '#1e40af', accent: '#1e3a8a', bg: '#eff6ff',
+      desc: '매거진 커버형 + 하단 정보 오버레이',
       layoutHint: 'portrait',
-      aiPrompt: `BACKGROUND: Clean white with very subtle blue tint.
-ZONE 1 — PHOTO AREA (top 45%): White rounded card (border-radius 12px, soft shadow). Top section: subtle blue (#1e40af) gradient band at 6% opacity. Center: large rectangular photo placeholder (50x50px equivalent, border-radius 8px, subtle blue border at 10%). "PHOTO" watermark text inside in light blue.
-ZONE 2 — NAME + TITLE (20%): Doctor name "김윈에이드" in large bold navy (#1e40af, 28px, weight 800). Below: rounded pill with navy gradient background, white bold text "치과 전문의".
-ZONE 3 — CREDENTIALS (25%): Alternating light/white stripe rows. Each row: "서울대 치의학 박사", "임플란트 전문", "경력 10년" — centered text in gray (#64748b). Clean professional list.
-BOTTOM: Hospital name in navy text, centered.
-Formal, authoritative, trust-building. Corporate medical profile card.`,
+      aiPrompt: `MAGAZINE COVER LAYOUT — top 55% photo area, bottom 45% info overlay.
+BACKGROUND: Light gray (#f1f5f9).
+TOP SECTION (55%): Large photo area with soft blue tint background. Hospital name with accent underline at top-left corner. Large circular photo placeholder centered — white background, soft shadow. Generous spacing.
+BOTTOM SECTION (45%): Clean white band. Doctor name in massive bold navy (#1e40af, 36px). Rounded navy pill with white text for specialty. Credentials listed below in gray. Clear separation between photo and info zones.
+Magazine editorial feel. Large photo emphasis. Formal, authoritative profile card.`,
     },
     {
       id: 'doc_friendly_curve', name: '친근한 곡선', color: '#10b981', accent: '#059669', bg: '#ecfdf5',
       desc: '민트 곡선 + 인사말 강조 (가정의학)',
       layoutHint: 'curve',
-      aiPrompt: `BACKGROUND: Soft mint (#ecfdf5) to white gradient. Gentle curved wave shape dividing upper and lower sections at ~35% height, green (#10b981) at 4% opacity.
-ZONE 1 — PHOTO (top 40%): Large circular photo frame (radius 22px equivalent) centered. White background with soft shadow. Subtle green (#10b981) border at 8% opacity. "PHOTO" watermark inside.
-ZONE 2 — NAME + TITLE (18%): "김윈에이드" in bold green (#10b981, 28px, weight 800). Below: rounded pill with green at 8% opacity, "치과 전문의" in green accent text.
-ZONE 3 — GREETING (30%): White rounded card with soft shadow, border-radius 16px. Inside: italic greeting text "환자분의 미소가 저의 보람입니다" in green accent color. Warm, personal, inviting.
-BOTTOM: Hospital name in green text.
-Friendly, approachable, warm. Organic curved shapes. Patient-friendly dental clinic aesthetic.`,
+      aiPrompt: `CAPSULE/PILL SHAPE LAYOUT — doctor info contained within a large capsule form.
+BACKGROUND: Clean white.
+CAPSULE SHAPE: Large vertical pill/capsule shape (very rounded rectangle, radius 50%) centered. Thin green (#10b981) stroke border. Upper half of capsule has soft green tint (15% opacity).
+UPPER CAPSULE: Circular photo placeholder centered — white with soft shadow. Photo area inside.
+LOWER CAPSULE: Hospital name in small green. Doctor name in large bold green (28px). Specialty in green accent. Credentials listed in gray.
+Hospital name repeated small at bottom outside capsule.
+Friendly, approachable, organic shape. Patient-friendly aesthetic with distinctive capsule silhouette.`,
     },
     {
       id: 'doc_modern_split', name: '모던 분할', color: '#6366f1', accent: '#4f46e5', bg: '#eef2ff',
       desc: '좌사진 + 우정보 2단 분할 (인기 레이아웃)',
       layoutHint: 'split',
-      aiPrompt: `LAYOUT: Two-column split design.
-LEFT COLUMN (42% width): Full-height area with indigo (#6366f1) at 6% opacity background. Large circular photo frame centered vertically — white background, subtle indigo border. Square photo placeholder inside (border-radius 6px, indigo at 8%). "PHOTO" watermark.
-RIGHT COLUMN (58% width): White background.
-TOP-RIGHT: Doctor name "김윈에이드" in bold indigo (#6366f1, 26px, weight 800). Below: rounded pill with indigo at 8% opacity, "치과 전문의" in indigo accent.
-MIDDLE-RIGHT: Bullet list with small indigo dots: "서울대 치대 졸업", "임플란트 전문", "경력 10년" in gray (#64748b).
-BOTTOM-RIGHT: Italic quote "환자분의 미소가 저의 보람입니다" in indigo accent.
-Modern, geometric split-layout. Clean division. Contemporary medical profile.`,
+      aiPrompt: `DIAGONAL SPLIT LAYOUT — bold diagonal line divides the entire canvas.
+BACKGROUND: White canvas with a strong diagonal line running from top-left corner to bottom-right corner in indigo (#6366f1). The line is 3-4px thick.
+UPPER-LEFT TRIANGLE: Light indigo tint (6% opacity). Contains hospital name in small indigo text near top-left.
+LOWER-RIGHT TRIANGLE: Pure white. Contains doctor name in bold indigo (#6366f1, 26px, weight 800) and specialty pill badge below it. Credentials listed in gray (#64748b).
+INTERSECTION: A large circular profile photo frame (white fill, indigo border) sits centered exactly where the diagonal line crosses the middle of the canvas. The circle overlaps both triangles.
+BOTTOM-RIGHT CORNER: Italic quote text in indigo accent.
+Modern geometric composition. The diagonal creates dramatic visual tension. Sharp, contemporary medical profile.`,
     },
     {
       id: 'doc_warm_story', name: '따뜻한 스토리', color: '#f97316', accent: '#ea580c', bg: '#fff7ed',
       desc: '인사말 중심 매거진 + 소형 프로필',
       layoutHint: 'story',
-      aiPrompt: `BACKGROUND: Warm cream (#fff7ed) with subtle white overlay card at 50% opacity, border-radius 12px.
-ZONE 1 — COMPACT HEADER (top 25%): Left: small circular photo frame (radius 12px). Right: "치과 전문의" in small orange text, below: "김윈에이드" in bold orange (#f97316, 22px, weight 800). Thin divider line below in orange at 8% opacity.
-ZONE 2 — GREETING MESSAGE (45%): Rounded area with orange at 3% opacity. Large storytelling text centered: "안녕하세요. 여러분의 건강한 미소를 위해 항상 노력하겠습니다. 편안하게 찾아주세요." in warm gray (#475569). Last line "편안하게 찾아주세요." in bold orange accent. Personal, heartfelt narrative style.
-ZONE 3 — CREDENTIALS (15%): White card with soft shadow. Single line: "서울대 치대 | 임플란트 전문 | 경력 10년" in light gray, centered.
-BOTTOM: Hospital name in orange accent text.
-Warm, personal, storytelling. Emphasis on doctor's greeting over credentials. Trust-building human touch.`,
+      aiPrompt: `NEWSPAPER COLUMN LAYOUT — editorial magazine style with distinct left sidebar and right article area.
+BACKGROUND: Warm cream (#fff7ed).
+LEFT SIDEBAR (20% width, full height): Narrow vertical strip in warm orange (#f97316) at 15% opacity. Contains a small circular profile photo at top of the strip. Below photo: doctor name written vertically in orange. Hospital name at bottom of strip, also vertical.
+RIGHT ARTICLE AREA (80% width): White/cream background.
+TOP-RIGHT: Large decorative open-quote mark « in orange (#f97316) at 20% opacity. Below: doctor greeting text "안녕하세요. 여러분의 건강한 미소를 위해 항상 노력하겠습니다." in warm gray (#475569), styled like a newspaper article paragraph.
+MIDDLE-RIGHT: Specialty "치과 전문의" in bold orange (#f97316). Credentials listed below as a byline: "서울대 치대 | 임플란트 전문 | 경력 10년" in light gray.
+BOTTOM-RIGHT: Closing decorative quote mark ».
+Editorial, warm, narrative-driven. Newspaper column aesthetic with strong left sidebar identity strip. Trust-building human storytelling.`,
     },
     {
       id: 'doc_dark_luxury', name: '다크 럭셔리', color: '#d4a017', accent: '#b8860b', bg: '#1a1a2e',
       desc: '다크 네이비 + 골드 (VIP 원장)',
       layoutHint: 'luxury',
-      aiPrompt: `BACKGROUND: Deep navy (#0f172a) full background.
-ZONE 1 — GOLD HEADER (top 8%): Thin gold (#d4a017) decorative double line spanning 70% width, centered. Elegant separator.
-ZONE 2 — PHOTO (35%): Large circular frame centered. Gold (#d4a017) border at 20% opacity, subtle gold glow at 5%. Dark inner circle with "PHOTO" in gold at 40% opacity.
-ZONE 3 — NAME + TITLE (20%): "김윈에이드" in large bold gold (#d4a017, 28px, weight 800). Below: rounded pill with gold at 8% opacity, "치과 전문의" in gold (#b8860b).
-ZONE 4 — CREDENTIALS (15%): "서울대 치대 | 임플란트 전문" in light gray (#94a3b8). Thin gold divider line below.
-BOTTOM: Hospital name in gold text. Gold decorative line.
-Premium dark luxury. Deep navy with gold accents. VIP doctor profile. High-end dental specialist branding.`,
+      aiPrompt: `CENTERED SQUARE GOLDEN FRAME LAYOUT — premium dark luxury with geometric gold frame.
+BACKGROUND: Deep navy (#0f172a) full bleed.
+CENTER: A large square frame (not rounded, sharp corners) with gold (#d4a017) 2px border, positioned dead center of the canvas. Inside the frame: circular profile photo placeholder on dark navy background.
+CORNER ACCENTS: Four L-shaped gold accent lines at each corner of the square frame, extending outward — like decorative corner brackets. Each L is about 15px long on each arm.
+BELOW FRAME: Doctor name "김윈에이드" in large bold gold (#d4a017, 28px). Specialty "치과 전문의" in smaller gold. Credentials in light gray (#94a3b8).
+TOP OF CANVAS: Hospital name in small gold text, centered.
+BOTTOM OF CANVAS: Thin gold decorative horizontal line.
+Premium, VIP aesthetic. The square frame with corner accents is the defining visual element. Dark navy + gold = high-end dental specialist branding.`,
     },
     {
       id: 'doc_clean_grid', name: '클린 그리드', color: '#0ea5e9', accent: '#0284c7', bg: '#f0f9ff',
       desc: '2×2 정보 카드 그리드 (인포그래픽)',
       layoutHint: 'grid',
-      aiPrompt: `BACKGROUND: Light sky blue (#f0f9ff) to white gradient.
-ZONE 1 — COMPACT HEADER (top 25%): Left: circular photo frame (radius 14px) with white background, subtle sky blue border, soft shadow. Right: "김윈에이드" in bold sky blue (#0ea5e9, 22px). Below right: rounded pill with sky blue at 8%, "치과 전문의" in blue accent.
-ZONE 2 — INFO GRID (50%): 2x2 grid of white cards with soft shadow, border-radius 8px. Each card:
-- Top: category label in bold sky blue ("학력", "전공", "경력", "학회")
-- Bottom: value in gray ("서울대 치대", "임플란트", "10년 이상", "대한치과의사협회")
-Cards arranged in neat grid with 8px gaps.
-ZONE 3 — CTA (10%): Rounded pill button with sky blue gradient, width 60%, centered.
-BOTTOM: Hospital name in blue accent text.
-Clean, organized, infographic-style. Dashboard aesthetic. Easy-to-read structured profile.`,
+      aiPrompt: `CIRCULAR DASHBOARD LAYOUT — infographic style with central profile hub and satellite info badges.
+BACKGROUND: Light sky blue (#f0f9ff) gradient to white.
+CENTER: Large circular profile photo frame (diameter ~40% of width) centered in the upper-middle area. White fill, sky blue (#0ea5e9) border, subtle shadow. This is the visual hub.
+SATELLITE BADGES: 4 smaller circles arranged around the central circle (top-left, top-right, bottom-left, bottom-right). Each badge is a white circle with sky blue border containing one piece of info:
+- Badge 1 (top-left): "학력" label + "서울대 치대" value
+- Badge 2 (top-right): "전공" label + "임플란트" value
+- Badge 3 (bottom-left): "경력" label + "10년" value
+- Badge 4 (bottom-right): "학회" label + "치과의사협회" value
+CONNECTING LINES: Thin sky blue (#0ea5e9) lines connecting each satellite badge to the central circle.
+TOP: Hospital name in small sky blue text.
+BOTTOM: Doctor name "김윈에이드" in bold sky blue (#0ea5e9, 22px). Specialty "치과 전문의" below.
+Dashboard infographic. Radial layout with connected nodes. Clean, data-visualization aesthetic for medical professionals.`,
     },
   ],
 
@@ -1991,88 +2001,94 @@ Clean, organized, infographic-style. Dashboard aesthetic. Easy-to-read structure
       id: 'ntc_bulletin_board', name: '클린 블루 안내', color: '#2563eb', accent: '#1d4ed8', bg: '#eff6ff',
       desc: '블루 헤더 + 구조화 정보 행 (표준)',
       layoutHint: 'bulletin',
-      aiPrompt: `Clean blue Korean dental clinic official notice design (inspired by professional medical notices).
-TOP (8%): Solid blue (#2563eb) bar with small centered icon (tooth/clinic logo shape).
-TITLE AREA (18%): Small gray English text "CLINIC NAME DENTAL CLINIC". Below: bold Korean clinic name. Below: very large bold black text "진료시간 안내" or notice title.
-MAIN CONTENT (55%): White card with light blue border and subtle shadow. Structured content displayed as organized rows with clear dividing lines. Each row contains:
-- Category label on left (in regular weight)
-- Colon separator
-- Details on right in bold
-- Optional small colored badge for special notes (like "야간진료", "휴게시간 없음")
-Clean, organized, table-like layout. Each information row clearly separated.
-BOTTOM (19%): Location/contact info section. Subway station icon with station name and exit info. Address details. Small clinic logo at bottom-right.
-Ultra-professional, corporate Korean healthcare design. Clean blue accent on white.`,
+      aiPrompt: `CORK BOARD / STICKY NOTES LAYOUT — bulletin board aesthetic with pinned notes.
+BACKGROUND: Warm cork/tan texture (#d4a373 at 30% opacity on beige #f5f0e8). Subtle wood grain pattern.
+HEADER: Blue (#2563eb) banner strip across top with "공지사항" in white bold text. Clinic name below in small blue text.
+MAIN AREA: 3 sticky notes (post-it style) pinned to the cork board, each tilted at a slightly different angle (-3°, 2°, -1°):
+- NOTE 1 (yellow #fef08a): Tilted left. Contains primary notice content (e.g., schedule info). Small round pushpin circle at top in red.
+- NOTE 2 (pink #fda4af): Tilted right. Contains secondary details (dates, special hours). Small round pushpin circle at top in blue.
+- NOTE 3 (green #bbf7d0): Slightly tilted. Contains contact/location info. Small round pushpin circle at top in yellow.
+Each note has subtle drop shadow to appear lifted off the board. Handwritten-style text feel.
+BOTTOM: Small clinic logo and year in subtle gray text.
+Casual, approachable, bulletin-board aesthetic. The tilted sticky notes with pushpins create an immediately recognizable cork board look. Warm, inviting clinic notice.`,
     },
     {
       id: 'ntc_modern_alert', name: '코럴 공지', color: '#ef4444', accent: '#dc2626', bg: '#fef2f2',
       desc: '코럴 그라데이션 + 강조 뱃지 (긴급)',
       layoutHint: 'alert',
-      aiPrompt: `Warm coral/red Korean dental clinic important notice design.
-BACKGROUND: Soft gradient from warm coral (#f87171) at top to light peach (#fef2f2) at bottom.
-TOP (30%): Large bold white text with notice title (e.g., "진료 안내", "휴진 안내") in heavy rounded Korean font. Important dates highlighted. Clinic name in small text.
-CENTER (45%): Clean white rounded card with notice content. Key information displayed prominently:
-- Date/period in large bold text
-- Details in organized rows
-- Important items highlighted with red/coral accent badges
-- Clean section dividers
-BOTTOM (25%): Additional info, contact details, clinic logo centered.
-Warm, attention-grabbing Korean healthcare notice. Professional yet inviting.`,
+      aiPrompt: `TRAFFIC SIGN / WARNING ALERT LAYOUT — bold, attention-grabbing alert design.
+TOP ZONE (60% of height): Solid coral/red (#ef4444) background fill.
+CENTER OF TOP ZONE: Large warning triangle shape (equilateral, white stroke, 3px border) centered. Inside the triangle: large bold "!" exclamation mark in white. This triangle is the dominant visual element.
+ABOVE TRIANGLE: "긴급 공지" or notice title in large bold white text.
+BELOW TRIANGLE: Brief notice summary in white text (e.g., "휴진 안내").
+BOTTOM ZONE (40% of height): Clean white background.
+CONTENT IN BOTTOM ZONE: Notice details in dark text — date, reason, contact info. Organized as clean text blocks with coral (#ef4444) accent bullets.
+FOOTER: Clinic name and year in small coral text.
+Bold, unmissable alert design. The large warning triangle on solid red background immediately signals importance. Traffic-sign inspired visual language for urgent medical clinic notices.`,
     },
     {
       id: 'ntc_soft_info', name: '라벤더 안내', color: '#8b5cf6', accent: '#7c3aed', bg: '#f5f3ff',
       desc: '라벤더 필 카드 3단 (부드러운 안내)',
       layoutHint: 'soft',
-      aiPrompt: `BACKGROUND: Gentle gradient from soft lavender (#f5f3ff) to white. Subtle decorative circles at corners in light purple at 5-8% opacity.
-ZONE 1 — HEADER (top 15%): Rounded pill with purple at 6% opacity. Left: "i" icon circle in purple at 10%. Right: bold purple title "진료실 이전 안내" (#8b5cf6, 20px, weight 700).
-ZONE 2 — CONTENT CARDS (55%): 3 individual rounded pill cards (border-radius 14px, white 90% opacity, soft shadow), stacked vertically with 8px gaps. Each card: small purple circle (10% opacity) on left, content text in gray (#475569) on right. Cards contain: "2026년 4월 1일부터", "새 장소에서 진료합니다", "서울시 강남구 ...".
-ZONE 3 — CTA (15%): Rounded pill with purple at 6% opacity, centered text "양해 부탁드립니다" in purple accent.
-BOTTOM: Hospital name in light gray.
-Soft, calming, gentle. All rounded shapes. Approachable and friendly dental clinic notice. Lavender palette.`,
+      aiPrompt: `KAKAOTALK CHAT INTERFACE LAYOUT — messenger-style conversation design.
+BACKGROUND: Light lavender (#f5f3ff) mimicking a chat app background.
+HEADER BAR: Solid purple (#8b5cf6) bar at top with "< 병원 공지방" text in white (like a chat room title bar). Small profile icon on left.
+CHAT BUBBLES — left-aligned (clinic messages):
+- Bubble 1: Yellow (#fef08a) rounded rectangle with polygon tail pointing left. Contains "안녕하세요! 진료 안내드립니다 😊" in dark text.
+- Bubble 2: Yellow rounded rectangle with tail. Contains notice details (schedule, dates).
+- Bubble 3: Yellow rounded rectangle with tail. Contains additional info.
+CHAT BUBBLE — right-aligned (patient reply):
+- White rounded rectangle with polygon tail pointing right. Contains "네, 감사합니다!" in gray text.
+TIME STAMPS: Small gray time text ("오후 2:30") next to bubbles.
+BOTTOM: Input field bar with rounded text input area and send button, like a real chat interface.
+Familiar, friendly, conversational. KakaoTalk-inspired layout makes the notice feel personal and approachable. Lavender + yellow palette.`,
     },
     {
       id: 'ntc_corporate_formal', name: '공식 문서', color: '#1f2937', accent: '#111827', bg: '#f9fafb',
       desc: '공문서 형식 + 흑백 이중선 (공식)',
       layoutHint: 'formal',
-      aiPrompt: `BACKGROUND: Pure white (#ffffff).
-ZONE 1 — HEADER (top 8%): Full-width 2px solid black (#1f2937) line. Below: hospital name centered in formal font.
-ZONE 2 — TITLE (12%): Large bold text "공 지 사 항" with letter-spacing 4px in charcoal (#1f2937, 26px, weight 800), centered. Below: thin horizontal line at 30% opacity.
-ZONE 3 — CONTENT (50%): White area with thin border frame. Clean formal text layout: "2026년 4월 1일부터 새로운 장소에서 진료합니다." in dark text. Indented paragraphs. "신주소: 서울시 강남구 ..." Numbered items with proper Korean formal document formatting. Clear section headings.
-ZONE 4 — CLOSING (15%): Thin divider line at 20% opacity. "위와 같이 알려드리오니 참고하시기 바랍니다." in formal closing. Date and clinic name.
-BOTTOM: Thin black border line matching top.
-Formal, authoritative, institutional Korean official document format. Black and white with no color.`,
+      aiPrompt: `CERTIFICATE / OFFICIAL DOCUMENT LAYOUT — formal document with decorative border and seal.
+BACKGROUND: Pure white (#ffffff).
+BORDER: Double-line border (outer 2px, inner 1px, 4px gap) in charcoal (#1f2937) inset 5% from edges, creating a certificate/diploma frame effect.
+CORNER BRACKETS: L-shaped bracket decorations at all 4 corners of the border — each bracket is two short perpendicular lines forming an L, adding formal document gravitas.
+HEADER: Hospital name centered in formal serif-style font. "공 지 사 항" in large bold charcoal (#1f2937, 26px) with wide letter-spacing, centered below.
+CONTENT AREA: Clean formal text layout with proper Korean official document formatting. Indented paragraphs, numbered items. Dark text on white.
+SEAL: Red circular stamp mark ("印") at bottom-right of content area — a circle with "印" character inside in red (#dc2626), mimicking a traditional Korean official seal/stamp (도장). This is the key visual differentiator.
+FOOTER: Date and clinic name in formal closing. Bottom border line matching top.
+Institutional, authoritative, certificate-style. The double border + corner brackets + red seal stamp = unmistakable official document format.`,
     },
     {
       id: 'ntc_card_popup', name: '민트 팝업', color: '#06b6d4', accent: '#0891b2', bg: '#ecfeff',
       desc: '플로팅 모달 카드 + 민트 상단바',
       layoutHint: 'popup',
-      aiPrompt: `Modern mint/cyan Korean dental clinic pop-up notice design.
-BACKGROUND: Light mint gradient (#ecfeff to white) with soft geometric shapes.
-FLOATING CARD: Large white card with cyan top border (4px solid #06b6d4), rounded corners, prominent drop shadow. Looks like it's floating above the background.
-CARD CONTENT:
-- Top bar: Cyan accent with icon (megaphone/bell) and "공지" badge
-- Title: Large bold dark text with notice subject
-- Body: Organized content with cyan bullet points
-- Key dates/info in highlighted cyan boxes
-- Divider lines between sections
-- Bottom: Action info (contact/visit) with cyan button-style elements
-OUTSIDE CARD: Small decorative elements in mint tones. Clinic branding.
-Modern, digital-native Korean healthcare notice. Clean and contemporary.`,
+      aiPrompt: `DARK OVERLAY POPUP MODAL LAYOUT — floating modal dialog on dimmed background.
+BACKGROUND: Dark semi-transparent overlay (#0f172a at 70% opacity) covering the entire canvas — simulating a dimmed/blurred page behind a popup.
+MODAL CARD: White rounded rectangle (border-radius 16px) centered in the canvas, with strong drop shadow. Takes up about 70% width and 60% height.
+TOP-RIGHT OF MODAL: Circular "X" close button in cyan (#06b6d4) outline.
+MODAL HEADER: Rounded cyan (#06b6d4) icon circle at top-center of modal (bell/megaphone icon shape). Below: "공지사항" title in bold dark text.
+MODAL BODY: Clean organized content with cyan bullet points. Key dates in highlighted cyan (#06b6d4 at 10% opacity) boxes. Divider lines between sections.
+MODAL FOOTER: Rounded cyan (#06b6d4) CTA button "확인" centered at bottom of modal.
+OUTSIDE MODAL: Clinic name in small white text visible through the dark overlay at bottom.
+Modern, digital-native popup experience. The dark overlay + floating white modal creates a familiar UI pattern. Mint/cyan accent on white card against dark backdrop.`,
     },
     {
       id: 'ntc_timeline', name: '그린 타임라인', color: '#22c55e', accent: '#16a34a', bg: '#f0fdf4',
       desc: '변경 전/후 타임라인 비교 (이전 안내)',
       layoutHint: 'timeline',
-      aiPrompt: `Timeline-style Korean dental clinic change notice design.
-BACKGROUND: Soft green (#f0fdf4) to white gradient.
-TOP (20%): Clinic logo. Bold title "변경 안내" or notice title in dark green.
-CENTER (60%): Vertical timeline with green line connecting nodes:
-- BEFORE node: Circle with old information, struck-through or faded
-- Arrow/transition indicator
-- AFTER node: Circle with new information, highlighted in green
-- Effective date badge in green
-Each node is a white card with shadow containing relevant details.
-BOTTOM (20%): Summary of changes, contact info for questions. Green accent footer with clinic info.
-Infographic-style change notice. Clear before/after comparison. Green palette.`,
+      aiPrompt: `NUMBERED STEPS LAYOUT — vertical step-by-step process with large numbered circles and connecting arrows.
+BACKGROUND: Soft green (#f0fdf4) gradient to white.
+HEADER: "안내 사항" title in bold dark green (#16a34a). Clinic name in smaller green text below.
+STEP SEQUENCE (vertical, centered): 4 large numbered circles connected by downward arrows:
+- STEP 1: Large circle (green #22c55e fill, white "1" inside in bold). Label text to the right: first notice item.
+- DOWN ARROW: Green arrow pointing downward connecting step 1 to step 2.
+- STEP 2: Large circle (green fill, white "2"). Label: second notice item.
+- DOWN ARROW connecting to step 3.
+- STEP 3: Large circle (green fill, white "3"). Label: third notice item.
+- DOWN ARROW connecting to step 4.
+- STEP 4: Large circle (green fill, white "4"). Label: fourth notice item / conclusion.
+Each step circle is the dominant visual element (~20px diameter). Labels are clean text to the side.
+FOOTER: Clinic name and contact in small green text.
+Process-flow infographic. The large numbered circles with connecting arrows create a clear visual sequence. Green palette conveys positive, organized information flow.`,
     },
   ],
 
@@ -2507,77 +2523,99 @@ Cute, playful. Pastel pink celebration. Child-friendly dental practice greeting.
       id: 'hir_corporate_clean', name: '기업 클린', color: '#1e40af', accent: '#1e3a8a', bg: '#eff6ff',
       desc: '네이비 구분선 + 공식 목록 (표준)',
       layoutHint: 'corporate',
-      aiPrompt: `BACKGROUND: Clean white (#ffffff).
-ZONE 1 — LOGO HEADER (top 10%): Left-aligned rectangular placeholder box (60x28px, navy #1e40af at 6% opacity, border-radius 8px, dashed 1px navy border at 20%) for company logo. Right-aligned: "RECRUITMENT" in small navy text (10px, weight 600, letter-spacing 3px). Full-width thin horizontal rule below (1px, navy #1e40af at 12% opacity).
-ZONE 2 — TITLE BLOCK (12%): Large bold "간호사 모집" in navy (#1e40af, 28px, weight 800) left-aligned. Below: "함께 성장할 인재를 찾습니다" in navy accent (#1e3a8a, 12px, weight 400). Full-width thin horizontal rule below (1px, navy at 12% opacity).
-ZONE 3 — REQUIREMENTS LIST (45%): No card — clean open list directly on white background. Each of 4 rows separated by thin horizontal rules (1px, navy at 6% opacity). Each row: navy square bullet (4px, filled navy at 40%) left, requirement label in dark gray (#1e293b, 13px, weight 600) next, detail value right-aligned in gray (#475569, 13px, weight 400). Rows: "고용형태 — 정규직", "자격요건 — 경력 1년 이상", "복리후생 — 4대보험, 중식, 인센티브", "접수기간 — 채용시까지 상시". Generous row height (40px). Final thin horizontal rule after last row.
-ZONE 4 — CTA (10%): Full-width pill button (border-radius 24px) with navy gradient (#1e40af → #1e3a8a), white bold text "지원하기" (14px, weight 700).
-ZONE 5 — FOOTER (8%): Hospital name in light gray (#94a3b8, 11px, weight 400) center-aligned. Thin horizontal rule above (1px, navy at 8% opacity).
-Formal corporate document style. Top-down vertical list with horizontal rules as section dividers. Logo placeholder header. No cards or shadows — clean ruled layout like an official posting.`,
+      aiPrompt: `VERTICAL 3-BAND TABLE LAYOUT — structured corporate posting with header/body/footer bands.
+BAND 1 — HEADER (top 18%): Solid navy (#1e40af) filled rectangle, full width. "간호사 모집" in large bold white text centered. "RECRUITMENT" in small white text above with letter-spacing.
+BAND 2 — TABLE BODY (middle 60%): Alternating row stripes — row 1 white, row 2 light blue (#eff6ff at 50%), row 3 white, row 4 light blue. Each row has a LEFT LABEL COLUMN (30% width, navy text, bold) and RIGHT VALUE COLUMN (70% width, gray text). Rows:
+- Row 1: "고용형태" | "정규직"
+- Row 2: "자격요건" | "경력 1년 이상"
+- Row 3: "복리후생" | "4대보험, 중식, 인센티브"
+- Row 4: "접수기간" | "채용시까지 상시"
+Thin navy divider lines between rows. Table-like structured data presentation.
+BAND 3 — CTA FOOTER (bottom 22%): Solid navy (#1e40af) filled rectangle, full width. White bold "지원하기" button text centered. Hospital name in small white text below.
+Three distinct horizontal bands create a visually structured, corporate posting format. Navy-white-navy sandwich layout.`,
     },
     {
       id: 'hir_friendly_team', name: '팀워크 친근', color: '#22c55e', accent: '#16a34a', bg: '#f0fdf4',
       desc: '팀 아이콘 + 말풍선 초대 (동네 병원)',
       layoutHint: 'team',
-      aiPrompt: `BACKGROUND: Soft mint (#f0fdf4) to white gradient (top to bottom).
-ZONE 1 — TEAM PHOTO AREA (top 25%): Large circle (120px diameter, centered) with green (#22c55e) at 8% opacity fill, dashed green border (2px, 25% opacity). Inside: silhouette group icon (3 simple person outlines in green at 30% opacity) representing team. Small "Our Team" label below circle in green (#16a34a, 10px, weight 500).
-ZONE 2 — SPEECH BUBBLE (15%): Rounded speech bubble shape (white fill, green #22c55e border 2px, border-radius 16px) with triangular tail pointing up toward team circle. Inside: "Join us! 함께해요!" in green (#22c55e, 18px, weight 700). Small sparkle accents (green, 4px) around bubble.
-ZONE 3 — HORIZONTAL ICON CARDS (35%): Horizontal scrollable-style row of 4 mini cards side by side (each ~22% width, border-radius 16px, white fill, green shadow at 6% opacity). Each card is vertically stacked: TOP: circular green icon area (28px, green at 10% opacity) with simple icon symbol (briefcase, shield, utensils, clock in green at 40%), BOTTOM: short label text in gray (#475569, 10px, weight 500). Cards: "정규직" (briefcase), "4대보험" (shield), "중식제공" (utensils), "상시모집" (clock). Cards arranged in a tight horizontal row with 6px gaps.
-ZONE 4 — CTA (12%): Rounded pill button (border-radius 24px, not full-width — centered, 60% width) with green gradient (#22c55e → #16a34a), white bold text "지원하기" (14px, weight 700).
-BOTTOM: Hospital name in green (#22c55e, 11px, weight 400) centered.
-Friendly, approachable, team-oriented. Circular team photo area, speech bubble greeting, horizontal icon cards. Warm community recruitment feel.`,
+      aiPrompt: `TEAM SILHOUETTES + CARD ROWS LAYOUT — people-first recruitment design.
+BACKGROUND: Soft mint (#f0fdf4) to white gradient.
+TOP SECTION (35%): Row of 3 people silhouettes centered horizontally — each person is a circle (head) + ellipse (body) in green (#22c55e) at varying opacities (40%, 60%, 40%). Center person is slightly larger (team lead feel). "함께해요!" text in bold green below the silhouettes.
+MIDDLE SECTION (45%): Horizontal card rows stacked vertically — 3-4 rounded rectangle cards (full width, white fill, green left border 3px, soft shadow). Each card contains:
+- Card 1: "정규직 채용" — employment type info
+- Card 2: "4대보험 + 중식 제공" — benefits
+- Card 3: "경력 1년 이상" — qualifications
+- Card 4: "상시 모집" — recruitment period
+Cards have green (#22c55e) left accent border, clean text on right.
+BOTTOM (20%): Green gradient (#22c55e → #16a34a) rounded pill CTA button "지원하기" centered. Hospital name below in small green text.
+Friendly, team-oriented. The 3 people silhouettes at top immediately signal "team recruitment." Horizontal cards below provide structured info. Community-driven clinic feel.`,
     },
     {
       id: 'hir_modern_startup', name: '모던 스타트업', color: '#8b5cf6', accent: '#7c3aed', bg: '#f5f3ff',
       desc: '대각선 분할 + 플로팅 태그 (모던)',
       layoutHint: 'modern',
-      aiPrompt: `BACKGROUND: Diagonal split — top-left triangle in lavender (#f5f3ff), bottom-right triangle in deep purple (#7c3aed at 8% opacity). The diagonal line runs from top-right corner to bottom-left corner, creating a bold geometric split.
-ZONE 1 — HERO TEXT (left 40% of canvas, vertically centered): Massive bold "JOIN" text in purple (#8b5cf6, 72px, weight 900, letter-spacing -2px) stacked vertically — each letter on its own line. Below the last letter: thin purple line (40px wide, 2px, #7c3aed). Text dominates the left portion of the design. High visual impact.
-ZONE 2 — TITLE AREA (right 55%, top portion 20%): "간호사 모집" in bold purple (#8b5cf6, 22px, weight 800) right-aligned. Below: "함께 성장할 인재를 찾습니다" in purple accent (#7c3aed, 11px, weight 400).
-ZONE 3 — FLOATING PILLS (right 55%, middle 40%): Requirements displayed as individual floating pill/tag shapes (border-radius 20px, purple at 6% opacity fill, purple #8b5cf6 border 1px at 20%). Each pill: text inside in purple (#7c3aed, 11px, weight 500). Pills scattered in organic layout (not grid-aligned) at slight rotations (-3deg to +3deg): "정규직", "경력 1년 이상", "4대보험 완비", "중식 제공", "인센티브", "상시 모집". Pills vary in size based on text length. Floating, dynamic arrangement.
-ZONE 4 — CTA (bottom 12%, right-aligned): Compact pill button (border-radius 24px, 50% width, right-aligned) with purple gradient (#8b5cf6 → #7c3aed), white bold text "지원하기" (13px, weight 700).
-BOTTOM: Hospital name in light gray (#94a3b8, 10px) left-aligned.
-Bold diagonal split composition. Oversized typography taking 40% of space. Floating pill tags instead of list. Startup energy, geometric, contemporary.`,
+      aiPrompt: `CODE EDITOR / DEVELOPER BRACES LAYOUT — dark background with curly braces framing content.
+BACKGROUND: Dark charcoal (#1e1b4b) full bleed, mimicking a code editor/IDE.
+LEFT BRACE: Very large opening curly brace "{" in purple (#8b5cf6) at 30% opacity, positioned at left side, spanning full height. Bold, oversized decorative typography element.
+RIGHT BRACE: Very large closing curly brace "}" in purple at 30% opacity, positioned at right side, spanning full height.
+CONTENT BETWEEN BRACES (centered):
+- LINE NUMBERS: Small purple numbers (1, 2, 3, 4, 5) listed vertically on the far left like code editor line numbers.
+- LINE 1: "// 간호사 모집" in bold light purple (#a78bfa) — comment syntax style.
+- LINE 2: "position: '정규직'" in white text — key-value code style.
+- LINE 3: "experience: '1년 이상'" in white text.
+- LINE 4: "benefits: ['4대보험', '중식', '인센티브']" in white text with array syntax.
+- LINE 5: "apply: '상시모집'" in white text.
+BOTTOM: Purple (#8b5cf6) rounded CTA button "지원하기" centered. Hospital name in small purple text below.
+Tech startup aesthetic. The giant curly braces on dark background create an unmistakable code-editor look. Line numbers reinforce the developer motif. Modern, edgy recruitment for tech-savvy clinics.`,
     },
     {
       id: 'hir_benefits_focus', name: '복리후생 강조', color: '#f59e0b', accent: '#d97706', bg: '#fffbeb',
       desc: '2×2 혜택 아이콘 카드 (복리후생 중심)',
       layoutHint: 'benefits',
-      aiPrompt: `BACKGROUND: Warm cream (#fffbeb).
-ZONE 1 — COMPACT HEADER (top 10%): "간호사 모집" in bold amber (#f59e0b, 22px, weight 800) center-aligned. Below: "함께 성장할 인재를 찾습니다" in amber accent (#d97706, 11px, weight 400).
-ZONE 2 — BENEFITS 2x2 GRID (55%): Four equal-sized benefit cards arranged in a 2x2 grid (8px gaps). Each card: white fill, border-radius 16px, soft amber shadow (amber at 5% opacity), border 1px amber at 8% opacity. Card interior — TOP: large circular icon area (40px, amber #f59e0b at 8% opacity fill) with centered icon symbol in amber at 35% opacity. BOTTOM: bold benefit title (amber #d97706, 13px, weight 700) and detail line below (gray #475569, 11px, weight 400).
-Card 1 (top-left): briefcase icon, "정규직 채용", "경력 1년 이상".
-Card 2 (top-right): shield-check icon, "4대보험", "완비 지원".
-Card 3 (bottom-left): utensils icon, "중식 제공", "인센티브 포함".
-Card 4 (bottom-right): calendar-check icon, "상시 모집", "채용시까지".
-Each card is self-contained — benefit is the hero, not a list item.
-ZONE 3 — SECONDARY INFO (12%): Thin amber line (1px, 30% opacity, centered 50% width). Below: small gray text (#475569, 10px) "자세한 사항은 문의 바랍니다" center-aligned.
-ZONE 4 — CTA (10%): Full-width pill button (border-radius 24px) with amber gradient (#f59e0b → #d97706), white bold text "지원하기" (14px, weight 700).
-BOTTOM: Hospital name in amber (#d97706, 11px, weight 400) centered.
-Benefits-first layout. 2x2 grid of benefit cards as primary content. Each benefit is a standalone visual card with icon. Requirements are secondary. Warm, inviting, perk-focused.`,
+      aiPrompt: `GIFT BOX WITH FLYING BENEFITS LAYOUT — celebratory design with benefits "popping out" of a gift box.
+BACKGROUND: Warm cream (#fffbeb).
+GIFT BOX (bottom 40% of canvas): Large rectangular gift box shape centered — amber (#f59e0b) fill with darker amber (#d97706) ribbon cross (vertical + horizontal strips meeting at center). Ribbon bow at the top center of the box. Box has subtle shadow.
+FLYING BENEFIT CARDS (above the box, top 50%): 3-4 small white rounded cards appearing to "fly out" of the open gift box, scattered upward at different angles and positions:
+- Card 1 (tilted -5°): "4대보험" in amber text
+- Card 2 (tilted +3°): "중식 제공" in amber text
+- Card 3 (tilted -2°, higher): "인센티브" in amber text
+- Card 4 (tilted +4°): "정규직" in amber text
+Each card has soft shadow and slight rotation, creating a dynamic "explosion from box" feel.
+ABOVE CARDS: "간호사 모집" in bold amber (#f59e0b, 22px) title at very top. Small sparkle/star accents around the flying cards.
+BOTTOM: Hospital name in amber text below the gift box.
+Celebratory, generous feel. The gift box metaphor = "we're offering you these benefits." Flying cards create energy and excitement. Warm amber palette.`,
     },
     {
       id: 'hir_urgent_now', name: '급구 긴급', color: '#ef4444', accent: '#dc2626', bg: '#fef2f2',
       desc: 'D-day 카운트다운 + 레드 배너 (급구)',
       layoutHint: 'urgent',
-      aiPrompt: `BACKGROUND: Clean white (#ffffff) with subtle red radial pulse gradient at top center (red #ef4444 at 3% opacity, fading outward).
-ZONE 1 — COUNTDOWN HEADER (top 22%): Full-width red (#ef4444) filled rounded rectangle (border-radius 12px). Inside TOP: "URGENT" in small white text (10px, weight 700, letter-spacing 4px, 70% opacity). CENTER: large bold white "간호사 급구" (28px, weight 900). BOTTOM of banner: countdown-style time display — three white rounded boxes (border-radius 6px, white at 20% opacity fill, each ~50x40px) side by side showing "D-7" style indicator. Left box: large bold "D" (22px), center box: bold "-" (22px), right box: bold "7" (22px). All white text on red. Below boxes: tiny white label text "채용마감" (9px, 50% opacity).
-ZONE 2 — BOLD BULLET REQUIREMENTS (40%): No card wrapper — direct on white background. Each of 4 requirements as a bold standalone row with generous vertical spacing (16px between). Each row: LEFT: large filled red circle (14px diameter, #ef4444), RIGHT: requirement text in dark gray (#1e293b, 15px, weight 700). Text is larger and bolder than typical — urgent emphasis. Items: "● 정규직 채용 (경력 1년 이상)", "● 4대보험 완비", "● 중식 제공 + 인센티브", "● 상시 모집 — 채용시까지". Red left-border accent line (3px, #ef4444, full height of this zone) running along the left margin.
-ZONE 3 — PULSING CTA (15%): Large full-width pill button (border-radius 24px, height 52px) with red gradient (#ef4444 → #dc2626). White bold text "지금 바로 지원하기" (16px, weight 800). Subtle outer glow effect (red at 8% opacity, 4px blur). Above button: small red text "지원 접수 중" with red blinking dot indicator (6px filled red circle) to the left (10px, weight 600, #dc2626).
-BOTTOM: Hospital name in light gray (#94a3b8, 11px, weight 400) centered.
-Countdown-driven urgency. D-day timer visual at top. Bold oversized bullet requirements (no cards). Pulsing CTA with status indicator. Time-pressure recruitment design.`,
+      aiPrompt: `DIAGONAL SPLIT + RADIATION LINES LAYOUT — high-energy urgent recruitment.
+BACKGROUND: Diagonal split — upper-left portion in solid red (#ef4444), lower-right portion in white. The diagonal line runs from top-right to bottom-left.
+RADIATION LINES: 6-8 thin lines radiating outward from the top-left corner in red (#ef4444) at 15% opacity, like a sunburst/explosion effect emanating from the corner. These lines extend across the white portion.
+RED AREA (upper-left triangle): "급구" in massive bold white text (40px+). "URGENT" in smaller white text with letter-spacing above it.
+WHITE AREA (lower-right triangle): Job details in dark text:
+- "간호사 모집" in bold red (#ef4444) title
+- Requirements listed: "정규직", "경력 1년 이상", "4대보험", "중식 + 인센티브"
+- Each item with a red bullet dot
+BOTTOM: Red gradient pill CTA button "지금 지원하기" centered. Hospital name in small gray text.
+The diagonal split + radiation lines from the corner create maximum visual urgency. Red dominates. High-impact, impossible-to-ignore recruitment alert.`,
     },
     {
       id: 'hir_premium_brand', name: '프리미엄 브랜드', color: '#78716c', accent: '#57534e', bg: '#fafaf9',
       desc: '매거진 에디토리얼 + 골드 라인 (고급)',
       layoutHint: 'brand',
-      aiPrompt: `BACKGROUND: Warm off-white (#fafaf9) with very subtle linen paper texture feel (noise at 2% opacity).
-ZONE 1 — GOLD ACCENT LINE (top 3%): Thin horizontal gold line (#b8860b, 1.5px, 50% opacity) spanning full width with 24px margin on each side. Elegant, understated.
-ZONE 2 — EDITORIAL HEADER (top 12–30%): "CAREER" in ultra-light serif typography (charcoal #78716c, 42px, weight 300, letter-spacing 8px) center-aligned. Below with 4px gap: "OPPORTUNITY" in same style (charcoal #78716c, 42px, weight 300, letter-spacing 8px). Below with 20px gap: thin gold line (#b8860b, 1px, centered, 30% width). Below with 16px gap: "간호사 모집" in bold serif (charcoal #57534e, 20px, weight 700, letter-spacing 2px). Generous whitespace — magazine editorial typography rhythm.
-ZONE 3 — BODY COPY (30%): Left-aligned text block with 32px left margin, styled like magazine body copy. Opening pull-quote: large gold opening quotation mark (#b8860b, 28px, serif) at top-left. Below: "함께 성장할 인재를 찾습니다" in charcoal (#57534e, 14px, weight 400, serif, line-height 1.8). Below with 20px gap: requirements as elegant inline text (NOT a list, NOT cards) — flowing paragraph style: "경력 1년 이상의 정규직 포지션으로, 4대보험 및 중식을 제공하며 인센티브가 포함됩니다. 채용시까지 상시 모집합니다." in gray (#64748b, 12px, weight 400, serif, line-height 2.0). Closing gold quotation mark at end. Luxurious leading and tracking throughout.
-ZONE 4 — EDITORIAL CTA (10%): NOT a button — text-only CTA styled as magazine tagline. "지원 문의" in charcoal (#57534e, 13px, weight 600, letter-spacing 3px, serif) center-aligned. Thin gold underline below text (40px wide, 1px, #b8860b). Understated, no gradient, no fill.
-ZONE 5 — FOOTER (8%): Hospital name in light charcoal (#a8a29e, 11px, weight 400, letter-spacing 2px, serif) center-aligned. Below: thin gold line (#b8860b, 1.5px, 50% opacity) spanning full width with 24px margin — mirroring top accent line.
-Magazine editorial layout. Serif typography throughout. Gold (#b8860b) accent lines top and bottom as framing device. Flowing paragraph instead of list. Pull-quote styling. Luxurious whitespace and leading. No cards, no shadows, no buttons — pure typographic elegance.`,
+      aiPrompt: `FLAG/PENNANT ON FLAGPOLE LAYOUT — distinctive flag shape as the main visual element.
+BACKGROUND: Warm off-white (#fafaf9).
+FLAGPOLE: Thin vertical line (2px, charcoal #78716c) running from top to bottom on the left side (about 20% from left edge). Small circular finial at top of the pole.
+FLAG/PENNANT: A large pennant/banner shape attached to the flagpole — rectangular body with a pointed/tapered right edge (like a triangular notch cut from the right side). Flag fills about 60% of canvas width. Flag color: warm charcoal (#78716c) with subtle gold (#b8860b) border.
+ON THE FLAG: "간호사 모집" in bold gold (#b8860b) text, large. Below: "CAREER OPPORTUNITY" in smaller gold text with letter-spacing.
+BELOW THE FLAG (right of pole): Job details listed vertically in charcoal text on the off-white background:
+- "정규직 | 경력 1년 이상"
+- "4대보험 | 중식 | 인센티브"
+- "상시 모집"
+Each line with a small gold bullet. Elegant serif-style typography.
+BOTTOM: Hospital name in small charcoal text. Thin gold horizontal line.
+The flag/pennant shape on a pole is the unmistakable visual identity of this template. Premium, editorial, distinctive silhouette. Charcoal + gold palette.`,
     },
   ],
 
