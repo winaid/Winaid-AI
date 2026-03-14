@@ -816,10 +816,12 @@ const AdminPage: React.FC<AdminPageProps> = ({ onAdminVerified }) => {
   const loadStyleProfiles = useCallback(async () => {
     const profiles = await getAllStyleProfiles();
     setStyleProfiles(profiles);
-    // 기존 URL 입력 초기화
-    const urlMap: Record<string, string> = {};
+    // DB에서 로드한 URL을 배열로 변환 (쉼표 구분 다중 URL 대응)
+    const urlMap: Record<string, string[]> = {};
     profiles.forEach(p => {
-      if (p.naver_blog_url) urlMap[p.hospital_name] = p.naver_blog_url;
+      if (p.naver_blog_url) {
+        urlMap[p.hospital_name] = p.naver_blog_url.split(',').map(u => u.trim()).filter(Boolean);
+      }
     });
     setBlogUrlInputs(prev => ({ ...urlMap, ...prev }));
   }, []);
@@ -835,36 +837,37 @@ const AdminPage: React.FC<AdminPageProps> = ({ onAdminVerified }) => {
   // 병원 블로그 URL 저장 (크롤링 없이) — 첫 번째 유효 URL 사용
   const handleSaveBlogUrl = async (hospitalName: string, teamId: number) => {
     const urls = blogUrlInputs[hospitalName] || [];
-    const validUrl = urls.find(u => u.includes('blog.naver.com'));
-    if (!validUrl) {
+    const validUrls = urls.filter(u => u.trim() && u.includes('blog.naver.com'));
+    if (validUrls.length === 0) {
       toast.error('네이버 블로그 URL을 입력해주세요. (blog.naver.com/...)');
       return;
     }
     try {
-      await saveHospitalBlogUrl(hospitalName, teamId, validUrl);
-      toast.success('URL 저장 완료!');
+      // 다중 URL은 쉼표로 결합하여 DB TEXT 필드에 저장
+      await saveHospitalBlogUrl(hospitalName, teamId, validUrls.join(','));
+      toast.success(`URL ${validUrls.length}개 저장 완료!`);
       loadStyleProfiles();
     } catch (err: any) {
       toast.error(err.message || 'URL 저장 실패');
     }
   };
 
-  // 크롤링 + 말투 학습 실행 — 첫 번째 유효 URL로 크롤링
+  // 크롤링 + 말투 학습 실행 — 모든 유효 URL에서 크롤링
   const handleCrawlAndLearn = async (hospitalName: string, teamId: number) => {
     const urls = blogUrlInputs[hospitalName] || [];
-    const validUrl = urls.find(u => u.includes('blog.naver.com'));
-    if (!validUrl) {
+    const validUrls = urls.filter(u => u.trim() && u.includes('blog.naver.com'));
+    if (validUrls.length === 0) {
       toast.error('먼저 네이버 블로그 URL을 입력해주세요.');
       return;
     }
 
     setCrawlingStatus(prev => ({
       ...prev,
-      [hospitalName]: { loading: true, progress: '준비 중...' },
+      [hospitalName]: { loading: true, progress: `준비 중... (${validUrls.length}개 URL)` },
     }));
 
     try {
-      const result = await crawlAndLearnHospitalStyle(hospitalName, teamId, validUrl, (msg) => {
+      const result = await crawlAndLearnHospitalStyle(hospitalName, teamId, validUrls, (msg) => {
         setCrawlingStatus(prev => ({
           ...prev,
           [hospitalName]: { loading: true, progress: msg },

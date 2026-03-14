@@ -424,49 +424,67 @@ export interface HospitalStyleProfile {
 
 /**
  * 병원 블로그 크롤링 → 말투 분석 → Supabase 저장
+ * blogUrl: 단일 URL string 또는 URL 배열 (다중 블로그 지원)
  */
 export const crawlAndLearnHospitalStyle = async (
   hospitalName: string,
   teamId: number,
-  blogUrl: string,
+  blogUrl: string | string[],
   onProgress?: (msg: string) => void
 ): Promise<HospitalStyleProfile> => {
   const API_BASE_URL = (import.meta as any).env?.VITE_CRAWLER_URL || '';
+  const blogUrls = Array.isArray(blogUrl) ? blogUrl : [blogUrl];
 
-  // 1단계: 블로그 글 크롤링
-  onProgress?.('블로그 글 수집 중... (최대 10개)');
-  const crawlRes = await fetch(`${API_BASE_URL}/api/naver/crawl-hospital-blog`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ blogUrl, maxPosts: 10 }),
-  });
+  // 1단계: 모든 URL에서 블로그 글 크롤링
+  const allPosts: { url: string; content: string; title?: string; publishedAt?: string; summary?: string; thumbnail?: string }[] = [];
 
-  if (!crawlRes.ok) {
-    const err = await crawlRes.json().catch(() => ({}));
-    throw new Error(err.message || '블로그 크롤링에 실패했습니다.');
+  for (let i = 0; i < blogUrls.length; i++) {
+    const url = blogUrls[i];
+    const urlLabel = blogUrls.length > 1 ? ` (${i + 1}/${blogUrls.length})` : '';
+    onProgress?.(`블로그 글 수집 중${urlLabel}... (최대 10개)`);
+
+    try {
+      const crawlRes = await fetch(`${API_BASE_URL}/api/naver/crawl-hospital-blog`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ blogUrl: url, maxPosts: 10 }),
+      });
+
+      if (!crawlRes.ok) {
+        const err = await crawlRes.json().catch(() => ({}));
+        console.warn(`[Crawl] URL ${i + 1} 크롤링 실패:`, url, err.message);
+        continue; // 하나 실패해도 나머지 계속
+      }
+
+      const crawlData = await crawlRes.json();
+      const posts = crawlData.posts || [];
+      allPosts.push(...posts);
+      console.log(`[Crawl] URL ${i + 1} (${url}) → ${posts.length}개 글 수집`);
+    } catch (e: any) {
+      console.warn(`[Crawl] URL ${i + 1} 네트워크 오류:`, url, e?.message);
+      continue;
+    }
   }
 
-  const crawlData = await crawlRes.json();
-  const posts: { url: string; content: string; title?: string; publishedAt?: string; summary?: string; thumbnail?: string }[] = crawlData.posts || [];
-
-  if (posts.length === 0) {
+  if (allPosts.length === 0) {
     throw new Error('수집된 블로그 글이 없습니다. URL을 다시 확인해주세요.');
   }
 
   // 2단계: 수집된 글 합치기 (최대 8000자)
-  onProgress?.(`${posts.length}개 글 수집 완료. 말투 분석 중...`);
-  const combinedText = posts.map(p => p.content).join('\n\n---\n\n').slice(0, 8000);
+  onProgress?.(`총 ${allPosts.length}개 글 수집 완료. 말투 분석 중...`);
+  const combinedText = allPosts.map(p => p.content).join('\n\n---\n\n').slice(0, 8000);
 
   // 3단계: Gemini로 말투 분석
   const analyzedStyle = await analyzeWritingStyle(combinedText, hospitalName);
 
   // 4단계: Supabase에 저장 (upsert)
   onProgress?.('말투 프로파일 저장 중...');
+  const primaryUrl = blogUrls[0]; // DB에는 대표 URL 저장
   const profileData = {
     hospital_name: hospitalName,
     team_id: teamId,
-    naver_blog_url: blogUrl,
-    crawled_posts_count: posts.length,
+    naver_blog_url: blogUrls.length > 1 ? blogUrls.join(',') : primaryUrl,
+    crawled_posts_count: allPosts.length,
     style_profile: analyzedStyle,
     raw_sample_text: combinedText.slice(0, 10000),
     last_crawled_at: new Date().toISOString(),
@@ -500,7 +518,7 @@ export const crawlAndLearnHospitalStyle = async (
   // 5단계: 개별 글을 hospital_crawled_posts에 저장 (글 목록 보기용)
   onProgress?.('수집된 글 저장 중...');
   const savePostsPromise = Promise.allSettled(
-    posts.map(p => saveCrawledPost(hospitalName, p.url, p.content, undefined, {
+    allPosts.map(p => saveCrawledPost(hospitalName, p.url, p.content, undefined, {
       title: p.title,
       publishedAt: p.publishedAt,
       summary: p.summary,
@@ -514,7 +532,7 @@ export const crawlAndLearnHospitalStyle = async (
   ]);
 
   onProgress?.('완료!');
-  return { ...(data as HospitalStyleProfile), posts };
+  return { ...(data as HospitalStyleProfile), posts: allPosts };
 };
 
 /**
@@ -1110,17 +1128,29 @@ export const crawlAndScoreAllHospitals = async (
   for (let i = 0; i < targets.length; i++) {
     const p = targets[i];
     onProgress?.(`[${i + 1}/${total}] ${p.hospital_name} 크롤링 중...`, i, total);
-    try {
-      const res = await fetch(`${API_BASE_URL}/api/naver/crawl-hospital-blog`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ blogUrl: p.naver_blog_url, maxPosts: 10 }),
-      });
-      if (!res.ok) continue;
-      const crawlData = await res.json();
-      const posts: { url: string; content: string; title?: string; publishedAt?: string; summary?: string; thumbnail?: string }[] = crawlData.posts || [];
 
-      for (const post of posts) {
+    // DB에 쉼표로 결합된 다중 URL 대응
+    const blogUrls = (p.naver_blog_url || '').split(',').map(u => u.trim()).filter(Boolean);
+
+    try {
+      const allPosts: { url: string; content: string; title?: string; publishedAt?: string; summary?: string; thumbnail?: string }[] = [];
+
+      for (const blogUrl of blogUrls) {
+        try {
+          const res = await fetch(`${API_BASE_URL}/api/naver/crawl-hospital-blog`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ blogUrl, maxPosts: 10 }),
+          });
+          if (!res.ok) continue;
+          const crawlData = await res.json() as any;
+          allPosts.push(...(crawlData.posts || []));
+        } catch (urlErr) {
+          console.warn(`[CrawlAll] ${p.hospital_name} URL 실패:`, blogUrl, urlErr);
+        }
+      }
+
+      for (const post of allPosts) {
         onProgress?.(`[${i + 1}/${total}] ${p.hospital_name} 채점 중...`, i, total);
         const meta = { title: post.title, publishedAt: post.publishedAt, summary: post.summary, thumbnail: post.thumbnail };
         try {
