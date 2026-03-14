@@ -41,6 +41,7 @@ interface StyleTabProps {
   setDbPosts: React.Dispatch<React.SetStateAction<Record<string, CrawledPost[]>>>;
   onSaveUrl: (hospitalName: string, teamId: number) => void;
   onCrawl: (hospitalName: string, teamId: number) => void;
+  onCrawlSingleUrl: (hospitalName: string, teamId: number, singleUrl: string) => void;
   onReset: (hospitalName: string) => void;
   crawlAllStatus: { loading: boolean; progress: string };
   onCrawlAll: () => void;
@@ -48,7 +49,7 @@ interface StyleTabProps {
 
 const StyleTab: React.FC<StyleTabProps> = ({
   styleProfiles, blogUrlInputs, setBlogUrlInputs, crawlingStatus, crawledPosts,
-  dbPosts, setDbPosts, onSaveUrl, onCrawl, onReset, crawlAllStatus, onCrawlAll,
+  dbPosts, setDbPosts, onSaveUrl, onCrawl, onCrawlSingleUrl, onReset, crawlAllStatus, onCrawlAll,
 }) => {
   const [selectedTeam, setSelectedTeam] = useState<number>(TEAM_DATA[0].id);
   const [expandedPosts, setExpandedPosts] = useState<Record<string, boolean>>({});
@@ -219,34 +220,60 @@ const StyleTab: React.FC<StyleTabProps> = ({
                 </div>
                 {/* 다중 URL 입력 */}
                 <div className="space-y-2">
-                  {urls.map((urlVal, urlIdx) => (
-                    <div key={urlIdx} className="flex gap-2 items-center">
-                      <span className="text-[10px] text-slate-400 font-mono w-4 shrink-0 text-center">{urlIdx + 1}</span>
-                      <input
-                        type="url"
-                        value={urlVal}
-                        onChange={e => {
-                          const newUrls = [...urls];
-                          newUrls[urlIdx] = e.target.value;
-                          setBlogUrlInputs(prev => ({ ...prev, [baseName]: newUrls }));
-                        }}
-                        placeholder="https://blog.naver.com/병원아이디"
-                        className="flex-1 px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-violet-400 transition-colors"
-                        disabled={status?.loading}
-                      />
-                      {urls.length > 1 && (
-                        <button
-                          onClick={() => {
-                            const newUrls = urls.filter((_, i) => i !== urlIdx);
-                            setBlogUrlInputs(prev => ({ ...prev, [baseName]: newUrls }));
-                          }}
-                          disabled={status?.loading}
-                          className="w-7 h-7 flex items-center justify-center text-xs text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-40"
-                          title="URL 삭제"
-                        >✕</button>
-                      )}
-                    </div>
-                  ))}
+                  {urls.map((urlVal, urlIdx) => {
+                    const urlStatusKey = `${baseName}::${urlVal}`;
+                    const urlStatus = crawlingStatus[urlStatusKey];
+                    const isUrlValid = urlVal.trim() && urlVal.includes('blog.naver.com');
+                    const anyLoading = status?.loading || urlStatus?.loading;
+                    return (
+                      <div key={urlIdx}>
+                        <div className="flex gap-2 items-center">
+                          <span className="text-[10px] text-slate-400 font-mono w-4 shrink-0 text-center">{urlIdx + 1}</span>
+                          <input
+                            type="url"
+                            value={urlVal}
+                            onChange={e => {
+                              const newUrls = [...urls];
+                              newUrls[urlIdx] = e.target.value;
+                              setBlogUrlInputs(prev => ({ ...prev, [baseName]: newUrls }));
+                            }}
+                            placeholder="https://blog.naver.com/병원아이디"
+                            className="flex-1 px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-violet-400 transition-colors"
+                            disabled={anyLoading}
+                          />
+                          <button
+                            onClick={() => onCrawlSingleUrl(baseName, team.id, urlVal)}
+                            disabled={anyLoading || !isUrlValid}
+                            className="px-2.5 py-2 text-[11px] font-bold bg-violet-500 text-white rounded-lg hover:bg-violet-600 transition-colors disabled:opacity-40 whitespace-nowrap"
+                            title="이 URL만 크롤링 + 학습"
+                          >
+                            {urlStatus?.loading ? '학습중...' : '크롤링'}
+                          </button>
+                          {urls.length > 1 && (
+                            <button
+                              onClick={() => {
+                                const newUrls = urls.filter((_, i) => i !== urlIdx);
+                                setBlogUrlInputs(prev => ({ ...prev, [baseName]: newUrls }));
+                              }}
+                              disabled={anyLoading}
+                              className="w-7 h-7 flex items-center justify-center text-xs text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-40"
+                              title="URL 삭제"
+                            >✕</button>
+                          )}
+                        </div>
+                        {urlStatus?.loading && (
+                          <div className="ml-6 mt-1 flex items-center gap-1.5 text-[11px] text-violet-500">
+                            <div className="w-2.5 h-2.5 border-2 border-violet-400 border-t-transparent rounded-full animate-spin" />
+                            {urlStatus.progress}
+                          </div>
+                        )}
+                        {urlStatus?.error && <p className="ml-6 mt-1 text-[11px] text-red-500">{urlStatus.error}</p>}
+                        {urlStatus && !urlStatus.loading && !urlStatus.error && urlStatus.progress === '학습 완료!' && (
+                          <p className="ml-6 mt-1 text-[11px] text-green-600 font-medium">학습 완료!</p>
+                        )}
+                      </div>
+                    );
+                  })}
                   {/* URL 추가 + 액션 버튼 */}
                   <div className="flex gap-2 items-center">
                     <span className="w-4 shrink-0" />
@@ -266,7 +293,7 @@ const StyleTab: React.FC<StyleTabProps> = ({
                       disabled={status?.loading || !hasAnyUrl}
                       className="px-3 py-2 text-xs font-bold bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors disabled:opacity-40 whitespace-nowrap"
                     >
-                      {status?.loading ? '학습 중...' : '크롤링 + 학습'}
+                      {status?.loading ? '학습 중...' : '전체 크롤링'}
                     </button>
                     {(profile || (dbPosts[baseName] && dbPosts[baseName].length > 0)) && (
                       <button
@@ -895,6 +922,51 @@ const AdminPage: React.FC<AdminPageProps> = ({ onAdminVerified }) => {
   };
 
   // 크롤링 + 말투 학습 실행 — 모든 유효 URL에서 크롤링
+  // 개별 URL 크롤링 + 학습
+  const handleCrawlSingleUrl = async (hospitalName: string, teamId: number, singleUrl: string) => {
+    if (!singleUrl.trim() || !singleUrl.includes('blog.naver.com')) {
+      toast.error('유효한 네이버 블로그 URL을 입력해주세요.');
+      return;
+    }
+
+    const statusKey = `${hospitalName}::${singleUrl}`;
+    setCrawlingStatus(prev => ({
+      ...prev,
+      [statusKey]: { loading: true, progress: '크롤링 시작...' },
+    }));
+
+    try {
+      const result = await crawlAndLearnHospitalStyle(hospitalName, teamId, singleUrl, (msg) => {
+        setCrawlingStatus(prev => ({
+          ...prev,
+          [statusKey]: { loading: true, progress: msg },
+        }));
+      });
+      if (result.posts && result.posts.length > 0) {
+        setCrawledPosts(prev => ({
+          ...prev,
+          [hospitalName]: [...(prev[hospitalName] || []), ...result.posts!],
+        }));
+      }
+      const blogId = singleUrl.match(/blog\.naver\.com\/([^/?#]+)/)?.[1] || singleUrl;
+      toast.success(`${blogId} 크롤링 + 학습 완료!`);
+      setCrawlingStatus(prev => ({
+        ...prev,
+        [statusKey]: { loading: false, progress: '학습 완료!' },
+      }));
+      loadStyleProfiles();
+      getAllCrawledPostsSummary().then(setDbPosts).catch(console.warn);
+    } catch (err: any) {
+      const errMsg = err.message || '알 수 없는 오류';
+      toast.error(`크롤링 실패: ${errMsg}`);
+      setCrawlingStatus(prev => ({
+        ...prev,
+        [statusKey]: { loading: false, progress: '', error: errMsg },
+      }));
+    }
+  };
+
+  // 전체 URL 크롤링 + 학습
   const handleCrawlAndLearn = async (hospitalName: string, teamId: number) => {
     const urls = blogUrlInputs[hospitalName] || [];
     const validUrls = urls.filter(u => u.trim() && u.includes('blog.naver.com'));
@@ -1409,6 +1481,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onAdminVerified }) => {
               setDbPosts={setDbPosts}
               onSaveUrl={handleSaveBlogUrl}
               onCrawl={handleCrawlAndLearn}
+              onCrawlSingleUrl={handleCrawlSingleUrl}
               onReset={handleResetCrawlData}
               crawlAllStatus={crawlAllStatus}
               onCrawlAll={handleCrawlAllHospitals}
