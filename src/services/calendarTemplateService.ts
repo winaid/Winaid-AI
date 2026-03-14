@@ -2001,94 +2001,79 @@ Dashboard infographic. Radial layout with connected nodes. Clean, data-visualiza
       id: 'ntc_bulletin_board', name: '클린 블루 안내', color: '#2563eb', accent: '#1d4ed8', bg: '#eff6ff',
       desc: '블루 헤더 + 구조화 정보 행 (표준)',
       layoutHint: 'bulletin',
-      aiPrompt: `CORK BOARD / STICKY NOTES LAYOUT — bulletin board aesthetic with pinned notes.
-BACKGROUND: Warm cork/tan texture (#d4a373 at 30% opacity on beige #f5f0e8). Subtle wood grain pattern.
-HEADER: Blue (#2563eb) banner strip across top with "공지사항" in white bold text. Clinic name below in small blue text.
-MAIN AREA: 3 sticky notes (post-it style) pinned to the cork board, each tilted at a slightly different angle (-3°, 2°, -1°):
-- NOTE 1 (yellow #fef08a): Tilted left. Contains primary notice content (e.g., schedule info). Small round pushpin circle at top in red.
-- NOTE 2 (pink #fda4af): Tilted right. Contains secondary details (dates, special hours). Small round pushpin circle at top in blue.
-- NOTE 3 (green #bbf7d0): Slightly tilted. Contains contact/location info. Small round pushpin circle at top in yellow.
-Each note has subtle drop shadow to appear lifted off the board. Handwritten-style text feel.
-BOTTOM: Small clinic logo and year in subtle gray text.
-Casual, approachable, bulletin-board aesthetic. The tilted sticky notes with pushpins create an immediately recognizable cork board look. Warm, inviting clinic notice.`,
+      aiPrompt: `HEADER+CARD LAYOUT — solid color header block with white content card below.
+TOP 40%: Solid blue (#2563eb) block filling upper portion. Hospital name in small white text. Notice title in very large bold white text centered.
+BOTTOM 60%: Light blue (#eff6ff) background.
+WHITE CARD: Large white rounded card (radius 10px, shadow) overlapping the color block boundary. Inside the card: notice content displayed as bullet-point items, each with a small colored dot on the left and text on the right.
+CTA BUTTON: Blue gradient rounded button at bottom of card with call-to-action text in white.
+FOOTER: Small "문의 환영합니다" text with phone number.
+Clean professional Korean clinic notice. Color header + white card overlap creates depth. Blue and white.`,
     },
     {
       id: 'ntc_modern_alert', name: '코럴 공지', color: '#ef4444', accent: '#dc2626', bg: '#fef2f2',
       desc: '코럴 그라데이션 + 강조 뱃지 (긴급)',
       layoutHint: 'alert',
-      aiPrompt: `TRAFFIC SIGN / WARNING ALERT LAYOUT — bold, attention-grabbing alert design.
-TOP ZONE (60% of height): Solid coral/red (#ef4444) background fill.
-CENTER OF TOP ZONE: Large warning triangle shape (equilateral, white stroke, 3px border) centered. Inside the triangle: large bold "!" exclamation mark in white. This triangle is the dominant visual element.
-ABOVE TRIANGLE: "긴급 공지" or notice title in large bold white text.
-BELOW TRIANGLE: Brief notice summary in white text (e.g., "휴진 안내").
-BOTTOM ZONE (40% of height): Clean white background.
-CONTENT IN BOTTOM ZONE: Notice details in dark text — date, reason, contact info. Organized as clean text blocks with coral (#ef4444) accent bullets.
-FOOTER: Clinic name and year in small coral text.
-Bold, unmissable alert design. The large warning triangle on solid red background immediately signals importance. Traffic-sign inspired visual language for urgent medical clinic notices.`,
+      aiPrompt: `URGENT BANNER LAYOUT — bold color header banner with clean content card below.
+TOP: Thick red/coral (#ef4444) banner block (about 30% of height). Hospital name in small white text. Notice title in very large bold white text (e.g., "긴급 휴진 안내").
+CONTENT CARD: White rounded card (radius 8px, shadow) below the banner. Inside: notice details as bulleted items with colored dot bullets. Each item on its own line with generous spacing. First item in bold dark text, rest in gray.
+CONTACT BAR: Rounded pill at bottom with light red background, phone number and "문의" text inside.
+FOOTER: Small gray text with call-to-action.
+Urgent, attention-grabbing. Red banner header immediately signals importance. Clean card below for readability. Red and white medical urgency aesthetic.`,
     },
     {
       id: 'ntc_soft_info', name: '라벤더 안내', color: '#8b5cf6', accent: '#7c3aed', bg: '#f5f3ff',
       desc: '라벤더 필 카드 3단 (부드러운 안내)',
       layoutHint: 'soft',
-      aiPrompt: `KAKAOTALK CHAT INTERFACE LAYOUT — messenger-style conversation design.
-BACKGROUND: Light lavender (#f5f3ff) mimicking a chat app background.
-HEADER BAR: Solid purple (#8b5cf6) bar at top with "< 병원 공지방" text in white (like a chat room title bar). Small profile icon on left.
-CHAT BUBBLES — left-aligned (clinic messages):
-- Bubble 1: Yellow (#fef08a) rounded rectangle with polygon tail pointing left. Contains "안녕하세요! 진료 안내드립니다 😊" in dark text.
-- Bubble 2: Yellow rounded rectangle with tail. Contains notice details (schedule, dates).
-- Bubble 3: Yellow rounded rectangle with tail. Contains additional info.
-CHAT BUBBLE — right-aligned (patient reply):
-- White rounded rectangle with polygon tail pointing right. Contains "네, 감사합니다!" in gray text.
-TIME STAMPS: Small gray time text ("오후 2:30") next to bubbles.
-BOTTOM: Input field bar with rounded text input area and send button, like a real chat interface.
-Familiar, friendly, conversational. KakaoTalk-inspired layout makes the notice feel personal and approachable. Lavender + yellow palette.`,
+      aiPrompt: `SOFT ROUNDED CARD LAYOUT — centered icon circle with numbered pill cards below.
+BACKGROUND: Soft lavender (#f5f3ff) or light tint matching the template color.
+TOP: Rounded circle icon (info "ℹ" symbol) centered, with light color fill at 10% opacity. Large and prominent.
+TITLE: Notice title in large bold colored text centered below the icon.
+SUBTITLE: Hospital name in small gray text.
+CONTENT: 3 numbered pill-shaped cards stacked vertically. Each pill card is white with soft shadow, rounded ends (radius 9px). Inside each: small numbered circle on the left (1, 2, 3) in template color, notice text on the right.
+CTA: Rounded pill at bottom with light colored fill, call-to-action text in template color.
+Soft, approachable, friendly. All rounded shapes. Gentle pastel palette. Easy-to-read numbered items in pill-shaped cards.`,
     },
     {
       id: 'ntc_corporate_formal', name: '공식 문서', color: '#1f2937', accent: '#111827', bg: '#f9fafb',
       desc: '공문서 형식 + 흑백 이중선 (공식)',
       layoutHint: 'formal',
-      aiPrompt: `CERTIFICATE / OFFICIAL DOCUMENT LAYOUT — formal document with decorative border and seal.
+      aiPrompt: `OFFICIAL DOCUMENT LAYOUT — clean black-and-white formal notice with double border lines.
 BACKGROUND: Pure white (#ffffff).
-BORDER: Double-line border (outer 2px, inner 1px, 4px gap) in charcoal (#1f2937) inset 5% from edges, creating a certificate/diploma frame effect.
-CORNER BRACKETS: L-shaped bracket decorations at all 4 corners of the border — each bracket is two short perpendicular lines forming an L, adding formal document gravitas.
-HEADER: Hospital name centered in formal serif-style font. "공 지 사 항" in large bold charcoal (#1f2937, 26px) with wide letter-spacing, centered below.
-CONTENT AREA: Clean formal text layout with proper Korean official document formatting. Indented paragraphs, numbered items. Dark text on white.
-SEAL: Red circular stamp mark ("印") at bottom-right of content area — a circle with "印" character inside in red (#dc2626), mimicking a traditional Korean official seal/stamp (도장). This is the key visual differentiator.
-FOOTER: Date and clinic name in formal closing. Bottom border line matching top.
-Institutional, authoritative, certificate-style. The double border + corner brackets + red seal stamp = unmistakable official document format.`,
+TOP BORDER: Double horizontal lines (thick above, thin below) in charcoal (#1f2937) spanning most of the width.
+HOSPITAL NAME: Centered in formal font below top border.
+TITLE: "공지사항" in very large bold charcoal text with wide letter-spacing (3-5px between characters). Thin line separator below title.
+BODY: Notice content in clean paragraphs, left-aligned with indent. Dark text on white.
+CLOSING: Formal closing line ("위 사항을 안내드리오니 참고 바랍니다."). Hospital name and "원장" title below.
+BOTTOM BORDER: Double horizontal lines matching top (thin above, thick below).
+Formal, institutional, official Korean document format. Black and white only. No colors, no decorations. Clean typography-driven authority.`,
     },
     {
       id: 'ntc_card_popup', name: '민트 팝업', color: '#06b6d4', accent: '#0891b2', bg: '#ecfeff',
       desc: '플로팅 모달 카드 + 민트 상단바',
       layoutHint: 'popup',
-      aiPrompt: `DARK OVERLAY POPUP MODAL LAYOUT — floating modal dialog on dimmed background.
-BACKGROUND: Dark semi-transparent overlay (#0f172a at 70% opacity) covering the entire canvas — simulating a dimmed/blurred page behind a popup.
-MODAL CARD: White rounded rectangle (border-radius 16px) centered in the canvas, with strong drop shadow. Takes up about 70% width and 60% height.
-TOP-RIGHT OF MODAL: Circular "X" close button in cyan (#06b6d4) outline.
-MODAL HEADER: Rounded cyan (#06b6d4) icon circle at top-center of modal (bell/megaphone icon shape). Below: "공지사항" title in bold dark text.
-MODAL BODY: Clean organized content with cyan bullet points. Key dates in highlighted cyan (#06b6d4 at 10% opacity) boxes. Divider lines between sections.
-MODAL FOOTER: Rounded cyan (#06b6d4) CTA button "확인" centered at bottom of modal.
-OUTSIDE MODAL: Clinic name in small white text visible through the dark overlay at bottom.
-Modern, digital-native popup experience. The dark overlay + floating white modal creates a familiar UI pattern. Mint/cyan accent on white card against dark backdrop.`,
+      aiPrompt: `POPUP MODAL LAYOUT — dark overlay with centered white modal card.
+BACKGROUND: Dark semi-transparent overlay (#0f172a at 60% opacity) covering entire canvas.
+MODAL: Large white rounded card (radius 12px, strong shadow) centered. Takes about 80% width and 70% height.
+MODAL ICON: Rounded colored icon circle (📢 megaphone or bell shape) at top of modal.
+TITLE: Notice title in large bold dark text.
+SUBTITLE: Hospital name in small gray text.
+BODY: Notice content as clean text items inside the modal card. Each item has generous spacing.
+CTA BUTTON: Colored gradient rounded button at bottom of modal with "확인" text in white.
+Modern digital popup experience. Dark backdrop + white card = familiar UI pattern. Clean and contemporary.`,
     },
     {
       id: 'ntc_timeline', name: '그린 타임라인', color: '#22c55e', accent: '#16a34a', bg: '#f0fdf4',
       desc: '변경 전/후 타임라인 비교 (이전 안내)',
       layoutHint: 'timeline',
-      aiPrompt: `NUMBERED STEPS LAYOUT — vertical step-by-step process with large numbered circles and connecting arrows.
-BACKGROUND: Soft green (#f0fdf4) gradient to white.
-HEADER: "안내 사항" title in bold dark green (#16a34a). Clinic name in smaller green text below.
-STEP SEQUENCE (vertical, centered): 4 large numbered circles connected by downward arrows:
-- STEP 1: Large circle (green #22c55e fill, white "1" inside in bold). Label text to the right: first notice item.
-- DOWN ARROW: Green arrow pointing downward connecting step 1 to step 2.
-- STEP 2: Large circle (green fill, white "2"). Label: second notice item.
-- DOWN ARROW connecting to step 3.
-- STEP 3: Large circle (green fill, white "3"). Label: third notice item.
-- DOWN ARROW connecting to step 4.
-- STEP 4: Large circle (green fill, white "4"). Label: fourth notice item / conclusion.
-Each step circle is the dominant visual element (~20px diameter). Labels are clean text to the side.
-FOOTER: Clinic name and contact in small green text.
-Process-flow infographic. The large numbered circles with connecting arrows create a clear visual sequence. Green palette conveys positive, organized information flow.`,
+      aiPrompt: `BEFORE/AFTER COMPARISON LAYOUT — side-by-side change display.
+BACKGROUND: White.
+HEADER: Hospital name in colored text. Notice title in bold large colored text.
+CENTER ARROW: Circle with arrow (→) indicating the change direction.
+LEFT CARD "BEFORE": Light red (#fef2f2) background card. "BEFORE" label in bold red (#ef4444). Old information shown below with line separator.
+RIGHT CARD "AFTER": Light green (#f0fdf4) background card. "AFTER" label in bold green (#22c55e). New information shown below with line separator.
+The two cards sit side by side with the arrow between them, making the change visually clear and immediate.
+FOOTER: Call-to-action text. Phone number.
+Before/after comparison format. Red for old, green for new. Clear visual change communication.`,
     },
   ],
 
@@ -2628,63 +2613,72 @@ The flag/pennant shape on a pole is the unmistakable visual identity of this tem
       id: 'cau_medical_checklist', name: '의료 체크리스트', color: '#3b82f6', accent: '#2563eb', bg: '#eff6ff',
       desc: '번호 배지 + 4단 카드 목록 (표준)',
       layoutHint: 'checklist',
-      aiPrompt: `BACKGROUND: Clean white with very subtle blue tint.
-ZONE 1 — HEADER (top 8%): Hospital name in blue (#2563eb) text. Below: bold "시술 후 주의사항" in blue (#3b82f6, 22px, weight 800).
-ZONE 2 — CHECKLIST (65%): 4 individual white rounded cards stacked vertically with 8px gaps. Each card (border-radius 10px, soft shadow): LEFT: numbered square badge (border-radius 6px, blue at 8% opacity), bold number "1/2/3/4" in blue inside. RIGHT: instruction text in gray (#475569). Items: "혀로 건드리지 마세요", "음주/흡연 금지", "부기 2~3일 내 소실", "딱딱한 음식 금지". Clean, organized checklist format.
-BOTTOM: Hospital name in light gray.
-Professional medical checklist. Clear numbered instructions. Blue and white clinical aesthetic.`,
+      aiPrompt: `CHECKBOX CHECKLIST LAYOUT — vertical list with checkmark boxes and progress line.
+TOP: Blue (#3b82f6) solid header bar with hospital name in white and procedure title in bold white below.
+LEFT SIDE: Thin vertical progress line in blue running from top item to bottom item.
+ITEMS: 4 checkbox items stacked vertically. Each item has a square checkbox (white fill, blue border) with a checkmark (✓) drawn inside in blue. Text to the right of each checkbox describing the instruction. Dashed connecting lines between checkboxes along the progress line.
+BOTTOM: Emergency contact bar with phone number. Blue rounded pill shape.
+Clean medical checklist format. Each instruction preceded by a visible checkbox with checkmark. Blue and white clinical aesthetic. Hospital name at top.`,
     },
     {
       id: 'cau_warning_bold', name: '경고 강조형', color: '#ef4444', accent: '#dc2626', bg: '#fef2f2',
       desc: '▲ 경고 삼각형 + 레드 행 강조 (긴급)',
       layoutHint: 'warning',
-      aiPrompt: `BACKGROUND: Clean white.
-ZONE 1 — WARNING BANNER (top 15%): Rounded rectangle with red at 8% opacity. Warning triangle icon (▲) in red at 30% left side. Bold "시술 후 주의사항" in red (#ef4444, 22px, weight 800).
-ZONE 2 — CAUTION LIST (60%): 4 rows of instructions. Each row: horizontal bar with alternating subtle red background (4% opacity). Left: red circle with "!" inside. Right: caution text in dark gray. Items: "혀로 건드리지 마세요", "음주/흡연 금지", "부기 2~3일 내 소실", "딱딱한 음식 금지". Bold, clear, urgent formatting.
-BOTTOM: Hospital name in light gray.
-Bold warning style. Red and white. Urgent medical safety emphasis. Clear DO/DON'T instructions.`,
+      aiPrompt: `PROHIBITION SIGN LAYOUT — large X-mark prohibition symbol as central visual.
+BACKGROUND: Light red tint (#fef2f2 at 8% opacity).
+CENTER-TOP: Large circle (red #ef4444 outline, 25% opacity) with bold X cross lines inside — two diagonal lines crossing through the center. "금지" text in the center of the X mark. This prohibition sign is the dominant visual element occupying the top half.
+BELOW SIGN: Procedure title in bold red (#ef4444). "아래 사항을 꼭 지켜주세요" subtitle.
+ITEMS: 4 numbered items at bottom, each with a small numbered circle and instruction text. Compact listing with red accent bullets.
+BOTTOM: Emergency contact bar. Hospital name.
+Bold prohibition-sign visual language. Unmissable red warning. The X-mark circle is the defining element.`,
     },
     {
       id: 'cau_friendly_guide', name: '친절한 가이드', color: '#10b981', accent: '#059669', bg: '#ecfdf5',
       desc: '세로 연결선 + 단계별 안내 (친절)',
       layoutHint: 'guide',
-      aiPrompt: `BACKGROUND: Soft mint (#ecfdf5) to white gradient.
-ZONE 1 — HEADER (top 10%): Hospital name in green accent. Below: bold "시술 후 주의사항" in green (#10b981, 22px, weight 800).
-ZONE 2 — GUIDE CARD (60%): Large white rounded card (border-radius 16px, 70% opacity, soft shadow). Inside: 4 step-by-step items connected by a thin vertical green line on the left. Each step: outer circle (green at 6%), inner circle (green at 10%), numbered "1/2/3/4" in bold green. Right: instruction text in gray (#475569). Connecting line between circles (green at 10% opacity). Items: "혀로 건드리지 마세요", "음주/흡연 금지", "부기 2~3일 내 소실", "딱딱한 음식 금지".
-BOTTOM: Hospital name in green text.
-Friendly, caring, encouraging. Step-by-step guide format. Warm and approachable green palette.`,
+      aiPrompt: `STAIRCASE STEP-DOWN LAYOUT — items arranged as descending stairs from left to right.
+BACKGROUND: Soft mint (#ecfdf5) to white gradient.
+HEADER: Hospital name in green accent. Procedure title in bold green (#10b981).
+STAIRCASE: 4 items arranged as descending steps — each item is positioned lower and further to the right than the previous, creating a visual staircase effect. Each step is a rounded rectangle with light green tint, containing a numbered circle on the left (green fill, white number) and instruction text to the right. Diagonal arrows connect each step to the next, pointing down-right.
+BOTTOM: Emergency contact bar. Hospital name.
+Step-by-step descending guide. Visual staircase metaphor for sequential instructions. Friendly green palette.`,
     },
     {
       id: 'cau_timeline_recovery', name: '회복 타임라인', color: '#8b5cf6', accent: '#7c3aed', bg: '#f5f3ff',
       desc: '당일→1주→1개월 회복 마일스톤',
       layoutHint: 'timeline',
-      aiPrompt: `BACKGROUND: Soft lavender (#f5f3ff) to white gradient.
-ZONE 1 — HEADER (top 12%): Purple pill badge with "시술 후 안내" at 5% opacity. Below: bold "회복 가이드" in purple (#8b5cf6, 22px, weight 800).
-ZONE 2 — TIMELINE (65%): Vertical timeline with purple line (8% opacity) on the left. 4 milestone nodes connected by the line:
-- Each node: outer circle (white, purple stroke at 30%), inner filled circle (purple at 50%). RIGHT: bold time label in purple ("당일", "1주일", "2주일", "1개월"). Below: instruction in gray ("혀로 건드리지 마세요", "딱딱한 음식 금지", "정상 식사 가능", "정기검진 내원").
-Chronological recovery stages. Clear progression from Day 1 to Month 1.
-BOTTOM: Hospital name in purple text.
-Medical recovery infographic. Purple palette. Milestone-based healing progress.`,
+      aiPrompt: `VERTICAL THERMOMETER GAUGE LAYOUT — thermometer as visual progress indicator.
+BACKGROUND: Soft lavender (#f5f3ff) to white.
+HEADER: Procedure title in bold purple (#8b5cf6). Hospital name.
+LEFT SIDE: Large vertical thermometer shape — a tall rounded rectangle (thermometer tube) with a circular bulb at the bottom. The tube is divided into 4 colored segments from bottom to top: red (당일), amber (1주), blue (2주), green (1개월). Each segment represents a recovery stage.
+RIGHT SIDE: Horizontal tick marks extending from the thermometer to labels. Each label shows the time period in bold colored text and the instruction in gray text below. Labels are positioned next to their corresponding thermometer segment.
+BOTTOM: Emergency contact bar. Hospital name.
+Medical thermometer infographic. Color-coded recovery stages. Purple/multi-color palette.`,
     },
     {
       id: 'cau_infographic', name: '인포그래픽', color: '#f59e0b', accent: '#d97706', bg: '#fffbeb',
       desc: '2×2 O/X 아이콘 그리드 (시각 중심)',
       layoutHint: 'infographic',
-      aiPrompt: `BACKGROUND: Warm cream (#fffbeb) to white gradient.
-ZONE 1 — HEADER (top 8%): Hospital name in amber accent. Below: bold "시술 후 주의사항" in amber (#f59e0b, 22px, weight 800).
-ZONE 2 — ICON GRID (65%): 2x2 grid of white cards (border-radius 10px, soft shadow). Each card: TOP: colored circle icon — red (#fef2f2) with "X" for don'ts, green (#ecfdf5) with "O" for dos. BOTTOM: short instruction text. Grid items: "혀 금지" (X), "음주 금지" (X), "냉찜질" (O), "부드러운 음식" (O). Visual-heavy, icon-dominant. Minimal text, maximum visual communication.
-BOTTOM: Hospital name in amber text.
-Visual infographic style. Icon-heavy. Easy-to-understand at a glance. Pictogram-based instructions.`,
+      aiPrompt: `CENTRAL TOOTH RADIAL LAYOUT — tooth icon at center with instructions radiating outward.
+BACKGROUND: Warm cream (#fffbeb).
+HEADER: Procedure title in bold amber (#f59e0b). Hospital name.
+CENTER: Large circular area with tooth icon (🦷) centered — light amber tinted circle as background. This is the visual hub.
+RADIAL ITEMS: 4 instruction items radiating from the center tooth in 4 directions (top, right, bottom, left). Each item has a dashed connecting line from center to a numbered circle, with instruction text positioned near the circle. Items radiate outward like a compass rose.
+BOTTOM: Emergency contact bar. Hospital name.
+Radial infographic layout. Tooth as visual center, instructions as satellite elements. Amber warm palette.`,
     },
     {
       id: 'cau_clean_card', name: '클린 카드', color: '#0ea5e9', accent: '#0284c7', bg: '#f0f9ff',
       desc: '스카이블루 2×2 카드 UI (모던)',
       layoutHint: 'card',
-      aiPrompt: `BACKGROUND: Light sky blue (#f0f9ff) to white gradient.
-ZONE 1 — HEADER (top 8%): Hospital name in sky blue accent. Below: bold "시술 후 주의사항" in sky blue (#0ea5e9, 22px, weight 800).
-ZONE 2 — CARD GRID (65%): 2x2 grid of individual white cards (border-radius 12px, 95% opacity, soft shadow). Each card: colored circle icon at top — red for warnings (#fef2f2 bg, "X" in red), green for recommendations (#ecfdf5 bg, "O" in green). Below: short instruction text in gray (#475569). Cards: "혀로 건드리지 마세요" (X), "음주/흡연 금지" (X), "딱딱한 음식 금지" (X), "냉찜질 권장" (O). Modern UI card layout.
-BOTTOM: Hospital name in sky blue text.
-Clean, modern, card-based. Individual items as separate cards. Contemporary healthcare design.`,
+      aiPrompt: `DO / DON'T TWO-COLUMN SPLIT LAYOUT — left column for DO, right column for DON'T.
+BACKGROUND: White.
+HEADER: Procedure title in bold sky blue (#0ea5e9).
+LEFT COLUMN "DO ✓": Green header bar (#22c55e) with "DO ✓" in white. Below: items that patients SHOULD do, each in a light green card with green checkmark circle. Items like "냉찜질 권장", "부드러운 음식" etc.
+CENTER: Vertical dashed divider line separating the two columns.
+RIGHT COLUMN "DON'T ✗": Red header bar (#ef4444) with "DON'T ✗" in white. Below: items that patients SHOULD NOT do, each in a light red card with red X circle. Items like "혀로 건드리지 마세요", "음주 금지" etc.
+BOTTOM: Emergency contact bar. Hospital name.
+Clear DO/DON'T split. Green for allowed, red for prohibited. Two-column visual comparison.`,
     },
   ],
   // ─── 비급여 진료비 안내 (6개) ───
@@ -2696,61 +2690,82 @@ Clean, modern, card-based. Individual items as separate cards. Contemporary heal
       id: 'prc_clean_table', name: '클린 테이블', color: '#3b82f6', accent: '#2563eb', bg: '#eff6ff',
       desc: '블루 헤더 + 줄무늬 행 테이블 (표준)',
       layoutHint: 'table',
-      aiPrompt: `BACKGROUND: Clean white with very subtle blue tint.
-ZONE 1 — HEADER (top 12%): Blue gradient bar (#3b82f6→#2563eb). "비급여 진료비 안내" in bold white text centered. Hospital name in small white text above.
-ZONE 2 — PRICE TABLE (65%): White card with rounded corners and soft shadow. Inside: alternating white/#f8fafc rows. Each row: treatment name in dark gray (#1e293b) LEFT, dotted leader line in light gray, price in bold blue (#2563eb) RIGHT. Clear alignment. Row height generous for readability. Top row header in blue background: "항목" left, "금액" right.
-ZONE 3 — FOOTER (10%): Small gray text with disclaimer notice. Hospital contact info.
-Professional corporate medical fee schedule. Clean table layout. Blue and white clinical aesthetic.`,
+      aiPrompt: `RECEIPT STYLE LAYOUT — narrow receipt/ticket format.
+BACKGROUND: White. The price list is presented as a narrow receipt/ticket shape centered on the canvas (about 60% width), with subtle drop shadow.
+TOP: Hospital name centered at top of receipt. Thin line separator.
+TITLE: "비급여 진료비" in bold. "PRICE LIST" in small text below.
+DASHED CUT LINE: Horizontal dashed line (scissors cut line) separating header from items.
+ITEMS: Treatment name on left, price on right (bold blue #2563eb). Thin separator line between each item. Clean, receipt-like formatting.
+BOTTOM DASHED LINE: Another scissors cut line at bottom.
+FOOTER: Small disclaimer text.
+Receipt/ticket visual metaphor. Narrow vertical format with dashed cut lines. Blue and white.`,
     },
     {
       id: 'prc_card_grid', name: '카드 그리드', color: '#10b981', accent: '#059669', bg: '#ecfdf5',
       desc: '2열 시술별 카드 + 아이콘 (치과)',
       layoutHint: 'cards',
-      aiPrompt: `BACKGROUND: Soft mint gradient (#ecfdf5 → white).
-ZONE 1 — HEADER (top 10%): "비급여 진료비 안내" in bold green (#10b981, weight 800). Hospital name in small green accent.
-ZONE 2 — PRICE CARDS (70%): 2-column grid of individual white cards (border-radius 12px, soft shadow). Each card: small medical icon at top (tooth, syringe, etc. in green), treatment name in bold dark text center, price in large bold green (#059669) text below. Clean separation between cards with 8px gaps.
-ZONE 3 — FOOTER (8%): Disclaimer in small gray text.
-Modern card-based pricing. Each treatment as a separate visual card. Mint green medical aesthetic.`,
+      aiPrompt: `TAB MENU LAYOUT — left side tabs with right side price display.
+BACKGROUND: Soft mint gradient (#ecfdf5 → white).
+HEADER: Hospital name. "비급여 진료비 안내" in bold green (#10b981).
+ITEMS: Each treatment displayed as a tab interface — LEFT: small colored tab button (first tab is filled green, rest are white with green outline) showing treatment name. RIGHT: expanded content area showing the price in large bold green text. Tabs are stacked vertically.
+The first tab appears "selected" (filled green with white text). Other tabs appear unselected (white with green text, green outline).
+FOOTER: Disclaimer text.
+Tab-selection UI metaphor. Interactive-looking price menu. Green medical aesthetic.`,
     },
     {
       id: 'prc_premium_dark', name: '프리미엄 다크', color: '#1e293b', accent: '#f59e0b', bg: '#0f172a',
       desc: '다크 네이비 + 골드 가격 (프리미엄)',
       layoutHint: 'dark',
-      aiPrompt: `BACKGROUND: Dark navy (#0f172a) with subtle gradient.
-ZONE 1 — HEADER (top 12%): Gold accent line at very top. "비급여 진료비 안내" in bold white text. Hospital name in small gold (#f59e0b) text.
-ZONE 2 — PRICE LIST (65%): Semi-transparent dark cards (#1e293b at 80% opacity, border-radius 10px). Each row: treatment name in white text LEFT, gold (#f59e0b) price RIGHT. Thin gold separator line between items. Prices in bold, slightly larger font. Premium spacing.
-ZONE 3 — FOOTER (10%): Disclaimer in muted gray (#94a3b8) text. Gold accent line at bottom.
-Premium luxury aesthetic. Dark background with gold accents. High-end clinic pricing feel.`,
+      aiPrompt: `NEON SIGN BOARD LAYOUT — dark background with glowing neon-style text.
+BACKGROUND: Dark navy (#0f172a) full bleed.
+BORDER: Double-line border in gold (#f59e0b) at ~40% opacity, creating a neon sign frame effect. Inner border slightly inset from outer.
+HEADER: Hospital name in glowing gold. "PRICE LIST" in large white text with subtle glow effect.
+NEON UNDERLINE: Gold bar below the title, simulating a neon tube light.
+ITEMS: Treatment names in gold at 70% opacity on left, prices in bright white bold text on right. Thin gold lines separating each item. The gold text should have a subtle glow/halo effect.
+FOOTER: Disclaimer in small gold text. Matching gold border line at bottom.
+Neon sign aesthetic on dark background. Gold glow effects. Premium nightclub/lounge feel for high-end clinic.`,
     },
     {
       id: 'prc_warm_wood', name: '따뜻한 우드', color: '#92400e', accent: '#d97706', bg: '#fffbeb',
       desc: '카페 메뉴판 + 도트 리더 (따뜻한)',
       layoutHint: 'wood',
-      aiPrompt: `BACKGROUND: Warm cream (#fffbeb) with subtle paper texture feel.
-ZONE 1 — HEADER (top 12%): Warm brown banner (#92400e at 10% opacity, rounded). "비급여 진료비 안내" in bold warm brown (#92400e, weight 800). Small tooth icon accent.
-ZONE 2 — PRICE MENU (65%): Styled like a premium cafe menu board. Each item row: treatment name in dark brown LEFT, series of dots connecting to amber (#d97706) bold price RIGHT. Thin warm brown divider lines between sections. Clean serif-inspired typography feel.
-ZONE 3 — FOOTER (10%): Disclaimer in warm gray text inside a subtle rounded box.
-Warm, natural, inviting aesthetic. Like a premium clinic waiting room display. Brown and cream tones.`,
+      aiPrompt: `CHALKBOARD LAYOUT — dark green chalkboard with chalk-style white text.
+BACKGROUND: Dark green (#1a3a2a) full bleed, simulating a real chalkboard/blackboard.
+FRAME: Thick brown (#8B4513) border around the edges, like a wooden chalkboard frame.
+TITLE: "비급여 진료비 안내" in white chalk-style text (slightly rough/textured appearance). Horizontal white line below.
+"PRICE LIST" subtitle in cream/yellow (#fef3c7) small text.
+ITEMS: Treatment names in white chalk text on left, chalk dotted leader lines connecting to prices in yellow (#fbbf24) bold chalk text on right. Each item separated by subtle chalk dust lines.
+FOOTER: Hospital name in small white chalk text at bottom.
+Chalkboard/blackboard aesthetic. White and yellow chalk on dark green. Warm, familiar, café-menu feel but for a medical clinic.`,
     },
     {
       id: 'prc_gradient_modern', name: '그라데이션 모던', color: '#7c3aed', accent: '#a855f7', bg: '#f5f3ff',
       desc: '퍼플 그라데이션 + 교차 행 (모던)',
       layoutHint: 'gradient',
-      aiPrompt: `BACKGROUND: Soft lavender gradient (#f5f3ff → #ede9fe → white).
-ZONE 1 — HEADER (top 12%): Purple gradient pill badge with "비급여" tag. "진료비 안내" in bold purple (#7c3aed, weight 800). Hospital name in light purple.
-ZONE 2 — PRICE LIST (65%): Large white card (border-radius 16px, soft purple shadow). Inside: each row has a small purple circle bullet, treatment name in dark text, price in bold purple (#7c3aed) right-aligned. Alternating row backgrounds: white and lavender at 3% opacity. Clean modern spacing.
-ZONE 3 — FOOTER (10%): Notice text in muted purple. Subtle gradient accent line.
-Modern, fresh, contemporary. Purple gradient aesthetic. Clean medical pricing layout.`,
+      aiPrompt: `HORIZONTAL BAR CHART LAYOUT — prices displayed as comparative horizontal bars.
+BACKGROUND: Soft lavender (#f5f3ff).
+HEADER: Hospital name in purple (#7c3aed). "진료비 안내" in bold large purple text.
+CHART: Each treatment displayed as a horizontal bar — treatment name above the bar in dark text, the bar itself is a rounded rectangle in purple (varying opacity), bar WIDTH proportional to price (more expensive = wider bar). Price number displayed at the end of the bar in bold purple text.
+Bars are stacked vertically with generous spacing. Visual comparison of prices at a glance.
+FOOTER: Disclaimer in small gray text.
+Bar chart visualization of pricing. Easy visual comparison. Purple gradient aesthetic.`,
     },
     {
       id: 'prc_minimal_line', name: '미니멀 라인', color: '#64748b', accent: '#0ea5e9', bg: '#f8fafc',
       desc: '타이포 중심 + 가로선 (스위스 미니멀)',
       layoutHint: 'minimal',
-      aiPrompt: `BACKGROUND: Pure white (#ffffff).
-ZONE 1 — HEADER (top 8%): Thin sky blue (#0ea5e9) line at top edge. "비급여 진료비 안내" in bold dark gray (#1e293b, weight 800). No decoration.
-ZONE 2 — PRICE LIST (72%): Ultra-clean list. Each item: treatment name in medium gray (#475569), thin horizontal line extending across, price in bold dark (#1e293b) with sky blue (#0ea5e9) won symbol accent. Generous vertical spacing (20px between items). No cards, no backgrounds — just clean typography and lines.
-ZONE 3 — FOOTER (8%): Disclaimer in light gray (#94a3b8). Thin blue line at bottom matching top.
-Ultra-minimal. No decorations. Pure typography-driven design. Swiss design inspired. Maximum whitespace.`,
+      aiPrompt: `TRI-FOLD BROCHURE LAYOUT — three folded sections with dashed fold lines.
+BACKGROUND: White.
+HEADER: Hospital name. "비급여 진료비 안내" in bold dark text.
+FOLD LINE: Horizontal dashed line across full width (like a paper fold crease).
+THREE SECTIONS: Canvas divided into 3 equal horizontal sections by dashed fold lines, like a tri-fold brochure:
+- Section 1: First treatment — name in bold on left, price in bold on right. "비급여 항목" label in small gray text.
+- Section 2 (slightly gray background): Second treatment — same layout.
+- Section 3: Third treatment — same layout.
+Additional items shown as small text at bottom if space permits.
+Dashed fold lines between each section create the unmistakable tri-fold brochure look.
+FOOTER: Disclaimer text.
+Tri-fold brochure metaphor. Clean sections divided by fold lines. Minimal Swiss design.`,
     },
   ],
 };
