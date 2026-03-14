@@ -2089,7 +2089,7 @@ Fresh, hygienic healthcare aesthetic. Professional yet refreshing. Green cross a
   event: [
     {
       id: 'evt_sale_banner', name: '할인 배너', color: '#ef4444', accent: '#b91c1c', bg: '#fef2f2',
-      desc: '가격 강조 할인형',
+      desc: '거대 할인율 + 대각선 스트라이프',
       layoutHint: 'price',
       aiPrompt: `BACKGROUND: Clean white (#ffffff) with very subtle warm gradient at bottom.
 ZONE 1 — TOP BANNER (top 18%): Full-width rounded rectangle with bold red (#ef4444 → #b91c1c) gradient fill. Hospital name in small white text (12px). Below: event title "임플란트 특별 할인" in large bold white text (24px, heavy weight).
@@ -2100,7 +2100,7 @@ NO illustrations. Pure typographic promotional design. Urgent, attention-grabbin
     },
     {
       id: 'evt_elegant_event', name: '엘레강스 이벤트', color: '#a855f7', accent: '#7e22ce', bg: '#faf5ff',
-      desc: '고급스러운 이벤트',
+      desc: '다크 네이비 + 골드 이중선 프레임',
       layoutHint: 'elegant',
       aiPrompt: `BACKGROUND: Soft lavender gradient (#faf5ff to white). Very subtle radial glow of purple at center (5% opacity).
 ZONE 1 — HEADER (top 12%): Hospital name in small elegant text with letter-spacing 2px, purple (#7e22ce). Thin decorative line (0.5px, purple at 15% opacity) below.
@@ -2111,7 +2111,7 @@ Luxury, sophisticated, premium dental clinic promotion. Gold-foil-inspired refin
     },
     {
       id: 'evt_pop_colorful', name: '팝 컬러풀', color: '#f59e0b', accent: '#d97706', bg: '#fffbeb',
-      desc: '활기찬 팝 스타일',
+      desc: '겹치는 원 + 중앙 배지 팝아트',
       layoutHint: 'pop',
       aiPrompt: `BACKGROUND: Warm cream (#fffbeb) to white gradient. Subtle geometric dot pattern at edges in amber (#f59e0b) at 6% opacity.
 ZONE 1 — HEADER (top 10%): Hospital name in bold amber (#d97706) text.
@@ -2122,7 +2122,7 @@ Warm, energetic promotional poster. Inviting and professional. Korean dental cli
     },
     {
       id: 'evt_minimal_modern', name: '미니멀 모던', color: '#64748b', accent: '#334155', bg: '#f8fafc',
-      desc: '심플 미니멀',
+      desc: '좌정렬 타이포 + 최대 여백',
       layoutHint: 'minimal',
       aiPrompt: `BACKGROUND: Pure white (#ffffff) with barely visible cool gray tint.
 ZONE 1 — SPACIOUS TOP (top 15%): Maximum whitespace. Small caps "IMPLANT EVENT" in light gray (#94a3b8), letter-spacing 4px, centered.
@@ -2133,7 +2133,7 @@ Ultra-minimalist. Maximum whitespace. Architectural precision. Less is more luxu
     },
     {
       id: 'evt_gradient_wave', name: '그라데이션 웨이브', color: '#06b6d4', accent: '#0891b2', bg: '#ecfeff',
-      desc: '물결 그라데이션',
+      desc: '상하 물결 곡선 + 플로팅 카드',
       layoutHint: 'wave',
       aiPrompt: `BACKGROUND: Light cyan (#ecfeff) to white gradient.
 ZONE 1 — HEADER (top 12%): Hospital name in teal (#0891b2) text. Below: large bold title "임플란트 이벤트" in cyan (#06b6d4, 28px, weight 800).
@@ -2144,7 +2144,7 @@ Modern, flowing, dynamic. Ocean-inspired calm yet exciting. Tech-forward healthc
     },
     {
       id: 'evt_season_special', name: '시즌 스페셜', color: '#22c55e', accent: '#15803d', bg: '#f0fdf4',
-      desc: '계절 한정 이벤트',
+      desc: '대각선 리본 + 시즌 뱃지',
       layoutHint: 'season',
       aiPrompt: `BACKGROUND: Soft mint (#f0fdf4) to white gradient. Very subtle leaf/floral shapes at corners in green at 5-8% opacity.
 ZONE 1 — HEADER (top 10%): Hospital name in green (#15803d) text.
@@ -2159,7 +2159,7 @@ Fresh, natural, inviting. Seasonal limited-time offer feel. Professional Korean 
   doctor: [
     {
       id: 'doc_portrait_formal', name: '정장 포트레이트', color: '#1e40af', accent: '#1e3a8a', bg: '#eff6ff',
-      desc: '공식 프로필형',
+      desc: '상단 웨이브 + 프로필 오버랩',
       layoutHint: 'portrait',
       aiPrompt: `BACKGROUND: Clean white with very subtle blue tint.
 ZONE 1 — PHOTO AREA (top 45%): White rounded card (border-radius 12px, soft shadow). Top section: subtle blue (#1e40af) gradient band at 6% opacity. Center: large rectangular photo placeholder (50x50px equivalent, border-radius 8px, subtle blue border at 10%). "PHOTO" watermark text inside in light blue.
@@ -2170,7 +2170,7 @@ Formal, authoritative, trust-building. Corporate medical profile card.`,
     },
     {
       id: 'doc_friendly_curve', name: '친근한 곡선', color: '#10b981', accent: '#059669', bg: '#ecfdf5',
-      desc: '부드러운 곡선형',
+      desc: '이중 곡선 배경 + 인사말 카드',
       layoutHint: 'curve',
       aiPrompt: `BACKGROUND: Soft mint (#ecfdf5) to white gradient. Gentle curved wave shape dividing upper and lower sections at ~35% height, green (#10b981) at 4% opacity.
 ZONE 1 — PHOTO (top 40%): Large circular photo frame (radius 22px equivalent) centered. White background with soft shadow. Subtle green (#10b981) border at 8% opacity. "PHOTO" watermark inside.
@@ -2181,7 +2181,7 @@ Friendly, approachable, warm. Organic curved shapes. Patient-friendly dental cli
     },
     {
       id: 'doc_modern_split', name: '모던 분할', color: '#6366f1', accent: '#4f46e5', bg: '#eef2ff',
-      desc: '좌우 분할 레이아웃',
+      desc: '좌측 풀컬러 + 우측 정보 카드',
       layoutHint: 'split',
       aiPrompt: `LAYOUT: Two-column split design.
 LEFT COLUMN (42% width): Full-height area with indigo (#6366f1) at 6% opacity background. Large circular photo frame centered vertically — white background, subtle indigo border. Square photo placeholder inside (border-radius 6px, indigo at 8%). "PHOTO" watermark.
@@ -2193,7 +2193,7 @@ Modern, geometric split-layout. Clean division. Contemporary medical profile.`,
     },
     {
       id: 'doc_warm_story', name: '따뜻한 스토리', color: '#f97316', accent: '#ea580c', bg: '#fff7ed',
-      desc: '인사말 중심 스토리형',
+      desc: '매거진 에디토리얼 + 대형 인용부호',
       layoutHint: 'story',
       aiPrompt: `BACKGROUND: Warm cream (#fff7ed) with subtle white overlay card at 50% opacity, border-radius 12px.
 ZONE 1 — COMPACT HEADER (top 25%): Left: small circular photo frame (radius 12px). Right: "치과 전문의" in small orange text, below: "김윈에이드" in bold orange (#f97316, 22px, weight 800). Thin divider line below in orange at 8% opacity.
@@ -2204,7 +2204,7 @@ Warm, personal, storytelling. Emphasis on doctor's greeting over credentials. Tr
     },
     {
       id: 'doc_dark_luxury', name: '다크 럭셔리', color: '#d4a017', accent: '#b8860b', bg: '#1a1a2e',
-      desc: '프리미엄 다크',
+      desc: '다크 네이비 + 동심원 골드링',
       layoutHint: 'luxury',
       aiPrompt: `BACKGROUND: Deep navy (#0f172a) full background.
 ZONE 1 — GOLD HEADER (top 8%): Thin gold (#d4a017) decorative double line spanning 70% width, centered. Elegant separator.
@@ -2216,7 +2216,7 @@ Premium dark luxury. Deep navy with gold accents. VIP doctor profile. High-end d
     },
     {
       id: 'doc_clean_grid', name: '클린 그리드', color: '#0ea5e9', accent: '#0284c7', bg: '#f0f9ff',
-      desc: '정보 정리형 그리드',
+      desc: '벤토 그리드 비균등 블록 배치',
       layoutHint: 'grid',
       aiPrompt: `BACKGROUND: Light sky blue (#f0f9ff) to white gradient.
 ZONE 1 — COMPACT HEADER (top 25%): Left: circular photo frame (radius 14px) with white background, subtle sky blue border, soft shadow. Right: "김윈에이드" in bold sky blue (#0ea5e9, 22px). Below right: rounded pill with sky blue at 8%, "치과 전문의" in blue accent.
@@ -2234,7 +2234,7 @@ Clean, organized, infographic-style. Dashboard aesthetic. Easy-to-read structure
   notice: [
     {
       id: 'ntc_bulletin_board', name: '클린 블루 안내', color: '#2563eb', accent: '#1d4ed8', bg: '#eff6ff',
-      desc: '블루 진료시간 안내형',
+      desc: '노란 게시판 + 압정 장식',
       layoutHint: 'bulletin',
       aiPrompt: `Clean blue Korean dental clinic official notice design (inspired by professional medical notices).
 TOP (8%): Solid blue (#2563eb) bar with small centered icon (tooth/clinic logo shape).
@@ -2250,7 +2250,7 @@ Ultra-professional, corporate Korean healthcare design. Clean blue accent on whi
     },
     {
       id: 'ntc_modern_alert', name: '코럴 공지', color: '#ef4444', accent: '#dc2626', bg: '#fef2f2',
-      desc: '따뜻한 코럴 공지',
+      desc: '플로팅 카드 + 느낌표 아이콘',
       layoutHint: 'alert',
       aiPrompt: `Warm coral/red Korean dental clinic important notice design.
 BACKGROUND: Soft gradient from warm coral (#f87171) at top to light peach (#fef2f2) at bottom.
@@ -2265,7 +2265,7 @@ Warm, attention-grabbing Korean healthcare notice. Professional yet inviting.`,
     },
     {
       id: 'ntc_soft_info', name: '라벤더 안내', color: '#8b5cf6', accent: '#7c3aed', bg: '#f5f3ff',
-      desc: '부드러운 라벤더 안내',
+      desc: '말풍선 + 정보 아이콘 플로팅',
       layoutHint: 'soft',
       aiPrompt: `BACKGROUND: Gentle gradient from soft lavender (#f5f3ff) to white. Subtle decorative circles at corners in light purple at 5-8% opacity.
 ZONE 1 — HEADER (top 15%): Rounded pill with purple at 6% opacity. Left: "i" icon circle in purple at 10%. Right: bold purple title "진료실 이전 안내" (#8b5cf6, 20px, weight 700).
@@ -2276,7 +2276,7 @@ Soft, calming, gentle. All rounded shapes. Approachable and friendly dental clin
     },
     {
       id: 'ntc_corporate_formal', name: '공식 문서', color: '#1f2937', accent: '#111827', bg: '#f9fafb',
-      desc: '격식있는 공문 스타일',
+      desc: '다크 네이비 헤더 + 이중 테두리',
       layoutHint: 'formal',
       aiPrompt: `BACKGROUND: Pure white (#ffffff).
 ZONE 1 — HEADER (top 8%): Full-width 2px solid black (#1f2937) line. Below: hospital name centered in formal font.
@@ -2288,7 +2288,7 @@ Formal, authoritative, institutional Korean official document format. Black and 
     },
     {
       id: 'ntc_card_popup', name: '민트 팝업', color: '#06b6d4', accent: '#0891b2', bg: '#ecfeff',
-      desc: '민트 팝업 카드',
+      desc: '모달 팝업 + 그라데이션 헤더',
       layoutHint: 'popup',
       aiPrompt: `Modern mint/cyan Korean dental clinic pop-up notice design.
 BACKGROUND: Light mint gradient (#ecfeff to white) with soft geometric shapes.
@@ -2305,7 +2305,7 @@ Modern, digital-native Korean healthcare notice. Clean and contemporary.`,
     },
     {
       id: 'ntc_timeline', name: '그린 타임라인', color: '#22c55e', accent: '#16a34a', bg: '#f0fdf4',
-      desc: '변경 타임라인 안내',
+      desc: '메트로 노선도 스타일 타임라인',
       layoutHint: 'timeline',
       aiPrompt: `Timeline-style Korean dental clinic change notice design.
 BACKGROUND: Soft green (#f0fdf4) to white gradient.
@@ -2745,7 +2745,7 @@ Cute, playful. Pastel pink celebration. Child-friendly dental practice greeting.
   hiring: [
     {
       id: 'hir_corporate_clean', name: '기업 클린', color: '#1e40af', accent: '#1e3a8a', bg: '#eff6ff',
-      desc: '공식 채용공고',
+      desc: '신문 칼럼 마스트헤드 + 구분선',
       layoutHint: 'corporate',
       aiPrompt: `BACKGROUND: Clean white (#ffffff).
 ZONE 1 — LOGO HEADER (top 10%): Left-aligned rectangular placeholder box (60x28px, navy #1e40af at 6% opacity, border-radius 8px, dashed 1px navy border at 20%) for company logo. Right-aligned: "RECRUITMENT" in small navy text (10px, weight 600, letter-spacing 3px). Full-width thin horizontal rule below (1px, navy #1e40af at 12% opacity).
@@ -2757,7 +2757,7 @@ Formal corporate document style. Top-down vertical list with horizontal rules as
     },
     {
       id: 'hir_friendly_team', name: '팀워크 친근', color: '#22c55e', accent: '#16a34a', bg: '#f0fdf4',
-      desc: '친근한 팀 소개형',
+      desc: '겹치는 세 원 팀심벌 + 불릿 목록',
       layoutHint: 'team',
       aiPrompt: `BACKGROUND: Soft mint (#f0fdf4) to white gradient (top to bottom).
 ZONE 1 — TEAM PHOTO AREA (top 25%): Large circle (120px diameter, centered) with green (#22c55e) at 8% opacity fill, dashed green border (2px, 25% opacity). Inside: silhouette group icon (3 simple person outlines in green at 30% opacity) representing team. Small "Our Team" label below circle in green (#16a34a, 10px, weight 500).
@@ -2769,7 +2769,7 @@ Friendly, approachable, team-oriented. Circular team photo area, speech bubble g
     },
     {
       id: 'hir_modern_startup', name: '모던 스타트업', color: '#8b5cf6', accent: '#7c3aed', bg: '#f5f3ff',
-      desc: '트렌디 모던',
+      desc: '다크 배경 + 3D 블록 레터',
       layoutHint: 'modern',
       aiPrompt: `BACKGROUND: Diagonal split — top-left triangle in lavender (#f5f3ff), bottom-right triangle in deep purple (#7c3aed at 8% opacity). The diagonal line runs from top-right corner to bottom-left corner, creating a bold geometric split.
 ZONE 1 — HERO TEXT (left 40% of canvas, vertically centered): Massive bold "JOIN" text in purple (#8b5cf6, 72px, weight 900, letter-spacing -2px) stacked vertically — each letter on its own line. Below the last letter: thin purple line (40px wide, 2px, #7c3aed). Text dominates the left portion of the design. High visual impact.
@@ -2781,7 +2781,7 @@ Bold diagonal split composition. Oversized typography taking 40% of space. Float
     },
     {
       id: 'hir_benefits_focus', name: '복리후생 강조', color: '#f59e0b', accent: '#d97706', bg: '#fffbeb',
-      desc: '혜택 중심 디자인',
+      desc: '2×2 퍼즐 조각 복리후생 카드',
       layoutHint: 'benefits',
       aiPrompt: `BACKGROUND: Warm cream (#fffbeb).
 ZONE 1 — COMPACT HEADER (top 10%): "간호사 모집" in bold amber (#f59e0b, 22px, weight 800) center-aligned. Below: "함께 성장할 인재를 찾습니다" in amber accent (#d97706, 11px, weight 400).
@@ -2798,7 +2798,7 @@ Benefits-first layout. 2x2 grid of benefit cards as primary content. Each benefi
     },
     {
       id: 'hir_urgent_now', name: '급구 긴급', color: '#ef4444', accent: '#dc2626', bg: '#fef2f2',
-      desc: '긴급 채용 강조',
+      desc: '풀컬러 배경 + 흰색 반전 CTA',
       layoutHint: 'urgent',
       aiPrompt: `BACKGROUND: Clean white (#ffffff) with subtle red radial pulse gradient at top center (red #ef4444 at 3% opacity, fading outward).
 ZONE 1 — COUNTDOWN HEADER (top 22%): Full-width red (#ef4444) filled rounded rectangle (border-radius 12px). Inside TOP: "URGENT" in small white text (10px, weight 700, letter-spacing 4px, 70% opacity). CENTER: large bold white "간호사 급구" (28px, weight 900). BOTTOM of banner: countdown-style time display — three white rounded boxes (border-radius 6px, white at 20% opacity fill, each ~50x40px) side by side showing "D-7" style indicator. Left box: large bold "D" (22px), center box: bold "-" (22px), right box: bold "7" (22px). All white text on red. Below boxes: tiny white label text "채용마감" (9px, 50% opacity).
@@ -2809,7 +2809,7 @@ Countdown-driven urgency. D-day timer visual at top. Bold oversized bullet requi
     },
     {
       id: 'hir_premium_brand', name: '프리미엄 브랜드', color: '#78716c', accent: '#57534e', bg: '#fafaf9',
-      desc: '고급 브랜딩',
+      desc: '대각선 스트라이프 + 스퀘어 마커',
       layoutHint: 'brand',
       aiPrompt: `BACKGROUND: Warm off-white (#fafaf9) with very subtle linen paper texture feel (noise at 2% opacity).
 ZONE 1 — GOLD ACCENT LINE (top 3%): Thin horizontal gold line (#b8860b, 1.5px, 50% opacity) spanning full width with 24px margin on each side. Elegant, understated.
@@ -2825,7 +2825,7 @@ Magazine editorial layout. Serif typography throughout. Gold (#b8860b) accent li
   caution: [
     {
       id: 'cau_medical_checklist', name: '의료 체크리스트', color: '#3b82f6', accent: '#2563eb', bg: '#eff6ff',
-      desc: '체크리스트형 안내',
+      desc: '넘버 배지 카드 + 그림자 목록',
       layoutHint: 'checklist',
       aiPrompt: `BACKGROUND: Clean white with very subtle blue tint.
 ZONE 1 — HEADER (top 8%): Hospital name in blue (#2563eb) text. Below: bold "시술 후 주의사항" in blue (#3b82f6, 22px, weight 800).
@@ -2835,7 +2835,7 @@ Professional medical checklist. Clear numbered instructions. Blue and white clin
     },
     {
       id: 'cau_warning_bold', name: '경고 강조형', color: '#ef4444', accent: '#dc2626', bg: '#fef2f2',
-      desc: '주의 경고 강조',
+      desc: '솔리드 배너 + 경고 삼각형',
       layoutHint: 'warning',
       aiPrompt: `BACKGROUND: Clean white.
 ZONE 1 — WARNING BANNER (top 15%): Rounded rectangle with red at 8% opacity. Warning triangle icon (▲) in red at 30% left side. Bold "시술 후 주의사항" in red (#ef4444, 22px, weight 800).
@@ -2845,7 +2845,7 @@ Bold warning style. Red and white. Urgent medical safety emphasis. Clear DO/DON'
     },
     {
       id: 'cau_friendly_guide', name: '친절한 가이드', color: '#10b981', accent: '#059669', bg: '#ecfdf5',
-      desc: '부드러운 안내 가이드',
+      desc: '아코디언 접힌 종이 + 넘버링',
       layoutHint: 'guide',
       aiPrompt: `BACKGROUND: Soft mint (#ecfdf5) to white gradient.
 ZONE 1 — HEADER (top 10%): Hospital name in green accent. Below: bold "시술 후 주의사항" in green (#10b981, 22px, weight 800).
@@ -2855,7 +2855,7 @@ Friendly, caring, encouraging. Step-by-step guide format. Warm and approachable 
     },
     {
       id: 'cau_timeline_recovery', name: '회복 타임라인', color: '#8b5cf6', accent: '#7c3aed', bg: '#f5f3ff',
-      desc: '회복 단계별 안내',
+      desc: '반원 게이지 아크 + 회복 타임라인',
       layoutHint: 'timeline',
       aiPrompt: `BACKGROUND: Soft lavender (#f5f3ff) to white gradient.
 ZONE 1 — HEADER (top 12%): Purple pill badge with "시술 후 안내" at 5% opacity. Below: bold "회복 가이드" in purple (#8b5cf6, 22px, weight 800).
@@ -2867,7 +2867,7 @@ Medical recovery infographic. Purple palette. Milestone-based healing progress.`
     },
     {
       id: 'cau_infographic', name: '인포그래픽', color: '#f59e0b', accent: '#d97706', bg: '#fffbeb',
-      desc: '시각적 인포그래픽',
+      desc: '지그재그 디바이더 + O/X 아이콘',
       layoutHint: 'infographic',
       aiPrompt: `BACKGROUND: Warm cream (#fffbeb) to white gradient.
 ZONE 1 — HEADER (top 8%): Hospital name in amber accent. Below: bold "시술 후 주의사항" in amber (#f59e0b, 22px, weight 800).
@@ -2877,7 +2877,7 @@ Visual infographic style. Icon-heavy. Easy-to-understand at a glance. Pictogram-
     },
     {
       id: 'cau_clean_card', name: '클린 카드', color: '#0ea5e9', accent: '#0284c7', bg: '#f0f9ff',
-      desc: '깔끔한 카드형',
+      desc: '모자이크 체커보드 2×2 블록',
       layoutHint: 'card',
       aiPrompt: `BACKGROUND: Light sky blue (#f0f9ff) to white gradient.
 ZONE 1 — HEADER (top 8%): Hospital name in sky blue accent. Below: bold "시술 후 주의사항" in sky blue (#0ea5e9, 22px, weight 800).
@@ -2889,7 +2889,7 @@ Clean, modern, card-based. Individual items as separate cards. Contemporary heal
   pricing: [
     {
       id: 'prc_clean_table', name: '클린 테이블', color: '#3b82f6', accent: '#2563eb', bg: '#eff6ff',
-      desc: '깔끔한 가격표',
+      desc: '솔리드 헤더 + 줄무늬 테이블',
       layoutHint: 'table',
       aiPrompt: `BACKGROUND: Clean white with very subtle blue tint.
 ZONE 1 — HEADER (top 12%): Blue gradient bar (#3b82f6→#2563eb). "비급여 진료비 안내" in bold white text centered. Hospital name in small white text above.
@@ -2899,7 +2899,7 @@ Professional corporate medical fee schedule. Clean table layout. Blue and white 
     },
     {
       id: 'prc_card_grid', name: '카드 그리드', color: '#10b981', accent: '#059669', bg: '#ecfdf5',
-      desc: '카드형 가격 안내',
+      desc: '기울어진 미니 카드 4장 나열',
       layoutHint: 'cards',
       aiPrompt: `BACKGROUND: Soft mint gradient (#ecfdf5 → white).
 ZONE 1 — HEADER (top 10%): "비급여 진료비 안내" in bold green (#10b981, weight 800). Hospital name in small green accent.
@@ -2909,7 +2909,7 @@ Modern card-based pricing. Each treatment as a separate visual card. Mint green 
     },
     {
       id: 'prc_premium_dark', name: '프리미엄 다크', color: '#1e293b', accent: '#f59e0b', bg: '#0f172a',
-      desc: '고급 다크 가격표',
+      desc: '육각형 패턴 다크 + 골드 액센트',
       layoutHint: 'dark',
       aiPrompt: `BACKGROUND: Dark navy (#0f172a) with subtle gradient.
 ZONE 1 — HEADER (top 12%): Gold accent line at very top. "비급여 진료비 안내" in bold white text. Hospital name in small gold (#f59e0b) text.
@@ -2919,7 +2919,7 @@ Premium luxury aesthetic. Dark background with gold accents. High-end clinic pri
     },
     {
       id: 'prc_warm_wood', name: '따뜻한 우드', color: '#92400e', accent: '#d97706', bg: '#fffbeb',
-      desc: '내추럴 가격판',
+      desc: '카페 메뉴판 우드톤 + 테두리',
       layoutHint: 'wood',
       aiPrompt: `BACKGROUND: Warm cream (#fffbeb) with subtle paper texture feel.
 ZONE 1 — HEADER (top 12%): Warm brown banner (#92400e at 10% opacity, rounded). "비급여 진료비 안내" in bold warm brown (#92400e, weight 800). Small tooth icon accent.
@@ -2929,7 +2929,7 @@ Warm, natural, inviting aesthetic. Like a premium clinic waiting room display. B
     },
     {
       id: 'prc_gradient_modern', name: '그라데이션 모던', color: '#7c3aed', accent: '#a855f7', bg: '#f5f3ff',
-      desc: '모던 그라데이션',
+      desc: '그라데이션 사이드바 + 행 교차',
       layoutHint: 'gradient',
       aiPrompt: `BACKGROUND: Soft lavender gradient (#f5f3ff → #ede9fe → white).
 ZONE 1 — HEADER (top 12%): Purple gradient pill badge with "비급여" tag. "진료비 안내" in bold purple (#7c3aed, weight 800). Hospital name in light purple.
@@ -2939,7 +2939,7 @@ Modern, fresh, contemporary. Purple gradient aesthetic. Clean medical pricing la
     },
     {
       id: 'prc_minimal_line', name: '미니멀 라인', color: '#64748b', accent: '#0ea5e9', bg: '#f8fafc',
-      desc: '미니멀 라인 스타일',
+      desc: '도트 리더 점선 + 최대 여백',
       layoutHint: 'minimal',
       aiPrompt: `BACKGROUND: Pure white (#ffffff).
 ZONE 1 — HEADER (top 8%): Thin sky blue (#0ea5e9) line at top edge. "비급여 진료비 안내" in bold dark gray (#1e293b, weight 800). No decoration.

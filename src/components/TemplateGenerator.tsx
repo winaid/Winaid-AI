@@ -3111,14 +3111,22 @@ export default function TemplateGenerator({ onSwitchToFree }: { onSwitchToFree?:
                 type="button"
                 onClick={() => setTemplateAppMode('strict')}
                 className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all ${templateAppMode === 'strict' ? 'bg-white text-violet-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                title="선택한 템플릿의 레이아웃·색상·구조를 그대로 복제합니다"
               >그대로</button>
               <button
                 type="button"
                 onClick={() => setTemplateAppMode('inspired')}
                 className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all ${templateAppMode === 'inspired' ? 'bg-white text-violet-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                title="템플릿의 분위기를 참고하되 AI가 자유롭게 재해석합니다"
               >참고</button>
             </div>
           </div>
+          {/* strict/inspired 모드 설명 */}
+          <p className="text-[10px] text-slate-400 -mt-1.5 mb-2">
+            {templateAppMode === 'strict'
+              ? '📋 레이아웃·색상·구조를 그대로 복제 — 결과가 프리뷰와 거의 동일'
+              : '🎨 분위기만 참고 — AI가 색상·배치·장식을 자유롭게 재해석'}
+          </p>
           {category === 'schedule' ? (
             /* 진료 일정: 달력 테마 — 3열 그리드, 스크롤 가능 */
             <div className="grid grid-cols-3 gap-3 max-h-[480px] overflow-y-auto pr-1">
@@ -3180,19 +3188,48 @@ export default function TemplateGenerator({ onSwitchToFree }: { onSwitchToFree?:
                   >
                     <div className="relative w-full overflow-hidden" style={{ aspectRatio: '3/4', background: tmpl.previewImage ? '#f8fafc' : `linear-gradient(160deg, ${tmpl.bg} 0%, white 80%)` }}>
                       <TemplateSVGPreview template={tmpl} category={category} hospitalName={hospitalName || '윈에이드 치과'} />
-                      {/* 하단 그라데이션 */}
-                      <div className="absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t from-black/40 to-transparent pointer-events-none" />
+                      {/* 스타일 태그 뱃지 — 좌상단 */}
+                      <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-md text-[9px] font-bold shadow-sm" style={{ backgroundColor: tmpl.color, color: 'white' }}>
+                        {tmpl.layoutHint === 'price' || tmpl.layoutHint === 'table' ? '가격형' :
+                         tmpl.layoutHint === 'elegant' || tmpl.layoutHint === 'luxury' ? '프리미엄' :
+                         tmpl.layoutHint === 'pop' || tmpl.layoutHint === 'cute' ? '활기찬' :
+                         tmpl.layoutHint === 'minimal' ? '미니멀' :
+                         tmpl.layoutHint === 'wave' || tmpl.layoutHint === 'gradient' ? '그라데이션' :
+                         tmpl.layoutHint === 'season' || tmpl.layoutHint === 'nature' ? '시즌' :
+                         tmpl.layoutHint === 'split' || tmpl.layoutHint === 'grid' ? '분할형' :
+                         tmpl.layoutHint === 'portrait' || tmpl.layoutHint === 'curve' ? '프로필' :
+                         tmpl.layoutHint === 'story' ? '스토리' :
+                         tmpl.layoutHint === 'alert' || tmpl.layoutHint === 'warning' ? '경고형' :
+                         tmpl.layoutHint === 'formal' ? '공문형' :
+                         tmpl.layoutHint === 'timeline' ? '타임라인' :
+                         tmpl.layoutHint === 'bulletin' ? '게시판' :
+                         tmpl.layoutHint === 'soft' ? '말풍선' :
+                         tmpl.layoutHint === 'traditional' || tmpl.layoutHint === 'warm' ? '전통' :
+                         tmpl.layoutHint === 'corporate' ? '기업형' :
+                         tmpl.layoutHint === 'team' ? '팀워크' :
+                         tmpl.layoutHint === 'modern' ? '모던' :
+                         tmpl.layoutHint === 'brand' ? '브랜드' :
+                         tmpl.layoutHint === 'benefits' ? '복리후생' :
+                         tmpl.layoutHint === 'urgent' ? '긴급' :
+                         tmpl.layoutHint === 'checklist' ? '체크리스트' :
+                         tmpl.layoutHint === 'guide' ? '가이드' :
+                         tmpl.layoutHint === 'card' || tmpl.layoutHint === 'cards' ? '카드형' :
+                         tmpl.layoutHint === 'dark' ? '다크' :
+                         tmpl.layoutHint === 'wood' ? '우드' :
+                         tmpl.layoutHint === 'infographic' ? '인포' :
+                         '스타일'}
+                      </div>
                       {/* 선택 체크 뱃지 */}
                       {isSelected && (
                         <div className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full flex items-center justify-center shadow-lg" style={{ backgroundColor: tmpl.color }}>
                           <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
                         </div>
                       )}
-                      {/* 템플릿 이름 */}
-                      <div className="absolute inset-x-0 bottom-0 px-2 pb-2">
-                        <div className="text-white font-bold text-xs drop-shadow-lg leading-tight">{tmpl.name}</div>
-                        <div className="text-white/70 text-[10px] mt-0.5 drop-shadow">{tmpl.desc}</div>
-                      </div>
+                    </div>
+                    {/* 카드 외부 name/desc — 가독성 강화 */}
+                    <div className="px-1.5 py-1.5 bg-white">
+                      <div className="font-bold text-[11px] text-slate-800 leading-tight truncate">{tmpl.name}</div>
+                      <div className="text-[9px] text-slate-500 mt-0.5 leading-tight truncate">{tmpl.desc}</div>
                     </div>
                   </button>
                 );
