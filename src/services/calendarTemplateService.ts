@@ -2983,6 +2983,8 @@ export function resizeImageForReference(dataUrl: string): Promise<string> {
   return resizeImageToThumbnail(dataUrl, 512, 0.75);
 }
 
+export type TemplateApplicationMode = 'strict' | 'inspired';
+
 interface AiTemplateRequest {
   category: 'schedule' | 'event' | 'doctor' | 'notice' | 'greeting' | 'hiring' | 'caution' | 'pricing';
   stylePrompt: string;
@@ -2996,6 +2998,7 @@ interface AiTemplateRequest {
   brandColor?: string;
   brandAccent?: string;
   calendarTheme?: string;
+  applicationMode?: TemplateApplicationMode;
 }
 
 /** 달력 테마별 AI 스타일 프롬프트 — SVG 템플릿의 실제 디자인 특성을 반영 */
@@ -3381,7 +3384,22 @@ ${userRequestBlock}
 ${categoryLabels[category] || 'hospital announcement'}
 ${calendarAccuracyBlock}${calendarThemeBlock}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
-[DESIGN STYLE]
+${req.applicationMode === 'strict' ? `[DESIGN APPLICATION MODE: STRICT / 템플릿 그대로]
+Follow the template layout EXACTLY. Maintain the same:
+- Visual structure (header/body/footer proportions)
+- Information hierarchy and placement
+- Color scheme and tone
+- Decorative elements and style
+Only change the text content to match the user's input. The result should look like a variant of the same template.
+` : `[DESIGN APPLICATION MODE: INSPIRED / 템플릿 참고]
+Use the template as a REFERENCE for mood and general direction only.
+Feel free to:
+- Reinterpret the layout structure creatively
+- Adjust proportions and element placement
+- Add subtle creative variations
+- Keep the overall mood/tone but make it feel fresh and unique
+The result should feel inspired by the template, not a copy of it.
+`}[DESIGN STYLE]
 ${stylePrompt}
 
 DESIGN QUALITY REQUIREMENTS:
@@ -3719,6 +3737,7 @@ export async function generateTemplateWithAI(
     hospitalInfo?: string[]; // 진료시간, 전화번호, 주소
     brandColor?: string; // 메인 브랜드 컬러 HEX
     brandAccent?: string; // 포인트 컬러 HEX
+    applicationMode?: TemplateApplicationMode; // strict=템플릿 그대로, inspired=느낌만 참고
   }
 ): Promise<string> {
   // 카테고리별 텍스트 콘텐츠 생성
@@ -3765,6 +3784,7 @@ export async function generateTemplateWithAI(
     brandColor: options?.brandColor,
     brandAccent: options?.brandAccent,
     calendarTheme: category === 'schedule' ? templateData.colorTheme : undefined,
+    applicationMode: options?.applicationMode,
   });
 
   // 이미지 파트 준비

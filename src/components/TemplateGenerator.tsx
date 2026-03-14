@@ -13,6 +13,7 @@ import {
   saveStyleToHistory,
   deleteStyleFromHistory,
   resizeImageToThumbnail,
+  type TemplateApplicationMode,
   resizeImageForReference,
   CALENDAR_THEME_OPTIONS,
   type ClosedDay,
@@ -2314,6 +2315,7 @@ export default function TemplateGenerator({ onSwitchToFree }: { onSwitchToFree?:
   const [logoBase64, setLogoBase64] = useState<string | null>(null);
   const [customMessage, setCustomMessage] = useState('');
   const [extraPrompt, setExtraPrompt] = useState('');
+  const [templateAppMode, setTemplateAppMode] = useState<TemplateApplicationMode>('inspired');
   const [imageSize, setImageSize] = useState<ImageSize>('auto');
   const [brandingPos, setBrandingPos] = useState<'top' | 'bottom'>('top');
 
@@ -2633,6 +2635,7 @@ export default function TemplateGenerator({ onSwitchToFree }: { onSwitchToFree?:
           hospitalInfo: hospitalInfoLines.length > 0 ? hospitalInfoLines : undefined,
           brandColor: brandColor || undefined,
           brandAccent: brandAccent || undefined,
+          applicationMode: templateAppMode,
         });
 
         images.push(imageDataUrl);
@@ -3099,9 +3102,23 @@ export default function TemplateGenerator({ onSwitchToFree }: { onSwitchToFree?:
 
         {/* 카테고리별 디자인 템플릿 (12개) */}
         <div>
-          <label className="block text-sm font-bold text-slate-700 mb-3">
-            디자인 템플릿 {selectedHistory && <span className="text-violet-400 font-normal text-xs">(내 스타일 선택 시 무시됨)</span>}
-          </label>
+          <div className="flex items-center justify-between mb-3">
+            <label className="text-sm font-bold text-slate-700">
+              디자인 템플릿 {selectedHistory && <span className="text-violet-400 font-normal text-xs">(내 스타일 선택 시 무시됨)</span>}
+            </label>
+            <div className="flex items-center gap-1.5 bg-slate-100 rounded-lg p-0.5">
+              <button
+                type="button"
+                onClick={() => setTemplateAppMode('strict')}
+                className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all ${templateAppMode === 'strict' ? 'bg-white text-violet-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+              >그대로</button>
+              <button
+                type="button"
+                onClick={() => setTemplateAppMode('inspired')}
+                className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all ${templateAppMode === 'inspired' ? 'bg-white text-violet-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+              >참고</button>
+            </div>
+          </div>
           {category === 'schedule' ? (
             /* 진료 일정: 달력 테마 — 3열 그리드, 스크롤 가능 */
             <div className="grid grid-cols-3 gap-3 max-h-[480px] overflow-y-auto pr-1">

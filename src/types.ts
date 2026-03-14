@@ -7,7 +7,7 @@ export type AudienceMode =
   | '보호자용(가족걱정)'
   | '전문가용(신뢰/정보)';
 export type ImageStyle = 'photo' | 'illustration' | 'medical' | 'custom';
-export type CardNewsDesignTemplateId = 'medical-clean' | 'spring-floral' | 'modern-grid' | 'simple-pin' | 'medical-illust';
+export type CardNewsDesignTemplateId = 'info-card' | 'expert-quote' | 'checklist' | 'qna-card' | 'notice-board' | 'number-highlight' | 'minimal-gradient' | 'photo-overlay';
 export type PostType = 'blog' | 'card_news' | 'press_release';
 export type CssTheme = 'modern' | 'premium' | 'minimal' | 'warm' | 'professional';
 export type WritingStyle = 'expert' | 'empathy' | 'conversion';  // 전문가형 / 공감형 / 전환형

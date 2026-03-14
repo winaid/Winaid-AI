@@ -903,8 +903,8 @@ ${sectionSummaries.join('\n')}`;
   const concParagraphs = (conclusionHtml.match(/<p[\s>]/gi) || []).length;
   const sectionParagraphs = sectionHtmls.map(h => (h.match(/<p[\s>]/gi) || []).length);
   console.info(`[PIPELINE] 📊 균형 검증: intro=${introLen}자(${introParagraphs}문단), sections=${sectionLens.join('/')}자, paragraphs=${sectionParagraphs.join('/')}, conclusion=${concLen}자(${concParagraphs}문단), balance=${balanceRatio}%(min/max)`);
-  if (balanceRatio < 60) {
-    console.warn(`[PIPELINE] ⚠️ 섹션 균형 경고: 최소 ${minSec}자 vs 최대 ${maxSec}자 (비율 ${balanceRatio}%) — 60% 미만`);
+  if (balanceRatio < 75) {
+    console.warn(`[PIPELINE] ⚠️ 섹션 균형 경고: 최소 ${minSec}자 vs 최대 ${maxSec}자 (비율 ${balanceRatio}%) — 75% 미만`);
   }
 
   const rawHtml = `${introHtml}\n${sectionHtmls.join('\n')}\n${conclusionHtml}`;
