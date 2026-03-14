@@ -418,7 +418,7 @@ const StyleTab: React.FC<StyleTabProps> = ({
                                         const blogId = post.url.match(/blog\.naver\.com\/([^/]+)/)?.[1];
                                         return blogId ? <span className="text-[9px] px-1 py-0.5 bg-violet-50 text-violet-500 rounded mr-1.5 font-mono">{blogId}</span> : null;
                                       })()}
-                                      {post.title || post.url}
+                                      {post.title ? post.title.replace(/&#39;/g, "'").replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"') : post.url}
                                     </p>
                                   </div>
                                   <span className="text-[10px] text-slate-400 shrink-0">{isOpen ? '접기' : '펼치기'}</span>

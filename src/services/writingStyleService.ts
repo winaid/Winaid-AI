@@ -8,6 +8,25 @@ import { callGemini, callGeminiRaw, GEMINI_MODEL, TIMEOUTS } from "./geminiClien
 // Gemini 응답에서 프로필 데이터 안전 추출 (3단계 fallback)
 // ============================================================
 
+/** HTML 엔티티 디코딩 (&#39; → ', &amp; → & 등) */
+const decodeHtmlEntities = (text: string): string => {
+  if (!text || !text.includes('&')) return text;
+  const entities: Record<string, string> = {
+    '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"',
+    '&#39;': "'", '&#x27;': "'", '&apos;': "'", '&#x2F;': '/',
+    '&nbsp;': ' ', '&#160;': ' ',
+  };
+  let result = text;
+  for (const [entity, char] of Object.entries(entities)) {
+    result = result.split(entity).join(char);
+  }
+  // 숫자형 엔티티 (&#NNN;)
+  result = result.replace(/&#(\d+);/g, (_, num) => String.fromCharCode(parseInt(num, 10)));
+  // 16진수 엔티티 (&#xHH;)
+  result = result.replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
+  return result;
+};
+
 /** 코드펜스(```json ... ```) 제거 */
 const stripCodeFence = (text: string): string => {
   const trimmed = text.trim();
@@ -896,9 +915,9 @@ export const saveCrawledPost = async (
     content,
     crawled_at: new Date().toISOString(),
   };
-  if (meta?.title) record.title = meta.title;
+  if (meta?.title) record.title = decodeHtmlEntities(meta.title);
   if (meta?.publishedAt) record.published_at = meta.publishedAt;
-  if (meta?.summary) record.summary = meta.summary;
+  if (meta?.summary) record.summary = decodeHtmlEntities(meta.summary);
   if (meta?.thumbnail) record.thumbnail = meta.thumbnail;
   if (score) {
     record.score_typo = score.score_typo;
