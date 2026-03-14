@@ -310,7 +310,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const { error } = await client.auth.signInWithOAuth({
       provider: _provider as any,
       options: {
-        redirectTo: window.location.origin + '/#blog'
+        redirectTo: window.location.origin + '/blog'
       }
     });
     return { error: error || null };

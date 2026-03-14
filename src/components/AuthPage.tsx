@@ -31,7 +31,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onNavigate }) => {
       // OAuth 토큰이 URL에 있는 경우 (콜백)
       if (hash && (hash.includes('access_token') || hash.includes('refresh_token'))) {
         console.log('[AuthPage] OAuth callback detected, redirecting to app');
-        window.history.replaceState(null, '', window.location.pathname + '#blog');
+        window.history.replaceState(null, '', '/blog');
         onNavigate('blog');
         return;
       }

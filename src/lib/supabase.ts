@@ -69,7 +69,7 @@ export const signUpWithTeam = async (
     password,
     options: {
       data: { name: displayName, team_id: teamId },
-      emailRedirectTo: window.location.origin + '/#blog'
+      emailRedirectTo: window.location.origin + '/blog'
     }
   });
 
@@ -120,7 +120,7 @@ export const signUpWithEmail = async (email: string, password: string, name: str
     options: {
       data: { name },
       // 이메일 확인 없이 바로 로그인 (Supabase 대시보드에서도 설정 필요)
-      emailRedirectTo: window.location.origin + '/#blog'
+      emailRedirectTo: window.location.origin + '/blog'
     }
   });
   
@@ -229,7 +229,7 @@ export const signOut = async () => {
 
 export const resetPassword = async (email: string) => {
   const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: window.location.origin + '/#auth'
+    redirectTo: window.location.origin + '/auth'
   });
   return { data, error };
 };

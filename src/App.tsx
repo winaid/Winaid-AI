@@ -101,15 +101,43 @@ const stripHtml = (html: string) => {
   return tmp.textContent || tmp.innerText || '';
 };
 
-const App: React.FC = () => {
-  const [currentPage, setCurrentPage] = useState<PageType>(() => {
-    const hash = window.location.hash.replace('#', '');
-    if (hash === 'admin') return 'admin';
-    if (hash === 'auth' || hash === 'login' || hash === 'register') return 'auth';
-    if (hash === 'app') return 'home';
-    if (contentPages.includes(hash as PageType)) return hash as PageType;
+// ── Path 기반 라우팅 헬퍼 ──
+const getPageFromPath = (): PageType => {
+  // 1) OAuth 콜백: 해시에 access_token이 있으면 일단 landing (후속 OAuth 핸들러가 처리)
+  const hash = window.location.hash;
+  if (hash && (hash.includes('access_token') || hash.includes('error'))) {
     return 'landing';
-  });
+  }
+
+  // 2) 기존 해시 URL 호환 → path로 리다이렉트
+  if (hash && hash !== '#') {
+    const hashPage = hash.replace('#', '');
+    const targetPath = hashPage === 'app' ? '/app' : `/${hashPage}`;
+    window.history.replaceState(null, '', targetPath);
+    if (hashPage === 'admin') return 'admin';
+    if (hashPage === 'auth' || hashPage === 'login' || hashPage === 'register') return 'auth';
+    if (hashPage === 'app') return 'home';
+    if (contentPages.includes(hashPage as PageType)) return hashPage as PageType;
+    return 'landing';
+  }
+
+  // 3) path 기반 판별
+  const path = window.location.pathname.replace(/^\//, '');
+  if (path === 'admin') return 'admin';
+  if (path === 'auth' || path === 'login' || path === 'register') return 'auth';
+  if (path === 'app') return 'home';
+  if (contentPages.includes(path as PageType)) return path as PageType;
+  return 'landing';
+};
+
+const navigateTo = (page: string) => {
+  const targetPath = page === 'home' ? '/app' : `/${page}`;
+  window.history.pushState(null, '', targetPath);
+  window.dispatchEvent(new PopStateEvent('popstate'));
+};
+
+const App: React.FC = () => {
+  const [currentPage, setCurrentPage] = useState<PageType>(getPageFromPath);
   const [apiKeyReady, setApiKeyReady] = useState<boolean>(false);
   
   // Supabase 인증 상태
@@ -133,7 +161,7 @@ const App: React.FC = () => {
 
   // 페이지 전환 (탭 전환 대신 페이지 전환)
   const setContentTab = (tab: ContentTabType) => {
-    window.location.hash = tab;
+    navigateTo(tab);
     setCurrentPage(tab as PageType);
   };
 
@@ -255,15 +283,15 @@ const App: React.FC = () => {
         
         if (error) {
           console.error('[OAuth Callback] Error getting session:', error);
-          // 에러 시 hash 정리 후 auth 페이지로
-          window.location.hash = 'auth';
+          // 에러 시 auth 페이지로
+          window.history.replaceState(null, '', '/auth');
           return null;
         }
-        
+
         if (session?.user) {
           console.log('[OAuth Callback] Session established:', session.user.email);
-          // 성공 - hash를 정리하고 blog으로
-          window.history.replaceState(null, '', window.location.pathname + '#blog');
+          // 성공 - URL 정리 후 blog으로
+          window.history.replaceState(null, '', '/blog');
           return session;
         }
       }
@@ -298,9 +326,9 @@ const App: React.FC = () => {
         });
         
         // 세션이 있고 현재 auth 페이지면 홈으로 이동
-        const currentHash = window.location.hash;
-        if (currentHash === '#auth') {
-          window.location.hash = 'app';
+        const currentPath = window.location.pathname;
+        if (currentPath === '/auth') {
+          navigateTo('home');
           setCurrentPage('home');
         }
         // #app은 이미 home이므로 유지
@@ -367,16 +395,16 @@ const App: React.FC = () => {
           setAuthLoading(false);
           
           const currentHash = window.location.hash;
-          
+          const currentPath = window.location.pathname;
+
           // OAuth 토큰이 URL에 있는 경우에만 홈으로 리다이렉트
           if (currentHash.includes('access_token') || currentHash.includes('refresh_token')) {
-            window.history.replaceState(null, '', window.location.pathname + '#app');
-            window.location.hash = 'app';
+            window.history.replaceState(null, '', '/app');
             setCurrentPage('home');
           }
           // auth 페이지에서 로그인한 경우 홈으로 이동
-          else if (currentHash === '#auth' || currentHash === '#login' || currentHash === '#register') {
-            window.location.hash = 'app';
+          else if (currentPath === '/auth' || currentPath === '/login' || currentPath === '/register') {
+            navigateTo('home');
             setCurrentPage('home');
           }
           // 그 외 (admin, pricing 등)는 현재 페이지 유지
@@ -396,18 +424,10 @@ const App: React.FC = () => {
     };
   }, []);
 
-  // URL hash 기반 라우팅
+  // URL path 기반 라우팅 (popstate)
   useEffect(() => {
-    const handleHashChange = () => {
-      const hash = window.location.hash.replace('#', '');
-
-      let newPage: PageType;
-      if (hash === 'admin') newPage = 'admin';
-      else if (hash === 'auth' || hash === 'login' || hash === 'register') newPage = 'auth';
-      else if (hash === 'app') newPage = 'home';
-      else if (contentPages.includes(hash as PageType)) newPage = hash as PageType;
-      else return; // 해시 없음 = 현재 페이지 유지
-
+    const handlePopState = () => {
+      const newPage = getPageFromPath();
       setCurrentPage(prevPage => {
         if (prevPage !== newPage) {
           window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -416,17 +436,13 @@ const App: React.FC = () => {
       });
     };
 
-    // 해시가 있을 때만 초기 실행 (landing 보호)
-    if (window.location.hash && window.location.hash !== '#') {
-      handleHashChange();
-    }
-    window.addEventListener('hashchange', handleHashChange);
-    return () => window.removeEventListener('hashchange', handleHashChange);
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
   // 페이지 네비게이션 헬퍼
   const handleNavigate = (page: PageType) => {
-    window.location.hash = page;
+    navigateTo(page);
     setCurrentPage(page);
   };
 
@@ -452,9 +468,9 @@ const App: React.FC = () => {
       // 세션 스토리지도 초기화
       sessionStorage.clear();
       
-      window.location.hash = 'auth';
+      window.history.replaceState(null, '', '/auth');
       setCurrentPage('auth');
-      
+
       // 페이지 새로고침으로 완전 초기화
       window.location.reload();
     }
@@ -471,7 +487,7 @@ const App: React.FC = () => {
       <Suspense fallback={<PageSkeleton />}>
         <LandingPage
           onStart={() => {
-            window.location.hash = 'app';
+            navigateTo('home');
             setCurrentPage('home');
           }}
           darkMode={darkMode}
@@ -543,7 +559,7 @@ const App: React.FC = () => {
       } ${darkMode ? 'bg-[#161b22] border-[#30363d]' : 'bg-white border-slate-200 shadow-[1px_0_0_0_rgba(0,0,0,0.04)]'}`}>
         {/* 로고 */}
         <div className={`h-14 flex items-center ${sidebarCollapsed ? 'justify-center px-2' : 'px-4'} border-b ${darkMode ? 'border-[#30363d]' : 'border-slate-100'}`}>
-          <a href="#app" onClick={(e) => { e.preventDefault(); window.location.hash = 'app'; setCurrentPage('home'); }} className="flex items-center gap-2.5 hover:opacity-80 transition-opacity cursor-pointer group">
+          <a href="/app" onClick={(e) => { e.preventDefault(); navigateTo('home'); setCurrentPage('home'); }} className="flex items-center gap-2.5 hover:opacity-80 transition-opacity cursor-pointer group">
             <img src="/280_logo.png" alt="WINAID" className={`h-8 w-8 group-hover:scale-105 transition-transform flex-none ${darkMode ? 'rounded-md bg-white p-0.5' : ''}`} />
             {!sidebarCollapsed && (
               <div className="flex flex-col leading-none">
@@ -671,7 +687,7 @@ const App: React.FC = () => {
       <div className="flex flex-col flex-1 min-w-0">
       <header className={`lg:hidden backdrop-blur-2xl border-b sticky top-0 z-30 flex-none transition-all duration-300 ${darkMode ? 'bg-slate-800/90 border-slate-700' : 'bg-white/80 border-slate-100/80 shadow-[0_1px_3px_rgba(0,0,0,0.04)]'}`}>
         <div className="h-14 w-full px-5 flex justify-between items-center">
-          <a href="#app" onClick={(e) => { e.preventDefault(); window.location.hash = 'app'; setCurrentPage('home'); }} className="flex items-center gap-2.5 hover:opacity-80 transition-opacity cursor-pointer group">
+          <a href="/app" onClick={(e) => { e.preventDefault(); navigateTo('home'); setCurrentPage('home'); }} className="flex items-center gap-2.5 hover:opacity-80 transition-opacity cursor-pointer group">
             <img src="/280_logo.png" alt="WINAID" className={`h-8 w-8 group-hover:scale-105 transition-transform ${darkMode ? 'rounded-md bg-white p-0.5' : ''}`} />
             <div className="flex flex-col leading-none">
               <span className={`font-black text-base tracking-[-0.02em] ${darkMode ? 'text-slate-100' : 'text-slate-800'}`}>WIN<span className="text-blue-600">AID</span></span>

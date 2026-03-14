@@ -22,7 +22,7 @@ const NO_CACHE_PATTERNS = [
   /\/assets\/.*\.css$/,     // CSS 번들
   /^\/$/, // index.html (루트)
   /\/index\.html$/,
-  /\/#/, // hash routes
+  /^\/(app|auth|admin|blog|card_news|press|image|refine|history|pricing|login|register)/, // SPA routes
 ];
 
 // 항상 캐시할 패턴 (정적 자산)

@@ -173,7 +173,7 @@ Sitemap: https://story-darugi.com/sitemap.xml
 
 # Disallow admin and api routes
 Disallow: /api/
-Disallow: /#admin
+Disallow: /admin
 `);
 });
 
@@ -189,19 +189,19 @@ app.get('/sitemap.xml', (c) => {
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://story-darugi.com/#app</loc>
+    <loc>https://story-darugi.com/app</loc>
     <lastmod>${today}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://story-darugi.com/#pricing</loc>
+    <loc>https://story-darugi.com/pricing</loc>
     <lastmod>${today}</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://story-darugi.com/#auth</loc>
+    <loc>https://story-darugi.com/auth</loc>
     <lastmod>${today}</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>

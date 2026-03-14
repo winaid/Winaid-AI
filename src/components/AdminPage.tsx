@@ -1076,7 +1076,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onAdminVerified }) => {
               {loginLoading ? '인증 중...' : '로그인'}
             </button>
             <div className="mt-4 text-center">
-              <a href="#" className="text-sm text-slate-400 hover:text-slate-600 transition-colors">홈으로 돌아가기</a>
+              <a href="/" className="text-sm text-slate-400 hover:text-slate-600 transition-colors">홈으로 돌아가기</a>
             </div>
           </form>
         </div>
@@ -1095,7 +1095,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onAdminVerified }) => {
             <p className="text-slate-400 text-sm">WINAID 관리자</p>
           </div>
           <div className="flex items-center gap-2">
-            <a href="#blog" className="px-4 py-2 bg-white border border-slate-200 text-slate-600 font-medium rounded-lg hover:bg-slate-50 transition-colors text-sm">앱으로 이동</a>
+            <a href="/blog" className="px-4 py-2 bg-white border border-slate-200 text-slate-600 font-medium rounded-lg hover:bg-slate-50 transition-colors text-sm">앱으로 이동</a>
             <button onClick={handleAdminLogout} className="px-4 py-2 bg-white border border-red-200 text-red-500 font-medium rounded-lg hover:bg-red-50 transition-colors text-sm">로그아웃</button>
           </div>
         </div>

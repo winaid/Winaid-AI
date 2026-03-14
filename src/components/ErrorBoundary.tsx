@@ -59,7 +59,8 @@ class ErrorBoundary extends Component<Props, State> {
 
   handleGoHome = () => {
     this.setState({ hasError: false, error: null, errorInfo: null });
-    window.location.hash = 'app';
+    window.history.pushState(null, '', '/app');
+    window.dispatchEvent(new PopStateEvent('popstate'));
   };
 
   render() {
