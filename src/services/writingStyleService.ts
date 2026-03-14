@@ -496,14 +496,34 @@ export const crawlAndLearnHospitalStyle = async (
   // 3단계: Gemini로 말투 분석
   const analyzedStyle = await analyzeWritingStyle(combinedText, hospitalName);
 
-  // 4단계: Supabase에 저장 (upsert)
+  // 4단계: Supabase에 저장 (upsert) — 기존 profile merge
   onProgress?.('말투 프로파일 저장 중...');
-  const primaryUrl = blogUrls[0]; // DB에는 대표 URL 저장
+
+  // 기존 프로파일 조회 (개별 URL 크롤링 시 naver_blog_url/crawled_posts_count 보존)
+  let existingProfile: any = null;
+  try {
+    const { data: ep } = await supabase
+      .from('hospital_style_profiles')
+      .select('naver_blog_url, crawled_posts_count')
+      .eq('hospital_name', hospitalName)
+      .single();
+    if (ep) existingProfile = ep;
+  } catch { /* 없으면 무시 */ }
+
+  // naver_blog_url: 기존 URL 목록에 새 URL 병합 (중복 제거)
+  const existingUrls = (existingProfile?.naver_blog_url || '').split(',').map((u: string) => u.trim()).filter(Boolean);
+  const mergedUrls = [...new Set([...existingUrls, ...blogUrls])];
+  // crawled_posts_count: 기존 카운트에 새로 수집한 글 수 합산 (단, 전체 크롤링 시에는 새 값으로 교체)
+  const isFullCrawl = blogUrls.length > 1 || existingUrls.length <= 1;
+  const newPostCount = isFullCrawl
+    ? allPosts.length
+    : (existingProfile?.crawled_posts_count || 0) + allPosts.length;
+
   const profileData = {
     hospital_name: hospitalName,
     team_id: teamId,
-    naver_blog_url: blogUrls.length > 1 ? blogUrls.join(',') : primaryUrl,
-    crawled_posts_count: allPosts.length,
+    naver_blog_url: mergedUrls.join(','),
+    crawled_posts_count: newPostCount,
     style_profile: analyzedStyle,
     raw_sample_text: combinedText.slice(0, 10000),
     last_crawled_at: new Date().toISOString(),
