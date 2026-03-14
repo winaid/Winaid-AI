@@ -548,7 +548,13 @@ ${personaBlock}
 [절대 다루지 않을 내용] ${sectionForbidden}
 [독자가 놀랄 정보] ${sectionKeyInfo}
 [목표 글자 수] ${targetChars}자
-[첫 문장 패턴] ${firstSentencePattern}번 패턴 사용
+[첫 문장 패턴] ${
+  firstSentencePattern === '1' ? '사실 직진 — 핵심 의학 정보를 첫 문장에서 바로 전달' :
+  firstSentencePattern === '2' ? '장면 환기 — 독자가 겪는 구체적 상황을 짧게 재현' :
+  firstSentencePattern === '3' ? '대조 — 흔한 오해와 실제 원인의 차이를 제시' :
+  firstSentencePattern === '4' ? '조건 제시 — 특정 연령/상황/조건에서 발생하는 현상 서술' :
+  '메커니즘 — 체내에서 일어나는 과정을 순서대로 설명'
+}
 
 ${previousSections.length > 0 ? `[이전 섹션에서 이미 다룬 내용 - 절대 반복 금지]
 ${previousSections.map((s, i) => `섹션 ${i + 1}: ${s}`).join('\n')}` : ''}

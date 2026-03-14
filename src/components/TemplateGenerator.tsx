@@ -2680,7 +2680,7 @@ export default function TemplateGenerator({ onSwitchToFree }: { onSwitchToFree?:
 
   const handleDownload = (pageIndex?: number) => {
     if (resultImages.length === 0) return;
-    const suffixes: Record<TemplateCategory, string> = { schedule: `${month}월_진료안내`, event: '이벤트', doctor: '의사소개', notice: '공지사항', greeting: '인사', hiring: '채용공고', caution: '주의사항' };
+    const suffixes: Record<TemplateCategory, string> = { schedule: `${month}월_진료안내`, event: '이벤트', doctor: '의사소개', notice: '공지사항', greeting: '인사', hiring: '채용공고', caution: '주의사항', pricing: '비급여안내' };
     const baseName = `${hospitalName || '병원'}_${suffixes[category]}`;
     if (pageIndex !== undefined) {
       const a = document.createElement('a'); a.href = resultImages[pageIndex];

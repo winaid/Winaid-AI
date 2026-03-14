@@ -906,6 +906,15 @@ ${sectionSummaries.join('\n')}`;
   if (balanceRatio < 75) {
     console.warn(`[PIPELINE] ⚠️ 섹션 균형 경고: 최소 ${minSec}자 vs 최대 ${maxSec}자 (비율 ${balanceRatio}%) — 75% 미만`);
   }
+  // ── 서술 품질 힌트 로그 ──
+  const allText = [introHtml, ...sectionHtmls, conclusionHtml].join('\n').replace(/<[^>]+>/g, '');
+  const sentences = allText.split(/[.?!]\s+|다\.\s*|다\s*$/).filter(s => s.trim().length > 5);
+  const endings = sentences.map(s => { const m = s.trim().match(/(습니다|있습니다|됩니다|입니다|합니다|봅니다|겠습니다|드립니다)$/); return m?.[1] || '기타'; });
+  let maxRepeat = 1, cur = 1;
+  for (let i = 1; i < endings.length; i++) { if (endings[i] === endings[i-1] && endings[i] !== '기타') { cur++; if (cur > maxRepeat) maxRepeat = cur; } else { cur = 1; } }
+  if (maxRepeat >= 3) {
+    console.warn(`[PIPELINE] ⚠️ 어미 연속 경고: 같은 어미 ${maxRepeat}회 연속 감지`);
+  }
 
   const rawHtml = `${introHtml}\n${sectionHtmls.join('\n')}\n${conclusionHtml}`;
   const integrationPrompt = getPipelineIntegrationPrompt(targetLength);
