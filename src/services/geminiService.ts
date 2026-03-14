@@ -810,7 +810,7 @@ ${JSON.stringify(searchResults?.collected_facts?.slice(i, i + 2) || [], null, 2)
         systemPrompt: sectionPrompt + hospitalStyleSuffix,
         model: GEMINI_MODEL.PRO,
         responseType: 'text',
-        timeout: 45000,
+        timeout: 90000, // 45s→90s: PRO 504 감소 시도 (프록시 상한 180s, Vercel maxDuration 300s 이내)
         temperature: 0.75,
       });
       sectionHtml = typeof result === 'string' ? result.trim() : '';
@@ -3681,11 +3681,13 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
     }
   }
   const hasBlobInHistory = storageHtml.includes('blob:');
-  console.info(`[STORAGE] saveBlogHistory | contentType=${embedSource} | contentLen=${blogHistoryContent.length}자 | htmlLen=${storageHtml.length}자(${Math.round(storageHtml.length * 2 / 1024)}KB) | blob잔류=${hasBlobInHistory}`);
+  // blog_history.html_content 경량화: base64 이미지 src 제거 (이 필드를 읽는 프론트엔드 코드 0곳)
+  const lightweightHtml = storageHtml.replace(/src="data:image\/[^"]*"/gi, 'src=""');
+  console.info(`[STORAGE] saveBlogHistory lightweight | original=${storageHtml.length}자(${Math.round(storageHtml.length * 2 / 1024)}KB) | lightweight=${lightweightHtml.length}자(${Math.round(lightweightHtml.length * 2 / 1024)}KB) | imagesStripped=true | contentType=${embedSource} | contentLen=${blogHistoryContent.length}자 | blob잔류=${hasBlobInHistory}`);
   saveBlogHistory(
     textData.title,
     blogHistoryContent,
-    storageHtml,
+    lightweightHtml,
     request.keywords?.split(',').map(k => k.trim()) || [request.topic],
     undefined, // naverUrl
     request.category

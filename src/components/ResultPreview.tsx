@@ -1004,10 +1004,13 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
         
         // 🆕 블로그 이력 저장 (카드뉴스 다운로드 성공 시)
         if (content.title && localHtml) {
+          // blog_history.html_content 경량화: base64 이미지 src 제거 (읽는 코드 0곳)
+          const lightweightHtml = localHtml.replace(/src="data:image\/[^"]*"/gi, 'src=""');
+          console.info(`[STORAGE] saveBlogHistory lightweight | original=${localHtml.length}자 | lightweight=${lightweightHtml.length}자 | imagesStripped=true`);
           saveBlogHistory(
             content.title,
             localHtml.replace(/<[^>]*>/g, ' ').trim(),
-            localHtml,
+            lightweightHtml,
             content.keyword?.split(',').map(k => k.trim()) || [],
             undefined,
             content.category
