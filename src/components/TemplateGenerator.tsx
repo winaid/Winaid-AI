@@ -3144,9 +3144,10 @@ export default function TemplateGenerator({ onSwitchToFree }: { onSwitchToFree?:
                     onDoubleClick={(e) => { e.preventDefault(); setEnlargedCalendarTheme(t.value); }}
                     className={`group relative rounded-2xl overflow-hidden transition-all duration-200
                       ${isSelected
-                        ? 'shadow-xl ring-2 ring-blue-400 ring-offset-2'
+                        ? 'shadow-xl ring-2 ring-offset-2'
                         : 'shadow-sm hover:shadow-md border border-slate-200/80'
                       }`}
+                    style={isSelected ? { '--tw-ring-color': t.groupColor } as React.CSSProperties : undefined}
                   >
                     <div className="relative bg-white">
                       {/* SVG 전체 이미지 — 고정 비율 컨테이너에 맞춤 */}
@@ -3155,12 +3156,21 @@ export default function TemplateGenerator({ onSwitchToFree }: { onSwitchToFree?:
                           <ThemeComp data={themeSample} width={600} />
                         </div>
                       )}
+                      {/* 시각 군 태그 — 좌상단 */}
+                      <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-md text-[9px] font-bold shadow-sm" style={{ backgroundColor: t.groupColor, color: 'white' }}>
+                        {t.group}
+                      </div>
                       {/* 선택 체크 뱃지 */}
                       {isSelected && (
-                        <div className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center shadow-lg">
+                        <div className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full flex items-center justify-center shadow-lg" style={{ backgroundColor: t.groupColor }}>
                           <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
                         </div>
                       )}
+                    </div>
+                    {/* 카드 외부 name/desc — 가독성 강화 */}
+                    <div className="px-1.5 py-1.5 bg-white">
+                      <div className="font-bold text-[11px] text-slate-800 leading-tight truncate">{t.label.replace(/^[^\s]+\s/, '')}</div>
+                      <div className="text-[9px] text-slate-500 mt-0.5 leading-tight truncate">{t.desc}</div>
                     </div>
                   </button>
                 );
@@ -3554,6 +3564,7 @@ export default function TemplateGenerator({ onSwitchToFree }: { onSwitchToFree?:
               <div className="p-4 border-b border-slate-100 flex items-center justify-between">
                 <div>
                   <h3 className="font-bold text-slate-800">{themeOpt.emoji} {themeOpt.label.replace(/^[\S]+\s/, '')}</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">{themeOpt.desc}</p>
                 </div>
                 <button onClick={() => setEnlargedCalendarTheme(null)} className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition-colors">
                   <svg className="w-4 h-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
