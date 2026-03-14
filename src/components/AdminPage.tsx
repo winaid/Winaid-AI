@@ -139,7 +139,7 @@ const StyleTab: React.FC<StyleTabProps> = ({
             <h2 className="text-base font-bold text-violet-800 mb-1">병원별 네이버 블로그 말투 학습</h2>
             <p className="text-sm text-violet-600">
               각 병원의 네이버 블로그 URL을 입력 후 <strong>크롤링 + 학습</strong>을 누르면 AI가 글을 읽고 말투를 자동 학습합니다.
-              수집된 글은 오타/맞춤법·의료광고법 점수와 함께 병원별 최대 10개 보관됩니다.
+              수집된 글은 오타/맞춤법·의료광고법 점수와 함께 병원별 최대 30개 보관됩니다. 다중 URL 입력 시 모든 블로그의 글이 함께 수집됩니다.
             </p>
           </div>
           <button
@@ -313,7 +313,7 @@ const StyleTab: React.FC<StyleTabProps> = ({
                         className="flex items-center gap-1.5 text-xs font-semibold text-violet-600 hover:text-violet-800 transition-colors"
                       >
                         <span>{expandedPosts[baseName] ? '▼' : '▶'}</span>
-                        수집된 글 {displayCount || profileCount}개 보기
+                        수집된 글 {displayCount || profileCount}개 보기{profileCount > 0 && displayCount > 0 && profileCount !== displayCount ? ` (학습 ${profileCount}개)` : ''}
                       </button>
                       {expandedPosts[baseName] && (
                         <div className="mt-2 space-y-2 max-h-[600px] overflow-y-auto pr-1">
@@ -353,7 +353,14 @@ const StyleTab: React.FC<StyleTabProps> = ({
                                         <span className="text-[10px] px-1.5 py-0.5 bg-slate-100 text-slate-400 rounded">미채점</span>
                                       )}
                                     </div>
-                                    <p className="text-[11px] text-violet-600 truncate font-medium">{post.url}</p>
+                                    <p className="text-[11px] text-violet-600 truncate font-medium">
+                                      {(() => {
+                                        // 출처 블로그 ID 표시 (예: blog.naver.com/x577wqy3 → x577wqy3)
+                                        const blogId = post.url.match(/blog\.naver\.com\/([^/]+)/)?.[1];
+                                        return blogId ? <span className="text-[9px] px-1 py-0.5 bg-violet-50 text-violet-500 rounded mr-1.5 font-mono">{blogId}</span> : null;
+                                      })()}
+                                      {post.title || post.url}
+                                    </p>
                                   </div>
                                   <span className="text-[10px] text-slate-400 shrink-0">{isOpen ? '접기' : '펼치기'}</span>
                                 </button>

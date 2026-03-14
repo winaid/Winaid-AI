@@ -921,10 +921,10 @@ export const saveCrawledPost = async (
   const post: CrawledPost = { id: `ls_${Date.now()}_${Math.random()}`, ...record } as CrawledPost;
   if (existing >= 0) all[existing] = { ...all[existing], ...post };
   else all.unshift(post);
-  // 병원별 최대 10개
+  // 병원별 최대 30개 (다중 URL 크롤링 대응)
   const byHospital = all.filter(p => p.hospital_name === hospitalName);
   const others = all.filter(p => p.hospital_name !== hospitalName);
-  lsSave([...byHospital.slice(0, 10), ...others]);
+  lsSave([...byHospital.slice(0, 30), ...others]);
   return post;
 };
 
@@ -991,7 +991,8 @@ export const updateCrawledPostContent = async (id: string, correctedContent: str
 };
 
 /**
- * 병원별 크롤링 글 조회 (최대 10개, 최신순). Supabase 실패 시 localStorage 폴백.
+ * 병원별 크롤링 글 조회 (최대 30개, 최신순). Supabase 실패 시 localStorage 폴백.
+ * 다중 URL 크롤링 시 URL당 최대 10개 × 3개 URL = 30개까지 보관
  */
 export const getCrawledPosts = async (hospitalName: string): Promise<CrawledPost[]> => {
   const { data, error } = await supabase
@@ -999,7 +1000,7 @@ export const getCrawledPosts = async (hospitalName: string): Promise<CrawledPost
     .select('*')
     .eq('hospital_name', hospitalName)
     .order('published_at', { ascending: false, nullsFirst: false })
-    .limit(10);
+    .limit(30);
   if (!error && data && data.length > 0) return data as CrawledPost[];
   // Supabase 실패 또는 빈 결과 → localStorage
   const lsPosts = lsGetAll().filter(p => p.hospital_name === hospitalName);
@@ -1009,7 +1010,7 @@ export const getCrawledPosts = async (hospitalName: string): Promise<CrawledPost
     if (b.published_at) return 1;
     return 0;
   });
-  return lsPosts.slice(0, 10);
+  return lsPosts.slice(0, 30);
 };
 
 /**
@@ -1033,7 +1034,7 @@ export const getAllCrawledPostsSummary = async (): Promise<Record<string, Crawle
   const result: Record<string, CrawledPost[]> = {};
   for (const post of posts) {
     if (!result[post.hospital_name]) result[post.hospital_name] = [];
-    if (result[post.hospital_name].length < 10) result[post.hospital_name].push(post);
+    if (result[post.hospital_name].length < 30) result[post.hospital_name].push(post);
   }
   return result;
 };
