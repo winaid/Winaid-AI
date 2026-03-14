@@ -18,7 +18,7 @@ async function getTextEmbedding(_text: string): Promise<number[]> {
   // embedContent API is not supported by the proxy server.
   // Gracefully return empty array - embedding is non-critical functionality.
   // Similarity checks will still work via web search matching.
-  console.warn('⚠️ 텍스트 임베딩 비활성화: embedContent API는 프록시 서버에서 지원되지 않습니다.');
+  console.info('ℹ️ 텍스트 임베딩 비활성화: embedContent API는 프록시 서버에서 지원되지 않습니다.');
   return [];
 }
 
@@ -597,11 +597,11 @@ export const saveBlogHistory = async (
       ? await getTextEmbedding(contentForEmbed)
       : [];
     if (contentForEmbed.length < 20) {
-      console.warn(`[EMBED_INPUT] ⚠️ 임베딩 스킵 — 텍스트 너무 짧음 (${contentForEmbed.length}자)`);
+      console.info(`[EMBED_INPUT] ℹ️ 임베딩 스킵 — 텍스트 너무 짧음 (${contentForEmbed.length}자)`);
     }
 
     if (embedding.length === 0) {
-      console.warn('⚠️ 임베딩 생성 실패, 임베딩 없이 저장합니다.');
+      console.info('ℹ️ 임베딩 미사용 (프록시 모드), 임베딩 없이 저장합니다.');
     } else {
       console.log(`✅ 임베딩 생성 완료 (차원: ${embedding.length})`);
     }

@@ -780,7 +780,7 @@ ${JSON.stringify(searchResults?.collected_facts?.slice(0, 2) || [], null, 2)}`;
     const section = outline.sections[i];
     const sectionNum = `${i + 1}/${outline.sections.length}`;
     safeProgress(`✍️ [2/4] 소제목 ${sectionNum} "${section.title}" 생성 중...`);
-    console.warn(`[PIPELINE] ▶ B-2: 소제목 ${sectionNum} "${section.title}" 시작`);
+    console.info(`[PIPELINE] ▶ B-2: 소제목 ${sectionNum} "${section.title}" 시작`);
 
     const sectionPrompt = getPipelineSectionPrompt(
       i,
@@ -2386,10 +2386,10 @@ ${JSON.stringify(searchResults, null, 2)}
         const deviation = charCountNoSpaces - targetLength;
 
         if (charCountNoSpaces < targetMin) {
-          console.warn(`⚠️ 글자수 부족: 목표=${targetLength}자, 실제=${charCountNoSpaces}자 (${deviation}자 부족)`);
+          console.info(`ℹ️ 글자수 부족: 목표=${targetLength}자, 실제=${charCountNoSpaces}자 (${deviation}자 부족)`);
           safeProgress(`⚠️ 생성 완료: ${charCountNoSpaces}자 (목표보다 ${Math.abs(deviation)}자 짧음)`);
         } else if (charCountNoSpaces > targetMax) {
-          console.warn(`⚠️ 글자수 초과: 목표=${targetLength}자, 실제=${charCountNoSpaces}자 (+${deviation}자)`);
+          console.info(`ℹ️ 글자수 초과: 목표=${targetLength}자, 실제=${charCountNoSpaces}자 (+${deviation}자)`);
           safeProgress(`⚠️ 생성 완료: ${charCountNoSpaces}자 (목표보다 ${deviation}자 길음)`);
         } else {
           console.log(`✅ 글자수 적정: 목표=${targetLength}자, 실제=${charCountNoSpaces}자`);
@@ -2976,8 +2976,8 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
       safeProgress('⚠️ 파이프라인 실패, 기존 방식으로 재시도...');
       try {
         textData = await generateBlogPostText(request, safeProgress);
-        console.warn(`[BLOG_FLOW] ✅ 구형 폴백 성공 — title: "${textData?.title}", content: ${textData?.content?.length || 0}자`);
-        console.warn(`[PIPELINE_RESULT] source=legacy_fallback | reason=${failReason} | textLength=${textData?.content?.length || 0} | imagePrompts=${textData?.imagePrompts?.length || 0} | model=PRO(60s,JSON,googleSearch)`);
+        console.info(`[BLOG_FLOW] ✅ 구형 폴백 성공 — title: "${textData?.title}", content: ${textData?.content?.length || 0}자`);
+        console.info(`[PIPELINE_RESULT] source=legacy_fallback | reason=${failReason} | textLength=${textData?.content?.length || 0} | imagePrompts=${textData?.imagePrompts?.length || 0} | model=PRO(60s,JSON,googleSearch)`);
       } catch (fallbackError: any) {
         console.error(`[BLOG_FLOW] ❌ 구형 폴백도 실패: ${fallbackError?.message}`);
         throw new Error(pipelineError?.message || '블로그 생성에 실패했습니다. 다시 시도해주세요.');
@@ -3280,7 +3280,7 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
   
   // 🖼️ 이미지 삽입 전 디버그
   const bodyLenBeforeImages = body.length;
-  console.warn(`[IMG_INSERT] 이미지 삽입 전 body: ${bodyLenBeforeImages}자, 이미지 ${images.length}장`);
+  console.info(`[IMG_INSERT] 이미지 삽입 전 body: ${bodyLenBeforeImages}자, 이미지 ${images.length}장`);
 
   const blobUrls: string[] = []; // cleanup용 blob URL 수집
   images.forEach(img => {
@@ -3324,7 +3324,7 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
     body = body.replace(pattern, '');
     }
   });
-  console.warn(`[IMG_INSERT] 이미지 삽입 후 body: ${body.length}자 (삽입 전: ${bodyLenBeforeImages}자)`);
+  console.info(`[IMG_INSERT] 이미지 삽입 후 body: ${body.length}자 (삽입 전: ${bodyLenBeforeImages}자)`);
   
   // 혹시 남아있는 [IMG_N] 마커 모두 제거
   body = body.replace(/\[IMG_\d+\]/gi, '');
