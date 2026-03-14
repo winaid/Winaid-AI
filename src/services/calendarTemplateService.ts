@@ -2360,7 +2360,7 @@ Overall: Ultra-clean, contemporary, corporate. Swiss/minimalist typography. Indi
       id: 'grt_seol_bokjumeoni', name: '복주머니', color: '#e11d48', accent: '#be123c', bg: '#fff1f2',
       desc: '복주머니 장식',
       layoutHint: 'cute',
-      aiPrompt: `BACKGROUND: Soft rose-pink gradient (#fff1f2 → #fce7f3) full bleed. Small subtle geometric accent dots in gold (#fbbf24), red (#e11d48), and pink (#f9a8d4) scattered at 20% opacity. Subtle radial glow in center (white at 15%).
+      aiPrompt: `BACKGROUND: Soft rose-pink gradient (#fff1f2 → #fce7f3) full bleed. Small subtle geometric accent dots in gold (#fbbf24), red (#e11d48), and pink (#f9a8d4) scattered at 20% opacity. Subtle warm radial glow in center (white at 15%).
 ZONE 1 — TOP HEADER (top 15%): "복 많이 받으세요!" in large bold rose-red (#e11d48) rounded Korean font with slight text-shadow in pink. Small gold accent marks flanking the text left and right. Hospital name in smaller deep rose (#be123c) below.
 ZONE 2 — MAIN ILLUSTRATION (middle 45%): Three illustrated bokjumeoni (복주머니) pouches arranged in a row — left pouch in red (#dc2626) with gold drawstring, center pouch (largest, 1.3x scale) in hot pink (#e11d48) with traditional flower embroidery pattern, right pouch in coral (#fb7185) with gold drawstring. Each pouch has a small gold "복" character embroidered. Gold coins (동전) floating above pouches (5–7 coins with square holes). Between the pouches: a simple tooth character (white rounded rectangle, dot eyes, curved smile, pink cheeks) wearing a miniature hanbok jeogori (저고리) in pink and yellow.
 ZONE 3 — GREETING MESSAGE (next 25%): Rounded pill-shape card with pink border (#fda4af, 2px) and white fill, border-radius 24px. Inside: cheerful New Year greeting in deep rose (#9f1239) text, playful rounded font. Small clover (☘) icons as bullet points.
@@ -2372,7 +2372,7 @@ Overall: Cheerful, playful. Pink-red-gold palette. Cute character-driven design 
       desc: '고급 금박 효과',
       layoutHint: 'luxury',
       aiPrompt: `BACKGROUND: Rich burgundy (#7f1d1d) full bleed with subtle luxury paper/linen texture overlay at 8% opacity. Thin gold (#d4a017) ornamental border inset 4% from all edges — double line with tiny diamond shapes at corners.
-ZONE 1 — TOP ACCENT (top 12%): Centered gold foil pine branch (소나무) illustration spanning 60% width — intricate needle detail in gold (#d4a017) with subtle gold shimmer effect. Small gold sparkle dots around branch tips.
+ZONE 1 — TOP ACCENT (top 12%): Centered gold foil pine branch (소나무) illustration spanning 60% width — intricate needle detail in gold (#d4a017) with subtle gold shimmer effect. Small gold accent dots around branch tips.
 ZONE 2 — MAIN CENTERPIECE (middle 40%): Large circular gold frame (3px gold #d4a017 line, radius ~30% of image width) centered. Inside circle: "복" character in extra-large, elegant gold calligraphy (#fbbf24 to #d4a017 gradient), brush stroke style. Circle surrounded by intricate Korean traditional patterns (보상화문 / 연꽃문) in gold foil at 40% opacity forming a mandala-like ring. Four small gold corner ornaments (traditional Korean 모서리 장식) at diagonal positions around the circle.
 ZONE 3 — GREETING TEXT (next 28%): "새해 복 많이 받으세요" in elegant gold (#fbbf24) serif/calligraphy Korean font, centered, generous letter-spacing. Below: thin gold divider line (60% width). 2 lines of refined greeting text in soft gold (#d4a017 at 70%) on burgundy, font-size small-medium. Hospital/clinic name in small bright gold below.
 ZONE 4 — FOOTER (bottom 20%): Gold foil embossed effect — symmetric arrangement of Korean traditional motifs: two mirrored phoenix (봉황) silhouettes in gold at 25% opacity flanking a small gold tooth icon (premium shield-shaped dental emblem). Year "2026" in small gold text at very bottom.
@@ -2430,19 +2430,19 @@ Overall: Ultra-clean, contemporary, Swiss-inspired minimalism. Indigo and silver
       id: 'grt_chsk_rabbit', name: '토끼 캐릭터', color: '#ec4899', accent: '#be185d', bg: '#fdf2f8',
       desc: '달토끼 귀여운',
       layoutHint: 'cute',
-      aiPrompt: `BACKGROUND: Soft pink-to-lavender gradient (#fdf2f8 → #f3e8ff) full bleed. Scattered small stars and sparkles (✦) in gold (#fbbf24) and pink (#f9a8d4) at 20% opacity across entire background. Soft circular bokeh lights in warm pink (#fda4af at 10%) floating in upper portion.
+      aiPrompt: `BACKGROUND: Soft pink-to-lavender gradient (#fdf2f8 → #f3e8ff) full bleed. Scattered small stars in gold (#fbbf24) and pink (#f9a8d4) at 20% opacity across entire background. Soft warm glow in warm pink (#fda4af at 10%) in upper portion.
 ZONE 1 — TOP HEADER (top 15%): "즐거운 한가위!" in large bold hot pink (#ec4899) bubbly rounded Korean font with subtle pink text-shadow. Small crescent moon and star icons in gold (#fbbf24) flanking text. Hospital name in smaller deep pink (#be185d) below.
-ZONE 2 — MAIN ILLUSTRATION (middle 45%): Large luminous full moon circle in pale yellow (#fef3c7) as backdrop, centered. On the moon surface: an adorable kawaii moon rabbit (달토끼) character — white fluffy bunny with large round eyes, pink inner ears (#f9a8d4), pink nose, rosy cheek circles (#fda4af), wearing a tiny pastel pink hanbok jeogori (저고리). Rabbit is cheerfully pounding rice cake (떡) with a small wooden mallet (떡메) into a mortar (절구). Rice cake pieces bouncing up playfully. Next to the rabbit: a cute chibi tooth character (white rounded rectangle body, dot eyes, big curved smile, pink blush, tiny pink ribbon/bow on top) wearing a miniature hanbok치마 (chima) in lavender, holding a tiny Korean fan (부채). Floating around them: 3–4 colorful cartoon autumn leaves (maple in red #ef4444, ginkgo in yellow #fbbf24) and small floating songpyeon in pastel colors.
-ZONE 3 — GREETING MESSAGE (next 25%): Rounded pill-shape card with pink border (#f9a8d4, 2px) and white fill (95% opacity), border-radius 24px. Inside: cheerful Chuseok greeting in deep pink (#9f1239) text, playful rounded font, line-height 1.6. "달토끼와 함께 행복한 추석!" as highlight in bold pink (#ec4899). Small star (★) and moon (☽) as decorative bullet points.
+ZONE 2 — MAIN ILLUSTRATION (middle 45%): Large luminous full moon circle in pale yellow (#fef3c7) as backdrop, centered. On the moon surface: an adorable illustrated moon rabbit (달토끼) character — white fluffy bunny with large round eyes, pink inner ears (#f9a8d4), pink nose, rosy cheek circles (#fda4af), wearing a tiny pastel pink hanbok jeogori (저고리). Rabbit is cheerfully pounding rice cake (떡) with a small wooden mallet (떡메) into a mortar (절구). Rice cake pieces bouncing up playfully. Next to the rabbit: a cute illustrated tooth character (white rounded rectangle body, dot eyes, big curved smile, pink blush, tiny pink ribbon/bow on top) wearing a miniature hanbok치마 (chima) in lavender, holding a tiny Korean fan (부채). Floating around them: 3–4 colorful cartoon autumn leaves (maple in red #ef4444, ginkgo in yellow #fbbf24) and small floating songpyeon in pastel colors.
+ZONE 3 — GREETING MESSAGE (next 25%): Rounded pill-shape card with pink border (#f9a8d4, 2px) and white fill (95% opacity), border-radius 24px. Inside: cheerful Chuseok greeting in deep pink (#9f1239) text, playful rounded font, line-height 1.6. "달토끼와 함께 행복한 추석!" as highlight in bold pink (#ec4899). Small moon (☽) icons as decorative bullet points.
 ZONE 4 — FOOTER (bottom 15%): Row of tiny bouncing characters — small rabbit, moon, songpyeon, maple leaf, tooth — as repeating icons in pink (#ec4899) outline, evenly spaced. Year "2026 추석" in bubbly pink text centered. Clinic info in small rose (#be185d).
-Overall: Adorable, kawaii, character-driven playful design. Pink-lavender-gold palette. Cheerful and family-friendly — perfect for a pediatric or family dental clinic Chuseok greeting card.`,
+Overall: Adorable, illustrated, character-driven playful design. Pink-lavender-gold palette. Cheerful and family-friendly — perfect for a pediatric or family dental clinic Chuseok greeting card.`,
     },
     {
       id: 'grt_chsk_premium', name: '달빛 프리미엄', color: '#d4a017', accent: '#b8860b', bg: '#1a1a2e',
       desc: '고급 달빛 골드',
       layoutHint: 'luxury',
       aiPrompt: `BACKGROUND: Deep midnight navy (#1a1a2e) full bleed with subtle luxury silk/satin texture overlay at 6% opacity. Thin gold (#d4a017) ornamental double-line border inset 4% from all edges, with small traditional Korean corner motifs (모서리 장식) at each corner in gold.
-ZONE 1 — TOP ACCENT (top 12%): Symmetrical arrangement of golden wheat stalks (벼이삭) and grain clusters in gold foil (#d4a017) curving inward from left and right edges, meeting near center. Small gold sparkle dots at grain tips. Subtle golden light glow at center-top hinting at moonrise.
+ZONE 1 — TOP ACCENT (top 12%): Symmetrical arrangement of golden wheat stalks (벼이삭) and grain clusters in gold foil (#d4a017) curving inward from left and right edges, meeting near center. Small gold accent dots at grain tips. Subtle golden light glow at center-top hinting at moonrise.
 ZONE 2 — MOONLIT CENTERPIECE (middle 40%): Massive luminous full moon centered — large perfect circle with rich gold gradient (#fbbf24 → #d4a017), realistic moon surface texture, dramatic outer glow in warm gold (#f59e0b at 25%) radiating outward creating a moonlight halo effect. Inside moon: very faint traditional rabbit silhouette in slightly deeper gold at 12% opacity. Flanking moon left and right: elegant gold foil persimmon branches (감나무) — 2 ripe persimmons each side in deep gold (#b8860b) with delicate gold leaves. Below moon: small arrangement of traditional Korean offering fruits (제수용 과일) — pears, apples, chestnuts — as gold silhouettes.
 ZONE 3 — GREETING TEXT (next 28%): "풍성한 한가위 보내세요" in large elegant gold (#fbbf24) serif/calligraphy Korean font, centered, with subtle gold shimmer effect. Below: thin gold ornamental divider with lotus motif center. 2 lines of refined greeting in soft gold (#d4a017 at 70%) on navy, font-size small-medium. Hospital/clinic name in small bright gold (#fbbf24). Traditional gold bracket frame (「 」style) around entire text zone.
 ZONE 4 — FOOTER (bottom 20%): Gold foil embossed effect — two mirrored traditional Korean phoenix (봉황) silhouettes in gold at 20% opacity flanking a premium tooth icon (shield-shaped dental emblem with crescent moon detail) in gold (#d4a017). "2026 추석" in small gold text at very bottom. Gold wave pattern (파도문) at 10% opacity along bottom edge.
@@ -2748,10 +2748,10 @@ Cute, kawaii, playful. Pastel pink celebration. Child-friendly dental practice g
       desc: '공식 채용공고',
       layoutHint: 'corporate',
       aiPrompt: `BACKGROUND: Clean white (#ffffff).
-ZONE 1 — LOGO HEADER (top 10%): Left-aligned rectangular placeholder box (60x28px, navy #1e40af at 6% opacity, border-radius 4px, dashed 1px navy border at 20%) for company logo. Right-aligned: "RECRUITMENT" in small navy text (10px, weight 600, letter-spacing 3px). Full-width thin horizontal rule below (1px, navy #1e40af at 12% opacity).
+ZONE 1 — LOGO HEADER (top 10%): Left-aligned rectangular placeholder box (60x28px, navy #1e40af at 6% opacity, border-radius 8px, dashed 1px navy border at 20%) for company logo. Right-aligned: "RECRUITMENT" in small navy text (10px, weight 600, letter-spacing 3px). Full-width thin horizontal rule below (1px, navy #1e40af at 12% opacity).
 ZONE 2 — TITLE BLOCK (12%): Large bold "간호사 모집" in navy (#1e40af, 28px, weight 800) left-aligned. Below: "함께 성장할 인재를 찾습니다" in navy accent (#1e3a8a, 12px, weight 400). Full-width thin horizontal rule below (1px, navy at 12% opacity).
 ZONE 3 — REQUIREMENTS LIST (45%): No card — clean open list directly on white background. Each of 4 rows separated by thin horizontal rules (1px, navy at 6% opacity). Each row: navy square bullet (4px, filled navy at 40%) left, requirement label in dark gray (#1e293b, 13px, weight 600) next, detail value right-aligned in gray (#475569, 13px, weight 400). Rows: "고용형태 — 정규직", "자격요건 — 경력 1년 이상", "복리후생 — 4대보험, 중식, 인센티브", "접수기간 — 채용시까지 상시". Generous row height (40px). Final thin horizontal rule after last row.
-ZONE 4 — CTA (10%): Full-width rounded button (border-radius 6px) with navy gradient (#1e40af → #1e3a8a), white bold text "지원하기" (14px, weight 700).
+ZONE 4 — CTA (10%): Full-width pill button (border-radius 24px) with navy gradient (#1e40af → #1e3a8a), white bold text "지원하기" (14px, weight 700).
 ZONE 5 — FOOTER (8%): Hospital name in light gray (#94a3b8, 11px, weight 400) center-aligned. Thin horizontal rule above (1px, navy at 8% opacity).
 Formal corporate document style. Top-down vertical list with horizontal rules as section dividers. Logo placeholder header. No cards or shadows — clean ruled layout like an official posting.`,
     },
@@ -2762,7 +2762,7 @@ Formal corporate document style. Top-down vertical list with horizontal rules as
       aiPrompt: `BACKGROUND: Soft mint (#f0fdf4) to white gradient (top to bottom).
 ZONE 1 — TEAM PHOTO AREA (top 25%): Large circle (120px diameter, centered) with green (#22c55e) at 8% opacity fill, dashed green border (2px, 25% opacity). Inside: silhouette group icon (3 simple person outlines in green at 30% opacity) representing team. Small "Our Team" label below circle in green (#16a34a, 10px, weight 500).
 ZONE 2 — SPEECH BUBBLE (15%): Rounded speech bubble shape (white fill, green #22c55e border 2px, border-radius 16px) with triangular tail pointing up toward team circle. Inside: "Join us! 함께해요!" in green (#22c55e, 18px, weight 700). Small sparkle accents (green, 4px) around bubble.
-ZONE 3 — HORIZONTAL ICON CARDS (35%): Horizontal scrollable-style row of 4 mini cards side by side (each ~22% width, border-radius 10px, white fill, green shadow at 6% opacity). Each card is vertically stacked: TOP: circular green icon area (28px, green at 10% opacity) with simple icon symbol (briefcase, shield, utensils, clock in green at 40%), BOTTOM: short label text in gray (#475569, 10px, weight 500). Cards: "정규직" (briefcase), "4대보험" (shield), "중식제공" (utensils), "상시모집" (clock). Cards arranged in a tight horizontal row with 6px gaps.
+ZONE 3 — HORIZONTAL ICON CARDS (35%): Horizontal scrollable-style row of 4 mini cards side by side (each ~22% width, border-radius 16px, white fill, green shadow at 6% opacity). Each card is vertically stacked: TOP: circular green icon area (28px, green at 10% opacity) with simple icon symbol (briefcase, shield, utensils, clock in green at 40%), BOTTOM: short label text in gray (#475569, 10px, weight 500). Cards: "정규직" (briefcase), "4대보험" (shield), "중식제공" (utensils), "상시모집" (clock). Cards arranged in a tight horizontal row with 6px gaps.
 ZONE 4 — CTA (12%): Rounded pill button (border-radius 24px, not full-width — centered, 60% width) with green gradient (#22c55e → #16a34a), white bold text "지원하기" (14px, weight 700).
 BOTTOM: Hospital name in green (#22c55e, 11px, weight 400) centered.
 Friendly, approachable, team-oriented. Circular team photo area, speech bubble greeting, horizontal icon cards. Warm community recruitment feel.`,
@@ -2775,7 +2775,7 @@ Friendly, approachable, team-oriented. Circular team photo area, speech bubble g
 ZONE 1 — HERO TEXT (left 40% of canvas, vertically centered): Massive bold "JOIN" text in purple (#8b5cf6, 72px, weight 900, letter-spacing -2px) stacked vertically — each letter on its own line. Below the last letter: thin purple line (40px wide, 2px, #7c3aed). Text dominates the left portion of the design. High visual impact.
 ZONE 2 — TITLE AREA (right 55%, top portion 20%): "간호사 모집" in bold purple (#8b5cf6, 22px, weight 800) right-aligned. Below: "함께 성장할 인재를 찾습니다" in purple accent (#7c3aed, 11px, weight 400).
 ZONE 3 — FLOATING PILLS (right 55%, middle 40%): Requirements displayed as individual floating pill/tag shapes (border-radius 20px, purple at 6% opacity fill, purple #8b5cf6 border 1px at 20%). Each pill: text inside in purple (#7c3aed, 11px, weight 500). Pills scattered in organic layout (not grid-aligned) at slight rotations (-3deg to +3deg): "정규직", "경력 1년 이상", "4대보험 완비", "중식 제공", "인센티브", "상시 모집". Pills vary in size based on text length. Floating, dynamic arrangement.
-ZONE 4 — CTA (bottom 12%, right-aligned): Compact rounded button (border-radius 8px, 50% width, right-aligned) with purple gradient (#8b5cf6 → #7c3aed), white bold text "지원하기" (13px, weight 700).
+ZONE 4 — CTA (bottom 12%, right-aligned): Compact pill button (border-radius 24px, 50% width, right-aligned) with purple gradient (#8b5cf6 → #7c3aed), white bold text "지원하기" (13px, weight 700).
 BOTTOM: Hospital name in light gray (#94a3b8, 10px) left-aligned.
 Bold diagonal split composition. Oversized typography taking 40% of space. Floating pill tags instead of list. Startup energy, geometric, contemporary.`,
     },
@@ -2785,14 +2785,14 @@ Bold diagonal split composition. Oversized typography taking 40% of space. Float
       layoutHint: 'benefits',
       aiPrompt: `BACKGROUND: Warm cream (#fffbeb).
 ZONE 1 — COMPACT HEADER (top 10%): "간호사 모집" in bold amber (#f59e0b, 22px, weight 800) center-aligned. Below: "함께 성장할 인재를 찾습니다" in amber accent (#d97706, 11px, weight 400).
-ZONE 2 — BENEFITS 2x2 GRID (55%): Four equal-sized benefit cards arranged in a 2x2 grid (8px gaps). Each card: white fill, border-radius 12px, soft amber shadow (amber at 5% opacity), border 1px amber at 8% opacity. Card interior — TOP: large circular icon area (40px, amber #f59e0b at 8% opacity fill) with centered icon symbol in amber at 35% opacity. BOTTOM: bold benefit title (amber #d97706, 13px, weight 700) and detail line below (gray #475569, 11px, weight 400).
+ZONE 2 — BENEFITS 2x2 GRID (55%): Four equal-sized benefit cards arranged in a 2x2 grid (8px gaps). Each card: white fill, border-radius 16px, soft amber shadow (amber at 5% opacity), border 1px amber at 8% opacity. Card interior — TOP: large circular icon area (40px, amber #f59e0b at 8% opacity fill) with centered icon symbol in amber at 35% opacity. BOTTOM: bold benefit title (amber #d97706, 13px, weight 700) and detail line below (gray #475569, 11px, weight 400).
 Card 1 (top-left): briefcase icon, "정규직 채용", "경력 1년 이상".
 Card 2 (top-right): shield-check icon, "4대보험", "완비 지원".
 Card 3 (bottom-left): utensils icon, "중식 제공", "인센티브 포함".
 Card 4 (bottom-right): calendar-check icon, "상시 모집", "채용시까지".
 Each card is self-contained — benefit is the hero, not a list item.
 ZONE 3 — SECONDARY INFO (12%): Thin amber line (1px, 30% opacity, centered 50% width). Below: small gray text (#475569, 10px) "자세한 사항은 문의 바랍니다" center-aligned.
-ZONE 4 — CTA (10%): Full-width rounded button (border-radius 8px) with amber gradient (#f59e0b → #d97706), white bold text "지원하기" (14px, weight 700).
+ZONE 4 — CTA (10%): Full-width pill button (border-radius 24px) with amber gradient (#f59e0b → #d97706), white bold text "지원하기" (14px, weight 700).
 BOTTOM: Hospital name in amber (#d97706, 11px, weight 400) centered.
 Benefits-first layout. 2x2 grid of benefit cards as primary content. Each benefit is a standalone visual card with icon. Requirements are secondary. Warm, inviting, perk-focused.`,
     },
@@ -2800,25 +2800,24 @@ Benefits-first layout. 2x2 grid of benefit cards as primary content. Each benefi
       id: 'hir_urgent_now', name: '급구 긴급', color: '#ef4444', accent: '#dc2626', bg: '#fef2f2',
       desc: '긴급 채용 강조',
       layoutHint: 'urgent',
-      aiPrompt: `BACKGROUND: Clean white.
-ZONE 1 — URGENT BANNER (top 18%): Full-width rounded rectangle with bold red (#ef4444) fill. "URGENT" in small white text with letter-spacing, 70% opacity. Below: large bold white text "간호사 급구" (26px, weight 900). Eye-catching, attention-grabbing red banner.
-ZONE 2 — SUBTITLE (5%): "함께 성장할 인재를 찾습니다" in red accent text.
-ZONE 3 — REQUIREMENTS CARD (40%): White rounded card with soft shadow. 4 rows with red circle indicators and requirement text in gray. Urgent, direct, clear.
-ZONE 4 — CTA (12%): Full-width rounded button with red gradient (#ef4444 → #dc2626), white bold text "지원하기".
-BOTTOM: Hospital name in light gray.
-Urgent, time-sensitive. Bold red. Attention-grabbing recruitment. Immediate action needed feel.`,
+      aiPrompt: `BACKGROUND: Clean white (#ffffff) with subtle red radial pulse gradient at top center (red #ef4444 at 3% opacity, fading outward).
+ZONE 1 — COUNTDOWN HEADER (top 22%): Full-width red (#ef4444) filled rounded rectangle (border-radius 12px). Inside TOP: "URGENT" in small white text (10px, weight 700, letter-spacing 4px, 70% opacity). CENTER: large bold white "간호사 급구" (28px, weight 900). BOTTOM of banner: countdown-style time display — three white rounded boxes (border-radius 6px, white at 20% opacity fill, each ~50x40px) side by side showing "D-7" style indicator. Left box: large bold "D" (22px), center box: bold "-" (22px), right box: bold "7" (22px). All white text on red. Below boxes: tiny white label text "채용마감" (9px, 50% opacity).
+ZONE 2 — BOLD BULLET REQUIREMENTS (40%): No card wrapper — direct on white background. Each of 4 requirements as a bold standalone row with generous vertical spacing (16px between). Each row: LEFT: large filled red circle (14px diameter, #ef4444), RIGHT: requirement text in dark gray (#1e293b, 15px, weight 700). Text is larger and bolder than typical — urgent emphasis. Items: "● 정규직 채용 (경력 1년 이상)", "● 4대보험 완비", "● 중식 제공 + 인센티브", "● 상시 모집 — 채용시까지". Red left-border accent line (3px, #ef4444, full height of this zone) running along the left margin.
+ZONE 3 — PULSING CTA (15%): Large full-width pill button (border-radius 24px, height 52px) with red gradient (#ef4444 → #dc2626). White bold text "지금 바로 지원하기" (16px, weight 800). Subtle outer glow effect (red at 8% opacity, 4px blur). Above button: small red text "지원 접수 중" with red blinking dot indicator (6px filled red circle) to the left (10px, weight 600, #dc2626).
+BOTTOM: Hospital name in light gray (#94a3b8, 11px, weight 400) centered.
+Countdown-driven urgency. D-day timer visual at top. Bold oversized bullet requirements (no cards). Pulsing CTA with status indicator. Time-pressure recruitment design.`,
     },
     {
       id: 'hir_premium_brand', name: '프리미엄 브랜드', color: '#78716c', accent: '#57534e', bg: '#fafaf9',
       desc: '고급 브랜딩',
       layoutHint: 'brand',
-      aiPrompt: `BACKGROUND: Warm off-white (#fafaf9).
-ZONE 1 — HEADER (top 12%): Thin decorative line in charcoal (#78716c) at 10% opacity. "CAREER OPPORTUNITY" in small charcoal text with letter-spacing 3px. Below: large bold "간호사 모집" in charcoal (#57534e, 26px, weight 800).
-ZONE 2 — SUBTITLE (5%): "함께 성장할 인재를 찾습니다" in charcoal accent text.
-ZONE 3 — REQUIREMENTS CARD (40%): White rounded card with soft shadow. 4 rows with subtle charcoal circle icons and requirement text. Refined, elegant spacing.
-ZONE 4 — CTA (12%): Full-width rounded button with charcoal gradient, white bold text "지원하기".
-BOTTOM: Hospital name in charcoal text.
-Premium, sophisticated, executive-level. Gold-inspired refinement. High-end dental clinic branding.`,
+      aiPrompt: `BACKGROUND: Warm off-white (#fafaf9) with very subtle linen paper texture feel (noise at 2% opacity).
+ZONE 1 — GOLD ACCENT LINE (top 3%): Thin horizontal gold line (#b8860b, 1.5px, 50% opacity) spanning full width with 24px margin on each side. Elegant, understated.
+ZONE 2 — EDITORIAL HEADER (top 12–30%): "CAREER" in ultra-light serif typography (charcoal #78716c, 42px, weight 300, letter-spacing 8px) center-aligned. Below with 4px gap: "OPPORTUNITY" in same style (charcoal #78716c, 42px, weight 300, letter-spacing 8px). Below with 20px gap: thin gold line (#b8860b, 1px, centered, 30% width). Below with 16px gap: "간호사 모집" in bold serif (charcoal #57534e, 20px, weight 700, letter-spacing 2px). Generous whitespace — magazine editorial typography rhythm.
+ZONE 3 — BODY COPY (30%): Left-aligned text block with 32px left margin, styled like magazine body copy. Opening pull-quote: large gold opening quotation mark (#b8860b, 28px, serif) at top-left. Below: "함께 성장할 인재를 찾습니다" in charcoal (#57534e, 14px, weight 400, serif, line-height 1.8). Below with 20px gap: requirements as elegant inline text (NOT a list, NOT cards) — flowing paragraph style: "경력 1년 이상의 정규직 포지션으로, 4대보험 및 중식을 제공하며 인센티브가 포함됩니다. 채용시까지 상시 모집합니다." in gray (#64748b, 12px, weight 400, serif, line-height 2.0). Closing gold quotation mark at end. Luxurious leading and tracking throughout.
+ZONE 4 — EDITORIAL CTA (10%): NOT a button — text-only CTA styled as magazine tagline. "지원 문의" in charcoal (#57534e, 13px, weight 600, letter-spacing 3px, serif) center-aligned. Thin gold underline below text (40px wide, 1px, #b8860b). Understated, no gradient, no fill.
+ZONE 5 — FOOTER (8%): Hospital name in light charcoal (#a8a29e, 11px, weight 400, letter-spacing 2px, serif) center-aligned. Below: thin gold line (#b8860b, 1.5px, 50% opacity) spanning full width with 24px margin — mirroring top accent line.
+Magazine editorial layout. Serif typography throughout. Gold (#b8860b) accent lines top and bottom as framing device. Flowing paragraph instead of list. Pull-quote styling. Luxurious whitespace and leading. No cards, no shadows, no buttons — pure typographic elegance.`,
     },
   ],
 
