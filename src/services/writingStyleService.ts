@@ -987,12 +987,25 @@ export const saveCrawledPost = async (
     record.law_issues = score.law_issues;
     record.scored_at = new Date().toISOString();
   }
+
+  // 1차 시도: source_blog_id 포함
   const { data, error } = await supabase
     .from('hospital_crawled_posts')
     .upsert(record, { onConflict: 'hospital_name,url' })
     .select()
     .single();
   if (!error && data) return data as CrawledPost;
+
+  // 2차 시도: source_blog_id 컬럼이 DB에 없을 수 있으므로 제외 후 재시도
+  if (error && (error.message?.includes('source_blog_id') || error.code === '42703' || error.code === 'PGRST204')) {
+    const { source_blog_id: _removed, ...recordWithout } = record;
+    const { data: d2, error: e2 } = await supabase
+      .from('hospital_crawled_posts')
+      .upsert(recordWithout, { onConflict: 'hospital_name,url' })
+      .select()
+      .single();
+    if (!e2 && d2) return d2 as CrawledPost;
+  }
 
   // Supabase 실패(401 등) → localStorage 폴백
   const all = lsGetAll();
