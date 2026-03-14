@@ -636,8 +636,8 @@ export const generateBlogWithPipeline = async (
   onProgress?: (msg: string) => void
 ): Promise<{ title: string; content: string; imagePrompts: string[] }> => {
   const safeProgress = onProgress || ((msg: string) => console.log('Pipeline:', msg));
-  console.warn(`[BLOG_FLOW] generateBlogWithPipeline 시작 — topic: ${request.topic?.substring(0, 30)}`);
-  console.warn('[PIPELINE] ▶ Stage A: 아웃라인 생성 시작');
+  console.info(`[BLOG_FLOW] generateBlogWithPipeline 시작 — topic: ${request.topic?.substring(0, 30)}`);
+  console.info('[PIPELINE] ▶ Stage A: 아웃라인 생성 시작');
   const targetLength = request.textLength || 1500;
   // LLM은 글자수를 정확히 세지 못해 항상 20~30% 부족하게 생성 → 프롬프트용 목표를 1.35배로 설정
   const promptTargetLength = Math.round(targetLength * 1.35);
@@ -654,7 +654,7 @@ export const generateBlogWithPipeline = async (
         const prompt = await getHospitalStylePromptForGeneration(request.hospitalName);
         if (prompt) {
           hospitalStyleSuffix = `\n\n[🏥 병원 블로그 학습 말투 - 반드시 적용]\n${prompt}`;
-          console.warn('[PIPELINE] ✅ 병원 말투 로드 성공:', request.hospitalName);
+          console.info('[PIPELINE] ✅ 병원 말투 로드 성공:', request.hospitalName);
         } else {
           console.warn('[PIPELINE] 병원 말투 데이터 없음 (null) — 기본 말투 사용');
         }
@@ -720,8 +720,8 @@ ${JSON.stringify(searchResults?.collected_facts?.slice(0, 3) || [], null, 2)}`;
   outline.sections.forEach((s: any) => { s.targetChars = s.targetChars || charsPerSection; });
 
   safeProgress(`✅ Stage A 완료: 소제목 ${outline.sections.length}개 설계`);
-  console.warn(`[PIPELINE] ✅ Stage A 완료: 소제목 ${outline.sections.length}개`);
-  console.warn('[PIPELINE] ▶ Stage B: 본문 생성 시작 (도입부 → 소제목 → 마무리, 직렬)');
+  console.info(`[PIPELINE] ✅ Stage A 완료: 소제목 ${outline.sections.length}개`);
+  console.info('[PIPELINE] ▶ Stage B: 본문 생성 시작 (도입부 → 소제목 → 마무리, 직렬)');
 
   // ── Stage B: 본문 생성 (PRO) ── [도입부 → 소제목 순차 → 마무리]
   // ⚠️ 직렬 전환 이유: 병렬 생성 시 PRO 503 → FLASH 폴백 중 빈 문자열 반환 → EMPTY_STATE 버그
@@ -729,7 +729,7 @@ ${JSON.stringify(searchResults?.collected_facts?.slice(0, 3) || [], null, 2)}`;
 
   // ── B-1: 도입부 생성 ──
   safeProgress('✍️ [2/4] 도입부 생성 중...');
-  console.warn('[PIPELINE] ▶ B-1: 도입부 생성 시작');
+  console.info('[PIPELINE] ▶ B-1: 도입부 생성 시작');
   const introPrompt = getPipelineIntroPrompt(
     outline.intro?.approach || 'A',
     outline.intro?.scene || request.topic,
@@ -769,7 +769,7 @@ ${JSON.stringify(searchResults?.collected_facts?.slice(0, 2) || [], null, 2)}`;
     console.error(`[PIPELINE] ❌ 도입부 생성됐지만 너무 짧음: ${introHtml.length}자`);
     throw new Error('도입부 생성에 실패했습니다. 네트워크 상태를 확인 후 다시 시도해주세요.');
   }
-  console.warn(`[PIPELINE] ✅ B-1 도입부 완료: ${introHtml.length}자`);
+  console.info(`[PIPELINE] ✅ B-1 도입부 완료: ${introHtml.length}자`);
   safeProgress('✅ 도입부 완료');
 
   // ── B-2: 소제목 섹션 직렬 생성 ──
@@ -828,15 +828,15 @@ ${JSON.stringify(searchResults?.collected_facts?.slice(i, i + 2) || [], null, 2)
     sectionSummaries.push(
       sectionHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().substring(0, 150)
     );
-    console.warn(`[PIPELINE] ✅ 소제목 ${sectionNum} 완료: ${sectionHtml.length}자`);
+    console.info(`[PIPELINE] ✅ 소제목 ${sectionNum} 완료: ${sectionHtml.length}자`);
     safeProgress(`✅ 소제목 ${sectionNum} "${section.title}" 완료`);
   }
 
-  console.warn(`[PIPELINE] ✅ Stage B-1/2 완료: 도입부 ${introHtml.length}자, 소제목 ${sectionHtmls.length}/${outline.sections.length}개 전부 성공`);
+  console.info(`[PIPELINE] ✅ Stage B-1/2 완료: 도입부 ${introHtml.length}자, 소제목 ${sectionHtmls.length}/${outline.sections.length}개 전부 성공`);
 
   // ── B-3: 마무리 생성 ──
   safeProgress('✍️ [3/4] 마무리 작성 중...');
-  console.warn('[PIPELINE] ▶ B-3: 마무리 생성 시작');
+  console.info('[PIPELINE] ▶ B-3: 마무리 생성 시작');
   const conclusionPrompt = getPipelineConclusionPrompt(
     outline.conclusion?.direction || '열린 결말',
     outline.conclusion?.targetChars || Math.round(promptTargetLength * 0.15),
@@ -870,14 +870,14 @@ ${sectionSummaries.join('\n')}`;
   }
 
   safeProgress('✅ 본문 생성 완료');
-  console.warn(`[PIPELINE] ✅ Stage B-3 마무리 완료: ${conclusionHtml.length}자`);
-  console.warn('[PIPELINE] ▶ Stage C: 통합 검증 시작');
+  console.info(`[PIPELINE] ✅ Stage B-3 마무리 완료: ${conclusionHtml.length}자`);
+  console.info('[PIPELINE] ▶ Stage C: 통합 검증 시작');
 
   // ── Stage C: 통합 + 검증 (FLASH) ──
   safeProgress('🔍 [4/4] 전체 통합 및 검증 중...');
 
   // rawHtml 조립 전 완전성 검사 — 모든 파트가 존재하는지 확인
-  console.warn(`[PIPELINE] 🔍 완전성 검사: intro=${introHtml.length}자, sections=${sectionHtmls.map(h => h.length).join('/')}, conclusion=${conclusionHtml.length}자`);
+  console.info(`[PIPELINE] 🔍 완전성 검사: intro=${introHtml.length}자, sections=${sectionHtmls.map(h => h.length).join('/')}, conclusion=${conclusionHtml.length}자`);
   const emptyParts: string[] = [];
   if (!introHtml || introHtml.length < 30) emptyParts.push('도입부');
   sectionHtmls.forEach((h, i) => {
@@ -890,7 +890,7 @@ ${sectionSummaries.join('\n')}`;
     console.error(`[PIPELINE] ❌ 완전성 검사 실패:`, emptyParts);
     throw new Error(msg);
   }
-  console.warn('[PIPELINE] ✅ 완전성 검사 통과 — 모든 파트 존재 확인');
+  console.info('[PIPELINE] ✅ 완전성 검사 통과 — 모든 파트 존재 확인');
 
   const rawHtml = `${introHtml}\n${sectionHtmls.join('\n')}\n${conclusionHtml}`;
   const integrationPrompt = getPipelineIntegrationPrompt(targetLength);
@@ -921,7 +921,7 @@ ${sectionSummaries.join('\n')}`;
   }
 
   safeProgress('✅ [4/4] 통합 검증 완료');
-  console.warn(`[PIPELINE] ✅ Stage C 완료: finalContent ${finalContent.length}자 (텍스트 ${finalContent.replace(/<[^>]+>/g, '').trim().length}자)`);
+  console.info(`[PIPELINE] ✅ Stage C 완료: finalContent ${finalContent.length}자 (텍스트 ${finalContent.replace(/<[^>]+>/g, '').trim().length}자)`);
 
   // 이미지 프롬프트 생성 (섹션 역할별 차별화)
   const imageCount = request.imageCount ?? 1;
@@ -957,7 +957,7 @@ ${sectionSummaries.join('\n')}`;
     }
   }
 
-  console.warn(`[PIPELINE] ✅ generateBlogWithPipeline 완료 — title: "${request.topic}", content: ${finalContent.length}자, conclusionHtml: ${conclusionHtml.length}자, imagePrompts: ${imagePrompts.length}개`);
+  console.info(`[PIPELINE] ✅ generateBlogWithPipeline 완료 — title: "${request.topic}", content: ${finalContent.length}자, conclusionHtml: ${conclusionHtml.length}자, imagePrompts: ${imagePrompts.length}개`);
   return {
     title: request.topic,
     content: finalContent,
@@ -2755,7 +2755,7 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
   const isCardNews = request.postType === 'card_news';
   const isPressRelease = request.postType === 'press_release';
   
-  console.warn(`[BLOG_FLOW] generateFullPost 시작 — postType: ${request.postType}, topic: ${request.topic?.substring(0, 30)}`);
+  console.info(`[BLOG_FLOW] generateFullPost 시작 — postType: ${request.postType}, topic: ${request.topic?.substring(0, 30)}`);
   // • 디버그: request에 customImagePrompt가 있는지 확인
   console.log('• generateFullPost 시작 - request.imageStyle:', request.imageStyle);
   console.log('• generateFullPost 시작 - request.customImagePrompt:', request.customImagePrompt ? request.customImagePrompt.substring(0, 50) : 'undefined/없음');
@@ -2967,8 +2967,8 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
         }
       };
       safeProgress('✅ 다단계 파이프라인 생성 완료!');
-      console.warn(`[BLOG_FLOW] ✅ 파이프라인 textData 확보 — title: "${textData.title}", content: ${textData.content?.length || 0}자`);
-      console.warn(`[PIPELINE_RESULT] source=pipeline`);
+      console.info(`[BLOG_FLOW] ✅ 파이프라인 textData 확보 — title: "${textData.title}", content: ${textData.content?.length || 0}자`);
+      console.info(`[PIPELINE_RESULT] source=pipeline`);
     } catch (pipelineError: any) {
       const failReason = `${pipelineError?.status || 'N/A'} ${pipelineError?.message?.substring(0, 120) || 'unknown'}`;
       console.error(`[BLOG_FLOW] ❌ 파이프라인 실패: ${pipelineError?.message}`);
@@ -3004,7 +3004,7 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
 
     safeProgress(step1Msg);
     textData = await generateBlogPostText(request, safeProgress);
-    console.warn(`[PIPELINE_RESULT] source=legacy_direct (referenceUrl or non-blog)`);
+    console.info(`[PIPELINE_RESULT] source=legacy_direct (referenceUrl or non-blog)`);
   }
   
   const styleName = STYLE_NAMES[request.imageStyle] || STYLE_NAMES.illustration;
@@ -3084,7 +3084,7 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
   // 🔧 content 또는 contentHtml 필드 둘 다 지원
   let body = textData.content || (textData as any).contentHtml || '';
 
-  console.warn(`[BLOG_FLOW] body 확보됨: ${body ? body.length : 0}자, title: "${textData.title}"`);
+  console.info(`[BLOG_FLOW] body 확보됨: ${body ? body.length : 0}자, title: "${textData.title}"`);
   // 방어 코드: body가 없으면 에러
   if (!body || body.trim() === '') {
     console.error('❌ textData.content/contentHtml 둘 다 비어있습니다:', textData);
@@ -3282,6 +3282,7 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
   const bodyLenBeforeImages = body.length;
   console.warn(`[IMG_INSERT] 이미지 삽입 전 body: ${bodyLenBeforeImages}자, 이미지 ${images.length}장`);
 
+  const blobUrls: string[] = []; // cleanup용 blob URL 수집
   images.forEach(img => {
     const pattern = new RegExp(`\\[IMG_${img.index}\\]`, "gi");
     const hasMarker = body.match(pattern);
@@ -3303,7 +3304,8 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
         }
         const blob = new Blob([byteArray], { type: mimeType });
         displaySrc = URL.createObjectURL(blob);
-        console.warn(`[IMG_INSERT] IMG_${img.index}: base64 ${img.data.length}자 → blob URL (${displaySrc.length}자)`);
+        blobUrls.push(displaySrc);
+        console.info(`[IMG_INSERT] IMG_${img.index}: base64 ${img.data.length}자 → blob URL (${displaySrc.length}자)`);
       }
     } catch (blobErr) {
       console.warn(`[IMG_INSERT] IMG_${img.index}: blob 변환 실패, base64 원본 사용`, blobErr);
@@ -3631,18 +3633,31 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
   });
   console.log('  - seoScore:', seoScore);
   
+  // 🛡️ 저장용 HTML: blob URL → base64 복원 (blob URL은 세션 내에서만 유효하므로 저장 시 원본 복원)
+  let storageHtml = finalHtml;
+  if (images.length > 0) {
+    for (const img of images) {
+      if (!img.data) continue;
+      const p1 = new RegExp(`(<img[^>]*data-image-index="${img.index}"[^>]*src=")blob:[^"]*(")`,'gi');
+      storageHtml = storageHtml.replace(p1, `$1${img.data}$2`);
+      const p2 = new RegExp(`(<img[^>]*src=")blob:[^"]*("[^>]*data-image-index="${img.index}")`,'gi');
+      storageHtml = storageHtml.replace(p2, `$1${img.data}$2`);
+    }
+    console.info(`[STORAGE] blob URL → base64 복원 완료: display=${finalHtml.length}자, storage=${storageHtml.length}자`);
+  }
+
   // 🔥 서버에 블로그 이력 저장 (비동기, 실패해도 무시)
   saveBlogHistory(
     textData.title,
-    textData.content || finalHtml, // content가 없으면 HTML 사용
-    finalHtml,
+    textData.content || storageHtml, // content가 없으면 복원된 HTML 사용
+    storageHtml,
     request.keywords?.split(',').map(k => k.trim()) || [request.topic],
     undefined, // naverUrl
     request.category
   ).catch(error => {
     console.warn('⚠️ 블로그 이력 저장 실패 (무시):', error);
   });
-  
+
   // 📦 생성된 블로그 포스트 Supabase에 저장 (비동기, 실패해도 무시)
   saveGeneratedPost({
     hospitalName: request.hospitalName,
@@ -3651,7 +3666,7 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
     doctorTitle: request.doctorTitle,
     postType: 'blog',
     title: textData.title,
-    content: finalHtml,
+    content: storageHtml,
     keywords: request.keywords?.split(',').map(k => k.trim()),
     topic: request.topic,
     imageStyle: request.imageStyle
@@ -3678,7 +3693,7 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
 
   // 최종 완료 메시지
   safeProgress('✅ 모든 생성 작업 완료!');
-  console.warn(`[BLOG_FLOW] ✅ generateFullPost 반환 직전 — title: "${textData.title}", htmlContent: ${finalHtml.length}자, imageFailCount: ${imageFailCount}`);
+  console.info(`[BLOG_FLOW] ✅ generateFullPost 반환 직전 — title: "${textData.title}", htmlContent: ${finalHtml.length}자, imageFailCount: ${imageFailCount}`);
 
   return {
     title: textData.title,
@@ -3697,6 +3712,7 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
     imagePrompts: textData.imagePrompts,
     conclusionLength: textData.conclusionLength, // 파이프라인 마무리 원본 길이 (없으면 undefined)
     generatedImages: images, // base64 원본 이미지 (export/복사 시 blob URL → base64 복원용)
+    blobUrls, // cleanup용 blob URL 목록
   };
 
   } catch (postProcessError) {

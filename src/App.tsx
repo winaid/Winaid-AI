@@ -202,10 +202,32 @@ const App: React.FC = () => {
   }, [mobileTab]);
 
   // 📊 렌더 게이트 로그 — 상태 변경 시 어떤 뷰가 보이는지 추적
+  // hasAttemptedGeneration: 한 번이라도 생성 시도했으면 true (EMPTY_STATE 구분용)
+  const hasAttemptedGenerationRef = React.useRef(false);
   useEffect(() => {
     const cs = getCurrentState();
+    if (cs.isLoading) hasAttemptedGenerationRef.current = true;
     const renderView = cs.isLoading ? 'LOADING_SPINNER' : cs.data ? 'RESULT_PREVIEW' : cs.error ? 'ERROR_MODAL' : 'EMPTY_STATE';
-    console.warn(`[RENDER_GATE] contentTab=${contentTab} | isLoading=${cs.isLoading} | hasData=${!!cs.data} | hasError=${!!cs.error} | progress="${(cs.progress || '').substring(0, 30)}" → ${renderView}`);
+    const logMsg = `[RENDER_GATE] contentTab=${contentTab} | isLoading=${cs.isLoading} | hasData=${!!cs.data} | hasError=${!!cs.error} | progress="${(cs.progress || '').substring(0, 30)}" → ${renderView}`;
+    switch (renderView) {
+      case 'LOADING_SPINNER':
+        console.info(`⏳ ${logMsg}`);
+        break;
+      case 'RESULT_PREVIEW':
+        console.info(`✅ ${logMsg}`);
+        break;
+      case 'ERROR_MODAL':
+        console.warn(`❌ ${logMsg}`);
+        break;
+      case 'EMPTY_STATE':
+      default:
+        if (hasAttemptedGenerationRef.current) {
+          console.warn(`⚠️ ${logMsg} (생성 시도 후 빈 상태 — input 복귀 확인)`);
+        } else {
+          console.info(`ℹ️ ${logMsg} (초기 상태)`);
+        }
+        break;
+    }
   }, [getCurrentState, contentTab]);
 
   // Supabase 인증 상태 감시

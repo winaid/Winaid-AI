@@ -115,7 +115,7 @@ if (GEMINI_API_KEYS.length > 0) {
   // 프록시 모드에서는 API 키가 서버에만 존재 → 클라이언트에 없어도 정상
   const proxyUrl = import.meta.env.VITE_GEMINI_PROXY_URL;
   if (proxyUrl) {
-    console.warn('ℹ️ 클라이언트 API 키 없음 — 서버 프록시 모드로 동작 (정상)');
+    console.info('ℹ️ 클라이언트 API 키 없음 — 서버 프록시 모드로 동작 (정상)');
   } else {
     console.warn('⚠️ API 키도 없고 프록시 URL도 없음 — Gemini 호출 불가');
   }
@@ -322,7 +322,7 @@ export async function callGemini(config: GeminiCallConfig): Promise<any> {
  */
 export async function callGeminiRaw(model: string, apiBody: any, timeout: number = TIMEOUTS.IMAGE_GENERATION): Promise<any> {
   const endpoint = getGeminiEndpoint();
-  console.warn(`[BLOG_FLOW] callGeminiRaw(${model}) → ${endpoint.substring(0, 60)}...`);
+  console.info(`[BLOG_FLOW] callGeminiRaw(${model}) → ${endpoint.substring(0, 60)}...`);
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeout + 5000);
@@ -384,7 +384,7 @@ async function _callGeminiOnce(config: GeminiCallConfig): Promise<any> {
   };
 
   const endpoint = getGeminiEndpoint();
-  console.warn(`[BLOG_FLOW] _callGeminiOnce(${model}) → ${endpoint.substring(0, 60)}...`);
+  console.info(`[BLOG_FLOW] _callGeminiOnce(${model}) → ${endpoint.substring(0, 60)}...`);
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeout + 5000);

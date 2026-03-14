@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, RefObject } from 'react';
 import { GenerationRequest, GenerationState } from '../types';
+import { restoreBase64Images } from '../components/resultPreviewUtils';
 
 type ContentTabType = 'blog' | 'refine' | 'card_news' | 'press' | 'image' | 'history';
 
@@ -96,7 +97,7 @@ export function useContentGeneration(deps: ContentGenerationDeps): ContentGenera
     }
 
     deps.setMobileTab('result');
-    console.warn(`[BLOG_FLOW] handleGenerate 시작 — postType: ${request.postType}, topic: ${request.topic?.substring(0, 30)}`);
+    console.info(`[BLOG_FLOW] handleGenerate 시작 — postType: ${request.postType}, topic: ${request.topic?.substring(0, 30)}`);
 
     if (!request.postType) {
       setState(prev => ({
@@ -146,7 +147,7 @@ export function useContentGeneration(deps: ContentGenerationDeps): ContentGenera
 
     try {
       const { generateFullPost } = await import('../services/geminiService');
-      console.warn('[BLOG_FLOW] generateFullPost 호출 시작...');
+      console.info('[BLOG_FLOW] generateFullPost 호출 시작...');
       const result = await generateFullPost(request, (p) => targetSetState(prev => ({ ...prev, progress: p })));
       // 📋 결과물 완전성 검증 로그 — "완전한 글 1편" 기준
       const html = result?.fullHtml || result?.htmlContent || '';
@@ -157,17 +158,17 @@ export function useContentGeneration(deps: ContentGenerationDeps): ContentGenera
       const conclusionLength = result?.conclusionLength; // 파이프라인에서 전달된 원본 길이 (없으면 undefined)
       const hasConclusion = conclusionLength ? conclusionLength >= 20 : textOnly.length > 200; // 근사값 fallback
       const conclusionSource = conclusionLength ? `pipeline(${conclusionLength}자)` : `heuristic(textLen=${textOnly.length})`;
-      console.warn(`[BLOG_FLOW] ✅ generateFullPost 반환됨`);
-      console.warn(`[BLOG_FLOW] 📋 완전성 검증: title="${result?.title}" | fullHtml=${html.length}자 | 텍스트=${textOnly.length}자 | h2/h3=${h2Count}개 | intro=${hasIntro} | conclusion=${hasConclusion} [${conclusionSource}]`);
+      console.info(`[BLOG_FLOW] ✅ generateFullPost 반환됨`);
+      console.info(`[BLOG_FLOW] 📋 완전성 검증: title="${result?.title}" | fullHtml=${html.length}자 | 텍스트=${textOnly.length}자 | h2/h3=${h2Count}개 | intro=${hasIntro} | conclusion=${hasConclusion} [${conclusionSource}]`);
       if (!result?.title || h2Count < 2 || textOnly.length < 300) {
         console.error(`[BLOG_FLOW] ⚠️ 완전성 미달 — title=${!!result?.title}, h2=${h2Count}, textLen=${textOnly.length}`);
       }
       const imageWarning = result.imageFailCount && result.imageFailCount > 0
         ? `본문은 정상 생성되었습니다. 이미지 ${result.imageFailCount}장은 AI 서버 과부하로 생성에 실패했습니다.`
         : null;
-      console.warn(`[BLOG_FLOW] setBlogState 호출 직전 — data 존재: ${!!result}, isLoading: false`);
+      console.info(`[BLOG_FLOW] setBlogState 호출 직전 — data 존재: ${!!result}, isLoading: false`);
       targetSetState({ isLoading: false, error: null, warning: imageWarning, data: result, progress: '' });
-      console.warn(`[BLOG_FLOW] ✅ setBlogState 완료 — 사용자 화면 전환 대기 (RENDER_GATE에서 RESULT_PREVIEW 확인)`);
+      console.info(`[BLOG_FLOW] ✅ setBlogState 완료 — 사용자 화면 전환 대기 (RENDER_GATE에서 RESULT_PREVIEW 확인)`);
 
       // 크레딧 차감 + 사용량 저장
       try {
@@ -178,12 +179,12 @@ export function useContentGeneration(deps: ContentGenerationDeps): ContentGenera
         console.warn('크레딧 차감/사용량 저장 스킵:', e);
       }
 
-      // API 서버에 자동 저장
+      // API 서버에 자동 저장 (blob URL → base64 복원 후 저장)
       try {
         const { saveContentToServer } = await import('../services/apiService');
         const saveResult = await saveContentToServer({
           title: result.title,
-          content: result.htmlContent,
+          content: restoreBase64Images(result.htmlContent, result.generatedImages),
           category: request.category,
           postType: request.postType,
           metadata: {

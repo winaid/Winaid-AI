@@ -4,7 +4,7 @@ import { modifyPostWithAI, regenerateCardSlide as _regenerateCardSlide } from '.
 import { regenerateSection } from '../services/geminiService';
 import { generateSingleImage, generateBlogImage, recommendImagePrompt, recommendCardNewsPrompt, CARD_LAYOUT_RULE as _CARD_LAYOUT_RULE, STYLE_KEYWORDS } from '../services/imageGenerationService';
 import { saveAs } from 'file-saver';
-import { removeOklchFromClonedDoc, AI_PROMPT_TEMPLATES, AUTOSAVE_KEY, AUTOSAVE_HISTORY_KEY, CARD_PROMPT_HISTORY_KEY, CARD_REF_IMAGE_KEY, AutoSaveHistoryItem, CardPromptHistoryItem, extractTitle, cleanText } from './resultPreviewUtils';
+import { removeOklchFromClonedDoc, AI_PROMPT_TEMPLATES, AUTOSAVE_KEY, AUTOSAVE_HISTORY_KEY, CARD_PROMPT_HISTORY_KEY, CARD_REF_IMAGE_KEY, AutoSaveHistoryItem, CardPromptHistoryItem, extractTitle, cleanText, restoreBase64Images } from './resultPreviewUtils';
 import { SeoDetailModal, AiSmellDetailModal, SimilarityModal } from './ScoringModals';
 import { ImageDownloadModal, ImageRegenModal, CardDownloadModal } from './ExportModals';
 import { CardRegenModal } from './CardRegenModal';
@@ -242,6 +242,14 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
 
   useEffect(() => {
     setLocalHtml(content.fullHtml);
+    // blob URL cleanup: 이전 content의 blob URL 해제 (메모리 누수 방지)
+    return () => {
+      if (content.blobUrls) {
+        content.blobUrls.forEach(url => {
+          try { URL.revokeObjectURL(url); } catch { /* ignore */ }
+        });
+      }
+    };
   }, [content.fullHtml]);
 
   // 🎨 content.customImagePrompt가 변경되면 저장된 값도 업데이트
@@ -537,8 +545,10 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
     const title = extractTitle(localHtml);
     const timeStr = now.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
     
+    // blob URL → base64 복원: localStorage에 blob: URL이 남으면 재로드 시 이미지 깨짐
+    const restoredHtml = restoreBase64Images(localHtml, content.generatedImages);
     const saveData = {
-      html: localHtml,
+      html: restoredHtml,
       theme: currentTheme,
       postType: content.postType,
       imageStyle: content.imageStyle,

@@ -65,6 +65,29 @@ export const AI_PROMPT_TEMPLATES = [
   { label: 'SEO 강화', prompt: '키워드 밀도를 높이고 소제목을 SEO에 최적화된 형태로 수정해줘', icon: '🔍' },
 ];
 
+// blob URL → base64 복원: 저장/export 시 HTML 내 blob: URL을 원본 base64로 되돌림
+// geminiService, useDocumentExport, ResultPreview(autosave) 등에서 공통 사용
+export function restoreBase64Images(
+  html: string,
+  generatedImages?: { index: number; data: string; prompt: string }[]
+): string {
+  if (!generatedImages || generatedImages.length === 0) return html;
+  let restored = html;
+  for (const img of generatedImages) {
+    // data-image-index="N" 속성을 가진 img 태그의 src를 base64로 복원
+    // src가 data-image-index 뒤에 올 수 있으므로 두 패턴 모두 처리
+    const p1 = new RegExp(
+      `(<img[^>]*data-image-index="${img.index}"[^>]*src=")([^"]*)(")`, 'gi'
+    );
+    restored = restored.replace(p1, `$1${img.data}$3`);
+    const p2 = new RegExp(
+      `(<img[^>]*src=")([^"]*?)("[^>]*data-image-index="${img.index}")`, 'gi'
+    );
+    restored = restored.replace(p2, `$1${img.data}$3`);
+  }
+  return restored;
+}
+
 // 임시저장 키
 export const AUTOSAVE_KEY = 'hospitalai_autosave';
 export const AUTOSAVE_HISTORY_KEY = 'hospitalai_autosave_history'; // 여러 저장본 관리

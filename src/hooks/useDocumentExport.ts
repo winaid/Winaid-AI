@@ -1,7 +1,7 @@
 import { useState, useCallback, RefObject } from 'react';
 import { GeneratedContent, CssTheme } from '../types';
 import { applyThemeToHtml } from '../utils/cssThemes';
-import { convertToWordCompatibleHtml } from '../components/resultPreviewUtils';
+import { convertToWordCompatibleHtml, restoreBase64Images } from '../components/resultPreviewUtils';
 import { saveBlogHistory } from '../services/contentSimilarityService';
 import { toast } from '../components/Toast';
 import { getDesignTemplateById } from '../services/cardNewsDesignTemplates';
@@ -21,27 +21,6 @@ interface UseDocumentExportReturn {
   handleDownloadPDF: () => Promise<void>;
   handleCopy: () => Promise<void>;
   applyInlineStylesForNaver: (html: string, theme?: CssTheme) => string;
-}
-
-// blob URL → base64 복원: export/복사 시 HTML 내 blob: URL을 원본 base64로 되돌림
-function restoreBase64Images(html: string, generatedImages?: { index: number; data: string; prompt: string }[]): string {
-  if (!generatedImages || generatedImages.length === 0) return html;
-  let restored = html;
-  for (const img of generatedImages) {
-    // data-image-index="N" 속성을 가진 img 태그의 src를 base64로 복원
-    const pattern = new RegExp(
-      `(<img[^>]*data-image-index="${img.index}"[^>]*src=")([^"]*)(")`,
-      'gi'
-    );
-    restored = restored.replace(pattern, `$1${img.data}$3`);
-    // src가 data-image-index보다 앞에 올 수도 있으므로 역순도 처리
-    const pattern2 = new RegExp(
-      `(<img[^>]*src=")([^"]*?)("[^>]*data-image-index="${img.index}")`,
-      'gi'
-    );
-    restored = restored.replace(pattern2, `$1${img.data}$3`);
-  }
-  return restored;
 }
 
 export function useDocumentExport({
