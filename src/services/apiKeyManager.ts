@@ -164,7 +164,8 @@ export function initializeApiKeyManager(keys: string[]): void {
  */
 export function getApiKey(): string | null {
   if (!keyManagerInstance) {
-    console.error('❌ API 키 매니저가 초기화되지 않았습니다');
+    // 프록시 모드에서는 클라이언트에 키가 없는 것이 정상 — warn으로 낮춤
+    console.warn('[ApiKeyManager] 초기화되지 않음 (프록시 모드에서는 정상)');
     return null;
   }
   
