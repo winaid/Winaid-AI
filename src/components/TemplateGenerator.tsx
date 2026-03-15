@@ -59,76 +59,424 @@ const textareaCls = `${inputCls} resize-none`;
 const labelCls = 'block text-xs font-bold text-slate-500 mb-1.5';
 
 // ─── 프로덕션 프리뷰 디자인 시스템 ───
-// 카테고리별 차별화된 CSS 프리뷰 — 실제 생성 결과의 톤/레이아웃/밀도를 사전 전달
+// 12개 schedule 디자인 패밀리 — 각각 고유한 레이아웃 골격
+
+// Schedule 그룹 분류 (UI 라벨용)
+const SCHEDULE_GROUPS: { label: string; desc: string; values: string[] }[] = [
+  { label: '📅 달력형', desc: '월간/주간 달력 구조', values: ['autumn', 'korean_traditional', 'cherry_blossom', 'spring_kids'] },
+  { label: '📋 안내형', desc: '시간표·카드·배너 구조', values: ['winter', 'medical_notebook', 'autumn_spring_note', 'autumn_holiday', 'hanok_roof', 'dark_green_clinic', 'dark_blue_modern', 'lavender_sparkle'] },
+];
 
 function CalendarThemePreview({ themeValue, groupColor, size = 'sm' }: { themeValue: string; groupColor: string; size?: 'sm' | 'lg' }) {
-  const days = ['일','월','화','수','목','금','토'];
-  const cellSize = size === 'lg' ? 'w-7 h-7 text-[10px]' : 'w-3.5 h-3.5 text-[5px]';
-  const headerSize = size === 'lg' ? 'text-[9px]' : 'text-[4px]';
-  const titleSize = size === 'lg' ? 'text-sm' : 'text-[7px]';
-  const subSize = size === 'lg' ? 'text-[10px]' : 'text-[5px]';
-  const pad = size === 'lg' ? 'p-3' : 'p-1.5';
-  const gap = size === 'lg' ? 'gap-1' : 'gap-[2px]';
+  const s = size === 'lg';
   const c = groupColor;
-  const c15 = c + '26'; // 15% opacity
-  const c30 = c + '4D';
-  const c60 = c + '99';
 
-  // Theme-specific visual variations
-  const isDark = ['dark_green_clinic','dark_blue_modern'].includes(themeValue);
-  const isTraditional = ['korean_traditional','hanok_roof'].includes(themeValue);
-  const isPremium = ['medical_notebook','lavender_sparkle'].includes(themeValue);
-  const bgStyle = isDark
-    ? { background: `linear-gradient(170deg, ${c} 0%, ${c}dd 100%)` }
-    : isTraditional
-      ? { background: `linear-gradient(175deg, #faf5ef 0%, #f5ebe0 100%)` }
-      : isPremium
-        ? { background: `linear-gradient(170deg, #fafafa 0%, ${c15} 100%)` }
-        : { background: `linear-gradient(170deg, white 0%, ${c15} 100%)` };
-  const textMain = isDark ? 'white' : isTraditional ? '#5c3d2e' : '#374151';
-  const textSub = isDark ? 'rgba(255,255,255,0.6)' : '#9ca3af';
-
-  return (
-    <div className={`w-full h-full flex flex-col ${pad}`} style={bgStyle}>
-      {/* Header */}
-      <div className="flex items-center justify-between mb-1">
-        <div className={`${titleSize} font-extrabold`} style={{ color: isDark ? 'white' : c }}>3월 진료안내</div>
-        <div className={`${subSize}`} style={{ color: textSub }}>OO병원</div>
-      </div>
-      {/* Accent line */}
-      <div className="w-full h-[1px] mb-1" style={{ background: isDark ? 'rgba(255,255,255,0.2)' : `linear-gradient(90deg, ${c}, ${c30})` }} />
-      {/* Day headers */}
-      <div className={`grid grid-cols-7 ${gap} mb-0.5`}>
-        {days.map((d, i) => (
-          <div key={d} className={`${headerSize} font-bold text-center`} style={{ color: i === 0 ? '#ef4444' : i === 6 ? (isDark ? '#93c5fd' : '#3b82f6') : textSub }}>{d}</div>
-        ))}
-      </div>
-      {/* Calendar grid — 5 rows */}
-      <div className={`grid grid-cols-7 ${gap} flex-1`}>
-        {[null,null,null,null,null,null,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,null,null,null,null,null].slice(0, 35).map((d, i) => {
-          if (d === null) return <div key={`e${i}`} />;
-          const isSun = i % 7 === 0;
-          const isSat = i % 7 === 6;
-          const isClosed = d === 9 || d === 23;
-          const isShort = d === 16;
-          return (
-            <div key={i} className={`${cellSize} rounded-sm flex items-center justify-center font-bold leading-none`}
-              style={{
-                color: isClosed ? '#ef4444' : isShort ? '#d97706' : isSun ? '#ef4444' : isSat ? (isDark ? '#93c5fd' : '#3b82f6') : textMain,
-                background: isClosed ? (isDark ? 'rgba(239,68,68,0.25)' : '#fee2e2') : isShort ? (isDark ? 'rgba(217,119,6,0.2)' : '#fef9c3') : 'transparent',
-                borderRadius: isClosed || isShort ? '3px' : undefined,
-              }}
-            >{d}</div>
-          );
-        })}
-      </div>
-      {/* Bottom info bar */}
-      <div className="mt-auto pt-1">
-        <div className={`${subSize} leading-tight`} style={{ color: textSub }}>
-          <span className="inline-block w-1.5 h-1.5 rounded-full mr-0.5 align-middle" style={{ background: '#ef4444' }} />휴진
-          <span className="inline-block w-1.5 h-1.5 rounded-full mx-0.5 align-middle ml-1.5" style={{ background: '#d97706' }} />단축
+  // ── Family 1: autumn — 풀캘린더 보드 (화면 70%가 격자) ──
+  if (themeValue === 'autumn') {
+    const days = ['일','월','화','수','목','금','토'];
+    return (
+      <div className="w-full h-full flex flex-col" style={{ background: 'white' }}>
+        {/* 극도로 얇은 헤더 */}
+        <div className="flex items-center justify-between px-2" style={{ height: s ? '28px' : '14px', background: `linear-gradient(90deg, ${c}, ${c}cc)` }}>
+          <span className={`${s ? 'text-[11px]' : 'text-[5.5px]'} font-extrabold text-white`}>3월 진료안내</span>
+          <span className={`${s ? 'text-[9px]' : 'text-[4px]'} text-white/60`}>OO병원</span>
+        </div>
+        {/* 격자가 면적 대부분 차지 */}
+        <div className="flex-1 flex flex-col px-1 pt-0.5">
+          <div className="grid grid-cols-7 gap-0">
+            {days.map((d, i) => (
+              <div key={d} className={`text-center ${s ? 'text-[9px] py-0.5' : 'text-[4px]'} font-bold`} style={{ color: i === 0 ? '#ef4444' : i === 6 ? '#3b82f6' : '#9ca3af' }}>{d}</div>
+            ))}
+          </div>
+          <div className="grid grid-cols-7 flex-1">
+            {[null,null,null,null,null,null,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,null,null,null,null,null].slice(0,35).map((d, i) => {
+              if (!d) return <div key={`e${i}`} />;
+              const isClosed = d === 9 || d === 23;
+              const isShort = d === 16;
+              const isSun = i % 7 === 0;
+              const isSat = i % 7 === 6;
+              return (
+                <div key={i} className={`flex items-center justify-center ${s ? 'text-[11px]' : 'text-[5.5px]'} font-bold`}
+                  style={{
+                    color: isClosed ? 'white' : isShort ? '#92400e' : isSun ? '#ef4444' : isSat ? '#3b82f6' : '#374151',
+                    background: isClosed ? '#ef4444' : isShort ? '#fef3c7' : 'transparent',
+                    borderRadius: isClosed ? '50%' : isShort ? '2px' : undefined,
+                  }}>{d}</div>
+              );
+            })}
+          </div>
+        </div>
+        {/* 최소한의 범례 */}
+        <div className="px-2 pb-1 flex gap-2">
+          <span className={`${s ? 'text-[8px]' : 'text-[4px]'} text-slate-400`}><span className="inline-block w-1.5 h-1.5 rounded-full bg-red-500 mr-0.5 align-middle" />휴진</span>
+          <span className={`${s ? 'text-[8px]' : 'text-[4px]'} text-slate-400`}><span className="inline-block w-1.5 h-1.5 rounded-sm bg-amber-200 mr-0.5 align-middle" />단축</span>
         </div>
       </div>
+    );
+  }
+
+  // ── Family 2: korean_traditional — 전통 기와 프레임 ──
+  if (themeValue === 'korean_traditional') {
+    const days = ['일','월','화','수','목','금','토'];
+    return (
+      <div className="w-full h-full flex flex-col" style={{ background: '#faf5ef' }}>
+        {/* 기와지붕 톱니 패턴 */}
+        <div className="w-full overflow-hidden" style={{ height: s ? '10px' : '5px' }}>
+          <svg viewBox="0 0 120 10" className="w-full h-full" preserveAspectRatio="none">
+            <path d="M0,10 Q5,0 10,10 Q15,0 20,10 Q25,0 30,10 Q35,0 40,10 Q45,0 50,10 Q55,0 60,10 Q65,0 70,10 Q75,0 80,10 Q85,0 90,10 Q95,0 100,10 Q105,0 110,10 Q115,0 120,10" fill="#78350f" />
+          </svg>
+        </div>
+        {/* 반원 해 안에 월 숫자 */}
+        <div className="flex flex-col items-center" style={{ padding: s ? '8px 0 4px' : '3px 0 2px' }}>
+          <div className="rounded-full flex items-center justify-center" style={{ width: s ? 48 : 22, height: s ? 24 : 11, background: '#e8795a' }}>
+            <span className={`${s ? 'text-sm' : 'text-[7px]'} font-black text-white`}>3월</span>
+          </div>
+          <span className={`${s ? 'text-[10px]' : 'text-[4.5px]'} font-bold mt-0.5`} style={{ color: '#5c3d2e' }}>진료일정 안내</span>
+        </div>
+        {/* 꽃살 브래킷 프레임 안 달력 */}
+        <div className="flex-1 mx-1.5 mb-1 rounded border flex flex-col px-1" style={{ borderColor: '#d4a57440', background: '#fffdf8' }}>
+          <div className="grid grid-cols-7 gap-0 mt-0.5">
+            {days.map((d, i) => (
+              <div key={d} className={`text-center ${s ? 'text-[8px]' : 'text-[3.5px]'} font-bold`} style={{ color: i === 0 ? '#c2410c' : i === 6 ? '#1e40af' : '#92400e' }}>{d}</div>
+            ))}
+          </div>
+          <div className="grid grid-cols-7 flex-1">
+            {[null,null,null,null,null,null,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,null,null,null,null,null].slice(0,35).map((d, i) => {
+              if (!d) return <div key={`e${i}`} />;
+              const isClosed = d === 9 || d === 23;
+              return (
+                <div key={i} className={`flex items-center justify-center ${s ? 'text-[10px]' : 'text-[4.5px]'} font-bold`}
+                  style={{ color: isClosed ? '#c2410c' : i % 7 === 0 ? '#c2410c' : '#5c3d2e', background: isClosed ? '#e8795a22' : 'transparent' }}>{d}</div>
+              );
+            })}
+          </div>
+        </div>
+        <div className={`text-center pb-1 ${s ? 'text-[8px]' : 'text-[4px]'}`} style={{ color: '#92400e88' }}>OO한의원</div>
+      </div>
+    );
+  }
+
+  // ── Family 3: winter — 휴진일 강조 카드 (달력 격자 없음) ──
+  if (themeValue === 'winter') {
+    return (
+      <div className="w-full h-full flex flex-col" style={{ background: 'linear-gradient(170deg, #e0f2fe 0%, #f0f9ff 100%)' }}>
+        <div className={`px-2.5 ${s ? 'pt-4' : 'pt-2'}`}>
+          <div className={`${s ? 'text-xs' : 'text-[5px]'} font-extrabold`} style={{ color: '#0369a1' }}>3월 휴진 안내</div>
+          <div className={`${s ? 'text-[10px]' : 'text-[4px]'} mt-0.5`} style={{ color: '#0369a180' }}>OO병원</div>
+        </div>
+        <div className={`flex-1 flex flex-col justify-center ${s ? 'gap-3 px-3' : 'gap-1.5 px-2.5'}`}>
+          {[{ day: '9', wd: '화', label: '정기휴진' }, { day: '23', wd: '화', label: '정기휴진' }].map((item, i) => (
+            <div key={i} className={`flex items-center ${s ? 'gap-3 p-3' : 'gap-1.5 p-1.5'} rounded-xl bg-white`} style={{ boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+              <div className={`${s ? 'w-10 h-10 text-lg' : 'w-5 h-5 text-[8px]'} rounded-lg bg-red-500 text-white font-black flex items-center justify-center`}>{item.day}</div>
+              <div>
+                <div className={`${s ? 'text-sm' : 'text-[6px]'} font-extrabold text-red-600`}>{item.day}일({item.wd}) {item.label}</div>
+                <div className={`${s ? 'text-[10px]' : 'text-[4px]'} text-slate-400 mt-0.5`}>종일 휴진</div>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className={`px-2.5 ${s ? 'pb-3' : 'pb-1.5'}`}>
+          <div className={`${s ? 'text-[10px] p-2' : 'text-[4.5px] p-1'} rounded-lg`} style={{ background: '#0369a110', color: '#0369a1' }}>
+            평일 09:00~18:00 · 토 09:00~13:00
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Family 4: cherry_blossom — 시즌 일러스트 프레임 달력 ──
+  if (themeValue === 'cherry_blossom') {
+    const days = ['일','월','화','수','목','금','토'];
+    return (
+      <div className="w-full h-full flex flex-col relative overflow-hidden" style={{ background: '#fdf2f8' }}>
+        {/* 코너 장식 */}
+        <div className="absolute top-0 left-0" style={{ width: s ? 28 : 14, height: s ? 28 : 14, background: 'radial-gradient(circle at top left, #f9a8d480 0%, transparent 70%)' }} />
+        <div className="absolute top-0 right-0" style={{ width: s ? 22 : 11, height: s ? 32 : 16, background: 'radial-gradient(circle at top right, #fbcfe880 0%, transparent 70%)' }} />
+        <div className="absolute bottom-0 left-0" style={{ width: s ? 20 : 10, height: s ? 20 : 10, background: 'radial-gradient(circle at bottom left, #f9a8d460 0%, transparent 70%)' }} />
+        <div className="absolute bottom-0 right-0" style={{ width: s ? 30 : 15, height: s ? 24 : 12, background: 'radial-gradient(circle at bottom right, #fbcfe860 0%, transparent 70%)' }} />
+        {/* 꽃잎 점 장식 */}
+        <div className={`absolute ${s ? 'top-2 left-3 w-2 h-2' : 'top-1 left-1.5 w-1 h-1'} rounded-full bg-pink-300/40`} />
+        <div className={`absolute ${s ? 'top-5 right-4 w-1.5 h-1.5' : 'top-2 right-2 w-0.5 h-0.5'} rounded-full bg-pink-200/50`} />
+        <div className={`absolute ${s ? 'bottom-4 left-5 w-1.5 h-1.5' : 'bottom-2 left-2.5 w-0.5 h-0.5'} rounded-full bg-rose-300/30`} />
+        {/* 헤더 */}
+        <div className={`text-center ${s ? 'pt-4 pb-1' : 'pt-2 pb-0.5'} relative z-10`}>
+          <div className={`${s ? 'text-[10px]' : 'text-[4.5px]'} text-pink-400`}>봄바람처럼 건강하세요</div>
+          <div className={`${s ? 'text-sm' : 'text-[7px]'} font-extrabold text-rose-700`}>3월 진료안내</div>
+        </div>
+        {/* 달력 중앙 축소 */}
+        <div className={`flex-1 ${s ? 'mx-3 mb-1 p-2' : 'mx-1.5 mb-0.5 p-1'} rounded-lg bg-white/80 relative z-10`}>
+          <div className="grid grid-cols-7 gap-0">
+            {days.map((d, i) => (
+              <div key={d} className={`text-center ${s ? 'text-[8px]' : 'text-[3.5px]'} font-bold`} style={{ color: i === 0 ? '#e11d48' : i === 6 ? '#3b82f6' : '#9ca3af' }}>{d}</div>
+            ))}
+          </div>
+          <div className="grid grid-cols-7 flex-1">
+            {[null,null,null,null,null,null,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,null,null,null,null,null].slice(0,35).map((d, i) => {
+              if (!d) return <div key={`e${i}`} />;
+              const isClosed = d === 9 || d === 23;
+              return (
+                <div key={i} className={`flex items-center justify-center ${s ? 'text-[9px]' : 'text-[4px]'} font-bold`}
+                  style={{ color: isClosed ? '#e11d48' : i % 7 === 0 ? '#e11d48' : '#6b7280', background: isClosed ? '#fce7f3' : 'transparent', borderRadius: isClosed ? '50%' : undefined }}>{d}</div>
+              );
+            })}
+          </div>
+        </div>
+        <div className={`text-center ${s ? 'pb-2 text-[8px]' : 'pb-1 text-[4px]'} text-pink-300 relative z-10`}>OO의원</div>
+      </div>
+    );
+  }
+
+  // ── Family 5: spring_kids — 주간 시간 바 (달력 없음) ──
+  if (themeValue === 'spring_kids') {
+    const schedule = [
+      { day: '월', start: 9, end: 18, closed: false },
+      { day: '화', start: 9, end: 18, closed: false },
+      { day: '수', start: 9, end: 18, closed: false },
+      { day: '목', start: 9, end: 18, closed: false },
+      { day: '금', start: 9, end: 18, closed: false },
+      { day: '토', start: 9, end: 13, closed: false },
+      { day: '일', start: 0, end: 0, closed: true },
+    ];
+    const barMax = 12; // 09:00~21:00 range = 12 hours
+    return (
+      <div className="w-full h-full flex flex-col" style={{ background: 'linear-gradient(170deg, #f0fdf4 0%, white 100%)' }}>
+        <div className={`${s ? 'px-3 pt-3 pb-1' : 'px-2 pt-1.5 pb-0.5'}`}>
+          <div className={`${s ? 'text-xs' : 'text-[5.5px]'} font-extrabold text-emerald-700`}>주간 진료시간</div>
+          <div className={`${s ? 'text-[10px]' : 'text-[4px]'} text-emerald-500 mt-0.5`}>OO의원</div>
+        </div>
+        <div className={`flex-1 flex flex-col justify-center ${s ? 'px-3 gap-1.5' : 'px-2 gap-[3px]'}`}>
+          {schedule.map((row, i) => (
+            <div key={i} className="flex items-center gap-1">
+              <span className={`${s ? 'text-[10px] w-5' : 'text-[4.5px] w-2.5'} font-bold text-right`} style={{ color: row.closed ? '#ef4444' : '#374151' }}>{row.day}</span>
+              <div className="flex-1 relative" style={{ height: s ? 10 : 5 }}>
+                <div className="absolute inset-0 rounded-sm" style={{ background: '#e2e8f0' }} />
+                {!row.closed && (
+                  <div className="absolute top-0 bottom-0 rounded-sm" style={{
+                    left: `${((row.start - 9) / barMax) * 100}%`,
+                    width: `${((row.end - row.start) / barMax) * 100}%`,
+                    background: row.day === '토' ? '#3b82f6' : '#22c55e',
+                  }} />
+                )}
+                {row.closed && (
+                  <div className={`absolute inset-0 flex items-center justify-center ${s ? 'text-[8px]' : 'text-[3.5px]'} font-bold text-red-500`}>휴진</div>
+                )}
+              </div>
+              {!row.closed && <span className={`${s ? 'text-[8px]' : 'text-[3.5px]'} text-slate-400`}>{row.start}~{row.end}</span>}
+            </div>
+          ))}
+        </div>
+        <div className={`${s ? 'px-3 pb-2 text-[9px]' : 'px-2 pb-1 text-[4px]'} text-emerald-400`}>점심 13:00~14:00</div>
+      </div>
+    );
+  }
+
+  // ── Family 6: medical_notebook — 스위스 미니멀 (거의 흑백, 대형 숫자) ──
+  if (themeValue === 'medical_notebook') {
+    return (
+      <div className="w-full h-full flex flex-col bg-white">
+        <div className={`${s ? 'px-5 pt-6' : 'px-2.5 pt-3'}`}>
+          <div className={`${s ? 'text-[9px]' : 'text-[4px]'} text-slate-400 tracking-[0.3em]`}>SCHEDULE</div>
+          <div className={`${s ? 'text-5xl' : 'text-[22px]'} font-black text-slate-800 leading-none`}>3</div>
+          <div className={`${s ? 'text-sm' : 'text-[6px]'} font-light text-slate-400 -mt-0.5`}>March 2026</div>
+        </div>
+        <div className={`${s ? 'w-10 h-[1px] mx-5 my-3' : 'w-5 h-[0.5px] mx-2.5 my-1.5'} bg-slate-200`} />
+        <div className={`flex-1 ${s ? 'px-5' : 'px-2.5'} flex flex-col justify-center`}>
+          <div className={`space-y-1 ${s ? 'text-[10px]' : 'text-[4.5px]'}`}>
+            <div className="flex justify-between text-slate-600"><span>평일</span><span className="font-medium">09:00 – 18:00</span></div>
+            <div className="flex justify-between text-slate-600"><span>토요일</span><span className="font-medium">09:00 – 13:00</span></div>
+            <div className="flex justify-between text-red-500"><span>일/공휴일</span><span className="font-medium">휴진</span></div>
+          </div>
+          <div className={`${s ? 'mt-3 text-[9px]' : 'mt-1.5 text-[4px]'} text-slate-400`}>점심시간 13:00 – 14:00</div>
+        </div>
+        <div className={`${s ? 'px-5 pb-4 text-[9px]' : 'px-2.5 pb-2 text-[4px]'} text-slate-300`}>OO병원</div>
+      </div>
+    );
+  }
+
+  // ── Family 7: autumn_spring_note — 야간진료 배너형 ──
+  if (themeValue === 'autumn_spring_note') {
+    return (
+      <div className="w-full h-full flex flex-col">
+        {/* 다크 배너 상단 40% */}
+        <div className="flex flex-col items-center justify-center" style={{ height: '40%', background: 'linear-gradient(135deg, #1e293b 0%, #334155 100%)' }}>
+          <div className={`${s ? 'text-lg' : 'text-[8px]'} mb-0.5`}>🌙</div>
+          <div className={`${s ? 'text-sm' : 'text-[7px]'} font-black text-white`}>야간진료 안내</div>
+          <div className={`${s ? 'text-[10px]' : 'text-[4.5px]'} text-amber-400 font-bold mt-0.5`}>매주 화·목 21시까지</div>
+        </div>
+        {/* 하단 시간표 60% */}
+        <div className="flex-1 flex flex-col justify-center px-2 bg-white" style={{ padding: s ? '12px' : '6px' }}>
+          <div className={`space-y-0.5 ${s ? 'text-[10px]' : 'text-[4.5px]'}`}>
+            {[
+              { day: '월·수·금', time: '09:00~18:00', night: false },
+              { day: '화·목', time: '09:00~21:00', night: true },
+              { day: '토요일', time: '09:00~13:00', night: false },
+              { day: '일/공휴일', time: '휴진', night: false },
+            ].map((r, i) => (
+              <div key={i} className="flex items-center justify-between" style={{ padding: s ? '3px 4px' : '1px 2px', background: r.night ? '#fef3c720' : 'transparent', borderRadius: '3px' }}>
+                <span className={`font-medium ${r.night ? 'text-amber-700' : 'text-slate-600'}`}>{r.day}</span>
+                <span className={`font-bold ${r.night ? 'text-amber-600' : r.time === '휴진' ? 'text-red-500' : 'text-slate-700'}`}>{r.time}</span>
+                {r.night && <span className={`${s ? 'text-[8px]' : 'text-[3.5px]'} text-amber-500 font-bold ml-1`}>야간</span>}
+              </div>
+            ))}
+          </div>
+          <div className={`${s ? 'mt-3 text-[9px]' : 'mt-1 text-[4px]'} text-slate-400`}>OO병원 · 02-000-0000</div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Family 8: autumn_holiday — SNS 타임테이블 (히어로 배너 + 표) ──
+  if (themeValue === 'autumn_holiday') {
+    return (
+      <div className="w-full h-full flex flex-col">
+        {/* 히어로 배너 상단 1/3 */}
+        <div className="flex flex-col items-center justify-center" style={{ height: '33%', background: `linear-gradient(135deg, ${c} 0%, ${c}dd 100%)` }}>
+          <div className={`${s ? 'text-[10px]' : 'text-[4.5px]'} text-white/60 tracking-wider`}>CLINIC HOURS</div>
+          <div className={`${s ? 'text-base' : 'text-[8px]'} font-black text-white`}>3월 진료시간</div>
+        </div>
+        {/* 하단 요일별 시간 표 */}
+        <div className="flex-1 flex flex-col bg-white">
+          {[
+            { day: '평일 (월~금)', time: '09:00 ~ 18:00' },
+            { day: '토요일', time: '09:00 ~ 13:00' },
+            { day: '점심시간', time: '13:00 ~ 14:00' },
+            { day: '일요일 / 공휴일', time: '휴진' },
+          ].map((row, i) => (
+            <div key={i} className={`flex items-center justify-between flex-1 px-2 ${s ? 'text-[10px]' : 'text-[4.5px]'}`}
+              style={{ background: i % 2 === 0 ? '#f8fafc' : 'white', borderBottom: '0.5px solid #f1f5f9' }}>
+              <span className="text-slate-600 font-medium">{row.day}</span>
+              <span className={`font-bold ${row.time === '휴진' ? 'text-red-500' : 'text-slate-800'}`}>{row.time}</span>
+            </div>
+          ))}
+          <div className={`text-center ${s ? 'py-1.5 text-[9px]' : 'py-0.5 text-[4px]'} text-slate-400`}>OO병원 · 02-000-0000</div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Family 9: hanok_roof — 프리미엄 세로 카드 (아이보리+골드, 세리프) ──
+  if (themeValue === 'hanok_roof') {
+    return (
+      <div className="w-full h-full flex flex-col items-center justify-center" style={{ background: 'linear-gradient(175deg, #faf7f2 0%, #f5ebe0 100%)' }}>
+        <div className={`${s ? 'text-[9px]' : 'text-[4px]'} tracking-[0.4em] mb-1`} style={{ color: '#c9a96e' }}>CLINIC HOURS</div>
+        <div className={`${s ? 'w-16 h-[1px]' : 'w-8 h-[0.5px]'}`} style={{ background: 'linear-gradient(90deg, transparent, #c9a96e, transparent)' }} />
+        <div className={`${s ? 'text-3xl mt-3 mb-1' : 'text-[16px] mt-1.5 mb-0.5'} font-black`} style={{ color: '#78583d', fontFamily: 'Georgia, serif' }}>3월</div>
+        <div className={`${s ? 'text-xs' : 'text-[5px]'} font-medium`} style={{ color: '#a3836a' }}>진료안내</div>
+        <div className={`${s ? 'w-16 h-[1px] my-3' : 'w-8 h-[0.5px] my-1.5'}`} style={{ background: 'linear-gradient(90deg, transparent, #c9a96e, transparent)' }} />
+        <div className={`text-center ${s ? 'text-[10px] space-y-1' : 'text-[4.5px] space-y-0.5'}`} style={{ color: '#78583d' }}>
+          <div>평일 10:00 ~ 19:00</div>
+          <div>토요일 10:00 ~ 15:00</div>
+          <div className="text-red-400">일·공휴일 휴진</div>
+        </div>
+        <div className={`${s ? 'w-16 h-[1px] my-3' : 'w-8 h-[0.5px] my-1.5'}`} style={{ background: 'linear-gradient(90deg, transparent, #c9a96e, transparent)' }} />
+        <div className={`${s ? 'text-[9px]' : 'text-[4px]'}`} style={{ color: '#a3836a88' }}>OO피부과</div>
+      </div>
+    );
+  }
+
+  // ── Family 10: dark_green_clinic — 다크 카드 대시보드 ──
+  if (themeValue === 'dark_green_clinic') {
+    return (
+      <div className="w-full h-full flex flex-col" style={{ background: 'linear-gradient(170deg, #1a2e28 0%, #2d5a4a 100%)' }}>
+        <div className={`${s ? 'px-3 pt-3' : 'px-2 pt-1.5'}`}>
+          <div className={`${s ? 'text-[10px]' : 'text-[4.5px]'} text-white/40 tracking-wider`}>MARCH 2026</div>
+          <div className={`${s ? 'text-sm' : 'text-[7px]'} font-extrabold text-white`}>3월 진료안내</div>
+        </div>
+        <div className={`flex-1 flex flex-col justify-center ${s ? 'px-3 gap-2' : 'px-2 gap-1'}`}>
+          {/* 진료시간 카드 */}
+          <div className={`${s ? 'p-2.5' : 'p-1.5'} rounded-lg`} style={{ background: 'rgba(255,255,255,0.08)' }}>
+            <div className={`${s ? 'text-[9px]' : 'text-[4px]'} text-emerald-400 font-bold mb-1`}>진료시간</div>
+            <div className={`${s ? 'text-[10px] space-y-0.5' : 'text-[4.5px] space-y-0'}`}>
+              <div className="flex justify-between text-white/70"><span>평일</span><span className="text-white font-medium">09~18</span></div>
+              <div className="flex justify-between text-white/70"><span>토요일</span><span className="text-white font-medium">09~13</span></div>
+            </div>
+          </div>
+          {/* 휴진일 카드 */}
+          <div className={`${s ? 'p-2.5' : 'p-1.5'} rounded-lg`} style={{ background: 'rgba(239,68,68,0.15)' }}>
+            <div className={`${s ? 'text-[9px]' : 'text-[4px]'} text-red-400 font-bold mb-0.5`}>휴진일</div>
+            <div className={`${s ? 'text-[10px]' : 'text-[4.5px]'} text-white/80`}>9일(화), 23일(화)</div>
+          </div>
+          {/* 연락처 카드 */}
+          <div className={`${s ? 'p-2' : 'p-1'} rounded-lg flex items-center justify-between`} style={{ background: 'rgba(255,255,255,0.05)' }}>
+            <span className={`${s ? 'text-[9px]' : 'text-[4px]'} text-white/50`}>OO병원</span>
+            <span className={`${s ? 'text-[9px]' : 'text-[4px]'} text-emerald-400`}>02-000-0000</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Family 11: dark_blue_modern — 좌우 분할 스플릿 ──
+  if (themeValue === 'dark_blue_modern') {
+    return (
+      <div className="w-full h-full flex">
+        {/* 좌측 컬러 패널 */}
+        <div className="flex flex-col items-center justify-center" style={{ width: '35%', background: 'linear-gradient(180deg, #1e3a5f 0%, #1e293b 100%)' }}>
+          <div className={`${s ? 'text-3xl' : 'text-[16px]'} font-black text-white leading-none`}>3</div>
+          <div className={`${s ? 'text-[10px]' : 'text-[4.5px]'} text-white/50 font-medium`}>월</div>
+          <div className={`${s ? 'w-6 h-[1px] my-2' : 'w-3 h-[0.5px] my-1'} bg-white/20`} />
+          <div className={`${s ? 'text-[8px]' : 'text-[3.5px]'} text-white/40 text-center leading-relaxed`}>진료<br />안내</div>
+        </div>
+        {/* 우측 정보 */}
+        <div className="flex-1 flex flex-col justify-center bg-white" style={{ padding: s ? '12px' : '6px' }}>
+          <div className={`${s ? 'text-[10px]' : 'text-[4.5px]'} font-extrabold text-slate-800 mb-2`}>진료시간</div>
+          <div className={`space-y-0.5 ${s ? 'text-[10px]' : 'text-[4.5px]'}`}>
+            {[
+              { l: '평일', v: '09:00~18:00', c: '#374151' },
+              { l: '토요일', v: '09:00~13:00', c: '#374151' },
+              { l: '일/공휴일', v: '휴진', c: '#ef4444' },
+              { l: '점심', v: '13:00~14:00', c: '#9ca3af' },
+            ].map((r, i) => (
+              <div key={i} className="flex items-center gap-1">
+                <span className={`${s ? 'w-14' : 'w-7'} text-slate-500`}>{r.l}</span>
+                <span className="font-bold" style={{ color: r.c }}>{r.v}</span>
+              </div>
+            ))}
+          </div>
+          <div className={`${s ? 'mt-3' : 'mt-1.5'}`}>
+            <div className={`${s ? 'text-[9px]' : 'text-[4px]'} font-bold text-red-500`}>휴진: 9일, 23일</div>
+          </div>
+          <div className={`${s ? 'mt-2 text-[8px]' : 'mt-1 text-[3.5px]'} text-slate-300`}>OO병원</div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Family 12: lavender_sparkle — 의료 안내 카드형 (절제된 의료기관 톤) ──
+  if (themeValue === 'lavender_sparkle') {
+    return (
+      <div className="w-full h-full flex flex-col" style={{ background: 'linear-gradient(170deg, #f5f3ff 0%, #ede9fe 100%)' }}>
+        <div className={`${s ? 'px-3 pt-3' : 'px-2 pt-1.5'}`}>
+          <div className={`${s ? 'text-[10px]' : 'text-[4.5px]'} font-extrabold`} style={{ color: '#7c3aed' }}>3월 진료 안내</div>
+          <div className={`${s ? 'text-[9px]' : 'text-[4px]'} mt-0.5`} style={{ color: '#7c3aed80' }}>OO의원 안내드립니다</div>
+        </div>
+        <div className={`flex-1 flex flex-col justify-center ${s ? 'px-3 gap-2' : 'px-2 gap-1'}`}>
+          {/* 안내 블록 1 */}
+          <div className={`bg-white ${s ? 'rounded-xl p-3' : 'rounded-lg p-1.5'}`} style={{ boxShadow: '0 1px 4px rgba(124,58,237,0.08)' }}>
+            <div className={`${s ? 'text-[9px]' : 'text-[4px]'} font-bold mb-1`} style={{ color: '#6d28d9' }}>진료시간 안내</div>
+            <div className={`${s ? 'text-[10px] space-y-0.5' : 'text-[4.5px] space-y-0'}`}>
+              <div className="flex justify-between" style={{ color: '#4c1d95' }}><span>평일</span><span className="font-medium">09:00 ~ 18:00</span></div>
+              <div className="flex justify-between" style={{ color: '#4c1d95' }}><span>토요일</span><span className="font-medium">09:00 ~ 13:00</span></div>
+              <div className="flex justify-between text-red-400"><span>일·공휴일</span><span className="font-medium">휴진</span></div>
+            </div>
+          </div>
+          {/* 안내 블록 2 */}
+          <div className={`bg-white ${s ? 'rounded-xl p-2.5' : 'rounded-lg p-1.5'}`} style={{ boxShadow: '0 1px 4px rgba(124,58,237,0.06)' }}>
+            <div className={`${s ? 'text-[9px]' : 'text-[4px]'} font-bold mb-0.5`} style={{ color: '#ef4444' }}>3월 휴진일</div>
+            <div className={`${s ? 'text-[10px]' : 'text-[4.5px]'}`} style={{ color: '#4c1d95' }}>9일(화), 23일(화) 정기휴진</div>
+          </div>
+        </div>
+        <div className={`${s ? 'px-3 pb-2 text-[9px]' : 'px-2 pb-1 text-[4px]'}`} style={{ color: '#7c3aed60' }}>
+          궁금하신 점은 02-000-0000으로 문의해 주세요
+        </div>
+      </div>
+    );
+  }
+
+  // Fallback (should not reach)
+  return (
+    <div className="w-full h-full flex items-center justify-center bg-slate-50">
+      <span className="text-[10px] text-slate-400">{themeValue}</span>
     </div>
   );
 }
@@ -1863,43 +2211,54 @@ export default function TemplateGenerator({ onSwitchToFree }: { onSwitchToFree?:
               : '🎨 분위기만 참고 — AI가 색상·배치·장식을 자유롭게 재해석'}
           </p>
           {category === 'schedule' ? (
-            /* 진료 일정: 달력 테마 — 3열 그리드, 스크롤 가능 */
-            <div className="grid grid-cols-3 gap-3 max-h-[480px] overflow-y-auto pr-1">
-              {CALENDAR_THEME_OPTIONS.map(t => {
-                const isSelected = calendarTheme === t.value;
-
+            /* 진료 일정: 달력형 / 안내형 그룹 헤더 + 3열 그리드 */
+            <div className="space-y-4 max-h-[520px] overflow-y-auto pr-1">
+              {SCHEDULE_GROUPS.map(group => {
+                const groupThemes = CALENDAR_THEME_OPTIONS.filter(t => group.values.includes(t.value));
+                if (groupThemes.length === 0) return null;
                 return (
-                  <button
-                    key={t.value}
-                    type="button"
-                    onClick={() => setCalendarTheme(t.value)}
-                    onDoubleClick={(e) => { e.preventDefault(); setEnlargedCalendarTheme(t.value); }}
-                    className={`group relative rounded-2xl overflow-hidden transition-all duration-200
-                      ${isSelected
-                        ? 'shadow-xl ring-2 ring-offset-2'
-                        : 'shadow-sm hover:shadow-md border border-slate-200/80'
-                      }`}
-                    style={isSelected ? { '--tw-ring-color': t.groupColor } as React.CSSProperties : undefined}
-                  >
-                    <div className="relative" style={{ aspectRatio: '3/4' }}>
-                      <CalendarThemePreview themeValue={t.value} groupColor={t.groupColor} />
-                      {/* 시각 군 태그 — 좌상단 */}
-                      <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-md text-[9px] font-bold shadow-sm" style={{ backgroundColor: t.groupColor, color: 'white' }}>
-                        {t.group}
-                      </div>
-                      {/* 선택 체크 뱃지 */}
-                      {isSelected && (
-                        <div className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full flex items-center justify-center shadow-lg" style={{ backgroundColor: t.groupColor }}>
-                          <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                        </div>
-                      )}
+                  <div key={group.label}>
+                    {/* 그룹 섹션 헤더 */}
+                    <div className="flex items-center gap-2 mb-2 px-1">
+                      <span className="text-sm font-bold text-slate-700">{group.label}</span>
+                      <span className="text-[10px] text-slate-400">{group.desc}</span>
+                      <span className="text-[10px] text-slate-300 ml-auto">{groupThemes.length}종</span>
                     </div>
-                    {/* 카드 외부 name/desc — 가독성 강화 */}
-                    <div className="px-1.5 py-1.5 bg-white">
-                      <div className="font-bold text-[11px] text-slate-800 leading-tight truncate">{t.label.replace(/^[^\s]+\s/, '')}</div>
-                      <div className="text-[9px] text-slate-500 mt-0.5 leading-tight truncate">{t.desc}</div>
+                    <div className="grid grid-cols-3 gap-3">
+                      {groupThemes.map(t => {
+                        const isSelected = calendarTheme === t.value;
+                        return (
+                          <button
+                            key={t.value}
+                            type="button"
+                            onClick={() => setCalendarTheme(t.value)}
+                            onDoubleClick={(e) => { e.preventDefault(); setEnlargedCalendarTheme(t.value); }}
+                            className={`group relative rounded-2xl overflow-hidden transition-all duration-200
+                              ${isSelected
+                                ? 'shadow-xl ring-2 ring-offset-2'
+                                : 'shadow-sm hover:shadow-md border border-slate-200/80'
+                              }`}
+                            style={isSelected ? { '--tw-ring-color': t.groupColor } as React.CSSProperties : undefined}
+                          >
+                            <div className="relative" style={{ aspectRatio: '3/4' }}>
+                              <CalendarThemePreview themeValue={t.value} groupColor={t.groupColor} />
+                              {/* 선택 체크 뱃지 */}
+                              {isSelected && (
+                                <div className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full flex items-center justify-center shadow-lg" style={{ backgroundColor: t.groupColor }}>
+                                  <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                                </div>
+                              )}
+                            </div>
+                            {/* 카드 외부 name/desc */}
+                            <div className="px-1.5 py-1.5 bg-white">
+                              <div className="font-bold text-[11px] text-slate-800 leading-tight truncate">{t.label.replace(/^[^\s]+\s/, '')}</div>
+                              <div className="text-[9px] text-slate-500 mt-0.5 leading-tight truncate">{t.desc}</div>
+                            </div>
+                          </button>
+                        );
+                      })}
                     </div>
-                  </button>
+                  </div>
                 );
               })}
             </div>
