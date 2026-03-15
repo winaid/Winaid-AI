@@ -87,6 +87,25 @@ export const TEMPLATE_LIST: (TemplateInfo & {
       ],
     },
   },
+  {
+    id: 'autumn-note',
+    name: '다크 브라운',
+    description: '브라운 톤, 노트 프레임, 실무형 휴진안내 (정형외과·내과)',
+    tags: ['프로페셔널', '다크', '브라운', '휴진안내'],
+    previewBg: '#D4A574',
+    Component: T7AutumnSpringNote,
+    sample: {
+      clinicName: '윈에이드 치과',
+      monthLabel: '10월', year: 2025, month: 10,
+      title: '10월 휴진 안내',
+      subtitle: '진료 예약 및 내원에 참고 부탁 드립니다.',
+      events: [
+        { date: 5, label: '추석연휴', type: 'closed' },
+        { date: 6, label: '추석연휴', type: 'closed' },
+        { date: 7, label: '추석연휴', type: 'closed' },
+      ],
+    },
+  },
   // ─── ② 시즌/이벤트: 봄·가을·겨울 시즌 한정 안내 ───
   {
     id: 'cherry',
@@ -140,25 +159,6 @@ export const TEMPLATE_LIST: (TemplateInfo & {
         { date: 3, label: '개천절', type: 'closed' },
         { date: 9, label: '한글날', type: 'closed' },
         { date: 4, label: '정상 진료', type: 'normal', color: '#C62828' },
-      ],
-    },
-  },
-  {
-    id: 'autumn-note',
-    name: '가을 노트',
-    description: '브라운 톤, 스프링 바인딩, 추석 연휴안내',
-    tags: ['시즌', '가을', '노트', '연휴안내'],
-    previewBg: '#D4A574',
-    Component: T7AutumnSpringNote,
-    sample: {
-      clinicName: '윈에이드 치과',
-      monthLabel: '10월', year: 2025, month: 10,
-      title: '10월 휴진 안내',
-      subtitle: '진료 예약 및 내원에 참고 부탁 드립니다.',
-      events: [
-        { date: 5, label: '추석연휴', type: 'closed' },
-        { date: 6, label: '추석연휴', type: 'closed' },
-        { date: 7, label: '추석연휴', type: 'closed' },
       ],
     },
   },
@@ -239,7 +239,7 @@ export const TEMPLATE_LIST: (TemplateInfo & {
   },
   {
     id: 'spring',
-    name: '봄 동산',
+    name: '봄 파스텔',
     description: '파스텔 자연 풍경, 소아과/소아치과 안내 (70-25-5 색비율)',
     tags: ['캐주얼', '소아과', '파스텔', '봄'],
     previewBg: '#F0F8FC',

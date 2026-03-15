@@ -59,17 +59,8 @@ export default function T11DarkBlueModern({ data, width = 600, colors, mode = 'f
   const svgH = safeNum(noticeY + noticeH + 70, 600);
   const scale = safeNum(width / 600, 1);
 
-  const eventDates = new Set(data.events.map(e => e.date));
-
   function getEvent(date: number) {
     return data.events.find(e => e.date === date);
-  }
-
-  /** Check if a column (day-of-week index) has any event in visible weeks */
-  function columnHasEvent(di: number): boolean {
-    return weeks.some(week =>
-      week[di] && week[di].isCurrentMonth && eventDates.has(week[di].day)
-    );
   }
 
   const DAY_LABELS = ['일', '월', '화', '수', '목', '금', '토'];
@@ -125,21 +116,15 @@ export default function T11DarkBlueModern({ data, width = 600, colors, mode = 'f
         stroke="#3A5E8C" strokeWidth="1" opacity="0.6" />
 
       {/* ── Calendar grid ── */}
-      {/* Column background fills */}
-      {DAY_LABELS.map((_, di) => {
-        const cx = safeNum(PAD_X + di * COL_W);
-        const colBg = columnHasEvent(di) ? '#1A2F55' : (di % 2 === 0 ? '#FFFFFF' : '#F0F5FF');
-        const isEventCol = columnHasEvent(di);
-        return (
-          <rect key={di} x={cx} y={GRID_Y} width={COL_W} height={calH}
-            fill={isEventCol ? '#1A2F55' : colBg}
-            opacity={isEventCol ? 1 : 1} />
-        );
-      })}
+      {/* Calendar body background — uniform white */}
+      <rect x={PAD_X} y={GRID_Y} width={GRID_W} height={calH}
+        rx="6" fill="white" />
 
       {/* Header row background */}
       <rect x={PAD_X} y={GRID_Y} width={GRID_W} height={HEADER_H}
-        fill="#1E3A68" />
+        rx="6" fill="#1E3A68" />
+      <rect x={PAD_X} y={safeNum(GRID_Y + HEADER_H / 2)} width={GRID_W}
+        height={safeNum(HEADER_H / 2)} fill="#1E3A68" />
 
       {/* Header day labels */}
       {DAY_LABELS.map((day, i) => (
@@ -178,7 +163,7 @@ export default function T11DarkBlueModern({ data, width = 600, colors, mode = 'f
               <line key={di}
                 x1={safeNum(PAD_X + di * COL_W)} y1={rowY}
                 x2={safeNum(PAD_X + di * COL_W)} y2={safeNum(rowY + ROW_H)}
-                stroke="#D8DFE8" strokeWidth="0.5" />
+                stroke="#E8EDF5" strokeWidth="0.5" />
             ))}
 
             {/* Cells */}
@@ -189,44 +174,41 @@ export default function T11DarkBlueModern({ data, width = 600, colors, mode = 'f
               const current = cell.isCurrentMonth;
               const hasEvent = !!event && current;
               const dimmed = isHighlight && current && !hasEvent;
-              const isEventCol = columnHasEvent(di);
 
-              // Cell background for non-event columns in body
-              if (!isEventCol) {
-                // already drawn by column background rects
-              }
-
-              let numColor = isEventCol
-                ? '#CCDAEE'
-                : (di === 0 ? '#E05555' : di === 6 ? '#4A8AD4' : '#2C3E50');
-              if (!current) numColor = isEventCol ? '#3A5577' : '#B0B8C4';
+              let numColor = di === 0 ? '#E05555' : di === 6 ? '#4A8AD4' : '#2C3E50';
+              if (!current) numColor = '#B0B8C4';
 
               return (
                 <g key={di} opacity={dimmed ? 0.25 : 1}>
-                  {/* Event cell highlight */}
+                  {/* Highlight glow */}
+                  {isHighlight && hasEvent && (
+                    <circle cx={cellCx} cy={safeNum(rowY + 26)} r={28}
+                      fill={event!.color ?? '#1E3A68'} opacity={0.12} />
+                  )}
+                  {/* Event cell badge */}
                   {hasEvent && (
-                    <rect x={cellX + 1} y={safeNum(rowY + 1)}
-                      width={safeNum(COL_W - 2)} height={safeNum(ROW_H - 2)}
-                      fill={event!.type === 'closed' ? '#0F2240' : '#182E52'}
-                      opacity="0.5" rx="2" />
+                    <circle cx={cellCx} cy={safeNum(rowY + 26)} r={22}
+                      fill={event!.type === 'closed' ? '#1E3A68' : 'none'}
+                      stroke={event!.type === 'closed' ? 'none' : '#1E3A68'}
+                      strokeWidth="1.8" />
                   )}
 
                   {/* Date number */}
-                  <text x={cellCx} y={safeNum(rowY + 26)}
+                  <text x={cellCx} y={safeNum(rowY + 32)}
                     textAnchor="middle" fontSize="16"
                     fontWeight={hasEvent ? '800' : '500'}
-                    fill={numColor}
+                    fill={hasEvent && event!.type === 'closed' ? 'white' : numColor}
                   >
                     {cell.day}
                   </text>
 
                   {/* Event label */}
                   {hasEvent && (
-                    <text x={cellCx} y={safeNum(rowY + 48)}
+                    <text x={cellCx} y={safeNum(rowY + 52)}
                       textAnchor="middle"
                       fontSize={isHighlight ? '12' : '11'}
                       fontWeight="700"
-                      fill={event!.color ?? (event!.type === 'closed' ? '#FF6B6B' : '#7AB8FF')}
+                      fill={event!.color ?? (event!.type === 'closed' ? '#E05555' : '#1E3A68')}
                     >
                       {event!.label}
                     </text>
