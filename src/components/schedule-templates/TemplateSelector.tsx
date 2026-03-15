@@ -16,25 +16,25 @@ import T12LavenderSparkle from './templates/T12LavenderSparkle';
 /**
  * 진료일정 템플릿 목록
  *
- * 용도 정의: 월간 진료안내 / 휴진안내 / 시즌 공지용 카드
- * (일상적 진료시간 안내와 다름 — 이건 요일별 테이블이 표준)
+ * 용도: 월간 진료안내 / 휴진안내 / 시즌 공지용 카드
  *
- * 그룹 분류 기준: 실제 카드 무드
- * ① 프로페셔널 — 병원 공식 느낌, 절제된 톤
- * ② 시즌/이벤트 — 봄·가을·겨울 시즌 한정 안내
- * ③ 전통/문화 — 한의원·명절 안내
- * ④ 캐주얼/친근 — 소아과·동네의원 친근한 안내
+ * 분류 기준: "사용자가 왜 이 템플릿을 고르는가" (선택 이유)
+ * ① 프로페셔널 — 공식적·격식 있는 안내
+ * ② 브랜딩/고급 — 클리닉 이미지·고급감 강조
+ * ③ 시즌 — 계절·명절 한정 안내
+ * ④ 전통 — 한의원·한방병원 전용
+ * ⑤ 캐주얼 — 소아과·동네의원 친근한 안내
  */
 export const TEMPLATE_LIST: (TemplateInfo & {
   Component: React.ComponentType<{ data: ScheduleData; width?: number; mode?: CalendarViewMode }>;
   sample: ScheduleData;
 })[] = [
-  // ─── ① 프로페셔널: 병원 공식 휴진/진료안내 ───
+  // ─── ① 프로페셔널: 공식적·격식 있는 안내 ───
   {
     id: 'dark-green',
     name: '클리닉 그린',
     description: '의료 그린 톤, 미니멀 진료안내 (치과·일반의원)',
-    tags: ['프로페셔널', '그린', '클리닉', '휴진안내'],
+    tags: ['프로페셔널', '그린', '클리닉'],
     previewBg: '#2C4A4A',
     Component: T10DarkGreenClinic,
     sample: {
@@ -52,8 +52,8 @@ export const TEMPLATE_LIST: (TemplateInfo & {
   {
     id: 'dark-blue',
     name: '모던 네이비',
-    description: '네이비 배경, 프리미엄 진료안내 (정형외과·전문의원)',
-    tags: ['프로페셔널', '다크', '네이비', '휴진안내'],
+    description: '네이비 배경 + 화이트 달력, 프리미엄 공식안내',
+    tags: ['프로페셔널', '네이비', '프리미엄'],
     previewBg: '#0D1B3E',
     Component: T11DarkBlueModern,
     sample: {
@@ -69,29 +69,10 @@ export const TEMPLATE_LIST: (TemplateInfo & {
     },
   },
   {
-    id: 'neutral-clean',
-    name: '뉴트럴 클린',
-    description: '베이지·그레이 모노크롬, 미니멀 진료안내 (피부과·여성의원)',
-    tags: ['프로페셔널', '뉴트럴', '미니멀', '휴진안내'],
-    previewBg: '#F5F0E8',
-    Component: T12LavenderSparkle,
-    sample: {
-      clinicName: '윈에이드 피부과',
-      monthLabel: '10월', year: 2025, month: 10,
-      title: '10월 진료안내',
-      notices: ['참고하여 내원에 차질이 없으시길 바랍니다.'],
-      events: [
-        { date: 1, label: '정상 진료', type: 'normal', color: '#8A7E72' },
-        { date: 3, label: '개천절 휴진', type: 'closed' },
-        { date: 9, label: '한글날 휴진', type: 'closed' },
-      ],
-    },
-  },
-  {
     id: 'autumn-note',
     name: '다크 브라운',
-    description: '브라운 톤, 노트 프레임, 실무형 휴진안내 (정형외과·내과)',
-    tags: ['프로페셔널', '다크', '브라운', '휴진안내'],
+    description: '웜 브라운 + 노트 프레임, 실무형 휴진안내',
+    tags: ['프로페셔널', '다크', '브라운'],
     previewBg: '#D4A574',
     Component: T7AutumnSpringNote,
     sample: {
@@ -106,13 +87,49 @@ export const TEMPLATE_LIST: (TemplateInfo & {
       ],
     },
   },
-  // ─── ② 시즌/이벤트: 봄·가을·겨울 시즌 한정 안내 ───
   {
-    id: 'cherry',
-    name: '벚꽃 봄',
-    description: '핑크 벚꽃 톤, 봄 시즌 진료안내 (3~4월)',
-    tags: ['시즌', '봄', '벚꽃', '핑크'],
-    previewBg: '#FCE4EC',
+    id: 'minimal-doc',
+    name: '미니멀 문서',
+    description: '정보 중심 문서 레이아웃, 장식 없는 블루 모노톤',
+    tags: ['프로페셔널', '미니멀', '문서형'],
+    previewBg: '#FFFFFF',
+    Component: T5Notebook,
+    sample: {
+      clinicName: '윈에이드 치과',
+      monthLabel: '7월', year: 2025, month: 7,
+      title: '7월 진료안내',
+      events: [
+        { date: 5, label: '정기 휴진', type: 'closed' },
+        { date: 6, label: '정기 휴진', type: 'closed' },
+        { date: 12, label: '정기 휴진', type: 'closed' },
+      ],
+    },
+  },
+  {
+    id: 'autumn-official',
+    name: '가을 공문',
+    description: '이중선 테두리, 공식 안내문 포맷 (가을 톤)',
+    tags: ['프로페셔널', '공문형', '가을'],
+    previewBg: '#FBF7F0',
+    Component: T3Autumn,
+    sample: {
+      clinicName: '윈에이드 치과',
+      monthLabel: '11월', year: 2025, month: 11,
+      title: '11월 진료안내',
+      subtitle: '진료일정을 확인하시어 내원 및 예약에 착오 없으시길 바랍니다.',
+      events: [
+        { date: 6, label: '정기휴진', type: 'closed' },
+        { date: 13, label: '정기휴진', type: 'closed' },
+      ],
+    },
+  },
+  // ─── ② 브랜딩/고급: 클리닉 이미지·고급감 강조 ───
+  {
+    id: 'soft-branding',
+    name: '소프트 브랜딩',
+    description: '로고·클리닉명 강조, 핑크 톤 브랜드 카드',
+    tags: ['브랜딩', '핑크', '로고강조'],
+    previewBg: '#FDE8EF',
     Component: T2CherryBlossom,
     sample: {
       clinicName: '윈에이드 치과',
@@ -126,23 +143,25 @@ export const TEMPLATE_LIST: (TemplateInfo & {
     },
   },
   {
-    id: 'autumn',
-    name: '가을 단풍',
-    description: '단풍잎 장식, 가을 시즌 진료안내 (9~11월)',
-    tags: ['시즌', '가을', '단풍', '따뜻한'],
-    previewBg: '#FFE0B2',
-    Component: T3Autumn,
+    id: 'premium-soft',
+    name: '프리미엄 소프트',
+    description: '아이보리·골드 악센트, 고급 클리닉 안내 (피부과·여성의원)',
+    tags: ['고급', '골드', '아이보리', '피부과'],
+    previewBg: '#FAF8F3',
+    Component: T12LavenderSparkle,
     sample: {
-      clinicName: '윈에이드 치과',
-      monthLabel: '11월', year: 2025, month: 11,
-      title: '11월 진료안내',
-      subtitle: '진료일정을 확인하시어 내원 및 예약에 착오 없으시길 바랍니다.',
+      clinicName: '윈에이드 피부과',
+      monthLabel: '10월', year: 2025, month: 10,
+      title: '10월 진료안내',
+      notices: ['참고하여 내원에 차질이 없으시길 바랍니다.'],
       events: [
-        { date: 6, label: '정기휴진', type: 'closed' },
-        { date: 13, label: '정기휴진', type: 'closed' },
+        { date: 1, label: '정상 진료', type: 'normal', color: '#C4A872' },
+        { date: 3, label: '개천절 휴진', type: 'closed' },
+        { date: 9, label: '한글날 휴진', type: 'closed' },
       ],
     },
   },
+  // ─── ③ 시즌: 계절·명절 한정 안내 ───
   {
     id: 'autumn-holiday',
     name: '가을 휴진안내',
@@ -180,12 +199,12 @@ export const TEMPLATE_LIST: (TemplateInfo & {
       ],
     },
   },
-  // ─── ③ 전통/문화: 한의원·명절 안내 ───
+  // ─── ④ 전통: 한의원·한방병원 ───
   {
     id: 'traditional',
-    name: '한국 전통',
-    description: '산수화·학·오방색, 한의원/명절 안내 (설·추석)',
-    tags: ['전통', '한의원', '명절', '오방색'],
+    name: '전통 문서',
+    description: '이중 테두리·기하 문양, 문서형 전통 안내 (한의원 공식)',
+    tags: ['전통', '한의원', '오방색', '문서형'],
     previewBg: '#F5EDD5',
     Component: T4KoreanTraditional,
     sample: {
@@ -202,9 +221,9 @@ export const TEMPLATE_LIST: (TemplateInfo & {
   },
   {
     id: 'hanok',
-    name: '한옥 기와',
-    description: '한옥 기와지붕·코랄 톤, 한의원/한방병원 안내',
-    tags: ['전통', '한옥', '한의원', '기와'],
+    name: '한옥 프레임',
+    description: '한옥 기와지붕·코랄 프레임, 한의원/한방병원 감성안내',
+    tags: ['전통', '한옥', '프레임형', '코랄'],
     previewBg: '#F0E6D3',
     Component: T9HanokRoof,
     sample: {
@@ -218,25 +237,7 @@ export const TEMPLATE_LIST: (TemplateInfo & {
       ],
     },
   },
-  // ─── ④ 캐주얼/친근: 소아과·동네의원 ───
-  {
-    id: 'notebook',
-    name: '노트북',
-    description: '블루 노트 프레임, 의사 캐릭터 (치과·소아치과)',
-    tags: ['캐주얼', '의사캐릭터', '블루', '치과'],
-    previewBg: '#E3F2FD',
-    Component: T5Notebook,
-    sample: {
-      clinicName: '윈에이드 치과',
-      monthLabel: '7월', year: 2025, month: 7,
-      title: '7월 진료안내',
-      events: [
-        { date: 5, label: '정기 휴진', type: 'closed' },
-        { date: 6, label: '정기 휴진', type: 'closed' },
-        { date: 12, label: '정기 휴진', type: 'closed' },
-      ],
-    },
-  },
+  // ─── ⑤ 캐주얼: 소아과·동네의원 친근한 안내 ───
   {
     id: 'spring',
     name: '봄 파스텔',

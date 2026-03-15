@@ -4,26 +4,29 @@ import { DEFAULT_COLORS } from '../types';
 import { buildCalendarWeeks, getEventWeeks, safeNum, safeTranslate } from '../calendarEngine';
 
 const FONT = "Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif";
-const COL_W = 540 / 7;  // card inner width
+const COL_W = 540 / 7;
 const CARD_X = 30;
+const CARD_W = 540;
 const HEADER_H = 46;
 const ROW_H_FULL = 74;
 const ROW_H_WEEKLY = 105;
 
 /**
- * 이벤트 타입 → 컬러 매핑
- * 오방색(五方色) 절제 포인트 반영 (한국민속대백과사전 근거):
- * - 赤(남/화): 휴진 → #8B1A2A (절제된 적색)
- * - 黑(북/수): 야간 → #2C3E50 (절제된 현색)
- * - 靑(동/목): 정상 → #1B5E4B (절제된 청록)
- * - 黃(중앙/토): 세미나 → #8B7D3C (절제된 황색)
- * 과하게 쓰지 않고 이벤트 뱃지에서만 포인트로 사용
+ * T4 — 전통 문서 (Traditional Document)
+ *
+ * 성격: 문서형 전통 — 한의원/명절 공식 안내, 격식 있는 전통 느낌
+ * 차별점: 이중 테두리 프레임, 전통 기하 문양, 오방색 이벤트
+ *        T9 한옥 기와(프레임형)와 구분: 장식적 프레임 아닌 "문서 격식"
+ * 대상: "전통적이면서 공식적인 안내"가 필요한 한의원
+ *
+ * 오방색(五方色) 매핑:
+ * - 赤(남/화): 휴진, 黑(북/수): 야간, 靑(동/목): 정상, 黃(중앙/토): 세미나
  */
 const TYPE_COLORS: Record<string, { bg: string; text: string }> = {
-  closed:  { bg: '#8B1A2A', text: 'white' },   // 赤 — 절제된 적색
-  night:   { bg: '#2C3E50', text: 'white' },   // 黑 — 절제된 현색
-  normal:  { bg: '#1B5E4B', text: 'white' },   // 靑 — 절제된 청록
-  seminar: { bg: '#8B7D3C', text: 'white' },   // 黃 — 절제된 황색
+  closed:  { bg: '#8B1A2A', text: 'white' },
+  night:   { bg: '#2C3E50', text: 'white' },
+  normal:  { bg: '#1B5E4B', text: 'white' },
+  seminar: { bg: '#8B7D3C', text: 'white' },
   custom:  { bg: '#6B4C1A', text: 'white' },
 };
 
@@ -34,39 +37,14 @@ interface Props {
   mode?: CalendarViewMode;
 }
 
-function Crane({ x, y, size = 1, flip = false }: { x: number; y: number; size?: number; flip?: boolean }) {
-  const s = flip ? -1 : 1;
+/** 전통 기하 문양 (코너) */
+function TraditionalCorner({ x, y, rot = 0 }: { x: number; y: number; rot?: number }) {
   return (
-    <g transform={`${safeTranslate(x, y)} scale(${safeNum(s * size, 1)},${safeNum(size, 1)})`} opacity="0.7">
-      {/* Body */}
-      <ellipse cx="0" cy="0" rx="22" ry="10" fill="#B0BEC5" transform="rotate(-10)" />
-      {/* Neck */}
-      <path d="M 12,-8 Q 20,-25 18,-38" stroke="#B0BEC5" strokeWidth="5" fill="none" strokeLinecap="round" />
-      {/* Head */}
-      <circle cx="18" cy="-40" r="6" fill="#B0BEC5" />
-      {/* Red cap */}
-      <ellipse cx="18" cy="-44" rx="4" ry="2.5" fill="#E53935" />
-      {/* Beak */}
-      <line x1="24" y1="-40" x2="34" y2="-37" stroke="#78909C" strokeWidth="2" />
-      {/* Wing up */}
-      <path d="M 0,0 Q -18,-20 -35,-5 Q -18,5 0,0" fill="#CFD8DC" />
-      {/* Wing down */}
-      <path d="M 0,0 Q -15,15 -30,10 Q -15,2 0,0" fill="#B0BEC5" />
-      {/* Tail */}
-      <path d="M -22,0 Q -38,5 -42,12 Q -35,8 -22,0" fill="#CFD8DC" />
-      {/* Legs */}
-      <line x1="5" y1="8" x2="2" y2="28" stroke="#90A4AE" strokeWidth="2" />
-      <line x1="-5" y1="8" x2="-8" y2="28" stroke="#90A4AE" strokeWidth="2" />
-    </g>
-  );
-}
-
-function TraditionalCloud({ x, y, w = 80 }: { x: number; y: number; w?: number }) {
-  return (
-    <g transform={safeTranslate(x, y)} opacity="0.55">
-      <ellipse cx="0" cy="0" rx={w * 0.5} ry={w * 0.18} fill="#D4C5A9" />
-      <ellipse cx={w * 0.18} cy={w * -0.1} rx={w * 0.22} ry={w * 0.14} fill="#D4C5A9" />
-      <ellipse cx={-w * 0.18} cy={w * -0.08} rx={w * 0.2} ry={w * 0.12} fill="#D4C5A9" />
+    <g transform={`${safeTranslate(x, y)} rotate(${safeNum(rot)})`} opacity="0.4">
+      <rect x="0" y="0" width="28" height="28" fill="none" stroke="#8B6914" strokeWidth="1.5" />
+      <rect x="4" y="4" width="20" height="20" fill="none" stroke="#8B6914" strokeWidth="0.8" />
+      <line x1="0" y1="14" x2="10" y2="14" stroke="#8B6914" strokeWidth="0.8" />
+      <line x1="14" y1="0" x2="14" y2="10" stroke="#8B6914" strokeWidth="0.8" />
     </g>
   );
 }
@@ -80,14 +58,12 @@ export default function T4KoreanTraditional({ data, width = 600, colors, mode = 
     ? getEventWeeks(allWeeks, data.events.map(e => e.date))
     : allWeeks;
   const ROW_H = isWeekly ? ROW_H_WEEKLY : ROW_H_FULL;
-  const CARD_Y = 260;
+  const CARD_Y = 220;
   const calH = safeNum(HEADER_H + weeks.length * ROW_H);
   const cardH = safeNum(calH + 20);
-  const svgH = safeNum(CARD_Y + cardH + 90, 600);
+  const noticeCount = data.notices?.length ?? 0;
+  const svgH = safeNum(CARD_Y + cardH + noticeCount * 22 + 90, 600);
   const scale = safeNum(width / 600, 1);
-
-  // Find the "special" date (date=1 or any highlighted date for outline circle)
-  const specialDate = data.events.find(e => e.date === 1 && e.type === 'normal');
 
   function getEvent(date: number) {
     return data.events.find(e => e.date === date);
@@ -97,7 +73,7 @@ export default function T4KoreanTraditional({ data, width = 600, colors, mode = 
     <svg
       viewBox={`0 0 600 ${svgH}`}
       width={width}
-      height={svgH * scale}
+      height={safeNum(svgH * scale)}
       fontFamily={FONT}
       xmlns="http://www.w3.org/2000/svg"
     >
@@ -108,138 +84,117 @@ export default function T4KoreanTraditional({ data, width = 600, colors, mode = 
         </linearGradient>
       </defs>
 
-      {/* Beige background */}
+      {/* 한지 느낌 배경 */}
       <rect width="600" height={svgH} fill="url(#t4-bg)" />
 
-      {/* Traditional corner patterns (simplified geometric) */}
-      {[0, 1, 2, 3].map(i => {
-        const x = i % 2 === 0 ? 8 : 584;
-        const y = i < 2 ? 8 : svgH - 8;
-        const r = i < 2 ? 0 : 180;
-        return (
-          <g key={i} transform={`${safeTranslate(x, y)} rotate(${safeNum(r)})`} opacity="0.4">
-            <rect x="0" y="0" width="22" height="22" fill="none" stroke="#8B6914" strokeWidth="1.5" />
-            <rect x="3" y="3" width="16" height="16" fill="none" stroke="#8B6914" strokeWidth="1" />
-            <line x1="0" y1="11" x2="8" y2="11" stroke="#8B6914" strokeWidth="1" />
-            <line x1="11" y1="0" x2="11" y2="8" stroke="#8B6914" strokeWidth="1" />
-          </g>
-        );
-      })}
+      {/* 이중 문서 테두리 (전통 문서 격식) */}
+      <rect x="12" y="12" width="576" height={safeNum(svgH - 24)}
+        rx="2" fill="none" stroke="#B8A060" strokeWidth="2" />
+      <rect x="18" y="18" width="564" height={safeNum(svgH - 36)}
+        rx="1" fill="none" stroke="#B8A060" strokeWidth="0.8" />
 
-      {/* Cranes */}
-      <Crane x={70} y={90} size={0.9} />
-      <Crane x={520} y={svgH - 100} size={0.85} flip />
+      {/* 네 모서리 전통 기하 문양 */}
+      <TraditionalCorner x={24} y={24} rot={0} />
+      <TraditionalCorner x={safeNum(600 - 52)} y={24} rot={90} />
+      <TraditionalCorner x={24} y={safeNum(svgH - 52)} rot={270} />
+      <TraditionalCorner x={safeNum(600 - 52)} y={safeNum(svgH - 52)} rot={180} />
 
-      {/* Traditional clouds */}
-      <TraditionalCloud x={20} y={35} w={90} />
-      <TraditionalCloud x={460} y={30} w={100} />
-      <TraditionalCloud x={200} y={20} w={70} />
-      <TraditionalCloud x={20} y={svgH - 40} w={80} />
-      <TraditionalCloud x={480} y={svgH - 35} w={90} />
+      {/* 공식 문서 헤더 영역 */}
+      <line x1="80" y1="70" x2="520" y2="70"
+        stroke="#B8A060" strokeWidth="0.8" />
 
-      {/* Mountain outline at bottom */}
-      <path
-        d={`M 0,${svgH} Q 80,${svgH - 60} 160,${svgH - 95} Q 240,${svgH - 130} 300,${svgH - 105}
-            Q 380,${svgH - 80} 440,${svgH - 110} Q 520,${svgH - 75} 600,${svgH - 55} L 600,${svgH} Z`}
-        fill="#C8A96E" opacity="0.25"
-      />
+      {/* 클리닉명 (발신처) */}
+      <text x="300" y="60" textAnchor="middle" fontSize="16"
+        fontWeight="700" fill="#3E2A0A" letterSpacing="4">
+        {data.clinicName}
+      </text>
 
-      {/* Title */}
-      <text x="300" y="195" textAnchor="middle" fontSize="46" fontWeight="900"
+      {/* 월 안내 제목 */}
+      <text x="300" y="130" textAnchor="middle" fontSize="46" fontWeight="900"
         fill="#3E2A0A" letterSpacing="2">
         {data.monthLabel} 진료일정
       </text>
 
-      {/* Subtitle */}
+      {/* 전통 구분선 (삼단) */}
+      <g transform={safeTranslate(300, 150)}>
+        <line x1="-120" y1="0" x2="-20" y2="0" stroke="#B8A060" strokeWidth="0.8" />
+        <circle cx="0" cy="0" r="3" fill="#B8A060" />
+        <line x1="20" y1="0" x2="120" y2="0" stroke="#B8A060" strokeWidth="0.8" />
+      </g>
+
+      {/* 부제 */}
       {data.subtitle && data.subtitle.split('\n').map((line, i) => (
-        <text key={i} x="300" y={228 + i * 22}
+        <text key={i} x="300" y={safeNum(175 + i * 22)}
           textAnchor="middle" fontSize="14" fill="#6B4C1A">
           {line}
         </text>
       ))}
 
-      {/* Calendar card */}
-      <rect x={CARD_X} y={CARD_Y} width="540" height={cardH}
-        rx="6" fill="white" stroke="#D4C5A9" strokeWidth="1.5" />
+      {/* 캘린더 카드 */}
+      <rect x={CARD_X} y={CARD_Y} width={CARD_W} height={cardH}
+        rx="4" fill="white" stroke="#D4C5A9" strokeWidth="1" />
 
-      {/* Header row */}
-      <rect x={CARD_X} y={CARD_Y} width="540" height={HEADER_H}
-        rx="6" fill="white" stroke="#D4C5A9" strokeWidth="1" />
-      <rect x={CARD_X} y={CARD_Y + HEADER_H / 2} width="540" height={HEADER_H / 2} fill="white" />
+      {/* 캘린더 헤더 */}
+      <rect x={CARD_X} y={CARD_Y} width={CARD_W} height={HEADER_H}
+        rx="4" fill="white" stroke="#D4C5A9" strokeWidth="1" />
+      <line x1={CARD_X} y1={safeNum(CARD_Y + HEADER_H)}
+        x2={safeNum(CARD_X + CARD_W)} y2={safeNum(CARD_Y + HEADER_H)}
+        stroke="#D4C5A9" strokeWidth="1" />
 
       {['일', '월', '화', '수', '목', '금', '토'].map((day, i) => (
-        <g key={day}>
-          {i > 0 && (
-            <line x1={CARD_X + i * COL_W} y1={CARD_Y}
-              x2={CARD_X + i * COL_W} y2={CARD_Y + cardH}
-              stroke="#E8DCC8" strokeWidth="1" />
-          )}
-          <text
-            x={CARD_X + i * COL_W + COL_W / 2} y={CARD_Y + 31}
-            textAnchor="middle" fontSize="15" fontWeight="600"
-            fill={i === 0 ? '#8B1A2A' : '#3E2A0A'}
-          >
-            {day}
-          </text>
-        </g>
+        <text key={day}
+          x={safeNum(CARD_X + i * COL_W + COL_W / 2)} y={safeNum(CARD_Y + 31)}
+          textAnchor="middle" fontSize="15" fontWeight="600"
+          fill={i === 0 ? '#8B1A2A' : '#3E2A0A'}
+        >
+          {day}
+        </text>
       ))}
 
-      {/* Calendar rows */}
+      {/* 캘린더 행 */}
       {weeks.map((week, wi) => {
-        const rowY = CARD_Y + HEADER_H + wi * ROW_H;
+        const rowY = safeNum(CARD_Y + HEADER_H + wi * ROW_H);
         return (
           <g key={wi}>
-            <line x1={CARD_X} y1={rowY + ROW_H} x2={CARD_X + 540} y2={rowY + ROW_H}
-              stroke="#E8DCC8" strokeWidth="1" />
-
+            {wi < weeks.length - 1 && (
+              <line x1={CARD_X} y1={safeNum(rowY + ROW_H)}
+                x2={safeNum(CARD_X + CARD_W)} y2={safeNum(rowY + ROW_H)}
+                stroke="#E8DCC8" strokeWidth="1" />
+            )}
             {week.map((cell, di) => {
-              const cx = CARD_X + di * COL_W + COL_W / 2;
+              const cx = safeNum(CARD_X + di * COL_W + COL_W / 2);
               const event = getEvent(cell.day);
               const current = cell.isCurrentMonth;
+              const hasEvent = !!event && current;
+              const dimmed = isHighlight && current && !hasEvent;
+              const typeColors = hasEvent ? (TYPE_COLORS[event!.type] ?? TYPE_COLORS.custom) : null;
 
               let numColor = di === 0 ? '#8B1A2A' : '#3E2A0A';
               if (!current) numColor = '#C4B8A0';
 
-              const hasEvent = !!event && current;
-              const typeColors = hasEvent ? (TYPE_COLORS[event!.type] ?? TYPE_COLORS.custom) : null;
-              const dimmed = isHighlight && current && !hasEvent;
-
-              // Special: date=1 gets outline circle instead of filled
-              const isSpecial = cell.day === 1 && current && specialDate;
-
               return (
                 <g key={di} opacity={dimmed ? 0.25 : 1}>
-                  {/* Highlight glow */}
-                  {isHighlight && hasEvent && !isSpecial && (
-                    <circle cx={cx} cy={rowY + 28} r={30} fill={event!.color ?? typeColors!.bg} opacity={0.18} />
+                  {isHighlight && hasEvent && (
+                    <circle cx={cx} cy={safeNum(rowY + 28)} r={30}
+                      fill={event!.color ?? typeColors!.bg} opacity={0.18} />
                   )}
-                  {/* Filled circle for events */}
-                  {hasEvent && !isSpecial && (
-                    <circle cx={cx} cy={rowY + 28} r={24} fill={event!.color ?? typeColors!.bg} />
+                  {/* 오방색 원형 뱃지 */}
+                  {hasEvent && (
+                    <circle cx={cx} cy={safeNum(rowY + 28)} r={24}
+                      fill={event!.color ?? typeColors!.bg} />
                   )}
-                  {/* Outline circle for special date */}
-                  {isSpecial && (
-                    <>
-                      <circle cx={cx} cy={rowY + 28} r={24}
-                        fill="none" stroke="#C62828" strokeWidth="2" strokeDasharray="4,2" />
-                      {/* Star accent */}
-                      <text x={cx + 20} y={rowY + 6} fontSize="12" fill="#C62828">✦</text>
-                    </>
-                  )}
-
-                  <text x={cx} y={rowY + 34}
+                  <text x={cx} y={safeNum(rowY + 34)}
                     textAnchor="middle" fontSize="15"
                     fontWeight={hasEvent ? '700' : '500'}
-                    fill={hasEvent ? (isSpecial ? '#C62828' : typeColors!.text) : numColor}
+                    fill={hasEvent ? typeColors!.text : numColor}
                   >
                     {cell.day}
                   </text>
-
                   {hasEvent && (
-                    <text x={cx} y={rowY + 54}
-                      textAnchor="middle" fontSize={isHighlight ? '11.5' : '10'} fontWeight={isHighlight ? '800' : '600'}
-                      fill={isSpecial ? '#C62828' : (event!.color ?? typeColors!.bg)}
-                    >
+                    <text x={cx} y={safeNum(rowY + 54)}
+                      textAnchor="middle" fontSize={isHighlight ? '11.5' : '10'}
+                      fontWeight={isHighlight ? '800' : '600'}
+                      fill={event!.color ?? typeColors!.bg}>
                       {event!.label}
                     </text>
                   )}
@@ -250,12 +205,28 @@ export default function T4KoreanTraditional({ data, width = 600, colors, mode = 
         );
       })}
 
-      {/* Footer logo area */}
-      <g transform={safeTranslate(300, CARD_Y + cardH + 60)}>
-        {/* B circle icon */}
-        <circle cx="-60" cy="0" r="18" fill="#1565C0" />
-        <text x="-60" y="6" textAnchor="middle" fontSize="16" fontWeight="900" fill="white">B</text>
-        <text x="-28" y="6" fontSize="18" fontWeight="800" fill="#3E2A0A">
+      {/* 안내사항 — 전통 문서 스타일 */}
+      {data.notices && data.notices.length > 0 && (
+        <g>
+          {data.notices.map((n, i) => (
+            <g key={i}>
+              <text x={safeNum(CARD_X + 16)}
+                y={safeNum(CARD_Y + cardH + 24 + i * 22)}
+                fontSize="12" fill="#6B4C1A"
+                fontWeight={i === 0 ? '600' : '400'}>
+                {`• ${n}`}
+              </text>
+            </g>
+          ))}
+        </g>
+      )}
+
+      {/* 하단 서명 */}
+      <g transform={safeTranslate(300, safeNum(svgH - 40))}>
+        <line x1="-80" y1="-10" x2="80" y2="-10"
+          stroke="#B8A060" strokeWidth="0.8" />
+        <text x="0" y="8" textAnchor="middle" fontSize="15"
+          fontWeight="700" fill="#3E2A0A" letterSpacing="2">
           {data.clinicName}
         </text>
       </g>

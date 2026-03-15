@@ -137,14 +137,10 @@ export default function T11DarkBlueModern({ data, width = 600, colors, mode = 'f
         </text>
       ))}
 
-      {/* Grid outer border */}
-      <rect x={PAD_X} y={GRID_Y} width={GRID_W} height={calH}
-        fill="none" stroke="#2A4A7A" strokeWidth="1.5" />
-
       {/* Header bottom border */}
       <line x1={PAD_X} y1={safeNum(GRID_Y + HEADER_H)}
         x2={safeNum(PAD_X + GRID_W)} y2={safeNum(GRID_Y + HEADER_H)}
-        stroke="#2A4A7A" strokeWidth="1.5" />
+        stroke="#E0E4EC" strokeWidth="1" />
 
       {/* Calendar body rows */}
       {weeks.map((week, wi) => {
@@ -157,14 +153,6 @@ export default function T11DarkBlueModern({ data, width = 600, colors, mode = 'f
                 x2={safeNum(PAD_X + GRID_W)} y2={safeNum(rowY + ROW_H)}
                 stroke="#D8DFE8" strokeWidth="0.7" />
             )}
-
-            {/* Column dividers */}
-            {[1, 2, 3, 4, 5, 6].map(di => (
-              <line key={di}
-                x1={safeNum(PAD_X + di * COL_W)} y1={rowY}
-                x2={safeNum(PAD_X + di * COL_W)} y2={safeNum(rowY + ROW_H)}
-                stroke="#E8EDF5" strokeWidth="0.5" />
-            ))}
 
             {/* Cells */}
             {week.map((cell, di) => {

@@ -4,36 +4,27 @@ import { DEFAULT_COLORS } from '../types';
 import { buildCompactCalendarWeeks, getEventWeeks, safeNum, safeTranslate } from '../calendarEngine';
 
 const FONT = "Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif";
-const COL_W = 560 / 7;  // inside card (card x=20, w=560)
-const CARD_X = 20;
-const CARD_Y = 168;
-const HEADER_H = 50;
-const ROW_H_FULL = 92;
-const ROW_H_WEEKLY = 120;
+const COL_W = 540 / 7;
+const CARD_X = 30;
+const CARD_W = 540;
+const HEADER_H = 44;
+const ROW_H_FULL = 78;
+const ROW_H_WEEKLY = 108;
+const CARD_Y = 200;
+
+/**
+ * T3 — 가을 공문 (Autumn Official Notice)
+ *
+ * 성격: 실무 공문형 — 병원 공식 안내문/공지 느낌
+ * 차별점: 정돈된 레이아웃, 공문 헤더 구조, 절제된 가을 톤
+ * 대상: "공식적이고 격식 있는 안내가 필요한" 병원
+ */
 
 interface Props {
   data: ScheduleData;
   width?: number;
   colors?: TemplateColors;
   mode?: CalendarViewMode;
-}
-
-// Simplified maple leaf path (centered at 0,0, size ~40px)
-function MapleLeaf({ x, y, size = 1, rot = 0, color = '#D84315' }: {
-  x: number; y: number; size?: number; rot?: number; color?: string;
-}) {
-  return (
-    <g transform={`${safeTranslate(x, y)} rotate(${safeNum(rot)}) scale(${safeNum(size, 1)})`}>
-      <path
-        d="M0,-38 C5,-30 15,-22 10,-12 C18,-16 24,-4 16,0 C22,4 18,14 10,10 C14,18 6,24 0,38
-           C-6,24 -14,18 -10,10 C-18,14 -22,4 -16,0 C-24,-4 -18,-16 -10,-12 C-15,-22 -5,-30 0,-38 Z"
-        fill={color}
-        opacity="0.88"
-      />
-      {/* Stem */}
-      <line x1="0" y1="38" x2="0" y2="55" stroke={color} strokeWidth="3" />
-    </g>
-  );
 }
 
 export default function T3Autumn({ data, width = 600, colors, mode = 'full' }: Props) {
@@ -46,9 +37,16 @@ export default function T3Autumn({ data, width = 600, colors, mode = 'full' }: P
     : allWeeks;
   const ROW_H = isWeekly ? ROW_H_WEEKLY : ROW_H_FULL;
   const calH = safeNum(HEADER_H + weeks.length * ROW_H);
-  const cardH = safeNum(calH + 24);
-  const svgH = safeNum(CARD_Y + cardH + 70, 600);
+  const cardH = safeNum(calH + 20);
+  const noticeCount = data.notices?.length ?? 0;
+  const svgH = safeNum(CARD_Y + cardH + noticeCount * 24 + 90, 600);
   const scale = safeNum(width / 600, 1);
+
+  const CHARCOAL = '#2C2216';
+  const WARM_BROWN = '#6B4C2A';
+  const HEADER_BG = '#4A3728';
+  const AUTUMN_ACCENT = '#C67A3C';
+  const LIGHT_CREAM = '#FBF7F0';
 
   function getEvent(date: number) {
     return data.events.find(e => e.date === date);
@@ -62,110 +60,114 @@ export default function T3Autumn({ data, width = 600, colors, mode = 'full' }: P
       fontFamily={FONT}
       xmlns="http://www.w3.org/2000/svg"
     >
-      <defs>
-        <linearGradient id="t3-bg" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#FFAB40" />
-          <stop offset="50%" stopColor="#FF7043" />
-          <stop offset="100%" stopColor="#E64A19" />
-        </linearGradient>
-        <filter id="t3-shadow">
-          <feDropShadow dx="0" dy="4" stdDeviation="8" floodColor="rgba(0,0,0,0.18)" />
-        </filter>
-      </defs>
+      {/* 배경: 밝은 크림 (공문 용지 느낌) */}
+      <rect width="600" height={svgH} fill={LIGHT_CREAM} />
 
-      {/* Background */}
-      <rect width="600" height={svgH} fill="url(#t3-bg)" />
+      {/* 상단 공문 헤더 영역 — 이중선 테두리 */}
+      <rect x="30" y="20" width="540" height="160" rx="2"
+        fill="none" stroke={WARM_BROWN} strokeWidth="2" />
+      <rect x="34" y="24" width="532" height="152" rx="1"
+        fill="none" stroke={WARM_BROWN} strokeWidth="0.8" />
 
-      {/* Maple leaves - corners */}
-      <MapleLeaf x={30} y={55} size={1.4} rot={-25} color="#BF360C" />
-      <MapleLeaf x={85} y={20} size={1.0} rot={15} color="#D84315" />
-      <MapleLeaf x={55} y={100} size={0.8} rot={40} color="#E64A19" />
-      <MapleLeaf x={570} y={45} size={1.5} rot={30} color="#BF360C" />
-      <MapleLeaf x={530} y={90} size={1.0} rot={-15} color="#FF7043" />
-      <MapleLeaf x={555} y={135} size={0.7} rot={50} color="#D84315" />
-      {/* Bottom corners */}
-      <MapleLeaf x={25} y={svgH - 60} size={1.2} rot={20} color="#BF360C" />
-      <MapleLeaf x={575} y={svgH - 50} size={1.3} rot={-30} color="#D84315" />
-      <MapleLeaf x={540} y={svgH - 100} size={0.9} rot={10} color="#E64A19" />
+      {/* 공문 제목 라인 */}
+      <line x1="60" y1="65" x2="540" y2="65"
+        stroke={WARM_BROWN} strokeWidth="0.5" />
 
-      {/* Decorative triangle accent */}
-      <polygon points="520,140 545,110 555,145" fill="rgba(255,255,255,0.12)" />
-      <polygon points="65,160 80,130 90,162" fill="rgba(255,255,255,0.12)" />
+      {/* 클리닉명 (공문 발신처) */}
+      <text x="300" y="55" textAnchor="middle" fontSize="18"
+        fontWeight="700" fill={CHARCOAL} letterSpacing="3">
+        {data.clinicName}
+      </text>
 
-      {/* Title */}
-      <text x="300" y="88" textAnchor="middle" fontSize="62" fontWeight="900"
-        fill="#3E1800" letterSpacing="-2">
+      {/* 월 안내 제목 */}
+      <text x="300" y="110" textAnchor="middle" fontSize="38"
+        fontWeight="900" fill={CHARCOAL} letterSpacing="1">
         {data.monthLabel} 진료일정
       </text>
 
-      {/* Subtitle */}
+      {/* 부제 */}
       {data.subtitle && (
-        <text x="300" y="128" textAnchor="middle" fontSize="16" fill="#5D3010" fontWeight="400">
+        <text x="300" y="145" textAnchor="middle" fontSize="13"
+          fill={WARM_BROWN} fontWeight="400">
           {data.subtitle}
         </text>
       )}
 
-      {/* White calendar card */}
-      <rect x={CARD_X} y={CARD_Y} width="560" height={cardH}
-        rx="12" fill="white" filter="url(#t3-shadow)" />
+      {/* 가을 악센트 라인 (공문 스타일 구분선, 절제된 가을 컬러) */}
+      <rect x="180" y="155" width="240" height="3" rx="1.5"
+        fill={AUTUMN_ACCENT} opacity="0.6" />
 
-      {/* Calendar header (dark) */}
-      <rect x={CARD_X} y={CARD_Y} width="560" height={HEADER_H}
-        rx="12" fill="#37282A" />
-      <rect x={CARD_X} y={CARD_Y + HEADER_H / 2} width="560" height={HEADER_H / 2} fill="#37282A" />
+      {/* 캘린더 카드 */}
+      <rect x={CARD_X} y={CARD_Y} width={CARD_W} height={cardH}
+        rx="4" fill="white" stroke="#D8CCBA" strokeWidth="1" />
+
+      {/* 캘린더 헤더 — 차분한 브라운 */}
+      <rect x={CARD_X} y={CARD_Y} width={CARD_W} height={HEADER_H}
+        rx="4" fill={HEADER_BG} />
+      <rect x={CARD_X} y={safeNum(CARD_Y + HEADER_H / 2)} width={CARD_W}
+        height={safeNum(HEADER_H / 2)} fill={HEADER_BG} />
 
       {['일', '월', '화', '수', '목', '금', '토'].map((day, i) => (
         <text key={day}
-          x={CARD_X + i * COL_W + COL_W / 2} y={CARD_Y + 33}
-          textAnchor="middle" fontSize="16" fontWeight="700" fill="white"
+          x={safeNum(CARD_X + i * COL_W + COL_W / 2)} y={safeNum(CARD_Y + 29)}
+          textAnchor="middle" fontSize="14" fontWeight="700"
+          fill={i === 0 ? '#FFAA9A' : 'white'}
         >
           {day}
         </text>
       ))}
 
-      {/* Rows */}
+      {/* 캘린더 행 */}
       {weeks.map((week, wi) => {
-        const rowY = CARD_Y + HEADER_H + wi * ROW_H;
+        const rowY = safeNum(CARD_Y + HEADER_H + wi * ROW_H);
         return (
           <g key={wi}>
             {wi < weeks.length - 1 && (
-              <line x1={CARD_X} y1={rowY + ROW_H} x2={CARD_X + 560} y2={rowY + ROW_H}
-                stroke="#E8E0D8" strokeWidth="1" />
+              <line x1={CARD_X} y1={safeNum(rowY + ROW_H)}
+                x2={safeNum(CARD_X + CARD_W)} y2={safeNum(rowY + ROW_H)}
+                stroke="#E8DFD2" strokeWidth="1" />
             )}
             {week.map((cell, di) => {
-              const cx = CARD_X + di * COL_W + COL_W / 2;
+              const cx = safeNum(CARD_X + di * COL_W + COL_W / 2);
               const event = getEvent(cell.day);
               const current = cell.isCurrentMonth;
               const hasEvent = !!event && current;
               const dimmed = isHighlight && current && !hasEvent;
-
-              // Dual date text (e.g. "23/30")
               const dayText = cell.dual ? `${cell.day}/${cell.dual}` : String(cell.day);
 
-              let numColor = di === 0 ? '#C62828' : '#333';
-              if (!current) numColor = '#BDBDBD';
+              let numColor = di === 0 ? '#B8432A' : CHARCOAL;
+              if (!current) numColor = '#C4BAA8';
+
+              const isClosed = hasEvent && event!.type === 'closed';
+              const evColor = event?.color ?? (isClosed ? '#B8432A' : AUTUMN_ACCENT);
 
               return (
                 <g key={di} opacity={dimmed ? 0.25 : 1}>
-                  {/* Highlight glow */}
                   {isHighlight && hasEvent && (
-                    <rect x={cx - 38} y={rowY + 40} width="76" height="32" rx="10"
-                      fill={event!.color ?? C.closed} opacity={0.15} />
+                    <circle cx={cx} cy={safeNum(rowY + 28)} r={28}
+                      fill={evColor} opacity={0.12} />
                   )}
-                  <text x={cx} y={rowY + 36} textAnchor="middle"
-                    fontSize={cell.dual ? 14 : 18} fontWeight={isHighlight && hasEvent ? '800' : '600'} fill={numColor}>
+                  {/* 공문형 이벤트: 밑줄 강조 (도장 느낌) */}
+                  {hasEvent && (
+                    <g>
+                      <line x1={safeNum(cx - 22)} y1={safeNum(rowY + 38)}
+                        x2={safeNum(cx + 22)} y2={safeNum(rowY + 38)}
+                        stroke={evColor} strokeWidth="2.5" />
+                    </g>
+                  )}
+                  <text x={cx} y={safeNum(rowY + 32)}
+                    textAnchor="middle" fontSize={cell.dual ? 13 : 16}
+                    fontWeight={hasEvent ? '800' : '500'}
+                    fill={hasEvent ? evColor : numColor}>
                     {dayText}
                   </text>
-                  {/* Yellow pill badge */}
-                  {event && current && (
-                    <g>
-                      <rect x={cx - 32} y={rowY + 45} width="64" height="22" rx="6"
-                        fill={event.color ?? C.closed} />
-                      <text x={cx} y={rowY + 60}
-                        textAnchor="middle" fontSize="12" fontWeight="700" fill="white">
-                        {event.label}
-                      </text>
-                    </g>
+                  {hasEvent && (
+                    <text x={cx} y={safeNum(rowY + 56)}
+                      textAnchor="middle" fontSize={isHighlight ? '12' : '10.5'}
+                      fontWeight={isHighlight ? '700' : '600'}
+                      fill={evColor}>
+                      {event!.label}
+                    </text>
                   )}
                 </g>
               );
@@ -174,15 +176,30 @@ export default function T3Autumn({ data, width = 600, colors, mode = 'full' }: P
         );
       })}
 
-      {/* Footer: tooth icon + hospital name */}
-      <g transform={safeTranslate(300, CARD_Y + cardH + 52)}>
-        {/* Simple tooth shape */}
-        <path
-          d="M-12,-14 C-18,-14 -22,-8 -22,0 C-22,10 -16,22 -10,22 C-7,22 -5,14 0,14
-             C5,14 7,22 10,22 C16,22 22,10 22,0 C22,-8 18,-14 12,-14 Z"
-          fill="#E53935"
-        />
-        <text x="18" y="6" fontSize="18" fontWeight="800" fill="#37282A">
+      {/* 안내사항 — 공문 스타일 박스 */}
+      {data.notices && data.notices.length > 0 && (
+        <g>
+          <rect x={CARD_X} y={safeNum(CARD_Y + cardH + 12)}
+            width={CARD_W} height={safeNum(noticeCount * 24 + 16)}
+            rx="3" fill="none" stroke="#D8CCBA" strokeWidth="0.8" />
+          {data.notices.map((n, i) => (
+            <g key={i}>
+              <text x={safeNum(CARD_X + 16)} y={safeNum(CARD_Y + cardH + 32 + i * 24)}
+                fontSize="12" fill={i === 0 ? CHARCOAL : WARM_BROWN}
+                fontWeight={i === 0 ? '600' : '400'}>
+                {`※ ${n}`}
+              </text>
+            </g>
+          ))}
+        </g>
+      )}
+
+      {/* 하단 공문 서명 영역 */}
+      <g transform={safeTranslate(300, safeNum(svgH - 40))}>
+        <line x1="-100" y1="-12" x2="100" y2="-12"
+          stroke={WARM_BROWN} strokeWidth="0.8" />
+        <text x="0" y="6" textAnchor="middle" fontSize="14"
+          fontWeight="700" fill={CHARCOAL} letterSpacing="2">
           {data.clinicName}
         </text>
       </g>
