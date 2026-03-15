@@ -232,117 +232,128 @@ function CalendarThemePreview({ themeValue, groupColor, size = 'sm' }: { themeVa
     );
   }
 
-  // ── Family 4: cherry_blossom — 웜코랄 클리닉 (따뜻한 톤 + 더블라인 프레임) ──
+  // ── Family 4: cherry_blossom — 버건디 프레스티지 (세리프 숫자 + 센터 헤더 + 좌측보더 휴진) ──
   if (themeValue === 'cherry_blossom') {
     const days = ['일','월','화','수','목','금','토'];
     return (
-      <div className="w-full h-full flex flex-col" style={{ background: '#faf8f6' }}>
-        {/* 코랄 톤 헤더 — 병원 브랜드 */}
-        <div className="flex items-center justify-between" style={{ padding: s ? '7px 12px' : '3px 6px', background: 'linear-gradient(135deg, #b45030 0%, #c2553a 100%)' }}>
-          <div>
-            <div className={`${s ? 'text-[13px]' : 'text-[6.5px]'} font-black text-white leading-tight`}>3월 진료안내</div>
-            <div className={`${s ? 'text-[8px]' : 'text-[3.5px]'} text-white/60 font-medium`}>OO의원</div>
-          </div>
-          <div className={`${s ? 'text-[8px] px-2 py-0.5' : 'text-[3.5px] px-1 py-[1px]'} rounded-sm bg-white/15 text-white font-bold`}>2026</div>
+      <div className="w-full h-full flex flex-col" style={{ background: '#fafafa' }}>
+        {/* 버건디 탑 액센트 라인 */}
+        <div style={{ height: s ? '3px' : '1.5px', background: '#881337' }} />
+        {/* 센터 정렬 헤더 — 의료 문서 스타일 */}
+        <div className="flex flex-col items-center" style={{ padding: s ? '8px 0 5px' : '4px 0 2px' }}>
+          <div className={`${s ? 'text-[7px]' : 'text-[3px]'} tracking-[0.3em] font-medium`} style={{ color: '#9f1239' }}>OO의원</div>
+          <div className={`${s ? 'text-[16px]' : 'text-[8px]'} font-black leading-tight`} style={{ color: '#1c1917' }}>3월 진료안내</div>
+          <div className={`${s ? 'text-[8px]' : 'text-[3.5px]'} font-medium mt-0.5`} style={{ color: '#a8a29e' }}>2026</div>
         </div>
-        {/* 더블라인 프레임 달력 */}
-        <div className="flex-1 flex flex-col" style={{ margin: s ? '5px 8px' : '2px 4px', border: '2px solid #c2553a40', padding: s ? '1px' : '0.5px' }}>
-          <div style={{ border: '0.5px solid #c2553a20', flex: 1, display: 'flex', flexDirection: 'column', background: 'white' }}>
-            {/* 요일 헤더 — 따뜻한 뉴트럴 */}
-            <div className="grid grid-cols-7" style={{ borderBottom: '1px solid #e8ddd5', background: '#f5f0eb' }}>
-              {days.map((d, i) => (
-                <div key={d} className={`text-center font-extrabold ${s ? 'text-[9px] py-[3px]' : 'text-[4px] py-[1px]'}`}
-                  style={{ color: i === 0 ? '#dc2626' : i === 6 ? '#2563eb' : '#8b5e3c' }}>{d}</div>
-              ))}
-            </div>
-            {/* 날짜 격자 — 밑줄 인디케이터 */}
-            <div className="grid grid-cols-7 flex-1">
-              {[null,null,null,null,null,null,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,null,null,null,null,null].slice(0,35).map((d, i) => {
-                if (!d) return <div key={`e${i}`} style={{ borderRight: '0.5px solid #f0ebe5', borderBottom: '0.5px solid #f0ebe5' }} />;
-                const isClosed = d === 9 || d === 23;
-                const isShort = d === 16;
-                return (
-                  <div key={i} className="flex flex-col items-center justify-center"
-                    style={{ borderRight: '0.5px solid #f0ebe5', borderBottom: '0.5px solid #f0ebe5', background: isClosed ? '#fef2f2' : 'transparent' }}>
-                    <span className={`${s ? 'text-[10px]' : 'text-[5px]'} font-bold`}
-                      style={{ color: isClosed ? '#dc2626' : isShort ? '#b45309' : i % 7 === 0 ? '#dc2626' : i % 7 === 6 ? '#2563eb' : '#44403c' }}>{d}</span>
-                    {isClosed && <span className={`${s ? 'text-[5px] px-1' : 'text-[2.5px] px-0.5'} font-black text-white leading-none rounded-sm`} style={{ background: '#dc2626' }}>휴진</span>}
-                    {isShort && <div className={`${s ? 'w-3 h-[1.5px]' : 'w-1.5 h-[0.5px]'} mt-[1px]`} style={{ background: '#d97706' }} />}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+        {/* 구분선 */}
+        <div style={{ height: '1px', margin: s ? '0 12px' : '0 6px', background: 'linear-gradient(90deg, transparent, #88133744, transparent)' }} />
+        {/* 요일 헤더 — 세리프 스타일 */}
+        <div className="grid grid-cols-7" style={{ margin: s ? '0 12px' : '0 6px', borderBottom: '1.5px solid #1c1917' }}>
+          {days.map((d, i) => (
+            <div key={d} className={`text-center font-bold ${s ? 'text-[9px] py-[4px]' : 'text-[4px] py-[2px]'}`}
+              style={{ color: i === 0 ? '#dc2626' : i === 6 ? '#2563eb' : '#44403c', fontFamily: 'Georgia, serif' }}>{d}</div>
+          ))}
         </div>
-        {/* 풋터 — 정보 + 범례 */}
-        <div className="flex items-center justify-between" style={{ padding: s ? '4px 10px 6px' : '2px 5px 3px', borderTop: '1px solid #e8ddd5' }}>
+        {/* 날짜 격자 — 헤어라인 + 좌측 보더 휴진 (dark_blue_modern 참조) */}
+        <div className="grid grid-cols-7 flex-1" style={{ margin: s ? '0 12px' : '0 6px' }}>
+          {[null,null,null,null,null,null,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,null,null,null,null,null].slice(0,35).map((d, i) => {
+            if (!d) return <div key={`e${i}`} style={{ borderBottom: '0.5px solid #e7e5e4' }} />;
+            const isClosed = d === 9 || d === 23;
+            const isShort = d === 16;
+            return (
+              <div key={i} className="flex flex-col items-center justify-center"
+                style={{
+                  borderBottom: '0.5px solid #e7e5e4',
+                  borderLeft: isClosed ? `2px solid #881337` : undefined,
+                  background: isClosed ? '#fef2f2' : isShort ? '#fffbeb' : 'transparent',
+                }}>
+                <span className={`${s ? 'text-[11px]' : 'text-[5.5px]'}`}
+                  style={{
+                    fontFamily: 'Georgia, serif',
+                    fontWeight: 600,
+                    color: isClosed ? '#881337' : isShort ? '#92400e' : i % 7 === 0 ? '#dc2626' : i % 7 === 6 ? '#2563eb' : '#292524',
+                  }}>{d}</span>
+                {isClosed && <span className={`${s ? 'text-[5px]' : 'text-[2.5px]'} font-black leading-none`} style={{ color: '#881337' }}>휴진</span>}
+                {isShort && <span className={`${s ? 'text-[5px]' : 'text-[2.5px]'} font-bold leading-none`} style={{ color: '#92400e' }}>단축</span>}
+              </div>
+            );
+          })}
+        </div>
+        {/* 풋터 — 하단 구분선 + 정보 */}
+        <div style={{ margin: s ? '0 12px' : '0 6px', borderTop: '1.5px solid #1c1917' }} />
+        <div className="flex items-center justify-between" style={{ padding: s ? '4px 12px 6px' : '2px 6px 3px' }}>
+          <span className={`${s ? 'text-[8px]' : 'text-[3.5px]'} font-medium`} style={{ color: '#57534e' }}>평일 09–18 · 토 09–13</span>
           <div className="flex gap-1.5">
-            <span className={`flex items-center gap-0.5 ${s ? 'text-[8px]' : 'text-[3.5px]'} font-medium`} style={{ color: '#78716c' }}>
-              <span className={`inline-block ${s ? 'w-2 h-2' : 'w-1 h-1'} rounded-sm bg-red-500`} />휴진
+            <span className={`flex items-center gap-0.5 ${s ? 'text-[7px]' : 'text-[3px]'}`} style={{ color: '#78716c' }}>
+              <span className={`inline-block ${s ? 'w-1.5 h-[5px]' : 'w-0.5 h-[2.5px]'}`} style={{ background: '#881337' }} />휴진
             </span>
-            <span className={`flex items-center gap-0.5 ${s ? 'text-[8px]' : 'text-[3.5px]'} font-medium`} style={{ color: '#78716c' }}>
-              <span className={`inline-block ${s ? 'w-2.5 h-[1.5px]' : 'w-1 h-[0.5px]'}`} style={{ background: '#d97706' }} />단축
+            <span className={`flex items-center gap-0.5 ${s ? 'text-[7px]' : 'text-[3px]'}`} style={{ color: '#78716c' }}>
+              <span className={`inline-block ${s ? 'w-1.5 h-1.5' : 'w-0.5 h-0.5'} rounded-full`} style={{ background: '#92400e' }} />단축
             </span>
           </div>
-          <span className={`${s ? 'text-[8px]' : 'text-[3.5px]'} font-medium`} style={{ color: '#78716c' }}>평일 09~18 · 토 09~13</span>
         </div>
       </div>
     );
   }
 
-  // ── Family 5: spring_kids — 소프트 틸 클리닉 (의료 전문 톤 + 상단 컬러바 + 클린 격자) ──
+  // ── Family 5: spring_kids — 포레스트 메디컬 (다크그린 탭 + 두꺼운 격자 + 풀배경 휴진) ──
   if (themeValue === 'spring_kids') {
-    const days = ['일','월','화','수','목','금','토'];
+    const days = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
     return (
-      <div className="w-full h-full flex flex-col" style={{ background: '#f8fafb' }}>
-        {/* 틸 톤 상단 컬러바 */}
-        <div style={{ height: s ? '3px' : '1.5px', background: 'linear-gradient(90deg, #0d9488, #14b8a6, #0d9488)' }} />
-        {/* 헤더 — 깔끔한 병원 브랜드 */}
-        <div className="flex items-center justify-between" style={{ padding: s ? '6px 12px' : '3px 6px' }}>
+      <div className="w-full h-full flex flex-col" style={{ background: 'white' }}>
+        {/* 다크 포레스트 그린 헤더 — 탭 형태 */}
+        <div className="flex items-center justify-between" style={{ padding: s ? '7px 12px' : '3px 6px', background: '#14532d' }}>
           <div>
-            <div className={`${s ? 'text-[13px]' : 'text-[6.5px]'} font-black leading-tight`} style={{ color: '#134e4a' }}>3월 진료안내</div>
-            <div className={`${s ? 'text-[8px]' : 'text-[3.5px]'} font-medium`} style={{ color: '#5eead4' }}>OO소아과의원</div>
+            <div className={`${s ? 'text-[13px]' : 'text-[6.5px]'} font-black text-white leading-tight`}>3월 진료안내</div>
+            <div className={`${s ? 'text-[8px]' : 'text-[3.5px]'} font-medium`} style={{ color: '#86efac' }}>OO소아과의원</div>
           </div>
-          <div className="flex flex-col items-end">
-            <span className={`${s ? 'text-[18px]' : 'text-[9px]'} font-black leading-none`} style={{ color: '#0d948833' }}>3</span>
+          <div className="flex items-baseline" style={{ gap: s ? 2 : 1 }}>
+            <span className={`${s ? 'text-[22px]' : 'text-[11px]'} font-black text-white/20 leading-none`}>3</span>
           </div>
         </div>
-        {/* 요일 헤더 — 틸 단색 톤 */}
-        <div className="grid grid-cols-7" style={{ borderBottom: '1px solid #ccfbf1', borderTop: '1px solid #ccfbf1', background: '#f0fdfa' }}>
+        {/* 그린 서브 바 — 연락처 */}
+        <div className="flex items-center justify-end" style={{ padding: s ? '2px 12px' : '1px 6px', background: '#166534' }}>
+          <span className={`${s ? 'text-[7px]' : 'text-[3px]'} text-white/50`}>02-000-0000</span>
+        </div>
+        {/* 요일 헤더 — 영문 대문자, 강한 대비 */}
+        <div className="grid grid-cols-7" style={{ borderBottom: '2px solid #14532d' }}>
           {days.map((d, i) => (
-            <div key={d} className={`text-center font-extrabold ${s ? 'text-[9px] py-[3px]' : 'text-[4px] py-[1px]'}`}
-              style={{ color: i === 0 ? '#dc2626' : i === 6 ? '#2563eb' : '#0f766e' }}>{d}</div>
+            <div key={d} className={`text-center font-black ${s ? 'text-[7px] py-[4px]' : 'text-[3px] py-[2px]'}`}
+              style={{ color: i === 0 ? '#dc2626' : i === 6 ? '#2563eb' : '#14532d', letterSpacing: '0.02em' }}>{d}</div>
           ))}
         </div>
-        {/* 달력 격자 — 클린 그리드, 원형 휴진 마크 */}
+        {/* 달력 격자 — 두꺼운 셀 보더, 좌상단 숫자 배치, 풀 레드 배경 휴진 */}
         <div className="grid grid-cols-7 flex-1">
           {[null,null,null,null,null,null,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,null,null,null,null,null].slice(0,35).map((d, i) => {
-            if (!d) return <div key={`e${i}`} style={{ borderRight: '0.5px solid #f0fdfa', borderBottom: '0.5px solid #f0fdfa' }} />;
+            if (!d) return <div key={`e${i}`} style={{ borderRight: '1px solid #e5e7eb', borderBottom: '1px solid #e5e7eb' }} />;
             const isClosed = d === 9 || d === 23;
             const isShort = d === 16;
             return (
-              <div key={i} className="flex flex-col items-center justify-center"
-                style={{ borderRight: '0.5px solid #f0fdfa', borderBottom: '0.5px solid #f0fdfa', background: isClosed ? '#fef2f2' : isShort ? '#fffbeb' : 'transparent' }}>
-                <span className={`${s ? 'text-[10px]' : 'text-[5px]'} font-bold`}
-                  style={{ color: isClosed ? '#dc2626' : isShort ? '#b45309' : i % 7 === 0 ? '#dc2626' : i % 7 === 6 ? '#2563eb' : '#1e293b' }}>{d}</span>
-                {isClosed && <span className={`${s ? 'text-[5px] w-3 h-3' : 'text-[2.5px] w-1.5 h-1.5'} flex items-center justify-center rounded-full font-black text-white leading-none`}
-                  style={{ background: '#dc2626', fontSize: s ? '5px' : '2.5px' }}>휴</span>}
-                {isShort && <span className={`${s ? 'text-[5px]' : 'text-[2.5px]'} font-black text-amber-600 leading-none`}>단축</span>}
+              <div key={i} className="flex flex-col items-center justify-center relative"
+                style={{
+                  borderRight: '1px solid #e5e7eb',
+                  borderBottom: '1px solid #e5e7eb',
+                  background: isClosed ? '#dc2626' : isShort ? '#fef9c3' : 'white',
+                }}>
+                <span className={`${s ? 'text-[11px]' : 'text-[5.5px]'} font-bold`}
+                  style={{ color: isClosed ? 'white' : isShort ? '#92400e' : i % 7 === 0 ? '#dc2626' : i % 7 === 6 ? '#2563eb' : '#1f2937' }}>{d}</span>
+                {isClosed && <span className={`${s ? 'text-[5px]' : 'text-[2.5px]'} font-black text-white/80 leading-none`}>휴진</span>}
+                {isShort && <span className={`${s ? 'text-[5px]' : 'text-[2.5px]'} font-black leading-none`} style={{ color: '#92400e' }}>단축</span>}
               </div>
             );
           })}
         </div>
-        {/* 풋터 — 틸 악센트 정보바 */}
-        <div className="flex items-center justify-between" style={{ padding: s ? '4px 10px' : '2px 5px', background: '#f0fdfa', borderTop: '1px solid #ccfbf1' }}>
+        {/* 풋터 — 다크그린 정보 바 */}
+        <div className="flex items-center justify-between" style={{ padding: s ? '4px 12px' : '2px 6px', background: '#14532d' }}>
+          <span className={`${s ? 'text-[8px]' : 'text-[3.5px]'} font-medium text-white`}>평일 09–18 · 토 09–13</span>
           <div className="flex gap-1.5">
-            <span className={`flex items-center gap-0.5 ${s ? 'text-[8px]' : 'text-[3.5px]'} font-medium`} style={{ color: '#64748b' }}>
-              <span className={`inline-block ${s ? 'w-1.5 h-1.5' : 'w-0.5 h-0.5'} rounded-full bg-red-500`} />휴진
+            <span className={`flex items-center gap-0.5 ${s ? 'text-[7px]' : 'text-[3px]'} text-white/70`}>
+              <span className={`inline-block ${s ? 'w-2 h-2' : 'w-1 h-1'} rounded-sm bg-red-500`} />휴진
             </span>
-            <span className={`flex items-center gap-0.5 ${s ? 'text-[8px]' : 'text-[3.5px]'} font-medium`} style={{ color: '#64748b' }}>
-              <span className={`inline-block ${s ? 'w-1.5 h-1.5' : 'w-0.5 h-0.5'} rounded-full bg-amber-500`} />단축
+            <span className={`flex items-center gap-0.5 ${s ? 'text-[7px]' : 'text-[3px]'} text-white/70`}>
+              <span className={`inline-block ${s ? 'w-2 h-2' : 'w-1 h-1'} rounded-sm`} style={{ background: '#fef9c3', border: '0.5px solid #fde047' }} />단축
             </span>
           </div>
-          <span className={`${s ? 'text-[8px]' : 'text-[3.5px]'} font-medium`} style={{ color: '#0f766e' }}>09~18 · 토 09~13</span>
         </div>
       </div>
     );
@@ -681,62 +692,58 @@ function CalendarThemePreview({ themeValue, groupColor, size = 'sm' }: { themeVa
     );
   }
 
-  // ── Family 12: lavender_sparkle — 슬레이트 인디고 (차분한 의료 톤 + 좌측 인디고 스트라이프) ──
+  // ── Family 12: lavender_sparkle — 쿨그레이 모던 (네이비 배너 + 교대 컬럼 + 하단보더 휴진) ──
   if (themeValue === 'lavender_sparkle') {
     const days = ['일','월','화','수','목','금','토'];
     return (
-      <div className="w-full h-full flex flex-col" style={{ background: '#f8f9fb' }}>
-        {/* 좌측 인디고 스트라이프 + 헤더 */}
-        <div className="flex" style={{ borderBottom: '1px solid #e2e5ea' }}>
-          <div style={{ width: s ? '4px' : '2px', background: 'linear-gradient(180deg, #4338ca, #3730a3)' }} />
-          <div className="flex-1 flex items-center justify-between" style={{ padding: s ? '7px 10px' : '3px 5px' }}>
-            <div>
-              <div className={`${s ? 'text-[13px]' : 'text-[6.5px]'} font-black leading-tight`} style={{ color: '#1e1b4b' }}>3월 진료안내</div>
-              <div className={`${s ? 'text-[8px]' : 'text-[3.5px]'} font-medium`} style={{ color: '#6366f1' }}>OO의원</div>
-            </div>
-            <div className="flex flex-col items-end">
-              <span className={`${s ? 'text-[7px]' : 'text-[3px]'} tracking-[0.15em] font-medium`} style={{ color: '#a5b4fc' }}>MARCH</span>
-              <span className={`${s ? 'text-[16px]' : 'text-[8px]'} font-black leading-none`} style={{ color: '#1e1b4b' }}>2026</span>
-            </div>
+      <div className="w-full h-full flex flex-col" style={{ background: '#ffffff' }}>
+        {/* 네이비 배너 헤더 */}
+        <div className="flex items-center justify-between" style={{ padding: s ? '7px 12px' : '3px 6px', background: 'linear-gradient(135deg, #1e293b, #334155)' }}>
+          <div>
+            <div className={`${s ? 'text-[13px]' : 'text-[6.5px]'} font-black text-white leading-tight`}>3월 진료안내</div>
+            <div className={`${s ? 'text-[8px]' : 'text-[3.5px]'} text-slate-400 font-medium`}>OO의원 · 2026</div>
           </div>
+          <div className={`${s ? 'text-[8px] px-2 py-0.5' : 'text-[3.5px] px-1 py-[1px]'} font-bold text-slate-300`} style={{ border: '1px solid #475569', borderRadius: s ? 4 : 2 }}>MARCH</div>
         </div>
-        {/* 요일 헤더 — 인디고 뉴트럴 */}
-        <div className="grid grid-cols-7" style={{ borderBottom: '1px solid #e0e7ff', background: '#eef2ff' }}>
+        {/* 요일 헤더 — 뉴트럴 그레이 */}
+        <div className="grid grid-cols-7" style={{ borderBottom: '2px solid #334155' }}>
           {days.map((d, i) => (
-            <div key={d} className={`text-center font-extrabold ${s ? 'text-[9px] py-[3px]' : 'text-[4px] py-[1px]'}`}
-              style={{ color: i === 0 ? '#dc2626' : i === 6 ? '#2563eb' : '#4338ca' }}>{d}</div>
+            <div key={d} className={`text-center font-extrabold ${s ? 'text-[9px] py-[4px]' : 'text-[4px] py-[2px]'}`}
+              style={{ color: i === 0 ? '#dc2626' : i === 6 ? '#2563eb' : '#334155', background: i % 2 === 0 ? '#f8fafc' : 'white' }}>{d}</div>
           ))}
         </div>
-        {/* 달력 격자 — 교대 행 틴트 + 취소선 휴진 */}
+        {/* 달력 격자 — 교대 컬럼 틴트 + 하단 보더 휴진 */}
         <div className="grid grid-cols-7 flex-1">
           {[null,null,null,null,null,null,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,null,null,null,null,null].slice(0,35).map((d, i) => {
-            const rowAlt = Math.floor(i / 7) % 2 === 1;
-            if (!d) return <div key={`e${i}`} style={{ borderRight: '0.5px solid #e8ecf0', borderBottom: '0.5px solid #e8ecf0', background: rowAlt ? '#f5f7fa' : 'white' }} />;
+            const colAlt = i % 7 % 2 === 0;
+            if (!d) return <div key={`e${i}`} style={{ borderBottom: '0.5px solid #e2e8f0', background: colAlt ? '#f8fafc' : 'white' }} />;
             const isClosed = d === 9 || d === 23;
             const isShort = d === 16;
             return (
               <div key={i} className="flex flex-col items-center justify-center"
                 style={{
-                  borderRight: '0.5px solid #e8ecf0',
-                  borderBottom: '0.5px solid #e8ecf0',
-                  background: isClosed ? '#fef2f2' : isShort ? '#fffbeb' : rowAlt ? '#f5f7fa' : 'white',
+                  borderBottom: isClosed ? '2.5px solid #dc2626' : '0.5px solid #e2e8f0',
+                  background: isClosed ? '#fef2f2' : isShort ? '#fffbeb' : colAlt ? '#f8fafc' : 'white',
                 }}>
-                <span className={`${s ? 'text-[10px]' : 'text-[5px]'} font-bold`}
-                  style={{
-                    color: isClosed ? '#dc2626' : isShort ? '#b45309' : i % 7 === 0 ? '#dc2626' : i % 7 === 6 ? '#2563eb' : '#1e1b4b',
-                    textDecoration: isClosed ? 'line-through' : 'none',
-                    textDecorationColor: '#dc2626',
-                  }}>{d}</span>
+                <span className={`${s ? 'text-[11px]' : 'text-[5.5px]'} font-bold`}
+                  style={{ color: isClosed ? '#dc2626' : isShort ? '#92400e' : i % 7 === 0 ? '#dc2626' : i % 7 === 6 ? '#2563eb' : '#1e293b' }}>{d}</span>
                 {isClosed && <span className={`${s ? 'text-[5px]' : 'text-[2.5px]'} font-black text-red-600 leading-none`}>휴진</span>}
-                {isShort && <span className={`${s ? 'text-[5px]' : 'text-[2.5px]'} font-black text-amber-600 leading-none`}>단축</span>}
+                {isShort && <span className={`${s ? 'text-[5px]' : 'text-[2.5px]'} font-black leading-none`} style={{ color: '#92400e' }}>단축</span>}
               </div>
             );
           })}
         </div>
-        {/* 풋터 — 인디고 정보바 */}
-        <div className="flex items-center justify-between" style={{ padding: s ? '4px 10px' : '2px 5px', borderTop: '1px solid #e0e7ff', background: '#eef2ff' }}>
-          <span className={`${s ? 'text-[8px]' : 'text-[3.5px]'} font-medium`} style={{ color: '#4338ca' }}>09~18 · 토 09~13</span>
-          <span className={`${s ? 'text-[7px]' : 'text-[3px]'}`} style={{ color: '#6366f1' }}>02-000-0000</span>
+        {/* 풋터 — 그레이 정보 바 */}
+        <div className="flex items-center justify-between" style={{ padding: s ? '4px 12px' : '2px 6px', background: '#f1f5f9', borderTop: '1px solid #e2e8f0' }}>
+          <span className={`${s ? 'text-[8px]' : 'text-[3.5px]'} font-medium`} style={{ color: '#334155' }}>평일 09–18 · 토 09–13</span>
+          <div className="flex gap-1.5">
+            <span className={`flex items-center gap-0.5 ${s ? 'text-[7px]' : 'text-[3px]'}`} style={{ color: '#64748b' }}>
+              <span className={`inline-block ${s ? 'w-2.5 h-[2px]' : 'w-1 h-[1px]'} bg-red-600`} />휴진
+            </span>
+            <span className={`flex items-center gap-0.5 ${s ? 'text-[7px]' : 'text-[3px]'}`} style={{ color: '#64748b' }}>
+              <span className={`inline-block ${s ? 'w-1.5 h-1.5' : 'w-0.5 h-0.5'} rounded-full`} style={{ background: '#92400e' }} />단축
+            </span>
+          </div>
         </div>
       </div>
     );
