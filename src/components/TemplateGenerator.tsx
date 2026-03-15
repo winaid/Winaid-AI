@@ -23,124 +23,9 @@ import {
   type CategoryTemplate,
   type SavedStyleHistory,
 } from '../services/calendarTemplateService';
-import {
-  T1SpringKindergarten,
-  T2CherryBlossom,
-  T3Autumn,
-  T4KoreanTraditional,
-  T5Notebook,
-  T6Christmas,
-  T7AutumnSpringNote,
-  T8AutumnHoliday,
-  T9HanokRoof,
-  T10DarkGreenClinic,
-  T11DarkBlueModern,
-  T12LavenderSparkle,
-  type ScheduleData,
-} from './schedule-templates';
+// [DELETED] T1~T12 schedule-template imports removed — old preview system
 
-/** 달력 테마 값 → React 컴포넌트 + 샘플 데이터 */
-const THEME_COMPONENT_MAP: Record<string, {
-  Component: React.ComponentType<{ data: ScheduleData; width?: number }>;
-  sample: ScheduleData;
-}> = {
-  spring_kids: {
-    Component: T1SpringKindergarten,
-    sample: {
-      clinicName: '윈에이드 치과', monthLabel: '4월', year: 2025, month: 4,
-      title: '4월 진료일정',
-      events: [{ date: 5, label: '정기휴진', type: 'closed' }, { date: 12, label: '정기휴진', type: 'closed' }, { date: 19, label: '정기휴진', type: 'closed' }, { date: 26, label: '정기휴진', type: 'closed' }],
-    },
-  },
-  cherry_blossom: {
-    Component: T2CherryBlossom,
-    sample: {
-      clinicName: '윈에이드 치과', monthLabel: '4월', year: 2025, month: 4,
-      title: '4월 진료일정',
-      events: [{ date: 5, label: '정기휴진', type: 'closed' }, { date: 12, label: '정기휴진', type: 'closed' }, { date: 19, label: '정기휴진', type: 'closed' }, { date: 26, label: '정기휴진', type: 'closed' }],
-    },
-  },
-  autumn: {
-    Component: T3Autumn,
-    sample: {
-      clinicName: '윈에이드 치과', monthLabel: '11월', year: 2025, month: 11,
-      title: '11월 진료일정',
-      events: [{ date: 5, label: '정기휴진', type: 'closed' }, { date: 12, label: '정기휴진', type: 'closed' }, { date: 19, label: '정기휴진', type: 'closed' }, { date: 26, label: '정기휴진', type: 'closed' }],
-    },
-  },
-  korean_traditional: {
-    Component: T4KoreanTraditional,
-    sample: {
-      clinicName: '윈에이드 치과', monthLabel: '1월', year: 2025, month: 1,
-      title: '1월 진료일정',
-      events: [{ date: 5, label: '정기휴진', type: 'closed' }, { date: 12, label: '정기휴진', type: 'closed' }, { date: 19, label: '정기휴진', type: 'closed' }, { date: 26, label: '정기휴진', type: 'closed' }],
-    },
-  },
-  medical_notebook: {
-    Component: T5Notebook,
-    sample: {
-      clinicName: '윈에이드 치과', monthLabel: '7월', year: 2025, month: 7,
-      title: '7월 진료일정',
-      events: [{ date: 5, label: '정기휴진', type: 'closed' }, { date: 12, label: '정기휴진', type: 'closed' }, { date: 19, label: '정기휴진', type: 'closed' }, { date: 26, label: '정기휴진', type: 'closed' }],
-    },
-  },
-  winter: {
-    Component: T6Christmas,
-    sample: {
-      clinicName: '윈에이드 치과', monthLabel: '12월', year: 2025, month: 12,
-      title: '12월 진료일정',
-      events: [{ date: 5, label: '정기휴진', type: 'closed' }, { date: 12, label: '정기휴진', type: 'closed' }, { date: 19, label: '정기휴진', type: 'closed' }, { date: 26, label: '정기휴진', type: 'closed' }],
-    },
-  },
-  autumn_spring_note: {
-    Component: T7AutumnSpringNote,
-    sample: {
-      clinicName: '윈에이드 치과', monthLabel: '10월', year: 2025, month: 10,
-      title: '10월 휴진 안내',
-      events: [{ date: 5, label: '추석연휴', type: 'closed' }, { date: 6, label: '추석연휴', type: 'closed' }, { date: 7, label: '추석연휴', type: 'closed' }],
-    },
-  },
-  autumn_holiday: {
-    Component: T8AutumnHoliday,
-    sample: {
-      clinicName: '윈에이드 치과', monthLabel: '10월', year: 2025, month: 10,
-      title: '10월 휴무',
-      events: [{ date: 3, label: '개천절', type: 'closed' }, { date: 9, label: '한글날', type: 'closed' }, { date: 4, label: '정상 영업', type: 'normal' }],
-    },
-  },
-  hanok_roof: {
-    Component: T9HanokRoof,
-    sample: {
-      clinicName: '윈에이드 치과', monthLabel: '2월', year: 2025, month: 2,
-      title: '2월 진료일정 안내',
-      events: [{ date: 16, label: '휴진', type: 'closed' }, { date: 17, label: '휴진', type: 'closed' }, { date: 18, label: '휴진', type: 'closed' }],
-    },
-  },
-  dark_green_clinic: {
-    Component: T10DarkGreenClinic,
-    sample: {
-      clinicName: '윈에이드 치과', monthLabel: '10월', year: 2025, month: 10,
-      title: '10월 진료일정',
-      events: [{ date: 1, label: '정상진료', type: 'normal' }, { date: 3, label: '휴진', type: 'closed' }, { date: 9, label: '휴진', type: 'closed' }],
-    },
-  },
-  dark_blue_modern: {
-    Component: T11DarkBlueModern,
-    sample: {
-      clinicName: '윈에이드 치과', monthLabel: '10월', year: 2025, month: 10,
-      title: '10월 휴진 일정',
-      events: [{ date: 1, label: '임시공휴일', type: 'seminar' }, { date: 3, label: '개천절', type: 'closed' }, { date: 9, label: '한글날', type: 'closed' }],
-    },
-  },
-  lavender_sparkle: {
-    Component: T12LavenderSparkle,
-    sample: {
-      clinicName: '윈에이드 치과', monthLabel: '10월', year: 2025, month: 10,
-      title: '10월 진료일정',
-      events: [{ date: 1, label: '정상 진료', type: 'normal' }, { date: 3, label: '개천절 휴진', type: 'closed' }, { date: 9, label: '한글날 휴진', type: 'closed' }],
-    },
-  },
-};
+// [DELETED] THEME_COMPONENT_MAP (T1~T12 calendar theme previews) completely removed
 
 type DayMark = 'closed' | 'shortened' | 'vacation';
 type TemplateCategory = 'schedule' | 'event' | 'doctor' | 'notice' | 'greeting' | 'hiring' | 'caution' | 'pricing';
@@ -191,11 +76,15 @@ function TemplateSVGPreview({ template: t, category, hospitalName }: { template:
     );
   }
 
-  // Placeholder — old rounded-card / gradient-header / badge SVG system deleted
+  // [DELETED] Old SVG preview completely removed — placeholder until new system
   return (
-    <div className="w-full h-full flex flex-col items-center justify-center p-3 text-center" style={{ background: `linear-gradient(135deg, ${t.bg} 0%, #ffffff 100%)` }}>
-      <div className="text-xs font-bold mb-1" style={{ color: t.color }}>{t.name}</div>
-      <div className="text-[10px] text-slate-400 leading-tight">{t.desc}</div>
+    <div className="w-full h-full flex flex-col items-center justify-center p-4 text-center bg-slate-50">
+      <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-2 border-2 border-dashed" style={{ borderColor: t.color + '40' }}>
+        <span className="text-lg" style={{ color: t.color }}>✦</span>
+      </div>
+      <div className="text-[11px] font-bold text-slate-700 mb-1">{t.name}</div>
+      <div className="text-[9px] text-slate-400 leading-tight px-2 mb-2">{t.desc?.slice(0, 30)}</div>
+      <div className="text-[8px] text-slate-300 border border-dashed border-slate-200 rounded px-2 py-0.5">새 디자인 시스템 준비 중</div>
     </div>
   );
 }
@@ -1028,9 +917,6 @@ export default function TemplateGenerator({ onSwitchToFree }: { onSwitchToFree?:
             <div className="grid grid-cols-3 gap-3 max-h-[480px] overflow-y-auto pr-1">
               {CALENDAR_THEME_OPTIONS.map(t => {
                 const isSelected = calendarTheme === t.value;
-                const themeEntry = THEME_COMPONENT_MAP[t.value];
-                const ThemeComp = themeEntry?.Component;
-                const themeSample = themeEntry?.sample;
 
                 return (
                   <button
@@ -1045,13 +931,15 @@ export default function TemplateGenerator({ onSwitchToFree }: { onSwitchToFree?:
                       }`}
                     style={isSelected ? { '--tw-ring-color': t.groupColor } as React.CSSProperties : undefined}
                   >
-                    <div className="relative bg-white">
-                      {/* SVG 전체 이미지 — 고정 비율 컨테이너에 맞춤 */}
-                      {ThemeComp && themeSample && (
-                        <div className="calendar-thumb-svg" style={{ pointerEvents: 'none' }}>
-                          <ThemeComp data={themeSample} width={600} />
+                    <div className="relative bg-slate-50" style={{ aspectRatio: '3/4' }}>
+                      {/* [DELETED] Old calendar theme SVG preview removed */}
+                      <div className="w-full h-full flex flex-col items-center justify-center p-3 text-center">
+                        <div className="w-8 h-8 rounded-lg flex items-center justify-center text-lg mb-2" style={{ backgroundColor: t.groupColor + '18' }}>
+                          {t.emoji}
                         </div>
-                      )}
+                        <div className="text-[10px] font-bold text-slate-600">{t.label.replace(/^[\S]+\s/, '')}</div>
+                        <div className="text-[9px] text-slate-400 mt-1 leading-tight px-1">새 디자인 시스템 준비 중</div>
+                      </div>
                       {/* 시각 군 태그 — 좌상단 */}
                       <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-md text-[9px] font-bold shadow-sm" style={{ backgroundColor: t.groupColor, color: 'white' }}>
                         {t.group}
@@ -1451,9 +1339,7 @@ export default function TemplateGenerator({ onSwitchToFree }: { onSwitchToFree?:
       {/* 달력 테마 확대 모달 (더블클릭) */}
       {enlargedCalendarTheme && (() => {
         const themeOpt = CALENDAR_THEME_OPTIONS.find(t => t.value === enlargedCalendarTheme);
-        const themeEntry = THEME_COMPONENT_MAP[enlargedCalendarTheme];
-        if (!themeOpt || !themeEntry) return null;
-        const { Component: ThemeComp, sample: themeSample } = themeEntry;
+        if (!themeOpt) return null;
         return (
           <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-8" onClick={() => setEnlargedCalendarTheme(null)}>
             <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden" onClick={e => e.stopPropagation()}>
@@ -1466,10 +1352,11 @@ export default function TemplateGenerator({ onSwitchToFree }: { onSwitchToFree?:
                   <svg className="w-4 h-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                 </button>
               </div>
-              <div className="p-4 flex justify-center" style={{ lineHeight: 0 }}>
-                <div style={{ width: '100%', maxWidth: 480 }}>
-                  <ThemeComp data={themeSample} width={480} />
-                </div>
+              <div className="p-8 flex flex-col items-center justify-center bg-slate-50 min-h-[280px]">
+                <div className="text-4xl mb-3">{themeOpt.emoji}</div>
+                <div className="text-sm font-bold text-slate-700 mb-1">{themeOpt.label}</div>
+                <div className="text-xs text-slate-400 mb-4">{themeOpt.desc}</div>
+                <div className="text-xs text-slate-300 border border-dashed border-slate-200 rounded-lg px-4 py-2">새 디자인 시스템 준비 중</div>
               </div>
               <div className="p-4 border-t border-slate-100 flex gap-2">
                 <button
