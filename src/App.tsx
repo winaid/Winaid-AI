@@ -691,7 +691,7 @@ const App: React.FC = () => {
             <img src="/280_logo.png" alt="WINAID" className={`h-8 w-8 group-hover:scale-105 transition-transform ${darkMode ? 'rounded-md bg-white p-0.5' : ''}`} />
             <div className="flex flex-col leading-none">
               <span className={`font-black text-base tracking-[-0.02em] ${darkMode ? 'text-slate-100' : 'text-slate-800'}`}>WIN<span className="text-blue-600">AID</span></span>
-              <span className={`text-[8px] font-semibold tracking-wider uppercase ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>AI Marketing <span className="opacity-50">{typeof __BUILD_HASH__ !== 'undefined' ? __BUILD_HASH__ : 'dev'}</span></span>
+              <span className={`text-[8px] font-semibold tracking-wider uppercase ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>AI Marketing <span className="opacity-60" title={`빌드: ${typeof __BUILD_HASH__ !== 'undefined' ? __BUILD_HASH__ : 'dev'}`}>{typeof __BUILD_HASH__ !== 'undefined' ? __BUILD_HASH__ : 'dev'}</span></span>
             </div>
           </a>
           <div className="flex items-center gap-3">

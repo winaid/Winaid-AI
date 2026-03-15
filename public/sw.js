@@ -5,8 +5,8 @@
  * - PWA 지원
  */
 
-// 캐시 버전 - 배포 시 자동 업데이트를 위해 타임스탬프 사용
-const CACHE_VERSION = 'v9-' + '20260313';
+// 캐시 버전 - 빌드 시 vite.config.ts swVersionPlugin이 아래 값을 빌드 해시로 자동 교체합니다.
+const CACHE_VERSION = '__SW_BUILD_HASH__';
 const CACHE_NAME = 'hospitalai-' + CACHE_VERSION;
 const RUNTIME_CACHE = 'hospitalai-runtime-' + CACHE_VERSION;
 
