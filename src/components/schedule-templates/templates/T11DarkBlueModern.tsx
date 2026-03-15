@@ -44,6 +44,24 @@ function HalftoneDots({ x, y, flip = false }: { x: number; y: number; flip?: boo
   );
 }
 
+/**
+ * T11 — 모던 네이비 / 다크블루 모던 (Modern Navy)
+ *
+ * 리서치 근거:
+ * - 선도 의료기관의 85%가 로고에 블루 계열 사용 (Grey Matter Marketing)
+ * - 소비자의 62-90%가 첫 90초 안에 색상 기반으로 브랜드 판단 (CCICOLOR 연구)
+ * - 일관된 시그니처 컬러 → 브랜드 인지도 최대 80% 향상 (Tailor Brands)
+ * - 한국 전문기관 "신뢰의 네이비" 적극 채택 (법률신문); 병원 HI에서 블루/네이비 최고 신뢰도 (병원신문)
+ * - Golden Proportions 치과 웹디자인: "clean whites, muted golds, and navy for sophistication"
+ * - design_trends_research: "미니맥시멀리즘" — 미니멀 여백 + 역동적 패턴
+ *
+ * 시각 요소 매핑:
+ * - 네이비 그래디언트 #0D1B3E→#162850 → 의료 85% 블루 사용 + 한국 "신뢰의 네이비"
+ * - HalftoneDots 4코너 → "미니맥시멀리즘" 트렌드 (코너 장식으로 절제)
+ * - 원형 배지 이벤트 표시 → 다크 배경 위 원형 강조 (clean whites + navy)
+ * - 얇은 직사각형 클리닉명 프레임 → 한국 카드뉴스 "클린 라인" 패턴
+ * - #8AAED4 공지 텍스트 → 네이비 배경 위 밝은 블루 (가독성 + 톤 통일)
+ */
 export default function T11DarkBlueModern({ data, width = 600, colors, mode = 'full' }: Props) {
   const C = { ...DEFAULT_COLORS, ...colors };
   const isWeekly = mode === 'weekly';

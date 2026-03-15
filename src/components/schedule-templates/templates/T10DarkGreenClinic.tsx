@@ -63,6 +63,23 @@ function ClinicPhotoHint({ x, y, w, h }: {
   );
 }
 
+/**
+ * T10 — 클리닉 그린 (Clinic Green)
+ *
+ * 리서치 근거:
+ * - MedInterior 치과 인테리어 트렌드: "그린은 컬러감이 강해 포인트 컬러로만 사용"
+ *   + "자연 목재와 그린 페어링이 가장 흔한 조합"
+ * - MasterDentGroup 치과 컬러 가이드: 그린 = 건강(health), 치유(healing), 자연(nature)
+ * - Canva 한국 의료 템플릿: "초록색+아이보리" 카드뉴스 — 깔끔하고 신뢰감 있는 패턴
+ * - 덴탈아리랑 "치과를 아름답게 하는 아이디어 15가지": 호텔/스파 느낌 인테리어 트렌드
+ *
+ * 시각 요소 매핑:
+ * - 다크 그린 #2C4A4A 상반부 → MedInterior "포인트 컬러 원칙" (전면 사용 대신 상반부만)
+ * - 크림 #F5F0E8 하반부 → Canva "그린+아이보리" 한국 의료 템플릿 공통
+ * - ToothIcon → 치과 브랜딩 가장 보편적 심볼 (MasterDentGroup)
+ * - Diamond 45도 회전 배지 → 한국 카드뉴스 "기하학적 강조" (T11 원형과 차별)
+ * - ClinicPhotoHint 하단 3칸 → "커스텀 그래픽 > 스톡 이미지" 원칙
+ */
 export default function T10DarkGreenClinic({ data, width = 600, colors, mode = 'full' }: Props) {
   const C = { ...DEFAULT_COLORS, ...colors };
   const isWeekly = mode === 'weekly';

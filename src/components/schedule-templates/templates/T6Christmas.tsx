@@ -93,6 +93,23 @@ function ChristmasTree({ x, y, h = 50 }: { x: number; y: number; h?: number }) {
   );
 }
 
+/**
+ * T6 — 크리스마스 (Christmas)
+ *
+ * 리서치 근거:
+ * - OhPrint.me 2025 크리스마스 카드 트렌드: 3대 팔레트 분석
+ *   ① 네이비+골드 (VIP), ② 레드+베이지 (빈티지), ③ 그린+화이트 (미니멀)
+ *   2025-2026 트렌드 = "담백한(muted) 톤", 금박 마감
+ * - 세웅병원 크리스마스 휴진안내: 인사말(상단) + 휴진기간(중앙) + 재개일 + 응급연락처(하단) 구조
+ * - GettyImagesBank 한국 크리스마스 템플릿: 트리 실루엣(빈도 1위) + 눈꽃(빈도 2위) + 루돌프
+ *
+ * 시각 요소 매핑:
+ * - 파스텔 블루 배경 #D8E8F5 → "파스텔 블루+실버 (모던)" 팔레트 직접 차용
+ * - Snowflake 9개 (크기/투명도 다양) → 눈꽃 = 가장 보편적 크리스마스 장식 (빈도 2위)
+ * - SantaSilhouette opacity 0.22 → "담백한 디자인" 트렌드, 실루엣 > 풀컬러
+ * - ChristmasTree opacity 0.2 하단 5개 → 트리 실루엣 = 컬러 배경 위 가장 보편적 (빈도 1위)
+ * - 네이비 헤더 #1A3A5C → 의료 전문성 유지 (클래식 빨간 헤더 대신)
+ */
 export default function T6Christmas({ data, width = 600, colors, mode = 'full' }: Props) {
   const C = { ...DEFAULT_COLORS, ...colors };
   const isWeekly = mode === 'weekly';
