@@ -3,7 +3,7 @@ import type { ScheduleData, TemplateColors, CalendarViewMode } from '../types';
 import { DEFAULT_COLORS } from '../types';
 import { buildCalendarWeeks, getEventWeeks, getRangeBoundsInWeek, safeNum, safeTranslate } from '../calendarEngine';
 
-const FONT = "'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif";
+const FONT = "Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif";
 const COL_W = 600 / 7;
 const HEADER_H = 42;
 const ROW_H_FULL = 72;
@@ -45,15 +45,20 @@ export default function T1SpringKindergarten({ data, width = 600, colors, mode =
       fontFamily={FONT}
       xmlns="http://www.w3.org/2000/svg"
     >
+      {/*
+        리서치 근거: 소아과 인테리어 색 비율 원칙 (CasaLight, MedInterior)
+        70% 흰색/연한 배경 + 25% 파스텔 악센트 + 5% 포인트 컬러
+        기존: 하늘색-그린 배경이 과도 → 오프화이트 베이스에 파스텔 포인트로 조정
+      */}
       <defs>
         <linearGradient id="t1-sky" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#AEE0F5" />
-          <stop offset="55%" stopColor="#D8F0FA" />
-          <stop offset="100%" stopColor="#EAF8F0" />
+          <stop offset="0%" stopColor="#F0F8FC" />
+          <stop offset="50%" stopColor="#F7FBFD" />
+          <stop offset="100%" stopColor="#FAFDF9" />
         </linearGradient>
       </defs>
 
-      {/* Sky background */}
+      {/* Sky background — 70% 영역: 연한 오프화이트 (기존 대비 채도 대폭 감소) */}
       <rect width="600" height={svgH} fill="url(#t1-sky)" />
 
       {/* Clouds */}
@@ -65,21 +70,21 @@ export default function T1SpringKindergarten({ data, width = 600, colors, mode =
         </g>
       ))}
 
-      {/* ── Green ribbon bow at top center ── */}
+      {/* ── Green ribbon bow at top center (25% 파스텔 악센트 영역) ── */}
       <g transform="translate(300,68)">
-        {/* Crossing ribbon stripes */}
-        <line x1="-310" y1="-38" x2="310" y2="28" stroke="#5D9A3C" strokeWidth="22" strokeLinecap="round" />
-        <line x1="310" y1="-38" x2="-310" y2="28" stroke="#5D9A3C" strokeWidth="22" strokeLinecap="round" />
-        <line x1="-310" y1="-38" x2="310" y2="28" stroke="#4A7D2E" strokeWidth="10" strokeLinecap="round" opacity="0.4" />
-        <line x1="310" y1="-38" x2="-310" y2="28" stroke="#4A7D2E" strokeWidth="10" strokeLinecap="round" opacity="0.4" />
+        {/* Crossing ribbon stripes — 파스텔 그린으로 채도 감소 */}
+        <line x1="-310" y1="-38" x2="310" y2="28" stroke="#8CC5A0" strokeWidth="22" strokeLinecap="round" />
+        <line x1="310" y1="-38" x2="-310" y2="28" stroke="#8CC5A0" strokeWidth="22" strokeLinecap="round" />
+        <line x1="-310" y1="-38" x2="310" y2="28" stroke="#6DAF88" strokeWidth="10" strokeLinecap="round" opacity="0.3" />
+        <line x1="310" y1="-38" x2="-310" y2="28" stroke="#6DAF88" strokeWidth="10" strokeLinecap="round" opacity="0.3" />
         {/* Bow loops */}
-        <path d="M0,0 Q-55,-48 -35,-72 Q-12,-90 0,0" fill="#5D9A3C" />
-        <path d="M0,0 Q55,-48 35,-72 Q12,-90 0,0" fill="#5D9A3C" />
-        <path d="M0,0 Q-42,38 -28,58 Q-10,72 0,0" fill="#4A7D2E" opacity="0.85" />
-        <path d="M0,0 Q42,38 28,58 Q10,72 0,0" fill="#4A7D2E" opacity="0.85" />
+        <path d="M0,0 Q-55,-48 -35,-72 Q-12,-90 0,0" fill="#8CC5A0" />
+        <path d="M0,0 Q55,-48 35,-72 Q12,-90 0,0" fill="#8CC5A0" />
+        <path d="M0,0 Q-42,38 -28,58 Q-10,72 0,0" fill="#6DAF88" opacity="0.7" />
+        <path d="M0,0 Q42,38 28,58 Q10,72 0,0" fill="#6DAF88" opacity="0.7" />
         {/* Knot */}
-        <ellipse cx="0" cy="0" rx="20" ry="16" fill="#4A7D2E" />
-        <ellipse cx="0" cy="0" rx="11" ry="9" fill="#3A6622" />
+        <ellipse cx="0" cy="0" rx="20" ry="16" fill="#6DAF88" />
+        <ellipse cx="0" cy="0" rx="11" ry="9" fill="#5A9B76" />
       </g>
 
       {/* White oval */}
@@ -111,8 +116,8 @@ export default function T1SpringKindergarten({ data, width = 600, colors, mode =
         </g>
       ))}
 
-      {/* Clinic name */}
-      <text x="300" y="163" textAnchor="middle" fontSize="18" fontWeight="700" fill="#3B6E1C">
+      {/* Clinic name — 5% 포인트 컬러 */}
+      <text x="300" y="163" textAnchor="middle" fontSize="18" fontWeight="700" fill="#4A8A60">
         {data.clinicName}
       </text>
 
@@ -122,10 +127,10 @@ export default function T1SpringKindergarten({ data, width = 600, colors, mode =
 
       {/* Banner ribbon behind main title */}
       <g transform="translate(300,218)">
-        <path d="M -165,-16 L 165,-16 L 155,18 L -155,18 Z" fill="#D5E9C0" />
-        <path d="M -165,-16 L -188,1 L -165,18 Z" fill="#BDD4A8" />
-        <path d="M 165,-16 L 188,1 L 165,18 Z" fill="#BDD4A8" />
-        <text y="8" textAnchor="middle" fontSize="30" fontWeight="800" fill="#2E5C1A" letterSpacing="3">
+        <path d="M -165,-16 L 165,-16 L 155,18 L -155,18 Z" fill="#E2F0D8" />
+        <path d="M -165,-16 L -188,1 L -165,18 Z" fill="#D0E4C0" />
+        <path d="M 165,-16 L 188,1 L 165,18 Z" fill="#D0E4C0" />
+        <text y="8" textAnchor="middle" fontSize="30" fontWeight="800" fill="#3D7A4A" letterSpacing="3">
           {data.monthLabel} 일정
         </text>
       </g>
@@ -242,13 +247,13 @@ export default function T1SpringKindergarten({ data, width = 600, colors, mode =
 
       {/* ── Bottom landscape ── */}
       <g transform={safeTranslate(0, svgH - 118)}>
-        {/* Back hill */}
-        <path d="M 0,55 Q 150,18 300,38 Q 450,18 600,48 L 600,120 L 0,120 Z" fill="#66BB6A" />
+        {/* Back hill — 파스텔 그린 (25% 악센트) */}
+        <path d="M 0,55 Q 150,18 300,38 Q 450,18 600,48 L 600,120 L 0,120 Z" fill="#A8D8B0" />
         {/* Front hill */}
-        <path d="M 0,65 Q 100,40 200,55 Q 350,32 500,50 Q 560,44 600,58 L 600,120 L 0,120 Z" fill="#4CAF50" />
+        <path d="M 0,65 Q 100,40 200,55 Q 350,32 500,50 Q 560,44 600,58 L 600,120 L 0,120 Z" fill="#8CC99A" />
         {/* Scallop edge */}
         {Array.from({ length: 21 }, (_, i) => (
-          <circle key={i} cx={i * 30 + 0} cy={64} r="13" fill="#43A047" />
+          <circle key={i} cx={i * 30 + 0} cy={64} r="13" fill="#7BBF8A" />
         ))}
         {/* Fence rail */}
         <rect x="0" y="72" width="600" height="9" rx="2" fill="#8D6E63" />

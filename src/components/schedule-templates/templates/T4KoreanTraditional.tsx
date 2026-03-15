@@ -3,20 +3,28 @@ import type { ScheduleData, TemplateColors, CalendarViewMode } from '../types';
 import { DEFAULT_COLORS } from '../types';
 import { buildCalendarWeeks, getEventWeeks, safeNum, safeTranslate } from '../calendarEngine';
 
-const FONT = "'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', serif";
+const FONT = "Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif";
 const COL_W = 540 / 7;  // card inner width
 const CARD_X = 30;
 const HEADER_H = 46;
 const ROW_H_FULL = 74;
 const ROW_H_WEEKLY = 105;
 
-// Event type → circle color mapping
+/**
+ * 이벤트 타입 → 컬러 매핑
+ * 오방색(五方色) 절제 포인트 반영 (한국민속대백과사전 근거):
+ * - 赤(남/화): 휴진 → #8B1A2A (절제된 적색)
+ * - 黑(북/수): 야간 → #2C3E50 (절제된 현색)
+ * - 靑(동/목): 정상 → #1B5E4B (절제된 청록)
+ * - 黃(중앙/토): 세미나 → #8B7D3C (절제된 황색)
+ * 과하게 쓰지 않고 이벤트 뱃지에서만 포인트로 사용
+ */
 const TYPE_COLORS: Record<string, { bg: string; text: string }> = {
-  closed:  { bg: '#8B1A2A', text: 'white' },
-  night:   { bg: '#6A1B9A', text: 'white' },
-  normal:  { bg: '#1565C0', text: 'white' },
-  seminar: { bg: '#37474F', text: 'white' },
-  custom:  { bg: '#FF6F00', text: 'white' },
+  closed:  { bg: '#8B1A2A', text: 'white' },   // 赤 — 절제된 적색
+  night:   { bg: '#2C3E50', text: 'white' },   // 黑 — 절제된 현색
+  normal:  { bg: '#1B5E4B', text: 'white' },   // 靑 — 절제된 청록
+  seminar: { bg: '#8B7D3C', text: 'white' },   // 黃 — 절제된 황색
+  custom:  { bg: '#6B4C1A', text: 'white' },
 };
 
 interface Props {

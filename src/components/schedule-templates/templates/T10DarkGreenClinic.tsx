@@ -3,7 +3,7 @@ import type { ScheduleData, TemplateColors, CalendarViewMode } from '../types';
 import { DEFAULT_COLORS } from '../types';
 import { buildCalendarWeeks, getEventWeeks, safeNum, safeTranslate } from '../calendarEngine';
 
-const FONT = "'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif";
+const FONT = "Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif";
 const CARD_X = 30;
 const CARD_W = 540;
 const COL_W = CARD_W / 7;

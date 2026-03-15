@@ -3,7 +3,7 @@ import type { ScheduleData, TemplateColors, CalendarViewMode } from '../types';
 import { DEFAULT_COLORS } from '../types';
 import { buildCalendarWeeks, getEventWeeks, getRangeBoundsInWeek, safeNum, safeTranslate } from '../calendarEngine';
 
-const FONT = "'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif";
+const FONT = "Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif";
 const CARD_X = 30;
 const CARD_W = 540;
 const COL_W = CARD_W / 7;
@@ -11,12 +11,19 @@ const HEADER_H = 44;
 const ROW_H_FULL = 76;
 const ROW_H_WEEKLY = 108;
 
+/**
+ * 오방색(五方色) 절제 포인트 반영:
+ * 한의원 디자인 원칙 "색과 선의 절제" (medinterior.com) 준수
+ * - 赤: 휴진 표시 (절제된 적색, 코랄 계열과 조화)
+ * - 黑: 야간 진료 (절제된 흑색)
+ * - 코랄(#E8856A)은 한의원 크림 톤과 어울리는 따뜻한 색으로 유지
+ */
 const TYPE_COLORS: Record<string, { bg: string; text: string }> = {
-  closed:  { bg: '#D64545', text: 'white' },
-  night:   { bg: '#7B1FA2', text: 'white' },
-  normal:  { bg: '#E8856A', text: 'white' },
-  seminar: { bg: '#5D4037', text: 'white' },
-  custom:  { bg: '#E88B3A', text: 'white' },
+  closed:  { bg: '#C4564A', text: 'white' },   // 赤 — 한의원 톤에 맞는 절제된 적색
+  night:   { bg: '#3A3A3A', text: 'white' },   // 黑 — 기와 색상과 통일
+  normal:  { bg: '#E8856A', text: 'white' },   // 코랄 — 메인 악센트 유지
+  seminar: { bg: '#5D4A37', text: 'white' },   // 목재 톤
+  custom:  { bg: '#B8956A', text: 'white' },   // 黃 — 절제된 황토색
 };
 
 interface Props {
