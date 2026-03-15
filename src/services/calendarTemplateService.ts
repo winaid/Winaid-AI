@@ -1702,7 +1702,7 @@ export const CATEGORY_TEMPLATES: Record<string, CategoryTemplate[]> = {
     {
       id: 'sch_clean_blue', name: '클린블루', color: '#3b82f6', accent: '#1d4ed8', bg: '#eff6ff',
       desc: '파란 그라데이션 헤더에 7열 격자 달력 — 똑닥·네이버 예약 스타일의 가장 보편적 병원 일정표',
-      layoutHint: 'cal_grid',
+      layoutHint: 'cal_corporate',
       aiPrompt: `Korean medical clinic monthly schedule poster. Clean corporate blue — the most standard pattern used on 똑닥, 미리캔버스 hospital templates.
 
 ZONE PROPORTIONS:
@@ -1721,7 +1721,7 @@ Mobile readability: minimum body text 11pt, date numbers 14pt bold, title 24pt+.
     {
       id: 'sch_beige_premium', name: '베이지골드', color: '#a3836a', accent: '#78583d', bg: '#faf7f4',
       desc: '리넨 질감 아이보리 위에 골드 라인 포인트 — 피부과·성형외과 고급 진료표',
-      layoutHint: 'cal_dark',
+      layoutHint: 'cal_premium',
       aiPrompt: `Korean aesthetic/dermatology clinic monthly schedule. Premium beige/ivory — popular with 피부과, 성형외과 beauty clinics on 미리캔버스.
 
 ZONE PROPORTIONS:
@@ -1739,7 +1739,7 @@ Mobile readability: min body 11pt, dates 14pt. Premium, warm, sophisticated — 
     {
       id: 'sch_cherry_spring', name: '벚꽃봄', color: '#ec4899', accent: '#be185d', bg: '#fdf2f8',
       desc: '수채화 벚꽃 일러스트 코너 장식에 로즈핑크 달력 — 3~5월 봄 시즌 전용',
-      layoutHint: 'cal_nature',
+      layoutHint: 'cal_spring',
       aiPrompt: `Korean medical clinic monthly schedule. Spring cherry blossom (벚꽃) seasonal theme — designed for 3월~5월 spring period.
 
 ZONE PROPORTIONS:
@@ -1758,7 +1758,7 @@ Mobile readability: min body 11pt, dates 14pt. Elegant spring seasonal — soft,
     {
       id: 'sch_autumn_maple', name: '가을단풍', color: '#ea580c', accent: '#c2410c', bg: '#fff7ed',
       desc: '수채화 단풍잎 프레임에 오렌지 그라데이션 — 9~11월 가을 시즌 전용',
-      layoutHint: 'cal_bubble',
+      layoutHint: 'cal_autumn',
       aiPrompt: `Korean medical clinic monthly schedule. Autumn maple leaf (단풍) seasonal theme — designed for 9월~11월 fall period.
 
 ZONE PROPORTIONS:
@@ -1777,7 +1777,7 @@ Mobile readability: min body 11pt, dates 14pt, badge text 8pt+. Rich autumn harv
     {
       id: 'sch_traditional', name: '전통한옥', color: '#92400e', accent: '#78350f', bg: '#fef3c7',
       desc: '기와지붕 실루엣과 전통 문양 테두리 — 설·추석 명절 및 한의원 특화',
-      layoutHint: 'cal_glass',
+      layoutHint: 'cal_hanok',
       aiPrompt: `Korean medical clinic monthly schedule. Traditional Korean hanok (한옥) architecture motif — ideal for 설날/추석 holiday periods, 한의원, traditional clinics.
 
 ZONE PROPORTIONS:
@@ -1820,7 +1820,7 @@ Mobile readability: min body 11pt, dates 15pt. MINIMAL, CLEAN, warm-toned — ty
     {
       id: 'sch_winter_snow', name: '겨울눈꽃', color: '#0ea5e9', accent: '#0284c7', bg: '#f0f9ff',
       desc: '기하학적 눈 결정 패턴에 아이시 블루 톤 — 12~2월 겨울 시즌 전용',
-      layoutHint: 'cal_grid',
+      layoutHint: 'cal_winter',
       aiPrompt: `Korean medical clinic monthly schedule. Winter snowflake (눈꽃) seasonal theme — designed for 12월~2월 winter period.
 
 ZONE PROPORTIONS:
@@ -1839,7 +1839,7 @@ Mobile readability: min body 11pt, dates 14pt. Cold, crisp, clean — profession
     {
       id: 'sch_white_minimal', name: '화이트', color: '#374151', accent: '#111827', bg: '#ffffff',
       desc: '순백 배경에 흑백 타이포그래피만 — 스위스 그리드 스타일 모던 미니멀',
-      layoutHint: 'cal_grid',
+      layoutHint: 'cal_swiss',
       aiPrompt: `Korean medical clinic monthly schedule. Ultra-minimal white — modern Swiss/Scandinavian grid-based typographic design.
 
 ZONE PROPORTIONS:
@@ -1859,7 +1859,7 @@ Mobile readability: min body 11pt, dates 15pt, title 24pt+. Extremely clean, no 
     {
       id: 'sch_navy_dark', name: '네이비', color: '#1e3a5f', accent: '#0f2444', bg: '#0f2444',
       desc: '다크 네이비 배경에 화이트 카드 테이블 — 대학병원·종합병원 공신력 스타일',
-      layoutHint: 'cal_dark',
+      layoutHint: 'cal_navy',
       aiPrompt: `Korean medical clinic monthly schedule. Dark navy corporate — trustworthy, authoritative feel matching 대학병원, 종합병원 branding.
 
 ZONE PROPORTIONS:
@@ -1881,7 +1881,7 @@ Mobile readability: min body 11pt white-on-navy contrast ratio > 7:1, dates 14pt
     {
       id: 'sch_mint_teal', name: '민트', color: '#14b8a6', accent: '#0f766e', bg: '#f0fdfa',
       desc: '민트/틸 그라데이션에 의료 십자 아이콘 — 치과·소아과 청결하고 산뜻한 느낌',
-      layoutHint: 'cal_nature',
+      layoutHint: 'cal_mint',
       aiPrompt: `Korean dental/pediatric clinic monthly schedule. Fresh mint/teal — the most popular palette for 치과, 소아과 clinics on 똑닥 and 미리캔버스 templates.
 
 ZONE PROPORTIONS:
@@ -1919,7 +1919,7 @@ Mobile readability: min body 11pt, dates 14pt. Feminine, elegant, premium — ge
     {
       id: 'sch_classic_green', name: '클래식그린', color: '#2d5a4a', accent: '#1a3c32', bg: '#f5f1eb',
       desc: '크림 상단 + 다크그린 하단 분할 구성에 다이아몬드 마커 — 한의원·내과 중후한 신뢰감',
-      layoutHint: 'cal_nature',
+      layoutHint: 'cal_sage',
       aiPrompt: `Korean traditional medicine clinic monthly schedule. Elegant dark green split-layout — suits 한의원, 내과, 가정의학과 clinics.
 
 ZONE PROPORTIONS:
