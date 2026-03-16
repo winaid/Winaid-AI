@@ -79,7 +79,9 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
   const [learnedStyleId, setLearnedStyleId] = useState<string | undefined>(undefined);
   
   // 🏥 병원 선택 state
+  // localStorage에서 병원명은 UI 표시용으로만 복원 — 말투 적용은 명시 선택 시에만
   const [hospitalName, setHospitalName] = useState<string>(() => localStorage.getItem('hospitalName') || '');
+  const [hospitalExplicitlySelected, setHospitalExplicitlySelected] = useState(false);
   const [showHospitalDropdown, setShowHospitalDropdown] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState<number | null>(null);
   const [selectedManager, setSelectedManager] = useState<string>('');
@@ -171,8 +173,9 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
       faqCount: postType === 'blog' && includeFaq ? faqCount : undefined,
       // 🏥 병원 소개 섹션
       includeHospitalIntro: postType === 'blog' ? includeHospitalIntro : undefined,
-      // 🏥 병원명 (공통)
+      // 🏥 병원명 (공통) — 말투 적용은 명시 선택 시에만
       hospitalName: hospitalName || undefined,
+      hospitalStyleSource: hospitalExplicitlySelected && hospitalName ? 'explicit_selected_hospital' : 'generic_default',
       hospitalWebsite: postType === 'press_release' ? hospitalWebsite : undefined,
       doctorName: postType === 'press_release' ? doctorName : undefined,
       doctorTitle: postType === 'press_release' ? doctorTitle : undefined,
@@ -342,7 +345,7 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
             <input
               type="text"
               value={hospitalName}
-              onChange={(e) => { setHospitalName(e.target.value); localStorage.setItem('hospitalName', e.target.value); }}
+              onChange={(e) => { setHospitalName(e.target.value); setHospitalExplicitlySelected(!!e.target.value.trim()); localStorage.setItem('hospitalName', e.target.value); }}
               placeholder="병원명 선택"
               className={inputCls}
             />
@@ -380,6 +383,7 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
                             type="button"
                             onClick={() => {
                               setHospitalName(hospital.name.replace(/ \(.*\)$/, ''));
+                              setHospitalExplicitlySelected(true);
                               setSelectedManager(hospital.manager);
                               setSelectedHospitalEntry(hospital);
                               setKeywordStats([]);

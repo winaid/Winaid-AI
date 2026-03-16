@@ -644,9 +644,10 @@ export const generateBlogWithPipeline = async (
   const promptTargetLength = Math.round(targetLength * 1.35);
   const medicalLawMode = request.medicalLawMode || 'strict';
 
-  // 병원 블로그 학습 말투 로드 (learnedStyleId 없을 때만)
+  // 병원 블로그 학습 말투 로드 — 명시적 선택 시에만 적용
   let hospitalStyleSuffix = '';
-  if (!request.learnedStyleId && request.hospitalName) {
+  const styleSource = request.hospitalStyleSource || 'generic_default';
+  if (!request.learnedStyleId && request.hospitalName && styleSource === 'explicit_selected_hospital') {
     try {
       const { getHospitalStylePromptForGeneration } = await import('./writingStyleService');
       if (typeof getHospitalStylePromptForGeneration !== 'function') {
@@ -655,14 +656,16 @@ export const generateBlogWithPipeline = async (
         const prompt = await getHospitalStylePromptForGeneration(request.hospitalName);
         if (prompt) {
           hospitalStyleSuffix = `\n\n[🏥 병원 블로그 학습 말투 - 반드시 적용]\n${prompt}`;
-          console.info('[PIPELINE] ✅ 병원 말투 로드 성공:', request.hospitalName);
+          console.info(`[STYLE] source=explicit_selected_hospital | hospital=${request.hospitalName}`);
         } else {
-          console.warn('[PIPELINE] 병원 말투 데이터 없음 (null) — 기본 말투 사용');
+          console.info(`[STYLE] source=explicit_selected_hospital | hospital=${request.hospitalName} | data=null → generic_default`);
         }
       }
     } catch (e) {
-      console.warn('[PIPELINE] 병원 말투 로드 실패:', e);
+      console.warn('[STYLE] 병원 말투 로드 실패:', e);
     }
+  } else {
+    console.info(`[STYLE] source=${styleSource} | hospital=${request.hospitalName || '(none)'} | styleApplied=generic_default`);
   }
 
   // ── Stage A: 아웃라인 생성 (FLASH) ── [재시도 포함]
@@ -806,9 +809,11 @@ ${request.disease ? `[질환] ${request.disease}` : ''}
 ${JSON.stringify(searchResults?.collected_facts?.slice(i, i + 2) || [], null, 2)}`;
 
     // PRO 모델로 시도 — 타임아웃 시 _callGeminiOnce 내부에서 FLASH 폴백
+    const sectionSystemPrompt = sectionPrompt + hospitalStyleSuffix;
+    const promptLength = sectionSystemPrompt.length + sectionUserPrompt.length;
     const result = await callGemini({
       prompt: sectionUserPrompt,
-      systemPrompt: sectionPrompt + hospitalStyleSuffix,
+      systemPrompt: sectionSystemPrompt,
       model: GEMINI_MODEL.PRO,
       responseType: 'text',
       timeout: PRO_SECTION_TIMEOUT,
@@ -821,12 +826,15 @@ ${JSON.stringify(searchResults?.collected_facts?.slice(i, i + 2) || [], null, 2)
     const summary = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().substring(0, 150);
     const elapsed = Date.now() - t0;
     timings[`section_${i}`] = elapsed;
-    // 90초 넘으면 PRO timeout 후 FLASH 폴백이 발생한 것
-    if (elapsed > PRO_SECTION_TIMEOUT) {
+
+    // PRO timeout 후 FLASH 폴백이 발생했는지 판정 (elapsed > proTimeout+5s 여유)
+    const wasFlashFallback = elapsed > PRO_SECTION_TIMEOUT + 5000;
+    const finalModel = wasFlashFallback ? 'FLASH(fallback)' : 'PRO';
+    if (wasFlashFallback) {
       proTimeoutCount++;
       flashFallbackCount++;
     }
-    console.info(`[PIPELINE] ✅ section ${sectionNum} ${html.length}자 ${elapsed}ms (proTimeout=${PRO_SECTION_TIMEOUT}ms)`);
+    console.info(`[PIPELINE] ✅ section ${sectionNum} ${html.length}자 totalMs=${elapsed} finalModel=${finalModel} promptLength=${promptLength} proTimeoutMs=${PRO_SECTION_TIMEOUT}`);
     return { html, summary };
   };
 
@@ -1495,8 +1503,8 @@ ${getStylePromptForGeneration(learnedStyle)}
     } catch (e) {
       console.warn('학습된 말투 로드 실패:', e);
     }
-  } else if (request.hospitalName) {
-    // 2순위: 병원 블로그 크롤링으로 학습한 스타일 (Supabase)
+  } else if (request.hospitalName && request.hospitalStyleSource === 'explicit_selected_hospital') {
+    // 2순위: 병원 블로그 크롤링으로 학습한 스타일 (Supabase) — 명시 선택 시에만
     try {
       const { getHospitalStylePrompt } = await import('./writingStyleService');
       const hospitalStylePrompt = await getHospitalStylePrompt(request.hospitalName);
@@ -1510,11 +1518,13 @@ ${hospitalStylePrompt}
 - 자주 쓰는 표현과 문장 구조를 자연스럽게 반영하세요
 - 전체적인 분위기를 일관되게 유지하세요
 `;
-        console.log('🏥 병원 블로그 학습 말투 적용:', request.hospitalName);
+        console.info(`[STYLE] source=explicit_selected_hospital | hospital=${request.hospitalName} | function=generateFullPost`);
       }
     } catch (e) {
-      console.warn('병원 말투 프로파일 로드 실패:', e);
+      console.warn('[STYLE] 병원 말투 프로파일 로드 실패:', e);
     }
+  } else {
+    console.info(`[STYLE] source=${request.hospitalStyleSource || 'generic_default'} | hospital=${request.hospitalName || '(none)'} | function=generateFullPost`);
   }
   
   // 커스텀 소제목 적용

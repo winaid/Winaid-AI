@@ -68,6 +68,7 @@ export interface GenerationRequest {
   includeHospitalIntro?: boolean; // 병원 소개 섹션 포함 여부 (홈페이지 크롤링 + 자동 삽입)
   // 보도자료용 필드
   hospitalName?: string; // 병원명
+  hospitalStyleSource?: 'explicit_selected_hospital' | 'generic_default'; // 병원 말투 소스
   hospitalWebsite?: string; // 병원 웹사이트 URL (크롤링용)
   doctorName?: string; // 의료진 이름
   doctorTitle?: string; // 직함 (예: 원장, 부원장, 과장)

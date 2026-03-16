@@ -544,7 +544,7 @@ async function _callGeminiOnce(config: GeminiCallConfig): Promise<any> {
       // 503/429/504 + PRO → FLASH 폴백 (모델 다운그레이드)
       if ((response.status === 503 || response.status === 429 || response.status === 504) && model === GEMINI_MODEL.PRO) {
         console.warn(`⚠️ PRO 모델 ${response.status} → FLASH 즉시 폴백 시도...`);
-        return _callGeminiOnce({ ...config, model: GEMINI_MODEL.FLASH, timeout: 45000 });
+        return _callGeminiOnce({ ...config, model: GEMINI_MODEL.FLASH, timeout: 30000 });
       }
 
       const error: any = new Error(errorBody.error || `서버 응답 오류 (${response.status})`);
@@ -608,7 +608,7 @@ async function _callGeminiOnce(config: GeminiCallConfig): Promise<any> {
       console.warn(`[TIMEOUT] ⏱️ client AbortController fired: model=${model} clientTimeout=${clientTimeout}ms proxyTimeout=${timeout}ms upstreamTimeout≈${upstreamTimeout}ms`);
       if (model === GEMINI_MODEL.PRO) {
         console.warn('⚠️ PRO 모델 타임아웃 → FLASH 폴백 시도...');
-        return _callGeminiOnce({ ...config, model: GEMINI_MODEL.FLASH, timeout: 45000 });
+        return _callGeminiOnce({ ...config, model: GEMINI_MODEL.FLASH, timeout: 30000 });
       }
       const timeoutError: any = new Error(`Gemini API timeout (client=${clientTimeout}ms, proxy=${timeout}ms)`);
       timeoutError.status = 504;

@@ -103,33 +103,43 @@ function getKeys() {
 
 let keyIndex = 0;
 
-// ── 키별 503 cooldown 상태 ──
+// ── 키별 503 cooldown 상태 (text/image 분리) ──
 // Vercel Serverless는 인스턴스가 재사용되므로 모듈 스코프 변수가 유지됨
-const keyCooldowns = new Map(); // keyIndex → { until: timestamp, count: number }
+// text와 image(raw) 요청이 같은 cooldown pool을 공유하면,
+// 이미지 503이 텍스트 요청까지 차단하는 문제가 발생하므로 분리
+const keyCooldownsText = new Map();  // keyIndex → { until: timestamp, count: number }
+const keyCooldownsImage = new Map(); // keyIndex → { until: timestamp, count: number }
 
 const KEY_COOLDOWN_MS = 10000; // 503 발생 시 해당 키 10초 쿨다운
 
-function isKeyCooledDown(ki) {
-  const cd = keyCooldowns.get(ki);
+function getCooldownMap(isRaw) {
+  return isRaw ? keyCooldownsImage : keyCooldownsText;
+}
+
+function isKeyCooledDown(ki, isRaw) {
+  const map = getCooldownMap(isRaw);
+  const cd = map.get(ki);
   if (!cd) return false;
   if (Date.now() > cd.until) {
-    keyCooldowns.delete(ki);
+    map.delete(ki);
     return false;
   }
   return true;
 }
 
-function markKeyCooldown(ki) {
-  const cd = keyCooldowns.get(ki) || { until: 0, count: 0 };
+function markKeyCooldown(ki, isRaw) {
+  const map = getCooldownMap(isRaw);
+  const cd = map.get(ki) || { until: 0, count: 0 };
   cd.count++;
   // 연속 503 시 쿨다운 시간 증가 (10초, 20초, 30초)
   cd.until = Date.now() + KEY_COOLDOWN_MS * Math.min(cd.count, 3);
-  keyCooldowns.set(ki, cd);
-  console.warn(`[proxy] 🧊 key=${ki} cooldown ${Math.min(cd.count, 3) * 10}s (503 count=${cd.count})`);
+  map.set(ki, cd);
+  const scope = isRaw ? 'image' : 'text';
+  console.warn(`[proxy] 🧊 key=${ki} cooldownScope=${scope} cooldown ${Math.min(cd.count, 3) * 10}s (503 count=${cd.count})`);
 }
 
-function markKeySuccess(ki) {
-  keyCooldowns.delete(ki);
+function markKeySuccess(ki, isRaw) {
+  getCooldownMap(isRaw).delete(ki);
 }
 
 async function fetchGeminiWithRotation(keys, model, apiBody, timeout, isRaw = false) {
@@ -146,11 +156,13 @@ async function fetchGeminiWithRotation(keys, model, apiBody, timeout, isRaw = fa
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     const ki = (keyIndex + attempt) % keys.length;
 
-    // 503 쿨다운 중인 키는 건너뜀
-    if (isKeyCooledDown(ki)) {
-      const cd = keyCooldowns.get(ki);
-      console.warn(`[proxy] ⏭️ ${tag} key=${ki} model=${model} skipped (cooldown until +${Math.round((cd.until - Date.now()) / 1000)}s)`);
-      lastError = `key=${ki} in cooldown`;
+    // 503 쿨다운 중인 키는 건너뜀 (text/image 분리)
+    if (isKeyCooledDown(ki, isRaw)) {
+      const map = getCooldownMap(isRaw);
+      const cd = map.get(ki);
+      const scope = isRaw ? 'image' : 'text';
+      console.warn(`[proxy] ⏭️ ${tag} key=${ki} model=${model} skipped (cooldownScope=${scope} until +${Math.round((cd.until - Date.now()) / 1000)}s)`);
+      lastError = `key=${ki} in cooldown (${scope})`;
       lastStatus = 503;
       continue;
     }
@@ -175,8 +187,8 @@ async function fetchGeminiWithRotation(keys, model, apiBody, timeout, isRaw = fa
 
       if (response.ok) {
         keyIndex = (ki + 1) % keys.length;
-        markKeySuccess(ki);
-        console.log(`[proxy] ✅ ${tag} key=${ki} model=${model} ${ms}ms`);
+        markKeySuccess(ki, isRaw);
+        console.log(`[proxy] ✅ ${tag} key=${ki} model=${model} ${ms}ms cooldownScope=${isRaw ? 'image' : 'text'}`);
         return { ok: true, data: await response.json() };
       }
 
@@ -187,7 +199,7 @@ async function fetchGeminiWithRotation(keys, model, apiBody, timeout, isRaw = fa
       if (us === 503 || us === 429) {
         lastError = errorText;
         lastStatus = us;
-        markKeyCooldown(ki);
+        markKeyCooldown(ki, isRaw);
         if (attempt < maxAttempts - 1) {
           // 503: 3초 대기 후 다음 키, 429: 2초 대기 후 다음 키
           const delay = us === 503 ? 3000 : 2000;
@@ -244,22 +256,25 @@ async function fetchGeminiWithRotation(keys, model, apiBody, timeout, isRaw = fa
     const nextAvailableAt = earliest === Infinity ? now + 5000 : earliest + 500;
 
     // 구조화된 로그: 각 키의 cooldown 상태
+    const scope = isRaw ? 'image' : 'text';
+    const map = getCooldownMap(isRaw);
     for (let i = 0; i < keys.length; i++) {
-      const cd = keyCooldowns.get(i);
+      const cd = map.get(i);
       if (cd && cd.until > now) {
-        console.warn(`[proxy] 🧊 key=${i} cooldownUntil=+${Math.round((cd.until - now) / 1000)}s count=${cd.count} model=${model} isRaw=${isRaw}`);
+        console.warn(`[proxy] 🧊 key=${i} cooldownScope=${scope} cooldownUntil=+${Math.round((cd.until - now) / 1000)}s count=${cd.count} model=${model}`);
       }
     }
-    console.warn(`[proxy] 🧊 all_keys_in_cooldown keys=${keys.length} retryAfterMs=${retryAfterMs} nextAvailableAt=${nextAvailableAt} earliestKey=${earliestKeyIndex} model=${model} isRaw=${isRaw} elapsedMs=${Date.now() - (t0 || now)}`);
+    console.warn(`[proxy] 🧊 all_keys_in_cooldown cooldownScope=${scope} keys=${keys.length} retryAfterMs=${retryAfterMs} nextAvailableAt=${nextAvailableAt} earliestKey=${earliestKeyIndex} model=${model} isRaw=${isRaw} elapsedMs=${Date.now() - (t0 || now)}`);
 
     return {
       ok: false,
       status: 503,
       error: "all_keys_in_cooldown",
-      message: "All image keys are cooling down",
+      message: `All ${scope} keys are cooling down`,
+      cooldownScope: scope,
       retryAfterMs,
       nextAvailableAt,
-      details: `next key available in ${retryAfterMs}ms`,
+      details: `next key available in ${retryAfterMs}ms (scope=${scope})`,
     };
   }
   return {
@@ -290,18 +305,22 @@ export default async function handler(req, res) {
   // 헬스 체크 (GET) — CORS + 키 상태 디버깅 정보
   if (req.method === "GET") {
     const keysCount = getKeys().length;
-    const cooldowns = {};
+    const cooldowns = { text: {}, image: {} };
     for (let i = 0; i < keysCount; i++) {
-      const cd = keyCooldowns.get(i);
-      if (cd && Date.now() < cd.until) {
-        cooldowns[`key${i}`] = { remaining: Math.round((cd.until - Date.now()) / 1000) + "s", count: cd.count };
+      const cdText = keyCooldownsText.get(i);
+      if (cdText && Date.now() < cdText.until) {
+        cooldowns.text[`key${i}`] = { remaining: Math.round((cdText.until - Date.now()) / 1000) + "s", count: cdText.count };
+      }
+      const cdImage = keyCooldownsImage.get(i);
+      if (cdImage && Date.now() < cdImage.until) {
+        cooldowns.image[`key${i}`] = { remaining: Math.round((cdImage.until - Date.now()) / 1000) + "s", count: cdImage.count };
       }
     }
     return res.status(200).json({
       status: "ok",
       region: process.env.VERCEL_REGION || "iad1",
       keys: keysCount,
-      cooldowns: Object.keys(cooldowns).length > 0 ? cooldowns : "none",
+      cooldowns: (Object.keys(cooldowns.text).length > 0 || Object.keys(cooldowns.image).length > 0) ? cooldowns : "none",
       cors: {
         requestOrigin: origin || "(none)",
         allowed: isOriginAllowed(origin),
