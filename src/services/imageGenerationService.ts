@@ -460,18 +460,31 @@ export interface BlogImageResult {
   errorCode?: string;
 }
 
-// 이미지 생성 시도당 타임아웃 (프록시 경유 포함, 20초)
-const IMAGE_PER_ATTEMPT_TIMEOUT = 20000;
+export type ImageGenMode = 'auto' | 'manual';
+
+const IMAGE_TIMEOUT = {
+  auto:   18000,  // 자동 생성: 18초 — 빠르게 실패, 빠르게 fallback
+  manual: 40000,  // 수동 재생성: 40초 — 사용자가 대기 의사 있음
+} as const;
+
+const IMAGE_MAX_RETRIES = {
+  auto:   1,      // 자동: 1회 재시도 (총 2번) → 최악 ~40초
+  manual: 2,      // 수동: 2회 재시도 (총 3번) → 최악 ~130초
+} as const;
 
 // 🖼️ 블로그용 일반 이미지 생성 함수 (텍스트 없는 순수 이미지)
-// 최대 2회 시도 (시도당 20초), 503이면 ultra-minimal prompt로 재시도, 그래도 실패하면 placeholder
+// mode='auto': 블로그 생성 중 자동 호출 — 짧은 timeout, 1회 재시도, 빠른 fallback
+// mode='manual': 사용자가 "이미지 다시 생성" 클릭 — 긴 timeout, 2회 재시도
 export const generateBlogImage = async (
   promptText: string,
   style: ImageStyle,
   aspectRatio: string = "16:9",
-  customStylePrompt?: string
+  customStylePrompt?: string,
+  mode: ImageGenMode = 'auto'
 ): Promise<string> => {
   const styleCompact = customStylePrompt || BLOG_IMAGE_STYLE_COMPACT[style] || BLOG_IMAGE_STYLE_COMPACT.illustration;
+  const timeout = IMAGE_TIMEOUT[mode];
+  const maxRetries = IMAGE_MAX_RETRIES[mode];
 
   const fullPrompt = `Generate a ${aspectRatio} landscape blog image for a Korean medical clinic.
 [Subject] ${promptText}
@@ -482,10 +495,9 @@ export const generateBlogImage = async (
     style === 'photo' ? 'Photorealistic' : style === 'medical' ? 'Medical 3D' : '3D illustration, pastel'
   }. No text. 16:9.`.trim();
 
-  const MAX_RETRIES = 2;
   let lastError: any = null;
 
-  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
     const currentPrompt = attempt === 0 ? fullPrompt : minimalPrompt;
     const t0 = Date.now();
 
@@ -496,27 +508,27 @@ export const generateBlogImage = async (
           responseModalities: ["IMAGE", "TEXT"],
           temperature: 0.6,
         },
-      }, IMAGE_PER_ATTEMPT_TIMEOUT);
+      }, timeout);
 
       const ms = Date.now() - t0;
       const finishReason = result?.candidates?.[0]?.finishReason;
 
       if (finishReason === 'SAFETY' || finishReason === 'RECITATION') {
         lastError = new Error(`SAFETY:${finishReason}`);
-        console.warn(`[IMG] attempt=${attempt + 1} SAFETY ${ms}ms`);
-        if (attempt < MAX_RETRIES - 1) await new Promise(r => setTimeout(r, 1000));
+        console.warn(`[IMG] ${mode} attempt=${attempt + 1} SAFETY ${ms}ms`);
+        if (attempt < maxRetries) await new Promise(r => setTimeout(r, 800));
         continue;
       }
 
       const imagePart = (result?.candidates?.[0]?.content?.parts || []).find((p: any) => p.inlineData?.data);
       if (imagePart?.inlineData) {
-        console.info(`[IMG] ✅ blog attempt=${attempt + 1} ${ms}ms prompt=${currentPrompt.length}ch`);
+        console.info(`[IMG] ✅ ${mode} attempt=${attempt + 1} ${ms}ms timeout=${timeout} prompt=${currentPrompt.length}ch`);
         return `data:${imagePart.inlineData.mimeType || 'image/png'};base64,${imagePart.inlineData.data}`;
       }
 
       lastError = new Error('no image data');
-      console.warn(`[IMG] attempt=${attempt + 1} no-data ${ms}ms`);
-      if (attempt < MAX_RETRIES - 1) await new Promise(r => setTimeout(r, 1000));
+      console.warn(`[IMG] ${mode} attempt=${attempt + 1} no-data ${ms}ms`);
+      if (attempt < maxRetries) await new Promise(r => setTimeout(r, 800));
 
     } catch (error: any) {
       lastError = error;
@@ -525,16 +537,15 @@ export const generateBlogImage = async (
       const is503 = st === 503 || (error?.message || '').includes('503');
       const is504 = st === 504 || (error?.message || '').includes('timeout');
 
-      console.warn(`[IMG] ❌ attempt=${attempt + 1} ${is503 ? 'upstream-503' : is504 ? 'timeout' : st || 'ERR'} ${ms}ms`);
+      console.warn(`[IMG] ❌ ${mode} attempt=${attempt + 1} ${is503 ? '503' : is504 ? 'timeout' : st || 'ERR'} ${ms}ms timeout=${timeout}`);
 
-      if (attempt < MAX_RETRIES - 1) {
-        // 503/504: 짧은 backoff 후 minimal prompt로 즉시 재시도
-        await new Promise(r => setTimeout(r, is503 ? 1000 : 1500));
+      if (attempt < maxRetries) {
+        await new Promise(r => setTimeout(r, is503 ? 800 : 1000));
       }
     }
   }
 
-  console.error(`[IMG] ❌ blog FAILED ${MAX_RETRIES}x: ${lastError?.status || ''} ${lastError?.message?.substring(0, 60)}`);
+  console.error(`[IMG] ❌ ${mode} FAILED ${maxRetries + 1}x: ${lastError?.status || ''} ${lastError?.message?.substring(0, 60)}`);
   const base64Placeholder = btoa(unescape(encodeURIComponent(BLOG_IMAGE_PLACEHOLDER_SVG)));
   return `data:image/svg+xml;base64,${base64Placeholder}`;
 };

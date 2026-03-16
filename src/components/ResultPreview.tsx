@@ -1221,8 +1221,9 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
         newImageData = await generateSingleImage(regenPrompt.trim(), style, imgRatio, customStylePrompt);
       } else {
         // 📝 블로그: generateBlogImage 사용 (텍스트 없는 순수 이미지, 16:9)
-        console.log('🔄 블로그 이미지 재생성:', { style, customStylePrompt: customStylePrompt?.substring(0, 50) });
-        newImageData = await generateBlogImage(regenPrompt.trim(), style, imgRatio, customStylePrompt);
+        // 수동 재생성 → mode='manual' (더 긴 timeout 허용)
+        console.log('🔄 블로그 이미지 재생성 (manual):', { style, customStylePrompt: customStylePrompt?.substring(0, 50) });
+        newImageData = await generateBlogImage(regenPrompt.trim(), style, imgRatio, customStylePrompt, 'manual');
       }
       
       if (newImageData) {
@@ -1297,11 +1298,9 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
                   console.log('🔄 AI 보정 이미지 재생성:', { targetIdx, style, isCardNews, customStylePrompt: customStylePrompt?.substring(0, 50) });
                   
                   if (isCardNews) {
-                    // 🎴 카드뉴스: generateSingleImage 사용 (텍스트 포함, 1:1)
                     newImageMap[targetIdx] = await generateSingleImage(prompt, style, '1:1', customStylePrompt);
                   } else {
-                    // 📝 블로그: generateBlogImage 사용 (텍스트 없는 순수 이미지, 16:9)
-                    newImageMap[targetIdx] = await generateBlogImage(prompt, style, '16:9', customStylePrompt);
+                    newImageMap[targetIdx] = await generateBlogImage(prompt, style, '16:9', customStylePrompt, 'manual');
                   }
                 })
               );
