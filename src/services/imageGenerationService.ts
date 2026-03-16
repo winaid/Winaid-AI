@@ -498,8 +498,7 @@ ${promptText}
 
   console.log('📷 generateBlogImage - 블로그용 이미지 생성 (텍스트 없음, 16:9)');
 
-  // 재시도 로직
-  const MAX_RETRIES = 2;
+  const MAX_RETRIES = 3;
   let lastError: any = null;
 
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
@@ -514,35 +513,60 @@ ${promptText}
         },
       }, TIMEOUTS.IMAGE_GENERATION);
 
+      // 안전 필터 차단 확인
+      const finishReason = result?.candidates?.[0]?.finishReason;
+      if (finishReason === 'SAFETY' || finishReason === 'RECITATION') {
+        console.warn(`⚠️ 블로그 이미지 안전 정책 차단 (${finishReason}), 프롬프트 간소화 후 재시도`);
+        lastError = new Error(`이미지 안전 정책 차단 (${finishReason})`);
+        if (attempt < MAX_RETRIES) {
+          await new Promise(resolve => setTimeout(resolve, 1500 * attempt));
+        }
+        continue;
+      }
+
       const parts = result?.candidates?.[0]?.content?.parts || [];
       const imagePart = parts.find((p: any) => p.inlineData?.data);
 
       if (imagePart?.inlineData) {
         const mimeType = imagePart.inlineData.mimeType || 'image/png';
         const data = imagePart.inlineData.data;
-        console.log(`✅ 블로그 이미지 생성 성공`);
+        console.log(`✅ 블로그 이미지 생성 성공 (시도 ${attempt})`);
         return `data:${mimeType};base64,${data}`;
       }
 
       lastError = new Error('이미지 데이터를 받지 못했습니다.');
       if (attempt < MAX_RETRIES) {
-        await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+        await new Promise(resolve => setTimeout(resolve, 1500 * attempt));
       }
 
     } catch (error: any) {
       lastError = error;
-      console.error(`❌ 블로그 이미지 생성 에러:`, error?.message || error);
+      const status = error?.status;
+      const msg = error?.message || '';
+      console.error(`❌ 블로그 이미지 생성 에러 (시도 ${attempt}/${MAX_RETRIES}):`, msg);
+
       if (attempt < MAX_RETRIES) {
-        await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, attempt - 1)));
+        // 429(rate limit)는 더 오래 대기, 그 외는 지수 백오프
+        const isRateLimit = status === 429 || msg.includes('429') || msg.includes('quota') || msg.includes('RESOURCE_EXHAUSTED');
+        const waitMs = isRateLimit
+          ? 5000 * attempt
+          : 2000 * Math.pow(2, attempt - 1);
+        console.log(`⏳ ${waitMs / 1000}초 후 재시도... (${isRateLimit ? 'rate limit' : 'backoff'})`);
+        await new Promise(resolve => setTimeout(resolve, waitMs));
       }
     }
   }
 
-  // 실패 시 throw → generateFullPost의 per-image catch에서 imageFailCount 집계
+  // 최종 실패 시 플레이스홀더 SVG 반환 (throw 대신)
   console.error('❌ 블로그 이미지 생성 최종 실패:', lastError?.message || lastError);
-  const error: any = new Error(lastError?.message || '이미지 생성 실패');
-  error.status = lastError?.status || 503;
-  throw error;
+  const placeholderSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720">
+    <rect fill="#F1F5F9" width="1280" height="720" rx="16"/>
+    <rect fill="#fff" x="40" y="40" width="1200" height="640" rx="12"/>
+    <text x="640" y="340" text-anchor="middle" font-family="Arial,sans-serif" font-size="24" fill="#64748b">이미지 생성에 실패했습니다</text>
+    <text x="640" y="380" text-anchor="middle" font-family="Arial,sans-serif" font-size="16" fill="#94a3b8">이미지를 클릭하여 재생성해주세요</text>
+  </svg>`;
+  const base64Placeholder = btoa(unescape(encodeURIComponent(placeholderSvg)));
+  return `data:image/svg+xml;base64,${base64Placeholder}`;
 };
 
 // 🎴 기본 프레임 이미지 URL (로컬 파일 사용 - 외부 URL 403 에러 방지)
@@ -718,11 +742,9 @@ ${cleanPromptText}
     finalPromptHead: finalPrompt.slice(0, 500),
   });
 
-  // 🔄 재시도 로직: 최대 2회 시도 (빠른 실패 유도)
-  const MAX_RETRIES = 2;
+  const MAX_RETRIES = 3;
   let lastError: any = null;
 
-  // 참고 이미지 파트 준비 (기본 프레임 포함)
   const refImagePart = effectiveReferenceImage && effectiveReferenceImage.startsWith('data:')
     ? (() => {
         const [meta, base64] = effectiveReferenceImage.split(',');
@@ -735,7 +757,6 @@ ${cleanPromptText}
     try {
       console.log(`🎨 이미지 생성 시도 ${attempt}/${MAX_RETRIES} (gemini-3-pro-image-preview)...`);
 
-      // Nano Banana Pro (Gemini 3 Pro Image) - 이미지 생성 전용 모델
       const contentParts: any[] = refImagePart
         ? [refImagePart, { text: finalPrompt }]
         : [{ text: finalPrompt }];
@@ -748,16 +769,16 @@ ${cleanPromptText}
         },
       }, TIMEOUTS.IMAGE_GENERATION);
 
-      // 안전 필터 등으로 인한 차단 확인
       const finishReason = result?.candidates?.[0]?.finishReason;
-      if (finishReason && finishReason !== 'STOP' && finishReason !== 'MAX_TOKENS') {
-        console.warn(`⚠️ 이미지 생성 중단됨 (이유: ${finishReason})`);
-        if (finishReason === 'SAFETY' || finishReason === 'RECITATION') {
-           throw new Error(`이미지 생성이 안전 정책에 의해 차단되었습니다. (${finishReason})`);
+      if (finishReason === 'SAFETY' || finishReason === 'RECITATION') {
+        console.warn(`⚠️ 이미지 안전 정책 차단 (${finishReason}), 재시도`);
+        lastError = new Error(`이미지 안전 정책 차단 (${finishReason})`);
+        if (attempt < MAX_RETRIES) {
+          await new Promise(resolve => setTimeout(resolve, 2000 * attempt));
         }
+        continue;
       }
 
-      // 응답에서 이미지 데이터 추출
       const parts = result?.candidates?.[0]?.content?.parts || [];
       const imagePart = parts.find((p: any) => p.inlineData?.data);
 
@@ -768,30 +789,29 @@ ${cleanPromptText}
         return `data:${mimeType};base64,${data}`;
       }
 
-      // 텍스트 응답만 온 경우 (거절 메시지 등)
       const textPart = parts.find((p: any) => p.text)?.text;
       if (textPart) {
-        console.warn(`⚠️ 이미지 대신 텍스트 응답 수신: "${textPart.substring(0, 100)}..."`);
+        console.warn(`⚠️ 이미지 대신 텍스트 응답: "${textPart.substring(0, 100)}..."`);
       }
 
-      // inlineData가 없으면 재시도
-      console.warn(`⚠️ 이미지 데이터 없음, 재시도 중... (${attempt}/${MAX_RETRIES})`);
       lastError = new Error('이미지 데이터를 받지 못했습니다.');
-
-      // 재시도 전 짧은 대기
       if (attempt < MAX_RETRIES) {
-        await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+        await new Promise(resolve => setTimeout(resolve, 1500 * attempt));
       }
 
     } catch (error: any) {
       lastError = error;
-      console.error(`❌ 이미지 생성 에러 (시도 ${attempt}/${MAX_RETRIES}):`, error?.message || error);
+      const status = error?.status;
+      const msg = error?.message || '';
+      console.error(`❌ 이미지 생성 에러 (시도 ${attempt}/${MAX_RETRIES}):`, msg);
 
-      // 재시도 전 짧은 대기 (지수 백오프)
       if (attempt < MAX_RETRIES) {
-        const waitTime = 1000 * Math.pow(2, attempt - 1); // 1초, 2초, 4초
-        console.log(`⏳ ${waitTime/1000}초 후 재시도...`);
-        await new Promise(resolve => setTimeout(resolve, waitTime));
+        const isRateLimit = status === 429 || msg.includes('429') || msg.includes('quota') || msg.includes('RESOURCE_EXHAUSTED');
+        const waitMs = isRateLimit
+          ? 5000 * attempt
+          : 2000 * Math.pow(2, attempt - 1);
+        console.log(`⏳ ${waitMs / 1000}초 후 재시도... (${isRateLimit ? 'rate limit' : 'backoff'})`);
+        await new Promise(resolve => setTimeout(resolve, waitMs));
       }
     }
   }

@@ -721,36 +721,32 @@ ${JSON.stringify(searchResults?.collected_facts?.slice(0, 3) || [], null, 2)}`;
 
   safeProgress(`✅ Stage A 완료: 소제목 ${outline.sections.length}개 설계`);
   console.info(`[PIPELINE] ✅ Stage A 완료: 소제목 ${outline.sections.length}개`);
-  console.info('[PIPELINE] ▶ Stage B: 본문 생성 시작 (도입부 → 소제목 → 마무리, 직렬)');
+  console.info('[PIPELINE] ▶ Stage B: 본문 생성 시작 (도입부 + 섹션 배치 병렬)');
 
-  // ── Stage B: 본문 생성 (PRO) ── [도입부 → 소제목 순차 → 마무리]
-  // ⚠️ 직렬 전환 이유: 병렬 생성 시 PRO 503 → FLASH 폴백 중 빈 문자열 반환 → EMPTY_STATE 버그
+  // ── Stage B: 본문 생성 (배치 병렬) ──
+  // 도입부(FLASH) + 첫 번째 섹션 배치를 동시에 시작
+  // 섹션은 2개씩 배치 병렬 생성 (이전 배치의 요약만 전달)
   safeProgress('✍️ [2/4] 본문 생성 중...');
 
-  // ── B-1: 도입부 생성 ──
-  safeProgress('✍️ [2/4] 도입부 생성 중...');
-  console.info('[PIPELINE] ▶ B-1: 도입부 생성 시작');
-  const introPrompt = getPipelineIntroPrompt(
-    outline.intro?.approach || 'A',
-    outline.intro?.scene || request.topic,
-    outline.intro?.bridge || request.topic,
-    outline.intro?.targetChars || Math.round(promptTargetLength * 0.15),
-    request.persona,
-    request.keywords
-  );
+  // ── 도입부 생성 함수 ──
+  const generateIntro = async (): Promise<string> => {
+    console.info('[PIPELINE] ▶ B-1: 도입부 생성 시작');
+    const introPrompt = getPipelineIntroPrompt(
+      outline.intro?.approach || 'A',
+      outline.intro?.scene || request.topic,
+      outline.intro?.bridge || request.topic,
+      outline.intro?.targetChars || Math.round(promptTargetLength * 0.15),
+      request.persona,
+      request.keywords
+    );
 
-  const introUserPrompt = `[주제] ${request.topic}
+    const introUserPrompt = `[주제] ${request.topic}
 [키워드] ${request.keywords || '없음'}
 ${request.disease ? `[질환] ${request.disease}` : ''}
 
 [검색 결과]
 ${JSON.stringify(searchResults?.collected_facts?.slice(0, 2) || [], null, 2)}`;
 
-  // callGemini 내부에서 이미 PRO→FLASH 폴백 + 3회 retry 처리
-  // 파이프라인 레벨에서 추가 FLASH 폴백 불필요 (호출 수만 늘림)
-  let introHtml = '';
-  try {
-    // 도입부는 1~2문단/3~5문장으로 짧음 → FLASH로 충분 (PRO 504 위험 감소)
     const introResult = await callGemini({
       prompt: introUserPrompt,
       systemPrompt: introPrompt + hospitalStyleSuffix,
@@ -759,27 +755,21 @@ ${JSON.stringify(searchResults?.collected_facts?.slice(0, 2) || [], null, 2)}`;
       timeout: 30000,
       temperature: 0.85,
     });
-    introHtml = typeof introResult === 'string' ? introResult.trim() : '';
-  } catch (introErr: any) {
-    console.error(`[PIPELINE] ❌ 도입부 실패 (PRO+FLASH 내부 폴백 모두 소진): ${introErr?.message}`);
-    throw new Error(`도입부 생성에 실패했습니다. (${introErr?.status || '네트워크 오류'}) 다시 시도해주세요.`);
-  }
+    const html = typeof introResult === 'string' ? introResult.trim() : '';
+    if (!html || html.length < 30) {
+      throw new Error('도입부 생성에 실패했습니다. 다시 시도해주세요.');
+    }
+    console.info(`[PIPELINE] ✅ B-1 도입부 완료: ${html.length}자`);
+    return html;
+  };
 
-  if (!introHtml || introHtml.length < 30) {
-    console.error(`[PIPELINE] ❌ 도입부 생성됐지만 너무 짧음: ${introHtml.length}자`);
-    throw new Error('도입부 생성에 실패했습니다. 네트워크 상태를 확인 후 다시 시도해주세요.');
-  }
-  console.info(`[PIPELINE] ✅ B-1 도입부 완료: ${introHtml.length}자`);
-  safeProgress('✅ 도입부 완료');
-
-  // ── B-2: 소제목 섹션 직렬 생성 ──
-  const sectionHtmls: string[] = [];
-  const sectionSummaries: string[] = [];
-
-  for (let i = 0; i < outline.sections.length; i++) {
+  // ── 단일 섹션 생성 함수 ──
+  const generateSection = async (
+    i: number,
+    prevSummaries: string[]
+  ): Promise<{ html: string; summary: string }> => {
     const section = outline.sections[i];
     const sectionNum = `${i + 1}/${outline.sections.length}`;
-    safeProgress(`✍️ [2/4] 소제목 ${sectionNum} "${section.title}" 생성 중...`);
     console.info(`[PIPELINE] ▶ B-2: 소제목 ${sectionNum} "${section.title}" 시작`);
 
     const sectionPrompt = getPipelineSectionPrompt(
@@ -790,7 +780,7 @@ ${JSON.stringify(searchResults?.collected_facts?.slice(0, 2) || [], null, 2)}`;
       section.keyInfo || '',
       section.targetChars || charsPerSection,
       section.firstSentencePattern || String((i % 5) + 1),
-      sectionSummaries, // 직렬이므로 이전 섹션 요약 전달 가능
+      prevSummaries,
       medicalLawMode,
       request.persona,
       request.keywords
@@ -803,33 +793,79 @@ ${request.disease ? `[질환] ${request.disease}` : ''}
 [이 섹션 관련 검색 결과]
 ${JSON.stringify(searchResults?.collected_facts?.slice(i, i + 2) || [], null, 2)}`;
 
-    let sectionHtml = '';
-    try {
-      const result = await callGemini({
-        prompt: sectionUserPrompt,
-        systemPrompt: sectionPrompt + hospitalStyleSuffix,
-        model: GEMINI_MODEL.PRO,
-        responseType: 'text',
-        timeout: 90000, // 45s→90s: PRO 504 감소 시도 (프록시 상한 180s, Vercel maxDuration 300s 이내)
-        temperature: 0.75,
-      });
-      sectionHtml = typeof result === 'string' ? result.trim() : '';
-    } catch (secErr: any) {
-      console.error(`[PIPELINE] ❌ 소제목 ${sectionNum} 실패 (PRO+FLASH 내부 폴백 모두 소진): ${secErr?.message}`);
-      throw new Error(`소제목 "${section.title}" 생성에 실패했습니다. (${secErr?.status || '네트워크 오류'}) 다시 시도해주세요.`);
-    }
-
-    if (!sectionHtml || sectionHtml.length < 30) {
-      console.error(`[PIPELINE] ❌ 소제목 ${sectionNum} 생성됐지만 너무 짧음: ${sectionHtml.length}자`);
+    const result = await callGemini({
+      prompt: sectionUserPrompt,
+      systemPrompt: sectionPrompt + hospitalStyleSuffix,
+      model: GEMINI_MODEL.PRO,
+      responseType: 'text',
+      timeout: 90000,
+      temperature: 0.75,
+    });
+    const html = typeof result === 'string' ? result.trim() : '';
+    if (!html || html.length < 30) {
       throw new Error(`소제목 "${section.title}" 생성에 실패했습니다. 다시 시도해주세요.`);
     }
+    const summary = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().substring(0, 150);
+    console.info(`[PIPELINE] ✅ 소제목 ${sectionNum} 완료: ${html.length}자`);
+    return { html, summary };
+  };
 
-    sectionHtmls.push(sectionHtml);
-    sectionSummaries.push(
-      sectionHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().substring(0, 150)
-    );
-    console.info(`[PIPELINE] ✅ 소제목 ${sectionNum} 완료: ${sectionHtml.length}자`);
-    safeProgress(`✅ 소제목 ${sectionNum} "${section.title}" 완료`);
+  // ── 도입부 + 섹션 배치 병렬 실행 ──
+  const BATCH_SIZE = 2;
+  const sectionHtmls: string[] = new Array(outline.sections.length).fill('');
+  const sectionSummaries: string[] = [];
+
+  // 첫 번째 배치: 도입부 + 첫 배치 섹션을 동시 실행
+  const firstBatchEnd = Math.min(BATCH_SIZE, outline.sections.length);
+  safeProgress(`✍️ [2/4] 도입부 + 소제목 1~${firstBatchEnd} 동시 생성 중...`);
+
+  const firstBatchPromises: Promise<{ html: string; summary: string }>[] = [];
+  for (let i = 0; i < firstBatchEnd; i++) {
+    firstBatchPromises.push(generateSection(i, []));
+  }
+
+  let introHtml = '';
+  try {
+    const [introResult, ...firstBatchResults] = await Promise.all([
+      generateIntro(),
+      ...firstBatchPromises
+    ]);
+    introHtml = introResult;
+    safeProgress('✅ 도입부 완료');
+
+    firstBatchResults.forEach((result, idx) => {
+      sectionHtmls[idx] = result.html;
+      sectionSummaries.push(result.summary);
+      safeProgress(`✅ 소제목 ${idx + 1}/${outline.sections.length} "${outline.sections[idx].title}" 완료`);
+    });
+  } catch (err: any) {
+    console.error(`[PIPELINE] ❌ 도입부+첫배치 병렬 실패: ${err?.message}`);
+    throw new Error(`본문 생성에 실패했습니다. (${err?.status || '네트워크 오류'}) 다시 시도해주세요.`);
+  }
+
+  // 나머지 배치: 2개씩 묶어 병렬 실행 (이전 배치 요약 전달)
+  for (let batchStart = firstBatchEnd; batchStart < outline.sections.length; batchStart += BATCH_SIZE) {
+    const batchEnd = Math.min(batchStart + BATCH_SIZE, outline.sections.length);
+    const batchLabel = `${batchStart + 1}~${batchEnd}`;
+    safeProgress(`✍️ [2/4] 소제목 ${batchLabel} 동시 생성 중...`);
+
+    const batchPromises: Promise<{ html: string; summary: string }>[] = [];
+    for (let i = batchStart; i < batchEnd; i++) {
+      batchPromises.push(generateSection(i, [...sectionSummaries]));
+    }
+
+    try {
+      const batchResults = await Promise.all(batchPromises);
+      batchResults.forEach((result, idx) => {
+        const globalIdx = batchStart + idx;
+        sectionHtmls[globalIdx] = result.html;
+        sectionSummaries.push(result.summary);
+        safeProgress(`✅ 소제목 ${globalIdx + 1}/${outline.sections.length} "${outline.sections[globalIdx].title}" 완료`);
+      });
+    } catch (batchErr: any) {
+      console.error(`[PIPELINE] ❌ 배치 ${batchLabel} 실패: ${batchErr?.message}`);
+      throw new Error(`소제목 생성에 실패했습니다. (${batchErr?.status || '네트워크 오류'}) 다시 시도해주세요.`);
+    }
   }
 
   console.info(`[PIPELINE] ✅ Stage B-1/2 완료: 도입부 ${introHtml.length}자, 소제목 ${sectionHtmls.length}/${outline.sections.length}개 전부 성공`);
@@ -849,7 +885,6 @@ ${sectionSummaries.join('\n')}`;
 
   let conclusionHtml = '';
   try {
-    // 마무리는 2문단/3~5문장으로 짧음 → FLASH로 충분 (PRO 504 위험 감소)
     const conclusionResult = await callGemini({
       prompt: conclusionUserPrompt,
       systemPrompt: conclusionPrompt + hospitalStyleSuffix,
@@ -860,7 +895,7 @@ ${sectionSummaries.join('\n')}`;
     });
     conclusionHtml = typeof conclusionResult === 'string' ? conclusionResult.trim() : '';
   } catch (concErr: any) {
-    console.error(`[PIPELINE] ❌ 마무리 실패 (PRO+FLASH 내부 폴백 모두 소진): ${concErr?.message}`);
+    console.error(`[PIPELINE] ❌ 마무리 실패: ${concErr?.message}`);
     throw new Error(`마무리 생성에 실패했습니다. (${concErr?.status || '네트워크 오류'}) 다시 시도해주세요.`);
   }
 
@@ -3075,28 +3110,56 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
   }
 
   if (maxImages > 0 && textData.imagePrompts.length > 0) {
-    // 순차 생성으로 진행률 표시 (maxImages만큼 생성)
-    for (let i = 0; i < maxImages; i++) {
-      safeProgress(`🎨 이미지 ${i + 1}/${maxImages}장 생성 중...`);
+    // 병렬 생성 (동시성 제한 MAX_CONCURRENT_IMAGES로 API 과부하 방지)
+    const MAX_CONCURRENT_IMAGES = 2;
+    safeProgress(`🎨 이미지 ${maxImages}장 병렬 생성 중...`);
+
+    const generateOneImage = async (i: number): Promise<{ index: number; data: string; prompt: string } | null> => {
       const p = textData.imagePrompts[i];
       try {
         let img: string;
-
         if (request.postType === 'card_news') {
-          // 카드뉴스: 기존 함수 사용 (텍스트 포함, 브라우저 프레임)
           img = await generateSingleImage(p, request.imageStyle, imgRatio, request.customImagePrompt, fallbackReferenceImage, fallbackCopyMode);
         } else {
-          // 블로그: 새 함수 사용 (텍스트 없는 순수 이미지)
           img = await generateBlogImage(p, request.imageStyle, imgRatio, request.customImagePrompt);
         }
-
-        images.push({ index: i + 1, data: img, prompt: p });
+        return { index: i + 1, data: img, prompt: p };
       } catch (imgErr: any) {
-        imageFailCount++;
-        console.warn(`⚠️ 이미지 ${i + 1} 생성 실패 (${imgErr.status || imgErr.message}), 텍스트만 계속 진행`);
-        // 이미지 실패해도 텍스트는 계속 반환
+        console.warn(`⚠️ 이미지 ${i + 1} 생성 실패 (${imgErr.status || imgErr.message})`);
+        return null;
+      }
+    };
+
+    // 동시성 제한 병렬 실행
+    const imageIndices = Array.from({ length: maxImages }, (_, i) => i);
+    const pending = new Set<Promise<void>>();
+    const results: ({ index: number; data: string; prompt: string } | null)[] = new Array(maxImages).fill(null);
+
+    for (const i of imageIndices) {
+      const task = generateOneImage(i).then(result => {
+        results[i] = result;
+        if (result) {
+          safeProgress(`✅ 이미지 ${result.index}/${maxImages}장 완료`);
+        }
+      });
+      pending.add(task);
+      task.finally(() => pending.delete(task));
+
+      if (pending.size >= MAX_CONCURRENT_IMAGES) {
+        await Promise.race(pending);
       }
     }
+    await Promise.all(pending);
+
+    for (const r of results) {
+      if (r) {
+        images.push(r);
+      } else {
+        imageFailCount++;
+      }
+    }
+    images.sort((a, b) => a.index - b.index);
+
     if (imageFailCount > 0) {
       safeProgress(`⚠️ 이미지 ${imageFailCount}장 생성 실패 — 텍스트만 반환합니다`);
     }
