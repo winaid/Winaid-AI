@@ -12,7 +12,7 @@ import {
 } from "../utils/humanWritingPrompts";
 import { getTopCompetitorAnalysis, CompetitorAnalysis } from "./naverSearchService";
 import { analyzeCompetitorVocabulary, buildForbiddenWordsPrompt } from "./competitorVocabService";
-import { STYLE_NAMES, generateBlogImage, analyzeStyleReferenceImage } from "./imageGenerationService";
+import { STYLE_NAMES, generateBlogImage, analyzeStyleReferenceImage, generateImageQueue, type ImageQueueItem } from "./imageGenerationService";
 import { generateCardNewsWithAgents } from "./cardNewsService";
 import { generatePressRelease } from "./pressReleaseService";
 import { saveBlogHistory } from "./contentSimilarityService";
@@ -3107,54 +3107,49 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
   }
 
   if (maxImages > 0 && textData.imagePrompts.length > 0) {
-    // 이미지 생성: 순차 실행 + 이미지 사이 jitter delay
-    // 이유: gemini-3-pro-image-preview는 동시 요청에 503 반환
-    // 순차 + 간격으로 API 부하를 분산하여 성공률을 높임
+    // 이미지 생성: cooldown-aware 큐 + 제한 병렬 (normal=2, demo-safe=1)
+    // 최대 5장, hero 우선, 세마포어 기반 concurrency 제한
     const imgStart = Date.now();
-    safeProgress(`🎨 이미지 ${maxImages}장 순차 생성 중...`);
-    let lastImgError: any = null; // 직전 이미지 에러 추적 (cooldown 대기 판단용)
 
-    for (let i = 0; i < maxImages; i++) {
-      const p = textData.imagePrompts[i];
-      const imgRole = i === 0 ? 'hero' as const : 'sub' as const;
-      const t0 = Date.now();
-
-      safeProgress(`🎨 이미지 ${i + 1}/${maxImages}장 생성 중 (${imgRole})...`);
-      lastImgError = null;
-
-      try {
-        let img: string;
-        if (request.postType === 'card_news') {
-          img = await generateSingleImage(p, request.imageStyle, imgRatio, request.customImagePrompt, fallbackReferenceImage, fallbackCopyMode);
-        } else {
-          img = await generateBlogImage(p, request.imageStyle, imgRatio, request.customImagePrompt, 'auto', imgRole);
-        }
-        const isFallback = img.includes('image/svg+xml');
-        if (isFallback) {
-          console.warn(`[IMG] ${imgRole} #${i + 1} fallback ${Date.now() - t0}ms`);
+    if (request.postType === 'card_news') {
+      // 카드뉴스: 기존 순차 방식 유지 (generateSingleImage는 별도 로직)
+      safeProgress(`🎨 카드뉴스 이미지 ${maxImages}장 생성 중...`);
+      for (let i = 0; i < maxImages; i++) {
+        const p = textData.imagePrompts[i];
+        const t0 = Date.now();
+        safeProgress(`🎨 카드 이미지 ${i + 1}/${maxImages}장 생성 중...`);
+        try {
+          const img = await generateSingleImage(p, request.imageStyle, imgRatio, request.customImagePrompt, fallbackReferenceImage, fallbackCopyMode);
+          const isFallback = img.includes('image/svg+xml');
+          if (isFallback) { imageFailCount++; }
+          images.push({ index: i + 1, data: img, prompt: p });
+          if (!isFallback) safeProgress(`✅ 카드 이미지 ${i + 1}/${maxImages}장 완료`);
+        } catch (imgErr: any) {
+          console.warn(`[IMG] card #${i + 1} exception ${Date.now() - t0}ms: ${(imgErr?.message || '').substring(0, 60)}`);
           imageFailCount++;
-        } else {
-          console.info(`[IMG] ${imgRole} #${i + 1} OK ${Date.now() - t0}ms`);
-          safeProgress(`✅ 이미지 ${i + 1}/${maxImages}장 완료`);
         }
-        images.push({ index: i + 1, data: img, prompt: p });
-      } catch (imgErr: any) {
-        lastImgError = imgErr;
-        console.warn(`[IMG] ${imgRole} #${i + 1} exception ${Date.now() - t0}ms: ${(imgErr?.message || '').substring(0, 60)}`);
-        imageFailCount++;
+        // 카드뉴스 간 2~3초 고정 간격
+        if (i < maxImages - 1) {
+          await new Promise(r => setTimeout(r, 2000 + Math.random() * 1000));
+        }
       }
+    } else {
+      // 블로그: cooldown-aware 큐 사용
+      const queueItems: ImageQueueItem[] = textData.imagePrompts.slice(0, maxImages).map((p: string, i: number) => ({
+        index: i,
+        prompt: p,
+        role: (i === 0 ? 'hero' : 'sub') as 'hero' | 'sub',
+        style: request.imageStyle,
+        aspectRatio: imgRatio,
+        customStylePrompt: request.customImagePrompt,
+        mode: 'auto' as const,
+      }));
 
-      // 다음 이미지 전 대기: 직전이 cooldown 에러였으면 retryAfterMs 기반, 아니면 고정 간격
-      if (i < maxImages - 1) {
-        const prevFailed503 = lastImgError?.isCooldown || lastImgError?.status === 503;
-        const retryAfter = lastImgError?.retryAfterMs || 0;
-        const waitMs = retryAfter > 0
-          ? retryAfter + Math.random() * 1000  // cooldown 기반 + 소량 jitter
-          : prevFailed503
-            ? 5000 + Math.random() * 2000       // 503이었지만 retryAfter 없음
-            : 2000 + Math.random() * 1000;      // 정상: 2~3초 간격
-        console.info(`[IMG] ⏳ wait ${Math.round(waitMs)}ms before #${i + 2} (${retryAfter > 0 ? `cooldown=${retryAfter}ms` : prevFailed503 ? '503-backoff' : 'interval'})`);
-        await new Promise(r => setTimeout(r, waitMs));
+      const queueResults = await generateImageQueue(queueItems, safeProgress);
+
+      for (const qr of queueResults) {
+        images.push({ index: qr.index + 1, data: qr.data, prompt: qr.prompt });
+        if (qr.status === 'fallback') imageFailCount++;
       }
     }
 

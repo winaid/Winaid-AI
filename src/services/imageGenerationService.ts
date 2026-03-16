@@ -463,6 +463,82 @@ export interface BlogImageResult {
 export type ImageGenMode = 'auto' | 'manual';
 export type ImageRole = 'hero' | 'sub';
 
+// =============================================
+// 🎛️ Demo-safe mode: 환경변수 또는 런타임 플래그
+// localStorage.setItem('DEMO_SAFE_MODE', 'true') 로 활성화 가능
+// =============================================
+export function isDemoSafeMode(): boolean {
+  try {
+    return localStorage.getItem('DEMO_SAFE_MODE') === 'true';
+  } catch {
+    return false;
+  }
+}
+
+export function setDemoSafeMode(enabled: boolean): void {
+  try {
+    localStorage.setItem('DEMO_SAFE_MODE', enabled ? 'true' : 'false');
+    console.info(`[IMG] 🎛️ demo-safe mode ${enabled ? 'ON' : 'OFF'}`);
+  } catch { /* ignore */ }
+}
+
+// =============================================
+// 🔒 이미지 생성 세마포어 + cooldown-aware 큐
+// =============================================
+
+/** 글로벌 이미지 세마포어 상태 */
+let _activeImageJobs = 0;
+let _lastKnownCooldownUntil = 0; // 마지막으로 알려진 cooldown 종료 시각 (epoch ms)
+
+function getMaxConcurrency(): number {
+  return isDemoSafeMode() ? 1 : 2;
+}
+
+/** 세마포어 acquire: 슬롯이 비거나 cooldown이 끝날 때까지 대기 */
+async function acquireImageSlot(imageIndex: number, totalImages: number, imageType: ImageRole): Promise<{ queueWaitMs: number }> {
+  const t0 = Date.now();
+  const maxC = getMaxConcurrency();
+
+  while (true) {
+    const now = Date.now();
+
+    // cooldown 대기: 프록시가 알려준 cooldownUntil 이전이면 대기
+    if (_lastKnownCooldownUntil > now) {
+      const cooldownWait = _lastKnownCooldownUntil - now + 300 + Math.random() * 500;
+      console.info(`[IMG-Q] 🧊 idx=${imageIndex}/${totalImages} type=${imageType} cooldown-wait ${Math.round(cooldownWait)}ms (until ${new Date(_lastKnownCooldownUntil).toISOString()})`);
+      await new Promise(r => setTimeout(r, cooldownWait));
+      continue;
+    }
+
+    // 슬롯 대기: 현재 활성 작업이 최대치 이상이면 대기
+    if (_activeImageJobs >= maxC) {
+      console.info(`[IMG-Q] ⏳ idx=${imageIndex}/${totalImages} type=${imageType} slot-wait active=${_activeImageJobs}/${maxC}`);
+      await new Promise(r => setTimeout(r, 1000 + Math.random() * 500));
+      continue;
+    }
+
+    // 슬롯 획득
+    _activeImageJobs++;
+    const queueWaitMs = Date.now() - t0;
+    console.info(`[IMG-Q] 🟢 idx=${imageIndex}/${totalImages} type=${imageType} acquired slot=${_activeImageJobs}/${maxC} queueWaitMs=${queueWaitMs}`);
+    return { queueWaitMs };
+  }
+}
+
+function releaseImageSlot(): void {
+  _activeImageJobs = Math.max(0, _activeImageJobs - 1);
+}
+
+/** cooldown 상태를 글로벌에 기록 — 다른 이미지 작업이 참조 */
+function reportCooldown(nextAvailableAt?: number, retryAfterMs?: number): void {
+  const now = Date.now();
+  if (nextAvailableAt && nextAvailableAt > now) {
+    _lastKnownCooldownUntil = Math.max(_lastKnownCooldownUntil, nextAvailableAt);
+  } else if (retryAfterMs && retryAfterMs > 0) {
+    _lastKnownCooldownUntil = Math.max(_lastKnownCooldownUntil, now + retryAfterMs);
+  }
+}
+
 // 이미지 생성 모델(gemini-3-pro-image-preview)은 통상 20~60초 소요
 // timeout은 충분히 여유 있게 잡되, 실패 시 빠르게 재시도
 const IMAGE_TIMEOUT: Record<ImageGenMode, Record<ImageRole, number>> = {
@@ -490,6 +566,7 @@ export const generateBlogImage = async (
 ): Promise<string> => {
   const timeout = IMAGE_TIMEOUT[mode][role];
   const styleKw = customStylePrompt || STYLE_KEYWORD_SHORT[style] || STYLE_KEYWORD_SHORT.illustration;
+  const demoSafe = isDemoSafeMode();
 
   // hero: 구체적인 프롬프트 (1차) → 단순화 프롬프트 (재시도)
   // sub: 최소 프롬프트만 사용 (1차/재시도 동일 수준)
@@ -510,7 +587,8 @@ export const generateBlogImage = async (
   const prompts = promptsByRole[role];
 
   let lastError: any = null;
-  const maxAttempts = mode === 'manual' ? 3 : 2;
+  // [5] 자동 재시도 축소: auto 모드는 최대 1회 재시도(총 2회), demo-safe는 1회만
+  const maxAttempts = demoSafe ? 1 : (mode === 'manual' ? 2 : 2);
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     const currentPrompt = prompts[Math.min(attempt, prompts.length - 1)];
@@ -537,7 +615,7 @@ export const generateBlogImage = async (
 
       const imagePart = (result?.candidates?.[0]?.content?.parts || []).find((p: any) => p.inlineData?.data);
       if (imagePart?.inlineData) {
-        console.info(`[IMG] ✅ ${role} ${mode} #${attempt + 1} ${ms}ms t/o=${timeout} p=${currentPrompt.length}ch`);
+        console.info(`[IMG] ✅ ${role} ${mode} #${attempt + 1} ${ms}ms t/o=${timeout} p=${currentPrompt.length}ch demoSafe=${demoSafe}`);
         return `data:${imagePart.inlineData.mimeType || 'image/png'};base64,${imagePart.inlineData.data}`;
       }
 
@@ -548,31 +626,162 @@ export const generateBlogImage = async (
     } catch (error: any) {
       lastError = error;
       const ms = Date.now() - t0;
-      const st = error?.status;
-      const msg = error?.message || '';
       const isCooldown = error?.isCooldown === true;
+      const isUpstream503 = error?.isUpstream503 === true;
       const retryAfterMs = error?.retryAfterMs || 0;
-      const is503 = st === 503 || msg.includes('503');
-      const isTimeout = st === 504 || msg.includes('timeout');
-      const tag = isCooldown ? 'cooldown' : is503 ? '503' : isTimeout ? 'timeout' : String(st || 'ERR');
-      console.warn(`[IMG] ❌ ${role} ${mode} #${attempt + 1} ${tag} ${ms}ms${retryAfterMs ? ` retryAfter=${retryAfterMs}ms` : ''}`);
+      const nextAvailableAt = error?.nextAvailableAt || 0;
+      const isTimeout = error?.status === 504 || (error?.message || '').includes('timeout');
+      const errorType = isCooldown ? 'all_keys_in_cooldown' : isUpstream503 ? 'upstream_503' : isTimeout ? 'timeout' : String(error?.status || 'ERR');
 
-      if (attempt < maxAttempts - 1) {
-        // cooldown 응답: 프록시가 알려준 시간만큼 정확히 대기
-        // 503/timeout: 고정 backoff
-        const backoff = retryAfterMs > 0
-          ? retryAfterMs + Math.random() * 1000  // 프록시 지시 + 소량 jitter
-          : isTimeout ? 1000 : 3000;
-        console.info(`[IMG] ⏳ ${role} waiting ${Math.round(backoff)}ms (${retryAfterMs > 0 ? 'cooldown-based' : 'fixed'}) before retry`);
-        await new Promise(r => setTimeout(r, backoff));
+      console.warn(`[IMG] ❌ ${role} ${mode} #${attempt + 1} errorType=${errorType} ${ms}ms${retryAfterMs ? ` retryAfterMs=${retryAfterMs}` : ''}${nextAvailableAt ? ` nextAvailableAt=${nextAvailableAt}` : ''} demoSafe=${demoSafe}`);
+
+      // [3] 에러 유형별 분기 처리
+      if (isCooldown) {
+        // all_keys_in_cooldown: 글로벌 cooldown 기록 + retryAfterMs 기반 대기
+        reportCooldown(nextAvailableAt, retryAfterMs);
+        if (attempt < maxAttempts - 1) {
+          const waitMs = retryAfterMs > 0
+            ? retryAfterMs + 500 + Math.random() * 500  // 프록시 지시 기반 정확 대기
+            : 8000 + Math.random() * 2000;
+          console.info(`[IMG] ⏳ ${role} cooldown-wait ${Math.round(waitMs)}ms (retryAfterMs=${retryAfterMs}) before retry`);
+          await new Promise(r => setTimeout(r, waitMs));
+        }
+      } else if (isUpstream503) {
+        // upstream 503: 4~8초 랜덤 backoff 후 최대 1회만 재시도
+        if (attempt < maxAttempts - 1) {
+          const backoff = 4000 + Math.random() * 4000;
+          console.info(`[IMG] ⏳ ${role} upstream503-backoff ${Math.round(backoff)}ms before retry`);
+          await new Promise(r => setTimeout(r, backoff));
+        }
+      } else if (isTimeout) {
+        // timeout: 짧게 대기 후 축약 프롬프트로 재시도
+        if (attempt < maxAttempts - 1) {
+          console.info(`[IMG] ⏳ ${role} timeout-backoff 1000ms before retry (prompt will simplify)`);
+          await new Promise(r => setTimeout(r, 1000));
+        }
+      } else {
+        // 기타: 짧은 대기
+        if (attempt < maxAttempts - 1) {
+          await new Promise(r => setTimeout(r, 2000));
+        }
       }
     }
   }
 
-  console.error(`[IMG] ❌ ${role} ${mode} FAILED ${maxAttempts}x: ${lastError?.status || ''} ${lastError?.message?.substring(0, 60)}`);
+  const finalErrorType = lastError?.errorType || lastError?.isCooldown ? 'cooldown' : String(lastError?.status || 'unknown');
+  console.error(`[IMG] ❌ ${role} ${mode} FAILED ${maxAttempts}x errorType=${finalErrorType}: ${lastError?.message?.substring(0, 60)} demoSafe=${demoSafe} finalResult=fallback`);
   const base64Placeholder = btoa(unescape(encodeURIComponent(BLOG_IMAGE_PLACEHOLDER_SVG)));
   return `data:image/svg+xml;base64,${base64Placeholder}`;
 };
+
+// =============================================
+// 🖼️ 이미지 풀세트 생성 — cooldown-aware 큐 + 제한 병렬
+// 최대 5장, 내부 concurrency: normal=2, demo-safe=1
+// hero 우선, sub 순차 큐
+// =============================================
+export interface ImageQueueItem {
+  index: number;
+  prompt: string;
+  role: ImageRole;
+  style: ImageStyle;
+  aspectRatio: string;
+  customStylePrompt?: string;
+  mode: ImageGenMode;
+}
+
+export interface ImageQueueResult {
+  index: number;
+  data: string;
+  prompt: string;
+  role: ImageRole;
+  status: 'success' | 'fallback';
+  elapsedMs: number;
+  queueWaitMs: number;
+  errorType?: string;
+}
+
+export async function generateImageQueue(
+  items: ImageQueueItem[],
+  onProgress?: (msg: string) => void,
+): Promise<ImageQueueResult[]> {
+  const totalImages = items.length;
+  const maxC = getMaxConcurrency();
+  const mode = isDemoSafeMode() ? 'demo-safe' : 'normal';
+  const safeProgress = onProgress || ((msg: string) => console.log('📍 IMG:', msg));
+
+  console.info(`[IMG-Q] 🚀 start queue total=${totalImages} concurrency=${maxC} mode=${mode}`);
+  safeProgress(`🎨 이미지 ${totalImages}장 생성 시작 (${mode}, 동시 ${maxC}개)...`);
+
+  // hero를 가장 먼저 처리하도록 정렬 (hero 우선)
+  const sorted = [...items].sort((a, b) => {
+    if (a.role === 'hero' && b.role !== 'hero') return -1;
+    if (a.role !== 'hero' && b.role === 'hero') return 1;
+    return a.index - b.index;
+  });
+
+  const results: ImageQueueResult[] = [];
+  const base64Placeholder = btoa(unescape(encodeURIComponent(BLOG_IMAGE_PLACEHOLDER_SVG)));
+  const fallbackData = `data:image/svg+xml;base64,${base64Placeholder}`;
+
+  // 제한 병렬: 세마포어 기반 — acquireImageSlot이 내부적으로 대기하므로
+  // 모든 작업을 동시에 시작해도 세마포어가 concurrency를 제한함
+  const tasks = sorted.map(async (item) => {
+    const { queueWaitMs } = await acquireImageSlot(item.index, totalImages, item.role);
+
+    safeProgress(`🎨 이미지 ${item.index + 1}/${totalImages}장 생성 중 (${item.role})...`);
+    const t0 = Date.now();
+
+    try {
+      const img = await generateBlogImage(
+        item.prompt, item.style, item.aspectRatio,
+        item.customStylePrompt, item.mode, item.role
+      );
+      const elapsedMs = Date.now() - t0;
+      const isFallback = img.includes('image/svg+xml');
+      const finalResult = isFallback ? 'fallback' : 'success';
+
+      console.info(`[IMG-Q] ${isFallback ? '⚠️' : '✅'} idx=${item.index}/${totalImages} type=${item.role} ${finalResult} ${elapsedMs}ms queueWait=${queueWaitMs}ms mode=${mode}`);
+      if (!isFallback) {
+        safeProgress(`✅ 이미지 ${item.index + 1}/${totalImages}장 완료`);
+      }
+
+      results.push({
+        index: item.index, data: img, prompt: item.prompt,
+        role: item.role, status: finalResult as 'success' | 'fallback',
+        elapsedMs, queueWaitMs,
+      });
+    } catch (err: any) {
+      const elapsedMs = Date.now() - t0;
+      const errorType = err?.errorType || (err?.isCooldown ? 'cooldown' : String(err?.status || 'unknown'));
+      console.warn(`[IMG-Q] ❌ idx=${item.index}/${totalImages} type=${item.role} errorType=${errorType} ${elapsedMs}ms queueWait=${queueWaitMs}ms mode=${mode}`);
+
+      // cooldown이면 글로벌 기록 (다음 작업이 대기하도록)
+      if (err?.isCooldown || err?.nextAvailableAt || err?.retryAfterMs) {
+        reportCooldown(err.nextAvailableAt, err.retryAfterMs);
+      }
+
+      results.push({
+        index: item.index, data: fallbackData, prompt: item.prompt,
+        role: item.role, status: 'fallback',
+        elapsedMs, queueWaitMs, errorType,
+      });
+    } finally {
+      releaseImageSlot();
+    }
+  });
+
+  // 모든 작업 완료 대기 (세마포어가 concurrency 제한)
+  await Promise.allSettled(tasks);
+
+  // 원래 index 순서로 정렬
+  results.sort((a, b) => a.index - b.index);
+
+  const successCount = results.filter(r => r.status === 'success').length;
+  const failCount = results.filter(r => r.status === 'fallback').length;
+  console.info(`[IMG-Q] 🏁 done total=${totalImages} success=${successCount} fallback=${failCount} mode=${mode}`);
+
+  return results;
+}
 
 // 🎴 기본 프레임 이미지 URL (로컬 파일 사용 - 외부 URL 403 에러 방지)
 const DEFAULT_FRAME_IMAGE_URL = '/default-card-frame.webp';

@@ -373,13 +373,19 @@ export async function callGeminiRaw(model: string, apiBody: any, timeout: number
     if (!response.ok) {
       const errorBody = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
       const isCooldown = errorBody.error === 'all_keys_in_cooldown';
+      const isUpstream503 = !isCooldown && response.status === 503;
       const retryMs = errorBody.retryAfterMs || 0;
-      console.warn(`[RAW] ${model} ${response.status} ${ms}ms: ${(errorBody.error || '').substring(0, 60)}${isCooldown ? ` retryAfter=${retryMs}ms` : ''}`);
+      const nextAt = errorBody.nextAvailableAt || 0;
+      const errorType = isCooldown ? 'all_keys_in_cooldown' : isUpstream503 ? 'upstream_503' : `http_${response.status}`;
+      console.warn(`[RAW] ${model} ${response.status} ${ms}ms errorType=${errorType}: ${(errorBody.error || '').substring(0, 60)}${retryMs ? ` retryAfterMs=${retryMs}` : ''}${nextAt ? ` nextAvailableAt=${nextAt}` : ''}`);
       const error: any = new Error(errorBody.error || `서버 응답 오류 (${response.status})`);
       error.status = response.status;
       error.details = errorBody.details;
+      error.errorType = errorType;
       if (retryMs > 0) error.retryAfterMs = retryMs;
+      if (nextAt > 0) error.nextAvailableAt = nextAt;
       if (isCooldown) error.isCooldown = true;
+      if (isUpstream503) error.isUpstream503 = true;
       throw error;
     }
 

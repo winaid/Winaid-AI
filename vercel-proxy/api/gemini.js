@@ -136,6 +136,7 @@ async function fetchGeminiWithRotation(keys, model, apiBody, timeout, isRaw = fa
   const maxAttempts = Math.min(keys.length, 3);
   const perAttemptTimeout = Math.min(timeout, isRaw ? 95000 : 150000);
   const tag = isRaw ? "raw" : "text";
+  const t0 = Date.now();
   let lastError = "";
   let lastStatus = 502;
   let triedKeys = 0;
@@ -229,17 +230,33 @@ async function fetchGeminiWithRotation(keys, model, apiBody, timeout, isRaw = fa
     // 가장 빨리 풀리는 키의 cooldown 잔여 시간 계산
     const now = Date.now();
     let earliest = Infinity;
+    let earliestKeyIndex = -1;
     for (let i = 0; i < keys.length; i++) {
       const cd = keyCooldowns.get(i);
-      if (cd && cd.until > now && cd.until < earliest) earliest = cd.until;
+      if (cd && cd.until > now && cd.until < earliest) {
+        earliest = cd.until;
+        earliestKeyIndex = i;
+      }
     }
     const retryAfterMs = earliest === Infinity ? 5000 : Math.max(earliest - now + 500, 1000); // +500ms 여유
-    console.warn(`[proxy] 🧊 all ${keys.length} keys cooled down, retryAfter=${retryAfterMs}ms`);
+    const nextAvailableAt = earliest === Infinity ? now + 5000 : earliest + 500;
+
+    // 구조화된 로그: 각 키의 cooldown 상태
+    for (let i = 0; i < keys.length; i++) {
+      const cd = keyCooldowns.get(i);
+      if (cd && cd.until > now) {
+        console.warn(`[proxy] 🧊 key=${i} cooldownUntil=+${Math.round((cd.until - now) / 1000)}s count=${cd.count} model=${model} isRaw=${isRaw}`);
+      }
+    }
+    console.warn(`[proxy] 🧊 all_keys_in_cooldown keys=${keys.length} retryAfterMs=${retryAfterMs} nextAvailableAt=${nextAvailableAt} earliestKey=${earliestKeyIndex} model=${model} isRaw=${isRaw} elapsedMs=${Date.now() - (t0 || now)}`);
+
     return {
       ok: false,
       status: 503,
       error: "all_keys_in_cooldown",
+      message: "All image keys are cooling down",
       retryAfterMs,
+      nextAvailableAt,
       details: `next key available in ${retryAfterMs}ms`,
     };
   }
@@ -325,6 +342,8 @@ export default async function handler(req, res) {
       if (!result.ok) {
         const errBody = { error: result.error, details: result.details };
         if (result.retryAfterMs) errBody.retryAfterMs = result.retryAfterMs;
+        if (result.nextAvailableAt) errBody.nextAvailableAt = result.nextAvailableAt;
+        if (result.message) errBody.message = result.message;
         return res.status(result.status || 500).json(errBody);
       }
 
@@ -387,6 +406,8 @@ export default async function handler(req, res) {
     if (!result.ok) {
       const errBody = { error: result.error, details: result.details };
       if (result.retryAfterMs) errBody.retryAfterMs = result.retryAfterMs;
+      if (result.nextAvailableAt) errBody.nextAvailableAt = result.nextAvailableAt;
+      if (result.message) errBody.message = result.message;
       return res.status(result.status || 500).json(errBody);
     }
 
