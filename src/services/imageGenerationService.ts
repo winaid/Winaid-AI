@@ -593,6 +593,9 @@ export const generateBlogImage = async (
   // [5] 자동 재시도 축소: auto 모드는 최대 1회 재시도(총 2회), demo-safe는 1회만
   const maxAttempts = demoSafe ? 1 : (mode === 'manual' ? 2 : 2);
 
+  // 3차 시도 판정용 — 1차/2차 에러 유형 기록
+  const attemptErrors: { errorType: string; retryAfterMs: number }[] = [];
+
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     const currentPrompt = prompts[Math.min(attempt, prompts.length - 1)];
     const t0 = Date.now();
@@ -611,6 +614,7 @@ export const generateBlogImage = async (
 
       if (finishReason === 'SAFETY' || finishReason === 'RECITATION') {
         lastError = new Error(`SAFETY:${finishReason}`);
+        attemptErrors.push({ errorType: `SAFETY:${finishReason}`, retryAfterMs: 0 });
         console.warn(`[IMG] ${role} ${mode} #${attempt + 1} SAFETY ${ms}ms`);
         if (attempt < maxAttempts - 1) await new Promise(r => setTimeout(r, 1000));
         continue;
@@ -623,6 +627,7 @@ export const generateBlogImage = async (
       }
 
       lastError = new Error('no image data');
+      attemptErrors.push({ errorType: 'no_data', retryAfterMs: 0 });
       console.warn(`[IMG] ${role} ${mode} #${attempt + 1} no-data ${ms}ms`);
       if (attempt < maxAttempts - 1) await new Promise(r => setTimeout(r, 1000));
 
@@ -636,6 +641,7 @@ export const generateBlogImage = async (
       const isTimeout = error?.status === 504 || (error?.message || '').includes('timeout');
       const errorType = isCooldown ? 'all_keys_in_cooldown' : isUpstream503 ? 'upstream_503' : isTimeout ? 'timeout' : String(error?.status || 'ERR');
 
+      attemptErrors.push({ errorType, retryAfterMs });
       console.warn(`[IMG] ❌ ${role} ${mode} #${attempt + 1} errorType=${errorType} ${ms}ms${retryAfterMs ? ` retryAfterMs=${retryAfterMs}` : ''}${nextAvailableAt ? ` nextAvailableAt=${nextAvailableAt}` : ''} demoSafe=${demoSafe}`);
 
       // [3] 에러 유형별 분기 처리
@@ -671,8 +677,61 @@ export const generateBlogImage = async (
     }
   }
 
+  // ── 3차 시도 판정 ──
+  // hero: 품질 우선 — demo-safe에서도 3차 허용
+  // sub: normal mode에서만 3차 허용
+  // 공통 조건: 1차 = upstream_503 or timeout, 2차 = all_keys_in_cooldown, retryAfterMs <= 4000
+  const isHero = role === 'hero';
+  const baseEligible = attemptErrors.length >= 2
+    && ['upstream_503', 'timeout'].includes(attemptErrors[0].errorType)
+    && attemptErrors[1].errorType === 'all_keys_in_cooldown'
+    && attemptErrors[1].retryAfterMs > 0
+    && attemptErrors[1].retryAfterMs <= 4000;
+
+  const thirdChanceEligible = baseEligible && (isHero || !demoSafe);
+
+  console.info(`[IMG] 🔍 ${role} thirdChanceEligible=${thirdChanceEligible} imagePriority=${isHero ? 'hero' : 'sub'} attempts=[${attemptErrors.map(e => e.errorType).join(',')}] retryAfterMs=${attemptErrors[1]?.retryAfterMs || 0} demoSafe=${demoSafe}`);
+
+  if (thirdChanceEligible) {
+    const waitMs = attemptErrors[1].retryAfterMs + 200 + Math.random() * 300;
+    console.info(`[IMG] 🔄 ${role} thirdAttemptStarted imagePriority=${isHero ? 'hero' : 'sub'} retryAfterMs=${attemptErrors[1].retryAfterMs} waitMs=${Math.round(waitMs)}`);
+
+    await new Promise(r => setTimeout(r, waitMs));
+
+    const thirdPrompt = prompts[Math.min(1, prompts.length - 1)]; // 축약 프롬프트
+    const t0 = Date.now();
+
+    try {
+      const result = await callGeminiRaw(GEMINI_MODEL.IMAGE_PRO, {
+        contents: [{ role: "user", parts: [{ text: thirdPrompt }] }],
+        generationConfig: {
+          responseModalities: ["IMAGE", "TEXT"],
+          temperature: 0.6,
+        },
+      }, timeout);
+
+      const ms = Date.now() - t0;
+      const imagePart = (result?.candidates?.[0]?.content?.parts || []).find((p: any) => p.inlineData?.data);
+      if (imagePart?.inlineData) {
+        console.info(`[IMG] ✅ ${role} ${mode} #3(third-chance) ${ms}ms imagePriority=${isHero ? 'hero' : 'sub'} thirdAttemptResult=success finalRenderMode=ai-image`);
+        return `data:${imagePart.inlineData.mimeType || 'image/png'};base64,${imagePart.inlineData.data}`;
+      }
+      lastError = new Error('no image data (3rd chance)');
+      console.warn(`[IMG] ❌ ${role} ${mode} #3(third-chance) no-data ${ms}ms imagePriority=${isHero ? 'hero' : 'sub'} thirdAttemptResult=no_data finalRenderMode=fallback`);
+    } catch (error: any) {
+      lastError = error;
+      const ms = Date.now() - t0;
+      const errorType = error?.isCooldown ? 'all_keys_in_cooldown' : error?.isUpstream503 ? 'upstream_503' : String(error?.status || 'ERR');
+      console.warn(`[IMG] ❌ ${role} ${mode} #3(third-chance) errorType=${errorType} ${ms}ms imagePriority=${isHero ? 'hero' : 'sub'} thirdAttemptResult=error finalRenderMode=fallback`);
+      if (error?.isCooldown || error?.nextAvailableAt || error?.retryAfterMs) {
+        reportCooldown(error.nextAvailableAt, error.retryAfterMs);
+      }
+    }
+  }
+
+  const totalAttempts = maxAttempts + (thirdChanceEligible ? 1 : 0);
   const finalErrorType = lastError?.errorType || lastError?.isCooldown ? 'cooldown' : String(lastError?.status || 'unknown');
-  console.error(`[IMG] ❌ ${role} ${mode} FAILED ${maxAttempts}x errorType=${finalErrorType}: ${lastError?.message?.substring(0, 60)} demoSafe=${demoSafe} finalResult=fallback`);
+  console.error(`[IMG] ❌ ${role} ${mode} FAILED ${totalAttempts}x errorType=${finalErrorType}: ${lastError?.message?.substring(0, 60)} demoSafe=${demoSafe} finalResult=fallback`);
   const base64Placeholder = btoa(unescape(encodeURIComponent(BLOG_IMAGE_PLACEHOLDER_SVG)));
   return `data:image/svg+xml;base64,${base64Placeholder}`;
 };

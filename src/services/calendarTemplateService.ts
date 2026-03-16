@@ -3,6 +3,7 @@
  * HTML/CSS 템플릿 + html2canvas로 100% 정확한 달력 이미지를 프로그래밍으로 생성
  */
 import { callGemini, callGeminiRaw, TIMEOUTS } from './geminiClient';
+import { isDemoSafeMode } from './imageGenerationService';
 import { removeOklchFromClonedDoc } from '../components/resultPreviewUtils';
 
 // ── 타입 ──
@@ -5065,6 +5066,10 @@ export async function generateTemplateWithAI(
 
   const MAX_RETRIES = 2;
   let lastError: any = null;
+  const demoSafe = isDemoSafeMode();
+
+  // 3차 시도 판정용 — 각 시도의 에러 유형 기록
+  const attemptErrors: { errorType: string; retryAfterMs: number }[] = [];
 
   const buildContents = () => {
     const contents: any[] = [];
@@ -5131,6 +5136,7 @@ Use ONLY the new text content from the prompt below.
       }
 
       lastError = new Error('이미지 데이터를 받지 못했습니다.');
+      attemptErrors.push({ errorType: 'no_data', retryAfterMs: 0 });
       console.warn(`[TMPL] ⚠️ 시도 ${attempt} no image data`);
       if (attempt < MAX_RETRIES) {
         await new Promise(resolve => setTimeout(resolve, 2000));
@@ -5138,9 +5144,14 @@ Use ONLY the new text content from the prompt below.
     } catch (error: any) {
       lastError = error;
       const st = error?.status;
+      const isCooldown = error?.isCooldown === true;
       const is503 = st === 503 || (error?.message || '').includes('503');
+      const isTimeout = st === 504 || (error?.message || '').includes('timeout');
       const retryAfterMs = error?.retryAfterMs || 0;
-      console.warn(`[TMPL] ❌ 시도 ${attempt} ${is503 ? '503' : st || 'ERR'} ${retryAfterMs ? `retryAfter=${retryAfterMs}ms` : ''}`);
+      const errorType = isCooldown ? 'all_keys_in_cooldown' : is503 ? 'upstream_503' : isTimeout ? 'timeout' : String(st || 'ERR');
+
+      attemptErrors.push({ errorType, retryAfterMs });
+      console.warn(`[TMPL] ❌ 시도 ${attempt} errorType=${errorType} ${retryAfterMs ? `retryAfterMs=${retryAfterMs}ms` : ''}`);
 
       if (attempt < MAX_RETRIES) {
         // 503: cooldown 기반 대기 or 고정 backoff
@@ -5155,8 +5166,51 @@ Use ONLY the new text content from the prompt below.
     }
   }
 
+  // ── 3차 시도 판정 ──
+  // 템플릿 이미지는 hero급 품질 — demo-safe에서도 짧은 cooldown이면 3차 허용
+  // 조건: 1차 = upstream_503 or timeout, 2차 = all_keys_in_cooldown, retryAfterMs <= 4000
+  const thirdChanceEligible = attemptErrors.length >= 2
+    && ['upstream_503', 'timeout'].includes(attemptErrors[0].errorType)
+    && attemptErrors[1].errorType === 'all_keys_in_cooldown'
+    && attemptErrors[1].retryAfterMs > 0
+    && attemptErrors[1].retryAfterMs <= 4000;
+
+  console.info(`[TMPL] 🔍 thirdChanceEligible=${thirdChanceEligible} imagePriority=template attempts=[${attemptErrors.map(e => e.errorType).join(',')}] retryAfterMs=${attemptErrors[1]?.retryAfterMs || 0} demoSafe=${demoSafe}`);
+
+  if (thirdChanceEligible) {
+    const waitMs = attemptErrors[1].retryAfterMs + 200 + Math.random() * 300;
+    console.info(`[TMPL] 🔄 thirdAttemptStarted imagePriority=template retryAfterMs=${attemptErrors[1].retryAfterMs} waitMs=${Math.round(waitMs)}`);
+    await new Promise(resolve => setTimeout(resolve, waitMs));
+
+    try {
+      const result = await callGeminiRaw('gemini-3-pro-image-preview', {
+        contents: [{role: 'user', parts: contents}],
+        generationConfig: {
+          responseModalities: ['IMAGE', 'TEXT'],
+          temperature: 0.4,
+          imageConfig: { imageSize: '4K' },
+        },
+      }, TIMEOUTS.IMAGE_GENERATION);
+
+      const parts = result?.candidates?.[0]?.content?.parts || [];
+      const imagePart = parts.find((p: any) => p.inlineData?.data);
+
+      if (imagePart?.inlineData) {
+        console.info(`[TMPL] ✅ AI 이미지 성공 (3차 third-chance) thirdAttemptResult=success finalRenderMode=ai-image`);
+        return `data:${imagePart.inlineData.mimeType || 'image/png'};base64,${imagePart.inlineData.data}`;
+      }
+      lastError = new Error('no image data (3rd chance)');
+      console.warn(`[TMPL] ❌ 3차 third-chance thirdAttemptResult=no_data finalRenderMode=html-fallback`);
+    } catch (error: any) {
+      lastError = error;
+      const errorType = error?.isCooldown ? 'all_keys_in_cooldown' : String(error?.status || 'ERR');
+      console.warn(`[TMPL] ❌ 3차 third-chance errorType=${errorType} thirdAttemptResult=error finalRenderMode=html-fallback`);
+    }
+  }
+
   // ── AI 실패 → HTML 렌더링 폴백 시도 ──
-  console.warn(`[TMPL] ⚠️ AI 이미지 ${MAX_RETRIES}회 실패, HTML 폴백 시도 (${category})`);
+  const totalAttempts = MAX_RETRIES + (thirdChanceEligible ? 1 : 0);
+  console.warn(`[TMPL] ⚠️ AI 이미지 ${totalAttempts}회 실패, HTML 폴백 시도 (${category}) finalResult=html-fallback`);
 
   try {
     const htmlBuilders: Record<string, (data: any) => string> = {
