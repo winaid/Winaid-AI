@@ -510,7 +510,7 @@ export const generateBlogImage = async (
   const prompts = promptsByRole[role];
 
   let lastError: any = null;
-  const maxAttempts = mode === 'manual' ? 3 : 2; // auto: 2번(0,1), manual: 3번(0,1,2)
+  const maxAttempts = mode === 'manual' ? 3 : 2;
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     const currentPrompt = prompts[Math.min(attempt, prompts.length - 1)];
@@ -531,7 +531,7 @@ export const generateBlogImage = async (
       if (finishReason === 'SAFETY' || finishReason === 'RECITATION') {
         lastError = new Error(`SAFETY:${finishReason}`);
         console.warn(`[IMG] ${role} ${mode} #${attempt + 1} SAFETY ${ms}ms`);
-        if (attempt < maxAttempts - 1) await new Promise(r => setTimeout(r, 600));
+        if (attempt < maxAttempts - 1) await new Promise(r => setTimeout(r, 1000));
         continue;
       }
 
@@ -543,17 +543,26 @@ export const generateBlogImage = async (
 
       lastError = new Error('no image data');
       console.warn(`[IMG] ${role} ${mode} #${attempt + 1} no-data ${ms}ms`);
-      if (attempt < maxAttempts - 1) await new Promise(r => setTimeout(r, 600));
+      if (attempt < maxAttempts - 1) await new Promise(r => setTimeout(r, 1000));
 
     } catch (error: any) {
       lastError = error;
       const ms = Date.now() - t0;
       const st = error?.status;
-      const tag = st === 503 ? '503' : st === 504 || (error?.message || '').includes('timeout') ? 'timeout' : String(st || 'ERR');
+      const msg = error?.message || '';
+      const is503 = st === 503 || msg.includes('503');
+      const isTimeout = st === 504 || msg.includes('timeout');
+      const tag = is503 ? '503' : isTimeout ? 'timeout' : String(st || 'ERR');
       console.warn(`[IMG] ❌ ${role} ${mode} #${attempt + 1} ${tag} ${ms}ms t/o=${timeout}`);
 
       if (attempt < maxAttempts - 1) {
-        await new Promise(r => setTimeout(r, st === 503 ? 600 : 800));
+        // 503: 프록시가 이미 키 cooldown 적용함 → 클라이언트는 3~5초 대기
+        // timeout: 1초 대기 후 짧은 프롬프트로 재시도
+        const backoff = is503
+          ? 3000 + Math.random() * 2000  // 3~5초 jitter
+          : 1000;
+        console.info(`[IMG] ⏳ ${role} backoff ${Math.round(backoff)}ms before retry`);
+        await new Promise(r => setTimeout(r, backoff));
       }
     }
   }

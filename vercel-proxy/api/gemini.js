@@ -103,17 +103,58 @@ function getKeys() {
 
 let keyIndex = 0;
 
+// ── 키별 503 cooldown 상태 ──
+// Vercel Serverless는 인스턴스가 재사용되므로 모듈 스코프 변수가 유지됨
+const keyCooldowns = new Map(); // keyIndex → { until: timestamp, count: number }
+
+const KEY_COOLDOWN_MS = 10000; // 503 발생 시 해당 키 10초 쿨다운
+
+function isKeyCooledDown(ki) {
+  const cd = keyCooldowns.get(ki);
+  if (!cd) return false;
+  if (Date.now() > cd.until) {
+    keyCooldowns.delete(ki);
+    return false;
+  }
+  return true;
+}
+
+function markKeyCooldown(ki) {
+  const cd = keyCooldowns.get(ki) || { until: 0, count: 0 };
+  cd.count++;
+  // 연속 503 시 쿨다운 시간 증가 (10초, 20초, 30초)
+  cd.until = Date.now() + KEY_COOLDOWN_MS * Math.min(cd.count, 3);
+  keyCooldowns.set(ki, cd);
+  console.warn(`[proxy] 🧊 key=${ki} cooldown ${Math.min(cd.count, 3) * 10}s (503 count=${cd.count})`);
+}
+
+function markKeySuccess(ki) {
+  keyCooldowns.delete(ki);
+}
+
 async function fetchGeminiWithRotation(keys, model, apiBody, timeout, isRaw = false) {
   const maxAttempts = Math.min(keys.length, 3);
   const perAttemptTimeout = Math.min(timeout, isRaw ? 95000 : 150000);
   const tag = isRaw ? "raw" : "text";
   let lastError = "";
   let lastStatus = 502;
+  let triedKeys = 0;
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const ki = (keyIndex + attempt) % keys.length;
+
+    // 503 쿨다운 중인 키는 건너뜀
+    if (isKeyCooledDown(ki)) {
+      const cd = keyCooldowns.get(ki);
+      console.warn(`[proxy] ⏭️ ${tag} key=${ki} model=${model} skipped (cooldown until +${Math.round((cd.until - Date.now()) / 1000)}s)`);
+      lastError = `key=${ki} in cooldown`;
+      lastStatus = 503;
+      continue;
+    }
+
+    triedKeys++;
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), perAttemptTimeout);
-    const ki = (keyIndex + attempt) % keys.length;
     const currentKey = keys[ki];
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${currentKey}`;
     const t0 = Date.now();
@@ -131,20 +172,25 @@ async function fetchGeminiWithRotation(keys, model, apiBody, timeout, isRaw = fa
 
       if (response.ok) {
         keyIndex = (ki + 1) % keys.length;
+        markKeySuccess(ki);
         console.log(`[proxy] ✅ ${tag} key=${ki} model=${model} ${ms}ms`);
         return { ok: true, data: await response.json() };
       }
 
       const errorText = await response.text();
-      const us = response.status; // upstream status
+      const us = response.status;
       console.warn(`[proxy] ⚠️ ${tag} key=${ki} model=${model} upstream=${us} ${ms}ms`);
 
-      if ((us === 429 || us === 503) && attempt < maxAttempts - 1) {
+      if (us === 503 || us === 429) {
         lastError = errorText;
         lastStatus = us;
-        const delay = us === 429 ? 1500 : 500;
-        await new Promise((r) => setTimeout(r, delay));
-        continue;
+        markKeyCooldown(ki);
+        if (attempt < maxAttempts - 1) {
+          // 503: 3초 대기 후 다음 키, 429: 2초 대기 후 다음 키
+          const delay = us === 503 ? 3000 : 2000;
+          await new Promise((r) => setTimeout(r, delay));
+          continue;
+        }
       }
 
       return {
@@ -162,7 +208,7 @@ async function fetchGeminiWithRotation(keys, model, apiBody, timeout, isRaw = fa
         lastStatus = 504;
         console.warn(`[proxy] ⏱️ ${tag} key=${ki} model=${model} timeout ${ms}ms`);
         if (attempt < maxAttempts - 1) {
-          await new Promise((r) => setTimeout(r, 300));
+          await new Promise((r) => setTimeout(r, 500));
           continue;
         }
         return { ok: false, status: 504, error: "proxy timeout", details: lastError };
@@ -172,13 +218,19 @@ async function fetchGeminiWithRotation(keys, model, apiBody, timeout, isRaw = fa
       lastStatus = 502;
       console.warn(`[proxy] ❌ ${tag} key=${ki} model=${model} ${ms}ms ${lastError.substring(0, 80)}`);
       if (attempt < maxAttempts - 1) {
-        await new Promise((r) => setTimeout(r, 300));
+        await new Promise((r) => setTimeout(r, 500));
         continue;
       }
     }
   }
 
-  return { ok: false, status: lastStatus, error: "all keys failed", details: lastError };
+  const allCooled = triedKeys === 0;
+  return {
+    ok: false,
+    status: lastStatus,
+    error: allCooled ? "all keys in cooldown" : "all keys failed",
+    details: lastError,
+  };
 }
 
 // ── Vercel 핸들러 ──
@@ -198,16 +250,24 @@ export default async function handler(req, res) {
   // JSON 응답에만 Content-Type 설정
   res.setHeader("Content-Type", "application/json");
 
-  // 헬스 체크 (GET) — CORS 디버깅 정보 포함
+  // 헬스 체크 (GET) — CORS + 키 상태 디버깅 정보
   if (req.method === "GET") {
+    const keysCount = getKeys().length;
+    const cooldowns = {};
+    for (let i = 0; i < keysCount; i++) {
+      const cd = keyCooldowns.get(i);
+      if (cd && Date.now() < cd.until) {
+        cooldowns[`key${i}`] = { remaining: Math.round((cd.until - Date.now()) / 1000) + "s", count: cd.count };
+      }
+    }
     return res.status(200).json({
       status: "ok",
       region: process.env.VERCEL_REGION || "iad1",
-      keys: getKeys().length,
+      keys: keysCount,
+      cooldowns: Object.keys(cooldowns).length > 0 ? cooldowns : "none",
       cors: {
         requestOrigin: origin || "(none)",
         allowed: isOriginAllowed(origin),
-        effectiveOrigin: isOriginAllowed(origin) ? origin : "https://story-darugi.com",
         allowedList: getAllowedOrigins(),
       },
       timestamp: new Date().toISOString(),

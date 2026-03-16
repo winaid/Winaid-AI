@@ -3107,14 +3107,19 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
   }
 
   if (maxImages > 0 && textData.imagePrompts.length > 0) {
-    const MAX_CONCURRENT_IMAGES = 2;
+    // 이미지 생성: 순차 실행 + 이미지 사이 jitter delay
+    // 이유: gemini-3-pro-image-preview는 동시 요청에 503 반환
+    // 순차 + 간격으로 API 부하를 분산하여 성공률을 높임
     const imgStart = Date.now();
-    safeProgress(`🎨 이미지 ${maxImages}장 병렬 생성 중 (동시 ${MAX_CONCURRENT_IMAGES}장)...`);
+    safeProgress(`🎨 이미지 ${maxImages}장 순차 생성 중...`);
 
-    const generateOneImage = async (i: number): Promise<{ index: number; data: string; prompt: string } | null> => {
+    for (let i = 0; i < maxImages; i++) {
       const p = textData.imagePrompts[i];
       const imgRole = i === 0 ? 'hero' as const : 'sub' as const;
       const t0 = Date.now();
+
+      safeProgress(`🎨 이미지 ${i + 1}/${maxImages}장 생성 중 (${imgRole})...`);
+
       try {
         let img: string;
         if (request.postType === 'card_news') {
@@ -3128,42 +3133,21 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
           imageFailCount++;
         } else {
           console.info(`[IMG] ${imgRole} #${i + 1} OK ${Date.now() - t0}ms`);
+          safeProgress(`✅ 이미지 ${i + 1}/${maxImages}장 완료`);
         }
-        return { index: i + 1, data: img, prompt: p };
+        images.push({ index: i + 1, data: img, prompt: p });
       } catch (imgErr: any) {
-        console.warn(`[IMG] ${imgRole} #${i + 1} exception ${Date.now() - t0}ms: ${imgErr?.message?.substring(0, 60)}`);
-        return null;
-      }
-    };
-
-    const imageIndices = Array.from({ length: maxImages }, (_, i) => i);
-    const pending = new Set<Promise<void>>();
-    const results: ({ index: number; data: string; prompt: string } | null)[] = new Array(maxImages).fill(null);
-
-    for (const i of imageIndices) {
-      const task = generateOneImage(i).then(result => {
-        results[i] = result;
-        if (result && !result.data.includes('image/svg+xml')) {
-          safeProgress(`✅ 이미지 ${result.index}/${maxImages}장 완료`);
-        }
-      });
-      pending.add(task);
-      task.finally(() => pending.delete(task));
-
-      if (pending.size >= MAX_CONCURRENT_IMAGES) {
-        await Promise.race(pending);
-      }
-    }
-    await Promise.all(pending);
-
-    for (const r of results) {
-      if (r) {
-        images.push(r);
-      } else {
+        console.warn(`[IMG] ${imgRole} #${i + 1} exception ${Date.now() - t0}ms: ${(imgErr?.message || '').substring(0, 60)}`);
         imageFailCount++;
       }
+
+      // 다음 이미지 전 jitter delay (1.5~3초) — API 부하 분산
+      if (i < maxImages - 1) {
+        const jitter = 1500 + Math.random() * 1500;
+        console.info(`[IMG] ⏳ jitter ${Math.round(jitter)}ms before image #${i + 2}`);
+        await new Promise(r => setTimeout(r, jitter));
+      }
     }
-    images.sort((a, b) => a.index - b.index);
 
     const imgElapsed = Date.now() - imgStart;
     console.info(`[IMG] total: ${images.length}/${maxImages} images, ${imageFailCount} failed, ${imgElapsed}ms`);
