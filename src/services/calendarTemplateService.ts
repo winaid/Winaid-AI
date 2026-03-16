@@ -5063,10 +5063,9 @@ export async function generateTemplateWithAI(
     ? (templateData.hospitalPhotos as string[]).map((p: string) => makeImagePart(p)).filter(Boolean)
     : [];
 
-  const MAX_RETRIES = 3;
+  const MAX_RETRIES = 2;
   let lastError: any = null;
 
-  // 참고 이미지 + 로고 + 프롬프트 조합 (재사용)
   const buildContents = () => {
     const contents: any[] = [];
     if (styleRefPart) {
@@ -5108,7 +5107,7 @@ Use ONLY the new text content from the prompt below.
 
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
-      console.log(`🎨 템플릿 AI 이미지 생성 시도 ${attempt}/${MAX_RETRIES} (${category}, ref=${!!styleRefPart})...`);
+      console.log(`[TMPL] AI 이미지 시도 ${attempt}/${MAX_RETRIES} (${category}, ref=${!!styleRefPart})`);
 
       const result = await callGeminiRaw('gemini-3-pro-image-preview', {
         contents: [{role: 'user', parts: contents}],
@@ -5127,27 +5126,60 @@ Use ONLY the new text content from the prompt below.
       if (imagePart?.inlineData) {
         const mimeType = imagePart.inlineData.mimeType || 'image/png';
         const data = imagePart.inlineData.data;
-        console.log(`✅ 템플릿 AI 이미지 생성 성공 (시도 ${attempt})`);
+        console.info(`[TMPL] ✅ AI 이미지 성공 (시도 ${attempt}) renderMode=ai-image`);
         return `data:${mimeType};base64,${data}`;
       }
 
       lastError = new Error('이미지 데이터를 받지 못했습니다.');
+      console.warn(`[TMPL] ⚠️ 시도 ${attempt} no image data`);
       if (attempt < MAX_RETRIES) {
-        await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+        await new Promise(resolve => setTimeout(resolve, 2000));
       }
     } catch (error: any) {
       lastError = error;
-      const errMsg = typeof error?.message === 'string' ? error.message : JSON.stringify(error);
-      const statusCode = error?.status || error?.code || error?.error?.code;
-      console.error(`❌ 템플릿 AI 이미지 생성 에러 (시도 ${attempt}, status=${statusCode}):`, errMsg);
-      console.error('스택 트레이스:', error?.stack || '(no stack)');
+      const st = error?.status;
+      const is503 = st === 503 || (error?.message || '').includes('503');
+      const retryAfterMs = error?.retryAfterMs || 0;
+      console.warn(`[TMPL] ❌ 시도 ${attempt} ${is503 ? '503' : st || 'ERR'} ${retryAfterMs ? `retryAfter=${retryAfterMs}ms` : ''}`);
+
       if (attempt < MAX_RETRIES) {
-        await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, attempt - 1)));
+        // 503: cooldown 기반 대기 or 고정 backoff
+        const backoff = retryAfterMs > 0
+          ? retryAfterMs + Math.random() * 1000
+          : is503
+            ? 4000 + Math.random() * 4000  // 4~8초 jitter
+            : 2000;
+        console.info(`[TMPL] ⏳ backoff ${Math.round(backoff)}ms`);
+        await new Promise(resolve => setTimeout(resolve, backoff));
       }
     }
   }
 
-  // AI 생성 실패 시 기존 HTML 방식으로 폴백
-  console.warn('⚠️ AI 이미지 생성 실패, HTML 렌더링으로 폴백:', lastError?.message);
-  throw new Error(`AI 이미지 생성 실패: ${lastError?.message || '알 수 없는 오류'}. 다시 시도해주세요.`);
+  // ── AI 실패 → HTML 렌더링 폴백 시도 ──
+  console.warn(`[TMPL] ⚠️ AI 이미지 ${MAX_RETRIES}회 실패, HTML 폴백 시도 (${category})`);
+
+  try {
+    const htmlBuilders: Record<string, (data: any) => string> = {
+      schedule: buildCalendarHTML,
+      event: buildEventHTML,
+      doctor: buildDoctorHTML,
+      notice: buildNoticeHTML,
+      greeting: buildGreetingHTML,
+      hiring: buildHiringHTML,
+      caution: buildCautionHTML,
+    };
+
+    const builder = htmlBuilders[category];
+    if (!builder) {
+      throw new Error(`HTML 폴백 미지원 카테고리: ${category}`);
+    }
+
+    const html = builder(templateData as any);
+    const imageDataUrl = await renderCalendarToImage(html, options?.imageSize || { width: 1080, height: 1080 });
+    console.info(`[TMPL] ✅ HTML 폴백 성공 renderMode=html-fallback (${category})`);
+    return imageDataUrl;
+  } catch (fallbackErr: any) {
+    console.error(`[TMPL] ❌ HTML 폴백도 실패: ${fallbackErr?.message}`);
+    throw new Error(`이미지 생성 실패 (AI: ${lastError?.message?.substring(0, 60)}, HTML 폴백: ${fallbackErr?.message?.substring(0, 60)}). 다시 시도해주세요.`);
+  }
 }
