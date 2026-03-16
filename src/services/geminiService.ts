@@ -656,18 +656,17 @@ export const generateBlogWithPipeline = async (
         const prompt = await getHospitalStylePromptForGeneration(request.hospitalName);
         if (prompt) {
           hospitalStyleSuffix = `\n\n[🏥 병원 블로그 학습 말투 - 반드시 적용]\n${prompt}`;
-          console.info(`[STYLE] source=explicit_selected_hospital | hospital=${request.hospitalName}`);
+          console.info(`[STYLE] applied=hospital_tone | source=explicit_selected_hospital | explicitHospital=${request.hospitalName}`);
         } else {
-          console.info(`[STYLE] source=explicit_selected_hospital | hospital=${request.hospitalName} | data=null → generic_default`);
+          console.info(`[STYLE] applied=generic_default | source=explicit_selected_hospital | explicitHospital=${request.hospitalName} | reason=no_style_data`);
         }
       }
     } catch (e) {
       console.warn('[STYLE] 병원 말투 로드 실패:', e);
     }
   } else {
-    // persistedHospital: localStorage에서 복원됐지만 명시 선택 아닌 경우
-    const persistedHospital = (styleSource === 'generic_default' && request.hospitalName) ? request.hospitalName : '(none)';
-    console.info(`[STYLE] source=generic_default | explicitHospital=(none) | persistedHospital=${persistedHospital} | styleApplied=generic_default`);
+    const hasPersisted = styleSource === 'generic_default' && !!request.hospitalName;
+    console.info(`[STYLE] applied=generic_default | source=generic_default | explicitHospital=(none)${hasPersisted ? ` | persistedHospitalIgnored=${request.hospitalName}` : ''}`);
   }
 
   // ── Stage A: 아웃라인 생성 (FLASH) ── [재시도 포함]
@@ -1520,14 +1519,14 @@ ${hospitalStylePrompt}
 - 자주 쓰는 표현과 문장 구조를 자연스럽게 반영하세요
 - 전체적인 분위기를 일관되게 유지하세요
 `;
-        console.info(`[STYLE] source=explicit_selected_hospital | hospital=${request.hospitalName} | function=generateFullPost`);
+        console.info(`[STYLE] applied=hospital_tone | source=explicit_selected_hospital | explicitHospital=${request.hospitalName}`);
       }
     } catch (e) {
       console.warn('[STYLE] 병원 말투 프로파일 로드 실패:', e);
     }
   } else {
-    const persistedH = (request.hospitalStyleSource !== 'explicit_selected_hospital' && request.hospitalName) ? request.hospitalName : '(none)';
-    console.info(`[STYLE] source=generic_default | explicitHospital=(none) | persistedHospital=${persistedH} | styleApplied=generic_default | function=generateFullPost`);
+    const hasPersistedH = request.hospitalStyleSource !== 'explicit_selected_hospital' && !!request.hospitalName;
+    console.info(`[STYLE] applied=generic_default | source=generic_default | explicitHospital=(none)${hasPersistedH ? ` | persistedHospitalIgnored=${request.hospitalName}` : ''}`);
   }
   
   // 커스텀 소제목 적용
