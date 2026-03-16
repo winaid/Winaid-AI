@@ -47,21 +47,6 @@ function Diamond({ cx, cy, size, fill, stroke, strokeWidth = 0 }: {
   );
 }
 
-/** Blurred rectangle representing a clinic interior photo hint */
-function ClinicPhotoHint({ x, y, w, h }: {
-  x: number; y: number; w: number; h: number;
-}) {
-  return (
-    <g opacity="0.15">
-      <rect x={safeNum(x)} y={safeNum(y)} width={safeNum(w)} height={safeNum(h)}
-        rx="6" fill="#5A8A7A" />
-      <rect x={safeNum(x + 8)} y={safeNum(y + 6)} width={safeNum(w * 0.35)} height={safeNum(h - 12)}
-        rx="3" fill="#3D6B5E" />
-      <rect x={safeNum(x + w * 0.45)} y={safeNum(y + 10)} width={safeNum(w * 0.45)} height={safeNum(h - 20)}
-        rx="3" fill="#4A7D6E" />
-    </g>
-  );
-}
 
 /**
  * T10 — 클리닉 그린 (Clinic Green)
@@ -252,12 +237,14 @@ export default function T10DarkGreenClinic({ data, width = 600, colors, mode = '
         </text>
       ))}
 
-      {/* Bottom dark green strip with clinic photo hints */}
-      <rect x="0" y={safeNum(svgH - 60)} width="600" height="60"
-        fill={darkGreen} opacity="0.85" />
-      <ClinicPhotoHint x={30} y={safeNum(svgH - 52)} w={160} h={44} />
-      <ClinicPhotoHint x={220} y={safeNum(svgH - 52)} w={160} h={44} />
-      <ClinicPhotoHint x={410} y={safeNum(svgH - 52)} w={160} h={44} />
+      {/* Bottom dark green footer bar with clinic name */}
+      <rect x="0" y={safeNum(svgH - 50)} width="600" height="50"
+        fill={darkGreen} />
+      <text x="300" y={safeNum(svgH - 20)}
+        textAnchor="middle" fontSize="14" fontWeight="600"
+        fill="rgba(255,255,255,0.8)" letterSpacing="2">
+        {data.clinicName}
+      </text>
     </svg>
   );
 }

@@ -96,29 +96,27 @@ export default function T8AutumnHoliday({ data, width = 600, colors, mode = 'ful
       {/* Beige/cream background */}
       <rect width="600" height={svgH} fill="#FDF5EC" />
 
-      {/* Corner leaves — top-left */}
-      <AutumnLeaf x={35} y={40} size={1.3} rot={-20} color="#C0543B" />
-      <AutumnLeaf x={80} y={25} size={0.9} rot={15} color="#D4A24E" />
-      <RoundLeaf x={55} y={85} size={0.8} rot={30} color="#B8862D" />
+      {/* Corner leaves — top-left (크기/밀도 강화 → 썸네일에서 가을 즉시 인지) */}
+      <AutumnLeaf x={30} y={35} size={1.8} rot={-20} color="#C0543B" />
+      <AutumnLeaf x={85} y={20} size={1.3} rot={15} color="#D4A24E" />
+      <RoundLeaf x={50} y={90} size={1.2} rot={30} color="#B8862D" />
+      <AutumnLeaf x={130} y={55} size={1.0} rot={-35} color="#C97B3A" />
 
       {/* Corner leaves — top-right */}
-      <AutumnLeaf x={565} y={35} size={1.4} rot={25} color="#C97B3A" />
-      <RoundLeaf x={525} y={55} size={1.0} rot={-10} color="#C0543B" />
-      <AutumnLeaf x={550} y={95} size={0.7} rot={45} color="#D4A24E" />
+      <AutumnLeaf x={570} y={30} size={1.9} rot={25} color="#C97B3A" />
+      <RoundLeaf x={520} y={50} size={1.3} rot={-10} color="#C0543B" />
+      <AutumnLeaf x={545} y={100} size={1.1} rot={45} color="#D4A24E" />
+      <RoundLeaf x={475} y={30} size={0.9} rot={20} color="#B8862D" />
 
       {/* Corner leaves — bottom-left */}
-      <AutumnLeaf x={30} y={safeNum(svgH - 50)} size={1.1} rot={20} color="#B8862D" />
-      <RoundLeaf x={75} y={safeNum(svgH - 35)} size={0.8} rot={-15} color="#C97B3A" />
+      <AutumnLeaf x={25} y={safeNum(svgH - 45)} size={1.5} rot={20} color="#B8862D" />
+      <RoundLeaf x={80} y={safeNum(svgH - 30)} size={1.1} rot={-15} color="#C97B3A" />
+      <AutumnLeaf x={120} y={safeNum(svgH - 55)} size={0.9} rot={40} color="#D4A24E" />
 
       {/* Corner leaves — bottom-right */}
-      <AutumnLeaf x={570} y={safeNum(svgH - 45)} size={1.2} rot={-25} color="#C0543B" />
-      <RoundLeaf x={530} y={safeNum(svgH - 30)} size={0.9} rot={10} color="#D4A24E" />
-
-      {/* Brown brush strokes in corners */}
-      <BrushStroke x={10} y={120} rot={-5} width={70} />
-      <BrushStroke x={520} y={115} rot={5} width={65} />
-      <BrushStroke x={15} y={safeNum(svgH - 80)} rot={8} width={55} />
-      <BrushStroke x={530} y={safeNum(svgH - 75)} rot={-6} width={50} />
+      <AutumnLeaf x={575} y={safeNum(svgH - 40)} size={1.6} rot={-25} color="#C0543B" />
+      <RoundLeaf x={525} y={safeNum(svgH - 25)} size={1.2} rot={10} color="#D4A24E" />
+      <AutumnLeaf x={480} y={safeNum(svgH - 55)} size={0.9} rot={-40} color="#B8862D" />
 
       {/* White card with shadow */}
       <rect x={CARD_X} y={CARD_Y} width={CARD_W} height={cardH}
@@ -146,7 +144,7 @@ export default function T8AutumnHoliday({ data, width = 600, colors, mode = 'ful
       <rect x={CARD_X} y={safeNum(CARD_Y + HEADER_H / 2)} width={CARD_W}
         height={safeNum(HEADER_H / 2)} fill="#F5EDE0" />
 
-      {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, i) => (
+      {['일', '월', '화', '수', '목', '금', '토'].map((day, i) => (
         <text key={day}
           x={safeNum(CARD_X + i * COL_W + COL_W / 2)} y={safeNum(CARD_Y + 27)}
           textAnchor="middle" fontSize="13" fontWeight="700"

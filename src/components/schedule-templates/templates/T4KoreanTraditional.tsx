@@ -134,18 +134,17 @@ export default function T4KoreanTraditional({ data, width = 600, colors, mode = 
       <rect x={CARD_X} y={CARD_Y} width={CARD_W} height={cardH}
         rx="4" fill="white" stroke="#D4C5A9" strokeWidth="1" />
 
-      {/* 캘린더 헤더 */}
+      {/* 캘린더 헤더 — 전통 금색 배경 (T3 브라운과 확실히 구분) */}
       <rect x={CARD_X} y={CARD_Y} width={CARD_W} height={HEADER_H}
-        rx="4" fill="white" stroke="#D4C5A9" strokeWidth="1" />
-      <line x1={CARD_X} y1={safeNum(CARD_Y + HEADER_H)}
-        x2={safeNum(CARD_X + CARD_W)} y2={safeNum(CARD_Y + HEADER_H)}
-        stroke="#D4C5A9" strokeWidth="1" />
+        rx="4" fill="#6B5220" />
+      <rect x={CARD_X} y={safeNum(CARD_Y + HEADER_H / 2)} width={CARD_W}
+        height={safeNum(HEADER_H / 2)} fill="#6B5220" />
 
       {['일', '월', '화', '수', '목', '금', '토'].map((day, i) => (
         <text key={day}
           x={safeNum(CARD_X + i * COL_W + COL_W / 2)} y={safeNum(CARD_Y + 31)}
           textAnchor="middle" fontSize="15" fontWeight="600"
-          fill={i === 0 ? '#8B1A2A' : '#3E2A0A'}
+          fill={i === 0 ? '#FFB8A8' : '#F5EDD5'}
         >
           {day}
         </text>

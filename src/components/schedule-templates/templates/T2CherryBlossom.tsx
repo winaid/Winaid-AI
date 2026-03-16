@@ -40,14 +40,16 @@ interface Props {
   mode?: CalendarViewMode;
 }
 
-/** Subtle petal accent (restrained) */
+/** Cherry blossom petal cluster — visible at thumbnail */
 function PetalAccent({ x, y, size = 1 }: { x: number; y: number; size?: number }) {
   return (
-    <g transform={`${safeTranslate(x, y)} scale(${safeNum(size, 1)})`} opacity="0.4">
-      <ellipse cx="0" cy="-6" rx="8" ry="14" fill="#F8BBD0" transform="rotate(-15)" />
-      <ellipse cx="8" cy="4" rx="8" ry="14" fill="#F8BBD0" transform="rotate(25)" />
-      <ellipse cx="-8" cy="4" rx="8" ry="14" fill="#F8BBD0" transform="rotate(-55)" />
-      <circle cx="0" cy="0" r="4" fill="#F48FB1" opacity="0.6" />
+    <g transform={`${safeTranslate(x, y)} scale(${safeNum(size, 1)})`} opacity="0.7">
+      <ellipse cx="0" cy="-8" rx="10" ry="18" fill="#F8BBD0" transform="rotate(-15)" />
+      <ellipse cx="10" cy="5" rx="10" ry="18" fill="#F8BBD0" transform="rotate(25)" />
+      <ellipse cx="-10" cy="5" rx="10" ry="18" fill="#F8BBD0" transform="rotate(-55)" />
+      <ellipse cx="6" cy="-12" rx="8" ry="14" fill="#F48FB1" opacity="0.5" transform="rotate(40)" />
+      <ellipse cx="-6" cy="-12" rx="8" ry="14" fill="#F48FB1" opacity="0.5" transform="rotate(-40)" />
+      <circle cx="0" cy="0" r="5" fill="#EC407A" opacity="0.7" />
     </g>
   );
 }
@@ -94,10 +96,13 @@ export default function T2CherryBlossom({ data, width = 600, colors, mode = 'ful
       </defs>
       <rect width="600" height={svgH} fill="url(#t2-bg)" />
 
-      {/* 소프트 꽃잎 악센트 (절제된 3개) */}
-      <PetalAccent x={55} y={50} size={1.8} />
-      <PetalAccent x={545} y={45} size={2.0} />
-      <PetalAccent x={540} y={safeNum(svgH - 50)} size={1.5} />
+      {/* 꽃잎 악센트 — 썸네일에서 봄 느낌 즉시 전달 */}
+      <PetalAccent x={50} y={45} size={2.0} />
+      <PetalAccent x={110} y={80} size={1.3} />
+      <PetalAccent x={545} y={40} size={2.2} />
+      <PetalAccent x={490} y={85} size={1.4} />
+      <PetalAccent x={540} y={safeNum(svgH - 45)} size={1.6} />
+      <PetalAccent x={60} y={safeNum(svgH - 55)} size={1.2} />
 
       {/* ── 브랜딩 영역: 큰 로고 원 + 클리닉명 ── */}
       <g transform={safeTranslate(300, 80)}>

@@ -290,7 +290,7 @@ export default function T6Christmas({ data, width = 600, colors, mode = 'full' }
       </text>
       <text x="300" y={safeNum(CARD_Y + cardH + 70)}
         textAnchor="middle" fontSize="10" fontWeight="400" fill="#7A96B0" letterSpacing="1.5">
-        HANDA M DENTAL CLINIC
+        {data.clinicName}
       </text>
     </svg>
   );

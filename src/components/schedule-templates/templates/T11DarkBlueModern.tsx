@@ -1,7 +1,7 @@
 import React from 'react';
 import type { ScheduleData, TemplateColors, CalendarViewMode } from '../types';
 import { DEFAULT_COLORS } from '../types';
-import { buildCalendarWeeks, getEventWeeks, safeNum, safeTranslate } from '../calendarEngine';
+import { buildCalendarWeeks, getEventWeeks, safeNum } from '../calendarEngine';
 
 const FONT = "Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif";
 const PAD_X = 30;
@@ -17,31 +17,6 @@ interface Props {
   width?: number;
   colors?: TemplateColors;
   mode?: CalendarViewMode;
-}
-
-/** Quarter-circle halftone dot pattern */
-function HalftoneDots({ x, y, flip = false }: { x: number; y: number; flip?: boolean }) {
-  const dots: { cx: number; cy: number; r: number }[] = [];
-  const maxR = 90;
-  for (let row = 0; row < 6; row++) {
-    for (let col = 0; col < 6 - row; col++) {
-      const dx = col * 16 + 8;
-      const dy = row * 16 + 8;
-      if (Math.sqrt(dx * dx + dy * dy) < maxR) {
-        dots.push({ cx: dx, cy: dy, r: 3.2 - row * 0.3 });
-      }
-    }
-  }
-  const sx = flip ? -1 : 1;
-  const sy = 1;
-  return (
-    <g transform={safeTranslate(x, y)} opacity="0.25">
-      {dots.map((d, i) => (
-        <circle key={i} cx={safeNum(d.cx * sx)} cy={safeNum(d.cy * sy)}
-          r={safeNum(Math.max(d.r, 1.2))} fill="#5A8DBF" />
-      ))}
-    </g>
-  );
 }
 
 /**
@@ -100,12 +75,6 @@ export default function T11DarkBlueModern({ data, width = 600, colors, mode = 'f
 
       {/* Dark navy background */}
       <rect width="600" height={svgH} fill="url(#t11-bg)" />
-
-      {/* Halftone dot decorations in corners */}
-      <HalftoneDots x={8} y={8} />
-      <HalftoneDots x={592} y={8} flip />
-      <HalftoneDots x={8} y={safeNum(svgH - 8)} />
-      <HalftoneDots x={592} y={safeNum(svgH - 8)} flip />
 
       {/* Clinic name with thin white rectangular border frame */}
       <rect x="160" y="30" width="280" height="40" rx="3"
@@ -246,7 +215,7 @@ export default function T11DarkBlueModern({ data, width = 600, colors, mode = 'f
       <text x="300" y={safeNum(svgH - 12)}
         textAnchor="middle" fontSize="9" fontWeight="400"
         fill="#3A5E8C" letterSpacing="2">
-        DENTAL CLINIC
+        {data.clinicName}
       </text>
     </svg>
   );

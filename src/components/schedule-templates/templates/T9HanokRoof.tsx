@@ -279,7 +279,7 @@ export default function T9HanokRoof({ data, width = 600, colors, mode = 'full' }
           {data.clinicName}
         </text>
         <text x="0" y="22" textAnchor="middle" fontSize="11" fill="#A08060" letterSpacing="1">
-          HANOK MEDICAL CLINIC
+          {data.clinicName}
         </text>
       </g>
     </svg>
