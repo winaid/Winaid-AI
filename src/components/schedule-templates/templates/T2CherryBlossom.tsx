@@ -7,51 +7,16 @@ const FONT = "Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic'
 const COL_W = 540 / 7;
 const CARD_X = 30;
 const CARD_W = 540;
-const HEADER_H = 44;
-const ROW_H_FULL = 78;
-const ROW_H_WEEKLY = 108;
-const CARD_Y = 260;
-
-/**
- * T2 — 소프트 브랜딩 (Soft Branding)
- *
- * 성격: 클리닉 브랜드 아이덴티티를 자연스럽게 노출
- * 차별점: 큰 로고/클리닉명 영역 + 소프트 핑크 브랜딩 컬러
- * 대상: "우리 병원 이름이 잘 보이는 안내"를 원하는 클리닉
- *
- * 리서치 근거:
- * - 부산 B피부과 사례: 채널별 로고/메시지 불일치 → 브랜드 인지도 30% 하락 (openads.co.kr)
- * - 카드뉴스 브랜딩 골든룰: "병원 이름 가려도 우리 병원인지 아는가?" (병원 마케팅 벤치마크)
- * - 일관된 시그니처 컬러가 고객 인지도 평균 23% 상승 (디자인 리서치)
- * - 미리캔버스/Canva 의료 브랜딩 템플릿 공통 패턴: 원형 프로필 프레임 + 대형 클리닉명 + 브랜드 컬러 라인
- *
- * 시각 요소 매핑:
- * - 원형 로고(r=48) + 이니셜 → 카드뉴스 표지 "원형 프로필 프레임" 패턴
- * - 클리닉명 26px bold → "병원명이 첫 시선" 원칙
- * - 핑크 구분선 → 시그니처 컬러 라인
- * - 하단 미니 로고+클리닉명 → 카드뉴스 "마지막 장 CTA" 구조
- * - PetalAccent 3개(절제) → "일러스트 > 스톡사진 engagement" + 과잉 장식 방지
- */
+const HEADER_H = 42;
+const ROW_H_FULL = 76;
+const ROW_H_WEEKLY = 106;
+const CARD_Y = 280;
 
 interface Props {
   data: ScheduleData;
   width?: number;
   colors?: TemplateColors;
   mode?: CalendarViewMode;
-}
-
-/** Cherry blossom petal cluster — visible at thumbnail */
-function PetalAccent({ x, y, size = 1 }: { x: number; y: number; size?: number }) {
-  return (
-    <g transform={`${safeTranslate(x, y)} scale(${safeNum(size, 1)})`} opacity="0.7">
-      <ellipse cx="0" cy="-8" rx="10" ry="18" fill="#F8BBD0" transform="rotate(-15)" />
-      <ellipse cx="10" cy="5" rx="10" ry="18" fill="#F8BBD0" transform="rotate(25)" />
-      <ellipse cx="-10" cy="5" rx="10" ry="18" fill="#F8BBD0" transform="rotate(-55)" />
-      <ellipse cx="6" cy="-12" rx="8" ry="14" fill="#F48FB1" opacity="0.5" transform="rotate(40)" />
-      <ellipse cx="-6" cy="-12" rx="8" ry="14" fill="#F48FB1" opacity="0.5" transform="rotate(-40)" />
-      <circle cx="0" cy="0" r="5" fill="#EC407A" opacity="0.7" />
-    </g>
-  );
 }
 
 export default function T2CherryBlossom({ data, width = 600, colors, mode = 'full' }: Props) {
@@ -66,13 +31,13 @@ export default function T2CherryBlossom({ data, width = 600, colors, mode = 'ful
   const calH = safeNum(HEADER_H + weeks.length * ROW_H);
   const cardH = safeNum(calH + 20);
   const noticeCount = data.notices?.length ?? 0;
-  const svgH = safeNum(CARD_Y + cardH + noticeCount * 26 + 80, 600);
+  const svgH = safeNum(CARD_Y + cardH + noticeCount * 24 + 60, 600);
   const scale = safeNum(width / 600, 1);
 
-  const BRAND_PINK = '#E8638A';
-  const SOFT_PINK = '#FDE8EF';
-  const DEEP_ROSE = '#C2185B';
-  const TEXT_DARK = '#3C1A2A';
+  const ROSE = '#D4447C';
+  const ROSE_DARK = '#B8305E';
+  const ROSE_LIGHT = '#F8E0EC';
+  const TEXT_WHITE = '#FFFFFF';
 
   function getEvent(date: number) {
     return data.events.find(e => e.date === date);
@@ -86,75 +51,57 @@ export default function T2CherryBlossom({ data, width = 600, colors, mode = 'ful
       fontFamily={FONT}
       xmlns="http://www.w3.org/2000/svg"
     >
-      {/* 배경: 소프트 핑크 → 화이트 (브랜딩 톤) */}
-      <defs>
-        <linearGradient id="t2-bg" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={SOFT_PINK} />
-          <stop offset="60%" stopColor="white" />
-          <stop offset="100%" stopColor="#FAFAFA" />
-        </linearGradient>
-      </defs>
-      <rect width="600" height={svgH} fill="url(#t2-bg)" />
+      {/* 상단 로즈핑크 블록 — 전체 너비, 상단 40% */}
+      <rect width="600" height="260" fill={ROSE} />
+      {/* 하단 흰색 */}
+      <rect y="260" width="600" height={safeNum(svgH - 260)} fill="white" />
 
-      {/* 꽃잎 악센트 — 썸네일에서 봄 느낌 즉시 전달 */}
-      <PetalAccent x={50} y={45} size={2.0} />
-      <PetalAccent x={110} y={80} size={1.3} />
-      <PetalAccent x={545} y={40} size={2.2} />
-      <PetalAccent x={490} y={85} size={1.4} />
-      <PetalAccent x={540} y={safeNum(svgH - 45)} size={1.6} />
-      <PetalAccent x={60} y={safeNum(svgH - 55)} size={1.2} />
+      {/* 핑크 블록 안 장식: 큰 원형 반투명 */}
+      <circle cx="500" cy="60" r="120" fill="#E0558E" opacity="0.3" />
+      <circle cx="80" cy="200" r="80" fill="#C03A6C" opacity="0.2" />
 
-      {/* ── 브랜딩 영역: 큰 로고 원 + 클리닉명 ── */}
-      <g transform={safeTranslate(300, 80)}>
-        {/* 로고 원형 배경 */}
-        <circle cx="0" cy="0" r="48" fill={BRAND_PINK} />
-        <circle cx="0" cy="0" r="42" fill="none" stroke="white" strokeWidth="1.5" opacity="0.6" />
-        {/* 로고 이니셜 */}
-        <text x="0" y="14" textAnchor="middle" fontSize="36"
-          fontWeight="900" fill="white">
-          {data.clinicName.charAt(0)}
-        </text>
-      </g>
-
-      {/* 클리닉명 — 브랜드 강조 */}
-      <text x="300" y="160" textAnchor="middle" fontSize="26"
-        fontWeight="800" fill={TEXT_DARK} letterSpacing="2">
+      {/* 클리닉명 — 핑크 블록 안, 큰 흰색 */}
+      <text x="300" y="80" textAnchor="middle" fontSize="15"
+        fontWeight="500" fill="rgba(255,255,255,0.75)" letterSpacing="4">
         {data.clinicName}
       </text>
 
-      {/* 브랜드 구분선 */}
-      <line x1="200" y1="175" x2="400" y2="175"
-        stroke={BRAND_PINK} strokeWidth="1.5" opacity="0.5" />
+      {/* 큰 로고 이니셜 원 */}
+      <circle cx="300" cy="140" r="42" fill="white" />
+      <text x="300" y="155" textAnchor="middle" fontSize="38"
+        fontWeight="900" fill={ROSE}>
+        {data.clinicName.charAt(0)}
+      </text>
 
-      {/* 월 제목 */}
-      <text x="300" y="215" textAnchor="middle" fontSize="38"
-        fontWeight="900" fill={TEXT_DARK}>
+      {/* 월 타이틀 */}
+      <text x="300" y="218" textAnchor="middle" fontSize="36"
+        fontWeight="900" fill={TEXT_WHITE} letterSpacing="1">
         {data.monthLabel} 진료일정
       </text>
 
       {/* 부제 */}
       {data.subtitle && (
-        <text x="300" y="242" textAnchor="middle" fontSize="13"
-          fill={BRAND_PINK} fontWeight="400">
+        <text x="300" y="248" textAnchor="middle" fontSize="13"
+          fontWeight="400" fill="rgba(255,255,255,0.7)">
           {data.subtitle}
         </text>
       )}
 
-      {/* 캘린더 카드 */}
+      {/* 캘린더 카드 — 흰 라운드 카드, 핑크존/흰존 경계에 걸침 */}
       <rect x={CARD_X} y={CARD_Y} width={CARD_W} height={cardH}
-        rx="10" fill="white" stroke="#F0D8E0" strokeWidth="1" />
+        rx="12" fill="white" stroke={ROSE_LIGHT} strokeWidth="1.5" />
 
-      {/* 캘린더 헤더 — 브랜드 핑크 */}
+      {/* 캘린더 헤더 — 로즈핑크 */}
       <rect x={CARD_X} y={CARD_Y} width={CARD_W} height={HEADER_H}
-        rx="10" fill={BRAND_PINK} />
+        rx="12" fill={ROSE} />
       <rect x={CARD_X} y={safeNum(CARD_Y + HEADER_H / 2)} width={CARD_W}
-        height={safeNum(HEADER_H / 2)} fill={BRAND_PINK} />
+        height={safeNum(HEADER_H / 2)} fill={ROSE} />
 
       {['일', '월', '화', '수', '목', '금', '토'].map((day, i) => (
         <text key={day}
-          x={safeNum(CARD_X + i * COL_W + COL_W / 2)} y={safeNum(CARD_Y + 29)}
+          x={safeNum(CARD_X + i * COL_W + COL_W / 2)} y={safeNum(CARD_Y + 28)}
           textAnchor="middle" fontSize="14" fontWeight="700"
-          fill={i === 0 ? '#FFD0D0' : 'white'}
+          fill={i === 0 ? '#FFD0D0' : TEXT_WHITE}
         >
           {day}
         </text>
@@ -168,7 +115,7 @@ export default function T2CherryBlossom({ data, width = 600, colors, mode = 'ful
             {wi < weeks.length - 1 && (
               <line x1={CARD_X} y1={safeNum(rowY + ROW_H)}
                 x2={safeNum(CARD_X + CARD_W)} y2={safeNum(rowY + ROW_H)}
-                stroke="#F5E0E8" strokeWidth="1" />
+                stroke={ROSE_LIGHT} strokeWidth="1" />
             )}
             {week.map((cell, di) => {
               const cx = safeNum(CARD_X + di * COL_W + COL_W / 2);
@@ -177,30 +124,29 @@ export default function T2CherryBlossom({ data, width = 600, colors, mode = 'ful
               const hasEvent = !!event && current;
               const dimmed = isHighlight && current && !hasEvent;
 
-              let numColor = di === 0 ? DEEP_ROSE : TEXT_DARK;
+              let numColor = di === 0 ? ROSE_DARK : '#333';
               if (!current) numColor = '#D0C0C8';
 
-              const evColor = event?.color ?? BRAND_PINK;
+              const evColor = event?.color ?? ROSE;
 
               return (
                 <g key={di} opacity={dimmed ? 0.25 : 1}>
                   {isHighlight && hasEvent && (
-                    <circle cx={cx} cy={safeNum(rowY + 28)} r={28}
+                    <circle cx={cx} cy={safeNum(rowY + 26)} r={28}
                       fill={evColor} opacity={0.15} />
                   )}
-                  {/* 브랜딩형 이벤트: 소프트 원형 배경 */}
                   {hasEvent && (
-                    <circle cx={cx} cy={safeNum(rowY + 28)} r={22}
-                      fill={evColor} opacity="0.12" />
+                    <circle cx={cx} cy={safeNum(rowY + 26)} r={20}
+                      fill={evColor} opacity="0.15" />
                   )}
-                  <text x={cx} y={safeNum(rowY + 34)}
+                  <text x={cx} y={safeNum(rowY + 32)}
                     textAnchor="middle" fontSize="16"
                     fontWeight={hasEvent ? '800' : '500'}
                     fill={hasEvent ? evColor : numColor}>
                     {cell.day}
                   </text>
                   {hasEvent && (
-                    <text x={cx} y={safeNum(rowY + 56)}
+                    <text x={cx} y={safeNum(rowY + 52)}
                       textAnchor="middle" fontSize={isHighlight ? '12' : '10.5'}
                       fontWeight={isHighlight ? '700' : '600'}
                       fill={evColor}>
@@ -215,29 +161,25 @@ export default function T2CherryBlossom({ data, width = 600, colors, mode = 'ful
       })}
 
       {/* 안내사항 */}
-      {data.notices && data.notices.length > 0 && (
-        <g>
-          {data.notices.map((n, i) => (
-            <g key={i}>
-              <circle cx={safeNum(CARD_X + 14)} cy={safeNum(CARD_Y + cardH + 20 + i * 26)}
-                r="2.5" fill={BRAND_PINK} />
-              <text x={safeNum(CARD_X + 24)} y={safeNum(CARD_Y + cardH + 25 + i * 26)}
-                fontSize="12" fill={TEXT_DARK} fontWeight="400">
-                {n}
-              </text>
-            </g>
-          ))}
+      {data.notices && data.notices.length > 0 && data.notices.map((n, i) => (
+        <g key={i}>
+          <circle cx={safeNum(CARD_X + 14)} cy={safeNum(CARD_Y + cardH + 20 + i * 24)}
+            r="2.5" fill={ROSE} />
+          <text x={safeNum(CARD_X + 24)} y={safeNum(CARD_Y + cardH + 25 + i * 24)}
+            fontSize="12" fill="#555" fontWeight="400">
+            {n}
+          </text>
         </g>
-      )}
+      ))}
 
       {/* 하단 브랜딩 푸터 */}
-      <g transform={safeTranslate(300, safeNum(svgH - 35))}>
-        <circle cx="-70" cy="0" r="12" fill={BRAND_PINK} />
-        <text x="-70" y="5" textAnchor="middle" fontSize="11"
+      <g transform={safeTranslate(300, safeNum(svgH - 25))}>
+        <circle cx="-60" cy="0" r="10" fill={ROSE} />
+        <text x="-60" y="4" textAnchor="middle" fontSize="10"
           fontWeight="900" fill="white">
           {data.clinicName.charAt(0)}
         </text>
-        <text x="-45" y="5" fontSize="15" fontWeight="700" fill={TEXT_DARK}>
+        <text x="-38" y="5" fontSize="14" fontWeight="700" fill="#333">
           {data.clinicName}
         </text>
       </g>

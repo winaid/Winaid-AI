@@ -1,24 +1,16 @@
 import React from 'react';
 import type { ScheduleData, TemplateColors, CalendarViewMode } from '../types';
 import { DEFAULT_COLORS } from '../types';
-import { buildCompactCalendarWeeks, getEventWeeks, safeNum, safeTranslate } from '../calendarEngine';
+import { buildCompactCalendarWeeks, getEventWeeks, safeNum } from '../calendarEngine';
 
 const FONT = "Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif";
 const COL_W = 540 / 7;
 const CARD_X = 30;
 const CARD_W = 540;
-const HEADER_H = 44;
-const ROW_H_FULL = 78;
-const ROW_H_WEEKLY = 108;
+const HEADER_H = 42;
+const ROW_H_FULL = 76;
+const ROW_H_WEEKLY = 106;
 const CARD_Y = 200;
-
-/**
- * T3 — 가을 공문 (Autumn Official Notice)
- *
- * 성격: 실무 공문형 — 병원 공식 안내문/공지 느낌
- * 차별점: 정돈된 레이아웃, 공문 헤더 구조, 절제된 가을 톤
- * 대상: "공식적이고 격식 있는 안내가 필요한" 병원
- */
 
 interface Props {
   data: ScheduleData;
@@ -39,14 +31,12 @@ export default function T3Autumn({ data, width = 600, colors, mode = 'full' }: P
   const calH = safeNum(HEADER_H + weeks.length * ROW_H);
   const cardH = safeNum(calH + 20);
   const noticeCount = data.notices?.length ?? 0;
-  const svgH = safeNum(CARD_Y + cardH + noticeCount * 24 + 90, 600);
+  const svgH = safeNum(CARD_Y + cardH + noticeCount * 24 + 80, 600);
   const scale = safeNum(width / 600, 1);
 
-  const CHARCOAL = '#2C2216';
-  const WARM_BROWN = '#6B4C2A';
-  const HEADER_BG = '#4A3728';
-  const AUTUMN_ACCENT = '#C67A3C';
-  const LIGHT_CREAM = '#FBF7F0';
+  const RED = '#C62828';
+  const RED_DARK = '#8E1A1A';
+  const CHARCOAL = '#1A1A1A';
 
   function getEvent(date: number) {
     return data.events.find(e => e.date === date);
@@ -60,56 +50,52 @@ export default function T3Autumn({ data, width = 600, colors, mode = 'full' }: P
       fontFamily={FONT}
       xmlns="http://www.w3.org/2000/svg"
     >
-      {/* 배경: 밝은 크림 (공문 용지 느낌) */}
-      <rect width="600" height={svgH} fill={LIGHT_CREAM} />
+      {/* 흰 배경 — 공문 용지 */}
+      <rect width="600" height={svgH} fill="white" />
 
-      {/* 상단 풀폭 브라운 헤더 바 — 공문 격식감 + 썸네일에서 즉시 구분 */}
-      <rect x="0" y="0" width="600" height="70" fill={HEADER_BG} />
+      {/* 굵은 빨간 가로줄 2개 — 관공서 공문 핵심 시각 훅 */}
+      <rect x="0" y="0" width="600" height="14" fill={RED} />
+      <rect x="0" y="22" width="600" height="6" fill={RED} />
 
-      {/* 클리닉명 (공문 발신처) — 헤더 바 안 */}
-      <text x="300" y="28" textAnchor="middle" fontSize="13"
-        fontWeight="500" fill="rgba(255,255,255,0.7)" letterSpacing="4">
+      {/* 클리닉명 — 좌측 정렬 공문 발신처 */}
+      <text x={CARD_X} y="62" fontSize="13"
+        fontWeight="600" fill={RED} letterSpacing="3">
         {data.clinicName}
       </text>
 
-      {/* 가을 악센트 바 (헤더 바 하단) */}
-      <rect x="0" y="58" width="600" height="12" fill={AUTUMN_ACCENT} />
+      {/* 구분선 */}
+      <line x1={CARD_X} y1="74" x2={safeNum(CARD_X + CARD_W)} y2="74"
+        stroke="#DDD" strokeWidth="1" />
 
-      {/* 이중선 테두리 — 본문 영역 */}
-      <rect x="30" y="90" width="540" height="90" rx="2"
-        fill="none" stroke={WARM_BROWN} strokeWidth="1.5" />
-      <rect x="34" y="94" width="532" height="82" rx="1"
-        fill="none" stroke={WARM_BROWN} strokeWidth="0.6" />
-
-      {/* 월 안내 제목 */}
-      <text x="300" y="130" textAnchor="middle" fontSize="38"
-        fontWeight="900" fill={CHARCOAL} letterSpacing="1">
+      {/* 대형 타이틀 — 좌측 정렬, 공문 격식 */}
+      <text x={CARD_X} y="125" fontSize="48"
+        fontWeight="900" fill={CHARCOAL}>
         {data.monthLabel} 진료일정
       </text>
 
       {/* 부제 */}
       {data.subtitle && (
-        <text x="300" y="162" textAnchor="middle" fontSize="13"
-          fill={WARM_BROWN} fontWeight="400">
+        <text x={CARD_X} y="155" fontSize="14"
+          fill="#666" fontWeight="400">
           {data.subtitle}
         </text>
       )}
 
-      {/* 캘린더 카드 */}
-      <rect x={CARD_X} y={CARD_Y} width={CARD_W} height={cardH}
-        rx="4" fill="white" stroke="#D8CCBA" strokeWidth="1" />
+      {/* 빨간 악센트 바 — 타이틀과 달력 사이 */}
+      <rect x={CARD_X} y="170" width="80" height="4" rx="2" fill={RED} />
 
-      {/* 캘린더 헤더 — 차분한 브라운 */}
+      {/* 캘린더 — 빨간 헤더 */}
+      <rect x={CARD_X} y={CARD_Y} width={CARD_W} height={cardH}
+        rx="0" fill="white" stroke="#E0E0E0" strokeWidth="1" />
+
       <rect x={CARD_X} y={CARD_Y} width={CARD_W} height={HEADER_H}
-        rx="4" fill={HEADER_BG} />
-      <rect x={CARD_X} y={safeNum(CARD_Y + HEADER_H / 2)} width={CARD_W}
-        height={safeNum(HEADER_H / 2)} fill={HEADER_BG} />
+        fill={RED} />
 
       {['일', '월', '화', '수', '목', '금', '토'].map((day, i) => (
         <text key={day}
-          x={safeNum(CARD_X + i * COL_W + COL_W / 2)} y={safeNum(CARD_Y + 29)}
+          x={safeNum(CARD_X + i * COL_W + COL_W / 2)} y={safeNum(CARD_Y + 28)}
           textAnchor="middle" fontSize="14" fontWeight="700"
-          fill={i === 0 ? '#FFAA9A' : 'white'}
+          fill={i === 0 ? '#FFB8B8' : 'white'}
         >
           {day}
         </text>
@@ -123,7 +109,7 @@ export default function T3Autumn({ data, width = 600, colors, mode = 'full' }: P
             {wi < weeks.length - 1 && (
               <line x1={CARD_X} y1={safeNum(rowY + ROW_H)}
                 x2={safeNum(CARD_X + CARD_W)} y2={safeNum(rowY + ROW_H)}
-                stroke="#E8DFD2" strokeWidth="1" />
+                stroke="#EAEAEA" strokeWidth="1" />
             )}
             {week.map((cell, di) => {
               const cx = safeNum(CARD_X + di * COL_W + COL_W / 2);
@@ -133,11 +119,11 @@ export default function T3Autumn({ data, width = 600, colors, mode = 'full' }: P
               const dimmed = isHighlight && current && !hasEvent;
               const dayText = cell.dual ? `${cell.day}/${cell.dual}` : String(cell.day);
 
-              let numColor = di === 0 ? '#B8432A' : CHARCOAL;
-              if (!current) numColor = '#C4BAA8';
+              let numColor = di === 0 ? RED : CHARCOAL;
+              if (!current) numColor = '#CCC';
 
               const isClosed = hasEvent && event!.type === 'closed';
-              const evColor = event?.color ?? (isClosed ? '#B8432A' : AUTUMN_ACCENT);
+              const evColor = event?.color ?? (isClosed ? RED : '#333');
 
               return (
                 <g key={di} opacity={dimmed ? 0.25 : 1}>
@@ -145,13 +131,11 @@ export default function T3Autumn({ data, width = 600, colors, mode = 'full' }: P
                     <circle cx={cx} cy={safeNum(rowY + 28)} r={28}
                       fill={evColor} opacity={0.12} />
                   )}
-                  {/* 공문형 이벤트: 밑줄 강조 (도장 느낌) */}
+                  {/* 공문형: 이벤트 날짜에 빨간 밑줄 */}
                   {hasEvent && (
-                    <g>
-                      <line x1={safeNum(cx - 22)} y1={safeNum(rowY + 38)}
-                        x2={safeNum(cx + 22)} y2={safeNum(rowY + 38)}
-                        stroke={evColor} strokeWidth="2.5" />
-                    </g>
+                    <line x1={safeNum(cx - 22)} y1={safeNum(rowY + 38)}
+                      x2={safeNum(cx + 22)} y2={safeNum(rowY + 38)}
+                      stroke={evColor} strokeWidth="3" />
                   )}
                   <text x={cx} y={safeNum(rowY + 32)}
                     textAnchor="middle" fontSize={cell.dual ? 13 : 16}
@@ -174,33 +158,25 @@ export default function T3Autumn({ data, width = 600, colors, mode = 'full' }: P
         );
       })}
 
-      {/* 안내사항 — 공문 스타일 박스 */}
+      {/* 안내사항 — ※ 공문 스타일 */}
       {data.notices && data.notices.length > 0 && (
         <g>
-          <rect x={CARD_X} y={safeNum(CARD_Y + cardH + 12)}
-            width={CARD_W} height={safeNum(noticeCount * 24 + 16)}
-            rx="3" fill="none" stroke="#D8CCBA" strokeWidth="0.8" />
           {data.notices.map((n, i) => (
-            <g key={i}>
-              <text x={safeNum(CARD_X + 16)} y={safeNum(CARD_Y + cardH + 32 + i * 24)}
-                fontSize="12" fill={i === 0 ? CHARCOAL : WARM_BROWN}
-                fontWeight={i === 0 ? '600' : '400'}>
-                {`※ ${n}`}
-              </text>
-            </g>
+            <text key={i} x={safeNum(CARD_X + 4)} y={safeNum(CARD_Y + cardH + 24 + i * 24)}
+              fontSize="12" fill="#444" fontWeight="400">
+              {`※ ${n}`}
+            </text>
           ))}
         </g>
       )}
 
-      {/* 하단 공문 서명 영역 */}
-      <g transform={safeTranslate(300, safeNum(svgH - 40))}>
-        <line x1="-100" y1="-12" x2="100" y2="-12"
-          stroke={WARM_BROWN} strokeWidth="0.8" />
-        <text x="0" y="6" textAnchor="middle" fontSize="14"
-          fontWeight="700" fill={CHARCOAL} letterSpacing="2">
-          {data.clinicName}
-        </text>
-      </g>
+      {/* 하단 — 빨간 줄 + 클리닉명 (상단과 대칭) */}
+      <rect x="0" y={safeNum(svgH - 28)} width="600" height="6" fill={RED} />
+      <rect x="0" y={safeNum(svgH - 14)} width="600" height="14" fill={RED} />
+      <text x={CARD_X} y={safeNum(svgH - 38)} fontSize="13"
+        fontWeight="700" fill={CHARCOAL} letterSpacing="2">
+        {data.clinicName}
+      </text>
     </svg>
   );
 }

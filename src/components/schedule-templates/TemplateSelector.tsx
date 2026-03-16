@@ -51,9 +51,9 @@ export const TEMPLATE_LIST: (TemplateInfo & {
   },
   {
     id: 'dark-blue',
-    name: '모던 네이비',
-    description: '네이비 배경 + 화이트 달력, 프리미엄 공식안내',
-    tags: ['프로페셔널', '네이비', '프리미엄'],
+    name: '네이비 풀블리드',
+    description: '네이비 전면 배경, 골드 악센트, 프리미엄 공식안내',
+    tags: ['프로페셔널', '네이비', '프리미엄', '풀블리드'],
     previewBg: '#0D1B3E',
     Component: T11DarkBlueModern,
     sample: {
@@ -89,10 +89,10 @@ export const TEMPLATE_LIST: (TemplateInfo & {
   },
   {
     id: 'minimal-doc',
-    name: '미니멀 문서',
-    description: '정보 중심 문서 레이아웃, 장식 없는 블루 모노톤',
-    tags: ['프로페셔널', '미니멀', '문서형'],
-    previewBg: '#FFFFFF',
+    name: '블루 헤더',
+    description: '진한 블루 상단 블록, 정보 중심 깔끔한 달력',
+    tags: ['프로페셔널', '블루', '깔끔'],
+    previewBg: '#1565C0',
     Component: T5Notebook,
     sample: {
       clinicName: '윈에이드 치과',
@@ -107,10 +107,10 @@ export const TEMPLATE_LIST: (TemplateInfo & {
   },
   {
     id: 'autumn-official',
-    name: '가을 공문',
-    description: '이중선 테두리, 공식 안내문 포맷 (가을 톤)',
-    tags: ['프로페셔널', '공문형', '가을'],
-    previewBg: '#FBF7F0',
+    name: '레드 공문',
+    description: '빨간 가로줄 + 흰 배경, 관공서 스타일 공식 안내문',
+    tags: ['프로페셔널', '공문형', '레드', '공식'],
+    previewBg: '#FFFFFF',
     Component: T3Autumn,
     sample: {
       clinicName: '윈에이드 치과',
@@ -126,10 +126,10 @@ export const TEMPLATE_LIST: (TemplateInfo & {
   // ─── ② 브랜딩/고급: 클리닉 이미지·고급감 강조 ───
   {
     id: 'soft-branding',
-    name: '소프트 브랜딩',
-    description: '로고·클리닉명 강조, 핑크 톤 브랜드 카드',
-    tags: ['브랜딩', '핑크', '로고강조'],
-    previewBg: '#FDE8EF',
+    name: '핑크 블록',
+    description: '로즈핑크 상단 블록, 브랜드 강조 (여성의원·피부과)',
+    tags: ['브랜딩', '핑크', '여성의원', '피부과'],
+    previewBg: '#D4447C',
     Component: T2CherryBlossom,
     sample: {
       clinicName: '윈에이드 치과',
@@ -144,10 +144,10 @@ export const TEMPLATE_LIST: (TemplateInfo & {
   },
   {
     id: 'premium-soft',
-    name: '프리미엄 소프트',
-    description: '아이보리·골드 악센트, 고급 클리닉 안내 (피부과·여성의원)',
-    tags: ['고급', '골드', '아이보리', '피부과'],
-    previewBg: '#FAF8F3',
+    name: '골드 포멀',
+    description: '순흑 배경 + 골드 프레임, 성형외과·VIP 클리닉 최고급 안내',
+    tags: ['최고급', '골드', '블랙', '성형외과'],
+    previewBg: '#111111',
     Component: T12LavenderSparkle,
     sample: {
       clinicName: '윈에이드 피부과',
@@ -164,10 +164,10 @@ export const TEMPLATE_LIST: (TemplateInfo & {
   // ─── ③ 시즌: 계절·명절 한정 안내 ───
   {
     id: 'autumn-holiday',
-    name: '가을 휴진안내',
-    description: '베이지 배경, 코너 단풍잎, 추석/연휴 안내용',
-    tags: ['시즌', '가을', '추석', '휴진안내'],
-    previewBg: '#FDF5EC',
+    name: '웜 코랄',
+    description: '코랄 전면 배경 + 흰 라운드 카드, 동네의원·가정의학과',
+    tags: ['캐주얼', '코랄', '따뜻한', '동네의원'],
+    previewBg: '#E8856A',
     Component: T8AutumnHoliday,
     sample: {
       clinicName: '윈에이드 치과',
@@ -202,10 +202,10 @@ export const TEMPLATE_LIST: (TemplateInfo & {
   // ─── ④ 전통: 한의원·한방병원 ───
   {
     id: 'traditional',
-    name: '전통 문서',
-    description: '이중 테두리·기하 문양, 문서형 전통 안내 (한의원 공식)',
-    tags: ['전통', '한의원', '오방색', '문서형'],
-    previewBg: '#F5EDD5',
+    name: '수묵 한의원',
+    description: '먹색 배경 + 금 원, 현대적 한방 프리미엄',
+    tags: ['전통', '한의원', '먹색', '프리미엄'],
+    previewBg: '#1E1E1E',
     Component: T4KoreanTraditional,
     sample: {
       clinicName: '경희 한의원',
