@@ -604,8 +604,8 @@ const STYLE_KEYWORD_SHORT: Record<string, string> = {
   photo: 'photorealistic, DSLR, natural lighting, bokeh',
 };
 
-// ── 템플릿 기반 대체 이미지 생성 (AI 실패 시) ──
-// SVG placeholder 대신 프롬프트 키워드로 그라디언트 + 아이콘 카드를 만든다
+// ── 템플릿 기반 보조 비주얼 (AI 미생성 시) ──
+// "실패 대체물"이 아닌 "보조 비주얼 모드" — 프롬프트 기반 그라디언트 + 키워드 카드
 // 사용자에게 "이미지 없음"이 아닌 "완성된 비주얼"로 보이게 하는 것이 목적
 
 const TEMPLATE_GRADIENTS = [
@@ -631,18 +631,21 @@ function buildTemplateFallbackSvg(
   style: string,
   role: ImageRole,
 ): string {
-  // 프롬프트에서 핵심 키워드 2~3개 추출 (한글 우선)
   const koreanWords = promptText.match(/[\uAC00-\uD7A3]{2,}/g) || [];
   const keywords = koreanWords.slice(0, 3).join(' · ') || '건강 정보';
   const icon = TEMPLATE_ICONS[style] || '🏥';
 
-  // 랜덤 그라디언트 (프롬프트 해시 기반 — 동일 프롬프트면 동일 색상)
   const hash = promptText.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
   const [c1, c2] = TEMPLATE_GRADIENTS[hash % TEMPLATE_GRADIENTS.length];
 
   const width = 1280;
   const height = 720;
   const isHero = role === 'hero';
+
+  // "보조 비주얼 모드" — 실패감 없이, 이미지를 클릭하면 AI로 업그레이드 가능
+  const ctaText = isHero
+    ? '이미지를 클릭하면 AI 고품질 이미지로 업그레이드됩니다'
+    : '이미지 클릭 시 AI 이미지로 전환 가능';
 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
   <defs>
@@ -658,7 +661,7 @@ function buildTemplateFallbackSvg(
   <rect fill="rgba(255,255,255,0.12)" x="60" y="60" width="${width - 120}" height="${height - 120}" rx="24"/>
   <text x="${width / 2}" y="${isHero ? 280 : 300}" text-anchor="middle" font-family="Apple SD Gothic Neo,Noto Sans KR,sans-serif" font-size="${isHero ? 72 : 56}" fill="rgba(255,255,255,0.9)">${icon}</text>
   <text x="${width / 2}" y="${isHero ? 380 : 390}" text-anchor="middle" font-family="Apple SD Gothic Neo,Noto Sans KR,sans-serif" font-size="${isHero ? 32 : 26}" fill="rgba(255,255,255,0.85)" font-weight="600">${keywords}</text>
-  <text x="${width / 2}" y="${isHero ? 430 : 430}" text-anchor="middle" font-family="Arial,sans-serif" font-size="14" fill="rgba(255,255,255,0.45)">클릭하여 AI 이미지로 재생성</text>
+  <text x="${width / 2}" y="${isHero ? 430 : 430}" text-anchor="middle" font-family="Apple SD Gothic Neo,Noto Sans KR,sans-serif" font-size="14" fill="rgba(255,255,255,0.5)">${ctaText}</text>
 </svg>`;
 }
 
@@ -724,17 +727,13 @@ export const generateBlogImage = async (
   const maxAttempts = demoSafe && !isHero ? 2 : chain.length;
 
   let lastError: any = null;
+  const debug = isImgDebug();
   const attemptLog: { errorType: string; retryAfterMs: number; tier: ModelTier; ms: number }[] = [];
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     const def = chain[attempt];
     const t0 = Date.now();
     const tier = def.tier;
-
-    // [IMG-ROUTE] — 각 시도의 라우팅 정보
-    if (attempt === 0) {
-      console.info(`[IMG-ROUTE] idx=? type=${role} tier=${tier} model=${def.model}`);
-    }
 
     try {
       const result = await callGeminiRaw(def.model, {
@@ -751,13 +750,14 @@ export const generateBlogImage = async (
       if (finishReason === 'SAFETY' || finishReason === 'RECITATION') {
         lastError = new Error(`SAFETY:${finishReason}`);
         attemptLog.push({ errorType: `SAFETY:${finishReason}`, retryAfterMs: 0, tier, ms });
-        console.info(`[IMG-TRY] type=${role} attempt=${attempt + 1} tier=${tier} errorType=SAFETY:${finishReason} ${ms}ms`);
+        if (debug) console.debug(`[IMG-TRY] type=${role} attempt=${attempt + 1} tier=${tier} errorType=SAFETY:${finishReason} ${ms}ms`);
         if (attempt < maxAttempts - 1) await new Promise(r => setTimeout(r, 1000));
         continue;
       }
 
       const imagePart = (result?.candidates?.[0]?.content?.parts || []).find((p: any) => p.inlineData?.data);
       if (imagePart?.inlineData) {
+        // 운영 로그: 성공은 항상 출력
         console.info(`[IMG-FINAL] type=${role} result=ai-image tier=${tier} attempt=${attempt + 1} ${ms}ms`);
         return {
           data: `data:${imagePart.inlineData.mimeType || 'image/png'};base64,${imagePart.inlineData.data}`,
@@ -769,7 +769,7 @@ export const generateBlogImage = async (
 
       lastError = new Error('no image data');
       attemptLog.push({ errorType: 'no_data', retryAfterMs: 0, tier, ms });
-      console.info(`[IMG-TRY] type=${role} attempt=${attempt + 1} tier=${tier} errorType=no_data ${ms}ms`);
+      if (debug) console.debug(`[IMG-TRY] type=${role} attempt=${attempt + 1} tier=${tier} errorType=no_data ${ms}ms`);
       if (attempt < maxAttempts - 1) await new Promise(r => setTimeout(r, 1000));
 
     } catch (error: any) {
@@ -778,12 +778,12 @@ export const generateBlogImage = async (
       const parsed = parseImageError(error);
       attemptLog.push({ errorType: parsed.errorType, retryAfterMs: parsed.retryAfterMs, tier, ms });
 
-      // [IMG-TRY] — 시도별 에러 로그
-      console.info(`[IMG-TRY] type=${role} attempt=${attempt + 1} tier=${tier} errorType=${parsed.errorType} ${ms}ms${parsed.retryAfterMs ? ` retryAfterMs=${parsed.retryAfterMs}` : ''}`);
+      // 에러 시도 로그: debug 전용 (운영 로그는 FINAL/DOWNGRADE만)
+      if (debug) console.debug(`[IMG-TRY] type=${role} attempt=${attempt + 1} tier=${tier} errorType=${parsed.errorType} ${ms}ms${parsed.retryAfterMs ? ` retryAfterMs=${parsed.retryAfterMs}` : ''}`);
 
-      // http 500 구분 로깅 (프록시 버그 가능성)
+      // http 500: 항상 출력 (프록시 버그 가능성)
       if (parsed.isUpstream500) {
-        console.error(`[IMG-TRY] ⚠️ upstream_500 detected — possible proxy/code bug. model=${chain[attempt].model} status=${error?.status}`);
+        console.error(`[IMG-TRY] upstream_500 detected — possible proxy/code bug. model=${def.model} status=${error?.status}`);
       }
 
       // cooldown 기록
@@ -791,25 +791,26 @@ export const generateBlogImage = async (
         reportCooldown(tier, error?.nextAvailableAt, parsed.retryAfterMs);
       }
 
-      // 대기 전략: cross-tier 전환이면 cooldown 대기 스킵
+      // 대기 전략
       if (attempt < maxAttempts - 1) {
         const nextTier = chain[attempt + 1]?.tier;
         const isCrossTier = nextTier && nextTier !== tier;
 
         if (isCrossTier && (parsed.isCooldown || parsed.isUpstream503)) {
+          // 운영 로그: cross-tier 전환은 의미 있는 이벤트
           console.info(`[IMG-DOWNGRADE] type=${role} from=${tier} to=${nextTier} reason=${parsed.errorType}`);
-          // cross-tier: 즉시 전환, 대기 없음
         } else if (parsed.isCooldown) {
           const waitMs = parsed.retryAfterMs > 0
             ? parsed.retryAfterMs + 500 + Math.random() * 500
             : 8000 + Math.random() * 2000;
-          if (isImgDebug()) console.debug(`[IMG-Q] cooldown-wait ${Math.round(waitMs)}ms tier=${tier}`);
+          if (debug) console.debug(`[IMG-WAIT] cooldown ${Math.round(waitMs)}ms tier=${tier}`);
           await new Promise(r => setTimeout(r, waitMs));
         } else if (parsed.isUpstream503) {
           const backoff = 4000 + Math.random() * 4000;
-          if (isImgDebug()) console.debug(`[IMG-Q] 503-backoff ${Math.round(backoff)}ms tier=${tier}`);
+          if (debug) console.debug(`[IMG-WAIT] 503-backoff ${Math.round(backoff)}ms tier=${tier}`);
           await new Promise(r => setTimeout(r, backoff));
         } else if (parsed.isTimeout) {
+          if (debug) console.debug(`[IMG-WAIT] timeout-backoff 1000ms tier=${tier}`);
           await new Promise(r => setTimeout(r, 1000));
         } else {
           await new Promise(r => setTimeout(r, 2000));
@@ -818,13 +819,15 @@ export const generateBlogImage = async (
     }
   }
 
-  // ── AI 모두 실패 → template fallback ──
+  // ── AI 모두 실패 → 보조 비주얼 모드 (template) ──
   const tierPath = attemptLog.map(e => `${e.tier}:${e.errorType}`).join('→');
-  console.warn(`[IMG-TRY] type=${role} ALL_FAILED attempts=${attemptLog.length} tierPath=[${tierPath}]`);
-
-  // 3순위: 템플릿 기반 대체 렌더 (그라디언트 + 키워드 카드)
   const templateData = generateTemplateFallback(promptText, style, role);
-  console.info(`[IMG-FINAL] type=${role} result=template tier=${attemptLog[attemptLog.length - 1]?.tier || 'none'} attempts=${attemptLog.length}`);
+  // 운영 로그: template 전환은 항상 출력 + hero면 경고
+  if (isHero) {
+    console.warn(`[IMG-FINAL] type=hero result=TEMPLATE (hero AI 실패) tierPath=[${tierPath}] attempts=${attemptLog.length}`);
+  } else {
+    console.info(`[IMG-FINAL] type=${role} result=template tierPath=[${tierPath}] attempts=${attemptLog.length}`);
+  }
   return {
     data: templateData,
     modelTier: attemptLog[attemptLog.length - 1]?.tier || 'pro',
@@ -884,12 +887,14 @@ export async function generateImageQueue(
     return a.index - b.index;
   });
 
-  // [IMG-ROUTE] — 각 이미지의 라우팅 계획
-  sorted.forEach(item => {
-    const tier = item.role === 'hero' ? 'pro' : 'nb2';
-    const model = item.role === 'hero' ? GEMINI_MODEL.IMAGE_PRO : GEMINI_MODEL.IMAGE_FLASH;
-    console.info(`[IMG-ROUTE] idx=${item.index} type=${item.role} tier=${tier} model=${model}`);
-  });
+  // [IMG-ROUTE] — 각 이미지의 라우팅 계획 (debug 모드에서만 상세, 운영은 PLAN으로 충분)
+  if (isImgDebug()) {
+    sorted.forEach(item => {
+      const tier = item.role === 'hero' ? 'pro' : 'nb2';
+      const model = item.role === 'hero' ? GEMINI_MODEL.IMAGE_PRO : GEMINI_MODEL.IMAGE_FLASH;
+      console.debug(`[IMG-ROUTE] idx=${item.index} type=${item.role} tier=${tier} model=${model}`);
+    });
+  }
 
   const results: ImageQueueResult[] = [];
 
@@ -948,7 +953,7 @@ export async function generateImageQueue(
   await Promise.allSettled(tasks);
   results.sort((a, b) => a.index - b.index);
 
-  // ── [IMG-SUMMARY] 성공 지표 계산 ──
+  // ── [IMG-SUMMARY] 세분화 지표 ──
   const heroResults = results.filter(r => r.role === 'hero');
   const subResults = results.filter(r => r.role === 'sub');
 
@@ -958,13 +963,19 @@ export async function generateImageQueue(
   const nonPlaceholder = aiCount + templateCount;
 
   const heroAi = heroResults.filter(r => r.resultType === 'ai-image').length;
+  const heroTemplate = heroResults.filter(r => r.resultType === 'template').length;
   const subAi = subResults.filter(r => r.resultType === 'ai-image').length;
   const subNonPlaceholder = subResults.filter(r => r.resultType !== 'placeholder').length;
 
-  const heroSuccessRate = heroResults.length > 0 ? Math.round((heroAi / heroResults.length) * 100) : 100;
-  const subCompletionRate = subResults.length > 0 ? Math.round((subNonPlaceholder / subResults.length) * 100) : 100;
-  const fullSetRate = Math.round((nonPlaceholder / totalImages) * 100);
-  const aiOnlyRate = Math.round((aiCount / totalImages) * 100);
+  // 제품 KPI 지표
+  const metrics = {
+    completionRate:      pct(nonPlaceholder, totalImages),       // placeholder 없이 채워진 비율
+    aiCoverageRate:      pct(aiCount, totalImages),              // AI 생성 비율
+    heroAIHitRate:       pct(heroAi, heroResults.length),        // hero AI 성공률 (최우선 KPI)
+    subAICoverageRate:   pct(subAi, subResults.length),          // sub AI 성공률
+    templateFallbackRate: pct(templateCount, totalImages),       // template 대체 비율
+    placeholderRate:     pct(placeholderCount, totalImages),      // placeholder 비율 (0이 목표)
+  };
 
   // tier별 통계
   const proSuccess = results.filter(r => r.modelTier === 'pro' && r.resultType === 'ai-image').length;
@@ -974,18 +985,179 @@ export async function generateImageQueue(
     (r.role === 'sub' && r.modelTier === 'pro' && r.resultType === 'ai-image')
   ).length;
 
+  // 주요 실패 사유
+  const failReasons = results
+    .filter(r => r.errorType)
+    .reduce((acc, r) => { acc[r.errorType!] = (acc[r.errorType!] || 0) + 1; return acc; }, {} as Record<string, number>);
+
   const totalElapsed = results.reduce((sum, r) => sum + r.elapsedMs, 0);
 
+  // ── 운영 로그 ──
   console.info(`[IMG-SUMMARY] ═══════════════════════════════════════`);
   console.info(`[IMG-SUMMARY] total=${totalImages} ai=${aiCount} template=${templateCount} placeholder=${placeholderCount}`);
-  console.info(`[IMG-SUMMARY] heroSuccess=${heroAi}/${heroResults.length} subComplete=${subNonPlaceholder}/${subResults.length}`);
-  console.info(`[IMG-SUMMARY] heroSuccessRate=${heroSuccessRate}% subCompletionRate=${subCompletionRate}% fullSetRate=${fullSetRate}% aiOnlyRate=${aiOnlyRate}%`);
+  console.info(`[IMG-SUMMARY] completionRate=${metrics.completionRate}% aiCoverage=${metrics.aiCoverageRate}% templateFallback=${metrics.templateFallbackRate}% placeholder=${metrics.placeholderRate}%`);
+  console.info(`[IMG-SUMMARY] heroAIHitRate=${metrics.heroAIHitRate}% (${heroAi}/${heroResults.length}) subAICoverage=${metrics.subAICoverageRate}% (${subAi}/${subResults.length})`);
+  if (heroTemplate > 0) {
+    console.warn(`[IMG-SUMMARY] ⚠️ HERO_TEMPLATE_FALLBACK hero=${heroTemplate}건 — hero 품질 저하 (AI 미생성)`);
+  }
   console.info(`[IMG-SUMMARY] tierStats: pro=${proSuccess} nb2=${nb2Success} crossTier=${crossTier}`);
+  if (Object.keys(failReasons).length > 0) {
+    console.info(`[IMG-SUMMARY] failReasons: ${Object.entries(failReasons).map(([k, v]) => `${k}=${v}`).join(' ')}`);
+  }
   console.info(`[IMG-SUMMARY] totalMs=${totalElapsed} mode=${mode}`);
   console.info(`[IMG-SUMMARY] perImage: ${results.map(r => `idx${r.index}(${r.role}/${r.modelTier || '?'})=${r.resultType}/${r.elapsedMs}ms`).join(' | ')}`);
   console.info(`[IMG-SUMMARY] ═══════════════════════════════════════`);
 
+  // ── 세션 누적 통계 (20회+ 테스트용) ──
+  accumulateSessionStats(results, totalElapsed, mode);
+
   return results;
+}
+
+// ── 퍼센트 유틸 ──
+function pct(numerator: number, denominator: number): number {
+  return denominator > 0 ? Math.round((numerator / denominator) * 100) : 100;
+}
+
+// ── 세션 누적 통계 (SessionStats) ──
+// 탭을 닫기 전까지 누적 — 20회+ 테스트 후 한눈에 확인 가능
+// 콘솔에서 window.__IMG_SESSION_STATS 로 접근 가능
+
+interface SessionStatsData {
+  runs: number;
+  totalImages: number;
+  aiCount: number;
+  templateCount: number;
+  placeholderCount: number;
+  heroTotal: number;
+  heroAi: number;
+  heroTemplate: number;
+  subTotal: number;
+  subAi: number;
+  proSuccess: number;
+  nb2Success: number;
+  crossTier: number;
+  totalMs: number;
+  failReasons: Record<string, number>;
+  history: Array<{
+    ts: string;
+    total: number;
+    ai: number;
+    template: number;
+    placeholder: number;
+    heroResult: string;
+    totalMs: number;
+    failReasons: string;
+  }>;
+}
+
+const _sessionStats: SessionStatsData = {
+  runs: 0, totalImages: 0, aiCount: 0, templateCount: 0, placeholderCount: 0,
+  heroTotal: 0, heroAi: 0, heroTemplate: 0,
+  subTotal: 0, subAi: 0,
+  proSuccess: 0, nb2Success: 0, crossTier: 0,
+  totalMs: 0, failReasons: {}, history: [],
+};
+
+function accumulateSessionStats(results: ImageQueueResult[], totalMs: number, mode: string): void {
+  const s = _sessionStats;
+  s.runs++;
+  s.totalImages += results.length;
+  s.totalMs += totalMs;
+
+  const heroR = results.filter(r => r.role === 'hero');
+  const subR = results.filter(r => r.role === 'sub');
+
+  const ai = results.filter(r => r.resultType === 'ai-image').length;
+  const tpl = results.filter(r => r.resultType === 'template').length;
+  const ph = results.filter(r => r.resultType === 'placeholder').length;
+
+  s.aiCount += ai;
+  s.templateCount += tpl;
+  s.placeholderCount += ph;
+  s.heroTotal += heroR.length;
+  s.heroAi += heroR.filter(r => r.resultType === 'ai-image').length;
+  s.heroTemplate += heroR.filter(r => r.resultType === 'template').length;
+  s.subTotal += subR.length;
+  s.subAi += subR.filter(r => r.resultType === 'ai-image').length;
+  s.proSuccess += results.filter(r => r.modelTier === 'pro' && r.resultType === 'ai-image').length;
+  s.nb2Success += results.filter(r => r.modelTier === 'nb2' && r.resultType === 'ai-image').length;
+  s.crossTier += results.filter(r =>
+    (r.role === 'hero' && r.modelTier === 'nb2' && r.resultType === 'ai-image') ||
+    (r.role === 'sub' && r.modelTier === 'pro' && r.resultType === 'ai-image')
+  ).length;
+
+  // 실패 사유 누적
+  results.filter(r => r.errorType).forEach(r => {
+    s.failReasons[r.errorType!] = (s.failReasons[r.errorType!] || 0) + 1;
+  });
+
+  // 히스토리 row
+  const runFailReasons = results.filter(r => r.errorType).map(r => r.errorType).join(',');
+  const heroResult = heroR.length > 0
+    ? heroR.map(r => r.resultType).join(',')
+    : 'none';
+  s.history.push({
+    ts: new Date().toISOString().substring(11, 19),
+    total: results.length, ai, template: tpl, placeholder: ph,
+    heroResult, totalMs, failReasons: runFailReasons || '-',
+  });
+
+  // window 접근용 (콘솔 디버깅)
+  // - window.__IMG_SESSION_STATS: 원시 데이터
+  // - window.__IMG_PRINT_STATS(): 포맷된 테이블 출력
+  // - window.__IMG_RESET_STATS(): 통계 리셋
+  try {
+    (window as any).__IMG_SESSION_STATS = s;
+    (window as any).__IMG_PRINT_STATS = printSessionSummary;
+    (window as any).__IMG_RESET_STATS = resetImageSessionStats;
+  } catch { /* SSR safe */ }
+
+  // 누적 요약 로그 (5회마다 + 항상 마지막 줄)
+  if (s.runs % 5 === 0 || s.runs === 1) {
+    printSessionSummary();
+  } else {
+    console.info(`[IMG-SESSION] run=${s.runs} (next session summary at run=${Math.ceil(s.runs / 5) * 5})`);
+  }
+}
+
+function printSessionSummary(): void {
+  const s = _sessionStats;
+  console.info(`[IMG-SESSION] ═══════════════════════════════════════════`);
+  console.info(`[IMG-SESSION] 누적 통계 (${s.runs}회 실행)`);
+  console.info(`[IMG-SESSION]   images=${s.totalImages} ai=${s.aiCount} template=${s.templateCount} placeholder=${s.placeholderCount}`);
+  console.info(`[IMG-SESSION]   completionRate=${pct(s.aiCount + s.templateCount, s.totalImages)}% aiCoverage=${pct(s.aiCount, s.totalImages)}%`);
+  console.info(`[IMG-SESSION]   heroAIHitRate=${pct(s.heroAi, s.heroTotal)}% (${s.heroAi}/${s.heroTotal}) heroTemplateFallback=${s.heroTemplate}`);
+  console.info(`[IMG-SESSION]   subAICoverage=${pct(s.subAi, s.subTotal)}% (${s.subAi}/${s.subTotal})`);
+  console.info(`[IMG-SESSION]   tier: pro=${s.proSuccess} nb2=${s.nb2Success} crossTier=${s.crossTier}`);
+  if (Object.keys(s.failReasons).length > 0) {
+    console.info(`[IMG-SESSION]   failReasons: ${Object.entries(s.failReasons).map(([k, v]) => `${k}=${v}`).join(' ')}`);
+  }
+  console.info(`[IMG-SESSION]   avgTimePerRun=${s.runs > 0 ? Math.round(s.totalMs / s.runs) : 0}ms`);
+  console.info(`[IMG-SESSION] ───────────────────────────────────────────`);
+  console.info(`[IMG-SESSION] history:`);
+  console.info(`[IMG-SESSION]   ${'run'.padEnd(4)} ${'time'.padEnd(9)} ${'total'.padEnd(6)} ${'ai'.padEnd(4)} ${'tpl'.padEnd(4)} ${'ph'.padEnd(4)} ${'hero'.padEnd(12)} ${'ms'.padEnd(7)} failReasons`);
+  s.history.forEach((h, i) => {
+    console.info(`[IMG-SESSION]   ${String(i + 1).padEnd(4)} ${h.ts.padEnd(9)} ${String(h.total).padEnd(6)} ${String(h.ai).padEnd(4)} ${String(h.template).padEnd(4)} ${String(h.placeholder).padEnd(4)} ${h.heroResult.padEnd(12)} ${String(h.totalMs).padEnd(7)} ${h.failReasons}`);
+  });
+  console.info(`[IMG-SESSION] ═══════════════════════════════════════════`);
+}
+
+/** 세션 통계 수동 출력 — 콘솔에서 호출 가능 */
+export function printImageSessionStats(): void {
+  printSessionSummary();
+}
+
+/** 세션 통계 리셋 */
+export function resetImageSessionStats(): void {
+  Object.assign(_sessionStats, {
+    runs: 0, totalImages: 0, aiCount: 0, templateCount: 0, placeholderCount: 0,
+    heroTotal: 0, heroAi: 0, heroTemplate: 0,
+    subTotal: 0, subAi: 0,
+    proSuccess: 0, nb2Success: 0, crossTier: 0,
+    totalMs: 0, failReasons: {}, history: [],
+  });
+  console.info('[IMG-SESSION] stats reset');
 }
 
 // 🎴 기본 프레임 이미지 URL (로컬 파일 사용 - 외부 URL 403 에러 방지)
