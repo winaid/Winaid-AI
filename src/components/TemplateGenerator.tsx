@@ -63,35 +63,38 @@ const labelCls = 'block text-xs font-bold text-slate-500 mb-1.5';
 
 // Schedule 그룹 분류 (UI 라벨용)
 const SCHEDULE_GROUPS: { label: string; desc: string; values: string[] }[] = [
-  { label: '📋 클린 · 모던', desc: '깔끔한·실무·밝은 달력', values: ['medical_notebook', 'autumn', 'spring_kids', 'cherry_blossom', 'autumn_holiday', 'lavender_sparkle'] },
-  { label: '✨ 프리미엄 · 클래식', desc: '격조·고급·진중한 달력', values: ['korean_traditional', 'hanok_roof', 'dark_blue_modern', 'dark_green_clinic', 'winter', 'autumn_spring_note'] },
+  { label: '📋 실무 · 클린', desc: '실무형·격자·정보 중심', values: ['autumn', 'spring_kids', 'medical_notebook', 'autumn_spring_note'] },
+  { label: '🎨 소프트 · SNS', desc: '부드러운·컬러풀·소셜 무드', values: ['cherry_blossom', 'autumn_holiday', 'lavender_sparkle'] },
+  { label: '✨ 프리미엄 · 클래식', desc: '격조·고급·진중한 달력', values: ['korean_traditional', 'hanok_roof', 'winter', 'dark_green_clinic', 'dark_blue_modern'] },
 ];
 
 function CalendarThemePreview({ themeValue, groupColor, size = 'sm' }: { themeValue: string; groupColor: string; size?: 'sm' | 'lg' }) {
   const s = size === 'lg';
   const c = groupColor;
 
-  // ── Family 1: autumn — 실무형 스프레드시트 (컴팩트 헤더, 90% 그리드, 데이터 밀도 최대) ──
+  // ── Family 1: autumn — 실무형 스프레드시트 (교대 줄무늬 + 두꺼운 격자 = 엑셀 느낌) ──
   if (themeValue === 'autumn') {
     const days = ['일','월','화','수','목','금','토'];
     return (
-      <div className="w-full h-full flex flex-col" style={{ background: 'white' }}>
-        {/* 실무 헤더 — 한 줄, 정보만 */}
-        <div className="flex items-center justify-between" style={{ padding: s ? '4px 8px' : '2px 4px', borderBottom: '1.5px solid #334155' }}>
-          <span className={`${s ? 'text-[10px]' : 'text-[5px]'} font-black`} style={{ color: '#334155' }}>2026.03 진료일정</span>
-          <span className={`${s ? 'text-[8px]' : 'text-[3.5px]'} font-medium`} style={{ color: '#94a3b8' }}>OO치과 · 09–18 · 토09–13</span>
+      <div className="w-full h-full flex flex-col" style={{ background: '#f1f5f9' }}>
+        {/* 실무 헤더 — 한 줄, 셀 번호 느낌 */}
+        <div className="flex items-center justify-between" style={{ padding: s ? '3px 8px' : '1.5px 4px', background: '#334155' }}>
+          <span className={`${s ? 'text-[10px]' : 'text-[5px]'} font-black text-white`}>2026.03 진료일정</span>
+          <span className={`${s ? 'text-[7px]' : 'text-[3px]'} font-medium text-slate-400`}>OO치과</span>
         </div>
-        {/* 요일 헤더 — 다크 슬레이트 배경, 엑셀 헤더 느낌 */}
-        <div className="grid grid-cols-7" style={{ background: '#334155' }}>
+        {/* 요일 헤더 — 밝은 슬레이트, 엑셀 헤더 */}
+        <div className="grid grid-cols-7" style={{ background: '#e2e8f0', borderBottom: '2px solid #94a3b8' }}>
           {days.map((d, i) => (
             <div key={d} className={`text-center font-black ${s ? 'text-[9px] py-[3px]' : 'text-[4px] py-[1.5px]'}`}
-              style={{ color: i === 0 ? '#fca5a5' : i === 6 ? '#93c5fd' : '#e2e8f0' }}>{d}</div>
+              style={{ color: i === 0 ? '#dc2626' : i === 6 ? '#2563eb' : '#334155', borderRight: '1px solid #cbd5e1' }}>{d}</div>
           ))}
         </div>
-        {/* 달력 격자 — 1.5px 보더, 그리드가 전체 90%+ 차지 */}
+        {/* 달력 격자 — 교대 줄무늬(zebra stripe) + 두꺼운 보더 = 스프레드시트 킬러 피처 */}
         <div className="grid grid-cols-7 flex-1">
           {[null,null,null,null,null,null,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,null,null,null,null,null].slice(0,35).map((d, i) => {
-            if (!d) return <div key={`e${i}`} style={{ borderRight: '1px solid #cbd5e1', borderBottom: '1px solid #cbd5e1', background: '#f8fafc' }} />;
+            const rowIdx = Math.floor(i / 7);
+            const zebraEven = rowIdx % 2 === 0;
+            if (!d) return <div key={`e${i}`} style={{ borderRight: '1px solid #cbd5e1', borderBottom: '1px solid #cbd5e1', background: zebraEven ? '#f8fafc' : '#f1f5f9' }} />;
             const isClosed = d === 9 || d === 23;
             const isShort = d === 16;
             return (
@@ -99,13 +102,14 @@ function CalendarThemePreview({ themeValue, groupColor, size = 'sm' }: { themeVa
                 style={{
                   borderRight: '1px solid #cbd5e1',
                   borderBottom: '1px solid #cbd5e1',
-                  background: isClosed ? '#e2e8f0' : isShort ? '#fef9c3' : 'white',
+                  background: isClosed ? '#cbd5e1' : isShort ? '#fef9c3' : zebraEven ? '#ffffff' : '#f8fafc',
                 }}>
                 <span className={`${s ? 'text-[11px]' : 'text-[5.5px]'} font-bold`}
                   style={{
-                    color: isClosed ? '#94a3b8' : isShort ? '#92400e' : i % 7 === 0 ? '#dc2626' : i % 7 === 6 ? '#2563eb' : '#1e293b',
+                    color: isClosed ? '#64748b' : isShort ? '#92400e' : i % 7 === 0 ? '#dc2626' : i % 7 === 6 ? '#2563eb' : '#1e293b',
                     textDecoration: isClosed ? 'line-through' : 'none',
                     textDecorationColor: '#64748b',
+                    textDecorationThickness: s ? '2px' : '1px',
                   }}>{d}</span>
                 {isClosed && <span className={`${s ? 'text-[6px]' : 'text-[2.5px]'} font-black leading-none`} style={{ color: '#dc2626' }}>휴</span>}
                 {isShort && <span className={`${s ? 'text-[5px]' : 'text-[2.5px]'} font-bold leading-none`} style={{ color: '#92400e' }}>△단축</span>}
@@ -113,8 +117,9 @@ function CalendarThemePreview({ themeValue, groupColor, size = 'sm' }: { themeVa
             );
           })}
         </div>
-        {/* 풋터 — 얇은 라인, 최소 텍스트 */}
-        <div className="flex items-center justify-end" style={{ padding: s ? '2px 8px' : '1px 4px', borderTop: '1px solid #cbd5e1' }}>
+        {/* 풋터 — 스프레드시트 정보 바 */}
+        <div className="flex items-center justify-between" style={{ padding: s ? '2px 8px' : '1px 4px', background: '#e2e8f0', borderTop: '2px solid #94a3b8' }}>
+          <span className={`${s ? 'text-[7px]' : 'text-[3px]'} font-medium`} style={{ color: '#475569' }}>09–18 · 토09–13</span>
           <span className={`${s ? 'text-[7px]' : 'text-[3px]'}`} style={{ color: '#94a3b8' }}>휴진 9·23 | 단축 16</span>
         </div>
       </div>
@@ -232,7 +237,7 @@ function CalendarThemePreview({ themeValue, groupColor, size = 'sm' }: { themeVa
     );
   }
 
-  // ── Family 4: cherry_blossom — 블러시 로즈 브랜딩 (절제된 봄 톤 + 히어로 헤더 + 갭 셀) ──
+  // ── Family 4: cherry_blossom — 블러시 로즈 (히어로 헤더 + 파스텔 핑크 톤 + 갭 셀) ──
   if (themeValue === 'cherry_blossom') {
     const days = ['일','월','화','수','목','금','토'];
     return (
@@ -287,7 +292,7 @@ function CalendarThemePreview({ themeValue, groupColor, size = 'sm' }: { themeVa
     );
   }
 
-  // ── Family 5: spring_kids — 차콜 솔리드 (차콜 프레임 + 풀레드 셀 + 두꺼운 격자) ──
+  // ── Family 5: spring_kids — 차콜 프레임 (차콜 헤더/풋터 + 풀레드 휴진셀 + 두꺼운 격자) ──
   if (themeValue === 'spring_kids') {
     const days = ['일','월','화','수','목','금','토'];
     return (
@@ -347,7 +352,7 @@ function CalendarThemePreview({ themeValue, groupColor, size = 'sm' }: { themeVa
     );
   }
 
-  // ── Family 6: medical_notebook — 스위스 미니멀 달력 (모노톤, 규선 격자) ──
+  // ── Family 6: medical_notebook — 스위스 미니멀 (영문 요일 + 모노톤 규선 + 취소선/도트 마커) ──
   if (themeValue === 'medical_notebook') {
     const days = ['S','M','T','W','T','F','S'];
     return (
@@ -405,7 +410,7 @@ function CalendarThemePreview({ themeValue, groupColor, size = 'sm' }: { themeVa
     );
   }
 
-  // ── Family 7: autumn_spring_note — 야간진료 달력 (다크 헤더 + 화·목 컬럼 강조) ──
+  // ── Family 7: autumn_spring_note — 야간진료 (다크 배너 + 화·목 앰버 컬럼 강조) ──
   if (themeValue === 'autumn_spring_note') {
     const days = ['일','월','화','수','목','금','토'];
     return (
@@ -464,7 +469,7 @@ function CalendarThemePreview({ themeValue, groupColor, size = 'sm' }: { themeVa
     );
   }
 
-  // ── Family 8: autumn_holiday — SNS 볼드 달력 (컬러 히어로 + 라운드 격자) ──
+  // ── Family 8: autumn_holiday — SNS 볼드 (컬러 히어로 배너 + 라운드 뱃지 셀) ──
   if (themeValue === 'autumn_holiday') {
     const days = ['일','월','화','수','목','금','토'];
     return (
@@ -514,13 +519,15 @@ function CalendarThemePreview({ themeValue, groupColor, size = 'sm' }: { themeVa
     );
   }
 
-  // ── Family 9: hanok_roof — 프리미엄 골드 달력 (아이보리 + 세리프 + 점선 격자) ──
+  // ── Family 9: hanok_roof — 프리미엄 골드 달력 (골드 상단 밴드 + 아이보리 + 세리프 + 점선 격자) ──
   if (themeValue === 'hanok_roof') {
     const days = ['일','월','화','수','목','금','토'];
     return (
       <div className="w-full h-full flex flex-col" style={{ background: 'linear-gradient(175deg, #faf7f2 0%, #f5ebe0 100%)' }}>
+        {/* 골드 밴드 상단 — 킬러 피처: 한옥/전통과 다른 '골드 프리미엄' 정체성 */}
+        <div style={{ height: s ? '4px' : '2px', background: 'linear-gradient(90deg, #c9a96e, #e8d5a0, #c9a96e)' }} />
         {/* 우아한 헤더 — 센터 정렬, 골드 디바이더 */}
-        <div className="flex flex-col items-center" style={{ padding: s ? '8px 0 4px' : '4px 0 2px' }}>
+        <div className="flex flex-col items-center" style={{ padding: s ? '6px 0 4px' : '3px 0 2px' }}>
           <div className={`${s ? 'text-[7px]' : 'text-[3px]'} tracking-[0.4em] font-medium`} style={{ color: '#a3836a' }}>OO피부과의원</div>
           <div className="flex items-center" style={{ gap: s ? 5 : 2.5, margin: s ? '3px 0' : '1.5px 0' }}>
             <div style={{ width: s ? 14 : 7, height: '0.5px', background: 'linear-gradient(90deg, transparent, #c9a96e)' }} />
@@ -563,31 +570,31 @@ function CalendarThemePreview({ themeValue, groupColor, size = 'sm' }: { themeVa
           })}
         </div>
         {/* 풋터 — 골드 디바이더 + 정보 */}
-        <div className="flex flex-col items-center" style={{ padding: s ? '3px 0 5px' : '1.5px 0 2.5px', borderTop: '1px solid #c9a96e44' }}>
+        <div className="flex flex-col items-center" style={{ padding: s ? '3px 0 3px' : '1.5px 0 1.5px', borderTop: '1px solid #c9a96e44' }}>
           <div className={`${s ? 'text-[8px]' : 'text-[3.5px]'} font-medium`} style={{ color: '#92400e' }}>
             평일 10~19 · 토 10~15 · 점심 13~14
           </div>
           <div className={`${s ? 'text-[7px]' : 'text-[3px]'}`} style={{ color: '#a3836a88' }}>02-000-0000</div>
         </div>
+        {/* 골드 밴드 하단 — 상단과 대칭 */}
+        <div style={{ height: s ? '4px' : '2px', background: 'linear-gradient(90deg, #c9a96e, #e8d5a0, #c9a96e)' }} />
       </div>
     );
   }
 
-  // ── Family 10: dark_green_clinic — 프리미엄 그린 (다크 헤더 + 밝은 달력 본문) ──
+  // ── Family 10: dark_green_clinic — 프리미엄 그린 (상단 30% 그린 + 하단 밝은 달력) ──
   if (themeValue === 'dark_green_clinic') {
     const days = ['일','월','화','수','목','금','토'];
     return (
-      <div className="w-full h-full flex flex-col" style={{ background: '#f8faf8' }}>
-        {/* 다크 그린 헤더 — 프리미엄 느낌 */}
-        <div className="flex items-center justify-between" style={{ padding: s ? '8px 12px' : '4px 6px', background: 'linear-gradient(135deg, #14532d 0%, #166534 100%)' }}>
-          <div>
-            <div className={`${s ? 'text-[13px]' : 'text-[6.5px]'} font-black text-white leading-tight`}>3월 진료안내</div>
-            <div className={`${s ? 'text-[8px]' : 'text-[3.5px]'} font-medium`} style={{ color: '#86efac' }}>OO의원 · 2026</div>
-          </div>
-          <div className={`${s ? 'text-[18px]' : 'text-[9px]'} font-black text-white/20 leading-none`}>3</div>
+      <div className="w-full h-full flex flex-col" style={{ background: '#f0fdf4' }}>
+        {/* 상단 그린 영역 — 30% 차지, 프리미엄 */}
+        <div className="flex flex-col items-center justify-center" style={{ padding: s ? '10px 12px 8px' : '5px 6px 4px', background: 'linear-gradient(170deg, #14532d 0%, #166534 50%, #15803d 100%)' }}>
+          <div className={`${s ? 'text-[7px]' : 'text-[3px]'} tracking-[0.3em] font-medium`} style={{ color: '#86efac' }}>OO의원</div>
+          <div className={`${s ? 'text-[16px]' : 'text-[8px]'} font-black text-white leading-tight mt-0.5`}>3월 진료안내</div>
+          <div className={`${s ? 'text-[7px]' : 'text-[3px]'} font-medium text-emerald-300/60 mt-0.5`}>2026년 March</div>
         </div>
-        {/* 에메랄드 서브 라인 */}
-        <div style={{ height: s ? '2px' : '1px', background: 'linear-gradient(90deg, #059669, #10b981, #059669)' }} />
+        {/* 에메랄드 그라데이션 악센트 바 — 3px 두께로 킬러 피처 */}
+        <div style={{ height: s ? '3px' : '1.5px', background: 'linear-gradient(90deg, #059669, #34d399, #059669)' }} />
         {/* 요일 헤더 — 밝은 그린 틴트 */}
         <div className="grid grid-cols-7" style={{ background: '#ecfdf5', borderBottom: '1px solid #d1fae5' }}>
           {days.map((d, i) => (
@@ -626,7 +633,7 @@ function CalendarThemePreview({ themeValue, groupColor, size = 'sm' }: { themeVa
     );
   }
 
-  // ── Family 11: dark_blue_modern — 프리미엄 블루 (좌측 패널 25% + 밝은 달력 75%) ──
+  // ── Family 11: dark_blue_modern — 블루 사이드바 (좌측 네이비 패널 25% + 순백 달력 75%) ──
   if (themeValue === 'dark_blue_modern') {
     const days = ['일','월','화','수','목','금','토'];
     return (
@@ -680,7 +687,7 @@ function CalendarThemePreview({ themeValue, groupColor, size = 'sm' }: { themeVa
     );
   }
 
-  // ── Family 12: lavender_sparkle — 라벤더 소프트 클리닉 (둥근 외곽 + 갭 셀 + 절제된 라벤더 톤) ──
+  // ── Family 12: lavender_sparkle — 라벤더 소프트 (둥근 외곽 + 라벤더 갭 셀 + 소프트 퍼플) ──
   if (themeValue === 'lavender_sparkle') {
     const days = ['일','월','화','수','목','금','토'];
     return (

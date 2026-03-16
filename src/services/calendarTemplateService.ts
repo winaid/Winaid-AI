@@ -771,18 +771,18 @@ const THEMED_BUILDERS: Record<string, (data: CalendarData) => string> = {
 
 /** 테마 목록 (UI에서 사용) */
 export const CALENDAR_THEME_OPTIONS: { value: string; label: string; emoji: string; desc: string; group: string; groupColor: string }[] = [
-  { value: 'autumn',             label: '🍁 가을 단풍',        emoji: '🍁', desc: '단풍잎 일러스트 + 따뜻한 앰버',     group: '계절',   groupColor: '#ea580c' },
-  { value: 'korean_traditional', label: '🦢 한국 전통',         emoji: '🦢', desc: '전통 기와 문양 + 한지 배경',       group: '전통',   groupColor: '#92400e' },
-  { value: 'winter',             label: '❄️ 크리스마스',        emoji: '❄️', desc: '눈꽃 + 크리스마스 그린/레드',      group: '계절',   groupColor: '#0ea5e9' },
-  { value: 'cherry_blossom',     label: '🌸 벚꽃 봄',           emoji: '🌸', desc: '벚꽃 일러스트 + 파스텔 핑크',     group: '계절',   groupColor: '#ec4899' },
-  { value: 'spring_kids',        label: '🌼 봄 동산',           emoji: '🌼', desc: '꽃밭 일러스트 + 밝은 그린',       group: '계절',   groupColor: '#22c55e' },
-  { value: 'medical_notebook',   label: '📓 노트북',            emoji: '📓', desc: '스프링 노트 + 깔끔한 라인',       group: '미니멀', groupColor: '#3b82f6' },
-  { value: 'autumn_spring_note', label: '📒 가을 스프링노트',  emoji: '📒', desc: '가을 톤 노트 + 손그림 장식',       group: '내추럴', groupColor: '#d97706' },
-  { value: 'autumn_holiday',     label: '🍂 가을 Holiday',      emoji: '🍂', desc: '가을 잎 패턴 + 홀리데이 무드',     group: '계절',   groupColor: '#b45309' },
-  { value: 'hanok_roof',         label: '🏛️ 한옥 기와',        emoji: '🏛️', desc: '기와지붕 프레임 + 전통 색감',     group: '전통',   groupColor: '#78350f' },
-  { value: 'dark_green_clinic',  label: '🌲 다크그린 클리닉',   emoji: '🌲', desc: '짙은 그린 배경 + 다이아몬드 장식', group: '다크',   groupColor: '#2d5a4a' },
-  { value: 'dark_blue_modern',   label: '🌌 다크블루 모던',     emoji: '🌌', desc: '네이비 배경 + 하이라이트 액센트',   group: '다크',   groupColor: '#1e3a5f' },
-  { value: 'lavender_sparkle',   label: '💜 라벤더 소프트',     emoji: '💜', desc: '연보라 배경 + 부드러운 장식',       group: '미니멀', groupColor: '#7c3aed' },
+  { value: 'autumn',             label: '📊 실무 스프레드시트',  emoji: '📊', desc: '엑셀형 격자 + 슬레이트 헤더',      group: '실무',   groupColor: '#334155' },
+  { value: 'korean_traditional', label: '🏛️ 한방 전통',         emoji: '🏛️', desc: '기와 문양 + 이중 테두리 한지',     group: '전통',   groupColor: '#92400e' },
+  { value: 'winter',             label: '❄️ 딥블루 프로스트',    emoji: '❄️', desc: '블루 그라데이션 + 글래스 셀',      group: '프리미엄', groupColor: '#0c4a6e' },
+  { value: 'cherry_blossom',     label: '🌸 블러시 로즈',        emoji: '🌸', desc: '히어로 헤더 + 파스텔 핑크 톤',     group: '소프트', groupColor: '#9a6b7a' },
+  { value: 'spring_kids',        label: '🏥 차콜 프레임',        emoji: '🏥', desc: '차콜 헤더/풋터 + 풀레드 휴진셀',   group: '실무',   groupColor: '#292524' },
+  { value: 'medical_notebook',   label: '📐 스위스 미니멀',      emoji: '📐', desc: '영문 요일 + 모노톤 규선 격자',     group: '미니멀', groupColor: '#64748b' },
+  { value: 'autumn_spring_note', label: '🌙 야간진료',           emoji: '🌙', desc: '다크 배너 + 화·목 앰버 강조',      group: '실무',   groupColor: '#d97706' },
+  { value: 'autumn_holiday',     label: '📱 SNS 볼드',           emoji: '📱', desc: '컬러 히어로 + 라운드 뱃지 셀',     group: '소프트', groupColor: '#b45309' },
+  { value: 'hanok_roof',         label: '✨ 골드 클래식',        emoji: '✨', desc: '아이보리 + 세리프 + 점선 격자',     group: '프리미엄', groupColor: '#78350f' },
+  { value: 'dark_green_clinic',  label: '🌲 프리미엄 그린',      emoji: '🌲', desc: '다크그린 헤더 + 에메랄드 악센트',   group: '프리미엄', groupColor: '#14532d' },
+  { value: 'dark_blue_modern',   label: '🔷 블루 사이드바',      emoji: '🔷', desc: '좌측 네이비 패널 + 순백 달력',     group: '프리미엄', groupColor: '#1e3a5f' },
+  { value: 'lavender_sparkle',   label: '💜 라벤더 소프트',      emoji: '💜', desc: '연보라 라운드셀 + 부드러운 톤',     group: '소프트', groupColor: '#7c3aed' },
 ];
 
 // ── HTML 달력 생성 ──
