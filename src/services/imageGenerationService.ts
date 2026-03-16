@@ -1123,24 +1123,43 @@ function accumulateSessionStats(results: ImageQueueResult[], totalMs: number, mo
 
 function printSessionSummary(): void {
   const s = _sessionStats;
+  const avgMs = s.runs > 0 ? Math.round(s.totalMs / s.runs) : 0;
+
   console.info(`[IMG-SESSION] ═══════════════════════════════════════════`);
   console.info(`[IMG-SESSION] 누적 통계 (${s.runs}회 실행)`);
-  console.info(`[IMG-SESSION]   images=${s.totalImages} ai=${s.aiCount} template=${s.templateCount} placeholder=${s.placeholderCount}`);
-  console.info(`[IMG-SESSION]   completionRate=${pct(s.aiCount + s.templateCount, s.totalImages)}% aiCoverage=${pct(s.aiCount, s.totalImages)}%`);
-  console.info(`[IMG-SESSION]   heroAIHitRate=${pct(s.heroAi, s.heroTotal)}% (${s.heroAi}/${s.heroTotal}) heroTemplateFallback=${s.heroTemplate}`);
-  console.info(`[IMG-SESSION]   subAICoverage=${pct(s.subAi, s.subTotal)}% (${s.subAi}/${s.subTotal})`);
-  console.info(`[IMG-SESSION]   tier: pro=${s.proSuccess} nb2=${s.nb2Success} crossTier=${s.crossTier}`);
-  if (Object.keys(s.failReasons).length > 0) {
-    console.info(`[IMG-SESSION]   failReasons: ${Object.entries(s.failReasons).map(([k, v]) => `${k}=${v}`).join(' ')}`);
+  console.info(`[IMG-SESSION]`);
+  console.info(`[IMG-SESSION]   📊 KPI`);
+  console.info(`[IMG-SESSION]   heroAIHitRate     ${pct(s.heroAi, s.heroTotal)}%  (${s.heroAi}/${s.heroTotal})`);
+  console.info(`[IMG-SESSION]   aiCoverageRate    ${pct(s.aiCount, s.totalImages)}%  (${s.aiCount}/${s.totalImages})`);
+  console.info(`[IMG-SESSION]   completionRate    ${pct(s.aiCount + s.templateCount, s.totalImages)}%`);
+  console.info(`[IMG-SESSION]   templateRate      ${pct(s.templateCount, s.totalImages)}%  (${s.templateCount})`);
+  console.info(`[IMG-SESSION]   placeholderRate   ${pct(s.placeholderCount, s.totalImages)}%  (${s.placeholderCount})`);
+  console.info(`[IMG-SESSION]   avgTimePerRun     ${avgMs}ms  (${(avgMs / 1000).toFixed(1)}s)`);
+  if (s.heroTemplate > 0) {
+    console.warn(`[IMG-SESSION]   ⚠️ heroTemplateFallback=${s.heroTemplate}건`);
   }
-  console.info(`[IMG-SESSION]   avgTimePerRun=${s.runs > 0 ? Math.round(s.totalMs / s.runs) : 0}ms`);
-  console.info(`[IMG-SESSION] ───────────────────────────────────────────`);
-  console.info(`[IMG-SESSION] history:`);
-  console.info(`[IMG-SESSION]   ${'run'.padEnd(4)} ${'time'.padEnd(9)} ${'total'.padEnd(6)} ${'ai'.padEnd(4)} ${'tpl'.padEnd(4)} ${'ph'.padEnd(4)} ${'hero'.padEnd(12)} ${'ms'.padEnd(7)} failReasons`);
+  console.info(`[IMG-SESSION]`);
+  console.info(`[IMG-SESSION]   🔧 tier`);
+  console.info(`[IMG-SESSION]   pro=${s.proSuccess}  nb2=${s.nb2Success}  crossTier=${s.crossTier}`);
+  console.info(`[IMG-SESSION]   sub: ai=${s.subAi}/${s.subTotal} (${pct(s.subAi, s.subTotal)}%)`);
+  if (Object.keys(s.failReasons).length > 0) {
+    console.info(`[IMG-SESSION]   failReasons: ${Object.entries(s.failReasons).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k}=${v}`).join(' ')}`);
+  }
+  console.info(`[IMG-SESSION]`);
+  console.info(`[IMG-SESSION]   📋 history (${s.history.length}건)`);
+  console.info(`[IMG-SESSION]   #    time      tot  ai  tpl  ph  hero          ms      fail`);
   s.history.forEach((h, i) => {
-    console.info(`[IMG-SESSION]   ${String(i + 1).padEnd(4)} ${h.ts.padEnd(9)} ${String(h.total).padEnd(6)} ${String(h.ai).padEnd(4)} ${String(h.template).padEnd(4)} ${String(h.placeholder).padEnd(4)} ${h.heroResult.padEnd(12)} ${String(h.totalMs).padEnd(7)} ${h.failReasons}`);
+    const heroIcon = h.heroResult === 'ai-image' ? '✅' : h.heroResult === 'template' ? '⚠️' : '❌';
+    console.info(`[IMG-SESSION]   ${String(i + 1).padStart(3)}  ${h.ts}  ${String(h.total).padStart(3)}  ${String(h.ai).padStart(2)}  ${String(h.template).padStart(3)}  ${String(h.placeholder).padStart(2)}  ${heroIcon} ${h.heroResult.padEnd(10)}  ${String(h.totalMs).padStart(6)}  ${h.failReasons}`);
   });
   console.info(`[IMG-SESSION] ═══════════════════════════════════════════`);
+
+  // 충분한 데이터가 모이면 자동으로 베타 판정 출력
+  if (s.runs >= BETA_CRITERIA.minRuns) {
+    printBetaVerdict();
+  } else {
+    console.info(`[IMG-SESSION] 베타 판정까지 ${BETA_CRITERIA.minRuns - s.runs}회 더 필요`);
+  }
 }
 
 /** 세션 통계 수동 출력 — 콘솔에서 호출 가능 */
@@ -1159,6 +1178,189 @@ export function resetImageSessionStats(): void {
   });
   console.info('[IMG-SESSION] stats reset');
 }
+
+// =============================================
+// 🎯 내부 베타 통과 기준 + 자동 판정
+// =============================================
+// 10명 내부 베타 배포 전 최소 충족 조건
+// 기준 미달 시 IMG-SESSION 출력에 FAIL 경고
+
+const BETA_CRITERIA = {
+  minRuns:              20,    // 최소 테스트 횟수
+  heroAIHitRate:        80,    // hero AI 성공률 (%) — 80% 이상
+  aiCoverageRate:       60,    // 전체 AI 커버리지 (%) — 60% 이상
+  completionRate:       95,    // placeholder 없이 채워진 비율 (%) — 95% 이상
+  placeholderRate:       5,    // placeholder 비율 (%) — 5% 이하
+  avgTimePerRunMs:  120000,    // 평균 소요 시간 (ms) — 2분 이하
+} as const;
+
+interface BetaVerdict {
+  pass: boolean;
+  runsEnough: boolean;
+  details: Record<string, { value: number; threshold: number; unit: string; pass: boolean }>;
+}
+
+function evaluateBetaCriteria(): BetaVerdict {
+  const s = _sessionStats;
+  const runsEnough = s.runs >= BETA_CRITERIA.minRuns;
+
+  const heroAIHit = pct(s.heroAi, s.heroTotal);
+  const aiCoverage = pct(s.aiCount, s.totalImages);
+  const completion = pct(s.aiCount + s.templateCount, s.totalImages);
+  const placeholder = pct(s.placeholderCount, s.totalImages);
+  const avgTime = s.runs > 0 ? Math.round(s.totalMs / s.runs) : 0;
+
+  const details = {
+    heroAIHitRate:   { value: heroAIHit,   threshold: BETA_CRITERIA.heroAIHitRate,     unit: '%',  pass: heroAIHit >= BETA_CRITERIA.heroAIHitRate },
+    aiCoverageRate:  { value: aiCoverage,  threshold: BETA_CRITERIA.aiCoverageRate,    unit: '%',  pass: aiCoverage >= BETA_CRITERIA.aiCoverageRate },
+    completionRate:  { value: completion,  threshold: BETA_CRITERIA.completionRate,    unit: '%',  pass: completion >= BETA_CRITERIA.completionRate },
+    placeholderRate: { value: placeholder, threshold: BETA_CRITERIA.placeholderRate,   unit: '%',  pass: placeholder <= BETA_CRITERIA.placeholderRate },
+    avgTimePerRun:   { value: avgTime,     threshold: BETA_CRITERIA.avgTimePerRunMs,   unit: 'ms', pass: avgTime <= BETA_CRITERIA.avgTimePerRunMs },
+  };
+
+  const allPass = Object.values(details).every(d => d.pass);
+  return { pass: runsEnough && allPass, runsEnough, details };
+}
+
+function printBetaVerdict(): void {
+  const v = evaluateBetaCriteria();
+  const s = _sessionStats;
+
+  console.info(`[IMG-BETA] ═══════════════════════════════════════════`);
+  console.info(`[IMG-BETA] 내부 베타(10명) 통과 판정 — ${s.runs}회 실행`);
+
+  if (!v.runsEnough) {
+    console.warn(`[IMG-BETA] ⏳ 데이터 부족: ${s.runs}/${BETA_CRITERIA.minRuns}회 (최소 ${BETA_CRITERIA.minRuns}회 필요)`);
+  }
+
+  for (const [key, d] of Object.entries(v.details)) {
+    const icon = d.pass ? '✅' : '❌';
+    const cmp = key === 'placeholderRate' || key === 'avgTimePerRun'
+      ? `≤${d.threshold}${d.unit}`
+      : `≥${d.threshold}${d.unit}`;
+    console.info(`[IMG-BETA]   ${icon} ${key}: ${d.value}${d.unit} (기준 ${cmp})`);
+  }
+
+  if (v.pass) {
+    console.info(`[IMG-BETA] 🎉 PASS — 내부 베타 배포 가능`);
+  } else if (v.runsEnough) {
+    const fails = Object.entries(v.details).filter(([, d]) => !d.pass).map(([k]) => k);
+    console.warn(`[IMG-BETA] ❌ FAIL — 미달 항목: ${fails.join(', ')}`);
+  }
+  console.info(`[IMG-BETA] ═══════════════════════════════════════════`);
+}
+
+// =============================================
+// 📋 세션 통계 CSV / 클립보드 export
+// =============================================
+
+/** TSV(탭 구분) 문자열로 export — 스프레드시트에 바로 붙여넣기 가능 */
+function exportSessionStatsTSV(): string {
+  const s = _sessionStats;
+  const header = ['run', 'time', 'total', 'ai', 'template', 'placeholder', 'hero', 'ms', 'failReasons'].join('\t');
+  const rows = s.history.map((h, i) =>
+    [i + 1, h.ts, h.total, h.ai, h.template, h.placeholder, h.heroResult, h.totalMs, h.failReasons].join('\t')
+  );
+
+  // 요약 행
+  const heroAIHit = pct(s.heroAi, s.heroTotal);
+  const aiCoverage = pct(s.aiCount, s.totalImages);
+  const completion = pct(s.aiCount + s.templateCount, s.totalImages);
+  const avgTime = s.runs > 0 ? Math.round(s.totalMs / s.runs) : 0;
+  rows.push('');
+  rows.push(['SUMMARY', '', s.totalImages, s.aiCount, s.templateCount, s.placeholderCount, `heroAI=${heroAIHit}%`, avgTime, `aiCov=${aiCoverage}% comp=${completion}%`].join('\t'));
+
+  return [header, ...rows].join('\n');
+}
+
+/** 클립보드에 복사 (브라우저 환경) */
+async function copySessionStatsToClipboard(): Promise<void> {
+  const tsv = exportSessionStatsTSV();
+  try {
+    await navigator.clipboard.writeText(tsv);
+    console.info(`[IMG-SESSION] 📋 ${_sessionStats.runs}회 데이터 클립보드에 복사 완료 — 스프레드시트에 붙여넣기 가능`);
+  } catch {
+    console.info(`[IMG-SESSION] 클립보드 접근 불가 — 아래 데이터를 수동 복사:`);
+    console.info(tsv);
+  }
+}
+
+// =============================================
+// 🧪 콘솔 1줄 벤치마크 러너
+// =============================================
+// 브라우저 콘솔에서:
+//   window.__IMG_BENCHMARK(5)     → 5회 연속 실행
+//   window.__IMG_BENCHMARK(20)    → 20회 실행 후 베타 판정
+//   window.__IMG_BENCHMARK()      → 기본 1회
+
+const BENCHMARK_PROMPTS = [
+  '무릎 관절 치환술 후 재활 과정과 주의사항',
+  '소아 치과 정기검진의 중요성과 올바른 양치법',
+  '위내시경 검사 전 준비사항과 검사 과정',
+  '허리 디스크 비수술 치료법 비교',
+  '임플란트 시술 과정과 관리법',
+  '아토피 피부염 관리와 생활습관 개선',
+  '고혈압 약 복용 시 주의사항',
+  '백내장 수술 후 회복 과정',
+  '턱관절 장애 증상과 치료법',
+  '만성 두통의 원인과 진단 방법',
+];
+
+async function runImageBenchmark(
+  rounds: number = 1,
+  imagesPerRound: number = 5,
+  style: ImageStyle = 'illustration',
+): Promise<void> {
+  console.info(`[IMG-BENCH] ═══════════════════════════════════════════`);
+  console.info(`[IMG-BENCH] 벤치마크 시작: ${rounds}회 × ${imagesPerRound}장`);
+  console.info(`[IMG-BENCH] ═══════════════════════════════════════════`);
+
+  for (let r = 0; r < rounds; r++) {
+    const topic = BENCHMARK_PROMPTS[r % BENCHMARK_PROMPTS.length];
+    console.info(`[IMG-BENCH] round ${r + 1}/${rounds}: "${topic.substring(0, 30)}..."`);
+
+    const items: ImageQueueItem[] = [];
+    for (let i = 0; i < imagesPerRound; i++) {
+      const isHero = i === 0;
+      const prompt = isHero
+        ? `${topic} 대표 이미지, 전문적이고 신뢰감 있는 분위기`
+        : `${topic} 관련 보조 이미지 ${i}`;
+      items.push({
+        index: i,
+        prompt,
+        role: isHero ? 'hero' : 'sub',
+        style,
+        aspectRatio: '16:9',
+        mode: 'auto',
+      });
+    }
+
+    await generateImageQueue(items);
+
+    // 다음 라운드 전 짧은 쿨다운 (API 부담 경감)
+    if (r < rounds - 1) {
+      const gap = 3000 + Math.random() * 2000;
+      console.info(`[IMG-BENCH] round gap ${Math.round(gap)}ms...`);
+      await new Promise(resolve => setTimeout(resolve, gap));
+    }
+  }
+
+  console.info(`[IMG-BENCH] ═══════════════════════════════════════════`);
+  console.info(`[IMG-BENCH] 벤치마크 완료: ${rounds}회`);
+  console.info(`[IMG-BENCH] ═══════════════════════════════════════════`);
+
+  // 자동 요약 + 베타 판정
+  printSessionSummary();
+  printBetaVerdict();
+}
+
+// window 전역 등록 (콘솔 접근용)
+try {
+  (window as any).__IMG_BENCHMARK = runImageBenchmark;
+  (window as any).__IMG_BETA_CHECK = printBetaVerdict;
+  (window as any).__IMG_EXPORT_TSV = exportSessionStatsTSV;
+  (window as any).__IMG_COPY_STATS = copySessionStatsToClipboard;
+} catch { /* SSR safe */ }
 
 // 🎴 기본 프레임 이미지 URL (로컬 파일 사용 - 외부 URL 403 에러 방지)
 const DEFAULT_FRAME_IMAGE_URL = '/default-card-frame.webp';
