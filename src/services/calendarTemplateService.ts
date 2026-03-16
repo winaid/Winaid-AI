@@ -781,7 +781,7 @@ export const CALENDAR_THEME_OPTIONS: { value: string; label: string; emoji: stri
   { value: 'autumn_holiday',     label: '📱 SNS 볼드',           emoji: '📱', desc: '컬러 히어로 + 라운드 뱃지 셀',     group: '소프트', groupColor: '#b45309' },
   { value: 'hanok_roof',         label: '✨ 골드 클래식',        emoji: '✨', desc: '아이보리 + 세리프 + 점선 격자',     group: '프리미엄', groupColor: '#78350f' },
   { value: 'dark_green_clinic',  label: '🌲 프리미엄 그린',      emoji: '🌲', desc: '다크그린 헤더 + 에메랄드 악센트',   group: '프리미엄', groupColor: '#14532d' },
-  { value: 'dark_blue_modern',   label: '🔷 블루 사이드바',      emoji: '🔷', desc: '좌측 네이비 패널 + 순백 달력',     group: '프리미엄', groupColor: '#1e3a5f' },
+  { value: 'dark_blue_modern',   label: '🔷 네이비 모던',         emoji: '🔷', desc: '네이비 헤더/풋터 + 블루 악센트',   group: '프리미엄', groupColor: '#1e3a5f' },
   { value: 'lavender_sparkle',   label: '💜 라벤더 소프트',      emoji: '💜', desc: '연보라 라운드셀 + 부드러운 톤',     group: '소프트', groupColor: '#7c3aed' },
 ];
 
