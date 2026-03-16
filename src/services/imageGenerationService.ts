@@ -486,49 +486,71 @@ export function setDemoSafeMode(enabled: boolean): void {
 // 🔒 이미지 생성 세마포어 + cooldown-aware 큐 (2-tier: Pro / NB2)
 // =============================================
 
-type ModelTier = 'pro' | 'nb2';
+// =============================================
+// 🔒 2-Tier 이미지 파이프라인 — Pro(hero) + NB2(sub)
+// =============================================
+//
+// 설계 원칙:
+// 1. hero는 Pro 우선 → NB2 fallback → template → placeholder
+// 2. sub는 NB2 우선 → (optional Pro) → template → placeholder
+// 3. Pro/NB2 cooldown·queue·semaphore 완전 분리
+// 4. 사용자에게 빈 이미지 없이 완성본을 보여주는 것이 1차 목표
+// =============================================
 
-/** 모델별 세마포어 상태 — Pro와 NB2 독립 큐 */
+export type ModelTier = 'pro' | 'nb2';
+
+/** 최종 결과물 유형: AI생성 > 템플릿 > placeholder (순서=품질) */
+export type ImageResultType = 'ai-image' | 'template' | 'placeholder';
+
+// ── 설정값 (상수화 — 운영 중 쉽게 조정 가능) ──
+
+const TIER_CONCURRENCY: Record<ModelTier, number> = {
+  pro: 1,   // Pro: 503/cooldown 빈도가 높으므로 보수적
+  nb2: 1,   // NB2: 안정화 후 2로 올릴 수 있음
+};
+
+const IMAGE_TIMEOUT: Record<ImageGenMode, Record<ImageRole, number>> = {
+  auto:   { hero: 60000, sub: 55000 },
+  manual: { hero: 90000, sub: 75000 },
+};
+
+// 디버그 verbose 로그 플래그 — localStorage.setItem('IMG_DEBUG', 'true')
+function isImgDebug(): boolean {
+  try { return localStorage.getItem('IMG_DEBUG') === 'true'; } catch { return false; }
+}
+
+// ── 모델별 세마포어 ──
+
 const _activeJobs: Record<ModelTier, number> = { pro: 0, nb2: 0 };
 const _cooldownUntil: Record<ModelTier, number> = { pro: 0, nb2: 0 };
 
-/** 모델명 → tier 매핑 */
-function getModelTier(model: string): ModelTier {
-  return model === GEMINI_MODEL.IMAGE_FLASH ? 'nb2' : 'pro';
+function getTierConcurrency(tier: ModelTier): number {
+  return TIER_CONCURRENCY[tier];
 }
 
-function getMaxConcurrency(): number {
-  // 2025-03: concurrency=1 유지 (503/cooldown 안정화)
-  return 1;
-}
-
-/** 세마포어 acquire: 해당 tier의 슬롯이 비거나 cooldown이 끝날 때까지 대기 */
-async function acquireImageSlot(imageIndex: number, totalImages: number, imageType: ImageRole, tier: ModelTier): Promise<{ queueWaitMs: number }> {
+async function acquireImageSlot(idx: number, total: number, role: ImageRole, tier: ModelTier): Promise<{ queueWaitMs: number }> {
   const t0 = Date.now();
-  const maxC = getMaxConcurrency();
+  const maxC = getTierConcurrency(tier);
 
   while (true) {
     const now = Date.now();
 
-    // cooldown 대기: 해당 tier의 cooldownUntil 이전이면 대기
     if (_cooldownUntil[tier] > now) {
-      const cooldownWait = _cooldownUntil[tier] - now + 300 + Math.random() * 500;
-      console.info(`[IMG-Q] 🧊 idx=${imageIndex}/${totalImages} type=${imageType} tier=${tier} cooldown-wait ${Math.round(cooldownWait)}ms`);
-      await new Promise(r => setTimeout(r, cooldownWait));
+      const wait = _cooldownUntil[tier] - now + 300 + Math.random() * 500;
+      if (isImgDebug()) console.debug(`[IMG-Q] cooldown-wait idx=${idx} tier=${tier} ${Math.round(wait)}ms`);
+      await new Promise(r => setTimeout(r, wait));
       continue;
     }
 
-    // 슬롯 대기: 해당 tier의 활성 작업이 최대치 이상이면 대기
     if (_activeJobs[tier] >= maxC) {
-      console.info(`[IMG-Q] ⏳ idx=${imageIndex}/${totalImages} type=${imageType} tier=${tier} slot-wait active=${_activeJobs[tier]}/${maxC}`);
+      if (isImgDebug()) console.debug(`[IMG-Q] slot-wait idx=${idx} tier=${tier} active=${_activeJobs[tier]}/${maxC}`);
       await new Promise(r => setTimeout(r, 1000 + Math.random() * 500));
       continue;
     }
 
-    // 슬롯 획득
     _activeJobs[tier]++;
     const queueWaitMs = Date.now() - t0;
-    console.info(`[IMG-Q] 🟢 idx=${imageIndex}/${totalImages} type=${imageType} tier=${tier} acquired slot=${_activeJobs[tier]}/${maxC} queueWaitMs=${queueWaitMs}`);
+    if (isImgDebug()) console.debug(`[IMG-Q] acquired idx=${idx} tier=${tier} slot=${_activeJobs[tier]}/${maxC} queueWait=${queueWaitMs}ms`);
     return { queueWaitMs };
   }
 }
@@ -537,7 +559,6 @@ function releaseImageSlot(tier: ModelTier): void {
   _activeJobs[tier] = Math.max(0, _activeJobs[tier] - 1);
 }
 
-/** cooldown 상태를 tier별 글로벌에 기록 — 다른 이미지 작업이 참조 */
 function reportCooldown(tier: ModelTier, nextAvailableAt?: number, retryAfterMs?: number): void {
   const now = Date.now();
   if (nextAvailableAt && nextAvailableAt > now) {
@@ -547,23 +568,123 @@ function reportCooldown(tier: ModelTier, nextAvailableAt?: number, retryAfterMs?
   }
 }
 
-// 이미지 생성 모델(gemini-3-pro-image-preview)은 통상 20~60초 소요
-// timeout은 충분히 여유 있게 잡되, 실패 시 빠르게 재시도
-const IMAGE_TIMEOUT: Record<ImageGenMode, Record<ImageRole, number>> = {
-  auto:   { hero: 60000, sub: 55000 },
-  manual: { hero: 90000, sub: 75000 },
-};
+// ── 에러 유형 파서 ──
 
-// 스타일 키워드 — 최소한으로 줄여서 모델 부담 감소
+interface ParsedError {
+  errorType: string;
+  retryAfterMs: number;
+  isCooldown: boolean;
+  isUpstream503: boolean;
+  isUpstream500: boolean;
+  isTimeout: boolean;
+}
+
+function parseImageError(error: any): ParsedError {
+  const isCooldown = error?.isCooldown === true;
+  const isUpstream503 = error?.isUpstream503 === true;
+  const isUpstream500 = !isCooldown && !isUpstream503 && error?.status === 500;
+  const retryAfterMs = error?.retryAfterMs || 0;
+  const isTimeout = error?.status === 504 || (error?.message || '').includes('timeout');
+
+  let errorType: string;
+  if (isCooldown) errorType = 'all_keys_in_cooldown';
+  else if (isUpstream503) errorType = 'upstream_503';
+  else if (isUpstream500) errorType = 'upstream_500';
+  else if (isTimeout) errorType = 'timeout';
+  else errorType = String(error?.status || 'ERR');
+
+  return { errorType, retryAfterMs, isCooldown, isUpstream503, isUpstream500, isTimeout };
+}
+
+// ── 스타일 키워드 (프롬프트용) ──
+
 const STYLE_KEYWORD_SHORT: Record<string, string> = {
   illustration: '3D illustration, pastel, Blender style, soft lighting',
   medical: 'medical 3D, anatomical, clinical, blue-white',
   photo: 'photorealistic, DSLR, natural lighting, bokeh',
 };
 
-// 🖼️ 블로그용 이미지 생성 (2-tier 모델 구조)
-// hero: Pro → Pro → NB2(cross-tier fallback) → placeholder
-// sub:  NB2 → NB2 → (선택적 Pro) → placeholder
+// ── 템플릿 기반 대체 이미지 생성 (AI 실패 시) ──
+// SVG placeholder 대신 프롬프트 키워드로 그라디언트 + 아이콘 카드를 만든다
+// 사용자에게 "이미지 없음"이 아닌 "완성된 비주얼"로 보이게 하는 것이 목적
+
+const TEMPLATE_GRADIENTS = [
+  ['#667eea', '#764ba2'], // purple-violet
+  ['#f093fb', '#f5576c'], // pink-red
+  ['#4facfe', '#00f2fe'], // blue-cyan
+  ['#43e97b', '#38f9d7'], // green-teal
+  ['#fa709a', '#fee140'], // pink-yellow
+  ['#a18cd1', '#fbc2eb'], // lavender-pink
+  ['#fccb90', '#d57eeb'], // peach-purple
+  ['#96fbc4', '#f9f586'], // mint-yellow
+];
+
+const TEMPLATE_ICONS: Record<string, string> = {
+  illustration: '🏥',
+  medical: '🫀',
+  photo: '📸',
+  custom: '✨',
+};
+
+function buildTemplateFallbackSvg(
+  promptText: string,
+  style: string,
+  role: ImageRole,
+): string {
+  // 프롬프트에서 핵심 키워드 2~3개 추출 (한글 우선)
+  const koreanWords = promptText.match(/[\uAC00-\uD7A3]{2,}/g) || [];
+  const keywords = koreanWords.slice(0, 3).join(' · ') || '건강 정보';
+  const icon = TEMPLATE_ICONS[style] || '🏥';
+
+  // 랜덤 그라디언트 (프롬프트 해시 기반 — 동일 프롬프트면 동일 색상)
+  const hash = promptText.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+  const [c1, c2] = TEMPLATE_GRADIENTS[hash % TEMPLATE_GRADIENTS.length];
+
+  const width = 1280;
+  const height = 720;
+  const isHero = role === 'hero';
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:${c1}"/>
+      <stop offset="100%" style="stop-color:${c2}"/>
+    </linearGradient>
+    <filter id="blur"><feGaussianBlur stdDeviation="60"/></filter>
+  </defs>
+  <rect fill="url(#bg)" width="${width}" height="${height}" rx="0"/>
+  <circle cx="${width * 0.7}" cy="${height * 0.3}" r="200" fill="rgba(255,255,255,0.08)" filter="url(#blur)"/>
+  <circle cx="${width * 0.3}" cy="${height * 0.7}" r="160" fill="rgba(255,255,255,0.06)" filter="url(#blur)"/>
+  <rect fill="rgba(255,255,255,0.12)" x="60" y="60" width="${width - 120}" height="${height - 120}" rx="24"/>
+  <text x="${width / 2}" y="${isHero ? 280 : 300}" text-anchor="middle" font-family="Apple SD Gothic Neo,Noto Sans KR,sans-serif" font-size="${isHero ? 72 : 56}" fill="rgba(255,255,255,0.9)">${icon}</text>
+  <text x="${width / 2}" y="${isHero ? 380 : 390}" text-anchor="middle" font-family="Apple SD Gothic Neo,Noto Sans KR,sans-serif" font-size="${isHero ? 32 : 26}" fill="rgba(255,255,255,0.85)" font-weight="600">${keywords}</text>
+  <text x="${width / 2}" y="${isHero ? 430 : 430}" text-anchor="middle" font-family="Arial,sans-serif" font-size="14" fill="rgba(255,255,255,0.45)">클릭하여 AI 이미지로 재생성</text>
+</svg>`;
+}
+
+function generateTemplateFallback(promptText: string, style: string, role: ImageRole): string {
+  const svg = buildTemplateFallbackSvg(promptText, style, role);
+  return `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svg)))}`;
+}
+
+// ── 2-tier generateBlogImage ──
+// hero: Pro → Pro(retry) → NB2(cross-tier) → template → placeholder
+// sub:  NB2 → NB2(retry) → optional Pro → template → placeholder
+
+interface AttemptDef {
+  model: string;
+  tier: ModelTier;
+  prompt: string;
+  label: string;
+}
+
+export interface BlogImageOutput {
+  data: string;
+  modelTier: ModelTier;
+  attemptIndex: number;
+  resultType: ImageResultType;
+}
+
 export const generateBlogImage = async (
   promptText: string,
   style: ImageStyle,
@@ -571,7 +692,7 @@ export const generateBlogImage = async (
   customStylePrompt?: string,
   mode: ImageGenMode = 'auto',
   role: ImageRole = 'sub'
-): Promise<{ data: string; modelTier: ModelTier; attemptIndex: number }> => {
+): Promise<BlogImageOutput> => {
   const timeout = IMAGE_TIMEOUT[mode][role];
   const styleKw = customStylePrompt || STYLE_KEYWORD_SHORT[style] || STYLE_KEYWORD_SHORT.illustration;
   const demoSafe = isDemoSafeMode();
@@ -586,16 +707,7 @@ export const generateBlogImage = async (
   const subPrompt = `Medical blog image: ${promptText.substring(0, 100)}. ${styleKw}. No text, no logo. 16:9.`.trim();
   const ultraMinimal = `${promptText.substring(0, 60)}. ${styleKw}. No text. 16:9.`.trim();
 
-  // ── 2-tier 시도 체인 정의 ──
-  // hero: 1st Pro(구체적) → 2nd Pro(축약) → 3rd NB2(cross-tier fallback)
-  // sub:  1st NB2(축약) → 2nd NB2(최소) → 선택적 3rd Pro(demo-safe 제외)
-  interface AttemptDef {
-    model: string;
-    tier: ModelTier;
-    prompt: string;
-    label: string;
-  }
-
+  // ── 시도 체인 ──
   const heroChain: AttemptDef[] = [
     { model: GEMINI_MODEL.IMAGE_PRO, tier: 'pro', prompt: heroPrompt, label: '#1(pro)' },
     { model: GEMINI_MODEL.IMAGE_PRO, tier: 'pro', prompt: subPrompt, label: '#2(pro-retry)' },
@@ -605,21 +717,24 @@ export const generateBlogImage = async (
   const subChain: AttemptDef[] = [
     { model: GEMINI_MODEL.IMAGE_FLASH, tier: 'nb2', prompt: subPrompt, label: '#1(nb2)' },
     { model: GEMINI_MODEL.IMAGE_FLASH, tier: 'nb2', prompt: ultraMinimal, label: '#2(nb2-retry)' },
-    // 3차 Pro 폴백은 normal 모드에서만 허용
     ...(!demoSafe ? [{ model: GEMINI_MODEL.IMAGE_PRO, tier: 'pro' as ModelTier, prompt: ultraMinimal, label: '#3(pro-cross)' }] : []),
   ];
 
   const chain = isHero ? heroChain : subChain;
-  // demo-safe에서 hero 이외 sub는 2회로 제한
   const maxAttempts = demoSafe && !isHero ? 2 : chain.length;
 
   let lastError: any = null;
-  const attemptErrors: { errorType: string; retryAfterMs: number; tier: ModelTier }[] = [];
+  const attemptLog: { errorType: string; retryAfterMs: number; tier: ModelTier; ms: number }[] = [];
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     const def = chain[attempt];
     const t0 = Date.now();
     const tier = def.tier;
+
+    // [IMG-ROUTE] — 각 시도의 라우팅 정보
+    if (attempt === 0) {
+      console.info(`[IMG-ROUTE] idx=? type=${role} tier=${tier} model=${def.model}`);
+    }
 
     try {
       const result = await callGeminiRaw(def.model, {
@@ -635,65 +750,66 @@ export const generateBlogImage = async (
 
       if (finishReason === 'SAFETY' || finishReason === 'RECITATION') {
         lastError = new Error(`SAFETY:${finishReason}`);
-        attemptErrors.push({ errorType: `SAFETY:${finishReason}`, retryAfterMs: 0, tier });
-        console.warn(`[IMG] ${role} ${def.label} SAFETY ${ms}ms modelTier=${tier}`);
+        attemptLog.push({ errorType: `SAFETY:${finishReason}`, retryAfterMs: 0, tier, ms });
+        console.info(`[IMG-TRY] type=${role} attempt=${attempt + 1} tier=${tier} errorType=SAFETY:${finishReason} ${ms}ms`);
         if (attempt < maxAttempts - 1) await new Promise(r => setTimeout(r, 1000));
         continue;
       }
 
       const imagePart = (result?.candidates?.[0]?.content?.parts || []).find((p: any) => p.inlineData?.data);
       if (imagePart?.inlineData) {
-        console.info(`[IMG] ✅ ${role} ${def.label} ${ms}ms modelTier=${tier} t/o=${timeout} p=${def.prompt.length}ch demoSafe=${demoSafe}`);
+        console.info(`[IMG-FINAL] type=${role} result=ai-image tier=${tier} attempt=${attempt + 1} ${ms}ms`);
         return {
           data: `data:${imagePart.inlineData.mimeType || 'image/png'};base64,${imagePart.inlineData.data}`,
           modelTier: tier,
           attemptIndex: attempt + 1,
+          resultType: 'ai-image',
         };
       }
 
       lastError = new Error('no image data');
-      attemptErrors.push({ errorType: 'no_data', retryAfterMs: 0, tier });
-      console.warn(`[IMG] ${role} ${def.label} no-data ${ms}ms modelTier=${tier}`);
+      attemptLog.push({ errorType: 'no_data', retryAfterMs: 0, tier, ms });
+      console.info(`[IMG-TRY] type=${role} attempt=${attempt + 1} tier=${tier} errorType=no_data ${ms}ms`);
       if (attempt < maxAttempts - 1) await new Promise(r => setTimeout(r, 1000));
 
     } catch (error: any) {
       lastError = error;
       const ms = Date.now() - t0;
-      const isCooldown = error?.isCooldown === true;
-      const isUpstream503 = error?.isUpstream503 === true;
-      const retryAfterMs = error?.retryAfterMs || 0;
-      const nextAvailableAt = error?.nextAvailableAt || 0;
-      const isTimeout = error?.status === 504 || (error?.message || '').includes('timeout');
-      const errorType = isCooldown ? 'all_keys_in_cooldown' : isUpstream503 ? 'upstream_503' : isTimeout ? 'timeout' : String(error?.status || 'ERR');
+      const parsed = parseImageError(error);
+      attemptLog.push({ errorType: parsed.errorType, retryAfterMs: parsed.retryAfterMs, tier, ms });
 
-      attemptErrors.push({ errorType, retryAfterMs, tier });
-      console.warn(`[IMG] ❌ ${role} ${def.label} errorType=${errorType} ${ms}ms modelTier=${tier}${retryAfterMs ? ` retryAfterMs=${retryAfterMs}` : ''} demoSafe=${demoSafe}`);
+      // [IMG-TRY] — 시도별 에러 로그
+      console.info(`[IMG-TRY] type=${role} attempt=${attempt + 1} tier=${tier} errorType=${parsed.errorType} ${ms}ms${parsed.retryAfterMs ? ` retryAfterMs=${parsed.retryAfterMs}` : ''}`);
 
-      // tier별 cooldown 기록
-      if (isCooldown || nextAvailableAt || retryAfterMs) {
-        reportCooldown(tier, nextAvailableAt, retryAfterMs);
+      // http 500 구분 로깅 (프록시 버그 가능성)
+      if (parsed.isUpstream500) {
+        console.error(`[IMG-TRY] ⚠️ upstream_500 detected — possible proxy/code bug. model=${chain[attempt].model} status=${error?.status}`);
       }
 
-      // 에러 유형별 대기 (다음 시도가 같은 tier면 대기, cross-tier면 대기 없이 즉시)
+      // cooldown 기록
+      if (parsed.isCooldown || error?.nextAvailableAt || parsed.retryAfterMs) {
+        reportCooldown(tier, error?.nextAvailableAt, parsed.retryAfterMs);
+      }
+
+      // 대기 전략: cross-tier 전환이면 cooldown 대기 스킵
       if (attempt < maxAttempts - 1) {
         const nextTier = chain[attempt + 1]?.tier;
         const isCrossTier = nextTier && nextTier !== tier;
 
-        if (isCrossTier && isCooldown) {
-          // cross-tier fallback: 같은 tier가 cooldown이면 즉시 다른 tier로 전환
-          console.info(`[IMG] ⚡ ${role} cross-tier ${tier}→${nextTier} (skip cooldown wait)`);
-        } else if (isCooldown) {
-          const waitMs = retryAfterMs > 0
-            ? retryAfterMs + 500 + Math.random() * 500
+        if (isCrossTier && (parsed.isCooldown || parsed.isUpstream503)) {
+          console.info(`[IMG-DOWNGRADE] type=${role} from=${tier} to=${nextTier} reason=${parsed.errorType}`);
+          // cross-tier: 즉시 전환, 대기 없음
+        } else if (parsed.isCooldown) {
+          const waitMs = parsed.retryAfterMs > 0
+            ? parsed.retryAfterMs + 500 + Math.random() * 500
             : 8000 + Math.random() * 2000;
-          console.info(`[IMG] ⏳ ${role} cooldown-wait ${Math.round(waitMs)}ms modelTier=${tier}`);
+          if (isImgDebug()) console.debug(`[IMG-Q] cooldown-wait ${Math.round(waitMs)}ms tier=${tier}`);
           await new Promise(r => setTimeout(r, waitMs));
-        } else if (isUpstream503) {
+        } else if (parsed.isUpstream503) {
           const backoff = 4000 + Math.random() * 4000;
-          console.info(`[IMG] ⏳ ${role} upstream503-backoff ${Math.round(backoff)}ms modelTier=${tier}`);
+          if (isImgDebug()) console.debug(`[IMG-Q] 503-backoff ${Math.round(backoff)}ms tier=${tier}`);
           await new Promise(r => setTimeout(r, backoff));
-        } else if (isTimeout) {
-          console.info(`[IMG] ⏳ ${role} timeout-backoff 1000ms modelTier=${tier}`);
+        } else if (parsed.isTimeout) {
           await new Promise(r => setTimeout(r, 1000));
         } else {
           await new Promise(r => setTimeout(r, 2000));
@@ -702,15 +818,18 @@ export const generateBlogImage = async (
     }
   }
 
-  // ── 모든 시도 실패 → fallback ──
-  const finalErrorType = lastError?.errorType || (lastError?.isCooldown ? 'cooldown' : String(lastError?.status || 'unknown'));
-  const tierPath = attemptErrors.map(e => `${e.tier}:${e.errorType}`).join('→');
-  console.error(`[IMG] ❌ ${role} ${mode} FAILED ${attemptErrors.length}x tierPath=[${tierPath}] finalError=${finalErrorType}: ${lastError?.message?.substring(0, 60)} demoSafe=${demoSafe}`);
-  const base64Placeholder = btoa(unescape(encodeURIComponent(BLOG_IMAGE_PLACEHOLDER_SVG)));
+  // ── AI 모두 실패 → template fallback ──
+  const tierPath = attemptLog.map(e => `${e.tier}:${e.errorType}`).join('→');
+  console.warn(`[IMG-TRY] type=${role} ALL_FAILED attempts=${attemptLog.length} tierPath=[${tierPath}]`);
+
+  // 3순위: 템플릿 기반 대체 렌더 (그라디언트 + 키워드 카드)
+  const templateData = generateTemplateFallback(promptText, style, role);
+  console.info(`[IMG-FINAL] type=${role} result=template tier=${attemptLog[attemptLog.length - 1]?.tier || 'none'} attempts=${attemptLog.length}`);
   return {
-    data: `data:image/svg+xml;base64,${base64Placeholder}`,
-    modelTier: attemptErrors[attemptErrors.length - 1]?.tier || 'pro',
-    attemptIndex: attemptErrors.length,
+    data: templateData,
+    modelTier: attemptLog[attemptLog.length - 1]?.tier || 'pro',
+    attemptIndex: attemptLog.length,
+    resultType: 'template',
   };
 };
 
@@ -735,6 +854,7 @@ export interface ImageQueueResult {
   prompt: string;
   role: ImageRole;
   status: 'success' | 'fallback';
+  resultType: ImageResultType;
   elapsedMs: number;
   queueWaitMs: number;
   errorType?: string;
@@ -747,32 +867,38 @@ export async function generateImageQueue(
   onProgress?: (msg: string) => void,
 ): Promise<ImageQueueResult[]> {
   const totalImages = items.length;
-  const maxC = getMaxConcurrency();
   const mode = isDemoSafeMode() ? 'demo-safe' : 'normal';
   const safeProgress = onProgress || ((msg: string) => console.log('📍 IMG:', msg));
 
-  console.info(`[IMG-Q] 🚀 start queue total=${totalImages} concurrency=${maxC} mode=${mode}`);
-  safeProgress(`🎨 이미지 ${totalImages}장 생성 시작 (${mode}, 동시 ${maxC}개)...`);
+  const heroCount = items.filter(i => i.role === 'hero').length;
+  const subCount = items.filter(i => i.role === 'sub').length;
 
-  // hero를 가장 먼저 처리하도록 정렬 (hero 우선)
+  // [IMG-PLAN] — 파이프라인 계획 로그
+  console.info(`[IMG-PLAN] total=${totalImages} hero=${heroCount} sub=${subCount} mode=${mode} proConcurrency=${TIER_CONCURRENCY.pro} nb2Concurrency=${TIER_CONCURRENCY.nb2}`);
+  safeProgress(`🎨 이미지 ${totalImages}장 생성 시작 (hero ${heroCount} + sub ${subCount})...`);
+
+  // hero 우선 정렬
   const sorted = [...items].sort((a, b) => {
     if (a.role === 'hero' && b.role !== 'hero') return -1;
     if (a.role !== 'hero' && b.role === 'hero') return 1;
     return a.index - b.index;
   });
 
-  const results: ImageQueueResult[] = [];
-  const base64Placeholder = btoa(unescape(encodeURIComponent(BLOG_IMAGE_PLACEHOLDER_SVG)));
-  const fallbackData = `data:image/svg+xml;base64,${base64Placeholder}`;
+  // [IMG-ROUTE] — 각 이미지의 라우팅 계획
+  sorted.forEach(item => {
+    const tier = item.role === 'hero' ? 'pro' : 'nb2';
+    const model = item.role === 'hero' ? GEMINI_MODEL.IMAGE_PRO : GEMINI_MODEL.IMAGE_FLASH;
+    console.info(`[IMG-ROUTE] idx=${item.index} type=${item.role} tier=${tier} model=${model}`);
+  });
 
-  // 제한 병렬: 세마포어 기반 — acquireImageSlot이 내부적으로 대기하므로
-  // 모든 작업을 동시에 시작해도 세마포어가 concurrency를 제한함
-  // 초기 tier: hero=pro, sub=nb2
+  const results: ImageQueueResult[] = [];
+
+  // 세마포어 기반 제한 병렬 — 초기 tier: hero=pro, sub=nb2
   const tasks = sorted.map(async (item) => {
     const initialTier: ModelTier = item.role === 'hero' ? 'pro' : 'nb2';
     const { queueWaitMs } = await acquireImageSlot(item.index, totalImages, item.role, initialTier);
 
-    safeProgress(`🎨 이미지 ${item.index + 1}/${totalImages}장 생성 중 (${item.role}, ${initialTier})...`);
+    safeProgress(`🎨 이미지 ${item.index + 1}/${totalImages}장 생성 중 (${item.role})...`);
     const t0 = Date.now();
 
     try {
@@ -781,33 +907,37 @@ export async function generateImageQueue(
         item.customStylePrompt, item.mode, item.role
       );
       const elapsedMs = Date.now() - t0;
-      const isFallback = imgResult.data.includes('image/svg+xml');
-      const finalResult = isFallback ? 'fallback' : 'success';
+      const isAi = imgResult.resultType === 'ai-image';
 
-      console.info(`[IMG-Q] ${isFallback ? '⚠️' : '✅'} idx=${item.index}/${totalImages} type=${item.role} modelTier=${imgResult.modelTier} attempt=${imgResult.attemptIndex} ${finalResult} ${elapsedMs}ms queueWait=${queueWaitMs}ms mode=${mode}`);
-      if (!isFallback) {
-        safeProgress(`✅ 이미지 ${item.index + 1}/${totalImages}장 완료 (${imgResult.modelTier})`);
+      if (isAi) {
+        safeProgress(`✅ 이미지 ${item.index + 1}/${totalImages}장 완료`);
+      } else {
+        safeProgress(`🎨 이미지 ${item.index + 1}/${totalImages}장 대체 렌더 적용`);
       }
 
       results.push({
         index: item.index, data: imgResult.data, prompt: item.prompt,
-        role: item.role, status: finalResult as 'success' | 'fallback',
+        role: item.role,
+        status: isAi ? 'success' : 'fallback',
+        resultType: imgResult.resultType,
         elapsedMs, queueWaitMs,
         modelTier: imgResult.modelTier, attemptIndex: imgResult.attemptIndex,
       });
     } catch (err: any) {
       const elapsedMs = Date.now() - t0;
       const errorType = err?.errorType || (err?.isCooldown ? 'cooldown' : String(err?.status || 'unknown'));
-      console.warn(`[IMG-Q] ❌ idx=${item.index}/${totalImages} type=${item.role} errorType=${errorType} ${elapsedMs}ms queueWait=${queueWaitMs}ms mode=${mode}`);
 
       if (err?.isCooldown || err?.nextAvailableAt || err?.retryAfterMs) {
-        const tier = item.role === 'hero' ? 'pro' : 'nb2';
-        reportCooldown(tier as ModelTier, err.nextAvailableAt, err.retryAfterMs);
+        reportCooldown(initialTier, err.nextAvailableAt, err.retryAfterMs);
       }
 
+      // 예외 발생 시에도 template fallback으로 마감 (placeholder 최소화)
+      const templateData = generateTemplateFallback(item.prompt, item.style, item.role);
+      console.info(`[IMG-FINAL] idx=${item.index} type=${item.role} result=template reason=exception errorType=${errorType} ${elapsedMs}ms`);
+
       results.push({
-        index: item.index, data: fallbackData, prompt: item.prompt,
-        role: item.role, status: 'fallback',
+        index: item.index, data: templateData, prompt: item.prompt,
+        role: item.role, status: 'fallback', resultType: 'template',
         elapsedMs, queueWaitMs, errorType,
       });
     } finally {
@@ -815,42 +945,45 @@ export async function generateImageQueue(
     }
   });
 
-  // 모든 작업 완료 대기 (세마포어가 concurrency 제한)
   await Promise.allSettled(tasks);
-
-  // 원래 index 순서로 정렬
   results.sort((a, b) => a.index - b.index);
 
-  const successCount = results.filter(r => r.status === 'success').length;
-  const failCount = results.filter(r => r.status === 'fallback').length;
-  const totalElapsed = results.reduce((sum, r) => sum + r.elapsedMs, 0);
-  const totalQueueWait = results.reduce((sum, r) => sum + r.queueWaitMs, 0);
-  const errorTypes = results.filter(r => r.errorType).map(r => r.errorType);
-
-  // 2-tier 통계
+  // ── [IMG-SUMMARY] 성공 지표 계산 ──
   const heroResults = results.filter(r => r.role === 'hero');
   const subResults = results.filter(r => r.role === 'sub');
-  const heroSuccess = heroResults.filter(r => r.status === 'success').length;
-  const subSuccess = subResults.filter(r => r.status === 'success').length;
-  const proUsed = results.filter(r => r.modelTier === 'pro' && r.status === 'success').length;
-  const nb2Used = results.filter(r => r.modelTier === 'nb2' && r.status === 'success').length;
-  const crossTierFallbacks = results.filter(r =>
-    (r.role === 'hero' && r.modelTier === 'nb2' && r.status === 'success') ||
-    (r.role === 'sub' && r.modelTier === 'pro' && r.status === 'success')
+
+  const aiCount = results.filter(r => r.resultType === 'ai-image').length;
+  const templateCount = results.filter(r => r.resultType === 'template').length;
+  const placeholderCount = results.filter(r => r.resultType === 'placeholder').length;
+  const nonPlaceholder = aiCount + templateCount;
+
+  const heroAi = heroResults.filter(r => r.resultType === 'ai-image').length;
+  const subAi = subResults.filter(r => r.resultType === 'ai-image').length;
+  const subNonPlaceholder = subResults.filter(r => r.resultType !== 'placeholder').length;
+
+  const heroSuccessRate = heroResults.length > 0 ? Math.round((heroAi / heroResults.length) * 100) : 100;
+  const subCompletionRate = subResults.length > 0 ? Math.round((subNonPlaceholder / subResults.length) * 100) : 100;
+  const fullSetRate = Math.round((nonPlaceholder / totalImages) * 100);
+  const aiOnlyRate = Math.round((aiCount / totalImages) * 100);
+
+  // tier별 통계
+  const proSuccess = results.filter(r => r.modelTier === 'pro' && r.resultType === 'ai-image').length;
+  const nb2Success = results.filter(r => r.modelTier === 'nb2' && r.resultType === 'ai-image').length;
+  const crossTier = results.filter(r =>
+    (r.role === 'hero' && r.modelTier === 'nb2' && r.resultType === 'ai-image') ||
+    (r.role === 'sub' && r.modelTier === 'pro' && r.resultType === 'ai-image')
   ).length;
 
-  console.info(`[IMG-Q] ═══════════════════════════════════════`);
-  console.info(`[IMG-Q] 🏁 이미지 큐 완료 (2-tier)`);
-  console.info(`[IMG-Q]   total=${totalImages} success=${successCount} fallback=${failCount}`);
-  console.info(`[IMG-Q]   heroSuccess=${heroSuccess}/${heroResults.length} subSuccess=${subSuccess}/${subResults.length}`);
-  console.info(`[IMG-Q]   modelUsed: pro=${proUsed} nb2=${nb2Used} crossTierFallback=${crossTierFallbacks}`);
-  console.info(`[IMG-Q]   imageConcurrency=${maxC} mode=${mode}`);
-  console.info(`[IMG-Q]   totalGenerationMs=${totalElapsed} totalQueueWaitMs=${totalQueueWait}`);
-  if (errorTypes.length > 0) {
-    console.info(`[IMG-Q]   errorTypes=[${errorTypes.join(', ')}]`);
-  }
-  console.info(`[IMG-Q]   perImage: ${results.map(r => `idx${r.index}(${r.role}/${r.modelTier || '?'})=${r.elapsedMs}ms/${r.status}`).join(' | ')}`);
-  console.info(`[IMG-Q] ═══════════════════════════════════════`);
+  const totalElapsed = results.reduce((sum, r) => sum + r.elapsedMs, 0);
+
+  console.info(`[IMG-SUMMARY] ═══════════════════════════════════════`);
+  console.info(`[IMG-SUMMARY] total=${totalImages} ai=${aiCount} template=${templateCount} placeholder=${placeholderCount}`);
+  console.info(`[IMG-SUMMARY] heroSuccess=${heroAi}/${heroResults.length} subComplete=${subNonPlaceholder}/${subResults.length}`);
+  console.info(`[IMG-SUMMARY] heroSuccessRate=${heroSuccessRate}% subCompletionRate=${subCompletionRate}% fullSetRate=${fullSetRate}% aiOnlyRate=${aiOnlyRate}%`);
+  console.info(`[IMG-SUMMARY] tierStats: pro=${proSuccess} nb2=${nb2Success} crossTier=${crossTier}`);
+  console.info(`[IMG-SUMMARY] totalMs=${totalElapsed} mode=${mode}`);
+  console.info(`[IMG-SUMMARY] perImage: ${results.map(r => `idx${r.index}(${r.role}/${r.modelTier || '?'})=${r.resultType}/${r.elapsedMs}ms`).join(' | ')}`);
+  console.info(`[IMG-SUMMARY] ═══════════════════════════════════════`);
 
   return results;
 }

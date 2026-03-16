@@ -207,14 +207,20 @@ async function fetchGeminiWithRotation(keys, model, apiBody, timeout, isRaw = fa
 
       const errorText = await response.text();
       const us = response.status;
-      console.warn(`[proxy] ⚠️ ${tag} key=${ki} model=${model} upstream=${us} ${ms}ms`);
+      const scope = getCooldownScope(isRaw, model);
+
+      // upstream 500 구분: 프록시 내부 500과 구별하기 위해 명시적으로 로깅
+      if (us === 500) {
+        console.error(`[proxy] ⚠️ upstream_500 ${tag} key=${ki} model=${model} scope=${scope} ${ms}ms — possible upstream bug. body=${errorText.substring(0, 200)}`);
+      } else {
+        console.warn(`[proxy] ⚠️ ${tag} key=${ki} model=${model} upstream=${us} scope=${scope} ${ms}ms`);
+      }
 
       if (us === 503 || us === 429) {
         lastError = errorText;
         lastStatus = us;
         markKeyCooldown(ki, isRaw, model);
         if (attempt < maxAttempts - 1) {
-          // 503: 3초 대기 후 다음 키, 429: 2초 대기 후 다음 키
           const delay = us === 503 ? 3000 : 2000;
           await new Promise((r) => setTimeout(r, delay));
           continue;
@@ -224,7 +230,9 @@ async function fetchGeminiWithRotation(keys, model, apiBody, timeout, isRaw = fa
       return {
         ok: false,
         status: us,
-        error: `upstream ${us}`,
+        error: us === 500 ? "upstream_500" : `upstream ${us}`,
+        isUpstream500: us === 500,
+        isUpstream503: us === 503,
         details: errorText.substring(0, 500),
       };
     } catch (fetchErr) {
