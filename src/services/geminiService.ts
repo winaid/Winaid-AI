@@ -3757,20 +3757,20 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
   });
   console.log('  - seoScore:', seoScore);
   
-  // 🛡️ 저장용 HTML: blob URL → base64 복원 (blob URL은 세션 내에서만 유효하므로 저장 시 원본 복원)
+  // 🛡️ 저장용 HTML: blob URL → Supabase Storage URL로 업로드 (base64 저장 금지)
   let storageHtml = finalHtml;
   if (images.length > 0) {
-    for (const img of images) {
-      if (!img.data) continue;
-      const p1 = new RegExp(`(<img[^>]*data-image-index="${img.index}"[^>]*src=")blob:[^"]*(")`,'gi');
-      storageHtml = storageHtml.replace(p1, `$1${img.data}$2`);
-      const p2 = new RegExp(`(<img[^>]*src=")blob:[^"]*("[^>]*data-image-index="${img.index}")`,'gi');
-      storageHtml = storageHtml.replace(p2, `$1${img.data}$2`);
-    }
-    const hasBlobLeak = storageHtml.includes('blob:');
-    console.info(`[STORAGE] blob→base64 복원 | display=${finalHtml.length}자(${Math.round(finalHtml.length*2/1024)}KB) | storage=${storageHtml.length}자(${Math.round(storageHtml.length*2/1024)}KB) | blob잔류=${hasBlobLeak}`);
-    if (hasBlobLeak) {
-      console.error(`[STORAGE] ❌ storageHtml에 blob: URL 잔류! 재로드 시 이미지 깨짐 위험`);
+    try {
+      const { restoreAndUploadImages } = await import('./imageStorageService');
+      storageHtml = await restoreAndUploadImages(finalHtml, images);
+      console.info(`[STORAGE] blob→URL 업로드 완료 | display=${finalHtml.length}자(${Math.round(finalHtml.length*2/1024)}KB) | storage=${storageHtml.length}자(${Math.round(storageHtml.length*2/1024)}KB)`);
+    } catch (uploadErr) {
+      // 업로드 실패 시 base64 제거만 수행 (빈 이미지가 8MB payload보다 나음)
+      console.warn('[STORAGE] 이미지 업로드 실패, base64 strip만 수행:', uploadErr);
+      const { stripBase64FromHtml } = await import('./imageStorageService');
+      storageHtml = stripBase64FromHtml(finalHtml);
+      // blob: URL도 빈 문자열로
+      storageHtml = storageHtml.replace(/src="blob:[^"]*"/gi, 'src=""');
     }
   }
 

@@ -1,3 +1,12 @@
-# SPA fallback: all non-file/non-api routes serve index.html
+# Cloudflare Pages SPA routing
+# 규칙: 위에서 아래로 순서대로 평가 — 먼저 매칭되면 그 아래는 무시
+# 핵심: /assets/* 는 빌드된 정적 파일이므로 절대 rewrite하면 안 됨
+
+# API 프록시 (Cloudflare Functions)
 /api/*  /api/:splat  200
+
+# 정적 자산 — rewrite 없이 그대로 서빙 (JS/CSS/이미지/폰트)
+/assets/*  /assets/:splat  200
+
+# SPA fallback — 위 규칙에 매칭되지 않는 나머지만 index.html로
 /*      /index.html  200

@@ -671,8 +671,8 @@ function generateTemplateFallback(promptText: string, style: string, role: Image
 }
 
 // ── 2-tier generateBlogImage ──
-// hero: Pro → Pro(retry) → NB2(cross-tier) → template → placeholder
-// sub:  NB2 → NB2(retry) → optional Pro → template → placeholder
+// hero: Pro → NB2(cross-tier) → template   (wall time cap 50s)
+// sub:  NB2 → NB2(retry) → optional Pro → template
 
 interface AttemptDef {
   model: string;
@@ -711,10 +711,10 @@ export const generateBlogImage = async (
   const ultraMinimal = `${promptText.substring(0, 60)}. ${styleKw}. No text. 16:9.`.trim();
 
   // ── 시도 체인 ──
+  // hero: pro 1회 → nb2 1회 → template (wall time cap 50s)
   const heroChain: AttemptDef[] = [
     { model: GEMINI_MODEL.IMAGE_PRO, tier: 'pro', prompt: heroPrompt, label: '#1(pro)' },
-    { model: GEMINI_MODEL.IMAGE_PRO, tier: 'pro', prompt: subPrompt, label: '#2(pro-retry)' },
-    { model: GEMINI_MODEL.IMAGE_FLASH, tier: 'nb2', prompt: subPrompt, label: '#3(nb2-cross)' },
+    { model: GEMINI_MODEL.IMAGE_FLASH, tier: 'nb2', prompt: subPrompt, label: '#2(nb2-cross)' },
   ];
 
   const subChain: AttemptDef[] = [
@@ -726,11 +726,20 @@ export const generateBlogImage = async (
   const chain = isHero ? heroChain : subChain;
   const maxAttempts = demoSafe && !isHero ? 2 : chain.length;
 
+  // ── wall time cap (hero: 50s, sub: 90s) ──
+  const WALL_TIME_CAP_MS = isHero ? 50_000 : 90_000;
+  const wallStart = Date.now();
+
   let lastError: any = null;
   const debug = isImgDebug();
   const attemptLog: { errorType: string; retryAfterMs: number; tier: ModelTier; ms: number }[] = [];
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    // wall time 초과 시 즉시 template fallback
+    if (Date.now() - wallStart > WALL_TIME_CAP_MS) {
+      if (debug) console.debug(`[IMG-WALL] wall time cap ${WALL_TIME_CAP_MS}ms exceeded, skipping to template`);
+      break;
+    }
     const def = chain[attempt];
     const t0 = Date.now();
     const tier = def.tier;
@@ -820,13 +829,14 @@ export const generateBlogImage = async (
   }
 
   // ── AI 모두 실패 → 보조 비주얼 모드 (template) ──
+  const wallElapsed = Date.now() - wallStart;
   const tierPath = attemptLog.map(e => `${e.tier}:${e.errorType}`).join('→');
   const templateData = generateTemplateFallback(promptText, style, role);
   // 운영 로그: template 전환은 항상 출력 + hero면 경고
   if (isHero) {
-    console.warn(`[IMG-FINAL] type=hero result=TEMPLATE (hero AI 실패) tierPath=[${tierPath}] attempts=${attemptLog.length}`);
+    console.warn(`[IMG-FINAL] type=hero result=TEMPLATE (hero AI 실패) tierPath=[${tierPath}] attempts=${attemptLog.length} wallTime=${Math.round(wallElapsed / 1000)}s`);
   } else {
-    console.info(`[IMG-FINAL] type=${role} result=template tierPath=[${tierPath}] attempts=${attemptLog.length}`);
+    console.info(`[IMG-FINAL] type=${role} result=template tierPath=[${tierPath}] attempts=${attemptLog.length} wallTime=${Math.round(wallElapsed / 1000)}s`);
   }
   return {
     data: templateData,

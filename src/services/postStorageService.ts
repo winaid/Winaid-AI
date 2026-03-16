@@ -4,6 +4,7 @@
  */
 
 import { supabase, getUserIP, hashIP } from '../lib/supabase';
+import { stripBase64FromHtml } from './imageStorageService';
 
 // 글 타입 정의
 export type PostType = 'blog' | 'card_news' | 'press_release';
@@ -97,6 +98,9 @@ export const saveGeneratedPost = async (data: SavePostData): Promise<{
       char_count: charCount,
       word_count: wordCount
     };
+
+    // 🛡️ base64 안전망: persisted content에 base64가 남지 않도록 보장
+    data.content = stripBase64FromHtml(data.content);
 
     // 📊 payload 크기 진단 로그 — Supabase TEXT 컬럼 한도(1GB) 대비 실제 크기 확인
     const contentBytes = data.content.length * 2; // UTF-16 근사

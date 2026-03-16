@@ -4,7 +4,7 @@ import { modifyPostWithAI, regenerateCardSlide as _regenerateCardSlide } from '.
 import { regenerateSection } from '../services/geminiService';
 import { generateSingleImage, generateBlogImage, recommendImagePrompt, recommendCardNewsPrompt, CARD_LAYOUT_RULE as _CARD_LAYOUT_RULE, STYLE_KEYWORDS } from '../services/imageGenerationService';
 import { saveAs } from 'file-saver';
-import { removeOklchFromClonedDoc, AI_PROMPT_TEMPLATES, AUTOSAVE_KEY, AUTOSAVE_HISTORY_KEY, CARD_PROMPT_HISTORY_KEY, CARD_REF_IMAGE_KEY, AutoSaveHistoryItem, CardPromptHistoryItem, extractTitle, cleanText, restoreBase64Images } from './resultPreviewUtils';
+import { removeOklchFromClonedDoc, AI_PROMPT_TEMPLATES, AUTOSAVE_KEY, AUTOSAVE_HISTORY_KEY, CARD_PROMPT_HISTORY_KEY, CARD_REF_IMAGE_KEY, AutoSaveHistoryItem, CardPromptHistoryItem, extractTitle, cleanText } from './resultPreviewUtils';
 import { SeoDetailModal, AiSmellDetailModal, SimilarityModal } from './ScoringModals';
 import { ImageDownloadModal, ImageRegenModal, CardDownloadModal } from './ExportModals';
 import { CardRegenModal } from './CardRegenModal';
@@ -545,8 +545,10 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
     const title = extractTitle(localHtml);
     const timeStr = now.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
     
-    // blob URL → base64 복원: localStorage에 blob: URL이 남으면 재로드 시 이미지 깨짐
-    const restoredHtml = restoreBase64Images(localHtml, content.generatedImages);
+    // base64/blob 제거: localStorage에는 경량 HTML만 저장 (이미지는 Supabase Storage에 별도 보관)
+    const restoredHtml = localHtml
+      .replace(/src="data:image\/[^"]*"/gi, 'src=""')
+      .replace(/src="blob:[^"]*"/gi, 'src=""');
     const hasBlobLeak = restoredHtml.includes('blob:');
     const saveData = {
       html: restoredHtml,
