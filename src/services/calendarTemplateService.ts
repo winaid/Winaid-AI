@@ -771,18 +771,18 @@ const THEMED_BUILDERS: Record<string, (data: CalendarData) => string> = {
 
 /** 테마 목록 (UI에서 사용) */
 export const CALENDAR_THEME_OPTIONS: { value: string; label: string; emoji: string; desc: string; group: string; groupColor: string }[] = [
-  { value: 'autumn',             label: '📊 실무 스프레드시트',  emoji: '📊', desc: '엑셀형 격자 + 슬레이트 헤더',      group: '실무',   groupColor: '#334155' },
-  { value: 'korean_traditional', label: '🏛️ 한방 전통',         emoji: '🏛️', desc: '기와 문양 + 이중 테두리 한지',     group: '전통',   groupColor: '#92400e' },
-  { value: 'winter',             label: '❄️ 딥블루 프로스트',    emoji: '❄️', desc: '블루 그라데이션 + 글래스 셀',      group: '프리미엄', groupColor: '#0c4a6e' },
-  { value: 'cherry_blossom',     label: '🌸 블러시 로즈',        emoji: '🌸', desc: '히어로 헤더 + 파스텔 핑크 톤',     group: '소프트', groupColor: '#9a6b7a' },
+  { value: 'autumn',             label: '📊 실무 스프레드시트',  emoji: '📊', desc: 'zebra 격자 + 슬레이트 헤더 + 범례',  group: '실무',   groupColor: '#334155' },
+  { value: 'korean_traditional', label: '🏛️ 한방 전통',         emoji: '🏛️', desc: '기와 문양 + 이중 테두리 한지 프레임', group: '전통',   groupColor: '#92400e' },
+  { value: 'winter',             label: '❄️ 딥블루 프로스트',    emoji: '❄️', desc: '딥블루 그라데이션 + 프로스트 글래스', group: '프리미엄', groupColor: '#0c4a6e' },
+  { value: 'cherry_blossom',     label: '🌸 블러시 로즈',        emoji: '🌸', desc: '로즈 헤더 + 파스텔 핑크 갭 셀',     group: '소프트', groupColor: '#be7e8a' },
   { value: 'spring_kids',        label: '🏥 차콜 프레임',        emoji: '🏥', desc: '차콜 헤더/풋터 + 풀레드 휴진셀',   group: '실무',   groupColor: '#292524' },
-  { value: 'medical_notebook',   label: '📐 스위스 미니멀',      emoji: '📐', desc: '영문 요일 + 모노톤 규선 격자',     group: '미니멀', groupColor: '#64748b' },
-  { value: 'autumn_spring_note', label: '🌙 야간진료',           emoji: '🌙', desc: '다크 배너 + 화·목 앰버 강조',      group: '실무',   groupColor: '#d97706' },
-  { value: 'autumn_holiday',     label: '📱 SNS 볼드',           emoji: '📱', desc: '컬러 히어로 + 라운드 뱃지 셀',     group: '소프트', groupColor: '#b45309' },
-  { value: 'hanok_roof',         label: '✨ 골드 클래식',        emoji: '✨', desc: '아이보리 + 세리프 + 점선 격자',     group: '프리미엄', groupColor: '#78350f' },
+  { value: 'medical_notebook',   label: '📐 모던 미니멀',        emoji: '📐', desc: '2단 라인 + 모노톤 규선 + 도트 마커', group: '미니멀', groupColor: '#1e293b' },
+  { value: 'autumn_spring_note', label: '🌙 야간진료',           emoji: '🌙', desc: '다크 배너 + 화·목 앰버 컬럼 강조',  group: '실무',   groupColor: '#d97706' },
+  { value: 'autumn_holiday',     label: '📱 SNS 볼드',           emoji: '📱', desc: '코랄 히어로 + 라운드 뱃지 셀',     group: '소프트', groupColor: '#f97316' },
+  { value: 'hanok_roof',         label: '✨ 골드 클래식',        emoji: '✨', desc: '골드 밴드 + 세리프 + 점선 격자',     group: '프리미엄', groupColor: '#78350f' },
   { value: 'dark_green_clinic',  label: '🌲 프리미엄 그린',      emoji: '🌲', desc: '다크그린 헤더 + 에메랄드 악센트',   group: '프리미엄', groupColor: '#14532d' },
-  { value: 'dark_blue_modern',   label: '🔷 네이비 모던',         emoji: '🔷', desc: '네이비 헤더/풋터 + 블루 악센트',   group: '프리미엄', groupColor: '#1e3a5f' },
-  { value: 'lavender_sparkle',   label: '💜 라벤더 소프트',      emoji: '💜', desc: '연보라 라운드셀 + 부드러운 톤',     group: '소프트', groupColor: '#7c3aed' },
+  { value: 'dark_blue_modern',   label: '🔷 네이비 모던',         emoji: '🔷', desc: '네이비 헤더+요일바 + 블루 마커',   group: '프리미엄', groupColor: '#1e3a5f' },
+  { value: 'lavender_sparkle',   label: '💜 라벤더 소프트',      emoji: '💜', desc: '라벤더 헤더 + 라운드 갭 셀',       group: '소프트', groupColor: '#7c3aed' },
 ];
 
 // ── HTML 달력 생성 ──
