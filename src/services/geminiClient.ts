@@ -18,7 +18,8 @@ export const GEMINI_MODEL = {
   PRO: 'gemini-3.1-pro-preview',           // 글 생성 등 고품질 작업 (3.1 Pro)
   FLASH: 'gemini-3.1-flash-lite-preview',   // 검색, 자동 보정, 채팅 등 빠른 작업 (3.1 Flash Lite)
   FLASH_LITE: 'gemini-3.1-flash-lite-preview', // 프롬프트 추천 등 경량 작업 (3.1 Flash Lite)
-  IMAGE_PRO: 'gemini-3-pro-image-preview',  // 이미지 생성 (Nano Banana Pro)
+  IMAGE_PRO: 'gemini-3-pro-image-preview',    // 이미지 생성 (Nano Banana Pro) — hero 품질용
+  IMAGE_FLASH: 'gemini-3.1-flash-image-preview', // 이미지 생성 (Nano Banana 2) — sub 속도/성공률용
 } as const;
 
 export const TIMEOUTS = {
