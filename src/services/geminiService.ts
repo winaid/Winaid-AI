@@ -665,7 +665,9 @@ export const generateBlogWithPipeline = async (
       console.warn('[STYLE] 병원 말투 로드 실패:', e);
     }
   } else {
-    console.info(`[STYLE] source=${styleSource} | hospital=${request.hospitalName || '(none)'} | styleApplied=generic_default`);
+    // persistedHospital: localStorage에서 복원됐지만 명시 선택 아닌 경우
+    const persistedHospital = (styleSource === 'generic_default' && request.hospitalName) ? request.hospitalName : '(none)';
+    console.info(`[STYLE] source=generic_default | explicitHospital=(none) | persistedHospital=${persistedHospital} | styleApplied=generic_default`);
   }
 
   // ── Stage A: 아웃라인 생성 (FLASH) ── [재시도 포함]
@@ -1524,7 +1526,8 @@ ${hospitalStylePrompt}
       console.warn('[STYLE] 병원 말투 프로파일 로드 실패:', e);
     }
   } else {
-    console.info(`[STYLE] source=${request.hospitalStyleSource || 'generic_default'} | hospital=${request.hospitalName || '(none)'} | function=generateFullPost`);
+    const persistedH = (request.hospitalStyleSource !== 'explicit_selected_hospital' && request.hospitalName) ? request.hospitalName : '(none)';
+    console.info(`[STYLE] source=generic_default | explicitHospital=(none) | persistedHospital=${persistedH} | styleApplied=generic_default | function=generateFullPost`);
   }
   
   // 커스텀 소제목 적용

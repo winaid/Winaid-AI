@@ -245,8 +245,9 @@ async function fetchGeminiWithRotation(keys, model, apiBody, timeout, isRaw = fa
     const now = Date.now();
     let earliest = Infinity;
     let earliestKeyIndex = -1;
+    const cooldownMap = getCooldownMap(isRaw);
     for (let i = 0; i < keys.length; i++) {
-      const cd = keyCooldowns.get(i);
+      const cd = cooldownMap.get(i);
       if (cd && cd.until > now && cd.until < earliest) {
         earliest = cd.until;
         earliestKeyIndex = i;
