@@ -251,11 +251,14 @@ export function getKoreanErrorMessage(error: any): string {
   const msg = error?.message || '';
   const status = error?.status;
 
+  if (status === 404 || error?.isRouteNotFound) {
+    return '🔧 AI 프록시 서버의 라우트를 찾을 수 없습니다 (404). Vercel 배포 상태를 확인해주세요.';
+  }
   if (status === 429 || msg.includes('quota') || msg.includes('RESOURCE_EXHAUSTED') || msg.includes('limit')) {
     return '⚠️ API 사용량 한도에 도달했습니다. 잠시 후 다시 시도해주세요.';
   }
   if (isCorsOrProxyError(error)) {
-    return '🔧 AI 프록시 서버 연결에 실패했습니다. CORS 또는 프록시 설정을 확인해주세요. 관리자에게 문의하세요.';
+    return '🔧 AI 프록시 서버 연결에 실패했습니다. 프록시 라우트(404)이거나 CORS 설정 문제일 수 있습니다. 관리자에게 문의하세요.';
   }
   if (msg.includes('timeout') || msg.includes('Timeout')) {
     return '⏱️ 응답 시간이 초과되었습니다. 다시 시도해주세요.';
@@ -281,6 +284,7 @@ export function getKoreanErrorMessage(error: any): string {
  */
 function isRetryableError(error: any): boolean {
   if (isCorsOrProxyError(error)) return false;
+  if (error?.isRouteNotFound || error?.status === 404) return false;
 
   const msg = error?.message || '';
   const status = error?.status;
@@ -347,6 +351,42 @@ export async function callGemini(config: GeminiCallConfig): Promise<any> {
 }
 
 /**
+ * 프록시 엔드포인트 health check (캐시 1분)
+ * 404 vs CORS vs 네트워크 장애를 사전에 구분하기 위한 pre-check
+ */
+let _proxyHealthCache: { ok: boolean; ts: number; detail: string } | null = null;
+const PROXY_HEALTH_CACHE_MS = 60000; // 1분 캐시
+
+export async function checkProxyHealth(): Promise<{ ok: boolean; detail: string }> {
+  if (_proxyHealthCache && Date.now() - _proxyHealthCache.ts < PROXY_HEALTH_CACHE_MS) {
+    return { ok: _proxyHealthCache.ok, detail: _proxyHealthCache.detail };
+  }
+
+  const endpoint = getGeminiEndpoint();
+  // /api/gemini → /api/health (같은 도메인)
+  const healthUrl = endpoint.replace(/\/api\/gemini\/?$/, '/api/health');
+
+  try {
+    const res = await fetch(healthUrl, {
+      method: 'GET',
+      signal: AbortSignal.timeout(5000),
+    });
+    const ok = res.ok;
+    const detail = ok ? 'proxy alive' : `proxy returned ${res.status}`;
+    _proxyHealthCache = { ok, ts: Date.now(), detail };
+    if (!ok) {
+      console.warn(`[PROXY] ⚠️ health check ${res.status}: ${detail} | url: ${healthUrl}`);
+    }
+    return { ok, detail };
+  } catch (err: any) {
+    const detail = isCorsOrProxyError(err) ? 'health check CORS/network error' : (err?.message || 'unknown');
+    _proxyHealthCache = { ok: false, ts: Date.now(), detail };
+    console.warn(`[PROXY] ⚠️ health check failed: ${detail} | url: ${healthUrl}`);
+    return { ok: false, detail };
+  }
+}
+
+/**
  * Raw 모드 프록시 호출 - Gemini API 바디를 직접 전달
  * 이미지 생성/편집 등 고급 기능에 사용
  * Vercel 단일 경로 — 폴백 없음 (호출자가 재시도 관리)
@@ -371,6 +411,18 @@ export async function callGeminiRaw(model: string, apiBody: any, timeout: number
     const ms = Date.now() - t0;
 
     if (!response.ok) {
+      // 404: 프록시 라우트 자체가 없음 — CORS와 혼동되는 핵심 원인
+      if (response.status === 404) {
+        console.error(`[RAW] ⛔ ${model} 404 ${ms}ms — 프록시 라우트 미존재! endpoint: ${endpoint}`);
+        const error: any = new Error('프록시 서버에 /api/gemini 라우트가 없습니다 (404). Vercel 배포 설정을 확인하세요.');
+        error.status = 404;
+        error.errorType = 'route_not_found';
+        error.isRouteNotFound = true;
+        // health cache 즉시 무효화
+        _proxyHealthCache = { ok: false, ts: Date.now(), detail: 'route 404' };
+        throw error;
+      }
+
       const errorBody = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
       const isCooldown = errorBody.error === 'all_keys_in_cooldown';
       const isUpstream503 = !isCooldown && response.status === 503;
@@ -395,18 +447,35 @@ export async function callGeminiRaw(model: string, apiBody: any, timeout: number
     clearTimeout(timeoutId);
     const ms = Date.now() - t0;
 
+    // 이미 분류된 에러는 그대로 throw
+    if (error.errorType) {
+      throw error;
+    }
+
     if (error.name === 'AbortError') {
       console.warn(`[RAW] ${model} client-timeout ${ms}ms (limit ${clientTimeout}ms)`);
       const timeoutError: any = new Error('Gemini API timeout');
       timeoutError.status = 504;
+      timeoutError.errorType = 'timeout';
       throw timeoutError;
     }
 
-    // CORS/프록시 에러는 명확한 메시지로 즉시 throw (재시도 무의미)
+    // CORS/네트워크 에러 — 404와 구분하여 진단
     if (isCorsOrProxyError(error)) {
-      console.error(`[CORS] ⛔ callGeminiRaw CORS/proxy error: ${error.message} | endpoint: ${endpoint}`);
-      const corsError: any = new Error(getKoreanErrorMessage(error));
+      // 비동기로 health check 실행하여 원인 구분 시도
+      const healthHint = _proxyHealthCache?.ok === false
+        ? ` (health: ${_proxyHealthCache.detail})`
+        : '';
+      console.error(`[PROXY] ⛔ callGeminiRaw CORS/network error: ${error.message}${healthHint} | endpoint: ${endpoint}`);
+
+      // health check를 비동기로 트리거 (다음 호출 시 참조)
+      checkProxyHealth().catch(() => {});
+
+      const corsError: any = new Error(
+        `AI 프록시 서버 연결 실패 — 프록시가 404를 반환하거나 CORS 차단 상태일 수 있습니다.${healthHint} 관리자에게 문의하세요.`
+      );
       corsError.status = 0;
+      corsError.errorType = 'cors_or_network';
       corsError.isCors = true;
       throw corsError;
     }
@@ -457,6 +526,17 @@ async function _callGeminiOnce(config: GeminiCallConfig): Promise<any> {
     clearTimeout(timeoutId);
 
     if (!response.ok) {
+      // 404: 프록시 라우트 자체가 없음
+      if (response.status === 404) {
+        console.error(`[BLOG_FLOW] ⛔ ${model} 404 — 프록시 라우트 미존재! endpoint: ${endpoint}`);
+        _proxyHealthCache = { ok: false, ts: Date.now(), detail: 'route 404' };
+        const error: any = new Error('프록시 서버에 /api/gemini 라우트가 없습니다 (404). Vercel 배포 설정을 확인하세요.');
+        error.status = 404;
+        error.errorType = 'route_not_found';
+        error.isRouteNotFound = true;
+        throw error;
+      }
+
       const errorBody = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
 
       // 503/429/504 + PRO → FLASH 폴백 (모델 다운그레이드)
@@ -531,11 +611,23 @@ async function _callGeminiOnce(config: GeminiCallConfig): Promise<any> {
       throw timeoutError;
     }
 
+    // 이미 분류된 에러 (404 route_not_found 등)는 그대로 throw
+    if (error.errorType) {
+      throw error;
+    }
+
     // CORS/프록시 에러는 폴백/재시도 없이 즉시 throw
     if (isCorsOrProxyError(error)) {
-      console.error(`[CORS] ⛔ _callGeminiOnce CORS/proxy error: ${error.message} | endpoint: ${endpoint}`);
-      const corsError: any = new Error(getKoreanErrorMessage(error));
+      const healthHint = _proxyHealthCache?.ok === false
+        ? ` (health: ${_proxyHealthCache.detail})`
+        : '';
+      console.error(`[PROXY] ⛔ _callGeminiOnce CORS/network error: ${error.message}${healthHint} | endpoint: ${endpoint}`);
+      checkProxyHealth().catch(() => {});
+      const corsError: any = new Error(
+        `AI 프록시 서버 연결 실패 — 프록시가 404를 반환하거나 CORS 차단 상태일 수 있습니다.${healthHint} 관리자에게 문의하세요.`
+      );
       corsError.status = 0;
+      corsError.errorType = 'cors_or_network';
       corsError.isCors = true;
       throw corsError;
     }

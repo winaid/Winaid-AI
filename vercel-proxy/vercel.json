@@ -5,6 +5,10 @@
     "api/gemini.js": {
       "maxDuration": 300,
       "memory": 512
+    },
+    "api/health.js": {
+      "maxDuration": 10,
+      "memory": 128
     }
   },
   "headers": [
@@ -17,5 +21,9 @@
         { "key": "Vary", "value": "Origin" }
       ]
     }
+  ],
+  "rewrites": [
+    { "source": "/api/gemini", "destination": "/api/gemini" },
+    { "source": "/api/health", "destination": "/api/health" }
   ]
 }
