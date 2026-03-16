@@ -460,8 +460,11 @@ export interface BlogImageResult {
   errorCode?: string;
 }
 
+// 이미지 생성 시도당 타임아웃 (프록시 경유 포함, 20초)
+const IMAGE_PER_ATTEMPT_TIMEOUT = 20000;
+
 // 🖼️ 블로그용 일반 이미지 생성 함수 (텍스트 없는 순수 이미지)
-// 단계별 프롬프트 단순화: 1차 full → 2차 shorter → 3차 minimal
+// 최대 2회 시도 (시도당 20초), 503이면 ultra-minimal prompt로 재시도, 그래도 실패하면 placeholder
 export const generateBlogImage = async (
   promptText: string,
   style: ImageStyle,
@@ -470,34 +473,21 @@ export const generateBlogImage = async (
 ): Promise<string> => {
   const styleCompact = customStylePrompt || BLOG_IMAGE_STYLE_COMPACT[style] || BLOG_IMAGE_STYLE_COMPACT.illustration;
 
-  // 단계별 프롬프트: 재시도할수록 짧아짐
-  const prompts = [
-    // 1차: 스타일 블록 포함 슬림 프롬프트
-    `Generate a ${aspectRatio} landscape blog image for a Korean medical clinic.
-
+  const fullPrompt = `Generate a ${aspectRatio} landscape blog image for a Korean medical clinic.
 [Subject] ${promptText}
-
 [Style] ${styleCompact}
+[Rules] No text, no watermark, no logo. Clean, professional. 16:9 landscape.`.trim();
 
-[Rules]
-- No text, no title, no caption, no watermark, no logo
-- Clean, professional medical/health image
-- High quality, suitable for hospital blog post
-- 16:9 landscape format`.trim(),
+  const minimalPrompt = `Medical blog image: ${promptText.substring(0, 80)}. ${
+    style === 'photo' ? 'Photorealistic' : style === 'medical' ? 'Medical 3D' : '3D illustration, pastel'
+  }. No text. 16:9.`.trim();
 
-    // 2차: 더 짧은 프롬프트
-    `${aspectRatio} medical blog image. ${promptText}. Style: ${styleCompact}. No text, no watermark, no logo. Professional, clean.`.trim(),
-
-    // 3차: 최소 프롬프트
-    `Professional medical health image: ${promptText.substring(0, 100)}. ${style === 'photo' ? 'Photorealistic DSLR' : style === 'medical' ? 'Medical 3D illustration' : '3D illustration, pastel colors'}. No text. 16:9.`.trim(),
-  ];
-
-  const MAX_RETRIES = 3;
+  const MAX_RETRIES = 2;
   let lastError: any = null;
 
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
-    const currentPrompt = prompts[Math.min(attempt, prompts.length - 1)];
-    const attemptStart = Date.now();
+    const currentPrompt = attempt === 0 ? fullPrompt : minimalPrompt;
+    const t0 = Date.now();
 
     try {
       const result = await callGeminiRaw(GEMINI_MODEL.IMAGE_PRO, {
@@ -506,50 +496,45 @@ export const generateBlogImage = async (
           responseModalities: ["IMAGE", "TEXT"],
           temperature: 0.6,
         },
-      }, TIMEOUTS.IMAGE_GENERATION);
+      }, IMAGE_PER_ATTEMPT_TIMEOUT);
 
-      const elapsed = Date.now() - attemptStart;
+      const ms = Date.now() - t0;
       const finishReason = result?.candidates?.[0]?.finishReason;
+
       if (finishReason === 'SAFETY' || finishReason === 'RECITATION') {
-        lastError = new Error(`안전 정책 차단 (${finishReason})`);
-        console.warn(`[IMG] ⚠️ attempt ${attempt + 1} SAFETY ${elapsed}ms → simpler prompt`);
-        if (attempt < MAX_RETRIES - 1) {
-          await new Promise(resolve => setTimeout(resolve, 1500));
-        }
+        lastError = new Error(`SAFETY:${finishReason}`);
+        console.warn(`[IMG] attempt=${attempt + 1} SAFETY ${ms}ms`);
+        if (attempt < MAX_RETRIES - 1) await new Promise(r => setTimeout(r, 1000));
         continue;
       }
 
-      const parts = result?.candidates?.[0]?.content?.parts || [];
-      const imagePart = parts.find((p: any) => p.inlineData?.data);
-
+      const imagePart = (result?.candidates?.[0]?.content?.parts || []).find((p: any) => p.inlineData?.data);
       if (imagePart?.inlineData) {
-        console.info(`[IMG] ✅ blog image OK attempt=${attempt + 1} ${elapsed}ms prompt=${currentPrompt.length}ch`);
+        console.info(`[IMG] ✅ blog attempt=${attempt + 1} ${ms}ms prompt=${currentPrompt.length}ch`);
         return `data:${imagePart.inlineData.mimeType || 'image/png'};base64,${imagePart.inlineData.data}`;
       }
 
-      lastError = new Error('이미지 데이터 없음');
-      console.warn(`[IMG] ⚠️ attempt ${attempt + 1} no image data ${elapsed}ms`);
-      if (attempt < MAX_RETRIES - 1) {
-        await new Promise(resolve => setTimeout(resolve, 1500));
-      }
+      lastError = new Error('no image data');
+      console.warn(`[IMG] attempt=${attempt + 1} no-data ${ms}ms`);
+      if (attempt < MAX_RETRIES - 1) await new Promise(r => setTimeout(r, 1000));
+
     } catch (error: any) {
       lastError = error;
-      const elapsed = Date.now() - attemptStart;
-      const status = error?.status;
-      const msg = error?.message || '';
-      const isRateLimit = status === 429 || msg.includes('429') || msg.includes('quota');
-      const isTimeout = status === 504 || msg.includes('timeout');
+      const ms = Date.now() - t0;
+      const st = error?.status;
+      const is503 = st === 503 || (error?.message || '').includes('503');
+      const is504 = st === 504 || (error?.message || '').includes('timeout');
 
-      console.warn(`[IMG] ❌ attempt ${attempt + 1} ${isTimeout ? 'TIMEOUT' : isRateLimit ? '429' : status || 'ERR'} ${elapsed}ms`);
+      console.warn(`[IMG] ❌ attempt=${attempt + 1} ${is503 ? 'upstream-503' : is504 ? 'timeout' : st || 'ERR'} ${ms}ms`);
 
       if (attempt < MAX_RETRIES - 1) {
-        const waitMs = isRateLimit ? 5000 : isTimeout ? 2000 : 2000 * Math.pow(2, attempt);
-        await new Promise(resolve => setTimeout(resolve, waitMs));
+        // 503/504: 짧은 backoff 후 minimal prompt로 즉시 재시도
+        await new Promise(r => setTimeout(r, is503 ? 1000 : 1500));
       }
     }
   }
 
-  console.error(`[IMG] ❌ blog image FAILED after ${MAX_RETRIES} attempts: ${lastError?.message}`);
+  console.error(`[IMG] ❌ blog FAILED ${MAX_RETRIES}x: ${lastError?.status || ''} ${lastError?.message?.substring(0, 60)}`);
   const base64Placeholder = btoa(unescape(encodeURIComponent(BLOG_IMAGE_PLACEHOLDER_SVG)));
   return `data:image/svg+xml;base64,${base64Placeholder}`;
 };

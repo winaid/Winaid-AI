@@ -353,10 +353,11 @@ export async function callGemini(config: GeminiCallConfig): Promise<any> {
  */
 export async function callGeminiRaw(model: string, apiBody: any, timeout: number = TIMEOUTS.IMAGE_GENERATION): Promise<any> {
   const endpoint = getGeminiEndpoint();
-  console.info(`[BLOG_FLOW] callGeminiRaw(${model}) → ${endpoint.substring(0, 60)}...`);
-
+  const t0 = Date.now();
+  // 클라이언트 AbortController는 프록시 timeout보다 약간 여유
+  const clientTimeout = timeout + 5000;
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeout + 5000);
+  const timeoutId = setTimeout(() => controller.abort(), clientTimeout);
 
   try {
     const response = await fetch(endpoint, {
@@ -367,20 +368,25 @@ export async function callGeminiRaw(model: string, apiBody: any, timeout: number
     });
 
     clearTimeout(timeoutId);
+    const ms = Date.now() - t0;
 
     if (!response.ok) {
       const errorBody = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
+      console.warn(`[RAW] ${model} ${response.status} ${ms}ms: ${(errorBody.error || '').substring(0, 60)}`);
       const error: any = new Error(errorBody.error || `서버 응답 오류 (${response.status})`);
       error.status = response.status;
       error.details = errorBody.details;
       throw error;
     }
 
+    console.info(`[RAW] ${model} 200 ${ms}ms`);
     return await response.json();
   } catch (error: any) {
     clearTimeout(timeoutId);
+    const ms = Date.now() - t0;
 
     if (error.name === 'AbortError') {
+      console.warn(`[RAW] ${model} client-timeout ${ms}ms (limit ${clientTimeout}ms)`);
       const timeoutError: any = new Error('Gemini API timeout');
       timeoutError.status = 504;
       throw timeoutError;
