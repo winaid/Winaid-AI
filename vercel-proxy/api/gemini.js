@@ -225,10 +225,28 @@ async function fetchGeminiWithRotation(keys, model, apiBody, timeout, isRaw = fa
   }
 
   const allCooled = triedKeys === 0;
+  if (allCooled) {
+    // 가장 빨리 풀리는 키의 cooldown 잔여 시간 계산
+    const now = Date.now();
+    let earliest = Infinity;
+    for (let i = 0; i < keys.length; i++) {
+      const cd = keyCooldowns.get(i);
+      if (cd && cd.until > now && cd.until < earliest) earliest = cd.until;
+    }
+    const retryAfterMs = earliest === Infinity ? 5000 : Math.max(earliest - now + 500, 1000); // +500ms 여유
+    console.warn(`[proxy] 🧊 all ${keys.length} keys cooled down, retryAfter=${retryAfterMs}ms`);
+    return {
+      ok: false,
+      status: 503,
+      error: "all_keys_in_cooldown",
+      retryAfterMs,
+      details: `next key available in ${retryAfterMs}ms`,
+    };
+  }
   return {
     ok: false,
     status: lastStatus,
-    error: allCooled ? "all keys in cooldown" : "all keys failed",
+    error: "all keys failed",
     details: lastError,
   };
 }
@@ -305,10 +323,9 @@ export default async function handler(req, res) {
       const result = await fetchGeminiWithRotation(keys, body.model, body.apiBody, timeout, true);
 
       if (!result.ok) {
-        return res.status(result.status || 500).json({
-          error: result.error,
-          details: result.details,
-        });
+        const errBody = { error: result.error, details: result.details };
+        if (result.retryAfterMs) errBody.retryAfterMs = result.retryAfterMs;
+        return res.status(result.status || 500).json(errBody);
       }
 
       // ⚠️ Raw 모드: Gemini 응답을 가공 없이 그대로 반환
@@ -368,10 +385,9 @@ export default async function handler(req, res) {
     const result = await fetchGeminiWithRotation(keys, model, apiBody, timeout, false);
 
     if (!result.ok) {
-      return res.status(result.status || 500).json({
-        error: result.error,
-        details: result.details,
-      });
+      const errBody = { error: result.error, details: result.details };
+      if (result.retryAfterMs) errBody.retryAfterMs = result.retryAfterMs;
+      return res.status(result.status || 500).json(errBody);
     }
 
     // ⚠️ 텍스트 모드 응답 구조 — 프론트가 { text, usageMetadata } 를 기대

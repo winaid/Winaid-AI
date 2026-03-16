@@ -3112,6 +3112,7 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
     // 순차 + 간격으로 API 부하를 분산하여 성공률을 높임
     const imgStart = Date.now();
     safeProgress(`🎨 이미지 ${maxImages}장 순차 생성 중...`);
+    let lastImgError: any = null; // 직전 이미지 에러 추적 (cooldown 대기 판단용)
 
     for (let i = 0; i < maxImages; i++) {
       const p = textData.imagePrompts[i];
@@ -3119,6 +3120,7 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
       const t0 = Date.now();
 
       safeProgress(`🎨 이미지 ${i + 1}/${maxImages}장 생성 중 (${imgRole})...`);
+      lastImgError = null;
 
       try {
         let img: string;
@@ -3137,15 +3139,22 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
         }
         images.push({ index: i + 1, data: img, prompt: p });
       } catch (imgErr: any) {
+        lastImgError = imgErr;
         console.warn(`[IMG] ${imgRole} #${i + 1} exception ${Date.now() - t0}ms: ${(imgErr?.message || '').substring(0, 60)}`);
         imageFailCount++;
       }
 
-      // 다음 이미지 전 jitter delay (1.5~3초) — API 부하 분산
+      // 다음 이미지 전 대기: 직전이 cooldown 에러였으면 retryAfterMs 기반, 아니면 고정 간격
       if (i < maxImages - 1) {
-        const jitter = 1500 + Math.random() * 1500;
-        console.info(`[IMG] ⏳ jitter ${Math.round(jitter)}ms before image #${i + 2}`);
-        await new Promise(r => setTimeout(r, jitter));
+        const prevFailed503 = lastImgError?.isCooldown || lastImgError?.status === 503;
+        const retryAfter = lastImgError?.retryAfterMs || 0;
+        const waitMs = retryAfter > 0
+          ? retryAfter + Math.random() * 1000  // cooldown 기반 + 소량 jitter
+          : prevFailed503
+            ? 5000 + Math.random() * 2000       // 503이었지만 retryAfter 없음
+            : 2000 + Math.random() * 1000;      // 정상: 2~3초 간격
+        console.info(`[IMG] ⏳ wait ${Math.round(waitMs)}ms before #${i + 2} (${retryAfter > 0 ? `cooldown=${retryAfter}ms` : prevFailed503 ? '503-backoff' : 'interval'})`);
+        await new Promise(r => setTimeout(r, waitMs));
       }
     }
 

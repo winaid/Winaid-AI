@@ -372,10 +372,14 @@ export async function callGeminiRaw(model: string, apiBody: any, timeout: number
 
     if (!response.ok) {
       const errorBody = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
-      console.warn(`[RAW] ${model} ${response.status} ${ms}ms: ${(errorBody.error || '').substring(0, 60)}`);
+      const isCooldown = errorBody.error === 'all_keys_in_cooldown';
+      const retryMs = errorBody.retryAfterMs || 0;
+      console.warn(`[RAW] ${model} ${response.status} ${ms}ms: ${(errorBody.error || '').substring(0, 60)}${isCooldown ? ` retryAfter=${retryMs}ms` : ''}`);
       const error: any = new Error(errorBody.error || `서버 응답 오류 (${response.status})`);
       error.status = response.status;
       error.details = errorBody.details;
+      if (retryMs > 0) error.retryAfterMs = retryMs;
+      if (isCooldown) error.isCooldown = true;
       throw error;
     }
 

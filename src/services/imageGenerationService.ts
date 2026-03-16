@@ -550,18 +550,20 @@ export const generateBlogImage = async (
       const ms = Date.now() - t0;
       const st = error?.status;
       const msg = error?.message || '';
+      const isCooldown = error?.isCooldown === true;
+      const retryAfterMs = error?.retryAfterMs || 0;
       const is503 = st === 503 || msg.includes('503');
       const isTimeout = st === 504 || msg.includes('timeout');
-      const tag = is503 ? '503' : isTimeout ? 'timeout' : String(st || 'ERR');
-      console.warn(`[IMG] ❌ ${role} ${mode} #${attempt + 1} ${tag} ${ms}ms t/o=${timeout}`);
+      const tag = isCooldown ? 'cooldown' : is503 ? '503' : isTimeout ? 'timeout' : String(st || 'ERR');
+      console.warn(`[IMG] ❌ ${role} ${mode} #${attempt + 1} ${tag} ${ms}ms${retryAfterMs ? ` retryAfter=${retryAfterMs}ms` : ''}`);
 
       if (attempt < maxAttempts - 1) {
-        // 503: 프록시가 이미 키 cooldown 적용함 → 클라이언트는 3~5초 대기
-        // timeout: 1초 대기 후 짧은 프롬프트로 재시도
-        const backoff = is503
-          ? 3000 + Math.random() * 2000  // 3~5초 jitter
-          : 1000;
-        console.info(`[IMG] ⏳ ${role} backoff ${Math.round(backoff)}ms before retry`);
+        // cooldown 응답: 프록시가 알려준 시간만큼 정확히 대기
+        // 503/timeout: 고정 backoff
+        const backoff = retryAfterMs > 0
+          ? retryAfterMs + Math.random() * 1000  // 프록시 지시 + 소량 jitter
+          : isTimeout ? 1000 : 3000;
+        console.info(`[IMG] ⏳ ${role} waiting ${Math.round(backoff)}ms (${retryAfterMs > 0 ? 'cooldown-based' : 'fixed'}) before retry`);
         await new Promise(r => setTimeout(r, backoff));
       }
     }
