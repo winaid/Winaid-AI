@@ -634,10 +634,11 @@ export const generateBlogWithPipeline = async (
   request: GenerationRequest,
   searchResults: any,
   onProgress?: (msg: string) => void
-): Promise<{ title: string; content: string; imagePrompts: string[] }> => {
+): Promise<{ title: string; content: string; imagePrompts: string[]; conclusionLength?: number }> => {
   const safeProgress = onProgress || ((msg: string) => console.log('Pipeline:', msg));
-  console.info(`[BLOG_FLOW] generateBlogWithPipeline 시작 — topic: ${request.topic?.substring(0, 30)}`);
-  console.info('[PIPELINE] ▶ Stage A: 아웃라인 생성 시작');
+  const pipelineStart = Date.now();
+  const timings: Record<string, number> = {};
+  console.info(`[PIPELINE] ▶ START topic="${request.topic?.substring(0, 30)}"`);
   const targetLength = request.textLength || 1500;
   // LLM은 글자수를 정확히 세지 못해 항상 20~30% 부족하게 생성 → 프롬프트용 목표를 1.35배로 설정
   const promptTargetLength = Math.round(targetLength * 1.35);
@@ -665,6 +666,7 @@ export const generateBlogWithPipeline = async (
   }
 
   // ── Stage A: 아웃라인 생성 (FLASH) ── [재시도 포함]
+  const stageAStart = Date.now();
   safeProgress('📐 [1/4] 글 구조 설계 중...');
   const outlinePrompt = getPipelineOutlinePrompt(promptTargetLength, medicalLawMode, {
     audienceMode: request.audienceMode,
@@ -719,9 +721,10 @@ ${JSON.stringify(searchResults?.collected_facts?.slice(0, 3) || [], null, 2)}`;
   const charsPerSection = Math.round(bodyChars / outline.sections.length);
   outline.sections.forEach((s: any) => { s.targetChars = s.targetChars || charsPerSection; });
 
-  safeProgress(`✅ Stage A 완료: 소제목 ${outline.sections.length}개 설계`);
-  console.info(`[PIPELINE] ✅ Stage A 완료: 소제목 ${outline.sections.length}개`);
-  console.info('[PIPELINE] ▶ Stage B: 본문 생성 시작 (도입부 + 섹션 배치 병렬)');
+  timings.stageA = Date.now() - stageAStart;
+  safeProgress(`✅ Stage A 완료: 소제목 ${outline.sections.length}개 설계 (${(timings.stageA / 1000).toFixed(1)}초)`);
+  console.info(`[PIPELINE] ✅ Stage A: ${outline.sections.length}개 소제목 ${timings.stageA}ms`);
+  const stageBStart = Date.now();
 
   // ── Stage B: 본문 생성 (배치 병렬) ──
   // 도입부(FLASH) + 첫 번째 섹션 배치를 동시에 시작
@@ -730,7 +733,7 @@ ${JSON.stringify(searchResults?.collected_facts?.slice(0, 3) || [], null, 2)}`;
 
   // ── 도입부 생성 함수 ──
   const generateIntro = async (): Promise<string> => {
-    console.info('[PIPELINE] ▶ B-1: 도입부 생성 시작');
+    const t0 = Date.now();
     const introPrompt = getPipelineIntroPrompt(
       outline.intro?.approach || 'A',
       outline.intro?.scene || request.topic,
@@ -759,7 +762,7 @@ ${JSON.stringify(searchResults?.collected_facts?.slice(0, 2) || [], null, 2)}`;
     if (!html || html.length < 30) {
       throw new Error('도입부 생성에 실패했습니다. 다시 시도해주세요.');
     }
-    console.info(`[PIPELINE] ✅ B-1 도입부 완료: ${html.length}자`);
+    console.info(`[PIPELINE] ✅ intro ${html.length}자 ${Date.now() - t0}ms`);
     return html;
   };
 
@@ -770,7 +773,7 @@ ${JSON.stringify(searchResults?.collected_facts?.slice(0, 2) || [], null, 2)}`;
   ): Promise<{ html: string; summary: string }> => {
     const section = outline.sections[i];
     const sectionNum = `${i + 1}/${outline.sections.length}`;
-    console.info(`[PIPELINE] ▶ B-2: 소제목 ${sectionNum} "${section.title}" 시작`);
+    const t0 = Date.now();
 
     const sectionPrompt = getPipelineSectionPrompt(
       i,
@@ -806,7 +809,9 @@ ${JSON.stringify(searchResults?.collected_facts?.slice(i, i + 2) || [], null, 2)
       throw new Error(`소제목 "${section.title}" 생성에 실패했습니다. 다시 시도해주세요.`);
     }
     const summary = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().substring(0, 150);
-    console.info(`[PIPELINE] ✅ 소제목 ${sectionNum} 완료: ${html.length}자`);
+    const elapsed = Date.now() - t0;
+    timings[`section_${i}`] = elapsed;
+    console.info(`[PIPELINE] ✅ section ${sectionNum} ${html.length}자 ${elapsed}ms`);
     return { html, summary };
   };
 
@@ -868,11 +873,12 @@ ${JSON.stringify(searchResults?.collected_facts?.slice(i, i + 2) || [], null, 2)
     }
   }
 
-  console.info(`[PIPELINE] ✅ Stage B-1/2 완료: 도입부 ${introHtml.length}자, 소제목 ${sectionHtmls.length}/${outline.sections.length}개 전부 성공`);
+  timings.stageB_sections = Date.now() - stageBStart;
+  console.info(`[PIPELINE] ✅ Stage B sections: ${sectionHtmls.length}/${outline.sections.length} all OK ${timings.stageB_sections}ms`);
 
   // ── B-3: 마무리 생성 ──
+  const concStart = Date.now();
   safeProgress('✍️ [3/4] 마무리 작성 중...');
-  console.info('[PIPELINE] ▶ B-3: 마무리 생성 시작');
   const conclusionPrompt = getPipelineConclusionPrompt(
     outline.conclusion?.direction || '열린 결말',
     outline.conclusion?.targetChars || Math.round(promptTargetLength * 0.15),
@@ -904,9 +910,9 @@ ${sectionSummaries.join('\n')}`;
     throw new Error('마무리 생성에 실패했습니다. 다시 시도해주세요.');
   }
 
+  timings.conclusion = Date.now() - concStart;
   safeProgress('✅ 본문 생성 완료');
-  console.info(`[PIPELINE] ✅ Stage B-3 마무리 완료: ${conclusionHtml.length}자`);
-  console.info('[PIPELINE] ▶ Stage C: 통합 검증 시작');
+  console.info(`[PIPELINE] ✅ conclusion ${conclusionHtml.length}자 ${timings.conclusion}ms`);
 
   // ── Stage C: 통합 + 검증 (FLASH) ──
   safeProgress('🔍 [4/4] 전체 통합 및 검증 중...');
@@ -1016,7 +1022,8 @@ ${sectionSummaries.join('\n')}`;
     }
   }
 
-  console.info(`[PIPELINE] ✅ generateBlogWithPipeline 완료 — title: "${request.topic}", content: ${finalContent.length}자, conclusionHtml: ${conclusionHtml.length}자, imagePrompts: ${imagePrompts.length}개`);
+  timings.total = Date.now() - pipelineStart;
+  console.info(`[PIPELINE] ✅ DONE total=${timings.total}ms | A=${timings.stageA}ms B=${timings.stageB_sections}ms conc=${timings.conclusion}ms | ${finalContent.replace(/<[^>]+>/g, '').trim().length}자 imgPrompts=${imagePrompts.length}`);
   return {
     title: request.topic,
     content: finalContent,
@@ -3110,12 +3117,13 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
   }
 
   if (maxImages > 0 && textData.imagePrompts.length > 0) {
-    // 병렬 생성 (동시성 제한 MAX_CONCURRENT_IMAGES로 API 과부하 방지)
     const MAX_CONCURRENT_IMAGES = 2;
-    safeProgress(`🎨 이미지 ${maxImages}장 병렬 생성 중...`);
+    const imgStart = Date.now();
+    safeProgress(`🎨 이미지 ${maxImages}장 병렬 생성 중 (동시 ${MAX_CONCURRENT_IMAGES}장)...`);
 
     const generateOneImage = async (i: number): Promise<{ index: number; data: string; prompt: string } | null> => {
       const p = textData.imagePrompts[i];
+      const t0 = Date.now();
       try {
         let img: string;
         if (request.postType === 'card_news') {
@@ -3123,14 +3131,20 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
         } else {
           img = await generateBlogImage(p, request.imageStyle, imgRatio, request.customImagePrompt);
         }
+        const isFallback = img.includes('image/svg+xml');
+        if (isFallback) {
+          console.warn(`[IMG] image ${i + 1} returned fallback placeholder ${Date.now() - t0}ms`);
+          imageFailCount++;
+        } else {
+          console.info(`[IMG] image ${i + 1} OK ${Date.now() - t0}ms`);
+        }
         return { index: i + 1, data: img, prompt: p };
       } catch (imgErr: any) {
-        console.warn(`⚠️ 이미지 ${i + 1} 생성 실패 (${imgErr.status || imgErr.message})`);
+        console.warn(`[IMG] image ${i + 1} exception ${Date.now() - t0}ms: ${imgErr?.message?.substring(0, 60)}`);
         return null;
       }
     };
 
-    // 동시성 제한 병렬 실행
     const imageIndices = Array.from({ length: maxImages }, (_, i) => i);
     const pending = new Set<Promise<void>>();
     const results: ({ index: number; data: string; prompt: string } | null)[] = new Array(maxImages).fill(null);
@@ -3138,7 +3152,7 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
     for (const i of imageIndices) {
       const task = generateOneImage(i).then(result => {
         results[i] = result;
-        if (result) {
+        if (result && !result.data.includes('image/svg+xml')) {
           safeProgress(`✅ 이미지 ${result.index}/${maxImages}장 완료`);
         }
       });
@@ -3160,6 +3174,8 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
     }
     images.sort((a, b) => a.index - b.index);
 
+    const imgElapsed = Date.now() - imgStart;
+    console.info(`[IMG] total: ${images.length}/${maxImages} images, ${imageFailCount} failed, ${imgElapsed}ms`);
     if (imageFailCount > 0) {
       safeProgress(`⚠️ 이미지 ${imageFailCount}장 생성 실패 — 텍스트만 반환합니다`);
     }

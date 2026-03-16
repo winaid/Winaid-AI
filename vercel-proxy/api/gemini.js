@@ -64,62 +64,92 @@ function getKeys() {
 
 let keyIndex = 0;
 
-async function fetchGeminiWithRotation(keys, model, apiBody, timeout) {
+async function fetchGeminiWithRotation(keys, model, apiBody, timeout, isRaw = false) {
   const maxAttempts = Math.min(keys.length, 3);
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeout);
+  // raw/이미지 요청: 시도당 80초, 텍스트 요청: 전체 timeout 사용
+  const perAttemptTimeout = isRaw
+    ? Math.min(timeout, 80000)
+    : Math.min(timeout, 150000);
   let lastError = "";
+  let lastStatus = 502;
 
-  try {
-    for (let attempt = 0; attempt < maxAttempts; attempt++) {
-      const currentKey = keys[(keyIndex + attempt) % keys.length];
-      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${currentKey}`;
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    // 각 시도마다 독립된 AbortController 생성
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), perAttemptTimeout);
+    const currentKey = keys[(keyIndex + attempt) % keys.length];
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${currentKey}`;
+    const attemptStart = Date.now();
 
-      try {
-        const response = await fetch(apiUrl, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(apiBody),
-          signal: controller.signal,
-        });
+    try {
+      const response = await fetch(apiUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(apiBody),
+        signal: controller.signal,
+      });
 
-        if (response.ok) {
-          keyIndex = (keyIndex + attempt + 1) % keys.length;
-          clearTimeout(timeoutId);
-          return { ok: true, data: await response.json() };
-        }
+      clearTimeout(timeoutId);
+      const elapsed = Date.now() - attemptStart;
 
-        // 429 → 다음 키로 재시도
-        if (response.status === 429 && attempt < maxAttempts - 1) {
-          lastError = await response.text();
+      if (response.ok) {
+        keyIndex = (keyIndex + attempt + 1) % keys.length;
+        console.log(`[gemini-proxy] ✅ key#${attempt} ${model} ${elapsed}ms`);
+        return { ok: true, data: await response.json() };
+      }
+
+      const errorText = await response.text();
+
+      // 429/503 → 다음 키로 재시도
+      if ((response.status === 429 || response.status === 503) && attempt < maxAttempts - 1) {
+        lastError = errorText;
+        lastStatus = response.status;
+        console.warn(`[gemini-proxy] ⚠️ key#${attempt} ${response.status} ${elapsed}ms → next key`);
+        // 재시도 전 짧은 대기 (429: 1.5초, 503: 0.5초)
+        const retryDelay = response.status === 429 ? 1500 : 500;
+        await new Promise((r) => setTimeout(r, retryDelay));
+        continue;
+      }
+
+      // 기타 에러 → 투명 전달
+      return {
+        ok: false,
+        status: response.status,
+        error: `Gemini API error (${response.status})`,
+        details: errorText,
+      };
+    } catch (fetchErr) {
+      clearTimeout(timeoutId);
+      const elapsed = Date.now() - attemptStart;
+
+      if (fetchErr.name === "AbortError") {
+        lastError = `timeout after ${elapsed}ms (limit: ${perAttemptTimeout}ms)`;
+        lastStatus = 504;
+        console.warn(`[gemini-proxy] ⏱️ key#${attempt} timeout ${elapsed}ms`);
+        // timeout된 키 다음으로 넘어감 (남은 시도가 있으면)
+        if (attempt < maxAttempts - 1) {
+          await new Promise((r) => setTimeout(r, 500));
           continue;
         }
-
-        // 기타 에러 → 투명 전달
-        clearTimeout(timeoutId);
-        const errorText = await response.text();
         return {
           ok: false,
-          status: response.status,
-          error: `Gemini API error (${response.status})`,
-          details: errorText,
+          status: 504,
+          error: "Gemini API timeout",
+          details: lastError,
         };
-      } catch (fetchErr) {
-        if (fetchErr.name === "AbortError") {
-          clearTimeout(timeoutId);
-          return { ok: false, status: 504, error: "Gemini API timeout" };
-        }
-        lastError = fetchErr.message || String(fetchErr);
-        if (attempt >= maxAttempts - 1) break;
+      }
+
+      lastError = fetchErr.message || String(fetchErr);
+      lastStatus = 502;
+      console.warn(`[gemini-proxy] ❌ key#${attempt} error ${elapsed}ms: ${lastError.substring(0, 80)}`);
+      if (attempt < maxAttempts - 1) {
+        await new Promise((r) => setTimeout(r, 500));
+        continue;
       }
     }
-
-    clearTimeout(timeoutId);
-    return { ok: false, status: 502, error: "All API keys failed", details: lastError };
-  } catch (e) {
-    clearTimeout(timeoutId);
-    return { ok: false, status: 500, error: e.message || "Internal error" };
   }
+
+  return { ok: false, status: lastStatus, error: "All API keys failed", details: lastError };
 }
 
 // ── Vercel 핸들러 ──
@@ -174,7 +204,7 @@ export default async function handler(req, res) {
       }
 
       const timeout = Math.min(body.timeout || 180000, 300000);
-      const result = await fetchGeminiWithRotation(keys, body.model, body.apiBody, timeout);
+      const result = await fetchGeminiWithRotation(keys, body.model, body.apiBody, timeout, true);
 
       if (!result.ok) {
         return res.status(result.status || 500).json({
@@ -237,7 +267,7 @@ export default async function handler(req, res) {
     }
 
     const timeout = Math.min(body.timeout || 120000, 180000);
-    const result = await fetchGeminiWithRotation(keys, model, apiBody, timeout);
+    const result = await fetchGeminiWithRotation(keys, model, apiBody, timeout, false);
 
     if (!result.ok) {
       return res.status(result.status || 500).json({

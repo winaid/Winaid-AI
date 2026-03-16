@@ -439,87 +439,82 @@ export const cleanImagePromptText = (prompt: string): string => {
   return cleaned;
 };
 
+// 블로그 이미지용 슬림 스타일 키워드 (DESIGNER_PERSONA 대신 경량화)
+const BLOG_IMAGE_STYLE_COMPACT: Record<string, string> = {
+  illustration: '3D rendered illustration, Blender style, soft studio lighting, pastel colors, rounded shapes, clean gradient background, friendly, Korean medical clinic',
+  medical: 'medical 3D illustration, anatomical render, clinical lighting, semi-transparent organs, blue-white palette, educational, professional',
+  photo: 'photorealistic, DSLR, 35mm lens, natural lighting, shallow depth of field, bokeh, professional hospital environment, Korean',
+};
+
+// 블로그 이미지 플레이스홀더 SVG (재사용)
+const BLOG_IMAGE_PLACEHOLDER_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720">
+  <rect fill="#F1F5F9" width="1280" height="720" rx="16"/>
+  <rect fill="#fff" x="40" y="40" width="1200" height="640" rx="12"/>
+  <text x="640" y="340" text-anchor="middle" font-family="Arial,sans-serif" font-size="24" fill="#64748b">이미지 생성에 실패했습니다</text>
+  <text x="640" y="380" text-anchor="middle" font-family="Arial,sans-serif" font-size="16" fill="#94a3b8">이미지를 클릭하여 재생성해주세요</text>
+</svg>`;
+
+export interface BlogImageResult {
+  imageData: string;
+  status: 'success' | 'fallback';
+  errorCode?: string;
+}
+
 // 🖼️ 블로그용 일반 이미지 생성 함수 (텍스트 없는 순수 이미지)
+// 단계별 프롬프트 단순화: 1차 full → 2차 shorter → 3차 minimal
 export const generateBlogImage = async (
   promptText: string,
   style: ImageStyle,
   aspectRatio: string = "16:9",
   customStylePrompt?: string
 ): Promise<string> => {
-  // 스타일 블록만 사용 (카드뉴스 프레임 없음!)
-  const styleBlock = buildStyleBlock(style, customStylePrompt);
+  const styleCompact = customStylePrompt || BLOG_IMAGE_STYLE_COMPACT[style] || BLOG_IMAGE_STYLE_COMPACT.illustration;
 
-  // 블로그용 프롬프트: 텍스트 없는 순수 이미지! (한국어로 생성)
-  const now = new Date();
-  const dateInfo = `${now.getFullYear()}년 ${now.getMonth() + 1}월 ${now.getDate()}일`;
+  // 단계별 프롬프트: 재시도할수록 짧아짐
+  const prompts = [
+    // 1차: 스타일 블록 포함 슬림 프롬프트
+    `Generate a ${aspectRatio} landscape blog image for a Korean medical clinic.
 
-  const finalPrompt = `
-${DESIGNER_PERSONA}
+[Subject] ${promptText}
 
-[현재 날짜: ${dateInfo}]
-블로그 포스트용 전문적인 의료/건강 이미지를 생성해주세요.
+[Style] ${styleCompact}
 
-${styleBlock}
+[Rules]
+- No text, no title, no caption, no watermark, no logo
+- Clean, professional medical/health image
+- High quality, suitable for hospital blog post
+- 16:9 landscape format`.trim(),
 
-[이미지 내용]
-${promptText}
+    // 2차: 더 짧은 프롬프트
+    `${aspectRatio} medical blog image. ${promptText}. Style: ${styleCompact}. No text, no watermark, no logo. Professional, clean.`.trim(),
 
-[디자인 사양]
-- 비율: ${aspectRatio} (가로형/랜드스케이프 블로그 형식)
-- 스타일: 전문적인 의료/건강 이미지
-- 분위기: 신뢰감 있고, 깔끔하며, 현대적인 병원 환경
-- 텍스트 없음, 제목 없음, 캡션 없음, 워터마크 없음, 로고 없음
-- 순수한 시각적 콘텐츠만 - 블로그 게시물 이미지로 사용됩니다
-
-[필수 요구사항]
-✅ 텍스트 오버레이 없는 깔끔한 이미지 생성
-✅ 병원 블로그에 적합한 전문적인 의료/건강 이미지
-✅ 스타일에 따라 고품질, 상세한 일러스트 또는 사진
-✅ 블로그 게시물에 최적화된 가로형 16:9 형식
-
-[의료광고법 준수 - 이미지에 텍스트가 포함될 경우]
-🚨 절대 금지: "완치", "상담하세요", "방문하세요", "조기 발견", "전문의", 구체적 수치/시간
-✅ 허용: 증상명, 질환명, 정보성 키워드, 질문형 표현
-
-⛔ 금지사항 (Negative Prompt):
-- 한국어 텍스트, 영어 텍스트, any text overlay
-- 제목, 캡션, 워터마크, 로고
-- 브라우저 창 프레임, 카드뉴스 레이아웃
-- 텍스트가 포함된 인포그래픽 요소
-- Low quality, blurry, pixelated, distorted
-- Cartoon, anime, drawing, sketch (photo style일 경우)
-- 3D render, CGI (photo style일 경우)
-- Out of focus, bad lighting, overexposed
-- Watermark, signature, text, logo, caption
-
-[출력]
-의료 블로그 게시물에 적합한 텍스트 없는 깔끔한 단일 이미지.
-`.trim();
-
-  console.log('📷 generateBlogImage - 블로그용 이미지 생성 (텍스트 없음, 16:9)');
+    // 3차: 최소 프롬프트
+    `Professional medical health image: ${promptText.substring(0, 100)}. ${style === 'photo' ? 'Photorealistic DSLR' : style === 'medical' ? 'Medical 3D illustration' : '3D illustration, pastel colors'}. No text. 16:9.`.trim(),
+  ];
 
   const MAX_RETRIES = 3;
   let lastError: any = null;
 
-  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-    try {
-      console.log(`🎨 블로그 이미지 생성 시도 ${attempt}/${MAX_RETRIES}...`);
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    const currentPrompt = prompts[Math.min(attempt, prompts.length - 1)];
+    const attemptStart = Date.now();
 
+    try {
       const result = await callGeminiRaw(GEMINI_MODEL.IMAGE_PRO, {
-        contents: [{ role: "user", parts: [{ text: finalPrompt }] }],
+        contents: [{ role: "user", parts: [{ text: currentPrompt }] }],
         generationConfig: {
           responseModalities: ["IMAGE", "TEXT"],
           temperature: 0.6,
         },
       }, TIMEOUTS.IMAGE_GENERATION);
 
-      // 안전 필터 차단 확인
+      const elapsed = Date.now() - attemptStart;
       const finishReason = result?.candidates?.[0]?.finishReason;
       if (finishReason === 'SAFETY' || finishReason === 'RECITATION') {
-        console.warn(`⚠️ 블로그 이미지 안전 정책 차단 (${finishReason}), 프롬프트 간소화 후 재시도`);
-        lastError = new Error(`이미지 안전 정책 차단 (${finishReason})`);
-        if (attempt < MAX_RETRIES) {
-          await new Promise(resolve => setTimeout(resolve, 1500 * attempt));
+        lastError = new Error(`안전 정책 차단 (${finishReason})`);
+        console.warn(`[IMG] ⚠️ attempt ${attempt + 1} SAFETY ${elapsed}ms → simpler prompt`);
+        if (attempt < MAX_RETRIES - 1) {
+          await new Promise(resolve => setTimeout(resolve, 1500));
         }
         continue;
       }
@@ -528,44 +523,34 @@ ${promptText}
       const imagePart = parts.find((p: any) => p.inlineData?.data);
 
       if (imagePart?.inlineData) {
-        const mimeType = imagePart.inlineData.mimeType || 'image/png';
-        const data = imagePart.inlineData.data;
-        console.log(`✅ 블로그 이미지 생성 성공 (시도 ${attempt})`);
-        return `data:${mimeType};base64,${data}`;
+        console.info(`[IMG] ✅ blog image OK attempt=${attempt + 1} ${elapsed}ms prompt=${currentPrompt.length}ch`);
+        return `data:${imagePart.inlineData.mimeType || 'image/png'};base64,${imagePart.inlineData.data}`;
       }
 
-      lastError = new Error('이미지 데이터를 받지 못했습니다.');
-      if (attempt < MAX_RETRIES) {
-        await new Promise(resolve => setTimeout(resolve, 1500 * attempt));
+      lastError = new Error('이미지 데이터 없음');
+      console.warn(`[IMG] ⚠️ attempt ${attempt + 1} no image data ${elapsed}ms`);
+      if (attempt < MAX_RETRIES - 1) {
+        await new Promise(resolve => setTimeout(resolve, 1500));
       }
-
     } catch (error: any) {
       lastError = error;
+      const elapsed = Date.now() - attemptStart;
       const status = error?.status;
       const msg = error?.message || '';
-      console.error(`❌ 블로그 이미지 생성 에러 (시도 ${attempt}/${MAX_RETRIES}):`, msg);
+      const isRateLimit = status === 429 || msg.includes('429') || msg.includes('quota');
+      const isTimeout = status === 504 || msg.includes('timeout');
 
-      if (attempt < MAX_RETRIES) {
-        // 429(rate limit)는 더 오래 대기, 그 외는 지수 백오프
-        const isRateLimit = status === 429 || msg.includes('429') || msg.includes('quota') || msg.includes('RESOURCE_EXHAUSTED');
-        const waitMs = isRateLimit
-          ? 5000 * attempt
-          : 2000 * Math.pow(2, attempt - 1);
-        console.log(`⏳ ${waitMs / 1000}초 후 재시도... (${isRateLimit ? 'rate limit' : 'backoff'})`);
+      console.warn(`[IMG] ❌ attempt ${attempt + 1} ${isTimeout ? 'TIMEOUT' : isRateLimit ? '429' : status || 'ERR'} ${elapsed}ms`);
+
+      if (attempt < MAX_RETRIES - 1) {
+        const waitMs = isRateLimit ? 5000 : isTimeout ? 2000 : 2000 * Math.pow(2, attempt);
         await new Promise(resolve => setTimeout(resolve, waitMs));
       }
     }
   }
 
-  // 최종 실패 시 플레이스홀더 SVG 반환 (throw 대신)
-  console.error('❌ 블로그 이미지 생성 최종 실패:', lastError?.message || lastError);
-  const placeholderSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720">
-    <rect fill="#F1F5F9" width="1280" height="720" rx="16"/>
-    <rect fill="#fff" x="40" y="40" width="1200" height="640" rx="12"/>
-    <text x="640" y="340" text-anchor="middle" font-family="Arial,sans-serif" font-size="24" fill="#64748b">이미지 생성에 실패했습니다</text>
-    <text x="640" y="380" text-anchor="middle" font-family="Arial,sans-serif" font-size="16" fill="#94a3b8">이미지를 클릭하여 재생성해주세요</text>
-  </svg>`;
-  const base64Placeholder = btoa(unescape(encodeURIComponent(placeholderSvg)));
+  console.error(`[IMG] ❌ blog image FAILED after ${MAX_RETRIES} attempts: ${lastError?.message}`);
+  const base64Placeholder = btoa(unescape(encodeURIComponent(BLOG_IMAGE_PLACEHOLDER_SVG)));
   return `data:image/svg+xml;base64,${base64Placeholder}`;
 };
 
@@ -730,17 +715,7 @@ ${cleanPromptText}
 ⛔ No hashtags (#), watermarks, logos - NEVER render # symbol in the image!
 `.trim();
 
-  // • 디버그 - 프롬프트 전체 내용 확인!
-  console.log('🧩 generateSingleImage 입력 promptText:', promptText.substring(0, 300));
-  console.log('🧩 generateSingleImage cleanPromptText:', cleanPromptText.substring(0, 300));
-  console.log('🧩 generateSingleImage prompt blocks:', {
-    style,
-    hasCustomStyle: !!(customStylePrompt && customStylePrompt.trim()),
-    hasReferenceImage: !!referenceImage,
-    usingDefaultFrame: !referenceImage && !!effectiveReferenceImage,
-    copyMode: !!copyMode,
-    finalPromptHead: finalPrompt.slice(0, 500),
-  });
+  console.info(`[IMG] generateSingleImage style=${style} ref=${!!referenceImage} prompt=${finalPrompt.length}ch`);
 
   const MAX_RETRIES = 3;
   let lastError: any = null;
