@@ -1223,7 +1223,7 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
         // 📝 블로그: generateBlogImage 사용 (텍스트 없는 순수 이미지, 16:9)
         // 수동 재생성 → mode='manual' (더 긴 timeout 허용)
         console.log('🔄 블로그 이미지 재생성 (manual):', { style, customStylePrompt: customStylePrompt?.substring(0, 50) });
-        newImageData = await generateBlogImage(regenPrompt.trim(), style, imgRatio, customStylePrompt, 'manual');
+        newImageData = await generateBlogImage(regenPrompt.trim(), style, imgRatio, customStylePrompt, 'manual', 'hero');
       }
       
       if (newImageData) {
@@ -1300,7 +1300,7 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
                   if (isCardNews) {
                     newImageMap[targetIdx] = await generateSingleImage(prompt, style, '1:1', customStylePrompt);
                   } else {
-                    newImageMap[targetIdx] = await generateBlogImage(prompt, style, '16:9', customStylePrompt, 'manual');
+                    newImageMap[targetIdx] = await generateBlogImage(prompt, style, '16:9', customStylePrompt, 'manual', 'hero');
                   }
                 })
               );

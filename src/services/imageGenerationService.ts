@@ -461,44 +461,59 @@ export interface BlogImageResult {
 }
 
 export type ImageGenMode = 'auto' | 'manual';
+export type ImageRole = 'hero' | 'sub';
 
-const IMAGE_TIMEOUT = {
-  auto:   18000,  // 자동 생성: 18초 — 빠르게 실패, 빠르게 fallback
-  manual: 40000,  // 수동 재생성: 40초 — 사용자가 대기 의사 있음
-} as const;
+// hero: 대표 이미지 (더 구체적인 프롬프트, 약간 더 긴 timeout)
+// sub: 서브 이미지 (최소 프롬프트로 빠른 응답 유도)
+const IMAGE_TIMEOUT: Record<ImageGenMode, Record<ImageRole, number>> = {
+  auto:   { hero: 35000, sub: 28000 },
+  manual: { hero: 45000, sub: 40000 },
+};
 
-const IMAGE_MAX_RETRIES = {
-  auto:   1,      // 자동: 1회 재시도 (총 2번) → 최악 ~40초
-  manual: 2,      // 수동: 2회 재시도 (총 3번) → 최악 ~130초
-} as const;
+// 스타일 키워드 — 최소한으로 줄여서 모델 부담 감소
+const STYLE_KEYWORD_SHORT: Record<string, string> = {
+  illustration: '3D illustration, pastel, Blender style, soft lighting',
+  medical: 'medical 3D, anatomical, clinical, blue-white',
+  photo: 'photorealistic, DSLR, natural lighting, bokeh',
+};
 
-// 🖼️ 블로그용 일반 이미지 생성 함수 (텍스트 없는 순수 이미지)
-// mode='auto': 블로그 생성 중 자동 호출 — 짧은 timeout, 1회 재시도, 빠른 fallback
-// mode='manual': 사용자가 "이미지 다시 생성" 클릭 — 긴 timeout, 2회 재시도
+// 🖼️ 블로그용 이미지 생성 (텍스트 없는 순수 이미지)
+// role='hero': 대표 이미지 → 구체적 프롬프트 + 넉넉한 timeout
+// role='sub': 서브 이미지 → 최소 프롬프트 + 짧은 timeout → 빠른 응답
 export const generateBlogImage = async (
   promptText: string,
   style: ImageStyle,
   aspectRatio: string = "16:9",
   customStylePrompt?: string,
-  mode: ImageGenMode = 'auto'
+  mode: ImageGenMode = 'auto',
+  role: ImageRole = 'sub'
 ): Promise<string> => {
-  const styleCompact = customStylePrompt || BLOG_IMAGE_STYLE_COMPACT[style] || BLOG_IMAGE_STYLE_COMPACT.illustration;
-  const timeout = IMAGE_TIMEOUT[mode];
-  const maxRetries = IMAGE_MAX_RETRIES[mode];
+  const timeout = IMAGE_TIMEOUT[mode][role];
+  const styleKw = customStylePrompt || STYLE_KEYWORD_SHORT[style] || STYLE_KEYWORD_SHORT.illustration;
 
-  const fullPrompt = `Generate a ${aspectRatio} landscape blog image for a Korean medical clinic.
+  // hero: 구체적인 프롬프트 (1차) → 단순화 프롬프트 (재시도)
+  // sub: 최소 프롬프트만 사용 (1차/재시도 동일 수준)
+  const heroPrompt = `Generate a 16:9 landscape blog image for a Korean medical clinic.
 [Subject] ${promptText}
-[Style] ${styleCompact}
-[Rules] No text, no watermark, no logo. Clean, professional. 16:9 landscape.`.trim();
+[Style] ${customStylePrompt || BLOG_IMAGE_STYLE_COMPACT[style] || BLOG_IMAGE_STYLE_COMPACT.illustration}
+[Rules] No text, no watermark, no logo. Clean, professional.`.trim();
 
-  const minimalPrompt = `Medical blog image: ${promptText.substring(0, 80)}. ${
-    style === 'photo' ? 'Photorealistic' : style === 'medical' ? 'Medical 3D' : '3D illustration, pastel'
-  }. No text. 16:9.`.trim();
+  const subPrompt = `Medical blog image: ${promptText.substring(0, 100)}. ${styleKw}. No text, no logo. 16:9.`.trim();
+
+  const ultraMinimal = `${promptText.substring(0, 60)}. ${styleKw}. No text. 16:9.`.trim();
+
+  // 시도별 프롬프트 전략
+  const promptsByRole: Record<ImageRole, string[]> = {
+    hero: [heroPrompt, subPrompt],
+    sub:  [subPrompt, ultraMinimal],
+  };
+  const prompts = promptsByRole[role];
 
   let lastError: any = null;
+  const maxAttempts = mode === 'manual' ? 3 : 2; // auto: 2번(0,1), manual: 3번(0,1,2)
 
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    const currentPrompt = attempt === 0 ? fullPrompt : minimalPrompt;
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const currentPrompt = prompts[Math.min(attempt, prompts.length - 1)];
     const t0 = Date.now();
 
     try {
@@ -515,37 +530,35 @@ export const generateBlogImage = async (
 
       if (finishReason === 'SAFETY' || finishReason === 'RECITATION') {
         lastError = new Error(`SAFETY:${finishReason}`);
-        console.warn(`[IMG] ${mode} attempt=${attempt + 1} SAFETY ${ms}ms`);
-        if (attempt < maxRetries) await new Promise(r => setTimeout(r, 800));
+        console.warn(`[IMG] ${role} ${mode} #${attempt + 1} SAFETY ${ms}ms`);
+        if (attempt < maxAttempts - 1) await new Promise(r => setTimeout(r, 600));
         continue;
       }
 
       const imagePart = (result?.candidates?.[0]?.content?.parts || []).find((p: any) => p.inlineData?.data);
       if (imagePart?.inlineData) {
-        console.info(`[IMG] ✅ ${mode} attempt=${attempt + 1} ${ms}ms timeout=${timeout} prompt=${currentPrompt.length}ch`);
+        console.info(`[IMG] ✅ ${role} ${mode} #${attempt + 1} ${ms}ms t/o=${timeout} p=${currentPrompt.length}ch`);
         return `data:${imagePart.inlineData.mimeType || 'image/png'};base64,${imagePart.inlineData.data}`;
       }
 
       lastError = new Error('no image data');
-      console.warn(`[IMG] ${mode} attempt=${attempt + 1} no-data ${ms}ms`);
-      if (attempt < maxRetries) await new Promise(r => setTimeout(r, 800));
+      console.warn(`[IMG] ${role} ${mode} #${attempt + 1} no-data ${ms}ms`);
+      if (attempt < maxAttempts - 1) await new Promise(r => setTimeout(r, 600));
 
     } catch (error: any) {
       lastError = error;
       const ms = Date.now() - t0;
       const st = error?.status;
-      const is503 = st === 503 || (error?.message || '').includes('503');
-      const is504 = st === 504 || (error?.message || '').includes('timeout');
+      const tag = st === 503 ? '503' : st === 504 || (error?.message || '').includes('timeout') ? 'timeout' : String(st || 'ERR');
+      console.warn(`[IMG] ❌ ${role} ${mode} #${attempt + 1} ${tag} ${ms}ms t/o=${timeout}`);
 
-      console.warn(`[IMG] ❌ ${mode} attempt=${attempt + 1} ${is503 ? '503' : is504 ? 'timeout' : st || 'ERR'} ${ms}ms timeout=${timeout}`);
-
-      if (attempt < maxRetries) {
-        await new Promise(r => setTimeout(r, is503 ? 800 : 1000));
+      if (attempt < maxAttempts - 1) {
+        await new Promise(r => setTimeout(r, st === 503 ? 600 : 800));
       }
     }
   }
 
-  console.error(`[IMG] ❌ ${mode} FAILED ${maxRetries + 1}x: ${lastError?.status || ''} ${lastError?.message?.substring(0, 60)}`);
+  console.error(`[IMG] ❌ ${role} ${mode} FAILED ${maxAttempts}x: ${lastError?.status || ''} ${lastError?.message?.substring(0, 60)}`);
   const base64Placeholder = btoa(unescape(encodeURIComponent(BLOG_IMAGE_PLACEHOLDER_SVG)));
   return `data:image/svg+xml;base64,${base64Placeholder}`;
 };

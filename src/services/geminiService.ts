@@ -988,37 +988,27 @@ ${sectionSummaries.join('\n')}`;
   safeProgress('✅ [4/4] 통합 검증 완료');
   console.info(`[PIPELINE] ✅ Stage C 완료: finalContent ${finalContent.length}자 (텍스트 ${finalContent.replace(/<[^>]+>/g, '').trim().length}자)`);
 
-  // 이미지 프롬프트 생성 (섹션 역할별 차별화)
+  // 이미지 프롬프트 생성 — hero(대표) vs sub(서브) 차별화
+  // hero: 구체적이고 안정적인 프롬프트 (index 0)
+  // sub: 짧고 빠른 프롬프트 (index 1+) → 모델 응답 시간 단축
   const imageCount = request.imageCount ?? 1;
   const imagePrompts: string[] = [];
   if (imageCount > 0) {
-    const styleBase = request.imageStyle === 'illustration'
-      ? '3D 일러스트, 파스텔톤, 밝은 배경'
-      : request.imageStyle === 'medical_3d'
-        ? '의학 3D 일러스트, 해부학적 정확성'
-        : '실사 사진, DSLR, 따뜻한 조명';
-
-    const sectionRoles: Record<number, string> = {
-      0: '관심을 끌 수 있는 대표 이미지. 따뜻하고 신뢰감 있는 톤',
-      // 나머지는 섹션 역할 기반
-    };
-
     for (let i = 0; i < Math.min(imageCount, outline.sections.length + 1); i++) {
       const section = outline.sections[Math.min(i, outline.sections.length - 1)];
-      const role = section?.role || '';
-      let roleGuidance = sectionRoles[i] || '';
+      const sectionTitle = section?.title || '건강 정보';
 
-      if (!roleGuidance) {
-        if (/정의|개념|이란/.test(role)) roleGuidance = '이해하기 쉬운 설명형 이미지';
-        else if (/원인/.test(role)) roleGuidance = '원인 메커니즘을 보여주는 이미지';
-        else if (/증상/.test(role)) roleGuidance = '증상을 시각적으로 표현. 과장 없이';
-        else if (/치료|관리|예방/.test(role)) roleGuidance = '긍정적이고 희망적인 톤';
-        else roleGuidance = '해당 주제를 직관적으로 전달하는 이미지';
+      if (i === 0) {
+        // hero: 대표 이미지 — 구체적 묘사로 안정적 결과
+        imagePrompts.push(
+          `${request.topic} 관련 대표 이미지. 따뜻하고 신뢰감 있는 한국 병원 환경. 의사 또는 건강한 생활을 연상시키는 장면. 밝고 깨끗한 분위기`
+        );
+      } else {
+        // sub: 서브 이미지 — 최소 프롬프트로 빠른 응답 유도
+        imagePrompts.push(
+          `${request.topic} - ${sectionTitle}`
+        );
       }
-
-      imagePrompts.push(
-        `${request.topic} - ${section?.title || '건강 정보'}. ${roleGuidance}. 스타일: ${styleBase}. 금지: 공포/과장/의료기구 강조`
-      );
     }
   }
 
@@ -3123,24 +3113,25 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
 
     const generateOneImage = async (i: number): Promise<{ index: number; data: string; prompt: string } | null> => {
       const p = textData.imagePrompts[i];
+      const imgRole = i === 0 ? 'hero' as const : 'sub' as const;
       const t0 = Date.now();
       try {
         let img: string;
         if (request.postType === 'card_news') {
           img = await generateSingleImage(p, request.imageStyle, imgRatio, request.customImagePrompt, fallbackReferenceImage, fallbackCopyMode);
         } else {
-          img = await generateBlogImage(p, request.imageStyle, imgRatio, request.customImagePrompt);
+          img = await generateBlogImage(p, request.imageStyle, imgRatio, request.customImagePrompt, 'auto', imgRole);
         }
         const isFallback = img.includes('image/svg+xml');
         if (isFallback) {
-          console.warn(`[IMG] image ${i + 1} returned fallback placeholder ${Date.now() - t0}ms`);
+          console.warn(`[IMG] ${imgRole} #${i + 1} fallback ${Date.now() - t0}ms`);
           imageFailCount++;
         } else {
-          console.info(`[IMG] image ${i + 1} OK ${Date.now() - t0}ms`);
+          console.info(`[IMG] ${imgRole} #${i + 1} OK ${Date.now() - t0}ms`);
         }
         return { index: i + 1, data: img, prompt: p };
       } catch (imgErr: any) {
-        console.warn(`[IMG] image ${i + 1} exception ${Date.now() - t0}ms: ${imgErr?.message?.substring(0, 60)}`);
+        console.warn(`[IMG] ${imgRole} #${i + 1} exception ${Date.now() - t0}ms: ${imgErr?.message?.substring(0, 60)}`);
         return null;
       }
     };
