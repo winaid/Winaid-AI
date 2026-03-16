@@ -215,6 +215,25 @@ export const getAiProviderSettings = (): { textGeneration: 'gemini', imageGenera
 };
 
 /**
+ * CORS/프록시 설정 에러인지 판별
+ * 이 에러는 재시도해도 해결되지 않으므로 즉시 사용자에게 알려야 함
+ */
+function isCorsOrProxyError(error: any): boolean {
+  const msg = error?.message || '';
+  return (
+    msg.includes('Failed to fetch') ||
+    msg.includes('NetworkError') ||
+    msg.includes('ERR_NETWORK') ||
+    msg.includes('CORS') ||
+    msg.includes('cors') ||
+    msg.includes('Access-Control') ||
+    msg.includes('blocked by CORS') ||
+    msg.includes('No \'Access-Control-Allow-Origin\'') ||
+    (error?.name === 'TypeError' && msg.includes('fetch'))
+  );
+}
+
+/**
  * 사용자 친화적 에러 메시지 변환
  */
 export function getKoreanErrorMessage(error: any): string {
@@ -224,8 +243,8 @@ export function getKoreanErrorMessage(error: any): string {
   if (status === 429 || msg.includes('quota') || msg.includes('RESOURCE_EXHAUSTED') || msg.includes('limit')) {
     return '⚠️ API 사용량 한도에 도달했습니다. 잠시 후 다시 시도해주세요.';
   }
-  if (msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('ERR_NETWORK')) {
-    return '📡 인터넷 연결이 불안정합니다. 네트워크 상태를 확인해주세요.';
+  if (isCorsOrProxyError(error)) {
+    return '🔧 AI 프록시 서버 연결에 실패했습니다. CORS 또는 프록시 설정을 확인해주세요. 관리자에게 문의하세요.';
   }
   if (msg.includes('timeout') || msg.includes('Timeout')) {
     return '⏱️ 응답 시간이 초과되었습니다. 다시 시도해주세요.';
@@ -247,8 +266,11 @@ export function getKoreanErrorMessage(error: any): string {
 
 /**
  * 재시도 가능한 에러인지 판별
+ * CORS/프록시 에러는 재시도해도 해결 불가 → false 반환
  */
 function isRetryableError(error: any): boolean {
+  if (isCorsOrProxyError(error)) return false;
+
   const msg = error?.message || '';
   const status = error?.status;
   return (
@@ -256,9 +278,7 @@ function isRetryableError(error: any): boolean {
     msg.includes('429') || msg.includes('500') || msg.includes('503') || msg.includes('504') ||
     msg.includes('UNAVAILABLE') || msg.includes('INTERNAL') ||
     msg.includes('overloaded') || msg.includes('RESOURCE_EXHAUSTED') ||
-    msg.includes('timeout') || msg.includes('Timeout') ||
-    msg.includes('Failed to fetch') || msg.includes('NetworkError') ||
-    msg.includes('ERR_NETWORK')
+    msg.includes('timeout') || msg.includes('Timeout')
   );
 }
 

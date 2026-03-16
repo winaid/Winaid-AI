@@ -32,23 +32,43 @@ const DEFAULT_ALLOWED_ORIGINS = [
   "http://localhost:3000",
 ];
 
-function getCorsOrigin(origin) {
+function isOriginAllowed(origin) {
+  if (!origin) return false;
+
+  // 1) 환경변수 or 기본 화이트리스트에 정확히 포함
   const allowed = process.env.ALLOWED_ORIGINS
     ? process.env.ALLOWED_ORIGINS.split(",").map((s) => s.trim())
     : DEFAULT_ALLOWED_ORIGINS;
+  if (allowed.includes(origin)) return true;
 
-  if (allowed.includes(origin) || (origin && origin.endsWith(".pages.dev"))) {
-    return origin;
-  }
-  return allowed[0];
+  // 2) *.pages.dev 와일드카드 (Cloudflare Pages 프리뷰 도메인)
+  if (origin.endsWith(".pages.dev") && origin.startsWith("https://")) return true;
+
+  // 3) localhost 개발 서버 (포트 무관)
+  try {
+    const url = new URL(origin);
+    if (url.hostname === "localhost" || url.hostname === "127.0.0.1") return true;
+  } catch {}
+
+  // 4) *.sandbox.novita.ai (개발 샌드박스)
+  if (origin.endsWith(".sandbox.novita.ai")) return true;
+
+  return false;
 }
 
 function corsHeaders(origin) {
+  const allowed = isOriginAllowed(origin);
+  if (!allowed && origin) {
+    console.warn(`[CORS] ⛔ rejected origin: ${origin}`);
+  }
+  const effectiveOrigin = allowed ? origin : "https://story-darugi.com";
+
   return {
-    "Access-Control-Allow-Origin": getCorsOrigin(origin),
+    "Access-Control-Allow-Origin": effectiveOrigin,
     "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type",
-    "Content-Type": "application/json",
+    "Access-Control-Max-Age": "86400",
+    "Vary": "Origin",
   };
 }
 
@@ -158,13 +178,16 @@ export default async function handler(req, res) {
   const origin = req.headers.origin || "";
   const headers = corsHeaders(origin);
 
-  // CORS 헤더 설정
+  // CORS 헤더는 모든 응답에 항상 설정 (에러 응답 포함)
   Object.entries(headers).forEach(([k, v]) => res.setHeader(k, v));
 
-  // Preflight
+  // Preflight — CORS 헤더만 반환, Content-Type 불필요
   if (req.method === "OPTIONS") {
     return res.status(204).end();
   }
+
+  // JSON 응답에만 Content-Type 설정
+  res.setHeader("Content-Type", "application/json");
 
   // 헬스 체크 (GET)
   if (req.method === "GET") {
@@ -172,6 +195,7 @@ export default async function handler(req, res) {
       status: "ok",
       region: process.env.VERCEL_REGION || "iad1",
       keys: getKeys().length,
+      originAllowed: isOriginAllowed(origin),
       timestamp: new Date().toISOString(),
     });
   }
