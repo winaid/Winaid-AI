@@ -510,10 +510,12 @@ async function _callGeminiOnce(config: GeminiCallConfig): Promise<any> {
   };
 
   const endpoint = getGeminiEndpoint();
-  console.info(`[BLOG_FLOW] _callGeminiOnce(${model}) → ${endpoint.substring(0, 60)}...`);
+  const clientTimeout = timeout + 5000;
+  const upstreamTimeout = Math.floor(timeout * 0.85);
+  console.info(`[BLOG_FLOW] _callGeminiOnce(${model}) timeout: client=${clientTimeout}ms proxy=${timeout}ms upstream≈${upstreamTimeout}ms`);
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeout + 5000);
+  const timeoutId = setTimeout(() => controller.abort(), clientTimeout);
 
   try {
     const response = await fetch(endpoint, {
@@ -602,12 +604,15 @@ async function _callGeminiOnce(config: GeminiCallConfig): Promise<any> {
     clearTimeout(timeoutId);
 
     if (error.name === 'AbortError') {
+      const elapsed = Date.now() - (Date.now() - clientTimeout); // approximate
+      console.warn(`[TIMEOUT] ⏱️ client AbortController fired: model=${model} clientTimeout=${clientTimeout}ms proxyTimeout=${timeout}ms upstreamTimeout≈${upstreamTimeout}ms`);
       if (model === GEMINI_MODEL.PRO) {
         console.warn('⚠️ PRO 모델 타임아웃 → FLASH 폴백 시도...');
         return _callGeminiOnce({ ...config, model: GEMINI_MODEL.FLASH, timeout: 60000 });
       }
-      const timeoutError: any = new Error('Gemini API timeout');
+      const timeoutError: any = new Error(`Gemini API timeout (client=${clientTimeout}ms, proxy=${timeout}ms)`);
       timeoutError.status = 504;
+      timeoutError.errorType = 'timeout';
       throw timeoutError;
     }
 

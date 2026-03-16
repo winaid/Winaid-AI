@@ -134,8 +134,10 @@ function markKeySuccess(ki) {
 
 async function fetchGeminiWithRotation(keys, model, apiBody, timeout, isRaw = false) {
   const maxAttempts = Math.min(keys.length, 3);
-  const perAttemptTimeout = Math.min(timeout, isRaw ? 95000 : 150000);
+  // 업스트림 fetch timeout = 프록시 timeout의 85% (프록시가 응답 보낼 여유 확보)
+  const perAttemptTimeout = Math.min(Math.floor(timeout * 0.85), isRaw ? 95000 : 150000);
   const tag = isRaw ? "raw" : "text";
+  console.info(`[proxy] ${tag} model=${model} proxyTimeout=${timeout}ms upstreamTimeout=${perAttemptTimeout}ms keys=${keys.length}`);
   const t0 = Date.now();
   let lastError = "";
   let lastStatus = 502;
@@ -205,9 +207,9 @@ async function fetchGeminiWithRotation(keys, model, apiBody, timeout, isRaw = fa
       const ms = Date.now() - t0;
 
       if (fetchErr.name === "AbortError") {
-        lastError = `proxy timeout ${ms}ms (limit ${perAttemptTimeout}ms)`;
+        lastError = `upstream fetch timeout ${ms}ms (upstreamLimit=${perAttemptTimeout}ms, proxyLimit=${timeout}ms)`;
         lastStatus = 504;
-        console.warn(`[proxy] ⏱️ ${tag} key=${ki} model=${model} timeout ${ms}ms`);
+        console.warn(`[proxy] ⏱️ ${tag} key=${ki} model=${model} upstream-timeout ${ms}ms (upstreamLimit=${perAttemptTimeout}ms proxyLimit=${timeout}ms)`);
         if (attempt < maxAttempts - 1) {
           await new Promise((r) => setTimeout(r, 500));
           continue;
