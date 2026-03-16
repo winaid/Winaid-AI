@@ -105,7 +105,7 @@ let keyIndex = 0;
 
 async function fetchGeminiWithRotation(keys, model, apiBody, timeout, isRaw = false) {
   const maxAttempts = Math.min(keys.length, 3);
-  const perAttemptTimeout = Math.min(timeout, isRaw ? 45000 : 150000);
+  const perAttemptTimeout = Math.min(timeout, isRaw ? 95000 : 150000);
   const tag = isRaw ? "raw" : "text";
   let lastError = "";
   let lastStatus = 502;

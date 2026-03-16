@@ -463,11 +463,11 @@ export interface BlogImageResult {
 export type ImageGenMode = 'auto' | 'manual';
 export type ImageRole = 'hero' | 'sub';
 
-// hero: 대표 이미지 (더 구체적인 프롬프트, 약간 더 긴 timeout)
-// sub: 서브 이미지 (최소 프롬프트로 빠른 응답 유도)
+// 이미지 생성 모델(gemini-3-pro-image-preview)은 통상 20~60초 소요
+// timeout은 충분히 여유 있게 잡되, 실패 시 빠르게 재시도
 const IMAGE_TIMEOUT: Record<ImageGenMode, Record<ImageRole, number>> = {
-  auto:   { hero: 35000, sub: 28000 },
-  manual: { hero: 45000, sub: 40000 },
+  auto:   { hero: 60000, sub: 55000 },
+  manual: { hero: 90000, sub: 75000 },
 };
 
 // 스타일 키워드 — 최소한으로 줄여서 모델 부담 감소
