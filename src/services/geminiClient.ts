@@ -216,20 +216,31 @@ export const getAiProviderSettings = (): { textGeneration: 'gemini', imageGenera
 
 /**
  * CORS/프록시 설정 에러인지 판별
+ * 브라우저가 CORS 차단 시 throw하는 에러 패턴:
+ *  - Chrome: TypeError: Failed to fetch
+ *  - Firefox: TypeError: NetworkError when attempting to fetch resource
+ *  - Safari: TypeError: Load failed
  * 이 에러는 재시도해도 해결되지 않으므로 즉시 사용자에게 알려야 함
  */
-function isCorsOrProxyError(error: any): boolean {
+export function isCorsOrProxyError(error: any): boolean {
   const msg = error?.message || '';
-  return (
+  const name = error?.name || '';
+
+  // TypeError + fetch 관련 메시지 = 거의 확실한 CORS 또는 네트워크 차단
+  if (name === 'TypeError' && (
     msg.includes('Failed to fetch') ||
     msg.includes('NetworkError') ||
+    msg.includes('Load failed') ||
+    msg.includes('fetch')
+  )) return true;
+
+  return (
     msg.includes('ERR_NETWORK') ||
     msg.includes('CORS') ||
     msg.includes('cors') ||
     msg.includes('Access-Control') ||
     msg.includes('blocked by CORS') ||
-    msg.includes('No \'Access-Control-Allow-Origin\'') ||
-    (error?.name === 'TypeError' && msg.includes('fetch'))
+    msg.includes('No \'Access-Control-Allow-Origin\'')
   );
 }
 
@@ -374,6 +385,16 @@ export async function callGeminiRaw(model: string, apiBody: any, timeout: number
       timeoutError.status = 504;
       throw timeoutError;
     }
+
+    // CORS/프록시 에러는 명확한 메시지로 즉시 throw (재시도 무의미)
+    if (isCorsOrProxyError(error)) {
+      console.error(`[CORS] ⛔ callGeminiRaw CORS/proxy error: ${error.message} | endpoint: ${endpoint}`);
+      const corsError: any = new Error(getKoreanErrorMessage(error));
+      corsError.status = 0;
+      corsError.isCors = true;
+      throw corsError;
+    }
+
     throw error;
   }
 }
@@ -485,7 +506,6 @@ async function _callGeminiOnce(config: GeminiCallConfig): Promise<any> {
     clearTimeout(timeoutId);
 
     if (error.name === 'AbortError') {
-      // PRO 타임아웃 → FLASH 폴백
       if (model === GEMINI_MODEL.PRO) {
         console.warn('⚠️ PRO 모델 타임아웃 → FLASH 폴백 시도...');
         return _callGeminiOnce({ ...config, model: GEMINI_MODEL.FLASH, timeout: 60000 });
@@ -493,6 +513,15 @@ async function _callGeminiOnce(config: GeminiCallConfig): Promise<any> {
       const timeoutError: any = new Error('Gemini API timeout');
       timeoutError.status = 504;
       throw timeoutError;
+    }
+
+    // CORS/프록시 에러는 폴백/재시도 없이 즉시 throw
+    if (isCorsOrProxyError(error)) {
+      console.error(`[CORS] ⛔ _callGeminiOnce CORS/proxy error: ${error.message} | endpoint: ${endpoint}`);
+      const corsError: any = new Error(getKoreanErrorMessage(error));
+      corsError.status = 0;
+      corsError.isCors = true;
+      throw corsError;
     }
 
     throw error;

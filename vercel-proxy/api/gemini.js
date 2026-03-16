@@ -23,6 +23,12 @@
  */
 
 // ── CORS ──
+//
+// Vercel 환경변수 예시 (Dashboard → Settings → Environment Variables):
+//   ALLOWED_ORIGINS=https://story-darugi.com,https://www.story-darugi.com,https://d0507fad.ai-hospital.pages.dev,https://ai-hospital.pages.dev,http://localhost:5173,http://localhost:3000
+//
+// 환경변수가 없으면 아래 DEFAULT_ALLOWED_ORIGINS가 사용됨.
+// *.pages.dev 와 localhost:* 는 환경변수 유무와 무관하게 항상 허용.
 
 const DEFAULT_ALLOWED_ORIGINS = [
   "https://story-darugi.com",
@@ -32,19 +38,27 @@ const DEFAULT_ALLOWED_ORIGINS = [
   "http://localhost:3000",
 ];
 
+/** 환경변수에서 허용 origin 목록 파싱 (빈 문자열 필터링) */
+function getAllowedOrigins() {
+  if (process.env.ALLOWED_ORIGINS) {
+    const parsed = process.env.ALLOWED_ORIGINS.split(",")
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
+    return parsed.length > 0 ? parsed : DEFAULT_ALLOWED_ORIGINS;
+  }
+  return DEFAULT_ALLOWED_ORIGINS;
+}
+
 function isOriginAllowed(origin) {
   if (!origin) return false;
 
-  // 1) 환경변수 or 기본 화이트리스트에 정확히 포함
-  const allowed = process.env.ALLOWED_ORIGINS
-    ? process.env.ALLOWED_ORIGINS.split(",").map((s) => s.trim())
-    : DEFAULT_ALLOWED_ORIGINS;
-  if (allowed.includes(origin)) return true;
+  // 1) 화이트리스트 정확 매칭
+  if (getAllowedOrigins().includes(origin)) return true;
 
-  // 2) *.pages.dev 와일드카드 (Cloudflare Pages 프리뷰 도메인)
+  // 2) *.pages.dev (Cloudflare Pages 본 도메인 + 프리뷰 서브도메인)
   if (origin.endsWith(".pages.dev") && origin.startsWith("https://")) return true;
 
-  // 3) localhost 개발 서버 (포트 무관)
+  // 3) localhost / 127.0.0.1 (포트 무관)
   try {
     const url = new URL(origin);
     if (url.hostname === "localhost" || url.hostname === "127.0.0.1") return true;
@@ -58,9 +72,14 @@ function isOriginAllowed(origin) {
 
 function corsHeaders(origin) {
   const allowed = isOriginAllowed(origin);
+
+  // origin이 있는데 허용 목록에 없으면 경고 로그
   if (!allowed && origin) {
-    console.warn(`[CORS] ⛔ rejected origin: ${origin}`);
+    console.warn(`[CORS] ⛔ rejected origin="${origin}" allowedList=[${getAllowedOrigins().join(", ")}]`);
   }
+
+  // 허용된 경우: 요청 origin 그대로 반영 (브라우저가 매칭 검증)
+  // 비허용/origin 없음: 기본 도메인 고정 (서버-to-서버 등)
   const effectiveOrigin = allowed ? origin : "https://story-darugi.com";
 
   return {
@@ -189,13 +208,18 @@ export default async function handler(req, res) {
   // JSON 응답에만 Content-Type 설정
   res.setHeader("Content-Type", "application/json");
 
-  // 헬스 체크 (GET)
+  // 헬스 체크 (GET) — CORS 디버깅 정보 포함
   if (req.method === "GET") {
     return res.status(200).json({
       status: "ok",
       region: process.env.VERCEL_REGION || "iad1",
       keys: getKeys().length,
-      originAllowed: isOriginAllowed(origin),
+      cors: {
+        requestOrigin: origin || "(none)",
+        allowed: isOriginAllowed(origin),
+        effectiveOrigin: isOriginAllowed(origin) ? origin : "https://story-darugi.com",
+        allowedList: getAllowedOrigins(),
+      },
       timestamp: new Date().toISOString(),
     });
   }
