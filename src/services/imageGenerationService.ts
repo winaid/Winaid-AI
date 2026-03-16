@@ -491,7 +491,10 @@ let _activeImageJobs = 0;
 let _lastKnownCooldownUntil = 0; // 마지막으로 알려진 cooldown 종료 시각 (epoch ms)
 
 function getMaxConcurrency(): number {
-  return isDemoSafeMode() ? 1 : 2;
+  // 2025-03: 로그 기준 concurrency=2는 upstream 503 + all_keys_in_cooldown을 유발
+  // 체감 속도 개선보다 에러가 더 많으므로, 당분간 무조건 1개씩 순차 처리
+  // 추후 503/cooldown 비율이 충분히 낮아지면 normal=2로 복구 가능
+  return 1;
 }
 
 /** 세마포어 acquire: 슬롯이 비거나 cooldown이 끝날 때까지 대기 */
@@ -676,7 +679,7 @@ export const generateBlogImage = async (
 
 // =============================================
 // 🖼️ 이미지 풀세트 생성 — cooldown-aware 큐 + 제한 병렬
-// 최대 5장, 내부 concurrency: normal=2, demo-safe=1
+// 최대 5장, 내부 concurrency: 현재 항상 1 (503/cooldown 안정화)
 // hero 우선, sub 순차 큐
 // =============================================
 export interface ImageQueueItem {
@@ -778,7 +781,20 @@ export async function generateImageQueue(
 
   const successCount = results.filter(r => r.status === 'success').length;
   const failCount = results.filter(r => r.status === 'fallback').length;
-  console.info(`[IMG-Q] 🏁 done total=${totalImages} success=${successCount} fallback=${failCount} mode=${mode}`);
+  const totalElapsed = results.reduce((sum, r) => sum + r.elapsedMs, 0);
+  const totalQueueWait = results.reduce((sum, r) => sum + r.queueWaitMs, 0);
+  const errorTypes = results.filter(r => r.errorType).map(r => r.errorType);
+
+  console.info(`[IMG-Q] ═══════════════════════════════════════`);
+  console.info(`[IMG-Q] 🏁 이미지 큐 완료`);
+  console.info(`[IMG-Q]   total=${totalImages} success=${successCount} fallback=${failCount}`);
+  console.info(`[IMG-Q]   imageConcurrency=${maxC} mode=${mode}`);
+  console.info(`[IMG-Q]   totalGenerationMs=${totalElapsed} totalQueueWaitMs=${totalQueueWait}`);
+  if (errorTypes.length > 0) {
+    console.info(`[IMG-Q]   errorTypes=[${errorTypes.join(', ')}]`);
+  }
+  console.info(`[IMG-Q]   perImage: ${results.map(r => `idx${r.index}(${r.role})=${r.elapsedMs}ms/${r.status}`).join(' | ')}`);
+  console.info(`[IMG-Q] ═══════════════════════════════════════`);
 
   return results;
 }

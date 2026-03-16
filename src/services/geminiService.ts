@@ -12,7 +12,7 @@ import {
 } from "../utils/humanWritingPrompts";
 import { getTopCompetitorAnalysis, CompetitorAnalysis } from "./naverSearchService";
 import { analyzeCompetitorVocabulary, buildForbiddenWordsPrompt } from "./competitorVocabService";
-import { STYLE_NAMES, generateBlogImage, analyzeStyleReferenceImage, generateImageQueue, type ImageQueueItem } from "./imageGenerationService";
+import { STYLE_NAMES, generateBlogImage, analyzeStyleReferenceImage, generateImageQueue, type ImageQueueItem, isDemoSafeMode } from "./imageGenerationService";
 import { generateCardNewsWithAgents } from "./cardNewsService";
 import { generatePressRelease } from "./pressReleaseService";
 import { saveBlogHistory } from "./contentSimilarityService";
@@ -731,6 +731,15 @@ ${JSON.stringify(searchResults?.collected_facts?.slice(0, 3) || [], null, 2)}`;
   // 섹션은 2개씩 배치 병렬 생성 (이전 배치의 요약만 전달)
   safeProgress('✍️ [2/4] 본문 생성 중...');
 
+  // ── 성능 카운터 ──
+  const demoSafe = isDemoSafeMode();
+  let proTimeoutCount = 0;
+  let flashFallbackCount = 0;
+  // PRO 타임아웃: 로그 기준 PRO가 90초 넘게 걸리다 FLASH로 내려가므로
+  // 대기시간을 대폭 단축 — demo-safe 30초, normal 45초
+  const PRO_SECTION_TIMEOUT = demoSafe ? 30000 : 45000;
+  console.info(`[PIPELINE] ⚙️ config: sectionConcurrency=2 proTimeoutMs=${PRO_SECTION_TIMEOUT} demoSafe=${demoSafe}`);
+
   // ── 도입부 생성 함수 ──
   const generateIntro = async (): Promise<string> => {
     const t0 = Date.now();
@@ -796,12 +805,13 @@ ${request.disease ? `[질환] ${request.disease}` : ''}
 [이 섹션 관련 검색 결과]
 ${JSON.stringify(searchResults?.collected_facts?.slice(i, i + 2) || [], null, 2)}`;
 
+    // PRO 모델로 시도 — 타임아웃 시 _callGeminiOnce 내부에서 FLASH 폴백
     const result = await callGemini({
       prompt: sectionUserPrompt,
       systemPrompt: sectionPrompt + hospitalStyleSuffix,
       model: GEMINI_MODEL.PRO,
       responseType: 'text',
-      timeout: 90000,
+      timeout: PRO_SECTION_TIMEOUT,
       temperature: 0.75,
     });
     const html = typeof result === 'string' ? result.trim() : '';
@@ -811,7 +821,12 @@ ${JSON.stringify(searchResults?.collected_facts?.slice(i, i + 2) || [], null, 2)
     const summary = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().substring(0, 150);
     const elapsed = Date.now() - t0;
     timings[`section_${i}`] = elapsed;
-    console.info(`[PIPELINE] ✅ section ${sectionNum} ${html.length}자 ${elapsed}ms`);
+    // 90초 넘으면 PRO timeout 후 FLASH 폴백이 발생한 것
+    if (elapsed > PRO_SECTION_TIMEOUT) {
+      proTimeoutCount++;
+      flashFallbackCount++;
+    }
+    console.info(`[PIPELINE] ✅ section ${sectionNum} ${html.length}자 ${elapsed}ms (proTimeout=${PRO_SECTION_TIMEOUT}ms)`);
     return { html, summary };
   };
 
@@ -874,7 +889,7 @@ ${JSON.stringify(searchResults?.collected_facts?.slice(i, i + 2) || [], null, 2)
   }
 
   timings.stageB_sections = Date.now() - stageBStart;
-  console.info(`[PIPELINE] ✅ Stage B sections: ${sectionHtmls.length}/${outline.sections.length} all OK ${timings.stageB_sections}ms`);
+  console.info(`[PIPELINE] ✅ Stage B sections: ${sectionHtmls.length}/${outline.sections.length} all OK ${timings.stageB_sections}ms | proTimeoutCount=${proTimeoutCount} flashFallbackCount=${flashFallbackCount}`);
 
   // ── B-3: 마무리 생성 ──
   const concStart = Date.now();
@@ -1013,7 +1028,24 @@ ${sectionSummaries.join('\n')}`;
   }
 
   timings.total = Date.now() - pipelineStart;
-  console.info(`[PIPELINE] ✅ DONE total=${timings.total}ms | A=${timings.stageA}ms B=${timings.stageB_sections}ms conc=${timings.conclusion}ms | ${finalContent.replace(/<[^>]+>/g, '').trim().length}자 imgPrompts=${imagePrompts.length}`);
+
+  // ── 종합 성능 로그 ──
+  const sectionTimingsArr = Object.keys(timings)
+    .filter(k => k.startsWith('section_'))
+    .map(k => timings[k]);
+  const avgSectionMs = sectionTimingsArr.length > 0
+    ? Math.round(sectionTimingsArr.reduce((a, b) => a + b, 0) / sectionTimingsArr.length) : 0;
+
+  console.info(`[PIPELINE] ═══════════════════════════════════════`);
+  console.info(`[PIPELINE] ✅ DONE — 성능 요약`);
+  console.info(`[PIPELINE]   total=${timings.total}ms (${(timings.total / 1000).toFixed(1)}s)`);
+  console.info(`[PIPELINE]   stageA=${timings.stageA}ms | stageB=${timings.stageB_sections}ms | conclusion=${timings.conclusion}ms`);
+  console.info(`[PIPELINE]   sectionConcurrency=2 | proTimeoutMs=${PRO_SECTION_TIMEOUT} | demoSafe=${demoSafe}`);
+  console.info(`[PIPELINE]   proTimeoutCount=${proTimeoutCount} | flashFallbackCount=${flashFallbackCount}`);
+  console.info(`[PIPELINE]   avgSectionMs=${avgSectionMs} | sections=${sectionTimingsArr.map(t => `${t}ms`).join('/')}`);
+  console.info(`[PIPELINE]   promptLengthByStage: outline=${outlinePrompt.length} intro=${(getPipelineIntroPrompt('A', '', '', 300).length)} section≈${(getPipelineSectionPrompt(0, '', '', '', '', 300, '1', [], medicalLawMode).length)} conclusion=${(getPipelineConclusionPrompt('', 300).length)}`);
+  console.info(`[PIPELINE]   finalContent=${finalContent.replace(/<[^>]+>/g, '').trim().length}자 imgPrompts=${imagePrompts.length}`);
+  console.info(`[PIPELINE] ═══════════════════════════════════════`);
   return {
     title: request.topic,
     content: finalContent,

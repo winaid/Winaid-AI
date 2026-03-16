@@ -500,6 +500,31 @@ ${contextBlock}
  * Pipeline Stage B: 섹션별 본문 생성 (PRO 모델용)
  * 아웃라인의 특정 섹션 1개를 본문으로 생성
  */
+// ── 섹션용 경량 IDENTITY (~50% 축약) ──
+// 아웃라인 단계에서 이미 '글의 목표', '절대 안 되는 글' 등이 반영됐으므로
+// 섹션 생성에는 핵심 원칙만 전달
+const IDENTITY_COMPACT = `
+[글쓴이] 병원 블로그 에디터. 의사가 아닌 건강 정보 정리자
+[원칙] 짧게·직접·쉽게. 한 문장 40자 이내. 50자 넘으면 나눈다
+[언어] 한국어만 (영어 의료 장비명 허용: MRI, CT 등)
+[문체] 본문 ~습니다체. 소제목만 ~다체 허용
+[시점] 3인칭 관찰자. "나/저/우리/당신/여러분" 금지`;
+
+// ── 섹션용 경량 TONE (~40% 축약) ──
+// 핵심 금지 표현과 어미 규칙만 유지, 상세 예시·화자 위치·정보 밀도 중복 제거
+const TONE_COMPACT = `
+[어미] ~습니다 기반, 같은 어미 3회 연속 금지. "~수 있습니다"는 의료광고법 대상만
+[금지 표현]
+AI냄새: "알려져 있습니다/일반적으로/대부분의 경우/해당합니다/볼 수 있습니다/할 수 있습니다/영향을 미칩니다/셈입니다"
+딱딱: 측면/관점/맥락/양상/요인/파악/인지/고려/유발/초래/적절한/효과적/체계적/상당히/유익하다
+번역투: "~것이 중요합니다/~것으로 알려져/~가지고 있습니다/~에 의해 발생"
+메타: "이 글에서는~/살펴보겠습니다/정리해봅니다"
+말걸기: "~해보세요/~해보시는 건/~확인해 보세요/~궁금하실 겁니다" (1개라도 실패)
+"해야" 전부 금지 / "바랍니다" 전부 금지
+[톤] 단정·결과보장·불안조장 금지. 효과·전후비교·실제사례 금지. 독자에게 직접 질문 금지
+[의학] 쉽게 쓰되 틀리면 빼라. 의인화·감각비유 금지. 모호한 뭉뚱그리기 금지
+[밀도] 모든 문단에 구체적 의학 정보 1개+. "어, 이건 몰랐는데?" 정보 포함`;
+
 export const getPipelineSectionPrompt = (
   sectionIndex: number,
   sectionTitle: string,
@@ -517,66 +542,34 @@ export const getPipelineSectionPrompt = (
 
   let personaBlock = '';
   if (persona === 'director_1st') {
-    personaBlock = `
-[페르소나: 대표원장 1인칭 시점]
-- 1인칭 시점 유지 ("~입니다", "~인데요" 등 대표원장이 설명하는 어조)
-- 이 섹션은 의학 정보/전문 지식 중심으로 작성 (개인 경험 에피소드 불필요)
-- 정확하고 깊이 있는 전문 정보 전달에 집중
-`;
+    personaBlock = `\n[페르소나: 대표원장 1인칭] 의학 정보 중심 작성. 개인 경험 불필요`;
   } else if (persona === 'coordinator') {
-    personaBlock = `
-[페르소나: 상담 실장님 시점]
-- 친근하고 편안한 어조 ("상담할 때 많이 여쭤보시는데요", "저희 병원 오시는 분들 중에~")
-- 과정/비용/기간 중심 서술
-`;
+    personaBlock = `\n[페르소나: 상담 실장님] 친근한 어조. 과정/비용/기간 중심`;
   } else if (persona === 'hospital_info') {
-    personaBlock = `
-[페르소나: 병원 공식 블로그]
-- 3인칭 객관적 시점. "저", "제가" 등 1인칭 사용 금지
-`;
+    personaBlock = `\n[페르소나: 병원 공식 블로그] 3인칭 객관적. 1인칭 금지`;
   }
 
-  return `${IDENTITY}
-${TONE}
-${medicalLawBlock}
-${personaBlock}
+  return `${IDENTITY_COMPACT}
+${TONE_COMPACT}
+${medicalLawBlock}${personaBlock}
 
-[미션] 블로그 글의 소제목 ${sectionIndex + 1}번 섹션만 작성하라.
-
+[미션] 블로그 소제목 ${sectionIndex + 1}번 섹션 작성
 [소제목] ${sectionTitle}
-[이 섹션의 역할] ${sectionRole}
-[절대 다루지 않을 내용] ${sectionForbidden}
+[역할] ${sectionRole}
+[금지 내용] ${sectionForbidden}
 [독자가 놀랄 정보] ${sectionKeyInfo}
-[목표 글자 수] ${targetChars}자
-[첫 문장 패턴] ${
-  firstSentencePattern === '1' ? '사실 직진 — 핵심 의학 정보를 첫 문장에서 바로 전달' :
-  firstSentencePattern === '2' ? '장면 환기 — 독자가 겪는 구체적 상황을 짧게 재현' :
-  firstSentencePattern === '3' ? '대조 — 흔한 오해와 실제 원인의 차이를 제시' :
-  firstSentencePattern === '4' ? '조건 제시 — 특정 연령/상황/조건에서 발생하는 현상 서술' :
-  '메커니즘 — 체내에서 일어나는 과정을 순서대로 설명'
+[목표] ${targetChars}자 (최소 ${Math.round(targetChars * 0.8)}자)
+[첫 문장] ${
+  firstSentencePattern === '1' ? '사실 직진' :
+  firstSentencePattern === '2' ? '장면 환기' :
+  firstSentencePattern === '3' ? '대조' :
+  firstSentencePattern === '4' ? '조건 제시' :
+  '메커니즘'
 }
-
-${previousSections.length > 0 ? `[이전 섹션에서 이미 다룬 내용 - 절대 반복 금지]
-${previousSections.map((s, i) => `섹션 ${i + 1}: ${s}`).join('\n')}` : ''}
-
-${seoKeyword ? `[SEO 키워드 삽입 필수]
-- 키워드: "${seoKeyword}"
-- 이 섹션 본문에 키워드를 최소 1회 자연스럽게 포함할 것
-- 키워드를 억지로 넣지 말고 문맥에 맞게 녹여서 사용
-` : ''}
-[규칙]
-- 반드시 3문단 작성. 문단당 3~4문장
-- 첫 문장은 추상적 연결문 금지. 이 소제목의 핵심 정보를 직접 전달하는 문장으로 시작
-- 금지 첫 문장 패턴: "이 과정이", "이때", "겉으로 보이는 현상 뒤에는", "한편"
-- 문단마다 구체적 의학 정보 최소 1개
-- 같은 의미를 다른 표현으로 바꿔 쓰며 분량만 늘리는 문장 금지
-- 최소 글자 수: ${Math.round(targetChars * 0.8)}자 이상 필수. 목표 글자 수의 80% 미달 금지
-- 이전 섹션과 같은 정보를 반복해서 분량만 채우지 말 것
-- 어미 3회 연속 금지
-- HTML <p> 태그로 출력 (소제목 h3 태그 포함)
-- 소제목 태그 포함: <h3>${sectionTitle}</h3>
-
-[출력] HTML만 출력. 설명/코멘트 금지.`;
+${previousSections.length > 0 ? `[이전 섹션 - 반복 금지]\n${previousSections.map((s, i) => `${i + 1}: ${s}`).join('\n')}` : ''}
+${seoKeyword ? `[SEO] "${seoKeyword}" 최소 1회 자연 삽입` : ''}
+[규칙] 3문단×3~4문장. 첫 문장=핵심 정보 직접 전달. 추상 연결문 금지. 중복 금지. 어미 3연속 금지
+[출력] <h3>${sectionTitle}</h3> + <p> 태그 HTML만. 설명/코멘트 금지.`;
 };
 
 /**
