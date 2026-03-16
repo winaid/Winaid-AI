@@ -73,7 +73,7 @@ export default function T4KoreanTraditional({ data, width = 600, colors, mode = 
       {/* 중앙 큰 금색 원 — 핵심 시각 훅 (月 심볼) */}
       <circle cx="300" cy="155" r="90" fill="none" stroke={GOLD} strokeWidth="2" opacity="0.6" />
       <circle cx="300" cy="155" r="82" fill="none" stroke={GOLD} strokeWidth="0.8" opacity="0.3" />
-      <circle cx="300" cy="155" r="70" fill={GOLD} opacity="0.12" />
+      <circle cx="300" cy="155" r="70" fill={GOLD} opacity="0.25" />
 
       {/* 클리닉명 — 원 위 */}
       <text x="300" y="60" textAnchor="middle" fontSize="13"

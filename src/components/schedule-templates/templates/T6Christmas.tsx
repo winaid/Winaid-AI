@@ -31,18 +31,18 @@ function Snowflake({ x, y, r = 12, opacity = 0.4 }: {
       {[0, 30, 60, 90, 120, 150].map((a, i) => (
         <line key={i}
           x1="0" y1={-sr} x2="0" y2={sr}
-          stroke="#7BA7CF" strokeWidth="1.5"
+          stroke="#7BA7CF" strokeWidth="2.5"
           transform={`rotate(${safeNum(a)})`}
         />
       ))}
       {/* Branch ticks */}
       {[0, 60, 120, 180, 240, 300].map((a, i) => (
         <g key={i} transform={`rotate(${safeNum(a)})`}>
-          <line x1="-4" y1={safeNum(-sr * 0.55)} x2="0" y2={safeNum(-sr * 0.7)} stroke="#7BA7CF" strokeWidth="1.2" />
-          <line x1="4" y1={safeNum(-sr * 0.55)} x2="0" y2={safeNum(-sr * 0.7)} stroke="#7BA7CF" strokeWidth="1.2" />
+          <line x1="-5" y1={safeNum(-sr * 0.55)} x2="0" y2={safeNum(-sr * 0.7)} stroke="#7BA7CF" strokeWidth="2" />
+          <line x1="5" y1={safeNum(-sr * 0.55)} x2="0" y2={safeNum(-sr * 0.7)} stroke="#7BA7CF" strokeWidth="2" />
         </g>
       ))}
-      <circle cx="0" cy="0" r="2.5" fill="#7BA7CF" />
+      <circle cx="0" cy="0" r="3.5" fill="#7BA7CF" />
     </g>
   );
 }
@@ -50,7 +50,7 @@ function Snowflake({ x, y, r = 12, opacity = 0.4 }: {
 // Santa + reindeer silhouette (top-right)
 function SantaSilhouette({ x, y }: { x: number; y: number }) {
   return (
-    <g transform={safeTranslate(x, y)} opacity="0.22" fill="#5C7FAA">
+    <g transform={safeTranslate(x, y)} opacity="0.4" fill="#5C7FAA">
       {/* Sleigh */}
       <path d="M 0,0 Q 40,-10 80,0 Q 70,15 40,18 Q 10,15 0,0 Z" />
       <path d="M 10,18 Q 30,30 60,28 Q 70,20 80,0" fill="none"
@@ -85,7 +85,7 @@ function ChristmasTree({ x, y, h = 50 }: { x: number; y: number; h?: number }) {
   const sh = safeNum(h, 50);
   const w = safeNum(sh * 0.65);
   return (
-    <g transform={safeTranslate(x, y)} opacity="0.2" fill="#4A7FA5">
+    <g transform={safeTranslate(x, y)} opacity="0.4" fill="#4A7FA5">
       <polygon points={`0,${safeNum(-sh)} ${safeNum(-w)},${safeNum(sh * 0.2)} ${safeNum(w)},${safeNum(sh * 0.2)}`} />
       <polygon points={`0,${safeNum(-sh * 0.65)} ${safeNum(-w * 1.2)},${safeNum(sh * 0.5)} ${safeNum(w * 1.2)},${safeNum(sh * 0.5)}`} />
       <rect x="-8" y={safeNum(sh * 0.5)} width="16" height={safeNum(sh * 0.3)} fill="#4A7FA5" />
@@ -130,15 +130,15 @@ export default function T6Christmas({ data, width = 600, colors, mode = 'full' }
 
   // Snowflake positions
   const flakes = [
-    { x: 30, y: 30, r: 16, o: 0.45 },
-    { x: 80, y: 65, r: 10, o: 0.3 },
-    { x: 155, y: 18, r: 8, o: 0.25 },
-    { x: 490, y: 25, r: 18, o: 0.4 },
-    { x: 555, y: 70, r: 11, o: 0.3 },
-    { x: 420, y: 55, r: 8, o: 0.2 },
-    { x: 25, y: safeNum(svgH - 70), r: 13, o: 0.3 },
-    { x: 570, y: safeNum(svgH - 50), r: 15, o: 0.35 },
-    { x: 320, y: safeNum(svgH - 30), r: 9, o: 0.2 },
+    { x: 30, y: 30, r: 20, o: 0.6 },
+    { x: 80, y: 65, r: 14, o: 0.5 },
+    { x: 155, y: 18, r: 12, o: 0.45 },
+    { x: 490, y: 25, r: 22, o: 0.55 },
+    { x: 555, y: 70, r: 15, o: 0.5 },
+    { x: 420, y: 55, r: 12, o: 0.4 },
+    { x: 25, y: safeNum(svgH - 70), r: 16, o: 0.5 },
+    { x: 570, y: safeNum(svgH - 50), r: 18, o: 0.5 },
+    { x: 320, y: safeNum(svgH - 30), r: 13, o: 0.4 },
   ];
 
   return (

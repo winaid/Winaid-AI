@@ -57,7 +57,7 @@ export default function T5Notebook({ data, width = 600, colors, mode = 'full' }:
 
       {/* 블루 블록 안 장식: 큰 반투명 원 */}
       <circle cx="520" cy="40" r="100" fill={BLUE_DARK} opacity="0.3" />
-      <circle cx="60" cy="180" r="60" fill={BLUE_DARK} opacity="0.2" />
+      <circle cx="60" cy="180" r="60" fill={BLUE_DARK} opacity="0.35" />
 
       {/* 클리닉명 — 좌측 정렬, 블루 블록 안 */}
       <text x={CARD_X} y="50" fontSize="14"

@@ -210,7 +210,7 @@ export default function ScheduleTemplatePage() {
     }}>
 
       {/* ════ LEFT PANEL ════ */}
-      <div style={{ width: 390, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 0, maxHeight: '100vh', overflowY: 'auto' }}>
+      <div style={{ width: 480, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 0, maxHeight: '100vh', overflowY: 'auto' }}>
         <h2 style={{ margin: '0 0 16px', fontSize: 19, fontWeight: 800, color: '#1A2A4A' }}>
           진료일정 템플릿
         </h2>

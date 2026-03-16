@@ -53,18 +53,18 @@ export default function T3Autumn({ data, width = 600, colors, mode = 'full' }: P
       {/* 흰 배경 — 공문 용지 */}
       <rect width="600" height={svgH} fill="white" />
 
-      {/* 굵은 빨간 가로줄 2개 — 관공서 공문 핵심 시각 훅 */}
-      <rect x="0" y="0" width="600" height="14" fill={RED} />
-      <rect x="0" y="22" width="600" height="6" fill={RED} />
+      {/* 굵은 빨간 가로줄 2개 — 관공서 공문 핵심 시각 훅 (썸네일에서 확실히 보여야 함) */}
+      <rect x="0" y="0" width="600" height="28" fill={RED} />
+      <rect x="0" y="36" width="600" height="12" fill={RED} />
 
       {/* 클리닉명 — 좌측 정렬 공문 발신처 */}
-      <text x={CARD_X} y="62" fontSize="13"
+      <text x={CARD_X} y="72" fontSize="13"
         fontWeight="600" fill={RED} letterSpacing="3">
         {data.clinicName}
       </text>
 
       {/* 구분선 */}
-      <line x1={CARD_X} y1="74" x2={safeNum(CARD_X + CARD_W)} y2="74"
+      <line x1={CARD_X} y1="84" x2={safeNum(CARD_X + CARD_W)} y2="84"
         stroke="#DDD" strokeWidth="1" />
 
       {/* 대형 타이틀 — 좌측 정렬, 공문 격식 */}
@@ -82,7 +82,7 @@ export default function T3Autumn({ data, width = 600, colors, mode = 'full' }: P
       )}
 
       {/* 빨간 악센트 바 — 타이틀과 달력 사이 */}
-      <rect x={CARD_X} y="170" width="80" height="4" rx="2" fill={RED} />
+      <rect x={CARD_X} y="170" width="120" height="6" rx="3" fill={RED} />
 
       {/* 캘린더 — 빨간 헤더 */}
       <rect x={CARD_X} y={CARD_Y} width={CARD_W} height={cardH}
@@ -170,9 +170,9 @@ export default function T3Autumn({ data, width = 600, colors, mode = 'full' }: P
         </g>
       )}
 
-      {/* 하단 — 빨간 줄 + 클리닉명 (상단과 대칭) */}
-      <rect x="0" y={safeNum(svgH - 28)} width="600" height="6" fill={RED} />
-      <rect x="0" y={safeNum(svgH - 14)} width="600" height="14" fill={RED} />
+      {/* 하단 — 빨간 줄 + 클리닉명 (상단과 대칭, 두꺼운 줄) */}
+      <rect x="0" y={safeNum(svgH - 40)} width="600" height="12" fill={RED} />
+      <rect x="0" y={safeNum(svgH - 22)} width="600" height="22" fill={RED} />
       <text x={CARD_X} y={safeNum(svgH - 38)} fontSize="13"
         fontWeight="700" fill={CHARCOAL} letterSpacing="2">
         {data.clinicName}

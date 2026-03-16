@@ -274,9 +274,9 @@ export default function TemplateSelector({ selectedId, onSelect, previewData }: 
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(3, 1fr)',
-          gap: 12,
-          maxHeight: 480,
+          gridTemplateColumns: 'repeat(2, 1fr)',
+          gap: 14,
+          maxHeight: 720,
           overflowY: 'auto',
           paddingRight: 4,
         }}

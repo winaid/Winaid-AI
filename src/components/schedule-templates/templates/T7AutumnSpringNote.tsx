@@ -38,11 +38,11 @@ function MapleLeaf({ x, y, size = 1, rot = 0, color = '#D2691E' }: {
 }
 
 /** Decorative cloud shape */
-function Cloud({ x, y, scale = 1, opacity = 0.25 }: {
+function Cloud({ x, y, scale = 1, opacity = 0.4 }: {
   x: number; y: number; scale?: number; opacity?: number;
 }) {
   return (
-    <g transform={`${safeTranslate(x, y)} scale(${safeNum(scale, 1)})`} opacity={safeNum(opacity, 0.25)}>
+    <g transform={`${safeTranslate(x, y)} scale(${safeNum(scale, 1)})`} opacity={safeNum(opacity, 0.4)}>
       <ellipse cx="0" cy="0" rx="40" ry="18" fill="#F5E6C8" />
       <ellipse cx="-25" cy="5" rx="22" ry="14" fill="#F5E6C8" />
       <ellipse cx="25" cy="5" rx="22" ry="14" fill="#F5E6C8" />
@@ -128,7 +128,7 @@ export default function T7AutumnSpringNote({ data, width = 600, colors, mode = '
 
       {/* Clouds - top-right */}
       <Cloud x={480} y={45} scale={1.2} opacity={0.3} />
-      <Cloud x={540} y={85} scale={0.8} opacity={0.2} />
+      <Cloud x={540} y={85} scale={0.8} opacity={0.4} />
 
       {/* Title - huge white month label */}
       <text x="300" y="95" textAnchor="middle" fontSize="64" fontWeight="900"

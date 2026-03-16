@@ -56,29 +56,29 @@ export default function T12LavenderSparkle({ data, width = 600, colors, mode = '
       {/* 순흑 배경 */}
       <rect width="600" height={svgH} fill={BLACK} />
 
-      {/* 골드 프레임 — 전체를 감싸는 이중 테두리 */}
-      <rect x="14" y="14" width="572" height={safeNum(svgH - 28)}
-        rx="2" fill="none" stroke={GOLD} strokeWidth="1.5" />
-      <rect x="20" y="20" width="560" height={safeNum(svgH - 40)}
-        rx="1" fill="none" stroke={GOLD_DIM} strokeWidth="0.6" />
+      {/* 골드 프레임 — 전체를 감싸는 이중 테두리 (썸네일에서 보일 만큼 굵게) */}
+      <rect x="12" y="12" width="576" height={safeNum(svgH - 24)}
+        rx="2" fill="none" stroke={GOLD} strokeWidth="4" />
+      <rect x="22" y="22" width="556" height={safeNum(svgH - 44)}
+        rx="1" fill="none" stroke={GOLD_DIM} strokeWidth="2" />
 
-      {/* 네 모서리 골드 장식 — L자 코너 */}
+      {/* 네 모서리 골드 장식 — L자 코너 (확대) */}
       {[
-        { x: 14, y: 14, sx: 1, sy: 1 },
-        { x: 586, y: 14, sx: -1, sy: 1 },
-        { x: 14, y: safeNum(svgH - 14), sx: 1, sy: -1 },
-        { x: 586, y: safeNum(svgH - 14), sx: -1, sy: -1 },
+        { x: 12, y: 12, sx: 1, sy: 1 },
+        { x: 588, y: 12, sx: -1, sy: 1 },
+        { x: 12, y: safeNum(svgH - 12), sx: 1, sy: -1 },
+        { x: 588, y: safeNum(svgH - 12), sx: -1, sy: -1 },
       ].map((c, i) => (
         <g key={i} transform={safeTranslate(c.x, c.y)}>
-          <line x1="0" y1="0" x2={safeNum(30 * c.sx)} y2="0" stroke={GOLD_BRIGHT} strokeWidth="2" />
-          <line x1="0" y1="0" x2="0" y2={safeNum(30 * c.sy)} stroke={GOLD_BRIGHT} strokeWidth="2" />
+          <line x1="0" y1="0" x2={safeNum(60 * c.sx)} y2="0" stroke={GOLD_BRIGHT} strokeWidth="4" />
+          <line x1="0" y1="0" x2="0" y2={safeNum(60 * c.sy)} stroke={GOLD_BRIGHT} strokeWidth="4" />
         </g>
       ))}
 
       {/* 상단 골드 악센트 */}
-      <line x1="220" y1="42" x2="380" y2="42"
-        stroke={GOLD} strokeWidth="0.8" />
-      <circle cx="300" cy="42" r="2.5" fill={GOLD} />
+      <line x1="200" y1="42" x2="400" y2="42"
+        stroke={GOLD} strokeWidth="2" />
+      <circle cx="300" cy="42" r="4" fill={GOLD} />
 
       {/* 클리닉명 — 넓은 레터스페이싱, 골드 */}
       <text x="300" y="75" textAnchor="middle" fontSize="12" fontWeight="500"

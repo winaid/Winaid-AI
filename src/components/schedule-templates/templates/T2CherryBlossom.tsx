@@ -58,7 +58,7 @@ export default function T2CherryBlossom({ data, width = 600, colors, mode = 'ful
 
       {/* 핑크 블록 안 장식: 큰 원형 반투명 */}
       <circle cx="500" cy="60" r="120" fill="#E0558E" opacity="0.3" />
-      <circle cx="80" cy="200" r="80" fill="#C03A6C" opacity="0.2" />
+      <circle cx="80" cy="200" r="80" fill="#C03A6C" opacity="0.35" />
 
       {/* 클리닉명 — 핑크 블록 안, 큰 흰색 */}
       <text x="300" y="80" textAnchor="middle" fontSize="15"

@@ -36,7 +36,7 @@ interface Props {
 /** Decorative beige cloud */
 function HanokCloud({ x, y, w = 70 }: { x: number; y: number; w?: number }) {
   return (
-    <g transform={safeTranslate(x, y)} opacity="0.5">
+    <g transform={safeTranslate(x, y)} opacity="0.65">
       <ellipse cx="0" cy="0" rx={w * 0.5} ry={w * 0.16} fill="#DDD0B8" />
       <ellipse cx={w * 0.2} cy={w * -0.09} rx={w * 0.22} ry={w * 0.12} fill="#DDD0B8" />
       <ellipse cx={-w * 0.18} cy={w * -0.07} rx={w * 0.19} ry={w * 0.1} fill="#DDD0B8" />
@@ -47,10 +47,10 @@ function HanokCloud({ x, y, w = 70 }: { x: number; y: number; w?: number }) {
 /** Korean traditional corner pattern (small geometric squares) */
 function CornerPattern({ x, y, rotate = 0 }: { x: number; y: number; rotate?: number }) {
   return (
-    <g transform={`${safeTranslate(x, y)} rotate(${safeNum(rotate)})`} opacity="0.3">
-      <rect x="0" y="0" width="18" height="18" fill="none" stroke="#8B7355" strokeWidth="1.2" />
-      <rect x="3" y="3" width="12" height="12" fill="none" stroke="#8B7355" strokeWidth="0.8" />
-      <rect x="6" y="6" width="6" height="6" fill="none" stroke="#8B7355" strokeWidth="0.6" />
+    <g transform={`${safeTranslate(x, y)} rotate(${safeNum(rotate)})`} opacity="0.5">
+      <rect x="0" y="0" width="24" height="24" fill="none" stroke="#8B7355" strokeWidth="2" />
+      <rect x="4" y="4" width="16" height="16" fill="none" stroke="#8B7355" strokeWidth="1.5" />
+      <rect x="8" y="8" width="8" height="8" fill="none" stroke="#8B7355" strokeWidth="1.2" />
     </g>
   );
 }
@@ -99,18 +99,18 @@ export default function T9HanokRoof({ data, width = 600, colors, mode = 'full' }
         {/* Roof ridge */}
         <path
           d="M -200,-2 Q -160,-48 -80,-60 Q 0,-68 80,-60 Q 160,-48 200,-2"
-          fill="none" stroke="#3A3A3A" strokeWidth="3"
+          fill="none" stroke="#3A3A3A" strokeWidth="5"
         />
-        {/* Tile pattern: small repeated rectangles */}
+        {/* Tile pattern: repeated rectangles (sized to survive thumbnail) */}
         {[-160, -120, -80, -40, 0, 40, 80, 120, 160].map((tx, i) => (
           <g key={i}>
-            <rect x={tx - 8} y={-30} width={16} height={10} rx="1" fill="#5A5A5A" stroke="#3A3A3A" strokeWidth="0.5" />
-            <rect x={tx - 8} y={-16} width={16} height={10} rx="1" fill="#555" stroke="#3A3A3A" strokeWidth="0.5" />
+            <rect x={tx - 10} y={-32} width={20} height={12} rx="1" fill="#5A5A5A" stroke="#3A3A3A" strokeWidth="1.5" />
+            <rect x={tx - 10} y={-16} width={20} height={12} rx="1" fill="#555" stroke="#3A3A3A" strokeWidth="1.5" />
           </g>
         ))}
         {/* Curved eave ends */}
-        <path d="M -220,0 Q -235,-8 -240,5" stroke="#4A4A4A" strokeWidth="6" fill="none" strokeLinecap="round" />
-        <path d="M 220,0 Q 235,-8 240,5" stroke="#4A4A4A" strokeWidth="6" fill="none" strokeLinecap="round" />
+        <path d="M -220,0 Q -235,-8 -240,5" stroke="#4A4A4A" strokeWidth="8" fill="none" strokeLinecap="round" />
+        <path d="M 220,0 Q 235,-8 240,5" stroke="#4A4A4A" strokeWidth="8" fill="none" strokeLinecap="round" />
       </g>
 
       {/* Decorative clouds */}

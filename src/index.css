@@ -138,11 +138,11 @@ html {
   scroll-behavior: smooth;
 }
 
-/* Calendar template thumbnails — crop SVG to fill container uniformly */
+/* Calendar template thumbnails — show identity zone clearly */
 .calendar-thumb-svg {
   position: relative;
   overflow: hidden;
-  aspect-ratio: 4 / 5;
+  aspect-ratio: 3 / 4;
 }
 .calendar-thumb-svg svg {
   display: block;

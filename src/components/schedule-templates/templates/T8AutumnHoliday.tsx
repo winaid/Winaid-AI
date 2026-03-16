@@ -25,7 +25,7 @@ function WarmLeaf({ x, y, size = 1, rot = 0 }: {
 }) {
   return (
     <g transform={`${safeTranslate(x, y)} rotate(${safeNum(rot)}) scale(${safeNum(size, 1)})`}>
-      <ellipse cx="0" cy="0" rx="10" ry="18" fill="white" opacity="0.2" />
+      <ellipse cx="0" cy="0" rx="12" ry="20" fill="white" opacity="0.35" />
     </g>
   );
 }
@@ -71,9 +71,9 @@ export default function T8AutumnHoliday({ data, width = 600, colors, mode = 'ful
       <rect width="600" height={svgH} fill={CORAL} />
 
       {/* 배경 장식: 큰 반투명 원형들 — 따뜻한 톤 깊이 */}
-      <circle cx="520" cy="80" r="140" fill={CORAL_DARK} opacity="0.2" />
-      <circle cx="60" cy={safeNum(svgH - 80)} r="100" fill={CORAL_DARK} opacity="0.15" />
-      <circle cx="300" cy="160" r="200" fill={CORAL_LIGHT} opacity="0.1" />
+      <circle cx="520" cy="80" r="140" fill={CORAL_DARK} opacity="0.3" />
+      <circle cx="60" cy={safeNum(svgH - 80)} r="100" fill={CORAL_DARK} opacity="0.25" />
+      <circle cx="300" cy="160" r="200" fill={CORAL_LIGHT} opacity="0.2" />
 
       {/* 흰 잎 장식 — 코너에 흩어짐 */}
       <WarmLeaf x={40} y={40} size={1.8} rot={-30} />
