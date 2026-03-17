@@ -132,7 +132,7 @@ export function useCardNewsWorkflow(): CardNewsWorkflowState & CardNewsWorkflowA
       // 디자인 템플릿의 stylePrompt를 이미지 생성에 전달 (customImagePrompt보다 우선)
       const effectiveCustomStyle = template?.stylePrompt || pendingRequest.customImagePrompt;
 
-      const { generateSingleImage } = await import('../services/imageGenerationService');
+      const { generateSingleImage } = await import('../services/image/cardNewsImageService');
       const imagePromises = cardNewsPrompts.map((promptData, i) => {
         setScriptProgress(`🖼️ 이미지 ${i + 1}/${cardNewsPrompts.length}장 생성 중...`);
         return generateSingleImage(
