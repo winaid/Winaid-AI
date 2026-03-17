@@ -440,10 +440,11 @@ export const cleanImagePromptText = (prompt: string): string => {
 };
 
 // 블로그 이미지용 슬림 스타일 키워드 (DESIGNER_PERSONA 대신 경량화)
+// 공통 제약: modern Korean adult, no hanbok, no traditional/cultural costume, no text/watermark
 const BLOG_IMAGE_STYLE_COMPACT: Record<string, string> = {
-  illustration: '3D rendered illustration, Blender style, soft studio lighting, pastel colors, rounded shapes, clean gradient background, friendly, Korean medical clinic',
-  medical: 'medical 3D illustration, anatomical render, clinical lighting, semi-transparent organs, blue-white palette, educational, professional',
-  photo: 'photorealistic, DSLR, 35mm lens, natural lighting, shallow depth of field, bokeh, professional hospital environment, Korean',
+  illustration: '3D rendered illustration, Blender style, soft studio lighting, pastel colors, rounded shapes, clean gradient background, friendly modern Korean dental clinic interior, modern Korean adult patient or doctor in contemporary clothing, natural Korean facial features, no hanbok, no traditional costume, no text, no watermark',
+  medical: 'medical 3D illustration, anatomical render, clinical lighting, semi-transparent organs, blue-white palette, educational, professional Korean medical clinic context, no text, no watermark',
+  photo: 'photorealistic, DSLR, 35mm lens, natural lighting, shallow depth of field, bokeh, modern Korean hospital or dental clinic interior, modern Korean adult in contemporary everyday clothing or professional medical attire, natural Korean facial features, calm trustworthy atmosphere, no hanbok, no traditional clothing, no cultural costume, no text, no watermark',
 };
 
 // 블로그 이미지 플레이스홀더 SVG (재사용)
@@ -599,9 +600,9 @@ function parseImageError(error: any): ParsedError {
 // ── 스타일 키워드 (프롬프트용) ──
 
 const STYLE_KEYWORD_SHORT: Record<string, string> = {
-  illustration: '3D illustration, pastel, Blender style, soft lighting',
-  medical: 'medical 3D, anatomical, clinical, blue-white',
-  photo: 'photorealistic, DSLR, natural lighting, bokeh',
+  illustration: '3D illustration, pastel, Blender style, soft lighting, Korean clinic, no text, no watermark',
+  medical: 'medical 3D, anatomical, clinical, blue-white, no text, no watermark',
+  photo: 'photorealistic, DSLR, natural lighting, bokeh, Korean hospital, no text, no watermark',
 };
 
 // ── 템플릿 기반 보조 비주얼 (AI 미생성 시) ──
@@ -701,14 +702,23 @@ export const generateBlogImage = async (
   const demoSafe = isDemoSafeMode();
   const isHero = role === 'hero';
 
-  // ── 프롬프트 전략 ──
-  const heroPrompt = `Generate a 16:9 landscape blog image for a Korean medical clinic.
-[Subject] ${promptText}
-[Style] ${customStylePrompt || BLOG_IMAGE_STYLE_COMPACT[style] || BLOG_IMAGE_STYLE_COMPACT.illustration}
-[Rules] No text, no watermark, no logo. Clean, professional.`.trim();
+  // ── 공통 제약 (Korean medical SaaS 표준) ──
+  const COMMON_CONSTRAINTS = 'No text, no letters, no typography, no watermark, no logo. No hanbok, no traditional clothing, no cultural costume, no historical styling, no wedding styling, no festival styling. No exaggerated poses, no glamorous fashion portrait.';
 
-  const subPrompt = `Medical blog image: ${promptText.substring(0, 100)}. ${styleKw}. No text, no logo. 16:9.`.trim();
-  const ultraMinimal = `${promptText.substring(0, 60)}. ${styleKw}. No text. 16:9.`.trim();
+  // ── 프롬프트 전략 ──
+  const heroPrompt = `Generate a 16:9 landscape editorial hero image for a Korean medical/dental clinic blog.
+[Subject] ${promptText}
+[Person] Modern Korean adult with natural Korean facial features, wearing contemporary everyday clothing or professional medical attire.
+[Setting] Modern Korean hospital or dental clinic interior, calm and trustworthy atmosphere, clean and bright.
+[Style] ${customStylePrompt || BLOG_IMAGE_STYLE_COMPACT[style] || BLOG_IMAGE_STYLE_COMPACT.illustration}
+[Rules] ${COMMON_CONSTRAINTS}`.trim();
+
+  const subPrompt = `Korean medical blog image: ${promptText.substring(0, 100)}. Modern Korean adult or medical professional in contemporary Korean clinic setting. ${styleKw}. ${COMMON_CONSTRAINTS} 16:9.`.trim();
+  const ultraMinimal = `${promptText.substring(0, 60)}. Korean clinic, modern Korean adult. ${styleKw}. No text, no watermark, no hanbok. 16:9.`.trim();
+
+  // ── 프롬프트 방향 로그 ──
+  const promptProfile = isHero ? 'modern-korean-medical-editorial' : 'korean-clinic-context';
+  console.info(`[IMG-PROMPT] ${role} idx=${0} profile=${promptProfile} textless no-hanbok style=${style}`);
 
   // ── 시도 체인 ──
   // hero: pro 1회 → nb2 1회 → template (wall time cap 50s)

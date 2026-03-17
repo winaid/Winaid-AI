@@ -1034,8 +1034,8 @@ ${sectionSummaries.join('\n')}`;
   console.info(`[PIPELINE] finalQualityPath=${finalQualityPath}`);
 
   // 이미지 프롬프트 생성 — hero(대표) vs sub(서브) 차별화
-  // hero: 구체적이고 안정적인 프롬프트 (index 0)
-  // sub: 짧고 빠른 프롬프트 (index 1+) → 모델 응답 시간 단축
+  // hero: 현대 한국 병원 맥락 editorial 이미지
+  // sub: 소제목 맥락 보조 이미지 (최소 프롬프트 → 빠른 응답)
   const imageCount = request.imageCount ?? 1;
   const imagePrompts: string[] = [];
   if (imageCount > 0) {
@@ -1044,14 +1044,14 @@ ${sectionSummaries.join('\n')}`;
       const sectionTitle = section?.title || '건강 정보';
 
       if (i === 0) {
-        // hero: 대표 이미지 — 구체적 묘사로 안정적 결과
+        // hero: 대표 이미지 — 현대 한국 병원/치과 맥락 + 신뢰감/전문성
         imagePrompts.push(
-          `${request.topic} 관련 대표 이미지. 따뜻하고 신뢰감 있는 한국 병원 환경. 의사 또는 건강한 생활을 연상시키는 장면. 밝고 깨끗한 분위기`
+          `${request.topic} — 현대 한국 병원 환경의 대표 이미지. 현대적인 한국인 의사 또는 환자가 깨끗한 진료실에서 상담하는 장면. 신뢰감 있고 차분한 분위기. 현대적 일상복 또는 의료 전문복.`
         );
       } else {
-        // sub: 서브 이미지 — 최소 프롬프트로 빠른 응답 유도
+        // sub: 소제목 보조 이미지 — 한국 의료 맥락 유지하되 최소 프롬프트
         imagePrompts.push(
-          `${request.topic} - ${sectionTitle}`
+          `${request.topic} — ${sectionTitle}. 현대 한국 병원 맥락.`
         );
       }
     }
@@ -3161,7 +3161,7 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
   // 🔧 이미지 프롬프트 부족 시 자동 패딩 (요청 개수만큼 채우기)
   if (maxImages > 0 && textData.imagePrompts.length < maxImages) {
     console.warn(`⚠️ 이미지 프롬프트 부족! 요청: ${maxImages}개, 생성: ${textData.imagePrompts.length}개 → 자동 패딩`);
-    const defaultPrompt = `${request.topic} 관련 의료 이미지, ${request.imageStyle === 'illustration' ? '3D 일러스트, 파스텔톤' : request.imageStyle === 'medical' ? '의학 해부도, 전문 의료 이미지' : '실사 사진, DSLR 촬영'}, 한국인`;
+    const defaultPrompt = `${request.topic} — 현대 한국 병원 맥락 의료 이미지. ${request.imageStyle === 'illustration' ? '3D 일러스트, 파스텔톤' : request.imageStyle === 'medical' ? '의학 해부도, 전문 의료 이미지' : '실사 사진, DSLR 촬영'}. 현대 한국인, 현대적 일상복 또는 의료복.`;
     while (textData.imagePrompts.length < maxImages) {
       textData.imagePrompts.push(defaultPrompt);
       console.log(`   + 패딩 프롬프트 추가: ${textData.imagePrompts.length}/${maxImages}`);
