@@ -36,11 +36,15 @@ const initialState: GenerationState = {
   progress: '',
 };
 
+// 전체 생성 프로세스 hard timeout (무한 로딩 방지)
+const GENERATION_HARD_TIMEOUT_MS = 150_000; // 150초
+
 export function useContentGeneration(deps: ContentGenerationDeps): ContentGenerationState {
   const [state, setState] = useState<GenerationState>(initialState);
   const [blogState, setBlogState] = useState<GenerationState>(initialState);
   const [pressState, setPressState] = useState<GenerationState>(initialState);
   const isGeneratingRef = useRef(false);
+  const generationIdRef = useRef(0); // timeout 후 늦은 결과 방어용
 
   const getCurrentState = useCallback((): GenerationState => {
     if (deps.contentTab === 'press') return pressState;
@@ -170,10 +174,34 @@ export function useContentGeneration(deps: ContentGenerationDeps): ContentGenera
     console.info(`[GEN_STEP] setLoading(true) — postType=${request.postType}, target=${request.postType === 'press_release' ? 'pressState' : 'blogState'}`);
     targetSetState(prev => ({ ...prev, isLoading: true, error: null, warning: null, progress: 'SEO 최적화 키워드 분석 및 이미지 생성 중...' }));
 
+    // ── UI hard timeout: 무한 로딩 방지 (발표 안정화) ──
+    const thisGenId = ++generationIdRef.current;
+    const hardTimeoutId = setTimeout(() => {
+      if (isGeneratingRef.current && generationIdRef.current === thisGenId) {
+        console.error(`[BLOG_FLOW] ⏰ hard timeout ${GENERATION_HARD_TIMEOUT_MS}ms 초과 — 강제 로딩 해제`);
+        targetSetState(prev => ({
+          ...prev,
+          isLoading: false,
+          error: '생성 시간이 초과되었습니다. 네트워크 상태를 확인하고 다시 시도해주세요.',
+          progress: '',
+        }));
+        isGeneratingRef.current = false;
+      }
+    }, GENERATION_HARD_TIMEOUT_MS);
+
     try {
       const { generateFullPost } = await import('../services/geminiService');
       console.info('[GEN_STEP] before main pipeline — generateFullPost import OK');
-      const result = await generateFullPost(request, (p) => targetSetState(prev => ({ ...prev, progress: p })));
+      const result = await generateFullPost(request, (p) => {
+        // timeout 후 늦은 progress 업데이트 방어
+        if (generationIdRef.current !== thisGenId) return;
+        targetSetState(prev => ({ ...prev, progress: p }));
+      });
+      // timeout 후 늦게 도착한 결과가 UI를 덮지 않도록 방어
+      if (generationIdRef.current !== thisGenId) {
+        console.warn(`[BLOG_FLOW] ⚠️ 결과 도착했으나 genId 불일치 (${thisGenId} vs ${generationIdRef.current}) — 폐기`);
+        return;
+      }
       // 📋 결과물 완전성 검증 로그 — "완전한 글 1편" 기준
       const html = result?.fullHtml || result?.htmlContent || '';
       const textOnly = html.replace(/<[^>]+>/g, '').trim();
@@ -272,6 +300,7 @@ export function useContentGeneration(deps: ContentGenerationDeps): ContentGenera
         return { ...prev, isLoading: false, error: friendlyError, data: null };
       });
     } finally {
+      clearTimeout(hardTimeoutId);
       isGeneratingRef.current = false;
       import('../services/geminiClient').then(({ clearGenerationToken }) => clearGenerationToken()).catch(() => {});
     }

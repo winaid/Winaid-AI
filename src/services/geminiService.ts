@@ -842,6 +842,18 @@ ${JSON.stringify(searchResults?.collected_facts?.slice(i, i + 2) || [], null, 2)
   const sectionHtmls: string[] = new Array(outline.sections.length).fill('');
   const sectionSummaries: string[] = [];
 
+  // ── 섹션 실패 시 placeholder 생성 (발표 안정화: 개별 섹션 실패가 전체를 크래시하지 않도록) ──
+  let sectionFailCount = 0;
+  const makeSectionFallback = (idx: number): { html: string; summary: string } => {
+    const title = outline.sections[idx]?.title || `섹션 ${idx + 1}`;
+    sectionFailCount++;
+    console.warn(`[PIPELINE] ⚠️ 섹션 ${idx + 1} "${title}" fallback placeholder 사용 (failCount=${sectionFailCount})`);
+    return {
+      html: `<h3>${title}</h3>\n<p>이 섹션의 내용은 일시적으로 생성되지 않았습니다.</p>`,
+      summary: `(${title} — 생성 실패)`,
+    };
+  };
+
   // 첫 번째 배치: 도입부 + 첫 배치 섹션을 동시 실행
   const firstBatchEnd = Math.min(BATCH_SIZE, outline.sections.length);
   safeProgress(`✍️ [2/4] 도입부 + 소제목 1~${firstBatchEnd} 동시 생성 중...`);
@@ -852,23 +864,30 @@ ${JSON.stringify(searchResults?.collected_facts?.slice(i, i + 2) || [], null, 2)
   }
 
   let introHtml = '';
+  // 도입부는 필수 — 실패 시 전체 중단
   try {
-    const [introResult, ...firstBatchResults] = await Promise.all([
-      generateIntro(),
-      ...firstBatchPromises
-    ]);
-    introHtml = introResult;
+    introHtml = await generateIntro();
     safeProgress('✅ 도입부 완료');
-
-    firstBatchResults.forEach((result, idx) => {
-      sectionHtmls[idx] = result.html;
-      sectionSummaries.push(result.summary);
-      safeProgress(`✅ 소제목 ${idx + 1}/${outline.sections.length} "${outline.sections[idx].title}" 완료`);
-    });
   } catch (err: any) {
-    console.error(`[PIPELINE] ❌ 도입부+첫배치 병렬 실패: ${err?.message}`);
+    console.error(`[PIPELINE] ❌ 도입부 생성 실패: ${err?.message}`);
     throw new Error(`본문 생성에 실패했습니다. (${err?.status || '네트워크 오류'}) 다시 시도해주세요.`);
   }
+
+  // 첫 배치 섹션은 allSettled — 개별 실패 시 fallback
+  const firstSettled = await Promise.allSettled(firstBatchPromises);
+  firstSettled.forEach((settled, idx) => {
+    if (settled.status === 'fulfilled') {
+      sectionHtmls[idx] = settled.value.html;
+      sectionSummaries.push(settled.value.summary);
+      safeProgress(`✅ 소제목 ${idx + 1}/${outline.sections.length} "${outline.sections[idx].title}" 완료`);
+    } else {
+      console.error(`[PIPELINE] ❌ 섹션 ${idx + 1} "${outline.sections[idx]?.title}" 실패: ${settled.reason?.message || settled.reason}`);
+      const fb = makeSectionFallback(idx);
+      sectionHtmls[idx] = fb.html;
+      sectionSummaries.push(fb.summary);
+      safeProgress(`⚠️ 소제목 ${idx + 1}/${outline.sections.length} "${outline.sections[idx].title}" 대체 처리`);
+    }
+  });
 
   // 나머지 배치: 2개씩 묶어 병렬 실행 (이전 배치 요약 전달)
   for (let batchStart = firstBatchEnd; batchStart < outline.sections.length; batchStart += BATCH_SIZE) {
@@ -881,22 +900,32 @@ ${JSON.stringify(searchResults?.collected_facts?.slice(i, i + 2) || [], null, 2)
       batchPromises.push(generateSection(i, [...sectionSummaries]));
     }
 
-    try {
-      const batchResults = await Promise.all(batchPromises);
-      batchResults.forEach((result, idx) => {
-        const globalIdx = batchStart + idx;
-        sectionHtmls[globalIdx] = result.html;
-        sectionSummaries.push(result.summary);
+    const batchSettled = await Promise.allSettled(batchPromises);
+    batchSettled.forEach((settled, idx) => {
+      const globalIdx = batchStart + idx;
+      if (settled.status === 'fulfilled') {
+        sectionHtmls[globalIdx] = settled.value.html;
+        sectionSummaries.push(settled.value.summary);
         safeProgress(`✅ 소제목 ${globalIdx + 1}/${outline.sections.length} "${outline.sections[globalIdx].title}" 완료`);
-      });
-    } catch (batchErr: any) {
-      console.error(`[PIPELINE] ❌ 배치 ${batchLabel} 실패: ${batchErr?.message}`);
-      throw new Error(`소제목 생성에 실패했습니다. (${batchErr?.status || '네트워크 오류'}) 다시 시도해주세요.`);
-    }
+      } else {
+        console.error(`[PIPELINE] ❌ 섹션 ${globalIdx + 1} "${outline.sections[globalIdx]?.title}" 실패: ${settled.reason?.message || settled.reason}`);
+        const fb = makeSectionFallback(globalIdx);
+        sectionHtmls[globalIdx] = fb.html;
+        sectionSummaries.push(fb.summary);
+        safeProgress(`⚠️ 소제목 ${globalIdx + 1}/${outline.sections.length} "${outline.sections[globalIdx].title}" 대체 처리`);
+      }
+    });
   }
 
   timings.stageB_sections = Date.now() - stageBStart;
-  console.info(`[PIPELINE] ✅ Stage B sections: ${sectionHtmls.length}/${outline.sections.length} all OK ${timings.stageB_sections}ms | model=FLASH`);
+  const sectionOkCount = outline.sections.length - sectionFailCount;
+  console.info(`[PIPELINE] ✅ Stage B sections: ${sectionOkCount}/${outline.sections.length} OK (${sectionFailCount} fallback) ${timings.stageB_sections}ms | model=FLASH`);
+
+  // 전체 섹션이 실패한 경우에만 중단 — 최소 1개 성공이면 결과 반환
+  if (sectionOkCount === 0 && outline.sections.length > 0) {
+    console.error(`[PIPELINE] ❌ 모든 섹션 생성 실패 — 결과를 반환할 수 없음`);
+    throw new Error('모든 소제목 생성에 실패했습니다. 다시 시도해주세요.');
+  }
 
   // ── B-3: 마무리 생성 ──
   const concStart = Date.now();
