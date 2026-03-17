@@ -284,12 +284,12 @@ export async function callGemini(config: GeminiCallConfig): Promise<any> {
   const maxRetries = config.maxRetries ?? 3;
   let lastError: any = null;
   const callId = `[BLOG_FLOW] callGemini(${config.model || 'PRO'})`;
-  console.log(`${callId} 시작 (prompt: ${config.prompt?.substring(0, 50)}...)`);
+  console.info(`${callId} 시작 (prompt: ${config.prompt?.substring(0, 50)}...)`);
 
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     try {
       const result = await _callGeminiOnce(config);
-      console.log(`${callId} 성공 (시도 ${attempt + 1}/${maxRetries})`);
+      console.info(`${callId} 성공 (시도 ${attempt + 1}/${maxRetries})`);
       return result;
     } catch (error: any) {
       lastError = error;

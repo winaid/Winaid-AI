@@ -270,11 +270,11 @@ const App: React.FC = () => {
     // OAuth 콜백 처리 (URL hash에 access_token이 있는 경우)
     const handleOAuthCallback = async () => {
       const hash = window.location.hash;
-      console.log('[OAuth Callback] Current hash:', hash);
+      console.info('[OAuth Callback] Current hash:', hash);
       
       // OAuth 토큰이 URL에 있는지 확인
       if (hash && (hash.includes('access_token') || hash.includes('error'))) {
-        console.log('[OAuth Callback] Detected OAuth callback in URL');
+        console.info('[OAuth Callback] Detected OAuth callback in URL');
         
         // Supabase가 자동으로 세션을 설정할 때까지 대기
         // getSession()이 토큰을 파싱하고 세션을 생성함
@@ -288,7 +288,7 @@ const App: React.FC = () => {
         }
 
         if (session?.user) {
-          console.log('[OAuth Callback] Session established:', session.user.email);
+          console.info('[OAuth Callback] Session established:', session.user.email);
           // 성공 - URL 정리 후 blog으로
           window.history.replaceState(null, '', '/blog');
           return session;
@@ -311,10 +311,10 @@ const App: React.FC = () => {
         session = data.session;
       }
       
-      console.log('[Session Check] Session result:', session?.user?.email);
+      console.info('[Session Check] Session result:', session?.user?.email);
       
       if (session?.user) {
-        console.log('[Session Check] User found, setting isLoggedIn to true');
+        console.info('[Session Check] User found, setting isLoggedIn to true');
         setSupabaseUser(session.user);
         setIsLoggedIn(true);
         // 프로필 정보 설정
@@ -338,11 +338,11 @@ const App: React.FC = () => {
     
     checkSession();
 
-    console.log('[Auth] Initial auth check started');
+    console.info('[Auth] Initial auth check started');
     
     // 인증 상태 변경 감시
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('[Auth Event]', event, session?.user?.email);
+      console.info('[Auth Event]', event, session?.user?.email);
       
       if (session?.user) {
         setSupabaseUser(session.user);
@@ -380,7 +380,7 @@ const App: React.FC = () => {
                 expires_at: null
               } as any, { onConflict: 'user_id' });
               
-              console.log('✅ 프로필 자동 생성 완료:', session.user.email);
+              console.info('✅ 프로필 자동 생성 완료:', session.user.email);
             }
           } catch (e) {
             console.error('프로필 확인/생성 실패 (무시):', e);
@@ -389,7 +389,7 @@ const App: React.FC = () => {
         
         // 로그인 성공 시 처리
         if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-          console.log('[Auth Event] Login success');
+          console.info('[Auth Event] Login success');
           // 🔧 authLoading을 false로 설정 (로딩 화면 해제)
           setAuthLoading(false);
           

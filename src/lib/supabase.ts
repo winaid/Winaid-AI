@@ -5,7 +5,7 @@ import type { Database } from './database.types';
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://giiatpxkhponcbduyzci.supabase.co';
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdpaWF0cHhraHBvbmNiZHV5emNpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc0MzA0MzksImV4cCI6MjA4MzAwNjQzOX0.YsjqdemCH18UcK_fIa6yTulQkw00AemZeROhTaFIpBg';
 
-console.log('[Supabase] 초기화:', {
+console.info('[Supabase] 초기화:', {
   url: SUPABASE_URL,
   keyPrefix: SUPABASE_ANON_KEY.substring(0, 20) + '...',
   fromEnv: !!import.meta.env.VITE_SUPABASE_URL
@@ -91,7 +91,7 @@ export const signUpWithTeam = async (
         expires_at: null
       } as any, { onConflict: 'user_id' });
 
-      console.log('✅ 팀 회원가입 완료:', displayName, teamId);
+      console.info('✅ 팀 회원가입 완료:', displayName, teamId);
     } catch (e) {
       console.error('프로필 생성 실패 (무시):', e);
     }
@@ -146,7 +146,7 @@ export const signUpWithEmail = async (email: string, password: string, name: str
         expires_at: null
       } as any, { onConflict: 'user_id' });
       
-      console.log('✅ 프로필 및 구독 정보 생성 완료:', data.user.email);
+      console.info('✅ 프로필 및 구독 정보 생성 완료:', data.user.email);
     } catch (profileError) {
       console.error('프로필 생성 실패 (무시):', profileError);
       // 프로필 생성 실패해도 회원가입은 성공으로 처리
@@ -191,7 +191,7 @@ export const signInWithEmail = async (email: string, password: string) => {
           expires_at: null
         } as any, { onConflict: 'user_id' });
         
-        console.log('✅ 기존 유저 프로필 자동 생성:', data.user.email);
+        console.info('✅ 기존 유저 프로필 자동 생성:', data.user.email);
       }
     } catch (profileError) {
       console.error('프로필 확인/생성 실패 (무시):', profileError);
@@ -205,7 +205,7 @@ export const signInWithOAuth = async (_provider: 'google') => {
   // OAuth 리다이렉트 URL - Supabase가 콜백 시 #access_token을 추가함
   // 따라서 baseURL만 지정하고, 인증 후 App.tsx에서 hash를 파싱
   const redirectUrl = window.location.origin;
-  console.log('[OAuth] Starting Google login, redirectTo:', redirectUrl);
+  console.info('[OAuth] Starting Google login, redirectTo:', redirectUrl);
   
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
@@ -245,7 +245,7 @@ export const onAuthStateChange = (callback: (event: string, session: any) => voi
 
 // 회원 탈퇴 (계정 삭제)
 export const deleteAccount = async (userId: string) => {
-  console.log('[Delete Account] Starting account deletion for:', userId);
+  console.info('[Delete Account] Starting account deletion for:', userId);
   
   const errors: string[] = [];
   
@@ -259,7 +259,7 @@ export const deleteAccount = async (userId: string) => {
       console.warn('[Delete Account] usage_logs 삭제 실패:', logsError.message);
       errors.push(`usage_logs: ${logsError.message}`);
     } else {
-      console.log('[Delete Account] usage_logs 삭제 성공');
+      console.info('[Delete Account] usage_logs 삭제 성공');
     }
     
     // 2. 구독 정보 삭제
@@ -271,7 +271,7 @@ export const deleteAccount = async (userId: string) => {
       console.warn('[Delete Account] subscriptions 삭제 실패:', subError.message);
       errors.push(`subscriptions: ${subError.message}`);
     } else {
-      console.log('[Delete Account] subscriptions 삭제 성공');
+      console.info('[Delete Account] subscriptions 삭제 성공');
     }
     
     // 3. 프로필 삭제 (가장 중요!)
@@ -294,17 +294,17 @@ export const deleteAccount = async (userId: string) => {
         };
       }
     } else {
-      console.log('[Delete Account] profiles 삭제 성공');
+      console.info('[Delete Account] profiles 삭제 성공');
     }
     
     // 4. 로컬 스토리지 정리
     localStorage.removeItem(`user_credits_${userId}`);
     localStorage.removeItem('used_coupons');
-    console.log('[Delete Account] localStorage 정리 완료');
+    console.info('[Delete Account] localStorage 정리 완료');
     
     // 5. 로그아웃 (세션 종료)
     await supabase.auth.signOut();
-    console.log('[Delete Account] 로그아웃 완료');
+    console.info('[Delete Account] 로그아웃 완료');
     
     // 에러가 있었어도 프로필은 삭제됐으면 성공으로 처리
     if (errors.length > 0 && errors.some(e => e.startsWith('profiles:'))) {

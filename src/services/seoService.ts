@@ -43,7 +43,7 @@ ${text}
 // 네이버 뉴스 검색 API 호출 함수 (서버 프록시 사용 - CORS 해결)
 const searchNaverNews = async (query: string, display: number = 10): Promise<{ title: string; description: string; pubDate: string; link: string }[]> => {
   try {
-    console.log(`[네이버 뉴스] 검색 시작: ${query}`);
+    console.info(`[네이버 뉴스] 검색 시작: ${query}`);
 
     // 서버 프록시를 통해 네이버 API 호출 (CORS 해결)
     const response = await fetch(`/api/naver-news?query=${encodeURIComponent(query)}&display=${display}`, {
@@ -55,7 +55,7 @@ const searchNaverNews = async (query: string, display: number = 10): Promise<{ t
     }
 
     const data = await response.json() as { items?: any[] };
-    console.log(`[네이버 뉴스] ${data.items?.length || 0}개 결과 수신`);
+    console.info(`[네이버 뉴스] ${data.items?.length || 0}개 결과 수신`);
 
     return (data.items || []).map((item: any) => ({
       title: item.title.replace(/<[^>]*>/g, ''), // HTML 태그 제거
@@ -91,7 +91,7 @@ const searchNewsForTrends = async (category: string, _month: number): Promise<st
 
   // 1차: 네이버 뉴스 검색 시도
   try {
-    console.log(`[뉴스 트렌드] 네이버 뉴스 검색 시작: ${category} (${searchKeyword})`);
+    console.info(`[뉴스 트렌드] 네이버 뉴스 검색 시작: ${category} (${searchKeyword})`);
 
     const newsItems = await searchNaverNews(searchKeyword, 10);
 
@@ -101,7 +101,7 @@ const searchNewsForTrends = async (category: string, _month: number): Promise<st
         return `${idx + 1}. ${item.title}\n   - ${item.description.substring(0, 100)}...`;
       }).join('\n\n');
 
-      console.log(`[뉴스 트렌드] 네이버 뉴스 검색 완료: ${newsItems.length}개 기사`);
+      console.info(`[뉴스 트렌드] 네이버 뉴스 검색 완료: ${newsItems.length}개 기사`);
 
       // Gemini 3 Flash로 뉴스 분석하여 최적화된 인사이트 추출
       try {
@@ -138,7 +138,7 @@ ${newsContext}
           thinkingLevel: 'low',
           timeout: 30000
         }) || '';
-        console.log(`[뉴스 트렌드] Gemini Flash 분석 완료`);
+        console.info(`[뉴스 트렌드] Gemini Flash 분석 완료`);
 
         return `[최신 뉴스 트렌드 - 네이버 뉴스 + Gemini 분석]\n\n${analysisResult}\n\n[원본 뉴스]\n${newsContext}`;
 
@@ -171,7 +171,7 @@ ${newsContext}
         temperature: 0.3,
         timeout: 30000
       }) || '';
-      console.log(`[뉴스 트렌드] Gemini 검색 완료`);
+      console.info(`[뉴스 트렌드] Gemini 검색 완료`);
       return newsContext;
 
     } catch (geminiError) {

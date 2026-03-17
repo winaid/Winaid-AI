@@ -12,6 +12,7 @@ console.info(
   'background:#3b82f6;color:white;font-weight:bold;padding:2px 6px;border-radius:3px 0 0 3px',
   'background:#1e293b;color:#94a3b8;padding:2px 6px;border-radius:0 3px 3px 0'
 );
+console.info('[DEBUG] console alive — console.log는 프로덕션 빌드에서 제거됨, console.info/warn/error만 출력됨');
 
 const container = document.getElementById('root')
 if (container) {

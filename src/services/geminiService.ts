@@ -23,7 +23,7 @@ import { saveBlogHistory } from "./contentSimilarityService";
 // 🏥 질병관리청 검색 함수 (1차 검색) - 타임아웃 120초
 async function searchKDCA(query: string): Promise<string> {
   try {
-    console.log('🔍 [1차 검색] 질병관리청에서 검색 중...', query);
+    console.info('🔍 [1차 검색] 질병관리청에서 검색 중...', query);
 
     const kdcaDomains = ['kdca.go.kr', 'cdc.go.kr', 'nih.go.kr'];
 
@@ -47,7 +47,7 @@ async function searchKDCA(query: string): Promise<string> {
       timeout: 120000,
     });
 
-    console.log('✅ 질병관리청 검색 완료');
+    console.info('✅ 질병관리청 검색 완료');
     return typeof result === 'string' ? result : '';
 
   } catch (error) {
@@ -330,7 +330,7 @@ async function callGeminiWithSearch(
     const topic = topicMatch?.[1]?.trim() || '';
     const category = categoryMatch?.[1]?.trim() || '';
 
-    console.log('🔍 검색 시작:', { topic, category });
+    console.info('🔍 검색 시작:', { topic, category });
 
     // 1차: 질병관리청 검색
     let kdcaInfo = '';
@@ -359,7 +359,7 @@ ${hospitalInfo || '(검색 결과 없음)'}
 - 구체적 수치는 출처와 함께 제시`;
 
     // Gemini API 호출
-    console.log('🚀 보도자료 Gemini API 호출 시작...');
+    console.info('🚀 보도자료 Gemini API 호출 시작...');
     const isTextPlain = options.responseFormat === "text/plain";
     const result = await callGemini({
       prompt: enrichedPrompt,
@@ -369,7 +369,7 @@ ${hospitalInfo || '(검색 결과 없음)'}
       temperature: 0.6,
     });
 
-    console.log('✅ 보도자료 Gemini API 응답 수신');
+    console.info('✅ 보도자료 Gemini API 응답 수신');
 
     // callGemini returns the parsed result directly
     const text = typeof result === 'string' ? result : JSON.stringify(result);
@@ -1686,7 +1686,7 @@ ${subheadings.map((h, i) => `${i + 1}. ${h}`).join('\n')}
         ? `${request.customSubheadings}\n병원 소개`
         : '병원 소개';
     }
-    console.log('📋 병원 소개 토글 ON! 병원 정보 크롤링 시작:', crawlUrl);
+    console.info('📋 병원 소개 토글 ON! 병원 정보 크롤링 시작:', crawlUrl);
   }
   
   if (shouldCrawl) {
@@ -2164,15 +2164,15 @@ ${hospitalInfo}
     let result: any;
 
     // Gemini 사용
-    console.log('🔵 Using Gemini for text generation');
-    
+    console.info('🔵 Using Gemini for text generation');
+
     // 로그 출력 (generateContent 호출 전에 실행)
-    console.log('🔄 Gemini 웹 검색 및 콘텐츠 생성 시작');
-    console.log('🔍 검색 모드: 활성화 (최신 의료 정보 반영)');
-    console.log('📍 Step 1 시작 준비...');
+    console.info('🔄 Gemini 웹 검색 및 콘텐츠 생성 시작');
+    console.info('🔍 검색 모드: 활성화 (최신 의료 정보 반영)');
+    console.info('📍 Step 1 시작 준비...');
     
     // 📍 Step 1: Gemini 웹 검색으로 최신 정보 수집
-    console.log('📍 onProgress 호출 직전...');
+    console.info('📍 onProgress 호출 직전...');
     try {
       if (typeof onProgress === 'function') {
         safeProgress('🔍 최신 정보 검색 중...');
@@ -2182,7 +2182,7 @@ ${hospitalInfo}
     } catch (progressError) {
       console.error('❌ onProgress 호출 에러:', progressError);
     }
-    console.log('📍 onProgress 호출 완료, searchPrompt 생성 시작...');
+    console.info('📍 onProgress 호출 완료, searchPrompt 생성 시작...');
     
     // 간소화된 검색 프롬프트 (속도 개선)
     const searchPrompt = `"${request.topic}" 관련 최신 의료 정보 검색.
@@ -2209,14 +2209,14 @@ JSON 형식으로 응답:
     let geminiResult: { success: boolean; data: any; source: string } = { success: false, data: null, source: 'skipped' };
     
     // 🔍 항상 검색 실행 (최신 의료 정보 반영)
-    console.log('• 질병관리청 최신 정보 검색 시작');
+    console.info('• 질병관리청 최신 정보 검색 시작');
       
       // 🔵 Gemini 검색 실행 (타임아웃 90초)
       const SEARCH_TIMEOUT = 90000; // 90초 타임아웃
       
       const geminiSearchPromise = (async () => {
         try {
-          console.log('🔵 Gemini 검색 시작... (타임아웃: 90초)');
+          console.info('🔵 Gemini 검색 시작... (타임아웃: 90초)');
           // ⚠️ Google Search와 responseMimeType: "application/json"은 동시 사용 불가!
           // 텍스트로 받고 후처리로 JSON 파싱
           const searchResponseText = await callGemini({
@@ -2345,7 +2345,7 @@ JSON 형식으로 응답:
     
     if (geminiResults && gptResults) {
       // 🎯 둘 다 성공: 크로스체크 병합
-      console.log('🎯 듀얼 검색 성공 - 크로스체크 병합 시작');
+      console.info('🎯 듀얼 검색 성공 - 크로스체크 병합 시작');
       safeProgress('🔀 크로스체크: Gemini + GPT-5.2 결과 병합 중...');
       
       // 병합 후 health.kdca.go.kr 우선 정렬
@@ -2474,7 +2474,7 @@ JSON 형식으로 응답:
       
     } else if (geminiResults) {
       // Gemini 검색 성공
-      console.log('🔵 Gemini 검색 성공');
+      console.info('🔵 Gemini 검색 성공');
       searchResults = {
         collected_facts: sortByKdcaHealthPriority(geminiResults.collected_facts || []),
         key_statistics: sortByKdcaHealthPriority(geminiResults.key_statistics || []),
@@ -2491,7 +2491,7 @@ JSON 형식으로 응답:
     }
     
     // Step 2: AI가 검색 결과를 바탕으로 글 작성
-    console.log('Step 2: AI 글쓰기...');
+    console.info('Step 2: AI 글쓰기...');
     const geminiSystemPrompt = await getDynamicSystemPrompt(request.medicalLawMode || 'strict');
 
     const systemPrompt = `${geminiSystemPrompt}
@@ -2539,13 +2539,13 @@ ${JSON.stringify(searchResults, null, 2)}
 - fact_score, safety_score, conversion_score → 높을수록 좋음 (100점 = 최고)
 - ai_smell_score → 낮을수록 좋음 (7점 이하 = 최고, 90점 = 최악)`;
 
-    console.log('📍 callOpenAI_Staged 호출 직전...');
-    console.log('📍 프롬프트 길이:', (isCardNews ? cardNewsPrompt : blogPrompt).length);
-    console.log('📍 시스템 프롬프트(검색 결과) 길이:', JSON.stringify(searchResults, null, 2).length);
+    console.info('📍 callOpenAI_Staged 호출 직전...');
+    console.info('📍 프롬프트 길이:', (isCardNews ? cardNewsPrompt : blogPrompt).length);
+    console.info('📍 시스템 프롬프트(검색 결과) 길이:', JSON.stringify(searchResults, null, 2).length);
     
     // Gemini API 호출
     const finalPrompt = isCardNews ? cardNewsPrompt : blogPrompt;
-    console.log('🔵 Gemini 텍스트 생성 시작, 프롬프트:', finalPrompt.length, 'chars');
+    console.info('🔵 Gemini 텍스트 생성 시작, 프롬프트:', finalPrompt.length, 'chars');
     try {
 
       // 🎬 Pro로 바로 생성 (단일 단계)
@@ -2576,11 +2576,11 @@ ${JSON.stringify(searchResults, null, 2)}
           maxOutputTokens: 16384,
         });
 
-        console.log('Pro 생성 완료');
+        console.info('Pro 생성 완료');
         const contentText = geminiResponse.content || geminiResponse.text || JSON.stringify(geminiResponse);
         const textWithoutHtml = contentText.replace(/<[^>]+>/g, '');
         const charCountNoSpaces = textWithoutHtml.replace(/\s/g, '').length;
-        console.log(`글자수: ${charCountNoSpaces}자 (목표: ${targetLength}자)`);
+        console.info(`글자수: ${charCountNoSpaces}자 (목표: ${targetLength}자)`);
 
         // 🔍 글자수 목표 대비 검증 (뻥튀기 보정으로 약간 초과 가능 → 300자까지 OK)
         const targetMin = targetLength;
@@ -2850,7 +2850,7 @@ ${request.topic}${request.disease ? `, 질환: ${request.disease}` : ''}
     // 🎯 SEO 자동 평가 (재생성 없이 평가만 수행)
     const hasContent = result.content || result.contentHtml;
     if (!isCardNews && hasContent && result.title) {
-      console.log('📊 SEO 자동 평가 시작...');
+      console.info('📊 SEO 자동 평가 시작...');
       if (typeof onProgress === 'function') {
         safeProgress('📊 SEO 점수를 자동 평가하고 있습니다...');
       }
@@ -2959,8 +2959,8 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
   
   console.info(`[BLOG_FLOW] generateFullPost 시작 — postType: ${request.postType}, topic: ${request.topic?.substring(0, 30)}`);
   // • 디버그: request에 customImagePrompt가 있는지 확인
-  console.log('• generateFullPost 시작 - request.imageStyle:', request.imageStyle);
-  console.log('• generateFullPost 시작 - request.customImagePrompt:', request.customImagePrompt ? request.customImagePrompt.substring(0, 50) : 'undefined/없음');
+  console.info('• generateFullPost 시작 - request.imageStyle:', request.imageStyle);
+  console.info('• generateFullPost 시작 - request.customImagePrompt:', request.customImagePrompt ? request.customImagePrompt.substring(0, 50) : 'undefined/없음');
   
   // 🗞️ 보도자료: 전용 생성 함수 사용
   if (isPressRelease) {
@@ -3421,7 +3421,7 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
   
   // 🎯 소제목 후처리: Gemini가 h3 태그를 무시하고 다른 형식으로 출력한 경우 강제 변환
   if (request.postType === 'blog') {
-    console.log('🎯 소제목 형식 정규화 시작...');
+    console.info('🎯 소제목 형식 정규화 시작...');
     
     // 1. **소제목 텍스트** 형식을 h3로 변환 (독립된 줄에 있는 경우)
     body = body.replace(/<p>\*\*([^*]+)\*\*<\/p>/gi, '<h3>$1</h3>');
@@ -3436,7 +3436,7 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
     body = body.replace(/<p>\s*<b>([^<]+)<\/b>\s*<\/p>/gi, '<h3>$1</h3>');
     
     const h3Count = (body.match(/<h3[^>]*>/gi) || []).length;
-    console.log(`✅ 소제목 형식 정규화 완료! h3 태그 ${h3Count}개 발견`);
+    console.info(`✅ 소제목 형식 정규화 완료! h3 태그 ${h3Count}개 발견`);
   }
   
   // 🖼️ 블로그 포스트에 [IMG_N] 마커가 없으면 자동 삽입
