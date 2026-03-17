@@ -8,6 +8,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import { ToastContainer } from './components/Toast';
 import { useCardNewsWorkflow } from './hooks/useCardNewsWorkflow';
 import { useContentGeneration } from './hooks/useContentGeneration';
+import { initImageDebugGlobals } from './services/imageGenerationService';
 
 // Lazy load heavy components
 const InputForm = lazy(() => import('./components/InputForm'));
@@ -215,6 +216,9 @@ const App: React.FC = () => {
     localStorage.setItem('darkMode', String(newMode));
   };
   
+  // IMG 디버그 글로벌 등록 (콘솔에서 window.__IMG_VERIFY 등 즉시 사용 가능)
+  useEffect(() => { initImageDebugGlobals(); }, []);
+
   // 스크롤 위치 복원 (탭 전환 후)
   useEffect(() => {
     if (mobileTab === 'input' && leftPanelRef.current && scrollPositionRef.current > 0) {

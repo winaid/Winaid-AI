@@ -1463,6 +1463,20 @@ try {
   (window as any).__IMG_VERIFY = verifySaaSQuality;
 } catch { /* SSR safe */ }
 
+/**
+ * 앱 초기화 시 호출 — 4대 디버그 함수를 window에 명시적으로 등록
+ * accumulateSessionStats() 호출 전에도 콘솔에서 바로 사용 가능하게 보장
+ */
+export function initImageDebugGlobals(): void {
+  try {
+    (window as any).__IMG_VERIFY = verifySaaSQuality;
+    (window as any).__IMG_PRINT_STATS = printSessionSummary;
+    (window as any).__IMG_RESET_STATS = resetImageSessionStats;
+    (window as any).__IMG_SESSION_STATS = _sessionStats;
+    console.info('[IMG-DEBUG] globals attached: verify/print/reset/session');
+  } catch { /* SSR safe */ }
+}
+
 // 🎴 기본 프레임 이미지 URL (로컬 파일 사용 - 외부 URL 403 에러 방지)
 const DEFAULT_FRAME_IMAGE_URL = '/default-card-frame.webp';
 
