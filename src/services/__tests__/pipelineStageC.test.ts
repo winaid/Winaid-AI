@@ -191,11 +191,11 @@ describe('Pipeline Stage C — 실행 검증', () => {
       expect(pathLogs.some(l => l.includes('flash_draft+pro_polish'))).toBe(true);
     });
 
-    it('Stage C 로그에 attempt=PRO, timeout=30000 포함', async () => {
+    it('Stage C 로그에 attempt=PRO, timeout=25000 포함', async () => {
       await generateBlogWithPipeline(BASE_REQUEST, SEARCH_RESULTS);
       const attemptLogs = logsContaining('Stage C attempt=PRO');
       expect(attemptLogs.length).toBeGreaterThanOrEqual(1);
-      expect(attemptLogs[0]).toContain('timeout=30000');
+      expect(attemptLogs[0]).toContain('timeout=25000');
     });
 
     it('모든 섹션 FLASH 모델 사용 확인', async () => {
@@ -244,7 +244,7 @@ describe('Pipeline Stage C — 실행 검증', () => {
 
       const flashFallbackLogs = logsContaining('Stage C fallback=FLASH');
       expect(flashFallbackLogs.length).toBeGreaterThanOrEqual(1);
-      expect(flashFallbackLogs[0]).toContain('timeout=12000');
+      expect(flashFallbackLogs[0]).toContain('timeout=10000');
     });
 
     it('polishModel=FLASH(fallback) 로그 기록', async () => {
@@ -329,24 +329,28 @@ describe('Pipeline Stage C — 실행 검증', () => {
   });
 
   describe('횡단 검증: Stage C timeout 상수', () => {
-    it('PRO_POLISH_TIMEOUT = 30000, FLASH_POLISH_TIMEOUT = 12000', async () => {
+    it('PRO_POLISH_TIMEOUT = 25000, FLASH_POLISH_TIMEOUT = 10000, noAutoFallback=true', async () => {
       // 코드 정적 검증 — callGemini 호출에서 timeout 값 확인
       setupMockForPath('flash_fallback');
       await generateBlogWithPipeline(BASE_REQUEST, SEARCH_RESULTS);
 
-      // PRO 호출의 timeout 확인
+      // PRO 호출의 timeout + noAutoFallback 확인
       const proCalls = mockCallGemini.mock.calls.filter(
         (c: any[]) => c[0]?.model === 'gemini-3.1-pro-preview' && c[0]?.temperature === 0.3
       );
       expect(proCalls.length).toBeGreaterThanOrEqual(1);
-      expect(proCalls[0][0].timeout).toBe(30000);
+      expect(proCalls[0][0].timeout).toBe(25000);
+      expect(proCalls[0][0].noAutoFallback).toBe(true);
+      expect(proCalls[0][0].maxRetries).toBe(1);
 
-      // FLASH fallback 호출의 timeout 확인
+      // FLASH fallback 호출의 timeout + noAutoFallback 확인
       const flashPolishCalls = mockCallGemini.mock.calls.filter(
         (c: any[]) => c[0]?.model === 'gemini-3.1-flash-lite-preview' && c[0]?.temperature === 0.3
       );
       expect(flashPolishCalls.length).toBeGreaterThanOrEqual(1);
-      expect(flashPolishCalls[0][0].timeout).toBe(12000);
+      expect(flashPolishCalls[0][0].timeout).toBe(10000);
+      expect(flashPolishCalls[0][0].noAutoFallback).toBe(true);
+      expect(flashPolishCalls[0][0].maxRetries).toBe(1);
     });
   });
 

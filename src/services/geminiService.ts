@@ -973,8 +973,10 @@ ${sectionSummaries.join('\n')}`;
 
   const rawHtml = `${introHtml}\n${sectionHtmls.join('\n')}\n${conclusionHtml}`;
   const integrationPrompt = getPipelineIntegrationPrompt(targetLength);
-  const PRO_POLISH_TIMEOUT = 30000;
-  const FLASH_POLISH_TIMEOUT = 12000;
+  // timeout: proxy에 전달되는 값. 실제 client abort = timeout + 5000ms (geminiClient 내부 버퍼).
+  // PRO 25s → client 30s, FLASH 10s → client 15s. 총 최악 45s.
+  const PRO_POLISH_TIMEOUT = 25000;
+  const FLASH_POLISH_TIMEOUT = 10000;
 
   // 기본값: 가장 보수적인 경로. 이후 성공 시 승격.
   let finalQualityPath = 'flash_draft_only';
@@ -982,8 +984,13 @@ ${sectionSummaries.join('\n')}`;
   let polishModel = 'NONE';
   const stageCStart = Date.now();
 
-  // 1차: PRO polish 시도
-  console.info(`[PIPELINE] Stage C attempt=PRO timeout=${PRO_POLISH_TIMEOUT}`);
+  // 🛡️ Stage C는 자체 폴백 체인을 관리 — callGemini의 내부 PRO→FLASH 자동 폴백과 retry를 비활성화.
+  // 이유: 내부 폴백이 일어나면 caller(Stage C)가 실제 어떤 모델이 성공했는지 알 수 없어
+  // polishModel/finalQualityPath 라벨이 거짓이 됨.
+
+  // 1차: PRO polish 시도 (최대 30s, retry 없음, 내부 폴백 없음)
+  const proWallLimit = PRO_POLISH_TIMEOUT + 5000; // geminiClient가 +5s 버퍼를 추가하므로 실제 abort는 이 시점
+  console.info(`[PIPELINE] Stage C attempt=PRO timeout=${PRO_POLISH_TIMEOUT} clientAbort=${proWallLimit}`);
   try {
     integratedHtml = await callGemini({
       prompt: rawHtml,
@@ -992,13 +999,19 @@ ${sectionSummaries.join('\n')}`;
       responseType: 'text',
       timeout: PRO_POLISH_TIMEOUT,
       temperature: 0.3,
+      maxRetries: 1,
+      noAutoFallback: true,
     });
     polishModel = 'PRO';
     finalQualityPath = 'flash_draft+pro_polish';
   } catch (proErr: any) {
-    // 2차: FLASH polish 시도
-    console.warn(`[PIPELINE] ⚠️ Stage C PRO polish 실패 (${proErr?.message}), FLASH 재시도`);
-    console.info(`[PIPELINE] Stage C fallback=FLASH timeout=${FLASH_POLISH_TIMEOUT}`);
+    const proMs = Date.now() - stageCStart;
+    const reason = proErr?.errorType === 'timeout' ? 'timeout' : (proErr?.message || 'unknown').substring(0, 60);
+    console.warn(`[PIPELINE] ⚠️ Stage C PRO polish 실패 (${reason}, ${proMs}ms), FLASH 재시도`);
+
+    // 2차: FLASH polish 시도 (최대 15s, retry 없음)
+    const flashWallLimit = FLASH_POLISH_TIMEOUT + 5000;
+    console.info(`[PIPELINE] Stage C fallback=FLASH timeout=${FLASH_POLISH_TIMEOUT} clientAbort=${flashWallLimit}`);
     try {
       integratedHtml = await callGemini({
         prompt: rawHtml,
@@ -1007,12 +1020,16 @@ ${sectionSummaries.join('\n')}`;
         responseType: 'text',
         timeout: FLASH_POLISH_TIMEOUT,
         temperature: 0.3,
+        maxRetries: 1,
+        noAutoFallback: true,
       });
       polishModel = 'FLASH(fallback)';
       finalQualityPath = 'flash_draft+flash_polish';
     } catch (flashErr: any) {
+      const flashMs = Date.now() - stageCStart - proMs;
+      const flashReason = flashErr?.errorType === 'timeout' ? 'timeout' : (flashErr?.message || 'unknown').substring(0, 60);
       // 3차: pre-polish HTML 그대로 사용 (본문 파트는 이미 완전성 검증 통과)
-      console.warn(`[PIPELINE] ⚠️ Stage C FLASH polish 실패 (${flashErr?.message}), pre-polish HTML 사용`);
+      console.warn(`[PIPELINE] ⚠️ Stage C FLASH polish 실패 (${flashReason}, ${flashMs}ms), pre-polish HTML 사용`);
       integratedHtml = rawHtml;
       polishModel = 'NONE(pre-polish)';
       // finalQualityPath는 이미 flash_draft_only
@@ -1030,8 +1047,9 @@ ${sectionSummaries.join('\n')}`;
   }
 
   safeProgress('✅ [4/4] 통합 검증 완료');
-  console.info(`[PIPELINE] ✅ Stage C 완료: ${finalContent.length}자 (텍스트 ${finalContent.replace(/<[^>]+>/g, '').trim().length}자) polishModel=${polishModel} ${stageCMs}ms`);
-  console.info(`[PIPELINE] finalQualityPath=${finalQualityPath}`);
+  // 최종 로그: polishModel과 finalQualityPath는 여기서만 출력 — 단일 진실 원천
+  console.info(`[PIPELINE] ✅ Stage C 완료: ${finalContent.length}자 (텍스트 ${finalContent.replace(/<[^>]+>/g, '').trim().length}자) polishModel=${polishModel} stageC=${stageCMs}ms`);
+  console.info(`[PIPELINE] finalQualityPath=${finalQualityPath} | PRO_TIMEOUT=${PRO_POLISH_TIMEOUT} FLASH_TIMEOUT=${FLASH_POLISH_TIMEOUT}`);
 
   // 이미지 프롬프트 생성 — hero(대표) vs sub(서브) 차별화
   // hero: 현대 한국 병원 맥락 editorial 이미지

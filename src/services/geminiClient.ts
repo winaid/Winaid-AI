@@ -71,6 +71,8 @@ export interface GeminiCallConfig {
   thinkingLevel?: 'none' | 'low' | 'medium' | 'high';  // Gemini thinking budget
   topP?: number;
   maxOutputTokens?: number;
+  maxRetries?: number;         // callGemini retry 횟수 (기본 3). 1이면 retry 없이 1회만 시도.
+  noAutoFallback?: boolean;    // true면 _callGeminiOnce 내부 PRO→FLASH 자동 폴백 금지. Stage C처럼 caller가 직접 폴백을 관리할 때 사용.
 }
 
 // Vite define으로 주입된 전역 상수 (Cloudflare Pages 빌드 호환)
@@ -305,7 +307,7 @@ function isRetryableError(error: any): boolean {
  * - PRO 모델 실패 시 FLASH 폴백
  */
 export async function callGemini(config: GeminiCallConfig): Promise<any> {
-  const maxRetries = 3;
+  const maxRetries = config.maxRetries ?? 3;
   let lastError: any = null;
   const callId = `[BLOG_FLOW] callGemini(${config.model || 'PRO'})`;
   console.log(`${callId} 시작 (prompt: ${config.prompt?.substring(0, 50)}...)`);
@@ -543,10 +545,14 @@ async function _callGeminiOnce(config: GeminiCallConfig): Promise<any> {
 
       const errorBody = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
 
-      // 503/429/504 + PRO → FLASH 폴백
+      // 503/429/504 + PRO → FLASH 폴백 (noAutoFallback이면 caller에게 위임)
       if ((response.status === 503 || response.status === 429 || response.status === 504) && model === GEMINI_MODEL.PRO) {
-        console.warn(`[FALLBACK] PRO ${response.status} → FLASH`);
-        return _callGeminiOnce({ ...config, model: GEMINI_MODEL.FLASH, timeout: 25000 });
+        if (config.noAutoFallback) {
+          console.warn(`[FALLBACK] PRO ${response.status} — noAutoFallback, throw to caller`);
+        } else {
+          console.warn(`[FALLBACK] PRO ${response.status} → FLASH`);
+          return _callGeminiOnce({ ...config, model: GEMINI_MODEL.FLASH, timeout: 25000 });
+        }
       }
 
       const error: any = new Error(errorBody.error || `서버 응답 오류 (${response.status})`);
@@ -607,8 +613,9 @@ async function _callGeminiOnce(config: GeminiCallConfig): Promise<any> {
 
     if (error.name === 'AbortError') {
       // timeout 로그: 모델명 + timeout값만 (반복 상세 제거)
-      console.warn(`[TIMEOUT] ${model} ${clientTimeout}ms 초과 → ${model === GEMINI_MODEL.PRO ? 'FLASH 폴백' : 'throw'}`);
-      if (model === GEMINI_MODEL.PRO) {
+      const willFallback = model === GEMINI_MODEL.PRO && !config.noAutoFallback;
+      console.warn(`[TIMEOUT] ${model} ${clientTimeout}ms 초과 → ${willFallback ? 'FLASH 폴백' : 'throw'}`);
+      if (willFallback) {
         return _callGeminiOnce({ ...config, model: GEMINI_MODEL.FLASH, timeout: 25000 });
       }
       const timeoutError: any = new Error(`Gemini API timeout (client=${clientTimeout}ms, proxy=${timeout}ms)`);
