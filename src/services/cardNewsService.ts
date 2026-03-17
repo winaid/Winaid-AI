@@ -11,7 +11,9 @@
  */
 import { Type } from "@google/genai";
 import { callGemini, GEMINI_MODEL, TIMEOUTS } from "./geminiClient";
-import { STYLE_KEYWORDS, cleanImagePromptText, translateStylePromptToKorean, getCurrentYear, analyzeStyleReferenceImage } from "./imageGenerationService";
+import { STYLE_KEYWORDS } from "./image/imagePromptBuilder";
+import { cleanImagePromptText, translateStylePromptToKorean, getCurrentYear } from "./image/cardNewsImageService";
+import { analyzeStyleReferenceImage } from "./image/imageEditService";
 import { DESIGNER_PERSONA, SERIES_DESIGN_RULES } from "./calendarTemplateService";
 import { getDesignTemplateById } from "./cardNewsDesignTemplates";
 import type { GenerationRequest, ImageStyle, WritingStyle, CardPromptData, CardNewsScript } from "../types";

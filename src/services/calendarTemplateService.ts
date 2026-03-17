@@ -3,7 +3,7 @@
  * HTML/CSS 템플릿 + html2canvas로 100% 정확한 달력 이미지를 프로그래밍으로 생성
  */
 import { callGemini, callGeminiRaw, TIMEOUTS } from './geminiClient';
-import { isDemoSafeMode } from './imageGenerationService';
+import { isDemoSafeMode } from './image/imageOrchestrator';
 import { removeOklchFromClonedDoc } from '../components/resultPreviewUtils';
 
 // ── 타입 ──

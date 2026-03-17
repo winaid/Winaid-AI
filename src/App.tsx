@@ -7,7 +7,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import { ToastContainer } from './components/Toast';
 import { useCardNewsWorkflow } from './hooks/useCardNewsWorkflow';
 import { useContentGeneration } from './hooks/useContentGeneration';
-import { initImageDebugGlobals } from './services/imageGenerationService';
+import { initImageDebugGlobals } from './services/image/imageOrchestrator';
 
 // Lazy load heavy components
 const InputForm = lazy(() => import('./components/InputForm'));

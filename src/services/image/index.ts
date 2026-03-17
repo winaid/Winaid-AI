@@ -55,3 +55,22 @@ export {
   stripBase64FromHtml,
   restoreAndUploadImages,
 } from './imageStorageService';
+
+// Card News Image (Phase 2)
+export {
+  generateSingleImage,
+  recommendImagePrompt,
+  recommendCardNewsPrompt,
+  cleanImagePromptText,
+  translateStylePromptToKorean,
+  getCurrentYear,
+} from './cardNewsImageService';
+
+// Image Edit (Phase 2)
+export {
+  analyzeStyleReferenceImage,
+  transformImageStyle,
+  changeImageBackground,
+  editImageRegion,
+} from './imageEditService';
+export type { StyleTransformType } from './imageEditService';

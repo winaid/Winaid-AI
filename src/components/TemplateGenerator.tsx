@@ -4,7 +4,7 @@ import {
   transformImageStyle,
   editImageRegion,
   type StyleTransformType,
-} from '../services/imageGenerationService';
+} from '../services/image/imageEditService';
 import {
   generateTemplateWithAI,
   AI_STYLE_PRESETS,
