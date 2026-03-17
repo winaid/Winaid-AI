@@ -1,5 +1,13 @@
 import { GEMINI_MODEL, TIMEOUTS, callGemini, callGeminiRaw } from "./geminiClient";
 
+// ══════════════════════════════════════════════
+// 1차 구조 분리 완료: 이미지 서브시스템의 핵심 책임은
+// src/services/image/* 로 이동됨.
+//
+// 이 파일은 하위 호환을 위해 기존 export를 유지한다.
+// 새 코드는 src/services/image/* 에서 직접 import할 것.
+// ══════════════════════════════════════════════
+
 // 프롬프트 추천/번역에 사용할 경량 모델
 const PROMPT_RECOMMEND_MODEL = GEMINI_MODEL.FLASH_LITE;
 import type { ImageStyle } from "../types";
