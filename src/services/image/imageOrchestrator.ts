@@ -51,8 +51,8 @@ const TIER_CONCURRENCY: Record<ModelTier, number> = {
 };
 
 const IMAGE_TIMEOUT: Record<ImageGenMode, Record<ImageRole, number>> = {
-  auto:   { hero: 60000, sub: 55000 },
-  manual: { hero: 90000, sub: 75000 },
+  auto:   { hero: 30000, sub: 25000 },
+  manual: { hero: 45000, sub: 35000 },
 };
 
 // 디버그 verbose 로그 플래그
@@ -142,8 +142,44 @@ function pct(numerator: number, denominator: number): number {
   return denominator > 0 ? Math.round((numerator / denominator) * 100) : 100;
 }
 
+// ── Auto tier 결정 ──
+// hero/sub 모두 상황 기반으로 시작 tier를 결정한다.
+// "hero=PRO 고정" 편향을 제거하고, upstream 상태를 반영한다.
+function resolveStartTier(role: ImageRole, demoSafe: boolean): ModelTier {
+  const now = Date.now();
+
+  // demo-safe 모드: 항상 NB2 (빠른 경로)
+  if (demoSafe) return 'nb2';
+
+  // PRO가 현재 cooldown 상태면 NB2로 시작
+  if (_cooldownUntil.pro > now) {
+    console.info(`[IMG-TIER] role=${role} → nb2 (pro in cooldown, ${Math.round((_cooldownUntil.pro - now) / 1000)}s remaining)`);
+    return 'nb2';
+  }
+
+  // 세션 내 최근 PRO 실패율 확인: 최근 3회 중 2회 이상 실패면 NB2 우선
+  const recentHistory = _sessionStats.history.slice(-3);
+  if (recentHistory.length >= 2) {
+    const recentProFails = recentHistory.filter(h =>
+      h.failReasons.includes('upstream_503') ||
+      h.failReasons.includes('timeout') ||
+      h.failReasons.includes('all_keys_in_cooldown')
+    ).length;
+    if (recentProFails >= 2) {
+      console.info(`[IMG-TIER] role=${role} → nb2 (recent ${recentProFails}/3 sessions had failures)`);
+      return 'nb2';
+    }
+  }
+
+  // hero: PRO 사용 가능 상태이면 PRO 시도 (단, 위 조건에서 걸러지면 NB2)
+  if (role === 'hero') return 'pro';
+
+  // sub: 항상 NB2 우선
+  return 'nb2';
+}
+
 // =============================================
-// 🎨 generateBlogImage — 2-tier 이미지 생성
+// 🎨 generateBlogImage — auto-tier 이미지 생성
 // =============================================
 
 export const generateBlogImage = async (
@@ -173,23 +209,39 @@ export const generateBlogImage = async (
   const subPrompt = `Korean health blog image: ${promptText.substring(0, 140)}. Modern Korean adult, natural Korean facial features, contemporary clothing. ${styleKw}. ${COMMON_CONSTRAINTS} 16:9.`.trim();
   const ultraMinimal = `${promptText.substring(0, 80)}. Modern Korean adult. ${styleKw}. No text, no watermark, no hanbok. 16:9.`.trim();
 
-  // ── 시도 체인 ──
-  const heroChain: AttemptDef[] = [
-    { model: GEMINI_MODEL.IMAGE_PRO, tier: 'pro', prompt: heroPrompt, label: '#1(pro)' },
-    { model: GEMINI_MODEL.IMAGE_FLASH, tier: 'nb2', prompt: subPrompt, label: '#2(nb2-cross)' },
-  ];
+  // ── auto tier 결정 ──
+  const startTier = resolveStartTier(role, demoSafe);
+  console.info(`[IMG-TIER] role=${role} startTier=${startTier} mode=${mode}`);
 
-  const subChain: AttemptDef[] = [
-    { model: GEMINI_MODEL.IMAGE_FLASH, tier: 'nb2', prompt: subPrompt, label: '#1(nb2)' },
-    { model: GEMINI_MODEL.IMAGE_FLASH, tier: 'nb2', prompt: ultraMinimal, label: '#2(nb2-retry)' },
-    ...(!demoSafe ? [{ model: GEMINI_MODEL.IMAGE_PRO, tier: 'pro' as ModelTier, prompt: ultraMinimal, label: '#3(pro-cross)' }] : []),
-  ];
+  // ── 시도 체인: startTier에 따라 동적으로 구성 ──
+  let chain: AttemptDef[];
 
-  const chain = isHero ? heroChain : subChain;
-  const maxAttempts = demoSafe && !isHero ? 2 : chain.length;
+  if (isHero) {
+    if (startTier === 'pro') {
+      // PRO 사용 가능: PRO → NB2 fallback
+      chain = [
+        { model: GEMINI_MODEL.IMAGE_PRO, tier: 'pro', prompt: heroPrompt, label: '#1(pro)' },
+        { model: GEMINI_MODEL.IMAGE_FLASH, tier: 'nb2', prompt: subPrompt, label: '#2(nb2-cross)' },
+      ];
+    } else {
+      // PRO 불안정: NB2 먼저 → NB2 재시도(축소 프롬프트)
+      chain = [
+        { model: GEMINI_MODEL.IMAGE_FLASH, tier: 'nb2', prompt: heroPrompt, label: '#1(nb2-hero)' },
+        { model: GEMINI_MODEL.IMAGE_FLASH, tier: 'nb2', prompt: ultraMinimal, label: '#2(nb2-minimal)' },
+      ];
+    }
+  } else {
+    // sub: 항상 NB2 우선
+    chain = [
+      { model: GEMINI_MODEL.IMAGE_FLASH, tier: 'nb2', prompt: subPrompt, label: '#1(nb2)' },
+      { model: GEMINI_MODEL.IMAGE_FLASH, tier: 'nb2', prompt: ultraMinimal, label: '#2(nb2-retry)' },
+    ];
+  }
 
-  // ── wall time cap ──
-  const WALL_TIME_CAP_MS = isHero ? 50_000 : 90_000;
+  const maxAttempts = chain.length;
+
+  // ── wall time cap: hero 35s, sub 45s ──
+  const WALL_TIME_CAP_MS = isHero ? 35_000 : 45_000;
   const wallStart = Date.now();
 
   let lastError: any = null;
@@ -261,23 +313,22 @@ export const generateBlogImage = async (
         const nextTier = chain[attempt + 1]?.tier;
         const isCrossTier = nextTier && nextTier !== tier;
 
-        if (isCrossTier && (parsed.isCooldown || parsed.isUpstream503)) {
+        // 빠른 downgrade: 503/504/timeout/cooldown → 즉시 다음 시도로 전환
+        if (isCrossTier) {
+          // cross-tier 전환은 대기 없이 즉시
           console.info(`[IMG-DOWNGRADE] type=${role} from=${tier} to=${nextTier} reason=${parsed.errorType}`);
         } else if (parsed.isCooldown) {
-          const waitMs = parsed.retryAfterMs > 0
-            ? parsed.retryAfterMs + 500 + Math.random() * 500
-            : 8000 + Math.random() * 2000;
+          // cooldown: 최소 대기 (기존 8-10s → 2-3s)
+          const waitMs = Math.min(parsed.retryAfterMs || 2000, 3000) + Math.random() * 500;
           if (debug) console.debug(`[IMG-WAIT] cooldown ${Math.round(waitMs)}ms tier=${tier}`);
           await new Promise(r => setTimeout(r, waitMs));
-        } else if (parsed.isUpstream503) {
-          const backoff = 4000 + Math.random() * 4000;
-          if (debug) console.debug(`[IMG-WAIT] 503-backoff ${Math.round(backoff)}ms tier=${tier}`);
-          await new Promise(r => setTimeout(r, backoff));
-        } else if (parsed.isTimeout) {
-          if (debug) console.debug(`[IMG-WAIT] timeout-backoff 1000ms tier=${tier}`);
-          await new Promise(r => setTimeout(r, 1000));
+        } else if (parsed.isUpstream503 || parsed.isTimeout) {
+          // 503/timeout: 즉시 다음 시도 (backoff 제거 — wall cap이 시간 제한)
+          if (debug) console.debug(`[IMG-WAIT] fast-skip reason=${parsed.errorType} tier=${tier}`);
+          await new Promise(r => setTimeout(r, 500));
         } else {
-          await new Promise(r => setTimeout(r, 2000));
+          // 기타 에러: 짧은 대기
+          await new Promise(r => setTimeout(r, 1000));
         }
       }
     }
@@ -325,18 +376,18 @@ export async function generateImageQueue(
     return a.index - b.index;
   });
 
+  const demoSafe = isDemoSafeMode();
   if (isImgDebug()) {
     sorted.forEach(item => {
-      const tier = item.role === 'hero' ? 'pro' : 'nb2';
-      const model = item.role === 'hero' ? GEMINI_MODEL.IMAGE_PRO : GEMINI_MODEL.IMAGE_FLASH;
-      console.debug(`[IMG-ROUTE] idx=${item.index} type=${item.role} tier=${tier} model=${model}`);
+      const tier = resolveStartTier(item.role, demoSafe);
+      console.debug(`[IMG-ROUTE] idx=${item.index} type=${item.role} tier=${tier}`);
     });
   }
 
   const results: ImageQueueResult[] = [];
 
   const tasks = sorted.map(async (item) => {
-    const initialTier: ModelTier = item.role === 'hero' ? 'pro' : 'nb2';
+    const initialTier: ModelTier = resolveStartTier(item.role, demoSafe);
     const { queueWaitMs } = await acquireImageSlot(item.index, totalImages, item.role, initialTier);
 
     safeProgress(`🎨 이미지 ${item.index + 1}/${totalImages}장 생성 중 (${item.role})...`);
@@ -576,7 +627,7 @@ function printSessionSummary(): void {
     const max = sorted[sorted.length - 1];
     const p95 = sorted[Math.floor(sorted.length * 0.95)];
     const over50s = sorted.filter(ms => ms > 50000).length;
-    console.info(`[IMG-SESSION]   🕐 hero wallTime (cap=50s)`);
+    console.info(`[IMG-SESSION]   🕐 hero wallTime (cap=35s)`);
     console.info(`[IMG-SESSION]   median=${(median / 1000).toFixed(1)}s  p95=${(p95 / 1000).toFixed(1)}s  max=${(max / 1000).toFixed(1)}s  over50s=${over50s}/${sorted.length}`);
   }
 
