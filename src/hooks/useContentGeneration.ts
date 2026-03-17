@@ -98,8 +98,12 @@ export function useContentGeneration(deps: ContentGenerationDeps): ContentGenera
     deps.setMobileTab('result');
     console.info(`[BLOG_FLOW] handleGenerate 시작 — postType: ${request.postType}, topic: ${request.topic?.substring(0, 30)}`);
 
+    // targetSetState 미리 결정 — 에러도 올바른 state에 설정하기 위함
+    const earlyTargetSetState = request.postType === 'press_release' ? setPressState : setBlogState;
+
     if (!request.postType) {
-      setState(prev => ({
+      console.warn('[GEN_STEP] early return reason=postType 없음');
+      earlyTargetSetState(prev => ({
         ...prev,
         error: '콘텐츠 타입이 선택되지 않았습니다. 페이지를 새로고침 후 다시 시도해주세요.'
       }));
@@ -108,27 +112,35 @@ export function useContentGeneration(deps: ContentGenerationDeps): ContentGenera
     }
 
     // 서버 크레딧 차감 + generation token 발급
+    console.info('[GEN_STEP] credit check start');
     try {
       const { deductCreditOnServer, clearGenerationToken } = await import('../services/geminiClient');
       clearGenerationToken(); // 동시 생성 1건 전제 — 이전 토큰 정리
       const deductResult = await deductCreditOnServer(request.postType);
+      console.info(`[GEN_STEP] credit check result: success=${deductResult.success}, error=${deductResult.error || 'none'}`);
       if (!deductResult.success) {
-        setState(prev => ({
+        console.warn(`[GEN_STEP] early return reason=credit_fail: ${deductResult.error} — ${deductResult.message}`);
+        earlyTargetSetState(prev => ({
           ...prev,
+          isLoading: false,
           error: deductResult.message || '크레딧이 부족합니다.',
         }));
         isGeneratingRef.current = false;
         return;
       }
-    } catch (e) {
-      console.error('서버 크레딧 차감 실패:', e);
-      setState(prev => ({
+      console.info('[GEN_STEP] credit check pass');
+    } catch (e: any) {
+      console.error(`[GEN_STEP] credit check exception: ${e?.message || e}`);
+      earlyTargetSetState(prev => ({
         ...prev,
+        isLoading: false,
         error: '크레딧 확인에 실패했습니다. 다시 시도해주세요.',
       }));
       isGeneratingRef.current = false;
       return;
     }
+
+    console.info('[GEN_STEP] auth+credit passed, entering pipeline');
 
     // 카드뉴스: 3단계 워크플로우
     if (request.postType === 'card_news') {
@@ -150,11 +162,12 @@ export function useContentGeneration(deps: ContentGenerationDeps): ContentGenera
 
     const targetSetState = request.postType === 'press_release' ? setPressState : setBlogState;
 
+    console.info(`[GEN_STEP] setLoading(true) — postType=${request.postType}, target=${request.postType === 'press_release' ? 'pressState' : 'blogState'}`);
     targetSetState(prev => ({ ...prev, isLoading: true, error: null, warning: null, progress: 'SEO 최적화 키워드 분석 및 이미지 생성 중...' }));
 
     try {
       const { generateFullPost } = await import('../services/geminiService');
-      console.info('[BLOG_FLOW] generateFullPost 호출 시작...');
+      console.info('[GEN_STEP] before main pipeline — generateFullPost import OK');
       const result = await generateFullPost(request, (p) => targetSetState(prev => ({ ...prev, progress: p })));
       // 📋 결과물 완전성 검증 로그 — "완전한 글 1편" 기준
       const html = result?.fullHtml || result?.htmlContent || '';

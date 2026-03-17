@@ -84,7 +84,25 @@ async function getAuthToken(): Promise<string | null> {
   try {
     const { supabase } = await import('../lib/supabase');
     const { data: { session } } = await supabase.auth.getSession();
-    return session?.access_token || null;
+    const token = session?.access_token || null;
+    console.debug(`[GEN_STEP] getAuthToken: ${token ? 'JWT 있음' : 'JWT 없음'}`);
+    return token;
+  } catch (e) {
+    console.warn('[GEN_STEP] getAuthToken 예외:', e);
+    return null;
+  }
+}
+
+/** 관리자 세션 토큰 가져오기 (sessionStorage) */
+function getAdminToken(): string | null {
+  try {
+    const isAdmin = sessionStorage.getItem('ADMIN_AUTHENTICATED') === 'true';
+    const token = sessionStorage.getItem('ADMIN_TOKEN');
+    if (isAdmin && token) {
+      console.debug('[GEN_STEP] getAdminToken: 관리자 토큰 있음');
+      return token;
+    }
+    return null;
   } catch {
     return null;
   }
@@ -112,24 +130,32 @@ export async function deductCreditOnServer(postType: string): Promise<{
   message?: string;
 }> {
   const token = await getAuthToken();
-  if (!token) {
+  const adminToken = getAdminToken();
+
+  // JWT도 관리자 토큰도 없으면 인증 불가
+  if (!token && !adminToken) {
+    console.warn('[GEN_STEP] deductCredit: JWT 없음, 관리자 토큰 없음 → authentication_required');
     return { success: false, error: 'authentication_required', message: '로그인이 필요합니다.' };
   }
 
+  console.info(`[GEN_STEP] deductCredit 시작 — jwt=${!!token}, admin=${!!adminToken}, postType=${postType}`);
+
   const endpoint = getGeminiEndpoint();
   try {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    if (adminToken) headers['X-Admin-Token'] = adminToken;
+
     const response = await fetch(endpoint, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-      },
+      headers,
       body: JSON.stringify({ action: 'check_and_deduct', postType }),
     });
 
-    const data = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
+    const data = await response.json().catch(() => ({ error: `HTTP ${response.status}` })) as any;
 
     if (!response.ok) {
+      console.warn(`[GEN_STEP] deductCredit 서버 응답 실패: HTTP ${response.status}, error=${data.error}`);
       return {
         success: false,
         error: data.error || `HTTP ${response.status}`,
@@ -139,19 +165,23 @@ export async function deductCreditOnServer(postType: string): Promise<{
 
     if (data.success && data.generationToken) {
       _currentGenerationToken = data.generationToken;
+      console.info(`[GEN_STEP] deductCredit 성공 — creditsRemaining=${data.creditsRemaining}`);
     }
 
     return data;
   } catch (err: any) {
+    console.error(`[GEN_STEP] deductCredit 네트워크 에러: ${err?.message}`);
     return { success: false, error: 'network_error', message: '서버 연결에 실패했습니다.' };
   }
 }
 
-/** 프록시 요청용 헤더 생성 (JWT + Generation Token) */
+/** 프록시 요청용 헤더 생성 (JWT + Admin Token + Generation Token) */
 async function getProxyHeaders(): Promise<Record<string, string>> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   const token = await getAuthToken();
   if (token) headers['Authorization'] = `Bearer ${token}`;
+  const adminToken = getAdminToken();
+  if (adminToken) headers['X-Admin-Token'] = adminToken;
   if (_currentGenerationToken) headers['X-Generation-Token'] = _currentGenerationToken;
   return headers;
 }

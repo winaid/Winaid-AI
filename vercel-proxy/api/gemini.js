@@ -99,7 +99,7 @@ function corsHeaders(origin) {
   return {
     "Access-Control-Allow-Origin": effectiveOrigin,
     "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Generation-Token",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Generation-Token, X-Admin-Token",
     "Access-Control-Max-Age": "86400",
     "Vary": "Origin",
   };
@@ -356,6 +356,56 @@ async function verifyUser(req) {
   }
 }
 
+/**
+ * 관리자 비밀번호 검증 (Supabase RPC get_admin_stats 사용)
+ * X-Admin-Token 헤더의 비밀번호를 서버 측에서 검증
+ * 성공 시 { adminVerified: true }, 실패 시 { error: string }
+ */
+async function verifyAdminToken(adminToken) {
+  if (!adminToken) return { error: "admin_token_required" };
+
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const anonKey = process.env.SUPABASE_ANON_KEY;
+  if (!supabaseUrl || !anonKey) {
+    // fallback: 환경변수 ADMIN_PASSWORD로 직접 비교
+    const envPassword = process.env.ADMIN_PASSWORD;
+    if (envPassword && adminToken === envPassword) {
+      console.info("[auth] ✅ admin verified via ADMIN_PASSWORD env");
+      return { adminVerified: true };
+    }
+    console.error("[auth] SUPABASE not configured and no ADMIN_PASSWORD env");
+    return { error: "server_auth_not_configured" };
+  }
+
+  try {
+    const resp = await fetch(`${supabaseUrl}/rest/v1/rpc/get_admin_stats`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: anonKey,
+        Authorization: `Bearer ${anonKey}`,
+      },
+      body: JSON.stringify({ admin_password: adminToken }),
+    });
+
+    if (!resp.ok) {
+      console.warn(`[auth] admin RPC returned ${resp.status}`);
+      return { error: "admin_auth_failed" };
+    }
+
+    const rpcData = await resp.json();
+    if (!rpcData || rpcData.error || (typeof rpcData === "object" && rpcData.success === false)) {
+      return { error: "admin_password_invalid" };
+    }
+
+    console.info("[auth] ✅ admin verified via Supabase RPC");
+    return { adminVerified: true };
+  } catch (err) {
+    console.error("[auth] admin RPC error:", err.message);
+    return { error: "admin_auth_server_error" };
+  }
+}
+
 /** Supabase deduct_credits RPC 호출 */
 async function deductCredits(userId, amount) {
   const supabaseUrl = process.env.SUPABASE_URL;
@@ -520,15 +570,42 @@ export default async function handler(req, res) {
   }
 
   // ================================================================
-  // POST 공통: JWT 인증 (모든 POST 요청에 필수)
+  // POST 공통: 이중 인증 (1순위: Supabase JWT, 2순위: Admin Token)
   // ================================================================
+  let userId = null;
+  let authMethod = "none";
+
+  // 1순위: Supabase JWT (Authorization: Bearer <jwt>)
   const authResult = await verifyUser(req);
-  if (authResult.error) {
-    const status = authResult.error === "server_auth_not_configured" ? 500
-      : authResult.error === "auth_server_error" ? 502 : 401;
-    return res.status(status).json({ error: authResult.error });
+  if (!authResult.error) {
+    userId = authResult.userId;
+    authMethod = "jwt";
+    console.info(`[auth] ✅ JWT auth — user=${userId.substring(0, 8)}`);
   }
-  const userId = authResult.userId;
+
+  // 2순위: Admin Token (X-Admin-Token 헤더)
+  if (!userId) {
+    const adminToken = req.headers["x-admin-token"] || "";
+    if (adminToken) {
+      const adminResult = await verifyAdminToken(adminToken);
+      if (adminResult.adminVerified) {
+        userId = "admin";
+        authMethod = "admin_token";
+        console.info("[auth] ✅ Admin token auth");
+      } else {
+        console.warn(`[auth] ❌ Admin token failed: ${adminResult.error}`);
+      }
+    }
+  }
+
+  // 둘 다 실패 → 401
+  if (!userId) {
+    const jwtError = authResult.error || "no_credentials";
+    console.warn(`[auth] ❌ All auth failed — jwt_error=${jwtError}`);
+    const status = jwtError === "server_auth_not_configured" ? 500
+      : jwtError === "auth_server_error" ? 502 : 401;
+    return res.status(status).json({ error: jwtError });
+  }
 
   try {
     const body = req.body;
@@ -541,6 +618,20 @@ export default async function handler(req, res) {
     if (body && body.action === "check_and_deduct") {
       const postType = body.postType || "blog";
       const cost = CREDIT_COSTS[postType] || 1;
+
+      // 관리자 세션: 크레딧 차감 건너뛰기
+      if (authMethod === "admin_token") {
+        const generationToken = createGenerationToken("admin", postType);
+        if (!generationToken) {
+          return res.status(500).json({ error: "server_auth_not_configured", message: "GENERATION_TOKEN_SECRET 미설정" });
+        }
+        console.info(`[credits] ✅ admin bypass — postType=${postType} (no deduction)`);
+        return res.status(200).json({
+          success: true,
+          generationToken,
+          creditsRemaining: Infinity,
+        });
+      }
 
       const deductResult = await deductCredits(userId, cost);
       if (!deductResult.success) {
@@ -558,7 +649,7 @@ export default async function handler(req, res) {
       }
 
       const creditsRemaining = await getCreditsRemaining(userId);
-      console.info(`[credits] ✅ deducted ${cost} for ${postType} user=${userId.substring(0, 8)} remaining=${creditsRemaining}`);
+      console.info(`[credits] ✅ deducted ${cost} for ${postType} user=${userId.substring(0, 8)} remaining=${creditsRemaining} authMethod=${authMethod}`);
 
       return res.status(200).json({
         success: true,
@@ -573,6 +664,7 @@ export default async function handler(req, res) {
     const genToken = req.headers["x-generation-token"] || "";
     const tokenResult = verifyGenerationToken(genToken, userId);
     if (!tokenResult.valid) {
+      console.warn(`[auth] generation token invalid: ${tokenResult.error} authMethod=${authMethod} userId=${typeof userId === 'string' ? userId.substring(0, 8) : userId}`);
       return res.status(403).json({ error: tokenResult.error });
     }
 
