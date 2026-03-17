@@ -50,7 +50,7 @@ const StyleTab: React.FC<StyleTabProps> = ({
   styleProfiles, blogUrlInputs, setBlogUrlInputs, crawlingStatus, crawledPosts,
   dbPosts, setDbPosts, onSaveUrl, onCrawl, onReset, crawlAllStatus, onCrawlAll,
 }) => {
-  const [selectedTeam, setSelectedTeam] = useState<number>(TEAM_DATA[0].id);
+  const [selectedTeam, setSelectedTeam] = useState<number>(TEAM_DATA.find(t => t.id === 1)?.id ?? TEAM_DATA[0].id);
   const [expandedPosts, setExpandedPosts] = useState<Record<string, boolean>>({});
   const [expandedPost, setExpandedPost] = useState<string | null>(null); // "병원명::url"
   const [scoringId, setScoringId] = useState<string | null>(null);

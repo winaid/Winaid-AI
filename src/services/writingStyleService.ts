@@ -462,13 +462,13 @@ export const crawlAndLearnHospitalStyle = async (
   for (let i = 0; i < blogUrls.length; i++) {
     const url = blogUrls[i];
     const urlLabel = blogUrls.length > 1 ? ` (${i + 1}/${blogUrls.length})` : '';
-    onProgress?.(`블로그 글 수집 중${urlLabel}... (최대 10개)`);
+    onProgress?.(`블로그 글 수집 중${urlLabel}... (최대 5개)`);
 
     try {
       const crawlRes = await fetch(`${API_BASE_URL}/api/naver/crawl-hospital-blog`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ blogUrl: url, maxPosts: 10 }),
+        body: JSON.stringify({ blogUrl: url, maxPosts: 5 }),
       });
 
       if (!crawlRes.ok) {
@@ -1232,7 +1232,7 @@ export const crawlAndScoreAllHospitals = async (
           const res = await fetch(`${API_BASE_URL}/api/naver/crawl-hospital-blog`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ blogUrl, maxPosts: 10 }),
+            body: JSON.stringify({ blogUrl, maxPosts: 5 }),
           });
           if (!res.ok) continue;
           const crawlData = await res.json() as any;

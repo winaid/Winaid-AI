@@ -13,6 +13,13 @@ export interface TeamData {
 
 export const TEAM_DATA: TeamData[] = [
   {
+    id: 0,
+    label: '본부장님',
+    hospitals: [
+      { name: '광화문선치과', manager: '본부장님', address: '서울 종로구 광화문', naverBlogUrls: ['https://blog.naver.com/sundent21'] },
+    ],
+  },
+  {
     id: 1,
     label: '1팀',
     hospitals: [
