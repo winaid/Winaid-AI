@@ -626,6 +626,53 @@ E. "변화를 기록해두는 것도 방법입니다"
 // 다단계 파이프라인 생성 함수
 // ============================================
 
+// ── 이미지 장면 유형 분류 (sceneType) ──
+// 소제목 키워드 기반으로 장면 타입을 결정하여 이미지 다양화
+type SceneType = 'symptom-discomfort' | 'cause-mechanism' | 'consultation-treatment' | 'prevention-care' | 'caution-checkup';
+
+const SCENE_KEYWORDS: Record<SceneType, RegExp> = {
+  'symptom-discomfort': /통증|아프|붓기|출혈|시림|불편|증상|이상|징후|피가|욱신|저림|민감/,
+  'cause-mechanism': /원인|이유|발생|진행|악화|염증|세균|위험|요인|메커니즘|과정|구조/,
+  'consultation-treatment': /치료|시술|수술|상담|검진|진료|진단|처방|보철|임플란트|스케일링|발치/,
+  'prevention-care': /예방|관리|양치|칫솔|치실|습관|위생|세정|관리법|홈케어|구강 관리|정기/,
+  'caution-checkup': /주의|방치|조기|검진|내원|방문|신호|점검|체크|확인|필요/,
+};
+
+const SCENE_PROMPTS: Record<SceneType, string> = {
+  'symptom-discomfort': '구강 불편감이나 통증을 느끼는 현대 한국인의 자연스러운 일상 장면. 과장된 고통 표현 금지. 입 주변이나 잇몸 불편을 인지하는 모습.',
+  'cause-mechanism': '구강 건강 문제의 원인이나 진행 과정을 설명하는 맥락의 의료 정보 이미지. 반드시 병원 장면일 필요 없음.',
+  'consultation-treatment': '현대 한국 병원/치과에서 의사와 환자가 진료 또는 상담하는 장면. 깨끗한 진료실, 신뢰감 있는 분위기.',
+  'prevention-care': '양치질, 구강 위생 관리, 예방 행동을 하는 현대 한국인의 일상 장면. 집이나 욕실 등 일상 배경 허용.',
+  'caution-checkup': '구강 건강 경각심을 전달하는 현실적 장면. 병원 방문 전후를 암시하거나, 건강 점검이 필요함을 보여주는 모습.',
+};
+
+function classifySceneType(sectionTitle: string, usedSceneTypes: string[]): SceneType {
+  // 1차: 키워드 매칭
+  for (const [type, regex] of Object.entries(SCENE_KEYWORDS) as [SceneType, RegExp][]) {
+    if (regex.test(sectionTitle)) {
+      // 직전 sceneType과 같으면 다른 걸 찾아봄 (연속 중복 방지)
+      if (usedSceneTypes.length > 0 && usedSceneTypes[usedSceneTypes.length - 1] === type) {
+        continue; // 다음 매칭 시도
+      }
+      return type;
+    }
+  }
+  // 2차: 연속 중복 방지 실패 시에도 최초 매칭 반환
+  for (const [type, regex] of Object.entries(SCENE_KEYWORDS) as [SceneType, RegExp][]) {
+    if (regex.test(sectionTitle)) return type;
+  }
+  // 3차: 매칭 없으면 가장 적게 사용된 타입 반환 (다양성 보장)
+  const typeCounts: Record<string, number> = {};
+  const allTypes: SceneType[] = ['symptom-discomfort', 'cause-mechanism', 'consultation-treatment', 'prevention-care', 'caution-checkup'];
+  for (const t of allTypes) typeCounts[t] = usedSceneTypes.filter(u => u === t).length;
+  return allTypes.sort((a, b) => (typeCounts[a] || 0) - (typeCounts[b] || 0))[0];
+}
+
+function buildScenePrompt(topic: string, sectionTitle: string, sceneType: SceneType): string {
+  const sceneDesc = SCENE_PROMPTS[sceneType];
+  return `${topic} — ${sectionTitle}. ${sceneDesc} 현대 한국인, 현대적 일상복 또는 의료복.`;
+}
+
 /**
  * 다단계 파이프라인으로 블로그 글 생성
  * Stage A: 아웃라인 생성 (FLASH) → Stage B: 섹션별 초안 (FLASH) → Stage C: 최종 polish (PRO)
@@ -1051,26 +1098,33 @@ ${sectionSummaries.join('\n')}`;
   console.info(`[PIPELINE] ✅ Stage C 완료: ${finalContent.length}자 (텍스트 ${finalContent.replace(/<[^>]+>/g, '').trim().length}자) polishModel=${polishModel} stageC=${stageCMs}ms`);
   console.info(`[PIPELINE] finalQualityPath=${finalQualityPath} | PRO_TIMEOUT=${PRO_POLISH_TIMEOUT} FLASH_TIMEOUT=${FLASH_POLISH_TIMEOUT}`);
 
-  // 이미지 프롬프트 생성 — hero(대표) vs sub(서브) 차별화
-  // hero: 현대 한국 병원 맥락 editorial 이미지
-  // sub: 소제목 맥락 보조 이미지 (최소 프롬프트 → 빠른 응답)
+  // 이미지 프롬프트 생성 — hero는 주제 대표, sub는 문단 의미 기반 장면 분기
+  // 병원 장면 고정이 아니라, 문단 내용에 맞는 의료/구강 건강 맥락으로 다양화
   const imageCount = request.imageCount ?? 1;
   const imagePrompts: string[] = [];
+  // 사용된 sceneType 기록 — 연속 중복 방지용
+  const usedSceneTypes: string[] = [];
+
   if (imageCount > 0) {
     for (let i = 0; i < Math.min(imageCount, outline.sections.length + 1); i++) {
       const section = outline.sections[Math.min(i, outline.sections.length - 1)];
       const sectionTitle = section?.title || '건강 정보';
 
       if (i === 0) {
-        // hero: 대표 이미지 — 현대 한국 병원/치과 맥락 + 신뢰감/전문성
+        // hero: 주제 대표 이미지 — 반드시 병원 상담 장면일 필요 없음
+        // 주제 중심으로 구강 건강/의료 맥락의 editorial 이미지
         imagePrompts.push(
-          `${request.topic} — 현대 한국 병원 환경의 대표 이미지. 현대적인 한국인 의사 또는 환자가 깨끗한 진료실에서 상담하는 장면. 신뢰감 있고 차분한 분위기. 현대적 일상복 또는 의료 전문복.`
+          `${request.topic} — 주제를 상징적으로 보여주는 현대 한국인. 의료/구강 건강 맥락의 현실적 editorial 이미지. 차분하고 신뢰감 있는 분위기.`
         );
+        usedSceneTypes.push('topic-editorial');
+        console.info(`[IMG-PROMPT] hero idx=0 sceneType=topic-editorial profile=modern-korean-medical-context textless no-hanbok`);
       } else {
-        // sub: 소제목 보조 이미지 — 한국 의료 맥락 유지하되 최소 프롬프트
-        imagePrompts.push(
-          `${request.topic} — ${sectionTitle}. 현대 한국 병원 맥락.`
-        );
+        // sub: 소제목/문단 의미 기반 sceneType 분류
+        const sceneType = classifySceneType(sectionTitle, usedSceneTypes);
+        const scenePrompt = buildScenePrompt(request.topic, sectionTitle, sceneType);
+        imagePrompts.push(scenePrompt);
+        usedSceneTypes.push(sceneType);
+        console.info(`[IMG-PROMPT] sub idx=${i} sceneType=${sceneType} profile=korean-oral-health-context textless no-hanbok`);
       }
     }
   }
@@ -3179,7 +3233,7 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
   // 🔧 이미지 프롬프트 부족 시 자동 패딩 (요청 개수만큼 채우기)
   if (maxImages > 0 && textData.imagePrompts.length < maxImages) {
     console.warn(`⚠️ 이미지 프롬프트 부족! 요청: ${maxImages}개, 생성: ${textData.imagePrompts.length}개 → 자동 패딩`);
-    const defaultPrompt = `${request.topic} — 현대 한국 병원 맥락 의료 이미지. ${request.imageStyle === 'illustration' ? '3D 일러스트, 파스텔톤' : request.imageStyle === 'medical' ? '의학 해부도, 전문 의료 이미지' : '실사 사진, DSLR 촬영'}. 현대 한국인, 현대적 일상복 또는 의료복.`;
+    const defaultPrompt = `${request.topic} — 의료/구강 건강 맥락의 현실적 이미지. ${request.imageStyle === 'illustration' ? '3D 일러스트, 파스텔톤' : request.imageStyle === 'medical' ? '의학 해부도, 전문 의료 이미지' : '실사 사진, DSLR 촬영'}. 현대 한국인, 현대적 일상복 또는 의료복.`;
     while (textData.imagePrompts.length < maxImages) {
       textData.imagePrompts.push(defaultPrompt);
       console.log(`   + 패딩 프롬프트 추가: ${textData.imagePrompts.length}/${maxImages}`);
@@ -3225,18 +3279,31 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
         mode: 'auto' as const,
       }));
 
+      const plannedSlotCount = queueItems.length;
       const queueResults = await generateImageQueue(queueItems, safeProgress);
 
       for (const qr of queueResults) {
         images.push({ index: qr.index + 1, data: qr.data, prompt: qr.prompt });
         if (qr.status === 'fallback') imageFailCount++;
       }
+
+      // 슬롯 수량 보장 검증: 계획 대비 반환 수가 동일해야 함
+      const aiSlots = queueResults.filter(r => r.resultType === 'ai-image').length;
+      const templateSlots = queueResults.filter(r => r.resultType === 'template').length;
+      const placeholderSlots = queueResults.filter(r => r.resultType === 'placeholder').length;
+      const slotFillRate = plannedSlotCount > 0 ? Math.round((images.length / plannedSlotCount) * 100) : 100;
+      console.info(`[IMG-SLOTS] planned=${plannedSlotCount} returned=${images.length} ai=${aiSlots} template=${templateSlots} placeholder=${placeholderSlots} slotFillRate=${slotFillRate}%`);
+      if (images.length < plannedSlotCount) {
+        console.error(`[IMG-SLOTS] ⛔ 슬롯 누락! planned=${plannedSlotCount} returned=${images.length} — 슬롯 보장 위반`);
+      }
     }
 
     const imgElapsed = Date.now() - imgStart;
-    console.info(`[IMG] total: ${images.length}/${maxImages} images, ${imageFailCount} failed, ${imgElapsed}ms`);
-    if (imageFailCount > 0) {
-      safeProgress(`⚠️ 이미지 ${imageFailCount}장 생성 실패 — 텍스트만 반환합니다`);
+    console.info(`[IMG] total: ${images.length}/${maxImages} images, ${imageFailCount} fallback, ${imgElapsed}ms`);
+    if (imageFailCount > 0 && imageFailCount === images.length) {
+      safeProgress(`⚠️ 이미지 ${imageFailCount}장 AI 생성 실패 — 대체 이미지 적용`);
+    } else if (imageFailCount > 0) {
+      safeProgress(`⚠️ 이미지 ${imageFailCount}장 AI 생성 실패 — 일부 대체 이미지 적용`);
     }
   } else {
     console.log('🖼️ 이미지 0장 설정 - 이미지 생성 스킵');
@@ -3486,9 +3553,16 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
     body = body.replace(pattern, '');
     }
   });
-  console.info(`[IMG_INSERT] 이미지 삽입 후 body: ${body.length}자 (삽입 전: ${bodyLenBeforeImages}자)`);
-  
+  // 삽입 결과 집계: 계획 대비 실제 삽입 수
+  const insertedCount = images.filter(img => img.data && body.includes(`data-image-index="${img.index}"`)).length;
+  const skippedByLayout = images.length - insertedCount;
+  console.info(`[IMG-INSERT] planned=${images.length} inserted=${insertedCount} skippedByLayout=${skippedByLayout} bodyBefore=${bodyLenBeforeImages}자 bodyAfter=${body.length}자`);
+
   // 혹시 남아있는 [IMG_N] 마커 모두 제거
+  const remainingMarkers = (body.match(/\[IMG_\d+\]/gi) || []).length;
+  if (remainingMarkers > 0) {
+    console.warn(`[IMG-INSERT] ⚠️ 미매칭 마커 ${remainingMarkers}개 제거 — 본문에 삽입 위치 부족`);
+  }
   body = body.replace(/\[IMG_\d+\]/gi, '');
 
   // 카드뉴스: 분석된 스타일 배경색 강제 적용 (AI가 무시할 경우 대비)

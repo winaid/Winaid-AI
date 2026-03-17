@@ -706,19 +706,18 @@ export const generateBlogImage = async (
   const COMMON_CONSTRAINTS = 'No text, no letters, no typography, no watermark, no logo. No hanbok, no traditional clothing, no cultural costume, no historical styling, no wedding styling, no festival styling. No exaggerated poses, no glamorous fashion portrait.';
 
   // ── 프롬프트 전략 ──
-  const heroPrompt = `Generate a 16:9 landscape editorial hero image for a Korean medical/dental clinic blog.
+  // hero: 주제 대표 editorial 이미지 — 병원 장면 고정이 아니라 주제 맥락에 맞는 장면
+  // sub: 문단 내용 기반 — promptText에 이미 sceneType별 장면 묘사가 포함되어 있음
+  const heroPrompt = `Generate a 16:9 landscape editorial image for a Korean medical/dental health blog.
 [Subject] ${promptText}
-[Person] Modern Korean adult with natural Korean facial features, wearing contemporary everyday clothing or professional medical attire.
-[Setting] Modern Korean hospital or dental clinic interior, calm and trustworthy atmosphere, clean and bright.
+[Person] Modern Korean adult with natural Korean facial features, wearing contemporary everyday clothing or realistic medical attire.
+[Atmosphere] Calm, trustworthy, realistic editorial photo. The setting should match the subject — hospital/clinic if about treatment, home/daily life if about prevention or symptoms.
 [Style] ${customStylePrompt || BLOG_IMAGE_STYLE_COMPACT[style] || BLOG_IMAGE_STYLE_COMPACT.illustration}
 [Rules] ${COMMON_CONSTRAINTS}`.trim();
 
-  const subPrompt = `Korean medical blog image: ${promptText.substring(0, 100)}. Modern Korean adult or medical professional in contemporary Korean clinic setting. ${styleKw}. ${COMMON_CONSTRAINTS} 16:9.`.trim();
-  const ultraMinimal = `${promptText.substring(0, 60)}. Korean clinic, modern Korean adult. ${styleKw}. No text, no watermark, no hanbok. 16:9.`.trim();
-
-  // ── 프롬프트 방향 로그 ──
-  const promptProfile = isHero ? 'modern-korean-medical-editorial' : 'korean-clinic-context';
-  console.info(`[IMG-PROMPT] ${role} idx=${0} profile=${promptProfile} textless no-hanbok style=${style}`);
+  // sub: promptText에 이미 sceneType 기반 장면 묘사 포함 → 병원 고정 제거
+  const subPrompt = `Korean health blog image: ${promptText.substring(0, 140)}. Modern Korean adult, natural Korean facial features, contemporary clothing. ${styleKw}. ${COMMON_CONSTRAINTS} 16:9.`.trim();
+  const ultraMinimal = `${promptText.substring(0, 80)}. Modern Korean adult. ${styleKw}. No text, no watermark, no hanbok. 16:9.`.trim();
 
   // ── 시도 체인 ──
   // hero: pro 1회 → nb2 1회 → template (wall time cap 50s)
