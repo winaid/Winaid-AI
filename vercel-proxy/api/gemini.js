@@ -659,13 +659,21 @@ export default async function handler(req, res) {
     }
 
     // ================================================================
-    // AI 호출 공통: Generation Token 검증
+    // AI 호출: Generation Token 검증 (있으면 검증, 없으면 unmetered 허용)
+    // SEO/트렌드/키워드 분석 등은 generation token 없이 호출됨
+    // 크레딧 차감이 필요한 작업은 deductCreditOnServer → generation token 발급 경로를 거침
     // ================================================================
     const genToken = req.headers["x-generation-token"] || "";
-    const tokenResult = verifyGenerationToken(genToken, userId);
-    if (!tokenResult.valid) {
-      console.warn(`[auth] generation token invalid: ${tokenResult.error} authMethod=${authMethod} userId=${typeof userId === 'string' ? userId.substring(0, 8) : userId}`);
-      return res.status(403).json({ error: tokenResult.error });
+    let isMetered = false;
+    if (genToken) {
+      const tokenResult = verifyGenerationToken(genToken, userId);
+      if (!tokenResult.valid) {
+        console.warn(`[auth] generation token invalid: ${tokenResult.error} authMethod=${authMethod} userId=${typeof userId === 'string' ? userId.substring(0, 8) : userId}`);
+        return res.status(403).json({ error: tokenResult.error });
+      }
+      isMetered = true;
+    } else {
+      console.info(`[auth] ℹ️ unmetered call (no generation token) authMethod=${authMethod} userId=${typeof userId === 'string' ? userId.substring(0, 8) : userId}`);
     }
 
     // API 키 확인
