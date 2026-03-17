@@ -628,7 +628,7 @@ E. "변화를 기록해두는 것도 방법입니다"
 
 /**
  * 다단계 파이프라인으로 블로그 글 생성
- * Stage A: 아웃라인 생성 (FLASH) → Stage B: 섹션별 생성 (PRO) → Stage C: 통합 검증 (FLASH)
+ * Stage A: 아웃라인 생성 (FLASH) → Stage B: 섹션별 초안 (FLASH) → Stage C: 최종 polish (PRO)
  */
 export const generateBlogWithPipeline = async (
   request: GenerationRequest,
@@ -736,15 +736,9 @@ ${JSON.stringify(searchResults?.collected_facts?.slice(0, 3) || [], null, 2)}`;
 
   // ── 성능 카운터 ──
   const demoSafe = isDemoSafeMode();
-  let proTimeoutCount = 0;
-  let flashFallbackCount = 0;
-  // 적응형 모델 선택: PRO가 첫 섹션에서 timeout하면 나머지는 FLASH 직행
-  let proDisabledForSession = false;
-  // PRO 타임아웃: 12초로 대폭 축소 — PRO가 12초 안에 못 오면 FLASH가 낫다
-  // 이전 45초에서 12초로: 섹션당 timeout 비용 33초 절감
-  const PRO_SECTION_TIMEOUT = demoSafe ? 10000 : 12000;
-  const FLASH_SECTION_TIMEOUT = 25000; // FLASH도 30→25초로 타이트하게
-  console.info(`[PIPELINE] ⚙️ config: sectionConcurrency=2 proTimeoutMs=${PRO_SECTION_TIMEOUT} flashTimeoutMs=${FLASH_SECTION_TIMEOUT} demoSafe=${demoSafe}`);
+  // 섹션 생성은 FLASH 직행 — PRO는 최종 polish(Stage C)에서만 사용
+  const FLASH_SECTION_TIMEOUT = 25000;
+  console.info(`[PIPELINE] ⚙️ config: sectionModel=FLASH flashTimeoutMs=${FLASH_SECTION_TIMEOUT} proPolish=StageC demoSafe=${demoSafe}`);
 
   // ── 도입부 생성 함수 ──
   const generateIntro = async (): Promise<string> => {
@@ -811,19 +805,16 @@ ${request.disease ? `[질환] ${request.disease}` : ''}
 [이 섹션 관련 검색 결과]
 ${JSON.stringify(searchResults?.collected_facts?.slice(i, i + 2) || [], null, 2)}`;
 
-    // 적응형 모델 선택: PRO가 이미 실패했으면 FLASH 직행
+    // 섹션 초안은 FLASH 직행 — PRO는 Stage C polish에서 사용
     const sectionSystemPrompt = sectionPrompt + hospitalStyleSuffix;
     const promptLength = sectionSystemPrompt.length + sectionUserPrompt.length;
-    const useFlashDirect = proDisabledForSession;
-    const sectionModel = useFlashDirect ? GEMINI_MODEL.FLASH : GEMINI_MODEL.PRO;
-    const sectionTimeout = useFlashDirect ? FLASH_SECTION_TIMEOUT : PRO_SECTION_TIMEOUT;
 
     const result = await callGemini({
       prompt: sectionUserPrompt,
       systemPrompt: sectionSystemPrompt,
-      model: sectionModel,
+      model: GEMINI_MODEL.FLASH,
       responseType: 'text',
-      timeout: sectionTimeout,
+      timeout: FLASH_SECTION_TIMEOUT,
       temperature: 0.75,
     });
     const html = typeof result === 'string' ? result.trim() : '';
@@ -833,20 +824,7 @@ ${JSON.stringify(searchResults?.collected_facts?.slice(i, i + 2) || [], null, 2)
     const summary = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().substring(0, 150);
     const elapsed = Date.now() - t0;
     timings[`section_${i}`] = elapsed;
-
-    // PRO timeout 후 FLASH 폴백이 발생했는지 판정
-    const wasFlashFallback = !useFlashDirect && elapsed > PRO_SECTION_TIMEOUT + 3000;
-    let finalModel = useFlashDirect ? 'FLASH(direct)' : (wasFlashFallback ? 'FLASH(fallback)' : 'PRO');
-    if (wasFlashFallback) {
-      proTimeoutCount++;
-      flashFallbackCount++;
-      // 적응형: PRO가 한 번 timeout하면 나머지 섹션은 FLASH 직행
-      if (!proDisabledForSession) {
-        proDisabledForSession = true;
-        console.info(`[PIPELINE] ⚡ PRO timeout 감지 → 나머지 섹션 FLASH 직행 전환`);
-      }
-    }
-    console.info(`[PIPELINE] ✅ section ${sectionNum} ${html.length}자 ${elapsed}ms model=${finalModel} prompt=${promptLength}`);
+    console.info(`[PIPELINE] ✅ section ${sectionNum} ${html.length}자 ${elapsed}ms model=FLASH prompt=${promptLength}`);
     return { html, summary };
   };
 
@@ -909,7 +887,7 @@ ${JSON.stringify(searchResults?.collected_facts?.slice(i, i + 2) || [], null, 2)
   }
 
   timings.stageB_sections = Date.now() - stageBStart;
-  console.info(`[PIPELINE] ✅ Stage B sections: ${sectionHtmls.length}/${outline.sections.length} all OK ${timings.stageB_sections}ms | proTimeoutCount=${proTimeoutCount} flashFallbackCount=${flashFallbackCount}`);
+  console.info(`[PIPELINE] ✅ Stage B sections: ${sectionHtmls.length}/${outline.sections.length} all OK ${timings.stageB_sections}ms | model=FLASH`);
 
   // ── B-3: 마무리 생성 ──
   const concStart = Date.now();
@@ -949,8 +927,9 @@ ${sectionSummaries.join('\n')}`;
   safeProgress('✅ 본문 생성 완료');
   console.info(`[PIPELINE] ✅ conclusion ${conclusionHtml.length}자 ${timings.conclusion}ms`);
 
-  // ── Stage C: 통합 + 검증 (FLASH) ──
-  safeProgress('🔍 [4/4] 전체 통합 및 검증 중...');
+  // ── Stage C: 통합 + PRO polish ──
+  // FLASH 초안을 PRO로 최종 다듬기 — timeout 시 rawHtml 그대로 사용 (안전)
+  safeProgress('🔍 [4/4] 전체 통합 및 품질 보정 중...');
 
   // rawHtml 조립 전 완전성 검사 — 모든 파트가 존재하는지 확인
   console.info(`[PIPELINE] 🔍 완전성 검사: intro=${introHtml.length}자, sections=${sectionHtmls.map(h => h.length).join('/')}, conclusion=${conclusionHtml.length}자`);
@@ -994,22 +973,41 @@ ${sectionSummaries.join('\n')}`;
 
   const rawHtml = `${introHtml}\n${sectionHtmls.join('\n')}\n${conclusionHtml}`;
   const integrationPrompt = getPipelineIntegrationPrompt(targetLength);
+  const PRO_POLISH_TIMEOUT = demoSafe ? 30000 : 40000;
 
   let integratedHtml: any;
+  let polishModel = 'PRO';
+  const stageCStart = Date.now();
   try {
     integratedHtml = await callGemini({
       prompt: rawHtml,
       systemPrompt: integrationPrompt,
-      model: GEMINI_MODEL.FLASH,
+      model: GEMINI_MODEL.PRO,
       responseType: 'text',
-      timeout: 30000,
+      timeout: PRO_POLISH_TIMEOUT,
       temperature: 0.3,
     });
-  } catch (intErr: any) {
-    // Stage C 실패 시 rawHtml을 그대로 사용 (본문 파트는 이미 검증됨)
-    console.warn(`[PIPELINE] ⚠️ Stage C 통합 실패 (${intErr?.message}), rawHtml 사용`);
-    integratedHtml = rawHtml;
+  } catch (proErr: any) {
+    // PRO polish 실패 → FLASH로 재시도 (빠른 보정이라도)
+    console.warn(`[PIPELINE] ⚠️ Stage C PRO polish 실패 (${proErr?.message}), FLASH 재시도`);
+    polishModel = 'FLASH(fallback)';
+    try {
+      integratedHtml = await callGemini({
+        prompt: rawHtml,
+        systemPrompt: integrationPrompt,
+        model: GEMINI_MODEL.FLASH,
+        responseType: 'text',
+        timeout: 25000,
+        temperature: 0.3,
+      });
+    } catch (flashErr: any) {
+      // FLASH도 실패 → rawHtml 그대로 사용 (본문 파트는 이미 검증됨)
+      console.warn(`[PIPELINE] ⚠️ Stage C FLASH도 실패 (${flashErr?.message}), rawHtml 사용`);
+      integratedHtml = rawHtml;
+      polishModel = 'NONE(rawHtml)';
+    }
   }
+  const stageCMs = Date.now() - stageCStart;
 
   const finalContent = typeof integratedHtml === 'string' && integratedHtml.includes('<')
     ? integratedHtml.trim()
@@ -1021,7 +1019,7 @@ ${sectionSummaries.join('\n')}`;
   }
 
   safeProgress('✅ [4/4] 통합 검증 완료');
-  console.info(`[PIPELINE] ✅ Stage C 완료: finalContent ${finalContent.length}자 (텍스트 ${finalContent.replace(/<[^>]+>/g, '').trim().length}자)`);
+  console.info(`[PIPELINE] ✅ Stage C 완료: ${finalContent.length}자 (텍스트 ${finalContent.replace(/<[^>]+>/g, '').trim().length}자) polishModel=${polishModel} ${stageCMs}ms`);
 
   // 이미지 프롬프트 생성 — hero(대표) vs sub(서브) 차별화
   // hero: 구체적이고 안정적인 프롬프트 (index 0)
@@ -1059,9 +1057,8 @@ ${sectionSummaries.join('\n')}`;
   console.info(`[PIPELINE] ═══════════════════════════════════════`);
   console.info(`[PIPELINE] ✅ DONE — 성능 요약`);
   console.info(`[PIPELINE]   total=${timings.total}ms (${(timings.total / 1000).toFixed(1)}s)`);
-  console.info(`[PIPELINE]   stageA=${timings.stageA}ms | stageB=${timings.stageB_sections}ms | conclusion=${timings.conclusion}ms`);
-  console.info(`[PIPELINE]   proTimeoutMs=${PRO_SECTION_TIMEOUT} | flashTimeoutMs=${FLASH_SECTION_TIMEOUT} | proDisabled=${proDisabledForSession}`);
-  console.info(`[PIPELINE]   proTimeoutCount=${proTimeoutCount} | flashFallbackCount=${flashFallbackCount}`);
+  console.info(`[PIPELINE]   stageA=${timings.stageA}ms | stageB=${timings.stageB_sections}ms | conclusion=${timings.conclusion}ms | stageC=${stageCMs}ms`);
+  console.info(`[PIPELINE]   strategy=FLASH초안+PRO_polish | polishModel=${polishModel} | proPolishTimeout=${PRO_POLISH_TIMEOUT}ms`);
   console.info(`[PIPELINE]   avgSectionMs=${avgSectionMs} | sections=${sectionTimingsArr.map(t => `${t}ms`).join('/')}`);
   console.info(`[PIPELINE]   finalContent=${finalContent.replace(/<[^>]+>/g, '').trim().length}자 imgPrompts=${imagePrompts.length}`);
   console.info(`[PIPELINE] ═══════════════════════════════════════`);
