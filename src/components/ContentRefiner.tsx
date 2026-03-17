@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { refineContentByMedicalLaw } from '../services/postProcessingService';
-import { getAiClient } from '../services/geminiClient';
+import { callGemini, GEMINI_MODEL } from '../services/geminiClient';
 import { SYSTEM_PROMPT, getStage2_AiRemovalAndCompliance, getDynamicSystemPrompt } from '../lib/gpt52-prompts-staged';
 import { applyThemeToHtml } from '../utils/cssThemes';
 import { toast } from './Toast';
@@ -97,7 +97,7 @@ const ContentRefiner: React.FC<ContentRefinerProps> = ({ onClose, onNavigate, da
     setIsChatting(true);
 
     try {
-      const ai = getAiClient();
+      // SaaS 프록시 경유 — 클라이언트 API 키 불필요
       
       // URL 패턴 감지 (http://, https://, www.)
       const urlPattern = /(https?:\/\/[^\s]+)|(www\.[^\s]+)/gi;
@@ -349,15 +349,15 @@ ${wantsHumanize ? `
 ❌ JSON 금지! ❌ 코드블록 금지! ❌ 설명 금지!
 ❌ "수정했습니다" 같은 메타 설명 금지!`;
 
-      const result = await ai.models.generateContent({
-        model: 'gemini-3.1-pro-preview',  // 채팅 보정은 3.1 PRO
-        contents: prompt,
-        config: {
-          tools: [{ googleSearch: {} }] // Google Search 활성화
-        }
+      const result = await callGemini({
+        prompt,
+        model: GEMINI_MODEL.PRO,
+        responseType: 'text',
+        googleSearch: true,
+        timeout: 60000,
       });
 
-      let response = result.text || '';
+      let response = typeof result === 'string' ? result : (result?.text || '');
       
       // 🔧 JSON 형식으로 응답한 경우 처리 (Gemini가 지시를 무시하고 JSON으로 응답할 때)
       if (response.trim().startsWith('{') || response.trim().startsWith('```json')) {

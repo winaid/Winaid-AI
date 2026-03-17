@@ -1,7 +1,6 @@
-import { GoogleGenAI, Type } from "@google/genai";
+import { Type } from "@google/genai";
 import { LearnedWritingStyle, CrawledPost, CrawledPostScore } from "../types";
 import { supabase } from "../lib/supabase";
-import { getApiKey } from "./apiKeyManager";
 import { callGemini, callGeminiRaw, GEMINI_MODEL, TIMEOUTS } from "./geminiClient";
 
 // ============================================================
@@ -1001,51 +1000,25 @@ export const scoreCrawledPost = async (content: string): Promise<CrawledPostScor
 [분석할 글]
 ${content.slice(0, 3000)}`;
 
-  // 1순위: callGemini 프록시 경유 (서버에 API 키가 있으므로 클라이언트 키 불필요)
+  // SaaS 프록시 경유 — 클라이언트 API 키 불필요
   let raw = '';
-  const proxyUrl = import.meta.env.VITE_GEMINI_PROXY_URL;
-  if (proxyUrl) {
-    console.log('[Score] 프록시 모드로 채점 시작');
-    try {
-      const response = await callGemini({
-        prompt,
-        model: GEMINI_MODEL.FLASH,
-        responseType: 'json',
-        temperature: 0.1,
-      });
-      // callGemini responseType='json'은 이미 파싱된 객체 반환
-      if (response && typeof response === 'object' && typeof response.score_typo === 'number') {
-        console.log('[Score] 프록시 응답 — 이미 파싱된 JSON 객체');
-        raw = JSON.stringify(response);
-      } else if (typeof response === 'string') {
-        raw = response;
-      } else if (response?.text) {
-        raw = typeof response.text === 'string' ? response.text : JSON.stringify(response);
-      } else {
-        // 객체이지만 score_typo가 없는 경우도 시도
-        raw = JSON.stringify(response);
-      }
-    } catch (proxyErr: any) {
-      console.warn('[Score] 프록시 채점 실패, 직접 키 모드 시도:', proxyErr?.message?.substring(0, 80));
-      // 프록시 실패 시 직접 키 모드로 fallback (아래에서 처리)
-    }
-  }
-
-  // 2순위: 직접 API 키 모드 (프록시 없거나 프록시 실패 시)
-  if (!raw) {
-    const apiKey = localStorage.getItem('GEMINI_API_KEY') || getApiKey() || import.meta.env.VITE_GEMINI_API_KEY || (import.meta.env.VITE_GEMINI_API_KEY_2 as string | undefined);
-    if (!apiKey) {
-      console.error('[Score] API 키 없음 + 프록시 실패 — 채점 불가');
-      throw new Error('채점에 필요한 API 키가 없습니다. 관리자 설정에서 Gemini API 키를 등록해주세요.');
-    }
-    console.log('[Score] 직접 키 모드로 채점 시작');
-    const ai = new GoogleGenAI({ apiKey });
-    const response = await ai.models.generateContent({
-      model: GEMINI_MODEL.FLASH,
-      contents: prompt,
-      config: { responseMimeType: 'application/json', temperature: 0.1 },
-    });
-    raw = response.text || '';
+  console.log('[Score] 프록시 모드로 채점 시작');
+  const response = await callGemini({
+    prompt,
+    model: GEMINI_MODEL.FLASH,
+    responseType: 'json',
+    temperature: 0.1,
+  });
+  // callGemini responseType='json'은 이미 파싱된 객체 반환
+  if (response && typeof response === 'object' && typeof response.score_typo === 'number') {
+    console.log('[Score] 프록시 응답 — 이미 파싱된 JSON 객체');
+    raw = JSON.stringify(response);
+  } else if (typeof response === 'string') {
+    raw = response;
+  } else if (response?.text) {
+    raw = typeof response.text === 'string' ? response.text : JSON.stringify(response);
+  } else {
+    raw = JSON.stringify(response);
   }
 
   if (!raw.trim()) {

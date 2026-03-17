@@ -1,17 +1,9 @@
 /**
- * geminiClient.ts - Gemini API 핵심 인프라
+ * geminiClient.ts - Gemini API 핵심 인프라 (SaaS 프록시 전용)
  *
- * API 키 관리, 클라이언트 생성, callGemini 래퍼 등
- * geminiService.ts에서 분리된 코어 모듈
+ * 모든 AI 호출은 서버 프록시(VITE_GEMINI_PROXY_URL)를 경유한다.
+ * 클라이언트에는 API 키가 존재하지 않는다.
  */
-import { GoogleGenAI } from "@google/genai";
-import {
-  initializeApiKeyManager,
-  getApiKey,
-  handleApiFailure,
-  handleApiSuccess,
-  logApiKeyStatus,
-} from "./apiKeyManager";
 
 // 🎯 Gemini API 상수
 export const GEMINI_MODEL = {
@@ -75,142 +67,15 @@ export interface GeminiCallConfig {
   noAutoFallback?: boolean;    // true면 _callGeminiOnce 내부 PRO→FLASH 자동 폴백 금지. Stage C처럼 caller가 직접 폴백을 관리할 때 사용.
 }
 
-// Vite define으로 주입된 전역 상수 (Cloudflare Pages 빌드 호환)
-declare const __GEMINI_KEY_1__: string;
-declare const __GEMINI_KEY_2__: string;
-declare const __GEMINI_KEY_3__: string;
-
-// 🔑 Gemini API 키 목록 (환경변수에서 로드)
-export const getApiKeysFromEnv = (): string[] => {
-  const keys: string[] = [];
-
-  // 1순위: vite.config.ts define으로 직접 주입된 키 (Cloudflare Pages 호환)
-  const dk1 = typeof __GEMINI_KEY_1__ !== 'undefined' ? __GEMINI_KEY_1__ : '';
-  const dk2 = typeof __GEMINI_KEY_2__ !== 'undefined' ? __GEMINI_KEY_2__ : '';
-  const dk3 = typeof __GEMINI_KEY_3__ !== 'undefined' ? __GEMINI_KEY_3__ : '';
-
-  // 2순위: Vite import.meta.env (로컬 dev에서 사용)
-  const key1 = dk1 || import.meta.env.VITE_GEMINI_API_KEY;
-  const key2 = dk2 || import.meta.env.VITE_GEMINI_API_KEY_2;
-  const key3 = dk3 || import.meta.env.VITE_GEMINI_API_KEY_3;
-
-  if (key1) keys.push(key1);
-  if (key2) keys.push(key2);
-  if (key3) keys.push(key3);
-
-  // localStorage에서도 확인 (사용자가 직접 입력한 경우)
-  const localKey = localStorage.getItem('GEMINI_API_KEY');
-  if (localKey && localKey !== '***' && !keys.includes(localKey)) {
-    keys.push(localKey);
-  }
-
-  return keys;
-};
-
-export const GEMINI_API_KEYS = getApiKeysFromEnv();
-
-// API 키 매니저 초기화
-if (GEMINI_API_KEYS.length > 0) {
-  initializeApiKeyManager(GEMINI_API_KEYS);
-  console.log('🔐 다중 API 키 시스템 활성화 (총 ' + GEMINI_API_KEYS.length + '개)');
-  logApiKeyStatus();
-} else {
-  // 프록시 모드에서는 API 키가 서버에만 존재 → 클라이언트에 없어도 정상
+// SaaS 프록시 모드 — 클라이언트에 API 키 없음이 정상
+(() => {
   const proxyUrl = import.meta.env.VITE_GEMINI_PROXY_URL;
   if (proxyUrl) {
-    console.info('ℹ️ 클라이언트 API 키 없음 — 서버 프록시 모드로 동작 (정상)');
+    console.info('ℹ️ SaaS 프록시 모드 — AI 호출은 서버 프록시 경유');
   } else {
-    console.warn('⚠️ API 키도 없고 프록시 URL도 없음 — Gemini 호출 불가');
+    console.warn('⚠️ VITE_GEMINI_PROXY_URL 미설정 — Gemini 호출 불가');
   }
-}
-
-/**
- * Gemini API 호출 래퍼 (자동 폴백 및 재시도)
- */
-export async function callGeminiWithFallback<T>(
-  apiCall: (client: GoogleGenAI) => Promise<T>,
-  maxRetries: number = 2
-): Promise<T> {
-  let lastError: any = null;
-  let currentKey: string | null = null;
-
-  for (let attempt = 0; attempt < maxRetries; attempt++) {
-    try {
-      currentKey = getApiKey();
-
-      if (!currentKey) {
-        throw new Error('사용 가능한 API 키가 없습니다');
-      }
-
-      const client = new GoogleGenAI({ apiKey: currentKey });
-      const result = await apiCall(client);
-
-      // 성공 시 키 상태 업데이트
-      handleApiSuccess(currentKey);
-
-      return result;
-    } catch (error: any) {
-      lastError = error;
-
-      // 할당량 초과 에러 확인
-      const isQuotaError =
-        error?.message?.includes('quota') ||
-        error?.message?.includes('RESOURCE_EXHAUSTED') ||
-        error?.status === 429;
-
-      if (isQuotaError && currentKey) {
-        console.warn(`⚠️ API 할당량 초과 (시도 ${attempt + 1}/${maxRetries})`);
-        handleApiFailure(currentKey, error);
-        logApiKeyStatus();
-
-        // 다음 시도 전 짧은 대기
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      } else {
-        // 할당량 문제가 아니면 즉시 에러 던지기
-        throw error;
-      }
-    }
-  }
-
-  // 모든 재시도 실패
-  console.error('❌ 모든 API 키에서 요청 실패');
-  logApiKeyStatus();
-  throw lastError;
-}
-
-export const getAiClient = () => {
-  // 1순위: 다중 API 키 시스템에서 사용 가능한 키 가져오기
-  let apiKey = getApiKey();
-
-  // 2순위: define 주입 키 (Cloudflare Pages 빌드)
-  if (!apiKey) {
-    const dk = typeof __GEMINI_KEY_1__ !== 'undefined' ? __GEMINI_KEY_1__ : '';
-    apiKey = dk || import.meta.env.VITE_GEMINI_API_KEY;
-  }
-
-  // 3순위: localStorage (사용자 입력)
-  if (!apiKey) {
-    apiKey = localStorage.getItem('GEMINI_API_KEY');
-  }
-
-  if (!apiKey) {
-    console.error('[geminiClient] 키 탐색 실패 — getApiKey():', !getApiKey(), '| env:', !import.meta.env.VITE_GEMINI_API_KEY, '| localStorage:', !localStorage.getItem('GEMINI_API_KEY'));
-    throw new Error("API Key가 설정되지 않았습니다. 환경변수 VITE_GEMINI_API_KEY 확인 후 재배포하세요.");
-  }
-
-  return new GoogleGenAI({ apiKey });
-};
-
-export const getApiKeyValue = (): string => {
-  let apiKey = getApiKey();
-  if (!apiKey) {
-    const dk = typeof __GEMINI_KEY_1__ !== 'undefined' ? __GEMINI_KEY_1__ : '';
-    apiKey = dk || import.meta.env.VITE_GEMINI_API_KEY;
-  }
-  if (!apiKey) apiKey = localStorage.getItem('GEMINI_API_KEY');
-  if (!apiKey) throw new Error("API Key가 설정되지 않았습니다.");
-  return apiKey;
-};
+})();
 
 // AI Provider 설정 읽기 - Gemini만 사용
 export const getAiProviderSettings = (): { textGeneration: 'gemini', imageGeneration: 'gemini' } => {

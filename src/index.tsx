@@ -1,7 +1,6 @@
 import { Hono } from 'hono'
 
 type Bindings = {
-  GEMINI_API_KEY?: string;
   OPENAI_API_KEY?: string;
   PORTONE_STORE_ID?: string;
   PORTONE_CHANNEL_KEY?: string;
@@ -154,14 +153,6 @@ app.options('/api/crawler', (c) => {
   });
 })
 
-// 환경변수에서 API 키 가져오기 (서버 → 클라이언트)
-app.get('/api/config', (c) => {
-  const config = {
-    geminiKey: c.env.GEMINI_API_KEY || '',
-  }
-  return c.json(config)
-})
-
 // robots.txt
 app.get('/robots.txt', (c) => {
   return c.text(`# WINAID Robots.txt
@@ -222,8 +213,7 @@ app.get('*', (c) => {
     return new Response(null, { status: 404 });
   }
   
-  // 환경변수를 HTML에 직접 주입
-  const geminiKey = c.env.GEMINI_API_KEY || '';
+  // 환경변수를 HTML에 직접 주입 (결제 관련만 — API 키는 서버 프록시에서 관리)
   const portoneStoreId = c.env.PORTONE_STORE_ID || '';
   const portoneChannelKey = c.env.PORTONE_CHANNEL_KEY || '';
   
@@ -344,12 +334,10 @@ app.get('*', (c) => {
 <body class="bg-slate-50">
     <div id="root"></div>
     <script>
-      // 서버에서 주입된 API 키를 localStorage에 저장
+      // 서버에서 주입된 결제 설정을 localStorage에 저장
       (function() {
-        const gk = "${geminiKey}";
         const psi = "${portoneStoreId}";
         const pck = "${portoneChannelKey}";
-        if (gk) { localStorage.setItem('GEMINI_API_KEY', gk); localStorage.setItem('GLOBAL_GEMINI_API_KEY', gk); }
         if (psi) { localStorage.setItem('PORTONE_STORE_ID', psi); }
         if (pck) { localStorage.setItem('PORTONE_CHANNEL_KEY', pck); }
       })();

@@ -6,16 +6,10 @@ import { resolve } from 'path'
 import { readFileSync, writeFileSync } from 'fs'
 import type { Plugin } from 'vite'
 
-// 빌드 시 Gemini API 키 존재 여부 확인 (Cloudflare Pages 빌드 로그용)
-const geminiKey1 = process.env.VITE_GEMINI_API_KEY || '';
-const geminiKey2 = process.env.VITE_GEMINI_API_KEY_2 || '';
-const geminiKey3 = process.env.VITE_GEMINI_API_KEY_3 || '';
-
 // 빌드 버전 (배포 확인용 — UI에 표시)
 const buildHash = new Date().toISOString().slice(0,16).replace(/[-T:]/g, '') + '-' + Math.random().toString(36).slice(2,6);
 console.log(`[Build] BUILD_HASH: ${buildHash}`);
-console.log(`[Build] VITE_GEMINI_API_KEY: ${geminiKey1 ? '✅ 있음 (' + geminiKey1.slice(0,8) + '...)' : '❌ 없음'}`);
-console.log(`[Build] VITE_GEMINI_API_KEY_2: ${geminiKey2 ? '✅ 있음' : '⬜ 없음'}`);
+console.log(`[Build] SaaS 프록시 모드 — 클라이언트 번들에 API 키를 주입하지 않음`);
 
 /**
  * sw.js 내 __SW_BUILD_HASH__ 플레이스홀더를 빌드 해시로 치환하는 플러그인.
@@ -49,12 +43,8 @@ export default defineConfig({
       '127.0.0.1'
     ]
   },
-  // Cloudflare Pages에서 Vite env 로딩이 process.env를 못 읽는 문제 우회
-  // import.meta.env.VITE_* 대신 전역 상수로 직접 주입
+  // 빌드 시 전역 상수 주입 (API 키는 서버 프록시에만 존재 — 클라이언트 번들에 주입하지 않음)
   define: {
-    '__GEMINI_KEY_1__': JSON.stringify(geminiKey1),
-    '__GEMINI_KEY_2__': JSON.stringify(geminiKey2),
-    '__GEMINI_KEY_3__': JSON.stringify(geminiKey3),
     '__BUILD_HASH__': JSON.stringify(buildHash),
     '__GEMINI_PROXY_URL__': JSON.stringify(process.env.VITE_GEMINI_PROXY_URL || ''),
   },

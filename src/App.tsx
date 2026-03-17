@@ -1,4 +1,3 @@
-declare const __GEMINI_KEY_1__: string;
 declare const __BUILD_HASH__: string;
 declare const __GEMINI_PROXY_URL__: string;
 import React, { useState, useEffect, lazy, Suspense, useRef } from 'react';
@@ -17,7 +16,6 @@ const ScriptPreview = lazy(() => import('./components/ScriptPreview'));
 const PromptPreview = lazy(() => import('./components/PromptPreview'));
 const AdminPage = lazy(() => import('./components/AdminPage'));
 const AuthPage = lazy(() => import('./components/AuthPage').then(module => ({ default: module.AuthPage })));
-const ApiKeySettings = lazy(() => import('./components/ApiKeySettings'));
 // PasswordLogin 제거됨 — 비밀번호 인증 비활성화
 const ContentRefiner = lazy(() => import('./components/ContentRefiner'));
 const MedicalLawSearch = lazy(() => import('./components/MedicalLawSearch').then(module => ({ default: module.MedicalLawSearch })));
@@ -139,7 +137,6 @@ const navigateTo = (page: string) => {
 
 const App: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<PageType>(getPageFromPath);
-  const [apiKeyReady, setApiKeyReady] = useState<boolean>(false);
   
   // Supabase 인증 상태
   const [supabaseUser, setSupabaseUser] = useState<User | null>(null);
@@ -188,8 +185,6 @@ const App: React.FC = () => {
   });
 
 
-  // API 키 설정 모달 상태
-  const [showApiKeyModal, setShowApiKeyModal] = useState(false);
   const [showUserManual, setShowUserManual] = useState(false);
   const [quickInput, setQuickInput] = useState('');
 
@@ -480,10 +475,6 @@ const App: React.FC = () => {
     }
   };
 
-  // 서버 프록시 전환: API 키는 Vercel US 프록시에서 관리하므로 클라이언트 키 불필요
-  useEffect(() => {
-    setApiKeyReady(true);
-  }, []);
 
   // 랜딩 페이지 (모든 체크 전에 먼저 표시)
   if (currentPage === 'landing') {
@@ -501,7 +492,6 @@ const App: React.FC = () => {
   }
 
   // 로딩 중 (admin/pricing 페이지는 로딩 화면 없이 바로 표시)
-  // app 페이지는 로딩 중에도 UI 표시 (apiKeyReady 체크에서 처리)
   if (authLoading && currentPage !== 'admin' && (currentPage as string) !== 'pricing' && !appPages.includes(currentPage)) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
@@ -530,26 +520,6 @@ const App: React.FC = () => {
       <Suspense fallback={<PageSkeleton />}>
         <AdminPage onAdminVerified={() => setIsAdmin(true)} />
       </Suspense>
-    );
-  }
-
-  // API Key 미설정 시 안내 화면
-  if (!apiKeyReady) {
-    return (
-      <div className="min-h-screen bg-[#fafbfc] flex items-center justify-center p-6">
-        <div className="max-w-md w-full text-center bg-white p-12 rounded-2xl shadow-[0_8px_40px_rgba(0,0,0,0.06)] border border-slate-100 relative overflow-hidden">
-          <div className="text-6xl mb-6">🛠️</div>
-          <h1 className="text-2xl font-black mb-3 text-slate-900">WINAID</h1>
-          <h2 className="text-lg font-bold text-amber-600 mb-6">서비스 준비 중</h2>
-          <p className="text-slate-500 mb-8 font-medium">서비스가 곧 오픈될 예정입니다.<br/>잠시만 기다려주세요!</p>
-          <a
-            href="#"
-            className="block w-full bg-gradient-to-r from-emerald-500 to-green-600 text-white font-black py-4 rounded-2xl shadow-xl shadow-emerald-100 hover:shadow-2xl transition-all active:scale-95"
-          >
-             🏠 홈으로 돌아가기
-          </a>
-        </div>
-      </div>
     );
   }
 
@@ -1180,13 +1150,6 @@ const App: React.FC = () => {
             </div>
           </div>
         </div>
-      )}
-
-      {/* API 키 설정 모달 */}
-      {showApiKeyModal && (
-        <Suspense fallback={<LoadingSpinner />}>
-          <ApiKeySettings onClose={() => setShowApiKeyModal(false)} />
-        </Suspense>
       )}
 
       {/* 의료광고법 검색 플로팅 버튼 */}

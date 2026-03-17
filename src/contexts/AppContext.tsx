@@ -31,7 +31,6 @@ interface AppState {
   
   // 앱 설정
   darkMode: boolean;
-  apiKeyReady: boolean;
 }
 
 interface AppActions {
@@ -48,7 +47,6 @@ interface AppActions {
   
   // 설정 액션
   toggleDarkMode: () => void;
-  setApiKeyReady: (ready: boolean) => void;
 }
 
 interface AppContextValue {
@@ -69,7 +67,6 @@ const getInitialState = (): AppState => {
     isLoading: false,
     error: null,
     darkMode: savedDarkMode === 'true',
-    apiKeyReady: false,
   };
 };
 
@@ -133,10 +130,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     // 설정 액션
     toggleDarkMode: () => {
       setState(prev => ({ ...prev, darkMode: !prev.darkMode }));
-    },
-
-    setApiKeyReady: (ready) => {
-      setState(prev => ({ ...prev, apiKeyReady: ready }));
     },
   }), []);
 

@@ -1,5 +1,5 @@
 import { Type } from "@google/genai";
-import { GEMINI_MODEL, TIMEOUTS, callGemini, callGeminiRaw, callGeminiWithFallback, getAiProviderSettings, GEMINI_API_KEYS } from "./geminiClient";
+import { GEMINI_MODEL, TIMEOUTS, callGemini, callGeminiRaw, getAiProviderSettings } from "./geminiClient";
 import type { GeminiCallConfig } from "./geminiClient";
 import { GenerationRequest, GeneratedContent, TrendingItem, FactCheckReport, SeoScoreReport, SeoTitleItem, ImageStyle, WritingStyle, CardPromptData, CardNewsScript, SimilarityCheckResult, BlogHistory, OwnBlogMatch, WebSearchMatch } from "../types";
 import { SYSTEM_PROMPT, getStage1_ContentGeneration, getDynamicSystemPrompt, getPipelineOutlinePrompt, getPipelineSectionPrompt, getPipelineIntroPrompt, getPipelineConclusionPrompt, getPipelineIntegrationPrompt, getSectionRegeneratePrompt, getSmartBlockFaqPrompt } from "../lib/gpt52-prompts-staged";

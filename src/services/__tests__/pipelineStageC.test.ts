@@ -69,9 +69,7 @@ vi.mock('../geminiClient', () => ({
   TIMEOUTS: { GENERATION: 120000, CONTENT_GENERATION: 120000, IMAGE_GENERATION: 180000, QUICK_OPERATION: 60000 },
   callGemini: vi.fn(),
   callGeminiRaw: vi.fn(),
-  callGeminiWithFallback: vi.fn(),
   getAiProviderSettings: vi.fn(() => ({ provider: 'gemini' })),
-  GEMINI_API_KEYS: ['test-key-1'],
 }));
 
 vi.mock('../imageGenerationService', () => ({
