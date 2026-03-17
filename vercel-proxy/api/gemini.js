@@ -13,8 +13,10 @@
  *    → 응답: { status, region, keys, timestamp }
  *
  * 인증:
- *   - 모든 POST는 Authorization: Bearer <supabase_jwt> 필수
- *   - AI 호출(2,3)은 추가로 X-Generation-Token 필수
+ *   - TODO: 2026-03-29 인증 게이트 복구 예정
+ *   - 현재: 인증 optional 모드 (anonymous 허용)
+ *   - 원래: 모든 POST는 Authorization: Bearer <supabase_jwt> 필수
+ *   - 원래: AI 호출(2,3)은 추가로 X-Generation-Token 필수
  *   - GET 헬스체크는 인증 불필요
  *
  * 환경변수 (Vercel Dashboard → Settings → Environment Variables):
@@ -570,7 +572,9 @@ export default async function handler(req, res) {
   }
 
   // ================================================================
-  // POST 공통: 이중 인증 (1순위: Supabase JWT, 2순위: Admin Token)
+  // POST 공통: 인증 (optional 모드)
+  // TODO: 2026-03-29 로그인/인증 게이트 복구 예정
+  // 현재는 개발/운영 테스트를 위해 인증 optional — 미인증도 허용
   // ================================================================
   let userId = null;
   let authMethod = "none";
@@ -593,18 +597,17 @@ export default async function handler(req, res) {
         authMethod = "admin_token";
         console.info("[auth] ✅ Admin token auth");
       } else {
-        console.warn(`[auth] ❌ Admin token failed: ${adminResult.error}`);
+        console.warn(`[auth] ⚠️ Admin token failed: ${adminResult.error}`);
       }
     }
   }
 
-  // 둘 다 실패 → 401
+  // TODO: 2026-03-29 인증 복구 시 아래 블록의 주석을 해제할 것
+  // 인증 실패 시 anonymous 허용 (임시 오픈 모드)
   if (!userId) {
-    const jwtError = authResult.error || "no_credentials";
-    console.warn(`[auth] ❌ All auth failed — jwt_error=${jwtError}`);
-    const status = jwtError === "server_auth_not_configured" ? 500
-      : jwtError === "auth_server_error" ? 502 : 401;
-    return res.status(status).json({ error: jwtError });
+    userId = "anonymous";
+    authMethod = "anonymous";
+    console.info(`[auth] ℹ️ optional mode — no auth header, allowing request as anonymous`);
   }
 
   try {
@@ -619,13 +622,15 @@ export default async function handler(req, res) {
       const postType = body.postType || "blog";
       const cost = CREDIT_COSTS[postType] || 1;
 
-      // 관리자 세션: 크레딧 차감 건너뛰기
-      if (authMethod === "admin_token") {
-        const generationToken = createGenerationToken("admin", postType);
+      // 관리자 또는 anonymous 세션: 크레딧 차감 건너뛰기
+      // TODO: 2026-03-29 인증 복구 시 anonymous 분기 제거할 것
+      if (authMethod === "admin_token" || authMethod === "anonymous") {
+        const tokenUserId = authMethod === "admin_token" ? "admin" : "anonymous";
+        const generationToken = createGenerationToken(tokenUserId, postType);
         if (!generationToken) {
           return res.status(500).json({ error: "server_auth_not_configured", message: "GENERATION_TOKEN_SECRET 미설정" });
         }
-        console.info(`[credits] ✅ admin bypass — postType=${postType} (no deduction)`);
+        console.info(`[credits] ✅ ${authMethod} bypass — postType=${postType} (no deduction)`);
         return res.status(200).json({
           success: true,
           generationToken,
@@ -663,15 +668,22 @@ export default async function handler(req, res) {
     // SEO/트렌드/키워드 분석 등은 generation token 없이 호출됨
     // 크레딧 차감이 필요한 작업은 deductCreditOnServer → generation token 발급 경로를 거침
     // ================================================================
+    // TODO: 2026-03-29 인증 복구 시 anonymous의 generation token 검증 강제할 것
     const genToken = req.headers["x-generation-token"] || "";
     let isMetered = false;
     if (genToken) {
       const tokenResult = verifyGenerationToken(genToken, userId);
       if (!tokenResult.valid) {
-        console.warn(`[auth] generation token invalid: ${tokenResult.error} authMethod=${authMethod} userId=${typeof userId === 'string' ? userId.substring(0, 8) : userId}`);
-        return res.status(403).json({ error: tokenResult.error });
+        // anonymous 모드에서는 generation token 검증 실패해도 허용
+        if (authMethod === "anonymous") {
+          console.info(`[auth] ℹ️ anonymous mode — generation token invalid (${tokenResult.error}), allowing anyway`);
+        } else {
+          console.warn(`[auth] generation token invalid: ${tokenResult.error} authMethod=${authMethod} userId=${typeof userId === 'string' ? userId.substring(0, 8) : userId}`);
+          return res.status(403).json({ error: tokenResult.error });
+        }
+      } else {
+        isMetered = true;
       }
-      isMetered = true;
     } else {
       console.info(`[auth] ℹ️ unmetered call (no generation token) authMethod=${authMethod} userId=${typeof userId === 'string' ? userId.substring(0, 8) : userId}`);
     }

@@ -85,7 +85,7 @@ async function getAuthToken(): Promise<string | null> {
     const { supabase } = await import('../lib/supabase');
     const { data: { session } } = await supabase.auth.getSession();
     const token = session?.access_token || null;
-    console.debug(`[GEN_STEP] getAuthToken: ${token ? 'JWT 있음' : 'JWT 없음'}`);
+    console.info(`[AUTH] getAuthToken: ${token ? `JWT 있음 (len=${token.length}, prefix=${token.substring(0, 10)}…)` : 'JWT 없음 (세션 없음)'}`);
     return token;
   } catch (e) {
     console.warn('[GEN_STEP] getAuthToken 예외:', e);
@@ -99,7 +99,7 @@ function getAdminToken(): string | null {
     const isAdmin = sessionStorage.getItem('ADMIN_AUTHENTICATED') === 'true';
     const token = sessionStorage.getItem('ADMIN_TOKEN');
     if (isAdmin && token) {
-      console.debug('[GEN_STEP] getAdminToken: 관리자 토큰 있음');
+      console.info('[AUTH] getAdminToken: 관리자 토큰 있음');
       return token;
     }
     return null;
@@ -132,10 +132,14 @@ export async function deductCreditOnServer(postType: string): Promise<{
   const token = await getAuthToken();
   const adminToken = getAdminToken();
 
-  // JWT도 관리자 토큰도 없으면 인증 불가
+  // TODO: 2026-03-29 인증 복구 시 아래 early return 주석 해제할 것
+  // 현재는 프록시가 anonymous 허용하므로 프론트에서도 차단하지 않음
+  // if (!token && !adminToken) {
+  //   console.warn('[GEN_STEP] deductCredit: JWT 없음, 관리자 토큰 없음 → authentication_required');
+  //   return { success: false, error: 'authentication_required', message: '로그인이 필요합니다.' };
+  // }
   if (!token && !adminToken) {
-    console.warn('[GEN_STEP] deductCredit: JWT 없음, 관리자 토큰 없음 → authentication_required');
-    return { success: false, error: 'authentication_required', message: '로그인이 필요합니다.' };
+    console.info('[GEN_STEP] deductCredit: 인증 없음 — anonymous 모드로 프록시 호출');
   }
 
   console.info(`[GEN_STEP] deductCredit 시작 — jwt=${!!token}, admin=${!!adminToken}, postType=${postType}`);
@@ -183,6 +187,7 @@ async function getProxyHeaders(): Promise<Record<string, string>> {
   const adminToken = getAdminToken();
   if (adminToken) headers['X-Admin-Token'] = adminToken;
   if (_currentGenerationToken) headers['X-Generation-Token'] = _currentGenerationToken;
+  console.info(`[AUTH] proxyHeaders: Authorization=${headers['Authorization'] ? `Bearer …${headers['Authorization'].length}ch` : 'NONE'}, X-Admin-Token=${headers['X-Admin-Token'] ? `있음(${headers['X-Admin-Token'].length}ch)` : 'NONE'}, X-Generation-Token=${headers['X-Generation-Token'] ? '있음' : 'NONE'}`);
   return headers;
 }
 
