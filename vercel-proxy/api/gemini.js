@@ -2,25 +2,39 @@
  * Gemini API US Proxy — Vercel Serverless Function
  * 리전: iad1 (US East, Washington DC) — vercel.json에서 고정
  *
- * 두 가지 모드:
- * 1. 텍스트 생성: POST { prompt, model, systemInstruction, ... }
+ * 네 가지 모드:
+ * 1. 크레딧 차감:  POST { action: "check_and_deduct", postType }
+ *    → 응답: { success, generationToken, creditsRemaining }
+ * 2. 텍스트 생성:  POST { prompt, model, ... } + X-Generation-Token
  *    → 응답: { text, usageMetadata, candidates }
- * 2. Raw 모드:   POST { raw: true, model, apiBody, timeout }
+ * 3. Raw 모드:     POST { raw: true, model, apiBody } + X-Generation-Token
  *    → 응답: Gemini API 원본 JSON 그대로
- * 3. 헬스 체크:  GET /api/gemini
+ * 4. 헬스 체크:    GET /api/gemini
  *    → 응답: { status, region, keys, timestamp }
  *
+ * 인증:
+ *   - 모든 POST는 Authorization: Bearer <supabase_jwt> 필수
+ *   - AI 호출(2,3)은 추가로 X-Generation-Token 필수
+ *   - GET 헬스체크는 인증 불필요
+ *
  * 환경변수 (Vercel Dashboard → Settings → Environment Variables):
- *   GEMINI_API_KEY    (필수)
- *   GEMINI_API_KEY_2  (선택 - 멀티키 로테이션)
- *   GEMINI_API_KEY_3  (선택)
- *   ALLOWED_ORIGINS   (선택, 쉼표 구분)
+ *   GEMINI_API_KEY           (필수)
+ *   GEMINI_API_KEY_2         (선택 - 멀티키 로테이션)
+ *   GEMINI_API_KEY_3         (선택)
+ *   ALLOWED_ORIGINS          (선택, 쉼표 구분)
+ *   SUPABASE_URL             (필수 - JWT 검증)
+ *   SUPABASE_ANON_KEY        (필수 - JWT 검증)
+ *   SUPABASE_SERVICE_ROLE_KEY (필수 - RPC 호출)
+ *   GENERATION_TOKEN_SECRET  (필수 - HMAC 서명)
  *
  * 프론트엔드 계약:
- *   - callGemini()    → POST { prompt, model, ... } → { text, usageMetadata }
- *   - callGeminiRaw() → POST { raw:true, model, apiBody } → Gemini 원본 JSON
- *   ⚠️ 이 계약은 절대 변경 금지
+ *   - deductCreditOnServer() → POST { action, postType } → { success, generationToken }
+ *   - callGemini()           → POST { prompt, model, ... } → { text, usageMetadata }
+ *   - callGeminiRaw()        → POST { raw:true, model, apiBody } → Gemini 원본 JSON
+ *   ⚠️ 응답 구조는 절대 변경 금지
  */
+
+import crypto from "crypto";
 
 // ── CORS ──
 //
@@ -85,7 +99,7 @@ function corsHeaders(origin) {
   return {
     "Access-Control-Allow-Origin": effectiveOrigin,
     "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Generation-Token",
     "Access-Control-Max-Age": "86400",
     "Vary": "Origin",
   };
@@ -307,6 +321,150 @@ async function fetchGeminiWithRotation(keys, model, apiBody, timeout, isRaw = fa
   };
 }
 
+// ── 인증 + Generation Token ──
+
+const CREDIT_COSTS = { blog: 1, card_news: 2, press_release: 1 };
+const GENERATION_TOKEN_TTL_MS = 15 * 60 * 1000; // 15분
+
+/** Supabase JWT 검증 → userId 반환 */
+async function verifyUser(req) {
+  const authHeader = req.headers.authorization || req.headers.Authorization || "";
+  if (!authHeader.startsWith("Bearer ")) {
+    return { error: "authentication_required" };
+  }
+  const jwt = authHeader.slice(7);
+  if (!jwt) return { error: "authentication_required" };
+
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const anonKey = process.env.SUPABASE_ANON_KEY;
+  if (!supabaseUrl || !anonKey) {
+    console.error("[auth] SUPABASE_URL or SUPABASE_ANON_KEY not configured");
+    return { error: "server_auth_not_configured" };
+  }
+
+  try {
+    const resp = await fetch(`${supabaseUrl}/auth/v1/user`, {
+      headers: { Authorization: `Bearer ${jwt}`, apikey: anonKey },
+    });
+    if (!resp.ok) return { error: "invalid_token" };
+    const user = await resp.json();
+    if (!user || !user.id) return { error: "invalid_token" };
+    return { userId: user.id };
+  } catch (err) {
+    console.error("[auth] Supabase auth error:", err.message);
+    return { error: "auth_server_error" };
+  }
+}
+
+/** Supabase deduct_credits RPC 호출 */
+async function deductCredits(userId, amount) {
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!supabaseUrl || !serviceKey) {
+    return { success: false, error: "server_auth_not_configured" };
+  }
+
+  try {
+    const resp = await fetch(`${supabaseUrl}/rest/v1/rpc/deduct_credits`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: serviceKey,
+        Authorization: `Bearer ${serviceKey}`,
+      },
+      body: JSON.stringify({ p_user_id: userId, p_amount: amount }),
+    });
+
+    if (!resp.ok) {
+      console.error(`[credits] RPC HTTP ${resp.status}`);
+      return { success: false, error: "credit_check_failed" };
+    }
+
+    const result = await resp.json(); // boolean
+    return { success: result === true };
+  } catch (err) {
+    console.error("[credits] RPC error:", err.message);
+    return { success: false, error: "credit_check_failed" };
+  }
+}
+
+/** 사용자의 현재 크레딧 잔여량 조회 */
+async function getCreditsRemaining(userId) {
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!supabaseUrl || !serviceKey) return null;
+
+  try {
+    const resp = await fetch(
+      `${supabaseUrl}/rest/v1/subscriptions?user_id=eq.${userId}&select=credits_total,credits_used`,
+      {
+        headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` },
+      }
+    );
+    if (!resp.ok) return null;
+    const rows = await resp.json();
+    if (!rows || rows.length === 0) return null;
+    const { credits_total, credits_used } = rows[0];
+    return credits_total === -1 ? Infinity : credits_total - credits_used;
+  } catch {
+    return null;
+  }
+}
+
+/** HMAC-SHA256 기반 stateless generation token 발급 */
+function createGenerationToken(userId, postType) {
+  const secret = process.env.GENERATION_TOKEN_SECRET;
+  if (!secret) return null;
+
+  const payload = JSON.stringify({
+    uid: userId,
+    pt: postType,
+    iat: Date.now(),
+    exp: Date.now() + GENERATION_TOKEN_TTL_MS,
+    nonce: crypto.randomBytes(8).toString("hex"),
+  });
+  const payloadB64 = Buffer.from(payload).toString("base64url");
+  const sig = crypto.createHmac("sha256", secret).update(payloadB64).digest();
+  return `${payloadB64}.${sig.toString("base64url")}`;
+}
+
+/** Generation token 검증 (timing-safe 서명 비교) */
+function verifyGenerationToken(token, expectedUserId) {
+  const secret = process.env.GENERATION_TOKEN_SECRET;
+  if (!secret) return { valid: false, error: "server_auth_not_configured" };
+  if (!token) return { valid: false, error: "generation_token_required" };
+
+  const dotIdx = token.indexOf(".");
+  if (dotIdx < 0) return { valid: false, error: "malformed_token" };
+
+  const payloadB64 = token.slice(0, dotIdx);
+  const sigB64 = token.slice(dotIdx + 1);
+
+  // 서명 재계산
+  const expectedSig = crypto.createHmac("sha256", secret).update(payloadB64).digest();
+  const actualSig = Buffer.from(sigB64, "base64url");
+
+  // timing-safe 비교 (길이 불일치 시 즉시 거부)
+  if (expectedSig.length !== actualSig.length) {
+    return { valid: false, error: "invalid_signature" };
+  }
+  if (!crypto.timingSafeEqual(expectedSig, actualSig)) {
+    return { valid: false, error: "invalid_signature" };
+  }
+
+  let payload;
+  try {
+    payload = JSON.parse(Buffer.from(payloadB64, "base64url").toString());
+  } catch {
+    return { valid: false, error: "malformed_token" };
+  }
+
+  if (payload.exp < Date.now()) return { valid: false, error: "generation_token_expired" };
+  if (payload.uid !== expectedUserId) return { valid: false, error: "token_user_mismatch" };
+
+  return { valid: true, payload };
+}
+
 // ── Vercel 핸들러 ──
 
 export default async function handler(req, res) {
@@ -361,14 +519,68 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "POST only" });
   }
 
-  // API 키 확인
-  const keys = getKeys();
-  if (keys.length === 0) {
-    return res.status(500).json({ error: "No Gemini API keys configured" });
+  // ================================================================
+  // POST 공통: JWT 인증 (모든 POST 요청에 필수)
+  // ================================================================
+  const authResult = await verifyUser(req);
+  if (authResult.error) {
+    const status = authResult.error === "server_auth_not_configured" ? 500
+      : authResult.error === "auth_server_error" ? 502 : 401;
+    return res.status(status).json({ error: authResult.error });
   }
+  const userId = authResult.userId;
 
   try {
     const body = req.body;
+
+    // ================================================================
+    // 크레딧 차감 + Generation Token 발급
+    // deductCreditOnServer()에서 호출
+    // 응답: { success, generationToken, creditsRemaining }
+    // ================================================================
+    if (body && body.action === "check_and_deduct") {
+      const postType = body.postType || "blog";
+      const cost = CREDIT_COSTS[postType] || 1;
+
+      const deductResult = await deductCredits(userId, cost);
+      if (!deductResult.success) {
+        const status = deductResult.error === "server_auth_not_configured" ? 500
+          : deductResult.error === "credit_check_failed" ? 500 : 403;
+        const message = deductResult.error === "credit_check_failed"
+          ? "크레딧 확인 중 서버 오류가 발생했습니다."
+          : "크레딧이 부족합니다. 요금제를 업그레이드해주세요.";
+        return res.status(status).json({ error: deductResult.error || "insufficient_credits", message });
+      }
+
+      const generationToken = createGenerationToken(userId, postType);
+      if (!generationToken) {
+        return res.status(500).json({ error: "server_auth_not_configured", message: "GENERATION_TOKEN_SECRET 미설정" });
+      }
+
+      const creditsRemaining = await getCreditsRemaining(userId);
+      console.info(`[credits] ✅ deducted ${cost} for ${postType} user=${userId.substring(0, 8)} remaining=${creditsRemaining}`);
+
+      return res.status(200).json({
+        success: true,
+        generationToken,
+        creditsRemaining: creditsRemaining ?? -1,
+      });
+    }
+
+    // ================================================================
+    // AI 호출 공통: Generation Token 검증
+    // ================================================================
+    const genToken = req.headers["x-generation-token"] || "";
+    const tokenResult = verifyGenerationToken(genToken, userId);
+    if (!tokenResult.valid) {
+      return res.status(403).json({ error: tokenResult.error });
+    }
+
+    // API 키 확인
+    const keys = getKeys();
+    if (keys.length === 0) {
+      return res.status(500).json({ error: "No Gemini API keys configured" });
+    }
 
     // ================================================================
     // Raw 모드: apiBody를 Gemini API에 그대로 프록시

@@ -107,20 +107,27 @@ export function useContentGeneration(deps: ContentGenerationDeps): ContentGenera
       return;
     }
 
-    // 크레딧 체크
+    // 서버 크레딧 차감 + generation token 발급
     try {
-      const { checkCredits } = await import('../services/creditService');
-      const creditStatus = await checkCredits(request.postType);
-      if (!creditStatus.canGenerate) {
+      const { deductCreditOnServer, clearGenerationToken } = await import('../services/geminiClient');
+      clearGenerationToken(); // 동시 생성 1건 전제 — 이전 토큰 정리
+      const deductResult = await deductCreditOnServer(request.postType);
+      if (!deductResult.success) {
         setState(prev => ({
           ...prev,
-          error: creditStatus.message || '크레딧이 부족합니다.',
+          error: deductResult.message || '크레딧이 부족합니다.',
         }));
         isGeneratingRef.current = false;
         return;
       }
     } catch (e) {
-      console.warn('크레딧 체크 스킵:', e);
+      console.error('서버 크레딧 차감 실패:', e);
+      setState(prev => ({
+        ...prev,
+        error: '크레딧 확인에 실패했습니다. 다시 시도해주세요.',
+      }));
+      isGeneratingRef.current = false;
+      return;
     }
 
     // 카드뉴스: 3단계 워크플로우
@@ -129,6 +136,7 @@ export function useContentGeneration(deps: ContentGenerationDeps): ContentGenera
         await deps.handleGenerateCardNews(request, setState, deps.setContentTab);
       } finally {
         isGeneratingRef.current = false;
+        import('../services/geminiClient').then(({ clearGenerationToken }) => clearGenerationToken()).catch(() => {});
       }
       return;
     }
@@ -169,13 +177,12 @@ export function useContentGeneration(deps: ContentGenerationDeps): ContentGenera
       targetSetState({ isLoading: false, error: null, warning: imageWarning, data: result, progress: '' });
       console.info(`[BLOG_FLOW] ✅ setBlogState 완료 — 사용자 화면 전환 대기 (RENDER_GATE에서 RESULT_PREVIEW 확인)`);
 
-      // 크레딧 차감 + 사용량 저장
+      // 사용량 저장 (크레딧 차감은 서버에서 선처리 완료)
       try {
-        const { deductCredit, flushSessionUsage } = await import('../services/creditService');
-        await deductCredit(request.postType);
+        const { flushSessionUsage } = await import('../services/creditService');
         await flushSessionUsage();
       } catch (e) {
-        console.warn('크레딧 차감/사용량 저장 스킵:', e);
+        console.warn('사용량 저장 스킵:', e);
       }
 
       // API 서버에 자동 저장 — 반드시 storageHtml(경량화 완료본)만 사용
@@ -248,6 +255,7 @@ export function useContentGeneration(deps: ContentGenerationDeps): ContentGenera
       });
     } finally {
       isGeneratingRef.current = false;
+      import('../services/geminiClient').then(({ clearGenerationToken }) => clearGenerationToken()).catch(() => {});
     }
   }, [deps]);
 

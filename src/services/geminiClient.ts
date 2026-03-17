@@ -77,6 +77,85 @@ export interface GeminiCallConfig {
   }
 })();
 
+// ── 인증 + Generation Token 관리 ──
+
+/** Supabase 세션의 access_token 가져오기 */
+async function getAuthToken(): Promise<string | null> {
+  try {
+    const { supabase } = await import('../lib/supabase');
+    const { data: { session } } = await supabase.auth.getSession();
+    return session?.access_token || null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 현재 generation token (모듈 스코프).
+ * 동시 생성 1건 전제 — 생성 시작 전 clear, 종료 시 clear.
+ */
+let _currentGenerationToken: string | null = null;
+
+/** Generation token 초기화. 생성 시작 전 + 생성 종료(finally)에서 반드시 호출. */
+export function clearGenerationToken(): void {
+  _currentGenerationToken = null;
+}
+
+/**
+ * 서버에서 크레딧 차감 + generation token 발급.
+ * 생성 시작 전 1회 호출. 성공 시 이후 callGemini/callGeminiRaw에 자동 첨부.
+ */
+export async function deductCreditOnServer(postType: string): Promise<{
+  success: boolean;
+  creditsRemaining?: number;
+  error?: string;
+  message?: string;
+}> {
+  const token = await getAuthToken();
+  if (!token) {
+    return { success: false, error: 'authentication_required', message: '로그인이 필요합니다.' };
+  }
+
+  const endpoint = getGeminiEndpoint();
+  try {
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({ action: 'check_and_deduct', postType }),
+    });
+
+    const data = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
+
+    if (!response.ok) {
+      return {
+        success: false,
+        error: data.error || `HTTP ${response.status}`,
+        message: data.message || (response.status === 401 ? '로그인이 필요합니다.' : '크레딧이 부족합니다.'),
+      };
+    }
+
+    if (data.success && data.generationToken) {
+      _currentGenerationToken = data.generationToken;
+    }
+
+    return data;
+  } catch (err: any) {
+    return { success: false, error: 'network_error', message: '서버 연결에 실패했습니다.' };
+  }
+}
+
+/** 프록시 요청용 헤더 생성 (JWT + Generation Token) */
+async function getProxyHeaders(): Promise<Record<string, string>> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  const token = await getAuthToken();
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  if (_currentGenerationToken) headers['X-Generation-Token'] = _currentGenerationToken;
+  return headers;
+}
+
 // AI Provider 설정 읽기 - Gemini만 사용
 export const getAiProviderSettings = (): { textGeneration: 'gemini', imageGeneration: 'gemini' } => {
   return { textGeneration: 'gemini', imageGeneration: 'gemini' };
@@ -267,10 +346,12 @@ export async function callGeminiRaw(model: string, apiBody: any, timeout: number
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), clientTimeout);
 
+  const headers = await getProxyHeaders();
+
   try {
     const response = await fetch(endpoint, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify({ raw: true, model, apiBody, timeout }),
       signal: controller.signal,
     });
@@ -385,11 +466,12 @@ async function _callGeminiOnce(config: GeminiCallConfig): Promise<any> {
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), clientTimeout);
+  const headers = await getProxyHeaders();
 
   try {
     const response = await fetch(endpoint, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify(proxyRequest),
       signal: controller.signal,
     });

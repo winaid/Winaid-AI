@@ -1,14 +1,12 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { User, Session as _Session } from '@supabase/supabase-js';
-import { supabase, reinitializeSupabase, isSupabaseConfigured, getUserIP, hashIP } from '../lib/supabase';
+import { supabase, reinitializeSupabase, isSupabaseConfigured } from '../lib/supabase';
 import { PLANS as _PLANS, PlanType } from '../lib/database.types';
 import type { Database } from '../lib/database.types';
 
 // Supabase 테이블 타입
 type ProfileRow = Database['public']['Tables']['profiles']['Row'];
 type SubscriptionRow = Database['public']['Tables']['subscriptions']['Row'];
-type IpLimitRow = Database['public']['Tables']['ip_limits']['Row'];
-
 interface UserProfile {
   id: string;
   email: string | null;
@@ -31,9 +29,6 @@ interface AuthContextType {
   subscription: Subscription | null;
   loading: boolean;
   configured: boolean;
-  ipHash: string | null;
-  freeUsesRemaining: number;
-  
   // Auth methods
   signUp: (email: string, password: string, fullName?: string) => Promise<{ error: Error | null }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
@@ -42,7 +37,6 @@ interface AuthContextType {
   
   // Usage methods
   canGenerate: () => boolean;
-  useCredit: () => Promise<boolean>;
   refreshSubscription: () => Promise<void>;
 }
 
@@ -62,19 +56,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [loading, setLoading] = useState(true);
   const [configured, setConfigured] = useState(false);
-  const [ipHash, setIpHash] = useState<string | null>(null);
-  const [freeUsesRemaining, setFreeUsesRemaining] = useState(3);
   const [client, setClient] = useState(supabase);
-
-  // IP 해시 초기화
-  useEffect(() => {
-    const initIP = async () => {
-      const ip = await getUserIP();
-      const hash = await hashIP(ip);
-      setIpHash(hash);
-    };
-    initIP();
-  }, []);
 
   // 자동 로그인 해제 시: 탭/브라우저 닫으면 세션 정리
   useEffect(() => {
@@ -132,12 +114,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (!isMounted) return;
       }
 
-      // IP 기반 무료 사용량 확인 (필요한 경우만)
-      if (ipHash) {
-        await loadFreeUses(ipHash, newClient);
-        if (!isMounted) return;
-      }
-
       setLoading(false);
 
       // Auth 상태 변경 리스너
@@ -172,7 +148,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       isMounted = false;
       authSubscription?.unsubscribe();
     };
-  }, [ipHash]);
+  }, []);
 
   const loadProfile = async (userId: string, supabaseClient: typeof supabase, userEmail?: string, userName?: string) => {
     const { data, error } = await supabaseClient
@@ -228,39 +204,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const newSubscription: Omit<SubscriptionRow, 'id' | 'created_at' | 'updated_at'> = {
         user_id: userId,
         plan_type: 'free',
-        credits_total: 3,
+        credits_total: 10,
         credits_used: 0,
         expires_at: null
       };
-      
+
       const { error: insertError } = await supabaseClient
         .from('subscriptions')
         .insert(newSubscription as any);
-      
+
       if (!insertError) {
         setSubscription({
           plan_type: 'free',
-          credits_total: 3,
+          credits_total: 10,
           credits_used: 0,
-          credits_remaining: 3,
+          credits_remaining: 10,
           expires_at: null,
           is_expired: false
         });
       }
-    }
-  };
-
-  const loadFreeUses = async (hash: string, supabaseClient: typeof supabase) => {
-    const { data } = await supabaseClient
-      .from('ip_limits')
-      .select('free_uses')
-      .eq('ip_hash', hash)
-      .single() as { data: Pick<IpLimitRow, 'free_uses'> | null; error: any };
-
-    if (data) {
-      setFreeUsesRemaining(Math.max(0, 3 - data.free_uses));
-    } else {
-      setFreeUsesRemaining(3);
     }
   };
 
@@ -289,7 +251,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await client.from('subscriptions').insert({
         user_id: data.user.id,
         plan_type: 'free',
-        credits_total: 3,
+        credits_total: 10,
         credits_used: 0
       } as any);
     }
@@ -339,76 +301,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // 서버에서 JWT+generation token으로 크레딧 차감 — 프론트엔드는 표시용만
   const canGenerate = useCallback((): boolean => {
-    // 로그인한 유저
-    if (user && subscription) {
-      if (subscription.is_expired) return false;
-      if (subscription.credits_total === -1) return true; // 무제한
-      return subscription.credits_remaining > 0;
-    }
-
-    // 비로그인 - IP 기반 무료 사용
-    return freeUsesRemaining > 0;
-  }, [user, subscription, freeUsesRemaining]);
-
-  const useCredit = async (): Promise<boolean> => {
-    if (!canGenerate()) return false;
-
-    if (user && subscription) {
-      // 로그인 유저 - 크레딧 차감
-      if (subscription.credits_total !== -1) {
-        const { error } = await (client
-          .from('subscriptions') as any)
-          .update({ credits_used: subscription.credits_used + 1 })
-          .eq('user_id', user.id);
-
-        if (error) return false;
-
-        setSubscription(prev => prev ? {
-          ...prev,
-          credits_used: prev.credits_used + 1,
-          credits_remaining: prev.credits_remaining - 1
-        } : null);
-      }
-
-      // 🚀 성능 개선: 사용 로그는 백그라운드에서 비동기로 (await 제거)
-      void client.from('usage_logs').insert({
-        user_id: user.id,
-        ip_hash: ipHash || 'unknown',
-        action_type: 'generate_blog'
-      } as any);
-
-    } else if (ipHash) {
-      // 비로그인 - IP 기반 무료 사용량 차감
-      // 🚀 성능 개선: select-then-update 대신 upsert 사용
-      const { data: existing } = await client
-        .from('ip_limits')
-        .select('free_uses')
-        .eq('ip_hash', ipHash)
-        .single() as { data: Pick<IpLimitRow, 'free_uses'> | null; error: any };
-
-      const newFreeUses = (existing?.free_uses || 0) + 1;
-
-      // upsert로 insert/update를 한 번에 처리
-      await client.from('ip_limits').upsert({
-        ip_hash: ipHash,
-        free_uses: newFreeUses
-      } as any, {
-        onConflict: 'ip_hash'
-      });
-
-      setFreeUsesRemaining(prev => Math.max(0, prev - 1));
-
-      // 🚀 성능 개선: 사용 로그는 백그라운드에서 비동기로 (await 제거)
-      void client.from('usage_logs').insert({
-        user_id: null,
-        ip_hash: ipHash,
-        action_type: 'generate_blog'
-      } as any);
-    }
-
-    return true;
-  };
+    if (!user || !subscription) return false; // 로그인 필수
+    if (subscription.is_expired) return false;
+    if (subscription.credits_total === -1) return true; // 무제한
+    return subscription.credits_remaining > 0;
+  }, [user, subscription]);
 
   const refreshSubscription = async () => {
     if (user) {
@@ -423,14 +322,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       subscription,
       loading,
       configured,
-      ipHash,
-      freeUsesRemaining,
       signUp,
       signIn,
       signInWithProvider,
       signOut,
       canGenerate,
-      useCredit,
       refreshSubscription
     }}>
       {children}

@@ -86,7 +86,7 @@ export const signUpWithTeam = async (
       await supabase.from('subscriptions').upsert({
         user_id: data.user.id,
         plan_type: 'free',
-        credits_total: 3,
+        credits_total: 10,
         credits_used: 0,
         expires_at: null
       } as any, { onConflict: 'user_id' });
@@ -141,7 +141,7 @@ export const signUpWithEmail = async (email: string, password: string, name: str
       await supabase.from('subscriptions').upsert({
         user_id: data.user.id,
         plan_type: 'free',
-        credits_total: 3,
+        credits_total: 10,
         credits_used: 0,
         expires_at: null
       } as any, { onConflict: 'user_id' });
@@ -186,7 +186,7 @@ export const signInWithEmail = async (email: string, password: string) => {
         await supabase.from('subscriptions').upsert({
           user_id: data.user.id,
           plan_type: 'free',
-          credits_total: 3,
+          credits_total: 10,
           credits_used: 0,
           expires_at: null
         } as any, { onConflict: 'user_id' });
