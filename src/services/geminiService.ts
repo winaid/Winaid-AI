@@ -3901,6 +3901,7 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
     conclusionLength: textData.conclusionLength, // 파이프라인 마무리 원본 길이 (없으면 undefined)
     generatedImages: images, // base64 원본 이미지 (export/복사 시 blob URL → base64 복원용)
     blobUrls, // cleanup용 blob URL 목록
+    storageHtml, // 저장용 경량 HTML (blob/base64 → Supabase URL 치환 완료). 후단 저장 경로에서 반드시 이것만 사용할 것.
   };
 
   } catch (postProcessError) {

@@ -99,22 +99,35 @@ export const saveGeneratedPost = async (data: SavePostData): Promise<{
       word_count: wordCount
     };
 
-    // 🛡️ base64 안전망: persisted content에 base64가 남지 않도록 보장
+    // 🛡️ 안전망 1: base64 이미지 strip (저장 payload에 base64가 남으면 수MB로 비대해짐)
+    const preStripLen = data.content.length;
     data.content = stripBase64FromHtml(data.content);
+
+    // 🛡️안전망 2: blob: URL strip (blob URL은 세션 한정이므로 저장해도 재로드 시 깨짐)
+    data.content = data.content.replace(/src="blob:[^"]*"/gi, 'src=""');
+
+    const strippedBytes = (preStripLen - data.content.length) * 2;
+    if (strippedBytes > 0) {
+      console.warn(`[PostStorage] 🛡️ 안전망 발동: base64/blob ${Math.round(strippedBytes / 1024)}KB strip됨 (저장 전 경량화)`);
+    }
 
     // 📊 payload 크기 진단 로그 — Supabase TEXT 컬럼 한도(1GB) 대비 실제 크기 확인
     const contentBytes = data.content.length * 2; // UTF-16 근사
     const plainTextBytes = plainText.length * 2;
     const totalPayloadEstimate = contentBytes + plainTextBytes;
     const hasBlobLeak = data.content.includes('blob:');
+    const hasBase64Leak = data.content.includes('data:image/');
     console.info(
-      `[PostStorage] 📊 payload 크기 | content=${data.content.length}자(${Math.round(contentBytes / 1024)}KB) | plainText=${plainText.length}자(${Math.round(plainTextBytes / 1024)}KB) | total≈${Math.round(totalPayloadEstimate / 1024)}KB | blob잔류=${hasBlobLeak}`
+      `[PostStorage] 📊 payload 크기 | content=${data.content.length}자(${Math.round(contentBytes / 1024)}KB) | plainText=${plainText.length}자(${Math.round(plainTextBytes / 1024)}KB) | total≈${Math.round(totalPayloadEstimate / 1024)}KB | blob잔류=${hasBlobLeak} | base64잔류=${hasBase64Leak}`
     );
     if (hasBlobLeak) {
       console.warn('[PostStorage] ⚠️ blob: URL이 content에 포함됨 — 재로드 시 이미지 깨짐 위험');
     }
+    if (hasBase64Leak) {
+      console.error('[PostStorage] ⚠️ base64가 strip 후에도 잔류 — stripBase64FromHtml 정규식 점검 필요');
+    }
     if (contentBytes > 4 * 1024 * 1024) {
-      console.warn(`[PostStorage] ⚠️ content 크기 ${Math.round(contentBytes / 1024 / 1024)}MB — 대용량 payload 주의`);
+      console.error(`[PostStorage] ⛔ content 크기 ${Math.round(contentBytes / 1024 / 1024)}MB — 비정상 대용량! 저장 경로에 base64 유입 의심`);
     }
 
     // Supabase에 저장

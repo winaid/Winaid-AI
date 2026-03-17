@@ -236,6 +236,7 @@ export interface GeneratedContent {
   conclusionLength?: number; // 파이프라인 마무리(conclusionHtml) 원본 길이 (완전성 검증용)
   generatedImages?: { index: number; data: string; prompt: string }[]; // base64 원본 이미지 (export용, HTML에는 blob URL 사용)
   blobUrls?: string[]; // 생성된 blob URL 목록 (컴포넌트 cleanup 시 revokeObjectURL용)
+  storageHtml?: string; // 저장용 경량 HTML (blob/base64 → Supabase URL 치환 완료본). saveContentToServer에는 반드시 이것을 사용할 것.
 }
 
 export interface GenerationState {

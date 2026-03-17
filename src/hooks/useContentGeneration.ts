@@ -1,6 +1,5 @@
 import { useState, useCallback, useRef, RefObject } from 'react';
 import { GenerationRequest, GenerationState } from '../types';
-import { restoreBase64Images } from '../components/resultPreviewUtils';
 
 type ContentTabType = 'blog' | 'refine' | 'card_news' | 'press' | 'image' | 'history';
 
@@ -179,14 +178,31 @@ export function useContentGeneration(deps: ContentGenerationDeps): ContentGenera
         console.warn('크레딧 차감/사용량 저장 스킵:', e);
       }
 
-      // API 서버에 자동 저장 (blob URL → base64 복원 후 저장)
+      // API 서버에 자동 저장 — 반드시 storageHtml(경량화 완료본)만 사용
+      // ❌ restoreBase64Images 금지: blob→base64 복원은 화면 표시/export용이며, 저장 경로에서 쓰면 payload가 수MB로 비대해짐
       try {
         const { saveContentToServer } = await import('../services/apiService');
-        const restoredContent = restoreBase64Images(result.htmlContent, result.generatedImages);
-        console.info(`[STORAGE] saveContentToServer | display=${result.htmlContent.length}자(${Math.round(result.htmlContent.length*2/1024)}KB) | storage=${restoredContent.length}자(${Math.round(restoredContent.length*2/1024)}KB) | blob잔류=${restoredContent.includes('blob:')}`);
+        // storageHtml: generateFullPost 내부에서 blob→Supabase URL 치환 완료된 경량 HTML
+        // fallback: storageHtml이 없으면(카드뉴스 등) htmlContent에서 base64/blob strip
+        let contentForSave = result.storageHtml || '';
+        if (!contentForSave) {
+          // storageHtml이 없는 경우 (카드뉴스, 보도자료 등): htmlContent에서 base64/blob 제거
+          contentForSave = result.htmlContent
+            .replace(/src="data:image\/[^"]*"/gi, 'src=""')
+            .replace(/src="blob:[^"]*"/gi, 'src=""');
+          console.warn('[STORAGE] storageHtml 없음 — htmlContent에서 base64/blob strip 후 저장');
+        }
+        const displayKB = Math.round(result.htmlContent.length * 2 / 1024);
+        const storageKB = Math.round(contentForSave.length * 2 / 1024);
+        const hasBlobLeak = contentForSave.includes('blob:');
+        const hasBase64Leak = contentForSave.includes('data:image/');
+        console.info(`[STORAGE] saveContentToServer | display=${result.htmlContent.length}자(${displayKB}KB) | storage=${contentForSave.length}자(${storageKB}KB) | blob잔류=${hasBlobLeak} | base64잔류=${hasBase64Leak}`);
+        if (storageKB > 500) {
+          console.error(`[STORAGE] ⚠️ storage payload ${storageKB}KB — 비정상 크기! storageHtml 경로 점검 필요`);
+        }
         const saveResult = await saveContentToServer({
           title: result.title,
-          content: restoredContent,
+          content: contentForSave,
           category: request.category,
           postType: request.postType,
           metadata: {
