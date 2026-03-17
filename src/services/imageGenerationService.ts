@@ -1114,12 +1114,11 @@ function accumulateSessionStats(results: ImageQueueResult[], totalMs: number, mo
     : 0;
   if (heroMaxMs > 0) s.heroWallTimeMs.push(heroMaxMs);
 
-  // payload 크기 추적 (base64 vs URL)
-  const totalPayloadBytes = results.reduce((sum, r) => sum + (r.data?.length || 0) * 2, 0);
-  const payloadKB = Math.round(totalPayloadBytes / 1024);
-  s.payloadKB.push(payloadKB);
+  // payload 크기: 최종 저장 HTML 기준으로 측정 (updateSessionFinalPayload에서 후속 기록)
+  // 이 시점에서는 아직 base64/blob 상태이므로 임시값 -1 기록, 나중에 덮어씀
+  const payloadKB = -1; // placeholder — updateSessionFinalPayload()에서 최종값으로 교체
 
-  // 히스토리 row
+  // 히스토리 row — payloadKB는 후속 updateSessionFinalPayload()에서 갱신
   const runFailReasons = results.filter(r => r.errorType).map(r => r.errorType).join(',');
   const heroResult = heroR.length > 0
     ? heroR.map(r => r.resultType).join(',')
@@ -1127,7 +1126,7 @@ function accumulateSessionStats(results: ImageQueueResult[], totalMs: number, mo
   s.history.push({
     ts: new Date().toISOString().substring(11, 19),
     total: results.length, ai, template: tpl, placeholder: ph,
-    heroResult, totalMs, heroMaxMs, payloadKB,
+    heroResult, totalMs, heroMaxMs, payloadKB: 0, // placeholder — 최종 저장 시점에 갱신
     failReasons: runFailReasons || '-',
   });
 
@@ -1179,14 +1178,15 @@ function printSessionSummary(): void {
     console.info(`[IMG-SESSION]   median=${(median / 1000).toFixed(1)}s  p95=${(p95 / 1000).toFixed(1)}s  max=${(max / 1000).toFixed(1)}s  over50s=${over50s}/${sorted.length}`);
   }
 
-  // 📦 payload 크기 통계
-  if (s.payloadKB.length > 0) {
-    const avgKB = Math.round(s.payloadKB.reduce((a, b) => a + b, 0) / s.payloadKB.length);
-    const maxKB = Math.max(...s.payloadKB);
-    const over1MB = s.payloadKB.filter(kb => kb > 1024).length;
+  // 📦 최종 저장 payload 크기 통계 (storageHtml 기준)
+  const validPayloads = s.payloadKB.filter(kb => kb >= 0);
+  if (validPayloads.length > 0) {
+    const avgKB = Math.round(validPayloads.reduce((a, b) => a + b, 0) / validPayloads.length);
+    const maxKB = Math.max(...validPayloads);
+    const over100KB = validPayloads.filter(kb => kb > 100).length;
     console.info(`[IMG-SESSION]`);
-    console.info(`[IMG-SESSION]   📦 payload (base64 제거 검증)`);
-    console.info(`[IMG-SESSION]   avgPayload=${avgKB}KB  maxPayload=${maxKB}KB  over1MB=${over1MB}/${s.payloadKB.length}`);
+    console.info(`[IMG-SESSION]   📦 finalPayload (저장 HTML 기준)`);
+    console.info(`[IMG-SESSION]   avgFinalPayloadKB=${avgKB}  maxFinalPayloadKB=${maxKB}  over100KB=${over100KB}/${validPayloads.length}`);
   }
 
   console.info(`[IMG-SESSION]`);
@@ -1216,6 +1216,26 @@ function printSessionSummary(): void {
 /** 세션 통계 수동 출력 — 콘솔에서 호출 가능 */
 export function printImageSessionStats(): void {
   printSessionSummary();
+}
+
+/**
+ * 최종 저장 HTML 기준으로 payload 크기를 기록 (storageHtml 확정 후 호출)
+ * @param persistedHtmlKB  - storageHtml 기준 KB (base64/blob 제거 후)
+ * @param finalPayloadKB   - Supabase에 실제 저장된 총 payload KB
+ */
+export function updateSessionFinalPayload(persistedHtmlKB: number, finalPayloadKB: number): void {
+  const s = _sessionStats;
+  // payloadKB 배열의 마지막 항목을 최종값으로 교체
+  if (s.payloadKB.length > 0) {
+    s.payloadKB[s.payloadKB.length - 1] = finalPayloadKB;
+  } else {
+    s.payloadKB.push(finalPayloadKB);
+  }
+  // 히스토리의 마지막 row도 갱신
+  if (s.history.length > 0) {
+    s.history[s.history.length - 1].payloadKB = finalPayloadKB;
+  }
+  console.info(`[IMG-SESSION] 📦 finalPayload 갱신: persistedHtmlKB=${persistedHtmlKB} finalPayloadKB=${finalPayloadKB}`);
 }
 
 /** 세션 통계 리셋 */
@@ -1423,8 +1443,9 @@ async function verifySaaSQuality(rounds: number = 3): Promise<void> {
 
   const s = _sessionStats;
   const heroWallMax = s.heroWallTimeMs.length > 0 ? Math.max(...s.heroWallTimeMs) : 0;
-  const payloadMax = s.payloadKB.length > 0 ? Math.max(...s.payloadKB) : 0;
-  const payloadAvg = s.payloadKB.length > 0 ? Math.round(s.payloadKB.reduce((a, b) => a + b, 0) / s.payloadKB.length) : 0;
+  const validPayloads = s.payloadKB.filter(kb => kb >= 0);
+  const payloadMax = validPayloads.length > 0 ? Math.max(...validPayloads) : 0;
+  const payloadAvg = validPayloads.length > 0 ? Math.round(validPayloads.reduce((a, b) => a + b, 0) / validPayloads.length) : 0;
   const heroRate = pct(s.heroAi, s.heroTotal);
 
   console.info(`[VERIFY] ═══════════════════════════════════════════`);
@@ -1437,7 +1458,7 @@ async function verifySaaSQuality(rounds: number = 3): Promise<void> {
 
   // 2. Payload 크기
   const payloadPass = payloadMax <= 200; // 200KB 이하 (base64 없으면 수KB)
-  console.info(`[VERIFY]   ${payloadPass ? '✅' : '❌'} payload 경량화  avg=${payloadAvg}KB  max=${payloadMax}KB  (target≤200KB)`);
+  console.info(`[VERIFY]   ${payloadPass ? '✅' : '❌'} finalPayload (저장HTML)  avg=${payloadAvg}KB  max=${payloadMax}KB  (target≤200KB)`);
 
   // 3. heroAIHitRate
   const heroPass = heroRate >= 50; // 3-5회 검증이므로 50% 이상이면 OK

@@ -12,7 +12,7 @@ import {
 } from "../utils/humanWritingPrompts";
 import { getTopCompetitorAnalysis, CompetitorAnalysis } from "./naverSearchService";
 import { analyzeCompetitorVocabulary, buildForbiddenWordsPrompt } from "./competitorVocabService";
-import { STYLE_NAMES, generateBlogImage, analyzeStyleReferenceImage, generateImageQueue, type ImageQueueItem, isDemoSafeMode } from "./imageGenerationService";
+import { STYLE_NAMES, generateBlogImage, analyzeStyleReferenceImage, generateImageQueue, type ImageQueueItem, isDemoSafeMode, updateSessionFinalPayload } from "./imageGenerationService";
 import { generateCardNewsWithAgents } from "./cardNewsService";
 import { generatePressRelease } from "./pressReleaseService";
 import { saveBlogHistory } from "./contentSimilarityService";
@@ -738,10 +738,13 @@ ${JSON.stringify(searchResults?.collected_facts?.slice(0, 3) || [], null, 2)}`;
   const demoSafe = isDemoSafeMode();
   let proTimeoutCount = 0;
   let flashFallbackCount = 0;
-  // PRO 타임아웃: 로그 기준 PRO가 90초 넘게 걸리다 FLASH로 내려가므로
-  // 대기시간을 대폭 단축 — demo-safe 30초, normal 45초
-  const PRO_SECTION_TIMEOUT = demoSafe ? 30000 : 45000;
-  console.info(`[PIPELINE] ⚙️ config: sectionConcurrency=2 proTimeoutMs=${PRO_SECTION_TIMEOUT} demoSafe=${demoSafe}`);
+  // 적응형 모델 선택: PRO가 첫 섹션에서 timeout하면 나머지는 FLASH 직행
+  let proDisabledForSession = false;
+  // PRO 타임아웃: 12초로 대폭 축소 — PRO가 12초 안에 못 오면 FLASH가 낫다
+  // 이전 45초에서 12초로: 섹션당 timeout 비용 33초 절감
+  const PRO_SECTION_TIMEOUT = demoSafe ? 10000 : 12000;
+  const FLASH_SECTION_TIMEOUT = 25000; // FLASH도 30→25초로 타이트하게
+  console.info(`[PIPELINE] ⚙️ config: sectionConcurrency=2 proTimeoutMs=${PRO_SECTION_TIMEOUT} flashTimeoutMs=${FLASH_SECTION_TIMEOUT} demoSafe=${demoSafe}`);
 
   // ── 도입부 생성 함수 ──
   const generateIntro = async (): Promise<string> => {
@@ -808,15 +811,19 @@ ${request.disease ? `[질환] ${request.disease}` : ''}
 [이 섹션 관련 검색 결과]
 ${JSON.stringify(searchResults?.collected_facts?.slice(i, i + 2) || [], null, 2)}`;
 
-    // PRO 모델로 시도 — 타임아웃 시 _callGeminiOnce 내부에서 FLASH 폴백
+    // 적응형 모델 선택: PRO가 이미 실패했으면 FLASH 직행
     const sectionSystemPrompt = sectionPrompt + hospitalStyleSuffix;
     const promptLength = sectionSystemPrompt.length + sectionUserPrompt.length;
+    const useFlashDirect = proDisabledForSession;
+    const sectionModel = useFlashDirect ? GEMINI_MODEL.FLASH : GEMINI_MODEL.PRO;
+    const sectionTimeout = useFlashDirect ? FLASH_SECTION_TIMEOUT : PRO_SECTION_TIMEOUT;
+
     const result = await callGemini({
       prompt: sectionUserPrompt,
       systemPrompt: sectionSystemPrompt,
-      model: GEMINI_MODEL.PRO,
+      model: sectionModel,
       responseType: 'text',
-      timeout: PRO_SECTION_TIMEOUT,
+      timeout: sectionTimeout,
       temperature: 0.75,
     });
     const html = typeof result === 'string' ? result.trim() : '';
@@ -827,14 +834,19 @@ ${JSON.stringify(searchResults?.collected_facts?.slice(i, i + 2) || [], null, 2)
     const elapsed = Date.now() - t0;
     timings[`section_${i}`] = elapsed;
 
-    // PRO timeout 후 FLASH 폴백이 발생했는지 판정 (elapsed > proTimeout+5s 여유)
-    const wasFlashFallback = elapsed > PRO_SECTION_TIMEOUT + 5000;
-    const finalModel = wasFlashFallback ? 'FLASH(fallback)' : 'PRO';
+    // PRO timeout 후 FLASH 폴백이 발생했는지 판정
+    const wasFlashFallback = !useFlashDirect && elapsed > PRO_SECTION_TIMEOUT + 3000;
+    let finalModel = useFlashDirect ? 'FLASH(direct)' : (wasFlashFallback ? 'FLASH(fallback)' : 'PRO');
     if (wasFlashFallback) {
       proTimeoutCount++;
       flashFallbackCount++;
+      // 적응형: PRO가 한 번 timeout하면 나머지 섹션은 FLASH 직행
+      if (!proDisabledForSession) {
+        proDisabledForSession = true;
+        console.info(`[PIPELINE] ⚡ PRO timeout 감지 → 나머지 섹션 FLASH 직행 전환`);
+      }
     }
-    console.info(`[PIPELINE] ✅ section ${sectionNum} ${html.length}자 totalMs=${elapsed} finalModel=${finalModel} promptLength=${promptLength} proTimeoutMs=${PRO_SECTION_TIMEOUT}`);
+    console.info(`[PIPELINE] ✅ section ${sectionNum} ${html.length}자 ${elapsed}ms model=${finalModel} prompt=${promptLength}`);
     return { html, summary };
   };
 
@@ -1048,10 +1060,9 @@ ${sectionSummaries.join('\n')}`;
   console.info(`[PIPELINE] ✅ DONE — 성능 요약`);
   console.info(`[PIPELINE]   total=${timings.total}ms (${(timings.total / 1000).toFixed(1)}s)`);
   console.info(`[PIPELINE]   stageA=${timings.stageA}ms | stageB=${timings.stageB_sections}ms | conclusion=${timings.conclusion}ms`);
-  console.info(`[PIPELINE]   sectionConcurrency=2 | proTimeoutMs=${PRO_SECTION_TIMEOUT} | demoSafe=${demoSafe}`);
+  console.info(`[PIPELINE]   proTimeoutMs=${PRO_SECTION_TIMEOUT} | flashTimeoutMs=${FLASH_SECTION_TIMEOUT} | proDisabled=${proDisabledForSession}`);
   console.info(`[PIPELINE]   proTimeoutCount=${proTimeoutCount} | flashFallbackCount=${flashFallbackCount}`);
   console.info(`[PIPELINE]   avgSectionMs=${avgSectionMs} | sections=${sectionTimingsArr.map(t => `${t}ms`).join('/')}`);
-  console.info(`[PIPELINE]   promptLengthByStage: outline=${outlinePrompt.length} intro=${(getPipelineIntroPrompt('A', '', '', 300).length)} section≈${(getPipelineSectionPrompt(0, '', '', '', '', 300, '1', [], medicalLawMode).length)} conclusion=${(getPipelineConclusionPrompt('', 300).length)}`);
   console.info(`[PIPELINE]   finalContent=${finalContent.replace(/<[^>]+>/g, '').trim().length}자 imgPrompts=${imagePrompts.length}`);
   console.info(`[PIPELINE] ═══════════════════════════════════════`);
   return {
@@ -3772,6 +3783,13 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
       // blob: URL도 빈 문자열로
       storageHtml = storageHtml.replace(/src="blob:[^"]*"/gi, 'src=""');
     }
+  }
+
+  // 📦 최종 payload 크기를 세션 통계에 기록 (base64/blob 제거 후 진짜 저장 HTML 기준)
+  const persistedHtmlKB = Math.round(storageHtml.length * 2 / 1024);
+  const finalPayloadKB = persistedHtmlKB; // storageHtml = 실제 Supabase 저장값
+  if (images.length > 0) {
+    updateSessionFinalPayload(persistedHtmlKB, finalPayloadKB);
   }
 
   // 🔥 서버에 블로그 이력 저장 (비동기, 실패해도 무시)
