@@ -643,7 +643,7 @@ export const generateBlogWithPipeline = async (
   request: GenerationRequest,
   searchResults: any,
   onProgress?: (msg: string) => void
-): Promise<{ title: string; content: string; imagePrompts: string[]; conclusionLength?: number }> => {
+): Promise<{ title: string; rawHtml: string; polishPromise: Promise<{ content: string; polishModel: string; finalQualityPath: string; stageCMs: number }>; imagePrompts: string[]; conclusionLength?: number }> => {
   const safeProgress = onProgress || ((msg: string) => console.log('Pipeline:', msg));
   const pipelineStart = Date.now();
   const timings: Record<string, number> = {};
@@ -936,8 +936,8 @@ ${sectionSummaries.join('\n')}`;
   safeProgress('✅ 본문 생성 완료');
   console.info(`[PIPELINE] ✅ conclusion ${conclusionHtml.length}자 ${timings.conclusion}ms`);
 
-  // ── Stage C: 통합 + PRO polish ──
-  // FLASH 초안을 PRO로 최종 다듬기 — timeout 시 rawHtml 그대로 사용 (안전)
+  // ── Stage C: FLASH polish (단일 시도) ──
+  // PRO polish 제거: 20s+ 비용 대비 품질 향상 미미. FLASH 12s 단일 시도 → 실패 시 rawHtml.
   safeProgress('🔍 [4/4] 전체 통합 및 품질 보정 중...');
 
   // rawHtml 조립 전 완전성 검사 — 모든 파트가 존재하는지 확인
@@ -982,45 +982,18 @@ ${sectionSummaries.join('\n')}`;
 
   const rawHtml = `${introHtml}\n${sectionHtmls.join('\n')}\n${conclusionHtml}`;
   const integrationPrompt = getPipelineIntegrationPrompt(targetLength);
-  // timeout: proxy에 전달되는 값. 실제 client abort = timeout + 5000ms (geminiClient 내부 버퍼).
-  // PRO 20s → client 25s, FLASH 12s → client 17s. 총 최악 42s.
-  const PRO_POLISH_TIMEOUT = 20000;
   const FLASH_POLISH_TIMEOUT = 12000;
 
-  // 기본값: 가장 보수적인 경로. 이후 성공 시 승격.
-  let finalQualityPath = 'flash_draft_only';
-  let integratedHtml: any;
-  let polishModel = 'NONE';
-  const stageCStart = Date.now();
+  // Stage C를 비동기 promise로 생성 — 이미지 생성과 병렬 실행 가능
+  // 실패 시 rawHtml을 안전하게 반환 (pre-polish fallback)
+  const polishPromise: Promise<{ content: string; polishModel: string; finalQualityPath: string; stageCMs: number }> = (async () => {
+    let finalQualityPath = 'flash_draft_only';
+    let integratedHtml: any;
+    let polishModel = 'NONE';
+    const stageCStart = Date.now();
 
-  // 🛡️ Stage C는 자체 폴백 체인을 관리 — callGemini의 내부 PRO→FLASH 자동 폴백과 retry를 비활성화.
-  // 이유: 내부 폴백이 일어나면 caller(Stage C)가 실제 어떤 모델이 성공했는지 알 수 없어
-  // polishModel/finalQualityPath 라벨이 거짓이 됨.
-
-  // 1차: PRO polish 시도 (최대 30s, retry 없음, 내부 폴백 없음)
-  const proWallLimit = PRO_POLISH_TIMEOUT + 5000; // geminiClient가 +5s 버퍼를 추가하므로 실제 abort는 이 시점
-  console.info(`[PIPELINE] Stage C attempt=PRO timeout=${PRO_POLISH_TIMEOUT} clientAbort=${proWallLimit}`);
-  try {
-    integratedHtml = await callGemini({
-      prompt: rawHtml,
-      systemPrompt: integrationPrompt,
-      model: GEMINI_MODEL.PRO,
-      responseType: 'text',
-      timeout: PRO_POLISH_TIMEOUT,
-      temperature: 0.3,
-      maxRetries: 1,
-      noAutoFallback: true,
-    });
-    polishModel = 'PRO';
-    finalQualityPath = 'flash_draft+pro_polish';
-  } catch (proErr: any) {
-    const proMs = Date.now() - stageCStart;
-    const reason = proErr?.errorType === 'timeout' ? 'timeout' : (proErr?.message || 'unknown').substring(0, 60);
-    console.warn(`[PIPELINE] ⚠️ Stage C PRO polish 실패 (${reason}, ${proMs}ms), FLASH 재시도`);
-
-    // 2차: FLASH polish 시도 (최대 15s, retry 없음)
-    const flashWallLimit = FLASH_POLISH_TIMEOUT + 5000;
-    console.info(`[PIPELINE] Stage C fallback=FLASH timeout=${FLASH_POLISH_TIMEOUT} clientAbort=${flashWallLimit}`);
+    // FLASH polish 단일 시도 (최대 12s, retry 없음)
+    console.info(`[PIPELINE] Stage C attempt=FLASH timeout=${FLASH_POLISH_TIMEOUT} clientAbort=${FLASH_POLISH_TIMEOUT + 5000}`);
     try {
       integratedHtml = await callGemini({
         prompt: rawHtml,
@@ -1032,33 +1005,31 @@ ${sectionSummaries.join('\n')}`;
         maxRetries: 1,
         noAutoFallback: true,
       });
-      polishModel = 'FLASH(fallback)';
+      polishModel = 'FLASH';
       finalQualityPath = 'flash_draft+flash_polish';
-    } catch (flashErr: any) {
-      const flashMs = Date.now() - stageCStart - proMs;
-      const flashReason = flashErr?.errorType === 'timeout' ? 'timeout' : (flashErr?.message || 'unknown').substring(0, 60);
-      // 3차: pre-polish HTML 그대로 사용 (본문 파트는 이미 완전성 검증 통과)
-      console.warn(`[PIPELINE] ⚠️ Stage C FLASH polish 실패 (${flashReason}, ${flashMs}ms), pre-polish HTML 사용`);
+    } catch (polishErr: any) {
+      const polishMs = Date.now() - stageCStart;
+      const reason = polishErr?.errorType === 'timeout' ? 'timeout' : (polishErr?.message || 'unknown').substring(0, 60);
+      console.warn(`[PIPELINE] ⚠️ Stage C FLASH polish 실패 (${reason}, ${polishMs}ms), pre-polish HTML 사용`);
       integratedHtml = rawHtml;
       polishModel = 'NONE(pre-polish)';
-      // finalQualityPath는 이미 flash_draft_only
     }
-  }
-  const stageCMs = Date.now() - stageCStart;
+    const stageCMs = Date.now() - stageCStart;
 
-  const finalContent = typeof integratedHtml === 'string' && integratedHtml.includes('<')
-    ? integratedHtml.trim()
-    : rawHtml; // 파싱 실패 시 원본 사용
+    const finalContent = typeof integratedHtml === 'string' && integratedHtml.includes('<')
+      ? integratedHtml.trim()
+      : rawHtml;
 
-  // 최종 결과물 검증
-  if (!finalContent || finalContent.replace(/<[^>]+>/g, '').trim().length < 100) {
-    throw new Error('통합된 본문이 비어있습니다. 다시 시도해주세요.');
-  }
+    if (!finalContent || finalContent.replace(/<[^>]+>/g, '').trim().length < 100) {
+      throw new Error('통합된 본문이 비어있습니다. 다시 시도해주세요.');
+    }
 
-  safeProgress('✅ [4/4] 통합 검증 완료');
-  // 최종 로그: polishModel과 finalQualityPath는 여기서만 출력 — 단일 진실 원천
-  console.info(`[PIPELINE] ✅ Stage C 완료: ${finalContent.length}자 (텍스트 ${finalContent.replace(/<[^>]+>/g, '').trim().length}자) polishModel=${polishModel} stageC=${stageCMs}ms`);
-  console.info(`[PIPELINE] finalQualityPath=${finalQualityPath} | PRO_TIMEOUT=${PRO_POLISH_TIMEOUT} FLASH_TIMEOUT=${FLASH_POLISH_TIMEOUT}`);
+    safeProgress('✅ [4/4] 통합 검증 완료');
+    console.info(`[PIPELINE] ✅ Stage C 완료: ${finalContent.length}자 (텍스트 ${finalContent.replace(/<[^>]+>/g, '').trim().length}자) polishModel=${polishModel} stageC=${stageCMs}ms`);
+    console.info(`[PIPELINE] finalQualityPath=${finalQualityPath} | FLASH_TIMEOUT=${FLASH_POLISH_TIMEOUT}`);
+
+    return { content: finalContent, polishModel, finalQualityPath, stageCMs };
+  })();
 
   // 이미지 프롬프트 생성 — 사용자 선택 수량 계약 준수
   // selectedImageCount = 사용자가 선택한 정확한 수량 (0~5). 이 값이 최종 목표.
@@ -1103,26 +1074,27 @@ ${sectionSummaries.join('\n')}`;
   }
   console.info(`[IMG-PLAN] selected=${selectedImageCount} promptsGenerated=${imagePrompts.length} sections=${outline.sections.length}`);
 
-  timings.total = Date.now() - pipelineStart;
-
-  // ── 종합 성능 로그 ──
+  // ── 종합 성능 로그 (Stage A+B까지, Stage C는 비동기 진행 중) ──
   const sectionTimingsArr = Object.keys(timings)
     .filter(k => k.startsWith('section_'))
     .map(k => timings[k]);
   const avgSectionMs = sectionTimingsArr.length > 0
     ? Math.round(sectionTimingsArr.reduce((a, b) => a + b, 0) / sectionTimingsArr.length) : 0;
+  const textDraftMs = Date.now() - pipelineStart;
 
   console.info(`[PIPELINE] ═══════════════════════════════════════`);
-  console.info(`[PIPELINE] ✅ DONE — 성능 요약`);
-  console.info(`[PIPELINE]   total=${timings.total}ms (${(timings.total / 1000).toFixed(1)}s)`);
-  console.info(`[PIPELINE]   stageA=${timings.stageA}ms | stageB=${timings.stageB_sections}ms | conclusion=${timings.conclusion}ms | stageC=${stageCMs}ms`);
-  console.info(`[PIPELINE]   finalQualityPath=${finalQualityPath} | polishModel=${polishModel} | proPolishTimeout=${PRO_POLISH_TIMEOUT}ms`);
+  console.info(`[PIPELINE] ✅ Stage A+B DONE, Stage C async — 성능 요약`);
+  console.info(`[PIPELINE]   textDraft=${textDraftMs}ms (${(textDraftMs / 1000).toFixed(1)}s)`);
+  console.info(`[PIPELINE]   stageA=${timings.stageA}ms | stageB=${timings.stageB_sections}ms | conclusion=${timings.conclusion}ms | stageC=async(FLASH ${FLASH_POLISH_TIMEOUT}ms)`);
   console.info(`[PIPELINE]   avgSectionMs=${avgSectionMs} | sections=${sectionTimingsArr.map(t => `${t}ms`).join('/')}`);
-  console.info(`[PIPELINE]   finalContent=${finalContent.replace(/<[^>]+>/g, '').trim().length}자 imgPrompts=${imagePrompts.length}`);
+  console.info(`[PIPELINE]   rawHtml=${rawHtml.replace(/<[^>]+>/g, '').trim().length}자 imgPrompts=${imagePrompts.length}`);
   console.info(`[PIPELINE] ═══════════════════════════════════════`);
+
+  // polishPromise: Stage C는 비동기로 진행 중. caller가 이미지 생성과 병렬로 await 가능.
   return {
     title: request.topic,
-    content: finalContent,
+    rawHtml,
+    polishPromise,
     imagePrompts,
     conclusionLength: conclusionHtml.length
   };
@@ -3091,6 +3063,7 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
   // 📝 블로그: 다단계 파이프라인 시도 → 실패 시 기존 방식 폴백
   // 카드뉴스 폴백: 기존 방식 사용
   let textData: any;
+  let _polishPromise: Promise<{ content: string; polishModel: string; finalQualityPath: string; stageCMs: number }> | null = null;
 
   if (request.postType === 'blog' && !request.referenceUrl) {
     // 다단계 파이프라인 사용 (블로그 전용)
@@ -3115,9 +3088,12 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
       } catch { pipelineSearchResults = { collected_facts: [] }; }
 
       const pipelineResult = await generateBlogWithPipeline(request, pipelineSearchResults, safeProgress);
+      // Stage C(polish)는 비동기 — 이미지 생성과 병렬 처리
+      // rawHtml을 초기 content로 사용, 이미지 생성 후 polishPromise 결과로 교체
+      _polishPromise = pipelineResult.polishPromise;
       textData = {
         title: pipelineResult.title,
-        content: pipelineResult.content,
+        content: pipelineResult.rawHtml,
         imagePrompts: pipelineResult.imagePrompts,
         conclusionLength: pipelineResult.conclusionLength,
         fact_check: {
@@ -3130,8 +3106,8 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
           recommendations: []
         }
       };
-      safeProgress('✅ 다단계 파이프라인 생성 완료!');
-      console.info(`[BLOG_FLOW] ✅ 파이프라인 textData 확보 — title: "${textData.title}", content: ${textData.content?.length || 0}자`);
+      safeProgress('✅ 다단계 파이프라인 생성 완료! (폴리싱 병렬 진행 중)');
+      console.info(`[BLOG_FLOW] ✅ 파이프라인 textData 확보 — title: "${textData.title}", rawHtml: ${textData.content?.length || 0}자, polishPromise=async`);
       console.info(`[PIPELINE_RESULT] source=pipeline`);
     } catch (pipelineError: any) {
       const failReason = `${pipelineError?.status || 'N/A'} ${pipelineError?.message?.substring(0, 120) || 'unknown'}`;
@@ -3282,6 +3258,18 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
     console.info(`[IMG-CONTRACT] selected=0 planned=0 — 이미지 생성 스킵`);
     console.info(`[IMG-SUMMARY] selected=0 returned=0 inserted=0`);
     safeProgress('📝 이미지 없이 텍스트만 생성 완료');
+  }
+
+  // 🔄 Stage C 폴리싱 결과 대기 (이미지 생성과 병렬로 진행된 비동기 작업)
+  if (_polishPromise) {
+    try {
+      const polishResult = await _polishPromise;
+      textData.content = polishResult.content;
+      console.info(`[BLOG_FLOW] ✅ Stage C polish 완료 — model=${polishResult.polishModel}, path=${polishResult.finalQualityPath}, ${polishResult.stageCMs}ms, content=${polishResult.content.length}자`);
+    } catch (polishErr: any) {
+      console.warn(`[BLOG_FLOW] ⚠️ Stage C polish 실패, rawHtml 유지 — ${polishErr?.message?.substring(0, 80)}`);
+      // textData.content는 이미 rawHtml이므로 그대로 사용
+    }
   }
 
   // 🔧 content 또는 contentHtml 필드 둘 다 지원
