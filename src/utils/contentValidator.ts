@@ -353,10 +353,17 @@ export class ContentValidator {
     const violations: string[] = [];
     const warnings: string[] = [];
 
-    // Critical 위반만 체크
+    // Critical 위반 체크
     this.FORBIDDEN_KEYWORDS.critical.forEach(keyword => {
       if (text.includes(keyword)) {
         violations.push(`금지 키워드 발견: "${keyword}"`);
+      }
+    });
+
+    // High 위반 체크
+    this.FORBIDDEN_KEYWORDS.high.forEach(keyword => {
+      if (text.includes(keyword)) {
+        violations.push(`높은 위험 키워드 발견: "${keyword}"`);
       }
     });
 
