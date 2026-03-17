@@ -973,7 +973,7 @@ ${sectionSummaries.join('\n')}`;
 
   const rawHtml = `${introHtml}\n${sectionHtmls.join('\n')}\n${conclusionHtml}`;
   const integrationPrompt = getPipelineIntegrationPrompt(targetLength);
-  const PRO_POLISH_TIMEOUT = demoSafe ? 30000 : 40000;
+  const PRO_POLISH_TIMEOUT = 30000; // PRO polish 30초 — 실패해도 rawHtml 사용
 
   let integratedHtml: any;
   let polishModel = 'PRO';
@@ -1018,8 +1018,12 @@ ${sectionSummaries.join('\n')}`;
     throw new Error('통합된 본문이 비어있습니다. 다시 시도해주세요.');
   }
 
+  const finalQualityPath = polishModel === 'PRO' ? 'flash_draft+pro_polish'
+    : polishModel === 'FLASH(fallback)' ? 'flash_draft+flash_polish'
+    : 'flash_draft_only';
   safeProgress('✅ [4/4] 통합 검증 완료');
   console.info(`[PIPELINE] ✅ Stage C 완료: ${finalContent.length}자 (텍스트 ${finalContent.replace(/<[^>]+>/g, '').trim().length}자) polishModel=${polishModel} ${stageCMs}ms`);
+  console.info(`[PIPELINE] finalQualityPath=${finalQualityPath}`);
 
   // 이미지 프롬프트 생성 — hero(대표) vs sub(서브) 차별화
   // hero: 구체적이고 안정적인 프롬프트 (index 0)
@@ -1058,7 +1062,7 @@ ${sectionSummaries.join('\n')}`;
   console.info(`[PIPELINE] ✅ DONE — 성능 요약`);
   console.info(`[PIPELINE]   total=${timings.total}ms (${(timings.total / 1000).toFixed(1)}s)`);
   console.info(`[PIPELINE]   stageA=${timings.stageA}ms | stageB=${timings.stageB_sections}ms | conclusion=${timings.conclusion}ms | stageC=${stageCMs}ms`);
-  console.info(`[PIPELINE]   strategy=FLASH초안+PRO_polish | polishModel=${polishModel} | proPolishTimeout=${PRO_POLISH_TIMEOUT}ms`);
+  console.info(`[PIPELINE]   finalQualityPath=${finalQualityPath} | polishModel=${polishModel} | proPolishTimeout=${PRO_POLISH_TIMEOUT}ms`);
   console.info(`[PIPELINE]   avgSectionMs=${avgSectionMs} | sections=${sectionTimingsArr.map(t => `${t}ms`).join('/')}`);
   console.info(`[PIPELINE]   finalContent=${finalContent.replace(/<[^>]+>/g, '').trim().length}자 imgPrompts=${imagePrompts.length}`);
   console.info(`[PIPELINE] ═══════════════════════════════════════`);
