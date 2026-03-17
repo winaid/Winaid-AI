@@ -32,6 +32,17 @@ export interface LearnedWritingStyle {
     structure: string; // 글 구조 특징
     emotionLevel: 'low' | 'medium' | 'high'; // 감정 표현 정도
     formalityLevel: 'casual' | 'neutral' | 'formal'; // 격식 수준
+    // ── 심층 문체 분석 (2단계 프레임워크) ──
+    speakerIdentity?: string; // 화자 정체성 (대표원장 직접 설명형 / 객관적 칼럼형 / 환자 상담형 / 보호자 안심형)
+    readerDistance?: string; // 독자와의 거리감 (전문가 설명 / 친절 상담 대화 / 공감·위로 / 차분·객관)
+    sentenceRhythm?: string; // 문장 리듬 (평균 길이, 끊김 패턴, 어미 반복, 질문형/단정형/권유형 비중)
+    paragraphFlow?: string; // 문단 전개 구조 (사례→설명→정리, 문제→원인→해결 등)
+    persuasionStyle?: string; // 설득 방식 (정보 전달 / 신뢰 형성 / 치료 필요성 설득 / 두려움 완화)
+    uniqueExpressions?: string[]; // 고유 표현 습관 (접속어, 명사 표현, 반복 문장 구조, 상담 문장 패턴)
+    bannedGenericStyle?: string[]; // 금지할 범용 문체 (진부한 표현, AI체, 과장 광고)
+    oneLineSummary?: string; // 이 병원 문체 한 줄 정의
+    goodExamples?: string[]; // 이 병원다운 문장 예시 5개
+    badExamples?: string[]; // 이 병원답지 않은 문장 예시 5개
   };
   stylePrompt: string; // AI에게 전달할 스타일 프롬프트
   createdAt: string;

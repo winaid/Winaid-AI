@@ -40,6 +40,13 @@ const PROFILE_REQUIRED_FIELDS = [
   'emotionLevel', 'formalityLevel', 'description', 'stylePrompt',
 ] as const;
 
+/** 심층 분석 선택 필드 */
+const DEEP_ANALYSIS_FIELDS = [
+  'speakerIdentity', 'readerDistance', 'sentenceRhythm', 'paragraphFlow',
+  'persuasionStyle', 'uniqueExpressions', 'bannedGenericStyle',
+  'oneLineSummary', 'goodExamples', 'badExamples',
+] as const;
+
 /**
  * callGemini 반환값에서 프로필 객체 추출 — 3단계 fallback
  *
@@ -57,6 +64,17 @@ const extractProfileFromGeminiResponse = (response: any): {
   formalityLevel: string;
   description: string;
   stylePrompt: string;
+  // 심층 분석 필드
+  speakerIdentity: string;
+  readerDistance: string;
+  sentenceRhythm: string;
+  paragraphFlow: string;
+  persuasionStyle: string;
+  uniqueExpressions: string[];
+  bannedGenericStyle: string[];
+  oneLineSummary: string;
+  goodExamples: string[];
+  badExamples: string[];
 } => {
   console.log('[StyleProfile] 1/4 응답 타입:', typeof response, response ? Object.keys(response).slice(0, 8).join(',') : 'null');
 
@@ -134,6 +152,17 @@ const extractProfileFromGeminiResponse = (response: any): {
     formalityLevel: getField(parsed, 'formalityLevel', 'formality_level') ?? 'neutral',
     description: getField(parsed, 'description') ?? '',
     stylePrompt: getField(parsed, 'stylePrompt', 'style_prompt') ?? '',
+    // ── 심층 분석 필드 (선택) ──
+    speakerIdentity: getField(parsed, 'speakerIdentity', 'speaker_identity') ?? '',
+    readerDistance: getField(parsed, 'readerDistance', 'reader_distance') ?? '',
+    sentenceRhythm: getField(parsed, 'sentenceRhythm', 'sentence_rhythm') ?? '',
+    paragraphFlow: getField(parsed, 'paragraphFlow', 'paragraph_flow') ?? '',
+    persuasionStyle: getField(parsed, 'persuasionStyle', 'persuasion_style') ?? '',
+    uniqueExpressions: Array.isArray(getField(parsed, 'uniqueExpressions', 'unique_expressions')) ? getField(parsed, 'uniqueExpressions', 'unique_expressions') : [],
+    bannedGenericStyle: Array.isArray(getField(parsed, 'bannedGenericStyle', 'banned_generic_style')) ? getField(parsed, 'bannedGenericStyle', 'banned_generic_style') : [],
+    oneLineSummary: getField(parsed, 'oneLineSummary', 'one_line_summary') ?? '',
+    goodExamples: Array.isArray(getField(parsed, 'goodExamples', 'good_examples')) ? getField(parsed, 'goodExamples', 'good_examples') : [],
+    badExamples: Array.isArray(getField(parsed, 'badExamples', 'bad_examples')) ? getField(parsed, 'badExamples', 'bad_examples') : [],
   };
 
   // 최소 유효성: tone + description이 없으면 분석 실패로 간주
@@ -235,41 +264,87 @@ export const analyzeWritingStyle = async (
   sampleText: string,
   styleName: string
 ): Promise<LearnedWritingStyle> => {
-  const prompt = `당신은 블로그 글의 말투와 어조를 분석하는 전문가입니다.
+  const prompt = `너는 단순히 기존 글의 문장 끝맺음을 흉내 내는 사람이 아니라,
+해당 병원 고유의 화자 캐릭터, 상담 방식, 설명 습관, 설득 구조를 추출해
+그 문체를 재현하는 편집자 역할을 수행한다.
 
 [분석할 텍스트]
-${sampleText.substring(0, 3000)}
+${sampleText.substring(0, 5000)}
 
-[미션]
-위 텍스트의 말투, 어조, 문체 특징을 상세히 분석해주세요.
-특히 글의 시선 방향과 독자와의 관계 설정 방식에 주목합니다.
+[중요 원칙]
+- 표면적인 어미나 표현 몇 개만 모방하지 말 것
+- 반드시 화자의 태도, 환자와의 거리감, 설명 흐름, 설득 구조까지 분석할 것
+- 업종 공통 블로그 말투로 평준화하지 말 것
+- 병원명만 바꿔도 다른 병원 글처럼 보이는 문장은 피할 것
+- 실제 상담실/진료실에서 나올 법한 문장인지 기준으로 판단할 것
+- 근거가 약한 해석은 단정하지 말고 가능성으로 표시할 것
+- 반복적으로 확인되는 특징만 "이 병원 고유 문체"로 정의할 것
 
-[분석 항목]
-1. tone: 전체적인 어조 (예: "친근하고 따뜻한", "전문적이면서 편안한", "관찰자적", "대화하듯")
-2. sentenceEndings: 자주 사용하는 문장 끝 패턴 (예: ["~요", "~죠?", "~거든요", "~더라고요", "~합니다"])
-3. vocabulary: 특징적인 단어나 표현 5-10개 (예: ["사실", "근데", "진짜", "그렇죠?", "~인 편이에요"])
-4. structure: 글 구조 특징
-   - TYPE A (에세이형): "관찰 → 해석 → 정리" 흐름, 여백 있음, 열린 마무리
-   - TYPE B (정보 전달형): "핵심 → 근거 → 적용" 흐름, 명확한 정보 전달
-5. emotionLevel: 감정 표현 정도 ("low"=절제된, "medium"=적당한, "high"=풍부한)
-   - 감정이 정보 전달의 도구로만 사용되는지, 자연스러운 공감인지 구분
-6. formalityLevel: 격식 수준 ("casual"=편한, "neutral"=중립, "formal"=격식)
-7. styleType: 글 유형 ("essay"=에세이형/관찰→해석→정리, "informative"=정보전달형/전문칼럼)
-8. readerRelation: 독자와의 관계 ("companion"=함께 생각하는 동료, "guide"=안내자, "expert"=전문가)
+[분석 항목 — 7가지]
+
+1. 화자의 정체성 (speakerIdentity)
+   - 대표원장 직접 설명형인지
+   - 객관적 정보 칼럼형인지
+   - 환자 상담형인지
+   - 보호자 안심형인지
+
+2. 독자와의 거리감 (readerDistance)
+   - 전문가가 설명하는 거리인지
+   - 친절한 상담 대화형인지
+   - 공감과 위로가 섞인 톤인지
+   - 차분하고 객관적인 톤인지
+
+3. 문장 리듬 (sentenceRhythm)
+   - 평균 문장 길이
+   - 짧게 끊는지, 길게 설명하는지
+   - 같은 어미 반복 여부
+   - 질문형 / 단정형 / 권유형 비중
+
+4. 문단 전개 구조 (paragraphFlow)
+   - 사례 도입 → 설명 → 정리
+   - 문제 제기 → 원인 → 해결
+   - 환자 질문 → 답변
+   - 비교 설명 → 적합 대상 → 관리법
+
+5. 설득 방식 (persuasionStyle)
+   - 정보 전달 중심인지
+   - 신뢰 형성 중심인지
+   - 치료 필요성 설득형인지
+   - 두려움 완화형인지
+
+6. 고유 표현 습관 (uniqueExpressions)
+   - 자주 쓰는 접속어
+   - 자주 쓰는 명사 표현
+   - 반복되는 문장 구조
+   - 자주 등장하는 상담 문장 패턴
+
+7. 금지해야 할 범용 문체 (bannedGenericStyle)
+   - 다른 병원 블로그에도 그대로 들어갈 수 있는 진부한 표현
+   - 과장된 광고 문구
+   - AI가 쓴 듯한 균일한 설명체
+   - 의미 없이 반복되는 '~입니다', '~필요합니다' 나열
 
 [출력 형식]
-JSON으로 답변해주세요:
+반드시 아래 JSON으로만 답변. 설명 텍스트 없이 JSON만 출력.
 {
-  "tone": "어조 설명",
-  "sentenceEndings": ["끝말 1", "끝말 2", ...],
-  "vocabulary": ["단어1", "단어2", ...],
-  "structure": "구조 설명 (TYPE A/B 중 어느 쪽에 가까운지 명시)",
+  "tone": "전체적인 어조 설명 (2-3문장)",
+  "sentenceEndings": ["자주 쓰는 문장 끝 패턴 5-8개"],
+  "vocabulary": ["이 병원 고유의 특징적 단어/표현 5-10개"],
+  "structure": "글 구조 설명 (TYPE A 에세이형 / TYPE B 정보전달형 명시 + 상세 흐름)",
   "emotionLevel": "low/medium/high",
   "formalityLevel": "casual/neutral/formal",
-  "styleType": "essay/informative",
-  "readerRelation": "companion/guide/expert",
-  "description": "이 말투를 한 줄로 설명 (시선 방향과 독자 관계 포함)",
-  "stylePrompt": "AI가 이 말투로 글을 쓸 때 사용할 프롬프트 (50-100자, 핵심 특징 + AI 냄새 제거 포인트)"
+  "speakerIdentity": "화자 정체성 분석 (2-3문장, 어떤 위치에서 말하는지)",
+  "readerDistance": "독자와의 거리감 분석 (2-3문장)",
+  "sentenceRhythm": "문장 리듬 분석 (평균 길이, 끊김 패턴, 어미 반복 여부, 질문형/단정형/권유형 비중)",
+  "paragraphFlow": "문단 전개 구조 분석 (2-3문장, 대표적 흐름 패턴)",
+  "persuasionStyle": "설득 방식 분석 (2-3문장)",
+  "uniqueExpressions": ["고유 접속어, 명사 표현, 반복 문장 구조, 상담 패턴 — 5-10개"],
+  "bannedGenericStyle": ["이 병원 글에서 절대 나오면 안 되는 범용/진부 표현 5-8개"],
+  "oneLineSummary": "이 병원 문체를 한 줄로 정의",
+  "goodExamples": ["이 병원다운 문장 예시 5개 — 원문에서 추출하거나 원문 스타일로 새로 작성"],
+  "badExamples": ["이 병원답지 않은 문장 예시 5개 — 이런 문장이 나오면 실패"],
+  "description": "이 말투를 한 줄로 설명 (화자 캐릭터 + 독자 관계 + 설득 구조 포함)",
+  "stylePrompt": "AI가 이 말투로 글을 쓸 때 사용할 핵심 지침 (100-200자, 화자 태도 + 설명 흐름 + 금지 패턴)"
 }`;
 
   try {
@@ -298,17 +373,44 @@ JSON으로 답변해주세요:
             type: Type.STRING,
             enum: ["casual", "neutral", "formal"]
           },
+          speakerIdentity: { type: Type.STRING },
+          readerDistance: { type: Type.STRING },
+          sentenceRhythm: { type: Type.STRING },
+          paragraphFlow: { type: Type.STRING },
+          persuasionStyle: { type: Type.STRING },
+          uniqueExpressions: {
+            type: Type.ARRAY,
+            items: { type: Type.STRING }
+          },
+          bannedGenericStyle: {
+            type: Type.ARRAY,
+            items: { type: Type.STRING }
+          },
+          oneLineSummary: { type: Type.STRING },
+          goodExamples: {
+            type: Type.ARRAY,
+            items: { type: Type.STRING }
+          },
+          badExamples: {
+            type: Type.ARRAY,
+            items: { type: Type.STRING }
+          },
           description: { type: Type.STRING },
           stylePrompt: { type: Type.STRING }
         },
-        required: ["tone", "sentenceEndings", "vocabulary", "structure", "emotionLevel", "formalityLevel", "description", "stylePrompt"]
+        required: [
+          "tone", "sentenceEndings", "vocabulary", "structure", "emotionLevel", "formalityLevel",
+          "speakerIdentity", "readerDistance", "sentenceRhythm", "paragraphFlow", "persuasionStyle",
+          "uniqueExpressions", "bannedGenericStyle", "oneLineSummary", "goodExamples", "badExamples",
+          "description", "stylePrompt"
+        ]
       },
     });
 
     // Gemini 응답에서 프로필 안전 추출 (candidates[0].content.parts[0].text)
     const result = extractProfileFromGeminiResponse(response);
 
-    // LearnedWritingStyle 객체 생성 (검증된 필드만 사용)
+    // LearnedWritingStyle 객체 생성 (기본 + 심층 분석 필드)
     const learnedStyle: LearnedWritingStyle = {
       id: `style_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       name: styleName,
@@ -320,7 +422,18 @@ JSON으로 답변해주세요:
         vocabulary: result.vocabulary,
         structure: result.structure,
         emotionLevel: result.emotionLevel as 'low' | 'medium' | 'high',
-        formalityLevel: result.formalityLevel as 'casual' | 'neutral' | 'formal'
+        formalityLevel: result.formalityLevel as 'casual' | 'neutral' | 'formal',
+        // 심층 분석 필드
+        speakerIdentity: result.speakerIdentity,
+        readerDistance: result.readerDistance,
+        sentenceRhythm: result.sentenceRhythm,
+        paragraphFlow: result.paragraphFlow,
+        persuasionStyle: result.persuasionStyle,
+        uniqueExpressions: result.uniqueExpressions,
+        bannedGenericStyle: result.bannedGenericStyle,
+        oneLineSummary: result.oneLineSummary,
+        goodExamples: result.goodExamples,
+        badExamples: result.badExamples,
       },
       stylePrompt: result.stylePrompt,
       createdAt: new Date().toISOString()
@@ -367,41 +480,79 @@ const filterProhibitedExpressions = (words: string[]): string[] => {
  */
 export const getStylePromptForGeneration = (style: LearnedWritingStyle): string => {
   const { analyzedStyle } = style;
-  
+
   // 학습된 표현 중 의료광고법 위반 가능성 있는 것 필터링
   const safeVocabulary = filterProhibitedExpressions(analyzedStyle.vocabulary);
   const safeSentenceEndings = filterProhibitedExpressions(analyzedStyle.sentenceEndings);
-  
-  return `[학습된 말투 스타일: ${style.name}]
+  const safeUniqueExpressions = filterProhibitedExpressions(analyzedStyle.uniqueExpressions || []);
+
+  // ── 심층 분석 블록 (있을 때만 포함) ──
+  const hasDeepAnalysis = analyzedStyle.speakerIdentity || analyzedStyle.readerDistance;
+
+  const deepBlock = hasDeepAnalysis ? `
+[화자 캐릭터]
+- 정체성: ${analyzedStyle.speakerIdentity || '미분석'}
+- 독자와의 거리감: ${analyzedStyle.readerDistance || '미분석'}
+- 설득 방식: ${analyzedStyle.persuasionStyle || '미분석'}
+
+[문장·문단 DNA]
+- 리듬: ${analyzedStyle.sentenceRhythm || '미분석'}
+- 전개 구조: ${analyzedStyle.paragraphFlow || '미분석'}
+- 고유 표현: ${safeUniqueExpressions.length > 0 ? safeUniqueExpressions.join(', ') : '미분석'}
+
+[한 줄 정의] ${analyzedStyle.oneLineSummary || style.description}
+
+[이 병원다운 문장 — 참고]
+${(analyzedStyle.goodExamples || []).map((ex, i) => `${i + 1}. ${ex}`).join('\n') || '(예시 없음)'}
+
+[이 병원답지 않은 문장 — 절대 금지]
+${(analyzedStyle.badExamples || []).map((ex, i) => `${i + 1}. ${ex}`).join('\n') || '(예시 없음)'}
+` : '';
+
+  const bannedBlock = (analyzedStyle.bannedGenericStyle || []).length > 0
+    ? `\n[이 병원 글에서 금지할 범용 표현]\n${analyzedStyle.bannedGenericStyle!.map(b => `- ${b}`).join('\n')}\n`
+    : '';
+
+  return `[🏥 병원 고유 문체: ${style.name}]
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+너는 이 병원의 편집자다. 어미 몇 개를 흉내 내는 것이 아니라,
+화자의 태도·상담 방식·설명 습관·설득 구조를 재현하라.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[기본 톤]
 - 어조: ${analyzedStyle.tone}
-- 문장 끝 패턴: ${safeSentenceEndings.join(', ')}
-- 자주 사용하는 표현: ${safeVocabulary.join(', ')}
-- 글 구조: ${analyzedStyle.structure}
-- 감정 표현: ${analyzedStyle.emotionLevel === 'high' ? '풍부하게' : analyzedStyle.emotionLevel === 'medium' ? '적당히' : '절제하여'} (정보 전달의 보조 수단으로만)
 - 격식: ${analyzedStyle.formalityLevel === 'formal' ? '격식체' : analyzedStyle.formalityLevel === 'casual' ? '편한 말투' : '중립적'}
+- 감정 표현: ${analyzedStyle.emotionLevel === 'high' ? '풍부하게' : analyzedStyle.emotionLevel === 'medium' ? '적당히' : '절제하여'} (정보 전달의 보조 수단으로만)
+- 문장 끝 패턴: ${safeSentenceEndings.join(', ')}
+- 자주 쓰는 표현: ${safeVocabulary.join(', ')}
+- 글 구조: ${analyzedStyle.structure}
+${deepBlock}${bannedBlock}
+[✍️ 글 작성 전 자가점검 — 매 문단마다 확인]
+1. 이 문단의 화자가 실제 상담실/진료실에서 말하는 것처럼 읽히는가?
+2. 병원명을 가려도 이 병원 톤으로 느껴지는가?
+3. 다른 병원 블로그에 그대로 넣어도 어색하지 않은 범용 문장이 있지 않은가?
+4. 같은 어미가 3회 이상 연속 반복되지 않았는가?
+5. 각 문단에 이 병원 고유 문체 특징이 2개 이상 반영됐는가?
 
 ████████████████████████████████████████████████████████████████████████████████
 [🎯 AI 냄새 제거 + 의료법 준수 - 최우선 적용]
 ████████████████████████████████████████████████████████████████████████████████
 
-**⛔ 피해야 할 AI 패턴:**
+⛔ 피해야 할 AI 패턴:
 - "~가 핵심입니다" / "기억하세요" / "중요한 것은" → 삭제
 - "~수 있습니다" 2회 연속 → 1회는 "~경우도 있습니다", "~분들도 많습니다"로 변환
-- 문단마다 기능이 너무 명확한 구조 → 관찰→해석→정리 흐름으로
+- 정보글 평균체로 평준화 → 이 병원의 고유 리듬 유지
 - 모든 가능성 나열 → 대표적인 것만 언급, 여백 남기기
 
-**⛔ 의료광고법 금지 표현:**
+⛔ 의료광고법 금지 표현:
 - '방문하세요', '예약하세요', '상담하세요' → "고려해 보실 수 있습니다"
 - '완치', '최고', '보장', '확실' → 과대광고 금지
 - 구체적 숫자/시간 (출처 없이) → 범주형 표현으로 대체
 
-**✅ 사람다운 글쓰기 원칙:**
+✅ 사람다운 글쓰기 원칙:
 - 첫 문장: 정의/설명이 아닌 상황 묘사나 질문으로 시작
-- 감정 표현: 정보 전달의 도구로만 사용, 과도한 감정 표현 자제
-- 결론: 너무 깔끔하게 정리하지 않음, 독자가 끼워 넣을 여백 남기기
 - 태도: "같이 생각해보자" (설득이 아닌 동행)
-
-📌 핵심: 말투(어조)는 유지 + 구조(관찰→해석→정리) + 의료법 준수 + AI 패턴 제거
+- 결론: 너무 깔끔하게 정리하지 않음, 여백 남기기
 `;
 };
 
