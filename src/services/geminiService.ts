@@ -1021,9 +1021,9 @@ ${sectionSummaries.join('\n')}`;
   const rawHtml = `${introHtml}\n${sectionHtmls.join('\n')}\n${conclusionHtml}`;
   const integrationPrompt = getPipelineIntegrationPrompt(targetLength);
   // timeout: proxy에 전달되는 값. 실제 client abort = timeout + 5000ms (geminiClient 내부 버퍼).
-  // PRO 25s → client 30s, FLASH 10s → client 15s. 총 최악 45s.
-  const PRO_POLISH_TIMEOUT = 25000;
-  const FLASH_POLISH_TIMEOUT = 10000;
+  // PRO 20s → client 25s, FLASH 12s → client 17s. 총 최악 42s.
+  const PRO_POLISH_TIMEOUT = 20000;
+  const FLASH_POLISH_TIMEOUT = 12000;
 
   // 기본값: 가장 보수적인 경로. 이후 성공 시 승격.
   let finalQualityPath = 'flash_draft_only';

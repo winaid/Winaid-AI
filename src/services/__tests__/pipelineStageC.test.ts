@@ -189,11 +189,11 @@ describe('Pipeline Stage C — 실행 검증', () => {
       expect(pathLogs.some(l => l.includes('flash_draft+pro_polish'))).toBe(true);
     });
 
-    it('Stage C 로그에 attempt=PRO, timeout=25000 포함', async () => {
+    it('Stage C 로그에 attempt=PRO, timeout=20000 포함', async () => {
       await generateBlogWithPipeline(BASE_REQUEST, SEARCH_RESULTS);
       const attemptLogs = logsContaining('Stage C attempt=PRO');
       expect(attemptLogs.length).toBeGreaterThanOrEqual(1);
-      expect(attemptLogs[0]).toContain('timeout=25000');
+      expect(attemptLogs[0]).toContain('timeout=20000');
     });
 
     it('모든 섹션 FLASH 모델 사용 확인', async () => {
@@ -242,7 +242,7 @@ describe('Pipeline Stage C — 실행 검증', () => {
 
       const flashFallbackLogs = logsContaining('Stage C fallback=FLASH');
       expect(flashFallbackLogs.length).toBeGreaterThanOrEqual(1);
-      expect(flashFallbackLogs[0]).toContain('timeout=10000');
+      expect(flashFallbackLogs[0]).toContain('timeout=12000');
     });
 
     it('polishModel=FLASH(fallback) 로그 기록', async () => {
@@ -300,34 +300,32 @@ describe('Pipeline Stage C — 실행 검증', () => {
   });
 
   // ── 횡단 검증 ──
-  describe('횡단 검증: HTML 구조 보존 프롬프트', () => {
-    it('Stage C 프롬프트에 [HTML 구조 보존 원칙] 포함', async () => {
-      // getPipelineIntegrationPrompt 직접 검증
+  describe('횡단 검증: 경량 교정 프롬프트', () => {
+    it('Stage C 프롬프트에 구조 유지 규칙 포함', async () => {
       const { getPipelineIntegrationPrompt } = await import('../../lib/gpt52-prompts-staged');
       const prompt = getPipelineIntegrationPrompt(1500);
-      expect(prompt).toContain('[HTML 구조 보존 원칙]');
-      expect(prompt).toContain('섹션 순서, 문단 순서를 절대 바꾸지 말 것');
-      expect(prompt).toContain('CTA');
-      expect(prompt).toContain('태그를 불필요하게 바꾸지 말 것');
+      expect(prompt).toContain('소제목 순서와 전체 구조를 유지한다');
+      expect(prompt).toContain('HTML 태그 구조를 그대로 유지한다');
+      expect(prompt).toContain('문단 수와 전체 길이를 크게 바꾸지 않는다');
     });
 
-    it('Stage C 프롬프트에 [절대 금지] 포함', async () => {
+    it('Stage C 프롬프트에 최소 수정 원칙 포함', async () => {
       const { getPipelineIntegrationPrompt } = await import('../../lib/gpt52-prompts-staged');
       const prompt = getPipelineIntegrationPrompt(1500);
-      expect(prompt).toContain('[절대 금지]');
-      expect(prompt).toContain('소제목 추가/삭제/순서 변경');
-      expect(prompt).toContain('전체의 30% 이상 수정');
+      expect(prompt).toContain('수정량은 전체 문장의 15% 이내');
+      expect(prompt).toContain('전체를 재작성하지 말고');
+      expect(prompt).toContain('새 정보, 새 주장, 새 사례를 추가하지 않는다');
     });
 
     it('[출력] 지시어 — HTML만 출력', async () => {
       const { getPipelineIntegrationPrompt } = await import('../../lib/gpt52-prompts-staged');
       const prompt = getPipelineIntegrationPrompt(1500);
-      expect(prompt).toContain('[출력] 마감된 전체 HTML만 출력');
+      expect(prompt).toContain('HTML만 출력');
     });
   });
 
   describe('횡단 검증: Stage C timeout 상수', () => {
-    it('PRO_POLISH_TIMEOUT = 25000, FLASH_POLISH_TIMEOUT = 10000, noAutoFallback=true', async () => {
+    it('PRO_POLISH_TIMEOUT = 20000, FLASH_POLISH_TIMEOUT = 12000, noAutoFallback=true', async () => {
       // 코드 정적 검증 — callGemini 호출에서 timeout 값 확인
       setupMockForPath('flash_fallback');
       await generateBlogWithPipeline(BASE_REQUEST, SEARCH_RESULTS);
@@ -337,7 +335,7 @@ describe('Pipeline Stage C — 실행 검증', () => {
         (c: any[]) => c[0]?.model === 'gemini-3.1-pro-preview' && c[0]?.temperature === 0.3
       );
       expect(proCalls.length).toBeGreaterThanOrEqual(1);
-      expect(proCalls[0][0].timeout).toBe(25000);
+      expect(proCalls[0][0].timeout).toBe(20000);
       expect(proCalls[0][0].noAutoFallback).toBe(true);
       expect(proCalls[0][0].maxRetries).toBe(1);
 
@@ -346,7 +344,7 @@ describe('Pipeline Stage C — 실행 검증', () => {
         (c: any[]) => c[0]?.model === 'gemini-3.1-flash-lite-preview' && c[0]?.temperature === 0.3
       );
       expect(flashPolishCalls.length).toBeGreaterThanOrEqual(1);
-      expect(flashPolishCalls[0][0].timeout).toBe(10000);
+      expect(flashPolishCalls[0][0].timeout).toBe(12000);
       expect(flashPolishCalls[0][0].noAutoFallback).toBe(true);
       expect(flashPolishCalls[0][0].maxRetries).toBe(1);
     });
