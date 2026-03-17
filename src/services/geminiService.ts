@@ -973,11 +973,17 @@ ${sectionSummaries.join('\n')}`;
 
   const rawHtml = `${introHtml}\n${sectionHtmls.join('\n')}\n${conclusionHtml}`;
   const integrationPrompt = getPipelineIntegrationPrompt(targetLength);
-  const PRO_POLISH_TIMEOUT = 30000; // PRO polish 30초 — 실패해도 rawHtml 사용
+  const PRO_POLISH_TIMEOUT = 30000;
+  const FLASH_POLISH_TIMEOUT = 12000;
 
+  // 기본값: 가장 보수적인 경로. 이후 성공 시 승격.
+  let finalQualityPath = 'flash_draft_only';
   let integratedHtml: any;
-  let polishModel = 'PRO';
+  let polishModel = 'NONE';
   const stageCStart = Date.now();
+
+  // 1차: PRO polish 시도
+  console.info(`[PIPELINE] Stage C attempt=PRO timeout=${PRO_POLISH_TIMEOUT}`);
   try {
     integratedHtml = await callGemini({
       prompt: rawHtml,
@@ -987,40 +993,42 @@ ${sectionSummaries.join('\n')}`;
       timeout: PRO_POLISH_TIMEOUT,
       temperature: 0.3,
     });
+    polishModel = 'PRO';
+    finalQualityPath = 'flash_draft+pro_polish';
   } catch (proErr: any) {
-    // PRO polish 실패 → FLASH로 재시도 (빠른 보정이라도)
+    // 2차: FLASH polish 시도
     console.warn(`[PIPELINE] ⚠️ Stage C PRO polish 실패 (${proErr?.message}), FLASH 재시도`);
-    polishModel = 'FLASH(fallback)';
+    console.info(`[PIPELINE] Stage C fallback=FLASH timeout=${FLASH_POLISH_TIMEOUT}`);
     try {
       integratedHtml = await callGemini({
         prompt: rawHtml,
         systemPrompt: integrationPrompt,
         model: GEMINI_MODEL.FLASH,
         responseType: 'text',
-        timeout: 25000,
+        timeout: FLASH_POLISH_TIMEOUT,
         temperature: 0.3,
       });
+      polishModel = 'FLASH(fallback)';
+      finalQualityPath = 'flash_draft+flash_polish';
     } catch (flashErr: any) {
-      // FLASH도 실패 → rawHtml 그대로 사용 (본문 파트는 이미 검증됨)
-      console.warn(`[PIPELINE] ⚠️ Stage C FLASH도 실패 (${flashErr?.message}), rawHtml 사용`);
+      // 3차: pre-polish HTML 그대로 사용 (본문 파트는 이미 완전성 검증 통과)
+      console.warn(`[PIPELINE] ⚠️ Stage C FLASH polish 실패 (${flashErr?.message}), pre-polish HTML 사용`);
       integratedHtml = rawHtml;
-      polishModel = 'NONE(rawHtml)';
+      polishModel = 'NONE(pre-polish)';
+      // finalQualityPath는 이미 flash_draft_only
     }
   }
   const stageCMs = Date.now() - stageCStart;
 
   const finalContent = typeof integratedHtml === 'string' && integratedHtml.includes('<')
     ? integratedHtml.trim()
-    : rawHtml; // 통합 실패 시 원본 사용
+    : rawHtml; // 파싱 실패 시 원본 사용
 
   // 최종 결과물 검증
   if (!finalContent || finalContent.replace(/<[^>]+>/g, '').trim().length < 100) {
     throw new Error('통합된 본문이 비어있습니다. 다시 시도해주세요.');
   }
 
-  const finalQualityPath = polishModel === 'PRO' ? 'flash_draft+pro_polish'
-    : polishModel === 'FLASH(fallback)' ? 'flash_draft+flash_polish'
-    : 'flash_draft_only';
   safeProgress('✅ [4/4] 통합 검증 완료');
   console.info(`[PIPELINE] ✅ Stage C 완료: ${finalContent.length}자 (텍스트 ${finalContent.replace(/<[^>]+>/g, '').trim().length}자) polishModel=${polishModel} ${stageCMs}ms`);
   console.info(`[PIPELINE] finalQualityPath=${finalQualityPath}`);
