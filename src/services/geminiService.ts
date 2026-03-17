@@ -1098,36 +1098,48 @@ ${sectionSummaries.join('\n')}`;
   console.info(`[PIPELINE] ✅ Stage C 완료: ${finalContent.length}자 (텍스트 ${finalContent.replace(/<[^>]+>/g, '').trim().length}자) polishModel=${polishModel} stageC=${stageCMs}ms`);
   console.info(`[PIPELINE] finalQualityPath=${finalQualityPath} | PRO_TIMEOUT=${PRO_POLISH_TIMEOUT} FLASH_TIMEOUT=${FLASH_POLISH_TIMEOUT}`);
 
-  // 이미지 프롬프트 생성 — hero는 주제 대표, sub는 문단 의미 기반 장면 분기
-  // 병원 장면 고정이 아니라, 문단 내용에 맞는 의료/구강 건강 맥락으로 다양화
-  const imageCount = request.imageCount ?? 1;
+  // 이미지 프롬프트 생성 — 사용자 선택 수량 계약 준수
+  // selectedImageCount = 사용자가 선택한 정확한 수량 (0~5). 이 값이 최종 목표.
+  const selectedImageCount = request.imageCount ?? 1;
   const imagePrompts: string[] = [];
   // 사용된 sceneType 기록 — 연속 중복 방지용
   const usedSceneTypes: string[] = [];
 
-  if (imageCount > 0) {
-    for (let i = 0; i < Math.min(imageCount, outline.sections.length + 1); i++) {
-      const section = outline.sections[Math.min(i, outline.sections.length - 1)];
-      const sectionTitle = section?.title || '건강 정보';
+  console.info(`[IMG-PLAN] selected=${selectedImageCount} sections=${outline.sections.length}`);
 
+  if (selectedImageCount > 0) {
+    // 🛡️ 항상 selectedImageCount개 프롬프트 생성 — 섹션 수보다 많아도 절삭하지 않음
+    // 확장 규칙: sections 수 < selectedImageCount일 때도 의미 있는 추가 프롬프트 생성
+    const sectionCount = outline.sections.length;
+
+    for (let i = 0; i < selectedImageCount; i++) {
       if (i === 0) {
-        // hero: 주제 대표 이미지 — 반드시 병원 상담 장면일 필요 없음
-        // 주제 중심으로 구강 건강/의료 맥락의 editorial 이미지
+        // hero: 주제 대표 이미지
         imagePrompts.push(
           `${request.topic} — 주제를 상징적으로 보여주는 현대 한국인. 의료/구강 건강 맥락의 현실적 editorial 이미지. 차분하고 신뢰감 있는 분위기.`
         );
         usedSceneTypes.push('topic-editorial');
         console.info(`[IMG-PROMPT] hero idx=0 sceneType=topic-editorial profile=modern-korean-medical-context textless no-hanbok`);
-      } else {
-        // sub: 소제목/문단 의미 기반 sceneType 분류
+      } else if (i <= sectionCount) {
+        // sub: 섹션 범위 내 — 소제목/문단 의미 기반 sceneType
+        const section = outline.sections[i - 1];
+        const sectionTitle = section?.title || '건강 정보';
         const sceneType = classifySceneType(sectionTitle, usedSceneTypes);
         const scenePrompt = buildScenePrompt(request.topic, sectionTitle, sceneType);
         imagePrompts.push(scenePrompt);
         usedSceneTypes.push(sceneType);
-        console.info(`[IMG-PROMPT] sub idx=${i} sceneType=${sceneType} profile=korean-oral-health-context textless no-hanbok`);
+        console.info(`[IMG-PROMPT] sub idx=${i} sceneType=${sceneType} source=section profile=korean-oral-health-context textless no-hanbok`);
+      } else {
+        // sub 확장: 섹션 범위 초과 — 아직 사용하지 않은 sceneType으로 보충 프롬프트 생성
+        const sceneType = classifySceneType(request.topic, usedSceneTypes);
+        const scenePrompt = buildScenePrompt(request.topic, request.topic, sceneType);
+        imagePrompts.push(scenePrompt);
+        usedSceneTypes.push(sceneType);
+        console.info(`[IMG-PROMPT] sub idx=${i} sceneType=${sceneType} source=extended profile=korean-oral-health-context textless no-hanbok`);
       }
     }
   }
+  console.info(`[IMG-PLAN] selected=${selectedImageCount} promptsGenerated=${imagePrompts.length} sections=${outline.sections.length}`);
 
   timings.total = Date.now() - pipelineStart;
 
@@ -3202,14 +3214,11 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
   
   safeProgress(`🎨 ${styleName} 스타일로 ${imgRatio} 이미지 생성 중...`);
   
-  const maxImages = request.postType === 'card_news' ? (request.slideCount || 6) : (request.imageCount ?? 1);
-  
-  console.log('🖼️ 이미지 생성 설정:', {
-    'request.imageCount': request.imageCount,
-    'maxImages': maxImages,
-    'postType': request.postType,
-    'imagePrompts 길이': textData.imagePrompts?.length || 0
-  });
+  // selectedImageCount: 사용자 선택 수량 (0~5) — 이것이 최종 목표
+  const selectedImageCount = request.postType === 'card_news' ? (request.slideCount || 6) : (request.imageCount ?? 1);
+  const maxImages = selectedImageCount;
+
+  console.info(`[IMG-CONTRACT] selected=${selectedImageCount} maxImages=${maxImages} postType=${request.postType} promptsAvailable=${textData.imagePrompts?.length || 0}`);
   
   // 폴백 방식에서도 참고 이미지 전달 (레이아웃 재가공 지원)
   const fallbackReferenceImage = request.coverStyleImage || request.contentStyleImage;
@@ -3223,16 +3232,18 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
   let imageFailCount = 0;
 
   // imagePrompts가 없으면 빈 배열로 초기화 (imageCount가 0일 때 AI가 생략할 수 있음)
+  const generatedPromptCount = textData.imagePrompts?.length || 0;
   if (!textData.imagePrompts || !Array.isArray(textData.imagePrompts)) {
-    console.warn('⚠️ AI가 imagePrompts를 생성하지 않음! textData.imagePrompts:', textData.imagePrompts);
+    console.warn(`[IMG-CONTRACT] ⚠️ imagePrompts 미생성 — 빈 배열 초기화`);
     textData.imagePrompts = [];
   } else {
-    console.log('✅ AI가 imagePrompts 생성함:', textData.imagePrompts.length, '개');
+    console.info(`[IMG-CONTRACT] generatedPromptCount=${generatedPromptCount} selected=${selectedImageCount}`);
   }
 
-  // 🔧 이미지 프롬프트 부족 시 자동 패딩 (요청 개수만큼 채우기)
+  // 🔧 비상 패딩: 파이프라인이 정상이면 이 패딩은 실행되지 않아야 함
+  // 실행되면 파이프라인에서 프롬프트 수가 부족했다는 의미 → 경고 로그
   if (maxImages > 0 && textData.imagePrompts.length < maxImages) {
-    console.warn(`⚠️ 이미지 프롬프트 부족! 요청: ${maxImages}개, 생성: ${textData.imagePrompts.length}개 → 자동 패딩`);
+    console.warn(`[IMG-CONTRACT] ⚠️ 비상 패딩 발동! generated=${textData.imagePrompts.length} selected=${maxImages} — 파이프라인 프롬프트 부족`);
     const defaultPrompt = `${request.topic} — 의료/구강 건강 맥락의 현실적 이미지. ${request.imageStyle === 'illustration' ? '3D 일러스트, 파스텔톤' : request.imageStyle === 'medical' ? '의학 해부도, 전문 의료 이미지' : '실사 사진, DSLR 촬영'}. 현대 한국인, 현대적 일상복 또는 의료복.`;
     while (textData.imagePrompts.length < maxImages) {
       textData.imagePrompts.push(defaultPrompt);
@@ -3287,14 +3298,14 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
         if (qr.status === 'fallback') imageFailCount++;
       }
 
-      // 슬롯 수량 보장 검증: 계획 대비 반환 수가 동일해야 함
+      // 🛡️ 슬롯 수량 계약 검증: selected → planned → returned 일관성
       const aiSlots = queueResults.filter(r => r.resultType === 'ai-image').length;
       const templateSlots = queueResults.filter(r => r.resultType === 'template').length;
       const placeholderSlots = queueResults.filter(r => r.resultType === 'placeholder').length;
-      const slotFillRate = plannedSlotCount > 0 ? Math.round((images.length / plannedSlotCount) * 100) : 100;
-      console.info(`[IMG-SLOTS] planned=${plannedSlotCount} returned=${images.length} ai=${aiSlots} template=${templateSlots} placeholder=${placeholderSlots} slotFillRate=${slotFillRate}%`);
-      if (images.length < plannedSlotCount) {
-        console.error(`[IMG-SLOTS] ⛔ 슬롯 누락! planned=${plannedSlotCount} returned=${images.length} — 슬롯 보장 위반`);
+      const slotFillRate = selectedImageCount > 0 ? Math.round((images.length / selectedImageCount) * 100) : 100;
+      console.info(`[IMG-SUMMARY] selected=${selectedImageCount} planned=${plannedSlotCount} returned=${images.length} ai=${aiSlots} template=${templateSlots} placeholder=${placeholderSlots} slotFillRate=${slotFillRate}%`);
+      if (images.length < selectedImageCount) {
+        console.error(`[IMG-SUMMARY] ⛔ 수량 계약 위반! selected=${selectedImageCount} returned=${images.length}`);
       }
     }
 
@@ -3306,7 +3317,8 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
       safeProgress(`⚠️ 이미지 ${imageFailCount}장 AI 생성 실패 — 일부 대체 이미지 적용`);
     }
   } else {
-    console.log('🖼️ 이미지 0장 설정 - 이미지 생성 스킵');
+    console.info(`[IMG-CONTRACT] selected=0 planned=0 — 이미지 생성 스킵`);
+    console.info(`[IMG-SUMMARY] selected=0 returned=0 inserted=0`);
     safeProgress('📝 이미지 없이 텍스트만 생성 완료');
   }
 
@@ -3430,14 +3442,13 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
   // 🖼️ 블로그 포스트에 [IMG_N] 마커가 없으면 자동 삽입
   if (request.postType !== 'card_news' && images.length > 0 && !body.includes('[IMG_')) {
     console.log('⚠️ 블로그에 [IMG_N] 마커가 없음! 자동 삽입 중...');
-    
+
     // h3 소제목 다음에 이미지 마커 삽입
     const h3Tags = body.match(/<h3[^>]*>.*?<\/h3>/gi) || [];
     let imgIndex = 1;
-    
+
     if (h3Tags.length > 0) {
-      // 각 h3 뒤의 첫 번째 </p> 다음에 이미지 마커 삽입
-      let _h3Count = 0; // 디버깅용 카운터
+      let _h3Count = 0;
       body = body.replace(
         /(<h3[^>]*>.*?<\/h3>[\s\S]*?<\/p>)/gi,
         (match: string) => {
@@ -3450,15 +3461,14 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
           return match;
         }
       );
-      console.log(`✅ 블로그: [IMG_1] ~ [IMG_${imgIndex - 1}] 마커 자동 삽입 완료`);
+      console.log(`✅ 블로그: [IMG_1] ~ [IMG_${imgIndex - 1}] 마커 h3 기반 삽입`);
     } else {
-      // h3가 없으면 첫 번째 p 태그들 사이에 삽입
+      // h3가 없으면 </p> 사이에 삽입
       const pTags = body.match(/<\/p>/gi) || [];
       if (pTags.length >= 2) {
         let pCount = 0;
         body = body.replace(/<\/p>/gi, (match: string) => {
           pCount++;
-          // 2번째, 4번째, 6번째 </p> 뒤에 이미지 삽입
           if (pCount % 2 === 0 && imgIndex <= images.length) {
             const marker = `\n<div class="content-image-wrapper">[IMG_${imgIndex}]</div>\n`;
             imgIndex++;
@@ -3466,8 +3476,27 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
           }
           return match;
         });
-        console.log(`✅ 블로그 (h3 없음): [IMG_1] ~ [IMG_${imgIndex - 1}] 마커 자동 삽입 완료`);
+        console.log(`✅ 블로그 (h3 없음): [IMG_1] ~ [IMG_${imgIndex - 1}] 마커 p 기반 삽입`);
       }
+    }
+
+    // 🛡️ 수량 보장: h3/p 기반 삽입으로 부족한 마커는 본문 끝에 추가
+    if (imgIndex <= images.length) {
+      const remaining = images.length - imgIndex + 1;
+      console.warn(`[IMG-INSERT] ⚠️ 레이아웃 위치 부족! ${remaining}장 본문 끝에 추가 삽입`);
+      let tailMarkers = '';
+      while (imgIndex <= images.length) {
+        tailMarkers += `\n<div class="content-image-wrapper">[IMG_${imgIndex}]</div>\n`;
+        imgIndex++;
+      }
+      // </div> 닫기 태그 직전 또는 본문 끝에 삽입
+      if (body.includes('</div>')) {
+        const lastDivIdx = body.lastIndexOf('</div>');
+        body = body.substring(0, lastDivIdx) + tailMarkers + body.substring(lastDivIdx);
+      } else {
+        body += tailMarkers;
+      }
+      console.log(`✅ 블로그: 부족 마커 ${remaining}개 본문 끝에 보충 완료`);
     }
   }
   
@@ -3507,6 +3536,31 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
     }
   }
   
+  // 🛡️ 마커 수량 계약 보장: AI가 일부 마커만 생성한 경우 부족분 보충
+  if (request.postType !== 'card_news' && images.length > 0) {
+    const existingMarkers = (body.match(/\[IMG_\d+\]/gi) || []).map(m => {
+      const num = m.match(/\d+/);
+      return num ? parseInt(num[0]) : 0;
+    });
+    const missingIndices = images
+      .map(img => img.index)
+      .filter(idx => !existingMarkers.includes(idx));
+
+    if (missingIndices.length > 0) {
+      console.warn(`[IMG-INSERT] ⚠️ 마커 부족: ${missingIndices.length}개 누락 (${missingIndices.join(',')}) — 본문 끝에 보충`);
+      let supplementMarkers = '';
+      for (const idx of missingIndices) {
+        supplementMarkers += `\n<div class="content-image-wrapper">[IMG_${idx}]</div>\n`;
+      }
+      if (body.includes('</div>')) {
+        const lastDivIdx = body.lastIndexOf('</div>');
+        body = body.substring(0, lastDivIdx) + supplementMarkers + body.substring(lastDivIdx);
+      } else {
+        body += supplementMarkers;
+      }
+    }
+  }
+
   // 🖼️ 이미지 삽입 전 디버그
   const bodyLenBeforeImages = body.length;
   console.info(`[IMG_INSERT] 이미지 삽입 전 body: ${bodyLenBeforeImages}자, 이미지 ${images.length}장`);
@@ -3553,10 +3607,13 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
     body = body.replace(pattern, '');
     }
   });
-  // 삽입 결과 집계: 계획 대비 실제 삽입 수
+  // 삽입 결과 집계: 선택 수량 계약 최종 검증
   const insertedCount = images.filter(img => img.data && body.includes(`data-image-index="${img.index}"`)).length;
   const skippedByLayout = images.length - insertedCount;
-  console.info(`[IMG-INSERT] planned=${images.length} inserted=${insertedCount} skippedByLayout=${skippedByLayout} bodyBefore=${bodyLenBeforeImages}자 bodyAfter=${body.length}자`);
+  console.info(`[IMG-INSERT] selected=${selectedImageCount} available=${images.length} inserted=${insertedCount} skippedByLayout=${skippedByLayout}`);
+  if (insertedCount < selectedImageCount && images.length >= selectedImageCount) {
+    console.warn(`[IMG-INSERT] ⚠️ 삽입 부족: selected=${selectedImageCount} inserted=${insertedCount} — 레이아웃 마커 부족으로 일부 미삽입`);
+  }
 
   // 혹시 남아있는 [IMG_N] 마커 모두 제거
   const remainingMarkers = (body.match(/\[IMG_\d+\]/gi) || []).length;
