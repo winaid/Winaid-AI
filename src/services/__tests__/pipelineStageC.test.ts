@@ -72,12 +72,18 @@ vi.mock('../geminiClient', () => ({
   getAiProviderSettings: vi.fn(() => ({ provider: 'gemini' })),
 }));
 
-vi.mock('../imageGenerationService', () => ({
+vi.mock('../image/imageOrchestrator', () => ({
   isDemoSafeMode: vi.fn(() => false),
   updateSessionFinalPayload: vi.fn(),
   generateBlogImage: vi.fn(),
-  analyzeStyleReferenceImage: vi.fn(),
   generateImageQueue: vi.fn(),
+}));
+
+vi.mock('../image/imageEditService', () => ({
+  analyzeStyleReferenceImage: vi.fn(),
+}));
+
+vi.mock('../image/imagePromptBuilder', () => ({
   STYLE_NAMES: {},
 }));
 

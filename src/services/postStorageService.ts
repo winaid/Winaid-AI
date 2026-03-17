@@ -4,7 +4,7 @@
  */
 
 import { supabase, getUserIP, hashIP } from '../lib/supabase';
-import { stripBase64FromHtml } from './imageStorageService';
+import { stripBase64FromHtml } from './image/imageStorageService';
 
 // 글 타입 정의
 export type PostType = 'blog' | 'card_news' | 'press_release';

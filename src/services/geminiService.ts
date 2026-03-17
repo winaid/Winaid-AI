@@ -3909,13 +3909,13 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
   let storageHtml = finalHtml;
   if (images.length > 0) {
     try {
-      const { restoreAndUploadImages } = await import('./imageStorageService');
+      const { restoreAndUploadImages } = await import('./image/imageStorageService');
       storageHtml = await restoreAndUploadImages(finalHtml, images);
       console.info(`[STORAGE] blob→URL 업로드 완료 | display=${finalHtml.length}자(${Math.round(finalHtml.length*2/1024)}KB) | storage=${storageHtml.length}자(${Math.round(storageHtml.length*2/1024)}KB)`);
     } catch (uploadErr) {
       // 업로드 실패 시 base64 제거만 수행 (빈 이미지가 8MB payload보다 나음)
       console.warn('[STORAGE] 이미지 업로드 실패, base64 strip만 수행:', uploadErr);
-      const { stripBase64FromHtml } = await import('./imageStorageService');
+      const { stripBase64FromHtml } = await import('./image/imageStorageService');
       storageHtml = stripBase64FromHtml(finalHtml);
       // blob: URL도 빈 문자열로
       storageHtml = storageHtml.replace(/src="blob:[^"]*"/gi, 'src=""');
