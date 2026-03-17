@@ -182,6 +182,7 @@ ${newsContext}
 };
 
 export const getTrendingTopics = async (category: string): Promise<TrendingItem[]> => {
+  console.info('[ANALYZE] enter seoService.getTrendingTopics — category:', category);
   const now = new Date();
   const koreaTime = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
   const year = koreaTime.getFullYear();
@@ -289,6 +290,7 @@ ${newsContext ? '6. **뉴스 트렌드 반영 필수**: 위 뉴스에서 언급�
 };
 
 export const recommendSeoTitles = async (topic: string, keywords: string, postType: 'blog' | 'card_news' = 'blog'): Promise<SeoTitleItem[]> => {
+  console.info('[ANALYZE] enter seoService.recommendSeoTitles — topic:', topic?.substring(0, 30), ', postType:', postType);
   // 현재 날짜/계절 정보 추가 (트렌드와 동일하게)
   const now = new Date();
   const koreaTime = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Seoul" }));

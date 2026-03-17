@@ -128,14 +128,11 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
   const handleSubmit = (e: React.MouseEvent<HTMLButtonElement> | React.FormEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
-    console.log('🔵 Form Submit 시작');
-    console.log('  - topic:', topic);
-    console.log('  - postType:', postType, '(type:', typeof postType, ')');
-    console.log('  - category:', category);
-    
+
+    console.info('[GEN_STEP] handleSubmit click — topic:', topic?.substring(0, 30), ', postType:', postType, ', isLoading:', isLoading);
+
     if (!topic.trim()) {
-      console.warn('⚠️ topic이 비어있어 중단');
+      console.warn('[GEN_STEP] handleSubmit early return — topic 비어있음');
       return;
     }
     
@@ -182,10 +179,7 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
       pressType: postType === 'press_release' ? pressType : undefined,
     };
     
-    console.log('📦 전송할 requestData:', JSON.stringify(requestData, null, 2));
-    console.log('✅ onSubmit 호출');
-    
-    // onSubmit 호출
+    console.info('[GEN_STEP] handleSubmit → onSubmit 호출');
     onSubmit(requestData);
   };
 
@@ -259,37 +253,46 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
   };
 
   const handleRecommendTrends = async () => {
+    console.info('[ANALYZE] 트렌드 주제 click — category:', category);
     setIsLoadingTrends(true);
     setTrendingItems([]);
-    setSeoTitles([]); // 배타 렌더: 주제 추천 시 제목 추천 결과 clear
+    setSeoTitles([]);
     try {
+      console.info('[ANALYZE] 트렌드 before await — getTrendingTopics');
       const items = await getTrendingTopics(category);
+      console.info('[ANALYZE] 트렌드 success — items:', items?.length);
       setTrendingItems(items);
-    } catch (e) {
+    } catch (e: any) {
+      console.error('[ANALYZE] 트렌드 error:', e?.message || e);
       toast.error('트렌드 로딩 실패');
     } finally {
+      console.info('[ANALYZE] 트렌드 finally — reset loading');
       setIsLoadingTrends(false);
     }
   };
 
   const handleRecommendTitles = async () => {
-    // topic이 비어있으면 disease나 keywords로 대체 (제목 추천을 받기 위해 비워둔 경우)
     const topicForSeo = topic || disease || keywords || '';
-    if (!topicForSeo) return;
+    console.info('[ANALYZE] AI 제목 추천 click — topic:', topicForSeo?.substring(0, 30), ', postType:', postType);
+    if (!topicForSeo) {
+      console.warn('[ANALYZE] AI 제목 추천 — early return: topicForSeo 비어있음');
+      return;
+    }
     setIsLoadingTitles(true);
     setSeoTitles([]);
-    setTrendingItems([]); // 배타 렌더: 제목 추천 시 주제 추천 결과 clear
+    setTrendingItems([]);
     try {
-        // postType에 따라 블로그/카드뉴스용 제목 추천
-        // press_release는 blog로 처리
-        // keywords가 없으면 disease(질환명)을 키워드 대신 사용
         const keywordsForSeo = keywords || disease || topicForSeo;
+        console.info('[ANALYZE] AI 제목 추천 before await — recommendSeoTitles');
         const titles = await recommendSeoTitles(topicForSeo, keywordsForSeo, postType === 'press_release' ? 'blog' : postType);
+        console.info('[ANALYZE] AI 제목 추천 success — titles:', titles?.length);
         const sortedTitles = titles.sort((a, b) => b.score - a.score);
         setSeoTitles(sortedTitles);
-    } catch (e) {
+    } catch (e: any) {
+        console.error('[ANALYZE] AI 제목 추천 error:', e?.message || e);
         toast.error('제목 추천 실패');
     } finally {
+        console.info('[ANALYZE] AI 제목 추천 finally — reset loading');
         setIsLoadingTitles(false);
     }
   };

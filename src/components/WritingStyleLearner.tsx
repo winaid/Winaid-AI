@@ -124,23 +124,30 @@ const WritingStyleLearner: React.FC<WritingStyleLearnerProps> = ({
 
   // 말투 분석 및 학습
   const handleAnalyze = async () => {
+    console.info('[ANALYZE] click — textInput 길이:', textInput.length, ', styleName:', styleName);
+
     if (!textInput.trim()) {
+      console.warn('[ANALYZE] early return reason=textInput 비어있음');
       setError('분석할 텍스트를 입력해주세요.');
       return;
     }
 
     if (!styleName.trim()) {
+      console.warn('[ANALYZE] early return reason=styleName 비어있음');
       setError('스타일 이름을 입력해주세요.');
       return;
     }
 
+    console.info('[ANALYZE] set loading true');
     setError(null);
     setIsAnalyzing(true);
     setAnalyzeProgress('말투 분석 중...');
 
     try {
+      console.info('[ANALYZE] before first await — analyzeWritingStyle 호출');
       setAnalyzeProgress('Gemini AI로 말투 분석 중...');
       const analyzedStyle = await analyzeWritingStyle(textInput, styleName);
+      console.info('[ANALYZE] success — style:', analyzedStyle?.name, 'id:', analyzedStyle?.id);
 
       // 프로필 저장
       setAnalyzeProgress('프로파일 저장 중...');
@@ -158,11 +165,13 @@ const WritingStyleLearner: React.FC<WritingStyleLearnerProps> = ({
 
       toast.success(`"${analyzedStyle.name}" ${isPress ? '문체' : '말투'}가 학습되었습니다!`);
     } catch (err: any) {
-      console.error('[WritingStyleLearner] 분석/저장 실패:', err);
+      console.error('[ANALYZE] error:', err?.message || err);
+      console.error('[ANALYZE] error stack:', err?.stack);
       const errorMsg = err?.message || '말투 분석에 실패했습니다.';
       setError(errorMsg);
       toast.error(errorMsg);
     } finally {
+      console.info('[ANALYZE] finally reset loading');
       setIsAnalyzing(false);
       setAnalyzeProgress('');
     }
