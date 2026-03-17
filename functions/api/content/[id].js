@@ -1,7 +1,7 @@
 // GET /content/:id - 콘텐츠 상세 조회
 // DELETE /content/:id - 콘텐츠 삭제 (admin 인증 필수)
 
-import { verifyAdmin } from '../api-keys/_auth.js';
+import { verifyAdmin } from '../../utils/auth.js';
 
 export const onRequestGet = async (context) => {
   try {

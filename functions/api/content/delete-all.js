@@ -1,6 +1,6 @@
 // DELETE /content/delete-all - 모든 콘텐츠 삭제 (admin 인증 필수)
 
-import { verifyAdmin, CORS_HEADERS } from '../api-keys/_auth.js';
+import { verifyAdmin, CORS_HEADERS } from '../../utils/auth.js';
 
 export const onRequestDelete = async (context) => {
   // admin 인증
