@@ -443,3 +443,33 @@ ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS full_name TEXT;
 UPDATE public.profiles SET full_name = name WHERE full_name IS NULL AND name IS NOT NULL;
 
 CREATE INDEX IF NOT EXISTS idx_profiles_team_id ON public.profiles(team_id);
+
+-- ============================================
+-- 12. Supabase Storage — blog-images 버킷
+-- 생성된 AI 이미지를 저장하고 public URL로 제공
+-- base64 → URL 전환으로 payload 8MB → 수KB 축소
+-- ============================================
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES (
+  'blog-images',
+  'blog-images',
+  true,           -- public 접근 허용 (이미지 URL로 직접 접근)
+  5242880,        -- 5MB per file
+  ARRAY['image/png', 'image/jpeg', 'image/webp', 'image/gif']
+)
+ON CONFLICT (id) DO NOTHING;
+
+-- RLS: 누구나 읽기 가능 (public bucket)
+CREATE POLICY "Public read blog-images"
+  ON storage.objects FOR SELECT
+  USING (bucket_id = 'blog-images');
+
+-- RLS: 인증된 사용자만 업로드 가능
+CREATE POLICY "Authenticated upload blog-images"
+  ON storage.objects FOR INSERT
+  WITH CHECK (bucket_id = 'blog-images' AND auth.role() = 'authenticated');
+
+-- RLS: anon 사용자도 업로드 가능 (비로그인 사용자 지원)
+CREATE POLICY "Anon upload blog-images"
+  ON storage.objects FOR INSERT
+  WITH CHECK (bucket_id = 'blog-images' AND auth.role() = 'anon');

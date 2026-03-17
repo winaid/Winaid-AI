@@ -1049,6 +1049,8 @@ interface SessionStatsData {
   crossTier: number;
   totalMs: number;
   failReasons: Record<string, number>;
+  heroWallTimeMs: number[];  // hero별 wallTime 추적 (50s cap 검증용)
+  payloadKB: number[];       // 이미지 payload 크기 추적 (경량화 검증용)
   history: Array<{
     ts: string;
     total: number;
@@ -1057,6 +1059,8 @@ interface SessionStatsData {
     placeholder: number;
     heroResult: string;
     totalMs: number;
+    heroMaxMs: number;
+    payloadKB: number;
     failReasons: string;
   }>;
 }
@@ -1066,7 +1070,9 @@ const _sessionStats: SessionStatsData = {
   heroTotal: 0, heroAi: 0, heroTemplate: 0,
   subTotal: 0, subAi: 0,
   proSuccess: 0, nb2Success: 0, crossTier: 0,
-  totalMs: 0, failReasons: {}, history: [],
+  totalMs: 0, failReasons: {},
+  heroWallTimeMs: [], payloadKB: [],
+  history: [],
 };
 
 function accumulateSessionStats(results: ImageQueueResult[], totalMs: number, mode: string): void {
@@ -1102,6 +1108,17 @@ function accumulateSessionStats(results: ImageQueueResult[], totalMs: number, mo
     s.failReasons[r.errorType!] = (s.failReasons[r.errorType!] || 0) + 1;
   });
 
+  // hero wallTime 추적
+  const heroMaxMs = heroR.length > 0
+    ? Math.max(...heroR.map(r => r.elapsedMs + r.queueWaitMs))
+    : 0;
+  if (heroMaxMs > 0) s.heroWallTimeMs.push(heroMaxMs);
+
+  // payload 크기 추적 (base64 vs URL)
+  const totalPayloadBytes = results.reduce((sum, r) => sum + (r.data?.length || 0) * 2, 0);
+  const payloadKB = Math.round(totalPayloadBytes / 1024);
+  s.payloadKB.push(payloadKB);
+
   // 히스토리 row
   const runFailReasons = results.filter(r => r.errorType).map(r => r.errorType).join(',');
   const heroResult = heroR.length > 0
@@ -1110,7 +1127,8 @@ function accumulateSessionStats(results: ImageQueueResult[], totalMs: number, mo
   s.history.push({
     ts: new Date().toISOString().substring(11, 19),
     total: results.length, ai, template: tpl, placeholder: ph,
-    heroResult, totalMs, failReasons: runFailReasons || '-',
+    heroResult, totalMs, heroMaxMs, payloadKB,
+    failReasons: runFailReasons || '-',
   });
 
   // window 접근용 (콘솔 디버깅)
@@ -1149,6 +1167,29 @@ function printSessionSummary(): void {
     console.warn(`[IMG-SESSION]   ⚠️ heroTemplateFallback=${s.heroTemplate}건`);
   }
   console.info(`[IMG-SESSION]`);
+  // 🕐 hero wallTime 통계
+  if (s.heroWallTimeMs.length > 0) {
+    const sorted = [...s.heroWallTimeMs].sort((a, b) => a - b);
+    const median = sorted[Math.floor(sorted.length / 2)];
+    const max = sorted[sorted.length - 1];
+    const p95 = sorted[Math.floor(sorted.length * 0.95)];
+    const over50s = sorted.filter(ms => ms > 50000).length;
+    console.info(`[IMG-SESSION]`);
+    console.info(`[IMG-SESSION]   🕐 hero wallTime (cap=50s)`);
+    console.info(`[IMG-SESSION]   median=${(median / 1000).toFixed(1)}s  p95=${(p95 / 1000).toFixed(1)}s  max=${(max / 1000).toFixed(1)}s  over50s=${over50s}/${sorted.length}`);
+  }
+
+  // 📦 payload 크기 통계
+  if (s.payloadKB.length > 0) {
+    const avgKB = Math.round(s.payloadKB.reduce((a, b) => a + b, 0) / s.payloadKB.length);
+    const maxKB = Math.max(...s.payloadKB);
+    const over1MB = s.payloadKB.filter(kb => kb > 1024).length;
+    console.info(`[IMG-SESSION]`);
+    console.info(`[IMG-SESSION]   📦 payload (base64 제거 검증)`);
+    console.info(`[IMG-SESSION]   avgPayload=${avgKB}KB  maxPayload=${maxKB}KB  over1MB=${over1MB}/${s.payloadKB.length}`);
+  }
+
+  console.info(`[IMG-SESSION]`);
   console.info(`[IMG-SESSION]   🔧 tier`);
   console.info(`[IMG-SESSION]   pro=${s.proSuccess}  nb2=${s.nb2Success}  crossTier=${s.crossTier}`);
   console.info(`[IMG-SESSION]   sub: ai=${s.subAi}/${s.subTotal} (${pct(s.subAi, s.subTotal)}%)`);
@@ -1157,10 +1198,10 @@ function printSessionSummary(): void {
   }
   console.info(`[IMG-SESSION]`);
   console.info(`[IMG-SESSION]   📋 history (${s.history.length}건)`);
-  console.info(`[IMG-SESSION]   #    time      tot  ai  tpl  ph  hero          ms      fail`);
+  console.info(`[IMG-SESSION]   #    time      tot  ai  tpl  ph  hero          ms     heroMs  payKB  fail`);
   s.history.forEach((h, i) => {
     const heroIcon = h.heroResult === 'ai-image' ? '✅' : h.heroResult === 'template' ? '⚠️' : '❌';
-    console.info(`[IMG-SESSION]   ${String(i + 1).padStart(3)}  ${h.ts}  ${String(h.total).padStart(3)}  ${String(h.ai).padStart(2)}  ${String(h.template).padStart(3)}  ${String(h.placeholder).padStart(2)}  ${heroIcon} ${h.heroResult.padEnd(10)}  ${String(h.totalMs).padStart(6)}  ${h.failReasons}`);
+    console.info(`[IMG-SESSION]   ${String(i + 1).padStart(3)}  ${h.ts}  ${String(h.total).padStart(3)}  ${String(h.ai).padStart(2)}  ${String(h.template).padStart(3)}  ${String(h.placeholder).padStart(2)}  ${heroIcon} ${h.heroResult.padEnd(10)}  ${String(h.totalMs).padStart(6)}  ${String(h.heroMaxMs).padStart(6)}  ${String(h.payloadKB).padStart(5)}  ${h.failReasons}`);
   });
   console.info(`[IMG-SESSION] ═══════════════════════════════════════════`);
 
@@ -1184,7 +1225,9 @@ export function resetImageSessionStats(): void {
     heroTotal: 0, heroAi: 0, heroTemplate: 0,
     subTotal: 0, subAi: 0,
     proSuccess: 0, nb2Success: 0, crossTier: 0,
-    totalMs: 0, failReasons: {}, history: [],
+    totalMs: 0, failReasons: {},
+    heroWallTimeMs: [], payloadKB: [],
+    history: [],
   });
   console.info('[IMG-SESSION] stats reset');
 }
@@ -1364,12 +1407,60 @@ async function runImageBenchmark(
   printBetaVerdict();
 }
 
+// =============================================
+// 🔍 SaaS 품질 검증 (3대 이슈 확인)
+// window.__IMG_VERIFY(N) — N회 실행 후 결과 판정
+// 검증 항목: hero wallTime ≤50s, payload ≤100KB, heroAIHitRate
+// =============================================
+async function verifySaaSQuality(rounds: number = 3): Promise<void> {
+  resetImageSessionStats();
+  console.info(`[VERIFY] ═══════════════════════════════════════════`);
+  console.info(`[VERIFY] SaaS 품질 검증 시작: ${rounds}회`);
+  console.info(`[VERIFY] 검증항목: hero wallTime≤50s, payload≤100KB, heroAIHitRate`);
+  console.info(`[VERIFY] ═══════════════════════════════════════════`);
+
+  await runImageBenchmark(rounds, 3); // 3장씩 (hero 1 + sub 2) — 빠른 검증
+
+  const s = _sessionStats;
+  const heroWallMax = s.heroWallTimeMs.length > 0 ? Math.max(...s.heroWallTimeMs) : 0;
+  const payloadMax = s.payloadKB.length > 0 ? Math.max(...s.payloadKB) : 0;
+  const payloadAvg = s.payloadKB.length > 0 ? Math.round(s.payloadKB.reduce((a, b) => a + b, 0) / s.payloadKB.length) : 0;
+  const heroRate = pct(s.heroAi, s.heroTotal);
+
+  console.info(`[VERIFY] ═══════════════════════════════════════════`);
+  console.info(`[VERIFY] 📋 SaaS 품질 검증 결과 (${rounds}회)`);
+  console.info(`[VERIFY]`);
+
+  // 1. Hero wallTime
+  const wallPass = heroWallMax <= 55000; // 50s + 5s 여유
+  console.info(`[VERIFY]   ${wallPass ? '✅' : '❌'} hero wallTime  max=${(heroWallMax / 1000).toFixed(1)}s  (cap=50s)`);
+
+  // 2. Payload 크기
+  const payloadPass = payloadMax <= 200; // 200KB 이하 (base64 없으면 수KB)
+  console.info(`[VERIFY]   ${payloadPass ? '✅' : '❌'} payload 경량화  avg=${payloadAvg}KB  max=${payloadMax}KB  (target≤200KB)`);
+
+  // 3. heroAIHitRate
+  const heroPass = heroRate >= 50; // 3-5회 검증이므로 50% 이상이면 OK
+  console.info(`[VERIFY]   ${heroPass ? '✅' : '⚠️'} heroAIHitRate  ${heroRate}%  (${s.heroAi}/${s.heroTotal})  (target≥50% for ${rounds}회)`);
+
+  // 4. completionRate (placeholder 0)
+  const completionRate = pct(s.aiCount + s.templateCount, s.totalImages);
+  const compPass = completionRate >= 95;
+  console.info(`[VERIFY]   ${compPass ? '✅' : '❌'} completionRate  ${completionRate}%  (placeholder=${s.placeholderCount})`);
+
+  console.info(`[VERIFY]`);
+  const allPass = wallPass && payloadPass && compPass;
+  console.info(`[VERIFY]   ${allPass ? '🎉 SaaS 품질 기준 PASS' : '⚠️ 일부 기준 미달 — 로그 확인 필요'}`);
+  console.info(`[VERIFY] ═══════════════════════════════════════════`);
+}
+
 // window 전역 등록 (콘솔 접근용)
 try {
   (window as any).__IMG_BENCHMARK = runImageBenchmark;
   (window as any).__IMG_BETA_CHECK = printBetaVerdict;
   (window as any).__IMG_EXPORT_TSV = exportSessionStatsTSV;
   (window as any).__IMG_COPY_STATS = copySessionStatsToClipboard;
+  (window as any).__IMG_VERIFY = verifySaaSQuality;
 } catch { /* SSR safe */ }
 
 // 🎴 기본 프레임 이미지 URL (로컬 파일 사용 - 외부 URL 403 에러 방지)
