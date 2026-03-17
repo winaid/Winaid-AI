@@ -111,34 +111,39 @@ export function useContentGeneration(deps: ContentGenerationDeps): ContentGenera
       return;
     }
 
-    // 서버 크레딧 차감 + generation token 발급
-    console.info('[GEN_STEP] credit check start');
-    try {
-      const { deductCreditOnServer, clearGenerationToken } = await import('../services/geminiClient');
-      clearGenerationToken(); // 동시 생성 1건 전제 — 이전 토큰 정리
-      const deductResult = await deductCreditOnServer(request.postType);
-      console.info(`[GEN_STEP] credit check result: success=${deductResult.success}, error=${deductResult.error || 'none'}`);
-      if (!deductResult.success) {
-        console.warn(`[GEN_STEP] early return reason=credit_fail: ${deductResult.error} — ${deductResult.message}`);
-        earlyTargetSetState(prev => ({
-          ...prev,
-          isLoading: false,
-          error: deductResult.message || '크레딧이 부족합니다.',
-        }));
-        isGeneratingRef.current = false;
-        return;
-      }
-      console.info('[GEN_STEP] credit check pass');
-    } catch (e: any) {
-      console.error(`[GEN_STEP] credit check exception: ${e?.message || e}`);
-      earlyTargetSetState(prev => ({
-        ...prev,
-        isLoading: false,
-        error: '크레딧 확인에 실패했습니다. 다시 시도해주세요.',
-      }));
-      isGeneratingRef.current = false;
-      return;
-    }
+    // TODO: 2026-03-29 인증/크레딧 복구 시 아래 블록의 주석을 해제할 것
+    // 현재는 임시 optional 모드 — 크레딧 차감 + generation token 발급 스킵
+    // ── 원본 시작 ──
+    // console.info('[GEN_STEP] credit check start');
+    // try {
+    //   const { deductCreditOnServer, clearGenerationToken } = await import('../services/geminiClient');
+    //   clearGenerationToken();
+    //   const deductResult = await deductCreditOnServer(request.postType);
+    //   console.info(`[GEN_STEP] credit check result: success=${deductResult.success}, error=${deductResult.error || 'none'}`);
+    //   if (!deductResult.success) {
+    //     console.warn(`[GEN_STEP] early return reason=credit_fail: ${deductResult.error} — ${deductResult.message}`);
+    //     earlyTargetSetState(prev => ({
+    //       ...prev,
+    //       isLoading: false,
+    //       error: deductResult.message || '크레딧이 부족합니다.',
+    //     }));
+    //     isGeneratingRef.current = false;
+    //     return;
+    //   }
+    //   console.info('[GEN_STEP] credit check pass');
+    // } catch (e: any) {
+    //   console.error(`[GEN_STEP] credit check exception: ${e?.message || e}`);
+    //   earlyTargetSetState(prev => ({
+    //     ...prev,
+    //     isLoading: false,
+    //     error: '크레딧 확인에 실패했습니다. 다시 시도해주세요.',
+    //   }));
+    //   isGeneratingRef.current = false;
+    //   return;
+    // }
+    // ── 원본 끝 ──
+    console.info('[GEN_STEP] optional mode — skip deductCreditOnServer, no generation token');
+    // generation token 없이 진행 — 프록시가 anonymous unmetered 허용
 
     console.info('[GEN_STEP] auth+credit passed, entering pipeline');
 
