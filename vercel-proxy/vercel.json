@@ -9,6 +9,10 @@
     "api/health.js": {
       "maxDuration": 10,
       "memory": 128
+    },
+    "api/index.js": {
+      "maxDuration": 10,
+      "memory": 128
     }
   },
   "headers": [
@@ -24,6 +28,7 @@
   ],
   "rewrites": [
     { "source": "/api/gemini", "destination": "/api/gemini" },
-    { "source": "/api/health", "destination": "/api/health" }
+    { "source": "/api/health", "destination": "/api/health" },
+    { "source": "/", "destination": "/api/index" }
   ]
 }
