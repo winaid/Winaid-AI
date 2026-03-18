@@ -233,34 +233,10 @@ export function useContentGeneration(deps: ContentGenerationDeps): ContentGenera
         console.warn('사용량 저장 스킵:', e);
       }
 
-      // API 서버에 자동 저장 — artifact 메타데이터 활용
+      // API 서버에 자동 저장 — 저장 어댑터 사용
       try {
-        const { saveContentToServer } = await import('../services/apiService');
-        let contentForSave = result.storageHtml || '';
-        if (!contentForSave) {
-          contentForSave = result.htmlContent
-            .replace(/src="data:image\/[^"]*"/gi, 'src=""')
-            .replace(/src="blob:[^"]*"/gi, 'src=""');
-          console.warn('[STORAGE] storageHtml 없음 — htmlContent에서 base64/blob strip 후 저장');
-        }
-        const displayKB = Math.round(result.htmlContent.length * 2 / 1024);
-        const storageKB = Math.round(contentForSave.length * 2 / 1024);
-        console.debug(`[STORAGE] saveContentToServer | display=${displayKB}KB | storage=${storageKB}KB`);
-        if (storageKB > 500) {
-          console.error(`[STORAGE] ⚠️ storage payload ${storageKB}KB — 비정상 크기! storageHtml 경로 점검 필요`);
-        }
-        const saveResult = await saveContentToServer({
-          title: artifact.title,
-          content: contentForSave,
-          category: artifact.category ?? request.category,
-          postType: artifact.postType,
-          metadata: {
-            keywords: artifact.keywords,
-            seoScore: artifact.seoTotal,
-            aiSmellScore: artifact.aiSmellScore,
-          },
-        });
-
+        const { saveArtifactToServer } = await import('../core/generation/contentStorage');
+        const saveResult = await saveArtifactToServer(artifact);
         if (!saveResult.success) {
           console.warn('⚠️ 서버 저장 실패:', saveResult.error);
         }
