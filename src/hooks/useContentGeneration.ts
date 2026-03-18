@@ -2,6 +2,7 @@ import { useState, useCallback, useRef, RefObject } from 'react';
 import { GenerationRequest, GenerationState } from '../types';
 import { GENERATION_HARD_TIMEOUT_MS } from '../core/generation/contracts';
 import { runCreditGate } from '../core/generation/policies';
+import { runContentJob } from '../core/generation/generateContentJob';
 
 type ContentTabType = 'blog' | 'refine' | 'card_news' | 'press' | 'image' | 'history';
 
@@ -169,26 +170,46 @@ export function useContentGeneration(deps: ContentGenerationDeps): ContentGenera
     }, GENERATION_HARD_TIMEOUT_MS);
 
     try {
-      const { generateFullPost } = await import('../services/geminiService');
-      console.info('[GEN_STEP] before main pipeline — generateFullPost import OK');
-      const result = await generateFullPost(request, (p) => {
+      // ── 공식 오케스트레이터 진입점: runContentJob ──
+      // credit gate는 이미 위에서 카드뉴스 포함 전체 통과했으므로,
+      // runContentJob 내부의 gate는 이중 체크 (안전장치)
+      console.info('[GEN_STEP] before main pipeline — runContentJob 호출');
+      const outcome = await runContentJob(request, (p) => {
         // timeout 후 늦은 progress 업데이트 방어
         if (generationIdRef.current !== thisGenId) return;
         targetSetState(prev => ({ ...prev, progress: p }));
       });
+
       // timeout 후 늦게 도착한 결과가 UI를 덮지 않도록 방어
       if (generationIdRef.current !== thisGenId) {
         console.warn(`[BLOG_FLOW] ⚠️ 결과 도착했으나 genId 불일치 (${thisGenId} vs ${generationIdRef.current}) — 폐기`);
         return;
       }
+
+      // ── 실패 처리 ──
+      if (!outcome.success) {
+        console.error(`[BLOG_FLOW] ❌ 생성 실패:`, outcome.error);
+        targetSetState(prev => {
+          if (prev.data) {
+            console.warn('[BLOG_FLOW] 기존 data 보존, warning으로 처리');
+            return { ...prev, isLoading: false, error: null, warning: outcome.error };
+          }
+          console.warn('[BLOG_FLOW] data 없음 → error 상태로 전환 (에러 모달 표시 대기)');
+          return { ...prev, isLoading: false, error: outcome.error, data: null };
+        });
+        return;
+      }
+
+      // ── 성공 처리 ──
+      const result = outcome.data;
+
       // 📋 결과물 완전성 검증 로그 — "완전한 글 1편" 기준
       const html = result?.fullHtml || result?.htmlContent || '';
       const textOnly = html.replace(/<[^>]+>/g, '').trim();
       const h2Count = (html.match(/<h[23][^>]*>/gi) || []).length;
       const hasIntro = html.indexOf('<h') > 30 || (html.indexOf('<p') >= 0 && html.indexOf('<p') < html.indexOf('<h'));
-      // conclusion 판정: 파이프라인 원본 길이 > 근사값 순으로 확인
-      const conclusionLength = result?.conclusionLength; // 파이프라인에서 전달된 원본 길이 (없으면 undefined)
-      const hasConclusion = conclusionLength ? conclusionLength >= 20 : textOnly.length > 200; // 근사값 fallback
+      const conclusionLength = result?.conclusionLength;
+      const hasConclusion = conclusionLength ? conclusionLength >= 20 : textOnly.length > 200;
       const conclusionSource = conclusionLength ? `pipeline(${conclusionLength}자)` : `heuristic(textLen=${textOnly.length})`;
       console.info(`[BLOG_FLOW] ✅ generateFullPost 반환됨`);
       console.info(`[BLOG_FLOW] 📋 완전성 검증: title="${result?.title}" | fullHtml=${html.length}자 | 텍스트=${textOnly.length}자 | h2/h3=${h2Count}개 | intro=${hasIntro} | conclusion=${hasConclusion} [${conclusionSource}]`);
@@ -211,14 +232,10 @@ export function useContentGeneration(deps: ContentGenerationDeps): ContentGenera
       }
 
       // API 서버에 자동 저장 — 반드시 storageHtml(경량화 완료본)만 사용
-      // ❌ restoreBase64Images 금지: blob→base64 복원은 화면 표시/export용이며, 저장 경로에서 쓰면 payload가 수MB로 비대해짐
       try {
         const { saveContentToServer } = await import('../services/apiService');
-        // storageHtml: generateFullPost 내부에서 blob→Supabase URL 치환 완료된 경량 HTML
-        // fallback: storageHtml이 없으면(카드뉴스 등) htmlContent에서 base64/blob strip
         let contentForSave = result.storageHtml || '';
         if (!contentForSave) {
-          // storageHtml이 없는 경우 (카드뉴스, 보도자료 등): htmlContent에서 base64/blob 제거
           contentForSave = result.htmlContent
             .replace(/src="data:image\/[^"]*"/gi, 'src=""')
             .replace(/src="blob:[^"]*"/gi, 'src=""');
@@ -226,8 +243,6 @@ export function useContentGeneration(deps: ContentGenerationDeps): ContentGenera
         }
         const displayKB = Math.round(result.htmlContent.length * 2 / 1024);
         const storageKB = Math.round(contentForSave.length * 2 / 1024);
-        const hasBlobLeak = contentForSave.includes('blob:');
-        const hasBase64Leak = contentForSave.includes('data:image/');
         console.debug(`[STORAGE] saveContentToServer | display=${displayKB}KB | storage=${storageKB}KB`);
         if (storageKB > 500) {
           console.error(`[STORAGE] ⚠️ storage payload ${storageKB}KB — 비정상 크기! storageHtml 경로 점검 필요`);
@@ -250,34 +265,6 @@ export function useContentGeneration(deps: ContentGenerationDeps): ContentGenera
       } catch (saveErr) {
         console.warn('⚠️ 서버 저장 중 오류:', saveErr);
       }
-    } catch (err: any) {
-      console.error(`[BLOG_FLOW] ❌ 생성 실패:`, err?.message || err);
-      let friendlyError: string;
-      try {
-        const { getKoreanErrorMessage } = await import('../services/geminiClient');
-        friendlyError = getKoreanErrorMessage(err);
-      } catch {
-        // dynamic import 실패 시 안전 폴백
-        friendlyError = err?.message || '블로그 생성 중 오류가 발생했습니다. 다시 시도해주세요.';
-      }
-      // 🛡️ friendlyError가 falsy면 에러 모달이 안 뜸 → EMPTY_STATE 노출 방지
-      if (!friendlyError?.trim()) {
-        console.error('[BLOG_FLOW] ⚠️ friendlyError가 빈 문자열! 기본 메시지로 교체');
-        friendlyError = '블로그 생성 중 오류가 발생했습니다. 다시 시도해주세요.';
-      }
-      console.info(`[BLOG_FLOW] 에러 메시지: "${friendlyError}"`);
-      targetSetState(prev => {
-        // 🛡️ 이미 data가 있으면(부분 성공) 보존 — warning으로 표시
-        if (prev.data) {
-          console.warn('[BLOG_FLOW] 기존 data 보존, warning으로 처리');
-          return { ...prev, isLoading: false, error: null, warning: friendlyError };
-        }
-        // data가 없으면 반드시 error 상태 — EMPTY_STATE 방지
-        // ⚠️ mobileTab은 건드리지 않음: 에러 모달(position:fixed z-50)이 먼저 보여야 함
-        // 사용자가 모달을 닫을 때 App.tsx에서 mobileTab='input' 복귀 처리
-        console.warn('[BLOG_FLOW] data 없음 → error 상태로 전환 (에러 모달 표시 대기)');
-        return { ...prev, isLoading: false, error: friendlyError, data: null };
-      });
     } finally {
       clearTimeout(hardTimeoutId);
       isGeneratingRef.current = false;
