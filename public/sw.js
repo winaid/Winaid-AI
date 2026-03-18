@@ -99,9 +99,9 @@ self.addEventListener('fetch', (event) => {
     return;
   }
   
-  // 네비게이션 요청 (HTML 페이지)은 항상 네트워크 우선
-  if (request.mode === 'navigate') {
-    event.respondWith(networkFirst(request));
+  // 네비게이션 요청 (HTML 페이지) → network-first + app-shell fallback
+  if (request.mode === 'navigate' || request.destination === 'document') {
+    event.respondWith(navigateHandler(request));
     return;
   }
 
@@ -111,123 +111,80 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 정적 자원은 캐시 우선
+  // 정적 자원(이미지/폰트)만 캐시 우선
+  const isStaticAsset = ALWAYS_CACHE_PATTERNS.some(p => p.test(url.pathname));
+  if (isStaticAsset) {
+    event.respondWith(cacheFirst(request));
+    return;
+  }
+
+  // 해시된 빌드 파일(JS/CSS)은 항상 네트워크에서 가져옴
+  const isHashedAsset = NO_CACHE_PATTERNS.some(p => p.test(url.pathname));
+  if (isHashedAsset) {
+    event.respondWith(fetch(request));
+    return;
+  }
+
+  // 기타 same-origin GET → cache-first
   event.respondWith(cacheFirst(request));
 });
 
 /**
+ * 네비게이션 핸들러 (Network First + App Shell Fallback)
+ * - 페이지(document/navigate) 요청 전용
+ * - 네트워크 성공 시 응답 반환 + /index.html 캐시 갱신
+ * - 네트워크 실패 시 캐시된 /index.html 반환 (SPA app-shell)
+ */
+async function navigateHandler(request) {
+  try {
+    const response = await fetch(request);
+    // 성공 시 app-shell 캐시 갱신
+    if (response.ok) {
+      const cache = await caches.open(CACHE_NAME);
+      cache.put(new Request('/index.html'), response.clone());
+    }
+    return response;
+  } catch (error) {
+    console.log('[SW] Navigation fetch failed, falling back to cached app shell');
+    // 오프라인: 캐시된 /index.html (SPA app-shell) 반환
+    const cache = await caches.open(CACHE_NAME);
+    const cached = await cache.match('/index.html');
+    if (cached) {
+      return cached;
+    }
+    // 캐시도 없으면 오프라인 페이지
+    return new Response(
+      '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>오프라인</title></head><body style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;background:#667eea;color:white"><div style="text-align:center"><h1>📴 오프라인</h1><p>인터넷 연결을 확인해주세요.</p></div></body></html>',
+      { headers: { 'Content-Type': 'text/html' } }
+    );
+  }
+}
+
+/**
  * 캐시 우선 전략 (Cache First)
- * - 정적 자원에 적합
- * - 해시가 포함된 빌드 파일은 캐시하지 않음
+ * - 정적 자원(이미지/폰트/manifest 등)에만 사용
  */
 async function cacheFirst(request) {
-  // 안전장치: GET 요청만 캐시 가능
   if (request.method !== 'GET') {
     return fetch(request);
   }
-  
-  const url = new URL(request.url);
-  
-  // 정적 자산(이미지, 폰트)은 항상 캐시
-  const shouldAlwaysCache = ALWAYS_CACHE_PATTERNS.some(pattern => pattern.test(url.pathname));
-  if (shouldAlwaysCache) {
-    const cache = await caches.open(CACHE_NAME);
-    const cached = await cache.match(request);
-    
-    if (cached) {
-      console.log('[SW] 🎨 Static asset cache hit:', url.pathname);
-      return cached;
-    }
-    
-    try {
-      const response = await fetch(request);
-      if (response.ok) {
-        cache.put(request, response.clone());
-        console.log('[SW] 🎨 Static asset cached:', url.pathname);
-      }
-      return response;
-    } catch (error) {
-      console.error('[SW] Static asset fetch failed:', error);
-      throw error;
-    }
-  }
-  
-  // 해시가 포함된 빌드 파일은 항상 네트워크에서 가져옴 (캐시 X)
-  const shouldSkipCache = NO_CACHE_PATTERNS.some(pattern => pattern.test(url.pathname));
-  if (shouldSkipCache) {
-    // 개발 환경에서만 로그 출력
-    if (self.location.hostname === 'localhost' || self.location.hostname === '127.0.0.1') {
-      console.log('[SW] Skip cache for hashed asset:', url.pathname);
-    }
-    try {
-      return await fetch(request);
-    } catch (error) {
-      console.error('[SW] Network fetch failed for asset:', error);
-      throw error;
-    }
-  }
-  
+
   const cache = await caches.open(CACHE_NAME);
   const cached = await cache.match(request);
-  
+
   if (cached) {
-    console.log('[SW] Cache hit:', request.url);
     return cached;
   }
-  
+
   try {
-    console.log('[SW] Cache miss, fetching:', request.url);
     const response = await fetch(request);
-    
-    // 성공 응답만 캐시
     if (response.ok) {
       cache.put(request, response.clone());
     }
-    
     return response;
   } catch (error) {
-    console.error('[SW] Fetch failed:', error);
-    
-    // 오프라인 폴백 페이지
-    return new Response(
-      `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta charset="UTF-8">
-          <title>오프라인 - Hospital AI</title>
-          <style>
-            body {
-              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              height: 100vh;
-              margin: 0;
-              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-              color: white;
-            }
-            .container {
-              text-align: center;
-              padding: 40px;
-            }
-            h1 { font-size: 48px; margin: 0 0 20px; }
-            p { font-size: 18px; opacity: 0.9; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <h1>📴 오프라인 모드</h1>
-            <p>인터넷 연결을 확인해주세요.</p>
-            <p>연결되면 자동으로 복구됩니다.</p>
-          </div>
-        </body>
-      </html>
-      `,
-      {
-        headers: { 'Content-Type': 'text/html' },
-      }
-    );
+    console.error('[SW] Static asset fetch failed:', request.url, error);
+    throw error;
   }
 }
 
