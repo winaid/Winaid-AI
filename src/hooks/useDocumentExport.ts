@@ -147,7 +147,8 @@ export function useDocumentExport({
 
       // [Layer 2] History Persistence — PDF 다운로드 시 이력 저장
       if (content.title && localHtml) {
-        const lightweightHtml = localHtml.replace(/src="data:image\/[^"]*"/gi, 'src=""');
+        const { stripLargeBase64FromHtml } = await import('../services/image/imageStorageService');
+        const lightweightHtml = stripLargeBase64FromHtml(localHtml);
         console.info(`[STORAGE] persistBlogHistory | original=${localHtml.length}자 | lightweight=${lightweightHtml.length}자`);
         persistBlogHistory({
           title: content.title,

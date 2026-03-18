@@ -51,7 +51,7 @@ export function useResultActions(): UseResultActionsReturn {
 
   // ── [Layer 2] History Persistence ──
 
-  const persistCardNewsHistory = useCallback((opts: {
+  const persistCardNewsHistory = useCallback(async (opts: {
     title: string;
     html: string;
     keywords?: string;
@@ -59,7 +59,9 @@ export function useResultActions(): UseResultActionsReturn {
   }) => {
     if (!opts.title || !opts.html) return;
 
-    const lightweightHtml = opts.html.replace(/src="data:image\/[^"]*"/gi, 'src=""');
+    // SVG template 보존: raster base64만 제거, SVG inline은 유지
+    const { stripLargeBase64FromHtml } = await import('../services/image/imageStorageService');
+    const lightweightHtml = stripLargeBase64FromHtml(opts.html);
     console.info(
       `[STORAGE] persistCardNewsHistory | original=${opts.html.length}자 | lightweight=${lightweightHtml.length}자`
     );

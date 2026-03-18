@@ -309,11 +309,11 @@ async function _orchestrateCardNews(
       cardPrompts: agentResult.cardPrompts,
       cssTheme: request.cssTheme || 'modern'
     };
-  } catch (error) {
-    console.error('미니 에이전트 방식 실패, 기존 방식으로 폴백:', error);
-    safeProgress('⚠️ 미니 에이전트 실패, 기존 방식으로 재시도...');
-    // 기존 방식으로 폴백 (블로그 경로의 레거시 path)
-    return _orchestrateBlog({ ...request, postType: 'card_news' as any }, safeProgress);
+  } catch (error: any) {
+    // 카드뉴스 실패 시 블로그 코어를 fallback으로 사용하지 않음 (모드 격리)
+    // 이전: _orchestrateBlog({ ...request, postType: 'card_news' as any }) → blast radius
+    console.error('[CARD_NEWS] 미니 에이전트 방식 실패:', error?.message);
+    throw new Error('카드뉴스 생성에 실패했습니다. 다시 시도해주세요.');
   }
 }
 
@@ -745,8 +745,9 @@ async function _orchestrateBlog(
     }
 
     const hasBlobInHistory = storageHtml.includes('blob:');
-    // SVG template는 보존 ((?!svg) negative lookahead), raster base64만 제거
-    const lightweightHtml = storageHtml.replace(/src="data:image\/(?!svg)[^"]*"/gi, 'src=""');
+    // 공용 strip 함수 사용 — SVG template 보존, raster base64만 제거
+    const { stripLargeBase64FromHtml: stripForHistory } = await import('../../services/image/imageStorageService');
+    const lightweightHtml = stripForHistory(storageHtml);
     console.info(`[STORAGE] saveBlogHistory lightweight | original=${storageHtml.length}자(${Math.round(storageHtml.length * 2 / 1024)}KB) | lightweight=${lightweightHtml.length}자(${Math.round(lightweightHtml.length * 2 / 1024)}KB) | imagesStripped=true | contentType=${embedSource} | contentLen=${blogHistoryContent.length}자 | blob잔류=${hasBlobInHistory}`);
     // [Layer 2] History Persistence — Supabase blog_history (유사도 검사용)
     persistBlogHistory({

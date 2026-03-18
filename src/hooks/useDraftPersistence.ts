@@ -103,7 +103,7 @@ export function useDraftPersistence({
     }
   }, []);
 
-  const saveManually = useCallback(() => {
+  const saveManually = useCallback(async () => {
     if (!localHtml || !localHtml.trim()) {
       toast.warning('저장할 내용이 없습니다.');
       return;
@@ -119,9 +119,9 @@ export function useDraftPersistence({
     const timeStr = now.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
 
     // base64/blob 제거: localStorage에는 경량 HTML만 저장
-    const restoredHtml = localHtml
-      .replace(/src="data:image\/[^"]*"/gi, 'src=""')
-      .replace(/src="blob:[^"]*"/gi, 'src=""');
+    // SVG template는 보존 (사용자가 초안 재오픈 시 이미지 보여야 함)
+    const { stripLargeBase64FromHtml } = await import('../services/image/imageStorageService');
+    const restoredHtml = stripLargeBase64FromHtml(localHtml);
     const hasBlobLeak = restoredHtml.includes('blob:');
 
     const saveData: AutoSaveHistoryItem = {
