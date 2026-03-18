@@ -28,6 +28,7 @@ interface UseAiRefineParams {
   setEditorInput: (v: string) => void;
   setEditProgress: (v: string) => void;
   setEditImagePrompt: (v: string) => void;
+  setIsAIPromptApplied: (v: boolean) => void;
   // 카드뉴스 프롬프트 편집 state (읽기 전용)
   editSubtitle: string;
   editMainTitle: string;
@@ -50,8 +51,6 @@ interface UseAiRefineReturn {
   isRecommendingPrompt: boolean;
   // 카드뉴스 프롬프트 추천 상태
   isRecommendingCardPrompt: boolean;
-  isAIPromptApplied: boolean;
-  setIsAIPromptApplied: (v: boolean) => void;
   // 액션
   handleAiEditSubmit: (e: React.FormEvent, editorInput: string) => Promise<void>;
   handleSectionRegenerate: (sectionIndex: number) => Promise<void>;
@@ -72,6 +71,7 @@ export function useAiRefine({
   setEditorInput,
   setEditProgress,
   setEditImagePrompt,
+  setIsAIPromptApplied,
   editSubtitle,
   editMainTitle,
   editDescription,
@@ -91,7 +91,6 @@ export function useAiRefine({
 
   // ── 카드뉴스 프롬프트 추천 상태 ──
   const [isRecommendingCardPrompt, setIsRecommendingCardPrompt] = useState(false);
-  const [isAIPromptApplied, setIsAIPromptApplied] = useState(false);
 
   // ── 섹션 재생성 ──
 
@@ -369,8 +368,6 @@ export function useAiRefine({
     regenRefName,
     isRecommendingPrompt,
     isRecommendingCardPrompt,
-    isAIPromptApplied,
-    setIsAIPromptApplied,
     handleAiEditSubmit,
     handleSectionRegenerate,
     submitRegenerateImage,

@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { GeneratedContent, ImageStyle as _ImageStyle, CssTheme, BlogSection } from '../types';
-import { generateSingleImage } from '../services/image/cardNewsImageService';
-import { STYLE_KEYWORDS } from '../services/image/imagePromptBuilder';
-import { AI_PROMPT_TEMPLATES, CARD_PROMPT_HISTORY_KEY, CARD_REF_IMAGE_KEY, AutoSaveHistoryItem, CardPromptHistoryItem, cleanText } from './resultPreviewUtils';
+import { AI_PROMPT_TEMPLATES, AutoSaveHistoryItem } from './resultPreviewUtils';
 import { SeoDetailModal, AiSmellDetailModal, SimilarityModal } from './ScoringModals';
 import { ImageDownloadModal, ImageRegenModal, CardDownloadModal } from './ExportModals';
 import { CardRegenModal } from './CardRegenModal';
@@ -14,6 +12,7 @@ import { useDraftPersistence } from '../hooks/useDraftPersistence';
 import { useResultActions } from '../hooks/useResultActions';
 import { useCardDownload } from '../hooks/useCardDownload';
 import { useAiRefine } from '../hooks/useAiRefine';
+import { useCardRegenerate } from '../hooks/useCardRegenerate';
 
 
 
@@ -66,27 +65,10 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
   
   // 카드뉴스 다운로드 모달
   const [cardDownloadModalOpen, setCardDownloadModalOpen] = useState(false);
-  
-  // 카드 재생성 모달
-  const [cardRegenModalOpen, setCardRegenModalOpen] = useState(false);
-  const [cardRegenIndex, setCardRegenIndex] = useState(0);
-  const [cardRegenInstruction, setCardRegenInstruction] = useState(''); // 향후 재생성 지시사항 기능에 활용
-  const [isRegeneratingCard, setIsRegeneratingCard] = useState(false);
-  const [cardRegenProgress, setCardRegenProgress] = useState('');
-  
-  // 카드 재생성 시 편집 가능한 프롬프트
-  const [editSubtitle, setEditSubtitle] = useState('');
-  const [editMainTitle, setEditMainTitle] = useState('');
-  const [editDescription, setEditDescription] = useState('');
-  const [editTags, setEditTags] = useState(''); // 향후 태그 편집 기능에 활용
-  const [editImagePrompt, setEditImagePrompt] = useState('');
-  const [cardRegenRefImage, setCardRegenRefImage] = useState(''); // 참고 이미지
-  const [refImageMode, setRefImageMode] = useState<'recolor' | 'copy'>('copy'); // 참고 이미지 적용 방식: recolor=복제+색상변경, copy=완전복제
-  const [currentCardImage, setCurrentCardImage] = useState(''); // 현재 카드의 이미지 URL
-  const [promptHistory, setPromptHistory] = useState<CardPromptHistoryItem[]>([]); // 저장된 프롬프트 히스토리
-  const [showHistoryDropdown, setShowHistoryDropdown] = useState(false);
-  const [isRefImageLocked, setIsRefImageLocked] = useState(false); // 참고 이미지 고정 여부
-  
+
+  // AI 프롬프트 적용 플래그 (useCardRegenerate + useAiRefine 공유)
+  const [isAIPromptApplied, setIsAIPromptApplied] = useState(false);
+
   // 🎨 커스텀 스타일 프롬프트 저장 (재생성 시에도 유지)
   const [savedCustomStylePrompt, setSavedCustomStylePrompt] = useState<string | undefined>(content.customImagePrompt);
   
@@ -117,82 +99,6 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
     console.log('🔍 ResultPreview - content.postType:', content.postType);
   }, [content.factCheck, content.seoScore, content.postType]);
   
-  // 프롬프트 히스토리 및 참고 이미지 불러오기
-  useEffect(() => {
-    const saved = localStorage.getItem(CARD_PROMPT_HISTORY_KEY);
-    if (saved) {
-      try {
-        setPromptHistory(JSON.parse(saved));
-      } catch (e) {
-        console.error('히스토리 로드 실패:', e);
-      }
-    }
-    
-    // 저장된 참고 이미지 불러오기
-    const savedRefImage = localStorage.getItem(CARD_REF_IMAGE_KEY);
-    if (savedRefImage) {
-      try {
-        const parsed = JSON.parse(savedRefImage);
-        if (parsed.image) {
-          setCardRegenRefImage(parsed.image);
-          setRefImageMode(parsed.mode || 'copy');
-          setIsRefImageLocked(true);
-        }
-      } catch (e) {
-        console.error('참고 이미지 로드 실패:', e);
-      }
-    }
-  }, []);
-  
-  // 참고 이미지 저장/삭제 함수
-  const saveRefImageToStorage = (image: string, mode: 'recolor' | 'copy') => {
-    try {
-      localStorage.setItem(CARD_REF_IMAGE_KEY, JSON.stringify({ image, mode }));
-      setIsRefImageLocked(true);
-    } catch (e) {
-      console.error('참고 이미지 저장 실패 (용량 초과):', e);
-      toast.error('참고 이미지가 너무 큽니다. 더 작은 이미지를 사용해주세요.');
-    }
-  };
-  
-  const clearRefImageFromStorage = () => {
-    localStorage.removeItem(CARD_REF_IMAGE_KEY);
-    setIsRefImageLocked(false);
-  };
-  
-  // 프롬프트 저장 함수
-  const savePromptToHistory = () => {
-    if (!editSubtitle && !editMainTitle && !editDescription) return;
-    
-    const newItem: CardPromptHistoryItem = {
-      subtitle: editSubtitle,
-      mainTitle: editMainTitle,
-      description: editDescription,
-      imagePrompt: editImagePrompt,
-      savedAt: new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
-    };
-    
-    // 최근 3개만 유지 (중복 제거)
-    const filtered = promptHistory.filter(h => 
-      h.subtitle !== newItem.subtitle || h.mainTitle !== newItem.mainTitle
-    );
-    const newHistory = [newItem, ...filtered].slice(0, 3);
-    
-    setPromptHistory(newHistory);
-    localStorage.setItem(CARD_PROMPT_HISTORY_KEY, JSON.stringify(newHistory));
-    toast.success('프롬프트가 저장되었습니다!');
-  };
-  
-  // 히스토리에서 불러오기
-  const loadFromHistory = (item: CardPromptHistoryItem) => {
-    setEditSubtitle(item.subtitle);
-    setEditMainTitle(item.mainTitle);
-    setEditDescription(item.description);
-    setEditImagePrompt(item.imagePrompt);
-    setShowHistoryDropdown(false);
-  };
-  
-  // 텍스트 변경 시 이미지 프롬프트 자동 연동
   // 카드 수 (localHtml 변경 시 업데이트)
   const [cardCount, setCardCount] = useState(0);
   
@@ -229,6 +135,39 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
     applyInlineStylesForNaver,
   } = useDocumentExport({ content, localHtml, currentTheme, editorRef });
 
+  // ── Card Regenerate 훅 (카드뉴스 재생성 모달/편집/실행) ──
+  const {
+    cardRegenModalOpen, setCardRegenModalOpen,
+    cardRegenIndex,
+    isRegeneratingCard,
+    cardRegenProgress,
+    currentCardImage,
+    editSubtitle, setEditSubtitle,
+    editMainTitle, setEditMainTitle,
+    editDescription, setEditDescription,
+    editImagePrompt, setEditImagePrompt,
+    cardRegenRefImage, setCardRegenRefImage,
+    refImageMode, setRefImageMode,
+    isRefImageLocked,
+    saveRefImageToStorage,
+    clearRefImageFromStorage,
+    promptHistory,
+    showHistoryDropdown, setShowHistoryDropdown,
+    savePromptToHistory,
+    loadFromHistory,
+    openCardRegenModal,
+    handleCardRegenerate,
+  } = useCardRegenerate({
+    content,
+    localHtml,
+    setLocalHtml,
+    savedCustomStylePrompt,
+    designTemplateId: content.designTemplateId,
+    getCardElements,
+    isAIPromptApplied,
+    setIsAIPromptApplied,
+  });
+
   // ── AI Refine 훅 (AI 수정/재생성/프롬프트 추천) ──
   const {
     isEditingAi,
@@ -240,7 +179,6 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
     regenRefName,
     isRecommendingPrompt,
     isRecommendingCardPrompt,
-    isAIPromptApplied, setIsAIPromptApplied,
     handleAiEditSubmit: aiEditSubmit,
     handleSectionRegenerate,
     submitRegenerateImage,
@@ -258,6 +196,7 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
     setEditorInput,
     setEditProgress,
     setEditImagePrompt,
+    setIsAIPromptApplied,
     editSubtitle,
     editMainTitle,
     editDescription,
@@ -265,24 +204,6 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
 
   // handleAiEditSubmit 래퍼: editorInput을 바인딩
   const handleAiEditSubmit = (e: React.FormEvent) => aiEditSubmit(e, editorInput);
-
-  // 텍스트 변경 시 이미지 프롬프트 자동 연동
-  useEffect(() => {
-    if (isAIPromptApplied) return;
-    if (editSubtitle || editMainTitle || editDescription) {
-      const style = content.imageStyle || 'illustration';
-      let styleText: string;
-      if (style === 'custom' && savedCustomStylePrompt) {
-        styleText = savedCustomStylePrompt;
-      } else if (style === 'photo') {
-        styleText = 'photorealistic real medical clinic photo, natural lighting, DSLR, shallow depth of field, NOT illustration, NOT 3D render';
-      } else {
-        styleText = STYLE_KEYWORDS[style as keyof typeof STYLE_KEYWORDS] || STYLE_KEYWORDS.illustration;
-      }
-      const newImagePrompt = `1:1 카드뉴스, ${editSubtitle ? `"${editSubtitle}"` : ''} ${editMainTitle ? `"${editMainTitle}"` : ''} ${editDescription ? `"${editDescription}"` : ''}, ${styleText}, 밝고 친근한 분위기`.trim();
-      setEditImagePrompt(newImagePrompt);
-    }
-  }, [editSubtitle, editMainTitle, editDescription, content.imageStyle, savedCustomStylePrompt, isAIPromptApplied]);
 
   // 콘텐츠 품질 검사 훅 (SEO/유사도/이미지 최적화)
   const {
@@ -453,172 +374,7 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
   };
 
 
-  // 카드 슬라이드 재생성
-  const handleCardRegenerate = async () => {
-    // 편집된 프롬프트가 있는지 확인
-    const hasEditedPrompt = editSubtitle || editMainTitle || editDescription || editImagePrompt || cardRegenRefImage;
-    
-    if (!hasEditedPrompt) {
-      toast.info('프롬프트를 수정하거나 참고 이미지를 업로드해주세요.');
-      return;
-    }
-    
-    setIsRegeneratingCard(true);
-    setCardRegenProgress(cardRegenRefImage ? '참고 이미지 스타일 분석 중...' : '편집된 프롬프트로 이미지 생성 중...');
-    
-    try {
-      // 편집된 이미지 프롬프트 구성
-      const style = content.imageStyle || 'illustration';
-      
-      // 🎨 커스텀 스타일 프롬프트 우선순위:
-      // 1. savedCustomStylePrompt (state에 저장된 값) 사용 - 재생성 시에도 유지됨!
-      // 2. 참고 이미지가 있으면 "참고 이미지 스타일 그대로" 지시
-      // 3. 없으면 기본 스타일
-      // 🎨 커스텀 스타일은 항상 최우선! (참고 이미지가 있어도 유지)
-      const customStylePrompt = savedCustomStylePrompt || undefined;
-      console.log('🎨 재생성 시 커스텀 스타일:', customStylePrompt);
-      
-      // 🎨 스타일 결정: 커스텀 > 기본 스타일 (참고 이미지는 레이아웃만!)
-      let _styleText: string; // 향후 스타일 텍스트 표시에 활용 가능
-      if (customStylePrompt) {
-        _styleText = customStylePrompt;  // 커스텀 스타일 있으면 무조건 사용!
-      } else {
-        // 기본 스타일 (3D 일러스트)
-        _styleText = style === 'illustration' ? '3D 일러스트' : style === 'medical' ? '의학 3D' : '실사 사진';
-      }
-      
-      // 🔧 재생성 프롬프트: 사용자가 직접 수정한 editImagePrompt 사용!
-      // 자동 연동 프롬프트 또는 사용자가 직접 수정한 프롬프트
-      let imagePromptToUse = editImagePrompt || `1:1 카드뉴스, "${editSubtitle}" "${editMainTitle}" "${editDescription}", 밝고 친근한 분위기`;
-      
-      // 참고 이미지 모드에 따라 진행 메시지 설정
-      if (cardRegenRefImage) {
-        if (refImageMode === 'copy') {
-          setCardRegenProgress('📋 레이아웃 완전 복제 중...');
-        } else {
-          setCardRegenProgress('🎨 레이아웃 복제 + 색상 변경 중...');
-        }
-      } else if (customStylePrompt) {
-        setCardRegenProgress('🎨 커스텀 스타일로 이미지 생성 중...');
-      }
-      
-      // 🔧 디버그 로그 추가
-      console.log('🔄 카드 재생성 파라미터:', {
-        style,
-        customStylePrompt: customStylePrompt?.substring(0, 50),
-        hasRefImage: !!cardRegenRefImage,
-        refImageMode,
-        imagePromptToUse: imagePromptToUse.substring(0, 100)
-      });
-      
-      // 참고 이미지와 모드를 generateSingleImage에 전달 (inspire/copy 모두 지원)
-      // customStylePrompt를 4번째 파라미터로 전달 (커스텀 스타일 유지)
-      const newImage = await generateSingleImage(
-        imagePromptToUse, 
-        style, 
-        '1:1', 
-        customStylePrompt,  // 🎨 커스텀 스타일 프롬프트 - content.customImagePrompt가 있으면 항상 전달!
-        cardRegenRefImage || undefined,  // 참고 이미지가 있으면 항상 전달
-        refImageMode === 'copy'  // copy 모드인지 여부
-      );
-      
-      if (newImage) {
-        // 플레이스홀더 이미지인지 확인 (SVG 플레이스홀더는 재시도 필요)
-        const isPlaceholder = newImage.includes('이미지 생성에 실패했습니다') || newImage.includes('data:image/svg+xml');
-        
-        // DOM 업데이트 - 이미지 교체
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = localHtml;
-        const cardsInHtml = tempDiv.querySelectorAll('.card-slide');
-        
-        if (cardsInHtml[cardRegenIndex]) {
-          // 새 이미지로 교체 (완성형 카드이므로 전체 이미지 교체)
-          const regenBorderRadius = dtStyle?.borderRadius || '24px';
-          const regenBoxShadow = dtStyle?.boxShadow || '0 4px 16px rgba(0,0,0,0.08)';
-          const regenBorder = dtStyle?.borderWidth && dtStyle.borderWidth !== '0' ? `border: ${dtStyle.borderWidth} solid ${dtStyle.borderColor};` : '';
-          const newCardHtml = `
-            <div class="card-slide" style="border-radius: ${regenBorderRadius}; ${regenBorder} overflow: hidden; box-shadow: ${regenBoxShadow};">
-              <img src="${newImage}" alt="${imagePromptToUse}" data-index="${cardRegenIndex + 1}" class="card-full-img" style="width: 100%; height: auto; display: block;" />
-            </div>`;
-          
-          const newCardElement = document.createElement('div');
-          newCardElement.innerHTML = newCardHtml;
-          const newCard = newCardElement.firstElementChild;
-          
-          if (newCard) {
-            cardsInHtml[cardRegenIndex].replaceWith(newCard);
-            setLocalHtml(tempDiv.innerHTML);
-          }
-        }
-        
-        if (isPlaceholder) {
-          toast.warning(`${cardRegenIndex + 1}번 카드 이미지 생성에 실패했습니다. 잠시 후 다시 시도해주세요.`);
-        } else {
-          toast.success(`${cardRegenIndex + 1}번 카드가 재생성되었습니다!`);
-        }
-        setCardRegenModalOpen(false);
-        setCardRegenInstruction('');
-        setCardRegenProgress('');
-      } else {
-        throw new Error('이미지가 생성되지 않았습니다. 잠시 후 다시 시도해주세요.');
-      }
-      
-    } catch (error) {
-      console.error('카드 재생성 실패:', error);
-      toast.error('카드 재생성 중 오류가 발생했습니다.');
-    } finally {
-      setIsRegeneratingCard(false);
-      setCardRegenProgress('');
-    }
-  };
-  
-  // 카드 재생성 모달 열기
-  const openCardRegenModal = (cardIndex: number) => {
-    setCardRegenIndex(cardIndex);
-    setCardRegenInstruction('');
-    // 🔓 AI 프롬프트 적용 플래그 리셋 (모달 열 때마다 자동 연동 활성화)
-    setIsAIPromptApplied(false);
-    // 참고 이미지가 고정되어 있지 않으면 초기화, 고정되어 있으면 유지
-    if (!isRefImageLocked) {
-      setCardRegenRefImage('');
-    }
-    
-    // 현재 카드의 이미지 URL 가져오기
-    const cards = getCardElements();
-    if (cards && cards[cardIndex]) {
-      const img = cards[cardIndex].querySelector('img');
-      if (img) {
-        setCurrentCardImage(img.src);
-      } else {
-        setCurrentCardImage('');
-      }
-    } else {
-      setCurrentCardImage('');
-    }
-    
-    // 기존 프롬프트 값으로 편집 state 초기화
-    const cardPrompt = content.cardPrompts?.[cardIndex];
-    
-    // 먼저 모든 값을 초기화하여 useEffect가 새 값으로 트리거되도록 함
-    setEditSubtitle('');
-    setEditMainTitle('');
-    setEditDescription('');
-    setEditTags('');
-    setEditImagePrompt('');
-    
-    // 다음 렌더링 사이클에서 실제 값 설정 (useEffect 트리거 보장)
-    setTimeout(() => {
-      if (cardPrompt) {
-        setEditSubtitle(cardPrompt.textPrompt.subtitle || '');
-        setEditMainTitle(cardPrompt.textPrompt.mainTitle || '');
-        setEditDescription(cardPrompt.textPrompt.description || '');
-        setEditTags(cardPrompt.textPrompt.tags?.join(', ') || '');
-        // imagePrompt는 useEffect에서 자동 생성됨 (일관된 간단한 형식)
-      }
-    }, 0);
-    
-    setCardRegenModalOpen(true);
-  };
+  // [훅으로 이동됨] handleCardRegenerate, openCardRegenModal, saveRefImageToStorage, clearRefImageFromStorage, savePromptToHistory, loadFromHistory → useCardRegenerate
 
   // 이미지 클릭 핸들러 (다운로드 or 재생성 선택 모달)
   const handleImageClick = (imgSrc: string, imgAlt: string, index: number) => {
