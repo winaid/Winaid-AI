@@ -14,6 +14,7 @@ import { HomeDashboard } from './components/HomeDashboard';
 import { ToolWorkspace } from './components/workspace/ToolWorkspace';
 import { GenerateWorkspace } from './components/workspace/GenerateWorkspace';
 import type { ContentTabType } from './components/layout/Sidebar';
+import { ROUTES } from './constants/routes';
 const AdminPage = lazy(() => import('./components/AdminPage'));
 const AuthPage = lazy(() => import('./components/AuthPage').then(module => ({ default: module.AuthPage })));
 const MedicalLawSearch = lazy(() => import('./components/MedicalLawSearch').then(module => ({ default: module.MedicalLawSearch })));
@@ -70,7 +71,7 @@ const getPageFromPath = (): PageType => {
 };
 
 const navigateTo = (page: string) => {
-  const targetPath = page === 'home' ? '/app' : `/${page}`;
+  const targetPath = page === 'home' ? ROUTES.home : `/${page}`;
   window.history.pushState(null, '', targetPath);
   window.dispatchEvent(new PopStateEvent('popstate'));
 };
