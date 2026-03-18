@@ -622,12 +622,12 @@ export const crawlAndLearnHospitalStyle = async (
       });
 
       if (!crawlRes.ok) {
-        const err = await crawlRes.json().catch(() => ({}));
+        const err = await crawlRes.json().catch(() => ({})) as any;
         console.warn(`[Crawl] URL ${i + 1} 크롤링 실패:`, url, err.message);
         continue; // 하나 실패해도 나머지 계속
       }
 
-      const crawlData = await crawlRes.json();
+      const crawlData = await crawlRes.json() as any;
       const posts = crawlData.posts || [];
       allPosts.push(...posts);
       console.log(`[Crawl] URL ${i + 1} (${url}) → ${posts.length}개 글 수집`);
@@ -677,8 +677,8 @@ export const crawlAndLearnHospitalStyle = async (
     updated_at: new Date().toISOString(),
   };
 
-  const upsertPromise = supabase
-    .from('hospital_style_profiles')
+  const upsertPromise = (supabase
+    .from('hospital_style_profiles') as any)
     .upsert(profileData, { onConflict: 'hospital_name' })
     .select();
   const upsertTimeout = new Promise<never>((_, reject) =>
@@ -812,8 +812,8 @@ export const saveHospitalBlogUrl = async (
   teamId: number,
   blogUrl: string
 ): Promise<void> => {
-  const upsertPromise = supabase
-    .from('hospital_style_profiles')
+  const upsertPromise = (supabase
+    .from('hospital_style_profiles') as any)
     .upsert(
       { hospital_name: hospitalName, team_id: teamId, naver_blog_url: blogUrl, updated_at: new Date().toISOString() },
       { onConflict: 'hospital_name' }
@@ -1113,8 +1113,8 @@ export const saveCrawledPost = async (
   }
 
   // 1차 시도: source_blog_id 포함
-  const { data, error } = await supabase
-    .from('hospital_crawled_posts')
+  const { data, error } = await (supabase
+    .from('hospital_crawled_posts') as any)
     .upsert(record, { onConflict: 'hospital_name,url' })
     .select()
     .single();
@@ -1123,8 +1123,8 @@ export const saveCrawledPost = async (
   // 2차 시도: source_blog_id 컬럼이 DB에 없을 수 있으므로 제외 후 재시도
   if (error && (error.message?.includes('source_blog_id') || error.code === '42703' || error.code === 'PGRST204')) {
     const { source_blog_id: _removed, ...recordWithout } = record;
-    const { data: d2, error: e2 } = await supabase
-      .from('hospital_crawled_posts')
+    const { data: d2, error: e2 } = await (supabase
+      .from('hospital_crawled_posts') as any)
       .upsert(recordWithout, { onConflict: 'hospital_name,url' })
       .select()
       .single();
@@ -1161,16 +1161,16 @@ export const updateCrawledPostScore = async (id: string, score: CrawledPostScore
     updatePayload.score_spelling = score.score_spelling;
   }
 
-  const { error } = await supabase
-    .from('hospital_crawled_posts')
+  const { error } = await (supabase
+    .from('hospital_crawled_posts') as any)
     .update(updatePayload)
     .eq('id', id);
 
   if (error) {
     console.warn('Supabase 채점 업데이트 실패, localStorage 폴백:', error.message);
     // score_spelling 없이 재시도
-    const { error: error2 } = await supabase
-      .from('hospital_crawled_posts')
+    const { error: error2 } = await (supabase
+      .from('hospital_crawled_posts') as any)
       .update({
         score_typo: score.score_typo,
         score_medical_law: score.score_medical_law,
@@ -1195,8 +1195,8 @@ export const updateCrawledPostScore = async (id: string, score: CrawledPostScore
  * 수정된 본문 저장
  */
 export const updateCrawledPostContent = async (id: string, correctedContent: string): Promise<void> => {
-  const { error } = await supabase
-    .from('hospital_crawled_posts')
+  const { error } = await (supabase
+    .from('hospital_crawled_posts') as any)
     .update({ corrected_content: correctedContent })
     .eq('id', id);
   if (error) {

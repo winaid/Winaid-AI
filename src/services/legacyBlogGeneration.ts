@@ -502,8 +502,8 @@ ${getStylePromptForGeneration(learnedStyle)}
   } else if (request.hospitalName && request.hospitalStyleSource === 'explicit_selected_hospital') {
     // 2순위: 병원 블로그 크롤링으로 학습한 스타일 (Supabase) — 명시 선택 시에만
     try {
-      const { getHospitalStylePrompt } = await import('./writingStyleService');
-      const hospitalStylePrompt = await getHospitalStylePrompt(request.hospitalName);
+      const { getHospitalStylePromptForGeneration } = await import('./writingStyleService');
+      const hospitalStylePrompt = await getHospitalStylePromptForGeneration(request.hospitalName);
       if (hospitalStylePrompt) {
         learnedStyleInstruction = `
 [🏥🏥🏥 병원 블로그 학습 말투 - 최우선 적용! 🏥🏥🏥]
@@ -614,10 +614,10 @@ ${crawlData.content.substring(0, 3000)}
 ✅ 작성 방법:
 1. **분량: 5~7줄 정도로 작성** (너무 짧지도 길지도 않게, 적당한 분량으로!)
 2. **1개의 문단으로만 작성** (여러 문장 가능하지만, 문단 분리 금지! 한 덩어리로만 작성!)
-${request.keyword ? `3. **키워드와 자연스럽게 연결** (매우 중요!):
-   - 글의 주요 키워드: "${request.keyword}"
+${request.keywords ? `3. **키워드와 자연스럽게 연결** (매우 중요!):
+   - 글의 주요 키워드: "${request.keywords}"
    - 병원 소개를 키워드와 자연스럽게 연결하여 작성
-   - 예: "${request.keyword}" 관련하여 이 병원에서 도움을 받을 수 있습니다
+   - 예: "${request.keywords}" 관련하여 이 병원에서 도움을 받을 수 있습니다
    - 🚨 **키워드 등장 빈도** (여러 키워드가 있을 경우):
      • 첫 번째 키워드(가장 중요): 정확히 4회 등장
      • 두 번째 키워드: 최대 2회 등장
@@ -636,7 +636,7 @@ ${request.keyword ? `3. **키워드와 자연스럽게 연결** (매우 중요!)
 6. "~에서 도움을 받을 수 있습니다" 같은 완곡한 표현 사용 (⚠️ "검사", "치료", "상담", "검진" 단어 사용 금지)
 7. 병원명은 1회만 표현 (과도한 반복 금지)
 8. 🚨 **중요: 병원 소개는 최소 5줄 이상, 7줄 미만으로 작성! (1개 문단)**
-${request.keyword ? `9. 🚨 **핵심: 키워드("${request.keyword}")와 자연스럽게 연결하여 작성!**` : `9. 🚨 **핵심: 글의 주제와 자연스럽게 연결하여 작성! (제목/주제 반복 금지)**`}
+${request.keywords ? `9. 🚨 **핵심: 키워드("${request.keywords}")와 자연스럽게 연결하여 작성!**` : `9. 🚨 **핵심: 글의 주제와 자연스럽게 연결하여 작성! (제목/주제 반복 금지)**`}
 `;
           safeProgress('✅ 병원 정보 크롤링 완료');
         } else {

@@ -11,6 +11,7 @@
  */
 import { GEMINI_MODEL, callGemini } from "./geminiClient";
 import { isDemoSafeMode } from "./image/imageOrchestrator";
+import { classifySceneType, buildScenePrompt } from "./image/imageRouter";
 import { GenerationRequest } from "../types";
 import {
   getPipelineOutlinePrompt,
@@ -28,6 +29,7 @@ import {
   STAGE_C_USE_PRO,
   STAGE_C_PRO_TIMEOUT_MS,
   STAGE_C_FLASH_TIMEOUT_MS,
+  DEFAULT_BLOG_IMAGE_COUNT,
 } from "../core/generation/contracts";
 
 export const generateBlogWithPipeline = async (
