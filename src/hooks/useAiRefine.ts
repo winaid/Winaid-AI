@@ -102,7 +102,7 @@ export function useAiRefine({
     try {
       saveToHistory(localHtml);
 
-      const { regenerateSection } = await import('../services/geminiService');
+      const { regenerateSection } = await import('../services/faqService');
       const newSectionHtml = await regenerateSection(
         section.title,
         section.html,
@@ -265,7 +265,7 @@ export function useAiRefine({
     setEditProgress('AI 에디터가 요청하신 내용을 바탕으로 원고를 최적화하고 있습니다...');
 
     try {
-      const { modifyPostWithAI } = await import('../services/postProcessingService');
+      const { modifyPostWithAI } = await import('../services/contentEditorService');
       const result = await modifyPostWithAI(localHtml, editorInput);
 
       if (!result || !result.newHtml) {

@@ -43,7 +43,8 @@ import {
   type SavedStyleHistory,
 } from '../features/template/storage/styleHistory';
 
-import { CalendarThemePreview, TemplateSVGPreview } from '../features/template/previews/TemplatePreviews';
+import { CalendarThemePreview } from '../features/template/previews/CalendarPreviews';
+import { TemplateSVGPreview } from '../features/template/previews/TemplatePreviews';
 import { useTemplateGeneration, type GenerationOptions } from '../features/template/hooks/useTemplateGeneration';
 
 export default function TemplateGenerator({ onSwitchToFree }: { onSwitchToFree?: () => void }) {

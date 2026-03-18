@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { refineContentByMedicalLaw } from '../services/postProcessingService';
+import { refineContentByMedicalLaw } from '../services/medicalLawAdjuster';
 import { callGemini, GEMINI_MODEL } from '../services/geminiClient';
 import { SYSTEM_PROMPT, getStage2_AiRemovalAndCompliance, getDynamicSystemPrompt } from '../lib/gpt52-prompts-staged';
 import { applyThemeToHtml } from '../utils/cssThemes';

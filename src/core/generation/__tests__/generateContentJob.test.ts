@@ -31,7 +31,7 @@ vi.mock('../../../services/pressReleaseService', () => ({
   }),
 }));
 
-vi.mock('../../../services/geminiService', () => ({
+vi.mock('../../../services/blogPipelineService', () => ({
   generateBlogWithPipeline: vi.fn().mockResolvedValue({
     title: '블로그 테스트',
     rawHtml: '<p>블로그 내용</p>',
@@ -43,16 +43,16 @@ vi.mock('../../../services/geminiService', () => ({
     }),
     imagePrompts: ['테스트 프롬프트'],
   }),
+}));
+vi.mock('../../../services/legacyBlogGeneration', () => ({
   generateBlogPostText: vi.fn().mockResolvedValue({
     title: '레거시 블로그',
     content: '<p>레거시 내용</p>',
     imagePrompts: [],
     fact_check: { fact_score: 85, safety_score: 90, conversion_score: 80, ai_smell_score: 10, verified_facts_count: 5, issues: [], recommendations: [] },
   }),
-  runAiSmellCheck: vi.fn().mockReturnValue({
-    detected: false, patterns: [], score: 5, criticalIssues: [], warningIssues: [],
-  }),
-  integrateAiSmellToFactCheck: vi.fn().mockImplementation((fc) => fc),
+}));
+vi.mock('../../../services/faqService', () => ({
   generateFaqSection: vi.fn().mockResolvedValue(''),
   generateSmartBlockFaq: vi.fn().mockResolvedValue([]),
 }));

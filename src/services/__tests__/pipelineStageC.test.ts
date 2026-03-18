@@ -61,7 +61,7 @@ vi.mock('../image/imagePromptBuilder', () => ({ STYLE_NAMES: {} }));
 vi.mock('../writingStyleService', () => ({ getHospitalStylePromptForGeneration: vi.fn(() => null) }));
 
 import { callGemini } from '../geminiClient';
-import { generateBlogWithPipeline } from '../geminiService';
+import { generateBlogWithPipeline } from '../blogPipelineService';
 const mockCallGemini = vi.mocked(callGemini);
 
 const REQ = {

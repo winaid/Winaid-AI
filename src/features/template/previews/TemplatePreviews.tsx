@@ -1,10 +1,8 @@
 /**
- * TemplatePreviews.tsx — 프리뷰 dispatcher + re-export bridge
+ * TemplatePreviews.tsx — 프리뷰 dispatcher
  *
- * 기존 1646줄 giant file을 역할별로 분리한 뒤 남은 얇은 계층.
- * - CalendarPreviews.tsx  → CalendarThemePreview (달력 12테마)
- * - CategoryPreviews.tsx  → 7개 카테고리 프리뷰
- * - 이 파일             → TemplateSVGPreview (dispatcher) + re-export
+ * TemplateSVGPreview: 카테고리별 프리뷰 컴포넌트를 선택하는 dispatcher.
+ * CalendarPreviews.tsx, CategoryPreviews.tsx에서 실제 렌더링 수행.
  *
  * 소비자: TemplateGenerator.tsx
  */
@@ -21,9 +19,6 @@ import {
   CautionPreview,
   PricingPreview,
 } from './CategoryPreviews';
-
-// ── re-export for backward compatibility ──
-export { CalendarThemePreview } from './CalendarPreviews';
 
 // ── dispatcher ──
 export function TemplateSVGPreview({ template: t, category, hospitalName }: { template: CategoryTemplate; category: TemplateCategory; hospitalName: string }) {

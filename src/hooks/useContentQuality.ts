@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { GeneratedContent, SeoScoreReport, FactCheckReport, SimilarityCheckResult } from '../types';
 import { evaluateSeoScore } from '../services/seoService';
-import { recheckAiSmell } from '../services/postProcessingService';
+import { recheckAiSmell } from '../services/contentQualityService';
 import { checkContentSimilarity } from '../services/contentSimilarityService';
 import { optimizeAllImagesInHtml, formatFileSize } from '../utils/imageOptimizer';
 import { toast } from '../components/Toast';

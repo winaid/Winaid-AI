@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { CardNewsScript, CardNewsSlideScript } from '../types';
-import { regenerateSlideContent } from '../services/postProcessingService';
-import type { SlideRegenMode } from '../services/postProcessingService';
+import { regenerateSlideContent } from '../services/contentEditorService';
+import type { SlideRegenMode } from '../services/contentEditorService';
 import { toast } from './Toast';
 import { sanitizeHtml } from '../utils/sanitizeHtml';
 

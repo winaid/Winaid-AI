@@ -323,13 +323,10 @@ async function _orchestrateBlog(
   request: GenerationRequest,
   safeProgress: (msg: string) => void,
 ): Promise<GeneratedContent> {
-  // Stage 실행 함수: geminiService에서 import
-  const {
-    generateBlogWithPipeline,
-    generateBlogPostText,
-    generateFaqSection,
-    generateSmartBlockFaq,
-  } = await import('../../services/geminiService');
+  // Stage 실행 함수: SOT 파일에서 직접 import
+  const { generateBlogWithPipeline } = await import('../../services/blogPipelineService');
+  const { generateBlogPostText } = await import('../../services/legacyBlogGeneration');
+  const { generateFaqSection, generateSmartBlockFaq } = await import('../../services/faqService');
   const { runAiSmellCheck, integrateAiSmellToFactCheck } = await import('../../services/contentQualityService');
 
   const { STYLE_NAMES } = await import('../../services/image/imagePromptBuilder');
@@ -867,11 +864,3 @@ function parseBlogSections(html: string): BlogSection[] {
   return sections;
 }
 
-// ── geminiService.ts 호환 브릿지 ──
-
-/**
- * geminiService.ts의 generateFullPost re-export용 브릿지.
- * 새 코드에서는 runContentJob()을 사용하라.
- * @internal
- */
-export const _orchestrateFullPostBridge = orchestrateFullPost;
