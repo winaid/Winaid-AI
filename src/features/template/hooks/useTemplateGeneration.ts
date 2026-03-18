@@ -197,6 +197,8 @@ export function useTemplateGeneration() {
     // setters
     setCurrentPage,
     setError,
+    setGenerating,
+    setResultImages,
     setShowRegenMenu,
     setRegenPrompt,
     setShowRegenPromptInput,

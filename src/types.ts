@@ -282,6 +282,12 @@ export interface SimilarityCheckResult {
   webSearchMatches: WebSearchMatch[]; // 웹 검색 결과
   keyPhrases: string[]; // 추출된 핵심 문장들
   checkDuration: number; // 검사 소요 시간 (ms)
+  topSourceInfo?: {
+    matchCount: number;
+    blogKey?: string;
+    blogInfo?: { link?: string; title?: string; snippet?: string; displayLink?: string };
+    matchedPhrases?: string[];
+  };
 }
 
 // 자체 블로그 매칭 결과

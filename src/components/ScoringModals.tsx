@@ -623,9 +623,9 @@ export const SimilarityModal: React.FC<SimilarityModalProps> = ({
                             • "{phrase.substring(0, 80)}..."
                           </li>
                         ))}
-                        {similarityResult.topSourceInfo.matchedPhrases?.length > 5 && (
+                        {(similarityResult.topSourceInfo.matchedPhrases?.length ?? 0) > 5 && (
                           <li className={`italic ${darkMode ? 'text-slate-500' : 'text-slate-500'}`}>
-                            외 {similarityResult.topSourceInfo.matchedPhrases.length - 5}개 문장 더...
+                            외 {(similarityResult.topSourceInfo.matchedPhrases?.length ?? 0) - 5}개 문장 더...
                           </li>
                         )}
                       </ul>
