@@ -33,7 +33,17 @@ export const STAGE_B_BATCH_SIZE = 2;               // 동시 생성 섹션 수
 export const STAGE_B_INTRO_TIMEOUT_MS = 30_000;    // 인트로 생성
 export const STAGE_B_CONCLUSION_TIMEOUT_MS = 30_000;
 
-export const STAGE_C_POLISH_TIMEOUT_MS = 12_000;   // 폴리시 (비동기, 실패해도 진행)
+/**
+ * Stage C 교정 정책:
+ *   STAGE_C_USE_PRO = true  → PRO 시도 (20s) → 실패 시 FLASH (12s) → 실패 시 rawHtml
+ *   STAGE_C_USE_PRO = false → FLASH 단일 시도 (12s) → 실패 시 rawHtml
+ *
+ * PRO 복원 시 이 플래그만 true로 변경하면 된다.
+ */
+export const STAGE_C_USE_PRO = false;
+export const STAGE_C_PRO_TIMEOUT_MS = 20_000;      // PRO 교정 타임아웃
+export const STAGE_C_FLASH_TIMEOUT_MS = 12_000;     // FLASH 교정 타임아웃
+export const STAGE_C_POLISH_TIMEOUT_MS = 12_000;    // 호환용 alias (= FLASH timeout)
 export const STAGE_C_MAX_RETRIES = 1;
 export const STAGE_C_NO_AUTO_FALLBACK = true;
 

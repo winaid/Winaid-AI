@@ -41,6 +41,9 @@ import {
   STAGE_B_BATCH_SIZE,
   STAGE_B_INTRO_TIMEOUT_MS,
   STAGE_B_CONCLUSION_TIMEOUT_MS,
+  STAGE_C_USE_PRO,
+  STAGE_C_PRO_TIMEOUT_MS,
+  STAGE_C_FLASH_TIMEOUT_MS,
   STAGE_C_POLISH_TIMEOUT_MS,
   SEARCH_TIMEOUT_MS,
   DEFAULT_BLOG_IMAGE_COUNT,
@@ -744,8 +747,9 @@ ${sectionSummaries.join('\n')}`;
   safeProgress('✅ 본문 생성 완료');
   console.info(`[PIPELINE] ✅ conclusion ${conclusionHtml.length}자 ${timings.conclusion}ms`);
 
-  // ── Stage C: FLASH polish (단일 시도) ──
-  // PRO polish 제거: 20s+ 비용 대비 품질 향상 미미. FLASH 12s 단일 시도 → 실패 시 rawHtml.
+  // ── Stage C: 교정 (polish) ──
+  // 정책: STAGE_C_USE_PRO=true → PRO(20s) → FLASH(12s) → rawHtml
+  //        STAGE_C_USE_PRO=false → FLASH(12s) → rawHtml
   safeProgress('🔍 [4/4] 전체 통합 및 품질 보정 중...');
 
   // rawHtml 조립 전 완전성 검사 — 모든 파트가 존재하는지 확인
@@ -790,37 +794,62 @@ ${sectionSummaries.join('\n')}`;
 
   const rawHtml = `${introHtml}\n${sectionHtmls.join('\n')}\n${conclusionHtml}`;
   const integrationPrompt = getPipelineIntegrationPrompt(targetLength);
-  const FLASH_POLISH_TIMEOUT = STAGE_C_POLISH_TIMEOUT_MS;
 
   // Stage C를 비동기 promise로 생성 — 이미지 생성과 병렬 실행 가능
-  // 실패 시 rawHtml을 안전하게 반환 (pre-polish fallback)
+  // 정책: STAGE_C_USE_PRO에 따라 PRO→FLASH→rawHtml 또는 FLASH→rawHtml
   const polishPromise: Promise<{ content: string; polishModel: string; finalQualityPath: string; stageCMs: number }> = (async () => {
     let finalQualityPath = 'flash_draft_only';
     let integratedHtml: any;
     let polishModel = 'NONE';
     const stageCStart = Date.now();
 
-    // FLASH polish 단일 시도 (최대 12s, retry 없음)
-    console.info(`[PIPELINE] Stage C attempt=FLASH timeout=${FLASH_POLISH_TIMEOUT} clientAbort=${FLASH_POLISH_TIMEOUT + 5000}`);
-    try {
-      integratedHtml = await callGemini({
-        prompt: rawHtml,
-        systemPrompt: integrationPrompt,
-        model: GEMINI_MODEL.FLASH,
-        responseType: 'text',
-        timeout: FLASH_POLISH_TIMEOUT,
-        temperature: 0.3,
-        maxRetries: 1,
-        noAutoFallback: true,
-      });
-      polishModel = 'FLASH';
-      finalQualityPath = 'flash_draft+flash_polish';
-    } catch (polishErr: any) {
-      const polishMs = Date.now() - stageCStart;
-      const reason = polishErr?.errorType === 'timeout' ? 'timeout' : (polishErr?.message || 'unknown').substring(0, 60);
-      console.warn(`[PIPELINE] ⚠️ Stage C FLASH polish 실패 (${reason}, ${polishMs}ms), pre-polish HTML 사용`);
-      integratedHtml = rawHtml;
-      polishModel = 'NONE(pre-polish)';
+    // Step 1: PRO polish (STAGE_C_USE_PRO=true일 때만)
+    if (STAGE_C_USE_PRO) {
+      console.info(`[PIPELINE] Stage C attempt=PRO timeout=${STAGE_C_PRO_TIMEOUT_MS}`);
+      try {
+        integratedHtml = await callGemini({
+          prompt: rawHtml,
+          systemPrompt: integrationPrompt,
+          model: GEMINI_MODEL.PRO,
+          responseType: 'text',
+          timeout: STAGE_C_PRO_TIMEOUT_MS,
+          temperature: 0.3,
+          maxRetries: 1,
+          noAutoFallback: true,
+        });
+        polishModel = 'PRO';
+        finalQualityPath = 'flash_draft+pro_polish';
+      } catch (proErr: any) {
+        const proMs = Date.now() - stageCStart;
+        const reason = proErr?.errorType === 'timeout' ? 'timeout' : (proErr?.message || 'unknown').substring(0, 60);
+        console.warn(`[PIPELINE] ⚠️ Stage C PRO polish 실패 (${reason}, ${proMs}ms), FLASH fallback 시도`);
+        integratedHtml = null; // FLASH fallback으로 진행
+      }
+    }
+
+    // Step 2: FLASH polish (PRO 미사용 또는 PRO 실패 시)
+    if (!integratedHtml) {
+      console.info(`[PIPELINE] Stage C attempt=FLASH timeout=${STAGE_C_FLASH_TIMEOUT_MS}`);
+      try {
+        integratedHtml = await callGemini({
+          prompt: rawHtml,
+          systemPrompt: integrationPrompt,
+          model: GEMINI_MODEL.FLASH,
+          responseType: 'text',
+          timeout: STAGE_C_FLASH_TIMEOUT_MS,
+          temperature: 0.3,
+          maxRetries: 1,
+          noAutoFallback: true,
+        });
+        polishModel = STAGE_C_USE_PRO ? 'FLASH(fallback)' : 'FLASH';
+        finalQualityPath = 'flash_draft+flash_polish';
+      } catch (flashErr: any) {
+        const flashMs = Date.now() - stageCStart;
+        const reason = flashErr?.errorType === 'timeout' ? 'timeout' : (flashErr?.message || 'unknown').substring(0, 60);
+        console.warn(`[PIPELINE] ⚠️ Stage C FLASH polish 실패 (${reason}, ${flashMs}ms), pre-polish HTML 사용`);
+        integratedHtml = rawHtml;
+        polishModel = 'NONE(pre-polish)';
+      }
     }
     const stageCMs = Date.now() - stageCStart;
 
@@ -834,7 +863,7 @@ ${sectionSummaries.join('\n')}`;
 
     safeProgress('✅ [4/4] 통합 검증 완료');
     console.info(`[PIPELINE] ✅ Stage C 완료: ${finalContent.length}자 (텍스트 ${finalContent.replace(/<[^>]+>/g, '').trim().length}자) polishModel=${polishModel} stageC=${stageCMs}ms`);
-    console.info(`[PIPELINE] finalQualityPath=${finalQualityPath} | FLASH_TIMEOUT=${FLASH_POLISH_TIMEOUT}`);
+    console.info(`[PIPELINE] finalQualityPath=${finalQualityPath} | PRO_ENABLED=${STAGE_C_USE_PRO}`);
 
     return { content: finalContent, polishModel, finalQualityPath, stageCMs };
   })();
@@ -893,7 +922,7 @@ ${sectionSummaries.join('\n')}`;
   console.info(`[PIPELINE] ═══════════════════════════════════════`);
   console.info(`[PIPELINE] ✅ Stage A+B DONE, Stage C async — 성능 요약`);
   console.info(`[PIPELINE]   textDraft=${textDraftMs}ms (${(textDraftMs / 1000).toFixed(1)}s)`);
-  console.info(`[PIPELINE]   stageA=${timings.stageA}ms | stageB=${timings.stageB_sections}ms | conclusion=${timings.conclusion}ms | stageC=async(FLASH ${FLASH_POLISH_TIMEOUT}ms)`);
+  console.info(`[PIPELINE]   stageA=${timings.stageA}ms | stageB=${timings.stageB_sections}ms | conclusion=${timings.conclusion}ms | stageC=async(${STAGE_C_USE_PRO ? 'PRO→FLASH' : 'FLASH'} ${STAGE_C_FLASH_TIMEOUT_MS}ms)`);
   console.info(`[PIPELINE]   avgSectionMs=${avgSectionMs} | sections=${sectionTimingsArr.map(t => `${t}ms`).join('/')}`);
   console.info(`[PIPELINE]   rawHtml=${rawHtml.replace(/<[^>]+>/g, '').trim().length}자 imgPrompts=${imagePrompts.length}`);
   console.info(`[PIPELINE] ═══════════════════════════════════════`);
