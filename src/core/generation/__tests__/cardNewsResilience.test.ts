@@ -402,8 +402,8 @@ describe('카드뉴스 — 그룹 C. 저장/히스토리', () => {
       // deprecated data 필드에서 cardPrompts 확인
       expect(result.data.cardPrompts).toBeDefined();
       expect(result.data.cardPrompts).toHaveLength(6);
-      expect(result.data.cardPrompts[0].textPrompt).toBeDefined();
-      expect(result.data.cardPrompts[0].textPrompt.mainTitle).toBeTruthy();
+      expect(result.data.cardPrompts![0].textPrompt).toBeDefined();
+      expect(result.data.cardPrompts![0].textPrompt.mainTitle).toBeTruthy();
     }
   });
 });

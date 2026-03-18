@@ -51,8 +51,8 @@ const TIER_CONCURRENCY: Record<ModelTier, number> = {
 };
 
 const IMAGE_TIMEOUT: Record<ImageGenMode, Record<ImageRole, number>> = {
-  auto:   { hero: 25000, sub: 25000 },
-  manual: { hero: 35000, sub: 35000 },
+  auto:   { hero: 25000, sub: 18000 },
+  manual: { hero: 35000, sub: 25000 },
 };
 
 // 디버그 verbose 로그 플래그
@@ -242,8 +242,8 @@ export const generateBlogImage = async (
 
   const maxAttempts = chain.length;
 
-  // ── wall time cap: hero와 sub 동일 50s (hero가 2회 시도할 충분한 시간 확보) ──
-  const WALL_TIME_CAP_MS = 50_000;
+  // ── wall time cap: hero 50s / sub 30s (sub는 속도 우선, 빠른 fallback) ──
+  const WALL_TIME_CAP_MS = isHero ? 50_000 : 30_000;
   const wallStart = Date.now();
 
   let lastError: any = null;

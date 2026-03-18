@@ -217,9 +217,9 @@ export function useContentGeneration(deps: ContentGenerationDeps): ContentGenera
         console.error(`[BLOG_FLOW] ⚠️ 완전성 미달 — title=${!!artifact.title}, h2=${h2Count}, textLen=${textOnly.length}`);
       }
 
-      // artifact.warnings → UI warning (이미지 실패 등)
+      // artifact.warnings → UI warning (이미지 fallback 안내)
       const imageWarning = artifact.imageMeta.failCount > 0
-        ? `본문은 정상 생성되었습니다. 이미지 ${artifact.imageMeta.failCount}장은 AI 서버 과부하로 생성에 실패했습니다.`
+        ? `일부 이미지(${artifact.imageMeta.failCount}장)는 대체 이미지로 제공되었습니다. 해당 이미지를 클릭하면 AI 이미지로 교체할 수 있습니다.`
         : null;
       console.info(`[BLOG_FLOW] setBlogState 호출 직전 — data 존재: ${!!result}, isLoading: false`);
       targetSetState({ isLoading: false, error: null, warning: imageWarning, data: result, progress: '' });
