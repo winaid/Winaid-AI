@@ -76,8 +76,10 @@ export const DEFAULT_IMAGE_STYLE = 'illustration';
 // 생성 전체 타임아웃
 // ══════════════════════════════════════════════
 
-/** UI hard timeout — 무한 로딩 방지 */
-export const GENERATION_HARD_TIMEOUT_MS = 150_000;
+/** UI hard timeout — 무한 로딩 방지
+ * 텍스트 생성(~120s) + 이미지 wall cap(~50s) + 저장(~10s) = ~180s
+ * 여유 30s 포함하여 210s. 이보다 짧으면 정상 완료 전 강제 해제 위험. */
+export const GENERATION_HARD_TIMEOUT_MS = 210_000;
 
 // ══════════════════════════════════════════════
 // 섹션 재생성 / FAQ

@@ -104,7 +104,9 @@ export const saveGeneratedPost = async (data: SavePostData): Promise<{
     data.content = stripBase64FromHtml(data.content);
 
     // 🛡️안전망 2: blob: URL strip (blob URL은 세션 한정이므로 저장해도 재로드 시 깨짐)
-    data.content = data.content.replace(/src="blob:[^"]*"/gi, 'src=""');
+    // src="" 대신 투명 GIF placeholder로 교체하여 broken image 아이콘 방지
+    const PLACEHOLDER = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+    data.content = data.content.replace(/src="blob:[^"]*"/gi, `src="${PLACEHOLDER}"`);
 
     const strippedBytes = (preStripLen - data.content.length) * 2;
     if (strippedBytes > 0) {
