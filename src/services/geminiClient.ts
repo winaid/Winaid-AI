@@ -85,7 +85,7 @@ async function getAuthToken(): Promise<string | null> {
     const { supabase } = await import('../lib/supabase');
     const { data: { session } } = await supabase.auth.getSession();
     const token = session?.access_token || null;
-    console.info(`[AUTH] getAuthToken: ${token ? `JWT 있음 (len=${token.length}, prefix=${token.substring(0, 10)}…)` : 'JWT 없음 (세션 없음)'}`);
+    console.debug(`[AUTH] getAuthToken: ${token ? 'JWT 있음' : 'JWT 없음'}`);
     return token;
   } catch (e) {
     console.warn('[GEN_STEP] getAuthToken 예외:', e);
@@ -99,7 +99,7 @@ function getAdminToken(): string | null {
     const isAdmin = sessionStorage.getItem('ADMIN_AUTHENTICATED') === 'true';
     const token = sessionStorage.getItem('ADMIN_TOKEN');
     if (isAdmin && token) {
-      console.info('[AUTH] getAdminToken: 관리자 토큰 있음');
+      console.debug('[AUTH] getAdminToken: 있음');
       return token;
     }
     return null;
@@ -138,11 +138,7 @@ export async function deductCreditOnServer(postType: string): Promise<{
   //   console.warn('[GEN_STEP] deductCredit: JWT 없음, 관리자 토큰 없음 → authentication_required');
   //   return { success: false, error: 'authentication_required', message: '로그인이 필요합니다.' };
   // }
-  if (!token && !adminToken) {
-    console.info('[GEN_STEP] deductCredit: 인증 없음 — anonymous 모드로 프록시 호출');
-  }
-
-  console.info(`[GEN_STEP] deductCredit 시작 — jwt=${!!token}, admin=${!!adminToken}, postType=${postType}`);
+  console.debug(`[GEN_STEP] deductCredit 시작 — jwt=${!!token}, admin=${!!adminToken}, postType=${postType}`);
 
   const endpoint = getGeminiEndpoint();
   try {
@@ -187,7 +183,7 @@ async function getProxyHeaders(): Promise<Record<string, string>> {
   const adminToken = getAdminToken();
   if (adminToken) headers['X-Admin-Token'] = adminToken;
   if (_currentGenerationToken) headers['X-Generation-Token'] = _currentGenerationToken;
-  console.info(`[AUTH] proxyHeaders: Authorization=${headers['Authorization'] ? `Bearer …${headers['Authorization'].length}ch` : 'NONE'}, X-Admin-Token=${headers['X-Admin-Token'] ? `있음(${headers['X-Admin-Token'].length}ch)` : 'NONE'}, X-Generation-Token=${headers['X-Generation-Token'] ? '있음' : 'NONE'}`);
+  console.debug(`[AUTH] proxyHeaders: auth=${!!headers['Authorization']}, admin=${!!headers['X-Admin-Token']}, gen=${!!headers['X-Generation-Token']}`);
   return headers;
 }
 
@@ -397,7 +393,7 @@ export async function callGeminiRaw(model: string, apiBody: any, timeout: number
     if (!response.ok) {
       // 404: 프록시 라우트 자체가 없음 — CORS와 혼동되는 핵심 원인
       if (response.status === 404) {
-        console.error(`[RAW] ⛔ ${model} 404 ${ms}ms — 프록시 라우트 미존재! endpoint: ${endpoint}`);
+        console.error(`[RAW] ⛔ ${model} 404 ${ms}ms — 프록시 라우트 미존재!`);
         const error: any = new Error('프록시 서버에 /api/gemini 라우트가 없습니다 (404). Vercel 배포 설정을 확인하세요.');
         error.status = 404;
         error.errorType = 'route_not_found';

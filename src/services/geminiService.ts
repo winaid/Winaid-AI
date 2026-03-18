@@ -32,6 +32,25 @@ import {
   applyCardNewsStyles,
   wrapFinalHtml,
 } from "./resultAssembler";
+import {
+  STAGE_A_TIMEOUT_MS,
+  STAGE_B_SECTION_TIMEOUT_MS,
+  STAGE_B_BATCH_SIZE,
+  STAGE_B_INTRO_TIMEOUT_MS,
+  STAGE_B_CONCLUSION_TIMEOUT_MS,
+  STAGE_C_POLISH_TIMEOUT_MS,
+  STAGE_C_MAX_RETRIES,
+  STAGE_C_NO_AUTO_FALLBACK,
+  SEARCH_TIMEOUT_MS,
+  DEFAULT_BLOG_IMAGE_COUNT,
+  DEFAULT_CARD_NEWS_SLIDE_COUNT,
+  BLOG_IMAGE_RATIO,
+  CARD_NEWS_IMAGE_RATIO,
+  DEFAULT_IMAGE_STYLE,
+  DEFAULT_MEDICAL_LAW_MODE,
+  SECTION_REGEN_TIMEOUT_MS,
+  SMART_BLOCK_FAQ_TIMEOUT_MS,
+} from "../core/generation/contracts";
 
 // Gemini API 핵심 인프라는 geminiClient.ts에서 import됨
 
@@ -756,8 +775,7 @@ ${JSON.stringify(searchResults?.collected_facts?.slice(0, 3) || [], null, 2)}`;
   // ── 성능 카운터 ──
   const demoSafe = isDemoSafeMode();
   // 섹션 생성은 FLASH 직행 — PRO는 최종 polish(Stage C)에서만 사용
-  const FLASH_SECTION_TIMEOUT = 25000;
-  console.info(`[PIPELINE] ⚙️ config: sectionModel=FLASH flashTimeoutMs=${FLASH_SECTION_TIMEOUT} proPolish=StageC demoSafe=${demoSafe}`);
+  console.info(`[PIPELINE] ⚙️ config: sectionModel=FLASH flashTimeoutMs=${STAGE_B_SECTION_TIMEOUT_MS} proPolish=StageC demoSafe=${demoSafe}`);
 
   // ── 도입부 생성 함수 ──
   const generateIntro = async (): Promise<string> => {
@@ -833,7 +851,7 @@ ${JSON.stringify(searchResults?.collected_facts?.slice(i, i + 2) || [], null, 2)
       systemPrompt: sectionSystemPrompt,
       model: GEMINI_MODEL.FLASH,
       responseType: 'text',
-      timeout: FLASH_SECTION_TIMEOUT,
+      timeout: STAGE_B_SECTION_TIMEOUT_MS,
       temperature: 0.75,
     });
     const html = typeof result === 'string' ? result.trim() : '';
@@ -848,7 +866,7 @@ ${JSON.stringify(searchResults?.collected_facts?.slice(i, i + 2) || [], null, 2)
   };
 
   // ── 도입부 + 섹션 배치 병렬 실행 ──
-  const BATCH_SIZE = 2;
+  const BATCH_SIZE = STAGE_B_BATCH_SIZE;
   const sectionHtmls: string[] = new Array(outline.sections.length).fill('');
   const sectionSummaries: string[] = [];
 
@@ -1021,7 +1039,7 @@ ${sectionSummaries.join('\n')}`;
 
   const rawHtml = `${introHtml}\n${sectionHtmls.join('\n')}\n${conclusionHtml}`;
   const integrationPrompt = getPipelineIntegrationPrompt(targetLength);
-  const FLASH_POLISH_TIMEOUT = 12000;
+  const FLASH_POLISH_TIMEOUT = STAGE_C_POLISH_TIMEOUT_MS;
 
   // Stage C를 비동기 promise로 생성 — 이미지 생성과 병렬 실행 가능
   // 실패 시 rawHtml을 안전하게 반환 (pre-polish fallback)
@@ -1072,7 +1090,7 @@ ${sectionSummaries.join('\n')}`;
 
   // 이미지 프롬프트 생성 — 사용자 선택 수량 계약 준수
   // selectedImageCount = 사용자가 선택한 정확한 수량 (0~5). 이 값이 최종 목표.
-  const selectedImageCount = request.imageCount ?? 1;
+  const selectedImageCount = request.imageCount ?? DEFAULT_BLOG_IMAGE_COUNT;
   const imagePrompts: string[] = [];
   // 사용된 sceneType 기록 — 연속 중복 방지용
   const usedSceneTypes: string[] = [];
@@ -1555,7 +1573,7 @@ style 속성에 background: ${bgGradient}; 반드시 포함!
 `,
   };
   const personaPrompt = personaPromptMap[request.persona || 'hospital_info'] || '';
-  const imageStyle = request.imageStyle || 'illustration'; // 기본값: 3D 일러스트
+  const imageStyle = request.imageStyle || DEFAULT_IMAGE_STYLE;
   
   // 학습된 말투 스타일 적용
   // 우선순위: 1) 수동 학습(localStorage) → 2) 병원 블로그 학습(Supabase)
@@ -2185,7 +2203,7 @@ JSON 형식으로 응답:
     console.info('• 질병관리청 최신 정보 검색 시작');
       
       // 🔵 Gemini 검색 실행 (타임아웃 90초)
-      const SEARCH_TIMEOUT = 90000; // 90초 타임아웃
+      const SEARCH_TIMEOUT = SEARCH_TIMEOUT_MS;
       
       const geminiSearchPromise = (async () => {
         try {
@@ -3187,12 +3205,12 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
   }
   
   const styleName = STYLE_NAMES[request.imageStyle] || STYLE_NAMES.illustration;
-  const imgRatio = request.postType === 'card_news' ? "4:3" : "16:9";
+  const imgRatio = request.postType === 'card_news' ? CARD_NEWS_IMAGE_RATIO : BLOG_IMAGE_RATIO;
   
   safeProgress(`🎨 ${styleName} 스타일로 ${imgRatio} 이미지 생성 중...`);
   
   // selectedImageCount: 사용자 선택 수량 (0~5) — 이것이 최종 목표
-  const selectedImageCount = request.postType === 'card_news' ? (request.slideCount || 6) : (request.imageCount ?? 1);
+  const selectedImageCount = request.postType === 'card_news' ? (request.slideCount || DEFAULT_CARD_NEWS_SLIDE_COUNT) : (request.imageCount ?? DEFAULT_BLOG_IMAGE_COUNT);
   const maxImages = selectedImageCount;
 
   console.info(`[IMG-CONTRACT] selected=${selectedImageCount} maxImages=${maxImages} postType=${request.postType} promptsAvailable=${textData.imagePrompts?.length || 0}`);

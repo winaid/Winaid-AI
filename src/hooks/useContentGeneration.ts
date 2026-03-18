@@ -1,5 +1,7 @@
 import { useState, useCallback, useRef, RefObject } from 'react';
 import { GenerationRequest, GenerationState } from '../types';
+import { GENERATION_HARD_TIMEOUT_MS } from '../core/generation/contracts';
+import { runCreditGate } from '../core/generation/policies';
 
 type ContentTabType = 'blog' | 'refine' | 'card_news' | 'press' | 'image' | 'history';
 
@@ -36,8 +38,7 @@ const initialState: GenerationState = {
   progress: '',
 };
 
-// 전체 생성 프로세스 hard timeout (무한 로딩 방지)
-const GENERATION_HARD_TIMEOUT_MS = 150_000; // 150초
+// GENERATION_HARD_TIMEOUT_MS → core/generation/contracts.ts에서 import
 
 export function useContentGeneration(deps: ContentGenerationDeps): ContentGenerationState {
   const [state, setState] = useState<GenerationState>(initialState);
@@ -115,41 +116,19 @@ export function useContentGeneration(deps: ContentGenerationDeps): ContentGenera
       return;
     }
 
-    // TODO: 2026-03-29 인증/크레딧 복구 시 아래 블록의 주석을 해제할 것
-    // 현재는 임시 optional 모드 — 크레딧 차감 + generation token 발급 스킵
-    // ── 원본 시작 ──
-    // console.info('[GEN_STEP] credit check start');
-    // try {
-    //   const { deductCreditOnServer, clearGenerationToken } = await import('../services/geminiClient');
-    //   clearGenerationToken();
-    //   const deductResult = await deductCreditOnServer(request.postType);
-    //   console.info(`[GEN_STEP] credit check result: success=${deductResult.success}, error=${deductResult.error || 'none'}`);
-    //   if (!deductResult.success) {
-    //     console.warn(`[GEN_STEP] early return reason=credit_fail: ${deductResult.error} — ${deductResult.message}`);
-    //     earlyTargetSetState(prev => ({
-    //       ...prev,
-    //       isLoading: false,
-    //       error: deductResult.message || '크레딧이 부족합니다.',
-    //     }));
-    //     isGeneratingRef.current = false;
-    //     return;
-    //   }
-    //   console.info('[GEN_STEP] credit check pass');
-    // } catch (e: any) {
-    //   console.error(`[GEN_STEP] credit check exception: ${e?.message || e}`);
-    //   earlyTargetSetState(prev => ({
-    //     ...prev,
-    //     isLoading: false,
-    //     error: '크레딧 확인에 실패했습니다. 다시 시도해주세요.',
-    //   }));
-    //   isGeneratingRef.current = false;
-    //   return;
-    // }
-    // ── 원본 끝 ──
-    console.info('[GEN_STEP] optional mode — skip deductCreditOnServer, no generation token');
-    // generation token 없이 진행 — 프록시가 anonymous unmetered 허용
-
-    console.info('[GEN_STEP] auth+credit passed, entering pipeline');
+    // ── 크레딧 게이트: 접근 모드에 따라 자동 분기 ──
+    // anonymous_demo → 즉시 통과, authenticated_metered → 크레딧 차감
+    // 전환: core/generation/contracts.ts의 DEFAULT_ACCESS_MODE만 변경
+    const creditResult = await runCreditGate(request.postType);
+    if (!creditResult.allowed) {
+      earlyTargetSetState(prev => ({
+        ...prev,
+        isLoading: false,
+        error: creditResult.message || '크레딧이 부족합니다.',
+      }));
+      isGeneratingRef.current = false;
+      return;
+    }
 
     // 카드뉴스: 3단계 워크플로우
     if (request.postType === 'card_news') {
@@ -249,7 +228,7 @@ export function useContentGeneration(deps: ContentGenerationDeps): ContentGenera
         const storageKB = Math.round(contentForSave.length * 2 / 1024);
         const hasBlobLeak = contentForSave.includes('blob:');
         const hasBase64Leak = contentForSave.includes('data:image/');
-        console.info(`[STORAGE] saveContentToServer | display=${result.htmlContent.length}자(${displayKB}KB) | storage=${contentForSave.length}자(${storageKB}KB) | blob잔류=${hasBlobLeak} | base64잔류=${hasBase64Leak}`);
+        console.debug(`[STORAGE] saveContentToServer | display=${displayKB}KB | storage=${storageKB}KB`);
         if (storageKB > 500) {
           console.error(`[STORAGE] ⚠️ storage payload ${storageKB}KB — 비정상 크기! storageHtml 경로 점검 필요`);
         }
