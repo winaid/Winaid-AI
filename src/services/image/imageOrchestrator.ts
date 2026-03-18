@@ -47,7 +47,7 @@ export function setDemoSafeMode(enabled: boolean): void {
 
 const TIER_CONCURRENCY: Record<ModelTier, number> = {
   pro: 1,
-  nb2: 1,
+  nb2: 2,  // hero+sub 또는 sub+sub 병렬 — 직렬 대기 시간 40-50% 감소
 };
 
 const IMAGE_TIMEOUT: Record<ImageGenMode, Record<ImageRole, number>> = {
@@ -85,7 +85,7 @@ async function acquireImageSlot(idx: number, total: number, role: ImageRole, tie
 
     if (_activeJobs[tier] >= maxC) {
       if (isImgDebug()) console.debug(`[IMG-Q] slot-wait idx=${idx} tier=${tier} active=${_activeJobs[tier]}/${maxC}`);
-      await new Promise(r => setTimeout(r, 1000 + Math.random() * 500));
+      await new Promise(r => setTimeout(r, 400 + Math.random() * 300));
       continue;
     }
 
@@ -211,7 +211,8 @@ export const generateBlogImage = async (
 
   // ── auto tier 결정 ──
   const startTier = resolveStartTier(role, demoSafe);
-  console.info(`[IMG-TIER] role=${role} startTier=${startTier} mode=${mode} timeout=${timeout}ms wallCap=50s`);
+  const wallCapMs = isHero ? 50_000 : 30_000;
+  console.info(`[IMG-TIER] role=${role} startTier=${startTier} mode=${mode} timeout=${timeout}ms wallCap=${wallCapMs / 1000}s`);
 
   // ── 시도 체인: startTier에 따라 동적으로 구성 ──
   let chain: AttemptDef[];
@@ -243,7 +244,7 @@ export const generateBlogImage = async (
   const maxAttempts = chain.length;
 
   // ── wall time cap: hero 50s / sub 30s (sub는 속도 우선, 빠른 fallback) ──
-  const WALL_TIME_CAP_MS = isHero ? 50_000 : 30_000;
+  const WALL_TIME_CAP_MS = wallCapMs;
   const wallStart = Date.now();
 
   let lastError: any = null;
@@ -314,6 +315,14 @@ export const generateBlogImage = async (
       if (attempt < maxAttempts - 1) {
         const nextTier = chain[attempt + 1]?.tier;
         const isCrossTier = nextTier && nextTier !== tier;
+
+        // sub에서 서버 과부하(timeout/503/cooldown) → 2차 시도 건너뛰고 바로 template
+        // 같은 서버에 같은 tier로 재시도해도 다시 timeout될 확률이 높아 wall time만 낭비
+        // SAFETY/RECITATION/no_data 등 프롬프트 문제는 ultra-minimal로 재시도 가치 있음
+        if (!isHero && !isCrossTier && (parsed.isTimeout || parsed.isUpstream503 || parsed.isCooldown)) {
+          console.info(`[IMG-SKIP-RETRY] type=${role} reason=${parsed.errorType} → skip remaining attempts, fast-template`);
+          break;
+        }
 
         // 빠른 downgrade: 503/504/timeout/cooldown → 즉시 다음 시도로 전환
         if (isCrossTier) {
@@ -403,10 +412,11 @@ export async function generateImageQueue(
       const elapsedMs = Date.now() - t0;
       const isAi = imgResult.resultType === 'ai-image';
 
+      const elapsedSec = Math.round(elapsedMs / 1000);
       if (isAi) {
-        safeProgress(`✅ 이미지 ${item.index + 1}/${totalImages}장 완료`);
+        safeProgress(`✅ 이미지 ${item.index + 1}/${totalImages}장 완료 (${elapsedSec}초)`);
       } else {
-        safeProgress(`🎨 이미지 ${item.index + 1}/${totalImages}장 대체 렌더 적용`);
+        safeProgress(`🎨 이미지 ${item.index + 1}/${totalImages}장 대체 렌더 적용 (${elapsedSec}초)`);
       }
 
       results.push({
