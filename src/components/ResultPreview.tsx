@@ -475,6 +475,12 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
     }
   };
 
+  // ── [Layer 3] Draft Persistence ──────────────────────────────
+  // localStorage 기반 임시저장. 브라우저 세션 유지 / 편집 복구 목적.
+  // 서버 저장(Layer 1, 2)과는 독립된 계층이다.
+  // 상수: AUTOSAVE_KEY, AUTOSAVE_HISTORY_KEY (resultPreviewUtils.ts)
+  // ────────────────────────────────────────────────────────────
+
   // 자동저장 히스토리 불러오기
   useEffect(() => {
     try {

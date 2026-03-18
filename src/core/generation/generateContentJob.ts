@@ -183,7 +183,7 @@ async function _orchestrateCardNews(
   const { generateSingleImage } = await import('../../services/image/cardNewsImageService');
   const { generateCardNewsWithAgents } = await import('../../services/cardNewsService');
   const { MEDICAL_DISCLAIMER } = await import('../../services/resultAssembler');
-  const { saveGeneratedPost } = await import('../../services/postStorageService');
+  const { persistGeneratedPost } = await import('./contentStorage');
   const { runAiSmellCheck, integrateAiSmellToFactCheck } = await import('../../services/geminiService');
 
   safeProgress('🤖 미니 에이전트 방식으로 카드뉴스 생성 시작...');
@@ -288,22 +288,12 @@ async function _orchestrateCardNews(
       safeProgress('✅ 카드뉴스 생성 완료!');
     }
 
-    // Supabase에 저장 (비동기)
-    saveGeneratedPost({
-      hospitalName: request.hospitalName,
-      category: request.category,
-      doctorName: request.doctorName,
-      doctorTitle: request.doctorTitle,
+    // [Layer 1] Result Persistence — Supabase generated_posts
+    persistGeneratedPost(request, {
       postType: 'card_news',
       title: agentResult.title,
-      content: finalHtml,
-      keywords: request.keywords?.split(',').map(k => k.trim()),
-      topic: request.topic,
-      imageStyle: request.imageStyle,
-      slideCount: images.length
-    }).then(result => {
-      if (result.success) console.log('✅ 카드뉴스 저장 완료:', result.postId);
-      else console.warn('⚠️ 카드뉴스 저장 실패:', result.error);
+      contentHtml: finalHtml,
+      slideCount: images.length,
     }).catch(err => console.warn('⚠️ 카드뉴스 저장 예외:', err));
 
     return {
@@ -348,8 +338,7 @@ async function _orchestrateBlog(
   const { generateSingleImage } = await import('../../services/image/cardNewsImageService');
   const { updateSessionFinalPayload } = await import('../../services/image/imageOrchestrator');
   const { callGemini, TIMEOUTS } = await import('../../services/geminiClient');
-  const { saveGeneratedPost } = await import('../../services/postStorageService');
-  const { saveBlogHistory } = await import('../../services/contentSimilarityService');
+  const { persistGeneratedPost, persistBlogHistory } = await import('./contentStorage');
   const {
     MEDICAL_DISCLAIMER,
     cleanMarkdownArtifacts,
@@ -763,32 +752,22 @@ async function _orchestrateBlog(
     const hasBlobInHistory = storageHtml.includes('blob:');
     const lightweightHtml = storageHtml.replace(/src="data:image\/[^"]*"/gi, 'src=""');
     console.info(`[STORAGE] saveBlogHistory lightweight | original=${storageHtml.length}자(${Math.round(storageHtml.length * 2 / 1024)}KB) | lightweight=${lightweightHtml.length}자(${Math.round(lightweightHtml.length * 2 / 1024)}KB) | imagesStripped=true | contentType=${embedSource} | contentLen=${blogHistoryContent.length}자 | blob잔류=${hasBlobInHistory}`);
-    saveBlogHistory(
-      textData.title,
-      blogHistoryContent,
+    // [Layer 2] History Persistence — Supabase blog_history (유사도 검사용)
+    persistBlogHistory({
+      title: textData.title,
+      plainText: blogHistoryContent,
       lightweightHtml,
-      request.keywords?.split(',').map(k => k.trim()) || [request.topic],
-      undefined,
-      request.category
-    ).catch(error => {
+      keywords: request.keywords?.split(',').map(k => k.trim()) || [request.topic],
+      category: request.category,
+    }).catch(error => {
       console.warn('⚠️ 블로그 이력 저장 실패 (무시):', error);
     });
 
-    // Supabase에 저장 (비동기)
-    saveGeneratedPost({
-      hospitalName: request.hospitalName,
-      category: request.category,
-      doctorName: request.doctorName,
-      doctorTitle: request.doctorTitle,
+    // [Layer 1] Result Persistence — Supabase generated_posts
+    persistGeneratedPost(request, {
       postType: 'blog',
       title: textData.title,
-      content: storageHtml,
-      keywords: request.keywords?.split(',').map(k => k.trim()),
-      topic: request.topic,
-      imageStyle: request.imageStyle
-    }).then(result => {
-      if (result.success) console.log('✅ 블로그 포스트 저장 완료:', result.postId);
-      else console.warn('⚠️ 블로그 포스트 저장 실패:', result.error);
+      contentHtml: storageHtml,
     }).catch(err => console.warn('⚠️ 블로그 포스트 저장 예외:', err));
 
     // 블로그 섹션 분리

@@ -1,23 +1,40 @@
 /**
- * contentStorage — ContentArtifact → 저장 레이어 어댑터
+ * contentStorage — 저장 레이어 어댑터
  *
- * 3개 계층을 명확히 분리한다:
- *   1. ContentArtifact: 생성 1회의 제품 단위 결과물 (contracts.ts)
- *   2. SaveContentPayload: API 서버(Cloudflare KV) 저장용 payload
- *   3. SaveContentRecord: 저장 후 서버가 반환하는 레코드 (id 포함)
+ * 저장 계층을 3개로 분류한다:
  *
- * UI 코드(훅, 컴포넌트)는 이 모듈의 함수만 호출하고,
- * 저장 필드를 직접 조합하지 않는다.
+ *   ┌─────────────────────────────────────────────────────────────┐
+ *   │ Layer 1: Result Persistence (결과 저장)                      │
+ *   │   대상: Cloudflare KV (saveArtifactToServer)                │
+ *   │         Supabase generated_posts (persistGeneratedPost)     │
+ *   │   시점: 생성 완료 직후, 비동기                                │
+ *   │   목적: 생성 결과의 영구 보존                                 │
+ *   ├─────────────────────────────────────────────────────────────┤
+ *   │ Layer 2: History Persistence (이력 저장)                     │
+ *   │   대상: Supabase blog_history (persistBlogHistory)          │
+ *   │   시점: 생성 완료 직후, 비동기                                │
+ *   │   목적: 유사도 검사용 이력, 임베딩 기반 중복 탐지              │
+ *   ├─────────────────────────────────────────────────────────────┤
+ *   │ Layer 3: Draft Persistence (임시저장)                        │
+ *   │   대상: localStorage (hospitalai_autosave)                   │
+ *   │   시점: 편집 중 실시간                                       │
+ *   │   목적: 브라우저 세션 유지, 편집 복구                          │
+ *   │   담당: ResultPreview.tsx (이 파일 범위 밖)                   │
+ *   └─────────────────────────────────────────────────────────────┘
+ *
+ * 호출자(generateContentJob, useContentGeneration)는
+ * 서비스 함수를 직접 import하지 않고 이 모듈의 함수만 사용한다.
  */
 
 import type { ContentArtifact } from './contracts';
 import type { SaveContentRequest, SaveContentResponse } from '../../services/apiService';
+import type { GenerationRequest } from '../../types';
 
 // ══════════════════════════════════════════════
-// 타입 정의
+// Layer 1: Result Persistence — 타입 + 어댑터
 // ══════════════════════════════════════════════
 
-/** API 서버 저장용 payload — ContentArtifact에서 변환 */
+/** API 서버(Cloudflare KV) 저장용 payload */
 export type SaveContentPayload = SaveContentRequest;
 
 /** 저장 완료 후 레코드 — 서버가 부여한 id 포함 */
@@ -29,22 +46,13 @@ export interface SaveContentRecord {
   createdAt: string;
 }
 
-// ══════════════════════════════════════════════
-// 어댑터 함수
-// ══════════════════════════════════════════════
-
 /**
  * ContentArtifact → SaveContentPayload 변환.
- *
- * storageHtml이 있으면 그대로 사용하고,
- * 없으면 htmlContent에서 base64/blob을 strip한다.
- *
- * UI 코드에서 저장 필드를 직접 조합하는 대신 이 함수를 사용하라.
+ * storageHtml 우선, 없으면 htmlContent에서 base64/blob strip.
  */
 export function buildSavePayload(artifact: ContentArtifact): SaveContentPayload {
   const content = artifact.content;
 
-  // storageHtml 우선, 없으면 htmlContent에서 base64/blob strip
   let contentForSave = content.storageHtml || '';
   if (!contentForSave) {
     contentForSave = content.htmlContent
@@ -53,7 +61,6 @@ export function buildSavePayload(artifact: ContentArtifact): SaveContentPayload 
     console.warn('[STORAGE] storageHtml 없음 — htmlContent에서 base64/blob strip 후 저장');
   }
 
-  // 페이로드 크기 진단
   const storageKB = Math.round(contentForSave.length * 2 / 1024);
   if (storageKB > 500) {
     console.error(`[STORAGE] ⚠️ storage payload ${storageKB}KB — 비정상 크기! storageHtml 경로 점검 필요`);
@@ -73,9 +80,7 @@ export function buildSavePayload(artifact: ContentArtifact): SaveContentPayload 
 }
 
 /**
- * ContentArtifact를 API 서버에 저장하고 결과를 반환한다.
- *
- * UI 훅에서 직접 saveContentToServer를 호출하는 대신 이 함수를 사용하라.
+ * [Layer 1] ContentArtifact → API 서버(Cloudflare KV) 저장.
  */
 export async function saveArtifactToServer(
   artifact: ContentArtifact,
@@ -89,3 +94,80 @@ export async function saveArtifactToServer(
 
   return saveContentToServer(payload);
 }
+
+/**
+ * [Layer 1] 생성 결과를 Supabase generated_posts에 저장.
+ *
+ * generateContentJob에서 직접 saveGeneratedPost를 호출하는 대신 이 함수를 사용한다.
+ * 저장 의도(persist result)와 저장 구현(Supabase INSERT)을 분리.
+ */
+export async function persistGeneratedPost(
+  request: GenerationRequest,
+  opts: {
+    postType: 'blog' | 'card_news' | 'press_release';
+    title: string;
+    contentHtml: string;
+    slideCount?: number;
+  },
+): Promise<void> {
+  const { saveGeneratedPost } = await import('../../services/postStorageService');
+
+  const result = await saveGeneratedPost({
+    hospitalName: request.hospitalName,
+    category: request.category,
+    doctorName: request.doctorName,
+    doctorTitle: request.doctorTitle,
+    postType: opts.postType,
+    title: opts.title,
+    content: opts.contentHtml,
+    keywords: request.keywords?.split(',').map(k => k.trim()),
+    topic: request.topic,
+    imageStyle: request.imageStyle,
+    slideCount: opts.slideCount,
+  });
+
+  if (result.success) {
+    console.log(`✅ ${opts.postType} 저장 완료:`, result.postId);
+  } else {
+    console.warn(`⚠️ ${opts.postType} 저장 실패:`, result.error);
+  }
+}
+
+// ══════════════════════════════════════════════
+// Layer 2: History Persistence — 어댑터
+// ══════════════════════════════════════════════
+
+/**
+ * [Layer 2] 블로그 이력을 Supabase blog_history에 저장.
+ *
+ * 유사도 검사용 이력 저장. generateContentJob에서 직접
+ * saveBlogHistory를 호출하는 대신 이 함수를 사용한다.
+ */
+export async function persistBlogHistory(
+  opts: {
+    title: string;
+    plainText: string;
+    lightweightHtml: string;
+    keywords: string[];
+    naverUrl?: string;
+    category?: string;
+  },
+): Promise<void> {
+  const { saveBlogHistory } = await import('../../services/contentSimilarityService');
+
+  await saveBlogHistory(
+    opts.title,
+    opts.plainText,
+    opts.lightweightHtml,
+    opts.keywords,
+    opts.naverUrl,
+    opts.category,
+  );
+}
+
+// ══════════════════════════════════════════════
+// Layer 3: Draft Persistence
+// ══════════════════════════════════════════════
+// localStorage 기반 임시저장은 ResultPreview.tsx에서 관리.
+// 이 파일에서는 관여하지 않는다 — 계층만 선언.
+// 상수는 resultPreviewUtils.ts의 AUTOSAVE_KEY / AUTOSAVE_HISTORY_KEY 참조.
