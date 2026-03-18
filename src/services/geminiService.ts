@@ -39,15 +39,12 @@ import {
   STAGE_B_INTRO_TIMEOUT_MS,
   STAGE_B_CONCLUSION_TIMEOUT_MS,
   STAGE_C_POLISH_TIMEOUT_MS,
-  STAGE_C_MAX_RETRIES,
-  STAGE_C_NO_AUTO_FALLBACK,
   SEARCH_TIMEOUT_MS,
   DEFAULT_BLOG_IMAGE_COUNT,
   DEFAULT_CARD_NEWS_SLIDE_COUNT,
   BLOG_IMAGE_RATIO,
   CARD_NEWS_IMAGE_RATIO,
   DEFAULT_IMAGE_STYLE,
-  DEFAULT_MEDICAL_LAW_MODE,
   SECTION_REGEN_TIMEOUT_MS,
   SMART_BLOCK_FAQ_TIMEOUT_MS,
 } from "../core/generation/contracts";
@@ -732,7 +729,7 @@ ${JSON.stringify(searchResults?.collected_facts?.slice(0, 3) || [], null, 2)}`;
         systemPrompt: outlinePrompt,
         model: GEMINI_MODEL.FLASH,
         responseType: 'json',
-        timeout: 30000,
+        timeout: STAGE_A_TIMEOUT_MS,
         temperature: 0.7,
       });
       if (outlineResponse?.outline || outlineResponse?.sections) break;
@@ -801,7 +798,7 @@ ${JSON.stringify(searchResults?.collected_facts?.slice(0, 2) || [], null, 2)}`;
       systemPrompt: introPrompt + hospitalStyleSuffix,
       model: GEMINI_MODEL.FLASH,
       responseType: 'text',
-      timeout: 30000,
+      timeout: STAGE_B_INTRO_TIMEOUT_MS,
       temperature: 0.85,
     });
     const html = typeof introResult === 'string' ? introResult.trim() : '';
@@ -975,7 +972,7 @@ ${sectionSummaries.join('\n')}`;
       systemPrompt: conclusionPrompt + hospitalStyleSuffix,
       model: GEMINI_MODEL.FLASH,
       responseType: 'text',
-      timeout: 30000,
+      timeout: STAGE_B_CONCLUSION_TIMEOUT_MS,
       temperature: 0.75,
     });
     conclusionHtml = typeof conclusionResult === 'string' ? conclusionResult.trim() : '';
@@ -1177,7 +1174,7 @@ export const regenerateSection = async (
     systemPrompt: prompt,
     model: GEMINI_MODEL.PRO,
     responseType: 'text',
-    timeout: 45000,
+    timeout: SECTION_REGEN_TIMEOUT_MS,
     temperature: 0.85,
   });
 
@@ -1226,7 +1223,7 @@ export const generateSmartBlockFaq = async (
     systemPrompt: smartBlockPrompt,
     model: GEMINI_MODEL.PRO,
     responseType: 'json',
-    timeout: 30000,
+    timeout: SMART_BLOCK_FAQ_TIMEOUT_MS,
     temperature: 0.6,
   });
 
