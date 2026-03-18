@@ -376,7 +376,7 @@ export default function ScheduleTemplatePage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 180, overflowY: 'auto' }}>
             {[...data.events].sort((a, b) => a.date - b.date).map(ev => {
               const typeLabel = EVENT_TYPE_OPTIONS.find(o => o.value === ev.type)?.label ?? ev.type;
-              const typeColor = colors[ev.type] ?? DEFAULT_COLORS[ev.type as keyof typeof DEFAULT_COLORS] ?? '#999';
+              const typeColor = (colors as any)[ev.type] ?? DEFAULT_COLORS[ev.type as keyof typeof DEFAULT_COLORS] ?? '#999';
               return (
                 <div key={ev.date} style={{
                   display: 'flex', alignItems: 'center', gap: 8,
@@ -515,7 +515,7 @@ export default function ScheduleTemplatePage() {
               로딩 중...
             </div>
           }>
-            <Component data={data} width={500} colors={colors} mode={viewMode} />
+            <Component data={data} width={500} {...{ colors } as any} mode={viewMode} />
           </Suspense>
         </div>
 

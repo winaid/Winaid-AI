@@ -176,6 +176,7 @@ export function useCardNewsWorkflow(): CardNewsWorkflowState & CardNewsWorkflowA
       setGlobalState({
         isLoading: false,
         error: null,
+        warning: null,
         data: {
           htmlContent: finalHtml,
           title: cardNewsScript.title,

@@ -132,7 +132,7 @@ export function useContentGeneration(deps: ContentGenerationDeps): ContentGenera
         return;
       }
       try {
-        await deps.handleGenerateCardNews(request, setState, deps.setContentTab);
+        await deps.handleGenerateCardNews(request, setState, deps.setContentTab as any);
       } finally {
         isGeneratingRef.current = false;
         import('../services/geminiClient').then(({ clearGenerationToken }) => clearGenerationToken()).catch(() => {});

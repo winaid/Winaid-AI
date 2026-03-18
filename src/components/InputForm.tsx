@@ -172,7 +172,7 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
       includeHospitalIntro: postType === 'blog' ? includeHospitalIntro : undefined,
       // 🏥 병원명 (공통) — 말투 적용은 명시 선택 시에만
       hospitalName: hospitalName || undefined,
-      hospitalStyleSource: hospitalExplicitlySelected && hospitalName ? 'explicit_selected_hospital' : 'generic_default',
+      hospitalStyleSource: (hospitalExplicitlySelected && hospitalName ? 'explicit_selected_hospital' : 'generic_default') as 'explicit_selected_hospital' | 'generic_default',
       hospitalWebsite: postType === 'press_release' ? hospitalWebsite : undefined,
       doctorName: postType === 'press_release' ? doctorName : undefined,
       doctorTitle: postType === 'press_release' ? doctorTitle : undefined,

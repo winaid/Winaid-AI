@@ -55,7 +55,7 @@ app.post('/api/openai-chat', async (c) => {
 
     if (!openaiResponse.ok) {
       console.error('❌ OpenAI API Error:', responseData);
-      return c.json(responseData, { status: openaiResponse.status, headers: corsHeaders });
+      return c.json(responseData, { status: openaiResponse.status, headers: corsHeaders } as any);
     }
 
     console.log('✅ OpenAI API Success');
@@ -114,7 +114,7 @@ app.post('/api/crawler', async (c) => {
     if (!response.ok) {
       return c.json(
         { error: 'Failed to fetch URL', status: response.status },
-        { status: response.status, headers: corsHeaders }
+        { status: response.status, headers: corsHeaders } as any
       );
     }
 

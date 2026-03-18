@@ -161,7 +161,7 @@ const App: React.FC = () => {
           <HomeDashboard
             darkMode={darkMode}
             onSelectTab={setContentTab}
-            onSetTopic={(topic) => setState(prev => ({ ...prev, blog: { ...prev.blog, topic } }))}
+            onSetTopic={(topic) => setState(prev => ({ ...prev, blog: { ...(prev as any).blog, topic } }))}
             onShowUserManual={() => setShowUserManual(true)}
           />
         ) :
@@ -179,12 +179,12 @@ const App: React.FC = () => {
             cardNewsScript={cardNewsScript}
             pendingRequest={pendingRequest}
             onSubmit={(req) => { setHasGenerated(true); handleGenerate(req); }}
-            onTabChange={setContentTab}
+            onTabChange={setContentTab as any}
             onApprovePrompts={() => handleApprovePrompts(getCurrentSetState())}
             onBackToScript={handleBackToScript}
             onEditPrompts={handleEditPrompts}
-            onApproveScript={handleApproveScript}
-            onRegenerateScript={handleRegenerateScript}
+            onApproveScript={handleApproveScript as any}
+            onRegenerateScript={handleRegenerateScript as any}
             onEditScript={handleEditScript}
           />
         )}
