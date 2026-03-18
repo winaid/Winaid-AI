@@ -2,9 +2,9 @@
  * contentQualityService — 콘텐츠 품질 검사 SOT
  *
  * AI 냄새 검사와 FactCheck 통합의 단일 출처.
- * geminiService.ts와 postProcessingService.ts에서 중복된 함수를 통합.
+ * 구 geminiService.ts와 구 postProcessingService.ts에서 중복되었던 함수를 통합한 모듈.
  *
- * 소비자: generateContentJob, postProcessingService, pressReleaseService 등
+ * 소비자: generateContentJob, contentEditorService, pressReleaseService 등
  */
 
 import { Type } from '@google/genai';
@@ -128,7 +128,7 @@ export function evaluateContentQuality(htmlContent: string): FactCheckReport {
   return integrateAiSmellToFactCheck(baseFactCheck, aiSmellResult);
 }
 
-// ── LLM 기반 AI 냄새 상세 분석 (postProcessingService.ts에서 이동) ──
+// ── LLM 기반 AI 냄새 상세 분석 (구 postProcessingService.ts에서 이동됨) ──
 
 /**
  * AI 냄새 상세 분석 함수 (LLM 기반)
@@ -350,7 +350,7 @@ JSON 형식으로 응답해주세요.`;
   }
 };
 
-// ── LLM 기반 AI 냄새 재검사 (postProcessingService.ts에서 이동) ──
+// ── LLM 기반 AI 냄새 재검사 (구 postProcessingService.ts에서 이동됨) ──
 
 /**
  * AI 냄새 재검사 함수 (수동 재생성 후 사용)

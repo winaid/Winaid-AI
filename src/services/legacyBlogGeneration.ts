@@ -5,7 +5,7 @@
  * 이 파일은 파이프라인 실패 시 폴백 전용으로만 사용된다.
  * 새 기능 추가 금지 — 유지만 할 것.
  *
- * 원본: geminiService.ts에서 분리 (2024-03)
+ * 원본: 구 geminiService.ts에서 분리됨 (2024-03, 현재 독립 모듈)
  * 사용처: core/generation/generateContentJob.ts (_orchestrateBlog 폴백)
  */
 import { Type } from "@google/genai";

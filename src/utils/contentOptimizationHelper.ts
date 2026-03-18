@@ -1,6 +1,6 @@
 /**
  * 콘텐츠 최적화 헬퍼 함수
- * geminiService.ts에서 쉽게 사용할 수 있도록 통합된 인터페이스 제공
+ * 생성 서비스(blogPipelineService, legacyBlogGeneration 등)에서 사용하는 통합 인터페이스
  */
 
 import { optimizePrompt, estimateTokens } from './promptOptimizer';
@@ -37,7 +37,7 @@ export function prepareOptimizedPrompt(
   });
 
   // 2. 사람같은 글쓰기 규칙 추가
-  const humanRules = generateHumanWritingPrompt(category, tone);
+  const humanRules = generateHumanWritingPrompt();
 
   // 3. 결합
   const finalPrompt = optimized + '\n\n' + humanRules;

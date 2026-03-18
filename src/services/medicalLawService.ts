@@ -286,7 +286,7 @@ export async function checkMedicalLawUpdates(): Promise<{
       return { hasUpdates: false };
     }
 
-    const data = await response.json();
+    const data = await response.json() as { hasUpdates: boolean; latestUpdate?: { date: string; title: string; url: string } };
     return data;
   } catch (error) {
     // 에러를 조용히 처리 (API가 없어도 정상 동작)

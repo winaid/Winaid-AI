@@ -65,9 +65,9 @@ import { generateBlogWithPipeline } from '../blogPipelineService';
 const mockCallGemini = vi.mocked(callGemini);
 
 const REQ = {
-  topic: '임플란트 수술 과정과 주의사항', keywords: '강남 임플란트', category: '치과' as any,
-  postType: 'blog' as any, textLength: 1500, imageCount: 1, imageStyle: 'photo' as any, medicalLawMode: 'strict' as const,
-};
+  topic: '임플란트 수술 과정과 주의사항', keywords: '강남 임플란트', category: '치과',
+  postType: 'blog', textLength: 1500, imageCount: 1, imageStyle: 'photo', medicalLawMode: 'strict',
+} as any;
 const SEARCH = { collected_facts: [{ source: 'test', content: '임플란트는 인공 치근을 식립하는 시술입니다.' }] };
 
 // ── Mock setup ──

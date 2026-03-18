@@ -1,8 +1,8 @@
 /**
  * searchService — 의료 정보 검색 SOT
  *
- * geminiService.ts와 pressReleaseService.ts에서 중복된
- * searchKDCA, searchHospitalSites, callGeminiWithSearch를 단일화.
+ * 구 geminiService.ts와 pressReleaseService.ts에서 중복되었던
+ * searchKDCA, searchHospitalSites, callGeminiWithSearch를 단일화한 모듈.
  */
 
 import { callGemini, GEMINI_MODEL } from './geminiClient';

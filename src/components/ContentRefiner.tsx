@@ -125,7 +125,7 @@ const ContentRefiner: React.FC<ContentRefinerProps> = ({ onClose, onNavigate, da
             });
             
             if (response.ok) {
-              const data = await response.json();
+              const data = await response.json() as { content: string };
               crawledContent += `\n\n[${fullUrl}에서 크롤링한 내용]\n${data.content}\n`;
               console.log('✅ 크롤링 성공:', data.content.substring(0, 100));
             } else {

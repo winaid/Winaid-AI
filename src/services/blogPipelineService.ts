@@ -5,7 +5,7 @@
  * Stage B: 섹션별 초안 (FLASH, 병렬)
  * Stage C: 최종 polish (PRO or FLASH)
  *
- * 원본: geminiService.ts에서 분리 (2024-03)
+ * 원본: 구 geminiService.ts에서 분리됨 (2024-03, 현재 독립 모듈)
  * 사용처: core/generation/generateContentJob.ts (_orchestrateBlog 주 경로)
  * 테스트: services/__tests__/pipelineStageC.test.ts
  */

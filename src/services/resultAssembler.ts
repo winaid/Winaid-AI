@@ -1,7 +1,7 @@
 /**
  * Result Assembler — HTML 변환 파이프라인
  *
- * geminiService의 generateFullPost()에서 추출된 결과 조립 로직.
+ * 구 geminiService.generateFullPost()에서 추출된 결과 조립 로직 (현재 독립 모듈).
  * 생성된 텍스트 + 이미지를 최종 HTML로 변환하는 순수 변환 함수들.
  */
 

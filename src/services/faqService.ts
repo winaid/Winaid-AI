@@ -1,7 +1,7 @@
 /**
  * faqService — FAQ + 스마트블록 + 섹션 재생성
  *
- * geminiService.ts에서 추출.
+ * 구 geminiService.ts에서 추출됨 (현재 독립 모듈).
  * 독립 품질 기능으로 PRO 모델 사용이 허용됨.
  */
 
@@ -243,8 +243,7 @@ AI 검색 엔진(ChatGPT, Perplexity, Google AI Overview)이 답변으로 채택
  * - modifyPostWithAI() 수정 후 검증
  * - recheckAiSmell()에서 활용
  *
- * runAiSmellCheck, integrateAiSmellToFactCheck → contentQualityService.ts로 이동.
- * geminiService.ts에서는 re-export (import 위에서 처리).
+ * runAiSmellCheck, integrateAiSmellToFactCheck → contentQualityService.ts로 이동됨.
  */
 
 

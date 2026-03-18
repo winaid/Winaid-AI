@@ -2,7 +2,7 @@
  * contentEditorService.ts — 콘텐츠 편집/수정 서비스
  *
  * 카드 슬라이드 재생성, AI 콘텐츠 수정 기능.
- * postProcessingService.ts에서 분리.
+ * 구 postProcessingService.ts에서 분리됨 (현재 독립 모듈).
  *
  * 소비자:
  * - ScriptPreview.tsx → regenerateSlideContent, SlideRegenMode

@@ -153,8 +153,8 @@ export function useDocumentExport({
           title: content.title,
           plainText: localHtml.replace(/<[^>]*>/g, ' ').trim(),
           lightweightHtml,
-          keywords: content.keyword?.split(',').map(k => k.trim()) || [],
-          category: content.category,
+          keywords: (content as any).keyword?.split(',').map((k: string) => k.trim()) || [],
+          category: (content as any).category,
         }).catch(err => {
           console.error('블로그 이력 저장 실패:', err);
         });

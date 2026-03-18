@@ -10,8 +10,8 @@
  *   - 블로그/보도자료: 이 함수 내부에서만 gate 실행 (훅에서 호출 금지)
  *   - 카드뉴스: 별도 워크플로우이므로 훅(useContentGeneration)에서 직접 gate 실행
  *
- * geminiService.ts는 stage 실행 계층(generateBlogWithPipeline, generateBlogPostText,
- * generateFaqSection 등)만 제공한다. 최상위 흐름 책임은 이 파일에 있다.
+ * blogPipelineService, legacyBlogGeneration, faqService 등이 stage 실행 계층을 제공한다.
+ * 최상위 흐름 책임은 이 파일에 있다.
  */
 
 import type { GenerationRequest, GeneratedContent, FactCheckReport, SeoScoreReport, BlogSection } from '../../types';
@@ -138,9 +138,9 @@ export async function runContentJob(
 
 /**
  * postType별 전체 생성 오케스트레이션.
- * 기존 geminiService.generateFullPost()의 본문을 이관한 것.
+ * 구 geminiService.generateFullPost()의 본문을 이관한 것.
  *
- * geminiService.ts의 stage 실행 함수들을 호출하고,
+ * blogPipelineService, legacyBlogGeneration, faqService 등의 stage 실행 함수들을 호출하고,
  * 이미지 생성, 후처리, 저장까지 수행한다.
  *
  * 이 함수는 이 모듈 내부 전용이다. 외부에서는 runContentJob()을 사용하라.

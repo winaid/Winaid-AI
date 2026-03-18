@@ -103,7 +103,7 @@ export const CTA = {
   height: 14,
   rx: 7,
   fontSize: TYPO.cta.size,
-  fontWeight: TYPO.cta.fontWeight,
+  fontWeight: TYPO.cta.weight,
 } as const;
 
 // ─── 카테고리별 기본 팔레트 ───

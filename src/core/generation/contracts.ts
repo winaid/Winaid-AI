@@ -2,7 +2,7 @@
  * Generation Contracts — 생성 파이프라인의 정책 상수와 타입 계약
  *
  * 이 파일이 생성 정책의 single source of truth다.
- * geminiService.ts, useContentGeneration.ts, image/* 등은 여기서 import한다.
+ * blogPipelineService.ts, useContentGeneration.ts, image/* 등은 여기서 import한다.
  *
  * 3/29 크레딧 부착 시 ACCESS_MODE 정책만 수정하면 된다.
  */

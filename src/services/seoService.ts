@@ -2,7 +2,7 @@
  * seoService.ts - SEO/트렌딩 관련 서비스
  *
  * 키워드 추출, 트렌딩 토픽, SEO 제목 추천, SEO 점수 평가
- * geminiService.ts에서 분리된 모듈
+ * 구 geminiService.ts에서 분리됨 (현재 독립 모듈)
  */
 import { Type } from "@google/genai";
 import { TrendingItem, SeoTitleItem, SeoScoreReport } from "../types";

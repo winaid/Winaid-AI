@@ -2,7 +2,7 @@
  * contentSimilarityService.ts - AI 기반 콘텐츠 유사도 검사 시스템
  *
  * Gemini 임베딩 + 웹 검색을 통한 표절 검사, 블로그 이력 저장
- * geminiService.ts에서 분리된 모듈
+ * 구 geminiService.ts에서 분리됨 (현재 독립 모듈)
  */
 // Note: embedContent API is not supported by the proxy server.
 // Embedding function gracefully returns empty array.

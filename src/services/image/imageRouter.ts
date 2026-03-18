@@ -1,6 +1,6 @@
 /**
  * Image Router — role + sceneType 기반 라우팅 로직
- * geminiService.ts의 classifySceneType / buildScenePrompt를 이 파일로 이동.
+ * 구 geminiService.ts의 classifySceneType / buildScenePrompt를 이관하여 독립 모듈화.
  */
 
 import type { SceneType } from './imageTypes';
