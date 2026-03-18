@@ -82,3 +82,52 @@ export const SMART_BLOCK_FAQ_TIMEOUT_MS = 30_000;
 
 export type MedicalLawMode = 'strict' | 'relaxed';
 export const DEFAULT_MEDICAL_LAW_MODE: MedicalLawMode = 'strict';
+
+// ══════════════════════════════════════════════
+// ContentArtifact — 생성 1회의 제품 단위 결과물
+// ══════════════════════════════════════════════
+
+/**
+ * ContentArtifact: 블로그/보도자료 생성 결과를 SaaS 제품 관점에서 래핑한다.
+ *
+ * GeneratedContent는 렌더링/편집 전용 payload이고,
+ * ContentArtifact는 그 위에 저장·히스토리·재열기·재생성에 필요한
+ * 메타데이터를 붙인 제품 단위 shape이다.
+ *
+ * runContentJob()이 이 shape를 반환한다.
+ */
+
+import type { GeneratedContent, PostType, ContentCategory } from '../../types';
+
+export interface ArtifactImageMeta {
+  /** 생성 성공한 이미지 수 */
+  successCount: number;
+  /** 생성 실패한 이미지 수 */
+  failCount: number;
+  /** 재생성용 프롬프트 */
+  prompts: string[];
+}
+
+export interface ContentArtifact {
+  // ── 식별 ──
+  postType: PostType;
+  createdAt: string;         // ISO 8601
+
+  // ── 콘텐츠 ──
+  title: string;
+  content: GeneratedContent; // 렌더링/편집 전용 payload (기존 shape 그대로)
+
+  // ── 분류 ──
+  category?: ContentCategory;
+  keywords?: string;
+
+  // ── 품질 지표 ──
+  seoTotal?: number;         // seoScore.total
+  aiSmellScore?: number;     // factCheck.ai_smell_score
+
+  // ── 이미지 ──
+  imageMeta: ArtifactImageMeta;
+
+  // ── 경고 ──
+  warnings: string[];
+}

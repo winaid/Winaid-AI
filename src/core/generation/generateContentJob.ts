@@ -4,7 +4,7 @@
  * 책임:
  *   1. 크레딧/접근 게이트 실행 (policies.ts) — 이 함수가 gate의 유일한 실행 지점
  *   2. postType별 생성 함수 디스패치 (geminiService.generateFullPost)
- *   3. 에러 래핑 후 ContentJobOutcome 반환
+ *   3. 생성 결과를 ContentArtifact shape로 래핑하여 반환
  *
  * gate 책임 규칙:
  *   - 블로그/보도자료: 이 함수 내부에서만 gate 실행 (훅에서 호출 금지)
@@ -14,14 +14,17 @@
  * geminiService.ts는 stage 실행/보조 계층으로 내려간다.
  */
 
-import type { GenerationRequest, GeneratedContent } from '../../types';
+import type { GenerationRequest } from '../../types';
 import { runCreditGate, type CreditGateResult } from './policies';
+import type { ContentArtifact } from './contracts';
 
 // ── 결과 타입 ──
 
 export interface ContentJobResult {
   success: true;
-  data: GeneratedContent;
+  artifact: ContentArtifact;
+  /** @deprecated artifact.content로 접근하라. 기존 소비자 호환용. */
+  data: ContentArtifact['content'];
 }
 
 export interface ContentJobError {
@@ -40,7 +43,7 @@ export type ContentJobOutcome = ContentJobResult | ContentJobError;
  *
  * @param request  - 생성 요청 (postType, topic, keywords, ...)
  * @param onProgress - 진행 상황 콜백 (UI 표시용)
- * @returns ContentJobOutcome — 성공 시 data, 실패 시 error
+ * @returns ContentJobOutcome — 성공 시 artifact + data, 실패 시 error
  *
  * 호출자(useContentGeneration)가 담당하는 것:
  *   - React state 관리 (isLoading, error, data)
@@ -51,6 +54,7 @@ export type ContentJobOutcome = ContentJobResult | ContentJobError;
  * 이 함수가 담당하는 것:
  *   - 크레딧 게이트
  *   - generateFullPost 디스패치
+ *   - 결과를 ContentArtifact로 래핑
  *   - 에러 래핑
  */
 export async function runContentJob(
@@ -79,7 +83,31 @@ export async function runContentJob(
   try {
     const { generateFullPost } = await import('../../services/geminiService');
     const data = await generateFullPost(request, onProgress);
-    return { success: true, data };
+
+    // ── 4. ContentArtifact 래핑 ──
+    const warnings: string[] = [];
+    if (data.imageFailCount && data.imageFailCount > 0) {
+      warnings.push(`이미지 ${data.imageFailCount}장 생성 실패`);
+    }
+
+    const artifact: ContentArtifact = {
+      postType: request.postType,
+      createdAt: new Date().toISOString(),
+      title: data.title,
+      content: data,
+      category: request.category,
+      keywords: request.keywords,
+      seoTotal: data.seoScore?.total,
+      aiSmellScore: data.factCheck?.ai_smell_score,
+      imageMeta: {
+        successCount: (request.imageCount ?? 1) - (data.imageFailCount ?? 0),
+        failCount: data.imageFailCount ?? 0,
+        prompts: data.imagePrompts ?? [],
+      },
+      warnings,
+    };
+
+    return { success: true, artifact, data };
   } catch (err: any) {
     // 한국어 에러 메시지 변환
     let friendlyError: string;

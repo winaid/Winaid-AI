@@ -186,7 +186,8 @@ export function useContentGeneration(deps: ContentGenerationDeps): ContentGenera
 
       // ── 실패 처리 ──
       if (!outcome.success) {
-        console.error(`[BLOG_FLOW] ❌ 생성 실패:`, outcome.error);
+        const failReason = outcome.gateBlocked ? 'gate_blocked' : 'generation_error';
+        console.error(`[BLOG_FLOW] ❌ 생성 실패 (${failReason}):`, outcome.error);
         targetSetState(prev => {
           if (prev.data) {
             console.warn('[BLOG_FLOW] 기존 data 보존, warning으로 처리');
@@ -198,8 +199,9 @@ export function useContentGeneration(deps: ContentGenerationDeps): ContentGenera
         return;
       }
 
-      // ── 성공 처리 ──
-      const result = outcome.data;
+      // ── 성공 처리: artifact 기반 ──
+      const { artifact } = outcome;
+      const result = artifact.content;
 
       // 📋 결과물 완전성 검증 로그 — "완전한 글 1편" 기준
       const html = result?.fullHtml || result?.htmlContent || '';
@@ -210,12 +212,14 @@ export function useContentGeneration(deps: ContentGenerationDeps): ContentGenera
       const hasConclusion = conclusionLength ? conclusionLength >= 20 : textOnly.length > 200;
       const conclusionSource = conclusionLength ? `pipeline(${conclusionLength}자)` : `heuristic(textLen=${textOnly.length})`;
       console.info(`[BLOG_FLOW] ✅ generateFullPost 반환됨`);
-      console.info(`[BLOG_FLOW] 📋 완전성 검증: title="${result?.title}" | fullHtml=${html.length}자 | 텍스트=${textOnly.length}자 | h2/h3=${h2Count}개 | intro=${hasIntro} | conclusion=${hasConclusion} [${conclusionSource}]`);
-      if (!result?.title || h2Count < 2 || textOnly.length < 300) {
-        console.error(`[BLOG_FLOW] ⚠️ 완전성 미달 — title=${!!result?.title}, h2=${h2Count}, textLen=${textOnly.length}`);
+      console.info(`[BLOG_FLOW] 📋 완전성 검증: title="${artifact.title}" | fullHtml=${html.length}자 | 텍스트=${textOnly.length}자 | h2/h3=${h2Count}개 | intro=${hasIntro} | conclusion=${hasConclusion} [${conclusionSource}]`);
+      if (!artifact.title || h2Count < 2 || textOnly.length < 300) {
+        console.error(`[BLOG_FLOW] ⚠️ 완전성 미달 — title=${!!artifact.title}, h2=${h2Count}, textLen=${textOnly.length}`);
       }
-      const imageWarning = result.imageFailCount && result.imageFailCount > 0
-        ? `본문은 정상 생성되었습니다. 이미지 ${result.imageFailCount}장은 AI 서버 과부하로 생성에 실패했습니다.`
+
+      // artifact.warnings → UI warning (이미지 실패 등)
+      const imageWarning = artifact.imageMeta.failCount > 0
+        ? `본문은 정상 생성되었습니다. 이미지 ${artifact.imageMeta.failCount}장은 AI 서버 과부하로 생성에 실패했습니다.`
         : null;
       console.info(`[BLOG_FLOW] setBlogState 호출 직전 — data 존재: ${!!result}, isLoading: false`);
       targetSetState({ isLoading: false, error: null, warning: imageWarning, data: result, progress: '' });
@@ -229,7 +233,7 @@ export function useContentGeneration(deps: ContentGenerationDeps): ContentGenera
         console.warn('사용량 저장 스킵:', e);
       }
 
-      // API 서버에 자동 저장 — 반드시 storageHtml(경량화 완료본)만 사용
+      // API 서버에 자동 저장 — artifact 메타데이터 활용
       try {
         const { saveContentToServer } = await import('../services/apiService');
         let contentForSave = result.storageHtml || '';
@@ -246,14 +250,14 @@ export function useContentGeneration(deps: ContentGenerationDeps): ContentGenera
           console.error(`[STORAGE] ⚠️ storage payload ${storageKB}KB — 비정상 크기! storageHtml 경로 점검 필요`);
         }
         const saveResult = await saveContentToServer({
-          title: result.title,
+          title: artifact.title,
           content: contentForSave,
-          category: request.category,
-          postType: request.postType,
+          category: artifact.category ?? request.category,
+          postType: artifact.postType,
           metadata: {
-            keywords: request.keywords,
-            seoScore: result.seoScore?.total,
-            aiSmellScore: result.factCheck?.ai_smell_score,
+            keywords: artifact.keywords,
+            seoScore: artifact.seoTotal,
+            aiSmellScore: artifact.aiSmellScore,
           },
         });
 
