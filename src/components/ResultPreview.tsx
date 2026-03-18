@@ -5,8 +5,7 @@ import { regenerateSection } from '../services/geminiService';
 import { generateSingleImage, recommendImagePrompt, recommendCardNewsPrompt } from '../services/image/cardNewsImageService';
 import { generateBlogImage } from '../services/image/imageOrchestrator';
 import { CARD_LAYOUT_RULE as _CARD_LAYOUT_RULE, STYLE_KEYWORDS } from '../services/image/imagePromptBuilder';
-import { saveAs } from 'file-saver';
-import { removeOklchFromClonedDoc, AI_PROMPT_TEMPLATES, CARD_PROMPT_HISTORY_KEY, CARD_REF_IMAGE_KEY, AutoSaveHistoryItem, CardPromptHistoryItem, cleanText } from './resultPreviewUtils';
+import { AI_PROMPT_TEMPLATES, CARD_PROMPT_HISTORY_KEY, CARD_REF_IMAGE_KEY, AutoSaveHistoryItem, CardPromptHistoryItem, cleanText } from './resultPreviewUtils';
 import { SeoDetailModal, AiSmellDetailModal, SimilarityModal } from './ScoringModals';
 import { ImageDownloadModal, ImageRegenModal, CardDownloadModal } from './ExportModals';
 import { CardRegenModal } from './CardRegenModal';
@@ -16,11 +15,9 @@ import { useDocumentExport } from '../hooks/useDocumentExport';
 import { useContentQuality } from '../hooks/useContentQuality';
 import { useDraftPersistence } from '../hooks/useDraftPersistence';
 import { useResultActions } from '../hooks/useResultActions';
+import { useCardDownload } from '../hooks/useCardDownload';
 
 
-// 동적 임포트: 초기 번들 크기 최적화
-let docxModule: any = null;
-let html2canvasModule: any = null;
 
 interface ResultPreviewProps {
   content: GeneratedContent;
@@ -72,8 +69,6 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
   
   // 카드뉴스 다운로드 모달
   const [cardDownloadModalOpen, setCardDownloadModalOpen] = useState(false);
-  const [downloadingCard, setDownloadingCard] = useState(false);
-  const [cardDownloadProgress, setCardDownloadProgress] = useState('');
   
   // 카드 재생성 모달
   const [cardRegenModalOpen, setCardRegenModalOpen] = useState(false);
@@ -245,6 +240,26 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const savedScrollPosition = useRef<number>(0);
 
+  // ── Card Download 훅 ──
+  const {
+    downloadingCard,
+    cardDownloadProgress,
+    downloadImage,
+    downloadCardAsImage,
+    handleSingleCardDownload,
+    downloadAllCards,
+    getCardElements,
+  } = useCardDownload({
+    editorRef,
+    localHtml,
+    onHistoryPersist: () => persistCardNewsHistory({
+      title: content.title,
+      html: localHtml,
+      keywords: (content as any).keyword,
+      category: (content as any).category,
+    }),
+  });
+
   // 문서 내보내기 훅 (Word/PDF/복사)
   const {
     copied, editProgress, setEditProgress,
@@ -407,92 +422,6 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
     };
   }, [localHtml, content.postType]);
 
-  // 단일 카드 다운로드
-  const handleSingleCardDownload = async (cardIndex: number) => {
-    const cards = document.querySelectorAll('.naver-preview .card-slide');
-    const card = cards[cardIndex] as HTMLElement;
-    if (!card) {
-      toast.error('카드를 찾을 수 없습니다.');
-      return;
-    }
-
-    // 다운로드 진행 표시
-    setDownloadingCard(true);
-    setCardDownloadProgress(`${cardIndex + 1}번 카드 다운로드 준비 중...`);
-    
-    try {
-      // html2canvas 동적 로드
-      if (!html2canvasModule) {
-        setCardDownloadProgress('모듈 로드 중...');
-        html2canvasModule = (await import('html2canvas')).default;
-      }
-      
-      // 오버레이 임시 숨김
-      const overlay = card.querySelector('.card-overlay') as HTMLElement;
-      const badge = card.querySelector('.card-number-badge') as HTMLElement;
-      if (overlay) overlay.style.display = 'none';
-      if (badge) badge.style.display = 'none';
-      
-      setCardDownloadProgress(`${cardIndex + 1}번 카드 이미지 생성 중...`);
-      
-      const canvas = await html2canvasModule(card, {
-        scale: 2,
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: '#ffffff',
-        logging: false,
-        imageTimeout: 15000, // 이미지 로드 타임아웃 15초
-        onclone: (clonedDoc: Document, clonedElement: HTMLElement) => {
-          // 클론된 문서에서 오버레이 제거
-          const clonedOverlay = clonedDoc.querySelector('.card-overlay') as HTMLElement;
-          const clonedBadge = clonedDoc.querySelector('.card-number-badge') as HTMLElement;
-          if (clonedOverlay) clonedOverlay.remove();
-          if (clonedBadge) clonedBadge.remove();
-          
-          // oklch/oklab 색상을 안전한 색상으로 변환 (html2canvas 호환성)
-          removeOklchFromClonedDoc(clonedDoc, clonedElement);
-        }
-      });
-      
-      // 오버레이 복구
-      if (overlay) overlay.style.display = '';
-      if (badge) badge.style.display = '';
-      
-      // Promise로 toBlob 처리
-      const blob = await new Promise<Blob | null>((resolve) => {
-        canvas.toBlob((b: Blob | null) => resolve(b), 'image/png', 1.0);
-      });
-      
-      if (blob) {
-        saveAs(blob, `card_${cardIndex + 1}.png`);
-        setCardDownloadProgress(`✅ ${cardIndex + 1}번 카드 다운로드 완료!`);
-        setTimeout(() => setCardDownloadProgress(''), 1500);
-      } else {
-        // blob 생성 실패 시 toDataURL 방식으로 폴백
-        console.warn('toBlob 실패, toDataURL로 폴백');
-        const dataUrl = canvas.toDataURL('image/png');
-        const link = document.createElement('a');
-        link.download = `card_${cardIndex + 1}.png`;
-        link.href = dataUrl;
-        link.click();
-        setCardDownloadProgress(`✅ ${cardIndex + 1}번 카드 다운로드 완료!`);
-        setTimeout(() => setCardDownloadProgress(''), 1500);
-      }
-    } catch (error) {
-      console.error('카드 다운로드 실패:', error);
-      // 오버레이 복구 (에러 발생 시에도)
-      const overlay = card.querySelector('.card-overlay') as HTMLElement;
-      const badge = card.querySelector('.card-number-badge') as HTMLElement;
-      if (overlay) overlay.style.display = '';
-      if (badge) badge.style.display = '';
-      
-      setCardDownloadProgress('');
-      toast.error(`카드 다운로드에 실패했습니다: ${error instanceof Error ? error.message : '알 수 없는 오류'}`);
-    } finally {
-      setDownloadingCard(false);
-    }
-  };
-
   // ── Draft 불러오기 래퍼 (setLocalHtml/setCurrentTheme 바인딩) ──
   const loadFromAutoSaveHistory = (item: AutoSaveHistoryItem) => {
     const result = loadDraft(item);
@@ -506,55 +435,6 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
     if (prevHtml !== null) setLocalHtml(prevHtml);
   };
 
-  // 이미지 다운로드 함수
-  const downloadImage = (imgSrc: string, index: number) => {
-    const link = document.createElement('a');
-    link.href = imgSrc;
-    link.download = `hospital-ai-image-${index}.png`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-  
-  // 카드뉴스 1장씩 전체 다운로드 (html2canvas 사용)
-  const downloadCardAsImage = async (cardIndex: number) => {
-    const cardSlides = getCardElements();
-    if (!cardSlides || !cardSlides[cardIndex]) {
-      toast.error('카드를 찾을 수 없습니다. 카드뉴스를 먼저 생성해주세요.');
-      return;
-    }
-    
-    setDownloadingCard(true);
-    setCardDownloadProgress(`${cardIndex + 1}번 카드 이미지 생성 중...`);
-    
-    try {
-      // html2canvas 동적 로드
-      if (!html2canvasModule) {
-        html2canvasModule = (await import('html2canvas')).default;
-      }
-      
-      const card = cardSlides[cardIndex] as HTMLElement;
-      const canvas = await html2canvasModule(card, {
-        scale: 2, // 고화질
-        backgroundColor: null,
-        useCORS: true,
-        allowTaint: true,
-        logging: false,
-      });
-      
-      const link = document.createElement('a');
-      link.download = `card-news-${cardIndex + 1}.png`;
-      link.href = canvas.toDataURL('image/png');
-      link.click();
-      
-      setCardDownloadProgress('');
-    } catch (error) {
-      console.error('카드 다운로드 실패:', error);
-      toast.error('카드 다운로드 중 오류가 발생했습니다.');
-    } finally {
-      setDownloadingCard(false);
-    }
-  };
 
   // 카드 슬라이드 재생성
   const handleCardRegenerate = async () => {
@@ -721,146 +601,6 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
     }, 0);
     
     setCardRegenModalOpen(true);
-  };
-
-  // 카드 요소들 가져오기 (여러 방법 시도)
-  const getCardElements = (): NodeListOf<Element> | null => {
-    // 1. editorRef에서 찾기
-    let cards = editorRef.current?.querySelectorAll('.card-slide');
-    if (cards && cards.length > 0) return cards;
-    
-    // 2. naver-preview 영역에서 찾기
-    cards = document.querySelector('.naver-preview')?.querySelectorAll('.card-slide');
-    if (cards && cards.length > 0) return cards;
-    
-    // 3. 전체 document에서 찾기
-    cards = document.querySelectorAll('.card-slide');
-    if (cards && cards.length > 0) return cards;
-    
-    return null;
-  };
-  
-  // 카드 수 가져오기 (향후 UI에 카드 개수 표시 시 활용)
-  const _getCardCount = () => {
-    return getCardElements()?.length || 0;
-  };
-  
-  // 모든 카드뉴스 일괄 다운로드
-  const downloadAllCards = async () => {
-    const cardSlides = getCardElements();
-    if (!cardSlides || cardSlides.length === 0) {
-      toast.warning('다운로드할 카드가 없습니다. 카드뉴스를 먼저 생성해주세요.');
-      return;
-    }
-    
-    setDownloadingCard(true);
-    let successCount = 0;
-    let failedCards: number[] = [];
-    
-    try {
-      // html2canvas 동적 로드
-      if (!html2canvasModule) {
-        setCardDownloadProgress('모듈 로드 중...');
-        html2canvasModule = (await import('html2canvas')).default;
-      }
-      
-      for (let i = 0; i < cardSlides.length; i++) {
-        setCardDownloadProgress(`${i + 1}/${cardSlides.length}장 다운로드 중...`);
-        
-        try {
-          const card = cardSlides[i] as HTMLElement;
-          
-          // 오버레이 임시 숨김
-          const overlay = card.querySelector('.card-overlay') as HTMLElement;
-          const badge = card.querySelector('.card-number-badge') as HTMLElement;
-          if (overlay) overlay.style.display = 'none';
-          if (badge) badge.style.display = 'none';
-          
-          const canvas = await html2canvasModule(card, {
-            scale: 2,
-            backgroundColor: '#ffffff',
-            useCORS: true,
-            allowTaint: true,
-            logging: false,
-            imageTimeout: 15000,
-            onclone: (clonedDoc: Document, clonedElement: HTMLElement) => {
-              const clonedOverlay = clonedDoc.querySelector('.card-overlay') as HTMLElement;
-              const clonedBadge = clonedDoc.querySelector('.card-number-badge') as HTMLElement;
-              if (clonedOverlay) clonedOverlay.remove();
-              if (clonedBadge) clonedBadge.remove();
-              
-              // oklch/oklab 색상을 안전한 색상으로 변환 (html2canvas 호환성)
-              removeOklchFromClonedDoc(clonedDoc, clonedElement);
-            }
-          });
-          
-          // 오버레이 복구
-          if (overlay) overlay.style.display = '';
-          if (badge) badge.style.display = '';
-          
-          // Promise로 toBlob 처리 (타임아웃 포함)
-          const blob = await Promise.race([
-            new Promise<Blob | null>((resolve) => {
-              canvas.toBlob((b: Blob | null) => resolve(b), 'image/png', 1.0);
-            }),
-            new Promise<null>((_, reject) => 
-              setTimeout(() => reject(new Error('Blob 생성 타임아웃')), 10000)
-            )
-          ]);
-          
-          if (blob) {
-            saveAs(blob, `card-news-${i + 1}.png`);
-            successCount++;
-          } else {
-            // toDataURL 폴백
-            const dataUrl = canvas.toDataURL('image/png');
-            const link = document.createElement('a');
-            link.download = `card-news-${i + 1}.png`;
-            link.href = dataUrl;
-            link.click();
-            successCount++;
-          }
-          
-          // 각 다운로드 사이 짧은 딜레이 (브라우저 부하 방지)
-          await new Promise(resolve => setTimeout(resolve, 500));
-          
-        } catch (cardError) {
-          console.error(`${i + 1}번 카드 다운로드 실패:`, cardError);
-          failedCards.push(i + 1);
-          // 실패해도 다음 카드 계속 진행
-        }
-      }
-      
-      // 결과 메시지
-      if (failedCards.length === 0) {
-        setCardDownloadProgress(`✅ ${successCount}장 모두 다운로드 완료!`);
-        
-        // [Layer 2] History Persistence — 카드뉴스 다운로드 성공 시 이력 저장
-        persistCardNewsHistory({
-          title: content.title,
-          html: localHtml,
-          keywords: content.keyword,
-          category: content.category,
-        });
-      } else {
-        setCardDownloadProgress(`⚠️ ${successCount}장 완료, ${failedCards.length}장 실패 (${failedCards.join(', ')}번)`);
-      }
-      setTimeout(() => setCardDownloadProgress(''), 3000);
-      
-      // 실패한 카드가 있으면 안내
-      if (failedCards.length > 0) {
-        setTimeout(() => {
-          toast.warning(`${failedCards.length}장의 카드 다운로드에 실패했습니다. (${failedCards.join(', ')}번 카드)`);
-        }, 500);
-      }
-      
-    } catch (error) {
-      console.error('카드 다운로드 실패:', error);
-      setCardDownloadProgress('');
-      toast.error(`카드 다운로드 중 오류가 발생했습니다. 원인: ${error instanceof Error ? error.message : '알 수 없는 오류'}`);
-    } finally {
-      setDownloadingCard(false);
-    }
   };
 
   // 이미지 클릭 핸들러 (다운로드 or 재생성 선택 모달)
