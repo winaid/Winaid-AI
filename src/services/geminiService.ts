@@ -21,6 +21,17 @@ import { generateSingleImage } from "./image/cardNewsImageService";
 import { generateCardNewsWithAgents } from "./cardNewsService";
 import { generatePressRelease } from "./pressReleaseService";
 import { saveBlogHistory } from "./contentSimilarityService";
+import {
+  MEDICAL_DISCLAIMER,
+  cleanMarkdownArtifacts,
+  ensureContainerWrapper,
+  generateCardNewsFallbackTemplate,
+  normalizeSubtitles,
+  insertImageMarkers,
+  insertImageData,
+  applyCardNewsStyles,
+  wrapFinalHtml,
+} from "./resultAssembler";
 
 // Gemini API 핵심 인프라는 geminiClient.ts에서 import됨
 
@@ -392,8 +403,7 @@ ${hospitalInfo || '(검색 결과 없음)'}
 // getAiProviderSettings → geminiClient.ts에서 import됨
 
 
-// 의료 면책 조항 (HTML)
-const MEDICAL_DISCLAIMER = `본 콘텐츠는 의료 정보 제공 및 병원 광고를 목적으로 합니다.<br/>개인의 체질과 건강 상태에 따라 치료 결과는 차이가 있을 수 있으며, 부작용이 발생할 수 있습니다.`;
+// MEDICAL_DISCLAIMER → resultAssembler.ts로 이동
 
 // =============================================
 // 🔍 AI 냄새 검사 헬퍼 함수 (detectAiSmell 연결)
@@ -3334,405 +3344,44 @@ export const generateFullPost = async (request: GenerationRequest, onProgress?: 
 
   try { // 후처리 안전망 시작
   
-  // 🔧 마크다운 **볼드** 처리 (AI가 실수로 남긴 마크다운 제거 또는 변환)
-  // ** 로 감싼 텍스트를 <strong> 태그로 변환하거나 그냥 제거
-  body = body.replace(/\*\*([^*]+)\*\*/g, '$1'); // ** 제거 (강조 없이 일반 텍스트로)
-  // 또는 강조하고 싶으면: body = body.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  // Block 3: 마크다운/JSON 안전망 (resultAssembler)
+  body = cleanMarkdownArtifacts(body);
   
-  // body가 HTML이 아닌 JSON/배열 형태인지 검증
-  if (body && (body.startsWith('[{') || body.startsWith('{"'))) {
-    console.error('AI returned JSON instead of HTML, attempting to extract...');
-    try {
-    const parsed = JSON.parse(body);
-    if (Array.isArray(parsed)) {
-      body = parsed.map(item => item.content || item.html || '').join('');
-    } else if (parsed.content || parsed.html) {
-      body = parsed.content || parsed.html;
-    }
-    } catch (e) {
-    console.error('Failed to parse JSON content:', e);
-    }
-  }
+  // Block 4: 컨테이너 래핑 (resultAssembler)
+  body = ensureContainerWrapper(body, request.postType);
   
-  // AI가 class를 빼먹었을 경우 강제로 감싸기
-  if (request.postType !== 'card_news' && !body.includes('class="naver-post-container"')) {
-    body = `<div class="naver-post-container">${body}</div>`;
-  }
-  
-  // 🚨 카드뉴스인데 card-slide가 없으면 AI가 HTML 구조를 완전히 무시한 것!
-  // 이 경우 기본 카드뉴스 템플릿으로 강제 생성
-  if (request.postType === 'card_news' && !body.includes('class="card-slide"')) {
-    console.warn('AI ignored card-slide structure, generating fallback template...');
-    const slideCount = request.slideCount || 6;
-    const fallbackSlides: string[] = [];
-    
-    // body에서 텍스트 추출 시도
-    const plainText = body.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
-    const sentences = plainText.split(/[.!?。]/).filter((s: string) => s.trim().length > 5);
-    
-    for (let i = 0; i < slideCount; i++) {
-    const isFirst = i === 0;
-    const isLast = i === slideCount - 1;
-    const sentenceIdx = Math.min(i, sentences.length - 1);
-    const sentence = sentences[sentenceIdx] || request.topic;
-    
-    let subtitle = isFirst ? '알아봅시다' : isLast ? '함께 실천합니다' : `포인트 ${i}`;
-    let mainTitle = isFirst 
-      ? `${request.topic}<br/><span class="card-highlight">총정리</span>`
-      : isLast 
-      ? `건강한 습관<br/><span class="card-highlight">시작합니다</span>`
-      : sentence.slice(0, 15) + (sentence.length > 15 ? '...' : '');
-    let desc = sentence.slice(0, 50) || '건강한 생활을 위한 정보를 확인하세요.';
-    
-    fallbackSlides.push(`
-      <div class="card-slide" style="background: linear-gradient(180deg, #E8F4FD 0%, #F0F9FF 100%); border-radius: 24px; overflow: hidden;">
-        <div style="padding: 32px 28px; display: flex; flex-direction: column; align-items: center; text-align: center; height: 100%;">
-          <p class="card-subtitle" style="font-size: 14px; font-weight: 700; color: #3B82F6; margin-bottom: 8px;">${subtitle}</p>
-          <p class="card-main-title" style="font-size: 28px; font-weight: 900; color: #1E293B; line-height: 1.3; margin: 0 0 16px 0;">${mainTitle}</p>
-          <div class="card-img-container" style="width: 100%; margin: 16px 0;">[IMG_${i + 1}]</div>
-          <p class="card-desc" style="font-size: 15px; color: #475569; line-height: 1.6; font-weight: 500; max-width: 90%;">${desc}</p>
-        </div>
-      </div>
-    `);
-    }
-    body = fallbackSlides.join('\n');
-  }
-  
-  // 🎯 소제목 후처리: Gemini가 h3 태그를 무시하고 다른 형식으로 출력한 경우 강제 변환
-  if (request.postType === 'blog') {
-    console.info('🎯 소제목 형식 정규화 시작...');
-    
-    // 1. **소제목 텍스트** 형식을 h3로 변환 (독립된 줄에 있는 경우)
-    body = body.replace(/<p>\*\*([^*]+)\*\*<\/p>/gi, '<h3>$1</h3>');
-    
-    // 2. <p>## 소제목</p> 형식을 h3로 변환
-    body = body.replace(/<p>##\s*([^<]+)<\/p>/gi, '<h3>$1</h3>');
-    
-    // 3. <strong>소제목</strong> 단독 패턴을 h3로 변환 (독립된 p 태그 내)
-    body = body.replace(/<p>\s*<strong>([^<]+)<\/strong>\s*<\/p>/gi, '<h3>$1</h3>');
-    
-    // 4. <b>소제목</b> 단독 패턴을 h3로 변환
-    body = body.replace(/<p>\s*<b>([^<]+)<\/b>\s*<\/p>/gi, '<h3>$1</h3>');
-    
-    const h3Count = (body.match(/<h3[^>]*>/gi) || []).length;
-    console.info(`✅ 소제목 형식 정규화 완료! h3 태그 ${h3Count}개 발견`);
-  }
-  
-  // 🖼️ 블로그 포스트에 [IMG_N] 마커가 없으면 자동 삽입
-  if (request.postType !== 'card_news' && images.length > 0 && !body.includes('[IMG_')) {
-    console.log('⚠️ 블로그에 [IMG_N] 마커가 없음! 자동 삽입 중...');
-
-    // h3 소제목 다음에 이미지 마커 삽입
-    const h3Tags = body.match(/<h3[^>]*>.*?<\/h3>/gi) || [];
-    let imgIndex = 1;
-
-    if (h3Tags.length > 0) {
-      let _h3Count = 0;
-      body = body.replace(
-        /(<h3[^>]*>.*?<\/h3>[\s\S]*?<\/p>)/gi,
-        (match: string) => {
-          _h3Count++;
-          if (imgIndex <= images.length) {
-            const marker = `\n<div class="content-image-wrapper">[IMG_${imgIndex}]</div>\n`;
-            imgIndex++;
-            return match + marker;
-          }
-          return match;
-        }
-      );
-      console.log(`✅ 블로그: [IMG_1] ~ [IMG_${imgIndex - 1}] 마커 h3 기반 삽입`);
-    } else {
-      // h3가 없으면 </p> 사이에 삽입
-      const pTags = body.match(/<\/p>/gi) || [];
-      if (pTags.length >= 2) {
-        let pCount = 0;
-        body = body.replace(/<\/p>/gi, (match: string) => {
-          pCount++;
-          if (pCount % 2 === 0 && imgIndex <= images.length) {
-            const marker = `\n<div class="content-image-wrapper">[IMG_${imgIndex}]</div>\n`;
-            imgIndex++;
-            return match + marker;
-          }
-          return match;
-        });
-        console.log(`✅ 블로그 (h3 없음): [IMG_1] ~ [IMG_${imgIndex - 1}] 마커 p 기반 삽입`);
-      }
-    }
-
-    // 🛡️ 수량 보장: h3/p 기반 삽입으로 부족한 마커는 본문 끝에 추가
-    if (imgIndex <= images.length) {
-      const remaining = images.length - imgIndex + 1;
-      console.warn(`[IMG-INSERT] ⚠️ 레이아웃 위치 부족! ${remaining}장 본문 끝에 추가 삽입`);
-      let tailMarkers = '';
-      while (imgIndex <= images.length) {
-        tailMarkers += `\n<div class="content-image-wrapper">[IMG_${imgIndex}]</div>\n`;
-        imgIndex++;
-      }
-      // </div> 닫기 태그 직전 또는 본문 끝에 삽입
-      if (body.includes('</div>')) {
-        const lastDivIdx = body.lastIndexOf('</div>');
-        body = body.substring(0, lastDivIdx) + tailMarkers + body.substring(lastDivIdx);
-      } else {
-        body += tailMarkers;
-      }
-      console.log(`✅ 블로그: 부족 마커 ${remaining}개 본문 끝에 보충 완료`);
-    }
-  }
-  
-  // 🖼️ 카드뉴스인데 [IMG_N] 마커가 없으면 자동 삽입
-  if (request.postType === 'card_news' && images.length > 0) {
-    // card-slide 안에 card-img-container가 없거나 [IMG_N] 마커가 없으면 추가
-    const cardSlides = body.match(/<div[^>]*class="[^"]*card-slide[^"]*"[^>]*>[\s\S]*?<\/div>\s*<\/div>/gi) || [];
-    
-    if (cardSlides.length > 0 && !body.includes('[IMG_')) {
-      console.log('⚠️ 카드뉴스에 [IMG_N] 마커가 없음! 자동 삽입 중...');
-      
-      // 각 card-slide에 이미지 마커 삽입
-      let imgIndex = 1;
-      body = body.replace(
-        /(<div[^>]*class="[^"]*card-slide[^"]*"[^>]*>)([\s\S]*?)(<\/div>\s*<\/div>)/gi,
-        (match: string, openTag: string, content: string, closeTag: string) => {
-          // 이미 img 태그나 마커가 있으면 스킵
-          if (content.includes('[IMG_') || content.includes('<img')) {
-            return match;
-          }
-          // card-desc 또는 card-main-title 뒤에 이미지 컨테이너 삽입
-          const markerHtml = `<div class="card-img-container" style="width: 100%; margin: 16px 0; flex: 1; display: flex; align-items: center; justify-content: center;">[IMG_${imgIndex}]</div>`;
-          imgIndex++;
-          
-          // card-desc 앞에 삽입 (설명 위에 이미지)
-          if (content.includes('card-desc')) {
-            return openTag + content.replace(
-              /(<p[^>]*class="[^"]*card-desc[^"]*")/i,
-              markerHtml + '$1'
-            ) + closeTag;
-          }
-          // card-desc가 없으면 닫기 태그 앞에 삽입
-          return openTag + content + markerHtml + closeTag;
-        }
-      );
-      console.log(`✅ [IMG_1] ~ [IMG_${imgIndex - 1}] 마커 자동 삽입 완료`);
-    }
-  }
-  
-  // 🛡️ 마커 수량 계약 보장: AI가 일부 마커만 생성한 경우 부족분 보충
-  if (request.postType !== 'card_news' && images.length > 0) {
-    const existingMarkers = (body.match(/\[IMG_\d+\]/gi) || []).map(m => {
-      const num = m.match(/\d+/);
-      return num ? parseInt(num[0]) : 0;
-    });
-    const missingIndices = images
-      .map(img => img.index)
-      .filter(idx => !existingMarkers.includes(idx));
-
-    if (missingIndices.length > 0) {
-      console.warn(`[IMG-INSERT] ⚠️ 마커 부족: ${missingIndices.length}개 누락 (${missingIndices.join(',')}) — 본문 끝에 보충`);
-      let supplementMarkers = '';
-      for (const idx of missingIndices) {
-        supplementMarkers += `\n<div class="content-image-wrapper">[IMG_${idx}]</div>\n`;
-      }
-      if (body.includes('</div>')) {
-        const lastDivIdx = body.lastIndexOf('</div>');
-        body = body.substring(0, lastDivIdx) + supplementMarkers + body.substring(lastDivIdx);
-      } else {
-        body += supplementMarkers;
-      }
-    }
-  }
-
-  // 🖼️ 이미지 삽입 전 디버그
-  const bodyLenBeforeImages = body.length;
-  console.info(`[IMG_INSERT] 이미지 삽입 전 body: ${bodyLenBeforeImages}자, 이미지 ${images.length}장`);
-
-  const blobUrls: string[] = []; // cleanup용 blob URL 수집
-  images.forEach(img => {
-    const pattern = new RegExp(`\\[IMG_${img.index}\\]`, "gi");
-    const hasMarker = body.match(pattern);
-
-    if (img.data) {
-    // base64 data URI → blob URL 변환 (HTML 크기 4MB → 수KB로 축소)
-    let displaySrc = img.data;
-    try {
-      const commaIdx = img.data.indexOf(',');
-      if (commaIdx > 0 && img.data.startsWith('data:')) {
-        const meta = img.data.substring(0, commaIdx);
-        const base64Data = img.data.substring(commaIdx + 1);
-        const mimeMatch = meta.match(/data:(.*?);base64/);
-        const mimeType = mimeMatch?.[1] || 'image/png';
-        const byteChars = atob(base64Data);
-        const byteArray = new Uint8Array(byteChars.length);
-        for (let i = 0; i < byteChars.length; i++) {
-          byteArray[i] = byteChars.charCodeAt(i);
-        }
-        const blob = new Blob([byteArray], { type: mimeType });
-        displaySrc = URL.createObjectURL(blob);
-        blobUrls.push(displaySrc);
-        console.info(`[IMG_INSERT] IMG_${img.index}: base64 ${img.data.length}자 → blob URL (${displaySrc.length}자)`);
-      }
-    } catch (blobErr) {
-      console.warn(`[IMG_INSERT] IMG_${img.index}: blob 변환 실패, base64 원본 사용`, blobErr);
-      displaySrc = img.data; // fallback to base64
-    }
-
-    let imgHtml = "";
-    if (request.postType === 'card_news') {
-        imgHtml = `<img src="${displaySrc}" alt="${img.prompt}" data-image-index="${img.index}" class="card-full-img" style="width: 100%; height: auto; display: block;" />`;
-    } else {
-        imgHtml = `<div class="content-image-wrapper"><img src="${displaySrc}" alt="${img.prompt}" data-image-index="${img.index}" /></div>`;
-    }
-    body = body.replace(pattern, imgHtml);
-    } else {
-    // 이미지 생성 실패 시 마커 제거
-    body = body.replace(pattern, '');
-    }
-  });
-  // 삽입 결과 집계: 선택 수량 계약 최종 검증
-  const insertedCount = images.filter(img => img.data && body.includes(`data-image-index="${img.index}"`)).length;
-  const skippedByLayout = images.length - insertedCount;
-  console.info(`[IMG-INSERT] selected=${selectedImageCount} available=${images.length} inserted=${insertedCount} skippedByLayout=${skippedByLayout}`);
-  if (insertedCount < selectedImageCount && images.length >= selectedImageCount) {
-    console.warn(`[IMG-INSERT] ⚠️ 삽입 부족: selected=${selectedImageCount} inserted=${insertedCount} — 레이아웃 마커 부족으로 일부 미삽입`);
-  }
-
-  // 혹시 남아있는 [IMG_N] 마커 모두 제거
-  const remainingMarkers = (body.match(/\[IMG_\d+\]/gi) || []).length;
-  if (remainingMarkers > 0) {
-    console.warn(`[IMG-INSERT] ⚠️ 미매칭 마커 ${remainingMarkers}개 제거 — 본문에 삽입 위치 부족`);
-  }
-  body = body.replace(/\[IMG_\d+\]/gi, '');
-
-  // 카드뉴스: 분석된 스타일 배경색 강제 적용 (AI가 무시할 경우 대비)
-  if (request.postType === 'card_news' && textData.analyzedStyle?.backgroundColor) {
-    const bgColor = textData.analyzedStyle.backgroundColor;
-    const bgGradient = bgColor.includes('gradient') ? bgColor : `linear-gradient(180deg, ${bgColor} 0%, ${bgColor}dd 100%)`;
-    // 기존 card-slide의 background 스타일을 분석된 색상으로 교체
-    body = body.replace(
-    /(<div[^>]*class="[^"]*card-slide[^"]*"[^>]*style="[^"]*)background:[^;]*;?/gi,
-    `$1background: ${bgGradient};`
-    );
-    // 만약 background 스타일이 없는 card-slide가 있다면 추가
-    body = body.replace(
-    /<div([^>]*)class="([^"]*card-slide[^"]*)"([^>]*)>/gi,
-    (match: string, pre: string, cls: string, post: string) => {
-      if (match.includes('style="')) {
-        // 이미 style이 있지만 background가 없으면 추가
-        if (!match.includes('background:')) {
-          return match.replace('style="', `style="background: ${bgGradient}; `);
-        }
-        return match;
-      } else {
-        // style이 없으면 추가
-        return `<div${pre}class="${cls}"${post} style="background: ${bgGradient};">`;
-      }
-    }
-    );
-    safeProgress(`🎨 템플릿 색상(${bgColor}) 적용 완료`);
-  }
-
-  let finalHtml = "";
+  // Block 4b: 카드뉴스 폴백 템플릿 (resultAssembler)
   if (request.postType === 'card_news') {
-    finalHtml = `
-    <div class="card-news-container">
-       <h2 class="hidden-title">${textData.title}</h2>
-       <div class="card-grid-wrapper">
-          ${body}
-       </div>
-       <div class="legal-box-card">${MEDICAL_DISCLAIMER}</div>
-    </div>
-    `.trim();
-  } else {
-    // 블로그 포스트: 맨 위에 메인 제목(h2) 추가 (중복 방지)
-    const mainTitle = request.topic || textData.title;
-    
-    // 이미 main-title이 있는지 확인
-    const hasMainTitle = body.includes('class="main-title"') || body.includes('class=\'main-title\'');
-    
-    if (hasMainTitle) {
-      // 이미 제목이 있으면 그대로 사용
-      if (body.includes('class="naver-post-container"')) {
-        finalHtml = body;
-      } else {
-        finalHtml = `<div class="naver-post-container">${body}</div>`;
-      }
-    } else {
-      // 제목이 없으면 추가
-      if (body.includes('class="naver-post-container"')) {
-        finalHtml = body.replace(
-          '<div class="naver-post-container">',
-          `<div class="naver-post-container"><h2 class="main-title">${mainTitle}</h2>`
-        );
-      } else {
-        finalHtml = `<div class="naver-post-container"><h2 class="main-title">${mainTitle}</h2>${body}</div>`;
-      }
-    }
-    
-    // 🎨 블로그 콘텐츠용 CSS 스타일 추가
-    const blogStyles = `
-<style>
-.naver-post-container {
-  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
-  max-width: 800px;
-  margin: 0 auto;
-  padding: 40px 20px;
-  line-height: 1.8;
-  color: #333;
-}
-.naver-post-container .main-title {
-  font-size: 28px;
-  font-weight: 800;
-  color: #1a1a1a;
-  margin: 0 0 30px 0;
-  line-height: 1.4;
-  word-break: keep-all;
-}
-.naver-post-container h3 {
-  font-size: 20px;
-  font-weight: 700;
-  color: #1a1a1a;
-  margin: 40px 0 20px 0;
-  padding-bottom: 10px;
-  border-bottom: 2px solid #7c3aed;
-  line-height: 1.5;
-  word-break: keep-all;
-}
-.naver-post-container p {
-  font-size: 16px;
-  color: #444;
-  margin: 0 0 20px 0;
-  line-height: 1.8;
-  word-break: keep-all;
-}
-.naver-post-container ul {
-  margin: 20px 0;
-  padding-left: 24px;
-}
-.naver-post-container li {
-  font-size: 16px;
-  color: #444;
-  margin: 10px 0;
-  line-height: 1.7;
-}
-.naver-post-container strong {
-  font-weight: 700;
-  color: #1a1a1a;
-}
-.content-image-wrapper {
-  margin: 30px 0;
-  text-align: center;
-}
-.legal-box-card {
-  margin-top: 40px;
-  padding: 20px;
-  background: #f8f9fa;
-  border-radius: 8px;
-  font-size: 14px;
-  color: #666;
-  line-height: 1.6;
-}
-</style>
-`;
-    finalHtml = blogStyles + finalHtml;
+    body = generateCardNewsFallbackTemplate(body, request.slideCount || 6, request.topic);
   }
+  
+  // Block 5: 소제목 정규화 (resultAssembler)
+  if (request.postType === 'blog') {
+    body = normalizeSubtitles(body);
+  }
+  
+  // Block 6: 이미지 마커 자동 삽입 (resultAssembler)
+  body = insertImageMarkers(body, images.length, request.postType);
+
+  // Block 7: 이미지 데이터 삽입 (resultAssembler)
+  const imgResult = insertImageData(body, images, request.postType, selectedImageCount);
+  body = imgResult.html;
+  const blobUrls = imgResult.blobUrls;
+
+  // Block 8: 카드뉴스 스타일 적용 (resultAssembler)
+  if (request.postType === 'card_news') {
+    body = applyCardNewsStyles(body, textData.analyzedStyle);
+    if (textData.analyzedStyle?.backgroundColor) {
+      safeProgress(`🎨 템플릿 색상(${textData.analyzedStyle.backgroundColor}) 적용 완료`);
+    }
+  }
+
+  // Block 9: 최종 HTML 래핑 (resultAssembler)
+  let finalHtml = wrapFinalHtml(body, {
+    postType: request.postType,
+    topic: request.topic,
+    title: textData.title,
+  });
 
   // ============================================
   // ❓ FAQ 섹션 생성 (옵션) + 네이버 스마트블록 최적화
@@ -4127,44 +3776,3 @@ function parseBlogSections(html: string): import('../types').BlogSection[] {
   return sections;
 }
 
-// 구글 검색 API 호출
-const searchGoogle = async (query: string, num: number = 5): Promise<{ title: string; link: string; snippet: string }[]> => {
-  try {
-    const response = await fetch('/api/google/search', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ q: query, num }),
-    });
-
-    if (!response.ok) throw new Error('Google Search API failed');
-
-    const data = await response.json();
-    return (data.items || []).map((item: any) => ({
-      title: item.title,
-      link: item.link,
-      snippet: item.snippet,
-    }));
-  } catch (error) {
-    console.error('Google search failed:', error);
-    return [];
-  }
-};
-
-// URL 크롤링 API 호출
-const crawlUrl = async (url: string): Promise<string> => {
-  try {
-    const response = await fetch('/api/crawler', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url }),
-    });
-
-    if (!response.ok) return '';
-
-    const data = await response.json();
-    return data.content || '';
-  } catch (error) {
-    console.error('Crawling failed:', error);
-    return '';
-  }
-};

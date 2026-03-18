@@ -8,6 +8,10 @@ import { ToastContainer } from './components/Toast';
 import { useCardNewsWorkflow } from './hooks/useCardNewsWorkflow';
 import { useContentGeneration } from './hooks/useContentGeneration';
 import { initImageDebugGlobals } from './services/image/imageOrchestrator';
+import { Sidebar } from './components/layout/Sidebar';
+import { MobileHeader } from './components/layout/MobileHeader';
+import { HomeDashboard } from './components/HomeDashboard';
+import type { ContentTabType } from './components/layout/Sidebar';
 
 // Lazy load heavy components
 const InputForm = lazy(() => import('./components/InputForm'));
@@ -153,7 +157,6 @@ const App: React.FC = () => {
   const leftPanelRef = useRef<HTMLDivElement>(null);
   
   // contentTab은 이제 currentPage에서 파생 (호환성 유지)
-  type ContentTabType = 'blog' | 'refine' | 'card_news' | 'press' | 'image' | 'history';
   const contentTab: ContentTabType = contentPages.includes(currentPage) ? (currentPage as ContentTabType) : 'blog';
   const isAppPage = appPages.includes(currentPage);
 
@@ -186,7 +189,7 @@ const App: React.FC = () => {
 
 
   const [showUserManual, setShowUserManual] = useState(false);
-  const [quickInput, setQuickInput] = useState('');
+  // quickInput → HomeDashboard 내부 상태로 이동
 
   // 비밀번호 인증 제거됨 — 항상 인증된 상태
   const [isAuthenticated] = useState<boolean>(true);
@@ -528,358 +531,46 @@ const App: React.FC = () => {
     <div className={`min-h-screen flex font-sans relative transition-colors duration-300 ${darkMode ? 'bg-[#0f1117] text-slate-100' : 'bg-[#f6f7f9] text-slate-900'}`}>
 
       {/* 좌측 사이드바 네비게이션 */}
-      <aside className={`hidden lg:flex flex-col flex-none h-screen sticky top-0 z-30 transition-all duration-300 border-r ${
-        sidebarCollapsed ? 'w-[68px]' : 'w-[210px]'
-      } ${darkMode ? 'bg-[#161b22] border-[#30363d]' : 'bg-white border-slate-200 shadow-[1px_0_0_0_rgba(0,0,0,0.04)]'}`}>
-        {/* 로고 */}
-        <div className={`h-14 flex items-center ${sidebarCollapsed ? 'justify-center px-2' : 'px-4'} border-b ${darkMode ? 'border-[#30363d]' : 'border-slate-100'}`}>
-          <a href="/app" onClick={(e) => { e.preventDefault(); navigateTo('home'); setCurrentPage('home'); }} className="flex items-center gap-2.5 hover:opacity-80 transition-opacity cursor-pointer group">
-            <img src="/280_logo.png" alt="WINAID" className={`h-8 w-8 group-hover:scale-105 transition-transform flex-none ${darkMode ? 'rounded-md bg-white p-0.5' : ''}`} />
-            {!sidebarCollapsed && (
-              <div className="flex flex-col leading-none">
-                <span className={`font-black text-base tracking-[-0.02em] ${darkMode ? 'text-slate-100' : 'text-slate-800'}`}>WIN<span className="text-blue-600">AID</span></span>
-                <span className={`text-[8px] font-semibold tracking-wider uppercase ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>AI Marketing</span>
-              </div>
-            )}
-          </a>
-        </div>
+      <Sidebar
+        darkMode={darkMode}
+        collapsed={sidebarCollapsed}
+        onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+        onToggleDarkMode={toggleDarkMode}
+        contentTab={contentTab}
+        currentPage={currentPage}
+        onSelectTab={setContentTab}
+        onNavigateHome={() => { navigateTo('home'); setCurrentPage('home'); }}
+        isLoggedIn={isLoggedIn}
+        userEmail={supabaseUser?.email || undefined}
+        onLogout={handleLogout}
+      />
 
-        {/* 네비게이션 메뉴 */}
-        <nav className="flex-1 py-3 px-2 space-y-1 overflow-y-auto">
-          <div className={`px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider ${sidebarCollapsed ? 'text-center' : ''} ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>
-            {sidebarCollapsed ? '···' : '콘텐츠'}
-          </div>
-          {([
-            { id: 'blog' as ContentTabType, label: '블로그', icon: '📝' },
-            { id: 'card_news' as ContentTabType, label: '카드뉴스', icon: '🎨' },
-            { id: 'press' as ContentTabType, label: '언론보도', icon: '🗞️' },
-          ]).map(item => (
-            <button
-              key={item.id}
-              onClick={() => setContentTab(item.id)}
-              title={sidebarCollapsed ? item.label : undefined}
-              className={`w-full flex items-center gap-2.5 rounded-xl transition-all text-[13px] font-semibold ${
-                sidebarCollapsed ? 'justify-center px-2 py-2.5' : 'px-3 py-2.5'
-              } ${
-                contentTab === item.id && currentPage !== 'home'
-                  ? darkMode ? 'bg-blue-500/20 text-blue-400 font-bold' : 'bg-blue-50 text-blue-700 font-bold'
-                  : darkMode ? 'text-slate-400 hover:text-slate-200 hover:bg-[#1c2128]' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-50'
-              }`}
-            >
-              <span className="text-base flex-none">{item.icon}</span>
-              {!sidebarCollapsed && <span>{item.label}</span>}
-            </button>
-          ))}
-
-          <div className={`px-2 py-1.5 mt-4 text-[10px] font-bold uppercase tracking-wider ${sidebarCollapsed ? 'text-center' : ''} ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>
-            {sidebarCollapsed ? '···' : '도구'}
-          </div>
-          {([
-            { id: 'refine' as ContentTabType, label: 'AI 보정', icon: '✨' },
-            { id: 'image' as ContentTabType, label: '이미지 생성', icon: '🖼️' },
-            { id: 'history' as ContentTabType, label: '히스토리', icon: '🕐' },
-          ]).map(item => (
-            <button
-              key={item.id}
-              onClick={() => setContentTab(item.id)}
-              title={sidebarCollapsed ? item.label : undefined}
-              className={`w-full flex items-center gap-2.5 rounded-xl transition-all text-[13px] font-semibold ${
-                sidebarCollapsed ? 'justify-center px-2 py-2.5' : 'px-3 py-2.5'
-              } ${
-                contentTab === item.id && currentPage !== 'home'
-                  ? darkMode ? 'bg-blue-500/20 text-blue-400 font-bold' : 'bg-blue-50 text-blue-700 font-bold'
-                  : darkMode ? 'text-slate-400 hover:text-slate-200 hover:bg-[#1c2128]' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-50'
-              }`}
-            >
-              <span className="text-base flex-none">{item.icon}</span>
-              {!sidebarCollapsed && <span>{item.label}</span>}
-            </button>
-          ))}
-        </nav>
-
-        {/* 하단: 사이드바 접기/펼치기 + 다크모드 + 유저 */}
-        <div className={`border-t py-3 px-2 space-y-1 ${darkMode ? 'border-[#30363d]' : 'border-slate-100'}`}>
-          {/* 다크모드 토글 */}
-          <button
-            onClick={toggleDarkMode}
-            title={darkMode ? '라이트 모드' : '다크 모드'}
-            className={`w-full flex items-center gap-2.5 rounded-xl transition-all text-[13px] font-semibold ${
-              sidebarCollapsed ? 'justify-center px-2 py-2.5' : 'px-3 py-2.5'
-            } ${darkMode ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/50' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-100/80'}`}
-          >
-            <span className="text-base flex-none">{darkMode ? '☀️' : '🌙'}</span>
-            {!sidebarCollapsed && <span>{darkMode ? '라이트 모드' : '다크 모드'}</span>}
-          </button>
-
-          {/* 유저 메뉴 */}
-          {isLoggedIn && supabaseUser && (
-            <div className="relative">
-              <button
-                onClick={() => setShowUserMenu(!showUserMenu)}
-                title={supabaseUser.email || '사용자'}
-                className={`w-full flex items-center gap-2.5 rounded-xl transition-all text-[13px] font-semibold ${
-                  sidebarCollapsed ? 'justify-center px-2 py-2.5' : 'px-3 py-2.5'
-                } ${darkMode ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/50' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-100/80'}`}
-              >
-                <span className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold flex-none ${darkMode ? 'bg-slate-700 text-blue-400' : 'bg-blue-50 text-blue-600'}`}>
-                  {(supabaseUser.email || 'U')[0].toUpperCase()}
-                </span>
-                {!sidebarCollapsed && <span className="truncate text-xs">{supabaseUser.email}</span>}
-              </button>
-              {showUserMenu && (
-                <>
-                  <div className="fixed inset-0 z-40" onClick={() => setShowUserMenu(false)} />
-                  <div className={`absolute left-full bottom-0 ml-2 w-48 rounded-xl shadow-lg border z-50 overflow-hidden ${darkMode ? 'bg-[#161b22] border-[#30363d]' : 'bg-white border-slate-200'}`}>
-                    <button
-                      onClick={() => { setShowUserMenu(false); handleLogout(); }}
-                      className={`w-full text-left px-4 py-3 text-sm font-medium transition-colors ${darkMode ? 'text-red-400 hover:bg-slate-700' : 'text-red-500 hover:bg-red-50'}`}
-                    >
-                      로그아웃
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
-          )}
-
-          {/* 사이드바 접기/펼치기 */}
-          <button
-            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            className={`w-full flex items-center gap-2.5 rounded-xl transition-all text-[13px] font-semibold ${
-              sidebarCollapsed ? 'justify-center px-2 py-2.5' : 'px-3 py-2.5'
-            } ${darkMode ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/50' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-100/80'}`}
-          >
-            <svg className={`w-4 h-4 flex-none transition-transform ${sidebarCollapsed ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
-            </svg>
-            {!sidebarCollapsed && <span>사이드바 접기</span>}
-          </button>
-        </div>
-      </aside>
-
-      {/* 모바일 상단 헤더 (lg 미만에서만 표시) */}
+      {/* 모바일 상단 헤더 + 메인 콘텐츠 */}
       <div className="flex flex-col flex-1 min-w-0">
-      <header className={`lg:hidden backdrop-blur-2xl border-b sticky top-0 z-30 flex-none transition-all duration-300 ${darkMode ? 'bg-slate-800/90 border-slate-700' : 'bg-white/80 border-slate-100/80 shadow-[0_1px_3px_rgba(0,0,0,0.04)]'}`}>
-        <div className="h-14 w-full px-5 flex justify-between items-center">
-          <a href="/app" onClick={(e) => { e.preventDefault(); navigateTo('home'); setCurrentPage('home'); }} className="flex items-center gap-2.5 hover:opacity-80 transition-opacity cursor-pointer group">
-            <img src="/280_logo.png" alt="WINAID" className={`h-8 w-8 group-hover:scale-105 transition-transform ${darkMode ? 'rounded-md bg-white p-0.5' : ''}`} />
-            <div className="flex flex-col leading-none">
-              <span className={`font-black text-base tracking-[-0.02em] ${darkMode ? 'text-slate-100' : 'text-slate-800'}`}>WIN<span className="text-blue-600">AID</span></span>
-              <span className={`text-[8px] font-semibold tracking-wider uppercase ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>AI Marketing <span className="opacity-60" title={`빌드: ${typeof __BUILD_HASH__ !== 'undefined' ? __BUILD_HASH__ : 'dev'}`}>{typeof __BUILD_HASH__ !== 'undefined' ? __BUILD_HASH__ : 'dev'}</span></span>
-            </div>
-          </a>
-          <div className="flex items-center gap-3">
-             {isLoggedIn && supabaseUser && (
-               <button
-                 onClick={() => setShowUserMenu(!showUserMenu)}
-                 className={`w-9 h-9 rounded-xl flex items-center justify-center text-xs font-bold transition-all ${darkMode ? 'bg-slate-700 text-blue-400 hover:bg-slate-600' : 'bg-gradient-to-br from-blue-50 to-blue-100/80 text-blue-600 hover:from-blue-100 hover:to-blue-200/80 border border-blue-100/80 shadow-sm'}`}
-                 title={supabaseUser.email || '사용자'}
-               >
-                 {(supabaseUser.email || 'U')[0].toUpperCase()}
-               </button>
-             )}
-          </div>
-        </div>
-        {/* 모바일 네비 탭 */}
-        {currentPage !== 'home' && (
-        <div className={`border-t ${darkMode ? 'border-slate-700/50' : 'border-slate-100/80'}`}>
-          <nav className="w-full px-3 flex items-center gap-1 overflow-x-auto custom-scrollbar scroll-smooth" role="tablist" aria-label="콘텐츠 유형 탭">
-            {([
-              { id: 'blog' as ContentTabType, label: '블로그', icon: '📝' },
-              { id: 'card_news' as ContentTabType, label: '카드뉴스', icon: '🎨' },
-              { id: 'press' as ContentTabType, label: '언론보도', icon: '🗞️' },
-              { id: 'refine' as ContentTabType, label: 'AI 보정', icon: '✨' },
-              { id: 'image' as ContentTabType, label: '이미지 생성', icon: '🖼️' },
-              { id: 'history' as ContentTabType, label: '히스토리', icon: '🕐' },
-            ]).map(item => (
-              <button
-                key={item.id}
-                onClick={() => setContentTab(item.id)}
-                className={`relative py-3 px-3 text-[12px] font-semibold whitespace-nowrap transition-colors ${
-                  contentTab === item.id
-                    ? darkMode ? 'text-blue-400' : 'text-blue-600'
-                    : darkMode ? 'text-slate-400 hover:text-slate-200' : 'text-slate-500 hover:text-slate-800'
-                }`}
-              >
-                <span className="flex items-center gap-1">
-                  <span className="text-sm">{item.icon}</span>
-                  {item.label}
-                </span>
-                {contentTab === item.id && (
-                  <div className="absolute bottom-0 left-2 right-2 h-[2px] bg-blue-600 rounded-full" />
-                )}
-              </button>
-            ))}
-          </nav>
-        </div>
-        )}
-      </header>
+      <MobileHeader
+        darkMode={darkMode}
+        currentPage={currentPage}
+        contentTab={contentTab}
+        onSelectTab={setContentTab}
+        onNavigateHome={() => { navigateTo('home'); setCurrentPage('home'); }}
+        isLoggedIn={isLoggedIn}
+        userEmail={supabaseUser?.email || undefined}
+        showUserMenu={showUserMenu}
+        onToggleUserMenu={() => setShowUserMenu(!showUserMenu)}
+      />
 
       {/* 메인 콘텐츠 */}
       <main className="relative z-10 flex-1 overflow-y-auto">
         <div className="w-full px-5 lg:px-8 py-6">
 
-        {/* 홈 대시보드 - Genspark 스타일 */}
+        {/* 홈 대시보드 */}
         {currentPage === 'home' ? (
-          <div className={`min-h-full flex flex-col items-center px-6 pt-16 pb-20 ${darkMode ? 'bg-[#0d1117]' : 'bg-[#f7f7f8]'}`}>
-
-            {/* 타이틀 */}
-            <h1 className={`text-4xl md:text-5xl font-bold mb-3 text-center tracking-tight ${darkMode ? 'text-slate-100' : 'text-slate-900'}`}>
-              WINAID AI 워크스페이스
-            </h1>
-            <p className={`text-base mb-10 text-center ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-              병원 마케팅 콘텐츠를 AI로 빠르게 만들어보세요
-            </p>
-
-            {/* 입력 박스 */}
-            <div className={`w-full max-w-3xl rounded-2xl border shadow-md mb-4 overflow-hidden ${darkMode ? 'bg-[#161b22] border-[#30363d] shadow-black/30' : 'bg-white border-slate-200 shadow-slate-200/80'}`}>
-              <div className="flex items-center px-5 py-4 gap-3">
-                <svg className={`w-5 h-5 flex-shrink-0 ${darkMode ? 'text-slate-500' : 'text-slate-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
-                </svg>
-                <input
-                  type="text"
-                  value={quickInput}
-                  onChange={e => setQuickInput(e.target.value)}
-                  onKeyDown={e => {
-                    if (e.key === 'Enter' && quickInput.trim()) {
-                      setState(prev => ({ ...prev, blog: { ...prev.blog, topic: quickInput.trim() } }));
-                      setContentTab('blog');
-                    }
-                  }}
-                  placeholder="무엇이든 물어보고 만들어보세요"
-                  className={`flex-1 text-base outline-none bg-transparent placeholder:text-slate-400 ${darkMode ? 'text-slate-100' : 'text-slate-800'}`}
-                />
-                <button
-                  onClick={() => {
-                    if (quickInput.trim()) {
-                      setState(prev => ({ ...prev, blog: { ...prev.blog, topic: quickInput.trim() } }));
-                      setContentTab('blog');
-                    }
-                  }}
-                  className={`flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center transition-colors ${quickInput ? (darkMode ? 'bg-blue-600 hover:bg-blue-500' : 'bg-slate-900 hover:bg-slate-700') : (darkMode ? 'bg-slate-700 text-slate-500' : 'bg-slate-200 text-slate-400')}`}
-                >
-                  <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
-                  </svg>
-                </button>
-              </div>
-              <div className={`flex items-center gap-3 px-5 py-3 border-t text-xs ${darkMode ? 'border-[#30363d] text-slate-500' : 'border-slate-100 text-slate-400'}`}>
-                <span className="flex items-center gap-1.5 font-medium">
-                  <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse inline-block" />
-                  <span className={darkMode ? 'text-emerald-400' : 'text-emerald-600'}>AI 엔진 가동 중</span>
-                </span>
-                <span className={darkMode ? 'text-slate-700' : 'text-slate-300'}>|</span>
-                {['임플란트 블로그', '치과 카드뉴스', '성형외과 보도자료'].map(chip => (
-                  <button
-                    key={chip}
-                    onClick={() => {
-                      setState(prev => ({ ...prev, blog: { ...prev.blog, topic: chip } }));
-                      setContentTab('blog');
-                    }}
-                    className={`px-2.5 py-1 rounded-lg transition-colors ${darkMode ? 'bg-white/5 hover:bg-white/10 text-slate-400' : 'bg-slate-100 hover:bg-slate-200 text-slate-600'}`}
-                  >
-                    {chip}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* 콘텐츠 생성 - 대형 카드 3개 */}
-            <div className="w-full max-w-3xl flex flex-col gap-3 mt-8 mb-4">
-              {([
-                {
-                  id: 'blog' as ContentTabType,
-                  label: '블로그',
-                  desc: '네이버 스마트블록 최적화 의료 블로그 자동 생성',
-                  tags: ['SEO 최적화', '의료법 검증', 'AI 이미지'],
-                  accentBg: darkMode ? 'bg-blue-500/15' : 'bg-blue-50',
-                  accentColor: darkMode ? 'text-blue-400' : 'text-blue-600',
-                  accentBorder: darkMode ? 'border-r border-blue-500/20' : 'border-r border-blue-100',
-                  cardBg: darkMode ? 'bg-[#161b22] border-[#30363d] hover:border-blue-500/30' : 'bg-white border-slate-200 hover:border-blue-200 shadow-sm hover:shadow-md',
-                  tagBg: darkMode ? 'bg-blue-500/15 text-blue-400' : 'bg-blue-50 text-blue-600',
-                  btnBg: 'bg-blue-600 hover:bg-blue-700 text-white',
-                  icon: (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>),
-                },
-                {
-                  id: 'card_news' as ContentTabType,
-                  label: '카드뉴스',
-                  desc: 'SNS 이미지 슬라이드 원고 + 이미지 자동 제작',
-                  tags: ['슬라이드 구성', '이미지 생성', '디자인 템플릿'],
-                  accentBg: darkMode ? 'bg-pink-500/15' : 'bg-pink-50',
-                  accentColor: darkMode ? 'text-pink-400' : 'text-pink-600',
-                  accentBorder: darkMode ? 'border-r border-pink-500/20' : 'border-r border-pink-100',
-                  cardBg: darkMode ? 'bg-[#161b22] border-[#30363d] hover:border-pink-500/30' : 'bg-white border-slate-200 hover:border-pink-200 shadow-sm hover:shadow-md',
-                  tagBg: darkMode ? 'bg-pink-500/15 text-pink-400' : 'bg-pink-50 text-pink-600',
-                  btnBg: 'bg-pink-600 hover:bg-pink-700 text-white',
-                  icon: (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>),
-                },
-                {
-                  id: 'press' as ContentTabType,
-                  label: '보도자료',
-                  desc: '언론 배포용 전문 보도자료 작성',
-                  tags: ['보도자료 포맷', '전문 어조', '병원 정보 연동'],
-                  accentBg: darkMode ? 'bg-amber-500/15' : 'bg-amber-50',
-                  accentColor: darkMode ? 'text-amber-400' : 'text-amber-600',
-                  accentBorder: darkMode ? 'border-r border-amber-500/20' : 'border-r border-amber-100',
-                  cardBg: darkMode ? 'bg-[#161b22] border-[#30363d] hover:border-amber-500/30' : 'bg-white border-slate-200 hover:border-amber-200 shadow-sm hover:shadow-md',
-                  tagBg: darkMode ? 'bg-amber-500/15 text-amber-400' : 'bg-amber-50 text-amber-600',
-                  btnBg: 'bg-amber-600 hover:bg-amber-700 text-white',
-                  icon: (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7"><path d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10l6 6v8a2 2 0 01-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>),
-                },
-              ]).map(item => (
-                <button
-                  key={item.id}
-                  onClick={() => setContentTab(item.id)}
-                  className={`group flex items-stretch rounded-2xl border transition-all duration-200 overflow-hidden ${item.cardBg}`}
-                >
-                  <div className={`flex items-center justify-center w-20 flex-shrink-0 ${item.accentBg} ${item.accentBorder} ${item.accentColor}`}>
-                    {item.icon}
-                  </div>
-                  <div className="flex-1 flex flex-col justify-center px-5 py-4 text-left min-w-0">
-                    <h3 className={`text-base font-bold mb-1 ${darkMode ? 'text-slate-100' : 'text-slate-900'}`}>{item.label}</h3>
-                    <p className={`text-xs leading-relaxed mb-2.5 ${darkMode ? 'text-slate-500' : 'text-slate-500'}`}>{item.desc}</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {item.tags.map((t, i) => (
-                        <span key={i} className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-lg ${item.tagBg}`}>{t}</span>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="flex items-center px-5 flex-shrink-0">
-                    <span className={`text-xs font-bold px-4 py-2 rounded-xl transition-colors ${item.btnBg}`}>시작하기</span>
-                  </div>
-                </button>
-              ))}
-            </div>
-
-            {/* 도구 3개 - 가로 나열 */}
-            <div className="w-full max-w-3xl grid grid-cols-3 gap-3 mb-10">
-              {([
-                { id: 'refine' as ContentTabType, label: 'AI 보정', desc: '기존 글을 AI로 다듬기', iconBg: darkMode ? 'bg-emerald-500/15' : 'bg-emerald-50', iconColor: darkMode ? 'text-emerald-400' : 'text-emerald-600', icon: (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z"/></svg>) },
-                { id: 'image' as ContentTabType, label: '이미지 생성', desc: '진료일정·원내 안내물 이미지 자동 제작', iconBg: darkMode ? 'bg-violet-500/15' : 'bg-violet-50', iconColor: darkMode ? 'text-violet-400' : 'text-violet-600', icon: (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>) },
-                { id: 'history' as ContentTabType, label: '히스토리', desc: '생성 콘텐츠 내역 조회', iconBg: darkMode ? 'bg-slate-700' : 'bg-slate-100', iconColor: darkMode ? 'text-slate-400' : 'text-slate-500', icon: (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>) },
-              ]).map(item => (
-                <button
-                  key={item.id}
-                  onClick={() => setContentTab(item.id)}
-                  className={`flex items-center gap-3 p-4 rounded-xl border transition-all group ${darkMode ? 'bg-[#161b22] border-[#30363d] hover:border-slate-600' : 'bg-white border-slate-200 hover:border-slate-300 shadow-sm hover:shadow-md'}`}
-                >
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${item.iconBg} ${item.iconColor}`}>{item.icon}</div>
-                  <div className="text-left min-w-0">
-                    <div className={`text-sm font-semibold ${darkMode ? 'text-slate-200' : 'text-slate-800'}`}>{item.label}</div>
-                    <div className={`text-[11px] mt-0.5 truncate ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>{item.desc}</div>
-                  </div>
-                </button>
-              ))}
-            </div>
-
-            <button
-              onClick={() => setShowUserManual(true)}
-              className={`text-xs font-medium transition-colors ${darkMode ? 'text-slate-600 hover:text-slate-400' : 'text-slate-400 hover:text-slate-600'}`}
-            >
-              사용 설명서 보기 →
-            </button>
-          </div>
+          <HomeDashboard
+            darkMode={darkMode}
+            onSelectTab={setContentTab}
+            onSetTopic={(topic) => setState(prev => ({ ...prev, blog: { ...prev.blog, topic } }))}
+            onShowUserManual={() => setShowUserManual(true)}
+          />
         ) :
 
         /* 전체 화면 페이지들: 유사도, AI보정, 이미지, 히스토리 */
