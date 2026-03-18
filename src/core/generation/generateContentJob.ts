@@ -212,18 +212,39 @@ async function _orchestrateCardNews(
       console.log('🎨 첫 생성 imagePrompts:', agentResult.imagePrompts.map((p: string, i: number) => ({ index: i, promptHead: p.substring(0, 200) })));
     }
 
-    const images: { index: number; data: string; prompt: string }[] = [];
-    for (let i = 0; i < Math.min(maxImages, agentResult.imagePrompts.length); i++) {
-      safeProgress(`🎨 카드 이미지 ${i + 1}/${maxImages}장 생성 중...`);
-      const img = await generateSingleImage(
-        agentResult.imagePrompts[i],
-        request.imageStyle,
-        "1:1",
-        effectiveCustomStyle,
-        referenceImage,
-        copyMode
-      );
-      images.push({ index: i + 1, data: img, prompt: agentResult.imagePrompts[i] });
+    // ── 개별 timeout + 실패 격리 순차 루프 ──
+    const IMAGE_TIMEOUT_MS = 60_000;
+    const totalCards = Math.min(maxImages, agentResult.imagePrompts.length);
+    const images: { index: number; data: string; prompt: string; failed: boolean }[] = [];
+    let failedCount = 0;
+
+    for (let i = 0; i < totalCards; i++) {
+      safeProgress(`🎨 카드 이미지 ${i + 1}/${totalCards}장 생성 중...`);
+      try {
+        const imagePromise = generateSingleImage(
+          agentResult.imagePrompts[i],
+          request.imageStyle,
+          "1:1",
+          effectiveCustomStyle,
+          referenceImage,
+          copyMode
+        );
+        const timeoutPromise = new Promise<string>((_, reject) =>
+          setTimeout(() => reject(new Error(`이미지 ${i + 1}장 timeout (${IMAGE_TIMEOUT_MS / 1000}초)`)), IMAGE_TIMEOUT_MS)
+        );
+        const img = await Promise.race([imagePromise, timeoutPromise]);
+        images.push({ index: i + 1, data: img, prompt: agentResult.imagePrompts[i], failed: false });
+        safeProgress(`✅ 카드 이미지 ${i + 1}/${totalCards}장 완료`);
+      } catch (imgErr: any) {
+        console.warn(`⚠️ 카드 ${i + 1} 이미지 생성 실패 (계속 진행):`, imgErr?.message);
+        images.push({ index: i + 1, data: '', prompt: agentResult.imagePrompts[i], failed: true });
+        failedCount++;
+        safeProgress(`⚠️ 이미지 ${i + 1}/${totalCards}장 실패 — 다음 카드 진행 중...`);
+      }
+    }
+
+    if (failedCount > 0) {
+      safeProgress(`🖼️ 이미지 완료: ${totalCards - failedCount}장 성공, ${failedCount}장 fallback 적용`);
     }
 
     const cleanAltText = (text: string) => text
@@ -240,16 +261,31 @@ async function _orchestrateCardNews(
     const cardBorderStyle = sc?.borderWidth && sc.borderWidth !== '0'
       ? `border: ${sc.borderWidth} solid ${sc.borderColor};`
       : '';
+    const bgColor = sc?.backgroundColor || '#E8F4FD';
+    const textColor = '#1E293B';
+    const subtitleColor = '#64748B';
 
     const cardSlides = images.map((img) => {
-      if (img.data) {
+      if (img.data && !img.failed) {
         return `
           <div class="card-slide" style="border-radius: ${cardBorderRadius}; ${cardBorderStyle} overflow: hidden; aspect-ratio: 1/1; box-shadow: ${cardBoxShadow};">
             <img src="${img.data}" alt="${cleanAltText(img.prompt)}" data-index="${img.index}" class="card-full-img" style="width: 100%; height: 100%; object-fit: cover;" />
           </div>`;
       }
-      return '';
-    }).filter(Boolean).join('\n');
+      // ── Readable fallback SVG (텍스트 포함) ──
+      const cardPrompt = agentResult.cardPrompts?.[img.index - 1];
+      const tp = cardPrompt?.textPrompt || {};
+      const escSvg = (t: string) => (t || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+      const svgSub = escSvg(tp.subtitle || '').substring(0, 40);
+      const svgMain = escSvg(tp.mainTitle || `카드 ${img.index}`).substring(0, 25);
+      const svgDesc = escSvg(tp.description || '').substring(0, 50);
+      const fallbackSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="800" viewBox="0 0 800 800"><rect fill="${bgColor}" width="800" height="800" rx="24"/><rect fill="#fff" x="50" y="50" width="700" height="700" rx="20" opacity="0.85"/><text x="400" y="280" text-anchor="middle" font-family="Arial,sans-serif" font-size="20" fill="${subtitleColor}">${svgSub}</text><text x="400" y="360" text-anchor="middle" font-family="Arial,sans-serif" font-size="36" font-weight="bold" fill="${textColor}">${svgMain}</text>${svgDesc ? `<text x="400" y="420" text-anchor="middle" font-family="Arial,sans-serif" font-size="18" fill="${subtitleColor}">${svgDesc}</text>` : ''}<text x="400" y="540" text-anchor="middle" font-family="Arial,sans-serif" font-size="14" fill="#94A3B8">카드를 클릭하여 이미지를 재생성하세요</text></svg>`;
+      const b64 = typeof btoa === 'function' ? btoa(unescape(encodeURIComponent(fallbackSvg))) : Buffer.from(fallbackSvg).toString('base64');
+      return `
+          <div class="card-slide" style="border-radius: ${cardBorderRadius}; ${cardBorderStyle} overflow: hidden; aspect-ratio: 1/1; box-shadow: ${cardBoxShadow};">
+            <img src="data:image/svg+xml;base64,${b64}" alt="카드 ${img.index} (재생성 필요)" data-index="${img.index}" class="card-full-img" style="width: 100%; height: 100%; object-fit: cover;" />
+          </div>`;
+    }).join('\n');
 
     const finalHtml = `
       <div class="card-news-container">

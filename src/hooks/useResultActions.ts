@@ -23,6 +23,7 @@ interface UseResultActionsReturn {
     html: string;
     keywords?: string;
     category?: string;
+    cardPrompts?: any[];
   }) => void;
 }
 
@@ -56,26 +57,38 @@ export function useResultActions(): UseResultActionsReturn {
     html: string;
     keywords?: string;
     category?: string;
+    cardPrompts?: any[];
   }) => {
     if (!opts.title || !opts.html) return;
 
     // SVG template 보존: raster base64만 제거, SVG inline은 유지
     const { stripLargeBase64FromHtml } = await import('../services/image/imageStorageService');
     const lightweightHtml = stripLargeBase64FromHtml(opts.html);
+
+    // 카드 구조 메타데이터: cardPrompts에서 텍스트만 추출하여 경량 저장
+    let cardStructureMeta = '';
+    if (opts.cardPrompts && Array.isArray(opts.cardPrompts)) {
+      const cardTexts = opts.cardPrompts.map((cp, i) => {
+        const tp = cp?.textPrompt || {};
+        return `[${i + 1}] ${tp.subtitle || ''} | ${tp.mainTitle || ''} | ${tp.description || ''}`;
+      });
+      cardStructureMeta = cardTexts.join('\n');
+    }
+
     console.info(
-      `[STORAGE] persistCardNewsHistory | original=${opts.html.length}자 | lightweight=${lightweightHtml.length}자`
+      `[STORAGE] persistCardNewsHistory | original=${opts.html.length}자 | lightweight=${lightweightHtml.length}자 | cards=${opts.cardPrompts?.length || 0}`
     );
 
     // contentStorage 어댑터를 통해 Layer 2 저장
     import('../core/generation/contentStorage').then(({ persistBlogHistory }) => {
       persistBlogHistory({
         title: opts.title,
-        plainText: opts.html.replace(/<[^>]*>/g, ' ').trim(),
+        plainText: cardStructureMeta || opts.html.replace(/<[^>]*>/g, ' ').trim(),
         lightweightHtml,
         keywords: opts.keywords?.split(',').map(k => k.trim()) || [],
         category: opts.category,
       }).catch(err => {
-        console.error('블로그 이력 저장 실패 (메인 플로우는 계속):', err);
+        console.error('카드뉴스 이력 저장 실패 (메인 플로우는 계속):', err);
       });
     });
   }, []);

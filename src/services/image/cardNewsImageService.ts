@@ -342,21 +342,32 @@ export const generateSingleImage = async (
   // 🚨 핵심 문장 추출 전 안전 체크
   console.log('📝 핵심 문장 추출 시작, cleanPromptText 타입:', typeof cleanPromptText, '길이:', cleanPromptText?.length);
 
-  // cleanPromptText에서 핵심 텍스트 추출 (다양한 패턴 지원)
-  const subtitleMatch = (cleanPromptText && typeof cleanPromptText === 'string') ?
-                        (cleanPromptText.match(/subtitle:\s*"([^"]+)"/i) || cleanPromptText.match(/subtitle:\s*([^\n,]+)/i)) : null;
-  const mainTitleMatch = (cleanPromptText && typeof cleanPromptText === 'string') ?
-                         (cleanPromptText.match(/mainTitle:\s*"([^"]+)"/i) || cleanPromptText.match(/mainTitle:\s*([^\n,]+)/i)) : null;
-  const descriptionMatch = (cleanPromptText && typeof cleanPromptText === 'string') ?
-                           (cleanPromptText.match(/description:\s*"([^"]+)"/i) || cleanPromptText.match(/description:\s*([^\n]+)/i)) : null;
-  // 🎨 비주얼 지시문 추출
-  const visualMatch = (cleanPromptText && typeof cleanPromptText === 'string') ?
-                      (cleanPromptText.match(/비주얼:\s*([^\n]+)/i) || cleanPromptText.match(/visual:\s*([^\n]+)/i)) : null;
+  // cleanPromptText에서 핵심 텍스트 추출 — 구조화 파싱 우선, regex fallback
+  let extractedSubtitle = '';
+  let extractedMainTitle = '';
+  let extractedDescription = '';
+  let extractedVisual = '';
 
-  const extractedSubtitle = (subtitleMatch?.[1] || '').trim().replace(/^["']|["']$/g, '');
-  const extractedMainTitle = (mainTitleMatch?.[1] || '').trim().replace(/^["']|["']$/g, '');
-  const extractedDescription = (descriptionMatch?.[1] || '').trim().replace(/^["']|["']$/g, '');
-  const extractedVisual = (visualMatch?.[1] || '').trim();
+  if (cleanPromptText && typeof cleanPromptText === 'string') {
+    // 방법 1: key: "value" 형식 파싱 (따옴표 이스케이프 방어 포함)
+    const parseField = (text: string, key: string): string => {
+      // "key": "value" 또는 key: "value" (escaped quotes 방어)
+      const quotedMatch = text.match(new RegExp(`${key}:\\s*"((?:[^"\\\\]|\\\\.)*)"`, 'i'));
+      if (quotedMatch) return quotedMatch[1].replace(/\\"/g, '"').replace(/\\'/g, "'");
+      // key: value (줄바꿈까지)
+      const unquotedMatch = text.match(new RegExp(`${key}:\\s*([^\\n,]+)`, 'i'));
+      if (unquotedMatch) return unquotedMatch[1].trim().replace(/^["']|["']$/g, '');
+      return '';
+    };
+
+    extractedSubtitle = parseField(cleanPromptText, 'subtitle');
+    extractedMainTitle = parseField(cleanPromptText, 'mainTitle');
+    extractedDescription = parseField(cleanPromptText, 'description');
+
+    // 비주얼 지시문 추출
+    const visualMatch = cleanPromptText.match(/비주얼:\s*([^\n]+)/i) || cleanPromptText.match(/visual:\s*([^\n]+)/i);
+    extractedVisual = (visualMatch?.[1] || '').trim();
+  }
 
   // 🎨 프롬프트에서 배경색 추출 (디자인 템플릿 반영)
   const bgColorMatch = (cleanPromptText && typeof cleanPromptText === 'string') ?
