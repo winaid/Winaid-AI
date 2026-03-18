@@ -11,6 +11,16 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
+// ── imageStorageService mock: static import된 strip 함수 ──
+vi.mock('../../../services/image/imageStorageService', () => ({
+  stripLargeBase64FromHtml: vi.fn().mockImplementation((html: string) =>
+    html.replace(/src="data:image\/(?!svg)[^"]*"/gi, 'src=""').replace(/src="blob:[^"]*"/gi, 'src=""')
+  ),
+  stripBase64FromHtml: vi.fn().mockImplementation((html: string) =>
+    html.replace(/src="data:image\/(?!svg)[^"]*"/gi, 'src=""').replace(/src="blob:[^"]*"/gi, 'src=""')
+  ),
+}));
+
 // ── Layer 1 mock: apiService ──
 vi.mock('../../../services/apiService', () => ({
   saveContentToServer: vi.fn().mockResolvedValue({ success: true, id: 'test-id' }),

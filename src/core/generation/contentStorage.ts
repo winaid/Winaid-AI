@@ -29,6 +29,7 @@
 import type { ContentArtifact } from './contracts';
 import type { SaveContentRequest, SaveContentResponse } from '../../services/apiService';
 import type { GenerationRequest } from '../../types';
+import { stripLargeBase64FromHtml } from '../../services/image/imageStorageService';
 
 // ══════════════════════════════════════════════
 // Layer 1: Result Persistence — 타입 + 어댑터
@@ -55,8 +56,7 @@ export function buildSavePayload(artifact: ContentArtifact): SaveContentPayload 
 
   let contentForSave = content.storageHtml || '';
   if (!contentForSave) {
-    // storageHtml 없으면 htmlContent에서 strip — 공용 함수 사용
-    const { stripLargeBase64FromHtml } = require('../../services/image/imageStorageService');
+    // storageHtml 없으면 htmlContent에서 strip — 공용 함수 사용 (static import)
     contentForSave = stripLargeBase64FromHtml(content.htmlContent);
     console.warn('[STORAGE] storageHtml 없음 — htmlContent에서 공용 strip 적용 (SVG 보존)');
   }
