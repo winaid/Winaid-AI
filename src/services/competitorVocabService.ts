@@ -176,7 +176,7 @@ export async function analyzeCompetitorVocabulary(
         });
 
         if (response.ok) {
-          const data = await response.json();
+          const data: any = await response.json();
           if (data.content && data.content.length > 200) {
             // 최대 2000자까지만 (API 비용 절약)
             blogContents.push(data.content.substring(0, 2000));

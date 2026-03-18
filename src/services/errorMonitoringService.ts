@@ -106,9 +106,9 @@ async function flushErrors(): Promise<void> {
   pendingErrors = [];
 
   try {
-    const { error } = await supabase
-      .from('error_logs')
-      .insert(batch.map(e => ({
+    const { error } = await (supabase
+      .from('error_logs') as any)
+      .insert(batch.map((e: any) => ({
         category: e.category,
         severity: e.severity,
         message: e.message.substring(0, 1000), // DB 필드 길이 제한

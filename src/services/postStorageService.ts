@@ -131,8 +131,8 @@ export const saveGeneratedPost = async (data: SavePostData): Promise<{
     }
 
     // Supabase에 저장
-    const { data: result, error } = await supabase
-      .from('generated_posts')
+    const { data: result, error } = await (supabase
+      .from('generated_posts') as any)
       .insert(insertData)
       .select('id')
       .single();
@@ -184,13 +184,13 @@ export const getAllGeneratedPosts = async (
   error?: string;
 }> => {
   try {
-    const rpcPromise = supabase.rpc('get_all_generated_posts', {
+    const rpcPromise = supabase.rpc('get_all_generated_posts' as any, {
       admin_password: adminPassword,
       filter_post_type: options?.filterPostType || null,
       filter_hospital: options?.filterHospital || null,
       limit_count: options?.limit || 100,
       offset_count: options?.offset || 0
-    });
+    } as any);
     const timeoutPromise = new Promise<never>((_, reject) =>
       setTimeout(() => reject(new Error('데이터 조회 시간 초과 (15초)')), 15000)
     );
@@ -243,9 +243,9 @@ export const getAdminStats = async (adminPassword: string): Promise<{
     // RPC 함수는 SECURITY DEFINER로 anon key만으로도 호출 가능
 
     // 안전망: Supabase RPC hang 방지 (30초 — 싱가포르 서버 + 대용량 테이블 고려)
-    const rpcPromise = supabase.rpc('get_admin_stats', {
+    const rpcPromise = supabase.rpc('get_admin_stats' as any, {
       admin_password: adminPassword
-    });
+    } as any);
     const timeoutPromise = new Promise<never>((_, reject) =>
       setTimeout(() => reject(new Error('인증 요청 시간 초과 (30초). 네트워크 연결을 확인하세요.')), 30000)
     );
@@ -304,10 +304,10 @@ export const deleteGeneratedPost = async (
   error?: string;
 }> => {
   try {
-    const { data, error } = await supabase.rpc('delete_generated_post', {
+    const { data, error } = await supabase.rpc('delete_generated_post' as any, {
       admin_password: adminPassword,
       post_id: postId
-    });
+    } as any);
 
     if (error) {
       console.error('[PostStorage] Admin 삭제 실패:', error);

@@ -72,7 +72,7 @@ async function crawlBlogPosts(blogUrl: string): Promise<string> {
 
   if (!res.ok) return '';
 
-  const data = await res.json();
+  const data: any = await res.json();
   const posts: { content?: string }[] = data.posts || [];
 
   return posts
@@ -96,7 +96,7 @@ async function crawlSinglePage(url: string): Promise<string> {
 
   if (!res.ok) return '';
 
-  const data = await res.json();
+  const data: any = await res.json();
   return (data.content || '').trim().slice(0, 12000);
 }
 
