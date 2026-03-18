@@ -9,11 +9,14 @@ import { supabase } from '../../lib/supabase';
 const BUCKET_NAME = 'blog-images';
 
 // base64 data URI → Uint8Array + mime type 파싱
+// 주의: image/svg+xml 같은 MIME 타입도 지원해야 함 (\w+만으로는 '+'를 매칭 못함)
 function parseBase64DataUri(dataUri: string): { bytes: Uint8Array; mimeType: string; ext: string } | null {
-  const match = dataUri.match(/^data:(image\/(\w+));base64,(.+)$/);
+  const match = dataUri.match(/^data:(image\/([\w+.-]+));base64,(.+)$/);
   if (!match) return null;
   const mimeType = match[1];
-  const ext = match[2] === 'jpeg' ? 'jpg' : match[2];
+  const rawExt = match[2];
+  // svg+xml → svg, jpeg → jpg, 나머지 그대로
+  const ext = rawExt === 'svg+xml' ? 'svg' : rawExt === 'jpeg' ? 'jpg' : rawExt;
   const base64 = match[3];
   const binary = atob(base64);
   const bytes = new Uint8Array(binary.length);
@@ -31,6 +34,45 @@ function generatePath(imageIndex: number, ext: string): string {
 }
 
 /**
+ * 이미지 데이터를 정규화하여 업로드 가능한 data URI로 변환
+ * - data:image/...;base64,... → 그대로 사용
+ * - raw base64 (data: prefix 없음) → data:image/png;base64, 붙여서 정규화
+ * - blob: URL → 업로드 불가, null 반환
+ * - http/https URL → 이미 원격, 업로드 불필요, null 반환
+ * - null/empty → null 반환
+ */
+function normalizeImageData(data: string | null | undefined, imageIndex: number): string | null {
+  if (!data || data.length === 0) {
+    console.warn(`[IMG-NORMALIZE] IMG_${imageIndex}: empty data`);
+    return null;
+  }
+
+  // 이미 정상 data URI
+  if (data.startsWith('data:image/')) return data;
+
+  // blob URL — 브라우저 전용, 서버 업로드 불가
+  if (data.startsWith('blob:')) {
+    console.warn(`[IMG-NORMALIZE] IMG_${imageIndex}: blob URL cannot be uploaded, skipping`);
+    return null;
+  }
+
+  // 이미 원격 URL — 업로드 불필요
+  if (data.startsWith('http://') || data.startsWith('https://')) {
+    console.info(`[IMG-NORMALIZE] IMG_${imageIndex}: already a remote URL, skipping upload`);
+    return null;
+  }
+
+  // raw base64 (data: prefix 없음) — PNG로 가정하여 data URI 생성
+  if (/^[A-Za-z0-9+/]/.test(data) && data.length > 100) {
+    console.info(`[IMG-NORMALIZE] IMG_${imageIndex}: raw base64 detected, wrapping as data:image/png`);
+    return `data:image/png;base64,${data}`;
+  }
+
+  console.warn(`[IMG-NORMALIZE] IMG_${imageIndex}: unrecognized format (${data.substring(0, 50)}...)`);
+  return null;
+}
+
+/**
  * base64 이미지 1장을 Supabase Storage에 업로드
  * @returns public URL or null (실패 시)
  */
@@ -39,9 +81,13 @@ export async function uploadBase64Image(
   imageIndex: number
 ): Promise<string | null> {
   try {
-    const parsed = parseBase64DataUri(dataUri);
+    // 입력 데이터 정규화
+    const normalized = normalizeImageData(dataUri, imageIndex);
+    if (!normalized) return null;
+
+    const parsed = parseBase64DataUri(normalized);
     if (!parsed) {
-      console.warn(`[IMG-UPLOAD] IMG_${imageIndex}: invalid data URI format`);
+      console.warn(`[IMG-UPLOAD] IMG_${imageIndex}: invalid data URI format after normalize (${normalized.substring(0, 60)}...)`);
       return null;
     }
 

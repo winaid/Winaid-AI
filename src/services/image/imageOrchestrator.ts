@@ -51,8 +51,8 @@ const TIER_CONCURRENCY: Record<ModelTier, number> = {
 };
 
 const IMAGE_TIMEOUT: Record<ImageGenMode, Record<ImageRole, number>> = {
-  auto:   { hero: 30000, sub: 25000 },
-  manual: { hero: 45000, sub: 35000 },
+  auto:   { hero: 25000, sub: 25000 },
+  manual: { hero: 35000, sub: 35000 },
 };
 
 // 디버그 verbose 로그 플래그
@@ -217,14 +217,16 @@ export const generateBlogImage = async (
   let chain: AttemptDef[];
 
   if (isHero) {
+    // hero: fast-success-first 전략
+    // NB2로 먼저 빠르게 시도 → 실패 시 PRO 또는 축소 프롬프트로 재시도
+    // 이전 pro-first 전략은 hero wall time의 대부분을 첫 시도에서 소비하여
+    // fallback이 사실상 실패하는 구조적 문제가 있었음
     if (startTier === 'pro') {
-      // PRO 사용 가능: PRO → NB2 fallback
       chain = [
-        { model: GEMINI_MODEL.IMAGE_PRO, tier: 'pro', prompt: heroPrompt, label: '#1(pro)' },
-        { model: GEMINI_MODEL.IMAGE_FLASH, tier: 'nb2', prompt: subPrompt, label: '#2(nb2-cross)' },
+        { model: GEMINI_MODEL.IMAGE_FLASH, tier: 'nb2', prompt: heroPrompt, label: '#1(nb2-fast)' },
+        { model: GEMINI_MODEL.IMAGE_PRO, tier: 'pro', prompt: subPrompt, label: '#2(pro-fallback)' },
       ];
     } else {
-      // PRO 불안정: NB2 먼저 → NB2 재시도(축소 프롬프트)
       chain = [
         { model: GEMINI_MODEL.IMAGE_FLASH, tier: 'nb2', prompt: heroPrompt, label: '#1(nb2-hero)' },
         { model: GEMINI_MODEL.IMAGE_FLASH, tier: 'nb2', prompt: ultraMinimal, label: '#2(nb2-minimal)' },
@@ -240,8 +242,8 @@ export const generateBlogImage = async (
 
   const maxAttempts = chain.length;
 
-  // ── wall time cap: hero 35s, sub 45s ──
-  const WALL_TIME_CAP_MS = isHero ? 35_000 : 45_000;
+  // ── wall time cap: hero와 sub 동일 50s (hero가 2회 시도할 충분한 시간 확보) ──
+  const WALL_TIME_CAP_MS = 50_000;
   const wallStart = Date.now();
 
   let lastError: any = null;
