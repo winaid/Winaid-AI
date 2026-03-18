@@ -1,10 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { GeneratedContent, ImageStyle as _ImageStyle, CssTheme, BlogSection } from '../types';
-import { modifyPostWithAI, regenerateCardSlide as _regenerateCardSlide } from '../services/postProcessingService';
-import { regenerateSection } from '../services/geminiService';
-import { generateSingleImage, recommendImagePrompt, recommendCardNewsPrompt } from '../services/image/cardNewsImageService';
-import { generateBlogImage } from '../services/image/imageOrchestrator';
-import { CARD_LAYOUT_RULE as _CARD_LAYOUT_RULE, STYLE_KEYWORDS } from '../services/image/imagePromptBuilder';
+import { generateSingleImage } from '../services/image/cardNewsImageService';
+import { STYLE_KEYWORDS } from '../services/image/imagePromptBuilder';
 import { AI_PROMPT_TEMPLATES, CARD_PROMPT_HISTORY_KEY, CARD_REF_IMAGE_KEY, AutoSaveHistoryItem, CardPromptHistoryItem, cleanText } from './resultPreviewUtils';
 import { SeoDetailModal, AiSmellDetailModal, SimilarityModal } from './ScoringModals';
 import { ImageDownloadModal, ImageRegenModal, CardDownloadModal } from './ExportModals';
@@ -16,6 +13,7 @@ import { useContentQuality } from '../hooks/useContentQuality';
 import { useDraftPersistence } from '../hooks/useDraftPersistence';
 import { useResultActions } from '../hooks/useResultActions';
 import { useCardDownload } from '../hooks/useCardDownload';
+import { useAiRefine } from '../hooks/useAiRefine';
 
 
 
@@ -29,7 +27,6 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
   const [localHtml, setLocalHtml] = useState(content.fullHtml);
   const [currentTheme, setCurrentTheme] = useState<CssTheme>(content.cssTheme || 'modern');
   const [editorInput, setEditorInput] = useState('');
-  const [isEditingAi, setIsEditingAi] = useState(false);
   const [charCount, setCharCount] = useState(0);
   const [showTemplates, setShowTemplates] = useState(false);
 
@@ -86,8 +83,6 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
   const [cardRegenRefImage, setCardRegenRefImage] = useState(''); // 참고 이미지
   const [refImageMode, setRefImageMode] = useState<'recolor' | 'copy'>('copy'); // 참고 이미지 적용 방식: recolor=복제+색상변경, copy=완전복제
   const [currentCardImage, setCurrentCardImage] = useState(''); // 현재 카드의 이미지 URL
-  const [isRecommendingCardPrompt, setIsRecommendingCardPrompt] = useState(false); // 카드뉴스 AI 프롬프트 추천 중
-  const [isAIPromptApplied, setIsAIPromptApplied] = useState(false); // AI 추천 프롬프트가 적용된 상태인지 (자동 연동 스킵용)
   const [promptHistory, setPromptHistory] = useState<CardPromptHistoryItem[]>([]); // 저장된 프롬프트 히스토리
   const [showHistoryDropdown, setShowHistoryDropdown] = useState(false);
   const [isRefImageLocked, setIsRefImageLocked] = useState(false); // 참고 이미지 고정 여부
@@ -97,7 +92,6 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
   
   // 📝 섹션별 재생성 상태
   const [blogSections, setBlogSections] = useState<BlogSection[]>(content.sections || []);
-  const [regeneratingSection, setRegeneratingSection] = useState<number | null>(null);
   const [showSectionPanel, setShowSectionPanel] = useState(true);
   
   // content.seoScore가 있으면 자동으로 설정
@@ -199,41 +193,9 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
   };
   
   // 텍스트 변경 시 이미지 프롬프트 자동 연동
-  useEffect(() => {
-    // 🔒 AI 추천 프롬프트가 적용된 상태면 자동 연동 스킵 (사용자가 입력한 AI 프롬프트 보존)
-    if (isAIPromptApplied) {
-      return;
-    }
-    
-    // 텍스트 내용이 하나라도 있으면 이미지 프롬프트 자동 생성
-    if (editSubtitle || editMainTitle || editDescription) {
-      const style = content.imageStyle || 'illustration';
-      
-      // 🎨 커스텀 스타일일 때는 savedCustomStylePrompt 사용, 아니면 기본 스타일
-      let styleText: string;
-      if (style === 'custom' && savedCustomStylePrompt) {
-        styleText = savedCustomStylePrompt;
-      } else if (style === 'photo') {
-        styleText = 'photorealistic real medical clinic photo, natural lighting, DSLR, shallow depth of field, NOT illustration, NOT 3D render';
-      } else {
-        styleText = STYLE_KEYWORDS[style as keyof typeof STYLE_KEYWORDS] || STYLE_KEYWORDS.illustration;
-      }
-      
-      const newImagePrompt = `1:1 카드뉴스, ${editSubtitle ? `"${editSubtitle}"` : ''} ${editMainTitle ? `"${editMainTitle}"` : ''} ${editDescription ? `"${editDescription}"` : ''}, ${styleText}, 밝고 친근한 분위기`.trim();
-      
-      setEditImagePrompt(newImagePrompt);
-    }
-  }, [editSubtitle, editMainTitle, editDescription, content.imageStyle, savedCustomStylePrompt, isAIPromptApplied]);
-  
   // 카드 수 (localHtml 변경 시 업데이트)
   const [cardCount, setCardCount] = useState(0);
   
-  const [regenOpen, setRegenOpen] = useState(false);
-  const [regenIndex, setRegenIndex] = useState<number>(1);
-  const [regenPrompt, setRegenPrompt] = useState<string>('');
-  const [regenRefDataUrl, setRegenRefDataUrl] = useState<string | undefined>(undefined);
-  const [regenRefName, setRegenRefName] = useState<string>('');
-  const [isRecommendingPrompt, setIsRecommendingPrompt] = useState(false);
   
   const editorRef = useRef<HTMLDivElement>(null);
   const isInternalChange = useRef(false);
@@ -266,6 +228,61 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
     handleDownloadWord, handleDownloadPDF, handleCopy,
     applyInlineStylesForNaver,
   } = useDocumentExport({ content, localHtml, currentTheme, editorRef });
+
+  // ── AI Refine 훅 (AI 수정/재생성/프롬프트 추천) ──
+  const {
+    isEditingAi,
+    regeneratingSection,
+    regenOpen, setRegenOpen,
+    regenIndex, setRegenIndex,
+    regenPrompt, setRegenPrompt,
+    regenRefDataUrl,
+    regenRefName,
+    isRecommendingPrompt,
+    isRecommendingCardPrompt,
+    isAIPromptApplied, setIsAIPromptApplied,
+    handleAiEditSubmit: aiEditSubmit,
+    handleSectionRegenerate,
+    submitRegenerateImage,
+    handleRecommendPrompt,
+    handleRecommendCardPrompt,
+    handleRegenFileChange,
+  } = useAiRefine({
+    localHtml,
+    setLocalHtml,
+    content,
+    savedCustomStylePrompt: savedCustomStylePrompt || '',
+    blogSections,
+    setBlogSections,
+    saveToHistory,
+    setEditorInput,
+    setEditProgress,
+    setEditImagePrompt,
+    editSubtitle,
+    editMainTitle,
+    editDescription,
+  });
+
+  // handleAiEditSubmit 래퍼: editorInput을 바인딩
+  const handleAiEditSubmit = (e: React.FormEvent) => aiEditSubmit(e, editorInput);
+
+  // 텍스트 변경 시 이미지 프롬프트 자동 연동
+  useEffect(() => {
+    if (isAIPromptApplied) return;
+    if (editSubtitle || editMainTitle || editDescription) {
+      const style = content.imageStyle || 'illustration';
+      let styleText: string;
+      if (style === 'custom' && savedCustomStylePrompt) {
+        styleText = savedCustomStylePrompt;
+      } else if (style === 'photo') {
+        styleText = 'photorealistic real medical clinic photo, natural lighting, DSLR, shallow depth of field, NOT illustration, NOT 3D render';
+      } else {
+        styleText = STYLE_KEYWORDS[style as keyof typeof STYLE_KEYWORDS] || STYLE_KEYWORDS.illustration;
+      }
+      const newImagePrompt = `1:1 카드뉴스, ${editSubtitle ? `"${editSubtitle}"` : ''} ${editMainTitle ? `"${editMainTitle}"` : ''} ${editDescription ? `"${editDescription}"` : ''}, ${styleText}, 밝고 친근한 분위기`.trim();
+      setEditImagePrompt(newImagePrompt);
+    }
+  }, [editSubtitle, editMainTitle, editDescription, content.imageStyle, savedCustomStylePrompt, isAIPromptApplied]);
 
   // 콘텐츠 품질 검사 훅 (SEO/유사도/이미지 최적화)
   const {
@@ -648,276 +665,9 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
     }
   };
 
-  // 📝 섹션별 재생성 핸들러
-  const handleSectionRegenerate = async (sectionIndex: number) => {
-    const section = blogSections[sectionIndex];
-    if (!section || regeneratingSection !== null) return;
-
-    setRegeneratingSection(sectionIndex);
-    try {
-      // Undo를 위해 현재 상태 저장
-      saveToHistory(localHtml);
-
-      const newSectionHtml = await regenerateSection(
-        section.title,
-        section.html,
-        localHtml,
-        'strict',
-        (msg) => setEditProgress(msg)
-      );
-
-      // HTML에서 해당 섹션을 교체
-      let updatedHtml = localHtml;
-      const oldSectionHtml = section.html;
-      if (updatedHtml.includes(oldSectionHtml)) {
-        updatedHtml = updatedHtml.replace(oldSectionHtml, newSectionHtml);
-      } else {
-        // 정확한 매칭 실패 시 h3 태그 기반으로 교체 시도
-        const escapedTitle = section.title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        const sectionRegex = new RegExp(
-          `<h3[^>]*>${escapedTitle}<\\/h3>[\\s\\S]*?(?=<h3|<div class="faq|$)`,
-          'i'
-        );
-        updatedHtml = updatedHtml.replace(sectionRegex, newSectionHtml);
-      }
-
-      setLocalHtml(updatedHtml);
-
-      // 섹션 목록도 업데이트
-      setBlogSections(prev => prev.map((s, i) =>
-        i === sectionIndex ? { ...s, html: newSectionHtml } : s
-      ));
-
-      setEditProgress(`✅ "${section.title}" 재생성 완료`);
-    } catch (error) {
-      console.error('섹션 재생성 실패:', error);
-      setEditProgress('❌ 재생성 실패');
-    } finally {
-      setRegeneratingSection(null);
-      setTimeout(() => setEditProgress(''), 3000);
-    }
-  };
-
-  const _openRegenModal = (imgIndex: number, currentPrompt: string) => { // 향후 이미지 재생성 모달에 활용
-    setRegenIndex(imgIndex);
-    setRegenPrompt(currentPrompt || '전문적인 의료 일러스트');
-    setRegenRefDataUrl(undefined);
-    setRegenRefName('');
-    setRegenOpen(true);
-  };
-
-  const handleRegenFileChange = (file: File | null) => {
-    if (!file) {
-      setRegenRefDataUrl(undefined);
-      setRegenRefName('');
-      return;
-    }
-    setRegenRefName(file.name);
-    const reader = new FileReader();
-    reader.onload = () => {
-      const v = (reader.result || '').toString();
-      if (v.startsWith('data:')) setRegenRefDataUrl(v);
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const handleRecommendPrompt = async () => {
-    setIsRecommendingPrompt(true);
-    try {
-      const tempDiv = document.createElement('div');
-      tempDiv.innerHTML = localHtml;
-      const textContent = tempDiv.innerText || tempDiv.textContent || '';
-      
-      // 현재 이미지 스타일을 전달하여 스타일에 맞는 프롬프트 추천
-      // 🎨 커스텀 스타일일 때 savedCustomStylePrompt 전달
-      const currentStyle = content.imageStyle || 'illustration';
-      const recommendedPrompt = await recommendImagePrompt(textContent, regenPrompt, currentStyle, savedCustomStylePrompt);
-      setRegenPrompt(recommendedPrompt);
-    } catch {
-      toast.error('프롬프트 추천 중 오류가 발생했습니다.');
-    } finally {
-      setIsRecommendingPrompt(false);
-    }
-  };
-
-  // 🎴 카드뉴스용 AI 프롬프트 추천 - 부제/메인제목/설명 포함!
-  const handleRecommendCardPrompt = async () => {
-    setIsRecommendingCardPrompt(true);
-    try {
-      const currentStyle = content.imageStyle || 'illustration';
-      
-      // 🎴 카드뉴스 전용 프롬프트 추천 함수 사용
-      const recommendedPrompt = await recommendCardNewsPrompt(
-        editSubtitle,
-        editMainTitle,
-        editDescription,
-        currentStyle,
-        savedCustomStylePrompt
-      );
-      
-      // 🔒 AI 추천 프롬프트 적용 - 자동 연동 스킵 플래그 ON
-      setIsAIPromptApplied(true);
-      setEditImagePrompt(recommendedPrompt);
-    } catch {
-      toast.error('프롬프트 추천 중 오류가 발생했습니다.');
-    } finally {
-      setIsRecommendingCardPrompt(false);
-    }
-  };
-
-  const submitRegenerateImage = async () => {
-    if (!regenPrompt.trim()) return;
-    setIsEditingAi(true);
-    setEditProgress(`${regenIndex}번 이미지를 다시 생성 중...`);
-    try {
-      const style = content.imageStyle || 'illustration';
-      const isCardNews = content.postType === 'card_news';
-      const imgRatio = isCardNews ? "1:1" : "16:9";
-      // 🎨 커스텀 스타일 프롬프트: savedCustomStylePrompt 사용 (재생성 시에도 유지!)
-      const customStylePrompt = savedCustomStylePrompt || undefined;
-      
-      let newImageData: string;
-      
-      if (isCardNews) {
-        // 🎴 카드뉴스: generateSingleImage 사용 (텍스트 포함, 브라우저 프레임, 1:1)
-        console.log('🔄 카드뉴스 이미지 재생성:', { style, customStylePrompt: customStylePrompt?.substring(0, 50) });
-        newImageData = await generateSingleImage(regenPrompt.trim(), style, imgRatio, customStylePrompt);
-      } else {
-        // 📝 블로그: generateBlogImage 사용 (텍스트 없는 순수 이미지, 16:9)
-        // 수동 재생성 → mode='manual' (더 긴 timeout 허용)
-        console.log('🔄 블로그 이미지 재생성 (manual):', { style, customStylePrompt: customStylePrompt?.substring(0, 50) });
-        newImageData = (await generateBlogImage(regenPrompt.trim(), style, imgRatio, customStylePrompt, 'manual', 'hero')).data;
-      }
-
-      if (newImageData) {
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = localHtml;
-        const imgs = tempDiv.querySelectorAll('img');
-        if (imgs[regenIndex - 1]) {
-          const targetImg = imgs[regenIndex - 1];
-          const hadIndex = targetImg.hasAttribute('data-image-index');
-          targetImg.src = newImageData;
-          targetImg.alt = regenPrompt.trim();
-          if (!hadIndex) {
-            targetImg.setAttribute('data-image-index', String(regenIndex));
-          }
-          console.info(`[IMG_REGEN] before index=${regenIndex} | after data-image-index=${targetImg.getAttribute('data-image-index')} | preserved=${hadIndex}`);
-          setLocalHtml(tempDiv.innerHTML);
-        }
-        toast.success('이미지가 재생성되었습니다!');
-        setRegenOpen(false);
-      } else {
-        toast.error('이미지를 생성하지 못했습니다. 다시 시도해주세요.');
-      }
-    } catch {
-      toast.error('이미지 생성 중 오류가 발생했습니다.');
-    } finally {
-      setIsEditingAi(false);
-      setEditProgress('');
-    }
-  };
-
+  // [훅으로 이동됨] handleSectionRegenerate, handleRegenFileChange, handleRecommendPrompt, handleRecommendCardPrompt, submitRegenerateImage, handleAiEditSubmit → useAiRefine
   // [훅으로 이동됨] handleEvaluateSeo, handleRecheckAiSmell, handleOptimizeImages, handleCheckSimilarity → useContentQuality
   // [훅으로 이동됨] handleDownloadWord, handleDownloadPDF, handleCopy, applyInlineStylesForNaver → useDocumentExport
-  const handleAiEditSubmit = async (e: React.FormEvent) => {
-      e.preventDefault();
-      if (!editorInput.trim()) return;
-      
-      // Undo를 위해 현재 상태 저장
-      saveToHistory(localHtml);
-      
-      setIsEditingAi(true);
-      setEditProgress('AI 에디터가 요청하신 내용을 바탕으로 원고를 최적화하고 있습니다...');
-      
-      try {
-          const result = await modifyPostWithAI(localHtml, editorInput);
-          
-          // 🚨 방어 코드: newHtml 검증
-          if (!result || !result.newHtml) {
-            console.error('❌ AI 정밀보정 결과 없음:', result);
-            throw new Error('AI가 수정된 콘텐츠를 반환하지 않았습니다. 다시 시도해주세요.');
-          }
-          
-          let workingHtml = result.newHtml;
-
-          // 🖼️ 이미지가 0장인 경우 이미지 재생성 건너뛰기
-          const hasImages = localHtml.includes('[IMG_') || localHtml.includes('<img');
-          
-          if (result.regenerateImageIndices && result.newImagePrompts && hasImages) {
-              setEditProgress('요청하신 부분에 맞춰 새로운 일러스트를 생성 중입니다...');
-
-              const idxList = result.regenerateImageIndices.slice(0, 3);
-              const promptList = result.newImagePrompts.slice(0, idxList.length);
-              const newImageMap: Record<number, string> = {};
-
-              const isCardNews = content.postType === 'card_news';
-              await Promise.all(
-                promptList.map(async (prompt, i) => {
-                  const targetIdx = idxList[i];
-                  if (!targetIdx) return;
-                  const style = content.imageStyle || 'illustration';
-                  // 🎨 커스텀 스타일 프롬프트: savedCustomStylePrompt 사용 (재생성 시에도 유지!)
-                  const customStylePrompt = savedCustomStylePrompt || undefined;
-                  console.log('🔄 AI 보정 이미지 재생성:', { targetIdx, style, isCardNews, customStylePrompt: customStylePrompt?.substring(0, 50) });
-                  
-                  if (isCardNews) {
-                    newImageMap[targetIdx] = await generateSingleImage(prompt, style, '1:1', customStylePrompt);
-                  } else {
-                    newImageMap[targetIdx] = (await generateBlogImage(prompt, style, '16:9', customStylePrompt, 'manual', 'hero')).data;
-                  }
-                })
-              );
-
-              const markerPattern = /\[IMG_(\d+)\]/g;
-              let markersFound = false;
-              if (markerPattern.test(workingHtml)) {
-                  markersFound = true;
-                  workingHtml = workingHtml.replace(markerPattern, (match, idx) => {
-                      const imgNum = parseInt(idx, 10);
-                      const newSrc = newImageMap[imgNum];
-                      if (newSrc) {
-                          console.info(`[IMG_REGEN] marker [IMG_${imgNum}] → img with data-image-index="${imgNum}"`);
-                          return `<div class="content-image-wrapper"><img src="${newSrc}" data-image-index="${imgNum}" /></div>`;
-                      }
-                      return '';
-                  });
-              }
-
-              if (!markersFound) {
-                  try {
-                    const parser = new DOMParser();
-                    const doc = parser.parseFromString(workingHtml, 'text/html');
-                    const imgs = Array.from(doc.querySelectorAll('img'));
-                    imgs.forEach((img, i) => {
-                      const ordinal = i + 1;
-                      const newSrc = newImageMap[ordinal];
-                      if (newSrc) {
-                        const hadIndex = img.hasAttribute('data-image-index');
-                        img.setAttribute('src', newSrc);
-                        if (!hadIndex) {
-                          img.setAttribute('data-image-index', String(ordinal));
-                        }
-                        console.info(`[IMG_REGEN] DOM img[${i}] src 교체 | data-image-index=${img.getAttribute('data-image-index')} | preserved=${hadIndex}`);
-                      }
-                    });
-                    workingHtml = doc.body.innerHTML;
-                  } catch {
-                    workingHtml = workingHtml.replace(/\[IMG_\d+\]/g, '');
-                  }
-              }
-          }
-
-          setLocalHtml(workingHtml);
-          setEditorInput('');
-          setEditProgress('');
-      } catch (err: any) { 
-          const msg = (err?.message || err?.toString || "").toString();
-          toast.error("AI 보정 실패: " + (msg || "Gemini API 응답을 확인해주세요.")); 
-          setEditProgress('');
-      } finally { 
-          setIsEditingAi(false); 
-      }
-  };
 
   return (
     <div className={`rounded-2xl shadow-[0_4px_32px_rgba(0,0,0,0.06)] border h-full flex flex-col overflow-hidden relative transition-colors duration-300 backdrop-blur-2xl ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white/90 border-slate-200/60'}`}>
