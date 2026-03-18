@@ -124,7 +124,13 @@ export const saveGeneratedPost = async (data: SavePostData): Promise<{
       console.warn('[PostStorage] ⚠️ blob: URL이 content에 포함됨 — 재로드 시 이미지 깨짐 위험');
     }
     if (hasBase64Leak) {
-      console.error('[PostStorage] ⚠️ base64가 strip 후에도 잔류 — stripBase64FromHtml 정규식 점검 필요');
+      // SVG template는 의도적 inline 보존 — raster base64만 경고 대상
+      const hasRasterBase64Leak = /data:image\/(?!svg)[a-z]/i.test(data.content);
+      if (hasRasterBase64Leak) {
+        console.error('[PostStorage] ⚠️ raster base64가 strip 후에도 잔류 — stripBase64FromHtml 정규식 점검 필요');
+      } else {
+        console.info('[PostStorage] ℹ️ SVG template data URI 보존 (정책상 정상)');
+      }
     }
     if (contentBytes > 4 * 1024 * 1024) {
       console.error(`[PostStorage] ⛔ content 크기 ${Math.round(contentBytes / 1024 / 1024)}MB — 비정상 대용량! 저장 경로에 base64 유입 의심`);

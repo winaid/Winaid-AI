@@ -55,10 +55,11 @@ export function buildSavePayload(artifact: ContentArtifact): SaveContentPayload 
 
   let contentForSave = content.storageHtml || '';
   if (!contentForSave) {
+    // SVG template는 보존 ((?!svg) negative lookahead), raster base64만 제거
     contentForSave = content.htmlContent
-      .replace(/src="data:image\/[^"]*"/gi, 'src=""')
+      .replace(/src="data:image\/(?!svg)[^"]*"/gi, 'src=""')
       .replace(/src="blob:[^"]*"/gi, 'src=""');
-    console.warn('[STORAGE] storageHtml 없음 — htmlContent에서 base64/blob strip 후 저장');
+    console.warn('[STORAGE] storageHtml 없음 — htmlContent에서 raster base64/blob strip 후 저장 (SVG 보존)');
   }
 
   const storageKB = Math.round(contentForSave.length * 2 / 1024);

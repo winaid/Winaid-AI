@@ -705,10 +705,9 @@ async function _orchestrateBlog(
         storageHtml = await restoreAndUploadImages(finalHtml, images);
         console.info(`[STORAGE] blob→URL 업로드 완료 | display=${finalHtml.length}자(${Math.round(finalHtml.length*2/1024)}KB) | storage=${storageHtml.length}자(${Math.round(storageHtml.length*2/1024)}KB)`);
       } catch (uploadErr) {
-        console.warn('[STORAGE] 이미지 업로드 실패, base64 strip만 수행:', uploadErr);
-        const { stripBase64FromHtml } = await import('../../services/image/imageStorageService');
-        storageHtml = stripBase64FromHtml(finalHtml);
-        storageHtml = storageHtml.replace(/src="blob:[^"]*"/gi, 'src=""');
+        console.warn('[STORAGE] 이미지 업로드 실패, SVG 보존 + raster strip:', uploadErr);
+        const { stripLargeBase64FromHtml } = await import('../../services/image/imageStorageService');
+        storageHtml = stripLargeBase64FromHtml(finalHtml);
       }
     }
 
@@ -746,7 +745,8 @@ async function _orchestrateBlog(
     }
 
     const hasBlobInHistory = storageHtml.includes('blob:');
-    const lightweightHtml = storageHtml.replace(/src="data:image\/[^"]*"/gi, 'src=""');
+    // SVG template는 보존 ((?!svg) negative lookahead), raster base64만 제거
+    const lightweightHtml = storageHtml.replace(/src="data:image\/(?!svg)[^"]*"/gi, 'src=""');
     console.info(`[STORAGE] saveBlogHistory lightweight | original=${storageHtml.length}자(${Math.round(storageHtml.length * 2 / 1024)}KB) | lightweight=${lightweightHtml.length}자(${Math.round(lightweightHtml.length * 2 / 1024)}KB) | imagesStripped=true | contentType=${embedSource} | contentLen=${blogHistoryContent.length}자 | blob잔류=${hasBlobInHistory}`);
     // [Layer 2] History Persistence — Supabase blog_history (유사도 검사용)
     persistBlogHistory({
