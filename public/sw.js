@@ -16,13 +16,13 @@ const STATIC_ASSETS = [
   '/favicon.svg',
 ];
 
-// 캐시하지 않을 패턴 (해시가 포함된 빌드 파일 + index.html)
+// 캐시하지 않을 패턴 — 해시가 포함된 빌드 파일만 (매 배포마다 URL이 바뀌므로 캐시 불필요)
+// 주의: SPA routes(/app, /auth 등)는 여기에 넣지 말 것!
+//   → navigate 요청은 navigateHandler가 처리
+//   → non-navigate 요청이 이 분기에 빠지면 bare fetch rejection → FetchEvent 에러 발생
 const NO_CACHE_PATTERNS = [
-  /\/assets\/.*\.js$/,      // JavaScript 번들
-  /\/assets\/.*\.css$/,     // CSS 번들
-  /^\/$/, // index.html (루트)
-  /\/index\.html$/,
-  /^\/(app|auth|admin|blog|card_news|press|image|refine|history|pricing|login|register)/, // SPA routes
+  /\/assets\/.*\.js$/,      // JavaScript 번들 (index-CxjpC2j8.js 등)
+  /\/assets\/.*\.css$/,     // CSS 번들 (index-68vIKFuw.css 등)
 ];
 
 // 항상 캐시할 패턴 (정적 자산)
@@ -119,9 +119,15 @@ self.addEventListener('fetch', (event) => {
   }
 
   // 해시된 빌드 파일(JS/CSS)은 항상 네트워크에서 가져옴
+  // 네트워크 실패 시에도 respondWith에 reject된 promise가 전달되지 않도록 catch 처리
   const isHashedAsset = NO_CACHE_PATTERNS.some(p => p.test(url.pathname));
   if (isHashedAsset) {
-    event.respondWith(fetch(request));
+    event.respondWith(
+      fetch(request).catch((err) => {
+        console.error('[SW] Hashed asset fetch failed:', url.pathname, err);
+        return new Response('', { status: 503, statusText: 'Service Unavailable' });
+      })
+    );
     return;
   }
 
@@ -184,7 +190,9 @@ async function cacheFirst(request) {
     return response;
   } catch (error) {
     console.error('[SW] Static asset fetch failed:', request.url, error);
-    throw error;
+    // throw 하면 respondWith에 rejected promise가 전달되어 FetchEvent 에러 발생
+    // 대신 503 Response를 반환하여 브라우저가 정상적으로 처리할 수 있게 함
+    return new Response('', { status: 503, statusText: 'Service Unavailable' });
   }
 }
 
