@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { GeneratedContent, ImageStyle as _ImageStyle, CssTheme, BlogSection } from '../types';
 import { modifyPostWithAI, regenerateCardSlide as _regenerateCardSlide } from '../services/postProcessingService';
 import { regenerateSection } from '../services/geminiService';
@@ -6,7 +6,7 @@ import { generateSingleImage, recommendImagePrompt, recommendCardNewsPrompt } fr
 import { generateBlogImage } from '../services/image/imageOrchestrator';
 import { CARD_LAYOUT_RULE as _CARD_LAYOUT_RULE, STYLE_KEYWORDS } from '../services/image/imagePromptBuilder';
 import { saveAs } from 'file-saver';
-import { removeOklchFromClonedDoc, AI_PROMPT_TEMPLATES, AUTOSAVE_KEY, AUTOSAVE_HISTORY_KEY, CARD_PROMPT_HISTORY_KEY, CARD_REF_IMAGE_KEY, AutoSaveHistoryItem, CardPromptHistoryItem, extractTitle, cleanText } from './resultPreviewUtils';
+import { removeOklchFromClonedDoc, AI_PROMPT_TEMPLATES, CARD_PROMPT_HISTORY_KEY, CARD_REF_IMAGE_KEY, AutoSaveHistoryItem, CardPromptHistoryItem, cleanText } from './resultPreviewUtils';
 import { SeoDetailModal, AiSmellDetailModal, SimilarityModal } from './ScoringModals';
 import { ImageDownloadModal, ImageRegenModal, CardDownloadModal } from './ExportModals';
 import { CardRegenModal } from './CardRegenModal';
@@ -14,6 +14,8 @@ import { getDesignTemplateById } from '../services/cardNewsDesignTemplates';
 import { toast } from './Toast';
 import { useDocumentExport } from '../hooks/useDocumentExport';
 import { useContentQuality } from '../hooks/useContentQuality';
+import { useDraftPersistence } from '../hooks/useDraftPersistence';
+import { useResultActions } from '../hooks/useResultActions';
 
 
 // 동적 임포트: 초기 번들 크기 최적화
@@ -32,20 +34,36 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
   const [editorInput, setEditorInput] = useState('');
   const [isEditingAi, setIsEditingAi] = useState(false);
   const [charCount, setCharCount] = useState(0);
-  const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [showTemplates, setShowTemplates] = useState(false);
 
   // 디자인 템플릿 스타일 계산
   const designTemplate = content.designTemplateId ? getDesignTemplateById(content.designTemplateId) : undefined;
   const dtStyle = designTemplate?.styleConfig;
-  
-  // 자동저장 히스토리 (여러 저장본 관리)
-  const [autoSaveHistory, setAutoSaveHistory] = useState<AutoSaveHistoryItem[]>([]);
-  const [showAutoSaveDropdown, setShowAutoSaveDropdown] = useState(false);
-  
-  // Undo 기능을 위한 히스토리
-  const [htmlHistory, setHtmlHistory] = useState<string[]>([]);
-  const [canUndo, setCanUndo] = useState(false);
+
+  // ── [Layer 3] Draft Persistence ──
+  const {
+    autoSaveHistory,
+    lastSaved,
+    showAutoSaveDropdown,
+    setShowAutoSaveDropdown,
+    saveManually,
+    loadFromAutoSaveHistory: loadDraft,
+    hasAutoSave,
+    deleteHistoryItem,
+  } = useDraftPersistence({
+    localHtml,
+    currentTheme,
+    postType: content.postType,
+    imageStyle: content.imageStyle,
+  });
+
+  // ── Result Actions (undo + history persistence) ──
+  const {
+    canUndo,
+    handleUndo: undoAction,
+    saveToHistory,
+    persistCardNewsHistory,
+  } = useResultActions();
   
   // 이미지 다운로드 모달
   const [downloadModalOpen, setDownloadModalOpen] = useState(false);
@@ -475,212 +493,17 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
     }
   };
 
-  // ── [Layer 3] Draft Persistence ──────────────────────────────
-  // localStorage 기반 임시저장. 브라우저 세션 유지 / 편집 복구 목적.
-  // 서버 저장(Layer 1, 2)과는 독립된 계층이다.
-  // 상수: AUTOSAVE_KEY, AUTOSAVE_HISTORY_KEY (resultPreviewUtils.ts)
-  // ────────────────────────────────────────────────────────────
-
-  // 자동저장 히스토리 불러오기
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(AUTOSAVE_HISTORY_KEY);
-      if (saved) {
-        setAutoSaveHistory(JSON.parse(saved));
-      }
-    } catch (e) {
-      console.error('자동저장 히스토리 로드 실패:', e);
-    }
-  }, []);
-
-  // localStorage 안전 저장 함수 (용량 초과 방지)
-  const safeLocalStorageSet = (key: string, value: string): boolean => {
-    try {
-      localStorage.setItem(key, value);
-      return true;
-    } catch {
-      // QuotaExceededError 처리
-      console.warn('localStorage 용량 초과, 오래된 데이터 정리 중...');
-      return false;
-    }
-  };
-  
-  // 🔧 localStorage 용량 확인 함수
-  const getLocalStorageUsage = (): { used: number; total: number; percent: number } => {
-    let total = 0;
-    for (const key in localStorage) {
-      if (Object.prototype.hasOwnProperty.call(localStorage, key)) {
-        total += localStorage[key].length * 2; // UTF-16 = 2 bytes per char
-      }
-    }
-    const maxSize = 5 * 1024 * 1024; // 5MB
-    return { used: total, total: maxSize, percent: Math.round((total / maxSize) * 100) };
-  };
-  
-  // 🔧 히스토리에서 가장 오래된 항목 삭제
-  const removeOldestFromHistory = (): boolean => {
-    try {
-      const historyStr = localStorage.getItem(AUTOSAVE_HISTORY_KEY);
-      if (!historyStr) return false;
-      
-      const history = JSON.parse(historyStr);
-      if (history.length === 0) return false;
-      
-      // 가장 오래된 것 제거 (배열 마지막)
-      history.pop();
-      localStorage.setItem(AUTOSAVE_HISTORY_KEY, JSON.stringify(history));
-      console.log('🗑️ 오래된 저장본 1개 삭제, 남은 개수:', history.length);
-      return true;
-    } catch {
-      return false;
-    }
-  };
-
-  // 수동 저장 함수 (사용자가 버튼 클릭 시 저장)
-  const saveManually = () => {
-    if (!localHtml || !localHtml.trim()) {
-      toast.warning('저장할 내용이 없습니다.');
-      return;
-    }
-    
-    // 🔧 현재 히스토리가 이미 3개면 저장 불가
-    if (autoSaveHistory.length >= 3) {
-      toast.warning('저장 슬롯이 가득 찼습니다! 기존 저장본을 삭제한 후 다시 저장해주세요.');
-      return;
-    }
-    
-    const now = new Date();
-    const title = extractTitle(localHtml);
-    const timeStr = now.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
-    
-    // base64/blob 제거: localStorage에는 경량 HTML만 저장 (이미지는 Supabase Storage에 별도 보관)
-    const restoredHtml = localHtml
-      .replace(/src="data:image\/[^"]*"/gi, 'src=""')
-      .replace(/src="blob:[^"]*"/gi, 'src=""');
-    const hasBlobLeak = restoredHtml.includes('blob:');
-    const saveData = {
-      html: restoredHtml,
-      theme: currentTheme,
-      postType: content.postType,
-      imageStyle: content.imageStyle,
-      savedAt: now.toISOString(),
-      title: `${title} (${timeStr})` // 시간 포함하여 구분
-    };
-
-    // 🔧 저장할 데이터 크기 확인
-    const saveDataStr = JSON.stringify(saveData);
-    const dataSize = saveDataStr.length * 2; // UTF-16
-    const usage = getLocalStorageUsage();
-
-    console.info(`[STORAGE] autosave | display=${localHtml.length}자(${Math.round(localHtml.length*2/1024)}KB) | storage=${restoredHtml.length}자(${Math.round(restoredHtml.length*2/1024)}KB) | blob잔류=${hasBlobLeak} | payload=${Math.round(dataSize/1024)}KB | localStorage=${usage.percent}% (${Math.round(usage.used/1024)}/${Math.round(usage.total/1024)}KB)`);
-    if (hasBlobLeak) {
-      console.error(`[STORAGE] ❌ autosave에 blob: URL 잔류! 재로드 시 이미지 깨짐 위험`);
-    }
-    if (dataSize > 4 * 1024 * 1024) {
-      console.warn(`[STORAGE] ⚠️ autosave payload ${Math.round(dataSize/1024)}KB — localStorage 5MB 한도의 ${Math.round(dataSize/(5*1024*1024)*100)}% 사용`);
-    }
-    
-    // 🔧 용량 부족 시 오래된 것 자동 삭제 (최대 3번 시도)
-    let retryCount = 0;
-    while (usage.used + dataSize > usage.total * 0.9 && retryCount < 3) {
-      console.warn(`⚠️ 용량 부족 (${usage.percent}%), 오래된 저장본 삭제 중...`);
-      if (!removeOldestFromHistory()) break;
-      retryCount++;
-    }
-    
-    // 현재 저장 (단일 저장은 항상 시도)
-    if (!safeLocalStorageSet(AUTOSAVE_KEY, saveDataStr)) {
-      // 용량 초과 시 히스토리 전체 삭제 후 재시도
-      console.warn('🗑️ 히스토리 전체 삭제 후 재시도...');
-      localStorage.removeItem(AUTOSAVE_HISTORY_KEY);
-      setAutoSaveHistory([]);
-      
-      if (!safeLocalStorageSet(AUTOSAVE_KEY, saveDataStr)) {
-        toast.warning('저장 용량이 부족합니다. 기존 저장본을 모두 삭제 후 다시 시도해주세요.');
-        return;
-      }
-    }
-    setLastSaved(now);
-    
-    // 히스토리에 추가 (최근 3개만 유지)
-    setAutoSaveHistory(prev => {
-      // 🔧 같은 제목 필터링 제거 - 시간이 다르면 별도 저장
-      let newHistory = [saveData, ...prev].slice(0, 3);
-      
-      // 저장 시도 (용량 초과 시 오래된 것부터 삭제)
-      let historyStr = JSON.stringify(newHistory);
-      
-      // 🔧 저장 실패 시 오래된 것 하나씩 삭제하며 재시도
-      while (!safeLocalStorageSet(AUTOSAVE_HISTORY_KEY, historyStr) && newHistory.length > 1) {
-        console.warn(`⚠️ 히스토리 저장 실패, 오래된 항목 삭제 중... (${newHistory.length}개 → ${newHistory.length - 1}개)`);
-        newHistory.pop(); // 가장 오래된 것 삭제
-        historyStr = JSON.stringify(newHistory);
-      }
-      
-      if (newHistory.length === 1 && !safeLocalStorageSet(AUTOSAVE_HISTORY_KEY, historyStr)) {
-        // 그래도 실패하면 경고
-        toast.warning('저장 용량이 부족하여 이전 저장본이 삭제되었습니다.');
-        newHistory = [saveData]; // 현재 것만 유지
-        localStorage.setItem(AUTOSAVE_HISTORY_KEY, JSON.stringify(newHistory));
-      }
-      
-      return newHistory;
-    });
-    
-    const finalUsage = getLocalStorageUsage();
-    toast.success(`"${title}" 저장되었습니다! (${autoSaveHistory.length + 1}/3)`);
-  };
-
-  // 특정 저장본 불러오기
+  // ── Draft 불러오기 래퍼 (setLocalHtml/setCurrentTheme 바인딩) ──
   const loadFromAutoSaveHistory = (item: AutoSaveHistoryItem) => {
-    // 📊 재로드 경로 진단: blob: URL 잔류 시 이미지 깨짐
-    const hasBlobUrl = item.html.includes('blob:');
-    const imgCount = (item.html.match(/<img[^>]+>/gi) || []).length;
-    const base64ImgCount = (item.html.match(/src="data:image/gi) || []).length;
-    console.info(
-      `[RELOAD] 저장본 불러오기 | title="${item.title}" | html=${item.html.length}자(${Math.round(item.html.length * 2 / 1024)}KB) | img=${imgCount}개 | base64=${base64ImgCount}개 | blob잔류=${hasBlobUrl}`
-    );
-    if (hasBlobUrl) {
-      console.warn('[RELOAD] ⚠️ blob: URL 포함 — 이미지가 표시되지 않을 수 있음');
-    }
-    setLocalHtml(item.html);
-    if (item.theme) setCurrentTheme(item.theme as any);
-    setShowAutoSaveDropdown(false);
-    toast.info(`"${item.title}" 불러왔습니다!`);
+    const result = loadDraft(item);
+    setLocalHtml(result.html);
+    if (result.theme) setCurrentTheme(result.theme as CssTheme);
   };
 
-  // 임시저장 삭제 (향후 UI에서 활용 가능)
-  const _clearAutoSave = () => {
-    localStorage.removeItem(AUTOSAVE_KEY);
-    localStorage.removeItem(AUTOSAVE_HISTORY_KEY);
-    setAutoSaveHistory([]);
-    setLastSaved(null);
-    toast.info('임시저장이 삭제되었습니다.');
-  };
-
-  // 임시저장 데이터 있는지 확인
-  const hasAutoSave = () => {
-    try {
-      return autoSaveHistory.length > 0;
-    } catch {
-      return false;
-    }
-  };
-
-  // Undo: 이전 상태로 되돌리기
+  // ── Undo 래퍼 (setLocalHtml 바인딩) ──
   const handleUndo = () => {
-    if (htmlHistory.length > 0) {
-      const prevHtml = htmlHistory[htmlHistory.length - 1];
-      setHtmlHistory(prev => prev.slice(0, -1));
-      setLocalHtml(prevHtml);
-      setCanUndo(htmlHistory.length > 1);
-    }
-  };
-
-  // 히스토리에 현재 상태 저장 (AI 수정 전에 호출)
-  const saveToHistory = () => {
-    setHtmlHistory(prev => [...prev.slice(-9), localHtml]); // 최대 10개 유지
-    setCanUndo(true);
+    const prevHtml = undoAction();
+    if (prevHtml !== null) setLocalHtml(prevHtml);
   };
 
   // 이미지 다운로드 함수
@@ -1012,22 +835,13 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
       if (failedCards.length === 0) {
         setCardDownloadProgress(`✅ ${successCount}장 모두 다운로드 완료!`);
         
-        // 🆕 블로그 이력 저장 (카드뉴스 다운로드 성공 시)
-        if (content.title && localHtml) {
-          // blog_history.html_content 경량화: base64 이미지 src 제거 (읽는 코드 0곳)
-          const lightweightHtml = localHtml.replace(/src="data:image\/[^"]*"/gi, 'src=""');
-          console.info(`[STORAGE] saveBlogHistory lightweight | original=${localHtml.length}자 | lightweight=${lightweightHtml.length}자 | imagesStripped=true`);
-          saveBlogHistory(
-            content.title,
-            localHtml.replace(/<[^>]*>/g, ' ').trim(),
-            lightweightHtml,
-            content.keyword?.split(',').map(k => k.trim()) || [],
-            undefined,
-            content.category
-          ).catch(err => {
-            console.error('블로그 이력 저장 실패 (메인 플로우는 계속):', err);
-          });
-        }
+        // [Layer 2] History Persistence — 카드뉴스 다운로드 성공 시 이력 저장
+        persistCardNewsHistory({
+          title: content.title,
+          html: localHtml,
+          keywords: content.keyword,
+          category: content.category,
+        });
       } else {
         setCardDownloadProgress(`⚠️ ${successCount}장 완료, ${failedCards.length}장 실패 (${failedCards.join(', ')}번)`);
       }
@@ -1102,8 +916,7 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
     setRegeneratingSection(sectionIndex);
     try {
       // Undo를 위해 현재 상태 저장
-      setHtmlHistory(prev => [...prev, localHtml]);
-      setCanUndo(true);
+      saveToHistory(localHtml);
 
       const newSectionHtml = await regenerateSection(
         section.title,
@@ -1271,7 +1084,7 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
       if (!editorInput.trim()) return;
       
       // Undo를 위해 현재 상태 저장
-      saveToHistory();
+      saveToHistory(localHtml);
       
       setIsEditingAi(true);
       setEditProgress('AI 에디터가 요청하신 내용을 바탕으로 원고를 최적화하고 있습니다...');
@@ -2005,9 +1818,7 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
                             onClick={(e) => {
                               e.stopPropagation();
                               if (confirm(`"${item.title}"을(를) 삭제하시겠습니까?`)) {
-                                const newHistory = autoSaveHistory.filter((_, i) => i !== idx);
-                                setAutoSaveHistory(newHistory);
-                                localStorage.setItem(AUTOSAVE_HISTORY_KEY, JSON.stringify(newHistory));
+                                deleteHistoryItem(idx);
                               }
                             }}
                             className={`p-2 rounded-lg text-xs font-bold transition-all ${

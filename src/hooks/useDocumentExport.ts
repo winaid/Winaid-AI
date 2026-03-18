@@ -2,7 +2,7 @@ import { useState, useCallback, RefObject } from 'react';
 import { GeneratedContent, CssTheme } from '../types';
 import { applyThemeToHtml } from '../utils/cssThemes';
 import { convertToWordCompatibleHtml, restoreBase64Images } from '../components/resultPreviewUtils';
-import { saveBlogHistory } from '../services/contentSimilarityService';
+import { persistBlogHistory } from '../core/generation/contentStorage';
 import { toast } from '../components/Toast';
 import { getDesignTemplateById } from '../services/cardNewsDesignTemplates';
 
@@ -145,18 +145,17 @@ export function useDocumentExport({
       const restoredHtml = restoreBase64Images(localHtml, content.generatedImages);
       const styledHtml = applyInlineStylesForNaver(restoredHtml, currentTheme);
 
+      // [Layer 2] History Persistence — PDF 다운로드 시 이력 저장
       if (content.title && localHtml) {
-        // blog_history.html_content 경량화: base64 이미지 src 제거 (읽는 코드 0곳)
         const lightweightHtml = localHtml.replace(/src="data:image\/[^"]*"/gi, 'src=""');
-        console.info(`[STORAGE] saveBlogHistory lightweight | original=${localHtml.length}자 | lightweight=${lightweightHtml.length}자 | imagesStripped=true`);
-        saveBlogHistory(
-          content.title,
-          localHtml.replace(/<[^>]*>/g, ' ').trim(),
+        console.info(`[STORAGE] persistBlogHistory | original=${localHtml.length}자 | lightweight=${lightweightHtml.length}자`);
+        persistBlogHistory({
+          title: content.title,
+          plainText: localHtml.replace(/<[^>]*>/g, ' ').trim(),
           lightweightHtml,
-          content.keyword?.split(',').map(k => k.trim()) || [],
-          undefined,
-          content.category
-        ).catch(err => {
+          keywords: content.keyword?.split(',').map(k => k.trim()) || [],
+          category: content.category,
+        }).catch(err => {
           console.error('블로그 이력 저장 실패:', err);
         });
       }
