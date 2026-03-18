@@ -1,12 +1,15 @@
 /**
- * generateContentJob — 콘텐츠 생성 오케스트레이션의 공식 진입점
+ * generateContentJob — 블로그/보도자료 생성의 공식 오케스트레이션 진입점
  *
  * 책임:
- *   1. 크레딧/접근 게이트 실행 (policies.ts)
+ *   1. 크레딧/접근 게이트 실행 (policies.ts) — 이 함수가 gate의 유일한 실행 지점
  *   2. postType별 생성 함수 디스패치 (geminiService.generateFullPost)
- *   3. 결과를 GeneratedContent 형태로 반환
+ *   3. 에러 래핑 후 ContentJobOutcome 반환
  *
- * 이 파일이 "생성 1회" 단위의 source of truth다.
+ * gate 책임 규칙:
+ *   - 블로그/보도자료: 이 함수 내부에서만 gate 실행 (훅에서 호출 금지)
+ *   - 카드뉴스: 별도 워크플로우이므로 훅(useContentGeneration)에서 직접 gate 실행
+ *
  * UI 훅(useContentGeneration)은 이 함수를 호출하고,
  * geminiService.ts는 stage 실행/보조 계층으로 내려간다.
  */

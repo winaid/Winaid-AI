@@ -117,22 +117,20 @@ export function useContentGeneration(deps: ContentGenerationDeps): ContentGenera
       return;
     }
 
-    // ── 크레딧 게이트: 접근 모드에 따라 자동 분기 ──
-    // anonymous_demo → 즉시 통과, authenticated_metered → 크레딧 차감
-    // 전환: core/generation/contracts.ts의 DEFAULT_ACCESS_MODE만 변경
-    const creditResult = await runCreditGate(request.postType);
-    if (!creditResult.allowed) {
-      earlyTargetSetState(prev => ({
-        ...prev,
-        isLoading: false,
-        error: creditResult.message || '크레딧이 부족합니다.',
-      }));
-      isGeneratingRef.current = false;
-      return;
-    }
-
-    // 카드뉴스: 3단계 워크플로우
+    // ── 카드뉴스: 훅 레벨 credit gate + 3단계 워크플로우 ──
+    // 카드뉴스는 runContentJob을 거치지 않으므로 여기서 직접 gate 실행.
+    // 블로그/보도자료는 runContentJob 내부에서 gate를 실행한다 (이중 호출 방지).
     if (request.postType === 'card_news') {
+      const creditResult = await runCreditGate(request.postType);
+      if (!creditResult.allowed) {
+        earlyTargetSetState(prev => ({
+          ...prev,
+          isLoading: false,
+          error: creditResult.message || '크레딧이 부족합니다.',
+        }));
+        isGeneratingRef.current = false;
+        return;
+      }
       try {
         await deps.handleGenerateCardNews(request, setState, deps.setContentTab);
       } finally {
@@ -171,8 +169,8 @@ export function useContentGeneration(deps: ContentGenerationDeps): ContentGenera
 
     try {
       // ── 공식 오케스트레이터 진입점: runContentJob ──
-      // credit gate는 이미 위에서 카드뉴스 포함 전체 통과했으므로,
-      // runContentJob 내부의 gate는 이중 체크 (안전장치)
+      // credit gate 책임은 runContentJob 내부에서 단일 수행.
+      // 이 훅에서는 gate를 호출하지 않는다 (카드뉴스만 예외).
       console.info('[GEN_STEP] before main pipeline — runContentJob 호출');
       const outcome = await runContentJob(request, (p) => {
         // timeout 후 늦은 progress 업데이트 방어
