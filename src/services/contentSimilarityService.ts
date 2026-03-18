@@ -63,7 +63,7 @@ async function checkSimilarityWithOwnBlogs(
       .from('blog_history')
       .select('*')
       .order('published_at', { ascending: false })
-      .limit(100);
+      .limit(100) as { data: any[] | null; error: any };
 
     if (error) {
       console.error('❌ Supabase 쿼리 실패:', error);
@@ -249,7 +249,7 @@ async function searchExactMatch(keyPhrases: string[]): Promise<any[]> {
         });
 
         if (naverResponse.ok) {
-          const naverData = await naverResponse.json();
+          const naverData: any = await naverResponse.json();
 
           if (naverData.items && naverData.items.length > 0) {
             // 네이버 블로그 정보 추출
@@ -294,7 +294,7 @@ async function searchExactMatch(keyPhrases: string[]): Promise<any[]> {
           });
 
           if (googleResponse.ok) {
-            const googleData = await googleResponse.json();
+            const googleData: any = await googleResponse.json();
 
             if (googleData.items && googleData.items.length > 0) {
               const googleResults = googleData.items.map((item: any) => ({
@@ -618,7 +618,7 @@ export const saveBlogHistory = async (
       category,
       published_at: new Date().toISOString()
       // created_at은 DB DEFAULT NOW()로 자동 생성
-    });
+    } as any);
 
     if (error) {
       console.error('❌ Supabase 저장 오류:', error);

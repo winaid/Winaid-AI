@@ -177,6 +177,26 @@ interface GoogleSearchResult {
   };
 }
 
+/** 네이버/구글 검색 API 공통 응답 타입 */
+interface SearchApiResponse {
+  items?: Array<{
+    title: string;
+    link: string;
+    description?: string;
+    snippet?: string;
+    bloggername?: string;
+    displayLink?: string;
+  }>;
+  total?: number;
+  [key: string]: unknown;
+}
+
+/** 크롤러 API 응답 타입 */
+interface CrawlerResponse {
+  content?: string;
+  [key: string]: unknown;
+}
+
 import { extractSearchKeywords } from './seoService';
 
 /**
@@ -218,8 +238,8 @@ export async function searchNaverBlogsByCrawling(
       return null;
     }
 
-    const result = await response.json();
-    
+    const result: SearchApiResponse = await response.json();
+
     console.log('🔍 네이버 API 응답:', {
       hasItems: !!result.items,
       itemsLength: result.items?.length || 0,
@@ -236,7 +256,7 @@ export async function searchNaverBlogsByCrawling(
     }
     
     console.log(`✅ 네이버 크롤링: ${result.items.length}개 블로그 URL 발견`);
-    return result.items;
+    return result.items as Array<{ title: string; link: string; description: string; bloggername: string }>;
   } catch (error) {
     console.error('네이버 검색 크롤링 오류:', error);
     import('./errorMonitoringService').then(({ trackError }) => {
@@ -302,8 +322,8 @@ export async function searchBlogsDirectly(
         break;
       }
 
-      const result = await response.json();
-      
+      const result: SearchApiResponse = await response.json();
+
       if (result.items && result.items.length > 0) {
         allResults.push(...result.items);
         console.log(`✅ 배치 ${i + 1}: ${result.items.length}개 발견 (총 ${allResults.length}개)`);
@@ -422,7 +442,7 @@ export async function fetchNaverBlogContent(blogUrl: string): Promise<string | n
       throw new Error(`블로그 내용 가져오기 실패: ${response.status}`);
     }
 
-    const result = await response.json();
+    const result: CrawlerResponse = await response.json();
     return result.content || null;
   } catch (error) {
     console.error('블로그 내용 가져오기 오류:', error);
@@ -561,7 +581,7 @@ async function fetchBlogContentViaCrawler(url: string, retries = 3): Promise<str
           return null;
         }
 
-        const data = await response.json();
+        const data: CrawlerResponse = await response.json();
         return data.content || null;
       } catch (error) {
         if (attempt < retries) {

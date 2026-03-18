@@ -403,7 +403,7 @@ export async function callGeminiRaw(model: string, apiBody: any, timeout: number
         throw error;
       }
 
-      const errorBody = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
+      const errorBody = await response.json().catch(() => ({ error: `HTTP ${response.status}` })) as { error?: string; details?: string; retryAfterMs?: number; nextAvailableAt?: number };
       const isCooldown = errorBody.error === 'all_keys_in_cooldown';
       const isUpstream503 = !isCooldown && response.status === 503;
       const retryMs = errorBody.retryAfterMs || 0;
@@ -521,7 +521,7 @@ async function _callGeminiOnce(config: GeminiCallConfig): Promise<any> {
         throw error;
       }
 
-      const errorBody = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
+      const errorBody = await response.json().catch(() => ({ error: `HTTP ${response.status}` })) as { error?: string; details?: string };
 
       // 503/429/504 + PRO → FLASH 폴백 (noAutoFallback이면 caller에게 위임)
       if ((response.status === 503 || response.status === 429 || response.status === 504) && model === GEMINI_MODEL.PRO) {
@@ -539,7 +539,7 @@ async function _callGeminiOnce(config: GeminiCallConfig): Promise<any> {
       throw error;
     }
 
-    const result = await response.json();
+    const result = await response.json() as { text?: string; usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number } };
 
     // 응답 검증
     if (!result || !result.text) {
@@ -551,9 +551,10 @@ async function _callGeminiOnce(config: GeminiCallConfig): Promise<any> {
     // API 사용량 추적 (비동기, 실패해도 무시)
     try {
       if (result.usageMetadata) {
+        const meta = result.usageMetadata;
         import('./creditService').then(({ trackApiUsage, calculateCost }) => {
-          const inputTokens = result.usageMetadata.promptTokenCount || 0;
-          const outputTokens = result.usageMetadata.candidatesTokenCount || 0;
+          const inputTokens = meta.promptTokenCount || 0;
+          const outputTokens = meta.candidatesTokenCount || 0;
           trackApiUsage({
             model,
             inputTokens,

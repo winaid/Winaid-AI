@@ -44,8 +44,8 @@ export async function getMedicalLawRules(): Promise<MedicalLawProhibition[]> {
     console.log('🏥 의료광고법 규칙 로드 중...');
     
     // 1. 최신 활성 캐시 조회
-    const { data: cache, error } = await supabase
-      .from('medical_law_cache')
+    const { data: cache, error } = await (supabase
+      .from('medical_law_cache') as any)
       .select('*')
       .eq('is_active', true)
       .order('last_crawled_at', { ascending: false })
@@ -69,8 +69,8 @@ export async function getMedicalLawRules(): Promise<MedicalLawProhibition[]> {
       await crawlAndUpdateMedicalLaw();
       
       // 업데이트 후 다시 조회
-      const { data: newCache } = await supabase
-        .from('medical_law_cache')
+      const { data: newCache } = await (supabase
+        .from('medical_law_cache') as any)
         .select('*')
         .eq('is_active', true)
         .order('last_crawled_at', { ascending: false })
@@ -120,17 +120,17 @@ async function crawlAndUpdateMedicalLaw(): Promise<void> {
       return;
     }
     
-    const data = await response.json();
+    const data: any = await response.json();
     
     // 기존 활성 캐시 비활성화
-    await supabase
-      .from('medical_law_cache')
+    await (supabase
+      .from('medical_law_cache') as any)
       .update({ is_active: false })
       .eq('is_active', true);
-    
+
     // 새 캐시 저장
-    const { error: insertError } = await supabase
-      .from('medical_law_cache')
+    const { error: insertError } = await (supabase
+      .from('medical_law_cache') as any)
       .insert({
         source_url: lawUrl,
         last_crawled_at: new Date().toISOString(),
@@ -161,14 +161,14 @@ async function crawlAndUpdateMedicalLaw(): Promise<void> {
 async function saveDefaultRulesToCache(): Promise<void> {
   try {
     // 기존 활성 캐시 비활성화
-    await supabase
-      .from('medical_law_cache')
+    await (supabase
+      .from('medical_law_cache') as any)
       .update({ is_active: false })
       .eq('is_active', true);
-    
+
     // 기본 규칙 저장
-    await supabase
-      .from('medical_law_cache')
+    await (supabase
+      .from('medical_law_cache') as any)
       .insert({
         source_url: 'default',
         last_crawled_at: new Date().toISOString(),
@@ -266,8 +266,8 @@ export async function checkCacheStatus(): Promise<{
   isExpired: boolean;
 }> {
   try {
-    const { data: cache } = await supabase
-      .from('medical_law_cache')
+    const { data: cache } = await (supabase
+      .from('medical_law_cache') as any)
       .select('last_crawled_at')
       .eq('is_active', true)
       .order('last_crawled_at', { ascending: false })

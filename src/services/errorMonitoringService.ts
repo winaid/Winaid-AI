@@ -9,6 +9,7 @@ import { supabase } from '../lib/supabase';
 export type ErrorSeverity = 'low' | 'medium' | 'high' | 'critical';
 export type ErrorCategory =
   | 'gemini_api'
+  | 'gemini_api_all_retries_failed'
   | 'crawling'
   | 'embedding'
   | 'medical_law'
