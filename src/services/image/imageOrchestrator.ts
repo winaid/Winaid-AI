@@ -224,7 +224,7 @@ export const generateBlogImage = async (
     if (startTier === 'pro') {
       chain = [
         { model: GEMINI_MODEL.IMAGE_FLASH, tier: 'nb2', prompt: heroPrompt, label: '#1(nb2-fast)' },
-        { model: GEMINI_MODEL.IMAGE_PRO, tier: 'pro', prompt: subPrompt, label: '#2(pro-fallback)' },
+        { model: GEMINI_MODEL.IMAGE_PRO, tier: 'pro', prompt: heroPrompt, label: '#2(pro-quality)' },
       ];
     } else {
       chain = [

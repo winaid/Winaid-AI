@@ -187,11 +187,17 @@ export function replaceBase64WithUrls(
 }
 
 /**
- * HTML에서 모든 base64 이미지 src를 빈 문자열로 대체 (안전망)
+ * HTML에서 모든 base64/blob 이미지 src를 placeholder로 대체 (안전망)
  * persisted content에 base64가 남지 않도록 보장
+ * src="" 대신 1x1 투명 PNG를 넣어 broken image 아이콘 방지
  */
+const TRANSPARENT_PLACEHOLDER = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
 export function stripBase64FromHtml(html: string): string {
-  return html.replace(/src="data:image\/[^"]*"/gi, 'src=""');
+  // base64 이미지 → placeholder
+  let result = html.replace(/src="data:image\/[^"]*"/gi, `src="${TRANSPARENT_PLACEHOLDER}"`);
+  // blob URL도 → placeholder (혹시 남아 있으면)
+  result = result.replace(/src="blob:[^"]*"/gi, `src="${TRANSPARENT_PLACEHOLDER}"`);
+  return result;
 }
 
 /**
