@@ -6,10 +6,13 @@ import { SYSTEM_PROMPT, getStage1_ContentGeneration, getDynamicSystemPrompt, get
 import { loadMedicalLawForGeneration } from "./medicalLawService";
 import { saveGeneratedPost } from "./postStorageService";
 import {
-  detectAiSmell,
   FEW_SHOT_EXAMPLES,
   CATEGORY_SPECIFIC_PROMPTS,
 } from "../utils/humanWritingPrompts";
+// search + quality SOT — 단일 출처에서 import + re-export
+import { searchKDCA, searchHospitalSites, callGeminiWithSearch } from './searchService';
+import { runAiSmellCheck, integrateAiSmellToFactCheck } from './contentQualityService';
+export { runAiSmellCheck, integrateAiSmellToFactCheck };
 import { getTopCompetitorAnalysis, CompetitorAnalysis } from "./naverSearchService";
 import { analyzeCompetitorVocabulary, buildForbiddenWordsPrompt } from "./competitorVocabService";
 import { STYLE_NAMES } from "./image/imagePromptBuilder";
@@ -49,88 +52,7 @@ import {
   SMART_BLOCK_FAQ_TIMEOUT_MS,
 } from "../core/generation/contracts";
 
-// Gemini API 핵심 인프라는 geminiClient.ts에서 import됨
-
-
-// 🏥 질병관리청 검색 함수 (1차 검색) - 타임아웃 120초
-async function searchKDCA(query: string): Promise<string> {
-  try {
-    console.info('🔍 [1차 검색] 질병관리청에서 검색 중...', query);
-
-    const kdcaDomains = ['kdca.go.kr', 'cdc.go.kr', 'nih.go.kr'];
-
-    const result = await callGemini({
-      prompt: `질병관리청(KDCA) 공식 웹사이트에서 "${query}"에 대한 정보를 검색하고 요약해주세요.
-
-검색 범위: ${kdcaDomains.join(', ')}
-
-다음 정보를 우선적으로 찾아주세요:
-1. 질환의 정의 및 원인
-2. 주요 증상
-3. 예방 및 관리 방법
-4. 공식 통계 자료 (있는 경우)
-
-신뢰할 수 있는 출처의 정보만 사용하고, 출처를 명시해주세요.`,
-      model: GEMINI_MODEL.PRO,
-      responseType: 'text',
-      googleSearch: true,
-      temperature: 0.3,
-      thinkingLevel: 'low',
-      timeout: 120000,
-    });
-
-    console.info('✅ 질병관리청 검색 완료');
-    return typeof result === 'string' ? result : '';
-
-  } catch (error) {
-    console.error('❌ 질병관리청 검색 실패:', error);
-    return '';
-  }
-}
-
-// 🏥 병원 사이트 크롤링 함수 (2차 검색) - 서버 프록시 경유
-async function searchHospitalSites(query: string, category: string): Promise<string> {
-  try {
-    console.log('🔍 [2차 검색] 병원 사이트에서 크롤링 중...', query);
-
-    const hospitalDomains = [
-      'amc.seoul.kr', 'snuh.org', 'severance.healthcare.or.kr',
-      'samsunghospital.com', 'cmcseoul.or.kr', 'yuhs.or.kr'
-    ];
-
-    const result = await callGemini({
-      prompt: `대학병원 공식 웹사이트에서 "${query}" (${category})에 대한 전문 의료 정보를 검색하고 요약해주세요.
-
-검색 범위: ${hospitalDomains.join(', ')}
-
-다음 정보를 우선적으로 찾아주세요:
-1. 최신 진료 가이드라인
-2. 환자를 위한 설명 자료
-3. 의료진의 전문 의견
-4. 치료 및 관리 방법
-
-⚠️ 의료광고법 준수:
-- 치료 효과를 단정하는 표현 금지
-- 구체적인 치료 성공률/수치 언급 금지
-- "완치", "100% 효과" 등의 표현 금지
-
-신뢰할 수 있는 출처의 정보만 사용하고, 출처를 명시해주세요.`,
-      model: GEMINI_MODEL.PRO,
-      responseType: 'text',
-      googleSearch: true,
-      temperature: 0.3,
-      thinkingLevel: 'low',
-      timeout: 120000,
-    });
-
-    console.log('✅ 병원 사이트 크롤링 완료');
-    return typeof result === 'string' ? result : '';
-
-  } catch (error) {
-    console.error('❌ 병원 사이트 크롤링 실패:', error);
-    return '';
-  }
-}
+// search/quality 함수는 searchService.ts / contentQualityService.ts로 이동됨
 
 // ❓ FAQ 섹션 생성 함수 (네이버 질문 + 질병관리청 정보)
 export async function generateFaqSection(
@@ -350,73 +272,7 @@ AI 검색 엔진(ChatGPT, Perplexity, Google AI Overview)이 답변으로 채택
   }
 }
 
-// 🔍 callGeminiWithSearch - 1차: 질병관리청, 2차: 병원 사이트
-async function callGeminiWithSearch(
-  prompt: string, 
-  options: { responseFormat?: string } = {}
-): Promise<any> {
-  try {
-    // 프롬프트에서 주제 추출
-    const topicMatch = prompt.match(/주제[:\s]*[「『"]?([^」』"\n]+)[」』"]?/);
-    const categoryMatch = prompt.match(/진료과[:\s]*([^\n]+)/);
-    const topic = topicMatch?.[1]?.trim() || '';
-    const category = categoryMatch?.[1]?.trim() || '';
-
-    console.info('🔍 검색 시작:', { topic, category });
-
-    // 1차: 질병관리청 검색
-    let kdcaInfo = '';
-    if (topic) {
-      kdcaInfo = await searchKDCA(topic);
-    }
-
-    // 2차: 병원 사이트 크롤링
-    let hospitalInfo = '';
-    if (topic && category) {
-      hospitalInfo = await searchHospitalSites(topic, category);
-    }
-
-    // 검색 결과를 프롬프트에 추가
-    const enrichedPrompt = `${prompt}
-
-[🏥 1차 검색: 질병관리청 공식 정보]
-${kdcaInfo || '(검색 결과 없음)'}
-
-[🏥 2차 검색: 대학병원 전문 정보]
-${hospitalInfo || '(검색 결과 없음)'}
-
-⚠️ 위 검색 결과를 참고하되, 의료광고법을 반드시 준수하세요.
-- 출처가 명확한 정보만 사용
-- 치료 효과 단정 금지
-- 구체적 수치는 출처와 함께 제시`;
-
-    // Gemini API 호출
-    console.info('🚀 보도자료 Gemini API 호출 시작...');
-    const isTextPlain = options.responseFormat === "text/plain";
-    const result = await callGemini({
-      prompt: enrichedPrompt,
-      model: GEMINI_MODEL.PRO,
-      googleSearch: true,
-      responseType: isTextPlain ? 'text' : 'json',
-      temperature: 0.6,
-    });
-
-    console.info('✅ 보도자료 Gemini API 응답 수신');
-
-    // callGemini returns the parsed result directly
-    const text = typeof result === 'string' ? result : JSON.stringify(result);
-
-    console.log('📝 보도자료 텍스트 길이:', text?.length || 0);
-
-    return { text, response: result };
-    
-  } catch (error) {
-    console.error('❌ callGeminiWithSearch 실패:', error);
-    throw error;
-  }
-}
-
-// getAiProviderSettings → geminiClient.ts에서 import됨
+// callGeminiWithSearch → searchService.ts로 이동됨
 
 
 // MEDICAL_DISCLAIMER → resultAssembler.ts로 이동
@@ -430,112 +286,10 @@ ${hospitalInfo || '(검색 결과 없음)'}
  * - 블로그/카드뉴스 생성 후 자동 검사
  * - modifyPostWithAI() 수정 후 검증
  * - recheckAiSmell()에서 활용
+ *
+ * runAiSmellCheck, integrateAiSmellToFactCheck → contentQualityService.ts로 이동.
+ * geminiService.ts에서는 re-export (import 위에서 처리).
  */
-export const runAiSmellCheck = (htmlContent: string): {
-  detected: boolean;
-  patterns: string[];
-  score: number;
-  criticalIssues: string[];  // maxAllowed: 0인 패턴 (의료광고법 위반 등)
-  warningIssues: string[];   // maxAllowed > 0인 패턴 (번역투 등)
-} => {
-  // HTML에서 텍스트만 추출
-  const textContent = htmlContent
-    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
-    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&[a-z]+;/gi, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-  
-  // detectAiSmell() 호출
-  const result = detectAiSmell(textContent);
-  
-  // 패턴을 심각도별로 분류
-  const criticalIssues: string[] = [];
-  const warningIssues: string[] = [];
-  
-  for (const pattern of result.patterns) {
-    // (허용: 0회)인 패턴은 치명적 문제
-    if (pattern.includes('허용: 0회') || 
-        pattern.includes('절대 금지') || 
-        pattern.includes('의료광고법') ||
-        pattern.includes('금지!')) {
-      criticalIssues.push(pattern);
-    } else {
-      warningIssues.push(pattern);
-    }
-  }
-  
-  console.log('🔍 AI 냄새 검사 결과:', {
-    detected: result.detected,
-    score: result.score,
-    criticalCount: criticalIssues.length,
-    warningCount: warningIssues.length
-  });
-  
-  if (criticalIssues.length > 0) {
-    console.warn('🚨 치명적 AI 냄새 패턴 발견:', criticalIssues);
-  }
-  
-  return {
-    ...result,
-    criticalIssues,
-    warningIssues
-  };
-};
-
-/**
- * AI 냄새 검사 결과를 FactCheckReport에 통합
- */
-export const integrateAiSmellToFactCheck = (
-  factCheck: FactCheckReport,
-  aiSmellResult: ReturnType<typeof runAiSmellCheck>
-): FactCheckReport => {
-  // 기존 ai_smell_score와 detectAiSmell 결과 병합
-  const existingScore = factCheck.ai_smell_score || 0;
-  const detectedScore = aiSmellResult.score;
-  
-  // 더 높은 점수(더 심각한 문제) 사용
-  const finalScore = Math.max(existingScore, detectedScore);
-  
-  // 치명적 문제가 있으면 추가 페널티
-  const criticalPenalty = aiSmellResult.criticalIssues.length * 5;
-  const adjustedScore = Math.min(100, finalScore + criticalPenalty);
-  
-  // issues와 recommendations 업데이트
-  const newIssues = [...(factCheck.issues || [])];
-  const newRecommendations = [...(factCheck.recommendations || [])];
-  
-  // 치명적 문제 추가
-  for (const issue of aiSmellResult.criticalIssues) {
-    if (!newIssues.includes(issue)) {
-      newIssues.push(`🚨 ${issue}`);
-    }
-  }
-  
-  // 경고 문제 추가 (상위 3개만)
-  for (const warning of aiSmellResult.warningIssues.slice(0, 3)) {
-    if (!newIssues.includes(warning)) {
-      newIssues.push(`⚠️ ${warning}`);
-    }
-  }
-  
-  // 권장 사항 추가
-  if (aiSmellResult.criticalIssues.length > 0) {
-    newRecommendations.push('🚨 의료광고법 위반 표현 즉시 수정 필요');
-  }
-  if (adjustedScore > 15) {
-    newRecommendations.push('AI 냄새 점수 15점 초과 - 문장 패턴 다양화 권장');
-  }
-  
-  return {
-    ...factCheck,
-    ai_smell_score: adjustedScore,
-    issues: newIssues,
-    recommendations: newRecommendations
-  };
-};
 
 // 글 스타일별 프롬프트 - 의료법 제56조 기반 (실제 법령만 반영)
 const getWritingStylePrompts = (): Record<WritingStyle, string> => {

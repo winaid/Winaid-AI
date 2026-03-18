@@ -9,8 +9,9 @@ import { ImageStyle, FactCheckReport } from "../types";
 import { GEMINI_MODEL, TIMEOUTS, callGemini } from "./geminiClient";
 import { SYSTEM_PROMPT, getStage2_AiRemovalAndCompliance, getDynamicSystemPrompt } from "../lib/gpt52-prompts-staged";
 import { detectAiSmell, FEW_SHOT_EXAMPLES, CATEGORY_SPECIFIC_PROMPTS, PARAGRAPH_STRUCTURE_GUIDE } from "../utils/humanWritingPrompts";
+import { runAiSmellCheck, integrateAiSmellToFactCheck } from "./contentQualityService";
 
-// STYLE_KEYWORDS (geminiService.ts에서 순환참조 방지를 위해 직접 정의)
+// STYLE_KEYWORDS (이미지 스타일 키워드)
 const STYLE_KEYWORDS: Record<ImageStyle, string> = {
   photo: '사실적인 사진 스타일, 고해상도, 선명한 디테일',
   illustration: '일러스트 스타일, 깔끔한 벡터, 밝은 색상',
@@ -19,81 +20,7 @@ const STYLE_KEYWORDS: Record<ImageStyle, string> = {
   custom: '사용자 지정 스타일'
 };
 
-// AI 냄새 헬퍼 (geminiService.ts에서 이동)
-const runAiSmellCheck = (htmlContent: string): {
-  detected: boolean;
-  patterns: string[];
-  score: number;
-  criticalIssues: string[];
-  warningIssues: string[];
-} => {
-  const textContent = htmlContent
-    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
-    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&[a-z]+;/gi, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-
-  const result = detectAiSmell(textContent);
-
-  const criticalIssues: string[] = [];
-  const warningIssues: string[] = [];
-
-  for (const pattern of result.patterns) {
-    if (pattern.includes('허용: 0회') ||
-        pattern.includes('절대 금지') ||
-        pattern.includes('의료광고법') ||
-        pattern.includes('금지!')) {
-      criticalIssues.push(pattern);
-    } else {
-      warningIssues.push(pattern);
-    }
-  }
-
-  return { ...result, criticalIssues, warningIssues };
-};
-
-const integrateAiSmellToFactCheck = (
-  factCheck: FactCheckReport,
-  aiSmellResult: ReturnType<typeof runAiSmellCheck>
-): FactCheckReport => {
-  const existingScore = factCheck.ai_smell_score || 0;
-  const detectedScore = aiSmellResult.score;
-  const finalScore = Math.max(existingScore, detectedScore);
-  const criticalPenalty = aiSmellResult.criticalIssues.length * 5;
-  const adjustedScore = Math.min(100, finalScore + criticalPenalty);
-
-  const newIssues = [...(factCheck.issues || [])];
-  const newRecommendations = [...(factCheck.recommendations || [])];
-
-  for (const issue of aiSmellResult.criticalIssues) {
-    if (!newIssues.includes(issue)) {
-      newIssues.push(`🚨 ${issue}`);
-    }
-  }
-
-  for (const warning of aiSmellResult.warningIssues.slice(0, 3)) {
-    if (!newIssues.includes(warning)) {
-      newIssues.push(`⚠️ ${warning}`);
-    }
-  }
-
-  if (aiSmellResult.criticalIssues.length > 0) {
-    newRecommendations.push('🚨 의료광고법 위반 표현 즉시 수정 필요');
-  }
-  if (adjustedScore > 15) {
-    newRecommendations.push('AI 냄새 점수 15점 초과 - 문장 패턴 다양화 권장');
-  }
-
-  return {
-    ...factCheck,
-    ai_smell_score: adjustedScore,
-    issues: newIssues,
-    recommendations: newRecommendations
-  };
-};
+// runAiSmellCheck, integrateAiSmellToFactCheck → contentQualityService.ts에서 import
 
 // 카드뉴스 개별 슬라이드 재생성 함수
 export const regenerateCardSlide = async (
