@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { GeneratedContent, ImageStyle as _ImageStyle, CssTheme, BlogSection } from '../types';
 import '../styles/resultPreview.css';
-import { AI_PROMPT_TEMPLATES, AutoSaveHistoryItem } from './resultPreviewUtils';
+import { AI_PROMPT_TEMPLATES, AutoSaveHistoryItem, computeHtmlMetrics, injectCardOverlays } from './resultPreviewUtils';
 import { SeoDetailModal, AiSmellDetailModal, SimilarityModal } from './ScoringModals';
+import { ResultScoreBar } from './ResultScoreBar';
+import { ResultToolbar } from './ResultToolbar';
 import { ImageDownloadModal, ImageRegenModal, CardDownloadModal } from './ExportModals';
 import { CardRegenModal } from './CardRegenModal';
 import { getDesignTemplateById } from '../services/cardNewsDesignTemplates';
@@ -252,133 +254,15 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
     console.log('🎨 커스텀 스타일 업데이트:', content.customImagePrompt || '(없음 - 기본 스타일 사용)');
   }, [content.customImagePrompt]);
 
-  // 글자 수 계산 (실제 보이는 텍스트만, 공백 제외) + 카드 수 업데이트
+  // 글자 수 + 카드 수 계산 (유틸 함수로 분리됨)
   useEffect(() => {
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = localHtml;
-    
-    // 🔧 CSS <style> 태그 제거 (글자수에 CSS가 포함되지 않도록)
-    const styleTags = tempDiv.querySelectorAll('style');
-    styleTags.forEach(el => el.remove());
-    
-    // 🔧 <script> 태그도 제거
-    const scriptTags = tempDiv.querySelectorAll('script');
-    scriptTags.forEach(el => el.remove());
-    
-    // 카드 수 계산
-    const cards = tempDiv.querySelectorAll('.card-slide');
-    setCardCount(cards.length);
-    
-    // 숨겨진 요소 제거
-    const hiddenElements = tempDiv.querySelectorAll('.hidden-title, [style*="display: none"], [style*="display:none"]');
-    hiddenElements.forEach(el => el.remove());
-    
-    // 카드뉴스의 경우 실제 내용만 계산 (태그/해시태그/메타정보 제외)
-    if (content.postType === 'card_news') {
-      // pill-tag, footer, legal-box 등 메타정보 제거
-      const metaElements = tempDiv.querySelectorAll('.pill-tag, .card-footer-row, .legal-box-card, .brand-text, .arrow-icon');
-      metaElements.forEach(el => el.remove());
-      
-      // 실제 콘텐츠 텍스트만 추출 (subtitle, main-title, desc)
-      let contentText = '';
-      tempDiv.querySelectorAll('.card-subtitle, .card-main-title, .card-desc').forEach(el => {
-        contentText += (el.textContent || '') + ' ';
-      });
-      
-      // 공백 제외 글자 수 계산
-      const text = contentText.replace(/\s+/g, '');
-      setCharCount(text.length);
-    } else {
-      // 블로그 포스트의 경우 본문 텍스트만 계산 (공백 제외)
-      
-      // 해시태그 문단 제거 (#으로 시작하는 내용)
-      const hashtagElements = tempDiv.querySelectorAll('p');
-      hashtagElements.forEach(el => {
-        const text = el.textContent || '';
-        // #태그 패턴이 2개 이상 있으면 해시태그 문단으로 판단
-        if ((text.match(/#/g) || []).length >= 2) {
-          el.remove();
-        }
-      });
-      
-      // 이미지 마커 제거 ([IMG_1], [IMG_2] 등)
-      // main-title 클래스 제거 (제목은 본문 글자수에서 제외)
-      const mainTitleElements = tempDiv.querySelectorAll('.main-title');
-      mainTitleElements.forEach(el => el.remove());
-      
-      // ✅ 공백 제외 글자수 계산 (실제 콘텐츠 양 측정)
-      const text = (tempDiv.textContent || '')
-        .replace(/\[IMG_\d+\]/g, '')  // 이미지 마커 제거
-        .replace(/\s+/g, '')  // 모든 공백 제거
-        .trim();
-      
-      // 🔍 디버깅: 글자수 계산 상세 로그
-      console.log('📊 UI 글자수 계산 (CSS 제외):');
-      console.log('   - 공백 제외 후:', text.length);
-      console.log('   - 처음 100자:', text.substring(0, 100));
-      
-      setCharCount(text.length);
-    }
+    const metrics = computeHtmlMetrics(localHtml, content.postType);
+    setCharCount(metrics.charCount);
+    setCardCount(metrics.cardCount);
   }, [localHtml, content.postType]);
 
-  // 카드뉴스 카드에 오버레이 추가
-  useEffect(() => {
-    if (content.postType !== 'card_news') return;
-    
-    const addOverlaysToCards = () => {
-      const cards = document.querySelectorAll('.naver-preview .card-slide');
-      cards.forEach((card, index) => {
-        // 이미 오버레이가 있으면 스킵
-        if (card.querySelector('.card-overlay')) return;
-        
-        // 카드 번호 배지
-        const badge = document.createElement('div');
-        badge.className = 'card-number-badge';
-        badge.textContent = index === 0 ? '표지' : `${index + 1}`;
-        card.appendChild(badge);
-        
-        // 오버레이 생성
-        const overlay = document.createElement('div');
-        overlay.className = 'card-overlay';
-        overlay.innerHTML = `
-          <button class="card-overlay-btn regen" data-index="${index}">
-            🔄 재생성
-          </button>
-          <button class="card-overlay-btn download" data-index="${index}">
-            💾 다운로드
-          </button>
-        `;
-        card.appendChild(overlay);
-      });
-    };
-    
-    // 이벤트 위임 핸들러
-    const handleOverlayClick = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      if (!target.classList.contains('card-overlay-btn')) return;
-      
-      e.stopPropagation();
-      const index = parseInt(target.dataset.index || '0', 10);
-      
-      if (target.classList.contains('regen')) {
-        openCardRegenModal(index);
-      } else if (target.classList.contains('download')) {
-        handleSingleCardDownload(index);
-      }
-    };
-    
-    // DOM 업데이트 후 실행
-    const timer = setTimeout(() => {
-      addOverlaysToCards();
-      // 이벤트 위임: 부모 요소에 이벤트 리스너 등록
-      document.addEventListener('click', handleOverlayClick);
-    }, 100);
-    
-    return () => {
-      clearTimeout(timer);
-      document.removeEventListener('click', handleOverlayClick);
-    };
-  }, [localHtml, content.postType]);
+  // [React 선언적 패턴으로 전환됨] 카드 오버레이는 injectCardOverlays()로 HTML 렌더 시점에 주입
+  // 클릭 이벤트는 editor onClick 이벤트 위임(아래 JSX)이 처리
 
   // ── Draft 불러오기 래퍼 (setLocalHtml/setCurrentTheme 바인딩) ──
   const loadFromAutoSaveHistory = (item: AutoSaveHistoryItem) => {
@@ -413,7 +297,11 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
         savedScrollPosition.current = scrollContainerRef.current.scrollTop;
       }
       
-      const styledHtml = applyInlineStylesForNaver(localHtml, currentTheme);
+      let styledHtml = applyInlineStylesForNaver(localHtml, currentTheme);
+      // 카드뉴스: overlay/badge HTML을 렌더 시점에 주입 (DOM 직접 조작 제거)
+      if (content.postType === 'card_news') {
+        styledHtml = injectCardOverlays(styledHtml);
+      }
       if (editorRef.current.innerHTML !== styledHtml) {
         editorRef.current.innerHTML = styledHtml;
 
@@ -477,151 +365,23 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
         submitRegenerateImage={submitRegenerateImage}
       />
 
-      {/* 항상 표시: 점수 표시 & 다운로드 버튼 */}
-      <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 p-6 flex items-center justify-between text-white flex-none relative overflow-hidden">
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMSIgY3k9IjEiIHI9IjEiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4wMykiLz48L3N2Zz4=')] opacity-60" />
-        <div className="flex items-center gap-4 relative">
-          {content.factCheck ? (
-            <>
-              {/* 📊 SEO 점수 (블로그에만 표시) - 가장 앞에 배치 */}
-              {content.postType !== 'card_news' && (
-              <>
-                <div className="flex flex-col">
-                  <span className="text-[10px] font-black opacity-50 uppercase tracking-[0.1em] mb-1">📊 SEO 점수</span>
-                  <div className="flex items-center gap-2">
-                    {seoScore ? (
-                      <>
-                        <span className={`text-3xl font-black ${seoScore.total >= 85 ? 'text-emerald-400' : seoScore.total >= 70 ? 'text-amber-400' : 'text-red-400'}`}>
-                          {seoScore.total}점
-                        </span>
-                        <button
-                          onClick={() => setShowSeoDetail(true)}
-                          className="text-[10px] opacity-70 hover:opacity-100 underline"
-                        >
-                          {seoScore.total >= 85 ? '✅ 최적화' : seoScore.total >= 70 ? '⚠️ 개선필요' : '🚨 재설계'}
-                        </button>
-                      </>
-                    ) : (
-                      <button
-                        onClick={handleEvaluateSeo}
-                        disabled={isEvaluatingSeo}
-                        className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 rounded-lg text-xs font-bold flex items-center gap-1 disabled:opacity-50"
-                      >
-                        {isEvaluatingSeo ? (
-                          <>
-                            <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                            평가중...
-                          </>
-                        ) : (
-                          '평가하기'
-                        )}
-                      </button>
-                    )}
-                  </div>
-                </div>
-                
-                {/* 구분선 */}
-                <div className="w-px h-12 bg-slate-700"></div>
-              </>
-            )}
-            
-            {/* ⚖️ 의료법 준수 (Safety Score) */}
-            <div className="flex flex-col">
-              <span className="text-[10px] font-black opacity-50 uppercase tracking-[0.1em] mb-1">⚖️ 의료법</span>
-              <div className="flex items-center gap-2">
-                 <span className={`text-2xl font-black ${content.factCheck.safety_score > 80 ? 'text-green-400' : 'text-amber-400'}`}>
-                   {content.factCheck.safety_score}점
-                 </span>
-                 <span className="text-[10px] opacity-70">{content.factCheck.safety_score > 80 ? '✅' : '⚠️'}</span>
-              </div>
-            </div>
-            
-            {/* 구분선 */}
-            <div className="w-px h-12 bg-slate-700"></div>
-            
-            {/* 🎯 전환력 점수 (Conversion Score) */}
-            <div className="flex flex-col">
-              <span className="text-[10px] font-black opacity-50 uppercase tracking-[0.1em] mb-1">🎯 전환력</span>
-              <div className="flex items-center gap-2">
-                 <span className={`text-2xl font-black ${(content.factCheck.conversion_score || 0) >= 80 ? 'text-emerald-400' : (content.factCheck.conversion_score || 0) >= 60 ? 'text-amber-400' : 'text-red-400'}`}>
-                   {content.factCheck.conversion_score || 0}점
-                 </span>
-                 <span className="text-[10px] opacity-70 leading-tight">
-                   {(content.factCheck.conversion_score || 0) >= 80 ? '🔥' : (content.factCheck.conversion_score || 0) >= 60 ? '👍' : '💡'}
-                 </span>
-              </div>
-            </div>
-            
-            {/* 🤖 AI 냄새 점수 - 비활성화됨
-                <div className="w-px h-12 bg-slate-700"></div>
-                <div>AI 냄새 점수 UI</div>
-            */}
-            
-            {content.postType === 'card_news' && (
-              <div className="hidden lg:block ml-4">
-                <span className="text-xs font-bold text-blue-400 border border-blue-400 px-2 py-1 rounded-lg">카드뉴스 모드</span>
-              </div>
-            )}
-          </>
-          ) : (
-            <div className={`text-xs ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-              💡 콘텐츠를 생성하면 점수가 표시됩니다
-            </div>
-          )}
-        </div>
-        <div className="flex items-center gap-2 relative">
-             {/* 🖼️ 이미지 최적화 버튼 */}
-             <button 
-               onClick={handleOptimizeImages} 
-               disabled={isOptimizingImages}
-               className={`${
-                 optimizationStats 
-                   ? 'bg-green-500 hover:bg-green-600' 
-                   : 'bg-amber-500 hover:bg-amber-600'
-               } text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 relative`}
-               title={optimizationStats 
-                 ? `✅ ${optimizationStats.imageCount}개 이미지 최적화됨 (${formatFileSize(optimizationStats.totalSaved)} 절약)` 
-                 : 'WebP 변환 + Lazy Loading 적용'
-               }
-             >
-               {isOptimizingImages ? (
-                 <>
-                   <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24">
-                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
-                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-                   </svg>
-                   <span className="hidden lg:inline">최적화 중...</span>
-                 </>
-               ) : (
-                 <>
-                   🖼️ <span className="hidden lg:inline">{optimizationStats ? '최적화됨' : '이미지 최적화'}</span>
-                 </>
-               )}
-             </button>
-             
-             <span className="text-[10px] font-black uppercase text-slate-400 mr-2 hidden lg:inline">다운로드</span>
-             {content.postType === 'card_news' ? (
-               <>
-                 <button 
-                   onClick={() => setCardDownloadModalOpen(true)} 
-                   disabled={downloadingCard} 
-                   className="bg-purple-500 hover:bg-purple-600 text-white px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2"
-                 >
-                   📥 다운로드
-                 </button>
-               </>
-             ) : (
-               <>
-                 <button onClick={handleDownloadWord} disabled={isEditingAi} className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2">
-                    📄 Word
-                 </button>
-                 <button onClick={handleDownloadPDF} disabled={isEditingAi} className="bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2">
-                    📑 PDF
-                 </button>
-               </>
-             )}
-        </div>
-      </div>
+      <ResultScoreBar
+        darkMode={darkMode}
+        postType={content.postType}
+        factCheck={content.factCheck}
+        seoScore={seoScore}
+        isEvaluatingSeo={isEvaluatingSeo}
+        handleEvaluateSeo={handleEvaluateSeo}
+        setShowSeoDetail={setShowSeoDetail}
+        isOptimizingImages={isOptimizingImages}
+        optimizationStats={optimizationStats}
+        handleOptimizeImages={handleOptimizeImages}
+        isEditingAi={isEditingAi}
+        downloadingCard={downloadingCard}
+        setCardDownloadModalOpen={setCardDownloadModalOpen}
+        handleDownloadWord={handleDownloadWord}
+        handleDownloadPDF={handleDownloadPDF}
+      />
       
       {/* 📊 SEO 점수 상세 모달 */}
       {seoScore && (
@@ -697,185 +457,30 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
         />
       )}
 
-      <div className={`p-6 border-b flex-none transition-colors duration-300 ${darkMode ? 'border-slate-700 bg-slate-800' : 'border-slate-100 bg-white'}`}>
-        <div className="flex justify-between items-center mb-4">
-          <div className="flex items-center gap-4">
-            <div className={`flex p-1.5 rounded-xl ${darkMode ? 'bg-slate-700' : 'bg-slate-100'}`}>
-                <button onClick={() => setActiveTab('preview')} className={`px-8 py-2.5 text-sm font-bold rounded-lg transition-all ${activeTab === 'preview' ? (darkMode ? 'bg-slate-600 text-emerald-400 shadow-sm' : 'bg-white text-green-600 shadow-sm') : 'text-slate-400'}`}>미리보기</button>
-                <button onClick={() => setActiveTab('html')} className={`px-8 py-2.5 text-sm font-bold rounded-lg transition-all ${activeTab === 'html' ? (darkMode ? 'bg-slate-600 text-emerald-400 shadow-sm' : 'bg-white text-green-600 shadow-sm') : 'text-slate-400'}`}>HTML</button>
-            </div>
-
-            {/* 소제목별 수정 버튼 (블로그 전용) */}
-            {content.postType === 'blog' && blogSections.length > 0 && (
-              <button
-                onClick={() => setShowSectionPanel(!showSectionPanel)}
-                className={`px-4 py-2.5 text-sm font-bold rounded-xl transition-all flex items-center gap-2 ${
-                  showSectionPanel
-                    ? darkMode ? 'bg-violet-900/50 text-violet-300 border border-violet-700' : 'bg-violet-100 text-violet-700 border border-violet-300'
-                    : darkMode ? 'bg-slate-700 text-slate-300 hover:bg-slate-600 border border-slate-600' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200'
-                }`}
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
-                소제목별 수정
-              </button>
-            )}
-            
-            {/* 글자 수 표시 */}
-            <div className={`flex items-center gap-2 px-4 py-2 rounded-xl border ${darkMode ? 'bg-slate-700 border-slate-600' : 'bg-slate-50 border-slate-200'}`}>
-              <span className={`text-xs font-bold ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>📊 글자 수:</span>
-              <span className={`text-sm font-black ${charCount < 1500 ? 'text-amber-500' : charCount > 4000 ? 'text-blue-500' : 'text-emerald-500'}`}>
-                {charCount.toLocaleString()}자
-              </span>
-              <span className={`text-[10px] ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>
-                {charCount < 1500 ? '(짧음)' : charCount < 2500 ? '(적당)' : charCount < 4000 ? '(길음)' : '(매우 길음)'}
-              </span>
-            </div>
-            
-            {/* Undo 버튼 */}
-            {canUndo && (
-              <button
-                type="button"
-                onClick={handleUndo}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all ${darkMode ? 'bg-orange-900/50 text-orange-400 hover:bg-orange-900' : 'bg-orange-100 text-orange-700 hover:bg-orange-200'}`}
-                title="이전 상태로 되돌리기"
-              >
-                ↩️ 되돌리기
-              </button>
-            )}
-          </div>
-          
-          <div className="flex items-center gap-2">
-            {/* 유사도 검사 버튼 */}
-            <button 
-              onClick={handleCheckSimilarity}
-              disabled={isCheckingSimilarity}
-              className={`px-3 py-2 rounded-lg text-xs font-bold transition-all ${
-                isCheckingSimilarity 
-                  ? (darkMode ? 'bg-purple-900/30 text-purple-500 cursor-wait' : 'bg-purple-100/50 text-purple-400 cursor-wait')
-                  : (darkMode ? 'bg-purple-900/50 text-purple-400 hover:bg-purple-900' : 'bg-purple-100 text-purple-700 hover:bg-purple-200')
-              }`}
-              title="블로그 유사도 검사 (중복 체크)"
-            >
-              {isCheckingSimilarity ? (
-                <>
-                  <span className="animate-spin inline-block mr-1">🔄</span>
-                  검사 중...
-                </>
-              ) : (
-                <>🔍 유사도</>
-              )}
-            </button>
-            
-            {/* 저장 버튼 */}
-            <div className="flex items-center gap-1 relative">
-              {/* 수동 저장 버튼 */}
-              <button 
-                onClick={saveManually}
-                className={`px-3 py-2 rounded-lg text-xs font-bold transition-all ${darkMode ? 'bg-blue-900/50 text-blue-400 hover:bg-blue-900' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'}`}
-                title="현재 내용 저장"
-              >
-                💾 저장
-              </button>
-              
-              {hasAutoSave() && (
-                <div className="relative">
-                  <button 
-                    onClick={() => setShowAutoSaveDropdown(!showAutoSaveDropdown)}
-                    className={`px-3 py-2 rounded-lg text-xs font-bold transition-all ${darkMode ? 'bg-amber-900/50 text-amber-400 hover:bg-amber-900' : 'bg-amber-100 text-amber-700 hover:bg-amber-200'}`}
-                    title="저장된 글 불러오기"
-                  >
-                    📂 불러오기
-                  </button>
-                  
-                  {/* 자동저장 히스토리 드롭다운 */}
-                  {showAutoSaveDropdown && autoSaveHistory.length > 0 && (
-                    <div 
-                      className={`absolute bottom-full right-0 mb-2 w-80 rounded-xl shadow-2xl z-[10000] overflow-hidden border-2 ${
-                        darkMode ? 'bg-slate-800 border-amber-500' : 'bg-white border-amber-300'
-                      }`}
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <div className={`px-3 py-2 text-[10px] font-bold flex items-center justify-between ${darkMode ? 'bg-amber-600 text-white' : 'bg-amber-100 text-amber-800'}`}>
-                        <span>📂 저장된 글 ({autoSaveHistory.length}/3)</span>
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); setShowAutoSaveDropdown(false); }}
-                          className="text-xs hover:opacity-70"
-                        >✕</button>
-                      </div>
-                      {autoSaveHistory.map((item, idx) => (
-                        <div
-                          key={idx}
-                          className={`flex items-center gap-2 px-3 py-2.5 border-b last:border-b-0 ${
-                            darkMode ? 'border-slate-700' : 'border-slate-100'
-                          }`}
-                        >
-                          {/* 불러오기 버튼 */}
-                          <button
-                            type="button"
-                            onClick={() => loadFromAutoSaveHistory(item)}
-                            className={`flex-1 text-left text-xs transition-all rounded-lg p-2 ${
-                              darkMode 
-                                ? 'hover:bg-amber-900/50 text-slate-200' 
-                                : 'hover:bg-amber-50 text-slate-700'
-                            }`}
-                          >
-                            <div className="flex items-center justify-between mb-1">
-                              <span className="font-black text-sm truncate flex-1">{item.title}</span>
-                              <span className={`text-[9px] ml-2 px-2 py-0.5 rounded-full ${
-                                item.postType === 'card_news' 
-                                  ? 'bg-purple-100 text-purple-600' 
-                                  : item.postType === 'press_release'
-                                  ? 'bg-amber-100 text-amber-600'
-                                  : 'bg-blue-100 text-blue-600'
-                              }`}>
-                                {item.postType === 'card_news' ? '카드뉴스' : item.postType === 'press_release' ? '보도자료' : '블로그'}
-                              </span>
-                            </div>
-                            <div className={`text-[9px] ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                              🕐 {new Date(item.savedAt).toLocaleString('ko-KR', { 
-                                month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' 
-                              })}
-                            </div>
-                          </button>
-                          
-                          {/* 🗑️ 삭제 버튼 */}
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (confirm(`"${item.title}"을(를) 삭제하시겠습니까?`)) {
-                                deleteHistoryItem(idx);
-                              }
-                            }}
-                            className={`p-2 rounded-lg text-xs font-bold transition-all ${
-                              darkMode 
-                                ? 'bg-red-900/50 text-red-400 hover:bg-red-900' 
-                                : 'bg-red-50 text-red-500 hover:bg-red-100'
-                            }`}
-                            title="삭제"
-                          >
-                            🗑️
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-              {lastSaved && (
-                <span className={`text-[10px] hidden lg:inline ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>
-                  💾 {lastSaved.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })} 저장됨
-                </span>
-              )}
-            </div>
-            
-            <button onClick={handleCopy} className={`px-10 py-3 rounded-xl text-md font-bold text-white shadow-xl transition-all active:scale-95 ${copied ? 'bg-emerald-500' : 'bg-green-500 hover:bg-green-600'}`}>
-                {copied ? '✅ 복사 완료' : '블로그로 복사'}
-            </button>
-          </div>
-        </div>
-        
-      </div>
+      <ResultToolbar
+        darkMode={darkMode}
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        postType={content.postType}
+        blogSections={blogSections}
+        showSectionPanel={showSectionPanel}
+        setShowSectionPanel={setShowSectionPanel}
+        charCount={charCount}
+        canUndo={canUndo}
+        handleUndo={handleUndo}
+        isCheckingSimilarity={isCheckingSimilarity}
+        handleCheckSimilarity={handleCheckSimilarity}
+        saveManually={saveManually}
+        hasAutoSave={hasAutoSave}
+        showAutoSaveDropdown={showAutoSaveDropdown}
+        setShowAutoSaveDropdown={setShowAutoSaveDropdown}
+        autoSaveHistory={autoSaveHistory}
+        loadFromAutoSaveHistory={loadFromAutoSaveHistory}
+        deleteHistoryItem={deleteHistoryItem}
+        lastSaved={lastSaved}
+        copied={copied}
+        handleCopy={handleCopy}
+      />
 
 
 

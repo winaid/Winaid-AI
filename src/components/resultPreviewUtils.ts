@@ -274,3 +274,82 @@ export const convertToWordCompatibleHtml = (html: string): string => {
 
   return result;
 };
+
+// ── HTML 메트릭스 계산 (글자 수 + 카드 수) ──
+// ResultPreview 외부에서 순수 함수로 실행하여 document.createElement를 useEffect 밖으로 격리
+
+export interface HtmlMetrics {
+  charCount: number;
+  cardCount: number;
+}
+
+export function computeHtmlMetrics(html: string, postType: string): HtmlMetrics {
+  const tempDiv = document.createElement('div');
+  tempDiv.innerHTML = html;
+
+  // CSS <style> / <script> 태그 제거
+  tempDiv.querySelectorAll('style, script').forEach(el => el.remove());
+
+  // 카드 수 계산
+  const cardCount = tempDiv.querySelectorAll('.card-slide').length;
+
+  // 숨겨진 요소 제거
+  tempDiv.querySelectorAll('.hidden-title, [style*="display: none"], [style*="display:none"]').forEach(el => el.remove());
+
+  let charCount: number;
+
+  if (postType === 'card_news') {
+    // 메타정보 제거
+    tempDiv.querySelectorAll('.pill-tag, .card-footer-row, .legal-box-card, .brand-text, .arrow-icon').forEach(el => el.remove());
+    // 실제 콘텐츠 텍스트만 추출
+    let contentText = '';
+    tempDiv.querySelectorAll('.card-subtitle, .card-main-title, .card-desc').forEach(el => {
+      contentText += (el.textContent || '') + ' ';
+    });
+    charCount = contentText.replace(/\s+/g, '').length;
+  } else {
+    // 해시태그 문단 제거
+    tempDiv.querySelectorAll('p').forEach(el => {
+      const text = el.textContent || '';
+      if ((text.match(/#/g) || []).length >= 2) el.remove();
+    });
+    // main-title 제거
+    tempDiv.querySelectorAll('.main-title').forEach(el => el.remove());
+    charCount = (tempDiv.textContent || '')
+      .replace(/\[IMG_\d+\]/g, '')
+      .replace(/\s+/g, '')
+      .trim().length;
+  }
+
+  return { charCount, cardCount };
+}
+
+// ── 카드뉴스 오버레이/배지 HTML 주입 ──
+// contentEditable에 표시되는 카드 HTML에 overlay + badge를 삽입한다.
+// 기존 useEffect + document.createElement 패턴을 대체한다.
+
+export function injectCardOverlays(html: string): string {
+  const tempDiv = document.createElement('div');
+  tempDiv.innerHTML = html;
+  const cards = tempDiv.querySelectorAll('.card-slide');
+  cards.forEach((card, index) => {
+    // 이미 오버레이가 있으면 스킵
+    if (card.querySelector('.card-overlay')) return;
+
+    // 카드 번호 배지
+    const badge = document.createElement('div');
+    badge.className = 'card-number-badge';
+    badge.textContent = index === 0 ? '표지' : `${index + 1}`;
+    card.appendChild(badge);
+
+    // 오버레이
+    const overlay = document.createElement('div');
+    overlay.className = 'card-overlay';
+    overlay.innerHTML = `
+      <button class="card-overlay-btn regen" data-index="${index}">🔄 재생성</button>
+      <button class="card-overlay-btn download" data-index="${index}">💾 다운로드</button>
+    `;
+    card.appendChild(overlay);
+  });
+  return tempDiv.innerHTML;
+}
