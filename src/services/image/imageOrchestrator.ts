@@ -211,7 +211,7 @@ export const generateBlogImage = async (
 
   // ── auto tier 결정 ──
   const startTier = resolveStartTier(role, demoSafe);
-  console.info(`[IMG-TIER] role=${role} startTier=${startTier} mode=${mode}`);
+  console.info(`[IMG-TIER] role=${role} startTier=${startTier} mode=${mode} timeout=${timeout}ms wallCap=50s`);
 
   // ── 시도 체인: startTier에 따라 동적으로 구성 ──
   let chain: AttemptDef[];
@@ -629,7 +629,7 @@ function printSessionSummary(): void {
     const max = sorted[sorted.length - 1];
     const p95 = sorted[Math.floor(sorted.length * 0.95)];
     const over50s = sorted.filter(ms => ms > 50000).length;
-    console.info(`[IMG-SESSION]   🕐 hero wallTime (cap=35s)`);
+    console.info(`[IMG-SESSION]   🕐 hero wallTime (cap=50s)`);
     console.info(`[IMG-SESSION]   median=${(median / 1000).toFixed(1)}s  p95=${(p95 / 1000).toFixed(1)}s  max=${(max / 1000).toFixed(1)}s  over50s=${over50s}/${sorted.length}`);
   }
 
