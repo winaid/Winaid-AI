@@ -184,7 +184,7 @@ async function _orchestrateCardNews(
   const { generateCardNewsWithAgents } = await import('../../services/cardNewsService');
   const { MEDICAL_DISCLAIMER } = await import('../../services/resultAssembler');
   const { persistGeneratedPost } = await import('./contentStorage');
-  const { runAiSmellCheck, integrateAiSmellToFactCheck } = await import('../../services/geminiService');
+  const { runAiSmellCheck, integrateAiSmellToFactCheck } = await import('../../services/contentQualityService');
 
   safeProgress('🤖 미니 에이전트 방식으로 카드뉴스 생성 시작...');
 
@@ -329,9 +329,8 @@ async function _orchestrateBlog(
     generateBlogPostText,
     generateFaqSection,
     generateSmartBlockFaq,
-    runAiSmellCheck,
-    integrateAiSmellToFactCheck,
   } = await import('../../services/geminiService');
+  const { runAiSmellCheck, integrateAiSmellToFactCheck } = await import('../../services/contentQualityService');
 
   const { STYLE_NAMES } = await import('../../services/image/imagePromptBuilder');
   const { generateImageQueue } = await import('../../services/image/imageOrchestrator');
