@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { GeneratedContent, ImageStyle as _ImageStyle, CssTheme, BlogSection } from '../types';
+import '../styles/resultPreview.css';
 import { AI_PROMPT_TEMPLATES, AutoSaveHistoryItem } from './resultPreviewUtils';
 import { SeoDetailModal, AiSmellDetailModal, SimilarityModal } from './ScoringModals';
 import { ImageDownloadModal, ImageRegenModal, CardDownloadModal } from './ExportModals';
@@ -32,6 +33,25 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
   // 디자인 템플릿 스타일 계산
   const designTemplate = content.designTemplateId ? getDesignTemplateById(content.designTemplateId) : undefined;
   const dtStyle = designTemplate?.styleConfig;
+
+  // CSS custom properties: 디자인 템플릿 동적 값 → resultPreview.css의 var() fallback에 주입
+  const cardCssVars = useMemo<React.CSSProperties>(() => {
+    if (!dtStyle) return {};
+    const vars: Record<string, string> = {};
+    if (dtStyle.backgroundColor) {
+      vars['--rp-card-bg'] = `linear-gradient(180deg, ${dtStyle.backgroundColor} 0%, ${dtStyle.backgroundColor}dd 100%)`;
+    }
+    if (dtStyle.borderRadius) {
+      vars['--rp-card-radius'] = dtStyle.borderRadius;
+    }
+    if (dtStyle.boxShadow) {
+      vars['--rp-card-shadow'] = dtStyle.boxShadow;
+    }
+    if (dtStyle.borderWidth && dtStyle.borderWidth !== '0') {
+      vars['--rp-card-border'] = `${dtStyle.borderWidth} solid ${dtStyle.borderColor}`;
+    }
+    return vars as React.CSSProperties;
+  }, [dtStyle]);
 
   // ── [Layer 3] Draft Persistence ──
   const {
@@ -426,250 +446,10 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
   // [훅으로 이동됨] handleDownloadWord, handleDownloadPDF, handleCopy, applyInlineStylesForNaver → useDocumentExport
 
   return (
-    <div className={`rounded-2xl shadow-[0_4px_32px_rgba(0,0,0,0.06)] border h-full flex flex-col overflow-hidden relative transition-colors duration-300 backdrop-blur-2xl ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white/90 border-slate-200/60'}`}>
-      <style>{`
-        .naver-preview { word-break: keep-all; overflow-wrap: break-word; }
-        .naver-preview .naver-post-container { max-width: 100% !important; box-sizing: border-box; padding: 0 !important; }
-        .naver-preview .main-title { font-size: clamp(20px, 4vw, 32px); font-weight: 900; margin-bottom: 30px; color: #000; line-height: 1.4; padding-bottom: 20px; }
-        .naver-preview h2:not(.main-title):not(.hidden-title):not(.press-subtitle), .naver-preview h3 { font-size: clamp(18px, 3vw, 24px); font-weight: bold; margin-top: 50px; margin-bottom: 20px; color: #000; padding-left: 15px; border-left: 4px solid #787fff; }
-        .naver-preview p { font-size: clamp(14px, 2vw, 16px); margin-bottom: 20px; color: #333; line-height: 1.8; word-break: keep-all; }
-        .naver-preview .content-image-wrapper { position: relative; margin: 90px 0; }
-        .naver-preview .content-image-wrapper img { width: 100%; border-radius: 16px; display: block; box-shadow: 0 20px 50px rgba(0,0,0,0.08); cursor: pointer; transition: filter 0.3s; }
-        .naver-preview .content-image-wrapper:hover img { filter: brightness(0.8); }
-        .naver-preview .content-image-wrapper::after { content: '✨ 이미지 재생성'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(79, 70, 229, 0.9); color: white; padding: 12px 24px; border-radius: 20px; font-weight: 900; font-size: 14px; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
-        .naver-preview .content-image-wrapper:hover::after { opacity: 1; }
-
-        .card-news-container { max-width: 480px; margin: 0 auto; }
-        .card-grid-wrapper { display: flex; flex-direction: column; gap: 24px; }
-        
-        .card-slide {
-           background: ${dtStyle ? `linear-gradient(180deg, ${dtStyle.backgroundColor} 0%, ${dtStyle.backgroundColor}dd 100%)` : 'linear-gradient(180deg, #E8F4FD 0%, #F0F9FF 100%)'};
-           border-radius: ${dtStyle?.borderRadius || '24px'};
-           box-shadow: ${dtStyle?.boxShadow || '0 8px 32px rgba(0,0,0,0.06)'};
-           ${dtStyle?.borderWidth && dtStyle.borderWidth !== '0' ? `border: ${dtStyle.borderWidth} solid ${dtStyle.borderColor};` : ''}
-           overflow: hidden;
-           position: relative;
-           width: 100%;
-           cursor: pointer;
-           transition: transform 0.2s, box-shadow 0.2s;
-        }
-        .card-slide:hover {
-           transform: translateY(-4px);
-           box-shadow: 0 12px 40px rgba(0,0,0,0.12);
-        }
-        .card-slide:hover .card-overlay {
-           opacity: 1;
-        }
-        /* 모바일에서도 터치 시 오버레이 표시 */
-        .card-slide:active .card-overlay {
-           opacity: 1;
-        }
-        /* 모바일 전용: 미디어 쿼리로 항상 표시 (투명도 낮춤) */
-        @media (hover: none) and (pointer: coarse) {
-           .card-overlay {
-              opacity: 0.95;
-           }
-        }
-        .card-overlay {
-           position: absolute;
-           inset: 0;
-           background: rgba(0,0,0,0.5);
-           display: flex;
-           flex-direction: column;
-           justify-content: center;
-           align-items: center;
-           gap: 12px;
-           opacity: 0;
-           transition: opacity 0.2s;
-           z-index: 10;
-           /* 모바일에서 터치 가능하도록 */
-           touch-action: manipulation;
-        }
-        .card-overlay-btn {
-           padding: 12px 24px;
-           border-radius: 12px;
-           font-weight: 700;
-           font-size: 14px;
-           border: none;
-           cursor: pointer;
-           transition: transform 0.1s;
-           display: flex;
-           align-items: center;
-           gap: 8px;
-           user-select: none;
-           -webkit-user-select: none;
-           /* 모바일 터치 영역 확대 */
-           min-height: 44px;
-           touch-action: manipulation;
-        }
-        .card-overlay-btn:hover {
-           transform: scale(1.05);
-        }
-        /* 모바일에서 터치 피드백 */
-        .card-overlay-btn:active {
-           transform: scale(0.95);
-        }
-        .card-overlay-btn.regen {
-           background: linear-gradient(135deg, #8B5CF6, #6366F1);
-           color: white;
-        }
-        .card-overlay-btn.download {
-           background: white;
-           color: #1e293b;
-        }
-        .card-number-badge {
-           position: absolute;
-           top: 12px;
-           left: 12px;
-           background: rgba(0,0,0,0.6);
-           color: white;
-           padding: 4px 10px;
-           border-radius: 8px;
-           font-size: 12px;
-           font-weight: 700;
-           z-index: 5;
-        }
-
-        .card-border-box {
-           border: 3px solid #1e293b;
-           border-radius: 20px;
-           margin: 16px;
-           height: calc(100% - 32px);
-           display: flex;
-           flex-direction: column;
-           background: #fff;
-           overflow: hidden;
-        }
-
-        .card-header-row {
-           padding: 16px 20px;
-           display: flex;
-           justify-content: space-between;
-           align-items: center;
-           border-bottom: 1px solid #f1f5f9;
-        }
-        
-        .brand-text {
-           font-size: 10px;
-           font-weight: 900;
-           letter-spacing: 2px;
-           text-transform: uppercase;
-           color: #1e293b;
-        }
-
-        .arrow-icon {
-           font-size: 16px;
-           border: 2px solid #1e293b;
-           border-radius: 50%;
-           width: 28px;
-           height: 28px;
-           display: flex;
-           align-items: center;
-           justify-content: center;
-           color: #1e293b;
-        }
-
-        .card-content-area {
-           flex: 1;
-           display: flex;
-           flex-direction: column;
-           align-items: center;
-           justify-content: center;
-           text-align: center;
-           padding: 20px 24px;
-           gap: 8px;
-        }
-
-        .card-subtitle {
-           font-size: 13px;
-           font-weight: 700;
-           color: #3b82f6;
-           margin-bottom: 4px;
-           letter-spacing: -0.3px;
-        }
-
-        .card-divider-dotted {
-           width: 60%;
-           border-bottom: 2px dotted #cbd5e1;
-           margin: 8px 0 12px 0;
-        }
-
-        .card-main-title,
-        .card-content-area h1.card-main-title,
-        .card-content-area p.card-main-title {
-           font-size: 26px !important;
-           font-weight: 900 !important;
-           color: #0f172a !important;
-           line-height: 1.3 !important;
-           margin: 0 !important;
-           word-break: keep-all !important;
-           letter-spacing: -0.5px !important;
-           white-space: pre-line !important;
-           display: block !important;
-           text-align: center !important;
-           max-width: 100% !important;
-           padding: 0 8px !important;
-        }
-
-        .card-highlight {
-           color: #3b82f6;
-        }
-        
-        .card-img-container {
-           width: 100%;
-           display: flex;
-           justify-content: center;
-           align-items: center;
-           padding: 12px 0;
-        }
-        
-        .card-inner-img {
-            width: 85%;
-            aspect-ratio: 1;
-            object-fit: cover;
-            object-position: center top;
-            border-radius: 12px;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.08);
-        }
-
-        .card-full-img {
-            width: 100%;
-            height: auto;
-            display: block;
-        }
-        
-        .card-desc {
-            font-size: 15px;
-            color: #475569;
-            margin-top: 12px;
-            font-weight: 500;
-            line-height: 1.7;
-            word-break: keep-all;
-            max-width: 90%;
-            min-height: 40px;
-        }
-
-        .card-footer-row {
-           padding: 12px 20px 16px;
-           display: flex;
-           justify-content: center;
-           gap: 8px;
-           border-top: 1px solid #f1f5f9;
-        }
-
-        .pill-tag {
-           background: #f1f5f9;
-           padding: 6px 12px;
-           border-radius: 16px;
-           font-size: 11px;
-           font-weight: 700;
-           color: #475569;
-        }
-
-        .hidden-title { display: none; }
-        .legal-box-card { font-size: 10px; color: #94a3b8; text-align: center; margin-top: 16px; line-height: 1.5; }
-      `}</style>
-
+    <div
+      className={`rounded-2xl shadow-[0_4px_32px_rgba(0,0,0,0.06)] border h-full flex flex-col overflow-hidden relative transition-colors duration-300 backdrop-blur-2xl ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white/90 border-slate-200/60'}`}
+      style={cardCssVars}
+    >
       {/* 이미지 클릭 시 선택 모달 (다운로드 or 재생성) */}
       <ImageDownloadModal
         darkMode={darkMode}
