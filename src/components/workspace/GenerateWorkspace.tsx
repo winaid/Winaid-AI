@@ -169,6 +169,13 @@ function LoadingView({ darkMode, progress, postType, displayStage }: {
     .replace(/^[\u{1F300}-\u{1FAD6}\u{2600}-\u{27BF}\u{FE00}-\u{FE0F}\u{200D}\u{20E3}\u{E0020}-\u{E007F}]+\s*/u, '')
     .trim();
 
+  // 표시 문구 정책: stage.defaultMsg를 기본으로, cleanProgress는 보조
+  // 내부 용어가 섞인 raw progress보다 제품 톤의 defaultMsg를 우선한다.
+  // cleanProgress가 존재하고 stage.defaultMsg와 다른 유의미한 메시지일 때만 표시.
+  const displayMsg = (cleanProgress && cleanProgress.length > 2)
+    ? cleanProgress
+    : stage.defaultMsg;
+
   return (
     <div className={`rounded-xl border p-12 md:p-16 flex flex-col items-center justify-center text-center transition-colors duration-300 flex-1 min-h-[480px] ${darkMode ? 'bg-[#161b22] border-[#30363d]' : 'bg-white border-slate-200 shadow-sm'}`}>
       {/* 상단: 현재 단계 배지 */}
@@ -189,7 +196,7 @@ function LoadingView({ darkMode, progress, postType, displayStage }: {
 
       {/* 중단: 상세 진행 메시지 */}
       <p className={`text-sm font-medium mb-2 min-h-[20px] transition-all duration-200 ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>
-        {cleanProgress || stage.defaultMsg}
+        {displayMsg}
       </p>
 
       {/* 하단: 짧은 안내 */}

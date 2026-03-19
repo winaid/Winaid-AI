@@ -113,10 +113,23 @@ export function buildHeroRetryItem(
   // 이전: "현대 한국인, 신뢰감 있는 분위기"가 하드코딩되어 medical/illustration에서도 실사 유도
   const shortTopic = topic.substring(0, 60);
   const isPhoto = style === 'photo' && !customStylePrompt;
+  const isMedical = style === 'medical' && !customStylePrompt;
+
+  // medical은 완전히 다른 프롬프트 구조
+  if (isMedical) {
+    return {
+      index: 0,
+      prompt: `3D medical illustration of ${shortTopic}. Anatomical render, dental/oral structure cross-section, educational clinical visualization. Blue-white palette, clean studio lighting. NOT a portrait, NOT a photograph. Single scene. 16:9.`,
+      role: 'hero',
+      style,
+      aspectRatio,
+      customStylePrompt,
+      mode: 'manual',
+    };
+  }
+
   const styleHint = isPhoto
     ? '현대 한국인, 신뢰감 있는 분위기, 실사 사진.'
-    : style === 'medical'
-    ? '의학 3D 일러스트, 해부학적 렌더링, NOT a photograph.'
     : style === 'illustration'
     ? '3D 일러스트, Blender 스타일, 파스텔톤, NOT a photograph.'
     : customStylePrompt

@@ -147,48 +147,123 @@ describe('P0 스타일 계약: illustration', () => {
   });
 });
 
-// ── P0-3: medical 스타일 ──
+// ── medical 전용 프롬프트 빌더 (오케스트레이터의 완전 분리 경로 재현) ──
+function buildMedicalPrompts(promptText: string) {
+  const COMMON_CONSTRAINTS = 'No text, no letters, no typography, no watermark, no logo. No hanbok, no traditional clothing, no cultural costume, no historical styling, no wedding styling, no festival styling. No exaggerated poses, no glamorous fashion portrait. Single scene only — no split screen, no diptych, no collage, no side-by-side panels, no before-after comparison, no multiple frames in one image.';
+  const MEDICAL_NEGATIVE = 'Do NOT generate a photorealistic portrait. Do NOT show a human face close-up. Do NOT create a lifestyle clinic photo, stock photo, editorial patient photo, beauty shot, or cinematic portrait. No real human as main subject.';
+
+  const heroPrompt = `Generate a 16:9 landscape 3D medical illustration for a Korean dental/health educational blog.
+[Visual Subject] ${promptText} — Show this as an anatomical 3D render, clinical cross-section, or educational medical diagram. The main visual subject must be dental/oral anatomy, treatment mechanism, or medical structure — NOT a human portrait.
+[Rendering Style] 3D medical illustration, anatomical render, educational clinical visualization, rendered tooth/gum/oral anatomy, clean studio lighting, blue-white-teal clinical palette, semi-transparent layers where relevant, diagrammatic composition. Similar to medical textbook 3D renders or dental education materials.
+[Constraint] ${MEDICAL_NEGATIVE}
+[Rules] ${COMMON_CONSTRAINTS}`.trim();
+
+  const subPrompt = `3D medical illustration: ${promptText.substring(0, 120)}. Anatomical render, dental/oral structure visualization, clinical cross-section, educational diagram style. Blue-white palette, clean studio lighting. NOT a photograph, NOT a portrait, NOT a stock photo. ${COMMON_CONSTRAINTS} 16:9.`.trim();
+
+  const ultraMinimal = `3D medical illustration of ${promptText.substring(0, 80)}. Anatomical render, clinical visualization, NOT a photo, NOT a portrait. No text, no watermark. 16:9.`.trim();
+
+  return { heroPrompt, subPrompt, ultraMinimal, MEDICAL_NEGATIVE };
+}
+
+// ── P0-3: medical 스타일 (완전 분리 경로) ──
 describe('P0 스타일 계약: medical', () => {
-  const r = buildPrompts('척추 디스크 구조', 'medical');
+  const r = buildMedicalPrompts('척추 디스크 구조');
 
-  it('isPhoto = false', () => {
-    expect(r.isPhoto).toBe(false);
+  it('hero에 "editorial image" 없음 (medical은 편집 사진 아님)', () => {
+    expect(r.heroPrompt).not.toContain('editorial image');
   });
 
-  it('hero [Atmosphere]에 "Medical educational 3D illustration" 포함', () => {
-    expect(r.heroAtmosphere).toContain('Medical educational 3D illustration');
+  it('hero에 "3D medical illustration" 포함', () => {
+    expect(r.heroPrompt).toContain('3D medical illustration');
   });
 
-  it('hero [Atmosphere]에 "NOT a photograph" 포함', () => {
-    expect(r.heroAtmosphere).toContain('NOT a photograph');
+  it('hero에 [Person] 섹션 없음 (medical은 인물 중심 아님)', () => {
+    expect(r.heroPrompt).not.toContain('[Person]');
   });
 
-  it('hero [Person]에 "stylized 3D rendered" 포함', () => {
-    expect(r.heroPerson).toContain('stylized 3D rendered');
+  it('hero에 "NOT a human portrait" 포함', () => {
+    expect(r.heroPrompt).toContain('NOT a human portrait');
   });
 
-  it('hero [Style]에 "NOT a photograph" 포함', () => {
-    expect(r.heroStyleDirective).toContain('NOT a photograph');
+  it('hero에 "anatomical render" 포함', () => {
+    expect(r.heroPrompt).toContain('anatomical render');
   });
 
-  it('hero [Style]에 "NOT photorealistic" 포함', () => {
-    expect(r.heroStyleDirective).toContain('NOT photorealistic');
+  it('hero에 "educational clinical visualization" 포함', () => {
+    expect(r.heroPrompt).toContain('educational clinical visualization');
+  });
+
+  it('hero에 "NOT a photograph" 없어도 "NOT a photorealistic portrait" 등 강한 제약 있음', () => {
+    expect(r.heroPrompt).toContain('Do NOT generate a photorealistic portrait');
   });
 
   it('hero에 "realistic editorial photo" 없음', () => {
     expect(r.heroPrompt).not.toContain('realistic editorial photo');
   });
 
-  it('sub에 "NOT a photo" 포함', () => {
-    expect(r.subPersonHint).toContain('NOT a photo');
+  it('hero에 "Modern Korean adult" 없음', () => {
+    expect(r.heroPrompt).not.toContain('Modern Korean adult');
   });
 
-  it('sub styleKw에 "NOT a photo" 포함', () => {
-    expect(r.styleKw).toContain('NOT a photo');
+  it('hero에 portrait/face 억제 제약 포함', () => {
+    expect(r.MEDICAL_NEGATIVE).toContain('Do NOT show a human face close-up');
+    expect(r.MEDICAL_NEGATIVE).toContain('stock photo');
+    expect(r.MEDICAL_NEGATIVE).toContain('beauty shot');
   });
 
-  it('ultraMinimal에도 "NOT a photo" 포함', () => {
+  it('sub에 "3D medical illustration" 포함', () => {
+    expect(r.subPrompt).toContain('3D medical illustration');
+  });
+
+  it('sub에 "NOT a portrait" 포함', () => {
+    expect(r.subPrompt).toContain('NOT a portrait');
+  });
+
+  it('sub에 "NOT a photograph" 포함', () => {
+    expect(r.subPrompt).toContain('NOT a photograph');
+  });
+
+  it('sub에 "Modern Korean adult" 없음', () => {
+    expect(r.subPrompt).not.toContain('Modern Korean adult');
+  });
+
+  it('ultraMinimal에 "3D medical illustration" 포함', () => {
+    expect(r.ultraMinimal).toContain('3D medical illustration');
+  });
+
+  it('ultraMinimal에 "NOT a portrait" 포함', () => {
+    expect(r.ultraMinimal).toContain('NOT a portrait');
+  });
+
+  it('ultraMinimal에 "NOT a photo" 포함', () => {
     expect(r.ultraMinimal).toContain('NOT a photo');
+  });
+});
+
+// ── P0-3b: medical vs photo 구조 차이 ──
+describe('P0 medical vs photo 구조 차이', () => {
+  const med = buildMedicalPrompts('치아미백 원리');
+  const photo = buildPrompts('치아미백 원리', 'photo');
+
+  it('medical hero에 [Person] 없음, photo hero에 [Person] 있음', () => {
+    expect(med.heroPrompt).not.toContain('[Person]');
+    expect(photo.heroPrompt).toContain('[Person]');
+  });
+
+  it('medical hero에 "editorial image" 없음 (negative 제약의 "editorial patient photo"는 OK)', () => {
+    expect(med.heroPrompt).not.toContain('editorial image');
+    expect(med.heroPrompt).not.toContain('landscape editorial');
+    expect(photo.heroPrompt).toContain('editorial');
+  });
+
+  it('medical hero에 "anatomical render" 있음, photo hero에 없음', () => {
+    expect(med.heroPrompt).toContain('anatomical render');
+    expect(photo.heroPrompt).not.toContain('anatomical render');
+  });
+
+  it('medical sub에 "portrait" 억제, photo sub에 portrait 억제 없음', () => {
+    expect(med.subPrompt).toContain('NOT a portrait');
+    expect(photo.subPrompt).not.toContain('NOT a portrait');
   });
 });
 
@@ -256,11 +331,21 @@ describe('P0 스타일 계약: custom', () => {
 
 // ── P0-5: retry 시 스타일 유지 ──
 describe('P0 retry 스타일 유지', () => {
-  it('medical retry에 "NOT a photograph" 포함', () => {
+  it('medical retry: 완전 분리 구조 — "3D medical illustration" + "NOT a portrait"', () => {
     const item = buildHeroRetryItem('척추 디스크', 'medical', '16:9');
+    expect(item.prompt).toContain('3D medical illustration');
+    expect(item.prompt).toContain('NOT a portrait');
     expect(item.prompt).toContain('NOT a photograph');
-    expect(item.prompt).toContain('의학 3D 일러스트');
+    expect(item.prompt).not.toContain('현대 한국인');
+    expect(item.prompt).not.toContain('신뢰감');
     expect(item.style).toBe('medical');
+  });
+
+  it('medical retry: editorial / person / portrait 없음', () => {
+    const item = buildHeroRetryItem('치아미백', 'medical', '16:9');
+    expect(item.prompt).not.toContain('editorial');
+    expect(item.prompt).not.toContain('Modern Korean');
+    expect(item.prompt).toContain('Anatomical render');
   });
 
   it('illustration retry에 "NOT a photograph" 포함', () => {
@@ -283,12 +368,13 @@ describe('P0 retry 스타일 유지', () => {
     expect(item.customStylePrompt).toBe(customPrompt);
   });
 
-  it('retry item은 style과 customStylePrompt를 보존 → generateBlogImage에서 분기 작동', () => {
+  it('medical retry item이 generateBlogImage에서 medical 전용 경로를 타는지', () => {
     const item = buildHeroRetryItem('충치', 'medical', '16:9');
-    // item이 generateBlogImage로 전달되면 style='medical'로 분기
-    const r = buildPrompts(item.prompt, item.style, item.customStylePrompt);
-    expect(r.heroAtmosphere).toContain('NOT a photograph');
-    expect(r.heroAtmosphere).toContain('Medical educational 3D illustration');
+    // medical retry item은 style='medical'이므로 오케스트레이터에서 isMedical 분기
+    expect(item.style).toBe('medical');
+    // retry prompt 자체가 이미 medical 전용 구조
+    expect(item.prompt).toContain('3D medical illustration');
+    expect(item.prompt).not.toContain('[Person]');
   });
 });
 
@@ -332,32 +418,63 @@ describe('P0 SHORT keyword 정합성', () => {
 
 // ── P0-8: 전 구간 실사 키워드 혼입 검사 ──
 describe('P0 실사 키워드 혼입 방지', () => {
-  const PHOTO_KEYWORDS = ['realistic editorial photo', 'realistic medical attire', 'photorealistic'];
+  // illustration은 공통 경로 사용
+  describe('illustration 스타일', () => {
+    const r = buildPrompts('테스트 주제', 'illustration');
 
-  for (const style of ['illustration', 'medical'] as ImageStyle[]) {
-    describe(`${style} 스타일`, () => {
-      const r = buildPrompts('테스트 주제', style);
-
-      it(`hero에 "realistic editorial photo" 없음`, () => {
-        expect(r.heroPrompt).not.toContain('realistic editorial photo');
-      });
-
-      it(`hero에 "realistic medical attire" 없음`, () => {
-        expect(r.heroPrompt).not.toContain('realistic medical attire');
-      });
-
-      it(`hero [Style]에 "photorealistic"가 positive로 쓰이지 않음 (NOT photorealistic은 OK)`, () => {
-        // "NOT photorealistic"은 negative 제약이므로 허용
-        // "photorealistic,"나 "photorealistic " 단독 사용은 불허
-        const directive = r.heroStyleDirective;
-        const hasPositivePhotorealistic = directive.includes('photorealistic') &&
-          !directive.includes('NOT photorealistic');
-        expect(hasPositivePhotorealistic).toBe(false);
-      });
-
-      it(`sub에 "Modern Korean adult, natural Korean facial features, contemporary clothing" 없음`, () => {
-        expect(r.subPersonHint).not.toContain('Modern Korean adult, natural Korean facial features');
-      });
+    it('hero에 "realistic editorial photo" 없음', () => {
+      expect(r.heroPrompt).not.toContain('realistic editorial photo');
     });
-  }
+
+    it('hero에 "realistic medical attire" 없음', () => {
+      expect(r.heroPrompt).not.toContain('realistic medical attire');
+    });
+
+    it('hero [Style]에 "photorealistic"가 positive로 쓰이지 않음', () => {
+      const directive = r.heroStyleDirective;
+      const hasPositivePhotorealistic = directive.includes('photorealistic') &&
+        !directive.includes('NOT photorealistic');
+      expect(hasPositivePhotorealistic).toBe(false);
+    });
+
+    it('sub에 "Modern Korean adult, natural Korean facial features" 없음', () => {
+      expect(r.subPersonHint).not.toContain('Modern Korean adult, natural Korean facial features');
+    });
+  });
+
+  // medical은 완전 분리 경로 — 더 강한 검사
+  describe('medical 스타일 (분리 경로)', () => {
+    const r = buildMedicalPrompts('테스트 주제');
+
+    it('hero에 "editorial" 없음', () => {
+      expect(r.heroPrompt).not.toContain('editorial image');
+      expect(r.heroPrompt).not.toContain('editorial photo');
+    });
+
+    it('hero에 "Modern Korean adult" 없음', () => {
+      expect(r.heroPrompt).not.toContain('Modern Korean adult');
+    });
+
+    it('hero에 "facial features" 없음', () => {
+      expect(r.heroPrompt).not.toContain('facial features');
+    });
+
+    it('hero에 [Person] 없음', () => {
+      expect(r.heroPrompt).not.toContain('[Person]');
+    });
+
+    it('hero에 "realistic" (positive) 없음', () => {
+      // "photorealistic portrait"는 negative 문맥에서만 사용
+      expect(r.heroPrompt).not.toContain('realistic editorial');
+      expect(r.heroPrompt).not.toContain('realistic medical attire');
+    });
+
+    it('sub에 "Modern Korean adult" 없음', () => {
+      expect(r.subPrompt).not.toContain('Modern Korean adult');
+    });
+
+    it('ultraMinimal에 "Modern Korean adult" 없음', () => {
+      expect(r.ultraMinimal).not.toContain('Modern Korean adult');
+    });
+  });
 });

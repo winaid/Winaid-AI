@@ -198,26 +198,53 @@ export const generateBlogImage = async (
   // ── 공통 제약 ──
   const COMMON_CONSTRAINTS = 'No text, no letters, no typography, no watermark, no logo. No hanbok, no traditional clothing, no cultural costume, no historical styling, no wedding styling, no festival styling. No exaggerated poses, no glamorous fashion portrait. Single scene only — no split screen, no diptych, no collage, no side-by-side panels, no before-after comparison, no multiple frames in one image.';
 
-  // ── 스타일별 분위기/인물 프리셋 (hero 프롬프트용) ──
-  // photo만 실사 톤, 나머지는 스타일 고유 톤 유지
+  // ── 스타일별 프롬프트 분기 ──
   const isPhoto = style === 'photo' && !customStylePrompt;
+  const isMedical = style === 'medical' && !customStylePrompt;
+
+  // ── medical 전용 프롬프트 (완전 분리) ──
+  // medical은 portrait-oriented editorial image가 아니라
+  // anatomical / clinical visualization 중심이어야 한다.
+  // 공통 구조(editorial image + [Person])를 사용하지 않는다.
+  const MEDICAL_NEGATIVE = 'Do NOT generate a photorealistic portrait. Do NOT show a human face close-up. Do NOT create a lifestyle clinic photo, stock photo, editorial patient photo, beauty shot, or cinematic portrait. No real human as main subject.';
+
+  if (isMedical) {
+    const medicalHeroPrompt = `Generate a 16:9 landscape 3D medical illustration for a Korean dental/health educational blog.
+[Visual Subject] ${promptText} — Show this as an anatomical 3D render, clinical cross-section, or educational medical diagram. The main visual subject must be dental/oral anatomy, treatment mechanism, or medical structure — NOT a human portrait.
+[Rendering Style] 3D medical illustration, anatomical render, educational clinical visualization, rendered tooth/gum/oral anatomy, clean studio lighting, blue-white-teal clinical palette, semi-transparent layers where relevant, diagrammatic composition. Similar to medical textbook 3D renders or dental education materials.
+[Constraint] ${MEDICAL_NEGATIVE}
+[Rules] ${COMMON_CONSTRAINTS}`.trim();
+
+    const medicalSubPrompt = `3D medical illustration: ${promptText.substring(0, 120)}. Anatomical render, dental/oral structure visualization, clinical cross-section, educational diagram style. Blue-white palette, clean studio lighting. NOT a photograph, NOT a portrait, NOT a stock photo. ${COMMON_CONSTRAINTS} 16:9.`.trim();
+
+    const medicalUltraMinimal = `3D medical illustration of ${promptText.substring(0, 80)}. Anatomical render, clinical visualization, NOT a photo, NOT a portrait. No text, no watermark. 16:9.`.trim();
+
+    // hero/sub에 따라 프롬프트 선택
+    const heroPrompt = medicalHeroPrompt;
+    const subPrompt = medicalSubPrompt;
+    const ultraMinimal = medicalUltraMinimal;
+
+    // chain 구성은 아래 공통 로직에서 처리하므로 변수만 세팅
+    return _executeBlogImageChain({
+      heroPrompt, subPrompt, ultraMinimal,
+      isHero, role, mode, timeout, demoSafe, promptText, style,
+      COMMON_CONSTRAINTS,
+    });
+  }
+
+  // ── photo / illustration / custom 프롬프트 ──
   const heroAtmosphere = isPhoto
     ? 'Calm, trustworthy, realistic editorial photo. The setting should match the subject — hospital/clinic if about treatment, home/daily life if about prevention or symptoms.'
-    : style === 'medical'
-    ? 'Medical educational 3D illustration style. NOT a photograph. Clean, clinical, diagrammatic composition with semi-transparent anatomical elements.'
     : style === 'illustration'
     ? '3D rendered illustration, Blender/Pixar style. NOT a photograph. Soft pastel lighting, rounded friendly shapes, clean gradient background.'
     : 'Follow the custom style direction below. Do NOT default to photorealistic unless explicitly requested.';
 
   const heroPerson = isPhoto
     ? 'Modern Korean adult with natural Korean facial features, wearing contemporary everyday clothing or realistic medical attire.'
-    : style === 'medical'
-    ? 'If a person is needed: stylized 3D rendered Korean adult, simplified features. Anatomical/medical focus is primary.'
     : style === 'illustration'
     ? '3D rendered character — modern Korean adult with friendly rounded features, contemporary casual or medical clothing. NOT photorealistic.'
     : 'Modern Korean adult matching the custom style below.';
 
-  // ── 프롬프트 전략 ──
   const heroStyleDirective = customStylePrompt || BLOG_IMAGE_STYLE_COMPACT[style] || BLOG_IMAGE_STYLE_COMPACT.illustration;
   const heroPrompt = `Generate a 16:9 landscape editorial image for a Korean medical/dental health blog.
 [Subject] ${promptText}
@@ -226,32 +253,39 @@ export const generateBlogImage = async (
 [Style] ${heroStyleDirective}
 [Rules] ${COMMON_CONSTRAINTS}`.trim();
 
-  // sub: 스타일 분기를 반영 (photo일 때만 실사 인물 묘사)
   const subPersonHint = isPhoto
     ? 'Modern Korean adult, natural Korean facial features, contemporary clothing.'
-    : style === 'medical'
-    ? '3D medical illustration style, NOT a photo.'
     : style === 'illustration'
     ? '3D illustration style, friendly rounded character, NOT a photo.'
     : '';
   const subPrompt = `Korean health blog image: ${promptText.substring(0, 140)}. ${subPersonHint} ${styleKw}. ${COMMON_CONSTRAINTS} 16:9.`.trim();
   const ultraMinimal = `${promptText.substring(0, 80)}. ${subPersonHint} ${styleKw}. No text, no watermark, no hanbok. 16:9.`.trim();
 
-  // ── auto tier 결정 ──
+  return _executeBlogImageChain({
+    heroPrompt, subPrompt, ultraMinimal,
+    isHero, role, mode, timeout, demoSafe, promptText, style,
+    COMMON_CONSTRAINTS,
+  });
+};
+
+// ── chain 실행 공통 함수 ──
+interface _ChainParams {
+  heroPrompt: string; subPrompt: string; ultraMinimal: string;
+  isHero: boolean; role: ImageRole; mode: ImageGenMode;
+  timeout: number; demoSafe: boolean; promptText: string;
+  style: ImageStyle; COMMON_CONSTRAINTS: string;
+}
+
+async function _executeBlogImageChain(params: _ChainParams): Promise<BlogImageOutput> {
+  const { heroPrompt, subPrompt, ultraMinimal, isHero, role, mode, timeout, demoSafe, promptText, style } = params;
+
   const startTier = resolveStartTier(role, demoSafe);
-  // manual mode(블로그): sub wall cap 30s→50s (2차 ultraMinimal 시도 시간 확보)
-  // auto mode: 기존 30s 유지 (카드뉴스 등 영향 없음)
   const wallCapMs = isHero ? 50_000 : (mode === 'manual' ? 50_000 : 30_000);
   console.info(`[IMG-TIER] role=${role} startTier=${startTier} mode=${mode} timeout=${timeout}ms wallCap=${wallCapMs / 1000}s`);
 
-  // ── 시도 체인: startTier에 따라 동적으로 구성 ──
   let chain: AttemptDef[];
 
   if (isHero) {
-    // hero: fast-success-first 전략
-    // NB2로 먼저 빠르게 시도 → 실패 시 PRO 또는 축소 프롬프트로 재시도
-    // 이전 pro-first 전략은 hero wall time의 대부분을 첫 시도에서 소비하여
-    // fallback이 사실상 실패하는 구조적 문제가 있었음
     if (startTier === 'pro') {
       chain = [
         { model: GEMINI_MODEL.IMAGE_FLASH, tier: 'nb2', prompt: heroPrompt, label: '#1(nb2-fast)' },
@@ -264,10 +298,6 @@ export const generateBlogImage = async (
       ];
     }
   } else {
-    // sub: NB2 우선, 실패 시 cross-tier rescue (PRO)
-    // #1: NB2 + 표준 프롬프트
-    // #2: NB2 + 최소 프롬프트 (프롬프트 복잡도 문제 대응)
-    // #3: PRO + 최소 프롬프트 (NB2 서버 문제 대응, cross-tier → skip-retry 안 걸림)
     chain = [
       { model: GEMINI_MODEL.IMAGE_FLASH, tier: 'nb2', prompt: subPrompt, label: '#1(nb2)' },
       { model: GEMINI_MODEL.IMAGE_FLASH, tier: 'nb2', prompt: ultraMinimal, label: '#2(nb2-minimal)' },
@@ -276,8 +306,6 @@ export const generateBlogImage = async (
   }
 
   const maxAttempts = chain.length;
-
-  // ── wall time cap: hero 50s / sub 30s (sub는 속도 우선, 빠른 fallback) ──
   const WALL_TIME_CAP_MS = wallCapMs;
   const wallStart = Date.now();
 
@@ -350,40 +378,28 @@ export const generateBlogImage = async (
         const nextTier = chain[attempt + 1]?.tier;
         const isCrossTier = nextTier && nextTier !== tier;
 
-        // sub에서 서버 레벨 장애(503/cooldown) → 2차 시도 건너뛰고 바로 template
-        // 503/cooldown은 서버 자체 문제이므로 같은 tier 재시도 무의미
-        //
-        // timeout은 skip하지 않음:
-        //   - 2차 시도는 ultraMinimal(80자) vs 1차 subPrompt(200자+)로 완전히 다른 프롬프트
-        //   - timeout 원인이 프롬프트 복잡도이면 ultraMinimal은 성공 확률이 의미 있게 높음
-        //   - wall cap(manual 50s)이 전체 시간을 제한하므로 무한 대기 위험 없음
         if (!isHero && !isCrossTier && (parsed.isUpstream503 || parsed.isCooldown)) {
           console.info(`[IMG-SKIP-RETRY] type=${role} reason=${parsed.errorType} → skip remaining attempts, fast-template`);
           break;
         }
 
-        // 빠른 downgrade: 503/504/timeout/cooldown → 즉시 다음 시도로 전환
         if (isCrossTier) {
-          // cross-tier 전환은 대기 없이 즉시
           console.info(`[IMG-DOWNGRADE] type=${role} from=${tier} to=${nextTier} reason=${parsed.errorType}`);
         } else if (parsed.isCooldown) {
-          // cooldown: 최소 대기 (기존 8-10s → 2-3s)
           const waitMs = Math.min(parsed.retryAfterMs || 2000, 3000) + Math.random() * 500;
           if (debug) console.debug(`[IMG-WAIT] cooldown ${Math.round(waitMs)}ms tier=${tier}`);
           await new Promise(r => setTimeout(r, waitMs));
         } else if (parsed.isUpstream503 || parsed.isTimeout) {
-          // 503/timeout: 즉시 다음 시도 (backoff 제거 — wall cap이 시간 제한)
           if (debug) console.debug(`[IMG-WAIT] fast-skip reason=${parsed.errorType} tier=${tier}`);
           await new Promise(r => setTimeout(r, 500));
         } else {
-          // 기타 에러: 짧은 대기
           await new Promise(r => setTimeout(r, 1000));
         }
       }
     }
   }
 
-  // ── AI 모두 실패 → 보조 비주얼 모드 (template) ──
+  // ── AI 모두 실패 → template fallback ──
   const wallElapsed = Date.now() - wallStart;
   const tierPath = attemptLog.map(e => `${e.tier}:${e.errorType}`).join('→');
   const templateData = generateTemplateFallback(promptText, style, role);
@@ -398,7 +414,7 @@ export const generateBlogImage = async (
     attemptIndex: attemptLog.length,
     resultType: 'template',
   };
-};
+}
 
 // =============================================
 // 🖼️ generateImageQueue — cooldown-aware 큐 + 제한 병렬

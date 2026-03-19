@@ -64,21 +64,73 @@ function stripGateSignal(progress: string): string {
  * 내부 로직 메시지를 사용자 친화적 톤으로 교체.
  * "Stage A", "소제목 2/5", "폴리싱" 같은 파이프라인 용어를 숨긴다.
  */
+/**
+ * 내부 progress → 사용자용 메시지 변환.
+ *
+ * 정책: "원문 보존"이 아니라 "사용자 경험 보호".
+ * 내부 용어가 섞인 메시지는 빈 문자열로 반환하여
+ * displayStage의 defaultMsg가 대신 표시되게 한다.
+ *
+ * 이미지 단계에서는 병렬 정보("이미지 3/5장")를 제거하고
+ * "한 장씩 차분하게 준비하는" 느낌의 문구로 교체한다.
+ */
+
+// 이미지 단계 순환 문구 (병렬 진행을 숨기고 순차 인상 부여)
+const IMAGE_STEP_MESSAGES = [
+  '장면을 하나씩 정리하고 있어요',
+  '내용과 잘 맞는 장면을 살펴보고 있어요',
+  '화면이 심심하지 않도록 이미지를 준비하고 있어요',
+  '글과 어울리는 비주얼을 고르고 있어요',
+  '거의 다 왔어요, 마지막 이미지를 고르고 있어요',
+];
+let _imgStepIdx = 0;
+
 function humanizeProgress(msg: string): string {
   if (!msg) return msg;
-  // 파이프라인 내부 단계명 숨기기
-  if (/stage\s*[abc]/i.test(msg) || msg.includes('폴리싱')) return '';
+
+  // ── 1. 완전 숨기기: 내부 파이프라인 용어 ──
+  if (/stage\s*[abc]/i.test(msg)) return '';
+  if (msg.includes('폴리싱') || msg.includes('polish')) return '';
   if (msg.includes('소제목') && msg.includes('/')) return '';
-  if (msg.includes('도입부 작성')) return '';
+  if (msg.includes('도입부 작성') || msg.includes('도입부 생성')) return '';
   if (msg.includes('섹션') && /\d/.test(msg)) return '';
   if (msg.includes('마무리 작성')) return '';
   if (msg.includes('파이프라인')) return '';
   if (msg.includes('AI 냄새')) return '';
-  // 내부 역할 태그 제거: "(hero)", "(sub)" 등
-  let cleaned = msg.replace(/\s*\((hero|sub)\)/gi, '');
-  // 보조 비주얼 유지 → 사용자에게 보이지 않도록
-  if (cleaned.includes('보조 비주얼')) return '';
-  return cleaned;
+  if (msg.includes('보조 비주얼')) return '';
+  if (msg.includes('통합 검증')) return '';
+  if (msg.includes('quality path') || msg.includes('quality_path')) return '';
+  if (/seo\s*점수/i.test(msg) || /seo\s*score/i.test(msg)) return '';
+  if (msg.includes('FAQ') && !msg.includes('FAQ 섹션이')) return '';
+
+  // ── 2. 내부 역할/기술 태그 제거 ──
+  let cleaned = msg
+    .replace(/\s*\((hero|sub)\)/gi, '')
+    .replace(/\s*\[wave[- ]?\d+\]/gi, '')
+    .replace(/tier=\w+/gi, '')
+    .replace(/nb2|pro-rescue|pro-quality/gi, '');
+
+  // ── 3. 이미지 진행: 병렬 숫자를 순차 느낌으로 교체 ──
+  // "이미지 3/5장 생성 중" → 순환 문구
+  if (/이미지\s*\d+\/\d+장/.test(cleaned) || /이미지.*생성 시작/.test(cleaned)) {
+    const step = IMAGE_STEP_MESSAGES[_imgStepIdx % IMAGE_STEP_MESSAGES.length];
+    _imgStepIdx++;
+    return step;
+  }
+  // "이미지 3/5장 완료" → 순환 문구
+  if (/이미지\s*\d+\/\d+장\s*완료/.test(cleaned) || /이미지\s*\d+\/\d+장\s*준비 완료/.test(cleaned)) {
+    const step = IMAGE_STEP_MESSAGES[_imgStepIdx % IMAGE_STEP_MESSAGES.length];
+    _imgStepIdx++;
+    return step;
+  }
+
+  // ── 4. 재시도 메시지 간소화 ──
+  if (cleaned.includes('재시도')) {
+    return '조금 더 다듬고 있어요';
+  }
+
+  // ── 5. 나머지는 통과 (이모지 있는 완료 메시지 등) ──
+  return cleaned.trim();
 }
 
 /** gate 신호 추출 */
