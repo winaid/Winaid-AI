@@ -850,19 +850,8 @@ const AdminPage: React.FC<AdminPageProps> = ({ onAdminVerified }) => {
         toast.error(`전체 삭제 실패: ${result.error}`);
       } else {
         toast.success(`${result.deletedCount}개 콘텐츠가 삭제되었습니다.`);
-        setContents([]);
-        setStats(prev => ({
-          ...prev,
-          totalContents: 0,
-          blogCount: 0,
-          cardnewsCount: 0,
-          pressCount: 0,
-          uniqueHospitals: 0,
-          uniqueUsers: 0,
-          postsToday: 0,
-          postsThisWeek: 0,
-          postsThisMonth: 0,
-        }));
+        // DB에서 재검증 (개별 삭제와 동일 패턴 — loadContents 호출)
+        await loadContents();
       }
     } catch (err) {
       toast.error(`전체 삭제 오류: ${String(err)}`);

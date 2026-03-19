@@ -364,9 +364,19 @@ export const deleteAllGeneratedPosts = async (
       return { success: false, error: error.message };
     }
 
+    // null/undefined 방어: RPC 함수 미배포 또는 시그니처 불일치 시 data=null 가능
+    if (data === null || data === undefined) {
+      console.error('[PostStorage] Admin 전체 삭제: RPC 반환값 null — 함수 미배포 또는 시그니처 불일치 가능');
+      return { success: false, error: 'RPC 함수 응답 없음. Supabase에 delete_all_generated_posts 함수가 배포되었는지 확인하세요.' };
+    }
+
     const deletedCount = Number(data);
     if (deletedCount === -1) {
       return { success: false, error: '관리자 인증 실패' };
+    }
+    if (Number.isNaN(deletedCount)) {
+      console.error('[PostStorage] Admin 전체 삭제: 비정상 반환값:', data);
+      return { success: false, error: `비정상 RPC 반환값: ${String(data)}` };
     }
 
     console.log(`[PostStorage] ✅ 전체 삭제 완료: ${deletedCount}건`);
