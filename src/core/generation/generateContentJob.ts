@@ -15,7 +15,7 @@
  */
 
 import type { GenerationRequest, GeneratedContent, FactCheckReport, SeoScoreReport, BlogSection } from '../../types';
-import type { ImageQueueItem } from '../../services/image/imageTypes';
+import type { ImageQueueItem, ImageQueueResult } from '../../services/image/imageTypes';
 import { runCreditGate, type CreditGateResult } from './policies';
 import type { ContentArtifact } from './contracts';
 import {
@@ -23,6 +23,8 @@ import {
   DEFAULT_CARD_NEWS_SLIDE_COUNT,
   BLOG_IMAGE_RATIO,
   CARD_NEWS_IMAGE_RATIO,
+  BLOG_IMAGE_PHASE_SPLIT_THRESHOLD,
+  BLOG_IMAGE_PHASE1_COUNT,
 } from './contracts';
 
 // ── 결과 타입 ──
@@ -524,27 +526,81 @@ async function _orchestrateBlog(
       }
     } else {
       // 블로그: cooldown-aware 큐 사용
-      const queueItems: ImageQueueItem[] = textData.imagePrompts.slice(0, maxImages).map((p: string, i: number) => ({
-        index: i,
-        prompt: p,
-        role: (i === 0 ? 'hero' : 'sub') as 'hero' | 'sub',
-        style: request.imageStyle,
-        aspectRatio: imgRatio,
-        customStylePrompt: request.customImagePrompt,
-        mode: 'auto' as const,
-      }));
+      let allQueueResults: ImageQueueResult[] = [];
 
-      const plannedSlotCount = queueItems.length;
-      const queueResults = await generateImageQueue(queueItems, safeProgress);
+      if (maxImages >= BLOG_IMAGE_PHASE_SPLIT_THRESHOLD) {
+        // ── 블로그 5장 전용: 2단계 배치 전략 ──
+        // Phase 1 완료 후 Phase 2 실행 → rate limit 회복 상태에서 생성 → template fallback 감소
+        // NB2 concurrency=2 환경에서 5개 동시 요청 시 rate limit/503 집중 → 40% template 문제 해소
+        const p1Count = Math.min(BLOG_IMAGE_PHASE1_COUNT, maxImages);
+        const p2Count = maxImages - p1Count;
+        console.info(`[IMG-BLOG5] 2단계 배치: phase1=${p1Count}장 phase2=${p2Count}장 (threshold=${BLOG_IMAGE_PHASE_SPLIT_THRESHOLD})`);
 
-      for (const qr of queueResults) {
-        images.push({ index: qr.index + 1, data: qr.data, prompt: qr.prompt });
-        if (qr.status === 'fallback') imageFailCount++;
+        // Phase 1: hero + 핵심 sub (풀 시도)
+        const phase1Items: ImageQueueItem[] = textData.imagePrompts.slice(0, p1Count).map((p: string, i: number) => ({
+          index: i,
+          prompt: p,
+          role: (i === 0 ? 'hero' : 'sub') as 'hero' | 'sub',
+          style: request.imageStyle,
+          aspectRatio: imgRatio,
+          customStylePrompt: request.customImagePrompt,
+          mode: 'auto' as const,
+        }));
+
+        safeProgress(`🎨 이미지 1단계: 핵심 ${p1Count}장 생성 중...`);
+        const phase1Results = await generateImageQueue(phase1Items, safeProgress);
+        allQueueResults.push(...phase1Results);
+
+        for (const qr of phase1Results) {
+          images.push({ index: qr.index + 1, data: qr.data, prompt: qr.prompt });
+          if (qr.status === 'fallback') imageFailCount++;
+        }
+
+        // Phase 2: 나머지 sub (rate limit 회복 후 실행)
+        if (p2Count > 0) {
+          const phase2Items: ImageQueueItem[] = textData.imagePrompts.slice(p1Count, maxImages).map((p: string, i: number) => ({
+            index: p1Count + i,
+            prompt: p,
+            role: 'sub' as 'hero' | 'sub',
+            style: request.imageStyle,
+            aspectRatio: imgRatio,
+            customStylePrompt: request.customImagePrompt,
+            mode: 'auto' as const,
+          }));
+
+          safeProgress(`🎨 이미지 2단계: 보조 ${p2Count}장 생성 중...`);
+          const phase2Results = await generateImageQueue(phase2Items, safeProgress);
+          allQueueResults.push(...phase2Results);
+
+          for (const qr of phase2Results) {
+            images.push({ index: qr.index + 1, data: qr.data, prompt: qr.prompt });
+            if (qr.status === 'fallback') imageFailCount++;
+          }
+        }
+      } else {
+        // 기존 단일 배치 (3장 이하 — 변경 없음)
+        const queueItems: ImageQueueItem[] = textData.imagePrompts.slice(0, maxImages).map((p: string, i: number) => ({
+          index: i,
+          prompt: p,
+          role: (i === 0 ? 'hero' : 'sub') as 'hero' | 'sub',
+          style: request.imageStyle,
+          aspectRatio: imgRatio,
+          customStylePrompt: request.customImagePrompt,
+          mode: 'auto' as const,
+        }));
+
+        allQueueResults = await generateImageQueue(queueItems, safeProgress);
+
+        for (const qr of allQueueResults) {
+          images.push({ index: qr.index + 1, data: qr.data, prompt: qr.prompt });
+          if (qr.status === 'fallback') imageFailCount++;
+        }
       }
 
-      const aiSlots = queueResults.filter(r => r.resultType === 'ai-image').length;
-      const templateSlots = queueResults.filter(r => r.resultType === 'template').length;
-      const placeholderSlots = queueResults.filter(r => r.resultType === 'placeholder').length;
+      const plannedSlotCount = maxImages;
+      const aiSlots = allQueueResults.filter(r => r.resultType === 'ai-image').length;
+      const templateSlots = allQueueResults.filter(r => r.resultType === 'template').length;
+      const placeholderSlots = allQueueResults.filter(r => r.resultType === 'placeholder').length;
       const slotFillRate = selectedImageCount > 0 ? Math.round((images.length / selectedImageCount) * 100) : 100;
       console.info(`[IMG-SUMMARY] selected=${selectedImageCount} planned=${plannedSlotCount} returned=${images.length} ai=${aiSlots} template=${templateSlots} placeholder=${placeholderSlots} slotFillRate=${slotFillRate}%`);
       if (images.length < selectedImageCount) {
