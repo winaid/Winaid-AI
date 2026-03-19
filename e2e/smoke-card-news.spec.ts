@@ -74,9 +74,9 @@ test.describe('카드뉴스 Smoke Test', () => {
     await cardNewsTab.click();
     await page.waitForTimeout(1000);
 
-    // 템플릿 버튼들 찾기 (디자인 템플릿 관련 버튼)
-    const templateButtons = page.locator('[class*="template"], [class*="design"]').locator('button, [role="button"]');
-    const count = await templateButtons.count().catch(() => 0);
+    // 템플릿 버튼들 찾기 — "디자인 템플릿" 레이블 아래의 grid 내 button
+    const templateGrid = page.locator('label:has-text("디자인 템플릿")').locator('..').locator('.grid button');
+    const count = await templateGrid.count().catch(() => 0);
 
     if (count === 0) {
       // 템플릿 UI가 다른 형태일 수 있음 — 스킵
@@ -85,17 +85,16 @@ test.describe('카드뉴스 Smoke Test', () => {
     }
 
     // 첫 번째 템플릿 클릭
-    await templateButtons.first().click();
+    await templateGrid.first().click();
     await page.waitForTimeout(500);
 
-    // 클릭 후 선택 상태가 시각적으로 변경되었는지 (ring, border, active 등)
-    const hasActiveStyle = await templateButtons.first().evaluate(el => {
+    // 클릭 후 선택 상태가 시각적으로 변경되었는지 (border-blue 등)
+    const hasActiveStyle = await templateGrid.first().evaluate(el => {
       const cls = el.className;
-      return cls.includes('ring') || cls.includes('border-blue') || cls.includes('border-violet') || cls.includes('active') || cls.includes('selected');
+      return cls.includes('border-blue') || cls.includes('border-violet') || cls.includes('active') || cls.includes('selected');
     }).catch(() => false);
 
-    // 최소한 클릭이 에러 없이 되어야 함
-    expect(true).toBe(true); // 클릭 성공 자체가 검증
+    expect(hasActiveStyle).toBe(true);
   });
 
   test('카드뉴스 생성 버튼 존재', async ({ page }) => {
