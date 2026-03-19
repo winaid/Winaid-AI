@@ -339,6 +339,45 @@ export const deleteGeneratedPost = async (
   }
 };
 
+// Admin용: 전체 콘텐츠 삭제 (generated_posts 테이블만)
+export const deleteAllGeneratedPosts = async (
+  adminPassword: string
+): Promise<{
+  success: boolean;
+  deletedCount?: number;
+  error?: string;
+}> => {
+  try {
+    console.log('[PostStorage] Admin 전체 삭제 요청');
+
+    const rpcPromise = supabase.rpc('delete_all_generated_posts' as any, {
+      admin_password: adminPassword,
+    } as any);
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('전체 삭제 시간 초과 (30초)')), 30000)
+    );
+
+    const { data, error } = await Promise.race([rpcPromise, timeoutPromise]) as { data: any; error: any };
+
+    if (error) {
+      console.error('[PostStorage] Admin 전체 삭제 실패:', error);
+      return { success: false, error: error.message };
+    }
+
+    const deletedCount = Number(data);
+    if (deletedCount === -1) {
+      return { success: false, error: '관리자 인증 실패' };
+    }
+
+    console.log(`[PostStorage] ✅ 전체 삭제 완료: ${deletedCount}건`);
+    return { success: true, deletedCount };
+  } catch (err) {
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    console.error('[PostStorage] Admin 전체 삭제 예외:', errorMsg);
+    return { success: false, error: errorMsg };
+  }
+};
+
 // ═══════════════════════════════════════════
 // 사용자 히스토리 (SaaS용)
 // ═══════════════════════════════════════════

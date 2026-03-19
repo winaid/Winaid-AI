@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabase';
-import { getAllGeneratedPosts, getAdminStats, deleteGeneratedPost, PostType } from '../services/postStorageService';
+import { getAllGeneratedPosts, getAdminStats, deleteGeneratedPost, deleteAllGeneratedPosts, PostType } from '../services/postStorageService';
 import { TEAM_DATA } from '../constants/teamHospitals';
 import { toast } from './Toast';
 import {
@@ -691,6 +691,11 @@ const AdminPage: React.FC<AdminPageProps> = ({ onAdminVerified }) => {
   // 콘텐츠 미리보기 모달
   const [previewContent, setPreviewContent] = useState<ContentData | null>(null);
 
+  // 전체 삭제 모달
+  const [showDeleteAllModal, setShowDeleteAllModal] = useState(false);
+  const [deleteAllConfirmText, setDeleteAllConfirmText] = useState('');
+  const [deleteAllLoading, setDeleteAllLoading] = useState(false);
+
   const [dataError, setDataError] = useState<string>('');
   const [selectedTeam, setSelectedTeam] = useState<number | null>(null);
   const [selectedHospitalName, setSelectedHospitalName] = useState<string>('');
@@ -838,6 +843,41 @@ const AdminPage: React.FC<AdminPageProps> = ({ onAdminVerified }) => {
     }
   };
   
+  // 전체 삭제 핸들러
+  const handleDeleteAll = async () => {
+    if (deleteAllConfirmText !== '전체삭제') return;
+    if (deleteAllLoading) return;
+
+    setDeleteAllLoading(true);
+    try {
+      const token = sessionStorage.getItem('ADMIN_TOKEN') || '';
+      const result = await deleteAllGeneratedPosts(token);
+
+      if (!result.success) {
+        toast.error(`전체 삭제 실패: ${result.error}`);
+      } else {
+        toast.success(`${result.deletedCount}개 콘텐츠가 삭제되었습니다.`);
+        setContents([]);
+        setStats(prev => ({
+          ...prev,
+          totalContents: 0,
+          blogCount: 0,
+          cardnewsCount: 0,
+          pressCount: 0,
+          postsToday: 0,
+          postsThisWeek: 0,
+          postsThisMonth: 0,
+        }));
+      }
+    } catch (err) {
+      toast.error(`전체 삭제 오류: ${String(err)}`);
+    } finally {
+      setDeleteAllLoading(false);
+      setShowDeleteAllModal(false);
+      setDeleteAllConfirmText('');
+    }
+  };
+
   // 필터링된 콘텐츠 목록
   const filteredContents = contents.filter(c => {
     const typeMatch = contentFilter === 'all' || (c.content_type || 'blog') === contentFilter;
@@ -1300,6 +1340,14 @@ const AdminPage: React.FC<AdminPageProps> = ({ onAdminVerified }) => {
                     ))}
                   </div>
                   <button onClick={loadContents} disabled={loadingData} className="px-3 py-1.5 bg-slate-100 text-slate-600 font-medium rounded-lg hover:bg-slate-200 transition-colors text-xs disabled:opacity-50">{loadingData ? '로딩...' : '새로고침'}</button>
+                  {contents.length > 0 && (
+                    <button
+                      onClick={() => setShowDeleteAllModal(true)}
+                      className="px-3 py-1.5 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700 transition-colors text-xs"
+                    >
+                      전체 삭제
+                    </button>
+                  )}
                 </div>
               </div>
               <div className="p-5">
@@ -1421,6 +1469,60 @@ const AdminPage: React.FC<AdminPageProps> = ({ onAdminVerified }) => {
           </>
         )}
       </div>
+
+      {/* 전체 삭제 확인 모달 */}
+      {showDeleteAllModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => { if (!deleteAllLoading) { setShowDeleteAllModal(false); setDeleteAllConfirmText(''); } }}>
+          <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="p-6 border-b border-red-100">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center text-red-600 text-lg font-bold flex-shrink-0">!</div>
+                <h3 className="text-lg font-bold text-red-700">콘텐츠 전체 삭제</h3>
+              </div>
+              <p className="text-sm text-slate-600 leading-relaxed">
+                <strong className="text-red-600">generated_posts</strong> 테이블의 모든 콘텐츠(<strong className="text-red-700">{stats.totalContents}건</strong>)가 영구 삭제됩니다.
+              </p>
+              <p className="text-xs text-slate-400 mt-2">
+                사용자 계정, 결제, 설정, 말투 학습 데이터는 영향 없습니다.
+              </p>
+            </div>
+            <div className="p-6">
+              <label className="text-sm font-medium text-slate-700 mb-2 block">
+                확인하려면 <strong className="text-red-600 font-bold">전체삭제</strong>를 입력하세요
+              </label>
+              <input
+                type="text"
+                value={deleteAllConfirmText}
+                onChange={e => setDeleteAllConfirmText(e.target.value)}
+                placeholder="전체삭제"
+                className="w-full px-4 py-3 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-red-500/30 focus:border-red-400 transition-all"
+                disabled={deleteAllLoading}
+                autoFocus
+              />
+              <div className="flex gap-3 mt-5">
+                <button
+                  onClick={() => { setShowDeleteAllModal(false); setDeleteAllConfirmText(''); }}
+                  disabled={deleteAllLoading}
+                  className="flex-1 py-3 bg-slate-100 text-slate-600 font-semibold rounded-xl hover:bg-slate-200 transition-colors disabled:opacity-50"
+                >
+                  취소
+                </button>
+                <button
+                  onClick={handleDeleteAll}
+                  disabled={deleteAllConfirmText !== '전체삭제' || deleteAllLoading}
+                  className="flex-1 py-3 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {deleteAllLoading ? (
+                    <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />삭제 중...</>
+                  ) : (
+                    `${stats.totalContents}건 영구 삭제`
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
             {/* 콘텐츠 미리보기 모달 */}
       {previewContent && (

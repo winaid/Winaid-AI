@@ -360,6 +360,28 @@ BEGIN
 END;
 $fn$;
 
+-- 6-3b. delete_all_generated_posts: 전체 콘텐츠 삭제 (admin 전용)
+CREATE OR REPLACE FUNCTION delete_all_generated_posts(
+  admin_password TEXT
+)
+RETURNS BIGINT
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $fn$
+DECLARE
+  valid_password TEXT := 'winaid';
+  deleted_count BIGINT;
+BEGIN
+  IF admin_password IS NULL OR admin_password != valid_password THEN
+    RETURN -1;  -- 인증 실패
+  END IF;
+
+  DELETE FROM public.generated_posts;
+  GET DIAGNOSTICS deleted_count = ROW_COUNT;
+  RETURN deleted_count;
+END;
+$fn$;
+
 -- 6-4. 크레딧 차감 함수
 CREATE OR REPLACE FUNCTION public.deduct_credits(
   p_user_id UUID,
