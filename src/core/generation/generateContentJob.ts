@@ -555,16 +555,21 @@ async function _orchestrateBlog(
           await new Promise(r => setTimeout(r, gapMs));
         }
 
-        // progress 래퍼: wave 내 인덱스 대신 전체 기준으로 재포맷
+        // progress 래퍼: wave 내 분모(wave.items.length)를 전체(maxImages)로 교체
         const totalImageCount = maxImages;
         const waveProgress = (msg: string) => {
-          // "이미지 {wave내idx}/{wave내total}장" → "이미지 {전체기준}/{전체total}장"으로 교체
-          const fixed = msg.replace(
+          // "이미지 N/M장" → 분모만 전체로 교체 (분자는 item.index+1이므로 전체 기준)
+          let fixed = msg.replace(
             /이미지 (\d+)\/(\d+)장/,
             (_, idxStr) => {
               const idx = parseInt(idxStr, 10);
               return `이미지 ${idx}/${totalImageCount}장`;
             }
+          );
+          // "이미지 N장 생성 시작" → wave 내 개수 대신 전체 개수 표시
+          fixed = fixed.replace(
+            /이미지 (\d+)장 생성 시작/,
+            `이미지 ${totalImageCount}장 생성 시작`
           );
           safeProgress(fixed);
         };

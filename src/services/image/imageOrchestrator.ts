@@ -416,7 +416,7 @@ export async function generateImageQueue(
   const subCount = items.filter(i => i.role === 'sub').length;
 
   console.info(`[IMG-PLAN] total=${totalImages} hero=${heroCount} sub=${subCount} mode=${mode} proConcurrency=${TIER_CONCURRENCY.pro} nb2Concurrency=${TIER_CONCURRENCY.nb2}`);
-  safeProgress(`🎨 이미지 ${totalImages}장 생성 시작 (hero ${heroCount} + sub ${subCount})...`);
+  safeProgress(`🎨 이미지 ${totalImages}장 생성 시작...`);
 
   // hero 우선 정렬
   const sorted = [...items].sort((a, b) => {
@@ -454,7 +454,7 @@ export async function generateImageQueue(
       if (isAi) {
         safeProgress(`✅ 이미지 ${item.index + 1}/${totalImages}장 완료 (${elapsedSec}초)`);
       } else {
-        safeProgress(`🎨 이미지 ${item.index + 1}/${totalImages}장 대체 렌더 적용 (${elapsedSec}초)`);
+        safeProgress(`🎨 이미지 ${item.index + 1}/${totalImages}장 준비 완료 (${elapsedSec}초)`);
       }
 
       results.push({

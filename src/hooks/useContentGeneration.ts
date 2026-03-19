@@ -66,7 +66,7 @@ function stripGateSignal(progress: string): string {
  */
 function humanizeProgress(msg: string): string {
   if (!msg) return msg;
-  // 파이프라인 내부 단계명 교체
+  // 파이프라인 내부 단계명 숨기기
   if (/stage\s*[abc]/i.test(msg) || msg.includes('폴리싱')) return '';
   if (msg.includes('소제목') && msg.includes('/')) return '';
   if (msg.includes('도입부 작성')) return '';
@@ -74,7 +74,11 @@ function humanizeProgress(msg: string): string {
   if (msg.includes('마무리 작성')) return '';
   if (msg.includes('파이프라인')) return '';
   if (msg.includes('AI 냄새')) return '';
-  return msg;
+  // 내부 역할 태그 제거: "(hero)", "(sub)" 등
+  let cleaned = msg.replace(/\s*\((hero|sub)\)/gi, '');
+  // 보조 비주얼 유지 → 사용자에게 보이지 않도록
+  if (cleaned.includes('보조 비주얼')) return '';
+  return cleaned;
 }
 
 /** gate 신호 추출 */

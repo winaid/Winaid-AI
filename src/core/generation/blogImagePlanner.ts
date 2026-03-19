@@ -109,11 +109,22 @@ export function buildHeroRetryItem(
   aspectRatio: string,
   customStylePrompt?: string,
 ): ImageQueueItem {
-  // 간결 프롬프트: 핵심 주제 + 최소 지시만
+  // 간결 프롬프트: 핵심 주제 + 스타일 힌트 (style별 분기)
+  // 이전: "현대 한국인, 신뢰감 있는 분위기"가 하드코딩되어 medical/illustration에서도 실사 유도
   const shortTopic = topic.substring(0, 60);
+  const isPhoto = style === 'photo' && !customStylePrompt;
+  const styleHint = isPhoto
+    ? '현대 한국인, 신뢰감 있는 분위기, 실사 사진.'
+    : style === 'medical'
+    ? '의학 3D 일러스트, 해부학적 렌더링, NOT a photograph.'
+    : style === 'illustration'
+    ? '3D 일러스트, Blender 스타일, 파스텔톤, NOT a photograph.'
+    : customStylePrompt
+    ? `${customStylePrompt.substring(0, 60)}.`
+    : '3D 일러스트, 친근한 분위기.';
   return {
     index: 0,
-    prompt: `${shortTopic} — 건강/의료 블로그 대표 이미지. 단일 장면, 현대 한국인, 신뢰감 있는 분위기.`,
+    prompt: `${shortTopic} — 건강/의료 블로그 대표 이미지. 단일 장면, ${styleHint}`,
     role: 'hero',
     style,
     aspectRatio,
