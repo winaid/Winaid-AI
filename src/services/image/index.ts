@@ -19,7 +19,7 @@ export type {
 } from './imageTypes';
 
 // Router
-export { classifySceneType, buildScenePrompt } from './imageRouter';
+export { classifySceneType, buildScenePrompt, SCENE_BUCKETS } from './imageRouter';
 
 // Prompt Builder
 export {

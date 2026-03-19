@@ -11,7 +11,7 @@
  */
 import { GEMINI_MODEL, callGemini } from "./geminiClient";
 import { isDemoSafeMode } from "./image/imageOrchestrator";
-import { classifySceneType, buildScenePrompt } from "./image/imageRouter";
+import { classifySceneType, buildScenePrompt, SCENE_BUCKETS } from "./image/imageRouter";
 import { GenerationRequest } from "../types";
 import {
   getPipelineOutlinePrompt,
@@ -523,17 +523,17 @@ ${sectionSummaries.join('\n')}`;
         const section = outline.sections[i - 1];
         const sectionTitle = section?.title || '건강 정보';
         const sceneType = classifySceneType(sectionTitle, usedSceneTypes);
-        const scenePrompt = buildScenePrompt(request.topic, sectionTitle, sceneType, imgStyle);
+        const scenePrompt = buildScenePrompt(request.topic, sectionTitle, sceneType, imgStyle, usedSceneTypes);
         imagePrompts.push(scenePrompt);
         usedSceneTypes.push(sceneType);
-        console.info(`[IMG-PROMPT] sub idx=${i} sceneType=${sceneType} style=${imgStyle} source=section textless no-hanbok`);
+        console.info(`[IMG-PROMPT] sub idx=${i} sceneType=${sceneType} sceneBucket=${SCENE_BUCKETS[sceneType]} style=${imgStyle} source=section`);
       } else {
         // sub 확장: 섹션 범위 초과 — 아직 사용하지 않은 sceneType으로 보충 프롬프트 생성
         const sceneType = classifySceneType(request.topic, usedSceneTypes);
-        const scenePrompt = buildScenePrompt(request.topic, request.topic, sceneType, imgStyle);
+        const scenePrompt = buildScenePrompt(request.topic, request.topic, sceneType, imgStyle, usedSceneTypes);
         imagePrompts.push(scenePrompt);
         usedSceneTypes.push(sceneType);
-        console.info(`[IMG-PROMPT] sub idx=${i} sceneType=${sceneType} style=${imgStyle} source=extended textless no-hanbok`);
+        console.info(`[IMG-PROMPT] sub idx=${i} sceneType=${sceneType} sceneBucket=${SCENE_BUCKETS[sceneType]} style=${imgStyle} source=extended`);
       }
     }
   }

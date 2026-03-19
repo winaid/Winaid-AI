@@ -285,7 +285,9 @@ async function _executeBlogImageChain(params: _ChainParams): Promise<BlogImageOu
   const startTier = resolveStartTier(role, demoSafe);
   // Wall cap: hero 50s, sub(manual) 75s (2 attempts with 40s+25s), sub(auto) 30s
   const wallCapMs = isHero ? 50_000 : (mode === 'manual' ? 75_000 : 30_000);
-  console.info(`[IMG-TIER] role=${role} startTier=${startTier} mode=${mode} timeout=${timeout}ms wallCap=${wallCapMs / 1000}s`);
+  // chainType: 실제 chain 구조를 명확히 표시 (proAvail=pro가 chain에 포함 여부)
+  const chainType = isHero && startTier === 'pro' ? 'nb2→pro' : 'nb2→nb2';
+  console.info(`[IMG-TIER] role=${role} chainType=${chainType} proAvail=${startTier === 'pro'} mode=${mode} timeout=${timeout}ms wallCap=${wallCapMs / 1000}s`);
 
   let chain: AttemptDef[];
 
@@ -556,7 +558,9 @@ export async function generateImageQueue(
 
   const proSuccess = results.filter(r => r.modelTier === 'pro' && r.resultType === 'ai-image').length;
   const nb2Success = results.filter(r => r.modelTier === 'nb2' && r.resultType === 'ai-image').length;
-  const crossTier = results.filter(r =>
+  // nonPreferredTier: hero가 nb2에서 성공하거나, sub가 pro에서 성공한 경우
+  // (hero의 preferred=pro, sub의 preferred=nb2)
+  const nonPreferredTier = results.filter(r =>
     (r.role === 'hero' && r.modelTier === 'nb2' && r.resultType === 'ai-image') ||
     (r.role === 'sub' && r.modelTier === 'pro' && r.resultType === 'ai-image')
   ).length;
@@ -574,7 +578,7 @@ export async function generateImageQueue(
   if (heroTemplate > 0) {
     console.warn(`[IMG-SUMMARY] ⚠️ HERO_TEMPLATE_FALLBACK hero=${heroTemplate}건 — hero 품질 저하 (AI 미생성)`);
   }
-  console.info(`[IMG-SUMMARY] tierStats: pro=${proSuccess} nb2=${nb2Success} crossTier=${crossTier}`);
+  console.info(`[IMG-SUMMARY] tierStats: proSuccess=${proSuccess} nb2Success=${nb2Success} nonPreferredTier=${nonPreferredTier}`);
   if (Object.keys(failReasons).length > 0) {
     console.info(`[IMG-SUMMARY] failReasons: ${Object.entries(failReasons).map(([k, v]) => `${k}=${v}`).join(' ')}`);
   }
@@ -605,7 +609,7 @@ interface SessionStatsData {
   subAi: number;
   proSuccess: number;
   nb2Success: number;
-  crossTier: number;
+  nonPreferredTier: number;
   totalMs: number;
   failReasons: Record<string, number>;
   heroWallTimeMs: number[];
@@ -628,7 +632,7 @@ const _sessionStats: SessionStatsData = {
   runs: 0, totalImages: 0, aiCount: 0, templateCount: 0, placeholderCount: 0,
   heroTotal: 0, heroAi: 0, heroTemplate: 0,
   subTotal: 0, subAi: 0,
-  proSuccess: 0, nb2Success: 0, crossTier: 0,
+  proSuccess: 0, nb2Success: 0, nonPreferredTier: 0,
   totalMs: 0, failReasons: {},
   heroWallTimeMs: [], payloadKB: [],
   history: [],
@@ -657,7 +661,7 @@ function accumulateSessionStats(results: ImageQueueResult[], totalMs: number, mo
   s.subAi += subR.filter(r => r.resultType === 'ai-image').length;
   s.proSuccess += results.filter(r => r.modelTier === 'pro' && r.resultType === 'ai-image').length;
   s.nb2Success += results.filter(r => r.modelTier === 'nb2' && r.resultType === 'ai-image').length;
-  s.crossTier += results.filter(r =>
+  s.nonPreferredTier += results.filter(r =>
     (r.role === 'hero' && r.modelTier === 'nb2' && r.resultType === 'ai-image') ||
     (r.role === 'sub' && r.modelTier === 'pro' && r.resultType === 'ai-image')
   ).length;
@@ -736,7 +740,7 @@ function printSessionSummary(): void {
 
   console.info(`[IMG-SESSION]`);
   console.info(`[IMG-SESSION]   🔧 tier`);
-  console.info(`[IMG-SESSION]   pro=${s.proSuccess}  nb2=${s.nb2Success}  crossTier=${s.crossTier}`);
+  console.info(`[IMG-SESSION]   proSuccess=${s.proSuccess}  nb2Success=${s.nb2Success}  nonPreferredTier=${s.nonPreferredTier}`);
   console.info(`[IMG-SESSION]   sub: ai=${s.subAi}/${s.subTotal} (${pct(s.subAi, s.subTotal)}%)`);
   if (Object.keys(s.failReasons).length > 0) {
     console.info(`[IMG-SESSION]   failReasons: ${Object.entries(s.failReasons).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k}=${v}`).join(' ')}`);
@@ -784,7 +788,7 @@ export function resetImageSessionStats(): void {
     runs: 0, totalImages: 0, aiCount: 0, templateCount: 0, placeholderCount: 0,
     heroTotal: 0, heroAi: 0, heroTemplate: 0,
     subTotal: 0, subAi: 0,
-    proSuccess: 0, nb2Success: 0, crossTier: 0,
+    proSuccess: 0, nb2Success: 0, nonPreferredTier: 0,
     totalMs: 0, failReasons: {},
     heroWallTimeMs: [], payloadKB: [],
     history: [],
