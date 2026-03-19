@@ -40,3 +40,5 @@ server/data/
 # Trigger deployment - API key updated in Cloudflare
 # Redeploy with updated API key in Cloudflare
 .vercel
+test-results/
+playwright-report/
