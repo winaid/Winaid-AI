@@ -41,15 +41,16 @@ import crypto from "crypto";
 // ── CORS ──
 //
 // Vercel 환경변수 예시 (Dashboard → Settings → Environment Variables):
-//   ALLOWED_ORIGINS=https://story-darugi.com,https://www.story-darugi.com,https://d0507fad.ai-hospital.pages.dev,https://ai-hospital.pages.dev,http://localhost:5173,http://localhost:3000
+//   ALLOWED_ORIGINS=https://preview.story-darugi.com,https://ai-hospital.pages.dev,https://story-darugi.com,https://www.story-darugi.com,http://localhost:5173,http://localhost:3000
 //
 // 환경변수가 없으면 아래 DEFAULT_ALLOWED_ORIGINS가 사용됨.
 // *.pages.dev 와 localhost:* 는 환경변수 유무와 무관하게 항상 허용.
 
 const DEFAULT_ALLOWED_ORIGINS = [
+  "https://preview.story-darugi.com",
+  "https://ai-hospital.pages.dev",
   "https://story-darugi.com",
   "https://www.story-darugi.com",
-  "https://ai-hospital.pages.dev",
   "http://localhost:5173",
   "http://localhost:3000",
 ];

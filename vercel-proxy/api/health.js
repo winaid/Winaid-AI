@@ -11,9 +11,10 @@
  */
 
 const DEFAULT_ALLOWED_ORIGINS = [
+  "https://preview.story-darugi.com",
+  "https://ai-hospital.pages.dev",
   "https://story-darugi.com",
   "https://www.story-darugi.com",
-  "https://ai-hospital.pages.dev",
   "http://localhost:5173",
   "http://localhost:3000",
 ];

@@ -10,6 +10,7 @@ echo ""
 
 # 테스트할 origin 목록
 ORIGINS=(
+  "https://preview.story-darugi.com"
   "https://ai-hospital.pages.dev"
   "https://story-darugi.com"
   "https://www.story-darugi.com"
