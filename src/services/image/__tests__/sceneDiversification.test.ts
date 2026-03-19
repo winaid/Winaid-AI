@@ -9,6 +9,8 @@
  *   5. shot intent / repetition-avoid
  *   6. sceneBucket 메타가 prompt 본문에 없음 (로그 전용)
  *   7. 회귀 보호 (style contract)
+ *   8. topic-aware scene weighting + consultation throttle
+ *   9. mechanism-closeup 강화 검증
  */
 import { describe, it, expect } from 'vitest';
 import {
@@ -18,7 +20,10 @@ import {
   resolveSceneBucket,
   SCENE_BUCKETS,
   HERO_BUCKETS,
+  CONSULTATION_BUCKETS,
+  detectTopicHint,
 } from '../imageRouter';
+import type { TopicHint } from '../imageRouter';
 import type { SceneType } from '../imageTypes';
 import type { ImageStyle } from '../../../types';
 
@@ -414,5 +419,204 @@ describe('회귀 보호: buildScenePrompt 기존 계약', () => {
   it('classifySceneType 3차 fallback (가장 적게 사용된 타입)', () => {
     const result = classifySceneType('일반적인 내용', []);
     expect(ALL_SCENE_TYPES).toContain(result);
+  });
+});
+
+// ═══════════════════════════════════════════════
+// 12. detectTopicHint — score-based 주제 감지
+// ═══════════════════════════════════════════════
+
+describe('detectTopicHint (score-based)', () => {
+  it('보험/검진 키워드 → insurance-checkup', () => {
+    expect(detectTopicHint('건강보험 스케일링 혜택')).toBe('insurance-checkup');
+  });
+
+  it('예약/연말 키워드 → insurance-checkup', () => {
+    expect(detectTopicHint('연말 검진 예약 안내')).toBe('insurance-checkup');
+  });
+
+  it('질환/염증 키워드 → disease-pain', () => {
+    expect(detectTopicHint('잇몸 염증 원인과 증상')).toBe('disease-pain');
+  });
+
+  it('임플란트/시술 키워드 → treatment-procedure', () => {
+    expect(detectTopicHint('임플란트 시술 과정')).toBe('treatment-procedure');
+  });
+
+  it('관련 없는 주제 → general', () => {
+    expect(detectTopicHint('좋은 치과 고르는 방법')).toBe('general');
+  });
+
+  it('여러 hint 키워드 혼재 시 hit count 기반 선택', () => {
+    // "보험 혜택 검진 비용" = insurance 4 hits, vs "치료" = treatment 1 hit
+    expect(detectTopicHint('보험 혜택 검진 비용으로 치료')).toBe('insurance-checkup');
+  });
+
+  it('동점 시 insurance-checkup이 disease-pain보다 우선', () => {
+    // "검진 증상" = insurance 1 hit (검진), disease 1 hit (증상)
+    expect(detectTopicHint('검진 증상')).toBe('insurance-checkup');
+  });
+});
+
+// ═══════════════════════════════════════════════
+// 13. Consultation overuse — sceneType 선택 단계 throttle
+// ═══════════════════════════════════════════════
+
+describe('Consultation overuse — sceneType 선택 throttle', () => {
+  it('insurance-checkup + consultation이 이미 1+ → 다른 키워드 매칭 우선', () => {
+    // "검진 비용 안내" → consultation(검진) + caution(검진,비용,안내) 동시 매칭
+    // insurance topic + consultation 이미 1회 → consultation 회피 → caution-checkup 선택
+    const result = classifySceneType('검진 비용 안내', ['consultation-treatment'], 'insurance-checkup');
+    expect(result).not.toBe('consultation-treatment');
+  });
+
+  it('insurance-checkup + consultation 미사용 → consultation 허용', () => {
+    const result = classifySceneType('스케일링 치료', [], 'insurance-checkup');
+    expect(result).toBe('consultation-treatment');
+  });
+
+  it('general topic → consultation overuse penalty 없음', () => {
+    const result = classifySceneType('치료 방법', ['consultation-treatment'], 'general');
+    expect(result).toBe('consultation-treatment');
+  });
+
+  it('insurance-checkup 3차 fallback → caution-checkup/prevention-care 우선', () => {
+    // 키워드 매칭 없는 일반 제목 + insurance hint → bias가 적용됨
+    const result = classifySceneType('알아두면 좋은 사실', [], 'insurance-checkup');
+    expect(['caution-checkup', 'prevention-care']).toContain(result);
+  });
+
+  it('disease-pain 3차 fallback → symptom/cause 우선', () => {
+    const result = classifySceneType('알아두면 좋은 사실', [], 'disease-pain');
+    expect(['symptom-discomfort', 'cause-mechanism']).toContain(result);
+  });
+
+  it('5장 세트에서 insurance topic 시 consultation 최대 1회', () => {
+    const usedTypes: string[] = [];
+    const sectionTitles = [
+      '건강보험 스케일링 적용 대상',
+      '연 1회 스케일링 비용 안내',
+      '스케일링 시술 과정',
+      '스케일링 후 주의사항',
+    ];
+    for (const title of sectionTitles) {
+      const st = classifySceneType(title, usedTypes, 'insurance-checkup');
+      usedTypes.push(st);
+    }
+    const consultCount = usedTypes.filter(s => s === 'consultation-treatment').length;
+    expect(consultCount).toBeLessThanOrEqual(1);
+  });
+});
+
+// ═══════════════════════════════════════════════
+// 14. Consultation bucket 분산 (bucket 단계)
+// ═══════════════════════════════════════════════
+
+describe('Consultation bucket 분산', () => {
+  it('consultation-treatment 선택 시 bucket 내 분산', () => {
+    const usedBuckets: string[] = [];
+    const buckets: string[] = [];
+    for (let i = 0; i < 3; i++) {
+      const b = resolveSceneBucket('consultation-treatment', usedBuckets, 'sub');
+      usedBuckets.push(b);
+      buckets.push(b);
+    }
+    expect(new Set(buckets).size).toBe(3);
+  });
+
+  it('photo + consultation bucket 2개 이상 사용 시 deprioritize', () => {
+    const usedBuckets = ['treatment-interaction', 'chair-side-procedure'];
+    const b = resolveSceneBucket({
+      sceneType: 'consultation-treatment',
+      usedBuckets,
+      role: 'sub',
+      imageStyle: 'photo',
+    });
+    // 남은 consultation bucket은 explanation-dialogue이지만, 이미 2개 사용됨
+    // 그러나 consultation sceneType이면 consultation bucket만 있으므로 여전히 explanation-dialogue
+    expect(b).toBe('explanation-dialogue');
+  });
+
+  it('medical 스타일은 consultation throttle 없음', () => {
+    const usedBuckets = ['treatment-interaction', 'chair-side-procedure'];
+    const b = resolveSceneBucket({
+      sceneType: 'consultation-treatment',
+      usedBuckets,
+      role: 'sub',
+      imageStyle: 'medical',
+    });
+    expect(b).toBe('explanation-dialogue');
+  });
+});
+
+// ═══════════════════════════════════════════════
+// 15. mechanism-closeup 강화 검증
+// ═══════════════════════════════════════════════
+
+describe('mechanism-closeup 강화 (photo)', () => {
+  it('photo + mechanism-closeup에 구강 내부/클로즈업 키워드 포함', () => {
+    const p = buildScenePrompt('충치 원인', '원인 분석', 'cause-mechanism', 'photo', [], 'mechanism-closeup');
+    expect(p).toMatch(/구강 내부|클로즈업|입안/);
+  });
+
+  it('photo + mechanism-closeup에 검사 도구 관련 키워드 포함', () => {
+    const p = buildScenePrompt('치석 제거', '원인', 'cause-mechanism', 'photo', [], 'mechanism-closeup');
+    expect(p).toMatch(/미러|탐침|스케일러|도구/);
+  });
+
+  it('photo + mechanism-closeup shot intent에 oral/instruments 강조', () => {
+    const p = buildScenePrompt('잇몸병', '원인', 'cause-mechanism', 'photo', [], 'mechanism-closeup');
+    expect(p).toContain('mouth + hands + instruments');
+  });
+
+  it('photo + mechanism-closeup shot intent에 dialogue 회피 언급', () => {
+    const p = buildScenePrompt('잇몸병', '원인', 'cause-mechanism', 'photo', [], 'mechanism-closeup');
+    expect(p).toMatch(/doctor-patient dialogue/);
+  });
+
+  it('medical + cause-mechanism은 기존 3D/해부학 유지 (회귀 방지)', () => {
+    const p = buildScenePrompt('잇몸병', '원인', 'cause-mechanism', 'medical', [], 'mechanism-closeup');
+    expect(p).toContain('3D');
+    expect(p).not.toContain('구강 내부 극 클로즈업');
+  });
+
+  it('illustration + cause-mechanism은 기존 일러스트 유지 (회귀 방지)', () => {
+    const p = buildScenePrompt('잇몸병', '원인', 'cause-mechanism', 'illustration', [], 'mechanism-closeup');
+    expect(p).toMatch(/일러스트|인포그래픽/);
+    expect(p).not.toContain('구강 내부 극 클로즈업');
+  });
+});
+
+// ═══════════════════════════════════════════════
+// 16. Insurance topic 통합 시뮬레이션
+// ═══════════════════════════════════════════════
+
+describe('Insurance topic 통합 시뮬레이션', () => {
+  it('보험/검진 topic 5장 세트에서 checkup/prevention bucket 비중 높음', () => {
+    const usedBuckets: string[] = [];
+    const usedTypes: string[] = [];
+    const topicHint: TopicHint = 'insurance-checkup';
+
+    // hero
+    const heroBucket = resolveSceneBucket({
+      sceneType: 'symptom-discomfort', usedBuckets, role: 'hero', topicHint,
+    });
+    usedBuckets.push(heroBucket);
+    usedTypes.push('hero');
+
+    // 4 subs
+    const sectionTitles = ['적용 대상', '비용 안내', '시술 과정', '후 관리'];
+    for (const title of sectionTitles) {
+      const st = classifySceneType(title, usedTypes, topicHint);
+      const b = resolveSceneBucket({
+        sceneType: st, usedBuckets, role: 'sub', imageStyle: 'photo', topicHint,
+      });
+      usedBuckets.push(b);
+      usedTypes.push(st);
+    }
+
+    // consultation bucket 비중 검사
+    const consultCount = usedBuckets.filter(b => CONSULTATION_BUCKETS.has(b)).length;
+    expect(consultCount).toBeLessThanOrEqual(1);
   });
 });

@@ -11,7 +11,7 @@
  */
 import { GEMINI_MODEL, callGemini } from "./geminiClient";
 import { isDemoSafeMode } from "./image/imageOrchestrator";
-import { classifySceneType, buildScenePrompt, buildHeroScenePrompt, resolveSceneBucket, SCENE_BUCKETS } from "./image/imageRouter";
+import { classifySceneType, buildScenePrompt, buildHeroScenePrompt, resolveSceneBucket, SCENE_BUCKETS, CONSULTATION_BUCKETS, detectTopicHint } from "./image/imageRouter";
 import { GenerationRequest } from "../types";
 import {
   getPipelineOutlinePrompt,
@@ -496,8 +496,10 @@ ${sectionSummaries.join('\n')}`;
   const usedSceneTypes: string[] = [];
   // 사용된 bucket 기록 — planner-level 분산
   const usedBuckets: string[] = [];
+  // Topic hint — 주제 계열 감지
+  const topicHint = detectTopicHint(request.topic);
 
-  console.info(`[IMG-PLAN] selected=${selectedImageCount} sections=${outline.sections.length}`);
+  console.info(`[IMG-PLAN] selected=${selectedImageCount} sections=${outline.sections.length} topicHint=${topicHint}`);
 
   if (selectedImageCount > 0) {
     // 🛡️ 항상 selectedImageCount개 프롬프트 생성 — 섹션 수보다 많아도 절삭하지 않음
@@ -507,40 +509,54 @@ ${sectionSummaries.join('\n')}`;
     for (let i = 0; i < selectedImageCount; i++) {
       if (i === 0) {
         // hero: 공통 diversification 구조 사용 (role=hero)
-        const heroBucket = resolveSceneBucket('symptom-discomfort' /* unused for hero */, usedBuckets, 'hero');
+        const heroBucket = resolveSceneBucket({
+          sceneType: 'symptom-discomfort' /* unused for hero */,
+          usedBuckets, role: 'hero', imageStyle: imgStyle, topicHint,
+        });
         const heroPrompt = buildHeroScenePrompt(request.topic, imgStyle, heroBucket);
         imagePrompts.push(heroPrompt);
         usedBuckets.push(heroBucket);
         usedSceneTypes.push('hero');
-        console.info(`[IMG-PROMPT] hero idx=0 sceneBucket=${heroBucket} style=${imgStyle}`);
+        console.info(`[IMG-PROMPT] hero idx=0 sceneBucket=${heroBucket} style=${imgStyle} topicHint=${topicHint}`);
       } else if (i <= sectionCount) {
         // sub: 섹션 범위 내 — 소제목/문단 의미 기반 sceneType
         const section = outline.sections[i - 1];
         const sectionTitle = section?.title || '건강 정보';
-        const sceneType = classifySceneType(sectionTitle, usedSceneTypes);
-        const bucket = resolveSceneBucket(sceneType, usedBuckets, 'sub');
+        const sceneType = classifySceneType(sectionTitle, usedSceneTypes, topicHint);
+        const bucket = resolveSceneBucket({
+          sceneType, usedBuckets, role: 'sub', imageStyle: imgStyle, topicHint,
+        });
         const scenePrompt = buildScenePrompt(request.topic, sectionTitle, sceneType, imgStyle, usedSceneTypes, bucket);
         imagePrompts.push(scenePrompt);
         usedSceneTypes.push(sceneType);
         usedBuckets.push(bucket);
-        console.info(`[IMG-PROMPT] sub idx=${i} sceneType=${sceneType} sceneBucket=${bucket} style=${imgStyle} source=section`);
+        console.info(`[IMG-PROMPT] sub idx=${i} sceneType=${sceneType} sceneBucket=${bucket} style=${imgStyle} topicHint=${topicHint} source=section`);
       } else {
         // sub 확장: 섹션 범위 초과
-        const sceneType = classifySceneType(request.topic, usedSceneTypes);
-        const bucket = resolveSceneBucket(sceneType, usedBuckets, 'sub');
+        const sceneType = classifySceneType(request.topic, usedSceneTypes, topicHint);
+        const bucket = resolveSceneBucket({
+          sceneType, usedBuckets, role: 'sub', imageStyle: imgStyle, topicHint,
+        });
         const scenePrompt = buildScenePrompt(request.topic, request.topic, sceneType, imgStyle, usedSceneTypes, bucket);
         imagePrompts.push(scenePrompt);
         usedSceneTypes.push(sceneType);
         usedBuckets.push(bucket);
-        console.info(`[IMG-PROMPT] sub idx=${i} sceneType=${sceneType} sceneBucket=${bucket} style=${imgStyle} source=extended`);
+        console.info(`[IMG-PROMPT] sub idx=${i} sceneType=${sceneType} sceneBucket=${bucket} style=${imgStyle} topicHint=${topicHint} source=extended`);
       }
     }
 
     // Bucket 분산 요약 로그
     const uniqueBuckets = new Set(usedBuckets).size;
-    console.info(`[IMG-BUCKET-SUMMARY] total=${usedBuckets.length} unique=${uniqueBuckets} buckets=${usedBuckets.join(',')}`);
+    const consultationCount = usedBuckets.filter(b => CONSULTATION_BUCKETS.has(b)).length;
+    const consultationDeprioritized = topicHint === 'insurance-checkup' || consultationCount >= 2;
+    const biasHints: string[] = [];
+    if (topicHint === 'insurance-checkup') biasHints.push('caution-checkup+', 'prevention-care+');
+    if (topicHint === 'disease-pain') biasHints.push('symptom-discomfort+', 'cause-mechanism+');
+    if (topicHint === 'treatment-procedure') biasHints.push('consultation-treatment+');
+    const sceneWeightBias = biasHints.length > 0 ? biasHints.join(',') : 'none';
+    console.info(`[IMG-BUCKET-SUMMARY] total=${usedBuckets.length} unique=${uniqueBuckets} buckets=${usedBuckets.join(',')} consultationCount=${consultationCount} consultationDeprioritized=${consultationDeprioritized} topicHint=${topicHint} sceneWeightBias=${sceneWeightBias}`);
   }
-  console.info(`[IMG-PLAN] selected=${selectedImageCount} promptsGenerated=${imagePrompts.length} sections=${outline.sections.length}`);
+  console.info(`[IMG-PLAN] selected=${selectedImageCount} promptsGenerated=${imagePrompts.length} sections=${outline.sections.length} topicHint=${topicHint}`);
 
   // ── 종합 성능 로그 (Stage A+B까지, Stage C는 비동기 진행 중) ──
   const sectionTimingsArr = Object.keys(timings)

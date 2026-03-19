@@ -16,6 +16,61 @@ import type { SceneType } from './imageTypes';
 import type { ImageStyle } from '../../types';
 import type { ImageRole } from './imageTypes';
 
+// ── Topic Hint: 주제 계열 감지 (score-based) ──
+
+/** 주제의 성격별 힌트 — scene weighting 조절에 사용 */
+export type TopicHint = 'insurance-checkup' | 'disease-pain' | 'treatment-procedure' | 'general';
+
+const TOPIC_HINT_KEYWORDS: Record<Exclude<TopicHint, 'general'>, RegExp[]> = {
+  'insurance-checkup': [
+    /보험/, /혜택/, /예약/, /연말/, /검진/, /스케일링\s*주기/, /정기\s*검진/,
+    /비용/, /대상/, /주의사항/, /안내/, /체크/, /접수/, /건강\s*보험/,
+    /수가/, /급여/, /주기/, /시기/,
+  ],
+  'disease-pain': [
+    /염증/, /질환/, /통증/, /아프/, /원인/, /증상/, /잇몸\s*병/,
+    /충치/, /치주/, /신경/, /농양/, /부종/, /출혈/,
+  ],
+  'treatment-procedure': [
+    /임플란트/, /시술/, /수술/, /치료/, /보철/, /교정/,
+    /크라운/, /브릿지/, /레진/, /인레이/, /발치/, /회복/, /재건/,
+  ],
+};
+
+/** 동점 시 우선순위 (낮을수록 우선) */
+const TOPIC_HINT_PRIORITY: Record<Exclude<TopicHint, 'general'>, number> = {
+  'insurance-checkup': 0,
+  'disease-pain': 1,
+  'treatment-procedure': 2,
+};
+
+/**
+ * topic 문자열에서 주제 계열 힌트 감지 (score-based)
+ * - 각 hint별 keyword hit count → 최다 hit 선택
+ * - 동점 시 insurance-checkup > disease-pain > treatment-procedure 우선
+ * - 0 hit → 'general'
+ */
+export function detectTopicHint(topic: string): TopicHint {
+  let bestHint: TopicHint = 'general';
+  let bestScore = 0;
+  let bestPriority = Infinity;
+
+  for (const [hint, patterns] of Object.entries(TOPIC_HINT_KEYWORDS) as [Exclude<TopicHint, 'general'>, RegExp[]][]) {
+    const score = patterns.filter(re => re.test(topic)).length;
+    if (score > bestScore || (score === bestScore && score > 0 && TOPIC_HINT_PRIORITY[hint] < bestPriority)) {
+      bestHint = hint;
+      bestScore = score;
+      bestPriority = TOPIC_HINT_PRIORITY[hint];
+    }
+  }
+  return bestHint;
+}
+
+/** Consultation 계열 bucket 세트 — throttle 판단에 사용 */
+export const CONSULTATION_BUCKETS = new Set([
+  'treatment-interaction', 'chair-side-procedure', 'explanation-dialogue',
+]);
+
 // ── 장면 키워드 → SceneType 매핑 ──
 
 const SCENE_KEYWORDS: Record<SceneType, RegExp> = {
@@ -23,7 +78,7 @@ const SCENE_KEYWORDS: Record<SceneType, RegExp> = {
   'cause-mechanism': /원인|이유|발생|진행|악화|염증|세균|위험|요인|메커니즘|과정|구조/,
   'consultation-treatment': /치료|시술|수술|상담|검진|진료|진단|처방|보철|임플란트|스케일링|발치/,
   'prevention-care': /예방|관리|양치|칫솔|치실|습관|위생|세정|관리법|홈케어|구강 관리|정기/,
-  'caution-checkup': /주의|방치|조기|검진|내원|방문|신호|점검|체크|확인|필요/,
+  'caution-checkup': /주의|방치|조기|검진|내원|방문|신호|점검|체크|확인|필요|비용|대상|안내|혜택|보험/,
 };
 
 // ═══════════════════════════════════════════════
@@ -46,19 +101,55 @@ export const HERO_BUCKETS: string[] = ['overview-clinical', 'editorial-hero', 't
 // resolveSceneBucket — planner-level 분산
 // ═══════════════════════════════════════════════
 
+export interface ResolveSceneBucketOpts {
+  sceneType: SceneType;
+  usedBuckets: string[];
+  role?: ImageRole;
+  imageStyle?: ImageStyle;
+  topicHint?: TopicHint;
+}
+
 /**
  * sceneType + usedBuckets → 미사용 bucket 우선 선택 (deterministic)
  * - hero: HERO_BUCKETS에서 선택
  * - sub: SCENE_BUCKETS[sceneType]에서 선택
+ * - photo + consultation이 이미 2+ 사용됨 → consultation bucket 후순위
  * - 고갈 시 첫 번째 재사용
  */
+export function resolveSceneBucket(opts: ResolveSceneBucketOpts): string;
+/** @deprecated 하위 호환 — object form 사용 권장 */
+export function resolveSceneBucket(sceneType: SceneType, usedBuckets: string[], role?: ImageRole): string;
 export function resolveSceneBucket(
-  sceneType: SceneType,
-  usedBuckets: string[],
-  role: ImageRole = 'sub',
+  arg0: SceneType | ResolveSceneBucketOpts,
+  arg1?: string[],
+  arg2?: ImageRole,
 ): string {
+  // 하위 호환: positional args → object 변환
+  const opts: ResolveSceneBucketOpts = typeof arg0 === 'string'
+    ? { sceneType: arg0 as SceneType, usedBuckets: arg1 || [], role: arg2 || 'sub' }
+    : arg0;
+
+  const { sceneType, usedBuckets, role = 'sub', imageStyle, topicHint } = opts;
+
   const candidates = role === 'hero' ? HERO_BUCKETS : SCENE_BUCKETS[sceneType];
-  const unused = candidates.filter(b => !usedBuckets.includes(b));
+  let unused = candidates.filter(b => !usedBuckets.includes(b));
+
+  // Photo consultation throttle:
+  // consultation bucket이 이미 2개 이상이면 consultation bucket을 후순위로 밀기
+  if (imageStyle === 'photo' && sceneType === 'consultation-treatment') {
+    const consultCount = usedBuckets.filter(b => CONSULTATION_BUCKETS.has(b)).length;
+    if (consultCount >= 2 && unused.length > 1) {
+      const nonConsult = unused.filter(b => !CONSULTATION_BUCKETS.has(b));
+      if (nonConsult.length > 0) unused = nonConsult;
+    }
+  }
+
+  // insurance-checkup topic에서 caution-checkup sceneType이면 checkup-exam, waiting-reception 우선
+  if (topicHint === 'insurance-checkup' && sceneType === 'caution-checkup' && unused.length > 1) {
+    const preferred = unused.filter(b => b === 'checkup-exam' || b === 'waiting-reception');
+    if (preferred.length > 0) return preferred[0];
+  }
+
   return unused.length > 0 ? unused[0] : candidates[0];
 }
 
@@ -69,7 +160,7 @@ export function resolveSceneBucket(
 
 const PHOTO_SCENE_BASE: Record<SceneType, string> = {
   'symptom-discomfort': '환자가 턱이나 볼을 가볍게 잡고 불편을 느끼는 자연스러운 장면. 과장된 고통 표현 금지. 거울/반사면 장면 금지.',
-  'cause-mechanism': '구강 건강 문제의 원인이나 검사 맥락의 의료 정보 이미지. 사람 전신보다 검사 대상에 초점.',
+  'cause-mechanism': '구강 내부/치아/잇몸의 근접 검사 장면 또는 치과 기구가 포함된 검진 컷. 환자 얼굴 전체나 상담 테이블 중심 구도 금지. 입안/치석/염증 부위 또는 검사 도구에 초점.',
   'consultation-treatment': '현대 한국 병원/치과에서 의사가 환자에게 진료 또는 시술하는 장면. 깨끗한 진료실, 신뢰감 있는 분위기.',
   'prevention-care': '양치질, 치실 사용, 구강 세정제 등 예방 행동을 하는 현대 한국인의 일상 장면. 거울 앞 장면 금지.',
   'caution-checkup': '구강 건강 경각심을 전달하는 현실적 검진 장면. 건강 점검 환경에 초점.',
@@ -129,6 +220,11 @@ const BUCKET_DETAILS: Record<string, string> = {
   'topic-anchor': 'Focus: 주제 핵심 요소를 중앙 배치한 앵커 구도.',
 };
 
+// Photo-only bucket detail override — mechanism-closeup을 구강/검사 중심으로 강화
+const PHOTO_BUCKET_DETAIL_OVERRIDES: Record<string, string> = {
+  'mechanism-closeup': 'Focus: 구강 내부 극 클로즈업 — 치아/잇몸/치석/염증 부위. 치과 미러/탐침/스케일러 등 검사 도구 포함. 환자 얼굴 전체 프레이밍보다 입안+손+도구 중심 구도 우선.',
+};
+
 // ═══════════════════════════════════════════════
 // Layer 3: Shot Intent — bucket별 구도/프레이밍
 // ═══════════════════════════════════════════════
@@ -160,12 +256,17 @@ const SHOT_INTENTS: Record<string, string> = {
   'topic-anchor': 'Shot intent: central subject placement, balanced composition, clear visual anchor for the article topic.',
 };
 
+// Photo-only shot intent override — mechanism-closeup을 구강/도구 중심으로 강화
+const PHOTO_SHOT_INTENT_OVERRIDES: Record<string, string> = {
+  'mechanism-closeup': 'Shot intent: close-up inside oral cavity — teeth, gums, tartar, or inflamed tissue with dental mirror/probe/scaler visible. Prioritize mouth + hands + instruments framing. Strongly prefer oral/exam detail over full-face or doctor-patient dialogue composition.',
+};
+
 // ═══════════════════════════════════════════════
 // Layer 4: Repetition Avoid (공통)
 // ═══════════════════════════════════════════════
 
 const STYLE_REPETITION_AVOIDS: Record<string, string> = {
-  photo: 'Avoid repeating: same consultation/face-to-face dialogue composition. Vary shot distance, subject focus, or environment.',
+  photo: 'Avoid repeating: same consultation/face-to-face dialogue composition. If a consultation scene already exists in this set, strongly prefer: close-up on instruments, oral cavity detail, reception desk, x-ray monitor, or homecare action instead.',
   medical: 'Avoid repeating: same cross-section angle or organ view. Vary between sagittal/coronal/axial views, or switch to macro/micro scale.',
   illustration: 'Avoid repeating: same character pose or infographic layout. Vary scene composition, character action, or visual metaphor.',
 };
@@ -210,31 +311,73 @@ const HERO_SCENE_PROMPTS: Record<string, Record<string, string>> = {
 // Public API
 // ═══════════════════════════════════════════════
 
+/** topicHint별 sceneType 가중치 bias (3차 fallback에서 count에서 빼줌 → 우선 선택) */
+const TOPIC_HINT_BIAS: Record<TopicHint, Partial<Record<SceneType, number>>> = {
+  'insurance-checkup': { 'caution-checkup': -1, 'prevention-care': -1 },
+  'disease-pain': { 'symptom-discomfort': -1, 'cause-mechanism': -1 },
+  'treatment-procedure': { 'consultation-treatment': -1 },
+  'general': {},
+};
+
+/** topicHint에서 consultation에 불리한 penalty가 있는 hint 목록 */
+const CONSULTATION_PENALTY_HINTS: Set<TopicHint> = new Set(['insurance-checkup']);
+
 /**
  * 소제목 키워드 기반 SceneType 분류
- * - 1차: 키워드 매칭 (연속 중복 방지)
+ * - 1차: 키워드 매칭 (연속 중복 방지 + consultation overuse penalty)
  * - 2차: 연속 중복 무시 후 첫 매칭
- * - 3차: 가장 적게 사용된 타입 (다양성 보장)
+ * - 3차: 가장 적게 사용된 타입 (topicHint bias 적용)
  */
-export function classifySceneType(sectionTitle: string, usedSceneTypes: string[]): SceneType {
+export function classifySceneType(
+  sectionTitle: string,
+  usedSceneTypes: string[],
+  topicHint: TopicHint = 'general',
+): SceneType {
+  const consultCount = usedSceneTypes.filter(s => s === 'consultation-treatment').length;
+  // Consultation overuse: insurance-checkup topic에서 consultation이 이미 1+이면 다른 타입 시도
+  const consultationOverused = CONSULTATION_PENALTY_HINTS.has(topicHint) && consultCount >= 1;
+
   // 1차: 키워드 매칭
   for (const [type, regex] of Object.entries(SCENE_KEYWORDS) as [SceneType, RegExp][]) {
     if (regex.test(sectionTitle)) {
       // 직전 sceneType과 같으면 다른 걸 찾아봄 (연속 중복 방지)
       if (usedSceneTypes.length > 0 && usedSceneTypes[usedSceneTypes.length - 1] === type) {
-        continue; // 다음 매칭 시도
+        continue;
+      }
+      // Consultation overuse penalty: consultation으로 수렴 방지
+      if (type === 'consultation-treatment' && consultationOverused) {
+        continue;
       }
       return type;
     }
   }
-  // 2차: 연속 중복 방지 실패 시에도 최초 매칭 반환
+  // 2차: 연속 중복 방지 실패 시에도 최초 매칭 반환 (consultation penalty 유지)
   for (const [type, regex] of Object.entries(SCENE_KEYWORDS) as [SceneType, RegExp][]) {
-    if (regex.test(sectionTitle)) return type;
+    if (regex.test(sectionTitle)) {
+      if (type === 'consultation-treatment' && consultationOverused) continue;
+      return type;
+    }
   }
-  // 3차: 매칭 없으면 가장 적게 사용된 타입 반환 (다양성 보장)
-  const typeCounts: Record<string, number> = {};
+  // 2차-b: consultation penalty 무시 — 다른 매칭이 전혀 없을 때만 consultation 허용
+  let consultationFallbackMatch = false;
+  for (const [type, regex] of Object.entries(SCENE_KEYWORDS) as [SceneType, RegExp][]) {
+    if (regex.test(sectionTitle)) {
+      if (type === 'consultation-treatment' && consultationOverused) {
+        consultationFallbackMatch = true;
+        continue;
+      }
+      return type;
+    }
+  }
+  // 다른 키워드 매칭이 전혀 없고 consultation만 매칭된 경우 → consultation 반환
+  if (consultationFallbackMatch) return 'consultation-treatment';
+  // 3차: 매칭 없으면 가장 적게 사용된 타입 반환 (topicHint bias 적용)
   const allTypes: SceneType[] = ['symptom-discomfort', 'cause-mechanism', 'consultation-treatment', 'prevention-care', 'caution-checkup'];
-  for (const t of allTypes) typeCounts[t] = usedSceneTypes.filter(u => u === t).length;
+  const bias = TOPIC_HINT_BIAS[topicHint] || {};
+  const typeCounts: Record<string, number> = {};
+  for (const t of allTypes) {
+    typeCounts[t] = usedSceneTypes.filter(u => u === t).length + (bias[t] || 0);
+  }
   return allTypes.sort((a, b) => (typeCounts[a] || 0) - (typeCounts[b] || 0))[0];
 }
 
@@ -261,8 +404,10 @@ export function buildScenePrompt(
 ): string {
   const bucket = resolvedBucket || SCENE_BUCKETS[sceneType][0];
   const baseScene = getBaseScene(sceneType, imageStyle);
-  const bucketDetail = BUCKET_DETAILS[bucket] || '';
-  const shotIntent = SHOT_INTENTS[bucket] || SHOT_INTENTS[SCENE_BUCKETS[sceneType][0]] || '';
+  const isPhoto = !imageStyle || (imageStyle !== 'medical' && imageStyle !== 'illustration');
+  // Photo-specific overrides for bucket detail & shot intent
+  const bucketDetail = (isPhoto && PHOTO_BUCKET_DETAIL_OVERRIDES[bucket]) || BUCKET_DETAILS[bucket] || '';
+  const shotIntent = (isPhoto && PHOTO_SHOT_INTENT_OVERRIDES[bucket]) || SHOT_INTENTS[bucket] || SHOT_INTENTS[SCENE_BUCKETS[sceneType][0]] || '';
   const repAvoid = buildRepetitionAvoid(sceneType, usedSceneTypes || [], imageStyle);
 
   if (imageStyle === 'medical') {

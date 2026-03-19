@@ -19,7 +19,8 @@ export type {
 } from './imageTypes';
 
 // Router
-export { classifySceneType, buildScenePrompt, buildHeroScenePrompt, resolveSceneBucket, SCENE_BUCKETS, HERO_BUCKETS } from './imageRouter';
+export { classifySceneType, buildScenePrompt, buildHeroScenePrompt, resolveSceneBucket, SCENE_BUCKETS, HERO_BUCKETS, CONSULTATION_BUCKETS, detectTopicHint } from './imageRouter';
+export type { TopicHint, ResolveSceneBucketOpts } from './imageRouter';
 
 // Prompt Builder
 export {
