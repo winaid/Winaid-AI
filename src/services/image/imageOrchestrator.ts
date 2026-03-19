@@ -199,7 +199,7 @@ export const generateBlogImage = async (
   const isHero = role === 'hero';
 
   // ── 공통 제약 ──
-  const COMMON_CONSTRAINTS = 'No text, no letters, no typography, no watermark, no logo. No hanbok, no traditional clothing, no cultural costume, no historical styling, no wedding styling, no festival styling. No exaggerated poses, no glamorous fashion portrait. Single scene only — no split screen, no diptych, no collage, no side-by-side panels, no before-after comparison, no multiple frames in one image.';
+  const COMMON_CONSTRAINTS = 'No text, no letters, no typography, no watermark, no logo. No hanbok, no traditional clothing, no cultural costume, no historical styling, no wedding styling, no festival styling. No exaggerated poses, no glamorous fashion portrait. Single scene only — no split screen, no diptych, no collage, no side-by-side panels, no before-after comparison, no multiple frames in one image. No mirror scenes, no bathroom mirror selfie, no reflective surface shots — AI models produce physically incorrect reflections (duplicated person, wrong pose/angle in reflection, subject emerging from mirror). If a reflective surface is absolutely required: physically correct mirror reflection, single subject with consistent mirrored pose, no duplicated person, no impossible reflection geometry.';
 
   // ── 스타일별 프롬프트 분기 ──
   const isPhoto = style === 'photo' && !customStylePrompt;

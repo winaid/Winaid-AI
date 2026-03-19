@@ -1,4 +1,4 @@
-import React, { lazy, Suspense } from 'react';
+import React, { lazy, Suspense, useState, useEffect, useRef } from 'react';
 import type { GenerationRequest, GenerationState, DisplayStage } from '../../types';
 
 const InputForm = lazy(() => import('../InputForm'));
@@ -147,15 +147,64 @@ export function GenerateWorkspace({
  *
  * 단계 구조:
  *   상단 — 현재 단계 배지 (displayStage 기반, monotonic)
- *   중단 — 스피너 + 이모지 제거된 상세 메시지
+ *   중단 — 스피너 + 로테이션 문구 (같은 단계 안에서도 자연스럽게 변화)
  *   하단 — 단계별 짧은 안내
  *
- * 블로그: displayStage(숫자) 기반 → 뒤로 가지 않음
+ * 블로그: displayStage(숫자) 기반 → 뒤로 가지 않음, 문구 풀 로테이션
  * 카드뉴스/보도자료: progress 키워드 기반 (기존 방식 유지)
  */
+
+// ── 블로그 단계별 문구 풀 ──
+// 각 단계 내에서 순환하며 "계속 일하고 있다"는 인상을 준다.
+// 배열 순서가 곧 진행 순서 — 초반 → 후반 느낌을 자연스럽게 부여.
+const BLOG_MESSAGE_POOL: Record<number, string[]> = {
+  0: [
+    '좋은 문장을 한 줄씩 꺼내고 있어요',
+    '글의 흐름을 차근차근 잡고 있어요',
+    '읽기 편한 시작점을 만들고 있어요',
+    '핵심이 잘 보이도록 내용을 정리하고 있어요',
+    '첫 문장부터 자연스럽게 이어지게 다듬고 있어요',
+  ],
+  1: [
+    '좋은 문장을 한 줄씩 꺼내고 있어요',
+    '글의 흐름을 차근차근 잡고 있어요',
+    '읽기 편한 시작점을 만들고 있어요',
+    '핵심이 잘 보이도록 내용을 정리하고 있어요',
+    '첫 문장부터 자연스럽게 이어지게 다듬고 있어요',
+    '각 소주제를 꼼꼼히 채워가고 있어요',
+  ],
+  2: [
+    '읽는 맛이 나도록 다듬고 있어요',
+    '문장 사이의 흐름을 매끈하게 정리하고 있어요',
+    '너무 딱딱하지 않게, 너무 가볍지 않게 맞추고 있어요',
+    '처음부터 끝까지 자연스럽게 이어지게 손보고 있어요',
+    '한 번 더 읽어도 편안한 글로 정리하고 있어요',
+  ],
+  3: [
+    '글과 잘 어울리는 비주얼을 고르는 중이에요',
+    '장면을 하나씩 정리하고 있어요',
+    '내용과 잘 맞는 이미지를 살펴보고 있어요',
+    '화면이 심심하지 않도록 이미지를 준비하고 있어요',
+    '글에 딱 맞는 장면을 찾고 있어요',
+    '거의 다 왔어요, 마지막 장면을 고르고 있어요',
+  ],
+  4: [
+    '거의 다 왔어요, 마지막 손질만 남았어요',
+    '보기 좋게 정리해서 보여드릴 준비 중이에요',
+    '결과를 한 번 더 살피고 있어요',
+    '깔끔하게 마무리해서 가져오고 있어요',
+    '마지막 점검 후 바로 보여드릴게요',
+  ],
+};
+
+/** 블로그 문구 로테이션 간격 (ms) */
+const MSG_ROTATION_INTERVAL = 3200;
+
 function LoadingView({ darkMode, progress, postType, displayStage }: {
   darkMode: boolean; progress: string; postType?: string; displayStage?: DisplayStage;
 }) {
+  const isBlog = postType !== 'card_news' && postType !== 'press_release';
+
   // 블로그/보도자료: displayStage 기반 단계 정보
   // 카드뉴스: progress 키워드 기반 (displayStage가 없거나 0)
   const stage = (postType === 'card_news')
@@ -164,17 +213,59 @@ function LoadingView({ darkMode, progress, postType, displayStage }: {
     ? PRESS_STAGE
     : BLOG_STAGES[displayStage || 1] || BLOG_STAGES[1];
 
-  // progress에서 이모지 제거한 짧은 메시지
-  const cleanProgress = progress
-    .replace(/^[\u{1F300}-\u{1FAD6}\u{2600}-\u{27BF}\u{FE00}-\u{FE0F}\u{200D}\u{20E3}\u{E0020}-\u{E007F}]+\s*/u, '')
-    .trim();
+  // ── 블로그 문구 로테이션 ──
+  const [rotationIdx, setRotationIdx] = useState(0);
+  const stageRef = useRef(displayStage || 0);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // 표시 문구 정책: stage.defaultMsg를 기본으로, cleanProgress는 보조
-  // 내부 용어가 섞인 raw progress보다 제품 톤의 defaultMsg를 우선한다.
-  // cleanProgress가 존재하고 stage.defaultMsg와 다른 유의미한 메시지일 때만 표시.
-  const displayMsg = (cleanProgress && cleanProgress.length > 2)
-    ? cleanProgress
-    : stage.defaultMsg;
+  // stage 변경 시 인덱스 리셋
+  useEffect(() => {
+    if (isBlog && displayStage !== stageRef.current) {
+      stageRef.current = displayStage || 0;
+      setRotationIdx(0);
+    }
+  }, [displayStage, isBlog]);
+
+  // 타이머 기반 순환 — 같은 stage 안에서 문구를 자연스럽게 교체
+  useEffect(() => {
+    if (!isBlog) return;
+    if (timerRef.current) clearInterval(timerRef.current);
+
+    timerRef.current = setInterval(() => {
+      const pool = BLOG_MESSAGE_POOL[displayStage || 1] || BLOG_MESSAGE_POOL[1];
+      setRotationIdx(prev => (prev + 1) % pool.length);
+    }, MSG_ROTATION_INTERVAL);
+
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [displayStage, isBlog]);
+
+  // ── 표시 문구 결정 ──
+  let displayMsg: string;
+  if (isBlog) {
+    // progress에서 이모지 제거한 짧은 메시지
+    const cleanProgress = progress
+      .replace(/^[\u{1F300}-\u{1FAD6}\u{2600}-\u{27BF}\u{FE00}-\u{FE0F}\u{200D}\u{20E3}\u{E0020}-\u{E007F}]+\s*/u, '')
+      .trim();
+
+    // humanizeProgress에서 유의미한 메시지가 올 경우(이미지 순환 문구 등) 그것을 표시
+    // 그렇지 않으면(빈 문자열 또는 suppress됨) 문구 풀에서 로테이션
+    if (cleanProgress && cleanProgress.length > 2) {
+      displayMsg = cleanProgress;
+    } else {
+      const pool = BLOG_MESSAGE_POOL[displayStage || 1] || BLOG_MESSAGE_POOL[1];
+      displayMsg = pool[rotationIdx % pool.length];
+    }
+  } else {
+    // 카드뉴스/보도자료: 기존 방식 유지
+    const cleanProgress = progress
+      .replace(/^[\u{1F300}-\u{1FAD6}\u{2600}-\u{27BF}\u{FE00}-\u{FE0F}\u{200D}\u{20E3}\u{E0020}-\u{E007F}]+\s*/u, '')
+      .trim();
+    displayMsg = (cleanProgress && cleanProgress.length > 2)
+      ? cleanProgress
+      : stage.defaultMsg;
+  }
 
   return (
     <div className={`rounded-xl border p-12 md:p-16 flex flex-col items-center justify-center text-center transition-colors duration-300 flex-1 min-h-[480px] ${darkMode ? 'bg-[#161b22] border-[#30363d]' : 'bg-white border-slate-200 shadow-sm'}`}>
@@ -194,8 +285,8 @@ function LoadingView({ darkMode, progress, postType, displayStage }: {
         </div>
       </div>
 
-      {/* 중단: 상세 진행 메시지 */}
-      <p className={`text-sm font-medium mb-2 min-h-[20px] transition-all duration-200 ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>
+      {/* 중단: 상세 진행 메시지 — 부드러운 전환 */}
+      <p className={`text-sm font-medium mb-2 min-h-[20px] transition-opacity duration-500 ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>
         {displayMsg}
       </p>
 
