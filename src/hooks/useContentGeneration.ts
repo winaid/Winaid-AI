@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, RefObject } from 'react';
-import { GenerationRequest, GenerationState } from '../types';
+import { GenerationRequest, GenerationState, DisplayStage } from '../types';
 import { GENERATION_HARD_TIMEOUT_MS } from '../core/generation/contracts';
 import { runCreditGate } from '../core/generation/policies';
 import { runContentJob } from '../core/generation/generateContentJob';
@@ -37,7 +37,36 @@ const initialState: GenerationState = {
   warning: null,
   data: null,
   progress: '',
+  displayStage: 0,
 };
+
+/**
+ * raw progress 문자열에서 displayStage 번호를 파싱한다.
+ * 이 함수는 "올라갈 수 있는 최대 stage"를 반환한다.
+ * 호출자가 현재 stage와 비교하여 monotonic하게 적용해야 한다.
+ */
+function parseDisplayStage(progress: string): DisplayStage {
+  const p = progress.toLowerCase();
+
+  // 4: 저장/마무리
+  if (p.includes('저장') || p.includes('업로드') || p.includes('모든 생성 작업 완료')) return 4;
+
+  // 3: 이미지 생성
+  if (p.includes('이미지') || p.includes('대표 이미지') || p.includes('대체 렌더')) return 3;
+
+  // 2: 글 검토/통합 (Stage C, FAQ, SEO, 품질 검사)
+  if (p.includes('stage c') || p.includes('폴리싱') || p.includes('faq') || p.includes('자주 묻는')
+    || p.includes('seo') || p.includes('검사') || p.includes('검증') || p.includes('smell')
+    || p.includes('통합 검증')) return 2;
+
+  // 1: 글 작성 (파이프라인, 검색, 아웃라인, 섹션 등)
+  if (p.includes('파이프라인') || p.includes('검색') || p.includes('stage a') || p.includes('stage b')
+    || p.includes('소제목') || p.includes('섹션') || p.includes('도입부') || p.includes('마무리')
+    || p.includes('원고') || p.includes('블로그') || p.includes('기존 방식')
+    || p.includes('seo 최적화 키워드')) return 1;
+
+  return 0;
+}
 
 // GENERATION_HARD_TIMEOUT_MS → core/generation/contracts.ts에서 import
 
@@ -150,7 +179,7 @@ export function useContentGeneration(deps: ContentGenerationDeps): ContentGenera
     const targetSetState = request.postType === 'press_release' ? setPressState : setBlogState;
 
     console.info(`[GEN_STEP] setLoading(true) — postType=${request.postType}, target=${request.postType === 'press_release' ? 'pressState' : 'blogState'}`);
-    targetSetState(prev => ({ ...prev, isLoading: true, error: null, warning: null, progress: 'SEO 최적화 키워드 분석 및 이미지 생성 중...' }));
+    targetSetState(prev => ({ ...prev, isLoading: true, error: null, warning: null, progress: 'SEO 최적화 키워드 분석 및 콘텐츠 생성 중...', displayStage: 1 }));
 
     // ── UI hard timeout: 무한 로딩 방지 (발표 안정화) ──
     const thisGenId = ++generationIdRef.current;
@@ -162,6 +191,7 @@ export function useContentGeneration(deps: ContentGenerationDeps): ContentGenera
           isLoading: false,
           error: '생성 시간이 초과되었습니다. 네트워크 상태를 확인하고 다시 시도해주세요.',
           progress: '',
+          displayStage: 0,
         }));
         isGeneratingRef.current = false;
       }
@@ -175,7 +205,13 @@ export function useContentGeneration(deps: ContentGenerationDeps): ContentGenera
       const outcome = await runContentJob(request, (p) => {
         // timeout 후 늦은 progress 업데이트 방어
         if (generationIdRef.current !== thisGenId) return;
-        targetSetState(prev => ({ ...prev, progress: p }));
+        // monotonic displayStage: 현재보다 높은 stage만 적용
+        const newStage = parseDisplayStage(p);
+        targetSetState(prev => ({
+          ...prev,
+          progress: p,
+          displayStage: Math.max(prev.displayStage, newStage) as DisplayStage,
+        }));
       });
 
       // timeout 후 늦게 도착한 결과가 UI를 덮지 않도록 방어
@@ -222,7 +258,7 @@ export function useContentGeneration(deps: ContentGenerationDeps): ContentGenera
         ? `일부 이미지(${artifact.imageMeta.failCount}장)는 대체 이미지로 제공되었습니다. 해당 이미지를 클릭하면 AI 이미지로 교체할 수 있습니다.`
         : null;
       console.info(`[BLOG_FLOW] setBlogState 호출 직전 — data 존재: ${!!result}, isLoading: false`);
-      targetSetState({ isLoading: false, error: null, warning: imageWarning, data: result, progress: '' });
+      targetSetState({ isLoading: false, error: null, warning: imageWarning, data: result, progress: '', displayStage: 0 });
       console.info(`[BLOG_FLOW] ✅ setBlogState 완료 — 사용자 화면 전환 대기 (RENDER_GATE에서 RESULT_PREVIEW 확인)`);
 
       // 사용량 저장 (크레딧 차감은 서버에서 선처리 완료)

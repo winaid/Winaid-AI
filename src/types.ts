@@ -239,12 +239,26 @@ export interface GeneratedContent {
   storageHtml?: string; // 저장용 경량 HTML (blob/base64 → Supabase URL 치환 완료본). saveContentToServer에는 반드시 이것을 사용할 것.
 }
 
+/**
+ * 블로그 생성 화면 표시용 단계 번호.
+ * monotonic: 한 번 올라가면 뒤로 내려가지 않는다.
+ *
+ *   0 = 대기/시작 전
+ *   1 = 글 작성
+ *   2 = 글 검토/통합 (Stage C polish)
+ *   3 = 이미지 생성
+ *   4 = 저장/마무리
+ */
+export type DisplayStage = 0 | 1 | 2 | 3 | 4;
+
 export interface GenerationState {
   isLoading: boolean;
   error: string | null;
   warning: string | null;
   data: GeneratedContent | null;
   progress: string;
+  /** UI 표시용 단계. monotonic — 뒤로 가지 않음. */
+  displayStage: DisplayStage;
 }
 
 export interface TrendingItem {

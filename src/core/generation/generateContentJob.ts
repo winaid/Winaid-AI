@@ -534,11 +534,33 @@ async function _orchestrateBlog(
       );
 
       const allQueueResults: ImageQueueResult[] = [];
-      for (const wave of waves) {
+      for (let wi = 0; wi < waves.length; wi++) {
+        const wave = waves[wi];
         // 단일 웨이브면 라벨 생략, 복수 웨이브면 차수 표시
         const waveLabel = waves.length > 1 ? ` ${wave.label}` : '';
         safeProgress(`🎨 이미지${waveLabel}: ${wave.items.length}장 생성 중...`);
-        const waveResults = await generateImageQueue(wave.items, safeProgress);
+
+        // wave 간 간격: nb2 슬롯 회복 + API rate limit 완화 (첫 wave 제외)
+        if (wi > 0) {
+          const gapMs = 2000 + Math.random() * 1000;
+          console.info(`[IMG-WAVE] wave gap ${Math.round(gapMs)}ms before ${wave.label}`);
+          await new Promise(r => setTimeout(r, gapMs));
+        }
+
+        // progress 래퍼: wave 내 인덱스 대신 전체 기준으로 재포맷
+        const totalImageCount = maxImages;
+        const waveProgress = (msg: string) => {
+          // "이미지 {wave내idx}/{wave내total}장" → "이미지 {전체기준}/{전체total}장"으로 교체
+          const fixed = msg.replace(
+            /이미지 (\d+)\/(\d+)장/,
+            (_, idxStr) => {
+              const idx = parseInt(idxStr, 10);
+              return `이미지 ${idx}/${totalImageCount}장`;
+            }
+          );
+          safeProgress(fixed);
+        };
+        const waveResults = await generateImageQueue(wave.items, waveProgress);
         allQueueResults.push(...waveResults);
 
         for (const qr of waveResults) {

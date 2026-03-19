@@ -259,7 +259,8 @@ export function useCardNewsWorkflow(): CardNewsWorkflowState & CardNewsWorkflowA
           cardPrompts: cardNewsPrompts,
           designTemplateId: pendingRequest.designTemplateId
         },
-        progress: ''
+        progress: '',
+        displayStage: 0,
       });
 
       // 상태 초기화

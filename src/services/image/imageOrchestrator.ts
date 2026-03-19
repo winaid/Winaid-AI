@@ -236,10 +236,14 @@ export const generateBlogImage = async (
       ];
     }
   } else {
-    // sub: 항상 NB2 우선
+    // sub: NB2 우선, 실패 시 cross-tier rescue (PRO)
+    // #1: NB2 + 표준 프롬프트
+    // #2: NB2 + 최소 프롬프트 (프롬프트 복잡도 문제 대응)
+    // #3: PRO + 최소 프롬프트 (NB2 서버 문제 대응, cross-tier → skip-retry 안 걸림)
     chain = [
       { model: GEMINI_MODEL.IMAGE_FLASH, tier: 'nb2', prompt: subPrompt, label: '#1(nb2)' },
-      { model: GEMINI_MODEL.IMAGE_FLASH, tier: 'nb2', prompt: ultraMinimal, label: '#2(nb2-retry)' },
+      { model: GEMINI_MODEL.IMAGE_FLASH, tier: 'nb2', prompt: ultraMinimal, label: '#2(nb2-minimal)' },
+      { model: GEMINI_MODEL.IMAGE_PRO, tier: 'pro', prompt: ultraMinimal, label: '#3(pro-rescue)' },
     ];
   }
 

@@ -1,5 +1,5 @@
 import React, { lazy, Suspense } from 'react';
-import type { GenerationRequest, GenerationState } from '../../types';
+import type { GenerationRequest, GenerationState, DisplayStage } from '../../types';
 
 const InputForm = lazy(() => import('../InputForm'));
 const ResultPreview = lazy(() => import('../ResultPreview'));
@@ -120,6 +120,7 @@ export function GenerateWorkspace({
             darkMode={darkMode}
             progress={currentState.progress || scriptProgress}
             postType={pendingRequest?.postType}
+            displayStage={currentState.displayStage}
           />
         ) : currentState.data ? (
           <>
@@ -145,25 +146,32 @@ export function GenerateWorkspace({
  * 생성 중 로딩 화면
  *
  * 단계 구조:
- *   상단 — 현재 단계명 (progress 키워드에서 자동 판별)
- *   중단 — 스피너 + 상세 진행 메시지 1줄
- *   하단 — 짧은 안내
+ *   상단 — 현재 단계 배지 (displayStage 기반, monotonic)
+ *   중단 — 스피너 + 이모지 제거된 상세 메시지
+ *   하단 — 단계별 짧은 안내
  *
- * progress 문자열로 단계를 자동 판별한다.
- * 블로그/카드뉴스/보도자료 공통 사용.
+ * 블로그: displayStage(숫자) 기반 → 뒤로 가지 않음
+ * 카드뉴스/보도자료: progress 키워드 기반 (기존 방식 유지)
  */
-function LoadingView({ darkMode, progress, postType }: { darkMode: boolean; progress: string; postType?: string }) {
-  // ── 단계 자동 판별 ──
-  const stage = resolveStage(progress, postType);
+function LoadingView({ darkMode, progress, postType, displayStage }: {
+  darkMode: boolean; progress: string; postType?: string; displayStage?: DisplayStage;
+}) {
+  // 블로그/보도자료: displayStage 기반 단계 정보
+  // 카드뉴스: progress 키워드 기반 (displayStage가 없거나 0)
+  const stage = (postType === 'card_news')
+    ? resolveCardNewsStage(progress)
+    : (postType === 'press_release')
+    ? PRESS_STAGE
+    : BLOG_STAGES[displayStage || 1] || BLOG_STAGES[1];
 
-  // ── progress에서 이모지 제거한 짧은 메시지 ──
+  // progress에서 이모지 제거한 짧은 메시지
   const cleanProgress = progress
     .replace(/^[\u{1F300}-\u{1FAD6}\u{2600}-\u{27BF}\u{FE00}-\u{FE0F}\u{200D}\u{20E3}\u{E0020}-\u{E007F}]+\s*/u, '')
     .trim();
 
   return (
     <div className={`rounded-xl border p-12 md:p-16 flex flex-col items-center justify-center text-center transition-colors duration-300 flex-1 min-h-[480px] ${darkMode ? 'bg-[#161b22] border-[#30363d]' : 'bg-white border-slate-200 shadow-sm'}`}>
-      {/* 상단: 현재 단계명 */}
+      {/* 상단: 현재 단계 배지 */}
       <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold mb-6 ${darkMode ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 'bg-blue-50 text-blue-600 border border-blue-100'}`}>
         <span>{stage.icon}</span>
         <span>{stage.label}</span>
@@ -192,75 +200,28 @@ function LoadingView({ darkMode, progress, postType }: { darkMode: boolean; prog
   );
 }
 
-/** progress 키워드 기반 단계 판별 */
-function resolveStage(progress: string, postType?: string): {
-  icon: string; label: string; defaultMsg: string; hint: string;
-} {
+// ── 블로그 displayStage → 단계 정보 매핑 ──
+interface StageInfo { icon: string; label: string; defaultMsg: string; hint: string; }
+
+const BLOG_STAGES: Record<number, StageInfo> = {
+  0: { icon: '\u{270D}\u{FE0F}', label: '준비 중', defaultMsg: '생성을 준비하고 있습니다', hint: 'SEO 키워드를 분석합니다' },
+  1: { icon: '\u{270D}\u{FE0F}', label: '글 작성', defaultMsg: 'SEO 최적화 콘텐츠를 작성하고 있습니다', hint: '네이버 스마트블록에 최적화된 구조로 작성합니다' },
+  2: { icon: '\u{1F50D}', label: '글 검토', defaultMsg: '작성된 글을 검토하고 있습니다', hint: '문체 교정 및 의료 정확성을 확인합니다' },
+  3: { icon: '\u{1F3A8}', label: '이미지 생성', defaultMsg: '이미지를 생성하고 있습니다', hint: '이미지 수에 따라 30초~2분 소요됩니다' },
+  4: { icon: '\u{1F4BE}', label: '저장 중', defaultMsg: '결과를 저장하고 있습니다', hint: '거의 완료되었습니다' },
+};
+
+const PRESS_STAGE: StageInfo = {
+  icon: '\u{1F4F0}', label: '보도자료 작성', defaultMsg: '보도자료를 작성하고 있습니다', hint: '언론 배포용 형식으로 구성합니다',
+};
+
+/** 카드뉴스: progress 키워드 기반 단계 판별 (기존 방식 유지) */
+function resolveCardNewsStage(progress: string): StageInfo {
   const p = progress.toLowerCase();
-
-  // 이미지 단계
-  if (p.includes('이미지') || p.includes('image') || p.includes('img')) {
-    return {
-      icon: '\u{1F3A8}',
-      label: '이미지 생성',
-      defaultMsg: '이미지를 생성하고 있습니다',
-      hint: '이미지 수에 따라 30초~2분 소요됩니다',
-    };
-  }
-
-  // 저장/마무리 단계
-  if (p.includes('저장') || p.includes('완료') || p.includes('업로드') || p.includes('persist')) {
-    return {
-      icon: '\u{1F4BE}',
-      label: '저장 중',
-      defaultMsg: '결과를 저장하고 있습니다',
-      hint: '거의 완료되었습니다',
-    };
-  }
-
-  // FAQ 단계
-  if (p.includes('faq') || p.includes('자주 묻는')) {
-    return {
-      icon: '\u{2753}',
-      label: 'FAQ 생성',
-      defaultMsg: 'FAQ 섹션을 추가하고 있습니다',
-      hint: '스마트블록 노출을 위한 FAQ를 생성합니다',
-    };
-  }
-
-  // AI 냄새 / 품질 검사
-  if (p.includes('검사') || p.includes('검증') || p.includes('smell')) {
-    return {
-      icon: '\u{1F50D}',
-      label: '품질 검사',
-      defaultMsg: '콘텐츠 품질을 검사하고 있습니다',
-      hint: '의료광고법 준수 여부를 확인합니다',
-    };
-  }
-
-  // 카드뉴스 특화
-  if (postType === 'card_news') {
-    if (p.includes('원고') || p.includes('기획') || p.includes('1단계')) {
-      return { icon: '\u{1F4DD}', label: '원고 작성', defaultMsg: '카드뉴스 원고를 기획하고 있습니다', hint: '슬라이드별 구성을 설계합니다' };
-    }
-    if (p.includes('프롬프트') || p.includes('디자인') || p.includes('2단계')) {
-      return { icon: '\u{1F3A8}', label: '디자인 변환', defaultMsg: '카드뉴스 디자인을 구성하고 있습니다', hint: '각 카드의 레이아웃과 텍스트를 배치합니다' };
-    }
-    return { icon: '\u{1F4CB}', label: '카드뉴스 생성', defaultMsg: '카드뉴스를 생성하고 있습니다', hint: '원고 기획부터 이미지 생성까지 자동으로 진행됩니다' };
-  }
-
-  // 보도자료 특화
-  if (postType === 'press_release') {
-    return { icon: '\u{1F4F0}', label: '보도자료 작성', defaultMsg: '보도자료를 작성하고 있습니다', hint: '언론 배포용 형식으로 구성합니다' };
-  }
-
-  // 기본: 텍스트 생성 단계 (블로그)
-  return {
-    icon: '\u{270D}\u{FE0F}',
-    label: '글 작성',
-    defaultMsg: 'SEO 최적화 콘텐츠를 작성하고 있습니다',
-    hint: '네이버 스마트블록 노출에 최적화된 구조로 생성합니다',
-  };
+  if (p.includes('이미지')) return { icon: '\u{1F5BC}\u{FE0F}', label: '이미지 생성', defaultMsg: '카드 이미지를 생성하고 있습니다', hint: '각 카드별 이미지를 AI로 생성합니다' };
+  if (p.includes('원고') || p.includes('기획') || p.includes('1단계')) return { icon: '\u{1F4DD}', label: '원고 작성', defaultMsg: '카드뉴스 원고를 기획하고 있습니다', hint: '슬라이드별 구성을 설계합니다' };
+  if (p.includes('프롬프트') || p.includes('디자인') || p.includes('2단계')) return { icon: '\u{1F3A8}', label: '디자인 변환', defaultMsg: '카드뉴스 디자인을 구성하고 있습니다', hint: '각 카드의 레이아웃과 텍스트를 배치합니다' };
+  return { icon: '\u{1F4CB}', label: '카드뉴스 생성', defaultMsg: '카드뉴스를 생성하고 있습니다', hint: '원고 기획부터 이미지 생성까지 자동으로 진행됩니다' };
 }
 
 /** 초기 빈 상태 — 에디터 스타일 */
