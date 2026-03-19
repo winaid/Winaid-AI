@@ -488,6 +488,7 @@ async function _orchestrateBlog(
 
   let images: { index: number; data: string; prompt: string }[] = [];
   let imageFailCount = 0;
+  let _imageQualityWarning: string | undefined;
 
   const generatedPromptCount = textData.imagePrompts?.length || 0;
   if (!textData.imagePrompts || !Array.isArray(textData.imagePrompts)) {
@@ -627,9 +628,17 @@ async function _orchestrateBlog(
     }
 
     const imgElapsed = Date.now() - imgStart;
-    console.info(`[IMG] total: ${images.length}/${maxImages} images, ${imageFailCount} fallback, ${imgElapsed}ms`);
+    const templateRate = images.length > 0 ? Math.round((imageFailCount / images.length) * 100) : 0;
+    console.info(`[IMG] total: ${images.length}/${maxImages} images, ${imageFailCount} fallback (templateRate=${templateRate}%), ${imgElapsed}ms`);
+
+    // 품질 경고 메시지 생성 (결과 화면에 표시)
     if (imageFailCount > 0 && imageFailCount === images.length) {
       safeProgress(`⚠️ 이미지 ${imageFailCount}장 AI 생성 실패 — 대체 이미지 적용`);
+      _imageQualityWarning = '모든 이미지가 AI 생성에 실패하여 대체 이미지가 사용되었습니다. 이미지 재생성을 권장합니다.';
+    } else if (templateRate >= 40) {
+      // template 2장 이상 또는 40% 이상
+      safeProgress(`⚠️ 이미지 ${imageFailCount}장 AI 생성 실패 — 일부 대체 이미지 적용`);
+      _imageQualityWarning = `${images.length}장 중 ${imageFailCount}장이 AI 생성 실패로 대체 이미지가 사용되었습니다. 품질 개선을 위해 이미지 재생성을 권장합니다.`;
     } else if (imageFailCount > 0) {
       safeProgress(`⚠️ 이미지 ${imageFailCount}장 AI 생성 실패 — 일부 대체 이미지 적용`);
     }
@@ -672,6 +681,7 @@ async function _orchestrateBlog(
       imageStyle: request.imageStyle,
       cssTheme: request.cssTheme || 'modern',
       imageFailCount,
+      imageQualityWarning: _imageQualityWarning,
       imagePrompts: textData.imagePrompts,
     };
   };
@@ -905,6 +915,7 @@ async function _orchestrateBlog(
       cssTheme: request.cssTheme || 'modern',
       sections,
       imageFailCount,
+      imageQualityWarning: _imageQualityWarning,
       imagePrompts: textData.imagePrompts,
       conclusionLength: textData.conclusionLength,
       generatedImages: images,

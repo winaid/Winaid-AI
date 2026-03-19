@@ -35,6 +35,8 @@ export interface AttemptDef {
   tier: ModelTier;
   prompt: string;
   label: string;
+  /** Per-attempt timeout override (ms). Falls back to chain-level timeout if omitted. */
+  timeout?: number;
 }
 
 // ── ImageQueueItem / ImageQueueResult: 큐 입출력 ──

@@ -52,7 +52,7 @@ const TIER_CONCURRENCY: Record<ModelTier, number> = {
 
 const IMAGE_TIMEOUT: Record<ImageGenMode, Record<ImageRole, number>> = {
   auto:   { hero: 25000, sub: 18000 },
-  manual: { hero: 35000, sub: 22000 },  // sub 30s→22s: wallCap(50s) 내에 3회 attempt(nb2→nb2→pro) 확보
+  manual: { hero: 35000, sub: 40000 },  // sub 22s→40s: Gemini image 응답 25-40s 커버. 2회 attempt(nb2→nb2-minimal) 구조.
 };
 
 // 디버그 verbose 로그 플래그
@@ -283,7 +283,8 @@ async function _executeBlogImageChain(params: _ChainParams): Promise<BlogImageOu
   const { heroPrompt, subPrompt, ultraMinimal, isHero, role, mode, timeout, demoSafe, promptText, style } = params;
 
   const startTier = resolveStartTier(role, demoSafe);
-  const wallCapMs = isHero ? 50_000 : (mode === 'manual' ? 50_000 : 30_000);
+  // Wall cap: hero 50s, sub(manual) 75s (2 attempts with 40s+25s), sub(auto) 30s
+  const wallCapMs = isHero ? 50_000 : (mode === 'manual' ? 75_000 : 30_000);
   console.info(`[IMG-TIER] role=${role} startTier=${startTier} mode=${mode} timeout=${timeout}ms wallCap=${wallCapMs / 1000}s`);
 
   let chain: AttemptDef[];
@@ -301,10 +302,12 @@ async function _executeBlogImageChain(params: _ChainParams): Promise<BlogImageOu
       ];
     }
   } else {
+    // Sub chain: 2 nb2 attempts with progressive timeout.
+    // Pro-rescue 제거 이유: nb2 timeout 후 pro도 503/overload → 시간만 소모하고 결국 template.
+    // 대신 첫 시도에 충분한 timeout(40s)을 주고, 2차는 간결 프롬프트(25s)로 빠르게 시도.
     chain = [
-      { model: GEMINI_MODEL.IMAGE_FLASH, tier: 'nb2', prompt: subPrompt, label: '#1(nb2)' },
-      { model: GEMINI_MODEL.IMAGE_FLASH, tier: 'nb2', prompt: ultraMinimal, label: '#2(nb2-minimal)' },
-      { model: GEMINI_MODEL.IMAGE_PRO, tier: 'pro', prompt: ultraMinimal, label: '#3(pro-rescue)' },
+      { model: GEMINI_MODEL.IMAGE_FLASH, tier: 'nb2', prompt: subPrompt, label: '#1(nb2)', timeout },
+      { model: GEMINI_MODEL.IMAGE_FLASH, tier: 'nb2', prompt: ultraMinimal, label: '#2(nb2-minimal)', timeout: 25_000 },
     ];
   }
 
@@ -321,29 +324,29 @@ async function _executeBlogImageChain(params: _ChainParams): Promise<BlogImageOu
     const wallElapsedSoFar = Date.now() - wallStart;
 
     // wall cap 체크: 초과 시 template fallback으로 이동
-    // 단, cross-tier rescue(마지막 attempt이고 tier가 다른 경우)는 wall cap을 초과해도 1회 실행한다.
-    // 이유: pro rescue는 nb2 실패의 마지막 기회이며, wall cap 때문에 실행 안 되면
-    //       설계상 존재하는 rescue path가 사실상 dead code가 된다.
+    // hero chain에 cross-tier rescue(pro→nb2 등)가 있으면 wall cap 초과해도 1회 실행한다.
     const isLastChance = attempt === maxAttempts - 1;
     const isCrossTierRescue = attempt > 0 && def.tier !== chain[attempt - 1]?.tier;
-    if (wallElapsedSoFar > WALL_TIME_CAP_MS && !(isLastChance && isCrossTierRescue)) {
-      if (debug) console.debug(`[IMG-WALL] wall time cap ${WALL_TIME_CAP_MS}ms exceeded (${Math.round(wallElapsedSoFar)}ms), skipping to template`);
-      break;
-    }
-    if (wallElapsedSoFar > WALL_TIME_CAP_MS && isLastChance && isCrossTierRescue) {
-      console.info(`[IMG-WALL-RESCUE] wall cap exceeded but executing cross-tier rescue: ${def.label} (${def.tier})`);
+    if (wallElapsedSoFar > WALL_TIME_CAP_MS) {
+      if (isLastChance && isCrossTierRescue) {
+        console.info(`[IMG-WALL-RESCUE] wall cap exceeded but executing cross-tier rescue: ${def.label} (${def.tier})`);
+      } else {
+        if (debug) console.debug(`[IMG-WALL] wall time cap ${WALL_TIME_CAP_MS}ms exceeded (${Math.round(wallElapsedSoFar)}ms), skipping to template`);
+        break;
+      }
     }
     const t0 = Date.now();
     const tier = def.tier;
 
     try {
+      const attemptTimeout = def.timeout || timeout;
       const result = await callGeminiRaw(def.model, {
         contents: [{ role: "user", parts: [{ text: def.prompt }] }],
         generationConfig: {
           responseModalities: ["IMAGE", "TEXT"],
           temperature: 0.6,
         },
-      }, timeout);
+      }, attemptTimeout);
 
       const ms = Date.now() - t0;
       const finishReason = result?.candidates?.[0]?.finishReason;

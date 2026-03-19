@@ -105,7 +105,7 @@ describe('planBlogImageWaves — 웨이브 분할', () => {
     }
   });
 
-  it('블로그 이미지는 manual 모드 사용 (hero 35s, sub 30s timeout)', () => {
+  it('블로그 이미지는 manual 모드 사용 (hero 35s, sub 40s timeout)', () => {
     const waves = planBlogImageWaves(makePrompts(3), 3, STYLE, RATIO);
     const allItems = waves.flatMap(w => w.items);
     for (const item of allItems) {
@@ -157,6 +157,29 @@ describe('planBlogImageWaves — 웨이브 분할', () => {
     expect(waves[0].items).toHaveLength(3);
     expect(waves[1].items).toHaveLength(3);
     expect(waves[2].items).toHaveLength(1);
+  });
+
+  it('medical style: count=5 → 웨이브 3개 (2+2+1) — capacity=2', () => {
+    const waves = planBlogImageWaves(makePrompts(5), 5, 'medical', RATIO);
+    expect(waves).toHaveLength(3);
+    expect(waves[0].items).toHaveLength(2);
+    expect(waves[1].items).toHaveLength(2);
+    expect(waves[2].items).toHaveLength(1);
+    expect(waves[0].items[0].role).toBe('hero');
+  });
+
+  it('medical style: count=3 → 웨이브 2개 (2+1) — capacity=2', () => {
+    const waves = planBlogImageWaves(makePrompts(3), 3, 'medical', RATIO);
+    expect(waves).toHaveLength(2);
+    expect(waves[0].items).toHaveLength(2);
+    expect(waves[1].items).toHaveLength(1);
+  });
+
+  it('illustration style: count=5 → 웨이브 2개 (3+2) — capacity=3 유지', () => {
+    const waves = planBlogImageWaves(makePrompts(5), 5, 'illustration', RATIO);
+    expect(waves).toHaveLength(2);
+    expect(waves[0].items).toHaveLength(3);
+    expect(waves[1].items).toHaveLength(2);
   });
 });
 

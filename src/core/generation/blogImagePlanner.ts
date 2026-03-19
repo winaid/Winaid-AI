@@ -34,6 +34,14 @@ import { getStyleContract } from '../../services/image/imagePromptBuilder';
  */
 const WAVE_CAPACITY = 3;
 
+/**
+ * medical 스타일 전용 웨이브 용량.
+ * medical 프롬프트는 생성 난도가 높아 upstream 부담이 크다.
+ * hero(1장) + sub(1장) = 2장씩 순차 처리하여 동시 요청을 줄인다.
+ * 속도보다 성공률이 더 중요한 스타일이다.
+ */
+const MEDICAL_WAVE_CAPACITY = 2;
+
 export interface BlogImageWave {
   items: ImageQueueItem[];
   /** 'wave-1', 'wave-2', ... — 로그/UX 표시용 */
@@ -69,14 +77,17 @@ export function planBlogImageWaves(
     customStylePrompt,
     // 블로그 전용 timeout 정책: manual 모드 사용
     // auto: hero 25s / sub 18s → Gemini 응답 시간(15~35s) 대비 부족 → timeout 실패 빈발
-    // manual: hero 35s / sub 30s → 응답 시간 대부분 커버 → AI 커버리지 대폭 향상
+    // manual: hero 35s / sub 40s → 응답 시간 대부분 커버 → AI 커버리지 대폭 향상
     // 카드뉴스는 별도 경로(generateSingleImage)를 사용하므로 영향 없음
     mode: 'manual' as const,
   }));
 
+  // medical 스타일은 생성 난도가 높아 웨이브 용량을 줄여 upstream 부담 경감
+  const capacity = style === 'medical' ? MEDICAL_WAVE_CAPACITY : WAVE_CAPACITY;
+
   const waves: BlogImageWave[] = [];
-  for (let offset = 0; offset < allItems.length; offset += WAVE_CAPACITY) {
-    const chunk = allItems.slice(offset, offset + WAVE_CAPACITY);
+  for (let offset = 0; offset < allItems.length; offset += capacity) {
+    const chunk = allItems.slice(offset, offset + capacity);
     waves.push({
       items: chunk,
       label: `wave-${waves.length + 1}`,
@@ -84,7 +95,7 @@ export function planBlogImageWaves(
   }
 
   const desc = waves.map(w => `${w.label}(${w.items.length}장)`).join(' → ');
-  console.info(`[IMG-PLAN] 블로그 ${effectiveCount}장 웨이브 계획: ${desc} (capacity=${WAVE_CAPACITY})`);
+  console.info(`[IMG-PLAN] 블로그 ${effectiveCount}장 웨이브 계획: ${desc} (capacity=${capacity}${style === 'medical' ? '/medical' : ''})`);
 
   return waves;
 }

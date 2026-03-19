@@ -485,16 +485,22 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
 
 
       <div ref={scrollContainerRef} className={`flex-1 overflow-y-auto p-4 lg:p-6 custom-scrollbar transition-colors duration-300 ${darkMode ? 'bg-slate-900' : 'bg-slate-50'}`}>
-        {/* 이미지 생성 실패 알림 배너 */}
+        {/* 이미지 품질 경고 배너 */}
         {content.imageFailCount && content.imageFailCount > 0 && (
-          <div className="mx-4 mb-3 p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-center justify-between">
+          <div className={`mx-4 mb-3 p-3 rounded-xl flex items-center justify-between ${
+            content.imageQualityWarning
+              ? 'bg-orange-50 border border-orange-200'
+              : 'bg-amber-50 border border-amber-200'
+          }`}>
             <div className="flex items-center gap-2">
-              <span className="text-amber-500 text-lg">&#9888;</span>
-              <span className="text-sm text-amber-800 font-medium">
-                본문은 정상 생성되었습니다. 이미지 {content.imageFailCount}장은 AI 서버 과부하로 실패했습니다.
-              </span>
+              <span className={`text-lg ${content.imageQualityWarning ? 'text-orange-500' : 'text-amber-500'}`}>&#9888;</span>
+              <div>
+                <span className={`text-sm font-medium ${content.imageQualityWarning ? 'text-orange-800' : 'text-amber-800'}`}>
+                  {content.imageQualityWarning || `본문은 정상 생성되었습니다. 이미지 ${content.imageFailCount}장은 AI 서버 과부하로 실패했습니다.`}
+                </span>
+              </div>
             </div>
-            <span className="text-xs text-amber-600">나중에 이미지 클릭으로 재생성 가능</span>
+            <span className={`text-xs shrink-0 ml-2 ${content.imageQualityWarning ? 'text-orange-600' : 'text-amber-600'}`}>이미지 클릭으로 재생성 가능</span>
           </div>
         )}
         {activeTab === 'preview' ? (
