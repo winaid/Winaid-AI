@@ -52,7 +52,7 @@ const TIER_CONCURRENCY: Record<ModelTier, number> = {
 
 const IMAGE_TIMEOUT: Record<ImageGenMode, Record<ImageRole, number>> = {
   auto:   { hero: 25000, sub: 18000 },
-  manual: { hero: 35000, sub: 25000 },
+  manual: { hero: 35000, sub: 30000 },  // sub 25s→30s: Gemini 응답 15~35s 범위 커버 확대
 };
 
 // 디버그 verbose 로그 플래그
@@ -211,7 +211,9 @@ export const generateBlogImage = async (
 
   // ── auto tier 결정 ──
   const startTier = resolveStartTier(role, demoSafe);
-  const wallCapMs = isHero ? 50_000 : 30_000;
+  // manual mode(블로그): sub wall cap 30s→50s (2차 ultraMinimal 시도 시간 확보)
+  // auto mode: 기존 30s 유지 (카드뉴스 등 영향 없음)
+  const wallCapMs = isHero ? 50_000 : (mode === 'manual' ? 50_000 : 30_000);
   console.info(`[IMG-TIER] role=${role} startTier=${startTier} mode=${mode} timeout=${timeout}ms wallCap=${wallCapMs / 1000}s`);
 
   // ── 시도 체인: startTier에 따라 동적으로 구성 ──
@@ -316,10 +318,14 @@ export const generateBlogImage = async (
         const nextTier = chain[attempt + 1]?.tier;
         const isCrossTier = nextTier && nextTier !== tier;
 
-        // sub에서 서버 과부하(timeout/503/cooldown) → 2차 시도 건너뛰고 바로 template
-        // 같은 서버에 같은 tier로 재시도해도 다시 timeout될 확률이 높아 wall time만 낭비
-        // SAFETY/RECITATION/no_data 등 프롬프트 문제는 ultra-minimal로 재시도 가치 있음
-        if (!isHero && !isCrossTier && (parsed.isTimeout || parsed.isUpstream503 || parsed.isCooldown)) {
+        // sub에서 서버 레벨 장애(503/cooldown) → 2차 시도 건너뛰고 바로 template
+        // 503/cooldown은 서버 자체 문제이므로 같은 tier 재시도 무의미
+        //
+        // timeout은 skip하지 않음:
+        //   - 2차 시도는 ultraMinimal(80자) vs 1차 subPrompt(200자+)로 완전히 다른 프롬프트
+        //   - timeout 원인이 프롬프트 복잡도이면 ultraMinimal은 성공 확률이 의미 있게 높음
+        //   - wall cap(manual 50s)이 전체 시간을 제한하므로 무한 대기 위험 없음
+        if (!isHero && !isCrossTier && (parsed.isUpstream503 || parsed.isCooldown)) {
           console.info(`[IMG-SKIP-RETRY] type=${role} reason=${parsed.errorType} → skip remaining attempts, fast-template`);
           break;
         }
