@@ -485,24 +485,40 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
 
 
       <div ref={scrollContainerRef} className={`flex-1 overflow-y-auto p-4 lg:p-6 custom-scrollbar transition-colors duration-300 ${darkMode ? 'bg-slate-900' : 'bg-slate-50'}`}>
-        {/* 이미지 품질 경고 배너 */}
-        {content.imageFailCount && content.imageFailCount > 0 && (
-          <div className={`mx-4 mb-3 p-3 rounded-xl flex items-center justify-between ${
-            content.imageQualityWarning
-              ? 'bg-orange-50 border border-orange-200'
-              : 'bg-amber-50 border border-amber-200'
-          }`}>
-            <div className="flex items-center gap-2">
-              <span className={`text-lg ${content.imageQualityWarning ? 'text-orange-500' : 'text-amber-500'}`}>&#9888;</span>
-              <div>
-                <span className={`text-sm font-medium ${content.imageQualityWarning ? 'text-orange-800' : 'text-amber-800'}`}>
-                  {content.imageQualityWarning || `본문은 정상 생성되었습니다. 이미지 ${content.imageFailCount}장은 AI 서버 과부하로 실패했습니다.`}
-                </span>
+        {/* 이미지 품질 상태 배너 */}
+        {content.imageFailCount != null && content.imageFailCount > 0 && (() => {
+          const totalImages = content.imagePrompts?.length || 0;
+          const aiCount = totalImages - content.imageFailCount;
+          const isSevere = !!content.imageQualityWarning;
+          return (
+            <div className={`mx-4 mb-3 p-3 rounded-xl ${
+              isSevere ? 'bg-orange-50 border border-orange-200' : 'bg-amber-50 border border-amber-200'
+            }`}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className={`text-lg ${isSevere ? 'text-orange-500' : 'text-amber-500'}`}>&#9888;</span>
+                  <span className={`text-sm font-medium ${isSevere ? 'text-orange-800' : 'text-amber-800'}`}>
+                    {content.imageQualityWarning || `본문은 정상 생성되었습니다. 이미지 ${content.imageFailCount}장은 AI 서버 과부하로 실패했습니다.`}
+                  </span>
+                </div>
+                <span className={`text-xs shrink-0 ml-2 ${isSevere ? 'text-orange-600' : 'text-amber-600'}`}>이미지 클릭으로 재생성 가능</span>
               </div>
+              {totalImages > 0 && (
+                <div className="flex items-center gap-3 mt-2 ml-7">
+                  <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
+                    AI {aiCount}장
+                  </span>
+                  <span className="inline-flex items-center gap-1 text-xs font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
+                    대체 {content.imageFailCount}장
+                  </span>
+                  {isSevere && (
+                    <span className="text-xs text-orange-600 font-medium">이미지 재생성을 권장합니다</span>
+                  )}
+                </div>
+              )}
             </div>
-            <span className={`text-xs shrink-0 ml-2 ${content.imageQualityWarning ? 'text-orange-600' : 'text-amber-600'}`}>이미지 클릭으로 재생성 가능</span>
-          </div>
-        )}
+          );
+        })()}
         {activeTab === 'preview' ? (
           <div className={`relative ${content.postType === 'card_news' ? 'max-w-xl' : 'max-w-5xl'} mx-auto flex gap-4`}>
             {/* 섹션별 재생성 패널 (블로그 전용) - 사이드 패널 */}

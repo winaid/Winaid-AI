@@ -601,16 +601,9 @@ const AdminPage: React.FC<AdminPageProps> = ({ onAdminVerified }) => {
   // 초기값을 localStorage에서 직접 읽어서 설정 (useEffect 내 setState 방지)
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
     if (typeof window !== 'undefined') {
-      // sessionStorage 우선, 없으면 localStorage (로그인 유지)
+      // sessionStorage에서만 인증 상태 확인 (탭 닫으면 소멸)
+      // 보안: localStorage에 평문 비밀번호를 저장하지 않음
       if (sessionStorage.getItem('ADMIN_AUTHENTICATED') === 'true') return true;
-      if (localStorage.getItem('ADMIN_PERSIST') === 'true') {
-        const savedToken = localStorage.getItem('ADMIN_TOKEN');
-        if (savedToken) {
-          sessionStorage.setItem('ADMIN_AUTHENTICATED', 'true');
-          sessionStorage.setItem('ADMIN_TOKEN', savedToken);
-          return true;
-        }
-      }
     }
     return false;
   });
@@ -1060,12 +1053,14 @@ const AdminPage: React.FC<AdminPageProps> = ({ onAdminVerified }) => {
       }
 
       // 2단계: 인증 성공 — 즉시 로그인 처리
+      // 보안: sessionStorage에만 저장 (탭 닫으면 소멸).
+      // localStorage에 평문 비밀번호를 저장하지 않는다.
       setIsAuthenticated(true);
       sessionStorage.setItem('ADMIN_AUTHENTICATED', 'true');
       sessionStorage.setItem('ADMIN_TOKEN', password);
       if (rememberMe) {
-        localStorage.setItem('ADMIN_PERSIST', 'true');
-        localStorage.setItem('ADMIN_TOKEN', password);
+        // remember-me는 세션 내에서만 유지 (localStorage에 비밀번호 저장 안 함)
+        sessionStorage.setItem('ADMIN_PERSIST', 'true');
       }
       onAdminVerified?.();
 
@@ -1116,6 +1111,8 @@ const AdminPage: React.FC<AdminPageProps> = ({ onAdminVerified }) => {
     setIsAuthenticated(false);
     sessionStorage.removeItem('ADMIN_AUTHENTICATED');
     sessionStorage.removeItem('ADMIN_TOKEN');
+    sessionStorage.removeItem('ADMIN_PERSIST');
+    // legacy cleanup: 이전 버전이 localStorage에 저장했을 수 있음
     localStorage.removeItem('ADMIN_PERSIST');
     localStorage.removeItem('ADMIN_TOKEN');
   };
