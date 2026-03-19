@@ -60,6 +60,23 @@ function stripGateSignal(progress: string): string {
   return progress.replace(/__STAGE:[A-Z_]+__\s*/g, '').trim();
 }
 
+/**
+ * 내부 로직 메시지를 사용자 친화적 톤으로 교체.
+ * "Stage A", "소제목 2/5", "폴리싱" 같은 파이프라인 용어를 숨긴다.
+ */
+function humanizeProgress(msg: string): string {
+  if (!msg) return msg;
+  // 파이프라인 내부 단계명 교체
+  if (/stage\s*[abc]/i.test(msg) || msg.includes('폴리싱')) return '';
+  if (msg.includes('소제목') && msg.includes('/')) return '';
+  if (msg.includes('도입부 작성')) return '';
+  if (msg.includes('섹션') && /\d/.test(msg)) return '';
+  if (msg.includes('마무리 작성')) return '';
+  if (msg.includes('파이프라인')) return '';
+  if (msg.includes('AI 냄새')) return '';
+  return msg;
+}
+
 /** gate 신호 추출 */
 function extractGateSignal(progress: string): string | null {
   const m = progress.match(/__STAGE:([A-Z_]+)__/);
@@ -259,8 +276,8 @@ export function useContentGeneration(deps: ContentGenerationDeps): ContentGenera
         const gateSignal = extractGateSignal(p);
         if (gateSignal === 'TEXT_READY') textReadyRef_.current = true;
 
-        // 사용자에게 보이는 progress에서 gate 신호 제거
-        const cleanProgress = stripGateSignal(p);
+        // 사용자에게 보이는 progress에서 gate 신호 제거 + 내부 용어 교체
+        const cleanProgress = humanizeProgress(stripGateSignal(p));
 
         // gate + monotonic 기반 displayStage 결정
         targetSetState(prev => {

@@ -198,16 +198,44 @@ export const generateBlogImage = async (
   // ── 공통 제약 ──
   const COMMON_CONSTRAINTS = 'No text, no letters, no typography, no watermark, no logo. No hanbok, no traditional clothing, no cultural costume, no historical styling, no wedding styling, no festival styling. No exaggerated poses, no glamorous fashion portrait. Single scene only — no split screen, no diptych, no collage, no side-by-side panels, no before-after comparison, no multiple frames in one image.';
 
+  // ── 스타일별 분위기/인물 프리셋 (hero 프롬프트용) ──
+  // photo만 실사 톤, 나머지는 스타일 고유 톤 유지
+  const isPhoto = style === 'photo' && !customStylePrompt;
+  const heroAtmosphere = isPhoto
+    ? 'Calm, trustworthy, realistic editorial photo. The setting should match the subject — hospital/clinic if about treatment, home/daily life if about prevention or symptoms.'
+    : style === 'medical'
+    ? 'Medical educational 3D illustration style. NOT a photograph. Clean, clinical, diagrammatic composition with semi-transparent anatomical elements.'
+    : style === 'illustration'
+    ? '3D rendered illustration, Blender/Pixar style. NOT a photograph. Soft pastel lighting, rounded friendly shapes, clean gradient background.'
+    : 'Follow the custom style direction below. Do NOT default to photorealistic unless explicitly requested.';
+
+  const heroPerson = isPhoto
+    ? 'Modern Korean adult with natural Korean facial features, wearing contemporary everyday clothing or realistic medical attire.'
+    : style === 'medical'
+    ? 'If a person is needed: stylized 3D rendered Korean adult, simplified features. Anatomical/medical focus is primary.'
+    : style === 'illustration'
+    ? '3D rendered character — modern Korean adult with friendly rounded features, contemporary casual or medical clothing. NOT photorealistic.'
+    : 'Modern Korean adult matching the custom style below.';
+
   // ── 프롬프트 전략 ──
+  const heroStyleDirective = customStylePrompt || BLOG_IMAGE_STYLE_COMPACT[style] || BLOG_IMAGE_STYLE_COMPACT.illustration;
   const heroPrompt = `Generate a 16:9 landscape editorial image for a Korean medical/dental health blog.
 [Subject] ${promptText}
-[Person] Modern Korean adult with natural Korean facial features, wearing contemporary everyday clothing or realistic medical attire.
-[Atmosphere] Calm, trustworthy, realistic editorial photo. The setting should match the subject — hospital/clinic if about treatment, home/daily life if about prevention or symptoms.
-[Style] ${customStylePrompt || BLOG_IMAGE_STYLE_COMPACT[style] || BLOG_IMAGE_STYLE_COMPACT.illustration}
+[Person] ${heroPerson}
+[Atmosphere] ${heroAtmosphere}
+[Style] ${heroStyleDirective}
 [Rules] ${COMMON_CONSTRAINTS}`.trim();
 
-  const subPrompt = `Korean health blog image: ${promptText.substring(0, 140)}. Modern Korean adult, natural Korean facial features, contemporary clothing. ${styleKw}. ${COMMON_CONSTRAINTS} 16:9.`.trim();
-  const ultraMinimal = `${promptText.substring(0, 80)}. Modern Korean adult. ${styleKw}. No text, no watermark, no hanbok. 16:9.`.trim();
+  // sub: 스타일 분기를 반영 (photo일 때만 실사 인물 묘사)
+  const subPersonHint = isPhoto
+    ? 'Modern Korean adult, natural Korean facial features, contemporary clothing.'
+    : style === 'medical'
+    ? '3D medical illustration style, NOT a photo.'
+    : style === 'illustration'
+    ? '3D illustration style, friendly rounded character, NOT a photo.'
+    : '';
+  const subPrompt = `Korean health blog image: ${promptText.substring(0, 140)}. ${subPersonHint} ${styleKw}. ${COMMON_CONSTRAINTS} 16:9.`.trim();
+  const ultraMinimal = `${promptText.substring(0, 80)}. ${subPersonHint} ${styleKw}. No text, no watermark, no hanbok. 16:9.`.trim();
 
   // ── auto tier 결정 ──
   const startTier = resolveStartTier(role, demoSafe);

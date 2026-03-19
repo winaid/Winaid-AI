@@ -204,11 +204,11 @@ function LoadingView({ darkMode, progress, postType, displayStage }: {
 interface StageInfo { icon: string; label: string; defaultMsg: string; hint: string; }
 
 const BLOG_STAGES: Record<number, StageInfo> = {
-  0: { icon: '\u{270D}\u{FE0F}', label: '준비 중', defaultMsg: '생성을 준비하고 있습니다', hint: 'SEO 키워드를 분석합니다' },
-  1: { icon: '\u{270D}\u{FE0F}', label: '글 작성', defaultMsg: 'SEO 최적화 콘텐츠를 작성하고 있습니다', hint: '네이버 스마트블록에 최적화된 구조로 작성합니다' },
-  2: { icon: '\u{1F50D}', label: '글 검토', defaultMsg: '작성된 글을 검토하고 있습니다', hint: '문체 교정 및 의료 정확성을 확인합니다' },
-  3: { icon: '\u{1F3A8}', label: '이미지 생성', defaultMsg: '이미지를 생성하고 있습니다', hint: '이미지 수에 따라 30초~2분 소요됩니다' },
-  4: { icon: '\u{1F4BE}', label: '저장 중', defaultMsg: '결과를 저장하고 있습니다', hint: '거의 완료되었습니다' },
+  0: { icon: '\u{270D}\u{FE0F}', label: '글 준비 중', defaultMsg: '좋은 문장을 한 줄씩 꺼내고 있어요', hint: '키워드를 분석하고 구조를 설계합니다' },
+  1: { icon: '\u{270D}\u{FE0F}', label: '글 준비 중', defaultMsg: '좋은 문장을 한 줄씩 꺼내고 있어요', hint: '전문 의료 콘텐츠를 작성하고 있습니다' },
+  2: { icon: '\u{2728}', label: '내용 다듬는 중', defaultMsg: '읽는 맛이 나도록 다듬고 있어요', hint: '문체 교정과 정확성 검토를 진행합니다' },
+  3: { icon: '\u{1F3A8}', label: '이미지 만드는 중', defaultMsg: '글과 잘 어울리는 비주얼을 고르는 중이에요', hint: '이미지 수에 따라 30초~2분 정도 걸립니다' },
+  4: { icon: '\u{1F389}', label: '마무리하는 중', defaultMsg: '거의 다 왔어요, 마지막 손질만 남았어요', hint: '결과를 저장하고 있습니다' },
 };
 
 const PRESS_STAGE: StageInfo = {

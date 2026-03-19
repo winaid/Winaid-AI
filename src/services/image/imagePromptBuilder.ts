@@ -162,13 +162,13 @@ export const STYLE_KEYWORDS: Record<ImageStyle, string> = {
 // ── 블로그 이미지용 슬림 스타일 키워드 (오케스트레이터에서 사용) ──
 export const BLOG_IMAGE_STYLE_COMPACT: Record<string, string> = {
   illustration: '3D rendered illustration, Blender style, soft studio lighting, pastel colors, rounded shapes, clean gradient background, single unified scene, one coherent composition, friendly modern Korean dental clinic interior, modern Korean adult patient or doctor in contemporary clothing, natural Korean facial features, no hanbok, no traditional costume, no text, no watermark',
-  medical: 'medical 3D illustration, anatomical render, clinical lighting, semi-transparent organs, blue-white palette, educational, professional Korean medical clinic context, no text, no watermark',
+  medical: 'medical 3D illustration, anatomical render, NOT a photograph, NOT photorealistic, clinical lighting, semi-transparent organs, blue-white palette, educational diagram style, professional Korean medical clinic context, no text, no watermark',
   photo: 'photorealistic, DSLR, 35mm lens, natural lighting, shallow depth of field, bokeh, modern Korean hospital or dental clinic interior, modern Korean adult in contemporary everyday clothing or professional medical attire, natural Korean facial features, calm trustworthy atmosphere, no hanbok, no traditional clothing, no cultural costume, no text, no watermark',
 };
 
 // ── 오케스트레이터용 짧은 스타일 키워드 ──
 export const STYLE_KEYWORD_SHORT: Record<string, string> = {
   illustration: '3D illustration, pastel, Blender style, soft lighting, single scene, Korean clinic, no text, no watermark',
-  medical: 'medical 3D, anatomical, clinical, blue-white, no text, no watermark',
+  medical: 'medical 3D illustration, NOT a photo, anatomical, clinical, blue-white, no text, no watermark',
   photo: 'photorealistic, DSLR, natural lighting, bokeh, Korean hospital, no text, no watermark',
 };
