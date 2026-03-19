@@ -87,30 +87,52 @@
     <!-- Service Worker 업데이트 핸들러 -->
     <script>
       if ('serviceWorker' in navigator) {
-        // 서비스 워커로부터 업데이트 메시지 수신
-        navigator.serviceWorker.addEventListener('message', (event) => {
+        // ── 이중 reload 방어 플래그 ──
+        var _swReloading = false;
+
+        function swReload(reason) {
+          if (_swReloading) return;
+          _swReloading = true;
+          console.log('[SW-Update] ' + reason + ' → 페이지 새로고침');
+          // reload(true)는 deprecated — 대신 location.reload() 사용
+          // _headers no-cache 설정이 HTTP 캐시를 방지하므로 안전
+          window.location.reload();
+        }
+
+        // ── SW activate 완료 후 메시지 수신 → reload ──
+        // 이 시점에는 이미 구 캐시 삭제 + clients.claim() 완료
+        navigator.serviceWorker.addEventListener('message', function(event) {
           if (event.data && event.data.type === 'SW_UPDATED') {
-            console.log('[App] Service Worker updated to:', event.data.version);
-            // 페이지 강제 새로고침 (캐시 무시)
-            window.location.reload(true);
+            swReload('SW activated v=' + event.data.version);
           }
         });
-        
-        // 서비스 워커 등록 및 업데이트 감지
-        navigator.serviceWorker.register('/sw.js').then((registration) => {
-          // 새 서비스 워커가 대기 중이면 즉시 활성화
-          registration.addEventListener('updatefound', () => {
-            const newWorker = registration.installing;
+
+        // ── SW 등록 + 강제 업데이트 체크 ──
+        navigator.serviceWorker.register('/sw.js').then(function(registration) {
+          // [핵심 수정] 페이지 로드마다 sw.js 변경 여부를 서버에 확인
+          // 이전: register()만 호출 → 브라우저 기본 24시간 체크 주기에 의존
+          // → 배포 후 사용자가 수동 캐시 삭제 전까지 구버전 유지
+          registration.update().catch(function() {});
+
+          // 장시간 세션(생성 작업 중)에서도 새 버전 감지
+          setInterval(function() {
+            registration.update().catch(function() {});
+          }, 60 * 1000); // 60초마다 sw.js 변경 체크
+
+          // ── updatefound: 새 SW가 설치되고 activated 상태가 되면 reload ──
+          // 이전: installed 상태에서 reload → 구 캐시 삭제 전에 reload되는 레이스 발생
+          // 수정: activated 상태까지 기다림 → 구 캐시 삭제 + claim 완료 보장
+          registration.addEventListener('updatefound', function() {
+            var newWorker = registration.installing;
             if (newWorker) {
-              newWorker.addEventListener('statechange', () => {
-                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                  console.log('[App] New Service Worker installed, refreshing...');
-                  window.location.reload(true);
+              newWorker.addEventListener('statechange', function() {
+                if (newWorker.state === 'activated' && navigator.serviceWorker.controller) {
+                  swReload('SW updatefound → activated');
                 }
               });
             }
           });
-        }).catch(err => console.log('[App] SW registration failed:', err));
+        }).catch(function(err) { console.log('[SW] registration failed:', err); });
       }
     </script>
 </body>
