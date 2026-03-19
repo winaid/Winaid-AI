@@ -285,9 +285,6 @@ async function _executeBlogImageChain(params: _ChainParams): Promise<BlogImageOu
   const startTier = resolveStartTier(role, demoSafe);
   // Wall cap: hero 50s, sub(manual) 75s (2 attempts with 40s+25s), sub(auto) 30s
   const wallCapMs = isHero ? 50_000 : (mode === 'manual' ? 75_000 : 30_000);
-  // chainType: 실제 chain 구조를 명확히 표시 (proAvail=pro가 chain에 포함 여부)
-  const chainType = isHero && startTier === 'pro' ? 'nb2→pro' : 'nb2→nb2';
-  console.info(`[IMG-TIER] role=${role} chainType=${chainType} proAvail=${startTier === 'pro'} mode=${mode} timeout=${timeout}ms wallCap=${wallCapMs / 1000}s`);
 
   let chain: AttemptDef[];
 
@@ -312,6 +309,11 @@ async function _executeBlogImageChain(params: _ChainParams): Promise<BlogImageOu
       { model: GEMINI_MODEL.IMAGE_FLASH, tier: 'nb2', prompt: ultraMinimal, label: '#2(nb2-minimal)', timeout: 25_000 },
     ];
   }
+
+  // chainType: chain 배열의 실제 tier 순서를 로그에 반영
+  const chainType = chain.map(c => c.tier).join('→');
+  const slotTier = chain[0].tier; // 슬롯 예약은 첫 attempt tier 기준
+  console.info(`[IMG-TIER] role=${role} chain=[${chain.map(c => c.label).join(', ')}] tierPath=${chainType} slotTier=${slotTier} mode=${mode} timeout=${timeout}ms wallCap=${wallCapMs / 1000}s`);
 
   const maxAttempts = chain.length;
   const WALL_TIME_CAP_MS = wallCapMs;
@@ -481,8 +483,11 @@ export async function generateImageQueue(
   const results: ImageQueueResult[] = [];
 
   const tasks = sorted.map(async (item) => {
-    const initialTier: ModelTier = resolveStartTier(item.role, demoSafe);
-    const { queueWaitMs } = await acquireImageSlot(item.index, totalImages, item.role, initialTier);
+    // 슬롯 예약: chain의 첫 attempt는 항상 nb2이므로 nb2 기준으로 예약.
+    // resolveStartTier는 chain 구성(pro 포함 여부)만 결정하며,
+    // 실제 첫 attempt tier와 슬롯 tier를 일치시킨다.
+    const slotTier: ModelTier = 'nb2';
+    const { queueWaitMs } = await acquireImageSlot(item.index, totalImages, item.role, slotTier);
 
     safeProgress(`🎨 이미지 ${item.index + 1}/${totalImages}장 생성 중 (${item.role})...`);
     const t0 = Date.now();
@@ -515,7 +520,7 @@ export async function generateImageQueue(
       const errorType = err?.errorType || (err?.isCooldown ? 'cooldown' : String(err?.status || 'unknown'));
 
       if (err?.isCooldown || err?.nextAvailableAt || err?.retryAfterMs) {
-        reportCooldown(initialTier, err.nextAvailableAt, err.retryAfterMs);
+        reportCooldown(slotTier, err.nextAvailableAt, err.retryAfterMs);
       }
 
       const templateData = generateTemplateFallback(item.prompt, item.style, item.role);
@@ -527,7 +532,7 @@ export async function generateImageQueue(
         elapsedMs, queueWaitMs, errorType,
       });
     } finally {
-      releaseImageSlot(initialTier);
+      releaseImageSlot(slotTier);
     }
   });
 

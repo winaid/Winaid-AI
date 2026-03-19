@@ -214,13 +214,16 @@ export function useAiRefine({
       const imgRatio = isCardNews ? '1:1' : '16:9';
       const customStylePrompt = savedCustomStylePrompt || undefined;
 
+      // 블로그: 1번 이미지만 hero, 나머지는 sub
+      const imageRole = (regenIndex === 1) ? 'hero' : 'sub';
+
       let newImageData: string;
       if (isCardNews) {
         console.log('🔄 카드뉴스 이미지 재생성:', { style, customStylePrompt: customStylePrompt?.substring(0, 50) });
         newImageData = await generateSingleImage(regenPrompt.trim(), style, imgRatio, customStylePrompt);
       } else {
-        console.log('🔄 블로그 이미지 재생성 (manual):', { style, customStylePrompt: customStylePrompt?.substring(0, 50) });
-        newImageData = (await generateBlogImage(regenPrompt.trim(), style, imgRatio, customStylePrompt, 'manual', 'hero')).data;
+        console.log(`🔄 블로그 이미지 재생성 (manual/${imageRole}):`, { index: regenIndex, style, customStylePrompt: customStylePrompt?.substring(0, 50) });
+        newImageData = (await generateBlogImage(regenPrompt.trim(), style, imgRatio, customStylePrompt, 'manual', imageRole)).data;
       }
 
       if (newImageData) {
@@ -235,7 +238,11 @@ export function useAiRefine({
           if (!hadIndex) {
             targetImg.setAttribute('data-image-index', String(regenIndex));
           }
-          console.info(`[IMG_REGEN] before index=${regenIndex} | after data-image-index=${targetImg.getAttribute('data-image-index')} | preserved=${hadIndex}`);
+          // 재생성 성공 → 메타데이터 갱신: template→ai
+          targetImg.setAttribute('data-image-source', 'ai');
+          targetImg.setAttribute('data-fallback', 'false');
+          targetImg.setAttribute('data-image-role', imageRole);
+          console.info(`[IMG_REGEN] before index=${regenIndex} | after data-image-index=${targetImg.getAttribute('data-image-index')} | preserved=${hadIndex} | role=${imageRole}`);
           setLocalHtml(tempDiv.innerHTML);
         }
         const { toast } = await import('../components/Toast');
@@ -293,12 +300,14 @@ export function useAiRefine({
             if (!targetIdx) return;
             const style = content.imageStyle || 'illustration';
             const customStylePrompt = savedCustomStylePrompt || undefined;
-            console.log('🔄 AI 보정 이미지 재생성:', { targetIdx, style, isCardNews, customStylePrompt: customStylePrompt?.substring(0, 50) });
+            // 블로그: 1번 이미지만 hero, 나머지는 sub
+            const role = (targetIdx === 1) ? 'hero' : 'sub';
+            console.log(`🔄 AI 보정 이미지 재생성 (${role}):`, { targetIdx, style, isCardNews, customStylePrompt: customStylePrompt?.substring(0, 50) });
 
             if (isCardNews) {
               newImageMap[targetIdx] = await generateSingleImage(prompt, style, '1:1', customStylePrompt);
             } else {
-              newImageMap[targetIdx] = (await generateBlogImage(prompt, style, '16:9', customStylePrompt, 'manual', 'hero')).data;
+              newImageMap[targetIdx] = (await generateBlogImage(prompt, style, '16:9', customStylePrompt, 'manual', role)).data;
             }
           }),
         );
@@ -311,8 +320,9 @@ export function useAiRefine({
             const imgNum = parseInt(idx, 10);
             const newSrc = newImageMap[imgNum];
             if (newSrc) {
-              console.info(`[IMG_REGEN] marker [IMG_${imgNum}] → img with data-image-index="${imgNum}"`);
-              return `<div class="content-image-wrapper"><img src="${newSrc}" data-image-index="${imgNum}" /></div>`;
+              const markerRole = imgNum === 1 ? 'hero' : 'sub';
+              console.info(`[IMG_REGEN] marker [IMG_${imgNum}] → img with data-image-index="${imgNum}" role=${markerRole}`);
+              return `<div class="content-image-wrapper"><img src="${newSrc}" data-image-index="${imgNum}" data-image-source="ai" data-fallback="false" data-image-role="${markerRole}" /></div>`;
             }
             return '';
           });
@@ -332,7 +342,12 @@ export function useAiRefine({
                 if (!hadIndex) {
                   img.setAttribute('data-image-index', String(ordinal));
                 }
-                console.info(`[IMG_REGEN] DOM img[${i}] src 교체 | data-image-index=${img.getAttribute('data-image-index')} | preserved=${hadIndex}`);
+                // 재생성 성공 → 메타데이터 갱신
+                const imgRole = ordinal === 1 ? 'hero' : 'sub';
+                img.setAttribute('data-image-source', 'ai');
+                img.setAttribute('data-fallback', 'false');
+                img.setAttribute('data-image-role', imgRole);
+                console.info(`[IMG_REGEN] DOM img[${i}] src 교체 | data-image-index=${img.getAttribute('data-image-index')} | preserved=${hadIndex} | role=${imgRole}`);
               }
             });
             workingHtml = doc.body.innerHTML;

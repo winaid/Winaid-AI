@@ -83,6 +83,10 @@ export interface AssemblyImage {
   index: number;
   data?: string;  // base64 data URI
   prompt: string;
+  /** 이미지 출처: ai-image | template | placeholder */
+  resultType?: string;
+  /** 이미지 역할: hero | sub */
+  role?: string;
 }
 
 // ── Block 3: 마크다운/JSON 안전망 ──
@@ -283,11 +287,16 @@ export function insertImageData(
         displaySrc = img.data;
       }
 
+      // 이미지 출처/역할 메타데이터
+      const imgSource = img.resultType === 'template' ? 'template' : 'ai';
+      const isFallback = img.resultType === 'template' || img.resultType === 'placeholder';
+      const imgRole = img.role || (img.index === 1 ? 'hero' : 'sub');
+
       let imgHtml = "";
       if (postType === 'card_news') {
-        imgHtml = `<img src="${displaySrc}" alt="${img.prompt}" data-image-index="${img.index}" class="card-full-img" style="width: 100%; height: auto; display: block;" />`;
+        imgHtml = `<img src="${displaySrc}" alt="${img.prompt}" data-image-index="${img.index}" data-image-source="${imgSource}" data-fallback="${isFallback}" data-image-role="${imgRole}" class="card-full-img" style="width: 100%; height: auto; display: block;" />`;
       } else {
-        imgHtml = `<div class="content-image-wrapper"><img src="${displaySrc}" alt="${img.prompt}" data-image-index="${img.index}" /></div>`;
+        imgHtml = `<div class="content-image-wrapper"><img src="${displaySrc}" alt="${img.prompt}" data-image-index="${img.index}" data-image-source="${imgSource}" data-fallback="${isFallback}" data-image-role="${imgRole}" /></div>`;
       }
       result = result.replace(pattern, imgHtml);
     } else {

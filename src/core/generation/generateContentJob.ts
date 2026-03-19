@@ -487,7 +487,7 @@ async function _orchestrateBlog(
   const fallbackReferenceImage = request.coverStyleImage || request.contentStyleImage;
   const fallbackCopyMode = request.styleCopyMode;
 
-  let images: { index: number; data: string; prompt: string }[] = [];
+  let images: { index: number; data: string; prompt: string; resultType?: string; role?: string }[] = [];
   let imageFailCount = 0;
   let _imageQualityWarning: string | undefined;
 
@@ -499,13 +499,36 @@ async function _orchestrateBlog(
     console.info(`[IMG-CONTRACT] generatedPromptCount=${generatedPromptCount} selected=${selectedImageCount}`);
   }
 
-  // 비상 패딩
+  // 비상 패딩: 부족한 프롬프트를 본문 구조 기반으로 보충
   if (maxImages > 0 && textData.imagePrompts.length < maxImages) {
-    console.warn(`[IMG-CONTRACT] ⚠️ 비상 패딩 발동! generated=${textData.imagePrompts.length} selected=${maxImages} — 파이프라인 프롬프트 부족`);
-    const defaultPrompt = `${request.topic} — 의료/구강 건강 맥락의 현실적 이미지. ${request.imageStyle === 'illustration' ? '3D 일러스트, 파스텔톤' : request.imageStyle === 'medical' ? '의학 해부도, 전문 의료 이미지' : '실사 사진, DSLR 촬영'}. 현대 한국인, 현대적 일상복 또는 의료복.`;
+    const deficit = maxImages - textData.imagePrompts.length;
+    console.warn(`[IMG-CONTRACT] ⚠️ 비상 패딩 발동! generated=${textData.imagePrompts.length} selected=${maxImages} deficit=${deficit}`);
+
+    // 본문에서 h3 소제목을 추출하여 섹션 맥락 기반 프롬프트 생성
+    const bodyContent = textData.content || '';
+    const h3Matches = bodyContent.match(/<h3[^>]*>([\s\S]*?)<\/h3>/gi) || [];
+    const sectionTitles = h3Matches
+      .map((m: string) => m.replace(/<[^>]+>/g, '').trim())
+      .filter((t: string) => t.length > 2 && !t.includes('FAQ') && !t.includes('자주 묻는'));
+
+    const styleHint = request.imageStyle === 'illustration'
+      ? '3D 일러스트, Blender 스타일, 파스텔톤, 친근한 분위기'
+      : request.imageStyle === 'medical'
+      ? '3D 의학 일러스트, 임상 시각화, 청결한 배경'
+      : '실사 사진, 현대 한국인, 자연스러운 분위기';
+
+    // 이미 할당된 프롬프트 수 = 다음 패딩의 시작 인덱스
+    let paddingIdx = textData.imagePrompts.length;
     while (textData.imagePrompts.length < maxImages) {
-      textData.imagePrompts.push(defaultPrompt);
-      console.log(`   + 패딩 프롬프트 추가: ${textData.imagePrompts.length}/${maxImages}`);
+      // 섹션 제목이 있으면 해당 맥락 사용, 없으면 토픽 기반
+      const sectionIdx = paddingIdx - (maxImages - deficit); // deficit 시작부터 순서 배정
+      const sectionContext = sectionTitles[sectionIdx] || sectionTitles[sectionIdx % Math.max(sectionTitles.length, 1)];
+      const contextualPrompt = sectionContext
+        ? `${request.topic} — "${sectionContext}" 섹션 관련 이미지. ${styleHint}. 단일 장면, 16:9.`
+        : `${request.topic} — 건강/의료 블로그 보조 이미지. ${styleHint}. 단일 장면, 16:9.`;
+      textData.imagePrompts.push(contextualPrompt);
+      console.log(`   + 구조화 패딩 프롬프트 추가 [${textData.imagePrompts.length}/${maxImages}]: context="${sectionContext || 'topic-only'}"`);
+      paddingIdx++;
     }
   }
 
@@ -579,7 +602,7 @@ async function _orchestrateBlog(
         allQueueResults.push(...waveResults);
 
         for (const qr of waveResults) {
-          images.push({ index: qr.index + 1, data: qr.data, prompt: qr.prompt });
+          images.push({ index: qr.index + 1, data: qr.data, prompt: qr.prompt, resultType: qr.resultType, role: qr.role });
           if (qr.status === 'fallback') imageFailCount++;
         }
       }
@@ -604,7 +627,7 @@ async function _orchestrateBlog(
           // hero 교체: images 배열 + allQueueResults 모두 갱신
           const heroImgIdx = images.findIndex(img => img.index === 1);
           if (heroImgIdx >= 0) {
-            images[heroImgIdx] = { index: 1, data: retryHero.data, prompt: retryHero.prompt };
+            images[heroImgIdx] = { index: 1, data: retryHero.data, prompt: retryHero.prompt, resultType: retryHero.resultType, role: 'hero' };
             imageFailCount = Math.max(0, imageFailCount - 1);
           }
           const heroQRIdx = allQueueResults.findIndex(r => r.role === 'hero');
