@@ -8,7 +8,7 @@
  * 모든 함수가 순수 함수이므로 mock 없이 입력→출력 검증만 수행.
  */
 import { describe, it, expect } from 'vitest';
-import { planBlogImageWaves, insertBlogImageMarkers } from '../blogImagePlanner';
+import { planBlogImageWaves, insertBlogImageMarkers, buildHeroRetryItem } from '../blogImagePlanner';
 import type { ImageStyle } from '../../../types';
 
 // ── 테스트 헬퍼 ──
@@ -102,6 +102,14 @@ describe('planBlogImageWaves — 웨이브 분할', () => {
     expect(allItems[0].role).toBe('hero');
     for (let i = 1; i < allItems.length; i++) {
       expect(allItems[i].role).toBe('sub');
+    }
+  });
+
+  it('블로그 이미지는 manual 모드 사용 (hero 35s, sub 25s timeout)', () => {
+    const waves = planBlogImageWaves(makePrompts(3), 3, STYLE, RATIO);
+    const allItems = waves.flatMap(w => w.items);
+    for (const item of allItems) {
+      expect(item.mode).toBe('manual');
     }
   });
 
@@ -251,5 +259,30 @@ describe('insertBlogImageMarkers — intro 없는 블로그', () => {
     const img1Pos = result.indexOf('[IMG_1]');
     const firstH3End = result.indexOf('</h3>') + '</h3>'.length;
     expect(img1Pos).toBeGreaterThan(firstH3End);
+  });
+});
+
+// ═══════════════════════════════════════
+// C. buildHeroRetryItem — hero 재시도 아이템
+// ═══════════════════════════════════════
+
+describe('buildHeroRetryItem — hero 재시도 전략', () => {
+  it('role=hero, index=0, mode=manual', () => {
+    const item = buildHeroRetryItem('임플란트 치료', STYLE, RATIO);
+    expect(item.role).toBe('hero');
+    expect(item.index).toBe(0);
+    expect(item.mode).toBe('manual');
+  });
+
+  it('프롬프트가 간결 (원본 topic 60자 이내 + 짧은 지시)', () => {
+    const longTopic = '가나다라마바사아자차카타파하'.repeat(10); // 140자
+    const item = buildHeroRetryItem(longTopic, STYLE, RATIO);
+    // 프롬프트 전체 길이가 합리적인 범위 (200자 이내)
+    expect(item.prompt.length).toBeLessThan(200);
+  });
+
+  it('customStylePrompt가 전달되면 포함', () => {
+    const item = buildHeroRetryItem('치아미백', STYLE, RATIO, '밝은 톤');
+    expect(item.customStylePrompt).toBe('밝은 톤');
   });
 });

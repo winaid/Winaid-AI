@@ -66,7 +66,11 @@ export function planBlogImageWaves(
     style,
     aspectRatio,
     customStylePrompt,
-    mode: 'auto' as const,
+    // 블로그 전용 timeout 정책: manual 모드 사용
+    // auto: hero 25s / sub 18s → Gemini 응답 시간(15~35s) 대비 부족 → timeout 실패 빈발
+    // manual: hero 35s / sub 25s → 응답 시간 대부분 커버 → AI 커버리지 대폭 향상
+    // 카드뉴스는 별도 경로(generateSingleImage)를 사용하므로 영향 없음
+    mode: 'manual' as const,
   }));
 
   const waves: BlogImageWave[] = [];
@@ -82,6 +86,40 @@ export function planBlogImageWaves(
   console.info(`[IMG-PLAN] 블로그 ${effectiveCount}장 웨이브 계획: ${desc} (capacity=${WAVE_CAPACITY})`);
 
   return waves;
+}
+
+// ═══════════════════════════════════════════════
+// hero 재시도 전략
+// ═══════════════════════════════════════════════
+
+/**
+ * hero가 template fallback된 경우 간결 프롬프트로 1회 재시도 아이템을 생성한다.
+ *
+ * 재시도 근거:
+ *   - hero의 기본 chain은 heroPrompt(5줄 복합 프롬프트)로 2회 시도
+ *   - startTier=pro일 때 두 번 다 heroPrompt 사용 → 복잡한 프롬프트가 원인이면 둘 다 실패
+ *   - 재시도는 간결 프롬프트(1줄) + manual mode(35s) → 성공 확률이 의미 있게 높음
+ *   - "같은 프롬프트 재시도"가 아니라 "다른 프롬프트 재시도" → 시간 낭비가 아님
+ *
+ * null을 반환하면 재시도하지 않는다 (이미 AI 이미지이거나, hero가 없는 경우).
+ */
+export function buildHeroRetryItem(
+  topic: string,
+  style: ImageStyle,
+  aspectRatio: string,
+  customStylePrompt?: string,
+): ImageQueueItem {
+  // 간결 프롬프트: 핵심 주제 + 최소 지시만
+  const shortTopic = topic.substring(0, 60);
+  return {
+    index: 0,
+    prompt: `${shortTopic} — 건강/의료 블로그 대표 이미지. 현대 한국인, 신뢰감 있는 분위기.`,
+    role: 'hero',
+    style,
+    aspectRatio,
+    customStylePrompt,
+    mode: 'manual',
+  };
 }
 
 // ═══════════════════════════════════════════════

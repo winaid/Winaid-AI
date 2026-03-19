@@ -524,7 +524,7 @@ async function _orchestrateBlog(
       }
     } else {
       // 블로그: 웨이브 기반 이미지 생성 (0~N장 범용 정책)
-      const { planBlogImageWaves } = await import('./blogImagePlanner');
+      const { planBlogImageWaves, buildHeroRetryItem } = await import('./blogImagePlanner');
       const waves = planBlogImageWaves(
         textData.imagePrompts,
         maxImages,
@@ -544,6 +544,39 @@ async function _orchestrateBlog(
         for (const qr of waveResults) {
           images.push({ index: qr.index + 1, data: qr.data, prompt: qr.prompt });
           if (qr.status === 'fallback') imageFailCount++;
+        }
+      }
+
+      // ── hero 재시도: hero가 template이면 간결 프롬프트로 1회 추가 시도 ──
+      // 근거: hero chain(startTier=pro)은 heroPrompt(복합 5줄)로만 2회 시도.
+      //        timeout이 프롬프트 복잡도 때문이면 둘 다 실패한다.
+      //        간결 프롬프트(1줄)는 생성 시간 10-20s → manual 35s timeout 내 성공 확률 높음.
+      const heroQR = allQueueResults.find(r => r.role === 'hero');
+      if (heroQR && heroQR.resultType === 'template') {
+        safeProgress('🔄 대표 이미지 재시도 중 (간결 프롬프트)...');
+        const retryItem = buildHeroRetryItem(
+          request.topic,
+          request.imageStyle,
+          imgRatio,
+          request.customImagePrompt,
+        );
+        const retryResults = await generateImageQueue([retryItem], safeProgress);
+        const retryHero = retryResults[0];
+
+        if (retryHero && retryHero.resultType === 'ai-image') {
+          // hero 교체: images 배열 + allQueueResults 모두 갱신
+          const heroImgIdx = images.findIndex(img => img.index === 1);
+          if (heroImgIdx >= 0) {
+            images[heroImgIdx] = { index: 1, data: retryHero.data, prompt: retryHero.prompt };
+            imageFailCount = Math.max(0, imageFailCount - 1);
+          }
+          const heroQRIdx = allQueueResults.findIndex(r => r.role === 'hero');
+          if (heroQRIdx >= 0) allQueueResults[heroQRIdx] = retryHero;
+          console.info('[IMG-HERO-RETRY] ✅ hero 재시도 성공 (간결 프롬프트)');
+          safeProgress('✅ 대표 이미지 재시도 성공!');
+        } else {
+          console.warn('[IMG-HERO-RETRY] ⚠️ hero 재시도 실패 — 보조 비주얼 유지');
+          safeProgress('⚠️ 대표 이미지 재시도 실패 — 보조 비주얼 유지');
         }
       }
 
