@@ -30,7 +30,10 @@ export {
   STYLE_KEYWORDS,
   BLOG_IMAGE_STYLE_COMPACT,
   STYLE_KEYWORD_SHORT,
+  getStyleContract,
+  STYLE_CONTRACTS,
 } from './imagePromptBuilder';
+export type { StyleContract } from './imagePromptBuilder';
 
 // Fallback
 export { generateTemplateFallback, buildTemplateFallbackSvg } from './imageFallbackService';

@@ -24,7 +24,7 @@ import type {
   BlogImageOutput,
   AttemptDef,
 } from './imageTypes';
-import { BLOG_IMAGE_STYLE_COMPACT, STYLE_KEYWORD_SHORT } from './imagePromptBuilder';
+import { BLOG_IMAGE_STYLE_COMPACT, STYLE_KEYWORD_SHORT, getStyleContract } from './imagePromptBuilder';
 import { generateTemplateFallback } from './imageFallbackService';
 
 // ── Demo-safe mode ──
@@ -205,29 +205,29 @@ export const generateBlogImage = async (
   const isPhoto = style === 'photo' && !customStylePrompt;
   const isMedical = style === 'medical' && !customStylePrompt;
 
-  // ── medical 전용 프롬프트 (완전 분리) ──
+  // ── medical 전용 프롬프트 (완전 분리, StyleContract 기반) ──
   // medical은 portrait-oriented editorial image가 아니라
   // anatomical / clinical visualization 중심이어야 한다.
   // 공통 구조(editorial image + [Person])를 사용하지 않는다.
-  const MEDICAL_NEGATIVE = 'Do NOT generate a photorealistic portrait. Do NOT show a human face close-up. Do NOT create a lifestyle clinic photo, stock photo, editorial patient photo, beauty shot, or cinematic portrait. No real human as main subject.';
+  // 모든 경로(hero/sub/ultraMinimal)가 동일한 StyleContract를 참조한다.
 
   if (isMedical) {
+    const mc = getStyleContract('medical');
+
     const medicalHeroPrompt = `Generate a 16:9 landscape 3D medical illustration for a Korean dental/health educational blog.
-[Visual Subject] ${promptText} — Show this as an anatomical 3D render, clinical cross-section, or educational medical diagram. The main visual subject must be dental/oral anatomy, treatment mechanism, or medical structure — NOT a human portrait.
-[Rendering Style] 3D medical illustration, anatomical render, educational clinical visualization, rendered tooth/gum/oral anatomy, clean studio lighting, blue-white-teal clinical palette, semi-transparent layers where relevant, diagrammatic composition. Similar to medical textbook 3D renders or dental education materials.
-[Constraint] ${MEDICAL_NEGATIVE}
+[Visual Subject] ${promptText} — ${mc.subjectHint}
+[Rendering Style] ${mc.anchor}
+[Constraint] ${mc.negative}
 [Rules] ${COMMON_CONSTRAINTS}`.trim();
 
-    const medicalSubPrompt = `3D medical illustration: ${promptText.substring(0, 120)}. Anatomical render, dental/oral structure visualization, clinical cross-section, educational diagram style. Blue-white palette, clean studio lighting. NOT a photograph, NOT a portrait, NOT a stock photo. ${COMMON_CONSTRAINTS} 16:9.`.trim();
+    const medicalSubPrompt = `3D medical illustration: ${promptText.substring(0, 120)}. ${mc.anchor} ${COMMON_CONSTRAINTS} 16:9.`.trim();
 
-    const medicalUltraMinimal = `3D medical illustration of ${promptText.substring(0, 80)}. Anatomical render, clinical visualization, NOT a photo, NOT a portrait. No text, no watermark. 16:9.`.trim();
+    const medicalUltraMinimal = `3D medical render: ${promptText.substring(0, 80)}. ${mc.anchorShort} 16:9.`.trim();
 
-    // hero/sub에 따라 프롬프트 선택
     const heroPrompt = medicalHeroPrompt;
     const subPrompt = medicalSubPrompt;
     const ultraMinimal = medicalUltraMinimal;
 
-    // chain 구성은 아래 공통 로직에서 처리하므로 변수만 세팅
     return _executeBlogImageChain({
       heroPrompt, subPrompt, ultraMinimal,
       isHero, role, mode, timeout, demoSafe, promptText, style,

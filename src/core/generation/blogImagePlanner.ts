@@ -16,6 +16,7 @@
 
 import type { ImageQueueItem } from '../../services/image/imageTypes';
 import type { ImageStyle } from '../../types';
+import { getStyleContract } from '../../services/image/imagePromptBuilder';
 
 // ═══════════════════════════════════════════════
 // 생성 전략: 웨이브 기반 배치
@@ -109,17 +110,18 @@ export function buildHeroRetryItem(
   aspectRatio: string,
   customStylePrompt?: string,
 ): ImageQueueItem {
-  // 간결 프롬프트: 핵심 주제 + 스타일 힌트 (style별 분기)
-  // 이전: "현대 한국인, 신뢰감 있는 분위기"가 하드코딩되어 medical/illustration에서도 실사 유도
+  // 간결 프롬프트: 핵심 주제 + StyleContract.anchorShort
+  // StyleContract를 참조하여 모든 retry가 세트 계약을 유지한다.
   const shortTopic = topic.substring(0, 60);
   const isPhoto = style === 'photo' && !customStylePrompt;
   const isMedical = style === 'medical' && !customStylePrompt;
 
-  // medical은 완전히 다른 프롬프트 구조
+  // medical은 StyleContract 기반 완전 분리 프롬프트
   if (isMedical) {
+    const mc = getStyleContract('medical');
     return {
       index: 0,
-      prompt: `3D medical illustration of ${shortTopic}. Anatomical render, dental/oral structure cross-section, educational clinical visualization. Blue-white palette, clean studio lighting. NOT a portrait, NOT a photograph. Single scene. 16:9.`,
+      prompt: `3D medical render of ${shortTopic}. ${mc.anchorShort} Single scene. 16:9.`,
       role: 'hero',
       style,
       aspectRatio,

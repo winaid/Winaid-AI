@@ -501,31 +501,39 @@ ${sectionSummaries.join('\n')}`;
     // 🛡️ 항상 selectedImageCount개 프롬프트 생성 — 섹션 수보다 많아도 절삭하지 않음
     // 확장 규칙: sections 수 < selectedImageCount일 때도 의미 있는 추가 프롬프트 생성
     const sectionCount = outline.sections.length;
+    const imgStyle = request.imageStyle;
 
     for (let i = 0; i < selectedImageCount; i++) {
       if (i === 0) {
-        // hero: 주제 대표 이미지
-        imagePrompts.push(
-          `${request.topic} — 주제를 상징적으로 보여주는 현대 한국인. 의료/구강 건강 맥락의 현실적 editorial 이미지. 차분하고 신뢰감 있는 분위기.`
-        );
+        // hero: 주제 대표 이미지 — 스타일별 분기
+        if (imgStyle === 'medical') {
+          // medical: 해부학/임상 시각화 중심 (사람 중심 아님)
+          imagePrompts.push(
+            `${request.topic} — 주제를 대표하는 3D 의학 렌더. 해부학적 구조 또는 치료 메커니즘의 임상 시각화.`
+          );
+        } else {
+          imagePrompts.push(
+            `${request.topic} — 주제를 상징적으로 보여주는 현대 한국인. 의료/구강 건강 맥락의 현실적 editorial 이미지. 차분하고 신뢰감 있는 분위기.`
+          );
+        }
         usedSceneTypes.push('topic-editorial');
-        console.info(`[IMG-PROMPT] hero idx=0 sceneType=topic-editorial profile=modern-korean-medical-context textless no-hanbok`);
+        console.info(`[IMG-PROMPT] hero idx=0 sceneType=topic-editorial style=${imgStyle} textless no-hanbok`);
       } else if (i <= sectionCount) {
         // sub: 섹션 범위 내 — 소제목/문단 의미 기반 sceneType
         const section = outline.sections[i - 1];
         const sectionTitle = section?.title || '건강 정보';
         const sceneType = classifySceneType(sectionTitle, usedSceneTypes);
-        const scenePrompt = buildScenePrompt(request.topic, sectionTitle, sceneType);
+        const scenePrompt = buildScenePrompt(request.topic, sectionTitle, sceneType, imgStyle);
         imagePrompts.push(scenePrompt);
         usedSceneTypes.push(sceneType);
-        console.info(`[IMG-PROMPT] sub idx=${i} sceneType=${sceneType} source=section profile=korean-oral-health-context textless no-hanbok`);
+        console.info(`[IMG-PROMPT] sub idx=${i} sceneType=${sceneType} style=${imgStyle} source=section textless no-hanbok`);
       } else {
         // sub 확장: 섹션 범위 초과 — 아직 사용하지 않은 sceneType으로 보충 프롬프트 생성
         const sceneType = classifySceneType(request.topic, usedSceneTypes);
-        const scenePrompt = buildScenePrompt(request.topic, request.topic, sceneType);
+        const scenePrompt = buildScenePrompt(request.topic, request.topic, sceneType, imgStyle);
         imagePrompts.push(scenePrompt);
         usedSceneTypes.push(sceneType);
-        console.info(`[IMG-PROMPT] sub idx=${i} sceneType=${sceneType} source=extended profile=korean-oral-health-context textless no-hanbok`);
+        console.info(`[IMG-PROMPT] sub idx=${i} sceneType=${sceneType} style=${imgStyle} source=extended textless no-hanbok`);
       }
     }
   }
