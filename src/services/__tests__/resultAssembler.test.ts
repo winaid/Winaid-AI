@@ -146,6 +146,66 @@ describe('insertImageMarkers', () => {
     const result = insertImageMarkers(input, 1, 'blog');
     expect(result).toContain('[IMG_1]');
   });
+  // ── 0~5장 범위 정합성 ──
+
+  it('블로그 count=1 → [IMG_1]만 삽입', () => {
+    const input = '<p>도입부</p><h3>소제목</h3><p>본문</p>';
+    const result = insertImageMarkers(input, 1, 'blog');
+    expect(result).toContain('[IMG_1]');
+    expect(result).not.toContain('[IMG_2]');
+  });
+
+  it('블로그 count=3 → [IMG_1]~[IMG_3] 삽입, 번호 누락 없음', () => {
+    const input = '<p>도입부</p><h3>A</h3><p>a</p><h3>B</h3><p>b</p><h3>C</h3><p>c</p>';
+    const result = insertImageMarkers(input, 3, 'blog');
+    for (let i = 1; i <= 3; i++) {
+      expect(result).toContain(`[IMG_${i}]`);
+    }
+  });
+
+  it('블로그 count=5 → [IMG_1]~[IMG_5] 삽입, 번호 누락/중복 없음', () => {
+    const input = '<p>도입</p><h3>A</h3><p>a</p><h3>B</h3><p>b</p><h3>C</h3><p>c</p><h3>D</h3><p>d</p></div>';
+    const result = insertImageMarkers(input, 5, 'blog');
+    for (let i = 1; i <= 5; i++) {
+      const count = (result.match(new RegExp(`\\[IMG_${i}\\]`, 'g')) || []).length;
+      expect(count).toBe(1);
+    }
+  });
+
+  it('블로그 count=5 → inserted 마커 수가 정확히 5개', () => {
+    const input = '<p>도입</p><h3>A</h3><p>a</p><h3>B</h3><p>b</p><h3>C</h3><p>c</p><h3>D</h3><p>d</p></div>';
+    const result = insertImageMarkers(input, 5, 'blog');
+    const allMarkers = result.match(/\[IMG_\d+\]/g) || [];
+    expect(allMarkers).toHaveLength(5);
+  });
+
+  // ── 카드뉴스 비영향 ──
+
+  it('card_news → 블로그 planner를 호출하지 않음 (card-slide 구조 유지)', () => {
+    const input = '<div class="card-slide"><p class="card-desc">내용</p></div></div>';
+    const result = insertImageMarkers(input, 1, 'card_news');
+    // 카드뉴스에는 card-img-container 방식으로 삽입
+    expect(result).toContain('card-img-container');
+    // 블로그 방식(content-image-wrapper)이 아님
+    expect(result).not.toContain('content-image-wrapper');
+  });
+
+  it('card_news + count=0 → 마커 없음', () => {
+    const input = '<div class="card-slide"><p>내용</p></div></div>';
+    const result = insertImageMarkers(input, 0, 'card_news');
+    expect(result).not.toContain('[IMG_');
+  });
+
+  // ── 마커 수량 보장 검증 ──
+
+  it('블로그 마커 수량 보장: 부족한 마커는 본문 끝에 보충', () => {
+    // h3 1개뿐인 HTML에 5장 요청 → planner가 일부 배치 + 보장 로직이 나머지 보충
+    const input = '<h3>유일</h3><p>본문</p></div>';
+    const result = insertImageMarkers(input, 5, 'blog');
+    for (let i = 1; i <= 5; i++) {
+      expect(result).toContain(`[IMG_${i}]`);
+    }
+  });
 });
 
 // ═══════════════════════════════════════
