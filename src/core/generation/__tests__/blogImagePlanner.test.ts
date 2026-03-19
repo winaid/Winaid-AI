@@ -105,7 +105,7 @@ describe('planBlogImageWaves — 웨이브 분할', () => {
     }
   });
 
-  it('블로그 이미지는 manual 모드 사용 (hero 35s, sub 25s timeout)', () => {
+  it('블로그 이미지는 manual 모드 사용 (hero 35s, sub 30s timeout)', () => {
     const waves = planBlogImageWaves(makePrompts(3), 3, STYLE, RATIO);
     const allItems = waves.flatMap(w => w.items);
     for (const item of allItems) {
