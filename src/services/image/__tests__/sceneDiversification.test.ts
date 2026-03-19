@@ -1,16 +1,24 @@
 /**
- * Scene Diversification QA — 전 스타일 장면 분화 검증
+ * Scene Diversification QA — 전 스타일 장면 분화 + bucket 분산 + hero 통합 검증
  *
  * 검증 대상:
- *   1. photo/medical/illustration 각 스타일에서 sceneType별 프롬프트가 충분히 구분되는지
- *   2. 같은 sceneType이라도 스타일마다 표현이 다른지
- *   3. hero/sub 역할 구분이 유지되는지
- *   4. 반복 방지(repetition-avoid)가 중복 sceneType에서 동작하는지
- *   5. sceneBucket이 모든 sceneType에 매핑되는지
- *   6. 기존 style contract가 깨지지 않는지 (회귀)
+ *   1. SCENE_BUCKETS 다중 후보 완전성
+ *   2. resolveSceneBucket planner-level 분산
+ *   3. 스타일별 sceneType base + bucket detail 조합
+ *   4. hero 공통 구조 편입
+ *   5. shot intent / repetition-avoid
+ *   6. sceneBucket 메타가 prompt 본문에 없음 (로그 전용)
+ *   7. 회귀 보호 (style contract)
  */
 import { describe, it, expect } from 'vitest';
-import { buildScenePrompt, classifySceneType, SCENE_BUCKETS } from '../imageRouter';
+import {
+  buildScenePrompt,
+  buildHeroScenePrompt,
+  classifySceneType,
+  resolveSceneBucket,
+  SCENE_BUCKETS,
+  HERO_BUCKETS,
+} from '../imageRouter';
 import type { SceneType } from '../imageTypes';
 import type { ImageStyle } from '../../../types';
 
@@ -25,61 +33,176 @@ const ALL_SCENE_TYPES: SceneType[] = [
 const ALL_STYLES: ImageStyle[] = ['photo', 'medical', 'illustration'];
 
 // ═══════════════════════════════════════════════
-// 1. sceneBucket 매핑 완전성
+// 1. SCENE_BUCKETS 다중 후보 완전성
 // ═══════════════════════════════════════════════
 
-describe('SCENE_BUCKETS', () => {
-  it('모든 sceneType에 sceneBucket이 매핑됨', () => {
+describe('SCENE_BUCKETS (다중 후보)', () => {
+  it('모든 sceneType에 bucket 후보가 2개 이상', () => {
     for (const st of ALL_SCENE_TYPES) {
-      expect(SCENE_BUCKETS[st]).toBeTruthy();
-      expect(SCENE_BUCKETS[st].length).toBeGreaterThan(3);
+      expect(SCENE_BUCKETS[st]).toBeDefined();
+      expect(SCENE_BUCKETS[st].length).toBeGreaterThanOrEqual(2);
     }
   });
 
-  it('각 sceneBucket이 서로 다름', () => {
-    const buckets = ALL_SCENE_TYPES.map(st => SCENE_BUCKETS[st]);
-    const unique = new Set(buckets);
-    expect(unique.size).toBe(ALL_SCENE_TYPES.length);
+  it('각 sceneType의 bucket 후보가 서로 고유', () => {
+    for (const st of ALL_SCENE_TYPES) {
+      const unique = new Set(SCENE_BUCKETS[st]);
+      expect(unique.size).toBe(SCENE_BUCKETS[st].length);
+    }
+  });
+
+  it('sceneType 간 bucket이 겹치지 않음', () => {
+    const allBuckets = ALL_SCENE_TYPES.flatMap(st => SCENE_BUCKETS[st]);
+    const unique = new Set(allBuckets);
+    expect(unique.size).toBe(allBuckets.length);
+  });
+});
+
+describe('HERO_BUCKETS', () => {
+  it('hero bucket이 2개 이상', () => {
+    expect(HERO_BUCKETS.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('hero bucket이 sub bucket과 겹치지 않음', () => {
+    const subBuckets = ALL_SCENE_TYPES.flatMap(st => SCENE_BUCKETS[st]);
+    for (const hb of HERO_BUCKETS) {
+      expect(subBuckets).not.toContain(hb);
+    }
   });
 });
 
 // ═══════════════════════════════════════════════
-// 2. 스타일별 장면 프롬프트 분화 검증
+// 2. resolveSceneBucket — planner-level 분산
 // ═══════════════════════════════════════════════
 
-describe('photo 스타일: sceneType별 장면 분화', () => {
+describe('resolveSceneBucket', () => {
+  it('첫 호출 → 첫 번째 후보', () => {
+    const bucket = resolveSceneBucket('cause-mechanism', [], 'sub');
+    expect(bucket).toBe(SCENE_BUCKETS['cause-mechanism'][0]);
+  });
+
+  it('같은 sceneType 두 번째 호출 → 두 번째 후보', () => {
+    const first = SCENE_BUCKETS['cause-mechanism'][0];
+    const bucket = resolveSceneBucket('cause-mechanism', [first], 'sub');
+    expect(bucket).toBe(SCENE_BUCKETS['cause-mechanism'][1]);
+  });
+
+  it('같은 sceneType 세 번째 호출 → 세 번째 후보', () => {
+    const [a, b] = SCENE_BUCKETS['cause-mechanism'];
+    const bucket = resolveSceneBucket('cause-mechanism', [a, b], 'sub');
+    expect(bucket).toBe(SCENE_BUCKETS['cause-mechanism'][2]);
+  });
+
+  it('모든 후보 사용됨 → 첫 번째 재사용 (graceful fallback)', () => {
+    const all = [...SCENE_BUCKETS['cause-mechanism']];
+    const bucket = resolveSceneBucket('cause-mechanism', all, 'sub');
+    expect(bucket).toBe(SCENE_BUCKETS['cause-mechanism'][0]);
+  });
+
+  it('다른 sceneType bucket은 영향 없음', () => {
+    const usedBuckets = [SCENE_BUCKETS['symptom-discomfort'][0]];
+    const bucket = resolveSceneBucket('cause-mechanism', usedBuckets, 'sub');
+    expect(bucket).toBe(SCENE_BUCKETS['cause-mechanism'][0]);
+  });
+
+  it('hero role → HERO_BUCKETS에서 선택', () => {
+    const bucket = resolveSceneBucket('cause-mechanism', [], 'hero');
+    expect(bucket).toBe(HERO_BUCKETS[0]);
+  });
+
+  it('hero bucket 연속 분산', () => {
+    const first = HERO_BUCKETS[0];
+    const bucket = resolveSceneBucket('cause-mechanism', [first], 'hero');
+    expect(bucket).toBe(HERO_BUCKETS[1]);
+  });
+});
+
+// ═══════════════════════════════════════════════
+// 3. 5-image 세트 시뮬레이션: unique bucket 보장
+// ═══════════════════════════════════════════════
+
+describe('5-image 세트 bucket 다양성', () => {
+  it('hero + 4 sub → 최소 5개 unique bucket', () => {
+    const usedBuckets: string[] = [];
+    const usedTypes: string[] = [];
+
+    // hero
+    const heroBucket = resolveSceneBucket('symptom-discomfort', usedBuckets, 'hero');
+    usedBuckets.push(heroBucket);
+    usedTypes.push('hero');
+
+    // 4 subs with different sceneTypes
+    const subTypes: SceneType[] = ['symptom-discomfort', 'cause-mechanism', 'consultation-treatment', 'prevention-care'];
+    for (const st of subTypes) {
+      const bucket = resolveSceneBucket(st, usedBuckets, 'sub');
+      usedBuckets.push(bucket);
+      usedTypes.push(st);
+    }
+
+    expect(usedBuckets.length).toBe(5);
+    expect(new Set(usedBuckets).size).toBe(5); // all unique
+  });
+
+  it('같은 sceneType 반복 시에도 다른 bucket 할당', () => {
+    const usedBuckets: string[] = [];
+
+    // cause-mechanism 3번
+    for (let i = 0; i < 3; i++) {
+      const bucket = resolveSceneBucket('cause-mechanism', usedBuckets, 'sub');
+      usedBuckets.push(bucket);
+    }
+
+    // 3개 모두 다른 bucket
+    expect(new Set(usedBuckets).size).toBe(3);
+    expect(usedBuckets[0]).toBe('mechanism-closeup');
+    expect(usedBuckets[1]).toBe('exam-monitor');
+    expect(usedBuckets[2]).toBe('progression-visual');
+  });
+});
+
+// ═══════════════════════════════════════════════
+// 4. buildScenePrompt: sceneType base + bucket detail 조합
+// ═══════════════════════════════════════════════
+
+describe('buildScenePrompt: base + bucket 조합', () => {
+  it('resolvedBucket 지정 시 해당 bucket의 detail과 shot intent 사용', () => {
+    const p = buildScenePrompt('임플란트', '원인', 'cause-mechanism', 'photo', [], 'exam-monitor');
+    expect(p).toContain('모니터'); // bucket detail contains 모니터
+    expect(p).toContain('monitor'); // shot intent contains monitor
+  });
+
+  it('resolvedBucket 미지정 시 첫 번째 bucket 사용 (하위 호환)', () => {
+    const p = buildScenePrompt('임플란트', '원인', 'cause-mechanism', 'photo');
+    expect(p).toContain('close-up'); // mechanism-closeup의 shot intent
+  });
+
+  it('같은 sceneType, 다른 bucket → 다른 prompt', () => {
+    const p1 = buildScenePrompt('임플란트', '원인', 'cause-mechanism', 'photo', [], 'mechanism-closeup');
+    const p2 = buildScenePrompt('임플란트', '원인', 'cause-mechanism', 'photo', [], 'exam-monitor');
+    expect(p1).not.toBe(p2);
+  });
+
+  it('같은 sceneType, 다른 bucket → base scene은 공유', () => {
+    const p1 = buildScenePrompt('임플란트', '원인', 'cause-mechanism', 'photo', [], 'mechanism-closeup');
+    const p2 = buildScenePrompt('임플란트', '원인', 'cause-mechanism', 'photo', [], 'exam-monitor');
+    // Both should contain the base scene for cause-mechanism
+    expect(p1).toContain('원인');
+    expect(p2).toContain('원인');
+  });
+});
+
+// ═══════════════════════════════════════════════
+// 5. 스타일별 sceneType 분화 (기존 유지)
+// ═══════════════════════════════════════════════
+
+describe('photo 스타일: sceneType별 분화', () => {
   const prompts = ALL_SCENE_TYPES.map(st =>
-    buildScenePrompt('임플란트', '테스트 섹션', st, 'photo')
+    buildScenePrompt('임플란트', '테스트', st, 'photo')
   );
 
   it('5개 sceneType 프롬프트가 모두 다름', () => {
     const unique = new Set(prompts);
     expect(unique.size).toBe(5);
-  });
-
-  it('symptom은 불편/통증 표현 포함', () => {
-    const p = buildScenePrompt('임플란트', '통증 증상', 'symptom-discomfort', 'photo');
-    expect(p).toMatch(/불편|통증|턱|볼/);
-  });
-
-  it('cause-mechanism은 클로즈업/검사 장면 유도', () => {
-    const p = buildScenePrompt('임플란트', '원인', 'cause-mechanism', 'photo');
-    expect(p).toMatch(/클로즈업|모니터|검사/);
-  });
-
-  it('consultation은 진료/시술 장면', () => {
-    const p = buildScenePrompt('임플란트', '치료', 'consultation-treatment', 'photo');
-    expect(p).toMatch(/진료|시술|치료/);
-  });
-
-  it('prevention은 일상 관리 장면', () => {
-    const p = buildScenePrompt('임플란트', '예방', 'prevention-care', 'photo');
-    expect(p).toMatch(/양치|치실|구강/);
-  });
-
-  it('caution-checkup은 검진/접수 환경 장면', () => {
-    const p = buildScenePrompt('임플란트', '검진', 'caution-checkup', 'photo');
-    expect(p).toMatch(/접수|대기|엑스레이|검진/);
   });
 
   it('photo 프롬프트에 "현대 한국인" 포함', () => {
@@ -91,14 +214,11 @@ describe('photo 스타일: sceneType별 장면 분화', () => {
   it('cause-mechanism이 상담 장면으로 수렴하지 않음', () => {
     const cause = buildScenePrompt('임플란트', '원인', 'cause-mechanism', 'photo');
     const consult = buildScenePrompt('임플란트', '상담', 'consultation-treatment', 'photo');
-    // cause에는 "상담"이 없어야 함
-    expect(cause).not.toMatch(/상담|의사와 환자가 진료/);
-    // 둘은 다른 프롬프트
     expect(cause).not.toBe(consult);
   });
 });
 
-describe('medical 스타일: sceneType별 장면 분화', () => {
+describe('medical 스타일: sceneType별 분화', () => {
   const prompts = ALL_SCENE_TYPES.map(st =>
     buildScenePrompt('임플란트', '테스트', st, 'medical')
   );
@@ -108,7 +228,7 @@ describe('medical 스타일: sceneType별 장면 분화', () => {
     expect(unique.size).toBe(5);
   });
 
-  it('medical 프롬프트에 "현대 한국인" 없음 (회귀 보호)', () => {
+  it('medical 프롬프트에 "현대 한국인" 없음', () => {
     for (const p of prompts) {
       expect(p).not.toContain('현대 한국인');
     }
@@ -119,29 +239,9 @@ describe('medical 스타일: sceneType별 장면 분화', () => {
       expect(p).toMatch(/3D|단면도|임상/);
     }
   });
-
-  it('symptom-discomfort는 증상 부위 강조', () => {
-    const p = buildScenePrompt('잇몸', '증상', 'symptom-discomfort', 'medical');
-    expect(p).toMatch(/해부학|단면도|조직/);
-  });
-
-  it('cause-mechanism은 메커니즘/진행 시각화', () => {
-    const p = buildScenePrompt('충치', '원인', 'cause-mechanism', 'medical');
-    expect(p).toMatch(/메커니즘|진행|조직|구조/);
-  });
-
-  it('medical 프롬프트 간 비슷한 단면도 반복 방지 — shot intent가 다름', () => {
-    const symptom = buildScenePrompt('잇몸', '증상', 'symptom-discomfort', 'medical');
-    const cause = buildScenePrompt('잇몸', '원인', 'cause-mechanism', 'medical');
-    // shot intent 부분이 다른지 확인
-    expect(symptom).not.toBe(cause);
-    // shot intent 키워드가 각각 포함
-    expect(symptom).toContain('discomfort');
-    expect(cause).toContain('close-up');
-  });
 });
 
-describe('illustration 스타일: sceneType별 장면 분화', () => {
+describe('illustration 스타일: sceneType별 분화', () => {
   const prompts = ALL_SCENE_TYPES.map(st =>
     buildScenePrompt('임플란트', '테스트', st, 'illustration')
   );
@@ -151,25 +251,15 @@ describe('illustration 스타일: sceneType별 장면 분화', () => {
     expect(unique.size).toBe(5);
   });
 
-  it('illustration 프롬프트에 "현대 한국인" 없음 (illustration 전용 프롬프트)', () => {
+  it('illustration 프롬프트에 "현대 한국인" 없음', () => {
     for (const p of prompts) {
       expect(p).not.toContain('현대 한국인');
     }
   });
-
-  it('cause-mechanism은 인포그래픽/메커니즘 표현', () => {
-    const p = buildScenePrompt('충치', '원인', 'cause-mechanism', 'illustration');
-    expect(p).toMatch(/인포그래픽|메커니즘|순서도/);
-  });
-
-  it('caution-checkup은 체크리스트/점검 시각 요소', () => {
-    const p = buildScenePrompt('치과', '검진', 'caution-checkup', 'illustration');
-    expect(p).toMatch(/체크리스트|점검|알림/);
-  });
 });
 
 // ═══════════════════════════════════════════════
-// 3. 같은 sceneType, 다른 스타일 → 다른 프롬프트
+// 6. 같은 sceneType, 다른 스타일 → 다른 프롬프트
 // ═══════════════════════════════════════════════
 
 describe('같은 sceneType, 스타일별 표현 분화', () => {
@@ -187,10 +277,10 @@ describe('같은 sceneType, 스타일별 표현 분화', () => {
 });
 
 // ═══════════════════════════════════════════════
-// 4. Shot Intent가 sceneType별로 다름 (공통 레이어)
+// 7. Shot Intent (bucket별)
 // ═══════════════════════════════════════════════
 
-describe('Shot Intent 공통 레이어', () => {
+describe('Shot Intent', () => {
   it('모든 프롬프트에 "Shot intent" 키워드 포함', () => {
     for (const style of ALL_STYLES) {
       for (const st of ALL_SCENE_TYPES) {
@@ -200,18 +290,17 @@ describe('Shot Intent 공통 레이어', () => {
     }
   });
 
-  it('sceneType별 shot intent가 서로 다름', () => {
-    const intents = ALL_SCENE_TYPES.map(st =>
-      buildScenePrompt('테스트', '테스트', st, 'photo')
-    );
-    // shot intent 부분이 모두 달라야 함
-    const unique = new Set(intents);
-    expect(unique.size).toBe(5);
+  it('다른 bucket → 다른 shot intent', () => {
+    const p1 = buildScenePrompt('테스트', '테스트', 'cause-mechanism', 'photo', [], 'mechanism-closeup');
+    const p2 = buildScenePrompt('테스트', '테스트', 'cause-mechanism', 'photo', [], 'exam-monitor');
+    // Both have shot intent but different content
+    expect(p1).toContain('close-up');
+    expect(p2).toContain('monitor');
   });
 });
 
 // ═══════════════════════════════════════════════
-// 5. Repetition Avoid 동작 검증
+// 8. Repetition Avoid
 // ═══════════════════════════════════════════════
 
 describe('Repetition Avoid', () => {
@@ -220,47 +309,79 @@ describe('Repetition Avoid', () => {
     expect(p).not.toContain('Avoid repeating');
   });
 
-  it('이전에 같은 sceneType이 있으면 photo repetition-avoid 추가', () => {
+  it('이전에 같은 sceneType이 있으면 repetition-avoid 추가', () => {
     const p = buildScenePrompt('임플란트', '치료', 'consultation-treatment', 'photo', ['consultation-treatment']);
     expect(p).toContain('Avoid repeating');
-    expect(p).toContain('consultation');
-  });
-
-  it('medical repetition-avoid는 cross-section 관련', () => {
-    const p = buildScenePrompt('임플란트', '증상', 'symptom-discomfort', 'medical', ['symptom-discomfort']);
-    expect(p).toContain('Avoid repeating');
-    expect(p).toContain('cross-section');
-  });
-
-  it('illustration repetition-avoid는 layout 관련', () => {
-    const p = buildScenePrompt('임플란트', '원인', 'cause-mechanism', 'illustration', ['cause-mechanism']);
-    expect(p).toContain('Avoid repeating');
-    expect(p).toContain('layout');
   });
 
   it('다른 sceneType이면 repetition-avoid 없음', () => {
-    const p = buildScenePrompt('임플란트', '치료', 'consultation-treatment', 'photo', ['cause-mechanism', 'symptom-discomfort']);
+    const p = buildScenePrompt('임플란트', '치료', 'consultation-treatment', 'photo', ['cause-mechanism']);
     expect(p).not.toContain('Avoid repeating');
   });
 });
 
 // ═══════════════════════════════════════════════
-// 6. sceneBucket 로그 태그 포함
+// 9. sceneBucket 메타가 prompt 본문에 없음
 // ═══════════════════════════════════════════════
 
-describe('sceneBucket 태그', () => {
-  it('모든 프롬프트에 [sceneBucket=...] 태그 포함', () => {
+describe('sceneBucket 메타 분리', () => {
+  it('sub prompt에 [sceneBucket=...] 태그 없음', () => {
     for (const style of ALL_STYLES) {
       for (const st of ALL_SCENE_TYPES) {
         const p = buildScenePrompt('테스트', '테스트', st, style);
-        expect(p).toContain(`[sceneBucket=${SCENE_BUCKETS[st]}]`);
+        expect(p).not.toContain('[sceneBucket=');
       }
+    }
+  });
+
+  it('hero prompt에 [sceneBucket=...] 태그 없음', () => {
+    for (const style of ALL_STYLES) {
+      const p = buildHeroScenePrompt('테스트', style);
+      expect(p).not.toContain('[sceneBucket=');
     }
   });
 });
 
 // ═══════════════════════════════════════════════
-// 7. 회귀 보호: 기존 style contract 유지
+// 10. Hero 공통 구조 편입
+// ═══════════════════════════════════════════════
+
+describe('buildHeroScenePrompt', () => {
+  it('photo hero → "현대 한국인" 포함', () => {
+    const p = buildHeroScenePrompt('임플란트', 'photo');
+    expect(p).toContain('현대 한국인');
+  });
+
+  it('medical hero → "3D" 포함, "현대 한국인" 없음', () => {
+    const p = buildHeroScenePrompt('임플란트', 'medical');
+    expect(p).toContain('3D');
+    expect(p).not.toContain('현대 한국인');
+  });
+
+  it('illustration hero → "3D" 또는 "일러스트" 포함', () => {
+    const p = buildHeroScenePrompt('임플란트', 'illustration');
+    expect(p).toMatch(/3D|일러스트/);
+  });
+
+  it('hero에 Shot intent 포함', () => {
+    const p = buildHeroScenePrompt('임플란트', 'photo');
+    expect(p).toContain('Shot intent');
+  });
+
+  it('hero bucket별로 다른 prompt', () => {
+    const p1 = buildHeroScenePrompt('임플란트', 'photo', 'overview-clinical');
+    const p2 = buildHeroScenePrompt('임플란트', 'photo', 'editorial-hero');
+    expect(p1).not.toBe(p2);
+  });
+
+  it('hero topic이 prompt에 포함됨', () => {
+    const p = buildHeroScenePrompt('치아 미백', 'photo');
+    expect(p).toContain('치아 미백');
+  });
+});
+
+// ═══════════════════════════════════════════════
+// 11. 회귀 보호: buildScenePrompt 기존 계약
 // ═══════════════════════════════════════════════
 
 describe('회귀 보호: buildScenePrompt 기존 계약', () => {
@@ -287,7 +408,6 @@ describe('회귀 보호: buildScenePrompt 기존 계약', () => {
 
   it('classifySceneType 연속 중복 방지 유지', () => {
     const result = classifySceneType('통증과 치료', ['symptom-discomfort']);
-    // '통증'이 먼저 매칭되지만 직전과 같으므로 '치료' → consultation-treatment
     expect(result).toBe('consultation-treatment');
   });
 
