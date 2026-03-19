@@ -424,7 +424,8 @@ async function _orchestrateBlog(
           recommendations: []
         }
       };
-      safeProgress('✅ 다단계 파이프라인 생성 완료! (폴리싱 병렬 진행 중)');
+      // gate 신호: 텍스트 draft 완료 → UI에서 "글 검토" 단계 진입 허용
+      safeProgress('__STAGE:TEXT_READY__ ✅ 다단계 파이프라인 생성 완료! (폴리싱 병렬 진행 중)');
       console.info(`[BLOG_FLOW] ✅ 파이프라인 textData 확보 — title: "${textData.title}", rawHtml: ${textData.content?.length || 0}자, polishPromise=async`);
       console.info(`[PIPELINE_RESULT] source=pipeline`);
     } catch (pipelineError: any) {
@@ -434,6 +435,8 @@ async function _orchestrateBlog(
       safeProgress('⚠️ 파이프라인 실패, 기존 방식으로 재시도...');
       try {
         textData = await generateBlogPostText(request, safeProgress);
+        // gate 신호: 레거시 경로에서도 텍스트 완료 통지
+        safeProgress('__STAGE:TEXT_READY__ ✅ 텍스트 생성 완료');
         console.info(`[BLOG_FLOW] ✅ 구형 폴백 성공 — title: "${textData?.title}", content: ${textData?.content?.length || 0}자`);
         console.info(`[PIPELINE_RESULT] source=legacy_fallback | reason=${failReason} | textLength=${textData?.content?.length || 0} | imagePrompts=${textData?.imagePrompts?.length || 0} | model=PRO(60s,JSON,googleSearch)`);
       } catch (fallbackError: any) {
@@ -462,13 +465,18 @@ async function _orchestrateBlog(
 
     safeProgress(step1Msg);
     textData = await generateBlogPostText(request, safeProgress);
+    // gate 신호: 레퍼런스/카드뉴스 경로에서도 텍스트 완료 통지
+    if (request.postType === 'blog') {
+      safeProgress('__STAGE:TEXT_READY__ ✅ 텍스트 생성 완료');
+    }
     console.info(`[PIPELINE_RESULT] source=legacy_direct (referenceUrl or non-blog)`);
   }
 
   const styleName = STYLE_NAMES[request.imageStyle] || STYLE_NAMES.illustration;
   const imgRatio = request.postType === 'card_news' ? CARD_NEWS_IMAGE_RATIO : BLOG_IMAGE_RATIO;
 
-  safeProgress(`🎨 ${styleName} 스타일로 ${imgRatio} 이미지 생성 중...`);
+  // gate 신호: 이미지 생성 단계 진입 (textReady gate 통과 시만 UI에 반영)
+  safeProgress(`__STAGE:IMAGE_START__ 🎨 ${styleName} 스타일로 ${imgRatio} 이미지 생성 중...`);
 
   const selectedImageCount = request.postType === 'card_news' ? (request.slideCount || DEFAULT_CARD_NEWS_SLIDE_COUNT) : (request.imageCount ?? DEFAULT_BLOG_IMAGE_COUNT);
   const maxImages = selectedImageCount;
@@ -875,7 +883,7 @@ async function _orchestrateBlog(
       }
     }
 
-    safeProgress('✅ 모든 생성 작업 완료!');
+    safeProgress('__STAGE:SAVING__ ✅ 모든 생성 작업 완료!');
     console.info(`[BLOG_FLOW] ✅ orchestrateFullPost 반환 직전 — title: "${textData.title}", htmlContent: ${finalHtml.length}자, imageFailCount: ${imageFailCount}`);
 
     return {

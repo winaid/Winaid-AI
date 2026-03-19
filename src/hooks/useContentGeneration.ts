@@ -40,32 +40,78 @@ const initialState: GenerationState = {
   displayStage: 0,
 };
 
+// ══════════════════════════════════════════════════════
+// 블로그 displayStage gate 로직
+//
+// 구조: raw progress → gate 신호 감지 → internal flags → displayStage
+//
+// 내부 처리 순서와 화면 표시 순서를 분리한다.
+// 내부에서 이미지가 먼저 시작돼도, textReady 플래그가 false이면
+// displayStage는 image(3)로 올라가지 않는다.
+//
+// gate 신호:
+//   __STAGE:TEXT_READY__  → 텍스트 draft 완료 (Stage A+B 끝)
+//   __STAGE:IMAGE_START__ → 이미지 생성 진입 (블로그 이미지 루프 직전)
+//   __STAGE:SAVING__      → 저장 단계 진입
+// ══════════════════════════════════════════════════════
+
+/** progress에서 gate 신호 prefix를 제거하고 사용자용 메시지만 반환 */
+function stripGateSignal(progress: string): string {
+  return progress.replace(/__STAGE:[A-Z_]+__\s*/g, '').trim();
+}
+
+/** gate 신호 추출 */
+function extractGateSignal(progress: string): string | null {
+  const m = progress.match(/__STAGE:([A-Z_]+)__/);
+  return m ? m[1] : null;
+}
+
 /**
- * raw progress 문자열에서 displayStage 번호를 파싱한다.
- * 이 함수는 "올라갈 수 있는 최대 stage"를 반환한다.
- * 호출자가 현재 stage와 비교하여 monotonic하게 적용해야 한다.
+ * 블로그 displayStage 결정.
+ *
+ * gate 플래그(textReady) 기반으로 stage 3(이미지) 진입을 제어한다.
+ * monotonic: 현재 displayStage보다 낮으면 무시.
+ *
+ * 흐름:
+ *   1. gate 신호 → 내부 플래그 갱신
+ *   2. 플래그 조합 → 허용 가능 최대 stage 계산
+ *   3. monotonic 적용: max(현재, 새 stage)
  */
-function parseDisplayStage(progress: string): DisplayStage {
-  const p = progress.toLowerCase();
+function resolveGatedStage(
+  currentStage: DisplayStage,
+  gateSignal: string | null,
+  textReady: boolean,
+  rawProgress: string,
+): DisplayStage {
+  // gate 신호에 의한 직접 stage 결정
+  if (gateSignal === 'SAVING') return Math.max(currentStage, 4) as DisplayStage;
+  if (gateSignal === 'IMAGE_START' && textReady) return Math.max(currentStage, 3) as DisplayStage;
+  if (gateSignal === 'TEXT_READY') return Math.max(currentStage, 2) as DisplayStage;
 
-  // 4: 저장/마무리
-  if (p.includes('저장') || p.includes('업로드') || p.includes('모든 생성 작업 완료')) return 4;
+  // raw progress에서 힌트 기반 stage 파싱 (gate 신호가 없는 일반 메시지)
+  const p = rawProgress.toLowerCase();
 
-  // 3: 이미지 생성
-  if (p.includes('이미지') || p.includes('대표 이미지') || p.includes('대체 렌더')) return 3;
+  // 저장 키워드 감지
+  if (p.includes('모든 생성 작업 완료')) return Math.max(currentStage, 4) as DisplayStage;
 
-  // 2: 글 검토/통합 (Stage C, FAQ, SEO, 품질 검사)
-  if (p.includes('stage c') || p.includes('폴리싱') || p.includes('faq') || p.includes('자주 묻는')
-    || p.includes('seo') || p.includes('검사') || p.includes('검증') || p.includes('smell')
-    || p.includes('통합 검증')) return 2;
+  // 이미지 키워드 감지 — 단, textReady gate 통과 필수
+  if (textReady && (p.includes('이미지') || p.includes('대표 이미지') || p.includes('대체 렌더'))) {
+    return Math.max(currentStage, 3) as DisplayStage;
+  }
 
-  // 1: 글 작성 (파이프라인, 검색, 아웃라인, 섹션 등)
-  if (p.includes('파이프라인') || p.includes('검색') || p.includes('stage a') || p.includes('stage b')
-    || p.includes('소제목') || p.includes('섹션') || p.includes('도입부') || p.includes('마무리')
-    || p.includes('원고') || p.includes('블로그') || p.includes('기존 방식')
-    || p.includes('seo 최적화 키워드')) return 1;
+  // 글 검토 키워드
+  if (p.includes('폴리싱') || p.includes('faq') || p.includes('seo 점수')
+    || p.includes('검사') || p.includes('파이프라인 생성 완료')) {
+    return Math.max(currentStage, 2) as DisplayStage;
+  }
 
-  return 0;
+  // 글 작성 키워드
+  if (p.includes('파이프라인') || p.includes('검색') || p.includes('소제목')
+    || p.includes('섹션') || p.includes('도입부') || p.includes('기존 방식')) {
+    return Math.max(currentStage, 1) as DisplayStage;
+  }
+
+  return currentStage;
 }
 
 // GENERATION_HARD_TIMEOUT_MS → core/generation/contracts.ts에서 import
@@ -202,16 +248,34 @@ export function useContentGeneration(deps: ContentGenerationDeps): ContentGenera
       // credit gate 책임은 runContentJob 내부에서 단일 수행.
       // 이 훅에서는 gate를 호출하지 않는다 (카드뉴스만 예외).
       console.info('[GEN_STEP] before main pipeline — runContentJob 호출');
+      // 블로그 전용 gate: textReady가 true가 되기 전에는 image stage 진입 차단
+      const textReadyRef_ = { current: false };
+
       const outcome = await runContentJob(request, (p) => {
         // timeout 후 늦은 progress 업데이트 방어
         if (generationIdRef.current !== thisGenId) return;
-        // monotonic displayStage: 현재보다 높은 stage만 적용
-        const newStage = parseDisplayStage(p);
-        targetSetState(prev => ({
-          ...prev,
-          progress: p,
-          displayStage: Math.max(prev.displayStage, newStage) as DisplayStage,
-        }));
+
+        // gate 신호 추출 → 내부 플래그 갱신
+        const gateSignal = extractGateSignal(p);
+        if (gateSignal === 'TEXT_READY') textReadyRef_.current = true;
+
+        // 사용자에게 보이는 progress에서 gate 신호 제거
+        const cleanProgress = stripGateSignal(p);
+
+        // gate + monotonic 기반 displayStage 결정
+        targetSetState(prev => {
+          const newStage = resolveGatedStage(
+            prev.displayStage,
+            gateSignal,
+            textReadyRef_.current,
+            cleanProgress,
+          );
+          return {
+            ...prev,
+            progress: cleanProgress || prev.progress,
+            displayStage: newStage,
+          };
+        });
       });
 
       // timeout 후 늦게 도착한 결과가 UI를 덮지 않도록 방어
