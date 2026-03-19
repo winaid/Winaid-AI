@@ -864,6 +864,8 @@ const AdminPage: React.FC<AdminPageProps> = ({ onAdminVerified }) => {
           blogCount: 0,
           cardnewsCount: 0,
           pressCount: 0,
+          uniqueHospitals: 0,
+          uniqueUsers: 0,
           postsToday: 0,
           postsThisWeek: 0,
           postsThisMonth: 0,
