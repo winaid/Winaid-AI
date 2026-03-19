@@ -52,7 +52,8 @@ const TIER_CONCURRENCY: Record<ModelTier, number> = {
 
 const IMAGE_TIMEOUT: Record<ImageGenMode, Record<ImageRole, number>> = {
   auto:   { hero: 25000, sub: 18000 },
-  manual: { hero: 35000, sub: 40000 },  // sub 22s→40s: Gemini image 응답 25-40s 커버. 2회 attempt(nb2→nb2-minimal) 구조.
+  blog:   { hero: 35000, sub: 40000 },  // 블로그 자동 생성: Gemini 응답 25-40s 커버
+  manual: { hero: 35000, sub: 40000 },  // 사용자 재생성/AI수정: blog과 동일 timeout
 };
 
 // 디버그 verbose 로그 플래그
@@ -283,8 +284,8 @@ async function _executeBlogImageChain(params: _ChainParams): Promise<BlogImageOu
   const { heroPrompt, subPrompt, ultraMinimal, isHero, role, mode, timeout, demoSafe, promptText, style } = params;
 
   const startTier = resolveStartTier(role, demoSafe);
-  // Wall cap: hero 50s, sub(manual) 75s (2 attempts with 40s+25s), sub(auto) 30s
-  const wallCapMs = isHero ? 50_000 : (mode === 'manual' ? 75_000 : 30_000);
+  // Wall cap: hero 50s, sub(blog/manual) 75s (2 attempts with 40s+25s), sub(auto) 30s
+  const wallCapMs = isHero ? 50_000 : (mode === 'blog' || mode === 'manual' ? 75_000 : 30_000);
 
   let chain: AttemptDef[];
 
@@ -456,13 +457,16 @@ export async function generateImageQueue(
   onProgress?: (msg: string) => void,
 ): Promise<ImageQueueResult[]> {
   const totalImages = items.length;
-  const mode = isDemoSafeMode() ? 'demo-safe' : 'normal';
+  const demoSafeFlag = isDemoSafeMode();
+  // itemMode: queue 내 아이템들의 실제 timeout 정책 ('blog' | 'manual' | 'auto')
+  const itemMode = items[0]?.mode ?? 'auto';
+  const runContext = demoSafeFlag ? 'demo-safe' : itemMode;
   const safeProgress = onProgress || ((msg: string) => console.log('📍 IMG:', msg));
 
   const heroCount = items.filter(i => i.role === 'hero').length;
   const subCount = items.filter(i => i.role === 'sub').length;
 
-  console.info(`[IMG-PLAN] total=${totalImages} hero=${heroCount} sub=${subCount} mode=${mode} proConcurrency=${TIER_CONCURRENCY.pro} nb2Concurrency=${TIER_CONCURRENCY.nb2}`);
+  console.info(`[IMG-PLAN] total=${totalImages} hero=${heroCount} sub=${subCount} mode=${runContext} proConcurrency=${TIER_CONCURRENCY.pro} nb2Concurrency=${TIER_CONCURRENCY.nb2}`);
   safeProgress(`🎨 이미지 ${totalImages}장 생성 시작...`);
 
   // hero 우선 정렬
@@ -472,10 +476,9 @@ export async function generateImageQueue(
     return a.index - b.index;
   });
 
-  const demoSafe = isDemoSafeMode();
   if (isImgDebug()) {
     sorted.forEach(item => {
-      const tier = resolveStartTier(item.role, demoSafe);
+      const tier = resolveStartTier(item.role, demoSafeFlag);
       console.debug(`[IMG-ROUTE] idx=${item.index} type=${item.role} tier=${tier}`);
     });
   }
@@ -563,11 +566,13 @@ export async function generateImageQueue(
 
   const proSuccess = results.filter(r => r.modelTier === 'pro' && r.resultType === 'ai-image').length;
   const nb2Success = results.filter(r => r.modelTier === 'nb2' && r.resultType === 'ai-image').length;
-  // nonPreferredTier: hero가 nb2에서 성공하거나, sub가 pro에서 성공한 경우
-  // (hero의 preferred=pro, sub의 preferred=nb2)
-  const nonPreferredTier = results.filter(r =>
-    (r.role === 'hero' && r.modelTier === 'nb2' && r.resultType === 'ai-image') ||
-    (r.role === 'sub' && r.modelTier === 'pro' && r.resultType === 'ai-image')
+  // tierEscalation: 1차 attempt tier에서 실패 후 다른 tier로 올라가 성공한 횟수
+  // 현재 chain 정책: hero=[nb2-fast → pro-quality], sub=[nb2 → nb2-minimal]
+  //   - hero가 pro에서 성공 = nb2 실패 후 pro escalation (attempt >= 2)
+  //   - sub가 pro에서 성공 = 예외적 escalation
+  // nb2 attempt=1 성공은 happy path이므로 카운트하지 않는다.
+  const tierEscalation = results.filter(r =>
+    r.resultType === 'ai-image' && r.modelTier === 'pro' && (r.attemptIndex ?? 1) >= 2
   ).length;
 
   const failReasons = results
@@ -583,16 +588,16 @@ export async function generateImageQueue(
   if (heroTemplate > 0) {
     console.warn(`[IMG-SUMMARY] ⚠️ HERO_TEMPLATE_FALLBACK hero=${heroTemplate}건 — hero 품질 저하 (AI 미생성)`);
   }
-  console.info(`[IMG-SUMMARY] tierStats: proSuccess=${proSuccess} nb2Success=${nb2Success} nonPreferredTier=${nonPreferredTier}`);
+  console.info(`[IMG-SUMMARY] tierStats: proSuccess=${proSuccess} nb2Success=${nb2Success} tierEscalation=${tierEscalation}`);
   if (Object.keys(failReasons).length > 0) {
     console.info(`[IMG-SUMMARY] failReasons: ${Object.entries(failReasons).map(([k, v]) => `${k}=${v}`).join(' ')}`);
   }
-  console.info(`[IMG-SUMMARY] totalMs=${totalElapsed} mode=${mode}`);
+  console.info(`[IMG-SUMMARY] totalMs=${totalElapsed} mode=${runContext}`);
   console.info(`[IMG-SUMMARY] perImage: ${results.map(r => `idx${r.index}(${r.role}/${r.modelTier || '?'})=${r.resultType}/${r.elapsedMs}ms`).join(' | ')}`);
   console.info(`[IMG-SUMMARY] ═══════════════════════════════════════`);
 
   // 세션 누적 통계
-  accumulateSessionStats(results, totalElapsed, mode);
+  accumulateSessionStats(results, totalElapsed, runContext);
 
   return results;
 }
@@ -614,7 +619,7 @@ interface SessionStatsData {
   subAi: number;
   proSuccess: number;
   nb2Success: number;
-  nonPreferredTier: number;
+  tierEscalation: number;
   totalMs: number;
   failReasons: Record<string, number>;
   heroWallTimeMs: number[];
@@ -637,7 +642,7 @@ const _sessionStats: SessionStatsData = {
   runs: 0, totalImages: 0, aiCount: 0, templateCount: 0, placeholderCount: 0,
   heroTotal: 0, heroAi: 0, heroTemplate: 0,
   subTotal: 0, subAi: 0,
-  proSuccess: 0, nb2Success: 0, nonPreferredTier: 0,
+  proSuccess: 0, nb2Success: 0, tierEscalation: 0,
   totalMs: 0, failReasons: {},
   heroWallTimeMs: [], payloadKB: [],
   history: [],
@@ -666,9 +671,8 @@ function accumulateSessionStats(results: ImageQueueResult[], totalMs: number, mo
   s.subAi += subR.filter(r => r.resultType === 'ai-image').length;
   s.proSuccess += results.filter(r => r.modelTier === 'pro' && r.resultType === 'ai-image').length;
   s.nb2Success += results.filter(r => r.modelTier === 'nb2' && r.resultType === 'ai-image').length;
-  s.nonPreferredTier += results.filter(r =>
-    (r.role === 'hero' && r.modelTier === 'nb2' && r.resultType === 'ai-image') ||
-    (r.role === 'sub' && r.modelTier === 'pro' && r.resultType === 'ai-image')
+  s.tierEscalation += results.filter(r =>
+    r.resultType === 'ai-image' && r.modelTier === 'pro' && (r.attemptIndex ?? 1) >= 2
   ).length;
 
   results.filter(r => r.errorType).forEach(r => {
@@ -745,7 +749,7 @@ function printSessionSummary(): void {
 
   console.info(`[IMG-SESSION]`);
   console.info(`[IMG-SESSION]   🔧 tier`);
-  console.info(`[IMG-SESSION]   proSuccess=${s.proSuccess}  nb2Success=${s.nb2Success}  nonPreferredTier=${s.nonPreferredTier}`);
+  console.info(`[IMG-SESSION]   proSuccess=${s.proSuccess}  nb2Success=${s.nb2Success}  tierEscalation=${s.tierEscalation}`);
   console.info(`[IMG-SESSION]   sub: ai=${s.subAi}/${s.subTotal} (${pct(s.subAi, s.subTotal)}%)`);
   if (Object.keys(s.failReasons).length > 0) {
     console.info(`[IMG-SESSION]   failReasons: ${Object.entries(s.failReasons).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k}=${v}`).join(' ')}`);
@@ -793,7 +797,7 @@ export function resetImageSessionStats(): void {
     runs: 0, totalImages: 0, aiCount: 0, templateCount: 0, placeholderCount: 0,
     heroTotal: 0, heroAi: 0, heroTemplate: 0,
     subTotal: 0, subAi: 0,
-    proSuccess: 0, nb2Success: 0, nonPreferredTier: 0,
+    proSuccess: 0, nb2Success: 0, tierEscalation: 0,
     totalMs: 0, failReasons: {},
     heroWallTimeMs: [], payloadKB: [],
     history: [],

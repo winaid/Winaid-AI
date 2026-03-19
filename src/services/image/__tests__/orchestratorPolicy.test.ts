@@ -5,11 +5,12 @@
  * 블로그 5장 품질 기준을 충족하는지 검증한다.
  *
  * 검증 대상:
- *   1. manual mode sub timeout = 40s (Gemini 응답 25-40s 커버)
- *   2. manual mode sub wall cap = 75s (2차 시도 허용)
+ *   1. blog mode sub timeout = 40s (Gemini 응답 25-40s 커버)
+ *   2. blog mode sub wall cap = 75s (2차 시도 허용)
  *   3. sub chain에 pro-rescue가 없음 (2 nb2 attempts only)
  *   4. per-attempt timeout: 2차 시도는 25s (ultraMinimal)
  *   5. medical wave capacity = 2 (upstream 부담 경감)
+ *   6. blog/manual mode는 동일 timeout, auto와 구분
  */
 import { describe, it, expect } from 'vitest';
 
@@ -20,16 +21,21 @@ describe('블로그 5장 이미지 정책 검증', () => {
   // 이 값들은 imageOrchestrator.ts의 IMAGE_TIMEOUT과 동일해야 한다.
   const IMAGE_TIMEOUT = {
     auto:   { hero: 25000, sub: 18000 },
+    blog:   { hero: 35000, sub: 40000 },
     manual: { hero: 35000, sub: 40000 },
   };
 
   describe('timeout 정책', () => {
-    it('manual sub timeout = 40s (Gemini 25-40s 응답 커버)', () => {
-      expect(IMAGE_TIMEOUT.manual.sub).toBe(40000);
+    it('blog sub timeout = 40s (Gemini 25-40s 응답 커버)', () => {
+      expect(IMAGE_TIMEOUT.blog.sub).toBe(40000);
     });
 
-    it('manual hero timeout >= 35s', () => {
-      expect(IMAGE_TIMEOUT.manual.hero).toBeGreaterThanOrEqual(35000);
+    it('blog hero timeout >= 35s', () => {
+      expect(IMAGE_TIMEOUT.blog.hero).toBeGreaterThanOrEqual(35000);
+    });
+
+    it('manual(재생성) timeout은 blog과 동일', () => {
+      expect(IMAGE_TIMEOUT.manual).toEqual(IMAGE_TIMEOUT.blog);
     });
 
     it('auto sub timeout은 변경 없음 (18s)', () => {
@@ -42,18 +48,22 @@ describe('블로그 5장 이미지 정책 검증', () => {
   });
 
   describe('wall cap 정책', () => {
-    // imageOrchestrator.ts: isHero ? 50_000 : (mode === 'manual' ? 75_000 : 30_000)
-    const getWallCap = (isHero: boolean, mode: 'auto' | 'manual') =>
-      isHero ? 50_000 : (mode === 'manual' ? 75_000 : 30_000);
+    // imageOrchestrator.ts: isHero ? 50_000 : (mode === 'blog' || mode === 'manual' ? 75_000 : 30_000)
+    const getWallCap = (isHero: boolean, mode: 'auto' | 'blog' | 'manual') =>
+      isHero ? 50_000 : (mode === 'blog' || mode === 'manual' ? 75_000 : 30_000);
 
-    it('manual sub wall cap = 75s (2차 attempt 허용)', () => {
-      expect(getWallCap(false, 'manual')).toBe(75000);
+    it('blog sub wall cap = 75s (2차 attempt 허용)', () => {
+      expect(getWallCap(false, 'blog')).toBe(75000);
     });
 
-    it('manual sub wall cap에서 2차 시도 가능: wallCap - timeout >= 25s', () => {
+    it('manual sub wall cap = blog과 동일 (75s)', () => {
+      expect(getWallCap(false, 'manual')).toBe(getWallCap(false, 'blog'));
+    });
+
+    it('blog sub wall cap에서 2차 시도 가능: wallCap - timeout >= 25s', () => {
       // 1차 시도(40s) 후 남은 시간 35s → 2차 시도 25s 충분
-      const wallCap = getWallCap(false, 'manual');
-      const subTimeout = IMAGE_TIMEOUT.manual.sub;
+      const wallCap = getWallCap(false, 'blog');
+      const subTimeout = IMAGE_TIMEOUT.blog.sub;
       const remainingAfterFirst = wallCap - subTimeout;
       expect(remainingAfterFirst).toBeGreaterThanOrEqual(25000);
     });
@@ -63,6 +73,7 @@ describe('블로그 5장 이미지 정책 검증', () => {
     });
 
     it('hero wall cap은 변경 없음 (50s)', () => {
+      expect(getWallCap(true, 'blog')).toBe(50000);
       expect(getWallCap(true, 'manual')).toBe(50000);
       expect(getWallCap(true, 'auto')).toBe(50000);
     });
@@ -77,12 +88,12 @@ describe('블로그 5장 이미지 정책 검증', () => {
 
     it('sub 2차 attempt timeout은 25s (ultraMinimal은 빠름)', () => {
       const secondAttemptTimeout = 25000;
-      expect(secondAttemptTimeout).toBeLessThan(IMAGE_TIMEOUT.manual.sub);
+      expect(secondAttemptTimeout).toBeLessThan(IMAGE_TIMEOUT.blog.sub);
       expect(secondAttemptTimeout).toBeGreaterThanOrEqual(20000);
     });
 
     it('sub 총 worst case(2 attempt) < wall cap', () => {
-      const firstTimeout = IMAGE_TIMEOUT.manual.sub; // 40s
+      const firstTimeout = IMAGE_TIMEOUT.blog.sub; // 40s
       const secondTimeout = 25000; // 25s
       const wallCap = 75000;
       // 1차 timeout + gap(1s) + 2차 timeout = 66s < 75s

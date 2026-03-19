@@ -105,11 +105,11 @@ describe('planBlogImageWaves — 웨이브 분할', () => {
     }
   });
 
-  it('블로그 이미지는 manual 모드 사용 (hero 35s, sub 40s timeout)', () => {
+  it('블로그 이미지는 blog 모드 사용 (hero 35s, sub 40s timeout)', () => {
     const waves = planBlogImageWaves(makePrompts(3), 3, STYLE, RATIO);
     const allItems = waves.flatMap(w => w.items);
     for (const item of allItems) {
-      expect(item.mode).toBe('manual');
+      expect(item.mode).toBe('blog');
     }
   });
 
@@ -290,11 +290,11 @@ describe('insertBlogImageMarkers — intro 없는 블로그', () => {
 // ═══════════════════════════════════════
 
 describe('buildHeroRetryItem — hero 재시도 전략', () => {
-  it('role=hero, index=0, mode=manual', () => {
+  it('role=hero, index=0, mode=blog', () => {
     const item = buildHeroRetryItem('임플란트 치료', STYLE, RATIO);
     expect(item.role).toBe('hero');
     expect(item.index).toBe(0);
-    expect(item.mode).toBe('manual');
+    expect(item.mode).toBe('blog');
   });
 
   it('프롬프트가 간결 (원본 topic 60자 이내 + 짧은 지시)', () => {

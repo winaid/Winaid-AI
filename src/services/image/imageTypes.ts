@@ -16,7 +16,13 @@ export type SceneType =
 
 // ── ImageRole / ImageGenMode / ModelTier ──
 export type ImageRole = 'hero' | 'sub';
-export type ImageGenMode = 'auto' | 'manual';
+/**
+ * Timeout 정책 모드:
+ *   - 'auto':   기본 (hero 25s / sub 18s) — 벤치마크, 단건 테스트
+ *   - 'blog':   블로그 최초 자동 생성 (hero 35s / sub 40s) — planBlogImageWaves
+ *   - 'manual': 사용자 수동 재생성/AI수정 (hero 35s / sub 40s) — useAiRefine
+ */
+export type ImageGenMode = 'auto' | 'blog' | 'manual';
 export type ModelTier = 'pro' | 'nb2';
 
 /** 최종 결과물 유형: AI생성 > 템플릿 > placeholder (순서=품질) */
