@@ -68,7 +68,7 @@ export function planBlogImageWaves(
     customStylePrompt,
     // 블로그 전용 timeout 정책: manual 모드 사용
     // auto: hero 25s / sub 18s → Gemini 응답 시간(15~35s) 대비 부족 → timeout 실패 빈발
-    // manual: hero 35s / sub 25s → 응답 시간 대부분 커버 → AI 커버리지 대폭 향상
+    // manual: hero 35s / sub 30s → 응답 시간 대부분 커버 → AI 커버리지 대폭 향상
     // 카드뉴스는 별도 경로(generateSingleImage)를 사용하므로 영향 없음
     mode: 'manual' as const,
   }));
