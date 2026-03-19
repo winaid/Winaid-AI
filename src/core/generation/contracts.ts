@@ -72,19 +72,6 @@ export const BLOG_IMAGE_RATIO = '16:9';
 export const CARD_NEWS_IMAGE_RATIO = '4:3';
 export const DEFAULT_IMAGE_STYLE = 'illustration';
 
-/**
- * 블로그 5장 전용 2단계 배치 정책
- *
- * imageCount >= BLOG_IMAGE_PHASE_SPLIT_THRESHOLD 일 때:
- *   Phase 1: hero(1) + sub(PHASE1_COUNT-1) → 풀 시도, AI 커버리지 극대화
- *   Phase 2: 나머지 sub → Phase 1 완료 후 실행, rate limit 회복 상태에서 생성
- *
- * 이 정책은 블로그 postType에서만 적용된다.
- * 카드뉴스/보도자료/공용 이미지 파이프라인에 영향 없음.
- */
-export const BLOG_IMAGE_PHASE_SPLIT_THRESHOLD = 4;
-export const BLOG_IMAGE_PHASE1_COUNT = 3;
-
 // ══════════════════════════════════════════════
 // 생성 전체 타임아웃
 // ══════════════════════════════════════════════

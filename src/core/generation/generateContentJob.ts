@@ -23,8 +23,6 @@ import {
   DEFAULT_CARD_NEWS_SLIDE_COUNT,
   BLOG_IMAGE_RATIO,
   CARD_NEWS_IMAGE_RATIO,
-  BLOG_IMAGE_PHASE_SPLIT_THRESHOLD,
-  BLOG_IMAGE_PHASE1_COUNT,
 } from './contracts';
 
 // ── 결과 타입 ──
@@ -525,73 +523,25 @@ async function _orchestrateBlog(
         }
       }
     } else {
-      // 블로그: cooldown-aware 큐 사용
-      let allQueueResults: ImageQueueResult[] = [];
+      // 블로그: 웨이브 기반 이미지 생성 (0~N장 범용 정책)
+      const { planBlogImageWaves } = await import('./blogImagePlanner');
+      const waves = planBlogImageWaves(
+        textData.imagePrompts,
+        maxImages,
+        request.imageStyle,
+        imgRatio,
+        request.customImagePrompt,
+      );
 
-      if (maxImages >= BLOG_IMAGE_PHASE_SPLIT_THRESHOLD) {
-        // ── 블로그 5장 전용: 2단계 배치 전략 ──
-        // Phase 1 완료 후 Phase 2 실행 → rate limit 회복 상태에서 생성 → template fallback 감소
-        // NB2 concurrency=2 환경에서 5개 동시 요청 시 rate limit/503 집중 → 40% template 문제 해소
-        const p1Count = Math.min(BLOG_IMAGE_PHASE1_COUNT, maxImages);
-        const p2Count = maxImages - p1Count;
-        console.info(`[IMG-BLOG5] 2단계 배치: phase1=${p1Count}장 phase2=${p2Count}장 (threshold=${BLOG_IMAGE_PHASE_SPLIT_THRESHOLD})`);
+      const allQueueResults: ImageQueueResult[] = [];
+      for (const wave of waves) {
+        // 단일 웨이브면 라벨 생략, 복수 웨이브면 차수 표시
+        const waveLabel = waves.length > 1 ? ` ${wave.label}` : '';
+        safeProgress(`🎨 이미지${waveLabel}: ${wave.items.length}장 생성 중...`);
+        const waveResults = await generateImageQueue(wave.items, safeProgress);
+        allQueueResults.push(...waveResults);
 
-        // Phase 1: hero + 핵심 sub (풀 시도)
-        const phase1Items: ImageQueueItem[] = textData.imagePrompts.slice(0, p1Count).map((p: string, i: number) => ({
-          index: i,
-          prompt: p,
-          role: (i === 0 ? 'hero' : 'sub') as 'hero' | 'sub',
-          style: request.imageStyle,
-          aspectRatio: imgRatio,
-          customStylePrompt: request.customImagePrompt,
-          mode: 'auto' as const,
-        }));
-
-        safeProgress(`🎨 이미지 1단계: 핵심 ${p1Count}장 생성 중...`);
-        const phase1Results = await generateImageQueue(phase1Items, safeProgress);
-        allQueueResults.push(...phase1Results);
-
-        for (const qr of phase1Results) {
-          images.push({ index: qr.index + 1, data: qr.data, prompt: qr.prompt });
-          if (qr.status === 'fallback') imageFailCount++;
-        }
-
-        // Phase 2: 나머지 sub (rate limit 회복 후 실행)
-        if (p2Count > 0) {
-          const phase2Items: ImageQueueItem[] = textData.imagePrompts.slice(p1Count, maxImages).map((p: string, i: number) => ({
-            index: p1Count + i,
-            prompt: p,
-            role: 'sub' as 'hero' | 'sub',
-            style: request.imageStyle,
-            aspectRatio: imgRatio,
-            customStylePrompt: request.customImagePrompt,
-            mode: 'auto' as const,
-          }));
-
-          safeProgress(`🎨 이미지 2단계: 보조 ${p2Count}장 생성 중...`);
-          const phase2Results = await generateImageQueue(phase2Items, safeProgress);
-          allQueueResults.push(...phase2Results);
-
-          for (const qr of phase2Results) {
-            images.push({ index: qr.index + 1, data: qr.data, prompt: qr.prompt });
-            if (qr.status === 'fallback') imageFailCount++;
-          }
-        }
-      } else {
-        // 기존 단일 배치 (3장 이하 — 변경 없음)
-        const queueItems: ImageQueueItem[] = textData.imagePrompts.slice(0, maxImages).map((p: string, i: number) => ({
-          index: i,
-          prompt: p,
-          role: (i === 0 ? 'hero' : 'sub') as 'hero' | 'sub',
-          style: request.imageStyle,
-          aspectRatio: imgRatio,
-          customStylePrompt: request.customImagePrompt,
-          mode: 'auto' as const,
-        }));
-
-        allQueueResults = await generateImageQueue(queueItems, safeProgress);
-
-        for (const qr of allQueueResults) {
+        for (const qr of waveResults) {
           images.push({ index: qr.index + 1, data: qr.data, prompt: qr.prompt });
           if (qr.status === 'fallback') imageFailCount++;
         }

@@ -6,6 +6,7 @@
  */
 
 import type { PostType } from "../types";
+import { insertBlogImageMarkers } from "../core/generation/blogImagePlanner";
 
 // ── 상수 ──
 
@@ -183,115 +184,10 @@ export function insertImageMarkers(
 ): string {
   let result = body;
 
-  // 블로그: [IMG_N] 마커 없으면 자동 삽입
+  // 블로그: [IMG_N] 마커 없으면 자동 삽입 (blogImagePlanner 범용 정책 위임)
   if (postType !== 'card_news' && imageCount > 0 && !result.includes('[IMG_')) {
     console.log('⚠️ 블로그에 [IMG_N] 마커가 없음! 자동 삽입 중...');
-
-    const h3Tags = result.match(/<h3[^>]*>.*?<\/h3>/gi) || [];
-    let imgIndex = 1;
-
-    if (imageCount >= 4 && h3Tags.length > 0) {
-      // ── 블로그 5장 전용: 확장 배치 전략 ──
-      // intro(1장) + h3 기반(N장) + 하단 보충 → 레이아웃 경고 제거
-      // 카드뉴스에 영향 없음 (postType !== 'card_news' 분기 내부)
-
-      // Step 1: 인트로 뒤 (첫 h3 앞)에 1장 배치
-      const firstH3Idx = result.indexOf(h3Tags[0]!);
-      if (firstH3Idx > 0) {
-        const introSection = result.substring(0, firstH3Idx);
-        const lastPInIntro = introSection.lastIndexOf('</p>');
-        if (lastPInIntro > 0 && imgIndex <= imageCount) {
-          const insertPoint = lastPInIntro + '</p>'.length;
-          const marker = `\n<div class="content-image-wrapper">[IMG_${imgIndex}]</div>\n`;
-          result = result.substring(0, insertPoint) + marker + result.substring(insertPoint);
-          imgIndex++;
-        }
-      }
-
-      // Step 2: h3+p 쌍 뒤에 배치
-      if (imgIndex <= imageCount) {
-        result = result.replace(
-          /(<h3[^>]*>.*?<\/h3>[\s\S]*?<\/p>)/gi,
-          (match: string) => {
-            if (imgIndex <= imageCount) {
-              const marker = `\n<div class="content-image-wrapper">[IMG_${imgIndex}]</div>\n`;
-              imgIndex++;
-              return match + marker;
-            }
-            return match;
-          }
-        );
-      }
-
-      // Step 3: 아직 남았으면 본문 하단에 조용히 보충 (5장 모드 정상 동작)
-      if (imgIndex <= imageCount) {
-        const remaining = imageCount - imgIndex + 1;
-        console.info(`[IMG-INSERT] 블로그 ${imageCount}장 모드: ${remaining}장 본문 하단 배치`);
-        let tailMarkers = '';
-        while (imgIndex <= imageCount) {
-          tailMarkers += `\n<div class="content-image-wrapper">[IMG_${imgIndex}]</div>\n`;
-          imgIndex++;
-        }
-        if (result.includes('</div>')) {
-          const lastDivIdx = result.lastIndexOf('</div>');
-          result = result.substring(0, lastDivIdx) + tailMarkers + result.substring(lastDivIdx);
-        } else {
-          result += tailMarkers;
-        }
-      }
-
-      console.log(`✅ 블로그 ${imageCount}장: [IMG_1] ~ [IMG_${imageCount}] 확장 배치 완료 (intro+h3 기반)`);
-
-    } else if (h3Tags.length > 0) {
-      // 기존 h3 기반 삽입 (1-3장 — 변경 없음)
-      result = result.replace(
-        /(<h3[^>]*>.*?<\/h3>[\s\S]*?<\/p>)/gi,
-        (match: string) => {
-          if (imgIndex <= imageCount) {
-            const marker = `\n<div class="content-image-wrapper">[IMG_${imgIndex}]</div>\n`;
-            imgIndex++;
-            return match + marker;
-          }
-          return match;
-        }
-      );
-      console.log(`✅ 블로그: [IMG_1] ~ [IMG_${imgIndex - 1}] 마커 h3 기반 삽입`);
-    } else {
-      // p 기반 폴백 (h3 없는 경우 — 변경 없음)
-      const pTags = result.match(/<\/p>/gi) || [];
-      if (pTags.length >= 2) {
-        let pCount = 0;
-        result = result.replace(/<\/p>/gi, (match: string) => {
-          pCount++;
-          if (pCount % 2 === 0 && imgIndex <= imageCount) {
-            const marker = `\n<div class="content-image-wrapper">[IMG_${imgIndex}]</div>\n`;
-            imgIndex++;
-            return match + marker;
-          }
-          return match;
-        });
-        console.log(`✅ 블로그 (h3 없음): [IMG_1] ~ [IMG_${imgIndex - 1}] 마커 p 기반 삽입`);
-      }
-    }
-
-    // 부족 마커 본문 끝에 보충 (5장 모드에서는 경고 억제 — 정상 동작)
-    if (imgIndex <= imageCount) {
-      const remaining = imageCount - imgIndex + 1;
-      if (imageCount < 4) {
-        console.warn(`[IMG-INSERT] ⚠️ 레이아웃 위치 부족! ${remaining}장 본문 끝에 추가 삽입`);
-      }
-      let tailMarkers = '';
-      while (imgIndex <= imageCount) {
-        tailMarkers += `\n<div class="content-image-wrapper">[IMG_${imgIndex}]</div>\n`;
-        imgIndex++;
-      }
-      if (result.includes('</div>')) {
-        const lastDivIdx = result.lastIndexOf('</div>');
-        result = result.substring(0, lastDivIdx) + tailMarkers + result.substring(lastDivIdx);
-      } else {
-        result += tailMarkers;
-      }
-    }
+    result = insertBlogImageMarkers(result, imageCount);
   }
 
   // 카드뉴스: [IMG_N] 마커 없으면 자동 삽입
