@@ -343,6 +343,7 @@ async function _orchestrateCardNews(
       imageStyle: request.imageStyle,
       customImagePrompt: request.customImagePrompt,
       cardPrompts: agentResult.cardPrompts,
+      designTemplateId: request.designTemplateId,
       cssTheme: request.cssTheme || 'modern'
     };
   } catch (error: any) {
