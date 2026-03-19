@@ -61,18 +61,17 @@ function stripGateSignal(progress: string): string {
 }
 
 /**
- * 내부 로직 메시지를 사용자 친화적 톤으로 교체.
- * "Stage A", "소제목 2/5", "폴리싱" 같은 파이프라인 용어를 숨긴다.
- */
-/**
- * 내부 progress → 사용자용 메시지 변환.
+ * 내부 progress → 사용자 표시 문구 변환.
  *
- * 정책: "원문 보존"이 아니라 "사용자 경험 보호".
- * 내부 용어가 섞인 메시지는 빈 문자열로 반환하여
- * displayStage의 defaultMsg가 대신 표시되게 한다.
+ * ▸ 블로그: **화이트리스트** 방식 — 기본적으로 모든 raw progress를 suppress.
+ *   허용된 패턴만 사용자에게 표시하고, 나머지는 빈 문자열을 반환하여
+ *   displayStage의 defaultMsg가 대신 표시되게 한다.
+ *   → "[1/4] 글 구조 설계 중...", "도입부 완료", "통합 검증 완료" 등
+ *     내부 파이프라인 용어가 절대 사용자에게 노출되지 않는다.
  *
- * 이미지 단계에서는 병렬 정보("이미지 3/5장")를 제거하고
- * "한 장씩 차분하게 준비하는" 느낌의 문구로 교체한다.
+ * ▸ 카드뉴스/보도자료: 기존 키워드 기반 (대부분 통과).
+ *   이 유형은 progress 문자열 자체가 사용자에게 보여도 무방한 수준이므로
+ *   기술 태그만 제거하고 나머지를 통과시킨다.
  */
 
 // 이미지 단계 순환 문구 (병렬 진행을 숨기고 순차 인상 부여)
@@ -85,52 +84,55 @@ const IMAGE_STEP_MESSAGES = [
 ];
 let _imgStepIdx = 0;
 
-function humanizeProgress(msg: string): string {
+function humanizeProgress(msg: string, postType?: string): string {
   if (!msg) return msg;
 
-  // ── 1. 완전 숨기기: 내부 파이프라인 용어 ──
-  if (/stage\s*[abc]/i.test(msg)) return '';
-  if (msg.includes('폴리싱') || msg.includes('polish')) return '';
-  if (msg.includes('소제목') && msg.includes('/')) return '';
-  if (msg.includes('도입부 작성') || msg.includes('도입부 생성')) return '';
-  if (msg.includes('섹션') && /\d/.test(msg)) return '';
-  if (msg.includes('마무리 작성')) return '';
-  if (msg.includes('파이프라인')) return '';
-  if (msg.includes('AI 냄새')) return '';
-  if (msg.includes('보조 비주얼')) return '';
-  if (msg.includes('통합 검증')) return '';
-  if (msg.includes('quality path') || msg.includes('quality_path')) return '';
-  if (/seo\s*점수/i.test(msg) || /seo\s*score/i.test(msg)) return '';
-  if (msg.includes('FAQ') && !msg.includes('FAQ 섹션이')) return '';
-
-  // ── 2. 내부 역할/기술 태그 제거 ──
-  let cleaned = msg
+  // ── 공통: 기술 태그 제거 ──
+  const cleaned = msg
     .replace(/\s*\((hero|sub)\)/gi, '')
     .replace(/\s*\[wave[- ]?\d+\]/gi, '')
     .replace(/tier=\w+/gi, '')
-    .replace(/nb2|pro-rescue|pro-quality/gi, '');
+    .replace(/nb2|pro-rescue|pro-quality/gi, '')
+    .trim();
 
-  // ── 3. 이미지 진행: 병렬 숫자를 순차 느낌으로 교체 ──
-  // "이미지 3/5장 생성 중" → 순환 문구
-  if (/이미지\s*\d+\/\d+장/.test(cleaned) || /이미지.*생성 시작/.test(cleaned)) {
+  // ══════════════════════════════════════════════
+  // 카드뉴스 / 보도자료: 기존 키워드 기반 (대부분 통과)
+  // ══════════════════════════════════════════════
+  if (postType === 'card_news' || postType === 'press_release') {
+    if (cleaned.includes('보조 비주얼')) return '';
+    if (cleaned.includes('AI 냄새')) return '';
+    return cleaned;
+  }
+
+  // ══════════════════════════════════════════════
+  // 블로그: 화이트리스트 — 기본 suppress, 허용 패턴만 통과
+  // ══════════════════════════════════════════════
+
+  // ── WL-1. 이미지 진행 → 순환 문구로 교체 ──
+  if (/이미지/.test(cleaned) && (/\d+\/\d+장/.test(cleaned) || /생성\s*(시작|중)/.test(cleaned))) {
     const step = IMAGE_STEP_MESSAGES[_imgStepIdx % IMAGE_STEP_MESSAGES.length];
     _imgStepIdx++;
     return step;
   }
-  // "이미지 3/5장 완료" → 순환 문구
-  if (/이미지\s*\d+\/\d+장\s*완료/.test(cleaned) || /이미지\s*\d+\/\d+장\s*준비 완료/.test(cleaned)) {
+  if (/이미지/.test(cleaned) && /(완료|준비 완료)/.test(cleaned)) {
     const step = IMAGE_STEP_MESSAGES[_imgStepIdx % IMAGE_STEP_MESSAGES.length];
     _imgStepIdx++;
     return step;
   }
 
-  // ── 4. 재시도 메시지 간소화 ──
-  if (cleaned.includes('재시도')) {
+  // ── WL-2. 재시도 → 부드러운 문구 (단, 보조 비주얼/실패 메시지는 suppress) ──
+  if (cleaned.includes('재시도') && !cleaned.includes('실패') && !cleaned.includes('보조 비주얼')) {
     return '조금 더 다듬고 있어요';
   }
 
-  // ── 5. 나머지는 통과 (이모지 있는 완료 메시지 등) ──
-  return cleaned.trim();
+  // ── WL-3. 최종 완료 → 마무리 문구 ──
+  if (cleaned.includes('모든 생성 작업 완료')) {
+    return '마지막 손질을 하고 있어요';
+  }
+
+  // ── 그 외 전부 suppress ──
+  // displayStage의 defaultMsg("좋은 문장을 한 줄씩 꺼내고 있어요" 등)가 대신 표시됨.
+  return '';
 }
 
 /** gate 신호 추출 */
@@ -333,7 +335,7 @@ export function useContentGeneration(deps: ContentGenerationDeps): ContentGenera
         if (gateSignal === 'TEXT_READY') textReadyRef_.current = true;
 
         // 사용자에게 보이는 progress에서 gate 신호 제거 + 내부 용어 교체
-        const cleanProgress = humanizeProgress(stripGateSignal(p));
+        const cleanProgress = humanizeProgress(stripGateSignal(p), request.postType);
 
         // gate + monotonic 기반 displayStage 결정
         targetSetState(prev => {
@@ -343,9 +345,13 @@ export function useContentGeneration(deps: ContentGenerationDeps): ContentGenera
             textReadyRef_.current,
             cleanProgress,
           );
+          // 블로그: 화이트리스트에서 suppress된 경우(빈 문자열) prev.progress를 유지하지 않음
+          // → GenerateWorkspace에서 stage.defaultMsg가 표시됨
+          // 카드뉴스/보도자료: cleanProgress가 비어있으면 이전 메시지 유지 (기존 호환)
+          const isBlog = request.postType !== 'card_news' && request.postType !== 'press_release';
           return {
             ...prev,
-            progress: cleanProgress || prev.progress,
+            progress: isBlog ? cleanProgress : (cleanProgress || prev.progress),
             displayStage: newStage,
           };
         });

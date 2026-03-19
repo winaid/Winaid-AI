@@ -52,7 +52,7 @@ const TIER_CONCURRENCY: Record<ModelTier, number> = {
 
 const IMAGE_TIMEOUT: Record<ImageGenMode, Record<ImageRole, number>> = {
   auto:   { hero: 25000, sub: 18000 },
-  manual: { hero: 35000, sub: 30000 },  // sub 25s→30s: Gemini 응답 15~35s 범위 커버 확대
+  manual: { hero: 35000, sub: 22000 },  // sub 30s→22s: wallCap(50s) 내에 3회 attempt(nb2→nb2→pro) 확보
 };
 
 // 디버그 verbose 로그 플래그
@@ -191,7 +191,10 @@ export const generateBlogImage = async (
   role: ImageRole = 'sub'
 ): Promise<BlogImageOutput> => {
   const timeout = IMAGE_TIMEOUT[mode][role];
-  const styleKw = customStylePrompt || STYLE_KEYWORD_SHORT[style] || STYLE_KEYWORD_SHORT.illustration;
+  // custom style: ultraMinimal에서 prompt가 너무 길어지지 않도록 60자로 제한
+  const styleKw = customStylePrompt
+    ? customStylePrompt.substring(0, 60)
+    : (STYLE_KEYWORD_SHORT[style] || STYLE_KEYWORD_SHORT.illustration);
   const demoSafe = isDemoSafeMode();
   const isHero = role === 'hero';
 
@@ -314,11 +317,22 @@ async function _executeBlogImageChain(params: _ChainParams): Promise<BlogImageOu
   const attemptLog: { errorType: string; retryAfterMs: number; tier: ModelTier; ms: number }[] = [];
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    if (Date.now() - wallStart > WALL_TIME_CAP_MS) {
-      if (debug) console.debug(`[IMG-WALL] wall time cap ${WALL_TIME_CAP_MS}ms exceeded, skipping to template`);
+    const def = chain[attempt];
+    const wallElapsedSoFar = Date.now() - wallStart;
+
+    // wall cap 체크: 초과 시 template fallback으로 이동
+    // 단, cross-tier rescue(마지막 attempt이고 tier가 다른 경우)는 wall cap을 초과해도 1회 실행한다.
+    // 이유: pro rescue는 nb2 실패의 마지막 기회이며, wall cap 때문에 실행 안 되면
+    //       설계상 존재하는 rescue path가 사실상 dead code가 된다.
+    const isLastChance = attempt === maxAttempts - 1;
+    const isCrossTierRescue = attempt > 0 && def.tier !== chain[attempt - 1]?.tier;
+    if (wallElapsedSoFar > WALL_TIME_CAP_MS && !(isLastChance && isCrossTierRescue)) {
+      if (debug) console.debug(`[IMG-WALL] wall time cap ${WALL_TIME_CAP_MS}ms exceeded (${Math.round(wallElapsedSoFar)}ms), skipping to template`);
       break;
     }
-    const def = chain[attempt];
+    if (wallElapsedSoFar > WALL_TIME_CAP_MS && isLastChance && isCrossTierRescue) {
+      console.info(`[IMG-WALL-RESCUE] wall cap exceeded but executing cross-tier rescue: ${def.label} (${def.tier})`);
+    }
     const t0 = Date.now();
     const tier = def.tier;
 
@@ -379,8 +393,18 @@ async function _executeBlogImageChain(params: _ChainParams): Promise<BlogImageOu
         const isCrossTier = nextTier && nextTier !== tier;
 
         if (!isHero && !isCrossTier && (parsed.isUpstream503 || parsed.isCooldown)) {
-          console.info(`[IMG-SKIP-RETRY] type=${role} reason=${parsed.errorType} → skip remaining attempts, fast-template`);
-          break;
+          // 같은 tier 재시도는 무의미 → 건너뛰기
+          // 단, chain 뒤에 cross-tier rescue가 있으면 그쪽으로 점프
+          const crossTierIdx = chain.findIndex((c, i) => i > attempt && c.tier !== tier);
+          if (crossTierIdx >= 0) {
+            console.info(`[IMG-SKIP-TO-RESCUE] type=${role} reason=${parsed.errorType} → skip same-tier retries, jump to ${chain[crossTierIdx].label}`);
+            // attempt를 cross-tier 직전으로 이동 (for loop의 attempt++가 cross-tier로 진행)
+            attempt = crossTierIdx - 1;
+          } else {
+            console.info(`[IMG-SKIP-RETRY] type=${role} reason=${parsed.errorType} → skip remaining attempts, fast-template`);
+            break;
+          }
+          continue;
         }
 
         if (isCrossTier) {
