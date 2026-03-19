@@ -113,7 +113,7 @@ export function buildHeroRetryItem(
   const shortTopic = topic.substring(0, 60);
   return {
     index: 0,
-    prompt: `${shortTopic} — 건강/의료 블로그 대표 이미지. 현대 한국인, 신뢰감 있는 분위기.`,
+    prompt: `${shortTopic} — 건강/의료 블로그 대표 이미지. 단일 장면, 현대 한국인, 신뢰감 있는 분위기.`,
     role: 'hero',
     style,
     aspectRatio,

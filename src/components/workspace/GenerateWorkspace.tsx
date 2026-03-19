@@ -141,28 +141,126 @@ export function GenerateWorkspace({
   );
 }
 
-/** 생성 중 로딩 스피너 */
+/**
+ * 생성 중 로딩 화면
+ *
+ * 단계 구조:
+ *   상단 — 현재 단계명 (progress 키워드에서 자동 판별)
+ *   중단 — 스피너 + 상세 진행 메시지 1줄
+ *   하단 — 짧은 안내
+ *
+ * progress 문자열로 단계를 자동 판별한다.
+ * 블로그/카드뉴스/보도자료 공통 사용.
+ */
 function LoadingView({ darkMode, progress, postType }: { darkMode: boolean; progress: string; postType?: string }) {
+  // ── 단계 자동 판별 ──
+  const stage = resolveStage(progress, postType);
+
+  // ── progress에서 이모지 제거한 짧은 메시지 ──
+  const cleanProgress = progress
+    .replace(/^[\u{1F300}-\u{1FAD6}\u{2600}-\u{27BF}\u{FE00}-\u{FE0F}\u{200D}\u{20E3}\u{E0020}-\u{E007F}]+\s*/u, '')
+    .trim();
+
   return (
-    <div className={`rounded-xl border p-16 flex flex-col items-center justify-center text-center transition-colors duration-300 flex-1 min-h-[480px] ${darkMode ? 'bg-[#161b22] border-[#30363d]' : 'bg-white border-slate-200 shadow-sm'}`}>
-      <div className="relative mb-8">
-        <div className={`w-16 h-16 border-[3px] border-t-blue-500 rounded-full animate-spin ${darkMode ? 'border-slate-700' : 'border-blue-100'}`}></div>
+    <div className={`rounded-xl border p-12 md:p-16 flex flex-col items-center justify-center text-center transition-colors duration-300 flex-1 min-h-[480px] ${darkMode ? 'bg-[#161b22] border-[#30363d]' : 'bg-white border-slate-200 shadow-sm'}`}>
+      {/* 상단: 현재 단계명 */}
+      <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold mb-6 ${darkMode ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 'bg-blue-50 text-blue-600 border border-blue-100'}`}>
+        <span>{stage.icon}</span>
+        <span>{stage.label}</span>
+      </div>
+
+      {/* 중단: 스피너 */}
+      <div className="relative mb-6">
+        <div className={`w-14 h-14 border-[3px] border-t-blue-500 rounded-full animate-spin ${darkMode ? 'border-slate-700' : 'border-blue-100'}`}></div>
         <div className="absolute inset-0 flex items-center justify-center">
-          <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${darkMode ? 'bg-slate-700' : 'bg-blue-50'}`}>
-            <svg className="w-4 h-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" /></svg>
+          <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${darkMode ? 'bg-slate-700' : 'bg-blue-50'}`}>
+            <svg className="w-3.5 h-3.5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" /></svg>
           </div>
         </div>
       </div>
-      <h2 className={`text-lg font-bold mb-3 ${darkMode ? 'text-slate-100' : 'text-slate-800'}`}>{progress}</h2>
-      <p className={`max-w-xs text-sm font-medium text-center ${darkMode ? 'text-slate-400' : 'text-slate-400'}`}>
-        {postType === 'card_news'
-          ? '카드뉴스 원고를 생성하고 있습니다...'
-          : postType === 'press_release'
-          ? '언론 보도자료를 작성하고 있습니다...'
-          : <>네이버 스마트블록 노출을 위한 최적의<br/>의료 콘텐츠를 생성하고 있습니다.</>}
+
+      {/* 중단: 상세 진행 메시지 */}
+      <p className={`text-sm font-medium mb-2 min-h-[20px] transition-all duration-200 ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>
+        {cleanProgress || stage.defaultMsg}
+      </p>
+
+      {/* 하단: 짧은 안내 */}
+      <p className={`text-xs max-w-xs ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>
+        {stage.hint}
       </p>
     </div>
   );
+}
+
+/** progress 키워드 기반 단계 판별 */
+function resolveStage(progress: string, postType?: string): {
+  icon: string; label: string; defaultMsg: string; hint: string;
+} {
+  const p = progress.toLowerCase();
+
+  // 이미지 단계
+  if (p.includes('이미지') || p.includes('image') || p.includes('img')) {
+    return {
+      icon: '\u{1F3A8}',
+      label: '이미지 생성',
+      defaultMsg: '이미지를 생성하고 있습니다',
+      hint: '이미지 수에 따라 30초~2분 소요됩니다',
+    };
+  }
+
+  // 저장/마무리 단계
+  if (p.includes('저장') || p.includes('완료') || p.includes('업로드') || p.includes('persist')) {
+    return {
+      icon: '\u{1F4BE}',
+      label: '저장 중',
+      defaultMsg: '결과를 저장하고 있습니다',
+      hint: '거의 완료되었습니다',
+    };
+  }
+
+  // FAQ 단계
+  if (p.includes('faq') || p.includes('자주 묻는')) {
+    return {
+      icon: '\u{2753}',
+      label: 'FAQ 생성',
+      defaultMsg: 'FAQ 섹션을 추가하고 있습니다',
+      hint: '스마트블록 노출을 위한 FAQ를 생성합니다',
+    };
+  }
+
+  // AI 냄새 / 품질 검사
+  if (p.includes('검사') || p.includes('검증') || p.includes('smell')) {
+    return {
+      icon: '\u{1F50D}',
+      label: '품질 검사',
+      defaultMsg: '콘텐츠 품질을 검사하고 있습니다',
+      hint: '의료광고법 준수 여부를 확인합니다',
+    };
+  }
+
+  // 카드뉴스 특화
+  if (postType === 'card_news') {
+    if (p.includes('원고') || p.includes('기획') || p.includes('1단계')) {
+      return { icon: '\u{1F4DD}', label: '원고 작성', defaultMsg: '카드뉴스 원고를 기획하고 있습니다', hint: '슬라이드별 구성을 설계합니다' };
+    }
+    if (p.includes('프롬프트') || p.includes('디자인') || p.includes('2단계')) {
+      return { icon: '\u{1F3A8}', label: '디자인 변환', defaultMsg: '카드뉴스 디자인을 구성하고 있습니다', hint: '각 카드의 레이아웃과 텍스트를 배치합니다' };
+    }
+    return { icon: '\u{1F4CB}', label: '카드뉴스 생성', defaultMsg: '카드뉴스를 생성하고 있습니다', hint: '원고 기획부터 이미지 생성까지 자동으로 진행됩니다' };
+  }
+
+  // 보도자료 특화
+  if (postType === 'press_release') {
+    return { icon: '\u{1F4F0}', label: '보도자료 작성', defaultMsg: '보도자료를 작성하고 있습니다', hint: '언론 배포용 형식으로 구성합니다' };
+  }
+
+  // 기본: 텍스트 생성 단계 (블로그)
+  return {
+    icon: '\u{270D}\u{FE0F}',
+    label: '글 작성',
+    defaultMsg: 'SEO 최적화 콘텐츠를 작성하고 있습니다',
+    hint: '네이버 스마트블록 노출에 최적화된 구조로 생성합니다',
+  };
 }
 
 /** 초기 빈 상태 — 에디터 스타일 */

@@ -112,6 +112,12 @@ ${JSON.stringify(searchResults?.collected_facts?.slice(0, 3) || [], null, 2)}`;
     throw new Error('아웃라인 생성 실패: 소제목이 없습니다. 다시 시도해주세요.');
   }
 
+  // 소제목 최소 5개 정책 강제: 4개 이하면 경고 로그 + 계속 진행
+  // (LLM 재시도는 시간 비용 대비 효과 낮으므로, 로그로 추적하고 프롬프트 정책으로 유도)
+  if (outline.sections.length < 5) {
+    console.warn(`[PIPELINE] ⚠️ 소제목 ${outline.sections.length}개 — 정책 최소 5개 미달. 프롬프트 개선 필요.`);
+  }
+
   // 사용자 지정 소제목이 있으면 아웃라인에 반영
   if (request.customSubheadings) {
     const customTitles = request.customSubheadings.split(/\r?\n/).filter(h => h.trim());
@@ -389,7 +395,11 @@ ${sectionSummaries.join('\n')}`;
   const concParagraphs = (conclusionHtml.match(/<p[\s>]/gi) || []).length;
   const sectionParagraphs = sectionHtmls.map(h => (h.match(/<p[\s>]/gi) || []).length);
   console.info(`[PIPELINE] 📊 균형 검증: intro=${introLen}자(${introParagraphs}문단), sections=${sectionLens.join('/')}자, paragraphs=${sectionParagraphs.join('/')}, conclusion=${concLen}자(${concParagraphs}문단), balance=${balanceRatio}%(min/max)`);
-  if (balanceRatio < 75) {
+  if (balanceRatio < 60) {
+    const longestIdx = sectionLens.indexOf(maxSec);
+    const shortestIdx = sectionLens.indexOf(minSec);
+    console.error(`[PIPELINE] ⛔ 섹션 균형 심각: 최단 섹션${shortestIdx + 1}(${minSec}자) vs 최장 섹션${longestIdx + 1}(${maxSec}자) — 비율 ${balanceRatio}% (60% 미만)`);
+  } else if (balanceRatio < 75) {
     console.warn(`[PIPELINE] ⚠️ 섹션 균형 경고: 최소 ${minSec}자 vs 최대 ${maxSec}자 (비율 ${balanceRatio}%) — 75% 미만`);
   }
   // ── 서술 품질 힌트 로그 ──
