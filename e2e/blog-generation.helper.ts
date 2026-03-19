@@ -1,28 +1,34 @@
 /**
  * 블로그 생성 E2E 헬퍼 — Playwright용 공통 동작 추상화
  *
- * 반복되는 "페이지 열기 → 주제 입력 → 이미지 수 설정 → 생성 → 완료 대기 → 결과 수집"
- * 흐름을 helper로 분리하여 0~5장 각 시나리오에서 재사용.
+ * 실측 검증용: preview.story-darugi.com 에서 실제 API 호출
+ * 모든 [IMG-*] / [BLOG_FLOW] / [RESULT_PREVIEW] 패턴 수집
  */
 import type { Page } from '@playwright/test';
 
 // ── 콘솔 로그 수집 ──
 
 export interface CollectedLogs {
-  imgSummary: string[];   // [IMG-SUMMARY] 패턴
-  imgContract: string[];  // [IMG-CONTRACT] 패턴
-  imgPlan: string[];      // [IMG-PLAN] 패턴
-  imgHeroRetry: string[]; // [IMG-HERO-RETRY] 패턴
-  blogFlow: string[];     // [BLOG_FLOW] 패턴
-  warnings: string[];     // ⚠️ 포함 로그
-  errors: string[];       // console.error
-  all: string[];          // 전체 로그
+  imgSummary: string[];
+  imgContract: string[];
+  imgPlan: string[];
+  imgTier: string[];
+  imgFinal: string[];
+  imgSession: string[];
+  imgHeroRetry: string[];
+  blogFlow: string[];
+  resultPreview: string[];
+  warnings: string[];
+  errors: string[];
+  all: string[];
 }
 
 export function createLogCollector(page: Page): CollectedLogs {
   const logs: CollectedLogs = {
-    imgSummary: [], imgContract: [], imgPlan: [], imgHeroRetry: [],
-    blogFlow: [], warnings: [], errors: [], all: [],
+    imgSummary: [], imgContract: [], imgPlan: [], imgTier: [],
+    imgFinal: [], imgSession: [], imgHeroRetry: [],
+    blogFlow: [], resultPreview: [],
+    warnings: [], errors: [], all: [],
   };
 
   page.on('console', (msg) => {
@@ -31,8 +37,12 @@ export function createLogCollector(page: Page): CollectedLogs {
     if (text.includes('[IMG-SUMMARY]')) logs.imgSummary.push(text);
     if (text.includes('[IMG-CONTRACT]')) logs.imgContract.push(text);
     if (text.includes('[IMG-PLAN]')) logs.imgPlan.push(text);
+    if (text.includes('[IMG-TIER]')) logs.imgTier.push(text);
+    if (text.includes('[IMG-FINAL]')) logs.imgFinal.push(text);
+    if (text.includes('[IMG-SESSION]')) logs.imgSession.push(text);
     if (text.includes('[IMG-HERO-RETRY]')) logs.imgHeroRetry.push(text);
     if (text.includes('[BLOG_FLOW]')) logs.blogFlow.push(text);
+    if (text.includes('[RESULT_PREVIEW]')) logs.resultPreview.push(text);
     if (text.includes('⚠️')) logs.warnings.push(text);
     if (msg.type() === 'error') logs.errors.push(text);
   });
@@ -53,7 +63,6 @@ export interface ImageSummaryData {
 
 /** [IMG-SUMMARY] 로그에서 수치 추출 */
 export function parseImgSummary(logs: string[]): ImageSummaryData | null {
-  // 마지막 summary 로그 사용 (여러 wave가 있으면 마지막이 전체 요약)
   const lastLog = logs.filter(l => l.includes('selected=')).pop();
   if (!lastLog) return null;
 
@@ -72,45 +81,60 @@ export function parseImgSummary(logs: string[]): ImageSummaryData | null {
   };
 }
 
+/** hero 결과 판별: [IMG-FINAL] 로그 중 첫 번째(hero)가 ai-image인지 */
+export function parseHeroResult(imgFinalLogs: string[]): string {
+  if (imgFinalLogs.length === 0) return 'unknown';
+  const first = imgFinalLogs[0];
+  if (first.includes('ai-image')) return 'ai-image';
+  if (first.includes('template') || first.includes('TEMPLATE')) return 'template';
+  if (first.includes('placeholder')) return 'placeholder';
+  return 'unknown';
+}
+
+/** inserted/persisted 관련 로그 파싱 */
+export function parsePersistedInfo(allLogs: string[]): { inserted: number; persisted: number; imageFailCount: number } {
+  let inserted = -1, persisted = -1, imageFailCount = 0;
+  for (const l of allLogs) {
+    const insMatch = l.match(/inserted[=:](\d+)/i);
+    if (insMatch) inserted = parseInt(insMatch[1], 10);
+    const perMatch = l.match(/persisted[=:](\d+)/i);
+    if (perMatch) persisted = parseInt(perMatch[1], 10);
+    const failMatch = l.match(/imageFailCount[=:](\d+)/i);
+    if (failMatch) imageFailCount = parseInt(failMatch[1], 10);
+  }
+  return { inserted, persisted, imageFailCount };
+}
+
 // ── 블로그 생성 흐름 ──
 
+export type ImageStyleOption = 'photo' | 'illustration';
+
 export interface BlogGenerationResult {
-  /** 결과 화면이 표시되었는지 */
   resultVisible: boolean;
-  /** 결과 HTML 내 이미지 수 */
   imageCount: number;
-  /** 이미지 경고 배너 존재 여부 */
   hasImageWarning: boolean;
-  /** 경고 배너 텍스트 */
   warningText: string;
-  /** 콘솔 로그 기반 수집 데이터 */
   logs: CollectedLogs;
-  /** 파싱된 IMG-SUMMARY */
   summary: ImageSummaryData | null;
-  /** 생성 소요 시간 (ms) */
+  heroResult: string;
+  persistedInfo: { inserted: number; persisted: number; imageFailCount: number };
   durationMs: number;
+  debugVerify: string;
 }
 
 /**
  * 블로그 생성 전체 흐름 실행.
- *
- * 1. 페이지 진입
- * 2. (debug helper reset)
- * 3. topic 입력
- * 4. 이미지 수 설정
- * 5. 생성 버튼 클릭
- * 6. 완료 대기 (spinner 소멸 + 결과 표시)
- * 7. 결과 수집
  */
 export async function runBlogGeneration(
   page: Page,
   options: {
     topic: string;
     imageCount: number;
+    imageStyle?: ImageStyleOption;
     timeoutMs?: number;
   },
 ): Promise<BlogGenerationResult> {
-  const { topic, imageCount, timeoutMs = 180_000 } = options;
+  const { topic, imageCount, imageStyle = 'photo', timeoutMs = 180_000 } = options;
 
   // ── 1. 콘솔 수집 시작 ──
   const logs = createLogCollector(page);
@@ -123,41 +147,23 @@ export async function runBlogGeneration(
   await page.route('**/cdn.jsdelivr.net/**', route => route.abort());
   await page.route('**/fontawesome**', route => route.abort());
 
-  // ── 3. 페이지 진입 ──
-  await page.goto('/', { waitUntil: 'domcontentloaded' });
-  // React hydration 대기
-  await page.waitForTimeout(3000);
+  // ── 3. 페이지 진입 ── 직접 /blog 경로로 이동
+  await page.goto('/blog', { waitUntil: 'domcontentloaded' });
+  await page.waitForTimeout(4000);
 
-  // ── 4. 랜딩/홈 → 블로그 InputForm 진입 ──
-  // 랜딩 페이지: "무료로 시작하기" 클릭
-  const landingStart = page.locator('button:has-text("무료로 시작하기")').first();
-  if (await landingStart.isVisible().catch(() => false)) {
-    await landingStart.click();
-    await page.waitForTimeout(1500);
-  }
-  // 홈 대시보드: 블로그 카드의 "시작하기" 클릭
-  // 사이드바 "블로그" 메뉴 또는 블로그 카드 시작하기 버튼
-  const blogSidebar = page.locator('text=블로그').first();
-  if (await blogSidebar.isVisible().catch(() => false)) {
-    await blogSidebar.click();
-    await page.waitForTimeout(1500);
-  }
-
-  // ── 5. debug helper reset (가능하면) ──
+  // ── 5. debug helper reset ──
   await page.evaluate(() => {
     try { (window as any).__IMG_RESET_STATS?.(); } catch {}
   }).catch(() => {});
 
   // ── 6. topic 입력 ──
-  // 앱 진입 후 topic input 탐색 (블로그 제목 또는 일반 input)
   const topicInput = page.locator('input[placeholder*="블로그 제목"]').or(
     page.locator('input[placeholder*="블로그"]')
   ).first();
   await topicInput.waitFor({ state: 'visible', timeout: 15_000 });
   await topicInput.fill(topic);
 
-  // ── 5. 이미지 수 설정 ──
-  // range slider 값 변경 (React state 반영을 위해 input + change 이벤트)
+  // ── 7. 이미지 수 설정 (range slider) ──
   await page.evaluate((count) => {
     const slider = document.querySelector('input[type="range"][min="0"][max="5"]') as HTMLInputElement;
     if (slider) {
@@ -169,58 +175,92 @@ export async function runBlogGeneration(
       slider.dispatchEvent(new Event('change', { bubbles: true }));
     }
   }, imageCount);
-
-  // 설정 반영 대기
   await page.waitForTimeout(300);
 
-  // ── 6. 생성 버튼 클릭 ──
+  // ── 8. 이미지 스타일 선택 ──
+  const styleLabel = imageStyle === 'photo' ? '실사' : '일러스트';
+  const styleBtn = page.locator(`button:has-text("${styleLabel}")`).first();
+  if (await styleBtn.isVisible().catch(() => false)) {
+    await styleBtn.click();
+    await page.waitForTimeout(300);
+  }
+
+  // ── 9. 생성 버튼 클릭 ──
   const t0 = Date.now();
   const generateBtn = page.locator('button:has-text("블로그 원고 생성")');
   await generateBtn.click();
 
-  // ── 7. 완료 대기 ──
-  // 전략: "생성 중..." 버튼 텍스트가 원래 텍스트로 돌아오면 완료
-  // + 결과 영역(contenteditable)이 나타나면 추가 확인
+  // ── 10. 완료 대기 ──
+  // Playwright locator 기반: .naver-preview (ResultPreview 렌더 컨테이너) 출현 대기
+  const resultLocator = page.locator('.naver-preview').first();
   try {
-    // 버튼이 다시 활성화될 때까지 대기 (= 생성 완료)
-    await page.waitForFunction(
-      () => {
-        const btn = document.querySelector('button') as HTMLButtonElement | null;
-        // "생성 중..." 텍스트가 사라지면 완료
-        return btn && !btn.textContent?.includes('생성 중');
-      },
-      { timeout: timeoutMs },
-    );
+    await resultLocator.waitFor({ state: 'visible', timeout: timeoutMs });
   } catch {
-    // timeout — 결과가 부분적으로 나왔을 수 있으므로 계속 수집
+    // timeout — 부분 결과라도 수집
+    console.log(`[E2E] ⚠️ .naver-preview not visible after ${timeoutMs}ms`);
   }
 
   const durationMs = Date.now() - t0;
 
-  // 결과 렌더 대기 (짧게)
-  await page.waitForTimeout(2000);
+  // 결과 렌더 완전 대기 (이미지 로드 등)
+  await page.waitForTimeout(8000);
 
-  // ── 8. 결과 수집 ──
-  const resultVisible = await page.locator('div[contenteditable="true"]').isVisible().catch(() => false);
+  // 디버깅: 현재 상태 스크린샷 + DOM 구조 로그
+  await page.screenshot({ path: `test-results/debug-after-gen-${imageCount}img-${imageStyle}.png` }).catch(() => {});
+
+  // ── 11. 결과 수집 ──
+  // 여러 셀렉터 시도: contenteditable → naver-preview → 결과 컨테이너
+  let resultVisible = await page.locator('div[contenteditable="true"]').isVisible().catch(() => false);
+  if (!resultVisible) {
+    resultVisible = await page.locator('.naver-preview').isVisible().catch(() => false);
+  }
+  if (!resultVisible) {
+    // 결과가 있는지 더 넓게 확인 (ResultPreview 렌더 여부)
+    resultVisible = await page.evaluate(() => {
+      // naver-preview 클래스 또는 contentEditable div가 있는지
+      const np = document.querySelector('.naver-preview');
+      const ce = document.querySelector('[contenteditable]');
+      return !!(np || ce);
+    }).catch(() => false);
+  }
 
   let imageCountInResult = 0;
   if (resultVisible) {
     imageCountInResult = await page.locator('div[contenteditable="true"] img').count().catch(() => 0);
+    if (imageCountInResult === 0) {
+      imageCountInResult = await page.locator('.naver-preview img').count().catch(() => 0);
+    }
   }
 
-  const hasImageWarning = await page.locator('div.bg-amber-50').isVisible().catch(() => false);
+  // 경고 배너: bg-amber-50 또는 bg-amber-900 (dark mode)
+  let hasImageWarning = await page.locator('div.bg-amber-50').isVisible().catch(() => false);
+  if (!hasImageWarning) {
+    hasImageWarning = await page.locator('[class*="amber"]').first().isVisible().catch(() => false);
+  }
   let warningText = '';
   if (hasImageWarning) {
-    warningText = await page.locator('div.bg-amber-50').textContent().catch(() => '') || '';
+    warningText = await page.locator('[class*="amber"]').first().textContent().catch(() => '') || '';
   }
 
-  // ── 9. debug helper 결과 (가능하면) ──
+  // ── 12. debug helpers ──
   await page.evaluate(() => {
     try { (window as any).__IMG_PRINT_STATS?.(); } catch {}
   }).catch(() => {});
-
-  // 수집 대기
   await page.waitForTimeout(500);
+
+  let debugVerify = '';
+  try {
+    debugVerify = await page.evaluate(() => {
+      try {
+        const result = (window as any).__IMG_VERIFY?.();
+        return typeof result === 'string' ? result : JSON.stringify(result || '');
+      } catch { return ''; }
+    }) || '';
+  } catch {}
+
+  // ── 13. hero & persisted 파싱 ──
+  const heroResult = parseHeroResult(logs.imgFinal);
+  const persistedInfo = parsePersistedInfo(logs.all);
 
   return {
     resultVisible,
@@ -229,6 +269,9 @@ export async function runBlogGeneration(
     warningText,
     logs,
     summary: parseImgSummary(logs.imgSummary),
+    heroResult,
+    persistedInfo,
     durationMs,
+    debugVerify,
   };
 }

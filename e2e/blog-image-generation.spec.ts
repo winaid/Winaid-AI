@@ -1,182 +1,293 @@
 /**
- * 블로그 이미지 0~5장 E2E 검증 — Playwright
+ * 블로그 이미지 0~5장 실측 E2E 검증 — Playwright
  *
- * 스테이징 URL에서 실제 생성 흐름을 검증한다.
- * 회귀(regression) 방지가 목적.
+ * 대상: https://preview.story-darugi.com (실제 API)
+ * 주제: 임플란트 (고정)
+ * 스타일: photo 0~5장 각 1회 + illustration 5장 1회 + photo 5장 추가 1회
  *
  * 실행:
- *   E2E_BASE_URL=https://story-darugi.com npx playwright test
- *   E2E_BASE_URL=http://localhost:5173 npx playwright test
- *
- * 환경변수:
- *   E2E_BASE_URL  — 스테이징 URL (기본: https://story-darugi.com)
- *   E2E_TIMEOUT   — 생성 대기 ms (기본: 180000)
+ *   E2E_BASE_URL=https://preview.story-darugi.com npx playwright test
  */
 import { test, expect } from '@playwright/test';
-import { runBlogGeneration, type BlogGenerationResult } from './blog-generation.helper';
+import {
+  runBlogGeneration,
+  type BlogGenerationResult,
+  type ImageStyleOption,
+} from './blog-generation.helper';
 
 const TOPIC = '임플란트 시술 비용과 과정 총정리';
 const TIMEOUT = parseInt(process.env.E2E_TIMEOUT || '180000', 10);
 
-// ── 결과 리포트 출력 ──
+// ── 결과 테이블 행 ──
+interface ResultRow {
+  count: number;
+  style: ImageStyleOption;
+  selected: number;
+  planned: number;
+  returned: number;
+  ai: number;
+  template: number;
+  placeholder: number;
+  inserted: number;
+  persisted: number;
+  heroResult: string;
+  heroAIHit: string;
+  subAICoverage: string;
+  totalMs: number;
+  warning: string;
+  verdict: string;
+}
+
+const allResults: ResultRow[] = [];
+
+function buildRow(label: string, count: number, style: ImageStyleOption, r: BlogGenerationResult): ResultRow {
+  const s = r.summary;
+  const ai = s?.ai ?? -1;
+  const template = s?.template ?? -1;
+  const returned = s?.returned ?? -1;
+
+  // hero 판정
+  const heroAIHit = count === 0 ? 'N/A'
+    : r.heroResult === 'ai-image' ? 'YES'
+    : r.heroResult === 'template' ? 'NO(tpl)'
+    : r.heroResult;
+
+  // sub AI coverage (hero 제외)
+  let subAICoverage = 'N/A';
+  if (count > 1 && s && s.returned > 1) {
+    const heroAI = r.heroResult === 'ai-image' ? 1 : 0;
+    const subAI = ai - heroAI;
+    const subTotal = returned - 1;
+    subAICoverage = subTotal > 0 ? `${Math.round((subAI / subTotal) * 100)}%` : 'N/A';
+  }
+
+  // 판정
+  let verdict = '?';
+  if (count === 0) {
+    verdict = (!r.resultVisible) ? 'FAIL(no result)'
+      : (r.imageCount === 0 && (!s || s.selected === 0)) ? 'PASS' : 'FAIL';
+  } else if (count >= 1 && count <= 3) {
+    if (!r.resultVisible) { verdict = 'FAIL(no result)'; }
+    else if (s && s.selected === count && s.returned === count) {
+      verdict = template > 0 && count <= 2 ? 'PARTIAL' : 'PASS';
+    } else { verdict = 'FAIL(mismatch)'; }
+  } else {
+    // 4~5장
+    if (!r.resultVisible) { verdict = 'FAIL(no result)'; }
+    else if (!s) { verdict = 'FAIL(no summary)'; }
+    else if (s.selected !== count || s.returned !== count) { verdict = 'FAIL(mismatch)'; }
+    else if (r.heroResult === 'template') { verdict = 'FAIL(hero=tpl)'; }
+    else if (template >= 2) { verdict = 'FAIL(tpl>=2)'; }
+    else {
+      const aiCov = returned > 0 ? (ai / returned) * 100 : 0;
+      if (aiCov < 60) { verdict = 'FAIL(aiCov<60%)'; }
+      else if (aiCov < 80) { verdict = 'PARTIAL'; }
+      else { verdict = 'PASS'; }
+    }
+  }
+
+  const warning = r.hasImageWarning ? r.warningText.substring(0, 60) : '';
+
+  return {
+    count, style,
+    selected: s?.selected ?? -1,
+    planned: s?.planned ?? -1,
+    returned: s?.returned ?? -1,
+    ai, template, placeholder: s?.placeholder ?? -1,
+    inserted: r.persistedInfo.inserted,
+    persisted: r.persistedInfo.persisted,
+    heroResult: r.heroResult,
+    heroAIHit,
+    subAICoverage,
+    totalMs: r.durationMs,
+    warning,
+    verdict,
+  };
+}
 
 function printReport(label: string, r: BlogGenerationResult) {
   const s = r.summary;
   console.log(`\n═══ ${label} ═══`);
   console.log(`결과화면: ${r.resultVisible ? '✅' : '❌'}`);
-  console.log(`이미지: ${r.imageCount}장 / 경고: ${r.hasImageWarning ? r.warningText.substring(0, 80) : '없음'}`);
+  console.log(`이미지렌더: ${r.imageCount}장 / 경고: ${r.hasImageWarning ? r.warningText.substring(0, 80) : '없음'}`);
   console.log(`소요시간: ${(r.durationMs / 1000).toFixed(1)}s`);
+  console.log(`heroResult: ${r.heroResult}`);
   if (s) {
     console.log(`selected=${s.selected} planned=${s.planned} returned=${s.returned} ai=${s.ai} template=${s.template} placeholder=${s.placeholder}`);
     const aiCov = s.returned > 0 ? Math.round((s.ai / s.returned) * 100) : 0;
-    const tplRate = s.returned > 0 ? Math.round((s.template / s.returned) * 100) : 0;
-    console.log(`aiCoverage=${aiCov}% templateFallback=${tplRate}%`);
+    console.log(`aiCoverage=${aiCov}%`);
   } else {
     console.log('IMG-SUMMARY 로그 미수집');
   }
-  // hero retry 로그
-  if (r.logs.imgHeroRetry.length > 0) {
-    r.logs.imgHeroRetry.forEach(l => console.log(`  ${l}`));
-  }
+  // 핵심 로그 출력
+  if (r.logs.imgContract.length > 0) console.log(`[IMG-CONTRACT] ${r.logs.imgContract.join(' | ')}`);
+  if (r.logs.imgPlan.length > 0) console.log(`[IMG-PLAN] ${r.logs.imgPlan.join(' | ')}`);
+  if (r.logs.imgTier.length > 0) r.logs.imgTier.forEach(l => console.log(`  ${l}`));
+  if (r.logs.imgFinal.length > 0) r.logs.imgFinal.forEach(l => console.log(`  ${l}`));
+  if (r.logs.imgSession.length > 0) r.logs.imgSession.forEach(l => console.log(`  ${l}`));
+  if (r.logs.imgHeroRetry.length > 0) r.logs.imgHeroRetry.forEach(l => console.log(`  ${l}`));
+  if (r.debugVerify) console.log(`[DEBUG-VERIFY] ${r.debugVerify}`);
   console.log(`═══════════════════\n`);
 }
 
-// ═══════════════════════════════════════
-// 1차 필수: 0장 / 1장 / 5장
-// ═══════════════════════════════════════
+function printFinalTable() {
+  console.log('\n\n╔══════════════════════════════════════════════════════════════════════════════════════════════════╗');
+  console.log('║                           블로그 이미지 실측 검증 결과표                                        ║');
+  console.log('╠══════╤═══════════════╤══════╤══════╤══════╤════╤═════╤═════╤══════╤═══════╤════════╤═════════════╣');
+  console.log('║count │ style         │sel   │plan  │ret   │ai  │tpl  │ph   │ins   │per    │heroAI  │verdict      ║');
+  console.log('╠══════╪═══════════════╪══════╪══════╪══════╪════╪═════╪═════╪══════╪═══════╪════════╪═════════════╣');
+  for (const r of allResults) {
+    const line = `║${String(r.count).padStart(5)} │${r.style.padEnd(14)} │${String(r.selected).padStart(5)} │${String(r.planned).padStart(5)} │${String(r.returned).padStart(5)} │${String(r.ai).padStart(3)} │${String(r.template).padStart(4)} │${String(r.placeholder).padStart(4)} │${String(r.inserted).padStart(5)} │${String(r.persisted).padStart(6)} │${r.heroAIHit.padEnd(7)} │${r.verdict.padEnd(12)} ║`;
+    console.log(line);
+  }
+  console.log('╚══════╧═══════════════╧══════╧══════╧══════╧════╧═════╧═════╧══════╧═══════╧════════╧═════════════╝');
 
-test.describe('블로그 이미지 생성 — 1차 필수 검증', () => {
-
-  test('0장: 이미지 생성/삽입 완전 스킵', async ({ page }) => {
-    const r = await runBlogGeneration(page, {
-      topic: TOPIC,
-      imageCount: 0,
-      timeoutMs: TIMEOUT,
-    });
-    printReport('0장', r);
-
-    // 결과 화면은 표시되어야 함 (텍스트만)
-    expect(r.resultVisible).toBe(true);
-
-    // 이미지 0장이면 이미지 경고도 없어야 함
-    expect(r.imageCount).toBe(0);
-
-    // IMG-SUMMARY 로그: selected=0이면 이미지 생성 자체를 스킵
-    // 로그가 없거나 selected=0이면 정상
-    if (r.summary) {
-      expect(r.summary.selected).toBe(0);
+  // 5장 KPI 비교
+  const fivePhoto = allResults.filter(r => r.count === 5 && r.style === 'photo');
+  const fiveIllu = allResults.filter(r => r.count === 5 && r.style === 'illustration');
+  if (fivePhoto.length > 0 || fiveIllu.length > 0) {
+    console.log('\n── 5장 KPI 비교 ──');
+    for (const r of [...fivePhoto, ...fiveIllu]) {
+      const aiCov = r.returned > 0 ? Math.round((r.ai / r.returned) * 100) : 0;
+      console.log(`  ${r.style} | ai=${r.ai} tpl=${r.template} aiCov=${aiCov}% hero=${r.heroAIHit} time=${(r.totalMs/1000).toFixed(1)}s → ${r.verdict}`);
     }
+  }
+
+  // 최종 판정
+  const failures = allResults.filter(r => r.verdict.startsWith('FAIL'));
+  const partials = allResults.filter(r => r.verdict === 'PARTIAL');
+  console.log(`\n── 최종 판정 ──`);
+  console.log(`  총 ${allResults.length}건 실행 / PASS=${allResults.length - failures.length - partials.length} / PARTIAL=${partials.length} / FAIL=${failures.length}`);
+  if (failures.length > 0) {
+    console.log(`  실패 케이스: ${failures.map(f => `${f.count}장(${f.style}): ${f.verdict}`).join(', ')}`);
+  }
+  console.log('');
+}
+
+// ═══════════════════════════════════════
+// Photo 0~5장 (각 1회)
+// ═══════════════════════════════════════
+
+test.describe.serial('Photo 0~5장 실측', () => {
+
+  test('photo 0장: 이미지 스킵', async ({ page }) => {
+    const r = await runBlogGeneration(page, { topic: TOPIC, imageCount: 0, imageStyle: 'photo', timeoutMs: TIMEOUT });
+    printReport('photo 0장', r);
+    const row = buildRow('photo 0장', 0, 'photo', r);
+    allResults.push(row);
+    expect(r.resultVisible, '결과 화면 미표시').toBe(true);
+    // 0장: 이미지 없어야 함
+    expect(r.imageCount, '이미지 존재').toBe(0);
   });
 
-  test('1장: hero 이미지 생성 + 자연 배치', async ({ page }) => {
-    const r = await runBlogGeneration(page, {
-      topic: TOPIC,
-      imageCount: 1,
-      timeoutMs: TIMEOUT,
-    });
-    printReport('1장', r);
-
+  test('photo 1장: hero 생성', async ({ page }) => {
+    const r = await runBlogGeneration(page, { topic: TOPIC, imageCount: 1, imageStyle: 'photo', timeoutMs: TIMEOUT });
+    printReport('photo 1장', r);
+    const row = buildRow('photo 1장', 1, 'photo', r);
+    allResults.push(row);
     expect(r.resultVisible).toBe(true);
-
-    // 정합성: 이미지 1장 표시 (AI 또는 template)
     expect(r.imageCount).toBeGreaterThanOrEqual(1);
-
     if (r.summary) {
       expect(r.summary.selected).toBe(1);
       expect(r.summary.returned).toBe(1);
     }
   });
 
-  test('5장: 전체 흐름 + 품질 KPI 수집', async ({ page }) => {
-    const r = await runBlogGeneration(page, {
-      topic: TOPIC,
-      imageCount: 5,
-      timeoutMs: TIMEOUT,
-    });
-    printReport('5장', r);
-
-    expect(r.resultVisible).toBe(true);
-
-    // 정합성: 5장 모두 반환
-    if (r.summary) {
-      expect(r.summary.selected).toBe(5);
-      expect(r.summary.returned).toBe(5);
-
-      // ── 품질 KPI (report-only, hard fail 아님) ──
-      // 현재 시스템이 완전히 안정적이지 않으므로 soft assertion 사용
-      const aiCov = r.summary.returned > 0
-        ? Math.round((r.summary.ai / r.summary.returned) * 100) : 0;
-      const tplRate = r.summary.returned > 0
-        ? Math.round((r.summary.template / r.summary.returned) * 100) : 0;
-
-      console.log(`[KPI-CHECK] aiCoverage=${aiCov}% templateFallback=${tplRate}%`);
-      console.log(`[KPI-CHECK] hero template? ${r.summary.template > 0 && r.summary.ai < r.summary.returned ? '⚠️ 가능성 있음' : '✅ 양호'}`);
-
-      // soft assertion: template 3장 이상이면 경고 (hard fail 아님)
-      if (r.summary.template >= 3) {
-        console.warn(`[KPI-WARN] template ${r.summary.template}장 — 품질 점검 필요`);
-      }
-    }
-
-    // 이미지 5장 전부 렌더되어야 함 (AI든 template든)
-    expect(r.imageCount).toBeGreaterThanOrEqual(5);
-  });
-});
-
-// ═══════════════════════════════════════
-// 2차: 2장 / 3장 / 4장
-// ═══════════════════════════════════════
-
-test.describe('블로그 이미지 생성 — 2차 확장 검증', () => {
-
-  test('2장: intro + section 배치', async ({ page }) => {
-    const r = await runBlogGeneration(page, {
-      topic: '치아 미백 시술 종류와 비용',
-      imageCount: 2,
-      timeoutMs: TIMEOUT,
-    });
-    printReport('2장', r);
-
+  test('photo 2장', async ({ page }) => {
+    const r = await runBlogGeneration(page, { topic: TOPIC, imageCount: 2, imageStyle: 'photo', timeoutMs: TIMEOUT });
+    printReport('photo 2장', r);
+    const row = buildRow('photo 2장', 2, 'photo', r);
+    allResults.push(row);
     expect(r.resultVisible).toBe(true);
     expect(r.imageCount).toBeGreaterThanOrEqual(2);
-
     if (r.summary) {
       expect(r.summary.selected).toBe(2);
       expect(r.summary.returned).toBe(2);
     }
   });
 
-  test('3장: 기본 품질 유지', async ({ page }) => {
-    const r = await runBlogGeneration(page, {
-      topic: '잇몸 질환 원인과 예방법',
-      imageCount: 3,
-      timeoutMs: TIMEOUT,
-    });
-    printReport('3장', r);
-
+  test('photo 3장', async ({ page }) => {
+    const r = await runBlogGeneration(page, { topic: TOPIC, imageCount: 3, imageStyle: 'photo', timeoutMs: TIMEOUT });
+    printReport('photo 3장', r);
+    const row = buildRow('photo 3장', 3, 'photo', r);
+    allResults.push(row);
     expect(r.resultVisible).toBe(true);
     expect(r.imageCount).toBeGreaterThanOrEqual(3);
-
     if (r.summary) {
       expect(r.summary.selected).toBe(3);
       expect(r.summary.returned).toBe(3);
     }
   });
 
-  test('4장: 웨이브 분할 + 자연 확장', async ({ page }) => {
-    const r = await runBlogGeneration(page, {
-      topic: '사랑니 발치 후 관리 방법',
-      imageCount: 4,
-      timeoutMs: TIMEOUT,
-    });
-    printReport('4장', r);
-
+  test('photo 4장', async ({ page }) => {
+    const r = await runBlogGeneration(page, { topic: TOPIC, imageCount: 4, imageStyle: 'photo', timeoutMs: TIMEOUT });
+    printReport('photo 4장', r);
+    const row = buildRow('photo 4장', 4, 'photo', r);
+    allResults.push(row);
     expect(r.resultVisible).toBe(true);
     expect(r.imageCount).toBeGreaterThanOrEqual(4);
-
     if (r.summary) {
       expect(r.summary.selected).toBe(4);
       expect(r.summary.returned).toBe(4);
     }
   });
+
+  test('photo 5장 (1차)', async ({ page }) => {
+    const r = await runBlogGeneration(page, { topic: TOPIC, imageCount: 5, imageStyle: 'photo', timeoutMs: TIMEOUT });
+    printReport('photo 5장 (1차)', r);
+    const row = buildRow('photo 5장 (1차)', 5, 'photo', r);
+    allResults.push(row);
+    expect(r.resultVisible).toBe(true);
+    expect(r.imageCount).toBeGreaterThanOrEqual(5);
+    if (r.summary) {
+      expect(r.summary.selected).toBe(5);
+      expect(r.summary.returned).toBe(5);
+    }
+  });
+});
+
+// ═══════════════════════════════════════
+// Photo 5장 추가 (안정성)
+// ═══════════════════════════════════════
+
+test.describe.serial('Photo 5장 추가 실행', () => {
+
+  test('photo 5장 (2차)', async ({ page }) => {
+    const r = await runBlogGeneration(page, { topic: TOPIC, imageCount: 5, imageStyle: 'photo', timeoutMs: TIMEOUT });
+    printReport('photo 5장 (2차)', r);
+    const row = buildRow('photo 5장 (2차)', 5, 'photo', r);
+    allResults.push(row);
+    expect(r.resultVisible).toBe(true);
+    if (r.summary) {
+      expect(r.summary.selected).toBe(5);
+      expect(r.summary.returned).toBe(5);
+    }
+  });
+});
+
+// ═══════════════════════════════════════
+// Illustration 5장
+// ═══════════════════════════════════════
+
+test.describe.serial('Illustration 5장 실측', () => {
+
+  test('illustration 5장', async ({ page }) => {
+    const r = await runBlogGeneration(page, { topic: TOPIC, imageCount: 5, imageStyle: 'illustration', timeoutMs: TIMEOUT });
+    printReport('illustration 5장', r);
+    const row = buildRow('illustration 5장', 5, 'illustration', r);
+    allResults.push(row);
+    expect(r.resultVisible).toBe(true);
+    if (r.summary) {
+      expect(r.summary.selected).toBe(5);
+      expect(r.summary.returned).toBe(5);
+    }
+  });
+});
+
+// ═══════════════════════════════════════
+// 최종 리포트 (teardown)
+// ═══════════════════════════════════════
+
+test.afterAll(() => {
+  printFinalTable();
 });
