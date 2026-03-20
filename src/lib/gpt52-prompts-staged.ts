@@ -433,26 +433,36 @@ export const getPipelineOutlinePrompt = (
   medicalLawMode: 'strict' | 'relaxed' = 'strict',
   context?: { audienceMode?: string; persona?: string; tone?: string }
 ) => {
-  const medicalLawBlock = medicalLawMode === 'relaxed' ? RELAXED_MEDICAL_LAW : MEDICAL_LAW_COMMON;
   let contextBlock = '';
   if (context) {
     contextBlock = `
-[청중/페르소나/말투에 맞는 아웃라인 설계]
-${context.audienceMode ? `- 청중: ${context.audienceMode}
-  → 환자용: 증상 공감 → 원인 이해 → 관리법 순서
-  → 보호자용: 관찰 포인트 → 병원 방문 시점 → 보호자 역할 순서
-  → 전문가용: 메커니즘 → 감별진단 → 최신 가이드라인 순서` : ''}
-${context.persona ? `- 페르소나: ${context.persona}
-  → hospital_info: 객관적 정보 전달형 소제목 (질문형/정의형)
-  → director_1st: 임상 경험 기반 소제목 ("진료실에서 자주 보는~" 느낌). 각 소제목 본문에 반드시 원장의 개인 경험/에피소드 포함 필수
-  → coordinator: 상담 시 자주 묻는 질문 기반 소제목` : ''}
+[청중/페르소나/말투]
+${context.audienceMode ? `- 청중: ${context.audienceMode} → 환자용: 증상→원인→관리 / 보호자용: 관찰→방문시점→역할 / 전문가용: 메커니즘→감별→가이드라인` : ''}
+${context.persona ? `- 페르소나: ${context.persona} → hospital_info: 객관적 정보형 / director_1st: 임상 경험 기반 / coordinator: 자주 묻는 질문 기반` : ''}
 ${context.tone ? `- 말투: ${context.tone}` : ''}`;
   }
-  return `너는 병원 블로그 글의 구조를 설계하는 에디터다.
-${IDENTITY}
-${STRUCTURE}
+  return `너는 병원 블로그 소제목을 설계하는 에디터다.
+[글쓴이] 병원 블로그 에디터. 의사가 아닌 건강 정보 정리자
+[원칙] 짧게·직접·쉽게. 독자가 "이 글은 다르네"라고 느끼게
+[언어] 한국어만 (영어 의료 장비명 허용)
 
-${medicalLawBlock}
+[소제목 규칙]
+- 최소 5개. 1500~1999자: 5개 / 2000~2499자: 5~6개 / 2500~2999자: 6개 / 3000자+: 6~7개
+- 소제목 간 문단 수 차이 최대 1문단
+- 각 소제목은 하나의 역할만 (정의/원인/증상/치료/관리 등). 역할 중복 금지
+- 네이버 검색창에 사람이 직접 칠 법한 말투. 짧고 구어체 (10~25자)
+- 피할 것: "~이란", "~의 정의", "주요 ~", "~ 및 ~", 두 주제를 한 소제목에 합치기
+- 좋은 예: "찬 물만 마시면 이가 시린 이유" / "충치인 줄 알았는데 잇몸이 문제?"
+
+[글 전체 구조]
+- 도입부: 2문단 (독자 상황 장면 + 핵심 범위 안내)
+- 본문 소제목: 3문단씩 균일. 마지막 소제목도 축약 금지
+- 마무리: 2문단 (핵심 메시지 + 행동 안내)
+
+[도입부 방식 5가지]
+A. 반복 인지형 / B. 불안 확인형 / C. 변화 축적형 / D. 유독 나만형 / E. 검색 계기형
+
+[중복 차단] 한 소제목에서 다룬 정보는 다른 소제목에서 반복 금지
 ${contextBlock}
 
 [미션] 아래 주제에 맞는 블로그 글의 아웃라인을 설계하라.
@@ -467,20 +477,20 @@ ${contextBlock}
 {
   "outline": {
     "intro": {
-      "approach": "A~E 중 택1 (도입부 방식)",
-      "scene": "구체적 장면 1줄 설명",
-      "bridge": "브릿지 문장 방향",
+      "approach": "A~E 중 택1",
+      "scene": "구체적 장면 1줄",
+      "bridge": "브릿지 방향",
       "targetChars": ${Math.round(textLength * 0.15)}
     },
     "sections": [
       {
         "title": "소제목 (구어체 10~20자)",
-        "role": "이 섹션의 정보 기능 1개 (원인/증상/관리법/주의점/방문 전 확인사항 중 택1 — 다른 섹션과 기능 중복 금지)",
-        "forbidden": "이 섹션에서 절대 다루지 않을 내용",
-        "keyInfo": "독자가 '어, 이건 몰랐는데?' 할 정보 1개",
+        "role": "정보 기능 1개 (다른 섹션과 중복 금지)",
+        "forbidden": "이 섹션에서 다루지 않을 내용",
+        "keyInfo": "독자가 놀랄 정보 1개",
         "paragraphs": 3,
         "targetChars": 0,
-        "firstSentencePattern": "1~5 중 택1 (소제목 첫 문장 패턴)"
+        "firstSentencePattern": "1~5 중 택1"
       }
     ],
     "conclusion": {
@@ -490,7 +500,7 @@ ${contextBlock}
     "seoKeywordPlan": {
       "mainKeyword": "메인 키워드",
       "lsiKeywords": ["LSI 키워드 2~3개"],
-      "keywordPlacement": "키워드 배치 계획 (어느 소제목에 몇 회)"
+      "keywordPlacement": "배치 계획"
     }
   }
 }`;
