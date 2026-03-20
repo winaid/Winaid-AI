@@ -36,11 +36,15 @@ const WAVE_CAPACITY = 3;
 
 /**
  * medical 스타일 전용 웨이브 용량.
- * medical 프롬프트는 생성 난도가 높아 upstream 부담이 크다.
- * hero(1장) + sub(1장) = 2장씩 순차 처리하여 동시 요청을 줄인다.
- * 속도보다 성공률이 더 중요한 스타일이다.
+ *
+ * 변경 이력:
+ *   2 → 3 (2026-03): 5장 기준 3파(2+2+1) → 2파(3+2)로 변경.
+ *   nb2 concurrency=2이므로 wave 내 3장이어도 실제 동시 2장 + 1장 대기.
+ *   3파 구조에서 inter-wave gap 누적(~5s) + 3차 wave의 upstream 부하 집중으로
+ *   template fallback율이 photo/illustration 대비 2배(40% vs 20%)였음.
+ *   2파로 줄여 gap 1회 + 동일 slot 정책으로 안정성 개선.
  */
-const MEDICAL_WAVE_CAPACITY = 2;
+const MEDICAL_WAVE_CAPACITY = 3;
 
 export interface BlogImageWave {
   items: ImageQueueItem[];

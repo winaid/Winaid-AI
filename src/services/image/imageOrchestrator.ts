@@ -221,7 +221,9 @@ export const generateBlogImage = async (
 [Constraint] ${mc.negative}
 [Rules] ${COMMON_CONSTRAINTS}`.trim();
 
-    const medicalSubPrompt = `3D medical illustration: ${promptText.substring(0, 120)}. ${mc.anchor} ${COMMON_CONSTRAINTS} 16:9.`.trim();
+    // sub는 anchorShort 사용 — photo/illustration도 sub에서 STYLE_KEYWORD_SHORT(축약) 사용.
+    // full anchor(400+자)는 hero 전용. sub에 full anchor를 쓰면 프롬프트 과다로 timeout 증가.
+    const medicalSubPrompt = `3D medical illustration: ${promptText.substring(0, 120)}. ${mc.anchorShort} ${COMMON_CONSTRAINTS} 16:9.`.trim();
 
     const medicalUltraMinimal = `3D medical render: ${promptText.substring(0, 80)}. ${mc.anchorShort} 16:9.`.trim();
 
