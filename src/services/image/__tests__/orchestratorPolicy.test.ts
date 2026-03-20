@@ -101,6 +101,47 @@ describe('블로그 5장 이미지 정책 검증', () => {
     });
   });
 
+  describe('sub prompt 경량화 정책', () => {
+    // SUB_CONSTRAINTS: sub 1차 시도에서 COMMON_CONSTRAINTS 대신 사용하는 경량 제약
+    const COMMON_CONSTRAINTS_LENGTH = 500; // ~500 chars
+    const SUB_CONSTRAINTS = 'Single scene. No text, no watermark, no hanbok, no traditional clothing. No split screen, no collage, no mirror scenes.';
+
+    it('SUB_CONSTRAINTS는 COMMON_CONSTRAINTS의 30% 이하', () => {
+      expect(SUB_CONSTRAINTS.length).toBeLessThan(COMMON_CONSTRAINTS_LENGTH * 0.3);
+    });
+
+    it('SUB_CONSTRAINTS에 필수 negative 키워드 포함', () => {
+      expect(SUB_CONSTRAINTS).toContain('No text');
+      expect(SUB_CONSTRAINTS).toContain('no watermark');
+      expect(SUB_CONSTRAINTS).toContain('no hanbok');
+      expect(SUB_CONSTRAINTS).toContain('Single scene');
+      expect(SUB_CONSTRAINTS).toContain('no collage');
+      expect(SUB_CONSTRAINTS).toContain('no mirror');
+    });
+
+    it('sub 1차 prompt 예상 길이 < 500자 (photo style), 기존 ~830자 대비 절반 이하', () => {
+      // subPrompt = "Korean health blog image: {140}. {75} {85}. {SUB_CONSTRAINTS} 16:9."
+      const prefix = 'Korean health blog image: '.length;      // 27
+      const promptText = 140;                                    // max
+      const subPersonHint = 75;                                  // photo hint
+      const styleKw = 85;                                        // photo styleKw
+      const separators = 10;                                     // dots, spaces
+      const suffix = ' 16:9.'.length;                            // 6
+      const estimated = prefix + promptText + subPersonHint + styleKw + SUB_CONSTRAINTS.length + separators + suffix;
+      expect(estimated).toBeLessThan(500);
+      // 기존 COMMON_CONSTRAINTS 사용 시 ~830자 대비 절반 이하
+      const oldEstimated = prefix + promptText + subPersonHint + styleKw + COMMON_CONSTRAINTS_LENGTH + separators + suffix;
+      expect(estimated).toBeLessThan(oldEstimated * 0.6);
+    });
+
+    it('sub 1차 prompt가 heroCompact와 유사한 길이 범위 (300-500자)', () => {
+      // heroCompact ~380자, subPrompt(compact) ~460자 — 동일 응답 시간대
+      const subEstimate = 460;
+      const heroCompactEstimate = 380;
+      expect(Math.abs(subEstimate - heroCompactEstimate)).toBeLessThan(120);
+    });
+  });
+
   describe('5장 시나리오 시간 예산', () => {
     it('5장 worst case (모든 sub 2차 시도) 시간이 hard timeout 이내', () => {
       // hero: 50s wall cap

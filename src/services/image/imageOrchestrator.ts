@@ -202,6 +202,11 @@ export const generateBlogImage = async (
   // ── 공통 제약 ──
   const COMMON_CONSTRAINTS = 'No text, no letters, no typography, no watermark, no logo. No hanbok, no traditional clothing, no cultural costume, no historical styling, no wedding styling, no festival styling. No exaggerated poses, no glamorous fashion portrait. Single scene only — no split screen, no diptych, no collage, no side-by-side panels, no before-after comparison, no multiple frames in one image. No mirror scenes, no bathroom mirror selfie, no reflective surface shots — AI models produce physically incorrect reflections (duplicated person, wrong pose/angle in reflection, subject emerging from mirror). If a reflective surface is absolutely required: physically correct mirror reflection, single subject with consistent mirrored pose, no duplicated person, no impossible reflection geometry.';
 
+  // ── sub 전용 경량 제약 (~70자 vs COMMON_CONSTRAINTS ~500자) ──
+  // sub 1차 시도 프롬프트를 ~830자 → ~400자로 축소하여 nb2 응답 시간 단축.
+  // heroCompact와 동일 전략: 필수 negative만 유지, 상세 설명 제거.
+  const SUB_CONSTRAINTS = 'Single scene. No text, no watermark, no hanbok, no traditional clothing. No split screen, no collage, no mirror scenes.';
+
   // ── 스타일별 프롬프트 분기 ──
   const isPhoto = style === 'photo' && !customStylePrompt;
   const isMedical = style === 'medical' && !customStylePrompt;
@@ -223,7 +228,7 @@ export const generateBlogImage = async (
 
     // sub는 anchorShort 사용 — photo/illustration도 sub에서 STYLE_KEYWORD_SHORT(축약) 사용.
     // full anchor(400+자)는 hero 전용. sub에 full anchor를 쓰면 프롬프트 과다로 timeout 증가.
-    const medicalSubPrompt = `3D medical illustration: ${promptText.substring(0, 120)}. ${mc.anchorShort} ${COMMON_CONSTRAINTS} 16:9.`.trim();
+    const medicalSubPrompt = `3D medical illustration: ${promptText.substring(0, 120)}. ${mc.anchorShort} ${SUB_CONSTRAINTS} 16:9.`.trim();
 
     const medicalUltraMinimal = `3D medical render: ${promptText.substring(0, 80)}. ${mc.anchorShort} 16:9.`.trim();
 
@@ -265,7 +270,7 @@ export const generateBlogImage = async (
     : style === 'illustration'
     ? '3D illustration style, friendly rounded character, NOT a photo.'
     : '';
-  const subPrompt = `Korean health blog image: ${promptText.substring(0, 140)}. ${subPersonHint} ${styleKw}. ${COMMON_CONSTRAINTS} 16:9.`.trim();
+  const subPrompt = `Korean health blog image: ${promptText.substring(0, 140)}. ${subPersonHint} ${styleKw}. ${SUB_CONSTRAINTS} 16:9.`.trim();
   const ultraMinimal = `${promptText.substring(0, 80)}. ${subPersonHint} ${styleKw}. No text, no watermark, no hanbok. 16:9.`.trim();
 
   // hero 전용 compact 프롬프트: nb2 첫 시도용 (COMMON_CONSTRAINTS 제외 → 프롬프트 ~200자)
