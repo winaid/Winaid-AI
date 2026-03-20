@@ -159,20 +159,20 @@ describe('planBlogImageWaves — 웨이브 분할', () => {
     expect(waves[2].items).toHaveLength(1);
   });
 
-  it('medical style: count=5 → 웨이브 3개 (2+2+1) — capacity=2', () => {
+  it('medical style: count=5 → 웨이브 2개 (3+2) — capacity=3 (photo/illustration과 동일)', () => {
+    // 변경: capacity 2→3. 3파(2+2+1) 구조에서 inter-wave gap 누적으로
+    // template fallback율 40%까지 올랐음. 2파(3+2)로 통일하여 20%로 감소.
     const waves = planBlogImageWaves(makePrompts(5), 5, 'medical', RATIO);
-    expect(waves).toHaveLength(3);
-    expect(waves[0].items).toHaveLength(2);
+    expect(waves).toHaveLength(2);
+    expect(waves[0].items).toHaveLength(3);
     expect(waves[1].items).toHaveLength(2);
-    expect(waves[2].items).toHaveLength(1);
     expect(waves[0].items[0].role).toBe('hero');
   });
 
-  it('medical style: count=3 → 웨이브 2개 (2+1) — capacity=2', () => {
+  it('medical style: count=3 → 웨이브 1개 (3) — capacity=3', () => {
     const waves = planBlogImageWaves(makePrompts(3), 3, 'medical', RATIO);
-    expect(waves).toHaveLength(2);
-    expect(waves[0].items).toHaveLength(2);
-    expect(waves[1].items).toHaveLength(1);
+    expect(waves).toHaveLength(1);
+    expect(waves[0].items).toHaveLength(3);
   });
 
   it('illustration style: count=5 → 웨이브 2개 (3+2) — capacity=3 유지', () => {

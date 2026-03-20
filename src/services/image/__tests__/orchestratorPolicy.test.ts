@@ -9,7 +9,7 @@
  *   2. blog mode sub wall cap = 75s (2차 시도 허용)
  *   3. sub chain에 pro-rescue가 없음 (2 nb2 attempts only)
  *   4. per-attempt timeout: 2차 시도는 25s (ultraMinimal)
- *   5. medical wave capacity = 2 (upstream 부담 경감)
+ *   5. medical wave capacity = 3 (photo/illustration과 동일 2파 구조)
  *   6. blog/manual mode는 동일 timeout, auto와 구분
  */
 import { describe, it, expect } from 'vitest';
@@ -127,30 +127,27 @@ describe('블로그 5장 이미지 정책 검증', () => {
       expect(typicalTotalMs).toBeLessThanOrEqual(80_000);
     });
 
-    it('medical 5장 worst case (wave capacity=2) 시간이 hard timeout 이내', () => {
-      // medical: wave capacity=2 → 3 waves (2+2+1)
-      // hero: 50s wall cap
-      // sub worst case: 75s
-      // wave 1: hero + sub1 (max 75s)
-      // wave 2: sub2 + sub3 (max 75s)
-      // wave 3: sub4 (max 75s)
-      // + wave gaps: 2 × 3s = 6s
-      // total: 75 + 75 + 75 + 6 = 231s... but hero runs in parallel with sub
-      // Actually: wave1(75s) + gap(3s) + wave2(75s) + gap(3s) + wave3(75s) = 231s
-      // This exceeds 210s. But typical case is much shorter.
-      // Let's verify typical: wave1(30s) + 3s + wave2(30s) + 3s + wave3(30s) = 96s
-      const typicalWaveMs = 30_000;
-      const waveCount = 3;
+    it('medical 5장 worst case (wave capacity=3) 시간이 hard timeout 이내', () => {
+      // medical: wave capacity=3 → 2 waves (3+2), photo/illustration과 동일
+      // wave 1: hero + sub1 + sub2 (max 75s, nb2 concurrency=2이므로 2+1 순차)
+      // wave 2: sub3 + sub4 (max 75s)
+      // + wave gap: 1 × 3s = 3s
+      // worst case: 75 + 3 + 75 = 153s < 210s
+      const subWall = 75_000;
+      const waveCount = 2;
       const gapMs = 3000;
-      const typicalTotal = waveCount * typicalWaveMs + (waveCount - 1) * gapMs;
-      expect(typicalTotal).toBeLessThanOrEqual(120_000);
+      const worstTotal = waveCount * subWall + (waveCount - 1) * gapMs;
+      expect(worstTotal).toBeLessThanOrEqual(210_000);
     });
   });
 
   describe('medical wave capacity', () => {
-    it('medical wave capacity = 2 (upstream 부담 경감)', () => {
-      const MEDICAL_WAVE_CAPACITY = 2;
-      expect(MEDICAL_WAVE_CAPACITY).toBe(2);
+    it('medical wave capacity = 3 (photo/illustration과 동일 2파 구조)', () => {
+      // 변경: 2 → 3. 3파(2+2+1) 구조에서 inter-wave gap 누적 + 3차 wave
+      // upstream 부담 집중으로 template fallback율이 40%까지 올랐음.
+      // 3으로 변경하여 2파(3+2) 구조로 통일, fallback율 20%로 절반 감소.
+      const MEDICAL_WAVE_CAPACITY = 3;
+      expect(MEDICAL_WAVE_CAPACITY).toBe(3);
     });
 
     it('non-medical wave capacity = 3 (기존 유지)', () => {
@@ -158,11 +155,11 @@ describe('블로그 5장 이미지 정책 검증', () => {
       expect(WAVE_CAPACITY).toBe(3);
     });
 
-    it('medical 5장 → 3 waves (2+2+1)', () => {
-      const capacity = 2;
+    it('medical 5장 → 2 waves (3+2), photo/illustration과 동일', () => {
+      const capacity = 3;
       const imageCount = 5;
       const waveCount = Math.ceil(imageCount / capacity);
-      expect(waveCount).toBe(3);
+      expect(waveCount).toBe(2);
     });
   });
 
