@@ -228,11 +228,12 @@ export const generateBlogImage = async (
     const medicalUltraMinimal = `3D medical render: ${promptText.substring(0, 80)}. ${mc.anchorShort} 16:9.`.trim();
 
     const heroPrompt = medicalHeroPrompt;
+    const heroCompact = `3D medical illustration for health blog, 16:9: ${promptText.substring(0, 120)}. ${mc.anchorShort} Single scene. No text, no watermark.`.trim();
     const subPrompt = medicalSubPrompt;
     const ultraMinimal = medicalUltraMinimal;
 
     return _executeBlogImageChain({
-      heroPrompt, subPrompt, ultraMinimal,
+      heroPrompt, heroCompact, subPrompt, ultraMinimal,
       isHero, role, mode, timeout, demoSafe, promptText, style,
       COMMON_CONSTRAINTS,
     });
@@ -267,8 +268,12 @@ export const generateBlogImage = async (
   const subPrompt = `Korean health blog image: ${promptText.substring(0, 140)}. ${subPersonHint} ${styleKw}. ${COMMON_CONSTRAINTS} 16:9.`.trim();
   const ultraMinimal = `${promptText.substring(0, 80)}. ${subPersonHint} ${styleKw}. No text, no watermark, no hanbok. 16:9.`.trim();
 
+  // hero 전용 compact 프롬프트: nb2 첫 시도용 (COMMON_CONSTRAINTS 제외 → 프롬프트 ~200자)
+  // nb2는 짧은 프롬프트에서 빠르게 응답. 긴 heroPrompt는 pro rescue에서만 사용.
+  const heroCompact = `Korean health blog hero image, 16:9 landscape: ${promptText.substring(0, 140)}. ${subPersonHint} ${styleKw}. Single scene. No text, no watermark, no hanbok, no traditional clothing.`.trim();
+
   return _executeBlogImageChain({
-    heroPrompt, subPrompt, ultraMinimal,
+    heroPrompt, heroCompact, subPrompt, ultraMinimal,
     isHero, role, mode, timeout, demoSafe, promptText, style,
     COMMON_CONSTRAINTS,
   });
@@ -276,14 +281,14 @@ export const generateBlogImage = async (
 
 // ── chain 실행 공통 함수 ──
 interface _ChainParams {
-  heroPrompt: string; subPrompt: string; ultraMinimal: string;
+  heroPrompt: string; heroCompact: string; subPrompt: string; ultraMinimal: string;
   isHero: boolean; role: ImageRole; mode: ImageGenMode;
   timeout: number; demoSafe: boolean; promptText: string;
   style: ImageStyle; COMMON_CONSTRAINTS: string;
 }
 
 async function _executeBlogImageChain(params: _ChainParams): Promise<BlogImageOutput> {
-  const { heroPrompt, subPrompt, ultraMinimal, isHero, role, mode, timeout, demoSafe, promptText, style } = params;
+  const { heroPrompt, heroCompact, subPrompt, ultraMinimal, isHero, role, mode, timeout, demoSafe, promptText, style } = params;
 
   const startTier = resolveStartTier(role, demoSafe);
   // Wall cap: hero 50s, sub(blog/manual) 75s (2 attempts with 40s+25s), sub(auto) 30s
@@ -293,13 +298,15 @@ async function _executeBlogImageChain(params: _ChainParams): Promise<BlogImageOu
 
   if (isHero) {
     if (startTier === 'pro') {
+      // nb2 첫 시도: compact 프롬프트 (~200자) → 빠른 응답, 1차 성공률 극대화
+      // pro rescue: full heroPrompt (~1000자) → 품질 최대, 시간 여유 있음
       chain = [
-        { model: GEMINI_MODEL.IMAGE_FLASH, tier: 'nb2', prompt: heroPrompt, label: '#1(nb2-fast)' },
+        { model: GEMINI_MODEL.IMAGE_FLASH, tier: 'nb2', prompt: heroCompact, label: '#1(nb2-compact)' },
         { model: GEMINI_MODEL.IMAGE_PRO, tier: 'pro', prompt: heroPrompt, label: '#2(pro-quality)' },
       ];
     } else {
       chain = [
-        { model: GEMINI_MODEL.IMAGE_FLASH, tier: 'nb2', prompt: heroPrompt, label: '#1(nb2-hero)' },
+        { model: GEMINI_MODEL.IMAGE_FLASH, tier: 'nb2', prompt: heroCompact, label: '#1(nb2-hero)' },
         { model: GEMINI_MODEL.IMAGE_FLASH, tier: 'nb2', prompt: ultraMinimal, label: '#2(nb2-minimal)' },
       ];
     }

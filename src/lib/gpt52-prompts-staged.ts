@@ -558,7 +558,7 @@ ${medicalLawBlock}${personaBlock}
 [역할] ${sectionRole}
 [금지 내용] ${sectionForbidden}
 [독자가 놀랄 정보] ${sectionKeyInfo}
-[목표] ${targetChars}자 (최소 ${Math.round(targetChars * 0.8)}자, 최대 ${Math.round(targetChars * 1.2)}자 — 초과 시 실패)
+[목표] ${targetChars}자 (최소 ${Math.round(targetChars * 0.85)}자, 최대 ${Math.round(targetChars * 1.15)}자 — 초과 시 실패)
 [첫 문장] ${
   firstSentencePattern === '1' ? '사실 직진' :
   firstSentencePattern === '2' ? '장면 환기' :

@@ -35,7 +35,7 @@ export const STAGE_B_CONCLUSION_TIMEOUT_MS = 30_000;
 
 /**
  * Stage C 교정 정책:
- *   STAGE_C_USE_PRO = true  → PRO 시도 (40s, 텍스트 800~2500자 범위만) → 실패 시 FLASH (15s) → 실패 시 rawHtml
+ *   STAGE_C_USE_PRO = true  → PRO 시도 (40s, 텍스트 800~1500자 범위만) → 실패 시 FLASH (15s) → 실패 시 rawHtml
  *   STAGE_C_USE_PRO = false → FLASH 단일 시도 (15s) → 실패 시 rawHtml
  *
  * 조건부 PRO 전략: 텍스트가 STAGE_C_PRO_MIN_CHARS 이상이면 PRO polish 시도.
@@ -49,8 +49,10 @@ export const STAGE_C_MAX_RETRIES = 1;
 export const STAGE_C_NO_AUTO_FALLBACK = true;
 /** PRO polish 최소 텍스트 길이 — 이 이상이면 PRO 시도, 미만이면 FLASH만 */
 export const STAGE_C_PRO_MIN_CHARS = 800;
-/** PRO polish 최대 텍스트 길이 — 이 초과면 FLASH만 사용 (PRO timeout 방지) */
-export const STAGE_C_PRO_MAX_CHARS = 2500;
+/** PRO polish 최대 텍스트 길이 — 이 초과면 FLASH만 사용 (PRO timeout 방지)
+ * 일반 블로그(1500자 설정)의 rawText ≈ 2000~2300자 → PRO가 100% timeout.
+ * 1500자 이하의 짧은 콘텐츠에서만 PRO가 현실적으로 성공 가능. */
+export const STAGE_C_PRO_MAX_CHARS = 1500;
 
 export const SEARCH_TIMEOUT_MS = 90_000;           // 검색 (KDCA/병원)
 

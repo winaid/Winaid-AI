@@ -511,7 +511,22 @@ ${sectionSummaries.join('\n')}`;
   // → parseBlogSections, 균형 계산, Stage C 모두 이 마커를 기준으로 conclusion을 별도 파트로 인식
   const wrappedConclusion = `<section data-blog-part="conclusion">${conclusionHtml}</section>`;
   const rawHtml = `${introHtml}\n${sectionHtmls.join('\n')}\n${wrappedConclusion}`;
-  const integrationPrompt = getPipelineIntegrationPrompt(targetLength);
+
+  // 동적 균형 힌트: pre-polish 단계에서 max/min > 1.4이면 Stage C에 구체적 재균형 지시 주입
+  let balanceHint = '';
+  const nonZeroForHint = sectionLens.filter(l => l > 0);
+  if (nonZeroForHint.length >= 2) {
+    const maxH = Math.max(...nonZeroForHint);
+    const minH = Math.min(...nonZeroForHint);
+    if (maxH / minH > 1.4) {
+      const longestI = sectionLens.indexOf(maxH);
+      const shortestI = sectionLens.indexOf(minH);
+      const targetLen = Math.round(medianSec * 1.1);
+      balanceHint = `\n\n[긴급 균형 교정] 섹션 ${longestI + 1}번(${maxH}자)이 섹션 ${shortestI + 1}번(${minH}자)보다 ${Math.round(maxH / minH * 100 - 100)}% 길다. 섹션 ${longestI + 1}번에서 반복·사족을 잘라내어 ${targetLen}자 이하로 줄여라. 정보를 버리지 말고 압축하라.`;
+      console.info(`[PIPELINE] 📐 동적 균형 힌트 주입: 섹션${longestI + 1}(${maxH}자)→${targetLen}자 목표`);
+    }
+  }
+  const integrationPrompt = getPipelineIntegrationPrompt(targetLength) + balanceHint;
 
   // Stage C를 비동기 promise로 생성 — 이미지 생성과 병렬 실행 가능
   // 정책: STAGE_C_USE_PRO에 따라 PRO→FLASH→rawHtml 또는 FLASH→rawHtml

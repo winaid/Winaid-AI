@@ -71,19 +71,27 @@ describe('품질 게이트: 조건부 PRO 활성화', () => {
   // contracts.ts에서 가져온 값 시뮬레이션
   const STAGE_C_USE_PRO = true;
   const STAGE_C_PRO_MIN_CHARS = 800;
+  const STAGE_C_PRO_MAX_CHARS = 1500;
 
   function shouldUsePro(rawTextLength: number): boolean {
-    return STAGE_C_USE_PRO && rawTextLength >= STAGE_C_PRO_MIN_CHARS;
+    return STAGE_C_USE_PRO && rawTextLength >= STAGE_C_PRO_MIN_CHARS && rawTextLength <= STAGE_C_PRO_MAX_CHARS;
   }
 
-  it('800자 이상이면 PRO 활성화', () => {
+  it('800~1500자 범위면 PRO 활성화', () => {
     expect(shouldUsePro(1000)).toBe(true);
     expect(shouldUsePro(800)).toBe(true);
+    expect(shouldUsePro(1500)).toBe(true);
   });
 
   it('800자 미만이면 FLASH만 사용', () => {
     expect(shouldUsePro(500)).toBe(false);
     expect(shouldUsePro(799)).toBe(false);
+  });
+
+  it('1500자 초과면 FLASH만 사용 (PRO timeout 방지)', () => {
+    expect(shouldUsePro(1501)).toBe(false);
+    expect(shouldUsePro(2000)).toBe(false);
+    expect(shouldUsePro(2500)).toBe(false);
   });
 
   it('0자면 FLASH만 사용', () => {
