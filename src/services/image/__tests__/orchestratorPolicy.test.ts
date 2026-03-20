@@ -103,7 +103,7 @@ describe('블로그 5장 이미지 정책 검증', () => {
 
   describe('sub prompt 경량화 정책', () => {
     // SUB_CONSTRAINTS: sub 1차 시도에서 COMMON_CONSTRAINTS 대신 사용하는 경량 제약
-    const COMMON_CONSTRAINTS_LENGTH = 500; // ~500 chars
+    const COMMON_CONSTRAINTS_LENGTH = 776; // actual length (includes mirror clause)
     const SUB_CONSTRAINTS = 'Single scene. No text, no watermark, no hanbok, no traditional clothing. No split screen, no collage, no mirror scenes.';
 
     it('SUB_CONSTRAINTS는 COMMON_CONSTRAINTS의 30% 이하', () => {
