@@ -79,9 +79,11 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
   const [learnedStyleId, setLearnedStyleId] = useState<string | undefined>(undefined);
   
   // 🏥 병원 선택 state
-  // localStorage에 병원명이 저장되어 있으면 이전 세션에서 명시 선택한 것이므로 자동 적용
+  // localStorage 복원은 "편의 복원"일 뿐, 이번 요청에서 명시 선택한 것이 아니다.
+  // hospitalExplicitlySelected는 이번 세션에서 사용자가 직접 병원을 선택하거나
+  // 입력해야만 true가 된다. 이전 세션 저장값만으로는 hospital_tone이 적용되지 않는다.
   const [hospitalName, setHospitalName] = useState<string>(() => localStorage.getItem('hospitalName') || '');
-  const [hospitalExplicitlySelected, setHospitalExplicitlySelected] = useState(() => !!localStorage.getItem('hospitalName'));
+  const [hospitalExplicitlySelected, setHospitalExplicitlySelected] = useState(false);
   const [showHospitalDropdown, setShowHospitalDropdown] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState<number | null>(null);
   const [selectedManager, setSelectedManager] = useState<string>('');

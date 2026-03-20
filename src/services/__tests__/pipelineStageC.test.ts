@@ -74,20 +74,21 @@ const SEARCH = { collected_facts: [{ source: 'test', content: '임플란트는 �
 function setupMock(stageCBehavior: 'flash_success' | 'flash_fail' | 'pro_success' | 'pro_fail_flash_success' | 'all_fail') {
   mockCallGemini.mockImplementation(async (config: any) => {
     if (config.responseType === 'json') return SAMPLE_OUTLINE;
+    // Stage C polish (PRO or FLASH) — temperature 0.3 기반 판별을 먼저 수행
+    // systemPrompt에 '도입부' 텍스트가 포함될 수 있으므로 temperature로 우선 분기
+    if (config.model === 'gemini-3.1-pro-preview' && config.temperature === 0.3) {
+      if (stageCBehavior === 'pro_success') return SAMPLE_POLISHED;
+      throw new Error('PRO polish timeout');
+    }
     if (config.model === 'gemini-3.1-flash-lite-preview' && config.responseType === 'text') {
-      if (config.temperature === 0.85 || config.systemPrompt?.includes('도입부')) return SAMPLE_INTRO;
-      if (config.prompt?.includes('다룬 내용 요약')) return SAMPLE_CONCLUSION;
       // Stage C FLASH polish
       if (config.temperature === 0.3) {
         if (stageCBehavior === 'flash_success' || stageCBehavior === 'pro_fail_flash_success') return SAMPLE_POLISHED;
         throw new Error('FLASH polish timeout');
       }
+      if (config.temperature === 0.85) return SAMPLE_INTRO;
+      if (config.prompt?.includes('다룬 내용 요약')) return SAMPLE_CONCLUSION;
       return SAMPLE_SECTION(0);
-    }
-    // PRO calls (Stage C PRO polish)
-    if (config.model === 'gemini-3.1-pro-preview' && config.temperature === 0.3) {
-      if (stageCBehavior === 'pro_success') return SAMPLE_POLISHED;
-      throw new Error('PRO polish timeout');
     }
     return SAMPLE_SECTION(0);
   });

@@ -1064,10 +1064,15 @@ function parseBlogSections(html: string): BlogSection[] {
   if (conclusionMarkerMatch) {
     const conclusionInner = conclusionMarkerMatch[1].trim();
     if (conclusionInner && conclusionInner.replace(/<[^>]+>/g, '').trim().length > 10) {
+      // conclusion 내부의 h3에서 제목 추출 (없으면 기본값 "마무리")
+      const conclusionH3Match = conclusionInner.match(/<h3[^>]*>([\s\S]*?)<\/h3>/i);
+      const conclusionTitle = conclusionH3Match
+        ? conclusionH3Match[1].replace(/<[^>]+>/g, '').trim() || '마무리'
+        : '마무리';
       sections.push({
         index: sections.length,
         type: 'conclusion',
-        title: '마무리',
+        title: conclusionTitle,
         html: conclusionInner,
       });
     }

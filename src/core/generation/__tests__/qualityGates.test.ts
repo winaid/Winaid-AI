@@ -233,7 +233,12 @@ describe('품질 게이트: conclusion 구조 분리', () => {
       const conclusionInner = conclusionMarkerMatch[1].trim();
       const textLen = conclusionInner.replace(/<[^>]+>/g, '').trim().length;
       if (textLen > 10) {
-        sections.push({ type: 'conclusion', title: '마무리', textLen });
+        // conclusion 내부의 h3에서 제목 추출
+        const conclusionH3 = conclusionInner.match(/<h3[^>]*>([\s\S]*?)<\/h3>/i);
+        const conclusionTitle = conclusionH3
+          ? conclusionH3[1].replace(/<[^>]+>/g, '').trim() || '마무리'
+          : '마무리';
+        sections.push({ type: 'conclusion', title: conclusionTitle, textLen });
       }
     }
 
@@ -249,7 +254,7 @@ describe('품질 게이트: conclusion 구조 분리', () => {
     '<h3>회복 기간과 주의사항</h3><p>수술 후 1~2주간은 부드러운 음식을 섭취해야 합니다. 흡연과 음주는 골유착을 방해하므로 최소 2주간 금지입니다.</p><p>정기적인 검진으로 임플란트 상태를 확인하는 것이 장기 유지에 중요합니다.</p>',
     '<h3>병원 선택 기준</h3><p>임플란트 전문의 경력과 사용하는 임플란트 브랜드를 확인하세요. 오스템, 네오, 스트라우만 등 검증된 브랜드를 사용하는지 확인이 필요합니다.</p><p>사후 관리 프로그램과 보증 기간도 병원 선택의 중요한 기준입니다.</p>',
   ];
-  const exampleConclusion = '<p>임플란트는 적절한 진단과 계획 하에 진행하면 오래 사용할 수 있는 치료법입니다. 본인의 구강 상태와 예산에 맞는 선택을 위해 2~3곳의 병원에서 상담을 받아보는 것을 권장합니다.</p><p>충분한 정보를 바탕으로 판단하시면 만족스러운 결과를 얻을 수 있습니다.</p>';
+  const exampleConclusion = '<h3>정리하며</h3><p>임플란트는 적절한 진단과 계획 하에 진행하면 오래 사용할 수 있는 치료법입니다. 본인의 구강 상태와 예산에 맞는 선택을 위해 2~3곳의 병원에서 상담을 받아보는 것을 권장합니다.</p><p>충분한 정보를 바탕으로 판단하시면 만족스러운 결과를 얻을 수 있습니다.</p>';
 
   it('conclusion이 semantic wrapper로 감싸져 조립된다', () => {
     const rawHtml = assembleRawHtml(exampleIntro, exampleSections, exampleConclusion);
@@ -262,7 +267,7 @@ describe('품질 게이트: conclusion 구조 분리', () => {
     const parsed = parseSections(rawHtml);
     const conclusionParts = parsed.filter(s => s.type === 'conclusion');
     expect(conclusionParts.length).toBe(1);
-    expect(conclusionParts[0].title).toBe('마무리');
+    expect(conclusionParts[0].title).toBe('정리하며');
     expect(conclusionParts[0].textLen).toBeGreaterThan(10);
   });
 
@@ -320,14 +325,42 @@ describe('품질 게이트: conclusion 구조 분리', () => {
   });
 
   it('conclusion wrapper가 없는 레거시 HTML도 정상 파싱된다', () => {
-    // 레거시: conclusion wrapper 없이 마지막에 <p>만 있는 경우
+    // 레거시: conclusion wrapper 없이 마지막에 h3+p가 있는 경우
     const legacyHtml = `${exampleIntro}\n${exampleSections.join('\n')}\n${exampleConclusion}`;
     const parsed = parseSections(legacyHtml);
-    // conclusion wrapper가 없으면 모든 섹션이 section 또는 intro 타입
+    // conclusion wrapper가 없으면 conclusion의 h3도 일반 section으로 파싱
     const conclusionParts = parsed.filter(s => s.type === 'conclusion');
     expect(conclusionParts.length).toBe(0);
-    // 레거시는 마지막 섹션에 conclusion이 흡수됨 (구 동작)
+    // 레거시는 conclusion h3가 일반 section으로 흡수됨 (구 동작)
     const h3Sections = parsed.filter(s => s.type === 'section');
-    expect(h3Sections.length).toBe(5);
+    expect(h3Sections.length).toBe(6); // 5 body + 1 conclusion h3
+  });
+
+  it('도입부에는 h3가 없다', () => {
+    const rawHtml = assembleRawHtml(exampleIntro, exampleSections, exampleConclusion);
+    const parsed = parseSections(rawHtml);
+    const introParts = parsed.filter(s => s.type === 'intro');
+    expect(introParts.length).toBe(1);
+    // intro HTML에 h3가 포함되지 않아야 함
+    expect(introParts[0].textLen).toBeGreaterThan(10);
+    const introHtml = rawHtml.substring(0, rawHtml.indexOf('<h3>'));
+    expect(introHtml).not.toMatch(/<h3[^>]*>/i);
+  });
+
+  it('마무리에는 h3가 있다', () => {
+    const rawHtml = assembleRawHtml(exampleIntro, exampleSections, exampleConclusion);
+    // conclusion wrapper 내부에 h3가 포함되어야 함
+    const conclusionMatch = rawHtml.match(/<section[^>]*data-blog-part="conclusion"[^>]*>([\s\S]*?)<\/section>/i);
+    expect(conclusionMatch).not.toBeNull();
+    expect(conclusionMatch![1]).toContain('<h3>');
+    expect(conclusionMatch![1]).toContain('정리하며');
+  });
+
+  it('conclusion h3 제목이 parser에서 추출된다', () => {
+    const rawHtml = assembleRawHtml(exampleIntro, exampleSections, exampleConclusion);
+    const parsed = parseSections(rawHtml);
+    const conclusionPart = parsed.find(s => s.type === 'conclusion');
+    expect(conclusionPart).toBeDefined();
+    expect(conclusionPart!.title).toBe('정리하며');
   });
 });
