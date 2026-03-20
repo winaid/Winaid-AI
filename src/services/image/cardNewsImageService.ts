@@ -5,9 +5,14 @@
  */
 
 import { GEMINI_MODEL, TIMEOUTS, callGemini, callGeminiRaw } from "../geminiClient";
-import { DESIGNER_PERSONA } from "../calendarTemplateService";
 import type { ImageStyle } from "../../types";
 import { buildFrameBlock, buildStyleBlock } from "./imagePromptBuilder";
+
+// 카드뉴스 전용 경량 페르소나 (DESIGNER_PERSONA ~1500ch → ~200ch로 축소)
+// 이미지 생성 모델에 불필요한 template/calendar 맥락 제거
+const CARD_NEWS_PERSONA = `[ROLE] Korean medical SNS card news designer.
+[GOAL] Generate a 1:1 square card image with Korean text rendered directly into pixels.
+[PRIORITY] Text readability > visual aesthetics. Mobile-first. Korean medical ad law compliant.`;
 
 // 프롬프트 추천/번역에 사용할 경량 모델
 const PROMPT_RECOMMEND_MODEL = GEMINI_MODEL.FLASH_LITE;
@@ -389,73 +394,37 @@ export const generateSingleImage = async (
   const now = new Date();
   const dateInfo = `${now.getFullYear()}년 ${now.getMonth() + 1}월 ${now.getDate()}일`;
 
+  // ── 경량화된 프롬프트 (~5000ch → ~2000ch) ──
+  // 핵심 변경: DESIGNER_PERSONA 제거, 중복 규칙 통합, 필수 지시만 유지
   const finalPrompt = hasValidText ? `
-${DESIGNER_PERSONA}
+${CARD_NEWS_PERSONA}
 
-[현재 날짜: ${dateInfo}]
-🚨 RENDER THIS EXACT KOREAN TEXT IN THE IMAGE 🚨
+🚨 RENDER THIS EXACT KOREAN TEXT IN THE IMAGE:
+MAIN TITLE (big, bold, center): "${extractedMainTitle}"
+SUBTITLE (small, above title): "${extractedSubtitle}"
+${extractedDescription ? `DESCRIPTION (small, below title): "${extractedDescription}"` : ''}
 
-[TEXT HIERARCHY - MUST FOLLOW EXACTLY!]
-※ MAIN TITLE (BIG, BOLD, CENTER): "${extractedMainTitle}"
-※ SUBTITLE (small, above main title): "${extractedSubtitle}"
-${extractedDescription ? `※ DESCRIPTION (small, below main title): "${extractedDescription}"` : ''}
+${extractedVisual ? `ILLUSTRATION: "${extractedVisual}" — draw exactly this!` : ''}
 
-${extractedVisual ? `[ILLUSTRATION - MUST FOLLOW THIS VISUAL DESCRIPTION!]
-🎨 "${extractedVisual}"
-⚠️ Draw EXACTLY what is described above! Do NOT change or ignore this visual instruction!` : ''}
-
-Generate a 1:1 square social media card with the Korean text above rendered directly into the image.
-
+1:1 square card. Background: ${extractedBgColor} gradient.
 ${frameBlock}
 ${styleBlock}
 
-[TEXT LAYOUT - CRITICAL!]
-- SUBTITLE: Small text (14-16px), positioned at TOP or above main title
-- MAIN TITLE: Large bold text (28-36px), positioned at CENTER, most prominent
-- DESCRIPTION: Small text (14-16px), positioned BELOW main title
-- Text hierarchy: subtitle(small) → mainTitle(BIG) → description(small)
-
-[DESIGN]
-- 1:1 square, background: ${extractedBgColor} gradient
-- Korean text rendered with clean readable font
-- Professional Instagram-style card news design
-- Illustration at bottom, text at top/center
-${extractedVisual ? `- ILLUSTRATION MUST MATCH: "${extractedVisual}"` : ''}
+Text: subtitle(small) → mainTitle(LARGE) → description(small). Clean readable Korean font.
 ${extractedTemplateBlock ? extractedTemplateBlock : ''}
-
-[RULES]
-✅ MAIN TITLE must be the LARGEST and most prominent text
-✅ Subtitle must be SMALLER than main title
-✅ Do NOT swap subtitle and mainTitle positions
-✅ Do NOT use placeholder text
-${extractedVisual ? `✅ ILLUSTRATION must follow the visual description EXACTLY` : ''}
-⛔ No hashtags (#), watermarks, logos - NEVER render # symbol in the image!
-⛔ Do NOT ignore visual instructions
-
-[의료광고법 - 이미지 텍스트 규칙]
-🚨 금지: "완치", "상담하세요", "방문하세요", "조기 발견", "전문의", 수치(%)
-✅ 허용: 증상명, 질환명, 정보성 표현, 질문형 제목
+⛔ No hashtags, watermarks, logos, placeholder text.
 `.trim() : `
-${DESIGNER_PERSONA}
+${CARD_NEWS_PERSONA}
 
-[현재 날짜: ${dateInfo}]
-Generate a 1:1 square social media card image.
-
+1:1 square social media card image.
 ${frameBlock}
 ${styleBlock}
 
 [CONTENT TO RENDER]
 ${cleanPromptText}
 
-[DESIGN]
-- 1:1 square, background: ${extractedBgColor} gradient
-- Korean text rendered with clean readable font
-- Professional Instagram-style card news design
-
-[RULES]
-✅ Render the Korean text from the content above
-⛔ Do NOT render instruction text like "subtitle:" or "mainTitle:"
-⛔ No hashtags (#), watermarks, logos - NEVER render # symbol in the image!
+Background: ${extractedBgColor} gradient. Clean readable Korean font.
+⛔ No hashtags, watermarks, logos. Do NOT render instruction labels.
 `.trim();
 
   console.info(`[IMG] generateSingleImage style=${style} ref=${!!referenceImage} prompt=${finalPrompt.length}ch`);

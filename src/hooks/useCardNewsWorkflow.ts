@@ -137,22 +137,27 @@ export function useCardNewsWorkflow(): CardNewsWorkflowState & CardNewsWorkflowA
 
       const { generateSingleImage } = await import('../services/image/cardNewsImageService');
 
-      // ── 개별 timeout + 실패 격리 순차 루프 ──
-      // Promise.all 대신 for...of로 순차 실행하여:
-      // 1) 진행률이 실시간으로 갱신됨
-      // 2) 한 장 실패해도 다음 장 계속 진행
-      // 3) 개별 이미지에 60초 timeout 적용
-      const IMAGE_TIMEOUT_MS = 60_000;
+      // ── 안정화된 배치 실행 루프 ──
+      // 핵심 변경:
+      // 1) per-card timeout: 60s → 120s (실제 모델 응답 80~185s 관찰)
+      // 2) 배치 크기 2: 완전 직렬(느림) vs 전체 병렬(불안정) 사이 균형
+      // 3) late-arrival 캡처: timeout 후에도 응답 도착 시 반영
+      const PER_CARD_TIMEOUT_MS = 120_000;
+      const BATCH_SIZE = 2;
       const totalCards = cardNewsPrompts.length;
-      const images: (string | null)[] = [];
+      const images: (string | null)[] = new Array(totalCards).fill(null);
       let failedCount = 0;
 
-      for (let i = 0; i < totalCards; i++) {
-        const promptData = cardNewsPrompts[i];
-        setScriptProgress(`🖼️ 이미지 ${i + 1}/${totalCards}장 생성 중...`);
+      // late-arrival 캡처용: timeout 후에도 백그라운드에서 계속 실행
+      const lateArrivals: Map<number, Promise<string | null>> = new Map();
 
-        try {
-          // 개별 이미지에 timeout 적용
+      for (let batchStart = 0; batchStart < totalCards; batchStart += BATCH_SIZE) {
+        const batchEnd = Math.min(batchStart + BATCH_SIZE, totalCards);
+        const batchIndices = Array.from({ length: batchEnd - batchStart }, (_, k) => batchStart + k);
+        setScriptProgress(`🖼️ 이미지 ${batchStart + 1}~${batchEnd}/${totalCards}장 생성 중...`);
+
+        const batchPromises = batchIndices.map(async (i) => {
+          const promptData = cardNewsPrompts[i];
           const imagePromise = generateSingleImage(
             promptData.imagePrompt,
             imageStyle,
@@ -161,17 +166,61 @@ export function useCardNewsWorkflow(): CardNewsWorkflowState & CardNewsWorkflowA
             referenceImage,
             copyMode
           );
-          const timeoutPromise = new Promise<null>((_, reject) =>
-            setTimeout(() => reject(new Error(`이미지 ${i + 1}장 생성 timeout (${IMAGE_TIMEOUT_MS / 1000}초)`)), IMAGE_TIMEOUT_MS)
+
+          // late-arrival 캡처: promise 자체를 저장
+          const wrappedPromise = imagePromise.then(
+            (url) => url,
+            () => null
           );
-          const result = await Promise.race([imagePromise, timeoutPromise]);
-          images.push(result);
-          setScriptProgress(`✅ 이미지 ${i + 1}/${totalCards}장 완료`);
-        } catch (imgErr: any) {
-          console.warn(`⚠️ 카드 ${i + 1} 이미지 생성 실패 (계속 진행):`, imgErr?.message);
-          images.push(null);
-          failedCount++;
-          setScriptProgress(`⚠️ 이미지 ${i + 1}/${totalCards}장 실패 — 다음 카드 진행 중...`);
+          lateArrivals.set(i, wrappedPromise);
+
+          try {
+            const timeoutPromise = new Promise<null>((_, reject) =>
+              setTimeout(() => reject(new Error(`이미지 ${i + 1}장 생성 timeout (${PER_CARD_TIMEOUT_MS / 1000}초)`)), PER_CARD_TIMEOUT_MS)
+            );
+            const result = await Promise.race([imagePromise, timeoutPromise]);
+            images[i] = result;
+            setScriptProgress(`✅ 이미지 ${i + 1}/${totalCards}장 완료`);
+          } catch (imgErr: any) {
+            console.warn(`⚠️ 카드 ${i + 1} 이미지 생성 실패 (계속 진행):`, imgErr?.message);
+            images[i] = null;
+            failedCount++;
+            setScriptProgress(`⚠️ 이미지 ${i + 1}/${totalCards}장 실패 — 다음 배치 진행 중...`);
+          }
+        });
+
+        await Promise.allSettled(batchPromises);
+      }
+
+      // ── late-arrival 복구: timeout된 카드 중 뒤늦게 도착한 응답 반영 ──
+      if (failedCount > 0) {
+        setScriptProgress(`🔄 실패 카드 ${failedCount}장 응답 대기 중 (최대 30초)...`);
+        const LATE_ARRIVAL_WAIT_MS = 30_000;
+        const failedIndices = images.map((img, i) => img === null ? i : -1).filter(i => i >= 0);
+
+        const lateResults = await Promise.race([
+          Promise.allSettled(failedIndices.map(async (i) => {
+            const pending = lateArrivals.get(i);
+            if (!pending) return null;
+            return pending;
+          })),
+          new Promise<null>((resolve) => setTimeout(() => resolve(null), LATE_ARRIVAL_WAIT_MS))
+        ]);
+
+        if (lateResults && Array.isArray(lateResults)) {
+          let recovered = 0;
+          lateResults.forEach((result, idx) => {
+            const cardIdx = failedIndices[idx];
+            if (result.status === 'fulfilled' && result.value) {
+              images[cardIdx] = result.value;
+              recovered++;
+              failedCount--;
+              console.info(`🔄 카드 ${cardIdx + 1} late-arrival 복구 성공`);
+            }
+          });
+          if (recovered > 0) {
+            setScriptProgress(`🔄 ${recovered}장 추가 복구 완료! 총 실패: ${failedCount}장`);
+          }
         }
       }
 

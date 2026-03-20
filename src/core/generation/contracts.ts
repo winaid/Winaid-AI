@@ -75,6 +75,18 @@ export const PIPELINE_FALLBACK = 'legacy_single_shot' as const;
 
 export const DEFAULT_BLOG_IMAGE_COUNT = 1;
 export const DEFAULT_CARD_NEWS_SLIDE_COUNT = 6;
+/**
+ * 카드뉴스 최대 슬라이드 수.
+ *
+ * 근거:
+ * - 이미지 모델 응답 시간: 40~185s (중앙값 ~80s)
+ * - batch=2 병렬, per-card timeout=120s
+ * - 7장 = 4 batches × 120s = 최대 480s + late-arrival 30s ≈ 510s
+ * - 8장 이상은 UX wall time 5분 초과 위험
+ * - 단기 운영값: 7장 (프롬프트 경량화 + 배치 적용 기준)
+ * - 프롬프트/모델 최적화 후 목표값: 8장
+ */
+export const MAX_CARD_NEWS_SLIDE_COUNT = 7;
 export const BLOG_IMAGE_RATIO = '16:9';
 export const CARD_NEWS_IMAGE_RATIO = '4:3';
 export const DEFAULT_IMAGE_STYLE = 'illustration';

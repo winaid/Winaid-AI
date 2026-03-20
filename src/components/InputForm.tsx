@@ -763,8 +763,8 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
                       <label className="text-xs font-semibold text-slate-500">카드뉴스 장수</label>
                       <span className="text-xs font-semibold text-blue-600">{slideCount}장</span>
                     </div>
-                    <input type="range" min="4" max="10" step="1" value={slideCount} onChange={(e) => setSlideCount(parseInt(e.target.value))} className="w-full accent-blue-500 h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer" />
-                    <div className="flex justify-between mt-1 text-[10px] text-slate-400"><span>4장</span><span>10장</span></div>
+                    <input type="range" min="4" max="7" step="1" value={slideCount} onChange={(e) => setSlideCount(parseInt(e.target.value))} className="w-full accent-blue-500 h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer" />
+                    <div className="flex justify-between mt-1 text-[10px] text-slate-400"><span>4장</span><span>7장</span></div>
                   </div>
                </div>
            ) : postType === 'press_release' ? (
