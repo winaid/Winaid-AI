@@ -17,6 +17,7 @@ import { analyzeStyleReferenceImage } from "./image/imageEditService";
 import { DESIGNER_PERSONA, SERIES_DESIGN_RULES } from "./calendarTemplateService";
 import { getDesignTemplateById } from "./cardNewsDesignTemplates";
 import { MAX_CARD_NEWS_SLIDE_COUNT, DEFAULT_CARD_NEWS_SLIDE_COUNT } from "../core/generation/contracts";
+import { clampSlideCount } from "../core/generation/cardNewsConfig";
 import type { GenerationRequest, ImageStyle, WritingStyle, CardPromptData, CardNewsScript } from "../types";
 import {
   FEW_SHOT_EXAMPLES as _FEW_SHOT_EXAMPLES,
@@ -694,11 +695,7 @@ export const generateCardNewsScript = async (
   request: GenerationRequest,
   onProgress: (msg: string) => void
 ): Promise<CardNewsScript> => {
-  const rawSlideCount = request.slideCount || DEFAULT_CARD_NEWS_SLIDE_COUNT;
-  const slideCount = Math.min(rawSlideCount, MAX_CARD_NEWS_SLIDE_COUNT);
-  if (rawSlideCount > MAX_CARD_NEWS_SLIDE_COUNT) {
-    console.warn(`⚠️ slideCount ${rawSlideCount} → ${slideCount} (max=${MAX_CARD_NEWS_SLIDE_COUNT})`);
-  }
+  const slideCount = clampSlideCount(request.slideCount);
   const writingStyle = request.writingStyle || 'empathy';
   const writingStylePrompt = getWritingStylePrompts()[writingStyle];
 
@@ -897,7 +894,7 @@ export const generateCardNewsWithAgents = async (
   request: GenerationRequest,
   onProgress: (msg: string) => void
 ): Promise<{ content: string; imagePrompts: string[]; cardPrompts: CardPromptData[]; title: string; styleConfig?: AnalyzedStyle; }> => {
-  const slideCount = Math.min(request.slideCount || DEFAULT_CARD_NEWS_SLIDE_COUNT, MAX_CARD_NEWS_SLIDE_COUNT);
+  const slideCount = clampSlideCount(request.slideCount);
 
   // 1단계: 스토리 기획
   onProgress('📝 [1/3] 스토리 기획 중...');

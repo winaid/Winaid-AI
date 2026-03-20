@@ -208,8 +208,9 @@ describe('카드뉴스 — 그룹 A. 정상 생성', () => {
     }
   });
 
-  it('A3. 8컷 정상 생성 → 8장 카드 반환', async () => {
-    setupAgentMock(8);
+  it('A3. 8컷 요청 → MAX_SLIDE_COUNT(7)로 clamp되어 7장 반환', async () => {
+    // MAX_SLIDE_COUNT=7이므로 8장 요청 시 7장으로 clamp
+    setupAgentMock(7);
     mockGenerateSingleImage.mockResolvedValue('data:image/png;base64,CCCC');
 
     const result = await runContentJob({
@@ -220,8 +221,8 @@ describe('카드뉴스 — 그룹 A. 정상 생성', () => {
     expect(result.success).toBe(true);
     if (result.success) {
       const html = getHtml(result);
-      expect(countCardSlides(html)).toBe(8);
-      expect(countSuccessImages(html)).toBe(8);
+      expect(countCardSlides(html)).toBe(7);
+      expect(countSuccessImages(html)).toBe(7);
     }
   });
 });
