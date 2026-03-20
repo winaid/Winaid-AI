@@ -79,9 +79,9 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, onTabChange,
   const [learnedStyleId, setLearnedStyleId] = useState<string | undefined>(undefined);
   
   // 🏥 병원 선택 state
-  // localStorage에서 병원명은 UI 표시용으로만 복원 — 말투 적용은 명시 선택 시에만
+  // localStorage에 병원명이 저장되어 있으면 이전 세션에서 명시 선택한 것이므로 자동 적용
   const [hospitalName, setHospitalName] = useState<string>(() => localStorage.getItem('hospitalName') || '');
-  const [hospitalExplicitlySelected, setHospitalExplicitlySelected] = useState(false);
+  const [hospitalExplicitlySelected, setHospitalExplicitlySelected] = useState(() => !!localStorage.getItem('hospitalName'));
   const [showHospitalDropdown, setShowHospitalDropdown] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState<number | null>(null);
   const [selectedManager, setSelectedManager] = useState<string>('');

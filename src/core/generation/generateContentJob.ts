@@ -690,6 +690,27 @@ async function _orchestrateBlog(
     throw new Error('AI가 콘텐츠를 생성하지 못했습니다. 다시 시도해주세요.');
   }
 
+  // ── 품질 게이트: visible placeholder 패턴 제거 ──
+  // 사용자에게 "생성 실패", "일시적으로 생성되지 않았습니다" 등의 placeholder 문구가 노출되지 않도록 함
+  const PLACEHOLDER_PATTERNS = [
+    /이 섹션의 내용은 일시적으로 생성되지 않았습니다\.?/g,
+    /\(.*?— 생성 실패\)/g,
+    /내용 생성 중 오류/g,
+  ];
+  let placeholderStripped = 0;
+  for (const pattern of PLACEHOLDER_PATTERNS) {
+    const matches = body.match(pattern);
+    if (matches) {
+      placeholderStripped += matches.length;
+      body = body.replace(pattern, '');
+    }
+  }
+  // placeholder가 제거된 후 빈 <p></p> 태그 정리
+  if (placeholderStripped > 0) {
+    body = body.replace(/<p>\s*<\/p>/g, '');
+    console.info(`[QUALITY-GATE] placeholder ${placeholderStripped}개 제거됨`);
+  }
+
   // 후처리 안전망
   const safeMinimalResult = (): GeneratedContent => {
     const minimalHtml = body.includes('class="naver-post-container"')
@@ -919,6 +940,27 @@ async function _orchestrateBlog(
         console.log(`📋 블로그 섹션 분리 완료: ${sections.length}개`);
       } catch (e) {
         console.warn('⚠️ 블로그 섹션 분리 실패:', e);
+      }
+    }
+
+    // ── 최종 품질 게이트 ──
+    if (request.postType === 'blog') {
+      const h3Count = (finalHtml.match(/<h3[^>]*>/gi) || []).length;
+      const textOnly = finalHtml.replace(/<[^>]+>/g, '').trim();
+      const qualityIssues: string[] = [];
+
+      if (h3Count < 3) qualityIssues.push(`소제목 부족(${h3Count}개)`);
+      if (textOnly.length < 300) qualityIssues.push(`본문 짧음(${textOnly.length}자)`);
+
+      // visible placeholder 최종 확인
+      if (/일시적으로 생성되지 않았습니다|생성 실패|내용 생성 중 오류/.test(textOnly)) {
+        qualityIssues.push('placeholder 잔존');
+      }
+
+      if (qualityIssues.length > 0) {
+        console.warn(`[QUALITY-GATE] ⚠️ 최종 품질 경고: ${qualityIssues.join(', ')}`);
+      } else {
+        console.info(`[QUALITY-GATE] ✅ 통과 — h3=${h3Count}개, text=${textOnly.length}자`);
       }
     }
 
