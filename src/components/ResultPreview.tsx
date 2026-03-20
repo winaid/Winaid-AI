@@ -535,7 +535,7 @@ const ResultPreview: React.FC<ResultPreviewProps> = ({ content, darkMode = false
                 {blogSections.map((section, idx) => (
                   <div key={idx} className={`p-3 rounded-lg text-sm ${darkMode ? 'bg-slate-700 hover:bg-slate-600' : 'bg-slate-50 hover:bg-slate-100'} transition-colors`}>
                     <div className={`font-medium mb-1 truncate ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>
-                      {section.type === 'intro' ? '도입부' : section.title}
+                      {section.type === 'intro' ? '도입부' : section.type === 'conclusion' ? '마무리' : section.title}
                     </div>
                     <div className="flex items-center gap-2">
                       <span className={`text-xs ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>

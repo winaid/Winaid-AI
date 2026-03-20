@@ -483,7 +483,12 @@ ${sectionSummaries.join('\n')}`;
   const introParagraphs = (introHtml.match(/<p[\s>]/gi) || []).length;
   const concParagraphs = (conclusionHtml.match(/<p[\s>]/gi) || []).length;
   const sectionParagraphs = sectionHtmls.map(h => (h.match(/<p[\s>]/gi) || []).length);
-  console.info(`[PIPELINE] 📊 균형 검증: intro=${introLen}자(${introParagraphs}문단), sections=${sectionLens.join('/')}자, paragraphs=${sectionParagraphs.join('/')}, conclusion=${concLen}자(${concParagraphs}문단), balance=${balanceRatio}%(min/max)`);
+  const nonZeroLens = sectionLens.filter(l => l > 0);
+  const sortedLens = [...nonZeroLens].sort((a, b) => a - b);
+  const medianSec = sortedLens.length > 0 ? sortedLens[Math.floor(sortedLens.length / 2)] : 0;
+  const lastSecLen = nonZeroLens.length > 0 ? nonZeroLens[nonZeroLens.length - 1] : 0;
+  const lastVsMedian = medianSec > 0 ? (lastSecLen / medianSec).toFixed(2) : 'N/A';
+  console.info(`[PIPELINE] 📊 균형 검증: intro=${introLen}자(${introParagraphs}문단), sections=${sectionLens.join('/')}자, paragraphs=${sectionParagraphs.join('/')}, conclusion=${concLen}자(${concParagraphs}문단)(별도파트), balance=${balanceRatio}%(min/max), lastVsMedian=${lastVsMedian}, median=${medianSec}`);
   if (balanceRatio < 60) {
     const longestIdx = sectionLens.indexOf(maxSec);
     const shortestIdx = sectionLens.indexOf(minSec);
@@ -501,7 +506,10 @@ ${sectionSummaries.join('\n')}`;
     console.warn(`[PIPELINE] ⚠️ 어미 연속 경고: 같은 어미 ${maxRepeat}회 연속 감지`);
   }
 
-  const rawHtml = `${introHtml}\n${sectionHtmls.join('\n')}\n${conclusionHtml}`;
+  // conclusion을 semantic wrapper로 감싸서 마지막 h3 섹션과 구조적으로 분리
+  // → parseBlogSections, 균형 계산, Stage C 모두 이 마커를 기준으로 conclusion을 별도 파트로 인식
+  const wrappedConclusion = `<section data-blog-part="conclusion">${conclusionHtml}</section>`;
+  const rawHtml = `${introHtml}\n${sectionHtmls.join('\n')}\n${wrappedConclusion}`;
   const integrationPrompt = getPipelineIntegrationPrompt(targetLength);
 
   // Stage C를 비동기 promise로 생성 — 이미지 생성과 병렬 실행 가능

@@ -1006,10 +1006,19 @@ function parseBlogSections(html: string): BlogSection[] {
   const containerMatch = html.match(/<div[^>]*class="naver-post-container"[^>]*>([\s\S]*)<\/div>\s*$/);
   const content = containerMatch ? containerMatch[1] : html;
 
+  // conclusion 마커 감지: <section data-blog-part="conclusion">...</section>
+  // 마지막 h3 섹션의 범위를 conclusion 시작 전까지로 제한
+  const conclusionMarkerMatch = content.match(/<section[^>]*data-blog-part="conclusion"[^>]*>([\s\S]*?)<\/section>/i);
+  const contentEndForSections = conclusionMarkerMatch
+    ? content.indexOf(conclusionMarkerMatch[0])
+    : content.length;
+
   let headingRegex = /<h3[^>]*>([\s\S]*?)<\/h3>/gi;
   const h3Matches: { index: number; title: string; fullMatch: string }[] = [];
   let match;
   while ((match = headingRegex.exec(content)) !== null) {
+    // conclusion 마커 내부의 h3는 무시
+    if (match.index >= contentEndForSections) break;
     h3Matches.push({
       index: match.index,
       title: match[1].replace(/<[^>]+>/g, '').trim(),
@@ -1020,6 +1029,7 @@ function parseBlogSections(html: string): BlogSection[] {
   if (h3Matches.length === 0) {
     headingRegex = /<h2[^>]*(?!class="[^"]*(?:main-title|hidden-title)[^"]*")[^>]*>([\s\S]*?)<\/h2>/gi;
     while ((match = headingRegex.exec(content)) !== null) {
+      if (match.index >= contentEndForSections) break;
       const title = match[1].replace(/<[^>]+>/g, '').trim();
       if (title && !title.includes('FAQ') && !title.includes('자주 묻는')) {
         h3Matches.push({ index: match.index, title, fullMatch: match[0] });
@@ -1036,7 +1046,8 @@ function parseBlogSections(html: string): BlogSection[] {
 
   for (let i = 0; i < h3Matches.length; i++) {
     const start = h3Matches[i].index;
-    const end = i + 1 < h3Matches.length ? h3Matches[i + 1].index : content.length;
+    // 마지막 h3: conclusion 마커 시작 전까지만 (conclusion 흡수 방지)
+    const end = i + 1 < h3Matches.length ? h3Matches[i + 1].index : contentEndForSections;
     const sectionHtml = content.substring(start, end).trim();
 
     if (h3Matches[i].title.includes('자주 묻는') || h3Matches[i].title.includes('FAQ')) continue;
@@ -1047,6 +1058,19 @@ function parseBlogSections(html: string): BlogSection[] {
       title: h3Matches[i].title,
       html: sectionHtml
     });
+  }
+
+  // conclusion을 별도 파트로 추가
+  if (conclusionMarkerMatch) {
+    const conclusionInner = conclusionMarkerMatch[1].trim();
+    if (conclusionInner && conclusionInner.replace(/<[^>]+>/g, '').trim().length > 10) {
+      sections.push({
+        index: sections.length,
+        type: 'conclusion',
+        title: '마무리',
+        html: conclusionInner,
+      });
+    }
   }
 
   return sections;

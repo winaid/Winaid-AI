@@ -676,6 +676,8 @@ export const getPipelineIntegrationPrompt = (
 8. 수정량은 전체 문장의 15% 이내를 목표로 한다
 9. HTML 태그 구조를 그대로 유지한다 (h2→h3, p→div 등 변경 금지)
 10. 설명하지 말고 최종 결과만 출력한다
+11. 각 h3 섹션의 길이를 가능한 균형 있게 유지한다. 특정 섹션(특히 마지막 h3)만 과도하게 확장하지 않는다
+12. <section data-blog-part="conclusion"> 태그가 있으면 그 구조를 그대로 유지한다. conclusion 내용을 앞 섹션에 흡수시키거나, 태그를 제거하지 않는다
 
 [우선 수정할 것]
 - 같은 어미 3회 연속 → 가운데 어미를 다른 종결어미로 변경
@@ -694,6 +696,7 @@ export const getPipelineIntegrationPrompt = (
 
 [수정하지 말 것]
 - 소제목 재구성, 문단 추가/삭제, 정보 확장, SEO 키워드 추가 삽입, 섹션 순서 변경
+- <section data-blog-part="conclusion"> 태그 구조 (반드시 원본 그대로 유지)
 
 [출력] 교정된 전체 HTML만 출력. 설명/코멘트 없이 HTML만.`;
 };
