@@ -35,20 +35,22 @@ export const STAGE_B_CONCLUSION_TIMEOUT_MS = 30_000;
 
 /**
  * Stage C 교정 정책:
- *   STAGE_C_USE_PRO = true  → PRO 시도 (25s) → 실패 시 FLASH (15s) → 실패 시 rawHtml
+ *   STAGE_C_USE_PRO = true  → PRO 시도 (40s, 텍스트 800~2500자 범위만) → 실패 시 FLASH (15s) → 실패 시 rawHtml
  *   STAGE_C_USE_PRO = false → FLASH 단일 시도 (15s) → 실패 시 rawHtml
  *
  * 조건부 PRO 전략: 텍스트가 STAGE_C_PRO_MIN_CHARS 이상이면 PRO polish 시도.
  * 짧은 텍스트는 FLASH polish만으로 충분하므로 비용/지연 절감.
  */
 export const STAGE_C_USE_PRO = true;
-export const STAGE_C_PRO_TIMEOUT_MS = 25_000;       // PRO 교정 타임아웃 (여유 확보)
+export const STAGE_C_PRO_TIMEOUT_MS = 40_000;       // PRO 교정 타임아웃 (40s — 이전 25s에서 100% timeout 발생)
 export const STAGE_C_FLASH_TIMEOUT_MS = 15_000;     // FLASH 교정 타임아웃 (여유 확보)
 export const STAGE_C_POLISH_TIMEOUT_MS = 15_000;    // 호환용 alias (= FLASH timeout)
 export const STAGE_C_MAX_RETRIES = 1;
 export const STAGE_C_NO_AUTO_FALLBACK = true;
 /** PRO polish 최소 텍스트 길이 — 이 이상이면 PRO 시도, 미만이면 FLASH만 */
 export const STAGE_C_PRO_MIN_CHARS = 800;
+/** PRO polish 최대 텍스트 길이 — 이 초과면 FLASH만 사용 (PRO timeout 방지) */
+export const STAGE_C_PRO_MAX_CHARS = 2500;
 
 export const SEARCH_TIMEOUT_MS = 90_000;           // 검색 (KDCA/병원)
 

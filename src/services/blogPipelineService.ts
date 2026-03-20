@@ -30,6 +30,7 @@ import {
   STAGE_C_PRO_TIMEOUT_MS,
   STAGE_C_FLASH_TIMEOUT_MS,
   STAGE_C_PRO_MIN_CHARS,
+  STAGE_C_PRO_MAX_CHARS,
   DEFAULT_BLOG_IMAGE_COUNT,
 } from "../core/generation/contracts";
 
@@ -520,11 +521,15 @@ ${sectionSummaries.join('\n')}`;
     let polishModel = 'NONE';
     const stageCStart = Date.now();
 
-    // Step 1: PRO polish — 조건부 활성화 (텍스트가 충분히 길 때만 PRO 시도)
+    // Step 1: PRO polish — 조건부 활성화 (텍스트가 적정 범위일 때만 PRO 시도)
     const rawTextLength = rawHtml.replace(/<[^>]+>/g, '').trim().length;
-    const useProForThis = STAGE_C_USE_PRO && rawTextLength >= STAGE_C_PRO_MIN_CHARS;
+    const useProForThis = STAGE_C_USE_PRO && rawTextLength >= STAGE_C_PRO_MIN_CHARS && rawTextLength <= STAGE_C_PRO_MAX_CHARS;
     if (!useProForThis && STAGE_C_USE_PRO) {
-      console.info(`[PIPELINE] Stage C PRO 스킵: rawText=${rawTextLength}자 < ${STAGE_C_PRO_MIN_CHARS}자 (FLASH만 사용)`);
+      if (rawTextLength < STAGE_C_PRO_MIN_CHARS) {
+        console.info(`[PIPELINE] Stage C PRO 스킵: rawText=${rawTextLength}자 < ${STAGE_C_PRO_MIN_CHARS}자 (FLASH만 사용)`);
+      } else if (rawTextLength > STAGE_C_PRO_MAX_CHARS) {
+        console.info(`[PIPELINE] Stage C PRO 스킵: rawText=${rawTextLength}자 > ${STAGE_C_PRO_MAX_CHARS}자 (텍스트 과대 — FLASH만 사용)`);
+      }
     }
     if (useProForThis) {
       console.info(`[PIPELINE] Stage C attempt=PRO timeout=${STAGE_C_PRO_TIMEOUT_MS}`);
