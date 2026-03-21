@@ -10,7 +10,7 @@
 | `/blog` | `app/(dashboard)/blog/page.tsx` | `GenerateWorkspace(blog)` | **done** (입력→API→결과표시) |
 | `/card_news` | `app/(dashboard)/card_news/page.tsx` | `GenerateWorkspace(card_news)` | **done** (입력→생성→저장) |
 | `/press` | `app/(dashboard)/press/page.tsx` | `GenerateWorkspace(press)` | **done** (입력→생성→저장) |
-| `/refine` | `app/refine/page.tsx` | `src/components/ContentRefiner.tsx` | stub |
+| `/refine` | `app/(dashboard)/refine/page.tsx` | `src/components/ContentRefiner.tsx` | **done** (입력→보정→저장) |
 | `/image` | `app/image/page.tsx` | `src/components/ImageGenerator.tsx` | stub |
 | `/history` | `app/(dashboard)/history/page.tsx` | `src/components/PostHistory.tsx` | **done** (목록+상세) |
 | `/admin` | `app/admin/page.tsx` | `src/components/AdminPage.tsx` | stub |
