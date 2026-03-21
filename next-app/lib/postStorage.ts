@@ -10,7 +10,8 @@ export interface SavePostInput {
   userId?: string | null;
   userEmail?: string | null;
   hospitalName?: string;
-  postType: 'blog' | 'card_news' | 'press_release' | 'refine';
+  postType: 'blog' | 'card_news' | 'press_release';
+  workflowType?: 'generate' | 'refine';
   title: string;
   content: string;
   topic?: string;
@@ -21,6 +22,7 @@ export interface SavePostInput {
 export interface SavedPost {
   id: string;
   post_type: string;
+  workflow_type: string;
   title: string;
   content: string;
   topic: string | null;
@@ -43,6 +45,7 @@ export async function savePost(input: SavePostInput): Promise<{ id: string } | {
       user_email: input.userEmail || null,
       hospital_name: input.hospitalName || null,
       post_type: input.postType,
+      workflow_type: input.workflowType || 'generate',
       title: input.title,
       content: input.content,
       plain_text: plainText.substring(0, 10000),
@@ -67,7 +70,7 @@ export async function savePost(input: SavePostInput): Promise<{ id: string } | {
 export async function listPosts(userId: string | null): Promise<{ posts: SavedPost[] } | { error: string }> {
   let query = supabase
     .from('generated_posts')
-    .select('id, post_type, title, content, topic, hospital_name, keywords, char_count, created_at')
+    .select('id, post_type, workflow_type, title, content, topic, hospital_name, keywords, char_count, created_at')
     .order('created_at', { ascending: false })
     .limit(50);
 
@@ -89,7 +92,7 @@ export async function listPosts(userId: string | null): Promise<{ posts: SavedPo
 export async function getPost(postId: string): Promise<{ post: SavedPost } | { error: string }> {
   const { data, error } = await supabase
     .from('generated_posts')
-    .select('id, post_type, title, content, topic, hospital_name, keywords, char_count, created_at')
+    .select('id, post_type, workflow_type, title, content, topic, hospital_name, keywords, char_count, created_at')
     .eq('id', postId)
     .single();
 

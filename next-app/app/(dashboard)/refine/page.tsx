@@ -52,7 +52,7 @@ export default function RefinePage() {
 
       setRefinedContent(data.text);
 
-      // Supabase에 저장 — post_type CHECK 제약으로 'blog'로 저장, topic에 보정 모드 표기
+      // Supabase에 저장 — post_type='blog' + workflow_type='refine'
       const { data: { session } } = await supabase.auth.getSession();
       const modeLabel = REFINE_OPTIONS.find(o => o.value === selectedMode)?.label || selectedMode;
       const titleMatch = data.text.match(/^#\s+(.+)/m) || data.text.match(/^(.+)/);
@@ -63,7 +63,8 @@ export default function RefinePage() {
       const saveResult = await savePost({
         userId: session?.user?.id || null,
         userEmail: session?.user?.email || null,
-        postType: 'refine',
+        postType: 'blog',
+        workflowType: 'refine',
         title: extractedTitle,
         content: data.text,
         topic: `${modeLabel} · ${originalText.trim().substring(0, 100)}`,
