@@ -8,6 +8,18 @@
     "api/gemini.js": {
       "maxDuration": 300,
       "memory": 512
+    },
+    "api/naver/crawl-hospital-blog.js": {
+      "maxDuration": 120
+    },
+    "api/naver/crawl-search.js": {
+      "maxDuration": 60
+    },
+    "api/naver/crawl-top-blog.js": {
+      "maxDuration": 60
+    },
+    "api/crawler.js": {
+      "maxDuration": 30
     }
   },
   "rewrites": [
