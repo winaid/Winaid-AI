@@ -42,3 +42,8 @@ server/data/
 .vercel
 test-results/
 playwright-report/
+
+# Next.js
+next-app/.next/
+next-app/node_modules/
+next-app/out/
