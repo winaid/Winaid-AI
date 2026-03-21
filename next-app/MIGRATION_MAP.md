@@ -6,7 +6,7 @@
 |-----------|-------------|-------------|------|
 | `/` | `app/page.tsx` | `src/components/LandingPage.tsx` | stub |
 | `/auth` | `app/auth/page.tsx` | `src/components/AuthPage.tsx` | **done** |
-| `/app` | `app/app/page.tsx` | `src/components/HomeDashboard.tsx` | stub |
+| `/app` | `app/app/page.tsx` | `src/components/HomeDashboard.tsx` | **done** |
 | `/blog` | `app/blog/page.tsx` | `GenerateWorkspace(blog)` | stub |
 | `/card_news` | `app/card_news/page.tsx` | `GenerateWorkspace(card_news)` | stub |
 | `/press` | `app/press/page.tsx` | `GenerateWorkspace(press)` | stub |
