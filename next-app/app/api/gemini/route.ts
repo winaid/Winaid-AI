@@ -136,7 +136,7 @@ export async function POST(request: NextRequest) {
   const keys = getKeys();
   if (keys.length === 0) {
     return NextResponse.json(
-      { error: 'No Gemini API keys configured. Set GEMINI_API_KEY env var.' },
+      { error: '[env] GEMINI_API_KEY 누락. .env.local에 GEMINI_API_KEY=your_key 추가 필요.' },
       { status: 500 },
     );
   }
