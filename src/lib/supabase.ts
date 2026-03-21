@@ -1,14 +1,20 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './database.types';
 
-// Supabase 설정 - 환경변수 우선, 없으면 하드코딩 값 사용
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://giiatpxkhponcbduyzci.supabase.co';
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdpaWF0cHhraHBvbmNiZHV5emNpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc0MzA0MzksImV4cCI6MjA4MzAwNjQzOX0.YsjqdemCH18UcK_fIa6yTulQkw00AemZeROhTaFIpBg';
+// Supabase 설정 - 환경변수 필수 (하드코딩 fallback 제거됨)
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+  throw new Error(
+    '[Supabase] VITE_SUPABASE_URL 과 VITE_SUPABASE_ANON_KEY 환경변수가 필요합니다. ' +
+    '.env 파일 또는 Vercel 환경변수를 확인하세요.'
+  );
+}
 
 console.info('[Supabase] 초기화:', {
   url: SUPABASE_URL,
   keyPrefix: SUPABASE_ANON_KEY.substring(0, 20) + '...',
-  fromEnv: !!import.meta.env.VITE_SUPABASE_URL
 });
 
 // Supabase 클라이언트 생성
@@ -17,10 +23,8 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY);
 // 클라이언트 재초기화 (호환성을 위해 기존 클라이언트 반환)
 export const reinitializeSupabase = () => supabase;
 
-// Supabase 설정 여부 확인
-export const isSupabaseConfigured = () => {
-  return !!(SUPABASE_URL && SUPABASE_ANON_KEY);
-};
+// Supabase 설정 여부 확인 (env 필수이므로 여기 도달하면 항상 true)
+export const isSupabaseConfigured = () => true;
 
 // 사용자 IP 가져오기
 export const getUserIP = async (): Promise<string> => {
