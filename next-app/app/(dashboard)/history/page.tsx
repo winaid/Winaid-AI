@@ -4,12 +4,41 @@ import { useState, useEffect, useCallback } from 'react';
 import { listPosts, type SavedPost } from '../../../lib/postStorage';
 import { supabase } from '../../../lib/supabase';
 
+type FilterTab = 'all' | 'blog' | 'card_news' | 'press_release' | 'refine';
+
+const FILTER_TABS: { value: FilterTab; label: string }[] = [
+  { value: 'all', label: '전체' },
+  { value: 'blog', label: '블로그' },
+  { value: 'card_news', label: '카드뉴스' },
+  { value: 'press_release', label: '보도자료' },
+  { value: 'refine', label: 'AI 보정' },
+];
+
+const EMPTY_MESSAGES: Record<FilterTab, string> = {
+  all: '블로그를 생성하면 여기에 자동으로 저장됩니다.',
+  blog: '블로그 글을 생성하면 여기에 표시됩니다.',
+  card_news: '카드뉴스를 생성하면 여기에 표시됩니다.',
+  press_release: '보도자료를 생성하면 여기에 표시됩니다.',
+  refine: 'AI 보정 결과가 여기에 표시됩니다.',
+};
+
+function filterPosts(posts: SavedPost[], tab: FilterTab): SavedPost[] {
+  switch (tab) {
+    case 'all': return posts;
+    case 'blog': return posts.filter(p => p.post_type === 'blog' && p.workflow_type !== 'refine');
+    case 'card_news': return posts.filter(p => p.post_type === 'card_news');
+    case 'press_release': return posts.filter(p => p.post_type === 'press_release');
+    case 'refine': return posts.filter(p => p.workflow_type === 'refine');
+  }
+}
+
 export default function HistoryPage() {
   const [posts, setPosts] = useState<SavedPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedPost, setSelectedPost] = useState<SavedPost | null>(null);
   const [copyFeedback, setCopyFeedback] = useState(false);
+  const [activeTab, setActiveTab] = useState<FilterTab>('all');
 
   const loadPosts = useCallback(async () => {
     setLoading(true);
@@ -120,10 +149,12 @@ export default function HistoryPage() {
     );
   }
 
+  const filtered = filterPosts(posts, activeTab);
+
   // ── 목록 ──
   return (
     <div className="p-5 max-w-4xl mx-auto">
-      <div className="flex items-center justify-between mb-5">
+      <div className="flex items-center justify-between mb-4">
         <h1 className="text-xl font-bold text-slate-900">생성 이력</h1>
         <button
           onClick={loadPosts}
@@ -133,6 +164,31 @@ export default function HistoryPage() {
           새로고침
         </button>
       </div>
+
+      {/* 필터 탭 */}
+      {!loading && posts.length > 0 && (
+        <div className="flex gap-1 mb-4 overflow-x-auto">
+          {FILTER_TABS.map(tab => {
+            const count = filterPosts(posts, tab.value).length;
+            return (
+              <button
+                key={tab.value}
+                onClick={() => setActiveTab(tab.value)}
+                className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all whitespace-nowrap ${
+                  activeTab === tab.value
+                    ? 'bg-slate-800 text-white'
+                    : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                }`}
+              >
+                {tab.label}
+                <span className={`ml-1 ${activeTab === tab.value ? 'text-slate-300' : 'text-slate-400'}`}>
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {loading && (
         <div className="flex items-center justify-center py-20">
@@ -156,21 +212,23 @@ export default function HistoryPage() {
         </div>
       )}
 
-      {!loading && !error && posts.length === 0 && (
+      {!loading && !error && filtered.length === 0 && (
         <div className="text-center py-20">
           <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4 mx-auto bg-slate-100">
             <svg className="w-7 h-7 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
-          <h2 className="text-lg font-bold text-slate-700 mb-1">아직 생성 이력이 없습니다</h2>
-          <p className="text-sm text-slate-400">블로그를 생성하면 여기에 자동으로 저장됩니다.</p>
+          <h2 className="text-lg font-bold text-slate-700 mb-1">
+            {posts.length === 0 ? '아직 생성 이력이 없습니다' : '해당 유형의 이력이 없습니다'}
+          </h2>
+          <p className="text-sm text-slate-400">{EMPTY_MESSAGES[activeTab]}</p>
         </div>
       )}
 
-      {!loading && posts.length > 0 && (
+      {!loading && filtered.length > 0 && (
         <div className="space-y-2">
-          {posts.map(post => (
+          {filtered.map(post => (
             <button
               key={post.id}
               onClick={() => setSelectedPost(post)}
