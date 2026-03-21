@@ -1,15 +1,13 @@
 -- ============================================
--- post_type CHECK 제약에 'refine' 추가
--- Supabase 대시보드 > SQL Editor에서 실행
+-- ⚠ 폐기됨 — 이 파일은 적용하지 마세요
+-- 대체: 2026-03-21_add_workflow_type.sql
 -- ============================================
 --
--- 배경: /refine(AI 보정) 결과가 post_type='blog'로 위장 저장되고 있었음.
--- 이 마이그레이션으로 'refine'을 정식 post_type으로 추가하여
--- 데이터 모델 차원에서 올바르게 식별 가능하게 만듦.
+-- 이 마이그레이션은 post_type에 'refine'을 추가하는 방식이었으나,
+-- 콘텐츠 유형(post_type)과 작업 방식(workflow_type)을 분리하는
+-- 방향으로 변경되었습니다.
 --
--- 기존 데이터 호환:
--- - blog, card_news, press_release 데이터는 영향 없음
--- - 이전에 blog로 위장 저장된 [AI 보정] 데이터는 수동 업데이트 가능 (아래 참조)
+-- 아래 내용은 참고용으로만 남겨둡니다. 실행하지 마세요.
 
 -- 1. 기존 CHECK 제약 제거 후 새 제약 추가
 ALTER TABLE public.generated_posts
