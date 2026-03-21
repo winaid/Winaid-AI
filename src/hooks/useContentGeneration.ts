@@ -412,16 +412,8 @@ export function useContentGeneration(deps: ContentGenerationDeps): ContentGenera
         console.warn('사용량 저장 스킵:', e);
       }
 
-      // API 서버에 자동 저장 — 저장 어댑터 사용
-      try {
-        const { saveArtifactToServer } = await import('../core/generation/contentStorage');
-        const saveResult = await saveArtifactToServer(artifact);
-        if (!saveResult.success) {
-          console.warn('⚠️ 서버 저장 실패:', saveResult.error);
-        }
-      } catch (saveErr) {
-        console.warn('⚠️ 서버 저장 중 오류:', saveErr);
-      }
+      // [2024-03 KV retire] Cloudflare KV 부가 저장(saveArtifactToServer) 제거.
+      // 생성 결과 저장은 Supabase generated_posts (persistGeneratedPost) 단일 경로만 사용.
     } finally {
       clearTimeout(hardTimeoutId);
       isGeneratingRef.current = false;

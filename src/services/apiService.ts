@@ -1,7 +1,13 @@
-// API 서버에 콘텐츠 저장하는 서비스
-
-// Cloudflare Pages Functions 사용 - 같은 도메인에서 API 제공
-// 개발: http://localhost:3000, 프로덕션: https://story-darugi.com
+// [LEGACY] Cloudflare KV 콘텐츠 저장 서비스
+//
+// 이 파일의 함수들은 Cloudflare KV 기반 /api/content/* 엔드포인트를 호출한다.
+// 2024-03 기준 실사용 호출부가 없음:
+//   - saveContentToServer: useContentGeneration에서 호출 제거됨
+//   - deleteAllContent / getContentList: 호출부 없음 (admin은 Supabase 경로 사용)
+//
+// 생성 결과 저장은 Supabase generated_posts (postStorageService) 단일 경로.
+// 이 파일은 타입 export(SaveContentRequest, SaveContentResponse)만 아직 참조될 수 있으므로 유지.
+// TODO: 타입 참조 정리 후 파일 삭제 가능
 const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 
 export interface SaveContentRequest {
@@ -23,9 +29,7 @@ export interface SaveContentResponse {
   error?: string;
 }
 
-/**
- * 생성된 콘텐츠를 API 서버에 저장
- */
+/** @deprecated Cloudflare KV retire — 호출부 제거됨 (2024-03) */
 export const saveContentToServer = async (data: SaveContentRequest): Promise<SaveContentResponse> => {
   try {
     const response = await fetch(`${API_BASE_URL}/api/content/save`, {
@@ -54,9 +58,7 @@ export const saveContentToServer = async (data: SaveContentRequest): Promise<Sav
   }
 };
 
-/**
- * 저장된 모든 콘텐츠 삭제 (새 글 생성 전 호출)
- */
+/** @deprecated Cloudflare KV retire — 호출부 없음 (2024-03) */
 export const deleteAllContent = async (): Promise<SaveContentResponse> => {
   try {
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
@@ -88,9 +90,7 @@ export const deleteAllContent = async (): Promise<SaveContentResponse> => {
   }
 };
 
-/**
- * 저장된 콘텐츠 목록 가져오기
- */
+/** @deprecated Cloudflare KV retire — 호출부 없음 (2024-03) */
 export const getContentList = async (): Promise<any[]> => {
   try {
     const response = await fetch(`${API_BASE_URL}/api/content/list`);

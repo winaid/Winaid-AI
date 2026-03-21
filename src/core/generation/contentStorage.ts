@@ -1,14 +1,14 @@
 /**
  * contentStorage — 저장 레이어 어댑터
  *
- * 저장 계층을 3개로 분류한다:
+ * 저장 계층:
  *
  *   ┌─────────────────────────────────────────────────────────────┐
  *   │ Layer 1: Result Persistence (결과 저장)                      │
- *   │   대상: Cloudflare KV (saveArtifactToServer)                │
- *   │         Supabase generated_posts (persistGeneratedPost)     │
+ *   │   대상: Supabase generated_posts (persistGeneratedPost)     │
  *   │   시점: 생성 완료 직후, 비동기                                │
  *   │   목적: 생성 결과의 영구 보존                                 │
+ *   │   [RETIRED] Cloudflare KV 저장은 2024-03에 제거됨.           │
  *   ├─────────────────────────────────────────────────────────────┤
  *   │ Layer 2: History Persistence (이력 저장)                     │
  *   │   대상: Supabase blog_history (persistBlogHistory)          │
@@ -27,73 +27,15 @@
  */
 
 import type { ContentArtifact } from './contracts';
-import type { SaveContentRequest, SaveContentResponse } from '../../services/apiService';
 import type { GenerationRequest } from '../../types';
-import { stripLargeBase64FromHtml } from '../../services/image/imageStorageService';
 
 // ══════════════════════════════════════════════
-// Layer 1: Result Persistence — 타입 + 어댑터
+// Layer 1: Result Persistence — Supabase only
 // ══════════════════════════════════════════════
-
-/** API 서버(Cloudflare KV) 저장용 payload */
-export type SaveContentPayload = SaveContentRequest;
-
-/** 저장 완료 후 레코드 — 서버가 부여한 id 포함 */
-export interface SaveContentRecord {
-  id: string;
-  title: string;
-  postType: string;
-  category: string;
-  createdAt: string;
-}
-
-/**
- * ContentArtifact → SaveContentPayload 변환.
- * storageHtml 우선, 없으면 htmlContent에서 base64/blob strip.
- */
-export function buildSavePayload(artifact: ContentArtifact): SaveContentPayload {
-  const content = artifact.content;
-
-  let contentForSave = content.storageHtml || '';
-  if (!contentForSave) {
-    // storageHtml 없으면 htmlContent에서 strip — 공용 함수 사용 (static import)
-    contentForSave = stripLargeBase64FromHtml(content.htmlContent);
-    console.warn('[STORAGE] storageHtml 없음 — htmlContent에서 공용 strip 적용 (SVG 보존)');
-  }
-
-  const storageKB = Math.round(contentForSave.length * 2 / 1024);
-  if (storageKB > 500) {
-    console.error(`[STORAGE] ⚠️ storage payload ${storageKB}KB — 비정상 크기! storageHtml 경로 점검 필요`);
-  }
-
-  return {
-    title: artifact.title,
-    content: contentForSave,
-    category: artifact.category ?? '',
-    postType: artifact.postType,
-    metadata: {
-      keywords: artifact.keywords,
-      seoScore: artifact.seoTotal,
-      aiSmellScore: artifact.aiSmellScore,
-    },
-  };
-}
-
-/**
- * [Layer 1] ContentArtifact → API 서버(Cloudflare KV) 저장.
- */
-export async function saveArtifactToServer(
-  artifact: ContentArtifact,
-): Promise<SaveContentResponse> {
-  const { saveContentToServer } = await import('../../services/apiService');
-  const payload = buildSavePayload(artifact);
-
-  const displayKB = Math.round(artifact.content.htmlContent.length * 2 / 1024);
-  const storageKB = Math.round(payload.content.length * 2 / 1024);
-  console.debug(`[STORAGE] saveArtifactToServer | display=${displayKB}KB | storage=${storageKB}KB`);
-
-  return saveContentToServer(payload);
-}
+//
+// [RETIRED] Cloudflare KV 저장 (saveArtifactToServer, buildSavePayload,
+// SaveContentPayload, SaveContentRecord)은 2024-03에 제거됨.
+// 생성 결과 저장은 아래 persistGeneratedPost → Supabase generated_posts 단일 경로.
 
 /**
  * [Layer 1] 생성 결과를 Supabase generated_posts에 저장.

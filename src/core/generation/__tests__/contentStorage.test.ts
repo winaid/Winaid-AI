@@ -1,30 +1,17 @@
 /**
  * contentStorage 어댑터 테스트
  *
- * 목적: 3-layer persistence 어댑터의 변환 계약을 보호한다.
- * - buildSavePayload: ContentArtifact → SaveContentPayload 변환
+ * 목적: persistence 어댑터의 변환 계약을 보호한다.
  * - persistGeneratedPost: 요청 → 저장 파라미터 변환
  * - persistBlogHistory: opts → 함수 호출 인자 매핑
  *
- * mock 전략: 외부 서비스(apiService, postStorageService, contentSimilarityService)만 mock.
+ * [RETIRED] buildSavePayload / saveArtifactToServer 테스트는
+ * Cloudflare KV retire (2024-03)과 함께 제거됨.
+ *
+ * mock 전략: 외부 서비스(postStorageService, contentSimilarityService)만 mock.
  * 변환 로직 자체는 실제 코드를 실행하여 검증한다.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-
-// ── imageStorageService mock: static import된 strip 함수 ──
-vi.mock('../../../services/image/imageStorageService', () => ({
-  stripLargeBase64FromHtml: vi.fn().mockImplementation((html: string) =>
-    html.replace(/src="data:image\/(?!svg)[^"]*"/gi, 'src=""').replace(/src="blob:[^"]*"/gi, 'src=""')
-  ),
-  stripBase64FromHtml: vi.fn().mockImplementation((html: string) =>
-    html.replace(/src="data:image\/(?!svg)[^"]*"/gi, 'src=""').replace(/src="blob:[^"]*"/gi, 'src=""')
-  ),
-}));
-
-// ── Layer 1 mock: apiService ──
-vi.mock('../../../services/apiService', () => ({
-  saveContentToServer: vi.fn().mockResolvedValue({ success: true, id: 'test-id' }),
-}));
 
 // ── Layer 1 mock: postStorageService ──
 const mockSaveGeneratedPost = vi.fn().mockResolvedValue({ success: true, postId: 'post-123' });
@@ -39,118 +26,13 @@ vi.mock('../../../services/contentSimilarityService', () => ({
 }));
 
 import {
-  buildSavePayload,
-  saveArtifactToServer,
   persistGeneratedPost,
   persistBlogHistory,
 } from '../contentStorage';
 import type { ContentArtifact } from '../contracts';
 
-// ── 테스트용 fixture ──
-
-function createTestArtifact(overrides?: Partial<ContentArtifact>): ContentArtifact {
-  return {
-    postType: 'blog',
-    createdAt: '2026-03-18T00:00:00.000Z',
-    title: '테스트 블로그',
-    content: {
-      title: '테스트 블로그',
-      htmlContent: '<div class="naver-post-container"><p>본문</p></div>',
-      imageUrl: '',
-      fullHtml: '<div class="naver-post-container"><p>본문</p></div>',
-      tags: [],
-      postType: 'blog',
-      imageStyle: 'illustration' as const,
-      cssTheme: 'modern',
-      storageHtml: '<div>storage 최적화 HTML</div>',
-    } as any,
-    category: '치과' as any,
-    keywords: '임플란트,치아미백',
-    seoTotal: 88,
-    aiSmellScore: 5,
-    imageMeta: { successCount: 1, failCount: 0, prompts: ['테스트 프롬프트'] },
-    warnings: [],
-    ...overrides,
-  };
-}
-
 beforeEach(() => {
   vi.clearAllMocks();
-});
-
-// ═══════════════════════════════════════
-// buildSavePayload
-// ═══════════════════════════════════════
-
-describe('buildSavePayload', () => {
-  it('storageHtml 우선 사용', () => {
-    const artifact = createTestArtifact();
-    const payload = buildSavePayload(artifact);
-
-    expect(payload.content).toBe('<div>storage 최적화 HTML</div>');
-    expect(payload.title).toBe('테스트 블로그');
-    expect(payload.postType).toBe('blog');
-    expect(payload.category).toBe('치과');
-  });
-
-  it('storageHtml 없으면 htmlContent에서 base64/blob strip', () => {
-    const artifact = createTestArtifact({
-      content: {
-        title: '테스트',
-        htmlContent: '<img src="data:image/png;base64,abc123"/><img src="blob:http://localhost/xyz"/>',
-        imageUrl: '',
-        fullHtml: '',
-        tags: [],
-        postType: 'blog',
-        imageStyle: 'illustration' as const,
-        cssTheme: 'modern',
-        // storageHtml 의도적 누락
-      } as any,
-    });
-
-    const payload = buildSavePayload(artifact);
-    expect(payload.content).not.toContain('data:image');
-    expect(payload.content).not.toContain('blob:');
-    expect(payload.content).toContain('src=""');
-  });
-
-  it('metadata에 keywords, seoScore, aiSmellScore 포함', () => {
-    const artifact = createTestArtifact();
-    const payload = buildSavePayload(artifact);
-
-    expect(payload.metadata).toEqual({
-      keywords: '임플란트,치아미백',
-      seoScore: 88,
-      aiSmellScore: 5,
-    });
-  });
-
-  it('category 없으면 빈 문자열', () => {
-    const artifact = createTestArtifact({ category: undefined });
-    const payload = buildSavePayload(artifact);
-    expect(payload.category).toBe('');
-  });
-});
-
-// ═══════════════════════════════════════
-// saveArtifactToServer
-// ═══════════════════════════════════════
-
-describe('saveArtifactToServer', () => {
-  it('buildSavePayload 결과를 saveContentToServer에 전달', async () => {
-    const artifact = createTestArtifact();
-    const result = await saveArtifactToServer(artifact);
-
-    expect(result.success).toBe(true);
-
-    const { saveContentToServer } = await import('../../../services/apiService');
-    expect(saveContentToServer).toHaveBeenCalledWith(
-      expect.objectContaining({
-        title: '테스트 블로그',
-        postType: 'blog',
-      }),
-    );
-  });
 });
 
 // ═══════════════════════════════════════
