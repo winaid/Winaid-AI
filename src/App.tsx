@@ -20,6 +20,9 @@ const AuthPage = lazy(() => import('./components/AuthPage').then(module => ({ de
 const MedicalLawSearch = lazy(() => import('./components/MedicalLawSearch').then(module => ({ default: module.MedicalLawSearch })));
 const LandingPage = lazy(() => import('./components/LandingPage'));
 const UserManual = lazy(() => import('./components/UserManual'));
+const MaintenancePage = lazy(() => import('./components/MaintenancePage'));
+
+const IS_MAINTENANCE = import.meta.env.VITE_MAINTENANCE_MODE === 'true';
 
 const PageSkeleton = () => (
   <div className="min-h-screen flex items-center justify-center bg-slate-50/50">
@@ -93,6 +96,15 @@ const App: React.FC = () => {
   }, [mobileTab]);
 
   // ── 페이지 분기 렌더링 ──
+
+  // 점검 모드
+  if (IS_MAINTENANCE) {
+    return (
+      <Suspense fallback={<PageSkeleton />}>
+        <MaintenancePage darkMode={darkMode} />
+      </Suspense>
+    );
+  }
 
   // 랜딩
   if (currentPage === 'landing') {
