@@ -57,16 +57,16 @@ export default function RefinePage() {
       const modeLabel = REFINE_OPTIONS.find(o => o.value === selectedMode)?.label || selectedMode;
       const titleMatch = data.text.match(/^#\s+(.+)/m) || data.text.match(/^(.+)/);
       const extractedTitle = titleMatch
-        ? `[AI 보정] ${titleMatch[1].replace(/^[#*\s]+/, '').trim().substring(0, 180)}`
-        : `[AI 보정] ${originalText.trim().substring(0, 50)}`;
+        ? titleMatch[1].replace(/^[#*\s]+/, '').trim().substring(0, 200)
+        : originalText.trim().substring(0, 50);
 
       const saveResult = await savePost({
         userId: session?.user?.id || null,
         userEmail: session?.user?.email || null,
-        postType: 'blog',
+        postType: 'refine',
         title: extractedTitle,
         content: data.text,
-        topic: `[AI 보정 · ${modeLabel}] ${originalText.trim().substring(0, 100)}`,
+        topic: `${modeLabel} · ${originalText.trim().substring(0, 100)}`,
       });
 
       if ('error' in saveResult) {

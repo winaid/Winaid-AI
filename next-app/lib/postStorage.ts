@@ -10,7 +10,7 @@ export interface SavePostInput {
   userId?: string | null;
   userEmail?: string | null;
   hospitalName?: string;
-  postType: 'blog' | 'card_news' | 'press_release';
+  postType: 'blog' | 'card_news' | 'press_release' | 'refine';
   title: string;
   content: string;
   topic?: string;

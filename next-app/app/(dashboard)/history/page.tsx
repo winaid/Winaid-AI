@@ -174,9 +174,10 @@ export default function HistoryPage() {
                     <span className={`px-1.5 py-0.5 rounded font-semibold ${
                       post.post_type === 'blog' ? 'bg-blue-50 text-blue-600'
                         : post.post_type === 'card_news' ? 'bg-pink-50 text-pink-600'
+                        : post.post_type === 'refine' ? 'bg-violet-50 text-violet-600'
                         : 'bg-amber-50 text-amber-600'
                     }`}>
-                      {post.post_type === 'blog' ? '블로그' : post.post_type === 'card_news' ? '카드뉴스' : '보도자료'}
+                      {post.post_type === 'blog' ? '블로그' : post.post_type === 'card_news' ? '카드뉴스' : post.post_type === 'refine' ? 'AI 보정' : '보도자료'}
                     </span>
                     {post.hospital_name && (
                       <span className="truncate max-w-[120px]">{post.hospital_name}</span>

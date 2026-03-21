@@ -13,7 +13,7 @@ export type AudienceMode =
   | '전문가용(신뢰/정보)';
 
 export type ImageStyle = 'photo' | 'illustration' | 'medical' | 'custom';
-export type PostType = 'blog' | 'card_news' | 'press_release';
+export type PostType = 'blog' | 'card_news' | 'press_release' | 'refine';
 export type CssTheme = 'modern' | 'premium' | 'minimal' | 'warm' | 'professional';
 export type WritingStyle = 'expert' | 'empathy' | 'conversion';
 
