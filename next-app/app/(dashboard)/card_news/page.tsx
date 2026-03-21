@@ -5,6 +5,7 @@ import { TEAM_DATA } from '../../../lib/teamData';
 import { buildCardNewsPrompt, type CardNewsRequest } from '../../../lib/cardNewsPrompt';
 import { savePost } from '../../../lib/postStorage';
 import { supabase } from '../../../lib/supabase';
+import { ErrorPanel, ResultPanel } from '../../../components/GenerationResult';
 import type { WritingStyle } from '../../../lib/types';
 
 const WRITING_STYLE_OPTIONS: { value: WritingStyle; label: string }[] = [
@@ -69,31 +70,35 @@ export default function CardNewsPage() {
 
       setGeneratedContent(data.text);
 
-      // Supabase에 저장
-      const { data: { session } } = await supabase.auth.getSession();
-      const titleMatch = data.text.match(/\*\*제목\*\*:\s*(.+)/m)
-        || data.text.match(/^###?\s+1장[:\s]*(.+)/m)
-        || data.text.match(/^#\s+(.+)/m)
-        || data.text.match(/^(.+)/);
-      const extractedTitle = titleMatch
-        ? titleMatch[1].replace(/^[#*\s]+/, '').trim().substring(0, 200)
-        : topic.trim();
+      // Supabase 저장 — 실패해도 생성 결과 표시에 영향 없음
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const titleMatch = data.text.match(/\*\*제목\*\*:\s*(.+)/m)
+          || data.text.match(/^###?\s+1장[:\s]*(.+)/m)
+          || data.text.match(/^#\s+(.+)/m)
+          || data.text.match(/^(.+)/);
+        const extractedTitle = titleMatch
+          ? titleMatch[1].replace(/^[#*\s]+/, '').trim().substring(0, 200)
+          : topic.trim();
 
-      const saveResult = await savePost({
-        userId: session?.user?.id || null,
-        userEmail: session?.user?.email || null,
-        hospitalName: hospitalName || undefined,
-        postType: 'card_news',
-        title: extractedTitle,
-        content: data.text,
-        topic: topic.trim(),
-        keywords: keywords.trim() ? keywords.split(',').map(k => k.trim()).filter(Boolean) : undefined,
-      });
+        const saveResult = await savePost({
+          userId: session?.user?.id || null,
+          userEmail: session?.user?.email || null,
+          hospitalName: hospitalName || undefined,
+          postType: 'card_news',
+          title: extractedTitle,
+          content: data.text,
+          topic: topic.trim(),
+          keywords: keywords.trim() ? keywords.split(',').map(k => k.trim()).filter(Boolean) : undefined,
+        });
 
-      if ('error' in saveResult) {
-        setSaveStatus('저장 실패: ' + saveResult.error);
-      } else {
-        setSaveStatus('저장 완료');
+        if ('error' in saveResult) {
+          setSaveStatus('저장 실패: ' + saveResult.error);
+        } else {
+          setSaveStatus('저장 완료');
+        }
+      } catch {
+        setSaveStatus('저장 실패: Supabase 연결 불가');
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : '네트워크 오류';
@@ -263,50 +268,9 @@ export default function CardNewsPage() {
             </p>
           </div>
         ) : error ? (
-          <div className="rounded-2xl border border-red-200 bg-red-50 p-6 min-h-[200px]">
-            <div className="flex items-center gap-2 mb-3">
-              <span className="text-red-500 text-lg">⚠</span>
-              <h3 className="text-base font-bold text-red-700">생성 실패</h3>
-            </div>
-            <p className="text-sm text-red-600 mb-4">{error}</p>
-            <button
-              onClick={() => setError(null)}
-              className="px-4 py-2 text-sm font-semibold bg-white border border-red-200 rounded-lg text-red-600 hover:bg-red-50 transition-colors"
-            >
-              닫기
-            </button>
-          </div>
+          <ErrorPanel error={error} onDismiss={() => setError(null)} />
         ) : generatedContent ? (
-          <div className="rounded-2xl border border-slate-200 bg-white shadow-sm min-h-[480px] overflow-hidden flex flex-col">
-            {/* 결과 헤더 */}
-            <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100 bg-slate-50/80">
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 bg-emerald-500 rounded-full" />
-                <span className="text-xs font-semibold text-slate-500">생성 완료 · {slideCount}장</span>
-                {saveStatus && (
-                  <span className={`text-xs font-medium ml-2 ${saveStatus.startsWith('저장 실패') ? 'text-red-500' : 'text-emerald-600'}`}>
-                    {saveStatus}
-                  </span>
-                )}
-              </div>
-              <button
-                onClick={() => {
-                  if (typeof navigator !== 'undefined') {
-                    navigator.clipboard.writeText(generatedContent);
-                  }
-                }}
-                className="px-3 py-1.5 text-xs font-semibold bg-white border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-100 transition-colors"
-              >
-                복사
-              </button>
-            </div>
-            {/* 결과 본문 */}
-            <div className="p-6 flex-1">
-              <article className="prose prose-slate max-w-none text-sm leading-relaxed whitespace-pre-wrap">
-                {generatedContent}
-              </article>
-            </div>
-          </div>
+          <ResultPanel content={generatedContent} completionText={`생성 완료 · ${slideCount}장`} saveStatus={saveStatus} />
         ) : (
           /* EmptyState */
           <div className="rounded-2xl border border-slate-200 bg-white shadow-[0_2px_16px_rgba(0,0,0,0.06)] flex-1 min-h-[520px] overflow-hidden flex flex-col">
