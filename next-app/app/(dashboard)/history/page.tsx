@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { listPosts, type SavedPost } from '../../../lib/postStorage';
-import { supabase } from '../../../lib/supabase';
+import { getSupabaseClient } from '../../../lib/supabase';
 
 type FilterTab = 'all' | 'blog' | 'card_news' | 'press_release' | 'refine';
 
@@ -44,7 +44,7 @@ export default function HistoryPage() {
     setLoading(true);
     setError(null);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session } } = await getSupabaseClient().auth.getSession();
       const result = await listPosts(session?.user?.id || null);
       if ('error' in result) {
         setError(result.error);

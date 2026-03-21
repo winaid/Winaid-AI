@@ -7,7 +7,7 @@ import { TEAM_DATA } from '../../../lib/teamData';
 import { ContentCategory, type GenerationRequest, type AudienceMode, type ImageStyle, type WritingStyle, type CssTheme } from '../../../lib/types';
 import { buildBlogPrompt } from '../../../lib/blogPrompt';
 import { savePost } from '../../../lib/postStorage';
-import { supabase } from '../../../lib/supabase';
+import { getSupabaseClient } from '../../../lib/supabase';
 import { ErrorPanel, ResultPanel } from '../../../components/GenerationResult';
 
 function BlogForm() {
@@ -90,7 +90,7 @@ function BlogForm() {
 
       // Supabase 저장 — 실패해도 생성 결과 표시에 영향 없음
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session } } = await getSupabaseClient().auth.getSession();
         const titleMatch = data.text.match(/^#\s+(.+)/m) || data.text.match(/^(.+)/);
         const extractedTitle = titleMatch ? titleMatch[1].replace(/^#+\s*/, '').trim().substring(0, 200) : topic.trim();
 

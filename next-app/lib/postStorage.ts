@@ -4,7 +4,7 @@
  * 기존 src/services/postStorageService.ts 참고하여 최소 구현.
  * 테이블 스키마는 sql/migrations/supabase_migration_generated_posts.sql 기준.
  */
-import { supabase } from './supabase';
+import { getSupabaseClient } from './supabase';
 
 export interface SavePostInput {
   userId?: string | null;
@@ -34,6 +34,7 @@ export interface SavedPost {
 
 /** 생성 결과를 generated_posts에 저장 */
 export async function savePost(input: SavePostInput): Promise<{ id: string } | { error: string }> {
+  const supabase = getSupabaseClient();
   const plainText = input.content.replace(/<[^>]*>/g, '').replace(/[#*_~`>-]/g, '');
   const charCount = plainText.replace(/\s/g, '').length;
   const wordCount = plainText.split(/\s+/).filter(w => w.length > 0).length;
@@ -68,6 +69,7 @@ export async function savePost(input: SavePostInput): Promise<{ id: string } | {
 
 /** 사용자의 생성 이력 조회 */
 export async function listPosts(userId: string | null): Promise<{ posts: SavedPost[] } | { error: string }> {
+  const supabase = getSupabaseClient();
   let query = supabase
     .from('generated_posts')
     .select('id, post_type, workflow_type, title, content, topic, hospital_name, keywords, char_count, created_at')
@@ -90,6 +92,7 @@ export async function listPosts(userId: string | null): Promise<{ posts: SavedPo
 
 /** 단일 포스트 조회 */
 export async function getPost(postId: string): Promise<{ post: SavedPost } | { error: string }> {
+  const supabase = getSupabaseClient();
   const { data, error } = await supabase
     .from('generated_posts')
     .select('id, post_type, workflow_type, title, content, topic, hospital_name, keywords, char_count, created_at')

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '../../lib/supabase';
+import { isSupabaseConfigured, supabase } from '../../lib/supabase';
 import { signInWithTeam, signUpWithTeam } from '../../lib/auth';
 import { TEAM_DATA } from '../../lib/teamData';
 
@@ -22,12 +22,17 @@ export default function AuthPage() {
 
   // 마운트 시 세션 체크 + OAuth 콜백 처리
   useEffect(() => {
+    if (!isSupabaseConfigured || !supabase) {
+      setCheckingSession(false);
+      return;
+    }
+
     const checkSessionAndOAuth = async () => {
       const hash = window.location.hash;
 
       // OAuth 콜백 (access_token이 URL에 있는 경우)
       if (hash && (hash.includes('access_token') || hash.includes('refresh_token'))) {
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session } } = await supabase!.auth.getSession();
         if (session) {
           router.push('/app');
           return;
@@ -35,7 +40,7 @@ export default function AuthPage() {
       }
 
       // 일반 세션 체크
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session } } = await supabase!.auth.getSession();
       if (session) {
         router.push('/app');
         return;
@@ -46,6 +51,36 @@ export default function AuthPage() {
 
     checkSessionAndOAuth();
   }, [router]);
+
+  // Supabase 미설정 시 안내 화면
+  if (!isSupabaseConfigured) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
+        <div className="w-full max-w-[420px]">
+          <div className="text-center mb-10">
+            <div className="inline-flex items-center gap-2.5">
+              <img src="/280_logo.png" alt="WINAID" className="h-10 rounded-lg" />
+              <span className="text-2xl font-black text-slate-800">WIN<span className="text-blue-500">AID</span></span>
+            </div>
+          </div>
+          <div className="bg-white rounded-2xl shadow-lg shadow-slate-200/50 border border-slate-100 p-8 text-center">
+            <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4 mx-auto bg-amber-50">
+              <svg className="w-7 h-7 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+              </svg>
+            </div>
+            <h2 className="text-lg font-bold text-slate-800 mb-2">로그인 서비스 준비 중</h2>
+            <p className="text-sm text-slate-500 mb-4">
+              Supabase 환경변수가 설정되지 않아 인증 기능을 사용할 수 없습니다.
+            </p>
+            <p className="text-xs text-slate-400">
+              <code className="bg-slate-100 px-1.5 py-0.5 rounded">.env.local</code>에 <code className="bg-slate-100 px-1.5 py-0.5 rounded">NEXT_PUBLIC_SUPABASE_URL</code>과 <code className="bg-slate-100 px-1.5 py-0.5 rounded">NEXT_PUBLIC_SUPABASE_ANON_KEY</code>를 설정하세요.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // 팀 로그인
   const handleTeamLogin = async (e: React.FormEvent) => {

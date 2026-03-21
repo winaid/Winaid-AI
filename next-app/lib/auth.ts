@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { getSupabaseClient } from './supabase';
 
 /** 이름 + 팀ID → 내부용 이메일 생성 (기존 Vite 앱과 동일한 로직) */
 export const nameTeamToEmail = (name: string, teamId: number): string => {
@@ -14,6 +14,7 @@ export const signInWithTeam = async (
   teamId: number,
   password: string
 ) => {
+  const supabase = getSupabaseClient();
   const email = nameTeamToEmail(displayName, teamId);
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
@@ -66,6 +67,7 @@ export const signUpWithTeam = async (
   teamId: number,
   password: string
 ) => {
+  const supabase = getSupabaseClient();
   const email = nameTeamToEmail(displayName, teamId);
 
   const { data, error } = await supabase.auth.signUp({
@@ -109,6 +111,7 @@ export const signUpWithTeam = async (
 
 /** 로그아웃 */
 export const signOut = async () => {
+  const supabase = getSupabaseClient();
   const { error } = await supabase.auth.signOut();
   return { error };
 };

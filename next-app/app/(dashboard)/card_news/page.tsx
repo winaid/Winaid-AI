@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { TEAM_DATA } from '../../../lib/teamData';
 import { buildCardNewsPrompt, type CardNewsRequest } from '../../../lib/cardNewsPrompt';
 import { savePost } from '../../../lib/postStorage';
-import { supabase } from '../../../lib/supabase';
+import { getSupabaseClient } from '../../../lib/supabase';
 import { ErrorPanel, ResultPanel } from '../../../components/GenerationResult';
 import type { WritingStyle } from '../../../lib/types';
 
@@ -72,7 +72,7 @@ export default function CardNewsPage() {
 
       // Supabase 저장 — 실패해도 생성 결과 표시에 영향 없음
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session } } = await getSupabaseClient().auth.getSession();
         const titleMatch = data.text.match(/\*\*제목\*\*:\s*(.+)/m)
           || data.text.match(/^###?\s+1장[:\s]*(.+)/m)
           || data.text.match(/^#\s+(.+)/m)

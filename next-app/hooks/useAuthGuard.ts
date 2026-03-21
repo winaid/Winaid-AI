@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '../lib/supabase';
+import { isSupabaseConfigured, getSupabaseClient } from '../lib/supabase';
 import type { User } from '@supabase/supabase-js';
 
 interface AuthGuardResult {
@@ -19,7 +19,13 @@ export function useAuthGuard(): AuthGuardResult {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!isSupabaseConfigured) {
+      router.replace('/auth');
+      return;
+    }
+
     let mounted = true;
+    const supabase = getSupabaseClient();
 
     const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -55,6 +61,7 @@ export function useAuthGuard(): AuthGuardResult {
 
   const handleLogout = async () => {
     try {
+      const supabase = getSupabaseClient();
       await supabase.auth.signOut();
     } catch (e) {
       console.error('로그아웃 에러:', e);
