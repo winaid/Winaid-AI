@@ -12,7 +12,7 @@
 | `/press` | `app/press/page.tsx` | `GenerateWorkspace(press)` | stub |
 | `/refine` | `app/refine/page.tsx` | `src/components/ContentRefiner.tsx` | stub |
 | `/image` | `app/image/page.tsx` | `src/components/ImageGenerator.tsx` | stub |
-| `/history` | `app/history/page.tsx` | `src/components/PostHistory.tsx` | stub |
+| `/history` | `app/(dashboard)/history/page.tsx` | `src/components/PostHistory.tsx` | **done** (목록+상세) |
 | `/admin` | `app/admin/page.tsx` | `src/components/AdminPage.tsx` | stub |
 
 ## API 매핑

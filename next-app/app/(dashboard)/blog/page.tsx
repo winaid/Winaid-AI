@@ -6,6 +6,8 @@ import { PERSONAS, TONES, WRITING_STYLES, CSS_THEMES } from '../../../lib/consta
 import { TEAM_DATA } from '../../../lib/teamData';
 import { ContentCategory, type GenerationRequest, type AudienceMode, type ImageStyle, type WritingStyle, type CssTheme } from '../../../lib/types';
 import { buildBlogPrompt } from '../../../lib/blogPrompt';
+import { savePost } from '../../../lib/postStorage';
+import { supabase } from '../../../lib/supabase';
 
 function BlogForm() {
   const searchParams = useSearchParams();
@@ -31,6 +33,7 @@ function BlogForm() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedContent, setGeneratedContent] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [saveStatus, setSaveStatus] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,6 +61,7 @@ function BlogForm() {
     setIsGenerating(true);
     setError(null);
     setGeneratedContent(null);
+    setSaveStatus(null);
 
     try {
       const { systemInstruction, prompt } = buildBlogPrompt(request);
@@ -82,6 +86,29 @@ function BlogForm() {
       }
 
       setGeneratedContent(data.text);
+
+      // Supabase에 저장
+      const { data: { session } } = await supabase.auth.getSession();
+      const titleMatch = data.text.match(/^#\s+(.+)/m) || data.text.match(/^(.+)/);
+      const extractedTitle = titleMatch ? titleMatch[1].replace(/^#+\s*/, '').trim().substring(0, 200) : topic.trim();
+
+      const saveResult = await savePost({
+        userId: session?.user?.id || null,
+        userEmail: session?.user?.email || null,
+        hospitalName: hospitalName || undefined,
+        postType: 'blog',
+        title: extractedTitle,
+        content: data.text,
+        topic: topic.trim(),
+        keywords: keywords.trim() ? keywords.split(',').map(k => k.trim()).filter(Boolean) : undefined,
+        imageStyle: imageCount > 0 ? imageStyle : undefined,
+      });
+
+      if ('error' in saveResult) {
+        setSaveStatus('저장 실패: ' + saveResult.error);
+      } else {
+        setSaveStatus('저장 완료');
+      }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : '네트워크 오류';
       setError(msg);
@@ -370,6 +397,11 @@ function BlogForm() {
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 bg-emerald-500 rounded-full" />
                 <span className="text-xs font-semibold text-slate-500">생성 완료</span>
+                {saveStatus && (
+                  <span className={`text-xs font-medium ml-2 ${saveStatus.startsWith('저장 실패') ? 'text-red-500' : 'text-emerald-600'}`}>
+                    {saveStatus}
+                  </span>
+                )}
               </div>
               <button
                 onClick={() => {
