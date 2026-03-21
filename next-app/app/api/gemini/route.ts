@@ -35,7 +35,7 @@ export async function OPTIONS() {
   });
 }
 
-export async function POST(request: NextRequest) {
+export async function POST(_request: NextRequest) {
   // TODO: 기존 api/gemini.js 로직 포팅
   return NextResponse.json(
     { error: 'Not yet migrated — stub route' },

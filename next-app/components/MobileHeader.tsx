@@ -8,7 +8,7 @@ type ContentTab = 'blog' | 'card_news' | 'press' | 'refine' | 'image' | 'history
 interface MobileHeaderProps {
   isLoggedIn: boolean;
   userEmail?: string;
-  showUserMenu: boolean;
+  showUserMenu?: boolean;
   onToggleUserMenu: () => void;
 }
 
@@ -24,7 +24,7 @@ const tabs: { id: ContentTab; label: string; icon: string; href: string }[] = [
 export function MobileHeader({
   isLoggedIn,
   userEmail,
-  showUserMenu,
+  showUserMenu: _showUserMenu,
   onToggleUserMenu,
 }: MobileHeaderProps) {
   const pathname = usePathname();
