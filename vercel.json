@@ -18,17 +18,16 @@
     "api/naver/crawl-top-blog.js": {
       "maxDuration": 60
     },
+    "api/naver/keyword-stats.js": {
+      "maxDuration": 30
+    },
     "api/crawler.js": {
       "maxDuration": 30
     }
   },
   "rewrites": [
     {
-      "source": "/api/:path*",
-      "destination": "https://story-darugi.com/api/:path*"
-    },
-    {
-      "source": "/(.*)",
+      "source": "/((?!api/).*)",
       "destination": "/index.html"
     }
   ]
