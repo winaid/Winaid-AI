@@ -18,7 +18,7 @@ npm run dev
 | `GEMINI_API_KEY` | Google Gemini API 키 | [Google AI Studio](https://aistudio.google.com/apikey) |
 
 이 3개가 없으면:
-- Supabase 키 누락 → 앱 시작 시 즉시 에러 (`[env] NEXT_PUBLIC_SUPABASE_URL 누락`)
+- Supabase 키 누락 → 로그인/저장/히스토리 기능 사용 불가 (앱 자체는 시작됨)
 - Gemini 키 누락 → 콘텐츠 생성 시 에러 (`[env] GEMINI_API_KEY 누락`)
 
 ## 선택 환경변수
