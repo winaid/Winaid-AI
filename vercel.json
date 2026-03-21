@@ -1,8 +1,15 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "regions": ["iad1"],
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "framework": null,
+  "functions": {
+    "api/gemini.js": {
+      "maxDuration": 300,
+      "memory": 512
+    }
+  },
   "rewrites": [
     {
       "source": "/api/:path*",
