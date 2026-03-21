@@ -87,27 +87,31 @@ function BlogForm() {
 
       setGeneratedContent(data.text);
 
-      // Supabase에 저장
-      const { data: { session } } = await supabase.auth.getSession();
-      const titleMatch = data.text.match(/^#\s+(.+)/m) || data.text.match(/^(.+)/);
-      const extractedTitle = titleMatch ? titleMatch[1].replace(/^#+\s*/, '').trim().substring(0, 200) : topic.trim();
+      // Supabase 저장 — 실패해도 생성 결과 표시에 영향 없음
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const titleMatch = data.text.match(/^#\s+(.+)/m) || data.text.match(/^(.+)/);
+        const extractedTitle = titleMatch ? titleMatch[1].replace(/^#+\s*/, '').trim().substring(0, 200) : topic.trim();
 
-      const saveResult = await savePost({
-        userId: session?.user?.id || null,
-        userEmail: session?.user?.email || null,
-        hospitalName: hospitalName || undefined,
-        postType: 'blog',
-        title: extractedTitle,
-        content: data.text,
-        topic: topic.trim(),
-        keywords: keywords.trim() ? keywords.split(',').map(k => k.trim()).filter(Boolean) : undefined,
-        imageStyle: imageCount > 0 ? imageStyle : undefined,
-      });
+        const saveResult = await savePost({
+          userId: session?.user?.id || null,
+          userEmail: session?.user?.email || null,
+          hospitalName: hospitalName || undefined,
+          postType: 'blog',
+          title: extractedTitle,
+          content: data.text,
+          topic: topic.trim(),
+          keywords: keywords.trim() ? keywords.split(',').map(k => k.trim()).filter(Boolean) : undefined,
+          imageStyle: imageCount > 0 ? imageStyle : undefined,
+        });
 
-      if ('error' in saveResult) {
-        setSaveStatus('저장 실패: ' + saveResult.error);
-      } else {
-        setSaveStatus('저장 완료');
+        if ('error' in saveResult) {
+          setSaveStatus('저장 실패: ' + saveResult.error);
+        } else {
+          setSaveStatus('저장 완료');
+        }
+      } catch {
+        setSaveStatus('저장 실패: Supabase 연결 불가');
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : '네트워크 오류';
