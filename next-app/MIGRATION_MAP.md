@@ -8,7 +8,7 @@
 | `/auth` | `app/auth/page.tsx` | `src/components/AuthPage.tsx` | **done** |
 | `/app` | `app/(dashboard)/app/page.tsx` | `src/components/HomeDashboard.tsx` | **done** |
 | `/blog` | `app/(dashboard)/blog/page.tsx` | `GenerateWorkspace(blog)` | **done** (입력→API→결과표시) |
-| `/card_news` | `app/card_news/page.tsx` | `GenerateWorkspace(card_news)` | stub |
+| `/card_news` | `app/(dashboard)/card_news/page.tsx` | `GenerateWorkspace(card_news)` | **done** (입력→생성→저장) |
 | `/press` | `app/press/page.tsx` | `GenerateWorkspace(press)` | stub |
 | `/refine` | `app/refine/page.tsx` | `src/components/ContentRefiner.tsx` | stub |
 | `/image` | `app/image/page.tsx` | `src/components/ImageGenerator.tsx` | stub |
