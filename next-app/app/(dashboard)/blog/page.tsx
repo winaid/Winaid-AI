@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { PERSONAS, TONES, WRITING_STYLES, CSS_THEMES } from '../../../lib/constants';
 import { TEAM_DATA } from '../../../lib/teamData';
 import { ContentCategory, type GenerationRequest, type AudienceMode, type ImageStyle, type WritingStyle, type CssTheme } from '../../../lib/types';
+import { buildBlogPrompt } from '../../../lib/blogPrompt';
 
 function BlogForm() {
   const searchParams = useSearchParams();
@@ -29,6 +30,7 @@ function BlogForm() {
   // ── 생성 상태 ──
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedContent, setGeneratedContent] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,14 +56,38 @@ function BlogForm() {
     };
 
     setIsGenerating(true);
-    // TODO: 실제 /api/gemini 호출 연결
-    console.log('[Blog] Generation request:', request);
+    setError(null);
+    setGeneratedContent(null);
 
-    // 시뮬레이션 — API 연결 시 교체
-    setTimeout(() => {
-      setGeneratedContent(null);
+    try {
+      const { systemInstruction, prompt } = buildBlogPrompt(request);
+
+      const res = await fetch('/api/gemini', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt,
+          systemInstruction,
+          model: 'gemini-2.5-flash-preview-05-20',
+          temperature: 0.85,
+          maxOutputTokens: 8192,
+        }),
+      });
+
+      const data = await res.json() as { text?: string; error?: string; details?: string };
+
+      if (!res.ok || !data.text) {
+        setError(data.error || data.details || `서버 오류 (${res.status})`);
+        return;
+      }
+
+      setGeneratedContent(data.text);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : '네트워크 오류';
+      setError(msg);
+    } finally {
       setIsGenerating(false);
-    }, 2000);
+    }
   };
 
   const inputCls = "w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all";
@@ -323,9 +349,45 @@ function BlogForm() {
               전문 의료 콘텐츠를 작성하고 있습니다
             </p>
           </div>
+        ) : error ? (
+          <div className="rounded-2xl border border-red-200 bg-red-50 p-6 min-h-[200px]">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-red-500 text-lg">⚠</span>
+              <h3 className="text-base font-bold text-red-700">생성 실패</h3>
+            </div>
+            <p className="text-sm text-red-600 mb-4">{error}</p>
+            <button
+              onClick={() => setError(null)}
+              className="px-4 py-2 text-sm font-semibold bg-white border border-red-200 rounded-lg text-red-600 hover:bg-red-50 transition-colors"
+            >
+              닫기
+            </button>
+          </div>
         ) : generatedContent ? (
-          <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-6 min-h-[480px]">
-            <div dangerouslySetInnerHTML={{ __html: generatedContent }} />
+          <div className="rounded-2xl border border-slate-200 bg-white shadow-sm min-h-[480px] overflow-hidden flex flex-col">
+            {/* 결과 헤더 */}
+            <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100 bg-slate-50/80">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 bg-emerald-500 rounded-full" />
+                <span className="text-xs font-semibold text-slate-500">생성 완료</span>
+              </div>
+              <button
+                onClick={() => {
+                  if (typeof navigator !== 'undefined') {
+                    navigator.clipboard.writeText(generatedContent);
+                  }
+                }}
+                className="px-3 py-1.5 text-xs font-semibold bg-white border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-100 transition-colors"
+              >
+                복사
+              </button>
+            </div>
+            {/* 결과 본문 — 마크다운을 whitespace-pre-wrap으로 표시 */}
+            <div className="p-6 flex-1">
+              <article className="prose prose-slate max-w-none text-sm leading-relaxed whitespace-pre-wrap">
+                {generatedContent}
+              </article>
+            </div>
           </div>
         ) : (
           /* EmptyState */

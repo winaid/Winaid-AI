@@ -1,28 +1,104 @@
 /**
  * /api/gemini — Gemini 프록시 API Route Handler
  *
- * TODO: 기존 api/gemini.js의 로직을 Next.js Route Handler로 전환
- * 현재는 health check 뼈대만 존재
- *
- * 전환 시 주의:
- * - req/res 패턴 → NextRequest/NextResponse 패턴
- * - process.env 접근은 동일하게 동작
- * - streaming 응답은 ReadableStream 사용
- * - maxDuration은 route segment config로 설정
+ * 기존 api/gemini.js의 핵심 텍스트 생성 로직을 Next.js Route Handler로 포팅.
+ * 현재 scope: prompt → Gemini generateContent → { text } 반환
+ * 미포함: 크레딧 차감, generation token, raw mode, 이미지 생성
  */
 import { NextRequest, NextResponse } from 'next/server';
 
-// Vercel Serverless Function 설정
 export const maxDuration = 300;
 export const dynamic = 'force-dynamic';
+
+// ── 멀티키 로테이션 ──
+
+function getKeys(): string[] {
+  const keys: string[] = [];
+  if (process.env.GEMINI_API_KEY) keys.push(process.env.GEMINI_API_KEY);
+  if (process.env.GEMINI_API_KEY_2) keys.push(process.env.GEMINI_API_KEY_2);
+  if (process.env.GEMINI_API_KEY_3) keys.push(process.env.GEMINI_API_KEY_3);
+  return keys;
+}
+
+let keyIndex = 0;
+
+// ── Gemini API 호출 (키 로테이션 + 재시도) ──
+
+async function fetchGemini(
+  keys: string[],
+  model: string,
+  apiBody: Record<string, unknown>,
+  timeout: number,
+): Promise<{ ok: true; data: Record<string, unknown> } | { ok: false; status: number; error: string; details?: string }> {
+  const maxAttempts = Math.min(keys.length, 3);
+  const perAttemptTimeout = Math.min(Math.floor(timeout * 0.85), 150000);
+
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const ki = (keyIndex + attempt) % keys.length;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), perAttemptTimeout);
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${keys[ki]}`;
+
+    try {
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(apiBody),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (response.ok) {
+        keyIndex = (ki + 1) % keys.length;
+        const data = await response.json() as Record<string, unknown>;
+        return { ok: true, data };
+      }
+
+      const errorText = await response.text();
+      const status = response.status;
+
+      // 429/503: 재시도
+      if ((status === 429 || status === 503) && attempt < maxAttempts - 1) {
+        await new Promise(r => setTimeout(r, status === 503 ? 3000 : 2000));
+        continue;
+      }
+
+      return { ok: false, status, error: `upstream ${status}`, details: errorText.substring(0, 500) };
+    } catch (err: unknown) {
+      clearTimeout(timeoutId);
+      const error = err as Error;
+
+      if (error.name === 'AbortError') {
+        if (attempt < maxAttempts - 1) {
+          await new Promise(r => setTimeout(r, 500));
+          continue;
+        }
+        return { ok: false, status: 504, error: 'Gemini API timeout' };
+      }
+
+      if (attempt < maxAttempts - 1) {
+        await new Promise(r => setTimeout(r, 500));
+        continue;
+      }
+      return { ok: false, status: 502, error: error.message || 'fetch failed' };
+    }
+  }
+
+  return { ok: false, status: 500, error: 'all keys exhausted' };
+}
+
+// ── GET: 헬스 체크 ──
 
 export async function GET() {
   return NextResponse.json({
     status: 'ok',
-    message: 'Gemini API route — Next.js migration stub',
+    keys: getKeys().length,
     timestamp: new Date().toISOString(),
   });
 }
+
+// ── OPTIONS: CORS preflight ──
 
 export async function OPTIONS() {
   return new NextResponse(null, {
@@ -35,10 +111,95 @@ export async function OPTIONS() {
   });
 }
 
-export async function POST(_request: NextRequest) {
-  // TODO: 기존 api/gemini.js 로직 포팅
-  return NextResponse.json(
-    { error: 'Not yet migrated — stub route' },
-    { status: 501 }
-  );
+// ── POST: 텍스트 생성 ──
+
+interface GeminiRequestBody {
+  prompt?: string;
+  model?: string;
+  systemInstruction?: string;
+  temperature?: number;
+  topP?: number;
+  maxOutputTokens?: number;
+  responseType?: string;
+  schema?: Record<string, unknown>;
+  thinkingLevel?: string;
+  timeout?: number;
+}
+
+interface GeminiCandidate {
+  content?: {
+    parts?: Array<{ text?: string }>;
+  };
+}
+
+export async function POST(request: NextRequest) {
+  const keys = getKeys();
+  if (keys.length === 0) {
+    return NextResponse.json(
+      { error: 'No Gemini API keys configured. Set GEMINI_API_KEY env var.' },
+      { status: 500 },
+    );
+  }
+
+  let body: GeminiRequestBody;
+  try {
+    body = await request.json() as GeminiRequestBody;
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+  }
+
+  if (!body.prompt) {
+    return NextResponse.json({ error: 'prompt is required' }, { status: 400 });
+  }
+
+  const model = body.model || 'gemini-2.5-flash-preview-05-20';
+  const systemText = body.systemInstruction || '';
+  const userText = body.prompt;
+
+  // Gemini API body 조립
+  const apiBody: Record<string, unknown> = {
+    contents: [{ role: 'user', parts: [{ text: userText }] }],
+    generationConfig: {
+      temperature: body.temperature ?? 0.85,
+      topP: body.topP ?? 0.95,
+      maxOutputTokens: body.maxOutputTokens ?? 8192,
+      responseMimeType: body.responseType === 'json' ? 'application/json' : 'text/plain',
+    },
+  };
+
+  if (systemText) {
+    apiBody.systemInstruction = { parts: [{ text: systemText }] };
+  }
+
+  if (body.schema && body.responseType === 'json') {
+    (apiBody.generationConfig as Record<string, unknown>).responseSchema = body.schema;
+  }
+
+  if (body.thinkingLevel && body.thinkingLevel !== 'none') {
+    const budget: Record<string, number> = { low: 1024, medium: 4096, high: 8192 };
+    (apiBody.generationConfig as Record<string, unknown>).thinkingConfig = {
+      thinkingBudget: budget[body.thinkingLevel] || 4096,
+    };
+  }
+
+  const timeout = Math.min(body.timeout || 120000, 180000);
+  const result = await fetchGemini(keys, model, apiBody, timeout);
+
+  if (!result.ok) {
+    return NextResponse.json(
+      { error: result.error, details: result.details },
+      { status: result.status },
+    );
+  }
+
+  // 응답에서 text 추출
+  const candidates = (result.data.candidates || []) as GeminiCandidate[];
+  const textParts = candidates[0]?.content?.parts || [];
+  const text = textParts.map(p => p.text || '').join('');
+
+  return NextResponse.json({
+    text,
+    usageMetadata: result.data.usageMetadata || null,
+    candidates: candidates.length,
+  });
 }
