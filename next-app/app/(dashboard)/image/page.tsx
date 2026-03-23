@@ -145,6 +145,7 @@ export default function ImagePage() {
           logoInstruction: logoInstruction || undefined,
           hospitalInfo: hospitalInfo || undefined,
           brandColors: brandColors || undefined,
+          logoBase64: logoEnabled && logoDataUrl ? logoDataUrl : undefined,
         }),
       });
 

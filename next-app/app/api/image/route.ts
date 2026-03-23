@@ -55,6 +55,7 @@ interface ImageRequestBody {
   logoInstruction?: string;
   hospitalInfo?: string;
   brandColors?: string;
+  logoBase64?: string; // data:image/...;base64,xxx
 }
 
 export async function POST(request: NextRequest) {
@@ -98,9 +99,22 @@ export async function POST(request: NextRequest) {
     'Generate at high resolution. Sharp edges, crisp text, no blur, no compression artifacts.',
   ].filter(Boolean).join('\n\n');
 
+  // 멀티모달 parts 구성: 텍스트 + 로고 이미지(있으면)
+  const parts: Array<Record<string, unknown>> = [{ text: fullPrompt }];
+
+  // 로고 이미지를 inlineData로 추가
+  if (body.logoBase64) {
+    const match = body.logoBase64.match(/^data:(image\/\w+);base64,(.+)$/);
+    if (match) {
+      parts.push({
+        inlineData: { mimeType: match[1], data: match[2] },
+      });
+    }
+  }
+
   const model = 'gemini-2.0-flash-exp';
   const apiBody = {
-    contents: [{ role: 'user', parts: [{ text: fullPrompt }] }],
+    contents: [{ role: 'user', parts }],
     generationConfig: {
       responseModalities: ['IMAGE', 'TEXT'],
       temperature: 0.6,
