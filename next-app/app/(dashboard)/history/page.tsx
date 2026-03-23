@@ -1,8 +1,47 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { listPosts, type SavedPost } from '../../../lib/postStorage';
 import { getSupabaseClient } from '../../../lib/supabase';
+
+// ── 상대 시간 ──
+
+function relativeTime(dateStr: string): string {
+  const now = Date.now();
+  const diff = now - new Date(dateStr).getTime();
+  const sec = Math.floor(diff / 1000);
+  if (sec < 60) return '방금 전';
+  const min = Math.floor(sec / 60);
+  if (min < 60) return `${min}분 전`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr}시간 전`;
+  const day = Math.floor(hr / 24);
+  if (day < 30) return `${day}일 전`;
+  return new Date(dateStr).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' });
+}
+
+// ── 간이 Markdown → HTML ──
+
+function mdToHtml(md: string): string {
+  let html = md
+    .replace(/```[\s\S]*?```/g, (m) => {
+      const code = m.slice(3, -3).replace(/^\w*\n/, '');
+      return `<pre style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:0.5rem;padding:1rem;overflow-x:auto;font-size:0.8125rem;line-height:1.6;margin:0.75rem 0"><code>${code.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</code></pre>`;
+    })
+    .replace(/^#### (.+)$/gm, '<h4 style="font-size:1rem;font-weight:600;color:#475569;margin:0.75rem 0 0.3rem">$1</h4>')
+    .replace(/^### (.+)$/gm, '<h3 style="font-size:1.1rem;font-weight:700;color:#1e40af;margin:1rem 0 0.4rem;padding-left:15px;border-left:4px solid #787fff;line-height:1.5">$1</h3>')
+    .replace(/^## (.+)$/gm, '<h2 style="font-size:1.35rem;font-weight:700;color:#1e293b;margin:1.25rem 0 0.5rem">$1</h2>')
+    .replace(/^# (.+)$/gm, '<h1 style="font-size:2rem;font-weight:900;color:#1e293b;margin:1.5rem 0 0.75rem;line-height:1.4">$1</h1>')
+    .replace(/^---$/gm, '<hr style="border:none;border-top:1px solid #e2e8f0;margin:1.5rem 0" />')
+    .replace(/\*\*(.+?)\*\*/g, '<strong style="font-weight:700;color:#1e293b">$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/^[-*] (.+)$/gm, '<li style="font-size:0.9375rem;line-height:1.7;color:#334155;margin:0.2rem 0">$1</li>')
+    .replace(/\n{2,}/g, '</p><p style="font-size:0.9375rem;line-height:1.85;color:#334155;margin:0.5rem 0">')
+    .replace(/\n/g, '<br />');
+  html = `<p style="font-size:0.9375rem;line-height:1.85;color:#334155;margin:0.5rem 0">${html}</p>`;
+  html = html.replace(/<p[^>]*>\s*<\/p>/g, '');
+  return html.replace(/<script[\s\S]*?<\/script>/gi, '').replace(/on\w+\s*=\s*["'][^"']*["']/gi, '').replace(/javascript\s*:/gi, '');
+}
 
 type FilterTab = 'all' | 'blog' | 'card_news' | 'press_release' | 'refine';
 
@@ -106,7 +145,7 @@ export default function HistoryPage() {
             </div>
             <h1 className="text-lg font-bold text-slate-900 mb-1">{selectedPost.title}</h1>
             <div className="flex items-center gap-3 text-xs text-slate-400 flex-wrap">
-              <span>{new Date(selectedPost.created_at).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+              <span>{relativeTime(selectedPost.created_at)}</span>
               {selectedPost.hospital_name && (
                 <span className="px-2 py-0.5 bg-blue-50 text-blue-600 rounded-md font-medium">{selectedPost.hospital_name}</span>
               )}
@@ -130,18 +169,35 @@ export default function HistoryPage() {
 
           {/* 본문 */}
           <div className="px-6 py-6">
-            <article className="text-sm leading-relaxed text-slate-700 whitespace-pre-wrap">
-              {selectedPost.content}
-            </article>
+            <article
+              className="max-w-none"
+              style={{ fontFamily: "'Malgun Gothic', sans-serif", lineHeight: 1.9 }}
+              dangerouslySetInnerHTML={{ __html: mdToHtml(selectedPost.content) }}
+            />
           </div>
 
           {/* 하단 액션 */}
           <div className="px-6 py-3 border-t border-slate-100 bg-slate-50/50 flex items-center gap-3">
             <button
-              onClick={() => handleCopy(selectedPost.content)}
-              className="px-4 py-2 text-xs font-semibold bg-white border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-100 transition-colors"
+              onClick={() => {
+                try {
+                  const html = mdToHtml(selectedPost.content);
+                  const blob = new Blob([html], { type: 'text/html' });
+                  const plainBlob = new Blob([selectedPost.content], { type: 'text/plain' });
+                  navigator.clipboard.write([new ClipboardItem({ 'text/html': blob, 'text/plain': plainBlob })]);
+                } catch {
+                  navigator.clipboard.writeText(selectedPost.content);
+                }
+                setCopyFeedback(true);
+                setTimeout(() => setCopyFeedback(false), 1500);
+              }}
+              className={`px-4 py-2 text-xs font-bold rounded-xl transition-all ${
+                copyFeedback
+                  ? 'bg-emerald-500 text-white'
+                  : 'bg-green-500 hover:bg-green-600 text-white shadow-sm'
+              }`}
             >
-              {copyFeedback ? '복사됨!' : '본문 복사'}
+              {copyFeedback ? '✅ 복사 완료' : '블로그로 복사'}
             </button>
           </div>
         </div>
@@ -252,7 +308,7 @@ export default function HistoryPage() {
                     {post.topic && !post.hospital_name && (
                       <span className="truncate max-w-[140px] text-slate-400">{post.topic}</span>
                     )}
-                    <span>{new Date(post.created_at).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                    <span>{relativeTime(post.created_at)}</span>
                     {post.char_count != null && (
                       <span>{post.char_count.toLocaleString()}자</span>
                     )}
