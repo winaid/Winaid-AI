@@ -2,6 +2,61 @@
 
 import { useState, useMemo } from 'react';
 
+// ── 간이 Markdown → HTML 변환 ──
+
+function markdownToHtml(md: string): string {
+  let html = md
+    // 코드블록 (```...```) — 먼저 처리해서 내부 마크다운이 변환되지 않게
+    .replace(/```[\s\S]*?```/g, (m) => {
+      const code = m.slice(3, -3).replace(/^\w*\n/, '');
+      return `<pre class="rp-code"><code>${escapeHtml(code)}</code></pre>`;
+    })
+    // 제목
+    .replace(/^#### (.+)$/gm, '<h4 class="rp-h4">$1</h4>')
+    .replace(/^### (.+)$/gm, '<h3 class="rp-h3">$1</h3>')
+    .replace(/^## (.+)$/gm, '<h2 class="rp-h2">$1</h2>')
+    .replace(/^# (.+)$/gm, '<h1 class="rp-h1">$1</h1>')
+    // 수평선
+    .replace(/^---$/gm, '<hr class="rp-hr" />')
+    // 굵은/기울임
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    // 리스트
+    .replace(/^[-*] (.+)$/gm, '<li class="rp-li">$1</li>')
+    .replace(/^(\d+)\. (.+)$/gm, '<li class="rp-li rp-ol">$1. $2</li>')
+    // 빈 줄 → 단락 구분
+    .replace(/\n{2,}/g, '\n</p><p class="rp-p">\n')
+    // 줄바꿈
+    .replace(/\n/g, '<br />');
+
+  // 감싸기
+  html = `<p class="rp-p">${html}</p>`;
+  // 연속 li를 ul로 감싸기
+  html = html.replace(/((?:<li class="rp-li">[\s\S]*?<\/li>\s*<br \/>\s*)+)/g, (block) => {
+    const cleaned = block.replace(/<br \/>\s*/g, '');
+    return `<ul class="rp-ul">${cleaned}</ul>`;
+  });
+  // 빈 p 제거
+  html = html.replace(/<p class="rp-p">\s*<\/p>/g, '');
+
+  return html;
+}
+
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function sanitizeHtml(html: string): string {
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/on\w+\s*=\s*["'][^"']*["']/gi, '')
+    .replace(/javascript\s*:/gi, '');
+}
+
 // ── 에러 패널 ──
 
 interface ErrorPanelProps {
@@ -132,17 +187,26 @@ interface ResultPanelProps {
 export function ResultPanel({ content, completionText = '생성 완료', saveStatus, scores, postType }: ResultPanelProps) {
   const [copyFeedback, setCopyFeedback] = useState(false);
 
+  const renderedHtml = useMemo(() => sanitizeHtml(markdownToHtml(content)), [content]);
   const charCount = useMemo(() => content.replace(/\s/g, '').length, [content]);
 
   const charLabel = charCount < 1500 ? '짧음' : charCount < 4000 ? '적당' : '길음';
   const charColor = charCount < 1500 ? 'text-amber-600' : charCount < 4000 ? 'text-emerald-600' : 'text-blue-600';
 
   const handleCopy = () => {
-    if (typeof navigator !== 'undefined') {
+    if (typeof navigator === 'undefined') return;
+    // HTML 형식으로 클립보드에 복사 (블로그 에디터 붙여넣기용)
+    try {
+      const blob = new Blob([renderedHtml], { type: 'text/html' });
+      const plainBlob = new Blob([content], { type: 'text/plain' });
+      navigator.clipboard.write([
+        new ClipboardItem({ 'text/html': blob, 'text/plain': plainBlob }),
+      ]);
+    } catch {
       navigator.clipboard.writeText(content);
-      setCopyFeedback(true);
-      setTimeout(() => setCopyFeedback(false), 1500);
     }
+    setCopyFeedback(true);
+    setTimeout(() => setCopyFeedback(false), 1500);
   };
 
   return (
@@ -190,11 +254,25 @@ export function ResultPanel({ content, completionText = '생성 완료', saveSta
         </button>
       </div>
 
-      {/* ── 콘텐츠 영역 ── */}
-      <div className="p-6 flex-1">
-        <article className="prose prose-slate max-w-none text-sm leading-relaxed whitespace-pre-wrap">
-          {content}
-        </article>
+      {/* ── 콘텐츠 미리보기 ── */}
+      <div className="p-6 flex-1 overflow-y-auto">
+        <style>{`
+          .rp-preview .rp-h1 { font-size: 1.75rem; font-weight: 800; color: #1e293b; margin: 1.5rem 0 0.75rem; line-height: 1.3; }
+          .rp-preview .rp-h2 { font-size: 1.35rem; font-weight: 700; color: #1e293b; margin: 1.25rem 0 0.5rem; line-height: 1.35; }
+          .rp-preview .rp-h3 { font-size: 1.1rem; font-weight: 700; color: #334155; margin: 1rem 0 0.4rem; line-height: 1.4; }
+          .rp-preview .rp-h4 { font-size: 1rem; font-weight: 600; color: #475569; margin: 0.75rem 0 0.3rem; }
+          .rp-preview .rp-p { font-size: 0.9375rem; line-height: 1.8; color: #334155; margin: 0.5rem 0; }
+          .rp-preview .rp-ul { list-style: disc; padding-left: 1.5rem; margin: 0.5rem 0; }
+          .rp-preview .rp-li { font-size: 0.9375rem; line-height: 1.7; color: #334155; margin: 0.2rem 0; }
+          .rp-preview .rp-hr { border: none; border-top: 1px solid #e2e8f0; margin: 1.5rem 0; }
+          .rp-preview .rp-code { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 0.5rem; padding: 1rem; overflow-x: auto; font-size: 0.8125rem; line-height: 1.6; color: #475569; margin: 0.75rem 0; }
+          .rp-preview strong { font-weight: 700; color: #1e293b; }
+          .rp-preview em { font-style: italic; }
+        `}</style>
+        <article
+          className="rp-preview max-w-none"
+          dangerouslySetInnerHTML={{ __html: renderedHtml }}
+        />
       </div>
     </div>
   );
