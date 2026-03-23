@@ -270,7 +270,7 @@ export default function CardNewsPage() {
         ) : error ? (
           <ErrorPanel error={error} onDismiss={() => setError(null)} />
         ) : generatedContent ? (
-          <ResultPanel content={generatedContent} completionText={`생성 완료 · ${slideCount}장`} saveStatus={saveStatus} />
+          <ResultPanel content={generatedContent} completionText={`생성 완료 · ${slideCount}장`} saveStatus={saveStatus} postType="card_news" />
         ) : (
           /* EmptyState */
           <div className="rounded-2xl border border-slate-200 bg-white shadow-[0_2px_16px_rgba(0,0,0,0.06)] flex-1 min-h-[520px] overflow-hidden flex flex-col">
