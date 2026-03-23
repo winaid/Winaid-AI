@@ -288,7 +288,7 @@ export default function PressPage() {
         ) : error ? (
           <ErrorPanel error={error} onDismiss={() => setError(null)} />
         ) : generatedContent ? (
-          <ResultPanel content={generatedContent} saveStatus={saveStatus} />
+          <ResultPanel content={generatedContent} saveStatus={saveStatus} postType="press_release" completionText="보도자료 생성 완료" />
         ) : (
           <div className="rounded-2xl border border-slate-200 bg-white shadow-[0_2px_16px_rgba(0,0,0,0.06)] flex-1 min-h-[520px] overflow-hidden flex flex-col">
             <div className="flex items-center gap-2 px-4 py-2.5 border-b border-slate-100 bg-slate-50/80">
