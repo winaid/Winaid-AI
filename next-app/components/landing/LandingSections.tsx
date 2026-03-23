@@ -6,6 +6,7 @@ import {
   SUB_FEATURES,
   USE_CASES,
   HOW_IT_WORKS,
+  TESTIMONIALS,
   type AiSolution,
   type SubFeature,
   type UseCase,
@@ -393,6 +394,50 @@ function LandingSections() {
                   <span className="text-xs font-black text-blue-600 mb-2 block tracking-wider">{item.step}</span>
                   <h3 className="text-xl font-bold mb-2 text-slate-900">{item.title}</h3>
                   <p className="text-slate-500 text-sm leading-relaxed">{item.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ═══ TESTIMONIALS ═══ */}
+      <section className="py-28 bg-gradient-to-b from-white via-slate-50/50 to-white relative overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(circle,_rgba(0,0,0,0.03)_1px,_transparent_1px)] bg-[length:24px_24px] opacity-20" />
+        <div className="max-w-6xl mx-auto px-6 lg:px-8 relative">
+          <div className="text-center mb-20">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-50 border border-amber-100 mb-6">
+              <span className="text-amber-700 font-bold text-xs tracking-widest uppercase">TESTIMONIALS</span>
+            </div>
+            <h2 className="text-4xl md:text-6xl font-black text-slate-900 leading-tight">
+              원장님들의<br />
+              <span className="bg-gradient-to-r from-amber-500 to-orange-500 bg-clip-text text-transparent">실제 후기</span>
+            </h2>
+            <p className="text-lg text-slate-400 mt-6 font-medium">300+ 병원이 선택한 이유를 확인하세요</p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-6">
+            {TESTIMONIALS.map((review, i) => (
+              <div
+                key={i}
+                className="bg-white/60 backdrop-blur border border-white/80 rounded-2xl p-7 hover:bg-white hover:shadow-xl hover:shadow-amber-100/30 transition-all duration-500 group"
+              >
+                <div className="flex items-center gap-1 mb-4">
+                  {Array.from({ length: review.rating }).map((_, j) => (
+                    <svg key={j} className="w-4 h-4 text-amber-400" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                    </svg>
+                  ))}
+                </div>
+                <p className="text-sm text-slate-600 leading-relaxed mb-5 font-medium">&ldquo;{review.text}&rdquo;</p>
+                <div className="flex items-center gap-3 pt-4 border-t border-slate-100">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white text-sm font-bold">
+                    {review.name[0]}
+                  </div>
+                  <div>
+                    <div className="text-sm font-bold text-slate-800">{review.name}</div>
+                    <div className="text-xs text-slate-400 font-medium">{review.hospital}</div>
+                  </div>
                 </div>
               </div>
             ))}
