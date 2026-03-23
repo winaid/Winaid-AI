@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { buildRefinePrompt, REFINE_OPTIONS, type RefineMode } from '../../../lib/refinePrompt';
 import { savePost } from '../../../lib/postStorage';
-import { getSupabaseClient } from '../../../lib/supabase';
+import { getSessionSafe } from '../../../lib/supabase';
 import { ErrorPanel, ResultPanel } from '../../../components/GenerationResult';
 
 export default function RefinePage() {
@@ -53,9 +53,9 @@ export default function RefinePage() {
 
       setRefinedContent(data.text);
 
-      // Supabase 저장 — 실패해도 보정 결과 표시에 영향 없음
+      // 저장 — Supabase 또는 guest localStorage
       try {
-        const { data: { session } } = await getSupabaseClient().auth.getSession();
+        const { userId, userEmail } = await getSessionSafe();
         const modeLabel = REFINE_OPTIONS.find(o => o.value === selectedMode)?.label || selectedMode;
         const titleMatch = data.text.match(/^#\s+(.+)/m) || data.text.match(/^(.+)/);
         const extractedTitle = titleMatch
@@ -63,8 +63,8 @@ export default function RefinePage() {
           : originalText.trim().substring(0, 50);
 
         const saveResult = await savePost({
-          userId: session?.user?.id || null,
-          userEmail: session?.user?.email || null,
+          userId,
+          userEmail,
           postType: 'blog',
           workflowType: 'refine',
           title: extractedTitle,

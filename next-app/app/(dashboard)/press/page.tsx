@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { TEAM_DATA } from '../../../lib/teamData';
 import { buildPressPrompt, PRESS_TYPES, DOCTOR_TITLES, type PressType } from '../../../lib/pressPrompt';
 import { savePost } from '../../../lib/postStorage';
-import { getSupabaseClient } from '../../../lib/supabase';
+import { getSessionSafe } from '../../../lib/supabase';
 import { ErrorPanel, ResultPanel } from '../../../components/GenerationResult';
 
 export default function PressPage() {
@@ -65,17 +65,17 @@ export default function PressPage() {
 
       setGeneratedContent(data.text);
 
-      // Supabase 저장 — 실패해도 생성 결과 표시에 영향 없음
+      // 저장 — Supabase 또는 guest localStorage
       try {
-        const { data: { session } } = await getSupabaseClient().auth.getSession();
+        const { userId, userEmail } = await getSessionSafe();
         const titleMatch = data.text.match(/^#\s+(.+)/m) || data.text.match(/^(.+)/);
         const extractedTitle = titleMatch
           ? titleMatch[1].replace(/^[#*\s]+/, '').trim().substring(0, 200)
           : topic.trim();
 
         const saveResult = await savePost({
-          userId: session?.user?.id || null,
-          userEmail: session?.user?.email || null,
+          userId,
+          userEmail,
           hospitalName: hospitalName || undefined,
           postType: 'press_release',
           title: extractedTitle,

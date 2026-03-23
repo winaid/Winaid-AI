@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { listPosts, type SavedPost } from '../../../lib/postStorage';
-import { getSupabaseClient } from '../../../lib/supabase';
+import { getSessionSafe } from '../../../lib/supabase';
 
 // ── 상대 시간 ──
 
@@ -83,8 +83,8 @@ export default function HistoryPage() {
     setLoading(true);
     setError(null);
     try {
-      const { data: { session } } = await getSupabaseClient().auth.getSession();
-      const result = await listPosts(session?.user?.id || null);
+      const { userId } = await getSessionSafe();
+      const result = await listPosts(userId);
       if ('error' in result) {
         setError(result.error);
       } else {

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { TEAM_DATA } from '../../../lib/teamData';
 import { buildCardNewsPrompt, type CardNewsRequest } from '../../../lib/cardNewsPrompt';
 import { savePost } from '../../../lib/postStorage';
-import { getSupabaseClient } from '../../../lib/supabase';
+import { getSessionSafe } from '../../../lib/supabase';
 import { ErrorPanel, ResultPanel } from '../../../components/GenerationResult';
 import type { WritingStyle } from '../../../lib/types';
 
@@ -70,9 +70,9 @@ export default function CardNewsPage() {
 
       setGeneratedContent(data.text);
 
-      // Supabase 저장 — 실패해도 생성 결과 표시에 영향 없음
+      // 저장 — Supabase 또는 guest localStorage
       try {
-        const { data: { session } } = await getSupabaseClient().auth.getSession();
+        const { userId, userEmail } = await getSessionSafe();
         const titleMatch = data.text.match(/\*\*제목\*\*:\s*(.+)/m)
           || data.text.match(/^###?\s+1장[:\s]*(.+)/m)
           || data.text.match(/^#\s+(.+)/m)
@@ -82,8 +82,8 @@ export default function CardNewsPage() {
           : topic.trim();
 
         const saveResult = await savePost({
-          userId: session?.user?.id || null,
-          userEmail: session?.user?.email || null,
+          userId,
+          userEmail,
           hospitalName: hospitalName || undefined,
           postType: 'card_news',
           title: extractedTitle,

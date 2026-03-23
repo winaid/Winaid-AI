@@ -41,7 +41,7 @@ export function MobileHeader({
           </div>
         </Link>
         <div className="flex items-center gap-3">
-          {isLoggedIn && userEmail && (
+          {isLoggedIn && userEmail ? (
             <button
               onClick={onToggleUserMenu}
               className="w-9 h-9 rounded-xl flex items-center justify-center text-xs font-bold transition-all bg-gradient-to-br from-blue-50 to-blue-100/80 text-blue-600 hover:from-blue-100 hover:to-blue-200/80 border border-blue-100/80 shadow-sm"
@@ -49,6 +49,13 @@ export function MobileHeader({
             >
               {userEmail[0].toUpperCase()}
             </button>
+          ) : (
+            <Link
+              href="/auth"
+              className="px-3 py-1.5 rounded-lg text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 transition-all border border-blue-100"
+            >
+              로그인
+            </Link>
           )}
         </div>
       </div>

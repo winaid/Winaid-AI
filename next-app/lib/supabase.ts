@@ -22,3 +22,17 @@ export function getSupabaseClient(): SupabaseClient {
   }
   return supabase;
 }
+
+/** 세션 안전 조회 — Supabase 미설정/미로그인 시 null 반환 (throw 안 함) */
+export async function getSessionSafe(): Promise<{ userId: string | null; userEmail: string | null }> {
+  if (!supabase) return { userId: null, userEmail: null };
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    return {
+      userId: session?.user?.id || null,
+      userEmail: session?.user?.email || null,
+    };
+  } catch {
+    return { userId: null, userEmail: null };
+  }
+}

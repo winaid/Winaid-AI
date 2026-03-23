@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { isSupabaseConfigured, getSupabaseClient } from '../lib/supabase';
 import type { User } from '@supabase/supabase-js';
 
@@ -10,17 +9,18 @@ interface AuthGuardResult {
   userEmail: string;
   userName: string;
   loading: boolean;
+  isGuest: boolean;
   handleLogout: () => Promise<void>;
 }
 
 export function useAuthGuard(): AuthGuardResult {
-  const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!isSupabaseConfigured) {
-      router.replace('/auth');
+      // Supabase 미설정 → guest 모드로 진입
+      setLoading(false);
       return;
     }
 
@@ -28,16 +28,18 @@ export function useAuthGuard(): AuthGuardResult {
     const supabase = getSupabaseClient();
 
     const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!mounted) return;
-
-      if (!session) {
-        router.replace('/auth');
-        return;
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!mounted) return;
+        if (session?.user) {
+          setUser(session.user);
+        }
+        // 세션 없어도 guest로 진입 (리다이렉트 안 함)
+      } catch {
+        // Supabase 오류 시에도 guest로 진입
+      } finally {
+        if (mounted) setLoading(false);
       }
-
-      setUser(session.user);
-      setLoading(false);
     };
 
     checkSession();
@@ -46,10 +48,8 @@ export function useAuthGuard(): AuthGuardResult {
       if (!mounted) return;
       if (session?.user) {
         setUser(session.user);
-        setLoading(false);
       } else {
         setUser(null);
-        router.replace('/auth');
       }
     });
 
@@ -57,17 +57,18 @@ export function useAuthGuard(): AuthGuardResult {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, [router]);
+  }, []);
 
   const handleLogout = async () => {
     try {
-      const supabase = getSupabaseClient();
-      await supabase.auth.signOut();
+      if (isSupabaseConfigured) {
+        const supabase = getSupabaseClient();
+        await supabase.auth.signOut();
+      }
     } catch (e) {
       console.error('로그아웃 에러:', e);
     } finally {
       setUser(null);
-      // localStorage에서 Supabase 세션 정리
       if (typeof window !== 'undefined') {
         Object.keys(localStorage).forEach(key => {
           if (key.startsWith('sb-') || key.includes('supabase')) {
@@ -75,15 +76,15 @@ export function useAuthGuard(): AuthGuardResult {
           }
         });
       }
-      router.replace('/auth');
     }
   };
 
+  const isGuest = !user;
   const userEmail = user?.email || '';
   const userName = user?.user_metadata?.name
     || user?.user_metadata?.full_name
     || user?.email?.split('@')[0]
-    || '사용자';
+    || (isGuest ? 'Guest' : '사용자');
 
-  return { user, userEmail, userName, loading, handleLogout };
+  return { user, userEmail, userName, loading, isGuest, handleLogout };
 }
