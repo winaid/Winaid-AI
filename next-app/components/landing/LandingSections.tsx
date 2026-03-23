@@ -11,6 +11,8 @@ import {
   ABOUT_DESC,
   ABOUT_HEADING_SUFFIX,
   YEARS_OF_EXPERIENCE,
+  CTA,
+  FOOTER,
   type AiSolution,
   type SubFeature,
   type UseCase,
@@ -497,6 +499,88 @@ function LandingSections() {
           </div>
         </div>
       </section>
+
+      {/* ═══ CTA ═══ */}
+      <section className="py-36 relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-[#0f172a] to-blue-950" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle,_rgba(255,255,255,0.04)_1px,_transparent_1px)] bg-[length:24px_24px] opacity-20" />
+        <div className="absolute inset-0">
+          <div className="absolute top-0 right-1/4 w-[600px] h-[600px] bg-blue-500/10 rounded-full blur-[180px]" />
+          <div className="absolute bottom-0 left-1/4 w-[500px] h-[500px] bg-violet-500/10 rounded-full blur-[150px]" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-cyan-500/5 rounded-full blur-[120px]" />
+        </div>
+        <div className="relative max-w-4xl mx-auto px-6 text-center">
+          <div className="inline-flex items-center gap-2.5 px-5 py-2.5 rounded-full bg-white/5 backdrop-blur border border-white/10 mb-10">
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-400" />
+            </span>
+            <span className="text-emerald-300 font-bold text-xs tracking-wider">{CTA.badge}</span>
+          </div>
+          <h2 className="text-5xl md:text-7xl font-black text-white mb-8 leading-[1.1]">
+            {CTA.heading}<br />
+            <span className="bg-gradient-to-r from-blue-400 via-cyan-300 to-blue-400 bg-clip-text text-transparent">{CTA.headingHighlight}</span>
+          </h2>
+          <p className="text-xl text-slate-400 mb-16 max-w-lg mx-auto font-medium leading-relaxed whitespace-pre-line">
+            {CTA.sub}
+          </p>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <a
+              href="/auth"
+              className="group px-14 py-6 bg-white text-blue-700 font-black text-lg rounded-2xl hover:bg-blue-50 transition-all duration-300 shadow-2xl shadow-blue-500/10 hover:-translate-y-1 ring-4 ring-white/20"
+            >
+              {CTA.primaryButton}
+              <span className="inline-block ml-2 group-hover:translate-x-1.5 transition-transform">&rarr;</span>
+            </a>
+            <a
+              href={CTA.phoneHref}
+              className="px-8 py-6 text-slate-400 hover:text-white font-bold text-lg transition-colors flex items-center gap-2"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z" /></svg>
+              {CTA.secondaryButton}
+            </a>
+          </div>
+        </div>
+      </section>
+
+      {/* ═══ FOOTER ═══ */}
+      <footer className="py-16 bg-slate-950 border-t border-slate-800/50 relative">
+        <div className="absolute inset-0 bg-[radial-gradient(circle,_rgba(255,255,255,0.04)_1px,_transparent_1px)] bg-[length:24px_24px] opacity-10" />
+        <div className="max-w-6xl mx-auto px-6 lg:px-8 relative">
+          <div className="flex items-center justify-center gap-3 mb-10">
+            <img src="/280_logo.png" alt="" className="h-8 w-8 rounded-lg bg-white p-0.5" />
+            <span className="font-black text-xl tracking-tight text-slate-300">
+              WIN<span className="text-blue-400">AID</span>
+            </span>
+          </div>
+          <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 mb-8">
+            <span className="text-slate-500 text-sm font-medium">{FOOTER.address}</span>
+            <span className="text-slate-700">|</span>
+            <span className="text-slate-500 text-sm font-medium">{FOOTER.companyName}</span>
+            <span className="text-slate-700">|</span>
+            <span className="text-slate-500 text-sm font-medium">{FOOTER.ceo}</span>
+            <span className="text-slate-700">|</span>
+            <span className="text-slate-500 text-sm font-medium">{FOOTER.bizNo}</span>
+          </div>
+          <div className="flex items-center justify-center gap-6 mb-10">
+            <a href={`mailto:${FOOTER.email}`} className="text-slate-400 hover:text-blue-400 transition-colors text-sm font-medium flex items-center gap-2">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" /></svg>
+              {FOOTER.email}
+            </a>
+            <a href={FOOTER.phoneHref} className="text-slate-400 hover:text-blue-400 transition-colors text-sm font-medium flex items-center gap-2">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z" /></svg>
+              {FOOTER.phone}
+            </a>
+            <span className="text-slate-400 text-sm font-medium flex items-center gap-2">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0110.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0l.229 2.523a1.125 1.125 0 01-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0021 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 00-1.913-.247M6.34 18H5.25A2.25 2.25 0 013 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 011.913-.247m10.5 0a48.536 48.536 0 00-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659M18.75 12h-2.25m-7.5 0h-2.25" /></svg>
+              {FOOTER.fax}
+            </span>
+          </div>
+          <div className="pt-8 border-t border-slate-800/50 text-center text-xs text-slate-600 font-medium">
+            &copy; {new Date().getFullYear()} WINAID. All rights reserved.
+          </div>
+        </div>
+      </footer>
     </>
   );
 }
