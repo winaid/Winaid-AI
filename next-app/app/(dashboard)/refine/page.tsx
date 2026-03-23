@@ -185,7 +185,36 @@ export default function RefinePage() {
         ) : error ? (
           <ErrorPanel title="보정 실패" error={error} onDismiss={() => setError(null)} />
         ) : refinedContent ? (
-          <ResultPanel content={refinedContent} completionText={`보정 완료 · ${REFINE_OPTIONS.find(o => o.value === selectedMode)?.label}`} saveStatus={saveStatus} />
+          <div className="space-y-4">
+            {/* 원문 비교 (접기 가능) */}
+            <details className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+              <summary className="px-5 py-3 cursor-pointer select-none flex items-center gap-2 bg-slate-50/80 hover:bg-slate-100 transition-colors">
+                <svg className="w-4 h-4 text-slate-400 transition-transform [details[open]>&]:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                </svg>
+                <span className="text-xs font-bold text-slate-500">원문 비교</span>
+                <span className="text-[10px] text-slate-400 ml-1">{originalText.replace(/\s/g, '').length.toLocaleString()}자</span>
+              </summary>
+              <div className="px-5 py-4 border-t border-slate-100 max-h-[300px] overflow-y-auto">
+                <p className="text-sm leading-relaxed text-slate-500 whitespace-pre-wrap">{originalText}</p>
+              </div>
+            </details>
+
+            {/* 결과 */}
+            <ResultPanel content={refinedContent} completionText={`보정 완료 · ${REFINE_OPTIONS.find(o => o.value === selectedMode)?.label}`} saveStatus={saveStatus} />
+
+            {/* 결과를 원문에 적용 */}
+            <button
+              type="button"
+              onClick={() => { setOriginalText(refinedContent); setRefinedContent(null); setSaveStatus(null); }}
+              className="w-full py-2.5 text-xs font-bold text-violet-600 bg-violet-50 border border-violet-200 rounded-xl hover:bg-violet-100 transition-all flex items-center justify-center gap-2"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182" />
+              </svg>
+              결과를 원문에 적용하고 다시 보정하기
+            </button>
+          </div>
         ) : (
           <div className="rounded-2xl border border-slate-200 bg-white shadow-[0_2px_16px_rgba(0,0,0,0.06)] flex-1 min-h-[520px] overflow-hidden flex flex-col">
             <div className="flex items-center gap-2 px-4 py-2.5 border-b border-slate-100 bg-slate-50/80">
