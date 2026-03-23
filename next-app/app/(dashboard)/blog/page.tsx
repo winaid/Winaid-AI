@@ -8,7 +8,7 @@ import { ContentCategory, type GenerationRequest, type AudienceMode, type ImageS
 import { buildBlogPrompt } from '../../../lib/blogPrompt';
 import { savePost } from '../../../lib/postStorage';
 import { getSupabaseClient } from '../../../lib/supabase';
-import { ErrorPanel, ResultPanel } from '../../../components/GenerationResult';
+import { ErrorPanel, ResultPanel, type ScoreBarData } from '../../../components/GenerationResult';
 
 function BlogForm() {
   const searchParams = useSearchParams();
@@ -33,6 +33,7 @@ function BlogForm() {
   // ── 생성 상태 ──
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedContent, setGeneratedContent] = useState<string | null>(null);
+  const [scores, setScores] = useState<ScoreBarData | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
 
@@ -62,6 +63,7 @@ function BlogForm() {
     setIsGenerating(true);
     setError(null);
     setGeneratedContent(null);
+    setScores(undefined);
     setSaveStatus(null);
 
     try {
@@ -86,12 +88,38 @@ function BlogForm() {
         return;
       }
 
-      setGeneratedContent(data.text);
+      // 점수 블록 파싱: ---SCORES--- 이후 JSON 추출
+      let blogText = data.text;
+      let parsed: ScoreBarData | undefined;
+      try {
+        const marker = '---SCORES---';
+        const idx = blogText.lastIndexOf(marker);
+        if (idx !== -1) {
+          const afterMarker = blogText.substring(idx + marker.length);
+          const jsonMatch = afterMarker.match(/\{[\s\S]*?\}/);
+          if (jsonMatch) {
+            const raw = JSON.parse(jsonMatch[0]) as Record<string, unknown>;
+            const seo = typeof raw.seo === 'number' ? raw.seo : undefined;
+            const medical = typeof raw.medical === 'number' ? raw.medical : undefined;
+            const conversion = typeof raw.conversion === 'number' ? raw.conversion : undefined;
+            if (seo != null || medical != null || conversion != null) {
+              parsed = { seoScore: seo, safetyScore: medical, conversionScore: conversion };
+            }
+          }
+          // 점수 블록을 콘텐츠에서 제거
+          blogText = blogText.substring(0, idx).replace(/\n+$/, '');
+        }
+      } catch {
+        // 파싱 실패 시 조용히 무시 — 전체 텍스트를 그대로 사용
+      }
+
+      setGeneratedContent(blogText);
+      setScores(parsed);
 
       // Supabase 저장 — 실패해도 생성 결과 표시에 영향 없음
       try {
         const { data: { session } } = await getSupabaseClient().auth.getSession();
-        const titleMatch = data.text.match(/^#\s+(.+)/m) || data.text.match(/^(.+)/);
+        const titleMatch = blogText.match(/^#\s+(.+)/m) || blogText.match(/^(.+)/);
         const extractedTitle = titleMatch ? titleMatch[1].replace(/^#+\s*/, '').trim().substring(0, 200) : topic.trim();
 
         const saveResult = await savePost({
@@ -100,7 +128,7 @@ function BlogForm() {
           hospitalName: hospitalName || undefined,
           postType: 'blog',
           title: extractedTitle,
-          content: data.text,
+          content: blogText,
           topic: topic.trim(),
           keywords: keywords.trim() ? keywords.split(',').map(k => k.trim()).filter(Boolean) : undefined,
           imageStyle: imageCount > 0 ? imageStyle : undefined,
@@ -384,7 +412,7 @@ function BlogForm() {
         ) : error ? (
           <ErrorPanel error={error} onDismiss={() => setError(null)} />
         ) : generatedContent ? (
-          <ResultPanel content={generatedContent} saveStatus={saveStatus} postType="blog" />
+          <ResultPanel content={generatedContent} saveStatus={saveStatus} postType="blog" scores={scores} />
         ) : (
           /* EmptyState */
           <div className="rounded-2xl border border-slate-200 bg-white shadow-[0_2px_16px_rgba(0,0,0,0.06)] flex-1 min-h-[520px] overflow-hidden flex flex-col">
