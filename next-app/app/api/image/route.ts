@@ -52,6 +52,9 @@ const DESIGN_RULE = `[디자인 규칙]
 interface ImageRequestBody {
   prompt: string;
   aspectRatio?: AspectRatio;
+  logoInstruction?: string;
+  hospitalInfo?: string;
+  brandColors?: string;
 }
 
 export async function POST(request: NextRequest) {
@@ -88,6 +91,9 @@ export async function POST(request: NextRequest) {
     DESIGN_RULE,
     languageRule,
     body.prompt.trim(),
+    body.logoInstruction || '',
+    body.hospitalInfo || '',
+    body.brandColors || '',
     aspectInstruction,
     'Generate at high resolution. Sharp edges, crisp text, no blur, no compression artifacts.',
   ].filter(Boolean).join('\n\n');
