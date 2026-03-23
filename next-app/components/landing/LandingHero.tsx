@@ -1,12 +1,28 @@
-import { HERO, QUICK_TAGS, MORE_TAGS, CTA } from './landingData';
+'use client';
+
+import { useState, useEffect } from 'react';
+import { HERO, QUICK_TAGS, MORE_TAGS } from './landingData';
 
 function LandingHero() {
+  const [scrolled, setScrolled] = useState(false);
+  const [showMoreTags, setShowMoreTags] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 50);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
   return (
     <>
       {/* ── Sticky Nav ── */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-2xl shadow-[0_1px_3px_rgba(0,0,0,0.05)] border-b border-slate-200/50">
+      <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
+        scrolled
+          ? 'bg-white/80 backdrop-blur-2xl shadow-[0_1px_3px_rgba(0,0,0,0.05)] border-b border-slate-200/50'
+          : 'bg-transparent'
+      }`}>
         <div className="max-w-7xl mx-auto px-6 lg:px-8 h-[72px] flex items-center justify-between">
-          <div className="flex items-center gap-3">
+          <div className={`flex items-center gap-3 transition-all duration-500 ${scrolled ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}`}>
             <img src="/280_logo.png" alt="" className="h-8 w-8" />
             <span className="font-black text-xl tracking-tight text-slate-800">
               WIN<span className="text-blue-600">AID</span>
@@ -73,12 +89,12 @@ function LandingHero() {
             <strong className="text-slate-700">{HERO.subBold}</strong> {HERO.subSuffix}
           </p>
 
-          {/* AI Chat Bar (정적 껍데기) */}
+          {/* AI Chat Bar */}
           <div className="max-w-2xl mx-auto mb-10">
             <div className="relative bg-white/90 backdrop-blur-xl rounded-2xl shadow-[0_8px_40px_rgba(0,0,0,0.08)] border border-slate-200/60 hover:shadow-[0_12px_50px_rgba(0,0,0,0.12)] transition-all duration-500 overflow-hidden">
-              <div className="p-2.5 flex items-center gap-3">
+              <div className="p-2.5 flex items-center gap-3 group">
                 <div className="pl-3">
-                  <svg className="w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <svg className="w-5 h-5 text-slate-400 group-hover:text-blue-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
                   </svg>
                 </div>
@@ -105,24 +121,37 @@ function LandingHero() {
           <div className="max-w-2xl mx-auto">
             <div className="flex flex-wrap justify-center gap-2.5 mb-3">
               {QUICK_TAGS.map((tag) => (
-                <span
+                <a
                   key={tag}
-                  className="px-4 py-2 rounded-full text-[13px] font-medium text-slate-500 bg-white/80 backdrop-blur border border-slate-200/60 hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50/80 hover:shadow-sm transition-all cursor-pointer"
+                  href="/auth"
+                  className="px-4 py-2 rounded-full text-[13px] font-medium text-slate-500 bg-white/80 backdrop-blur border border-slate-200/60 hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50/80 hover:shadow-sm transition-all"
                 >
                   {tag}
-                </span>
+                </a>
               ))}
             </div>
-            <div className="flex flex-wrap justify-center gap-2.5">
-              {MORE_TAGS.map((tag) => (
-                <span
-                  key={tag}
-                  className="px-4 py-2 rounded-full text-[13px] font-medium text-slate-500 bg-white/80 backdrop-blur border border-slate-200/60 hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50/80 hover:shadow-sm transition-all cursor-pointer"
-                >
-                  {tag}
-                </span>
-              ))}
-            </div>
+            {showMoreTags && (
+              <div className="flex flex-wrap justify-center gap-2.5 mb-3">
+                {MORE_TAGS.map((tag) => (
+                  <a
+                    key={tag}
+                    href="/auth"
+                    className="px-4 py-2 rounded-full text-[13px] font-medium text-slate-500 bg-white/80 backdrop-blur border border-slate-200/60 hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50/80 hover:shadow-sm transition-all"
+                  >
+                    {tag}
+                  </a>
+                ))}
+              </div>
+            )}
+            <button
+              onClick={() => setShowMoreTags(!showMoreTags)}
+              className="text-sm text-slate-400 hover:text-slate-600 transition-colors flex items-center gap-1.5 mx-auto mt-3 font-medium"
+            >
+              <svg className={`w-4 h-4 transition-transform duration-300 ${showMoreTags ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+              </svg>
+              {showMoreTags ? '접기' : '더 많은 기능 보기'}
+            </button>
           </div>
         </div>
       </section>
