@@ -232,7 +232,7 @@ function LandingSections() {
           </div>
 
           {/* Sub-features */}
-          <div className="grid grid-cols-3 gap-4 mt-8">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-8">
             {SUB_FEATURES.map((feat, i) => (
               <div
                 key={i}
@@ -287,9 +287,9 @@ function LandingSections() {
 
               {/* Content */}
               <div className="p-8">
-                <div className="grid grid-cols-12 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
                   {/* Left: Input form mockup */}
-                  <div className="col-span-5 space-y-4">
+                  <div className="md:col-span-5 space-y-4">
                     <div className="bg-[#fafbfc] rounded-xl p-5 border border-slate-100 space-y-4">
                       <div className="flex items-center gap-2.5">
                         <div className="w-6 h-6 rounded-lg bg-blue-600 flex items-center justify-center">
@@ -322,7 +322,7 @@ function LandingSections() {
                   </div>
 
                   {/* Right: Result mockup */}
-                  <div className="col-span-7">
+                  <div className="md:col-span-7">
                     <div className="bg-[#fafbfc] rounded-xl p-6 border border-slate-100 space-y-4">
                       <div className="flex items-center gap-2 mb-3">
                         <div className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
