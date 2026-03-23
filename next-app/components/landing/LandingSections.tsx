@@ -4,8 +4,10 @@ import {
   IMPACT_STATS,
   AI_SOLUTIONS,
   SUB_FEATURES,
+  USE_CASES,
   type AiSolution,
   type SubFeature,
+  type UseCase,
 } from './landingData';
 
 /* ── Icon maps ── */
@@ -43,6 +45,18 @@ const subFeatureIcons: Record<SubFeature['iconName'], React.ReactNode> = {
   ),
   press: (
     <svg className="w-5 h-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 7.5h1.5m-1.5 3h1.5m-7.5 3h7.5m-7.5 3h7.5m3-9h3.375c.621 0 1.125.504 1.125 1.125V18a2.25 2.25 0 01-2.25 2.25M16.5 7.5V18a2.25 2.25 0 002.25 2.25M16.5 7.5V4.875c0-.621-.504-1.125-1.125-1.125H4.125C3.504 3.75 3 4.254 3 4.875V18a2.25 2.25 0 002.25 2.25h13.5M6 7.5h3v3H6v-3z" /></svg>
+  ),
+};
+
+const useCaseIcons: Record<UseCase['iconName'], React.ReactNode> = {
+  time: (
+    <svg className="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+  ),
+  law: (
+    <svg className="w-6 h-6 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" /></svg>
+  ),
+  image: (
+    <svg className="w-6 h-6 text-violet-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" /></svg>
   ),
 };
 
@@ -309,6 +323,41 @@ function LandingSections() {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ═══ USE CASES ═══ */}
+      <section className="py-28 bg-gradient-to-br from-blue-50/80 via-indigo-50/50 to-violet-50/60 relative overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(circle,_rgba(0,0,0,0.03)_1px,_transparent_1px)] bg-[length:24px_24px] opacity-20" />
+        <div className="absolute top-0 left-0 w-[400px] h-[400px] bg-blue-200/20 rounded-full blur-[150px]" />
+        <div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-violet-200/20 rounded-full blur-[150px]" />
+
+        <div className="max-w-6xl mx-auto px-6 lg:px-8 relative">
+          <div className="text-center mb-20">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/80 backdrop-blur border border-white/60 shadow-sm mb-6">
+              <span className="text-blue-600 font-bold text-xs tracking-widest uppercase">USE CASES</span>
+            </div>
+            <h2 className="text-4xl md:text-6xl font-black leading-tight text-slate-900">
+              이런 고민,<br />
+              <span className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">WINAID AI가 해결합니다</span>
+            </h2>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-6">
+            {USE_CASES.map((item, i) => (
+              <div
+                key={i}
+                className="bg-white/60 backdrop-blur border border-white/80 rounded-2xl p-8 hover:bg-white hover:shadow-2xl hover:shadow-blue-100/40 hover:-translate-y-1 transition-all duration-500 group"
+              >
+                <div className="w-14 h-14 rounded-2xl bg-white shadow-sm border border-slate-100 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                  {useCaseIcons[item.iconName]}
+                </div>
+                <p className="text-slate-400 text-sm line-through mb-2 font-medium">{item.pain}</p>
+                <p className="text-xl font-bold text-slate-900 mb-3">{item.solution}</p>
+                <p className="text-sm text-slate-500 leading-relaxed">{item.desc}</p>
+              </div>
+            ))}
           </div>
         </div>
       </section>
