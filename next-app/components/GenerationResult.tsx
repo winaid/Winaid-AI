@@ -187,6 +187,7 @@ interface ResultPanelProps {
 
 export function ResultPanel({ content, completionText = '생성 완료', saveStatus, scores, postType, cssTheme = 'modern' }: ResultPanelProps) {
   const [copyFeedback, setCopyFeedback] = useState(false);
+  const [activeTab, setActiveTab] = useState<'preview' | 'html'>('preview');
 
   const renderedHtml = useMemo(() => sanitizeHtml(markdownToHtml(content)), [content]);
   const charCount = useMemo(() => content.replace(/\s/g, '').length, [content]);
@@ -218,6 +219,22 @@ export function ResultPanel({ content, completionText = '생성 완료', saveSta
       {/* ── 툴바 ── */}
       <div className="flex items-center justify-between px-5 py-2.5 border-b border-slate-100 bg-slate-50/80">
         <div className="flex items-center gap-3">
+          {/* 탭 전환 */}
+          <div className="flex p-1 rounded-xl bg-slate-100">
+            <button
+              onClick={() => setActiveTab('preview')}
+              className={`px-5 py-1.5 text-xs font-bold rounded-lg transition-all ${activeTab === 'preview' ? 'bg-white text-green-600 shadow-sm' : 'text-slate-400'}`}
+            >
+              미리보기
+            </button>
+            <button
+              onClick={() => setActiveTab('html')}
+              className={`px-5 py-1.5 text-xs font-bold rounded-lg transition-all ${activeTab === 'html' ? 'bg-white text-green-600 shadow-sm' : 'text-slate-400'}`}
+            >
+              HTML
+            </button>
+          </div>
+
           {/* 완료 상태 */}
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 bg-emerald-500 rounded-full" />
@@ -255,7 +272,14 @@ export function ResultPanel({ content, completionText = '생성 완료', saveSta
         </button>
       </div>
 
-      {/* ── 콘텐츠 미리보기 ── */}
+      {/* ── 콘텐츠 영역 ── */}
+      {activeTab === 'html' ? (
+        <div className="p-6 flex-1 overflow-y-auto">
+          <pre className="bg-slate-50 border border-slate-200 rounded-xl p-5 text-xs leading-relaxed text-slate-600 font-mono whitespace-pre-wrap break-all overflow-x-auto max-h-[600px]">
+            <code>{renderedHtml}</code>
+          </pre>
+        </div>
+      ) : (
       <div className="p-6 flex-1 overflow-y-auto">
         <style>{`
           /* ── base ── */
@@ -308,6 +332,7 @@ export function ResultPanel({ content, completionText = '생성 완료', saveSta
           dangerouslySetInnerHTML={{ __html: renderedHtml }}
         />
       </div>
+      )}
     </div>
   );
 }
