@@ -101,7 +101,7 @@ function LandingHero() {
             </span>
           </div>
           <a
-            href="/auth"
+            href="/app"
             className="px-7 py-3 rounded-full font-black text-sm bg-blue-600 text-white hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/30 hover:shadow-blue-600/40 hover:-translate-y-0.5 ring-2 ring-blue-600/20"
           >
             무료로 시작하기 &rarr;
@@ -202,7 +202,7 @@ function LandingHero() {
                   {chatMessages.length > 0 && chatMessages[chatMessages.length - 1].role === 'assistant' && !isChatting && (
                     <div className="flex justify-center pt-2 pb-1">
                       <a
-                        href="/auth"
+                        href="/app"
                         className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white text-xs font-bold rounded-full shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 hover:-translate-y-0.5 transition-all flex items-center gap-2"
                       >
                         윈에이드에서 직접 체험해보기 &rarr;
@@ -253,7 +253,7 @@ function LandingHero() {
                   </button>
                 ) : (
                   <a
-                    href="/auth"
+                    href="/app"
                     className="px-8 py-3.5 bg-blue-600 hover:bg-blue-700 rounded-xl text-white font-black text-sm transition-all flex items-center gap-2 flex-shrink-0 shadow-lg shadow-blue-600/25 hover:shadow-blue-600/40"
                   >
                     시작하기
@@ -272,7 +272,7 @@ function LandingHero() {
               {QUICK_TAGS.map((tag) => (
                 <a
                   key={tag}
-                  href="/auth"
+                  href="/app"
                   className="px-4 py-2 rounded-full text-[13px] font-medium text-slate-500 bg-white/80 backdrop-blur border border-slate-200/60 hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50/80 hover:shadow-sm transition-all"
                 >
                   {tag}
@@ -284,7 +284,7 @@ function LandingHero() {
                 {MORE_TAGS.map((tag) => (
                   <a
                     key={tag}
-                    href="/auth"
+                    href="/app"
                     className="px-4 py-2 rounded-full text-[13px] font-medium text-slate-500 bg-white/80 backdrop-blur border border-slate-200/60 hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50/80 hover:shadow-sm transition-all"
                   >
                     {tag}

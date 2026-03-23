@@ -116,19 +116,7 @@ export function Sidebar({
               </>
             )}
           </div>
-        ) : (
-          <Link
-            href="/auth"
-            className={`w-full flex items-center gap-2.5 rounded-xl transition-all text-[13px] font-semibold ${
-              collapsed ? 'justify-center px-2 py-2.5' : 'px-3 py-2.5'
-            } text-blue-600 hover:text-blue-700 hover:bg-blue-50`}
-          >
-            <span className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold flex-none bg-slate-100 text-slate-500">
-              G
-            </span>
-            {!collapsed && <span className="text-xs">로그인</span>}
-          </Link>
-        )}
+        ) : null}
 
         <button
           onClick={onToggleCollapse}

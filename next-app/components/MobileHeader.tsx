@@ -49,14 +49,7 @@ export function MobileHeader({
             >
               {userEmail[0].toUpperCase()}
             </button>
-          ) : (
-            <Link
-              href="/auth"
-              className="px-3 py-1.5 rounded-lg text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 transition-all border border-blue-100"
-            >
-              로그인
-            </Link>
-          )}
+          ) : null}
         </div>
       </div>
       {/* 모바일 네비 탭 (대시보드가 아닌 하위 페이지에서만 표시) */}
