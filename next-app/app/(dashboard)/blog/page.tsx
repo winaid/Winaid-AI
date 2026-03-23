@@ -91,11 +91,11 @@ function BlogForm() {
       // 점수 블록 파싱: ---SCORES--- 이후 JSON 추출
       let blogText = data.text;
       let parsed: ScoreBarData | undefined;
-      try {
-        const marker = '---SCORES---';
-        const idx = blogText.lastIndexOf(marker);
-        if (idx !== -1) {
-          const afterMarker = blogText.substring(idx + marker.length);
+      const marker = '---SCORES---';
+      const idx = blogText.lastIndexOf(marker);
+      if (idx !== -1) {
+        const afterMarker = blogText.substring(idx + marker.length);
+        try {
           const jsonMatch = afterMarker.match(/\{[\s\S]*?\}/);
           if (jsonMatch) {
             const raw = JSON.parse(jsonMatch[0]) as Record<string, unknown>;
@@ -106,11 +106,14 @@ function BlogForm() {
               parsed = { seoScore: seo, safetyScore: medical, conversionScore: conversion };
             }
           }
-          // 점수 블록을 콘텐츠에서 제거
-          blogText = blogText.substring(0, idx).replace(/\n+$/, '');
+        } catch {
+          // JSON 파싱 실패 — parsed는 undefined로 유지
         }
-      } catch {
-        // 파싱 실패 시 조용히 무시 — 전체 텍스트를 그대로 사용
+        // 마커가 있으면 항상 마커 이후를 제거 (파싱 성공 여부와 무관)
+        // 마커 바로 앞의 코드블록 fence(```)도 함께 제거
+        blogText = blogText.substring(0, idx).replace(/\n*```\s*$/, '').replace(/\n+$/, '');
+        // 본문에 혹시 남은 마커 잔여물도 제거
+        blogText = blogText.replace(/---SCORES---[\s\S]*$/, '').replace(/\n+$/, '');
       }
 
       setGeneratedContent(blogText);
