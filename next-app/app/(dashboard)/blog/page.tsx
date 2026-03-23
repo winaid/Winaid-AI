@@ -415,7 +415,7 @@ function BlogForm() {
         ) : error ? (
           <ErrorPanel error={error} onDismiss={() => setError(null)} />
         ) : generatedContent ? (
-          <ResultPanel content={generatedContent} saveStatus={saveStatus} postType="blog" scores={scores} />
+          <ResultPanel content={generatedContent} saveStatus={saveStatus} postType="blog" scores={scores} cssTheme={cssTheme} />
         ) : (
           /* EmptyState */
           <div className="rounded-2xl border border-slate-200 bg-white shadow-[0_2px_16px_rgba(0,0,0,0.06)] flex-1 min-h-[520px] overflow-hidden flex flex-col">
