@@ -46,8 +46,66 @@ You specialize in Korean medical clinic SNS images — monthly schedules, event 
 
 const DESIGN_RULE = `[디자인 규칙]
 1. 사용자가 프롬프트에서 지정한 색상, 위치, 레이아웃, 분위기를 정확히 따르세요.
-2. 요소 간 간격을 최소화하세요. 모든 요소를 콤팩트하게 배치하세요.
-3. 한국어 텍스트를 명확하고 읽기 쉽게 렌더링하세요.`;
+2. 휴진/휴무 표시는 프롬프트에 지정된 색상(예: 붉은색)을 사용하세요. 모든 휴진 날짜에 동일한 색상과 스타일을 적용하세요.
+3. 요소 간 간격을 최소화하세요. 모든 요소를 콤팩트하게 배치하세요.
+4. 한국어 텍스트를 명확하고 읽기 쉽게 렌더링하세요.`;
+
+// ── 달력 감지 ──
+
+function detectDateContext(prompt: string): { needsCalendar: boolean; months: number[]; year: number } {
+  const now = new Date();
+  const year = now.getFullYear();
+  const calendarKeywords = /달력|캘린더|calendar|일정|스케줄|진료\s*안내|휴진|휴무|공휴일|진료\s*시간/i;
+  const needsCalendar = calendarKeywords.test(prompt);
+
+  const months: number[] = [];
+  const monthMatches = prompt.matchAll(/(\d{1,2})\s*월/g);
+  for (const m of monthMatches) {
+    const num = parseInt(m[1], 10);
+    if (num >= 1 && num <= 12) months.push(num);
+  }
+  if (months.length === 0 && needsCalendar) {
+    months.push(now.getMonth() + 1);
+  }
+  return { needsCalendar, months, year };
+}
+
+function buildCalendarGrid(year: number, month: number): string {
+  const firstDay = new Date(year, month - 1, 1).getDay();
+  const lastDate = new Date(year, month, 0).getDate();
+  const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+
+  let grid = `${month}월 달력:\n`;
+  grid += dayNames.join('  ') + '\n';
+  let line = '    '.repeat(firstDay);
+  let dayOfWeek = firstDay;
+
+  for (let d = 1; d <= lastDate; d++) {
+    line += String(d).padStart(2, ' ') + '  ';
+    dayOfWeek++;
+    if (dayOfWeek === 7) {
+      grid += line.trimEnd() + '\n';
+      line = '';
+      dayOfWeek = 0;
+    }
+  }
+  if (line.trim()) grid += line.trimEnd() + '\n';
+  return grid;
+}
+
+function getKoreanHolidays(year: number, month: number): string[] {
+  const holidays: Record<string, string> = {
+    '1-1': '신정', '3-1': '삼일절', '5-5': '어린이날',
+    '6-6': '현충일', '8-15': '광복절', '10-3': '개천절',
+    '10-9': '한글날', '12-25': '성탄절',
+  };
+  const result: string[] = [];
+  for (const [key, name] of Object.entries(holidays)) {
+    const [m] = key.split('-').map(Number);
+    if (m === month) result.push(`${key} ${name}`);
+  }
+  return result;
+}
 
 interface ImageRequestBody {
   prompt: string;
@@ -55,7 +113,8 @@ interface ImageRequestBody {
   logoInstruction?: string;
   hospitalInfo?: string;
   brandColors?: string;
-  logoBase64?: string; // data:image/...;base64,xxx
+  logoBase64?: string;      // data:image/...;base64,xxx
+  calendarImage?: string;   // Canvas-rendered calendar reference image (data URL)
 }
 
 export async function POST(request: NextRequest) {
@@ -85,12 +144,33 @@ export async function POST(request: NextRequest) {
   const hasEnglishRequest = /\b(english|영어로)\b/i.test(body.prompt);
   const languageRule = hasEnglishRequest
     ? ''
-    : '[언어 규칙] 이미지 안의 모든 텍스트는 반드시 한국어로만 작성하세요.';
+    : '[언어 규칙] 이미지 안의 모든 텍스트는 반드시 한국어로만 작성하세요. 요일은 일/월/화/수/목/금/토로 표기하세요.';
+
+  // 달력 자동 감지
+  const dateCtx = detectDateContext(body.prompt);
+  let calendarContext = '';
+  let calendarInstruction = '';
+  if (dateCtx.needsCalendar && dateCtx.months.length > 0) {
+    const gridParts: string[] = [];
+    for (const month of dateCtx.months) {
+      gridParts.push(buildCalendarGrid(dateCtx.year, month));
+      const holidays = getKoreanHolidays(dateCtx.year, month);
+      if (holidays.length > 0) {
+        gridParts.push(`공휴일: ${holidays.join(', ')}`);
+      }
+    }
+    calendarContext = `[정확한 달력 데이터]\n${gridParts.join('\n')}`;
+    if (body.calendarImage) {
+      calendarInstruction = '[달력 규칙] 첨부된 달력 참조 이미지의 날짜-요일 배치를 반드시 정확히 따르세요. 각 날짜가 올바른 요일 칸에 위치해야 합니다. 날짜를 중복하거나 빠뜨리지 마세요. 달력의 숫자는 참조 이미지와 1:1로 동일해야 합니다.';
+    }
+  }
 
   const fullPrompt = [
     DESIGNER_PERSONA,
     DESIGN_RULE,
     languageRule,
+    calendarInstruction,
+    calendarContext,
     body.prompt.trim(),
     body.logoInstruction || '',
     body.hospitalInfo || '',
@@ -99,8 +179,18 @@ export async function POST(request: NextRequest) {
     'Generate at high resolution. Sharp edges, crisp text, no blur, no compression artifacts.',
   ].filter(Boolean).join('\n\n');
 
-  // 멀티모달 parts 구성: 텍스트 + 로고 이미지(있으면)
+  // 멀티모달 parts 구성: 텍스트 + 참조 이미지들
   const parts: Array<Record<string, unknown>> = [{ text: fullPrompt }];
+
+  // 달력 참조 이미지를 inlineData로 추가
+  if (body.calendarImage) {
+    const calMatch = body.calendarImage.match(/^data:(image\/\w+);base64,(.+)$/);
+    if (calMatch) {
+      parts.push({
+        inlineData: { mimeType: calMatch[1], data: calMatch[2] },
+      });
+    }
+  }
 
   // 로고 이미지를 inlineData로 추가
   if (body.logoBase64) {

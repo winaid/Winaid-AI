@@ -95,6 +95,118 @@ export default function ImagePage() {
     try { localStorage.removeItem(LOGO_STORAGE_KEY); } catch { /* ignore */ }
   }, []);
 
+  // ── 달력 Canvas 참조 이미지 생성 (old app과 동일) ──
+
+  const generateCalendarImage = useCallback((year: number, month: number, holidays: string[]): string | null => {
+    try {
+      const canvas = document.createElement('canvas');
+      const scale = 4;
+      const cellW = 100 * scale, cellH = 70 * scale;
+      const cols = 7;
+      const headerH = 80 * scale;
+      const dayHeaderH = 40 * scale;
+      const firstDay = new Date(year, month - 1, 1).getDay();
+      const lastDate = new Date(year, month, 0).getDate();
+      const rows = Math.ceil((firstDay + lastDate) / 7);
+
+      canvas.width = cols * cellW;
+      canvas.height = headerH + dayHeaderH + rows * cellH;
+
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return null;
+
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.fillStyle = '#222222';
+      ctx.font = `bold ${32 * scale}px sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.fillText(`${month}월`, canvas.width / 2, 50 * scale);
+
+      const holidayDays = new Set<number>();
+      for (const h of holidays) {
+        const m = h.match(/^\d+-(\d+)/);
+        if (m) holidayDays.add(parseInt(m[1], 10));
+      }
+
+      const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+      ctx.font = `bold ${18 * scale}px sans-serif`;
+      for (let i = 0; i < 7; i++) {
+        const x = i * cellW + cellW / 2;
+        const y = headerH + 25 * scale;
+        ctx.fillStyle = i === 0 ? '#e53e3e' : i === 6 ? '#3182ce' : '#555555';
+        ctx.fillText(dayNames[i], x, y);
+      }
+
+      ctx.strokeStyle = '#dddddd';
+      ctx.lineWidth = scale;
+      ctx.beginPath();
+      ctx.moveTo(0, headerH + dayHeaderH);
+      ctx.lineTo(canvas.width, headerH + dayHeaderH);
+      ctx.stroke();
+
+      for (let d = 1; d <= lastDate; d++) {
+        const idx = firstDay + d - 1;
+        const col = idx % 7;
+        const row = Math.floor(idx / 7);
+        const x = col * cellW + cellW / 2;
+        const y = headerH + dayHeaderH + row * cellH + 35 * scale;
+
+        ctx.font = `bold ${20 * scale}px sans-serif`;
+        ctx.fillStyle = col === 0 || holidayDays.has(d) ? '#e53e3e' : col === 6 ? '#3182ce' : '#333333';
+        ctx.fillText(String(d), x, y);
+      }
+
+      for (let r = 1; r < rows; r++) {
+        const y = headerH + dayHeaderH + r * cellH;
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(canvas.width, y);
+        ctx.stroke();
+      }
+      for (let c = 1; c < cols; c++) {
+        const x = c * cellW;
+        ctx.beginPath();
+        ctx.moveTo(x, headerH + dayHeaderH);
+        ctx.lineTo(x, canvas.height);
+        ctx.stroke();
+      }
+
+      return canvas.toDataURL('image/png');
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const detectCalendar = useCallback((text: string) => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const keywords = /달력|캘린더|calendar|일정|스케줄|진료\s*안내|휴진|휴무|공휴일|진료\s*시간/i;
+    const needsCalendar = keywords.test(text);
+    const months: number[] = [];
+    const monthMatches = text.matchAll(/(\d{1,2})\s*월/g);
+    for (const m of monthMatches) {
+      const num = parseInt(m[1], 10);
+      if (num >= 1 && num <= 12) months.push(num);
+    }
+    if (months.length === 0 && needsCalendar) months.push(now.getMonth() + 1);
+    return { needsCalendar, months, year };
+  }, []);
+
+  const getKoreanHolidays = useCallback((month: number): string[] => {
+    const holidays: Record<string, string> = {
+      '1-1': '신정', '3-1': '삼일절', '5-5': '어린이날',
+      '6-6': '현충일', '8-15': '광복절', '10-3': '개천절',
+      '10-9': '한글날', '12-25': '성탄절',
+    };
+    const result: string[] = [];
+    for (const [key, name] of Object.entries(holidays)) {
+      const [m] = key.split('-').map(Number);
+      if (m === month) result.push(`${key} ${name}`);
+    }
+    return result;
+  }, []);
+
   // ── 프롬프트 조립 + API 호출 ──
 
   const handleGenerate = useCallback(async () => {
@@ -104,6 +216,16 @@ export default function ImagePage() {
     setError(null);
     setResult(null);
     setProgress('이미지 생성 중...');
+
+    // 달력 참조 이미지 (Canvas)
+    let calendarImage: string | undefined;
+    const dateCtx = detectCalendar(prompt);
+    if (dateCtx.needsCalendar && dateCtx.months.length > 0) {
+      const holidays = getKoreanHolidays(dateCtx.months[0]);
+      const img = generateCalendarImage(dateCtx.year, dateCtx.months[0], holidays);
+      if (img) calendarImage = img;
+      setProgress('달력 데이터 준비 완료, 이미지 생성 중...');
+    }
 
     // 로고 지시문
     let logoInstruction = '';
@@ -146,6 +268,7 @@ export default function ImagePage() {
           hospitalInfo: hospitalInfo || undefined,
           brandColors: brandColors || undefined,
           logoBase64: logoEnabled && logoDataUrl ? logoDataUrl : undefined,
+          calendarImage: calendarImage || undefined,
         }),
       });
 
@@ -168,7 +291,7 @@ export default function ImagePage() {
     } finally {
       setGenerating(false);
     }
-  }, [prompt, aspectRatio, generating, logoEnabled, logoDataUrl, hospitalName, logoPosition, clinicPhone, clinicHours, clinicAddress, brandColor, brandAccent]);
+  }, [prompt, aspectRatio, generating, logoEnabled, logoDataUrl, hospitalName, logoPosition, clinicPhone, clinicHours, clinicAddress, brandColor, brandAccent, detectCalendar, getKoreanHolidays, generateCalendarImage]);
 
   const handleDownload = useCallback(() => {
     if (!result) return;
