@@ -1,3 +1,6 @@
+'use client';
+
+import { useEffect, useRef, useState, type RefObject } from 'react';
 import {
   PARTNER_HOSPITALS,
   PARTNER_LABEL,
@@ -97,9 +100,41 @@ const statGradients = [
   'from-amber-400 to-orange-400',
 ];
 
+/* ── Fade-in hook ── */
+
+function useFadeIn(): [RefObject<HTMLDivElement | null>, boolean] {
+  const ref = useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) { setVisible(true); obs.disconnect(); } },
+      { threshold: 0.15, rootMargin: '0px 0px -50px 0px' },
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+
+  return [ref, visible];
+}
+
+const fade = (visible: boolean) =>
+  `transition-all duration-700 ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`;
+
 /* ── Component ── */
 
 function LandingSections() {
+  const [impactRef, impactV] = useFadeIn();
+  const [solutionsRef, solutionsV] = useFadeIn();
+  const [previewRef, previewV] = useFadeIn();
+  const [useCasesRef, useCasesV] = useFadeIn();
+  const [howRef, howV] = useFadeIn();
+  const [testimonialsRef, testimonialsV] = useFadeIn();
+  const [aboutRef, aboutV] = useFadeIn();
+  const [ctaRef, ctaV] = useFadeIn();
+
   return (
     <>
       {/* ═══ PARTNERS — Marquee ═══ */}
@@ -159,7 +194,7 @@ function LandingSections() {
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-indigo-500/5 rounded-full blur-[200px]" />
 
         <div className="max-w-6xl mx-auto px-6 lg:px-8 relative">
-          <div className="text-center mb-20">
+          <div ref={impactRef} className={`text-center mb-20 ${fade(impactV)}`}>
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 backdrop-blur border border-white/10 mb-6">
               <span className="text-blue-400 font-bold text-xs tracking-widest uppercase">IMPACT</span>
             </div>
@@ -194,7 +229,7 @@ function LandingSections() {
         <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-violet-100/20 rounded-full blur-[120px]" />
 
         <div className="max-w-6xl mx-auto px-6 lg:px-8 relative">
-          <div className="text-center mb-20">
+          <div ref={solutionsRef} className={`text-center mb-20 ${fade(solutionsV)}`}>
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-50 border border-blue-100 mb-6">
               <span className="text-blue-600 font-bold text-xs tracking-widest uppercase">AI SOLUTIONS</span>
             </div>
@@ -253,7 +288,7 @@ function LandingSections() {
       <section className="py-28 bg-gradient-to-b from-white via-slate-50/80 to-white relative overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(circle,_rgba(0,0,0,0.03)_1px,_transparent_1px)] bg-[length:24px_24px] opacity-20" />
         <div className="max-w-6xl mx-auto px-6 lg:px-8 relative">
-          <div className="text-center mb-20">
+          <div ref={previewRef} className={`text-center mb-20 ${fade(previewV)}`}>
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-100 border border-slate-200/60 mb-6">
               <span className="text-slate-600 font-bold text-xs tracking-widest uppercase">PRODUCT PREVIEW</span>
             </div>
@@ -364,7 +399,7 @@ function LandingSections() {
         <div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-violet-200/20 rounded-full blur-[150px]" />
 
         <div className="max-w-6xl mx-auto px-6 lg:px-8 relative">
-          <div className="text-center mb-20">
+          <div ref={useCasesRef} className={`text-center mb-20 ${fade(useCasesV)}`}>
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/80 backdrop-blur border border-white/60 shadow-sm mb-6">
               <span className="text-blue-600 font-bold text-xs tracking-widest uppercase">USE CASES</span>
             </div>
@@ -396,7 +431,7 @@ function LandingSections() {
       <section className="py-28 bg-white relative overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(circle,_rgba(0,0,0,0.03)_1px,_transparent_1px)] bg-[length:24px_24px] opacity-15" />
         <div className="max-w-5xl mx-auto px-6 lg:px-8 relative">
-          <div className="text-center mb-20">
+          <div ref={howRef} className={`text-center mb-20 ${fade(howV)}`}>
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-100 border border-slate-200/60 mb-6">
               <span className="text-slate-600 font-bold text-xs tracking-widest uppercase">HOW IT WORKS</span>
             </div>
@@ -427,7 +462,7 @@ function LandingSections() {
       <section className="py-28 bg-gradient-to-b from-white via-slate-50/50 to-white relative overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(circle,_rgba(0,0,0,0.03)_1px,_transparent_1px)] bg-[length:24px_24px] opacity-20" />
         <div className="max-w-6xl mx-auto px-6 lg:px-8 relative">
-          <div className="text-center mb-20">
+          <div ref={testimonialsRef} className={`text-center mb-20 ${fade(testimonialsV)}`}>
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-50 border border-amber-100 mb-6">
               <span className="text-amber-700 font-bold text-xs tracking-widest uppercase">TESTIMONIALS</span>
             </div>
@@ -471,7 +506,7 @@ function LandingSections() {
       <section className="py-28 bg-gradient-to-br from-amber-50/40 via-orange-50/20 to-yellow-50/30 relative overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(circle,_rgba(0,0,0,0.03)_1px,_transparent_1px)] bg-[length:24px_24px] opacity-15" />
         <div className="max-w-5xl mx-auto px-6 lg:px-8 relative">
-          <div className="text-center mb-20">
+          <div ref={aboutRef} className={`text-center mb-20 ${fade(aboutV)}`}>
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/80 backdrop-blur border border-white/60 shadow-sm mb-6">
               <span className="text-amber-700 font-bold text-xs tracking-widest uppercase">ABOUT WINAID</span>
             </div>
@@ -509,7 +544,7 @@ function LandingSections() {
           <div className="absolute bottom-0 left-1/4 w-[500px] h-[500px] bg-violet-500/10 rounded-full blur-[150px]" />
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-cyan-500/5 rounded-full blur-[120px]" />
         </div>
-        <div className="relative max-w-4xl mx-auto px-6 text-center">
+        <div ref={ctaRef} className={`relative max-w-4xl mx-auto px-6 text-center ${fade(ctaV)}`}>
           <div className="inline-flex items-center gap-2.5 px-5 py-2.5 rounded-full bg-white/5 backdrop-blur border border-white/10 mb-10">
             <span className="relative flex h-2.5 w-2.5">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
