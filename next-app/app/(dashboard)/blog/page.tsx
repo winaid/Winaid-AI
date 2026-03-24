@@ -1141,7 +1141,7 @@ JSON 형식으로 응답해주세요.`;
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               prompt: seoPrompt,
-              model: 'gemini-2.0-flash-lite',
+              model: 'gemini-3.1-flash-lite-preview',
               responseType: 'json',
               schema: seoSchema,
               temperature: 0.3,
