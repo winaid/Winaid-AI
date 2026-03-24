@@ -225,10 +225,11 @@ OUTPUT DIRECTION:
     }
   }
 
-  // 모델 우선순위: PRO → FLASH fallback (root geminiClient 동일)
+  // 모델 우선순위: PRO → FLASH → 2.5 fallback
   const MODELS = [
-    'gemini-3-pro-image-preview',       // Pro: 고품질
-    'gemini-3.1-flash-image-preview',   // Flash: 속도+안정성
+    'gemini-3-pro-image-preview',       // Nano Banana Pro: 고품질
+    'gemini-3.1-flash-image-preview',   // Nano Banana 2: 속도+안정성
+    'gemini-2.5-flash-image',           // Nano Banana: 안정 GA 모델
   ];
 
   const apiBody = {
