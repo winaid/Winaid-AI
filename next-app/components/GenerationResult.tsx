@@ -296,6 +296,12 @@ export function ResultPanel({ content, completionText = '생성 완료', saveSta
           .rp-preview strong { font-weight: 700; }
           .rp-preview em { font-style: italic; }
 
+          /* ── bare tag fallback (Gemini HTML에 rp-* 클래스가 없는 경우, old applyThemeToHtml 동일) ── */
+          .rp-preview h1:not([class]) { font-size: 32px; font-weight: 900; margin: 30px 0 15px; line-height: 1.4; color: #1a1a1a; }
+          .rp-preview h2:not([class]) { font-size: 24px; font-weight: 700; margin: 25px 0 12px; line-height: 1.35; color: #1a1a1a; }
+          .rp-preview h3:not([class]) { font-size: 19px; font-weight: bold; margin: 30px 0 15px 0; padding: 12px 0 12px 16px; border-left: 4px solid #787fff; color: #1e40af; line-height: 1.5; }
+          .rp-preview p:not([class]) { font-size: 17px; color: #333; margin-bottom: 25px; line-height: 1.85; }
+
           /* ── modern ── */
           .rp-theme-modern { background: #fff; padding: 40px; color: #333; }
           .rp-theme-modern .rp-h1 { color: #1a1a1a; padding-bottom: 20px; }
@@ -318,8 +324,8 @@ export function ResultPanel({ content, completionText = '생성 완료', saveSta
           .rp-theme-warm { max-width: 820px; background: #fffbf5; padding: 45px 35px; border-radius: 20px; color: #4a4a4a; }
           .rp-theme-warm .rp-h1 { color: #c46d3d; padding: 20px 25px; background: #fff; border-radius: 15px; box-shadow: 0 2px 10px rgba(196,109,61,0.1); }
           .rp-theme-warm .rp-h2 { color: #c46d3d; }
-          .rp-theme-warm .rp-h3 { border-left-color: #c46d3d; color: #c46d3d; }
-          .rp-theme-warm .rp-p { color: #4a4a4a; }
+          .rp-theme-warm .rp-h3, .rp-theme-warm h3:not([class]) { border-left-color: #c46d3d; color: #c46d3d; }
+          .rp-theme-warm .rp-p, .rp-theme-warm p:not([class]) { color: #4a4a4a; }
 
           /* ── professional ── */
           .rp-theme-professional { max-width: 880px; background: #f7f9fb; padding: 50px 40px; border-top: 4px solid #787fff; color: #3a3a3a; }
