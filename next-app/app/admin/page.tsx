@@ -244,16 +244,28 @@ export default function AdminPage() {
   const loadStyleProfiles = useCallback(async () => {
     const profiles = await getAllStyleProfiles();
     setStyleProfiles(profiles);
+
+    // 1. teamData에서 기본 URL 채우기
     const urlMap: Record<string, string[]> = {};
+    for (const team of TEAM_DATA) {
+      for (const h of team.hospitals) {
+        const baseName = h.name.replace(/ \(.*\)$/, '');
+        if (h.naverBlogUrls && h.naverBlogUrls.length > 0 && !urlMap[baseName]) {
+          urlMap[baseName] = [...h.naverBlogUrls];
+        }
+      }
+    }
+
+    // 2. DB 프로필의 URL로 덮어쓰기 (DB가 우선)
     profiles.forEach(p => {
       if (p.naver_blog_url) {
         urlMap[p.hospital_name] = p.naver_blog_url.split(',').map(u => u.trim()).filter(Boolean);
       }
     });
-    // DB 값을 기본으로 깔고, 사용자가 수정 중인 값이 없는 병원만 DB 값으로 채움
+
+    // 3. 사용자가 수정 중인 항목은 유지
     setBlogUrlInputs(prev => {
       const merged: Record<string, string[]> = { ...urlMap };
-      // 사용자가 이미 수정 중인 항목은 유지 (빈 배열이 아닌 경우만)
       for (const [key, val] of Object.entries(prev)) {
         if (val.length > 0 && val.some(u => u.trim())) {
           merged[key] = val;
@@ -1078,7 +1090,9 @@ export default function AdminPage() {
                   {uniqueHospitals.map(([baseName, h]) => {
                     const profile = styleProfiles.find(p => p.hospital_name === baseName);
                     const status = crawlingStatus[baseName];
-                    const urls = blogUrlInputs[baseName] || (profile?.naver_blog_url ? profile.naver_blog_url.split(',').map(u => u.trim()).filter(Boolean) : ['']);
+                    const urls = blogUrlInputs[baseName]
+                      || (profile?.naver_blog_url ? profile.naver_blog_url.split(',').map(u => u.trim()).filter(Boolean) : null)
+                      || (h.naverBlogUrls && h.naverBlogUrls.length > 0 ? h.naverBlogUrls : ['']);
                     const hasAnyUrl = urls.some(u => u.includes('blog.naver.com'));
 
                     return (
