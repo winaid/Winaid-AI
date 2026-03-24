@@ -886,14 +886,8 @@ ${topic.trim()}${disease.trim() ? ', 질환: ' + disease.trim() : ''}
         const h3Count = h3Tags.length;
         console.info(`[BLOG] Stage 2: 소제목 수 판정 — 현재 ${h3Count}개 (최소 5개)`);
 
-        if (h3Count > 0 && h3Count < 5) {
-          const deficit = 5 - h3Count;
-          console.warn(`[BLOG] Stage 2: ⚠️ 소제목 ${h3Count}개 — 정책 최소 5개 미달 (부족 ${deficit}개)`);
-          console.info(`[BLOG] Stage 2: ℹ️ PO 결정으로 소제목 자동 보정 없음 — 그대로 진행`);
-        } else if (h3Count >= 5) {
+        if (h3Count >= 5) {
           console.info(`[BLOG] Stage 2: ✅ 소제목 수 충분 (${h3Count}개)`);
-        } else {
-          console.info(`[BLOG] Stage 2: 소제목 0개 — 보정 스킵 (구조 전체 문제)`);
         }
       }
 
