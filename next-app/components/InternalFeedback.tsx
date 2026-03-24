@@ -13,7 +13,9 @@ import {
   listFeedbacks,
   addFeedback,
   deleteFeedback,
+  analyzeFeedbacks,
   type InternalFeedback as FeedbackItem,
+  type FeedbackAnalysis,
 } from '../lib/feedbackService';
 
 interface Props {
@@ -42,6 +44,11 @@ export default function InternalFeedback({ page, userId, userName }: Props) {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [submitOk, setSubmitOk] = useState(false);
+
+  // AI 분석
+  const [analysis, setAnalysis] = useState<FeedbackAnalysis | null>(null);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [analysisError, setAnalysisError] = useState('');
 
   const load = useCallback(async () => {
     const list = await listFeedbacks(page);
@@ -76,6 +83,33 @@ export default function InternalFeedback({ page, userId, userName }: Props) {
     if (ok) {
       setFeedbacks(prev => prev.filter(f => f.id !== feedbackId));
     }
+  };
+
+  const handleAnalyze = async () => {
+    if (analyzing) return;
+    setAnalyzing(true);
+    setAnalysisError('');
+    const result = await analyzeFeedbacks(feedbacks);
+    if (result.success && result.analysis) {
+      setAnalysis(result.analysis);
+    } else {
+      setAnalysisError(result.error || '분석 실패');
+    }
+    setAnalyzing(false);
+  };
+
+  const priorityBadge = (p: string) => {
+    const map: Record<string, string> = {
+      high: 'bg-red-100 text-red-700',
+      medium: 'bg-amber-100 text-amber-700',
+      low: 'bg-slate-100 text-slate-600',
+    };
+    const labels: Record<string, string> = { high: '긴급', medium: '보통', low: '낮음' };
+    return (
+      <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${map[p] || map.low}`}>
+        {labels[p] || p}
+      </span>
+    );
   };
 
   return (
@@ -159,6 +193,74 @@ export default function InternalFeedback({ page, userId, userName }: Props) {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* ── AI 분석 섹션 ── */}
+      <div className="px-5 py-4 border-t border-slate-100">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <svg className="w-4 h-4 text-violet-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+            </svg>
+            <span className="text-sm font-bold text-slate-700">AI 피드백 분석</span>
+          </div>
+          <button
+            onClick={handleAnalyze}
+            disabled={analyzing || feedbacks.length === 0}
+            className="px-3 py-1.5 text-xs font-semibold bg-violet-600 text-white rounded-lg hover:bg-violet-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center gap-1.5"
+          >
+            {analyzing ? (
+              <><div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />분석 중...</>
+            ) : (
+              <>분석 실행</>
+            )}
+          </button>
+        </div>
+
+        {feedbacks.length === 0 && !analyzing && (
+          <p className="text-xs text-slate-400">피드백이 있어야 분석할 수 있습니다.</p>
+        )}
+
+        {analysisError && (
+          <div className="p-2.5 bg-red-50 border border-red-200 rounded-lg mb-3">
+            <p className="text-xs text-red-600">{analysisError}</p>
+          </div>
+        )}
+
+        {analysis && (
+          <div className="space-y-3">
+            {/* 전체 요약 */}
+            <div className="p-3 bg-violet-50 border border-violet-200 rounded-xl">
+              <p className="text-xs font-bold text-violet-700 mb-1">전체 트렌드</p>
+              <p className="text-sm text-violet-800 leading-relaxed">{analysis.overall}</p>
+            </div>
+
+            {/* 클러스터 카드 */}
+            {analysis.clusters.map((cluster, idx) => (
+              <div key={idx} className="p-3 bg-white border border-slate-200 rounded-xl">
+                <div className="flex items-center gap-2 mb-1.5">
+                  {priorityBadge(cluster.priority)}
+                  <span className="text-xs font-bold text-slate-800">{cluster.theme}</span>
+                  <span className="text-[10px] text-slate-400 ml-auto">{cluster.count}건</span>
+                </div>
+                <p className="text-sm text-slate-600 leading-relaxed mb-2">{cluster.summary}</p>
+                {cluster.examples.length > 0 && (
+                  <div className="space-y-1">
+                    {cluster.examples.map((ex, ei) => (
+                      <div key={ei} className="text-[11px] text-slate-500 pl-2.5 border-l-2 border-slate-200 leading-relaxed">
+                        {ex}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+
+            {analysis.clusters.length === 0 && (
+              <p className="text-xs text-slate-400">분석 결과가 없습니다.</p>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
