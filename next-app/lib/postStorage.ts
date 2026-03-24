@@ -113,28 +113,44 @@ export async function savePost(input: SavePostInput): Promise<{ id: string } | {
   return { id: guestId };
 }
 
-/** 생성 이력 조회 (Supabase + guest 병합) */
-export async function listPosts(userId: string | null): Promise<{ posts: SavedPost[] } | { error: string }> {
+/**
+ * 생성 이력 조회 (Supabase + guest 병합)
+ *
+ * - userId가 있으면 해당 사용자 글만 조회 (non-admin 기본)
+ * - userId가 null이면 DB 조회를 건너뛰고 guest localStorage만 반환
+ * - showAll=true이면 userId와 무관하게 전체 DB 조회 (admin 전용)
+ */
+export async function listPosts(
+  userId: string | null,
+  options?: { showAll?: boolean },
+): Promise<{ posts: SavedPost[] } | { error: string }> {
   let dbPosts: SavedPost[] = [];
+  const showAll = options?.showAll === true;
 
   if (isSupabaseConfigured && supabase) {
-    try {
-      let query = supabase
-        .from('generated_posts')
-        .select('id, post_type, workflow_type, title, content, topic, hospital_name, keywords, char_count, created_at')
-        .order('created_at', { ascending: false })
-        .limit(50);
+    // non-admin + 미로그인 → DB 조회 스킵 (guest 데이터만)
+    if (!userId && !showAll) {
+      // skip DB query
+    } else {
+      try {
+        let query = supabase
+          .from('generated_posts')
+          .select('id, post_type, workflow_type, title, content, topic, hospital_name, keywords, char_count, created_at')
+          .order('created_at', { ascending: false })
+          .limit(50);
 
-      if (userId) {
-        query = query.eq('user_id', userId);
-      }
+        // admin(showAll)이 아니면 반드시 userId로 필터
+        if (!showAll && userId) {
+          query = query.eq('user_id', userId);
+        }
 
-      const { data, error } = await query;
-      if (!error && data) {
-        dbPosts = data as SavedPost[];
+        const { data, error } = await query;
+        if (!error && data) {
+          dbPosts = data as SavedPost[];
+        }
+      } catch {
+        // Supabase 에러 시 guest 데이터만 반환
       }
-    } catch {
-      // Supabase 에러 시 guest 데이터만 반환
     }
   }
 
