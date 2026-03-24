@@ -1,26 +1,67 @@
 /**
  * 네이버 블로그 크롤러 — Next.js API Route
  *
- * functions/api/naver/crawl-hospital-blog.ts (Cloudflare Function) 로직을
- * Next.js API Route로 이식. 외부 서비스 의존 없이 자체 크롤링 가능.
- *
  * POST /api/naver/crawl-hospital-blog
  * Body: { blogUrl: string, maxPosts?: number }
+ *
+ * 전략:
+ *  1) RSS 피드에서 글 목록 + 요약 확보 (안정적, 차단 드묾)
+ *  2) RSS 실패 시 PostList HTML에서 logNo 추출 (기존 방식)
+ *  3) 개별 글 페이지에서 본문 추출 (6단계 selector fallback)
+ *  4) 경과 시간 추적 — serverless timeout 전에 조기 종료
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 
+// ── 상수 ──
+
+const FETCH_TIMEOUT_MS = 8000; // 개별 fetch 8초 제한
+const MAX_TOTAL_MS = 25000; // 전체 25초 제한 (Vercel Pro 60초 내 여유)
+const POST_FETCH_DELAY_MS = 150; // 글 간 딜레이
+const CONCURRENCY = 2; // 동시 fetch 수
+
 const FETCH_HEADERS: Record<string, string> = {
   'User-Agent':
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-  Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-  'Accept-Language': 'ko-KR,ko;q=0.9',
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+  Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+  'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
+  'Accept-Encoding': 'gzip, deflate, br',
+  'Cache-Control': 'no-cache',
   Referer: 'https://blog.naver.com/',
+  'sec-ch-ua': '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"',
+  'sec-ch-ua-mobile': '?0',
+  'sec-ch-ua-platform': '"Windows"',
+  'Sec-Fetch-Dest': 'document',
+  'Sec-Fetch-Mode': 'navigate',
+  'Sec-Fetch-Site': 'same-origin',
 };
+
+let startTime = 0;
+
+function elapsed(): number {
+  return Date.now() - startTime;
+}
+
+function hasTimeLeft(): boolean {
+  return elapsed() < MAX_TOTAL_MS;
+}
+
+// ── 유틸 ──
 
 function extractBlogId(blogUrl: string): string | null {
   const m = blogUrl.match(/blog\.naver\.com\/([^/?#]+)/);
   return m ? m[1] : null;
+}
+
+async function fetchWithTimeout(url: string, headers: Record<string, string>): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  try {
+    const res = await fetch(url, { headers, signal: controller.signal });
+    return res;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 function parseNaverDate(raw: string): Date | null {
@@ -52,25 +93,111 @@ function parseNaverDate(raw: string): Date | null {
   return null;
 }
 
-// ── 1단계: logNo 수집 ──
+const cleanHtml = (raw: string) =>
+  raw
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&#x27;/g, "'")
+    .replace(/[ \t]+/g, ' ')
+    .split('\n')
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0)
+    .join('\n')
+    .trim();
 
-async function fetchLogNos(blogId: string, maxCandidates: number): Promise<string[]> {
+// ── 1단계: 글 목록 수집 (RSS 우선, PostList fallback) ──
+
+interface PostEntry {
+  logNo: string;
+  title?: string;
+  publishedAt?: string;
+  summary?: string;
+}
+
+/** RSS 피드에서 글 목록 추출 */
+async function fetchFromRss(blogId: string, maxPosts: number): Promise<PostEntry[]> {
+  const rssUrl = `https://rss.blog.naver.com/${blogId}.xml`;
+  console.log(`[Crawl] RSS 시도: ${rssUrl}`);
+
+  try {
+    const res = await fetchWithTimeout(rssUrl, {
+      'User-Agent': FETCH_HEADERS['User-Agent'],
+      Accept: 'application/rss+xml, application/xml, text/xml, */*',
+    });
+    if (!res.ok) {
+      console.log(`[Crawl] RSS 실패: HTTP ${res.status}`);
+      return [];
+    }
+    const xml = await res.text();
+
+    // <item> 블록 추출
+    const items: PostEntry[] = [];
+    const itemRegex = /<item>([\s\S]*?)<\/item>/g;
+    let match: RegExpExecArray | null;
+    while ((match = itemRegex.exec(xml)) !== null && items.length < maxPosts) {
+      const block = match[1];
+
+      // logNo 추출 from <link>
+      const linkMatch = block.match(/<link>([^<]+)<\/link>/);
+      if (!linkMatch) continue;
+      const link = linkMatch[1].trim();
+      const logNoMatch = link.match(/\/(\d{10,})$/);
+      if (!logNoMatch) continue;
+
+      // 제목
+      const titleMatch = block.match(/<title><!\[CDATA\[([\s\S]*?)\]\]><\/title>/)
+        || block.match(/<title>([^<]+)<\/title>/);
+      const title = titleMatch ? cleanHtml(titleMatch[1]) : '';
+
+      // 날짜
+      const dateMatch = block.match(/<pubDate>([^<]+)<\/pubDate>/);
+      let publishedAt = '';
+      if (dateMatch) {
+        const d = new Date(dateMatch[1].trim());
+        if (!isNaN(d.getTime())) publishedAt = d.toISOString();
+      }
+
+      // 요약
+      const descMatch = block.match(/<description><!\[CDATA\[([\s\S]*?)\]\]><\/description>/)
+        || block.match(/<description>([^<]+)<\/description>/);
+      const summary = descMatch ? cleanHtml(descMatch[1]).slice(0, 300) : '';
+
+      items.push({ logNo: logNoMatch[1], title, publishedAt, summary });
+    }
+
+    console.log(`[Crawl] RSS에서 ${items.length}개 글 발견`);
+    return items;
+  } catch (err) {
+    console.log(`[Crawl] RSS 오류: ${(err as Error).message}`);
+    return [];
+  }
+}
+
+/** PostList HTML에서 logNo 추출 (RSS 실패 시 fallback) */
+async function fetchLogNos(blogId: string, maxCandidates: number): Promise<PostEntry[]> {
   const seenLogNos = new Set<string>();
-  const logNos: string[] = [];
+  const entries: PostEntry[] = [];
   let page = 1;
 
-  while (logNos.length < maxCandidates && page <= 10) {
+  while (entries.length < maxCandidates && page <= 5 && hasTimeLeft()) {
     const listUrl = `https://blog.naver.com/PostList.naver?blogId=${blogId}&currentPage=${page}&categoryNo=0&postListType=&blogType=B`;
     let html: string;
     try {
-      const res = await fetch(listUrl, { headers: FETCH_HEADERS });
+      const res = await fetchWithTimeout(listUrl, FETCH_HEADERS);
       if (!res.ok) {
-        console.log(`[Crawl] PostList 페이지 ${page} 실패: ${res.status}`);
+        console.log(`[Crawl] PostList p${page} HTTP ${res.status}`);
         break;
       }
       html = await res.text();
     } catch (err) {
-      console.log(`[Crawl] PostList 페이지 ${page} 네트워크 오류: ${(err as Error).message}`);
+      const msg = (err as Error).name === 'AbortError' ? 'timeout' : (err as Error).message;
+      console.log(`[Crawl] PostList p${page} 오류: ${msg}`);
       break;
     }
 
@@ -81,7 +208,7 @@ async function fetchLogNos(blogId: string, maxCandidates: number): Promise<strin
     while ((m = p1.exec(html)) !== null) {
       if (!seenLogNos.has(m[1])) {
         seenLogNos.add(m[1]);
-        logNos.push(m[1]);
+        entries.push({ logNo: m[1] });
         foundNew++;
       }
     }
@@ -90,22 +217,22 @@ async function fetchLogNos(blogId: string, maxCandidates: number): Promise<strin
     while ((m = p2.exec(html)) !== null) {
       if (!seenLogNos.has(m[1])) {
         seenLogNos.add(m[1]);
-        logNos.push(m[1]);
+        entries.push({ logNo: m[1] });
         foundNew++;
       }
     }
 
-    console.log(`[Crawl] 페이지 ${page}: ${foundNew}개 신규 logNo (누적: ${logNos.length}개)`);
+    console.log(`[Crawl] PostList p${page}: +${foundNew}개 (누적 ${entries.length})`);
     if (foundNew === 0) break;
     page++;
   }
 
-  logNos.sort((a, b) => Number(b) - Number(a));
-  console.log(`[Crawl] 총 ${logNos.length}개 logNo 수집`);
-  return logNos.slice(0, maxCandidates);
+  // logNo 내림차순 정렬 (최신)
+  entries.sort((a, b) => Number(b.logNo) - Number(a.logNo));
+  return entries.slice(0, maxCandidates);
 }
 
-// ── 2단계: 개별 글 본문 + 메타데이터 추출 ──
+// ── 2단계: 개별 글 본문 추출 ──
 
 interface PostResult {
   logNo: string;
@@ -117,60 +244,62 @@ interface PostResult {
   thumbnail: string;
 }
 
-async function fetchPostContent(blogId: string, logNo: string): Promise<PostResult | null> {
-  const url = `https://blog.naver.com/PostView.naver?blogId=${blogId}&logNo=${logNo}`;
+async function fetchPostContent(
+  blogId: string,
+  entry: PostEntry,
+): Promise<PostResult | null> {
+  const logNo = entry.logNo;
+  const url = `https://blog.naver.com/PostView.naver?blogId=${blogId}&logNo=${logNo}&directAccess=true`;
   let html: string;
   try {
-    const res = await fetch(url, { headers: FETCH_HEADERS });
+    const res = await fetchWithTimeout(url, FETCH_HEADERS);
     if (!res.ok) {
       console.log(`  [Crawl] PostView ${logNo} HTTP ${res.status}`);
       return null;
     }
     html = await res.text();
   } catch (err) {
-    console.log(`  [Crawl] PostView ${logNo} 네트워크 오류: ${(err as Error).message}`);
+    const msg = (err as Error).name === 'AbortError' ? 'timeout' : (err as Error).message;
+    console.log(`  [Crawl] PostView ${logNo} 오류: ${msg}`);
     return null;
   }
 
   // ── 제목 ──
-  let title = '';
-  const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
-  if (titleMatch) {
-    title = titleMatch[1]
-      .replace(/\s*:\s*네이버\s*블로그$/i, '')
-      .replace(/&nbsp;/g, ' ')
-      .replace(/&amp;/g, '&')
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>')
-      .replace(/&quot;/g, '"')
-      .replace(/&#39;/g, "'")
-      .replace(/&#x27;/g, "'")
-      .trim();
+  let title = entry.title || '';
+  if (!title) {
+    const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+    if (titleMatch) {
+      title = titleMatch[1]
+        .replace(/\s*:\s*네이버\s*블로그$/i, '')
+        .replace(/&nbsp;/g, ' ')
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'")
+        .replace(/&#x27;/g, "'")
+        .trim();
+    }
   }
   if (!title) {
     const seTitleMatch = html.match(
       /<[^>]*class="[^"]*se-title[^"]*"[^>]*>[\s\S]*?<span[^>]*>([\s\S]*?)<\/span>/i,
     );
-    if (seTitleMatch)
-      title = seTitleMatch[1]
-        .replace(/<[^>]+>/g, '')
-        .replace(/\s+/g, ' ')
-        .trim();
+    if (seTitleMatch) title = seTitleMatch[1].replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
   }
 
   // ── 날짜 ──
-  let publishedAt = '';
-  const ogPatterns = [
-    /<meta[^>]*property="og:createdate"[^>]*content="([^"]+)"/i,
-    /<meta[^>]*content="([^"]+)"[^>]*property="og:createdate"/i,
-  ];
-  for (const op of ogPatterns) {
-    const om = op.exec(html);
-    if (om) {
-      const d = parseNaverDate(om[1]);
-      if (d) {
-        publishedAt = d.toISOString();
-        break;
+  let publishedAt = entry.publishedAt || '';
+  if (!publishedAt) {
+    const ogPatterns = [
+      /<meta[^>]*property="og:createdate"[^>]*content="([^"]+)"/i,
+      /<meta[^>]*content="([^"]+)"[^>]*property="og:createdate"/i,
+    ];
+    for (const op of ogPatterns) {
+      const om = op.exec(html);
+      if (om) {
+        const d = parseNaverDate(om[1]);
+        if (d) { publishedAt = d.toISOString(); break; }
       }
     }
   }
@@ -184,10 +313,7 @@ async function fetchPostContent(blogId: string, logNo: string): Promise<PostResu
       const fm = fp.exec(html);
       if (fm) {
         const d = parseNaverDate(fm[1].trim());
-        if (d) {
-          publishedAt = d.toISOString();
-          break;
-        }
+        if (d) { publishedAt = d.toISOString(); break; }
       }
     }
   }
@@ -203,34 +329,17 @@ async function fetchPostContent(blogId: string, logNo: string): Promise<PostResu
   const paragraphs: string[] = [];
   let m: RegExpExecArray | null;
 
-  const cleanHtml = (raw: string) =>
-    raw
-      .replace(/<br\s*\/?>/gi, '\n')
-      .replace(/<[^>]+>/g, ' ')
-      .replace(/&nbsp;/g, ' ')
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>')
-      .replace(/&amp;/g, '&')
-      .replace(/&quot;/g, '"')
-      .replace(/&#39;/g, "'")
-      .replace(/[ \t]+/g, ' ')
-      .split('\n')
-      .map((l) => l.trim())
-      .filter((l) => l.length > 0)
-      .join('\n')
-      .trim();
-
   // 1) se-text-paragraph (스마트에디터 3 / ONE)
-  const p1 = /<[^>]*class="[^"]*se-text-paragraph[^"]*"[^>]*>([\s\S]*?)<\/[^>]+>/g;
-  while ((m = p1.exec(html)) !== null) {
+  const r1 = /<[^>]*class="[^"]*se-text-paragraph[^"]*"[^>]*>([\s\S]*?)<\/[^>]+>/g;
+  while ((m = r1.exec(html)) !== null) {
     const text = cleanHtml(m[1]);
     if (text.length > 5) paragraphs.push(text);
   }
 
   // 2) se-module-text
   if (paragraphs.length === 0) {
-    const p2 = /<div[^>]*class="[^"]*se-module-text[^"]*"[^>]*>([\s\S]*?)<\/div>/g;
-    while ((m = p2.exec(html)) !== null) {
+    const r2 = /<div[^>]*class="[^"]*se-module-text[^"]*"[^>]*>([\s\S]*?)<\/div>/g;
+    while ((m = r2.exec(html)) !== null) {
       const text = cleanHtml(m[1]);
       if (text.length > 5) paragraphs.push(text);
     }
@@ -238,8 +347,8 @@ async function fetchPostContent(blogId: string, logNo: string): Promise<PostResu
 
   // 3) se_component_text
   if (paragraphs.length === 0) {
-    const p3 = /<div[^>]*class="[^"]*se_component_text[^"]*"[^>]*>([\s\S]*?)<\/div>/g;
-    while ((m = p3.exec(html)) !== null) {
+    const r3 = /<div[^>]*class="[^"]*se_component_text[^"]*"[^>]*>([\s\S]*?)<\/div>/g;
+    while ((m = r3.exec(html)) !== null) {
       const text = cleanHtml(m[1]);
       if (text.length > 5) paragraphs.push(text);
     }
@@ -251,14 +360,9 @@ async function fetchPostContent(blogId: string, logNo: string): Promise<PostResu
     if (areaMatch) {
       let chunk = areaMatch[1];
       const endMarkers = [
-        'class="post_footer"',
-        'class="post-footer"',
-        'class="comment_area"',
-        'class="area_sympathy"',
-        'id="printPost1"',
-        'class="wrap_postdata"',
-        'class="post_tag"',
-        'class="post-tag"',
+        'class="post_footer"', 'class="post-footer"', 'class="comment_area"',
+        'class="area_sympathy"', 'id="printPost1"', 'class="wrap_postdata"',
+        'class="post_tag"', 'class="post-tag"',
       ];
       for (const marker of endMarkers) {
         const idx = chunk.indexOf(marker);
@@ -271,9 +375,9 @@ async function fetchPostContent(blogId: string, logNo: string): Promise<PostResu
 
   // 5) p 태그 수집
   if (paragraphs.length === 0) {
-    const p5 = /<p[^>]*>([\s\S]*?)<\/p>/g;
+    const r5 = /<p[^>]*>([\s\S]*?)<\/p>/g;
     const allP: string[] = [];
-    while ((m = p5.exec(html)) !== null) {
+    while ((m = r5.exec(html)) !== null) {
       const text = cleanHtml(m[1]);
       if (text.length > 15) allP.push(text);
     }
@@ -294,6 +398,12 @@ async function fetchPostContent(blogId: string, logNo: string): Promise<PostResu
     }
   }
 
+  // RSS에서 이미 가져온 요약이 있고 본문 추출 모두 실패한 경우 → RSS 요약 사용
+  if (paragraphs.length === 0 && entry.summary && entry.summary.length > 30) {
+    console.log(`  [Crawl] RSS 요약 폴백: ${logNo} (${entry.summary.length}자)`);
+    paragraphs.push(entry.summary);
+  }
+
   const content = paragraphs.join('\n\n');
   if (content.length <= 30) {
     console.log(`  [Crawl] 본문 부족 스킵: ${logNo} (${content.length}자)`);
@@ -306,17 +416,55 @@ async function fetchPostContent(blogId: string, logNo: string): Promise<PostResu
     content,
     title,
     publishedAt,
-    summary: content
-      .substring(0, 200)
-      .replace(/\n/g, ' ')
-      .trim(),
+    summary: content.substring(0, 200).replace(/\n/g, ' ').trim(),
     thumbnail,
   };
+}
+
+// ── 병렬 fetch 유틸 ──
+
+async function fetchPostsBatch(
+  blogId: string,
+  entries: PostEntry[],
+  maxPosts: number,
+): Promise<{ posts: PostResult[]; skipped: number; timedOut: boolean }> {
+  const posts: PostResult[] = [];
+  let skipped = 0;
+  let timedOut = false;
+
+  for (let i = 0; i < entries.length; i += CONCURRENCY) {
+    if (posts.length >= maxPosts || !hasTimeLeft()) {
+      timedOut = !hasTimeLeft();
+      break;
+    }
+
+    const batch = entries.slice(i, i + CONCURRENCY).filter(() => posts.length < maxPosts);
+    const results = await Promise.allSettled(
+      batch.map((entry) => fetchPostContent(blogId, entry)),
+    );
+
+    for (const r of results) {
+      if (r.status === 'fulfilled' && r.value) {
+        posts.push(r.value);
+      } else {
+        skipped++;
+      }
+    }
+
+    if (i + CONCURRENCY < entries.length) {
+      await new Promise((r) => setTimeout(r, POST_FETCH_DELAY_MS));
+    }
+  }
+
+  return { posts, skipped, timedOut };
 }
 
 // ── 메인 핸들러 ──
 
 export async function POST(request: NextRequest) {
+  startTime = Date.now();
+  const diagnostics: string[] = [];
+
   try {
     const body = (await request.json()) as { blogUrl: string; maxPosts?: number };
     const { blogUrl, maxPosts = 10 } = body;
@@ -337,41 +485,50 @@ export async function POST(request: NextRequest) {
     }
 
     const limited = Math.min(Number(maxPosts) || 10, 20);
-    console.log(`[Crawl] 블로그 수집 시작: ${blogId} (목표: ${limited}개)`);
+    console.log(`[Crawl] 시작: ${blogId} (목표 ${limited}개)`);
 
-    // 1단계: logNo 수집
+    // ── 1단계: 글 목록 수집 (RSS 우선 → PostList fallback) ──
+    let entries: PostEntry[] = [];
     const candidates = Math.min(limited * 3, 60);
-    const logNos = await fetchLogNos(blogId, candidates);
 
-    if (logNos.length === 0) {
+    // 1-A: RSS 시도
+    entries = await fetchFromRss(blogId, candidates);
+    if (entries.length > 0) {
+      diagnostics.push(`RSS에서 ${entries.length}개 글 목록 확보`);
+    }
+
+    // 1-B: RSS 실패 → PostList HTML
+    if (entries.length === 0 && hasTimeLeft()) {
+      diagnostics.push('RSS 실패 → PostList 시도');
+      entries = await fetchLogNos(blogId, candidates);
+      if (entries.length > 0) {
+        diagnostics.push(`PostList에서 ${entries.length}개 logNo 확보`);
+      }
+    }
+
+    if (entries.length === 0) {
+      diagnostics.push('글 목록 확보 실패');
+      const reason = !hasTimeLeft() ? ' (시간 초과)' : '';
+      console.log(`[Crawl] 글 목록 0건${reason}: ${blogId}`);
       return NextResponse.json({
         success: true,
         blogUrl,
         blogId,
         posts: [],
         postsCount: 0,
-        message: `블로그 "${blogId}"에서 글 목록을 찾을 수 없습니다. URL을 확인해주세요.`,
+        diagnostics,
+        message: `블로그 "${blogId}"에서 글 목록을 찾을 수 없습니다${reason}. RSS 공개 여부와 URL을 확인해주세요.`,
         timestamp: new Date().toISOString(),
       });
     }
 
-    // 2단계: 각 글 본문 수집
-    const posts: PostResult[] = [];
-    let skipped = 0;
-    for (const logNo of logNos) {
-      if (posts.length >= limited) break;
-      const result = await fetchPostContent(blogId, logNo);
-      if (result) {
-        posts.push(result);
-      } else {
-        skipped++;
-      }
-      await new Promise((r) => setTimeout(r, 300));
-    }
+    // ── 2단계: 본문 수집 (병렬, 시간 제한) ──
+    const { posts, skipped, timedOut } = await fetchPostsBatch(blogId, entries, limited);
 
-    console.log(`[Crawl] 본문 수집: ${posts.length}개 성공, ${skipped}개 스킵`);
+    diagnostics.push(`본문 수집: ${posts.length}개 성공, ${skipped}개 스킵${timedOut ? ', 시간 초과로 조기 종료' : ''}`);
+    console.log(`[Crawl] 본문 수집: ${posts.length}개, 스킵 ${skipped}개 (${elapsed()}ms)`);
 
-    // 3단계: 날짜순 정렬
+    // ── 3단계: 날짜순 정렬 ──
     posts.sort((a, b) => {
       if (a.publishedAt && b.publishedAt)
         return new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime();
@@ -380,7 +537,6 @@ export async function POST(request: NextRequest) {
       return Number(b.logNo) - Number(a.logNo);
     });
 
-    // logNo 필드 제거
     const output = posts.map(({ logNo: _logNo, ...rest }) => rest);
 
     return NextResponse.json({
@@ -389,12 +545,14 @@ export async function POST(request: NextRequest) {
       blogId,
       posts: output,
       postsCount: output.length,
+      diagnostics,
+      elapsedMs: elapsed(),
       timestamp: new Date().toISOString(),
     });
   } catch (err: unknown) {
-    console.error('[Crawl] 블로그 크롤링 에러:', err);
+    console.error('[Crawl] 에러:', err);
     return NextResponse.json(
-      { error: 'Crawling Failed', message: (err as Error).message },
+      { error: 'Crawling Failed', message: (err as Error).message, diagnostics },
       { status: 500 },
     );
   }

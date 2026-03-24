@@ -243,11 +243,13 @@ export async function crawlAndLearnHospitalStyle(
         errors.push(detail);
         continue;
       }
-      const data = (await res.json()) as { posts?: CrawledPost[]; message?: string };
+      const data = (await res.json()) as { posts?: CrawledPost[]; message?: string; diagnostics?: string[] };
       if (data.posts && data.posts.length > 0) {
         allPosts.push(...data.posts);
+        onProgress?.(`${data.posts.length}개 글 수집됨${urlLabel}`);
       } else {
-        errors.push(`URL ${i + 1}: 글 0건 수집됨${data.message ? ' — ' + data.message : ''}`);
+        const diag = data.diagnostics?.join(', ') || '';
+        errors.push(`URL ${i + 1}: 글 0건${data.message ? ' — ' + data.message : ''}${diag ? ' [' + diag + ']' : ''}`);
       }
     } catch (err) {
       const msg = (err as Error).message || '알 수 없는 오류';
