@@ -43,21 +43,23 @@ function mdToHtml(md: string): string {
   return html.replace(/<script[\s\S]*?<\/script>/gi, '').replace(/on\w+\s*=\s*["'][^"']*["']/gi, '').replace(/javascript\s*:/gi, '');
 }
 
-type FilterTab = 'all' | 'blog' | 'card_news' | 'press_release' | 'refine';
+type FilterTab = 'all' | 'blog' | 'card_news' | 'press_release' | 'image' | 'refine';
 
 const FILTER_TABS: { value: FilterTab; label: string }[] = [
   { value: 'all', label: '전체' },
   { value: 'blog', label: '블로그' },
   { value: 'card_news', label: '카드뉴스' },
   { value: 'press_release', label: '보도자료' },
+  { value: 'image', label: '이미지' },
   { value: 'refine', label: 'AI 보정' },
 ];
 
 const EMPTY_MESSAGES: Record<FilterTab, string> = {
-  all: '블로그를 생성하면 여기에 자동으로 저장됩니다.',
+  all: '콘텐츠를 생성하면 여기에 자동으로 저장됩니다.',
   blog: '블로그 글을 생성하면 여기에 표시됩니다.',
   card_news: '카드뉴스를 생성하면 여기에 표시됩니다.',
   press_release: '보도자료를 생성하면 여기에 표시됩니다.',
+  image: '이미지를 생성하면 여기에 표시됩니다.',
   refine: 'AI 보정 결과가 여기에 표시됩니다.',
 };
 
@@ -67,6 +69,7 @@ function filterPosts(posts: SavedPost[], tab: FilterTab): SavedPost[] {
     case 'blog': return posts.filter(p => p.post_type === 'blog' && p.workflow_type !== 'refine');
     case 'card_news': return posts.filter(p => p.post_type === 'card_news');
     case 'press_release': return posts.filter(p => p.post_type === 'press_release');
+    case 'image': return posts.filter(p => p.post_type === 'image');
     case 'refine': return posts.filter(p => p.workflow_type === 'refine');
   }
 }
@@ -115,6 +118,7 @@ export default function HistoryPage() {
       blog: { label: '블로그', cls: 'bg-blue-50 text-blue-600' },
       card_news: { label: '카드뉴스', cls: 'bg-pink-50 text-pink-600' },
       press_release: { label: '보도자료', cls: 'bg-amber-50 text-amber-600' },
+      image: { label: '이미지', cls: 'bg-emerald-50 text-emerald-600' },
     };
     const info = map[post.post_type] || { label: post.post_type, cls: 'bg-slate-100 text-slate-600' };
     return <span className={`px-1.5 py-0.5 rounded font-semibold text-xs ${info.cls}`}>{info.label}</span>;
@@ -152,7 +156,7 @@ export default function HistoryPage() {
               {selectedPost.topic && (
                 <span className="text-slate-500">주제: {selectedPost.topic}</span>
               )}
-              {selectedPost.char_count != null && (
+              {selectedPost.char_count != null && selectedPost.post_type !== 'image' && (
                 <span>{selectedPost.char_count.toLocaleString()}자</span>
               )}
             </div>
@@ -169,36 +173,60 @@ export default function HistoryPage() {
 
           {/* 본문 */}
           <div className="px-6 py-6">
-            <article
-              className="max-w-none"
-              style={{ fontFamily: "'Malgun Gothic', sans-serif", lineHeight: 1.9 }}
-              dangerouslySetInnerHTML={{ __html: mdToHtml(selectedPost.content) }}
-            />
+            {selectedPost.post_type === 'image' && selectedPost.content.startsWith('data:image') ? (
+              <div className="flex flex-col items-center gap-4">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={selectedPost.content}
+                  alt={selectedPost.title || '생성된 이미지'}
+                  className="max-w-full rounded-xl shadow-md border border-slate-200"
+                />
+                {selectedPost.topic && (
+                  <p className="text-sm text-slate-500 text-center">프롬프트: {selectedPost.topic}</p>
+                )}
+              </div>
+            ) : (
+              <article
+                className="max-w-none"
+                style={{ fontFamily: "'Malgun Gothic', sans-serif", lineHeight: 1.9 }}
+                dangerouslySetInnerHTML={{ __html: mdToHtml(selectedPost.content) }}
+              />
+            )}
           </div>
 
           {/* 하단 액션 */}
           <div className="px-6 py-3 border-t border-slate-100 bg-slate-50/50 flex items-center gap-3">
-            <button
-              onClick={() => {
-                try {
-                  const html = mdToHtml(selectedPost.content);
-                  const blob = new Blob([html], { type: 'text/html' });
-                  const plainBlob = new Blob([selectedPost.content], { type: 'text/plain' });
-                  navigator.clipboard.write([new ClipboardItem({ 'text/html': blob, 'text/plain': plainBlob })]);
-                } catch {
-                  navigator.clipboard.writeText(selectedPost.content);
-                }
-                setCopyFeedback(true);
-                setTimeout(() => setCopyFeedback(false), 1500);
-              }}
-              className={`px-4 py-2 text-xs font-bold rounded-xl transition-all ${
-                copyFeedback
-                  ? 'bg-emerald-500 text-white'
-                  : 'bg-green-500 hover:bg-green-600 text-white shadow-sm'
-              }`}
-            >
-              {copyFeedback ? '✅ 복사 완료' : '블로그로 복사'}
-            </button>
+            {selectedPost.post_type === 'image' && selectedPost.content.startsWith('data:image') ? (
+              <a
+                href={selectedPost.content}
+                download={`image-${selectedPost.id.slice(0, 8)}.png`}
+                className="px-4 py-2 text-xs font-bold rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 transition-all shadow-sm"
+              >
+                다운로드
+              </a>
+            ) : (
+              <button
+                onClick={() => {
+                  try {
+                    const html = mdToHtml(selectedPost.content);
+                    const blob = new Blob([html], { type: 'text/html' });
+                    const plainBlob = new Blob([selectedPost.content], { type: 'text/plain' });
+                    navigator.clipboard.write([new ClipboardItem({ 'text/html': blob, 'text/plain': plainBlob })]);
+                  } catch {
+                    navigator.clipboard.writeText(selectedPost.content);
+                  }
+                  setCopyFeedback(true);
+                  setTimeout(() => setCopyFeedback(false), 1500);
+                }}
+                className={`px-4 py-2 text-xs font-bold rounded-xl transition-all ${
+                  copyFeedback
+                    ? 'bg-emerald-500 text-white'
+                    : 'bg-green-500 hover:bg-green-600 text-white shadow-sm'
+                }`}
+              >
+                {copyFeedback ? '복사 완료' : '블로그로 복사'}
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -291,6 +319,17 @@ export default function HistoryPage() {
               className="w-full text-left bg-white rounded-xl border border-slate-200 p-4 hover:border-blue-200 hover:shadow-sm transition-all group"
             >
               <div className="flex items-start justify-between gap-4">
+                {/* 이미지 타입 썸네일 */}
+                {post.post_type === 'image' && post.content?.startsWith('data:image') && (
+                  <div className="flex-shrink-0">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={post.content}
+                      alt={post.title}
+                      className="w-14 h-14 rounded-lg object-cover border border-slate-200"
+                    />
+                  </div>
+                )}
                 <div className="min-w-0 flex-1">
                   <h3 className="text-sm font-bold text-slate-800 truncate group-hover:text-blue-700 transition-colors">
                     {post.title}
@@ -309,7 +348,7 @@ export default function HistoryPage() {
                       <span className="truncate max-w-[140px] text-slate-400">{post.topic}</span>
                     )}
                     <span>{relativeTime(post.created_at)}</span>
-                    {post.char_count != null && (
+                    {post.char_count != null && post.post_type !== 'image' && (
                       <span>{post.char_count.toLocaleString()}자</span>
                     )}
                   </div>
