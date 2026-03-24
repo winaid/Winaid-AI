@@ -1,8 +1,10 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { listPosts, type SavedPost } from '../../../lib/postStorage';
 import { getSessionSafe } from '../../../lib/supabase';
+import { useAuthGuard } from '../../../hooks/useAuthGuard';
+import PostFeedback from '../../../components/PostFeedback';
 
 // ── 상대 시간 ──
 
@@ -75,6 +77,7 @@ function filterPosts(posts: SavedPost[], tab: FilterTab): SavedPost[] {
 }
 
 export default function HistoryPage() {
+  const { user, userName, isGuest } = useAuthGuard();
   const [posts, setPosts] = useState<SavedPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -228,6 +231,15 @@ export default function HistoryPage() {
               </button>
             )}
           </div>
+
+          {/* 내부용 피드백란 — 로그인 사용자 전용 (guest/external에서는 렌더 안 함) */}
+          {!isGuest && user && (
+            <PostFeedback
+              postId={selectedPost.id}
+              userId={user.id}
+              userName={userName}
+            />
+          )}
         </div>
       </div>
     );
