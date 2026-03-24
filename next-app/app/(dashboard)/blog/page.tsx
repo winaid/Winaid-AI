@@ -89,7 +89,7 @@ function BlogForm() {
   const [medicalLawMode] = useState<'strict' | 'relaxed'>('strict');
   const [includeFaq, setIncludeFaq] = useState(false);
   const [faqCount, setFaqCount] = useState(3);
-  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(true);
   const [learnedStyleId, setLearnedStyleId] = useState<string | undefined>(undefined);
   const [customPrompt, setCustomPrompt] = useState('');
   const [showCustomInput, setShowCustomInput] = useState(false);
