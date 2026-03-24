@@ -67,7 +67,7 @@ export default function CardNewsPage() {
         body: JSON.stringify({
           prompt: finalPrompt,
           systemInstruction,
-          model: 'gemini-2.5-flash-preview-05-20',
+          model: 'gemini-3.1-pro-preview',
           temperature: 0.85,
           maxOutputTokens: 8192,
         }),

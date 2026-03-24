@@ -152,7 +152,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'prompt is required' }, { status: 400 });
   }
 
-  const model = body.model || 'gemini-2.5-flash-preview-05-20';
+  const model = body.model || 'gemini-3.1-pro-preview';
   const systemText = body.systemInstruction || '';
   const userText = body.prompt;
 

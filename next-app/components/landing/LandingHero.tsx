@@ -67,7 +67,7 @@ function LandingHero() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           prompt: `${history}\n\n사용자의 마지막 질문에 답변하세요.`,
-          model: 'gemini-2.0-flash',
+          model: 'gemini-3.1-flash-lite-preview',
           systemInstruction: CHAT_SYSTEM_PROMPT,
           temperature: 0.7,
           maxOutputTokens: 300,

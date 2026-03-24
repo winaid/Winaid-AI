@@ -350,7 +350,7 @@ ${sampleText.substring(0, 5000)}
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       prompt,
-      model: 'gemini-2.5-flash-preview-05-20',
+      model: 'gemini-3.1-flash-lite-preview',
       temperature: 0.3,
       responseType: 'json',
     }),

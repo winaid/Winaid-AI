@@ -62,7 +62,7 @@ export default function PressPage() {
         body: JSON.stringify({
           prompt: finalPrompt,
           systemInstruction,
-          model: 'gemini-2.5-flash-preview-05-20',
+          model: 'gemini-3.1-pro-preview',
           temperature: 0.7,
           maxOutputTokens: 8192,
         }),

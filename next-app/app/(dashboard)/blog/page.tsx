@@ -182,7 +182,7 @@ JSON 배열로 출력한다. 각 항목은 다음 구조를 따른다:
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           prompt,
-          model: 'gemini-2.0-flash-lite',
+          model: 'gemini-3.1-flash-lite-preview',
           responseType: 'json',
           timeout: 60000,
           schema: {
@@ -290,7 +290,7 @@ ${categoryKeywords}
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           prompt,
-          model: 'gemini-2.0-flash-lite',
+          model: 'gemini-3.1-flash-lite-preview',
           responseType: 'json',
           temperature: 0.9,
           timeout: 60000,
@@ -374,7 +374,7 @@ ${categoryKeywords}
         body: JSON.stringify({
           prompt: finalPrompt,
           systemInstruction,
-          model: 'gemini-2.5-flash-preview-05-20',
+          model: 'gemini-3.1-pro-preview',
           temperature: 0.85,
           maxOutputTokens: 8192,
         }),
