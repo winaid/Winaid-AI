@@ -336,6 +336,54 @@ ${categoryKeywords}
   function normalizeBlogStructure(html: string, topicFallback: string): { html: string; log: string[] } {
     const log: string[] = [];
     let out = html;
+    const cleanedPatterns: string[] = [];
+
+    // 0) JSON escape 정리 (old legacyBlogGeneration.ts:1570-1596 동일)
+    // 0a) JSON escaped closing tags: <\/p> → </p> etc.
+    if (/<\\\//.test(out)) {
+      out = out
+        .replace(/<\\\/p>/g, '</p>')
+        .replace(/<\\\/h2>/g, '</h3>')  // h2→h3도 함께
+        .replace(/<\\\/h3>/g, '</h3>')
+        .replace(/<\\\/div>/g, '</div>')
+        .replace(/<\\\/span>/g, '</span>')
+        .replace(/<\\\/strong>/g, '</strong>')
+        .replace(/<\\\/em>/g, '</em>');
+      cleanedPatterns.push('JSON escaped tags (<\\/p> etc.)');
+    }
+    // 0b) 남은 \/ 제거
+    if (/\\\//.test(out)) {
+      out = out.replace(/\\\//g, '/');
+      cleanedPatterns.push('escaped slash (\\/)');
+    }
+    // 0c) \\n 리터럴 문자열 제거 (JSON escape 잔여물)
+    if (/\\n/.test(out)) {
+      out = out.replace(/\\n/g, '');
+      cleanedPatterns.push('literal \\n');
+    }
+    // 0d) 연속 줄바꿈 정리
+    out = out.replace(/\n\n+/g, '\n');
+    // 0e) JSON 형식 잔여물 제거 (AI가 JSON으로 감싼 경우)
+    const hadJsonWrapper =
+      /^\s*\{\s*"title"\s*:\s*"/.test(out) ||
+      /^\s*\{\s*"content"\s*:\s*"/.test(out);
+    if (hadJsonWrapper) {
+      out = out
+        .replace(/^\s*\{\s*"title"\s*:\s*"[^"]*"\s*,\s*"content"\s*:\s*"/i, '')
+        .replace(/"\s*,\s*"imagePrompts"\s*:\s*\[.*?\]\s*\}\s*$/i, '')
+        .replace(/^\s*\{\s*"content"\s*:\s*"/i, '')
+        .replace(/"\s*\}\s*$/i, '');
+      cleanedPatterns.push('JSON wrapper ({\"content\":\"...\"})');
+    }
+    // 0f) 이미지 없음 텍스트 제거
+    out = out
+      .replace(/\(이미지 없음\)/g, '')
+      .replace(/\(이미지가 없습니다\)/g, '')
+      .replace(/\[이미지 없음\]/g, '');
+
+    if (cleanedPatterns.length > 0) {
+      log.push(`[ESCAPE] JSON escape 정리: ${cleanedPatterns.join(', ')}`);
+    }
 
     // 1) h1 → h3
     const h1Count = (out.match(/<h1[\s>]/gi) || []).length;
