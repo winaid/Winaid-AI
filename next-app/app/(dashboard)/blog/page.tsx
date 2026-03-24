@@ -755,6 +755,13 @@ ${subs.length > 0 ? `경쟁 글 소제목: ${subs.join(' / ')}` : ''}
       blogText = normalizedHtml;
       structureLogs.forEach(l => console.info(`[BLOG] ${l}`));
       console.info(`[BLOG] 구조 보정 완료 — ${beforeLen}자 → ${blogText.length}자`);
+
+      // 3.6) 메인 제목 주입 (old resultAssembler.ts 동일: <h2 class="main-title">)
+      const hasMainTitle = blogText.includes('class="main-title"') || blogText.includes("class='main-title'");
+      if (!hasMainTitle) {
+        blogText = `<h2 class="main-title">${topic.trim()}</h2>\n${blogText}`;
+        console.info(`[BLOG] 메인 제목 주입: "${topic.trim()}"`);
+      }
       if (parsed) {
         console.info(`[BLOG] 자가평가 점수 — SEO: ${parsed.seoScore ?? '?'}, 의료법: ${parsed.safetyScore ?? '?'}, 전환: ${parsed.conversionScore ?? '?'}`);
       }

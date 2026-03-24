@@ -296,6 +296,9 @@ export function ResultPanel({ content, completionText = '생성 완료', saveSta
           .rp-preview strong { font-weight: 700; }
           .rp-preview em { font-style: italic; }
 
+          /* ── main-title (old resultAssembler.ts + cssThemes.ts modern 기준) ── */
+          .rp-preview .main-title { font-size: 32px; font-weight: 900; color: #1a1a1a; margin: 0 0 30px 0; padding-bottom: 20px; line-height: 1.4; word-break: keep-all; }
+
           /* ── bare tag fallback (Gemini HTML에 rp-* 클래스가 없는 경우, old applyThemeToHtml 동일) ── */
           .rp-preview h1:not([class]) { font-size: 32px; font-weight: 900; margin: 30px 0 15px; line-height: 1.4; color: #1a1a1a; }
           .rp-preview h2:not([class]) { font-size: 24px; font-weight: 700; margin: 25px 0 12px; line-height: 1.35; color: #1a1a1a; }
@@ -312,18 +315,21 @@ export function ResultPanel({ content, completionText = '생성 완료', saveSta
           .rp-theme-premium { background: #fefefe; padding: 60px; border: 1px solid #e5e5e5; line-height: 2.0; color: #444; }
           .rp-theme-premium .rp-h1 { color: #2c2c2c; font-weight: 700; }
           .rp-theme-premium .rp-h2 { color: #2c2c2c; }
+          .rp-theme-premium .main-title { font-size: 34px; font-weight: 700; color: #2c2c2c; margin-bottom: 35px; padding-bottom: 25px; }
           .rp-theme-premium .rp-p { color: #444; line-height: 2.0; letter-spacing: -0.3px; }
 
           /* ── minimal ── */
           .rp-theme-minimal { max-width: 750px; background: #fff; padding: 30px 20px; color: #555; }
           .rp-theme-minimal .rp-h1 { font-size: 1.875rem; color: #222; }
           .rp-theme-minimal .rp-h2 { color: #222; }
+          .rp-theme-minimal .main-title { font-size: 30px; font-weight: 700; color: #222; margin-bottom: 25px; padding-bottom: 18px; }
           .rp-theme-minimal .rp-p { font-size: 1rem; color: #555; }
 
           /* ── warm ── */
           .rp-theme-warm { max-width: 820px; background: #fffbf5; padding: 45px 35px; border-radius: 20px; color: #4a4a4a; }
           .rp-theme-warm .rp-h1 { color: #c46d3d; padding: 20px 25px; background: #fff; border-radius: 15px; box-shadow: 0 2px 10px rgba(196,109,61,0.1); }
           .rp-theme-warm .rp-h2 { color: #c46d3d; }
+          .rp-theme-warm .main-title { font-size: 32px; font-weight: 800; color: #c46d3d; padding: 20px 25px; background: #fff; border-radius: 15px; box-shadow: 0 2px 10px rgba(196,109,61,0.1); }
           .rp-theme-warm .rp-h3, .rp-theme-warm h3:not([class]) { border-left-color: #c46d3d; color: #c46d3d; }
           .rp-theme-warm .rp-p, .rp-theme-warm p:not([class]) { color: #4a4a4a; }
 
@@ -331,6 +337,7 @@ export function ResultPanel({ content, completionText = '생성 완료', saveSta
           .rp-theme-professional { max-width: 880px; background: #f7f9fb; padding: 50px 40px; border-top: 4px solid #787fff; color: #3a3a3a; }
           .rp-theme-professional .rp-h1 { color: #0066cc; padding: 20px 25px; background: #fff; border-left: 6px solid #787fff; border-radius: 8px; }
           .rp-theme-professional .rp-h2 { color: #0066cc; }
+          .rp-theme-professional .main-title { font-size: 32px; font-weight: 800; color: #0066cc; padding: 20px 25px; background: #fff; border-left: 6px solid #787fff; border-radius: 8px; }
           .rp-theme-professional .rp-p { background: #fff; padding: 20px; border-radius: 8px; color: #3a3a3a; }
         `}</style>
         <article
