@@ -529,7 +529,9 @@ export async function updateCrawledPostContent(id: string, correctedContent: str
 
 export async function crawlAndScoreAllHospitals(
   onProgress?: (msg: string, done: number, total: number) => void,
+  options?: { includeStyleAnalysis?: boolean },
 ): Promise<void> {
+  const includeStyle = options?.includeStyleAnalysis ?? false;
   if (!CRAWLER_URL) {
     throw new Error('크롤러 서버 URL이 설정되지 않았습니다 (NEXT_PUBLIC_CRAWLER_URL)');
   }
@@ -635,16 +637,15 @@ export async function crawlAndScoreAllHospitals(
         }
       }
 
-      // 2) 말투 분석 (수집된 글이 있을 때만)
+      // 2) 말투 분석 (옵션 ON + 수집된 글이 있을 때만)
       let analyzedStyle: LearnedWritingStyle | null = null;
-      if (allContents.length > 0) {
+      if (includeStyle && allContents.length > 0) {
         onProgress?.(`${name} 말투 분석 중...`, i, total);
         try {
           const combinedText = allContents.join('\n\n---\n\n').slice(0, 8000);
           analyzedStyle = await analyzeWritingStyleViaApi(combinedText, name);
         } catch {
           onProgress?.(`${name} 말투 분석 실패 (채점은 완료)`, i, total);
-          // 말투 분석 실패해도 크롤링+채점 결과는 유지
         }
       }
 

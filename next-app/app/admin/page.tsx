@@ -181,6 +181,7 @@ export default function AdminPage() {
   const [scoringPost, setScoringPost] = useState<string | null>(null);
   const [editingContent, setEditingContent] = useState<Record<string, string>>({});
   const [crawlAllStatus, setCrawlAllStatus] = useState<{ loading: boolean; progress: string }>({ loading: false, progress: '' });
+  const [crawlAllIncludeStyle, setCrawlAllIncludeStyle] = useState(false);
 
   // 세션 복원
   useEffect(() => {
@@ -499,11 +500,15 @@ export default function AdminPage() {
   // ── 전체 병원 크롤링 + 채점 ──
   const handleCrawlAllHospitals = async () => {
     if (crawlAllStatus.loading) return;
-    setCrawlAllStatus({ loading: true, progress: '시작 중...' });
+    const modeLabel = crawlAllIncludeStyle ? '크롤링 + 채점 + 말투 분석' : '크롤링 + 채점';
+    setCrawlAllStatus({ loading: true, progress: `${modeLabel} 시작 중...` });
     try {
-      await crawlAndScoreAllHospitals((msg, done, total) => {
-        setCrawlAllStatus({ loading: true, progress: `[${done + 1}/${total}] ${msg}` });
-      });
+      await crawlAndScoreAllHospitals(
+        (msg, done, total) => {
+          setCrawlAllStatus({ loading: true, progress: `[${done + 1}/${total}] ${msg}` });
+        },
+        { includeStyleAnalysis: crawlAllIncludeStyle },
+      );
       setCrawlAllStatus({ loading: false, progress: '전체 완료!' });
       loadStyleProfiles();
     } catch (err: unknown) {
@@ -1024,17 +1029,29 @@ export default function AdminPage() {
                   수집된 글은 오타/맞춤법·의료광고법 점수와 함께 블로그 URL별 최대 10개씩 보관됩니다. 다중 URL 입력 시 각 블로그의 글이 출처별로 구분 표시됩니다.
                 </p>
               </div>
-              <button
-                onClick={handleCrawlAllHospitals}
-                disabled={crawlAllStatus.loading}
-                className="shrink-0 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-sm font-bold rounded-xl transition-colors flex items-center gap-2 shadow-sm"
-              >
-                {crawlAllStatus.loading ? (
-                  <><div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />{crawlAllStatus.progress || '크롤링 중...'}</>
-                ) : (
-                  <>🔄 전체 병원 자동 크롤링 + 채점</>
-                )}
-              </button>
+              <div className="shrink-0 flex flex-col items-end gap-2">
+                <button
+                  onClick={handleCrawlAllHospitals}
+                  disabled={crawlAllStatus.loading}
+                  className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-sm font-bold rounded-xl transition-colors flex items-center gap-2 shadow-sm"
+                >
+                  {crawlAllStatus.loading ? (
+                    <><div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />{crawlAllStatus.progress || '크롤링 중...'}</>
+                  ) : (
+                    <>🔄 전체 병원 자동 {crawlAllIncludeStyle ? '크롤링 + 채점 + 말투 분석' : '크롤링 + 채점'}</>
+                  )}
+                </button>
+                <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={crawlAllIncludeStyle}
+                    onChange={e => setCrawlAllIncludeStyle(e.target.checked)}
+                    disabled={crawlAllStatus.loading}
+                    className="w-3.5 h-3.5 rounded border-violet-300 text-violet-600 focus:ring-violet-500/30"
+                  />
+                  <span className="text-[11px] text-violet-600 font-medium">말투 분석까지 실행</span>
+                </label>
+              </div>
             </div>
             {crawlAllStatus.loading && (
               <div className="mt-2 text-xs text-indigo-600 font-medium">{crawlAllStatus.progress}</div>
