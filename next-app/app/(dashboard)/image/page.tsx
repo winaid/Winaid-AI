@@ -6,6 +6,8 @@
 'use client';
 
 import { useState, useCallback, useRef, useEffect } from 'react';
+import { savePost } from '../../../lib/postStorage';
+import { supabase } from '../../../lib/supabase';
 
 type AspectRatio = '1:1' | '16:9' | '9:16' | '4:3';
 
@@ -281,6 +283,32 @@ export default function ImagePage() {
       if (data.imageDataUrl) {
         setResult(data.imageDataUrl);
         setProgress('');
+
+        // 이미지 생성 기록 저장 (generated_posts)
+        try {
+          let userId: string | null = null;
+          let userEmail: string | null = null;
+          if (supabase) {
+            const { data: { user } } = await supabase.auth.getUser();
+            userId = user?.id ?? null;
+            userEmail = user?.email ?? null;
+          }
+          const titleText = prompt.trim().length > 60
+            ? prompt.trim().substring(0, 60) + '...'
+            : prompt.trim();
+          await savePost({
+            userId,
+            userEmail,
+            hospitalName: hospitalName || undefined,
+            postType: 'image',
+            title: titleText || '이미지 생성',
+            content: `[이미지 생성] 비율: ${aspectRatio}`,
+            topic: prompt.trim(),
+          });
+        } catch {
+          // 기록 저장 실패는 사용자 경험에 영향 주지 않음
+          console.warn('[Image] 생성 기록 저장 실패');
+        }
       } else {
         throw new Error('이미지 데이터를 받지 못했습니다.');
       }

@@ -167,28 +167,21 @@ export async function saveHospitalBlogUrl(
 export async function resetHospitalCrawlData(
   hospitalName: string,
 ): Promise<{ deletedPosts: number; profileDeleted: boolean; errors: string[] }> {
-  if (!supabase) return { deletedPosts: 0, profileDeleted: false, errors: ['Supabase 미설정'] };
   const errors: string[] = [];
 
-  // 크롤링 글 삭제
-  let deletedPosts = 0;
-  const { error: postErr } = await supabase
-    .from('hospital_crawled_posts')
-    .delete()
-    .eq('hospital_name', hospitalName);
-  if (postErr) errors.push(`글 삭제: ${postErr.message}`);
-  else deletedPosts = 1; // 삭제 성공 (정확한 수는 미반환)
+  // 1. 크롤링 글 삭제
+  const postResult = await deleteAllCrawledPosts(hospitalName);
+  if (postResult.error) errors.push(`글 삭제: ${postResult.error}`);
 
-  // 프로파일 삭제
-  let profileDeleted = false;
-  const { error: profErr } = await supabase
-    .from('hospital_style_profiles')
-    .delete()
-    .eq('hospital_name', hospitalName);
-  if (profErr) errors.push(`프로파일 삭제: ${profErr.message}`);
-  else profileDeleted = true;
+  // 2. 말투 프로파일 삭제
+  const profileResult = await deleteHospitalStyleProfile(hospitalName);
+  if (profileResult.error) errors.push(`프로파일 삭제: ${profileResult.error}`);
 
-  return { deletedPosts, profileDeleted, errors };
+  return {
+    deletedPosts: postResult.deleted,
+    profileDeleted: profileResult.success,
+    errors,
+  };
 }
 
 // ── 크롤링 + 학습 ──
@@ -585,6 +578,98 @@ export async function updateCrawledPostContent(id: string, correctedContent: str
     .from('hospital_crawled_posts')
     .update({ corrected_content: correctedContent })
     .eq('id', id);
+}
+
+/** 크롤링 글 단건 저장/upsert (root saveCrawledPost 이식) */
+export async function saveCrawledPost(
+  hospitalName: string,
+  url: string,
+  content: string,
+  score?: CrawledPostScore,
+  meta?: { title?: string; publishedAt?: string; summary?: string; thumbnail?: string },
+): Promise<DBCrawledPost | null> {
+  if (!supabase) return null;
+
+  const blogId = url.match(/blog\.naver\.com\/([^/?#]+)/)?.[1] || '';
+  const record: Record<string, unknown> = {
+    hospital_name: hospitalName,
+    url,
+    content,
+    source_blog_id: blogId,
+    crawled_at: new Date().toISOString(),
+  };
+  if (meta?.title) record.title = meta.title;
+  if (meta?.publishedAt) record.published_at = meta.publishedAt;
+  if (meta?.summary) record.summary = meta.summary;
+  if (meta?.thumbnail) record.thumbnail = meta.thumbnail;
+  if (score) {
+    record.score_typo = score.score_typo;
+    record.score_medical_law = score.score_medical_law;
+    record.score_total = score.score_total;
+    record.typo_issues = score.typo_issues;
+    record.law_issues = score.law_issues;
+    record.scored_at = new Date().toISOString();
+  }
+
+  // 1차 시도: source_blog_id 포함
+  const { data, error } = await (supabase
+    .from('hospital_crawled_posts') as any)
+    .upsert(record, { onConflict: 'hospital_name,url' })
+    .select()
+    .single();
+  if (!error && data) return data as DBCrawledPost;
+
+  // 2차 시도: source_blog_id 컬럼이 없을 수 있으므로 제외
+  if (error) {
+    const { source_blog_id: _removed, ...recordWithout } = record;
+    void _removed;
+    const { data: d2, error: e2 } = await (supabase
+      .from('hospital_crawled_posts') as any)
+      .upsert(recordWithout, { onConflict: 'hospital_name,url' })
+      .select()
+      .single();
+    if (!e2 && d2) return d2 as DBCrawledPost;
+  }
+
+  return null;
+}
+
+/** 특정 병원의 크롤링 글 전체 삭제 (root deleteAllCrawledPosts 이식) */
+export async function deleteAllCrawledPosts(
+  hospitalName: string,
+): Promise<{ deleted: number; error?: string }> {
+  if (!supabase) return { deleted: 0, error: 'Supabase 미설정' };
+
+  const { data, error } = await supabase
+    .from('hospital_crawled_posts')
+    .delete()
+    .eq('hospital_name', hospitalName)
+    .select('id');
+
+  if (error) {
+    console.warn('크롤링 글 삭제 실패:', error.message);
+    return { deleted: 0, error: error.message };
+  }
+  const count = Array.isArray(data) ? data.length : 0;
+  return { deleted: count };
+}
+
+/** 특정 병원의 말투 프로파일만 삭제 (root deleteHospitalStyleProfile 이식) */
+export async function deleteHospitalStyleProfile(
+  hospitalName: string,
+): Promise<{ success: boolean; error?: string }> {
+  if (!supabase) return { success: false, error: 'Supabase 미설정' };
+
+  const { error } = await supabase
+    .from('hospital_style_profiles')
+    .delete()
+    .eq('hospital_name', hospitalName);
+
+  if (error) {
+    console.warn('말투 프로파일 삭제 실패:', error.message);
+    return { success: false, error: error.message };
+  }
+  return { success: true };
 }
 
 export async function crawlAndScoreAllHospitals(

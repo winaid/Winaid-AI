@@ -18,6 +18,7 @@ import {
   resetHospitalCrawlData,
   getCrawledPosts,
   scoreCrawledPost,
+  saveCrawledPost,
   updateCrawledPostScore,
   updateCrawledPostContent,
   crawlAndScoreAllHospitals,
@@ -25,6 +26,8 @@ import {
   LearnedWritingStyle,
 } from '../../lib/styleService';
 import { deleteAllGeneratedPosts } from '../../lib/adminService';
+import { ToastContainer, toast } from '../../components/Toast';
+import { sanitizeHtml } from '../../lib/sanitizeHtml';
 import type { CrawledPostScore, DBCrawledPost } from '../../lib/types';
 
 // ── 타입 ──
@@ -34,6 +37,7 @@ interface AdminStats {
   blogCount: number;
   cardNewsCount: number;
   pressReleaseCount: number;
+  imageCount: number;
   uniqueHospitals: number;
   uniqueUsers: number;
   postsToday: number;
@@ -63,18 +67,20 @@ interface UserProfile {
 }
 
 type Tab = 'contents' | 'users' | 'style';
-type PostTypeFilter = 'all' | 'blog' | 'card_news' | 'press_release';
+type PostTypeFilter = 'all' | 'blog' | 'card_news' | 'press_release' | 'image';
 
 const POST_TYPE_LABELS: Record<string, string> = {
   blog: '블로그',
   card_news: '카드뉴스',
   press_release: '보도자료',
+  image: '이미지',
 };
 
 const POST_TYPE_COLORS: Record<string, string> = {
   blog: 'bg-blue-100 text-blue-700',
   card_news: 'bg-pink-100 text-pink-700',
   press_release: 'bg-amber-100 text-amber-700',
+  image: 'bg-emerald-100 text-emerald-700',
 };
 
 // ── RPC 호출 헬퍼 ──
@@ -89,6 +95,7 @@ async function getAdminStats(token: string): Promise<AdminStats | null> {
     blogCount: row.blog_count ?? 0,
     cardNewsCount: row.card_news_count ?? 0,
     pressReleaseCount: row.press_release_count ?? 0,
+    imageCount: row.image_count ?? 0,
     uniqueHospitals: row.unique_hospitals ?? 0,
     uniqueUsers: row.unique_users ?? 0,
     postsToday: row.posts_today ?? 0,
@@ -302,15 +309,15 @@ export default function AdminPage() {
     const urls = blogUrlInputs[hospitalName] || [];
     const validUrls = urls.filter(u => u.trim() && u.includes('blog.naver.com'));
     if (validUrls.length === 0) {
-      alert('네이버 블로그 URL을 입력해주세요. (blog.naver.com/...)');
+      toast.warning('네이버 블로그 URL을 입력해주세요. (blog.naver.com/...)');
       return;
     }
     try {
       await saveHospitalBlogUrl(hospitalName, teamId, validUrls.join(','));
-      alert(`URL ${validUrls.length}개 저장 완료!`);
+      toast.success(`URL ${validUrls.length}개 저장 완료!`);
       loadStyleProfiles();
     } catch (err: unknown) {
-      alert((err as Error).message || 'URL 저장 실패');
+      toast.error((err as Error).message || 'URL 저장 실패');
     }
   }, [blogUrlInputs, loadStyleProfiles]);
 
@@ -319,7 +326,7 @@ export default function AdminPage() {
     const urls = blogUrlInputs[hospitalName] || [];
     const validUrls = urls.filter(u => u.trim() && u.includes('blog.naver.com'));
     if (validUrls.length === 0) {
-      alert('먼저 네이버 블로그 URL을 입력해주세요.');
+      toast.warning('먼저 네이버 블로그 URL을 입력해주세요.');
       return;
     }
 
@@ -361,12 +368,12 @@ export default function AdminPage() {
       });
       loadStyleProfiles();
       if (result.errors.length > 0) {
-        alert(`초기화 일부 실패: ${result.errors.join(', ')}`);
+        toast.warning(`초기화 일부 실패: ${result.errors.join(', ')}`);
       } else {
-        alert(`${hospitalName}: 글 ${result.deletedPosts}개 삭제${result.profileDeleted ? ', 프로파일 삭제' : ''} 완료`);
+        toast.success(`${hospitalName}: 글 ${result.deletedPosts}개 삭제${result.profileDeleted ? ', 프로파일 삭제' : ''} 완료`);
       }
     } catch (err: unknown) {
-      alert(`초기화 실패: ${(err as Error).message}`);
+      toast.error(`초기화 실패: ${(err as Error).message}`);
     }
   }, [loadStyleProfiles]);
 
@@ -416,7 +423,7 @@ export default function AdminPage() {
       if (selectedPost?.id === postId) setSelectedPost(null);
       loadStats();
     } else {
-      alert('삭제에 실패했습니다.');
+      toast.error('삭제에 실패했습니다.');
     }
   };
 
@@ -455,22 +462,34 @@ export default function AdminPage() {
     if (scoringPost) return;
     setScoringPost(post.id);
     try {
-      const score = await scoreCrawledPost(post.content);
-      await updateCrawledPostScore(post.id, score);
+      // 메모리 글(id가 URL)은 먼저 DB에 저장
+      let dbPost = post;
+      if (post.id.startsWith('http')) {
+        const saved = await saveCrawledPost(post.hospital_name, post.url, post.content);
+        if (saved) {
+          dbPost = saved;
+          setDbPosts(prev => ({
+            ...prev,
+            [post.hospital_name]: [saved, ...(prev[post.hospital_name] || [])],
+          }));
+        }
+      }
+      const score = await scoreCrawledPost(dbPost.content);
+      await updateCrawledPostScore(dbPost.id, score);
       // DB 갱신 반영
       setDbPosts(prev => {
-        const list = prev[post.hospital_name] || [];
+        const list = prev[dbPost.hospital_name] || [];
         return {
           ...prev,
-          [post.hospital_name]: list.map(p =>
-            p.id === post.id
+          [dbPost.hospital_name]: list.map(p =>
+            p.id === dbPost.id
               ? { ...p, ...score, scored_at: new Date().toISOString() }
               : p,
           ),
         };
       });
     } catch (err: unknown) {
-      alert(`채점 실패: ${(err as Error).message}`);
+      toast.error(`채점 실패: ${(err as Error).message}`);
     } finally {
       setScoringPost(null);
     }
@@ -496,9 +515,9 @@ export default function AdminPage() {
         delete next[post.id];
         return next;
       });
-      alert('수정본 저장 완료');
+      toast.success('수정본 저장 완료');
     } catch (err: unknown) {
-      alert(`저장 실패: ${(err as Error).message}`);
+      toast.error(`저장 실패: ${(err as Error).message}`);
     }
   };
 
@@ -620,6 +639,7 @@ export default function AdminPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 p-4 lg:p-8">
+      <ToastContainer />
       <div className="max-w-6xl mx-auto">
       {/* 헤더 */}
       <div className="flex items-center justify-between mb-6">
@@ -646,6 +666,7 @@ export default function AdminPage() {
             { label: '블로그', value: stats.blogCount, color: 'bg-sky-50 text-sky-600' },
             { label: '카드뉴스', value: stats.cardNewsCount, color: 'bg-violet-50 text-violet-600' },
             { label: '보도자료', value: stats.pressReleaseCount, color: 'bg-emerald-50 text-emerald-600' },
+            { label: '이미지', value: stats.imageCount, color: 'bg-amber-50 text-amber-600' },
           ].map((s, i) => (
             <div key={i} className="bg-white rounded-xl p-4 border border-slate-100">
               <div className="text-2xl font-bold text-slate-800">{s.value.toLocaleString()}</div>
@@ -793,6 +814,7 @@ export default function AdminPage() {
                     { key: 'blog' as PostTypeFilter, label: '블로그' },
                     { key: 'card_news' as PostTypeFilter, label: '카드뉴스' },
                     { key: 'press_release' as PostTypeFilter, label: '보도자료' },
+                    { key: 'image' as PostTypeFilter, label: '이미지' },
                   ]).map(f => (
                     <button
                       key={f.key}
@@ -904,7 +926,7 @@ export default function AdminPage() {
                 <div className="p-6 overflow-y-auto max-h-[calc(90vh-180px)]">
                   <div
                     className="prose prose-slate prose-sm max-w-none"
-                    dangerouslySetInnerHTML={{ __html: selectedPost.content }}
+                    dangerouslySetInnerHTML={{ __html: sanitizeHtml(selectedPost.content) }}
                   />
                 </div>
               </div>
@@ -1228,8 +1250,8 @@ export default function AdminPage() {
                               onClick={async () => {
                                 if (!confirm(`"${baseName}" 병원을 목록에서 제거하시겠습니까?`)) return;
                                 const result = await deactivateHospital(baseName);
-                                if (result.success) { loadTeamData(); alert(`${baseName} 제거됨`); }
-                                else alert(result.error || '제거 실패');
+                                if (result.success) { loadTeamData(); toast.success(`${baseName} 제거됨`); }
+                                else toast.error(result.error || '제거 실패');
                               }}
                               disabled={status?.loading}
                               className="px-2 py-2 text-xs text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-40 whitespace-nowrap"
@@ -1630,9 +1652,9 @@ export default function AdminPage() {
                     if (result.success) {
                       setShowAddHospitalModal(false);
                       loadTeamData();
-                      alert(`${newHospital.name} 추가 완료`);
+                      toast.success(`${newHospital.name} 추가 완료`);
                     } else {
-                      alert(result.error || '추가 실패');
+                      toast.error(result.error || '추가 실패');
                     }
                   }}
                   disabled={!newHospital.name.trim()}
