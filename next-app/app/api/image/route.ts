@@ -110,6 +110,7 @@ function getKoreanHolidays(year: number, month: number): string[] {
 interface ImageRequestBody {
   prompt: string;
   aspectRatio?: AspectRatio;
+  mode?: 'blog' | 'default';  // blog: 텍스트 없는 본문 삽화용
   logoInstruction?: string;
   hospitalInfo?: string;
   brandColors?: string;
@@ -165,19 +166,41 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  const fullPrompt = [
-    DESIGNER_PERSONA,
-    DESIGN_RULE,
-    languageRule,
-    calendarInstruction,
-    calendarContext,
-    body.prompt.trim(),
-    body.logoInstruction || '',
-    body.hospitalInfo || '',
-    body.brandColors || '',
-    aspectInstruction,
-    'Generate at high resolution. Sharp edges, crisp text, no blur, no compression artifacts.',
-  ].filter(Boolean).join('\n\n');
+  const isBlogMode = body.mode === 'blog';
+
+  const BLOG_IMAGE_RULE = `[STRICT IMAGE RULES — BLOG ILLUSTRATION MODE]
+You are generating a blog body illustration image. This is NOT a poster, flyer, ad, or infographic.
+ABSOLUTE PROHIBITIONS:
+- NO readable text, titles, captions, labels, signage, logos, or watermarks anywhere in the image
+- NO hospital names, brand names, phone numbers, URLs, social handles
+- NO bullet lists, numbered lists, tables, charts, diagrams, infographics
+- NO poster layout, flyer layout, brochure layout, card news layout, banner layout
+- NO typography of any kind — zero letters, zero words, zero characters
+OUTPUT DIRECTION:
+- Generate a clean editorial-style photograph or natural scene illustration
+- Focus on visual mood, people, spaces, objects, lighting, atmosphere
+- The image must work as a blog body illustration that contains NO information text`;
+
+  const fullPrompt = isBlogMode
+    ? [
+        BLOG_IMAGE_RULE,
+        body.prompt.trim(),
+        aspectInstruction,
+        'Generate at high resolution. Sharp edges, no blur, no compression artifacts. Absolutely no text in the image.',
+      ].filter(Boolean).join('\n\n')
+    : [
+        DESIGNER_PERSONA,
+        DESIGN_RULE,
+        languageRule,
+        calendarInstruction,
+        calendarContext,
+        body.prompt.trim(),
+        body.logoInstruction || '',
+        body.hospitalInfo || '',
+        body.brandColors || '',
+        aspectInstruction,
+        'Generate at high resolution. Sharp edges, crisp text, no blur, no compression artifacts.',
+      ].filter(Boolean).join('\n\n');
 
   // 멀티모달 parts 구성: 텍스트 + 참조 이미지들
   const parts: Array<Record<string, unknown>> = [{ text: fullPrompt }];

@@ -987,7 +987,7 @@ ${topic.trim()}${disease.trim() ? ', 질환: ' + disease.trim() : ''}
             const imgRes = await fetch('/api/image', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ prompt, aspectRatio: '16:9' as const }),
+              body: JSON.stringify({ prompt, aspectRatio: '16:9' as const, mode: 'blog' as const }),
             });
             if (!imgRes.ok) return { index, url: null };
             const imgData = await imgRes.json() as { imageDataUrl?: string };
