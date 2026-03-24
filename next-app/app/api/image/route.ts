@@ -202,7 +202,7 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  const model = 'gemini-3.1-flash-image-preview';
+  const model = 'gemini-3-pro-image-preview';
   const apiBody = {
     contents: [{ role: 'user', parts }],
     generationConfig: {
