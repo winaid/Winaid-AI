@@ -21,8 +21,10 @@ import {
 interface Props {
   /** 현재 화면 식별자 (예: 'history') */
   page: string;
-  userId: string;
-  userName: string;
+  /** 로그인 사용자 ID (미로그인 시 생략 가능 — 3/31 이후 연결 강화 예정) */
+  userId?: string;
+  /** 표시 이름 (미로그인 시 '익명' fallback) */
+  userName?: string;
 }
 
 function timeAgo(dateStr: string): string {
@@ -39,6 +41,9 @@ function timeAgo(dateStr: string): string {
 }
 
 export default function InternalFeedback({ page, userId, userName }: Props) {
+  const resolvedUserId = userId || 'anonymous';
+  const resolvedUserName = userName || '익명';
+
   const [feedbacks, setFeedbacks] = useState<FeedbackItem[]>([]);
   const [text, setText] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -65,7 +70,7 @@ export default function InternalFeedback({ page, userId, userName }: Props) {
     setSubmitError('');
     setSubmitOk(false);
 
-    const result = await addFeedback(page, userId, userName, text);
+    const result = await addFeedback(page, resolvedUserId, resolvedUserName, text);
     if (result.success && result.feedback) {
       setFeedbacks(prev => [...prev, result.feedback!]);
       setText('');
@@ -137,7 +142,7 @@ export default function InternalFeedback({ page, userId, userName }: Props) {
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-semibold text-slate-700">{fb.user_name}</span>
                   <span className="text-[10px] text-slate-400">{timeAgo(fb.created_at)}</span>
-                  {fb.user_id === userId && (
+                  {fb.user_id === resolvedUserId && (
                     <button
                       onClick={() => handleDelete(fb.id)}
                       className="text-[10px] text-slate-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
@@ -157,7 +162,7 @@ export default function InternalFeedback({ page, userId, userName }: Props) {
       <div className="px-5 py-4 border-t border-slate-100">
         <div className="flex gap-2.5">
           <div className="w-7 h-7 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-[10px] font-bold flex-shrink-0 mt-0.5">
-            {userName.charAt(0)}
+            {resolvedUserName.charAt(0)}
           </div>
           <div className="flex-1 min-w-0">
             <textarea

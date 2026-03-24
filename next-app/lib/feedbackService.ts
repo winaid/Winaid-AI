@@ -2,7 +2,8 @@
  * 내부용 피드백 서비스 — internal_feedbacks 테이블 CRUD
  *
  * 페이지 단위 피드백 (각 기록별 댓글이 아님).
- * 로그인 사용자 전용. guest/external에서는 호출하지 않는다.
+ * 로그인/비로그인 모두 작성 가능 (비로그인 시 user_id='anonymous').
+ * 3/31 이후 로그인 연동 시 작성자 식별 강화 예정.
  */
 import { supabase } from './supabase';
 

@@ -255,16 +255,14 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* ── 내부 피드백 영역: History 섹션 바로 아래 sibling 블록 (internal 전용) ── */}
-      {!isGuest && user && (
-        <div className="w-full max-w-3xl mb-10">
-          <InternalFeedback
-            page="dashboard"
-            userId={user.id}
-            userName={userName}
-          />
-        </div>
-      )}
+      {/* ── 내부 피드백 영역: History 섹션 바로 아래 (로그인 불문 표시) ── */}
+      <div id="feedback" className="w-full max-w-3xl mb-10">
+        <InternalFeedback
+          page="dashboard"
+          userId={user?.id}
+          userName={userName}
+        />
+      </div>
     </div>
   );
 }

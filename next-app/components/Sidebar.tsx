@@ -26,6 +26,10 @@ const toolItems: { id: ContentTab; label: string; icon: string; href: string }[]
   { id: 'history', label: '히스토리', icon: '🕐', href: '/history' },
 ];
 
+const extraItems: { label: string; icon: string; href: string }[] = [
+  { label: '피드백', icon: '💬', href: '/app#feedback' },
+];
+
 export function Sidebar({
   collapsed,
   onToggleCollapse,
@@ -84,6 +88,10 @@ export function Sidebar({
           {collapsed ? '···' : '도구'}
         </div>
         {toolItems.map(navButton)}
+
+        <div className="mt-3 border-t border-slate-100 pt-3">
+          {extraItems.map(navButton)}
+        </div>
       </nav>
 
       {/* 하단 */}
