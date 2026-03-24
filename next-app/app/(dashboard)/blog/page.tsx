@@ -424,12 +424,19 @@ ${categoryKeywords}
         } catch {
           // JSON 파싱 실패 — parsed는 undefined로 유지
         }
-        // 마커가 있으면 항상 마커 이후를 제거 (파싱 성공 여부와 무관)
-        // 마커 바로 앞의 코드블록 fence(```)도 함께 제거
+        // 마커 이후 전체 제거 (점수 + 이미지 프롬프트 블록)
         blogText = blogText.substring(0, idx).replace(/\n*```\s*$/, '').replace(/\n+$/, '');
-        // 본문에 혹시 남은 마커 잔여물도 제거
         blogText = blogText.replace(/---SCORES---[\s\S]*$/, '').replace(/\n+$/, '');
       }
+
+      // ---IMAGE_PROMPTS--- 블록이 본문에 남아 있으면 제거
+      blogText = blogText.replace(/---IMAGE_PROMPTS---[\s\S]*$/, '').replace(/\n+$/, '');
+
+      // [IMG_N] 마커 제거 (이미지 생성은 별도 처리 — 현재는 마커만 strip)
+      blogText = blogText.replace(/\[IMG_\d+\]\n*/g, '');
+
+      // HTML 래핑 정리: 코드블록 fence 제거
+      blogText = blogText.replace(/^```html?\s*\n?/i, '').replace(/\n?```\s*$/, '');
 
       setGeneratedContent(blogText);
       setScores(parsed);
@@ -437,8 +444,9 @@ ${categoryKeywords}
       // 저장 — Supabase 또는 guest localStorage
       try {
         const { userId, userEmail } = await getSessionSafe();
-        const titleMatch = blogText.match(/^#\s+(.+)/m) || blogText.match(/^(.+)/);
-        const extractedTitle = titleMatch ? titleMatch[1].replace(/^#+\s*/, '').trim().substring(0, 200) : topic.trim();
+        // HTML에서 제목 추출: <h3> 첫 번째 또는 첫 줄
+        const titleMatch = blogText.match(/<h3[^>]*>([^<]+)<\/h3>/) || blogText.match(/^(.+)/);
+        const extractedTitle = titleMatch ? titleMatch[1].replace(/<[^>]*>/g, '').trim().substring(0, 200) : topic.trim();
 
         const saveResult = await savePost({
           userId,

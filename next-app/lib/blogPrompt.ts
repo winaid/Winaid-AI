@@ -1,8 +1,8 @@
 /**
  * 블로그 생성 프롬프트 조립 — GenerationRequest → { systemInstruction, prompt }
  *
- * 기존 Vite 앱의 프롬프트 로직을 단순화하여 이식.
- * 핵심 구조: systemInstruction(역할 지정) + prompt(구체적 요청)
+ * old legacyBlogGeneration.ts 기준으로 이식.
+ * 출력: HTML (<h3> 소제목 + <p> 문단 + [IMG_N] 마커)
  */
 import type { GenerationRequest } from './types';
 
@@ -31,6 +31,65 @@ const STYLE_GUIDES: Record<string, string> = {
   conversion: '독자가 상담 예약이나 문의를 하도록 자연스럽게 유도하는 문장을 포함합니다.',
 };
 
+function getImageStyleGuide(req: GenerationRequest): string {
+  const custom = req.customImagePrompt?.trim();
+  if (custom) return `커스텀 스타일: ${custom}`;
+  switch (req.imageStyle) {
+    case 'illustration':
+      return '3D 렌더 일러스트, Blender 스타일, 부드러운 스튜디오 조명, 파스텔 색상, 둥근 형태, 친근한 캐릭터, 깔끔한 배경 (⛔금지: 실사, 사진, DSLR)';
+    case 'medical':
+      return '의학 3D 일러스트, 해부학적 렌더링, 해부학적 구조, 장기 단면도, 반투명 장기, 임상 조명, 의료 색상 팔레트 (⛔금지: 귀여운 만화, 실사 얼굴)';
+    default:
+      return '실사 DSLR 사진, 진짜 사진, 35mm 렌즈, 자연스러운 부드러운 조명, 얕은 피사계심도, 전문 병원 환경 (⛔금지: 3D 렌더, 일러스트, 만화, 애니메이션)';
+  }
+}
+
+function buildHtmlTemplate(imageCount: number): string {
+  let html = `<p>도입 1 - 구체적 상황 + 감각</p>
+<p>도입 2 - 공감</p>
+${imageCount >= 1 ? '[IMG_1]' : ''}
+
+<h3>소제목 1</h3>
+<p>문단 1</p>
+<p>문단 2</p>
+${imageCount >= 2 ? '[IMG_2]' : ''}
+
+<h3>소제목 2</h3>
+<p>문단 1</p>
+<p>문단 2</p>
+${imageCount >= 3 ? '[IMG_3]' : ''}
+
+<h3>소제목 3</h3>
+<p>문단 1</p>
+<p>문단 2</p>
+${imageCount >= 4 ? '[IMG_4]' : ''}`;
+
+  if (imageCount >= 5) {
+    html += `
+
+<h3>소제목 4</h3>
+<p>문단 1</p>
+<p>문단 2</p>
+[IMG_5]`;
+  }
+
+  if (imageCount >= 6) {
+    html += `
+
+<h3>소제목 5</h3>
+<p>문단 1</p>
+<p>문단 2</p>
+[IMG_6]`;
+  }
+
+  html += `
+
+<p>마무리</p>
+<p>#해시태그 10개</p>`;
+
+  return html;
+}
+
 export function buildBlogPrompt(req: GenerationRequest): {
   systemInstruction: string;
   prompt: string;
@@ -43,6 +102,17 @@ export function buildBlogPrompt(req: GenerationRequest): {
     ? '의료광고법 준수는 유지하되, "~수 있습니다", "~에 도움이 됩니다" 등의 표현을 적극 활용합니다.'
     : '의료광고법을 엄격히 준수합니다. "최고", "최초", "100%", 과장 표현 금지.';
 
+  const targetImageCount = req.imageCount ?? 0;
+  const targetLength = req.textLength || 1500;
+  const imageStyleGuide = getImageStyleGuide(req);
+
+  // 소제목 개수 가이드 (old gpt52-prompts-staged.ts 동일)
+  let subheadingGuide: string;
+  if (targetLength < 2000) subheadingGuide = '5개';
+  else if (targetLength < 2500) subheadingGuide = '5~6개';
+  else if (targetLength < 3000) subheadingGuide = '6개';
+  else subheadingGuide = '6~7개';
+
   const systemInstruction = [
     '당신은 한국의 병원 마케팅 전문 블로그 작성자입니다.',
     personaGuide,
@@ -50,56 +120,150 @@ export function buildBlogPrompt(req: GenerationRequest): {
     `글의 어조: ${toneGuide}`,
     styleGuide,
     medLawNote,
-    '네이버 스마트블록 SEO에 최적화된 구조로 작성합니다.',
-    '소제목(##)을 활용하여 가독성을 높입니다.',
-    'HTML 태그 없이 순수 마크다운으로 작성합니다.',
+    '네이버 스마트블록 SEO에 최적화된 HTML 구조로 작성합니다.',
+    '출력은 반드시 HTML입니다. <h3>으로 소제목, <p>로 문단을 작성합니다.',
+    'H1, H2 태그는 사용하지 않습니다. 소제목은 반드시 <h3>만 사용합니다.',
+    '마크다운(#, ##, **) 금지. 순수 HTML 태그만 사용합니다.',
   ].filter(Boolean).join('\n');
 
-  const promptParts = [
-    `## 블로그 작성 요청`,
+  const promptParts: string[] = [];
+
+  // ── 작성 요청 ──
+  promptParts.push(
+    '한국 병·의원 네이버 블로그용 의료 콘텐츠를 작성하세요.',
+    '',
+    '[작성 요청]',
     `- 진료과: ${req.category}`,
-    `- 주제: ${req.topic}`,
-  ];
+    `- 제목/주제: ${req.topic}`,
+    `- SEO 키워드: ${req.keywords || '없음'}`,
+  );
 
   if (req.disease) {
-    promptParts.push(`- 질환명: ${req.disease}`);
-  }
-  if (req.keywords) {
-    promptParts.push(`- SEO 키워드: ${req.keywords}`);
+    promptParts.push(`- 질환(글의 핵심 주제): ${req.disease}`);
   }
   if (req.hospitalName) {
     promptParts.push(`- 병원명: ${req.hospitalName}`);
   }
 
-  promptParts.push(`- 목표 글자수: 약 ${req.textLength || 1500}자`);
+  promptParts.push(
+    `- 이미지: ${targetImageCount}장`,
+    `- 목표 글자 수: ${targetLength}자 ~ ${targetLength + 200}자`,
+  );
 
-  if (req.includeFaq) {
-    promptParts.push(`- FAQ 섹션을 ${req.faqCount || 3}개 포함해주세요.`);
+  // ── 소제목 구조 규칙 (old 동일) ──
+  promptParts.push(
+    '',
+    '[글 전체 구조]',
+    '- 도입부: 2문단 고정 (h3 소제목 없음, <p> 태그만)',
+    `- 본문 소제목: 최소 5개 (${targetLength}자 기준 ${subheadingGuide} 권장)`,
+    '- 각 소제목 = <h3> 태그. H1, H2 사용 금지',
+    '- 각 소제목 아래 문단 2~3개씩 균일. 마지막 소제목도 축약 금지',
+    '- 소제목 간 문단 수 차이 최대 1문단',
+    '- 마무리: 2문단 고정 (h3 소제목으로 시작)',
+    '',
+    '[소제목 규칙]',
+    '- 네이버 검색창에 사람이 직접 칠 법한 말투. 짧고 구어체 (10~25자)',
+    '- 피할 것: "~이란", "~의 정의", "주요 ~", "~ 및 ~"',
+    '- 좋은 예: "찬 물만 마시면 이가 시린 이유" / "충치인 줄 알았는데 잇몸이 문제?"',
+    '- 각 소제목은 하나의 역할만 담당 (정의/원인/증상/치료/관리 등). 앞 소제목에서 다룬 정보 반복 금지',
+  );
+
+  // ── 키워드 규칙 ──
+  if (req.disease && req.keywords) {
+    promptParts.push(
+      '',
+      `[키워드·질환 역할 분리]`,
+      `SEO 키워드: "${req.keywords}" / 질환: "${req.disease}"`,
+      `→ 키워드는 SEO용, 질환이 글의 실제 주제. 다른 질환명 추가 금지.`,
+    );
+  } else if (req.keywords) {
+    promptParts.push(
+      '',
+      `[키워드]`,
+      `"${req.keywords}" - 전체 3~4회, 도입부 첫 2문장에서는 금지. 다른 질환명 추가 금지.`,
+    );
   }
 
+  // ── 사용자 지정 소제목 ──
   if (req.customSubheadings) {
-    promptParts.push(`\n[사용자 지정 소제목]\n${req.customSubheadings}`);
+    promptParts.push(
+      '',
+      '[사용자 지정 소제목 - 반드시 이 소제목 사용]',
+      req.customSubheadings,
+    );
   }
+
+  // ── FAQ ──
+  if (req.includeFaq) {
+    promptParts.push(
+      '',
+      `[FAQ 섹션]`,
+      `본문 마무리 전에 FAQ를 ${req.faqCount || 3}개 포함하세요.`,
+      '형식: <h3>자주 묻는 질문</h3> 아래에 Q/A를 <p> 태그로 작성.',
+    );
+  }
+
+  // ── HTML 구조 + 이미지 마커 (old 동일) ──
+  promptParts.push(
+    '',
+    `[HTML 구조] - 이미지 ${targetImageCount}장 기준`,
+    buildHtmlTemplate(targetImageCount),
+  );
 
   promptParts.push(
     '',
-    '위 조건에 맞는 블로그 글을 작성해주세요.',
-    '제목은 SEO에 효과적이고 클릭을 유도하는 형태로 만들어주세요.',
-    '첫 문단에서 독자의 관심을 끌고, 본문에서 전문 정보를 전달하며, 마지막에 자연스러운 마무리를 해주세요.',
-    '',
-    '## 품질 자가평가 (필수)',
-    '블로그 글 작성이 끝나면, 글 맨 마지막에 아래 형식으로 자가평가 점수를 반드시 붙여주세요.',
-    '점수는 0~100 사이 정수입니다. 솔직하게 평가하세요.',
-    '',
-    '```',
-    '---SCORES---',
-    '{"seo": [SEO 최적화 점수], "medical": [의료광고법 준수 점수], "conversion": [전환력/행동유도 점수]}',
-    '```',
-    '',
-    '- seo: 키워드 밀도, 소제목 구조, 메타 적합성 기준',
-    '- medical: 의료광고법 위반 표현 유무 기준 (위반 없으면 90+)',
-    '- conversion: 독자가 상담/예약으로 이어질 가능성 기준',
+    `🚨 일반 소제목: <p> 2~3개 / 마무리: <p> 2개 (도입부와 비슷한 분량)`,
   );
+
+  // ── 이미지 프롬프트 규칙 (old 동일) ──
+  if (targetImageCount > 0) {
+    promptParts.push(
+      '',
+      `[이미지 프롬프트 규칙] 🚨 정확히 ${targetImageCount}개 필수!`,
+      `글 마지막에 [IMAGE_PROMPTS] 블록으로 이미지 프롬프트를 작성하세요.`,
+      `- 스타일: ${imageStyleGuide}`,
+      '- 텍스트/로고/워터마크 금지',
+      '- 사람이 등장할 경우 반드시 "한국인" 명시 (예: "한국인 여성", "한국인 의사")',
+      '',
+      '[이미지-본문 매칭 규칙]',
+      '- 각 [IMG_N] 위치의 이미지 프롬프트는 바로 위/아래 문단의 내용을 시각적으로 표현',
+      '- 이미지 순서: 본문 흐름과 동일하게 (도입→증상→원인→관리)',
+      '- 각 이미지가 서로 다른 장면이어야 합니다 (비슷한 포즈/배경 반복 금지)',
+    );
+
+    if (req.customImagePrompt) {
+      promptParts.push(
+        '',
+        `[커스텀 스타일 필수 적용]`,
+        `사용자가 "${req.customImagePrompt}" 스타일을 요청했습니다.`,
+        `모든 이미지 프롬프트에 이 스타일 키워드를 반드시 포함하세요.`,
+      );
+    }
+  }
+
+  // ── 출력 형식 ──
+  promptParts.push(
+    '',
+    '[출력 형식]',
+    '1. 먼저 HTML 본문을 작성하세요.',
+    targetImageCount > 0
+      ? `   본문 안에 [IMG_1]~[IMG_${targetImageCount}] 마커를 위 구조대로 배치하세요.`
+      : '   이미지 마커 없이 작성하세요.',
+    '2. 본문 작성이 끝나면 아래 형식으로 자가평가 점수를 붙이세요:',
+    '',
+    '---SCORES---',
+    '{"seo": [점수], "medical": [점수], "conversion": [점수]}',
+  );
+
+  if (targetImageCount > 0) {
+    promptParts.push(
+      '',
+      `3. 점수 블록 다음에 이미지 프롬프트를 작성하세요:`,
+      '',
+      '---IMAGE_PROMPTS---',
+      `[정확히 ${targetImageCount}줄, 한 줄에 하나씩, 한국어로 작성]`,
+    );
+  }
 
   return {
     systemInstruction,
