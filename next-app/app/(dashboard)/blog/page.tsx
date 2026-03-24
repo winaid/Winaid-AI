@@ -862,6 +862,23 @@ ${topic.trim()}${disease.trim() ? ', 질환: ' + disease.trim() : ''}
         }
       }
 
+      // ── 글자수 목표 대비 검증 (old legacyBlogGeneration.ts:1474-1498 동일) ──
+      {
+        const textOnly = blogText.replace(/<[^>]+>/g, '');
+        const charCountNoSpaces = textOnly.replace(/\s/g, '').length;
+        const targetMin = textLength;
+        const targetMax = textLength + 300;
+        const deviation = charCountNoSpaces - textLength;
+
+        if (charCountNoSpaces < targetMin) {
+          console.info(`[BLOG] 글자수 부족: 목표=${textLength}자, 실제=${charCountNoSpaces}자 (${deviation}자 부족)`);
+        } else if (charCountNoSpaces > targetMax) {
+          console.info(`[BLOG] 글자수 초과: 목표=${textLength}자, 실제=${charCountNoSpaces}자 (+${deviation}자) — 그대로 진행`);
+        } else {
+          console.info(`[BLOG] ✅ 글자수 적정: 목표=${textLength}자, 실제=${charCountNoSpaces}자 (${deviation >= 0 ? '+' : ''}${deviation}자)`);
+        }
+      }
+
       // 4) 이미지 없으면 마커 strip 후 바로 표시
       if (imageCount === 0 || imagePrompts.length === 0) {
         blogText = blogText.replace(/\[IMG_\d+\]\n*/g, '');
