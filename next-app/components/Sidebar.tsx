@@ -27,7 +27,7 @@ const toolItems: { id: ContentTab; label: string; icon: string; href: string }[]
 ];
 
 const extraItems: { label: string; icon: string; href: string }[] = [
-  { label: '피드백', icon: '💬', href: '/app#feedback' },
+  { label: '피드백', icon: '💬', href: '/feedback' },
 ];
 
 export function Sidebar({

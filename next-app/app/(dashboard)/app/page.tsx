@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { useAuthGuard } from '../../../hooks/useAuthGuard';
 import { listPosts, type SavedPost } from '../../../lib/postStorage';
 import { getSessionSafe } from '../../../lib/supabase';
-import InternalFeedback from '../../../components/InternalFeedback';
 
 type ContentTab = 'blog' | 'card_news' | 'press' | 'refine' | 'image' | 'history';
 
@@ -255,14 +254,6 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* ── 내부 피드백 영역: History 섹션 바로 아래 (로그인 불문 표시) ── */}
-      <div id="feedback" className="w-full max-w-3xl mb-10">
-        <InternalFeedback
-          page="dashboard"
-          userId={user?.id}
-          userName={userName}
-        />
-      </div>
     </div>
   );
 }
