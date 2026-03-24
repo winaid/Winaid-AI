@@ -368,18 +368,93 @@ ${categoryKeywords}
     try {
       const { systemInstruction, prompt } = buildBlogPrompt(request);
 
-      // 말투 주입 우선순위 (old 동일): 1) 수동 학습(localStorage) → 2) 병원 블로그 학습(Supabase)
+      // ── 경쟁 블로그 분석 (old legacyBlogGeneration.ts line 674-724 동일) ──
+      let competitorInstruction = '';
+      if (keywords.trim()) {
+        try {
+          const competitorRes = await fetch('/api/gemini', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              prompt: `너는 네이버 블로그 SEO 분석 전문가다.
+"${keywords.trim()}" 키워드로 네이버 통합탭에서 1위를 차지할 블로그 글의 구조를 분석해줘.
+
+실제 네이버 상위 블로그를 참고하여 아래 형식의 JSON으로만 답변해.
+설명 없이 JSON만 출력.
+
+{
+  "title": "예상 1위 블로그 제목 (30~40자)",
+  "charCount": 예상 글자수(숫자),
+  "subtitleCount": 예상 소제목 수(숫자),
+  "subtitles": ["소제목1", "소제목2", "소제목3", ...],
+  "imageCount": 예상 이미지 수(숫자),
+  "keyAngles": ["이 키워드에서 자주 다루는 핵심 관점 3~5개"]
+}`,
+              model: 'gemini-3.1-flash-lite-preview',
+              temperature: 0.3,
+              responseType: 'json',
+              timeout: 15000,
+            }),
+          });
+
+          if (competitorRes.ok) {
+            const cData = await competitorRes.json() as { text?: string };
+            if (cData.text) {
+              let cText = cData.text;
+              const cJsonMatch = cText.match(/```(?:json)?\s*([\s\S]*?)```/);
+              if (cJsonMatch) cText = cJsonMatch[1];
+              const c = JSON.parse(cText.trim()) as {
+                title?: string; charCount?: number; subtitleCount?: number;
+                subtitles?: string[]; imageCount?: number; keyAngles?: string[];
+              };
+              const subs = c.subtitles || [];
+              competitorInstruction = `
+[경쟁 블로그 분석 결과 - 이 글보다 상위에 노출되어야 함]
+현재 "${keywords.trim()}" 통합탭 상위 블로그 예상 구조:
+- 제목: ${c.title || '미분석'}
+- 글자 수: ${c.charCount || 0}자
+- 소제목 수: ${subs.length}개
+- 이미지 수: ${c.imageCount || 0}개
+${subs.length > 0 ? `- 소제목 목록: ${subs.join(' / ')}` : ''}
+
+[경쟁 분석 기반 작성 전략]
+1. 글자 수: 경쟁 글(${c.charCount || 0}자)보다 충분한 분량 확보
+2. 소제목: 경쟁 글(${subs.length}개)보다 더 다양한 관점 제공
+3. 이미지: 경쟁 글(${c.imageCount || 0}개)과 동등 이상
+4. 구조: 더 읽기 쉽고 체류 시간이 길어지는 구조 설계
+
+[차별화 앵글 설계 - 경쟁 글과 다른 관점 필수]
+${subs.length > 0 ? `경쟁 글 소제목: ${subs.join(' / ')}` : ''}
+위 소제목이 이미 다루는 내용은 "같은 말 다시 하기"가 아니라 "더 깊은 메커니즘/숫자"로 차별화.
+경쟁 글이 빠뜨린 앵글을 최소 1~2개 추가:
+- 빠진 관점 후보: 자가 관리법, 연령대별 차이, 시술 후 관리, 비용/기간 현실 정보, 잘못 알려진 상식 바로잡기
+- 경쟁 글이 나열형이면 → 우리는 "독자 상황별 분기"나 "흔한 오해" 앵글로 차별화
+- 경쟁 글이 감성 위주면 → 우리는 구체적 숫자/메커니즘으로 차별화
+`;
+            }
+          }
+        } catch {
+          // 경쟁 분석 실패해도 생성은 계속 진행
+        }
+      }
+
+      // 프롬프트 조립: 기본 + 경쟁 분석 + 말투
       let finalPrompt = prompt;
+      if (competitorInstruction) {
+        finalPrompt += `\n\n${competitorInstruction}`;
+      }
+
+      // 말투 주입 우선순위 (old 동일): 1) 수동 학습(localStorage) → 2) 병원 블로그 학습(Supabase)
       if (learnedStyleId) {
         const learnedStyle = getStyleById(learnedStyleId);
         if (learnedStyle) {
-          finalPrompt = `${prompt}\n\n[🎓🎓🎓 학습된 말투 적용 - 최우선 적용! 🎓🎓🎓]\n${getStylePromptForGeneration(learnedStyle)}\n\n⚠️ 위 학습된 말투를 반드시 적용하세요!\n- 문장 끝 패턴을 정확히 따라하세요\n- 자주 사용하는 표현을 자연스럽게 활용하세요\n- 전체적인 어조와 분위기를 일관되게 유지하세요`;
+          finalPrompt += `\n\n[🎓🎓🎓 학습된 말투 적용 - 최우선 적용! 🎓🎓🎓]\n${getStylePromptForGeneration(learnedStyle)}\n\n⚠️ 위 학습된 말투를 반드시 적용하세요!\n- 문장 끝 패턴을 정확히 따라하세요\n- 자주 사용하는 표현을 자연스럽게 활용하세요\n- 전체적인 어조와 분위기를 일관되게 유지하세요`;
         }
       } else if (hospitalName) {
         try {
           const stylePrompt = await getHospitalStylePrompt(hospitalName);
           if (stylePrompt) {
-            finalPrompt = `${prompt}\n\n[병원 블로그 학습 말투 - 반드시 적용]\n${stylePrompt}`;
+            finalPrompt += `\n\n[병원 블로그 학습 말투 - 반드시 적용]\n${stylePrompt}`;
           }
         } catch { /* 프로파일 없으면 기본 동작 */ }
       }
