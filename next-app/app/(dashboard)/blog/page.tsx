@@ -10,6 +10,7 @@ import { savePost } from '../../../lib/postStorage';
 import { getSessionSafe } from '../../../lib/supabase';
 import { getHospitalStylePrompt } from '../../../lib/styleService';
 import { ErrorPanel, ResultPanel, type ScoreBarData } from '../../../components/GenerationResult';
+import WritingStyleLearner, { getStyleById, getStylePromptForGeneration } from '../../../components/WritingStyleLearner';
 
 function BlogForm() {
   const searchParams = useSearchParams();
@@ -37,6 +38,7 @@ function BlogForm() {
   const [includeFaq, setIncludeFaq] = useState(false);
   const [faqCount, setFaqCount] = useState(3);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [learnedStyleId, setLearnedStyleId] = useState<string | undefined>(undefined);
 
   // ── AI 제목 추천 / 트렌드 상태 ──
   const [isLoadingTitles, setIsLoadingTitles] = useState(false);
@@ -357,9 +359,14 @@ ${categoryKeywords}
     try {
       const { systemInstruction, prompt } = buildBlogPrompt(request);
 
-      // 병원 말투 프로파일 자동 주입
+      // 말투 주입 우선순위 (old 동일): 1) 수동 학습(localStorage) → 2) 병원 블로그 학습(Supabase)
       let finalPrompt = prompt;
-      if (hospitalName) {
+      if (learnedStyleId) {
+        const learnedStyle = getStyleById(learnedStyleId);
+        if (learnedStyle) {
+          finalPrompt = `${prompt}\n\n[🎓🎓🎓 학습된 말투 적용 - 최우선 적용! 🎓🎓🎓]\n${getStylePromptForGeneration(learnedStyle)}\n\n⚠️ 위 학습된 말투를 반드시 적용하세요!\n- 문장 끝 패턴을 정확히 따라하세요\n- 자주 사용하는 표현을 자연스럽게 활용하세요\n- 전체적인 어조와 분위기를 일관되게 유지하세요`;
+        }
+      } else if (hospitalName) {
         try {
           const stylePrompt = await getHospitalStylePrompt(hospitalName);
           if (stylePrompt) {
@@ -560,6 +567,13 @@ ${categoryKeywords}
             )}
           </div>
 
+          {/* 말투 학습 (old WritingStyleLearner 동일) */}
+          <WritingStyleLearner
+            onStyleSelect={(styleId) => setLearnedStyleId(styleId)}
+            selectedStyleId={learnedStyleId}
+            contentType="blog"
+          />
+
           {/* 진료과 + 대상 독자 (old 동일: grid-cols-2 select) */}
           <div className="grid grid-cols-2 gap-3">
             <select
@@ -747,15 +761,17 @@ ${categoryKeywords}
                   rows={3}
                 />
               </div>
-              {/* 화자/어조 */}
-              <div className="grid grid-cols-2 gap-2">
-                <select value={persona} onChange={e => setPersona(e.target.value)} className={inputCls}>
-                  {PERSONAS.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
-                </select>
-                <select value={tone} onChange={e => setTone(e.target.value)} className={inputCls}>
-                  {TONES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-                </select>
-              </div>
+              {/* 화자/어조 (학습된 말투 적용 시 숨김 — old 동일) */}
+              {!learnedStyleId && (
+                <div className="grid grid-cols-2 gap-2">
+                  <select value={persona} onChange={e => setPersona(e.target.value)} className={inputCls}>
+                    {PERSONAS.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
+                  </select>
+                  <select value={tone} onChange={e => setTone(e.target.value)} className={inputCls}>
+                    {TONES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                  </select>
+                </div>
+              )}
             </div>
           </div>
           )}
