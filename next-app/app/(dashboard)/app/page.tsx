@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthGuard } from '../../../hooks/useAuthGuard';
 import InternalFeedback from '../../../components/InternalFeedback';
@@ -11,6 +11,14 @@ export default function DashboardPage() {
   const router = useRouter();
   const { user, userName } = useAuthGuard();
   const [quickInput, setQuickInput] = useState('');
+
+  useEffect(() => {
+    if (window.location.hash === '#feedback') {
+      setTimeout(() => {
+        document.getElementById('feedback')?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+    }
+  }, []);
 
   const navigateTo = (tab: ContentTab) => router.push(`/${tab}`);
 

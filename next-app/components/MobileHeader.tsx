@@ -57,25 +57,40 @@ export function MobileHeader({
       {!isAppHome && (
         <div className="border-t border-slate-100/80">
           <nav className="w-full px-3 flex items-center gap-1 overflow-x-auto" role="tablist">
-            {tabs.map(item => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`relative py-3 px-3 text-[12px] font-semibold whitespace-nowrap transition-colors ${
-                  pathname === item.href
-                    ? 'text-blue-600'
-                    : 'text-slate-500 hover:text-slate-800'
-                }`}
-              >
-                <span className="flex items-center gap-1">
-                  <span className="text-sm">{item.icon}</span>
-                  {item.label}
-                </span>
-                {pathname === item.href && (
-                  <div className="absolute bottom-0 left-2 right-2 h-[2px] bg-blue-600 rounded-full" />
-                )}
-              </Link>
-            ))}
+            {tabs.map(item => {
+              const hashIdx = item.href.indexOf('#');
+              const hasHash = hashIdx !== -1;
+              const basePath = hasHash ? item.href.slice(0, hashIdx) : item.href;
+              const isItemActive = pathname === item.href || (hasHash && pathname === basePath);
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={(e) => {
+                    if (hasHash && pathname === basePath) {
+                      e.preventDefault();
+                      const hash = item.href.slice(hashIdx + 1);
+                      const el = document.getElementById(hash);
+                      if (el) el.scrollIntoView({ behavior: 'smooth' });
+                      window.history.replaceState(null, '', item.href);
+                    }
+                  }}
+                  className={`relative py-3 px-3 text-[12px] font-semibold whitespace-nowrap transition-colors ${
+                    isItemActive
+                      ? 'text-blue-600'
+                      : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  <span className="flex items-center gap-1">
+                    <span className="text-sm">{item.icon}</span>
+                    {item.label}
+                  </span>
+                  {isItemActive && (
+                    <div className="absolute bottom-0 left-2 right-2 h-[2px] bg-blue-600 rounded-full" />
+                  )}
+                </Link>
+              );
+            })}
           </nav>
         </div>
       )}

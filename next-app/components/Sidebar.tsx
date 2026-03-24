@@ -42,23 +42,38 @@ export function Sidebar({
 
   const isActive = (href: string) => pathname === href || (href.includes('#') && pathname === href.split('#')[0]);
 
-  const navButton = (item: { label: string; icon: string; href: string }) => (
-    <Link
-      key={item.href}
-      href={item.href}
-      title={collapsed ? item.label : undefined}
-      className={`w-full flex items-center gap-2.5 rounded-xl transition-all text-[13px] font-semibold ${
-        collapsed ? 'justify-center px-2 py-2.5' : 'px-3 py-2.5'
-      } ${
-        isActive(item.href)
-          ? 'bg-blue-50 text-blue-700 font-bold'
-          : 'text-slate-600 hover:text-slate-800 hover:bg-slate-50'
-      }`}
-    >
-      <span className="text-base flex-none">{item.icon}</span>
-      {!collapsed && <span>{item.label}</span>}
-    </Link>
-  );
+  const navButton = (item: { label: string; icon: string; href: string }) => {
+    const hashIndex = item.href.indexOf('#');
+    const hasHash = hashIndex !== -1;
+    const basePath = hasHash ? item.href.slice(0, hashIndex) : item.href;
+    const hash = hasHash ? item.href.slice(hashIndex + 1) : '';
+
+    return (
+      <Link
+        key={item.href}
+        href={item.href}
+        title={collapsed ? item.label : undefined}
+        onClick={(e) => {
+          if (hasHash && pathname === basePath) {
+            e.preventDefault();
+            const el = document.getElementById(hash);
+            if (el) el.scrollIntoView({ behavior: 'smooth' });
+            window.history.replaceState(null, '', item.href);
+          }
+        }}
+        className={`w-full flex items-center gap-2.5 rounded-xl transition-all text-[13px] font-semibold ${
+          collapsed ? 'justify-center px-2 py-2.5' : 'px-3 py-2.5'
+        } ${
+          isActive(item.href)
+            ? 'bg-blue-50 text-blue-700 font-bold'
+            : 'text-slate-600 hover:text-slate-800 hover:bg-slate-50'
+        }`}
+      >
+        <span className="text-base flex-none">{item.icon}</span>
+        {!collapsed && <span>{item.label}</span>}
+      </Link>
+    );
+  };
 
   return (
     <aside className={`hidden lg:flex flex-col flex-none h-screen sticky top-0 z-30 transition-all duration-300 border-r ${
