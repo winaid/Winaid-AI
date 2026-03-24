@@ -1,65 +1,20 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthGuard } from '../../../hooks/useAuthGuard';
-import { listPosts, type SavedPost } from '../../../lib/postStorage';
-import { getSessionSafe } from '../../../lib/supabase';
 
 type ContentTab = 'blog' | 'card_news' | 'press' | 'refine' | 'image' | 'history';
 
-const POST_TYPE_LABELS: Record<string, string> = {
-  blog: '블로그',
-  card_news: '카드뉴스',
-  press_release: '보도자료',
-  image: '이미지',
-};
-
-function relativeTime(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const sec = Math.floor(diff / 1000);
-  if (sec < 60) return '방금 전';
-  const min = Math.floor(sec / 60);
-  if (min < 60) return `${min}분 전`;
-  const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr}시간 전`;
-  const day = Math.floor(hr / 24);
-  if (day < 30) return `${day}일 전`;
-  return new Date(dateStr).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' });
-}
-
 export default function DashboardPage() {
   const router = useRouter();
-  const { user, userName, isGuest } = useAuthGuard();
+  useAuthGuard();
   const [quickInput, setQuickInput] = useState('');
-  const [recentPosts, setRecentPosts] = useState<SavedPost[]>([]);
-  const [historyLoading, setHistoryLoading] = useState(false);
-
-  const loadRecentPosts = useCallback(async () => {
-    setHistoryLoading(true);
-    try {
-      const { userId } = await getSessionSafe();
-      const isAdmin = typeof sessionStorage !== 'undefined'
-        && sessionStorage.getItem('ADMIN_AUTHENTICATED') === 'true';
-      const result = await listPosts(userId, { showAll: isAdmin });
-      if (!('error' in result)) {
-        setRecentPosts(result.posts.slice(0, 5));
-      }
-    } catch {
-      // silent
-    }
-    setHistoryLoading(false);
-  }, []);
-
-  useEffect(() => {
-    loadRecentPosts();
-  }, [loadRecentPosts]);
 
   const navigateTo = (tab: ContentTab) => router.push(`/${tab}`);
 
   const handleQuickSubmit = () => {
     if (quickInput.trim()) {
-      // TODO: quickInput을 blog 페이지로 전달하는 메커니즘 필요 (searchParams 또는 state)
       router.push(`/blog?topic=${encodeURIComponent(quickInput.trim())}`);
     }
   };
@@ -202,56 +157,6 @@ export default function DashboardPage() {
             </div>
           </button>
         ))}
-      </div>
-
-      {/* ── History 섹션: 최근 생성 이력 (인라인) ── */}
-      <div className="w-full max-w-3xl mb-4">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-base font-bold text-slate-800">최근 생성 이력</h2>
-          <button
-            onClick={() => router.push('/history')}
-            className="text-xs font-medium text-blue-600 hover:text-blue-800 transition-colors"
-          >
-            전체 보기 →
-          </button>
-        </div>
-
-        {historyLoading ? (
-          <div className="flex items-center justify-center py-8">
-            <div className="w-6 h-6 border-2 border-blue-100 border-t-blue-500 rounded-full animate-spin" />
-          </div>
-        ) : recentPosts.length === 0 ? (
-          <div className="bg-white rounded-xl border border-slate-200 p-6 text-center">
-            <p className="text-sm text-slate-400">아직 생성 이력이 없습니다.</p>
-            <p className="text-xs text-slate-300 mt-1">콘텐츠를 생성하면 여기에 표시됩니다.</p>
-          </div>
-        ) : (
-          <div className="space-y-1.5">
-            {recentPosts.map(post => (
-              <button
-                key={post.id}
-                onClick={() => router.push('/history')}
-                className="w-full text-left bg-white rounded-xl border border-slate-200 px-4 py-3 hover:border-blue-200 hover:shadow-sm transition-all group"
-              >
-                <div className="flex items-center gap-3">
-                  <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold flex-shrink-0 ${
-                    post.post_type === 'blog' ? 'bg-blue-50 text-blue-600'
-                    : post.post_type === 'card_news' ? 'bg-pink-50 text-pink-600'
-                    : post.post_type === 'press_release' ? 'bg-amber-50 text-amber-600'
-                    : post.post_type === 'image' ? 'bg-emerald-50 text-emerald-600'
-                    : 'bg-slate-100 text-slate-600'
-                  }`}>
-                    {POST_TYPE_LABELS[post.post_type] || post.post_type}
-                  </span>
-                  <span className="text-sm font-medium text-slate-700 truncate group-hover:text-blue-700 transition-colors">
-                    {post.title}
-                  </span>
-                  <span className="text-[10px] text-slate-400 flex-shrink-0 ml-auto">{relativeTime(post.created_at)}</span>
-                </div>
-              </button>
-            ))}
-          </div>
-        )}
       </div>
 
     </div>
