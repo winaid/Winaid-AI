@@ -500,34 +500,40 @@ export default function AdminPage() {
 
   if (!authenticated) {
     return (
-      <div className="min-h-[60vh] flex items-center justify-center">
-        <div className="w-full max-w-sm p-8 bg-white rounded-2xl shadow-lg border border-slate-200">
-          <h1 className="text-xl font-bold text-center text-slate-900 mb-6">관리자 로그인</h1>
-          <div className="space-y-4">
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
-              placeholder="관리자 비밀번호"
-              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-500/10"
-              autoFocus
-            />
-            {loginError && (
-              <p className="text-sm text-red-500 text-center">{loginError}</p>
-            )}
-            <button
-              onClick={handleLogin}
-              disabled={loginLoading || !password.trim()}
-              className={`w-full py-3 rounded-xl text-white font-semibold text-sm transition-all ${
-                loginLoading || !password.trim()
-                  ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                  : 'bg-slate-800 hover:bg-slate-900'
-              }`}
-            >
-              {loginLoading ? '확인 중...' : '로그인'}
-            </button>
+      <div className="min-h-[60vh] flex items-center justify-center p-6">
+        <div className="w-full max-w-sm">
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center w-14 h-14 bg-slate-800 rounded-2xl mb-4">
+              <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+            </div>
+            <h1 className="text-xl font-bold text-slate-800">Admin</h1>
+            <p className="text-slate-400 text-sm mt-1">관리자 비밀번호를 입력하세요</p>
           </div>
+
+          <form onSubmit={(e) => { e.preventDefault(); handleLogin(); }} className="bg-white rounded-2xl shadow-lg shadow-slate-200/50 border border-slate-100 p-8">
+            {loginError && <div className="mb-4 p-3 bg-red-50 border border-red-100 rounded-xl text-red-600 text-sm">{loginError}</div>}
+            <div className="mb-5">
+              <label className="text-sm font-medium text-slate-600 mb-1.5 block">비밀번호</label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="관리자 비밀번호"
+                className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 transition-all"
+                autoFocus
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={loginLoading || !password.trim()}
+              className="w-full py-3.5 bg-slate-800 text-white font-semibold rounded-xl hover:bg-slate-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loginLoading ? '인증 중...' : '로그인'}
+            </button>
+            <div className="mt-4 text-center">
+              <a href="/" className="text-sm text-slate-400 hover:text-slate-600 transition-colors">홈으로 돌아가기</a>
+            </div>
+          </form>
         </div>
       </div>
     );
@@ -540,65 +546,71 @@ export default function AdminPage() {
   // ── 대시보드 ──
 
   return (
-    <div className="space-y-5">
+    <div>
       {/* 헤더 */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-slate-900">관리자 대시보드</h1>
-        <button
-          onClick={handleLogout}
-          className="px-3 py-1.5 text-xs text-slate-500 hover:text-red-600 border border-slate-200 rounded-lg hover:border-red-200 transition-all"
-        >
-          로그아웃
-        </button>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-xl font-bold text-slate-800">Admin Dashboard</h1>
+          <p className="text-slate-400 text-sm">WINAID 관리자</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <a href="/blog" className="px-4 py-2 bg-white border border-slate-200 text-slate-600 font-medium rounded-lg hover:bg-slate-50 transition-colors text-sm">앱으로 이동</a>
+          <button
+            onClick={handleLogout}
+            className="px-4 py-2 bg-white border border-red-200 text-red-500 font-medium rounded-lg hover:bg-red-50 transition-colors text-sm"
+          >
+            로그아웃
+          </button>
+        </div>
       </div>
 
-      {/* 통계 카드 */}
+      {/* 통계 카드 — 상단 4열 */}
       {stats && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
           {[
-            { label: '전체 콘텐츠', value: stats.totalPosts, color: 'text-slate-900' },
-            { label: '블로그', value: stats.blogCount, color: 'text-blue-600' },
-            { label: '카드뉴스', value: stats.cardNewsCount, color: 'text-pink-600' },
-            { label: '보도자료', value: stats.pressReleaseCount, color: 'text-amber-600' },
-            { label: '병원 수', value: stats.uniqueHospitals, color: 'text-emerald-600' },
+            { label: '전체 콘텐츠', value: stats.totalPosts, color: 'bg-blue-50 text-blue-600' },
+            { label: '블로그', value: stats.blogCount, color: 'bg-sky-50 text-sky-600' },
+            { label: '카드뉴스', value: stats.cardNewsCount, color: 'bg-violet-50 text-violet-600' },
+            { label: '보도자료', value: stats.pressReleaseCount, color: 'bg-emerald-50 text-emerald-600' },
           ].map((s, i) => (
-            <div key={i} className="bg-white rounded-xl border border-slate-200 p-4">
-              <p className="text-[11px] font-medium text-slate-400 mb-1">{s.label}</p>
-              <p className={`text-2xl font-bold ${s.color}`}>{s.value.toLocaleString()}</p>
+            <div key={i} className="bg-white rounded-xl p-4 border border-slate-100">
+              <div className="text-2xl font-bold text-slate-800">{s.value.toLocaleString()}</div>
+              <div className={`text-xs font-medium mt-1 inline-block px-2 py-0.5 rounded-full ${s.color}`}>{s.label}</div>
             </div>
           ))}
         </div>
       )}
 
+      {/* 통계 카드 — 하단 5열 */}
       {stats && (
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
           {[
+            { label: '병원 수', value: stats.uniqueHospitals },
+            { label: '사용자 수', value: stats.uniqueUsers },
             { label: '오늘', value: stats.postsToday },
             { label: '이번 주', value: stats.postsThisWeek },
             { label: '이번 달', value: stats.postsThisMonth },
           ].map((s, i) => (
-            <div key={i} className="bg-slate-50 rounded-xl border border-slate-100 p-3 text-center">
-              <p className="text-[11px] text-slate-400">{s.label}</p>
-              <p className="text-lg font-bold text-slate-700">{s.value}</p>
+            <div key={i} className="bg-white rounded-xl p-3 border border-slate-100 text-center">
+              <div className="text-lg font-bold text-slate-700">{s.value}</div>
+              <div className="text-[11px] text-slate-400">{s.label}</div>
             </div>
           ))}
         </div>
       )}
 
-      {/* 탭 */}
-      <div className="flex gap-1 bg-slate-100 rounded-lg p-1">
+      {/* 메인 탭 */}
+      <div className="flex bg-white border border-slate-200 rounded-xl p-1 mb-5 w-fit shadow-sm">
         {([
-          { key: 'contents' as Tab, label: '콘텐츠 관리' },
-          { key: 'users' as Tab, label: '사용자 관리' },
-          { key: 'style' as Tab, label: '말투 학습' },
+          { key: 'contents' as Tab, label: '콘텐츠 관리', activeClass: 'bg-slate-800 text-white shadow-sm' },
+          { key: 'style' as Tab, label: '말투 학습', activeClass: 'bg-violet-600 text-white shadow-sm' },
+          { key: 'users' as Tab, label: '사용자 관리', activeClass: 'bg-emerald-600 text-white shadow-sm' },
         ]).map(t => (
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
-            className={`flex-1 py-2 rounded-md text-sm font-medium transition-all ${
-              tab === t.key
-                ? t.key === 'style' ? 'bg-violet-600 text-white shadow-sm' : 'bg-white text-slate-900 shadow-sm'
-                : 'text-slate-500 hover:text-slate-700'
+            className={`px-6 py-2.5 rounded-lg text-sm font-bold transition-all ${
+              tab === t.key ? t.activeClass : 'text-slate-500 hover:text-slate-700'
             }`}
           >
             {t.label}
