@@ -567,10 +567,11 @@ export async function crawlAndScoreAllHospitals(
 
   for (let i = 0; i < total; i++) {
     const { name, teamId, urls } = hospitalUrls[i];
+    const allContents: string[] = []; // 말투 분석용 본문 수집
     let totalPostsForHospital = 0;
 
     try {
-      // 각 URL별 최대 5개씩 크롤링
+      // 1) 각 URL별 최대 5개씩 크롤링 + 채점
       for (let urlIdx = 0; urlIdx < urls.length; urlIdx++) {
         const urlLabel = urls.length > 1 ? ` URL ${urlIdx + 1}/${urls.length}` : '';
         onProgress?.(`${name}${urlLabel} 크롤링 중...`, i, total);
@@ -599,6 +600,7 @@ export async function crawlAndScoreAllHospitals(
         // 채점 + DB 저장
         for (let pi = 0; pi < posts.length; pi++) {
           const post = posts[pi];
+          allContents.push(post.content);
           onProgress?.(`${name}${urlLabel} 채점 ${pi + 1}/${posts.length}`, i, total);
           try {
             const score = await scoreCrawledPost(post.content);
@@ -633,22 +635,40 @@ export async function crawlAndScoreAllHospitals(
         }
       }
 
-      // 병원 프로필 업데이트 (크롤링 수 갱신)
+      // 2) 말투 분석 (수집된 글이 있을 때만)
+      let analyzedStyle: LearnedWritingStyle | null = null;
+      if (allContents.length > 0) {
+        onProgress?.(`${name} 말투 분석 중...`, i, total);
+        try {
+          const combinedText = allContents.join('\n\n---\n\n').slice(0, 8000);
+          analyzedStyle = await analyzeWritingStyleViaApi(combinedText, name);
+        } catch {
+          onProgress?.(`${name} 말투 분석 실패 (채점은 완료)`, i, total);
+          // 말투 분석 실패해도 크롤링+채점 결과는 유지
+        }
+      }
+
+      // 3) 병원 프로필 업데이트
       if (totalPostsForHospital > 0 && supabase) {
+        const profileData: Record<string, unknown> = {
+          hospital_name: name,
+          team_id: teamId,
+          naver_blog_url: urls.join(','),
+          crawled_posts_count: totalPostsForHospital,
+          last_crawled_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+        if (analyzedStyle) {
+          profileData.style_profile = analyzedStyle;
+          profileData.raw_sample_text = allContents.join('\n\n---\n\n').slice(0, 10000);
+        }
         await (supabase.from('hospital_style_profiles') as any).upsert(
-          {
-            hospital_name: name,
-            team_id: teamId,
-            naver_blog_url: urls.join(','),
-            crawled_posts_count: totalPostsForHospital,
-            last_crawled_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          },
+          profileData,
           { onConflict: 'hospital_name' },
         );
       }
 
-      onProgress?.(`${name} 완료 (${totalPostsForHospital}개 글)`, i, total);
+      onProgress?.(`${name} 완료 (${totalPostsForHospital}개 글${analyzedStyle ? ' + 말투 분석' : ''})`, i, total);
     } catch (err) {
       onProgress?.(`${name} 실패: ${(err as Error).message?.slice(0, 60)}`, i, total);
       // 병원 실패 → 다음 병원으로 계속
