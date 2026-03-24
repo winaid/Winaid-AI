@@ -302,7 +302,7 @@ export default function ImagePage() {
             hospitalName: hospitalName || undefined,
             postType: 'image',
             title: titleText || '이미지 생성',
-            content: `[이미지 생성] 비율: ${aspectRatio}`,
+            content: data.imageDataUrl,
             topic: prompt.trim(),
           });
         } catch {

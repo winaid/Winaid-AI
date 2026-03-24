@@ -867,6 +867,17 @@ export default function AdminPage() {
                     {posts.map(post => (
                       <div key={post.id} className="rounded-xl p-4 border border-slate-100 hover:border-slate-200 hover:bg-slate-50/50 transition-all">
                         <div className="flex items-start justify-between gap-3">
+                          {/* 이미지 타입이면 썸네일 표시 */}
+                          {post.post_type === 'image' && post.content?.startsWith('data:image') && (
+                            <div className="flex-shrink-0">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={post.content}
+                                alt={post.title}
+                                className="w-16 h-16 rounded-lg object-cover border border-slate-200"
+                              />
+                            </div>
+                          )}
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1.5">
                               <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${POST_TYPE_COLORS[post.post_type] || 'bg-slate-100 text-slate-600'}`}>
@@ -879,9 +890,13 @@ export default function AdminPage() {
                               {post.hospital_name && <span className="px-1.5 py-0.5 bg-emerald-50 text-emerald-600 rounded text-[11px] font-medium">{post.hospital_name}</span>}
                               {post.category && <span className="px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded text-[11px]">{post.category}</span>}
                               {post.user_email && <span className="text-blue-400">{post.user_email}</span>}
-                              {post.char_count && <span className="text-slate-300">{post.char_count.toLocaleString()}자</span>}
+                              {post.char_count && post.post_type !== 'image' && <span className="text-slate-300">{post.char_count.toLocaleString()}자</span>}
                             </div>
-                            <p className="text-xs text-slate-400 line-clamp-1">{post.topic || post.content?.replace(/<[^>]*>/g, '').substring(0, 120)}</p>
+                            <p className="text-xs text-slate-400 line-clamp-1">
+                              {post.post_type === 'image'
+                                ? (post.topic || '이미지 생성')
+                                : (post.topic || post.content?.replace(/<[^>]*>/g, '').substring(0, 120))}
+                            </p>
                           </div>
                           <div className="flex gap-1.5 flex-shrink-0">
                             <button onClick={() => setSelectedPost(post)} className="px-3 py-1.5 bg-blue-50 text-blue-600 font-medium rounded-lg hover:bg-blue-100 transition-colors text-xs">보기</button>
@@ -924,10 +939,33 @@ export default function AdminPage() {
                   </button>
                 </div>
                 <div className="p-6 overflow-y-auto max-h-[calc(90vh-180px)]">
-                  <div
-                    className="prose prose-slate prose-sm max-w-none"
-                    dangerouslySetInnerHTML={{ __html: sanitizeHtml(selectedPost.content) }}
-                  />
+                  {selectedPost.post_type === 'image' && selectedPost.content.startsWith('data:image') ? (
+                    <div className="flex flex-col items-center gap-4">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={selectedPost.content}
+                        alt={selectedPost.title || '생성된 이미지'}
+                        className="max-w-full rounded-xl shadow-md border border-slate-200"
+                      />
+                      <div className="flex gap-2">
+                        <a
+                          href={selectedPost.content}
+                          download={`image-${selectedPost.id.slice(0, 8)}.png`}
+                          className="px-4 py-2 bg-emerald-600 text-white text-xs font-semibold rounded-lg hover:bg-emerald-700 transition-colors"
+                        >
+                          다운로드
+                        </a>
+                      </div>
+                      {selectedPost.topic && (
+                        <p className="text-sm text-slate-500 text-center">프롬프트: {selectedPost.topic}</p>
+                      )}
+                    </div>
+                  ) : (
+                    <div
+                      className="prose prose-slate prose-sm max-w-none"
+                      dangerouslySetInnerHTML={{ __html: sanitizeHtml(selectedPost.content) }}
+                    />
+                  )}
                 </div>
               </div>
             </div>
