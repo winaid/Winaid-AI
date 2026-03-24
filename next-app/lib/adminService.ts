@@ -10,27 +10,57 @@ export async function deleteAllGeneratedPosts(
   if (!supabase) return { success: false, error: 'Supabase 미설정' };
 
   try {
-    const { data, error } = await supabase.rpc('delete_all_generated_posts', {
+    // root와 동일: as any 캐스팅 + 타임아웃 30초
+    const rpcPromise = supabase.rpc('delete_all_generated_posts' as any, {
       admin_password: adminPassword,
-    });
+    } as any);
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('전체 삭제 시간 초과 (30초)')), 30000),
+    );
+
+    const { data, error } = await Promise.race([rpcPromise, timeoutPromise]) as {
+      data: any;
+      error: any;
+    };
 
     if (error) {
-      return { success: false, error: error.message };
+      const msg = error.message || String(error);
+
+      // RPC 함수 미배포 감지
+      if (msg.includes('WHERE clause') || msg.includes('could not find')) {
+        return {
+          success: false,
+          error:
+            'DB에 delete_all_generated_posts 함수가 없습니다. ' +
+            'Supabase SQL Editor에서 sql/migrations/2026-03-20_fix_delete_all_generated_posts.sql을 실행하세요.',
+        };
+      }
+
+      return { success: false, error: msg };
     }
 
     // RPC가 null 반환 (함수 미배포 등)
     if (data === null || data === undefined) {
-      return { success: false, error: 'RPC 함수가 응답하지 않았습니다 (null). DB 배포를 확인하세요.' };
+      return {
+        success: false,
+        error:
+          'RPC 함수가 응답하지 않았습니다 (null). ' +
+          'Supabase SQL Editor에서 delete_all_generated_posts 함수를 배포했는지 확인하세요.',
+      };
     }
 
     // -1 반환 (인증 실패 등)
     if (data === -1) {
-      return { success: false, error: '관리자 인증 실패' };
+      return { success: false, error: '관리자 인증 실패 — 비밀번호가 올바르지 않습니다.' };
     }
 
     const count = typeof data === 'number' ? data : 0;
     return { success: true, deletedCount: count };
   } catch (err: unknown) {
-    return { success: false, error: (err as Error).message || '알 수 없는 오류' };
+    const msg = (err as Error).message || '알 수 없는 오류';
+    if (msg.includes('시간 초과')) {
+      return { success: false, error: msg };
+    }
+    return { success: false, error: `삭제 중 오류: ${msg}` };
   }
 }
