@@ -403,15 +403,32 @@ ${categoryKeywords}
         return;
       }
 
-      // 점수 블록 파싱: ---SCORES--- 이후 JSON 추출
+      // ── 응답 파싱: 본문 / SCORES / IMAGE_PROMPTS 분리 ──
       let blogText = data.text;
       let parsed: ScoreBarData | undefined;
-      const marker = '---SCORES---';
-      const idx = blogText.lastIndexOf(marker);
-      if (idx !== -1) {
-        const afterMarker = blogText.substring(idx + marker.length);
+      const imagePrompts: string[] = [];
+
+      // 1) ---IMAGE_PROMPTS--- 블록 추출 + 제거
+      const imgPromptsMarker = '---IMAGE_PROMPTS---';
+      const imgIdx = blogText.indexOf(imgPromptsMarker);
+      if (imgIdx !== -1) {
+        const afterImg = blogText.substring(imgIdx + imgPromptsMarker.length).trim();
+        afterImg.split('\n').forEach(line => {
+          const trimmed = line.replace(/^\d+[\.\)]\s*/, '').trim();
+          if (trimmed && !trimmed.startsWith('---') && !trimmed.startsWith('[') && !trimmed.startsWith('{')) {
+            imagePrompts.push(trimmed);
+          }
+        });
+        blogText = blogText.substring(0, imgIdx).replace(/\n+$/, '');
+      }
+
+      // 2) ---SCORES--- 블록 추출 + 제거
+      const scoresMarker = '---SCORES---';
+      const scoresIdx = blogText.lastIndexOf(scoresMarker);
+      if (scoresIdx !== -1) {
+        const afterScores = blogText.substring(scoresIdx + scoresMarker.length);
         try {
-          const jsonMatch = afterMarker.match(/\{[\s\S]*?\}/);
+          const jsonMatch = afterScores.match(/\{[\s\S]*?\}/);
           if (jsonMatch) {
             const raw = JSON.parse(jsonMatch[0]) as Record<string, unknown>;
             const seo = typeof raw.seo === 'number' ? raw.seo : undefined;
@@ -421,30 +438,74 @@ ${categoryKeywords}
               parsed = { seoScore: seo, safetyScore: medical, conversionScore: conversion };
             }
           }
-        } catch {
-          // JSON 파싱 실패 — parsed는 undefined로 유지
-        }
-        // 마커 이후 전체 제거 (점수 + 이미지 프롬프트 블록)
-        blogText = blogText.substring(0, idx).replace(/\n*```\s*$/, '').replace(/\n+$/, '');
-        blogText = blogText.replace(/---SCORES---[\s\S]*$/, '').replace(/\n+$/, '');
+        } catch { /* 파싱 실패 무시 */ }
+        blogText = blogText.substring(0, scoresIdx).replace(/\n*```\s*$/, '').replace(/\n+$/, '');
       }
 
-      // ---IMAGE_PROMPTS--- 블록이 본문에 남아 있으면 제거
-      blogText = blogText.replace(/---IMAGE_PROMPTS---[\s\S]*$/, '').replace(/\n+$/, '');
-
-      // [IMG_N] 마커 제거 (이미지 생성은 별도 처리 — 현재는 마커만 strip)
-      blogText = blogText.replace(/\[IMG_\d+\]\n*/g, '');
-
-      // HTML 래핑 정리: 코드블록 fence 제거
+      // 3) HTML 정리: 코드블록 fence 제거
       blogText = blogText.replace(/^```html?\s*\n?/i, '').replace(/\n?```\s*$/, '');
 
-      setGeneratedContent(blogText);
-      setScores(parsed);
+      // 4) 이미지 없으면 마커 strip 후 바로 표시
+      if (imageCount === 0 || imagePrompts.length === 0) {
+        blogText = blogText.replace(/\[IMG_\d+\]\n*/g, '');
+        setGeneratedContent(blogText);
+        setScores(parsed);
+      } else {
+        // 5) 마커가 있는 본문을 먼저 표시 (이미지 자리에 로딩 표시)
+        let htmlWithPlaceholders = blogText;
+        for (let i = 1; i <= imageCount; i++) {
+          htmlWithPlaceholders = htmlWithPlaceholders.replace(
+            new RegExp(`\\[IMG_${i}\\]`, 'g'),
+            `<div class="content-image-wrapper" data-img-slot="${i}" style="text-align:center;padding:24px 0;"><div style="display:inline-flex;align-items:center;gap:8px;padding:12px 20px;background:#f1f5f9;border-radius:12px;font-size:13px;color:#64748b;">🖼️ 이미지 ${i}/${imageCount} 생성 중...</div></div>`,
+          );
+        }
+        // 혹시 남은 초과 마커 정리
+        htmlWithPlaceholders = htmlWithPlaceholders.replace(/\[IMG_\d+\]\n*/g, '');
+        setGeneratedContent(htmlWithPlaceholders);
+        setScores(parsed);
 
-      // 저장 — Supabase 또는 guest localStorage
+        // 6) 이미지 병렬 생성 (old 동일: 각 프롬프트 → /api/image → base64)
+        const generateImage = async (prompt: string, index: number): Promise<{ index: number; dataUrl: string | null }> => {
+          try {
+            const imgRes = await fetch('/api/image', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ prompt, aspectRatio: '16:9' as const }),
+            });
+            if (!imgRes.ok) return { index, dataUrl: null };
+            const imgData = await imgRes.json() as { imageDataUrl?: string };
+            return { index, dataUrl: imgData.imageDataUrl || null };
+          } catch {
+            return { index, dataUrl: null };
+          }
+        };
+
+        // 최대 imageCount개까지만 생성
+        const prompts = imagePrompts.slice(0, imageCount);
+        const imageResults = await Promise.all(
+          prompts.map((p, i) => generateImage(p, i + 1)),
+        );
+
+        // 7) [IMG_N] 마커를 실제 이미지로 교체 (old insertImageData 동일)
+        let finalHtml = blogText;
+        for (const img of imageResults) {
+          const pattern = new RegExp(`\\[IMG_${img.index}\\]`, 'gi');
+          if (img.dataUrl) {
+            const imgTag = `<div class="content-image-wrapper"><img src="${img.dataUrl}" alt="blog image ${img.index}" data-image-index="${img.index}" style="max-width:100%;height:auto;border-radius:12px;" /></div>`;
+            finalHtml = finalHtml.replace(pattern, imgTag);
+          } else {
+            finalHtml = finalHtml.replace(pattern, '');
+          }
+        }
+        // 미매칭 마커 제거
+        finalHtml = finalHtml.replace(/\[IMG_\d+\]\n*/g, '');
+        setGeneratedContent(finalHtml);
+        blogText = finalHtml;
+      }
+
+      // ── 저장 — Supabase 또는 guest localStorage ──
       try {
         const { userId, userEmail } = await getSessionSafe();
-        // HTML에서 제목 추출: <h3> 첫 번째 또는 첫 줄
         const titleMatch = blogText.match(/<h3[^>]*>([^<]+)<\/h3>/) || blogText.match(/^(.+)/);
         const extractedTitle = titleMatch ? titleMatch[1].replace(/<[^>]*>/g, '').trim().substring(0, 200) : topic.trim();
 
