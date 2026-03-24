@@ -11,6 +11,9 @@ import { getSessionSafe, supabase } from '../../../lib/supabase';
 import { getHospitalStylePrompt } from '../../../lib/styleService';
 import { ErrorPanel, ResultPanel, type ScoreBarData } from '../../../components/GenerationResult';
 import WritingStyleLearner, { getStyleById, getStylePromptForGeneration } from '../../../components/WritingStyleLearner';
+import type { BlogSection } from '../../../lib/types';
+import { parseBlogSections, replaceSectionHtml } from '../../../lib/blogSectionParser';
+import { downloadWord, downloadPDF } from '../../../lib/blogExport';
 
 // ── old GenerateWorkspace.tsx 동일: 블로그 displayStage → 단계 정보 ──
 const BLOG_STAGES: Record<number, { icon: string; label: string; defaultMsg: string; hint: string }> = {
@@ -112,6 +115,11 @@ function BlogForm() {
   const [scores, setScores] = useState<ScoreBarData | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
+
+  // ── 블로그 섹션 상태 (소제목 재생성 + export) ──
+  const [blogSections, setBlogSections] = useState<BlogSection[]>([]);
+  const [regeneratingSection, setRegeneratingSection] = useState<number | null>(null);
+  const [sectionProgress, setSectionProgress] = useState('');
 
   // ── 진행 상태 (old safeProgress UI parity) ──
   // displayStage: 0=준비, 1=글작성, 2=다듬기, 3=이미지, 4=마무리
@@ -572,6 +580,9 @@ ${categoryKeywords}
     setGeneratedContent(null);
     setScores(undefined);
     setSaveStatus(null);
+    setBlogSections([]);
+    setRegeneratingSection(null);
+    setSectionProgress('');
 
     // ── 로그: 요청 시작 ──
     console.info(`[BLOG] ========== 블로그 생성 시작 ==========`);
@@ -1220,6 +1231,11 @@ JSON 형식으로 응답해주세요.`;
         console.info('[BLOG] ✅ Step 2 완료: 글 작성 및 SEO 평가 완료');
       }
 
+      // ── 섹션 파싱 (소제목 재생성 기능용) ──
+      const sections = parseBlogSections(blogText);
+      setBlogSections(sections);
+      console.info(`[BLOG] 섹션 파싱 완료: ${sections.length}개 (intro=${sections.filter(s => s.type === 'intro').length}, section=${sections.filter(s => s.type === 'section').length}, conclusion=${sections.filter(s => s.type === 'conclusion').length})`);
+
       // ── 저장 — Supabase 또는 guest localStorage ──
       console.info(`[BLOG] 저장 시작 — 최종 콘텐츠 길이: ${blogText.length}자`);
       try {
@@ -1261,6 +1277,126 @@ JSON 형식으로 응답해주세요.`;
       setDisplayStage(0);
     }
   };
+
+  // ── 소제목 재생성 (root useAiRefine.ts + faqService.ts + gpt52-prompts-staged.ts 기준) ──
+  const handleSectionRegenerate = useCallback(async (sectionIndex: number) => {
+    const section = blogSections.find(s => s.index === sectionIndex);
+    if (!section || !generatedContent) return;
+    if (regeneratingSection !== null) return; // 동시 재생성 방지
+
+    setRegeneratingSection(sectionIndex);
+    setSectionProgress(`"${section.type === 'intro' ? '도입부' : section.title}" 재생성 중...`);
+
+    try {
+      const sectionTitle = section.type === 'intro' ? '도입부' : section.title;
+
+      // root getSectionRegeneratePrompt 동일 구조
+      const systemPrompt = `[글쓴이 정체성]
+병원 블로그 전담 에디터. 의사가 아니라 건강 정보를 잘 정리하는 사람.
+- 의학 지식이 있지만 의사처럼 말하지 않는다
+- 독자에게 가르치지 않는다. 정보를 두고 갈 뿐이다
+- 문장이 짧다. 군더더기를 싫어한다
+
+[최상위 원칙] 쉽고 짧게 직접 말한다
+1. 짧게 쓴다. 한 문장은 40자 이내 권장
+2. 직접 말한다. 돌려 말하지 않는다
+3. 쉬운 말을 쓴다
+4. 의료광고법에 걸리는 표현만 피한다
+
+[문체] 본문은 ~습니다체. 소제목만 ~다체 허용
+[시점] 3인칭 관찰자. "나/저/우리/당신/여러분" 금지
+
+[톤 규칙]
+- "~할 수 있습니다" 금지 → "~는 경우도 있습니다"
+- "~하는 것이 좋습니다" 금지 → "~하는 편이 낫습니다"
+- "~에 도움이 됩니다" 금지
+- 질문형 문장 금지 ("~하신가요?", "~은 아닌가요?")
+
+[의료광고법 (strict)]
+- 치료 효과 단정 금지 ("완치", "확실히 나아집니다")
+- 비교 광고 금지 ("최고", "유일")
+- 환자 유인 금지
+- 개인차 언급 필수
+
+[미션] 아래 소제목 섹션만 새로 작성하라. 나머지 글과의 흐름은 유지.
+
+[소제목] ${sectionTitle}
+[현재 내용]
+${section.html}
+
+[전체 글 맥락 (참고용)]
+${generatedContent.substring(0, 2000)}
+
+[규칙]
+- 현재 내용과 다른 관점/표현으로 재작성
+- 같은 정보를 다루되 문장 구조와 어미를 변경
+- 2~3문단 유지
+- HTML <h3>과 <p> 태그로 출력
+
+[출력] ${section.type === 'intro' ? '<p>부터 시작하는 도입부 HTML만 출력.' : `<h3>${sectionTitle}</h3>부터 시작하는 HTML만 출력.`}`;
+
+      const res = await fetch('/api/gemini', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: `소제목 "${sectionTitle}" 섹션을 새로 작성해주세요.`,
+          systemInstruction: systemPrompt,
+          model: 'gemini-3.1-pro-preview',
+          temperature: 0.85,
+          maxOutputTokens: 8192,
+          timeout: 60000,
+        }),
+      });
+
+      const data = await res.json() as { text?: string; error?: string };
+      if (!res.ok || !data.text) {
+        throw new Error(data.error || '재생성 실패');
+      }
+
+      let newSectionHtml = data.text.trim();
+      // 코드블록 fence 제거
+      newSectionHtml = newSectionHtml.replace(/^```html?\s*\n?/i, '').replace(/\n?```\s*$/, '');
+
+      // HTML 검증
+      if (!newSectionHtml.includes('<')) {
+        throw new Error('유효한 HTML이 반환되지 않았습니다');
+      }
+
+      // 전체 HTML에서 해당 섹션 교체
+      const updatedHtml = replaceSectionHtml(
+        generatedContent,
+        section.html,
+        newSectionHtml,
+        section.title,
+      );
+
+      setGeneratedContent(updatedHtml);
+
+      // 섹션 목록 갱신
+      const newSections = parseBlogSections(updatedHtml);
+      setBlogSections(newSections);
+
+      setSectionProgress(`✅ "${sectionTitle}" 재생성 완료`);
+      setTimeout(() => setSectionProgress(''), 3000);
+    } catch (err) {
+      console.error('[BLOG] 섹션 재생성 실패:', err);
+      setSectionProgress('❌ 재생성 실패');
+      setTimeout(() => setSectionProgress(''), 3000);
+    } finally {
+      setRegeneratingSection(null);
+    }
+  }, [blogSections, generatedContent, regeneratingSection]);
+
+  // ── Word / PDF 다운로드 ──
+  const handleDownloadWord = useCallback(() => {
+    if (!generatedContent) return;
+    downloadWord(generatedContent);
+  }, [generatedContent]);
+
+  const handleDownloadPDF = useCallback(() => {
+    if (!generatedContent) return;
+    downloadPDF(generatedContent);
+  }, [generatedContent]);
 
   const inputCls = "w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all";
   const labelCls = "block text-xs font-semibold text-slate-500 mb-1.5";
@@ -1650,7 +1786,19 @@ JSON 형식으로 응답해주세요.`;
         })() : error ? (
           <ErrorPanel error={error} onDismiss={() => setError(null)} />
         ) : generatedContent ? (
-          <ResultPanel content={generatedContent} saveStatus={saveStatus} postType="blog" scores={scores} cssTheme={cssTheme} />
+          <ResultPanel
+            content={generatedContent}
+            saveStatus={saveStatus}
+            postType="blog"
+            scores={scores}
+            cssTheme={cssTheme}
+            blogSections={blogSections}
+            regeneratingSection={regeneratingSection}
+            sectionProgress={sectionProgress}
+            onSectionRegenerate={handleSectionRegenerate}
+            onDownloadWord={handleDownloadWord}
+            onDownloadPDF={handleDownloadPDF}
+          />
         ) : (
           /* EmptyState */
           <div className="rounded-2xl border border-slate-200 bg-white shadow-[0_2px_16px_rgba(0,0,0,0.06)] flex-1 min-h-[520px] overflow-hidden flex flex-col">

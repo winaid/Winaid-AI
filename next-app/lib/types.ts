@@ -55,3 +55,11 @@ export interface SeoTitleItem {
   score: number;
   type: '신뢰' | '안전' | '정보' | '공감';
 }
+
+/** 블로그 섹션 (소제목 단위) — root app parseBlogSections 기준 */
+export interface BlogSection {
+  index: number;
+  type: 'intro' | 'section' | 'conclusion';
+  title: string;
+  html: string;
+}
