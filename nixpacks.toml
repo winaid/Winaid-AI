@@ -1,0 +1,11 @@
+# Railway가 Nixpacks를 강제 사용할 때, crawler-server만 빌드하도록 override
+[phases.setup]
+nixPkgs = ["nodejs_22", "npm-9_x"]
+# chromium/GTK 등 시스템 패키지를 Nix가 아닌 install phase에서 처리
+aptPkgs = ["chromium", "fonts-noto-cjk"]
+
+[phases.install]
+cmds = ["cd crawler-server && npm ci --omit=dev"]
+
+[start]
+cmd = "cd crawler-server && node src/index.js"

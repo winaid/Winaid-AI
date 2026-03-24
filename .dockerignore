@@ -1,0 +1,4 @@
+*
+!crawler-server/package.json
+!crawler-server/package-lock.json
+!crawler-server/src/
