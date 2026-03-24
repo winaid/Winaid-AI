@@ -250,7 +250,17 @@ export default function AdminPage() {
         urlMap[p.hospital_name] = p.naver_blog_url.split(',').map(u => u.trim()).filter(Boolean);
       }
     });
-    setBlogUrlInputs(prev => ({ ...urlMap, ...prev }));
+    // DB 값을 기본으로 깔고, 사용자가 수정 중인 값이 없는 병원만 DB 값으로 채움
+    setBlogUrlInputs(prev => {
+      const merged: Record<string, string[]> = { ...urlMap };
+      // 사용자가 이미 수정 중인 항목은 유지 (빈 배열이 아닌 경우만)
+      for (const [key, val] of Object.entries(prev)) {
+        if (val.length > 0 && val.some(u => u.trim())) {
+          merged[key] = val;
+        }
+      }
+      return merged;
+    });
   }, []);
 
   // 말투 탭 진입 시 로드
