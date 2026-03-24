@@ -16,15 +16,20 @@ export interface InternalFeedback {
   created_at: string;
 }
 
-/** 특정 페이지의 피드백 목록 (최신 30개, 오래된 순) */
-export async function listFeedbacks(page: string): Promise<InternalFeedback[]> {
+/** 특정 페이지의 피드백 목록 (오래된 순, limit/offset 지원) */
+export async function listFeedbacks(
+  page: string,
+  options?: { limit?: number; offset?: number },
+): Promise<InternalFeedback[]> {
   if (!supabase) return [];
+  const limit = options?.limit ?? 50;
+  const offset = options?.offset ?? 0;
   const { data, error } = await supabase
     .from('internal_feedbacks')
     .select('id, user_id, user_name, content, page, created_at')
     .eq('page', page)
     .order('created_at', { ascending: true })
-    .limit(30);
+    .range(offset, offset + limit - 1);
   if (error) {
     console.error('[feedbackService] listFeedbacks error:', error.message);
     return [];

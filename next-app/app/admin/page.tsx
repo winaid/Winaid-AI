@@ -25,7 +25,7 @@ import {
   HospitalStyleProfile,
   LearnedWritingStyle,
 } from '../../lib/styleService';
-import { deleteAllGeneratedPosts } from '../../lib/adminService';
+import { deleteAllGeneratedPosts, updateUserTeam, deleteUserProfile } from '../../lib/adminService';
 import { ToastContainer, toast } from '../../components/Toast';
 import { sanitizeHtml } from '../../lib/sanitizeHtml';
 import type { CrawledPostScore, DBCrawledPost } from '../../lib/types';
@@ -115,6 +115,7 @@ async function getAllPosts(
   token: string,
   filterType?: string,
   filterHospital?: string,
+  offset = 0,
 ): Promise<GeneratedPost[]> {
   if (!supabase) return [];
   const { data, error } = await supabase.rpc('get_all_generated_posts', {
@@ -122,7 +123,7 @@ async function getAllPosts(
     filter_post_type: filterType && filterType !== 'all' ? filterType : null,
     filter_hospital: filterHospital || null,
     limit_count: 100,
-    offset_count: 0,
+    offset_count: offset,
   });
   if (error || !data) return [];
   return data as GeneratedPost[];
@@ -197,6 +198,19 @@ export default function AdminPage() {
   const [feedbackAnalyzing, setFeedbackAnalyzing] = useState(false);
   const [feedbackAnalysisError, setFeedbackAnalysisError] = useState('');
 
+  // 검색
+  const [contentSearch, setContentSearch] = useState('');
+  const [userSearch, setUserSearch] = useState('');
+  const [feedbackSearch, setFeedbackSearch] = useState('');
+
+  // 콘텐츠 페이지네이션
+  const [postsOffset, setPostsOffset] = useState(0);
+  const [hasMorePosts, setHasMorePosts] = useState(true);
+
+  // 피드백 페이지네이션
+  const [feedbackOffset, setFeedbackOffset] = useState(0);
+  const [hasMoreFeedbacks, setHasMoreFeedbacks] = useState(true);
+
   // 말투 학습
   const [styleProfiles, setStyleProfiles] = useState<HospitalStyleProfile[]>([]);
   const [blogUrlInputs, setBlogUrlInputs] = useState<Record<string, string[]>>({});
@@ -269,12 +283,19 @@ export default function AdminPage() {
     if (s) setStats(s);
   }, [getToken]);
 
-  const loadPosts = useCallback(async () => {
+  const loadPosts = useCallback(async (append = false) => {
     setPostsLoading(true);
-    const p = await getAllPosts(getToken(), typeFilter, hospitalFilter);
-    setPosts(p);
+    const offset = append ? postsOffset : 0;
+    const p = await getAllPosts(getToken(), typeFilter, hospitalFilter, offset);
+    if (append) {
+      setPosts(prev => [...prev, ...p]);
+    } else {
+      setPosts(p);
+      setPostsOffset(0);
+    }
+    setHasMorePosts(p.length >= 100);
     setPostsLoading(false);
-  }, [getToken, typeFilter, hospitalFilter]);
+  }, [getToken, typeFilter, hospitalFilter, postsOffset]);
 
   const loadUsers = useCallback(async () => {
     setUsersLoading(true);
@@ -284,12 +305,42 @@ export default function AdminPage() {
   }, []);
 
   // 피드백 로드
-  const loadAdminFeedbacks = useCallback(async () => {
+  const loadAdminFeedbacks = useCallback(async (append = false) => {
     setFeedbacksLoading(true);
-    const list = await listFeedbacks('dashboard');
-    setAdminFeedbacks(list);
+    const offset = append ? feedbackOffset : 0;
+    const list = await listFeedbacks('dashboard', { limit: 50, offset });
+    if (append) {
+      setAdminFeedbacks(prev => [...prev, ...list]);
+    } else {
+      setAdminFeedbacks(list);
+      setFeedbackOffset(0);
+    }
+    setHasMoreFeedbacks(list.length >= 50);
     setFeedbacksLoading(false);
-  }, []);
+  }, [feedbackOffset]);
+
+  // 사용자 팀 변경
+  const handleUserTeamChange = async (userId: string, teamId: number | null) => {
+    const result = await updateUserTeam(userId, teamId);
+    if (result.success) {
+      setUsers(prev => prev.map(u => u.id === userId ? { ...u, team_id: teamId } : u));
+      toast.success('팀 변경 완료');
+    } else {
+      toast.error(result.error || '팀 변경 실패');
+    }
+  };
+
+  // 사용자 삭제
+  const handleUserDelete = async (userId: string, userName: string) => {
+    if (!confirm(`"${userName || '이름 없음'}" 사용자의 프로필을 삭제하시겠습니까?`)) return;
+    const result = await deleteUserProfile(userId);
+    if (result.success) {
+      setUsers(prev => prev.filter(u => u.id !== userId));
+      toast.success('사용자 프로필 삭제 완료');
+    } else {
+      toast.error(result.error || '삭제 실패');
+    }
+  };
 
   const handleAdminFeedbackDelete = async (id: string) => {
     if (!confirm('이 피드백을 삭제하시겠습니까?')) return;
@@ -859,7 +910,16 @@ export default function AdminPage() {
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm">
             {/* 헤더: 제목 + 타입 필터 + 새로고침 + 전체 삭제 */}
             <div className="p-5 border-b border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-              <h2 className="text-base font-bold text-slate-800">콘텐츠 관리</h2>
+              <div className="flex items-center gap-3">
+                <h2 className="text-base font-bold text-slate-800">콘텐츠 관리</h2>
+                <input
+                  type="text"
+                  value={contentSearch}
+                  onChange={e => setContentSearch(e.target.value)}
+                  placeholder="제목·병원·주제 검색"
+                  className="px-3 py-1.5 text-xs border border-slate-200 rounded-lg w-48 focus:outline-none focus:border-blue-400 transition-colors"
+                />
+              </div>
               <div className="flex flex-wrap gap-2 items-center">
                 <div className="flex bg-slate-100 p-0.5 rounded-lg">
                   {([
@@ -911,13 +971,24 @@ export default function AdminPage() {
                   <p className="text-slate-400 font-medium">저장된 콘텐츠가 없습니다.</p>
                   <p className="text-slate-300 text-sm mt-1">블로그 글을 생성하면 여기에 자동 저장됩니다.</p>
                 </div>
-              ) : (
+              ) : (() => {
+                const q = contentSearch.trim().toLowerCase();
+                const filtered = q
+                  ? posts.filter(p =>
+                      (p.title?.toLowerCase().includes(q)) ||
+                      (p.hospital_name?.toLowerCase().includes(q)) ||
+                      (p.topic?.toLowerCase().includes(q)) ||
+                      (p.user_email?.toLowerCase().includes(q))
+                    )
+                  : posts;
+                return (
                 <>
                   <p className="text-xs text-slate-400 mb-4">
                     {typeFilter === 'all' ? `총 ${posts.length}개` : `${POST_TYPE_LABELS[typeFilter] || typeFilter} ${posts.length}개`}
+                    {q && ` · 검색 결과 ${filtered.length}개`}
                   </p>
                   <div className="space-y-2">
-                    {posts.map(post => (
+                    {filtered.map(post => (
                       <div key={post.id} className="rounded-xl p-4 border border-slate-100 hover:border-slate-200 hover:bg-slate-50/50 transition-all">
                         <div className="flex items-start justify-between gap-3">
                           {/* 이미지 타입이면 썸네일 표시 */}
@@ -959,8 +1030,22 @@ export default function AdminPage() {
                       </div>
                     ))}
                   </div>
+                  {hasMorePosts && !q && (
+                    <button
+                      onClick={() => {
+                        const nextOffset = postsOffset + 100;
+                        setPostsOffset(nextOffset);
+                        loadPosts(true);
+                      }}
+                      disabled={postsLoading}
+                      className="w-full mt-4 py-2.5 text-xs font-semibold text-slate-500 bg-slate-50 border border-slate-200 rounded-xl hover:bg-slate-100 transition-colors disabled:opacity-50"
+                    >
+                      {postsLoading ? '불러오는 중...' : '더 불러오기'}
+                    </button>
+                  )}
                 </>
-              )}
+                );
+              })()}
             </div>
           </div>
 
@@ -1090,13 +1175,30 @@ export default function AdminPage() {
       )}
 
       {/* ── 사용자 관리 탭 ── */}
-      {tab === 'users' && (
+      {tab === 'users' && (() => {
+        const uq = userSearch.trim().toLowerCase();
+        const filteredUsers = uq
+          ? users.filter(u =>
+              (u.full_name?.toLowerCase().includes(uq)) ||
+              (u.email?.toLowerCase().includes(uq))
+            )
+          : users;
+        return (
         <div className="space-y-4">
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-            <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
-              <div>
-                <h2 className="text-base font-bold text-slate-800">가입 사용자 목록</h2>
-                <p className="text-xs text-slate-400 mt-0.5">총 {users.length}명</p>
+            <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div>
+                  <h2 className="text-base font-bold text-slate-800">가입 사용자 목록</h2>
+                  <p className="text-xs text-slate-400 mt-0.5">총 {users.length}명{uq && ` · 검색 ${filteredUsers.length}명`}</p>
+                </div>
+                <input
+                  type="text"
+                  value={userSearch}
+                  onChange={e => setUserSearch(e.target.value)}
+                  placeholder="이름·이메일 검색"
+                  className="px-3 py-1.5 text-xs border border-slate-200 rounded-lg w-44 focus:outline-none focus:border-emerald-400 transition-colors"
+                />
               </div>
               <button
                 onClick={loadUsers}
@@ -1108,17 +1210,17 @@ export default function AdminPage() {
             </div>
             {usersLoading ? (
               <div className="py-16 text-center text-slate-400 text-sm">불러오는 중...</div>
-            ) : users.length === 0 ? (
+            ) : filteredUsers.length === 0 ? (
               <div className="py-16 text-center">
                 <div className="text-3xl mb-2 opacity-30">👤</div>
-                <p className="text-slate-400 text-sm">가입한 사용자가 없습니다.</p>
+                <p className="text-slate-400 text-sm">{uq ? '검색 결과가 없습니다.' : '가입한 사용자가 없습니다.'}</p>
               </div>
             ) : (
               <div className="divide-y divide-slate-50">
-                {users.map(user => {
+                {filteredUsers.map(user => {
                   const team = TEAM_DATA.find(t => t.id === user.team_id);
                   return (
-                    <div key={user.id} className="px-5 py-4 flex items-center gap-4">
+                    <div key={user.id} className="px-5 py-4 flex items-center gap-4 group">
                       <div className="w-9 h-9 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-sm font-bold flex-shrink-0">
                         {user.full_name?.charAt(0) || '?'}
                       </div>
@@ -1131,9 +1233,25 @@ export default function AdminPage() {
                         </div>
                         <p className="text-xs text-slate-400 truncate mt-0.5">{user.email}</p>
                       </div>
+                      <select
+                        value={user.team_id ?? ''}
+                        onChange={e => handleUserTeamChange(user.id, e.target.value ? Number(e.target.value) : null)}
+                        className="text-xs border border-slate-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:border-blue-400 transition-colors flex-shrink-0"
+                      >
+                        <option value="">팀 없음</option>
+                        {TEAM_DATA.map(t => (
+                          <option key={t.id} value={t.id}>{t.label}</option>
+                        ))}
+                      </select>
                       <div className="text-xs text-slate-400 flex-shrink-0">
                         {formatDate(user.created_at)}
                       </div>
+                      <button
+                        onClick={() => handleUserDelete(user.id, user.full_name || user.email || '')}
+                        className="text-[10px] text-slate-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100 flex-shrink-0"
+                      >
+                        삭제
+                      </button>
                     </div>
                   );
                 })}
@@ -1141,7 +1259,8 @@ export default function AdminPage() {
             )}
           </div>
         </div>
-      )}
+        );
+      })()}
 
       {/* ── 말투 학습 탭 ── */}
       {tab === 'style' && (
@@ -1757,17 +1876,34 @@ export default function AdminPage() {
         </div>
       )}
       {/* ── 피드백 관리 탭 ── */}
-      {tab === 'feedback' && (
+      {tab === 'feedback' && (() => {
+        const fq = feedbackSearch.trim().toLowerCase();
+        const filteredFeedbacks = fq
+          ? adminFeedbacks.filter(f =>
+              f.content.toLowerCase().includes(fq) ||
+              f.user_name.toLowerCase().includes(fq)
+            )
+          : adminFeedbacks;
+        return (
         <div className="space-y-4">
           {/* 헤더 + 분석 버튼 */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <h2 className="text-lg font-bold text-slate-800">피드백 목록</h2>
               {adminFeedbacks.length > 0 && (
-                <span className="text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">{adminFeedbacks.length}건</span>
+                <span className="text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
+                  {adminFeedbacks.length}건{fq && ` · 검색 ${filteredFeedbacks.length}건`}
+                </span>
               )}
+              <input
+                type="text"
+                value={feedbackSearch}
+                onChange={e => setFeedbackSearch(e.target.value)}
+                placeholder="내용·작성자 검색"
+                className="px-3 py-1.5 text-xs border border-slate-200 rounded-lg w-44 focus:outline-none focus:border-blue-400 transition-colors"
+              />
               <button
-                onClick={loadAdminFeedbacks}
+                onClick={() => loadAdminFeedbacks()}
                 disabled={feedbacksLoading}
                 className="text-xs text-blue-600 hover:text-blue-800 font-medium"
               >
@@ -1830,14 +1966,14 @@ export default function AdminPage() {
             <div className="flex justify-center py-10">
               <div className="w-6 h-6 border-2 border-blue-100 border-t-blue-500 rounded-full animate-spin" />
             </div>
-          ) : adminFeedbacks.length === 0 ? (
+          ) : filteredFeedbacks.length === 0 ? (
             <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center">
-              <p className="text-sm text-slate-400">아직 피드백이 없습니다.</p>
+              <p className="text-sm text-slate-400">{fq ? '검색 결과가 없습니다.' : '아직 피드백이 없습니다.'}</p>
             </div>
           ) : (
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
               <div className="divide-y divide-slate-100">
-                {adminFeedbacks.map(fb => (
+                {filteredFeedbacks.map(fb => (
                   <div key={fb.id} className="px-5 py-3.5 flex gap-3 group hover:bg-slate-50/50 transition-colors">
                     <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">
                       {fb.user_name.charAt(0)}
@@ -1859,10 +1995,24 @@ export default function AdminPage() {
                   </div>
                 ))}
               </div>
+              {hasMoreFeedbacks && !fq && (
+                <button
+                  onClick={() => {
+                    const nextOffset = feedbackOffset + 50;
+                    setFeedbackOffset(nextOffset);
+                    loadAdminFeedbacks(true);
+                  }}
+                  disabled={feedbacksLoading}
+                  className="w-full py-2.5 text-xs font-semibold text-slate-500 bg-slate-50 border-t border-slate-100 hover:bg-slate-100 transition-colors disabled:opacity-50"
+                >
+                  {feedbacksLoading ? '불러오는 중...' : '더 불러오기'}
+                </button>
+              )}
             </div>
           )}
         </div>
-      )}
+        );
+      })()}
 
       </div>
     </div>

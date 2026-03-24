@@ -1,5 +1,5 @@
 /**
- * Admin 전용 RPC 헬퍼 — root postStorageService.ts에서 admin 관련만 이식
+ * Admin 전용 서비스 — RPC 헬퍼 + 사용자 관리
  */
 import { supabase } from './supabase';
 
@@ -63,4 +63,33 @@ export async function deleteAllGeneratedPosts(
     }
     return { success: false, error: `삭제 중 오류: ${msg}` };
   }
+}
+
+// ── 사용자 관리 ──
+
+/** 사용자 팀 배정 변경 */
+export async function updateUserTeam(
+  userId: string,
+  teamId: number | null,
+): Promise<{ success: boolean; error?: string }> {
+  if (!supabase) return { success: false, error: 'Supabase 미설정' };
+  const { error } = await supabase
+    .from('profiles')
+    .update({ team_id: teamId })
+    .eq('id', userId);
+  if (error) return { success: false, error: error.message };
+  return { success: true };
+}
+
+/** 사용자 프로필 삭제 (auth 계정은 유지, profiles 레코드만 삭제) */
+export async function deleteUserProfile(
+  userId: string,
+): Promise<{ success: boolean; error?: string }> {
+  if (!supabase) return { success: false, error: 'Supabase 미설정' };
+  const { error } = await supabase
+    .from('profiles')
+    .delete()
+    .eq('id', userId);
+  if (error) return { success: false, error: error.message };
+  return { success: true };
 }
