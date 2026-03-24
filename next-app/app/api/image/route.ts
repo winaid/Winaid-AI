@@ -225,7 +225,12 @@ OUTPUT DIRECTION:
     }
   }
 
-  const model = 'gemini-3-pro-image-preview';
+  // 모델 우선순위: PRO → FLASH fallback (root geminiClient 동일)
+  const MODELS = [
+    'gemini-3-pro-image-preview',       // Pro: 고품질
+    'gemini-3.1-flash-image-preview',   // Flash: 속도+안정성
+  ];
+
   const apiBody = {
     contents: [{ role: 'user', parts }],
     generationConfig: {
@@ -234,85 +239,82 @@ OUTPUT DIRECTION:
     },
   };
 
-  const MAX_RETRIES = 2;
   const perAttemptTimeout = 120000;
+  let lastError = '';
 
-  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
-    const ki = (keyIndex + attempt) % keys.length;
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), perAttemptTimeout);
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${keys[ki]}`;
+  // 각 모델 × 각 키 조합으로 시도
+  for (const model of MODELS) {
+    for (let ki = 0; ki < keys.length; ki++) {
+      const keyIdx = (keyIndex + ki) % keys.length;
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), perAttemptTimeout);
+      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${keys[keyIdx]}`;
 
-    try {
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(apiBody),
-        signal: controller.signal,
-      });
+      try {
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(apiBody),
+          signal: controller.signal,
+        });
 
-      clearTimeout(timeoutId);
+        clearTimeout(timeoutId);
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        const status = response.status;
+        if (!response.ok) {
+          const errorText = await response.text();
+          const status = response.status;
+          lastError = `${model} key${ki}: ${status} ${errorText.substring(0, 200)}`;
 
-        if ((status === 429 || status === 503) && attempt < MAX_RETRIES - 1) {
-          await new Promise(r => setTimeout(r, 2000));
+          // 429/503 → 다음 키 또는 다음 모델로
+          if (status === 429 || status === 503) {
+            await new Promise(r => setTimeout(r, 1500));
+            continue;
+          }
+
+          // 400 (모델 미존재 등) → 다음 모델로
+          if (status === 400 || status === 404) break;
+
+          // 기타 에러 → 다음 시도
           continue;
         }
 
-        return NextResponse.json(
-          { error: `Gemini API ${status}`, details: errorText.substring(0, 500) },
-          { status },
-        );
-      }
+        keyIndex = (keyIdx + 1) % keys.length;
+        const data = await response.json();
 
-      keyIndex = (ki + 1) % keys.length;
-      const data = await response.json();
+        const resParts = data?.candidates?.[0]?.content?.parts || [];
+        const imagePart = resParts.find((p: { inlineData?: { data?: string } }) => p.inlineData?.data);
 
-      const parts = data?.candidates?.[0]?.content?.parts || [];
-      const imagePart = parts.find((p: { inlineData?: { data?: string } }) => p.inlineData?.data);
+        if (imagePart?.inlineData) {
+          const mimeType = imagePart.inlineData.mimeType || 'image/png';
+          const base64 = imagePart.inlineData.data;
 
-      if (imagePart?.inlineData) {
-        const mimeType = imagePart.inlineData.mimeType || 'image/png';
-        const base64 = imagePart.inlineData.data;
+          return NextResponse.json({
+            imageDataUrl: `data:${mimeType};base64,${base64}`,
+            mimeType,
+            model,
+          });
+        }
 
-        return NextResponse.json({
-          imageDataUrl: `data:${mimeType};base64,${base64}`,
-          mimeType,
-        });
-      }
+        // 이미지 없는 응답 → 다음 시도
+        lastError = `${model}: 응답에 이미지 데이터 없음`;
+        continue;
+      } catch (err: unknown) {
+        clearTimeout(timeoutId);
+        const error = err as Error;
+        lastError = `${model} key${ki}: ${error.name === 'AbortError' ? 'timeout' : error.message}`;
 
-      // 이미지 데이터 없음 — 재시도
-      if (attempt < MAX_RETRIES - 1) {
-        await new Promise(r => setTimeout(r, 1000));
+        if (error.name === 'AbortError') {
+          // 타임아웃 → 다음 모델로 (같은 모델 재시도 무의미)
+          break;
+        }
+        await new Promise(r => setTimeout(r, 1500));
         continue;
       }
-
-      return NextResponse.json(
-        { error: '이미지 데이터를 받지 못했습니다.' },
-        { status: 502 },
-      );
-    } catch (err: unknown) {
-      clearTimeout(timeoutId);
-      const error = err as Error;
-
-      if (attempt < MAX_RETRIES - 1) {
-        await new Promise(r => setTimeout(r, 2000));
-        continue;
-      }
-
-      if (error.name === 'AbortError') {
-        return NextResponse.json({ error: 'Gemini API timeout' }, { status: 504 });
-      }
-
-      return NextResponse.json(
-        { error: error.message || '이미지 생성 실패' },
-        { status: 502 },
-      );
     }
   }
 
-  return NextResponse.json({ error: '모든 시도 실패' }, { status: 502 });
+  return NextResponse.json(
+    { error: `이미지 생성 실패 (${MODELS.length}개 모델 모두 실패)`, details: lastError },
+    { status: 502 },
+  );
 }
