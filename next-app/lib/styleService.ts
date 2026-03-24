@@ -321,6 +321,7 @@ async function analyzeWritingStyleViaApi(
   sampleText: string,
   styleName: string,
 ): Promise<LearnedWritingStyle> {
+  // root writingStyleService.ts analyzeWritingStyle와 동일한 프롬프트
   const prompt = `너는 단순히 기존 글의 문장 끝맺음을 흉내 내는 사람이 아니라,
 해당 병원 고유의 화자 캐릭터, 상담 방식, 설명 습관, 설득 구조를 추출해
 그 문체를 재현하는 편집자 역할을 수행한다.
@@ -332,18 +333,54 @@ ${sampleText.substring(0, 5000)}
 - 표면적인 어미나 표현 몇 개만 모방하지 말 것
 - 반드시 화자의 태도, 환자와의 거리감, 설명 흐름, 설득 구조까지 분석할 것
 - 업종 공통 블로그 말투로 평준화하지 말 것
+- 병원명만 바꿔도 다른 병원 글처럼 보이는 문장은 피할 것
 - 실제 상담실/진료실에서 나올 법한 문장인지 기준으로 판단할 것
 - 근거가 약한 해석은 단정하지 말고 가능성으로 표시할 것
 - 반복적으로 확인되는 특징만 "이 병원 고유 문체"로 정의할 것
 
 [분석 항목 — 7가지]
+
 1. 화자의 정체성 (speakerIdentity)
+   - 대표원장 직접 설명형인지
+   - 객관적 정보 칼럼형인지
+   - 환자 상담형인지
+   - 보호자 안심형인지
+
 2. 독자와의 거리감 (readerDistance)
+   - 전문가가 설명하는 거리인지
+   - 친절한 상담 대화형인지
+   - 공감과 위로가 섞인 톤인지
+   - 차분하고 객관적인 톤인지
+
 3. 문장 리듬 (sentenceRhythm)
+   - 평균 문장 길이
+   - 짧게 끊는지, 길게 설명하는지
+   - 같은 어미 반복 여부
+   - 질문형 / 단정형 / 권유형 비중
+
 4. 문단 전개 구조 (paragraphFlow)
+   - 사례 도입 → 설명 → 정리
+   - 문제 제기 → 원인 → 해결
+   - 환자 질문 → 답변
+   - 비교 설명 → 적합 대상 → 관리법
+
 5. 설득 방식 (persuasionStyle)
+   - 정보 전달 중심인지
+   - 신뢰 형성 중심인지
+   - 치료 필요성 설득형인지
+   - 두려움 완화형인지
+
 6. 고유 표현 습관 (uniqueExpressions)
+   - 자주 쓰는 접속어
+   - 자주 쓰는 명사 표현
+   - 반복되는 문장 구조
+   - 자주 등장하는 상담 문장 패턴
+
 7. 금지해야 할 범용 문체 (bannedGenericStyle)
+   - 다른 병원 블로그에도 그대로 들어갈 수 있는 진부한 표현
+   - 과장된 광고 문구
+   - AI가 쓴 듯한 균일한 설명체
+   - 의미 없이 반복되는 '~입니다', '~필요합니다' 나열
 
 [출력 형식]
 반드시 아래 JSON으로만 답변. 설명 텍스트 없이 JSON만 출력.
@@ -351,30 +388,30 @@ ${sampleText.substring(0, 5000)}
   "tone": "전체적인 어조 설명 (2-3문장)",
   "sentenceEndings": ["자주 쓰는 문장 끝 패턴 5-8개"],
   "vocabulary": ["이 병원 고유의 특징적 단어/표현 5-10개"],
-  "structure": "글 구조 설명",
+  "structure": "글 구조 설명 (TYPE A 에세이형 / TYPE B 정보전달형 명시 + 상세 흐름)",
   "emotionLevel": "low/medium/high",
   "formalityLevel": "casual/neutral/formal",
-  "speakerIdentity": "화자 정체성 분석",
-  "readerDistance": "독자와의 거리감 분석",
-  "sentenceRhythm": "문장 리듬 분석",
-  "paragraphFlow": "문단 전개 구조 분석",
-  "persuasionStyle": "설득 방식 분석",
-  "uniqueExpressions": ["고유 표현 5-10개"],
-  "bannedGenericStyle": ["금지할 범용 표현 5-8개"],
+  "speakerIdentity": "화자 정체성 분석 (2-3문장, 어떤 위치에서 말하는지)",
+  "readerDistance": "독자와의 거리감 분석 (2-3문장)",
+  "sentenceRhythm": "문장 리듬 분석 (평균 길이, 끊김 패턴, 어미 반복 여부, 질문형/단정형/권유형 비중)",
+  "paragraphFlow": "문단 전개 구조 분석 (2-3문장, 대표적 흐름 패턴)",
+  "persuasionStyle": "설득 방식 분석 (2-3문장)",
+  "uniqueExpressions": ["고유 접속어, 명사 표현, 반복 문장 구조, 상담 패턴 — 5-10개"],
+  "bannedGenericStyle": ["이 병원 글에서 절대 나오면 안 되는 범용/진부 표현 5-8개"],
   "oneLineSummary": "이 병원 문체를 한 줄로 정의",
-  "goodExamples": ["이 병원다운 문장 예시 5개"],
-  "badExamples": ["이 병원답지 않은 문장 예시 5개"],
-  "description": "이 말투를 한 줄로 설명",
-  "stylePrompt": "AI가 이 말투로 글을 쓸 때 사용할 핵심 지침 (100-200자)"
+  "goodExamples": ["이 병원다운 문장 예시 5개 — 원문에서 추출하거나 원문 스타일로 새로 작성"],
+  "badExamples": ["이 병원답지 않은 문장 예시 5개 — 이런 문장이 나오면 실패"],
+  "description": "이 말투를 한 줄로 설명 (화자 캐릭터 + 독자 관계 + 설득 구조 포함)",
+  "stylePrompt": "AI가 이 말투로 글을 쓸 때 사용할 핵심 지침 (100-200자, 화자 태도 + 설명 흐름 + 금지 패턴)"
 }`;
 
+  // root와 동일: PRO 모델 사용 (flash-lite → 3.1-pro-preview)
   const res = await fetch(resolveApiUrl('/api/gemini'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       prompt,
-      model: 'gemini-3.1-flash-lite-preview',
-      temperature: 0.3,
+      model: 'gemini-3.1-pro-preview',
       responseType: 'json',
     }),
   });
