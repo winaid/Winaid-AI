@@ -14,6 +14,7 @@ export default function FeedbackPage() {
           page="dashboard"
           userId={user?.id}
           userName={userName}
+          writeOnly
         />
       </div>
     </div>

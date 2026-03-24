@@ -29,6 +29,13 @@ import { deleteAllGeneratedPosts } from '../../lib/adminService';
 import { ToastContainer, toast } from '../../components/Toast';
 import { sanitizeHtml } from '../../lib/sanitizeHtml';
 import type { CrawledPostScore, DBCrawledPost } from '../../lib/types';
+import {
+  listFeedbacks,
+  deleteFeedback,
+  analyzeFeedbacks,
+  type InternalFeedback as FeedbackItem,
+  type FeedbackAnalysis,
+} from '../../lib/feedbackService';
 
 // ── 타입 ──
 
@@ -66,7 +73,7 @@ interface UserProfile {
   created_at: string;
 }
 
-type Tab = 'contents' | 'users' | 'style';
+type Tab = 'contents' | 'users' | 'style' | 'feedback';
 type PostTypeFilter = 'all' | 'blog' | 'card_news' | 'press_release' | 'image';
 
 const POST_TYPE_LABELS: Record<string, string> = {
@@ -183,6 +190,13 @@ export default function AdminPage() {
   const [deleteAllError, setDeleteAllError] = useState('');
   const hospitalScrollRef = useRef<HTMLDivElement>(null);
 
+  // 피드백 관리
+  const [adminFeedbacks, setAdminFeedbacks] = useState<FeedbackItem[]>([]);
+  const [feedbacksLoading, setFeedbacksLoading] = useState(false);
+  const [feedbackAnalysis, setFeedbackAnalysis] = useState<FeedbackAnalysis | null>(null);
+  const [feedbackAnalyzing, setFeedbackAnalyzing] = useState(false);
+  const [feedbackAnalysisError, setFeedbackAnalysisError] = useState('');
+
   // 말투 학습
   const [styleProfiles, setStyleProfiles] = useState<HospitalStyleProfile[]>([]);
   const [blogUrlInputs, setBlogUrlInputs] = useState<Record<string, string[]>>({});
@@ -239,6 +253,13 @@ export default function AdminPage() {
     }
   }, [tab, authenticated]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // 피드백 탭 진입 시 로드
+  useEffect(() => {
+    if (tab === 'feedback' && authenticated && adminFeedbacks.length === 0) {
+      loadAdminFeedbacks();
+    }
+  }, [tab, authenticated]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const getToken = useCallback(() => {
     return sessionStorage.getItem('ADMIN_TOKEN') || password;
   }, [password]);
@@ -261,6 +282,38 @@ export default function AdminPage() {
     setUsers(u);
     setUsersLoading(false);
   }, []);
+
+  // 피드백 로드
+  const loadAdminFeedbacks = useCallback(async () => {
+    setFeedbacksLoading(true);
+    const list = await listFeedbacks('dashboard');
+    setAdminFeedbacks(list);
+    setFeedbacksLoading(false);
+  }, []);
+
+  const handleAdminFeedbackDelete = async (id: string) => {
+    if (!confirm('이 피드백을 삭제하시겠습니까?')) return;
+    const ok = await deleteFeedback(id);
+    if (ok) {
+      setAdminFeedbacks(prev => prev.filter(f => f.id !== id));
+      toast.success('피드백 삭제 완료');
+    } else {
+      toast.error('삭제 실패');
+    }
+  };
+
+  const handleAdminFeedbackAnalyze = async () => {
+    if (feedbackAnalyzing) return;
+    setFeedbackAnalyzing(true);
+    setFeedbackAnalysisError('');
+    const result = await analyzeFeedbacks(adminFeedbacks);
+    if (result.success && result.analysis) {
+      setFeedbackAnalysis(result.analysis);
+    } else {
+      setFeedbackAnalysisError(result.error || '분석 실패');
+    }
+    setFeedbackAnalyzing(false);
+  };
 
   // 말투 프로파일 로드
   const loadStyleProfiles = useCallback(async () => {
@@ -700,6 +753,7 @@ export default function AdminPage() {
           { key: 'contents' as Tab, label: '콘텐츠 관리', activeClass: 'bg-slate-800 text-white shadow-sm' },
           { key: 'style' as Tab, label: '말투 학습', activeClass: 'bg-violet-600 text-white shadow-sm' },
           { key: 'users' as Tab, label: '사용자 관리', activeClass: 'bg-emerald-600 text-white shadow-sm' },
+          { key: 'feedback' as Tab, label: '피드백 관리', activeClass: 'bg-blue-600 text-white shadow-sm' },
         ]).map(t => (
           <button
             key={t.key}
@@ -1703,6 +1757,114 @@ export default function AdminPage() {
           </div>
         </div>
       )}
+      {/* ── 피드백 관리 탭 ── */}
+      {tab === 'feedback' && (
+        <div className="space-y-4">
+          {/* 헤더 + 분석 버튼 */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <h2 className="text-lg font-bold text-slate-800">피드백 목록</h2>
+              {adminFeedbacks.length > 0 && (
+                <span className="text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">{adminFeedbacks.length}건</span>
+              )}
+              <button
+                onClick={loadAdminFeedbacks}
+                disabled={feedbacksLoading}
+                className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+              >
+                {feedbacksLoading ? '로딩...' : '새로고침'}
+              </button>
+            </div>
+            <button
+              onClick={handleAdminFeedbackAnalyze}
+              disabled={feedbackAnalyzing || adminFeedbacks.length === 0}
+              className="px-4 py-2 text-xs font-bold bg-violet-600 text-white rounded-xl hover:bg-violet-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center gap-1.5"
+            >
+              {feedbackAnalyzing ? (
+                <><div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />분석 중...</>
+              ) : (
+                <>AI 피드백 분석</>
+              )}
+            </button>
+          </div>
+
+          {/* AI 분석 결과 */}
+          {feedbackAnalysisError && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-xl">
+              <p className="text-xs text-red-600">{feedbackAnalysisError}</p>
+            </div>
+          )}
+          {feedbackAnalysis && (
+            <div className="space-y-3">
+              <div className="p-4 bg-violet-50 border border-violet-200 rounded-2xl">
+                <p className="text-xs font-bold text-violet-700 mb-1">전체 트렌드</p>
+                <p className="text-sm text-violet-800 leading-relaxed">{feedbackAnalysis.overall}</p>
+              </div>
+              {feedbackAnalysis.clusters.map((cluster, idx) => (
+                <div key={idx} className="p-4 bg-white border border-slate-200 rounded-2xl">
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                      cluster.priority === 'high' ? 'bg-red-100 text-red-700'
+                      : cluster.priority === 'medium' ? 'bg-amber-100 text-amber-700'
+                      : 'bg-slate-100 text-slate-600'
+                    }`}>
+                      {cluster.priority === 'high' ? '긴급' : cluster.priority === 'medium' ? '보통' : '낮음'}
+                    </span>
+                    <span className="text-xs font-bold text-slate-800">{cluster.theme}</span>
+                    <span className="text-[10px] text-slate-400 ml-auto">{cluster.count}건</span>
+                  </div>
+                  <p className="text-sm text-slate-600 leading-relaxed mb-2">{cluster.summary}</p>
+                  {cluster.examples.length > 0 && (
+                    <div className="space-y-1">
+                      {cluster.examples.map((ex, ei) => (
+                        <div key={ei} className="text-[11px] text-slate-500 pl-2.5 border-l-2 border-slate-200 leading-relaxed">{ex}</div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* 피드백 목록 */}
+          {feedbacksLoading ? (
+            <div className="flex justify-center py-10">
+              <div className="w-6 h-6 border-2 border-blue-100 border-t-blue-500 rounded-full animate-spin" />
+            </div>
+          ) : adminFeedbacks.length === 0 ? (
+            <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center">
+              <p className="text-sm text-slate-400">아직 피드백이 없습니다.</p>
+            </div>
+          ) : (
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+              <div className="divide-y divide-slate-100">
+                {adminFeedbacks.map(fb => (
+                  <div key={fb.id} className="px-5 py-3.5 flex gap-3 group hover:bg-slate-50/50 transition-colors">
+                    <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">
+                      {fb.user_name.charAt(0)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <span className="text-xs font-semibold text-slate-700">{fb.user_name}</span>
+                        <span className="text-[10px] text-slate-400">{fb.user_id === 'anonymous' ? '(비로그인)' : fb.user_id.slice(0, 8)}</span>
+                        <span className="text-[10px] text-slate-400">{new Date(fb.created_at).toLocaleString('ko-KR')}</span>
+                      </div>
+                      <p className="text-sm text-slate-600 whitespace-pre-wrap break-words leading-relaxed">{fb.content}</p>
+                    </div>
+                    <button
+                      onClick={() => handleAdminFeedbackDelete(fb.id)}
+                      className="text-[10px] text-slate-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100 flex-shrink-0 self-center"
+                    >
+                      삭제
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       </div>
     </div>
   );

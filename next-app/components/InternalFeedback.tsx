@@ -25,6 +25,8 @@ interface Props {
   userId?: string;
   /** 표시 이름 (미로그인 시 '익명' fallback) */
   userName?: string;
+  /** true이면 입력만 표시 (목록/분석 숨김) */
+  writeOnly?: boolean;
 }
 
 function timeAgo(dateStr: string): string {
@@ -40,7 +42,7 @@ function timeAgo(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' });
 }
 
-export default function InternalFeedback({ page, userId, userName }: Props) {
+export default function InternalFeedback({ page, userId, userName, writeOnly }: Props) {
   const resolvedUserId = userId || 'anonymous';
   const resolvedUserName = userName || '익명';
 
@@ -56,9 +58,10 @@ export default function InternalFeedback({ page, userId, userName }: Props) {
   const [analysisError, setAnalysisError] = useState('');
 
   const load = useCallback(async () => {
+    if (writeOnly) return;
     const list = await listFeedbacks(page);
     setFeedbacks(list);
-  }, [page]);
+  }, [page, writeOnly]);
 
   useEffect(() => {
     load();
@@ -130,8 +133,8 @@ export default function InternalFeedback({ page, userId, userName }: Props) {
         )}
       </div>
 
-      {/* 기존 피드백 목록 */}
-      {feedbacks.length > 0 && (
+      {/* 기존 피드백 목록 (writeOnly에서는 숨김) */}
+      {!writeOnly && feedbacks.length > 0 && (
         <div className="px-5 py-3 space-y-3 max-h-[320px] overflow-y-auto">
           {feedbacks.map(fb => (
             <div key={fb.id} className="flex gap-2.5 group">
@@ -200,8 +203,8 @@ export default function InternalFeedback({ page, userId, userName }: Props) {
         </div>
       </div>
 
-      {/* ── AI 분석 섹션 ── */}
-      <div className="px-5 py-4 border-t border-slate-100">
+      {/* ── AI 분석 섹션 (writeOnly에서는 숨김) ── */}
+      {!writeOnly && <div className="px-5 py-4 border-t border-slate-100">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <svg className="w-4 h-4 text-violet-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -266,7 +269,7 @@ export default function InternalFeedback({ page, userId, userName }: Props) {
             )}
           </div>
         )}
-      </div>
+      </div>}
     </div>
   );
 }
