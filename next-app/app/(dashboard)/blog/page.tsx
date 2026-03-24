@@ -332,6 +332,86 @@ ${categoryKeywords}
     }
   };
 
+  // ── 구조 보정 함수 (old legacyBlogGeneration.ts 동일) ──
+  function normalizeBlogStructure(html: string, topicFallback: string): { html: string; log: string[] } {
+    const log: string[] = [];
+    let out = html;
+
+    // 1) h1 → h3
+    const h1Count = (out.match(/<h1[\s>]/gi) || []).length;
+    if (h1Count > 0) {
+      out = out.replace(/<h1([^>]*)>/gi, '<h3$1>').replace(/<\/h1>/gi, '</h3>');
+      log.push(`[STRUCTURE] h1→h3 변환: ${h1Count}개`);
+    }
+
+    // 2) h2 → h3 (old와 동일)
+    const h2Count = (out.match(/<h2[\s>]/gi) || []).length;
+    if (h2Count > 0) {
+      out = out.replace(/<h2([^>]*)>/gi, '<h3$1>').replace(/<\/h2>/gi, '</h3>');
+      log.push(`[STRUCTURE] h2→h3 변환: ${h2Count}개`);
+    }
+
+    // 3) markdown ## → h3
+    const mdHeadings = out.match(/^#{1,3}\s+.+$/gm) || [];
+    if (mdHeadings.length > 0) {
+      out = out.replace(/^#{1,3}\s+(.+)$/gm, '<h3>$1</h3>');
+      log.push(`[STRUCTURE] markdown heading→h3 변환: ${mdHeadings.length}개`);
+    }
+
+    // 4) 해시태그 제거 (old 동일)
+    out = out.replace(/#[가-힣a-zA-Z0-9_]+(\s*#[가-힣a-zA-Z0-9_]+)*/g, '');
+
+    // 5) 이모지 제거 (old 동일 — 전문 의료 콘텐츠 톤)
+    out = out
+      .replace(/[\u{1F300}-\u{1F9FF}]/gu, '')
+      .replace(/[\u{2600}-\u{26FF}]/gu, '')
+      .replace(/[\u{2700}-\u{27BF}]/gu, '')
+      .replace(/[\u{FE00}-\u{FE0F}]/gu, '')
+      .replace(/[\u{1F000}-\u{1F02F}]/gu, '');
+
+    // 6) 빈 p 태그 제거
+    out = out.replace(/<p>\s*<\/p>/g, '');
+
+    // 7) h3 개수 확인 — 최소 5개 보장
+    const h3Matches = out.match(/<h3[^>]*>[\s\S]*?<\/h3>/gi) || [];
+    const h3Count = h3Matches.length;
+    log.push(`[STRUCTURE] 소제목(h3) 수: ${h3Count}개`);
+
+    if (h3Count === 0) {
+      // 소제목이 전혀 없으면 첫 줄을 제목으로 승격하고 기본 구조 보정
+      log.push(`[STRUCTURE] ⚠️ 소제목 0개 — 기본 구조 보정 시도`);
+    }
+
+    // 8) 제목 확인 — 첫 번째 h3 전까지 도입부가 있는지
+    const firstH3Idx = out.search(/<h3[\s>]/i);
+    if (firstH3Idx === 0) {
+      // 도입부 없이 바로 h3로 시작 → 첫 h3을 제목으로 간주, 도입부 부재 경고
+      log.push(`[STRUCTURE] ⚠️ 도입부 없음 — h3으로 바로 시작`);
+    } else if (firstH3Idx > 0) {
+      const introPart = out.substring(0, firstH3Idx);
+      const introPs = (introPart.match(/<p[^>]*>/gi) || []).length;
+      log.push(`[STRUCTURE] 도입부 문단: ${introPs}개`);
+    }
+
+    // 9) 각 소제목 아래 문단 수 검증
+    const sections = out.split(/<h3[^>]*>/i).slice(1); // h3 이후 각 섹션
+    const sectionParagraphCounts: number[] = [];
+    for (const section of sections) {
+      const nextH3 = section.search(/<h3[\s>]/i);
+      const sectionContent = nextH3 > 0 ? section.substring(0, nextH3) : section;
+      const pCount = (sectionContent.match(/<p[^>]*>/gi) || []).length;
+      sectionParagraphCounts.push(pCount);
+    }
+    const shortSections = sectionParagraphCounts.filter(c => c < 2).length;
+    if (shortSections > 0) {
+      log.push(`[STRUCTURE] ⚠️ 문단 2개 미만 섹션: ${shortSections}개 (보정 불필요 — 프롬프트 강화로 대응)`);
+    }
+    log.push(`[STRUCTURE] 섹션별 문단 수: [${sectionParagraphCounts.join(', ')}]`);
+
+    out = out.trim();
+    return { html: out, log };
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!topic.trim()) return;
@@ -365,12 +445,22 @@ ${categoryKeywords}
     setScores(undefined);
     setSaveStatus(null);
 
+    // ── 로그: 요청 시작 ──
+    console.info(`[BLOG] ========== 블로그 생성 시작 ==========`);
+    console.info(`[BLOG] topic="${request.topic}" disease="${request.disease || '없음'}" imageCount=${request.imageCount} textLength=${request.textLength}`);
+    console.info(`[BLOG] category="${request.category}" persona="${request.persona}" tone="${request.tone}" audience="${request.audienceMode}"`);
+    if (request.customSubheadings) {
+      console.info(`[BLOG] customSubheadings="${request.customSubheadings.substring(0, 100)}..."`);
+    }
+
     try {
       const { systemInstruction, prompt } = buildBlogPrompt(request);
+      console.info(`[BLOG] 프롬프트 조립 완료 — system: ${systemInstruction.length}자, prompt: ${prompt.length}자`);
 
       // ── 경쟁 블로그 분석 (old legacyBlogGeneration.ts line 674-724 동일) ──
       let competitorInstruction = '';
       if (keywords.trim()) {
+        console.info(`[BLOG] 경쟁 블로그 분석 시작 — 키워드: "${keywords.trim()}"`);
         try {
           const competitorRes = await fetch('/api/gemini', {
             method: 'POST',
@@ -433,10 +523,13 @@ ${subs.length > 0 ? `경쟁 글 소제목: ${subs.join(' / ')}` : ''}
 `;
             }
           }
-        } catch {
+        } catch (compErr) {
           // 경쟁 분석 실패해도 생성은 계속 진행
+          console.warn(`[BLOG] 경쟁 분석 실패 (무시):`, compErr);
         }
       }
+
+      console.info(`[BLOG] 경쟁 분석 결과: ${competitorInstruction ? '성공 (' + competitorInstruction.length + '자)' : '없음/스킵'}`);
 
       // 프롬프트 조립: 기본 + 경쟁 분석 + 말투
       let finalPrompt = prompt;
@@ -459,6 +552,9 @@ ${subs.length > 0 ? `경쟁 글 소제목: ${subs.join(' / ')}` : ''}
         } catch { /* 프로파일 없으면 기본 동작 */ }
       }
 
+      console.info(`[BLOG] 최종 프롬프트 길이: ${finalPrompt.length}자 (system: ${systemInstruction.length}자)`);
+      console.info(`[BLOG] Gemini 호출 시작 — model=gemini-3.1-pro-preview, temp=0.85`);
+
       const res = await fetch('/api/gemini', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -474,9 +570,13 @@ ${subs.length > 0 ? `경쟁 글 소제목: ${subs.join(' / ')}` : ''}
       const data = await res.json() as { text?: string; error?: string; details?: string };
 
       if (!res.ok || !data.text) {
-        setError(data.error || data.details || `서버 오류 (${res.status})`);
+        const errMsg = data.error || data.details || `서버 오류 (${res.status})`;
+        console.error(`[BLOG] ❌ 생성 실패: ${errMsg}`);
+        setError(errMsg);
         return;
       }
+
+      console.info(`[BLOG] Gemini 응답 수신 — 원본 길이: ${data.text.length}자`);
 
       // ── 응답 파싱: 본문 / SCORES / IMAGE_PROMPTS 분리 ──
       let blogText = data.text;
@@ -519,6 +619,17 @@ ${subs.length > 0 ? `경쟁 글 소제목: ${subs.join(' / ')}` : ''}
 
       // 3) HTML 정리: 코드블록 fence 제거
       blogText = blogText.replace(/^```html?\s*\n?/i, '').replace(/\n?```\s*$/, '');
+
+      // 3.5) 구조 보정 (old legacyBlogGeneration.ts 동일: h1/h2→h3, markdown→h3, 이모지/해시태그 제거)
+      const beforeLen = blogText.length;
+      const { html: normalizedHtml, log: structureLogs } = normalizeBlogStructure(blogText, topic.trim());
+      blogText = normalizedHtml;
+      structureLogs.forEach(l => console.info(`[BLOG] ${l}`));
+      console.info(`[BLOG] 구조 보정 완료 — ${beforeLen}자 → ${blogText.length}자`);
+      if (parsed) {
+        console.info(`[BLOG] 자가평가 점수 — SEO: ${parsed.seoScore ?? '?'}, 의료법: ${parsed.safetyScore ?? '?'}, 전환: ${parsed.conversionScore ?? '?'}`);
+      }
+      console.info(`[BLOG] 이미지 프롬프트: ${imagePrompts.length}개 (요청: ${imageCount}개)`);
 
       // 4) 이미지 없으면 마커 strip 후 바로 표시
       if (imageCount === 0 || imagePrompts.length === 0) {
@@ -619,10 +730,12 @@ ${subs.length > 0 ? `경쟁 글 소제목: ${subs.join(' / ')}` : ''}
       }
 
       // ── 저장 — Supabase 또는 guest localStorage ──
+      console.info(`[BLOG] 저장 시작 — 최종 콘텐츠 길이: ${blogText.length}자`);
       try {
         const { userId, userEmail } = await getSessionSafe();
         const titleMatch = blogText.match(/<h3[^>]*>([^<]+)<\/h3>/) || blogText.match(/^(.+)/);
         const extractedTitle = titleMatch ? titleMatch[1].replace(/<[^>]*>/g, '').trim().substring(0, 200) : topic.trim();
+        console.info(`[BLOG] 추출 제목: "${extractedTitle}"`);
 
         const saveResult = await savePost({
           userId,
@@ -637,15 +750,20 @@ ${subs.length > 0 ? `경쟁 글 소제목: ${subs.join(' / ')}` : ''}
         });
 
         if ('error' in saveResult) {
+          console.warn(`[BLOG] 저장 실패: ${saveResult.error}`);
           setSaveStatus('저장 실패: ' + saveResult.error);
         } else {
+          console.info(`[BLOG] ✅ 저장 완료`);
           setSaveStatus('저장 완료');
         }
-      } catch {
+      } catch (saveErr) {
+        console.warn(`[BLOG] 저장 실패: Supabase 연결 불가`, saveErr);
         setSaveStatus('저장 실패: Supabase 연결 불가');
       }
+      console.info(`[BLOG] ========== 블로그 생성 완료 ==========`);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : '네트워크 오류';
+      console.error(`[BLOG] ❌ 생성 실패: ${msg}`, err);
       setError(msg);
     } finally {
       setIsGenerating(false);
