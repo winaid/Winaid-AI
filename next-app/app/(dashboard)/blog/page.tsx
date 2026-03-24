@@ -691,7 +691,7 @@ ${subs.length > 0 ? `경쟁 글 소제목: ${subs.join(' / ')}` : ''}
           systemInstruction,
           model: 'gemini-3.1-pro-preview',
           temperature: 0.85,
-          maxOutputTokens: 8192,
+          maxOutputTokens: 65536,
         }),
       });
 
