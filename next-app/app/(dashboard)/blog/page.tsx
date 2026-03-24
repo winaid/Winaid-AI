@@ -2,7 +2,7 @@
 
 import { useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { CATEGORIES, PERSONAS, TONES, WRITING_STYLES, CSS_THEMES } from '../../../lib/constants';
+import { CATEGORIES, PERSONAS, TONES } from '../../../lib/constants';
 import { TEAM_DATA } from '../../../lib/teamData';
 import { ContentCategory, type GenerationRequest, type AudienceMode, type ImageStyle, type WritingStyle, type CssTheme } from '../../../lib/types';
 import { buildBlogPrompt } from '../../../lib/blogPrompt';
@@ -29,8 +29,10 @@ function BlogForm() {
   const [textLength, setTextLength] = useState(1500);
   const [hospitalName, setHospitalName] = useState('');
   const [showHospitalPicker, setShowHospitalPicker] = useState(false);
-  const [medicalLawMode, setMedicalLawMode] = useState<'strict' | 'relaxed'>('strict');
+  const [medicalLawMode] = useState<'strict' | 'relaxed'>('strict');
   const [includeFaq, setIncludeFaq] = useState(false);
+  const [faqCount, setFaqCount] = useState(3);
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   // ── 생성 상태 ──
   const [isGenerating, setIsGenerating] = useState(false);
@@ -58,6 +60,7 @@ function BlogForm() {
       writingStyle,
       medicalLawMode,
       includeFaq,
+      faqCount: includeFaq ? faqCount : undefined,
       hospitalName: hospitalName || undefined,
       hospitalStyleSource: hospitalName ? 'explicit_selected_hospital' : 'generic_default',
     };
@@ -273,123 +276,93 @@ function BlogForm() {
             />
           </div>
 
-          {/* 화자/어조 */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className={labelCls}>화자</label>
-              <select value={persona} onChange={e => setPersona(e.target.value)} className={inputCls}>
-                {PERSONAS.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className={labelCls}>어조</label>
-              <select value={tone} onChange={e => setTone(e.target.value)} className={inputCls}>
-                {TONES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-              </select>
-            </div>
-          </div>
+          {/* 상세 설정 토글 */}
+          <button type="button" onClick={() => setShowAdvanced(!showAdvanced)}
+            className="w-full flex items-center justify-between px-3 py-2 bg-slate-50 hover:bg-slate-100 rounded-lg text-xs font-semibold text-slate-500 transition-all border border-slate-100">
+            <span>⚙️ 상세 설정</span>
+            <svg className={`w-4 h-4 transition-transform ${showAdvanced ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
+          </button>
 
-          {/* 글 스타일 */}
-          <div>
-            <label className={labelCls}>글 스타일</label>
-            <div className="flex gap-1.5">
-              {WRITING_STYLES.map(ws => (
-                <button
-                  key={ws.value}
-                  type="button"
-                  onClick={() => setWritingStyle(ws.value as WritingStyle)}
-                  className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all ${
-                    writingStyle === ws.value
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
-                  }`}
-                >
-                  {ws.label}
-                </button>
-              ))}
+          {/* 상세 설정 패널 */}
+          {showAdvanced && (
+          <div className="space-y-4 p-3 bg-slate-50 rounded-xl border border-slate-100">
+            <div className="space-y-3">
+              {/* 글자 수 */}
+              <div>
+                <div className="flex justify-between mb-1.5">
+                  <label className="text-xs font-semibold text-slate-500">글자 수</label>
+                  <span className="text-xs font-semibold text-blue-600">{textLength}자</span>
+                </div>
+                <input type="range" min={1500} max={3500} step={100} value={textLength} onChange={e => setTextLength(Number(e.target.value))} className="w-full accent-blue-500 h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer" aria-label={`글자 수: ${textLength}자`} />
+                <div className="flex justify-between mt-1 text-[10px] text-slate-400"><span>1500</span><span>2500</span><span>3500</span></div>
+              </div>
+              {/* AI 이미지 수 */}
+              <div>
+                <div className="flex justify-between mb-1.5">
+                  <label className="text-xs font-semibold text-slate-500">AI 이미지 수</label>
+                  <span className={`text-xs font-semibold ${imageCount === 0 ? 'text-slate-400' : 'text-blue-600'}`}>{imageCount === 0 ? '없음' : `${imageCount}장`}</span>
+                </div>
+                <input type="range" min={0} max={5} step={1} value={imageCount} onChange={e => setImageCount(Number(e.target.value))} className="w-full accent-blue-500 h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer" aria-label={`AI 이미지 수: ${imageCount}장`} />
+                <div className="flex justify-between mt-1 text-[10px] text-slate-400"><span>0장</span><span>5장</span></div>
+              </div>
+              {/* FAQ 토글 */}
+              <div className="flex items-center justify-between p-3 bg-white rounded-xl border border-slate-200">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm">❓</span>
+                  <div>
+                    <span className="text-xs font-semibold text-slate-700">FAQ 섹션</span>
+                    <p className="text-[10px] text-slate-400">네이버 질문 + 질병관리청 정보</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {includeFaq && (
+                    <div className="flex gap-0.5">
+                      {[3, 4, 5].map(num => (
+                        <button key={num} type="button" onClick={() => setFaqCount(num)}
+                          className={`w-7 h-7 rounded-md text-[10px] font-semibold transition-all ${faqCount === num ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
+                        >{num}</button>
+                      ))}
+                    </div>
+                  )}
+                  <button type="button" onClick={() => setIncludeFaq(!includeFaq)}
+                    className={`relative rounded-full transition-colors ${includeFaq ? 'bg-blue-500' : 'bg-slate-300'}`}
+                    style={{ width: 40, height: 22 }}
+                  >
+                    <span className={`absolute top-[3px] left-[3px] w-4 h-4 bg-white rounded-full shadow transition-all duration-200 ${includeFaq ? 'translate-x-[18px]' : 'translate-x-0'}`} />
+                  </button>
+                </div>
+              </div>
+              {/* 이미지 스타일 */}
+              <div>
+                <p className="text-[11px] font-semibold text-slate-500 mb-1.5">이미지 스타일</p>
+                <div className="grid grid-cols-4 gap-1.5">
+                  {([
+                    { id: 'photo' as ImageStyle, icon: '📸', label: '실사' },
+                    { id: 'illustration' as ImageStyle, icon: '🎨', label: '일러스트' },
+                    { id: 'medical' as ImageStyle, icon: '🫀', label: '의학 3D' },
+                  ]).map(s => (
+                    <button key={s.id} type="button"
+                      onClick={() => setImageStyle(s.id)}
+                      className={`py-2 rounded-lg border transition-all flex flex-col items-center gap-0.5 ${imageStyle === s.id ? 'border-blue-400 bg-blue-50 text-blue-700' : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300'}`}
+                    >
+                      <span className="text-base">{s.icon}</span>
+                      <span className="text-[10px] font-semibold">{s.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {/* 화자/어조 */}
+              <div className="grid grid-cols-2 gap-2">
+                <select value={persona} onChange={e => setPersona(e.target.value)} className={inputCls}>
+                  {PERSONAS.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
+                </select>
+                <select value={tone} onChange={e => setTone(e.target.value)} className={inputCls}>
+                  {TONES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                </select>
+              </div>
             </div>
           </div>
-
-          {/* 글 길이 */}
-          <div>
-            <label className={labelCls}>글 길이: {textLength.toLocaleString()}자</label>
-            <input
-              type="range"
-              min={800}
-              max={3000}
-              step={100}
-              value={textLength}
-              onChange={e => setTextLength(Number(e.target.value))}
-              className="w-full accent-blue-600"
-            />
-            <div className="flex justify-between text-[10px] text-slate-400 mt-0.5">
-              <span>800자</span>
-              <span>3,000자</span>
-            </div>
-          </div>
-
-          {/* 이미지 */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className={labelCls}>이미지 수</label>
-              <select value={imageCount} onChange={e => setImageCount(Number(e.target.value))} className={inputCls}>
-                {[0, 1, 2, 3, 4, 5].map(n => (
-                  <option key={n} value={n}>{n === 0 ? '없음' : `${n}장`}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className={labelCls}>이미지 스타일</label>
-              <select value={imageStyle} onChange={e => setImageStyle(e.target.value as ImageStyle)} className={inputCls} disabled={imageCount === 0}>
-                <option value="photo">사진</option>
-                <option value="illustration">일러스트</option>
-                <option value="medical">의료 이미지</option>
-              </select>
-            </div>
-          </div>
-
-          {/* CSS 테마 */}
-          <div>
-            <label className={labelCls}>디자인 테마</label>
-            <div className="flex gap-1.5 flex-wrap">
-              {CSS_THEMES.map(th => (
-                <button
-                  key={th.value}
-                  type="button"
-                  onClick={() => setCssTheme(th.value as CssTheme)}
-                  className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
-                    cssTheme === th.value
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
-                  }`}
-                >
-                  {th.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* 옵션 토글 */}
-          <div className="space-y-2 pt-1">
-            <label className="flex items-center gap-2.5 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={medicalLawMode === 'relaxed'}
-                onChange={e => setMedicalLawMode(e.target.checked ? 'relaxed' : 'strict')}
-                className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-              />
-              <span className="text-xs text-slate-600">아슬아슬 모드 (의료광고법 경계)</span>
-            </label>
-            <label className="flex items-center gap-2.5 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={includeFaq}
-                onChange={e => setIncludeFaq(e.target.checked)}
-                className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-              />
-              <span className="text-xs text-slate-600">FAQ 섹션 포함</span>
-            </label>
-          </div>
+          )}
 
           {/* 생성 버튼 */}
           <button
