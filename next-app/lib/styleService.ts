@@ -60,6 +60,92 @@ export async function getAllStyleProfiles(): Promise<HospitalStyleProfile[]> {
   return data as HospitalStyleProfile[];
 }
 
+// ── 콘텐츠 생성 시 말투 프롬프트 조회 (old getHospitalStylePromptForGeneration 이식) ──
+
+const styleProfileCache: Record<string, HospitalStyleProfile | null> = {};
+
+export async function getHospitalStylePrompt(hospitalName: string): Promise<string | null> {
+  if (!supabase || !hospitalName) return null;
+
+  if (!(hospitalName in styleProfileCache)) {
+    const { data, error } = await supabase
+      .from('hospital_style_profiles')
+      .select('style_profile')
+      .eq('hospital_name', hospitalName)
+      .limit(1);
+    if (error || !data || data.length === 0) {
+      styleProfileCache[hospitalName] = null;
+    } else {
+      styleProfileCache[hospitalName] = data[0] as HospitalStyleProfile;
+    }
+  }
+
+  const profile = styleProfileCache[hospitalName];
+  if (!profile?.style_profile) return null;
+
+  const style = profile.style_profile as LearnedWritingStyle;
+  const as_ = style.analyzedStyle;
+  if (!as_) return null;
+
+  // 의료광고법 금지 표현 필터
+  const PROHIBITED = [
+    '방문하세요', '내원하세요', '예약하세요', '문의하세요', '상담하세요',
+    '오세요', '완치', '최고', '유일', '특효', '1등', '최고급', '100%', '확실', '보장', '반드시',
+  ];
+  const filterProhibited = (words: string[]) =>
+    words.filter(w => !PROHIBITED.some(p => w.toLowerCase().includes(p.toLowerCase())));
+
+  const safeVocabulary = filterProhibited(as_.vocabulary || []);
+  const safeSentenceEndings = filterProhibited(as_.sentenceEndings || []);
+  const safeUniqueExpressions = filterProhibited(as_.uniqueExpressions || []);
+
+  const deepBlock = as_.speakerIdentity ? `
+[화자 캐릭터]
+- 정체성: ${as_.speakerIdentity || '미분석'}
+- 독자와의 거리감: ${as_.readerDistance || '미분석'}
+- 설득 방식: ${as_.persuasionStyle || '미분석'}
+
+[문장·문단 DNA]
+- 리듬: ${as_.sentenceRhythm || '미분석'}
+- 전개 구조: ${as_.paragraphFlow || '미분석'}
+- 고유 표현: ${safeUniqueExpressions.length > 0 ? safeUniqueExpressions.join(', ') : '미분석'}
+
+[한 줄 정의] ${as_.oneLineSummary || style.description}
+
+[이 병원다운 문장 — 참고]
+${(as_.goodExamples || []).map((ex, i) => `${i + 1}. ${ex}`).join('\n') || '(예시 없음)'}
+
+[이 병원답지 않은 문장 — 절대 금지]
+${(as_.badExamples || []).map((ex, i) => `${i + 1}. ${ex}`).join('\n') || '(예시 없음)'}
+` : '';
+
+  const bannedBlock = (as_.bannedGenericStyle || []).length > 0
+    ? `\n[이 병원 글에서 금지할 범용 표현]\n${as_.bannedGenericStyle!.map(b => `- ${b}`).join('\n')}\n`
+    : '';
+
+  return `[병원 고유 문체: ${style.name}]
+너는 이 병원의 편집자다. 어미 몇 개를 흉내 내는 것이 아니라,
+화자의 태도·상담 방식·설명 습관·설득 구조를 재현하라.
+
+[기본 톤]
+- 어조: ${as_.tone}
+- 격식: ${as_.formalityLevel === 'formal' ? '격식체' : as_.formalityLevel === 'casual' ? '편한 말투' : '중립적'}
+- 감정 표현: ${as_.emotionLevel === 'high' ? '풍부하게' : as_.emotionLevel === 'medium' ? '적당히' : '절제하여'}
+- 문장 끝 패턴: ${safeSentenceEndings.join(', ')}
+- 자주 쓰는 표현: ${safeVocabulary.join(', ')}
+- 글 구조: ${as_.structure}
+${deepBlock}${bannedBlock}
+[글 작성 전 자가점검]
+1. 이 문단의 화자가 실제 상담실/진료실에서 말하는 것처럼 읽히는가?
+2. 병원명을 가려도 이 병원 톤으로 느껴지는가?
+3. 같은 어미가 3회 이상 연속 반복되지 않았는가?
+
+[AI 냄새 제거 + 의료법 준수]
+- "~가 핵심입니다" / "기억하세요" / "중요한 것은" → 삭제
+- '방문하세요', '예약하세요', '상담하세요' → "고려해 보실 수 있습니다"
+- '완치', '최고', '보장', '확실' → 과대광고 금지`;
+}
+
 export async function saveHospitalBlogUrl(
   hospitalName: string,
   teamId: number,

@@ -5,6 +5,7 @@ import { TEAM_DATA } from '../../../lib/teamData';
 import { buildCardNewsPrompt, type CardNewsRequest } from '../../../lib/cardNewsPrompt';
 import { savePost } from '../../../lib/postStorage';
 import { getSessionSafe } from '../../../lib/supabase';
+import { getHospitalStylePrompt } from '../../../lib/styleService';
 import { ErrorPanel, ResultPanel } from '../../../components/GenerationResult';
 import type { WritingStyle } from '../../../lib/types';
 
@@ -49,11 +50,22 @@ export default function CardNewsPage() {
     try {
       const { systemInstruction, prompt } = buildCardNewsPrompt(request);
 
+      // 병원 말투 프로파일 자동 주입
+      let finalPrompt = prompt;
+      if (hospitalName) {
+        try {
+          const stylePrompt = await getHospitalStylePrompt(hospitalName);
+          if (stylePrompt) {
+            finalPrompt = `${prompt}\n\n[병원 블로그 학습 말투 - 반드시 적용]\n${stylePrompt}`;
+          }
+        } catch { /* 프로파일 없으면 기본 동작 */ }
+      }
+
       const res = await fetch('/api/gemini', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          prompt,
+          prompt: finalPrompt,
           systemInstruction,
           model: 'gemini-2.5-flash-preview-05-20',
           temperature: 0.85,
