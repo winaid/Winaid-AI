@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, Suspense } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { CATEGORIES, PERSONAS, TONES } from '../../../lib/constants';
 import { TEAM_DATA } from '../../../lib/teamData';
@@ -39,6 +39,14 @@ function BlogForm() {
   const [faqCount, setFaqCount] = useState(3);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [learnedStyleId, setLearnedStyleId] = useState<string | undefined>(undefined);
+  const [customPrompt, setCustomPrompt] = useState('');
+  const [showCustomInput, setShowCustomInput] = useState(false);
+
+  // localStorage에서 커스텀 프롬프트 복원 (old 동일)
+  useEffect(() => {
+    const saved = localStorage.getItem('hospital_custom_image_prompt');
+    if (saved) setCustomPrompt(saved);
+  }, []);
 
   // ── AI 제목 추천 / 트렌드 상태 ──
   const [isLoadingTitles, setIsLoadingTitles] = useState(false);
@@ -346,6 +354,7 @@ ${categoryKeywords}
       includeFaq,
       faqCount: includeFaq ? faqCount : undefined,
       customSubheadings: customSubheadings.trim() || undefined,
+      customImagePrompt: imageStyle === 'custom' ? (customPrompt?.trim() || undefined) : undefined,
       hospitalName: hospitalName || undefined,
       hospitalStyleSource: hospitalName ? 'explicit_selected_hospital' : 'generic_default',
     };
@@ -567,13 +576,6 @@ ${categoryKeywords}
             )}
           </div>
 
-          {/* 말투 학습 (old WritingStyleLearner 동일) */}
-          <WritingStyleLearner
-            onStyleSelect={(styleId) => setLearnedStyleId(styleId)}
-            selectedStyleId={learnedStyleId}
-            contentType="blog"
-          />
-
           {/* 진료과 + 대상 독자 (old 동일: grid-cols-2 select) */}
           <div className="grid grid-cols-2 gap-3">
             <select
@@ -731,7 +733,7 @@ ${categoryKeywords}
                   </button>
                 </div>
               </div>
-              {/* 이미지 스타일 */}
+              {/* 이미지 스타일 (old 동일: 4버튼 + 커스텀 textarea) */}
               <div>
                 <p className="text-[11px] font-semibold text-slate-500 mb-1.5">이미지 스타일</p>
                 <div className="grid grid-cols-4 gap-1.5">
@@ -739,9 +741,10 @@ ${categoryKeywords}
                     { id: 'photo' as ImageStyle, icon: '📸', label: '실사' },
                     { id: 'illustration' as ImageStyle, icon: '🎨', label: '일러스트' },
                     { id: 'medical' as ImageStyle, icon: '🫀', label: '의학 3D' },
+                    { id: 'custom' as ImageStyle, icon: '✏️', label: '커스텀' },
                   ]).map(s => (
                     <button key={s.id} type="button"
-                      onClick={() => setImageStyle(s.id)}
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); setImageStyle(s.id); setShowCustomInput(s.id === 'custom'); }}
                       className={`py-2 rounded-lg border transition-all flex flex-col items-center gap-0.5 ${imageStyle === s.id ? 'border-blue-400 bg-blue-50 text-blue-700' : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300'}`}
                     >
                       <span className="text-base">{s.icon}</span>
@@ -749,6 +752,21 @@ ${categoryKeywords}
                     </button>
                   ))}
                 </div>
+                {showCustomInput && imageStyle === 'custom' && (
+                  <div className="mt-2 p-2.5 bg-white rounded-lg border border-slate-200">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[11px] font-semibold text-slate-600">커스텀 프롬프트</span>
+                      {customPrompt && (
+                        <button type="button" onClick={() => localStorage.setItem('hospital_custom_image_prompt', customPrompt)}
+                          className="px-2 py-0.5 bg-slate-800 text-white text-[10px] font-medium rounded hover:bg-slate-900">저장</button>
+                      )}
+                    </div>
+                    <textarea value={customPrompt} onChange={(e) => setCustomPrompt(e.target.value)}
+                      placeholder="파스텔톤, 손그림 느낌의 일러스트, 부드러운 선..."
+                      className="w-full p-2 bg-slate-50 border border-slate-200 rounded text-xs focus:border-blue-400 outline-none resize-none" rows={2}
+                    />
+                  </div>
+                )}
               </div>
               {/* 소제목 직접 입력 */}
               <div>
@@ -761,6 +779,12 @@ ${categoryKeywords}
                   rows={3}
                 />
               </div>
+              {/* 말투 학습 (old 동일 위치: 이미지 스타일 아래, 화자/어조 위) */}
+              <WritingStyleLearner
+                onStyleSelect={(styleId) => setLearnedStyleId(styleId)}
+                selectedStyleId={learnedStyleId}
+                contentType="blog"
+              />
               {/* 화자/어조 (학습된 말투 적용 시 숨김 — old 동일) */}
               {!learnedStyleId && (
                 <div className="grid grid-cols-2 gap-2">
