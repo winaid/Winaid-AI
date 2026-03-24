@@ -7,7 +7,7 @@ import { TEAM_DATA } from '../../../lib/teamData';
 import { ContentCategory, type GenerationRequest, type AudienceMode, type ImageStyle, type WritingStyle, type CssTheme, type TrendingItem, type SeoTitleItem } from '../../../lib/types';
 import { buildBlogPrompt } from '../../../lib/blogPrompt';
 import { savePost } from '../../../lib/postStorage';
-import { getSessionSafe } from '../../../lib/supabase';
+import { getSessionSafe, supabase } from '../../../lib/supabase';
 import { getHospitalStylePrompt } from '../../../lib/styleService';
 import { ErrorPanel, ResultPanel, type ScoreBarData } from '../../../components/GenerationResult';
 import WritingStyleLearner, { getStyleById, getStylePromptForGeneration } from '../../../components/WritingStyleLearner';
@@ -464,34 +464,74 @@ ${categoryKeywords}
         setGeneratedContent(htmlWithPlaceholders);
         setScores(parsed);
 
-        // 6) 이미지 병렬 생성 (old 동일: 각 프롬프트 → /api/image → base64)
-        const generateImage = async (prompt: string, index: number): Promise<{ index: number; dataUrl: string | null }> => {
+        // 6) 이미지 생성 → Storage 업로드 → public URL
+        const generateAndUpload = async (prompt: string, index: number): Promise<{ index: number; url: string | null }> => {
           try {
+            // 6a) /api/image → base64
             const imgRes = await fetch('/api/image', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ prompt, aspectRatio: '16:9' as const }),
             });
-            if (!imgRes.ok) return { index, dataUrl: null };
+            if (!imgRes.ok) return { index, url: null };
             const imgData = await imgRes.json() as { imageDataUrl?: string };
-            return { index, dataUrl: imgData.imageDataUrl || null };
+            const dataUrl = imgData.imageDataUrl;
+            if (!dataUrl) return { index, url: null };
+
+            // 6b) base64 → Supabase Storage 업로드
+            if (supabase) {
+              try {
+                const commaIdx = dataUrl.indexOf(',');
+                const base64Data = dataUrl.substring(commaIdx + 1);
+                const metaPart = dataUrl.substring(0, commaIdx);
+                const mimeMatch = metaPart.match(/data:(.*?);base64/);
+                const mimeType = mimeMatch?.[1] || 'image/png';
+                const ext = mimeType === 'image/jpeg' ? 'jpg' : 'png';
+
+                // binary 변환
+                const byteChars = atob(base64Data);
+                const byteArray = new Uint8Array(byteChars.length);
+                for (let i = 0; i < byteChars.length; i++) {
+                  byteArray[i] = byteChars.charCodeAt(i);
+                }
+                const blob = new Blob([byteArray], { type: mimeType });
+
+                const fileName = `blog/${Date.now()}_${index}.${ext}`;
+                const { error: uploadErr } = await supabase.storage
+                  .from('blog-images')
+                  .upload(fileName, blob, { contentType: mimeType, upsert: false });
+
+                if (!uploadErr) {
+                  const { data: urlData } = supabase.storage.from('blog-images').getPublicUrl(fileName);
+                  if (urlData?.publicUrl) {
+                    return { index, url: urlData.publicUrl };
+                  }
+                }
+                console.warn(`[IMG_UPLOAD] IMG_${index}: 업로드 실패, base64 fallback`, uploadErr?.message);
+              } catch (uploadErr) {
+                console.warn(`[IMG_UPLOAD] IMG_${index}: 업로드 예외, base64 fallback`, uploadErr);
+              }
+            }
+
+            // 6c) Storage 실패 시 base64 fallback
+            return { index, url: dataUrl };
           } catch {
-            return { index, dataUrl: null };
+            return { index, url: null };
           }
         };
 
         // 최대 imageCount개까지만 생성
         const prompts = imagePrompts.slice(0, imageCount);
         const imageResults = await Promise.all(
-          prompts.map((p, i) => generateImage(p, i + 1)),
+          prompts.map((p, i) => generateAndUpload(p, i + 1)),
         );
 
         // 7) [IMG_N] 마커를 실제 이미지로 교체 (old insertImageData 동일)
         let finalHtml = blogText;
         for (const img of imageResults) {
           const pattern = new RegExp(`\\[IMG_${img.index}\\]`, 'gi');
-          if (img.dataUrl) {
-            const imgTag = `<div class="content-image-wrapper"><img src="${img.dataUrl}" alt="blog image ${img.index}" data-image-index="${img.index}" style="max-width:100%;height:auto;border-radius:12px;" /></div>`;
+          if (img.url) {
+            const imgTag = `<div class="content-image-wrapper"><img src="${img.url}" alt="blog image ${img.index}" data-image-index="${img.index}" style="max-width:100%;height:auto;border-radius:12px;" /></div>`;
             finalHtml = finalHtml.replace(pattern, imgTag);
           } else {
             finalHtml = finalHtml.replace(pattern, '');
