@@ -569,7 +569,16 @@ export async function crawlAndScoreAllHospitals(
   for (const team of TEAM_DATA) {
     for (const h of team.hospitals) {
       const baseName = h.name.replace(/ \(.*\)$/, '');
-      if (seen.has(baseName)) continue;
+      if (seen.has(baseName)) {
+        // 중복 병원이지만 URL이 다를 수 있음 — URL을 합침
+        const existing = hospitalUrls.find(x => x.name === baseName);
+        if (existing && h.naverBlogUrls) {
+          for (const u of h.naverBlogUrls) {
+            if (!existing.urls.includes(u)) existing.urls.push(u);
+          }
+        }
+        continue;
+      }
       seen.add(baseName);
 
       const profile = profileMap.get(baseName);
