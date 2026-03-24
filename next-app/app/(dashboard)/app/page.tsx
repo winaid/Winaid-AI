@@ -2,11 +2,14 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuthGuard } from '../../../hooks/useAuthGuard';
+import InternalFeedback from '../../../components/InternalFeedback';
 
 type ContentTab = 'blog' | 'card_news' | 'press' | 'refine' | 'image' | 'history';
 
 export default function DashboardPage() {
   const router = useRouter();
+  const { user, userName, isGuest } = useAuthGuard();
   const [quickInput, setQuickInput] = useState('');
 
   const navigateTo = (tab: ContentTab) => router.push(`/${tab}`);
@@ -157,6 +160,17 @@ export default function DashboardPage() {
           </button>
         ))}
       </div>
+
+      {/* ── 내부 피드백 영역: 히스토리 섹션 아래 sibling 블록 (internal 전용) ── */}
+      {!isGuest && user && (
+        <div className="w-full max-w-3xl mb-10">
+          <InternalFeedback
+            page="dashboard"
+            userId={user.id}
+            userName={userName}
+          />
+        </div>
+      )}
     </div>
   );
 }
