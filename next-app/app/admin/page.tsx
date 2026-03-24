@@ -715,7 +715,6 @@ export default function AdminPage() {
       {stats && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
           {[
-            { label: '전체 콘텐츠', value: stats.totalPosts, color: 'bg-blue-50 text-blue-600' },
             { label: '블로그', value: stats.blogCount, color: 'bg-sky-50 text-sky-600' },
             { label: '카드뉴스', value: stats.cardNewsCount, color: 'bg-violet-50 text-violet-600' },
             { label: '보도자료', value: stats.pressReleaseCount, color: 'bg-emerald-50 text-emerald-600' },
