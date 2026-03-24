@@ -27,7 +27,7 @@ const toolItems: { id: ContentTab; label: string; icon: string; href: string }[]
 ];
 
 const extraItems: { label: string; icon: string; href: string }[] = [
-  { label: '피드백', icon: '💬', href: '/feedback' },
+  { label: '피드백', icon: '💬', href: '/app#feedback' },
 ];
 
 export function Sidebar({
@@ -40,7 +40,7 @@ export function Sidebar({
   const pathname = usePathname();
   const [showUserMenu, setShowUserMenu] = useState(false);
 
-  const isActive = (href: string) => pathname === href;
+  const isActive = (href: string) => pathname === href || (href.includes('#') && pathname === href.split('#')[0]);
 
   const navButton = (item: { label: string; icon: string; href: string }) => (
     <Link
