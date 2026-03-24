@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { CATEGORIES, PERSONAS, TONES } from '../../../lib/constants';
 import { TEAM_DATA } from '../../../lib/teamData';
@@ -11,6 +11,58 @@ import { getSessionSafe, supabase } from '../../../lib/supabase';
 import { getHospitalStylePrompt } from '../../../lib/styleService';
 import { ErrorPanel, ResultPanel, type ScoreBarData } from '../../../components/GenerationResult';
 import WritingStyleLearner, { getStyleById, getStylePromptForGeneration } from '../../../components/WritingStyleLearner';
+
+// ── old GenerateWorkspace.tsx 동일: 블로그 displayStage → 단계 정보 ──
+const BLOG_STAGES: Record<number, { icon: string; label: string; defaultMsg: string; hint: string }> = {
+  0: { icon: '✍️', label: '글 준비 중', defaultMsg: '좋은 문장을 한 줄씩 꺼내고 있어요', hint: '키워드를 분석하고 구조를 설계합니다' },
+  1: { icon: '✍️', label: '글 준비 중', defaultMsg: '좋은 문장을 한 줄씩 꺼내고 있어요', hint: '전문 의료 콘텐츠를 작성하고 있습니다' },
+  2: { icon: '✨', label: '내용 다듬는 중', defaultMsg: '읽는 맛이 나도록 다듬고 있어요', hint: '문체 교정과 정확성 검토를 진행합니다' },
+  3: { icon: '🎨', label: '이미지 만드는 중', defaultMsg: '글과 잘 어울리는 비주얼을 고르는 중이에요', hint: '이미지 수에 따라 30초~2분 정도 걸립니다' },
+  4: { icon: '🎉', label: '마무리하는 중', defaultMsg: '거의 다 왔어요, 마지막 손질만 남았어요', hint: '결과를 저장하고 있습니다' },
+};
+
+// ── old GenerateWorkspace.tsx 동일: 단계별 문구 로테이션 풀 ──
+const BLOG_MESSAGE_POOL: Record<number, string[]> = {
+  0: [
+    '좋은 문장을 한 줄씩 꺼내고 있어요',
+    '글의 흐름을 차근차근 잡고 있어요',
+    '읽기 편한 시작점을 만들고 있어요',
+    '핵심이 잘 보이도록 내용을 정리하고 있어요',
+    '첫 문장부터 자연스럽게 이어지게 다듬고 있어요',
+  ],
+  1: [
+    '좋은 문장을 한 줄씩 꺼내고 있어요',
+    '글의 흐름을 차근차근 잡고 있어요',
+    '읽기 편한 시작점을 만들고 있어요',
+    '핵심이 잘 보이도록 내용을 정리하고 있어요',
+    '첫 문장부터 자연스럽게 이어지게 다듬고 있어요',
+    '각 소주제를 꼼꼼히 채워가고 있어요',
+  ],
+  2: [
+    '읽는 맛이 나도록 다듬고 있어요',
+    '문장 사이의 흐름을 매끈하게 정리하고 있어요',
+    '너무 딱딱하지 않게, 너무 가볍지 않게 맞추고 있어요',
+    '처음부터 끝까지 자연스럽게 이어지게 손보고 있어요',
+    '한 번 더 읽어도 편안한 글로 정리하고 있어요',
+  ],
+  3: [
+    '글과 잘 어울리는 비주얼을 고르는 중이에요',
+    '장면을 하나씩 정리하고 있어요',
+    '내용과 잘 맞는 이미지를 살펴보고 있어요',
+    '화면이 심심하지 않도록 이미지를 준비하고 있어요',
+    '글에 딱 맞는 장면을 찾고 있어요',
+    '거의 다 왔어요, 마지막 장면을 고르고 있어요',
+  ],
+  4: [
+    '거의 다 왔어요, 마지막 손질만 남았어요',
+    '보기 좋게 정리해서 보여드릴 준비 중이에요',
+    '결과를 한 번 더 살피고 있어요',
+    '깔끔하게 마무리해서 가져오고 있어요',
+    '마지막 점검 후 바로 보여드릴게요',
+  ],
+};
+
+const MSG_ROTATION_INTERVAL = 3200;
 
 function BlogForm() {
   const searchParams = useSearchParams();
@@ -60,6 +112,32 @@ function BlogForm() {
   const [scores, setScores] = useState<ScoreBarData | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
+
+  // ── 진행 상태 (old safeProgress UI parity) ──
+  // displayStage: 0=준비, 1=글작성, 2=다듬기, 3=이미지, 4=마무리
+  const [displayStage, setDisplayStage] = useState<number>(0);
+  const [rotationIdx, setRotationIdx] = useState(0);
+  const rotationTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // old GenerateWorkspace.tsx 동일: displayStage 변경 시 로테이션 리셋 + 타이머 순환
+  useEffect(() => {
+    setRotationIdx(0);
+  }, [displayStage]);
+
+  useEffect(() => {
+    if (!isGenerating) {
+      if (rotationTimerRef.current) clearInterval(rotationTimerRef.current);
+      return;
+    }
+    if (rotationTimerRef.current) clearInterval(rotationTimerRef.current);
+    rotationTimerRef.current = setInterval(() => {
+      const pool = BLOG_MESSAGE_POOL[displayStage] || BLOG_MESSAGE_POOL[1];
+      setRotationIdx(prev => (prev + 1) % pool.length);
+    }, MSG_ROTATION_INTERVAL);
+    return () => {
+      if (rotationTimerRef.current) clearInterval(rotationTimerRef.current);
+    };
+  }, [displayStage, isGenerating]);
 
   // ── AI 제목 추천 (old handleRecommendTitles 동일) ──
   const handleRecommendTitles = async () => {
@@ -488,6 +566,8 @@ ${categoryKeywords}
     };
 
     setIsGenerating(true);
+    setDisplayStage(1);
+    setRotationIdx(0);
     setError(null);
     setGeneratedContent(null);
     setScores(undefined);
@@ -625,6 +705,7 @@ ${subs.length > 0 ? `경쟁 글 소제목: ${subs.join(' / ')}` : ''}
       }
 
       console.info(`[BLOG] Gemini 응답 수신 — 원본 길이: ${data.text.length}자`);
+      setDisplayStage(2); // old displayStage 2: 내용 다듬는 중
 
       // ── 응답 파싱: 본문 / SCORES / IMAGE_PROMPTS 분리 ──
       let blogText = data.text;
@@ -885,6 +966,7 @@ ${topic.trim()}${disease.trim() ? ', 질환: ' + disease.trim() : ''}
         setGeneratedContent(blogText);
         setScores(parsed);
       } else {
+        setDisplayStage(3); // old displayStage 3: 이미지 만드는 중
         // 5) 마커가 있는 본문을 먼저 표시 (이미지 자리에 로딩 표시)
         let htmlWithPlaceholders = blogText;
         for (let i = 1; i <= imageCount; i++) {
@@ -1002,6 +1084,7 @@ ${topic.trim()}${disease.trim() ? ', 질환: ' + disease.trim() : ''}
 
       // ── SEO 자동 평가 (old legacyBlogGeneration.ts:1742-1794 동일 — 평가만, 재생성 없음) ──
       if (blogText && topic.trim()) {
+        setDisplayStage(4); // old displayStage 4: 마무리하는 중
         console.info('[BLOG] 📊 SEO 자동 평가 시작...');
         try {
           const seoHtml = blogText;
@@ -1227,6 +1310,7 @@ JSON 형식으로 응답해주세요.`;
       setError(msg);
     } finally {
       setIsGenerating(false);
+      setDisplayStage(0);
     }
   };
 
@@ -1585,23 +1669,37 @@ JSON 형식으로 응답해주세요.`;
 
       {/* ── 결과 영역 ── */}
       <div className="flex-1 min-w-0">
-        {isGenerating ? (
+        {isGenerating ? (() => {
+          const stage = BLOG_STAGES[displayStage] || BLOG_STAGES[1];
+          const pool = BLOG_MESSAGE_POOL[displayStage] || BLOG_MESSAGE_POOL[1];
+          const displayMsg = pool[rotationIdx % pool.length];
+          return (
           <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-12 flex flex-col items-center justify-center text-center min-h-[480px]">
+            {/* 상단: 현재 단계 배지 (old 동일) */}
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold mb-6 bg-blue-50 text-blue-600 border border-blue-100">
-              <span>✍️</span>
-              <span>글 준비 중</span>
+              <span>{stage.icon}</span>
+              <span>{stage.label}</span>
             </div>
+            {/* 중단: 스피너 (old 동일) */}
             <div className="relative mb-6">
               <div className="w-14 h-14 border-[3px] border-blue-100 border-t-blue-500 rounded-full animate-spin" />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-blue-50">
+                  <svg className="w-3.5 h-3.5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" /></svg>
+                </div>
+              </div>
             </div>
-            <p className="text-sm font-medium text-slate-700 mb-2">
-              좋은 문장을 한 줄씩 꺼내고 있어요
+            {/* 중단: 상세 진행 메시지 — 부드러운 전환 (old 동일) */}
+            <p className="text-sm font-medium text-slate-700 mb-2 min-h-[20px] transition-opacity duration-500">
+              {displayMsg}
             </p>
-            <p className="text-xs text-slate-400">
-              전문 의료 콘텐츠를 작성하고 있습니다
+            {/* 하단: 짧은 안내 (old 동일) */}
+            <p className="text-xs text-slate-400 max-w-xs">
+              {stage.hint}
             </p>
           </div>
-        ) : error ? (
+          );
+        })() : error ? (
           <ErrorPanel error={error} onDismiss={() => setError(null)} />
         ) : generatedContent ? (
           <ResultPanel content={generatedContent} saveStatus={saveStatus} postType="blog" scores={scores} cssTheme={cssTheme} />
