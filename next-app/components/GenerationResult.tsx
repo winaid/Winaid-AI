@@ -189,7 +189,12 @@ export function ResultPanel({ content, completionText = '생성 완료', saveSta
   const [copyFeedback, setCopyFeedback] = useState(false);
   const [activeTab, setActiveTab] = useState<'preview' | 'html'>('preview');
 
-  const renderedHtml = useMemo(() => sanitizeHtml(markdownToHtml(content)), [content]);
+  // content가 이미 HTML이면 markdownToHtml 스킵 (old는 innerHTML 직접 렌더)
+  const isHtml = /<(?:h[1-6]|p|div|ul|ol|table)\b/i.test(content);
+  const renderedHtml = useMemo(
+    () => sanitizeHtml(isHtml ? content : markdownToHtml(content)),
+    [content, isHtml],
+  );
   const charCount = useMemo(() => content.replace(/\s/g, '').length, [content]);
 
   const charLabel = charCount < 1500 ? '짧음' : charCount < 4000 ? '적당' : '길음';
