@@ -1,6 +1,29 @@
-const puppeteer = require('puppeteer');
+const puppeteer = require('puppeteer-core');
 
 let browser = null;
+
+/**
+ * 시스템에 설치된 Chromium 경로 탐색
+ */
+function findChromiumPath() {
+  const fs = require('fs');
+  const candidates = [
+    process.env.PUPPETEER_EXECUTABLE_PATH,
+    process.env.CHROME_BIN,
+    '/usr/bin/chromium-browser',
+    '/usr/bin/chromium',
+    '/usr/bin/google-chrome',
+    '/usr/bin/google-chrome-stable',
+  ].filter(Boolean);
+
+  for (const p of candidates) {
+    if (fs.existsSync(p)) return p;
+  }
+  throw new Error(
+    'Chromium을 찾을 수 없습니다. PUPPETEER_EXECUTABLE_PATH 환경변수를 설정하세요.\n' +
+    `탐색 경로: ${candidates.join(', ')}`
+  );
+}
 
 /**
  * 브라우저 인스턴스 가져오기 (싱글톤)
@@ -10,9 +33,11 @@ async function getBrowser() {
     return browser;
   }
 
-  console.log('🌐 Puppeteer 브라우저 시작 중...');
-  
+  const executablePath = findChromiumPath();
+  console.log(`🌐 Puppeteer 브라우저 시작 중... (${executablePath})`);
+
   browser = await puppeteer.launch({
+    executablePath,
     headless: process.env.HEADLESS !== 'false',
     args: [
       '--no-sandbox',
