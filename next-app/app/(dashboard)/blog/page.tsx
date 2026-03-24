@@ -18,6 +18,8 @@ function BlogForm() {
   const topicParam = searchParams.get('topic');
   const [topic, setTopic] = useState(topicParam || '');
   const [keywords, setKeywords] = useState('');
+  const [disease, setDisease] = useState('');
+  const [customSubheadings, setCustomSubheadings] = useState('');
   const [category, setCategory] = useState<ContentCategory>(ContentCategory.DENTAL);
   const [persona, setPersona] = useState(PERSONAS[0].value);
   const [tone, setTone] = useState(TONES[0].value);
@@ -51,6 +53,7 @@ function BlogForm() {
       category,
       topic: topic.trim(),
       keywords: keywords.trim(),
+      disease: disease.trim() || undefined,
       tone,
       audienceMode,
       persona,
@@ -63,6 +66,7 @@ function BlogForm() {
       medicalLawMode,
       includeFaq,
       faqCount: includeFaq ? faqCount : undefined,
+      customSubheadings: customSubheadings.trim() || undefined,
       hospitalName: hospitalName || undefined,
       hospitalStyleSource: hospitalName ? 'explicit_selected_hospital' : 'generic_default',
     };
@@ -320,12 +324,22 @@ function BlogForm() {
 
           {/* 키워드 */}
           <div>
-            <label className={labelCls}>SEO 키워드 (쉼표 구분)</label>
             <input
               type="text"
               value={keywords}
               onChange={e => setKeywords(e.target.value)}
-              placeholder="예: 임플란트, 치과, 관리"
+              placeholder="SEO 키워드 (예: 강남 치과, 임플란트 가격)"
+              className={inputCls}
+            />
+          </div>
+
+          {/* 질환명 */}
+          <div>
+            <input
+              type="text"
+              value={disease}
+              onChange={e => setDisease(e.target.value)}
+              placeholder="질환명 (예: 치주염, 충치) - 글의 실제 주제"
               className={inputCls}
             />
           </div>
@@ -404,6 +418,17 @@ function BlogForm() {
                     </button>
                   ))}
                 </div>
+              </div>
+              {/* 소제목 직접 입력 */}
+              <div>
+                <p className="text-[11px] font-semibold text-slate-500 mb-1.5">소제목 직접 입력 <span className="text-slate-400 font-normal">(선택 · 한 줄에 하나씩)</span></p>
+                <textarea
+                  value={customSubheadings}
+                  onChange={e => setCustomSubheadings(e.target.value)}
+                  placeholder={"임플란트 수술 과정과 기간\n임플란트 후 관리법\n임플란트 비용 비교"}
+                  className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-xs focus:border-blue-400 outline-none resize-none placeholder:text-slate-300"
+                  rows={3}
+                />
               </div>
               {/* 화자/어조 */}
               <div className="grid grid-cols-2 gap-2">

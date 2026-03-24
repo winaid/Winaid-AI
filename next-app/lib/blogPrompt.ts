@@ -61,6 +61,9 @@ export function buildBlogPrompt(req: GenerationRequest): {
     `- 주제: ${req.topic}`,
   ];
 
+  if (req.disease) {
+    promptParts.push(`- 질환명: ${req.disease}`);
+  }
   if (req.keywords) {
     promptParts.push(`- SEO 키워드: ${req.keywords}`);
   }
@@ -72,6 +75,10 @@ export function buildBlogPrompt(req: GenerationRequest): {
 
   if (req.includeFaq) {
     promptParts.push(`- FAQ 섹션을 ${req.faqCount || 3}개 포함해주세요.`);
+  }
+
+  if (req.customSubheadings) {
+    promptParts.push(`\n[사용자 지정 소제목]\n${req.customSubheadings}`);
   }
 
   promptParts.push(
