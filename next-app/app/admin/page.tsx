@@ -1056,6 +1056,10 @@ export default function AdminPage() {
             {crawlAllStatus.loading && (
               <div className="mt-2 text-xs text-indigo-600 font-medium">{crawlAllStatus.progress}</div>
             )}
+            <div className="mt-3 pt-3 border-t border-violet-200 flex items-center gap-2 text-[11px] text-violet-500">
+              <span>⏰</span>
+              <span>자동 스케줄: 매일 10:00~18:00 (1시간 간격) — 크롤링 + 채점 자동 실행</span>
+            </div>
           </div>
 
           {/* 팀 탭 */}

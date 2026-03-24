@@ -195,6 +195,17 @@ export async function resetHospitalCrawlData(
 
 const CRAWLER_URL = process.env.NEXT_PUBLIC_CRAWLER_URL || '';
 
+/** 서버사이드(cron 등)에서도 /api/* 상대경로를 절대 URL로 resolve */
+function resolveApiUrl(path: string): string {
+  if (typeof window !== 'undefined') return path; // 브라우저: 상대경로 OK
+  const base = process.env.NEXT_PUBLIC_VERCEL_URL
+    ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`
+    : process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : 'http://localhost:3000';
+  return `${base}${path}`;
+}
+
 interface CrawledPost {
   url: string;
   content: string;
@@ -345,7 +356,7 @@ ${sampleText.substring(0, 5000)}
   "stylePrompt": "AI가 이 말투로 글을 쓸 때 사용할 핵심 지침 (100-200자)"
 }`;
 
-  const res = await fetch('/api/gemini', {
+  const res = await fetch(resolveApiUrl('/api/gemini'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -440,7 +451,7 @@ ${sliced}
   "law_issues": [{"word":"위반표현","severity":"critical/high/medium/low","replacement":["대체표현"],"context":"문맥","law_article":"제56조N항"}]
 }`;
 
-  const res = await fetch('/api/gemini', {
+  const res = await fetch(resolveApiUrl('/api/gemini'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
