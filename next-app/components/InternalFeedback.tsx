@@ -3,9 +3,10 @@
 /**
  * InternalFeedback — 페이지 하단 내부용 피드백 영역
  *
- * - 로그인 사용자 전용 (외부에서 렌더하지 않음 — 호출부에서 분기)
+ * - 로그인/비로그인 모두 사용 가능 (비로그인 시 anonymous/익명 fallback)
  * - 페이지 단위 피드백 (기록별 댓글 아님)
- * - v1: 텍스트 입력 → 저장 → 목록 표시 → 삭제
+ * - writeOnly=true: 입력만 (목록/분석은 admin에서 확인)
+ * - 3/31 이후 로그인 연동 시 작성자 식별 강화 예정
  */
 
 import { useState, useEffect, useCallback } from 'react';

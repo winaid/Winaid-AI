@@ -3,12 +3,13 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthGuard } from '../../../hooks/useAuthGuard';
+import InternalFeedback from '../../../components/InternalFeedback';
 
 type ContentTab = 'blog' | 'card_news' | 'press' | 'refine' | 'image' | 'history';
 
 export default function DashboardPage() {
   const router = useRouter();
-  useAuthGuard();
+  const { user, userName } = useAuthGuard();
   const [quickInput, setQuickInput] = useState('');
 
   const navigateTo = (tab: ContentTab) => router.push(`/${tab}`);
@@ -157,6 +158,16 @@ export default function DashboardPage() {
             </div>
           </button>
         ))}
+      </div>
+
+      {/* 내부 피드백 */}
+      <div id="feedback" className="w-full max-w-3xl mb-10">
+        <InternalFeedback
+          page="dashboard"
+          userId={user?.id}
+          userName={userName || '익명'}
+          writeOnly
+        />
       </div>
 
     </div>
