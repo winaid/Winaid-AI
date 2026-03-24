@@ -7,8 +7,8 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { supabase, isSupabaseConfigured } from '../../../lib/supabase';
-import { TEAM_DATA } from '../../../lib/teamData';
+import { supabase, isSupabaseConfigured } from '../../lib/supabase';
+import { TEAM_DATA } from '../../lib/teamData';
 import {
   getAllStyleProfiles,
   saveHospitalBlogUrl,
@@ -21,9 +21,9 @@ import {
   crawlAndScoreAllHospitals,
   HospitalStyleProfile,
   LearnedWritingStyle,
-} from '../../../lib/styleService';
-import { deleteAllGeneratedPosts } from '../../../lib/adminService';
-import type { CrawledPostScore, DBCrawledPost } from '../../../lib/types';
+} from '../../lib/styleService';
+import { deleteAllGeneratedPosts } from '../../lib/adminService';
+import type { CrawledPostScore, DBCrawledPost } from '../../lib/types';
 
 // ── 타입 ──
 
@@ -492,7 +492,7 @@ export default function AdminPage() {
 
   if (!isSupabaseConfigured) {
     return (
-      <div className="min-h-[60vh] flex items-center justify-center">
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="text-center p-8 bg-amber-50 rounded-xl border border-amber-200 max-w-md">
           <p className="text-amber-700 font-semibold mb-2">Supabase 미설정</p>
           <p className="text-sm text-amber-600">.env.local에 NEXT_PUBLIC_SUPABASE_URL과 NEXT_PUBLIC_SUPABASE_ANON_KEY를 추가하세요.</p>
@@ -505,7 +505,7 @@ export default function AdminPage() {
 
   if (!authenticated) {
     return (
-      <div className="min-h-[60vh] bg-slate-50 flex items-center justify-center p-6">
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
         <div className="w-full max-w-sm">
           <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center w-14 h-14 bg-slate-800 rounded-2xl mb-4">
@@ -566,7 +566,8 @@ export default function AdminPage() {
   // ── 대시보드 ──
 
   return (
-    <div>
+    <div className="min-h-screen bg-slate-50 p-4 lg:p-8">
+      <div className="max-w-6xl mx-auto">
       {/* 헤더 */}
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -1448,6 +1449,7 @@ export default function AdminPage() {
           })()}
         </div>
       )}
+      </div>
     </div>
   );
 }
