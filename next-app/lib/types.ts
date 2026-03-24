@@ -5,8 +5,6 @@
 
 export enum ContentCategory {
   DENTAL = '치과',
-  DERMATOLOGY = '피부과',
-  ORTHOPEDICS = '정형외과',
 }
 
 export type AudienceMode =
