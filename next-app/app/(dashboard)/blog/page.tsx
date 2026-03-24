@@ -4,7 +4,7 @@ import { useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { CATEGORIES, PERSONAS, TONES } from '../../../lib/constants';
 import { TEAM_DATA } from '../../../lib/teamData';
-import { ContentCategory, type GenerationRequest, type AudienceMode, type ImageStyle, type WritingStyle, type CssTheme } from '../../../lib/types';
+import { ContentCategory, type GenerationRequest, type AudienceMode, type ImageStyle, type WritingStyle, type CssTheme, type TrendingItem, type SeoTitleItem } from '../../../lib/types';
 import { buildBlogPrompt } from '../../../lib/blogPrompt';
 import { savePost } from '../../../lib/postStorage';
 import { getSessionSafe } from '../../../lib/supabase';
@@ -38,12 +38,289 @@ function BlogForm() {
   const [faqCount, setFaqCount] = useState(3);
   const [showAdvanced, setShowAdvanced] = useState(false);
 
+  // ── AI 제목 추천 / 트렌드 상태 ──
+  const [isLoadingTitles, setIsLoadingTitles] = useState(false);
+  const [isLoadingTrends, setIsLoadingTrends] = useState(false);
+  const [seoTitles, setSeoTitles] = useState<SeoTitleItem[]>([]);
+  const [trendingItems, setTrendingItems] = useState<TrendingItem[]>([]);
+
   // ── 생성 상태 ──
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedContent, setGeneratedContent] = useState<string | null>(null);
   const [scores, setScores] = useState<ScoreBarData | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
+
+  // ── AI 제목 추천 (old handleRecommendTitles 동일) ──
+  const handleRecommendTitles = async () => {
+    const topicForSeo = topic || disease || keywords || '';
+    if (!topicForSeo) return;
+    setIsLoadingTitles(true);
+    setSeoTitles([]);
+    setTrendingItems([]);
+    try {
+      const keywordsForSeo = keywords || disease || topicForSeo;
+      const now = new Date();
+      const koreaTime = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
+      const currentMonth = koreaTime.getMonth() + 1;
+      const seasons = ['겨울', '겨울', '봄', '봄', '봄', '여름', '여름', '여름', '가을', '가을', '가을', '겨울'];
+      const currentSeason = seasons[currentMonth - 1];
+
+      const prompt = `[입력 정보]
+주제: ${topicForSeo}
+키워드: ${keywordsForSeo}
+글자수 기준: 28~38자 이내 (모바일 최적화)
+시즌: ${currentSeason}
+
+────────────────────
+[역할]
+
+너는 네이버에서 실제 몸이 불편한 사람이 검색할 법한 문장을
+병원 블로그에 올릴 수 있을 정도로
+차분하고 정돈된 제목으로 다듬는 AI다.
+
+이 제목은
+광고도 아니고,
+날것의 검색어도 아닌,
+'검색자 언어를 한 번 정리한 질문형 문장'이어야 한다.
+
+────────────────────
+[1. 사고 기준]
+
+- 출발점은 '아픈 사람의 검색 문장'이다
+- 결과물은 '병원 블로그 제목'이다
+- 너무 캐주얼하지도, 너무 전문적이지도 않게 조율한다
+
+즉,
+▶ 말투는 일반인
+▶ 구조는 정리된 글 제목
+
+────────────────────
+[2. 표현 톤 규칙]
+
+- 존댓말 사용
+- 감정 표현은 최소화
+- 불안은 암시만 하고 강조하지 않는다
+- "걱정됨", "무서움" 같은 직접 감정어는 쓰지 않는다
+- 물어보는 형식은 유지하되 과하지 않게 정리한다
+
+────────────────────
+[3. 절대 금지 표현]
+
+- 전문가, 전문의, 전문적인
+- 의료인, 의사, 한의사
+- 진료, 치료, 처방, 상담
+- 효과, 개선, 해결
+- 정상, 비정상, 위험
+- 병명 확정 표현
+- 병원 방문을 연상시키는 표현
+
+────────────────────
+[4. 제목 구조 가이드]
+
+제목은 아래 끝맺음 중 하나로 마무리한다.
+
+▶ 끝맺음 패턴 (필수)
+- ~볼 점
+- ~이유
+- ~한다면
+- ~일 때
+- ~있을까요
+
+▶ 키워드 배치 규칙 (필수)
+- SEO 키워드는 반드시 제목의 맨 앞에 위치해야 한다
+
+▶ 구조 예시
+① [증상/상황] + ~할 때 살펴볼 점
+② [증상/상황] + ~는 이유
+③ [증상/상황] + ~한다면
+④ [증상/상황] + ~일 때 확인할 부분
+
+────────────────────
+[5. 네이버 적합성 조율 규칙]
+
+- '블로그 제목으로 자연스러운 수준'이 기준
+
+────────────────────
+[6. 의료광고 안전 장치]
+
+- 판단, 결론, 예측 금지
+- 원인 암시 최소화
+- 상태 + 질문까지만 허용
+
+────────────────────
+[7. 출력 조건]
+
+- 제목만 출력
+- 설명, 부제, 해설 금지
+- 5개 생성
+
+────────────────────
+[PART 2. SEO 점수 평가]
+
+각 제목에 대해 0~100점 SEO 점수를 계산한다.
+
+▶ SEO 점수 = A + B + C + D + E
+[A] 검색자 자연도 (0~25점)
+[B] 질문 적합도 AEO (0~25점)
+[C] 키워드 구조 안정성 SEO (0~20점)
+[D] 의료광고·AI 요약 안전성 GEO (0~20점)
+[E] 병원 블로그 적합도 CCO (0~10점)
+
+────────────────────
+[PART 3. 출력 형식]
+
+JSON 배열로 출력한다. 각 항목은 다음 구조를 따른다:
+{
+  "title": "생성된 제목",
+  "score": 총점(숫자),
+  "type": "증상질환형" | "변화원인형" | "확인형" | "정상범위형"
+}`;
+
+      const res = await fetch('/api/gemini', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt,
+          model: 'gemini-2.0-flash-lite',
+          responseType: 'json',
+          timeout: 60000,
+          schema: {
+            type: 'ARRAY',
+            items: {
+              type: 'OBJECT',
+              properties: {
+                title: { type: 'STRING' },
+                score: { type: 'NUMBER' },
+                type: { type: 'STRING', enum: ['증상질환형', '변화원인형', '확인형', '정상범위형'] }
+              },
+              required: ['title', 'score', 'type']
+            }
+          }
+        }),
+      });
+
+      const data = await res.json() as { text?: string; error?: string };
+      if (!res.ok || !data.text) throw new Error(data.error || '제목 추천 실패');
+
+      const titles: SeoTitleItem[] = JSON.parse(data.text);
+      const sorted = titles.sort((a, b) => b.score - a.score);
+      setSeoTitles(sorted);
+    } catch {
+      setError('제목 추천 실패');
+    } finally {
+      setIsLoadingTitles(false);
+    }
+  };
+
+  // ── 트렌드 주제 (old handleRecommendTrends 동일) ──
+  const handleRecommendTrends = async () => {
+    setIsLoadingTrends(true);
+    setTrendingItems([]);
+    setSeoTitles([]);
+    try {
+      const now = new Date();
+      const koreaTime = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
+      const year = koreaTime.getFullYear();
+      const month = koreaTime.getMonth() + 1;
+      const day = koreaTime.getDate();
+      const hour = koreaTime.getHours();
+      const dayOfWeek = ['일', '월', '화', '수', '목', '금', '토'][koreaTime.getDay()];
+      const dateStr = `${year}년 ${month}월 ${day}일 (${dayOfWeek}) ${hour}시`;
+      const randomSeed = Math.floor(Math.random() * 1000);
+
+      const seasonalContext: Record<number, string> = {
+        1: '신년 건강검진 시즌, 겨울철 독감/감기, 난방으로 인한 건조',
+        2: '설 연휴 후 피로, 환절기 시작, 미세먼지 증가',
+        3: '본격 환절기, 꽃가루 알레르기, 황사/미세먼지',
+        4: '봄철 야외활동 증가, 알레르기 비염 최고조',
+        5: '초여름, 식중독 주의 시작, 냉방병 예고',
+        6: '장마철 습도, 무좀/피부질환, 식중독 급증',
+        7: '폭염, 열사병/일사병, 냉방병 본격화',
+        8: '극심한 폭염, 온열질환 피크, 휴가 후 피로',
+        9: '환절기 시작, 가을 알레르기, 일교차 큰 시기',
+        10: '환절기 감기, 독감 예방접종 시즌, 건강검진 시즌',
+        11: '본격 독감 시즌, 난방 시작, 건조한 피부',
+        12: '독감 절정기, 연말 피로, 동상/저체온증'
+      };
+
+      const categoryHints: Record<string, string> = {
+        '정형외과': '관절통, 허리디스크, 어깨통증, 무릎연골, 오십견, 척추관협착증',
+        '피부과': '여드름, 아토피, 건선, 탈모, 피부건조, 대상포진',
+        '내과': '당뇨, 고혈압, 갑상선, 위장질환, 간기능, 건강검진',
+        '치과': '충치, 잇몸질환, 임플란트, 치아미백, 교정, 사랑니, 치주염',
+        '안과': '안구건조증, 노안, 백내장, 녹내장, 시력교정',
+        '이비인후과': '비염, 축농증, 어지럼증, 이명, 편도염',
+      };
+
+      const currentSeasonContext = seasonalContext[month] || '';
+      const categoryKeywords = categoryHints[category] || '일반적인 건강 증상, 예방, 관리';
+
+      const prompt = `[🕐 정확한 현재 시각: ${dateStr} 기준 (한국 표준시)]
+[🎲 다양성 시드: ${randomSeed}]
+
+당신은 네이버/구글 검색 트렌드 분석 전문가입니다.
+'${category}' 진료과와 관련하여 **지금 이 시점**에 검색량이 급상승하거나 관심이 높은 건강/의료 주제 5가지를 추천해주세요.
+
+[📅 ${month}월 시즌 특성]
+${currentSeasonContext}
+
+[🏥 ${category} 관련 키워드 풀]
+${categoryKeywords}
+
+[⚠️ 중요 규칙]
+1. **매번 다른 결과 필수**: 이전 응답과 다른 새로운 주제를 선정하세요 (시드: ${randomSeed})
+2. **구체적인 주제**: "어깨통증" 대신 "겨울철 난방 후 어깨 뻣뻣함" 처럼 구체적으로
+3. **현재 시점 반영**: ${month}월 ${day}일 기준 계절/시기 특성 반드시 반영
+4. **롱테일 키워드**: 블로그 작성에 바로 쓸 수 있는 구체적인 키워드 조합 제시
+5. **다양한 난이도**: 경쟁 높은 주제 2개 + 틈새 주제 3개 섞어서
+
+[📊 점수 산정]
+- SEO 점수(0~100): 검색량 높고 + 블로그 경쟁도 낮을수록 고점수
+- 점수 높은 순 정렬
+
+[🎯 출력 형식]
+- topic: 구체적인 주제명
+- keywords: 블로그 제목에 쓸 롱테일 키워드
+- score: SEO 점수 (70~95 사이)
+- seasonal_factor: 왜 지금 이 주제가 뜨는지 한 줄 설명`;
+
+      const res = await fetch('/api/gemini', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt,
+          model: 'gemini-2.0-flash-lite',
+          responseType: 'json',
+          temperature: 0.9,
+          timeout: 60000,
+          schema: {
+            type: 'ARRAY',
+            items: {
+              type: 'OBJECT',
+              properties: {
+                topic: { type: 'STRING' },
+                keywords: { type: 'STRING' },
+                score: { type: 'NUMBER' },
+                seasonal_factor: { type: 'STRING' }
+              },
+              required: ['topic', 'keywords', 'score', 'seasonal_factor']
+            }
+          }
+        }),
+      });
+
+      const data = await res.json() as { text?: string; error?: string };
+      if (!res.ok || !data.text) throw new Error(data.error || '트렌드 분석 실패');
+
+      const items: TrendingItem[] = JSON.parse(data.text);
+      setTrendingItems(items);
+    } catch {
+      setError('트렌드 로딩 실패');
+    } finally {
+      setIsLoadingTrends(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -343,6 +620,46 @@ function BlogForm() {
               className={inputCls}
             />
           </div>
+
+          {/* AI 제목 추천 + 트렌드 주제 (2버튼 가로) */}
+          <div className="flex gap-2">
+            <button type="button" onClick={handleRecommendTitles} disabled={isLoadingTitles || !(topic || disease || keywords)}
+              className="flex-1 py-2 bg-slate-100 text-slate-600 rounded-lg text-xs font-semibold hover:bg-slate-200 transition-all disabled:opacity-40 flex items-center justify-center gap-1">
+              {isLoadingTitles ? <><div className="w-3 h-3 border-2 border-slate-400 border-t-slate-600 rounded-full animate-spin" />생성 중...</> : <>✨ AI 제목 추천</>}
+            </button>
+            <button type="button" onClick={handleRecommendTrends} disabled={isLoadingTrends}
+              className="flex-1 py-2 bg-slate-100 text-slate-600 rounded-lg text-xs font-semibold hover:bg-slate-200 transition-all disabled:opacity-40 flex items-center justify-center gap-1">
+              {isLoadingTrends ? <><div className="w-3 h-3 border-2 border-slate-400 border-t-slate-600 rounded-full animate-spin" />분석 중...</> : <>🔥 트렌드 주제</>}
+            </button>
+          </div>
+
+          {/* SEO 제목 추천 결과 */}
+          {seoTitles.length > 0 && (
+            <div className="space-y-1">
+              {seoTitles.map((item, idx) => (
+                <button key={idx} type="button" onClick={() => setTopic(item.title)}
+                  className="w-full text-left px-3 py-2 bg-white border border-slate-100 rounded-lg hover:border-blue-400 transition-all group relative">
+                  <div className="absolute top-2 right-2 text-[10px] font-semibold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">SEO {item.score}</div>
+                  <span className="text-[10px] text-slate-400 block">{item.type}</span>
+                  <span className="text-xs font-medium text-slate-700 group-hover:text-blue-600 block pr-12">{item.title}</span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* 트렌드 주제 결과 */}
+          {trendingItems.length > 0 && (
+            <div className="space-y-1">
+              {trendingItems.map((item, idx) => (
+                <button key={idx} type="button" onClick={() => { setDisease(item.topic); }}
+                  className="w-full text-left px-3 py-2 bg-white border border-slate-100 rounded-lg hover:border-blue-400 transition-all group relative">
+                  <div className="absolute top-2 right-2 text-[10px] font-semibold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">SEO {item.score}</div>
+                  <span className="text-xs font-semibold text-slate-800 group-hover:text-blue-600 block pr-12">{item.topic}</span>
+                  <p className="text-[11px] text-slate-400 truncate">{item.keywords} · {item.seasonal_factor}</p>
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* 상세 설정 토글 */}
           <button type="button" onClick={() => setShowAdvanced(!showAdvanced)}

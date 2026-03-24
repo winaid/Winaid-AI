@@ -44,3 +44,16 @@ export interface GenerationRequest {
   hospitalName?: string;
   hospitalStyleSource?: 'explicit_selected_hospital' | 'generic_default';
 }
+
+export interface TrendingItem {
+  topic: string;
+  keywords: string;
+  score: number;
+  seasonal_factor: string;
+}
+
+export interface SeoTitleItem {
+  title: string;
+  score: number;
+  type: '신뢰' | '안전' | '정보' | '공감';
+}
