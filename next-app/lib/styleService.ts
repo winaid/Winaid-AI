@@ -188,11 +188,22 @@ export async function resetHospitalCrawlData(
 
 const CRAWLER_URL = process.env.NEXT_PUBLIC_CRAWLER_URL || '';
 
-/** 크롤러 엔드포인트 URL 결정 — 외부 URL 설정 시 외부 사용, 아니면 자체 API route */
+/**
+ * 크롤러 엔드포인트 URL 결정.
+ * 네이버 블로그는 서버사이드 fetch를 차단(403)하므로
+ * 반드시 Puppeteer 기반 외부 크롤러(crawler-server/)가 필요하다.
+ * NEXT_PUBLIC_CRAWLER_URL이 미설정이면 에러를 던진다.
+ */
 function getCrawlerBaseUrl(): string {
   if (CRAWLER_URL) return CRAWLER_URL;
-  // 외부 크롤러 미설정 → 자체 Next.js API route 사용
-  return resolveApiUrl('');
+  throw new Error(
+    '크롤러 서버 URL이 설정되지 않았습니다.\n' +
+    '네이버 블로그는 서버사이드 fetch를 차단하므로 Puppeteer 기반 크롤러가 필요합니다.\n\n' +
+    '1. crawler-server/를 Railway에 배포하세요 (DEPLOY_GUIDE.md 참조)\n' +
+    '2. Vercel Dashboard → Settings → Environment Variables에서\n' +
+    '   NEXT_PUBLIC_CRAWLER_URL = https://your-crawler.railway.app\n' +
+    '   을 추가하세요.',
+  );
 }
 
 /** 서버사이드(cron 등)에서도 /api/* 상대경로를 절대 URL로 resolve */
