@@ -141,6 +141,7 @@ export default function AdminPage() {
   const [loginError, setLoginError] = useState('');
   const [loginLoading, setLoginLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
 
   // 탭
   const [tab, setTab] = useState<Tab>('contents');
@@ -343,6 +344,9 @@ export default function AdminPage() {
     if (s) {
       sessionStorage.setItem('ADMIN_AUTHENTICATED', 'true');
       sessionStorage.setItem('ADMIN_TOKEN', password.trim());
+      if (rememberMe) {
+        sessionStorage.setItem('ADMIN_PERSIST', 'true');
+      }
       setAuthenticated(true);
       setStats(s);
     } else {
@@ -354,6 +358,10 @@ export default function AdminPage() {
   const handleLogout = () => {
     sessionStorage.removeItem('ADMIN_AUTHENTICATED');
     sessionStorage.removeItem('ADMIN_TOKEN');
+    sessionStorage.removeItem('ADMIN_PERSIST');
+    // legacy cleanup
+    localStorage.removeItem('ADMIN_PERSIST');
+    localStorage.removeItem('ADMIN_TOKEN');
     setAuthenticated(false);
     setPassword('');
     setStats(null);
@@ -543,6 +551,10 @@ export default function AdminPage() {
                 </button>
               </div>
             </div>
+            <label className="flex items-center gap-2 mb-5 cursor-pointer select-none">
+              <input type="checkbox" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} className="w-4 h-4 rounded border-slate-300 text-blue-500 focus:ring-blue-500/30" />
+              <span className="text-sm text-slate-500">이 기기에서 로그인 유지</span>
+            </label>
             <button
               type="submit"
               disabled={loginLoading}
