@@ -2,7 +2,7 @@
 
 import { useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { PERSONAS, TONES, WRITING_STYLES, CSS_THEMES } from '../../../lib/constants';
+import { CATEGORIES, PERSONAS, TONES, WRITING_STYLES, CSS_THEMES } from '../../../lib/constants';
 import { TEAM_DATA } from '../../../lib/teamData';
 import { ContentCategory, type GenerationRequest, type AudienceMode, type ImageStyle, type WritingStyle, type CssTheme } from '../../../lib/types';
 import { buildBlogPrompt } from '../../../lib/blogPrompt';
@@ -18,6 +18,7 @@ function BlogForm() {
   const topicParam = searchParams.get('topic');
   const [topic, setTopic] = useState(topicParam || '');
   const [keywords, setKeywords] = useState('');
+  const [category, setCategory] = useState<ContentCategory>(ContentCategory.DENTAL);
   const [persona, setPersona] = useState(PERSONAS[0].value);
   const [tone, setTone] = useState(TONES[0].value);
   const [audienceMode, setAudienceMode] = useState<AudienceMode>('환자용(친절/공감)');
@@ -43,7 +44,7 @@ function BlogForm() {
     if (!topic.trim()) return;
 
     const request: GenerationRequest = {
-      category: ContentCategory.DENTAL,
+      category,
       topic: topic.trim(),
       keywords: keywords.trim(),
       tone,
@@ -221,6 +222,32 @@ function BlogForm() {
             </div>
           </div>
 
+          {/* 진료과 + 대상 독자 (old 동일: grid-cols-2 select) */}
+          <div className="grid grid-cols-2 gap-3">
+            <select
+              value={category}
+              onChange={e => setCategory(e.target.value as ContentCategory)}
+              className={inputCls}
+              disabled={isGenerating}
+              aria-label="진료과 선택"
+            >
+              {CATEGORIES.map(cat => (
+                <option key={cat.value} value={cat.value}>{cat.label}</option>
+              ))}
+            </select>
+            <select
+              value={audienceMode}
+              onChange={e => setAudienceMode(e.target.value as AudienceMode)}
+              className={inputCls}
+              disabled={isGenerating}
+              aria-label="타겟 청중 선택"
+            >
+              <option value="환자용(친절/공감)">환자용 (친절/공감)</option>
+              <option value="보호자용(가족걱정)">보호자용 (부모님/자녀 걱정)</option>
+              <option value="전문가용(신뢰/정보)">전문가용 (신뢰/정보)</option>
+            </select>
+          </div>
+
           {/* 주제 */}
           <div>
             <label className={labelCls}>주제 *</label>
@@ -259,27 +286,6 @@ function BlogForm() {
               <select value={tone} onChange={e => setTone(e.target.value)} className={inputCls}>
                 {TONES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
               </select>
-            </div>
-          </div>
-
-          {/* 대상 독자 */}
-          <div>
-            <label className={labelCls}>대상 독자</label>
-            <div className="flex gap-1.5">
-              {(['환자용(친절/공감)', '보호자용(가족걱정)', '전문가용(신뢰/정보)'] as AudienceMode[]).map(mode => (
-                <button
-                  key={mode}
-                  type="button"
-                  onClick={() => setAudienceMode(mode)}
-                  className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all ${
-                    audienceMode === mode
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
-                  }`}
-                >
-                  {mode.split('(')[0]}
-                </button>
-              ))}
             </div>
           </div>
 

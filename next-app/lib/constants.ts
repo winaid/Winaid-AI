@@ -4,7 +4,9 @@
 import { ContentCategory } from './types';
 
 export const CATEGORIES = [
-  { value: ContentCategory.DENTAL, label: '치과' },
+  { value: ContentCategory.DENTAL, label: '🦷 치과' },
+  { value: ContentCategory.DERMATOLOGY, label: '🧴 피부과' },
+  { value: ContentCategory.ORTHOPEDICS, label: '🦴 정형외과' },
 ];
 
 export const PERSONAS = [

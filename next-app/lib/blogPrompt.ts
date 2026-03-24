@@ -57,6 +57,7 @@ export function buildBlogPrompt(req: GenerationRequest): {
 
   const promptParts = [
     `## 블로그 작성 요청`,
+    `- 진료과: ${req.category}`,
     `- 주제: ${req.topic}`,
   ];
 
