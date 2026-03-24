@@ -963,28 +963,30 @@ export default function AdminPage() {
       {/* ── 말투 학습 탭 ── */}
       {tab === 'style' && (
         <div className="space-y-4">
-          {/* 설명 헤더 + 전체 크롤링 버튼 */}
+          {/* 설명 + 전체 자동 크롤링 버튼 */}
           <div className="bg-violet-50 border border-violet-200 rounded-2xl p-5">
-            <div className="flex items-center justify-between flex-wrap gap-3">
+            <div className="flex items-start justify-between gap-3 flex-wrap">
               <div>
                 <h2 className="text-base font-bold text-violet-800 mb-1">병원별 네이버 블로그 말투 학습</h2>
                 <p className="text-sm text-violet-600">
                   각 병원의 네이버 블로그 URL을 입력 후 <strong>크롤링 + 학습</strong>을 누르면 AI가 글을 읽고 말투를 자동 학습합니다.
+                  수집된 글은 오타/맞춤법·의료광고법 점수와 함께 블로그 URL별 최대 10개씩 보관됩니다. 다중 URL 입력 시 각 블로그의 글이 출처별로 구분 표시됩니다.
                 </p>
               </div>
               <button
                 onClick={handleCrawlAllHospitals}
                 disabled={crawlAllStatus.loading}
-                className="px-4 py-2.5 text-xs font-bold bg-violet-600 text-white rounded-xl hover:bg-violet-700 transition-all disabled:opacity-50 whitespace-nowrap"
+                className="shrink-0 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-sm font-bold rounded-xl transition-colors flex items-center gap-2 shadow-sm"
               >
-                {crawlAllStatus.loading ? '처리 중...' : '전체 병원 자동 크롤링 + 채점'}
+                {crawlAllStatus.loading ? (
+                  <><div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />{crawlAllStatus.progress || '크롤링 중...'}</>
+                ) : (
+                  <>🔄 전체 병원 자동 크롤링 + 채점</>
+                )}
               </button>
             </div>
-            {crawlAllStatus.progress && (
-              <div className="mt-3 flex items-center gap-2 text-xs text-violet-600">
-                {crawlAllStatus.loading && <div className="w-3 h-3 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />}
-                {crawlAllStatus.progress}
-              </div>
+            {crawlAllStatus.loading && (
+              <div className="mt-2 text-xs text-indigo-600 font-medium">{crawlAllStatus.progress}</div>
             )}
           </div>
 
@@ -1064,32 +1066,33 @@ export default function AdminPage() {
                         {/* 다중 URL 입력 */}
                         <div className="space-y-2">
                           {urls.map((urlVal, urlIdx) => (
-                            <div key={urlIdx} className="flex gap-2 items-center">
-                              <span className="text-[10px] text-slate-400 font-mono w-4 shrink-0 text-center">{urlIdx + 1}</span>
-                              <input
-                                type="url"
-                                value={urlVal}
-                                onChange={e => {
-                                  const newUrls = [...urls];
-                                  newUrls[urlIdx] = e.target.value;
-                                  setBlogUrlInputs(prev => ({ ...prev, [baseName]: newUrls }));
-                                }}
-                                placeholder="https://blog.naver.com/병원아이디"
-                                className="flex-1 px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-violet-400 transition-colors"
-                                disabled={status?.loading}
-                              />
-                              {urls.length > 1 && (
-                                <button
-                                  onClick={() => {
-                                    const newUrls = urls.filter((_, i) => i !== urlIdx);
+                            <div key={urlIdx}>
+                              <div className="flex gap-2 items-center">
+                                <span className="text-[10px] text-slate-400 font-mono w-4 shrink-0 text-center">{urlIdx + 1}</span>
+                                <input
+                                  type="url"
+                                  value={urlVal}
+                                  onChange={e => {
+                                    const newUrls = [...urls];
+                                    newUrls[urlIdx] = e.target.value;
                                     setBlogUrlInputs(prev => ({ ...prev, [baseName]: newUrls }));
                                   }}
+                                  placeholder="https://blog.naver.com/병원아이디"
+                                  className="flex-1 px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-violet-400 transition-colors"
                                   disabled={status?.loading}
-                                  className="w-7 h-7 flex items-center justify-center text-xs text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-40"
-                                >
-                                  x
-                                </button>
-                              )}
+                                />
+                                {urls.length > 1 && (
+                                  <button
+                                    onClick={() => {
+                                      const newUrls = urls.filter((_, i) => i !== urlIdx);
+                                      setBlogUrlInputs(prev => ({ ...prev, [baseName]: newUrls }));
+                                    }}
+                                    disabled={status?.loading}
+                                    className="w-7 h-7 flex items-center justify-center text-xs text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-40"
+                                    title="URL 삭제"
+                                  >✕</button>
+                                )}
+                              </div>
                             </div>
                           ))}
 
@@ -1100,17 +1103,13 @@ export default function AdminPage() {
                               onClick={() => setBlogUrlInputs(prev => ({ ...prev, [baseName]: [...urls, ''] }))}
                               disabled={status?.loading}
                               className="px-2.5 py-1.5 text-xs font-medium text-violet-600 border border-violet-200 bg-violet-50 rounded-lg hover:bg-violet-100 transition-colors disabled:opacity-40"
-                            >
-                              + URL 추가
-                            </button>
+                            >+ URL 추가</button>
                             <div className="flex-1" />
                             <button
                               onClick={() => handleSaveBlogUrl(baseName, team.id)}
                               disabled={status?.loading || !hasAnyUrl}
                               className="px-3 py-2 text-xs font-semibold bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 transition-colors disabled:opacity-40 whitespace-nowrap"
-                            >
-                              URL 저장
-                            </button>
+                            >URL 저장</button>
                             <button
                               onClick={() => handleCrawlAndLearn(baseName, team.id)}
                               disabled={status?.loading || !hasAnyUrl}
@@ -1118,7 +1117,7 @@ export default function AdminPage() {
                             >
                               {status?.loading ? '학습 중...' : '전체 크롤링'}
                             </button>
-                            {(profile || false) && (
+                            {(profile || (dbPosts[baseName] && dbPosts[baseName].length > 0)) && (
                               <button
                                 onClick={() => handleResetCrawlData(baseName)}
                                 disabled={status?.loading}
@@ -1191,109 +1190,154 @@ export default function AdminPage() {
                           );
                         })()}
 
-                        {/* ── 수집된 글 아코디언 (root StyleTab 동일) ── */}
+                        {/* ── 수집된 글 아코디언 ── */}
                         {(() => {
                           const hospitalPosts = dbPosts[baseName] || [];
                           const blogIds = [...new Set(hospitalPosts.map(p => p.source_blog_id).filter(Boolean))];
                           const isExpanded = expandedPosts[`${baseName}_accordion`];
+                          const profileCount = profile?.crawled_posts_count || 0;
+                          const displayCount = hospitalPosts.length || profileCount;
+                          if (displayCount === 0 && !isExpanded) return null;
+
                           return (
                             <div className="mt-3">
                               <button
+                                type="button"
                                 onClick={() => {
                                   if (!isExpanded && hospitalPosts.length === 0) {
                                     loadDbPosts(baseName);
                                   }
                                   setExpandedPosts(prev => ({ ...prev, [`${baseName}_accordion`]: !isExpanded }));
                                 }}
-                                className="text-xs font-semibold text-slate-500 hover:text-violet-600 transition-colors"
+                                className="flex items-center gap-1.5 text-xs font-semibold text-violet-600 hover:text-violet-800 transition-colors"
                               >
-                                {isExpanded ? '▼' : '▶'} 수집된 글 {hospitalPosts.length > 0 ? `${hospitalPosts.length}개` : ''} 보기
-                                {blogIds.length > 0 && ` (${blogIds.length}개 블로그)`}
+                                <span>{isExpanded ? '▼' : '▶'}</span>
+                                수집된 글 {displayCount}개 보기
+                                {blogIds.length > 1 && <span className="text-[10px] text-slate-400 ml-1">({blogIds.length}개 블로그)</span>}
                               </button>
 
                               {isExpanded && hospitalPosts.length > 0 && (
-                                <div className="mt-2 space-y-3">
+                                <div className="mt-2 space-y-3 max-h-[700px] overflow-y-auto pr-1">
                                   {blogIds.map(blogId => {
                                     const groupPosts = hospitalPosts.filter(p => p.source_blog_id === blogId);
                                     return (
-                                      <div key={blogId || 'unknown'} className="border border-slate-100 rounded-lg overflow-hidden">
-                                        <div className="px-3 py-2 bg-slate-50 text-[11px] text-slate-500 font-semibold flex items-center gap-2">
-                                          <span>[{blogId || '?'}]</span>
-                                          <span>{groupPosts.length}개 글</span>
+                                      <div key={blogId || 'unknown'} className="border border-violet-100 rounded-lg overflow-hidden bg-white">
+                                        {/* URL 그룹 헤더 */}
+                                        <div className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-violet-50 to-slate-50 border-b border-violet-100">
+                                          <span className="text-[10px] px-1.5 py-0.5 bg-violet-100 text-violet-700 rounded font-mono font-bold">{blogId || '?'}</span>
+                                          <span className="text-[10px] text-slate-500">{groupPosts.length}개 글</span>
                                           {blogId && (
                                             <a
                                               href={`https://blog.naver.com/${blogId}`}
                                               target="_blank"
                                               rel="noopener noreferrer"
-                                              className="text-blue-500 hover:underline ml-auto"
-                                            >
-                                              블로그 &rarr;
-                                            </a>
+                                              className="ml-auto text-[10px] text-violet-400 hover:text-violet-600"
+                                            >블로그 →</a>
                                           )}
                                         </div>
-                                        <div className="divide-y divide-slate-50">
-                                          {groupPosts.slice(0, 10).map(post => {
+                                        {/* 해당 블로그의 글 목록 */}
+                                        <div className="divide-y divide-slate-100">
+                                          {groupPosts.slice(0, 10).map((post, i) => {
                                             const isPostExpanded = expandedPosts[post.id];
-                                            const scoreColor = (s?: number) =>
-                                              s == null ? 'bg-slate-100 text-slate-400' :
-                                              s >= 90 ? 'bg-green-100 text-green-700' :
-                                              s >= 70 ? 'bg-amber-100 text-amber-700' :
-                                              'bg-red-100 text-red-700';
+                                            const isScoring = scoringPost === post.id;
+                                            const hasScore = post.scored_at != null;
+                                            const scoreBadge = (score?: number) => {
+                                              if (score == null) return 'bg-slate-100 text-slate-400';
+                                              if (score >= 90) return 'bg-green-100 text-green-700';
+                                              if (score >= 70) return 'bg-orange-100 text-orange-700';
+                                              return 'bg-red-100 text-red-600';
+                                            };
+                                            const currentContent = editingContent[post.id] ?? post.corrected_content ?? post.content;
                                             return (
-                                              <div key={post.id} className="px-3 py-2">
-                                                <div
-                                                  className="flex items-center gap-2 cursor-pointer"
+                                              <div key={post.id} className="border-b border-slate-100 last:border-b-0">
+                                                {/* 글 헤더 */}
+                                                <button
+                                                  type="button"
                                                   onClick={() => setExpandedPosts(prev => ({ ...prev, [post.id]: !isPostExpanded }))}
+                                                  className="w-full flex items-start gap-2 px-3 py-2 text-left hover:bg-slate-50 transition-colors"
                                                 >
-                                                  <span className="text-[10px] text-slate-400">{isPostExpanded ? '▼' : '▶'}</span>
-                                                  {/* 점수 뱃지 */}
-                                                  {post.scored_at ? (
-                                                    <div className="flex gap-1">
-                                                      <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${scoreColor(post.score_typo)}`}>오타 {post.score_typo ?? '?'}</span>
-                                                      <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${scoreColor(post.score_spelling)}`}>맞춤법 {post.score_spelling ?? '?'}</span>
-                                                      <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${scoreColor(post.score_medical_law)}`}>의료법 {post.score_medical_law ?? '?'}</span>
-                                                      <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${scoreColor(post.score_total)}`}>종합 {post.score_total ?? '?'}</span>
+                                                  <span className="text-[11px] font-bold text-slate-400 mt-0.5 shrink-0">#{i + 1}</span>
+                                                  <div className="flex-1 min-w-0">
+                                                    <div className="flex items-center gap-1.5 flex-wrap mb-0.5">
+                                                      {hasScore ? (
+                                                        <>
+                                                          <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${scoreBadge(post.score_typo)}`}>오타 {post.score_typo ?? '?'}점</span>
+                                                          <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${scoreBadge(post.score_spelling)}`}>맞춤법 {post.score_spelling ?? '?'}점</span>
+                                                          <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${scoreBadge(post.score_medical_law)}`}>의료법 {post.score_medical_law ?? '?'}점</span>
+                                                          <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${scoreBadge(post.score_total)}`}>종합 {post.score_total ?? '?'}점</span>
+                                                        </>
+                                                      ) : (
+                                                        <span className="text-[10px] px-1.5 py-0.5 bg-slate-100 text-slate-400 rounded">미채점</span>
+                                                      )}
                                                     </div>
-                                                  ) : (
-                                                    <span className="text-[10px] text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded">미채점</span>
-                                                  )}
-                                                  <span className="text-xs text-slate-700 truncate flex-1">{post.title || post.url}</span>
-                                                </div>
+                                                    <p className="text-[11px] text-violet-600 truncate font-medium">
+                                                      {post.source_blog_id && <span className="text-[9px] px-1 py-0.5 bg-violet-50 text-violet-500 rounded mr-1.5 font-mono">{post.source_blog_id}</span>}
+                                                      {post.title ? post.title.replace(/&#39;/g, "'").replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"') : post.url}
+                                                    </p>
+                                                  </div>
+                                                  <span className="text-[10px] text-slate-400 shrink-0">{isPostExpanded ? '접기' : '펼치기'}</span>
+                                                </button>
 
-                                                {/* 펼쳐진 글 상세 */}
+                                                {/* 펼침: 본문 + 채점 + 수정 */}
                                                 {isPostExpanded && (
-                                                  <div className="mt-2 ml-4 space-y-3">
-                                                    {/* 채점 버튼 */}
-                                                    <button
-                                                      onClick={() => handleScorePost(post)}
-                                                      disabled={scoringPost === post.id}
-                                                      className="px-3 py-1.5 text-xs font-bold bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 disabled:opacity-50 transition-all"
-                                                    >
-                                                      {scoringPost === post.id ? '채점 중...' : post.scored_at ? '재채점' : '📊 채점하기'}
-                                                    </button>
+                                                  <div className="px-3 pb-3 bg-slate-50 border-t border-slate-100 space-y-3">
+                                                    {/* 채점 / 재채점 버튼 */}
+                                                    <div className="mt-2 flex items-center gap-2">
+                                                      <button
+                                                        onClick={() => handleScorePost(post)}
+                                                        disabled={isScoring}
+                                                        className="px-3 py-1.5 text-[11px] font-bold bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors flex items-center gap-1.5"
+                                                      >
+                                                        {isScoring
+                                                          ? <><div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />채점 중...</>
+                                                          : hasScore ? '🔄 재채점' : '📊 채점하기'}
+                                                      </button>
+                                                    </div>
 
-                                                    {/* 오타/맞춤법 이슈 (root 동일) */}
-                                                    {post.typo_issues && post.typo_issues.length > 0 && (
-                                                      <div>
-                                                        <p className="text-[11px] font-bold text-slate-600 mb-1">오타/맞춤법 이슈</p>
-                                                        <div className="space-y-1">
+                                                    {/* 점수 이유 요약 */}
+                                                    {hasScore && (
+                                                      <div className="bg-slate-50 border border-slate-200 rounded-lg p-2.5 space-y-1">
+                                                        <p className="text-[11px] font-bold text-slate-700 mb-1">📋 채점 근거</p>
+                                                        <div className="flex flex-wrap gap-2 text-[11px]">
+                                                          <span className={`px-2 py-0.5 rounded font-bold ${scoreBadge(post.score_typo)}`}>
+                                                            오타 {post.score_typo ?? '?'}점
+                                                            {(() => { const n = ((post.typo_issues as CrawledPostScore['typo_issues']) || []).filter(i => i.type === 'typo' || !i.type).length; return n > 0 ? ` — ${n}건 × -10점` : ' — 없음'; })()}
+                                                          </span>
+                                                          <span className={`px-2 py-0.5 rounded font-bold ${scoreBadge(post.score_spelling)}`}>
+                                                            맞춤법 {post.score_spelling ?? '-'}점
+                                                            {(() => { const n = ((post.typo_issues as CrawledPostScore['typo_issues']) || []).filter(i => i.type === 'spelling').length; return n > 0 ? ` — ${n}건 × -5점` : ' — 없음'; })()}
+                                                          </span>
+                                                          <span className={`px-2 py-0.5 rounded font-bold ${scoreBadge(post.score_medical_law)}`}>
+                                                            의료법 {post.score_medical_law ?? '?'}점
+                                                            {((post.law_issues as CrawledPostScore['law_issues'])?.length ?? 0) > 0
+                                                              ? ` — 위반 ${(post.law_issues as CrawledPostScore['law_issues'])!.length}건`
+                                                              : ' — 위반 없음'}
+                                                          </span>
+                                                        </div>
+                                                      </div>
+                                                    )}
+
+                                                    {/* 오타/맞춤법 이슈 */}
+                                                    {post.typo_issues && (post.typo_issues as CrawledPostScore['typo_issues']).length > 0 && (
+                                                      <div className="bg-orange-50 border border-orange-200 rounded-lg p-2.5">
+                                                        <p className="text-[11px] font-bold text-orange-700 mb-1.5">⚠️ 오타 · 맞춤법 이슈 ({(post.typo_issues as CrawledPostScore['typo_issues']).length}건)</p>
+                                                        <div className="space-y-2">
                                                           {(post.typo_issues as CrawledPostScore['typo_issues']).map((issue, idx) => (
-                                                            <div key={idx} className="flex items-center gap-2 text-[11px]">
-                                                              <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
-                                                                issue.type === 'typo' ? 'bg-orange-100 text-orange-600' : 'bg-blue-100 text-blue-600'
-                                                              }`}>
-                                                                {issue.type === 'typo' ? '오타' : '맞춤법'}
-                                                              </span>
-                                                              <span className="text-red-500 line-through">{issue.original}</span>
-                                                              <span className="text-slate-400">&rarr;</span>
-                                                              <span className="text-green-600 font-medium">{issue.correction}</span>
-                                                              {editingContent[post.id] !== undefined && (
+                                                            <div key={idx} className="text-[11px]">
+                                                              <div className="flex items-center gap-2 flex-wrap">
+                                                                <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold ${issue.type === 'spelling' ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'}`}>
+                                                                  {issue.type === 'spelling' ? '맞춤법' : '오타'}
+                                                                </span>
+                                                                <span className="text-red-600 line-through">&quot;{issue.original}&quot;</span>
+                                                                <span className="text-slate-400">→</span>
+                                                                <span className="text-green-700 font-medium">&quot;{issue.correction}&quot;</span>
                                                                 <button
                                                                   onClick={() => applyCorrection(post.id, issue.original, issue.correction)}
-                                                                  className="text-[9px] text-blue-500 hover:underline"
-                                                                >
-                                                                  [수정]
-                                                                </button>
+                                                                  className="ml-auto px-2 py-0.5 bg-green-600 text-white text-[10px] rounded font-bold hover:bg-green-700"
+                                                                >수정</button>
+                                                              </div>
+                                                              {issue.context && (
+                                                                <p className="text-[10px] text-slate-400 italic mt-0.5 pl-1 border-l-2 border-orange-200">{issue.context}</p>
                                                               )}
                                                             </div>
                                                           ))}
@@ -1301,63 +1345,64 @@ export default function AdminPage() {
                                                       </div>
                                                     )}
 
-                                                    {/* 의료광고법 이슈 (root 동일) */}
+                                                    {/* 의료광고법 이슈 */}
                                                     {post.law_issues && (post.law_issues as CrawledPostScore['law_issues']).length > 0 && (
-                                                      <div>
-                                                        <p className="text-[11px] font-bold text-slate-600 mb-1">의료광고법 이슈</p>
-                                                        <div className="space-y-1">
+                                                      <div className="bg-red-50 border border-red-200 rounded-lg p-2.5">
+                                                        <p className="text-[11px] font-bold text-red-700 mb-1.5">🚫 의료광고법 이슈 ({(post.law_issues as CrawledPostScore['law_issues']).length}건)</p>
+                                                        <div className="space-y-2.5">
                                                           {(post.law_issues as CrawledPostScore['law_issues']).map((issue, idx) => (
-                                                            <div key={idx} className="text-[11px] flex items-start gap-2">
-                                                              <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold flex-none ${
-                                                                issue.severity === 'critical' ? 'bg-red-100 text-red-700' :
-                                                                issue.severity === 'high' ? 'bg-orange-100 text-orange-700' :
-                                                                'bg-yellow-100 text-yellow-700'
-                                                              }`}>
-                                                                {issue.severity}
-                                                              </span>
-                                                              <div>
-                                                                <span className="text-red-500 font-medium">{issue.word}</span>
+                                                            <div key={idx} className="text-[11px] bg-white border border-red-100 rounded-lg p-2">
+                                                              <div className="flex items-center gap-1.5 flex-wrap">
+                                                                <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold ${issue.severity === 'critical' ? 'bg-red-200 text-red-800' : issue.severity === 'high' ? 'bg-orange-200 text-orange-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                                                                  {issue.severity}
+                                                                </span>
+                                                                <span className="text-red-600 font-bold">&quot;{issue.word}&quot;</span>
                                                                 {issue.replacement?.length > 0 && (
-                                                                  <span className="text-slate-400"> &rarr; {issue.replacement.join(', ')}</span>
-                                                                )}
-                                                                {issue.law_article && (
-                                                                  <span className="text-slate-400 ml-1">({issue.law_article})</span>
+                                                                  <span className="text-emerald-700 font-medium">→ &quot;{issue.replacement[0]}&quot;</span>
                                                                 )}
                                                               </div>
+                                                              {issue.law_article && (
+                                                                <div className="mt-1.5 px-2 py-1 bg-red-50 border border-red-200 rounded text-[10px] font-bold text-red-700">
+                                                                  📋 {issue.law_article}
+                                                                </div>
+                                                              )}
+                                                              {issue.context && (
+                                                                <p className="mt-1 text-[10px] text-slate-400 italic pl-1 border-l-2 border-red-200">{issue.context}</p>
+                                                              )}
                                                             </div>
                                                           ))}
                                                         </div>
                                                       </div>
                                                     )}
 
-                                                    {/* 수정본 편집 (root 동일) */}
+                                                    {/* 본문 (편집 가능) */}
                                                     <div>
-                                                      <p className="text-[11px] font-bold text-slate-600 mb-1">수정본</p>
+                                                      <p className="text-[10px] text-slate-500 mb-1 font-medium">본문 {post.corrected_content ? '(수정본)' : ''}</p>
                                                       <textarea
-                                                        value={editingContent[post.id] ?? post.corrected_content ?? post.content}
+                                                        className="w-full text-[11px] text-slate-600 bg-white border border-slate-200 rounded-lg p-2 max-h-48 resize-y focus:outline-none focus:border-violet-400"
+                                                        value={currentContent}
                                                         onChange={e => setEditingContent(prev => ({ ...prev, [post.id]: e.target.value }))}
                                                         rows={6}
-                                                        className="w-full text-xs border border-slate-200 rounded-lg p-2 focus:outline-none focus:border-violet-400 resize-y"
                                                       />
                                                     </div>
 
                                                     {/* 저장 + 링크 */}
-                                                    <div className="flex items-center gap-3">
+                                                    <div className="flex items-center gap-2">
                                                       {editingContent[post.id] !== undefined && (
                                                         <button
                                                           onClick={() => handleSaveContent(post)}
-                                                          className="px-3 py-1.5 text-xs font-bold bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-all"
+                                                          className="px-3 py-1.5 text-[11px] font-bold bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors"
                                                         >
-                                                          수정본 저장
+                                                          ✅ 수정본 저장
                                                         </button>
                                                       )}
                                                       <a
                                                         href={post.url}
                                                         target="_blank"
                                                         rel="noopener noreferrer"
-                                                        className="text-[11px] text-blue-500 hover:underline"
+                                                        className="text-[11px] text-violet-500 hover:underline"
                                                       >
-                                                        블로그에서 보기 &rarr;
+                                                        블로그에서 보기 →
                                                       </a>
                                                     </div>
                                                   </div>
