@@ -133,7 +133,7 @@ async function deletePost(token: string, postId: string): Promise<boolean> {
   if (!supabase) return false;
   const { data, error } = await supabase.rpc('delete_generated_post', {
     admin_password: token,
-    target_post_id: postId,
+    post_id: postId,
   });
   if (error) return false;
   return !!data;
