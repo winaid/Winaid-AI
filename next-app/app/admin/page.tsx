@@ -283,11 +283,11 @@ export default function AdminPage() {
     if (s) setStats(s);
   }, [getToken]);
 
-  const loadPosts = useCallback(async (append = false) => {
+  const loadPosts = useCallback(async (appendOffset?: number) => {
     setPostsLoading(true);
-    const offset = append ? postsOffset : 0;
+    const offset = appendOffset ?? 0;
     const p = await getAllPosts(getToken(), typeFilter, hospitalFilter, offset);
-    if (append) {
+    if (appendOffset !== undefined && appendOffset > 0) {
       setPosts(prev => [...prev, ...p]);
     } else {
       setPosts(p);
@@ -295,7 +295,7 @@ export default function AdminPage() {
     }
     setHasMorePosts(p.length >= 100);
     setPostsLoading(false);
-  }, [getToken, typeFilter, hospitalFilter, postsOffset]);
+  }, [getToken, typeFilter, hospitalFilter]);
 
   const loadUsers = useCallback(async () => {
     setUsersLoading(true);
@@ -305,11 +305,11 @@ export default function AdminPage() {
   }, []);
 
   // 피드백 로드
-  const loadAdminFeedbacks = useCallback(async (append = false) => {
+  const loadAdminFeedbacks = useCallback(async (appendOffset?: number) => {
     setFeedbacksLoading(true);
-    const offset = append ? feedbackOffset : 0;
+    const offset = appendOffset ?? 0;
     const list = await listFeedbacks('dashboard', { limit: 50, offset });
-    if (append) {
+    if (appendOffset !== undefined && appendOffset > 0) {
       setAdminFeedbacks(prev => [...prev, ...list]);
     } else {
       setAdminFeedbacks(list);
@@ -317,7 +317,7 @@ export default function AdminPage() {
     }
     setHasMoreFeedbacks(list.length >= 50);
     setFeedbacksLoading(false);
-  }, [feedbackOffset]);
+  }, []);
 
   // 사용자 팀 변경
   const handleUserTeamChange = async (userId: string, teamId: number | null) => {
@@ -1035,7 +1035,7 @@ export default function AdminPage() {
                       onClick={() => {
                         const nextOffset = postsOffset + 100;
                         setPostsOffset(nextOffset);
-                        loadPosts(true);
+                        loadPosts(nextOffset);
                       }}
                       disabled={postsLoading}
                       className="w-full mt-4 py-2.5 text-xs font-semibold text-slate-500 bg-slate-50 border border-slate-200 rounded-xl hover:bg-slate-100 transition-colors disabled:opacity-50"
@@ -2000,7 +2000,7 @@ export default function AdminPage() {
                   onClick={() => {
                     const nextOffset = feedbackOffset + 50;
                     setFeedbackOffset(nextOffset);
-                    loadAdminFeedbacks(true);
+                    loadAdminFeedbacks(nextOffset);
                   }}
                   disabled={feedbacksLoading}
                   className="w-full py-2.5 text-xs font-semibold text-slate-500 bg-slate-50 border-t border-slate-100 hover:bg-slate-100 transition-colors disabled:opacity-50"

@@ -188,16 +188,11 @@ export async function resetHospitalCrawlData(
 
 const CRAWLER_URL = process.env.NEXT_PUBLIC_CRAWLER_URL || '';
 
-function ensureCrawlerUrl(): string {
-  if (!CRAWLER_URL) {
-    throw new Error(
-      '크롤러 서버 URL이 설정되지 않았습니다.\n' +
-      'Vercel Dashboard → Settings → Environment Variables에서\n' +
-      'NEXT_PUBLIC_CRAWLER_URL = https://loving-caring-production-e0d2.up.railway.app\n' +
-      '을 추가하세요.',
-    );
-  }
-  return CRAWLER_URL;
+/** 크롤러 엔드포인트 URL 결정 — 외부 URL 설정 시 외부 사용, 아니면 자체 API route */
+function getCrawlerBaseUrl(): string {
+  if (CRAWLER_URL) return CRAWLER_URL;
+  // 외부 크롤러 미설정 → 자체 Next.js API route 사용
+  return resolveApiUrl('');
 }
 
 /** 서버사이드(cron 등)에서도 /api/* 상대경로를 절대 URL로 resolve */
@@ -228,27 +223,43 @@ export async function crawlAndLearnHospitalStyle(
 ): Promise<{ posts: CrawledPost[] }> {
   // 1단계: 모든 URL에서 글 크롤링
   const allPosts: CrawledPost[] = [];
+  const errors: string[] = [];
+  const crawlerBase = getCrawlerBaseUrl();
 
   for (let i = 0; i < blogUrls.length; i++) {
     const urlLabel = blogUrls.length > 1 ? ` (${i + 1}/${blogUrls.length})` : '';
     onProgress?.(`블로그 글 수집 중${urlLabel}... (최대 5개)`);
 
     try {
-      const res = await fetch(`${ensureCrawlerUrl()}/api/naver/crawl-hospital-blog`, {
+      const res = await fetch(`${crawlerBase}/api/naver/crawl-hospital-blog`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ blogUrl: blogUrls[i], maxPosts: 5 }),
       });
-      if (!res.ok) continue;
-      const data = (await res.json()) as { posts?: CrawledPost[] };
-      if (data.posts) allPosts.push(...data.posts);
-    } catch {
+      if (!res.ok) {
+        const errBody = await res.text().catch(() => '');
+        const detail = `URL ${i + 1} 크롤링 HTTP ${res.status}${errBody ? ': ' + errBody.slice(0, 100) : ''}`;
+        console.error(`[styleService] ${detail}`);
+        errors.push(detail);
+        continue;
+      }
+      const data = (await res.json()) as { posts?: CrawledPost[]; message?: string };
+      if (data.posts && data.posts.length > 0) {
+        allPosts.push(...data.posts);
+      } else {
+        errors.push(`URL ${i + 1}: 글 0건 수집됨${data.message ? ' — ' + data.message : ''}`);
+      }
+    } catch (err) {
+      const msg = (err as Error).message || '알 수 없는 오류';
+      console.error(`[styleService] URL ${i + 1} 크롤링 오류:`, msg);
+      errors.push(`URL ${i + 1} 네트워크 오류: ${msg.slice(0, 80)}`);
       continue;
     }
   }
 
   if (allPosts.length === 0) {
-    throw new Error('수집된 블로그 글이 없습니다. URL을 다시 확인해주세요.');
+    const detail = errors.length > 0 ? '\n' + errors.join('\n') : '';
+    throw new Error(`수집된 블로그 글이 없습니다.${detail}`);
   }
 
   // 2단계: 합치기 + Gemini 분석
@@ -677,7 +688,7 @@ export async function crawlAndScoreAllHospitals(
   options?: { includeStyleAnalysis?: boolean },
 ): Promise<void> {
   const includeStyle = options?.includeStyleAnalysis ?? false;
-  ensureCrawlerUrl(); // CRAWLER_URL 미설정 시 즉시 에러
+  const crawlerBase = getCrawlerBaseUrl();
 
   // DB 프로필 + teamData 병합하여 URL이 있는 병원 목록 구성
   const profiles = await getAllStyleProfiles();
@@ -733,7 +744,7 @@ export async function crawlAndScoreAllHospitals(
 
         let posts: { url: string; content: string; title?: string; publishedAt?: string; summary?: string; thumbnail?: string }[] = [];
         try {
-          const res = await fetch(`${ensureCrawlerUrl()}/api/naver/crawl-hospital-blog`, {
+          const res = await fetch(`${crawlerBase}/api/naver/crawl-hospital-blog`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ blogUrl: urls[urlIdx], maxPosts: 5 }),
