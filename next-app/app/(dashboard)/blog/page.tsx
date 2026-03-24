@@ -28,7 +28,9 @@ function BlogForm() {
   const [imageCount, setImageCount] = useState(0);
   const [textLength, setTextLength] = useState(1500);
   const [hospitalName, setHospitalName] = useState('');
-  const [showHospitalPicker, setShowHospitalPicker] = useState(false);
+  const [selectedTeam, setSelectedTeam] = useState<number | null>(null);
+  const [selectedManager, setSelectedManager] = useState('');
+  const [showHospitalDropdown, setShowHospitalDropdown] = useState(false);
   const [medicalLawMode] = useState<'strict' | 'relaxed'>('strict');
   const [includeFaq, setIncludeFaq] = useState(false);
   const [faqCount, setFaqCount] = useState(3);
@@ -182,47 +184,99 @@ function BlogForm() {
             <h2 className="text-base font-bold text-slate-800">블로그 생성</h2>
           </div>
 
-          {/* 병원 선택 */}
-          <div>
-            <label className={labelCls}>병원 선택 (선택)</label>
-            <div className="relative">
-              <input
-                type="text"
-                value={hospitalName}
-                onChange={e => setHospitalName(e.target.value)}
-                onFocus={() => setShowHospitalPicker(true)}
-                placeholder="병원명 입력 또는 선택"
-                className={inputCls}
-              />
-              {showHospitalPicker && (
+          {/* 팀 선택 + 병원명 (old 동일) */}
+          <div className="flex bg-slate-100 rounded-lg p-0.5">
+            {TEAM_DATA.map(team => (
+              <button
+                key={team.id}
+                type="button"
+                onClick={() => { setSelectedTeam(team.id); setShowHospitalDropdown(true); }}
+                className={`flex-1 py-1.5 rounded-md text-xs font-bold transition-all ${
+                  selectedTeam === team.id
+                    ? 'bg-white text-blue-600 shadow-sm'
+                    : 'text-slate-400 hover:text-slate-600'
+                }`}
+              >
+                {team.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="relative">
+            {selectedTeam !== null ? (
+            <>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={hospitalName}
+                  onChange={e => setHospitalName(e.target.value)}
+                  placeholder="병원명 선택"
+                  className={inputCls}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowHospitalDropdown(!showHospitalDropdown)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 transition-colors"
+                >
+                  <svg className={`w-4 h-4 transition-transform ${showHospitalDropdown ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                </button>
+              </div>
+              {showHospitalDropdown && (
                 <>
-                  <div className="fixed inset-0 z-10" onClick={() => setShowHospitalPicker(false)} />
-                  <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg z-20 max-h-64 overflow-y-auto">
-                    {TEAM_DATA.map(team => (
-                      <div key={team.id}>
-                        <div className="px-3 py-1.5 text-[10px] font-bold text-slate-400 uppercase bg-slate-50 sticky top-0">
-                          {team.label}
+                  <div className="fixed inset-0 z-10" onClick={() => setShowHospitalDropdown(false)} />
+                  <div className="absolute z-50 mt-1 w-full bg-white rounded-xl border border-slate-200 shadow-lg overflow-hidden">
+                    {/* 팀 헤더 */}
+                    <div className="px-3 py-2 bg-blue-50 border-b border-blue-100">
+                      <span className="text-xs font-bold text-blue-600">{TEAM_DATA.find(t => t.id === selectedTeam)?.label}</span>
+                    </div>
+                    {/* 병원 목록 (매니저별 그룹) */}
+                    {(() => {
+                      const team = TEAM_DATA.find(t => t.id === selectedTeam);
+                      if (!team || team.hospitals.length === 0) {
+                        return <div className="p-4 text-center text-xs text-slate-400">등록된 병원이 없습니다</div>;
+                      }
+                      const managers = [...new Set(team.hospitals.map(h => h.manager))];
+                      return (
+                        <div className="max-h-64 overflow-y-auto">
+                          {managers.map(manager => (
+                            <div key={manager}>
+                              <div className="px-3 py-2 bg-slate-50 text-[11px] font-bold text-slate-500 sticky top-0">
+                                {manager}
+                              </div>
+                              {team.hospitals.filter(h => h.manager === manager).map(hospital => (
+                                <button
+                                  key={`${hospital.name}-${hospital.manager}`}
+                                  type="button"
+                                  onClick={() => {
+                                    setHospitalName(hospital.name.replace(/ \(.*\)$/, ''));
+                                    setSelectedManager(hospital.manager);
+                                    setShowHospitalDropdown(false);
+                                  }}
+                                  className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-blue-50 hover:text-blue-700 transition-colors flex items-center justify-between"
+                                >
+                                  <span>{hospital.name.replace(/ \(.*\)$/, '')}</span>
+                                  {hospitalName === hospital.name.replace(/ \(.*\)$/, '') && (
+                                    <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                                  )}
+                                </button>
+                              ))}
+                            </div>
+                          ))}
                         </div>
-                        {team.hospitals.map(h => (
-                          <button
-                            key={`${team.id}-${h.name}`}
-                            type="button"
-                            onClick={() => {
-                              setHospitalName(h.name);
-                              setShowHospitalPicker(false);
-                            }}
-                            className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-blue-50 hover:text-blue-700 transition-colors"
-                          >
-                            {h.name}
-                            <span className="text-[11px] text-slate-400 ml-2">{h.manager}</span>
-                          </button>
-                        ))}
-                      </div>
-                    ))}
+                      );
+                    })()}
                   </div>
                 </>
               )}
-            </div>
+              {selectedManager && hospitalName && (
+                <p className="mt-1 text-[11px] text-slate-400">담당: {selectedManager}</p>
+              )}
+            </>
+            ) : (
+              <div className="px-3 py-2.5 border border-slate-200 rounded-lg text-sm text-slate-400 bg-slate-50">
+                팀을 먼저 선택해주세요
+              </div>
+            )}
           </div>
 
           {/* 진료과 + 대상 독자 (old 동일: grid-cols-2 select) */}
