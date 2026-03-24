@@ -1,10 +1,10 @@
 /**
- * 병원 말투 학습 서비스 — Supabase CRUD + 크롤러 + Gemini 분석
+ * 병원 말투 학습 서비스 — Supabase CRUD + 크롤러 + Gemini 분석 + 채점
  *
- * old app writingStyleService.ts에서 핵심만 이식.
- * 채점(scoring) 관련은 다음 턴에서 추가.
+ * old app writingStyleService.ts에서 이식.
  */
 import { supabase } from './supabase';
+import type { CrawledPostScore, DBCrawledPost } from './types';
 
 // ── 타입 ──
 
@@ -400,4 +400,196 @@ ${sampleText.substring(0, 5000)}
     stylePrompt: (result.stylePrompt as string) || '',
     createdAt: new Date().toISOString(),
   };
+}
+
+// ── 채점 (scoring) — root writingStyleService.scoreCrawledPost 이식 ──
+
+export async function scoreCrawledPost(content: string): Promise<CrawledPostScore> {
+  const sliced = content.slice(0, 3000);
+  const prompt = `너는 병원 블로그 글의 오타·맞춤법·의료광고법 위반을 검수하는 검수 전문가다.
+
+[검수 대상 텍스트]
+${sliced}
+
+[채점 항목 3가지 — 각 100점 만점, 감점 방식]
+
+1) score_typo (오타 점수, 100점)
+- 실제 오타만 해당 (의도적 표현은 오타 아님)
+- 건당 -10점, 최대 10건까지 보고
+
+2) score_spelling (맞춤법·띄어쓰기·문법 점수, 100점)
+- 건당 -5점, 최대 10건까지 보고
+
+3) score_medical_law (의료광고법 준수 점수, 100점)
+- 의료법 제56조 기준
+  - 제56조1항: 치료 효과 단정 ("완치", "100% 치료") → critical, -20
+  - 제56조2항1호: 최고/유일 ("최고", "국내 유일") → critical, -20
+  - 제56조2항2호: 타 의료기관 비교/비방 → high, -10
+  - 제56조2항3호: 환자 체험기 ("OO환자 OO일만에") → high, -10
+  - 제56조2항4호: 뉴스/방송 인용 ("TV에서 소개된") → medium, -5
+  - 제56조2항5호: 미입증 안전 주장 ("부작용 없이") → high, -10
+  - 제56조2항6호: 과장/허위 ("탁월한", "획기적인") → medium, -5
+
+[출력 형식] JSON만 출력. 설명 없이.
+{
+  "score_typo": 숫자,
+  "score_spelling": 숫자,
+  "score_medical_law": 숫자,
+  "score_total": (세 점수 평균, 반올림),
+  "typo_issues": [{"original":"틀린표현","correction":"올바른표현","context":"문맥","type":"typo 또는 spelling"}],
+  "law_issues": [{"word":"위반표현","severity":"critical/high/medium/low","replacement":["대체표현"],"context":"문맥","law_article":"제56조N항"}]
+}`;
+
+  const res = await fetch('/api/gemini', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      prompt,
+      model: 'gemini-3.1-flash-lite-preview',
+      temperature: 0.1,
+      responseType: 'json',
+      timeout: 60000,
+    }),
+  });
+
+  if (!res.ok) throw new Error('채점 API 호출 실패');
+
+  const data = (await res.json()) as { text?: string };
+  let parsed: Record<string, unknown>;
+  try {
+    let text = data.text || '';
+    const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+    if (jsonMatch) text = jsonMatch[1];
+    parsed = JSON.parse(text.trim());
+  } catch {
+    throw new Error('채점 결과 파싱 실패');
+  }
+
+  return {
+    score_typo: Math.max(0, Math.min(100, Number(parsed.score_typo) || 100)),
+    score_spelling: Math.max(0, Math.min(100, Number(parsed.score_spelling) || 100)),
+    score_medical_law: Math.max(0, Math.min(100, Number(parsed.score_medical_law) || 100)),
+    score_total: Math.max(0, Math.min(100, Number(parsed.score_total) || 100)),
+    typo_issues: (parsed.typo_issues as CrawledPostScore['typo_issues']) || [],
+    law_issues: (parsed.law_issues as CrawledPostScore['law_issues']) || [],
+  };
+}
+
+// ── DB 크롤링 글 CRUD ──
+
+export async function getCrawledPosts(hospitalName: string): Promise<DBCrawledPost[]> {
+  if (!supabase) return [];
+  const { data, error } = await supabase
+    .from('hospital_crawled_posts')
+    .select('*')
+    .eq('hospital_name', hospitalName)
+    .order('published_at', { ascending: false });
+  if (error || !data) return [];
+  return data as DBCrawledPost[];
+}
+
+export async function getAllCrawledPostsSummary(): Promise<Record<string, DBCrawledPost[]>> {
+  if (!supabase) return {};
+  const { data, error } = await supabase
+    .from('hospital_crawled_posts')
+    .select('*')
+    .order('published_at', { ascending: false });
+  if (error || !data) return {};
+  const grouped: Record<string, DBCrawledPost[]> = {};
+  for (const row of data as DBCrawledPost[]) {
+    if (!grouped[row.hospital_name]) grouped[row.hospital_name] = [];
+    grouped[row.hospital_name].push(row);
+  }
+  return grouped;
+}
+
+export async function updateCrawledPostScore(id: string, score: CrawledPostScore): Promise<void> {
+  if (!supabase) return;
+  await supabase
+    .from('hospital_crawled_posts')
+    .update({
+      score_typo: score.score_typo,
+      score_spelling: score.score_spelling,
+      score_medical_law: score.score_medical_law,
+      score_total: score.score_total,
+      typo_issues: score.typo_issues,
+      law_issues: score.law_issues,
+      scored_at: new Date().toISOString(),
+    })
+    .eq('id', id);
+}
+
+export async function updateCrawledPostContent(id: string, correctedContent: string): Promise<void> {
+  if (!supabase) return;
+  await supabase
+    .from('hospital_crawled_posts')
+    .update({ corrected_content: correctedContent })
+    .eq('id', id);
+}
+
+export async function crawlAndScoreAllHospitals(
+  onProgress?: (msg: string, done: number, total: number) => void,
+): Promise<void> {
+  const profiles = await getAllStyleProfiles();
+  const withUrl = profiles.filter(p => p.naver_blog_url);
+  const total = withUrl.length;
+  if (total === 0) return;
+
+  for (let i = 0; i < total; i++) {
+    const profile = withUrl[i];
+    const urls = profile.naver_blog_url!.split(',').map(u => u.trim()).filter(Boolean);
+    onProgress?.(`[${i + 1}/${total}] ${profile.hospital_name} 크롤링 중...`, i, total);
+
+    try {
+      for (const url of urls) {
+        const res = await fetch(`${CRAWLER_URL}/api/naver/crawl-hospital-blog`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ blogUrl: url, maxPosts: 5 }),
+        });
+        if (!res.ok) continue;
+        const data = (await res.json()) as { posts?: { url: string; content: string; title?: string; publishedAt?: string; summary?: string; thumbnail?: string }[] };
+        if (!data.posts) continue;
+
+        onProgress?.(`[${i + 1}/${total}] ${profile.hospital_name} 채점 중...`, i, total);
+
+        for (const post of data.posts) {
+          try {
+            const score = await scoreCrawledPost(post.content);
+            const blogId = post.url.match(/blog\.naver\.com\/([^/?#]+)/)?.[1] || '';
+            if (supabase) {
+              await (supabase.from('hospital_crawled_posts') as any).upsert(
+                {
+                  hospital_name: profile.hospital_name,
+                  url: post.url,
+                  content: post.content,
+                  source_blog_id: blogId,
+                  title: post.title || '',
+                  published_at: post.publishedAt || null,
+                  summary: post.summary || post.content.slice(0, 200),
+                  thumbnail: post.thumbnail || null,
+                  crawled_at: new Date().toISOString(),
+                  score_typo: score.score_typo,
+                  score_spelling: score.score_spelling,
+                  score_medical_law: score.score_medical_law,
+                  score_total: score.score_total,
+                  typo_issues: score.typo_issues,
+                  law_issues: score.law_issues,
+                  scored_at: new Date().toISOString(),
+                },
+                { onConflict: 'hospital_name,url' },
+              );
+            }
+          } catch {
+            // 개별 글 실패 시 건너뜀
+          }
+          await new Promise(r => setTimeout(r, 300));
+        }
+      }
+    } catch {
+      // 병원 실패 시 건너뜀
+    }
+  }
+
+  onProgress?.('전체 완료!', total, total);
 }

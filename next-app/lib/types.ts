@@ -63,3 +63,35 @@ export interface BlogSection {
   title: string;
   html: string;
 }
+
+/** 크롤링 글 채점 결과 — root writingStyleService.scoreCrawledPost 기준 */
+export interface CrawledPostScore {
+  score_typo: number;
+  score_spelling: number;
+  score_medical_law: number;
+  score_total: number;
+  typo_issues: Array<{ original: string; correction: string; context: string; type?: string }>;
+  law_issues: Array<{ word: string; severity: string; replacement: string[]; context: string; law_article?: string }>;
+}
+
+/** DB 크롤링 글 — root types.ts CrawledPost 기준 */
+export interface DBCrawledPost {
+  id: string;
+  hospital_name: string;
+  url: string;
+  content: string;
+  source_blog_id?: string;
+  title?: string;
+  published_at?: string;
+  summary?: string;
+  thumbnail?: string;
+  score_typo?: number;
+  score_spelling?: number;
+  score_medical_law?: number;
+  score_total?: number;
+  typo_issues?: CrawledPostScore['typo_issues'];
+  law_issues?: CrawledPostScore['law_issues'];
+  corrected_content?: string;
+  crawled_at: string;
+  scored_at?: string;
+}

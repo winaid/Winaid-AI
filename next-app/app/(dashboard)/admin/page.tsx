@@ -2,7 +2,7 @@
  * Admin Page — "/admin" 경로
  *
  * 핵심 플로우: 비밀번호 로그인 → 통계 → 콘텐츠 관리 → 사용자 관리 → 말투 학습
- * Supabase RPC: get_admin_stats, get_all_generated_posts, delete_generated_post
+ * Supabase RPC: get_admin_stats, get_all_generated_posts, delete_generated_post, delete_all_generated_posts
  */
 'use client';
 
@@ -14,9 +14,16 @@ import {
   saveHospitalBlogUrl,
   crawlAndLearnHospitalStyle,
   resetHospitalCrawlData,
+  getCrawledPosts,
+  scoreCrawledPost,
+  updateCrawledPostScore,
+  updateCrawledPostContent,
+  crawlAndScoreAllHospitals,
   HospitalStyleProfile,
   LearnedWritingStyle,
 } from '../../../lib/styleService';
+import { deleteAllGeneratedPosts } from '../../../lib/adminService';
+import type { CrawledPostScore, DBCrawledPost } from '../../../lib/types';
 
 // ── 타입 ──
 
@@ -151,11 +158,25 @@ export default function AdminPage() {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [usersLoading, setUsersLoading] = useState(false);
 
+  // 콘텐츠 관리 — 팀/병원 필터 + 전체 삭제
+  const [selectedContentTeam, setSelectedContentTeam] = useState<number | null>(null);
+  const [selectedContentHospital, setSelectedContentHospital] = useState('');
+  const [showDeleteAllModal, setShowDeleteAllModal] = useState(false);
+  const [deleteAllConfirmText, setDeleteAllConfirmText] = useState('');
+  const [deleteAllLoading, setDeleteAllLoading] = useState(false);
+
   // 말투 학습
   const [styleProfiles, setStyleProfiles] = useState<HospitalStyleProfile[]>([]);
   const [blogUrlInputs, setBlogUrlInputs] = useState<Record<string, string[]>>({});
   const [crawlingStatus, setCrawlingStatus] = useState<Record<string, { loading: boolean; progress: string; error?: string }>>({});
   const [selectedTeam, setSelectedTeam] = useState(TEAM_DATA.find(t => t.id === 1)?.id ?? TEAM_DATA[0].id);
+
+  // 말투 탭 — 채점/글 관리
+  const [dbPosts, setDbPosts] = useState<Record<string, DBCrawledPost[]>>({});
+  const [expandedPosts, setExpandedPosts] = useState<Record<string, boolean>>({});
+  const [scoringPost, setScoringPost] = useState<string | null>(null);
+  const [editingContent, setEditingContent] = useState<Record<string, string>>({});
+  const [crawlAllStatus, setCrawlAllStatus] = useState<{ loading: boolean; progress: string }>({ loading: false, progress: '' });
 
   // 세션 복원
   useEffect(() => {
@@ -179,6 +200,11 @@ export default function AdminPage() {
     if (!authenticated) return;
     loadPosts();
   }, [typeFilter, hospitalFilter]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 팀/병원 chip 선택 → hospitalFilter 연동
+  useEffect(() => {
+    setHospitalFilter(selectedContentHospital);
+  }, [selectedContentHospital]);
 
   // 사용자 탭 진입 시 로드
   useEffect(() => {
@@ -346,6 +372,110 @@ export default function AdminPage() {
     }
   };
 
+  // ── 전체 삭제 (root deleteAllGeneratedPosts 동일) ──
+  const handleDeleteAll = async () => {
+    if (deleteAllConfirmText !== '전체삭제') return;
+    setDeleteAllLoading(true);
+    try {
+      const result = await deleteAllGeneratedPosts(getToken());
+      if (result.success) {
+        alert(`전체 삭제 완료: ${result.deletedCount ?? 0}건 삭제됨`);
+        setPosts([]);
+        setShowDeleteAllModal(false);
+        setDeleteAllConfirmText('');
+        loadStats();
+      } else {
+        alert(`삭제 실패: ${result.error}`);
+      }
+    } catch (err: unknown) {
+      alert(`삭제 오류: ${(err as Error).message}`);
+    } finally {
+      setDeleteAllLoading(false);
+    }
+  };
+
+  // ── 크롤링 글 로드 (DB) ──
+  const loadDbPosts = useCallback(async (hospitalName: string) => {
+    const posts = await getCrawledPosts(hospitalName);
+    setDbPosts(prev => ({ ...prev, [hospitalName]: posts }));
+  }, []);
+
+  // ── 글 채점 (root handleScorePost 동일) ──
+  const handleScorePost = async (post: DBCrawledPost) => {
+    if (scoringPost) return;
+    setScoringPost(post.id);
+    try {
+      const score = await scoreCrawledPost(post.content);
+      await updateCrawledPostScore(post.id, score);
+      // DB 갱신 반영
+      setDbPosts(prev => {
+        const list = prev[post.hospital_name] || [];
+        return {
+          ...prev,
+          [post.hospital_name]: list.map(p =>
+            p.id === post.id
+              ? { ...p, ...score, scored_at: new Date().toISOString() }
+              : p,
+          ),
+        };
+      });
+    } catch (err: unknown) {
+      alert(`채점 실패: ${(err as Error).message}`);
+    } finally {
+      setScoringPost(null);
+    }
+  };
+
+  // ── 수정본 저장 ──
+  const handleSaveContent = async (post: DBCrawledPost) => {
+    const content = editingContent[post.id];
+    if (!content) return;
+    try {
+      await updateCrawledPostContent(post.id, content);
+      setDbPosts(prev => {
+        const list = prev[post.hospital_name] || [];
+        return {
+          ...prev,
+          [post.hospital_name]: list.map(p =>
+            p.id === post.id ? { ...p, corrected_content: content } : p,
+          ),
+        };
+      });
+      setEditingContent(prev => {
+        const next = { ...prev };
+        delete next[post.id];
+        return next;
+      });
+      alert('수정본 저장 완료');
+    } catch (err: unknown) {
+      alert(`저장 실패: ${(err as Error).message}`);
+    }
+  };
+
+  // ── 오타 수정 적용 ──
+  const applyCorrection = (postId: string, original: string, correction: string) => {
+    setEditingContent(prev => {
+      const current = prev[postId] || '';
+      if (!current) return prev;
+      return { ...prev, [postId]: current.replace(new RegExp(original.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), correction) };
+    });
+  };
+
+  // ── 전체 병원 크롤링 + 채점 ──
+  const handleCrawlAllHospitals = async () => {
+    if (crawlAllStatus.loading) return;
+    setCrawlAllStatus({ loading: true, progress: '시작 중...' });
+    try {
+      await crawlAndScoreAllHospitals((msg, done, total) => {
+        setCrawlAllStatus({ loading: true, progress: `[${done + 1}/${total}] ${msg}` });
+      });
+      setCrawlAllStatus({ loading: false, progress: '전체 완료!' });
+      loadStyleProfiles();
+    } catch (err: unknown) {
+      setCrawlAllStatus({ loading: false, progress: `오류: ${(err as Error).message}` });
+    }
+  };
+
   // ── 시간 포맷 ──
 
   const formatDate = (iso: string) => {
@@ -479,9 +609,61 @@ export default function AdminPage() {
       {/* ── 콘텐츠 관리 탭 ── */}
       {tab === 'contents' && (
         <div className="space-y-4">
-          {/* 필터 */}
+          {/* 팀 필터 (root admin 동일) */}
+          <div className="flex gap-1.5 flex-wrap">
+            <button
+              onClick={() => { setSelectedContentTeam(null); setSelectedContentHospital(''); }}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                selectedContentTeam === null ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+              }`}
+            >
+              전체
+            </button>
+            {TEAM_DATA.map(t => (
+              <button
+                key={t.id}
+                onClick={() => { setSelectedContentTeam(t.id); setSelectedContentHospital(''); }}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                  selectedContentTeam === t.id ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                }`}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+
+          {/* 병원 가로 스크롤 chip (root admin 동일) */}
+          {selectedContentTeam !== null && (() => {
+            const team = TEAM_DATA.find(t => t.id === selectedContentTeam);
+            if (!team) return null;
+            const hospitals = [...new Set(team.hospitals.map(h => h.name.replace(/ \(.*\)$/, '')))];
+            return (
+              <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+                <button
+                  onClick={() => setSelectedContentHospital('')}
+                  className={`flex-none px-3 py-1.5 rounded-full text-xs font-medium transition-all whitespace-nowrap ${
+                    selectedContentHospital === '' ? 'bg-blue-600 text-white' : 'bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200'
+                  }`}
+                >
+                  {team.label} 전체
+                </button>
+                {hospitals.map(h => (
+                  <button
+                    key={h}
+                    onClick={() => setSelectedContentHospital(h)}
+                    className={`flex-none px-3 py-1.5 rounded-full text-xs font-medium transition-all whitespace-nowrap ${
+                      selectedContentHospital === h ? 'bg-blue-600 text-white' : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200'
+                    }`}
+                  >
+                    {h}
+                  </button>
+                ))}
+              </div>
+            );
+          })()}
+
+          {/* 타입 필터 + 액션 */}
           <div className="flex flex-col sm:flex-row gap-3">
-            {/* 타입 필터 */}
             <div className="flex gap-1.5">
               {([
                 { key: 'all' as PostTypeFilter, label: '전체' },
@@ -503,17 +685,7 @@ export default function AdminPage() {
               ))}
             </div>
 
-            {/* 병원 필터 */}
-            <select
-              value={hospitalFilter}
-              onChange={(e) => setHospitalFilter(e.target.value)}
-              className="px-3 py-1.5 rounded-lg text-xs border border-slate-200 bg-white text-slate-600 outline-none focus:border-blue-400"
-            >
-              <option value="">전체 병원</option>
-              {allHospitals.map(h => (
-                <option key={h} value={h}>{h}</option>
-              ))}
-            </select>
+            <div className="flex-1" />
 
             {/* 새로고침 */}
             <button
@@ -521,6 +693,14 @@ export default function AdminPage() {
               className="px-3 py-1.5 rounded-lg text-xs bg-slate-100 text-slate-500 hover:bg-slate-200 transition-all"
             >
               새로고침
+            </button>
+
+            {/* 전체 삭제 (root admin 동일) */}
+            <button
+              onClick={() => setShowDeleteAllModal(true)}
+              className="px-3 py-1.5 rounded-lg text-xs bg-red-50 text-red-500 hover:bg-red-100 border border-red-200 font-medium transition-all"
+            >
+              전체 삭제
             </button>
           </div>
 
@@ -618,6 +798,42 @@ export default function AdminPage() {
               </div>
             </div>
           )}
+
+          {/* 전체 삭제 모달 (root admin 동일) */}
+          {showDeleteAllModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setShowDeleteAllModal(false)}>
+              <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 p-6" onClick={e => e.stopPropagation()}>
+                <h3 className="text-base font-bold text-red-700 mb-2">전체 콘텐츠 삭제</h3>
+                <p className="text-sm text-slate-600 mb-4">
+                  모든 생성된 콘텐츠가 영구 삭제됩니다. 이 작업은 되돌릴 수 없습니다.
+                </p>
+                <p className="text-xs text-slate-500 mb-2">확인하려면 아래에 <strong className="text-red-600">전체삭제</strong>를 입력하세요.</p>
+                <input
+                  type="text"
+                  value={deleteAllConfirmText}
+                  onChange={e => setDeleteAllConfirmText(e.target.value)}
+                  placeholder="전체삭제"
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm mb-4 outline-none focus:border-red-400"
+                  autoFocus
+                />
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => { setShowDeleteAllModal(false); setDeleteAllConfirmText(''); }}
+                    className="flex-1 py-2 rounded-lg text-sm font-medium bg-slate-100 text-slate-600 hover:bg-slate-200"
+                  >
+                    취소
+                  </button>
+                  <button
+                    onClick={handleDeleteAll}
+                    disabled={deleteAllConfirmText !== '전체삭제' || deleteAllLoading}
+                    className="flex-1 py-2 rounded-lg text-sm font-bold bg-red-600 text-white hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    {deleteAllLoading ? '삭제 중...' : '전체 삭제 실행'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -678,12 +894,29 @@ export default function AdminPage() {
       {/* ── 말투 학습 탭 ── */}
       {tab === 'style' && (
         <div className="space-y-4">
-          {/* 설명 헤더 */}
+          {/* 설명 헤더 + 전체 크롤링 버튼 */}
           <div className="bg-violet-50 border border-violet-200 rounded-2xl p-5">
-            <h2 className="text-base font-bold text-violet-800 mb-1">병원별 네이버 블로그 말투 학습</h2>
-            <p className="text-sm text-violet-600">
-              각 병원의 네이버 블로그 URL을 입력 후 <strong>크롤링 + 학습</strong>을 누르면 AI가 글을 읽고 말투를 자동 학습합니다.
-            </p>
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div>
+                <h2 className="text-base font-bold text-violet-800 mb-1">병원별 네이버 블로그 말투 학습</h2>
+                <p className="text-sm text-violet-600">
+                  각 병원의 네이버 블로그 URL을 입력 후 <strong>크롤링 + 학습</strong>을 누르면 AI가 글을 읽고 말투를 자동 학습합니다.
+                </p>
+              </div>
+              <button
+                onClick={handleCrawlAllHospitals}
+                disabled={crawlAllStatus.loading}
+                className="px-4 py-2.5 text-xs font-bold bg-violet-600 text-white rounded-xl hover:bg-violet-700 transition-all disabled:opacity-50 whitespace-nowrap"
+              >
+                {crawlAllStatus.loading ? '처리 중...' : '전체 병원 자동 크롤링 + 채점'}
+              </button>
+            </div>
+            {crawlAllStatus.progress && (
+              <div className="mt-3 flex items-center gap-2 text-xs text-violet-600">
+                {crawlAllStatus.loading && <div className="w-3 h-3 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />}
+                {crawlAllStatus.progress}
+              </div>
+            )}
           </div>
 
           {/* 팀 탭 */}
@@ -884,6 +1117,194 @@ export default function AdminPage() {
                                   <span className="font-semibold text-slate-600">고유 표현:</span>{' '}
                                   <span className="text-slate-500">{as_.vocabulary.slice(0, 6).join(', ')}</span>
                                 </div>
+                              )}
+                            </div>
+                          );
+                        })()}
+
+                        {/* ── 수집된 글 아코디언 (root StyleTab 동일) ── */}
+                        {(() => {
+                          const hospitalPosts = dbPosts[baseName] || [];
+                          const blogIds = [...new Set(hospitalPosts.map(p => p.source_blog_id).filter(Boolean))];
+                          const isExpanded = expandedPosts[`${baseName}_accordion`];
+                          return (
+                            <div className="mt-3">
+                              <button
+                                onClick={() => {
+                                  if (!isExpanded && hospitalPosts.length === 0) {
+                                    loadDbPosts(baseName);
+                                  }
+                                  setExpandedPosts(prev => ({ ...prev, [`${baseName}_accordion`]: !isExpanded }));
+                                }}
+                                className="text-xs font-semibold text-slate-500 hover:text-violet-600 transition-colors"
+                              >
+                                {isExpanded ? '▼' : '▶'} 수집된 글 {hospitalPosts.length > 0 ? `${hospitalPosts.length}개` : ''} 보기
+                                {blogIds.length > 0 && ` (${blogIds.length}개 블로그)`}
+                              </button>
+
+                              {isExpanded && hospitalPosts.length > 0 && (
+                                <div className="mt-2 space-y-3">
+                                  {blogIds.map(blogId => {
+                                    const groupPosts = hospitalPosts.filter(p => p.source_blog_id === blogId);
+                                    return (
+                                      <div key={blogId || 'unknown'} className="border border-slate-100 rounded-lg overflow-hidden">
+                                        <div className="px-3 py-2 bg-slate-50 text-[11px] text-slate-500 font-semibold flex items-center gap-2">
+                                          <span>[{blogId || '?'}]</span>
+                                          <span>{groupPosts.length}개 글</span>
+                                          {blogId && (
+                                            <a
+                                              href={`https://blog.naver.com/${blogId}`}
+                                              target="_blank"
+                                              rel="noopener noreferrer"
+                                              className="text-blue-500 hover:underline ml-auto"
+                                            >
+                                              블로그 &rarr;
+                                            </a>
+                                          )}
+                                        </div>
+                                        <div className="divide-y divide-slate-50">
+                                          {groupPosts.slice(0, 10).map(post => {
+                                            const isPostExpanded = expandedPosts[post.id];
+                                            const scoreColor = (s?: number) =>
+                                              s == null ? 'bg-slate-100 text-slate-400' :
+                                              s >= 90 ? 'bg-green-100 text-green-700' :
+                                              s >= 70 ? 'bg-amber-100 text-amber-700' :
+                                              'bg-red-100 text-red-700';
+                                            return (
+                                              <div key={post.id} className="px-3 py-2">
+                                                <div
+                                                  className="flex items-center gap-2 cursor-pointer"
+                                                  onClick={() => setExpandedPosts(prev => ({ ...prev, [post.id]: !isPostExpanded }))}
+                                                >
+                                                  <span className="text-[10px] text-slate-400">{isPostExpanded ? '▼' : '▶'}</span>
+                                                  {/* 점수 뱃지 */}
+                                                  {post.scored_at ? (
+                                                    <div className="flex gap-1">
+                                                      <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${scoreColor(post.score_typo)}`}>오타 {post.score_typo ?? '?'}</span>
+                                                      <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${scoreColor(post.score_spelling)}`}>맞춤법 {post.score_spelling ?? '?'}</span>
+                                                      <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${scoreColor(post.score_medical_law)}`}>의료법 {post.score_medical_law ?? '?'}</span>
+                                                      <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${scoreColor(post.score_total)}`}>종합 {post.score_total ?? '?'}</span>
+                                                    </div>
+                                                  ) : (
+                                                    <span className="text-[10px] text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded">미채점</span>
+                                                  )}
+                                                  <span className="text-xs text-slate-700 truncate flex-1">{post.title || post.url}</span>
+                                                </div>
+
+                                                {/* 펼쳐진 글 상세 */}
+                                                {isPostExpanded && (
+                                                  <div className="mt-2 ml-4 space-y-3">
+                                                    {/* 채점 버튼 */}
+                                                    <button
+                                                      onClick={() => handleScorePost(post)}
+                                                      disabled={scoringPost === post.id}
+                                                      className="px-3 py-1.5 text-xs font-bold bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 disabled:opacity-50 transition-all"
+                                                    >
+                                                      {scoringPost === post.id ? '채점 중...' : post.scored_at ? '재채점' : '📊 채점하기'}
+                                                    </button>
+
+                                                    {/* 오타/맞춤법 이슈 (root 동일) */}
+                                                    {post.typo_issues && post.typo_issues.length > 0 && (
+                                                      <div>
+                                                        <p className="text-[11px] font-bold text-slate-600 mb-1">오타/맞춤법 이슈</p>
+                                                        <div className="space-y-1">
+                                                          {(post.typo_issues as CrawledPostScore['typo_issues']).map((issue, idx) => (
+                                                            <div key={idx} className="flex items-center gap-2 text-[11px]">
+                                                              <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
+                                                                issue.type === 'typo' ? 'bg-orange-100 text-orange-600' : 'bg-blue-100 text-blue-600'
+                                                              }`}>
+                                                                {issue.type === 'typo' ? '오타' : '맞춤법'}
+                                                              </span>
+                                                              <span className="text-red-500 line-through">{issue.original}</span>
+                                                              <span className="text-slate-400">&rarr;</span>
+                                                              <span className="text-green-600 font-medium">{issue.correction}</span>
+                                                              {editingContent[post.id] !== undefined && (
+                                                                <button
+                                                                  onClick={() => applyCorrection(post.id, issue.original, issue.correction)}
+                                                                  className="text-[9px] text-blue-500 hover:underline"
+                                                                >
+                                                                  [수정]
+                                                                </button>
+                                                              )}
+                                                            </div>
+                                                          ))}
+                                                        </div>
+                                                      </div>
+                                                    )}
+
+                                                    {/* 의료광고법 이슈 (root 동일) */}
+                                                    {post.law_issues && (post.law_issues as CrawledPostScore['law_issues']).length > 0 && (
+                                                      <div>
+                                                        <p className="text-[11px] font-bold text-slate-600 mb-1">의료광고법 이슈</p>
+                                                        <div className="space-y-1">
+                                                          {(post.law_issues as CrawledPostScore['law_issues']).map((issue, idx) => (
+                                                            <div key={idx} className="text-[11px] flex items-start gap-2">
+                                                              <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold flex-none ${
+                                                                issue.severity === 'critical' ? 'bg-red-100 text-red-700' :
+                                                                issue.severity === 'high' ? 'bg-orange-100 text-orange-700' :
+                                                                'bg-yellow-100 text-yellow-700'
+                                                              }`}>
+                                                                {issue.severity}
+                                                              </span>
+                                                              <div>
+                                                                <span className="text-red-500 font-medium">{issue.word}</span>
+                                                                {issue.replacement?.length > 0 && (
+                                                                  <span className="text-slate-400"> &rarr; {issue.replacement.join(', ')}</span>
+                                                                )}
+                                                                {issue.law_article && (
+                                                                  <span className="text-slate-400 ml-1">({issue.law_article})</span>
+                                                                )}
+                                                              </div>
+                                                            </div>
+                                                          ))}
+                                                        </div>
+                                                      </div>
+                                                    )}
+
+                                                    {/* 수정본 편집 (root 동일) */}
+                                                    <div>
+                                                      <p className="text-[11px] font-bold text-slate-600 mb-1">수정본</p>
+                                                      <textarea
+                                                        value={editingContent[post.id] ?? post.corrected_content ?? post.content}
+                                                        onChange={e => setEditingContent(prev => ({ ...prev, [post.id]: e.target.value }))}
+                                                        rows={6}
+                                                        className="w-full text-xs border border-slate-200 rounded-lg p-2 focus:outline-none focus:border-violet-400 resize-y"
+                                                      />
+                                                    </div>
+
+                                                    {/* 저장 + 링크 */}
+                                                    <div className="flex items-center gap-3">
+                                                      {editingContent[post.id] !== undefined && (
+                                                        <button
+                                                          onClick={() => handleSaveContent(post)}
+                                                          className="px-3 py-1.5 text-xs font-bold bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-all"
+                                                        >
+                                                          수정본 저장
+                                                        </button>
+                                                      )}
+                                                      <a
+                                                        href={post.url}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="text-[11px] text-blue-500 hover:underline"
+                                                      >
+                                                        블로그에서 보기 &rarr;
+                                                      </a>
+                                                    </div>
+                                                  </div>
+                                                )}
+                                              </div>
+                                            );
+                                          })}
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              )}
+
+                              {isExpanded && hospitalPosts.length === 0 && (
+                                <p className="mt-2 text-[11px] text-slate-400">수집된 글이 없습니다. 크롤링을 먼저 실행하세요.</p>
                               )}
                             </div>
                           );
