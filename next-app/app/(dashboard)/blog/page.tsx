@@ -880,7 +880,7 @@ ${topic.trim()}${disease.trim() ? ', 질환: ' + disease.trim() : ''}
         console.info(`[BLOG] Stage 1.5: 본문 300자 미만 — 검증 스킵`);
       }
 
-      // ── Stage 2: 소제목 5개 미만 자동 보정 (old blogPipelineService.ts:120-147 동일 정책) ──
+      // ── Stage 2: 소제목 개수 검사 (최소 5개 정책 — 보정 없음, PO 결정) ──
       {
         const h3Tags = blogText.match(/<h3[^>]*>([\s\S]*?)<\/h3>/gi) || [];
         const h3Count = h3Tags.length;
@@ -888,61 +888,8 @@ ${topic.trim()}${disease.trim() ? ', 질환: ' + disease.trim() : ''}
 
         if (h3Count > 0 && h3Count < 5) {
           const deficit = 5 - h3Count;
-          const existingTitles = h3Tags.map(t => t.replace(/<[^>]*>/g, '').trim());
-          console.warn(`[BLOG] Stage 2: ⚠️ 소제목 ${h3Count}개 — 정책 최소 5개 미달 (부족 ${deficit}개). 보정 시도`);
-
-          try {
-            const repairPrompt = `아래 블로그 글에 소제목이 ${h3Count}개뿐입니다. ${deficit}개를 추가로 작성하세요.
-
-[규칙]
-- 기존 소제목과 내용이 겹치지 않는 새로운 관점만 추가
-- 각 소제목은 <h3> 태그, 아래에 <p> 문단 2~3개씩
-- 소제목 이름: 네이버 검색창에 직접 칠 법한 구어체 (10~25자)
-- H1, H2 태그 금지. <h3>만 사용
-- 마크다운 금지. HTML만 출력
-
-[주제] ${topic.trim()}${disease.trim() ? ' / 질환: ' + disease.trim() : ''}
-[기존 소제목] ${existingTitles.join(' / ')}
-
-정확히 ${deficit}개의 소제목+문단을 HTML로만 출력하세요. 설명 없이 HTML만.`;
-
-            const repairRes = await fetch('/api/gemini', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                prompt: repairPrompt,
-                systemInstruction: '블로그 소제목 보정 전문가. HTML만 반환하라. 설명 금지.',
-                model: 'gemini-3.1-flash-lite-preview',
-                temperature: 0.7,
-                timeout: 15000,
-              }),
-            });
-
-            if (repairRes.ok) {
-              const repairData = await repairRes.json() as { text?: string };
-              let newSections = repairData.text?.trim() || '';
-              newSections = newSections.replace(/^```html?\s*\n?/i, '').replace(/\n?```\s*$/, '');
-
-              const newH3s = (newSections.match(/<h3[^>]*>/gi) || []).length;
-              if (newH3s > 0 && newSections.includes('<p>')) {
-                // 마무리 섹션(마지막 h3) 앞에 삽입
-                const lastH3Idx = blogText.lastIndexOf('<h3');
-                if (lastH3Idx > 0) {
-                  blogText = blogText.slice(0, lastH3Idx) + newSections + '\n' + blogText.slice(lastH3Idx);
-                } else {
-                  blogText += '\n' + newSections;
-                }
-                const finalH3Count = (blogText.match(/<h3[^>]*>/gi) || []).length;
-                console.info(`[BLOG] Stage 2: ✅ 소제목 보정 완료 — ${h3Count}개 → ${finalH3Count}개 (+${newH3s}개 추가)`);
-              } else {
-                console.warn(`[BLOG] Stage 2: ⚠️ 보정 응답 부적합 (h3=${newH3s}개, <p> 포함=${newSections.includes('<p>')}), 원본 유지`);
-              }
-            } else {
-              console.warn(`[BLOG] Stage 2: ⚠️ 보정 API 실패 (${repairRes.status}), 원본 유지`);
-            }
-          } catch (repairErr) {
-            console.warn(`[BLOG] Stage 2: ⚠️ 보정 예외, 원본 유지:`, repairErr);
-          }
+          console.warn(`[BLOG] Stage 2: ⚠️ 소제목 ${h3Count}개 — 정책 최소 5개 미달 (부족 ${deficit}개)`);
+          console.info(`[BLOG] Stage 2: ℹ️ PO 결정으로 소제목 자동 보정 없음 — 그대로 진행`);
         } else if (h3Count >= 5) {
           console.info(`[BLOG] Stage 2: ✅ 소제목 수 충분 (${h3Count}개)`);
         } else {
