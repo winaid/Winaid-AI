@@ -8,7 +8,9 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
-import { TEAM_DATA } from '../../lib/teamData';
+import { TEAM_DATA as TEAM_DATA_FALLBACK } from '../../lib/teamData';
+import type { TeamData } from '../../lib/teamData';
+import { getTeamDataFromDB, addHospital, deactivateHospital } from '../../lib/hospitalService';
 import {
   getAllStyleProfiles,
   saveHospitalBlogUrl,
@@ -143,6 +145,11 @@ export default function AdminPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
 
+  // 팀/병원 데이터 (DB 우선, fallback: teamData.ts)
+  const [TEAM_DATA, setTeamData] = useState<TeamData[]>(TEAM_DATA_FALLBACK);
+  const [showAddHospitalModal, setShowAddHospitalModal] = useState(false);
+  const [newHospital, setNewHospital] = useState({ teamId: 1, name: '', manager: '', address: '', blogUrls: [''] });
+
   // 탭
   const [tab, setTab] = useState<Tab>('contents');
 
@@ -193,11 +200,18 @@ export default function AdminPage() {
     }
   }, []);
 
+  // 팀/병원 데이터 DB 로드
+  const loadTeamData = useCallback(async () => {
+    const data = await getTeamDataFromDB();
+    setTeamData(data);
+  }, []);
+
   // 인증 후 데이터 로드
   useEffect(() => {
     if (!authenticated) return;
     loadStats();
     loadPosts();
+    loadTeamData();
   }, [authenticated]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 필터 변경 시 재로드
@@ -274,7 +288,7 @@ export default function AdminPage() {
       }
       return merged;
     });
-  }, []);
+  }, [TEAM_DATA]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 말투 탭 진입 시 로드
   useEffect(() => {
@@ -1059,6 +1073,16 @@ export default function AdminPage() {
             <div className="mt-3 pt-3 border-t border-violet-200 flex items-center gap-2 text-[11px] text-violet-500">
               <span>⏰</span>
               <span>자동 스케줄: 매일 10:00~18:00 (1시간 간격) — 크롤링 + 채점 자동 실행</span>
+              <div className="flex-1" />
+              <button
+                onClick={() => {
+                  setNewHospital({ teamId: TEAM_DATA[0]?.id ?? 1, name: '', manager: '', address: '', blogUrls: [''] });
+                  setShowAddHospitalModal(true);
+                }}
+                className="px-3 py-1.5 bg-violet-600 hover:bg-violet-700 text-white text-[11px] font-bold rounded-lg transition-colors"
+              >
+                + 병원 추가
+              </button>
             </div>
           </div>
 
@@ -1200,6 +1224,17 @@ export default function AdminPage() {
                                 초기화
                               </button>
                             )}
+                            <button
+                              onClick={async () => {
+                                if (!confirm(`"${baseName}" 병원을 목록에서 제거하시겠습니까?`)) return;
+                                const result = await deactivateHospital(baseName);
+                                if (result.success) { loadTeamData(); alert(`${baseName} 제거됨`); }
+                                else alert(result.error || '제거 실패');
+                              }}
+                              disabled={status?.loading}
+                              className="px-2 py-2 text-xs text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-40 whitespace-nowrap"
+                              title="병원 제거"
+                            >✕</button>
                           </div>
                         </div>
 
@@ -1504,6 +1539,108 @@ export default function AdminPage() {
               </div>
             );
           })()}
+        </div>
+      )}
+
+      {/* 병원 추가 모달 */}
+      {showAddHospitalModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowAddHospitalModal(false)}>
+          <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="p-6 border-b border-slate-100">
+              <h3 className="text-lg font-bold text-slate-800">병원 추가</h3>
+              <p className="text-xs text-slate-400 mt-1">새 병원을 등록하면 말투 학습 목록에 추가됩니다.</p>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="text-sm font-medium text-slate-600 mb-1 block">팀</label>
+                <select
+                  value={newHospital.teamId}
+                  onChange={e => setNewHospital(prev => ({ ...prev, teamId: Number(e.target.value) }))}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-violet-400"
+                >
+                  {TEAM_DATA.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-slate-600 mb-1 block">병원명 *</label>
+                <input
+                  value={newHospital.name}
+                  onChange={e => setNewHospital(prev => ({ ...prev, name: e.target.value }))}
+                  placeholder="예: 서울바른치과"
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-violet-400"
+                  autoFocus
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-slate-600 mb-1 block">담당자</label>
+                <input
+                  value={newHospital.manager}
+                  onChange={e => setNewHospital(prev => ({ ...prev, manager: e.target.value }))}
+                  placeholder="예: 김주열 팀장님"
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-violet-400"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-slate-600 mb-1 block">주소</label>
+                <input
+                  value={newHospital.address}
+                  onChange={e => setNewHospital(prev => ({ ...prev, address: e.target.value }))}
+                  placeholder="예: 서울 강남구 역삼동"
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-violet-400"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-slate-600 mb-1 block">블로그 URL</label>
+                {newHospital.blogUrls.map((url, idx) => (
+                  <div key={idx} className="flex gap-2 items-center mb-1.5">
+                    <input
+                      value={url}
+                      onChange={e => {
+                        const urls = [...newHospital.blogUrls];
+                        urls[idx] = e.target.value;
+                        setNewHospital(prev => ({ ...prev, blogUrls: urls }));
+                      }}
+                      placeholder="https://blog.naver.com/병원아이디"
+                      className="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-violet-400"
+                    />
+                    {newHospital.blogUrls.length > 1 && (
+                      <button onClick={() => setNewHospital(prev => ({ ...prev, blogUrls: prev.blogUrls.filter((_, i) => i !== idx) }))} className="text-red-400 hover:text-red-600 text-xs">✕</button>
+                    )}
+                  </div>
+                ))}
+                <button
+                  onClick={() => setNewHospital(prev => ({ ...prev, blogUrls: [...prev.blogUrls, ''] }))}
+                  className="text-xs text-violet-600 font-medium hover:text-violet-700"
+                >+ URL 추가</button>
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={() => setShowAddHospitalModal(false)}
+                  className="flex-1 py-2.5 bg-slate-100 text-slate-600 font-semibold rounded-xl hover:bg-slate-200 transition-colors"
+                >취소</button>
+                <button
+                  onClick={async () => {
+                    const result = await addHospital(
+                      newHospital.teamId,
+                      newHospital.name,
+                      newHospital.manager,
+                      newHospital.address,
+                      newHospital.blogUrls,
+                    );
+                    if (result.success) {
+                      setShowAddHospitalModal(false);
+                      loadTeamData();
+                      alert(`${newHospital.name} 추가 완료`);
+                    } else {
+                      alert(result.error || '추가 실패');
+                    }
+                  }}
+                  disabled={!newHospital.name.trim()}
+                  className="flex-1 py-2.5 bg-violet-600 text-white font-bold rounded-xl hover:bg-violet-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                >추가</button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
       </div>

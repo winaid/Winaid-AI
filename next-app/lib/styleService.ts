@@ -561,8 +561,9 @@ export async function crawlAndScoreAllHospitals(
   const profiles = await getAllStyleProfiles();
   const profileMap = new Map(profiles.map(p => [p.hospital_name, p]));
 
-  // teamData에서도 URL 수집 (DB에 없는 병원 포함)
-  const { TEAM_DATA } = await import('./teamData');
+  // DB에서 팀/병원 로드 (fallback: teamData.ts)
+  const { getTeamDataFromDB } = await import('./hospitalService');
+  const TEAM_DATA = await getTeamDataFromDB();
   const hospitalUrls: { name: string; teamId: number; urls: string[] }[] = [];
   const seen = new Set<string>();
 
