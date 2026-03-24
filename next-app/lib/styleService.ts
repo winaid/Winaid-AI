@@ -195,6 +195,18 @@ export async function resetHospitalCrawlData(
 
 const CRAWLER_URL = process.env.NEXT_PUBLIC_CRAWLER_URL || '';
 
+function ensureCrawlerUrl(): string {
+  if (!CRAWLER_URL) {
+    throw new Error(
+      '크롤러 서버 URL이 설정되지 않았습니다.\n' +
+      'Vercel Dashboard → Settings → Environment Variables에서\n' +
+      'NEXT_PUBLIC_CRAWLER_URL = https://loving-caring-production-e0d2.up.railway.app\n' +
+      '을 추가하세요.',
+    );
+  }
+  return CRAWLER_URL;
+}
+
 /** 서버사이드(cron 등)에서도 /api/* 상대경로를 절대 URL로 resolve */
 function resolveApiUrl(path: string): string {
   if (typeof window !== 'undefined') return path; // 브라우저: 상대경로 OK
@@ -229,7 +241,7 @@ export async function crawlAndLearnHospitalStyle(
     onProgress?.(`블로그 글 수집 중${urlLabel}... (최대 5개)`);
 
     try {
-      const res = await fetch(`${CRAWLER_URL}/api/naver/crawl-hospital-blog`, {
+      const res = await fetch(`${ensureCrawlerUrl()}/api/naver/crawl-hospital-blog`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ blogUrl: blogUrls[i], maxPosts: 5 }),
@@ -543,9 +555,7 @@ export async function crawlAndScoreAllHospitals(
   options?: { includeStyleAnalysis?: boolean },
 ): Promise<void> {
   const includeStyle = options?.includeStyleAnalysis ?? false;
-  if (!CRAWLER_URL) {
-    throw new Error('크롤러 서버 URL이 설정되지 않았습니다 (NEXT_PUBLIC_CRAWLER_URL)');
-  }
+  ensureCrawlerUrl(); // CRAWLER_URL 미설정 시 즉시 에러
 
   // DB 프로필 + teamData 병합하여 URL이 있는 병원 목록 구성
   const profiles = await getAllStyleProfiles();
@@ -591,7 +601,7 @@ export async function crawlAndScoreAllHospitals(
 
         let posts: { url: string; content: string; title?: string; publishedAt?: string; summary?: string; thumbnail?: string }[] = [];
         try {
-          const res = await fetch(`${CRAWLER_URL}/api/naver/crawl-hospital-blog`, {
+          const res = await fetch(`${ensureCrawlerUrl()}/api/naver/crawl-hospital-blog`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ blogUrl: urls[urlIdx], maxPosts: 5 }),
