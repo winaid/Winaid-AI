@@ -139,6 +139,8 @@ function BlogForm() {
   // ── 생성 상태 ──
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedContent, setGeneratedContent] = useState<string | null>(null);
+  const [savedImagePrompts, setSavedImagePrompts] = useState<string[]>([]);
+  const [regeneratingImage, setRegeneratingImage] = useState<number | null>(null);
   const [scores, setScores] = useState<ScoreBarData | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
@@ -965,6 +967,7 @@ ${subs.length > 0 ? `경쟁 글 소제목: ${subs.join(' / ')}` : ''}
         console.info(`[BLOG] 자가평가 점수 — SEO: ${parsed.seoScore ?? '?'}, 의료법: ${parsed.safetyScore ?? '?'}, 전환: ${parsed.conversionScore ?? '?'}`);
       }
       console.info(`[BLOG] 이미지 프롬프트: ${imagePrompts.length}개 (요청: ${imageCount}개)`);
+      setSavedImagePrompts(imagePrompts);
 
       // ── Stage 1.5: 도입부 품질 게이트 (old legacyBlogGeneration.ts:1621-1711 동일) ──
       if (blogText.length > 300) {
@@ -1465,6 +1468,89 @@ JSON 형식으로 응답해주세요.`;
       setDisplayStage(0);
     }
   };
+
+  // ── 이미지 재생성 ──
+  const handleImageRegenerate = useCallback(async (imageIndex: number) => {
+    const promptIdx = imageIndex - 1;
+    const originalPrompt = savedImagePrompts[promptIdx];
+    if (!originalPrompt) return;
+
+    const newPrompt = window.prompt('이미지 프롬프트를 수정하세요:', originalPrompt);
+    if (!newPrompt || newPrompt === originalPrompt && !window.confirm('같은 프롬프트로 재생성할까요?')) return;
+
+    setRegeneratingImage(imageIndex);
+    console.info(`[BLOG] 이미지 ${imageIndex} 재생성 시작 — 프롬프트: "${newPrompt.substring(0, 60)}..."`);
+
+    try {
+      const imgRes = await fetch('/api/image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: newPrompt, aspectRatio: '16:9', mode: 'blog' }),
+      });
+      if (!imgRes.ok) throw new Error('이미지 생성 실패');
+
+      const imgData = await imgRes.json() as { imageDataUrl?: string };
+      if (!imgData.imageDataUrl) throw new Error('이미지 데이터 없음');
+
+      // Supabase Storage 업로드
+      if (supabase) {
+        try {
+          const dataUrl = imgData.imageDataUrl;
+          const commaIdx = dataUrl.indexOf(',');
+          const base64Data = dataUrl.substring(commaIdx + 1);
+          const metaPart = dataUrl.substring(0, commaIdx);
+          const mimeMatch = metaPart.match(/data:(.*?);base64/);
+          const mimeType = mimeMatch?.[1] || 'image/png';
+          const ext = mimeType === 'image/jpeg' ? 'jpg' : 'png';
+          const byteChars = atob(base64Data);
+          const byteArray = new Uint8Array(byteChars.length);
+          for (let i = 0; i < byteChars.length; i++) byteArray[i] = byteChars.charCodeAt(i);
+          const blob = new Blob([byteArray], { type: mimeType });
+          const fileName = `blog/${Date.now()}_regen_${imageIndex}.${ext}`;
+          const { error: uploadErr } = await supabase.storage.from('blog-images').upload(fileName, blob, { contentType: mimeType, upsert: false });
+          if (!uploadErr) {
+            const { data: urlData } = supabase.storage.from('blog-images').getPublicUrl(fileName);
+            if (urlData?.publicUrl) {
+              // DOM에서 이미지 교체
+              setGeneratedContent(prev => {
+                if (!prev) return prev;
+                const div = document.createElement('div');
+                div.innerHTML = prev;
+                const imgs = div.querySelectorAll(`img[data-image-index="${imageIndex}"]`);
+                imgs.forEach(img => img.setAttribute('src', urlData.publicUrl));
+                return div.innerHTML;
+              });
+              // 프롬프트도 업데이트
+              setSavedImagePrompts(prev => {
+                const next = [...prev];
+                next[promptIdx] = newPrompt;
+                return next;
+              });
+              console.info(`[BLOG] 이미지 ${imageIndex} 재생성 완료 (Storage)`);
+              return;
+            }
+          }
+        } catch { /* Storage 실패 → base64 fallback */ }
+      }
+
+      // base64 fallback
+      setGeneratedContent(prev => {
+        if (!prev) return prev;
+        const div = document.createElement('div');
+        div.innerHTML = prev;
+        const imgs = div.querySelectorAll(`img[data-image-index="${imageIndex}"]`);
+        imgs.forEach(img => img.setAttribute('src', imgData.imageDataUrl!));
+        return div.innerHTML;
+      });
+      setSavedImagePrompts(prev => { const next = [...prev]; next[promptIdx] = newPrompt; return next; });
+      console.info(`[BLOG] 이미지 ${imageIndex} 재생성 완료 (base64)`);
+    } catch (err) {
+      console.error(`[BLOG] 이미지 ${imageIndex} 재생성 실패:`, err);
+      alert('이미지 재생성에 실패했습니다.');
+    } finally {
+      setRegeneratingImage(null);
+    }
+  }, [savedImagePrompts, supabase]);
 
   // ── 소제목 재생성 (root useAiRefine.ts + faqService.ts + gpt52-prompts-staged.ts 기준) ──
   const handleSectionRegenerate = useCallback(async (sectionIndex: number) => {
@@ -2231,6 +2317,8 @@ ${generatedContent.substring(0, 2000)}
             onSectionRegenerate={handleSectionRegenerate}
             onDownloadWord={handleDownloadWord}
             onDownloadPDF={handleDownloadPDF}
+            onImageRegenerate={handleImageRegenerate}
+            regeneratingImage={regeneratingImage}
           />
         ) : (
           /* EmptyState */

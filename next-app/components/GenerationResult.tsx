@@ -254,6 +254,8 @@ interface ResultPanelProps {
   onSectionRegenerate?: (sectionIndex: number) => void;
   onDownloadWord?: () => void;
   onDownloadPDF?: () => void;
+  onImageRegenerate?: (imageIndex: number) => void;
+  regeneratingImage?: number | null;
 }
 
 export function ResultPanel({
@@ -269,6 +271,8 @@ export function ResultPanel({
   onSectionRegenerate,
   onDownloadWord,
   onDownloadPDF,
+  onImageRegenerate,
+  regeneratingImage,
 }: ResultPanelProps) {
   const [copyFeedback, setCopyFeedback] = useState(false);
   const [activeTab, setActiveTab] = useState<'preview' | 'html'>('preview');
@@ -457,7 +461,9 @@ export function ResultPanel({
 
               /* ── content-image-wrapper ── */
               .rp-preview .content-image-wrapper { margin: 30px 0; text-align: center; }
-              .rp-preview .content-image-wrapper img { max-width: 100%; height: auto; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.1); }
+              .rp-preview .content-image-wrapper img { max-width: 100%; height: auto; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.1); cursor: pointer; transition: opacity 0.2s; }
+              .rp-preview .content-image-wrapper img:hover { opacity: 0.85; }
+              .rp-preview .content-image-wrapper img::after { content: '🔄 클릭하여 재생성'; }
 
               /* ── modern ── */
               .rp-theme-modern { background: #fff; padding: 40px; color: #333; }
@@ -500,7 +506,25 @@ export function ResultPanel({
               suppressContentEditableWarning
               className={`rp-preview rp-theme-${cssTheme} max-w-none outline-none`}
               dangerouslySetInnerHTML={{ __html: renderedHtml }}
+              onClick={(e) => {
+                const target = e.target as HTMLElement;
+                if (target.tagName === 'IMG' && onImageRegenerate) {
+                  const idx = target.getAttribute('data-image-index');
+                  if (idx) {
+                    e.preventDefault();
+                    onImageRegenerate(Number(idx));
+                  }
+                }
+              }}
             />
+            {regeneratingImage != null && (
+              <div className="absolute inset-0 bg-white/60 flex items-center justify-center z-10">
+                <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 rounded-xl border border-blue-200">
+                  <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                  <span className="text-xs font-bold text-blue-600">이미지 {regeneratingImage} 재생성 중...</span>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
