@@ -1045,7 +1045,7 @@ export default function ImagePage() {
 
                 {/* 달력 테마 선택 (OLD parity: CALENDAR_THEME_OPTIONS 12종, 그룹별) */}
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-500 mb-2">달력 디자인 테마</label>
+                  <label className="block text-sm font-bold text-slate-700 mb-2">디자인 템플릿</label>
                   <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1">
                     {SCHEDULE_GROUPS.map(group => {
                       const groupThemes = CALENDAR_THEME_OPTIONS.filter(t => group.values.includes(t.value));
