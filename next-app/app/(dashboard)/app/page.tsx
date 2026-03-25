@@ -168,15 +168,8 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      {/* 내부 피드백 */}
-      <div id="feedback" className="w-full max-w-3xl mb-10">
-        <InternalFeedback
-          page="dashboard"
-          userId={user?.id}
-          userName={userName || '익명'}
-          writeOnly
-        />
-      </div>
+      {/* 내부 피드백 — UI 숨김 (기능 유지, id="feedback" 앵커 유지) */}
+      <div id="feedback" className="hidden" />
 
     </div>
   );
