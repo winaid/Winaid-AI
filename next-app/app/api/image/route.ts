@@ -107,15 +107,111 @@ function getKoreanHolidays(year: number, month: number): string[] {
   return result;
 }
 
+// ── 카드뉴스 전용 페르소나 + 프레임/스타일 블록 (OLD cardNewsImageService.ts 동일) ──
+
+const CARD_NEWS_PERSONA = `[ROLE] Korean medical SNS card news designer.
+[GOAL] Generate a 1:1 square card image with Korean text rendered directly into pixels.
+[PRIORITY] Text readability > visual aesthetics. Mobile-first. Korean medical ad law compliant.`;
+
+const CARD_FRAME_RULE = `[FRAME LAYOUT - FOLLOW REFERENCE STYLE]
+- Border color: #787fff (lavender purple/violet) around the edges
+- White content area inside the border
+- Rounded corners
+- Clean minimal design`;
+
+function buildCardStyleBlock(imageStyle: string): string {
+  if (imageStyle === 'photo') return `[STYLE - 실사 촬영 (PHOTOREALISTIC)]
+- photorealistic, DSLR, 35mm lens, natural lighting, shallow depth of field, bokeh
+- realistic skin texture, real fabric texture, 4K ultra high resolution
+- 실제 한국인 인물, 실제 병원/의료 환경
+⛔ 금지: 3D render, illustration, cartoon, anime, vector, clay`;
+
+  if (imageStyle === 'medical') return `[STYLE - 의학 3D (MEDICAL 3D RENDER)]
+- medical 3D illustration, anatomical render, scientific visualization
+- clinical lighting, x-ray style glow, translucent organs
+- 인체 해부학, 장기 단면도, 뼈/근육/혈관 구조
+⛔ 금지: cute cartoon, photorealistic human face`;
+
+  // default: illustration
+  return `[STYLE - 3D 일러스트 (3D ILLUSTRATION)]
+- 3D rendered illustration, Blender/Cinema4D style, soft 3D render
+- soft studio lighting, ambient occlusion, gentle shadows
+- smooth plastic-like surfaces, matte finish, rounded edges
+- 밝은 파스텔 톤, 파란색/흰색/연한 색상 팔레트
+- cute stylized characters, friendly expressions
+⛔ 금지: photorealistic, real photo, DSLR, realistic texture`;
+}
+
+function buildCardNewsPromptFull(body: ImageRequestBody): string {
+  const style = body.imageStyle || 'illustration';
+  const styleBlock = buildCardStyleBlock(style);
+
+  // 텍스트 필드 파싱
+  const parseField = (text: string, key: string): string => {
+    const match = text.match(new RegExp(`${key}:\\s*"((?:[^"\\\\]|\\\\.)*)"`, 'i'))
+      || text.match(new RegExp(`${key}:\\s*([^\\n,]+)`, 'i'));
+    return match?.[1]?.trim().replace(/^["']|["']$/g, '') || '';
+  };
+
+  const subtitle = parseField(body.prompt, 'subtitle');
+  const mainTitle = parseField(body.prompt, 'mainTitle');
+  const description = parseField(body.prompt, 'description');
+  const visualMatch = body.prompt.match(/비주얼:\s*([^\n]+)/i);
+  const visual = visualMatch?.[1]?.trim() || '';
+
+  // 배경색 추출 (디자인 템플릿에서)
+  const bgMatch = body.prompt.match(/배경색:\s*(#[A-Fa-f0-9]{6}|#[A-Fa-f0-9]{3})/i);
+  const bgColor = bgMatch?.[1] || '#E8F4FD';
+
+  // 디자인 템플릿 블록 추출
+  const tmplMatch = body.prompt.match(/\[디자인 템플릿:[^\]]*\][\s\S]*$/m);
+  const templateBlock = tmplMatch?.[0] || '';
+
+  const hasText = subtitle || mainTitle;
+
+  if (hasText) {
+    return `${CARD_NEWS_PERSONA}
+
+🚨 RENDER THIS EXACT KOREAN TEXT IN THE IMAGE:
+MAIN TITLE (big, bold, center): "${mainTitle}"
+SUBTITLE (small, above title): "${subtitle}"
+${description ? `DESCRIPTION (small, below title): "${description}"` : ''}
+
+${visual ? `ILLUSTRATION: "${visual}" — draw exactly this!` : ''}
+
+1:1 square card. Background: ${bgColor} gradient.
+${CARD_FRAME_RULE}
+${styleBlock}
+
+Text: subtitle(small) → mainTitle(LARGE) → description(small). Clean readable Korean font.
+${templateBlock}
+⛔ No hashtags, watermarks, logos, placeholder text.`.trim();
+  }
+
+  return `${CARD_NEWS_PERSONA}
+
+1:1 square social media card image.
+${CARD_FRAME_RULE}
+${styleBlock}
+
+[CONTENT TO RENDER]
+${body.prompt}
+
+Background: ${bgColor} gradient. Clean readable Korean font.
+⛔ No hashtags, watermarks, logos. Do NOT render instruction labels.`.trim();
+}
+
 interface ImageRequestBody {
   prompt: string;
   aspectRatio?: AspectRatio;
-  mode?: 'blog' | 'default';  // blog: 텍스트 없는 본문 삽화용
+  mode?: 'blog' | 'card_news' | 'default';
+  imageStyle?: string;       // card_news: illustration | photo | medical
   logoInstruction?: string;
   hospitalInfo?: string;
   brandColors?: string;
-  logoBase64?: string;      // data:image/...;base64,xxx
-  calendarImage?: string;   // Canvas-rendered calendar reference image (data URL)
+  logoBase64?: string;
+  calendarImage?: string;
+  referenceImage?: string;   // card_news: 참고 이미지 base64
 }
 
 export async function POST(request: NextRequest) {
@@ -167,6 +263,7 @@ export async function POST(request: NextRequest) {
   }
 
   const isBlogMode = body.mode === 'blog';
+  const isCardNewsMode = body.mode === 'card_news';
 
   const BLOG_IMAGE_RULE = `[STRICT IMAGE RULES — BLOG ILLUSTRATION MODE]
 You are generating a blog body illustration image. This is NOT a poster, flyer, ad, or infographic.
@@ -181,7 +278,9 @@ OUTPUT DIRECTION:
 - Focus on visual mood, people, spaces, objects, lighting, atmosphere
 - The image must work as a blog body illustration that contains NO information text`;
 
-  const fullPrompt = isBlogMode
+  const fullPrompt = isCardNewsMode
+    ? buildCardNewsPromptFull(body)
+    : isBlogMode
     ? [
         BLOG_IMAGE_RULE,
         body.prompt.trim(),
@@ -211,6 +310,16 @@ OUTPUT DIRECTION:
     if (calMatch) {
       parts.push({
         inlineData: { mimeType: calMatch[1], data: calMatch[2] },
+      });
+    }
+  }
+
+  // 카드뉴스 참고 이미지를 inlineData로 추가
+  if (body.referenceImage) {
+    const refMatch = body.referenceImage.match(/^data:(image\/\w+);base64,(.+)$/);
+    if (refMatch) {
+      parts.push({
+        inlineData: { mimeType: refMatch[1], data: refMatch[2] },
       });
     }
   }

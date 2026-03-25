@@ -495,7 +495,7 @@ JSON 배열로 출력한다. 각 항목은 다음 구조를 따른다:
     }
   };
 
-  // ── 트렌드 주제 (old handleRecommendTrends 동일) ──
+  // ── 트렌드 주제 (네이버 뉴스 크롤링 → Gemini 분석 — OLD seoService.ts 동일) ──
   const handleRecommendTrends = async () => {
     console.info(`[TREND] ========== 트렌드 주제 추천 시작 ==========`);
     console.info(`[TREND] 진료과="${category}"`);
@@ -537,6 +537,71 @@ JSON 배열로 출력한다. 각 항목은 다음 구조를 따른다:
         '이비인후과': '비염, 축농증, 어지럼증, 이명, 편도염',
       };
 
+      // ── STEP 1: 네이버 뉴스 크롤링 (OLD searchNewsForTrends 동일) ──
+      const newsSearchKeywords: Record<string, string> = {
+        '정형외과': '관절 통증 OR 허리디스크 OR 어깨통증',
+        '피부과': '피부 건강 OR 아토피 OR 탈모',
+        '내과': '건강검진 OR 당뇨 OR 고혈압',
+        '치과': '치과 치료 OR 임플란트 OR 잇몸',
+        '안과': '안구건조증 OR 시력 OR 백내장',
+        '이비인후과': '비염 OR 축농증 OR 편도염',
+      };
+      const searchKeyword = newsSearchKeywords[category] || `${category} 건강`;
+
+      let newsContext = '';
+      try {
+        console.info(`[TREND] 네이버 뉴스 검색: "${searchKeyword}"`);
+        const newsRes = await fetch(`/api/naver/news?query=${encodeURIComponent(searchKeyword)}&display=10`);
+        if (newsRes.ok) {
+          const newsData = await newsRes.json() as {
+            items?: Array<{ title?: string; description?: string; pubDate?: string }>;
+          };
+          const newsItems = (newsData.items || []).slice(0, 5);
+          if (newsItems.length > 0) {
+            // 뉴스 결과를 Gemini Flash로 분석
+            const newsText = newsItems.map((item, i) =>
+              `${i + 1}. ${(item.title || '').replace(/<[^>]*>/g, '')} — ${(item.description || '').replace(/<[^>]*>/g, '').substring(0, 100)}`
+            ).join('\n');
+
+            console.info(`[TREND] 네이버 뉴스 ${newsItems.length}건 → Gemini 분석 중...`);
+            const analysisRes = await fetch('/api/gemini', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                prompt: `다음은 "${category}" 관련 최신 네이버 뉴스 검색 결과입니다:\n\n${newsText}\n\n이 뉴스들을 분석하여 다음을 추출해주세요:\n1. 현재 가장 핫한 건강 이슈 3가지\n2. 블로그 키워드로 활용 가능한 SEO 키워드 5개\n3. 뉴스 기반 콘텐츠 아이디어 2개\n4. 의료광고법 주의사항\n\n간결하게 정리해주세요.`,
+                model: 'gemini-3.1-flash-lite-preview',
+                temperature: 0.4,
+                maxOutputTokens: 1000,
+              }),
+            });
+            const analysisData = await analysisRes.json() as { text?: string };
+            if (analysisData.text) {
+              newsContext = analysisData.text;
+              console.info(`[TREND] 뉴스 분석 완료 (${newsContext.length}자)`);
+            }
+          }
+        }
+      } catch (newsErr) {
+        console.warn('[TREND] 네이버 뉴스 크롤링 실패 (Gemini 단독 분석으로 진행):', newsErr);
+        // fallback: Gemini googleSearch
+        try {
+          const fallbackRes = await fetch('/api/gemini', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              prompt: `최근 한국 "${category}" 관련 건강 뉴스 트렌드를 검색하여 핵심 이슈 3가지를 요약해주세요.`,
+              model: 'gemini-3.1-flash-lite-preview',
+              googleSearch: true,
+              temperature: 0.4,
+              maxOutputTokens: 800,
+            }),
+          });
+          const fallbackData = await fallbackRes.json() as { text?: string };
+          if (fallbackData.text) newsContext = fallbackData.text;
+        } catch { /* 최종 fallback — 뉴스 없이 진행 */ }
+      }
+
+      // ── STEP 2: 최종 Gemini 트렌드 분석 (뉴스 컨텍스트 포함) ──
       const currentSeasonContext = seasonalContext[month] || '';
       const categoryKeywords = categoryHints[category] || '일반적인 건강 증상, 예방, 관리';
 
@@ -551,6 +616,12 @@ ${currentSeasonContext}
 
 [🏥 ${category} 관련 키워드 풀]
 ${categoryKeywords}
+${newsContext ? `
+[📰 최신 네이버 뉴스 분석 결과 — 반드시 반영!]
+${newsContext}
+
+⚠️ 위 뉴스 분석에서 1~2개의 뉴스 기반 트렌드 주제를 반드시 포함하세요.
+뉴스 기반 주제의 seasonal_factor에는 "📰 뉴스 트렌드" 태그를 붙여주세요.` : ''}
 
 [⚠️ 중요 규칙]
 1. **매번 다른 결과 필수**: 이전 응답과 다른 새로운 주제를 선정하세요 (시드: ${randomSeed})
@@ -558,6 +629,7 @@ ${categoryKeywords}
 3. **현재 시점 반영**: ${month}월 ${day}일 기준 계절/시기 특성 반드시 반영
 4. **롱테일 키워드**: 블로그 작성에 바로 쓸 수 있는 구체적인 키워드 조합 제시
 5. **다양한 난이도**: 경쟁 높은 주제 2개 + 틈새 주제 3개 섞어서
+${newsContext ? '6. **뉴스 트렌드 1~2개 반드시 포함**: 위 뉴스 분석에서 추출한 이슈 반영' : ''}
 
 [📊 점수 산정]
 - SEO 점수(0~100): 검색량 높고 + 블로그 경쟁도 낮을수록 고점수
@@ -576,6 +648,7 @@ ${categoryKeywords}
           prompt,
           model: 'gemini-3.1-flash-lite-preview',
           responseType: 'json',
+          googleSearch: true,
           temperature: 0.9,
           timeout: 60000,
           schema: {

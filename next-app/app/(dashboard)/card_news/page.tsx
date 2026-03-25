@@ -68,20 +68,27 @@ export default function CardNewsPage() {
   const [promptHistory, setPromptHistory] = useState<CardPromptHistoryItem[]>([]);
   const [showHistoryDropdown, setShowHistoryDropdown] = useState(false);
 
-  // ── 이미지 생성 헬퍼 ──
-  const generateCardImage = async (prompt: string, index: number): Promise<string | null> => {
+  // ── 이미지 생성 헬퍼 (OLD cardNewsImageService.generateSingleImage 동일 파이프라인) ──
+  const generateCardImage = async (prompt: string, index: number, refImage?: string): Promise<string | null> => {
     try {
-      const styleMap: Record<ImageStyleType, string> = {
-        photo: '실사 DSLR 사진, 자연스러운 조명, 의료/건강 환경',
-        illustration: '3D 렌더 일러스트, Blender 스타일, 파스텔 색상, 깔끔한 배경',
-        medical: '의학 3D 일러스트, 해부학적 렌더링, 임상 조명',
-      };
-      const fullPrompt = `${prompt}. 스타일: ${styleMap[imageStyle]}. 정사각형(1:1). 텍스트/글자/라벨 절대 금지. 시각적 장면만.`;
+      // 디자인 템플릿의 배경색/스타일 프롬프트 반영
+      const tmpl = designTemplateId ? CARD_NEWS_DESIGN_TEMPLATES.find(t => t.id === designTemplateId) : undefined;
+      const bgColor = tmpl?.colors?.background || '#E8F4FD';
+      const templateBlock = tmpl ? `[디자인 템플릿: ${tmpl.name}]\n${tmpl.stylePrompt}\n배경색: ${bgColor}` : '';
+
+      // 프롬프트에 템플릿 블록 추가
+      const fullPrompt = `${prompt}\n${templateBlock}`.trim();
 
       const res = await fetch('/api/image', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: fullPrompt, aspectRatio: '1:1', mode: 'card_news' }),
+        body: JSON.stringify({
+          prompt: fullPrompt,
+          aspectRatio: '1:1',
+          mode: 'card_news',
+          imageStyle,
+          referenceImage: refImage || undefined,
+        }),
       });
       if (!res.ok) return null;
       const data = await res.json() as { imageDataUrl?: string };
@@ -144,8 +151,14 @@ export default function CardNewsPage() {
           if (stylePrompt) finalPrompt += `\n\n[병원 말투 적용]\n${stylePrompt}`;
         } catch { /* ignore */ }
       }
-      // 이미지 프롬프트도 같이 요청
-      finalPrompt += `\n\n## 이미지 프롬프트\n각 슬라이드에 어울리는 이미지 프롬프트를 작성하세요.\n형식: 각 슬라이드 아래에 **이미지**: (영어 프롬프트) 추가\n- 텍스트/글자/라벨 절대 금지\n- 시각적 장면만 묘사 (인물, 공간, 사물)`;
+      // 이미지 프롬프트도 같이 요청 — OLD 구조화 형식 (subtitle/mainTitle/description/비주얼)
+      finalPrompt += `\n\n## 이미지 프롬프트
+각 슬라이드에 어울리는 이미지 프롬프트를 아래 형식으로 작성하세요:
+**이미지**:
+subtitle: "(부제 텍스트)"
+mainTitle: "(메인 제목 텍스트)"
+description: "(설명 텍스트)"
+비주얼: (배경 이미지 내용을 한국어로 30자 이내 묘사 — 텍스트/글자/라벨 절대 금지, 시각적 장면만)`;
 
       console.info(`[CARD] ========== 카드뉴스 생성 시작 ==========`);
       console.info(`[CARD] 주제="${topic}" 슬라이드=${slideCount}장 스타일=${writingStyle} 템플릿=${designTemplateId || 'auto'}`);
@@ -180,14 +193,33 @@ export default function CardNewsPage() {
         const roleMatch = block.match(/^(.+?)[\n\r]/);
         const titleMatch = block.match(/\*\*제목\*\*[:\s]*(.+)/m) || block.match(/\*\*메인.*?\*\*[:\s]*(.+)/m);
         const bodyMatch = block.match(/\*\*본문\*\*[:\s]*([\s\S]*?)(?=\*\*|$)/m) || block.match(/\*\*부제\*\*[:\s]*(.+)/m);
-        const imgMatch = block.match(/\*\*이미지\*\*[:\s]*(.+)/m);
+        // 이미지 프롬프트: 구조화 형식 또는 단순 형식
+        const imgSection = block.match(/\*\*이미지\*\*[:\s]*([\s\S]*?)(?=###|$)/m);
+        let imagePrompt = '';
+        if (imgSection) {
+          const imgText = imgSection[1].trim();
+          // 구조화 형식이면 그대로 (subtitle/mainTitle/비주얼 포함)
+          if (imgText.includes('subtitle:') || imgText.includes('mainTitle:') || imgText.includes('비주얼:')) {
+            imagePrompt = imgText;
+          } else {
+            // 단순 형식 → 구조화 형식으로 변환
+            const title = titleMatch?.[1]?.trim() || '';
+            const subtitle = roleMatch?.[1]?.replace(/\*\*/g, '').trim() || '';
+            const desc = bodyMatch?.[1]?.trim() || '';
+            imagePrompt = `subtitle: "${subtitle}"\nmainTitle: "${title}"\n${desc ? `description: "${desc}"\n` : ''}비주얼: ${imgText}`;
+          }
+        } else {
+          const title = titleMatch?.[1]?.trim() || `슬라이드 ${num}`;
+          const subtitle = roleMatch?.[1]?.replace(/\*\*/g, '').trim() || '';
+          imagePrompt = `subtitle: "${subtitle}"\nmainTitle: "${title}"\n비주얼: ${topic} 관련 의료 건강 이미지`;
+        }
 
         parsedCards.push({
           index: num,
           role: roleMatch?.[1]?.replace(/\*\*/g, '').trim() || `${num}장`,
           title: titleMatch?.[1]?.trim() || `슬라이드 ${num}`,
           body: bodyMatch?.[1]?.trim() || '',
-          imagePrompt: imgMatch?.[1]?.trim() || `medical health ${topic} slide ${num}`,
+          imagePrompt,
           imageUrl: null,
         });
       }
@@ -325,7 +357,7 @@ export default function CardNewsPage() {
 
     try {
       const promptToUse = editImagePrompt || `1:1 카드뉴스, "${editSubtitle}" "${editMainTitle}" "${editDescription}", 밝고 친근한 분위기`;
-      const url = await generateCardImage(promptToUse, cardRegenIndex);
+      const url = await generateCardImage(promptToUse, cardRegenIndex, cardRegenRefImage || undefined);
 
       setCards(prev => prev.map(c =>
         c.index === cardRegenIndex
