@@ -8,6 +8,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { savePost } from '../../../lib/postStorage';
 import { supabase } from '../../../lib/supabase';
+import { PromptChat } from '../../../components/PromptChat';
 
 type AspectRatio = '1:1' | '16:9' | '9:16' | '4:3';
 
@@ -21,10 +22,23 @@ const ASPECT_RATIOS: { value: AspectRatio; label: string; icon: string }[] = [
 const LOGO_STORAGE_KEY = 'hospital-logo-dataurl';
 const HOSPITAL_NAME_KEY = 'hospital-logo-name';
 
+const TEMPLATE_CATEGORIES = [
+  { id: 'schedule', name: '진료일정', icon: '📅', desc: '휴진/단축진료', placeholder: '4월 휴진 안내 포스터, 달력 형태, 휴진일 빨간색 표시, 깔끔한 의료 디자인' },
+  { id: 'event', name: '이벤트', icon: '🎉', desc: '시술 할인', placeholder: '임플란트 할인 이벤트 포스터, 가격 강조, 기간 표시, 밝고 신뢰감 있는 디자인' },
+  { id: 'doctor', name: '의사소개', icon: '🧑‍⚕️', desc: '전문의 부임', placeholder: '새로 부임한 전문의 소개 카드, 이름/전문분야/경력, 전문적이고 신뢰감 있는 디자인' },
+  { id: 'notice', name: '공지사항', icon: '📢', desc: '변경/이전', placeholder: '병원 이전 안내 공지, 새 주소와 약도, 깔끔한 정보 전달형 디자인' },
+  { id: 'greeting', name: '명절 인사', icon: '🎊', desc: '설날/추석', placeholder: '설날 인사 포스터, 따뜻한 한국적 분위기, 병원명과 휴진 안내 포함' },
+  { id: 'hiring', name: '채용/공고', icon: '📋', desc: '직원 모집', placeholder: '치과위생사 모집 공고, 지원자격/근무조건, 깔끔하고 전문적인 디자인' },
+  { id: 'caution', name: '주의사항', icon: '⚠️', desc: '시술/진료 후', placeholder: '임플란트 시술 후 주의사항 안내, 항목별 아이콘, 읽기 쉬운 리스트 형태' },
+  { id: 'pricing', name: '비급여 안내', icon: '💰', desc: '시술 가격표', placeholder: '비급여 진료비 안내표, 시술명/가격 표 형태, 깔끔하고 투명한 디자인' },
+] as const;
+
 const inputCls = 'w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm outline-none focus:border-emerald-400 focus:bg-white focus:ring-2 focus:ring-emerald-500/10 transition-all placeholder:text-slate-300 placeholder:font-normal';
 
 export default function ImagePage() {
+  const [mode, setMode] = useState<'template' | 'free'>('template');
   const [prompt, setPrompt] = useState('');
+  const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
   const [aspectRatio, setAspectRatio] = useState<AspectRatio>('1:1');
   const [generating, setGenerating] = useState(false);
   const [progress, setProgress] = useState('');
@@ -334,14 +348,49 @@ export default function ImagePage() {
       {/* 좌측: 입력 폼 */}
       <div className="w-full lg:w-[340px] xl:w-[380px] lg:flex-none">
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-          {/* 헤더 */}
+          {/* 헤더 (OLD parity: 모드 토글 포함) */}
           <div className="flex items-center gap-2 px-4 py-2.5 border-b bg-emerald-50 border-emerald-100">
             <span>🖼️</span>
             <span className="text-xs font-bold text-emerald-700">이미지 생성</span>
+            <div className="ml-auto flex bg-white/80 rounded-lg p-0.5 border border-emerald-200/60">
+              <button onClick={() => setMode('template')}
+                className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${mode === 'template' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
+                템플릿
+              </button>
+              <button onClick={() => setMode('free')}
+                className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${mode === 'free' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
+                자유 입력
+              </button>
+            </div>
           </div>
 
           {/* 입력 폼 */}
           <div className="p-4 space-y-3">
+            {/* 템플릿 카테고리 선택 (OLD parity: 템플릿 모드) */}
+            {mode === 'template' && (
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-500 mb-1.5">카테고리 선택</label>
+                <div className="grid grid-cols-4 gap-1.5">
+                  {TEMPLATE_CATEGORIES.map(cat => (
+                    <button key={cat.id} type="button"
+                      onClick={() => {
+                        setSelectedTemplate(selectedTemplate === cat.id ? null : cat.id);
+                        if (selectedTemplate !== cat.id) setPrompt(cat.placeholder);
+                      }}
+                      className={`flex flex-col items-center gap-0.5 p-2 rounded-lg border transition-all text-center ${
+                        selectedTemplate === cat.id
+                          ? 'border-blue-400 bg-blue-50 text-blue-700 shadow-sm'
+                          : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                      }`}>
+                      <span className="text-lg">{cat.icon}</span>
+                      <span className="text-[10px] font-semibold leading-tight">{cat.name}</span>
+                      <span className="text-[8px] text-slate-400 leading-tight">{cat.desc}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* 프롬프트 */}
             <div>
               <label className="block text-[11px] font-semibold text-slate-500 mb-1.5">이미지 설명</label>
@@ -357,6 +406,9 @@ export default function ImagePage() {
                 {prompt.length}자
               </div>
             </div>
+
+            {/* AI 프롬프트 채팅 (OLD parity: PromptGenerator) */}
+            <PromptChat onApplyPrompt={(p) => setPrompt(p)} disabled={generating} />
 
             {/* 비율 선택 */}
             <div>
