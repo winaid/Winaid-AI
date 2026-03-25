@@ -174,6 +174,9 @@ function BlogForm() {
   // ── 키워드 분석 (old InputForm handleAnalyzeKeywords 동일) ──
   const handleAnalyzeKeywords = async () => {
     if (!selectedHospitalAddress || !hospitalName) return;
+    console.info(`[KEYWORD] ========== 키워드 분석 시작 ==========`);
+    console.info(`[KEYWORD] 병원="${hospitalName}" 주소="${selectedHospitalAddress}" 진료과="${category}"`);
+    console.info(`[KEYWORD] clinicContext=${clinicContext ? `신뢰도 ${Math.round(clinicContext.confidence * 100)}%, 서비스 ${clinicContext.actualServices.length}개` : '없음'}`);
     setIsAnalyzingKeywords(true);
     setShowKeywordPanel(true);
     setKeywordAiRec('');
@@ -183,11 +186,14 @@ function BlogForm() {
         hospitalName,
         selectedHospitalAddress,
         category,
-        (msg) => setKeywordProgress(msg),
+        (msg) => { setKeywordProgress(msg); console.info(`[KEYWORD] ${msg}`); },
         clinicContext,
       );
+      console.info(`[KEYWORD] 결과: ${result.stats.length}개 키워드, API 에러: ${result.apiErrors?.length || 0}건`);
+      result.stats.slice(0, 5).forEach(s => console.info(`[KEYWORD]   "${s.keyword}" — 검색량: ${s.monthlySearchVolume}, 발행량: ${s.blogPostCount}, 포화도: ${s.saturation}`));
       setKeywordStats(result.stats);
       if (result.apiErrors?.length) {
+        console.warn(`[KEYWORD] API 에러:`, result.apiErrors);
         const blogErr = result.apiErrors.find(e => e.includes('블로그') || e.includes('Blog') || e.includes('CLIENT'));
         setKeywordAiRec(
           (result.aiRecommendation || '') + (blogErr ? `\n\n⚠️ **발행량 조회 오류:** ${blogErr}` : ''),
@@ -195,8 +201,9 @@ function BlogForm() {
       } else {
         setKeywordAiRec(result.aiRecommendation || '');
       }
+      console.info(`[KEYWORD] ========== 키워드 분석 완료 ==========`);
     } catch (e) {
-      console.error('키워드 분석 실패:', e);
+      console.error('[KEYWORD] ❌ 키워드 분석 실패:', e);
       setKeywordStats([]);
     } finally {
       setIsAnalyzingKeywords(false);
@@ -207,17 +214,26 @@ function BlogForm() {
   // ── 병원 홈페이지 크롤링 ──
   const handleCrawlHomepage = async () => {
     if (!homepageUrl.trim()) return;
+    console.info(`[CRAWL] ========== 홈페이지 분석 시작 ==========`);
+    console.info(`[CRAWL] URL="${homepageUrl.trim()}"`);
     setIsCrawling(true);
     setCrawlProgress('');
     try {
       const ctx = await analyzeClinicContent(homepageUrl.trim(), setCrawlProgress);
       setClinicContext(ctx);
       if (ctx) {
+        console.info(`[CRAWL] 분석 완료 — 신뢰도: ${Math.round(ctx.confidence * 100)}%, 유형: ${ctx.sourceType}`);
+        console.info(`[CRAWL]   서비스: ${ctx.actualServices.join(', ') || '없음'}`);
+        console.info(`[CRAWL]   특화: ${ctx.specialties.join(', ') || '없음'}`);
+        console.info(`[CRAWL]   지역: ${ctx.locationSignals.join(', ') || '없음'}`);
+        console.info(`[CRAWL] ========== 홈페이지 분석 완료 ==========`);
         setCrawlProgress(`분석 완료! 서비스 ${ctx.actualServices.length}개, 특화 ${ctx.specialties.length}개 발견`);
       } else {
+        console.warn(`[CRAWL] 분석 결과 없음`);
         setCrawlProgress('분석할 콘텐츠를 찾지 못했습니다.');
       }
-    } catch {
+    } catch (e) {
+      console.error('[CRAWL] ❌ 크롤링 실패:', e);
       setCrawlProgress('크롤링 실패');
       setClinicContext(null);
     } finally {
@@ -228,6 +244,7 @@ function BlogForm() {
   const handleLoadMoreKeywords = async () => {
     if (!selectedHospitalAddress || !hospitalName) return;
     if (keywordStats.length >= MAX_KEYWORDS) return;
+    console.info(`[KEYWORD] 추가 키워드 로드 시작 — 현재 ${keywordStats.length}개 / 최대 ${MAX_KEYWORDS}개`);
     setIsLoadingMoreKeywords(true);
     setKeywordProgress('');
     try {
@@ -260,6 +277,8 @@ function BlogForm() {
   // ── 상위권 체크 ──
   const handleCheckRanks = async () => {
     if (keywordStats.length === 0 || !hospitalName) return;
+    console.info(`[RANK] ========== 상위권 체크 시작 ==========`);
+    console.info(`[RANK] 병원="${hospitalName}" 키워드 ${keywordStats.length}개`);
     // 병원의 블로그 ID 가져오기
     const team = TEAM_DATA.find(t => t.id === selectedTeam);
     const hospital = team?.hospitals.find(h => h.name.replace(/ \(.*\)$/, '') === hospitalName);
@@ -284,8 +303,12 @@ function BlogForm() {
       const map = new Map<string, KeywordRankResult>();
       for (const r of results) map.set(r.keyword, r);
       setRankResults(map);
+      const ranked = results.filter(r => r.isRanked);
+      console.info(`[RANK] 결과: ${ranked.length}/${results.length}개 키워드 노출 중`);
+      ranked.forEach(r => console.info(`[RANK]   "${r.keyword}" → ${r.rank}위`));
+      console.info(`[RANK] ========== 상위권 체크 완료 ==========`);
     } catch (e) {
-      console.error('상위권 체크 실패:', e);
+      console.error('[RANK] ❌ 상위권 체크 실패:', e);
     } finally {
       setIsCheckingRanks(false);
       setTimeout(() => setKeywordProgress(''), 3000);
@@ -296,6 +319,8 @@ function BlogForm() {
   const handleRecommendTitles = async () => {
     const topicForSeo = topic || disease || keywords || '';
     if (!topicForSeo) return;
+    console.info(`[TITLE] ========== 제목 추천 시작 ==========`);
+    console.info(`[TITLE] 주제="${topicForSeo}" 키워드="${keywords}" 질환="${disease}"`);
     setIsLoadingTitles(true);
     setSeoTitles([]);
     setTrendingItems([]);
@@ -447,7 +472,11 @@ JSON 배열로 출력한다. 각 항목은 다음 구조를 따른다:
       const titles: SeoTitleItem[] = JSON.parse(data.text);
       const sorted = titles.sort((a, b) => b.score - a.score);
       setSeoTitles(sorted);
-    } catch {
+      console.info(`[TITLE] 결과: ${sorted.length}개 제목 생성`);
+      sorted.forEach((t, i) => console.info(`[TITLE]   ${i + 1}. [${t.score}점] "${t.title}"`));
+      console.info(`[TITLE] ========== 제목 추천 완료 ==========`);
+    } catch (e) {
+      console.error('[TITLE] ❌ 제목 추천 실패:', e);
       setError('제목 추천 실패');
     } finally {
       setIsLoadingTitles(false);
@@ -456,6 +485,8 @@ JSON 배열로 출력한다. 각 항목은 다음 구조를 따른다:
 
   // ── 트렌드 주제 (old handleRecommendTrends 동일) ──
   const handleRecommendTrends = async () => {
+    console.info(`[TREND] ========== 트렌드 주제 추천 시작 ==========`);
+    console.info(`[TREND] 진료과="${category}"`);
     setIsLoadingTrends(true);
     setTrendingItems([]);
     setSeoTitles([]);
@@ -556,7 +587,11 @@ ${categoryKeywords}
 
       const items: TrendingItem[] = JSON.parse(data.text);
       setTrendingItems(items);
-    } catch {
+      console.info(`[TREND] 결과: ${items.length}개 트렌드 주제`);
+      items.forEach((t, i) => console.info(`[TREND]   ${i + 1}. [${t.score}점] "${t.topic}" — ${t.keywords} (${t.seasonal_factor})`));
+      console.info(`[TREND] ========== 트렌드 주제 추천 완료 ==========`);
+    } catch (e) {
+      console.error('[TREND] ❌ 트렌드 로딩 실패:', e);
       setError('트렌드 로딩 실패');
     } finally {
       setIsLoadingTrends(false);
