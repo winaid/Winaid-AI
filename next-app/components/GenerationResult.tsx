@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import type { BlogSection } from '../lib/types';
 
 // ── 간이 Markdown → HTML 변환 ──
@@ -275,6 +275,7 @@ export function ResultPanel({
   const [copyFeedback, setCopyFeedback] = useState(false);
   const [activeTab, setActiveTab] = useState<'preview' | 'html'>('preview');
   const [showSectionPanel, setShowSectionPanel] = useState(false);
+  const editorRef = useRef<HTMLDivElement>(null);
 
   const hasBlogSections = postType === 'blog' && blogSections && blogSections.length > 0 && onSectionRegenerate;
 
@@ -291,15 +292,17 @@ export function ResultPanel({
 
   const handleCopy = () => {
     if (typeof navigator === 'undefined') return;
-    // HTML 형식으로 클립보드에 복사 (블로그 에디터 붙여넣기용)
+    // 편집된 HTML이 있으면 그것을 복사, 없으면 원본
+    const editedHtml = editorRef.current?.innerHTML || renderedHtml;
+    const plainText = editorRef.current?.innerText || content;
     try {
-      const blob = new Blob([renderedHtml], { type: 'text/html' });
-      const plainBlob = new Blob([content], { type: 'text/plain' });
+      const blob = new Blob([editedHtml], { type: 'text/html' });
+      const plainBlob = new Blob([plainText], { type: 'text/plain' });
       navigator.clipboard.write([
         new ClipboardItem({ 'text/html': blob, 'text/plain': plainBlob }),
       ]);
     } catch {
-      navigator.clipboard.writeText(content);
+      navigator.clipboard.writeText(plainText);
     }
     setCopyFeedback(true);
     setTimeout(() => setCopyFeedback(false), 1500);
@@ -494,7 +497,10 @@ export function ResultPanel({
               .rp-theme-professional .rp-p { background: #fff; padding: 20px; border-radius: 8px; color: #3a3a3a; }
             `}</style>
             <article
-              className={`rp-preview rp-theme-${cssTheme} max-w-none`}
+              ref={editorRef}
+              contentEditable
+              suppressContentEditableWarning
+              className={`rp-preview rp-theme-${cssTheme} max-w-none outline-none`}
               dangerouslySetInnerHTML={{ __html: renderedHtml }}
             />
           </div>

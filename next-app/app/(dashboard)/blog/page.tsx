@@ -92,7 +92,10 @@ function BlogForm() {
   const [selectedManager, setSelectedManager] = useState('');
   const [showHospitalDropdown, setShowHospitalDropdown] = useState(false);
   const [selectedHospitalAddress, setSelectedHospitalAddress] = useState('');
-  const [medicalLawMode] = useState<'strict' | 'relaxed'>('strict');
+  const [medicalLawMode, setMedicalLawMode] = useState<'strict' | 'relaxed'>(() => {
+    if (typeof window === 'undefined') return 'strict';
+    return (localStorage.getItem('medicalLawMode') as 'strict' | 'relaxed') || 'strict';
+  });
   const [includeFaq, setIncludeFaq] = useState(false);
   const [faqCount, setFaqCount] = useState(3);
   const [showAdvanced, setShowAdvanced] = useState(true);
@@ -2090,7 +2093,18 @@ ${generatedContent.substring(0, 2000)}
                   <span className={`absolute top-[3px] left-[3px] w-4 h-4 bg-white rounded-full shadow transition-all duration-200 ${includeHospitalIntro ? 'translate-x-[18px]' : 'translate-x-0'}`} />
                 </button>
               </div>
-              {/* 이미지 스타일 (old 동일: 4버튼 + 커스텀 textarea) */}
+              {/* 소제목 직접 입력 (OLD 기준: 이미지 스타일 위) */}
+              <div>
+                <p className="text-[11px] font-semibold text-slate-500 mb-1.5">소제목 직접 입력 <span className="text-slate-400 font-normal">(선택 · 한 줄에 하나씩)</span></p>
+                <textarea
+                  value={customSubheadings}
+                  onChange={e => setCustomSubheadings(e.target.value)}
+                  placeholder={"임플란트 수술 과정과 기간\n임플란트 후 관리법\n임플란트 비용 비교"}
+                  className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-xs focus:border-blue-400 outline-none resize-none placeholder:text-slate-300"
+                  rows={3}
+                />
+              </div>
+              {/* 이미지 스타일 */}
               <div>
                 <p className="text-[11px] font-semibold text-slate-500 mb-1.5">이미지 스타일</p>
                 <div className="grid grid-cols-4 gap-1.5">
@@ -2124,17 +2138,6 @@ ${generatedContent.substring(0, 2000)}
                     />
                   </div>
                 )}
-              </div>
-              {/* 소제목 직접 입력 */}
-              <div>
-                <p className="text-[11px] font-semibold text-slate-500 mb-1.5">소제목 직접 입력 <span className="text-slate-400 font-normal">(선택 · 한 줄에 하나씩)</span></p>
-                <textarea
-                  value={customSubheadings}
-                  onChange={e => setCustomSubheadings(e.target.value)}
-                  placeholder={"임플란트 수술 과정과 기간\n임플란트 후 관리법\n임플란트 비용 비교"}
-                  className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-xs focus:border-blue-400 outline-none resize-none placeholder:text-slate-300"
-                  rows={3}
-                />
               </div>
               {/* 말투 학습 (old 동일 위치: 이미지 스타일 아래, 화자/어조 위) */}
               <WritingStyleLearner
