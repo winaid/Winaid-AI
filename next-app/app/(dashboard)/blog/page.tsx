@@ -107,6 +107,8 @@ function BlogForm() {
   const [isLoadingMoreKeywords, setIsLoadingMoreKeywords] = useState(false);
   const [showKeywordPanel, setShowKeywordPanel] = useState(false);
   const [keywordSortBy, setKeywordSortBy] = useState<'volume' | 'blog' | 'saturation'>('volume');
+  const [keywordSearch, setKeywordSearch] = useState('');
+  const [keywordMinVolume, setKeywordMinVolume] = useState(0);
 
   // localStorage에서 커스텀 프롬프트 복원 (old 동일)
   useEffect(() => {
@@ -1614,6 +1616,34 @@ ${generatedContent.substring(0, 2000)}
                   </button>
                 </div>
               </div>
+              {/* 검색 + 최소 검색량 필터 */}
+              {!isAnalyzingKeywords && keywordStats.length > 0 && (
+                <div className="flex gap-2 px-3 py-2 border-b border-slate-100 bg-white">
+                  <input
+                    type="text"
+                    value={keywordSearch}
+                    onChange={e => setKeywordSearch(e.target.value)}
+                    placeholder="키워드 검색..."
+                    className="flex-1 px-2.5 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:border-blue-400 placeholder:text-slate-300"
+                  />
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] text-slate-400 whitespace-nowrap">최소</span>
+                    <select
+                      value={keywordMinVolume}
+                      onChange={e => setKeywordMinVolume(Number(e.target.value))}
+                      className="px-1.5 py-1.5 text-[11px] border border-slate-200 rounded-lg focus:outline-none focus:border-blue-400 bg-white text-slate-600"
+                    >
+                      <option value={0}>전체</option>
+                      <option value={10}>10+</option>
+                      <option value={50}>50+</option>
+                      <option value={100}>100+</option>
+                      <option value={500}>500+</option>
+                      <option value={1000}>1,000+</option>
+                      <option value={5000}>5,000+</option>
+                    </select>
+                  </div>
+                </div>
+              )}
               {isAnalyzingKeywords ? (
                 <div className="p-6 text-center">
                   <div className="w-6 h-6 border-2 border-blue-200 border-t-blue-500 rounded-full animate-spin mx-auto mb-2" />
@@ -1633,6 +1663,11 @@ ${generatedContent.substring(0, 2000)}
                       </thead>
                       <tbody>
                         {[...keywordStats]
+                          .filter(s => {
+                            if (keywordMinVolume > 0 && s.monthlySearchVolume < keywordMinVolume) return false;
+                            if (keywordSearch && !s.keyword.includes(keywordSearch.trim())) return false;
+                            return true;
+                          })
                           .sort((a, b) => {
                             if (keywordSortBy === 'volume') return b.monthlySearchVolume - a.monthlySearchVolume;
                             if (keywordSortBy === 'blog') return b.blogPostCount - a.blogPostCount;
