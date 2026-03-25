@@ -85,6 +85,19 @@ export default function ImagePage() {
   const [evPeriod, setEvPeriod] = useState('');
   const [evDesc, setEvDesc] = useState('');
 
+  // ── doctor 전용 상태 (OLD parity) ──
+  const [docName, setDocName] = useState('');
+  const [docSpecialty, setDocSpecialty] = useState('');
+  const [docCareer, setDocCareer] = useState('');
+  const [docGreeting, setDocGreeting] = useState('');
+  const [docPhotoBase64, setDocPhotoBase64] = useState<string | null>(null);
+  const docPhotoRef = useRef<HTMLInputElement>(null);
+
+  // ── notice 전용 상태 (OLD parity) ──
+  const [noticeTitle, setNoticeTitle] = useState('');
+  const [noticeContent, setNoticeContent] = useState('');
+  const [noticeDate, setNoticeDate] = useState('');
+
   // ── 가격 헬퍼 (OLD parity) ──
   const parseNum = (s: string) => Number(s.replace(/[^0-9]/g, '')) || 0;
   const fmtWon = (s: string) => { const n = parseNum(s); return n > 0 ? n.toLocaleString() + '원' : ''; };
@@ -166,6 +179,50 @@ export default function ImagePage() {
     if (extraPrompt) p += `\n${extraPrompt}`;
     return p;
   }, [evTitle, evSubtitle, evPrice, evOrigPrice, evDiscount, autoDiscountPct, evPeriod, evDesc, customMessage, extraPrompt]);
+
+  // ── doctor 전용 프롬프트 빌더 ──
+  const buildDoctorPrompt = useCallback((): string => {
+    const name = docName || '전문의';
+    let p = `병원 의사 소개 카드 이미지.\n의사 이름: "${name}"\n`;
+    if (docSpecialty) p += `전문 분야: ${docSpecialty}\n`;
+    if (docCareer) {
+      const careers = docCareer.split('\n').filter(Boolean);
+      if (careers.length > 0) p += `주요 경력/학력:\n${careers.map(c => `- ${c}`).join('\n')}\n`;
+    }
+    if (docGreeting) p += `인사말: "${docGreeting}"\n`;
+    if (docPhotoBase64) p += '첨부된 의사 사진을 이미지 좌측 또는 상단에 자연스럽게 배치해주세요.\n';
+    p += '전문적이고 신뢰감 있는 의료 디자인, 깔끔한 정보 레이아웃, 한국어 텍스트.';
+    if (customMessage) p += `\n추가 문구: "${customMessage}"`;
+    if (extraPrompt) p += `\n${extraPrompt}`;
+    return p;
+  }, [docName, docSpecialty, docCareer, docGreeting, docPhotoBase64, customMessage, extraPrompt]);
+
+  // ── notice 전용 프롬프트 빌더 ──
+  const buildNoticePrompt = useCallback((): string => {
+    const title = noticeTitle || '공지사항';
+    let p = `병원 공지사항 안내 이미지.\n공지 제목: "${title}"\n`;
+    if (noticeContent) {
+      const lines = noticeContent.split('\n').filter(Boolean);
+      if (lines.length > 0) p += `공지 내용:\n${lines.map(l => `- ${l}`).join('\n')}\n`;
+    }
+    if (noticeDate) p += `적용일: ${noticeDate}\n`;
+    p += '깔끔하고 공식적인 의료 공지 디자인, 정보 전달에 최적화된 레이아웃, 한국어 텍스트.';
+    if (customMessage) p += `\n추가 문구: "${customMessage}"`;
+    if (extraPrompt) p += `\n${extraPrompt}`;
+    return p;
+  }, [noticeTitle, noticeContent, noticeDate, customMessage, extraPrompt]);
+
+  // 전용 폼 모드 여부 (렌더용)
+  const hasFormMode = mode === 'template' && (selectedTemplate === 'schedule' || selectedTemplate === 'event' || selectedTemplate === 'doctor' || selectedTemplate === 'notice');
+
+  const handleDocPhotoUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !file.type.startsWith('image/')) return;
+    const reader = new FileReader();
+    reader.onload = () => setDocPhotoBase64(reader.result as string);
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  }, []);
 
   // localStorage 복원
   useEffect(() => {
@@ -333,10 +390,17 @@ export default function ImagePage() {
   // ── 프롬프트 조립 + API 호출 ──
 
   const handleGenerate = useCallback(async () => {
-    // schedule/event 모드에서는 전용 프롬프트 사용
+    // 전용 폼 모드에서는 구조화 프롬프트 사용
     const isScheduleMode = mode === 'template' && selectedTemplate === 'schedule';
     const isEventMode = mode === 'template' && selectedTemplate === 'event';
-    const effectivePrompt = isScheduleMode ? buildSchedulePrompt() : isEventMode ? buildEventPrompt() : prompt.trim();
+    const isDoctorMode = mode === 'template' && selectedTemplate === 'doctor';
+    const isNoticeMode = mode === 'template' && selectedTemplate === 'notice';
+    const hasForm = isScheduleMode || isEventMode || isDoctorMode || isNoticeMode;
+    const effectivePrompt = isScheduleMode ? buildSchedulePrompt()
+      : isEventMode ? buildEventPrompt()
+      : isDoctorMode ? buildDoctorPrompt()
+      : isNoticeMode ? buildNoticePrompt()
+      : prompt.trim();
 
     if (!effectivePrompt || generating) return;
 
@@ -405,6 +469,7 @@ export default function ImagePage() {
           brandColors: brandColors || undefined,
           logoBase64: logoEnabled && logoDataUrl ? logoDataUrl : undefined,
           calendarImage: calendarImage || undefined,
+          referenceImage: isDoctorMode && docPhotoBase64 ? docPhotoBase64 : undefined,
         }),
       });
 
@@ -453,7 +518,7 @@ export default function ImagePage() {
     } finally {
       setGenerating(false);
     }
-  }, [prompt, aspectRatio, generating, logoEnabled, logoDataUrl, hospitalName, logoPosition, clinicPhone, clinicHours, clinicAddress, brandColor, brandAccent, detectCalendar, getKoreanHolidays2, generateCalendarImage, mode, selectedTemplate, buildSchedulePrompt, buildEventPrompt, schYear, schMonth]);
+  }, [prompt, aspectRatio, generating, logoEnabled, logoDataUrl, hospitalName, logoPosition, clinicPhone, clinicHours, clinicAddress, brandColor, brandAccent, detectCalendar, getKoreanHolidays2, generateCalendarImage, mode, selectedTemplate, buildSchedulePrompt, buildEventPrompt, buildDoctorPrompt, buildNoticePrompt, schYear, schMonth, docPhotoBase64]);
 
   const handleDownload = useCallback(() => {
     if (!result) return;
@@ -496,8 +561,8 @@ export default function ImagePage() {
                       onClick={() => {
                         const newSel = selectedTemplate === cat.id ? null : cat.id;
                         setSelectedTemplate(newSel);
-                        // schedule/event는 전용 폼 사용 → placeholder 주입 안 함
-                        if (newSel && newSel !== 'schedule' && newSel !== 'event') setPrompt(cat.placeholder);
+                        // 전용 폼 카테고리는 placeholder 주입 안 함
+                        if (newSel && newSel !== 'schedule' && newSel !== 'event' && newSel !== 'doctor' && newSel !== 'notice') setPrompt(cat.placeholder);
                       }}
                       className={`flex flex-col items-center gap-0.5 p-2 rounded-lg border transition-all text-center ${
                         selectedTemplate === cat.id
@@ -683,8 +748,65 @@ export default function ImagePage() {
               </div>
             )}
 
-            {/* ── 공통: 추가 문구 + 추가 프롬프트 (schedule/event 모드) ── */}
-            {mode === 'template' && (selectedTemplate === 'schedule' || selectedTemplate === 'event') && (
+            {/* ══ doctor 전용 폼 (OLD parity) ══ */}
+            {mode === 'template' && selectedTemplate === 'doctor' && (
+              <div className="space-y-3">
+                <div className="flex gap-3 items-start">
+                  {/* 의사 사진 업로드 */}
+                  <div className="flex flex-col items-center gap-1 flex-shrink-0">
+                    <label className="block text-[11px] font-semibold text-slate-500">사진</label>
+                    <label className="w-20 h-24 rounded-lg border-2 border-dashed border-slate-300 bg-white flex items-center justify-center cursor-pointer hover:border-blue-400 transition-colors overflow-hidden">
+                      {docPhotoBase64 ? (
+                        <img src={docPhotoBase64} alt="의사 사진" className="w-full h-full object-cover rounded-md" />
+                      ) : (
+                        <svg className="w-8 h-8 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                      )}
+                      <input ref={docPhotoRef} type="file" accept="image/*" className="hidden" onChange={handleDocPhotoUpload} />
+                    </label>
+                    {docPhotoBase64 && <button type="button" onClick={() => setDocPhotoBase64(null)} className="text-[10px] text-red-400 hover:text-red-600">삭제</button>}
+                  </div>
+                  <div className="flex-1 space-y-2">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-500 mb-1">의사 이름</label>
+                      <input type="text" value={docName} onChange={e => setDocName(e.target.value)} placeholder="김철수" className={inputCls} />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-500 mb-1">전문 분야</label>
+                      <input type="text" value={docSpecialty} onChange={e => setDocSpecialty(e.target.value)} placeholder="치과보철과 전문의" className={inputCls} />
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-500 mb-1">경력/학력 <span className="text-slate-400 font-normal">(줄바꿈으로 구분)</span></label>
+                  <textarea value={docCareer} onChange={e => setDocCareer(e.target.value)} placeholder={'서울대학교 치의학대학원 졸업\n서울대치과병원 전공의\n대한치과보철학회 정회원'} rows={4} className={`${inputCls} resize-none`} />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-500 mb-1">인사말 <span className="text-slate-400 font-normal">(선택)</span></label>
+                  <textarea value={docGreeting} onChange={e => setDocGreeting(e.target.value)} placeholder="환자분들의 건강한 삶을 위해 최선을 다하겠습니다." rows={2} className={`${inputCls} resize-none`} />
+                </div>
+              </div>
+            )}
+
+            {/* ══ notice 전용 폼 (OLD parity) ══ */}
+            {mode === 'template' && selectedTemplate === 'notice' && (
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-500 mb-1">공지 제목</label>
+                  <input type="text" value={noticeTitle} onChange={e => setNoticeTitle(e.target.value)} placeholder="진료시간 변경 안내" className={inputCls} />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-500 mb-1">공지 내용 <span className="text-slate-400 font-normal">(줄바꿈으로 구분)</span></label>
+                  <textarea value={noticeContent} onChange={e => setNoticeContent(e.target.value)} placeholder={'평일 진료시간이 변경됩니다\n변경 전: 09:00~18:00\n변경 후: 09:00~19:00'} rows={5} className={`${inputCls} resize-none`} />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-500 mb-1">적용일 <span className="text-slate-400 font-normal">(선택)</span></label>
+                  <input type="text" value={noticeDate} onChange={e => setNoticeDate(e.target.value)} placeholder="2026년 4월 1일부터" className={inputCls} />
+                </div>
+              </div>
+            )}
+
+            {/* ── 공통: 추가 문구 + 추가 프롬프트 (전용 폼 모드) ── */}
+            {mode === 'template' && (selectedTemplate === 'schedule' || selectedTemplate === 'event' || selectedTemplate === 'doctor' || selectedTemplate === 'notice') && (
               <div className="space-y-3">
                 <div>
                   <label className="block text-[11px] font-semibold text-slate-500 mb-1">추가 문구 <span className="text-slate-400 font-normal">(선택 — 하단 표시)</span></label>
@@ -699,8 +821,8 @@ export default function ImagePage() {
               </div>
             )}
 
-            {/* 프롬프트 (schedule/event가 아닌 경우에만 표시) */}
-            {!(mode === 'template' && (selectedTemplate === 'schedule' || selectedTemplate === 'event')) && (<>
+            {/* 프롬프트 (전용 폼이 아닌 경우에만 표시) */}
+            {!(mode === 'template' && (selectedTemplate === 'schedule' || selectedTemplate === 'event' || selectedTemplate === 'doctor' || selectedTemplate === 'notice')) && (<>
             <div>
               <label className="block text-[11px] font-semibold text-slate-500 mb-1.5">이미지 설명</label>
               <textarea
@@ -823,9 +945,9 @@ export default function ImagePage() {
             {/* 생성 버튼 */}
             <button
               onClick={handleGenerate}
-              disabled={generating || (!(selectedTemplate === 'schedule' || selectedTemplate === 'event') && !prompt.trim())}
+              disabled={generating || (!hasFormMode && !prompt.trim())}
               className={`w-full py-3 rounded-xl text-white font-semibold text-sm transition-all ${
-                generating || (!(selectedTemplate === 'schedule' || selectedTemplate === 'event') && !prompt.trim())
+                generating || (!hasFormMode && !prompt.trim())
                   ? 'bg-slate-200 cursor-not-allowed text-slate-400'
                   : 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-lg shadow-emerald-500/25'
               }`}
