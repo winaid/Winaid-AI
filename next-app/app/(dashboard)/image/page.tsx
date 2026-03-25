@@ -1409,8 +1409,8 @@ export default function ImagePage() {
                   )}
                 </div>
 
-                {/* 카테고리별 디자인 템플릿 (OLD parity: CATEGORY_TEMPLATES) */}
-                {currentCatTemplates.length > 0 && (
+                {/* 카테고리별 디자인 템플릿 (schedule 제외 — schedule은 달력 테마가 대체) */}
+                {selectedTemplate !== 'schedule' && currentCatTemplates.length > 0 && (
                   <div>
                     <div className="flex items-center justify-between mb-3">
                       <label className="text-sm font-bold text-slate-700">
