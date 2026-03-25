@@ -1698,6 +1698,27 @@ ${generatedContent.substring(0, 2000)}
                   </div>
                 )}
               </div>
+              {/* CSS 테마 (old 동일: 5가지 미리보기 테마 선택) */}
+              <div>
+                <p className="text-[11px] font-semibold text-slate-500 mb-1.5">미리보기 테마</p>
+                <div className="grid grid-cols-5 gap-1.5">
+                  {([
+                    { id: 'modern' as CssTheme, label: '모던', color: 'bg-slate-700' },
+                    { id: 'premium' as CssTheme, label: '프리미엄', color: 'bg-amber-700' },
+                    { id: 'minimal' as CssTheme, label: '미니멀', color: 'bg-gray-500' },
+                    { id: 'warm' as CssTheme, label: '따뜻한', color: 'bg-orange-500' },
+                    { id: 'professional' as CssTheme, label: '전문', color: 'bg-blue-700' },
+                  ]).map(t => (
+                    <button key={t.id} type="button"
+                      onClick={(e) => { e.preventDefault(); setCssTheme(t.id); }}
+                      className={`py-2 rounded-lg border transition-all flex flex-col items-center gap-0.5 ${cssTheme === t.id ? 'border-blue-400 bg-blue-50 text-blue-700' : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300'}`}
+                    >
+                      <div className={`w-4 h-4 rounded-full ${t.color}`} />
+                      <span className="text-[10px] font-semibold">{t.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
               {/* 소제목 직접 입력 */}
               <div>
                 <p className="text-[11px] font-semibold text-slate-500 mb-1.5">소제목 직접 입력 <span className="text-slate-400 font-normal">(선택 · 한 줄에 하나씩)</span></p>
