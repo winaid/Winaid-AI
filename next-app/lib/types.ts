@@ -74,9 +74,11 @@ export interface CrawledPostScore {
   score_typo: number;
   score_spelling: number;
   score_medical_law: number;
+  score_naver_seo: number;
   score_total: number;
   typo_issues: Array<{ original: string; correction: string; context: string; type?: string }>;
   law_issues: Array<{ word: string; severity: string; replacement: string[]; context: string; law_article?: string }>;
+  seo_issues?: Array<{ item: string; score: number; reason: string }>;
 }
 
 /** DB 크롤링 글 — root types.ts CrawledPost 기준 */
@@ -93,9 +95,11 @@ export interface DBCrawledPost {
   score_typo?: number;
   score_spelling?: number;
   score_medical_law?: number;
+  score_naver_seo?: number;
   score_total?: number;
   typo_issues?: CrawledPostScore['typo_issues'];
   law_issues?: CrawledPostScore['law_issues'];
+  seo_issues?: CrawledPostScore['seo_issues'];
   corrected_content?: string;
   crawled_at: string;
   scored_at?: string;

@@ -483,12 +483,12 @@ ${sampleText.substring(0, 5000)}
 
 export async function scoreCrawledPost(content: string): Promise<CrawledPostScore> {
   const sliced = content.slice(0, 3000);
-  const prompt = `너는 병원 블로그 글의 오타·맞춤법·의료광고법 위반을 검수하는 검수 전문가다.
+  const prompt = `너는 병원 블로그 글의 품질·SEO를 검수하는 전문가다.
 
 [검수 대상 텍스트]
 ${sliced}
 
-[채점 항목 3가지 — 각 100점 만점, 감점 방식]
+[채점 항목 4가지 — 각 100점 만점, 감점 방식]
 
 1) score_typo (오타 점수, 100점)
 - 실제 오타만 해당 (의도적 표현은 오타 아님)
@@ -507,14 +507,27 @@ ${sliced}
   - 제56조2항5호: 미입증 안전 주장 ("부작용 없이") → high, -10
   - 제56조2항6호: 과장/허위 ("탁월한", "획기적인") → medium, -5
 
+4) score_naver_seo (네이버 블로그 SEO 점수, 100점)
+네이버 C-Rank + D.I.A 알고리즘 기준 (2025~2026):
+- 글자 수: 1500자 미만 -15 (네이버 최적 1500~2000자)
+- 키워드 배치: 제목+본문에 핵심 키워드 4~6회 자연 반복이 적정. 2회 미만 -10, 10회 이상(키워드 스터핑) -15
+- 소제목 구조: 소제목(h2/h3) 없음 -15, 3개 미만 -10 (구조화된 글 우대)
+- 문단 가독성: 300자 이상 연속 문단 -10 (모바일 가독성)
+- 경험/전문성: 구체적 경험·사례·수치 없이 일반론만 -15 (D.I.A는 경험 기반 콘텐츠 우대)
+- 이미지: 이미지 없는 글 -10, 상위노출 글 평균 이미지 3~5장
+- CTA/행동유도: 상담 안내, 예약, 연락처 등 없으면 -5
+- 주제 일관성: 글의 주제가 제목과 불일치하면 -10 (C-Rank 주제 전문성)
+
 [출력 형식] JSON만 출력. 설명 없이.
 {
   "score_typo": 숫자,
   "score_spelling": 숫자,
   "score_medical_law": 숫자,
-  "score_total": (세 점수 평균, 반올림),
+  "score_naver_seo": 숫자,
+  "score_total": (네 점수 평균, 반올림),
   "typo_issues": [{"original":"틀린표현","correction":"올바른표현","context":"문맥","type":"typo 또는 spelling"}],
-  "law_issues": [{"word":"위반표현","severity":"critical/high/medium/low","replacement":["대체표현"],"context":"문맥","law_article":"제56조N항"}]
+  "law_issues": [{"word":"위반표현","severity":"critical/high/medium/low","replacement":["대체표현"],"context":"문맥","law_article":"제56조N항"}],
+  "seo_issues": [{"item":"항목명","score":감점점수,"reason":"감점 사유"}]
 }`;
 
   const res = await fetch(resolveApiUrl('/api/gemini'), {
@@ -542,14 +555,18 @@ ${sliced}
     throw new Error('채점 결과 파싱 실패');
   }
 
-  return {
+  const scores = {
     score_typo: Math.max(0, Math.min(100, Number(parsed.score_typo) || 100)),
     score_spelling: Math.max(0, Math.min(100, Number(parsed.score_spelling) || 100)),
     score_medical_law: Math.max(0, Math.min(100, Number(parsed.score_medical_law) || 100)),
-    score_total: Math.max(0, Math.min(100, Number(parsed.score_total) || 100)),
+    score_naver_seo: Math.max(0, Math.min(100, Number(parsed.score_naver_seo) || 100)),
+    score_total: 0,
     typo_issues: (parsed.typo_issues as CrawledPostScore['typo_issues']) || [],
     law_issues: (parsed.law_issues as CrawledPostScore['law_issues']) || [],
+    seo_issues: (parsed.seo_issues as CrawledPostScore['seo_issues']) || [],
   };
+  scores.score_total = Math.round((scores.score_typo + scores.score_spelling + scores.score_medical_law + scores.score_naver_seo) / 4);
+  return scores;
 }
 
 // ── DB 크롤링 글 CRUD ──
@@ -588,9 +605,11 @@ export async function updateCrawledPostScore(id: string, score: CrawledPostScore
       score_typo: score.score_typo,
       score_spelling: score.score_spelling,
       score_medical_law: score.score_medical_law,
+      score_naver_seo: score.score_naver_seo,
       score_total: score.score_total,
       typo_issues: score.typo_issues,
       law_issues: score.law_issues,
+      seo_issues: score.seo_issues,
       scored_at: new Date().toISOString(),
     })
     .eq('id', id);

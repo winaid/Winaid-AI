@@ -225,6 +225,50 @@ export default function AdminPage() {
   const [crawlAllStatus, setCrawlAllStatus] = useState<{ loading: boolean; progress: string }>({ loading: false, progress: '' });
   const [crawlAllIncludeStyle, setCrawlAllIncludeStyle] = useState(false);
 
+  // 노출 순위 체크
+  const [rankCheckKeyword, setRankCheckKeyword] = useState<Record<string, string>>({});
+  const [rankCheckResult, setRankCheckResult] = useState<Record<string, { rank: number | null; checking: boolean; total?: number }>>({});
+
+  const handleCheckRank = useCallback(async (hospitalName: string, blogUrls: string[]) => {
+    const keyword = rankCheckKeyword[hospitalName]?.trim();
+    if (!keyword) return;
+    const key = hospitalName;
+    setRankCheckResult(prev => ({ ...prev, [key]: { rank: null, checking: true } }));
+    try {
+      const blogIds = blogUrls
+        .map(url => url.match(/blog\.naver\.com\/([^/?#]+)/)?.[1])
+        .filter((id): id is string => !!id);
+      if (blogIds.length === 0) {
+        setRankCheckResult(prev => ({ ...prev, [key]: { rank: null, checking: false } }));
+        return;
+      }
+      const res = await fetch('/api/naver/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: keyword, display: 30 }),
+      });
+      if (!res.ok) {
+        setRankCheckResult(prev => ({ ...prev, [key]: { rank: null, checking: false } }));
+        return;
+      }
+      const data = (await res.json()) as { items?: Array<{ link?: string }>, total?: number };
+      const items = data.items || [];
+      const blogIdSet = new Set(blogIds.map(id => id.toLowerCase()));
+      let foundRank: number | null = null;
+      for (let i = 0; i < items.length; i++) {
+        const link = items[i].link || '';
+        const match = link.match(/blog\.naver\.com\/([^/?#]+)/);
+        if (match && blogIdSet.has(match[1].toLowerCase())) {
+          foundRank = i + 1;
+          break;
+        }
+      }
+      setRankCheckResult(prev => ({ ...prev, [key]: { rank: foundRank, checking: false, total: data.total } }));
+    } catch {
+      setRankCheckResult(prev => ({ ...prev, [key]: { rank: null, checking: false } }));
+    }
+  }, [rankCheckKeyword]);
+
   // 세션 복원
   useEffect(() => {
     const saved = sessionStorage.getItem('ADMIN_AUTHENTICATED');
@@ -1482,6 +1526,48 @@ export default function AdminPage() {
                           <p className="mt-2 text-xs text-green-600 font-medium">학습 완료!</p>
                         )}
 
+                        {/* 노출 순위 체크 */}
+                        {hasAnyUrl && (
+                          <div className="mt-3 bg-blue-50 border border-blue-100 rounded-xl p-3">
+                            <p className="text-[11px] font-bold text-blue-700 mb-2">네이버 노출 순위 체크</p>
+                            <div className="flex gap-1.5">
+                              <input
+                                type="text"
+                                value={rankCheckKeyword[baseName] || ''}
+                                onChange={e => setRankCheckKeyword(prev => ({ ...prev, [baseName]: e.target.value }))}
+                                onKeyDown={e => { if (e.key === 'Enter') handleCheckRank(baseName, urls); }}
+                                placeholder="키워드 입력 (예: 광화문 임플란트)"
+                                className="flex-1 px-3 py-1.5 text-xs border border-blue-200 rounded-lg focus:outline-none focus:border-blue-400 bg-white"
+                              />
+                              <button
+                                onClick={() => handleCheckRank(baseName, urls)}
+                                disabled={rankCheckResult[baseName]?.checking || !rankCheckKeyword[baseName]?.trim()}
+                                className="px-3 py-1.5 text-xs font-bold bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-40 whitespace-nowrap"
+                              >
+                                {rankCheckResult[baseName]?.checking ? '확인 중...' : '순위 확인'}
+                              </button>
+                            </div>
+                            {rankCheckResult[baseName] && !rankCheckResult[baseName].checking && (
+                              <div className="mt-2">
+                                {rankCheckResult[baseName].rank != null ? (
+                                  <p className="text-xs font-bold">
+                                    <span className={`inline-block px-2 py-0.5 rounded ${rankCheckResult[baseName].rank! <= 5 ? 'bg-green-100 text-green-700' : rankCheckResult[baseName].rank! <= 10 ? 'bg-orange-100 text-orange-700' : 'bg-red-100 text-red-600'}`}>
+                                      {rankCheckResult[baseName].rank}위
+                                    </span>
+                                    <span className="text-slate-500 font-normal ml-1.5">
+                                      &quot;{rankCheckKeyword[baseName]}&quot; 검색 시 블로그탭 상위 30개 중 {rankCheckResult[baseName].rank}위 노출
+                                    </span>
+                                  </p>
+                                ) : (
+                                  <p className="text-xs text-slate-400">
+                                    &quot;{rankCheckKeyword[baseName]}&quot; 검색 결과 상위 30위 내 미노출
+                                  </p>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        )}
+
                         {/* 학습된 스타일 프로필 요약 */}
                         {profile?.style_profile && (() => {
                           const sp = profile.style_profile as LearnedWritingStyle;
@@ -1602,10 +1688,11 @@ export default function AdminPage() {
                                                     <div className="flex items-center gap-1.5 flex-wrap mb-0.5">
                                                       {hasScore ? (
                                                         <>
-                                                          <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${scoreBadge(post.score_typo)}`}>오타 {post.score_typo ?? '?'}점</span>
-                                                          <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${scoreBadge(post.score_spelling)}`}>맞춤법 {post.score_spelling ?? '?'}점</span>
-                                                          <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${scoreBadge(post.score_medical_law)}`}>의료법 {post.score_medical_law ?? '?'}점</span>
-                                                          <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${scoreBadge(post.score_total)}`}>종합 {post.score_total ?? '?'}점</span>
+                                                          <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${scoreBadge(post.score_typo)}`}>오타 {post.score_typo ?? '?'}</span>
+                                                          <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${scoreBadge(post.score_spelling)}`}>맞춤법 {post.score_spelling ?? '?'}</span>
+                                                          <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${scoreBadge(post.score_medical_law)}`}>의료법 {post.score_medical_law ?? '?'}</span>
+                                                          <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${scoreBadge(post.score_naver_seo)}`}>SEO {post.score_naver_seo ?? '?'}</span>
+                                                          <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${scoreBadge(post.score_total)}`}>종합 {post.score_total ?? '?'}</span>
                                                         </>
                                                       ) : (
                                                         <span className="text-[10px] px-1.5 py-0.5 bg-slate-100 text-slate-400 rounded">미채점</span>
@@ -1653,6 +1740,12 @@ export default function AdminPage() {
                                                             {((post.law_issues as CrawledPostScore['law_issues'])?.length ?? 0) > 0
                                                               ? ` — 위반 ${(post.law_issues as CrawledPostScore['law_issues'])!.length}건`
                                                               : ' — 위반 없음'}
+                                                          </span>
+                                                          <span className={`px-2 py-0.5 rounded font-bold ${scoreBadge(post.score_naver_seo)}`}>
+                                                            SEO {post.score_naver_seo ?? '?'}점
+                                                            {((post.seo_issues as CrawledPostScore['seo_issues'])?.length ?? 0) > 0
+                                                              ? ` — 감점 ${(post.seo_issues as CrawledPostScore['seo_issues'])!.length}건`
+                                                              : ' — 양호'}
                                                           </span>
                                                         </div>
                                                       </div>
@@ -1710,6 +1803,22 @@ export default function AdminPage() {
                                                               {issue.context && (
                                                                 <p className="mt-1 text-[10px] text-slate-400 italic pl-1 border-l-2 border-red-200">{issue.context}</p>
                                                               )}
+                                                            </div>
+                                                          ))}
+                                                        </div>
+                                                      </div>
+                                                    )}
+
+                                                    {/* SEO 이슈 */}
+                                                    {post.seo_issues && (post.seo_issues as CrawledPostScore['seo_issues'])!.length > 0 && (
+                                                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-2.5">
+                                                        <p className="text-[11px] font-bold text-blue-700 mb-1.5">SEO 감점 항목 ({(post.seo_issues as CrawledPostScore['seo_issues'])!.length}건)</p>
+                                                        <div className="space-y-1">
+                                                          {(post.seo_issues as CrawledPostScore['seo_issues'])!.map((issue, idx) => (
+                                                            <div key={idx} className="flex items-center gap-2 text-[11px]">
+                                                              <span className="text-red-500 font-bold">{issue.score}점</span>
+                                                              <span className="font-semibold text-slate-700">{issue.item}</span>
+                                                              <span className="text-slate-400">{issue.reason}</span>
                                                             </div>
                                                           ))}
                                                         </div>
