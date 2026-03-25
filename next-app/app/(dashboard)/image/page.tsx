@@ -145,6 +145,81 @@ export default function ImagePage() {
     e.target.value = '';
   }, []);
 
+  // ── caution 전용 상태 (OLD parity) ──
+  const [cautionType, setCautionType] = useState('시술 후');
+  const [cautionTitle, setCautionTitle] = useState('');
+  const [cautionItems, setCautionItems] = useState('');
+  const [cautionEmergency, setCautionEmergency] = useState('');
+
+  const CAUTION_DEFAULTS: Record<string, { title: string; items: string; emergency: string }> = {
+    '시술 후': { title: '시술 후 주의사항', items: '시술 부위를 혀로 건드리지 마세요\n당일 음주 및 흡연은 피해주세요\n자극적이고 뜨거운 음식은 피해주세요\n딱딱한 음식은 3일간 피해주세요\n양치 시 시술 부위 주의해서 닦아주세요\n부기나 출혈은 2~3일 내 자연 소실됩니다', emergency: '이상 증상 시 연락: 02-1234-5678' },
+    '진료 후': { title: '진료 후 안내사항', items: '마취가 풀릴 때까지 식사를 피해주세요\n마취 부위를 깨물지 않도록 주의해주세요\n처방된 약은 정해진 시간에 복용해주세요\n당일 과격한 운동은 피해주세요\n통증이 지속되면 내원해주세요', emergency: '이상 증상 시 연락: 02-1234-5678' },
+    '수술 후': { title: '수술 후 주의사항', items: '거즈는 1~2시간 후 제거해주세요\n수술 당일 침을 뱉지 마세요\n냉찜질을 20분 간격으로 해주세요\n2~3일간 부드러운 음식만 드세요\n음주와 흡연은 최소 1주일 금지입니다\n격한 운동은 1주일간 삼가주세요\n처방약은 반드시 복용해주세요', emergency: '출혈·심한 통증 시 즉시 연락: 02-1234-5678' },
+    '복약': { title: '복약 안내', items: '식후 30분에 복용해주세요\n정해진 용량을 지켜주세요\n항생제는 끝까지 복용하세요\n알레르기 반응 시 즉시 중단하세요\n두통·어지러움 시 안정을 취하세요', emergency: '부작용 발생 시 연락: 02-1234-5678' },
+    '일반': { title: '주의사항 안내', items: '안내사항을 잘 읽어주세요\n궁금한 점은 문의해주세요', emergency: '' },
+  };
+
+  const handleCautionTypeChange = (type: string) => {
+    setCautionType(type);
+    const defaults = CAUTION_DEFAULTS[type];
+    if (defaults) {
+      if (!cautionItems) setCautionItems(defaults.items);
+      if (!cautionTitle) setCautionTitle(defaults.title);
+      if (!cautionEmergency) setCautionEmergency(defaults.emergency);
+    }
+  };
+
+  // ── pricing 전용 상태 (OLD parity) ──
+  const [pricingTitle, setPricingTitle] = useState('비급여 진료비 안내');
+  const [pricingItems, setPricingItems] = useState('임플란트 (1개): 1,200,000원\n레진 충전: 150,000원\n치아 미백: 300,000원\n교정 상담: 무료');
+  const [pricingNotice, setPricingNotice] = useState('상기 금액은 부가세 포함 금액이며, 환자 상태에 따라 달라질 수 있습니다.');
+
+  // ── 공통 템플릿 옵션 (OLD parity) ──
+  const [templateAppMode, setTemplateAppMode] = useState<'strict' | 'inspired'>('inspired');
+
+  // ── 스타일 히스토리 (OLD parity — localStorage 기반) ──
+  interface StyleHistoryItem { id: string; name: string; stylePrompt: string; thumbnailDataUrl: string; referenceImageUrl: string; }
+  const STYLE_HISTORY_KEY = 'winaid-style-history';
+
+  const [styleHistory, setStyleHistory] = useState<StyleHistoryItem[]>([]);
+  const [selectedStyle, setSelectedStyle] = useState<StyleHistoryItem | null>(null);
+
+  const loadStyleHistory = useCallback((): StyleHistoryItem[] => {
+    try { return JSON.parse(localStorage.getItem(STYLE_HISTORY_KEY) || '[]'); } catch { return []; }
+  }, []);
+  const saveStyleHistory = useCallback((items: StyleHistoryItem[]) => {
+    try { localStorage.setItem(STYLE_HISTORY_KEY, JSON.stringify(items.slice(0, 20))); } catch { /* ignore */ }
+  }, []);
+
+  // 스타일 업로드 (참조 이미지 → 히스토리에 저장)
+  const handleStyleUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      const item: StyleHistoryItem = {
+        id: `style-${Date.now()}`,
+        name: '업로드 스타일',
+        stylePrompt: 'Copy the exact visual style from the reference image. Match illustration style, colors, layout, typography, and all decorative elements as closely as possible.',
+        thumbnailDataUrl: dataUrl,
+        referenceImageUrl: dataUrl,
+      };
+      const updated = [item, ...styleHistory].slice(0, 20);
+      setStyleHistory(updated);
+      saveStyleHistory(updated);
+      setSelectedStyle(item);
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  }, [styleHistory, saveStyleHistory]);
+
+  const deleteStyleItem = useCallback((id: string) => {
+    const updated = styleHistory.filter(h => h.id !== id);
+    setStyleHistory(updated);
+    saveStyleHistory(updated);
+    if (selectedStyle?.id === id) setSelectedStyle(null);
+  }, [styleHistory, saveStyleHistory, selectedStyle]);
+
   // ── 가격 헬퍼 (OLD parity) ──
   const parseNum = (s: string) => Number(s.replace(/[^0-9]/g, '')) || 0;
   const fmtWon = (s: string) => { const n = parseNum(s); return n > 0 ? n.toLocaleString() + '원' : ''; };
@@ -303,8 +378,38 @@ export default function ImagePage() {
     return p;
   }, [hiringPageCount, hiringPageData, hiringPhotos, customMessage, extraPrompt]);
 
-  // 전용 폼 모드 여부 (렌더용)
-  const hasFormMode = mode === 'template' && (selectedTemplate === 'schedule' || selectedTemplate === 'event' || selectedTemplate === 'doctor' || selectedTemplate === 'notice' || selectedTemplate === 'greeting' || selectedTemplate === 'hiring');
+  // ── caution 전용 프롬프트 빌더 ──
+  const buildCautionPrompt = useCallback((): string => {
+    const title = cautionTitle || `${cautionType} 주의사항`;
+    let p = `병원 ${cautionType} 주의사항 안내 이미지.\n제목: "${title}"\n`;
+    if (cautionItems) {
+      const items = cautionItems.split('\n').filter(Boolean);
+      if (items.length > 0) p += `주의사항 항목:\n${items.map((item, i) => `${i + 1}. ${item}`).join('\n')}\n`;
+    }
+    if (cautionEmergency) p += `응급 연락처: ${cautionEmergency}\n`;
+    p += '항목별 아이콘, 읽기 쉬운 리스트 형태, 깔끔한 의료 안내 디자인, 한국어 텍스트.';
+    if (customMessage) p += `\n추가 문구: "${customMessage}"`;
+    if (extraPrompt) p += `\n${extraPrompt}`;
+    return p;
+  }, [cautionType, cautionTitle, cautionItems, cautionEmergency, customMessage, extraPrompt]);
+
+  // ── pricing 전용 프롬프트 빌더 ──
+  const buildPricingPrompt = useCallback((): string => {
+    const title = pricingTitle || '비급여 진료비 안내';
+    let p = `병원 비급여 진료비 안내 이미지.\n제목: "${title}"\n`;
+    if (pricingItems) {
+      const items = pricingItems.split('\n').filter(Boolean);
+      if (items.length > 0) p += `가격 항목 (표 형태로 배치):\n${items.map(item => `- ${item}`).join('\n')}\n`;
+    }
+    if (pricingNotice) p += `하단 안내: "${pricingNotice}"\n`;
+    p += '깔끔하고 투명한 가격표 디자인, 시술명과 가격이 한눈에 보이는 표 레이아웃, 한국어 텍스트.';
+    if (customMessage) p += `\n추가 문구: "${customMessage}"`;
+    if (extraPrompt) p += `\n${extraPrompt}`;
+    return p;
+  }, [pricingTitle, pricingItems, pricingNotice, customMessage, extraPrompt]);
+
+  // 전용 폼 모드 여부 (렌더용) — 모든 8개 카테고리
+  const hasFormMode = mode === 'template' && selectedTemplate !== null;
 
   const handleDocPhotoUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -331,8 +436,10 @@ export default function ImagePage() {
         if (p.brandColor) setBrandColor(p.brandColor);
         if (p.brandAccent) setBrandAccent(p.brandAccent);
       }
+      // 스타일 히스토리 복원
+      setStyleHistory(loadStyleHistory());
     } catch { /* ignore */ }
-  }, []);
+  }, [loadStyleHistory]);
 
   const saveHospitalInfo = useCallback(() => {
     localStorage.setItem('hospital_info', JSON.stringify({
@@ -488,14 +595,26 @@ export default function ImagePage() {
     const isNoticeMode = mode === 'template' && selectedTemplate === 'notice';
     const isGreetingMode = mode === 'template' && selectedTemplate === 'greeting';
     const isHiringMode = mode === 'template' && selectedTemplate === 'hiring';
-    const hasForm = isScheduleMode || isEventMode || isDoctorMode || isNoticeMode || isGreetingMode || isHiringMode;
-    const effectivePrompt = isScheduleMode ? buildSchedulePrompt()
+    const isCautionMode = mode === 'template' && selectedTemplate === 'caution';
+    const isPricingMode = mode === 'template' && selectedTemplate === 'pricing';
+    const hasForm = isScheduleMode || isEventMode || isDoctorMode || isNoticeMode || isGreetingMode || isHiringMode || isCautionMode || isPricingMode;
+    let effectivePrompt = isScheduleMode ? buildSchedulePrompt()
       : isEventMode ? buildEventPrompt()
       : isDoctorMode ? buildDoctorPrompt()
       : isNoticeMode ? buildNoticePrompt()
       : isGreetingMode ? buildGreetingPrompt()
       : isHiringMode ? buildHiringPrompt()
+      : isCautionMode ? buildCautionPrompt()
+      : isPricingMode ? buildPricingPrompt()
       : prompt.trim();
+
+    // 스타일 히스토리 선택 시 스타일 프롬프트 추가
+    if (selectedStyle && hasForm) {
+      const modeLabel = templateAppMode === 'strict'
+        ? 'STRICTLY copy the exact visual style from the reference image. Match layout, colors, typography, decorations exactly.'
+        : 'Use the reference image as style inspiration. Keep the mood and color palette but interpret freely.';
+      effectivePrompt += `\n[STYLE] ${modeLabel}\nStyle reference: ${selectedStyle.stylePrompt}`;
+    }
 
     if (!effectivePrompt || generating) return;
 
@@ -566,6 +685,8 @@ export default function ImagePage() {
           calendarImage: calendarImage || undefined,
           referenceImage: isDoctorMode && docPhotoBase64 ? docPhotoBase64
             : isHiringMode && hiringPhotos.length > 0 ? hiringPhotos[0]
+            : selectedStyle?.referenceImageUrl
+            ? selectedStyle.referenceImageUrl
             : undefined,
         }),
       });
@@ -615,7 +736,7 @@ export default function ImagePage() {
     } finally {
       setGenerating(false);
     }
-  }, [prompt, aspectRatio, generating, logoEnabled, logoDataUrl, hospitalName, logoPosition, clinicPhone, clinicHours, clinicAddress, brandColor, brandAccent, detectCalendar, getKoreanHolidays2, generateCalendarImage, mode, selectedTemplate, buildSchedulePrompt, buildEventPrompt, buildDoctorPrompt, buildNoticePrompt, buildGreetingPrompt, buildHiringPrompt, schYear, schMonth, docPhotoBase64, hiringPhotos]);
+  }, [prompt, aspectRatio, generating, logoEnabled, logoDataUrl, hospitalName, logoPosition, clinicPhone, clinicHours, clinicAddress, brandColor, brandAccent, detectCalendar, getKoreanHolidays2, generateCalendarImage, mode, selectedTemplate, buildSchedulePrompt, buildEventPrompt, buildDoctorPrompt, buildNoticePrompt, buildGreetingPrompt, buildHiringPrompt, buildCautionPrompt, buildPricingPrompt, schYear, schMonth, docPhotoBase64, hiringPhotos, selectedStyle, templateAppMode]);
 
   const handleDownload = useCallback(() => {
     if (!result) return;
@@ -658,9 +779,7 @@ export default function ImagePage() {
                       onClick={() => {
                         const newSel = selectedTemplate === cat.id ? null : cat.id;
                         setSelectedTemplate(newSel);
-                        // 전용 폼 카테고리는 placeholder 주입 안 함
-                        const formCats = ['schedule', 'event', 'doctor', 'notice', 'greeting', 'hiring'];
-                        if (newSel && !formCats.includes(newSel)) setPrompt(cat.placeholder);
+                        // 모든 카테고리가 전용 폼 — placeholder 주입 안 함
                       }}
                       className={`flex flex-col items-center gap-0.5 p-2 rounded-lg border transition-all text-center ${
                         selectedTemplate === cat.id
@@ -1007,7 +1126,54 @@ export default function ImagePage() {
               </div>
             )}
 
-            {/* ── 공통: 추가 문구 + 추가 프롬프트 (전용 폼 모드) ── */}
+            {/* ══ caution 전용 폼 (OLD parity) ══ */}
+            {mode === 'template' && selectedTemplate === 'caution' && (
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-500 mb-1">주의사항 유형</label>
+                  <div className="flex gap-1.5">
+                    {(['시술 후', '진료 후', '수술 후', '복약', '일반'] as const).map(t => (
+                      <button key={t} type="button" onClick={() => handleCautionTypeChange(t)}
+                        className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${cautionType === t ? 'bg-slate-800 text-white shadow-md' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-500 mb-1">제목 <span className="text-slate-400 font-normal">(자동 생성됨)</span></label>
+                  <input type="text" value={cautionTitle} onChange={e => setCautionTitle(e.target.value)} placeholder={`${cautionType} 주의사항`} className={inputCls} />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-500 mb-1">주의사항 항목 <span className="text-slate-400 font-normal">(줄바꿈으로 구분)</span></label>
+                  <textarea value={cautionItems} onChange={e => setCautionItems(e.target.value)} placeholder={'시술 부위를 혀로 건드리지 마세요\n당일 음주 및 흡연은 피해주세요\n부기나 출혈은 2~3일 내 자연 소실됩니다\n딱딱한 음식은 일주일간 피해주세요'} rows={5} className={`${inputCls} resize-none`} />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-500 mb-1">응급 연락처 <span className="text-slate-400 font-normal">(선택)</span></label>
+                  <input type="text" value={cautionEmergency} onChange={e => setCautionEmergency(e.target.value)} placeholder="이상 증상 시 연락: 02-1234-5678" className={inputCls} />
+                </div>
+              </div>
+            )}
+
+            {/* ══ pricing 전용 폼 (OLD parity) ══ */}
+            {mode === 'template' && selectedTemplate === 'pricing' && (
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-500 mb-1">제목</label>
+                  <input type="text" value={pricingTitle} onChange={e => setPricingTitle(e.target.value)} placeholder="비급여 진료비 안내" className={inputCls} />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-500 mb-1">항목 <span className="text-slate-400 font-normal">(줄바꿈으로 구분, &quot;항목명: 가격&quot; 형식)</span></label>
+                  <textarea value={pricingItems} onChange={e => setPricingItems(e.target.value)} placeholder={'임플란트 (1개): 1,200,000원\n레진 충전: 150,000원\n치아 미백: 300,000원\n교정 상담: 무료'} rows={6} className={`${inputCls} resize-none`} />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-500 mb-1">하단 안내 <span className="text-slate-400 font-normal">(선택)</span></label>
+                  <input type="text" value={pricingNotice} onChange={e => setPricingNotice(e.target.value)} placeholder="상기 금액은 환자 상태에 따라 달라질 수 있습니다." className={inputCls} />
+                </div>
+              </div>
+            )}
+
+            {/* ── 공통: 추가 문구 + 추가 프롬프트 + 스타일 (전용 폼 모드) ── */}
             {hasFormMode && (
               <div className="space-y-3">
                 <div>
@@ -1019,6 +1185,61 @@ export default function ImagePage() {
                     추가 프롬프트 <span className="text-indigo-400 font-normal">(AI에게 자유롭게 지시)</span>
                   </label>
                   <textarea value={extraPrompt} onChange={e => setExtraPrompt(e.target.value)} placeholder={'예: 벚꽃 느낌으로 꾸며줘\n예: 하단에 전화번호 크게 넣어줘'} rows={2} className="w-full px-3 py-2 border border-indigo-200 rounded-lg text-sm outline-none focus:border-indigo-400 resize-none bg-white placeholder:text-indigo-300" />
+                </div>
+
+                {/* 스타일 적용 모드 (OLD parity: strict/inspired) */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-[11px] font-semibold text-slate-500">스타일 적용 모드</label>
+                    <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-0.5">
+                      <button type="button" onClick={() => setTemplateAppMode('strict')}
+                        className={`px-2.5 py-1 rounded-md text-[10px] font-medium transition-all ${templateAppMode === 'strict' ? 'bg-white text-violet-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
+                        그대로
+                      </button>
+                      <button type="button" onClick={() => setTemplateAppMode('inspired')}
+                        className={`px-2.5 py-1 rounded-md text-[10px] font-medium transition-all ${templateAppMode === 'inspired' ? 'bg-white text-violet-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
+                        참고
+                      </button>
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-slate-400">
+                    {templateAppMode === 'strict'
+                      ? '레이아웃·색상·구조를 그대로 복제 — 결과가 참조와 거의 동일'
+                      : '분위기만 참고 — AI가 색상·배치·장식을 자유롭게 재해석'}
+                  </p>
+                </div>
+
+                {/* 내 스타일 히스토리 (OLD parity) */}
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-500 mb-1.5">
+                    내 스타일 {styleHistory.length > 0 && <span className="text-slate-400 font-normal">({styleHistory.length}개)</span>}
+                  </label>
+                  <div className="flex gap-2 overflow-x-auto pb-2">
+                    {/* 스타일 이미지 업로드 */}
+                    <label className="relative flex-shrink-0 w-14 h-14 rounded-xl border-2 border-dashed border-violet-300 bg-violet-50 flex flex-col items-center justify-center cursor-pointer hover:border-violet-500 hover:bg-violet-100 transition-all">
+                      <svg className="w-4 h-4 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                      <span className="text-[7px] text-violet-500 font-bold mt-0.5">업로드</span>
+                      <input type="file" accept="image/*" className="hidden" onChange={handleStyleUpload} />
+                    </label>
+                    {styleHistory.map(h => (
+                      <button key={h.id} type="button" onClick={() => setSelectedStyle(selectedStyle?.id === h.id ? null : h)}
+                        className={`relative flex-shrink-0 w-14 rounded-xl overflow-hidden border-2 transition-all group ${selectedStyle?.id === h.id ? 'border-violet-500 shadow-lg scale-105 ring-2 ring-violet-200' : 'border-slate-200 hover:border-slate-300'}`}>
+                        <img src={h.thumbnailDataUrl} alt={h.name} className="w-14 h-14 object-cover" />
+                        <div className="absolute inset-x-0 bottom-0 bg-black/60 px-1 py-0.5">
+                          <div className="text-[7px] text-white font-medium truncate">{h.name}</div>
+                        </div>
+                        <span onClick={(e) => { e.stopPropagation(); deleteStyleItem(h.id); }} className="absolute top-0.5 right-0.5 w-3.5 h-3.5 bg-red-500/80 text-white rounded-full text-[7px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">x</span>
+                      </button>
+                    ))}
+                  </div>
+                  {selectedStyle && (
+                    <div className="mt-1.5 p-2 bg-violet-50 rounded-lg border border-violet-200">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold text-violet-700">스타일 적용 중: {selectedStyle.name}</span>
+                        <button type="button" onClick={() => setSelectedStyle(null)} className="text-[10px] text-violet-400 hover:text-violet-600">해제</button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
