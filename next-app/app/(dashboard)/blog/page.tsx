@@ -2100,6 +2100,7 @@ ${generatedContent.substring(0, 2000)}
                 <textarea
                   value={customSubheadings}
                   onChange={e => setCustomSubheadings(e.target.value)}
+                  onPaste={e => { e.preventDefault(); const text = e.clipboardData.getData('text/plain'); document.execCommand('insertText', false, text); }}
                   placeholder={"임플란트 수술 과정과 기간\n임플란트 후 관리법\n임플란트 비용 비교"}
                   className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-xs focus:border-blue-400 outline-none resize-none placeholder:text-slate-300"
                   rows={3}
@@ -2134,6 +2135,7 @@ ${generatedContent.substring(0, 2000)}
                       )}
                     </div>
                     <textarea value={customPrompt} onChange={(e) => setCustomPrompt(e.target.value)}
+                      onPaste={e => { e.preventDefault(); const text = e.clipboardData.getData('text/plain'); document.execCommand('insertText', false, text); }}
                       placeholder="파스텔톤, 손그림 느낌의 일러스트, 부드러운 선..."
                       className="w-full p-2 bg-slate-50 border border-slate-200 rounded text-xs focus:border-blue-400 outline-none resize-none" rows={2}
                     />
