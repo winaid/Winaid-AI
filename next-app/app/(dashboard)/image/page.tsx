@@ -10,6 +10,7 @@ import { savePost } from '../../../lib/postStorage';
 import { supabase } from '../../../lib/supabase';
 import { PromptChat } from '../../../components/PromptChat';
 import { CATEGORY_TEMPLATES, type CategoryTemplate } from '../../../lib/categoryTemplates';
+import { TemplateSVGPreview } from '../../../components/TemplatePreviews';
 
 type AspectRatio = '1:1' | '16:9' | '9:16' | '4:3';
 type DayMark = 'closed' | 'shortened' | 'vacation';
@@ -45,7 +46,8 @@ export default function ImagePage() {
   const [aspectRatio, setAspectRatio] = useState<AspectRatio>('1:1');
   const [generating, setGenerating] = useState(false);
   const [progress, setProgress] = useState('');
-  const [result, setResult] = useState<string | null>(null);
+  const [resultImages, setResultImages] = useState<string[]>([]);
+  const [currentPage, setCurrentPage] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [generatingStep, setGeneratingStep] = useState(0);
   const [showRegenMenu, setShowRegenMenu] = useState(false);
@@ -695,7 +697,6 @@ export default function ImagePage() {
 
     setGenerating(true);
     setError(null);
-    setResult(null);
     setProgress('이미지 생성 중...');
     setGeneratingStep(0);
     setShowRegenMenu(false);
@@ -777,7 +778,7 @@ export default function ImagePage() {
       }
 
       if (data.imageDataUrl) {
-        setResult(data.imageDataUrl);
+        setResultImages(prev => { const next = [...prev, data.imageDataUrl]; setCurrentPage(next.length - 1); return next; });
         setProgress('');
 
         // 이미지 생성 기록 저장 (generated_posts)
@@ -818,13 +819,26 @@ export default function ImagePage() {
     }
   }, [prompt, aspectRatio, generating, logoEnabled, logoDataUrl, hospitalName, logoPosition, clinicPhone, clinicHours, clinicAddress, brandColor, brandAccent, detectCalendar, getKoreanHolidays2, generateCalendarImage, mode, selectedTemplate, buildSchedulePrompt, buildEventPrompt, buildDoctorPrompt, buildNoticePrompt, buildGreetingPrompt, buildHiringPrompt, buildCautionPrompt, buildPricingPrompt, schYear, schMonth, docPhotoBase64, hiringPhotos, activeStylePrompt, selectedUploadedStyle, templateAppMode]);
 
-  const handleDownload = useCallback(() => {
-    if (!result) return;
-    const link = document.createElement('a');
-    link.href = result;
-    link.download = `hospital-image-${Date.now()}.png`;
-    link.click();
-  }, [result]);
+  const handleDownload = useCallback((pageIndex?: number) => {
+    if (resultImages.length === 0) return;
+    if (pageIndex !== undefined) {
+      // 단일 다운로드
+      const link = document.createElement('a');
+      link.href = resultImages[pageIndex];
+      link.download = `hospital-image-${pageIndex + 1}-${Date.now()}.png`;
+      link.click();
+    } else {
+      // 전체 다운로드
+      resultImages.forEach((img, i) => {
+        setTimeout(() => {
+          const link = document.createElement('a');
+          link.href = img;
+          link.download = `hospital-image-${i + 1}-${Date.now()}.png`;
+          link.click();
+        }, i * 300);
+      });
+    }
+  }, [resultImages]);
 
   return (
     <div className="flex flex-col lg:flex-row gap-5 lg:items-start w-full">
@@ -1453,11 +1467,10 @@ export default function ImagePage() {
                             }`}
                             style={isSelected ? { '--tw-ring-color': tmpl.color } as React.CSSProperties : undefined}
                           >
-                            {/* 그라데이션 미리보기 영역 */}
-                            <div className="relative w-full overflow-hidden" style={{ aspectRatio: '3/4', background: `linear-gradient(160deg, ${tmpl.bg} 0%, white 80%)` }}>
-                              {/* 컬러 바 */}
-                              <div className="absolute top-0 inset-x-0 h-8" style={{ background: `linear-gradient(135deg, ${tmpl.color}, ${tmpl.accent})` }} />
-                              {/* 레이아웃 힌트 뱃지 */}
+                            {/* OLD parity: TemplateSVGPreview로 카테고리별 레이아웃 프리뷰 */}
+                            <div className="relative w-full overflow-hidden" style={{ aspectRatio: '3/4', background: tmpl.previewImage ? '#f8fafc' : `linear-gradient(160deg, ${tmpl.bg} 0%, white 80%)` }}>
+                              <TemplateSVGPreview template={tmpl} category={selectedTemplate || 'event'} hospitalName={hospitalName || 'OO병원'} />
+                              {/* 스타일 태그 뱃지 */}
                               <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-md text-[8px] font-bold shadow-sm" style={{ backgroundColor: tmpl.color, color: 'white' }}>
                                 {tmpl.layoutHint === 'price' || tmpl.layoutHint === 'table' ? '가격형'
                                   : tmpl.layoutHint === 'elegant' || tmpl.layoutHint === 'luxury' ? '프리미엄'
@@ -1487,12 +1500,6 @@ export default function ImagePage() {
                                   <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
                                 </div>
                               )}
-                              {/* 가운데 텍스트 미리보기 */}
-                              <div className="absolute inset-0 flex items-center justify-center p-3 pt-10">
-                                <div className="text-center">
-                                  <div className="text-[10px] font-bold" style={{ color: tmpl.color }}>{tmpl.name}</div>
-                                </div>
-                              </div>
                             </div>
                             {/* 카드 하단 name/desc */}
                             <div className="px-1.5 py-1.5 bg-white">
@@ -1705,13 +1712,34 @@ export default function ImagePage() {
               </div>
             </div>
           </div>
-        ) : result ? (
-          /* 결과 표시 (OLD parity: 이미지 + 버튼 그룹 + 재생성 메뉴 + 편집 도구) */
+        ) : resultImages.length > 0 ? (
+          /* 결과 표시 (OLD parity: 다중 페이지 + 버튼 그룹 + 재생성 + 편집) */
           <div className="space-y-4 w-full flex flex-col items-center">
-            <img src={result} alt="생성된 이미지" className="max-w-full max-h-[65vh] rounded-2xl shadow-2xl" draggable={false} />
+            {/* 다중 페이지 네비게이션 (OLD parity) */}
+            {resultImages.length > 1 && (
+              <div className="flex items-center gap-3">
+                <button onClick={() => setCurrentPage(Math.max(0, currentPage - 1))} disabled={currentPage === 0} className="w-8 h-8 rounded-full bg-slate-200 hover:bg-slate-300 disabled:opacity-30 flex items-center justify-center transition-colors">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+                </button>
+                <div className="flex gap-1.5">
+                  {resultImages.map((_, i) => (
+                    <button key={i} onClick={() => setCurrentPage(i)} className={`w-8 h-8 rounded-lg text-xs font-bold transition-all ${currentPage === i ? 'bg-slate-800 text-white shadow-md' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>{i + 1}</button>
+                  ))}
+                </div>
+                <button onClick={() => setCurrentPage(Math.min(resultImages.length - 1, currentPage + 1))} disabled={currentPage === resultImages.length - 1} className="w-8 h-8 rounded-full bg-slate-200 hover:bg-slate-300 disabled:opacity-30 flex items-center justify-center transition-colors">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                </button>
+              </div>
+            )}
+            <img src={resultImages[currentPage]} alt={`생성된 이미지 ${currentPage + 1}`} className="max-w-full max-h-[65vh] rounded-2xl shadow-2xl" draggable={false} />
             {/* 버튼 그룹 (OLD parity) */}
             <div className="flex gap-3 flex-wrap justify-center">
-              <button onClick={handleDownload} className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-sm transition-colors shadow-lg">다운로드</button>
+              <button onClick={() => handleDownload(currentPage)} className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-sm transition-colors shadow-lg">
+                {resultImages.length > 1 ? `${currentPage + 1}장 다운로드` : '다운로드'}
+              </button>
+              {resultImages.length > 1 && (
+                <button onClick={() => handleDownload()} className="px-6 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-bold text-sm transition-colors">전체 다운로드</button>
+              )}
               {/* 다시 생성 드롭다운 (OLD parity) */}
               <div className="relative">
                 <button onClick={() => setShowRegenMenu(!showRegenMenu)} disabled={generating}
