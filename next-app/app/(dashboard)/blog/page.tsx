@@ -747,10 +747,10 @@ ${categoryKeywords}
       const { systemInstruction, prompt } = buildBlogPrompt(request);
       console.info(`[BLOG] 프롬프트 조립 완료 — system: ${systemInstruction.length}자, prompt: ${prompt.length}자`);
 
-      // ── 경쟁 블로그 분석 (old legacyBlogGeneration.ts line 674-724 동일) ──
-      let competitorInstruction = '';
-      if (keywords.trim()) {
-        console.info(`[BLOG] 경쟁 블로그 분석 시작 — 키워드: "${keywords.trim()}"`);
+      // ── 병렬 실행: 경쟁 블로그 분석 + 말투 로드 (서로 독립적) ──
+      console.info(`[BLOG] 경쟁 분석 + 말투 로드 병렬 시작`);
+
+      const competitorPromise = keywords.trim() ? (async () => {
         try {
           const competitorRes = await fetch('/api/gemini', {
             method: 'POST',
@@ -776,19 +776,18 @@ ${categoryKeywords}
               timeout: 15000,
             }),
           });
-
-          if (competitorRes.ok) {
-            const cData = await competitorRes.json() as { text?: string };
-            if (cData.text) {
-              let cText = cData.text;
-              const cJsonMatch = cText.match(/```(?:json)?\s*([\s\S]*?)```/);
-              if (cJsonMatch) cText = cJsonMatch[1];
-              const c = JSON.parse(cText.trim()) as {
-                title?: string; charCount?: number; subtitleCount?: number;
-                subtitles?: string[]; imageCount?: number; keyAngles?: string[];
-              };
-              const subs = c.subtitles || [];
-              competitorInstruction = `
+          if (!competitorRes.ok) return '';
+          const cData = await competitorRes.json() as { text?: string };
+          if (!cData.text) return '';
+          let cText = cData.text;
+          const cJsonMatch = cText.match(/```(?:json)?\s*([\s\S]*?)```/);
+          if (cJsonMatch) cText = cJsonMatch[1];
+          const c = JSON.parse(cText.trim()) as {
+            title?: string; charCount?: number; subtitleCount?: number;
+            subtitles?: string[]; imageCount?: number; keyAngles?: string[];
+          };
+          const subs = c.subtitles || [];
+          return `
 [경쟁 블로그 분석 결과 - 이 글보다 상위에 노출되어야 함]
 현재 "${keywords.trim()}" 통합탭 상위 블로그 예상 구조:
 - 제목: ${c.title || '미분석'}
@@ -811,36 +810,35 @@ ${subs.length > 0 ? `경쟁 글 소제목: ${subs.join(' / ')}` : ''}
 - 경쟁 글이 나열형이면 → 우리는 "독자 상황별 분기"나 "흔한 오해" 앵글로 차별화
 - 경쟁 글이 감성 위주면 → 우리는 구체적 숫자/메커니즘으로 차별화
 `;
-            }
-          }
-        } catch (compErr) {
-          // 경쟁 분석 실패해도 생성은 계속 진행
-          console.warn(`[BLOG] 경쟁 분석 실패 (무시):`, compErr);
+        } catch (e) {
+          console.warn(`[BLOG] 경쟁 분석 실패 (무시):`, e);
+          return '';
         }
-      }
+      })() : Promise.resolve('');
 
-      console.info(`[BLOG] 경쟁 분석 결과: ${competitorInstruction ? '성공 (' + competitorInstruction.length + '자)' : '없음/스킵'}`);
+      const stylePromise = (async () => {
+        if (learnedStyleId) {
+          const learnedStyle = getStyleById(learnedStyleId);
+          if (learnedStyle) {
+            return `\n\n[🎓🎓🎓 학습된 말투 적용 - 최우선 적용! 🎓🎓🎓]\n${getStylePromptForGeneration(learnedStyle)}\n\n⚠️ 위 학습된 말투를 반드시 적용하세요!\n- 문장 끝 패턴을 정확히 따라하세요\n- 자주 사용하는 표현을 자연스럽게 활용하세요\n- 전체적인 어조와 분위기를 일관되게 유지하세요`;
+          }
+        } else if (hospitalName) {
+          try {
+            const sp = await getHospitalStylePrompt(hospitalName);
+            if (sp) return `\n\n[병원 블로그 학습 말투 - 반드시 적용]\n${sp}`;
+          } catch { /* 프로파일 없으면 기본 */ }
+        }
+        return '';
+      })();
 
-      // 프롬프트 조립: 기본 + 경쟁 분석 + 말투
+      // 두 작업 동시 완료 대기
+      const [competitorInstruction, styleInstruction] = await Promise.all([competitorPromise, stylePromise]);
+
+      console.info(`[BLOG] 병렬 완료 — 경쟁: ${competitorInstruction ? competitorInstruction.length + '자' : '없음'}, 말투: ${styleInstruction ? styleInstruction.length + '자' : '없음'}`);
+
       let finalPrompt = prompt;
-      if (competitorInstruction) {
-        finalPrompt += `\n\n${competitorInstruction}`;
-      }
-
-      // 말투 주입 우선순위 (old 동일): 1) 수동 학습(localStorage) → 2) 병원 블로그 학습(Supabase)
-      if (learnedStyleId) {
-        const learnedStyle = getStyleById(learnedStyleId);
-        if (learnedStyle) {
-          finalPrompt += `\n\n[🎓🎓🎓 학습된 말투 적용 - 최우선 적용! 🎓🎓🎓]\n${getStylePromptForGeneration(learnedStyle)}\n\n⚠️ 위 학습된 말투를 반드시 적용하세요!\n- 문장 끝 패턴을 정확히 따라하세요\n- 자주 사용하는 표현을 자연스럽게 활용하세요\n- 전체적인 어조와 분위기를 일관되게 유지하세요`;
-        }
-      } else if (hospitalName) {
-        try {
-          const stylePrompt = await getHospitalStylePrompt(hospitalName);
-          if (stylePrompt) {
-            finalPrompt += `\n\n[병원 블로그 학습 말투 - 반드시 적용]\n${stylePrompt}`;
-          }
-        } catch { /* 프로파일 없으면 기본 동작 */ }
-      }
+      if (competitorInstruction) finalPrompt += `\n\n${competitorInstruction}`;
+      if (styleInstruction) finalPrompt += styleInstruction;
 
       console.info(`[BLOG] 최종 프롬프트 길이: ${finalPrompt.length}자 (system: ${systemInstruction.length}자)`);
       console.info(`[BLOG] Gemini 호출 시작 — model=gemini-3.1-pro-preview, temp=0.85`);

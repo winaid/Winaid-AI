@@ -122,7 +122,7 @@ interface WritingStyleLearnerProps {
   contentType?: 'blog' | 'press_release';
 }
 
-type InputMethod = 'text' | 'image' | 'file';
+type InputMethod = 'text' | 'image' | 'file' | 'url';
 
 export default function WritingStyleLearner({
   onStyleSelect,
@@ -146,6 +146,7 @@ export default function WritingStyleLearner({
   const [savedStyles, setSavedStyles] = useState<LearnedWritingStyle[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [extractedText, setExtractedText] = useState('');
+  const [urlInput, setUrlInput] = useState('');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -244,6 +245,52 @@ export default function WritingStyleLearner({
     } finally {
       setIsAnalyzing(false);
       setAnalyzeProgress('');
+    }
+  };
+
+  // ── 네이버 블로그 URL 크롤링 ──
+  const handleUrlCrawl = async () => {
+    if (!urlInput.trim()) { setError('URL을 입력해주세요.'); return; }
+    setError(null);
+    setIsAnalyzing(true);
+    setAnalyzeProgress('블로그 글 수집 중...');
+    try {
+      const isBlog = /blog\.naver\.com/i.test(urlInput);
+      let content = '';
+      if (isBlog) {
+        const res = await fetch('/api/naver/crawl-hospital-blog', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ blogUrl: urlInput.trim(), maxPosts: 5 }),
+        });
+        if (!res.ok) throw new Error('크롤링 실패');
+        const data = (await res.json()) as { posts?: { content?: string }[] };
+        content = (data.posts || [])
+          .map(p => (p.content || '').trim())
+          .filter(t => t.length > 30)
+          .join('\n\n---\n\n')
+          .slice(0, 12000);
+      } else {
+        const res = await fetch('/api/crawler', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: urlInput.trim() }),
+        });
+        if (!res.ok) throw new Error('크롤링 실패');
+        const data = (await res.json()) as { content?: string };
+        content = (data.content || '').trim().slice(0, 12000);
+      }
+      if (content.length < 100) {
+        setError('크롤링된 텍스트가 너무 짧습니다. 다른 URL을 시도해주세요.');
+      } else {
+        setExtractedText(content);
+        setTextInput(content);
+        setAnalyzeProgress(`${isBlog ? '블로그 글' : '페이지'} 수집 완료! (${content.length}자)`);
+      }
+    } catch {
+      setError('URL 크롤링 실패. URL을 확인해주세요.');
+    } finally {
+      setIsAnalyzing(false);
     }
   };
 
@@ -462,11 +509,11 @@ ${textInput.substring(0, 5000)}
 
             {/* 입력 방식 선택 */}
             <div className="flex gap-2 mb-4">
+              <button type="button" onClick={() => setInputMethod('url')} className={methodBtnCls(inputMethod === 'url')}>
+                <span>🔗</span> <span className="leading-tight">블로그<br/>URL</span>
+              </button>
               <button type="button" onClick={() => setInputMethod('text')} className={methodBtnCls(inputMethod === 'text')}>
                 <span>✏️</span> <span className="leading-tight">직접<br/>입력</span>
-              </button>
-              <button type="button" onClick={() => setInputMethod('image')} className={methodBtnCls(inputMethod === 'image')}>
-                <span>📷</span> 스크린샷
               </button>
               <button type="button" onClick={() => setInputMethod('file')} className={methodBtnCls(inputMethod === 'file')}>
                 <span>📄</span> 파일
@@ -483,32 +530,30 @@ ${textInput.substring(0, 5000)}
             />
 
             {/* 입력 방식별 UI */}
-            {inputMethod === 'text' && (
-              <textarea
-                value={textInput}
-                onChange={(e) => setTextInput(e.target.value)}
-                placeholder={contentExample}
-                className={`${inputFieldCls} resize-none`}
-                rows={6}
-              />
-            )}
-
-            {inputMethod === 'image' && (
+            {inputMethod === 'url' && (
               <div className="space-y-3">
-                <div
-                  onClick={() => imageInputRef.current?.click()}
-                  className="border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all border-slate-300 hover:border-violet-400 hover:bg-violet-50"
-                >
-                  <span className="text-4xl mb-2 block">📷</span>
-                  <p className="text-sm font-bold text-slate-600">스크린샷 이미지 업로드</p>
-                  <p className="text-[11px] mt-1 text-slate-400">
-                    PNG, JPG, WEBP 지원 · {isPress ? '보도자료' : '블로그'} 캡쳐 이미지에서 텍스트 추출
-                  </p>
+                <div className="flex gap-2">
+                  <input
+                    type="url"
+                    value={urlInput}
+                    onChange={e => setUrlInput(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') handleUrlCrawl(); }}
+                    placeholder="https://blog.naver.com/병원아이디"
+                    className={`${inputFieldCls} flex-1`}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleUrlCrawl}
+                    disabled={isAnalyzing || !urlInput.trim()}
+                    className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-bold hover:bg-emerald-700 disabled:opacity-40 whitespace-nowrap"
+                  >
+                    {isAnalyzing ? '수집 중...' : '크롤링'}
+                  </button>
                 </div>
-                <input ref={imageInputRef} type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+                <p className="text-[11px] text-slate-400">네이버 블로그 URL을 입력하면 최근 글 5개를 자동으로 수집합니다.</p>
                 {extractedText && (
                   <div className="p-3 rounded-xl bg-green-50 border border-green-200">
-                    <p className="text-xs font-bold mb-2 text-green-600">✅ 추출된 텍스트:</p>
+                    <p className="text-xs font-bold mb-2 text-green-600">✅ 수집된 텍스트 ({extractedText.length}자)</p>
                     <textarea
                       value={textInput}
                       onChange={(e) => setTextInput(e.target.value)}
@@ -518,6 +563,16 @@ ${textInput.substring(0, 5000)}
                   </div>
                 )}
               </div>
+            )}
+
+            {inputMethod === 'text' && (
+              <textarea
+                value={textInput}
+                onChange={(e) => setTextInput(e.target.value)}
+                placeholder={contentExample}
+                className={`${inputFieldCls} resize-none`}
+                rows={6}
+              />
             )}
 
             {inputMethod === 'file' && (
