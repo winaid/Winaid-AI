@@ -20,7 +20,85 @@ export interface KeywordAnalysisResult {
   apiErrors?: string[];
 }
 
+export interface KeywordRankResult {
+  keyword: string;
+  isRanked: boolean;      // 상위 10에 노출 여부
+  rank?: number;          // 몇 위인지 (1-based)
+  matchedTitle?: string;  // 매칭된 블로그 제목
+}
+
 export const MAX_KEYWORDS = 100;
+
+// ── 상위권 체크 ──
+
+/**
+ * 키워드별 네이버 블로그 검색 상위 10에 해당 병원 블로그가 있는지 체크
+ * blogIds: 병원의 네이버 블로그 ID 목록 (예: ['x577wqy3', 'ekttwj8518'])
+ */
+export async function checkKeywordRankings(
+  keywords: string[],
+  blogIds: string[],
+  onProgress?: (msg: string) => void,
+): Promise<KeywordRankResult[]> {
+  const results: KeywordRankResult[] = [];
+  const blogIdSet = new Set(blogIds.map(id => id.toLowerCase()));
+
+  // 3개씩 배치 (rate limit 방지)
+  for (let i = 0; i < keywords.length; i += 3) {
+    const batch = keywords.slice(i, i + 3);
+    onProgress?.(`상위권 체크 중... (${Math.min(i + 3, keywords.length)}/${keywords.length})`);
+
+    const batchResults = await Promise.all(
+      batch.map(async (keyword): Promise<KeywordRankResult> => {
+        try {
+          const res = await fetch('/api/naver/search', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query: keyword, display: 10 }),
+          });
+          if (!res.ok) return { keyword, isRanked: false };
+
+          const data = (await res.json()) as {
+            items?: Array<{ link?: string; title?: string; bloggername?: string }>;
+          };
+
+          const items = data.items || [];
+          for (let rank = 0; rank < items.length; rank++) {
+            const item = items[rank];
+            const link = item.link || '';
+            // 블로그 URL에서 blogId 추출
+            const blogIdMatch = link.match(/blog\.naver\.com\/([^/?#]+)/);
+            if (blogIdMatch && blogIdSet.has(blogIdMatch[1].toLowerCase())) {
+              const cleanTitle = (item.title || '')
+                .replace(/<[^>]+>/g, '')
+                .replace(/&[a-z]+;/g, ' ')
+                .trim();
+              return {
+                keyword,
+                isRanked: true,
+                rank: rank + 1,
+                matchedTitle: cleanTitle,
+              };
+            }
+          }
+          return { keyword, isRanked: false };
+        } catch {
+          return { keyword, isRanked: false };
+        }
+      }),
+    );
+
+    results.push(...batchResults);
+
+    // 배치 간 딜레이
+    if (i + 3 < keywords.length) {
+      await new Promise(r => setTimeout(r, 200));
+    }
+  }
+
+  onProgress?.(`상위권 체크 완료 (${results.filter(r => r.isRanked).length}개 노출 중)`);
+  return results;
+}
 
 // ── 수도권 판별 ──
 

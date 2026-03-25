@@ -14,7 +14,7 @@ import WritingStyleLearner, { getStyleById, getStylePromptForGeneration } from '
 import type { BlogSection } from '../../../lib/types';
 import { parseBlogSections, replaceSectionHtml } from '../../../lib/blogSectionParser';
 import { downloadWord, downloadPDF } from '../../../lib/blogExport';
-import { analyzeHospitalKeywords, loadMoreKeywords, MAX_KEYWORDS, type KeywordStat } from '../../../lib/keywordAnalysisService';
+import { analyzeHospitalKeywords, loadMoreKeywords, checkKeywordRankings, MAX_KEYWORDS, type KeywordStat, type KeywordRankResult } from '../../../lib/keywordAnalysisService';
 
 // ── old GenerateWorkspace.tsx 동일: 블로그 displayStage → 단계 정보 ──
 const BLOG_STAGES: Record<number, { icon: string; label: string; defaultMsg: string; hint: string }> = {
@@ -109,6 +109,9 @@ function BlogForm() {
   const [keywordSortBy, setKeywordSortBy] = useState<'volume' | 'blog' | 'saturation'>('volume');
   const [keywordSearch, setKeywordSearch] = useState('');
   const [keywordMinVolume, setKeywordMinVolume] = useState(0);
+  const [isCheckingRanks, setIsCheckingRanks] = useState(false);
+  const [rankResults, setRankResults] = useState<Map<string, KeywordRankResult>>(new Map());
+  const [hideRanked, setHideRanked] = useState(false);
 
   // localStorage에서 커스텀 프롬프트 복원 (old 동일)
   useEffect(() => {
@@ -220,6 +223,41 @@ function BlogForm() {
     } finally {
       setIsLoadingMoreKeywords(false);
       setTimeout(() => setKeywordProgress(''), 2000);
+    }
+  };
+
+  // ── 상위권 체크 ──
+  const handleCheckRanks = async () => {
+    if (keywordStats.length === 0 || !hospitalName) return;
+    // 병원의 블로그 ID 가져오기
+    const team = TEAM_DATA.find(t => t.id === selectedTeam);
+    const hospital = team?.hospitals.find(h => h.name.replace(/ \(.*\)$/, '') === hospitalName);
+    const blogUrls = hospital?.naverBlogUrls || [];
+    const blogIds = blogUrls
+      .map(url => url.match(/blog\.naver\.com\/([^/?#]+)/)?.[1])
+      .filter((id): id is string => !!id);
+
+    if (blogIds.length === 0) {
+      setKeywordProgress('블로그 URL이 등록되지 않은 병원입니다.');
+      setTimeout(() => setKeywordProgress(''), 3000);
+      return;
+    }
+
+    setIsCheckingRanks(true);
+    try {
+      const results = await checkKeywordRankings(
+        keywordStats.map(s => s.keyword),
+        blogIds,
+        (msg) => setKeywordProgress(msg),
+      );
+      const map = new Map<string, KeywordRankResult>();
+      for (const r of results) map.set(r.keyword, r);
+      setRankResults(map);
+    } catch (e) {
+      console.error('상위권 체크 실패:', e);
+    } finally {
+      setIsCheckingRanks(false);
+      setTimeout(() => setKeywordProgress(''), 3000);
     }
   };
 
@@ -1626,6 +1664,14 @@ ${generatedContent.substring(0, 2000)}
                     placeholder="키워드 검색..."
                     className="flex-1 px-2.5 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:border-blue-400 placeholder:text-slate-300"
                   />
+                  {/* 노출 중 숨기기 토글 (상위권 체크 완료 시만) */}
+                  {rankResults.size > 0 && (
+                    <button type="button" onClick={() => setHideRanked(!hideRanked)}
+                      className={`px-2 py-1.5 text-[10px] font-semibold rounded-lg border transition-all whitespace-nowrap ${hideRanked ? 'bg-emerald-50 border-emerald-300 text-emerald-700' : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300'}`}
+                    >
+                      {hideRanked ? '✅ 노출 중 숨김' : '노출 중 포함'}
+                    </button>
+                  )}
                   <div className="flex items-center gap-1.5">
                     <span className="text-[10px] text-slate-400 whitespace-nowrap">최소</span>
                     <select
@@ -1659,6 +1705,7 @@ ${generatedContent.substring(0, 2000)}
                           <th className="text-right px-3 py-2 font-semibold">월간 검색량</th>
                           <th className="text-right px-3 py-2 font-semibold">발행량</th>
                           <th className="text-right px-3 py-2 font-semibold">포화도</th>
+                          {rankResults.size > 0 && <th className="text-center px-2 py-2 font-semibold">상위권</th>}
                         </tr>
                       </thead>
                       <tbody>
@@ -1666,6 +1713,7 @@ ${generatedContent.substring(0, 2000)}
                           .filter(s => {
                             if (keywordMinVolume > 0 && s.monthlySearchVolume < keywordMinVolume) return false;
                             if (keywordSearch && !s.keyword.includes(keywordSearch.trim())) return false;
+                            if (hideRanked && rankResults.get(s.keyword)?.isRanked) return false;
                             return true;
                           })
                           .sort((a, b) => {
@@ -1687,25 +1735,43 @@ ${generatedContent.substring(0, 2000)}
                                   {stat.saturation?.toFixed(1) || '0.0'}
                                 </span>
                               </td>
+                              {rankResults.size > 0 && (
+                                <td className="px-2 py-2 text-center">
+                                  {(() => {
+                                    const r = rankResults.get(stat.keyword);
+                                    if (!r) return <span className="text-slate-300">-</span>;
+                                    if (r.isRanked) return <span className="text-[10px] font-bold text-emerald-600" title={r.matchedTitle || ''}>{r.rank}위 ✅</span>;
+                                    return <span className="text-[10px] text-slate-400">미노출</span>;
+                                  })()}
+                                </td>
+                              )}
                             </tr>
                           ))}
                       </tbody>
                     </table>
                   </div>
-                  {/* 더보기 버튼 */}
-                  {keywordStats.length < MAX_KEYWORDS && (
-                    <div className="px-3 py-2 border-t border-slate-100">
+                  {/* 더보기 + 상위권 체크 버튼 */}
+                  <div className="px-3 py-2 border-t border-slate-100 flex gap-2">
+                    {keywordStats.length < MAX_KEYWORDS && (
                       <button type="button" onClick={handleLoadMoreKeywords} disabled={isLoadingMoreKeywords}
-                        className="w-full py-1.5 text-xs font-semibold text-blue-600 hover:bg-blue-50 rounded transition-all disabled:opacity-50 flex items-center justify-center gap-1">
+                        className="flex-1 py-1.5 text-xs font-semibold text-blue-600 hover:bg-blue-50 rounded transition-all disabled:opacity-50 flex items-center justify-center gap-1">
                         {isLoadingMoreKeywords ? (
-                          <><div className="w-3 h-3 border-2 border-blue-300 border-t-blue-600 rounded-full animate-spin" />추가 로딩 중...</>
+                          <><div className="w-3 h-3 border-2 border-blue-300 border-t-blue-600 rounded-full animate-spin" />로딩 중...</>
                         ) : (
                           <>더보기 ({keywordStats.length}/{MAX_KEYWORDS})</>
                         )}
                       </button>
-                      {keywordProgress && <p className="text-[10px] text-slate-400 text-center mt-1">{keywordProgress}</p>}
-                    </div>
-                  )}
+                    )}
+                    <button type="button" onClick={handleCheckRanks} disabled={isCheckingRanks || keywordStats.length === 0}
+                      className="flex-1 py-1.5 text-xs font-semibold text-emerald-600 hover:bg-emerald-50 rounded border border-emerald-200 transition-all disabled:opacity-50 flex items-center justify-center gap-1">
+                      {isCheckingRanks ? (
+                        <><div className="w-3 h-3 border-2 border-emerald-300 border-t-emerald-600 rounded-full animate-spin" />체크 중...</>
+                      ) : (
+                        <>🔍 상위권 체크</>
+                      )}
+                    </button>
+                  </div>
+                  {keywordProgress && <p className="text-[10px] text-slate-400 text-center px-3 pb-2">{keywordProgress}</p>}
                   {/* AI 블루오션 분석 결과 */}
                   {keywordAiRec && (
                     <div className="px-3 py-3 border-t border-slate-100 bg-blue-50/50">
