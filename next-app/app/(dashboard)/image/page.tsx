@@ -13,15 +13,16 @@ import { CATEGORY_TEMPLATES, type CategoryTemplate } from '../../../lib/category
 import { TemplateSVGPreview } from '../../../components/TemplatePreviews';
 import { CalendarThemePreview } from '../../../components/CalendarPreviews';
 
-type AspectRatio = '1:1' | '16:9' | '9:16' | '4:3';
+type AspectRatio = '1:1' | '16:9' | '3:4' | '9:16' | 'auto';
 type DayMark = 'closed' | 'shortened' | 'vacation';
 type ScheduleLayout = 'full_calendar' | 'week' | 'highlight';
 
-const ASPECT_RATIOS: { value: AspectRatio; label: string; icon: string }[] = [
-  { value: '1:1', label: '정사각형', icon: '⬜' },
-  { value: '16:9', label: '가로형', icon: '🖥️' },
-  { value: '9:16', label: '세로형', icon: '📱' },
-  { value: '4:3', label: '4:3', icon: '🖼️' },
+const ASPECT_RATIOS: { value: AspectRatio; label: string; icon: string; desc: string }[] = [
+  { value: '1:1', label: '1080x1080', icon: '⬜', desc: '인스타 피드' },
+  { value: '16:9', label: '1920x1080', icon: '🖥️', desc: '가로형 배너' },
+  { value: '3:4', label: '1080x1440', icon: '📋', desc: '3:4 세로' },
+  { value: '9:16', label: '1080x1920', icon: '📱', desc: '9:16 세로' },
+  { value: 'auto', label: '자동', icon: '✨', desc: '콘텐츠 맞춤' },
 ];
 
 const LOGO_STORAGE_KEY = 'hospital-logo-dataurl';
@@ -1568,15 +1569,16 @@ export default function ImagePage() {
             <PromptChat onApplyPrompt={(p) => setPrompt(p)} disabled={generating} />
             </>)}
 
-            {/* 이미지 사이즈 (OLD 위치: 추가 프롬프트 아래) */}
+            {/* 이미지 사이즈 (OLD parity: 5열 그리드, 아이콘+라벨+desc) */}
             <div>
               <label className="block text-xs font-semibold text-slate-600 mb-2">이미지 사이즈</label>
-              <div className="grid grid-cols-4 gap-1.5">
+              <div className="grid grid-cols-5 gap-1.5">
                 {ASPECT_RATIOS.map((r) => (
                   <button key={r.value} onClick={() => setAspectRatio(r.value)} disabled={generating}
                     className={`py-2 px-1 rounded-xl text-center transition-all ${aspectRatio === r.value ? 'bg-slate-800 text-white shadow-md' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>
                     <div className="text-sm leading-none">{r.icon}</div>
                     <div className="text-[10px] font-bold mt-1 leading-tight">{r.label}</div>
+                    <div className={`text-[8px] mt-0.5 ${aspectRatio === r.value ? 'text-slate-300' : 'text-slate-400'}`}>{r.desc}</div>
                   </button>
                 ))}
               </div>
