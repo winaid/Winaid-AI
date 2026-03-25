@@ -74,6 +74,30 @@ export default function ImagePage() {
   const [shortenedHours, setShortenedHours] = useState<Map<number, string>>(new Map());
   const [vacationReasons, setVacationReasons] = useState<Map<number, string>>(new Map());
   const [markMode, setMarkMode] = useState<DayMark>('closed');
+  const [calendarTheme, setCalendarTheme] = useState<string>('autumn');
+
+  // ── 달력 테마 옵션 (OLD parity: CALENDAR_THEME_OPTIONS 12종) ──
+  const CALENDAR_THEME_OPTIONS: { value: string; label: string; emoji: string; desc: string; group: string; groupColor: string }[] = [
+    { value: 'autumn', label: '실무 스프레드시트', emoji: '📊', desc: 'zebra 격자 + 슬레이트 헤더', group: '실무', groupColor: '#334155' },
+    { value: 'korean_traditional', label: '한방 전통', emoji: '🏛️', desc: '기와 문양 + 한지 프레임', group: '전통', groupColor: '#92400e' },
+    { value: 'winter', label: '딥블루 프로스트', emoji: '❄️', desc: '딥블루 그라데이션 + 프로스트', group: '프리미엄', groupColor: '#0c4a6e' },
+    { value: 'cherry_blossom', label: '블러시 로즈', emoji: '🌸', desc: '로즈 헤더 + 파스텔 핑크', group: '소프트', groupColor: '#be7e8a' },
+    { value: 'spring_kids', label: '차콜 프레임', emoji: '🏥', desc: '차콜 헤더/풋터 + 풀레드 휴진', group: '실무', groupColor: '#292524' },
+    { value: 'medical_notebook', label: '모던 미니멀', emoji: '📐', desc: '2단 라인 + 모노톤 도트', group: '실무', groupColor: '#1e293b' },
+    { value: 'autumn_spring_note', label: '야간진료', emoji: '🌙', desc: '다크 배너 + 앰버 컬럼 강조', group: '실무', groupColor: '#d97706' },
+    { value: 'autumn_holiday', label: 'SNS 볼드', emoji: '📱', desc: '코랄 히어로 + 라운드 뱃지', group: '소프트', groupColor: '#f97316' },
+    { value: 'hanok_roof', label: '골드 클래식', emoji: '✨', desc: '골드 밴드 + 세리프 + 점선', group: '프리미엄', groupColor: '#78350f' },
+    { value: 'dark_green_clinic', label: '프리미엄 그린', emoji: '🌲', desc: '다크그린 헤더 + 에메랄드', group: '프리미엄', groupColor: '#14532d' },
+    { value: 'dark_blue_modern', label: '네이비 모던', emoji: '🔷', desc: '네이비 헤더 + 블루 마커', group: '프리미엄', groupColor: '#1e3a5f' },
+    { value: 'lavender_sparkle', label: '라벤더 소프트', emoji: '💜', desc: '라벤더 헤더 + 라운드 셀', group: '소프트', groupColor: '#7c3aed' },
+  ];
+
+  const SCHEDULE_GROUPS: { label: string; desc: string; values: string[] }[] = [
+    { label: '📋 실무 · 클린', desc: '실무형·격자·정보 중심', values: ['autumn', 'spring_kids', 'medical_notebook', 'autumn_spring_note'] },
+    { label: '🎨 소프트 · SNS', desc: '부드러운·컬러풀·소셜', values: ['cherry_blossom', 'autumn_holiday', 'lavender_sparkle'] },
+    { label: '✨ 프리미엄 · 클래식', desc: '격조·고급·진중한 달력', values: ['korean_traditional', 'hanok_roof', 'winter', 'dark_green_clinic', 'dark_blue_modern'] },
+  ];
+
   const [customMessage, setCustomMessage] = useState('');
   const [extraPrompt, setExtraPrompt] = useState('');
 
@@ -207,8 +231,10 @@ export default function ImagePage() {
   const [selectedCatTemplate, setSelectedCatTemplate] = useState<CategoryTemplate | null>(null);
 
   // OLD 우선순위: uploadedStyle > catTemplate > preset
-  const activeStylePrompt = selectedUploadedStyle?.stylePrompt || selectedCatTemplate?.aiPrompt || selectedPreset.aiPrompt;
-  const activeStyleName = selectedUploadedStyle?.name || selectedCatTemplate?.name || selectedPreset.name;
+  // schedule 카테고리에서 calendarTheme 선택 시 스타일 프리셋 무시 (OLD parity: calendarThemeActive)
+  const calendarThemeActive = selectedTemplate === 'schedule' && calendarTheme;
+  const activeStylePrompt = selectedUploadedStyle?.stylePrompt || selectedCatTemplate?.aiPrompt || (calendarThemeActive ? '' : selectedPreset.aiPrompt);
+  const activeStyleName = selectedUploadedStyle?.name || selectedCatTemplate?.name || (calendarThemeActive ? CALENDAR_THEME_OPTIONS.find(t => t.value === calendarTheme)?.label || calendarTheme : selectedPreset.name);
 
   // 현재 카테고리에 맞는 디자인 템플릿 목록 (OLD parity: greeting은 명절별 서브키)
   const currentCatTemplates: CategoryTemplate[] = (() => {
@@ -323,7 +349,13 @@ export default function ImagePage() {
     const noticeLines = schNotices.split('\n').filter(Boolean);
     const layoutLabel = schLayout === 'full_calendar' ? '전체 달력(월간 캘린더)' : schLayout === 'week' ? '한 주(주간 캘린더)' : '강조형(날짜 강조)';
 
+    // 달력 테마 정보
+    const themeOption = CALENDAR_THEME_OPTIONS.find(t => t.value === calendarTheme);
+    const themeName = themeOption?.label || calendarTheme;
+    const themeDesc = themeOption?.desc || '';
+
     let p = `${schYear}년 ${schMonth}월 병원 진료 일정 안내 포스터.\n제목: "${title}"\n레이아웃: ${layoutLabel} 스타일.\n`;
+    p += `달력 디자인 테마: "${themeName}" — ${themeDesc}\n`;
     if (closedDays.length > 0) p += `휴진일: ${closedDays.map(d => `${d}일`).join(', ')} — 빨간색으로 눈에 띄게 표시.\n`;
     if (shortened.length > 0) p += `단축진료: ${shortened.join(', ')} — 주황색으로 표시.\n`;
     if (vacations.length > 0) p += `휴가: ${vacations.join(', ')} — 보라색으로 표시.\n`;
@@ -332,7 +364,7 @@ export default function ImagePage() {
     if (customMessage) p += `\n추가 문구: "${customMessage}"`;
     if (extraPrompt) p += `\n${extraPrompt}`;
     return p;
-  }, [schYear, schMonth, schTitle, schLayout, dayMarks, shortenedHours, vacationReasons, schNotices, customMessage, extraPrompt]);
+  }, [schYear, schMonth, schTitle, schLayout, dayMarks, shortenedHours, vacationReasons, schNotices, customMessage, extraPrompt, calendarTheme]);
 
   const buildEventPrompt = useCallback((): string => {
     const title = evTitle || '이벤트';
@@ -959,6 +991,101 @@ export default function ImagePage() {
                 <div>
                   <label className="block text-[11px] font-semibold text-slate-500 mb-1">안내 문구 (줄바꿈으로 구분)</label>
                   <textarea value={schNotices} onChange={e => setSchNotices(e.target.value)} placeholder={'진료시간: 평일 09:00~18:00\n점심시간: 13:00~14:00'} rows={3} className={`${inputCls} resize-none`} />
+                </div>
+
+                {/* 달력 테마 선택 (OLD parity: CALENDAR_THEME_OPTIONS 12종, 그룹별) */}
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-500 mb-2">달력 디자인 테마</label>
+                  <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1">
+                    {SCHEDULE_GROUPS.map(group => {
+                      const groupThemes = CALENDAR_THEME_OPTIONS.filter(t => group.values.includes(t.value));
+                      if (groupThemes.length === 0) return null;
+                      return (
+                        <div key={group.label}>
+                          <div className="flex items-center gap-2 mb-1.5 px-0.5">
+                            <span className="text-[11px] font-bold text-slate-700">{group.label}</span>
+                            <span className="text-[9px] text-slate-400">{group.desc}</span>
+                            <span className="text-[9px] text-slate-300 ml-auto">{groupThemes.length}종</span>
+                          </div>
+                          <div className="grid grid-cols-3 gap-2">
+                            {groupThemes.map(t => {
+                              const isSelected = calendarTheme === t.value;
+                              return (
+                                <button key={t.value} type="button" onClick={() => setCalendarTheme(t.value)}
+                                  className={`group relative rounded-2xl overflow-hidden transition-all duration-200 ${
+                                    isSelected
+                                      ? 'shadow-xl ring-2 ring-offset-2'
+                                      : 'shadow-sm hover:shadow-md border border-slate-200/80'
+                                  }`}
+                                  style={isSelected ? { '--tw-ring-color': t.groupColor } as React.CSSProperties : undefined}
+                                >
+                                  {/* 미니 달력 프리뷰 */}
+                                  <div className="relative w-full" style={{ aspectRatio: '3/4' }}>
+                                    {/* 헤더 영역 */}
+                                    <div className="absolute inset-x-0 top-0 h-[28%] flex items-center justify-center" style={{ background: `linear-gradient(135deg, ${t.groupColor}, ${t.groupColor}cc)` }}>
+                                      <div className="text-center">
+                                        <div className="text-[7px] font-bold text-white/70">OO병원</div>
+                                        <div className="text-[9px] font-black text-white leading-none">3월 진료일정</div>
+                                      </div>
+                                    </div>
+                                    {/* 요일 바 */}
+                                    <div className="absolute inset-x-0 top-[28%] h-[8%] flex items-center justify-around px-1" style={{ background: `${t.groupColor}15` }}>
+                                      {['일','월','화','수','목','금','토'].map((d, i) => (
+                                        <span key={d} className="text-[4px] font-bold" style={{ color: i === 0 ? '#dc2626' : i === 6 ? '#2563eb' : t.groupColor }}>{d}</span>
+                                      ))}
+                                    </div>
+                                    {/* 미니 날짜 그리드 */}
+                                    <div className="absolute inset-x-0 top-[36%] bottom-[16%] grid grid-cols-7 gap-px px-1" style={{ background: '#f8fafc' }}>
+                                      {[null,null,null,null,null,null,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21].map((d, i) => (
+                                        <div key={i} className="flex items-center justify-center">
+                                          {d && (
+                                            <span className={`text-[4px] font-bold leading-none ${d === 9 || d === 16 ? 'text-red-500' : ''}`} style={{ color: d === 9 || d === 16 ? undefined : t.groupColor + '99' }}>
+                                              {d === 9 || d === 16 ? '•' : d <= 9 ? d : ''}
+                                            </span>
+                                          )}
+                                        </div>
+                                      ))}
+                                    </div>
+                                    {/* 풋터 */}
+                                    <div className="absolute inset-x-0 bottom-0 h-[16%] flex items-center justify-center" style={{ background: `${t.groupColor}20` }}>
+                                      <span className="text-[4px] font-medium" style={{ color: t.groupColor }}>진료시간 안내</span>
+                                    </div>
+                                    {/* 선택 체크 */}
+                                    {isSelected && (
+                                      <div className="absolute top-1 right-1 w-5 h-5 rounded-full flex items-center justify-center shadow-lg" style={{ backgroundColor: t.groupColor }}>
+                                        <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                                      </div>
+                                    )}
+                                  </div>
+                                  {/* 카드 하단 */}
+                                  <div className="px-1.5 py-1 bg-white">
+                                    <div className="font-bold text-[9px] text-slate-800 leading-tight truncate">{t.emoji} {t.label}</div>
+                                    <div className="text-[7px] text-slate-500 mt-0.5 leading-tight truncate">{t.desc}</div>
+                                  </div>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {/* 현재 선택된 테마 요약 */}
+                  {(() => {
+                    const ct = CALENDAR_THEME_OPTIONS.find(t => t.value === calendarTheme);
+                    if (!ct) return null;
+                    return (
+                      <div className="mt-2 p-2 rounded-lg border" style={{ backgroundColor: ct.groupColor + '10', borderColor: ct.groupColor + '30' }}>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm">{ct.emoji}</span>
+                          <div>
+                            <span className="text-[10px] font-bold" style={{ color: ct.groupColor }}>{ct.label}</span>
+                            <span className="text-[9px] text-slate-400 ml-1.5">{ct.desc}</span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
             )}
