@@ -248,7 +248,7 @@ async function crawlBlogContent(url) {
  *  4단계: 본문 있는 글만 모은 뒤, publishedAt 내림차순으로 최종 재정렬
  *  5단계: 상위 N개 반환
  */
-async function crawlHospitalBlogPosts(blogUrl, maxPosts = 10) {
+async function crawlHospitalBlogPosts(blogUrl, maxPosts = 5) {
   let page = null;
 
   try {
@@ -307,42 +307,47 @@ async function crawlHospitalBlogPosts(blogUrl, maxPosts = 10) {
     const targetLogNos = allLogNos.slice(0, candidates);
     console.log(`[Crawl] ${targetLogNos.length}개 후보 logNo 수집 (목표: ${maxPosts}개)`);
 
-    // ── 2단계: 각 글 본문 + 날짜 수집 ──
+    // ── 2단계: 각 글 본문 + 날짜 수집 (병렬) ──
     const results = [];
     let skipped = 0;
+    const CONCURRENCY = 3; // 동시 크롤링 수
 
-    for (const logNo of targetLogNos) {
-      if (results.length >= maxPosts) break;
-
+    // 단일 글 크롤링 함수
+    async function crawlSinglePost(logNo) {
       const postUrl = `https://blog.naver.com/${blogId}/${logNo}`;
+      const postPage = await browserInstance.newPage();
       try {
-        console.log(`📄 글 ${results.length + 1}/${maxPosts} 수집: ${postUrl}`);
-
-        // Puppeteer로 본문 + 메타데이터 추출
-        const postPage = await browserInstance.newPage();
         await postPage.setUserAgent(
           'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
         );
-        await postPage.goto(postUrl, { waitUntil: 'networkidle2', timeout: 30000 });
+
+        // 이미지, 폰트, CSS, 미디어 차단 — 텍스트만 필요
+        await postPage.setRequestInterception(true);
+        postPage.on('request', (req) => {
+          const type = req.resourceType();
+          if (['image', 'font', 'stylesheet', 'media'].includes(type)) {
+            req.abort();
+          } else {
+            req.continue();
+          }
+        });
+
+        await postPage.goto(postUrl, { waitUntil: 'domcontentloaded', timeout: 20000 });
 
         const postData = await postPage.evaluate(() => {
-          // 제목
           let title = '';
           const titleEl = document.querySelector('.se-title-text, .pcol1, .itemSubjectBoldfont');
           if (titleEl) title = titleEl.textContent?.trim() || '';
           if (!title) title = document.title?.replace(/\s*:\s*네이버\s*블로그$/i, '').trim() || '';
 
-          // 날짜: og:createdate 메타태그
           let publishedAt = '';
           const ogDate = document.querySelector('meta[property="og:createdate"]');
           if (ogDate) publishedAt = ogDate.getAttribute('content') || '';
 
-          // 썸네일: og:image
           let thumbnail = '';
           const ogImg = document.querySelector('meta[property="og:image"]');
           if (ogImg) thumbnail = ogImg.getAttribute('content') || '';
 
-          // 본문
           let content = '';
           const mainContainer = document.querySelector('.se-main-container');
           if (mainContainer) {
@@ -358,10 +363,7 @@ async function crawlHospitalBlogPosts(blogUrl, maxPosts = 10) {
           return { title, publishedAt, thumbnail, content };
         });
 
-        await postPage.close();
-
         if (postData.content && postData.content.length > 100) {
-          // 날짜 정규화
           let publishedAtISO = '';
           if (postData.publishedAt) {
             try {
@@ -370,23 +372,45 @@ async function crawlHospitalBlogPosts(blogUrl, maxPosts = 10) {
             } catch {}
           }
 
-          results.push({
+          return {
             url: postUrl,
             content: postData.content.slice(0, 3000),
             title: postData.title || '',
             publishedAt: publishedAtISO,
             summary: postData.content.substring(0, 200).replace(/\n/g, ' ').trim(),
             thumbnail: postData.thumbnail || '',
-          });
+          };
         } else {
           console.log(`  ⚠️ 본문 부족 스킵: ${logNo} (${postData.content?.length || 0}자)`);
-          skipped++;
+          return null;
         }
-
-        await new Promise(resolve => setTimeout(resolve, 1500));
       } catch (e) {
         console.error(`글 수집 실패 (${postUrl}):`, e.message);
-        skipped++;
+        return null;
+      } finally {
+        await postPage.close();
+      }
+    }
+
+    // 병렬 배치 처리
+    for (let i = 0; i < targetLogNos.length && results.length < maxPosts; i += CONCURRENCY) {
+      const batch = targetLogNos.slice(i, i + CONCURRENCY);
+      console.log(`📄 배치 ${Math.floor(i / CONCURRENCY) + 1}: ${batch.length}개 글 병렬 크롤링...`);
+
+      const batchResults = await Promise.all(batch.map(logNo => crawlSinglePost(logNo)));
+
+      for (const result of batchResults) {
+        if (result) {
+          results.push(result);
+        } else {
+          skipped++;
+        }
+        if (results.length >= maxPosts) break;
+      }
+
+      // 배치 간 짧은 딜레이 (봇 감지 방지)
+      if (i + CONCURRENCY < targetLogNos.length && results.length < maxPosts) {
+        await new Promise(resolve => setTimeout(resolve, 500));
       }
     }
 
