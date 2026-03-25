@@ -292,6 +292,11 @@ async function fetchPostData(blogId, logNo) {
           .replace(/<[^>]+>/g, ' ')
           .replace(/&nbsp;/g, ' ')
           .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'")
+          .replace(/&lsquo;/g, '\u2018').replace(/&rsquo;/g, '\u2019')
+          .replace(/&ldquo;/g, '\u201C').replace(/&rdquo;/g, '\u201D')
+          .replace(/&hellip;/g, '\u2026').replace(/&mdash;/g, '\u2014').replace(/&ndash;/g, '\u2013')
+          .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)))
+          .replace(/&#x([0-9a-fA-F]+);/g, (_, h) => String.fromCharCode(parseInt(h, 16)))
           .replace(/\s+/g, ' ')
           .trim();
         if (text.length > 5) paragraphs.push(text);
@@ -320,11 +325,17 @@ async function fetchPostData(blogId, logNo) {
   return null;  // fetch 전부 실패
 }
 
-/** HTML 엔티티 간이 디코딩 */
+/** HTML 엔티티 디코딩 */
 function decodeHtml(str) {
   return str
     .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&nbsp;/g, ' ');
+    .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&nbsp;/g, ' ')
+    .replace(/&lsquo;/g, '\u2018').replace(/&rsquo;/g, '\u2019')
+    .replace(/&ldquo;/g, '\u201C').replace(/&rdquo;/g, '\u201D')
+    .replace(/&hellip;/g, '\u2026').replace(/&mdash;/g, '\u2014').replace(/&ndash;/g, '\u2013')
+    .replace(/&bull;/g, '\u2022').replace(/&middot;/g, '\u00B7')
+    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)))
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, h) => String.fromCharCode(parseInt(h, 16)));
 }
 
 /**
