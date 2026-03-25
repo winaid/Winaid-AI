@@ -3,7 +3,10 @@
  * - Gemini로 병원 주소 기반 지역 키워드 생성 (수도권 3km / 지방 5km)
  * - /api/naver/keyword-stats로 검색량 + 블로그 발행량 조회
  * - Gemini로 블루오션 키워드 분석 및 추천
+ * - ClinicContext 기반 키워드 품질 향상
  */
+
+import type { ClinicContext } from './clinicContextService';
 
 export interface KeywordStat {
   keyword: string;
@@ -131,6 +134,18 @@ async function callGeminiForKeywords(prompt: string, options?: { temperature?: n
   return data.text;
 }
 
+// ── ClinicContext → 프롬프트 블록 ──
+
+function buildClinicContextBlock(ctx: ClinicContext | null | undefined): string {
+  if (!ctx || ctx.confidence < 0.3) return '';
+  const lines: string[] = ['', '[병원 실제 콘텐츠 분석 결과]'];
+  if (ctx.actualServices.length > 0) lines.push(`실제 제공 서비스: ${ctx.actualServices.join(', ')}`);
+  if (ctx.specialties.length > 0) lines.push(`특화/차별화 진료: ${ctx.specialties.join(', ')}`);
+  if (ctx.locationSignals.length > 0) lines.push(`콘텐츠에서 확인된 지역: ${ctx.locationSignals.join(', ')}`);
+  lines.push('→ 실제 제공 서비스와 관련된 키워드를 우선 생성하세요.');
+  return lines.join('\n');
+}
+
 // ── AI 키워드 후보 생성 ──
 
 async function generateKeywordsWithAI(
@@ -138,6 +153,7 @@ async function generateKeywordsWithAI(
   address: string,
   category?: string,
   existingBlogTitles?: string[],
+  clinicCtx?: ClinicContext | null,
 ): Promise<string[]> {
   const radius = isMetroArea(address) ? 3 : 5;
 
@@ -155,7 +171,7 @@ ${existingBlogTitles.map(t => `- ${t}`).join('\n')}
 주소: ${address}
 진료과: ${category || '치과'}
 탐색 반경: ${radius}km (${radius === 3 ? '수도권 - 인근 주요 지역까지 포함' : '지방 - 넓은 범위로 주변 지역 포함'})
-${existingBlock}
+${existingBlock}${buildClinicContextBlock(clinicCtx)}
 규칙:
 1. 주소에서 동/구/읍/면 추출
 2. 반경 ${radius}km 이내 주요 지하철역 이름 포함
@@ -196,6 +212,7 @@ async function generateMoreKeywordsWithAI(
   existingKeywords: string[],
   category?: string,
   remainingCount: number = 15,
+  clinicCtx?: ClinicContext | null,
 ): Promise<string[]> {
   const radius = isMetroArea(address) ? 3 : 5;
   const generateCount = Math.min(remainingCount, 15);
@@ -351,6 +368,7 @@ export async function analyzeHospitalKeywords(
   address: string,
   category?: string,
   onProgress?: (msg: string) => void,
+  clinicCtx?: ClinicContext | null,
 ): Promise<KeywordAnalysisResult> {
   // Step 0: 이미 작성한 블로그 글 제목 가져오기
   onProgress?.('기존 블로그 글 확인 중...');
@@ -362,7 +380,7 @@ export async function analyzeHospitalKeywords(
   }
 
   // Step 1: AI 키워드 후보 생성 (기존 글 제목 전달하여 중복 우선순위 낮춤)
-  const candidates = await generateKeywordsWithAI(hospitalName, address, category, existingTitles);
+  const candidates = await generateKeywordsWithAI(hospitalName, address, category, existingTitles, clinicCtx);
 
   if (candidates.length === 0) {
     throw new Error('키워드를 생성할 수 없습니다.');
@@ -401,6 +419,7 @@ export async function loadMoreKeywords(
   existingStats: KeywordStat[],
   category?: string,
   onProgress?: (msg: string) => void,
+  clinicCtx?: ClinicContext | null,
 ): Promise<{ stats: KeywordStat[]; apiErrors?: string[]; reachedLimit?: boolean }> {
   const existingKeywords = existingStats.map(s => s.keyword);
   const remaining = MAX_KEYWORDS - existingKeywords.length;
@@ -424,7 +443,7 @@ export async function loadMoreKeywords(
       ? `추가 키워드 생성 중... (현재 ${existingKeywords.length}개 / 최대 ${MAX_KEYWORDS}개)`
       : `유효 키워드 보충 중... (${allNewStats.length}/${TARGET_COUNT}개 확보)`,
     );
-    const moreCandidates = await generateMoreKeywordsWithAI(hospitalName, address, currentExisting, category, batchSize);
+    const moreCandidates = await generateMoreKeywordsWithAI(hospitalName, address, currentExisting, category, batchSize, clinicCtx);
     if (moreCandidates.length === 0) break;
 
     onProgress?.(`${moreCandidates.length}개 추가 키워드 분석 중...`);

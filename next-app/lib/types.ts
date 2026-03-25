@@ -41,6 +41,11 @@ export interface GenerationRequest {
   faqCount?: number;
   hospitalName?: string;
   hospitalStyleSource?: 'explicit_selected_hospital' | 'generic_default';
+  clinicContext?: {
+    actualServices: string[];
+    specialties: string[];
+    locationSignals: string[];
+  } | null;
 }
 
 export interface TrendingItem {

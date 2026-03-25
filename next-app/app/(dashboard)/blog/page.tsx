@@ -183,6 +183,7 @@ function BlogForm() {
         selectedHospitalAddress,
         category,
         (msg) => setKeywordProgress(msg),
+        clinicContext,
       );
       setKeywordStats(result.stats);
       if (result.apiErrors?.length) {
@@ -235,6 +236,7 @@ function BlogForm() {
         keywordStats,
         category,
         (msg) => setKeywordProgress(msg),
+        clinicContext,
       );
       if (moreStats.length > 0) {
         setKeywordStats(prev => {
@@ -713,6 +715,11 @@ ${categoryKeywords}
       customImagePrompt: imageStyle === 'custom' ? (customPrompt?.trim() || undefined) : undefined,
       hospitalName: hospitalName || undefined,
       hospitalStyleSource: hospitalName ? 'explicit_selected_hospital' : 'generic_default',
+      clinicContext: clinicContext ? {
+        actualServices: clinicContext.actualServices,
+        specialties: clinicContext.specialties,
+        locationSignals: clinicContext.locationSignals,
+      } : undefined,
     };
 
     setIsGenerating(true);

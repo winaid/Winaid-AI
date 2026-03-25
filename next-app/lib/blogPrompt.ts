@@ -152,6 +152,23 @@ export function buildBlogPrompt(req: GenerationRequest): {
     promptParts.push(`- 병원명: ${req.hospitalName}`);
   }
 
+  // ── 병원 홈페이지/블로그 분석 결과 ──
+  if (req.clinicContext) {
+    const ctx = req.clinicContext;
+    const ctxParts: string[] = ['', '[병원 실제 정보 (홈페이지/블로그 분석 결과)]'];
+    if (ctx.actualServices.length > 0) {
+      ctxParts.push(`- 실제 제공 서비스: ${ctx.actualServices.join(', ')}`);
+    }
+    if (ctx.specialties.length > 0) {
+      ctxParts.push(`- 특화/차별화 진료: ${ctx.specialties.join(', ')}`);
+    }
+    if (ctx.locationSignals.length > 0) {
+      ctxParts.push(`- 주변 지역: ${ctx.locationSignals.join(', ')}`);
+    }
+    ctxParts.push('→ 위 정보를 자연스럽게 반영하되, 없는 서비스를 언급하지 마세요.');
+    promptParts.push(...ctxParts);
+  }
+
   promptParts.push(
     `- 이미지: ${targetImageCount}장`,
     `- 목표 글자 수: ${targetLength}자 ~ ${targetLength + 200}자`,
@@ -188,13 +205,13 @@ export function buildBlogPrompt(req: GenerationRequest): {
       '',
       `[키워드·질환 역할 분리]`,
       `SEO 키워드: "${req.keywords}" / 질환: "${req.disease}"`,
-      `→ 키워드는 SEO용, 질환이 글의 실제 주제. 다른 질환명 추가 금지.`,
+      `→ 키워드는 SEO용(글 전체에 4~5회, 자연스러운 위치에 배치), 질환이 글의 실제 주제. 다른 질환명 추가 금지.`,
     );
   } else if (req.keywords) {
     promptParts.push(
       '',
       `[키워드]`,
-      `"${req.keywords}" - 전체 3~4회, 도입부 첫 2문장에서는 금지. 다른 질환명 추가 금지.`,
+      `"${req.keywords}" - 글 전체에 4~5회, 자연스러운 위치에 배치. 도입부 첫 2문장에서는 금지. 다른 질환명 추가 금지.`,
     );
   }
 
