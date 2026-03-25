@@ -746,112 +746,130 @@ export async function crawlAndScoreAllHospitals(
     throw new Error('크롤링할 병원이 없습니다. 블로그 URL을 먼저 설정하세요.');
   }
 
-  for (let i = 0; i < total; i++) {
-    const { name, teamId, urls } = hospitalUrls[i];
-    const allContents: string[] = []; // 말투 분석용 본문 수집
+  // ── 한 병원 처리 함수 ──
+  async function processHospital(
+    hospital: { name: string; teamId: number; urls: string[] },
+    index: number,
+  ) {
+    const { name, teamId, urls } = hospital;
+    const allContents: string[] = [];
     let totalPostsForHospital = 0;
 
-    try {
-      // 1) 각 URL별 최대 5개씩 크롤링 + 채점
-      for (let urlIdx = 0; urlIdx < urls.length; urlIdx++) {
-        const urlLabel = urls.length > 1 ? ` URL ${urlIdx + 1}/${urls.length}` : '';
-        onProgress?.(`${name}${urlLabel} 크롤링 중...`, i, total);
+    // 1) 각 URL별 최대 5개씩 크롤링 + 채점
+    for (let urlIdx = 0; urlIdx < urls.length; urlIdx++) {
+      const urlLabel = urls.length > 1 ? ` URL ${urlIdx + 1}/${urls.length}` : '';
+      onProgress?.(`${name}${urlLabel} 크롤링 중...`, index, total);
 
-        let posts: { url: string; content: string; title?: string; publishedAt?: string; summary?: string; thumbnail?: string }[] = [];
-        try {
-          const res = await fetch(`${crawlerBase}/api/naver/crawl-hospital-blog`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ blogUrl: urls[urlIdx], maxPosts: 5 }),
-          });
-          if (!res.ok) {
-            onProgress?.(`${name}${urlLabel} 크롤링 실패 (${res.status})`, i, total);
-            continue;
-          }
-          const data = (await res.json()) as { posts?: typeof posts };
-          posts = data.posts || [];
-        } catch (err) {
-          onProgress?.(`${name}${urlLabel} 크롤링 오류: ${(err as Error).message?.slice(0, 50)}`, i, total);
+      let posts: { url: string; content: string; title?: string; publishedAt?: string; summary?: string; thumbnail?: string }[] = [];
+      try {
+        const res = await fetch(`${crawlerBase}/api/naver/crawl-hospital-blog`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ blogUrl: urls[urlIdx], maxPosts: 5 }),
+        });
+        if (!res.ok) {
+          onProgress?.(`${name}${urlLabel} 크롤링 실패 (${res.status})`, index, total);
           continue;
         }
-
-        if (posts.length === 0) continue;
-        totalPostsForHospital += posts.length;
-
-        // 채점 + DB 저장
-        for (let pi = 0; pi < posts.length; pi++) {
-          const post = posts[pi];
-          allContents.push(post.content);
-          onProgress?.(`${name}${urlLabel} 채점 ${pi + 1}/${posts.length}`, i, total);
-          try {
-            const score = await scoreCrawledPost(post.content);
-            const blogId = post.url.match(/blog\.naver\.com\/([^/?#]+)/)?.[1] || '';
-            if (supabase) {
-              await (supabase.from('hospital_crawled_posts') as any).upsert(
-                {
-                  hospital_name: name,
-                  url: post.url,
-                  content: post.content,
-                  source_blog_id: blogId,
-                  title: post.title || '',
-                  published_at: post.publishedAt || null,
-                  summary: post.summary || post.content.slice(0, 200),
-                  thumbnail: post.thumbnail || null,
-                  crawled_at: new Date().toISOString(),
-                  score_typo: score.score_typo,
-                  score_spelling: score.score_spelling,
-                  score_medical_law: score.score_medical_law,
-                  score_total: score.score_total,
-                  typo_issues: score.typo_issues,
-                  law_issues: score.law_issues,
-                  scored_at: new Date().toISOString(),
-                },
-                { onConflict: 'hospital_name,url' },
-              );
-            }
-          } catch {
-            // 개별 글 채점 실패 → 건너뜀
-          }
-          await new Promise(r => setTimeout(r, 300));
-        }
+        const data = (await res.json()) as { posts?: typeof posts };
+        posts = data.posts || [];
+      } catch (err) {
+        onProgress?.(`${name}${urlLabel} 크롤링 오류: ${(err as Error).message?.slice(0, 50)}`, index, total);
+        continue;
       }
 
-      // 2) 말투 분석 (옵션 ON + 수집된 글이 있을 때만)
-      let analyzedStyle: LearnedWritingStyle | null = null;
-      if (includeStyle && allContents.length > 0) {
-        onProgress?.(`${name} 말투 분석 중...`, i, total);
+      if (posts.length === 0) continue;
+      totalPostsForHospital += posts.length;
+
+      // 채점 + DB 저장
+      for (let pi = 0; pi < posts.length; pi++) {
+        const post = posts[pi];
+        allContents.push(post.content);
+        onProgress?.(`${name}${urlLabel} 채점 ${pi + 1}/${posts.length}`, index, total);
         try {
-          const combinedText = allContents.join('\n\n---\n\n').slice(0, 8000);
-          analyzedStyle = await analyzeWritingStyleViaApi(combinedText, name);
+          const score = await scoreCrawledPost(post.content);
+          const blogId = post.url.match(/blog\.naver\.com\/([^/?#]+)/)?.[1] || '';
+          if (supabase) {
+            await (supabase.from('hospital_crawled_posts') as any).upsert(
+              {
+                hospital_name: name,
+                url: post.url,
+                content: post.content,
+                source_blog_id: blogId,
+                title: post.title || '',
+                published_at: post.publishedAt || null,
+                summary: post.summary || post.content.slice(0, 200),
+                thumbnail: post.thumbnail || null,
+                crawled_at: new Date().toISOString(),
+                score_typo: score.score_typo,
+                score_spelling: score.score_spelling,
+                score_medical_law: score.score_medical_law,
+                score_total: score.score_total,
+                typo_issues: score.typo_issues,
+                law_issues: score.law_issues,
+                scored_at: new Date().toISOString(),
+              },
+              { onConflict: 'hospital_name,url' },
+            );
+          }
         } catch {
-          onProgress?.(`${name} 말투 분석 실패 (채점은 완료)`, i, total);
+          // 개별 글 채점 실패 → 건너뜀
         }
+        await new Promise(r => setTimeout(r, 300));
       }
+    }
 
-      // 3) 병원 프로필 업데이트
-      if (totalPostsForHospital > 0 && supabase) {
-        const profileData: Record<string, unknown> = {
-          hospital_name: name,
-          team_id: teamId,
-          naver_blog_url: urls.join(','),
-          crawled_posts_count: totalPostsForHospital,
-          last_crawled_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        };
-        if (analyzedStyle) {
-          profileData.style_profile = analyzedStyle;
-          profileData.raw_sample_text = allContents.join('\n\n---\n\n').slice(0, 10000);
-        }
-        await (supabase.from('hospital_style_profiles') as any).upsert(
-          profileData,
-          { onConflict: 'hospital_name' },
-        );
+    // 2) 말투 분석 (옵션 ON + 수집된 글이 있을 때만)
+    let analyzedStyle: LearnedWritingStyle | null = null;
+    if (includeStyle && allContents.length > 0) {
+      onProgress?.(`${name} 말투 분석 중...`, index, total);
+      try {
+        const combinedText = allContents.join('\n\n---\n\n').slice(0, 8000);
+        analyzedStyle = await analyzeWritingStyleViaApi(combinedText, name);
+      } catch {
+        onProgress?.(`${name} 말투 분석 실패 (채점은 완료)`, index, total);
       }
+    }
 
-      onProgress?.(`${name} 완료 (${totalPostsForHospital}개 글${analyzedStyle ? ' + 말투 분석' : ''})`, i, total);
-    } catch (err) {
-      onProgress?.(`${name} 실패: ${(err as Error).message?.slice(0, 60)}`, i, total);
-      // 병원 실패 → 다음 병원으로 계속
+    // 3) 병원 프로필 업데이트
+    if (totalPostsForHospital > 0 && supabase) {
+      const profileData: Record<string, unknown> = {
+        hospital_name: name,
+        team_id: teamId,
+        naver_blog_url: urls.join(','),
+        crawled_posts_count: totalPostsForHospital,
+        last_crawled_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      if (analyzedStyle) {
+        profileData.style_profile = analyzedStyle;
+        profileData.raw_sample_text = allContents.join('\n\n---\n\n').slice(0, 10000);
+      }
+      await (supabase.from('hospital_style_profiles') as any).upsert(
+        profileData,
+        { onConflict: 'hospital_name' },
+      );
+    }
+
+    onProgress?.(`${name} 완료 (${totalPostsForHospital}개 글${analyzedStyle ? ' + 말투 분석' : ''})`, index, total);
+  }
+
+  // ── 3개씩 배치 병렬 처리 ──
+  const BATCH_SIZE = 3;
+  let doneCount = 0;
+
+  for (let i = 0; i < total; i += BATCH_SIZE) {
+    const batch = hospitalUrls.slice(i, i + BATCH_SIZE);
+    const results = await Promise.allSettled(
+      batch.map((h, j) => processHospital(h, i + j))
+    );
+
+    for (let j = 0; j < results.length; j++) {
+      doneCount++;
+      if (results[j].status === 'rejected') {
+        const err = (results[j] as PromiseRejectedResult).reason;
+        onProgress?.(`${batch[j].name} 실패: ${(err as Error).message?.slice(0, 60)}`, doneCount - 1, total);
+      }
     }
   }
 
