@@ -1573,31 +1573,15 @@ export default function AdminPage() {
                           <p className="mt-2 text-xs text-green-600 font-medium">학습 완료!</p>
                         )}
 
-                        {/* 노출 순위 체크 */}
-                        {hasAnyUrl && (
+                        {/* 노출 순위 (크롤링 시 자동 체크) */}
+                        {hasAnyUrl && rankResults[baseName] && (
                           <div className="mt-3 bg-blue-50 border border-blue-100 rounded-xl p-3">
                             <div className="flex items-center justify-between mb-2">
                               <p className="text-[11px] font-bold text-blue-700">네이버 노출 순위</p>
-                              <button
-                                onClick={() => handleAutoRankCheck(baseName, urls, h.address)}
-                                disabled={rankResults[baseName]?.checking}
-                                className="px-2 py-1 text-[10px] font-bold bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-40"
-                              >
-                                {rankResults[baseName]?.checking ? '체크 중...' : '순위 체크'}
-                              </button>
+                              {rankResults[baseName]?.checking && (
+                                <span className="text-[10px] text-blue-500 font-medium animate-pulse">체크 중...</span>
+                              )}
                             </div>
-                            {/* 수동 키워드 추가 */}
-                            <div className="flex gap-1.5 mb-2">
-                              <input
-                                type="text"
-                                value={rankCheckKeyword[baseName] || ''}
-                                onChange={e => setRankCheckKeyword(prev => ({ ...prev, [baseName]: e.target.value }))}
-                                onKeyDown={e => { if (e.key === 'Enter') handleAutoRankCheck(baseName, urls, h.address); }}
-                                placeholder="추가 키워드 (선택)"
-                                className="flex-1 px-2.5 py-1 text-[11px] border border-blue-200 rounded-lg focus:outline-none focus:border-blue-400 bg-white"
-                              />
-                            </div>
-                            {/* 결과 표시 */}
                             {rankResults[baseName]?.keywords && rankResults[baseName].keywords.length > 0 && (
                               <div className="space-y-1">
                                 {rankResults[baseName].keywords.map((r, idx) => (
@@ -1613,7 +1597,7 @@ export default function AdminPage() {
                                   </div>
                                 ))}
                                 <p className="text-[9px] text-slate-400 mt-1">
-                                  노출: {rankResults[baseName].keywords.filter(r => r.rank != null).length}개 / 총 {rankResults[baseName].keywords.length}개 키워드
+                                  노출: {rankResults[baseName].keywords.filter(r => r.rank != null).length}개 / 총 {rankResults[baseName].keywords.length}개 키워드 (크롤링 시 자동 체크)
                                 </p>
                               </div>
                             )}
