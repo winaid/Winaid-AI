@@ -1985,14 +1985,24 @@ ${generatedContent.substring(0, 2000)}
           {showAdvanced && (
           <div className="space-y-4 p-3 bg-slate-50 rounded-xl border border-slate-100">
             <div className="space-y-3">
-              {/* 글자 수 */}
+              {/* 글 길이 */}
               <div>
-                <div className="flex justify-between mb-1.5">
-                  <label className="text-xs font-semibold text-slate-500">글자 수</label>
-                  <span className="text-xs font-semibold text-blue-600">{textLength}자</span>
+                <p className="text-xs font-semibold text-slate-500 mb-1.5">글 길이</p>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {([
+                    { value: 1500, label: '짧은 글', desc: '~1,500자' },
+                    { value: 2500, label: '중간 글', desc: '~2,500자' },
+                    { value: 3500, label: '긴 글', desc: '~3,500자' },
+                  ]).map(opt => (
+                    <button key={opt.value} type="button"
+                      onClick={() => setTextLength(opt.value)}
+                      className={`py-2 rounded-lg border transition-all text-center ${textLength === opt.value ? 'border-blue-400 bg-blue-50 text-blue-700' : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300'}`}
+                    >
+                      <span className="text-[11px] font-semibold block">{opt.label}</span>
+                      <span className="text-[9px] text-slate-400">{opt.desc}</span>
+                    </button>
+                  ))}
                 </div>
-                <input type="range" min={1500} max={3500} step={100} value={textLength} onChange={e => setTextLength(Number(e.target.value))} className="w-full accent-blue-500 h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer" aria-label={`글자 수: ${textLength}자`} />
-                <div className="flex justify-between mt-1 text-[10px] text-slate-400"><span>1500</span><span>2500</span><span>3500</span></div>
               </div>
               {/* AI 이미지 수 */}
               <div>
