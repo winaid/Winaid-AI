@@ -1494,7 +1494,8 @@ export default function ImagePage() {
                   </div>
                 )}
 
-                {/* 디자인 스타일 프리셋 (OLD parity: AI_STYLE_PRESETS 12개) */}
+                {/* 디자인 스타일 프리셋 (schedule 제외 — schedule은 달력 테마가 대체) */}
+                {selectedTemplate !== 'schedule' && (
                 <div>
                   <label className="block text-[11px] font-semibold text-slate-500 mb-1.5">
                     디자인 스타일 {(selectedUploadedStyle || selectedCatTemplate) && <span className="text-violet-400 font-normal">(상위 스타일 선택 시 무시됨)</span>}
@@ -1542,6 +1543,7 @@ export default function ImagePage() {
                     </div>
                   </div>
                 </div>
+                )}
               </div>
             )}
 
