@@ -34,19 +34,35 @@ function extractLogNo(href, blogId) {
   return null;
 }
 
-/** RSS <link> 태그에서 URL 추출 — 개행 뒤에 URL이 오는 경우 대응 */
-function extractRssLinks(xml, blogId) {
-  const logNos = [];
-  // RSS의 <item> 안에 <link> 태그가 있고, \n 뒤에 실제 URL이 오는 경우가 있음
-  // 예: <link>\nhttps://blog.naver.com/blogId/223456789\n</link>
-  const linkPattern = /<link[^>]*>([\s\S]*?)<\/link>/gi;
-  let match;
-  while ((match = linkPattern.exec(xml)) !== null) {
-    const linkText = match[1].trim();
-    const logNo = extractLogNo(linkText, blogId);
-    if (logNo) logNos.push(logNo);
+/** RSS에서 <item> 단위로 logNo + pubDate 추출 */
+function extractRssItems(xml, blogId) {
+  const items = [];
+  const itemPattern = /<item>([\s\S]*?)<\/item>/gi;
+  let itemMatch;
+  while ((itemMatch = itemPattern.exec(xml)) !== null) {
+    const block = itemMatch[1];
+    // <link> — 개행 뒤 URL 대응
+    const linkMatch = block.match(/<link[^>]*>([\s\S]*?)<\/link>/i);
+    if (!linkMatch) continue;
+    const logNo = extractLogNo(linkMatch[1].trim(), blogId);
+    if (!logNo) continue;
+
+    // <pubDate>
+    let publishedAt = '';
+    const dateMatch = block.match(/<pubDate>([^<]+)<\/pubDate>/i);
+    if (dateMatch) {
+      const d = new Date(dateMatch[1].trim());
+      if (!isNaN(d.getTime())) publishedAt = d.toISOString();
+    }
+
+    items.push({ logNo, publishedAt });
   }
-  return logNos;
+  return items;
+}
+
+/** 하위 호환 — logNo만 필요한 곳용 */
+function extractRssLinks(xml, blogId) {
+  return extractRssItems(xml, blogId).map(i => i.logNo);
 }
 
 /**
@@ -273,10 +289,51 @@ async function fetchPostData(blogId, logNo) {
                        || html.match(/<meta\s+content="([^"]*?)"\s+property="og:title"/i);
       const title = titleMatch ? decodeHtml(titleMatch[1]) : '';
 
-      // 날짜: og:createdate 또는 article:published_time
-      const dateMatch = html.match(/<meta\s+property="(?:og:createdate|article:published_time)"\s+content="([^"]*?)"/i)
-                      || html.match(/<meta\s+content="([^"]*?)"\s+property="(?:og:createdate|article:published_time)"/i);
-      const publishedAt = dateMatch ? dateMatch[1] : '';
+      // 날짜: 여러 패턴 시도
+      let publishedAt = '';
+      const datePatterns = [
+        // og:createdate (네이버 표준)
+        /<meta\s+property="og:createdate"\s+content="([^"]+)"/i,
+        /<meta\s+content="([^"]+)"\s+property="og:createdate"/i,
+        // article:published_time
+        /<meta\s+property="article:published_time"\s+content="([^"]+)"/i,
+        /<meta\s+content="([^"]+)"\s+property="article:published_time"/i,
+        // se_publishDate (스마트에디터)
+        /class="[^"]*se_publishDate[^"]*"[^>]*>([^<]+)/i,
+        // blog2_series date
+        /class="[^"]*blog_date[^"]*"[^>]*>([^<]+)/i,
+        // 날짜 패턴 (2026. 3. 25. / 2026-03-25 / 2026.03.25)
+        /class="[^"]*date[^"]*"[^>]*>\s*(\d{4}[\s./-]+\d{1,2}[\s./-]+\d{1,2})/i,
+        // se-date (스마트에디터 ONE)
+        /class="[^"]*se-date[^"]*"[^>]*>([^<]+)/i,
+        // 본문 내 날짜 span
+        /<span[^>]*class="[^"]*date[^"]*"[^>]*>([^<]+)<\/span>/i,
+      ];
+      for (const pat of datePatterns) {
+        const dm = pat.exec(html);
+        if (dm && dm[1]) {
+          const raw = dm[1].trim();
+          // ISO 형식이면 그대로
+          if (raw.includes('T') && raw.includes('-')) {
+            const d = new Date(raw);
+            if (!isNaN(d.getTime())) { publishedAt = raw; break; }
+          }
+          // 2026. 3. 25. 또는 2026-03-25 형식
+          const dotMatch = raw.match(/(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})/);
+          if (dotMatch) {
+            publishedAt = new Date(Number(dotMatch[1]), Number(dotMatch[2]) - 1, Number(dotMatch[3])).toISOString();
+            break;
+          }
+          const dashMatch = raw.match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
+          if (dashMatch) {
+            publishedAt = new Date(Number(dashMatch[1]), Number(dashMatch[2]) - 1, Number(dashMatch[3])).toISOString();
+            break;
+          }
+          // 그 외 Date 파싱 시도
+          const d = new Date(raw);
+          if (!isNaN(d.getTime())) { publishedAt = d.toISOString(); break; }
+        }
+      }
 
       // 썸네일: og:image
       const imgMatch = html.match(/<meta\s+property="og:image"\s+content="([^"]*?)"/i)
@@ -404,6 +461,7 @@ async function crawlHospitalBlogPosts(blogUrl, maxPosts = 10) {
     // ── 1단계: logNo 수집 (fetch 기반, 빠름) ──
     const seenLogNos = new Set();
     const allLogNos = [];
+    const rssDateMap = new Map(); // logNo → publishedAt (RSS에서 얻은 날짜)
 
     const addLogNos = (logNos, source) => {
       let added = 0;
@@ -419,12 +477,18 @@ async function crawlHospitalBlogPosts(blogUrl, maxPosts = 10) {
 
     // 1-A: RSS + PostTitleListAsync 동시 시도
     const [rssResult, apiResult] = await Promise.allSettled([
-      // RSS
+      // RSS (logNo + pubDate)
       (async () => {
         const rssUrl = `https://rss.blog.naver.com/${blogId}.xml`;
         const res = await fetch(rssUrl, { headers: FETCH_HEADERS, signal: AbortSignal.timeout(5000) });
         if (!res.ok) return [];
-        return extractRssLinks(await res.text(), blogId);
+        const xml = await res.text();
+        const items = extractRssItems(xml, blogId);
+        // 날짜 저장
+        for (const item of items) {
+          if (item.publishedAt) rssDateMap.set(item.logNo, item.publishedAt);
+        }
+        return items.map(i => i.logNo);
       })(),
       // PostTitleListAsync
       (async () => {
@@ -508,8 +572,10 @@ async function crawlHospitalBlogPosts(blogUrl, maxPosts = 10) {
         if (r.status === 'fulfilled' && r.value) {
           const postData = r.value;
           let publishedAtISO = '';
-          if (postData.publishedAt) {
-            try { const d = new Date(postData.publishedAt); if (!isNaN(d.getTime())) publishedAtISO = d.toISOString(); } catch {}
+          // 본문에서 추출한 날짜 → RSS 날짜 fallback
+          const rawDate = postData.publishedAt || rssDateMap.get(logNo) || '';
+          if (rawDate) {
+            try { const d = new Date(rawDate); if (!isNaN(d.getTime())) publishedAtISO = d.toISOString(); } catch {}
           }
           results.push({
             url: `https://blog.naver.com/${blogId}/${logNo}`,
@@ -526,8 +592,9 @@ async function crawlHospitalBlogPosts(blogUrl, maxPosts = 10) {
           const postData = await fetchPostDataPuppeteer(browserInstance, blogId, logNo);
           if (postData) {
             let publishedAtISO = '';
-            if (postData.publishedAt) {
-              try { const d = new Date(postData.publishedAt); if (!isNaN(d.getTime())) publishedAtISO = d.toISOString(); } catch {}
+            const rawDate = postData.publishedAt || rssDateMap.get(logNo) || '';
+            if (rawDate) {
+              try { const d = new Date(rawDate); if (!isNaN(d.getTime())) publishedAtISO = d.toISOString(); } catch {}
             }
             results.push({
               url: `https://blog.naver.com/${blogId}/${logNo}`,
