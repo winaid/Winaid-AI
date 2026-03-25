@@ -110,24 +110,36 @@ export function buildBlogPrompt(req: GenerationRequest): {
 
   // 소제목 개수 가이드 (old gpt52-prompts-staged.ts 동일)
   let subheadingGuide: string;
-  if (targetLength < 2000) subheadingGuide = '5개';
-  else if (targetLength < 2500) subheadingGuide = '5~6개';
-  else if (targetLength < 3000) subheadingGuide = '6개';
-  else subheadingGuide = '6~7개';
+  if (targetLength < 2000) subheadingGuide = '4개';
+  else if (targetLength < 2500) subheadingGuide = '4~5개';
+  else if (targetLength < 3000) subheadingGuide = '5개';
+  else subheadingGuide = '5~6개';
+
+  // 말투 학습이 적용되면 IDENTITY의 화자/시점 규칙을 무시 (학습된 말투 우선)
+  const hasLearnedStyle = !!(req.learnedStyleId || (req.hospitalStyleSource === 'explicit_selected_hospital' && req.hospitalName));
 
   const systemInstruction = [
     // ── 글쓴이 정체성 (OLD IDENTITY 블록) ──
-    '[글쓴이 정체성]',
-    '병원 블로그 전담 에디터. 의사가 아니라 건강 정보를 잘 정리하는 사람.',
-    '- 의학 지식이 있지만 의사처럼 말하지 않는다',
-    '- 독자에게 가르치지 않는다. 정보를 두고 갈 뿐이다',
-    '- 문장이 짧다. 군더더기를 싫어한다',
-    '',
-    '[최상위 원칙] 쉽고 짧게 직접 말한다',
-    '1. 짧게 쓴다. 한 문장은 40자 이내 권장. 50자 넘으면 나눈다',
-    '2. 직접 말한다. 돌려 말하지 않는다',
-    '3. 쉬운 말을 쓴다. 중학생도 이해할 수 있을 정도',
-    '4. 의료광고법에 걸리는 표현만 피한다. 나머지는 직접 서술한다',
+    // 말투 학습 시: 정체성/시점은 학습된 말투가 덮어씀
+    ...(hasLearnedStyle ? [
+      '[최상위 원칙] 쉽고 짧게 직접 말한다',
+      '1. 짧게 쓴다. 한 문장은 40자 이내 권장. 50자 넘으면 나눈다',
+      '2. 직접 말한다. 돌려 말하지 않는다',
+      '3. 쉬운 말을 쓴다. 중학생도 이해할 수 있을 정도',
+      '⚠️ 아래 학습된 말투/화자 설정이 최우선. IDENTITY 화자 설정보다 학습 말투를 따르세요.',
+    ] : [
+      '[글쓴이 정체성]',
+      '병원 블로그 전담 에디터. 의사가 아니라 건강 정보를 잘 정리하는 사람.',
+      '- 의학 지식이 있지만 의사처럼 말하지 않는다',
+      '- 독자에게 가르치지 않는다. 정보를 두고 갈 뿐이다',
+      '- 문장이 짧다. 군더더기를 싫어한다',
+      '',
+      '[최상위 원칙] 쉽고 짧게 직접 말한다',
+      '1. 짧게 쓴다. 한 문장은 40자 이내 권장. 50자 넘으면 나눈다',
+      '2. 직접 말한다. 돌려 말하지 않는다',
+      '3. 쉬운 말을 쓴다. 중학생도 이해할 수 있을 정도',
+      '4. 의료광고법에 걸리는 표현만 피한다. 나머지는 직접 서술한다',
+    ]),
     '',
     personaGuide,
     audienceGuide,
@@ -214,7 +226,7 @@ export function buildBlogPrompt(req: GenerationRequest): {
     '',
     '[글 전체 구조 — 반드시 준수]',
     '- 도입부: 2문단 고정 (h3 소제목 없음, <p> 태그만)',
-    `- 본문 소제목: 최소 5개 (${targetLength}자 기준 ${subheadingGuide} 권장). 5개 미만 실패`,
+    `- 본문 소제목: 최소 4개 (${targetLength}자 기준 ${subheadingGuide} 권장). 4개 미만 실패`,
     '- 각 소제목 = <h3> 태그만 사용. <h1>, <h2> 절대 금지',
     '- 각 소제목 아래 문단 2~3개씩 균일. 마지막 소제목도 축약 금지',
     '- 소제목 간 문단 수 차이 최대 1문단',
@@ -229,7 +241,7 @@ export function buildBlogPrompt(req: GenerationRequest): {
     '🚨 [구조 위반 체크리스트 — 출력 전 반드시 확인]',
     '□ <h1>, <h2> 태그가 단 1개라도 있으면 → 실패',
     '□ 마크다운 ##, ### 이 있으면 → 실패',
-    '□ <h3> 소제목이 5개 미만이면 → 실패',
+    '□ <h3> 소제목이 4개 미만이면 → 실패',
     '□ 소제목 아래 <p>가 2개 미만이면 → 실패',
     '□ 마무리 섹션이 없으면 → 실패',
   );

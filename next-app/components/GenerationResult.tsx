@@ -189,51 +189,49 @@ function BlogSectionPanel({
   onRegenerate: (idx: number) => void;
 }) {
   return (
-    <div className="w-[220px] flex-none border-r border-slate-100 bg-slate-50/60 overflow-y-auto">
-      <div className="px-3 py-2.5 border-b border-slate-100">
-        <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">소제목별 수정</span>
+    <div className="sticky top-4 shrink-0 w-56 rounded-xl p-4 space-y-2 h-fit max-h-[70vh] overflow-y-auto shadow-xl self-start bg-white border border-slate-200">
+      <div className="flex items-center justify-between mb-3">
+        <h4 className="text-sm font-bold text-slate-700">소제목별 수정</h4>
       </div>
-      <div className="divide-y divide-slate-100">
-        {sections.map((section) => {
-          const label =
-            section.type === 'intro'
-              ? '도입부'
-              : section.type === 'conclusion'
-                ? '마무리'
-                : section.title;
-          const charLen = section.html.replace(/<[^>]*>/g, '').replace(/\s/g, '').length;
-          const isRegenerating = regeneratingSection === section.index;
-          const isDisabled = regeneratingSection !== null && !isRegenerating;
+      {sections.map((section) => {
+        const label =
+          section.type === 'intro'
+            ? '도입부'
+            : section.type === 'conclusion'
+              ? '마무리'
+              : section.title;
+        const charLen = section.html.replace(/<[^>]*>/g, '').replace(/\s/g, '').length;
+        const isRegenerating = regeneratingSection === section.index;
+        const isDisabled = regeneratingSection !== null && !isRegenerating;
 
-          return (
-            <div key={section.index} className="px-3 py-2.5">
-              <div className="text-xs font-semibold text-slate-700 mb-1 truncate" title={label}>
-                {label}
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] text-slate-400">{charLen}자</span>
-                <button
-                  onClick={() => onRegenerate(section.index)}
-                  disabled={isRegenerating || isDisabled}
-                  className={`px-2.5 py-1 text-[10px] font-bold rounded-md transition-all ${
-                    isRegenerating
-                      ? 'bg-blue-100 text-blue-600 animate-pulse cursor-wait'
-                      : isDisabled
-                        ? 'bg-slate-100 text-slate-300 cursor-not-allowed'
-                        : 'bg-violet-50 text-violet-600 hover:bg-violet-100'
-                  }`}
-                >
-                  {isRegenerating ? '재생성 중...' : '재생성'}
-                </button>
-              </div>
+        return (
+          <div key={section.index} className="p-3 rounded-lg text-sm bg-slate-50 hover:bg-slate-100 transition-colors">
+            <div className="font-medium mb-1 truncate text-slate-700" title={label}>
+              {label}
             </div>
-          );
-        })}
-      </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-slate-500">{charLen}자</span>
+              <button
+                onClick={() => onRegenerate(section.index)}
+                disabled={isRegenerating || isDisabled}
+                className={`ml-auto text-xs px-3 py-1 rounded-md font-medium transition-all ${
+                  isRegenerating
+                    ? 'bg-blue-100 text-blue-600 animate-pulse'
+                    : isDisabled
+                      ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                      : 'bg-violet-100 text-violet-700 hover:bg-violet-200 active:scale-95'
+                }`}
+              >
+                {isRegenerating ? '재생성 중...' : '재생성'}
+              </button>
+            </div>
+          </div>
+        );
+      })}
       {/* 재생성 진행 상태 */}
       {sectionProgress && (
-        <div className="px-3 py-2 bg-blue-50 border-t border-blue-100">
-          <p className="text-[10px] text-blue-600 animate-pulse">{sectionProgress}</p>
+        <div className="mt-2 p-2 bg-blue-50 rounded-lg text-xs text-blue-700 animate-pulse">
+          {sectionProgress}
         </div>
       )}
     </div>

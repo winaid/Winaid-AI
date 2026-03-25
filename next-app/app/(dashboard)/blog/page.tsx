@@ -1079,13 +1079,13 @@ ${topic.trim()}${disease.trim() ? ', 질환: ' + disease.trim() : ''}
         console.info(`[BLOG] Stage 1.5: 본문 300자 미만 — 검증 스킵`);
       }
 
-      // ── Stage 2: 소제목 개수 검사 (최소 5개 정책 — 보정 없음, PO 결정) ──
+      // ── Stage 2: 소제목 개수 검사 (최소 4개 정책) ──
       {
         const h3Tags = blogText.match(/<h3[^>]*>([\s\S]*?)<\/h3>/gi) || [];
         const h3Count = h3Tags.length;
-        console.info(`[BLOG] Stage 2: 소제목 수 판정 — 현재 ${h3Count}개 (최소 5개)`);
+        console.info(`[BLOG] Stage 2: 소제목 수 판정 — 현재 ${h3Count}개 (최소 4개)`);
 
-        if (h3Count >= 5) {
+        if (h3Count >= 4) {
           console.info(`[BLOG] Stage 2: ✅ 소제목 수 충분 (${h3Count}개)`);
         }
       }
