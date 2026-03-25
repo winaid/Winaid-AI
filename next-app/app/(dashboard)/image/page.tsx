@@ -1308,6 +1308,21 @@ export default function ImagePage() {
                   <textarea value={extraPrompt} onChange={e => setExtraPrompt(e.target.value)} placeholder={'예: 벚꽃 느낌으로 꾸며줘\n예: 하단에 전화번호 크게 넣어줘'} rows={2} className="w-full px-3 py-2 border border-indigo-200 rounded-lg text-sm outline-none focus:border-indigo-400 resize-none bg-white placeholder:text-indigo-300" />
                 </div>
 
+                {/* 이미지 사이즈 (OLD 위치: 추가 프롬프트 아래, 내 스타일 위) */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-2">이미지 사이즈</label>
+                  <div className="grid grid-cols-5 gap-1.5">
+                    {ASPECT_RATIOS.map((r) => (
+                      <button key={r.value} type="button" onClick={() => setAspectRatio(r.value)} disabled={generating}
+                        className={`py-2 px-1 rounded-xl text-center transition-all ${aspectRatio === r.value ? 'bg-slate-800 text-white shadow-md' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>
+                        <div className="text-sm leading-none">{r.icon}</div>
+                        <div className="text-[10px] font-bold mt-1 leading-tight">{r.label}</div>
+                        <div className={`text-[8px] mt-0.5 ${aspectRatio === r.value ? 'text-slate-300' : 'text-slate-400'}`}>{r.desc}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 {/* 내 스타일 히스토리 (업로드 스타일 — 선택 시 내장 프리셋보다 우선) */}
                 <div>
                   <label className="block text-[11px] font-semibold text-slate-500 mb-1.5">
@@ -1557,21 +1572,6 @@ export default function ImagePage() {
             {/* AI 프롬프트 채팅 (OLD parity: PromptGenerator) */}
             <PromptChat onApplyPrompt={(p) => setPrompt(p)} disabled={generating} />
             </>)}
-
-            {/* 이미지 사이즈 (OLD parity: 5열 그리드, 아이콘+라벨+desc) */}
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-2">이미지 사이즈</label>
-              <div className="grid grid-cols-5 gap-1.5">
-                {ASPECT_RATIOS.map((r) => (
-                  <button key={r.value} onClick={() => setAspectRatio(r.value)} disabled={generating}
-                    className={`py-2 px-1 rounded-xl text-center transition-all ${aspectRatio === r.value ? 'bg-slate-800 text-white shadow-md' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>
-                    <div className="text-sm leading-none">{r.icon}</div>
-                    <div className="text-[10px] font-bold mt-1 leading-tight">{r.label}</div>
-                    <div className={`text-[8px] mt-0.5 ${aspectRatio === r.value ? 'text-slate-300' : 'text-slate-400'}`}>{r.desc}</div>
-                  </button>
-                ))}
-              </div>
-            </div>
 
             {/* 상세 설정 (전화번호/진료시간/주소/브랜드컬러) */}
             <button type="button" onClick={() => setShowAdvanced(!showAdvanced)}
