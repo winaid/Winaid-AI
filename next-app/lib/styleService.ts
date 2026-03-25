@@ -491,11 +491,19 @@ ${sliced}
 [채점 항목 4가지 — 각 100점 만점, 감점 방식]
 
 1) score_typo (오타 점수, 100점)
-- 실제 오타만 해당 (의도적 표현은 오타 아님)
+- 실제 오타만 해당 (예: "임프란트"→"임플란트", "치요"→"치료")
 - 건당 -10점, 최대 10건까지 보고
+- ⚠️ 오타가 아닌 것: 문장 스타일/표현 차이, 문장이 짧은 것, 구어체 표현
 
 2) score_spelling (맞춤법·띄어쓰기·문법 점수, 100점)
+- 실제 맞춤법/띄어쓰기 오류만 해당 (예: "됬다"→"됐다", "해야될"→"해야 될")
 - 건당 -5점, 최대 10건까지 보고
+- ⚠️ 맞춤법 오류가 아닌 것:
+  - 문장을 더 길게/짧게 쓰는 건 스타일 차이지 오류가 아님
+  - "잇몸에 염증" → "잇몸에 염증이 생길 수 있습니다"는 문장 확장 제안이지 맞춤법 오류 아님
+  - "영향" → "영향을 미칠 수 있습니다"는 스타일 제안이지 맞춤법 오류 아님
+  - 완결된 문장이 아닌 것(제목, 소제목, 리스트 항목)은 오류로 잡지 않는다
+  - correction이 original보다 훨씬 길면 (2배 이상) 스타일 제안일 가능성 높음 → 제외
 
 3) score_medical_law (의료광고법 준수 점수, 100점)
 - 의료법 제56조 기준
@@ -515,6 +523,12 @@ ${sliced}
 - 병원 상호명, 진료과목 나열, 진료시간/위치/주차 등 사실 정보는 위반 아님
 - "~에 도움이 됩니다", "~할 수 있습니다" 같은 완화된 표현은 위반 아님
 - 위반 여부는 해당 문장 전체 맥락에서 판단. 단어 단독 매칭 절대 금지
+
+⚠️ 대체어(replacement) 작성 규칙:
+- 원문의 말투와 분위기를 최대한 유지하세요
+- AI스러운 딱딱한 표현 금지 (예: "증상 개선에 도움을 드릴 수 있습니다" ← 이런 거 금지)
+- 블로그 글이니까 자연스럽고 읽기 편한 표현으로 제안
+- 예시: "획기적인 치료" → "효과적인 치료", "완치됩니다" → "나을 수 있어요", "최고의 기술" → "검증된 기술"
 
 4) score_naver_seo (네이버 블로그 SEO 점수, 100점)
 네이버 C-Rank + D.I.A 알고리즘 기준 (2025~2026):
@@ -564,15 +578,63 @@ ${sliced}
     throw new Error('채점 결과 파싱 실패');
   }
 
+  let typo_issues = (parsed.typo_issues as CrawledPostScore['typo_issues']) || [];
+  let law_issues = (parsed.law_issues as CrawledPostScore['law_issues']) || [];
+  const seo_issues = (parsed.seo_issues as CrawledPostScore['seo_issues']) || [];
+
+  // ── 후처리 필터: 오탐 제거 ──
+
+  // 맞춤법/오타: correction이 original보다 2배 이상 길면 스타일 제안 → 제거
+  typo_issues = typo_issues.filter(issue => {
+    const origLen = (issue.original || '').length;
+    const corrLen = (issue.correction || '').length;
+    if (origLen > 0 && corrLen > origLen * 2) return false;
+    // original과 correction이 거의 같으면 제거 (띄어쓰기만 다른 경우 제외)
+    if (issue.original.replace(/\s/g, '') === issue.correction.replace(/\s/g, '')) return false;
+    return true;
+  });
+
+  // 의료법: 오탐 제거
+  const safeLawWordPatterns = [/인근/, /근처/, /주변/, /역\s*치과/, /구\s*치과/, /동\s*치과/];
+  const negativeContextPatterns = [/어렵/, /불가/, /없습니다/, /않습니다/, /아닙니다/, /주의/, /위험/, /수 있/];
+  // 기술/시스템/방식 설명에 쓰이는 단어는 치료 효과 단정이 아님
+  const techDescPatterns = [/시스템/, /방식/, /기술/, /장비/, /장치/, /프로그램/, /설계/, /소재/];
+  law_issues = law_issues.filter(issue => {
+    const ctx = (issue.context || '');
+    const word = (issue.word || '');
+    // 지역명+치과 패턴은 무조건 제거
+    if (safeLawWordPatterns.some(p => p.test(word))) return false;
+    // 부정/완화 문맥이면 제거 (예: "완치가 어렵다", "~할 수 있습니다")
+    if (negativeContextPatterns.some(p => p.test(ctx))) return false;
+    // "혁신적인/획기적인" + 시스템/방식/기술 문맥이면 제거
+    if (/혁신|획기/.test(word) && techDescPatterns.some(p => p.test(ctx))) return false;
+    // severity가 medium이고 context에 구체적 기술/방법론 설명이 있으면 제거
+    if (issue.severity === 'medium' && techDescPatterns.some(p => p.test(ctx))) return false;
+    return true;
+  });
+
+  // 필터 후 점수 재계산
+  const typoCount = typo_issues.filter(i => i.type === 'typo' || !i.type).length;
+  const spellingCount = typo_issues.filter(i => i.type === 'spelling').length;
+  const recalcTypo = Math.max(0, 100 - typoCount * 10);
+  const recalcSpelling = Math.max(0, 100 - spellingCount * 5);
+  // 필터 후 이슈가 0건이면 100점, 아니면 이슈 수 기반으로 재계산
+  const rawLawIssueCount = (parsed.law_issues as CrawledPostScore['law_issues'])?.length ?? 0;
+  const recalcLaw = law_issues.length === 0
+    ? 100
+    : rawLawIssueCount > law_issues.length
+      ? Math.min(100, Math.max(0, Math.min(100, Number(parsed.score_medical_law) || 100) + (rawLawIssueCount - law_issues.length) * 10))
+      : Math.max(0, Math.min(100, Number(parsed.score_medical_law) || 100));
+
   const scores = {
-    score_typo: Math.max(0, Math.min(100, Number(parsed.score_typo) || 100)),
-    score_spelling: Math.max(0, Math.min(100, Number(parsed.score_spelling) || 100)),
-    score_medical_law: Math.max(0, Math.min(100, Number(parsed.score_medical_law) || 100)),
+    score_typo: recalcTypo,
+    score_spelling: recalcSpelling,
+    score_medical_law: recalcLaw,
     score_naver_seo: Math.max(0, Math.min(100, Number(parsed.score_naver_seo) || 100)),
     score_total: 0,
-    typo_issues: (parsed.typo_issues as CrawledPostScore['typo_issues']) || [],
-    law_issues: (parsed.law_issues as CrawledPostScore['law_issues']) || [],
-    seo_issues: (parsed.seo_issues as CrawledPostScore['seo_issues']) || [],
+    typo_issues,
+    law_issues,
+    seo_issues,
   };
   scores.score_total = Math.round((scores.score_typo + scores.score_spelling + scores.score_medical_law + scores.score_naver_seo) / 4);
   return scores;

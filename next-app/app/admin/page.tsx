@@ -1674,6 +1674,18 @@ export default function AdminPage() {
                                               if (score >= 70) return 'bg-orange-100 text-orange-700';
                                               return 'bg-red-100 text-red-600';
                                             };
+                                            // 이슈 기반 점수 보정 (이슈 0건인데 점수가 100 미만이면 100으로)
+                                            const typoIssues = (post.typo_issues as CrawledPostScore['typo_issues']) || [];
+                                            const typoOnly = typoIssues.filter(i => i.type === 'typo' || !i.type);
+                                            const spellingOnly = typoIssues.filter(i => i.type === 'spelling');
+                                            const lawIssues = (post.law_issues as CrawledPostScore['law_issues']) || [];
+                                            const displayTypo = typoOnly.length === 0 ? 100 : (post.score_typo ?? 100);
+                                            const displaySpelling = spellingOnly.length === 0 ? 100 : (post.score_spelling ?? 100);
+                                            const displayLaw = lawIssues.length === 0 ? 100 : (post.score_medical_law ?? 100);
+                                            const displaySeo = post.score_naver_seo ?? null;
+                                            const displayTotal = hasScore
+                                              ? Math.round(((displayTypo + displaySpelling + displayLaw + (displaySeo ?? displayTypo)) / (displaySeo != null ? 4 : 3)))
+                                              : post.score_total;
                                             const currentContent = editingContent[post.id] ?? post.corrected_content ?? post.content;
                                             return (
                                               <div key={post.id} className="border-b border-slate-100 last:border-b-0">
@@ -1688,11 +1700,11 @@ export default function AdminPage() {
                                                     <div className="flex items-center gap-1.5 flex-wrap mb-0.5">
                                                       {hasScore ? (
                                                         <>
-                                                          <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${scoreBadge(post.score_typo)}`}>오타 {post.score_typo ?? '?'}</span>
-                                                          <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${scoreBadge(post.score_spelling)}`}>맞춤법 {post.score_spelling ?? '?'}</span>
-                                                          <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${scoreBadge(post.score_medical_law)}`}>의료법 {post.score_medical_law ?? '?'}</span>
-                                                          <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${scoreBadge(post.score_naver_seo)}`}>SEO {post.score_naver_seo ?? '?'}</span>
-                                                          <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${scoreBadge(post.score_total)}`}>종합 {post.score_total ?? '?'}</span>
+                                                          <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${scoreBadge(displayTypo)}`}>오타 {displayTypo}</span>
+                                                          <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${scoreBadge(displaySpelling)}`}>맞춤법 {displaySpelling}</span>
+                                                          <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${scoreBadge(displayLaw)}`}>의료법 {displayLaw}</span>
+                                                          {displaySeo != null && <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${scoreBadge(displaySeo)}`}>SEO {displaySeo}</span>}
+                                                          <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${scoreBadge(displayTotal)}`}>종합 {displayTotal}</span>
                                                         </>
                                                       ) : (
                                                         <span className="text-[10px] px-1.5 py-0.5 bg-slate-100 text-slate-400 rounded">미채점</span>
@@ -1727,26 +1739,23 @@ export default function AdminPage() {
                                                       <div className="bg-slate-50 border border-slate-200 rounded-lg p-2.5 space-y-1">
                                                         <p className="text-[11px] font-bold text-slate-700 mb-1">📋 채점 근거</p>
                                                         <div className="flex flex-wrap gap-2 text-[11px]">
-                                                          <span className={`px-2 py-0.5 rounded font-bold ${scoreBadge(post.score_typo)}`}>
-                                                            오타 {post.score_typo ?? '?'}점
-                                                            {(() => { const n = ((post.typo_issues as CrawledPostScore['typo_issues']) || []).filter(i => i.type === 'typo' || !i.type).length; return n > 0 ? ` — ${n}건 × -10점` : ' — 없음'; })()}
+                                                          <span className={`px-2 py-0.5 rounded font-bold ${scoreBadge(displayTypo)}`}>
+                                                            오타 {displayTypo}점{typoOnly.length > 0 ? ` — ${typoOnly.length}건 × -10점` : ' — 없음'}
                                                           </span>
-                                                          <span className={`px-2 py-0.5 rounded font-bold ${scoreBadge(post.score_spelling)}`}>
-                                                            맞춤법 {post.score_spelling ?? '-'}점
-                                                            {(() => { const n = ((post.typo_issues as CrawledPostScore['typo_issues']) || []).filter(i => i.type === 'spelling').length; return n > 0 ? ` — ${n}건 × -5점` : ' — 없음'; })()}
+                                                          <span className={`px-2 py-0.5 rounded font-bold ${scoreBadge(displaySpelling)}`}>
+                                                            맞춤법 {displaySpelling}점{spellingOnly.length > 0 ? ` — ${spellingOnly.length}건 × -5점` : ' — 없음'}
                                                           </span>
-                                                          <span className={`px-2 py-0.5 rounded font-bold ${scoreBadge(post.score_medical_law)}`}>
-                                                            의료법 {post.score_medical_law ?? '?'}점
-                                                            {((post.law_issues as CrawledPostScore['law_issues'])?.length ?? 0) > 0
-                                                              ? ` — 위반 ${(post.law_issues as CrawledPostScore['law_issues'])!.length}건`
-                                                              : ' — 위반 없음'}
+                                                          <span className={`px-2 py-0.5 rounded font-bold ${scoreBadge(displayLaw)}`}>
+                                                            의료법 {displayLaw}점{lawIssues.length > 0 ? ` — 위반 ${lawIssues.length}건` : ' — 위반 없음'}
                                                           </span>
-                                                          <span className={`px-2 py-0.5 rounded font-bold ${scoreBadge(post.score_naver_seo)}`}>
-                                                            SEO {post.score_naver_seo ?? '?'}점
-                                                            {((post.seo_issues as CrawledPostScore['seo_issues'])?.length ?? 0) > 0
-                                                              ? ` — 감점 ${(post.seo_issues as CrawledPostScore['seo_issues'])!.length}건`
-                                                              : ' — 양호'}
-                                                          </span>
+                                                          {displaySeo != null && (
+                                                            <span className={`px-2 py-0.5 rounded font-bold ${scoreBadge(displaySeo)}`}>
+                                                              SEO {displaySeo}점
+                                                              {((post.seo_issues as CrawledPostScore['seo_issues'])?.length ?? 0) > 0
+                                                                ? ` — 감점 ${(post.seo_issues as CrawledPostScore['seo_issues'])!.length}건`
+                                                                : ' — 양호'}
+                                                            </span>
+                                                          )}
                                                         </div>
                                                       </div>
                                                     )}
