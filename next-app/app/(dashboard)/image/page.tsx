@@ -43,7 +43,7 @@ const inputCls = 'w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-x
 export default function ImagePage() {
   const [mode, setMode] = useState<'template' | 'free'>('template');
   const [prompt, setPrompt] = useState('');
-  const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
+  const [selectedTemplate, setSelectedTemplate] = useState<string | null>('schedule');
   const [aspectRatio, setAspectRatio] = useState<AspectRatio>('1:1');
   const [generating, setGenerating] = useState(false);
   const [progress, setProgress] = useState('');
