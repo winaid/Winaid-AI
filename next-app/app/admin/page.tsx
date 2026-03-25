@@ -225,48 +225,74 @@ export default function AdminPage() {
   const [crawlAllStatus, setCrawlAllStatus] = useState<{ loading: boolean; progress: string }>({ loading: false, progress: '' });
   const [crawlAllIncludeStyle, setCrawlAllIncludeStyle] = useState(false);
 
-  // 노출 순위 체크
+  // 노출 순위 체크 (다중 키워드)
   const [rankCheckKeyword, setRankCheckKeyword] = useState<Record<string, string>>({});
-  const [rankCheckResult, setRankCheckResult] = useState<Record<string, { rank: number | null; checking: boolean; total?: number }>>({});
+  const [rankResults, setRankResults] = useState<Record<string, { keywords: Array<{ keyword: string; rank: number | null }>; checking: boolean }>>({});
 
-  const handleCheckRank = useCallback(async (hospitalName: string, blogUrls: string[]) => {
-    const keyword = rankCheckKeyword[hospitalName]?.trim();
-    if (!keyword) return;
-    const key = hospitalName;
-    setRankCheckResult(prev => ({ ...prev, [key]: { rank: null, checking: true } }));
+  /** 단일 키워드 네이버 순위 체크 */
+  const checkSingleRank = async (keyword: string, blogIds: string[]): Promise<number | null> => {
     try {
-      const blogIds = blogUrls
-        .map(url => url.match(/blog\.naver\.com\/([^/?#]+)/)?.[1])
-        .filter((id): id is string => !!id);
-      if (blogIds.length === 0) {
-        setRankCheckResult(prev => ({ ...prev, [key]: { rank: null, checking: false } }));
-        return;
-      }
       const res = await fetch('/api/naver/search', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query: keyword, display: 30 }),
       });
-      if (!res.ok) {
-        setRankCheckResult(prev => ({ ...prev, [key]: { rank: null, checking: false } }));
-        return;
-      }
-      const data = (await res.json()) as { items?: Array<{ link?: string }>, total?: number };
-      const items = data.items || [];
+      if (!res.ok) return null;
+      const data = (await res.json()) as { items?: Array<{ link?: string }> };
       const blogIdSet = new Set(blogIds.map(id => id.toLowerCase()));
-      let foundRank: number | null = null;
-      for (let i = 0; i < items.length; i++) {
-        const link = items[i].link || '';
-        const match = link.match(/blog\.naver\.com\/([^/?#]+)/);
-        if (match && blogIdSet.has(match[1].toLowerCase())) {
-          foundRank = i + 1;
-          break;
-        }
+      for (let i = 0; i < (data.items || []).length; i++) {
+        const match = (data.items![i].link || '').match(/blog\.naver\.com\/([^/?#]+)/);
+        if (match && blogIdSet.has(match[1].toLowerCase())) return i + 1;
       }
-      setRankCheckResult(prev => ({ ...prev, [key]: { rank: foundRank, checking: false, total: data.total } }));
-    } catch {
-      setRankCheckResult(prev => ({ ...prev, [key]: { rank: null, checking: false } }));
+      return null;
+    } catch { return null; }
+  };
+
+  /** 병원 주소에서 핵심 키워드 자동 생성 */
+  const generateCoreKeywords = (hospitalName: string, address?: string): string[] => {
+    const keywords: string[] = [];
+    const locations: string[] = [];
+    if (address) {
+      const guMatch = address.match(/([가-힣]+[구군])\b/g);
+      if (guMatch) locations.push(...guMatch.filter(g => !/^(서울|부산|대구|인천|광주|대전|울산|세종)$/.test(g)));
+      const dongMatch = address.match(/([가-힣]+[동읍면])\b/g);
+      if (dongMatch) locations.push(...dongMatch.filter(d => d.length >= 2 && d.length <= 6));
     }
+    if (locations.length === 0) locations.push(hospitalName.replace(/치과.*|의원.*|병원.*/g, '').trim());
+    const terms = ['치과', '임플란트', '치아교정', '스케일링', '신경치료'];
+    const uniqueLocs = [...new Set(locations)].slice(0, 2);
+    for (const loc of uniqueLocs) {
+      for (const term of terms) keywords.push(`${loc} ${term}`);
+    }
+    return keywords.slice(0, 8);
+  };
+
+  /** 병원 순위 자동 체크 (크롤링 후 자동 호출) */
+  const handleAutoRankCheck = useCallback(async (hospitalName: string, blogUrls: string[], address?: string) => {
+    const blogIds = blogUrls
+      .map(url => url.match(/blog\.naver\.com\/([^/?#]+)/)?.[1])
+      .filter((id): id is string => !!id);
+    if (blogIds.length === 0) return;
+
+    setRankResults(prev => ({ ...prev, [hospitalName]: { keywords: [], checking: true } }));
+    const coreKeywords = generateCoreKeywords(hospitalName, address);
+    const results: Array<{ keyword: string; rank: number | null }> = [];
+
+    for (let i = 0; i < coreKeywords.length; i++) {
+      const rank = await checkSingleRank(coreKeywords[i], blogIds);
+      results.push({ keyword: coreKeywords[i], rank });
+      // rate limit
+      if (i < coreKeywords.length - 1) await new Promise(r => setTimeout(r, 200));
+    }
+
+    // 수동 키워드도 있으면 추가
+    const manual = rankCheckKeyword[hospitalName]?.trim();
+    if (manual && !coreKeywords.includes(manual)) {
+      const rank = await checkSingleRank(manual, blogIds);
+      results.unshift({ keyword: manual, rank });
+    }
+
+    setRankResults(prev => ({ ...prev, [hospitalName]: { keywords: results, checking: false } }));
   }, [rankCheckKeyword]);
 
   // 세션 복원
@@ -492,9 +518,18 @@ export default function AdminPage() {
       });
       setCrawlingStatus(prev => ({
         ...prev,
-        [hospitalName]: { loading: false, progress: '학습 완료!' },
+        [hospitalName]: { loading: false, progress: '학습 완료! 노출 순위 체크 중...' },
       }));
       loadStyleProfiles();
+      // 자동 노출 순위 체크
+      const team = TEAM_DATA.find(t => t.hospitals.some(h => h.name.replace(/ \(.*\)$/, '') === hospitalName));
+      const hospital = team?.hospitals.find(h => h.name.replace(/ \(.*\)$/, '') === hospitalName);
+      handleAutoRankCheck(hospitalName, validUrls, hospital?.address).then(() => {
+        setCrawlingStatus(prev => ({
+          ...prev,
+          [hospitalName]: { loading: false, progress: '학습 + 순위 체크 완료!' },
+        }));
+      });
     } catch (err: unknown) {
       const errMsg = (err as Error).message || '알 수 없는 오류';
       setCrawlingStatus(prev => ({
@@ -690,8 +725,20 @@ export default function AdminPage() {
         },
         { includeStyleAnalysis: crawlAllIncludeStyle },
       );
-      setCrawlAllStatus({ loading: false, progress: '전체 완료!' });
+      setCrawlAllStatus({ loading: true, progress: '채점 완료! 전체 노출 순위 체크 중...' });
       loadStyleProfiles();
+      // 전체 병원 자동 순위 체크
+      for (const team of TEAM_DATA) {
+        for (const h of team.hospitals) {
+          const baseName = h.name.replace(/ \(.*\)$/, '');
+          const urls = h.naverBlogUrls?.filter(Boolean) || [];
+          if (urls.length > 0) {
+            await handleAutoRankCheck(baseName, urls, h.address);
+            await new Promise(r => setTimeout(r, 300));
+          }
+        }
+      }
+      setCrawlAllStatus({ loading: false, progress: '전체 크롤링 + 순위 체크 완료!' });
     } catch (err: unknown) {
       setCrawlAllStatus({ loading: false, progress: `오류: ${(err as Error).message}` });
     }
@@ -1529,40 +1576,45 @@ export default function AdminPage() {
                         {/* 노출 순위 체크 */}
                         {hasAnyUrl && (
                           <div className="mt-3 bg-blue-50 border border-blue-100 rounded-xl p-3">
-                            <p className="text-[11px] font-bold text-blue-700 mb-2">네이버 노출 순위 체크</p>
-                            <div className="flex gap-1.5">
+                            <div className="flex items-center justify-between mb-2">
+                              <p className="text-[11px] font-bold text-blue-700">네이버 노출 순위</p>
+                              <button
+                                onClick={() => handleAutoRankCheck(baseName, urls, h.address)}
+                                disabled={rankResults[baseName]?.checking}
+                                className="px-2 py-1 text-[10px] font-bold bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-40"
+                              >
+                                {rankResults[baseName]?.checking ? '체크 중...' : '순위 체크'}
+                              </button>
+                            </div>
+                            {/* 수동 키워드 추가 */}
+                            <div className="flex gap-1.5 mb-2">
                               <input
                                 type="text"
                                 value={rankCheckKeyword[baseName] || ''}
                                 onChange={e => setRankCheckKeyword(prev => ({ ...prev, [baseName]: e.target.value }))}
-                                onKeyDown={e => { if (e.key === 'Enter') handleCheckRank(baseName, urls); }}
-                                placeholder="키워드 입력 (예: 광화문 임플란트)"
-                                className="flex-1 px-3 py-1.5 text-xs border border-blue-200 rounded-lg focus:outline-none focus:border-blue-400 bg-white"
+                                onKeyDown={e => { if (e.key === 'Enter') handleAutoRankCheck(baseName, urls, h.address); }}
+                                placeholder="추가 키워드 (선택)"
+                                className="flex-1 px-2.5 py-1 text-[11px] border border-blue-200 rounded-lg focus:outline-none focus:border-blue-400 bg-white"
                               />
-                              <button
-                                onClick={() => handleCheckRank(baseName, urls)}
-                                disabled={rankCheckResult[baseName]?.checking || !rankCheckKeyword[baseName]?.trim()}
-                                className="px-3 py-1.5 text-xs font-bold bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-40 whitespace-nowrap"
-                              >
-                                {rankCheckResult[baseName]?.checking ? '확인 중...' : '순위 확인'}
-                              </button>
                             </div>
-                            {rankCheckResult[baseName] && !rankCheckResult[baseName].checking && (
-                              <div className="mt-2">
-                                {rankCheckResult[baseName].rank != null ? (
-                                  <p className="text-xs font-bold">
-                                    <span className={`inline-block px-2 py-0.5 rounded ${rankCheckResult[baseName].rank! <= 5 ? 'bg-green-100 text-green-700' : rankCheckResult[baseName].rank! <= 10 ? 'bg-orange-100 text-orange-700' : 'bg-red-100 text-red-600'}`}>
-                                      {rankCheckResult[baseName].rank}위
-                                    </span>
-                                    <span className="text-slate-500 font-normal ml-1.5">
-                                      &quot;{rankCheckKeyword[baseName]}&quot; 검색 시 블로그탭 상위 30개 중 {rankCheckResult[baseName].rank}위 노출
-                                    </span>
-                                  </p>
-                                ) : (
-                                  <p className="text-xs text-slate-400">
-                                    &quot;{rankCheckKeyword[baseName]}&quot; 검색 결과 상위 30위 내 미노출
-                                  </p>
-                                )}
+                            {/* 결과 표시 */}
+                            {rankResults[baseName]?.keywords && rankResults[baseName].keywords.length > 0 && (
+                              <div className="space-y-1">
+                                {rankResults[baseName].keywords.map((r, idx) => (
+                                  <div key={idx} className="flex items-center gap-2 text-[11px]">
+                                    {r.rank != null ? (
+                                      <span className={`px-1.5 py-0.5 rounded font-bold min-w-[36px] text-center ${r.rank <= 5 ? 'bg-green-100 text-green-700' : r.rank <= 10 ? 'bg-orange-100 text-orange-700' : 'bg-red-100 text-red-600'}`}>
+                                        {r.rank}위
+                                      </span>
+                                    ) : (
+                                      <span className="px-1.5 py-0.5 rounded font-bold min-w-[36px] text-center bg-slate-100 text-slate-400">-</span>
+                                    )}
+                                    <span className="text-slate-600">{r.keyword}</span>
+                                  </div>
+                                ))}
+                                <p className="text-[9px] text-slate-400 mt-1">
+                                  노출: {rankResults[baseName].keywords.filter(r => r.rank != null).length}개 / 총 {rankResults[baseName].keywords.length}개 키워드
+                                </p>
                               </div>
                             )}
                           </div>
