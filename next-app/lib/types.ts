@@ -39,6 +39,7 @@ export interface GenerationRequest {
   medicalLawMode?: 'strict' | 'relaxed';
   includeFaq?: boolean;
   faqCount?: number;
+  includeHospitalIntro?: boolean;
   hospitalName?: string;
   hospitalStyleSource?: 'explicit_selected_hospital' | 'generic_default';
   clinicContext?: {

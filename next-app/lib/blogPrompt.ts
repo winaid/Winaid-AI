@@ -234,6 +234,20 @@ export function buildBlogPrompt(req: GenerationRequest): {
     );
   }
 
+  // ── 병원 소개 섹션 ──
+  if (req.includeHospitalIntro && req.clinicContext) {
+    const ctx = req.clinicContext;
+    promptParts.push(
+      '',
+      '[병원 소개 섹션 - 글 마지막에 삽입]',
+      '마무리 섹션 바로 앞에 <h3>병원 소개</h3> 소제목을 추가하고, 아래 정보를 자연스럽게 2~3문단으로 작성하세요.',
+      ctx.actualServices.length > 0 ? `- 진료 서비스: ${ctx.actualServices.join(', ')}` : '',
+      ctx.specialties.length > 0 ? `- 특화 진료: ${ctx.specialties.join(', ')}` : '',
+      ctx.locationSignals.length > 0 ? `- 위치: ${ctx.locationSignals.join(', ')}` : '',
+      '- 병원 소개는 광고가 아닌 정보 전달 톤으로 작성. 의료법 준수.',
+    );
+  }
+
   // ── HTML 구조 + 이미지 마커 (old 동일) ──
   promptParts.push(
     '',

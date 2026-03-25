@@ -119,6 +119,7 @@ function BlogForm() {
   const [clinicContext, setClinicContext] = useState<ClinicContext | null>(null);
   const [isCrawling, setIsCrawling] = useState(false);
   const [crawlProgress, setCrawlProgress] = useState('');
+  const [includeHospitalIntro, setIncludeHospitalIntro] = useState(false);
 
   // localStorage에서 커스텀 프롬프트 복원 (old 동일)
   useEffect(() => {
@@ -715,6 +716,7 @@ ${categoryKeywords}
       customImagePrompt: imageStyle === 'custom' ? (customPrompt?.trim() || undefined) : undefined,
       hospitalName: hospitalName || undefined,
       hospitalStyleSource: hospitalName ? 'explicit_selected_hospital' : 'generic_default',
+      includeHospitalIntro,
       clinicContext: clinicContext ? {
         actualServices: clinicContext.actualServices,
         specialties: clinicContext.specialties,
@@ -1627,7 +1629,7 @@ ${generatedContent.substring(0, 2000)}
                                     setHospitalName(hospital.name.replace(/ \(.*\)$/, ''));
                                     setSelectedManager(hospital.manager);
                                     setSelectedHospitalAddress(hospital.address || '');
-                                    setHomepageUrl(hospital.naverBlogUrls?.[0] || '');
+                                    setHomepageUrl('');
                                     setClinicContext(null);
                                     setCrawlProgress('');
                                     setKeywordStats([]);
@@ -1990,16 +1992,15 @@ ${generatedContent.substring(0, 2000)}
                 <p className="text-xs font-semibold text-slate-500 mb-1.5">글 길이</p>
                 <div className="grid grid-cols-3 gap-1.5">
                   {([
-                    { value: 1500, label: '짧은 글', desc: '~1,500자' },
-                    { value: 2500, label: '중간 글', desc: '~2,500자' },
-                    { value: 3500, label: '긴 글', desc: '~3,500자' },
+                    { value: 1500, label: '짧은 글' },
+                    { value: 2500, label: '중간 글' },
+                    { value: 3500, label: '긴 글' },
                   ]).map(opt => (
                     <button key={opt.value} type="button"
                       onClick={() => setTextLength(opt.value)}
                       className={`py-2 rounded-lg border transition-all text-center ${textLength === opt.value ? 'border-blue-400 bg-blue-50 text-blue-700' : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300'}`}
                     >
-                      <span className="text-[11px] font-semibold block">{opt.label}</span>
-                      <span className="text-[9px] text-slate-400">{opt.desc}</span>
+                      <span className="text-[11px] font-semibold">{opt.label}</span>
                     </button>
                   ))}
                 </div>
@@ -2039,6 +2040,22 @@ ${generatedContent.substring(0, 2000)}
                     <span className={`absolute top-[3px] left-[3px] w-4 h-4 bg-white rounded-full shadow transition-all duration-200 ${includeFaq ? 'translate-x-[18px]' : 'translate-x-0'}`} />
                   </button>
                 </div>
+              </div>
+              {/* 병원 소개 섹션 토글 */}
+              <div className="flex items-center justify-between p-3 bg-white rounded-xl border border-slate-200">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm">🏥</span>
+                  <div>
+                    <span className="text-xs font-semibold text-slate-700">병원 소개 섹션</span>
+                    <p className="text-[10px] text-slate-400">홈페이지 크롤링 후 자동 삽입</p>
+                  </div>
+                </div>
+                <button type="button" onClick={() => setIncludeHospitalIntro(!includeHospitalIntro)}
+                  className={`relative rounded-full transition-colors ${includeHospitalIntro ? 'bg-blue-500' : 'bg-slate-300'}`}
+                  style={{ width: 40, height: 22 }}
+                >
+                  <span className={`absolute top-[3px] left-[3px] w-4 h-4 bg-white rounded-full shadow transition-all duration-200 ${includeHospitalIntro ? 'translate-x-[18px]' : 'translate-x-0'}`} />
+                </button>
               </div>
               {/* 이미지 스타일 (old 동일: 4버튼 + 커스텀 textarea) */}
               <div>
