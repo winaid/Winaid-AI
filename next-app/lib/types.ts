@@ -3,6 +3,8 @@
  * 마이그레이션 완료 후 통합 예정
  */
 
+export type CardNewsDesignTemplateId = 'medical-clean' | 'spring-floral' | 'modern-grid' | 'simple-pin' | 'medical-illust';
+
 export enum ContentCategory {
   DENTAL = '치과',
   DERMATOLOGY = '피부과',

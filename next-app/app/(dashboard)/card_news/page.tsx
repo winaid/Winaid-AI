@@ -6,8 +6,9 @@ import { buildCardNewsPrompt, type CardNewsRequest } from '../../../lib/cardNews
 import { savePost } from '../../../lib/postStorage';
 import { getSessionSafe } from '../../../lib/supabase';
 import { getHospitalStylePrompt } from '../../../lib/styleService';
+import { CARD_NEWS_DESIGN_TEMPLATES } from '../../../lib/cardNewsDesignTemplates';
 import { ErrorPanel, ResultPanel } from '../../../components/GenerationResult';
-import type { WritingStyle } from '../../../lib/types';
+import type { WritingStyle, CardNewsDesignTemplateId } from '../../../lib/types';
 
 const WRITING_STYLE_OPTIONS: { value: WritingStyle; label: string }[] = [
   { value: 'empathy', label: '공감형' },
@@ -23,6 +24,7 @@ export default function CardNewsPage() {
   const [showHospitalPicker, setShowHospitalPicker] = useState(false);
   const [slideCount, setSlideCount] = useState(6);
   const [writingStyle, setWritingStyle] = useState<WritingStyle>('empathy');
+  const [designTemplateId, setDesignTemplateId] = useState<CardNewsDesignTemplateId | undefined>(undefined);
 
   // ── 생성 상태 ──
   const [isGenerating, setIsGenerating] = useState(false);
@@ -40,6 +42,7 @@ export default function CardNewsPage() {
       hospitalName: hospitalName || undefined,
       slideCount,
       writingStyle,
+      designTemplateId,
     };
 
     setIsGenerating(true);
@@ -199,6 +202,47 @@ export default function CardNewsPage() {
               placeholder="예: 스케일링, 잇몸, 관리"
               className={inputCls}
             />
+          </div>
+
+          {/* 디자인 템플릿 */}
+          <div>
+            <label className={labelCls}>디자인 템플릿</label>
+            <div className="grid grid-cols-5 gap-1.5">
+              {CARD_NEWS_DESIGN_TEMPLATES.map(tmpl => (
+                <button
+                  key={tmpl.id}
+                  type="button"
+                  onClick={() => setDesignTemplateId(designTemplateId === tmpl.id ? undefined : tmpl.id)}
+                  className={`relative flex flex-col items-center gap-1 p-1.5 rounded-xl border-2 transition-all ${
+                    designTemplateId === tmpl.id
+                      ? 'border-pink-500 bg-pink-50 shadow-md shadow-pink-500/20'
+                      : 'border-slate-200 bg-white hover:border-slate-300'
+                  }`}
+                >
+                  {designTemplateId === tmpl.id && (
+                    <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-pink-500 rounded-full flex items-center justify-center">
+                      <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                    </span>
+                  )}
+                  <div
+                    className="w-full aspect-square rounded-lg overflow-hidden"
+                    dangerouslySetInnerHTML={{ __html: tmpl.previewSvg }}
+                  />
+                  <span className="text-[9px] font-semibold text-slate-600 leading-tight text-center">{tmpl.name}</span>
+                </button>
+              ))}
+            </div>
+            {designTemplateId && (
+              <div className="mt-2 px-2.5 py-1.5 bg-pink-50 rounded-lg border border-pink-200">
+                <p className="text-[10px] text-pink-700 font-medium">
+                  {CARD_NEWS_DESIGN_TEMPLATES.find(t => t.id === designTemplateId)?.icon}{' '}
+                  {CARD_NEWS_DESIGN_TEMPLATES.find(t => t.id === designTemplateId)?.description}
+                </p>
+              </div>
+            )}
+            {!designTemplateId && (
+              <p className="mt-1 text-[10px] text-slate-400">선택하지 않으면 AI가 자동으로 디자인합니다.</p>
+            )}
           </div>
 
           {/* 슬라이드 수 */}

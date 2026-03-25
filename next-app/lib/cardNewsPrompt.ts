@@ -5,12 +5,16 @@
  * 슬라이드별 제목 + 설명 구조로 출력.
  */
 
+import type { CardNewsDesignTemplateId } from './types';
+import { CARD_NEWS_DESIGN_TEMPLATES } from './cardNewsDesignTemplates';
+
 export interface CardNewsRequest {
   topic: string;
   keywords?: string;
   hospitalName?: string;
   slideCount: number;         // 4–7
   writingStyle?: 'expert' | 'empathy' | 'conversion';
+  designTemplateId?: CardNewsDesignTemplateId;
 }
 
 const STYLE_GUIDES: Record<string, string> = {
@@ -46,6 +50,13 @@ export function buildCardNewsPrompt(req: CardNewsRequest): {
   }
   if (req.hospitalName) {
     promptParts.push(`- 병원명: ${req.hospitalName}`);
+  }
+  if (req.designTemplateId) {
+    const tmpl = CARD_NEWS_DESIGN_TEMPLATES.find(t => t.id === req.designTemplateId);
+    if (tmpl) {
+      promptParts.push(`- 디자인 템플릿: ${tmpl.name} (${tmpl.description})`);
+      promptParts.push(`- 디자인 분위기: ${tmpl.styleConfig.mood}`);
+    }
   }
 
   promptParts.push(
