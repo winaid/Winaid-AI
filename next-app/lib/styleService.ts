@@ -716,25 +716,27 @@ export async function crawlAndScoreAllHospitals(
   for (const team of TEAM_DATA) {
     for (const h of team.hospitals) {
       const baseName = h.name.replace(/ \(.*\)$/, '');
+      const profile = profileMap.get(baseName);
+      const dbUrls = profile?.naver_blog_url?.split(',').map(u => u.trim()).filter(Boolean);
+      const teamUrls = h.naverBlogUrls?.filter(Boolean);
+      const newUrls = (dbUrls && dbUrls.length > 0) ? dbUrls : (teamUrls || []);
+
       if (seen.has(baseName)) {
-        // 중복 병원이지만 URL이 다를 수 있음 — URL을 합침
+        // 중복 병원 — URL 합침 (이미 hospitalUrls에 있으면 추가, 없으면 새로 생성)
         const existing = hospitalUrls.find(x => x.name === baseName);
-        if (existing && h.naverBlogUrls) {
-          for (const u of h.naverBlogUrls) {
+        if (existing) {
+          for (const u of newUrls) {
             if (!existing.urls.includes(u)) existing.urls.push(u);
           }
+        } else if (newUrls.length > 0) {
+          hospitalUrls.push({ name: baseName, teamId: team.id, urls: [...newUrls] });
         }
         continue;
       }
       seen.add(baseName);
 
-      const profile = profileMap.get(baseName);
-      // DB URL 우선, 없으면 teamData URL
-      const dbUrls = profile?.naver_blog_url?.split(',').map(u => u.trim()).filter(Boolean);
-      const teamUrls = h.naverBlogUrls?.filter(Boolean);
-      const urls = (dbUrls && dbUrls.length > 0) ? dbUrls : (teamUrls || []);
-      if (urls.length > 0) {
-        hospitalUrls.push({ name: baseName, teamId: team.id, urls });
+      if (newUrls.length > 0) {
+        hospitalUrls.push({ name: baseName, teamId: team.id, urls: [...newUrls] });
       }
     }
   }
