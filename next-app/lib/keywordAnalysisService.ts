@@ -1,6 +1,6 @@
 /**
  * 키워드 분석 서비스 (next-app 이식)
- * - Gemini로 병원 주소 기반 지역 키워드 생성 (수도권 2km / 지방 5km)
+ * - Gemini로 병원 주소 기반 지역 키워드 생성 (수도권 3km / 지방 5km)
  * - /api/naver/keyword-stats로 검색량 + 블로그 발행량 조회
  * - Gemini로 블루오션 키워드 분석 및 추천
  */
@@ -139,7 +139,7 @@ async function generateKeywordsWithAI(
   category?: string,
   existingBlogTitles?: string[],
 ): Promise<string[]> {
-  const radius = isMetroArea(address) ? 2 : 5;
+  const radius = isMetroArea(address) ? 3 : 5;
 
   const existingBlock = existingBlogTitles && existingBlogTitles.length > 0
     ? `\n[이미 작성한 블로그 글 제목 (이 주제들은 이미 다뤘으므로 관련 키워드 우선순위를 낮추세요)]
@@ -154,7 +154,7 @@ ${existingBlogTitles.map(t => `- ${t}`).join('\n')}
 병원명: ${hospitalName}
 주소: ${address}
 진료과: ${category || '치과'}
-탐색 반경: ${radius}km (${radius === 2 ? '수도권 - 좁은 범위로 정밀하게' : '지방 - 넓은 범위로 주변 지역 포함'})
+탐색 반경: ${radius}km (${radius === 3 ? '수도권 - 인근 주요 지역까지 포함' : '지방 - 넓은 범위로 주변 지역 포함'})
 ${existingBlock}
 규칙:
 1. 주소에서 동/구/읍/면 추출
@@ -164,11 +164,12 @@ ${existingBlock}
    - 시술: 임플란트, 치아교정, 라미네이트, 치아미백, 스케일링, 충치치료, 신경치료, 사랑니발치, 틀니, 브릿지, 크라운, 레진, 인레이
    - 증상: 치통, 잇몸출혈, 잇몸염증, 이갈이, 턱관절, 시린이, 충치, 풍치
    - 대상: 소아치과, 어린이치과
-   - 기타: 치과 비용, 치과 가격, 치과 추천, 치과 잘하는곳, 야간진료 치과, 주말진료 치과
+   - 기타: 치과 추천, 치과 잘하는곳, 야간진료 치과, 주말진료 치과
 5. 키워드 조합: "{지역} {시술/증상/기타}", "{역명} {시술/증상/기타}" 등
 6. 병원명은 포함하지 않는다
-7. 실제 네이버에서 검색량이 있을 법한 키워드만
-8. 정확히 15개 생성
+7. "비용", "가격" 관련 키워드는 절대 포함하지 않는다
+8. 실제 네이버에서 검색량이 있을 법한 키워드만
+9. 정확히 15개 생성
 
 JSON 배열로만 응답하세요:
 ["키워드1", "키워드2", ...]`;
@@ -196,7 +197,7 @@ async function generateMoreKeywordsWithAI(
   category?: string,
   remainingCount: number = 15,
 ): Promise<string[]> {
-  const radius = isMetroArea(address) ? 2 : 5;
+  const radius = isMetroArea(address) ? 3 : 5;
   const generateCount = Math.min(remainingCount, 15);
 
   const prompt = `당신은 네이버 블로그 SEO 키워드 전문가입니다.
@@ -214,8 +215,9 @@ ${existingKeywords.map(k => `- ${k}`).join('\n')}
 1. 위 키워드와 겹치지 않는 새로운 키워드만 생성
 2. 더 구체적인 롱테일 키워드 위주
 3. 다양한 카테고리에서 골고루
-4. 정확히 ${generateCount}개 생성
-5. 이미 분석한 키워드와 절대 겹치면 안 됩니다!
+4. "비용", "가격" 관련 키워드는 절대 포함하지 않는다
+5. 정확히 ${generateCount}개 생성
+6. 이미 분석한 키워드와 절대 겹치면 안 됩니다!
 
 JSON 배열로만 응답하세요:
 ["키워드1", "키워드2", ...]`;
@@ -296,20 +298,26 @@ async function analyzeBlueOceanWithAI(hospitalName: string, stats: KeywordStat[]
     .map(s => `${s.keyword} | 검색량: ${s.monthlySearchVolume.toLocaleString()} | 발행량: ${s.blogPostCount.toLocaleString()} | 포화도: ${s.saturation?.toFixed(1)}`)
     .join('\n');
 
-  const prompt = `당신은 네이버 블로그 SEO 전략 전문가입니다.
-
-아래는 "${hospitalName}"의 지역 키워드별 월간 검색량과 블로그 누적 발행량 데이터입니다.
+  const prompt = `아래 지역 키워드 데이터를 분석하세요.
 
 ${dataRows}
 
-위 데이터를 분석해서 다음을 알려주세요:
+다음 형식으로 간결하게 답하세요:
 
-1. **블루오션 키워드 TOP 3** (검색량 대비 발행량이 적은 키워드)
-   - 왜 이 키워드가 좋은지 한 줄 설명
-2. **레드오션 주의 키워드** (발행량이 너무 많아 경쟁이 치열한 키워드)
-3. **추천 블로그 주제 3개** (블루오션 키워드를 활용한 구체적인 블로그 글 제목)
+블루오션 TOP 3 (포화도 낮은 키워드):
+1. [키워드] - 한줄 이유
+2. [키워드] - 한줄 이유
+3. [키워드] - 한줄 이유
 
-실무적이고 간결하게 답해주세요. 마크다운 사용 가능.`;
+레드오션 주의:
+- [키워드] (포화도: X)
+
+추천 블로그 제목 3개:
+1. [블루오션 키워드 활용 제목]
+2. [블루오션 키워드 활용 제목]
+3. [블루오션 키워드 활용 제목]
+
+병원명("${hospitalName}")은 제목에 포함하지 마세요. 마크다운 헤딩(###) 사용하지 마세요. 위 형식 그대로만 답하세요.`;
 
   try {
     return await callGeminiForKeywords(prompt, { temperature: 0.4 });
