@@ -47,6 +47,10 @@ export default function ImagePage() {
   const [progress, setProgress] = useState('');
   const [result, setResult] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [generatingStep, setGeneratingStep] = useState(0);
+  const [showRegenMenu, setShowRegenMenu] = useState(false);
+  const [regenPrompt, setRegenPrompt] = useState('');
+  const [showRegenPromptInput, setShowRegenPromptInput] = useState(false);
 
   // 로고 관련
   const [logoDataUrl, setLogoDataUrl] = useState<string | null>(null);
@@ -693,6 +697,10 @@ export default function ImagePage() {
     setError(null);
     setResult(null);
     setProgress('이미지 생성 중...');
+    setGeneratingStep(0);
+    setShowRegenMenu(false);
+    setShowRegenPromptInput(false);
+    const stepTimer = setInterval(() => setGeneratingStep(s => s + 1), 3000);
 
     // 달력 참조 이미지 (Canvas) — schedule 모드에서는 항상 생성
     let calendarImage: string | undefined;
@@ -805,6 +813,7 @@ export default function ImagePage() {
       setError(e.message || '이미지 생성에 실패했습니다.');
       setProgress('');
     } finally {
+      clearInterval(stepTimer);
       setGenerating(false);
     }
   }, [prompt, aspectRatio, generating, logoEnabled, logoDataUrl, hospitalName, logoPosition, clinicPhone, clinicHours, clinicAddress, brandColor, brandAccent, detectCalendar, getKoreanHolidays2, generateCalendarImage, mode, selectedTemplate, buildSchedulePrompt, buildEventPrompt, buildDoctorPrompt, buildNoticePrompt, buildGreetingPrompt, buildHiringPrompt, buildCautionPrompt, buildPricingPrompt, schYear, schMonth, docPhotoBase64, hiringPhotos, activeStylePrompt, selectedUploadedStyle, templateAppMode]);
@@ -820,7 +829,7 @@ export default function ImagePage() {
   return (
     <div className="flex flex-col lg:flex-row gap-5 lg:items-start w-full">
       {/* 좌측: 입력 폼 */}
-      <div className="w-full lg:w-[340px] xl:w-[380px] lg:flex-none">
+      <div className="w-full lg:w-[400px] xl:w-[440px] lg:flex-none">
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
           {/* 헤더 (OLD parity: 모드 토글 포함) */}
           <div className="flex items-center gap-2 px-4 py-2.5 border-b bg-emerald-50 border-emerald-100">
@@ -850,16 +859,14 @@ export default function ImagePage() {
                       onClick={() => {
                         const newSel = selectedTemplate === cat.id ? null : cat.id;
                         setSelectedTemplate(newSel);
-                        // 모든 카테고리가 전용 폼 — placeholder 주입 안 함
                       }}
-                      className={`flex flex-col items-center gap-0.5 p-2 rounded-lg border transition-all text-center ${
+                      className={`flex items-center justify-center gap-1 py-2 px-1 rounded-xl text-[11px] font-bold whitespace-nowrap transition-all duration-200 border ${
                         selectedTemplate === cat.id
-                          ? 'border-blue-400 bg-blue-50 text-blue-700 shadow-sm'
-                          : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                          ? 'bg-blue-500 text-white border-blue-500 shadow-md shadow-blue-200/50'
+                          : 'bg-white text-slate-500 border-slate-200 hover:border-blue-300 hover:text-blue-500 hover:shadow-sm'
                       }`}>
-                      <span className="text-lg">{cat.icon}</span>
-                      <span className="text-[10px] font-semibold leading-tight">{cat.name}</span>
-                      <span className="text-[8px] text-slate-400 leading-tight">{cat.desc}</span>
+                      <span className="text-sm leading-none">{cat.icon}</span>
+                      {cat.name}
                     </button>
                   ))}
                 </div>
