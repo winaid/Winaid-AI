@@ -332,7 +332,7 @@ async function crawlHospitalBlogPosts(blogUrl, maxPosts = 5) {
           }
         });
 
-        await postPage.goto(postUrl, { waitUntil: 'domcontentloaded', timeout: 20000 });
+        await postPage.goto(postUrl, { waitUntil: 'networkidle0', timeout: 20000 });
 
         const postData = await postPage.evaluate(() => {
           let title = '';
