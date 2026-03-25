@@ -9,6 +9,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { savePost } from '../../../lib/postStorage';
 import { supabase } from '../../../lib/supabase';
 import { PromptChat } from '../../../components/PromptChat';
+import { CATEGORY_TEMPLATES, type CategoryTemplate } from '../../../lib/categoryTemplates';
 
 type AspectRatio = '1:1' | '16:9' | '9:16' | '4:3';
 type DayMark = 'closed' | 'shortened' | 'vacation';
@@ -203,11 +204,21 @@ export default function ImagePage() {
 
   const [styleHistory, setStyleHistory] = useState<StyleHistoryItem[]>([]);
   const [selectedUploadedStyle, setSelectedUploadedStyle] = useState<StyleHistoryItem | null>(null);
+  const [selectedCatTemplate, setSelectedCatTemplate] = useState<CategoryTemplate | null>(null);
 
-  // OLD 우선순위: uploadedStyle > preset
-  // activeStylePrompt/Name은 최종 생성에 사용
-  const activeStylePrompt = selectedUploadedStyle?.stylePrompt || selectedPreset.aiPrompt;
-  const activeStyleName = selectedUploadedStyle?.name || selectedPreset.name;
+  // OLD 우선순위: uploadedStyle > catTemplate > preset
+  const activeStylePrompt = selectedUploadedStyle?.stylePrompt || selectedCatTemplate?.aiPrompt || selectedPreset.aiPrompt;
+  const activeStyleName = selectedUploadedStyle?.name || selectedCatTemplate?.name || selectedPreset.name;
+
+  // 현재 카테고리에 맞는 디자인 템플릿 목록 (OLD parity: greeting은 명절별 서브키)
+  const currentCatTemplates: CategoryTemplate[] = (() => {
+    if (!selectedTemplate) return [];
+    if (selectedTemplate === 'greeting') {
+      const subKey = `greeting_${greetHoliday}`;
+      return CATEGORY_TEMPLATES[subKey] || CATEGORY_TEMPLATES['greeting'] || [];
+    }
+    return CATEGORY_TEMPLATES[selectedTemplate] || [];
+  })();
 
   const loadStyleHistory = useCallback((): StyleHistoryItem[] => {
     try { return JSON.parse(localStorage.getItem(STYLE_HISTORY_KEY) || '[]'); } catch { return []; }
@@ -299,6 +310,9 @@ export default function ImagePage() {
       if (d && !greetClosure) setGreetClosure(d.closure);
     }
   }, [selectedTemplate]);
+
+  // 카테고리/명절 변경 시 카테고리 템플릿 선택 초기화
+  useEffect(() => { setSelectedCatTemplate(null); }, [selectedTemplate, greetHoliday]);
 
   // ── schedule/event 전용 프롬프트 빌더 ──
   const buildSchedulePrompt = useCallback((): string => {
@@ -1268,20 +1282,104 @@ export default function ImagePage() {
                   )}
                 </div>
 
+                {/* 카테고리별 디자인 템플릿 (OLD parity: CATEGORY_TEMPLATES) */}
+                {currentCatTemplates.length > 0 && (
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="text-[11px] font-semibold text-slate-500">
+                        디자인 템플릿 <span className="text-slate-400 font-normal">({currentCatTemplates.length}종)</span>
+                        {selectedUploadedStyle && <span className="text-violet-400 font-normal ml-1">(내 스타일 선택 시 무시됨)</span>}
+                      </label>
+                    </div>
+                    <div className={`grid grid-cols-3 gap-2 max-h-[320px] overflow-y-auto pr-1 ${selectedUploadedStyle ? 'opacity-40 pointer-events-none' : ''}`}>
+                      {currentCatTemplates.map(tmpl => {
+                        const isSelected = !selectedUploadedStyle && selectedCatTemplate?.id === tmpl.id;
+                        return (
+                          <button key={tmpl.id} type="button"
+                            onClick={() => { setSelectedCatTemplate(isSelected ? null : tmpl); setSelectedUploadedStyle(null); }}
+                            className={`group relative rounded-2xl overflow-hidden transition-all duration-200 ${
+                              isSelected
+                                ? 'shadow-xl ring-2 ring-offset-2'
+                                : 'shadow-sm hover:shadow-md border border-slate-200/80'
+                            }`}
+                            style={isSelected ? { '--tw-ring-color': tmpl.color } as React.CSSProperties : undefined}
+                          >
+                            {/* 그라데이션 미리보기 영역 */}
+                            <div className="relative w-full overflow-hidden" style={{ aspectRatio: '3/4', background: `linear-gradient(160deg, ${tmpl.bg} 0%, white 80%)` }}>
+                              {/* 컬러 바 */}
+                              <div className="absolute top-0 inset-x-0 h-8" style={{ background: `linear-gradient(135deg, ${tmpl.color}, ${tmpl.accent})` }} />
+                              {/* 레이아웃 힌트 뱃지 */}
+                              <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-md text-[8px] font-bold shadow-sm" style={{ backgroundColor: tmpl.color, color: 'white' }}>
+                                {tmpl.layoutHint === 'price' || tmpl.layoutHint === 'table' ? '가격형'
+                                  : tmpl.layoutHint === 'elegant' || tmpl.layoutHint === 'luxury' ? '프리미엄'
+                                  : tmpl.layoutHint === 'pop' || tmpl.layoutHint === 'cute' ? '활기찬'
+                                  : tmpl.layoutHint === 'minimal' ? '미니멀'
+                                  : tmpl.layoutHint === 'wave' || tmpl.layoutHint === 'gradient' ? '그라데이션'
+                                  : tmpl.layoutHint === 'season' || tmpl.layoutHint === 'nature' ? '시즌'
+                                  : tmpl.layoutHint === 'split' || tmpl.layoutHint === 'grid' ? '분할형'
+                                  : tmpl.layoutHint === 'portrait' || tmpl.layoutHint === 'curve' ? '프로필'
+                                  : tmpl.layoutHint === 'story' ? '스토리'
+                                  : tmpl.layoutHint === 'alert' || tmpl.layoutHint === 'warning' ? '경고형'
+                                  : tmpl.layoutHint === 'formal' ? '공문형'
+                                  : tmpl.layoutHint === 'timeline' ? '타임라인'
+                                  : tmpl.layoutHint === 'traditional' || tmpl.layoutHint === 'warm' ? '전통'
+                                  : tmpl.layoutHint === 'corporate' ? '기업형'
+                                  : tmpl.layoutHint === 'team' ? '팀워크'
+                                  : tmpl.layoutHint === 'modern' ? '모던'
+                                  : tmpl.layoutHint === 'checklist' ? '체크리스트'
+                                  : tmpl.layoutHint === 'infographic' ? '인포'
+                                  : tmpl.layoutHint === 'card' || tmpl.layoutHint === 'cards' ? '카드형'
+                                  : tmpl.layoutHint === 'dark' ? '다크'
+                                  : '스타일'}
+                              </div>
+                              {/* 선택 체크 */}
+                              {isSelected && (
+                                <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full flex items-center justify-center shadow-lg" style={{ backgroundColor: tmpl.color }}>
+                                  <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                                </div>
+                              )}
+                              {/* 가운데 텍스트 미리보기 */}
+                              <div className="absolute inset-0 flex items-center justify-center p-3 pt-10">
+                                <div className="text-center">
+                                  <div className="text-[10px] font-bold" style={{ color: tmpl.color }}>{tmpl.name}</div>
+                                </div>
+                              </div>
+                            </div>
+                            {/* 카드 하단 name/desc */}
+                            <div className="px-1.5 py-1.5 bg-white">
+                              <div className="font-bold text-[10px] text-slate-800 leading-tight truncate">{tmpl.name}</div>
+                              <div className="text-[8px] text-slate-500 mt-0.5 leading-tight truncate">{tmpl.desc}</div>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {selectedCatTemplate && !selectedUploadedStyle && (
+                      <div className="mt-1.5 p-2 bg-blue-50 rounded-lg border border-blue-200">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-bold text-blue-700">템플릿: {selectedCatTemplate.name}</span>
+                          <button type="button" onClick={() => setSelectedCatTemplate(null)} className="text-[10px] text-blue-400 hover:text-blue-600">해제</button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {/* 디자인 스타일 프리셋 (OLD parity: AI_STYLE_PRESETS 12개) */}
                 <div>
                   <label className="block text-[11px] font-semibold text-slate-500 mb-1.5">
-                    디자인 스타일 {selectedUploadedStyle && <span className="text-violet-400 font-normal">(내 스타일 선택 시 무시됨)</span>}
+                    디자인 스타일 {(selectedUploadedStyle || selectedCatTemplate) && <span className="text-violet-400 font-normal">(상위 스타일 선택 시 무시됨)</span>}
                   </label>
                   <div className="grid grid-cols-4 gap-1.5">
                     {AI_STYLE_PRESETS.map(preset => {
-                      const isActive = !selectedUploadedStyle && selectedPreset.id === preset.id;
+                      const isActive = !selectedUploadedStyle && !selectedCatTemplate && selectedPreset.id === preset.id;
+                      const dimmed = !!(selectedUploadedStyle || selectedCatTemplate);
                       return (
-                        <button key={preset.id} type="button" onClick={() => { setSelectedPreset(preset); setSelectedUploadedStyle(null); }}
+                        <button key={preset.id} type="button" onClick={() => { setSelectedPreset(preset); setSelectedUploadedStyle(null); setSelectedCatTemplate(null); }}
                           className={`relative rounded-xl p-2 text-center transition-all border ${
                             isActive
                               ? 'border-transparent shadow-md ring-2 ring-offset-1'
-                              : selectedUploadedStyle
+                              : dimmed
                               ? 'border-slate-100 opacity-50'
                               : 'border-slate-200 hover:border-slate-300 hover:shadow-sm'
                           }`}
