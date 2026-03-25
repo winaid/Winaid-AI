@@ -1732,12 +1732,6 @@ export default function AdminPage() {
                                                   className="w-full flex items-start gap-2 px-3 py-2 text-left hover:bg-slate-50 transition-colors"
                                                 >
                                                   <span className="text-[11px] font-bold text-slate-400 mt-0.5 shrink-0">#{i + 1}</span>
-                                                  {/* 네이버 노출 순위 */}
-                                                  {post.naver_rank != null && (
-                                                    <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold shrink-0 ${post.naver_rank <= 5 ? 'bg-green-100 text-green-700' : post.naver_rank <= 10 ? 'bg-blue-100 text-blue-700' : post.naver_rank <= 20 ? 'bg-orange-100 text-orange-700' : 'bg-slate-100 text-slate-500'}`}>
-                                                      {post.naver_rank}위
-                                                    </span>
-                                                  )}
                                                   <div className="flex-1 min-w-0">
                                                     <div className="flex items-center gap-1.5 flex-wrap mb-0.5">
                                                       {hasScore ? (

@@ -106,8 +106,6 @@ export interface DBCrawledPost {
   law_issues?: CrawledPostScore['law_issues'];
   seo_issues?: CrawledPostScore['seo_issues'];
   corrected_content?: string;
-  naver_rank?: number | null;
-  naver_rank_keyword?: string;
   crawled_at: string;
   scored_at?: string;
 }
