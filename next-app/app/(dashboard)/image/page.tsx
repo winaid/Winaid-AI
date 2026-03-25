@@ -11,6 +11,7 @@ import { supabase } from '../../../lib/supabase';
 import { PromptChat } from '../../../components/PromptChat';
 import { CATEGORY_TEMPLATES, type CategoryTemplate } from '../../../lib/categoryTemplates';
 import { TemplateSVGPreview } from '../../../components/TemplatePreviews';
+import { CalendarThemePreview } from '../../../components/CalendarPreviews';
 
 type AspectRatio = '1:1' | '16:9' | '9:16' | '4:3';
 type DayMark = 'closed' | 'shortened' | 'vacation';
@@ -1067,41 +1068,13 @@ export default function ImagePage() {
                                   }`}
                                   style={isSelected ? { '--tw-ring-color': t.groupColor } as React.CSSProperties : undefined}
                                 >
-                                  {/* 미니 달력 프리뷰 */}
-                                  <div className="relative w-full" style={{ aspectRatio: '3/4' }}>
-                                    {/* 헤더 영역 */}
-                                    <div className="absolute inset-x-0 top-0 h-[28%] flex items-center justify-center" style={{ background: `linear-gradient(135deg, ${t.groupColor}, ${t.groupColor}cc)` }}>
-                                      <div className="text-center">
-                                        <div className="text-[7px] font-bold text-white/70">OO병원</div>
-                                        <div className="text-[9px] font-black text-white leading-none">3월 진료일정</div>
-                                      </div>
-                                    </div>
-                                    {/* 요일 바 */}
-                                    <div className="absolute inset-x-0 top-[28%] h-[8%] flex items-center justify-around px-1" style={{ background: `${t.groupColor}15` }}>
-                                      {['일','월','화','수','목','금','토'].map((d, i) => (
-                                        <span key={d} className="text-[4px] font-bold" style={{ color: i === 0 ? '#dc2626' : i === 6 ? '#2563eb' : t.groupColor }}>{d}</span>
-                                      ))}
-                                    </div>
-                                    {/* 미니 날짜 그리드 */}
-                                    <div className="absolute inset-x-0 top-[36%] bottom-[16%] grid grid-cols-7 gap-px px-1" style={{ background: '#f8fafc' }}>
-                                      {[null,null,null,null,null,null,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21].map((d, i) => (
-                                        <div key={i} className="flex items-center justify-center">
-                                          {d && (
-                                            <span className={`text-[4px] font-bold leading-none ${d === 9 || d === 16 ? 'text-red-500' : ''}`} style={{ color: d === 9 || d === 16 ? undefined : t.groupColor + '99' }}>
-                                              {d === 9 || d === 16 ? '•' : d <= 9 ? d : ''}
-                                            </span>
-                                          )}
-                                        </div>
-                                      ))}
-                                    </div>
-                                    {/* 풋터 */}
-                                    <div className="absolute inset-x-0 bottom-0 h-[16%] flex items-center justify-center" style={{ background: `${t.groupColor}20` }}>
-                                      <span className="text-[4px] font-medium" style={{ color: t.groupColor }}>진료시간 안내</span>
-                                    </div>
+                                  {/* OLD parity: CalendarThemePreview 컴포넌트 */}
+                                  <div className="relative" style={{ aspectRatio: '3/4' }}>
+                                    <CalendarThemePreview themeValue={t.value} groupColor={t.groupColor} />
                                     {/* 선택 체크 */}
                                     {isSelected && (
-                                      <div className="absolute top-1 right-1 w-5 h-5 rounded-full flex items-center justify-center shadow-lg" style={{ backgroundColor: t.groupColor }}>
-                                        <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                                      <div className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full flex items-center justify-center shadow-lg" style={{ backgroundColor: t.groupColor }}>
+                                        <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
                                       </div>
                                     )}
                                   </div>
