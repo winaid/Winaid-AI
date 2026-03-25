@@ -58,11 +58,24 @@ export default async function handler(req, res) {
     console.log('🕷️ Crawling:', url);
 
     let fetchUrl = url;
-    const naverBlogMatch = url.match(/https:\/\/blog\.naver\.com\/([^\/]+)\/(\d+)/);
-    if (naverBlogMatch) {
-      const [, blogId, logNo] = naverBlogMatch;
+    let isNaverBlog = false;
+    let blogId, logNo;
+
+    // 형식 1: blog.naver.com/blogId/logNo (경로)
+    const pathMatch = url.match(/https?:\/\/(?:m\.)?blog\.naver\.com\/([^/?#]+)\/(\d+)/);
+    // 형식 2: PostView.naver?blogId=xxx&logNo=123 (쿼리)
+    const qsMatch = url.match(/blog\.naver\.com.*[?&]blogId=([^&]+).*[?&]logNo=(\d+)/)
+                 || url.match(/blog\.naver\.com.*[?&]logNo=(\d+).*[?&]blogId=([^&]+)/);
+
+    if (pathMatch) {
+      blogId = pathMatch[1]; logNo = pathMatch[2]; isNaverBlog = true;
+    } else if (qsMatch) {
+      blogId = qsMatch[1]; logNo = qsMatch[2]; isNaverBlog = true;
+    }
+
+    if (isNaverBlog && blogId && logNo) {
       fetchUrl = `https://blog.naver.com/PostView.naver?blogId=${blogId}&logNo=${logNo}`;
-      console.log('📝 네이버 블로그 PostView URL:', fetchUrl);
+      console.log('[Crawler] PostView URL:', fetchUrl);
     }
 
     const response = await fetch(fetchUrl, {
@@ -81,7 +94,7 @@ export default async function handler(req, res) {
     const html = await response.text();
     let textContent = '';
 
-    if (naverBlogMatch) {
+    if (isNaverBlog) {
       const paragraphPattern = /<[^>]*class="[^"]*se-text-paragraph[^"]*"[^>]*>([\s\S]*?)<\/[^>]+>/g;
       const paragraphs = [];
       let match;
