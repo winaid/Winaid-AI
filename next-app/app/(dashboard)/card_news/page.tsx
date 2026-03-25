@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { TEAM_DATA } from '../../../lib/teamData';
 import { buildCardNewsPrompt, type CardNewsRequest } from '../../../lib/cardNewsPrompt';
 import { savePost } from '../../../lib/postStorage';
@@ -8,6 +8,7 @@ import { getSessionSafe, supabase } from '../../../lib/supabase';
 import { getHospitalStylePrompt } from '../../../lib/styleService';
 import { CARD_NEWS_DESIGN_TEMPLATES } from '../../../lib/cardNewsDesignTemplates';
 import { ErrorPanel } from '../../../components/GenerationResult';
+import { CardRegenModal, type CardPromptHistoryItem, CARD_PROMPT_HISTORY_KEY, CARD_REF_IMAGE_KEY } from '../../../components/CardRegenModal';
 import type { WritingStyle, CardNewsDesignTemplateId } from '../../../lib/types';
 
 interface CardSlide {
@@ -51,6 +52,21 @@ export default function CardNewsPage() {
   const [error, setError] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
   const [regeneratingCard, setRegeneratingCard] = useState<number | null>(null);
+  // 카드 재생성 모달 state
+  const [cardRegenModalOpen, setCardRegenModalOpen] = useState(false);
+  const [cardRegenIndex, setCardRegenIndex] = useState(1);
+  const [cardRegenProgress, setCardRegenProgress] = useState('');
+  const [currentCardImage, setCurrentCardImage] = useState('');
+  const [editSubtitle, setEditSubtitle] = useState('');
+  const [editMainTitle, setEditMainTitle] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+  const [editImagePrompt, setEditImagePrompt] = useState('');
+  const [isRecommendingPrompt, setIsRecommendingPrompt] = useState(false);
+  const [cardRegenRefImage, setCardRegenRefImage] = useState('');
+  const [refImageMode, setRefImageMode] = useState<'recolor' | 'copy'>('copy');
+  const [isRefImageLocked, setIsRefImageLocked] = useState(false);
+  const [promptHistory, setPromptHistory] = useState<CardPromptHistoryItem[]>([]);
+  const [showHistoryDropdown, setShowHistoryDropdown] = useState(false);
 
   // ── 이미지 생성 헬퍼 ──
   const generateCardImage = async (prompt: string, index: number): Promise<string | null> => {
@@ -242,21 +258,120 @@ export default function CardNewsPage() {
     }
   };
 
-  // ── 개별 카드 이미지 재생성 ──
-  const handleCardRegenerate = useCallback(async (cardIndex: number) => {
+  // ── 초기 로드: 프롬프트 히스토리 + 참고 이미지 ──
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(CARD_PROMPT_HISTORY_KEY);
+      if (saved) setPromptHistory(JSON.parse(saved));
+    } catch { /* ignore */ }
+    try {
+      const savedRef = localStorage.getItem(CARD_REF_IMAGE_KEY);
+      if (savedRef) {
+        const parsed = JSON.parse(savedRef);
+        if (parsed.image) { setCardRegenRefImage(parsed.image); setRefImageMode(parsed.mode || 'copy'); setIsRefImageLocked(true); }
+      }
+    } catch { /* ignore */ }
+  }, []);
+
+  // ── 이미지 프롬프트 자동 연동 (텍스트 변경 시) ──
+  useEffect(() => {
+    if (editSubtitle || editMainTitle || editDescription) {
+      const newPrompt = `1:1 카드뉴스, ${editSubtitle ? `"${editSubtitle}"` : ''} ${editMainTitle ? `"${editMainTitle}"` : ''} ${editDescription ? `"${editDescription}"` : ''}, 밝고 친근한 분위기`.trim();
+      setEditImagePrompt(newPrompt);
+    }
+  }, [editSubtitle, editMainTitle, editDescription]);
+
+  // ── 카드 재생성 모달 열기 ──
+  const openCardRegenModal = useCallback((cardIndex: number) => {
     const card = cards.find(c => c.index === cardIndex);
     if (!card) return;
+    setCardRegenIndex(cardIndex);
+    setCurrentCardImage(card.imageUrl || '');
+    setEditSubtitle(card.role);
+    setEditMainTitle(card.title);
+    setEditDescription(card.body);
+    setEditImagePrompt(card.imagePrompt);
+    if (!isRefImageLocked) setCardRegenRefImage('');
+    setCardRegenModalOpen(true);
+  }, [cards, isRefImageLocked]);
 
-    const newPrompt = window.prompt('이미지 프롬프트를 수정하세요:', card.imagePrompt);
-    if (!newPrompt) return;
+  // ── AI 프롬프트 추천 ──
+  const handleRecommendPrompt = useCallback(async () => {
+    setIsRecommendingPrompt(true);
+    try {
+      const res = await fetch('/api/gemini', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: `다음 카드뉴스 슬라이드에 어울리는 이미지 프롬프트를 한글로 작성해주세요.\n부제: ${editSubtitle}\n제목: ${editMainTitle}\n설명: ${editDescription}\n\n1:1 카드뉴스 이미지 프롬프트만 출력하세요. 텍스트/글자 절대 금지.`,
+          systemInstruction: '이미지 생성용 프롬프트 작성 전문가. 한글로 시각적 장면만 묘사하세요.',
+          model: 'gemini-3.1-pro-preview',
+          temperature: 0.7,
+          maxOutputTokens: 500,
+        }),
+      });
+      const data = await res.json() as { text?: string };
+      if (data.text) setEditImagePrompt(data.text.trim());
+    } catch { /* ignore */ } finally { setIsRecommendingPrompt(false); }
+  }, [editSubtitle, editMainTitle, editDescription]);
 
-    setRegeneratingCard(cardIndex);
-    const url = await generateCardImage(newPrompt, cardIndex);
-    setCards(prev => prev.map(c =>
-      c.index === cardIndex ? { ...c, imageUrl: url, imagePrompt: newPrompt } : c
-    ));
-    setRegeneratingCard(null);
-  }, [cards, imageStyle]);
+  // ── 카드 재생성 실행 ──
+  const executeCardRegenerate = useCallback(async () => {
+    const hasInput = editSubtitle || editMainTitle || editDescription || editImagePrompt || cardRegenRefImage;
+    if (!hasInput) return;
+
+    setRegeneratingCard(cardRegenIndex);
+    setCardRegenProgress(cardRegenRefImage ? '참고 이미지 스타일 분석 중...' : '편집된 프롬프트로 이미지 생성 중...');
+
+    try {
+      const promptToUse = editImagePrompt || `1:1 카드뉴스, "${editSubtitle}" "${editMainTitle}" "${editDescription}", 밝고 친근한 분위기`;
+      const url = await generateCardImage(promptToUse, cardRegenIndex);
+
+      setCards(prev => prev.map(c =>
+        c.index === cardRegenIndex
+          ? { ...c, imageUrl: url, imagePrompt: promptToUse, title: editMainTitle || c.title, body: editDescription || c.body, role: editSubtitle || c.role }
+          : c
+      ));
+      setCardRegenModalOpen(false);
+    } catch (err) {
+      console.error('카드 재생성 실패:', err);
+    } finally {
+      setRegeneratingCard(null);
+      setCardRegenProgress('');
+    }
+  }, [cardRegenIndex, editSubtitle, editMainTitle, editDescription, editImagePrompt, cardRegenRefImage, imageStyle]);
+
+  // ── 프롬프트 히스토리 저장/불러오기 ──
+  const savePromptToHistory = useCallback(() => {
+    if (!editSubtitle && !editMainTitle && !editDescription) return;
+    const newItem: CardPromptHistoryItem = {
+      subtitle: editSubtitle, mainTitle: editMainTitle, description: editDescription,
+      imagePrompt: editImagePrompt,
+      savedAt: new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }),
+    };
+    const filtered = promptHistory.filter(h => h.subtitle !== newItem.subtitle || h.mainTitle !== newItem.mainTitle);
+    const newHistory = [newItem, ...filtered].slice(0, 3);
+    setPromptHistory(newHistory);
+    localStorage.setItem(CARD_PROMPT_HISTORY_KEY, JSON.stringify(newHistory));
+  }, [editSubtitle, editMainTitle, editDescription, editImagePrompt, promptHistory]);
+
+  const loadFromHistory = useCallback((item: CardPromptHistoryItem) => {
+    setEditSubtitle(item.subtitle);
+    setEditMainTitle(item.mainTitle);
+    setEditDescription(item.description);
+    setEditImagePrompt(item.imagePrompt);
+    setShowHistoryDropdown(false);
+  }, []);
+
+  // ── 참고 이미지 저장/삭제 ──
+  const lockRefImage = useCallback((image: string, mode: 'recolor' | 'copy') => {
+    try { localStorage.setItem(CARD_REF_IMAGE_KEY, JSON.stringify({ image, mode })); setIsRefImageLocked(true); } catch { /* too large */ }
+  }, []);
+
+  const unlockRefImage = useCallback(() => {
+    localStorage.removeItem(CARD_REF_IMAGE_KEY);
+    setIsRefImageLocked(false);
+  }, []);
 
   // ── 개별 카드 다운로드 ──
   const handleCardDownload = (card: CardSlide) => {
@@ -456,7 +571,7 @@ export default function CardNewsPage() {
 
                     {/* 호버 액션 버튼 */}
                     <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
-                      <button onClick={() => handleCardRegenerate(card.index)} disabled={regeneratingCard !== null}
+                      <button onClick={() => openCardRegenModal(card.index)} disabled={regeneratingCard !== null}
                         className="px-3 py-1.5 bg-white rounded-lg text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors shadow-lg"
                       >🔄 재생성</button>
                       {card.imageUrl && (
@@ -513,6 +628,39 @@ export default function CardNewsPage() {
           </div>
         )}
       </div>
+
+      {/* ── 카드 재생성 모달 ── */}
+      <CardRegenModal
+        open={cardRegenModalOpen}
+        onClose={() => setCardRegenModalOpen(false)}
+        cardIndex={cardRegenIndex}
+        isRegenerating={regeneratingCard !== null}
+        regenProgress={cardRegenProgress}
+        currentCardImage={currentCardImage}
+        editSubtitle={editSubtitle}
+        setEditSubtitle={setEditSubtitle}
+        editMainTitle={editMainTitle}
+        setEditMainTitle={setEditMainTitle}
+        editDescription={editDescription}
+        setEditDescription={setEditDescription}
+        editImagePrompt={editImagePrompt}
+        setEditImagePrompt={setEditImagePrompt}
+        isRecommending={isRecommendingPrompt}
+        onRecommendPrompt={handleRecommendPrompt}
+        refImage={cardRegenRefImage}
+        setRefImage={setCardRegenRefImage}
+        refImageMode={refImageMode}
+        setRefImageMode={setRefImageMode}
+        isRefImageLocked={isRefImageLocked}
+        onLockRefImage={lockRefImage}
+        onUnlockRefImage={unlockRefImage}
+        promptHistory={promptHistory}
+        showHistoryDropdown={showHistoryDropdown}
+        setShowHistoryDropdown={setShowHistoryDropdown}
+        onSavePromptHistory={savePromptToHistory}
+        onLoadFromHistory={loadFromHistory}
+        onRegenerate={executeCardRegenerate}
+      />
     </div>
   );
 }

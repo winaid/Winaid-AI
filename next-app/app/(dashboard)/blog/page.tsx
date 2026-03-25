@@ -14,6 +14,7 @@ import WritingStyleLearner, { getStyleById, getStylePromptForGeneration } from '
 import type { BlogSection } from '../../../lib/types';
 import { parseBlogSections, replaceSectionHtml } from '../../../lib/blogSectionParser';
 import { downloadWord, downloadPDF } from '../../../lib/blogExport';
+import { ImageActionModal, ImageRegenModal } from '../../../components/ImageRegenModal';
 import { analyzeHospitalKeywords, loadMoreKeywords, checkKeywordRankings, MAX_KEYWORDS, type KeywordStat, type KeywordRankResult } from '../../../lib/keywordAnalysisService';
 import { analyzeClinicContent, type ClinicContext } from '../../../lib/clinicContextService';
 
@@ -141,6 +142,12 @@ function BlogForm() {
   const [generatedContent, setGeneratedContent] = useState<string | null>(null);
   const [savedImagePrompts, setSavedImagePrompts] = useState<string[]>([]);
   const [regeneratingImage, setRegeneratingImage] = useState<number | null>(null);
+  // 블로그 이미지 모달 state
+  const [imgActionModalOpen, setImgActionModalOpen] = useState(false);
+  const [imgRegenModalOpen, setImgRegenModalOpen] = useState(false);
+  const [selectedImgIndex, setSelectedImgIndex] = useState(0);
+  const [selectedImgSrc, setSelectedImgSrc] = useState('');
+  const [regenPrompt, setRegenPrompt] = useState('');
   const [scores, setScores] = useState<ScoreBarData | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
@@ -1469,15 +1476,38 @@ JSON 형식으로 응답해주세요.`;
     }
   };
 
-  // ── 이미지 재생성 ──
-  const handleImageRegenerate = useCallback(async (imageIndex: number) => {
+  // ── 이미지 클릭 → 액션 모달 열기 ──
+  const handleImageClick = useCallback((imageIndex: number) => {
     const promptIdx = imageIndex - 1;
     const originalPrompt = savedImagePrompts[promptIdx];
     if (!originalPrompt) return;
+    // 현재 이미지 src 가져오기
+    if (generatedContent) {
+      const div = document.createElement('div');
+      div.innerHTML = generatedContent;
+      const img = div.querySelector(`img[data-image-index="${imageIndex}"]`);
+      setSelectedImgSrc(img?.getAttribute('src') || '');
+    }
+    setSelectedImgIndex(imageIndex);
+    setRegenPrompt(originalPrompt);
+    setImgActionModalOpen(true);
+  }, [savedImagePrompts, generatedContent]);
 
-    const newPrompt = window.prompt('이미지 프롬프트를 수정하세요:', originalPrompt);
-    if (!newPrompt || newPrompt === originalPrompt && !window.confirm('같은 프롬프트로 재생성할까요?')) return;
+  // ── 이미지 다운로드 ──
+  const handleImageDownload = useCallback((src: string, index: number) => {
+    const a = document.createElement('a');
+    a.href = src;
+    a.download = `blog_image_${index}.png`;
+    a.click();
+  }, []);
 
+  // ── 이미지 재생성 실행 (모달에서 호출) ──
+  const handleImageRegenerateSubmit = useCallback(async () => {
+    const imageIndex = selectedImgIndex;
+    const newPrompt = regenPrompt;
+    if (!newPrompt.trim()) return;
+
+    setImgRegenModalOpen(false);
     setRegeneratingImage(imageIndex);
     console.info(`[BLOG] 이미지 ${imageIndex} 재생성 시작 — 프롬프트: "${newPrompt.substring(0, 60)}..."`);
 
@@ -1511,7 +1541,6 @@ JSON 형식으로 응답해주세요.`;
           if (!uploadErr) {
             const { data: urlData } = supabase.storage.from('blog-images').getPublicUrl(fileName);
             if (urlData?.publicUrl) {
-              // DOM에서 이미지 교체
               setGeneratedContent(prev => {
                 if (!prev) return prev;
                 const div = document.createElement('div');
@@ -1520,12 +1549,7 @@ JSON 형식으로 응답해주세요.`;
                 imgs.forEach(img => img.setAttribute('src', urlData.publicUrl));
                 return div.innerHTML;
               });
-              // 프롬프트도 업데이트
-              setSavedImagePrompts(prev => {
-                const next = [...prev];
-                next[promptIdx] = newPrompt;
-                return next;
-              });
+              setSavedImagePrompts(prev => { const next = [...prev]; next[imageIndex - 1] = newPrompt; return next; });
               console.info(`[BLOG] 이미지 ${imageIndex} 재생성 완료 (Storage)`);
               return;
             }
@@ -1542,7 +1566,7 @@ JSON 형식으로 응답해주세요.`;
         imgs.forEach(img => img.setAttribute('src', imgData.imageDataUrl!));
         return div.innerHTML;
       });
-      setSavedImagePrompts(prev => { const next = [...prev]; next[promptIdx] = newPrompt; return next; });
+      setSavedImagePrompts(prev => { const next = [...prev]; next[imageIndex - 1] = newPrompt; return next; });
       console.info(`[BLOG] 이미지 ${imageIndex} 재생성 완료 (base64)`);
     } catch (err) {
       console.error(`[BLOG] 이미지 ${imageIndex} 재생성 실패:`, err);
@@ -1550,7 +1574,7 @@ JSON 형식으로 응답해주세요.`;
     } finally {
       setRegeneratingImage(null);
     }
-  }, [savedImagePrompts, supabase]);
+  }, [selectedImgIndex, regenPrompt, supabase]);
 
   // ── 소제목 재생성 (root useAiRefine.ts + faqService.ts + gpt52-prompts-staged.ts 기준) ──
   const handleSectionRegenerate = useCallback(async (sectionIndex: number) => {
@@ -2317,7 +2341,7 @@ ${generatedContent.substring(0, 2000)}
             onSectionRegenerate={handleSectionRegenerate}
             onDownloadWord={handleDownloadWord}
             onDownloadPDF={handleDownloadPDF}
-            onImageRegenerate={handleImageRegenerate}
+            onImageRegenerate={handleImageClick}
             regeneratingImage={regeneratingImage}
           />
         ) : (
@@ -2369,6 +2393,27 @@ ${generatedContent.substring(0, 2000)}
           </div>
         )}
       </div>
+
+      {/* ── 블로그 이미지 액션 모달 (다운로드/재생성 선택) ── */}
+      <ImageActionModal
+        open={imgActionModalOpen}
+        onClose={() => setImgActionModalOpen(false)}
+        imageSrc={selectedImgSrc}
+        imageIndex={selectedImgIndex}
+        onDownload={handleImageDownload}
+        onRegenerate={() => setImgRegenModalOpen(true)}
+      />
+
+      {/* ── 블로그 이미지 재생성 모달 (프롬프트 편집) ── */}
+      <ImageRegenModal
+        open={imgRegenModalOpen}
+        onClose={() => setImgRegenModalOpen(false)}
+        imageIndex={selectedImgIndex}
+        prompt={regenPrompt}
+        setPrompt={setRegenPrompt}
+        isRegenerating={regeneratingImage !== null}
+        onSubmit={handleImageRegenerateSubmit}
+      />
     </div>
   );
 }
