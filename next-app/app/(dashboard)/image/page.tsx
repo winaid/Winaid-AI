@@ -11,6 +11,8 @@ import { supabase } from '../../../lib/supabase';
 import { PromptChat } from '../../../components/PromptChat';
 
 type AspectRatio = '1:1' | '16:9' | '9:16' | '4:3';
+type DayMark = 'closed' | 'shortened' | 'vacation';
+type ScheduleLayout = 'full_calendar' | 'week' | 'highlight';
 
 const ASPECT_RATIOS: { value: AspectRatio; label: string; icon: string }[] = [
   { value: '1:1', label: '정사각형', icon: '⬜' },
@@ -59,6 +61,111 @@ export default function ImagePage() {
   const [brandColor, setBrandColor] = useState('');
   const [brandAccent, setBrandAccent] = useState('');
   const [showAdvanced, setShowAdvanced] = useState(false);
+
+  // ── schedule 전용 상태 (OLD parity) ──
+  const now = new Date();
+  const [schYear, setSchYear] = useState(now.getFullYear());
+  const [schMonth, setSchMonth] = useState(now.getMonth() + 1);
+  const [schTitle, setSchTitle] = useState('');
+  const [schLayout, setSchLayout] = useState<ScheduleLayout>('full_calendar');
+  const [schNotices, setSchNotices] = useState('');
+  const [dayMarks, setDayMarks] = useState<Map<number, DayMark>>(new Map());
+  const [shortenedHours, setShortenedHours] = useState<Map<number, string>>(new Map());
+  const [vacationReasons, setVacationReasons] = useState<Map<number, string>>(new Map());
+  const [markMode, setMarkMode] = useState<DayMark>('closed');
+  const [customMessage, setCustomMessage] = useState('');
+  const [extraPrompt, setExtraPrompt] = useState('');
+
+  // ── event 전용 상태 (OLD parity) ──
+  const [evTitle, setEvTitle] = useState('');
+  const [evSubtitle, setEvSubtitle] = useState('');
+  const [evPriceRaw, setEvPriceRaw] = useState('');
+  const [evOrigPriceRaw, setEvOrigPriceRaw] = useState('');
+  const [evDiscount, setEvDiscount] = useState('');
+  const [evPeriod, setEvPeriod] = useState('');
+  const [evDesc, setEvDesc] = useState('');
+
+  // ── 가격 헬퍼 (OLD parity) ──
+  const parseNum = (s: string) => Number(s.replace(/[^0-9]/g, '')) || 0;
+  const fmtWon = (s: string) => { const n = parseNum(s); return n > 0 ? n.toLocaleString() + '원' : ''; };
+  const evPrice = fmtWon(evPriceRaw);
+  const evOrigPrice = fmtWon(evOrigPriceRaw);
+  const autoDiscountPct = (() => {
+    const price = parseNum(evPriceRaw), orig = parseNum(evOrigPriceRaw);
+    if (orig > 0 && price > 0 && price < orig) return `${Math.round((1 - price / orig) * 100)}% OFF`;
+    return '';
+  })();
+
+  // ── 달력 그리드 계산 (OLD parity) ──
+  const schFirstDay = new Date(schYear, schMonth - 1, 1).getDay();
+  const schLastDate = new Date(schYear, schMonth, 0).getDate();
+  const schWeeks: (number | null)[][] = [];
+  {
+    let week: (number | null)[] = new Array(schFirstDay).fill(null);
+    for (let d = 1; d <= schLastDate; d++) { week.push(d); if (week.length === 7) { schWeeks.push(week); week = []; } }
+    if (week.length > 0) { while (week.length < 7) week.push(null); schWeeks.push(week); }
+  }
+
+  const getFixedHolidays = (month: number): Map<number, string> => {
+    const fixed: Record<string, string> = { '1-1': '신정', '3-1': '삼일절', '5-5': '어린이날', '6-6': '현충일', '8-15': '광복절', '10-3': '개천절', '10-9': '한글날', '12-25': '성탄절' };
+    const result = new Map<number, string>();
+    for (const [key, name] of Object.entries(fixed)) { const [m, d] = key.split('-').map(Number); if (m === month) result.set(d, name); }
+    return result;
+  };
+  const schHolidays = getFixedHolidays(schMonth);
+
+  const handleDayClick = (day: number) => {
+    const m = new Map(dayMarks);
+    if (m.get(day) === markMode) {
+      m.delete(day);
+      const sh = new Map(shortenedHours); sh.delete(day); setShortenedHours(sh);
+      const vr = new Map(vacationReasons); vr.delete(day); setVacationReasons(vr);
+    } else { m.set(day, markMode); }
+    setDayMarks(m);
+  };
+
+  const closedCount = [...dayMarks.values()].filter(v => v === 'closed').length;
+  const shortenedCount = [...dayMarks.values()].filter(v => v === 'shortened').length;
+  const vacationCount = [...dayMarks.values()].filter(v => v === 'vacation').length;
+
+  // 월/년 변경 시 마킹 초기화
+  useEffect(() => { setDayMarks(new Map()); setShortenedHours(new Map()); setVacationReasons(new Map()); }, [schMonth, schYear]);
+
+  // ── schedule/event 전용 프롬프트 빌더 ──
+  const buildSchedulePrompt = useCallback((): string => {
+    const title = schTitle || `${schMonth}월 휴진 안내`;
+    const closedDays = [...dayMarks].filter(([, m]) => m === 'closed').map(([d]) => d).sort((a, b) => a - b);
+    const shortened = [...dayMarks].filter(([, m]) => m === 'shortened').map(([d]) => `${d}일(${shortenedHours.get(d) || '단축진료'})`).sort();
+    const vacations = [...dayMarks].filter(([, m]) => m === 'vacation').map(([d]) => `${d}일(${vacationReasons.get(d) || '휴가'})`).sort();
+    const noticeLines = schNotices.split('\n').filter(Boolean);
+    const layoutLabel = schLayout === 'full_calendar' ? '전체 달력(월간 캘린더)' : schLayout === 'week' ? '한 주(주간 캘린더)' : '강조형(날짜 강조)';
+
+    let p = `${schYear}년 ${schMonth}월 병원 진료 일정 안내 포스터.\n제목: "${title}"\n레이아웃: ${layoutLabel} 스타일.\n`;
+    if (closedDays.length > 0) p += `휴진일: ${closedDays.map(d => `${d}일`).join(', ')} — 빨간색으로 눈에 띄게 표시.\n`;
+    if (shortened.length > 0) p += `단축진료: ${shortened.join(', ')} — 주황색으로 표시.\n`;
+    if (vacations.length > 0) p += `휴가: ${vacations.join(', ')} — 보라색으로 표시.\n`;
+    if (noticeLines.length > 0) p += `안내 문구: ${noticeLines.join(' / ')}\n`;
+    p += '깔끔하고 전문적인 의료 디자인, 한국어 텍스트, 모바일에서도 읽기 쉬운 크기.';
+    if (customMessage) p += `\n추가 문구: "${customMessage}"`;
+    if (extraPrompt) p += `\n${extraPrompt}`;
+    return p;
+  }, [schYear, schMonth, schTitle, schLayout, dayMarks, shortenedHours, vacationReasons, schNotices, customMessage, extraPrompt]);
+
+  const buildEventPrompt = useCallback((): string => {
+    const title = evTitle || '이벤트';
+    let p = `병원 이벤트 홍보 포스터.\n이벤트 제목: "${title}"\n`;
+    if (evSubtitle) p += `부제목: "${evSubtitle}"\n`;
+    if (evPrice) p += `이벤트 가격: ${evPrice} — 크고 굵게 강조.\n`;
+    if (evOrigPrice) p += `정가: ${evOrigPrice} — 취소선으로 표시.\n`;
+    const disc = evDiscount || autoDiscountPct;
+    if (disc) p += `할인율: ${disc} — 눈에 띄는 뱃지/라벨로 표시.\n`;
+    if (evPeriod) p += `이벤트 기간: ${evPeriod}\n`;
+    if (evDesc) p += `상세 설명: ${evDesc}\n`;
+    p += '밝고 신뢰감 있는 의료 디자인, 가격과 혜택이 한눈에 보이는 레이아웃, 한국어 텍스트.';
+    if (customMessage) p += `\n추가 문구: "${customMessage}"`;
+    if (extraPrompt) p += `\n${extraPrompt}`;
+    return p;
+  }, [evTitle, evSubtitle, evPrice, evOrigPrice, evDiscount, autoDiscountPct, evPeriod, evDesc, customMessage, extraPrompt]);
 
   // localStorage 복원
   useEffect(() => {
@@ -209,7 +316,7 @@ export default function ImagePage() {
     return { needsCalendar, months, year };
   }, []);
 
-  const getKoreanHolidays = useCallback((month: number): string[] => {
+  const getKoreanHolidays2 = useCallback((month: number): string[] => {
     const holidays: Record<string, string> = {
       '1-1': '신정', '3-1': '삼일절', '5-5': '어린이날',
       '6-6': '현충일', '8-15': '광복절', '10-3': '개천절',
@@ -226,21 +333,34 @@ export default function ImagePage() {
   // ── 프롬프트 조립 + API 호출 ──
 
   const handleGenerate = useCallback(async () => {
-    if (!prompt.trim() || generating) return;
+    // schedule/event 모드에서는 전용 프롬프트 사용
+    const isScheduleMode = mode === 'template' && selectedTemplate === 'schedule';
+    const isEventMode = mode === 'template' && selectedTemplate === 'event';
+    const effectivePrompt = isScheduleMode ? buildSchedulePrompt() : isEventMode ? buildEventPrompt() : prompt.trim();
+
+    if (!effectivePrompt || generating) return;
 
     setGenerating(true);
     setError(null);
     setResult(null);
     setProgress('이미지 생성 중...');
 
-    // 달력 참조 이미지 (Canvas)
+    // 달력 참조 이미지 (Canvas) — schedule 모드에서는 항상 생성
     let calendarImage: string | undefined;
-    const dateCtx = detectCalendar(prompt);
-    if (dateCtx.needsCalendar && dateCtx.months.length > 0) {
-      const holidays = getKoreanHolidays(dateCtx.months[0]);
-      const img = generateCalendarImage(dateCtx.year, dateCtx.months[0], holidays);
+    if (isScheduleMode) {
+      const hMap = getFixedHolidays(schMonth);
+      const holidays = [...hMap.entries()].map(([d, name]) => `${schMonth}-${d} ${name}`);
+      const img = generateCalendarImage(schYear, schMonth, holidays);
       if (img) calendarImage = img;
       setProgress('달력 데이터 준비 완료, 이미지 생성 중...');
+    } else {
+      const dateCtx = detectCalendar(effectivePrompt);
+      if (dateCtx.needsCalendar && dateCtx.months.length > 0) {
+        const holidays = getKoreanHolidays2(dateCtx.months[0]);
+        const img = generateCalendarImage(dateCtx.year, dateCtx.months[0], holidays);
+        if (img) calendarImage = img;
+        setProgress('달력 데이터 준비 완료, 이미지 생성 중...');
+      }
     }
 
     // 로고 지시문
@@ -278,7 +398,7 @@ export default function ImagePage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          prompt: prompt.trim(),
+          prompt: effectivePrompt,
           aspectRatio,
           logoInstruction: logoInstruction || undefined,
           hospitalInfo: hospitalInfo || undefined,
@@ -307,9 +427,9 @@ export default function ImagePage() {
             userId = user?.id ?? null;
             userEmail = user?.email ?? null;
           }
-          const titleText = prompt.trim().length > 60
-            ? prompt.trim().substring(0, 60) + '...'
-            : prompt.trim();
+          const titleText = effectivePrompt.length > 60
+            ? effectivePrompt.substring(0, 60) + '...'
+            : effectivePrompt;
           await savePost({
             userId,
             userEmail,
@@ -317,7 +437,7 @@ export default function ImagePage() {
             postType: 'image',
             title: titleText || '이미지 생성',
             content: data.imageDataUrl,
-            topic: prompt.trim(),
+            topic: effectivePrompt,
           });
         } catch {
           // 기록 저장 실패는 사용자 경험에 영향 주지 않음
@@ -333,7 +453,7 @@ export default function ImagePage() {
     } finally {
       setGenerating(false);
     }
-  }, [prompt, aspectRatio, generating, logoEnabled, logoDataUrl, hospitalName, logoPosition, clinicPhone, clinicHours, clinicAddress, brandColor, brandAccent, detectCalendar, getKoreanHolidays, generateCalendarImage]);
+  }, [prompt, aspectRatio, generating, logoEnabled, logoDataUrl, hospitalName, logoPosition, clinicPhone, clinicHours, clinicAddress, brandColor, brandAccent, detectCalendar, getKoreanHolidays2, generateCalendarImage, mode, selectedTemplate, buildSchedulePrompt, buildEventPrompt, schYear, schMonth]);
 
   const handleDownload = useCallback(() => {
     if (!result) return;
@@ -374,8 +494,10 @@ export default function ImagePage() {
                   {TEMPLATE_CATEGORIES.map(cat => (
                     <button key={cat.id} type="button"
                       onClick={() => {
-                        setSelectedTemplate(selectedTemplate === cat.id ? null : cat.id);
-                        if (selectedTemplate !== cat.id) setPrompt(cat.placeholder);
+                        const newSel = selectedTemplate === cat.id ? null : cat.id;
+                        setSelectedTemplate(newSel);
+                        // schedule/event는 전용 폼 사용 → placeholder 주입 안 함
+                        if (newSel && newSel !== 'schedule' && newSel !== 'event') setPrompt(cat.placeholder);
                       }}
                       className={`flex flex-col items-center gap-0.5 p-2 rounded-lg border transition-all text-center ${
                         selectedTemplate === cat.id
@@ -391,7 +513,194 @@ export default function ImagePage() {
               </div>
             )}
 
-            {/* 프롬프트 */}
+            {/* ══ schedule 전용 폼 (OLD parity) ══ */}
+            {mode === 'template' && selectedTemplate === 'schedule' && (
+              <div className="space-y-3">
+                <div className="flex gap-3">
+                  <div className="flex-1">
+                    <label className="block text-[11px] font-semibold text-slate-500 mb-1">연도</label>
+                    <select value={schYear} onChange={e => setSchYear(Number(e.target.value))} className={inputCls}>
+                      {[now.getFullYear(), now.getFullYear() + 1].map(y => <option key={y} value={y}>{y}년</option>)}
+                    </select>
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-[11px] font-semibold text-slate-500 mb-1">월</label>
+                    <select value={schMonth} onChange={e => setSchMonth(Number(e.target.value))} className={inputCls}>
+                      {Array.from({ length: 12 }, (_, i) => i + 1).map(m => <option key={m} value={m}>{m}월</option>)}
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-500 mb-1">제목</label>
+                  <input type="text" value={schTitle} onChange={e => setSchTitle(e.target.value)} placeholder={`${schMonth}월 휴진 안내`} className={inputCls} />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-500 mb-1">레이아웃 스타일</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {([
+                      { id: 'full_calendar' as ScheduleLayout, icon: '📅', name: '전체 달력', desc: '월간 캘린더' },
+                      { id: 'week' as ScheduleLayout, icon: '📋', name: '한 주', desc: '주간 캘린더' },
+                      { id: 'highlight' as ScheduleLayout, icon: '⭐', name: '강조형', desc: '날짜 강조' },
+                    ]).map(lt => (
+                      <button key={lt.id} type="button" onClick={() => setSchLayout(lt.id)}
+                        className={`py-2.5 px-2 rounded-xl text-center transition-all border ${
+                          schLayout === lt.id ? 'bg-blue-50 border-blue-300 ring-2 ring-blue-200 shadow-sm' : 'bg-white border-slate-200 hover:border-slate-300'
+                        }`}>
+                        <div className="text-lg">{lt.icon}</div>
+                        <div className={`text-xs font-bold ${schLayout === lt.id ? 'text-blue-700' : 'text-slate-700'}`}>{lt.name}</div>
+                        <div className="text-[10px] text-slate-400">{lt.desc}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {/* 마킹 모드 */}
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-500 mb-1.5">마킹 모드 (선택 후 달력 클릭)</label>
+                  <div className="flex gap-2">
+                    {([
+                      { m: 'closed' as DayMark, l: '휴진', bg: 'bg-red-500', r: 'ring-red-300' },
+                      { m: 'shortened' as DayMark, l: '단축', bg: 'bg-amber-500', r: 'ring-amber-300' },
+                      { m: 'vacation' as DayMark, l: '휴가', bg: 'bg-purple-500', r: 'ring-purple-300' },
+                    ]).map(({ m: md, l, bg, r }) => (
+                      <button key={md} type="button" onClick={() => setMarkMode(md)}
+                        className={`flex-1 py-2 px-3 rounded-lg text-sm font-bold transition-all ${markMode === md ? `${bg} text-white ring-2 ${r} shadow-md` : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>
+                        {l}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {/* 달력 그리드 */}
+                <div className="border border-slate-200 rounded-xl overflow-hidden">
+                  <div className="bg-slate-50 px-3 py-2 text-center text-sm font-bold text-slate-700">{schYear}년 {schMonth}월</div>
+                  <table className="w-full border-collapse">
+                    <thead><tr>{['일','월','화','수','목','금','토'].map((d, i) => (
+                      <th key={d} className={`py-2 text-xs font-bold ${i === 0 ? 'text-red-500' : i === 6 ? 'text-blue-500' : 'text-slate-500'}`}>{d}</th>
+                    ))}</tr></thead>
+                    <tbody>{schWeeks.map((w, wi) => (
+                      <tr key={wi}>{w.map((d, di) => {
+                        if (d === null) return <td key={di} className="p-1" />;
+                        const mark = dayMarks.get(d);
+                        const isH = schHolidays.has(d);
+                        const isSun = di === 0;
+                        const isSat = di === 6;
+                        let bg = 'bg-white hover:bg-slate-50', tx = 'text-slate-700', badge = '';
+                        if (mark === 'closed') { bg = 'bg-red-50 ring-1 ring-red-300'; tx = 'text-red-600 font-bold'; badge = '휴진'; }
+                        else if (mark === 'shortened') { bg = 'bg-amber-50 ring-1 ring-amber-300'; tx = 'text-amber-600 font-bold'; badge = '단축'; }
+                        else if (mark === 'vacation') { bg = 'bg-purple-50 ring-1 ring-purple-300'; tx = 'text-purple-600 font-bold'; badge = '휴가'; }
+                        else if (isSun || isH) tx = 'text-red-500';
+                        else if (isSat) tx = 'text-blue-500';
+                        return (
+                          <td key={di} className="p-1">
+                            <button type="button" onClick={() => handleDayClick(d)} className={`w-full rounded-lg py-1.5 text-center cursor-pointer transition-all ${bg} ${tx}`}>
+                              <div className="text-sm">{d}</div>
+                              {badge && <div className="text-[9px] font-bold -mt-0.5">{badge}</div>}
+                              {isH && !badge && <div className="text-[9px] text-red-400">{schHolidays.get(d)}</div>}
+                            </button>
+                          </td>
+                        );
+                      })}</tr>
+                    ))}</tbody>
+                  </table>
+                </div>
+                {/* 마킹 요약 뱃지 */}
+                {(closedCount > 0 || shortenedCount > 0 || vacationCount > 0) && (
+                  <div className="flex gap-2 flex-wrap text-xs">
+                    {closedCount > 0 && <span className="px-2 py-1 bg-red-50 text-red-600 rounded-full font-semibold">휴진 {closedCount}일</span>}
+                    {shortenedCount > 0 && <span className="px-2 py-1 bg-amber-50 text-amber-600 rounded-full font-semibold">단축 {shortenedCount}일</span>}
+                    {vacationCount > 0 && <span className="px-2 py-1 bg-purple-50 text-purple-600 rounded-full font-semibold">휴가 {vacationCount}일</span>}
+                  </div>
+                )}
+                {/* 단축진료 시간 입력 */}
+                {shortenedCount > 0 && (
+                  <div className="space-y-2">
+                    <label className="block text-[11px] font-semibold text-slate-500">단축진료 시간</label>
+                    {[...dayMarks].filter(([, m]) => m === 'shortened').sort(([a], [b]) => a - b).map(([day]) => (
+                      <div key={day} className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-amber-600 w-12">{day}일</span>
+                        <input type="text" value={shortenedHours.get(day) || ''} onChange={e => { const m = new Map(shortenedHours); m.set(day, e.target.value); setShortenedHours(m); }} placeholder="예: 10:00~14:00" className="flex-1 px-2 py-1.5 border border-slate-200 rounded-lg text-xs outline-none focus:border-blue-400 bg-white" />
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {/* 휴가 사유 입력 */}
+                {vacationCount > 0 && (
+                  <div className="space-y-2">
+                    <label className="block text-[11px] font-semibold text-slate-500">휴가 사유</label>
+                    {[...dayMarks].filter(([, m]) => m === 'vacation').sort(([a], [b]) => a - b).map(([day]) => (
+                      <div key={day} className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-purple-600 w-12">{day}일</span>
+                        <input type="text" value={vacationReasons.get(day) || ''} onChange={e => { const m = new Map(vacationReasons); m.set(day, e.target.value); setVacationReasons(m); }} placeholder="예: 원장님 학회" className="flex-1 px-2 py-1.5 border border-slate-200 rounded-lg text-xs outline-none focus:border-blue-400 bg-white" />
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {/* 안내 문구 */}
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-500 mb-1">안내 문구 (줄바꿈으로 구분)</label>
+                  <textarea value={schNotices} onChange={e => setSchNotices(e.target.value)} placeholder={'진료시간: 평일 09:00~18:00\n점심시간: 13:00~14:00'} rows={3} className={`${inputCls} resize-none`} />
+                </div>
+              </div>
+            )}
+
+            {/* ══ event 전용 폼 (OLD parity) ══ */}
+            {mode === 'template' && selectedTemplate === 'event' && (
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-500 mb-1">이벤트 제목</label>
+                  <input type="text" value={evTitle} onChange={e => setEvTitle(e.target.value)} placeholder="예: 임플란트 봄맞이 할인 이벤트" className={inputCls} />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-500 mb-1">부제목 <span className="text-slate-400 font-normal">(선택)</span></label>
+                  <input type="text" value={evSubtitle} onChange={e => setEvSubtitle(e.target.value)} placeholder="예: 봄맞이 특별 이벤트" className={inputCls} />
+                </div>
+                <div className="flex gap-3">
+                  <div className="flex-1">
+                    <label className="block text-[11px] font-semibold text-slate-500 mb-1">이벤트 가격</label>
+                    <input type="text" inputMode="numeric" value={evPriceRaw} onChange={e => setEvPriceRaw(e.target.value)} placeholder="300000" className={inputCls} />
+                    {evPrice && <p className="text-xs text-blue-500 mt-0.5 font-medium">{evPrice}</p>}
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-[11px] font-semibold text-slate-500 mb-1">정가 <span className="text-slate-400 font-normal">(취소선)</span></label>
+                    <input type="text" inputMode="numeric" value={evOrigPriceRaw} onChange={e => setEvOrigPriceRaw(e.target.value)} placeholder="500000" className={inputCls} />
+                    {evOrigPrice && <p className="text-xs text-slate-400 mt-0.5 line-through">{evOrigPrice}</p>}
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <div className="flex-1">
+                    <label className="block text-[11px] font-semibold text-slate-500 mb-1">할인율 <span className="text-slate-400 font-normal">(자동계산)</span></label>
+                    <input type="text" value={evDiscount || autoDiscountPct} onChange={e => setEvDiscount(e.target.value)} placeholder={autoDiscountPct || '자동 계산됨'} className={inputCls} />
+                    {autoDiscountPct && !evDiscount && <p className="text-xs text-emerald-500 mt-0.5 font-medium">자동: {autoDiscountPct}</p>}
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-[11px] font-semibold text-slate-500 mb-1">이벤트 기간</label>
+                    <input type="text" value={evPeriod} onChange={e => setEvPeriod(e.target.value)} placeholder="3/1 ~ 3/31" className={inputCls} />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-500 mb-1">상세 설명 <span className="text-slate-400 font-normal">(선택)</span></label>
+                  <textarea value={evDesc} onChange={e => setEvDesc(e.target.value)} placeholder={'임플란트+잇몸치료 패키지\n첫 방문 고객 한정'} rows={3} className={`${inputCls} resize-none`} />
+                </div>
+              </div>
+            )}
+
+            {/* ── 공통: 추가 문구 + 추가 프롬프트 (schedule/event 모드) ── */}
+            {mode === 'template' && (selectedTemplate === 'schedule' || selectedTemplate === 'event') && (
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-500 mb-1">추가 문구 <span className="text-slate-400 font-normal">(선택 — 하단 표시)</span></label>
+                  <textarea value={customMessage} onChange={e => setCustomMessage(e.target.value)} placeholder={'불편을 드려 죄송합니다.\n응급 시 ☎ 010-1234-5678'} rows={2} className={`${inputCls} resize-none`} />
+                </div>
+                <div className="bg-indigo-50 rounded-xl p-3 border border-indigo-100">
+                  <label className="block text-[11px] font-semibold text-indigo-700 mb-1">
+                    추가 프롬프트 <span className="text-indigo-400 font-normal">(AI에게 자유롭게 지시)</span>
+                  </label>
+                  <textarea value={extraPrompt} onChange={e => setExtraPrompt(e.target.value)} placeholder={'예: 벚꽃 느낌으로 꾸며줘\n예: 하단에 전화번호 크게 넣어줘'} rows={2} className="w-full px-3 py-2 border border-indigo-200 rounded-lg text-sm outline-none focus:border-indigo-400 resize-none bg-white placeholder:text-indigo-300" />
+                </div>
+              </div>
+            )}
+
+            {/* 프롬프트 (schedule/event가 아닌 경우에만 표시) */}
+            {!(mode === 'template' && (selectedTemplate === 'schedule' || selectedTemplate === 'event')) && (<>
             <div>
               <label className="block text-[11px] font-semibold text-slate-500 mb-1.5">이미지 설명</label>
               <textarea
@@ -409,6 +718,7 @@ export default function ImagePage() {
 
             {/* AI 프롬프트 채팅 (OLD parity: PromptGenerator) */}
             <PromptChat onApplyPrompt={(p) => setPrompt(p)} disabled={generating} />
+            </>)}
 
             {/* 비율 선택 */}
             <div>
@@ -513,9 +823,9 @@ export default function ImagePage() {
             {/* 생성 버튼 */}
             <button
               onClick={handleGenerate}
-              disabled={generating || !prompt.trim()}
+              disabled={generating || (!(selectedTemplate === 'schedule' || selectedTemplate === 'event') && !prompt.trim())}
               className={`w-full py-3 rounded-xl text-white font-semibold text-sm transition-all ${
-                generating || !prompt.trim()
+                generating || (!(selectedTemplate === 'schedule' || selectedTemplate === 'event') && !prompt.trim())
                   ? 'bg-slate-200 cursor-not-allowed text-slate-400'
                   : 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-lg shadow-emerald-500/25'
               }`}
