@@ -98,6 +98,53 @@ export default function ImagePage() {
   const [noticeContent, setNoticeContent] = useState('');
   const [noticeDate, setNoticeDate] = useState('');
 
+  // ── greeting 전용 상태 (OLD parity) ──
+  const [greetHoliday, setGreetHoliday] = useState('설날');
+  const [greetMsg, setGreetMsg] = useState('');
+  const [greetClosure, setGreetClosure] = useState('');
+
+  const HOLIDAY_DEFAULTS: Record<string, { msg: string; closure: string }> = {
+    '설날': { msg: '새해 복 많이 받으세요\n건강하고 행복한 한 해 되시길 바랍니다', closure: '1/28(화) ~ 1/30(목)' },
+    '추석': { msg: '풍성한 한가위 보내세요\n가족과 함께 행복한 추석 되세요', closure: '10/5(일) ~ 10/7(화)' },
+    '새해': { msg: 'Happy New Year!\n새해에도 건강하시길 바랍니다', closure: '1/1(수)' },
+    '어버이날': { msg: '감사합니다, 사랑합니다\n어버이날을 진심으로 축하드립니다', closure: '' },
+    '크리스마스': { msg: 'Merry Christmas!\n따뜻하고 행복한 성탄절 보내세요', closure: '12/25(목)' },
+  };
+
+  // ── hiring 전용 상태 (OLD parity) ──
+  type HiringPageType = 'cover' | 'requirements' | 'benefits' | 'contact' | 'intro' | 'free';
+  interface HiringPageData { type: HiringPageType; content: string; }
+
+  const HIRING_PAGE_TYPES: { id: HiringPageType; label: string; placeholder: string }[] = [
+    { id: 'cover', label: '표지', placeholder: '간호사 모집합니다\n함께 성장할 인재를 찾습니다' },
+    { id: 'requirements', label: '자격요건', placeholder: '해당 면허 소지자\n경력 1년 이상 우대\n성실하고 책임감 있는 분' },
+    { id: 'benefits', label: '복리후생', placeholder: '4대보험 가입\n중식 제공\n연차/월차 보장\n인센티브 지급' },
+    { id: 'contact', label: '지원방법', placeholder: '이메일: recruit@hospital.com\n전화: 02-1234-5678\n마감: 채용시까지' },
+    { id: 'intro', label: '병원소개', placeholder: '최신 장비와 쾌적한 환경\n서울 강남 위치\n직원 만족도 95%' },
+    { id: 'free', label: '자유입력', placeholder: '원하는 내용을 자유롭게 입력하세요' },
+  ];
+  const defaultPageTypes: HiringPageType[] = ['cover', 'requirements', 'benefits', 'contact', 'intro'];
+
+  const [hiringPageCount, setHiringPageCount] = useState(1);
+  const [hiringPageData, setHiringPageData] = useState<HiringPageData[]>([{ type: 'cover', content: '' }]);
+  const [hiringPhotos, setHiringPhotos] = useState<string[]>([]);
+
+  const updatePageType = (index: number, type: HiringPageType) => {
+    const data = [...hiringPageData]; data[index] = { ...data[index], type }; setHiringPageData(data);
+  };
+  const updatePageContent = (index: number, content: string) => {
+    const data = [...hiringPageData]; data[index] = { ...data[index], content }; setHiringPageData(data);
+  };
+  const handleHiringPhotoUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files; if (!files) return;
+    Array.from(files).forEach(file => {
+      const reader = new FileReader();
+      reader.onload = () => setHiringPhotos(prev => [...prev, reader.result as string].slice(0, 5));
+      reader.readAsDataURL(file);
+    });
+    e.target.value = '';
+  }, []);
+
   // ── 가격 헬퍼 (OLD parity) ──
   const parseNum = (s: string) => Number(s.replace(/[^0-9]/g, '')) || 0;
   const fmtWon = (s: string) => { const n = parseNum(s); return n > 0 ? n.toLocaleString() + '원' : ''; };
@@ -143,6 +190,15 @@ export default function ImagePage() {
 
   // 월/년 변경 시 마킹 초기화
   useEffect(() => { setDayMarks(new Map()); setShortenedHours(new Map()); setVacationReasons(new Map()); }, [schMonth, schYear]);
+
+  // greeting 기본값 (OLD parity: 명절 선택 시 자동 기본값)
+  useEffect(() => {
+    if (selectedTemplate === 'greeting') {
+      const d = HOLIDAY_DEFAULTS[greetHoliday];
+      if (d && !greetMsg) setGreetMsg(d.msg);
+      if (d && !greetClosure) setGreetClosure(d.closure);
+    }
+  }, [selectedTemplate]);
 
   // ── schedule/event 전용 프롬프트 빌더 ──
   const buildSchedulePrompt = useCallback((): string => {
@@ -212,8 +268,43 @@ export default function ImagePage() {
     return p;
   }, [noticeTitle, noticeContent, noticeDate, customMessage, extraPrompt]);
 
+  // ── greeting 전용 프롬프트 빌더 ──
+  const buildGreetingPrompt = useCallback((): string => {
+    let p = `병원 ${greetHoliday} 인사 이미지.\n명절: ${greetHoliday}\n`;
+    if (greetMsg) p += `인사말: "${greetMsg.replace(/\n/g, ' ')}"\n`;
+    if (greetClosure) p += `휴진 기간: ${greetClosure}\n`;
+    p += `따뜻하고 한국적인 ${greetHoliday} 분위기, 병원명과 휴진 안내 포함, 한국어 텍스트.`;
+    if (customMessage) p += `\n추가 문구: "${customMessage}"`;
+    if (extraPrompt) p += `\n${extraPrompt}`;
+    return p;
+  }, [greetHoliday, greetMsg, greetClosure, customMessage, extraPrompt]);
+
+  // ── hiring 전용 프롬프트 빌더 ──
+  const buildHiringPrompt = useCallback((): string => {
+    const pages = hiringPageData.slice(0, hiringPageCount);
+    const typeLabels: Record<HiringPageType, string> = { cover: '표지', requirements: '자격요건', benefits: '복리후생', contact: '지원방법', intro: '병원소개', free: '자유입력' };
+    let p = `병원 채용/직원 모집 공고 이미지.\n`;
+    if (hiringPageCount === 1) {
+      const page = pages[0];
+      const label = typeLabels[page.type];
+      p += `유형: ${label}\n`;
+      if (page.content) p += `내용:\n${page.content}\n`;
+    } else {
+      p += `총 ${hiringPageCount}페이지 구성:\n`;
+      pages.forEach((page, i) => {
+        const label = typeLabels[page.type];
+        p += `[${i + 1}페이지 - ${label}] ${page.content || '(내용 없음)'}\n`;
+      });
+    }
+    if (hiringPhotos.length > 0) p += `병원 사진 ${hiringPhotos.length}장 첨부 — 디자인에 자연스럽게 활용.\n`;
+    p += '깔끔하고 전문적인 채용 공고 디자인, 한국어 텍스트, 신뢰감 있는 레이아웃.';
+    if (customMessage) p += `\n추가 문구: "${customMessage}"`;
+    if (extraPrompt) p += `\n${extraPrompt}`;
+    return p;
+  }, [hiringPageCount, hiringPageData, hiringPhotos, customMessage, extraPrompt]);
+
   // 전용 폼 모드 여부 (렌더용)
-  const hasFormMode = mode === 'template' && (selectedTemplate === 'schedule' || selectedTemplate === 'event' || selectedTemplate === 'doctor' || selectedTemplate === 'notice');
+  const hasFormMode = mode === 'template' && (selectedTemplate === 'schedule' || selectedTemplate === 'event' || selectedTemplate === 'doctor' || selectedTemplate === 'notice' || selectedTemplate === 'greeting' || selectedTemplate === 'hiring');
 
   const handleDocPhotoUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -395,11 +486,15 @@ export default function ImagePage() {
     const isEventMode = mode === 'template' && selectedTemplate === 'event';
     const isDoctorMode = mode === 'template' && selectedTemplate === 'doctor';
     const isNoticeMode = mode === 'template' && selectedTemplate === 'notice';
-    const hasForm = isScheduleMode || isEventMode || isDoctorMode || isNoticeMode;
+    const isGreetingMode = mode === 'template' && selectedTemplate === 'greeting';
+    const isHiringMode = mode === 'template' && selectedTemplate === 'hiring';
+    const hasForm = isScheduleMode || isEventMode || isDoctorMode || isNoticeMode || isGreetingMode || isHiringMode;
     const effectivePrompt = isScheduleMode ? buildSchedulePrompt()
       : isEventMode ? buildEventPrompt()
       : isDoctorMode ? buildDoctorPrompt()
       : isNoticeMode ? buildNoticePrompt()
+      : isGreetingMode ? buildGreetingPrompt()
+      : isHiringMode ? buildHiringPrompt()
       : prompt.trim();
 
     if (!effectivePrompt || generating) return;
@@ -469,7 +564,9 @@ export default function ImagePage() {
           brandColors: brandColors || undefined,
           logoBase64: logoEnabled && logoDataUrl ? logoDataUrl : undefined,
           calendarImage: calendarImage || undefined,
-          referenceImage: isDoctorMode && docPhotoBase64 ? docPhotoBase64 : undefined,
+          referenceImage: isDoctorMode && docPhotoBase64 ? docPhotoBase64
+            : isHiringMode && hiringPhotos.length > 0 ? hiringPhotos[0]
+            : undefined,
         }),
       });
 
@@ -518,7 +615,7 @@ export default function ImagePage() {
     } finally {
       setGenerating(false);
     }
-  }, [prompt, aspectRatio, generating, logoEnabled, logoDataUrl, hospitalName, logoPosition, clinicPhone, clinicHours, clinicAddress, brandColor, brandAccent, detectCalendar, getKoreanHolidays2, generateCalendarImage, mode, selectedTemplate, buildSchedulePrompt, buildEventPrompt, buildDoctorPrompt, buildNoticePrompt, schYear, schMonth, docPhotoBase64]);
+  }, [prompt, aspectRatio, generating, logoEnabled, logoDataUrl, hospitalName, logoPosition, clinicPhone, clinicHours, clinicAddress, brandColor, brandAccent, detectCalendar, getKoreanHolidays2, generateCalendarImage, mode, selectedTemplate, buildSchedulePrompt, buildEventPrompt, buildDoctorPrompt, buildNoticePrompt, buildGreetingPrompt, buildHiringPrompt, schYear, schMonth, docPhotoBase64, hiringPhotos]);
 
   const handleDownload = useCallback(() => {
     if (!result) return;
@@ -562,7 +659,8 @@ export default function ImagePage() {
                         const newSel = selectedTemplate === cat.id ? null : cat.id;
                         setSelectedTemplate(newSel);
                         // 전용 폼 카테고리는 placeholder 주입 안 함
-                        if (newSel && newSel !== 'schedule' && newSel !== 'event' && newSel !== 'doctor' && newSel !== 'notice') setPrompt(cat.placeholder);
+                        const formCats = ['schedule', 'event', 'doctor', 'notice', 'greeting', 'hiring'];
+                        if (newSel && !formCats.includes(newSel)) setPrompt(cat.placeholder);
                       }}
                       className={`flex flex-col items-center gap-0.5 p-2 rounded-lg border transition-all text-center ${
                         selectedTemplate === cat.id
@@ -805,8 +903,112 @@ export default function ImagePage() {
               </div>
             )}
 
+            {/* ══ greeting 전용 폼 (OLD parity) ══ */}
+            {mode === 'template' && selectedTemplate === 'greeting' && (
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-500 mb-1">명절 종류</label>
+                  <div className="flex gap-1.5">
+                    {(['설날', '추석', '새해', '어버이날', '크리스마스'] as const).map(h => (
+                      <button key={h} type="button" onClick={() => {
+                        setGreetHoliday(h);
+                        const d = HOLIDAY_DEFAULTS[h];
+                        if (d) { setGreetMsg(d.msg); setGreetClosure(d.closure); }
+                      }} className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${greetHoliday === h ? 'bg-slate-800 text-white shadow-md' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>
+                        {h}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-500 mb-1">인사말</label>
+                  <textarea value={greetMsg} onChange={e => setGreetMsg(e.target.value)} placeholder={'풍성한 한가위 보내시고\n건강하고 행복한 추석 되세요'} rows={3} className={`${inputCls} resize-none`} />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-500 mb-1">휴진 기간 <span className="text-slate-400 font-normal">(선택)</span></label>
+                  <input type="text" value={greetClosure} onChange={e => setGreetClosure(e.target.value)} placeholder="9/28(토) ~ 10/1(화)" className={inputCls} />
+                </div>
+              </div>
+            )}
+
+            {/* ══ hiring 전용 폼 (OLD parity) ══ */}
+            {mode === 'template' && selectedTemplate === 'hiring' && (
+              <div className="space-y-3">
+                {/* 페이지 수 */}
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-500 mb-1">페이지 수</label>
+                  <div className="flex gap-1.5">
+                    {[1, 2, 3, 4, 5].map(n => (
+                      <button key={n} type="button" onClick={() => {
+                        setHiringPageCount(n);
+                        setHiringPageData(prev => {
+                          const data = [...prev];
+                          while (data.length < n) data.push({ type: defaultPageTypes[data.length] || 'free', content: '' });
+                          return data.slice(0, n);
+                        });
+                      }} className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${hiringPageCount === n ? 'bg-slate-800 text-white shadow-md' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>
+                        {n}장
+                      </button>
+                    ))}
+                  </div>
+                  {hiringPageCount > 1 && (
+                    <p className="text-[10px] text-slate-400 mt-1">1장째 스타일 기준으로 나머지 페이지 톤이 통일됩니다</p>
+                  )}
+                </div>
+                {/* 병원 사진 업로드 */}
+                <div className="bg-slate-50 rounded-xl p-3 border border-slate-200 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-slate-600">병원 사진 <span className="text-slate-400 font-normal">(선택, 최대 5장)</span></label>
+                    {hiringPhotos.length > 0 && <button type="button" onClick={() => setHiringPhotos([])} className="text-[10px] text-red-400 hover:text-red-600">전체 삭제</button>}
+                  </div>
+                  <div className="flex gap-2 flex-wrap">
+                    {hiringPhotos.map((photo, i) => (
+                      <div key={i} className="relative group">
+                        <img src={photo} alt={`병원사진 ${i + 1}`} className="w-16 h-16 rounded-lg object-cover border border-slate-200" />
+                        <button type="button" onClick={() => setHiringPhotos(prev => prev.filter((_, j) => j !== i))} className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full text-[8px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow">x</button>
+                      </div>
+                    ))}
+                    {hiringPhotos.length < 5 && (
+                      <label className="w-16 h-16 rounded-lg border-2 border-dashed border-slate-300 bg-white flex flex-col items-center justify-center cursor-pointer hover:border-blue-400 transition-colors">
+                        <svg className="w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                        <span className="text-[8px] text-slate-400 mt-0.5">사진 추가</span>
+                        <input type="file" accept="image/*" multiple className="hidden" onChange={handleHiringPhotoUpload} />
+                      </label>
+                    )}
+                  </div>
+                  <p className="text-[9px] text-slate-400">병원 외관, 내부, 장비 등 사진을 넣으면 AI가 디자인에 활용합니다</p>
+                </div>
+                {/* 페이지별 내용 */}
+                {Array.from({ length: hiringPageCount }, (_, i) => {
+                  const page = hiringPageData[i] || { type: 'free' as HiringPageType, content: '' };
+                  const typeInfo = HIRING_PAGE_TYPES.find(t => t.id === page.type) || HIRING_PAGE_TYPES[5];
+                  return (
+                    <div key={i} className="bg-slate-50 rounded-xl p-3 border border-slate-200 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-slate-600">{hiringPageCount > 1 ? `${i + 1}페이지` : '내용'}</span>
+                        <div className="flex gap-1">
+                          {HIRING_PAGE_TYPES.map(t => (
+                            <button key={t.id} type="button" onClick={() => updatePageType(i, t.id)} className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${page.type === t.id ? 'bg-slate-700 text-white' : 'bg-white text-slate-400 hover:text-slate-600 border border-slate-200'}`}>
+                              {t.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <textarea
+                        value={page.content}
+                        onChange={e => updatePageContent(i, e.target.value)}
+                        placeholder={typeInfo.placeholder}
+                        rows={hiringPageCount === 1 ? 5 : 3}
+                        className={`${inputCls} resize-none`}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
             {/* ── 공통: 추가 문구 + 추가 프롬프트 (전용 폼 모드) ── */}
-            {mode === 'template' && (selectedTemplate === 'schedule' || selectedTemplate === 'event' || selectedTemplate === 'doctor' || selectedTemplate === 'notice') && (
+            {hasFormMode && (
               <div className="space-y-3">
                 <div>
                   <label className="block text-[11px] font-semibold text-slate-500 mb-1">추가 문구 <span className="text-slate-400 font-normal">(선택 — 하단 표시)</span></label>
@@ -822,7 +1024,7 @@ export default function ImagePage() {
             )}
 
             {/* 프롬프트 (전용 폼이 아닌 경우에만 표시) */}
-            {!(mode === 'template' && (selectedTemplate === 'schedule' || selectedTemplate === 'event' || selectedTemplate === 'doctor' || selectedTemplate === 'notice')) && (<>
+            {!hasFormMode && (<>
             <div>
               <label className="block text-[11px] font-semibold text-slate-500 mb-1.5">이미지 설명</label>
               <textarea
