@@ -14,6 +14,7 @@ import WritingStyleLearner, { getStyleById, getStylePromptForGeneration } from '
 import type { BlogSection } from '../../../lib/types';
 import { parseBlogSections, replaceSectionHtml } from '../../../lib/blogSectionParser';
 import { downloadWord, downloadPDF } from '../../../lib/blogExport';
+import { analyzeHospitalKeywords, loadMoreKeywords, MAX_KEYWORDS, type KeywordStat } from '../../../lib/keywordAnalysisService';
 
 // ── old GenerateWorkspace.tsx 동일: 블로그 displayStage → 단계 정보 ──
 const BLOG_STAGES: Record<number, { icon: string; label: string; defaultMsg: string; hint: string }> = {
@@ -89,6 +90,7 @@ function BlogForm() {
   const [selectedTeam, setSelectedTeam] = useState<number | null>(null);
   const [selectedManager, setSelectedManager] = useState('');
   const [showHospitalDropdown, setShowHospitalDropdown] = useState(false);
+  const [selectedHospitalAddress, setSelectedHospitalAddress] = useState('');
   const [medicalLawMode] = useState<'strict' | 'relaxed'>('strict');
   const [includeFaq, setIncludeFaq] = useState(false);
   const [faqCount, setFaqCount] = useState(3);
@@ -96,6 +98,15 @@ function BlogForm() {
   const [learnedStyleId, setLearnedStyleId] = useState<string | undefined>(undefined);
   const [customPrompt, setCustomPrompt] = useState('');
   const [showCustomInput, setShowCustomInput] = useState(false);
+
+  // ── 키워드 분석 상태 (old InputForm 동일) ──
+  const [keywordStats, setKeywordStats] = useState<KeywordStat[]>([]);
+  const [keywordAiRec, setKeywordAiRec] = useState('');
+  const [keywordProgress, setKeywordProgress] = useState('');
+  const [isAnalyzingKeywords, setIsAnalyzingKeywords] = useState(false);
+  const [isLoadingMoreKeywords, setIsLoadingMoreKeywords] = useState(false);
+  const [showKeywordPanel, setShowKeywordPanel] = useState(false);
+  const [keywordSortBy, setKeywordSortBy] = useState<'volume' | 'blog' | 'saturation'>('volume');
 
   // localStorage에서 커스텀 프롬프트 복원 (old 동일)
   useEffect(() => {
@@ -146,6 +157,69 @@ function BlogForm() {
       if (rotationTimerRef.current) clearInterval(rotationTimerRef.current);
     };
   }, [displayStage, isGenerating]);
+
+  // ── 키워드 분석 (old InputForm handleAnalyzeKeywords 동일) ──
+  const handleAnalyzeKeywords = async () => {
+    if (!selectedHospitalAddress || !hospitalName) return;
+    setIsAnalyzingKeywords(true);
+    setShowKeywordPanel(true);
+    setKeywordAiRec('');
+    setKeywordProgress('');
+    try {
+      const result = await analyzeHospitalKeywords(
+        hospitalName,
+        selectedHospitalAddress,
+        category,
+        (msg) => setKeywordProgress(msg),
+      );
+      setKeywordStats(result.stats);
+      if (result.apiErrors?.length) {
+        const blogErr = result.apiErrors.find(e => e.includes('블로그') || e.includes('Blog') || e.includes('CLIENT'));
+        setKeywordAiRec(
+          (result.aiRecommendation || '') + (blogErr ? `\n\n⚠️ **발행량 조회 오류:** ${blogErr}` : ''),
+        );
+      } else {
+        setKeywordAiRec(result.aiRecommendation || '');
+      }
+    } catch (e) {
+      console.error('키워드 분석 실패:', e);
+      setKeywordStats([]);
+    } finally {
+      setIsAnalyzingKeywords(false);
+      setKeywordProgress('');
+    }
+  };
+
+  const handleLoadMoreKeywords = async () => {
+    if (!selectedHospitalAddress || !hospitalName) return;
+    if (keywordStats.length >= MAX_KEYWORDS) return;
+    setIsLoadingMoreKeywords(true);
+    setKeywordProgress('');
+    try {
+      const { stats: moreStats, reachedLimit } = await loadMoreKeywords(
+        hospitalName,
+        selectedHospitalAddress,
+        keywordStats,
+        category,
+        (msg) => setKeywordProgress(msg),
+      );
+      if (moreStats.length > 0) {
+        setKeywordStats(prev => {
+          const existingSet = new Set(prev.map(s => s.keyword.toLowerCase()));
+          const uniqueNew = moreStats.filter(s => !existingSet.has(s.keyword.toLowerCase()));
+          return [...prev, ...uniqueNew].slice(0, MAX_KEYWORDS);
+        });
+      }
+      if (reachedLimit) {
+        setKeywordProgress(`최대 ${MAX_KEYWORDS}개 키워드에 도달했습니다.`);
+      }
+    } catch (e) {
+      console.error('추가 키워드 로드 실패:', e);
+    } finally {
+      setIsLoadingMoreKeywords(false);
+      setTimeout(() => setKeywordProgress(''), 2000);
+    }
+  };
 
   // ── AI 제목 추천 (old handleRecommendTitles 동일) ──
   const handleRecommendTitles = async () => {
@@ -1477,6 +1551,9 @@ ${generatedContent.substring(0, 2000)}
                                   onClick={() => {
                                     setHospitalName(hospital.name.replace(/ \(.*\)$/, ''));
                                     setSelectedManager(hospital.manager);
+                                    setSelectedHospitalAddress(hospital.address || '');
+                                    setKeywordStats([]);
+                                    setShowKeywordPanel(false);
                                     setShowHospitalDropdown(false);
                                   }}
                                   className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-blue-50 hover:text-blue-700 transition-colors flex items-center justify-between"
@@ -1505,6 +1582,108 @@ ${generatedContent.substring(0, 2000)}
               </div>
             )}
           </div>
+
+          {/* 키워드 분석 버튼 (old InputForm 동일: 병원 선택 후 표시) */}
+          {selectedHospitalAddress && hospitalName && (
+            <button
+              type="button"
+              onClick={handleAnalyzeKeywords}
+              disabled={isAnalyzingKeywords}
+              className="w-full py-2.5 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-2 bg-blue-600 text-white hover:bg-blue-700 shadow-sm disabled:opacity-50"
+            >
+              <span>🔍</span>
+              <span>{isAnalyzingKeywords ? '키워드 분석 중...' : '키워드 분석'}</span>
+            </button>
+          )}
+
+          {/* 키워드 분석 결과 패널 (old InputForm 동일) */}
+          {showKeywordPanel && (
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+              <div className="flex items-center justify-between px-3 py-2 bg-slate-50 border-b border-slate-100">
+                <span className="text-xs font-bold text-slate-700">키워드 분석 ({keywordStats.length}개)</span>
+                <div className="flex items-center gap-1">
+                  {(['volume', 'blog', 'saturation'] as const).map(sort => (
+                    <button key={sort} type="button" onClick={() => setKeywordSortBy(sort)}
+                      className={`px-2 py-0.5 rounded text-[10px] font-semibold transition-all ${keywordSortBy === sort ? 'bg-blue-500 text-white' : 'text-slate-400 hover:text-slate-600'}`}
+                    >
+                      {sort === 'volume' ? '검색량' : sort === 'blog' ? '발행량' : '포화도'}
+                    </button>
+                  ))}
+                  <button type="button" onClick={() => setShowKeywordPanel(false)} className="ml-1 text-slate-400 hover:text-slate-600">
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                  </button>
+                </div>
+              </div>
+              {isAnalyzingKeywords ? (
+                <div className="p-6 text-center">
+                  <div className="w-6 h-6 border-2 border-blue-200 border-t-blue-500 rounded-full animate-spin mx-auto mb-2" />
+                  <p className="text-xs text-slate-400">{keywordProgress || '검색량 분석 중...'}</p>
+                </div>
+              ) : keywordStats.length > 0 ? (
+                <>
+                  <div className="max-h-72 overflow-y-auto">
+                    <table className="w-full text-xs">
+                      <thead className="sticky top-0 bg-slate-50">
+                        <tr className="text-slate-500">
+                          <th className="text-left px-3 py-2 font-semibold">키워드</th>
+                          <th className="text-right px-3 py-2 font-semibold">월간 검색량</th>
+                          <th className="text-right px-3 py-2 font-semibold">발행량</th>
+                          <th className="text-right px-3 py-2 font-semibold">포화도</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {[...keywordStats]
+                          .sort((a, b) => {
+                            if (keywordSortBy === 'volume') return b.monthlySearchVolume - a.monthlySearchVolume;
+                            if (keywordSortBy === 'blog') return b.blogPostCount - a.blogPostCount;
+                            return (a.saturation || 0) - (b.saturation || 0);
+                          })
+                          .map((stat, idx) => (
+                            <tr
+                              key={stat.keyword}
+                              className={`border-t border-slate-50 hover:bg-blue-50 cursor-pointer transition-colors ${idx % 2 === 0 ? '' : 'bg-slate-50/50'}`}
+                              onClick={() => setKeywords(k => k ? `${k}, ${stat.keyword}` : stat.keyword)}
+                            >
+                              <td className="px-3 py-2 font-medium text-slate-700">{stat.keyword}</td>
+                              <td className="px-3 py-2 text-right text-slate-600">{stat.monthlySearchVolume.toLocaleString()}</td>
+                              <td className="px-3 py-2 text-right text-slate-600">{stat.blogPostCount.toLocaleString()}</td>
+                              <td className="px-3 py-2 text-right">
+                                <span className={`font-semibold ${(stat.saturation || 0) < 1 ? 'text-emerald-600' : (stat.saturation || 0) < 3 ? 'text-amber-600' : 'text-red-600'}`}>
+                                  {stat.saturation?.toFixed(1) || '0.0'}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  {/* 더보기 버튼 */}
+                  {keywordStats.length < MAX_KEYWORDS && (
+                    <div className="px-3 py-2 border-t border-slate-100">
+                      <button type="button" onClick={handleLoadMoreKeywords} disabled={isLoadingMoreKeywords}
+                        className="w-full py-1.5 text-xs font-semibold text-blue-600 hover:bg-blue-50 rounded transition-all disabled:opacity-50 flex items-center justify-center gap-1">
+                        {isLoadingMoreKeywords ? (
+                          <><div className="w-3 h-3 border-2 border-blue-300 border-t-blue-600 rounded-full animate-spin" />추가 로딩 중...</>
+                        ) : (
+                          <>더보기 ({keywordStats.length}/{MAX_KEYWORDS})</>
+                        )}
+                      </button>
+                      {keywordProgress && <p className="text-[10px] text-slate-400 text-center mt-1">{keywordProgress}</p>}
+                    </div>
+                  )}
+                  {/* AI 블루오션 분석 결과 */}
+                  {keywordAiRec && (
+                    <div className="px-3 py-3 border-t border-slate-100 bg-blue-50/50">
+                      <p className="text-[11px] font-bold text-blue-700 mb-1">💡 AI 키워드 분석</p>
+                      <div className="text-[11px] text-slate-600 whitespace-pre-wrap leading-relaxed">{keywordAiRec}</div>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="p-4 text-center text-xs text-slate-400">분석 결과가 없습니다</div>
+              )}
+            </div>
+          )}
 
           {/* 진료과 + 대상 독자 (old 동일: grid-cols-2 select) */}
           <div className="grid grid-cols-2 gap-3">
