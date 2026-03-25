@@ -1,4 +1,8 @@
-const puppeteer = require('puppeteer-core');
+const puppeteer = require('puppeteer-extra');
+const StealthPlugin = require('puppeteer-extra-plugin-stealth');
+
+// Stealth 플러그인 적용 — headless 브라우저 탐지 우회
+puppeteer.use(StealthPlugin());
 
 let browser = null;
 
@@ -34,11 +38,11 @@ async function getBrowser() {
   }
 
   const executablePath = findChromiumPath();
-  console.log(`🌐 Puppeteer 브라우저 시작 중... (${executablePath})`);
+  console.log(`🌐 Puppeteer+Stealth 브라우저 시작 중... (${executablePath})`);
 
   browser = await puppeteer.launch({
     executablePath,
-    headless: process.env.HEADLESS !== 'false',
+    headless: 'new',
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
@@ -46,12 +50,14 @@ async function getBrowser() {
       '--disable-accelerated-2d-canvas',
       '--no-first-run',
       '--no-zygote',
-      '--disable-gpu'
+      '--disable-gpu',
+      '--disable-blink-features=AutomationControlled',
+      '--window-size=1920,1080',
     ],
     timeout: parseInt(process.env.BROWSER_TIMEOUT) || 30000
   });
 
-  console.log('✅ Puppeteer 브라우저 시작 완료');
+  console.log('✅ Puppeteer+Stealth 브라우저 시작 완료');
   return browser;
 }
 
