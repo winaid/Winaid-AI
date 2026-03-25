@@ -15,6 +15,7 @@ import type { BlogSection } from '../../../lib/types';
 import { parseBlogSections, replaceSectionHtml } from '../../../lib/blogSectionParser';
 import { downloadWord, downloadPDF } from '../../../lib/blogExport';
 import { analyzeHospitalKeywords, loadMoreKeywords, checkKeywordRankings, MAX_KEYWORDS, type KeywordStat, type KeywordRankResult } from '../../../lib/keywordAnalysisService';
+import { analyzeClinicContent, type ClinicContext } from '../../../lib/clinicContextService';
 
 // ── old GenerateWorkspace.tsx 동일: 블로그 displayStage → 단계 정보 ──
 const BLOG_STAGES: Record<number, { icon: string; label: string; defaultMsg: string; hint: string }> = {
@@ -113,6 +114,12 @@ function BlogForm() {
   const [rankResults, setRankResults] = useState<Map<string, KeywordRankResult>>(new Map());
   const [hideRanked, setHideRanked] = useState(false);
 
+  // ── 병원 홈페이지/블로그 크롤링 상태 ──
+  const [homepageUrl, setHomepageUrl] = useState('');
+  const [clinicContext, setClinicContext] = useState<ClinicContext | null>(null);
+  const [isCrawling, setIsCrawling] = useState(false);
+  const [crawlProgress, setCrawlProgress] = useState('');
+
   // localStorage에서 커스텀 프롬프트 복원 (old 동일)
   useEffect(() => {
     const saved = localStorage.getItem('hospital_custom_image_prompt');
@@ -192,6 +199,27 @@ function BlogForm() {
     } finally {
       setIsAnalyzingKeywords(false);
       setKeywordProgress('');
+    }
+  };
+
+  // ── 병원 홈페이지 크롤링 ──
+  const handleCrawlHomepage = async () => {
+    if (!homepageUrl.trim()) return;
+    setIsCrawling(true);
+    setCrawlProgress('');
+    try {
+      const ctx = await analyzeClinicContent(homepageUrl.trim(), setCrawlProgress);
+      setClinicContext(ctx);
+      if (ctx) {
+        setCrawlProgress(`분석 완료! 서비스 ${ctx.actualServices.length}개, 특화 ${ctx.specialties.length}개 발견`);
+      } else {
+        setCrawlProgress('분석할 콘텐츠를 찾지 못했습니다.');
+      }
+    } catch {
+      setCrawlProgress('크롤링 실패');
+      setClinicContext(null);
+    } finally {
+      setIsCrawling(false);
     }
   };
 
@@ -1592,6 +1620,9 @@ ${generatedContent.substring(0, 2000)}
                                     setHospitalName(hospital.name.replace(/ \(.*\)$/, ''));
                                     setSelectedManager(hospital.manager);
                                     setSelectedHospitalAddress(hospital.address || '');
+                                    setHomepageUrl(hospital.naverBlogUrls?.[0] || '');
+                                    setClinicContext(null);
+                                    setCrawlProgress('');
                                     setKeywordStats([]);
                                     setShowKeywordPanel(false);
                                     setShowHospitalDropdown(false);
@@ -1623,7 +1654,56 @@ ${generatedContent.substring(0, 2000)}
             )}
           </div>
 
-          {/* 키워드 분석 버튼 (old InputForm 동일: 병원 선택 후 표시) */}
+          {/* 병원 홈페이지/블로그 URL 입력 */}
+          {hospitalName && (
+            <div>
+              <p className="text-[11px] font-semibold text-slate-500 mb-1.5">병원 홈페이지/블로그 URL</p>
+              <div className="flex gap-1.5">
+                <input
+                  type="url"
+                  value={homepageUrl}
+                  onChange={e => { setHomepageUrl(e.target.value); setClinicContext(null); setCrawlProgress(''); }}
+                  placeholder="https://blog.naver.com/..."
+                  className="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-xs focus:border-blue-400 outline-none bg-white"
+                />
+                <button
+                  type="button"
+                  onClick={handleCrawlHomepage}
+                  disabled={isCrawling || !homepageUrl.trim()}
+                  className="px-3 py-2 rounded-lg text-xs font-semibold transition-all bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-40 whitespace-nowrap"
+                >
+                  {isCrawling ? '분석 중...' : '분석'}
+                </button>
+              </div>
+              {crawlProgress && (
+                <p className="mt-1 text-[10px] text-slate-400">{crawlProgress}</p>
+              )}
+              {clinicContext && (
+                <div className="mt-1.5 p-2 bg-emerald-50 rounded-lg border border-emerald-100">
+                  <p className="text-[10px] font-semibold text-emerald-700 mb-1">
+                    분석 결과 (신뢰도 {Math.round(clinicContext.confidence * 100)}%)
+                  </p>
+                  {clinicContext.actualServices.length > 0 && (
+                    <p className="text-[10px] text-slate-600">
+                      서비스: {clinicContext.actualServices.join(', ')}
+                    </p>
+                  )}
+                  {clinicContext.specialties.length > 0 && (
+                    <p className="text-[10px] text-slate-600">
+                      특화: {clinicContext.specialties.join(', ')}
+                    </p>
+                  )}
+                  {clinicContext.locationSignals.length > 0 && (
+                    <p className="text-[10px] text-slate-600">
+                      지역: {clinicContext.locationSignals.join(', ')}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* 키워드 분석 버튼 */}
           {selectedHospitalAddress && hospitalName && (
             <button
               type="button"
@@ -1977,27 +2057,6 @@ ${generatedContent.substring(0, 2000)}
                     />
                   </div>
                 )}
-              </div>
-              {/* CSS 테마 (old 동일: 5가지 미리보기 테마 선택) */}
-              <div>
-                <p className="text-[11px] font-semibold text-slate-500 mb-1.5">미리보기 테마</p>
-                <div className="grid grid-cols-5 gap-1.5">
-                  {([
-                    { id: 'modern' as CssTheme, label: '모던', color: 'bg-slate-700' },
-                    { id: 'premium' as CssTheme, label: '프리미엄', color: 'bg-amber-700' },
-                    { id: 'minimal' as CssTheme, label: '미니멀', color: 'bg-gray-500' },
-                    { id: 'warm' as CssTheme, label: '따뜻한', color: 'bg-orange-500' },
-                    { id: 'professional' as CssTheme, label: '전문', color: 'bg-blue-700' },
-                  ]).map(t => (
-                    <button key={t.id} type="button"
-                      onClick={(e) => { e.preventDefault(); setCssTheme(t.id); }}
-                      className={`py-2 rounded-lg border transition-all flex flex-col items-center gap-0.5 ${cssTheme === t.id ? 'border-blue-400 bg-blue-50 text-blue-700' : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300'}`}
-                    >
-                      <div className={`w-4 h-4 rounded-full ${t.color}`} />
-                      <span className="text-[10px] font-semibold">{t.label}</span>
-                    </button>
-                  ))}
-                </div>
               </div>
               {/* 소제목 직접 입력 */}
               <div>
