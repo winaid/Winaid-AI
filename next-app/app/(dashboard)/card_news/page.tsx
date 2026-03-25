@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { TEAM_DATA } from '../../../lib/teamData';
+import { CATEGORIES } from '../../../lib/constants';
 import { buildCardNewsPrompt, type CardNewsRequest } from '../../../lib/cardNewsPrompt';
 import { savePost } from '../../../lib/postStorage';
 import { getSessionSafe, supabase } from '../../../lib/supabase';
@@ -9,7 +10,8 @@ import { getHospitalStylePrompt } from '../../../lib/styleService';
 import { CARD_NEWS_DESIGN_TEMPLATES } from '../../../lib/cardNewsDesignTemplates';
 import { ErrorPanel } from '../../../components/GenerationResult';
 import { CardRegenModal, type CardPromptHistoryItem, CARD_PROMPT_HISTORY_KEY, CARD_REF_IMAGE_KEY } from '../../../components/CardRegenModal';
-import type { WritingStyle, CardNewsDesignTemplateId } from '../../../lib/types';
+import { ContentCategory } from '../../../lib/types';
+import type { WritingStyle, CardNewsDesignTemplateId, TrendingItem, AudienceMode } from '../../../lib/types';
 
 interface CardSlide {
   index: number;
@@ -20,19 +22,14 @@ interface CardSlide {
   imageUrl: string | null;
 }
 
-const WRITING_STYLE_OPTIONS: { value: WritingStyle; label: string }[] = [
-  { value: 'empathy', label: '공감형' },
-  { value: 'expert', label: '전문가형' },
-  { value: 'conversion', label: '전환유도형' },
-];
-
 const IMAGE_STYLE_OPTIONS = [
   { id: 'photo', icon: '📸', label: '실사' },
   { id: 'illustration', icon: '🎨', label: '일러스트' },
   { id: 'medical', icon: '🫀', label: '의학 3D' },
+  { id: 'custom', icon: '✏️', label: '커스텀' },
 ] as const;
 
-type ImageStyleType = typeof IMAGE_STYLE_OPTIONS[number]['id'];
+type ImageStyleType = 'photo' | 'illustration' | 'medical' | 'custom';
 
 export default function CardNewsPage() {
   // ── 폼 상태 ──
@@ -41,9 +38,15 @@ export default function CardNewsPage() {
   const [hospitalName, setHospitalName] = useState('');
   const [showHospitalPicker, setShowHospitalPicker] = useState(false);
   const [slideCount, setSlideCount] = useState(6);
-  const [writingStyle, setWritingStyle] = useState<WritingStyle>('empathy');
   const [designTemplateId, setDesignTemplateId] = useState<CardNewsDesignTemplateId | undefined>(undefined);
   const [imageStyle, setImageStyle] = useState<ImageStyleType>('illustration');
+  const [category, setCategory] = useState<ContentCategory>(ContentCategory.DENTAL);
+  const [audienceMode, setAudienceMode] = useState<AudienceMode>('환자용(친절/공감)');
+  const [showAdvanced, setShowAdvanced] = useState(true);
+  const [customImagePrompt, setCustomImagePrompt] = useState('');
+  // 트렌드 주제
+  const [isLoadingTrends, setIsLoadingTrends] = useState(false);
+  const [trendingItems, setTrendingItems] = useState<TrendingItem[]>([]);
 
   // ── 생성 상태 ──
   const [isGenerating, setIsGenerating] = useState(false);
@@ -76,8 +79,10 @@ export default function CardNewsPage() {
       const bgColor = tmpl?.colors?.background || '#E8F4FD';
       const templateBlock = tmpl ? `[디자인 템플릿: ${tmpl.name}]\n${tmpl.stylePrompt}\n배경색: ${bgColor}` : '';
 
+      // 커스텀 스타일: 사용자 프롬프트 추가
+      const customBlock = imageStyle === 'custom' && customImagePrompt ? `\n[사용자 지정 스타일]\n${customImagePrompt}` : '';
       // 프롬프트에 템플릿 블록 추가
-      const fullPrompt = `${prompt}\n${templateBlock}`.trim();
+      const fullPrompt = `${prompt}\n${templateBlock}${customBlock}`.trim();
 
       const res = await fetch('/api/image', {
         method: 'POST',
@@ -125,12 +130,13 @@ export default function CardNewsPage() {
     e.preventDefault();
     if (!topic.trim()) return;
 
+    const derivedWritingStyle: WritingStyle = audienceMode === '전문가용(신뢰/정보)' ? 'expert' : 'empathy';
     const request: CardNewsRequest = {
       topic: topic.trim(),
       keywords: keywords.trim() || undefined,
       hospitalName: hospitalName || undefined,
       slideCount,
-      writingStyle,
+      writingStyle: derivedWritingStyle,
       designTemplateId,
     };
 
@@ -161,7 +167,7 @@ description: "(설명 텍스트)"
 비주얼: (배경 이미지 내용을 한국어로 30자 이내 묘사 — 텍스트/글자/라벨 절대 금지, 시각적 장면만)`;
 
       console.info(`[CARD] ========== 카드뉴스 생성 시작 ==========`);
-      console.info(`[CARD] 주제="${topic}" 슬라이드=${slideCount}장 스타일=${writingStyle} 템플릿=${designTemplateId || 'auto'}`);
+      console.info(`[CARD] 주제="${topic}" 슬라이드=${slideCount}장 스타일=${derivedWritingStyle} 템플릿=${designTemplateId || 'auto'}`);
 
       const res = await fetch('/api/gemini', {
         method: 'POST',
@@ -371,7 +377,7 @@ description: "(설명 텍스트)"
       setRegeneratingCard(null);
       setCardRegenProgress('');
     }
-  }, [cardRegenIndex, editSubtitle, editMainTitle, editDescription, editImagePrompt, cardRegenRefImage, imageStyle]);
+  }, [cardRegenIndex, editSubtitle, editMainTitle, editDescription, editImagePrompt, cardRegenRefImage, imageStyle, customImagePrompt]);
 
   // ── 프롬프트 히스토리 저장/불러오기 ──
   const savePromptToHistory = useCallback(() => {
@@ -405,6 +411,119 @@ description: "(설명 텍스트)"
     setIsRefImageLocked(false);
   }, []);
 
+  // ── 트렌드 주제 추천 (OLD parity — 네이버 뉴스 → Gemini 분석) ──
+  const handleRecommendTrends = useCallback(async () => {
+    setIsLoadingTrends(true);
+    setTrendingItems([]);
+    try {
+      const now = new Date();
+      const koreaTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Seoul' }));
+      const year = koreaTime.getFullYear();
+      const month = koreaTime.getMonth() + 1;
+      const day = koreaTime.getDate();
+      const hour = koreaTime.getHours();
+      const dayOfWeek = ['일', '월', '화', '수', '목', '금', '토'][koreaTime.getDay()];
+      const dateStr = `${year}년 ${month}월 ${day}일 (${dayOfWeek}) ${hour}시`;
+      const randomSeed = Math.floor(Math.random() * 1000);
+
+      const seasonalContext: Record<number, string> = {
+        1: '신년 건강검진 시즌, 겨울철 독감/감기, 난방으로 인한 건조',
+        2: '설 연휴 후 피로, 환절기 시작, 미세먼지 증가',
+        3: '본격 환절기, 꽃가루 알레르기, 황사/미세먼지',
+        4: '봄철 야외활동 증가, 알레르기 비염 최고조',
+        5: '초여름, 식중독 주의 시작, 냉방병 예고',
+        6: '장마철 습도, 무좀/피부질환, 식중독 급증',
+        7: '폭염, 열사병/일사병, 냉방병 본격화',
+        8: '극심한 폭염, 온열질환 피크, 휴가 후 피로',
+        9: '환절기 시작, 가을 알레르기, 일교차 큰 시기',
+        10: '환절기 감기, 독감 예방접종 시즌, 건강검진 시즌',
+        11: '본격 독감 시즌, 난방 시작, 건조한 피부',
+        12: '독감 절정기, 연말 피로, 동상/저체온증',
+      };
+
+      const categoryHints: Record<string, string> = {
+        '치과': '충치, 잇몸질환, 임플란트, 치아미백, 교정, 사랑니, 치주염',
+        '피부과': '여드름, 아토피, 건선, 탈모, 피부건조, 대상포진',
+        '정형외과': '관절통, 허리디스크, 어깨통증, 무릎연골, 오십견, 척추관협착증',
+      };
+
+      const newsSearchKeywords: Record<string, string> = {
+        '치과': '치과 치료 OR 임플란트 OR 잇몸',
+        '피부과': '피부 건강 OR 아토피 OR 탈모',
+        '정형외과': '관절 통증 OR 허리디스크 OR 어깨통증',
+      };
+      const searchKeyword = newsSearchKeywords[category] || `${category} 건강`;
+
+      let newsContext = '';
+      try {
+        const newsRes = await fetch(`/api/naver/news?query=${encodeURIComponent(searchKeyword)}&display=10`);
+        if (newsRes.ok) {
+          const newsData = await newsRes.json() as { items?: Array<{ title?: string; description?: string }> };
+          const newsItems = (newsData.items || []).slice(0, 5);
+          if (newsItems.length > 0) {
+            const newsText = newsItems.map((item, i) =>
+              `${i + 1}. ${(item.title || '').replace(/<[^>]*>/g, '')} — ${(item.description || '').replace(/<[^>]*>/g, '').substring(0, 100)}`
+            ).join('\n');
+            const analysisRes = await fetch('/api/gemini', {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ prompt: `다음은 "${category}" 관련 최신 네이버 뉴스입니다:\n\n${newsText}\n\n핵심 이슈 3가지, SEO 키워드 5개, 콘텐츠 아이디어 2개를 간결히 정리하세요.`, model: 'gemini-3.1-flash-lite-preview', temperature: 0.4, maxOutputTokens: 1000 }),
+            });
+            const analysisData = await analysisRes.json() as { text?: string };
+            if (analysisData.text) newsContext = analysisData.text;
+          }
+        }
+      } catch {
+        try {
+          const fallbackRes = await fetch('/api/gemini', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompt: `최근 한국 "${category}" 관련 건강 뉴스 트렌드를 검색하여 핵심 이슈 3가지를 요약해주세요.`, model: 'gemini-3.1-flash-lite-preview', googleSearch: true, temperature: 0.4, maxOutputTokens: 800 }),
+          });
+          const fallbackData = await fallbackRes.json() as { text?: string };
+          if (fallbackData.text) newsContext = fallbackData.text;
+        } catch { /* 뉴스 없이 진행 */ }
+      }
+
+      const currentSeasonContext = seasonalContext[month] || '';
+      const catKeywords = categoryHints[category] || '일반적인 건강 증상, 예방, 관리';
+
+      const prompt = `[🕐 현재 시각: ${dateStr} (한국 표준시)]
+[🎲 다양성 시드: ${randomSeed}]
+
+당신은 네이버/구글 검색 트렌드 분석 전문가입니다.
+'${category}' 진료과와 관련하여 **지금 이 시점**에 카드뉴스로 만들기 좋은 건강/의료 주제 5가지를 추천해주세요.
+
+[📅 ${month}월 시즌 특성]
+${currentSeasonContext}
+
+[🏥 ${category} 관련 키워드 풀]
+${catKeywords}
+${newsContext ? `\n[📰 최신 네이버 뉴스 분석]\n${newsContext}\n\n⚠️ 뉴스 기반 트렌드 주제 1~2개를 반드시 포함하세요.` : ''}
+
+[⚠️ 중요 규칙]
+1. 매번 다른 결과 필수 (시드: ${randomSeed})
+2. 구체적인 주제명: "어깨통증" 대신 "겨울철 어깨 뻣뻣함 원인과 해결법" 등
+3. ${month}월 ${day}일 기준 계절/시기 반영
+4. 카드뉴스 주제로 적합한 형태 (리스트형, 퀴즈형, 비교형 등)
+5. 다양한 난이도: 경쟁 높은 주제 2개 + 틈새 주제 3개`;
+
+      const res = await fetch('/api/gemini', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt, model: 'gemini-3.1-flash-lite-preview', responseType: 'json', googleSearch: true, temperature: 0.9, timeout: 60000,
+          schema: { type: 'ARRAY', items: { type: 'OBJECT', properties: { topic: { type: 'STRING' }, keywords: { type: 'STRING' }, score: { type: 'NUMBER' }, seasonal_factor: { type: 'STRING' } }, required: ['topic', 'keywords', 'score', 'seasonal_factor'] } },
+        }),
+      });
+
+      const data = await res.json() as { text?: string; error?: string };
+      if (!res.ok || !data.text) throw new Error(data.error || '트렌드 분석 실패');
+      setTrendingItems(JSON.parse(data.text) as TrendingItem[]);
+    } catch {
+      /* 실패 시 무시 */
+    } finally {
+      setIsLoadingTrends(false);
+    }
+  }, [category]);
+
   // ── 개별 카드 다운로드 ──
   const handleCardDownload = (card: CardSlide) => {
     if (!card.imageUrl) return;
@@ -421,132 +540,156 @@ description: "(설명 텍스트)"
     <div className="flex flex-col lg:flex-row gap-5 lg:items-start p-5">
       {/* ── 입력 폼 ── */}
       <div className="w-full lg:w-[340px] xl:w-[380px] lg:flex-none">
-        <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-lg">🎨</span>
-            <h2 className="text-base font-bold text-slate-800">카드뉴스 생성</h2>
+        <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+          {/* ── 핑크 헤더 (OLD parity) ── */}
+          <div className="flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-pink-50 to-rose-50 border-b border-pink-100">
+            <span className="text-lg">🌸</span>
+            <h2 className="text-base font-bold text-pink-700">카드뉴스</h2>
           </div>
 
-          {/* 병원 선택 */}
-          <div>
-            <label className={labelCls}>병원 선택 (선택)</label>
-            <div className="relative">
-              <input
-                type="text"
-                value={hospitalName}
-                onChange={e => setHospitalName(e.target.value)}
-                onFocus={() => setShowHospitalPicker(true)}
-                placeholder="병원명 입력 또는 선택"
-                className={inputCls}
-              />
-              {showHospitalPicker && (
-                <>
-                  <div className="fixed inset-0 z-10" onClick={() => setShowHospitalPicker(false)} />
-                  <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg z-20 max-h-64 overflow-y-auto">
-                    {TEAM_DATA.map(team => (
-                      <div key={team.id}>
-                        <div className="px-3 py-1.5 text-[10px] font-bold text-slate-400 uppercase bg-slate-50 sticky top-0">{team.label}</div>
-                        {team.hospitals.map(h => (
-                          <button key={`${team.id}-${h.name}`} type="button"
-                            onClick={() => { setHospitalName(h.name); setShowHospitalPicker(false); }}
-                            className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-pink-50 hover:text-pink-700 transition-colors"
-                          >
-                            {h.name}<span className="text-[11px] text-slate-400 ml-2">{h.manager}</span>
-                          </button>
-                        ))}
-                      </div>
+          <div className="p-5 space-y-4">
+            {/* 진료과 + 대상 독자 (OLD parity: grid-cols-2 select) */}
+            <div className="grid grid-cols-2 gap-3">
+              <select value={category} onChange={e => setCategory(e.target.value as ContentCategory)} className={inputCls} disabled={isGenerating} aria-label="진료과 선택">
+                {CATEGORIES.map(cat => (
+                  <option key={cat.value} value={cat.value}>{cat.label}</option>
+                ))}
+              </select>
+              <select value={audienceMode} onChange={e => setAudienceMode(e.target.value as AudienceMode)} className={inputCls} disabled={isGenerating} aria-label="대상 독자">
+                <option value="환자용(친절/공감)">환자용 (친절/공감)</option>
+                <option value="보호자용(가족걱정)">보호자용 (부모님/자녀 걱정)</option>
+                <option value="전문가용(신뢰/정보)">전문가용 (신뢰/정보)</option>
+              </select>
+            </div>
+
+            {/* 주제 */}
+            <input type="text" value={topic} onChange={e => setTopic(e.target.value)} placeholder="카드뉴스 주제 (예: 임플란트 시술 과정 안내)" required className={inputCls} />
+
+            {/* 🔥 트렌드 주제 (OLD parity) */}
+            <button type="button" onClick={handleRecommendTrends} disabled={isLoadingTrends}
+              className="w-full py-2 bg-slate-100 text-slate-600 rounded-lg text-xs font-semibold hover:bg-slate-200 transition-all disabled:opacity-40 flex items-center justify-center gap-1">
+              {isLoadingTrends ? <><div className="w-3 h-3 border-2 border-slate-400 border-t-slate-600 rounded-full animate-spin" />분석 중...</> : <>🔥 트렌드 주제</>}
+            </button>
+
+            {/* 트렌드 주제 결과 */}
+            {trendingItems.length > 0 && (
+              <div className="space-y-1">
+                {trendingItems.map((item, idx) => (
+                  <button key={idx} type="button" onClick={() => setTopic(item.topic)}
+                    className="w-full text-left px-3 py-2 bg-white border border-slate-100 rounded-lg hover:border-blue-400 transition-all group relative">
+                    <div className="absolute top-2 right-2 text-[10px] font-semibold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">SEO {item.score}</div>
+                    <span className="text-xs font-semibold text-slate-800 group-hover:text-blue-600 block pr-12">{item.topic}</span>
+                    <p className="text-[11px] text-slate-400 truncate">{item.keywords} · {item.seasonal_factor}</p>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* ⚙️ 상세 설정 (OLD parity: 접기/펼치기) */}
+            <button type="button" onClick={() => setShowAdvanced(!showAdvanced)}
+              className="w-full flex items-center justify-between px-3 py-2 bg-slate-50 hover:bg-slate-100 rounded-lg text-xs font-semibold text-slate-500 transition-all border border-slate-100">
+              <span>⚙️ 상세 설정</span>
+              <svg className={`w-4 h-4 transition-transform ${showAdvanced ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
+            </button>
+
+            {showAdvanced && (
+              <div className="space-y-4 p-3 bg-slate-50 rounded-xl border border-slate-100">
+                {/* 병원 선택 */}
+                <div>
+                  <label className={labelCls}>병원 선택 (선택)</label>
+                  <div className="relative">
+                    <input type="text" value={hospitalName} onChange={e => setHospitalName(e.target.value)} onFocus={() => setShowHospitalPicker(true)} placeholder="병원명 입력 또는 선택" className={inputCls} />
+                    {showHospitalPicker && (
+                      <>
+                        <div className="fixed inset-0 z-10" onClick={() => setShowHospitalPicker(false)} />
+                        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg z-20 max-h-64 overflow-y-auto">
+                          {TEAM_DATA.map(team => (
+                            <div key={team.id}>
+                              <div className="px-3 py-1.5 text-[10px] font-bold text-slate-400 uppercase bg-slate-50 sticky top-0">{team.label}</div>
+                              {team.hospitals.map(h => (
+                                <button key={`${team.id}-${h.name}`} type="button" onClick={() => { setHospitalName(h.name); setShowHospitalPicker(false); }}
+                                  className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-pink-50 hover:text-pink-700 transition-colors">
+                                  {h.name}<span className="text-[11px] text-slate-400 ml-2">{h.manager}</span>
+                                </button>
+                              ))}
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {/* 디자인 템플릿 */}
+                <div>
+                  <label className={labelCls}>디자인 템플릿</label>
+                  <div className="grid grid-cols-5 gap-1.5">
+                    {CARD_NEWS_DESIGN_TEMPLATES.map(tmpl => (
+                      <button key={tmpl.id} type="button"
+                        onClick={() => setDesignTemplateId(designTemplateId === tmpl.id ? undefined : tmpl.id)}
+                        className={`relative flex flex-col items-center gap-1 p-1.5 rounded-xl border-2 transition-all ${designTemplateId === tmpl.id ? 'border-pink-500 bg-pink-50 shadow-md shadow-pink-500/20' : 'border-slate-200 bg-white hover:border-slate-300'}`}
+                      >
+                        {designTemplateId === tmpl.id && (
+                          <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-pink-500 rounded-full flex items-center justify-center">
+                            <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                          </span>
+                        )}
+                        <div className="w-full aspect-square rounded-lg overflow-hidden" dangerouslySetInnerHTML={{ __html: tmpl.previewSvg }} />
+                        <span className="text-[9px] font-semibold text-slate-600 leading-tight text-center">{tmpl.name}</span>
+                      </button>
                     ))}
                   </div>
-                </>
-              )}
-            </div>
-          </div>
-
-          {/* 주제 */}
-          <div>
-            <label className={labelCls}>주제 *</label>
-            <input type="text" value={topic} onChange={e => setTopic(e.target.value)} placeholder="예: 스케일링 후 주의사항" required className={inputCls} />
-          </div>
-
-          {/* 키워드 */}
-          <div>
-            <label className={labelCls}>키워드 (쉼표 구분)</label>
-            <input type="text" value={keywords} onChange={e => setKeywords(e.target.value)} placeholder="예: 스케일링, 잇몸, 관리" className={inputCls} />
-          </div>
-
-          {/* 디자인 템플릿 */}
-          <div>
-            <label className={labelCls}>디자인 템플릿</label>
-            <div className="grid grid-cols-5 gap-1.5">
-              {CARD_NEWS_DESIGN_TEMPLATES.map(tmpl => (
-                <button key={tmpl.id} type="button"
-                  onClick={() => setDesignTemplateId(designTemplateId === tmpl.id ? undefined : tmpl.id)}
-                  className={`relative flex flex-col items-center gap-1 p-1.5 rounded-xl border-2 transition-all ${designTemplateId === tmpl.id ? 'border-pink-500 bg-pink-50 shadow-md shadow-pink-500/20' : 'border-slate-200 bg-white hover:border-slate-300'}`}
-                >
-                  {designTemplateId === tmpl.id && (
-                    <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-pink-500 rounded-full flex items-center justify-center">
-                      <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                    </span>
+                  {designTemplateId ? (
+                    <div className="mt-2 px-2.5 py-1.5 bg-pink-50 rounded-lg border border-pink-200">
+                      <p className="text-[10px] text-pink-700 font-medium">
+                        {CARD_NEWS_DESIGN_TEMPLATES.find(t => t.id === designTemplateId)?.icon}{' '}
+                        {CARD_NEWS_DESIGN_TEMPLATES.find(t => t.id === designTemplateId)?.description}
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="mt-1 text-[10px] text-slate-400">선택하지 않으면 AI가 자동으로 디자인합니다.</p>
                   )}
-                  <div className="w-full aspect-square rounded-lg overflow-hidden" dangerouslySetInnerHTML={{ __html: tmpl.previewSvg }} />
-                  <span className="text-[9px] font-semibold text-slate-600 leading-tight text-center">{tmpl.name}</span>
-                </button>
-              ))}
-            </div>
-            {designTemplateId ? (
-              <div className="mt-2 px-2.5 py-1.5 bg-pink-50 rounded-lg border border-pink-200">
-                <p className="text-[10px] text-pink-700 font-medium">
-                  {CARD_NEWS_DESIGN_TEMPLATES.find(t => t.id === designTemplateId)?.icon}{' '}
-                  {CARD_NEWS_DESIGN_TEMPLATES.find(t => t.id === designTemplateId)?.description}
-                </p>
+                </div>
+
+                {/* 카드뉴스 장수 */}
+                <div>
+                  <label className={labelCls}>카드뉴스 장수 <span className="text-pink-600 font-bold">{slideCount}장</span></label>
+                  <input type="range" min={4} max={7} step={1} value={slideCount} onChange={e => setSlideCount(Number(e.target.value))} className="w-full accent-pink-600" />
+                  <div className="flex justify-between text-[10px] text-slate-400 mt-0.5"><span>4장</span><span>7장</span></div>
+                </div>
+
+                {/* 이미지 스타일 (OLD parity: 4종) */}
+                <div>
+                  <label className={labelCls}>이미지 스타일</label>
+                  <div className="grid grid-cols-4 gap-1.5">
+                    {IMAGE_STYLE_OPTIONS.map(s => (
+                      <button key={s.id} type="button" onClick={() => setImageStyle(s.id)}
+                        className={`py-2 rounded-lg border transition-all flex flex-col items-center gap-0.5 ${imageStyle === s.id ? 'border-pink-400 bg-pink-50 text-pink-700' : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300'}`}
+                      >
+                        <span className="text-base">{s.icon}</span>
+                        <span className="text-[10px] font-semibold">{s.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                  {/* 커스텀 프롬프트 (커스텀 선택 시) */}
+                  {imageStyle === 'custom' && (
+                    <textarea value={customImagePrompt} onChange={e => setCustomImagePrompt(e.target.value)}
+                      placeholder="원하는 이미지 스타일을 직접 입력하세요 (예: 수채화 느낌, 따뜻한 파스텔톤, 손그림 스타일...)"
+                      rows={2} className="w-full mt-2 px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-pink-500/20 resize-none" />
+                  )}
+                </div>
               </div>
-            ) : (
-              <p className="mt-1 text-[10px] text-slate-400">선택하지 않으면 AI가 자동으로 디자인합니다.</p>
             )}
-          </div>
 
-          {/* 슬라이드 수 */}
-          <div>
-            <label className={labelCls}>슬라이드 수: {slideCount}장</label>
-            <input type="range" min={4} max={7} step={1} value={slideCount} onChange={e => setSlideCount(Number(e.target.value))} className="w-full accent-pink-600" />
-            <div className="flex justify-between text-[10px] text-slate-400 mt-0.5"><span>4장</span><span>7장</span></div>
+            {/* 생성 버튼 */}
+            <button type="submit" disabled={isGenerating || !topic.trim()}
+              className="w-full py-3 bg-pink-600 text-white font-bold rounded-xl hover:bg-pink-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              {isGenerating ? (
+                <><svg className="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" /></svg>생성 중...</>
+              ) : '카드뉴스 생성하기'}
+            </button>
           </div>
-
-          {/* 이미지 스타일 */}
-          <div>
-            <label className={labelCls}>이미지 스타일</label>
-            <div className="flex gap-1.5">
-              {IMAGE_STYLE_OPTIONS.map(s => (
-                <button key={s.id} type="button" onClick={() => setImageStyle(s.id)}
-                  className={`flex-1 py-2 rounded-lg border transition-all flex flex-col items-center gap-0.5 ${imageStyle === s.id ? 'border-pink-400 bg-pink-50 text-pink-700' : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300'}`}
-                >
-                  <span className="text-base">{s.icon}</span>
-                  <span className="text-[10px] font-semibold">{s.label}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* 글 스타일 */}
-          <div>
-            <label className={labelCls}>글 스타일</label>
-            <div className="flex gap-1.5">
-              {WRITING_STYLE_OPTIONS.map(ws => (
-                <button key={ws.value} type="button" onClick={() => setWritingStyle(ws.value)}
-                  className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all ${writingStyle === ws.value ? 'bg-pink-600 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
-                >{ws.label}</button>
-              ))}
-            </div>
-          </div>
-
-          {/* 생성 버튼 */}
-          <button type="submit" disabled={isGenerating || !topic.trim()}
-            className="w-full py-3 bg-pink-600 text-white font-bold rounded-xl hover:bg-pink-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-          >
-            {isGenerating ? (
-              <><svg className="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" /></svg>생성 중...</>
-            ) : '카드뉴스 생성하기'}
-          </button>
         </form>
       </div>
 

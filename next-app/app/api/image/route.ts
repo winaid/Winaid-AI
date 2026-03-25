@@ -132,6 +132,8 @@ function buildCardStyleBlock(imageStyle: string): string {
 - 인체 해부학, 장기 단면도, 뼈/근육/혈관 구조
 ⛔ 금지: cute cartoon, photorealistic human face`;
 
+  if (imageStyle === 'custom') return ''; // 사용자 지정 스타일 — 추가 규칙 없음
+
   // default: illustration
   return `[STYLE - 3D 일러스트 (3D ILLUSTRATION)]
 - 3D rendered illustration, Blender/Cinema4D style, soft 3D render
