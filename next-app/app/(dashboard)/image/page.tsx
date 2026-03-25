@@ -177,12 +177,37 @@ export default function ImagePage() {
   // ── 공통 템플릿 옵션 (OLD parity) ──
   const [templateAppMode, setTemplateAppMode] = useState<'strict' | 'inspired'>('inspired');
 
-  // ── 스타일 히스토리 (OLD parity — localStorage 기반) ──
+  // ── AI_STYLE_PRESETS (OLD parity — 12개 내장 스타일) ──
+  interface StylePreset { id: string; name: string; color: string; accent: string; bg: string; desc: string; mood: string; aiPrompt: string; }
+
+  const AI_STYLE_PRESETS: StylePreset[] = [
+    { id: 'fresh_start', name: '상쾌한 새출발', color: '#dc2626', accent: '#b91c1c', bg: '#fef2f2', desc: '희망 · 새로움', mood: '새해 첫날 아침같은 상쾌한 희망의 느낌', aiPrompt: 'Fresh new beginning design, soft champagne gold and warm coral accents, confetti and streamer decorations, crisp morning atmosphere, festive yet elegant, gentle sparkle effects, hopeful and bright mood, clean white space with pastel color pops, no radial rays or sunburst patterns' },
+    { id: 'romantic_blossom', name: '로맨틱 블로썸', color: '#e11d48', accent: '#be123c', bg: '#fff1f2', desc: '설렘 · 로맨틱', mood: '이른 봄 설렘이 피어나는 로맨틱한 느낌', aiPrompt: 'Early spring romantic design, soft rose pink and warm red accents, delicate heart shapes, cherry blossom buds about to bloom, gentle watercolor washes, romantic yet professional mood, subtle floral borders, warm cozy atmosphere' },
+    { id: 'petal_breeze', name: '꽃잎 바람', color: '#f472b6', accent: '#ec4899', bg: '#fdf2f8', desc: '벚꽃 · 산뜻', mood: '꽃잎이 흩날리는 화사하고 산뜻한 느낌', aiPrompt: 'Cherry blossom petal design, soft pink petals floating in the air, pastel pink and white gradient background, sakura branch illustrations, light and airy mood, gentle breeze atmosphere, fresh spring colors, delicate floral patterns' },
+    { id: 'sprout_green', name: '새싹 그린', color: '#22c55e', accent: '#16a34a', bg: '#f0fdf4', desc: '생명력 · 치유', mood: '초록 새싹이 돋아나는 싱그러운 느낌', aiPrompt: 'Fresh sprout nature design, vibrant young green and lime accents, sprouting leaves and seedling illustrations, morning dew drops, clean fresh air mood, bright natural sunlight, growth and vitality energy, botanical elements, eco-friendly aesthetic' },
+    { id: 'warm_gratitude', name: '따뜻한 감사', color: '#f59e0b', accent: '#d97706', bg: '#fffbeb', desc: '카네이션 · 감성', mood: '카네이션 향기같은 따뜻한 감사의 느낌', aiPrompt: 'Warm gratitude design, carnation flower illustrations in red and pink, warm golden yellow background, heartfelt and thankful mood, soft hand-drawn floral elements, cozy family atmosphere, gentle warm lighting, watercolor texture accents' },
+    { id: 'rain_droplet', name: '청량 빗방울', color: '#6366f1', accent: '#4f46e5', bg: '#eef2ff', desc: '빗방울 · 청량', mood: '빗방울이 떨어지는 청량하고 시원한 느낌', aiPrompt: 'Rainy season design, soft indigo and cool blue tones, gentle raindrops and water ripple patterns, transparent umbrella motifs, calm reflective puddle aesthetic, refreshing and cool mood, misty atmosphere with clarity, clean water-inspired gradients' },
+    { id: 'ocean_breeze', name: '바다 물결', color: '#0ea5e9', accent: '#0284c7', bg: '#f0f9ff', desc: '시원한 · 파도', mood: '한여름 바다의 시원하고 청량한 느낌', aiPrompt: 'Summer ocean design, bright sky blue and turquoise gradients, ocean waves and seashell motifs, tropical vibes, cool refreshing mood, sunlight sparkling on water, beach sand textures, clear blue sky, vacation energy' },
+    { id: 'sunflower_energy', name: '해바라기 에너지', color: '#eab308', accent: '#ca8a04', bg: '#fefce8', desc: '강렬 · 활력', mood: '해바라기처럼 강렬하고 뜨거운 에너지 느낌', aiPrompt: 'Midsummer sunflower design, bold golden yellow and warm orange, large sunflower illustrations, bright blazing sunshine, high energy and vibrant mood, clear summer sky, bold dynamic composition, warm saturated colors, powerful and lively atmosphere' },
+    { id: 'maple_romance', name: '단풍 낭만', color: '#ea580c', accent: '#c2410c', bg: '#fff7ed', desc: '단풍 · 낭만', mood: '단풍이 물들기 시작하는 낭만적인 느낌', aiPrompt: 'Early autumn design, warm orange and amber tones, maple leaves turning red and gold, soft warm sunset lighting, romantic and nostalgic mood, cozy sweater weather atmosphere, gentle falling leaves, warm gradient from orange to deep red' },
+    { id: 'harvest_gold', name: '풍요로운 수확', color: '#a16207', accent: '#854d0e', bg: '#fefce8', desc: '풍성 · 따뜻한', mood: '풍성한 수확의 따뜻하고 풍요로운 느낌', aiPrompt: 'Autumn harvest design, rich brown and burnt orange palette, pumpkin and wheat illustrations, rustic warmth, abundance and gratitude mood, golden hour lighting, cozy thanksgiving atmosphere, grain texture accents, deep earthy warm tones' },
+    { id: 'quiet_fog', name: '고즈넉한 안개', color: '#78716c', accent: '#57534e', bg: '#fafaf9', desc: '차분 · 고즈넉', mood: '낙엽이 쌓인 고즈넉한 늦가을 느낌', aiPrompt: 'Late autumn serene design, muted warm gray and soft brown tones, dry fallen leaves scattered softly, bare tree branch silhouettes, quiet contemplative mood, gentle fog atmosphere, warm tea and book aesthetic, calm and peaceful, subtle vintage texture' },
+    { id: 'snowflake_glow', name: '눈꽃 조명', color: '#b91c1c', accent: '#d4a017', bg: '#fef9f0', desc: '눈꽃 · 포근한', mood: '눈꽃과 따뜻한 조명이 어우러진 포근한 느낌', aiPrompt: 'Winter holiday design, warm crimson red and shimmering gold accents, delicate white snowflake patterns on warm background, cozy Christmas fairy lights glow, rich red and gold color palette, festive ornament decorations, warm candlelight ambiance, soft falling snow, elegant holiday atmosphere with warmth' },
+  ];
+
+  const [selectedPreset, setSelectedPreset] = useState<StylePreset>(AI_STYLE_PRESETS[0]);
+
+  // ── 스타일 히스토리 (OLD parity — localStorage 기반, 업로드 스타일) ──
   interface StyleHistoryItem { id: string; name: string; stylePrompt: string; thumbnailDataUrl: string; referenceImageUrl: string; }
   const STYLE_HISTORY_KEY = 'winaid-style-history';
 
   const [styleHistory, setStyleHistory] = useState<StyleHistoryItem[]>([]);
-  const [selectedStyle, setSelectedStyle] = useState<StyleHistoryItem | null>(null);
+  const [selectedUploadedStyle, setSelectedUploadedStyle] = useState<StyleHistoryItem | null>(null);
+
+  // OLD 우선순위: uploadedStyle > preset
+  // activeStylePrompt/Name은 최종 생성에 사용
+  const activeStylePrompt = selectedUploadedStyle?.stylePrompt || selectedPreset.aiPrompt;
+  const activeStyleName = selectedUploadedStyle?.name || selectedPreset.name;
 
   const loadStyleHistory = useCallback((): StyleHistoryItem[] => {
     try { return JSON.parse(localStorage.getItem(STYLE_HISTORY_KEY) || '[]'); } catch { return []; }
@@ -207,7 +232,7 @@ export default function ImagePage() {
       const updated = [item, ...styleHistory].slice(0, 20);
       setStyleHistory(updated);
       saveStyleHistory(updated);
-      setSelectedStyle(item);
+      setSelectedUploadedStyle(item);
     };
     reader.readAsDataURL(file);
     e.target.value = '';
@@ -217,8 +242,8 @@ export default function ImagePage() {
     const updated = styleHistory.filter(h => h.id !== id);
     setStyleHistory(updated);
     saveStyleHistory(updated);
-    if (selectedStyle?.id === id) setSelectedStyle(null);
-  }, [styleHistory, saveStyleHistory, selectedStyle]);
+    if (selectedUploadedStyle?.id === id) setSelectedUploadedStyle(null);
+  }, [styleHistory, saveStyleHistory, selectedUploadedStyle]);
 
   // ── 가격 헬퍼 (OLD parity) ──
   const parseNum = (s: string) => Number(s.replace(/[^0-9]/g, '')) || 0;
@@ -608,12 +633,12 @@ export default function ImagePage() {
       : isPricingMode ? buildPricingPrompt()
       : prompt.trim();
 
-    // 스타일 히스토리 선택 시 스타일 프롬프트 추가
-    if (selectedStyle && hasForm) {
+    // 스타일 프롬프트 추가 (OLD parity: uploadedStyle > preset)
+    if (hasForm && activeStylePrompt) {
       const modeLabel = templateAppMode === 'strict'
-        ? 'STRICTLY copy the exact visual style from the reference image. Match layout, colors, typography, decorations exactly.'
-        : 'Use the reference image as style inspiration. Keep the mood and color palette but interpret freely.';
-      effectivePrompt += `\n[STYLE] ${modeLabel}\nStyle reference: ${selectedStyle.stylePrompt}`;
+        ? 'STRICTLY copy the exact visual style. Match layout, colors, typography, decorations exactly.'
+        : 'Use this as style inspiration. Keep the mood and color palette but interpret freely.';
+      effectivePrompt += `\n[STYLE] ${modeLabel}\n${activeStylePrompt}`;
     }
 
     if (!effectivePrompt || generating) return;
@@ -685,8 +710,8 @@ export default function ImagePage() {
           calendarImage: calendarImage || undefined,
           referenceImage: isDoctorMode && docPhotoBase64 ? docPhotoBase64
             : isHiringMode && hiringPhotos.length > 0 ? hiringPhotos[0]
-            : selectedStyle?.referenceImageUrl
-            ? selectedStyle.referenceImageUrl
+            : selectedUploadedStyle?.referenceImageUrl
+            ? selectedUploadedStyle.referenceImageUrl
             : undefined,
         }),
       });
@@ -736,7 +761,7 @@ export default function ImagePage() {
     } finally {
       setGenerating(false);
     }
-  }, [prompt, aspectRatio, generating, logoEnabled, logoDataUrl, hospitalName, logoPosition, clinicPhone, clinicHours, clinicAddress, brandColor, brandAccent, detectCalendar, getKoreanHolidays2, generateCalendarImage, mode, selectedTemplate, buildSchedulePrompt, buildEventPrompt, buildDoctorPrompt, buildNoticePrompt, buildGreetingPrompt, buildHiringPrompt, buildCautionPrompt, buildPricingPrompt, schYear, schMonth, docPhotoBase64, hiringPhotos, selectedStyle, templateAppMode]);
+  }, [prompt, aspectRatio, generating, logoEnabled, logoDataUrl, hospitalName, logoPosition, clinicPhone, clinicHours, clinicAddress, brandColor, brandAccent, detectCalendar, getKoreanHolidays2, generateCalendarImage, mode, selectedTemplate, buildSchedulePrompt, buildEventPrompt, buildDoctorPrompt, buildNoticePrompt, buildGreetingPrompt, buildHiringPrompt, buildCautionPrompt, buildPricingPrompt, schYear, schMonth, docPhotoBase64, hiringPhotos, activeStylePrompt, selectedUploadedStyle, templateAppMode]);
 
   const handleDownload = useCallback(() => {
     if (!result) return;
@@ -1209,10 +1234,11 @@ export default function ImagePage() {
                   </p>
                 </div>
 
-                {/* 내 스타일 히스토리 (OLD parity) */}
+                {/* 내 스타일 히스토리 (업로드 스타일 — 선택 시 내장 프리셋보다 우선) */}
                 <div>
                   <label className="block text-[11px] font-semibold text-slate-500 mb-1.5">
                     내 스타일 {styleHistory.length > 0 && <span className="text-slate-400 font-normal">({styleHistory.length}개)</span>}
+                    {selectedUploadedStyle && <span className="text-violet-500 font-normal ml-1">(내장 프리셋보다 우선)</span>}
                   </label>
                   <div className="flex gap-2 overflow-x-auto pb-2">
                     {/* 스타일 이미지 업로드 */}
@@ -1222,8 +1248,8 @@ export default function ImagePage() {
                       <input type="file" accept="image/*" className="hidden" onChange={handleStyleUpload} />
                     </label>
                     {styleHistory.map(h => (
-                      <button key={h.id} type="button" onClick={() => setSelectedStyle(selectedStyle?.id === h.id ? null : h)}
-                        className={`relative flex-shrink-0 w-14 rounded-xl overflow-hidden border-2 transition-all group ${selectedStyle?.id === h.id ? 'border-violet-500 shadow-lg scale-105 ring-2 ring-violet-200' : 'border-slate-200 hover:border-slate-300'}`}>
+                      <button key={h.id} type="button" onClick={() => setSelectedUploadedStyle(selectedUploadedStyle?.id === h.id ? null : h)}
+                        className={`relative flex-shrink-0 w-14 rounded-xl overflow-hidden border-2 transition-all group ${selectedUploadedStyle?.id === h.id ? 'border-violet-500 shadow-lg scale-105 ring-2 ring-violet-200' : 'border-slate-200 hover:border-slate-300'}`}>
                         <img src={h.thumbnailDataUrl} alt={h.name} className="w-14 h-14 object-cover" />
                         <div className="absolute inset-x-0 bottom-0 bg-black/60 px-1 py-0.5">
                           <div className="text-[7px] text-white font-medium truncate">{h.name}</div>
@@ -1232,14 +1258,62 @@ export default function ImagePage() {
                       </button>
                     ))}
                   </div>
-                  {selectedStyle && (
+                  {selectedUploadedStyle && (
                     <div className="mt-1.5 p-2 bg-violet-50 rounded-lg border border-violet-200">
                       <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-bold text-violet-700">스타일 적용 중: {selectedStyle.name}</span>
-                        <button type="button" onClick={() => setSelectedStyle(null)} className="text-[10px] text-violet-400 hover:text-violet-600">해제</button>
+                        <span className="text-[10px] font-bold text-violet-700">업로드 스타일 적용 중: {selectedUploadedStyle.name}</span>
+                        <button type="button" onClick={() => setSelectedUploadedStyle(null)} className="text-[10px] text-violet-400 hover:text-violet-600">해제</button>
                       </div>
                     </div>
                   )}
+                </div>
+
+                {/* 디자인 스타일 프리셋 (OLD parity: AI_STYLE_PRESETS 12개) */}
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-500 mb-1.5">
+                    디자인 스타일 {selectedUploadedStyle && <span className="text-violet-400 font-normal">(내 스타일 선택 시 무시됨)</span>}
+                  </label>
+                  <div className="grid grid-cols-4 gap-1.5">
+                    {AI_STYLE_PRESETS.map(preset => {
+                      const isActive = !selectedUploadedStyle && selectedPreset.id === preset.id;
+                      return (
+                        <button key={preset.id} type="button" onClick={() => { setSelectedPreset(preset); setSelectedUploadedStyle(null); }}
+                          className={`relative rounded-xl p-2 text-center transition-all border ${
+                            isActive
+                              ? 'border-transparent shadow-md ring-2 ring-offset-1'
+                              : selectedUploadedStyle
+                              ? 'border-slate-100 opacity-50'
+                              : 'border-slate-200 hover:border-slate-300 hover:shadow-sm'
+                          }`}
+                          style={{
+                            backgroundColor: isActive ? preset.bg : undefined,
+                            ...(isActive ? { '--tw-ring-color': preset.color } as React.CSSProperties : {}),
+                          }}
+                        >
+                          {/* 컬러 서클 */}
+                          <div className="mx-auto w-7 h-7 rounded-full mb-1 shadow-inner" style={{ background: `linear-gradient(135deg, ${preset.color}, ${preset.accent})` }} />
+                          <div className={`text-[10px] font-bold leading-tight truncate ${isActive ? 'text-slate-800' : 'text-slate-600'}`}>{preset.name}</div>
+                          <div className="text-[8px] text-slate-400 leading-tight truncate">{preset.desc}</div>
+                          {/* 선택 체크 */}
+                          {isActive && (
+                            <div className="absolute top-1 right-1 w-4 h-4 rounded-full flex items-center justify-center" style={{ backgroundColor: preset.color }}>
+                              <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {/* 현재 적용 중인 스타일 요약 */}
+                  <div className="mt-2 p-2 rounded-lg border" style={{ backgroundColor: selectedPreset.bg, borderColor: selectedPreset.color + '30' }}>
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 rounded-full flex-shrink-0" style={{ background: `linear-gradient(135deg, ${selectedPreset.color}, ${selectedPreset.accent})` }} />
+                      <div>
+                        <span className="text-[10px] font-bold" style={{ color: selectedPreset.color }}>{activeStyleName}</span>
+                        <span className="text-[9px] text-slate-400 ml-1.5">{selectedPreset.mood}</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
