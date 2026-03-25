@@ -36,15 +36,17 @@ const FETCH_HEADERS: Record<string, string> = {
   'Sec-Fetch-Site': 'same-origin',
 };
 
-let startTime = 0;
-
-function elapsed(): number {
-  return Date.now() - startTime;
+/** request-scoped 타이머 — 동시 요청 시 간섭 방지 */
+function createTimer() {
+  const start = Date.now();
+  return {
+    elapsed: () => Date.now() - start,
+    hasTimeLeft: () => (Date.now() - start) < MAX_TOTAL_MS,
+  };
 }
 
-function hasTimeLeft(): boolean {
-  return elapsed() < MAX_TOTAL_MS;
-}
+// 함수들이 timer를 인자로 받도록 하기 위한 타입
+type Timer = ReturnType<typeof createTimer>;
 
 // ── 유틸 ──
 
@@ -143,11 +145,11 @@ async function fetchFromRss(blogId: string, maxPosts: number): Promise<PostEntry
     while ((match = itemRegex.exec(xml)) !== null && items.length < maxPosts) {
       const block = match[1];
 
-      // logNo 추출 from <link>
-      const linkMatch = block.match(/<link>([^<]+)<\/link>/);
+      // logNo 추출 from <link> — \n 뒤에 URL이 오는 경우도 대응
+      const linkMatch = block.match(/<link[^>]*>([\s\S]*?)<\/link>/);
       if (!linkMatch) continue;
       const link = linkMatch[1].trim();
-      const logNoMatch = link.match(/\/(\d{10,})$/);
+      const logNoMatch = link.match(/\/(\d{8,})(?:\?|$)/) || link.match(/logNo=(\d+)/);
       if (!logNoMatch) continue;
 
       // 제목
@@ -180,12 +182,12 @@ async function fetchFromRss(blogId: string, maxPosts: number): Promise<PostEntry
 }
 
 /** PostList HTML에서 logNo 추출 (RSS 실패 시 fallback) */
-async function fetchLogNos(blogId: string, maxCandidates: number): Promise<PostEntry[]> {
+async function fetchLogNos(blogId: string, maxCandidates: number, timer: Timer): Promise<PostEntry[]> {
   const seenLogNos = new Set<string>();
   const entries: PostEntry[] = [];
   let page = 1;
 
-  while (entries.length < maxCandidates && page <= 5 && hasTimeLeft()) {
+  while (entries.length < maxCandidates && page <= 5 && timer.hasTimeLeft()) {
     const listUrl = `https://blog.naver.com/PostList.naver?blogId=${blogId}&currentPage=${page}&categoryNo=0&postListType=&blogType=B`;
     let html: string;
     try {
@@ -427,14 +429,15 @@ async function fetchPostsBatch(
   blogId: string,
   entries: PostEntry[],
   maxPosts: number,
+  timer: Timer,
 ): Promise<{ posts: PostResult[]; skipped: number; timedOut: boolean }> {
   const posts: PostResult[] = [];
   let skipped = 0;
   let timedOut = false;
 
   for (let i = 0; i < entries.length; i += CONCURRENCY) {
-    if (posts.length >= maxPosts || !hasTimeLeft()) {
-      timedOut = !hasTimeLeft();
+    if (posts.length >= maxPosts || !timer.hasTimeLeft()) {
+      timedOut = !timer.hasTimeLeft();
       break;
     }
 
@@ -462,7 +465,7 @@ async function fetchPostsBatch(
 // ── 메인 핸들러 ──
 
 export async function POST(request: NextRequest) {
-  startTime = Date.now();
+  const timer = createTimer();
   const diagnostics: string[] = [];
 
   try {
@@ -498,9 +501,9 @@ export async function POST(request: NextRequest) {
     }
 
     // 1-B: RSS 실패 → PostList HTML
-    if (entries.length === 0 && hasTimeLeft()) {
+    if (entries.length === 0 && timer.hasTimeLeft()) {
       diagnostics.push('RSS 실패 → PostList 시도');
-      entries = await fetchLogNos(blogId, candidates);
+      entries = await fetchLogNos(blogId, candidates, timer);
       if (entries.length > 0) {
         diagnostics.push(`PostList에서 ${entries.length}개 logNo 확보`);
       }
@@ -508,7 +511,7 @@ export async function POST(request: NextRequest) {
 
     if (entries.length === 0) {
       diagnostics.push('글 목록 확보 실패');
-      const reason = !hasTimeLeft() ? ' (시간 초과)' : '';
+      const reason = !timer.hasTimeLeft() ? ' (시간 초과)' : '';
       console.log(`[Crawl] 글 목록 0건${reason}: ${blogId}`);
       return NextResponse.json({
         success: true,
@@ -523,10 +526,10 @@ export async function POST(request: NextRequest) {
     }
 
     // ── 2단계: 본문 수집 (병렬, 시간 제한) ──
-    const { posts, skipped, timedOut } = await fetchPostsBatch(blogId, entries, limited);
+    const { posts, skipped, timedOut } = await fetchPostsBatch(blogId, entries, limited, timer);
 
     diagnostics.push(`본문 수집: ${posts.length}개 성공, ${skipped}개 스킵${timedOut ? ', 시간 초과로 조기 종료' : ''}`);
-    console.log(`[Crawl] 본문 수집: ${posts.length}개, 스킵 ${skipped}개 (${elapsed()}ms)`);
+    console.log(`[Crawl] 본문 수집: ${posts.length}개, 스킵 ${skipped}개 (${timer.elapsed()}ms)`);
 
     // ── 3단계: 날짜순 정렬 ──
     posts.sort((a, b) => {
@@ -546,7 +549,7 @@ export async function POST(request: NextRequest) {
       posts: output,
       postsCount: output.length,
       diagnostics,
-      elapsedMs: elapsed(),
+      elapsedMs: timer.elapsed(),
       timestamp: new Date().toISOString(),
     });
   } catch (err: unknown) {
