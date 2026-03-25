@@ -59,8 +59,15 @@ async function generateKeywordsWithAI(
   hospitalName: string,
   address: string,
   category?: string,
+  existingBlogTitles?: string[],
 ): Promise<string[]> {
   const radius = isMetroArea(address) ? 2 : 5;
+
+  const existingBlock = existingBlogTitles && existingBlogTitles.length > 0
+    ? `\n[이미 작성한 블로그 글 제목 (이 주제들은 이미 다뤘으므로 관련 키워드 우선순위를 낮추세요)]
+${existingBlogTitles.map(t => `- ${t}`).join('\n')}
+`
+    : '';
 
   const prompt = `당신은 네이버 블로그 SEO 키워드 전문가입니다.
 
@@ -70,7 +77,7 @@ async function generateKeywordsWithAI(
 주소: ${address}
 진료과: ${category || '치과'}
 탐색 반경: ${radius}km (${radius === 2 ? '수도권 - 좁은 범위로 정밀하게' : '지방 - 넓은 범위로 주변 지역 포함'})
-
+${existingBlock}
 규칙:
 1. 주소에서 동/구/읍/면 추출
 2. 반경 ${radius}km 이내 주요 지하철역 이름 포함
@@ -235,15 +242,41 @@ ${dataRows}
 
 // ── 메인 분석 함수 ──
 
+/** 크롤링된 블로그 글 제목 가져오기 (Supabase) */
+async function fetchExistingBlogTitles(hospitalName: string): Promise<string[]> {
+  try {
+    const { supabase } = await import('./supabase');
+    if (!supabase) return [];
+    const { data } = await supabase
+      .from('hospital_crawled_posts')
+      .select('title')
+      .eq('hospital_name', hospitalName)
+      .not('title', 'is', null)
+      .order('crawled_at', { ascending: false })
+      .limit(30);
+    return (data || []).map(d => d.title).filter((t): t is string => !!t && t.length > 5);
+  } catch {
+    return [];
+  }
+}
+
 export async function analyzeHospitalKeywords(
   hospitalName: string,
   address: string,
   category?: string,
   onProgress?: (msg: string) => void,
 ): Promise<KeywordAnalysisResult> {
-  // Step 1: AI 키워드 후보 생성
-  onProgress?.('근처 지역 키워드 생성 중...');
-  const candidates = await generateKeywordsWithAI(hospitalName, address, category);
+  // Step 0: 이미 작성한 블로그 글 제목 가져오기
+  onProgress?.('기존 블로그 글 확인 중...');
+  const existingTitles = await fetchExistingBlogTitles(hospitalName);
+  if (existingTitles.length > 0) {
+    onProgress?.(`기존 글 ${existingTitles.length}개 확인 완료. 키워드 생성 중...`);
+  } else {
+    onProgress?.('근처 지역 키워드 생성 중...');
+  }
+
+  // Step 1: AI 키워드 후보 생성 (기존 글 제목 전달하여 중복 우선순위 낮춤)
+  const candidates = await generateKeywordsWithAI(hospitalName, address, category, existingTitles);
 
   if (candidates.length === 0) {
     throw new Error('키워드를 생성할 수 없습니다.');
