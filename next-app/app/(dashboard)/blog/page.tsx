@@ -764,6 +764,7 @@ ${categoryKeywords}
 
     setIsGenerating(true);
     setDisplayStage(1);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
     setRotationIdx(0);
     setError(null);
     setGeneratedContent(null);
