@@ -873,6 +873,33 @@ export default function ImagePage() {
               </div>
             )}
 
+            {/* 병원 브랜딩 (OLD 순서: 카테고리 탭 바로 아래) */}
+            <div className="bg-slate-50/60 rounded-xl p-4 border border-slate-100 space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="block text-xs font-bold text-slate-500">병원 브랜딩</label>
+                <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-lg p-0.5">
+                  {(['top', 'bottom'] as const).map(pos => (
+                    <button key={pos} type="button" onClick={() => setLogoPosition(pos)}
+                      className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all ${logoPosition === pos ? 'bg-blue-500 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
+                      {pos === 'top' ? '▲ 상단' : '▼ 하단'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="flex gap-2 items-center">
+                <label className="flex-shrink-0 w-12 h-12 rounded-xl border-2 border-dashed border-slate-300 flex items-center justify-center cursor-pointer hover:border-blue-400 transition-colors overflow-hidden bg-white">
+                  {logoDataUrl ? (
+                    <img src={logoDataUrl} alt="로고" className="w-full h-full object-contain" />
+                  ) : (
+                    <svg className="w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                  )}
+                  <input type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
+                </label>
+                <input type="text" value={hospitalName} onChange={e => handleHospitalNameChange(e.target.value)} placeholder="병원명 입력 (선택)" className="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-blue-400 bg-white" />
+                {logoDataUrl && <button type="button" onClick={removeLogo} className="text-[10px] text-red-400 hover:text-red-600">삭제</button>}
+              </div>
+            </div>
+
             {/* ══ schedule 전용 폼 (OLD parity) ══ */}
             {mode === 'template' && selectedTemplate === 'schedule' && (
               <div className="space-y-3">
@@ -1360,28 +1387,6 @@ export default function ImagePage() {
                   <textarea value={extraPrompt} onChange={e => setExtraPrompt(e.target.value)} placeholder={'예: 벚꽃 느낌으로 꾸며줘\n예: 하단에 전화번호 크게 넣어줘'} rows={2} className="w-full px-3 py-2 border border-indigo-200 rounded-lg text-sm outline-none focus:border-indigo-400 resize-none bg-white placeholder:text-indigo-300" />
                 </div>
 
-                {/* 스타일 적용 모드 (OLD parity: strict/inspired) */}
-                <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className="text-[11px] font-semibold text-slate-500">스타일 적용 모드</label>
-                    <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-0.5">
-                      <button type="button" onClick={() => setTemplateAppMode('strict')}
-                        className={`px-2.5 py-1 rounded-md text-[10px] font-medium transition-all ${templateAppMode === 'strict' ? 'bg-white text-violet-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
-                        그대로
-                      </button>
-                      <button type="button" onClick={() => setTemplateAppMode('inspired')}
-                        className={`px-2.5 py-1 rounded-md text-[10px] font-medium transition-all ${templateAppMode === 'inspired' ? 'bg-white text-violet-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
-                        참고
-                      </button>
-                    </div>
-                  </div>
-                  <p className="text-[10px] text-slate-400">
-                    {templateAppMode === 'strict'
-                      ? '레이아웃·색상·구조를 그대로 복제 — 결과가 참조와 거의 동일'
-                      : '분위기만 참고 — AI가 색상·배치·장식을 자유롭게 재해석'}
-                  </p>
-                </div>
-
                 {/* 내 스타일 히스토리 (업로드 스타일 — 선택 시 내장 프리셋보다 우선) */}
                 <div>
                   <label className="block text-[11px] font-semibold text-slate-500 mb-1.5">
@@ -1419,12 +1424,22 @@ export default function ImagePage() {
                 {/* 카테고리별 디자인 템플릿 (OLD parity: CATEGORY_TEMPLATES) */}
                 {currentCatTemplates.length > 0 && (
                   <div>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <label className="text-[11px] font-semibold text-slate-500">
-                        디자인 템플릿 <span className="text-slate-400 font-normal">({currentCatTemplates.length}종)</span>
-                        {selectedUploadedStyle && <span className="text-violet-400 font-normal ml-1">(내 스타일 선택 시 무시됨)</span>}
+                    <div className="flex items-center justify-between mb-3">
+                      <label className="text-sm font-bold text-slate-700">
+                        디자인 템플릿 {selectedUploadedStyle && <span className="text-violet-400 font-normal text-xs">(내 스타일 선택 시 무시됨)</span>}
                       </label>
+                      <div className="flex items-center gap-1.5 bg-slate-100 rounded-lg p-0.5">
+                        <button type="button" onClick={() => setTemplateAppMode('strict')}
+                          className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all ${templateAppMode === 'strict' ? 'bg-white text-violet-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                          title="선택한 템플릿의 레이아웃·색상·구조를 그대로 복제합니다">그대로</button>
+                        <button type="button" onClick={() => setTemplateAppMode('inspired')}
+                          className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all ${templateAppMode === 'inspired' ? 'bg-white text-violet-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                          title="템플릿의 분위기를 참고하되 AI가 자유롭게 재해석합니다">참고</button>
+                      </div>
                     </div>
+                    <p className="text-[10px] text-slate-400 -mt-1.5 mb-2">
+                      {templateAppMode === 'strict' ? '📋 레이아웃·색상·구조를 그대로 복제 — 결과가 프리뷰와 거의 동일' : '🎨 분위기만 참고 — AI가 색상·배치·장식을 자유롭게 재해석'}
+                    </p>
                     <div className={`grid grid-cols-3 gap-2 max-h-[320px] overflow-y-auto pr-1 ${selectedUploadedStyle ? 'opacity-40 pointer-events-none' : ''}`}>
                       {currentCatTemplates.map(tmpl => {
                         const isSelected = !selectedUploadedStyle && selectedCatTemplate?.id === tmpl.id;
@@ -1571,80 +1586,26 @@ export default function ImagePage() {
             <PromptChat onApplyPrompt={(p) => setPrompt(p)} disabled={generating} />
             </>)}
 
-            {/* 비율 선택 */}
+            {/* 이미지 사이즈 (OLD 위치: 추가 프롬프트 아래) */}
             <div>
-              <label className="block text-[11px] font-semibold text-slate-500 mb-1.5">이미지 비율</label>
-              <div className="flex gap-1.5">
+              <label className="block text-xs font-semibold text-slate-600 mb-2">이미지 사이즈</label>
+              <div className="grid grid-cols-4 gap-1.5">
                 {ASPECT_RATIOS.map((r) => (
-                  <button
-                    key={r.value}
-                    onClick={() => setAspectRatio(r.value)}
-                    disabled={generating}
-                    className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition-all ${
-                      aspectRatio === r.value
-                        ? 'bg-slate-800 text-white shadow-sm'
-                        : 'bg-slate-50 text-slate-600 border border-slate-200 hover:border-slate-300'
-                    }`}
-                  >
-                    <span>{r.icon}</span>
-                    <span>{r.label}</span>
+                  <button key={r.value} onClick={() => setAspectRatio(r.value)} disabled={generating}
+                    className={`py-2 px-1 rounded-xl text-center transition-all ${aspectRatio === r.value ? 'bg-slate-800 text-white shadow-md' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>
+                    <div className="text-sm leading-none">{r.icon}</div>
+                    <div className="text-[10px] font-bold mt-1 leading-tight">{r.label}</div>
                   </button>
                 ))}
               </div>
             </div>
 
-            {/* 로고 설정 */}
-            <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 space-y-2.5">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-semibold text-slate-600">병원 로고</label>
-                <button
-                  onClick={() => setLogoEnabled(!logoEnabled)}
-                  className={`relative rounded-full transition-colors ${logoEnabled && logoDataUrl ? 'bg-blue-500' : 'bg-slate-300'}`}
-                  style={{ width: 36, height: 20 }}
-                >
-                  <span className={`absolute top-[2px] left-[2px] w-4 h-4 bg-white rounded-full shadow transition-transform ${logoEnabled && logoDataUrl ? 'translate-x-[16px]' : ''}`} />
-                </button>
-              </div>
-
-              <div className="flex items-center gap-2">
-                {logoDataUrl ? (
-                  <div className="flex items-center gap-2">
-                    <div className="w-9 h-9 rounded-lg border border-slate-200 bg-white flex items-center justify-center overflow-hidden">
-                      <img src={logoDataUrl} alt="로고" className="max-w-full max-h-full object-contain" />
-                    </div>
-                    <button onClick={removeLogo} className="text-[11px] text-red-500 hover:text-red-700">삭제</button>
-                  </div>
-                ) : (
-                  <button onClick={() => logoInputRef.current?.click()}
-                    className="flex items-center gap-1.5 px-3 py-2 border border-dashed border-slate-300 rounded-lg text-xs text-slate-500 hover:border-blue-400 hover:text-blue-600 transition-all bg-white"
-                  >
-                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    로고 업로드
-                  </button>
-                )}
-                <input ref={logoInputRef} type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" />
-              </div>
-
-              {logoDataUrl && (
-                <div className="flex gap-2">
-                  <input type="text" value={hospitalName} onChange={(e) => handleHospitalNameChange(e.target.value)} placeholder="병원명 (선택)" className="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-blue-400 bg-white" />
-                  <div className="flex bg-white rounded-lg p-0.5 border border-slate-200">
-                    <button type="button" onClick={() => setLogoPosition('top')} className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all ${logoPosition === 'top' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500'}`}>상단</button>
-                    <button type="button" onClick={() => setLogoPosition('bottom')} className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all ${logoPosition === 'bottom' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500'}`}>하단</button>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* 상세 설정 토글 */}
+            {/* 상세 설정 (전화번호/진료시간/주소/브랜드컬러) */}
             <button type="button" onClick={() => setShowAdvanced(!showAdvanced)}
               className="w-full flex items-center justify-between px-3 py-2 bg-slate-50 hover:bg-slate-100 rounded-lg text-xs font-semibold text-slate-500 transition-all border border-slate-100">
-              <span>상세 설정</span>
+              <span>병원 기본 정보</span>
               <svg className={`w-4 h-4 transition-transform ${showAdvanced ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
             </button>
-
             {showAdvanced && (
               <div className="space-y-3 p-3 bg-slate-50 rounded-xl border border-slate-100">
                 <input type="text" value={clinicPhone} onChange={e => setClinicPhone(e.target.value)} onBlur={saveHospitalInfo} placeholder="전화번호: 02-1234-5678" className={inputCls} />
@@ -1671,136 +1632,180 @@ export default function ImagePage() {
               </div>
             )}
 
-            {/* 생성 버튼 */}
+            {/* 생성 버튼 (OLD style: violet→indigo→blue) */}
             <button
               onClick={handleGenerate}
               disabled={generating || (!hasFormMode && !prompt.trim())}
-              className={`w-full py-3 rounded-xl text-white font-semibold text-sm transition-all ${
+              className={`w-full py-4 rounded-2xl text-white font-bold text-base transition-all duration-200 ${
                 generating || (!hasFormMode && !prompt.trim())
-                  ? 'bg-slate-200 cursor-not-allowed text-slate-400'
-                  : 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-lg shadow-emerald-500/25'
+                  ? 'bg-slate-400 cursor-not-allowed shadow-md'
+                  : 'bg-gradient-to-r from-violet-600 via-indigo-600 to-blue-600 hover:from-violet-700 hover:via-indigo-700 hover:to-blue-700 active:scale-[0.97] shadow-lg shadow-indigo-500/30 hover:shadow-xl hover:shadow-indigo-500/40'
               }`}
             >
               {generating ? (
                 <span className="flex items-center justify-center gap-2">
-                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                  </svg>
-                  {progress || '생성 중...'}
+                  <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" /></svg>
+                  AI 디자인 생성 중...
                 </span>
-              ) : '이미지 생성하기'}
+              ) : (
+                <span className="flex items-center justify-center gap-2">
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z" /></svg>
+                  AI 디자인 생성
+                </span>
+              )}
             </button>
           </div>
         </div>
       </div>
 
-      {/* 우측: 결과 영역 */}
-      <div className="flex flex-col min-h-[480px] lg:flex-1 min-w-0">
-        {/* 에러 */}
-        {error && (
-          <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-4">
-            <div className="flex items-start gap-3">
-              <span className="text-red-400 text-lg mt-0.5">⚠️</span>
-              <div>
-                <p className="text-sm font-semibold text-red-700 mb-1">이미지 생성 실패</p>
-                <p className="text-sm text-red-600">{error}</p>
-                <button
-                  onClick={handleGenerate}
-                  disabled={generating || !prompt.trim()}
-                  className="mt-2 px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg text-xs font-medium transition-all"
-                >
-                  다시 시도
-                </button>
-              </div>
-            </div>
+      {/* 우측: 결과 영역 (OLD parity) */}
+      <div className="flex flex-col min-h-[480px] lg:flex-1 min-w-0 rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+        {/* 상단 툴바 (OLD parity: 장식 B/I/U + 정렬) */}
+        <div className="flex items-center gap-3 px-5 py-3 border-b border-slate-200/80 bg-white">
+          <div className="flex items-center gap-1">
+            {(['B', 'I', 'U'] as const).map(btn => (
+              <div key={btn} className="w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold text-slate-300 select-none">{btn}</div>
+            ))}
           </div>
-        )}
-
-        {/* 로딩 */}
+          <div className="w-px h-5 bg-slate-200" />
+          <div className="flex items-center gap-1">
+            {[
+              <path key="a1" strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />,
+              <path key="a2" strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h10.5m-10.5 5.25h16.5" />,
+            ].map((icon, i) => (
+              <div key={i} className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-300">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>{icon}</svg>
+              </div>
+            ))}
+          </div>
+        </div>
+        {/* 콘텐츠 영역 */}
+        <div className="flex-1 flex flex-col items-center justify-center p-6">
+        {error && <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600 w-full max-w-lg">{error}</div>}
         {generating ? (
-          <div className="rounded-xl border border-slate-200 bg-white shadow-sm flex-1 min-h-[480px] flex flex-col items-center justify-center">
-            <div className="relative w-20 h-20 mb-6">
-              <div className="absolute inset-0 rounded-full border-4 border-emerald-100" />
-              <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-emerald-500 animate-spin" />
-              <div className="absolute inset-3 rounded-full border-4 border-transparent border-t-teal-400 animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }} />
+          /* OLD-style 로딩: 이중 스피너 + 단계 메시지 + 진행 도트 */
+          <div className="flex flex-col items-center justify-center gap-6 animate-fade-in">
+            <div className="relative w-24 h-24">
+              <div className="absolute inset-0 rounded-full border-4 border-violet-100" />
+              <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-violet-500 animate-spin" />
+              <div className="absolute inset-3 rounded-full border-4 border-transparent border-t-indigo-400 animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }} />
               <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-2xl animate-pulse">🎨</span>
+                <span className="text-2xl animate-pulse">{['🎨', '✨', '🖌️', '💫'][generatingStep % 4]}</span>
               </div>
             </div>
-            <p className="text-base font-bold text-gray-700 mb-1">{progress || 'AI가 이미지 만드는 중...'}</p>
-            <p className="text-xs text-gray-400">최대 2분 정도 걸릴 수 있습니다</p>
-            <div className="flex gap-1.5 mt-4">
-              {[0, 1, 2].map(i => (
-                <div key={i} className="w-2 h-2 rounded-full bg-emerald-400 animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
-              ))}
+            <div className="text-center space-y-2">
+              <p className="text-base font-bold text-slate-700">
+                {['AI가 디자인 구상 중...', '레이아웃 배치하는 중...', '색감 입히는 중...', '마무리 터치 중...', '거의 다 됐어요!'][Math.min(generatingStep, 4)]}
+              </p>
+              <p className="text-xs text-slate-400">보통 10~30초 정도 걸려요</p>
+              <div className="flex justify-center gap-1 mt-3">
+                {[0, 1, 2, 3, 4].map(i => (
+                  <div key={i} className={`w-2 h-2 rounded-full transition-all duration-500 ${i <= generatingStep ? 'bg-violet-500 scale-110' : 'bg-slate-200'}`} />
+                ))}
+              </div>
             </div>
           </div>
         ) : result ? (
-          /* 결과 표시 */
-          <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-            <div className="p-4">
-              <img
-                src={result}
-                alt="생성된 이미지"
-                className="w-full h-auto rounded-lg"
-                style={{ imageRendering: 'auto' }}
-                draggable={false}
-              />
+          /* 결과 표시 (OLD parity: 이미지 + 버튼 그룹 + 재생성 메뉴 + 편집 도구) */
+          <div className="space-y-4 w-full flex flex-col items-center">
+            <img src={result} alt="생성된 이미지" className="max-w-full max-h-[65vh] rounded-2xl shadow-2xl" draggable={false} />
+            {/* 버튼 그룹 (OLD parity) */}
+            <div className="flex gap-3 flex-wrap justify-center">
+              <button onClick={handleDownload} className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-sm transition-colors shadow-lg">다운로드</button>
+              {/* 다시 생성 드롭다운 (OLD parity) */}
+              <div className="relative">
+                <button onClick={() => setShowRegenMenu(!showRegenMenu)} disabled={generating}
+                  className="px-6 py-2.5 bg-slate-600 hover:bg-slate-700 text-white rounded-xl font-bold text-sm transition-colors flex items-center gap-1.5">
+                  다시 생성
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                </button>
+                {showRegenMenu && (
+                  <div className="absolute bottom-full mb-2 right-0 w-56 bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden z-10">
+                    <button onClick={() => { setShowRegenMenu(false); handleGenerate(); }}
+                      className="w-full px-4 py-3 text-left text-sm hover:bg-slate-50 transition-colors flex items-center gap-2">
+                      <svg className="w-4 h-4 text-violet-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                      <div><div className="font-bold text-slate-700">자동 재생성</div><div className="text-xs text-slate-400">같은 설정으로 새로 생성</div></div>
+                    </button>
+                    <div className="border-t border-slate-100" />
+                    <button onClick={() => { setShowRegenMenu(false); setShowRegenPromptInput(true); setRegenPrompt(''); }}
+                      className="w-full px-4 py-3 text-left text-sm hover:bg-slate-50 transition-colors flex items-center gap-2">
+                      <svg className="w-4 h-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                      <div><div className="font-bold text-slate-700">수정 후 재생성</div><div className="text-xs text-slate-400">변경 사항을 프롬프트로 지시</div></div>
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
-            <div className="flex gap-3 p-4 pt-0">
-              <button
-                onClick={handleDownload}
-                className="flex-1 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-xl font-semibold text-sm transition-all shadow-md"
-              >
-                다운로드
-              </button>
-              <button
-                onClick={handleGenerate}
-                disabled={generating}
-                className="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-semibold text-sm transition-all"
-              >
-                다시 생성
-              </button>
+            {/* 수정 프롬프트 입력 (OLD parity) */}
+            {showRegenPromptInput && (
+              <div className="w-full max-w-lg space-y-2 mt-2">
+                <textarea value={regenPrompt} onChange={e => setRegenPrompt(e.target.value)}
+                  placeholder="예: 배경색을 좀 더 따뜻하게, 글씨 크기를 키워줘, 여백을 줄여줘..."
+                  className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm outline-none focus:border-violet-400 resize-none bg-white" rows={3} autoFocus />
+                <div className="flex gap-2 justify-end">
+                  <button onClick={() => setShowRegenPromptInput(false)} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-sm font-medium transition-colors">취소</button>
+                  <button onClick={() => { setShowRegenPromptInput(false); setExtraPrompt(prev => prev ? prev + '\n' + regenPrompt : regenPrompt); handleGenerate(); }}
+                    disabled={!regenPrompt.trim()} className="px-5 py-2 bg-violet-600 hover:bg-violet-700 disabled:opacity-40 text-white rounded-lg text-sm font-bold transition-colors">수정 반영 재생성</button>
+                </div>
+              </div>
+            )}
+            {/* AI 이미지 편집 도구 (OLD parity: 접이식) */}
+            <div className="w-full max-w-lg mt-4">
+              <details className="group">
+                <summary className="cursor-pointer flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-slate-700 transition-colors select-none">
+                  <svg className="w-4 h-4 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                  AI 이미지 편집 도구
+                  <svg className="w-3 h-3 transition-transform group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                </summary>
+                <div className="mt-3 space-y-3">
+                  <div>
+                    <div className="text-xs font-semibold text-slate-600 mb-1.5">스타일 변환</div>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {[
+                        { label: '플랫 일러스트', icon: '🎨', prompt: '플랫 일러스트 스타일로 변환' },
+                        { label: '3D 클레이', icon: '🧱', prompt: '3D 클레이 스타일로 변환' },
+                        { label: '수채화', icon: '🖌️', prompt: '수채화 스타일로 변환' },
+                        { label: '미니멀', icon: '◻️', prompt: '미니멀 스타일로 변환' },
+                        { label: '포토리얼', icon: '📷', prompt: '포토리얼리스틱 스타일로 변환' },
+                        { label: '애니/만화', icon: '✨', prompt: '애니메이션/만화 스타일로 변환' },
+                      ].map(s => (
+                        <button key={s.label} disabled={generating}
+                          onClick={() => { setExtraPrompt(s.prompt); handleGenerate(); }}
+                          className="px-2 py-2 bg-slate-50 hover:bg-violet-50 border border-slate-200 hover:border-violet-300 rounded-lg text-xs font-medium text-slate-600 hover:text-violet-700 transition-all disabled:opacity-40">
+                          {s.icon} {s.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-xs font-semibold text-slate-600 mb-1.5">AI 자유 편집</div>
+                    <div className="flex gap-2">
+                      <input type="text" placeholder="예: 배경을 파란색으로, 텍스트 색상 변경..."
+                        className="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-xs outline-none focus:border-violet-400"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !generating) {
+                            setExtraPrompt(e.currentTarget.value);
+                            handleGenerate();
+                          }
+                        }} />
+                    </div>
+                  </div>
+                </div>
+              </details>
             </div>
           </div>
         ) : (
-          /* 대기 상태 */
-          <div className="rounded-xl border border-slate-200 bg-white shadow-sm flex-1 min-h-[480px] flex flex-col items-center justify-center text-center p-8">
-            <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-6 bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-100">
-              <svg className="w-7 h-7 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+          /* 대기 상태 (OLD parity: 단순한 빈 상태) */
+          <div className="flex flex-col items-center justify-center gap-4 text-center">
+            <div className="w-16 h-16 rounded-2xl bg-slate-50 flex items-center justify-center">
+              <svg className="w-8 h-8 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0022.5 18.75V5.25A2.25 2.25 0 0020.25 3H3.75A2.25 2.25 0 001.5 5.25v13.5A2.25 2.25 0 003.75 21z" />
               </svg>
             </div>
-            <div className="max-w-sm">
-              <h2 className="text-3xl font-black tracking-tight leading-tight mb-3 text-slate-800">
-                AI가 만드는<br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-teal-600 underline decoration-emerald-200 underline-offset-4">
-                  의료 이미지
-                </span>
-              </h2>
-              <p className="text-sm text-slate-400 mb-8 leading-relaxed">
-                프롬프트 하나로 병원 SNS, 안내물,<br />인포그래픽을 자동 생성합니다
-              </p>
-            </div>
-            <div className="space-y-3 text-left max-w-xs">
-              {[
-                '자유 프롬프트 이미지 생성',
-                '병원 로고 자동 배치',
-                '브랜드 컬러 반영',
-              ].map((text, i) => (
-                <div key={i} className="flex items-center gap-3">
-                  <span className="text-emerald-500 text-sm">✦</span>
-                  <span className="text-sm text-slate-500">{text}</span>
-                </div>
-              ))}
-            </div>
-            <div className="mt-8 inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-slate-50 border border-slate-200">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="text-sm font-medium text-slate-500">AI 대기 중</span>
-            </div>
+            <p className="text-sm text-slate-400">왼쪽에서 설정 후 생성 버튼을 눌러주세요</p>
           </div>
         )}
+        </div>
       </div>
     </div>
   );
