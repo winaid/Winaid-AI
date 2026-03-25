@@ -1042,73 +1042,6 @@ export default function ImagePage() {
                   <label className="block text-[11px] font-semibold text-slate-500 mb-1">안내 문구 (줄바꿈으로 구분)</label>
                   <textarea value={schNotices} onChange={e => setSchNotices(e.target.value)} placeholder={'진료시간: 평일 09:00~18:00\n점심시간: 13:00~14:00'} rows={3} className={`${inputCls} resize-none`} />
                 </div>
-
-                {/* 달력 테마 선택 (OLD parity: CALENDAR_THEME_OPTIONS 12종, 그룹별) */}
-                <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-2">디자인 템플릿</label>
-                  <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1">
-                    {SCHEDULE_GROUPS.map(group => {
-                      const groupThemes = CALENDAR_THEME_OPTIONS.filter(t => group.values.includes(t.value));
-                      if (groupThemes.length === 0) return null;
-                      return (
-                        <div key={group.label}>
-                          <div className="flex items-center gap-2 mb-1.5 px-0.5">
-                            <span className="text-[11px] font-bold text-slate-700">{group.label}</span>
-                            <span className="text-[9px] text-slate-400">{group.desc}</span>
-                            <span className="text-[9px] text-slate-300 ml-auto">{groupThemes.length}종</span>
-                          </div>
-                          <div className="grid grid-cols-3 gap-2">
-                            {groupThemes.map(t => {
-                              const isSelected = calendarTheme === t.value;
-                              return (
-                                <button key={t.value} type="button" onClick={() => setCalendarTheme(t.value)}
-                                  className={`group relative rounded-2xl overflow-hidden transition-all duration-200 ${
-                                    isSelected
-                                      ? 'shadow-xl ring-2 ring-offset-2'
-                                      : 'shadow-sm hover:shadow-md border border-slate-200/80'
-                                  }`}
-                                  style={isSelected ? { '--tw-ring-color': t.groupColor } as React.CSSProperties : undefined}
-                                >
-                                  {/* OLD parity: CalendarThemePreview 컴포넌트 */}
-                                  <div className="relative" style={{ aspectRatio: '3/4' }}>
-                                    <CalendarThemePreview themeValue={t.value} groupColor={t.groupColor} />
-                                    {/* 선택 체크 */}
-                                    {isSelected && (
-                                      <div className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full flex items-center justify-center shadow-lg" style={{ backgroundColor: t.groupColor }}>
-                                        <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                                      </div>
-                                    )}
-                                  </div>
-                                  {/* 카드 하단 */}
-                                  <div className="px-1.5 py-1 bg-white">
-                                    <div className="font-bold text-[9px] text-slate-800 leading-tight truncate">{t.emoji} {t.label}</div>
-                                    <div className="text-[7px] text-slate-500 mt-0.5 leading-tight truncate">{t.desc}</div>
-                                  </div>
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  {/* 현재 선택된 테마 요약 */}
-                  {(() => {
-                    const ct = CALENDAR_THEME_OPTIONS.find(t => t.value === calendarTheme);
-                    if (!ct) return null;
-                    return (
-                      <div className="mt-2 p-2 rounded-lg border" style={{ backgroundColor: ct.groupColor + '10', borderColor: ct.groupColor + '30' }}>
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm">{ct.emoji}</span>
-                          <div>
-                            <span className="text-[10px] font-bold" style={{ color: ct.groupColor }}>{ct.label}</span>
-                            <span className="text-[9px] text-slate-400 ml-1.5">{ct.desc}</span>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })()}
-                </div>
               </div>
             )}
 
@@ -1409,7 +1342,63 @@ export default function ImagePage() {
                   )}
                 </div>
 
-                {/* 카테고리별 디자인 템플릿 (schedule 제외 — schedule은 달력 테마가 대체) */}
+                {/* schedule 달력 테마 (OLD parity: "디자인 템플릿" 위치) */}
+                {selectedTemplate === 'schedule' && (
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <label className="text-sm font-bold text-slate-700">디자인 템플릿</label>
+                      <div className="flex items-center gap-1.5 bg-slate-100 rounded-lg p-0.5">
+                        <button type="button" onClick={() => setTemplateAppMode('strict')}
+                          className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all ${templateAppMode === 'strict' ? 'bg-white text-violet-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>그대로</button>
+                        <button type="button" onClick={() => setTemplateAppMode('inspired')}
+                          className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all ${templateAppMode === 'inspired' ? 'bg-white text-violet-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>참고</button>
+                      </div>
+                    </div>
+                    <p className="text-[10px] text-slate-400 -mt-1.5 mb-2">
+                      {templateAppMode === 'strict' ? '📋 레이아웃·색상·구조를 그대로 복제 — 결과가 프리뷰와 거의 동일' : '🎨 분위기만 참고 — AI가 색상·배치·장식을 자유롭게 재해석'}
+                    </p>
+                    <div className="space-y-4 max-h-[520px] overflow-y-auto pr-1">
+                      {SCHEDULE_GROUPS.map(group => {
+                        const groupThemes = CALENDAR_THEME_OPTIONS.filter(t => group.values.includes(t.value));
+                        if (groupThemes.length === 0) return null;
+                        return (
+                          <div key={group.label}>
+                            <div className="flex items-center gap-2 mb-2 px-1">
+                              <span className="text-sm font-bold text-slate-700">{group.label}</span>
+                              <span className="text-[10px] text-slate-400">{group.desc}</span>
+                              <span className="text-[10px] text-slate-300 ml-auto">{groupThemes.length}종</span>
+                            </div>
+                            <div className="grid grid-cols-3 gap-3">
+                              {groupThemes.map(t => {
+                                const isSelected = calendarTheme === t.value;
+                                return (
+                                  <button key={t.value} type="button" onClick={() => setCalendarTheme(t.value)}
+                                    className={`group relative rounded-2xl overflow-hidden transition-all duration-200 ${isSelected ? 'shadow-xl ring-2 ring-offset-2' : 'shadow-sm hover:shadow-md border border-slate-200/80'}`}
+                                    style={isSelected ? { '--tw-ring-color': t.groupColor } as React.CSSProperties : undefined}>
+                                    <div className="relative" style={{ aspectRatio: '3/4' }}>
+                                      <CalendarThemePreview themeValue={t.value} groupColor={t.groupColor} />
+                                      {isSelected && (
+                                        <div className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full flex items-center justify-center shadow-lg" style={{ backgroundColor: t.groupColor }}>
+                                          <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                                        </div>
+                                      )}
+                                    </div>
+                                    <div className="px-1.5 py-1.5 bg-white">
+                                      <div className="font-bold text-[11px] text-slate-800 leading-tight truncate">{t.emoji} {t.label}</div>
+                                      <div className="text-[9px] text-slate-500 mt-0.5 leading-tight truncate">{t.desc}</div>
+                                    </div>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* 카테고리별 디자인 템플릿 (schedule 제외) */}
                 {selectedTemplate !== 'schedule' && currentCatTemplates.length > 0 && (
                   <div>
                     <div className="flex items-center justify-between mb-3">
