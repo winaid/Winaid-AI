@@ -235,14 +235,146 @@ async function crawlBlogContent(url) {
 // 3. 병원 블로그 전체 글 목록 크롤링 (말투 학습용)
 // ────────────────────────────────────────────────
 //
-// 전략 (3단계 fallback으로 logNo 수집):
-//  1순위: RSS 피드 (blog.naver.com/PostList.naver?...&feedType=atom)
-//  2순위: PostTitleListAsync JSON API (차단이 덜함)
-//  3순위: PostList HTML Puppeteer (기존 방식, 403 위험)
-//
-// 그 후 각 글 본문 수집 시:
-//  1순위: PC URL (blog.naver.com/blogId/logNo)
-//  2순위: 모바일 URL (m.blog.naver.com/blogId/logNo) — 차단이 덜함
+// 속도 최적화:
+//  - logNo 수집: fetch 기반 (RSS → PostTitleListAsync), Puppeteer는 최후 수단
+//  - 글 본문 수집: fetch + HTML 파싱 (Puppeteer 대비 10배 빠름), 3개씩 병렬
+//  - fetch 실패 시만 Puppeteer fallback
+
+const FETCH_HEADERS = {
+  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  'Referer': 'https://blog.naver.com/',
+  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
+};
+
+/**
+ * fetch로 네이버 블로그 글 하나의 본문 + 메타데이터 추출
+ * Puppeteer 없이 HTTP fetch + HTML 파싱 — 0.5~1초면 끝남
+ */
+async function fetchPostData(blogId, logNo) {
+  const postViewUrl = `https://blog.naver.com/PostView.naver?blogId=${blogId}&logNo=${logNo}`;
+  const urls = [
+    postViewUrl,
+    `https://m.blog.naver.com/${blogId}/${logNo}`,  // 모바일 fallback
+  ];
+
+  for (const url of urls) {
+    try {
+      const res = await fetch(url, {
+        headers: FETCH_HEADERS,
+        signal: AbortSignal.timeout(8000),
+      });
+      if (!res.ok) continue;
+
+      const html = await res.text();
+
+      // 제목: og:title
+      const titleMatch = html.match(/<meta\s+property="og:title"\s+content="([^"]*?)"/i)
+                       || html.match(/<meta\s+content="([^"]*?)"\s+property="og:title"/i);
+      const title = titleMatch ? decodeHtml(titleMatch[1]) : '';
+
+      // 날짜: og:createdate 또는 article:published_time
+      const dateMatch = html.match(/<meta\s+property="(?:og:createdate|article:published_time)"\s+content="([^"]*?)"/i)
+                      || html.match(/<meta\s+content="([^"]*?)"\s+property="(?:og:createdate|article:published_time)"/i);
+      const publishedAt = dateMatch ? dateMatch[1] : '';
+
+      // 썸네일: og:image
+      const imgMatch = html.match(/<meta\s+property="og:image"\s+content="([^"]*?)"/i)
+                     || html.match(/<meta\s+content="([^"]*?)"\s+property="og:image"/i);
+      const thumbnail = imgMatch ? imgMatch[1] : '';
+
+      // 본문: se-text-paragraph 추출 (네이버 스마트에디터)
+      const paragraphPattern = /<[^>]*class="[^"]*se-text-paragraph[^"]*"[^>]*>([\s\S]*?)<\/[^>]+>/g;
+      const paragraphs = [];
+      let match;
+      while ((match = paragraphPattern.exec(html)) !== null) {
+        const text = match[1]
+          .replace(/<[^>]+>/g, ' ')
+          .replace(/&nbsp;/g, ' ')
+          .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'")
+          .replace(/\s+/g, ' ')
+          .trim();
+        if (text.length > 5) paragraphs.push(text);
+      }
+
+      // se-text-paragraph 없으면 postViewArea fallback
+      let content = paragraphs.join('\n\n');
+      if (content.length < 100) {
+        const areaMatch = html.match(/id="postViewArea"[^>]*>([\s\S]*?)<\/div>/i);
+        if (areaMatch) {
+          content = areaMatch[1]
+            .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+            .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+            .replace(/<[^>]+>/g, ' ')
+            .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+            .replace(/\s+/g, ' ')
+            .trim();
+        }
+      }
+
+      if (content.length > 100) {
+        return { title, publishedAt, thumbnail, content };
+      }
+    } catch { /* try next URL */ }
+  }
+  return null;  // fetch 전부 실패
+}
+
+/** HTML 엔티티 간이 디코딩 */
+function decodeHtml(str) {
+  return str
+    .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&nbsp;/g, ' ');
+}
+
+/**
+ * Puppeteer fallback — fetch로 본문을 못 가져온 글만 여기로
+ */
+async function fetchPostDataPuppeteer(browserInstance, blogId, logNo) {
+  let postPage = null;
+  try {
+    postPage = await browserInstance.newPage();
+    await postPage.setUserAgent(FETCH_HEADERS['User-Agent']);
+
+    const urls = [
+      `https://blog.naver.com/${blogId}/${logNo}`,
+      `https://m.blog.naver.com/${blogId}/${logNo}`,
+    ];
+
+    let navigated = false;
+    for (const url of urls) {
+      const resp = await postPage.goto(url, { waitUntil: 'domcontentloaded', timeout: 15000 }).catch(() => null);
+      if (resp && resp.status() < 400) { navigated = true; break; }
+    }
+    if (!navigated) return null;
+
+    const postData = await postPage.evaluate(() => {
+      let title = '';
+      const titleEl = document.querySelector('.se-title-text, .pcol1, .itemSubjectBoldfont, ._titleArea, .tit_h3');
+      if (titleEl) title = titleEl.textContent?.trim() || '';
+      if (!title) title = document.title?.replace(/\s*:\s*네이버\s*블로그$/i, '').trim() || '';
+
+      let publishedAt = '';
+      const ogDate = document.querySelector('meta[property="og:createdate"]') || document.querySelector('meta[property="article:published_time"]');
+      if (ogDate) publishedAt = ogDate.getAttribute('content') || '';
+
+      let thumbnail = '';
+      const ogImg = document.querySelector('meta[property="og:image"]');
+      if (ogImg) thumbnail = ogImg.getAttribute('content') || '';
+
+      let content = '';
+      const selectors = ['.se-main-container', '#postViewArea', '.post-view', '#post-area', '.post_ct', '.post_ct_body', '.se_component_wrap'];
+      for (const sel of selectors) {
+        const el = document.querySelector(sel);
+        if (el && el.textContent?.trim().length > 50) { content = el.textContent.trim(); break; }
+      }
+      return { title, publishedAt, thumbnail, content };
+    });
+
+    return (postData.content && postData.content.length > 100) ? postData : null;
+  } catch { return null; }
+  finally { if (postPage) await postPage.close().catch(() => {}); }
+}
 
 async function crawlHospitalBlogPosts(blogUrl, maxPosts = 10) {
   const timer = createTimer();
@@ -254,17 +386,11 @@ async function crawlHospitalBlogPosts(blogUrl, maxPosts = 10) {
       throw new Error('올바른 네이버 블로그 URL이 아닙니다. (예: https://blog.naver.com/example)');
     }
     const blogId = blogIdMatch[1];
-    const candidates = Math.min(maxPosts + 10, 30);
-
-    const browserInstance = await getBrowser();
-    page = await browserInstance.newPage();
-    await page.setUserAgent(
-      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-    );
+    const candidates = Math.min(maxPosts + 5, 20);
 
     console.log(`[HospBlog] blogId=${blogId}, 목표=${maxPosts}개 [${timer.elapsed()}]`);
 
-    // ── 1단계: logNo 수집 (3단계 fallback) ──
+    // ── 1단계: logNo 수집 (fetch 기반, 빠름) ──
     const seenLogNos = new Set();
     const allLogNos = [];
 
@@ -277,223 +403,105 @@ async function crawlHospitalBlogPosts(blogUrl, maxPosts = 10) {
           added++;
         }
       }
-      console.log(`[HospBlog] ${source}: +${added}개 (누적 ${allLogNos.length}개) [${timer.elapsed()}]`);
+      if (added > 0) console.log(`[HospBlog] ${source}: +${added}개 (누적 ${allLogNos.length}개) [${timer.elapsed()}]`);
     };
 
-    // ─── 1-A: RSS 피드 시도 ───
-    try {
-      console.log(`[HospBlog] 1-A: RSS 피드 시도 [${timer.elapsed()}]`);
-      const rssUrl = `https://rss.blog.naver.com/${blogId}.xml`;
-      const rssResponse = await fetch(rssUrl, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        },
-        signal: AbortSignal.timeout(10000),
-      });
-
-      if (rssResponse.ok) {
-        const rssXml = await rssResponse.text();
-        const rssLogNos = extractRssLinks(rssXml, blogId);
-        addLogNos(rssLogNos, 'RSS');
-      } else {
-        console.log(`[HospBlog] RSS 응답: ${rssResponse.status} [${timer.elapsed()}]`);
-      }
-    } catch (e) {
-      console.log(`[HospBlog] RSS 실패: ${e.message} [${timer.elapsed()}]`);
-    }
-
-    // ─── 1-B: PostTitleListAsync JSON API 시도 ───
-    if (allLogNos.length < candidates) {
-      try {
-        console.log(`[HospBlog] 1-B: PostTitleListAsync API 시도 [${timer.elapsed()}]`);
-        for (let pg = 1; pg <= 3 && allLogNos.length < candidates; pg++) {
+    // 1-A: RSS + PostTitleListAsync 동시 시도
+    const [rssResult, apiResult] = await Promise.allSettled([
+      // RSS
+      (async () => {
+        const rssUrl = `https://rss.blog.naver.com/${blogId}.xml`;
+        const res = await fetch(rssUrl, { headers: FETCH_HEADERS, signal: AbortSignal.timeout(5000) });
+        if (!res.ok) return [];
+        return extractRssLinks(await res.text(), blogId);
+      })(),
+      // PostTitleListAsync
+      (async () => {
+        const logNos = [];
+        for (let pg = 1; pg <= 2; pg++) {
           const apiUrl = `https://blog.naver.com/PostTitleListAsync.naver?blogId=${blogId}&viewdate=&currentPage=${pg}&categoryNo=0&parentCategoryNo=0&countPerPage=10`;
-          const apiResponse = await fetch(apiUrl, {
-            headers: {
-              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-              'Referer': `https://blog.naver.com/${blogId}`,
-              'X-Requested-With': 'XMLHttpRequest',
-            },
-            signal: AbortSignal.timeout(10000),
+          const res = await fetch(apiUrl, {
+            headers: { ...FETCH_HEADERS, 'Referer': `https://blog.naver.com/${blogId}`, 'X-Requested-With': 'XMLHttpRequest' },
+            signal: AbortSignal.timeout(5000),
           });
-
-          if (!apiResponse.ok) {
-            console.log(`[HospBlog] PostTitleListAsync p${pg}: ${apiResponse.status} [${timer.elapsed()}]`);
-            break;
-          }
-
-          const apiText = await apiResponse.text();
-          // logNo를 텍스트에서 추출 (JSON이 깨질 수 있으므로 regex)
-          const logNoMatches = apiText.match(/"logNo"\s*:\s*"?(\d+)"?/g) || [];
-          const pageLogNos = logNoMatches.map(m => {
-            const n = m.match(/(\d+)/);
-            return n ? n[1] : null;
-          }).filter(Boolean);
-
-          addLogNos(pageLogNos, `PostTitleListAsync p${pg}`);
+          if (!res.ok) break;
+          const text = await res.text();
+          const matches = text.match(/"logNo"\s*:\s*"?(\d+)"?/g) || [];
+          const pageLogNos = matches.map(m => { const n = m.match(/(\d+)/); return n ? n[1] : null; }).filter(Boolean);
+          logNos.push(...pageLogNos);
           if (pageLogNos.length === 0) break;
-          await new Promise(r => setTimeout(r, 500));
         }
-      } catch (e) {
-        console.log(`[HospBlog] PostTitleListAsync 실패: ${e.message} [${timer.elapsed()}]`);
-      }
-    }
+        return logNos;
+      })(),
+    ]);
 
-    // ─── 1-C: PostList HTML Puppeteer (최후 수단) ───
+    if (rssResult.status === 'fulfilled') addLogNos(rssResult.value, 'RSS');
+    if (apiResult.status === 'fulfilled') addLogNos(apiResult.value, 'PostTitleListAsync');
+
+    // 1-B: Puppeteer fallback (위에서 부족할 때만)
     if (allLogNos.length < candidates) {
       try {
-        console.log(`[HospBlog] 1-C: PostList Puppeteer 시도 [${timer.elapsed()}]`);
-        let pgNum = 1;
-        while (allLogNos.length < candidates && pgNum <= 3) {
-          const blogListUrl = `https://blog.naver.com/PostList.naver?blogId=${blogId}&categoryNo=0&currentPage=${pgNum}&postListType=&blogType=B`;
+        console.log(`[HospBlog] Puppeteer fallback for logNo [${timer.elapsed()}]`);
+        const browserInstance = await getBrowser();
+        page = await browserInstance.newPage();
+        await page.setUserAgent(FETCH_HEADERS['User-Agent']);
 
-          const response = await page.goto(blogListUrl, { waitUntil: 'networkidle2', timeout: 20000 }).catch(() => null);
+        const blogListUrl = `https://blog.naver.com/PostList.naver?blogId=${blogId}&categoryNo=0&currentPage=1&postListType=&blogType=B`;
+        const resp = await page.goto(blogListUrl, { waitUntil: 'domcontentloaded', timeout: 15000 }).catch(() => null);
 
-          if (!response || response.status() === 403) {
-            console.log(`[HospBlog] PostList p${pgNum}: 차단(403) 또는 네트워크 실패 [${timer.elapsed()}]`);
-            // 모바일 URL fallback
-            const mobileListUrl = `https://m.blog.naver.com/${blogId}?tab=1&currentPage=${pgNum}`;
-            console.log(`[HospBlog] 모바일 fallback: ${mobileListUrl} [${timer.elapsed()}]`);
-            const mResp = await page.goto(mobileListUrl, { waitUntil: 'networkidle2', timeout: 20000 }).catch(() => null);
-            if (!mResp || mResp.status() >= 400) {
-              console.log(`[HospBlog] 모바일도 실패 [${timer.elapsed()}]`);
-              break;
-            }
-          }
-
+        if (resp && resp.status() < 400) {
           const pageLogNos = await page.evaluate((bid) => {
             const logNos = [];
-            const anchors = document.querySelectorAll('a[href]');
-            anchors.forEach(a => {
+            document.querySelectorAll('a[href]').forEach(a => {
               const href = a.href || '';
-              // logNo= 쿼리 파라미터
-              const qsMatch = href.match(/logNo=(\d+)/);
-              if (qsMatch) { logNos.push(qsMatch[1]); return; }
-              // /blogId/223456789 경로
-              const pathMatch = href.match(new RegExp(`(?:blog\\.naver\\.com|m\\.blog\\.naver\\.com)/${bid}/(\\d{8,})`));
-              if (pathMatch) logNos.push(pathMatch[1]);
+              const m = href.match(/logNo=(\d+)/) || href.match(new RegExp(`${bid}/(\\d{8,})`));
+              if (m) logNos.push(m[1]);
             });
             return logNos;
           }, blogId);
-
-          addLogNos(pageLogNos, `PostList p${pgNum}`);
-          if (pageLogNos.length === 0) break;
-          pgNum++;
-          await new Promise(r => setTimeout(r, 1000));
+          addLogNos(pageLogNos, 'PostList Puppeteer');
         }
+        await page.close();
+        page = null;
       } catch (e) {
         console.log(`[HospBlog] PostList Puppeteer 실패: ${e.message} [${timer.elapsed()}]`);
       }
     }
 
-    // logNo가 하나도 없으면 에러
     if (allLogNos.length === 0) {
       throw new Error(`글 목록을 가져올 수 없습니다. blogId=${blogId} — RSS/API/HTML 모두 실패`);
     }
 
-    // logNo 내림차순 (큰 번호 = 최신)
+    // logNo 내림차순 → 최신순
     allLogNos.sort((a, b) => Number(b) - Number(a));
     const targetLogNos = allLogNos.slice(0, candidates);
-    console.log(`[HospBlog] 후보 ${targetLogNos.length}개, 목표 ${maxPosts}개 [${timer.elapsed()}]`);
+    console.log(`[HospBlog] 후보 ${targetLogNos.length}개 [${timer.elapsed()}]`);
 
-    // ── 2단계: 각 글 본문 + 날짜 수집 ──
+    // ── 2단계: 글 본문 수집 (fetch 병렬, 3개씩) ──
     const results = [];
     let skipped = 0;
+    const CONCURRENCY = 3;
 
-    for (const logNo of targetLogNos) {
-      if (results.length >= maxPosts) break;
+    for (let i = 0; i < targetLogNos.length && results.length < maxPosts; i += CONCURRENCY) {
+      const batch = targetLogNos.slice(i, i + CONCURRENCY).filter(() => results.length + (i > 0 ? 0 : 0) < maxPosts + CONCURRENCY);
 
-      const postUrl = `https://blog.naver.com/${blogId}/${logNo}`;
-      let postPage = null;
-      try {
-        console.log(`[HospBlog] 글 ${results.length + 1}/${maxPosts}: ${logNo} [${timer.elapsed()}]`);
+      const batchResults = await Promise.allSettled(
+        batch.map(logNo => fetchPostData(blogId, logNo))
+      );
 
-        postPage = await browserInstance.newPage();
-        await postPage.setUserAgent(
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-        );
+      for (let j = 0; j < batchResults.length; j++) {
+        if (results.length >= maxPosts) break;
+        const logNo = batch[j];
+        const r = batchResults[j];
 
-        // PC URL 시도, 실패 시 모바일 fallback
-        let navigated = false;
-        const pcResponse = await postPage.goto(postUrl, { waitUntil: 'networkidle2', timeout: 25000 }).catch(() => null);
-
-        if (pcResponse && pcResponse.status() < 400) {
-          navigated = true;
-        } else {
-          const mobileUrl = `https://m.blog.naver.com/${blogId}/${logNo}`;
-          console.log(`[HospBlog] PC 차단, 모바일 시도: ${mobileUrl} [${timer.elapsed()}]`);
-          const mResp = await postPage.goto(mobileUrl, { waitUntil: 'networkidle2', timeout: 25000 }).catch(() => null);
-          if (mResp && mResp.status() < 400) navigated = true;
-        }
-
-        if (!navigated) {
-          console.log(`[HospBlog] 글 접근 실패: ${logNo} [${timer.elapsed()}]`);
-          skipped++;
-          await postPage.close();
-          continue;
-        }
-
-        const postData = await postPage.evaluate(() => {
-          // 제목
-          let title = '';
-          const titleEl = document.querySelector('.se-title-text, .pcol1, .itemSubjectBoldfont, ._titleArea, .tit_h3');
-          if (titleEl) title = titleEl.textContent?.trim() || '';
-          if (!title) title = document.title?.replace(/\s*:\s*네이버\s*블로그$/i, '').trim() || '';
-
-          // 날짜: og:createdate 메타태그
-          let publishedAt = '';
-          const ogDate = document.querySelector('meta[property="og:createdate"]');
-          if (ogDate) publishedAt = ogDate.getAttribute('content') || '';
-          // fallback: article:published_time
-          if (!publishedAt) {
-            const artDate = document.querySelector('meta[property="article:published_time"]');
-            if (artDate) publishedAt = artDate.getAttribute('content') || '';
-          }
-
-          // 썸네일: og:image
-          let thumbnail = '';
-          const ogImg = document.querySelector('meta[property="og:image"]');
-          if (ogImg) thumbnail = ogImg.getAttribute('content') || '';
-
-          // 본문 (여러 셀렉터 시도)
-          let content = '';
-          const selectors = [
-            '.se-main-container',
-            '#postViewArea',
-            '.post-view',
-            '#post-area',
-            '.post_ct',
-            // 모바일 셀렉터
-            '.post_ct_body',
-            '.se_component_wrap',
-            '#viewTypeSelector',
-          ];
-          for (const sel of selectors) {
-            const el = document.querySelector(sel);
-            if (el && el.textContent?.trim().length > 50) {
-              content = el.textContent.trim();
-              break;
-            }
-          }
-
-          return { title, publishedAt, thumbnail, content };
-        });
-
-        await postPage.close();
-        postPage = null;
-
-        if (postData.content && postData.content.length > 100) {
-          // 날짜 정규화
+        if (r.status === 'fulfilled' && r.value) {
+          const postData = r.value;
           let publishedAtISO = '';
           if (postData.publishedAt) {
-            try {
-              const d = new Date(postData.publishedAt);
-              if (!isNaN(d.getTime())) publishedAtISO = d.toISOString();
-            } catch { /* ignore */ }
+            try { const d = new Date(postData.publishedAt); if (!isNaN(d.getTime())) publishedAtISO = d.toISOString(); } catch {}
           }
-
           results.push({
-            url: postUrl,
+            url: `https://blog.naver.com/${blogId}/${logNo}`,
             content: postData.content.slice(0, 3000),
             title: postData.title || '',
             publishedAt: publishedAtISO,
@@ -501,30 +509,45 @@ async function crawlHospitalBlogPosts(blogUrl, maxPosts = 10) {
             thumbnail: postData.thumbnail || '',
           });
         } else {
-          console.log(`[HospBlog] 본문 부족 스킵: ${logNo} (${postData.content?.length || 0}자) [${timer.elapsed()}]`);
-          skipped++;
+          // fetch 실패 → Puppeteer fallback (한 번에 하나씩)
+          console.log(`[HospBlog] fetch 실패 ${logNo}, Puppeteer 시도 [${timer.elapsed()}]`);
+          const browserInstance = await getBrowser();
+          const postData = await fetchPostDataPuppeteer(browserInstance, blogId, logNo);
+          if (postData) {
+            let publishedAtISO = '';
+            if (postData.publishedAt) {
+              try { const d = new Date(postData.publishedAt); if (!isNaN(d.getTime())) publishedAtISO = d.toISOString(); } catch {}
+            }
+            results.push({
+              url: `https://blog.naver.com/${blogId}/${logNo}`,
+              content: postData.content.slice(0, 3000),
+              title: postData.title || '',
+              publishedAt: publishedAtISO,
+              summary: postData.content.substring(0, 200).replace(/\n/g, ' ').trim(),
+              thumbnail: postData.thumbnail || '',
+            });
+          } else {
+            skipped++;
+          }
         }
+      }
 
-        await new Promise(r => setTimeout(r, 1500));
-      } catch (e) {
-        console.error(`[HospBlog] 글 수집 실패 (${logNo}): ${e.message} [${timer.elapsed()}]`);
-        skipped++;
-        if (postPage) await postPage.close().catch(() => {});
+      // 배치 간 짧은 딜레이 (차단 방지)
+      if (i + CONCURRENCY < targetLogNos.length && results.length < maxPosts) {
+        await new Promise(r => setTimeout(r, 300));
       }
     }
 
-    // ── 3단계: publishedAt 내림차순 최종 정렬 ──
+    // ── 3단계: publishedAt 내림차순 정렬 ──
     const dateCount = results.filter(r => r.publishedAt).length;
     results.sort((a, b) => {
-      if (a.publishedAt && b.publishedAt) {
-        return new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime();
-      }
+      if (a.publishedAt && b.publishedAt) return new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime();
       if (a.publishedAt && !b.publishedAt) return -1;
       if (!a.publishedAt && b.publishedAt) return 1;
       return 0;
     });
 
-    console.log(`[HospBlog] 완료: ${results.length}/${maxPosts}개 수집, 스킵 ${skipped}개, 날짜 ${dateCount}/${results.length}개 [${timer.elapsed()}]`);
+    console.log(`[HospBlog] 완료: ${results.length}/${maxPosts}개, 스킵 ${skipped}, 날짜 ${dateCount}/${results.length}개 [${timer.elapsed()}]`);
     results.forEach((p, i) => {
       console.log(`  ${i + 1}. [${p.publishedAt?.substring(0, 10) || 'N/A'}] ${p.title?.substring(0, 40) || p.url}`);
     });
