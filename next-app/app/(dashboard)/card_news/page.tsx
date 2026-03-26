@@ -295,15 +295,24 @@ visual: (배경 비주얼 묘사 30자 이내)
     setProgress(`이미지 생성 중... (0/${cards.length}장)`);
 
     try {
-      let firstImageUrl: string | null = null;
-      const imageResults: { index: number; url: string | null }[] = [];
+      // 1장: 스타일 기준 (직렬), 2장~: 1장 참조하여 병렬 생성
+      setProgress(`이미지 생성 중... (1/${cards.length}장) — 스타일 기준 설정`);
+      const firstCard = cards[0];
+      const firstImageUrl = await generateCardImage(firstCard.imagePrompt, firstCard.index);
+      const imageResults: { index: number; url: string | null }[] = [{ index: firstCard.index, url: firstImageUrl }];
 
-      for (let i = 0; i < cards.length; i++) {
-        const card = cards[i];
-        setProgress(`이미지 생성 중... (${i + 1}/${cards.length}장)${i === 0 ? ' — 스타일 기준 설정' : ''}`);
-        const url = await generateCardImage(card.imagePrompt, card.index, i > 0 && firstImageUrl ? firstImageUrl : undefined);
-        imageResults.push({ index: card.index, url });
-        if (i === 0 && url) firstImageUrl = url;
+      if (cards.length > 1) {
+        const remaining = cards.slice(1);
+        let completed = 1;
+        const restResults = await Promise.all(
+          remaining.map(async (card) => {
+            const url = await generateCardImage(card.imagePrompt, card.index, firstImageUrl || undefined);
+            completed++;
+            setProgress(`이미지 생성 중... (${completed}/${cards.length}장)`);
+            return { index: card.index, url };
+          }),
+        );
+        imageResults.push(...restResults);
       }
 
       const finalCards = cards.map(card => {

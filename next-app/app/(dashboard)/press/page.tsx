@@ -44,41 +44,42 @@ export default function PressPage() {
     setSaveStatus(null);
 
     try {
-      // 1) 병원 웹사이트 크롤링
-      let hospitalInfo = '';
-      if (hospitalWebsite.trim()) {
-        setProgress('🏥 병원 웹사이트 분석 중...');
+      // 1) 병원 크롤링 + 말투 로드 병렬 실행
+      setProgress('🏥 병원 정보 수집 중...');
+
+      const crawlPromise = (async (): Promise<string> => {
+        if (!hospitalWebsite.trim()) return '';
         try {
           const crawlRes = await fetch('/api/naver/crawl-hospital-blog', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ blogUrl: hospitalWebsite.trim(), maxPosts: 1 }),
           });
-          if (crawlRes.ok) {
-            const crawlData = await crawlRes.json() as { posts?: Array<{ content?: string }> };
-            const siteContent = crawlData.posts?.[0]?.content || '';
-            if (siteContent) {
-              setProgress('🏥 병원 강점 분석 중...');
-              const analysisRes = await fetch('/api/gemini', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  prompt: `다음은 ${hospitalName || 'OO병원'}의 웹사이트 내용입니다.\n\n${siteContent.slice(0, 3000)}\n\n위 병원 웹사이트에서 다음 정보를 추출해주세요:\n1. 병원의 핵심 강점 (3~5개)\n2. 특화 진료과목이나 특별한 의료 서비스\n3. 차별화된 특징 (장비, 시스템, 의료진 등)\n4. 수상 경력이나 인증 사항\n\n간결하게 핵심만 추출해주세요.`,
-                  model: 'gemini-3.1-flash-lite-preview',
-                  temperature: 0.3,
-                  maxOutputTokens: 1000,
-                }),
-              });
-              if (analysisRes.ok) {
-                const analysis = await analysisRes.json() as { text?: string };
-                if (analysis.text) hospitalInfo = `[🏥 ${hospitalName || 'OO병원'} 병원 정보 - 웹사이트 분석 결과]\n${analysis.text}`;
-              }
-            }
-          }
-        } catch {
-          setProgress('⚠️ 웹사이트 분석 실패, 기본 정보로 진행...');
-        }
-      }
+          if (!crawlRes.ok) return '';
+          const crawlData = await crawlRes.json() as { posts?: Array<{ content?: string }> };
+          const siteContent = crawlData.posts?.[0]?.content || '';
+          if (!siteContent) return '';
+          const analysisRes = await fetch('/api/gemini', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              prompt: `다음은 ${hospitalName || 'OO병원'}의 웹사이트 내용입니다.\n\n${siteContent.slice(0, 3000)}\n\n위 병원 웹사이트에서 다음 정보를 추출해주세요:\n1. 병원의 핵심 강점 (3~5개)\n2. 특화 진료과목이나 특별한 의료 서비스\n3. 차별화된 특징 (장비, 시스템, 의료진 등)\n4. 수상 경력이나 인증 사항\n\n간결하게 핵심만 추출해주세요.`,
+              model: 'gemini-3.1-flash-lite-preview', temperature: 0.3, maxOutputTokens: 1000,
+            }),
+          });
+          if (!analysisRes.ok) return '';
+          const analysis = await analysisRes.json() as { text?: string };
+          return analysis.text ? `[🏥 ${hospitalName || 'OO병원'} 병원 정보 - 웹사이트 분석 결과]\n${analysis.text}` : '';
+        } catch { return ''; }
+      })();
+
+      const stylePromise = (async (): Promise<string> => {
+        if (!hospitalName) return '';
+        try { return await getHospitalStylePrompt(hospitalName) || ''; } catch { return ''; }
+      })();
+
+      // 병렬 대기
+      const [hospitalInfo, stylePrompt] = await Promise.all([crawlPromise, stylePromise]);
 
       // 2) 프롬프트 조립
       setProgress('🗞️ 보도자료 작성 중...');
@@ -88,14 +89,9 @@ export default function PressPage() {
         hospitalInfo: hospitalInfo || undefined,
       });
 
-      // 3) 병원 말투 자동 주입
+      // 3) 병원 말투 주입
       let finalPrompt = prompt;
-      if (hospitalName) {
-        try {
-          const stylePrompt = await getHospitalStylePrompt(hospitalName);
-          if (stylePrompt) finalPrompt = `${prompt}\n\n[병원 블로그 학습 말투 - 보도자료 스타일 유지하며 적용]\n${stylePrompt}`;
-        } catch { /* 프로파일 없으면 기본 동작 */ }
-      }
+      if (stylePrompt) finalPrompt = `${prompt}\n\n[병원 블로그 학습 말투 - 보도자료 스타일 유지하며 적용]\n${stylePrompt}`;
 
       // 4) Google Search 연동으로 생성
       setProgress('🔍 최신 의료 정보 검색 + 기사 작성 중...');
