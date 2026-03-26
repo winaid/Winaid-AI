@@ -628,9 +628,17 @@ ${sliced}
     // 1) ```json ... ``` 블록 추출
     const jsonBlock = text.match(/```(?:json)?\s*([\s\S]*?)```/);
     if (jsonBlock) text = jsonBlock[1];
-    // 2) JSON 객체 { ... } 직접 추출 (앞뒤 텍스트 제거)
-    const braceMatch = text.match(/\{[\s\S]*\}/);
-    if (braceMatch) text = braceMatch[0];
+    // 2) 첫 번째 { 부터 매칭하는 } 까지 추출 (중첩 대응)
+    const startIdx = text.indexOf('{');
+    if (startIdx >= 0) {
+      let depth = 0;
+      let endIdx = startIdx;
+      for (let i = startIdx; i < text.length; i++) {
+        if (text[i] === '{') depth++;
+        else if (text[i] === '}') { depth--; if (depth === 0) { endIdx = i; break; } }
+      }
+      text = text.slice(startIdx, endIdx + 1);
+    }
     parsed = JSON.parse(text.trim());
   } catch {
     // 최후 시도: 응답에서 score 키가 있는 부분만 추출
