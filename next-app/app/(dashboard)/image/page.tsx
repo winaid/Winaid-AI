@@ -725,14 +725,14 @@ export default function ImagePage() {
     // 스타일 프롬프트 추가 (OLD parity: DESIGN_SYSTEM_V2 + 카테고리 가이드 + strict/inspired)
     if (hasForm && activeStylePrompt) {
       const DESIGN_SYSTEM = `[DESIGN SYSTEM — Korean Medical SNS Standard]
-FORMAT: 4:5 vertical ratio recommended. Important content within center safe zone. Side margins 48px+.
-3-SECOND RULE: Core message must be comprehensible within 3 seconds at mobile phone distance.
-TYPOGRAPHY: Sans-serif only (Pretendard/Noto Sans KR style). Heading Bold 28-36pt, body Regular 14-16pt, caption 11-13pt. Sufficient line-height for Korean text.
-COLOR: max 3 colors per design (primary+accent+neutral). Medical trust palette: soft blue, navy, teal, mint, clean white. No neon.
-SURFACES: cards white radius 16px shadow subtle, badges rounded, dividers 1px subtle.
-KOREAN MEDICAL LAW: No superlatives (최고/유일/첫). No guarantees of treatment outcome.
-FORBIDDEN: starburst, confetti, multiple fonts, <12pt text, clip-art, 3D metallic text, handwritten style.
-PRACTICAL: Must look like it could be posted TODAY on a real Korean hospital Instagram.`;
+FORMAT: Vertical ratio recommended. Important content within center safe zone with generous side margins.
+TYPOGRAPHY: Sans-serif only. Headings bold and large, body clean and readable, captions small. Sufficient line-height for Korean text.
+COLOR: Maximum three colors per design. Medical trust palette: soft blue, navy, teal, mint, clean white. No neon.
+SURFACES: Clean card layouts with rounded corners, subtle shadows, rounded badges, subtle dividers.
+KOREAN MEDICAL LAW: No superlatives. No guarantees of treatment outcome.
+FORBIDDEN: starburst, confetti, multiple fonts, tiny text, clip-art, metallic text, handwritten style.
+PRACTICAL: Must look like a real Korean hospital Instagram post.
+⛔ NEVER render CSS code, pixel values, technical specs, or design tokens as visible text.`;
 
       const categoryGuides: Record<string, string> = {
         schedule: 'hospital monthly schedule — clean grid layout, clear day headers (일월화수목금토), Sunday=red, Saturday=blue, closed days clearly marked. ONLY include text that appears in quotes in the prompt. Do NOT invent operating hours, lunch breaks, or phone numbers.',
