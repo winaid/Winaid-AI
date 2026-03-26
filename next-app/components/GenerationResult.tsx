@@ -287,7 +287,7 @@ export function ResultPanel({
     () => sanitizeHtml(isHtml ? content : markdownToHtml(content)),
     [content, isHtml],
   );
-  const charCount = useMemo(() => content.replace(/\s/g, '').length, [content]);
+  const charCount = useMemo(() => content.replace(/<[^>]+>/g, '').replace(/\s/g, '').length, [content]);
 
   const charLabel = charCount < 1500 ? '짧음' : charCount < 4000 ? '적당' : '길음';
   const charColor = charCount < 1500 ? 'text-amber-600' : charCount < 4000 ? 'text-emerald-600' : 'text-blue-600';
