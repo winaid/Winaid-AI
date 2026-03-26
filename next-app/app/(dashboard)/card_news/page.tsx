@@ -50,9 +50,10 @@ export default function CardNewsPage() {
 
   // ── 생성 상태 ──
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isGeneratingPrompts, setIsGeneratingPrompts] = useState(false);
   const [isGeneratingImages, setIsGeneratingImages] = useState(false);
   const [cards, setCards] = useState<CardSlide[]>([]);
-  const [pipelineStep, setPipelineStep] = useState<'idle' | 'script' | 'preview' | 'image'>('idle');
+  const [pipelineStep, setPipelineStep] = useState<'idle' | 'scriptReview' | 'promptReview'>('idle');
   const [progress, setProgress] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
@@ -74,18 +75,12 @@ export default function CardNewsPage() {
   const [promptHistory, setPromptHistory] = useState<CardPromptHistoryItem[]>([]);
   const [showHistoryDropdown, setShowHistoryDropdown] = useState(false);
 
-  // ── 이미지 생성 헬퍼 (OLD cardNewsImageService.generateSingleImage 동일 파이프라인) ──
+  // ── 이미지 생성 헬퍼 ──
   const generateCardImage = async (prompt: string, index: number, refImage?: string): Promise<string | null> => {
     try {
-      // 디자인 템플릿의 배경색/스타일 프롬프트 반영
-      const tmpl = designTemplateId ? CARD_NEWS_DESIGN_TEMPLATES.find(t => t.id === designTemplateId) : undefined;
-      const bgColor = tmpl?.colors?.background || '#E8F4FD';
-      const templateBlock = tmpl ? `[디자인 템플릿: ${tmpl.name}]\n${tmpl.stylePrompt}\n배경색: ${bgColor}` : '';
-
-      // 커스텀 스타일: 사용자 프롬프트 추가
+      // 커스텀 스타일만 추가 (디자인 템플릿의 프레임/테두리 지시는 프롬프트에 이미 반영됨)
       const customBlock = imageStyle === 'custom' && customImagePrompt ? `\n[사용자 지정 스타일]\n${customImagePrompt}` : '';
-      // 프롬프트에 템플릿 블록 추가
-      const fullPrompt = `${prompt}\n${templateBlock}${customBlock}`.trim();
+      const fullPrompt = `${prompt}${customBlock}`.trim();
 
       const res = await fetch('/api/image', {
         method: 'POST',
@@ -128,7 +123,7 @@ export default function CardNewsPage() {
     }
   };
 
-  // ── 메인 생성 ──
+  // ── Step 1: 원고 생성 ──
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!topic.trim()) return;
@@ -147,126 +142,157 @@ export default function CardNewsPage() {
     setError(null);
     setCards([]);
     setSaveStatus(null);
+    setPipelineStep('idle');
     setProgress('슬라이드 원고 작성 중...');
 
     try {
-      // Stage 1: 텍스트 원고 생성
       const { systemInstruction, prompt } = buildCardNewsPrompt(request);
       let finalPrompt = prompt;
-      // 말투 주입
       if (hospitalName) {
         try {
           const stylePrompt = await getHospitalStylePrompt(hospitalName);
           if (stylePrompt) finalPrompt += `\n\n[병원 말투 적용]\n${stylePrompt}`;
         } catch { /* ignore */ }
       }
-      // 이미지 프롬프트도 같이 요청 — OLD 구조화 형식 (subtitle/mainTitle/description/비주얼)
-      finalPrompt += `\n\n## 이미지 프롬프트
-각 슬라이드에 어울리는 이미지 프롬프트를 아래 형식으로 작성하세요:
-**이미지**:
-subtitle: "(부제 텍스트)"
-mainTitle: "(메인 제목 텍스트)"
-description: "(설명 텍스트)"
-비주얼: (배경 이미지 내용을 한국어로 30자 이내 묘사 — 텍스트/글자/라벨 절대 금지, 시각적 장면만)`;
-
-      console.info(`[CARD] ========== 카드뉴스 생성 시작 ==========`);
-      console.info(`[CARD] 주제="${topic}" 슬라이드=${slideCount}장 스타일=${derivedWritingStyle} 템플릿=${designTemplateId || 'auto'}`);
 
       const res = await fetch('/api/gemini', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          prompt: finalPrompt,
-          systemInstruction,
-          model: 'gemini-3.1-pro-preview',
-          temperature: 0.85,
-          maxOutputTokens: 8192,
+          prompt: finalPrompt, systemInstruction,
+          model: 'gemini-3.1-pro-preview', temperature: 0.85, maxOutputTokens: 8192,
         }),
       });
 
       const data = await res.json() as { text?: string; error?: string };
-      if (!res.ok || !data.text) {
-        setError(data.error || `서버 오류 (${res.status})`);
-        return;
-      }
+      if (!res.ok || !data.text) { setError(data.error || `서버 오류 (${res.status})`); return; }
 
-      console.info(`[CARD] 원고 생성 완료 — ${data.text.length}자`);
-
-      // Stage 2: 파싱 — 슬라이드별 분리
+      // 파싱
       const parsedCards: CardSlide[] = [];
       const slideBlocks = data.text.split(/###\s*(\d+)장[:\s]*/);
-
       for (let i = 1; i < slideBlocks.length; i += 2) {
         const num = parseInt(slideBlocks[i], 10);
         const block = slideBlocks[i + 1] || '';
         const roleMatch = block.match(/^(.+?)[\n\r]/);
         const titleMatch = block.match(/\*\*제목\*\*[:\s]*(.+)/m) || block.match(/\*\*메인.*?\*\*[:\s]*(.+)/m);
         const bodyMatch = block.match(/\*\*본문\*\*[:\s]*([\s\S]*?)(?=\*\*|$)/m) || block.match(/\*\*부제\*\*[:\s]*(.+)/m);
-        // 이미지 프롬프트: 구조화 형식 또는 단순 형식
-        const imgSection = block.match(/\*\*이미지\*\*[:\s]*([\s\S]*?)(?=###|$)/m);
-        let imagePrompt = '';
-        if (imgSection) {
-          const imgText = imgSection[1].trim();
-          // 구조화 형식이면 그대로 (subtitle/mainTitle/비주얼 포함)
-          if (imgText.includes('subtitle:') || imgText.includes('mainTitle:') || imgText.includes('비주얼:')) {
-            imagePrompt = imgText;
-          } else {
-            // 단순 형식 → 구조화 형식으로 변환
-            const title = titleMatch?.[1]?.trim() || '';
-            const subtitle = roleMatch?.[1]?.replace(/\*\*/g, '').trim() || '';
-            const desc = bodyMatch?.[1]?.trim() || '';
-            imagePrompt = `subtitle: "${subtitle}"\nmainTitle: "${title}"\n${desc ? `description: "${desc}"\n` : ''}비주얼: ${imgText}`;
-          }
-        } else {
-          const title = titleMatch?.[1]?.trim() || `슬라이드 ${num}`;
-          const subtitle = roleMatch?.[1]?.replace(/\*\*/g, '').trim() || '';
-          imagePrompt = `subtitle: "${subtitle}"\nmainTitle: "${title}"\n비주얼: ${topic} 관련 의료 건강 이미지`;
-        }
-
         parsedCards.push({
           index: num,
           role: roleMatch?.[1]?.replace(/\*\*/g, '').trim() || `${num}장`,
           title: titleMatch?.[1]?.trim() || `슬라이드 ${num}`,
           body: bodyMatch?.[1]?.trim() || '',
-          imagePrompt,
+          imagePrompt: '', // Step 2에서 생성
           imageUrl: null,
         });
       }
-
-      // 파싱 실패 시 단순 분할
       if (parsedCards.length === 0) {
         for (let i = 0; i < slideCount; i++) {
-          parsedCards.push({
-            index: i + 1,
-            role: i === 0 ? '표지' : i === slideCount - 1 ? '마무리' : `본문 ${i}`,
-            title: `슬라이드 ${i + 1}`,
-            body: '',
-            imagePrompt: `medical health ${topic} slide ${i + 1}`,
-            imageUrl: null,
-          });
+          parsedCards.push({ index: i + 1, role: i === 0 ? '표지' : i === slideCount - 1 ? '마무리' : `본문 ${i}`, title: `슬라이드 ${i + 1}`, body: '', imagePrompt: '', imageUrl: null });
         }
       }
 
       setCards(parsedCards);
       setRawScriptText(data.text);
-      setPipelineStep('preview');
-      console.info(`[CARD] 파싱 완료 — ${parsedCards.length}장 → 프롬프트 미리보기 단계`);
-
+      setPipelineStep('scriptReview');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : '네트워크 오류');
-      setPipelineStep('idle');
-    } finally {
-      setIsGenerating(false);
-      setProgress('');
-    }
+    } finally { setIsGenerating(false); setProgress(''); }
   };
 
-  // ── Stage 3: 이미지 생성 (프롬프트 승인 후) ──
+  // ── Step 2: 프롬프트 생성 (원고 승인 후) ──
+  const handleGeneratePrompts = async () => {
+    if (cards.length === 0) return;
+    setIsGeneratingPrompts(true);
+    setProgress('이미지 프롬프트 생성 중...');
+
+    try {
+      const tmpl = designTemplateId ? CARD_NEWS_DESIGN_TEMPLATES.find(t => t.id === designTemplateId) : undefined;
+      const tmplMood = tmpl ? `\n분위기: ${tmpl.styleConfig.mood}. 컬러톤: ${tmpl.colors.background} 배경.` : '';
+
+      const cardsInfo = cards.map(c =>
+        `${c.index}장 [${c.role}]: 제목="${c.title}" / 본문="${c.body}"`
+      ).join('\n');
+
+      const promptGenPrompt = `당신은 카드뉴스 이미지 프롬프트 전문가입니다.
+아래 카드뉴스 원고를 보고, 각 슬라이드의 이미지 생성용 프롬프트를 작성해주세요.
+
+[주제] ${topic}
+${tmplMood}
+
+[원고]
+${cardsInfo}
+
+[프롬프트 작성 규칙]
+1. 각 카드에 표시될 한글 텍스트를 정확히 지정하세요:
+   - 부제(subtitle): 8자 이내의 짧은 문구
+   - 메인 제목(mainTitle): 핵심 키워드 2~4단어 (줄바꿈 가능)
+   - 설명(description): 15자 이내 한 줄 요약 (표지/마무리는 생략 가능)
+2. 배경 비주얼을 구체적으로 묘사하세요 (일러스트/사진 스타일, 색상, 오브젝트)
+3. 모든 카드가 같은 디자인 톤/컬러를 유지하도록 통일하세요
+4. 테두리, 프레임, 보더 지시 금지! 이미지 전체를 채우는 디자인으로!
+
+[출력 형식 — 반드시 이 형식으로]
+---CARD 1---
+subtitle: (부제 텍스트)
+mainTitle: (메인 제목)
+description: (설명 또는 빈칸)
+visual: (배경 비주얼 묘사 30자 이내)
+---CARD 2---
+...`;
+
+      const res = await fetch('/api/gemini', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: promptGenPrompt,
+          model: 'gemini-3.1-pro-preview', temperature: 0.7, maxOutputTokens: 4096,
+        }),
+      });
+      const data = await res.json() as { text?: string; error?: string };
+      if (!res.ok || !data.text) { setError(data.error || '프롬프트 생성 실패'); return; }
+
+      // 파싱: ---CARD N--- 구분
+      const promptBlocks = data.text.split(/---CARD\s*\d+---/i).filter(b => b.trim());
+      const updatedCards = cards.map((card, idx) => {
+        const block = promptBlocks[idx] || '';
+        const sub = block.match(/subtitle:\s*(.+)/i)?.[1]?.trim() || card.role;
+        const main = block.match(/mainTitle:\s*(.+)/i)?.[1]?.trim() || card.title;
+        const desc = block.match(/description:\s*(.+)/i)?.[1]?.trim() || '';
+        const visual = block.match(/visual:\s*(.+)/i)?.[1]?.trim() || `${topic} 관련 의료 일러스트`;
+
+        // 이미지 프롬프트 조립: 텍스트 + 비주얼 분리
+        const imagePrompt = [
+          `[카드뉴스 이미지 — 텍스트 포함]`,
+          `이미지에 반드시 표시할 한글 텍스트:`,
+          `- 상단 작은 글씨: "${sub}"`,
+          `- 중앙 큰 제목: "${main}"`,
+          desc ? `- 하단 설명: "${desc}"` : '',
+          ``,
+          `[배경 비주얼]`,
+          visual,
+          ``,
+          `[필수 규칙]`,
+          `- 위 한글 텍스트를 정확히 그대로 이미지에 렌더링할 것`,
+          `- 지정된 텍스트 외 다른 글자/라벨/워터마크 절대 금지`,
+          `- 테두리/프레임/보더 없이 이미지 전체를 채울 것`,
+          `- 1:1 정사각형 카드뉴스`,
+        ].filter(Boolean).join('\n');
+
+        return { ...card, imagePrompt };
+      });
+
+      setCards(updatedCards);
+      setPipelineStep('promptReview');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : '네트워크 오류');
+    } finally { setIsGeneratingPrompts(false); setProgress(''); }
+  };
+
+  // ── Step 3: 이미지 생성 (프롬프트 승인 후) ──
   const handleGenerateImages = async () => {
     if (cards.length === 0) return;
     setIsGeneratingImages(true);
-    setPipelineStep('image');
-    setProgress(`이미지 생성 중... (0/${cards.length}장) — 1장째 스타일 기준 설정`);
+    setProgress(`이미지 생성 중... (0/${cards.length}장)`);
 
     try {
       let firstImageUrl: string | null = null;
@@ -274,7 +300,7 @@ description: "(설명 텍스트)"
 
       for (let i = 0; i < cards.length; i++) {
         const card = cards[i];
-        setProgress(`이미지 생성 중... (${i + 1}/${cards.length}장)${i === 0 ? ' — 1장째 스타일 기준 설정' : ' — 1장째 스타일 참조'}`);
+        setProgress(`이미지 생성 중... (${i + 1}/${cards.length}장)${i === 0 ? ' — 스타일 기준 설정' : ''}`);
         const url = await generateCardImage(card.imagePrompt, card.index, i > 0 && firstImageUrl ? firstImageUrl : undefined);
         imageResults.push({ index: card.index, url });
         if (i === 0 && url) firstImageUrl = url;
@@ -285,9 +311,7 @@ description: "(설명 텍스트)"
         return { ...card, imageUrl: result?.url || null };
       });
       setCards(finalCards);
-
-      const successCount = finalCards.filter(c => c.imageUrl).length;
-      console.info(`[CARD] 이미지 생성 완료 — ${successCount}/${finalCards.length}장 성공`);
+      setPipelineStep('idle');
 
       // 저장
       try {
@@ -302,11 +326,7 @@ description: "(설명 텍스트)"
       } catch { setSaveStatus('저장 실패'); }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : '네트워크 오류');
-    } finally {
-      setIsGeneratingImages(false);
-      setPipelineStep('idle');
-      setProgress('');
-    }
+    } finally { setIsGeneratingImages(false); setProgress(''); }
   };
 
   // ── 초기 로드: 프롬프트 히스토리 + 참고 이미지 ──
@@ -699,8 +719,8 @@ ${newsContext ? `\n[📰 최신 네이버 뉴스 분석]\n${newsContext}\n\n⚠�
               className="w-full py-3 bg-pink-600 text-white font-bold rounded-xl hover:bg-pink-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {isGenerating ? (
-                <><svg className="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" /></svg>생성 중...</>
-              ) : '카드뉴스 생성하기'}
+                <><svg className="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" /></svg>원고 생성 중...</>
+              ) : '원고 생성하기'}
             </button>
           </div>
         </form>
@@ -708,66 +728,103 @@ ${newsContext ? `\n[📰 최신 네이버 뉴스 분석]\n${newsContext}\n\n⚠�
 
       {/* ── 결과 영역 ── */}
       <div className="flex-1 min-w-0">
-        {(isGenerating || isGeneratingImages) ? (
+        {(isGenerating || isGeneratingPrompts || isGeneratingImages) ? (
           <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-12 flex flex-col items-center justify-center text-center min-h-[480px]">
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold mb-6 bg-pink-50 text-pink-600 border border-pink-100">
-              <span>🎨</span><span>{isGeneratingImages ? '이미지 생성 중' : '원고 작성 중'}</span>
+              <span>🎨</span><span>{isGeneratingImages ? '이미지 생성 중' : isGeneratingPrompts ? '프롬프트 생성 중' : '원고 작성 중'}</span>
             </div>
-            <div className="relative mb-6">
-              <div className="w-14 h-14 border-[3px] border-pink-100 border-t-pink-500 rounded-full animate-spin" />
+            {/* 진행 단계 표시 */}
+            <div className="flex items-center gap-1 mb-6">
+              {['원고', '승인', '프롬프트', '승인', '이미지'].map((step, i) => (
+                <div key={i} className="flex items-center gap-1">
+                  <div className={`w-6 h-6 rounded-full text-[9px] font-bold flex items-center justify-center ${
+                    (i === 0 && isGenerating) || (i === 2 && isGeneratingPrompts) || (i === 4 && isGeneratingImages)
+                      ? 'bg-pink-500 text-white animate-pulse' : i < (isGenerating ? 0 : isGeneratingPrompts ? 2 : 4)
+                      ? 'bg-pink-100 text-pink-600' : 'bg-slate-100 text-slate-400'
+                  }`}>{i + 1}</div>
+                  {i < 4 && <div className="w-3 h-px bg-slate-200" />}
+                </div>
+              ))}
             </div>
-            <p className="text-sm font-medium text-slate-700 mb-2">{progress || (isGeneratingImages ? '카드 이미지를 생성하고 있어요' : `${slideCount}장 분량의 원고를 작성하고 있어요`)}</p>
-            <p className="text-xs text-slate-400">{isGeneratingImages ? '1장째 스타일 기준으로 통일된 이미지를 만듭니다' : '원고 작성 → 프롬프트 확인 → 이미지 생성 순서로 진행됩니다'}</p>
+            <div className="relative mb-6"><div className="w-14 h-14 border-[3px] border-pink-100 border-t-pink-500 rounded-full animate-spin" /></div>
+            <p className="text-sm font-medium text-slate-700 mb-2">{progress || (isGeneratingImages ? '카드 이미지를 생성하고 있어요' : isGeneratingPrompts ? '이미지 프롬프트를 만들고 있어요' : `${slideCount}장 분량의 원고를 작성하고 있어요`)}</p>
           </div>
         ) : error ? (
           <ErrorPanel error={error} onDismiss={() => setError(null)} />
-        ) : pipelineStep === 'preview' && cards.length > 0 && !cards.some(c => c.imageUrl) ? (
-          /* ── 프롬프트 미리보기 단계 ── */
+        ) : pipelineStep === 'scriptReview' && cards.length > 0 ? (
+          /* ── Step 2: 원고 승인 단계 ── */
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">
-                  📝 원고 확인
-                </span>
-                <span className="text-xs text-slate-500">{cards.length}장 · 프롬프트를 확인/수정한 뒤 이미지를 생성하세요</span>
-              </div>
+            <div className="flex items-center gap-2 mb-2">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">Step 1</span>
+              <span className="text-xs font-bold text-slate-700">원고 확인</span>
+              <span className="text-xs text-slate-400">· 제목/본문을 수정한 뒤 프롬프트를 생성하세요</span>
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-2">
               {cards.map((card, idx) => (
                 <div key={card.index} className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                  <div className="flex items-center gap-2 px-4 py-2.5 bg-slate-50 border-b border-slate-100">
-                    <span className="w-6 h-6 rounded-full bg-pink-500 text-white text-[10px] font-bold flex items-center justify-center flex-none">{card.index}</span>
+                  <div className="flex items-center gap-2 px-4 py-2 bg-slate-50 border-b border-slate-100">
+                    <span className="w-5 h-5 rounded-full bg-pink-500 text-white text-[9px] font-bold flex items-center justify-center flex-none">{card.index}</span>
                     <span className="text-xs font-bold text-slate-700">{card.role}</span>
                   </div>
-                  <div className="p-4 space-y-3">
+                  <div className="p-3 space-y-2">
                     <div>
-                      <label className="block text-[10px] font-semibold text-slate-400 mb-1">제목</label>
+                      <label className="block text-[10px] font-semibold text-slate-400 mb-0.5">제목</label>
                       <input type="text" value={card.title}
                         onChange={e => setCards(prev => prev.map((c, i) => i === idx ? { ...c, title: e.target.value } : c))}
-                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-400" />
+                        className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-400" />
                     </div>
                     <div>
-                      <label className="block text-[10px] font-semibold text-slate-400 mb-1">본문</label>
+                      <label className="block text-[10px] font-semibold text-slate-400 mb-0.5">본문</label>
                       <textarea value={card.body} rows={2}
                         onChange={e => setCards(prev => prev.map((c, i) => i === idx ? { ...c, body: e.target.value } : c))}
-                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-pink-500/20 resize-none" />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] font-semibold text-slate-400 mb-1">이미지 프롬프트</label>
-                      <textarea value={card.imagePrompt} rows={3}
-                        onChange={e => setCards(prev => prev.map((c, i) => i === idx ? { ...c, imagePrompt: e.target.value } : c))}
-                        className="w-full px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-xs text-slate-700 font-mono focus:outline-none focus:ring-2 focus:ring-amber-500/20 resize-none" />
+                        className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-pink-500/20 resize-none" />
                     </div>
                   </div>
                 </div>
               ))}
             </div>
 
-            <button onClick={handleGenerateImages}
-              className="w-full py-3.5 bg-pink-600 text-white font-bold rounded-xl hover:bg-pink-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-pink-500/20">
-              🎨 이미지 생성하기 ({cards.length}장)
+            <button onClick={handleGeneratePrompts} disabled={isGeneratingPrompts}
+              className="w-full py-3.5 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20 disabled:opacity-50">
+              원고 승인 → 프롬프트 생성하기
             </button>
+          </div>
+        ) : pipelineStep === 'promptReview' && cards.length > 0 && !cards.some(c => c.imageUrl) ? (
+          /* ── Step 4: 프롬프트 승인 단계 ── */
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-pink-50 text-pink-700 border border-pink-200">Step 2</span>
+              <span className="text-xs font-bold text-slate-700">프롬프트 확인</span>
+              <span className="text-xs text-slate-400">· 이미지 프롬프트를 수정한 뒤 이미지를 생성하세요</span>
+            </div>
+
+            <div className="space-y-2">
+              {cards.map((card, idx) => (
+                <div key={card.index} className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                  <div className="flex items-center gap-2 px-4 py-2 bg-slate-50 border-b border-slate-100">
+                    <span className="w-5 h-5 rounded-full bg-pink-500 text-white text-[9px] font-bold flex items-center justify-center flex-none">{card.index}</span>
+                    <span className="text-xs font-bold text-slate-700">{card.role}: {card.title}</span>
+                  </div>
+                  <div className="p-3">
+                    <textarea value={card.imagePrompt} rows={5}
+                      onChange={e => setCards(prev => prev.map((c, i) => i === idx ? { ...c, imagePrompt: e.target.value } : c))}
+                      className="w-full px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-xs text-slate-700 font-mono focus:outline-none focus:ring-2 focus:ring-amber-500/20 resize-none" />
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex gap-2">
+              <button onClick={() => setPipelineStep('scriptReview')}
+                className="px-4 py-3 bg-slate-100 text-slate-600 font-semibold rounded-xl hover:bg-slate-200 transition-all text-sm">
+                ← 원고로 돌아가기
+              </button>
+              <button onClick={handleGenerateImages} disabled={isGeneratingImages}
+                className="flex-1 py-3.5 bg-pink-600 text-white font-bold rounded-xl hover:bg-pink-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-pink-500/20 disabled:opacity-50">
+                🎨 프롬프트 승인 → 이미지 생성하기 ({cards.length}장)
+              </button>
+            </div>
           </div>
         ) : cards.length > 0 ? (
           <div className="space-y-4">
