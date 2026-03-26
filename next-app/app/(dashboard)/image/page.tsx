@@ -1294,9 +1294,20 @@ export default function ImagePage() {
               </div>
             )}
 
-            {/* ── 공통: 추가 문구 + 추가 프롬프트 + 스타일 (전용 폼 모드) ── */}
-            {hasFormMode && (
-              <div className="space-y-3">
+            {/* 프롬프트 (자유 입력 모드 — 카테고리 폼 대신 표시) */}
+            {!hasFormMode && (<>
+            <div>
+              <label className="block text-[11px] font-semibold text-slate-500 mb-1.5">이미지 설명</label>
+              <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)}
+                placeholder="예: 임플란트 시술 과정 인포그래픽, 밝고 신뢰감 있는 치과 분위기..."
+                rows={4} className={`${inputCls} resize-none`} disabled={generating} />
+              <div className="text-right text-[10px] text-slate-400 mt-0.5">{prompt.length}자</div>
+            </div>
+            <PromptChat onApplyPrompt={(p) => setPrompt(p)} disabled={generating} />
+            </>)}
+
+            {/* ── 공통 영역 (OLD: 항상 표시) ── */}
+            <div className="space-y-3">
                 <div>
                   <label className="block text-[11px] font-semibold text-slate-500 mb-1">추가 문구 <span className="text-slate-400 font-normal">(선택 — 하단 표시)</span></label>
                   <textarea value={customMessage} onChange={e => setCustomMessage(e.target.value)} placeholder={'불편을 드려 죄송합니다.\n응급 시 ☎ 010-1234-5678'} rows={2} className={`${inputCls} resize-none`} />
@@ -1499,29 +1510,7 @@ export default function ImagePage() {
                   </div>
                 )}
 
-              </div>
-            )}
-
-            {/* 프롬프트 (전용 폼이 아닌 경우에만 표시) */}
-            {!hasFormMode && (<>
-            <div>
-              <label className="block text-[11px] font-semibold text-slate-500 mb-1.5">이미지 설명</label>
-              <textarea
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                placeholder="예: 임플란트 시술 과정 인포그래픽, 밝고 신뢰감 있는 치과 분위기..."
-                rows={4}
-                className={`${inputCls} resize-none`}
-                disabled={generating}
-              />
-              <div className="text-right text-[10px] text-slate-400 mt-0.5">
-                {prompt.length}자
-              </div>
             </div>
-
-            {/* AI 프롬프트 채팅 (OLD parity: PromptGenerator) */}
-            <PromptChat onApplyPrompt={(p) => setPrompt(p)} disabled={generating} />
-            </>)}
 
             {/* 상세 설정 (전화번호/진료시간/주소/브랜드컬러) */}
             <button type="button" onClick={() => setShowAdvanced(!showAdvanced)}
