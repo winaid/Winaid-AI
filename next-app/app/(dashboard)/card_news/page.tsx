@@ -78,9 +78,12 @@ export default function CardNewsPage() {
   // ── 이미지 생성 헬퍼 ──
   const generateCardImage = async (prompt: string, index: number, refImage?: string): Promise<string | null> => {
     try {
-      // 커스텀 스타일만 추가 (디자인 템플릿의 프레임/테두리 지시는 프롬프트에 이미 반영됨)
+      // 디자인 템플릿 블록: 프롬프트에 없으면 자동 추가
+      const tmpl = designTemplateId ? CARD_NEWS_DESIGN_TEMPLATES.find(t => t.id === designTemplateId) : undefined;
+      const needsTemplate = tmpl && !prompt.includes('[디자인 템플릿:');
+      const templateBlock = needsTemplate ? `\n[디자인 템플릿: ${tmpl.name}]\n${tmpl.stylePrompt}\n배경색: ${tmpl.colors.background}` : '';
       const customBlock = imageStyle === 'custom' && customImagePrompt ? `\n[사용자 지정 스타일]\n${customImagePrompt}` : '';
-      const fullPrompt = `${prompt}${customBlock}`.trim();
+      const fullPrompt = `${prompt}${templateBlock}${customBlock}`.trim();
 
       const res = await fetch('/api/image', {
         method: 'POST',
@@ -350,10 +353,15 @@ visual: (배경 비주얼 묘사 30자 이내)
   // ── 이미지 프롬프트 자동 연동 (텍스트 변경 시) ──
   useEffect(() => {
     if (editSubtitle || editMainTitle || editDescription) {
-      const newPrompt = `1:1 카드뉴스, ${editSubtitle ? `"${editSubtitle}"` : ''} ${editMainTitle ? `"${editMainTitle}"` : ''} ${editDescription ? `"${editDescription}"` : ''}, 밝고 친근한 분위기`.trim();
-      setEditImagePrompt(newPrompt);
+      const parts = [
+        `subtitle: "${editSubtitle || ''}"`,
+        `mainTitle: "${editMainTitle || ''}"`,
+        editDescription ? `description: "${editDescription}"` : '',
+        `비주얼: ${topic || '의료 건강'} 관련 밝고 친근한 분위기 일러스트`,
+      ].filter(Boolean);
+      setEditImagePrompt(parts.join('\n'));
     }
-  }, [editSubtitle, editMainTitle, editDescription]);
+  }, [editSubtitle, editMainTitle, editDescription, topic]);
 
   // ── 카드 재생성 모달 열기 ──
   const openCardRegenModal = useCallback((cardIndex: number) => {
@@ -377,8 +385,8 @@ visual: (배경 비주얼 묘사 30자 이내)
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          prompt: `다음 카드뉴스 슬라이드에 어울리는 이미지 프롬프트를 한글로 작성해주세요.\n부제: ${editSubtitle}\n제목: ${editMainTitle}\n설명: ${editDescription}\n\n1:1 카드뉴스 이미지 프롬프트만 출력하세요. 텍스트/글자 절대 금지.`,
-          systemInstruction: '이미지 생성용 프롬프트 작성 전문가. 한글로 시각적 장면만 묘사하세요.',
+          prompt: `다음 카드뉴스 슬라이드에 어울리는 이미지 프롬프트를 아래 형식으로 작성해주세요.\n부제: ${editSubtitle}\n제목: ${editMainTitle}\n설명: ${editDescription}\n\n반드시 아래 형식으로만 출력:\nsubtitle: "${editSubtitle}"\nmainTitle: "${editMainTitle}"\n${editDescription ? `description: "${editDescription}"\n` : ''}비주얼: (배경 일러스트/사진 묘사 30자 이내)`,
+          systemInstruction: '이미지 프롬프트 전문가. subtitle/mainTitle/비주얼 형식으로만 출력.',
           model: 'gemini-3.1-pro-preview',
           temperature: 0.7,
           maxOutputTokens: 500,
@@ -398,7 +406,7 @@ visual: (배경 비주얼 묘사 30자 이내)
     setCardRegenProgress(cardRegenRefImage ? '참고 이미지 스타일 분석 중...' : '편집된 프롬프트로 이미지 생성 중...');
 
     try {
-      const promptToUse = editImagePrompt || `1:1 카드뉴스, "${editSubtitle}" "${editMainTitle}" "${editDescription}", 밝고 친근한 분위기`;
+      const promptToUse = editImagePrompt || `subtitle: "${editSubtitle}"\nmainTitle: "${editMainTitle}"\n${editDescription ? `description: "${editDescription}"\n` : ''}비주얼: ${topic || '의료 건강'} 관련 밝고 친근한 분위기 일러스트`;
       const url = await generateCardImage(promptToUse, cardRegenIndex, cardRegenRefImage || undefined);
 
       setCards(prev => prev.map(c =>
