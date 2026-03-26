@@ -330,7 +330,13 @@ OUTPUT DIRECTION:
         body.brandColors || '',
         aspectInstruction,
         'Generate at high resolution. Sharp edges, crisp text, no blur, no compression artifacts.',
-        '⛔ NEVER render placeholder contact info like "02-000-0000", "www.hospital.com", "02-1234-5678", or any phone/URL/email that was not explicitly provided by the user. If no contact info was given, leave that area empty or omit it entirely.',
+        `⛔ ABSOLUTE TEXT RULES:
+- ONLY render Korean text that appears in "quotes" in the prompt above. Do NOT invent any Korean text.
+- NEVER render placeholder contact info (02-000-0000, www.hospital.com, etc.)
+- NEVER render garbled/random Korean (찬당쩡, 맘보행, 양모가능 = WRONG)
+- NEVER render fake operating hours, fake addresses, or fake info the user didn't provide
+- If no contact info was given, leave that area COMPLETELY EMPTY or omit it
+- Do NOT render instruction labels like "[MAIN TITLE]", "날짜:", "제목:"`,
       ].filter(Boolean).join('\n\n');
 
   // 멀티모달 parts 구성: 텍스트 + 참조 이미지들

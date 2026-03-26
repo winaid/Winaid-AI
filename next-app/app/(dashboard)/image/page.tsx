@@ -240,9 +240,25 @@ export default function ImagePage() {
   const [selectedCatTemplate, setSelectedCatTemplate] = useState<CategoryTemplate | null>(null);
 
   // OLD 우선순위: uploadedStyle > catTemplate > preset
-  // schedule 카테고리에서 calendarTheme 선택 시 스타일 프리셋 무시 (OLD parity: calendarThemeActive)
+  // schedule 카테고리에서 calendarTheme 선택 시 → 테마 전용 스타일 프롬프트 사용
+  const CALENDAR_THEME_AI_STYLE: Record<string, string> = {
+    autumn: `[CALENDAR THEME: Autumn Maple] Background: warm cream (#FFF8E7) with FALLING MAPLE LEAVES in orange/red/golden. Calendar in white rounded card with shadow. Warm brown header. Golden yellow pill badges. Cozy, warm, autumnal. Color: orange, brown, golden, cream.`,
+    korean_traditional: `[CALENDAR THEME: Korean Traditional] Background: beige parchment (#F5EDD5). CRANE silhouettes in gray. Mountain/landscape at bottom in ink-painting style. Serif typography. Navy calendar header. Deep red markers. Dignified, classical, refined. Color: beige, navy, deep red, gold.`,
+    winter: `[CALENDAR THEME: Winter / Deep Blue Frost] Background: deep navy gradient (#1A2A4A → #2C3E6B). SNOWFLAKES in blue-white, varying sizes. Pine tree silhouettes at bottom. Calendar in white card. Elegant winter typography. Serene, magical winter night. Color: deep navy, white, soft blue, silver.`,
+    cherry_blossom: `[CALENDAR THEME: Cherry Blossom] Background: soft pink gradient (#FFF0F5 → #FFE4EC). Large CHERRY BLOSSOM PETALS scattered. Falling petals effect. Pink calendar header. Elegant serif title in dark pink. Romantic, feminine, soft spring. Color: pink, white, dark rose, purple.`,
+    spring_kids: `[CALENDAR THEME: Charcoal Frame] Dark charcoal frame (#292524) enclosing white canvas. Bold white title on charcoal. Calendar inside white area. Closed days in FULL RED cells. Clean grid with stone borders. Professional, bold, high-contrast. Color: charcoal, white, red, stone.`,
+    medical_notebook: `[CALENDAR THEME: Modern Minimal] Clean white background. Large bold month number typography. Double-line dividers (thick+thin). Dot markers for closed, line markers for shortened. Monochrome minimalist. Typography-driven. Color: black, white, slate, red dot, amber line.`,
+    autumn_spring_note: `[CALENDAR THEME: Night Clinic] Dark header (#1c1917) with AMBER STRIPE BAND ("야간진료 화·목 ~21시"). Tuesday/Thursday columns highlighted yellow. Warm amber accents. Closed days in red pill badges. Color: charcoal, amber/gold, yellow, white, red.`,
+    autumn_holiday: `[CALENDAR THEME: SNS Bold] White background with CORAL LEFT BAR accent. Bold large typography. Rounded badge cells. Coral (#f97316) line divider. Closed days with orange border + orange pill badge. Modern SNS post style. Color: white, coral/orange, charcoal, warm gray.`,
+    hanok_roof: `[CALENDAR THEME: Gold Classic] Warm ivory background (#faf7f2). GOLD BAND top+bottom. Diamond decoration + serif typography. Dotted grid lines. Elegant serif numbers. Gold accents throughout. Luxurious, classical, premium. Color: ivory, gold, brown, deep red.`,
+    dark_green_clinic: `[CALENDAR THEME: Premium Green] Sage/mint background (#f0f7f2). Emerald gradient accent lines. Dark green (#2d6a4f) header. Left border markers for closed days. Clean medical aesthetic. Wellness/healing mood. Color: sage, dark green, emerald, white, red.`,
+    dark_blue_modern: `[CALENDAR THEME: Navy Modern] Pure white background. Navy (#1e3a5f) text only — no background color blocks. 2.5px navy divider lines. Left navy border for closed days. Clean slate grid. Business document style. Color: white, navy, slate, amber, red.`,
+    lavender_sparkle: `[CALENDAR THEME: Lavender Soft] Soft lavender gradient (#f3eff8 → #fefcff). SPARKLE stars in purple shades. Lavender gradient header band. Rounded pill day badges. Rounded cells. Playful, magical, feminine. Color: lavender, deep purple, violet, white, pink.`,
+  };
+
   const calendarThemeActive = selectedTemplate === 'schedule' && calendarTheme;
-  const activeStylePrompt = selectedUploadedStyle?.stylePrompt || selectedCatTemplate?.aiPrompt || (calendarThemeActive ? '' : selectedPreset.aiPrompt);
+  const calendarThemeStylePrompt = calendarThemeActive ? (CALENDAR_THEME_AI_STYLE[calendarTheme] || '') : '';
+  const activeStylePrompt = selectedUploadedStyle?.stylePrompt || selectedCatTemplate?.aiPrompt || calendarThemeStylePrompt || selectedPreset.aiPrompt;
   const activeStyleName = selectedUploadedStyle?.name || selectedCatTemplate?.name || (calendarThemeActive ? CALENDAR_THEME_OPTIONS.find(t => t.value === calendarTheme)?.label || calendarTheme : selectedPreset.name);
 
   // 현재 카테고리에 맞는 디자인 템플릿 목록 (OLD parity: greeting은 명절별 서브키)
