@@ -309,9 +309,51 @@ export async function crawlAndLearnHospitalStyle(
       { onConflict: 'hospital_name' },
     );
 
-    // 개별 글 저장
-    for (const post of allPosts) {
+    // 개별 글 저장 + 순위 체크
+    for (let pi = 0; pi < allPosts.length; pi++) {
+      const post = allPosts[pi];
       const blogId = post.url.match(/blog\.naver\.com\/([^/?#]+)/)?.[1] || '';
+      onProgress?.(`순위 체크 ${pi + 1}/${allPosts.length}...`);
+
+      // 순위 체크: 글 제목 맨 앞 키워드로 검색
+      let naverRank: number | null = null;
+      let naverRankKeyword = '';
+      if (post.title && blogId) {
+        try {
+          const cleanTitle = (post.title || '')
+            .replace(/&#39;/g, "'").replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"');
+          const firstWord = cleanTitle.split(/[\s,?!.·:]/)[0].replace(/['""\[\]()【】]/g, '').trim();
+          console.log(`[순위] 제목: "${post.title}" → 키워드: "${firstWord}" / blogId: ${blogId}`);
+          if (firstWord.length >= 2) {
+            naverRankKeyword = firstWord;
+            const rankRes = await fetch('/api/naver/search', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ query: firstWord, display: 30 }),
+            });
+            console.log(`[순위] API 응답: ${rankRes.status}`);
+            if (rankRes.ok) {
+              const rankData = (await rankRes.json()) as { items?: Array<{ link?: string }> };
+              const items = rankData.items || [];
+              console.log(`[순위] 검색 결과 ${items.length}건`);
+              const lowerBlogId = blogId.toLowerCase();
+              const postLogNo = post.url.match(/\/(\d{5,})$/)?.[1] || post.url.match(/logNo=(\d+)/)?.[1];
+              for (let ri = 0; ri < items.length; ri++) {
+                const link = items[ri].link || '';
+                if (!link.toLowerCase().includes(lowerBlogId)) continue;
+                if (postLogNo && (link.includes(`/${postLogNo}`) || link.includes(`logNo=${postLogNo}`))) {
+                  naverRank = ri + 1;
+                  console.log(`[순위] ✅ ${ri + 1}위 매칭!`);
+                  break;
+                }
+              }
+            }
+            await new Promise(r => setTimeout(r, 200));
+          }
+        } catch (e) { console.error('[순위] 체크 실패:', e); }
+      }
+      console.log(`[순위] 최종: "${naverRankKeyword}" → ${naverRank !== null ? naverRank + '위' : '순위외'}`);
+
       await (supabase.from('hospital_crawled_posts') as any).upsert(
         {
           hospital_name: hospitalName,
@@ -323,6 +365,8 @@ export async function crawlAndLearnHospitalStyle(
           summary: post.summary || post.content.slice(0, 200),
           thumbnail: post.thumbnail || null,
           crawled_at: new Date().toISOString(),
+          naver_rank: naverRank,
+          naver_rank_keyword: naverRankKeyword || null,
         },
         { onConflict: 'hospital_name,url' },
       );
