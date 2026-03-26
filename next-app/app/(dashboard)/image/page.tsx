@@ -384,9 +384,10 @@ export default function ImagePage() {
 
 [CRITICAL LAYOUT RULES]
 - 비율: 정사각형(1:1) 또는 4:5 세로형. 절대 세로로 길쭉하게 만들지 마세요.
-- 구조: 상단 20% 헤더(병원명+제목) → 중앙 55% 달력 그리드 → 하단 25% 진료시간+안내
+- 구조: 상단 헤더(병원명+제목) → 달력 그리드 → 하단(사용자가 입력한 안내 문구만)
 - 달력은 콤팩트하게! 7열 그리드, 셀 간격 최소화, 날짜 숫자는 14-18pt
 - 전체가 하나의 세련된 카드 안에 담겨야 합니다
+- ⛔ 사용자가 입력하지 않은 진료시간, 점심시간, 전화번호를 절대 넣지 마세요! 하단에 아무 정보도 입력되지 않았으면 하단을 비워두세요.
 
 [CALENDAR DATA]
 월: ${schYear}년 ${schMonth}월
@@ -734,7 +735,7 @@ FORBIDDEN: starburst, confetti, multiple fonts, <12pt text, clip-art, 3D metalli
 PRACTICAL: Must look like it could be posted TODAY on a real Korean hospital Instagram.`;
 
       const categoryGuides: Record<string, string> = {
-        schedule: 'hospital monthly schedule — clean grid layout, clear day headers (일월화수목금토), Sunday=red, Saturday=blue, closed days clearly marked, 점심시간 info if provided.',
+        schedule: 'hospital monthly schedule — clean grid layout, clear day headers (일월화수목금토), Sunday=red, Saturday=blue, closed days clearly marked. ONLY include text that appears in quotes in the prompt. Do NOT invent operating hours, lunch breaks, or phone numbers.',
         event: 'hospital promotion — eye-catching yet professional. Discount number must be largest element. Original price strikethrough + discounted price prominent. Period dates visible.',
         doctor: 'doctor introduction — professional portrait-style. Only verifiable credentials. No superlatives.',
         notice: 'hospital notice — clean, authoritative, easy to read. Centered card layout. Structured info rows.',
