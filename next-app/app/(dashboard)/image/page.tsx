@@ -688,12 +688,50 @@ export default function ImagePage() {
       : isPricingMode ? buildPricingPrompt()
       : prompt.trim();
 
-    // 스타일 프롬프트 추가 (OLD parity: uploadedStyle > preset)
+    // 스타일 프롬프트 추가 (OLD parity: DESIGN_SYSTEM_V2 + 카테고리 가이드 + strict/inspired)
     if (hasForm && activeStylePrompt) {
-      const modeLabel = templateAppMode === 'strict'
-        ? 'STRICTLY copy the exact visual style. Match layout, colors, typography, decorations exactly.'
-        : 'Use this as style inspiration. Keep the mood and color palette but interpret freely.';
-      effectivePrompt += `\n[STYLE] ${modeLabel}\n${activeStylePrompt}`;
+      const DESIGN_SYSTEM = `[DESIGN SYSTEM — Korean Medical SNS Standard]
+FORMAT: 4:5 vertical ratio recommended. Important content within center safe zone. Side margins 48px+.
+3-SECOND RULE: Core message must be comprehensible within 3 seconds at mobile phone distance.
+TYPOGRAPHY: Sans-serif only (Pretendard/Noto Sans KR style). Heading Bold 28-36pt, body Regular 14-16pt, caption 11-13pt. Sufficient line-height for Korean text.
+COLOR: max 3 colors per design (primary+accent+neutral). Medical trust palette: soft blue, navy, teal, mint, clean white. No neon.
+SURFACES: cards white radius 16px shadow subtle, badges rounded, dividers 1px subtle.
+KOREAN MEDICAL LAW: No superlatives (최고/유일/첫). No guarantees of treatment outcome.
+FORBIDDEN: starburst, confetti, multiple fonts, <12pt text, clip-art, 3D metallic text, handwritten style.
+PRACTICAL: Must look like it could be posted TODAY on a real Korean hospital Instagram.`;
+
+      const categoryGuides: Record<string, string> = {
+        schedule: 'hospital monthly schedule — clean grid layout, clear day headers (일월화수목금토), Sunday=red, Saturday=blue, closed days clearly marked, 점심시간 info if provided.',
+        event: 'hospital promotion — eye-catching yet professional. Discount number must be largest element. Original price strikethrough + discounted price prominent. Period dates visible.',
+        doctor: 'doctor introduction — professional portrait-style. Only verifiable credentials. No superlatives.',
+        notice: 'hospital notice — clean, authoritative, easy to read. Centered card layout. Structured info rows.',
+        greeting: 'holiday greeting — warm, heartfelt, culturally appropriate Korean design. Traditional motifs. Hospital branding subtle at bottom.',
+        hiring: 'job posting — premium Instagram recruiting post. Clean icons for benefits/requirements. Minimal: icons + text only.',
+        caution: 'patient care instructions — clean medical handout. Highly readable 16pt+. Numbered list with generous spacing. Calming colors.',
+        pricing: 'fee schedule — premium price list. Clean table/list layout. Treatment LEFT, price RIGHT. Bold prices in accent color.',
+      };
+      const catGuide = categoryGuides[selectedTemplate || ''] || '';
+
+      const strictBlock = templateAppMode === 'strict'
+        ? `[APPLICATION MODE: STRICT — EXACT REPRODUCTION]
+COPY the template design EXACTLY. Match these elements precisely:
+- EXACT color palette, gradient angles, and opacity values
+- EXACT layout structure, zone proportions (header/body/footer ratios)
+- EXACT typography hierarchy (size, weight, spacing, alignment)
+- EXACT decorative elements (lines, shapes, icons, borders, badges)
+- EXACT spacing rhythm, padding, margins, card radius
+- EXACT marker/badge style for special items (closed days, prices, etc.)
+DO NOT reinterpret, simplify, or "improve" any element. The output must be visually indistinguishable from the template reference.
+ONLY replace placeholder text with the user's actual content.`
+        : `[APPLICATION MODE: INSPIRED — PREMIUM REINTERPRETATION]
+Use the template as MOOD INSPIRATION, not a strict blueprint.
+MUST PRESERVE from template: overall color family, general mood/atmosphere, level of formality, information hierarchy pattern.
+FREE TO REINTERPRET: exact layout proportions, decorative element placement, typography choices, spacing details, card shapes.
+CRITICAL: The result must feel PREMIUM and SOPHISTICATED — like a top-tier Korean hospital's official post.
+Reference quality bar: 똑닥/미리캔버스 premium hospital templates.
+Add subtle professional touches: refined gradients, elegant typography, clean whitespace, polished surfaces.`;
+
+      effectivePrompt += `\n\n${DESIGN_SYSTEM}\n\n[CATEGORY: ${catGuide}]\n\n${strictBlock}\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n[DESIGN STYLE — Template Layout]\n${activeStylePrompt}`;
     }
 
     if (!effectivePrompt || generating) return;
