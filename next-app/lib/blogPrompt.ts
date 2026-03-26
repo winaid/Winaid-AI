@@ -179,7 +179,7 @@ export function buildBlogPrompt(req: GenerationRequest): {
     '- 마크다운 문법 금지: #, ##, ###, **, *, ``` 등 일체 금지.',
     '- 순수 HTML 태그만 사용합니다. (<h3>, <p>, <strong>, <em> 등)',
     '',
-    `🚨 [글자 수 규칙] 목표 글자 수를 반드시 지킵니다. 짧은 글은 짧게, 긴 글은 길게. 목표보다 2배 이상 쓰면 실패입니다.`,
+    `🚨 [글자 수 규칙 — 가장 중요!] 목표 글자 수(공백 포함)를 반드시 지킵니다. 1400자 목표면 1100~1700자 범위. 목표의 1.5배 이상 쓰면 절대 실패! 짧은 글은 짧게, 긴 글은 길게. 쓰다 보니 길어지는 것 금지 — 미리 분량을 계획하고 쓰세요.`,
   ].filter(Boolean).join('\n');
 
   const promptParts: string[] = [];
@@ -220,7 +220,7 @@ export function buildBlogPrompt(req: GenerationRequest): {
 
   promptParts.push(
     `- 이미지: ${targetImageCount}장`,
-    `- 🚨 목표 글자 수: ${targetLength}자 ~ ${targetLength + 200}자 (초과 금지! ${targetLength + 300}자 이상은 실패)`,
+    `- 🚨 목표 글자 수: 공백 포함 ${targetLength}자 내외 (공백 포함 기준! ${Math.round(targetLength * 0.8)}~${Math.round(targetLength * 1.2)}자 범위. ${Math.round(targetLength * 1.5)}자 이상 절대 금지!)`,
   );
 
   // ── 소제목 구조 규칙 (old 동일) ──
@@ -246,7 +246,7 @@ export function buildBlogPrompt(req: GenerationRequest): {
     '□ <h3> 소제목이 4개 미만이면 → 실패',
     '□ 소제목 아래 <p>가 2개 미만이면 → 실패',
     '□ 마무리 섹션이 없으면 → 실패',
-    `□ 전체 글자 수가 ${targetLength + 300}자를 넘으면 → 실패 (목표: ${targetLength}~${targetLength + 200}자)`,
+    `□ 전체 글자 수(공백 포함)가 ${Math.round(targetLength * 1.5)}자를 넘으면 → 실패 (목표: ${targetLength}자 내외)`,
   );
 
   // ── 키워드 규칙 ──
