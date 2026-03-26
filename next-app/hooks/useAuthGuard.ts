@@ -70,7 +70,8 @@ export function useAuthGuard(): AuthGuardResult {
     } finally {
       setUser(null);
       if (typeof window !== 'undefined') {
-        Object.keys(localStorage).forEach(key => {
+        const keys = Array.from(Object.keys(localStorage));
+        keys.forEach(key => {
           if (key.startsWith('sb-') || key.includes('supabase')) {
             localStorage.removeItem(key);
           }

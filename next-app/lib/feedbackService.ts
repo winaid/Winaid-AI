@@ -45,7 +45,9 @@ export async function addFeedback(
   content: string,
 ): Promise<{ success: boolean; feedback?: InternalFeedback; error?: string }> {
   if (!supabase) return { success: false, error: 'Supabase 미설정' };
+  if (!page || typeof page !== 'string' || !page.trim()) return { success: false, error: '페이지 정보가 필요합니다.' };
   if (!content.trim()) return { success: false, error: '내용을 입력하세요.' };
+  if (content.length > 10000) return { success: false, error: '피드백은 10,000자 이내로 작성해주세요.' };
 
   const { data, error } = await supabase
     .from('internal_feedbacks')
@@ -168,7 +170,12 @@ ${numbered.join('\n')}
     if (json.error) return { success: false, error: json.error };
     if (!json.text) return { success: false, error: 'AI 응답이 비어 있습니다.' };
 
-    const analysis = JSON.parse(json.text) as FeedbackAnalysis;
+    let analysis: FeedbackAnalysis;
+    try {
+      analysis = JSON.parse(json.text) as FeedbackAnalysis;
+    } catch {
+      return { success: false, error: 'AI 응답 JSON 파싱 실패' };
+    }
     return { success: true, analysis };
   } catch (err: unknown) {
     return { success: false, error: (err as Error).message || '분석 중 오류' };

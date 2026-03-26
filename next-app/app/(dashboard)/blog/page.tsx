@@ -815,7 +815,7 @@ ${newsContext ? '6. **뉴스 트렌드 1~2개 반드시 포함**: 위 뉴스 분
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!topic.trim()) return;
+    if (!topic.trim() || isGenerating) return;
 
     const request: GenerationRequest = {
       category,

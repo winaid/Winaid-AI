@@ -11,10 +11,15 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
   const query = searchParams.get('query');
-  const display = searchParams.get('display') || '10';
+  const rawDisplay = parseInt(searchParams.get('display') || '10', 10);
+  const display = Math.min(Math.max(isNaN(rawDisplay) ? 10 : rawDisplay, 1), 100);
 
   if (!query) {
     return NextResponse.json({ error: 'query parameter required' }, { status: 400 });
+  }
+
+  if (query.length > 200) {
+    return NextResponse.json({ error: 'query too long (max 200 chars)' }, { status: 400 });
   }
 
   const clientId = process.env.NAVER_CLIENT_ID;
@@ -30,13 +35,19 @@ export async function GET(request: NextRequest) {
   try {
     const naverUrl = `https://openapi.naver.com/v1/search/news.json?query=${encodeURIComponent(query)}&display=${display}&sort=date`;
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
     const response = await fetch(naverUrl, {
       method: 'GET',
       headers: {
         'X-Naver-Client-Id': clientId,
         'X-Naver-Client-Secret': clientSecret,
       },
+      signal: controller.signal,
     });
+
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -47,11 +58,17 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const data = await response.json();
+    let data;
+    try {
+      data = await response.json();
+    } catch {
+      return NextResponse.json({ error: 'Naver API 응답 파싱 실패' }, { status: 502 });
+    }
     return NextResponse.json(data);
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : 'unknown';
-    console.error('[NAVER_NEWS] 프록시 오류:', msg);
-    return NextResponse.json({ error: msg }, { status: 500 });
+    const error = err instanceof Error ? err : new Error('unknown');
+    console.error('[NAVER_NEWS] 프록시 오류:', error.message);
+    const message = error.name === 'AbortError' ? 'Naver API 요청 시간 초과' : 'Naver news request failed';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

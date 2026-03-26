@@ -36,7 +36,7 @@ export default function PressPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!topic.trim() || !doctorName.trim()) return;
+    if (!topic.trim() || !doctorName.trim() || isGenerating) return;
 
     setIsGenerating(true);
     setError(null);

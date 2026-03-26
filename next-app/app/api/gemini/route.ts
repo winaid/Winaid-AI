@@ -51,7 +51,12 @@ async function fetchGemini(
 
       if (response.ok) {
         keyIndex = (ki + 1) % keys.length;
-        const data = await response.json() as Record<string, unknown>;
+        let data: Record<string, unknown>;
+        try {
+          data = await response.json() as Record<string, unknown>;
+        } catch {
+          return { ok: false, status: 502, error: 'Invalid JSON from Gemini API' };
+        }
         return { ok: true, data };
       }
 
@@ -64,7 +69,8 @@ async function fetchGemini(
         continue;
       }
 
-      return { ok: false, status, error: `upstream ${status}`, details: errorText.substring(0, 500) };
+      const safeDetails = errorText.substring(0, 500).replace(/key=[A-Za-z0-9_-]+/g, 'key=***');
+      return { ok: false, status, error: `upstream ${status}`, details: safeDetails };
     } catch (err: unknown) {
       clearTimeout(timeoutId);
       const error = err as Error;
@@ -81,7 +87,10 @@ async function fetchGemini(
         await new Promise(r => setTimeout(r, 500));
         continue;
       }
-      return { ok: false, status: 502, error: error.message || 'fetch failed' };
+      const rawMsg = error.message || 'fetch failed';
+      // Strip any API key fragments from error messages
+      const safeMsg = rawMsg.replace(/key=[A-Za-z0-9_-]+/g, 'key=***');
+      return { ok: false, status: 502, error: safeMsg };
     }
   }
 
@@ -152,6 +161,16 @@ export async function POST(request: NextRequest) {
   if (!body.prompt) {
     return NextResponse.json({ error: 'prompt is required' }, { status: 400 });
   }
+
+  if (body.prompt.length > 100000) {
+    return NextResponse.json({ error: 'prompt too long (max 100000 chars)' }, { status: 400 });
+  }
+
+  // Clamp numeric inputs to safe ranges
+  if (body.temperature !== undefined) body.temperature = Math.min(Math.max(body.temperature, 0), 2);
+  if (body.topP !== undefined) body.topP = Math.min(Math.max(body.topP, 0), 1);
+  if (body.maxOutputTokens !== undefined) body.maxOutputTokens = Math.min(Math.max(body.maxOutputTokens, 1), 65536);
+  if (body.timeout !== undefined) body.timeout = Math.min(Math.max(body.timeout, 5000), 180000);
 
   const model = body.model || 'gemini-3.1-pro-preview';
   const systemText = body.systemInstruction || '';

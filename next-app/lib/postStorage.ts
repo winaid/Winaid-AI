@@ -45,11 +45,24 @@ function getGuestPosts(): SavedPost[] {
   } catch { return []; }
 }
 
-function setGuestPosts(posts: SavedPost[]): void {
-  if (typeof window === 'undefined') return;
+function setGuestPosts(posts: SavedPost[]): boolean {
+  if (typeof window === 'undefined') return false;
+  const trimmed = posts.slice(0, GUEST_MAX_POSTS);
   try {
-    localStorage.setItem(GUEST_POSTS_KEY, JSON.stringify(posts.slice(0, GUEST_MAX_POSTS)));
-  } catch { /* quota exceeded — silent */ }
+    localStorage.setItem(GUEST_POSTS_KEY, JSON.stringify(trimmed));
+    return true;
+  } catch (e) {
+    console.warn('[postStorage] localStorage write failed, attempting to free space:', e);
+    // Try removing old entries and retry once
+    try {
+      const reduced = trimmed.slice(0, Math.max(1, Math.floor(trimmed.length / 2)));
+      localStorage.setItem(GUEST_POSTS_KEY, JSON.stringify(reduced));
+      return true;
+    } catch (e2) {
+      console.warn('[postStorage] localStorage write failed after retry:', e2);
+      return false;
+    }
+  }
 }
 
 // ── Main API ──
@@ -145,10 +158,13 @@ export async function listPosts(
         }
 
         const { data, error } = await query;
-        if (!error && data) {
+        if (error) {
+          console.error('[postStorage] listPosts query error:', error.message);
+        } else if (data) {
           dbPosts = data as SavedPost[];
         }
-      } catch {
+      } catch (err) {
+        console.error('[postStorage] listPosts Supabase error:', err);
         // Supabase 에러 시 guest 데이터만 반환
       }
     }

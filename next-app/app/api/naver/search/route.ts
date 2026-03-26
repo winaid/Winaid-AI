@@ -9,11 +9,17 @@ import { NextRequest, NextResponse } from 'next/server';
 export async function POST(request: NextRequest) {
   try {
     const body = (await request.json()) as { query?: string; display?: number; type?: string };
-    const { query, display = 10, type = 'webkr' } = body;
+    const { query, display: rawDisplay = 10, type = 'webkr' } = body;
 
     if (!query) {
       return NextResponse.json({ error: '검색어를 입력해주세요.' }, { status: 400 });
     }
+
+    if (query.length > 200) {
+      return NextResponse.json({ error: '검색어가 너무 깁니다 (최대 200자).' }, { status: 400 });
+    }
+
+    const display = Math.min(Math.max(Math.floor(rawDisplay), 1), 100);
 
     const clientId = process.env.NAVER_CLIENT_ID?.trim();
     const clientSecret = process.env.NAVER_CLIENT_SECRET?.trim();
@@ -30,20 +36,34 @@ export async function POST(request: NextRequest) {
     const searchType = validTypes.includes(type) ? type : 'webkr';
     const searchUrl = `https://openapi.naver.com/v1/search/${searchType}.json?query=${encodeURIComponent(query)}&display=${display}&sort=sim`;
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
     const response = await fetch(searchUrl, {
       headers: {
         'X-Naver-Client-Id': clientId,
         'X-Naver-Client-Secret': clientSecret,
       },
+      signal: controller.signal,
     });
+
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       return NextResponse.json({ error: `네이버 API 오류: ${response.status}` }, { status: response.status });
     }
 
-    const result = await response.json();
+    let result;
+    try {
+      result = await response.json();
+    } catch {
+      return NextResponse.json({ error: '네이버 API 응답 파싱 실패' }, { status: 502 });
+    }
     return NextResponse.json(result);
   } catch (error) {
-    return NextResponse.json({ error: (error as Error).message }, { status: 500 });
+    const err = error as Error;
+    console.error('[NAVER_SEARCH] 프록시 오류:', err.message);
+    const message = err.name === 'AbortError' ? '네이버 API 요청 시간 초과' : '네이버 검색 요청 실패';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

@@ -3,7 +3,10 @@
  * 외부 의존성 없이 XSS 방지
  */
 
-const ALLOWED_TAGS = new Set([
+const MAX_INPUT_LENGTH = 512_000; // 500KB
+const MAX_ATTR_VALUE_LENGTH = 2000;
+
+const ALLOWED_TAGS: ReadonlySet<string> = new Set([
   'p', 'br', 'hr', 'div', 'span',
   'strong', 'b', 'em', 'i', 'u', 's', 'del', 'ins', 'mark', 'small', 'sub', 'sup',
   'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
@@ -16,7 +19,7 @@ const ALLOWED_TAGS = new Set([
   'abbr', 'cite', 'q', 'time', 'ruby', 'rt', 'rp',
 ]);
 
-const ALLOWED_ATTRS = new Set([
+const ALLOWED_ATTRS: ReadonlySet<string> = new Set([
   'class', 'id', 'title', 'alt', 'width', 'height',
   'colspan', 'rowspan', 'scope', 'headers',
   'href', 'src', 'target', 'rel',
@@ -43,6 +46,8 @@ function sanitizeAttributes(tag: string, attrsStr: string): string {
     if (attrName === 'formaction') continue;
     if (!ALLOWED_ATTRS.has(attrName)) continue;
 
+    if (attrValue.length > MAX_ATTR_VALUE_LENGTH) continue;
+
     if (attrName === 'href' || attrName === 'src') {
       const decodedValue = decodeURIComponent(attrValue).replace(/[\x00-\x1f]/g, '').trim();
       if (!SAFE_URL_RE.test(decodedValue)) continue;
@@ -66,6 +71,10 @@ function sanitizeAttributes(tag: string, attrsStr: string): string {
 
 export function sanitizeHtml(html: string): string {
   if (!html) return '';
+  if (html.length > MAX_INPUT_LENGTH) {
+    console.warn(`[sanitizeHtml] Input too large (${html.length} chars), truncating to ${MAX_INPUT_LENGTH}`);
+    html = html.slice(0, MAX_INPUT_LENGTH);
+  }
 
   let result = html
     .replace(/<script[\s>][\s\S]*?<\/script\s*>/gi, '')

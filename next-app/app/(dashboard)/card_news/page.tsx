@@ -129,7 +129,7 @@ export default function CardNewsPage() {
   // ── Step 1: 원고 생성 ──
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!topic.trim()) return;
+    if (!topic.trim() || isGenerating) return;
 
     const derivedWritingStyle: WritingStyle = audienceMode === '전문가용(신뢰/정보)' ? 'expert' : 'empathy';
     const request: CardNewsRequest = {
@@ -204,7 +204,7 @@ export default function CardNewsPage() {
 
   // ── Step 2: 프롬프트 생성 (원고 승인 후) ──
   const handleGeneratePrompts = async () => {
-    if (cards.length === 0) return;
+    if (cards.length === 0 || isGeneratingPrompts) return;
     setIsGeneratingPrompts(true);
     setProgress('이미지 프롬프트 생성 중...');
 
@@ -294,7 +294,7 @@ visual: (배경 비주얼 묘사)
 
   // ── Step 3: 이미지 생성 (프롬프트 승인 후) ──
   const handleGenerateImages = async () => {
-    if (cards.length === 0) return;
+    if (cards.length === 0 || isGeneratingImages) return;
     setIsGeneratingImages(true);
     setProgress(`이미지 생성 중... (0/${cards.length}장)`);
 
