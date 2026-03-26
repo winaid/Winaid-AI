@@ -25,6 +25,9 @@ export default function PressPage() {
   const [generatedHtml, setGeneratedHtml] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editHtml, setEditHtml] = useState('');
+  const [qualityScore, setQualityScore] = useState<{ aiSmell: number; issues: string[] } | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -107,6 +110,29 @@ export default function PressPage() {
       if (!html.includes('class="press-release-container"')) html = `<div class="press-release-container">${html}</div>`;
       const finalHtml = PRESS_CSS + html;
       setGeneratedHtml(finalHtml);
+
+      // 5.5) 품질 평가 (규칙 기반, OLD evaluateContentQuality 동등)
+      try {
+        const textOnly = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+        const issues: string[] = [];
+        let aiSmellScore = 100;
+        // AI 냄새 패턴 검사
+        const patterns = [
+          { re: /~(입니다|합니다|됩니다|습니다)[.!]?\s*~?(입니다|합니다|됩니다|습니다)/g, msg: '같은 어미 연속 반복', penalty: 10 },
+          { re: /중요합니다|핵심입니다|기억하세요|잊지 마세요/g, msg: '단정형/명령형 표현', penalty: 5 },
+          { re: /방문하세요|내원하세요|예약하세요|상담하세요/g, msg: '행동 유도 명령형 (의료광고법 주의)', penalty: 15 },
+          { re: /완치|100%|최고의|유일한|특효|보장/g, msg: '의료광고법 위반 가능 표현', penalty: 20 },
+        ];
+        for (const p of patterns) {
+          const matches = textOnly.match(p.re);
+          if (matches && matches.length > 0) {
+            issues.push(`${p.msg} (${matches.length}건)`);
+            aiSmellScore -= p.penalty * matches.length;
+          }
+        }
+        if (textOnly.length < 500) { issues.push('본문이 너무 짧음 (500자 미만)'); aiSmellScore -= 10; }
+        setQualityScore({ aiSmell: Math.max(0, Math.min(100, aiSmellScore)), issues });
+      } catch { setQualityScore(null); }
 
       // 6) DB 저장
       try {
@@ -227,17 +253,44 @@ export default function PressPage() {
           <ErrorPanel error={error} onDismiss={() => setError(null)} />
         ) : generatedHtml ? (
           <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+            {/* 상단 바 */}
             <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-100 bg-slate-50/80">
               <div className="flex items-center gap-2">
                 <span className="text-xs font-bold text-amber-600">🗞️ 보도자료</span>
                 {saveStatus && <span className={`text-[10px] px-2 py-0.5 rounded-full ${saveStatus.includes('완료') ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-500'}`}>{saveStatus}</span>}
               </div>
               <div className="flex items-center gap-2">
+                <button onClick={() => { if (isEditing) { setGeneratedHtml(PRESS_CSS + editHtml); setIsEditing(false); } else { const raw = generatedHtml.replace(PRESS_CSS, ''); setEditHtml(raw); setIsEditing(true); } }}
+                  className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all ${isEditing ? 'bg-violet-600 text-white' : 'text-slate-500 hover:text-slate-700 bg-white border border-slate-200 hover:bg-slate-50'}`}>
+                  {isEditing ? '수정 완료' : '편집'}
+                </button>
                 <button onClick={handleCopy} className="px-3 py-1.5 text-xs font-medium text-slate-500 hover:text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-all">복사</button>
                 <button onClick={handleDownload} className="px-3 py-1.5 text-xs font-medium text-white bg-amber-600 hover:bg-amber-700 rounded-lg transition-all">HTML 다운로드</button>
               </div>
             </div>
-            <div className="p-6" dangerouslySetInnerHTML={{ __html: generatedHtml }} />
+
+            {/* 품질 평가 */}
+            {qualityScore && (
+              <div className="px-4 py-2.5 border-b border-slate-100 bg-slate-50/40">
+                <div className="flex items-center gap-3 flex-wrap">
+                  <span className={`text-[11px] px-2 py-0.5 rounded-full font-bold ${qualityScore.aiSmell >= 80 ? 'bg-green-50 text-green-700' : qualityScore.aiSmell >= 60 ? 'bg-orange-50 text-orange-700' : 'bg-red-50 text-red-700'}`}>
+                    품질 {qualityScore.aiSmell}점
+                  </span>
+                  {qualityScore.issues.length === 0 && <span className="text-[10px] text-green-600">이슈 없음</span>}
+                  {qualityScore.issues.map((issue, i) => (
+                    <span key={i} className="text-[10px] text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded">{issue}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 본문 — 편집/보기 */}
+            {isEditing ? (
+              <textarea value={editHtml} onChange={e => setEditHtml(e.target.value)}
+                className="w-full min-h-[600px] p-6 text-sm font-mono text-slate-700 border-none outline-none resize-none" />
+            ) : (
+              <div className="p-6" dangerouslySetInnerHTML={{ __html: generatedHtml }} />
+            )}
           </div>
         ) : (
           <div className="rounded-2xl border border-slate-200 bg-white shadow-sm flex-1 min-h-[520px] flex flex-col items-center justify-center px-12 py-16">
