@@ -565,12 +565,22 @@ ${sliced}
     }),
   });
 
-  if (!res.ok) throw new Error('채점 API 호출 실패');
+  if (!res.ok) {
+    const errBody = await res.text().catch(() => '');
+    throw new Error(`채점 API 호출 실패 (${res.status}): ${errBody.slice(0, 200)}`);
+  }
 
-  const data = (await res.json()) as { text?: string };
+  const data = (await res.json()) as { text?: string; error?: string };
+  if (data.error) {
+    throw new Error(`채점 API 오류: ${data.error}`);
+  }
+  if (!data.text) {
+    throw new Error('채점 API 응답에 text 없음');
+  }
+
   let parsed: Record<string, unknown>;
   try {
-    let text = data.text || '';
+    let text = data.text;
     // 1) ```json ... ``` 블록 추출
     const jsonBlock = text.match(/```(?:json)?\s*([\s\S]*?)```/);
     if (jsonBlock) text = jsonBlock[1];
@@ -581,15 +591,15 @@ ${sliced}
   } catch {
     // 최후 시도: 응답에서 score 키가 있는 부분만 추출
     try {
-      const raw = data.text || '';
-      const emergency = raw.match(/\{[^{}]*"score_typo"[^{}]*\}/);
+      const emergency = data.text.match(/\{[^{}]*"score_typo"[^{}]*\}/);
       if (emergency) {
         parsed = JSON.parse(emergency[0]);
       } else {
         throw new Error('no json');
       }
     } catch {
-      throw new Error('채점 결과 파싱 실패');
+      console.error('[채점 파싱 실패] 원본 응답:', data.text.slice(0, 500));
+      throw new Error(`채점 결과 파싱 실패 — 응답: ${data.text.slice(0, 150)}`);
     }
   }
 
