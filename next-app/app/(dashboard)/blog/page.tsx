@@ -11,6 +11,7 @@ import { getSessionSafe, supabase } from '../../../lib/supabase';
 import { getHospitalStylePrompt } from '../../../lib/styleService';
 import { ErrorPanel, ResultPanel, type ScoreBarData } from '../../../components/GenerationResult';
 import WritingStyleLearner, { getStyleById, getStylePromptForGeneration } from '../../../components/WritingStyleLearner';
+import ContentAnalysisPanel from '../../../components/ContentAnalysisPanel';
 import type { BlogSection } from '../../../lib/types';
 import { parseBlogSections, replaceSectionHtml } from '../../../lib/blogSectionParser';
 import { downloadWord, downloadPDF } from '../../../lib/blogExport';
@@ -2401,7 +2402,8 @@ ${generatedContent.substring(0, 2000)}
           );
         })() : error ? (
           <ErrorPanel error={error} onDismiss={() => setError(null)} />
-        ) : generatedContent ? (
+        ) : generatedContent ? (<>
+          <ContentAnalysisPanel html={generatedContent} keyword={topic?.split(',')[0]?.trim()} />
           <ResultPanel
             content={generatedContent}
             saveStatus={saveStatus}
@@ -2417,7 +2419,7 @@ ${generatedContent.substring(0, 2000)}
             onImageRegenerate={handleImageClick}
             regeneratingImage={regeneratingImage}
           />
-        ) : (
+        </>) : (
           /* EmptyState */
           <div className="rounded-2xl border border-slate-200 bg-white shadow-[0_2px_16px_rgba(0,0,0,0.06)] flex-1 min-h-[520px] overflow-hidden flex flex-col">
             <div className="flex items-center gap-1 px-4 py-2.5 border-b border-slate-100 bg-slate-50/80">

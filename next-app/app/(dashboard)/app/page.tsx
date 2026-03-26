@@ -1,16 +1,19 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuthGuard } from '../../../hooks/useAuthGuard';
 import InternalFeedback from '../../../components/InternalFeedback';
+import UserManual from '../../../components/UserManual';
 
 type ContentTab = 'blog' | 'card_news' | 'press' | 'refine' | 'image' | 'history';
 
 export default function DashboardPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user, userName } = useAuthGuard();
   const [quickInput, setQuickInput] = useState('');
+  const showGuide = searchParams.get('guide') === '1';
 
   useEffect(() => {
     if (window.location.hash === '#feedback') {
@@ -27,6 +30,8 @@ export default function DashboardPage() {
       router.push(`/blog?topic=${encodeURIComponent(quickInput.trim())}`);
     }
   };
+
+  if (showGuide) return <UserManual onClose={() => router.push('/app')} />;
 
   return (
     <div className="min-h-full flex flex-col items-center px-6 pt-16 pb-20 bg-[#f7f7f8]">
