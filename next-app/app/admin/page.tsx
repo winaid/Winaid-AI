@@ -1819,11 +1819,25 @@ export default function AdminPage() {
                                                                   <span className="text-emerald-700 font-medium">→ &quot;{issue.replacement[0]}&quot;</span>
                                                                 )}
                                                               </div>
-                                                              {issue.law_article && (
-                                                                <div className="mt-1.5 px-2 py-1 bg-red-50 border border-red-200 rounded text-[10px] font-bold text-red-700">
-                                                                  📋 {issue.law_article}
-                                                                </div>
-                                                              )}
+                                                              {issue.law_article && (() => {
+                                                                const lawDesc: Record<string, string> = {
+                                                                  '제56조1항': '치료 효과를 보장·단정하는 내용의 광고 금지',
+                                                                  '제56조2항': '거짓·과장 의료광고 금지',
+                                                                  '제56조2항1호': '환자를 유인·속이는 행위, 최고·유일 등 과대 표현 금지',
+                                                                  '제56조2항2호': '다른 의료기관을 비방하거나 비교하는 광고 금지',
+                                                                  '제56조2항3호': '신문·방송 등에 의한 기사 형태의 광고 금지, 환자 체험기 활용 금지',
+                                                                  '제56조2항4호': '뉴스·방송 등을 이용한 광고 금지',
+                                                                  '제56조2항5호': '의학적으로 인정되지 않는 치료 효과의 광고 금지, 안전성 미입증 주장 금지',
+                                                                  '제56조2항6호': '객관적으로 인정되지 않거나 과장된 내용의 광고 금지',
+                                                                };
+                                                                const desc = lawDesc[issue.law_article] || lawDesc[issue.law_article.replace(/(\d)항(\d)/, '$1항$2호')] || '';
+                                                                return (
+                                                                  <div className="mt-1.5 px-2 py-1.5 bg-red-50 border border-red-200 rounded text-[10px]">
+                                                                    <span className="font-bold text-red-700">📋 의료법 {issue.law_article}</span>
+                                                                    {desc && <span className="text-red-600 ml-1">— {desc}</span>}
+                                                                  </div>
+                                                                );
+                                                              })()}
                                                               {issue.context && (
                                                                 <p className="mt-1 text-[10px] text-slate-400 italic pl-1 border-l-2 border-red-200">{issue.context}</p>
                                                               )}
