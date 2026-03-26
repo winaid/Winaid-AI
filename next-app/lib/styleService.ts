@@ -871,7 +871,7 @@ export async function crawlAndScoreAllHospitals(
       if (posts.length === 0) continue;
       totalPostsForHospital += posts.length;
 
-      // 채점 + DB 저장
+      // 채점 + 블로그탭 순위 체크 + DB 저장
       for (let pi = 0; pi < posts.length; pi++) {
         const post = posts[pi];
         allContents.push(post.content);
@@ -879,6 +879,43 @@ export async function crawlAndScoreAllHospitals(
         try {
           const score = await scoreCrawledPost(post.content);
           const blogId = post.url.match(/blog\.naver\.com\/([^/?#]+)/)?.[1] || '';
+
+          // 블로그탭 순위 체크: 글 제목에서 핵심 키워드 추출 → 네이버 블로그 검색
+          let naverRank: number | null = null;
+          let naverRankKeyword = '';
+          if (post.title && blogId) {
+            try {
+              // 제목에서 검색 키워드 추출 (괄호/특수문자 제거, 앞 30자)
+              const cleanTitle = (post.title || '')
+                .replace(/&#39;/g, "'").replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"')
+                .replace(/\[.*?\]|\(.*?\)|【.*?】/g, '').trim();
+              const keyword = cleanTitle.length > 30 ? cleanTitle.slice(0, 30) : cleanTitle;
+              if (keyword.length >= 2) {
+                naverRankKeyword = keyword;
+                onProgress?.(`${name}${urlLabel} 순위 체크 "${keyword.slice(0, 15)}..."`, index, total);
+                // 네이버 블로그 검색 API로 순위 확인
+                const rankRes = await fetch('/api/naver/search', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ query: keyword, display: 30 }),
+                });
+                if (rankRes.ok) {
+                  const rankData = (await rankRes.json()) as { items?: Array<{ link?: string }> };
+                  const items = rankData.items || [];
+                  const lowerBlogId = blogId.toLowerCase();
+                  for (let ri = 0; ri < items.length; ri++) {
+                    const link = items[ri].link || '';
+                    if (link.toLowerCase().includes(`blog.naver.com/${lowerBlogId}`)) {
+                      naverRank = ri + 1;
+                      break;
+                    }
+                  }
+                }
+                await new Promise(r => setTimeout(r, 200)); // rate limit
+              }
+            } catch { /* 순위 체크 실패는 무시 */ }
+          }
+
           if (supabase) {
             await (supabase.from('hospital_crawled_posts') as any).upsert(
               {
@@ -900,6 +937,8 @@ export async function crawlAndScoreAllHospitals(
                 law_issues: score.law_issues,
                 seo_issues: score.seo_issues,
                 scored_at: new Date().toISOString(),
+                naver_rank: naverRank,
+                naver_rank_keyword: naverRankKeyword || null,
               },
               { onConflict: 'hospital_name,url' },
             );

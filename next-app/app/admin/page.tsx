@@ -1573,52 +1573,7 @@ export default function AdminPage() {
                           <p className="mt-2 text-xs text-green-600 font-medium">학습 완료!</p>
                         )}
 
-                        {/* 노출 순위 체크 */}
-                        {hasAnyUrl && (
-                          <div className="mt-3 bg-blue-50 border border-blue-100 rounded-xl p-3">
-                            <div className="flex items-center justify-between mb-2">
-                              <p className="text-[11px] font-bold text-blue-700">네이버 노출 순위</p>
-                              <button
-                                onClick={() => handleAutoRankCheck(baseName, urls, h.address)}
-                                disabled={rankResults[baseName]?.checking}
-                                className="px-2 py-1 text-[10px] font-bold bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-40"
-                              >
-                                {rankResults[baseName]?.checking ? '체크 중...' : '순위 체크'}
-                              </button>
-                            </div>
-                            {/* 수동 키워드 추가 */}
-                            <div className="flex gap-1.5 mb-2">
-                              <input
-                                type="text"
-                                value={rankCheckKeyword[baseName] || ''}
-                                onChange={e => setRankCheckKeyword(prev => ({ ...prev, [baseName]: e.target.value }))}
-                                onKeyDown={e => { if (e.key === 'Enter') handleAutoRankCheck(baseName, urls, h.address); }}
-                                placeholder="추가 키워드 (선택)"
-                                className="flex-1 px-2.5 py-1 text-[11px] border border-blue-200 rounded-lg focus:outline-none focus:border-blue-400 bg-white"
-                              />
-                            </div>
-                            {/* 결과 표시 */}
-                            {rankResults[baseName]?.keywords && rankResults[baseName].keywords.length > 0 && (
-                              <div className="space-y-1">
-                                {rankResults[baseName].keywords.map((r, idx) => (
-                                  <div key={idx} className="flex items-center gap-2 text-[11px]">
-                                    {r.rank != null ? (
-                                      <span className={`px-1.5 py-0.5 rounded font-bold min-w-[36px] text-center ${r.rank <= 5 ? 'bg-green-100 text-green-700' : r.rank <= 10 ? 'bg-orange-100 text-orange-700' : 'bg-red-100 text-red-600'}`}>
-                                        {r.rank}위
-                                      </span>
-                                    ) : (
-                                      <span className="px-1.5 py-0.5 rounded font-bold min-w-[36px] text-center bg-slate-100 text-slate-400">-</span>
-                                    )}
-                                    <span className="text-slate-600">{r.keyword}</span>
-                                  </div>
-                                ))}
-                                <p className="text-[9px] text-slate-400 mt-1">
-                                  노출: {rankResults[baseName].keywords.filter(r => r.rank != null).length}개 / 총 {rankResults[baseName].keywords.length}개 키워드
-                                </p>
-                              </div>
-                            )}
-                          </div>
-                        )}
+                        {/* 노출 순위: 수집된 글 각각에 순위 표시로 대체 (수동 체크 제거) */}
 
                         {/* 학습된 스타일 프로필 요약 */}
                         {profile?.style_profile && (() => {
@@ -1748,6 +1703,14 @@ export default function AdminPage() {
                                                   className="w-full flex items-start gap-2 px-3 py-2 text-left hover:bg-slate-50 transition-colors"
                                                 >
                                                   <span className="text-[11px] font-bold text-slate-400 mt-0.5 shrink-0">#{i + 1}</span>
+                                                  {/* 네이버 블로그탭 순위 */}
+                                                  {post.naver_rank != null ? (
+                                                    <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold shrink-0 ${post.naver_rank <= 3 ? 'bg-green-100 text-green-700' : post.naver_rank <= 10 ? 'bg-blue-100 text-blue-700' : post.naver_rank <= 20 ? 'bg-orange-100 text-orange-700' : 'bg-slate-100 text-slate-500'}`}>
+                                                      {post.naver_rank}위
+                                                    </span>
+                                                  ) : post.naver_rank_keyword ? (
+                                                    <span className="text-[10px] px-1.5 py-0.5 rounded font-bold shrink-0 bg-slate-100 text-slate-400">순위외</span>
+                                                  ) : null}
                                                   <div className="flex-1 min-w-0">
                                                     <div className="flex items-center gap-1.5 flex-wrap mb-0.5">
                                                       {hasScore ? (
