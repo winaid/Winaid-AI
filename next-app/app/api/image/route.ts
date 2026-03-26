@@ -177,6 +177,7 @@ function buildCardStyleBlock(imageStyle: string): string {
 function buildCardNewsPromptFull(body: ImageRequestBody): string {
   const style = body.imageStyle || 'illustration';
   const styleBlock = buildCardStyleBlock(style);
+  const hasRefImage = !!body.referenceImage;
 
   // 텍스트 필드 파싱
   const parseField = (text: string, key: string): string => {
@@ -199,10 +200,24 @@ function buildCardNewsPromptFull(body: ImageRequestBody): string {
   const tmplMatch = body.prompt.match(/\[디자인 템플릿:[^\]]*\][\s\S]*$/m);
   const templateBlock = tmplMatch?.[0] || '';
 
+  // 참조 이미지 스타일 복제 지시
+  const refImageRule = hasRefImage ? `
+🔒 [STYLE CONSISTENCY — CRITICAL]
+A reference image is attached. You MUST replicate its exact style:
+- SAME background color, gradient direction, and color palette
+- SAME layout structure (text position: top/center/bottom)
+- SAME illustration style (3D render / flat / watercolor / photo)
+- SAME decorative elements (flowers, icons, shapes) in similar positions
+- SAME text styling (font weight, color, size ratio between title/subtitle)
+- SAME overall composition and whitespace ratio
+- ONLY change the text content and specific illustration subject
+- The card must look like it belongs to the SAME series as the reference` : '';
+
   const hasText = subtitle || mainTitle;
 
   if (hasText) {
     return `${CARD_NEWS_PERSONA}
+${refImageRule}
 
 🚨 RENDER THIS EXACT KOREAN TEXT IN THE IMAGE:
 MAIN TITLE (big, bold, center): "${mainTitle}"
@@ -221,6 +236,7 @@ ${templateBlock}
   }
 
   return `${CARD_NEWS_PERSONA}
+${refImageRule}
 
 1:1 square social media card image.
 ${CARD_FRAME_RULE}
