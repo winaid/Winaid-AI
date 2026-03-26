@@ -880,40 +880,48 @@ export async function crawlAndScoreAllHospitals(
           const score = await scoreCrawledPost(post.content);
           const blogId = post.url.match(/blog\.naver\.com\/([^/?#]+)/)?.[1] || '';
 
-          // 블로그탭 순위 체크: 글 제목에서 핵심 키워드 추출 → 네이버 블로그 검색
+          // 순위 체크: 글 제목 맨 앞 키워드로 검색 → 그 글이 몇 위인지
           let naverRank: number | null = null;
           let naverRankKeyword = '';
           if (post.title && blogId) {
             try {
-              // 제목에서 검색 키워드 추출 (괄호/특수문자 제거, 앞 30자)
+              // 제목 맨 앞 키워드 추출 (예: "배방어린이치과 내원 전..." → "배방어린이치과")
               const cleanTitle = (post.title || '')
-                .replace(/&#39;/g, "'").replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"')
-                .replace(/\[.*?\]|\(.*?\)|【.*?】/g, '').trim();
-              const keyword = cleanTitle.length > 30 ? cleanTitle.slice(0, 30) : cleanTitle;
-              if (keyword.length >= 2) {
-                naverRankKeyword = keyword;
-                onProgress?.(`${name}${urlLabel} 순위 체크 "${keyword.slice(0, 15)}..."`, index, total);
-                // 네이버 블로그 검색 API로 순위 확인
+                .replace(/&#39;/g, "'").replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"');
+              const firstWord = cleanTitle.split(/[\s,?!.·:]/)[0].replace(/['""\[\]()【】]/g, '').trim();
+              if (firstWord.length >= 2) {
+                naverRankKeyword = firstWord;
+                onProgress?.(`${name}${urlLabel} 순위 체크 "${firstWord}"`, index, total);
                 const rankRes = await fetch('/api/naver/search', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ query: keyword, display: 30 }),
+                  body: JSON.stringify({ query: firstWord, display: 30 }),
                 });
                 if (rankRes.ok) {
                   const rankData = (await rankRes.json()) as { items?: Array<{ link?: string }> };
                   const items = rankData.items || [];
                   const lowerBlogId = blogId.toLowerCase();
+                  const postLogNo = post.url.match(/\/(\d+)$/)?.[1];
                   for (let ri = 0; ri < items.length; ri++) {
                     const link = items[ri].link || '';
-                    if (link.toLowerCase().includes(`blog.naver.com/${lowerBlogId}`)) {
+                    if (postLogNo && link.toLowerCase().includes(lowerBlogId) && link.includes(postLogNo)) {
                       naverRank = ri + 1;
                       break;
                     }
                   }
+                  if (naverRank === null) {
+                    for (let ri = 0; ri < items.length; ri++) {
+                      const link = items[ri].link || '';
+                      if (link.toLowerCase().includes(`blog.naver.com/${lowerBlogId}`)) {
+                        naverRank = ri + 1;
+                        break;
+                      }
+                    }
+                  }
                 }
-                await new Promise(r => setTimeout(r, 200)); // rate limit
+                await new Promise(r => setTimeout(r, 200));
               }
-            } catch { /* 순위 체크 실패는 무시 */ }
+            } catch { /* 순위 체크 실패 무시 */ }
           }
 
           if (supabase) {
