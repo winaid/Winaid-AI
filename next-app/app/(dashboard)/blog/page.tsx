@@ -149,6 +149,7 @@ function BlogForm() {
   const [selectedImgIndex, setSelectedImgIndex] = useState(0);
   const [selectedImgSrc, setSelectedImgSrc] = useState('');
   const [regenPrompt, setRegenPrompt] = useState('');
+  const [isRecommendingPrompt, setIsRecommendingPrompt] = useState(false);
   const [scores, setScores] = useState<ScoreBarData | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
@@ -1575,6 +1576,25 @@ JSON 형식으로 응답해주세요.`;
     a.click();
   }, []);
 
+  // ── AI 프롬프트 추천 (이미지 재생성 모달) ──
+  const handleRecommendPrompt = useCallback(async () => {
+    if (!generatedContent || isRecommendingPrompt) return;
+    setIsRecommendingPrompt(true);
+    try {
+      const textOnly = generatedContent.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 2000);
+      const res = await fetch('/api/gemini', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: `아래 병원 블로그 글의 ${selectedImgIndex}번째 이미지에 어울리는 프롬프트를 한국어로 1개만 작성해주세요. 프롬프트만 출력하세요.\n\n글 내용:\n${textOnly}`,
+          model: 'gemini-3.1-flash-lite-preview', temperature: 0.7, maxOutputTokens: 300,
+        }),
+      });
+      const data = await res.json() as { text?: string };
+      if (data.text) setRegenPrompt(data.text.trim());
+    } catch { /* 추천 실패 무시 */ }
+    finally { setIsRecommendingPrompt(false); }
+  }, [generatedContent, selectedImgIndex, isRecommendingPrompt]);
+
   // ── 이미지 재생성 실행 (모달에서 호출) ──
   const handleImageRegenerateSubmit = useCallback(async () => {
     const imageIndex = selectedImgIndex;
@@ -2488,6 +2508,8 @@ ${generatedContent.substring(0, 2000)}
         setPrompt={setRegenPrompt}
         isRegenerating={regeneratingImage !== null}
         onSubmit={handleImageRegenerateSubmit}
+        isRecommending={isRecommendingPrompt}
+        onRecommend={handleRecommendPrompt}
       />
     </div>
   );
