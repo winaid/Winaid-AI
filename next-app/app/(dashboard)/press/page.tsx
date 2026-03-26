@@ -17,6 +17,11 @@ export default function PressPage() {
   const [doctorTitle, setDoctorTitle] = useState('원장');
   const [pressType, setPressType] = useState<PressType>('achievement');
   const [textLength, setTextLength] = useState(1200);
+  const TEXT_LENGTH_OPTIONS = [
+    { value: 800, label: '짧은 기사', desc: '800자 · 단신/속보형' },
+    { value: 1200, label: '중간 기사', desc: '1,200자 · 일반 보도' },
+    { value: 1800, label: '긴 기사', desc: '1,800자 · 심층 보도' },
+  ];
   const [category, setCategory] = useState('치과');
   const [hospitalWebsite, setHospitalWebsite] = useState('');
 
@@ -228,9 +233,16 @@ export default function PressPage() {
 
           {/* 글자 수 */}
           <div>
-            <label className={labelCls}>글자 수: {textLength.toLocaleString()}자</label>
-            <input type="range" min={800} max={2000} step={200} value={textLength} onChange={e => setTextLength(Number(e.target.value))} className="w-full accent-amber-600" />
-            <div className="flex justify-between text-[10px] text-slate-400 mt-0.5"><span>800자</span><span>2,000자</span></div>
+            <label className={labelCls}>기사 길이</label>
+            <div className="grid grid-cols-3 gap-1.5">
+              {TEXT_LENGTH_OPTIONS.map(opt => (
+                <button key={opt.value} type="button" onClick={() => setTextLength(opt.value)}
+                  className={`py-2.5 px-2 rounded-xl text-center transition-all border ${textLength === opt.value ? 'bg-amber-50 border-amber-300 ring-2 ring-amber-200 shadow-sm' : 'bg-white border-slate-200 hover:border-slate-300'}`}>
+                  <div className={`text-xs font-bold ${textLength === opt.value ? 'text-amber-700' : 'text-slate-700'}`}>{opt.label}</div>
+                  <div className="text-[10px] text-slate-400">{opt.desc}</div>
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* 생성 버튼 */}
