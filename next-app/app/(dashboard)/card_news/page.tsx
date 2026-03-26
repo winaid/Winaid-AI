@@ -253,29 +253,23 @@ visual: (배경 비주얼 묘사 30자 이내)
 
       // 파싱: ---CARD N--- 구분
       const promptBlocks = data.text.split(/---CARD\s*\d+---/i).filter(b => b.trim());
+      // 디자인 템플릿 블록 (API route의 buildCardNewsPromptFull이 파싱)
+      const tmplBlock = tmpl ? `\n[디자인 템플릿: ${tmpl.name}]\n${tmpl.stylePrompt}\n배경색: ${tmpl.colors.background}` : '';
+
       const updatedCards = cards.map((card, idx) => {
         const block = promptBlocks[idx] || '';
-        const sub = block.match(/subtitle:\s*(.+)/i)?.[1]?.trim() || card.role;
-        const main = block.match(/mainTitle:\s*(.+)/i)?.[1]?.trim() || card.title;
-        const desc = block.match(/description:\s*(.+)/i)?.[1]?.trim() || '';
-        const visual = block.match(/visual:\s*(.+)/i)?.[1]?.trim() || `${topic} 관련 의료 일러스트`;
+        const sub = block.match(/subtitle:\s*(.+)/i)?.[1]?.trim().replace(/^["']|["']$/g, '') || card.role;
+        const main = block.match(/mainTitle:\s*(.+)/i)?.[1]?.trim().replace(/^["']|["']$/g, '') || card.title;
+        const desc = block.match(/description:\s*(.+)/i)?.[1]?.trim().replace(/^["']|["']$/g, '') || '';
+        const visual = block.match(/visual:\s*(.+)/i)?.[1]?.trim().replace(/^["']|["']$/g, '') || `${topic} 관련 의료 일러스트`;
 
-        // 이미지 프롬프트 조립: 텍스트 + 비주얼 분리
+        // API route의 buildCardNewsPromptFull 파서가 인식하는 형식으로 조립
         const imagePrompt = [
-          `[카드뉴스 이미지 — 텍스트 포함]`,
-          `이미지에 반드시 표시할 한글 텍스트:`,
-          `- 상단 작은 글씨: "${sub}"`,
-          `- 중앙 큰 제목: "${main}"`,
-          desc ? `- 하단 설명: "${desc}"` : '',
-          ``,
-          `[배경 비주얼]`,
-          visual,
-          ``,
-          `[필수 규칙]`,
-          `- 위 한글 텍스트를 정확히 그대로 이미지에 렌더링할 것`,
-          `- 지정된 텍스트 외 다른 글자/라벨/워터마크 절대 금지`,
-          `- 테두리/프레임/보더 없이 이미지 전체를 채울 것`,
-          `- 1:1 정사각형 카드뉴스`,
+          `subtitle: "${sub}"`,
+          `mainTitle: "${main}"`,
+          desc ? `description: "${desc}"` : '',
+          `비주얼: ${visual}`,
+          tmplBlock,
         ].filter(Boolean).join('\n');
 
         return { ...card, imagePrompt };
