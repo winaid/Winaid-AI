@@ -1691,7 +1691,9 @@ export default function AdminPage() {
                                             const displayLaw = lawIssues.length === 0 ? 100 : (post.score_medical_law ?? 100);
                                             const displaySeo = post.score_naver_seo ?? null;
                                             const displayTotal = hasScore
-                                              ? Math.round(((displayTypo + displaySpelling + displayLaw + (displaySeo ?? displayTypo)) / (displaySeo != null ? 4 : 3)))
+                                              ? Math.round(displaySeo != null
+                                                ? (displayTypo + displaySpelling + displayLaw + displaySeo) / 4
+                                                : (displayTypo + displaySpelling + displayLaw) / 3)
                                               : post.score_total;
                                             const currentContent = editingContent[post.id] ?? post.corrected_content ?? post.content;
                                             return (
