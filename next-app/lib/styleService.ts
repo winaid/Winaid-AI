@@ -901,21 +901,18 @@ export async function crawlAndScoreAllHospitals(
                   const rankData = (await rankRes.json()) as { items?: Array<{ link?: string }> };
                   const items = rankData.items || [];
                   const lowerBlogId = blogId.toLowerCase();
-                  const postLogNo = post.url.match(/\/(\d+)$/)?.[1];
+                  // post.url에서 글번호 추출: /blogId/223xxx 또는 logNo=223xxx
+                  const postLogNo = post.url.match(/\/(\d{5,})$/)?.[1]
+                    || post.url.match(/logNo=(\d+)/)?.[1];
                   for (let ri = 0; ri < items.length; ri++) {
                     const link = items[ri].link || '';
-                    if (postLogNo && link.toLowerCase().includes(lowerBlogId) && link.includes(postLogNo)) {
+                    const linkLower = link.toLowerCase();
+                    // 같은 블로그ID인지 확인
+                    if (!linkLower.includes(lowerBlogId)) continue;
+                    // 같은 글번호인지 확인 (URL path 또는 query param)
+                    if (postLogNo && (link.includes(`/${postLogNo}`) || link.includes(`logNo=${postLogNo}`))) {
                       naverRank = ri + 1;
                       break;
-                    }
-                  }
-                  if (naverRank === null) {
-                    for (let ri = 0; ri < items.length; ri++) {
-                      const link = items[ri].link || '';
-                      if (link.toLowerCase().includes(`blog.naver.com/${lowerBlogId}`)) {
-                        naverRank = ri + 1;
-                        break;
-                      }
                     }
                   }
                 }
