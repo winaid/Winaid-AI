@@ -802,38 +802,86 @@ ${newsContext ? `\n[📰 최신 네이버 뉴스 분석]\n${newsContext}\n\n⚠�
             </button>
           </div>
         ) : pipelineStep === 'promptReview' && cards.length > 0 && !cards.some(c => c.imageUrl) ? (
-          /* ── Step 4: 프롬프트 승인 단계 ── */
+          /* ── Step 4: 프롬프트 승인 단계 (필드별 UI) ── */
           <div className="space-y-4">
             <div className="flex items-center gap-2 mb-2">
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-pink-50 text-pink-700 border border-pink-200">Step 2</span>
-              <span className="text-xs font-bold text-slate-700">프롬프트 확인</span>
-              <span className="text-xs text-slate-400">· 이미지 프롬프트를 수정한 뒤 이미지를 생성하세요</span>
+              <span className="text-xs font-bold text-slate-700">이미지 프롬프트 확인</span>
+              <span className="text-xs text-slate-400">· 이미지에 들어갈 텍스트와 배경을 수정하세요</span>
             </div>
 
-            <div className="space-y-2">
-              {cards.map((card, idx) => (
-                <div key={card.index} className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                  <div className="flex items-center gap-2 px-4 py-2 bg-slate-50 border-b border-slate-100">
-                    <span className="w-5 h-5 rounded-full bg-pink-500 text-white text-[9px] font-bold flex items-center justify-center flex-none">{card.index}</span>
-                    <span className="text-xs font-bold text-slate-700">{card.role}: {card.title}</span>
+            <div className="space-y-3">
+              {cards.map((card, idx) => {
+                // 프롬프트에서 필드 추출
+                const getField = (key: string) => {
+                  const m = card.imagePrompt.match(new RegExp(`${key}:\\s*"?([^"\\n]+)"?`, 'i'));
+                  return m?.[1]?.trim() || '';
+                };
+                const pSub = getField('subtitle');
+                const pMain = getField('mainTitle');
+                const pDesc = getField('description');
+                const vMatch = card.imagePrompt.match(/비주얼:\s*(.+)/i);
+                const pVisual = vMatch?.[1]?.trim() || '';
+
+                // 필드 수정 시 프롬프트 재조립
+                const updateField = (field: string, value: string) => {
+                  const fields = { subtitle: pSub, mainTitle: pMain, description: pDesc, visual: pVisual, [field]: value };
+                  // 디자인 템플릿 블록 유지
+                  const tmplMatch = card.imagePrompt.match(/(\[디자인 템플릿:[\s\S]*$)/m);
+                  const tmplPart = tmplMatch?.[1] || '';
+                  const newPrompt = [
+                    `subtitle: "${fields.subtitle}"`,
+                    `mainTitle: "${fields.mainTitle}"`,
+                    fields.description ? `description: "${fields.description}"` : '',
+                    `비주얼: ${fields.visual}`,
+                    tmplPart,
+                  ].filter(Boolean).join('\n');
+                  setCards(prev => prev.map((c, i) => i === idx ? { ...c, imagePrompt: newPrompt } : c));
+                };
+
+                return (
+                  <div key={card.index} className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div className="flex items-center gap-2 px-4 py-2 bg-slate-50 border-b border-slate-100">
+                      <span className="w-5 h-5 rounded-full bg-pink-500 text-white text-[9px] font-bold flex items-center justify-center flex-none">{card.index}</span>
+                      <span className="text-xs font-bold text-slate-700">{card.role}</span>
+                    </div>
+                    <div className="p-3 space-y-2">
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-[10px] font-semibold text-slate-400 mb-0.5">작은 글씨 (부제)</label>
+                          <input type="text" value={pSub} onChange={e => updateField('subtitle', e.target.value)}
+                            className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-pink-500/20" />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-semibold text-slate-400 mb-0.5">큰 제목 (메인)</label>
+                          <input type="text" value={pMain} onChange={e => updateField('mainTitle', e.target.value)}
+                            className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-sm font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-pink-500/20" />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-semibold text-slate-400 mb-0.5">설명 문구 (선택)</label>
+                        <input type="text" value={pDesc} onChange={e => updateField('description', e.target.value)} placeholder="없으면 비워두세요"
+                          className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-pink-500/20" />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-semibold text-amber-600 mb-0.5">배경 이미지 묘사</label>
+                        <input type="text" value={pVisual} onChange={e => updateField('visual', e.target.value)}
+                          className="w-full px-2.5 py-1.5 bg-amber-50 border border-amber-200 rounded-lg text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-500/20" />
+                      </div>
+                    </div>
                   </div>
-                  <div className="p-3">
-                    <textarea value={card.imagePrompt} rows={5}
-                      onChange={e => setCards(prev => prev.map((c, i) => i === idx ? { ...c, imagePrompt: e.target.value } : c))}
-                      className="w-full px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-xs text-slate-700 font-mono focus:outline-none focus:ring-2 focus:ring-amber-500/20 resize-none" />
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             <div className="flex gap-2">
               <button onClick={() => setPipelineStep('scriptReview')}
                 className="px-4 py-3 bg-slate-100 text-slate-600 font-semibold rounded-xl hover:bg-slate-200 transition-all text-sm">
-                ← 원고로 돌아가기
+                ← 원고 수정
               </button>
               <button onClick={handleGenerateImages} disabled={isGeneratingImages}
                 className="flex-1 py-3.5 bg-pink-600 text-white font-bold rounded-xl hover:bg-pink-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-pink-500/20 disabled:opacity-50">
-                🎨 프롬프트 승인 → 이미지 생성하기 ({cards.length}장)
+                🎨 이미지 생성하기 ({cards.length}장)
               </button>
             </div>
           </div>
