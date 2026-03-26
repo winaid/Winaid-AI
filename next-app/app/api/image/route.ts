@@ -143,11 +143,11 @@ const CARD_NEWS_PERSONA = `[ROLE] Korean medical SNS card news designer.
 [GOAL] Generate a 1:1 square card image with Korean text rendered directly into pixels.
 [PRIORITY] Text readability > visual aesthetics. Mobile-first. Korean medical ad law compliant.`;
 
-const CARD_FRAME_RULE = `[FRAME LAYOUT - FOLLOW REFERENCE STYLE]
-- Border color: #787fff (lavender purple/violet) around the edges
-- White content area inside the border
-- Rounded corners
-- Clean minimal design`;
+const CARD_FRAME_RULE = `[LAYOUT RULES]
+- NO colored borders, frames, or outlines around the edges
+- Fill the entire image area edge-to-edge with content
+- Rounded corners on the overall image only
+- Clean minimal design, no decorative borders`;
 
 function buildCardStyleBlock(imageStyle: string): string {
   if (imageStyle === 'photo') return `[STYLE - 실사 촬영 (PHOTOREALISTIC)]
