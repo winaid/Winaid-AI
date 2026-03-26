@@ -363,13 +363,30 @@ export default function ImagePage() {
     const themeName = themeOption?.label || calendarTheme;
     const themeDesc = themeOption?.desc || '';
 
-    let p = `${schYear}년 ${schMonth}월 병원 진료 일정 안내 포스터.\n제목: "${title}"\n레이아웃: ${layoutLabel} 스타일.\n`;
-    p += `달력 디자인 테마: "${themeName}" — ${themeDesc}\n`;
-    if (closedDays.length > 0) p += `휴진일: ${closedDays.map(d => `${d}일`).join(', ')} — 빨간색으로 눈에 띄게 표시.\n`;
-    if (shortened.length > 0) p += `단축진료: ${shortened.join(', ')} — 주황색으로 표시.\n`;
-    if (vacations.length > 0) p += `휴가: ${vacations.join(', ')} — 보라색으로 표시.\n`;
-    if (noticeLines.length > 0) p += `안내 문구: ${noticeLines.join(' / ')}\n`;
-    p += '깔끔하고 전문적인 의료 디자인, 한국어 텍스트, 모바일에서도 읽기 쉬운 크기.';
+    let p = `Korean hospital ${schMonth}월 monthly schedule poster — PREMIUM DESIGN.
+제목: "${title}"
+
+[CRITICAL LAYOUT RULES]
+- 비율: 정사각형(1:1) 또는 4:5 세로형. 절대 세로로 길쭉하게 만들지 마세요.
+- 구조: 상단 20% 헤더(병원명+제목) → 중앙 55% 달력 그리드 → 하단 25% 진료시간+안내
+- 달력은 콤팩트하게! 7열 그리드, 셀 간격 최소화, 날짜 숫자는 14-18pt
+- 전체가 하나의 세련된 카드 안에 담겨야 합니다
+
+[CALENDAR DATA]
+월: ${schYear}년 ${schMonth}월
+레이아웃: ${layoutLabel}
+디자인 테마: "${themeName}" — ${themeDesc}
+`;
+    if (closedDays.length > 0) p += `휴진일: ${closedDays.map(d => `${d}일`).join(', ')} — 빨간색 배경 또는 빨간 동그라미로 강조.\n`;
+    if (shortened.length > 0) p += `단축진료: ${shortened.join(', ')} — 주황/앰버 표시.\n`;
+    if (vacations.length > 0) p += `휴가: ${vacations.join(', ')} — 보라색 표시.\n`;
+    if (noticeLines.length > 0) p += `하단 안내: ${noticeLines.join(' / ')}\n`;
+    p += `\n[DESIGN QUALITY]
+- 프리미엄 병원 인스타그램 피드 수준
+- 깔끔한 sans-serif 타이포, 세련된 색상 팔레트
+- 요일 헤더: 일(빨강) 월 화 수 목 금 토(파랑)
+- 충분한 여백, 정돈된 그리드, 고급스러운 느낌
+- 절대 엑셀/스프레드시트처럼 보이면 안 됨`;
     if (customMessage) p += `\n추가 문구: "${customMessage}"`;
     if (extraPrompt) p += `\n${extraPrompt}`;
     return p;
