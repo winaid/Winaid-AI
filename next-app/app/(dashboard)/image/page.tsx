@@ -740,7 +740,7 @@ Add subtle professional touches: refined gradients, elegant typography, clean wh
     setError(null);
     setProgress('이미지 생성 중...');
     setGeneratingStep(0);
-    resultAreaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setTimeout(() => resultAreaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
     setShowRegenMenu(false);
     setShowRegenPromptInput(false);
     const stepTimer = setInterval(() => setGeneratingStep(s => s + 1), 3000);
