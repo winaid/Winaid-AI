@@ -62,6 +62,7 @@ export default function ImagePage() {
   const [logoEnabled, setLogoEnabled] = useState(false);
   const [logoPosition, setLogoPosition] = useState<'top' | 'bottom'>('bottom');
   const logoInputRef = useRef<HTMLInputElement>(null);
+  const resultAreaRef = useRef<HTMLDivElement>(null);
 
   // 병원 기본 정보 / 브랜드 컬러
   const [clinicPhone, setClinicPhone] = useState('');
@@ -701,6 +702,7 @@ export default function ImagePage() {
     setError(null);
     setProgress('이미지 생성 중...');
     setGeneratingStep(0);
+    resultAreaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     setShowRegenMenu(false);
     setShowRegenPromptInput(false);
     const stepTimer = setInterval(() => setGeneratingStep(s => s + 1), 3000);
@@ -1564,7 +1566,7 @@ export default function ImagePage() {
       </div>
 
       {/* 우측: 결과 영역 (OLD parity) */}
-      <div className="flex flex-col min-h-[480px] lg:flex-1 min-w-0 rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+      <div ref={resultAreaRef} className="flex flex-col min-h-[480px] lg:flex-1 min-w-0 rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
         {/* 상단 툴바 (OLD parity: 장식 B/I/U + 정렬) */}
         <div className="flex items-center gap-3 px-5 py-3 border-b border-slate-200/80 bg-white">
           <div className="flex items-center gap-1">
