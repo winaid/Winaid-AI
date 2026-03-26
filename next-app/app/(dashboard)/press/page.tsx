@@ -18,9 +18,9 @@ export default function PressPage() {
   const [pressType, setPressType] = useState<PressType>('achievement');
   const [textLength, setTextLength] = useState(1200);
   const TEXT_LENGTH_OPTIONS = [
-    { value: 800, label: '짧은 기사', desc: '800자 · 단신/속보형' },
-    { value: 1200, label: '중간 기사', desc: '1,200자 · 일반 보도' },
-    { value: 1800, label: '긴 기사', desc: '1,800자 · 심층 보도' },
+    { value: 800, label: '짧은 기사', desc: '단신/속보형' },
+    { value: 1200, label: '중간 기사', desc: '일반 보도' },
+    { value: 1800, label: '긴 기사', desc: '심층 보도' },
   ];
   const [category, setCategory] = useState('치과');
   const [hospitalWebsite, setHospitalWebsite] = useState('');
