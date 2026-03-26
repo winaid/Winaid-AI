@@ -211,7 +211,7 @@ export default function PressPage() {
           <div className="grid grid-cols-3 gap-3">
             <div><label className={labelCls}>의료진 *</label><input type="text" value={doctorName} onChange={e => setDoctorName(e.target.value)} placeholder="홍길동" required className={inputCls} /></div>
             <div><label className={labelCls}>직함</label><select value={doctorTitle} onChange={e => setDoctorTitle(e.target.value)} className={inputCls}>{DOCTOR_TITLES.map(t => <option key={t} value={t}>{t}</option>)}</select></div>
-            <div><label className={labelCls}>진료과</label><select value={category} onChange={e => setCategory(e.target.value)} className={inputCls}>{CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}</select></div>
+            <div><label className={labelCls}>진료과</label><select value={category} onChange={e => setCategory(e.target.value)} className={inputCls}>{['치과', '피부과', '정형외과'].map(c => <option key={c} value={c}>{c}</option>)}</select></div>
           </div>
 
           {/* 주제 */}
