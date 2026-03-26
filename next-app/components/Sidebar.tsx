@@ -18,11 +18,11 @@ const contentItems: { id: ContentTab; label: string; icon: string; href: string 
   { id: 'blog', label: '블로그', icon: '📝', href: '/blog' },
   { id: 'card_news', label: '카드뉴스', icon: '🎨', href: '/card_news' },
   { id: 'press', label: '언론보도', icon: '🗞️', href: '/press' },
+  { id: 'image', label: '이미지 생성', icon: '🖼️', href: '/image' },
 ];
 
 const toolItems: { id: ContentTab; label: string; icon: string; href: string }[] = [
   { id: 'refine', label: 'AI 보정', icon: '✨', href: '/refine' },
-  { id: 'image', label: '이미지 생성', icon: '🖼️', href: '/image' },
   { id: 'history', label: '히스토리', icon: '🕐', href: '/history' },
 ];
 
