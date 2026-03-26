@@ -124,6 +124,7 @@ interface GeminiRequestBody {
   schema?: Record<string, unknown>;
   thinkingLevel?: string;
   timeout?: number;
+  googleSearch?: boolean;
 }
 
 interface GeminiCandidate {
@@ -173,6 +174,11 @@ export async function POST(request: NextRequest) {
 
   if (body.schema && body.responseType === 'json') {
     (apiBody.generationConfig as Record<string, unknown>).responseSchema = body.schema;
+  }
+
+  // Google Search 연동 (보도자료 등 최신 정보 필요 시)
+  if (body.googleSearch) {
+    apiBody.tools = [{ googleSearch: {} }];
   }
 
   if (body.thinkingLevel && body.thinkingLevel !== 'none') {
