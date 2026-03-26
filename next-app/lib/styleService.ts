@@ -910,10 +910,10 @@ export async function crawlAndScoreAllHospitals(
           let naverRankKeyword = '';
           if (post.title && blogId) {
             try {
-              // 제목 맨 앞 키워드 추출 (예: "배방어린이치과 내원 전..." → "배방어린이치과")
               const cleanTitle = (post.title || '')
                 .replace(/&#39;/g, "'").replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"');
               const firstWord = cleanTitle.split(/[\s,?!.·:]/)[0].replace(/['""\[\]()【】]/g, '').trim();
+              console.log(`[순위] 제목: "${post.title}" → 키워드: "${firstWord}" / blogId: ${blogId} / url: ${post.url}`);
               if (firstWord.length >= 2) {
                 naverRankKeyword = firstWord;
                 onProgress?.(`${name}${urlLabel} 순위 체크 "${firstWord}"`, index, total);
@@ -922,30 +922,33 @@ export async function crawlAndScoreAllHospitals(
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ query: firstWord, display: 30 }),
                 });
+                console.log(`[순위] API 응답 상태: ${rankRes.status}`);
                 if (rankRes.ok) {
                   const rankData = (await rankRes.json()) as { items?: Array<{ link?: string }> };
                   const items = rankData.items || [];
+                  console.log(`[순위] "${firstWord}" 검색 결과 ${items.length}건`);
                   const lowerBlogId = blogId.toLowerCase();
-                  // post.url에서 글번호 추출: /blogId/223xxx 또는 logNo=223xxx
                   const postLogNo = post.url.match(/\/(\d{5,})$/)?.[1]
                     || post.url.match(/logNo=(\d+)/)?.[1];
+                  console.log(`[순위] 매칭 조건 — blogId: ${lowerBlogId}, logNo: ${postLogNo}`);
                   for (let ri = 0; ri < items.length; ri++) {
                     const link = items[ri].link || '';
+                    console.log(`[순위]   ${ri + 1}위: ${link}`);
                     const linkLower = link.toLowerCase();
-                    // 같은 블로그ID인지 확인
                     if (!linkLower.includes(lowerBlogId)) continue;
-                    // 같은 글번호인지 확인 (URL path 또는 query param)
                     if (postLogNo && (link.includes(`/${postLogNo}`) || link.includes(`logNo=${postLogNo}`))) {
                       naverRank = ri + 1;
+                      console.log(`[순위] ✅ 매칭! ${ri + 1}위`);
                       break;
                     }
                   }
                 }
                 await new Promise(r => setTimeout(r, 200));
               }
-            } catch { /* 순위 체크 실패 무시 */ }
+            } catch (rankErr) { console.error('[순위] 체크 실패:', rankErr); }
           }
 
+          console.log(`[순위] 최종 결과 — "${naverRankKeyword}": ${naverRank !== null ? naverRank + '위' : '순위외'}`);
           if (supabase) {
             await (supabase.from('hospital_crawled_posts') as any).upsert(
               {
