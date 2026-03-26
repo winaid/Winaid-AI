@@ -50,7 +50,8 @@ const DESIGN_RULE = `[디자인 규칙]
 1. 사용자가 프롬프트에서 지정한 색상, 위치, 레이아웃, 분위기를 정확히 따르세요.
 2. 휴진/휴무 표시는 프롬프트에 지정된 색상(예: 붉은색)을 사용하세요. 모든 휴진 날짜에 동일한 색상과 스타일을 적용하세요.
 3. 요소 간 간격을 최소화하세요. 모든 요소를 콤팩트하게 배치하세요.
-4. 한국어 텍스트를 명확하고 읽기 쉽게 렌더링하세요.`;
+4. 한국어 텍스트를 명확하고 읽기 쉽게 렌더링하세요.
+5. 사용자가 직접 입력하지 않은 전화번호, 홈페이지 URL, 이메일 주소를 절대 넣지 마세요. "02-000-0000", "www.hospital.com", "02-1234-5678" 같은 예시/더미 연락처를 이미지에 렌더링하지 마세요. 연락처가 필요하면 빈 칸으로 두거나 아예 생략하세요.`;
 
 // ── 달력 감지 ──
 
@@ -303,6 +304,7 @@ OUTPUT DIRECTION:
         body.brandColors || '',
         aspectInstruction,
         'Generate at high resolution. Sharp edges, crisp text, no blur, no compression artifacts.',
+        '⛔ NEVER render placeholder contact info like "02-000-0000", "www.hospital.com", "02-1234-5678", or any phone/URL/email that was not explicitly provided by the user. If no contact info was given, leave that area empty or omit it entirely.',
       ].filter(Boolean).join('\n\n');
 
   // 멀티모달 parts 구성: 텍스트 + 참조 이미지들
