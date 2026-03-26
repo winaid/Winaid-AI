@@ -85,7 +85,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* 콘텐츠 생성 카드 3개 */}
+      {/* 콘텐츠 생성 카드 4개: 블로그 → 언론보도 → 카드뉴스 → 이미지 생성 */}
       <div className="w-full max-w-3xl flex flex-col gap-3 mt-8 mb-4">
         {([
           {
@@ -102,6 +102,19 @@ export default function DashboardPage() {
             icon: (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>),
           },
           {
+            id: 'press' as ContentTab,
+            label: '언론보도',
+            desc: '언론 배포용 전문 보도자료 작성',
+            tags: ['보도자료 포맷', '전문 어조', '병원 정보 연동'],
+            accentBg: 'bg-amber-50',
+            accentColor: 'text-amber-600',
+            accentBorder: 'border-r border-amber-100',
+            cardBg: 'bg-white border-slate-200 hover:border-amber-200 shadow-sm hover:shadow-md',
+            tagBg: 'bg-amber-50 text-amber-600',
+            btnBg: 'bg-amber-600 hover:bg-amber-700 text-white',
+            icon: (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7"><path d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10l6 6v8a2 2 0 01-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>),
+          },
+          {
             id: 'card_news' as ContentTab,
             label: '카드뉴스',
             desc: 'SNS 이미지 슬라이드 원고 + 이미지 자동 제작',
@@ -115,17 +128,17 @@ export default function DashboardPage() {
             icon: (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>),
           },
           {
-            id: 'press' as ContentTab,
-            label: '보도자료',
-            desc: '언론 배포용 전문 보도자료 작성',
-            tags: ['보도자료 포맷', '전문 어조', '병원 정보 연동'],
-            accentBg: 'bg-amber-50',
-            accentColor: 'text-amber-600',
-            accentBorder: 'border-r border-amber-100',
-            cardBg: 'bg-white border-slate-200 hover:border-amber-200 shadow-sm hover:shadow-md',
-            tagBg: 'bg-amber-50 text-amber-600',
-            btnBg: 'bg-amber-600 hover:bg-amber-700 text-white',
-            icon: (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7"><path d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10l6 6v8a2 2 0 01-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>),
+            id: 'image' as ContentTab,
+            label: '이미지 생성',
+            desc: '진료일정·원내 안내물 이미지 자동 제작',
+            tags: ['8종 카테고리', '캘린더 테마', '디자인 템플릿'],
+            accentBg: 'bg-violet-50',
+            accentColor: 'text-violet-600',
+            accentBorder: 'border-r border-violet-100',
+            cardBg: 'bg-white border-slate-200 hover:border-violet-200 shadow-sm hover:shadow-md',
+            tagBg: 'bg-violet-50 text-violet-600',
+            btnBg: 'bg-violet-600 hover:bg-violet-700 text-white',
+            icon: (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>),
           },
         ]).map(item => (
           <button
@@ -152,11 +165,10 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      {/* 도구 3개 */}
-      <div className="w-full max-w-3xl grid grid-cols-3 gap-3 mb-10">
+      {/* 도구 2개 */}
+      <div className="w-full max-w-3xl grid grid-cols-2 gap-3 mb-10">
         {([
           { id: 'refine' as ContentTab, label: 'AI 보정', desc: '기존 글을 AI로 다듬기', iconBg: 'bg-emerald-50', iconColor: 'text-emerald-600', icon: (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z"/></svg>) },
-          { id: 'image' as ContentTab, label: '이미지 생성', desc: '진료일정·원내 안내물 이미지 자동 제작', iconBg: 'bg-violet-50', iconColor: 'text-violet-600', icon: (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>) },
           { id: 'history' as ContentTab, label: '히스토리', desc: '생성 콘텐츠 내역 조회', iconBg: 'bg-slate-100', iconColor: 'text-slate-500', icon: (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>) },
         ]).map(item => (
           <button
