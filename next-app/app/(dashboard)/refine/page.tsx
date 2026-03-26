@@ -1,252 +1,248 @@
 'use client';
 
-import { useState } from 'react';
-import { buildRefinePrompt, REFINE_OPTIONS, type RefineMode } from '../../../lib/refinePrompt';
+import { useState, useRef, useEffect } from 'react';
+import { buildRefinePrompt, buildChatRefinePrompt, REFINE_OPTIONS, type RefineMode } from '../../../lib/refinePrompt';
 import { savePost } from '../../../lib/postStorage';
 import { getSessionSafe } from '../../../lib/supabase';
-import { ErrorPanel, ResultPanel } from '../../../components/GenerationResult';
+import { ErrorPanel } from '../../../components/GenerationResult';
+
+interface ChatMsg { role: 'user' | 'assistant'; content: string; ts: Date; }
 
 export default function RefinePage() {
-  // ── 폼 상태 ──
+  const [topMode, setTopMode] = useState<'auto' | 'chat'>('auto');
   const [originalText, setOriginalText] = useState('');
   const [selectedMode, setSelectedMode] = useState<RefineMode>('natural');
-
-  // ── 생성 상태 ──
+  const [refinedHtml, setRefinedHtml] = useState<string | null>(null);
   const [isRefining, setIsRefining] = useState(false);
-  const [refinedContent, setRefinedContent] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
 
-  const handleRefine = async (e: React.FormEvent) => {
+  // 채팅 모드
+  const [chatMessages, setChatMessages] = useState<ChatMsg[]>([]);
+  const [chatInput, setChatInput] = useState('');
+  const [isChatting, setIsChatting] = useState(false);
+  const chatEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [chatMessages]);
+
+  const getWorkingContent = () => refinedHtml || originalText;
+  const charCount = originalText.replace(/<[^>]+>/g, '').replace(/\s/g, '').length;
+
+  // ── 자동 보정 ──
+  const handleAutoRefine = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!originalText.trim()) return;
-
-    setIsRefining(true);
-    setError(null);
-    setRefinedContent(null);
-    setSaveStatus(null);
-
+    setIsRefining(true); setError(null); setRefinedHtml(null); setSaveStatus(null);
     try {
-      const { systemInstruction, prompt } = buildRefinePrompt({
-        originalText: originalText.trim(),
-        mode: selectedMode,
-      });
-
+      const { systemInstruction, prompt } = buildRefinePrompt({ originalText: originalText.trim(), mode: selectedMode });
       const res = await fetch('/api/gemini', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          prompt,
-          systemInstruction,
-          model: 'gemini-3.1-pro-preview',
-          temperature: 0.6,
-          maxOutputTokens: 8192,
-        }),
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt, systemInstruction, model: 'gemini-3.1-pro-preview', temperature: 0.6, maxOutputTokens: 8192, googleSearch: selectedMode === 'seo' }),
       });
-
-      const data = await res.json() as { text?: string; error?: string; details?: string };
-
-      if (!res.ok || !data.text) {
-        setError(data.error || data.details || `서버 오류 (${res.status})`);
-        return;
-      }
-
-      setRefinedContent(data.text);
-
-      // 저장 — Supabase 또는 guest localStorage
+      const data = await res.json() as { text?: string; error?: string };
+      if (!res.ok || !data.text) { setError(data.error || `서버 오류 (${res.status})`); return; }
+      let html = data.text.replace(/```html?\n?/gi, '').replace(/```\n?/gi, '').trim();
+      if (!html.startsWith('<')) html = `<p>${html.replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br/>')}</p>`;
+      setRefinedHtml(html);
       try {
         const { userId, userEmail } = await getSessionSafe();
-        const modeLabel = REFINE_OPTIONS.find(o => o.value === selectedMode)?.label || selectedMode;
-        const titleMatch = data.text.match(/^#\s+(.+)/m) || data.text.match(/^(.+)/);
-        const extractedTitle = titleMatch
-          ? titleMatch[1].replace(/^[#*\s]+/, '').trim().substring(0, 200)
-          : originalText.trim().substring(0, 50);
+        const label = REFINE_OPTIONS.find(o => o.value === selectedMode)?.label || selectedMode;
+        await savePost({ userId, userEmail, postType: 'blog', workflowType: 'refine', title: `${label} · ${originalText.trim().substring(0, 50)}`, content: html, topic: label });
+        setSaveStatus('저장 완료');
+      } catch { setSaveStatus('저장 실패'); }
+    } catch (err: unknown) { setError(err instanceof Error ? err.message : '네트워크 오류'); }
+    finally { setIsRefining(false); }
+  };
 
-        const saveResult = await savePost({
-          userId,
-          userEmail,
-          postType: 'blog',
-          workflowType: 'refine',
-          title: extractedTitle,
-          content: data.text,
-          topic: `${modeLabel} · ${originalText.trim().substring(0, 100)}`,
-        });
-
-        if ('error' in saveResult) {
-          setSaveStatus('저장 실패: ' + saveResult.error);
-        } else {
-          setSaveStatus('저장 완료');
+  // ── 채팅 수정 ──
+  const handleChatSubmit = async () => {
+    if (!chatInput.trim() || !getWorkingContent().trim()) return;
+    const userMsg: ChatMsg = { role: 'user', content: chatInput, ts: new Date() };
+    setChatMessages(prev => [...prev, userMsg]);
+    const msg = chatInput;
+    setChatInput(''); setIsChatting(true);
+    try {
+      // URL 감지 + 크롤링
+      const urls = msg.match(/(https?:\/\/[^\s]+)|(www\.[^\s]+)/gi);
+      let crawledContent = '';
+      if (urls) {
+        for (const url of urls) {
+          const fullUrl = url.startsWith('www.') ? `https://${url}` : url;
+          try {
+            const r = await fetch('/api/naver/crawl-hospital-blog', {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ blogUrl: fullUrl, maxPosts: 1 }),
+            });
+            if (r.ok) {
+              const d = await r.json() as { posts?: Array<{ content?: string }> };
+              if (d.posts?.[0]?.content) crawledContent += `\n[${fullUrl}]\n${d.posts[0].content.slice(0, 2000)}\n`;
+              else crawledContent += `\n[${fullUrl} — 내용 없음]\n`;
+            } else crawledContent += `\n[${fullUrl} — 크롤링 실패]\n`;
+          } catch { crawledContent += `\n[${fullUrl} — 접근 불가]\n`; }
         }
-      } catch {
-        setSaveStatus('저장 실패: Supabase 연결 불가');
       }
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : '네트워크 오류';
-      setError(msg);
-    } finally {
-      setIsRefining(false);
+      const { systemInstruction, prompt } = buildChatRefinePrompt({
+        workingContent: getWorkingContent(), userMessage: msg, crawledContent: crawledContent || undefined,
+      });
+      const res = await fetch('/api/gemini', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt, systemInstruction, model: 'gemini-3.1-pro-preview', temperature: 0.6, maxOutputTokens: 8192, googleSearch: true }),
+      });
+      const data = await res.json() as { text?: string; error?: string };
+      if (!res.ok || !data.text) throw new Error(data.error || '생성 실패');
+      let html = data.text.replace(/```html?\n?/gi, '').replace(/```\n?/gi, '').trim();
+      if (!html.startsWith('<')) html = `<p>${html.replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br/>')}</p>`;
+      setRefinedHtml(html);
+      let reply = '수정 완료! 오른쪽 결과를 확인해주세요.';
+      if (urls) {
+        const ok = (crawledContent.match(/\[https?/g) || []).length - (crawledContent.match(/실패|불가|없음/g) || []).length;
+        if (ok > 0) reply = `✅ ${ok}개 사이트 참고하여 수정 완료!`;
+      }
+      setChatMessages(prev => [...prev, { role: 'assistant', content: reply, ts: new Date() }]);
+    } catch (err) {
+      setChatMessages(prev => [...prev, { role: 'assistant', content: `❌ 수정 실패: ${(err as Error).message}`, ts: new Date() }]);
+    } finally { setIsChatting(false); }
+  };
+
+  // ── HTML 복사 (맑은 고딕 12pt) ──
+  const handleCopy = async () => {
+    if (!refinedHtml) return;
+    try {
+      const styled = refinedHtml
+        .replace(/<p>/g, '<p style="font-family:\'맑은 고딕\',sans-serif;font-size:12pt;margin:0 0 1em;line-height:1.6;">')
+        .replace(/<h2>/g, '<h2 style="font-family:\'맑은 고딕\',sans-serif;font-size:14pt;font-weight:bold;margin:1.5em 0 0.5em;">')
+        .replace(/<h3>/g, '<h3 style="font-family:\'맑은 고딕\',sans-serif;font-size:13pt;font-weight:bold;margin:1.2em 0 0.4em;">');
+      const htmlBlob = new Blob([styled], { type: 'text/html' });
+      const textBlob = new Blob([refinedHtml.replace(/<[^>]+>/g, '')], { type: 'text/plain' });
+      await navigator.clipboard.write([new ClipboardItem({ 'text/html': htmlBlob, 'text/plain': textBlob })]);
+    } catch {
+      const div = document.createElement('div'); div.innerHTML = refinedHtml;
+      await navigator.clipboard.writeText(div.textContent || '');
     }
   };
 
-  const charCount = originalText.replace(/\s/g, '').length;
+  const inputCls = 'w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-400 transition-all';
 
   return (
     <div className="flex flex-col lg:flex-row gap-5 lg:items-start p-5">
-      {/* ── 입력 영역 ── */}
-      <div className="w-full lg:w-[420px] xl:w-[460px] lg:flex-none">
-        <form onSubmit={handleRefine} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-lg">✨</span>
-            <h2 className="text-base font-bold text-slate-800">AI 보정</h2>
+      {/* ── 좌측 ── */}
+      <div className="w-full lg:w-[420px] xl:w-[460px] lg:flex-none space-y-4">
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+          <div className="flex items-center gap-2 mb-3"><span className="text-lg">✨</span><h2 className="text-base font-bold text-slate-800">AI 정밀보정</h2></div>
+          <div className="flex gap-1 p-1 rounded-xl bg-slate-50 border border-slate-100">
+            <button onClick={() => setTopMode('auto')} className={`flex-1 py-2.5 px-4 rounded-lg font-bold text-xs transition-all ${topMode === 'auto' ? 'bg-gradient-to-r from-violet-600 to-violet-700 text-white shadow-lg shadow-violet-500/25' : 'text-slate-500 hover:text-slate-700'}`}>자동 보정</button>
+            <button onClick={() => setTopMode('chat')} className={`flex-1 py-2.5 px-4 rounded-lg font-bold text-xs transition-all ${topMode === 'chat' ? 'bg-gradient-to-r from-violet-600 to-violet-700 text-white shadow-lg shadow-violet-500/25' : 'text-slate-500 hover:text-slate-700'}`}>채팅 수정</button>
           </div>
+        </div>
 
-          {/* 원문 입력 */}
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <label className="text-xs font-semibold text-slate-500">원문 입력 *</label>
-              <span className="text-[10px] text-slate-400">{charCount.toLocaleString()}자</span>
+        {topMode === 'auto' ? (
+          <form onSubmit={handleAutoRefine} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
+            <div>
+              <div className="flex items-center justify-between mb-1.5"><label className="text-xs font-semibold text-slate-500">원문 입력 *</label><span className="text-[10px] text-slate-400">{charCount.toLocaleString()}자</span></div>
+              <textarea value={originalText} onChange={e => setOriginalText(e.target.value)} placeholder="다듬고 싶은 텍스트를 여기에 붙여넣으세요..." required rows={10} className={`${inputCls} resize-y min-h-[180px]`} />
             </div>
-            <textarea
-              value={originalText}
-              onChange={e => setOriginalText(e.target.value)}
-              placeholder="다듬고 싶은 텍스트를 여기에 붙여넣으세요..."
-              required
-              rows={12}
-              className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-400 transition-all resize-y min-h-[200px]"
-            />
-          </div>
-
-          {/* 보정 모드 선택 */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-500 mb-2">보정 방향</label>
-            <div className="grid grid-cols-2 gap-1.5">
-              {REFINE_OPTIONS.map(opt => (
-                <button
-                  key={opt.value}
-                  type="button"
-                  onClick={() => setSelectedMode(opt.value)}
-                  className={`text-left px-3 py-2.5 rounded-xl transition-all border ${
-                    selectedMode === opt.value
-                      ? 'bg-violet-50 border-violet-200 ring-1 ring-violet-300'
-                      : 'bg-white border-slate-150 hover:bg-slate-50'
-                  }`}
-                >
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-sm">{opt.icon}</span>
-                    <span className={`text-xs font-bold ${selectedMode === opt.value ? 'text-violet-700' : 'text-slate-700'}`}>
-                      {opt.label}
-                    </span>
-                  </div>
-                  <p className="text-[10px] text-slate-400 mt-0.5 leading-snug">{opt.description}</p>
-                </button>
-              ))}
+            <div>
+              <label className="block text-xs font-semibold text-slate-500 mb-2">보정 방향</label>
+              <div className="grid grid-cols-2 gap-1.5">
+                {REFINE_OPTIONS.map(opt => (
+                  <button key={opt.value} type="button" onClick={() => setSelectedMode(opt.value)}
+                    className={`text-left px-3 py-2.5 rounded-xl transition-all border ${selectedMode === opt.value ? 'bg-violet-50 border-violet-200 ring-1 ring-violet-300' : 'bg-white border-slate-150 hover:bg-slate-50'}`}>
+                    <div className="flex items-center gap-1.5"><span className="text-sm">{opt.icon}</span><span className={`text-xs font-bold ${selectedMode === opt.value ? 'text-violet-700' : 'text-slate-700'}`}>{opt.label}</span></div>
+                    <p className="text-[10px] text-slate-400 mt-0.5 leading-snug">{opt.description}</p>
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
-
-          {/* 보정 버튼 */}
-          <button
-            type="submit"
-            disabled={isRefining || !originalText.trim()}
-            className="w-full py-3 bg-violet-600 text-white font-bold rounded-xl hover:bg-violet-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-          >
-            {isRefining ? (
-              <>
-                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                </svg>
-                보정 중...
-              </>
-            ) : (
-              'AI 보정 시작'
+            <button type="submit" disabled={isRefining || !originalText.trim()} className="w-full py-3 bg-violet-600 text-white font-bold rounded-xl hover:bg-violet-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+              {isRefining ? (<><svg className="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>보정 중...</>) : 'AI 보정 시작'}
+            </button>
+          </form>
+        ) : (
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col" style={{ height: 'calc(100vh - 220px)', minHeight: '500px' }}>
+            {!getWorkingContent().trim() && (
+              <div className="p-4 border-b border-slate-100">
+                <label className="text-xs font-bold text-slate-500 mb-1.5 block">보정할 콘텐츠 붙여넣기</label>
+                <textarea value={originalText} onChange={e => setOriginalText(e.target.value)} placeholder="보정할 블로그 글을 붙여넣으세요..." className={`${inputCls} h-28 resize-none`} />
+              </div>
             )}
-          </button>
-        </form>
+            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+              {chatMessages.length === 0 ? (
+                <div className="h-full flex items-center justify-center"><div className="text-center">
+                  <p className="text-sm text-slate-400">{originalText.trim() ? '수정 요청을 입력해보세요' : '위에 콘텐츠를 먼저 붙여넣으세요'}</p>
+                  <p className="text-xs mt-2 text-slate-500">예: "더 부드러운 톤으로 바꿔줘"<br/>"첫 문단을 더 짧게 만들어줘"<br/>"URL 붙여넣으면 참고해서 수정"</p>
+                </div></div>
+              ) : chatMessages.map((msg, i) => (
+                <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                  <div className={`max-w-[80%] px-4 py-2 rounded-lg ${msg.role === 'user' ? 'bg-gradient-to-r from-violet-500 to-indigo-500 text-white' : 'bg-slate-100 text-slate-900'}`}>
+                    <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                    <p className="text-xs mt-1 opacity-60">{msg.ts.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}</p>
+                  </div>
+                </div>
+              ))}
+              <div ref={chatEndRef} />
+            </div>
+            <div className="p-3 border-t border-slate-200">
+              <div className="flex gap-2">
+                <textarea value={chatInput} onChange={e => setChatInput(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && !isChatting) { e.preventDefault(); handleChatSubmit(); } }}
+                  placeholder="수정 요청 입력... (Shift+Enter: 줄바꿈)" disabled={isChatting} rows={1}
+                  className="flex-1 px-3 py-2 rounded-lg text-sm bg-slate-50 border border-slate-300 outline-none focus:ring-2 focus:ring-violet-500 resize-none" style={{ minHeight: 38, maxHeight: 120 }} />
+                <button onClick={handleChatSubmit} disabled={isChatting || !chatInput.trim()}
+                  className={`px-4 py-2 rounded-lg font-bold text-sm self-end transition-all ${isChatting || !chatInput.trim() ? 'bg-slate-300 text-slate-500' : 'bg-gradient-to-r from-violet-500 to-indigo-500 text-white hover:shadow-lg'}`}>
+                  {isChatting ? '⏳' : '전송'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* ── 결과 영역 ── */}
+      {/* ── 우측: 결과 ── */}
       <div className="flex-1 min-w-0">
-        {isRefining ? (
+        {(isRefining || isChatting) ? (
           <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-12 flex flex-col items-center justify-center text-center min-h-[480px]">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold mb-6 bg-violet-50 text-violet-600 border border-violet-100">
-              <span>✨</span>
-              <span>보정 중</span>
-            </div>
-            <div className="relative mb-6">
-              <div className="w-14 h-14 border-[3px] border-violet-100 border-t-violet-500 rounded-full animate-spin" />
-            </div>
-            <p className="text-sm font-medium text-slate-700 mb-2">
-              원문을 분석하고 다듬고 있어요
-            </p>
-            <p className="text-xs text-slate-400">
-              {REFINE_OPTIONS.find(o => o.value === selectedMode)?.description}
-            </p>
+            <div className="relative mb-6"><div className="w-14 h-14 border-[3px] border-violet-100 border-t-violet-500 rounded-full animate-spin" /></div>
+            <p className="text-sm font-medium text-slate-700 mb-2">원문을 분석하고 다듬고 있어요</p>
           </div>
         ) : error ? (
-          <ErrorPanel title="보정 실패" error={error} onDismiss={() => setError(null)} />
-        ) : refinedContent ? (
+          <ErrorPanel error={error} onDismiss={() => setError(null)} />
+        ) : refinedHtml ? (
           <div className="space-y-4">
-            {/* 원문 비교 (접기 가능) */}
             <details className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-              <summary className="px-5 py-3 cursor-pointer select-none flex items-center gap-2 bg-slate-50/80 hover:bg-slate-100 transition-colors">
-                <svg className="w-4 h-4 text-slate-400 transition-transform [details[open]>&]:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                </svg>
-                <span className="text-xs font-bold text-slate-500">원문 비교</span>
-                <span className="text-[10px] text-slate-400 ml-1">{originalText.replace(/\s/g, '').length.toLocaleString()}자</span>
+              <summary className="px-5 py-3 cursor-pointer select-none flex items-center gap-2 bg-slate-50/80 hover:bg-slate-100">
+                <span className="text-xs font-bold text-slate-500">▶ 원문 비교</span>
+                <span className="text-[10px] text-slate-400 ml-1">{charCount.toLocaleString()}자</span>
               </summary>
               <div className="px-5 py-4 border-t border-slate-100 max-h-[300px] overflow-y-auto">
                 <p className="text-sm leading-relaxed text-slate-500 whitespace-pre-wrap">{originalText}</p>
               </div>
             </details>
-
-            {/* 결과 */}
-            <ResultPanel content={refinedContent} completionText={`보정 완료 · ${REFINE_OPTIONS.find(o => o.value === selectedMode)?.label}`} saveStatus={saveStatus} />
-
-            {/* 결과를 원문에 적용 */}
-            <button
-              type="button"
-              onClick={() => { setOriginalText(refinedContent); setRefinedContent(null); setSaveStatus(null); }}
-              className="w-full py-2.5 text-xs font-bold text-violet-600 bg-violet-50 border border-violet-200 rounded-xl hover:bg-violet-100 transition-all flex items-center justify-center gap-2"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182" />
-              </svg>
+            <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-100 bg-slate-50/80">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-violet-600">✨ 보정 완료</span>
+                  {saveStatus && <span className={`text-[10px] px-2 py-0.5 rounded-full ${saveStatus.includes('완료') ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-500'}`}>{saveStatus}</span>}
+                </div>
+                <button onClick={handleCopy} className="px-3 py-1.5 text-xs font-medium text-slate-500 hover:text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-all">복사 (맑은 고딕)</button>
+              </div>
+              <div className="p-6 prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: refinedHtml }} />
+            </div>
+            <button type="button" onClick={() => { setOriginalText(refinedHtml); setRefinedHtml(null); setSaveStatus(null); }}
+              className="w-full py-2.5 text-xs font-bold text-violet-600 bg-violet-50 border border-violet-200 rounded-xl hover:bg-violet-100 transition-all flex items-center justify-center gap-2">
               결과를 원문에 적용하고 다시 보정하기
             </button>
           </div>
         ) : (
-          <div className="rounded-2xl border border-slate-200 bg-white shadow-[0_2px_16px_rgba(0,0,0,0.06)] flex-1 min-h-[520px] overflow-hidden flex flex-col">
-            <div className="flex items-center gap-2 px-4 py-2.5 border-b border-slate-100 bg-slate-50/80">
-              <div className="text-[10px] text-slate-300 font-medium">AI REFINE</div>
+          <div className="rounded-2xl border border-slate-200 bg-white shadow-sm flex-1 min-h-[520px] flex flex-col items-center justify-center px-12 py-16">
+            <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-6 bg-gradient-to-br from-violet-50 to-purple-50 border border-violet-100">
+              <svg className="w-7 h-7 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z" /></svg>
             </div>
-
-            <div className="flex-1 flex flex-col items-center justify-center px-12 py-16 select-none">
-              <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-6 bg-gradient-to-br from-violet-50 to-purple-50 border border-violet-100">
-                <svg className="w-7 h-7 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z" />
-                </svg>
-              </div>
-              <div className="max-w-sm text-center">
-                <h2 className="text-3xl font-black tracking-tight leading-tight mb-3 text-slate-800">
-                  AI가 다듬는<br /><span className="text-violet-600">콘텐츠 보정</span>
-                </h2>
-                <p className="text-sm leading-relaxed text-slate-400">
-                  기존 글을 붙여넣고<br />원하는 방향으로 다듬어보세요
-                </p>
-              </div>
-              <div className="mt-8 flex flex-col items-center gap-2">
-                {['자연스럽게 · 전문적으로 · 짧게 · 길게', '의료광고법 리스크 자동 완화', 'SEO 구조 최적화'].map(text => (
-                  <div key={text} className="flex items-center gap-3 px-4 py-2 rounded-lg text-xs text-slate-400">
-                    <span className="text-[10px] text-violet-400">✦</span>
-                    {text}
-                  </div>
-                ))}
-              </div>
-              <div className="mt-8 inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold bg-violet-50 text-violet-500 border border-violet-100">
-                <div className="w-1.5 h-1.5 bg-violet-500 rounded-full animate-pulse" />
-                AI 대기 중
-              </div>
+            <h2 className="text-2xl font-black text-slate-800 mb-2">AI 정밀보정</h2>
+            <p className="text-sm text-slate-400 text-center mb-6">기존 글을 붙여넣고<br/>원하는 방향으로 다듬어보세요</p>
+            <div className="space-y-2">
+              {['자동 보정: 6가지 방향 선택', '채팅 수정: 대화로 세밀하게', 'URL 붙여넣기로 참고자료 활용', '의료광고법 자동 준수'].map(t => (
+                <div key={t} className="flex items-center gap-2 text-xs text-slate-400"><span className="text-violet-400">✦</span>{t}</div>
+              ))}
             </div>
           </div>
         )}
