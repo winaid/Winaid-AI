@@ -607,6 +607,13 @@ ${sliced}
 ⚠️ 오탐 방지 — 반드시 문맥(context)을 확인하세요. 단어만 보고 판단 금지!
 - "완치"가 들어있어도 "완치가 어렵다", "완치를 보장할 수 없다" 등 부정/주의 문맥이면 위반 아님
 - "최고"가 들어있어도 "최고의 결과를 위해 노력합니다" 등 일반적 표현은 위반 아님
+- ⛔ 병원/치과 상호명에 포함된 단어는 절대 위반으로 잡지 마라! 예:
+  - "일등치과"의 "일등" → 상호명이므로 위반 아님!
+  - "으뜸치과"의 "으뜸" → 상호명이므로 위반 아님!
+  - "베스트치과"의 "베스트" → 상호명이므로 위반 아님!
+  - "최고치과"의 "최고" → 상호명이므로 위반 아님!
+  - "검단일등치과"의 "일등" → 상호명의 일부이므로 위반 아님!
+  - 병원 이름 자체가 과장 표현을 포함해도, 그것은 등록된 상호명이지 광고가 아니다
 - 지역명+병원/치과 조합은 위반 아님 (예: "강서구인근치과", "광화문 치과", "OO역 치과")
 - SEO 키워드 (지역+시술 조합)는 위반 아님 (예: "강남 임플란트")
 - 병원 상호명, 진료과목 나열, 진료시간/위치/주차 등 사실 정보는 위반 아님
@@ -1118,22 +1125,13 @@ export async function crawlAndScoreAllHospitals(
     onProgress?.(`${name} 완료 (${totalPostsForHospital}개 글${analyzedStyle ? ' + 말투 분석' : ''})`, index, total);
   }
 
-  // ── 3개씩 배치 병렬 처리 ──
-  const BATCH_SIZE = 3;
-  let doneCount = 0;
-
-  for (let i = 0; i < total; i += BATCH_SIZE) {
-    const batch = hospitalUrls.slice(i, i + BATCH_SIZE);
-    const results = await Promise.allSettled(
-      batch.map((h, j) => processHospital(h, i + j))
-    );
-
-    for (let j = 0; j < results.length; j++) {
-      doneCount++;
-      if (results[j].status === 'rejected') {
-        const err = (results[j] as PromiseRejectedResult).reason;
-        onProgress?.(`${batch[j].name} 실패: ${(err as Error).message?.slice(0, 60)}`, doneCount - 1, total);
-      }
+  // ── 순차 처리 (진행 표시 정확도 우선) ──
+  for (let i = 0; i < total; i++) {
+    const hospital = hospitalUrls[i];
+    try {
+      await processHospital(hospital, i);
+    } catch (err) {
+      onProgress?.(`${hospital.name} 실패: ${(err as Error).message?.slice(0, 60)}`, i, total);
     }
   }
 
