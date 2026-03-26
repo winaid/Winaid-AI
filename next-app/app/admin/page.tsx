@@ -1585,13 +1585,13 @@ export default function AdminPage() {
                               <div className="flex items-center gap-2">
                                 <span className="text-xs font-bold text-violet-700">스타일 프로필</span>
                                 {as_.oneLineSummary && (
-                                  <span className="text-[11px] text-violet-500 truncate max-w-sm">{as_.oneLineSummary}</span>
+                                  <span className="text-[11px] text-violet-500">{as_.oneLineSummary}</span>
                                 )}
                               </div>
-                              <div className="grid grid-cols-2 gap-2 text-[11px]">
+                              <div className="space-y-1.5 text-[11px]">
                                 <div>
                                   <span className="font-semibold text-slate-600">어조:</span>{' '}
-                                  <span className="text-slate-500">{as_.tone?.slice(0, 80)}</span>
+                                  <span className="text-slate-500">{as_.tone}</span>
                                 </div>
                                 <div>
                                   <span className="font-semibold text-slate-600">격식:</span>{' '}
@@ -1601,11 +1601,11 @@ export default function AdminPage() {
                                 </div>
                                 <div>
                                   <span className="font-semibold text-slate-600">화자:</span>{' '}
-                                  <span className="text-slate-500">{as_.speakerIdentity?.slice(0, 80)}</span>
+                                  <span className="text-slate-500">{as_.speakerIdentity}</span>
                                 </div>
                                 <div>
                                   <span className="font-semibold text-slate-600">설득:</span>{' '}
-                                  <span className="text-slate-500">{as_.persuasionStyle?.slice(0, 80)}</span>
+                                  <span className="text-slate-500">{as_.persuasionStyle}</span>
                                 </div>
                               </div>
                               {as_.sentenceEndings && as_.sentenceEndings.length > 0 && (
