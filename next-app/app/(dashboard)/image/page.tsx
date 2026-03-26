@@ -1499,56 +1499,6 @@ export default function ImagePage() {
                   </div>
                 )}
 
-                {/* 디자인 스타일 프리셋 (schedule 제외 — schedule은 달력 테마가 대체) */}
-                {selectedTemplate !== 'schedule' && (
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-500 mb-1.5">
-                    디자인 스타일 {(selectedUploadedStyle || selectedCatTemplate) && <span className="text-violet-400 font-normal">(상위 스타일 선택 시 무시됨)</span>}
-                  </label>
-                  <div className="grid grid-cols-4 gap-1.5">
-                    {AI_STYLE_PRESETS.map(preset => {
-                      const isActive = !selectedUploadedStyle && !selectedCatTemplate && selectedPreset.id === preset.id;
-                      const dimmed = !!(selectedUploadedStyle || selectedCatTemplate);
-                      return (
-                        <button key={preset.id} type="button" onClick={() => { setSelectedPreset(preset); setSelectedUploadedStyle(null); setSelectedCatTemplate(null); }}
-                          className={`relative rounded-xl p-2 text-center transition-all border ${
-                            isActive
-                              ? 'border-transparent shadow-md ring-2 ring-offset-1'
-                              : dimmed
-                              ? 'border-slate-100 opacity-50'
-                              : 'border-slate-200 hover:border-slate-300 hover:shadow-sm'
-                          }`}
-                          style={{
-                            backgroundColor: isActive ? preset.bg : undefined,
-                            ...(isActive ? { '--tw-ring-color': preset.color } as React.CSSProperties : {}),
-                          }}
-                        >
-                          {/* 컬러 서클 */}
-                          <div className="mx-auto w-7 h-7 rounded-full mb-1 shadow-inner" style={{ background: `linear-gradient(135deg, ${preset.color}, ${preset.accent})` }} />
-                          <div className={`text-[10px] font-bold leading-tight truncate ${isActive ? 'text-slate-800' : 'text-slate-600'}`}>{preset.name}</div>
-                          <div className="text-[8px] text-slate-400 leading-tight truncate">{preset.desc}</div>
-                          {/* 선택 체크 */}
-                          {isActive && (
-                            <div className="absolute top-1 right-1 w-4 h-4 rounded-full flex items-center justify-center" style={{ backgroundColor: preset.color }}>
-                              <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                            </div>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                  {/* 현재 적용 중인 스타일 요약 */}
-                  <div className="mt-2 p-2 rounded-lg border" style={{ backgroundColor: selectedPreset.bg, borderColor: selectedPreset.color + '30' }}>
-                    <div className="flex items-center gap-2">
-                      <div className="w-4 h-4 rounded-full flex-shrink-0" style={{ background: `linear-gradient(135deg, ${selectedPreset.color}, ${selectedPreset.accent})` }} />
-                      <div>
-                        <span className="text-[10px] font-bold" style={{ color: selectedPreset.color }}>{activeStyleName}</span>
-                        <span className="text-[9px] text-slate-400 ml-1.5">{selectedPreset.mood}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                )}
               </div>
             )}
 
