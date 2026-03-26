@@ -558,7 +558,7 @@ ${sliced}
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       prompt,
-      model: 'gemini-3.1-flash-lite-preview',
+      model: 'gemini-2.5-flash',
       temperature: 0.1,
       responseType: 'json',
       timeout: 60000,
@@ -571,11 +571,26 @@ ${sliced}
   let parsed: Record<string, unknown>;
   try {
     let text = data.text || '';
-    const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
-    if (jsonMatch) text = jsonMatch[1];
+    // 1) ```json ... ``` 블록 추출
+    const jsonBlock = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+    if (jsonBlock) text = jsonBlock[1];
+    // 2) JSON 객체 { ... } 직접 추출 (앞뒤 텍스트 제거)
+    const braceMatch = text.match(/\{[\s\S]*\}/);
+    if (braceMatch) text = braceMatch[0];
     parsed = JSON.parse(text.trim());
   } catch {
-    throw new Error('채점 결과 파싱 실패');
+    // 최후 시도: 응답에서 score 키가 있는 부분만 추출
+    try {
+      const raw = data.text || '';
+      const emergency = raw.match(/\{[^{}]*"score_typo"[^{}]*\}/);
+      if (emergency) {
+        parsed = JSON.parse(emergency[0]);
+      } else {
+        throw new Error('no json');
+      }
+    } catch {
+      throw new Error('채점 결과 파싱 실패');
+    }
   }
 
   let typo_issues = (parsed.typo_issues as CrawledPostScore['typo_issues']) || [];
