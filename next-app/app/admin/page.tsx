@@ -1039,12 +1039,40 @@ export default function AdminPage() {
                   {postsLoading ? '로딩...' : '새로고침'}
                 </button>
                 {posts.length > 0 && (
-                  <button
-                    onClick={() => { setDeleteAllError(''); setShowDeleteAllModal(true); }}
-                    className="px-3 py-1.5 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700 transition-colors text-xs"
-                  >
-                    전체 삭제
-                  </button>
+                  <>
+                    <button
+                      onClick={() => {
+                        const q = contentSearch.trim().toLowerCase();
+                        const rows = (q
+                          ? posts.filter(p =>
+                              (p.title || '').toLowerCase().includes(q) ||
+                              (p.hospital_name || '').toLowerCase().includes(q) ||
+                              (p.topic || '').toLowerCase().includes(q))
+                          : posts
+                        );
+                        const header = '유형,병원,제목,주제,글자수,생성일';
+                        const csv = [header, ...rows.map(p =>
+                          [POST_TYPE_LABELS[p.post_type] || p.post_type, p.hospital_name || '', `"${(p.title || '').replace(/"/g, '""')}"`, `"${(p.topic || '').replace(/"/g, '""')}"`, p.char_count ?? '', formatDate(p.created_at)].join(',')
+                        )].join('\n');
+                        const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `winaid_contents_${new Date().toISOString().slice(0, 10)}.csv`;
+                        a.click();
+                        URL.revokeObjectURL(url);
+                      }}
+                      className="px-3 py-1.5 bg-emerald-50 text-emerald-600 font-medium rounded-lg hover:bg-emerald-100 transition-colors text-xs border border-emerald-200"
+                    >
+                      CSV 내보내기
+                    </button>
+                    <button
+                      onClick={() => { setDeleteAllError(''); setShowDeleteAllModal(true); }}
+                      className="px-3 py-1.5 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700 transition-colors text-xs"
+                    >
+                      전체 삭제
+                    </button>
+                  </>
                 )}
               </div>
             </div>
@@ -1291,13 +1319,35 @@ export default function AdminPage() {
                   className="px-3 py-1.5 text-xs border border-slate-200 rounded-lg w-44 focus:outline-none focus:border-emerald-400 transition-colors"
                 />
               </div>
-              <button
-                onClick={loadUsers}
-                disabled={usersLoading}
-                className="px-3 py-1.5 bg-slate-100 text-slate-600 font-medium rounded-lg hover:bg-slate-200 transition-colors text-xs disabled:opacity-50"
-              >
-                {usersLoading ? '로딩...' : '새로고침'}
-              </button>
+              <div className="flex gap-2">
+                {users.length > 0 && (
+                  <button
+                    onClick={() => {
+                      const header = '이름,이메일,팀,가입일';
+                      const csv = [header, ...users.map(u =>
+                        [u.full_name || '', u.email || '', TEAM_DATA.find(t => t.id === u.team_id)?.label || String(u.team_id ?? '미배정'), formatDate(u.created_at)].join(',')
+                      )].join('\n');
+                      const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `winaid_users_${new Date().toISOString().slice(0, 10)}.csv`;
+                      a.click();
+                      URL.revokeObjectURL(url);
+                    }}
+                    className="px-3 py-1.5 bg-emerald-50 text-emerald-600 font-medium rounded-lg hover:bg-emerald-100 transition-colors text-xs border border-emerald-200"
+                  >
+                    CSV 내보내기
+                  </button>
+                )}
+                <button
+                  onClick={loadUsers}
+                  disabled={usersLoading}
+                  className="px-3 py-1.5 bg-slate-100 text-slate-600 font-medium rounded-lg hover:bg-slate-200 transition-colors text-xs disabled:opacity-50"
+                >
+                  {usersLoading ? '로딩...' : '새로고침'}
+                </button>
+              </div>
             </div>
             {usersLoading ? (
               <div className="py-16 text-center text-slate-400 text-sm">불러오는 중...</div>

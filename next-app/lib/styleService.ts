@@ -20,6 +20,11 @@ export interface AnalyzedStyle {
   sentenceRhythm?: string;
   paragraphFlow?: string;
   persuasionStyle?: string;
+  medicalTermLevel?: string;
+  procedureExplainStyle?: string;
+  trustBuildingPattern?: string;
+  ctaStyle?: string;
+  anxietyHandling?: string;
   uniqueExpressions?: string[];
   bannedGenericStyle?: string[];
   oneLineSummary?: string;
@@ -484,13 +489,18 @@ ${sampleText.substring(0, 6000)}
   "sentenceRhythm": "문장 리듬 분석 (평균 길이, 끊김 패턴, 어미 반복 여부, 질문형/단정형/권유형 비중)",
   "paragraphFlow": "문단 전개 구조 분석 (2-3문장, 대표적 흐름 패턴)",
   "persuasionStyle": "설득 방식 분석 (2-3문장)",
+  "medicalTermLevel": "의료 용어 사용 수준 (쉬운말만/전문용어+설명/전문가 대상)",
+  "procedureExplainStyle": "시술·치료 설명 방식 (단계별/비유 활용/Before-After/비교 등)",
+  "trustBuildingPattern": "환자 신뢰 구축 패턴 (경험 수치/후기 인용/논문 근거/공감 등)",
+  "ctaStyle": "행동 유도(CTA) 방식 (직접 권유/부드러운 제안/정보 제공 후 선택 맡김 등)",
+  "anxietyHandling": "환자 불안 대응 방식 (직접 해소/공감 후 안심/과학적 근거 제시 등)",
   "uniqueExpressions": ["고유 접속어, 명사 표현, 반복 문장 구조, 상담 패턴 — 5-10개"],
   "bannedGenericStyle": ["이 병원 글에서 절대 나오면 안 되는 범용/진부 표현 5-8개"],
   "oneLineSummary": "이 병원 문체를 한 줄로 정의",
   "goodExamples": ["이 병원다운 문장 예시 8~10개 — ⚠️ 반드시 원문에서 그대로 복사! 새로 만들면 안 됨! 이 병원의 톤이 가장 잘 드러나는 대표 문장들"],
   "badExamples": ["이 병원답지 않은 문장 예시 5개 — AI가 흔히 쓰는 범용 문장으로 작성. 이런 문장이 나오면 실패"],
   "description": "이 말투를 한 줄로 설명 (화자 캐릭터 + 독자 관계 + 설득 구조 포함)",
-  "stylePrompt": "AI가 이 말투로 글을 쓸 때 사용할 핵심 지침 (100-200자, 화자 태도 + 설명 흐름 + 금지 패턴)"
+  "stylePrompt": "AI가 이 말투로 글을 쓸 때 반드시 지켜야 할 핵심 지침 (150-250자, 화자 태도 + 설명 흐름 + 의료 설명 방식 + 금지 패턴)"
 }`;
 
   // root와 동일: PRO 모델 사용 (flash-lite → 3.1-pro-preview)
@@ -539,6 +549,11 @@ ${sampleText.substring(0, 6000)}
       sentenceRhythm: result.sentenceRhythm as string,
       paragraphFlow: result.paragraphFlow as string,
       persuasionStyle: result.persuasionStyle as string,
+      medicalTermLevel: result.medicalTermLevel as string,
+      procedureExplainStyle: result.procedureExplainStyle as string,
+      trustBuildingPattern: result.trustBuildingPattern as string,
+      ctaStyle: result.ctaStyle as string,
+      anxietyHandling: result.anxietyHandling as string,
       uniqueExpressions: result.uniqueExpressions as string[],
       bannedGenericStyle: result.bannedGenericStyle as string[],
       oneLineSummary: result.oneLineSummary as string,
