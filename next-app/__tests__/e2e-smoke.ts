@@ -1,11 +1,15 @@
 /**
- * E2E 스모크 테스트 — 모든 페이지 + API 라우트 검증
+ * E2E 스모크 테스트 — 모든 페이지 + API 라우트 + 실제 API 호출 검증
  *
- * 실행: npx tsx __tests__/e2e-smoke.ts
+ * 로컬:       npx tsx __tests__/e2e-smoke.ts
+ * 프로덕션:   BASE_URL=https://your-app.vercel.app npx tsx __tests__/e2e-smoke.ts
+ * API 스킵:   SKIP_LIVE_API=true npx tsx __tests__/e2e-smoke.ts
+ *
  * 전제: npm run dev (또는 npm start) 가 localhost:3000에서 실행 중
  */
 
 const BASE = process.env.BASE_URL || 'http://localhost:3000';
+const SKIP_LIVE_API = process.env.SKIP_LIVE_API === 'true';
 let passed = 0;
 let failed = 0;
 const failures: string[] = [];
@@ -38,59 +42,74 @@ async function fetchPage(path: string): Promise<{ status: number; html: string }
 
 async function fetchApi(
   path: string,
-  options?: { method?: string; body?: unknown },
+  options?: { method?: string; body?: unknown; timeoutMs?: number },
 ): Promise<{ status: number; data: Record<string, unknown> }> {
-  const res = await fetch(`${BASE}${path}`, {
-    method: options?.method || 'GET',
-    headers: { 'Content-Type': 'application/json' },
-    ...(options?.body ? { body: JSON.stringify(options.body) } : {}),
-  });
-  let data: Record<string, unknown>;
+  const controller = new AbortController();
+  const timeoutMs = options?.timeoutMs ?? 30000;
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
   try {
-    data = await res.json() as Record<string, unknown>;
-  } catch {
-    data = { _rawText: await res.text().catch(() => '(parse failed)') };
+    const res = await fetch(`${BASE}${path}`, {
+      method: options?.method || 'GET',
+      headers: { 'Content-Type': 'application/json' },
+      ...(options?.body ? { body: JSON.stringify(options.body) } : {}),
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+    let data: Record<string, unknown>;
+    try {
+      data = await res.json() as Record<string, unknown>;
+    } catch {
+      data = { _rawText: await res.text().catch(() => '(parse failed)') };
+    }
+    return { status: res.status, data };
+  } catch (err) {
+    clearTimeout(timeoutId);
+    throw err;
   }
-  return { status: res.status, data };
 }
 
 // ════════════════════════════════════════════
-// 1. 페이지 로드 테스트 — 모든 라우트가 200 반환하는지
+// 1. 페이지 로드 테스트 — 모든 라우트가 200 반환 + 핵심 텍스트 확인
 // ════════════════════════════════════════════
 
 async function pageLoadTests() {
   console.log('\n📄 [1] 페이지 로드 테스트');
 
-  const pages = [
-    '/',
-    '/auth',
-    '/app',
-    '/blog',
-    '/press',
-    '/card_news',
-    '/image',
-    '/refine',
-    '/history',
-    '/feedback',
-    '/admin',
+  const pages: { path: string; contains?: string }[] = [
+    { path: '/', contains: 'WINAID' },
+    { path: '/auth' },
+    { path: '/app' },
+    { path: '/blog' },
+    { path: '/press' },
+    { path: '/card_news' },
+    { path: '/image' },
+    { path: '/refine' },
+    { path: '/history' },
+    { path: '/feedback' },
+    { path: '/admin' },
   ];
 
-  for (const path of pages) {
-    await test(`GET ${path} → 200`, async () => {
+  for (const { path, contains } of pages) {
+    const label = contains ? `GET ${path} → 200 ("${contains}" 포함)` : `GET ${path} → 200`;
+    await test(label, async () => {
       const { status, html } = await fetchPage(path);
       assert(status === 200, `status=${status}`);
       assert(html.includes('</html>') || html.includes('</body>'), 'HTML 응답 아님');
       assert(html.length > 500, `HTML 너무 짧음 (${html.length}자)`);
+      if (contains) {
+        assert(html.includes(contains), `"${contains}" 텍스트 미포함`);
+      }
     });
   }
 }
 
 // ════════════════════════════════════════════
-// 2. API 라우트 테스트 — 입력 검증, 에러 핸들링
+// 2. API 입력 검증 테스트
 // ════════════════════════════════════════════
 
-async function apiTests() {
-  console.log('\n🔌 [2] API 라우트 테스트');
+async function apiValidationTests() {
+  console.log('\n🔌 [2] API 입력 검증 테스트');
 
   // Gemini health check
   await test('GET /api/gemini → 200 (health)', async () => {
@@ -184,11 +203,79 @@ async function apiTests() {
 }
 
 // ════════════════════════════════════════════
-// 3. 안정성 검증 — 에지 케이스
+// 3. 라이브 API 호출 테스트 (SKIP_LIVE_API=true로 스킵 가능)
+// ════════════════════════════════════════════
+
+async function liveApiTests() {
+  if (SKIP_LIVE_API) {
+    console.log('\n⏭️  [3] 라이브 API 테스트 — SKIP_LIVE_API=true로 스킵됨');
+    return;
+  }
+
+  console.log('\n🔥 [3] 라이브 API 호출 테스트');
+
+  // (a) Gemini 텍스트 생성
+  await test('POST /api/gemini (실제 생성) → 200 + text', async () => {
+    const { status, data } = await fetchApi('/api/gemini', {
+      method: 'POST',
+      body: {
+        prompt: '안녕하세요라고 한국어로 인사해주세요',
+        model: 'gemini-3.1-flash-lite-preview',
+        maxOutputTokens: 100,
+        timeout: 30000,
+      },
+      timeoutMs: 35000,
+    });
+    assert(status === 200, `status=${status}, error=${JSON.stringify(data.error)}`);
+    assert(typeof data.text === 'string' && data.text.length > 0, 'text가 비어있음');
+  });
+
+  // (b) Gemini JSON 응답 모드
+  await test('POST /api/gemini (JSON 모드) → 200 + parseable JSON', async () => {
+    const { status, data } = await fetchApi('/api/gemini', {
+      method: 'POST',
+      body: {
+        prompt: '1+1의 답을 JSON으로',
+        model: 'gemini-3.1-flash-lite-preview',
+        responseType: 'json',
+        schema: {
+          type: 'OBJECT',
+          properties: { answer: { type: 'NUMBER' } },
+          required: ['answer'],
+        },
+        maxOutputTokens: 100,
+        timeout: 30000,
+      },
+      timeoutMs: 35000,
+    });
+    assert(status === 200, `status=${status}, error=${JSON.stringify(data.error)}`);
+    assert(typeof data.text === 'string', 'text가 없음');
+    // JSON 파싱 가능 확인
+    let parsed = false;
+    try { JSON.parse(data.text as string); parsed = true; } catch { /* ignore */ }
+    assert(parsed, `JSON 파싱 실패: ${(data.text as string).substring(0, 100)}`);
+  });
+
+  // (c) 이미지 생성 (가장 느린 테스트)
+  console.log('  🖼️  이미지 생성 테스트 (최대 2분 소요...)');
+  await test('POST /api/image (실제 생성) → 200 + imageDataUrl', async () => {
+    const { status, data } = await fetchApi('/api/image', {
+      method: 'POST',
+      body: { prompt: '간단한 파란색 원 하나', aspectRatio: '1:1' },
+      timeoutMs: 120000,
+    });
+    assert(status === 200, `status=${status}, error=${JSON.stringify(data.error)}`);
+    const imgUrl = data.imageDataUrl as string;
+    assert(typeof imgUrl === 'string' && imgUrl.startsWith('data:image'), 'imageDataUrl이 data:image로 시작하지 않음');
+  });
+}
+
+// ════════════════════════════════════════════
+// 4. 안정성 검증 — 에지 케이스
 // ════════════════════════════════════════════
 
 async function stabilityTests() {
-  console.log('\n🛡️  [3] 안정성 검증');
+  console.log('\n🛡️  [4] 안정성 검증');
 
   // 존재하지 않는 페이지 → 404
   await test('GET /nonexistent → 404', async () => {
@@ -238,7 +325,9 @@ async function stabilityTests() {
 // ════════════════════════════════════════════
 
 async function main() {
-  console.log(`\n🚀 E2E 스모크 테스트 시작 (${BASE})\n`);
+  console.log(`\n🚀 E2E 스모크 테스트 시작 (${BASE})`);
+  if (SKIP_LIVE_API) console.log('   ℹ️  SKIP_LIVE_API=true — 라이브 API 테스트 스킵');
+  console.log('');
 
   // 서버 응답 대기 (최대 30초)
   for (let i = 0; i < 30; i++) {
@@ -255,7 +344,8 @@ async function main() {
   }
 
   await pageLoadTests();
-  await apiTests();
+  await apiValidationTests();
+  await liveApiTests();
   await stabilityTests();
 
   console.log(`\n${'═'.repeat(50)}`);

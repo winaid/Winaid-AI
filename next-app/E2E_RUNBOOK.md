@@ -66,6 +66,7 @@ curl http://localhost:3000/api/gemini
 | 생성 | 주제 입력 → 옵션 선택 → 생성 버튼 |
 | 성공 기준 | 생성 결과가 화면에 표시됨 |
 | 저장 확인 | 결과 하단에 "저장 완료" 또는 에러 없음 |
+| SEO 패널 | 생성 완료 후 "SEO 상세 분석 보기" 버튼 표시 → 클릭 시 5개 카테고리 점수 바 표시 |
 | 실패 시 확인 | (1) 네트워크 탭에서 `/api/gemini` 응답 확인 (2) 콘솔에서 `[postStorage]` 에러 확인 |
 
 ### 3. /history — 목록 확인
@@ -111,6 +112,22 @@ curl http://localhost:3000/api/gemini
 | 저장 확인 | `/history` → AI 보정 탭에 표시 |
 | 구분 확인 | 블로그 탭에는 표시되지 않음 (refine은 별도 분류) |
 
+### 8. /image — 이미지 생성
+
+| 항목 | 확인 방법 |
+|------|----------|
+| 페이지 로드 | `/image` 접속 → 카테고리 선택 UI 표시 |
+| 템플릿 로드 | 카테고리(진료일정 등) 클릭 → 템플릿 목록 로드 (동적 import) |
+| 생성 | 템플릿 선택 → 생성 → 이미지 결과 표시 |
+| 저장/다운로드 | 이미지 다운로드 버튼 동작 |
+
+### 9. 모바일 검증
+
+| 항목 | 확인 방법 |
+|------|----------|
+| 모바일 탭 | 브라우저 DevTools → 모바일 뷰포트 → 상단 탭 네비게이션 표시 |
+| 로그아웃 | 모바일에서 우상단 아바타 클릭 → 로그아웃 드롭다운 표시 → 클릭 시 로그아웃 |
+
 ---
 
 ## 실패 시 디버깅 순서
@@ -133,15 +150,27 @@ curl http://localhost:3000/api/gemini
 
 ---
 
-## known limitations (미검증 항목)
+## known limitations (현재 미검증 항목)
 
-- `/image` — stub 상태, 이관 미완료
-- `/admin` — stub 상태
-- 네이버/구글 외부 API — route 미생성 (`MIGRATION_MAP.md` 참고)
 - 다크모드 — 미착수
 - 에러 바운더리 (`error.tsx`) — 미착수
-- Vercel 배포 환경 — 로컬 검증 후 별도 확인 필요
-- 모바일 레이아웃 — 기본 반응형만 적용, 세밀한 확인 필요
+- 네이버 검색광고 API — NAVER_SEARCHAD_* env 필요 (선택)
+- 크롤러 서버 연동 — NEXT_PUBLIC_CRAWLER_URL env 필요 (선택)
+
+---
+
+## 자동화 테스트 실행
+
+```bash
+# 로컬 테스트 (dev 서버 실행 필요)
+npx tsx __tests__/e2e-smoke.ts
+
+# 프로덕션 테스트
+BASE_URL=https://your-app.vercel.app npx tsx __tests__/e2e-smoke.ts
+
+# API 호출 없이 페이지 로드만 테스트
+SKIP_LIVE_API=true npx tsx __tests__/e2e-smoke.ts
+```
 
 ---
 
