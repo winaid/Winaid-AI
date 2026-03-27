@@ -413,7 +413,8 @@ export default function ImagePage() {
 - 단축진료는 주황 배경으로 구분
 - 날짜 숫자는 크게(24pt 이상), 요일은 작게(12pt)
 - 5주치 격자를 절대 그리지 마세요. 딱 1주일(7칸)만!
-- ⛔ 사용자가 입력하지 않은 진료시간, 점심시간, 전화번호를 절대 넣지 마세요!`;
+- ⛔ 사용자가 입력하지 않은 진료시간, 점심시간, 전화번호를 절대 넣지 마세요!
+- ⛔ "2026년" 같은 연도를 표시하지 마세요! "N월"만 사용하세요.`;
     } else if (schLayout === 'highlight') {
       // 마킹된 날짜 목록을 명시적으로 포함
       const highlightItems: string[] = [];
@@ -434,7 +435,8 @@ export default function ImagePage() {
 - 색상: 휴진=빨강 배경, 단축=주황 배경, 휴가=보라 배경
 - 달력 격자 없이 날짜 자체가 주인공인 디자인
 - 7열 격자, 5주 배열 등 달력 형태를 절대 사용하지 마세요!
-- ⛔ 사용자가 입력하지 않은 진료시간, 점심시간, 전화번호를 절대 넣지 마세요!`;
+- ⛔ 사용자가 입력하지 않은 진료시간, 점심시간, 전화번호를 절대 넣지 마세요!
+- ⛔ "2026년" 같은 연도를 표시하지 마세요! "N월"만 사용하세요.`;
     } else {
       // full_calendar — 기존 그대로
       layoutRules = `[CRITICAL LAYOUT RULES]
@@ -442,7 +444,8 @@ export default function ImagePage() {
 - 구조: 상단 헤더(병원명+제목) → 달력 그리드 → 하단(사용자가 입력한 안내 문구만)
 - 달력은 콤팩트하게! 7열 그리드, 셀 간격 최소화, 날짜 숫자는 14-18pt
 - 전체가 하나의 세련된 카드 안에 담겨야 합니다
-- ⛔ 사용자가 입력하지 않은 진료시간, 점심시간, 전화번호를 절대 넣지 마세요! 하단에 아무 정보도 입력되지 않았으면 하단을 비워두세요.`;
+- ⛔ 사용자가 입력하지 않은 진료시간, 점심시간, 전화번호를 절대 넣지 마세요! 하단에 아무 정보도 입력되지 않았으면 하단을 비워두세요.
+- ⛔ "2026년" 같은 연도를 표시하지 마세요! "N월"만 사용하세요.`;
     }
 
     let p = `Korean hospital ${schMonth}월 monthly schedule poster — PREMIUM DESIGN.
@@ -451,9 +454,10 @@ export default function ImagePage() {
 ${layoutRules}
 
 [CALENDAR DATA]
-월: ${schYear}년 ${schMonth}월
+월: ${schMonth}월
 레이아웃: ${layoutLabel}
 디자인 테마: "${themeName}" — ${themeDesc}
+⛔ "2026년", "${schYear}년" 같은 연도 텍스트를 이미지 어디에도 표시하지 마세요! "${schMonth}월"만 사용하세요.
 ${layoutExtra}`;
     if (closedDays.length > 0) p += `휴진일: ${closedDays.map(d => `${d}일`).join(', ')} — 빨간색 배경 또는 빨간 동그라미로 강조.\n`;
     if (shortened.length > 0) p += `단축진료: ${shortened.join(', ')} — 주황/앰버 표시.\n`;
