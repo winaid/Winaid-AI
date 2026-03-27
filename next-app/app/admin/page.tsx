@@ -30,124 +30,20 @@ import { ToastContainer, toast } from '../../components/Toast';
 import { sanitizeHtml } from '../../lib/sanitizeHtml';
 import type { CrawledPostScore, DBCrawledPost } from '../../lib/types';
 import {
+  type AdminStats, type GeneratedPost, type UserProfile,
+  type Tab, type PostTypeFilter,
+  POST_TYPE_LABELS, POST_TYPE_COLORS,
+  getAdminStats, getAllPosts, deletePost, getUsers, formatDate,
+} from './adminTypes';
+import AdminUsersTab from './AdminUsersTab';
+import AdminFeedbackTab from './AdminFeedbackTab';
+import {
   listFeedbacks,
   deleteFeedback,
   analyzeFeedbacks,
   type InternalFeedback as FeedbackItem,
   type FeedbackAnalysis,
 } from '../../lib/feedbackService';
-
-// ── 타입 ──
-
-interface AdminStats {
-  totalPosts: number;
-  blogCount: number;
-  cardNewsCount: number;
-  pressReleaseCount: number;
-  imageCount: number;
-  uniqueHospitals: number;
-  uniqueUsers: number;
-  postsToday: number;
-  postsThisWeek: number;
-  postsThisMonth: number;
-}
-
-interface GeneratedPost {
-  id: string;
-  post_type: string;
-  title: string;
-  content: string;
-  hospital_name: string | null;
-  category: string | null;
-  user_email: string | null;
-  topic: string | null;
-  char_count: number | null;
-  created_at: string;
-}
-
-interface UserProfile {
-  id: string;
-  email: string | null;
-  full_name: string | null;
-  team_id: number | null;
-  created_at: string;
-}
-
-type Tab = 'contents' | 'users' | 'style' | 'feedback';
-type PostTypeFilter = 'all' | 'blog' | 'card_news' | 'press_release' | 'image';
-
-const POST_TYPE_LABELS: Record<string, string> = {
-  blog: '블로그',
-  card_news: '카드뉴스',
-  press_release: '보도자료',
-  image: '이미지',
-};
-
-const POST_TYPE_COLORS: Record<string, string> = {
-  blog: 'bg-blue-100 text-blue-700',
-  card_news: 'bg-pink-100 text-pink-700',
-  press_release: 'bg-amber-100 text-amber-700',
-  image: 'bg-emerald-100 text-emerald-700',
-};
-
-// ── RPC 호출 헬퍼 ──
-
-async function getAdminStats(token: string): Promise<AdminStats | null> {
-  if (!supabase) return null;
-  const { data, error } = await supabase.rpc('get_admin_stats', { admin_password: token });
-  if (error || !data || (Array.isArray(data) && data.length === 0)) return null;
-  const row = Array.isArray(data) ? data[0] : data;
-  return {
-    totalPosts: row.total_posts ?? 0,
-    blogCount: row.blog_count ?? 0,
-    cardNewsCount: row.card_news_count ?? 0,
-    pressReleaseCount: row.press_release_count ?? 0,
-    imageCount: row.image_count ?? 0,
-    uniqueHospitals: row.unique_hospitals ?? 0,
-    uniqueUsers: row.unique_users ?? 0,
-    postsToday: row.posts_today ?? 0,
-    postsThisWeek: row.posts_this_week ?? 0,
-    postsThisMonth: row.posts_this_month ?? 0,
-  };
-}
-
-async function getAllPosts(
-  token: string,
-  filterType?: string,
-  filterHospital?: string,
-  offset = 0,
-): Promise<GeneratedPost[]> {
-  if (!supabase) return [];
-  const { data, error } = await supabase.rpc('get_all_generated_posts', {
-    admin_password: token,
-    filter_post_type: filterType && filterType !== 'all' ? filterType : null,
-    filter_hospital: filterHospital || null,
-    limit_count: 100,
-    offset_count: offset,
-  });
-  if (error || !data) return [];
-  return data as GeneratedPost[];
-}
-
-async function deletePost(token: string, postId: string): Promise<boolean> {
-  if (!supabase) return false;
-  const { data, error } = await supabase.rpc('delete_generated_post', {
-    admin_password: token,
-    post_id: postId,
-  });
-  if (error) return false;
-  return !!data;
-}
-
-async function getUsers(): Promise<UserProfile[]> {
-  if (!supabase) return [];
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('id, email, full_name, team_id, created_at')
-    .order('created_at', { ascending: false });
-  if (error || !data) return [];
-  return data as UserProfile[];
-}
 
 // ── 메인 컴포넌트 ──
 
@@ -744,12 +640,7 @@ export default function AdminPage() {
     }
   };
 
-  // ── 시간 포맷 ──
-
-  const formatDate = (iso: string) => {
-    const d = new Date(iso);
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-  };
+  // formatDate — adminTypes.ts에서 import
 
   // ── Supabase 미설정 ──
 
@@ -1293,115 +1184,19 @@ export default function AdminPage() {
         </>
       )}
 
-      {/* ── 사용자 관리 탭 ── */}
-      {tab === 'users' && (() => {
-        const uq = userSearch.trim().toLowerCase();
-        const filteredUsers = uq
-          ? users.filter(u =>
-              (u.full_name?.toLowerCase().includes(uq)) ||
-              (u.email?.toLowerCase().includes(uq))
-            )
-          : users;
-        return (
-        <div className="space-y-4">
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-            <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <div>
-                  <h2 className="text-base font-bold text-slate-800">가입 사용자 목록</h2>
-                  <p className="text-xs text-slate-400 mt-0.5">총 {users.length}명{uq && ` · 검색 ${filteredUsers.length}명`}</p>
-                </div>
-                <input
-                  type="text"
-                  value={userSearch}
-                  onChange={e => setUserSearch(e.target.value)}
-                  placeholder="이름·이메일 검색"
-                  className="px-3 py-1.5 text-xs border border-slate-200 rounded-lg w-44 focus:outline-none focus:border-emerald-400 transition-colors"
-                />
-              </div>
-              <div className="flex gap-2">
-                {users.length > 0 && (
-                  <button
-                    onClick={() => {
-                      const header = '이름,이메일,팀,가입일';
-                      const csv = [header, ...users.map(u =>
-                        [u.full_name || '', u.email || '', TEAM_DATA.find(t => t.id === u.team_id)?.label || String(u.team_id ?? '미배정'), formatDate(u.created_at)].join(',')
-                      )].join('\n');
-                      const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
-                      const url = URL.createObjectURL(blob);
-                      const a = document.createElement('a');
-                      a.href = url;
-                      a.download = `winaid_users_${new Date().toISOString().slice(0, 10)}.csv`;
-                      a.click();
-                      URL.revokeObjectURL(url);
-                    }}
-                    className="px-3 py-1.5 bg-emerald-50 text-emerald-600 font-medium rounded-lg hover:bg-emerald-100 transition-colors text-xs border border-emerald-200"
-                  >
-                    CSV 내보내기
-                  </button>
-                )}
-                <button
-                  onClick={loadUsers}
-                  disabled={usersLoading}
-                  className="px-3 py-1.5 bg-slate-100 text-slate-600 font-medium rounded-lg hover:bg-slate-200 transition-colors text-xs disabled:opacity-50"
-                >
-                  {usersLoading ? '로딩...' : '새로고침'}
-                </button>
-              </div>
-            </div>
-            {usersLoading ? (
-              <div className="py-16 text-center text-slate-400 text-sm">불러오는 중...</div>
-            ) : filteredUsers.length === 0 ? (
-              <div className="py-16 text-center">
-                <div className="text-3xl mb-2 opacity-30">👤</div>
-                <p className="text-slate-400 text-sm">{uq ? '검색 결과가 없습니다.' : '가입한 사용자가 없습니다.'}</p>
-              </div>
-            ) : (
-              <div className="divide-y divide-slate-50">
-                {filteredUsers.map(user => {
-                  const team = TEAM_DATA.find(t => t.id === user.team_id);
-                  return (
-                    <div key={user.id} className="px-5 py-4 flex items-center gap-4 group">
-                      <div className="w-9 h-9 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-sm font-bold flex-shrink-0">
-                        {user.full_name?.charAt(0) || '?'}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-semibold text-slate-800 text-sm">{user.full_name || '-'}</span>
-                          {team && (
-                            <span className="text-[11px] px-2 py-0.5 bg-blue-50 text-blue-600 rounded-full font-medium">{team.label}</span>
-                          )}
-                        </div>
-                        <p className="text-xs text-slate-400 truncate mt-0.5">{user.email}</p>
-                      </div>
-                      <select
-                        value={user.team_id ?? ''}
-                        onChange={e => handleUserTeamChange(user.id, e.target.value ? Number(e.target.value) : null)}
-                        className="text-xs border border-slate-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:border-blue-400 transition-colors flex-shrink-0"
-                      >
-                        <option value="">팀 없음</option>
-                        {TEAM_DATA.map(t => (
-                          <option key={t.id} value={t.id}>{t.label}</option>
-                        ))}
-                      </select>
-                      <div className="text-xs text-slate-400 flex-shrink-0">
-                        {formatDate(user.created_at)}
-                      </div>
-                      <button
-                        onClick={() => handleUserDelete(user.id, user.full_name || user.email || '')}
-                        className="text-[10px] text-slate-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100 flex-shrink-0"
-                      >
-                        삭제
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </div>
-        );
-      })()}
+      {/* ── 사용자 관리 탭 — AdminUsersTab으로 분리 ── */}
+      {tab === 'users' && (
+        <AdminUsersTab
+          users={users}
+          usersLoading={usersLoading}
+          userSearch={userSearch}
+          setUserSearch={setUserSearch}
+          TEAM_DATA={TEAM_DATA}
+          onTeamChange={handleUserTeamChange}
+          onDelete={handleUserDelete}
+          onRefresh={loadUsers}
+        />
+      )}
 
       {/* ── 말투 학습 탭 ── */}
       {tab === 'style' && (
@@ -2074,144 +1869,27 @@ export default function AdminPage() {
           </div>
         </div>
       )}
-      {/* ── 피드백 관리 탭 ── */}
-      {tab === 'feedback' && (() => {
-        const fq = feedbackSearch.trim().toLowerCase();
-        const filteredFeedbacks = fq
-          ? adminFeedbacks.filter(f =>
-              f.content.toLowerCase().includes(fq) ||
-              f.user_name.toLowerCase().includes(fq)
-            )
-          : adminFeedbacks;
-        return (
-        <div className="space-y-4">
-          {/* 헤더 + 분석 버튼 */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <h2 className="text-lg font-bold text-slate-800">피드백 목록</h2>
-              {adminFeedbacks.length > 0 && (
-                <span className="text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
-                  {adminFeedbacks.length}건{fq && ` · 검색 ${filteredFeedbacks.length}건`}
-                </span>
-              )}
-              <input
-                type="text"
-                value={feedbackSearch}
-                onChange={e => setFeedbackSearch(e.target.value)}
-                placeholder="내용·작성자 검색"
-                className="px-3 py-1.5 text-xs border border-slate-200 rounded-lg w-44 focus:outline-none focus:border-blue-400 transition-colors"
-              />
-              <button
-                onClick={() => loadAdminFeedbacks()}
-                disabled={feedbacksLoading}
-                className="text-xs text-blue-600 hover:text-blue-800 font-medium"
-              >
-                {feedbacksLoading ? '로딩...' : '새로고침'}
-              </button>
-            </div>
-            <button
-              onClick={handleAdminFeedbackAnalyze}
-              disabled={feedbackAnalyzing || adminFeedbacks.length === 0}
-              className="px-4 py-2 text-xs font-bold bg-violet-600 text-white rounded-xl hover:bg-violet-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center gap-1.5"
-            >
-              {feedbackAnalyzing ? (
-                <><div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />분석 중...</>
-              ) : (
-                <>AI 피드백 분석</>
-              )}
-            </button>
-          </div>
-
-          {/* AI 분석 결과 */}
-          {feedbackAnalysisError && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-xl">
-              <p className="text-xs text-red-600">{feedbackAnalysisError}</p>
-            </div>
-          )}
-          {feedbackAnalysis && (
-            <div className="space-y-3">
-              <div className="p-4 bg-violet-50 border border-violet-200 rounded-2xl">
-                <p className="text-xs font-bold text-violet-700 mb-1">전체 트렌드</p>
-                <p className="text-sm text-violet-800 leading-relaxed">{feedbackAnalysis.overall}</p>
-              </div>
-              {feedbackAnalysis.clusters.map((cluster, idx) => (
-                <div key={idx} className="p-4 bg-white border border-slate-200 rounded-2xl">
-                  <div className="flex items-center gap-2 mb-1.5">
-                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
-                      cluster.priority === 'high' ? 'bg-red-100 text-red-700'
-                      : cluster.priority === 'medium' ? 'bg-amber-100 text-amber-700'
-                      : 'bg-slate-100 text-slate-600'
-                    }`}>
-                      {cluster.priority === 'high' ? '긴급' : cluster.priority === 'medium' ? '보통' : '낮음'}
-                    </span>
-                    <span className="text-xs font-bold text-slate-800">{cluster.theme}</span>
-                    <span className="text-[10px] text-slate-400 ml-auto">{cluster.count}건</span>
-                  </div>
-                  <p className="text-sm text-slate-600 leading-relaxed mb-2">{cluster.summary}</p>
-                  {cluster.examples.length > 0 && (
-                    <div className="space-y-1">
-                      {cluster.examples.map((ex, ei) => (
-                        <div key={ei} className="text-[11px] text-slate-500 pl-2.5 border-l-2 border-slate-200 leading-relaxed">{ex}</div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* 피드백 목록 */}
-          {feedbacksLoading ? (
-            <div className="flex justify-center py-10">
-              <div className="w-6 h-6 border-2 border-blue-100 border-t-blue-500 rounded-full animate-spin" />
-            </div>
-          ) : filteredFeedbacks.length === 0 ? (
-            <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center">
-              <p className="text-sm text-slate-400">{fq ? '검색 결과가 없습니다.' : '아직 피드백이 없습니다.'}</p>
-            </div>
-          ) : (
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-              <div className="divide-y divide-slate-100">
-                {filteredFeedbacks.map(fb => (
-                  <div key={fb.id} className="px-5 py-3.5 flex gap-3 group hover:bg-slate-50/50 transition-colors">
-                    <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">
-                      {fb.user_name.charAt(0)}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <span className="text-xs font-semibold text-slate-700">{fb.user_name}</span>
-                        <span className="text-[10px] text-slate-400">{fb.user_id === 'anonymous' ? '(비로그인)' : fb.user_id.slice(0, 8)}</span>
-                        <span className="text-[10px] text-slate-400">{new Date(fb.created_at).toLocaleString('ko-KR')}</span>
-                      </div>
-                      <p className="text-sm text-slate-600 whitespace-pre-wrap break-words leading-relaxed">{fb.content}</p>
-                    </div>
-                    <button
-                      onClick={() => handleAdminFeedbackDelete(fb.id)}
-                      className="text-[10px] text-slate-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100 flex-shrink-0 self-center"
-                    >
-                      삭제
-                    </button>
-                  </div>
-                ))}
-              </div>
-              {hasMoreFeedbacks && !fq && (
-                <button
-                  onClick={() => {
-                    const nextOffset = feedbackOffset + 50;
-                    setFeedbackOffset(nextOffset);
-                    loadAdminFeedbacks(nextOffset);
-                  }}
-                  disabled={feedbacksLoading}
-                  className="w-full py-2.5 text-xs font-semibold text-slate-500 bg-slate-50 border-t border-slate-100 hover:bg-slate-100 transition-colors disabled:opacity-50"
-                >
-                  {feedbacksLoading ? '불러오는 중...' : '더 불러오기'}
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-        );
-      })()}
+      {/* ── 피드백 관리 탭 — AdminFeedbackTab으로 분리 ── */}
+      {tab === 'feedback' && (
+        <AdminFeedbackTab
+          feedbacks={adminFeedbacks}
+          feedbacksLoading={feedbacksLoading}
+          feedbackSearch={feedbackSearch}
+          setFeedbackSearch={setFeedbackSearch}
+          feedbackAnalysis={feedbackAnalysis}
+          feedbackAnalyzing={feedbackAnalyzing}
+          feedbackAnalysisError={feedbackAnalysisError}
+          hasMoreFeedbacks={hasMoreFeedbacks}
+          onDelete={handleAdminFeedbackDelete}
+          onAnalyze={handleAdminFeedbackAnalyze}
+          onLoadMore={() => {
+            const nextOffset = feedbackOffset + 50;
+            setFeedbackOffset(nextOffset);
+            loadAdminFeedbacks(nextOffset);
+          }}
+          onRefresh={() => loadAdminFeedbacks()}
+        />
+      )}
 
       </div>
     </div>
