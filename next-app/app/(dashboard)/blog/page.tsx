@@ -1252,11 +1252,26 @@ ${topic.trim()}${disease.trim() ? ', 질환: ' + disease.trim() : ''}
           }
         };
 
-        // 최대 imageCount개까지만 생성
+        // 최대 imageCount개까지만 생성 — 각 이미지 완성 즉시 화면에 반영
         const prompts = imagePrompts.slice(0, imageCount);
-        const imageResults = await Promise.all(
-          prompts.map((p, i) => generateAndUpload(p, i + 1)),
-        );
+        const imagePromises = prompts.map((p, i) => {
+          const index = i + 1;
+          return generateAndUpload(p, index).then(result => {
+            // 이미지 완성 즉시 해당 슬롯의 플레이스홀더를 실제 이미지로 교체
+            if (result.url) {
+              setGeneratedContent(prev => {
+                if (!prev) return prev;
+                const imgTag = '<div class="content-image-wrapper"><img src="' + result.url + '" alt="blog image ' + result.index + '" data-image-index="' + result.index + '" style="max-width:100%;height:auto;border-radius:12px;" /></div>';
+                return prev.replace(
+                  new RegExp('<div class="content-image-wrapper" data-img-slot="' + result.index + '"[^>]*>[\\s\\S]*?</div>\\s*</div>', ''),
+                  imgTag,
+                );
+              });
+            }
+            return result;
+          });
+        });
+        const imageResults = await Promise.all(imagePromises);
 
         // 7) [IMG_N] 마커를 실제 이미지로 교체 (old insertImageData 동일)
         let finalHtml = blogText;
