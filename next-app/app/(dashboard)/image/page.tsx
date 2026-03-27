@@ -402,12 +402,12 @@ export default function ImagePage() {
       weekEnd.setDate(weekStart.getDate() + 6); // 해당 주 토요일
       const weekNum = Math.ceil((targetDay + firstOfMonth.getDay()) / 7);
       const fmtDate = (d: Date) => `${d.getMonth() + 1}월 ${d.getDate()}일`;
-      layoutExtra = `표시할 주: ${fmtDate(weekStart)}(일) ~ ${fmtDate(weekEnd)}(토) (${weekNum}째주)\n`;
+      layoutExtra = `[AI 참고용 — 이미지에 이 텍스트를 표시하지 마세요] 표시할 주: ${fmtDate(weekStart)}(일) ~ ${fmtDate(weekEnd)}(토)\n`;
 
       layoutRules = `[CRITICAL LAYOUT RULES — 주간(한 주) 뷰]
 - 비율: 정사각형(1:1) 또는 4:5 세로형. 절대 세로로 길쭉하게 만들지 마세요.
 - 월간 전체 달력을 그리지 마세요! 한 주(7일)만 표시합니다!
-- 구조: 상단 헤더(병원명+제목+"${schMonth}월 ${weekNum}째주") → 7칸 가로 배열(일~토) → 하단 안내
+- 구조: 상단 헤더(병원명+제목) → 7칸 가로 배열(일~토) → 하단 안내
 - 7개 날짜만 한 줄로 크게 표시 (각 칸에 날짜 숫자 + 요일)
 - 휴진일은 빨간 배경 또는 큰 X 표시로 강조
 - 단축진료는 주황 배경으로 구분
@@ -477,6 +477,8 @@ ${layoutExtra}`;
 - "pt", "px", "28-40pt", "(16pt)" 같은 폰트 크기/기술 용어
 - 사용자가 입력하지 않은 가짜 진료시간, 점심시간, 전화번호, 주소
 - 연도 텍스트 ("2026년" 등)
+- "N째주", "5째주", "1째주" 같은 주차 표시
+- "[AI 참고용" 으로 시작하는 텍스트
 - 위 항목이 하나라도 이미지에 보이면 실패입니다!`;
     if (customMessage) p += `\n추가 문구: "${customMessage}"`;
     if (extraPrompt) p += `\n${extraPrompt}`;
