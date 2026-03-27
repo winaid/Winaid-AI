@@ -300,16 +300,29 @@ export default function RefinePage() {
             </button>
           </div>
         ) : (
-          <div className="rounded-2xl border border-slate-200 bg-white shadow-sm flex-1 min-h-[520px] flex flex-col items-center justify-center px-12 py-16">
+          <div className="rounded-2xl border border-slate-200 bg-white shadow-sm flex-1 min-h-[520px] flex flex-col items-center justify-center px-12 py-16 select-none">
             <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-6 bg-gradient-to-br from-violet-50 to-purple-50 border border-violet-100">
               <svg className="w-7 h-7 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z" /></svg>
             </div>
-            <h2 className="text-2xl font-black text-slate-800 mb-2">AI 정밀보정</h2>
-            <p className="text-sm text-slate-400 text-center mb-6">기존 글을 붙여넣고<br/>원하는 방향으로 다듬어보세요</p>
-            <div className="space-y-2">
-              {['자동 보정: 6가지 방향 선택', '채팅 수정: 대화로 세밀하게', 'URL 붙여넣기로 참고자료 활용', '의료광고법 자동 준수'].map(t => (
-                <div key={t} className="flex items-center gap-2 text-xs text-slate-400"><span className="text-violet-400">✦</span>{t}</div>
+            <div className="max-w-sm text-center">
+              <h2 className="text-3xl font-black tracking-tight leading-tight mb-3 text-slate-800">
+                AI로 글을<br /><span className="text-violet-600">다듬어보세요</span>
+              </h2>
+              <p className="text-sm leading-relaxed text-slate-400">
+                기존 글을 붙여넣으면<br />AI가 전문적으로 보정합니다
+              </p>
+            </div>
+            <div className="mt-8 flex flex-col items-center gap-2">
+              {['자연스러운 문체 교정', 'AI 냄새 제거', '의료광고법 검증', 'SEO 최적화 보정', '채팅으로 세밀하게 수정'].map(text => (
+                <div key={text} className="flex items-center gap-3 px-4 py-2 rounded-lg text-xs text-slate-400">
+                  <span className="text-[10px] text-violet-400">✦</span>
+                  {text}
+                </div>
               ))}
+            </div>
+            <div className="mt-8 inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold bg-violet-50 text-violet-500 border border-violet-100">
+              <div className="w-1.5 h-1.5 bg-violet-500 rounded-full animate-pulse" />
+              AI 대기 중
             </div>
           </div>
         )}

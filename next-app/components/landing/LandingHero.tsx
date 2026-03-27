@@ -34,6 +34,8 @@ function LandingHero() {
   const [searchText, setSearchText] = useState('');
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [isChatting, setIsChatting] = useState(false);
+  const [chatCount, setChatCount] = useState(0);
+  const MAX_CHAT_COUNT = 10;
   const chatOpen = chatMessages.length > 0;
   const chatEndRef = useRef<HTMLDivElement>(null);
 
@@ -51,10 +53,21 @@ function LandingHero() {
     const question = searchText.trim();
     if (!question || isChatting) return;
 
+    // 세션당 최대 호출 횟수 제한
+    if (chatCount >= MAX_CHAT_COUNT) {
+      setChatMessages(prev => [...prev,
+        { role: 'user', content: question },
+        { role: 'assistant', content: '무료 대화 횟수를 모두 사용했어요. 더 많은 기능을 사용하려면 로그인하세요! 👉 윈에이드에서 블로그, 카드뉴스, 보도자료까지 무제한으로 만들 수 있어요.' },
+      ]);
+      setSearchText('');
+      return;
+    }
+
     const userMsg: ChatMessage = { role: 'user', content: question };
     setChatMessages(prev => [...prev, userMsg]);
     setSearchText('');
     setIsChatting(true);
+    setChatCount(prev => prev + 1);
 
     try {
       const history = [...chatMessages, userMsg]

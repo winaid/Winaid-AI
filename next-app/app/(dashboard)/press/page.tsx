@@ -301,16 +301,29 @@ export default function PressPage() {
             )}
           </div>
         ) : (
-          <div className="rounded-2xl border border-slate-200 bg-white shadow-sm flex-1 min-h-[520px] flex flex-col items-center justify-center px-12 py-16">
+          <div className="rounded-2xl border border-slate-200 bg-white shadow-sm flex-1 min-h-[520px] flex flex-col items-center justify-center px-12 py-16 select-none">
             <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-6 bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-100">
               <svg className="w-7 h-7 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 7.5h1.5m-1.5 3h1.5m-7.5 3h7.5m-7.5 3h7.5m3-9h3.375c.621 0 1.125.504 1.125 1.125V18a2.25 2.25 0 01-2.25 2.25M16.5 7.5V18a2.25 2.25 0 002.25 2.25M16.5 7.5V4.875c0-.621-.504-1.125-1.125-1.125H4.125C3.504 3.75 3 4.254 3 4.875V18a2.25 2.25 0 002.25 2.25h13.5M6 7.5h3v3H6v-3z" /></svg>
             </div>
-            <h2 className="text-2xl font-black text-slate-800 mb-2">AI 보도자료</h2>
-            <p className="text-sm text-slate-400 text-center mb-6">주제와 의료진 정보로<br/>기자 문체의 보도자료를 생성합니다</p>
-            <div className="space-y-2">
-              {['3인칭 기자 문체', '전문의 인용 2회 이상', '의료광고법 준수', 'Google Search 연동'].map(t => (
-                <div key={t} className="flex items-center gap-2 text-xs text-slate-400"><span className="text-amber-400">✦</span>{t}</div>
+            <div className="max-w-sm text-center">
+              <h2 className="text-3xl font-black tracking-tight leading-tight mb-3 text-slate-800">
+                AI가 작성하는<br /><span className="text-amber-600">전문 보도자료</span>
+              </h2>
+              <p className="text-sm leading-relaxed text-slate-400">
+                병원 정보와 주제를 입력하면<br />기자 문체의 보도자료를 자동 생성합니다
+              </p>
+            </div>
+            <div className="mt-8 flex flex-col items-center gap-2">
+              {['병원 웹사이트 분석 기반', '3인칭 기사체 작성', '전문의 인용 자동 삽입', '의료광고법 준수 검토', '언론 배포 최적화'].map(text => (
+                <div key={text} className="flex items-center gap-3 px-4 py-2 rounded-lg text-xs text-slate-400">
+                  <span className="text-[10px] text-amber-400">✦</span>
+                  {text}
+                </div>
               ))}
+            </div>
+            <div className="mt-8 inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold bg-amber-50 text-amber-500 border border-amber-100">
+              <div className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse" />
+              AI 대기 중
             </div>
           </div>
         )}
