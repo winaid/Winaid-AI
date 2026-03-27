@@ -6,17 +6,9 @@
  * 각 프리셋은 AI 프롬프트 + 색상 + 레이아웃 힌트를 포함.
  */
 
-export interface CategoryTemplate {
-  id: string;
-  name: string;
-  color: string;
-  accent: string;
-  bg: string;
-  desc: string;
-  aiPrompt: string;
-  layoutHint: string;
-  previewImage?: string;
-}
+// 타입은 별도 파일에서 re-export (번들 최적화: 타입만 필요한 곳에서 데이터 import 방지)
+export type { CategoryTemplate } from './categoryTemplateTypes';
+import type { CategoryTemplate } from './categoryTemplateTypes';
 
 export const CATEGORY_TEMPLATES: Record<string, CategoryTemplate[]> = {
 

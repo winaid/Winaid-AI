@@ -5,7 +5,7 @@
  * schedule은 inline 달력 프리뷰가 별도이므로 여기서는 나머지 7개 카테고리만.
  */
 import React from 'react';
-import type { CategoryTemplate } from '../lib/categoryTemplates';
+import type { CategoryTemplate } from '../lib/categoryTemplateTypes';
 import {
   EventPreview,
   DoctorPreview,

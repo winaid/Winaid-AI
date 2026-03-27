@@ -9,7 +9,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { savePost } from '../../../lib/postStorage';
 import { supabase } from '../../../lib/supabase';
 import { PromptChat } from '../../../components/PromptChat';
-import { CATEGORY_TEMPLATES, type CategoryTemplate } from '../../../lib/categoryTemplates';
+import type { CategoryTemplate } from '../../../lib/categoryTemplateTypes';
 import { TemplateSVGPreview } from '../../../components/TemplatePreviews';
 import { CalendarThemePreview } from '../../../components/CalendarPreviews';
 
@@ -55,6 +55,12 @@ export default function ImagePage() {
   const [showRegenMenu, setShowRegenMenu] = useState(false);
   const [regenPrompt, setRegenPrompt] = useState('');
   const [showRegenPromptInput, setShowRegenPromptInput] = useState(false);
+
+  // 카테고리 템플릿 데이터 — 동적 import (204KB 번들 최적화)
+  const [catTemplateData, setCatTemplateData] = useState<Record<string, CategoryTemplate[]> | null>(null);
+  useEffect(() => {
+    import('../../../lib/categoryTemplates').then(m => setCatTemplateData(m.CATEGORY_TEMPLATES));
+  }, []);
 
   // 로고 관련
   const [logoDataUrl, setLogoDataUrl] = useState<string | null>(null);
@@ -263,12 +269,12 @@ export default function ImagePage() {
 
   // 현재 카테고리에 맞는 디자인 템플릿 목록 (OLD parity: greeting은 명절별 서브키)
   const currentCatTemplates: CategoryTemplate[] = (() => {
-    if (!selectedTemplate) return [];
+    if (!selectedTemplate || !catTemplateData) return [];
     if (selectedTemplate === 'greeting') {
       const subKey = `greeting_${greetHoliday}`;
-      return CATEGORY_TEMPLATES[subKey] || CATEGORY_TEMPLATES['greeting'] || [];
+      return catTemplateData[subKey] || catTemplateData['greeting'] || [];
     }
-    return CATEGORY_TEMPLATES[selectedTemplate] || [];
+    return catTemplateData[selectedTemplate] || [];
   })();
 
   const loadStyleHistory = useCallback((): StyleHistoryItem[] => {

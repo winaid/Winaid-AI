@@ -7,7 +7,7 @@
  * 소비자: TemplatePreviews.tsx (dispatcher)
  */
 import React from 'react';
-import type { CategoryTemplate } from '../lib/categoryTemplates';
+import type { CategoryTemplate } from '../lib/categoryTemplateTypes';
 
 export function EventPreview({ t, name }: { t: CategoryTemplate; name: string }) {
   const h = t.layoutHint;
