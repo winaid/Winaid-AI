@@ -40,6 +40,7 @@ export default function AppLayout({
           userEmail={isGuest ? 'Guest' : userEmail}
           showUserMenu={showUserMenu}
           onToggleUserMenu={() => setShowUserMenu(v => !v)}
+          onLogout={handleLogout}
         />
         <main className="flex-1">
           {children}

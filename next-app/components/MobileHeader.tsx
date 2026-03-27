@@ -10,6 +10,7 @@ interface MobileHeaderProps {
   userEmail?: string;
   showUserMenu?: boolean;
   onToggleUserMenu: () => void;
+  onLogout?: () => void;
 }
 
 const tabs: { id: ContentTab; label: string; icon: string; href: string }[] = [
@@ -25,8 +26,9 @@ const tabs: { id: ContentTab; label: string; icon: string; href: string }[] = [
 export function MobileHeader({
   isLoggedIn,
   userEmail,
-  showUserMenu: _showUserMenu,
+  showUserMenu,
   onToggleUserMenu,
+  onLogout,
 }: MobileHeaderProps) {
   const pathname = usePathname();
   const isAppHome = pathname === '/app';
@@ -43,13 +45,28 @@ export function MobileHeader({
         </Link>
         <div className="flex items-center gap-3">
           {isLoggedIn && userEmail ? (
-            <button
-              onClick={onToggleUserMenu}
-              className="w-9 h-9 rounded-xl flex items-center justify-center text-xs font-bold transition-all bg-gradient-to-br from-blue-50 to-blue-100/80 text-blue-600 hover:from-blue-100 hover:to-blue-200/80 border border-blue-100/80 shadow-sm"
-              title={userEmail}
-            >
-              {userEmail[0].toUpperCase()}
-            </button>
+            <div className="relative">
+              <button
+                onClick={onToggleUserMenu}
+                className="w-9 h-9 rounded-xl flex items-center justify-center text-xs font-bold transition-all bg-gradient-to-br from-blue-50 to-blue-100/80 text-blue-600 hover:from-blue-100 hover:to-blue-200/80 border border-blue-100/80 shadow-sm"
+                title={userEmail}
+              >
+                {userEmail[0].toUpperCase()}
+              </button>
+              {showUserMenu && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={onToggleUserMenu} />
+                  <div className="absolute right-0 top-full mt-2 w-48 rounded-xl shadow-lg border z-50 overflow-hidden bg-white border-slate-200">
+                    <button
+                      onClick={() => { onToggleUserMenu(); onLogout?.(); }}
+                      className="w-full text-left px-4 py-3 text-sm font-medium transition-colors text-red-500 hover:bg-red-50"
+                    >
+                      로그아웃
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
           ) : null}
         </div>
       </div>

@@ -984,6 +984,8 @@ ${subs.length > 0 ? `경쟁 글 소제목: ${subs.join(' / ')}` : ''}
         const errMsg = data.error || data.details || `서버 오류 (${res.status})`;
         console.error(`[BLOG] ❌ 생성 실패: ${errMsg}`);
         setError(errMsg);
+        setIsGenerating(false);
+        setDisplayStage(0);
         return;
       }
 
@@ -1513,7 +1515,7 @@ JSON 형식으로 응답해주세요.`;
       console.info(`[BLOG] 저장 시작 — 최종 콘텐츠 길이: ${blogText.length}자`);
       try {
         const { userId, userEmail } = await getSessionSafe();
-        const titleMatch = blogText.match(/<h3[^>]*>([^<]+)<\/h3>/) || blogText.match(/^(.+)/);
+        const titleMatch = blogText.match(/<h2[^>]*class="[^"]*main-title[^"]*"[^>]*>([^<]+)<\/h2>/) || blogText.match(/<h3[^>]*>([^<]+)<\/h3>/) || blogText.match(/^(.+)/);
         const extractedTitle = titleMatch ? titleMatch[1].replace(/<[^>]*>/g, '').trim().substring(0, 200) : topic.trim();
         console.info(`[BLOG] 추출 제목: "${extractedTitle}"`);
 

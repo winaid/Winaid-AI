@@ -69,7 +69,7 @@ export default function RefinePage() {
     if (/상담|예약|연락|문의/.test(text)) conversion += 10;
     if (text.length > 1500) conversion += 5;
     return {
-      fact: Math.min(100, 85 + Math.floor(Math.random() * 10)), // 팩트 정확성은 규칙으로 정확 측정 불가 → 기본 높은 값
+      fact: 85, // 팩트 정확성은 규칙으로 정확 측정 불가 → 고정값
       safety: Math.max(0, Math.min(100, safety)),
       aiSmell: Math.min(100, aiSmell),
       conversion: Math.min(100, conversion),
