@@ -9,67 +9,17 @@ import { buildBlogPrompt } from '../../../lib/blogPrompt';
 import { savePost } from '../../../lib/postStorage';
 import { getSessionSafe, supabase } from '../../../lib/supabase';
 import { getHospitalStylePrompt } from '../../../lib/styleService';
-import { ErrorPanel, ResultPanel, type ScoreBarData } from '../../../components/GenerationResult';
+import { type ScoreBarData } from '../../../components/GenerationResult';
 import WritingStyleLearner, { getStyleById, getStylePromptForGeneration } from '../../../components/WritingStyleLearner';
-import ContentAnalysisPanel from '../../../components/ContentAnalysisPanel';
 import type { BlogSection } from '../../../lib/types';
 import { parseBlogSections, replaceSectionHtml } from '../../../lib/blogSectionParser';
 import { downloadWord, downloadPDF } from '../../../lib/blogExport';
 import { ImageActionModal, ImageRegenModal } from '../../../components/ImageRegenModal';
 import { analyzeHospitalKeywords, loadMoreKeywords, checkKeywordRankings, MAX_KEYWORDS, type KeywordStat, type KeywordRankResult } from '../../../lib/keywordAnalysisService';
 import { analyzeClinicContent, type ClinicContext } from '../../../lib/clinicContextService';
-
-// ── old GenerateWorkspace.tsx 동일: 블로그 displayStage → 단계 정보 ──
-const BLOG_STAGES: Record<number, { icon: string; label: string; defaultMsg: string; hint: string }> = {
-  0: { icon: '✍️', label: '글 준비 중', defaultMsg: '좋은 문장을 한 줄씩 꺼내고 있어요', hint: '키워드를 분석하고 구조를 설계합니다' },
-  1: { icon: '✍️', label: '글 준비 중', defaultMsg: '좋은 문장을 한 줄씩 꺼내고 있어요', hint: '전문 의료 콘텐츠를 작성하고 있습니다' },
-  2: { icon: '✨', label: '내용 다듬는 중', defaultMsg: '읽는 맛이 나도록 다듬고 있어요', hint: '문체 교정과 정확성 검토를 진행합니다' },
-  3: { icon: '🎨', label: '이미지 만드는 중', defaultMsg: '글과 잘 어울리는 비주얼을 고르는 중이에요', hint: '이미지 수에 따라 30초~2분 정도 걸립니다' },
-  4: { icon: '🎉', label: '마무리하는 중', defaultMsg: '거의 다 왔어요, 마지막 손질만 남았어요', hint: '결과를 저장하고 있습니다' },
-};
-
-// ── old GenerateWorkspace.tsx 동일: 단계별 문구 로테이션 풀 ──
-const BLOG_MESSAGE_POOL: Record<number, string[]> = {
-  0: [
-    '좋은 문장을 한 줄씩 꺼내고 있어요',
-    '글의 흐름을 차근차근 잡고 있어요',
-    '읽기 편한 시작점을 만들고 있어요',
-    '핵심이 잘 보이도록 내용을 정리하고 있어요',
-    '첫 문장부터 자연스럽게 이어지게 다듬고 있어요',
-  ],
-  1: [
-    '좋은 문장을 한 줄씩 꺼내고 있어요',
-    '글의 흐름을 차근차근 잡고 있어요',
-    '읽기 편한 시작점을 만들고 있어요',
-    '핵심이 잘 보이도록 내용을 정리하고 있어요',
-    '첫 문장부터 자연스럽게 이어지게 다듬고 있어요',
-    '각 소주제를 꼼꼼히 채워가고 있어요',
-  ],
-  2: [
-    '읽는 맛이 나도록 다듬고 있어요',
-    '문장 사이의 흐름을 매끈하게 정리하고 있어요',
-    '너무 딱딱하지 않게, 너무 가볍지 않게 맞추고 있어요',
-    '처음부터 끝까지 자연스럽게 이어지게 손보고 있어요',
-    '한 번 더 읽어도 편안한 글로 정리하고 있어요',
-  ],
-  3: [
-    '글과 잘 어울리는 비주얼을 고르는 중이에요',
-    '장면을 하나씩 정리하고 있어요',
-    '내용과 잘 맞는 이미지를 살펴보고 있어요',
-    '화면이 심심하지 않도록 이미지를 준비하고 있어요',
-    '글에 딱 맞는 장면을 찾고 있어요',
-    '거의 다 왔어요, 마지막 장면을 고르고 있어요',
-  ],
-  4: [
-    '거의 다 왔어요, 마지막 손질만 남았어요',
-    '보기 좋게 정리해서 보여드릴 준비 중이에요',
-    '결과를 한 번 더 살피고 있어요',
-    '깔끔하게 마무리해서 가져오고 있어요',
-    '마지막 점검 후 바로 보여드릴게요',
-  ],
-};
-
-const MSG_ROTATION_INTERVAL = 3200;
+import { BLOG_STAGES, BLOG_MESSAGE_POOL, MSG_ROTATION_INTERVAL } from './blogConstants';
+import { normalizeBlogStructure } from './normalizeBlog';
+import BlogResultArea from './BlogResultArea';
 
 function BlogForm() {
   const searchParams = useSearchParams();
@@ -685,133 +635,7 @@ ${newsContext ? '6. **뉴스 트렌드 1~2개 반드시 포함**: 위 뉴스 분
     }
   };
 
-  // ── 구조 보정 함수 (old legacyBlogGeneration.ts 동일) ──
-  function normalizeBlogStructure(html: string, topicFallback: string): { html: string; log: string[] } {
-    const log: string[] = [];
-    let out = html;
-    const cleanedPatterns: string[] = [];
-
-    // 0) JSON escape 정리 (old legacyBlogGeneration.ts:1570-1596 동일)
-    // 0a) JSON escaped closing tags: <\/p> → </p> etc.
-    if (/<\\\//.test(out)) {
-      out = out
-        .replace(/<\\\/p>/g, '</p>')
-        .replace(/<\\\/h2>/g, '</h3>')  // h2→h3도 함께
-        .replace(/<\\\/h3>/g, '</h3>')
-        .replace(/<\\\/div>/g, '</div>')
-        .replace(/<\\\/span>/g, '</span>')
-        .replace(/<\\\/strong>/g, '</strong>')
-        .replace(/<\\\/em>/g, '</em>');
-      cleanedPatterns.push('JSON escaped tags (<\\/p> etc.)');
-    }
-    // 0b) 남은 \/ 제거
-    if (/\\\//.test(out)) {
-      out = out.replace(/\\\//g, '/');
-      cleanedPatterns.push('escaped slash (\\/)');
-    }
-    // 0c) \\n 리터럴 문자열 제거 (JSON escape 잔여물)
-    if (/\\n/.test(out)) {
-      out = out.replace(/\\n/g, '');
-      cleanedPatterns.push('literal \\n');
-    }
-    // 0d) 연속 줄바꿈 정리
-    out = out.replace(/\n\n+/g, '\n');
-    // 0e) JSON 형식 잔여물 제거 (AI가 JSON으로 감싼 경우)
-    const hadJsonWrapper =
-      /^\s*\{\s*"title"\s*:\s*"/.test(out) ||
-      /^\s*\{\s*"content"\s*:\s*"/.test(out);
-    if (hadJsonWrapper) {
-      out = out
-        .replace(/^\s*\{\s*"title"\s*:\s*"[^"]*"\s*,\s*"content"\s*:\s*"/i, '')
-        .replace(/"\s*,\s*"imagePrompts"\s*:\s*\[.*?\]\s*\}\s*$/i, '')
-        .replace(/^\s*\{\s*"content"\s*:\s*"/i, '')
-        .replace(/"\s*\}\s*$/i, '');
-      cleanedPatterns.push('JSON wrapper ({\"content\":\"...\"})');
-    }
-    // 0f) 이미지 없음 텍스트 제거
-    out = out
-      .replace(/\(이미지 없음\)/g, '')
-      .replace(/\(이미지가 없습니다\)/g, '')
-      .replace(/\[이미지 없음\]/g, '');
-
-    if (cleanedPatterns.length > 0) {
-      log.push(`[ESCAPE] JSON escape 정리: ${cleanedPatterns.join(', ')}`);
-    }
-
-    // 1) h1 → h3
-    const h1Count = (out.match(/<h1[\s>]/gi) || []).length;
-    if (h1Count > 0) {
-      out = out.replace(/<h1([^>]*)>/gi, '<h3$1>').replace(/<\/h1>/gi, '</h3>');
-      log.push(`[STRUCTURE] h1→h3 변환: ${h1Count}개`);
-    }
-
-    // 2) h2 → h3 (old와 동일)
-    const h2Count = (out.match(/<h2[\s>]/gi) || []).length;
-    if (h2Count > 0) {
-      out = out.replace(/<h2([^>]*)>/gi, '<h3$1>').replace(/<\/h2>/gi, '</h3>');
-      log.push(`[STRUCTURE] h2→h3 변환: ${h2Count}개`);
-    }
-
-    // 3) markdown ## → h3
-    const mdHeadings = out.match(/^#{1,3}\s+.+$/gm) || [];
-    if (mdHeadings.length > 0) {
-      out = out.replace(/^#{1,3}\s+(.+)$/gm, '<h3>$1</h3>');
-      log.push(`[STRUCTURE] markdown heading→h3 변환: ${mdHeadings.length}개`);
-    }
-
-    // 4) 해시태그 제거 (old 동일)
-    out = out.replace(/#[가-힣a-zA-Z0-9_]+(\s*#[가-힣a-zA-Z0-9_]+)*/g, '');
-
-    // 5) 이모지 제거 (old 동일 — 전문 의료 콘텐츠 톤)
-    out = out
-      .replace(/[\u{1F300}-\u{1F9FF}]/gu, '')
-      .replace(/[\u{2600}-\u{26FF}]/gu, '')
-      .replace(/[\u{2700}-\u{27BF}]/gu, '')
-      .replace(/[\u{FE00}-\u{FE0F}]/gu, '')
-      .replace(/[\u{1F000}-\u{1F02F}]/gu, '');
-
-    // 6) 빈 p 태그 제거
-    out = out.replace(/<p>\s*<\/p>/g, '');
-
-    // 7) h3 개수 확인 — 최소 5개 보장
-    const h3Matches = out.match(/<h3[^>]*>[\s\S]*?<\/h3>/gi) || [];
-    const h3Count = h3Matches.length;
-    log.push(`[STRUCTURE] 소제목(h3) 수: ${h3Count}개`);
-
-    if (h3Count === 0) {
-      // 소제목이 전혀 없으면 첫 줄을 제목으로 승격하고 기본 구조 보정
-      log.push(`[STRUCTURE] ⚠️ 소제목 0개 — 기본 구조 보정 시도`);
-    }
-
-    // 8) 제목 확인 — 첫 번째 h3 전까지 도입부가 있는지
-    const firstH3Idx = out.search(/<h3[\s>]/i);
-    if (firstH3Idx === 0) {
-      // 도입부 없이 바로 h3로 시작 → 첫 h3을 제목으로 간주, 도입부 부재 경고
-      log.push(`[STRUCTURE] ⚠️ 도입부 없음 — h3으로 바로 시작`);
-    } else if (firstH3Idx > 0) {
-      const introPart = out.substring(0, firstH3Idx);
-      const introPs = (introPart.match(/<p[^>]*>/gi) || []).length;
-      log.push(`[STRUCTURE] 도입부 문단: ${introPs}개`);
-    }
-
-    // 9) 각 소제목 아래 문단 수 검증
-    const sections = out.split(/<h3[^>]*>/i).slice(1); // h3 이후 각 섹션
-    const sectionParagraphCounts: number[] = [];
-    for (const section of sections) {
-      const nextH3 = section.search(/<h3[\s>]/i);
-      const sectionContent = nextH3 > 0 ? section.substring(0, nextH3) : section;
-      const pCount = (sectionContent.match(/<p[^>]*>/gi) || []).length;
-      sectionParagraphCounts.push(pCount);
-    }
-    const shortSections = sectionParagraphCounts.filter(c => c < 2).length;
-    if (shortSections > 0) {
-      log.push(`[STRUCTURE] ⚠️ 문단 2개 미만 섹션: ${shortSections}개 (보정 불필요 — 프롬프트 강화로 대응)`);
-    }
-    log.push(`[STRUCTURE] 섹션별 문단 수: [${sectionParagraphCounts.join(', ')}]`);
-
-    out = out.trim();
-    return { html: out, log };
-  }
+  // normalizeBlogStructure — ./normalizeBlog.ts로 분리됨 (파일 상단 import 참조)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -2390,106 +2214,27 @@ ${generatedContent.substring(0, 2000)}
         </form>
       </div>
 
-      {/* ── 결과 영역 ── */}
-      <div className="flex-1 min-w-0">
-        {isGenerating ? (() => {
-          const stage = BLOG_STAGES[displayStage] || BLOG_STAGES[1];
-          const pool = BLOG_MESSAGE_POOL[displayStage] || BLOG_MESSAGE_POOL[1];
-          const displayMsg = pool[rotationIdx % pool.length];
-          return (
-          <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-12 flex flex-col items-center justify-center text-center min-h-[480px]">
-            {/* 상단: 현재 단계 배지 (old 동일) */}
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold mb-6 bg-blue-50 text-blue-600 border border-blue-100">
-              <span>{stage.icon}</span>
-              <span>{stage.label}</span>
-            </div>
-            {/* 중단: 스피너 (old 동일) */}
-            <div className="relative mb-6">
-              <div className="w-14 h-14 border-[3px] border-blue-100 border-t-blue-500 rounded-full animate-spin" />
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-blue-50">
-                  <svg className="w-3.5 h-3.5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" /></svg>
-                </div>
-              </div>
-            </div>
-            {/* 중단: 상세 진행 메시지 — 부드러운 전환 (old 동일) */}
-            <p className="text-sm font-medium text-slate-700 mb-2 min-h-[20px] transition-opacity duration-500">
-              {displayMsg}
-            </p>
-            {/* 하단: 짧은 안내 (old 동일) */}
-            <p className="text-xs text-slate-400 max-w-xs">
-              {stage.hint}
-            </p>
-          </div>
-          );
-        })() : error ? (
-          <ErrorPanel error={error} onDismiss={() => setError(null)} />
-        ) : generatedContent ? (<>
-          <ContentAnalysisPanel html={generatedContent} keyword={topic?.split(',')[0]?.trim()} />
-          <ResultPanel
-            content={generatedContent}
-            saveStatus={saveStatus}
-            postType="blog"
-            scores={scores}
-            cssTheme={cssTheme}
-            blogSections={blogSections}
-            regeneratingSection={regeneratingSection}
-            sectionProgress={sectionProgress}
-            onSectionRegenerate={handleSectionRegenerate}
-            onDownloadWord={handleDownloadWord}
-            onDownloadPDF={handleDownloadPDF}
-            onImageRegenerate={handleImageClick}
-            regeneratingImage={regeneratingImage}
-          />
-        </>) : (
-          /* EmptyState */
-          <div className="rounded-2xl border border-slate-200 bg-white shadow-[0_2px_16px_rgba(0,0,0,0.06)] flex-1 min-h-[520px] overflow-hidden flex flex-col">
-            <div className="flex items-center gap-1 px-4 py-2.5 border-b border-slate-100 bg-slate-50/80">
-              {['B', 'I', 'U'].map(t => (
-                <div key={t} className="w-7 h-7 rounded flex items-center justify-center text-xs font-bold text-slate-300">{t}</div>
-              ))}
-              <div className="w-px h-4 mx-1 bg-slate-200" />
-              {[1, 2, 3].map(i => (
-                <div key={i} className="w-7 h-7 rounded flex items-center justify-center text-slate-300">
-                  <div className="space-y-[3px]">
-                    {Array.from({ length: i === 1 ? 3 : i === 2 ? 2 : 1 }).map((_, j) => (
-                      <div key={j} className="h-0.5 rounded bg-slate-300" style={{ width: j === 0 ? '14px' : j === 1 ? '10px' : '12px' }} />
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="flex-1 flex flex-col items-center justify-center px-12 py-16 select-none">
-              <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-6 bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100">
-                <svg className="w-7 h-7 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
-                </svg>
-              </div>
-              <div className="max-w-sm text-center">
-                <h2 className="text-3xl font-black tracking-tight leading-tight mb-3 text-slate-800">
-                  AI가 작성하는<br /><span className="text-blue-600">의료 콘텐츠</span>
-                </h2>
-                <p className="text-sm leading-relaxed text-slate-400">
-                  키워드 하나로 SEO 최적화된<br />블로그 글을 자동 생성합니다
-                </p>
-              </div>
-              <div className="mt-8 flex flex-col items-center gap-2">
-                {['병원 말투 학습 기반 생성', 'SEO 키워드 자동 최적화', '의료광고법 준수 검토'].map(text => (
-                  <div key={text} className="flex items-center gap-3 px-4 py-2 rounded-lg text-xs text-slate-400">
-                    <span className="text-[10px] text-blue-400">✦</span>
-                    {text}
-                  </div>
-                ))}
-              </div>
-              <div className="mt-8 inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold bg-blue-50 text-blue-500 border border-blue-100">
-                <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse" />
-                AI 대기 중
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
+      {/* ── 결과 영역 — BlogResultArea 컴포넌트로 분리 ── */}
+      <BlogResultArea
+        isGenerating={isGenerating}
+        displayStage={displayStage}
+        rotationIdx={rotationIdx}
+        error={error}
+        onDismissError={() => setError(null)}
+        generatedContent={generatedContent}
+        saveStatus={saveStatus}
+        scores={scores}
+        cssTheme={cssTheme}
+        blogSections={blogSections}
+        regeneratingSection={regeneratingSection}
+        sectionProgress={sectionProgress}
+        onSectionRegenerate={handleSectionRegenerate}
+        onDownloadWord={handleDownloadWord}
+        onDownloadPDF={handleDownloadPDF}
+        onImageRegenerate={handleImageClick}
+        regeneratingImage={regeneratingImage}
+        topic={topic}
+      />
 
       {/* ── 블로그 이미지 액션 모달 (다운로드/재생성 선택) ── */}
       <ImageActionModal
