@@ -385,21 +385,76 @@ export default function ImagePage() {
     const themeName = themeOption?.label || calendarTheme;
     const themeDesc = themeOption?.desc || '';
 
-    let p = `Korean hospital ${schMonth}월 monthly schedule poster — PREMIUM DESIGN.
-제목: "${title}"
+    // 레이아웃별 렌더링 지시 분기
+    let layoutRules: string;
+    let layoutExtra = '';
 
-[CRITICAL LAYOUT RULES]
+    if (schLayout === 'week') {
+      // 마킹된 날짜 중 첫 번째가 속한 주를 찾아서 표시
+      const markedDays = [...dayMarks].map(([d]) => d).sort((a, b) => a - b);
+      const targetDay = markedDays[0] || 1;
+      const firstOfMonth = new Date(schYear, schMonth - 1, 1);
+      const targetDate = new Date(schYear, schMonth - 1, targetDay);
+      const dayOfWeek = targetDate.getDay(); // 0=일, 6=토
+      const weekStart = new Date(targetDate);
+      weekStart.setDate(targetDate.getDate() - dayOfWeek); // 해당 주 일요일
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekStart.getDate() + 6); // 해당 주 토요일
+      const weekNum = Math.ceil((targetDay + firstOfMonth.getDay()) / 7);
+      const fmtDate = (d: Date) => `${d.getMonth() + 1}월 ${d.getDate()}일`;
+      layoutExtra = `표시할 주: ${fmtDate(weekStart)}(일) ~ ${fmtDate(weekEnd)}(토) (${weekNum}째주)\n`;
+
+      layoutRules = `[CRITICAL LAYOUT RULES — 주간(한 주) 뷰]
+- 비율: 정사각형(1:1) 또는 4:5 세로형. 절대 세로로 길쭉하게 만들지 마세요.
+- 월간 전체 달력을 그리지 마세요! 한 주(7일)만 표시합니다!
+- 구조: 상단 헤더(병원명+제목+"${schMonth}월 ${weekNum}째주") → 7칸 가로 배열(일~토) → 하단 안내
+- 7개 날짜만 한 줄로 크게 표시 (각 칸에 날짜 숫자 + 요일)
+- 휴진일은 빨간 배경 또는 큰 X 표시로 강조
+- 단축진료는 주황 배경으로 구분
+- 날짜 숫자는 크게(24pt 이상), 요일은 작게(12pt)
+- 5주치 격자를 절대 그리지 마세요. 딱 1주일(7칸)만!
+- ⛔ 사용자가 입력하지 않은 진료시간, 점심시간, 전화번호를 절대 넣지 마세요!`;
+    } else if (schLayout === 'highlight') {
+      // 마킹된 날짜 목록을 명시적으로 포함
+      const highlightItems: string[] = [];
+      closedDays.forEach(d => highlightItems.push(`${d}일(휴진)`));
+      [...dayMarks].filter(([, m]) => m === 'shortened').sort(([a], [b]) => a - b).forEach(([d]) => highlightItems.push(`${d}일(단축진료)`));
+      vacations.forEach(v => highlightItems.push(v.replace('(', '(').replace(')', ')')));
+      if (highlightItems.length > 0) {
+        layoutExtra = `강조할 날짜: ${highlightItems.join(', ')}\n`;
+      }
+
+      layoutRules = `[CRITICAL LAYOUT RULES — 강조형(날짜 하이라이트)]
+- 비율: 정사각형(1:1) 또는 4:5 세로형. 절대 세로로 길쭉하게 만들지 마세요.
+- 월간 달력 격자를 그리지 마세요! 날짜만 크게 강조합니다!
+- 구조: 상단 헤더(병원명+제목) → 중앙에 강조 날짜들 → 하단 안내
+- 휴진일: 화면 중앙에 큰 원형/카드 안에 "N일" 크게 표시 (40pt 이상)
+- 여러 날이면 가로로 나열 (예: 1일, 8일, 15일 세 개의 큰 원)
+- 각 강조 날짜 아래에 "휴진" / "단축진료" / "휴가" 라벨
+- 색상: 휴진=빨강 배경, 단축=주황 배경, 휴가=보라 배경
+- 달력 격자 없이 날짜 자체가 주인공인 디자인
+- 7열 격자, 5주 배열 등 달력 형태를 절대 사용하지 마세요!
+- ⛔ 사용자가 입력하지 않은 진료시간, 점심시간, 전화번호를 절대 넣지 마세요!`;
+    } else {
+      // full_calendar — 기존 그대로
+      layoutRules = `[CRITICAL LAYOUT RULES]
 - 비율: 정사각형(1:1) 또는 4:5 세로형. 절대 세로로 길쭉하게 만들지 마세요.
 - 구조: 상단 헤더(병원명+제목) → 달력 그리드 → 하단(사용자가 입력한 안내 문구만)
 - 달력은 콤팩트하게! 7열 그리드, 셀 간격 최소화, 날짜 숫자는 14-18pt
 - 전체가 하나의 세련된 카드 안에 담겨야 합니다
-- ⛔ 사용자가 입력하지 않은 진료시간, 점심시간, 전화번호를 절대 넣지 마세요! 하단에 아무 정보도 입력되지 않았으면 하단을 비워두세요.
+- ⛔ 사용자가 입력하지 않은 진료시간, 점심시간, 전화번호를 절대 넣지 마세요! 하단에 아무 정보도 입력되지 않았으면 하단을 비워두세요.`;
+    }
+
+    let p = `Korean hospital ${schMonth}월 monthly schedule poster — PREMIUM DESIGN.
+제목: "${title}"
+
+${layoutRules}
 
 [CALENDAR DATA]
 월: ${schYear}년 ${schMonth}월
 레이아웃: ${layoutLabel}
 디자인 테마: "${themeName}" — ${themeDesc}
-`;
+${layoutExtra}`;
     if (closedDays.length > 0) p += `휴진일: ${closedDays.map(d => `${d}일`).join(', ')} — 빨간색 배경 또는 빨간 동그라미로 강조.\n`;
     if (shortened.length > 0) p += `단축진료: ${shortened.join(', ')} — 주황/앰버 표시.\n`;
     if (vacations.length > 0) p += `휴가: ${vacations.join(', ')} — 보라색 표시.\n`;
