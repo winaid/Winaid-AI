@@ -89,28 +89,28 @@ export default function ImagePage() {
   const [shortenedHours, setShortenedHours] = useState<Map<number, string>>(new Map());
   const [vacationReasons, setVacationReasons] = useState<Map<number, string>>(new Map());
   const [markMode, setMarkMode] = useState<DayMark>('closed');
-  const [calendarTheme, setCalendarTheme] = useState<string>('autumn');
+  const [calendarTheme, setCalendarTheme] = useState<string>('sch_spreadsheet');
 
-  // ── 달력 테마 옵션 (OLD parity: CALENDAR_THEME_OPTIONS 12종) ──
+  // ── 달력 테마 옵션 (12종 — 3패밀리) ──
   const CALENDAR_THEME_OPTIONS: { value: string; label: string; emoji: string; desc: string; group: string; groupColor: string }[] = [
-    { value: 'autumn', label: '실무 스프레드시트', emoji: '📊', desc: 'zebra 격자 + 슬레이트 헤더', group: '실무', groupColor: '#334155' },
-    { value: 'korean_traditional', label: '한방 전통', emoji: '🏛️', desc: '기와 문양 + 한지 프레임', group: '전통', groupColor: '#92400e' },
-    { value: 'winter', label: '딥블루 프로스트', emoji: '❄️', desc: '딥블루 그라데이션 + 프로스트', group: '프리미엄', groupColor: '#0c4a6e' },
-    { value: 'cherry_blossom', label: '블러시 로즈', emoji: '🌸', desc: '로즈 헤더 + 파스텔 핑크', group: '소프트', groupColor: '#be7e8a' },
-    { value: 'spring_kids', label: '차콜 프레임', emoji: '🏥', desc: '차콜 헤더/풋터 + 풀레드 휴진', group: '실무', groupColor: '#292524' },
-    { value: 'medical_notebook', label: '모던 미니멀', emoji: '📐', desc: '2단 라인 + 모노톤 도트', group: '실무', groupColor: '#1e293b' },
-    { value: 'autumn_spring_note', label: '야간진료', emoji: '🌙', desc: '다크 배너 + 앰버 컬럼 강조', group: '실무', groupColor: '#d97706' },
-    { value: 'autumn_holiday', label: 'SNS 볼드', emoji: '📱', desc: '코랄 히어로 + 라운드 뱃지', group: '소프트', groupColor: '#f97316' },
-    { value: 'hanok_roof', label: '골드 클래식', emoji: '✨', desc: '골드 밴드 + 세리프 + 점선', group: '프리미엄', groupColor: '#78350f' },
-    { value: 'dark_green_clinic', label: '프리미엄 그린', emoji: '🌲', desc: '다크그린 헤더 + 에메랄드', group: '프리미엄', groupColor: '#14532d' },
-    { value: 'dark_blue_modern', label: '네이비 모던', emoji: '🔷', desc: '네이비 헤더 + 블루 마커', group: '프리미엄', groupColor: '#1e3a5f' },
-    { value: 'lavender_sparkle', label: '라벤더 소프트', emoji: '💜', desc: '라벤더 헤더 + 라운드 셀', group: '소프트', groupColor: '#7c3aed' },
+    { value: 'sch_spreadsheet', label: '실무 스프레드시트', emoji: '📊', desc: 'zebra 격자 + 슬레이트 헤더', group: '실무', groupColor: '#334155' },
+    { value: 'sch_charcoal_frame', label: '차콜 프레임', emoji: '🏥', desc: '차콜 프레임 + 풀레드 휴진', group: '실무', groupColor: '#292524' },
+    { value: 'sch_modern_note', label: '모던 미니멀', emoji: '📐', desc: '이중선 + 모노톤 도트', group: '실무', groupColor: '#1e293b' },
+    { value: 'sch_night_clinic', label: '야간진료', emoji: '🌙', desc: '다크 배너 + 앰버 컬럼 강조', group: '실무', groupColor: '#d97706' },
+    { value: 'sch_blushy_rose', label: '블러시 로즈', emoji: '🌸', desc: '로즈 헤더 + 파스텔 핑크', group: '소프트', groupColor: '#be7e8a' },
+    { value: 'sch_sns_bold', label: 'SNS 볼드', emoji: '📱', desc: '코랄 바 + 라운드 뱃지', group: '소프트', groupColor: '#f97316' },
+    { value: 'sch_lavender_soft', label: '라벤더 소프트', emoji: '💜', desc: '라벤더 헤더 + 라운드 셀', group: '소프트', groupColor: '#7c3aed' },
+    { value: 'sch_korean_classic', label: '한방 전통', emoji: '🏛️', desc: '기와 문양 + 한지 프레임', group: '프리미엄', groupColor: '#92400e' },
+    { value: 'sch_deep_frost', label: '딥블루 프로스트', emoji: '❄️', desc: '딥네이비 + 프로스트 카드', group: '프리미엄', groupColor: '#0c4a6e' },
+    { value: 'sch_gold_classic', label: '골드 클래식', emoji: '✨', desc: '골드 밴드 + 세리프 + 점선', group: '프리미엄', groupColor: '#78350f' },
+    { value: 'sch_premium_green', label: '프리미엄 그린', emoji: '🌲', desc: '다크그린 + 에메랄드', group: '프리미엄', groupColor: '#14532d' },
+    { value: 'sch_navy_modern', label: '네이비 모던', emoji: '🔷', desc: '네이비 텍스트 + 비즈니스', group: '프리미엄', groupColor: '#1e3a5f' },
   ];
 
   const SCHEDULE_GROUPS: { label: string; desc: string; values: string[] }[] = [
-    { label: '📋 실무 · 클린', desc: '실무형·격자·정보 중심', values: ['autumn', 'spring_kids', 'medical_notebook', 'autumn_spring_note'] },
-    { label: '🎨 소프트 · SNS', desc: '부드러운·컬러풀·소셜', values: ['cherry_blossom', 'autumn_holiday', 'lavender_sparkle'] },
-    { label: '✨ 프리미엄 · 클래식', desc: '격조·고급·진중한 달력', values: ['korean_traditional', 'hanok_roof', 'winter', 'dark_green_clinic', 'dark_blue_modern'] },
+    { label: '📋 실무 · 클린', desc: '실무형·격자·정보 중심', values: ['sch_spreadsheet', 'sch_charcoal_frame', 'sch_modern_note', 'sch_night_clinic'] },
+    { label: '🎨 소프트 · SNS', desc: '부드러운·컬러풀·소셜', values: ['sch_blushy_rose', 'sch_sns_bold', 'sch_lavender_soft'] },
+    { label: '✨ 프리미엄 · 클래식', desc: '격조·고급·진중한 달력', values: ['sch_korean_classic', 'sch_deep_frost', 'sch_gold_classic', 'sch_premium_green', 'sch_navy_modern'] },
   ];
 
   const [customMessage, setCustomMessage] = useState('');
@@ -248,18 +248,18 @@ export default function ImagePage() {
   // OLD 우선순위: uploadedStyle > catTemplate > preset
   // schedule 카테고리에서 calendarTheme 선택 시 → 테마 전용 스타일 프롬프트 사용
   const CALENDAR_THEME_AI_STYLE: Record<string, string> = {
-    autumn: `[CALENDAR THEME: Autumn Maple] Background: warm cream (#FFF8E7) with FALLING MAPLE LEAVES in orange/red/golden. Calendar in white rounded card with shadow. Warm brown header. Golden yellow pill badges. Cozy, warm, autumnal. Color: orange, brown, golden, cream.`,
-    korean_traditional: `[CALENDAR THEME: Korean Traditional] Background: beige parchment (#F5EDD5). CRANE silhouettes in gray. Mountain/landscape at bottom in ink-painting style. Serif typography. Navy calendar header. Deep red markers. Dignified, classical, refined. Color: beige, navy, deep red, gold.`,
-    winter: `[CALENDAR THEME: Winter / Deep Blue Frost] Background: deep navy gradient (#1A2A4A → #2C3E6B). SNOWFLAKES in blue-white, varying sizes. Pine tree silhouettes at bottom. Calendar in white card. Elegant winter typography. Serene, magical winter night. Color: deep navy, white, soft blue, silver.`,
-    cherry_blossom: `[CALENDAR THEME: Cherry Blossom] Background: soft pink gradient (#FFF0F5 → #FFE4EC). Large CHERRY BLOSSOM PETALS scattered. Falling petals effect. Pink calendar header. Elegant serif title in dark pink. Romantic, feminine, soft spring. Color: pink, white, dark rose, purple.`,
-    spring_kids: `[CALENDAR THEME: Charcoal Frame] Dark charcoal frame (#292524) enclosing white canvas. Bold white title on charcoal. Calendar inside white area. Closed days in FULL RED cells. Clean grid with stone borders. Professional, bold, high-contrast. Color: charcoal, white, red, stone.`,
-    medical_notebook: `[CALENDAR THEME: Modern Minimal] Clean white background. Large bold month number typography. Double-line dividers (thick+thin). Dot markers for closed, line markers for shortened. Monochrome minimalist. Typography-driven. Color: black, white, slate, red dot, amber line.`,
-    autumn_spring_note: `[CALENDAR THEME: Night Clinic] Dark header (#1c1917) with AMBER STRIPE BAND ("야간진료 화·목 ~21시"). Tuesday/Thursday columns highlighted yellow. Warm amber accents. Closed days in red pill badges. Color: charcoal, amber/gold, yellow, white, red.`,
-    autumn_holiday: `[CALENDAR THEME: SNS Bold] White background with CORAL LEFT BAR accent. Bold large typography. Rounded badge cells. Coral (#f97316) line divider. Closed days with orange border + orange pill badge. Modern SNS post style. Color: white, coral/orange, charcoal, warm gray.`,
-    hanok_roof: `[CALENDAR THEME: Gold Classic] Warm ivory background (#faf7f2). GOLD BAND top+bottom. Diamond decoration + serif typography. Dotted grid lines. Elegant serif numbers. Gold accents throughout. Luxurious, classical, premium. Color: ivory, gold, brown, deep red.`,
-    dark_green_clinic: `[CALENDAR THEME: Premium Green] Sage/mint background (#f0f7f2). Emerald gradient accent lines. Dark green (#2d6a4f) header. Left border markers for closed days. Clean medical aesthetic. Wellness/healing mood. Color: sage, dark green, emerald, white, red.`,
-    dark_blue_modern: `[CALENDAR THEME: Navy Modern] Pure white background. Navy (#1e3a5f) text only — no background color blocks. 2.5px navy divider lines. Left navy border for closed days. Clean slate grid. Business document style. Color: white, navy, slate, amber, red.`,
-    lavender_sparkle: `[CALENDAR THEME: Lavender Soft] Soft lavender gradient (#f3eff8 → #fefcff). SPARKLE stars in purple shades. Lavender gradient header band. Rounded pill day badges. Rounded cells. Playful, magical, feminine. Color: lavender, deep purple, violet, white, pink.`,
+    sch_spreadsheet: `[CALENDAR THEME: Corporate Spreadsheet] Dark slate (#1e293b) header. White body with zebra stripes (#f8fafc/#f1f5f9). Closed=gray cell+strikethrough+red "휴". Shortened=yellow cell. Slate footer legend. Professional spreadsheet style.`,
+    sch_charcoal_frame: `[CALENDAR THEME: Charcoal Frame] Thick charcoal (#292524) border frame enclosing white canvas. Closed=FULL RED (#ef4444) cell background. Stone (#a8a29e) grid borders. Bold, high-contrast, professional.`,
+    sch_modern_note: `[CALENDAR THEME: Swiss Minimal] Pure white background. Large month number typography. Double-line dividers. Dot markers (red=closed, amber=shortened). Monochrome, typography-driven, 40%+ whitespace.`,
+    sch_night_clinic: `[CALENDAR THEME: Night Clinic Dark] Full dark charcoal (#1c1917) background. Amber (#d97706) stripe band. White text on dark. Column highlights for specific days. Red pill badges for closed. Warm amber accents.`,
+    sch_blushy_rose: `[CALENDAR THEME: Blushy Rose] Soft rose pink (#fff1f2) background. Coral/rose gradient header. Round cells with soft shadows. Rose circular badges for closed. Feminine, pastel, Instagram aesthetic.`,
+    sch_sns_bold: `[CALENDAR THEME: SNS Bold] White background with coral (#f97316) left vertical bar. Bold large typography. Rounded badge cells. Orange border+pill for closed. Modern social media post style.`,
+    sch_lavender_soft: `[CALENDAR THEME: Lavender Soft] Soft lavender gradient (#f3eff8→#fefcff). Sparkle star decorations. Lavender header band. Rounded pill day badges. Purple tones. Magical, soft, feminine.`,
+    sch_korean_classic: `[CALENDAR THEME: Korean Traditional] Warm cream (#f5e6d0) background. Coral half-sun motif. Roof tile border. Traditional flower lattice corners. Warm brown (#92400e) text. Dignified, classical Korean aesthetic.`,
+    sch_deep_frost: `[CALENDAR THEME: Deep Blue Frost] Deep navy (#0f2444) full-bleed background. White floating card with calendar. Sky blue (#7dd3fc) accents. Blue cell fill for closed. Authoritative university hospital aesthetic.`,
+    sch_gold_classic: `[CALENDAR THEME: Gold Classic] Warm ivory (#faf7f2) background. Gold decorative bands top+bottom. Diamond accents. Serif typography. Dotted grid. Luxurious, classical, premium.`,
+    sch_premium_green: `[CALENDAR THEME: Premium Green] Sage/mint (#f0f7f2) background. Emerald gradient accent lines. Dark green (#2d6a4f) header. Left border markers. Clean wellness/healing medical aesthetic.`,
+    sch_navy_modern: `[CALENDAR THEME: Navy Modern] Pure white background. Navy (#1e3a5f) text only, no color blocks. Navy divider lines. Left navy border for closed. Slate grid. Business document professional style.`,
   };
 
   const calendarThemeActive = selectedTemplate === 'schedule' && calendarTheme;

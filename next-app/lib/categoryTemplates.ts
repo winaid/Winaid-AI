@@ -18,249 +18,151 @@ export const CATEGORY_TEMPLATES: Record<string, CategoryTemplate[]> = {
   // 4계절 커버: 봄(벚꽃) / 여름(그린) / 가을(단풍) / 겨울(눈꽃) + 사계절 범용 8종
   schedule: [
     {
-      id: 'sch_clean_blue', name: '클린블루', color: '#3b82f6', accent: '#1d4ed8', bg: '#eff6ff',
-      desc: '파란 그라데이션 헤더에 7열 격자 달력 — 똑닥·네이버 예약 스타일의 가장 보편적 병원 일정표',
-      layoutHint: 'cal_corporate',
-      aiPrompt: `Korean medical clinic monthly schedule poster. Clean corporate blue — the most standard pattern used on 똑닥, 미리캔버스 hospital templates.
-
-ZONE PROPORTIONS:
-• TOP 18% — Blue gradient header bar (#3b82f6 → #1d4ed8). Hospital name "OO병원" 12pt white left-aligned. "N월 진료안내" 28pt bold white centered.
-• BODY 62% — White rounded card (radius 12px, shadow 0 2px 8px rgba(0,0,0,0.08)). 7-column grid: 일(red #ef4444) 월 화 수 목 금 토(blue #3b82f6) day headers 11pt bold. 5×7 date cells, each cell min 44×44px for mobile tap targets. Closed days: soft blue (#dbeafe) circle + "휴진" 8pt red below date. Shortened days: amber (#fef3c7) circle + "단축" 8pt amber below.
-• BOTTOM 20% — Three-row info block on light blue (#eff6ff) background:
-  Row 1: 진료시간 table → 평일 09:00~18:00 / 토요일 09:00~13:00 / 일요일·공휴일 휴진
-  Row 2: 점심시간 13:00~14:00 (yellow highlight bar)
-  Row 3: 범례 — 🔴 휴진 🟡 단축진료 🔵 정상진료 + 연락처 ☎ 02-000-0000
-
-STRICT MODE ANCHORS: Header gradient angle, 7-column grid structure, cell min-size 44px, three-row bottom info block must be preserved.
-INSPIRED MODE FREEDOM: Header gradient colors may shift within blue family, decorative corner shapes allowed, cell shape (circle/rounded-square) may vary.
-
-Mobile readability: minimum body text 11pt, date numbers 14pt bold, title 24pt+. No decorations, no illustrations. Pure corporate medical calendar.`,
+      id: 'sch_spreadsheet', name: '실무 스프레드시트', color: '#1e293b', accent: '#0f172a', bg: '#f8fafc',
+      desc: '슬레이트 헤더에 zebra 격자 — 가장 실무적인 스프레드시트 스타일', layoutHint: 'cal_corporate',
+      aiPrompt: `Korean hospital monthly schedule poster — Corporate Spreadsheet.
+STRUCTURE: Dark slate header (#1e293b) with hospital name + title condensed in one block. Body: white background with zebra stripes (even rows #f8fafc, odd rows #f1f5f9). Footer: dark slate bar with legend icons.
+CALENDAR GRID: 7-column grid. Day headers on slate background (#e2e8f0), Sunday=red text, Saturday=blue text. Clean thin borders between cells.
+MARKERS: Closed days — gray (#e2e8f0) cell background + strikethrough on number + small red "휴" label. Shortened — light yellow (#fef9c3) background + brown "단축" label. Vacation — light purple background + "휴가" label.
+STRICT MODE ANCHORS: (1) Slate header color #1e293b (2) Zebra stripe pattern (3) Gray+strikethrough for closed (4) Yellow for shortened (5) Footer legend bar.
+INSPIRED MODE FREEDOM: (1) Cell shape variations (2) Marker icon style (3) Header typography weight.
+⛔ Do NOT add any information the user didn't provide — no business hours, lunch hours, phone numbers, addresses. If no footer text was provided, leave the footer empty.
+Clean, readable layout with bold date numbers and clear contrast.`,
     },
     {
-      id: 'sch_beige_premium', name: '베이지골드', color: '#a3836a', accent: '#78583d', bg: '#faf7f4',
-      desc: '리넨 질감 아이보리 위에 골드 라인 포인트 — 피부과·성형외과 고급 진료표',
-      layoutHint: 'cal_premium',
-      aiPrompt: `Korean aesthetic/dermatology clinic monthly schedule. Premium beige/ivory — popular with 피부과, 성형외과 beauty clinics on 미리캔버스.
-
-ZONE PROPORTIONS:
-• TOP 20% — Warm ivory (#faf7f4) background with 3% linen paper texture. Hospital name "OO피부과" in small warm brown (#78583d) 11pt, letter-spacing 2px. Large elegant "N월 진료안내" in warm brown (#a3836a) 26pt weight 700 serif. Thin gold (#c9a96e) 1px decorative line below title.
-• BODY 58% — White card with warm border (1px #e8ddd0, radius 8px). Calendar grid inside. Day headers "일 월 화 수 목 금 토" in warm brown 11pt. Date numbers 14pt. Closed days: soft coral (#e8c4b8) circle behind number + "휴진" 8pt below. Shortened days: muted amber circle + "단축" 8pt.
-• BOTTOM 22% — Two sections:
-  Section 1: 진료시간 안내 table in warm brown text — 평일 10:00~19:00 / 토요일 10:00~15:00 / 일요일·공휴일 휴진. 점심시간 13:00~14:00 in soft coral highlight.
-  Section 2: 범례 bar — coral dot "휴진" / amber dot "단축" / 연락처. Hospital logo small warm brown bottom-center.
-
-STRICT MODE ANCHORS: Ivory/cream base tone, gold accent line position, serif title font, warm brown text color, two-section bottom layout.
-INSPIRED MODE FREEDOM: Texture intensity (0-5%), gold line style (solid/dashed/dotted), card corner treatment, serif font choice variation.
-
-Mobile readability: min body 11pt, dates 14pt. Premium, warm, sophisticated — luxury waiting room display aesthetic. No cartoon elements.`,
+      id: 'sch_charcoal_frame', name: '차콜 프레임', color: '#292524', accent: '#1c1917', bg: '#ffffff',
+      desc: '차콜 프레임이 흰 캔버스를 감싸는 볼드한 구조', layoutHint: 'cal_charcoal',
+      aiPrompt: `Korean hospital monthly schedule poster — Charcoal Frame.
+STRUCTURE: Thick charcoal (#292524) border frame enclosing entire design. Inside is pure white (#ffffff) canvas. Title in white bold text on charcoal frame top area.
+CALENDAR GRID: Clean grid inside white area with stone (#a8a29e) thin borders. Day headers in charcoal background with white text.
+MARKERS: Closed — FULL cell filled with red (#ef4444) background + white date number. Shortened — amber (#f59e0b) left border accent on cell. Vacation — purple left border.
+STRICT MODE ANCHORS: (1) Charcoal frame border (2) Full red cells for closed days (3) White canvas inside (4) Stone border grid (5) Bold title on frame.
+INSPIRED MODE FREEDOM: (1) Frame corner style (2) Emphasis method (3) Typography choice.
+⛔ Do NOT add any information the user didn't provide — no business hours, lunch hours, phone numbers, addresses.
+Professional, bold, high-contrast design with clear readable numbers.`,
     },
     {
-      id: 'sch_cherry_spring', name: '벚꽃봄', color: '#ec4899', accent: '#be185d', bg: '#fdf2f8',
-      desc: '수채화 벚꽃 일러스트 코너 장식에 로즈핑크 달력 — 3~5월 봄 시즌 전용',
-      layoutHint: 'cal_spring',
-      aiPrompt: `Korean medical clinic monthly schedule. Spring cherry blossom (벚꽃) seasonal theme — designed for 3월~5월 spring period.
-
-ZONE PROPORTIONS:
-• TOP 22% — Soft pink (#fdf2f8) background. Watercolor cherry blossom (벚꽃) petals at top-left and top-right corners, 20% opacity, natural painterly brush strokes. Hospital name "OO의원" in deep pink (#be185d) 11pt. Large bold "N월 진료안내" in dark rose (#831843) 26pt weight 800. "봄바람처럼 건강하세요" optional subtitle 10pt rose.
-• BODY 58% — White card (92% opacity, radius 12px, shadow soft). Light pink (#fce7f3) header bar with day names 일~토 11pt bold. 5×7 calendar grid, date numbers 14pt. Closed days: pink (#f9a8d4) circle + "휴진" 8pt magenta below. Shortened days: amber circle + "단축" 8pt. Falling petal illustration at card edge, very subtle.
-• BOTTOM 20% — Pink-tinted info area:
-  진료시간: 평일 09:00~18:00 / 토요일 09:00~13:00 / 일요일·공휴일 휴진
-  점심시간 12:30~13:30 in rose highlight
-  범례: 🌸 휴진 🟡 단축진료 + 연락처
-
-STRICT MODE ANCHORS: Cherry blossom corner illustrations, pink/rose color family, 22/58/20 zone ratio, watercolor art style.
-INSPIRED MODE FREEDOM: Petal density and placement, additional spring elements (나비, 새), pink shade variation, card opacity 85-95%.
-
-Mobile readability: min body 11pt, dates 14pt. Elegant spring seasonal — soft, professional, warm.`,
+      id: 'sch_modern_note', name: '모던 미니멀', color: '#374151', accent: '#111827', bg: '#ffffff',
+      desc: '순백 배경에 이중선 구분자 — 스위스 그리드 미니멀', layoutHint: 'cal_swiss',
+      aiPrompt: `Korean hospital monthly schedule poster — Swiss Minimal.
+STRUCTURE: Pure white background, designed with text and lines only. Top area features very large month number typography. Double-line divider (one thick line + one thin line) separating header from body.
+CALENDAR GRID: Minimal grid with generous whitespace. Monochrome color scheme. Clean sans-serif typography.
+MARKERS: Closed — small red dot marker next to date. Shortened — amber horizontal line under date. Vacation — purple dot.
+STRICT MODE ANCHORS: (1) Double-line divider (2) Dot/line markers only (3) Large month number (4) Over 40% whitespace (5) Zero decorative elements.
+INSPIRED MODE FREEDOM: (1) Typography weight (2) Line thickness (3) Marker shape.
+⛔ Do NOT add any information the user didn't provide — no business hours, lunch hours, phone numbers, addresses.
+Typography-driven minimalist design, clean and elegant.`,
     },
     {
-      id: 'sch_autumn_maple', name: '가을단풍', color: '#ea580c', accent: '#c2410c', bg: '#fff7ed',
-      desc: '수채화 단풍잎 프레임에 오렌지 그라데이션 — 9~11월 가을 시즌 전용',
-      layoutHint: 'cal_autumn',
-      aiPrompt: `Korean medical clinic monthly schedule. Autumn maple leaf (단풍) seasonal theme — designed for 9월~11월 fall period.
-
-ZONE PROPORTIONS:
-• TOP 25% — Warm gradient background (orange #f97316 → peach #fed7aa). Watercolor autumn maple leaves (빨강/주황/금색) at top corners, vivid and lush. "OO병원" 12pt white. Large bold white "N월 진료일정" 28pt heavy sans-serif. Subtitle "진료일정을 확인하시어 내원에 착오 없으시길 바랍니다" 10pt white.
-• BODY 55% — White rounded card (radius 14px). Charcoal (#3f3f46) header row with white day names 일~토. Calendar grid below, date numbers 14pt. Closed days: warm amber (#fbbf24) rounded pill badge with "정기휴진" text 8pt inside. Holiday: orange circle + holiday name 8pt below. Shortened: light orange circle + "단축" 8pt.
-• BOTTOM 20% — Warm cream (#fff7ed) area:
-  진료시간 table: 평일 09:00~18:30 / 토요일 09:00~13:00 / 일요일·공휴일 휴진
-  점심시간 12:30~14:00 in amber highlight bar
-  범례: 🍁 휴진(정기) / 🟠 공휴일 / 🟡 단축 + "OO병원" logo + 연락처
-
-STRICT MODE ANCHORS: Orange gradient header, maple leaf corner art, pill-badge closed-day markers, charcoal grid header, warm color family throughout.
-INSPIRED MODE FREEDOM: Leaf density and color mix, gradient angle, badge shape (pill/circle/tag), additional fall elements (은행잎, 밤).
-
-Mobile readability: min body 11pt, dates 14pt, badge text 8pt+. Rich autumn harvest atmosphere — warm and inviting.`,
+      id: 'sch_night_clinic', name: '야간진료', color: '#1c1917', accent: '#d97706', bg: '#1c1917',
+      desc: '다크 배너에 앰버 스트라이프 — 야간진료 강조', layoutHint: 'cal_night',
+      aiPrompt: `Korean hospital monthly schedule poster — Night Clinic Dark Theme.
+STRUCTURE: Full dark charcoal (#1c1917) background. Top area has amber (#d97706) horizontal stripe band. Overall warm amber/gold accent on dark canvas.
+CALENDAR GRID: White date numbers on dark background. Day headers in amber color. Tuesday and Thursday columns have subtle light yellow background highlight.
+MARKERS: Closed — red pill-shaped badge overlaying date. Shortened — amber pill badge. Night clinic extended hours columns visually highlighted.
+STRICT MODE ANCHORS: (1) Dark charcoal background (2) Amber stripe band (3) Column highlights for specific days (4) White text on dark (5) Red pill for closed.
+INSPIRED MODE FREEDOM: (1) Amber tone warmth range (2) Badge shape (3) Column highlight opacity.
+⛔ Do NOT add any information the user didn't provide — no business hours, lunch hours, phone numbers, addresses.
+High contrast dark theme with warm amber accents, bold readable numbers.`,
     },
     {
-      id: 'sch_traditional', name: '전통한옥', color: '#92400e', accent: '#78350f', bg: '#fef3c7',
-      desc: '기와지붕 실루엣과 전통 문양 테두리 — 설·추석 명절 및 한의원 특화',
-      layoutHint: 'cal_hanok',
-      aiPrompt: `Korean medical clinic monthly schedule. Traditional Korean hanok (한옥) architecture motif — ideal for 설날/추석 holiday periods, 한의원, traditional clinics.
-
-ZONE PROPORTIONS:
-• TOP 25% — Warm cream (#f5e6d0) background. Coral/salmon (#e8795a) half-circle sun shape with bold white "N월" 32pt inside. "진료일정 안내" 16pt white below sun. Traditional tiled roof (기와지붕) silhouette in dark charcoal spanning full width as decorative border. Subtle 전통 구름문 cloud pattern at 10% opacity.
-• BODY 55% — White card with traditional corner bracket ornaments (전통 꽃살문양) in warm brown (#92400e). 7-column calendar grid. Day headers: 일(coral) 토(blue) 평일(dark brown) 11pt. Date numbers 14pt. Closed days: coral circle behind white number + "휴진" 8pt coral below. 공휴일: warm gold circle + holiday name "설날/추석" 8pt.
-• BOTTOM 20% — Warm cream area with subtle 보자기 pattern border:
-  진료시간: 평일 09:00~18:00 / 토요일 09:00~13:00 / 일요일·공휴일 휴진
-  점심시간 12:00~13:00 in coral highlight
-  범례: 🔴 휴진 / 🟡 공휴일 / "명절 연휴 기간 진료 일정을 확인하여 주시기 바랍니다"
-  Hospital name in warm brown centered.
-
-STRICT MODE ANCHORS: 기와지붕 roof silhouette, half-circle sun title element, 전통 문양 corner brackets, coral/brown/cream color palette, 25/55/20 zones.
-INSPIRED MODE FREEDOM: Additional 전통 motifs (매화, 학, 연꽃), sun shape variation, 문양 complexity level, texture intensity.
-
-Mobile readability: min body 11pt, dates 14pt. Dignified, warm — traditional Korean architecture and cultural heritage feel.`,
+      id: 'sch_blushy_rose', name: '블러시 로즈', color: '#e11d48', accent: '#be123c', bg: '#fff1f2',
+      desc: '로즈 헤더에 파스텔 핑크 — 피부과 인스타 스타일', layoutHint: 'cal_rose',
+      aiPrompt: `Korean hospital monthly schedule poster — Blushy Rose.
+STRUCTURE: Soft rose pink (#fff1f2) overall background. Top header with coral-to-rose gradient. All elements have rounded corners and soft edges.
+CALENDAR GRID: Round cells with soft drop shadows. Pink-toned color palette throughout. Gentle feminine aesthetic.
+MARKERS: Closed — rose (#fda4af) circular badge over date. Shortened — peach colored badge. Vacation — light purple circle.
+STRICT MODE ANCHORS: (1) Rose pink palette (2) Round cells (3) Pastel tones throughout (4) Gradient header (5) Soft shadows on elements.
+INSPIRED MODE FREEDOM: (1) Pink shade range (2) Cell roundness (3) Decoration level.
+⛔ Do NOT add any information the user didn't provide — no business hours, lunch hours, phone numbers, addresses.
+Feminine, soft Instagram feed aesthetic with clear readable dates.`,
     },
     {
-      id: 'sch_natural_kraft', name: '내추럴', color: '#92400e', accent: '#78350f', bg: '#fffbeb',
-      desc: '크래프트지 질감에 손글씨풍 타이포 — 동네 의원·소아과의 친근한 게시판 스타일',
-      layoutHint: 'cal_kraft',
-      aiPrompt: `Korean neighborhood clinic monthly schedule. Warm natural kraft paper design — friendly, approachable community clinic (동네 의원, 소아과) feel.
-
-ZONE PROPORTIONS:
-• TOP 18% — Warm cream (#fefce8) background with kraft paper texture at 5% opacity. Simple minimal medical icon (작은 십자 or 하트) in warm brown. "N월 휴진 안내" in warm brown (#92400e) 24pt bold rounded sans-serif (slightly hand-drawn feel). Thin horizontal line divider in light warm brown (#d4a574).
-• BODY 60% — White/cream area. Clean calendar grid with generous cell spacing. Date numbers 15pt. 일요일 in red (#dc2626), 토요일 in blue (#2563eb), 평일 dark brown. Closed days: soft red (#fee2e2) circle + bold red number + "쉽니다" 8pt below. Shortened: light amber circle + "단축" 8pt.
-• BOTTOM 22% — Kraft-toned footer:
-  진료시간 안내 (rounded box, 1px warm brown border):
-    평일 09:00~18:00
-    토요일 09:00~13:00
-    일요일·공휴일 휴진
-    점심시간 12:30~13:30
-  범례: ⭕ 휴진 / △ 단축 / "편하게 문의해 주세요" + ☎ 연락처
-  Hospital name "OO의원" bottom center in warm brown.
-
-STRICT MODE ANCHORS: Kraft texture background, warm brown monochrome palette, hand-drawn feel typography, generous white space, no complex decorations.
-INSPIRED MODE FREEDOM: Texture intensity (3-8%), icon choice (tooth/heart/cross), line style, cell shape, additional doodle-style accents at low opacity.
-
-Mobile readability: min body 11pt, dates 15pt. MINIMAL, CLEAN, warm-toned — typography and calendar only, no characters or heavy illustrations.`,
+      id: 'sch_sns_bold', name: 'SNS 볼드', color: '#f97316', accent: '#ea580c', bg: '#ffffff',
+      desc: '흰 배경에 코랄 악센트 — SNS 포스트 스타일', layoutHint: 'cal_sns',
+      aiPrompt: `Korean hospital monthly schedule poster — SNS Bold Post Style.
+STRUCTURE: Clean white background with thick coral (#f97316) vertical bar accent on the left side. Bold, large typography throughout. Modern social media post aesthetic.
+CALENDAR GRID: Rounded badge-style date cells. Coral colored line dividers between rows. Bold sans-serif numbers.
+MARKERS: Closed — orange border around cell + orange pill badge with "휴" text. Shortened — amber badge. Modern and punchy.
+STRICT MODE ANCHORS: (1) Left coral vertical bar (2) Bold large typography (3) Rounded badge cells (4) Coral divider lines (5) White background.
+INSPIRED MODE FREEDOM: (1) Bar position/thickness (2) Badge shape (3) Color warmth range.
+⛔ Do NOT add any information the user didn't provide — no business hours, lunch hours, phone numbers, addresses.
+Bold, eye-catching SNS style with high readability.`,
     },
     {
-      id: 'sch_winter_snow', name: '겨울눈꽃', color: '#0ea5e9', accent: '#0284c7', bg: '#f0f9ff',
-      desc: '기하학적 눈 결정 패턴에 아이시 블루 톤 — 12~2월 겨울 시즌 전용',
-      layoutHint: 'cal_winter',
-      aiPrompt: `Korean medical clinic monthly schedule. Winter snowflake (눈꽃) seasonal theme — designed for 12월~2월 winter period.
-
-ZONE PROPORTIONS:
-• TOP 22% — Icy blue (#e0f2fe) to white vertical gradient. Delicate geometric snowflake (눈 결정) crystal patterns scattered at 12% opacity in light blue (#bae6fd). "OO병원" 11pt deep blue. Bold "N월 진료안내" in deep blue (#0c4a6e) 26pt weight 800. Sparkle (✦) snowflake accents flanking title at 20% opacity.
-• BODY 58% — Frosted white card (radius 12px, border 1px #bae6fd, backdrop-blur effect feel). 7-column grid with ice-blue (#e0f2fe) day header bar. Date numbers 14pt. Closed days: icy blue (#0ea5e9) rounded pill badge with white date + "휴진" 8pt below. Shortened: amber badge + "단축" 8pt. 공휴일: light blue cell bg + holiday name 8pt.
-• BOTTOM 20% — Light icy background:
-  진료시간 table in deep blue text: 평일 09:00~18:00 / 토요일 09:00~13:00 / 일요일·공휴일 휴진
-  점심시간 13:00~14:00 in sky-blue highlight bar
-  범례: ❄️ 휴진 / 🟡 단축 / "연말연시 진료일정 안내" + ☎ 연락처
-
-STRICT MODE ANCHORS: Ice-blue gradient, geometric snowflake patterns, frosted card effect, pill-badge markers, blue monochrome palette, 22/58/20 zones.
-INSPIRED MODE FREEDOM: Snowflake density and size, gradient direction, additional winter elements (트리, 별), blue shade range (sky to navy).
-
-Mobile readability: min body 11pt, dates 14pt. Cold, crisp, clean — professional Korean healthcare winter seasonal design.`,
+      id: 'sch_lavender_soft', name: '라벤더 소프트', color: '#7c3aed', accent: '#6d28d9', bg: '#f3eff8',
+      desc: '라벤더 그라데이션에 스파클 장식 — 부드러운 감성', layoutHint: 'cal_lavender',
+      aiPrompt: `Korean hospital monthly schedule poster — Lavender Soft.
+STRUCTURE: Soft lavender gradient background (#f3eff8 fading to #fefcff). Subtle sparkle/star decorations in purple shades scattered lightly. Lavender gradient header band at top.
+CALENDAR GRID: Rounded pill-shaped day badges. Cells with rounded corners. Soft purple toned grid lines.
+MARKERS: Closed — deep purple filled badge. Shortened — light violet badge. Vacation — pink badge. Magical and soft aesthetic.
+STRICT MODE ANCHORS: (1) Lavender gradient palette (2) Sparkle star decorations (3) Rounded pill cells (4) Gradient header band (5) Purple tone throughout.
+INSPIRED MODE FREEDOM: (1) Purple shade range (2) Sparkle decoration density (3) Cell roundness.
+⛔ Do NOT add any information the user didn't provide — no business hours, lunch hours, phone numbers, addresses.
+Dreamy, soft aesthetic with clear contrast for readability.`,
     },
     {
-      id: 'sch_white_minimal', name: '화이트', color: '#374151', accent: '#111827', bg: '#ffffff',
-      desc: '순백 배경에 흑백 타이포그래피만 — 스위스 그리드 스타일 모던 미니멀',
-      layoutHint: 'cal_swiss',
-      aiPrompt: `Korean medical clinic monthly schedule. Ultra-minimal white — modern Swiss/Scandinavian grid-based typographic design.
-
-ZONE PROPORTIONS:
-• TOP 15% — Pure white (#ffffff) background. Very subtle light gray geometric grid lines at 3% opacity. Clinic logo monochrome + "OO의원" 11pt dark centered. Thin accent line (1px, #e5e7eb). Large bold "N월 진료일정" in clean sans-serif black (#111827) 28pt weight 800.
-• BODY 62% — Clean white area with architectural grid. Thin gray (#e5e7eb) 1px lines separating cells. Day headers "일 월 화 수 목 금 토" 10pt medium gray. Date numbers 15pt black. Closed days: soft gray (#f3f4f6) circle + bold black number + "휴진" in red (#ef4444) 9pt below. Normal open days: very light blue (#eff6ff) circle badge. 공휴일: red (#fef2f2) bg + holiday name 8pt.
-• BOTTOM 23% — Maximum whitespace, left-aligned text block:
-  진료시간: 평일 09:00~18:00 / 토요일 09:00~13:00 / 일요일·공휴일 휴진
-  점심시간 13:00~14:00 (subtle gray underline)
-  범례: ● 휴진 (red) / ○ 정상진료 (blue) / "문의 ☎ 02-000-0000"
-  Important words "휴진" "정상진료" in bold black. No other decoration.
-
-STRICT MODE ANCHORS: Pure white background, black/gray-only palette (red only for 휴진), thin 1px grid lines, left-aligned bottom text, maximum whitespace ratio > 40%.
-INSPIRED MODE FREEDOM: Grid line style (solid/dashed), typography weight variation, subtle geometric accent shapes at < 5% opacity, circle vs square cell markers.
-
-Mobile readability: min body 11pt, dates 15pt, title 24pt+. Extremely clean, no clutter — architectural typography precision.`,
+      id: 'sch_korean_classic', name: '한방 전통', color: '#92400e', accent: '#78350f', bg: '#fef3c7',
+      desc: '기와 문양 + 한지 프레임 — 한의원 특화 전통 격조', layoutHint: 'cal_hanok',
+      aiPrompt: `Korean hospital monthly schedule poster — Korean Traditional Hanok Style.
+STRUCTURE: Warm cream (#f5e6d0) background evoking traditional Korean paper. Coral/salmon (#e8795a) decorative half-circle sun motif at top with month number inside. Traditional roof tile (기와) silhouette decorative border. Corner decorations inspired by traditional flower lattice (꽃살) patterns.
+CALENDAR GRID: Warm brown (#92400e) text. Grid styled with traditional aesthetic, subtle borders.
+MARKERS: Closed — deep red seal stamp style marker. Shortened — amber brush stroke accent. Classical and dignified feel.
+STRICT MODE ANCHORS: (1) Roof tile border decoration (2) Half-sun motif (3) Traditional pattern corners (4) Warm brown palette (5) Cream background.
+INSPIRED MODE FREEDOM: (1) Traditional motif variety (2) Color warmth level (3) Pattern complexity.
+⛔ Do NOT add any information the user didn't provide — no business hours, lunch hours, phone numbers, addresses.
+Dignified traditional Korean aesthetic with warm readable typography.`,
     },
     {
-      id: 'sch_navy_dark', name: '네이비', color: '#1e3a5f', accent: '#0f2444', bg: '#0f2444',
-      desc: '다크 네이비 배경에 화이트 카드 테이블 — 대학병원·종합병원 공신력 스타일',
-      layoutHint: 'cal_navy',
-      aiPrompt: `Korean medical clinic monthly schedule. Dark navy corporate — trustworthy, authoritative feel matching 대학병원, 종합병원 branding.
-
-ZONE PROPORTIONS:
-• TOP 18% — Deep navy (#0f2444) full bleed background. Subtle halftone dot pattern at corners at 3% opacity. White thin-bordered (1px) rectangle frame inset. Clinic name "OO병원" in small sky blue (#7dd3fc) 11pt. Large bold white "N월 휴진 일정" 28pt heavy sans-serif inside frame.
-• BODY 52% — White/light card (radius 10px) floating on navy. Clean table layout inside. Day header row: light blue (#dbeafe) background, dark navy text 11pt bold. Calendar grid with 1px #e5e7eb cell borders. Closed/holiday days: blue (#dbeafe) cell fill + bold navy date + holiday name 8pt below. Shortened: light amber cell fill + "단축" 8pt.
-• BOTTOM 30% — Navy background continues:
-  White text info block:
-    진료시간 안내 (white 14pt bold underline)
-    평일 09:00~18:00 / 토요일 09:00~14:00 / 일요일·공휴일 휴진
-    점심시간 13:00~14:00
-  범례 (horizontal): ◼ 휴진 / ◻ 단축 / "야간진료 매주 수요일 ~20:00" (if applicable)
-  Clinic logo in sky blue centered at very bottom. ☎ 연락처 white.
-
-STRICT MODE ANCHORS: Navy (#0f2444) dark background, white floating card, table-style grid with cell borders, sky-blue accent color, 18/52/30 zone ratio.
-INSPIRED MODE FREEDOM: Navy shade range (#0a1628 ~ #1e3a5f), card shadow intensity, header frame style, accent blue shade, bottom layout (centered vs left-aligned).
-
-Mobile readability: min body 11pt white-on-navy contrast ratio > 7:1, dates 14pt, title 24pt+. Corporate, trustworthy — professional healthcare institution.`,
+      id: 'sch_deep_frost', name: '딥블루 프로스트', color: '#1e3a5f', accent: '#0f2444', bg: '#0f2444',
+      desc: '딥 네이비에 프로스트 카드 — 대학병원 공신력 스타일', layoutHint: 'cal_navy',
+      aiPrompt: `Korean hospital monthly schedule poster — Deep Blue Frost.
+STRUCTURE: Deep navy (#0f2444) full-bleed background. White floating card with rounded corners containing the calendar grid, creating a frosted glass effect. Sky blue (#7dd3fc) accent elements.
+CALENDAR GRID: Table-style grid inside the white card with subtle cell borders. Clean professional typography.
+MARKERS: Closed — blue (#dbeafe) cell fill. Shortened — light amber cell fill. Authoritative university hospital aesthetic.
+STRICT MODE ANCHORS: (1) Deep navy background (2) White floating card (3) Table grid with borders (4) Blue cell fill for closed (5) Professional serif or sans-serif typography.
+INSPIRED MODE FREEDOM: (1) Navy tone range (2) Card shadow intensity (3) Accent color shade.
+⛔ Do NOT add any information the user didn't provide — no business hours, lunch hours, phone numbers, addresses.
+Authoritative, trustworthy design with high contrast white card on dark background.`,
     },
     {
-      id: 'sch_mint_teal', name: '민트', color: '#14b8a6', accent: '#0f766e', bg: '#f0fdfa',
-      desc: '민트/틸 그라데이션에 의료 십자 아이콘 — 치과·소아과 청결하고 산뜻한 느낌',
-      layoutHint: 'cal_mint',
-      aiPrompt: `Korean dental/pediatric clinic monthly schedule. Fresh mint/teal — the most popular palette for 치과, 소아과 clinics on 똑닥 and 미리캔버스 templates.
-
-ZONE PROPORTIONS:
-• TOP 20% — Light mint gradient (#f0fdfa → white). "OO치과" in teal (#0f766e) 12pt. Large bold "N월 진료안내" in teal (#14b8a6) 26pt weight 800. Thin teal 1px line divider. Small green medical cross (+) icon accent next to clinic name.
-• BODY 60% — White card (radius 10px, border 1px #99f6e4). Calendar grid. Day headers in teal text 11pt bold on light mint (#ccfbf1) header bar. Date numbers 14pt. Closed days: teal (#14b8a6) circle + white date number + "휴진" 8pt teal below. Shortened days: amber (#fbbf24) circle + "단축" 8pt. 공휴일: mint bg cell + holiday name 8pt.
-• BOTTOM 20% — Mint-tinted (#f0fdfa) info area:
-  진료시간 table (teal text): 평일 09:30~18:30 / 토요일 09:30~14:00 / 일요일·공휴일 휴진
-  점심시간 13:00~14:00 in teal highlight bar
-  범례: 🟢 휴진 / 🟡 단축진료 / 녹색 십자(+) 정상진료
-  ☎ 연락처 + "건강한 치아, OO치과가 함께합니다"
-
-STRICT MODE ANCHORS: Mint/teal monochrome palette, green cross icon, teal circle closed-day markers, clean hygienic white card, 20/60/20 zones.
-INSPIRED MODE FREEDOM: Teal shade variation (#0d9488 ~ #2dd4bf), cross icon size/position, card border treatment, additional tooth/dental icon at low opacity, gradient direction.
-
-Mobile readability: min body 11pt, dates 14pt. Fresh, hygienic, professional — clean dental/pediatric clinic standard aesthetic.`,
+      id: 'sch_gold_classic', name: '골드 클래식', color: '#a16207', accent: '#854d0e', bg: '#faf7f2',
+      desc: '아이보리에 골드 밴드 — 럭셔리 프리미엄 클래식', layoutHint: 'cal_gold',
+      aiPrompt: `Korean hospital monthly schedule poster — Gold Classic Premium.
+STRUCTURE: Warm ivory (#faf7f2) background. Decorative gold bands at top and bottom edges. Small diamond shape decorations as accents. Serif typography throughout for elegant feel.
+CALENDAR GRID: Dotted grid lines instead of solid lines. Elegant serif numerals for dates. Gold accent colors on headers.
+MARKERS: Closed — deep red serif number with gold underline. Shortened — amber dot marker. Luxurious and classical.
+STRICT MODE ANCHORS: (1) Gold decorative bands (2) Diamond accents (3) Serif typography (4) Ivory background (5) Dotted grid lines.
+INSPIRED MODE FREEDOM: (1) Gold tone variation (2) Decoration shape (3) Serif font style.
+⛔ Do NOT add any information the user didn't provide — no business hours, lunch hours, phone numbers, addresses.
+Luxurious, premium classical design with elegant readable serif numbers.`,
     },
     {
-      id: 'sch_lavender_soft', name: '라벤더', color: '#8b5cf6', accent: '#7c3aed', bg: '#f5f3ff',
-      desc: '연보라 글래스모피즘 카드에 스파클(✦) 장식 — 성형외과·에스테틱 프리미엄',
-      layoutHint: 'cal_glass',
-      aiPrompt: `Korean aesthetic clinic monthly schedule. Soft lavender purple — preferred by 성형외과, 에스테틱, 피부관리 beauty clinics.
-
-ZONE PROPORTIONS:
-• TOP 20% — Soft lavender gradient (#f3e8ff → #faf5ff → white). Four-pointed star sparkles (✦) in purple at 12% opacity flanking title area. "OO성형외과" 11pt dark purple. Large bold "N월 진료일정" in dark purple (#7c3aed) 26pt weight 800 centered.
-• BODY 58% — Glassmorphism-style card (white 85% opacity, radius 14px, backdrop-blur, border 1px rgba(139,92,246,0.15)). Day headers inside light lavender (#e9d5ff) bar 11pt bold purple. Calendar grid, date numbers 14pt. Closed/holiday days: purple (#8b5cf6) circle behind white date + "휴진" 9pt purple bold below. Consecutive closed days: light lavender (#ede9fe) rounded rectangle spanning multiple cells. Shortened: light violet circle + "단축" 8pt.
-• BOTTOM 22% — Two-part layout:
-  Part 1: Rounded callout box (border 1px #c4b5fd, radius 10px, bg #faf5ff): 진료시간 — 평일 10:00~19:00 / 토요일 10:00~15:00 / 일요일·공휴일 휴진 / 점심시간 13:00~14:00
-  Part 2: 범례 + notice: "정상진료" bold purple / "휴진" bold purple / "아름다운 변화, OO성형외과" + ☎ 연락처
-
-STRICT MODE ANCHORS: Lavender/purple palette, glassmorphism card effect, sparkle (✦) decorations, callout box in bottom section, 20/58/22 zones.
-INSPIRED MODE FREEDOM: Sparkle density/size, glassmorphism blur intensity, purple shade range (#a78bfa ~ #6d28d9), additional beauty elements (꽃, 리본) at < 10% opacity.
-
-Mobile readability: min body 11pt, dates 14pt. Feminine, elegant, premium — gentle luxury aesthetic clinic feel.`,
+      id: 'sch_premium_green', name: '프리미엄 그린', color: '#2d6a4f', accent: '#1b4332', bg: '#f0f7f2',
+      desc: '세이지/민트에 에메랄드 악센트 — 웰니스 의료 감성', layoutHint: 'cal_green',
+      aiPrompt: `Korean hospital monthly schedule poster — Premium Green Wellness.
+STRUCTURE: Sage/mint (#f0f7f2) background. Emerald green gradient accent lines as visual dividers. Dark green (#2d6a4f) header area with white text.
+CALENDAR GRID: Clean medical aesthetic grid with green-toned elements. Subtle sage colored cell backgrounds.
+MARKERS: Closed — left red border accent on cell. Shortened — left amber border accent. Clean wellness and healing mood.
+STRICT MODE ANCHORS: (1) Sage/mint background (2) Emerald gradient accent lines (3) Dark green header (4) Left border markers (5) Clean medical aesthetic.
+INSPIRED MODE FREEDOM: (1) Green tone range (2) Border marker style (3) Decoration level.
+⛔ Do NOT add any information the user didn't provide — no business hours, lunch hours, phone numbers, addresses.
+Clean wellness aesthetic with soothing green tones and clear readability.`,
     },
     {
-      id: 'sch_classic_green', name: '클래식그린', color: '#2d5a4a', accent: '#1a3c32', bg: '#f5f1eb',
-      desc: '크림 상단 + 다크그린 하단 분할 구성에 다이아몬드 마커 — 한의원·내과 중후한 신뢰감',
-      layoutHint: 'cal_sage',
-      aiPrompt: `Korean traditional medicine clinic monthly schedule. Elegant dark green split-layout — suits 한의원, 내과, 가정의학과 clinics.
-
-ZONE PROPORTIONS:
-• TOP 15% — Cream (#f5f1eb) background upper section. Clinic logo (한방 or 의료 icon) + "OO한의원" in dark green (#2d5a4a) 13pt centered. Small English subtitle "OO Korean Medicine Clinic" 9pt below in muted green.
-• TITLE BAR 8% — Dark green (#2d5a4a) rounded rectangle banner spanning 85% width, centered. Bold white "N월 진료일정" 22pt inside banner.
-• BODY 45% — White card (border 1px #2d5a4a at 30% opacity, radius 8px) with decorative corner bracket ornaments in dark green. 7-column grid. Day headers: 일(coral #e57373) 토(blue #5c9ce6) 평일(dark #1a3c32) 11pt. Date numbers 14pt. Closed days: dark green diamond (◆ rotated 45°) behind white date + holiday name + "휴진" 8pt green below. Special open days: green circle behind white date.
-• BOTTOM 32% — Deep forest green (#2d5a4a) background:
-  White text block:
-    진료시간 안내 (16pt bold white, underline)
-    평일 09:00~18:00 / 토요일 09:00~13:00 / 일요일·공휴일 휴진
-    점심시간 12:00~13:00
-  범례 (white): ◆ 휴진 / ● 정상진료(특별) / "참고하여 내원에 차질이 없으시기 바랍니다"
-  ☎ 연락처 + Hospital name white centered at bottom.
-
-STRICT MODE ANCHORS: Cream/green split background (60/40), dark green banner title bar, diamond (◆) closed-day markers, corner bracket ornaments, 15/8/45/32 zones.
-INSPIRED MODE FREEDOM: Green shade (#1a3c32 ~ #3d7a5f), split ratio (55-65% cream), ornament complexity, additional nature elements (대나무, 매화) at < 8% opacity, banner shape variation.
-
-Mobile readability: min body 11pt on both cream and green backgrounds, dates 14pt, white-on-green contrast > 7:1. Elegant, classic, authoritative — traditional medicine trust and nature harmony.`,
+      id: 'sch_navy_modern', name: '네이비 모던', color: '#1e3a5f', accent: '#0f2444', bg: '#ffffff',
+      desc: '흰 배경에 네이비 텍스트만 — 비즈니스 문서 스타일', layoutHint: 'cal_business',
+      aiPrompt: `Korean hospital monthly schedule poster — Navy Modern Business Document.
+STRUCTURE: Pure white background. Navy (#1e3a5f) colored text only — no colored background blocks anywhere. Clean navy horizontal divider lines separating sections.
+CALENDAR GRID: Slate gray thin grid lines. Minimal, clean layout. Navy text for all dates and headers.
+MARKERS: Closed — left navy border accent on cell only. Shortened — left amber border accent. No background fills, borders only.
+STRICT MODE ANCHORS: (1) Navy text color only (2) Horizontal divider lines (3) Left border markers only (4) Pure white background (5) No colored blocks.
+INSPIRED MODE FREEDOM: (1) Divider line thickness (2) Border marker width (3) Typography weight.
+⛔ Do NOT add any information the user didn't provide — no business hours, lunch hours, phone numbers, addresses.
+Clean business document style with navy on white, highly professional and readable.`,
     },
   ],
-  // ─── 이벤트 (6개) ───
-  // 연구 기반: X배너 → 인스타 어댑션, 캐러셀 표지, 사진+텍스트 분할, 할인율 48-72pt
-  // 색상: 코랄/핑크 + 골드(프리미엄), 블루+옐로우(주목), 화이트 베이스(의료 신뢰감)
+
   event: [
     {
       id: 'evt_sale_banner', name: '할인 배너', color: '#ef4444', accent: '#b91c1c', bg: '#fef2f2',
