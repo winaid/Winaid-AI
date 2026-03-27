@@ -105,6 +105,7 @@ function BlogForm() {
   const [seoReport, setSeoReport] = useState<SeoReport | null>(null);
   const [isSeoLoading, setIsSeoLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isRetryable, setIsRetryable] = useState(false);
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
   // 생성 시간 추정
   const [generationStartTime, setGenerationStartTime] = useState<number>(0);
@@ -643,6 +644,24 @@ ${newsContext ? '6. **뉴스 트렌드 1~2개 반드시 포함**: 위 뉴스 분
 
   // normalizeBlogStructure — ./normalizeBlog.ts로 분리됨 (파일 상단 import 참조)
 
+  // ── 에러 분류 (사용자 친화적 메시지 + 재시도 가능 여부) ──
+  function classifyError(err: unknown): { message: string; retryable: boolean } {
+    const raw = err instanceof Error ? err.message : String(err);
+    if (raw.includes('timeout') || raw.includes('Timeout') || raw.includes('504')) {
+      return { message: 'AI 응답이 느려 시간이 초과되었습니다. 다시 시도해주세요.', retryable: true };
+    }
+    if (raw.includes('429') || raw.includes('rate') || raw.includes('quota')) {
+      return { message: 'AI 요청이 일시적으로 제한되었습니다. 30초 후 다시 시도해주세요.', retryable: true };
+    }
+    if (raw.includes('503') || raw.includes('500') || raw.includes('upstream')) {
+      return { message: 'AI 서버가 일시적으로 불안정합니다. 잠시 후 다시 시도해주세요.', retryable: true };
+    }
+    if (raw.includes('fetch') || raw.includes('network') || raw.includes('Failed to fetch')) {
+      return { message: '네트워크 연결을 확인해주세요.', retryable: true };
+    }
+    return { message: raw, retryable: false };
+  }
+
   // ── SEO 평가 (백그라운드 — fire-and-forget) ──
   const runSeoEvaluation = async (blogHtml: string, topicStr: string, keywordsStr: string) => {
     setIsSeoLoading(true);
@@ -806,6 +825,7 @@ JSON 형식으로 응답해주세요.`;
     window.scrollTo({ top: 0, behavior: 'smooth' });
     setRotationIdx(0);
     setError(null);
+    setIsRetryable(false);
     setGeneratedContent(null);
     setScores(undefined);
     setSeoReport(null);
@@ -1321,9 +1341,10 @@ ${topic.trim()}${disease.trim() ? ', 질환: ' + disease.trim() : ''}
       }
       console.info(`[BLOG] ========== 블로그 생성 완료 ==========`);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : '네트워크 오류';
-      console.error(`[BLOG] ❌ 생성 실패: ${msg}`, err);
-      setError(msg);
+      const { message, retryable } = classifyError(err);
+      console.error(`[BLOG] ❌ 생성 실패: ${message}`, err);
+      setError(message);
+      setIsRetryable(retryable);
     } finally {
       setIsGenerating(false);
       setDisplayStage(0);
@@ -1633,6 +1654,8 @@ ${generatedContent.substring(0, 2000)}
         estimatedTotalSeconds={estimatedTotalSeconds}
         error={error}
         onDismissError={() => setError(null)}
+        isRetryable={isRetryable}
+        onRetry={() => { setError(null); setTimeout(() => { const form = document.querySelector('form'); if (form) form.requestSubmit(); }, 300); }}
         generatedContent={generatedContent}
         saveStatus={saveStatus}
         scores={scores}

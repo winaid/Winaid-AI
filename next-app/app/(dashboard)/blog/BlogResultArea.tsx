@@ -17,6 +17,8 @@ export interface BlogResultAreaProps {
   // 에러
   error: string | null;
   onDismissError: () => void;
+  isRetryable?: boolean;
+  onRetry?: () => void;
   // 결과
   generatedContent: string | null;
   saveStatus: string | null;
@@ -43,7 +45,7 @@ export interface BlogResultAreaProps {
 /** 블로그 결과 영역 — 생성 중 / 에러 / 결과 / 빈 상태 4가지 렌더링 */
 export default function BlogResultArea({
   isGenerating, displayStage, rotationIdx, generationStartTime, estimatedTotalSeconds,
-  error, onDismissError,
+  error, onDismissError, isRetryable, onRetry,
   generatedContent, saveStatus, scores, cssTheme,
   blogSections, regeneratingSection, sectionProgress,
   onSectionRegenerate, onDownloadWord, onDownloadPDF,
@@ -116,7 +118,7 @@ export default function BlogResultArea({
   if (error) {
     return (
       <div className="flex-1 min-w-0">
-        <ErrorPanel error={error} onDismiss={onDismissError} />
+        <ErrorPanel error={error} onDismiss={onDismissError} onRetry={isRetryable ? onRetry : undefined} />
       </div>
     );
   }

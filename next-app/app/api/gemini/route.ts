@@ -214,8 +214,8 @@ export async function POST(request: NextRequest) {
   let result = await fetchGemini(keys, model, apiBody, timeout);
   let fallbackUsed = false;
 
-  // PRO → FLASH 자동 폴백 (old geminiClient 동일: 503/429/504 + timeout)
-  if (!result.ok && model === PRO && (result.status === 503 || result.status === 429 || result.status === 504)) {
+  // PRO → FLASH 자동 폴백 (500/503/429/504 + timeout)
+  if (!result.ok && model === PRO && (result.status === 500 || result.status === 503 || result.status === 429 || result.status === 504)) {
     console.warn(`[FALLBACK] PRO ${result.status} → FLASH`);
     result = await fetchGemini(keys, FLASH, apiBody, 25000);
     fallbackUsed = true;

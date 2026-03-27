@@ -64,9 +64,10 @@ interface ErrorPanelProps {
   title?: string;
   error: string;
   onDismiss: () => void;
+  onRetry?: () => void;
 }
 
-export function ErrorPanel({ title = '생성 실패', error, onDismiss }: ErrorPanelProps) {
+export function ErrorPanel({ title = '생성 실패', error, onDismiss, onRetry }: ErrorPanelProps) {
   return (
     <div className="rounded-2xl border border-red-200 bg-red-50 p-6 min-h-[200px]">
       <div className="flex items-center gap-2 mb-3">
@@ -74,12 +75,22 @@ export function ErrorPanel({ title = '생성 실패', error, onDismiss }: ErrorP
         <h3 className="text-base font-bold text-red-700">{title}</h3>
       </div>
       <p className="text-sm text-red-600 mb-4">{error}</p>
-      <button
-        onClick={onDismiss}
-        className="px-4 py-2 text-sm font-semibold bg-white border border-red-200 rounded-lg text-red-600 hover:bg-red-50 transition-colors"
-      >
-        닫기
-      </button>
+      <div className="flex items-center gap-2">
+        <button
+          onClick={onDismiss}
+          className="px-4 py-2 text-sm font-semibold bg-white border border-red-200 rounded-lg text-red-600 hover:bg-red-50 transition-colors"
+        >
+          닫기
+        </button>
+        {onRetry && (
+          <button
+            onClick={onRetry}
+            className="px-4 py-2 text-sm font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            다시 생성하기
+          </button>
+        )}
+      </div>
     </div>
   );
 }
