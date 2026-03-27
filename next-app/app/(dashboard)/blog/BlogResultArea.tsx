@@ -3,7 +3,8 @@
 import { BLOG_STAGES, BLOG_MESSAGE_POOL } from './blogConstants';
 import { ErrorPanel, ResultPanel, type ScoreBarData } from '../../../components/GenerationResult';
 import ContentAnalysisPanel from '../../../components/ContentAnalysisPanel';
-import type { BlogSection, CssTheme } from '../../../lib/types';
+import SeoDetailPanel from '../../../components/SeoDetailPanel';
+import type { BlogSection, CssTheme, SeoReport } from '../../../lib/types';
 
 export interface BlogResultAreaProps {
   // 진행 상태
@@ -29,6 +30,8 @@ export interface BlogResultAreaProps {
   // 이미지
   onImageRegenerate: (imageIndex: number) => void;
   regeneratingImage: number | null;
+  // SEO 상세 리포트
+  seoReport?: SeoReport | null;
   // 빈 상태
   topic: string;
 }
@@ -41,6 +44,7 @@ export default function BlogResultArea({
   blogSections, regeneratingSection, sectionProgress,
   onSectionRegenerate, onDownloadWord, onDownloadPDF,
   onImageRegenerate, regeneratingImage,
+  seoReport,
   topic,
 }: BlogResultAreaProps) {
 
@@ -92,6 +96,7 @@ export default function BlogResultArea({
     return (
       <div className="flex-1 min-w-0">
         <ContentAnalysisPanel html={generatedContent} keyword={topic?.split(',')[0]?.trim()} />
+        {seoReport && <SeoDetailPanel report={seoReport} />}
         <ResultPanel
           content={generatedContent}
           saveStatus={saveStatus}

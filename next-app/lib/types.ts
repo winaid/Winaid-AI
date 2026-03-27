@@ -111,3 +111,21 @@ export interface DBCrawledPost {
   crawled_at: string;
   scored_at?: string;
 }
+
+// ── SEO 상세 평가 리포트 (Gemini 반환 구조) ──
+
+export interface SeoReportCategory {
+  score: number;
+  feedback: string;
+  [key: string]: number | string;
+}
+
+export interface SeoReport {
+  total: number;
+  title: SeoReportCategory;
+  keyword_structure: SeoReportCategory;
+  user_retention: SeoReportCategory;
+  medical_safety: SeoReportCategory;
+  conversion: SeoReportCategory;
+  improvement_suggestions: string[];
+}

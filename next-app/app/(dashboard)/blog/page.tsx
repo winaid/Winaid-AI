@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { CATEGORIES, PERSONAS, TONES } from '../../../lib/constants';
 import { TEAM_DATA } from '../../../lib/teamData';
-import { ContentCategory, type GenerationRequest, type AudienceMode, type ImageStyle, type WritingStyle, type CssTheme, type TrendingItem, type SeoTitleItem } from '../../../lib/types';
+import { ContentCategory, type GenerationRequest, type AudienceMode, type ImageStyle, type WritingStyle, type CssTheme, type TrendingItem, type SeoTitleItem, type SeoReport } from '../../../lib/types';
 import { buildBlogPrompt } from '../../../lib/blogPrompt';
 import { savePost } from '../../../lib/postStorage';
 import { getSessionSafe, supabase } from '../../../lib/supabase';
@@ -102,6 +102,7 @@ function BlogForm() {
   const [regenPrompt, setRegenPrompt] = useState('');
   const [isRecommendingPrompt, setIsRecommendingPrompt] = useState(false);
   const [scores, setScores] = useState<ScoreBarData | undefined>(undefined);
+  const [seoReport, setSeoReport] = useState<SeoReport | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
 
@@ -678,6 +679,7 @@ ${newsContext ? '6. **뉴스 트렌드 1~2개 반드시 포함**: 위 뉴스 분
     setError(null);
     setGeneratedContent(null);
     setScores(undefined);
+    setSeoReport(null);
     setSaveStatus(null);
     setBlogSections([]);
     setRegeneratingSection(null);
@@ -1310,6 +1312,10 @@ JSON 형식으로 응답해주세요.`;
             console.log(`[BLOG]   ④ 의료법 안전: ${seoReport.medical_safety?.score || 0}/20`);
             console.log(`[BLOG]   ⑤ 전환 연결성: ${seoReport.conversion?.score || 0}/10`);
 
+            // SEO 리포트를 state에 저장 (UI 표시용)
+            setSeoReport(seoReport as SeoReport);
+            setScores(prev => ({ ...prev, seoScore: seoReport.total }));
+
             if (seoReport.total >= 85) {
               console.log(`[BLOG] ✅ SEO 점수 85점 이상!`);
             } else {
@@ -1691,6 +1697,7 @@ ${generatedContent.substring(0, 2000)}
         onDownloadPDF={handleDownloadPDF}
         onImageRegenerate={handleImageClick}
         regeneratingImage={regeneratingImage}
+        seoReport={seoReport}
         topic={topic}
       />
 
