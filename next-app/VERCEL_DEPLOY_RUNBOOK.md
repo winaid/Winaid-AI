@@ -66,6 +66,8 @@ Settings → Environment Variables
 |------|------|------|
 | `GEMINI_API_KEY_2` | Preview + Production | 멀티키 로테이션용 |
 | `GEMINI_API_KEY_3` | Preview + Production | 멀티키 로테이션용 |
+| `NEXT_PUBLIC_CRAWLER_URL` | Preview + Production | 크롤러 서버 URL (말투 학습, 없으면 해당 기능 비활성) |
+| `CRON_SECRET` | Production만 | Vercel Cron 인증 (/api/cron/crawl-all) |
 
 ### 등록 절차
 
@@ -111,6 +113,10 @@ Settings → Environment Variables
 | 5 | `/blog` | 블로그 생성 | 주제 입력 → 결과 표시 |
 | 6 | `/history` | 저장 확인 | 방금 생성한 글이 목록에 표시 |
 | 7 | `/history` | 필터 탭 | 블로그 탭 클릭 → 필터 동작 |
+| 8 | `/press` | 보도자료 생성 | 빈 상태 UI 표시 → 주제 입력 → 결과 표시 |
+| 9 | `/refine` | AI 보정 | 빈 상태 UI 표시 → 텍스트 입력 → 보정 결과 |
+| 10 | `/image` | 이미지 생성 | 카테고리 템플릿 로드(동적) → 선택 → 생성 |
+| 11 | `/card_news` | 카드뉴스 | 주제 입력 → 결과 표시 |
 
 ---
 
@@ -150,6 +156,11 @@ Settings → Environment Variables
 [ ] /auth 로그인 동작
 [ ] /blog → 저장 → /history 확인
 [ ] /history 필터 탭 동작
+[ ] /press 빈 상태 + 생성 동작
+[ ] /refine 빈 상태 + 보정 동작
+[ ] /image 카테고리 템플릿 동적 로드 확인
+[ ] /blog → SEO 상세 분석 패널 표시 확인
+[ ] 모바일에서 로그아웃 드롭다운 동작
 [ ] old 앱은 아직 제거하지 않음
 [ ] Production 배포 여부는 Preview 통과 후 판단
 ```
