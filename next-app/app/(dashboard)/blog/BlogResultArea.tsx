@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { BLOG_STAGES, BLOG_MESSAGE_POOL } from './blogConstants';
 import { ErrorPanel, ResultPanel, type ScoreBarData } from '../../../components/GenerationResult';
 import ContentAnalysisPanel from '../../../components/ContentAnalysisPanel';
@@ -11,6 +12,8 @@ export interface BlogResultAreaProps {
   isGenerating: boolean;
   displayStage: number;
   rotationIdx: number;
+  generationStartTime: number;
+  estimatedTotalSeconds: number;
   // 에러
   error: string | null;
   onDismissError: () => void;
@@ -32,27 +35,41 @@ export interface BlogResultAreaProps {
   regeneratingImage: number | null;
   // SEO 상세 리포트
   seoReport?: SeoReport | null;
+  isSeoLoading?: boolean;
   // 빈 상태
   topic: string;
 }
 
 /** 블로그 결과 영역 — 생성 중 / 에러 / 결과 / 빈 상태 4가지 렌더링 */
 export default function BlogResultArea({
-  isGenerating, displayStage, rotationIdx,
+  isGenerating, displayStage, rotationIdx, generationStartTime, estimatedTotalSeconds,
   error, onDismissError,
   generatedContent, saveStatus, scores, cssTheme,
   blogSections, regeneratingSection, sectionProgress,
   onSectionRegenerate, onDownloadWord, onDownloadPDF,
   onImageRegenerate, regeneratingImage,
-  seoReport,
+  seoReport, isSeoLoading,
   topic,
 }: BlogResultAreaProps) {
+
+  // ── 카운트다운 타이머 (생성 중에만 동작) ──
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  useEffect(() => {
+    if (!isGenerating || !generationStartTime) { setElapsedSeconds(0); return; }
+    const timer = setInterval(() => {
+      setElapsedSeconds(Math.floor((Date.now() - generationStartTime) / 1000));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [isGenerating, generationStartTime]);
 
   // ── (1) 생성 중 ──
   if (isGenerating) {
     const stage = BLOG_STAGES[displayStage] || BLOG_STAGES[1];
     const pool = BLOG_MESSAGE_POOL[displayStage] || BLOG_MESSAGE_POOL[1];
     const displayMsg = pool[rotationIdx % pool.length];
+    const remaining = Math.max(0, estimatedTotalSeconds - elapsedSeconds);
+    const progressPct = estimatedTotalSeconds > 0 ? Math.min(95, (elapsedSeconds / estimatedTotalSeconds) * 100) : 0;
+
     return (
       <div className="flex-1 min-w-0">
         <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-12 flex flex-col items-center justify-center text-center min-h-[480px]">
@@ -70,9 +87,22 @@ export default function BlogResultArea({
               </div>
             </div>
           </div>
+          {/* 프로그레스 바 */}
+          <div className="w-full max-w-xs mb-4">
+            <div className="h-1 bg-slate-100 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-blue-500 rounded-full transition-all duration-1000"
+                style={{ width: `${progressPct}%` }}
+              />
+            </div>
+          </div>
           {/* 진행 메시지 */}
           <p className="text-sm font-medium text-slate-700 mb-2 min-h-[20px] transition-opacity duration-500">
             {displayMsg}
+          </p>
+          {/* 카운트다운 */}
+          <p className={`text-xs text-blue-400 mb-1 ${remaining === 0 ? 'animate-pulse' : ''}`}>
+            {remaining > 0 ? `약 ${remaining}초 남음` : '거의 완료...'}
           </p>
           <p className="text-xs text-slate-400 max-w-xs">
             {stage.hint}
@@ -96,7 +126,14 @@ export default function BlogResultArea({
     return (
       <div className="flex-1 min-w-0">
         <ContentAnalysisPanel html={generatedContent} keyword={topic?.split(',')[0]?.trim()} />
-        {seoReport && <SeoDetailPanel report={seoReport} />}
+        {seoReport ? (
+          <SeoDetailPanel report={seoReport} />
+        ) : isSeoLoading ? (
+          <div className="w-full mt-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white flex items-center gap-2">
+            <div className="w-3.5 h-3.5 border-2 border-blue-200 border-t-blue-500 rounded-full animate-spin" />
+            <span className="text-xs text-slate-500">SEO 상세 분석 중...</span>
+          </div>
+        ) : null}
         <ResultPanel
           content={generatedContent}
           saveStatus={saveStatus}

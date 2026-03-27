@@ -103,8 +103,12 @@ function BlogForm() {
   const [isRecommendingPrompt, setIsRecommendingPrompt] = useState(false);
   const [scores, setScores] = useState<ScoreBarData | undefined>(undefined);
   const [seoReport, setSeoReport] = useState<SeoReport | null>(null);
+  const [isSeoLoading, setIsSeoLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
+  // 생성 시간 추정
+  const [generationStartTime, setGenerationStartTime] = useState<number>(0);
+  const [estimatedTotalSeconds, setEstimatedTotalSeconds] = useState<number>(0);
 
   // ── 블로그 섹션 상태 (소제목 재생성 + export) ──
   const [blogSections, setBlogSections] = useState<BlogSection[]>([]);
@@ -639,6 +643,131 @@ ${newsContext ? '6. **뉴스 트렌드 1~2개 반드시 포함**: 위 뉴스 분
 
   // normalizeBlogStructure — ./normalizeBlog.ts로 분리됨 (파일 상단 import 참조)
 
+  // ── SEO 평가 (백그라운드 — fire-and-forget) ──
+  const runSeoEvaluation = async (blogHtml: string, topicStr: string, keywordsStr: string) => {
+    setIsSeoLoading(true);
+    console.info('[BLOG] 📊 SEO 자동 평가 시작 (백그라운드)...');
+    try {
+      const seoTitle = (blogHtml.match(/<h3[^>]*>([^<]+)<\/h3>/) || blogHtml.match(/^(.+)/))?.[1]?.replace(/<[^>]*>/g, '').trim() || topicStr;
+      const currentYear = new Date().getFullYear();
+
+      const seoPrompt = `당신은 네이버 블로그 SEO 전문가이자 병원 마케팅 콘텐츠 분석가입니다.
+
+아래 블로그 콘텐츠의 SEO 점수를 100점 만점으로 평가해주세요.
+
+[중요]
+📊 SEO 점수 평가 기준 (100점 만점)
+[중요]
+
+[※ 평가 대상 콘텐츠]
+- 제목: "${seoTitle}"
+- 주제: "${topicStr}"
+- 핵심 키워드: "${keywordsStr}"
+- 본문:
+${blogHtml.substring(0, 8000)}
+
+---
+① 제목 최적화 (25점 만점)
+---
+※ keyword_natural (10점): 핵심 키워드 자연 포함
+※ seasonality (5점): 시기성/상황성 포함
+※ judgment_inducing (5점): 판단 유도형 구조
+※ medical_law_safe (5점): 의료광고 리스크 없음
+
+---
+② 본문 키워드 구조 (25점 만점)
+---
+※ main_keyword_exposure (10점): 메인 키워드 3~5회 자연 노출
+※ related_keyword_spread (5점): 연관 키워드(LSI) 분산 배치
+※ subheading_variation (5점): 소제목에 키워드 변주 포함
+※ no_meaningless_repeat (5점): 의미 없는 반복 없음
+
+---
+③ 사용자 체류 구조 (20점 만점)
+---
+※ intro_problem_recognition (5점): 도입부 5줄 이내 문제 인식
+※ relatable_examples (5점): '나 얘기 같다' 생활 예시
+※ mid_engagement_points (5점): 중간 이탈 방지 포인트
+※ no_info_overload (5점): 정보 과부하 없음
+
+---
+④ 의료법 안전성 + 신뢰 신호 (20점 만점)
+---
+※ no_definitive_guarantee (5점): 단정·보장 표현 없음
+※ individual_difference (5점): 개인차/상황별 차이 자연 언급
+※ self_diagnosis_limit (5점): 자가진단 한계 명확화
+※ minimal_direct_promo (5점): 병원 직접 홍보 최소화
+
+---
+⑤ 전환 연결성 (10점 만점)
+---
+※ cta_flow_natural (5점): CTA가 정보 흐름을 끊지 않음
+※ time_fixed_sentence (5점): 시점 고정형 문장 존재
+
+[중요]
+⚠️ 평가 시 주의사항
+[중요]
+
+1. SEO 점수는 "완성도"가 아니라 "비교 지표"로 활용됩니다
+2. 85점 미만은 재설계/재작성이 필요한 수준입니다
+3. 각 항목별로 구체적인 개선 피드백을 반드시 작성하세요
+4. 의료법 안전성은 다른 항목보다 엄격하게 평가하세요
+5. 현재 시점(${currentYear}년) 기준 네이버 SEO 트렌드 반영
+
+각 항목의 feedback에는:
+- 잘된 점 1개 이상
+- 개선이 필요한 점 1개 이상
+- 구체적인 개선 방법 제안
+
+🎯 **improvement_suggestions 필수 작성!**
+85점 이상 달성을 위한 구체적이고 실행 가능한 개선 제안 3~5개를 배열로 제공해주세요.
+
+JSON 형식으로 응답해주세요.`;
+
+      const seoSchema = {
+        type: 'OBJECT',
+        properties: {
+          total: { type: 'INTEGER' },
+          title: { type: 'OBJECT', properties: { score: { type: 'INTEGER' }, keyword_natural: { type: 'INTEGER' }, seasonality: { type: 'INTEGER' }, judgment_inducing: { type: 'INTEGER' }, medical_law_safe: { type: 'INTEGER' }, feedback: { type: 'STRING' } }, required: ['score', 'feedback'] },
+          keyword_structure: { type: 'OBJECT', properties: { score: { type: 'INTEGER' }, main_keyword_exposure: { type: 'INTEGER' }, related_keyword_spread: { type: 'INTEGER' }, subheading_variation: { type: 'INTEGER' }, no_meaningless_repeat: { type: 'INTEGER' }, feedback: { type: 'STRING' } }, required: ['score', 'feedback'] },
+          user_retention: { type: 'OBJECT', properties: { score: { type: 'INTEGER' }, intro_problem_recognition: { type: 'INTEGER' }, relatable_examples: { type: 'INTEGER' }, mid_engagement_points: { type: 'INTEGER' }, no_info_overload: { type: 'INTEGER' }, feedback: { type: 'STRING' } }, required: ['score', 'feedback'] },
+          medical_safety: { type: 'OBJECT', properties: { score: { type: 'INTEGER' }, no_definitive_guarantee: { type: 'INTEGER' }, individual_difference: { type: 'INTEGER' }, self_diagnosis_limit: { type: 'INTEGER' }, minimal_direct_promo: { type: 'INTEGER' }, feedback: { type: 'STRING' } }, required: ['score', 'feedback'] },
+          conversion: { type: 'OBJECT', properties: { score: { type: 'INTEGER' }, cta_flow_natural: { type: 'INTEGER' }, time_fixed_sentence: { type: 'INTEGER' }, feedback: { type: 'STRING' } }, required: ['score', 'feedback'] },
+          improvement_suggestions: { type: 'ARRAY', items: { type: 'STRING' } }
+        },
+        required: ['total', 'title', 'keyword_structure', 'user_retention', 'medical_safety', 'conversion', 'improvement_suggestions']
+      };
+
+      const seoRes = await fetch('/api/gemini', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: seoPrompt, model: 'gemini-3.1-flash-lite-preview', responseType: 'json', schema: seoSchema, temperature: 0.3, maxOutputTokens: 4096 }),
+      });
+      const seoData = await seoRes.json() as { text?: string; error?: string };
+
+      if (seoRes.ok && seoData.text) {
+        const report = JSON.parse(seoData.text);
+        report.total = (report.title?.score || 0) + (report.keyword_structure?.score || 0) + (report.user_retention?.score || 0) + (report.medical_safety?.score || 0) + (report.conversion?.score || 0);
+
+        console.log(`[BLOG] 📊 SEO 평가 완료 - 총점: ${report.total}점`);
+        console.log(`[BLOG]   ① 제목: ${report.title?.score || 0}/25  ② 키워드: ${report.keyword_structure?.score || 0}/25  ③ 체류: ${report.user_retention?.score || 0}/20  ④ 의료법: ${report.medical_safety?.score || 0}/20  ⑤ 전환: ${report.conversion?.score || 0}/10`);
+
+        setSeoReport(report as SeoReport);
+        setScores(prev => ({ ...prev, seoScore: report.total }));
+
+        if (report.improvement_suggestions?.length) {
+          console.log(`[BLOG] 📝 SEO 개선 제안: ${report.improvement_suggestions.join(' | ')}`);
+        }
+      } else {
+        console.error(`[BLOG] ❌ SEO 평가 불가: ${seoData.error || 'API 응답 없음'}`);
+      }
+    } catch (seoError) {
+      console.error('[BLOG] ❌ SEO 평가 오류:', seoError);
+    } finally {
+      setIsSeoLoading(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!topic.trim() || isGenerating) return;
@@ -680,7 +809,13 @@ ${newsContext ? '6. **뉴스 트렌드 1~2개 반드시 포함**: 위 뉴스 분
     setGeneratedContent(null);
     setScores(undefined);
     setSeoReport(null);
+    setIsSeoLoading(false);
     setSaveStatus(null);
+    // 예상 시간 계산
+    setGenerationStartTime(Date.now());
+    let estimated = 35; // 텍스트 생성 (~30초) + 후처리 (~5초)
+    if (request.imageCount && request.imageCount > 0) estimated += request.imageCount * 25;
+    setEstimatedTotalSeconds(estimated);
     setBlogSections([]);
     setRegeneratingSection(null);
     setSectionProgress('');
@@ -1143,198 +1278,9 @@ ${topic.trim()}${disease.trim() ? ', 질환: ' + disease.trim() : ''}
         setScores({ ...parsed });
       }
 
-      // ── SEO 자동 평가 (old legacyBlogGeneration.ts:1742-1794 동일 — 평가만, 재생성 없음) ──
+      // ── SEO 평가는 백그라운드에서 실행 (사용자가 글을 바로 볼 수 있도록) ──
       if (blogText && topic.trim()) {
-        setDisplayStage(4); // old displayStage 4: 마무리하는 중
-        console.info('[BLOG] 📊 SEO 자동 평가 시작...');
-        try {
-          const seoHtml = blogText;
-          const seoTitle = (blogText.match(/<h3[^>]*>([^<]+)<\/h3>/) || blogText.match(/^(.+)/))?.[1]?.replace(/<[^>]*>/g, '').trim() || topic.trim();
-          const seoTopic = topic.trim();
-          const seoKeywords = keywords.trim() || '';
-          const currentYear = new Date().getFullYear();
-
-          const seoPrompt = `당신은 네이버 블로그 SEO 전문가이자 병원 마케팅 콘텐츠 분석가입니다.
-
-아래 블로그 콘텐츠의 SEO 점수를 100점 만점으로 평가해주세요.
-
-[중요]
-📊 SEO 점수 평가 기준 (100점 만점)
-[중요]
-
-[※ 평가 대상 콘텐츠]
-- 제목: "${seoTitle}"
-- 주제: "${seoTopic}"
-- 핵심 키워드: "${seoKeywords}"
-- 본문:
-${seoHtml.substring(0, 8000)}
-
----
-① 제목 최적화 (25점 만점)
----
-※ keyword_natural (10점): 핵심 키워드 자연 포함
-※ seasonality (5점): 시기성/상황성 포함
-※ judgment_inducing (5점): 판단 유도형 구조
-※ medical_law_safe (5점): 의료광고 리스크 없음
-
----
-② 본문 키워드 구조 (25점 만점)
----
-※ main_keyword_exposure (10점): 메인 키워드 3~5회 자연 노출
-※ related_keyword_spread (5점): 연관 키워드(LSI) 분산 배치
-※ subheading_variation (5점): 소제목에 키워드 변주 포함
-※ no_meaningless_repeat (5점): 의미 없는 반복 없음
-
----
-③ 사용자 체류 구조 (20점 만점)
----
-※ intro_problem_recognition (5점): 도입부 5줄 이내 문제 인식
-※ relatable_examples (5점): '나 얘기 같다' 생활 예시
-※ mid_engagement_points (5점): 중간 이탈 방지 포인트
-※ no_info_overload (5점): 정보 과부하 없음
-
----
-④ 의료법 안전성 + 신뢰 신호 (20점 만점)
----
-※ no_definitive_guarantee (5점): 단정·보장 표현 없음
-※ individual_difference (5점): 개인차/상황별 차이 자연 언급
-※ self_diagnosis_limit (5점): 자가진단 한계 명확화
-※ minimal_direct_promo (5점): 병원 직접 홍보 최소화
-
----
-⑤ 전환 연결성 (10점 만점)
----
-※ cta_flow_natural (5점): CTA가 정보 흐름을 끊지 않음
-※ time_fixed_sentence (5점): 시점 고정형 문장 존재
-
-[중요]
-⚠️ 평가 시 주의사항
-[중요]
-
-1. SEO 점수는 "완성도"가 아니라 "비교 지표"로 활용됩니다
-2. 85점 미만은 재설계/재작성이 필요한 수준입니다
-3. 각 항목별로 구체적인 개선 피드백을 반드시 작성하세요
-4. 의료법 안전성은 다른 항목보다 엄격하게 평가하세요
-5. 현재 시점(${currentYear}년) 기준 네이버 SEO 트렌드 반영
-
-각 항목의 feedback에는:
-- 잘된 점 1개 이상
-- 개선이 필요한 점 1개 이상
-- 구체적인 개선 방법 제안
-
-🎯 **improvement_suggestions 필수 작성!**
-85점 이상 달성을 위한 구체적이고 실행 가능한 개선 제안 3~5개를 배열로 제공해주세요.
-
-JSON 형식으로 응답해주세요.`;
-
-          const seoSchema = {
-            type: 'OBJECT',
-            properties: {
-              total: { type: 'INTEGER' },
-              title: {
-                type: 'OBJECT',
-                properties: {
-                  score: { type: 'INTEGER' }, keyword_natural: { type: 'INTEGER' },
-                  seasonality: { type: 'INTEGER' }, judgment_inducing: { type: 'INTEGER' },
-                  medical_law_safe: { type: 'INTEGER' }, feedback: { type: 'STRING' }
-                },
-                required: ['score', 'keyword_natural', 'seasonality', 'judgment_inducing', 'medical_law_safe', 'feedback']
-              },
-              keyword_structure: {
-                type: 'OBJECT',
-                properties: {
-                  score: { type: 'INTEGER' }, main_keyword_exposure: { type: 'INTEGER' },
-                  related_keyword_spread: { type: 'INTEGER' }, subheading_variation: { type: 'INTEGER' },
-                  no_meaningless_repeat: { type: 'INTEGER' }, feedback: { type: 'STRING' }
-                },
-                required: ['score', 'main_keyword_exposure', 'related_keyword_spread', 'subheading_variation', 'no_meaningless_repeat', 'feedback']
-              },
-              user_retention: {
-                type: 'OBJECT',
-                properties: {
-                  score: { type: 'INTEGER' }, intro_problem_recognition: { type: 'INTEGER' },
-                  relatable_examples: { type: 'INTEGER' }, mid_engagement_points: { type: 'INTEGER' },
-                  no_info_overload: { type: 'INTEGER' }, feedback: { type: 'STRING' }
-                },
-                required: ['score', 'intro_problem_recognition', 'relatable_examples', 'mid_engagement_points', 'no_info_overload', 'feedback']
-              },
-              medical_safety: {
-                type: 'OBJECT',
-                properties: {
-                  score: { type: 'INTEGER' }, no_definitive_guarantee: { type: 'INTEGER' },
-                  individual_difference: { type: 'INTEGER' }, self_diagnosis_limit: { type: 'INTEGER' },
-                  minimal_direct_promo: { type: 'INTEGER' }, feedback: { type: 'STRING' }
-                },
-                required: ['score', 'no_definitive_guarantee', 'individual_difference', 'self_diagnosis_limit', 'minimal_direct_promo', 'feedback']
-              },
-              conversion: {
-                type: 'OBJECT',
-                properties: {
-                  score: { type: 'INTEGER' }, cta_flow_natural: { type: 'INTEGER' },
-                  time_fixed_sentence: { type: 'INTEGER' }, feedback: { type: 'STRING' }
-                },
-                required: ['score', 'cta_flow_natural', 'time_fixed_sentence', 'feedback']
-              },
-              improvement_suggestions: { type: 'ARRAY', items: { type: 'STRING' } }
-            },
-            required: ['total', 'title', 'keyword_structure', 'user_retention', 'medical_safety', 'conversion', 'improvement_suggestions']
-          };
-
-          const seoRes = await fetch('/api/gemini', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              prompt: seoPrompt,
-              model: 'gemini-3.1-flash-lite-preview',
-              responseType: 'json',
-              schema: seoSchema,
-              temperature: 0.3,
-              maxOutputTokens: 4096,
-            }),
-          });
-          const seoData = await seoRes.json() as { text?: string; error?: string };
-
-          if (seoRes.ok && seoData.text) {
-            const seoReport = JSON.parse(seoData.text);
-            // 총점 재계산 (old seoService.ts:980-988 동일)
-            const calculatedTotal =
-              (seoReport.title?.score || 0) +
-              (seoReport.keyword_structure?.score || 0) +
-              (seoReport.user_retention?.score || 0) +
-              (seoReport.medical_safety?.score || 0) +
-              (seoReport.conversion?.score || 0);
-            seoReport.total = calculatedTotal;
-
-            console.log(`[BLOG] 📊 SEO 평가 완료 - 총점: ${seoReport.total}점`);
-            console.log(`[BLOG]   ① 제목 최적화: ${seoReport.title?.score || 0}/25`);
-            console.log(`[BLOG]   ② 본문 키워드: ${seoReport.keyword_structure?.score || 0}/25`);
-            console.log(`[BLOG]   ③ 사용자 체류: ${seoReport.user_retention?.score || 0}/20`);
-            console.log(`[BLOG]   ④ 의료법 안전: ${seoReport.medical_safety?.score || 0}/20`);
-            console.log(`[BLOG]   ⑤ 전환 연결성: ${seoReport.conversion?.score || 0}/10`);
-
-            // SEO 리포트를 state에 저장 (UI 표시용)
-            setSeoReport(seoReport as SeoReport);
-            setScores(prev => ({ ...prev, seoScore: seoReport.total }));
-
-            if (seoReport.total >= 85) {
-              console.log(`[BLOG] ✅ SEO 점수 85점 이상!`);
-            } else {
-              console.log(`[BLOG] ℹ️ SEO 점수 ${seoReport.total}점 - 참고용`);
-            }
-
-            if (seoReport.improvement_suggestions?.length) {
-              console.log(`[BLOG] 📝 SEO 개선 제안:`);
-              seoReport.improvement_suggestions.forEach((s: string, i: number) => {
-                console.log(`[BLOG]   ${i + 1}. ${s}`);
-              });
-            }
-          } else {
-            console.error(`[BLOG] ❌ SEO 평가 불가: ${seoData.error || 'API 응답 없음'}`);
-          }
-        } catch (seoError) {
-          console.error('[BLOG] ❌ SEO 평가 오류:', seoError);
-        }
-        console.info('[BLOG] ✅ Step 2 완료: 글 작성 및 SEO 평가 완료');
+        runSeoEvaluation(blogText, topic.trim(), keywords.trim());
       }
 
       // ── 섹션 파싱 (소제목 재생성 기능용) ──
@@ -1683,6 +1629,8 @@ ${generatedContent.substring(0, 2000)}
         isGenerating={isGenerating}
         displayStage={displayStage}
         rotationIdx={rotationIdx}
+        generationStartTime={generationStartTime}
+        estimatedTotalSeconds={estimatedTotalSeconds}
         error={error}
         onDismissError={() => setError(null)}
         generatedContent={generatedContent}
@@ -1698,6 +1646,7 @@ ${generatedContent.substring(0, 2000)}
         onImageRegenerate={handleImageClick}
         regeneratingImage={regeneratingImage}
         seoReport={seoReport}
+        isSeoLoading={isSeoLoading}
         topic={topic}
       />
 
