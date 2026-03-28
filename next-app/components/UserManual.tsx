@@ -15,7 +15,7 @@ const SECTIONS: { id: SectionKey; title: string; icon: string; items: { heading:
     { heading: '결과 활용', body: '• "블로그로 복사": 네이버 블로그에 바로 붙여넣기 (서식 유지)\n• "Word 다운로드": .doc 파일 저장\n• "PDF 다운로드": 인쇄/공유용 PDF\n• AI 에디터: 수정 요청 입력 시 AI가 글을 수정' },
     { heading: '소제목별 재생성', body: '"소제목별 수정" 버튼 클릭 시 특정 소제목 부분만 선택적으로 재생성할 수 있습니다.' },
   ]},
-  { id: 'cardnews', title: '카드뉴스', icon: '🎴', items: [
+  { id: 'cardnews', title: '카드뉴스', icon: '🎨', items: [
     { heading: '카드뉴스 생성', body: '1. "카드뉴스" 메뉴 클릭\n2. 주제 입력 + 디자인 템플릿 선택\n3. AI가 원고 → 이미지 프롬프트 → 이미지를 자동 생성\n4. 카드별 수정/재생성 가능' },
     { heading: '디자인 템플릿', body: '5가지 디자인 스타일 중 선택할 수 있으며, 각 카드의 이미지를 개별적으로 재생성할 수 있습니다.' },
   ]},
