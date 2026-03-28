@@ -22,10 +22,11 @@ export const CATEGORY_TEMPLATES: Record<string, CategoryTemplate[]> = {
       desc: '슬레이트 헤더에 zebra 격자 — 가장 실무적인 스프레드시트 스타일', layoutHint: 'cal_corporate',
       aiPrompt: `[CRITICAL — THIS IS A POSTER, NOT A SPREADSHEET]
 This is a DESIGNED POSTER that contains a calendar section — NOT a calendar that fills the entire image.
-Structure must be: decorative header/frame (30-40%) + calendar grid (40-50%) + info footer (10-20%).
+Structure must be: decorative header/frame (30-40%) + calendar grid (50-60%) + optional thin decorative footer line (0-5%).
 The poster must have visual identity: background texture, decorative elements, branded header, styled frame.
 The calendar grid is ONE ELEMENT inside the poster, not the whole image.
 DO NOT make the calendar grid fill 100% of the image.
+⛔ Do NOT create empty footer boxes, blank info sections, or placeholder rectangles. If no footer content was provided, simply end the poster with the calendar grid or a thin decorative line.
 Think of this as an Instagram-worthy hospital announcement poster that happens to show a monthly calendar.
 
 Korean hospital monthly schedule poster — Corporate Spreadsheet.
@@ -34,7 +35,7 @@ CALENDAR GRID: 7-column grid. Day headers on slate background (#e2e8f0), Sunday=
 MARKERS: Closed days — gray (#e2e8f0) cell background + strikethrough on number + small red "휴" label. Shortened — light yellow (#fef9c3) background + brown "단축" label. Vacation — light purple background + "휴가" label.
 STRICT MODE ANCHORS: (1) Slate header color #1e293b (2) Zebra stripe pattern (3) Gray+strikethrough for closed (4) Yellow for shortened (5) Footer legend bar.
 INSPIRED MODE FREEDOM: (1) Cell shape variations (2) Marker icon style (3) Header typography weight.
-⛔ Do NOT add any information the user didn't provide — no business hours, lunch hours, phone numbers, addresses. If no footer text was provided, leave the footer empty.
+⛔ Do NOT add any information the user didn't provide — no business hours, lunch hours, phone numbers, addresses. Do NOT draw empty boxes or blank placeholder sections.
 Clean, readable layout with bold date numbers and clear contrast.`,
     },
     {
@@ -42,10 +43,11 @@ Clean, readable layout with bold date numbers and clear contrast.`,
       desc: '차콜 프레임이 흰 캔버스를 감싸는 볼드한 구조', layoutHint: 'cal_charcoal',
       aiPrompt: `[CRITICAL — THIS IS A POSTER, NOT A SPREADSHEET]
 This is a DESIGNED POSTER that contains a calendar section — NOT a calendar that fills the entire image.
-Structure must be: decorative header/frame (30-40%) + calendar grid (40-50%) + info footer (10-20%).
+Structure must be: decorative header/frame (30-40%) + calendar grid (50-60%) + optional thin decorative footer line (0-5%).
 The poster must have visual identity: background texture, decorative elements, branded header, styled frame.
 The calendar grid is ONE ELEMENT inside the poster, not the whole image.
 DO NOT make the calendar grid fill 100% of the image.
+⛔ Do NOT create empty footer boxes, blank info sections, or placeholder rectangles. If no footer content was provided, simply end the poster with the calendar grid or a thin decorative line.
 Think of this as an Instagram-worthy hospital announcement poster that happens to show a monthly calendar.
 
 Korean hospital monthly schedule poster — Charcoal Frame.
@@ -54,7 +56,7 @@ CALENDAR GRID: Clean grid inside white area with stone (#a8a29e) thin borders. D
 MARKERS: Closed — FULL cell filled with red (#ef4444) background + white date number. Shortened — amber (#f59e0b) left border accent on cell. Vacation — purple left border.
 STRICT MODE ANCHORS: (1) Charcoal frame border (2) Full red cells for closed days (3) White canvas inside (4) Stone border grid (5) Bold title on frame.
 INSPIRED MODE FREEDOM: (1) Frame corner style (2) Emphasis method (3) Typography choice.
-⛔ Do NOT add any information the user didn't provide — no business hours, lunch hours, phone numbers, addresses.
+⛔ Do NOT add any information the user didn't provide — no business hours, lunch hours, phone numbers, addresses. Do NOT draw empty boxes or blank placeholder sections.
 Professional, bold, high-contrast design with clear readable numbers.`,
     },
     {
@@ -62,10 +64,11 @@ Professional, bold, high-contrast design with clear readable numbers.`,
       desc: '순백 배경에 이중선 구분자 — 스위스 그리드 미니멀', layoutHint: 'cal_swiss',
       aiPrompt: `[CRITICAL — THIS IS A POSTER, NOT A SPREADSHEET]
 This is a DESIGNED POSTER that contains a calendar section — NOT a calendar that fills the entire image.
-Structure must be: decorative header/frame (30-40%) + calendar grid (40-50%) + info footer (10-20%).
+Structure must be: decorative header/frame (30-40%) + calendar grid (50-60%) + optional thin decorative footer line (0-5%).
 The poster must have visual identity: background texture, decorative elements, branded header, styled frame.
 The calendar grid is ONE ELEMENT inside the poster, not the whole image.
 DO NOT make the calendar grid fill 100% of the image.
+⛔ Do NOT create empty footer boxes, blank info sections, or placeholder rectangles. If no footer content was provided, simply end the poster with the calendar grid or a thin decorative line.
 Think of this as an Instagram-worthy hospital announcement poster that happens to show a monthly calendar.
 
 Korean hospital monthly schedule poster — Swiss Minimal.
@@ -74,7 +77,7 @@ CALENDAR GRID: Minimal grid with generous whitespace. Monochrome color scheme. C
 MARKERS: Closed — small red dot marker next to date. Shortened — amber horizontal line under date. Vacation — purple dot.
 STRICT MODE ANCHORS: (1) Double-line divider (2) Dot/line markers only (3) Large month number (4) Over 40% whitespace (5) Zero decorative elements.
 INSPIRED MODE FREEDOM: (1) Typography weight (2) Line thickness (3) Marker shape.
-⛔ Do NOT add any information the user didn't provide — no business hours, lunch hours, phone numbers, addresses.
+⛔ Do NOT add any information the user didn't provide — no business hours, lunch hours, phone numbers, addresses. Do NOT draw empty boxes or blank placeholder sections.
 Typography-driven minimalist design, clean and elegant.`,
     },
     {
@@ -82,10 +85,11 @@ Typography-driven minimalist design, clean and elegant.`,
       desc: '다크 배너에 앰버 스트라이프 — 야간진료 강조', layoutHint: 'cal_night',
       aiPrompt: `[CRITICAL — THIS IS A POSTER, NOT A SPREADSHEET]
 This is a DESIGNED POSTER that contains a calendar section — NOT a calendar that fills the entire image.
-Structure must be: decorative header/frame (30-40%) + calendar grid (40-50%) + info footer (10-20%).
+Structure must be: decorative header/frame (30-40%) + calendar grid (50-60%) + optional thin decorative footer line (0-5%).
 The poster must have visual identity: background texture, decorative elements, branded header, styled frame.
 The calendar grid is ONE ELEMENT inside the poster, not the whole image.
 DO NOT make the calendar grid fill 100% of the image.
+⛔ Do NOT create empty footer boxes, blank info sections, or placeholder rectangles. If no footer content was provided, simply end the poster with the calendar grid or a thin decorative line.
 Think of this as an Instagram-worthy hospital announcement poster that happens to show a monthly calendar.
 
 Korean hospital monthly schedule poster — Night Clinic Dark Theme.
@@ -94,7 +98,7 @@ CALENDAR GRID: White date numbers on dark background. Day headers in amber color
 MARKERS: Closed — red pill-shaped badge overlaying date. Shortened — amber pill badge. Night clinic extended hours columns visually highlighted.
 STRICT MODE ANCHORS: (1) Dark charcoal background (2) Amber stripe band (3) Column highlights for specific days (4) White text on dark (5) Red pill for closed.
 INSPIRED MODE FREEDOM: (1) Amber tone warmth range (2) Badge shape (3) Column highlight opacity.
-⛔ Do NOT add any information the user didn't provide — no business hours, lunch hours, phone numbers, addresses.
+⛔ Do NOT add any information the user didn't provide — no business hours, lunch hours, phone numbers, addresses. Do NOT draw empty boxes or blank placeholder sections.
 High contrast dark theme with warm amber accents, bold readable numbers.`,
     },
     {
@@ -102,10 +106,11 @@ High contrast dark theme with warm amber accents, bold readable numbers.`,
       desc: '로즈 헤더에 파스텔 핑크 — 피부과 인스타 스타일', layoutHint: 'cal_rose',
       aiPrompt: `[CRITICAL — THIS IS A POSTER, NOT A SPREADSHEET]
 This is a DESIGNED POSTER that contains a calendar section — NOT a calendar that fills the entire image.
-Structure must be: decorative header/frame (30-40%) + calendar grid (40-50%) + info footer (10-20%).
+Structure must be: decorative header/frame (30-40%) + calendar grid (50-60%) + optional thin decorative footer line (0-5%).
 The poster must have visual identity: background texture, decorative elements, branded header, styled frame.
 The calendar grid is ONE ELEMENT inside the poster, not the whole image.
 DO NOT make the calendar grid fill 100% of the image.
+⛔ Do NOT create empty footer boxes, blank info sections, or placeholder rectangles. If no footer content was provided, simply end the poster with the calendar grid or a thin decorative line.
 Think of this as an Instagram-worthy hospital announcement poster that happens to show a monthly calendar.
 
 Korean hospital monthly schedule poster — Blushy Rose.
@@ -114,7 +119,7 @@ CALENDAR GRID: Round cells with soft drop shadows. Pink-toned color palette thro
 MARKERS: Closed — rose (#fda4af) circular badge over date. Shortened — peach colored badge. Vacation — light purple circle.
 STRICT MODE ANCHORS: (1) Rose pink palette (2) Round cells (3) Pastel tones throughout (4) Gradient header (5) Soft shadows on elements.
 INSPIRED MODE FREEDOM: (1) Pink shade range (2) Cell roundness (3) Decoration level.
-⛔ Do NOT add any information the user didn't provide — no business hours, lunch hours, phone numbers, addresses.
+⛔ Do NOT add any information the user didn't provide — no business hours, lunch hours, phone numbers, addresses. Do NOT draw empty boxes or blank placeholder sections.
 Feminine, soft Instagram feed aesthetic with clear readable dates.`,
     },
     {
@@ -122,10 +127,11 @@ Feminine, soft Instagram feed aesthetic with clear readable dates.`,
       desc: '흰 배경에 코랄 악센트 — SNS 포스트 스타일', layoutHint: 'cal_sns',
       aiPrompt: `[CRITICAL — THIS IS A POSTER, NOT A SPREADSHEET]
 This is a DESIGNED POSTER that contains a calendar section — NOT a calendar that fills the entire image.
-Structure must be: decorative header/frame (30-40%) + calendar grid (40-50%) + info footer (10-20%).
+Structure must be: decorative header/frame (30-40%) + calendar grid (50-60%) + optional thin decorative footer line (0-5%).
 The poster must have visual identity: background texture, decorative elements, branded header, styled frame.
 The calendar grid is ONE ELEMENT inside the poster, not the whole image.
 DO NOT make the calendar grid fill 100% of the image.
+⛔ Do NOT create empty footer boxes, blank info sections, or placeholder rectangles. If no footer content was provided, simply end the poster with the calendar grid or a thin decorative line.
 Think of this as an Instagram-worthy hospital announcement poster that happens to show a monthly calendar.
 
 Korean hospital monthly schedule poster — SNS Bold Post Style.
@@ -134,7 +140,7 @@ CALENDAR GRID: Rounded badge-style date cells. Coral colored line dividers betwe
 MARKERS: Closed — orange border around cell + orange pill badge with "휴" text. Shortened — amber badge. Modern and punchy.
 STRICT MODE ANCHORS: (1) Left coral vertical bar (2) Bold large typography (3) Rounded badge cells (4) Coral divider lines (5) White background.
 INSPIRED MODE FREEDOM: (1) Bar position/thickness (2) Badge shape (3) Color warmth range.
-⛔ Do NOT add any information the user didn't provide — no business hours, lunch hours, phone numbers, addresses.
+⛔ Do NOT add any information the user didn't provide — no business hours, lunch hours, phone numbers, addresses. Do NOT draw empty boxes or blank placeholder sections.
 Bold, eye-catching SNS style with high readability.`,
     },
     {
@@ -142,10 +148,11 @@ Bold, eye-catching SNS style with high readability.`,
       desc: '라벤더 그라데이션에 스파클 장식 — 부드러운 감성', layoutHint: 'cal_lavender',
       aiPrompt: `[CRITICAL — THIS IS A POSTER, NOT A SPREADSHEET]
 This is a DESIGNED POSTER that contains a calendar section — NOT a calendar that fills the entire image.
-Structure must be: decorative header/frame (30-40%) + calendar grid (40-50%) + info footer (10-20%).
+Structure must be: decorative header/frame (30-40%) + calendar grid (50-60%) + optional thin decorative footer line (0-5%).
 The poster must have visual identity: background texture, decorative elements, branded header, styled frame.
 The calendar grid is ONE ELEMENT inside the poster, not the whole image.
 DO NOT make the calendar grid fill 100% of the image.
+⛔ Do NOT create empty footer boxes, blank info sections, or placeholder rectangles. If no footer content was provided, simply end the poster with the calendar grid or a thin decorative line.
 Think of this as an Instagram-worthy hospital announcement poster that happens to show a monthly calendar.
 
 Korean hospital monthly schedule poster — Lavender Soft.
@@ -154,7 +161,7 @@ CALENDAR GRID: Rounded pill-shaped day badges. Cells with rounded corners. Soft 
 MARKERS: Closed — deep purple filled badge. Shortened — light violet badge. Vacation — pink badge. Magical and soft aesthetic.
 STRICT MODE ANCHORS: (1) Lavender gradient palette (2) Sparkle star decorations (3) Rounded pill cells (4) Gradient header band (5) Purple tone throughout.
 INSPIRED MODE FREEDOM: (1) Purple shade range (2) Sparkle decoration density (3) Cell roundness.
-⛔ Do NOT add any information the user didn't provide — no business hours, lunch hours, phone numbers, addresses.
+⛔ Do NOT add any information the user didn't provide — no business hours, lunch hours, phone numbers, addresses. Do NOT draw empty boxes or blank placeholder sections.
 Dreamy, soft aesthetic with clear contrast for readability.`,
     },
     {
@@ -162,10 +169,11 @@ Dreamy, soft aesthetic with clear contrast for readability.`,
       desc: '기와 문양 + 한지 프레임 — 한의원 특화 전통 격조', layoutHint: 'cal_hanok',
       aiPrompt: `[CRITICAL — THIS IS A POSTER, NOT A SPREADSHEET]
 This is a DESIGNED POSTER that contains a calendar section — NOT a calendar that fills the entire image.
-Structure must be: decorative header/frame (30-40%) + calendar grid (40-50%) + info footer (10-20%).
+Structure must be: decorative header/frame (30-40%) + calendar grid (50-60%) + optional thin decorative footer line (0-5%).
 The poster must have visual identity: background texture, decorative elements, branded header, styled frame.
 The calendar grid is ONE ELEMENT inside the poster, not the whole image.
 DO NOT make the calendar grid fill 100% of the image.
+⛔ Do NOT create empty footer boxes, blank info sections, or placeholder rectangles. If no footer content was provided, simply end the poster with the calendar grid or a thin decorative line.
 Think of this as an Instagram-worthy hospital announcement poster that happens to show a monthly calendar.
 
 Korean hospital monthly schedule poster — Korean Traditional Hanok Style.
@@ -174,7 +182,7 @@ CALENDAR GRID: Warm brown (#92400e) text. Grid styled with traditional aesthetic
 MARKERS: Closed — deep red seal stamp style marker. Shortened — amber brush stroke accent. Classical and dignified feel.
 STRICT MODE ANCHORS: (1) Roof tile border decoration (2) Half-sun motif (3) Traditional pattern corners (4) Warm brown palette (5) Cream background.
 INSPIRED MODE FREEDOM: (1) Traditional motif variety (2) Color warmth level (3) Pattern complexity.
-⛔ Do NOT add any information the user didn't provide — no business hours, lunch hours, phone numbers, addresses.
+⛔ Do NOT add any information the user didn't provide — no business hours, lunch hours, phone numbers, addresses. Do NOT draw empty boxes or blank placeholder sections.
 Dignified traditional Korean aesthetic with warm readable typography.`,
     },
     {
@@ -182,10 +190,11 @@ Dignified traditional Korean aesthetic with warm readable typography.`,
       desc: '딥 네이비에 프로스트 카드 — 대학병원 공신력 스타일', layoutHint: 'cal_navy',
       aiPrompt: `[CRITICAL — THIS IS A POSTER, NOT A SPREADSHEET]
 This is a DESIGNED POSTER that contains a calendar section — NOT a calendar that fills the entire image.
-Structure must be: decorative header/frame (30-40%) + calendar grid (40-50%) + info footer (10-20%).
+Structure must be: decorative header/frame (30-40%) + calendar grid (50-60%) + optional thin decorative footer line (0-5%).
 The poster must have visual identity: background texture, decorative elements, branded header, styled frame.
 The calendar grid is ONE ELEMENT inside the poster, not the whole image.
 DO NOT make the calendar grid fill 100% of the image.
+⛔ Do NOT create empty footer boxes, blank info sections, or placeholder rectangles. If no footer content was provided, simply end the poster with the calendar grid or a thin decorative line.
 Think of this as an Instagram-worthy hospital announcement poster that happens to show a monthly calendar.
 
 Korean hospital monthly schedule poster — Deep Blue Frost.
@@ -194,7 +203,7 @@ CALENDAR GRID: Table-style grid inside the white card with subtle cell borders. 
 MARKERS: Closed — blue (#dbeafe) cell fill. Shortened — light amber cell fill. Authoritative university hospital aesthetic.
 STRICT MODE ANCHORS: (1) Deep navy background (2) White floating card (3) Table grid with borders (4) Blue cell fill for closed (5) Professional serif or sans-serif typography.
 INSPIRED MODE FREEDOM: (1) Navy tone range (2) Card shadow intensity (3) Accent color shade.
-⛔ Do NOT add any information the user didn't provide — no business hours, lunch hours, phone numbers, addresses.
+⛔ Do NOT add any information the user didn't provide — no business hours, lunch hours, phone numbers, addresses. Do NOT draw empty boxes or blank placeholder sections.
 Authoritative, trustworthy design with high contrast white card on dark background.`,
     },
     {
@@ -202,10 +211,11 @@ Authoritative, trustworthy design with high contrast white card on dark backgrou
       desc: '아이보리에 골드 밴드 — 럭셔리 프리미엄 클래식', layoutHint: 'cal_gold',
       aiPrompt: `[CRITICAL — THIS IS A POSTER, NOT A SPREADSHEET]
 This is a DESIGNED POSTER that contains a calendar section — NOT a calendar that fills the entire image.
-Structure must be: decorative header/frame (30-40%) + calendar grid (40-50%) + info footer (10-20%).
+Structure must be: decorative header/frame (30-40%) + calendar grid (50-60%) + optional thin decorative footer line (0-5%).
 The poster must have visual identity: background texture, decorative elements, branded header, styled frame.
 The calendar grid is ONE ELEMENT inside the poster, not the whole image.
 DO NOT make the calendar grid fill 100% of the image.
+⛔ Do NOT create empty footer boxes, blank info sections, or placeholder rectangles. If no footer content was provided, simply end the poster with the calendar grid or a thin decorative line.
 Think of this as an Instagram-worthy hospital announcement poster that happens to show a monthly calendar.
 
 Korean hospital monthly schedule poster — Gold Classic Premium.
@@ -214,7 +224,7 @@ CALENDAR GRID: Dotted grid lines instead of solid lines. Elegant serif numerals 
 MARKERS: Closed — deep red serif number with gold underline. Shortened — amber dot marker. Luxurious and classical.
 STRICT MODE ANCHORS: (1) Gold decorative bands (2) Diamond accents (3) Serif typography (4) Ivory background (5) Dotted grid lines.
 INSPIRED MODE FREEDOM: (1) Gold tone variation (2) Decoration shape (3) Serif font style.
-⛔ Do NOT add any information the user didn't provide — no business hours, lunch hours, phone numbers, addresses.
+⛔ Do NOT add any information the user didn't provide — no business hours, lunch hours, phone numbers, addresses. Do NOT draw empty boxes or blank placeholder sections.
 Luxurious, premium classical design with elegant readable serif numbers.`,
     },
     {
@@ -222,10 +232,11 @@ Luxurious, premium classical design with elegant readable serif numbers.`,
       desc: '세이지/민트에 에메랄드 악센트 — 웰니스 의료 감성', layoutHint: 'cal_green',
       aiPrompt: `[CRITICAL — THIS IS A POSTER, NOT A SPREADSHEET]
 This is a DESIGNED POSTER that contains a calendar section — NOT a calendar that fills the entire image.
-Structure must be: decorative header/frame (30-40%) + calendar grid (40-50%) + info footer (10-20%).
+Structure must be: decorative header/frame (30-40%) + calendar grid (50-60%) + optional thin decorative footer line (0-5%).
 The poster must have visual identity: background texture, decorative elements, branded header, styled frame.
 The calendar grid is ONE ELEMENT inside the poster, not the whole image.
 DO NOT make the calendar grid fill 100% of the image.
+⛔ Do NOT create empty footer boxes, blank info sections, or placeholder rectangles. If no footer content was provided, simply end the poster with the calendar grid or a thin decorative line.
 Think of this as an Instagram-worthy hospital announcement poster that happens to show a monthly calendar.
 
 Korean hospital monthly schedule poster — Premium Green Wellness.
@@ -234,7 +245,7 @@ CALENDAR GRID: Clean medical aesthetic grid with green-toned elements. Subtle sa
 MARKERS: Closed — left red border accent on cell. Shortened — left amber border accent. Clean wellness and healing mood.
 STRICT MODE ANCHORS: (1) Sage/mint background (2) Emerald gradient accent lines (3) Dark green header (4) Left border markers (5) Clean medical aesthetic.
 INSPIRED MODE FREEDOM: (1) Green tone range (2) Border marker style (3) Decoration level.
-⛔ Do NOT add any information the user didn't provide — no business hours, lunch hours, phone numbers, addresses.
+⛔ Do NOT add any information the user didn't provide — no business hours, lunch hours, phone numbers, addresses. Do NOT draw empty boxes or blank placeholder sections.
 Clean wellness aesthetic with soothing green tones and clear readability.`,
     },
     {
@@ -242,10 +253,11 @@ Clean wellness aesthetic with soothing green tones and clear readability.`,
       desc: '흰 배경에 네이비 텍스트만 — 비즈니스 문서 스타일', layoutHint: 'cal_business',
       aiPrompt: `[CRITICAL — THIS IS A POSTER, NOT A SPREADSHEET]
 This is a DESIGNED POSTER that contains a calendar section — NOT a calendar that fills the entire image.
-Structure must be: decorative header/frame (30-40%) + calendar grid (40-50%) + info footer (10-20%).
+Structure must be: decorative header/frame (30-40%) + calendar grid (50-60%) + optional thin decorative footer line (0-5%).
 The poster must have visual identity: background texture, decorative elements, branded header, styled frame.
 The calendar grid is ONE ELEMENT inside the poster, not the whole image.
 DO NOT make the calendar grid fill 100% of the image.
+⛔ Do NOT create empty footer boxes, blank info sections, or placeholder rectangles. If no footer content was provided, simply end the poster with the calendar grid or a thin decorative line.
 Think of this as an Instagram-worthy hospital announcement poster that happens to show a monthly calendar.
 
 Korean hospital monthly schedule poster — Navy Modern Business Document.
@@ -254,7 +266,7 @@ CALENDAR GRID: Slate gray thin grid lines. Minimal, clean layout. Navy text for 
 MARKERS: Closed — left navy border accent on cell only. Shortened — left amber border accent. No background fills, borders only.
 STRICT MODE ANCHORS: (1) Navy text color only (2) Horizontal divider lines (3) Left border markers only (4) Pure white background (5) No colored blocks.
 INSPIRED MODE FREEDOM: (1) Divider line thickness (2) Border marker width (3) Typography weight.
-⛔ Do NOT add any information the user didn't provide — no business hours, lunch hours, phone numbers, addresses.
+⛔ Do NOT add any information the user didn't provide — no business hours, lunch hours, phone numbers, addresses. Do NOT draw empty boxes or blank placeholder sections.
 Clean business document style with navy on white, highly professional and readable.`,
     },
   ],
