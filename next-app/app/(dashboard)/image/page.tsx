@@ -253,7 +253,7 @@ export default function ImagePage() {
   // OLD 우선순위: uploadedStyle > catTemplate > preset
   // schedule 카테고리에서 calendarTheme 선택 시 → 테마 전용 스타일 프롬프트 사용
   const CALENDAR_THEME_AI_STYLE: Record<string, string> = {
-    sch_spreadsheet: `[CALENDAR THEME: Corporate Spreadsheet] Dark slate (#1e293b) header. White body with zebra stripes (#f8fafc/#f1f5f9). Closed=gray cell+strikethrough+red "휴". Shortened=yellow cell. Slate footer legend. Professional spreadsheet style.`,
+    sch_spreadsheet: `[CALENDAR THEME: Corporate Spreadsheet] Dark slate (#1e293b) header. White body with zebra stripes (#f8fafc/#f1f5f9). Closed=gray cell+strikethrough+red "휴진" label below date. Shortened=yellow cell+"단축" label below. No footer legend bar. Professional spreadsheet style.`,
     sch_charcoal_frame: `[CALENDAR THEME: Charcoal Frame] Thick charcoal (#292524) border frame enclosing white canvas. Closed=FULL RED (#ef4444) cell background. Stone (#a8a29e) grid borders. Bold, high-contrast, professional.`,
     sch_modern_note: `[CALENDAR THEME: Swiss Minimal] Pure white background. Large month number typography. Double-line dividers. Dot markers (red=closed, amber=shortened). Monochrome, typography-driven, 40%+ whitespace.`,
     sch_night_clinic: `[CALENDAR THEME: Night Clinic Dark] Full dark charcoal (#1c1917) background. Amber (#d97706) stripe band. White text on dark. Column highlights for specific days. Red pill badges for closed. Warm amber accents.`,
@@ -485,6 +485,8 @@ ${layoutExtra}`;
 - 연도 텍스트 ("2026년" 등)
 - "N째주", "5째주", "1째주" 같은 주차 표시
 - "[AI 참고용" 으로 시작하는 텍스트
+- 범례 바(legend bar): "■ 휴진 ■ 단축" 같은 별도 범례 영역을 만들지 마세요. 마킹된 날짜 셀 안에 직접 라벨을 표시하면 범례가 필요 없습니다.
+- 사용자가 선택하지 않은 날짜에 휴진/단축/휴가 마킹을 임의로 추가하지 마세요! 프롬프트에 명시된 날짜만 마킹하세요.
 - 위 항목이 하나라도 이미지에 보이면 실패입니다!`;
     if (customMessage) p += `\n추가 문구: "${customMessage}"`;
     if (extraPrompt) p += `\n${extraPrompt}`;

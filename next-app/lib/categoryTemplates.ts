@@ -30,10 +30,10 @@ DO NOT make the calendar grid fill 100% of the image.
 Think of this as an Instagram-worthy hospital announcement poster that happens to show a monthly calendar.
 
 Korean hospital monthly schedule poster — Corporate Spreadsheet.
-STRUCTURE: Dark slate header (#1e293b) with hospital name + title condensed in one block. Body: white background with zebra stripes (even rows #f8fafc, odd rows #f1f5f9). Footer: dark slate bar with legend icons.
+STRUCTURE: Dark slate header (#1e293b) with hospital name + title condensed in one block. Body: white background with zebra stripes (even rows #f8fafc, odd rows #f1f5f9). No footer bar — end cleanly after the calendar grid.
 CALENDAR GRID: 7-column grid. Day headers on slate background (#e2e8f0), Sunday=red text, Saturday=blue text. Clean thin borders between cells.
-MARKERS: Closed days — gray (#e2e8f0) cell background + strikethrough on number + small red "휴" label. Shortened — light yellow (#fef9c3) background + brown "단축" label. Vacation — light purple background + "휴가" label.
-STRICT MODE ANCHORS: (1) Slate header color #1e293b (2) Zebra stripe pattern (3) Gray+strikethrough for closed (4) Yellow for shortened (5) Footer legend bar.
+MARKERS: Closed days — gray (#e2e8f0) cell background + strikethrough on number + small red "휴" label below the date. Shortened — light yellow (#fef9c3) background + brown "단축" label below the date. Vacation — light purple background + "휴가" label below the date.
+STRICT MODE ANCHORS: (1) Slate header color #1e293b (2) Zebra stripe pattern (3) Gray+strikethrough for closed (4) Yellow for shortened (5) Labels ("휴진"/"단축"/"휴가") below marked dates.
 INSPIRED MODE FREEDOM: (1) Cell shape variations (2) Marker icon style (3) Header typography weight.
 ⛔ Do NOT add any information the user didn't provide — no business hours, lunch hours, phone numbers, addresses. Do NOT draw empty boxes or blank placeholder sections.
 Clean, readable layout with bold date numbers and clear contrast.`,
@@ -53,7 +53,7 @@ Think of this as an Instagram-worthy hospital announcement poster that happens t
 Korean hospital monthly schedule poster — Charcoal Frame.
 STRUCTURE: Thick charcoal (#292524) border frame enclosing entire design. Inside is pure white (#ffffff) canvas. Title in white bold text on charcoal frame top area.
 CALENDAR GRID: Clean grid inside white area with stone (#a8a29e) thin borders. Day headers in charcoal background with white text.
-MARKERS: Closed — FULL cell filled with red (#ef4444) background + white date number. Shortened — amber (#f59e0b) left border accent on cell. Vacation — purple left border.
+MARKERS: Closed — FULL cell filled with red (#ef4444) background + white date number + "휴진" label below. Shortened — amber (#f59e0b) left border accent + "단축" label below. Vacation — purple left border + "휴가" label below. ONLY mark the dates specified by the user — do NOT add marks to dates the user did not select.
 STRICT MODE ANCHORS: (1) Charcoal frame border (2) Full red cells for closed days (3) White canvas inside (4) Stone border grid (5) Bold title on frame.
 INSPIRED MODE FREEDOM: (1) Frame corner style (2) Emphasis method (3) Typography choice.
 ⛔ Do NOT add any information the user didn't provide — no business hours, lunch hours, phone numbers, addresses. Do NOT draw empty boxes or blank placeholder sections.
@@ -74,7 +74,7 @@ Think of this as an Instagram-worthy hospital announcement poster that happens t
 Korean hospital monthly schedule poster — Swiss Minimal.
 STRUCTURE: Pure white background, designed with text and lines only. Top area features very large month number typography. Double-line divider (one thick line + one thin line) separating header from body.
 CALENDAR GRID: Minimal grid with generous whitespace. Monochrome color scheme. Clean sans-serif typography.
-MARKERS: Closed — small red dot marker next to date. Shortened — amber horizontal line under date. Vacation — purple dot.
+MARKERS: Closed — small red dot marker next to date + "휴진" label below. Shortened — amber horizontal line under date + "단축" label below. Vacation — purple dot + "휴가" label below. ONLY mark the dates specified by the user.
 STRICT MODE ANCHORS: (1) Double-line divider (2) Dot/line markers only (3) Large month number (4) Over 40% whitespace (5) Zero decorative elements.
 INSPIRED MODE FREEDOM: (1) Typography weight (2) Line thickness (3) Marker shape.
 ⛔ Do NOT add any information the user didn't provide — no business hours, lunch hours, phone numbers, addresses. Do NOT draw empty boxes or blank placeholder sections.
@@ -95,7 +95,7 @@ Think of this as an Instagram-worthy hospital announcement poster that happens t
 Korean hospital monthly schedule poster — Night Clinic Dark Theme.
 STRUCTURE: Full dark charcoal (#1c1917) background. Top area has amber (#d97706) horizontal stripe band. Overall warm amber/gold accent on dark canvas.
 CALENDAR GRID: White date numbers on dark background. Day headers in amber color. Tuesday and Thursday columns have subtle light yellow background highlight.
-MARKERS: Closed — red pill-shaped badge overlaying date. Shortened — amber pill badge. Night clinic extended hours columns visually highlighted.
+MARKERS: Closed — red pill-shaped badge overlaying date + "휴진" label below. Shortened — amber pill badge + "단축" label below. Vacation — purple badge + "휴가" label below. ONLY mark the dates specified by the user. Night clinic extended hours columns visually highlighted.
 STRICT MODE ANCHORS: (1) Dark charcoal background (2) Amber stripe band (3) Column highlights for specific days (4) White text on dark (5) Red pill for closed.
 INSPIRED MODE FREEDOM: (1) Amber tone warmth range (2) Badge shape (3) Column highlight opacity.
 ⛔ Do NOT add any information the user didn't provide — no business hours, lunch hours, phone numbers, addresses. Do NOT draw empty boxes or blank placeholder sections.
@@ -116,7 +116,7 @@ Think of this as an Instagram-worthy hospital announcement poster that happens t
 Korean hospital monthly schedule poster — Blushy Rose.
 STRUCTURE: Soft rose pink (#fff1f2) overall background. Top header with coral-to-rose gradient. All elements have rounded corners and soft edges.
 CALENDAR GRID: Round cells with soft drop shadows. Pink-toned color palette throughout. Gentle feminine aesthetic.
-MARKERS: Closed — rose (#fda4af) circular badge over date. Shortened — peach colored badge. Vacation — light purple circle.
+MARKERS: Closed — rose (#fda4af) circular badge over date + "휴진" label below. Shortened — peach colored badge + "단축" label below. Vacation — light purple circle + "휴가" label below. ONLY mark the dates specified by the user.
 STRICT MODE ANCHORS: (1) Rose pink palette (2) Round cells (3) Pastel tones throughout (4) Gradient header (5) Soft shadows on elements.
 INSPIRED MODE FREEDOM: (1) Pink shade range (2) Cell roundness (3) Decoration level.
 ⛔ Do NOT add any information the user didn't provide — no business hours, lunch hours, phone numbers, addresses. Do NOT draw empty boxes or blank placeholder sections.
@@ -137,7 +137,7 @@ Think of this as an Instagram-worthy hospital announcement poster that happens t
 Korean hospital monthly schedule poster — SNS Bold Post Style.
 STRUCTURE: Clean white background with thick coral (#f97316) vertical bar accent on the left side. Bold, large typography throughout. Modern social media post aesthetic.
 CALENDAR GRID: Rounded badge-style date cells. Coral colored line dividers between rows. Bold sans-serif numbers.
-MARKERS: Closed — orange border around cell + orange pill badge with "휴" text. Shortened — amber badge. Modern and punchy.
+MARKERS: Closed — orange border around cell + orange pill badge with "휴진" label below the date. Shortened — amber badge + "단축" label below. Vacation — purple badge + "휴가" label below. ONLY mark the dates specified by the user.
 STRICT MODE ANCHORS: (1) Left coral vertical bar (2) Bold large typography (3) Rounded badge cells (4) Coral divider lines (5) White background.
 INSPIRED MODE FREEDOM: (1) Bar position/thickness (2) Badge shape (3) Color warmth range.
 ⛔ Do NOT add any information the user didn't provide — no business hours, lunch hours, phone numbers, addresses. Do NOT draw empty boxes or blank placeholder sections.
@@ -158,7 +158,7 @@ Think of this as an Instagram-worthy hospital announcement poster that happens t
 Korean hospital monthly schedule poster — Lavender Soft.
 STRUCTURE: Soft lavender gradient background (#f3eff8 fading to #fefcff). Subtle sparkle/star decorations in purple shades scattered lightly. Lavender gradient header band at top.
 CALENDAR GRID: Rounded pill-shaped day badges. Cells with rounded corners. Soft purple toned grid lines.
-MARKERS: Closed — deep purple filled badge. Shortened — light violet badge. Vacation — pink badge. Magical and soft aesthetic.
+MARKERS: Closed — deep purple filled badge + "휴진" label below. Shortened — light violet badge + "단축" label below. Vacation — pink badge + "휴가" label below. ONLY mark the dates specified by the user.
 STRICT MODE ANCHORS: (1) Lavender gradient palette (2) Sparkle star decorations (3) Rounded pill cells (4) Gradient header band (5) Purple tone throughout.
 INSPIRED MODE FREEDOM: (1) Purple shade range (2) Sparkle decoration density (3) Cell roundness.
 ⛔ Do NOT add any information the user didn't provide — no business hours, lunch hours, phone numbers, addresses. Do NOT draw empty boxes or blank placeholder sections.
@@ -179,7 +179,7 @@ Think of this as an Instagram-worthy hospital announcement poster that happens t
 Korean hospital monthly schedule poster — Korean Traditional Hanok Style.
 STRUCTURE: Warm cream (#f5e6d0) background evoking traditional Korean paper. Coral/salmon (#e8795a) decorative half-circle sun motif at top with month number inside. Traditional roof tile (기와) silhouette decorative border. Corner decorations inspired by traditional flower lattice (꽃살) patterns.
 CALENDAR GRID: Warm brown (#92400e) text. Grid styled with traditional aesthetic, subtle borders.
-MARKERS: Closed — deep red seal stamp style marker. Shortened — amber brush stroke accent. Classical and dignified feel.
+MARKERS: Closed — deep red seal stamp style marker + "휴진" label below. Shortened — amber brush stroke accent + "단축" label below. Vacation — purple marker + "휴가" label below. ONLY mark the dates specified by the user.
 STRICT MODE ANCHORS: (1) Roof tile border decoration (2) Half-sun motif (3) Traditional pattern corners (4) Warm brown palette (5) Cream background.
 INSPIRED MODE FREEDOM: (1) Traditional motif variety (2) Color warmth level (3) Pattern complexity.
 ⛔ Do NOT add any information the user didn't provide — no business hours, lunch hours, phone numbers, addresses. Do NOT draw empty boxes or blank placeholder sections.
@@ -200,7 +200,7 @@ Think of this as an Instagram-worthy hospital announcement poster that happens t
 Korean hospital monthly schedule poster — Deep Blue Frost.
 STRUCTURE: Deep navy (#0f2444) full-bleed background. White floating card with rounded corners containing the calendar grid, creating a frosted glass effect. Sky blue (#7dd3fc) accent elements.
 CALENDAR GRID: Table-style grid inside the white card with subtle cell borders. Clean professional typography.
-MARKERS: Closed — blue (#dbeafe) cell fill. Shortened — light amber cell fill. Authoritative university hospital aesthetic.
+MARKERS: Closed — blue (#dbeafe) cell fill + "휴진" label below. Shortened — light amber cell fill + "단축" label below. Vacation — purple cell fill + "휴가" label below. ONLY mark the dates specified by the user.
 STRICT MODE ANCHORS: (1) Deep navy background (2) White floating card (3) Table grid with borders (4) Blue cell fill for closed (5) Professional serif or sans-serif typography.
 INSPIRED MODE FREEDOM: (1) Navy tone range (2) Card shadow intensity (3) Accent color shade.
 ⛔ Do NOT add any information the user didn't provide — no business hours, lunch hours, phone numbers, addresses. Do NOT draw empty boxes or blank placeholder sections.
@@ -221,7 +221,7 @@ Think of this as an Instagram-worthy hospital announcement poster that happens t
 Korean hospital monthly schedule poster — Gold Classic Premium.
 STRUCTURE: Warm ivory (#faf7f2) background. Decorative gold bands at top and bottom edges. Small diamond shape decorations as accents. Serif typography throughout for elegant feel.
 CALENDAR GRID: Dotted grid lines instead of solid lines. Elegant serif numerals for dates. Gold accent colors on headers.
-MARKERS: Closed — deep red serif number with gold underline. Shortened — amber dot marker. Luxurious and classical.
+MARKERS: Closed — deep red serif number with gold underline + "휴진" label below. Shortened — amber dot marker + "단축" label below. Vacation — purple marker + "휴가" label below. ONLY mark the dates specified by the user.
 STRICT MODE ANCHORS: (1) Gold decorative bands (2) Diamond accents (3) Serif typography (4) Ivory background (5) Dotted grid lines.
 INSPIRED MODE FREEDOM: (1) Gold tone variation (2) Decoration shape (3) Serif font style.
 ⛔ Do NOT add any information the user didn't provide — no business hours, lunch hours, phone numbers, addresses. Do NOT draw empty boxes or blank placeholder sections.
@@ -242,7 +242,7 @@ Think of this as an Instagram-worthy hospital announcement poster that happens t
 Korean hospital monthly schedule poster — Premium Green Wellness.
 STRUCTURE: Sage/mint (#f0f7f2) background. Emerald green gradient accent lines as visual dividers. Dark green (#2d6a4f) header area with white text.
 CALENDAR GRID: Clean medical aesthetic grid with green-toned elements. Subtle sage colored cell backgrounds.
-MARKERS: Closed — left red border accent on cell. Shortened — left amber border accent. Clean wellness and healing mood.
+MARKERS: Closed — left red border accent on cell + "휴진" label below. Shortened — left amber border accent + "단축" label below. Vacation — left purple border + "휴가" label below. ONLY mark the dates specified by the user.
 STRICT MODE ANCHORS: (1) Sage/mint background (2) Emerald gradient accent lines (3) Dark green header (4) Left border markers (5) Clean medical aesthetic.
 INSPIRED MODE FREEDOM: (1) Green tone range (2) Border marker style (3) Decoration level.
 ⛔ Do NOT add any information the user didn't provide — no business hours, lunch hours, phone numbers, addresses. Do NOT draw empty boxes or blank placeholder sections.
@@ -263,7 +263,7 @@ Think of this as an Instagram-worthy hospital announcement poster that happens t
 Korean hospital monthly schedule poster — Navy Modern Business Document.
 STRUCTURE: Pure white background. Navy (#1e3a5f) colored text only — no colored background blocks anywhere. Clean navy horizontal divider lines separating sections.
 CALENDAR GRID: Slate gray thin grid lines. Minimal, clean layout. Navy text for all dates and headers.
-MARKERS: Closed — left navy border accent on cell only. Shortened — left amber border accent. No background fills, borders only.
+MARKERS: Closed — left navy border accent on cell + "휴진" label below. Shortened — left amber border accent + "단축" label below. Vacation — left purple border + "휴가" label below. ONLY mark the dates specified by the user. No background fills, borders only.
 STRICT MODE ANCHORS: (1) Navy text color only (2) Horizontal divider lines (3) Left border markers only (4) Pure white background (5) No colored blocks.
 INSPIRED MODE FREEDOM: (1) Divider line thickness (2) Border marker width (3) Typography weight.
 ⛔ Do NOT add any information the user didn't provide — no business hours, lunch hours, phone numbers, addresses. Do NOT draw empty boxes or blank placeholder sections.
