@@ -22,14 +22,6 @@ const MARCH: (number | null)[] = [
 const CLOSED = new Set([9, 23]);
 const SHORTENED = new Set([16]);
 
-/* ── placeholder 테마 색상 매핑 ── */
-const PLACEHOLDER_THEMES: Record<string, { bg: string; name: string }> = {
-  sch_korean_classic: { bg: '#92400e', name: '한방 전통' },
-  sch_deep_frost: { bg: '#0f2444', name: '딥블루 프로스트' },
-  sch_gold_classic: { bg: '#854d0e', name: '골드 클래식' },
-  sch_premium_green: { bg: '#2d6a4f', name: '프리미엄 그린' },
-  sch_navy_modern: { bg: '#1e3a5f', name: '네이비 모던' },
-};
 
 /* ── 메인 컴포넌트 ── */
 export function CalendarThemePreview({
@@ -696,26 +688,482 @@ export function CalendarThemePreview({
   }
 
   /* ═══════════════════════════════════════════
-     나머지 5개 — placeholder
+     8. sch_korean_classic — 한방 전통
+     시그니처: 기와지붕 톱니 + 반원 태양 + 코랄 장식
      ═══════════════════════════════════════════ */
-  const placeholder = PLACEHOLDER_THEMES[themeValue];
-  if (placeholder) {
+  if (themeValue === 'sch_korean_classic') {
+    const toothW = lg ? 8 : 4;
+    const toothH = lg ? 6 : 3;
+    const toothCount = lg ? 16 : 12;
+    const halfCircleW = lg ? 48 : 32;
+    const halfCircleH = lg ? 24 : 16;
     return (
       <div
-        className="w-full h-full flex flex-col items-center justify-center"
-        style={{ background: placeholder.bg }}
+        className="w-full h-full flex flex-col overflow-hidden relative"
+        style={{ background: '#f5e6d0' }}
       >
+        {/* ◈ 코너 장식 */}
         <div
-          className={`${lg ? 'text-[14px]' : 'text-[7px]'} font-black text-white text-center leading-tight`}
+          className="absolute pointer-events-none"
+          style={{
+            bottom: lg ? 6 : 3,
+            right: lg ? 6 : 3,
+            color: '#92400e',
+            fontSize: lg ? 10 : 5,
+            opacity: 0.4,
+          }}
         >
-          {placeholder.name}
+          ◈
         </div>
         <div
-          className={`${lg ? 'text-[9px]' : 'text-[4.5px]'} text-center mt-[2px]`}
-          style={{ color: 'rgba(255,255,255,0.6)' }}
+          className="absolute pointer-events-none"
+          style={{
+            bottom: lg ? 6 : 3,
+            left: lg ? 6 : 3,
+            color: '#92400e',
+            fontSize: lg ? 8 : 4,
+            opacity: 0.35,
+          }}
         >
-          프리뷰 준비 중
+          ✿
         </div>
+
+        {/* 차콜 헤더 + 톱니 하단 */}
+        <div style={{ background: '#44403c', flexShrink: 0 }}>
+          <div
+            className={`${fsTitle} font-black text-white text-center`}
+            style={{ padding: lg ? '4px 8px 0' : '2px 4px 0' }}
+          >
+            진료일정
+          </div>
+          {/* 톱니 모양: 삼각형 반복 */}
+          <div className="flex justify-center" style={{ overflow: 'hidden' }}>
+            {Array.from({ length: toothCount }).map((_, ti) => (
+              <div
+                key={ti}
+                style={{
+                  width: 0,
+                  height: 0,
+                  borderLeft: `${toothW / 2}px solid transparent`,
+                  borderRight: `${toothW / 2}px solid transparent`,
+                  borderTop: `${toothH}px solid #44403c`,
+                }}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* 코랄 반원 "3월" */}
+        <div className="flex justify-center" style={{ marginTop: lg ? 2 : 1 }}>
+          <div
+            className="flex items-center justify-center"
+            style={{
+              width: halfCircleW,
+              height: halfCircleH,
+              background: '#e8795a',
+              borderRadius: `${halfCircleW}px ${halfCircleW}px 0 0`,
+            }}
+          >
+            <span
+              className="font-black text-white"
+              style={{ fontSize: lg ? 14 : 7 }}
+            >
+              3월
+            </span>
+          </div>
+        </div>
+
+        {/* 요일 행 */}
+        <div
+          className="grid grid-cols-7"
+          style={{ padding: lg ? '2px 4px 0' : '1px 2px 0' }}
+        >
+          {DAYS.map((d, i) => (
+            <div
+              key={d}
+              className={`${fsTiny} font-bold text-center`}
+              style={{ color: i === 0 ? '#b91c1c' : '#92400e' }}
+            >
+              {d}
+            </div>
+          ))}
+        </div>
+
+        {/* 날짜 그리드 */}
+        <div
+          className={`grid grid-cols-7 ${gap} flex-1`}
+          style={{ padding: lg ? '1px 4px' : '0.5px 2px' }}
+        >
+          {MARCH.map((day, i) => {
+            if (day === null) return <div key={i} />;
+            const closed = CLOSED.has(day);
+            const short = SHORTENED.has(day);
+            return (
+              <div
+                key={i}
+                className={`${fsNum} text-center font-medium flex items-center justify-center`}
+                style={{
+                  background: closed ? '#e8795a' : 'transparent',
+                  color: closed ? '#fff' : short ? '#b45309' : '#78350f',
+                  borderRadius: closed ? '50%' : 0,
+                  aspectRatio: closed ? '1' : undefined,
+                }}
+              >
+                {day}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  /* ═══════════════════════════════════════════
+     9. sch_deep_frost — 딥블루 프로스트
+     시그니처: 딥 네이비 + 흰 플로팅 카드 + 스카이블루 악센트
+     ═══════════════════════════════════════════ */
+  if (themeValue === 'sch_deep_frost') {
+    return (
+      <div
+        className="w-full h-full flex flex-col overflow-hidden"
+        style={{ background: '#0f2444', padding: lg ? 6 : 3 }}
+      >
+        {/* 네이비 상단 타이틀 */}
+        <div style={{ paddingBottom: lg ? 4 : 2, flexShrink: 0 }}>
+          <div className={`${fsTitle} font-black text-white leading-tight`}>
+            3월 진료일정
+          </div>
+          <div className={`${fsTiny} leading-tight`} style={{ color: '#7dd3fc' }}>
+            OO치과
+          </div>
+        </div>
+
+        {/* 흰 플로팅 카드 */}
+        <div
+          className="flex-1 flex flex-col overflow-hidden"
+          style={{
+            background: '#ffffff',
+            borderRadius: lg ? 6 : 3,
+            boxShadow: lg
+              ? '0 4px 12px rgba(0,0,0,0.3)'
+              : '0 2px 6px rgba(0,0,0,0.3)',
+          }}
+        >
+          {/* 스카이블루 악센트 라인 */}
+          <div style={{ height: lg ? 3 : 1.5, background: '#7dd3fc', flexShrink: 0 }} />
+
+          {/* 요일 행 */}
+          <div
+            className="grid grid-cols-7"
+            style={{ padding: lg ? '3px 4px 0' : '1.5px 2px 0' }}
+          >
+            {DAYS.map((d, i) => (
+              <div
+                key={d}
+                className={`${fsTiny} font-bold text-center`}
+                style={{
+                  color: i === 0 ? '#ef4444' : i === 6 ? '#3b82f6' : '#1e3a5f',
+                }}
+              >
+                {d}
+              </div>
+            ))}
+          </div>
+
+          {/* 날짜 그리드 */}
+          <div
+            className={`grid grid-cols-7 ${gap} flex-1`}
+            style={{ padding: lg ? '2px 4px' : '1px 2px' }}
+          >
+            {MARCH.map((day, i) => {
+              if (day === null) return <div key={i} />;
+              const closed = CLOSED.has(day);
+              const short = SHORTENED.has(day);
+              return (
+                <div
+                  key={i}
+                  className={`${fsNum} text-center font-medium flex items-center justify-center`}
+                  style={{
+                    background: closed ? '#dbeafe' : short ? '#fef9c3' : '#fff',
+                    color: closed ? '#1e40af' : '#1e3a5f',
+                    border: '0.5px solid #e2e8f0',
+                    fontWeight: closed ? 700 : 500,
+                  }}
+                >
+                  {day}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  /* ═══════════════════════════════════════════
+     10. sch_gold_classic — 골드 클래식
+     시그니처: 상하단 골드 밴드 + ◆ 장식 + dotted 격자
+     ═══════════════════════════════════════════ */
+  if (themeValue === 'sch_gold_classic') {
+    const bandH = lg ? 14 : 8;
+    return (
+      <div
+        className="w-full h-full flex flex-col overflow-hidden"
+        style={{ background: '#faf7f2' }}
+      >
+        {/* 상단 골드 밴드 */}
+        <div
+          style={{
+            height: bandH,
+            background: 'linear-gradient(90deg, #c9a96e, #e8d5a8, #c9a96e)',
+            flexShrink: 0,
+          }}
+        />
+
+        {/* 제목 + ◆ */}
+        <div className="text-center" style={{ padding: lg ? '4px 8px 2px' : '2px 4px 1px' }}>
+          <div className={`${fsTitle} font-black font-serif`} style={{ color: '#854d0e' }}>
+            ◆ 3월 진료일정 ◆
+          </div>
+          <div className={`${fsTiny} font-serif`} style={{ color: '#a16207' }}>
+            OO치과
+          </div>
+        </div>
+
+        {/* 요일 행 */}
+        <div
+          className="grid grid-cols-7"
+          style={{
+            padding: lg ? '0 4px' : '0 2px',
+            borderBottom: '1px solid #d4c5a9',
+          }}
+        >
+          {DAYS.map((d, i) => (
+            <div
+              key={d}
+              className={`${fsTiny} font-bold text-center font-serif`}
+              style={{
+                color: i === 0 ? '#b91c1c' : i === 6 ? '#1d4ed8' : '#854d0e',
+                paddingBottom: lg ? 2 : 1,
+              }}
+            >
+              {d}
+            </div>
+          ))}
+        </div>
+
+        {/* 날짜 — dotted 격자 */}
+        <div
+          className={`grid grid-cols-7 flex-1`}
+          style={{ padding: lg ? '1px 4px' : '0.5px 2px' }}
+        >
+          {MARCH.map((day, i) => {
+            if (day === null) return <div key={i} />;
+            const closed = CLOSED.has(day);
+            const short = SHORTENED.has(day);
+            return (
+              <div
+                key={i}
+                className={`${fsNum} text-center font-serif flex items-center justify-center`}
+                style={{
+                  color: closed ? '#b91c1c' : '#78350f',
+                  borderBottom: '0.5px dotted #d4c5a9',
+                  fontWeight: closed ? 700 : 400,
+                  textDecoration: closed ? 'line-through' : 'none',
+                  background: short ? '#fef9c3' : 'transparent',
+                }}
+              >
+                {day}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* 하단 골드 밴드 */}
+        <div
+          style={{
+            height: bandH,
+            background: 'linear-gradient(90deg, #c9a96e, #e8d5a8, #c9a96e)',
+            flexShrink: 0,
+          }}
+        />
+      </div>
+    );
+  }
+
+  /* ═══════════════════════════════════════════
+     11. sch_premium_green — 프리미엄 그린
+     시그니처: 세이지 배경 + 다크그린 헤더 + 에메랄드 좌측 라인
+     ═══════════════════════════════════════════ */
+  if (themeValue === 'sch_premium_green') {
+    return (
+      <div
+        className="w-full h-full flex flex-row overflow-hidden"
+        style={{ background: '#f0f7f2' }}
+      >
+        {/* 에메랄드 좌측 세로선 */}
+        <div
+          style={{
+            width: 3,
+            background: 'linear-gradient(180deg, #10b981, #059669)',
+            flexShrink: 0,
+          }}
+        />
+
+        {/* 메인 콘텐츠 */}
+        <div className="flex-1 flex flex-col" style={{ minWidth: 0 }}>
+          {/* 다크그린 헤더 */}
+          <div
+            style={{
+              background: '#2d6a4f',
+              padding: lg ? '5px 8px' : '2.5px 4px',
+              flexShrink: 0,
+            }}
+          >
+            <div className={`${fsTitle} font-black text-white leading-tight`}>
+              3월 진료일정
+            </div>
+            <div className={`${fsTiny} leading-tight`} style={{ color: '#6ee7b7' }}>
+              OO치과
+            </div>
+          </div>
+
+          {/* 에메랄드 그라데이션 라인 */}
+          <div
+            style={{
+              height: lg ? 2 : 1,
+              background: 'linear-gradient(90deg, #059669, #10b981, #34d399)',
+              flexShrink: 0,
+            }}
+          />
+
+          {/* 요일 행 */}
+          <div
+            className="grid grid-cols-7"
+            style={{ padding: lg ? '3px 4px 0' : '1.5px 2px 0' }}
+          >
+            {DAYS.map((d, i) => (
+              <div
+                key={d}
+                className={`${fsTiny} font-bold text-center`}
+                style={{
+                  color: i === 0 ? '#ef4444' : i === 6 ? '#3b82f6' : '#2d6a4f',
+                }}
+              >
+                {d}
+              </div>
+            ))}
+          </div>
+
+          {/* 날짜 그리드 — 휴진은 좌측 빨간 보더 */}
+          <div
+            className={`grid grid-cols-7 ${gap} flex-1`}
+            style={{ padding: lg ? '1px 4px' : '0.5px 2px' }}
+          >
+            {MARCH.map((day, i) => {
+              if (day === null) return <div key={i} />;
+              const closed = CLOSED.has(day);
+              const short = SHORTENED.has(day);
+              return (
+                <div
+                  key={i}
+                  className={`${fsNum} text-center font-medium flex items-center justify-center`}
+                  style={{
+                    borderLeft: closed
+                      ? '3px solid #ef4444'
+                      : short
+                        ? '3px solid #f59e0b'
+                        : '3px solid transparent',
+                    color: closed ? '#991b1b' : '#1b4332',
+                    background: closed ? '#fef2f2' : short ? '#fefce8' : 'transparent',
+                    fontWeight: closed ? 700 : 500,
+                  }}
+                >
+                  {day}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  /* ═══════════════════════════════════════════
+     12. sch_navy_modern — 네이비 모던
+     시그니처: 순백 + 네이비 텍스트 + 굵은 구분선만, 장식 0%
+     ═══════════════════════════════════════════ */
+  if (themeValue === 'sch_navy_modern') {
+    return (
+      <div
+        className="w-full h-full flex flex-col overflow-hidden bg-white"
+        style={{ padding: lg ? '6px 8px' : '3px 4px' }}
+      >
+        {/* 상단 굵은 네이비 선 */}
+        <div style={{ height: 2.5, background: '#1e3a5f', flexShrink: 0 }} />
+
+        {/* 타이틀 */}
+        <div style={{ padding: lg ? '4px 0 2px' : '2px 0 1px' }}>
+          <div
+            className={`${fsTitle} font-black leading-tight`}
+            style={{ color: '#1e3a5f' }}
+          >
+            3월 진료일정
+          </div>
+          <div className={`${fsTiny}`} style={{ color: '#64748b' }}>
+            OO치과
+          </div>
+        </div>
+
+        {/* 요일 행 */}
+        <div
+          className="grid grid-cols-7"
+          style={{
+            borderBottom: '1px solid #cbd5e1',
+            paddingBottom: lg ? 2 : 1,
+          }}
+        >
+          {DAYS.map((d, i) => (
+            <div
+              key={d}
+              className={`${fsTiny} font-bold text-center`}
+              style={{
+                color: i === 0 ? '#ef4444' : i === 6 ? '#3b82f6' : '#1e3a5f',
+              }}
+            >
+              {d}
+            </div>
+          ))}
+        </div>
+
+        {/* 날짜 — 선과 텍스트만 */}
+        <div className={`grid grid-cols-7 ${gap} flex-1`}>
+          {MARCH.map((day, i) => {
+            if (day === null) return <div key={i} />;
+            const closed = CLOSED.has(day);
+            const short = SHORTENED.has(day);
+            return (
+              <div
+                key={i}
+                className={`${fsNum} text-center font-medium flex items-center justify-center`}
+                style={{
+                  borderLeft: closed
+                    ? '2.5px solid #1e3a5f'
+                    : short
+                      ? '2.5px solid #f59e0b'
+                      : '2.5px solid transparent',
+                  color: '#1e3a5f',
+                  fontWeight: closed ? 700 : 500,
+                }}
+              >
+                {day}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* 하단 굵은 네이비 선 */}
+        <div style={{ height: 2.5, background: '#1e3a5f', flexShrink: 0, marginTop: lg ? 2 : 1 }} />
       </div>
     );
   }
