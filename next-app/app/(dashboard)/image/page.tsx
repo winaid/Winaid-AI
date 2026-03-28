@@ -89,33 +89,33 @@ export default function ImagePage() {
   const [shortenedHours, setShortenedHours] = useState<Map<number, string>>(new Map());
   const [vacationReasons, setVacationReasons] = useState<Map<number, string>>(new Map());
   const [markMode, setMarkMode] = useState<DayMark>('closed');
-  const [calendarTheme, setCalendarTheme] = useState<string>('sch_spreadsheet');
+  const [calendarTheme, setCalendarTheme] = useState<string>('sch_cherry_blossom');
 
-  // ── 달력 테마 옵션 (12종 — 4그룹 × 3개) ──
+  // ── 달력 테마 옵션 (12종 — 4그룹) ──
   const CALENDAR_THEME_OPTIONS: { value: string; label: string; emoji: string; desc: string; group: string; groupColor: string }[] = [
-    // 실무 · 클린
-    { value: 'sch_spreadsheet', label: '실무 스프레드시트', emoji: '📊', desc: 'zebra 격자 + 슬레이트 헤더', group: '실무 · 클린', groupColor: '#334155' },
-    { value: 'sch_charcoal_frame', label: '차콜 프레임', emoji: '🏥', desc: '차콜 프레임 + 풀레드 휴진', group: '실무 · 클린', groupColor: '#292524' },
-    { value: 'sch_modern_note', label: '모던 미니멀', emoji: '📐', desc: '이중선 + 모노톤 도트', group: '실무 · 클린', groupColor: '#1e293b' },
-    // 소프트 · SNS
-    { value: 'sch_blushy_rose', label: '블러시 로즈', emoji: '🌸', desc: '로즈 헤더 + 파스텔 핑크', group: '소프트 · SNS', groupColor: '#be7e8a' },
-    { value: 'sch_sns_bold', label: 'SNS 볼드', emoji: '📱', desc: '코랄 바 + 라운드 뱃지', group: '소프트 · SNS', groupColor: '#f97316' },
-    { value: 'sch_lavender_soft', label: '라벤더 소프트', emoji: '💜', desc: '라벤더 헤더 + 라운드 셀', group: '소프트 · SNS', groupColor: '#7c3aed' },
-    // 프리미엄 · 클래식
-    { value: 'sch_korean_classic', label: '한방 전통', emoji: '🏛️', desc: '기와 문양 + 한지 프레임', group: '프리미엄 · 클래식', groupColor: '#92400e' },
-    { value: 'sch_gold_classic', label: '골드 클래식', emoji: '✨', desc: '골드 밴드 + 세리프 + 점선', group: '프리미엄 · 클래식', groupColor: '#78350f' },
-    { value: 'sch_deep_frost', label: '딥블루 프로스트', emoji: '❄️', desc: '딥네이비 + 프로스트 카드', group: '프리미엄 · 클래식', groupColor: '#0c4a6e' },
-    // 모던 · 의료
-    { value: 'sch_night_clinic', label: '야간진료', emoji: '🌙', desc: '다크 배너 + 앰버 컬럼 강조', group: '모던 · 의료', groupColor: '#d97706' },
-    { value: 'sch_premium_green', label: '프리미엄 그린', emoji: '🌲', desc: '다크그린 + 에메랄드', group: '모던 · 의료', groupColor: '#14532d' },
-    { value: 'sch_navy_modern', label: '네이비 모던', emoji: '🔷', desc: '네이비 텍스트 + 비즈니스', group: '모던 · 의료', groupColor: '#1e3a5f' },
+    // 시즌
+    { value: 'sch_cherry_blossom', label: '벚꽃 봄', emoji: '🌸', desc: '수채화 벚꽃 코너 장식', group: '시즌', groupColor: '#ec4899' },
+    { value: 'sch_sunflower_summer', label: '해바라기 여름', emoji: '🌻', desc: '해바라기 일러스트 + 옐로', group: '시즌', groupColor: '#ec4899' },
+    { value: 'sch_maple_autumn', label: '단풍 가을', emoji: '🍁', desc: '수채화 단풍잎 + 오렌지', group: '시즌', groupColor: '#ec4899' },
+    { value: 'sch_snowflake_winter', label: '눈꽃 겨울', emoji: '❄️', desc: '눈 결정 패턴 + 아이시 블루', group: '시즌', groupColor: '#ec4899' },
+    // 전통
+    { value: 'sch_korean_classic', label: '한방 전통', emoji: '🏛️', desc: '기와 문양 + 한지 프레임', group: '전통', groupColor: '#92400e' },
+    { value: 'sch_bojagi_holiday', label: '보자기 명절', emoji: '🎀', desc: '보자기 매듭 + 금색 테두리', group: '전통', groupColor: '#92400e' },
+    { value: 'sch_ink_wash', label: '수묵화', emoji: '🖌️', desc: '먹 번짐 + 대나무/매화', group: '전통', groupColor: '#92400e' },
+    // 모던
+    { value: 'sch_navy_professional', label: '네이비 프로', emoji: '💎', desc: '딥 네이비 + 흰 카드 + 골드', group: '모던', groupColor: '#1e3a5f' },
+    { value: 'sch_mint_wellness', label: '민트 웰니스', emoji: '🌿', desc: '민트 그라데이션 + 잎사귀', group: '모던', groupColor: '#1e3a5f' },
+    { value: 'sch_coral_sns', label: '코랄 SNS', emoji: '📱', desc: '코랄 그라데이션 + 라운드', group: '모던', groupColor: '#1e3a5f' },
+    // 특수
+    { value: 'sch_kids_pastel', label: '키즈 파스텔', emoji: '🌈', desc: '무지개 + 구름/별', group: '특수', groupColor: '#a855f7' },
+    { value: 'sch_beige_gold', label: '베이지 골드', emoji: '✨', desc: '리넨 질감 + 골드 라인', group: '특수', groupColor: '#a855f7' },
   ];
 
   const SCHEDULE_GROUPS: { label: string; desc: string; values: string[] }[] = [
-    { label: '📋 실무 · 클린', desc: '실무형·격자·정보 중심', values: ['sch_spreadsheet', 'sch_charcoal_frame', 'sch_modern_note'] },
-    { label: '🎨 소프트 · SNS', desc: '부드러운·컬러풀·소셜', values: ['sch_blushy_rose', 'sch_sns_bold', 'sch_lavender_soft'] },
-    { label: '✨ 프리미엄 · 클래식', desc: '격조·고급·진중한 달력', values: ['sch_korean_classic', 'sch_gold_classic', 'sch_deep_frost'] },
-    { label: '🏥 모던 · 의료', desc: '야간진료·웰니스·비즈니스', values: ['sch_night_clinic', 'sch_premium_green', 'sch_navy_modern'] },
+    { label: '🌸 시즌', desc: '봄·여름·가을·겨울', values: ['sch_cherry_blossom', 'sch_sunflower_summer', 'sch_maple_autumn', 'sch_snowflake_winter'] },
+    { label: '🏛️ 전통', desc: '한방·명절·수묵화', values: ['sch_korean_classic', 'sch_bojagi_holiday', 'sch_ink_wash'] },
+    { label: '💎 모던', desc: '네이비·민트·코랄', values: ['sch_navy_professional', 'sch_mint_wellness', 'sch_coral_sns'] },
+    { label: '✨ 특수', desc: '소아과·프리미엄', values: ['sch_kids_pastel', 'sch_beige_gold'] },
   ];
 
   const [customMessage, setCustomMessage] = useState('');
@@ -253,18 +253,18 @@ export default function ImagePage() {
   // OLD 우선순위: uploadedStyle > catTemplate > preset
   // schedule 카테고리에서 calendarTheme 선택 시 → 테마 전용 스타일 프롬프트 사용
   const CALENDAR_THEME_AI_STYLE: Record<string, string> = {
-    sch_spreadsheet: `[CALENDAR THEME: Corporate Spreadsheet] Dark slate (#1e293b) header. White body with zebra stripes (#f8fafc/#f1f5f9). Closed=gray cell+strikethrough+red "휴진" label below date. Shortened=yellow cell+"단축" label below. No footer legend bar. Professional spreadsheet style.`,
-    sch_charcoal_frame: `[CALENDAR THEME: Charcoal Frame] Thick charcoal (#292524) border frame enclosing white canvas. Closed=FULL RED (#ef4444) cell background. Stone (#a8a29e) grid borders. Bold, high-contrast, professional.`,
-    sch_modern_note: `[CALENDAR THEME: Swiss Minimal] Pure white background. Large month number typography. Double-line dividers. Dot markers (red=closed, amber=shortened). Monochrome, typography-driven, 40%+ whitespace.`,
-    sch_night_clinic: `[CALENDAR THEME: Night Clinic Dark] Full dark charcoal (#1c1917) background. Amber (#d97706) stripe band. White text on dark. Column highlights for specific days. Red pill badges for closed. Warm amber accents.`,
-    sch_blushy_rose: `[CALENDAR THEME: Blushy Rose] Soft rose pink (#fff1f2) background. Coral/rose gradient header. Round cells with soft shadows. Rose circular badges for closed. Feminine, pastel, Instagram aesthetic.`,
-    sch_sns_bold: `[CALENDAR THEME: SNS Bold] White background with coral (#f97316) left vertical bar. Bold large typography. Rounded badge cells. Orange border+pill for closed. Modern social media post style.`,
-    sch_lavender_soft: `[CALENDAR THEME: Lavender Soft] Soft lavender gradient (#f3eff8→#fefcff). Sparkle star decorations. Lavender header band. Rounded pill day badges. Purple tones. Magical, soft, feminine.`,
+    sch_cherry_blossom: `[CALENDAR THEME: Cherry Blossom Spring] Watercolor cherry blossom petals at corners. Soft pink #fdf2f8 background. Rose-pink frame. Falling petals. Deep rose #be185d title. Watercolor spring aesthetic.`,
+    sch_sunflower_summer: `[CALENDAR THEME: Sunflower Summer] Large sunflower illustration at corner. Warm yellow #fefce8 background. Golden brown #ca8a04 title. Sunshine rays. Sky blue accent. Bright summer mood.`,
+    sch_maple_autumn: `[CALENDAR THEME: Maple Autumn] Watercolor maple leaves at corners. Orange gradient #f97316→#fed7aa header. Warm cream #fff7ed background. Falling leaves. Warm autumn colors.`,
+    sch_snowflake_winter: `[CALENDAR THEME: Snowflake Winter] Geometric snowflake patterns at 12% opacity. Icy blue gradient #e0f2fe→white. Deep blue #0c4a6e title. Frosted card effect. Sparkle accents. Winter monochrome.`,
     sch_korean_classic: `[CALENDAR THEME: Korean Traditional] Warm cream (#f5e6d0) background. Coral half-sun motif. Roof tile border. Traditional flower lattice corners. Warm brown (#92400e) text. Dignified, classical Korean aesthetic.`,
-    sch_deep_frost: `[CALENDAR THEME: Deep Blue Frost] Deep navy (#0f2444) full-bleed background. White floating card with calendar. Sky blue (#7dd3fc) accents. Blue cell fill for closed. Authoritative university hospital aesthetic.`,
-    sch_gold_classic: `[CALENDAR THEME: Gold Classic] Warm ivory (#faf7f2) background. Gold decorative bands top+bottom. Diamond accents. Serif typography. Dotted grid. Luxurious, classical, premium.`,
-    sch_premium_green: `[CALENDAR THEME: Premium Green] Sage/mint (#f0f7f2) background. Emerald gradient accent lines. Dark green (#2d6a4f) header. Left border markers. Clean wellness/healing medical aesthetic.`,
-    sch_navy_modern: `[CALENDAR THEME: Navy Modern] Pure white background. Navy (#1e3a5f) text only, no color blocks. Navy divider lines. Left navy border for closed. Slate grid. Business document professional style.`,
+    sch_bojagi_holiday: `[CALENDAR THEME: Bojagi Holiday] Korean bojagi knot at top center. Gold #c9a96e border frame. Saekdong color stripes (red/blue/yellow/green). Hanji texture cream background. Traditional Korean holiday motifs.`,
+    sch_ink_wash: `[CALENDAR THEME: Ink Wash] East Asian ink wash bamboo/plum illustration. Ink splash header background. Pure white base. Charcoal #1f2937 text. Red seal stamp accent. Monochrome traditional painting style.`,
+    sch_navy_professional: `[CALENDAR THEME: Navy Professional] Deep navy #0f2444 background. White floating card with shadow. Gold #c9a96e decorative lines. Sky blue #7dd3fc accents. Authoritative university hospital style.`,
+    sch_mint_wellness: `[CALENDAR THEME: Mint Wellness] Eucalyptus/monstera leaf illustrations. Mint #f0fdfa gradient. Dark green #0f766e header. Emerald #10b981 accent line. Natural wellness healing mood.`,
+    sch_coral_sns: `[CALENDAR THEME: Coral SNS] Large coral-to-peach #f97316→#fed7aa gradient header. White rounded card (16px radius). Rounded badges. Bold typography. Modern Instagram feed aesthetic.`,
+    sch_kids_pastel: `[CALENDAR THEME: Kids Pastel] Pastel rainbow arch at top. Cloud and star illustrations. Soft pastel colors (pink/peach/yellow/mint/blue/lavender). Purple #7c3aed title. Playful kids/pediatric aesthetic.`,
+    sch_beige_gold: `[CALENDAR THEME: Beige Gold] Linen texture ivory #faf7f4 background. Gold #c9a96e decorative lines. Warm brown #78583d serif typography. Coral #e8c4b8 soft accent. Premium luxury dermatology/plastic surgery mood.`,
   };
 
   const calendarThemeActive = selectedTemplate === 'schedule' && calendarTheme;
