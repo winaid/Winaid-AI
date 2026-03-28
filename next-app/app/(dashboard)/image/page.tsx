@@ -467,14 +467,15 @@ ${layoutRules}
 디자인 테마: "${themeName}" — ${themeDesc}
 ⛔ "2026년", "${schYear}년" 같은 연도 텍스트를 이미지 어디에도 표시하지 마세요! "${schMonth}월"만 사용하세요.
 ${layoutExtra}`;
-    if (closedDays.length > 0) p += `휴진일: ${closedDays.map(d => `${d}일`).join(', ')} — 빨간색 배경 또는 빨간 동그라미로 강조.\n`;
-    if (shortened.length > 0) p += `단축진료: ${shortened.join(', ')} — 주황/앰버 표시.\n`;
-    if (vacations.length > 0) p += `휴가: ${vacations.join(', ')} — 보라색 표시.\n`;
+    if (closedDays.length > 0) p += `휴진일: ${closedDays.map(d => `${d}일`).join(', ')} — 빨간색 배경 또는 빨간 동그라미로 강조. 해당 날짜 숫자 아래에 반드시 "휴진" 텍스트를 작게 표시하세요.\n`;
+    if (shortened.length > 0) p += `단축진료: ${shortened.join(', ')} — 주황/앰버 표시. 해당 날짜 숫자 아래에 반드시 "단축" 텍스트를 작게 표시하세요.\n`;
+    if (vacations.length > 0) p += `휴가: ${vacations.join(', ')} — 보라색 표시. 해당 날짜 숫자 아래에 반드시 "휴가" 텍스트를 작게 표시하세요.\n`;
     if (noticeLines.length > 0) p += `하단 안내: ${noticeLines.join(' / ')}\n`;
     p += `\n[DESIGN QUALITY]
 - 프리미엄 병원 인스타그램 피드 수준
 - 깔끔한 sans-serif 타이포, 세련된 색상 팔레트
 - 요일 헤더: 일(빨강) 월 화 수 목 금 토(파랑)
+- 휴진/단축/휴가로 표시된 날짜에는 날짜 숫자 아래에 "휴진"/"단축"/"휴가" 라벨을 반드시 작은 글씨로 렌더링하세요. 라벨이 없으면 사용자가 어떤 날이 휴진인지 알 수 없습니다!
 - 충분한 여백, 정돈된 그리드, 고급스러운 느낌
 - 절대 엑셀/스프레드시트처럼 보이면 안 됨
 
