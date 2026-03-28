@@ -13,160 +13,92 @@ import type { CategoryTemplate } from './categoryTemplateTypes';
 export const CATEGORY_TEMPLATES: Record<string, CategoryTemplate[]> = {
 
   // ─── 진료 일정 (12개) ───
-  // 연구 기반: 한국 병원 진료시간 안내 이미지 — 테이블/카드 레이아웃, 요일별 격자, 점심시간 표시
-  // 지배적 패턴: 블루+화이트(신뢰), 민트/틸(치과), 베이지/아이보리(피부과/성형)
-  // 4계절 커버: 봄(벚꽃) / 여름(그린) / 가을(단풍) / 겨울(눈꽃) + 사계절 범용 8종
+  // 4계절(봄/여름/가을/겨울) + 전통(한방/보자기/수묵화) + 모던(네이비/민트/코랄) + 특수(키즈/베이지골드)
+  // 모든 템플릿에 AI가 그릴 수 있는 구체적 일러스트/장식 소재 포함
   schedule: [
     {
-      id: 'sch_spreadsheet', name: '실무 스프레드시트', color: '#1e293b', accent: '#0f172a', bg: '#f8fafc',
-      desc: '슬레이트 헤더에 zebra 격자 — 가장 실무적인 스프레드시트 스타일', layoutHint: 'cal_corporate',
+      id: "sch_cherry_blossom", name: "벚꽃 봄", color: "#ec4899", accent: "#be185d", bg: "#fdf2f8",
+      desc: "수채화 벚꽃잎 코너 장식 + 로즈핑크 프레임 — 3~5월 봄", layoutHint: "cal_spring",
       aiPrompt: `[CRITICAL — THIS IS A POSTER, NOT A SPREADSHEET]
 This is a DESIGNED POSTER that contains a calendar section — NOT a calendar that fills the entire image.
-Structure must be: decorative header/frame (30-40%) + calendar grid (50-60%) + optional thin decorative footer line (0-5%).
-The poster must have visual identity: background texture, decorative elements, branded header, styled frame.
-The calendar grid is ONE ELEMENT inside the poster, not the whole image.
+Structure: decorative header/frame (30-40%) + calendar grid (40-50%) + info footer (10-20%).
+The poster must have visual identity: background texture, decorative elements, branded header.
 DO NOT make the calendar grid fill 100% of the image.
-⛔ Do NOT create empty footer boxes, blank info sections, or placeholder rectangles. If no footer content was provided, simply end the poster with the calendar grid or a thin decorative line.
-Think of this as an Instagram-worthy hospital announcement poster that happens to show a monthly calendar.
+DO NOT add any information the user did not provide (no clinic hours, no lunch time, no phone number unless user entered them).
 
-Korean hospital monthly schedule poster — Corporate Spreadsheet.
-STRUCTURE: Dark slate header (#1e293b) with hospital name + title condensed in one block. Body: white background with zebra stripes (even rows #f8fafc, odd rows #f1f5f9). No footer bar — end cleanly after the calendar grid.
-CALENDAR GRID: 7-column grid. Day headers on slate background (#e2e8f0), Sunday=red text, Saturday=blue text. Clean thin borders between cells.
-MARKERS: Closed days — gray (#e2e8f0) cell background + strikethrough on number + small red "휴" label below the date. Shortened — light yellow (#fef9c3) background + brown "단축" label below the date. Vacation — light purple background + "휴가" label below the date.
-STRICT MODE ANCHORS: (1) Slate header color #1e293b (2) Zebra stripe pattern (3) Gray+strikethrough for closed (4) Yellow for shortened (5) Labels ("휴진"/"단축"/"휴가") below marked dates.
-INSPIRED MODE FREEDOM: (1) Cell shape variations (2) Marker icon style (3) Header typography weight.
-⛔ Do NOT add any information the user didn't provide — no business hours, lunch hours, phone numbers, addresses. Do NOT draw empty boxes or blank placeholder sections.
-Clean, readable layout with bold date numbers and clear contrast.`,
+Korean hospital monthly schedule poster — Spring Cherry Blossom theme.
+VISUAL MOTIFS: Watercolor cherry blossom petals at top-left and bottom-right corners. Falling petals (2-3) scattered. Rose-pink frame border around calendar area.
+COLORS: Background soft pink #fdf2f8. Title deep rose #be185d. Calendar frame rose-pink #ec4899.
+HEADER: Large bold title with cherry blossom petal accents. Hospital name small above.
+CALENDAR: White card with soft pink header row. Closed days in coral circle + "휴진" label below. Shortened in amber + "단축" label below.
+FOOTER: Subtle pink area with legend only.
+STRICT ANCHORS: Cherry blossom corner illustrations, pink frame, falling petals, rose color family, watercolor art style.
+INSPIRED FREEDOM: Petal density, pink shade variation, additional spring elements.
+Mobile readability: minimum body text 11pt, date numbers 14pt bold, title 24pt+.`,
     },
     {
-      id: 'sch_charcoal_frame', name: '차콜 프레임', color: '#292524', accent: '#1c1917', bg: '#ffffff',
-      desc: '차콜 프레임이 흰 캔버스를 감싸는 볼드한 구조', layoutHint: 'cal_charcoal',
+      id: "sch_sunflower_summer", name: "해바라기 여름", color: "#eab308", accent: "#ca8a04", bg: "#fefce8",
+      desc: "해바라기 일러스트 + 밝은 옐로 — 6~8월 여름", layoutHint: "cal_summer",
       aiPrompt: `[CRITICAL — THIS IS A POSTER, NOT A SPREADSHEET]
 This is a DESIGNED POSTER that contains a calendar section — NOT a calendar that fills the entire image.
-Structure must be: decorative header/frame (30-40%) + calendar grid (50-60%) + optional thin decorative footer line (0-5%).
-The poster must have visual identity: background texture, decorative elements, branded header, styled frame.
-The calendar grid is ONE ELEMENT inside the poster, not the whole image.
+Structure: decorative header/frame (30-40%) + calendar grid (40-50%) + info footer (10-20%).
+The poster must have visual identity: background texture, decorative elements, branded header.
 DO NOT make the calendar grid fill 100% of the image.
-⛔ Do NOT create empty footer boxes, blank info sections, or placeholder rectangles. If no footer content was provided, simply end the poster with the calendar grid or a thin decorative line.
-Think of this as an Instagram-worthy hospital announcement poster that happens to show a monthly calendar.
+DO NOT add any information the user did not provide (no clinic hours, no lunch time, no phone number unless user entered them).
 
-Korean hospital monthly schedule poster — Charcoal Frame.
-STRUCTURE: Thick charcoal (#292524) border frame enclosing entire design. Inside is pure white (#ffffff) canvas. Title in white bold text on charcoal frame top area.
-CALENDAR GRID: Clean grid inside white area with stone (#a8a29e) thin borders. Day headers in charcoal background with white text.
-MARKERS: Closed — FULL cell filled with red (#ef4444) background + white date number + "휴진" label below. Shortened — amber (#f59e0b) left border accent + "단축" label below. Vacation — purple left border + "휴가" label below. ONLY mark the dates specified by the user — do NOT add marks to dates the user did not select.
-STRICT MODE ANCHORS: (1) Charcoal frame border (2) Full red cells for closed days (3) White canvas inside (4) Stone border grid (5) Bold title on frame.
-INSPIRED MODE FREEDOM: (1) Frame corner style (2) Emphasis method (3) Typography choice.
-⛔ Do NOT add any information the user didn't provide — no business hours, lunch hours, phone numbers, addresses. Do NOT draw empty boxes or blank placeholder sections.
-Professional, bold, high-contrast design with clear readable numbers.`,
+Korean hospital monthly schedule poster — Summer Sunflower theme.
+VISUAL MOTIFS: Large sunflower illustration at top-right or top-left corner. Bright sunshine rays from top. Clear blue sky accent at top edge.
+COLORS: Background warm yellow #fefce8. Title golden brown #ca8a04. Sky blue accent #38bdf8.
+HEADER: Bold title with sunflower beside it. Warm golden gradient header bar.
+CALENDAR: White card on yellow background. Closed days in red circle + "휴진" label below. Shortened in amber + "단축" label below.
+FOOTER: Light yellow with legend.
+STRICT ANCHORS: Sunflower illustration, yellow/gold palette, sunshine rays, warm bright mood.
+INSPIRED FREEDOM: Sunflower size/position, sky element, gradient angle.
+Mobile readability: minimum body text 11pt, date numbers 14pt bold, title 24pt+.`,
     },
     {
-      id: 'sch_modern_note', name: '모던 미니멀', color: '#374151', accent: '#111827', bg: '#ffffff',
-      desc: '순백 배경에 이중선 구분자 — 스위스 그리드 미니멀', layoutHint: 'cal_swiss',
+      id: "sch_maple_autumn", name: "단풍 가을", color: "#ea580c", accent: "#c2410c", bg: "#fff7ed",
+      desc: "수채화 단풍잎 + 오렌지 그라데이션 — 9~11월 가을", layoutHint: "cal_autumn",
       aiPrompt: `[CRITICAL — THIS IS A POSTER, NOT A SPREADSHEET]
 This is a DESIGNED POSTER that contains a calendar section — NOT a calendar that fills the entire image.
-Structure must be: decorative header/frame (30-40%) + calendar grid (50-60%) + optional thin decorative footer line (0-5%).
-The poster must have visual identity: background texture, decorative elements, branded header, styled frame.
-The calendar grid is ONE ELEMENT inside the poster, not the whole image.
+Structure: decorative header/frame (30-40%) + calendar grid (40-50%) + info footer (10-20%).
+The poster must have visual identity: background texture, decorative elements, branded header.
 DO NOT make the calendar grid fill 100% of the image.
-⛔ Do NOT create empty footer boxes, blank info sections, or placeholder rectangles. If no footer content was provided, simply end the poster with the calendar grid or a thin decorative line.
-Think of this as an Instagram-worthy hospital announcement poster that happens to show a monthly calendar.
+DO NOT add any information the user did not provide (no clinic hours, no lunch time, no phone number unless user entered them).
 
-Korean hospital monthly schedule poster — Swiss Minimal.
-STRUCTURE: Pure white background, designed with text and lines only. Top area features very large month number typography. Double-line divider (one thick line + one thin line) separating header from body.
-CALENDAR GRID: Minimal grid with generous whitespace. Monochrome color scheme. Clean sans-serif typography.
-MARKERS: Closed — small red dot marker next to date + "휴진" label below. Shortened — amber horizontal line under date + "단축" label below. Vacation — purple dot + "휴가" label below. ONLY mark the dates specified by the user.
-STRICT MODE ANCHORS: (1) Double-line divider (2) Dot/line markers only (3) Large month number (4) Over 40% whitespace (5) Zero decorative elements.
-INSPIRED MODE FREEDOM: (1) Typography weight (2) Line thickness (3) Marker shape.
-⛔ Do NOT add any information the user didn't provide — no business hours, lunch hours, phone numbers, addresses. Do NOT draw empty boxes or blank placeholder sections.
-Typography-driven minimalist design, clean and elegant.`,
+Korean hospital monthly schedule poster — Autumn Maple Leaf theme.
+VISUAL MOTIFS: Watercolor maple leaves (red, orange, gold) clustered at top corners. Falling leaves (2-3) scattered. Warm gradient header.
+COLORS: Background warm cream #fff7ed. Header gradient orange #f97316 to peach #fed7aa. Title white on gradient.
+HEADER: Orange gradient banner with maple leaf accents. Bold white title.
+CALENDAR: White rounded card. Closed days in amber pill badge + "휴진" label below. Shortened in light orange + "단축" label below.
+FOOTER: Warm cream area with leaf accent and legend.
+STRICT ANCHORS: Maple leaf corner art, orange gradient header, falling leaves, warm autumn colors.
+INSPIRED FREEDOM: Leaf density/color mix, gradient direction, additional fall elements.
+Mobile readability: minimum body text 11pt, date numbers 14pt bold, title 24pt+.`,
     },
     {
-      id: 'sch_night_clinic', name: '야간진료', color: '#1c1917', accent: '#d97706', bg: '#1c1917',
-      desc: '다크 배너에 앰버 스트라이프 — 야간진료 강조', layoutHint: 'cal_night',
+      id: "sch_snowflake_winter", name: "눈꽃 겨울", color: "#0ea5e9", accent: "#0284c7", bg: "#f0f9ff",
+      desc: "기하학적 눈 결정 패턴 + 아이시 블루 — 12~2월 겨울", layoutHint: "cal_winter",
       aiPrompt: `[CRITICAL — THIS IS A POSTER, NOT A SPREADSHEET]
 This is a DESIGNED POSTER that contains a calendar section — NOT a calendar that fills the entire image.
-Structure must be: decorative header/frame (30-40%) + calendar grid (50-60%) + optional thin decorative footer line (0-5%).
-The poster must have visual identity: background texture, decorative elements, branded header, styled frame.
-The calendar grid is ONE ELEMENT inside the poster, not the whole image.
+Structure: decorative header/frame (30-40%) + calendar grid (40-50%) + info footer (10-20%).
+The poster must have visual identity: background texture, decorative elements, branded header.
 DO NOT make the calendar grid fill 100% of the image.
-⛔ Do NOT create empty footer boxes, blank info sections, or placeholder rectangles. If no footer content was provided, simply end the poster with the calendar grid or a thin decorative line.
-Think of this as an Instagram-worthy hospital announcement poster that happens to show a monthly calendar.
+DO NOT add any information the user did not provide (no clinic hours, no lunch time, no phone number unless user entered them).
 
-Korean hospital monthly schedule poster — Night Clinic Dark Theme.
-STRUCTURE: Full dark charcoal (#1c1917) background. Top area has amber (#d97706) horizontal stripe band. Overall warm amber/gold accent on dark canvas.
-CALENDAR GRID: White date numbers on dark background. Day headers in amber color. Tuesday and Thursday columns have subtle light yellow background highlight.
-MARKERS: Closed — red pill-shaped badge overlaying date + "휴진" label below. Shortened — amber pill badge + "단축" label below. Vacation — purple badge + "휴가" label below. ONLY mark the dates specified by the user. Night clinic extended hours columns visually highlighted.
-STRICT MODE ANCHORS: (1) Dark charcoal background (2) Amber stripe band (3) Column highlights for specific days (4) White text on dark (5) Red pill for closed.
-INSPIRED MODE FREEDOM: (1) Amber tone warmth range (2) Badge shape (3) Column highlight opacity.
-⛔ Do NOT add any information the user didn't provide — no business hours, lunch hours, phone numbers, addresses. Do NOT draw empty boxes or blank placeholder sections.
-High contrast dark theme with warm amber accents, bold readable numbers.`,
+Korean hospital monthly schedule poster — Winter Snowflake theme.
+VISUAL MOTIFS: Geometric snowflake crystal patterns scattered at 12% opacity in background. Sparkle accents. Frosted glass effect on calendar card.
+COLORS: Background icy blue gradient #e0f2fe to white. Title deep blue #0c4a6e. Accent sky blue #0ea5e9.
+HEADER: Icy gradient with snowflake patterns. Bold deep blue title with sparkle accents.
+CALENDAR: Frosted white card (border 1px #bae6fd). Closed days in icy blue pill badge + "휴진" label below. Shortened in amber + "단축" label below.
+FOOTER: Light icy background with legend.
+STRICT ANCHORS: Geometric snowflakes, ice-blue gradient, frosted card effect, blue monochrome, sparkle accents.
+INSPIRED FREEDOM: Snowflake density/size, gradient direction, additional winter elements.
+Mobile readability: minimum body text 11pt, date numbers 14pt bold, title 24pt+.`,
     },
     {
-      id: 'sch_blushy_rose', name: '블러시 로즈', color: '#e11d48', accent: '#be123c', bg: '#fff1f2',
-      desc: '로즈 헤더에 파스텔 핑크 — 피부과 인스타 스타일', layoutHint: 'cal_rose',
-      aiPrompt: `[CRITICAL — THIS IS A POSTER, NOT A SPREADSHEET]
-This is a DESIGNED POSTER that contains a calendar section — NOT a calendar that fills the entire image.
-Structure must be: decorative header/frame (30-40%) + calendar grid (50-60%) + optional thin decorative footer line (0-5%).
-The poster must have visual identity: background texture, decorative elements, branded header, styled frame.
-The calendar grid is ONE ELEMENT inside the poster, not the whole image.
-DO NOT make the calendar grid fill 100% of the image.
-⛔ Do NOT create empty footer boxes, blank info sections, or placeholder rectangles. If no footer content was provided, simply end the poster with the calendar grid or a thin decorative line.
-Think of this as an Instagram-worthy hospital announcement poster that happens to show a monthly calendar.
-
-Korean hospital monthly schedule poster — Blushy Rose.
-STRUCTURE: Soft rose pink (#fff1f2) overall background. Top header with coral-to-rose gradient. All elements have rounded corners and soft edges.
-CALENDAR GRID: Round cells with soft drop shadows. Pink-toned color palette throughout. Gentle feminine aesthetic.
-MARKERS: Closed — rose (#fda4af) circular badge over date + "휴진" label below. Shortened — peach colored badge + "단축" label below. Vacation — light purple circle + "휴가" label below. ONLY mark the dates specified by the user.
-STRICT MODE ANCHORS: (1) Rose pink palette (2) Round cells (3) Pastel tones throughout (4) Gradient header (5) Soft shadows on elements.
-INSPIRED MODE FREEDOM: (1) Pink shade range (2) Cell roundness (3) Decoration level.
-⛔ Do NOT add any information the user didn't provide — no business hours, lunch hours, phone numbers, addresses. Do NOT draw empty boxes or blank placeholder sections.
-Feminine, soft Instagram feed aesthetic with clear readable dates.`,
-    },
-    {
-      id: 'sch_sns_bold', name: 'SNS 볼드', color: '#f97316', accent: '#ea580c', bg: '#ffffff',
-      desc: '흰 배경에 코랄 악센트 — SNS 포스트 스타일', layoutHint: 'cal_sns',
-      aiPrompt: `[CRITICAL — THIS IS A POSTER, NOT A SPREADSHEET]
-This is a DESIGNED POSTER that contains a calendar section — NOT a calendar that fills the entire image.
-Structure must be: decorative header/frame (30-40%) + calendar grid (50-60%) + optional thin decorative footer line (0-5%).
-The poster must have visual identity: background texture, decorative elements, branded header, styled frame.
-The calendar grid is ONE ELEMENT inside the poster, not the whole image.
-DO NOT make the calendar grid fill 100% of the image.
-⛔ Do NOT create empty footer boxes, blank info sections, or placeholder rectangles. If no footer content was provided, simply end the poster with the calendar grid or a thin decorative line.
-Think of this as an Instagram-worthy hospital announcement poster that happens to show a monthly calendar.
-
-Korean hospital monthly schedule poster — SNS Bold Post Style.
-STRUCTURE: Clean white background with thick coral (#f97316) vertical bar accent on the left side. Bold, large typography throughout. Modern social media post aesthetic.
-CALENDAR GRID: Rounded badge-style date cells. Coral colored line dividers between rows. Bold sans-serif numbers.
-MARKERS: Closed — orange border around cell + orange pill badge with "휴진" label below the date. Shortened — amber badge + "단축" label below. Vacation — purple badge + "휴가" label below. ONLY mark the dates specified by the user.
-STRICT MODE ANCHORS: (1) Left coral vertical bar (2) Bold large typography (3) Rounded badge cells (4) Coral divider lines (5) White background.
-INSPIRED MODE FREEDOM: (1) Bar position/thickness (2) Badge shape (3) Color warmth range.
-⛔ Do NOT add any information the user didn't provide — no business hours, lunch hours, phone numbers, addresses. Do NOT draw empty boxes or blank placeholder sections.
-Bold, eye-catching SNS style with high readability.`,
-    },
-    {
-      id: 'sch_lavender_soft', name: '라벤더 소프트', color: '#7c3aed', accent: '#6d28d9', bg: '#f3eff8',
-      desc: '라벤더 그라데이션에 스파클 장식 — 부드러운 감성', layoutHint: 'cal_lavender',
-      aiPrompt: `[CRITICAL — THIS IS A POSTER, NOT A SPREADSHEET]
-This is a DESIGNED POSTER that contains a calendar section — NOT a calendar that fills the entire image.
-Structure must be: decorative header/frame (30-40%) + calendar grid (50-60%) + optional thin decorative footer line (0-5%).
-The poster must have visual identity: background texture, decorative elements, branded header, styled frame.
-The calendar grid is ONE ELEMENT inside the poster, not the whole image.
-DO NOT make the calendar grid fill 100% of the image.
-⛔ Do NOT create empty footer boxes, blank info sections, or placeholder rectangles. If no footer content was provided, simply end the poster with the calendar grid or a thin decorative line.
-Think of this as an Instagram-worthy hospital announcement poster that happens to show a monthly calendar.
-
-Korean hospital monthly schedule poster — Lavender Soft.
-STRUCTURE: Soft lavender gradient background (#f3eff8 fading to #fefcff). Subtle sparkle/star decorations in purple shades scattered lightly. Lavender gradient header band at top.
-CALENDAR GRID: Rounded pill-shaped day badges. Cells with rounded corners. Soft purple toned grid lines.
-MARKERS: Closed — deep purple filled badge + "휴진" label below. Shortened — light violet badge + "단축" label below. Vacation — pink badge + "휴가" label below. ONLY mark the dates specified by the user.
-STRICT MODE ANCHORS: (1) Lavender gradient palette (2) Sparkle star decorations (3) Rounded pill cells (4) Gradient header band (5) Purple tone throughout.
-INSPIRED MODE FREEDOM: (1) Purple shade range (2) Sparkle decoration density (3) Cell roundness.
-⛔ Do NOT add any information the user didn't provide — no business hours, lunch hours, phone numbers, addresses. Do NOT draw empty boxes or blank placeholder sections.
-Dreamy, soft aesthetic with clear contrast for readability.`,
-    },
-    {
-      id: 'sch_korean_classic', name: '한방 전통', color: '#92400e', accent: '#78350f', bg: '#fef3c7',
-      desc: '기와 문양 + 한지 프레임 — 한의원 특화 전통 격조', layoutHint: 'cal_hanok',
+      id: "sch_korean_classic", name: "한방 전통", color: "#92400e", accent: "#78350f", bg: "#fef3c7",
+      desc: "기와지붕 실루엣 + 코랄 반원 태양 + 전통 꽃살문양 — 한의원/명절", layoutHint: "cal_hanok",
       aiPrompt: `[CRITICAL — THIS IS A POSTER, NOT A SPREADSHEET]
 This is a DESIGNED POSTER that contains a calendar section — NOT a calendar that fills the entire image.
 Structure must be: decorative header/frame (30-40%) + calendar grid (50-60%) + optional thin decorative footer line (0-5%).
@@ -186,88 +118,144 @@ INSPIRED MODE FREEDOM: (1) Traditional motif variety (2) Color warmth level (3) 
 Dignified traditional Korean aesthetic with warm readable typography.`,
     },
     {
-      id: 'sch_deep_frost', name: '딥블루 프로스트', color: '#1e3a5f', accent: '#0f2444', bg: '#0f2444',
-      desc: '딥 네이비에 프로스트 카드 — 대학병원 공신력 스타일', layoutHint: 'cal_navy',
+      id: "sch_bojagi_holiday", name: "보자기 명절", color: "#b91c1c", accent: "#991b1b", bg: "#fef2f2",
+      desc: "보자기 매듭 장식 + 금색 테두리 + 전통 색동 — 설날/추석", layoutHint: "cal_holiday",
       aiPrompt: `[CRITICAL — THIS IS A POSTER, NOT A SPREADSHEET]
 This is a DESIGNED POSTER that contains a calendar section — NOT a calendar that fills the entire image.
-Structure must be: decorative header/frame (30-40%) + calendar grid (50-60%) + optional thin decorative footer line (0-5%).
-The poster must have visual identity: background texture, decorative elements, branded header, styled frame.
-The calendar grid is ONE ELEMENT inside the poster, not the whole image.
+Structure: decorative header/frame (30-40%) + calendar grid (40-50%) + info footer (10-20%).
+The poster must have visual identity: background texture, decorative elements, branded header.
 DO NOT make the calendar grid fill 100% of the image.
-⛔ Do NOT create empty footer boxes, blank info sections, or placeholder rectangles. If no footer content was provided, simply end the poster with the calendar grid or a thin decorative line.
-Think of this as an Instagram-worthy hospital announcement poster that happens to show a monthly calendar.
+DO NOT add any information the user did not provide (no clinic hours, no lunch time, no phone number unless user entered them).
 
-Korean hospital monthly schedule poster — Deep Blue Frost.
-STRUCTURE: Deep navy (#0f2444) full-bleed background. White floating card with rounded corners containing the calendar grid, creating a frosted glass effect. Sky blue (#7dd3fc) accent elements.
-CALENDAR GRID: Table-style grid inside the white card with subtle cell borders. Clean professional typography.
-MARKERS: Closed — blue (#dbeafe) cell fill + "휴진" label below. Shortened — light amber cell fill + "단축" label below. Vacation — purple cell fill + "휴가" label below. ONLY mark the dates specified by the user.
-STRICT MODE ANCHORS: (1) Deep navy background (2) White floating card (3) Table grid with borders (4) Blue cell fill for closed (5) Professional serif or sans-serif typography.
-INSPIRED MODE FREEDOM: (1) Navy tone range (2) Card shadow intensity (3) Accent color shade.
-⛔ Do NOT add any information the user didn't provide — no business hours, lunch hours, phone numbers, addresses. Do NOT draw empty boxes or blank placeholder sections.
-Authoritative, trustworthy design with high contrast white card on dark background.`,
+Korean hospital monthly schedule poster — Korean Traditional Bojagi Holiday theme.
+VISUAL MOTIFS: Korean bojagi (wrapping cloth) knot decoration at top center, large and prominent. Gold border frame around entire image. Color stripe accents (red, blue, yellow, green — Korean saekdong).
+COLORS: Background warm hanji texture cream. Frame gold #c9a96e. Title deep red #991b1b. Saekdong accents.
+HEADER: Bojagi knot decoration + gold frame top. Bold title below knot.
+CALENDAR: White area inside gold frame. Closed days in red circle + "휴진" label below. Holidays in gold circle with name.
+FOOTER: Gold frame bottom with legend.
+STRICT ANCHORS: Bojagi knot, gold frame border, saekdong color accents, hanji texture, traditional Korean motifs.
+INSPIRED FREEDOM: Knot style variation, additional traditional patterns, texture intensity.
+Mobile readability: minimum body text 11pt, date numbers 14pt bold, title 24pt+.`,
     },
     {
-      id: 'sch_gold_classic', name: '골드 클래식', color: '#a16207', accent: '#854d0e', bg: '#faf7f2',
-      desc: '아이보리에 골드 밴드 — 럭셔리 프리미엄 클래식', layoutHint: 'cal_gold',
+      id: "sch_ink_wash", name: "수묵화", color: "#374151", accent: "#1f2937", bg: "#f9fafb",
+      desc: "먹 번짐 효과 + 대나무/매화 수묵 일러스트 — 고급 한의원", layoutHint: "cal_inkwash",
       aiPrompt: `[CRITICAL — THIS IS A POSTER, NOT A SPREADSHEET]
 This is a DESIGNED POSTER that contains a calendar section — NOT a calendar that fills the entire image.
-Structure must be: decorative header/frame (30-40%) + calendar grid (50-60%) + optional thin decorative footer line (0-5%).
-The poster must have visual identity: background texture, decorative elements, branded header, styled frame.
-The calendar grid is ONE ELEMENT inside the poster, not the whole image.
+Structure: decorative header/frame (30-40%) + calendar grid (40-50%) + info footer (10-20%).
+The poster must have visual identity: background texture, decorative elements, branded header.
 DO NOT make the calendar grid fill 100% of the image.
-⛔ Do NOT create empty footer boxes, blank info sections, or placeholder rectangles. If no footer content was provided, simply end the poster with the calendar grid or a thin decorative line.
-Think of this as an Instagram-worthy hospital announcement poster that happens to show a monthly calendar.
+DO NOT add any information the user did not provide (no clinic hours, no lunch time, no phone number unless user entered them).
 
-Korean hospital monthly schedule poster — Gold Classic Premium.
-STRUCTURE: Warm ivory (#faf7f2) background. Decorative gold bands at top and bottom edges. Small diamond shape decorations as accents. Serif typography throughout for elegant feel.
-CALENDAR GRID: Dotted grid lines instead of solid lines. Elegant serif numerals for dates. Gold accent colors on headers.
-MARKERS: Closed — deep red serif number with gold underline + "휴진" label below. Shortened — amber dot marker + "단축" label below. Vacation — purple marker + "휴가" label below. ONLY mark the dates specified by the user.
-STRICT MODE ANCHORS: (1) Gold decorative bands (2) Diamond accents (3) Serif typography (4) Ivory background (5) Dotted grid lines.
-INSPIRED MODE FREEDOM: (1) Gold tone variation (2) Decoration shape (3) Serif font style.
-⛔ Do NOT add any information the user didn't provide — no business hours, lunch hours, phone numbers, addresses. Do NOT draw empty boxes or blank placeholder sections.
-Luxurious, premium classical design with elegant readable serif numbers.`,
+Korean hospital monthly schedule poster — East Asian Ink Wash Painting theme.
+VISUAL MOTIFS: Ink wash bamboo or plum blossom branch illustration at one corner (subtle, elegant). Ink wash splash/bleed effect at header background. Single red seal stamp as accent.
+COLORS: Background pure white #ffffff. Text charcoal #1f2937. Ink wash grays from light to dark. One red seal accent #dc2626.
+HEADER: Ink wash splash background fading to white. Elegant serif-style title in dark charcoal.
+CALENDAR: Clean white area with minimal thin gray lines. Closed days marked with small red circle (seal style) + "휴진" label below.
+FOOTER: Minimal, ink wash fade at bottom edge.
+STRICT ANCHORS: Ink wash bamboo/plum illustration, ink splash background, red seal stamp, monochrome palette, traditional east asian painting style.
+INSPIRED FREEDOM: Plant type (bamboo vs plum vs orchid), ink intensity, seal position.
+Mobile readability: minimum body text 11pt, date numbers 14pt bold, title 24pt+.`,
     },
     {
-      id: 'sch_premium_green', name: '프리미엄 그린', color: '#2d6a4f', accent: '#1b4332', bg: '#f0f7f2',
-      desc: '세이지/민트에 에메랄드 악센트 — 웰니스 의료 감성', layoutHint: 'cal_green',
+      id: "sch_navy_professional", name: "네이비 프로", color: "#1e3a5f", accent: "#0f2444", bg: "#0f2444",
+      desc: "딥 네이비 배경 + 흰 플로팅 카드 + 골드 라인 — 대학/종합병원", layoutHint: "cal_navy",
       aiPrompt: `[CRITICAL — THIS IS A POSTER, NOT A SPREADSHEET]
 This is a DESIGNED POSTER that contains a calendar section — NOT a calendar that fills the entire image.
-Structure must be: decorative header/frame (30-40%) + calendar grid (50-60%) + optional thin decorative footer line (0-5%).
-The poster must have visual identity: background texture, decorative elements, branded header, styled frame.
-The calendar grid is ONE ELEMENT inside the poster, not the whole image.
+Structure: decorative header/frame (30-40%) + calendar grid (40-50%) + info footer (10-20%).
+The poster must have visual identity: background texture, decorative elements, branded header.
 DO NOT make the calendar grid fill 100% of the image.
-⛔ Do NOT create empty footer boxes, blank info sections, or placeholder rectangles. If no footer content was provided, simply end the poster with the calendar grid or a thin decorative line.
-Think of this as an Instagram-worthy hospital announcement poster that happens to show a monthly calendar.
+DO NOT add any information the user did not provide (no clinic hours, no lunch time, no phone number unless user entered them).
 
-Korean hospital monthly schedule poster — Premium Green Wellness.
-STRUCTURE: Sage/mint (#f0f7f2) background. Emerald green gradient accent lines as visual dividers. Dark green (#2d6a4f) header area with white text.
-CALENDAR GRID: Clean medical aesthetic grid with green-toned elements. Subtle sage colored cell backgrounds.
-MARKERS: Closed — left red border accent on cell + "휴진" label below. Shortened — left amber border accent + "단축" label below. Vacation — left purple border + "휴가" label below. ONLY mark the dates specified by the user.
-STRICT MODE ANCHORS: (1) Sage/mint background (2) Emerald gradient accent lines (3) Dark green header (4) Left border markers (5) Clean medical aesthetic.
-INSPIRED MODE FREEDOM: (1) Green tone range (2) Border marker style (3) Decoration level.
-⛔ Do NOT add any information the user didn't provide — no business hours, lunch hours, phone numbers, addresses. Do NOT draw empty boxes or blank placeholder sections.
-Clean wellness aesthetic with soothing green tones and clear readability.`,
+Korean hospital monthly schedule poster — Navy Professional theme.
+VISUAL MOTIFS: Deep navy background with white floating card in center. Thin gold decorative lines at header and footer. Subtle halftone dot pattern at corners.
+COLORS: Background deep navy #0f2444. Card white. Title white on navy. Gold accent #c9a96e. Sky blue accent #7dd3fc.
+HEADER: Navy background with white title + gold decorative line below.
+CALENDAR: White floating card (rounded corners, shadow) containing grid. Closed days in blue cell fill #dbeafe + "휴진" label below.
+FOOTER: Navy with white text legend + gold line above.
+STRICT ANCHORS: Deep navy background, white floating card, gold accent lines, sky blue accents, authoritative mood.
+INSPIRED FREEDOM: Navy shade, card shadow intensity, gold line style.
+Mobile readability: minimum body text 11pt, date numbers 14pt bold, title 24pt+.`,
     },
     {
-      id: 'sch_navy_modern', name: '네이비 모던', color: '#1e3a5f', accent: '#0f2444', bg: '#ffffff',
-      desc: '흰 배경에 네이비 텍스트만 — 비즈니스 문서 스타일', layoutHint: 'cal_business',
+      id: "sch_mint_wellness", name: "민트 웰니스", color: "#14b8a6", accent: "#0f766e", bg: "#f0fdfa",
+      desc: "민트/세이지 그라데이션 + 잎사귀 일러스트 — 피부과/웰니스", layoutHint: "cal_mint",
       aiPrompt: `[CRITICAL — THIS IS A POSTER, NOT A SPREADSHEET]
 This is a DESIGNED POSTER that contains a calendar section — NOT a calendar that fills the entire image.
-Structure must be: decorative header/frame (30-40%) + calendar grid (50-60%) + optional thin decorative footer line (0-5%).
-The poster must have visual identity: background texture, decorative elements, branded header, styled frame.
-The calendar grid is ONE ELEMENT inside the poster, not the whole image.
+Structure: decorative header/frame (30-40%) + calendar grid (40-50%) + info footer (10-20%).
+The poster must have visual identity: background texture, decorative elements, branded header.
 DO NOT make the calendar grid fill 100% of the image.
-⛔ Do NOT create empty footer boxes, blank info sections, or placeholder rectangles. If no footer content was provided, simply end the poster with the calendar grid or a thin decorative line.
-Think of this as an Instagram-worthy hospital announcement poster that happens to show a monthly calendar.
+DO NOT add any information the user did not provide (no clinic hours, no lunch time, no phone number unless user entered them).
 
-Korean hospital monthly schedule poster — Navy Modern Business Document.
-STRUCTURE: Pure white background. Navy (#1e3a5f) colored text only — no colored background blocks anywhere. Clean navy horizontal divider lines separating sections.
-CALENDAR GRID: Slate gray thin grid lines. Minimal, clean layout. Navy text for all dates and headers.
-MARKERS: Closed — left navy border accent on cell + "휴진" label below. Shortened — left amber border accent + "단축" label below. Vacation — left purple border + "휴가" label below. ONLY mark the dates specified by the user. No background fills, borders only.
-STRICT MODE ANCHORS: (1) Navy text color only (2) Horizontal divider lines (3) Left border markers only (4) Pure white background (5) No colored blocks.
-INSPIRED MODE FREEDOM: (1) Divider line thickness (2) Border marker width (3) Typography weight.
-⛔ Do NOT add any information the user didn't provide — no business hours, lunch hours, phone numbers, addresses. Do NOT draw empty boxes or blank placeholder sections.
-Clean business document style with navy on white, highly professional and readable.`,
+Korean hospital monthly schedule poster — Mint Wellness theme.
+VISUAL MOTIFS: Watercolor eucalyptus or monstera leaf illustration at corners. Mint-to-sage gradient background. Emerald accent line on left side.
+COLORS: Background mint #f0fdfa gradient. Header dark green #0f766e. Accent emerald #10b981. Leaf illustration in sage green.
+HEADER: Dark green bar with white title + leaf illustration peeking from corner.
+CALENDAR: White area with clean grid. Closed days in red left-border marker + "휴진" label below. Shortened in amber + "단축" label below.
+FOOTER: Mint area with legend.
+STRICT ANCHORS: Leaf illustrations, mint/sage gradient, dark green header, emerald accent, natural wellness mood.
+INSPIRED FREEDOM: Leaf type, gradient direction, accent line style.
+Mobile readability: minimum body text 11pt, date numbers 14pt bold, title 24pt+.`,
+    },
+    {
+      id: "sch_coral_sns", name: "코랄 SNS", color: "#f97316", accent: "#ea580c", bg: "#fff7ed",
+      desc: "코랄→피치 그라데이션 + 라운드 카드 — 인스타그램 피드 스타일", layoutHint: "cal_sns",
+      aiPrompt: `[CRITICAL — THIS IS A POSTER, NOT A SPREADSHEET]
+This is a DESIGNED POSTER that contains a calendar section — NOT a calendar that fills the entire image.
+Structure: decorative header/frame (30-40%) + calendar grid (40-50%) + info footer (10-20%).
+The poster must have visual identity: background texture, decorative elements, branded header.
+DO NOT make the calendar grid fill 100% of the image.
+DO NOT add any information the user did not provide (no clinic hours, no lunch time, no phone number unless user entered them).
+
+Korean hospital monthly schedule poster — Coral SNS/Instagram Feed theme.
+VISUAL MOTIFS: Large coral-to-peach gradient header taking 35% of image. White rounded card (border-radius 16px) floating on gradient. All elements rounded.
+COLORS: Header gradient coral #f97316 to peach #fed7aa. Background light warm #fff7ed. Card white.
+HEADER: Big coral gradient area with bold white title. Rounded everything.
+CALENDAR: White rounded card with rounded badge-style date cells. Closed days in orange rounded badge + "휴진" label below. Shortened in amber rounded badge + "단축" label below.
+FOOTER: Light warm area with rounded legend badges.
+STRICT ANCHORS: Coral gradient header, white rounded card, rounded badges, modern SNS aesthetic, bold typography.
+INSPIRED FREEDOM: Gradient colors, card radius, badge shapes.
+Mobile readability: minimum body text 11pt, date numbers 14pt bold, title 24pt+.`,
+    },
+    {
+      id: "sch_kids_pastel", name: "키즈 파스텔", color: "#a855f7", accent: "#7c3aed", bg: "#faf5ff",
+      desc: "파스텔 무지개 + 구름/별 일러스트 — 소아과/소아치과", layoutHint: "cal_kids",
+      aiPrompt: `[CRITICAL — THIS IS A POSTER, NOT A SPREADSHEET]
+This is a DESIGNED POSTER that contains a calendar section — NOT a calendar that fills the entire image.
+Structure: decorative header/frame (30-40%) + calendar grid (40-50%) + info footer (10-20%).
+The poster must have visual identity: background texture, decorative elements, branded header.
+DO NOT make the calendar grid fill 100% of the image.
+DO NOT add any information the user did not provide (no clinic hours, no lunch time, no phone number unless user entered them).
+
+Korean hospital monthly schedule poster — Kids Pastel Rainbow theme.
+VISUAL MOTIFS: Pastel rainbow arch at top of image (large, prominent). Cute cloud illustrations floating. Small star decorations scattered. Everything soft and rounded.
+COLORS: Background light lavender #faf5ff. Rainbow colors in soft pastel (pink, peach, yellow, mint, sky blue, lavender). Title purple #7c3aed.
+HEADER: Large pastel rainbow arch with clouds. Cute bold title below rainbow.
+CALENDAR: White rounded card with colorful pastel cell backgrounds. Closed days in purple circle + "휴진" label below. Shortened in pink + "단축" label below.
+FOOTER: Pastel area with star decorations and legend.
+STRICT ANCHORS: Pastel rainbow arch, cloud illustrations, star decorations, soft rounded shapes, playful kids aesthetic.
+INSPIRED FREEDOM: Rainbow size, cloud density, star placement, pastel color intensity.
+Mobile readability: minimum body text 11pt, date numbers 14pt bold, title 24pt+.`,
+    },
+    {
+      id: "sch_beige_gold", name: "베이지 골드", color: "#a3836a", accent: "#78583d", bg: "#faf7f4",
+      desc: "리넨 질감 아이보리 + 골드 라인 포인트 — 피부과/성형외과 고급", layoutHint: "cal_premium",
+      aiPrompt: `[CRITICAL — THIS IS A POSTER, NOT A SPREADSHEET]
+This is a DESIGNED POSTER that contains a calendar section — NOT a calendar that fills the entire image.
+Structure: decorative header/frame (30-40%) + calendar grid (40-50%) + info footer (10-20%).
+The poster must have visual identity: background texture, decorative elements, branded header.
+DO NOT make the calendar grid fill 100% of the image.
+DO NOT add any information the user did not provide (no clinic hours, no lunch time, no phone number unless user entered them).
+
+Korean hospital monthly schedule poster — Premium Beige Gold theme.
+VISUAL MOTIFS: Linen paper texture background at 3% opacity. Thin gold decorative line below title. Warm brown serif typography. Subtle gold corner ornaments.
+COLORS: Background warm ivory #faf7f4 with linen texture. Title warm brown #78583d. Gold accent #c9a96e. Coral soft accent #e8c4b8.
+HEADER: Elegant warm brown serif title with gold decorative line below. Hospital name small above in lighter brown.
+CALENDAR: White card with warm border 1px #e8ddd0. Closed days in soft coral circle + "휴진" label below. Shortened in muted amber + "단축" label below.
+FOOTER: Warm area with legend + gold corner ornament.
+STRICT ANCHORS: Linen texture, gold decorative lines, warm brown serif typography, ivory/cream base, premium luxury mood.
+INSPIRED FREEDOM: Texture intensity, gold line style, serif font choice, corner treatment.
+Mobile readability: minimum body text 11pt, date numbers 14pt bold, title 24pt+.`,
     },
   ],
 
