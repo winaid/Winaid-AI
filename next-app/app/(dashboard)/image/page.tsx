@@ -91,26 +91,31 @@ export default function ImagePage() {
   const [markMode, setMarkMode] = useState<DayMark>('closed');
   const [calendarTheme, setCalendarTheme] = useState<string>('sch_spreadsheet');
 
-  // ── 달력 테마 옵션 (12종 — 3패밀리) ──
+  // ── 달력 테마 옵션 (12종 — 4그룹 × 3개) ──
   const CALENDAR_THEME_OPTIONS: { value: string; label: string; emoji: string; desc: string; group: string; groupColor: string }[] = [
-    { value: 'sch_spreadsheet', label: '실무 스프레드시트', emoji: '📊', desc: 'zebra 격자 + 슬레이트 헤더', group: '실무', groupColor: '#334155' },
-    { value: 'sch_charcoal_frame', label: '차콜 프레임', emoji: '🏥', desc: '차콜 프레임 + 풀레드 휴진', group: '실무', groupColor: '#292524' },
-    { value: 'sch_modern_note', label: '모던 미니멀', emoji: '📐', desc: '이중선 + 모노톤 도트', group: '실무', groupColor: '#1e293b' },
-    { value: 'sch_night_clinic', label: '야간진료', emoji: '🌙', desc: '다크 배너 + 앰버 컬럼 강조', group: '실무', groupColor: '#d97706' },
-    { value: 'sch_blushy_rose', label: '블러시 로즈', emoji: '🌸', desc: '로즈 헤더 + 파스텔 핑크', group: '소프트', groupColor: '#be7e8a' },
-    { value: 'sch_sns_bold', label: 'SNS 볼드', emoji: '📱', desc: '코랄 바 + 라운드 뱃지', group: '소프트', groupColor: '#f97316' },
-    { value: 'sch_lavender_soft', label: '라벤더 소프트', emoji: '💜', desc: '라벤더 헤더 + 라운드 셀', group: '소프트', groupColor: '#7c3aed' },
-    { value: 'sch_korean_classic', label: '한방 전통', emoji: '🏛️', desc: '기와 문양 + 한지 프레임', group: '프리미엄', groupColor: '#92400e' },
-    { value: 'sch_deep_frost', label: '딥블루 프로스트', emoji: '❄️', desc: '딥네이비 + 프로스트 카드', group: '프리미엄', groupColor: '#0c4a6e' },
-    { value: 'sch_gold_classic', label: '골드 클래식', emoji: '✨', desc: '골드 밴드 + 세리프 + 점선', group: '프리미엄', groupColor: '#78350f' },
-    { value: 'sch_premium_green', label: '프리미엄 그린', emoji: '🌲', desc: '다크그린 + 에메랄드', group: '프리미엄', groupColor: '#14532d' },
-    { value: 'sch_navy_modern', label: '네이비 모던', emoji: '🔷', desc: '네이비 텍스트 + 비즈니스', group: '프리미엄', groupColor: '#1e3a5f' },
+    // 실무 · 클린
+    { value: 'sch_spreadsheet', label: '실무 스프레드시트', emoji: '📊', desc: 'zebra 격자 + 슬레이트 헤더', group: '실무 · 클린', groupColor: '#334155' },
+    { value: 'sch_charcoal_frame', label: '차콜 프레임', emoji: '🏥', desc: '차콜 프레임 + 풀레드 휴진', group: '실무 · 클린', groupColor: '#292524' },
+    { value: 'sch_modern_note', label: '모던 미니멀', emoji: '📐', desc: '이중선 + 모노톤 도트', group: '실무 · 클린', groupColor: '#1e293b' },
+    // 소프트 · SNS
+    { value: 'sch_blushy_rose', label: '블러시 로즈', emoji: '🌸', desc: '로즈 헤더 + 파스텔 핑크', group: '소프트 · SNS', groupColor: '#be7e8a' },
+    { value: 'sch_sns_bold', label: 'SNS 볼드', emoji: '📱', desc: '코랄 바 + 라운드 뱃지', group: '소프트 · SNS', groupColor: '#f97316' },
+    { value: 'sch_lavender_soft', label: '라벤더 소프트', emoji: '💜', desc: '라벤더 헤더 + 라운드 셀', group: '소프트 · SNS', groupColor: '#7c3aed' },
+    // 프리미엄 · 클래식
+    { value: 'sch_korean_classic', label: '한방 전통', emoji: '🏛️', desc: '기와 문양 + 한지 프레임', group: '프리미엄 · 클래식', groupColor: '#92400e' },
+    { value: 'sch_gold_classic', label: '골드 클래식', emoji: '✨', desc: '골드 밴드 + 세리프 + 점선', group: '프리미엄 · 클래식', groupColor: '#78350f' },
+    { value: 'sch_deep_frost', label: '딥블루 프로스트', emoji: '❄️', desc: '딥네이비 + 프로스트 카드', group: '프리미엄 · 클래식', groupColor: '#0c4a6e' },
+    // 모던 · 의료
+    { value: 'sch_night_clinic', label: '야간진료', emoji: '🌙', desc: '다크 배너 + 앰버 컬럼 강조', group: '모던 · 의료', groupColor: '#d97706' },
+    { value: 'sch_premium_green', label: '프리미엄 그린', emoji: '🌲', desc: '다크그린 + 에메랄드', group: '모던 · 의료', groupColor: '#14532d' },
+    { value: 'sch_navy_modern', label: '네이비 모던', emoji: '🔷', desc: '네이비 텍스트 + 비즈니스', group: '모던 · 의료', groupColor: '#1e3a5f' },
   ];
 
   const SCHEDULE_GROUPS: { label: string; desc: string; values: string[] }[] = [
-    { label: '📋 실무 · 클린', desc: '실무형·격자·정보 중심', values: ['sch_spreadsheet', 'sch_charcoal_frame', 'sch_modern_note', 'sch_night_clinic'] },
+    { label: '📋 실무 · 클린', desc: '실무형·격자·정보 중심', values: ['sch_spreadsheet', 'sch_charcoal_frame', 'sch_modern_note'] },
     { label: '🎨 소프트 · SNS', desc: '부드러운·컬러풀·소셜', values: ['sch_blushy_rose', 'sch_sns_bold', 'sch_lavender_soft'] },
-    { label: '✨ 프리미엄 · 클래식', desc: '격조·고급·진중한 달력', values: ['sch_korean_classic', 'sch_deep_frost', 'sch_gold_classic', 'sch_premium_green', 'sch_navy_modern'] },
+    { label: '✨ 프리미엄 · 클래식', desc: '격조·고급·진중한 달력', values: ['sch_korean_classic', 'sch_gold_classic', 'sch_deep_frost'] },
+    { label: '🏥 모던 · 의료', desc: '야간진료·웰니스·비즈니스', values: ['sch_night_clinic', 'sch_premium_green', 'sch_navy_modern'] },
   ];
 
   const [customMessage, setCustomMessage] = useState('');
