@@ -191,22 +191,26 @@ The poster must have visual identity: background texture, decorative elements, b
 DO NOT make the calendar grid fill 100% of the image.
 DO NOT add any information the user did not provide (no clinic hours, no lunch time, no phone number unless user entered them).
 
-Korean hospital monthly schedule poster — Premium Clean Blue theme.
+Korean hospital monthly schedule poster — Premium Clean Blue Corporate theme.
 
-BACKGROUND: Entire background deep blue-to-sky gradient (#1d4ed8 at top fading through #3b82f6 to #93c5fd at bottom). The gradient should feel rich and dimensional, not flat. Subtle abstract wave or flowing curve shapes in lighter blue (#60a5fa) at 8-12% opacity across the background, creating depth and movement.
+BACKGROUND: Entire background is a SMOOTH, CLEAN blue gradient — deep navy (#1e3a8a) at top corners fading to sky blue (#93c5fd) at center, then to very light blue (#eff6ff) at bottom. NO patterns, NO hexagons, NO waves, NO geometric shapes. Just a pure, smooth, elegant blue gradient like a clear winter sky. The gradient itself is the decoration.
 
-DECORATIVE LAYER: Large, elegant curved wave decoration sweeping across the header area — think premium airline or fintech branding. Small geometric diamond or hexagon pattern scattered at 5% opacity in the blue gradient. Thin white decorative line (0.5px) separating header from calendar area.
+DECORATIVE LAYER: MINIMAL decoration. Only a thin white horizontal line (1px, 40% opacity) separating title area from calendar area. A single small white medical cross icon (+) at top-right corner at 20% opacity. That is it — no other decorations.
 
-CALENDAR CARD: Frosted white card (backdrop-blur feel, 95% opacity, rounded 16px, shadow 0 8px 32px rgba(0,0,0,0.12)) floating on the blue gradient. The blue gradient should be visible around and slightly through the card edges. Card feels premium and elevated.
+CALENDAR CARD: Large white card (rounded 16px, soft shadow 0 4px 20px rgba(0,0,0,0.1)) taking up 65% of the image. Card should feel like it is floating elegantly on the blue gradient. Clean grid inside with thin light gray (#e5e7eb) lines. Day header row has very light blue (#dbeafe) background.
 
-TITLE: Bold white text with subtle text-shadow on the deep blue gradient. Large and confident. Hospital name in light blue (#93c5fd) small above.
+TITLE: Bold white text on the blue gradient area above the card. Large, clean, sans-serif. Hospital name small white text above the main title.
 
-COLOR PALETTE: Deep blue #1d4ed8, medium blue #3b82f6, sky blue #93c5fd, white, frosted white.
+TYPOGRAPHY: Modern Korean sans-serif throughout. Title 28pt+ bold white. Date numbers 14pt clean black. Sunday red, Saturday blue.
 
-QUALITY: This must look like a Samsung or Hyundai corporate design — premium, sophisticated, tech-forward. NOT a simple blue rectangle with white text. The gradient, waves, and frosted card create a modern, dimensional, premium feel.
+FOOTER: Below the card, on the blue gradient — small white text legend only. No box, no background.
 
-STRICT ANCHORS: Rich blue gradient (not flat), abstract wave/curve decorations, frosted white floating card, blue monochrome palette, premium corporate aesthetic.
-INSPIRED FREEDOM: Wave shape and placement, gradient color stops, diamond/hexagon pattern density, card frosting intensity.
+COLOR PALETTE: Navy #1e3a8a, sky blue #93c5fd, light blue #eff6ff, white, light gray #e5e7eb. ONLY blue family + white + gray. No other colors except red for closed days.
+
+QUALITY: Think Samsung Medical Center or university hospital official notice level. Extremely clean, trustworthy, no-nonsense corporate medical design. The beauty comes from the smooth gradient and generous whitespace, not from decorations.
+
+STRICT ANCHORS: Smooth blue gradient (no patterns), large white floating card, minimal decoration (cross icon only), corporate sans-serif typography, generous whitespace, trustworthy medical mood.
+INSPIRED FREEDOM: Gradient blue shade range, card shadow intensity, cross icon opacity, title alignment.
 Mobile readability: minimum body text 11pt, date numbers 14pt bold, title 24pt+.`,
     },
     {
