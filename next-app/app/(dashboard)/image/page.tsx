@@ -470,7 +470,11 @@ ${layoutExtra}`;
     if (closedDays.length > 0) p += `휴진일: ${closedDays.map(d => `${d}일`).join(', ')} — 빨간색 배경 또는 빨간 동그라미로 강조. 해당 날짜 숫자 아래에 반드시 "휴진" 텍스트를 작게 표시하세요.\n`;
     if (shortened.length > 0) p += `단축진료: ${shortened.join(', ')} — 주황/앰버 표시. 해당 날짜 숫자 아래에 반드시 "단축" 텍스트를 작게 표시하세요.\n`;
     if (vacations.length > 0) p += `휴가: ${vacations.join(', ')} — 보라색 표시. 해당 날짜 숫자 아래에 반드시 "휴가" 텍스트를 작게 표시하세요.\n`;
-    if (noticeLines.length > 0) p += `하단 안내: ${noticeLines.join(' / ')}\n`;
+    if (noticeLines.length > 0) {
+      p += `하단 안내 영역: "${noticeLines.join(' / ')}" — 이 텍스트를 달력 아래에 표시하세요.\n`;
+    } else {
+      p += `⛔ 하단 안내 문구가 없습니다. 달력 아래에 빈 박스, 빈 직사각형, 빈 풋터 영역을 절대 그리지 마세요. 달력 격자 바로 아래에서 포스터를 깔끔하게 끝내세요.\n`;
+    }
     p += `\n[DESIGN QUALITY]
 - 프리미엄 병원 인스타그램 피드 수준
 - 깔끔한 sans-serif 타이포, 세련된 색상 팔레트

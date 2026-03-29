@@ -21,7 +21,7 @@ export const CATEGORY_TEMPLATES: Record<string, CategoryTemplate[]> = {
       desc: "수채화 벚꽃잎 코너 장식 + 로즈핑크 프레임 — 3~5월 봄", layoutHint: "cal_spring",
       aiPrompt: `[CRITICAL — THIS IS A POSTER, NOT A SPREADSHEET]
 This is a DESIGNED POSTER that contains a calendar section — NOT a calendar that fills the entire image.
-Structure: decorative header/frame (30-40%) + calendar grid (40-50%) + info footer (10-20%).
+Structure: decorative header/frame (30-40%) + calendar grid (50-60%) + footer ONLY if user provided notice text.
 The poster must have visual identity: background texture, decorative elements, branded header.
 DO NOT make the calendar grid fill 100% of the image.
 DO NOT add any information the user did not provide (no clinic hours, no lunch time, no phone number unless user entered them).
@@ -51,7 +51,7 @@ Mobile readability: minimum body text 11pt, date numbers 14pt bold, title 24pt+.
       desc: "해바라기 일러스트 + 밝은 옐로 — 6~8월 여름", layoutHint: "cal_summer",
       aiPrompt: `[CRITICAL — THIS IS A POSTER, NOT A SPREADSHEET]
 This is a DESIGNED POSTER that contains a calendar section — NOT a calendar that fills the entire image.
-Structure: decorative header/frame (30-40%) + calendar grid (40-50%) + info footer (10-20%).
+Structure: decorative header/frame (30-40%) + calendar grid (50-60%) + footer ONLY if user provided notice text.
 The poster must have visual identity: background texture, decorative elements, branded header.
 DO NOT make the calendar grid fill 100% of the image.
 DO NOT add any information the user did not provide (no clinic hours, no lunch time, no phone number unless user entered them).
@@ -79,7 +79,7 @@ Mobile readability: minimum body text 11pt, date numbers 14pt bold, title 24pt+.
       desc: "수채화 단풍잎 + 오렌지 그라데이션 — 9~11월 가을", layoutHint: "cal_autumn",
       aiPrompt: `[CRITICAL — THIS IS A POSTER, NOT A SPREADSHEET]
 This is a DESIGNED POSTER that contains a calendar section — NOT a calendar that fills the entire image.
-Structure: decorative header/frame (30-40%) + calendar grid (40-50%) + info footer (10-20%).
+Structure: decorative header/frame (30-40%) + calendar grid (50-60%) + footer ONLY if user provided notice text.
 The poster must have visual identity: background texture, decorative elements, branded header.
 DO NOT make the calendar grid fill 100% of the image.
 DO NOT add any information the user did not provide (no clinic hours, no lunch time, no phone number unless user entered them).
@@ -107,7 +107,7 @@ Mobile readability: minimum body text 11pt, date numbers 14pt bold, title 24pt+.
       desc: "기하학적 눈 결정 패턴 + 아이시 블루 — 12~2월 겨울", layoutHint: "cal_winter",
       aiPrompt: `[CRITICAL — THIS IS A POSTER, NOT A SPREADSHEET]
 This is a DESIGNED POSTER that contains a calendar section — NOT a calendar that fills the entire image.
-Structure: decorative header/frame (30-40%) + calendar grid (40-50%) + info footer (10-20%).
+Structure: decorative header/frame (30-40%) + calendar grid (50-60%) + footer ONLY if user provided notice text.
 The poster must have visual identity: background texture, decorative elements, branded header.
 DO NOT make the calendar grid fill 100% of the image.
 DO NOT add any information the user did not provide (no clinic hours, no lunch time, no phone number unless user entered them).
@@ -127,11 +127,11 @@ Mobile readability: minimum body text 11pt, date numbers 14pt bold, title 24pt+.
       desc: "기와지붕 실루엣 + 전통 꽃살문양 — 한의원/명절", layoutHint: "cal_hanok",
       aiPrompt: `[CRITICAL — THIS IS A POSTER, NOT A SPREADSHEET]
 This is a DESIGNED POSTER that contains a calendar section — NOT a calendar that fills the entire image.
-Structure must be: decorative header/frame (30-40%) + calendar grid (60-70%). NO FOOTER SECTION.
+Structure must be: decorative header/frame (30-40%) + calendar grid (50-60%) + footer ONLY if user provided notice text.
 The poster must have visual identity: background texture, decorative elements, branded header, styled frame.
 The calendar grid is ONE ELEMENT inside the poster, not the whole image.
 DO NOT make the calendar grid fill 100% of the image.
-⛔ Do NOT create ANY footer area, empty box, blank section, or placeholder rectangle below the calendar. The image must END with the calendar grid. Nothing below it.
+⛔ If no footer text was provided by the user, do NOT draw any footer area, empty box, or blank rectangle below the calendar. End the poster cleanly after the calendar grid.
 Think of this as an Instagram-worthy hospital announcement poster that happens to show a monthly calendar.
 
 Korean hospital monthly schedule poster — Korean Traditional Hanok Style.
@@ -140,8 +140,7 @@ CALENDAR GRID: Warm brown (#92400e) text. Grid styled with traditional aesthetic
 MARKERS: Closed — deep red seal stamp style marker + "휴진" label below. Shortened — amber brush stroke accent + "단축" label below. Vacation — purple marker + "휴가" label below. ONLY mark the dates specified by the user.
 STRICT MODE ANCHORS: (1) Roof tile border decoration (2) Traditional pattern corners (3) Warm brown palette (4) Cream background (5) 꽃살 lattice motifs.
 INSPIRED MODE FREEDOM: (1) Traditional motif variety (2) Color warmth level (3) Pattern complexity.
-⛔ Do NOT add any information the user didn't provide — no business hours, lunch hours, phone numbers, addresses. Do NOT draw empty boxes or blank placeholder sections.
-⛔ ABSOLUTELY NO empty rectangles, blank rounded boxes, or placeholder areas at the bottom of the image. The poster must END cleanly after the calendar grid — no footer box, no info section, no blank area. If you draw an empty box at the bottom, this is a FAILURE.
+⛔ Do NOT add any information the user didn't provide — no business hours, lunch hours, phone numbers, addresses. Do NOT draw empty boxes or blank placeholder sections. If no notice text was provided, end the poster after the calendar grid with NO empty area below.
 Dignified traditional Korean aesthetic with warm readable typography.`,
     },
     {
@@ -149,7 +148,7 @@ Dignified traditional Korean aesthetic with warm readable typography.`,
       desc: "보자기 매듭 장식 + 금색 테두리 + 전통 색동 — 설날/추석", layoutHint: "cal_holiday",
       aiPrompt: `[CRITICAL — THIS IS A POSTER, NOT A SPREADSHEET]
 This is a DESIGNED POSTER that contains a calendar section — NOT a calendar that fills the entire image.
-Structure: decorative header/frame (30-40%) + calendar grid (40-50%) + info footer (10-20%).
+Structure: decorative header/frame (30-40%) + calendar grid (50-60%) + footer ONLY if user provided notice text.
 The poster must have visual identity: background texture, decorative elements, branded header.
 DO NOT make the calendar grid fill 100% of the image.
 DO NOT add any information the user did not provide (no clinic hours, no lunch time, no phone number unless user entered them).
@@ -169,7 +168,7 @@ Mobile readability: minimum body text 11pt, date numbers 14pt bold, title 24pt+.
       desc: "먹 번짐 효과 + 대나무/매화 수묵 일러스트 — 고급 한의원", layoutHint: "cal_inkwash",
       aiPrompt: `[CRITICAL — THIS IS A POSTER, NOT A SPREADSHEET]
 This is a DESIGNED POSTER that contains a calendar section — NOT a calendar that fills the entire image.
-Structure: decorative header/frame (30-40%) + calendar grid (40-50%) + info footer (10-20%).
+Structure: decorative header/frame (30-40%) + calendar grid (50-60%) + footer ONLY if user provided notice text.
 The poster must have visual identity: background texture, decorative elements, branded header.
 DO NOT make the calendar grid fill 100% of the image.
 DO NOT add any information the user did not provide (no clinic hours, no lunch time, no phone number unless user entered them).
@@ -189,7 +188,7 @@ Mobile readability: minimum body text 11pt, date numbers 14pt bold, title 24pt+.
       desc: "딥 네이비 배경 + 흰 플로팅 카드 + 골드 라인 — 대학/종합병원", layoutHint: "cal_navy",
       aiPrompt: `[CRITICAL — THIS IS A POSTER, NOT A SPREADSHEET]
 This is a DESIGNED POSTER that contains a calendar section — NOT a calendar that fills the entire image.
-Structure: decorative header/frame (30-40%) + calendar grid (40-50%) + info footer (10-20%).
+Structure: decorative header/frame (30-40%) + calendar grid (50-60%) + footer ONLY if user provided notice text.
 The poster must have visual identity: background texture, decorative elements, branded header.
 DO NOT make the calendar grid fill 100% of the image.
 DO NOT add any information the user did not provide (no clinic hours, no lunch time, no phone number unless user entered them).
@@ -209,7 +208,7 @@ Mobile readability: minimum body text 11pt, date numbers 14pt bold, title 24pt+.
       desc: "민트/세이지 그라데이션 + 잎사귀 일러스트 — 피부과/웰니스", layoutHint: "cal_mint",
       aiPrompt: `[CRITICAL — THIS IS A POSTER, NOT A SPREADSHEET]
 This is a DESIGNED POSTER that contains a calendar section — NOT a calendar that fills the entire image.
-Structure: decorative header/frame (30-40%) + calendar grid (40-50%) + info footer (10-20%).
+Structure: decorative header/frame (30-40%) + calendar grid (50-60%) + footer ONLY if user provided notice text.
 The poster must have visual identity: background texture, decorative elements, branded header.
 DO NOT make the calendar grid fill 100% of the image.
 DO NOT add any information the user did not provide (no clinic hours, no lunch time, no phone number unless user entered them).
@@ -229,7 +228,7 @@ Mobile readability: minimum body text 11pt, date numbers 14pt bold, title 24pt+.
       desc: "코랄→피치 그라데이션 + 라운드 카드 — 인스타그램 피드 스타일", layoutHint: "cal_sns",
       aiPrompt: `[CRITICAL — THIS IS A POSTER, NOT A SPREADSHEET]
 This is a DESIGNED POSTER that contains a calendar section — NOT a calendar that fills the entire image.
-Structure: decorative header/frame (30-40%) + calendar grid (40-50%) + info footer (10-20%).
+Structure: decorative header/frame (30-40%) + calendar grid (50-60%) + footer ONLY if user provided notice text.
 The poster must have visual identity: background texture, decorative elements, branded header.
 DO NOT make the calendar grid fill 100% of the image.
 DO NOT add any information the user did not provide (no clinic hours, no lunch time, no phone number unless user entered them).
@@ -249,7 +248,7 @@ Mobile readability: minimum body text 11pt, date numbers 14pt bold, title 24pt+.
       desc: "파스텔 무지개 + 구름/별 일러스트 — 소아과/소아치과", layoutHint: "cal_kids",
       aiPrompt: `[CRITICAL — THIS IS A POSTER, NOT A SPREADSHEET]
 This is a DESIGNED POSTER that contains a calendar section — NOT a calendar that fills the entire image.
-Structure: decorative header/frame (30-40%) + calendar grid (40-50%) + info footer (10-20%).
+Structure: decorative header/frame (30-40%) + calendar grid (50-60%) + footer ONLY if user provided notice text.
 The poster must have visual identity: background texture, decorative elements, branded header.
 DO NOT make the calendar grid fill 100% of the image.
 DO NOT add any information the user did not provide (no clinic hours, no lunch time, no phone number unless user entered them).
@@ -269,7 +268,7 @@ Mobile readability: minimum body text 11pt, date numbers 14pt bold, title 24pt+.
       desc: "리넨 질감 아이보리 + 골드 라인 포인트 — 피부과/성형외과 고급", layoutHint: "cal_premium",
       aiPrompt: `[CRITICAL — THIS IS A POSTER, NOT A SPREADSHEET]
 This is a DESIGNED POSTER that contains a calendar section — NOT a calendar that fills the entire image.
-Structure: decorative header/frame (30-40%) + calendar grid (40-50%) + info footer (10-20%).
+Structure: decorative header/frame (30-40%) + calendar grid (50-60%) + footer ONLY if user provided notice text.
 The poster must have visual identity: background texture, decorative elements, branded header.
 DO NOT make the calendar grid fill 100% of the image.
 DO NOT add any information the user did not provide (no clinic hours, no lunch time, no phone number unless user entered them).
