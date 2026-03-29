@@ -45,7 +45,7 @@ export default function ImagePage() {
   const [mode, setMode] = useState<'template' | 'free'>('template');
   const [prompt, setPrompt] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>('schedule');
-  const [aspectRatio, setAspectRatio] = useState<AspectRatio>('1:1');
+  const [aspectRatio, setAspectRatio] = useState<AspectRatio>('3:4');
   const [generating, setGenerating] = useState(false);
   const [progress, setProgress] = useState('');
   const [resultImages, setResultImages] = useState<string[]>([]);
