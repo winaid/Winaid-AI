@@ -329,158 +329,147 @@ Mobile readability: minimum body text 11pt, date numbers 14pt bold, title 24pt+.
 
   event: [
     {
-      id: "evt_gold_celebration", name: "골드 셀레브레이션", color: "#b8860b", accent: "#8b6914", bg: "#faf7f2",
-      desc: "아이보리 + 골드 타이포 + 미니멀 콘페티 — 개원/리뉴얼 축하", layoutHint: "celebration",
-      aiPrompt: `[CRITICAL — THIS IS A PREMIUM CELEBRATION POSTER]
-This must look like a luxury brand launch invitation, NOT a generic flyer.
-DO NOT add any information the user did not provide. DO NOT write placeholder hospital names.
+      id: "evt_gold_luxury", name: "골드 럭셔리", color: "#b8860b", accent: "#8b6914", bg: "#faf5ef",
+      desc: "메탈릭 골드 텍스처 + 크림 배경 — 고급스러운 프리미엄 스타일", layoutHint: "luxury",
+      aiPrompt: `[CRITICAL — THIS IS A PREMIUM DESIGNED POSTER, NOT A GENERIC FLYER]
+DO NOT add any information the user did not provide.
+DO NOT write any placeholder hospital name.
 
-Korean hospital grand opening celebration poster — Luxury Gold theme.
+Korean hospital event/promotion poster — Luxury Gold theme. Pure design style — works for ANY type of event.
 
-BACKGROUND: Rich cream (#faf5ef) base. Entire background covered with a subtle METALLIC GOLD SHIMMER effect — imagine brushed gold leaf texture at 5-8% opacity across the whole surface. At the top and bottom edges: soft gold (#d4a853) gradient fade (15% opacity) creating a warm glow frame effect. This is NOT random confetti dots — it is an elegant metallic texture.
+BACKGROUND: Rich cream (#faf5ef) base. Entire background covered with subtle METALLIC GOLD SHIMMER effect — brushed gold leaf texture at 5-8% opacity across the whole surface. At top and bottom edges: soft gold (#d4a853) gradient fade (15% opacity) creating warm glow frame. NOT random dots — elegant metallic texture.
 
-TYPOGRAPHY HERO (top 45%): The event title (user-provided, or "GRAND OPEN") in MASSIVE display typography — at least 60pt, weight 900, deep gold (#8B6914). Typography IS the decoration. Below title: thin gold line (1px, width 25%, centered). Below line: subtitle or hospital name in warm charcoal (#3c3228), 16pt, elegant spacing.
+TYPOGRAPHY HERO (top 45%): Event title (user-provided) in MASSIVE display typography — 60pt+, weight 900, deep gold (#8B6914). Typography IS the decoration. Below: thin gold line (1px, width 25%, centered). Below line: subtitle in warm charcoal (#3c3228), 16pt, elegant spacing.
 
-CONTENT CARD (middle 35%): Frosted white card (rounded 20px, backdrop-blur, border: 0.5px solid rgba(212,168,83,0.3)). Inside: event details in warm charcoal. ANY numbers (prices, percentages, dates) rendered in bold gold (#b8860b). Clean hierarchy with generous line spacing. NO bullet points — use elegant spacing instead.
+CONTENT CARD (middle 35%): Frosted white card (rounded 20px, backdrop-blur, border: 0.5px solid rgba(212,168,83,0.3)). Event details in warm charcoal. Numbers in bold gold (#b8860b). Clean hierarchy, generous line spacing. NO bullet points.
 
-SIGNATURE DETAIL: Two thin parallel gold lines (0.5px each, 4px gap) running horizontally across the full width — one at 30% from top, one at 75% from top.
+SIGNATURE DETAIL: Two thin parallel gold lines (0.5px each, 4px gap) at 30% and 75% from top — structural decoration replacing confetti.
 
-FOOTER (bottom 20%): Cream continues. Small warm charcoal text. Gold monogram-style hospital initial.
+FOOTER (bottom 20%): Cream continues. Small warm charcoal text.
 
-BANNED ELEMENTS: No confetti, no random dots, no scattered shapes, no ribbons, no balloons. Decoration comes ONLY from typography weight, gold lines, and metallic texture.
+BANNED: No confetti, no dots, no scattered shapes, no ribbons, no balloons. Decoration from typography weight, gold lines, metallic texture ONLY.
 
-STRICT ANCHORS: Metallic gold shimmer texture, massive display typography, parallel gold lines, frosted card, cream/gold/charcoal only palette, luxury brand aesthetic.
+STRICT ANCHORS: Metallic gold shimmer, massive display typography, parallel gold lines, frosted card, cream/gold/charcoal palette, luxury brand aesthetic.
 INSPIRED FREEDOM: Gold shade, shimmer intensity, line placement, card opacity.
-
-Mobile readability: title 48pt+, body 12pt+, prices 28pt+.`,
+Mobile readability: title 48pt+, body 12pt+.`,
     },
-
     {
-      id: "evt_navy_open", name: "모던 네이비 오픈", color: "#0f2444", accent: "#1e3a5f", bg: "#0f2444",
-      desc: "딥 네이비 + 흰 대형 타이포 + 골드 악센트 — 대학병원급 개원", layoutHint: "navy_open",
-      aiPrompt: `[CRITICAL — THIS IS A PREMIUM CORPORATE ANNOUNCEMENT]
-This must look like a top university hospital official announcement. NOT a generic poster.
-DO NOT add any information the user did not provide. DO NOT write placeholder hospital names.
+      id: "evt_deep_navy", name: "딥 네이비", color: "#0a1628", accent: "#1e3a5f", bg: "#0a1628",
+      desc: "다크 네이비 + 흰 대형 타이포 + 골드 라인 — 권위 있는 모던 스타일", layoutHint: "navy",
+      aiPrompt: `[CRITICAL — THIS IS A PREMIUM CORPORATE POSTER]
+DO NOT add any information the user did not provide.
+DO NOT write any placeholder hospital name.
 
-Korean hospital opening announcement poster — Premium Navy Corporate theme.
+Korean hospital event/promotion poster — Deep Navy Corporate theme. Pure design style — works for ANY type of event.
 
-BACKGROUND: Deep navy (#0a1628) filling entire image — darker than typical navy, almost black-navy. Single subtle spotlight effect: slightly lighter circle (#0f2444) at center (20% of image), creating depth like a stage light. NO patterns, NO textures — pure deep color with lighting.
+BACKGROUND: Deep navy (#0a1628) filling entire image — darker than typical navy, almost black-navy. Single subtle spotlight effect: slightly lighter circle (#0f2444) at center (20% of image), creating depth like stage light. NO patterns, NO textures — pure deep color with lighting.
 
-TYPOGRAPHY HERO (top 50%): Massive white (#ffffff) title — event name in 56pt+, weight 900, tight letter-spacing (-1px). This is the DOMINANT element — the title should feel like it is projected onto a dark screen. Below: single thin gold (#c9a96e) horizontal line (width 20%, centered, 1px). Below line: subtitle in sky blue (#7dd3fc), 14pt, letter-spacing +2px.
+TYPOGRAPHY HERO (top 50%): Massive white (#ffffff) title — 56pt+, weight 900, tight letter-spacing (-1px). Feels like projected onto a dark screen. Below: single thin gold (#c9a96e) horizontal line (width 20%, centered, 1px). Below line: subtitle in sky blue (#7dd3fc), 14pt, letter-spacing +2px.
 
-CONTENT AREA (middle 30%): NO card — text floats directly on navy. Event details in white, 14pt. Important numbers in gold (#c9a96e), bold. Dates in sky blue (#7dd3fc). Each line separated by generous spacing (24px+). Text is center-aligned, floating in dark space.
+CONTENT AREA (middle 30%): NO card — text floats directly on navy. Details in white, 14pt. Important numbers in gold (#c9a96e), bold. Dates in sky blue (#7dd3fc). Each line separated by generous spacing (24px+). Center-aligned, floating in dark space.
 
-BOTTOM EDGE (bottom 20%): Very subtle gold gradient line (height 1px, gold to transparent) at 80% from top. Hospital name in small sky blue at very bottom. Nothing else.
+BOTTOM EDGE (bottom 20%): Subtle gold gradient line (1px, gold to transparent) at 80%. Hospital name in small sky blue at very bottom. Nothing else.
 
-BANNED ELEMENTS: No white cards, no boxes, no frames, no borders, no decorations. The power is in DARKNESS + WHITE TYPOGRAPHY + NEGATIVE SPACE. Like a movie title sequence.
+BANNED: No white cards, no boxes, no frames, no borders. Power is in DARKNESS + WHITE TYPOGRAPHY + NEGATIVE SPACE. Like a movie title sequence.
 
 STRICT ANCHORS: Near-black navy, spotlight effect, massive white title, gold accent line, sky blue secondary, cinematic typography, extreme minimalism.
-INSPIRED FREEDOM: Spotlight position, navy darkness level, gold line placement, text alignment.
-
+INSPIRED FREEDOM: Spotlight position, navy darkness, gold line placement, text alignment.
 Mobile readability: title 44pt+, body 12pt+ (white on navy contrast 15:1+).`,
     },
-
     {
-      id: "evt_clean_sky", name: "클린 스카이", color: "#0284c7", accent: "#0369a1", bg: "#f0f9ff",
-      desc: "하늘색 그라데이션 + 의료 하트 아이콘 — 건강검진 프로모션", layoutHint: "sky",
-      aiPrompt: `[CRITICAL — THIS IS A CLEAN MEDICAL POSTER]
-Professional, trustworthy, approachable. Think premium hospital health check center.
-DO NOT add any information the user did not provide. DO NOT write placeholder hospital names.
+      id: "evt_sky_blue", name: "스카이 블루", color: "#3b82f6", accent: "#1e3a8a", bg: "#eff6ff",
+      desc: "하늘색 그라데이션 + 클린 카드 — 깔끔하고 신뢰감 있는 스타일", layoutHint: "sky",
+      aiPrompt: `[CRITICAL — THIS IS A CLEAN PROFESSIONAL POSTER]
+DO NOT add any information the user did not provide.
+DO NOT write any placeholder hospital name.
 
-Korean hospital health checkup promotion poster — Clean Sky Blue theme.
+Korean hospital event/promotion poster — Clean Sky Blue theme. Pure design style — works for ANY type of event.
 
-BACKGROUND: Smooth vertical gradient — medium blue (#3b82f6) at very top (10%) transitioning through sky blue (#7dd3fc) to very light blue (#eff6ff) at 40%, then to pure white (#ffffff) at bottom. The gradient is SMOOTH like a winter morning sky. NO clouds, NO patterns, NO textures.
+BACKGROUND: Smooth vertical gradient — medium blue (#3b82f6) at very top (10%) through sky blue (#7dd3fc) to very light blue (#eff6ff) at 40%, then to pure white at bottom. SMOOTH like clear morning sky. NO clouds, NO patterns.
 
-SINGLE ICON: At the top-right area, ONE simple geometric plus-sign (+) in white, 25% opacity, medium size. Clean, geometric, medical. This is the ONLY non-text visual element.
+SINGLE ICON: Top-right area, ONE simple geometric plus-sign (+) in white, 25% opacity, medium size. ONLY non-text visual element.
 
-TITLE AREA (top 35%): On the blue gradient area. Bold white title (32pt+, weight 800) — user-provided title or event name. Hospital name in light blue (#bfdbfe), small, above title.
+TITLE AREA (top 35%): Bold white title (32pt+, weight 800) on blue gradient. Hospital name in light blue (#bfdbfe), small, above title.
 
-CONTENT AREA (middle 40%): As the gradient reaches white, content appears in deep blue (#1e3a8a) text. Clean typography, generous spacing. If there are checkup items: simple list with thin blue (#93c5fd) left-border accent (2px) per item — NOT bullet points. Prices in bold deep blue.
+CONTENT AREA (middle 40%): As gradient reaches white, content in deep blue (#1e3a8a) text. Generous spacing. List items with thin blue (#93c5fd) left-border accent (2px) — NOT bullet points. Numbers in bold deep blue.
 
-FOOTER (bottom 25%): Pure white. Contact or period info in medium blue (#3b82f6), small. Thin blue line (1px, #93c5fd) as divider.
+FOOTER (bottom 25%): Pure white. Info in medium blue (#3b82f6), small. Thin blue line (1px, #93c5fd) divider.
 
-BANNED ELEMENTS: No hearts, no pulse lines, no stethoscopes, no medical illustrations. The blue gradient IS the medical trust signal.
+BANNED: No hearts, no pulse lines, no stethoscopes, no medical illustrations. Blue gradient IS the trust signal.
 
-STRICT ANCHORS: Blue-to-white smooth gradient, single plus icon, white-on-blue title, deep blue body text, left-border accent list style, zero clutter.
-INSPIRED FREEDOM: Blue shade range, plus icon size/position, gradient transition speed.
-
+STRICT ANCHORS: Blue-to-white smooth gradient, single plus icon, white-on-blue title, deep blue body text, left-border list style, zero clutter.
+INSPIRED FREEDOM: Blue shade range, plus icon size/position, gradient speed.
 Mobile readability: title 28pt+, body 12pt+.`,
     },
-
     {
-      id: "evt_green_wellness", name: "그린 웰니스", color: "#16a34a", accent: "#15803d", bg: "#f0fdf4",
-      desc: "세이지 그린 + 잎 실루엣 + 체크마크 — 건강검진 웰니스", layoutHint: "wellness",
-      aiPrompt: `[CRITICAL — THIS IS A WELLNESS POSTER]
-Natural, calming, premium. Think Aesop store interior aesthetic applied to healthcare.
-DO NOT add any information the user did not provide. DO NOT write placeholder hospital names.
+      id: "evt_sage_botanical", name: "세이지 보태니컬", color: "#16a34a", accent: "#14532d", bg: "#f0fdf4",
+      desc: "세이지 워터컬러 + 유칼립투스 실루엣 — 자연스럽고 차분한 스타일", layoutHint: "botanical",
+      aiPrompt: `[CRITICAL — THIS IS A PREMIUM WELLNESS-MOOD POSTER]
+DO NOT add any information the user did not provide.
+DO NOT write any placeholder hospital name.
 
-Korean hospital health checkup promotion poster — Green Wellness theme.
+Korean hospital event/promotion poster — Sage Botanical theme. Pure design style — works for ANY type of event.
 
-BACKGROUND: Soft sage (#f0fdf4) filling entire image. Very subtle watercolor wash effect — lighter (#ecfdf5) and slightly darker (#dcfce7) sage areas blending organically, like watercolor paper. At bottom-right corner: a single eucalyptus branch silhouette in sage green (#86efac) at 10-15% opacity, reaching about 25% into the image. Elegant, minimal botanical presence.
+BACKGROUND: Soft sage (#f0fdf4) filling entire image. Subtle watercolor wash — lighter (#ecfdf5) and darker (#dcfce7) sage areas blending organically. At bottom-right corner: single eucalyptus branch silhouette in sage green (#86efac) at 10-15% opacity, reaching about 25% into image.
 
-TYPOGRAPHY (top 40%): Dark forest green (#14532d) title — bold, 32pt+, modern sans-serif. Below: thin emerald (#10b981) line (1px, width 20%). Below line: subtitle or hospital name in medium green (#16a34a), 14pt.
+TYPOGRAPHY (top 40%): Dark forest green (#14532d) title — bold, 32pt+, modern sans-serif. Below: thin emerald (#10b981) line (1px, width 20%). Below: subtitle in medium green (#16a34a), 14pt.
 
-CONTENT AREA (middle 40%): Clean white card (rounded 16px, very soft shadow, border: 1px solid #dcfce7). Inside: dark green text. Items separated by thin sage lines. Numbers in bold emerald (#059669). Generous padding inside card (24px+).
+CONTENT AREA (middle 40%): White card (rounded 16px, soft shadow, border: 1px solid #dcfce7). Dark green text inside. Sections separated by thin sage lines. Numbers in bold emerald (#059669). Generous padding (24px+).
 
 FOOTER (bottom 20%): Sage continues. Small dark green text. Thin emerald line above.
 
-BANNED ELEMENTS: No check marks, no checklists, no leaf illustrations (only the one silhouette). The botanical presence is MINIMAL — one branch.
+BANNED: No check marks, no checklists, no leaf illustrations except the ONE silhouette. Botanical presence is MINIMAL.
 
-STRICT ANCHORS: Sage watercolor wash, single eucalyptus silhouette, dark green typography, white content card, emerald accents, organic minimal wellness mood.
-INSPIRED FREEDOM: Watercolor intensity, branch type (eucalyptus/olive/fern), green shade range.
-
+STRICT ANCHORS: Sage watercolor wash, single eucalyptus silhouette, dark green typography, white card, emerald accents, organic minimal mood.
+INSPIRED FREEDOM: Watercolor intensity, branch type, green shade range.
 Mobile readability: title 28pt+, body 12pt+.`,
     },
-
     {
-      id: "evt_summer_cool", name: "써머 쿨", color: "#0ea5e9", accent: "#0284c7", bg: "#f0f9ff",
-      desc: "시원한 블루 그라데이션 + 물결 패턴 — 여름 시즌 할인", layoutHint: "summer",
-      aiPrompt: `[CRITICAL — THIS IS A PREMIUM SEASONAL POSTER]
-Refreshing and sophisticated, NOT a beach party flyer. Think luxury resort spa promotion.
-DO NOT add any information the user did not provide. DO NOT write placeholder hospital names.
+      id: "evt_ocean_cool", name: "오션 쿨", color: "#0ea5e9", accent: "#0e7490", bg: "#ecfeff",
+      desc: "틸→시안 그라데이션 + 물결 패턴 — 시원하고 세련된 스타일", layoutHint: "ocean",
+      aiPrompt: `[CRITICAL — THIS IS A PREMIUM POSTER, NOT A BEACH FLYER]
+DO NOT add any information the user did not provide.
+DO NOT write any placeholder hospital name.
 
-Korean hospital summer season promotion poster — Summer Cool Blue theme.
+Korean hospital event/promotion poster — Ocean Cool theme. Pure design style — works for ANY type of event.
 
-BACKGROUND: Deep-to-light blue gradient filling entire image — deep teal (#0e7490) at top corners fading through cerulean (#0ea5e9) to light cyan (#cffafe) at center-bottom. Across the ENTIRE background: very subtle flowing wave lines (smooth sine curves, 3-4 waves) in lighter blue (#67e8f9) at 6-10% opacity. Waves flow horizontally, organic and smooth — like calm ocean currents, NOT cartoon waves.
+BACKGROUND: Deep-to-light blue gradient — deep teal (#0e7490) at top corners through cerulean (#0ea5e9) to light cyan (#cffafe) at center-bottom. Across ENTIRE background: subtle flowing wave lines (smooth sine curves, 3-4 waves) in lighter blue (#67e8f9) at 6-10% opacity. Smooth and elegant, NOT cartoon waves.
 
-TYPOGRAPHY HERO (top 40%): Bold white title (36pt+, weight 900) — user-provided title or event name. Below: thin white line (1px, width 15%). Below: subtitle in light cyan (#a5f3fc), 14pt.
+TYPOGRAPHY HERO (top 40%): Bold white title (36pt+, weight 900). Below: thin white line (1px, width 15%). Below: subtitle in light cyan (#a5f3fc), 14pt.
 
-CONTENT AREA (middle 35%): Frosted white card (rounded 16px, backdrop-blur effect, 88% opacity). Inside: dark teal (#134e4a) text. Discount numbers in bold cerulean (#0891b2). Period with cyan accent.
+CONTENT AREA (middle 35%): Frosted white card (rounded 16px, backdrop-blur, 88% opacity). Dark teal (#134e4a) text inside. Numbers in bold cerulean (#0891b2).
 
-FOOTER (bottom 25%): Gradient continues to lighter blue. Small teal text on light background.
+FOOTER (bottom 25%): Gradient continues lighter. Small teal text.
 
-ACCENT: 2-3 very small sparkle marks in white at 10% opacity, scattered subtly. No other decoration.
+ACCENT: 2-3 very small sparkle marks in white at 10% opacity. No other decoration.
 
-BANNED ELEMENTS: No sun, no beach, no palm trees, no ice cream. The blue gradient is the summer signal.
+BANNED: No sun, no beach, no palm trees, no ice cream. Blue gradient is the mood signal.
 
-STRICT ANCHORS: Teal-to-cyan gradient, subtle wave line pattern, frosted card, white bold title, sparkle accents, sophisticated cool mood.
-INSPIRED FREEDOM: Blue/teal shade range, wave line count, card opacity, sparkle count.
-
+STRICT ANCHORS: Teal-to-cyan gradient, subtle wave lines, frosted card, white bold title, sparkle accents, sophisticated cool mood.
+INSPIRED FREEDOM: Blue/teal range, wave count, card opacity, sparkle count.
 Mobile readability: title 32pt+, body 12pt+.`,
     },
-
     {
-      id: "evt_winter_warm", name: "윈터 웜", color: "#dc2626", accent: "#b91c1c", bg: "#fef2f2",
-      desc: "따뜻한 크림→코랄 그라데이션 + 눈꽃 패턴 — 겨울 시즌 할인", layoutHint: "winter",
-      aiPrompt: `[CRITICAL — THIS IS A PREMIUM SEASONAL POSTER]
-Warm and inviting, NOT a Christmas card. Think luxury department store winter sale.
-DO NOT add any information the user did not provide. DO NOT write placeholder hospital names.
+      id: "evt_blush_warm", name: "블러시 웜", color: "#881337", accent: "#9f1239", bg: "#fef7ed",
+      desc: "샴페인→블러시 그라데이션 + 기하학 눈꽃 — 따뜻하고 우아한 스타일", layoutHint: "warm",
+      aiPrompt: `[CRITICAL — THIS IS A PREMIUM POSTER, NOT A CHRISTMAS CARD]
+DO NOT add any information the user did not provide.
+DO NOT write any placeholder hospital name.
 
-Korean hospital winter season promotion poster — Winter Warm theme.
+Korean hospital event/promotion poster — Blush Warm theme. Pure design style — works for ANY type of event.
 
-BACKGROUND: Warm gradient filling entire image — soft champagne (#fef3c7) at top through blush pink (#fce7f3) at middle to warm cream (#fefce8) at bottom. Across the ENTIRE background: geometric snowflake crystals (hexagonal, precise, NOT cartoon) in white at 6-10% opacity, various sizes (small to medium), scattered evenly. The snowflakes are GEOMETRIC and ELEGANT — like a luxury winter window display.
+BACKGROUND: Warm gradient — soft champagne (#fef3c7) at top through blush pink (#fce7f3) at middle to warm cream (#fefce8) at bottom. Across ENTIRE background: geometric snowflake crystals (hexagonal, precise, NOT cartoon) in white at 6-10% opacity, various sizes. GEOMETRIC and ELEGANT.
 
-TYPOGRAPHY HERO (top 40%): Deep wine red (#881337) title — bold, 36pt+, modern sans-serif with slight serif accent. User-provided title or event name. Below: thin rose-gold (#b76e79) line (1px, width 20%). Below: subtitle in warm brown (#78350f), 14pt.
+TYPOGRAPHY HERO (top 40%): Deep wine red (#881337) title — bold, 36pt+, modern sans-serif with slight serif accent. Below: thin rose-gold (#b76e79) line (1px, width 20%). Below: subtitle in warm brown (#78350f), 14pt.
 
-CONTENT AREA (middle 35%): White card (rounded 16px, warm shadow with pink tint rgba(252,231,243,0.5)). Inside: warm brown text. Discount numbers in bold wine (#9f1239). Period in rose accent.
+CONTENT AREA (middle 35%): White card (rounded 16px, warm shadow rgba(252,231,243,0.5)). Warm brown text inside. Numbers in bold wine (#9f1239).
 
 FOOTER (bottom 25%): Warm gradient continues. Small warm brown text. Rose-gold line above.
 
-BANNED ELEMENTS: No scarves, no mugs, no mittens, no Christmas trees, no Santa. The geometric snowflakes + warm gradient is the winter signal.
+BANNED: No scarves, no mugs, no mittens, no Christmas trees, no Santa. Geometric snowflakes + warm gradient is the mood signal.
 
-STRICT ANCHORS: Champagne-to-blush warm gradient, geometric snowflake crystals, wine red typography, rose-gold accents, white content card, luxury warm mood.
-INSPIRED FREEDOM: Gradient warmth, snowflake geometric style, wine red shade, card treatment.
-
+STRICT ANCHORS: Champagne-to-blush gradient, geometric snowflake crystals, wine red typography, rose-gold accents, white card, luxury warm mood.
+INSPIRED FREEDOM: Gradient warmth, snowflake style, wine red shade, card treatment.
 Mobile readability: title 32pt+, body 12pt+.`,
     },
   ],
