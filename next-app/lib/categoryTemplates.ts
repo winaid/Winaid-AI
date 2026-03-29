@@ -127,11 +127,11 @@ Mobile readability: minimum body text 11pt, date numbers 14pt bold, title 24pt+.
       desc: "기와지붕 실루엣 + 전통 꽃살문양 — 한의원/명절", layoutHint: "cal_hanok",
       aiPrompt: `[CRITICAL — THIS IS A POSTER, NOT A SPREADSHEET]
 This is a DESIGNED POSTER that contains a calendar section — NOT a calendar that fills the entire image.
-Structure must be: decorative header/frame (30-40%) + calendar grid (50-60%) + optional thin decorative footer line (0-5%).
+Structure must be: decorative header/frame (30-40%) + calendar grid (60-70%). NO FOOTER SECTION.
 The poster must have visual identity: background texture, decorative elements, branded header, styled frame.
 The calendar grid is ONE ELEMENT inside the poster, not the whole image.
 DO NOT make the calendar grid fill 100% of the image.
-⛔ Do NOT create empty footer boxes, blank info sections, or placeholder rectangles. If no footer content was provided, simply end the poster with the calendar grid or a thin decorative line.
+⛔ Do NOT create ANY footer area, empty box, blank section, or placeholder rectangle below the calendar. The image must END with the calendar grid. Nothing below it.
 Think of this as an Instagram-worthy hospital announcement poster that happens to show a monthly calendar.
 
 Korean hospital monthly schedule poster — Korean Traditional Hanok Style.
@@ -141,6 +141,7 @@ MARKERS: Closed — deep red seal stamp style marker + "휴진" label below. Sho
 STRICT MODE ANCHORS: (1) Roof tile border decoration (2) Traditional pattern corners (3) Warm brown palette (4) Cream background (5) 꽃살 lattice motifs.
 INSPIRED MODE FREEDOM: (1) Traditional motif variety (2) Color warmth level (3) Pattern complexity.
 ⛔ Do NOT add any information the user didn't provide — no business hours, lunch hours, phone numbers, addresses. Do NOT draw empty boxes or blank placeholder sections.
+⛔ ABSOLUTELY NO empty rectangles, blank rounded boxes, or placeholder areas at the bottom of the image. The poster must END cleanly after the calendar grid — no footer box, no info section, no blank area. If you draw an empty box at the bottom, this is a FAILURE.
 Dignified traditional Korean aesthetic with warm readable typography.`,
     },
     {
