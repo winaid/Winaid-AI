@@ -1584,7 +1584,7 @@ Add subtle professional touches: refined gradients, elegant typography, clean wh
                                   <button key={t.value} type="button" onClick={() => setCalendarTheme(t.value)}
                                     className={`group relative rounded-2xl overflow-hidden transition-all duration-200 ${isSelected ? 'shadow-xl ring-2 ring-offset-2' : 'shadow-sm hover:shadow-md border border-slate-200/80'}`}
                                     style={isSelected ? { '--tw-ring-color': t.groupColor } as React.CSSProperties : undefined}>
-                                    <div className="relative" style={{ aspectRatio: '3/4' }}>
+                                    <div className="relative" style={{ aspectRatio: '1/1' }}>
                                       <CalendarThemePreview themeValue={t.value} groupColor={t.groupColor} />
                                       {isSelected && (
                                         <div className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full flex items-center justify-center shadow-lg" style={{ backgroundColor: t.groupColor }}>
