@@ -11,7 +11,7 @@ import { supabase } from '../../../lib/supabase';
 import { PromptChat } from '../../../components/PromptChat';
 import type { CategoryTemplate } from '../../../lib/categoryTemplateTypes';
 import { TemplateSVGPreview } from '../../../components/TemplatePreviews';
-import { CalendarThemePreview } from '../../../components/CalendarPreviews';
+import { CalendarThemePreview, ThemePreview } from '../../../components/CalendarPreviews';
 
 type AspectRatio = '1:1' | '16:9' | '3:4' | '9:16' | 'auto';
 type DayMark = 'closed' | 'shortened' | 'vacation';
@@ -1710,9 +1710,9 @@ The DESIGN must be VISUALLY IDENTICAL to the reference image.`;
                             }`}
                             style={isSelected ? { '--tw-ring-color': tmpl.color } as React.CSSProperties : undefined}
                           >
-                            {/* OLD parity: TemplateSVGPreview로 카테고리별 레이아웃 프리뷰 */}
-                            <div className="relative w-full overflow-hidden" style={{ aspectRatio: '3/4', background: tmpl.previewImage ? '#f8fafc' : `linear-gradient(160deg, ${tmpl.bg} 0%, white 80%)` }}>
-                              <TemplateSVGPreview template={tmpl} category={selectedTemplate || 'event'} hospitalName={hospitalName || 'OO병원'} />
+                            {/* 카테고리별 프리뷰 이미지 또는 SVG fallback */}
+                            <div className="relative w-full overflow-hidden" style={{ aspectRatio: '3/4' }}>
+                              <ThemePreview themeValue={tmpl.id} category={selectedTemplate || 'event'} groupColor={tmpl.color} label={tmpl.name} size="sm" />
                               {/* 스타일 태그 뱃지 */}
                               <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-md text-[8px] font-bold shadow-sm" style={{ backgroundColor: tmpl.color, color: 'white' }}>
                                 {tmpl.layoutHint === 'price' || tmpl.layoutHint === 'table' ? '가격형'
