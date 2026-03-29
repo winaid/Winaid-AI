@@ -2418,170 +2418,197 @@ MOBILE: On narrow screens, columns can stack vertically (DO on top, DON'T below)
   // 색상: 화이트+다크그레이/네이비(가장 보편적), 베이지/크림(프리미엄)
   pricing: [
     {
-      id: 'prc_clean_table', name: '클린 테이블 표준형', color: '#3b82f6', accent: '#2563eb', bg: '#eff6ff',
-      desc: '블루 헤더 + 줄무늬 행 테이블 — 의료법 제45조 준수 비급여 진료비 표준 공시표',
-      layoutHint: 'table',
-      aiPrompt: `CLEAN TABLE STANDARD — the most common Korean hospital fee schedule format. Compliant with 의료법 제45조 (비급여 진료비 투명 공개 의무). Treatment name LEFT, price RIGHT alignment.
+      id: "prc_clean_table", name: "클린 테이블", color: "#374151", accent: "#6366f1", bg: "#ffffff",
+      desc: "순백 + 깔끔한 테이블 + 인디고 헤더 — 미니멀 가격표", layoutHint: "table",
+      aiPrompt: `[CRITICAL — THIS IS A PREMIUM PRICE LIST POSTER]
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. Leave areas blank or use only user-provided text.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- ONLY use text the user explicitly provided.
 
-BACKGROUND: White (#ffffff) full bleed.
-ZONE 1 — HEADER (top 15%): Full-width horizontal bar in blue (#3b82f6), 56px height. "비급여 진료비 안내" in bold white text (22px, weight 700) centered. Hospital name "병원명" in smaller white text (12px, weight 400) above title within the bar.
-ZONE 2 — TABLE BODY (middle 65%): Full-width table layout. Rows alternate white and light blue (#eff6ff at 50%). Each row (height 48px, padding 12-16px):
-- LEFT: Treatment name in dark text (#1e293b, 14px, weight 500), left-aligned with 6% left margin.
-- RIGHT: Price in bold blue (#2563eb, 15px, weight 700) right-aligned with 6% right margin, "원" suffix.
-Thin gray (#e2e8f0, 1px) horizontal lines between rows.
-CATEGORY HEADERS: Category name rows (e.g., "임플란트", "보톡스/필러", "레이저") span full width with slightly darker blue-gray (#dbeafe) background, bold text (#1e3a8a, 13px, weight 600).
-Example rows:
-- Category: "임플란트"
-  - "오스템 임플란트 (1개)" | "1,200,000원"
-  - "스트라우만 임플란트 (1개)" | "1,800,000원"
-- Category: "보톡스"
-  - "이마 보톡스 (50단위)" | "150,000원"
-  - "사각턱 보톡스 (50단위)" | "200,000원"
-ZONE 3 — FOOTER (bottom 20%): Thin gray line (#e2e8f0, 1px) separator. Small gray text (#94a3b8, 11px):
-- "※ 상기 금액은 부가세(VAT) 포함 금액입니다"
-- "※ 시술 범위 및 재료에 따라 달라질 수 있습니다"
-- "최종 수정일: YYYY.MM.DD"
-Hospital name and phone "☎ 02-000-0000" in small text.
+Korean hospital non-covered medical fee price list poster — CLEAN TABLE style.
 
-STRICT MODE ANCHORS: Blue header bar, alternating-row table with left-name/right-price alignment, category group headers, footer with VAT and date. Table structure is essential.
-INSPIRED MODE FREEDOM: Number of categories/items, price values, category names, row height, stripe color intensity, footer disclaimer text.
-MOBILE: Treatment name minimum 13px. Price minimum 14px. Row height minimum 44px for touch. Category headers clearly distinguishable from item rows.`,
+VISUAL STRUCTURE:
+BACKGROUND: Pure white (#ffffff). Clean, minimal.
+
+HEADER (top 20%): Indigo (#6366f1) solid rounded rectangle (rounded 12px) spanning 85% width, centered. Inside: title in bold white text (36pt+). Hospital name small white above.
+
+TABLE AREA (middle 65%): Clean price table on white.
+- Header row: light indigo (#eef2ff) background, bold dark text
+- Each row: thin gray line (1px, #e5e7eb) separator
+- Item LEFT in dark gray (#374151), price RIGHT in bold dark (#111827)
+- Alternating rows: white and very light gray (#f9fafb)
+- Generous row height (40px+)
+- Looks like premium restaurant menu
+
+FOOTER (bottom 15%): Small gray text. Thin indigo line above.
+
+THE STRUCTURED TABLE WITH HEADER ROW IS MANDATORY.
+
+STRICT ANCHORS: Indigo header block, clean structured table, alternating rows, bold prices right-aligned, minimal white.
+Mobile readability: header 32pt+, table text 14pt+, prices 16pt+ bold.`,
     },
     {
-      id: 'prc_card_grid', name: '카테고리 카드형', color: '#10b981', accent: '#059669', bg: '#ecfdf5',
-      desc: '2열 카테고리별 카드 그리드 — 진료 항목별로 묶은 치과/피부과 비급여 가격표',
-      layoutHint: 'cards',
-      aiPrompt: `CATEGORY CARD GRID — organized by treatment category in a 2-column card layout. Each card groups related treatments. Clean, organized dental/dermatology clinic style.
+      id: "prc_dark_premium", name: "다크 프리미엄", color: "#0f172a", accent: "#d4a853", bg: "#0f172a",
+      desc: "블랙 배경 + 골드 가격 — 럭셔리 가격표", layoutHint: "dark",
+      aiPrompt: `[CRITICAL — THIS IS A PREMIUM PRICE LIST POSTER]
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. Leave areas blank or use only user-provided text.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- ONLY use text the user explicitly provided.
 
-BACKGROUND: Very light mint (#f0fdf9) full bleed.
-ZONE 1 — HEADER (top 12%): Hospital name "병원명" in smaller dark text (#374151, 12px) centered at top. "비급여 진료비 안내" in bold teal (#059669, 22px) text centered below. Thin teal line (#10b981, 1px, 40% width) centered as divider.
-ZONE 2 — CARD GRID (middle 68%): 2-column grid of category cards, centered, 14px gap. Each card represents one treatment category.
-CARD DESIGN: White rounded rectangle (46% width, auto height, 12px radius, subtle shadow). Card header: category name in bold white text (14px) on a teal (#10b981) background strip (full card width, 36px height, 12px top radius). Card body (padding 14px): 2-4 treatment items listed vertically. Each item row:
-- Treatment name on left in dark text (#374151, 13px)
-- Price on right in bold teal (#059669, 14px, weight 700) with "원" suffix
-Thin light gray (#e5e7eb, 1px) lines between items.
-Cards:
-- Card 1: "임플란트" — "오스템 (1개) | 1,200,000원", "스트라우만 (1개) | 1,800,000원"
-- Card 2: "보톡스" — "이마 (50u) | 150,000원", "사각턱 (50u) | 200,000원"
-- Card 3: "필러" — "팔자필러 (1cc) | 300,000원", "턱끝필러 (1cc) | 350,000원"
-- Card 4: "레이저" — "IPL (1회) | 100,000원", "프락셀 (1회) | 250,000원"
-- Card 5: "스케일링" — "일반 스케일링 | 50,000원"
-- Card 6: "미백" — "전문 미백 (상·하) | 300,000원"
-ZONE 3 — FOOTER (bottom 20%): Small gray text (#6b7280, 11px) centered: "※ VAT 포함 / 시술 범위에 따라 변동 가능 / 최종 수정일: YYYY.MM.DD". Hospital contact in small text.
+Korean hospital non-covered medical fee price list poster — DARK LUXURY style. Like a 5-star hotel room service menu.
 
-STRICT MODE ANCHORS: 2-column card grid, teal header strip per card, treatment-name-left/price-right within each card. Card-based grouping is the defining structure.
-INSPIRED MODE FREEDOM: Card count (4-8), items per card (1-4), category names, price values, card dimensions, shadow intensity, additional icons per category.
-MOBILE: Cards reflow to single column. Card minimum width 280px. Treatment text minimum 12px. Price text minimum 13px.`,
+VISUAL STRUCTURE:
+BACKGROUND: Deep navy-black (#0f172a). Subtle dark texture (leather or linen) at 5% opacity.
+
+GOLD FRAME: Thin gold (#d4a853) double-line rectangular frame (outer 1px, inner 0.5px, 3px gap) inset 4% from edges. Gold corner bracket ornaments.
+
+INSIDE FRAME:
+- Top: title in bold gold (#d4a853) serif text (34pt+). Small diamond accent.
+- Below title: thin gold line
+
+PRICE LIST:
+- Each item: name in white (#e2e8f0) LEFT, dotted gold leader line in middle, price in bold gold RIGHT
+- Items separated by generous spacing (24px+)
+- The dotted leader line connecting name to price is THE signature element
+- 6-8 items max
+
+BOTTOM: Small gold text for hospital name.
+
+THE GOLD FRAME AND DOTTED LEADER LINES ARE MANDATORY.
+
+STRICT ANCHORS: Dark background, gold double frame, white names, gold prices, dotted leader lines, luxury menu.
+Mobile readability: title 30pt+, items 14pt+, prices 16pt+ bold.`,
     },
     {
-      id: 'prc_premium_dark', name: '프리미엄 다크', color: '#1e293b', accent: '#f59e0b', bg: '#0f172a',
-      desc: '다크 네이비 + 골드 가격 — 프리미엄 피부과·성형외과 고급 비급여 가격표',
-      layoutHint: 'dark',
-      aiPrompt: `PREMIUM DARK — dark navy background with gold accents for upscale aesthetic clinics. Luxury through restraint. Treatment name LEFT in white, price RIGHT in gold.
+      id: "prc_soft_card", name: "소프트 카드", color: "#7c3aed", accent: "#a78bfa", bg: "#f5f3ff",
+      desc: "각 항목이 둥근 카드로 분리 + 파스텔 — 카드형 가격표", layoutHint: "card",
+      aiPrompt: `[CRITICAL — THIS IS A PREMIUM PRICE LIST POSTER]
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. Leave areas blank or use only user-provided text.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- ONLY use text the user explicitly provided.
 
-BACKGROUND: Dark navy (#0f172a) full bleed.
-ZONE 1 — BORDER + HEADER (top 18%): Subtle gold (#f59e0b at 60%) double-line border around entire canvas — outer line 2px, inner line 1px, 6px gap. Hospital name "병원명" in smaller white text (#f1f5f9, 11px, letter-spacing 3px) centered at top. "비급여 진료비 안내" in gold (#f59e0b, 20px, weight 700) bold text centered below.
-ZONE 2 — PRICE LIST (middle 60%): Vertically stacked treatment items with generous spacing (20px between rows).
-CATEGORY HEADERS: Category name (e.g., "보톡스/필러", "레이저/리프팅", "피부관리") in small uppercase gold text (#f59e0b, 11px, letter-spacing 2px). Short gold line (40px, 1px) below category name.
-ITEM ROWS: Treatment name in white (#f1f5f9, 14px, weight 400) left-aligned. Price in bold gold (#f59e0b, 15px, weight 700) right-aligned with "원" suffix. Thin gold separator lines (1px, 20% opacity) between items.
-Example items:
-- Category: "보톡스"
-  - "이마 보톡스 (50단위)" | "150,000원"
-  - "사각턱 보톡스 (50단위)" | "200,000원"
-- Category: "필러"
-  - "팔자 필러 (1cc)" | "300,000원"
-  - "볼 필러 (1cc)" | "350,000원"
-- Category: "레이저"
-  - "제네시스 (1회)" | "100,000원"
-  - "울쎄라 (전체)" | "2,500,000원"
-ZONE 3 — FOOTER (bottom 22%): Thin gold line (80% width, centered, 1px). Small white text (#f1f5f9 at 50%, 10px): "※ VAT 포함 / 시술 범위에 따라 변동 가능". "최종 수정일: YYYY.MM.DD" in same style. Hospital phone in tiny gold text (10px).
+Korean hospital non-covered medical fee price list poster — SOFT CARD style. Each item is its own card.
 
-STRICT MODE ANCHORS: Dark navy background, gold double-border frame, gold category headers with short underline, white-name/gold-price row layout. Dark-on-gold contrast is essential.
-INSPIRED MODE FREEDOM: Category count, item count, border style (single vs double), gold opacity variations, spacing, additional decorative gold elements (corner ornaments).
-MOBILE: Treatment name minimum 13px. Price minimum 14px. Row spacing minimum 16px. Gold lines minimum 30% opacity for visibility on dark background.`,
+VISUAL STRUCTURE:
+BACKGROUND: Soft lavender (#f5f3ff) to white gradient.
+
+HEADER (top 15%): Title in bold violet (#5b21b6) text (34pt+). Small sparkle accent.
+
+CARD GRID (middle 75%): Each price item is a separate WHITE ROUNDED CARD (rounded 16px, soft shadow, border: 1px solid #ede9fe). Cards in 2-column grid or single column.
+- Inside each card: treatment name in violet (#5b21b6) bold (16pt), price in large bold dark (#111827, 22pt) below
+- Generous padding (16px+)
+- Tiny violet accent dot at top-left corner
+- 4-6 cards total
+
+FOOTER (bottom 10%): Small violet text.
+
+THE INDIVIDUAL ROUNDED CARDS FOR EACH ITEM ARE MANDATORY.
+
+STRICT ANCHORS: Lavender gradient, individual white rounded cards, violet accents, card grid layout, modern friendly.
+Mobile readability: title 30pt+, item names 14pt+, prices 20pt+ bold.`,
     },
     {
-      id: 'prc_warm_wood', name: '카페 메뉴판형', color: '#92400e', accent: '#d97706', bg: '#fffbeb',
-      desc: '크림 배경 + 도트 리더 연결선 — 카페 메뉴판 느낌의 따뜻한 동네 의원 가격표',
-      layoutHint: 'wood',
-      aiPrompt: `CAFE MENU BOARD — warm cream background styled like a cafe menu board. Dot-leader lines connect treatment names to prices. Approachable neighborhood clinic feel.
+      id: "prc_blue_medical", name: "블루 메디컬", color: "#1e40af", accent: "#3b82f6", bg: "#eff6ff",
+      desc: "블루 헤더 + 흰 테이블 + 체크 아이콘 — 공식 수가표", layoutHint: "medical",
+      aiPrompt: `[CRITICAL — THIS IS A PREMIUM PRICE LIST POSTER]
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. Leave areas blank or use only user-provided text.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- ONLY use text the user explicitly provided.
 
-BACKGROUND: Warm cream (#fffbeb) full bleed.
-ZONE 1 — HEADER (top 15%): Hospital name "OO내과의원" in smaller brown text (#92400e, 12px, weight 500) centered at top. "비급여 진료비 안내" in dark brown (#92400e, 22px, weight 700) bold text centered. Thin brown decorative line (1px, 60% width, centered) below title.
-ZONE 2 — MENU LIST (middle 65%): Items grouped by treatment category. Each category section:
-CATEGORY HEADER: Medium brown (#92400e, 15px, weight 600) bold text with short brown underline (30px, 2px). 28-32px spacing above each new category.
-ITEM ROWS: Each row (line-height 24px, 20px gap between rows):
-- Treatment name in dark brown (#78350f, 14px, weight 500) on the left.
-- Dotted leader line: repeating dots (·····) in light brown (#d4a574, 12px) filling space between name and price.
-- Price in bold amber (#d97706, 15px, weight 700) on the right with "원" suffix.
-Example categories and items:
-- "건강검진"
-  - "기본 건강검진 ········· 80,000원"
-  - "종합 건강검진 ········· 250,000원"
-- "예방접종"
-  - "독감 예방접종 ········· 35,000원"
-  - "대상포진 ········· 150,000원"
-- "비타민/수액"
-  - "비타민C 수액 ········· 50,000원"
-  - "피로회복 수액 ········· 80,000원"
-ZONE 3 — FOOTER (bottom 20%): Thin brown line (#92400e, 1px, 50% width, centered). Small brown text (#a16207, 11px): "※ VAT 포함 금액입니다 / 최종 수정일: YYYY.MM.DD". Hospital address and phone in small text.
+Korean hospital non-covered medical fee price list poster — BLUE MEDICAL OFFICIAL style. Like a hospital official posted fee schedule.
 
-STRICT MODE ANCHORS: Cream background, dot-leader lines connecting name to price, brown/amber color scheme, category grouping. The dot-leader pattern is the defining visual characteristic.
-INSPIRED MODE FREEDOM: Category count, item count, dot style (·, …, ---), brown shade variations, category header style, additional decorative elements (corner flourishes).
-MOBILE: Treatment name minimum 13px. Price minimum 14px. Dot leaders must remain visible (minimum 10px). Category spacing minimum 20px.`,
+VISUAL STRUCTURE:
+BACKGROUND: Blue gradient top (deep blue #1e40af to sky #60a5fa) taking 30%, then white 70%.
+
+HEADER (on blue, top 30%): Title in MASSIVE bold white text (40pt+). Hospital name in light blue (#bfdbfe) small. White plus (+) icon at 15% opacity top-right.
+
+TABLE AREA (on white, middle 60%): Official structured table.
+- Thin blue (#3b82f6) border around table (1.5px)
+- Header row: medium blue (#3b82f6) background, white bold text
+- Each row: white, thin blue (#dbeafe) bottom border
+- Item LEFT with small blue check icon prefix
+- Price RIGHT in bold dark navy (#1e3a8a)
+- Generous row padding
+
+FOOTER (bottom 10%): Small blue text.
+
+THE BLUE TABLE WITH CHECK ICONS AND BLUE HEADER ARE MANDATORY.
+
+STRICT ANCHORS: Blue gradient header, structured bordered table, blue check icons, bold navy prices, official medical document.
+Mobile readability: header 36pt+, table text 14pt+, prices 16pt+ bold.`,
     },
     {
-      id: 'prc_gradient_modern', name: '모던 그라데이션형', color: '#7c3aed', accent: '#a855f7', bg: '#f5f3ff',
-      desc: '라벤더 배경 + 퍼플 필 뱃지 가격 — 뷰티 클리닉/피부과 모던 비급여 가격표',
-      layoutHint: 'gradient',
-      aiPrompt: `MODERN GRADIENT — soft lavender background with purple pill badges for prices. Beauty clinic aesthetic. Treatment name LEFT, price in pill badge RIGHT.
+      id: "prc_gradient_modern", name: "그라데이션 모던", color: "#ec4899", accent: "#8b5cf6", bg: "#fdf2f8",
+      desc: "핑크→퍼플 그라데이션 상단 + 흰 가격 리스트 — 모던 가격표", layoutHint: "gradient",
+      aiPrompt: `[CRITICAL — THIS IS A PREMIUM PRICE LIST POSTER]
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. Leave areas blank or use only user-provided text.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- ONLY use text the user explicitly provided.
 
-BACKGROUND: Soft lavender (#f5f3ff) full bleed.
-ZONE 1 — HEADER (top 13%): Hospital name "병원명" in smaller dark gray (#374151, 12px) centered at top. "비급여 진료비 안내" in bold purple (#7c3aed, 22px) text centered. Thin purple line (#7c3aed, 1px, 30% width) centered below.
-ZONE 2 — PRICE LIST (middle 67%): Vertically stacked treatment items. Rows alternate transparent and very light purple (#ede9fe at 40%) backgrounds.
-CATEGORY LABELS: Small purple (#7c3aed, 11px, letter-spacing 2px, weight 600) uppercase text above each group.
-ROW LAYOUT (padding 14px vertical, 6% horizontal margin): Treatment name on left in dark text (#1f2937, 14px, weight 500). Price on right inside rounded pill-shaped badge: badge background light purple (#ede9fe), 1px purple (#c4b5fd) border, border-radius 999px, padding 6px 16px. Price text in bold purple (#7c3aed, 14px, weight 700) with "원" suffix.
-Example items:
-- Category: "보톡스"
-  - "이마 보톡스 (50단위)" | [150,000원] (pill badge)
-  - "사각턱 보톡스 (50단위)" | [200,000원]
-  - "턱끝 보톡스 (30단위)" | [120,000원]
-- Category: "필러"
-  - "팔자 필러 (1cc)" | [300,000원]
-  - "볼 필러 (1cc)" | [350,000원]
-- Category: "레이저"
-  - "토닝 (1회)" | [80,000원]
-  - "IPL (1회)" | [100,000원]
-ZONE 3 — FOOTER (bottom 20%): Small gray (#6b7280, 11px) text centered: "※ VAT 포함 / 시술 범위·횟수에 따라 변동 가능". "최종 수정일: YYYY.MM.DD". Hospital phone in small text.
+Korean hospital non-covered medical fee price list poster — GRADIENT MODERN style. Trendy beauty clinic price list.
 
-STRICT MODE ANCHORS: Lavender background, pill-shaped price badges with purple border, alternating row backgrounds, category labels. The pill badge is the distinctive element.
-INSPIRED MODE FREEDOM: Category count, item count, pill badge size/color, alternating row colors, category label style, additional treatment details (duration, sessions).
-MOBILE: Treatment name minimum 13px. Pill badge text minimum 13px. Row height minimum 44px. Pill badges must not wrap to next line.`,
+VISUAL STRUCTURE:
+BACKGROUND: Top 35% vibrant gradient — hot pink (#ec4899) to purple (#8b5cf6). Bottom 65% clean white.
+
+HEADER (on gradient, top 35%): Title in bold white text (38pt+). Thin white line (60% opacity). Hospital name white small.
+
+PRICE LIST (on white, middle 55%): Clean modern list — NOT traditional table.
+- Each item: name in dark (#1f2937) bold left, price in bold pink (#ec4899) right
+- Between: thin dotted line (#e5e7eb) connecting them
+- Items separated by 20px
+- Small pink circle bullet before item name
+- 5-7 items
+
+FOOTER (bottom 10%): Small gray text.
+
+THE VIBRANT GRADIENT HEADER AND DOTTED CONNECTOR LINES ARE MANDATORY.
+
+STRICT ANCHORS: Pink-to-purple gradient header, white price list, dotted connectors, gradient-colored prices, trendy beauty clinic.
+Mobile readability: header 34pt+, items 14pt+, prices 18pt+ bold.`,
     },
     {
-      id: 'prc_minimal_line', name: '미니멀 라인형', color: '#64748b', accent: '#0ea5e9', bg: '#f8fafc',
-      desc: '순백 배경 + 스카이블루 가격 — 스위스 타이포그래피 미니멀 비급여 가격표',
-      layoutHint: 'minimal',
-      aiPrompt: `MINIMAL LINE — ultra-minimal Swiss typography-inspired price list. Pure white, maximum whitespace. No decorations whatsoever. Treatment name LEFT in charcoal, price RIGHT in sky blue.
+      id: "prc_menu_board", name: "메뉴보드", color: "#1c1917", accent: "#a3836a", bg: "#1c1917",
+      desc: "다크 보드 + 세리프 타이포 + 도트 라인 — 카페 메뉴판 스타일", layoutHint: "menuboard",
+      aiPrompt: `[CRITICAL — THIS IS A PREMIUM PRICE LIST POSTER]
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. Leave areas blank or use only user-provided text.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- ONLY use text the user explicitly provided.
 
-BACKGROUND: Pure white (#ffffff) full bleed.
-ZONE 1 — HEADER (top 12%): Hospital name "병원명" in lighter gray (#94a3b8, 11px, weight 400) left-aligned or centered at top. "비급여 진료비 안내" in charcoal (#374151, 20px, weight 700) bold text. Single thin horizontal line (1px, #e2e8f0) spanning full width below title with 24px spacing.
-ZONE 2 — PRICE LIST (middle 70%): Each item row contains ONLY: treatment name in charcoal (#374151, 14px, weight 400) on the left, price in bold sky blue (#0ea5e9, 15px, weight 700) on the right with "원" suffix.
-NO separator lines between items — only generous whitespace (24-28px vertical gap) creates visual separation. NO icons, NO borders, NO background colors, NO dot leaders, NO badges.
-ALIGNMENT: All treatment names left-aligned to same position (6% left margin). All prices right-aligned to same position (6% right margin). Grid-based Swiss typographic alignment.
-Example items (no categories, just a flat list):
-- "임플란트 (오스템, 1개)" | "1,200,000원"
-- "임플란트 (스트라우만, 1개)" | "1,800,000원"
-- "이마 보톡스 (50단위)" | "150,000원"
-- "사각턱 보톡스 (50단위)" | "200,000원"
-- "팔자 필러 (1cc)" | "300,000원"
-- "스케일링" | "50,000원"
-- "전문 미백 (상·하)" | "300,000원"
-ZONE 3 — FOOTER (bottom 18%): After 32px gap, single thin line (1px, #e2e8f0, full width). Small gray (#94a3b8, 10px) text: "※ VAT 포함 / 최종 수정일: YYYY.MM.DD". Hospital contact in same style.
+Korean hospital non-covered medical fee price list poster — MENU BOARD style. Like a premium cafe chalkboard menu — but for a hospital.
 
-STRICT MODE ANCHORS: Pure white background, charcoal-name/sky-blue-price only, zero decorations, generous whitespace as only separator. The absence of decoration IS the design.
-INSPIRED MODE FREEDOM: Item count, treatment names, price values, font weight variations, whitespace amounts, optional single category divider lines (thin, subtle).
-MOBILE: Treatment name minimum 13px. Price minimum 14px. Vertical gap minimum 20px between items. Left/right margin minimum 5%.`,
+VISUAL STRUCTURE:
+BACKGROUND: Dark charcoal (#1c1917) or dark forest green (#1a2e1a). Subtle matte texture (chalkboard or dark wood) at 6-8% opacity.
+
+NATURAL WOOD FRAME: Thin natural wood border around entire image — like a real menu board frame. Light oak or walnut tone, 2-3% of image width. Visible wood grain.
+
+INSIDE THE BOARD:
+- Top: title in cream/ivory (#fef3c7) elegant serif text (32pt+), letter-spacing +2px. Below: thin cream decorative line with small ornament.
+
+PRICE ITEMS:
+- Each item: name in warm cream (#fef3c7) serif LEFT, dotted leader line (cream dots) in middle, price in bold cream RIGHT
+- Price slightly larger than name (18pt vs 14pt)
+- Items grouped by category — headers in warm brown (#a3836a) small caps
+- Between groups: thin cream decorative divider
+- 5-8 items
+
+BOTTOM: Small cream text for hospital name.
+
+THE WOOD FRAME, DARK BOARD, AND SERIF TYPOGRAPHY ARE MANDATORY.
+
+STRICT ANCHORS: Dark board, wood frame, cream serif typography, dotted leader lines, category grouping, premium cafe menu board.
+Mobile readability: title 28pt+, items 13pt+, prices 16pt+ bold.`,
     },
   ],
 };
