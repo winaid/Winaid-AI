@@ -804,160 +804,202 @@ Mobile readability: name 28pt+, credentials 12pt+.`,
     {
       id: "ntc_clean_white", name: "클린 화이트", color: "#374151", accent: "#111827", bg: "#ffffff",
       desc: "순백 배경 + 차콜 타이포 + 얇은 라인 — 가장 깔끔한 공지", layoutHint: "minimal",
-      aiPrompt: `[CRITICAL — THIS IS A PREMIUM INSTAGRAM-STYLE POSTER]
+      aiPrompt: `[CRITICAL — THIS IS A DESIGNED NOTICE POSTER WITH PHYSICAL OBJECTS]
 ⛔ STRICT CONTENT RULES:
 - DO NOT add any information the user did not provide.
 - DO NOT generate fake Korean text. Leave areas blank or use only user-provided text.
 - DO NOT add fake disclaimers, footnotes, or fine print.
-- DO NOT invent hospital names, phone numbers, or addresses.
 - ONLY use text the user explicitly provided.
 
-Korean hospital notice poster — EDITORIAL WHITE theme. Think Kinfolk magazine layout.
+Korean hospital notice poster — TAPED PAPER ON BEIGE WALL theme.
 
-VISUAL STRUCTURE — the poster MUST have this specific layout:
-TOP 25%: Pure white space with NOTHING except a tiny gray hospital cross (+) icon at top-center, 8% opacity.
-MIDDLE 50%: A large charcoal (#1e293b) rectangular BLOCK spanning 80% width, centered, with rounded corners (8px). Inside the block: the notice title in MASSIVE bold white text (48pt+). This dark block floating on white is THE signature design element. Below the title inside the block: thin white line (1px) then subtitle in light gray (#94a3b8) if provided.
-BOTTOM 25%: White space. Notice content (if any) in charcoal (#374151) text with generous spacing. Left-aligned with a thin charcoal vertical line (2px) running along the left edge of the text.
+VISUAL CONCEPT: A white sheet of paper taped to a warm beige wall. The paper has real paper texture with subtle creases/folds. Two pieces of light blue masking tape (washi tape) — one at top-left corner, one at bottom-right corner — holding the paper to the wall. The tape looks realistic, slightly wrinkled, semi-transparent.
 
-THE DARK BLOCK IS MANDATORY. Without it, the design has no identity.
-Background is pure white. Only colors: white + charcoal + light gray.
+BACKGROUND (THE WALL): Warm beige/tan (#d4c5a9) with subtle diagonal shadow lines (like sunlight through blinds) at 10% opacity. Real wall texture.
 
-STRICT ANCHORS: Dark charcoal block with white title inside, pure white background, editorial magazine aesthetic.
-INSPIRED FREEDOM: Block proportions, corner radius, icon style.
-Mobile readability: title 44pt+, body 14pt+.`,
+THE PAPER (centered, 80% of image): White paper (#ffffff) with very subtle paper texture and light crease lines. Slightly rotated (-1 to 1 degree) to feel natural/casual. Soft drop shadow behind paper.
+
+ON THE PAPER:
+- Top area: date in small serif gray text if user provided
+- Center: Large title in elegant brown/gold serif typography (40pt+)
+- Below title: thin gray horizontal line
+- Below line: notice content in dark gray (#374151) clean sans-serif text
+- Bottom: thin gray line + hospital name in small text
+
+THE BLUE TAPE AND PAPER TEXTURE ARE MANDATORY. Without them it is just text on white.
+
+STRICT ANCHORS: Beige wall background, white paper with creases, blue masking tape at two corners, shadow lines on wall, serif title, realistic stationery feel.
+Mobile readability: title 36pt+, body 13pt+.`,
     },
+
+
 
 
     {
       id: "ntc_soft_blue", name: "소프트 블루", color: "#1e3a8a", accent: "#3b82f6", bg: "#eff6ff",
       desc: "연한 하늘색 배경 + 네이비 타이포 — 신뢰감 있는 공지", layoutHint: "blue",
-      aiPrompt: `[CRITICAL — THIS IS A PREMIUM INSTAGRAM-STYLE POSTER]
+      aiPrompt: `[CRITICAL — THIS IS A DESIGNED NOTICE POSTER WITH PHYSICAL OBJECTS]
 ⛔ STRICT CONTENT RULES:
 - DO NOT add any information the user did not provide.
 - DO NOT generate fake Korean text. Leave areas blank or use only user-provided text.
 - DO NOT add fake disclaimers, footnotes, or fine print.
-- DO NOT invent hospital names, phone numbers, or addresses.
 - ONLY use text the user explicitly provided.
 
-Korean hospital notice poster — IMMERSIVE BLUE SKY theme. Think airline premium lounge signage.
+Korean hospital notice poster — BLUE FRAME WITH ICON theme.
 
-VISUAL STRUCTURE — the poster MUST have this specific layout:
-ENTIRE BACKGROUND: Deep blue (#1e40af) at top-left corner, radiating outward to sky blue (#60a5fa) at center, fading to very light blue (#eff6ff) at bottom-right. Across the ENTIRE surface: soft glowing circular bokeh lights (6-8 circles, various sizes from tiny to large) in white/light blue at 10-20% opacity. The bokeh creates a dreamy, premium atmosphere EVERYWHERE.
-FLOATING CARD: A frosted white card (rounded 24px, backdrop-blur effect, 88% opacity, border: 0.5px white at 30% opacity) positioned at center, spanning 75% width and 55% height. Inside the card: notice title in deep navy (#0f172a) bold text (36pt+). Below title: thin blue (#60a5fa) line. Content text in navy (#1e3a8a), generous spacing.
-NO TEXT OUTSIDE THE CARD except hospital name in small white at very top on the blue gradient.
+VISUAL CONCEPT: Clean poster with a prominent light blue (#bfdbfe) thick border frame around the entire image. Inside the frame: white background. A large circular icon in the center acts as the visual anchor.
 
-THE BOKEH LIGHTS AND FROSTED CARD ARE MANDATORY. Without them, it is just blue text on blue.
+BACKGROUND: Pure white inside the frame. Light blue (#e0f2fe) outside/behind the frame (visible as the thick border).
 
-STRICT ANCHORS: Full-bleed blue gradient, bokeh light circles, frosted glass card, deep navy text inside card.
-INSPIRED FREEDOM: Bokeh density/sizes, blue shade range, card opacity, gradient direction.
-Mobile readability: title 32pt+, body 13pt+.`,
+FRAME: Light blue (#93c5fd) thick border — 20px on all sides. Creates a clean framed bulletin board feel.
+
+INSIDE THE FRAME:
+- Top 30%: Small label text "NOTICE" in light blue, letter-spacing +4px, uppercase. Below: notice title in MASSIVE bold dark navy (#0f172a) text (44pt+, weight 900).
+- Center 35%: Large circular icon (80px diameter) — light blue (#3b82f6) circle with white simple icon inside (calendar with checkmark, or megaphone, or bell). This icon is THE visual centerpiece.
+- Bottom 35%: Notice content in dark text, centered. Date/time highlighted with light blue background strip.
+
+THE THICK BLUE FRAME AND CENTER ICON ARE MANDATORY.
+
+STRICT ANCHORS: Thick light blue border frame, large circular icon centerpiece, bold dark title, clean white interior, bulletin board aesthetic.
+Mobile readability: title 40pt+, body 13pt+.`,
     },
+
+
 
 
     {
       id: "ntc_warm_cream", name: "웜 크림", color: "#78583d", accent: "#c9a96e", bg: "#faf7f2",
       desc: "따뜻한 크림 배경 + 갈색 타이포 + 골드 악센트 — 고급 공지", layoutHint: "cream",
-      aiPrompt: `[CRITICAL — THIS IS A PREMIUM INSTAGRAM-STYLE POSTER]
+      aiPrompt: `[CRITICAL — THIS IS A DESIGNED NOTICE POSTER WITH PHYSICAL OBJECTS]
 ⛔ STRICT CONTENT RULES:
 - DO NOT add any information the user did not provide.
 - DO NOT generate fake Korean text. Leave areas blank or use only user-provided text.
 - DO NOT add fake disclaimers, footnotes, or fine print.
-- DO NOT invent hospital names, phone numbers, or addresses.
 - ONLY use text the user explicitly provided.
 
-Korean hospital notice poster — LUXURY GOLD STATIONERY theme. Think Cartier invitation card.
+Korean hospital notice poster — CORK BOARD WITH PINNED NOTE theme.
 
-VISUAL STRUCTURE — the poster MUST have this specific layout:
-ENTIRE BACKGROUND: Warm ivory (#faf5ef) with visible LINEN PAPER TEXTURE at 6-8% opacity — the texture must be noticeable, like real luxury stationery paper. The entire surface has a subtle metallic gold shimmer at 3-4% opacity.
-GOLD FRAME: A thin DOUBLE-LINE gold (#c9a96e) rectangular frame (outer line 1px, inner line 0.5px, 4px gap) inset 5% from all edges. Four small gold corner bracket ornaments at frame corners. This frame is THE signature element.
-INSIDE FRAME — TOP: Notice title in warm brown (#5c3d1e) serif-leaning text (36pt+, weight 700). Below title: thin gold line with small diamond centered.
-INSIDE FRAME — MIDDLE: Content text in warm brown (#5c4a32), generous spacing, serif-leaning.
-INSIDE FRAME — BOTTOM: Small gold text for date/hospital name.
+VISUAL CONCEPT: A cork bulletin board texture as the background. A white note card pinned to the board with a colorful push pin at the top center. The note card has a slight shadow and slight rotation for realism.
 
-THE GOLD DOUBLE FRAME WITH CORNER BRACKETS IS MANDATORY.
+BACKGROUND: Cork board texture (#c4a265 to #b8956a) — realistic cork material with visible grain and small dots. Fills entire image.
 
-STRICT ANCHORS: Linen texture, gold double-line frame, corner brackets, warm brown serif text, diamond ornament, luxury stationery mood.
-INSPIRED FREEDOM: Frame thickness, bracket ornament style, serif amount, gold shade.
+THE NOTE CARD: White card (#ffffff) with rounded corners (8px), centered, spanning 80% width and 85% height. Slight rotation (-0.5 to 0.5 degree). Realistic drop shadow (offset 4px, blur 12px). Paper texture visible on the card.
+
+PUSH PIN: At top-center of the card. Realistic 3D push pin — red or gold metallic, with visible pin shaft and shadow. THE key visual element.
+
+ON THE CARD:
+- Top: Notice title in warm brown (#5c3d1e) bold serif text (36pt+)
+- Below title: thin gold (#c9a96e) decorative line with small diamond
+- Middle: Content text in warm brown (#5c4a32), generous spacing
+- Bottom: Date and hospital name in lighter brown
+
+THE CORK TEXTURE AND PUSH PIN ARE MANDATORY.
+
+STRICT ANCHORS: Cork board background, white pinned note card, realistic push pin, paper shadow, warm brown serif typography, bulletin board realism.
 Mobile readability: title 32pt+, body 13pt+.`,
     },
+
+
 
 
     {
       id: "ntc_mint_fresh", name: "민트 프레시", color: "#0f766e", accent: "#10b981", bg: "#f0fdfa",
       desc: "민트 그라데이션 + 다크그린 타이포 — 상쾌한 공지", layoutHint: "mint",
-      aiPrompt: `[CRITICAL — THIS IS A PREMIUM INSTAGRAM-STYLE POSTER]
+      aiPrompt: `[CRITICAL — THIS IS A DESIGNED NOTICE POSTER WITH PHYSICAL OBJECTS]
 ⛔ STRICT CONTENT RULES:
 - DO NOT add any information the user did not provide.
 - DO NOT generate fake Korean text. Leave areas blank or use only user-provided text.
 - DO NOT add fake disclaimers, footnotes, or fine print.
-- DO NOT invent hospital names, phone numbers, or addresses.
 - ONLY use text the user explicitly provided.
 
-Korean hospital notice poster — BOTANICAL MINT GARDEN theme. Think Aesop store interior poster.
+Korean hospital notice poster — LETTER FROM ENVELOPE theme.
 
-VISUAL STRUCTURE — the poster MUST have this specific layout:
-ENTIRE BACKGROUND: Soft mint (#f0fdfa) with watercolor eucalyptus leaves scattered across the ENTIRE surface at 12-18% opacity — at least 8-10 leaf shapes of various sizes and rotations in sage green (#a7f3d0). Creates lush botanical wallpaper effect, NOT just one leaf in a corner.
-HEADER BLOCK: Dark teal (#0f766e) solid rounded rectangle (rounded 14px) at top, spanning 80% width, centered. Inside: notice title in bold white text (36pt+). This teal block on mint+leaves background is THE design signature.
-CONTENT AREA: Below the block. White rounded card (rounded 16px, border: 1px solid #d1fae5) containing content text in dark teal (#134e4a). Emerald (#10b981) left-border accent (3px) beside text.
-BOTTOM: Mint background with leaf scatter continues. Small teal text.
+VISUAL CONCEPT: A mint/sage colored envelope at the bottom, with a white letter/card partially pulled out from it, extending upward. The letter contains the notice content.
 
-THE SCATTERED LEAVES AND TEAL HEADER BLOCK ARE MANDATORY.
+BACKGROUND: Soft mint (#f0fdfa) to white gradient, clean and fresh.
 
-STRICT ANCHORS: Immersive leaf scatter wallpaper, dark teal header block, white content card, emerald accents, botanical wellness mood.
-INSPIRED FREEDOM: Leaf density/type, teal block shape, card style.
-Mobile readability: title 32pt+, body 13pt+.`,
+THE ENVELOPE: At the bottom 25% of image. Mint/sage (#a7f3d0) colored envelope, slightly open at top, realistic paper texture. The flap is open, revealing the letter. Subtle shadow.
+
+THE LETTER: White card/paper extending from the envelope upward, spanning top 75% of image. Clean white with subtle paper texture. Slight shadow separating it from envelope.
+
+ON THE LETTER:
+- Top: Small "NOTICE" label in emerald (#10b981), letter-spacing +3px
+- Center: Notice title in dark teal (#0f766e) bold text (38pt+)
+- Below: thin emerald line
+- Content: dark teal text, generous spacing
+
+THE ENVELOPE AND LETTER-PULLING-OUT EFFECT ARE MANDATORY.
+
+STRICT ANCHORS: Mint envelope at bottom, white letter pulled out, paper textures, teal typography, emerald accents, mail/letter metaphor.
+Mobile readability: title 34pt+, body 13pt+.`,
     },
+
+
 
 
     {
       id: "ntc_slate_modern", name: "슬레이트 모던", color: "#334155", accent: "#64748b", bg: "#f8fafc",
       desc: "연한 슬레이트 배경 + 기하학 라인 — 모던한 공지", layoutHint: "slate",
-      aiPrompt: `[CRITICAL — THIS IS A PREMIUM INSTAGRAM-STYLE POSTER]
+      aiPrompt: `[CRITICAL — THIS IS A DESIGNED NOTICE POSTER WITH PHYSICAL OBJECTS]
 ⛔ STRICT CONTENT RULES:
 - DO NOT add any information the user did not provide.
 - DO NOT generate fake Korean text. Leave areas blank or use only user-provided text.
 - DO NOT add fake disclaimers, footnotes, or fine print.
-- DO NOT invent hospital names, phone numbers, or addresses.
 - ONLY use text the user explicitly provided.
 
-Korean hospital notice poster — DARK SLATE TECH theme. Think Bloomberg terminal or Stripe website.
+Korean hospital notice poster — FLOATING CARD ON DARK SURFACE theme.
 
-VISUAL STRUCTURE — the poster MUST have this specific layout:
-ENTIRE BACKGROUND: Dark warm slate (#1e293b) full bleed — rich, deep, NOT pure black. Across the ENTIRE surface: thin diagonal geometric lines (intersecting at 30 and 150 degree angles) in lighter slate (#334155) at 5-7% opacity. Creates sophisticated dark tech pattern.
-TOP 45%: MASSIVE white (#f1f5f9) title text — 52pt+, weight 900, tight tracking. The white text GLOWS against dark slate. Below title: single SHORT amber (#d97706) horizontal line (3px height, 40px width only). This tiny amber line is the ONLY color in the entire poster — it makes the monochrome design pop.
-MIDDLE 35%: Content text in light gray (#e2e8f0), 14pt, directly on dark slate. NO card. Each item with generous 20px spacing. Important words in pure white, bold. Left-aligned editorial layout.
-BOTTOM 20%: Thin amber line (1px, 30% width). Small stone (#94a3b8) text.
+VISUAL CONCEPT: A white card floating above a dark slate surface, with realistic shadow showing depth/elevation. Like a business card hovering over a dark desk. Clean, architectural, premium.
 
-THE DARK BACKGROUND WITH GEOMETRIC PATTERN AND AMBER ACCENT ARE MANDATORY.
+BACKGROUND: Dark warm slate (#1e293b) surface with subtle leather/matte texture at 5% opacity.
 
-STRICT ANCHORS: Dark slate background, geometric diagonal pattern, massive white title, amber accent lines (only color), editorial left-aligned layout, tech-premium mood.
-INSPIRED FREEDOM: Slate shade, pattern angle, amber line placement.
-Mobile readability: title 48pt+, body 13pt+ (white on slate contrast 12:1+).`,
+THE FLOATING CARD: White card (#f8fafc) at center, spanning 78% width and 70% height. Rounded corners (12px). STRONG realistic drop shadow — offset (0, 8px), blur (24px), spread (4px), rgba(0,0,0,0.25). The shadow creates clear sense of card FLOATING 8px above the dark surface.
+
+ON THE CARD:
+- Top: Notice title in dark charcoal (#1e293b) bold text (36pt+)
+- Below title: short amber (#d97706) accent line (3px height, 40px width) — the only color accent
+- Content: dark gray (#374151) text, generous spacing, left-aligned editorial
+- Bottom of card: thin gray line + small text
+
+THE FLOATING SHADOW EFFECT IS MANDATORY. Card must look physically lifted off the dark surface.
+
+STRICT ANCHORS: Dark slate surface, white floating card with strong shadow, amber accent line, editorial layout, architectural premium mood.
+Mobile readability: title 32pt+, body 13pt+.`,
     },
+
+
 
 
     {
       id: "ntc_peach_soft", name: "피치 소프트", color: "#9a3412", accent: "#f97316", bg: "#fff7ed",
       desc: "연한 피치/살몬 배경 + 따뜻한 브라운 — 부드러운 공지", layoutHint: "peach",
-      aiPrompt: `[CRITICAL — THIS IS A PREMIUM INSTAGRAM-STYLE POSTER]
+      aiPrompt: `[CRITICAL — THIS IS A DESIGNED NOTICE POSTER WITH PHYSICAL OBJECTS]
 ⛔ STRICT CONTENT RULES:
 - DO NOT add any information the user did not provide.
 - DO NOT generate fake Korean text. Leave areas blank or use only user-provided text.
 - DO NOT add fake disclaimers, footnotes, or fine print.
-- DO NOT invent hospital names, phone numbers, or addresses.
 - ONLY use text the user explicitly provided.
 
-Korean hospital notice poster — WARM PEACH GLOW theme. Think trendy cafe announcement.
+Korean hospital notice poster — MEMO PAD WITH WASHI TAPE theme.
 
-VISUAL STRUCTURE — the poster MUST have this specific layout:
-ENTIRE BACKGROUND: Warm peach gradient — vivid peach (#fdba74) at top fading through soft peach (#fed7aa) at middle to warm cream (#fff7ed) at bottom. Across the ENTIRE surface: soft glowing circular BOKEH shapes (8-10 circles, various sizes from tiny to very large) in lighter peach (#ffedd5) and white at 12-18% opacity. Creates dreamy warm sunset glow EVERYWHERE — this is NOT a plain gradient, it is ALIVE with light.
-FLOATING CARD: White card with VERY rounded corners (border-radius 28px), soft warm shadow (rgba(249,115,22,0.15)), positioned at center, spanning 80% width, 50% height. Inside: notice title in deep brown (#78350f) bold text (38pt+, rounded sans-serif). Below: thin coral (#fb923c) line. Content in warm brown (#78350f).
-TOP: On peach gradient above card — hospital name in warm brown, small.
+VISUAL CONCEPT: A warm peach background with a white memo pad/notepad in the center. Colorful washi tape strips at top and bottom of the memo pad. Cute, warm, approachable.
 
-THE BOKEH GLOW AND VERY ROUNDED CARD ARE MANDATORY. Everything must feel WARM, ROUND, SOFT.
+BACKGROUND: Warm peach (#fdba74) to cream (#fff7ed) gradient. Soft, warm, inviting.
 
-STRICT ANCHORS: Immersive peach gradient, bokeh glow circles everywhere, very rounded white card (28px), deep brown title, warm friendly mood.
-INSPIRED FREEDOM: Peach shade, bokeh density/sizes, card radius, gradient warmth.
+THE MEMO PAD: White paper/card at center, spanning 82% width and 78% height. VERY rounded corners (20px). Subtle paper texture. Warm soft shadow.
+
+WASHI TAPE: Two strips of decorative washi tape:
+- Top of memo pad: coral/pink (#fb923c) washi tape strip, slightly diagonal, semi-transparent, with pattern texture (subtle stripes or dots)
+- Bottom of memo pad: different color washi tape (mint or yellow), also slightly diagonal
+
+ON THE MEMO PAD:
+- Title in deep brown (#78350f) bold rounded text (36pt+). Friendly, not corporate.
+- Below: thin coral line
+- Content in warm brown (#78350f), generous spacing
+
+THE WASHI TAPE STRIPS ARE MANDATORY.
+
+STRICT ANCHORS: Peach gradient background, white rounded memo pad, washi tape strips at top/bottom, warm brown text, friendly approachable mood.
 Mobile readability: title 34pt+, body 13pt+.`,
     },
   ],
