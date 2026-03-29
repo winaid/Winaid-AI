@@ -19,12 +19,12 @@ const THEME_NAMES: Record<string, string> = {
   sch_korean_classic: '한방 전통',
   sch_bojagi_holiday: '보자기 명절',
   sch_ink_wash: '수묵화',
-  sch_navy_professional: '네이비 프로',
-  sch_beige_gold: '베이지 골드',
-  sch_coral_sns: '코랄 SNS',
+  sch_clean_blue: '클린 블루',
+  sch_rose_gold: '로즈 골드',
+  sch_green_botanical: '그린 보태니컬',
   sch_kids_pastel: '키즈 파스텔',
-  sch_mint_wellness: '민트 웰니스',
-  sch_sunflower_summer: '해바라기',
+  sch_taegeuk_national: '태극기',
+  sch_christmas: '크리스마스',
 };
 
 export function CalendarThemePreview({

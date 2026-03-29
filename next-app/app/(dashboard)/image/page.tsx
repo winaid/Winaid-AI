@@ -94,7 +94,7 @@ export default function ImagePage() {
 
   // ── 달력 테마 옵션 (12종 — 4그룹) ──
   const CALENDAR_THEME_OPTIONS: { value: string; label: string; emoji: string; desc: string; group: string; groupColor: string }[] = [
-    // 시즌
+    // 자연
     { value: 'sch_cherry_blossom', label: '벚꽃', emoji: '🌸', desc: '핑크 워터컬러 + 흩날리는 꽃잎', group: '자연', groupColor: '#ec4899' },
     { value: 'sch_maple_autumn', label: '단풍', emoji: '🍁', desc: '오렌지 그라데이션 + 흩날리는 단풍잎', group: '자연', groupColor: '#ec4899' },
     { value: 'sch_snowflake_winter', label: '눈꽃', emoji: '❄️', desc: '눈 결정 패턴 + 아이시 블루', group: '자연', groupColor: '#ec4899' },
@@ -103,20 +103,20 @@ export default function ImagePage() {
     { value: 'sch_bojagi_holiday', label: '보자기 명절', emoji: '🎀', desc: '보자기 매듭 + 금색 테두리', group: '전통', groupColor: '#92400e' },
     { value: 'sch_ink_wash', label: '수묵화', emoji: '🖌️', desc: '먹 번짐 + 대나무/매화', group: '전통', groupColor: '#92400e' },
     // 기본
-    { value: 'sch_navy_professional', label: '네이비 프로', emoji: '💎', desc: '딥 네이비 + 흰 카드 + 골드', group: '기본', groupColor: '#1e3a5f' },
-    { value: 'sch_beige_gold', label: '베이지 골드', emoji: '✨', desc: '리넨 질감 + 골드 라인', group: '기본', groupColor: '#1e3a5f' },
-    { value: 'sch_coral_sns', label: '코랄 SNS', emoji: '📱', desc: '코랄 그라데이션 + 라운드', group: '기본', groupColor: '#1e3a5f' },
+    { value: 'sch_clean_blue', label: '클린 블루', emoji: '💙', desc: '파란 그라데이션 + 흰 카드', group: '기본', groupColor: '#3b82f6' },
+    { value: 'sch_rose_gold', label: '로즈 골드', emoji: '💖', desc: '대리석 질감 + 로즈골드 라인', group: '기본', groupColor: '#3b82f6' },
+    { value: 'sch_green_botanical', label: '그린 보태니컬', emoji: '🌿', desc: '유칼립투스 잎 + 내추럴', group: '기본', groupColor: '#3b82f6' },
     // 특수
     { value: 'sch_kids_pastel', label: '키즈 파스텔', emoji: '🌈', desc: '무지개 + 구름/별', group: '특수', groupColor: '#a855f7' },
-    { value: 'sch_mint_wellness', label: '민트 웰니스', emoji: '🌿', desc: '민트 그라데이션 + 잎사귀', group: '특수', groupColor: '#a855f7' },
-    { value: 'sch_sunflower_summer', label: '해바라기', emoji: '🌻', desc: '골드 그라데이션 + 해바라기 클러스터', group: '특수', groupColor: '#a855f7' },
+    { value: 'sch_taegeuk_national', label: '태극기', emoji: '🇰🇷', desc: '태극 모티프 + 삼일절/광복절', group: '특수', groupColor: '#a855f7' },
+    { value: 'sch_christmas', label: '크리스마스', emoji: '🎄', desc: '트리+선물+눈 + 연말', group: '특수', groupColor: '#a855f7' },
   ];
 
   const SCHEDULE_GROUPS: { label: string; desc: string; values: string[] }[] = [
     { label: '🌸 자연', desc: '벚꽃·단풍·눈꽃', values: ['sch_cherry_blossom', 'sch_maple_autumn', 'sch_snowflake_winter'] },
     { label: '🏛️ 전통', desc: '한방·명절·수묵화', values: ['sch_korean_classic', 'sch_bojagi_holiday', 'sch_ink_wash'] },
-    { label: '💎 기본', desc: '네이비·베이지·코랄', values: ['sch_navy_professional', 'sch_beige_gold', 'sch_coral_sns'] },
-    { label: '✨ 특수', desc: '키즈·민트·해바라기', values: ['sch_kids_pastel', 'sch_mint_wellness', 'sch_sunflower_summer'] },
+    { label: '💙 기본', desc: '블루·로즈골드·보태니컬', values: ['sch_clean_blue', 'sch_rose_gold', 'sch_green_botanical'] },
+    { label: '✨ 특수', desc: '키즈·태극기·크리스마스', values: ['sch_kids_pastel', 'sch_taegeuk_national', 'sch_christmas'] },
   ];
 
   const [customMessage, setCustomMessage] = useState('');
@@ -254,18 +254,18 @@ export default function ImagePage() {
   // OLD 우선순위: uploadedStyle > catTemplate > preset
   // schedule 카테고리에서 calendarTheme 선택 시 → 테마 전용 스타일 프롬프트 사용
   const CALENDAR_THEME_AI_STYLE: Record<string, string> = {
-    sch_cherry_blossom: `[CALENDAR THEME: Cherry Blossom Spring] Watercolor cherry blossom petals at corners. Soft pink #fdf2f8 background. Rose-pink frame. Falling petals. Deep rose #be185d title. Watercolor spring aesthetic.`,
-    sch_sunflower_summer: `[CALENDAR THEME: Sunflower Summer] Large sunflower illustration at corner. Warm yellow #fefce8 background. Golden brown #ca8a04 title. Sunshine rays. Sky blue accent. Bright summer mood.`,
-    sch_maple_autumn: `[CALENDAR THEME: Maple Autumn] Watercolor maple leaves at corners. Orange gradient #f97316→#fed7aa header. Warm cream #fff7ed background. Falling leaves. Warm autumn colors.`,
-    sch_snowflake_winter: `[CALENDAR THEME: Snowflake Winter] Geometric snowflake patterns at 12% opacity. Icy blue gradient #e0f2fe→white. Deep blue #0c4a6e title. Frosted card effect. Sparkle accents. Winter monochrome.`,
-    sch_korean_classic: `[CALENDAR THEME: Korean Traditional] Warm cream (#f5e6d0) background. Roof tile (기와) border. Traditional flower lattice (꽃살) corners. Warm brown (#92400e) text. No sun motif. Dignified, classical Korean aesthetic.`,
-    sch_bojagi_holiday: `[CALENDAR THEME: Bojagi Holiday] Korean bojagi knot at top center. Gold #c9a96e border frame. Saekdong color stripes (red/blue/yellow/green). Hanji texture cream background. Traditional Korean holiday motifs.`,
-    sch_ink_wash: `[CALENDAR THEME: Ink Wash] East Asian ink wash bamboo/plum illustration. Ink splash header background. Pure white base. Charcoal #1f2937 text. Red seal stamp accent. Monochrome traditional painting style.`,
-    sch_navy_professional: `[CALENDAR THEME: Navy Professional] Deep navy #0f2444 background. White floating card with shadow. Gold #c9a96e decorative lines. Sky blue #7dd3fc accents. Authoritative university hospital style.`,
-    sch_mint_wellness: `[CALENDAR THEME: Mint Wellness] Eucalyptus/monstera leaf illustrations. Mint #f0fdfa gradient. Dark green #0f766e header. Emerald #10b981 accent line. Natural wellness healing mood.`,
-    sch_coral_sns: `[CALENDAR THEME: Coral SNS] Large coral-to-peach #f97316→#fed7aa gradient header. White rounded card (16px radius). Rounded badges. Bold typography. Modern Instagram feed aesthetic.`,
-    sch_kids_pastel: `[CALENDAR THEME: Kids Pastel] Pastel rainbow arch at top. Cloud and star illustrations. Soft pastel colors (pink/peach/yellow/mint/blue/lavender). Purple #7c3aed title. Playful kids/pediatric aesthetic.`,
-    sch_beige_gold: `[CALENDAR THEME: Beige Gold] Linen texture ivory #faf7f4 background. Gold #c9a96e decorative lines. Warm brown #78583d serif typography. Coral #e8c4b8 soft accent. Premium luxury dermatology/plastic surgery mood.`,
+    sch_cherry_blossom: `[CALENDAR THEME: Cherry Blossom] Watercolor cherry blossom petals scattered across entire pink background. Soft pink #fdf2f8 gradient. Frosted white card. Deep rose #9f1239 title. Immersive spring aesthetic.`,
+    sch_maple_autumn: `[CALENDAR THEME: Maple Autumn] Orange-to-cream gradient entire background. Scattered autumn leaves at 20-40% opacity. Watercolor maple clusters at corners. White floating card. Warm autumn colors.`,
+    sch_snowflake_winter: `[CALENDAR THEME: Snowflake Winter] Geometric snowflake patterns at 12% opacity across entire background. Icy blue gradient #e0f2fe→white. Frosted card effect. Sparkle accents.`,
+    sch_korean_classic: `[CALENDAR THEME: Korean Traditional] Warm cream (#f5e6d0) background. Roof tile (기와) border TOP ONLY. Traditional flower lattice (꽃살) corners. Warm brown (#92400e) text. No sun motif.`,
+    sch_bojagi_holiday: `[CALENDAR THEME: Bojagi Holiday] Korean bojagi knot at top center. Gold #c9a96e border frame. Saekdong color stripes (red/blue/yellow/green). Hanji texture cream background.`,
+    sch_ink_wash: `[CALENDAR THEME: Ink Wash] East Asian ink wash bamboo/plum illustration. Ink splash header background. Pure white base. Charcoal #1f2937 text. Red seal stamp accent. Monochrome.`,
+    sch_clean_blue: `[CALENDAR THEME: Clean Blue] Blue gradient header (#3b82f6→#1d4ed8). Soft blue #eff6ff background. White floating card. Corporate medical aesthetic. Most standard hospital style.`,
+    sch_rose_gold: `[CALENDAR THEME: Rose Gold] White marble texture background. Rose-gold #b76e79 decorative lines. Deep rose #9f1239 serif title. Luxury dermatology/plastic surgery aesthetic.`,
+    sch_green_botanical: `[CALENDAR THEME: Green Botanical] Watercolor eucalyptus leaves at corners. Soft green #f0fdf4 background with linen texture. Dark green #15803d header. Natural wellness mood.`,
+    sch_kids_pastel: `[CALENDAR THEME: Kids Pastel] Pastel rainbow arch at top. Cloud and star illustrations. Soft pastel colors. Purple #7c3aed title. Playful kids/pediatric aesthetic.`,
+    sch_taegeuk_national: `[CALENDAR THEME: Taegeuk National] Stylized taegeuk symbol (red #c81e1e, blue #1e3a5f). Trigram pattern accents. Navy/red/white only. Refined modern patriotic design.`,
+    sch_christmas: `[CALENDAR THEME: Christmas] Red-to-green festive gradient. Christmas tree illustration. Gift boxes. Snowflakes at 10-15% opacity. String lights. Gold star. Warm festive mood.`,
   };
 
   const calendarThemeActive = selectedTemplate === 'schedule' && calendarTheme;
