@@ -191,22 +191,22 @@ The poster must have visual identity: background texture, decorative elements, b
 DO NOT make the calendar grid fill 100% of the image.
 DO NOT add any information the user did not provide (no clinic hours, no lunch time, no phone number unless user entered them).
 
-Korean hospital monthly schedule poster — Clean Corporate Blue theme.
+Korean hospital monthly schedule poster — Premium Clean Blue theme.
 
-BACKGROUND: Entire background soft blue gradient (#eff6ff to #dbeafe). Clean, professional, trustworthy medical clinic atmosphere.
+BACKGROUND: Entire background deep blue-to-sky gradient (#1d4ed8 at top fading through #3b82f6 to #93c5fd at bottom). The gradient should feel rich and dimensional, not flat. Subtle abstract wave or flowing curve shapes in lighter blue (#60a5fa) at 8-12% opacity across the background, creating depth and movement.
 
-DECORATIVE LAYER: Blue gradient header bar (#3b82f6 to #1d4ed8) spanning full width at top, taking 25-30% of image. Subtle geometric pattern or medical cross icon at low opacity in header. Clean white card floating below with soft shadow.
+DECORATIVE LAYER: Large, elegant curved wave decoration sweeping across the header area — think premium airline or fintech branding. Small geometric diamond or hexagon pattern scattered at 5% opacity in the blue gradient. Thin white decorative line (0.5px) separating header from calendar area.
 
-CALENDAR CARD: White card (rounded 12px, shadow 0 2px 8px rgba(0,0,0,0.08)) containing the calendar grid. Day headers on light blue (#dbeafe) row. Sunday red, Saturday blue.
+CALENDAR CARD: Frosted white card (backdrop-blur feel, 95% opacity, rounded 16px, shadow 0 8px 32px rgba(0,0,0,0.12)) floating on the blue gradient. The blue gradient should be visible around and slightly through the card edges. Card feels premium and elevated.
 
-TITLE: Bold white text on the blue gradient header. Hospital name small above.
+TITLE: Bold white text with subtle text-shadow on the deep blue gradient. Large and confident. Hospital name in light blue (#93c5fd) small above.
 
-COLOR PALETTE: Blue #3b82f6, deep blue #1d4ed8, white, light blue #eff6ff.
+COLOR PALETTE: Deep blue #1d4ed8, medium blue #3b82f6, sky blue #93c5fd, white, frosted white.
 
-QUALITY: Most standard, universally applicable hospital calendar design. Clean, professional, no-nonsense. Every hospital can use this.
+QUALITY: This must look like a Samsung or Hyundai corporate design — premium, sophisticated, tech-forward. NOT a simple blue rectangle with white text. The gradient, waves, and frosted card create a modern, dimensional, premium feel.
 
-STRICT ANCHORS: Blue gradient header, white floating card, blue/white palette, corporate medical aesthetic, clean sans-serif typography.
-INSPIRED FREEDOM: Gradient angle, header pattern, card shadow intensity, blue shade range.
+STRICT ANCHORS: Rich blue gradient (not flat), abstract wave/curve decorations, frosted white floating card, blue monochrome palette, premium corporate aesthetic.
+INSPIRED FREEDOM: Wave shape and placement, gradient color stops, diamond/hexagon pattern density, card frosting intensity.
 Mobile readability: minimum body text 11pt, date numbers 14pt bold, title 24pt+.`,
     },
     {
