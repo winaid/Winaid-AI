@@ -260,7 +260,7 @@ export default function ImagePage() {
     sch_korean_classic: `[CALENDAR THEME: Korean Traditional] Warm cream (#f5e6d0) background. Roof tile (기와) border TOP ONLY. Traditional flower lattice (꽃살) corners. Warm brown (#92400e) text. No sun motif.`,
     sch_bojagi_holiday: `[CALENDAR THEME: Bojagi Holiday] Korean bojagi knot at top center. Gold #c9a96e border frame. Saekdong color stripes (red/blue/yellow/green). Hanji texture cream background.`,
     sch_ink_wash: `[CALENDAR THEME: Ink Wash] East Asian ink wash bamboo/plum illustration. Ink splash header background. Pure white base. Charcoal #1f2937 text. Red seal stamp accent. Monochrome.`,
-    sch_clean_blue: `[CALENDAR THEME: Clean Blue] Blue gradient header (#3b82f6→#1d4ed8). Soft blue #eff6ff background. White floating card. Corporate medical aesthetic. Most standard hospital style.`,
+    sch_clean_blue: `[CALENDAR THEME: Premium Clean Blue] Rich deep-to-sky blue gradient (#1d4ed8→#3b82f6→#93c5fd). Elegant curved wave decorations in header. Frosted white floating card (95% opacity, heavy shadow). Hexagon pattern at 5% opacity. Samsung/Hyundai level premium corporate design.`,
     sch_rose_gold: `[CALENDAR THEME: Rose Gold] White marble texture background. Rose-gold #b76e79 decorative lines. Deep rose #9f1239 serif title. Luxury dermatology/plastic surgery aesthetic.`,
     sch_green_botanical: `[CALENDAR THEME: Green Botanical] Watercolor eucalyptus leaves at corners. Soft green #f0fdf4 background with linen texture. Dark green #15803d header. Natural wellness mood.`,
     sch_kids_pastel: `[CALENDAR THEME: Kids Pastel] Pastel rainbow arch at top. Cloud and star illustrations. Soft pastel colors. Purple #7c3aed title. Playful kids/pediatric aesthetic.`,
