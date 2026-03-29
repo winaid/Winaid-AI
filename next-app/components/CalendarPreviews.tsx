@@ -39,15 +39,19 @@ export function CalendarThemePreview({
   /* ═══ 1. 벚꽃 봄 ═══ */
   if (themeValue === 'sch_cherry_blossom') {
     return (
-      <C pal={['#ec4899', '#be185d', '#fdf2f8']} bg="#fdf2f8">
-        <div style={{ background: 'linear-gradient(135deg, #ec4899, #f472b6)', padding: lg ? '8px 6px' : '5px 4px', flexShrink: 0 }}>
+      <C pal={['#ec4899', '#be185d', '#fdf2f8']} bg="linear-gradient(180deg, #fce7f3, #fdf2f8)">
+        {/* 상단 로즈 바 */}
+        <div style={{ background: '#be185d', padding: lg ? '7px 6px' : '4px 4px', flexShrink: 0 }}>
           <span className={`${lg ? 'text-[10px]' : 'text-[7px]'} font-bold text-white`}>진료일정</span>
         </div>
+        {/* 꽃잎 scatter — 배경 전체에 분산 */}
         <div className="flex-1 relative">
-          {/* 꽃잎 암시 — 핑크 원 3개 */}
-          <div className="absolute rounded-full" style={{ top: lg ? 6 : 3, right: lg ? 8 : 5, width: lg ? 12 : 8, height: lg ? 12 : 8, background: '#f9a8d4', opacity: 0.6 }} />
-          <div className="absolute rounded-full" style={{ top: lg ? 16 : 10, right: lg ? 18 : 12, width: lg ? 8 : 5, height: lg ? 8 : 5, background: '#fbcfe8', opacity: 0.5 }} />
-          <div className="absolute rounded-full" style={{ bottom: lg ? 8 : 5, left: lg ? 10 : 6, width: lg ? 10 : 6, height: lg ? 10 : 6, background: '#f9a8d4', opacity: 0.4 }} />
+          <div className="absolute rounded-full" style={{ top: lg ? 4 : 2, right: lg ? 10 : 6, width: lg ? 10 : 6, height: lg ? 10 : 6, background: '#f9a8d4', opacity: 0.45 }} />
+          <div className="absolute rounded-full" style={{ top: lg ? 14 : 8, left: lg ? 8 : 5, width: lg ? 6 : 4, height: lg ? 6 : 4, background: '#fbcfe8', opacity: 0.35 }} />
+          <div className="absolute rounded-full" style={{ top: lg ? 8 : 5, left: lg ? 28 : 16, width: lg ? 12 : 7, height: lg ? 12 : 7, background: '#f9a8d4', opacity: 0.25 }} />
+          <div className="absolute rounded-full" style={{ bottom: lg ? 12 : 7, right: lg ? 14 : 8, width: lg ? 8 : 5, height: lg ? 8 : 5, background: '#fbcfe8', opacity: 0.5 }} />
+          <div className="absolute rounded-full" style={{ bottom: lg ? 4 : 2, left: lg ? 16 : 10, width: lg ? 5 : 3, height: lg ? 5 : 3, background: '#f9a8d4', opacity: 0.3 }} />
+          <div className="absolute rounded-full" style={{ top: lg ? 22 : 13, right: lg ? 6 : 3, width: lg ? 7 : 4, height: lg ? 7 : 4, background: '#fda4af', opacity: 0.2 }} />
         </div>
       </C>
     );
@@ -56,13 +60,20 @@ export function CalendarThemePreview({
   /* ═══ 2. 해바라기 여름 ═══ */
   if (themeValue === 'sch_sunflower_summer') {
     return (
-      <C pal={['#eab308', '#ca8a04', '#fefce8']} bg="#fefce8">
-        <div style={{ background: 'linear-gradient(135deg, #eab308, #facc15)', padding: lg ? '8px 6px' : '5px 4px', flexShrink: 0 }}>
+      <C pal={['#eab308', '#ca8a04', '#fefce8']} bg="linear-gradient(135deg, #fef9c3, #fefce8)">
+        {/* 골드 바 */}
+        <div style={{ background: 'linear-gradient(135deg, #ca8a04, #eab308)', padding: lg ? '7px 6px' : '4px 4px', flexShrink: 0 }}>
           <span className={`${lg ? 'text-[10px]' : 'text-[7px]'} font-bold text-white`}>진료일정</span>
         </div>
-        <div className="flex-1 flex items-center justify-center">
-          {/* 해바라기 암시 — 큰 노란 원 */}
-          <div className="rounded-full" style={{ width: lg ? 28 : 18, height: lg ? 28 : 18, background: '#fbbf24', border: `${lg ? 3 : 2}px solid #ca8a04` }} />
+        {/* 햇살 rays + 해바라기 원 분산 */}
+        <div className="flex-1 relative overflow-hidden">
+          {/* 대각선 햇살 줄무늬 */}
+          <div className="absolute" style={{ top: 0, left: lg ? -10 : -6, width: '140%', height: lg ? 4 : 3, background: 'rgba(255,255,255,0.3)', transform: 'rotate(25deg)', transformOrigin: 'top left' }} />
+          <div className="absolute" style={{ top: lg ? 12 : 7, left: lg ? -10 : -6, width: '140%', height: lg ? 3 : 2, background: 'rgba(255,255,255,0.2)', transform: 'rotate(25deg)', transformOrigin: 'top left' }} />
+          {/* 해바라기 원 — 우상단, 좌하단 */}
+          <div className="absolute rounded-full" style={{ top: lg ? 4 : 2, right: lg ? 6 : 3, width: lg ? 16 : 10, height: lg ? 16 : 10, background: '#fbbf24', border: `${lg ? 2 : 1.5}px solid #ca8a04` }} />
+          <div className="absolute rounded-full" style={{ bottom: lg ? 6 : 3, left: lg ? 8 : 4, width: lg ? 12 : 8, height: lg ? 12 : 8, background: '#fde047', border: `${lg ? 2 : 1.5}px solid #ca8a04`, opacity: 0.7 }} />
+          <div className="absolute rounded-full" style={{ bottom: lg ? 2 : 1, right: lg ? 16 : 10, width: lg ? 7 : 4, height: lg ? 7 : 4, background: '#fbbf24', opacity: 0.4 }} />
         </div>
       </C>
     );
@@ -71,14 +82,19 @@ export function CalendarThemePreview({
   /* ═══ 3. 단풍 가을 ═══ */
   if (themeValue === 'sch_maple_autumn') {
     return (
-      <C pal={['#ea580c', '#c2410c', '#fff7ed']} bg="#fff7ed">
-        <div style={{ background: 'linear-gradient(135deg, #f97316, #fed7aa)', height: '40%', flexShrink: 0, display: 'flex', alignItems: 'center', padding: lg ? '0 6px' : '0 4px' }}>
+      <C pal={['#ea580c', '#c2410c', '#fff7ed']} bg="linear-gradient(180deg, #ea580c 0%, #fed7aa 40%, #fff7ed 100%)">
+        {/* 오렌지 영역에 제목 */}
+        <div style={{ padding: lg ? '7px 6px' : '4px 4px', flexShrink: 0 }}>
           <span className={`${lg ? 'text-[10px]' : 'text-[7px]'} font-bold text-white`}>진료일정</span>
         </div>
+        {/* 낙엽 scatter — 배경 전체에 분산 */}
         <div className="flex-1 relative">
-          {/* 낙엽 암시 — 주황/빨강 작은 원 */}
-          <div className="absolute rounded-full" style={{ top: lg ? 6 : 3, right: lg ? 10 : 6, width: lg ? 8 : 5, height: lg ? 8 : 5, background: '#ea580c', opacity: 0.5 }} />
-          <div className="absolute rounded-full" style={{ top: lg ? 14 : 8, right: lg ? 20 : 12, width: lg ? 6 : 4, height: lg ? 6 : 4, background: '#f59e0b', opacity: 0.4 }} />
+          {/* 마름모(잎) — 다양한 색/크기/opacity */}
+          <div className="absolute" style={{ top: lg ? 2 : 1, right: lg ? 10 : 6, width: lg ? 8 : 5, height: lg ? 8 : 5, background: '#ea580c', opacity: 0.35, transform: 'rotate(45deg)', borderRadius: 1 }} />
+          <div className="absolute" style={{ top: lg ? 10 : 6, left: lg ? 8 : 5, width: lg ? 6 : 4, height: lg ? 6 : 4, background: '#eab308', opacity: 0.3, transform: 'rotate(45deg)', borderRadius: 1 }} />
+          <div className="absolute" style={{ top: lg ? 6 : 3, left: lg ? 24 : 14, width: lg ? 10 : 6, height: lg ? 10 : 6, background: '#92400e', opacity: 0.2, transform: 'rotate(45deg)', borderRadius: 1 }} />
+          <div className="absolute rounded-full" style={{ bottom: lg ? 8 : 5, right: lg ? 8 : 5, width: lg ? 7 : 4, height: lg ? 7 : 4, background: '#f97316', opacity: 0.25 }} />
+          <div className="absolute" style={{ bottom: lg ? 3 : 2, left: lg ? 14 : 8, width: lg ? 5 : 3, height: lg ? 5 : 3, background: '#dc2626', opacity: 0.15, transform: 'rotate(45deg)', borderRadius: 1 }} />
         </div>
       </C>
     );

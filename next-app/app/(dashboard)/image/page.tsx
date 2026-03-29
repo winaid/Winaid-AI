@@ -94,9 +94,9 @@ export default function ImagePage() {
   // ── 달력 테마 옵션 (12종 — 4그룹) ──
   const CALENDAR_THEME_OPTIONS: { value: string; label: string; emoji: string; desc: string; group: string; groupColor: string }[] = [
     // 시즌
-    { value: 'sch_cherry_blossom', label: '벚꽃 봄', emoji: '🌸', desc: '수채화 벚꽃 코너 장식', group: '시즌', groupColor: '#ec4899' },
-    { value: 'sch_sunflower_summer', label: '해바라기 여름', emoji: '🌻', desc: '해바라기 일러스트 + 옐로', group: '시즌', groupColor: '#ec4899' },
-    { value: 'sch_maple_autumn', label: '단풍 가을', emoji: '🍁', desc: '수채화 단풍잎 + 오렌지', group: '시즌', groupColor: '#ec4899' },
+    { value: 'sch_cherry_blossom', label: '벚꽃 봄', emoji: '🌸', desc: '핑크 워터컬러 + 흩날리는 꽃잎', group: '시즌', groupColor: '#ec4899' },
+    { value: 'sch_sunflower_summer', label: '해바라기 여름', emoji: '🌻', desc: '골드 그라데이션 + 해바라기 클러스터', group: '시즌', groupColor: '#ec4899' },
+    { value: 'sch_maple_autumn', label: '단풍 가을', emoji: '🍁', desc: '오렌지 그라데이션 + 흩날리는 단풍잎', group: '시즌', groupColor: '#ec4899' },
     { value: 'sch_snowflake_winter', label: '눈꽃 겨울', emoji: '❄️', desc: '눈 결정 패턴 + 아이시 블루', group: '시즌', groupColor: '#ec4899' },
     // 전통
     { value: 'sch_korean_classic', label: '한방 전통', emoji: '🏛️', desc: '기와 문양 + 한지 프레임', group: '전통', groupColor: '#92400e' },
