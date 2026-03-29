@@ -1,16 +1,12 @@
 /**
  * CalendarPreviews.tsx — 달력 테마 프리뷰 (정적 이미지)
  *
- * public/calendar-previews/{themeValue}.jpg 또는 .png 이미지를 표시.
- * 로드 실패 시 groupColor 배경 + 이름 fallback.
+ * public/calendar-previews/{themeValue}.jpg → .png 순서로 시도.
+ * 둘 다 실패 시 groupColor 배경 + 이름 fallback.
  */
 'use client';
 
 import { useState } from 'react';
-
-const PREVIEW_EXT: Record<string, string> = {
-  sch_korean_classic: 'png',
-};
 
 const THEME_NAMES: Record<string, string> = {
   sch_cherry_blossom: '벚꽃',
@@ -36,13 +32,13 @@ export function CalendarThemePreview({
   groupColor?: string;
   size?: 'sm' | 'lg';
 }) {
-  const [imgError, setImgError] = useState(false);
+  const [tryPng, setTryPng] = useState(false);
+  const [allFailed, setAllFailed] = useState(false);
   const lg = size === 'lg';
   const rd = lg ? 'rounded-xl' : 'rounded-lg';
-  const ext = PREVIEW_EXT[themeValue] || 'jpg';
-  const imgSrc = `/calendar-previews/${themeValue}.${ext}`;
+  const imgSrc = `/calendar-previews/${themeValue}.${tryPng ? 'png' : 'jpg'}`;
 
-  if (imgError) {
+  if (allFailed) {
     return (
       <div
         className={`w-full h-full flex items-center justify-center ${rd}`}
@@ -63,8 +59,11 @@ export function CalendarThemePreview({
       src={imgSrc}
       alt={THEME_NAMES[themeValue] || themeValue}
       loading="lazy"
-      onError={() => setImgError(true)}
-      className={`w-full h-full object-contain ${rd}`}
+      onError={() => {
+        if (!tryPng) setTryPng(true);
+        else setAllFailed(true);
+      }}
+      className={`w-full h-full object-cover ${rd}`}
     />
   );
 }
