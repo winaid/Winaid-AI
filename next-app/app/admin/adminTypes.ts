@@ -85,6 +85,8 @@ export async function getAllPosts(
   offset = 0,
 ): Promise<GeneratedPost[]> {
   if (!supabase) return [];
+
+  // RPC 시도
   const { data, error } = await supabase.rpc('get_all_generated_posts', {
     admin_password: token,
     filter_post_type: filterType && filterType !== 'all' ? filterType : null,
@@ -92,8 +94,48 @@ export async function getAllPosts(
     limit_count: 100,
     offset_count: offset,
   });
-  if (error || !data) return [];
-  return data as GeneratedPost[];
+  if (!error && data && data.length > 0) return data as GeneratedPost[];
+
+  // RPC 실패/빈 결과 → content 제외 직접 쿼리 fallback (이미지 base64가 너무 커서 RPC 응답 초과 방지)
+  try {
+    let query = supabase
+      .from('generated_posts')
+      .select('id, post_type, title, hospital_name, category, user_email, topic, char_count, created_at')
+      .order('created_at', { ascending: false })
+      .range(offset, offset + 99);
+
+    if (filterType && filterType !== 'all') {
+      query = query.eq('post_type', filterType);
+    }
+    if (filterHospital) {
+      query = query.ilike('hospital_name', `%${filterHospital}%`);
+    }
+
+    const { data: fallbackData, error: fallbackError } = await query;
+    if (fallbackError || !fallbackData) return [];
+
+    return (fallbackData as Record<string, unknown>[]).map(row => ({
+      ...row,
+      content: row.post_type === 'image' ? '[이미지]' : '',
+    })) as GeneratedPost[];
+  } catch {
+    return [];
+  }
+}
+
+export async function getPostContent(postId: string): Promise<string | null> {
+  if (!supabase) return null;
+  try {
+    const { data, error } = await supabase
+      .from('generated_posts')
+      .select('content')
+      .eq('id', postId)
+      .single();
+    if (error || !data) return null;
+    return (data as { content: string }).content;
+  } catch {
+    return null;
+  }
 }
 
 export async function deletePost(token: string, postId: string): Promise<boolean> {

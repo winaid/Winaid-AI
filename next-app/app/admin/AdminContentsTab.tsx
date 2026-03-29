@@ -4,6 +4,7 @@ import { useRef } from 'react';
 import {
   type GeneratedPost, type PostTypeFilter,
   POST_TYPE_LABELS, POST_TYPE_COLORS, formatDate,
+  getPostContent,
 } from './adminTypes';
 import { sanitizeHtml } from '../../lib/sanitizeHtml';
 import type { TeamData } from '../../lib/teamData';
@@ -284,7 +285,15 @@ export default function AdminContentsTab(props: AdminContentsTabProps) {
                             </p>
                           </div>
                           <div className="flex gap-1.5 flex-shrink-0">
-                            <button onClick={() => setSelectedPost(post)} className="px-3 py-1.5 bg-blue-50 text-blue-600 font-medium rounded-lg hover:bg-blue-100 transition-colors text-xs">보기</button>
+                            <button onClick={async () => {
+                              if (post.content === '[이미지]' || (!post.content && post.post_type === 'image')) {
+                                const content = await getPostContent(post.id);
+                                if (content) setSelectedPost({ ...post, content });
+                                else setSelectedPost(post);
+                              } else {
+                                setSelectedPost(post);
+                              }
+                            }} className="px-3 py-1.5 bg-blue-50 text-blue-600 font-medium rounded-lg hover:bg-blue-100 transition-colors text-xs">보기</button>
                             <button onClick={() => onDelete(post.id)} className="px-3 py-1.5 bg-red-50 text-red-500 font-medium rounded-lg hover:bg-red-100 transition-colors text-xs">삭제</button>
                           </div>
                         </div>
