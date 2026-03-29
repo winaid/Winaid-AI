@@ -802,262 +802,162 @@ Mobile readability: name 28pt+, credentials 12pt+.`,
   // 색상: 화이트+네이비/다크그레이(기본), 계절 악센트(핑크/오렌지), 서브듀드 전문적
   notice: [
     {
-      id: 'ntc_bulletin_board', name: '클린 블루 안내', color: '#2563eb', accent: '#1d4ed8', bg: '#eff6ff',
-      desc: '블루 헤더+오버랩 카드 표준형 — 똑닥/병원 표준 공지 포맷, 일반 긴급도, 구조화된 항목 나열',
-      layoutHint: 'bulletin',
-      aiPrompt: `Korean hospital official notice — standard blue header + overlapping white card. Modeled on 똑닥 공지 템플릿 and 네이버 예약 병원 공지 스타일. Normal urgency level.
+      id: "ntc_clean_white", name: "클린 화이트", color: "#374151", accent: "#111827", bg: "#ffffff",
+      desc: "순백 배경 + 차콜 타이포 + 얇은 라인 — 가장 깔끔한 공지", layoutHint: "minimal",
+      aiPrompt: `[CRITICAL — THIS IS A PREMIUM NOTICE POSTER, NOT A WORD DOCUMENT]
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- DO NOT invent hospital names, phone numbers, addresses, or medical information.
+- ONLY use text that the user explicitly provided in their input.
 
-=== ZONE LAYOUT (header + overlapping card) ===
-ZONE A – BLUE HEADER (35%): Solid blue (#2563eb) full-width block. Hospital name "○○병원" in small white (11px) top-center. Below: notice title e.g. "진료시간 변경 안내" or "휴진 안내" in large bold white (26px, weight 800) centered. Optional subtitle "안내드립니다" in white (13px, opacity 80%) below title.
-ZONE B – OVERLAPPING CARD (50%): Light blue (#eff6ff) background behind card. White rounded card (radius 12px, shadow 0 4px 16px rgba(0,0,0,0.08)), width 90%, overlapping Zone A bottom edge by ~10%. Inside card, structured content:
-  • "📅 기간: 2024.03.01(금) ~ 03.05(수)" — bold dark text (13px)
-  • "📋 사유: 병원 내부 시설 보수 공사" — gray text (13px)
-  • "🏥 대체진료: ○○병원 (02-XXX-XXXX)" — gray text (13px)
-  • "⏰ 재개일: 2024.03.06(목) 정상 진료" — bold dark text (13px)
-  Each item with blue (#2563eb) dot bullet, 8px vertical spacing. Key info (dates, contact) in bold (#1f2937), supporting text in gray (#4b5563).
-ZONE C – CTA + CONTACT (15%): Light blue background continues. Full-width rounded blue (#2563eb) button "전화 문의하기" in bold white (15px). Below: "📞 대표전화: 02-XXX-XXXX | 진료시간: 평일 09:00~18:00" in gray (10px) centered.
+Korean hospital notice poster — Clean White Minimal theme.
 
-=== EMERGENCY CONTACT BAR ===
-At very bottom: thin light blue (#dbeafe) bar, full width. "응급 시 연락처: 02-XXX-XXXX" in blue (#2563eb, 11px) centered.
+BACKGROUND: Pure white (#ffffff). No texture, no pattern. Whiteness is the design.
 
-=== INFO HIERARCHY ===
-1st: Notice title (largest, white on blue) 2nd: Key dates/period (bold in card) 3rd: Details (gray in card) 4th: CTA button 5th: Contact info
+TITLE (top 30%): LARGE bold charcoal (#111827), 40pt+, weight 900, sans-serif. Below: single thin line (1px, #e5e7eb, full width). ONLY decorative element.
 
-=== STRICT MODE ANCHORS ===
-• Blue header + white overlapping card structure must be maintained
-• Card overlaps header bottom edge
-• Structured bullet items inside card (not free-flowing text)
-• Emergency contact bar at bottom
-• Zone proportions: 35/50/15 (± 3%)
+CONTENT (middle 50%): Dark gray (#374151), 15pt. Line spacing 1.8. Items with thin left-border (2px, #e5e7eb). No bullet points.
 
-=== INSPIRED MODE FREEDOM ===
-• Number of bullet items can vary (3–6)
-• Icons/emojis beside items can be omitted or changed
-• Card can have blue left-border accent
-• Header can have subtle gradient (blue to darker blue)
-• Additional "참고사항" section inside card allowed
+FOOTER (bottom 20%): Light gray (#f9fafb) bg. Small gray (#6b7280) text. Thin line above.
 
-=== MOBILE READABILITY ===
-• Title ≥ 22px. Card items ≥ 12px. Contact ≥ 10px.
-• Card width 85–95% of canvas. Card padding ≥ 14px.
-• CTA button tap target ≥ 44px height`,
+BANNED: No icons, no emojis, no colors except grayscale, no boxes. Pure typography + whitespace.
+
+STRICT ANCHORS: Pure white, charcoal type, thin gray lines, extreme whitespace, Apple minimalism.
+Mobile readability: title 36pt+, body 14pt+.`,
     },
     {
-      id: 'ntc_modern_alert', name: '코럴 공지', color: '#ef4444', accent: '#dc2626', bg: '#fef2f2',
-      desc: '긴급 경고 배너형 — 긴급 휴진/응급 안내, 높은 긴급도, 응급연락처 강조 바, 대체병원 정보 포함',
-      layoutHint: 'alert',
-      aiPrompt: `Korean hospital URGENT notice — red alert banner for 긴급 휴진, 응급 상황, 긴급 변경. HIGH urgency level. Inspired by 병원 긴급공지 카카오톡 알림톡 디자인.
+      id: "ntc_soft_blue", name: "소프트 블루", color: "#1e3a8a", accent: "#3b82f6", bg: "#eff6ff",
+      desc: "연한 하늘색 배경 + 네이비 타이포 — 신뢰감 있는 공지", layoutHint: "blue",
+      aiPrompt: `[CRITICAL — THIS IS A PREMIUM NOTICE POSTER, NOT A WORD DOCUMENT]
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- DO NOT invent hospital names, phone numbers, addresses, or medical information.
+- ONLY use text that the user explicitly provided in their input.
 
-=== ZONE LAYOUT (alert banner + content + emergency bar) ===
-ZONE A – ALERT BANNER (25%): Solid coral-red (#ef4444) full-width block. Hospital name "○○병원" in small white (10px) top-left. Center: "⚠️ 긴급 안내" or "긴급 휴진 안내" in large bold white (28px, weight 800). Below title: "긴급" pill badge (white border, white text "URGENT", 10px) for additional emphasis.
-ZONE B – CONTENT CARD (45%): Light red (#fef2f2) background. White rounded card (radius 10px, shadow 0 2px 12px rgba(0,0,0,0.08)), width 90%. Inside card, structured with red (#ef4444) left border accent (3px):
-  • "🚨 휴진 기간: 2024.03.01(금) ~ 03.03(일)" — bold dark text (14px, weight 700)
-  • "📋 사유: 의료진 긴급 사정" — gray text (13px)
-  • "🏥 대체 병원: ○○의원 (도보 5분)" — gray text (13px)
-  • "📍 대체 병원 주소: 서울시 ○○구 ○○로 123" — gray text (12px)
-  • "⏰ 정상 진료 재개: 2024.03.04(월)" — bold dark text (14px)
-  Each with 8px vertical spacing. Dates and key info in bold (#1f2937).
-ZONE C – EMERGENCY CONTACT BAR (15%): Rounded pill bar with light red (#fef2f2) background, red (#ef4444) border (1.5px), centered. Inside: "📞 응급 연락처: 010-XXXX-XXXX (24시간)" in bold red (#dc2626, 14px). This is the most prominent contact element.
-ZONE D – CLOSING (15%): White background. "환자분들께 불편을 드려 진심으로 죄송합니다." in gray italic (12px) centered. Hospital name "○○병원 원장 ○○○" in small gray (10px). "대표전화: 02-XXX-XXXX" in gray (10px).
+Korean hospital notice poster — Soft Blue Trust theme.
 
-=== STRICT MODE ANCHORS ===
-• Red alert banner always at top — signals urgency immediately
-• Emergency contact bar must be prominently displayed (not buried in text)
-• Card must have red left-border accent
-• "긴급" or "URGENT" indicator always visible
-• Zone proportions: 25/45/15/15 (± 3%)
-• Apology closing message always present
+BACKGROUND: Gradient — light blue (#dbeafe) at top to very light blue (#eff6ff) to white at bottom.
 
-=== INSPIRED MODE FREEDOM ===
-• Alert icon can be ⚠️, 🚨, or ❗
-• Card can have full red border instead of left-only
-• Emergency bar can be full-width strip instead of pill shape
-• Additional "안내" items can be added (3–7 items)
-• Banner can have gradient (red to darker red)
+TITLE (top 35%): Bold deep navy (#1e3a8a), 38pt+. Thin blue line (1px, #93c5fd, width 30%) below.
 
-=== MOBILE READABILITY ===
-• Alert title ≥ 24px. Emergency phone ≥ 13px. Card items ≥ 12px.
-• Emergency contact bar always visible without scrolling
-• Card padding ≥ 12px. Red border accent ≥ 3px for visibility`,
+CONTENT (middle 45%): White frosted card (rounded 16px, 92% opacity). Deep navy text, 14pt. Blue (#bfdbfe) left-border (2px) per item.
+
+FOOTER (bottom 20%): White. Small blue text.
+
+SINGLE ACCENT: Tiny plus (+) in navy at 15% opacity, top-right.
+
+BANNED: No medical illustrations. Blue gradient = trust.
+
+STRICT ANCHORS: Blue-to-white gradient, navy type, frosted card, blue left-border, medical trust.
+Mobile readability: title 34pt+, body 13pt+.`,
     },
     {
-      id: 'ntc_soft_info', name: '라벤더 안내', color: '#8b5cf6', accent: '#7c3aed', bg: '#f5f3ff',
-      desc: '번호 매긴 필 카드 3단 — 낮은 긴급도, 피부과/소아과 친화, 변경사항을 단계별로 안내',
-      layoutHint: 'soft',
-      aiPrompt: `Korean hospital soft notice — numbered pill cards for friendly step-by-step announcements. LOW urgency level. For 진료시간 변경, 리모델링 안내, 새 서비스 도입. Preferred by 피부과/에스테틱/소아과. Inspired by 카카오톡 채널 안내 메시지 디자인.
+      id: "ntc_warm_cream", name: "웜 크림", color: "#78583d", accent: "#c9a96e", bg: "#faf7f2",
+      desc: "따뜻한 크림 배경 + 갈색 타이포 + 골드 악센트 — 고급 공지", layoutHint: "cream",
+      aiPrompt: `[CRITICAL — THIS IS A PREMIUM NOTICE POSTER, NOT A WORD DOCUMENT]
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- DO NOT invent hospital names, phone numbers, addresses, or medical information.
+- ONLY use text that the user explicitly provided in their input.
 
-=== ZONE LAYOUT (vertical: header + 3 numbered cards + CTA) ===
-ZONE A – HEADER (20%): Soft lavender (#f5f3ff) background. Rounded lavender (#8b5cf6) circle icon with white "ℹ" (or 📢) centered at top (32px diameter). Below: notice title e.g. "진료시간 변경 안내" or "새로운 서비스 안내" in bold purple (#8b5cf6, 22px, weight 800) centered. Hospital name "○○피부과" in small gray (#6b7280, 10px) centered below title.
+Korean hospital notice poster — Warm Cream Premium theme.
 
-ZONE B – NUMBERED CARDS (50%): Lavender background continues. 3 pill-shaped cards stacked vertically with 8px gap:
-  CARD 1: White card (radius 20px, shadow 0 1px 6px rgba(0,0,0,0.05)), width 90%. Left: purple (#8b5cf6) circle with white "1" (bold, 14px). Right: "변경사항: 오후 진료시간이 18:00에서 19:00으로 연장됩니다" in dark gray (#374151, 13px). Internal padding 12px.
-  CARD 2: Same style. Circle "2". "적용일: 2024년 3월 1일(금)부터 적용" in dark gray.
-  CARD 3: Same style. Circle "3". "참고사항: 토요일 진료시간은 변동 없습니다 (09:00~13:00)" in dark gray.
-  Each card identical dimensions. Content left-aligned after number circle.
+BACKGROUND: Warm ivory (#faf7f2). Subtle linen texture at 3% opacity.
 
-ZONE C – CTA + FOOTER (20%): Rounded purple (#8b5cf6) pill button "자세히 보기" or "문의하기" in bold white (14px), centered, 70% width. Below: "문의: 02-XXX-XXXX" in gray (10px). 10px below: thin lavender bar full-width with "응급 연락처: 010-XXXX-XXXX" in purple (#7c3aed, 10px) centered.
+TITLE (top 30%): Warm brown (#78583d), 36pt+, serif feel. Gold (#c9a96e) decorative line (1px, width 25%) with diamond centered below.
 
-=== STRICT MODE ANCHORS ===
-• Exactly 3 numbered pill cards (no more, no fewer)
-• Cards have pill shape (high border-radius ≥ 20px)
-• Number circles on left, text on right within each card
-• Lavender/purple palette throughout — no warm or contrasting colors
-• Zone proportions: 20/50/20 (± 3%, remaining 10% spacing)
-• Emergency contact bar at bottom
+CONTENT (middle 50%): Warm brown (#5c4a32), 14pt. Thin warm border-left (2px, #e8ddd0) per item.
 
-=== INSPIRED MODE FREEDOM ===
-• Number of cards can extend to 4–5 for complex notices
-• Card shape can be standard rounded rectangle instead of pill
-• Number indicators can be icons instead of numbers
-• Background can have subtle gradient (lavender to white)
-• Cards can have left purple border accent instead of number circle
+FOOTER (bottom 20%): Gold lines at top/bottom edges (full width, 0.5px). Small warm brown text.
 
-=== MOBILE READABILITY ===
-• Title ≥ 20px. Card text ≥ 12px. Number in circle ≥ 13px.
-• Card padding ≥ 10px. Cards width 85–95% of canvas.
-• CTA button tap target ≥ 44px height`,
+BANNED: No heavy frames. Luxury from warmth + texture + restrained gold.
+
+STRICT ANCHORS: Ivory/linen, warm brown serif title, gold diamond line, gilded borders, luxury warm.
+Mobile readability: title 32pt+, body 13pt+.`,
     },
     {
-      id: 'ntc_corporate_formal', name: '공식 문서', color: '#1f2937', accent: '#111827', bg: '#f9fafb',
-      desc: '공문서 이중선 형식 — 대학병원/종합병원 공식 고지, 원장 명의 발신, 무채색 권위체',
-      layoutHint: 'formal',
-      aiPrompt: `Korean hospital official document notice — formal 공문서 style. Used by 대학병원/종합병원 for 원장 명의 공지, 법적 고지, 정책 변경, 의료수가 변경. FORMAL urgency level. Inspired by Korean government 공문서 and 대한병원협회 공지 양식.
+      id: "ntc_mint_fresh", name: "민트 프레시", color: "#0f766e", accent: "#10b981", bg: "#f0fdfa",
+      desc: "민트 그라데이션 + 다크그린 타이포 — 상쾌한 공지", layoutHint: "mint",
+      aiPrompt: `[CRITICAL — THIS IS A PREMIUM NOTICE POSTER, NOT A WORD DOCUMENT]
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- DO NOT invent hospital names, phone numbers, addresses, or medical information.
+- ONLY use text that the user explicitly provided in their input.
 
-=== ZONE LAYOUT (document format with double-line borders) ===
-ZONE A – TOP BORDER + HEADER (15%): Pure white (#ffffff) background. Double horizontal lines at top: thick line (2px, charcoal #1f2937) above, thin line (0.5px, charcoal) below, 4px gap. Below lines: hospital name "○○대학교병원" in formal charcoal (#1f2937, 16px, weight 700, letter-spacing 3px) centered. Optional small hospital logo placeholder above name.
+Korean hospital notice poster — Mint Fresh theme.
 
-ZONE B – TITLE (12%): "공 지 사 항" in very large bold charcoal (#111827, 28px, weight 900, letter-spacing 8px) centered. Thin charcoal hairline (40% width) below title.
+BACKGROUND: Soft mint gradient (#ecfdf5 to #f0fdfa). Single small leaf silhouette (#a7f3d0) at bottom-right at 8% opacity.
 
-ZONE C – BODY CONTENT (48%): Left-aligned with 24px left indent. All text in charcoal (#1f2937) on white. Structured as formal numbered items:
-  "1. 변경 내용: 2024년 3월 1일부로 외래 진료시간이 아래와 같이 변경됩니다." (13px)
-  "   - 평일: 09:00 ~ 17:30 (변경 전: 09:00 ~ 17:00)" (12px, gray #4b5563)
-  "   - 토요일: 09:00 ~ 12:30 (변경 없음)" (12px, gray)
-  "2. 적용일: 2024년 3월 1일(금)" (13px)
-  "3. 사유: 의료진 진료 환경 개선" (13px)
-  "4. 문의: 원무과 02-XXX-XXXX (내선 XXX)" (13px)
-  Numbered items in bold charcoal. Sub-items indented with dash. 6px line spacing.
+TITLE (top 30%): Dark teal (#0f766e), 36pt+, sans-serif. Thin emerald (#10b981) line (1px, width 20%) below.
 
-ZONE D – CLOSING (15%): "위 사항을 안내드리오니 양해하여 주시기 바랍니다." in charcoal (12px) centered. 16px gap. "○○대학교병원" in bold charcoal (14px) centered. "병원장 ○○○" in charcoal (12px) centered. Double horizontal lines at bottom matching top border.
+CONTENT (middle 50%): White card (rounded 14px, border: 1px solid #d1fae5). Dark teal (#134e4a) text, 14pt. Emerald left-border (2px) per item.
 
-=== EMERGENCY CONTACT ===
-Below bottom border: "응급실: 02-XXX-XXXX (24시간)" in small charcoal (#374151, 10px) centered.
+FOOTER (bottom 20%): Mint continues. Small teal text. Thin emerald line above.
 
-=== STRICT MODE ANCHORS ===
-• Double-line borders at TOP and BOTTOM — defining feature
-• Black/white/charcoal only — NO colors, NO decorations, NO icons
-• Left-aligned body with indent (공문서 style)
-• Numbered items for content (not bullets)
-• Closing with hospital name + 원장 title
-• Zone proportions: 15/12/48/15 (± 3%, remaining 10% spacing)
+BANNED: No leaves except ONE silhouette. Mint gradient = freshness.
 
-=== INSPIRED MODE FREEDOM ===
-• Number of body items can vary (2–6)
-• Indent depth can vary (16–32px)
-• Letter-spacing in title can vary
-• Light gray (#f9fafb) background instead of pure white allowed
-• Sub-items can use ·, -, or ① style markers
-
-=== MOBILE READABILITY ===
-• Title ≥ 24px. Body text ≥ 12px. Closing ≥ 11px.
-• Left indent ≥ 16px. Right margin ≥ 16px.
-• Double lines must be visible (top line ≥ 1.5px thick)`,
+STRICT ANCHORS: Mint gradient, single leaf, dark teal type, emerald accents, white card, fresh mood.
+Mobile readability: title 32pt+, body 13pt+.`,
     },
     {
-      id: 'ntc_card_popup', name: '민트 팝업', color: '#06b6d4', accent: '#0891b2', bg: '#ecfeff',
-      desc: '다크 배경+플로팅 모달 카드 — 신규 개원/장비 도입/특별 안내, 중간 긴급도, 팝업 주목 효과',
-      layoutHint: 'popup',
-      aiPrompt: `Korean hospital modern popup-style notice — dark overlay with floating white modal card. MEDIUM urgency level. For attention-grabbing announcements: 신규 개원, 최신 장비 도입, 진료과목 추가, 특별 안내. Inspired by 앱 팝업 공지 UI and 카카오톡 채널 공지 팝업.
+      id: "ntc_slate_modern", name: "슬레이트 모던", color: "#334155", accent: "#64748b", bg: "#f8fafc",
+      desc: "연한 슬레이트 배경 + 기하학 라인 — 모던한 공지", layoutHint: "slate",
+      aiPrompt: `[CRITICAL — THIS IS A PREMIUM NOTICE POSTER, NOT A WORD DOCUMENT]
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- DO NOT invent hospital names, phone numbers, addresses, or medical information.
+- ONLY use text that the user explicitly provided in their input.
 
-=== ZONE LAYOUT (dark backdrop + centered modal card) ===
-BACKGROUND: Dark semi-transparent overlay (#0f172a at 60% opacity) full bleed. Creates focus on the modal card.
+Korean hospital notice poster — Slate Modern Geometric theme.
 
-MODAL CARD (centered, 85% width, ~75% height): White rounded card (radius 14px, shadow 0 8px 32px rgba(0,0,0,0.2)).
-  CARD ZONE A – ICON + TITLE (20% of card): Rounded mint (#06b6d4) circle icon (48px diameter) with white "📢" or "🔔" centered, positioned at top-center of card (overlapping card top edge by 50%). Below icon: notice title e.g. "신규 장비 도입 안내" or "진료과목 확대 안내" in bold dark (#1f2937, 22px, weight 800) centered. Hospital name "○○병원" in gray (#6b7280, 11px) centered below.
-  CARD ZONE B – CONTENT (50% of card): Structured items with generous spacing (10px between items):
-    • "📅 적용일: 2024년 3월 1일(금)부터" — bold dark (13px)
-    • "🔬 도입 장비: ○○○ (최신 CT 촬영 장비)" — gray (13px)
-    • "💡 특징: 저선량 고해상도 촬영으로 정확한 진단 가능" — gray (13px)
-    • "📍 위치: 본원 2층 영상의학과" — gray (12px)
-    • "ℹ️ 참고: 기존 예약 환자분께는 개별 안내드립니다" — gray (12px)
-  Each with mint (#06b6d4) dot bullet. Key info in bold (#1f2937).
-  CARD ZONE C – CTA + CONTACT (20% of card): Rounded mint (#06b6d4) to teal (#0891b2) gradient button "확인했습니다" or "예약 문의" in bold white (15px), 70% width, centered. Below: "문의: 02-XXX-XXXX" in gray (10px).
-  CARD ZONE D – EMERGENCY BAR (10% of card): Thin mint (#ecfeff) bar at card bottom with rounded bottom corners. "응급 연락처: 02-XXX-XXXX" in teal (#0891b2, 10px) centered.
+BACKGROUND: Light slate (#f8fafc). Geometric grid lines (0.5px, #e2e8f0) at 4% opacity.
 
-=== STRICT MODE ANCHORS ===
-• Dark overlay backdrop always present
-• White modal card centered on dark background
-• Icon circle overlaps card top edge
-• Content structured as bulleted items (not paragraph text)
-• CTA button inside card
-• Emergency contact at card bottom
-• Card proportions: 20/50/20/10 (± 3%)
+TITLE (top 30%): Dark slate (#1e293b), 38pt+, weight 900, tight tracking. Short bold accent line (3px, 40px width) below.
 
-=== INSPIRED MODE FREEDOM ===
-• Icon can be any relevant emoji or abstract symbol
-• Dark overlay opacity can vary 40–70%
-• Card size can vary 75–90% width, 65–80% height
-• Number of content items: 3–6
-• CTA button text freely changeable
-• Card can have mint top-border accent (3px)
+CONTENT (middle 50%): Slate (#334155), 14pt. Items separated by thin lines (1px, #e2e8f0). Grid-like layout.
 
-=== MOBILE READABILITY ===
-• Title ≥ 20px. Content items ≥ 12px. CTA ≥ 14px.
-• Card internal padding ≥ 16px. CTA tap target ≥ 44px.
-• Icon circle ≥ 40px diameter`,
+SIGNATURE: Small rotated diamond in slate (#94a3b8), 8x8px, bottom-right.
+
+BANNED: No curves, no gradients, no warmth. Everything ANGULAR, GEOMETRIC, PRECISE.
+
+STRICT ANCHORS: Light slate, grid lines, dark slate type, bold accent line, diamond mark, Swiss precision.
+Mobile readability: title 34pt+, body 13pt+.`,
     },
     {
-      id: 'ntc_timeline', name: '그린 타임라인', color: '#22c55e', accent: '#16a34a', bg: '#f0fdf4',
-      desc: '변경 전/후 좌우 비교 카드 — 진료시간/위치/담당의 변경, 빨강→초록 시각 비교, 즉시 파악 가능',
-      layoutHint: 'timeline',
-      aiPrompt: `Korean hospital change notice — before/after side-by-side comparison cards. For 진료시간 변경, 위치 이전, 담당의 변경, 시스템 변경. MEDIUM urgency level. Inspired by 은행/관공서 변경 안내문 and 병원 리모델링 이전 공지.
+      id: "ntc_peach_soft", name: "피치 소프트", color: "#9a3412", accent: "#f97316", bg: "#fff7ed",
+      desc: "연한 피치/살몬 배경 + 따뜻한 브라운 — 부드러운 공지", layoutHint: "peach",
+      aiPrompt: `[CRITICAL — THIS IS A PREMIUM NOTICE POSTER, NOT A WORD DOCUMENT]
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- DO NOT invent hospital names, phone numbers, addresses, or medical information.
+- ONLY use text that the user explicitly provided in their input.
 
-=== ZONE LAYOUT (header + side-by-side cards + footer) ===
-ZONE A – HEADER (18%): White background. Hospital name "○○의원" in green (#16a34a, 11px) top-left. Notice title e.g. "진료시간 변경 안내" or "병원 위치 이전 안내" in bold green (#22c55e, 24px, weight 800) centered. Thin green hairline (50% width) below title.
+Korean hospital notice poster — Peach Soft Warm theme.
 
-ZONE B – COMPARISON CARDS (50%): White background. Two cards side by side (each ~44% width, 8px gap between, centered):
-  LEFT CARD "변경 전": Light red (#fef2f2) background, radius 10px, padding 12px.
-    "변경 전" label in bold red (#ef4444, 14px, weight 700) at top.
-    Thin red (#fca5a5) line below label.
-    Content listed in dark gray (#374151, 12px):
-      "평일: 09:00 ~ 17:00"
-      "토요일: 09:00 ~ 12:00"
-      "점심: 12:30 ~ 13:30"
-    Each on own line, 5px spacing.
-  CENTER ARROW: Between the two cards, vertically centered: green (#22c55e) circle (28px) with white "→" arrow inside. Represents the change direction.
-  RIGHT CARD "변경 후": Light green (#f0fdf4) background, radius 10px, padding 12px.
-    "변경 후" label in bold green (#22c55e, 14px, weight 700) at top.
-    Thin green (#86efac) line below label.
-    Content listed in dark gray (#1f2937, 12px, weight 600):
-      "평일: 09:00 ~ 18:00" ← changed items in bold
-      "토요일: 09:00 ~ 13:00" ← changed items in bold
-      "점심: 12:30 ~ 13:30 (변동 없음)" ← unchanged in regular weight
+BACKGROUND: Soft gradient — light peach (#fed7aa) at top through warm cream (#fff7ed) to white. Subtle bokeh circles (#ffedd5) at 6-8% opacity.
 
-ZONE C – DETAILS + CONTACT (22%): White background.
-  "📅 적용일: 2024년 3월 1일(금)부터" in bold dark text (13px) centered.
-  "참고하여 내원에 차질 없으시기 바랍니다." in gray italic (11px) centered.
-  Thin green line divider.
-  Contact bar: light green (#f0fdf4) rounded bar, full width. "📞 문의: 02-XXX-XXXX | 응급: 010-XXXX-XXXX" in green (#16a34a, 11px) centered.
+TITLE (top 35%): Deep warm brown (#9a3412), 36pt+, rounded sans-serif. Thin coral (#fb923c) line (1px, width 20%) below.
 
-=== STRICT MODE ANCHORS ===
-• Two cards MUST be side by side (left = before, right = after)
-• Left card red-tinted, right card green-tinted — color coding mandatory
-• Arrow indicator between cards
-• Changed items in right card must be visually differentiated (bold)
-• Zone proportions: 18/50/22 (± 3%, remaining 10% spacing)
-• Emergency/contact bar at bottom
+CONTENT (middle 45%): White card with VERY rounded corners (22px), warm shadow. Warm brown (#78350f), 14pt. Coral (#fdba74) left-border (2px) per item.
 
-=== INSPIRED MODE FREEDOM ===
-• Arrow can be →, ▶, or animated-style chevron
-• Cards can be stacked vertically on very narrow canvas
-• Additional "변경 사유" section below cards allowed
-• Card borders can be added for definition
-• Background can have very subtle green tint instead of pure white
+FOOTER (bottom 20%): Warm cream. Small warm brown text.
 
-=== MOBILE READABILITY ===
-• Title ≥ 20px. Card labels ≥ 13px. Card content ≥ 11px.
-• Cards minimum width: 40% each. Gap ≥ 6px.
-• Arrow circle ≥ 24px diameter
-• Contact bar padding ≥ 8px`,
+BANNED: No sharp edges. Everything rounded and soft. No corporate coldness.
+
+STRICT ANCHORS: Peach-to-cream gradient, bokeh glow, very rounded card, warm brown type, coral accents, friendly warm.
+Mobile readability: title 32pt+, body 13pt+.`,
     },
   ],
 
