@@ -91,6 +91,7 @@ export default function ImagePage() {
   const [markMode, setMarkMode] = useState<DayMark>('closed');
   const [calendarTheme, setCalendarTheme] = useState<string>('sch_cherry_blossom');
   const [previewZoom, setPreviewZoom] = useState<string | null>(null);
+  const [previewZoomCategory, setPreviewZoomCategory] = useState<string>('schedule');
 
   // ── 달력 테마 옵션 (12종 — 4그룹) ──
   const CALENDAR_THEME_OPTIONS: { value: string; label: string; emoji: string; desc: string; group: string; groupColor: string }[] = [
@@ -1637,7 +1638,7 @@ The DESIGN must be VISUALLY IDENTICAL to the reference image.`;
                               {groupThemes.map(t => {
                                 const isSelected = calendarTheme === t.value;
                                 return (
-                                  <button key={t.value} type="button" onClick={() => setCalendarTheme(t.value)} onDoubleClick={(e) => { e.preventDefault(); setPreviewZoom(t.value); }}
+                                  <button key={t.value} type="button" onClick={() => setCalendarTheme(t.value)} onDoubleClick={(e) => { e.preventDefault(); setPreviewZoomCategory('schedule'); setPreviewZoom(t.value); }}
                                     className={`group relative rounded-2xl overflow-hidden transition-all duration-200 ${isSelected ? 'shadow-xl ring-2 ring-offset-2' : 'shadow-sm hover:shadow-md border border-slate-200/80'}`}
                                     style={isSelected ? { '--tw-ring-color': t.groupColor } as React.CSSProperties : undefined}>
                                     <div className="relative" style={{ aspectRatio: '1/1' }}>
@@ -1663,16 +1664,16 @@ The DESIGN must be VISUALLY IDENTICAL to the reference image.`;
                   </div>
                 )}
 
-                {/* 프리뷰 확대 모달 */}
+                {/* 프리뷰 확대 모달 (전체 카테고리 공통) */}
                 {previewZoom && (
                   <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-6" onClick={() => setPreviewZoom(null)}>
                     <div className="relative" onClick={e => e.stopPropagation()}>
                       <button type="button" onClick={() => setPreviewZoom(null)} className="absolute -top-3 -right-3 z-10 w-8 h-8 bg-black/70 hover:bg-black text-white rounded-full flex items-center justify-center text-lg shadow-lg">×</button>
                       <img
-                        src={`/schedule-previews/${previewZoom}.jpg`}
+                        src={`/${previewZoomCategory}-previews/${previewZoom}.jpg`}
                         alt={previewZoom}
                         className="max-w-[90vw] max-h-[85vh] rounded-2xl shadow-2xl"
-                        onError={(e) => { (e.target as HTMLImageElement).src = `/schedule-previews/${previewZoom}.png`; }}
+                        onError={(e) => { (e.target as HTMLImageElement).src = `/${previewZoomCategory}-previews/${previewZoom}.png`; }}
                       />
                     </div>
                   </div>
@@ -1703,6 +1704,7 @@ The DESIGN must be VISUALLY IDENTICAL to the reference image.`;
                         return (
                           <button key={tmpl.id} type="button"
                             onClick={() => { setSelectedCatTemplate(isSelected ? null : tmpl); setSelectedUploadedStyle(null); }}
+                            onDoubleClick={(e) => { e.preventDefault(); setPreviewZoomCategory(selectedTemplate || 'event'); setPreviewZoom(tmpl.id); }}
                             className={`group relative rounded-2xl overflow-hidden transition-all duration-200 ${
                               isSelected
                                 ? 'shadow-xl ring-2 ring-offset-2'
@@ -1710,8 +1712,8 @@ The DESIGN must be VISUALLY IDENTICAL to the reference image.`;
                             }`}
                             style={isSelected ? { '--tw-ring-color': tmpl.color } as React.CSSProperties : undefined}
                           >
-                            {/* 카테고리별 프리뷰 이미지 또는 SVG fallback */}
-                            <div className="relative w-full overflow-hidden" style={{ aspectRatio: '3/4' }}>
+                            {/* 카테고리별 프리뷰 이미지 또는 fallback */}
+                            <div className="relative w-full overflow-hidden" style={{ aspectRatio: '1/1' }}>
                               <ThemePreview themeValue={tmpl.id} category={selectedTemplate || 'event'} groupColor={tmpl.color} label={tmpl.name} size="sm" />
                               {/* 스타일 태그 뱃지 */}
                               <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-md text-[8px] font-bold shadow-sm" style={{ backgroundColor: tmpl.color, color: 'white' }}>
