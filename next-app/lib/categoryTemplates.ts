@@ -445,182 +445,192 @@ Mobile readability: minimum body text 11pt, date numbers 14pt bold, title 24pt+.
   event: [
     {
       id: "evt_gold_luxury", name: "골드 럭셔리", color: "#b8860b", accent: "#8b6914", bg: "#faf5ef",
-      desc: "메탈릭 골드 텍스처 + 크림 배경 — 고급스러운 프리미엄 스타일", layoutHint: "luxury",
-      aiPrompt: `[CRITICAL — THIS IS A PREMIUM DESIGNED POSTER, NOT A GENERIC FLYER]
+      desc: "골드 시머 텍스처 + 세리프 타이포 — 럭셔리 초대장 스타일", layoutHint: "luxury",
+      aiPrompt: `[CRITICAL — THIS IS A PREMIUM DESIGNED POSTER]
 ⛔ STRICT CONTENT RULES:
 - DO NOT add any information the user did not provide.
-- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
-- DO NOT add fake disclaimers, footnotes, or fine print (e.g. ※ sentences). These often come out as nonsensical gibberish.
-- DO NOT invent hospital names, phone numbers, addresses, or medical information.
-- ONLY use text that the user explicitly provided in their input. If no text was provided for a section, leave it empty or use a simple label.
+- DO NOT generate fake Korean text. Leave areas blank or use only user-provided text.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- ONLY use text the user explicitly provided.
 
+Korean hospital event poster — LUXURY GOLD STATIONERY style. Like a Cartier invitation card.
 
-Korean hospital event/promotion poster — Luxury Gold theme. Pure design style — works for ANY type of event.
+VISUAL STRUCTURE:
+BACKGROUND: Rich cream (#faf5ef) with visible METALLIC GOLD SHIMMER texture across entire surface at 5-7% opacity — like real gold-flecked luxury paper. Subtle diagonal light rays from top-left at 3% opacity.
 
-BACKGROUND: Rich cream (#faf5ef) base. Entire background covered with subtle METALLIC GOLD SHIMMER effect — brushed gold leaf texture at 5-8% opacity across the whole surface. At top and bottom edges: soft gold (#d4a853) gradient fade (15% opacity) creating warm glow frame. NOT random dots — elegant metallic texture.
+GOLD DOUBLE FRAME: Thin double-line gold (#c9a96e) rectangular frame (outer 1px, inner 0.5px, 4px gap) inset 5% from edges. Four gold corner bracket ornaments.
 
-TYPOGRAPHY HERO (top 45%): Event title (user-provided) in MASSIVE display typography — 60pt+, weight 900, deep gold (#8B6914). Typography IS the decoration. Below: thin gold line (1px, width 25%, centered). Below line: subtitle in warm charcoal (#3c3228), 16pt, elegant spacing.
+INSIDE FRAME:
+- Top: Event title in deep gold (#8B6914) MASSIVE serif typography (48pt+, weight 900). Typography IS the luxury.
+- Below title: two thin parallel gold lines (0.5px each, 3px gap, width 30%) with diamond centered.
+- Middle: Content in warm brown (#5c4a32) serif text, generous spacing. Numbers in bold gold.
+- Bottom: small warm brown text.
 
-CONTENT CARD (middle 35%): Frosted white card (rounded 20px, backdrop-blur, border: 0.5px solid rgba(212,168,83,0.3)). Event details in warm charcoal. Numbers in bold gold (#b8860b). Clean hierarchy, generous line spacing. NO bullet points.
+THE GOLD DOUBLE FRAME WITH CORNER BRACKETS AND DIAMOND ARE MANDATORY.
 
-SIGNATURE DETAIL: Two thin parallel gold lines (0.5px each, 4px gap) at 30% and 75% from top — structural decoration replacing confetti.
-
-FOOTER (bottom 20%): Cream continues. Small warm charcoal text.
-
-BANNED: No confetti, no dots, no scattered shapes, no ribbons, no balloons. Decoration from typography weight, gold lines, metallic texture ONLY.
-
-STRICT ANCHORS: Metallic gold shimmer, massive display typography, parallel gold lines, frosted card, cream/gold/charcoal palette, luxury brand aesthetic.
-INSPIRED FREEDOM: Gold shade, shimmer intensity, line placement, card opacity.
-Mobile readability: title 48pt+, body 12pt+.`,
+STRICT ANCHORS: Gold shimmer texture, double frame, corner brackets, serif title, diamond ornament, luxury invitation mood.
+Mobile readability: title 44pt+, body 13pt+.`,
     },
+
     {
       id: "evt_coral_peach", name: "코랄 피치", color: "#f97316", accent: "#ea580c", bg: "#fff7ed",
-      desc: "코랄→피치 따뜻한 그라데이션 + 라운드 — 밝고 따뜻한 스타일", layoutHint: "coral",
-      aiPrompt: `[CRITICAL — THIS IS A PREMIUM DESIGNED POSTER, NOT A GENERIC FLYER]
+      desc: "핑크/민트 분할 배경 + 기하학 원 + 3D 의료 오브제 — 트렌디 클리닉", layoutHint: "coral",
+      aiPrompt: `[CRITICAL — THIS IS A PREMIUM DESIGNED POSTER WITH 3D ELEMENTS]
 ⛔ STRICT CONTENT RULES:
 - DO NOT add any information the user did not provide.
-- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
-- DO NOT add fake disclaimers, footnotes, or fine print. These often come out as nonsensical gibberish.
-- DO NOT invent hospital names, phone numbers, addresses, or medical information.
-- ONLY use text that the user explicitly provided in their input.
+- DO NOT generate fake Korean text. Leave areas blank or use only user-provided text.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- ONLY use text the user explicitly provided.
 
-Korean hospital event/promotion poster — Coral Peach Warm theme. Pure design style — works for ANY type of event.
+Korean hospital event poster — 3D OBJECT + GEOMETRIC style. Like a modern dental/dermatology clinic social media ad.
 
-BACKGROUND: Warm gradient filling ENTIRE image — vivid coral (#f97316) at top fading through soft peach (#fdba74) at middle to warm cream (#fff7ed) at bottom. The gradient is SMOOTH, warm, and inviting like a sunset. Across the background: very subtle soft circular bokeh shapes (large, blurred circles) in lighter peach (#fed7aa) at 8-12% opacity. Creates a dreamy warm glow.
+VISUAL STRUCTURE:
+BACKGROUND: Split diagonally — soft pink (#fce7f3) on top-left half, mint/teal (#ccfbf1) on bottom-right half. The diagonal split creates dynamic energy.
 
-TYPOGRAPHY HERO (top 40%): Bold white title — 44pt+, weight 900, rounded sans-serif feel. Friendly and approachable, not corporate. Below: thin white line (1px, width 20%, centered). Below: subtitle in warm cream (#fef3c7), 14pt.
+GEOMETRIC SHAPES: Scattered across background — circles (outlined and filled), half-circles, ring shapes in pink (#f9a8d4), mint (#5eead4), and white at 20-40% opacity. 8-10 shapes total, various sizes.
 
-CONTENT CARD (middle 35%): White card with VERY rounded corners (border-radius 24px), soft warm shadow (rgba(249,115,22,0.15)). All elements inside rounded too. Text in warm brown (#78350f). Numbers in bold coral (#ea580c).
+3D OBJECT AREA (top 40%): A large soft circle (#f5f5f4) in center-top as a spotlight for a 3D medical illustration. Realistic 3D rendering of a medical object (tooth/implant for dental, syringe/vial for injection, skin layer for dermatology). If no specific topic, draw a 3D medical cross or pill capsule. Glossy, modern, soft shadows.
 
-FOOTER (bottom 25%): Gradient continues to cream. Small warm brown text.
+TEXT AREA (bottom 50%):
+- Clinic name small in gray
+- Event title in MASSIVE bold dark (#1e1b4b) text (40pt+)
+- Subtitle in coral (#f97316) bold
+- Content: price large and bold, date in gray
+- CTA: rounded coral pill button shape
 
-MOOD: Think trendy Korean cafe menu or popup store poster. Warm, inviting, Instagram-worthy. Everything rounded and soft.
+THE DIAGONAL SPLIT BACKGROUND AND 3D OBJECT ARE MANDATORY.
 
-BANNED: No sharp rectangles, no corporate grids, no medical icons. Warmth and roundness is the design language.
-
-STRICT ANCHORS: Coral-to-cream warm gradient, bokeh glow circles, very rounded card (24px), white bold title, warm brown body, friendly mood.
-INSPIRED FREEDOM: Coral shade, bokeh density, card radius, gradient warmth.
-Mobile readability: title 36pt+, body 12pt+.`,
+STRICT ANCHORS: Pink/mint diagonal split, geometric shapes, 3D medical object in circle spotlight, massive title, modern clinic social media aesthetic.
+Mobile readability: title 36pt+, body 13pt+.`,
     },
+
     {
       id: "evt_lavender_dream", name: "라벤더 드림", color: "#7c3aed", accent: "#6d28d9", bg: "#f5f3ff",
-      desc: "보라 그라데이션 + 별/스파클 — 몽환적이고 세련된 스타일", layoutHint: "lavender",
-      aiPrompt: `[CRITICAL — THIS IS A PREMIUM DESIGNED POSTER, NOT A GENERIC FLYER]
+      desc: "보라 그라데이션 + 유리 카드 + 블러 효과 — 글라스모피즘 스타일", layoutHint: "lavender",
+      aiPrompt: `[CRITICAL — THIS IS A PREMIUM DESIGNED POSTER WITH GLASSMORPHISM]
 ⛔ STRICT CONTENT RULES:
 - DO NOT add any information the user did not provide.
-- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
-- DO NOT add fake disclaimers, footnotes, or fine print. These often come out as nonsensical gibberish.
-- DO NOT invent hospital names, phone numbers, addresses, or medical information.
-- ONLY use text that the user explicitly provided in their input.
+- DO NOT generate fake Korean text. Leave areas blank or use only user-provided text.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- ONLY use text the user explicitly provided.
 
-Korean hospital event/promotion poster — Lavender Dream theme. Pure design style — works for ANY type of event.
+Korean hospital event poster — GLASSMORPHISM style. Trendy UI/UX inspired poster design.
 
-BACKGROUND: Dreamy gradient filling ENTIRE image — deep purple (#6d28d9) at top corners fading through medium lavender (#8b5cf6) to soft lilac (#ede9fe) at center, then to near-white lavender (#f5f3ff) at bottom. Across ENTIRE background: scattered sparkle marks in white and light purple at 10-20% opacity, various sizes, 5-8 total. Creates magical dreamy night sky atmosphere.
+VISUAL STRUCTURE:
+BACKGROUND: Rich gradient — deep purple (#4c1d95) at top-left flowing through violet (#7c3aed) to soft lavender (#c4b5fd) at bottom-right. Large blurred color blobs — a pink (#f0abfc) blob (200px, 30% opacity) at top-right, a blue (#818cf8) blob (150px, 25% opacity) at bottom-left. These blobs create depth for the glass effect.
 
-DECORATIVE: One subtle starburst — 3 sparkle marks close together at top-left, white, 25% opacity. Like a gentle star twinkling.
+GLASS CARD: A frosted glass card at center — white at 15-20% opacity, backdrop-blur effect (blobs behind are blurred through the card), border: 1px solid rgba(255,255,255,0.3), rounded 24px. Subtle white glow at card edges. This glass card is THE signature element.
 
-TYPOGRAPHY HERO (top 40%): Bold white title — 40pt+, weight 800. White text GLOWS against purple gradient. Below: thin white line (1px, width 15%, 30% opacity). Below: subtitle in light lavender (#c4b5fd), 14pt.
+INSIDE GLASS CARD:
+- Event title in bold white text (40pt+, weight 800) — floats on the frosted surface
+- Below title: thin white line (50% opacity)
+- Content in white/light lavender text, generous spacing
+- Numbers in bold white, slightly larger
 
-CONTENT AREA (middle 35%): Frosted white card (rounded 18px, 90% opacity, border: 0.5px solid rgba(139,92,246,0.2)). Deep purple (#4c1d95) text. Numbers in bold violet (#7c3aed).
+SPARKLES: 3-5 small sparkle marks in white at 20-40% opacity scattered around the card.
 
-FOOTER (bottom 25%): Gradient continues to light lavender. Small purple text.
+THE FROSTED GLASS CARD AND COLOR BLOBS ARE MANDATORY.
 
-MOOD: Luxury perfume ad or premium beauty clinic event. Dreamy, ethereal, sophisticated. NOT childish.
-
-BANNED: No stars, no moons, no clouds, no cartoon elements. Only geometric sparkle marks. Dreaminess from gradient depth and sparkle subtlety.
-
-STRICT ANCHORS: Deep purple-to-lilac gradient, sparkle marks, starburst cluster, frosted card, white glowing title, magical ethereal mood.
-INSPIRED FREEDOM: Purple shade range, sparkle count/size, starburst position, card opacity.
-Mobile readability: title 36pt+, body 12pt+.`,
+STRICT ANCHORS: Purple gradient, color blobs, frosted glass card with blur effect, white text on glass, sparkle accents, glassmorphism UI aesthetic.
+Mobile readability: title 36pt+, body 13pt+.`,
     },
+
 
     {
       id: "evt_sage_botanical", name: "세이지 보태니컬", color: "#16a34a", accent: "#14532d", bg: "#f0fdf4",
-      desc: "세이지 워터컬러 + 유칼립투스 실루엣 — 자연스럽고 차분한 스타일", layoutHint: "botanical",
-      aiPrompt: `[CRITICAL — THIS IS A PREMIUM WELLNESS-MOOD POSTER]
+      desc: "수채화 약초/잎 일러스트 + 자연 톤 — 웰니스 보태니컬 스타일", layoutHint: "botanical",
+      aiPrompt: `[CRITICAL — THIS IS A PREMIUM DESIGNED POSTER WITH BOTANICAL ILLUSTRATION]
 ⛔ STRICT CONTENT RULES:
 - DO NOT add any information the user did not provide.
-- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
-- DO NOT add fake disclaimers, footnotes, or fine print (e.g. ※ sentences). These often come out as nonsensical gibberish.
-- DO NOT invent hospital names, phone numbers, addresses, or medical information.
-- ONLY use text that the user explicitly provided in their input. If no text was provided for a section, leave it empty or use a simple label.
+- DO NOT generate fake Korean text. Leave areas blank or use only user-provided text.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- ONLY use text the user explicitly provided.
 
+Korean hospital event poster — BOTANICAL WATERCOLOR ILLUSTRATION style. Like an Aesop product poster.
 
-Korean hospital event/promotion poster — Sage Botanical theme. Pure design style — works for ANY type of event.
+VISUAL STRUCTURE:
+BACKGROUND: Soft sage (#f0fdf4) with subtle watercolor wash — lighter and darker sage areas blending organically like real watercolor paper.
 
-BACKGROUND: Soft sage (#f0fdf4) filling entire image. Subtle watercolor wash — lighter (#ecfdf5) and darker (#dcfce7) sage areas blending organically. At bottom-right corner: single eucalyptus branch silhouette in sage green (#86efac) at 10-15% opacity, reaching about 25% into image.
+BOTANICAL ILLUSTRATIONS: Lush watercolor botanical illustrations — eucalyptus branches, olive leaves, herb sprigs, or fern fronds. NOT clip art, but WATERCOLOR PAINTING style with visible brush strokes, water bleeding, and color gradation. Placed at TOP-LEFT corner and BOTTOM-RIGHT corner, reaching 25-30% into the image. The botanicals frame the content area.
 
-TYPOGRAPHY (top 40%): Dark forest green (#14532d) title — bold, 32pt+, modern sans-serif. Below: thin emerald (#10b981) line (1px, width 20%). Below: subtitle in medium green (#16a34a), 14pt.
+CONTENT AREA (center 60%): White semi-transparent card (rounded 16px, 92% opacity, border: 1px solid #d1fae5). Inside:
+- Event title in dark forest green (#14532d) bold text (36pt+)
+- Below title: thin emerald (#10b981) line with small leaf accent
+- Content in dark teal (#134e4a), generous spacing
+- Numbers/prices in bold emerald
 
-CONTENT AREA (middle 40%): White card (rounded 16px, soft shadow, border: 1px solid #dcfce7). Dark green text inside. Sections separated by thin sage lines. Numbers in bold emerald (#059669). Generous padding (24px+).
+THE WATERCOLOR BOTANICAL ILLUSTRATIONS (NOT CLIP ART) ARE MANDATORY.
 
-FOOTER (bottom 20%): Sage continues. Small dark green text. Thin emerald line above.
-
-BANNED: No check marks, no checklists, no leaf illustrations except the ONE silhouette. Botanical presence is MINIMAL.
-
-STRICT ANCHORS: Sage watercolor wash, single eucalyptus silhouette, dark green typography, white card, emerald accents, organic minimal mood.
-INSPIRED FREEDOM: Watercolor intensity, branch type, green shade range.
-Mobile readability: title 28pt+, body 12pt+.`,
+STRICT ANCHORS: Sage watercolor wash, lush watercolor botanical corners, white content card, dark green typography, emerald accents, organic premium mood.
+Mobile readability: title 32pt+, body 13pt+.`,
     },
+
     {
       id: "evt_charcoal_modern", name: "차콜 모던", color: "#292524", accent: "#44403c", bg: "#292524",
-      desc: "차콜 다크 + 화이트 타이포 — 모던하고 도시적인 스타일", layoutHint: "charcoal",
-      aiPrompt: `[CRITICAL — THIS IS A PREMIUM DESIGNED POSTER, NOT A GENERIC FLYER]
+      desc: "다크 배경 + 네온 글로우 라인/텍스트 — 네온 사인 스타일", layoutHint: "charcoal",
+      aiPrompt: `[CRITICAL — THIS IS A PREMIUM DESIGNED POSTER WITH NEON EFFECT]
 ⛔ STRICT CONTENT RULES:
 - DO NOT add any information the user did not provide.
-- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
-- DO NOT add fake disclaimers, footnotes, or fine print. These often come out as nonsensical gibberish.
-- DO NOT invent hospital names, phone numbers, addresses, or medical information.
-- ONLY use text that the user explicitly provided in their input.
+- DO NOT generate fake Korean text. Leave areas blank or use only user-provided text.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- ONLY use text the user explicitly provided.
 
-Korean hospital event/promotion poster — Charcoal Modern theme. Pure design style — works for ANY type of event.
+Korean hospital event poster — NEON SIGN ON DARK WALL style. Like a trendy bar or boutique clinic sign at night.
 
-BACKGROUND: Warm charcoal (#292524) filling entire image — NOT cold black, NOT navy. Warm dark brown-gray like espresso. Subtle noise/grain texture at 3% opacity. Single subtle warm spotlight: lighter area (#44403c) at upper-center (15% of image).
+VISUAL STRUCTURE:
+BACKGROUND: Dark charcoal (#1c1917) with subtle dark brick or concrete wall texture at 8-10% opacity. Creates a real wall surface for the neon.
 
-TYPOGRAPHY HERO (top 45%): Massive warm white (#f5f5f4) title — 52pt+, weight 900, tight tracking (-1.5px). Typography dominance is extreme. Below: thin warm gray (#a8a29e) line (1px, width 25%). Below: subtitle in stone (#d6d3d1), 14pt, letter-spacing +1px.
+NEON ELEMENTS:
+- Event title rendered as NEON TUBE TEXT — bright cyan (#22d3ee) or hot pink (#ec4899) or warm amber (#fbbf24), with realistic NEON GLOW effect: outer glow (same color at 30% opacity, blur 20px), inner bright white core. Looks like actual glowing neon tubes mounted on the dark wall.
+- Below title: a NEON LINE separator — thin glowing line in a different neon color, same glow effect.
+- Optional: a simple NEON ICON outline (heart, cross, or star) glowing beside the title.
 
-CONTENT AREA (middle 30%): NO card. Text floats on charcoal. Details in warm white (#e7e5e4), 14pt. Numbers in pure white, bold, larger. 20px+ line spacing. Left-aligned — editorial magazine layout.
+CONTENT BELOW NEON:
+- Regular white (#e2e8f0) text for event details — NOT neon, just clean white. 14pt, generous spacing.
+- Numbers/prices in the same neon color as title, but smaller glow.
+- Date in gray (#94a3b8).
 
-SIGNATURE: Single thin amber (#d97706) or copper (#b45309) vertical line — 2px width, at left edge, running 20% to 80% of image height. ONLY non-monochrome element.
+THE WALL TEXTURE AND NEON GLOW EFFECT ARE MANDATORY.
 
-FOOTER (bottom 25%): Charcoal continues. Stone (#a8a29e) small text. Left-aligned.
-
-MOOD: GQ magazine editorial or MUJI ad. Urban, sophisticated, editorial. Warm charcoal creates inviting darkness. Single amber line adds life.
-
-BANNED: No boxes, no cards, no frames, no icons, no gradients (except spotlight). Only typography weight contrast and single amber line. Architecture portfolio page aesthetic.
-
-STRICT ANCHORS: Warm charcoal, grain texture, massive white typography, left-aligned editorial, single amber vertical line, warm monochrome, magazine editorial mood.
-INSPIRED FREEDOM: Charcoal warmth, accent line color, text alignment, grain intensity.
-Mobile readability: title 44pt+, body 12pt+ (warm white on charcoal contrast 12:1+).`,
+STRICT ANCHORS: Dark textured wall, neon tube text with glow, neon line separator, neon icon, white content text, trendy night aesthetic.
+Mobile readability: title 36pt+, body 13pt+.`,
     },
+
 
     {
       id: "evt_blush_warm", name: "블러시 웜", color: "#881337", accent: "#9f1239", bg: "#fef7ed",
-      desc: "샴페인→블러시 그라데이션 + 기하학 눈꽃 — 따뜻하고 우아한 스타일", layoutHint: "warm",
-      aiPrompt: `[CRITICAL — THIS IS A PREMIUM POSTER, NOT A CHRISTMAS CARD]
+      desc: "따뜻한 톤 + 겹쳐진 둥근 종이 레이어들 — 페이퍼 레이어 스타일", layoutHint: "warm",
+      aiPrompt: `[CRITICAL — THIS IS A PREMIUM DESIGNED POSTER WITH PAPER LAYERS]
 ⛔ STRICT CONTENT RULES:
 - DO NOT add any information the user did not provide.
-- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
-- DO NOT add fake disclaimers, footnotes, or fine print (e.g. ※ sentences). These often come out as nonsensical gibberish.
-- DO NOT invent hospital names, phone numbers, addresses, or medical information.
-- ONLY use text that the user explicitly provided in their input. If no text was provided for a section, leave it empty or use a simple label.
+- DO NOT generate fake Korean text. Leave areas blank or use only user-provided text.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- ONLY use text the user explicitly provided.
 
+Korean hospital event poster — LAYERED PAPER CUTOUT style. Like handcrafted paper art.
 
-Korean hospital event/promotion poster — Blush Warm theme. Pure design style — works for ANY type of event.
+VISUAL STRUCTURE:
+BACKGROUND: Warm cream (#fef7ed) base.
 
-BACKGROUND: Warm gradient — soft champagne (#fef3c7) at top through blush pink (#fce7f3) at middle to warm cream (#fefce8) at bottom. Across ENTIRE background: geometric snowflake crystals (hexagonal, precise, NOT cartoon) in white at 6-10% opacity, various sizes. GEOMETRIC and ELEGANT.
+PAPER LAYERS: 3-4 overlapping rounded paper shapes stacked, each with visible drop shadow creating real depth/elevation. Like paper cutouts layered on a desk.
+- Bottom layer: large warm pink (#fce7f3) rounded rectangle, rotated -3 degrees, soft shadow
+- Middle layer: soft peach (#fed7aa) rounded rectangle, rotated +2 degrees, slightly smaller, higher shadow
+- Top layer: white (#ffffff) rounded rectangle (24px radius), centered, straight, strongest shadow — content lives here
 
-TYPOGRAPHY HERO (top 40%): Deep wine red (#881337) title — bold, 36pt+, modern sans-serif with slight serif accent. Below: thin rose-gold (#b76e79) line (1px, width 20%). Below: subtitle in warm brown (#78350f), 14pt.
+Each layer has subtle paper texture. Shadows between layers create satisfying 3D paper stack.
 
-CONTENT AREA (middle 35%): White card (rounded 16px, warm shadow rgba(252,231,243,0.5)). Warm brown text inside. Numbers in bold wine (#9f1239).
+ON THE TOP WHITE LAYER:
+- Event title in deep wine (#881337) or warm brown (#78350f) bold text (38pt+)
+- Below title: thin rose-gold (#b76e79) line
+- Content in warm brown, generous spacing
+- Numbers in bold wine
 
-FOOTER (bottom 25%): Warm gradient continues. Small warm brown text. Rose-gold line above.
+Colored layers peek out behind the white layer, creating warm color frame effect.
 
-BANNED: No scarves, no mugs, no mittens, no Christmas trees, no Santa. Geometric snowflakes + warm gradient is the mood signal.
+THE MULTIPLE OVERLAPPING PAPER LAYERS WITH SHADOWS ARE MANDATORY. At least 3 layers.
 
-STRICT ANCHORS: Champagne-to-blush gradient, geometric snowflake crystals, wine red typography, rose-gold accents, white card, luxury warm mood.
-INSPIRED FREEDOM: Gradient warmth, snowflake style, wine red shade, card treatment.
-Mobile readability: title 32pt+, body 12pt+.`,
+STRICT ANCHORS: Cream background, 3-4 overlapping rounded paper layers, progressive shadows, paper texture, warm pink/peach/white progression, paper craft aesthetic.
+Mobile readability: title 34pt+, body 13pt+.`,
     },
   ],
 
