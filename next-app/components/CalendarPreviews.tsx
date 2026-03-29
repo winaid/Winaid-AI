@@ -13,9 +13,9 @@ const PREVIEW_EXT: Record<string, string> = {
 };
 
 const THEME_NAMES: Record<string, string> = {
-  sch_cherry_blossom: '벚꽃 봄',
-  sch_maple_autumn: '단풍 가을',
-  sch_snowflake_winter: '눈꽃 겨울',
+  sch_cherry_blossom: '벚꽃',
+  sch_maple_autumn: '단풍',
+  sch_snowflake_winter: '눈꽃',
   sch_korean_classic: '한방 전통',
   sch_bojagi_holiday: '보자기 명절',
   sch_ink_wash: '수묵화',
@@ -24,7 +24,7 @@ const THEME_NAMES: Record<string, string> = {
   sch_coral_sns: '코랄 SNS',
   sch_kids_pastel: '키즈 파스텔',
   sch_mint_wellness: '민트 웰니스',
-  sch_sunflower_summer: '해바라기 여름',
+  sch_sunflower_summer: '해바라기',
 };
 
 export function CalendarThemePreview({
@@ -64,7 +64,7 @@ export function CalendarThemePreview({
       alt={THEME_NAMES[themeValue] || themeValue}
       loading="lazy"
       onError={() => setImgError(true)}
-      className={`w-full h-full object-cover ${rd}`}
+      className={`w-full h-full object-contain ${rd}`}
     />
   );
 }

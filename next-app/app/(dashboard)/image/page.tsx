@@ -90,13 +90,14 @@ export default function ImagePage() {
   const [vacationReasons, setVacationReasons] = useState<Map<number, string>>(new Map());
   const [markMode, setMarkMode] = useState<DayMark>('closed');
   const [calendarTheme, setCalendarTheme] = useState<string>('sch_cherry_blossom');
+  const [previewZoom, setPreviewZoom] = useState<string | null>(null);
 
   // ── 달력 테마 옵션 (12종 — 4그룹) ──
   const CALENDAR_THEME_OPTIONS: { value: string; label: string; emoji: string; desc: string; group: string; groupColor: string }[] = [
     // 시즌
-    { value: 'sch_cherry_blossom', label: '벚꽃 봄', emoji: '🌸', desc: '핑크 워터컬러 + 흩날리는 꽃잎', group: '자연', groupColor: '#ec4899' },
-    { value: 'sch_maple_autumn', label: '단풍 가을', emoji: '🍁', desc: '오렌지 그라데이션 + 흩날리는 단풍잎', group: '자연', groupColor: '#ec4899' },
-    { value: 'sch_snowflake_winter', label: '눈꽃 겨울', emoji: '❄️', desc: '눈 결정 패턴 + 아이시 블루', group: '자연', groupColor: '#ec4899' },
+    { value: 'sch_cherry_blossom', label: '벚꽃', emoji: '🌸', desc: '핑크 워터컬러 + 흩날리는 꽃잎', group: '자연', groupColor: '#ec4899' },
+    { value: 'sch_maple_autumn', label: '단풍', emoji: '🍁', desc: '오렌지 그라데이션 + 흩날리는 단풍잎', group: '자연', groupColor: '#ec4899' },
+    { value: 'sch_snowflake_winter', label: '눈꽃', emoji: '❄️', desc: '눈 결정 패턴 + 아이시 블루', group: '자연', groupColor: '#ec4899' },
     // 전통
     { value: 'sch_korean_classic', label: '한방 전통', emoji: '🏛️', desc: '기와 문양 + 한지 프레임', group: '전통', groupColor: '#92400e' },
     { value: 'sch_bojagi_holiday', label: '보자기 명절', emoji: '🎀', desc: '보자기 매듭 + 금색 테두리', group: '전통', groupColor: '#92400e' },
@@ -108,7 +109,7 @@ export default function ImagePage() {
     // 특수
     { value: 'sch_kids_pastel', label: '키즈 파스텔', emoji: '🌈', desc: '무지개 + 구름/별', group: '특수', groupColor: '#a855f7' },
     { value: 'sch_mint_wellness', label: '민트 웰니스', emoji: '🌿', desc: '민트 그라데이션 + 잎사귀', group: '특수', groupColor: '#a855f7' },
-    { value: 'sch_sunflower_summer', label: '해바라기 여름', emoji: '🌻', desc: '골드 그라데이션 + 해바라기 클러스터', group: '특수', groupColor: '#a855f7' },
+    { value: 'sch_sunflower_summer', label: '해바라기', emoji: '🌻', desc: '골드 그라데이션 + 해바라기 클러스터', group: '특수', groupColor: '#a855f7' },
   ];
 
   const SCHEDULE_GROUPS: { label: string; desc: string; values: string[] }[] = [
@@ -473,7 +474,7 @@ ${layoutExtra}`;
     if (noticeLines.length > 0) {
       p += `하단 안내 영역: "${noticeLines.join(' / ')}" — 이 텍스트를 달력 아래에 표시하세요.\n`;
     } else {
-      p += `⛔ 하단 안내 문구가 없습니다. 달력 아래에 빈 박스, 빈 직사각형, 빈 풋터 영역을 절대 그리지 마세요. 달력 격자 바로 아래에서 포스터를 깔끔하게 끝내세요.\n`;
+      p += `⛔ 하단 안내 문구가 없습니다. 달력 아래에 빈 박스, 빈 직사각형, 빈 라운드 카드, 빈 풋터 영역을 절대 그리지 마세요. 달력 격자가 이미지 하단까지 채우도록 하세요. 달력 아래에 어떤 형태의 빈 공간도 남기지 마세요. 빈 영역을 그리면 실패입니다!\n`;
     }
     p += `\n[DESIGN QUALITY]
 - 프리미엄 병원 인스타그램 피드 수준
@@ -491,6 +492,7 @@ ${layoutExtra}`;
 - "[AI 참고용" 으로 시작하는 텍스트
 - 범례 바(legend bar): "■ 휴진 ■ 단축" 같은 별도 범례 영역을 만들지 마세요. 마킹된 날짜 셀 안에 직접 라벨을 표시하면 범례가 필요 없습니다.
 - 사용자가 선택하지 않은 날짜에 휴진/단축/휴가 마킹을 임의로 추가하지 마세요! 프롬프트에 명시된 날짜만 마킹하세요.
+- 달력 아래 빈 공간: 달력 격자 아래에 내용 없는 빈 직사각형, 빈 라운드 박스, 빈 풋터 영역을 절대 그리지 마세요! 안내 문구가 제공되지 않았으면 달력 바로 아래에서 이미지를 끝내세요. 빈 공간을 남기느니 차라리 달력을 더 크게 그리세요.
 - 위 항목이 하나라도 이미지에 보이면 실패입니다!`;
     if (customMessage) p += `\n추가 문구: "${customMessage}"`;
     if (extraPrompt) p += `\n${extraPrompt}`;
@@ -1585,11 +1587,11 @@ Add subtle professional touches: refined gradients, elegant typography, clean wh
                               {groupThemes.map(t => {
                                 const isSelected = calendarTheme === t.value;
                                 return (
-                                  <button key={t.value} type="button" onClick={() => setCalendarTheme(t.value)}
+                                  <button key={t.value} type="button" onClick={() => setCalendarTheme(t.value)} onDoubleClick={(e) => { e.preventDefault(); setPreviewZoom(t.value); }}
                                     className={`group relative rounded-2xl overflow-hidden transition-all duration-200 ${isSelected ? 'shadow-xl ring-2 ring-offset-2' : 'shadow-sm hover:shadow-md border border-slate-200/80'}`}
                                     style={isSelected ? { '--tw-ring-color': t.groupColor } as React.CSSProperties : undefined}>
                                     <div className="relative" style={{ aspectRatio: '1/1' }}>
-                                      <CalendarThemePreview themeValue={t.value} groupColor={t.groupColor} />
+                                      <CalendarThemePreview themeValue={t.value} groupColor={t.groupColor} size="sm" />
                                       {isSelected && (
                                         <div className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full flex items-center justify-center shadow-lg" style={{ backgroundColor: t.groupColor }}>
                                           <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
@@ -1607,6 +1609,16 @@ Add subtle professional touches: refined gradients, elegant typography, clean wh
                           </div>
                         );
                       })}
+                    </div>
+                  </div>
+                )}
+
+                {/* 프리뷰 확대 모달 */}
+                {previewZoom && (
+                  <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" onClick={() => setPreviewZoom(null)}>
+                    <div className="relative max-w-lg w-full max-h-[80vh] bg-white rounded-2xl overflow-hidden shadow-2xl" onClick={e => e.stopPropagation()}>
+                      <button type="button" onClick={() => setPreviewZoom(null)} className="absolute top-2 right-2 z-10 w-8 h-8 bg-black/50 hover:bg-black/70 text-white rounded-full flex items-center justify-center text-lg">×</button>
+                      <CalendarThemePreview themeValue={previewZoom} groupColor={CALENDAR_THEME_OPTIONS.find(t => t.value === previewZoom)?.groupColor} size="lg" />
                     </div>
                   </div>
                 )}
