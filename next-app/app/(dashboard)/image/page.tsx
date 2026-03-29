@@ -868,6 +868,26 @@ Add subtle professional touches: refined gradients, elegant typography, clean wh
     setGenerating(true);
     setError(null);
     setProgress('이미지 생성 중...');
+
+    // schedule strict 모드에서 프리뷰 참조 이미지 로드
+    let scheduleRefImage: string | undefined;
+    if (isScheduleMode && templateAppMode === 'strict') {
+      try {
+        // jpg 먼저, 실패하면 png 시도
+        let refRes = await fetch(`/calendar-previews/${calendarTheme}.jpg`);
+        if (!refRes.ok) refRes = await fetch(`/calendar-previews/${calendarTheme}.png`);
+        if (refRes.ok) {
+          const blob = await refRes.blob();
+          const buf = await blob.arrayBuffer();
+          const b64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
+          const mime = blob.type || 'image/jpeg';
+          scheduleRefImage = `data:${mime};base64,${b64}`;
+          setProgress('참조 이미지 준비 완료, 달력 데이터 준비 중...');
+        }
+      } catch {
+        // fetch 실패 → 참조 이미지 없이 기존 방식 사용
+      }
+    }
     setGeneratingStep(0);
     setTimeout(() => resultAreaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
     setShowRegenMenu(false);
@@ -890,6 +910,20 @@ Add subtle professional touches: refined gradients, elegant typography, clean wh
         if (img) calendarImage = img;
         setProgress('달력 데이터 준비 완료, 이미지 생성 중...');
       }
+    }
+
+    // schedule strict 모드 + 참조 이미지 있을 때: 프롬프트에 참조 이미지 복제 지시 추가
+    if (scheduleRefImage) {
+      effectivePrompt += `\n\n[REFERENCE IMAGE PROVIDED — STRICT DESIGN REPRODUCTION]
+A reference image is attached. Reproduce the EXACT visual design from this reference:
+- EXACT same background color, gradient, and texture
+- EXACT same decorative elements (flowers, leaves, patterns, frames, illustrations)
+- EXACT same layout structure (header size, calendar position)
+- EXACT same color palette and visual mood
+- EXACT same calendar card shape, border, and shadow style
+⛔ DO NOT copy any text, dates, numbers, or labels from the reference image.
+The reference image is ONLY for visual design. All text content (month, dates, hospital name, markings) must come from the user input above.
+The DESIGN must be VISUALLY IDENTICAL to the reference image.`;
     }
 
     // 로고 지시문
@@ -934,7 +968,9 @@ Add subtle professional touches: refined gradients, elegant typography, clean wh
           brandColors: brandColors || undefined,
           logoBase64: logoEnabled && logoDataUrl ? logoDataUrl : undefined,
           calendarImage: calendarImage || undefined,
-          referenceImage: isDoctorMode && docPhotoBase64 ? docPhotoBase64
+          referenceImage: scheduleRefImage
+            ? scheduleRefImage
+            : isDoctorMode && docPhotoBase64 ? docPhotoBase64
             : isHiringMode && hiringPhotos.length > 0 ? hiringPhotos[0]
             : selectedUploadedStyle?.referenceImageUrl
             ? selectedUploadedStyle.referenceImageUrl
