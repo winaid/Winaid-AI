@@ -400,29 +400,47 @@ export default function ImagePage() {
       // 마킹된 날짜 중 첫 번째가 속한 주를 찾아서 표시
       const markedDays = [...dayMarks].map(([d]) => d).sort((a, b) => a - b);
       const targetDay = markedDays[0] || 1;
-      const firstOfMonth = new Date(schYear, schMonth - 1, 1);
       const targetDate = new Date(schYear, schMonth - 1, targetDay);
-      const dayOfWeek = targetDate.getDay(); // 0=일, 6=토
+      const dayOfWeek = targetDate.getDay();
       const weekStart = new Date(targetDate);
-      weekStart.setDate(targetDate.getDate() - dayOfWeek); // 해당 주 일요일
+      weekStart.setDate(targetDate.getDate() - dayOfWeek);
       const weekEnd = new Date(weekStart);
-      weekEnd.setDate(weekStart.getDate() + 6); // 해당 주 토요일
-      const weekNum = Math.ceil((targetDay + firstOfMonth.getDay()) / 7);
+      weekEnd.setDate(weekStart.getDate() + 6);
       const fmtDate = (d: Date) => `${d.getMonth() + 1}월 ${d.getDate()}일`;
-      layoutExtra = `[AI 참고용 — 이미지에 이 텍스트를 표시하지 마세요] 표시할 주: ${fmtDate(weekStart)}(일) ~ ${fmtDate(weekEnd)}(토)\n`;
+      // 7일 날짜 목록 생성
+      const weekDates: string[] = [];
+      for (let di = 0; di < 7; di++) {
+        const dd = new Date(weekStart);
+        dd.setDate(weekStart.getDate() + di);
+        const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+        weekDates.push(`${dd.getDate()}일(${dayNames[di]})`);
+      }
+      layoutExtra = `표시할 7일: ${weekDates.join(', ')}\n표시할 주 범위: ${fmtDate(weekStart)}(일) ~ ${fmtDate(weekEnd)}(토)\n`;
 
-      layoutRules = `[CRITICAL LAYOUT RULES — 주간(한 주) 뷰]
-- 비율: 정사각형(1:1) 또는 4:5 세로형. 절대 세로로 길쭉하게 만들지 마세요.
-- 월간 전체 달력을 그리지 마세요! 한 주(7일)만 표시합니다!
-- 구조: 상단 헤더(병원명+제목) → 7칸 가로 배열(일~토) → 하단 안내
-- 7개 날짜만 한 줄로 크게 표시 (각 칸에 날짜 숫자 + 요일)
-- 휴진일은 빨간 배경 또는 큰 X 표시로 강조
-- 단축진료는 주황 배경으로 구분
-- 날짜 숫자는 눈에 잘 보이게 크게, 요일은 날짜보다 작게
-- 5주치 격자를 절대 그리지 마세요. 딱 1주일(7칸)만!
-- ⛔ 사용자가 입력하지 않은 진료시간, 점심시간, 전화번호, 주소 등 허구 텍스트를 절대 넣지 마세요!
-- ⛔ "2026년" 같은 연도를 표시하지 마세요! "N월"만 사용하세요.
-- ⛔ 폰트 크기(pt), 픽셀(px) 같은 기술 용어를 이미지 안에 절대 표시하지 마세요!`;
+      layoutRules = `[CRITICAL LAYOUT — WEEKLY VIEW (한 주만 표시)]
+⚠️ THIS IS A WEEKLY VIEW. DO NOT draw a full monthly calendar!
+⚠️ Show ONLY 7 days (one week) in a SINGLE HORIZONTAL ROW.
+⚠️ If you draw a 7-column × 5-row monthly grid, you have FAILED.
+
+STRUCTURE:
+- TOP 30%: Decorative header with title "${title}" and week range
+- MIDDLE 50%: Exactly 7 LARGE date boxes in ONE horizontal row (일~토)
+  Each box: day name on top (small), date number LARGE below (30pt+)
+  Box size: at least 60px wide each
+- BOTTOM 20%: Legend/info area
+
+DATE BOX STYLES:
+- 휴진 (closed): RED (#ef4444) background, white number, "휴진" label below
+- 단축 (shortened): ORANGE (#f59e0b) background, white number, "단축" label below
+- 일반 (normal): white/light background, dark number
+- 일요일: red text, 토요일: blue text
+
+ABSOLUTE RULES:
+- ONLY 1 row of 7 boxes. NOT 5 rows. NOT a monthly grid.
+- Each box must be clearly separated and large enough to read
+- ⛔ No fake clinic hours, phone numbers, addresses
+- ⛔ No "2026년" — use "${schMonth}월" only
+- ⛔ No font size specs (pt/px) visible in image`;
     } else if (schLayout === 'highlight') {
       // 마킹된 날짜 목록을 명시적으로 포함
       const highlightItems: string[] = [];
@@ -433,19 +451,30 @@ export default function ImagePage() {
         layoutExtra = `강조할 날짜: ${highlightItems.join(', ')}\n`;
       }
 
-      layoutRules = `[CRITICAL LAYOUT RULES — 강조형(날짜 하이라이트)]
-- 비율: 정사각형(1:1) 또는 4:5 세로형. 절대 세로로 길쭉하게 만들지 마세요.
-- 월간 달력 격자를 그리지 마세요! 날짜만 크게 강조합니다!
-- 구조: 상단 헤더(병원명+제목) → 중앙에 강조 날짜들 → 하단 안내
-- 휴진일: 화면 중앙에 큰 원형/카드 안에 "N일"을 눈에 확 띄게 크게 표시
-- 여러 날이면 가로로 나열 (예: 1일, 8일, 15일 세 개의 큰 원)
-- 각 강조 날짜 아래에 "휴진" / "단축진료" / "휴가" 라벨
-- 색상: 휴진=빨강 배경, 단축=주황 배경, 휴가=보라 배경
-- 달력 격자 없이 날짜 자체가 주인공인 디자인
-- 7열 격자, 5주 배열 등 달력 형태를 절대 사용하지 마세요!
-- ⛔ 사용자가 입력하지 않은 진료시간, 점심시간, 전화번호, 주소 등 허구 텍스트를 절대 넣지 마세요!
-- ⛔ "2026년" 같은 연도를 표시하지 마세요! "N월"만 사용하세요.
-- ⛔ 폰트 크기(pt), 픽셀(px) 같은 기술 용어를 이미지 안에 절대 표시하지 마세요!`;
+      layoutRules = `[CRITICAL LAYOUT — HIGHLIGHT VIEW (날짜 강조)]
+⚠️ THIS IS A HIGHLIGHT VIEW. DO NOT draw a monthly calendar grid!
+⚠️ Show ONLY the marked dates as LARGE highlighted circles/cards.
+⚠️ If you draw a 7-column calendar table, you have FAILED.
+
+STRUCTURE:
+- TOP 35%: Decorative header with title "${title}" — large, bold
+- MIDDLE 40%: The marked dates displayed as LARGE circles or rounded cards
+  Each circle: 80px+ diameter, date number inside (40pt+)
+  Label below each circle: "휴진" / "단축" / "휴가"
+  If multiple dates: arrange horizontally in a row
+- BOTTOM 25%: Legend and any additional info
+
+CIRCLE STYLES:
+- 휴진: RED (#ef4444) circle, white number, "휴진" below
+- 단축: ORANGE (#f59e0b) circle, white number, "단축" below
+- 휴가: PURPLE (#7c3aed) circle, white number, "휴가" below
+
+ABSOLUTE RULES:
+- NO 7-column grid. NO 5-row layout. NO calendar table.
+- The circles/cards ARE the content — not a calendar
+- ⛔ No fake clinic hours, phone numbers, addresses
+- ⛔ No "2026년" — use "${schMonth}월" only
+- ⛔ No font size specs (pt/px) visible in image`;
     } else {
       // full_calendar — 기존 그대로
       layoutRules = `[CRITICAL LAYOUT RULES]
@@ -458,7 +487,8 @@ export default function ImagePage() {
 - ⛔ 폰트 크기(pt), 픽셀(px) 같은 기술 용어를 이미지 안에 절대 표시하지 마세요!`;
     }
 
-    let p = `Korean hospital ${schMonth}월 monthly schedule poster — PREMIUM DESIGN.
+    const posterType = schLayout === 'week' ? 'weekly schedule' : schLayout === 'highlight' ? 'schedule highlight' : 'monthly schedule';
+    let p = `Korean hospital ${schMonth}월 ${posterType} poster — PREMIUM DESIGN.
 제목: "${title}"
 
 ${layoutRules}
