@@ -1,7 +1,7 @@
 /**
  * CalendarPreviews.tsx — 달력 테마 프리뷰 (정적 이미지)
  *
- * public/calendar-previews/{themeValue}.png 또는 .jpg 이미지를 표시.
+ * public/calendar-previews/{themeValue}.jpg 또는 .png 이미지를 표시.
  * 로드 실패 시 groupColor 배경 + 이름 fallback.
  */
 'use client';
@@ -39,7 +39,7 @@ export function CalendarThemePreview({
   const [imgError, setImgError] = useState(false);
   const lg = size === 'lg';
   const rd = lg ? 'rounded-xl' : 'rounded-lg';
-  const ext = PREVIEW_EXT[themeValue] || 'png';
+  const ext = PREVIEW_EXT[themeValue] || 'jpg';
   const imgSrc = `/calendar-previews/${themeValue}.${ext}`;
 
   if (imgError) {
