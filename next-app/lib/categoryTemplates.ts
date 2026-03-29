@@ -135,7 +135,7 @@ DO NOT make the calendar grid fill 100% of the image.
 Think of this as an Instagram-worthy hospital announcement poster that happens to show a monthly calendar.
 
 Korean hospital monthly schedule poster — Korean Traditional Hanok Style.
-STRUCTURE: Warm cream (#f5e6d0) background evoking traditional Korean paper. Traditional roof tile (기와) silhouette decorative border at top. Corner decorations inspired by traditional flower lattice (꽃살) patterns. ⛔ Do NOT draw a sun, half-circle sun, or sunrise motif anywhere in the image.
+STRUCTURE: Warm cream (#f5e6d0) background evoking traditional Korean paper. Traditional roof tile (기와) silhouette decorative border at TOP EDGE ONLY — a single horizontal strip across the top. Small flower lattice (꽃살) decorations in top corners only. ⛔ Do NOT draw roof tiles on the left side, right side, or bottom of the image. ⛔ Do NOT draw a sun, half-circle sun, or sunrise motif anywhere. The left, right, and bottom edges must be clean with NO decorative borders — just the warm cream background.
 CALENDAR GRID: Warm brown (#92400e) text. Grid styled with traditional aesthetic, subtle borders.
 MARKERS: Closed — deep red seal stamp style marker + "휴진" label below. Shortened — amber brush stroke accent + "단축" label below. Vacation — purple marker + "휴가" label below. ONLY mark the dates specified by the user.
 STRICT MODE ANCHORS: (1) Roof tile border decoration (2) Traditional pattern corners (3) Warm brown palette (4) Cream background (5) 꽃살 lattice motifs.
