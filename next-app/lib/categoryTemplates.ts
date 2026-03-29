@@ -18,7 +18,7 @@ export const CATEGORY_TEMPLATES: Record<string, CategoryTemplate[]> = {
   schedule: [
     {
       id: "sch_cherry_blossom", name: "벚꽃 봄", color: "#ec4899", accent: "#be185d", bg: "#fdf2f8",
-      desc: "수채화 벚꽃잎 코너 장식 + 로즈핑크 프레임 — 3~5월 봄", layoutHint: "cal_spring", previewImage: "/calendar-previews/sch_cherry_blossom.jpg",
+      desc: "수채화 벚꽃잎 코너 장식 + 로즈핑크 프레임 — 3~5월 봄", layoutHint: "cal_spring", previewImage: "/schedule-previews/sch_cherry_blossom.jpg",
       aiPrompt: `[CRITICAL — THIS IS A POSTER, NOT A SPREADSHEET]
 This is a DESIGNED POSTER that contains a calendar section — NOT a calendar that fills the entire image.
 Structure: decorative header/frame (30-40%) + calendar grid (50-60%) + footer ONLY if user provided notice text.
@@ -59,7 +59,7 @@ Mobile readability: minimum body text 11pt, date numbers 14pt bold, title 24pt+.
 
     {
       id: "sch_maple_autumn", name: "단풍 가을", color: "#ea580c", accent: "#c2410c", bg: "#fff7ed",
-      desc: "수채화 단풍잎 + 오렌지 그라데이션 — 9~11월 가을", layoutHint: "cal_autumn", previewImage: "/calendar-previews/sch_maple_autumn.jpg",
+      desc: "수채화 단풍잎 + 오렌지 그라데이션 — 9~11월 가을", layoutHint: "cal_autumn", previewImage: "/schedule-previews/sch_maple_autumn.jpg",
       aiPrompt: `[CRITICAL — THIS IS A POSTER, NOT A SPREADSHEET]
 This is a DESIGNED POSTER that contains a calendar section — NOT a calendar that fills the entire image.
 Structure: decorative header/frame (30-40%) + calendar grid (50-60%) + footer ONLY if user provided notice text.
@@ -98,7 +98,7 @@ Mobile readability: minimum body text 11pt, date numbers 14pt bold, title 24pt+.
 
     {
       id: "sch_snowflake_winter", name: "눈꽃 겨울", color: "#0ea5e9", accent: "#0284c7", bg: "#f0f9ff",
-      desc: "기하학적 눈 결정 패턴 + 아이시 블루 — 12~2월 겨울", layoutHint: "cal_winter", previewImage: "/calendar-previews/sch_snowflake_winter.jpg",
+      desc: "기하학적 눈 결정 패턴 + 아이시 블루 — 12~2월 겨울", layoutHint: "cal_winter", previewImage: "/schedule-previews/sch_snowflake_winter.jpg",
       aiPrompt: `[CRITICAL — THIS IS A POSTER, NOT A SPREADSHEET]
 This is a DESIGNED POSTER that contains a calendar section — NOT a calendar that fills the entire image.
 Structure: decorative header/frame (30-40%) + calendar grid (50-60%) + footer ONLY if user provided notice text.
@@ -129,7 +129,7 @@ Mobile readability: minimum body text 11pt, date numbers 14pt bold, title 24pt+.
 
     {
       id: "sch_korean_classic", name: "한방 전통", color: "#92400e", accent: "#78350f", bg: "#fef3c7",
-      desc: "기와지붕 실루엣 + 전통 꽃살문양 — 한의원/명절", layoutHint: "cal_hanok", previewImage: "/calendar-previews/sch_korean_classic.png",
+      desc: "기와지붕 실루엣 + 전통 꽃살문양 — 한의원/명절", layoutHint: "cal_hanok", previewImage: "/schedule-previews/sch_korean_classic.png",
       aiPrompt: `[CRITICAL — THIS IS A POSTER, NOT A SPREADSHEET]
 This is a DESIGNED POSTER that contains a calendar section — NOT a calendar that fills the entire image.
 Structure must be: decorative header/frame (30-40%) + calendar grid (50-60%) + footer ONLY if user provided notice text.
@@ -156,7 +156,7 @@ Dignified traditional Korean aesthetic with warm readable typography.`,
 
     {
       id: "sch_bojagi_holiday", name: "보자기 명절", color: "#b91c1c", accent: "#991b1b", bg: "#fef2f2",
-      desc: "보자기 매듭 장식 + 금색 테두리 + 전통 색동 — 설날/추석", layoutHint: "cal_holiday", previewImage: "/calendar-previews/sch_bojagi_holiday.jpg",
+      desc: "보자기 매듭 장식 + 금색 테두리 + 전통 색동 — 설날/추석", layoutHint: "cal_holiday", previewImage: "/schedule-previews/sch_bojagi_holiday.jpg",
       aiPrompt: `[CRITICAL — THIS IS A POSTER, NOT A SPREADSHEET]
 This is a DESIGNED POSTER that contains a calendar section — NOT a calendar that fills the entire image.
 Structure: decorative header/frame (30-40%) + calendar grid (50-60%) + footer ONLY if user provided notice text.
@@ -187,7 +187,7 @@ Mobile readability: minimum body text 11pt, date numbers 14pt bold, title 24pt+.
 
     {
       id: "sch_ink_wash", name: "수묵화", color: "#374151", accent: "#1f2937", bg: "#f9fafb",
-      desc: "먹 번짐 효과 + 대나무/매화 수묵 일러스트 — 고급 한의원", layoutHint: "cal_inkwash", previewImage: "/calendar-previews/sch_ink_wash.jpg",
+      desc: "먹 번짐 효과 + 대나무/매화 수묵 일러스트 — 고급 한의원", layoutHint: "cal_inkwash", previewImage: "/schedule-previews/sch_ink_wash.jpg",
       aiPrompt: `[CRITICAL — THIS IS A POSTER, NOT A SPREADSHEET]
 This is a DESIGNED POSTER that contains a calendar section — NOT a calendar that fills the entire image.
 Structure: decorative header/frame (30-40%) + calendar grid (50-60%) + footer ONLY if user provided notice text.

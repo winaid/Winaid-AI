@@ -883,8 +883,8 @@ Add subtle professional touches: refined gradients, elegant typography, clean wh
     if (isScheduleMode && templateAppMode === 'strict') {
       try {
         // jpg 먼저, 실패하면 png 시도
-        let refRes = await fetch(`/calendar-previews/${calendarTheme}.jpg`);
-        if (!refRes.ok) refRes = await fetch(`/calendar-previews/${calendarTheme}.png`);
+        let refRes = await fetch(`/schedule-previews/${calendarTheme}.jpg`);
+        if (!refRes.ok) refRes = await fetch(`/schedule-previews/${calendarTheme}.png`);
         if (refRes.ok) {
           const blob = await refRes.blob();
           const buf = await blob.arrayBuffer();
@@ -1669,10 +1669,10 @@ The DESIGN must be VISUALLY IDENTICAL to the reference image.`;
                     <div className="relative" onClick={e => e.stopPropagation()}>
                       <button type="button" onClick={() => setPreviewZoom(null)} className="absolute -top-3 -right-3 z-10 w-8 h-8 bg-black/70 hover:bg-black text-white rounded-full flex items-center justify-center text-lg shadow-lg">×</button>
                       <img
-                        src={`/calendar-previews/${previewZoom}.${previewZoom === 'sch_korean_classic' ? 'png' : 'jpg'}`}
+                        src={`/schedule-previews/${previewZoom}.jpg`}
                         alt={previewZoom}
                         className="max-w-[90vw] max-h-[85vh] rounded-2xl shadow-2xl"
-                        onError={(e) => { (e.target as HTMLImageElement).src = `/calendar-previews/${previewZoom}.png`; }}
+                        onError={(e) => { (e.target as HTMLImageElement).src = `/schedule-previews/${previewZoom}.png`; }}
                       />
                     </div>
                   </div>
