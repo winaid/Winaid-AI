@@ -2134,7 +2134,7 @@ Cards:
 - [1,2]: Utensils icon → "식대 지원" / "점심 제공 또는\n월 식대 10만원 별도"
 - [2,1]: Graduation cap → "교육비 지원" / "직무교육·학회 참가비\n자격증 취득 지원"
 - [2,2]: Gift icon → "경조금·상여" / "경조사 지원·경조휴가\n명절 상여금 지급"
-ZONE 3 — CTA FOOTER (bottom 25%): Amber (#f59e0b) rounded pill button (220px, 48px, centered) with "지원하기" in bold white text (16px). Hospital name "OO병원" in small amber text (12px) below. "☎ 02-000-0000 | recruit@hospital.co.kr" in small gray text (11px).
+ZONE 3 — CTA FOOTER (bottom 25%): Amber (#f59e0b) rounded pill button (220px, 48px, centered) with "지원하기" in bold white text (16px). Hospital name "병원명" in small amber text (12px) below. "☎ 02-000-0000 | recruit@hospital.co.kr" in small gray text (11px).
 
 STRICT MODE ANCHORS: Warm cream background, 2x2 card grid with amber top-border, amber pill CTA. Grid must remain 2x2.
 INSPIRED MODE FREEDOM: Card content, icon style, card dimensions, description length, additional benefit cards (can expand to 2x3), shadow/border style.
@@ -2197,7 +2197,7 @@ MOBILE: Body text minimum 13px. Gold lines minimum 40% width. Generous vertical 
       aiPrompt: `MEDICAL NUMBERED CHECKLIST LAYOUT — vertical numbered list with connecting progress line. Patient safety focus. High readability for all ages. Optimized for print handout.
 
 BACKGROUND: White with very subtle blue tint (#f8fbff), full canvas.
-ZONE 1 — HEADER (top 18%): Blue (#3b82f6) solid header bar spanning full width. Hospital name "OO치과의원" in small white text (11px, weight 500) at top-left with 5% left margin. Procedure name "발치 후 주의사항" in bold large white text (22px, weight 700) centered below. Clean, professional medical header — single solid bar, no gradient.
+ZONE 1 — HEADER (top 18%): Blue (#3b82f6) solid header bar spanning full width. Hospital name "병원명" in small white text (11px, weight 500) at top-left with 5% left margin. Procedure name "발치 후 주의사항" in bold large white text (22px, weight 700) centered below. Clean, professional medical header — single solid bar, no gradient.
 ZONE 2 — CHECKLIST BODY (middle 57%): White background. Left side: thin vertical line in light blue (#93c5fd, 2px) running from first to last item, 12% from left edge. 5 numbered items stacked vertically with 20px gap.
 EACH ITEM: Filled blue circle (#3b82f6, 28px diameter) with white number (1-5, 14px bold) centered, positioned ON the vertical line. To the right (16px gap): instruction text in dark gray (#374151, 15px, weight 500), single line.
 - Item 1: "거즈를 1시간 동안 꽉 물고 계세요"
@@ -2218,7 +2218,7 @@ MOBILE: Instruction text minimum 14px. Number circles minimum 24px. Line spacing
       aiPrompt: `BOLD WARNING CARD LAYOUT — high-contrast red warning design for critical post-treatment precautions. Patient safety is paramount — every element designed for unmissable visibility.
 
 BACKGROUND: White (#ffffff) with light red tint (#fef2f2 at 30%) at edges.
-ZONE 1 — WARNING HEADER (top 22%): Large warning triangle icon (▲) in red (#ef4444) centered, 44px tall. Below: "시술 후 주의사항" in bold red (#ef4444, 24px) text centered. "아래 사항을 반드시 지켜주세요" in dark gray (#4b5563, 14px) centered. Hospital name "OO피부과" in small gray text (11px) above triangle.
+ZONE 1 — WARNING HEADER (top 22%): Large warning triangle icon (▲) in red (#ef4444) centered, 44px tall. Below: "시술 후 주의사항" in bold red (#ef4444, 24px) text centered. "아래 사항을 반드시 지켜주세요" in dark gray (#4b5563, 14px) centered. Hospital name "병원명" in small gray text (11px) above triangle.
 ZONE 2 — WARNING LIST (middle 53%): 5 numbered precaution items, each on its own row, full width with 5% horizontal margin.
 EACH ITEM: Red filled circle (#ef4444, 26px) with white number (14px bold) on the left. Instruction text in dark (#1f2937, 15px, weight 500) to the right with 12px gap.
 CRITICAL ROWS (items 1, 4): Light red background strip (#fef2f2, full row width, 8px vertical padding) to visually highlight the most dangerous warnings.
@@ -2241,7 +2241,7 @@ MOBILE: Warning text minimum 14px. Red bar minimum 56px height. Phone number tap
       aiPrompt: `FRIENDLY STEP-BY-STEP GUIDE LAYOUT — calming green design with connected numbered steps. Warm, reassuring tone reduces patient anxiety. Includes next-visit date field.
 
 BACKGROUND: Soft mint (#ecfdf5) to white vertical gradient (mint at top, white at bottom).
-ZONE 1 — HEADER (top 18%): Hospital name "OO치과" in green (#059669, 12px, weight 500) left-aligned with 6% left margin. "임플란트 시술 후 관리 안내" in bold dark green (#065f46, 20px) below. "차근차근 따라해 주세요 :)" in warm gray (#6b7280, 13px) as friendly subtitle. Approachable, non-clinical header tone.
+ZONE 1 — HEADER (top 18%): Hospital name "병원명" in green (#059669, 12px, weight 500) left-aligned with 6% left margin. "임플란트 시술 후 관리 안내" in bold dark green (#065f46, 20px) below. "차근차근 따라해 주세요 :)" in warm gray (#6b7280, 13px) as friendly subtitle. Approachable, non-clinical header tone.
 ZONE 2 — STEP-BY-STEP (middle 52%): 4 numbered steps arranged vertically with 24px spacing. Vertical dotted line in light green (#6ee7b7, 2px dots, 4px gap) running through all step circles, connecting top to bottom, positioned 10% from left edge.
 EACH STEP: Green filled circle (#10b981, 32px) with white number (①②③④, 16px) centered ON the dotted line. To the right (14px gap): instruction text in dark gray (#374151, 15px). Friendly Korean ~세요 endings throughout.
 - Step ①: "시술 후 2시간은 아무것도 드시지 마세요"
@@ -2265,7 +2265,7 @@ MOBILE: Step text minimum 14px. Circles minimum 28px. Next-visit box minimum 80p
       aiPrompt: `RECOVERY TIMELINE LAYOUT — horizontal timeline showing care instructions across recovery stages. Color transitions from amber (caution) to green (healed). Patients see their recovery journey at a glance.
 
 BACKGROUND: Soft lavender (#f5f3ff) to white gradient (lavender at top, white at bottom).
-ZONE 1 — HEADER (top 15%): Hospital name "OO치과" in small gray text (#6b7280, 11px) centered at top. "발치 후 회복 가이드" in bold purple (#8b5cf6, 22px) centered below. Thin purple line (#8b5cf6, 1px, 40% width) centered as divider.
+ZONE 1 — HEADER (top 15%): Hospital name "병원명" in small gray text (#6b7280, 11px) centered at top. "발치 후 회복 가이드" in bold purple (#8b5cf6, 22px) centered below. Thin purple line (#8b5cf6, 1px, 40% width) centered as divider.
 ZONE 2 — TIMELINE (middle 55%): Horizontal progress bar spanning 85% width, centered, 8px tall, rounded ends. Color gradient left to right: amber (#f59e0b) then light purple (#a78bfa) then blue (#3b82f6) then green (#10b981).
 4 circular markers (24px diameter) positioned ON the bar at equal intervals:
 - Marker 1 (left end): Amber (#f59e0b) filled circle. Label "당일" above in bold amber text (13px).
@@ -2290,7 +2290,7 @@ MOBILE: Timeline can wrap to 2 rows on very narrow screens. Marker labels minimu
       aiPrompt: `O/X INFOGRAPHIC GRID LAYOUT — 2x3 grid of icon cards showing DO (O) and DON'T (X) instructions. Instant visual comprehension — patients understand in seconds without reading long paragraphs. Color coding: green=allowed, red=prohibited.
 
 BACKGROUND: Warm cream (#fffbeb), full canvas.
-ZONE 1 — HEADER (top 15%): Hospital name "OO의원" in small gray text (#6b7280, 11px) centered at top. "시술 후 주의사항" in bold amber (#d97706, 22px) centered. "O는 해도 좋아요, X는 하지 마세요" in medium gray (#6b7280, 13px) as explanatory subtitle.
+ZONE 1 — HEADER (top 15%): Hospital name "병원명" in small gray text (#6b7280, 11px) centered at top. "시술 후 주의사항" in bold amber (#d97706, 22px) centered. "O는 해도 좋아요, X는 하지 마세요" in medium gray (#6b7280, 13px) as explanatory subtitle.
 ZONE 2 — O/X GRID (middle 60%): 2 columns x 3 rows grid, centered, 10px gap. Left column = O (DO) cards, Right column = X (DON'T) cards. Each card is a rounded rectangle (~46% width, ~80px height, 12px radius).
 O CARDS (left column, green): Light green background (#f0fdf4), 2px green (#22c55e) border. Large green "O" letter (36px, bold, #22c55e) on the left side of card. Instruction text (14px, dark #1f2937) to the right.
 - O Card 1: "냉찜질 해주세요"
@@ -2314,7 +2314,7 @@ MOBILE: O/X letters minimum 28px. Card text minimum 13px. Cards minimum 60px hei
       aiPrompt: `DO / DON'T TWO-COLUMN SPLIT LAYOUT — left column for recommended actions, right column for prohibited actions. Most intuitive format for behavioral instructions. Green=allowed, Red=prohibited color coding.
 
 BACKGROUND: White (#ffffff), full canvas.
-ZONE 1 — HEADER (top 18%): Hospital name "OO치과" in small gray text (#6b7280, 11px) centered at top. "보톡스 시술 후 주의사항" in bold sky blue (#0ea5e9, 22px) centered. Thin sky blue line (#0ea5e9, 1px, 60% width) centered as separator.
+ZONE 1 — HEADER (top 18%): Hospital name "병원명" in small gray text (#6b7280, 11px) centered at top. "보톡스 시술 후 주의사항" in bold sky blue (#0ea5e9, 22px) centered. Thin sky blue line (#0ea5e9, 1px, 60% width) centered as separator.
 ZONE 2 — TWO-COLUMN BODY (middle 57%): Content area split into two equal columns (48% width each) side by side with 4% center gap.
 LEFT COLUMN — "이렇게 하세요 ✓": Green header bar (#22c55e, full column width, 36px height, 8px top radius) with "이렇게 하세요 ✓" in bold white text (14px) centered. Below: 4 items stacked vertically with 8px gap. Each item is a card (light green #f0fdf4 background, 8px radius, 12px padding) with small green checkmark circle (✓, #22c55e, 20px) on the left, instruction text (#374151, 14px) on the right.
 - "냉찜질을 10분씩 반복하세요"
@@ -2345,7 +2345,7 @@ MOBILE: On narrow screens, columns can stack vertically (DO on top, DON'T below)
       aiPrompt: `CLEAN TABLE STANDARD — the most common Korean hospital fee schedule format. Compliant with 의료법 제45조 (비급여 진료비 투명 공개 의무). Treatment name LEFT, price RIGHT alignment.
 
 BACKGROUND: White (#ffffff) full bleed.
-ZONE 1 — HEADER (top 15%): Full-width horizontal bar in blue (#3b82f6), 56px height. "비급여 진료비 안내" in bold white text (22px, weight 700) centered. Hospital name "OO치과의원" in smaller white text (12px, weight 400) above title within the bar.
+ZONE 1 — HEADER (top 15%): Full-width horizontal bar in blue (#3b82f6), 56px height. "비급여 진료비 안내" in bold white text (22px, weight 700) centered. Hospital name "병원명" in smaller white text (12px, weight 400) above title within the bar.
 ZONE 2 — TABLE BODY (middle 65%): Full-width table layout. Rows alternate white and light blue (#eff6ff at 50%). Each row (height 48px, padding 12-16px):
 - LEFT: Treatment name in dark text (#1e293b, 14px, weight 500), left-aligned with 6% left margin.
 - RIGHT: Price in bold blue (#2563eb, 15px, weight 700) right-aligned with 6% right margin, "원" suffix.
@@ -2375,7 +2375,7 @@ MOBILE: Treatment name minimum 13px. Price minimum 14px. Row height minimum 44px
       aiPrompt: `CATEGORY CARD GRID — organized by treatment category in a 2-column card layout. Each card groups related treatments. Clean, organized dental/dermatology clinic style.
 
 BACKGROUND: Very light mint (#f0fdf9) full bleed.
-ZONE 1 — HEADER (top 12%): Hospital name "OO치과" in smaller dark text (#374151, 12px) centered at top. "비급여 진료비 안내" in bold teal (#059669, 22px) text centered below. Thin teal line (#10b981, 1px, 40% width) centered as divider.
+ZONE 1 — HEADER (top 12%): Hospital name "병원명" in smaller dark text (#374151, 12px) centered at top. "비급여 진료비 안내" in bold teal (#059669, 22px) text centered below. Thin teal line (#10b981, 1px, 40% width) centered as divider.
 ZONE 2 — CARD GRID (middle 68%): 2-column grid of category cards, centered, 14px gap. Each card represents one treatment category.
 CARD DESIGN: White rounded rectangle (46% width, auto height, 12px radius, subtle shadow). Card header: category name in bold white text (14px) on a teal (#10b981) background strip (full card width, 36px height, 12px top radius). Card body (padding 14px): 2-4 treatment items listed vertically. Each item row:
 - Treatment name on left in dark text (#374151, 13px)
@@ -2401,7 +2401,7 @@ MOBILE: Cards reflow to single column. Card minimum width 280px. Treatment text 
       aiPrompt: `PREMIUM DARK — dark navy background with gold accents for upscale aesthetic clinics. Luxury through restraint. Treatment name LEFT in white, price RIGHT in gold.
 
 BACKGROUND: Dark navy (#0f172a) full bleed.
-ZONE 1 — BORDER + HEADER (top 18%): Subtle gold (#f59e0b at 60%) double-line border around entire canvas — outer line 2px, inner line 1px, 6px gap. Hospital name "OO피부과" in smaller white text (#f1f5f9, 11px, letter-spacing 3px) centered at top. "비급여 진료비 안내" in gold (#f59e0b, 20px, weight 700) bold text centered below.
+ZONE 1 — BORDER + HEADER (top 18%): Subtle gold (#f59e0b at 60%) double-line border around entire canvas — outer line 2px, inner line 1px, 6px gap. Hospital name "병원명" in smaller white text (#f1f5f9, 11px, letter-spacing 3px) centered at top. "비급여 진료비 안내" in gold (#f59e0b, 20px, weight 700) bold text centered below.
 ZONE 2 — PRICE LIST (middle 60%): Vertically stacked treatment items with generous spacing (20px between rows).
 CATEGORY HEADERS: Category name (e.g., "보톡스/필러", "레이저/리프팅", "피부관리") in small uppercase gold text (#f59e0b, 11px, letter-spacing 2px). Short gold line (40px, 1px) below category name.
 ITEM ROWS: Treatment name in white (#f1f5f9, 14px, weight 400) left-aligned. Price in bold gold (#f59e0b, 15px, weight 700) right-aligned with "원" suffix. Thin gold separator lines (1px, 20% opacity) between items.
@@ -2458,7 +2458,7 @@ MOBILE: Treatment name minimum 13px. Price minimum 14px. Dot leaders must remain
       aiPrompt: `MODERN GRADIENT — soft lavender background with purple pill badges for prices. Beauty clinic aesthetic. Treatment name LEFT, price in pill badge RIGHT.
 
 BACKGROUND: Soft lavender (#f5f3ff) full bleed.
-ZONE 1 — HEADER (top 13%): Hospital name "OO피부과" in smaller dark gray (#374151, 12px) centered at top. "비급여 진료비 안내" in bold purple (#7c3aed, 22px) text centered. Thin purple line (#7c3aed, 1px, 30% width) centered below.
+ZONE 1 — HEADER (top 13%): Hospital name "병원명" in smaller dark gray (#374151, 12px) centered at top. "비급여 진료비 안내" in bold purple (#7c3aed, 22px) text centered. Thin purple line (#7c3aed, 1px, 30% width) centered below.
 ZONE 2 — PRICE LIST (middle 67%): Vertically stacked treatment items. Rows alternate transparent and very light purple (#ede9fe at 40%) backgrounds.
 CATEGORY LABELS: Small purple (#7c3aed, 11px, letter-spacing 2px, weight 600) uppercase text above each group.
 ROW LAYOUT (padding 14px vertical, 6% horizontal margin): Treatment name on left in dark text (#1f2937, 14px, weight 500). Price on right inside rounded pill-shaped badge: badge background light purple (#ede9fe), 1px purple (#c4b5fd) border, border-radius 999px, padding 6px 16px. Price text in bold purple (#7c3aed, 14px, weight 700) with "원" suffix.
@@ -2486,7 +2486,7 @@ MOBILE: Treatment name minimum 13px. Pill badge text minimum 13px. Row height mi
       aiPrompt: `MINIMAL LINE — ultra-minimal Swiss typography-inspired price list. Pure white, maximum whitespace. No decorations whatsoever. Treatment name LEFT in charcoal, price RIGHT in sky blue.
 
 BACKGROUND: Pure white (#ffffff) full bleed.
-ZONE 1 — HEADER (top 12%): Hospital name "OO의원" in lighter gray (#94a3b8, 11px, weight 400) left-aligned or centered at top. "비급여 진료비 안내" in charcoal (#374151, 20px, weight 700) bold text. Single thin horizontal line (1px, #e2e8f0) spanning full width below title with 24px spacing.
+ZONE 1 — HEADER (top 12%): Hospital name "병원명" in lighter gray (#94a3b8, 11px, weight 400) left-aligned or centered at top. "비급여 진료비 안내" in charcoal (#374151, 20px, weight 700) bold text. Single thin horizontal line (1px, #e2e8f0) spanning full width below title with 24px spacing.
 ZONE 2 — PRICE LIST (middle 70%): Each item row contains ONLY: treatment name in charcoal (#374151, 14px, weight 400) on the left, price in bold sky blue (#0ea5e9, 15px, weight 700) on the right with "원" suffix.
 NO separator lines between items — only generous whitespace (24-28px vertical gap) creates visual separation. NO icons, NO borders, NO background colors, NO dot leaders, NO badges.
 ALIGNMENT: All treatment names left-aligned to same position (6% left margin). All prices right-aligned to same position (6% right margin). Grid-based Swiss typographic alignment.
