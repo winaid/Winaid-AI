@@ -124,7 +124,7 @@ Mobile readability: minimum body text 11pt, date numbers 14pt bold, title 24pt+.
     },
     {
       id: "sch_korean_classic", name: "한방 전통", color: "#92400e", accent: "#78350f", bg: "#fef3c7",
-      desc: "기와지붕 실루엣 + 코랄 반원 태양 + 전통 꽃살문양 — 한의원/명절", layoutHint: "cal_hanok",
+      desc: "기와지붕 실루엣 + 전통 꽃살문양 — 한의원/명절", layoutHint: "cal_hanok",
       aiPrompt: `[CRITICAL — THIS IS A POSTER, NOT A SPREADSHEET]
 This is a DESIGNED POSTER that contains a calendar section — NOT a calendar that fills the entire image.
 Structure must be: decorative header/frame (30-40%) + calendar grid (50-60%) + optional thin decorative footer line (0-5%).
@@ -135,10 +135,10 @@ DO NOT make the calendar grid fill 100% of the image.
 Think of this as an Instagram-worthy hospital announcement poster that happens to show a monthly calendar.
 
 Korean hospital monthly schedule poster — Korean Traditional Hanok Style.
-STRUCTURE: Warm cream (#f5e6d0) background evoking traditional Korean paper. Coral/salmon (#e8795a) decorative half-circle sun motif at top with month number inside. Traditional roof tile (기와) silhouette decorative border. Corner decorations inspired by traditional flower lattice (꽃살) patterns.
+STRUCTURE: Warm cream (#f5e6d0) background evoking traditional Korean paper. Traditional roof tile (기와) silhouette decorative border at top. Corner decorations inspired by traditional flower lattice (꽃살) patterns. ⛔ Do NOT draw a sun, half-circle sun, or sunrise motif anywhere in the image.
 CALENDAR GRID: Warm brown (#92400e) text. Grid styled with traditional aesthetic, subtle borders.
 MARKERS: Closed — deep red seal stamp style marker + "휴진" label below. Shortened — amber brush stroke accent + "단축" label below. Vacation — purple marker + "휴가" label below. ONLY mark the dates specified by the user.
-STRICT MODE ANCHORS: (1) Roof tile border decoration (2) Half-sun motif (3) Traditional pattern corners (4) Warm brown palette (5) Cream background.
+STRICT MODE ANCHORS: (1) Roof tile border decoration (2) Traditional pattern corners (3) Warm brown palette (4) Cream background (5) 꽃살 lattice motifs.
 INSPIRED MODE FREEDOM: (1) Traditional motif variety (2) Color warmth level (3) Pattern complexity.
 ⛔ Do NOT add any information the user didn't provide — no business hours, lunch hours, phone numbers, addresses. Do NOT draw empty boxes or blank placeholder sections.
 Dignified traditional Korean aesthetic with warm readable typography.`,
