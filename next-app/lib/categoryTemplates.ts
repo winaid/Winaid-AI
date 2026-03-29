@@ -939,7 +939,7 @@ Mobile readability: title 34pt+, body 13pt+.`,
 
     {
       id: "ntc_slate_modern", name: "슬레이트 모던", color: "#334155", accent: "#64748b", bg: "#f8fafc",
-      desc: "연한 슬레이트 배경 + 기하학 라인 — 모던한 공지", layoutHint: "slate",
+      desc: "검정 펠트 레터보드 + 흰 글자 — 감성 레터보드 스타일", layoutHint: "slate",
       aiPrompt: `[CRITICAL — THIS IS A DESIGNED NOTICE POSTER WITH PHYSICAL OBJECTS]
 ⛔ STRICT CONTENT RULES:
 - DO NOT add any information the user did not provide.
@@ -947,24 +947,32 @@ Mobile readability: title 34pt+, body 13pt+.`,
 - DO NOT add fake disclaimers, footnotes, or fine print.
 - ONLY use text the user explicitly provided.
 
-Korean hospital notice poster — FLOATING CARD ON DARK SURFACE theme.
+Korean hospital notice poster — FELT LETTER BOARD theme. Like a trendy cafe or boutique clinic felt letter board.
 
-VISUAL CONCEPT: A white card floating above a dark slate surface, with realistic shadow showing depth/elevation. Like a business card hovering over a dark desk. Clean, architectural, premium.
+VISUAL CONCEPT: A realistic BLACK FELT LETTER BOARD with thin horizontal grooves (slots) where white plastic letters are inserted. The board has a natural wood or oak frame around it. This is a physical object — it must look like a REAL letter board photographed straight-on.
 
-BACKGROUND: Dark warm slate (#1e293b) surface with subtle leather/matte texture at 5% opacity.
+THE FRAME: Natural light oak or walnut wood frame surrounding the entire image. Frame width about 3-4% of image on each side. Visible wood grain texture. Clean, simple rectangular frame.
 
-THE FLOATING CARD: White card (#f8fafc) at center, spanning 78% width and 70% height. Rounded corners (12px). STRONG realistic drop shadow — offset (0, 8px), blur (24px), spread (4px), rgba(0,0,0,0.25). The shadow creates clear sense of card FLOATING 8px above the dark surface.
+THE FELT BOARD: Inside the frame — black felt (#1a1a1a) surface with visible felt texture (soft, slightly fuzzy). Subtle horizontal grooves/ridges running across the entire surface at regular intervals (every ~20px). These grooves are where the letters sit. The grooves are very subtle — slightly lighter black lines (#2a2a2a).
 
-ON THE CARD:
-- Top: Notice title in dark charcoal (#1e293b) bold text (36pt+)
-- Below title: short amber (#d97706) accent line (3px height, 40px width) — the only color accent
-- Content: dark gray (#374151) text, generous spacing, left-aligned editorial
-- Bottom of card: thin gray line + small text
+THE LETTERS: White (#ffffff) plastic letter tiles inserted into the grooves. Each letter is a small rectangular tile with rounded corners, slightly raised (subtle shadow beneath each letter). The letters form the notice text:
+- Title: large letters (one letter per tile), bold, taking up 2-3 rows
+- Below: smaller letters for content
+- Letters should look like real physical plastic tiles — not flat text. Each letter has its own tile with a tiny gap between tiles.
 
-THE FLOATING SHADOW EFFECT IS MANDATORY. Card must look physically lifted off the dark surface.
+LAYOUT:
+- Top rows: Notice title in large letter tiles
+- Middle: thin decorative row of arrow tiles or dash tiles as separator
+- Bottom rows: Content in smaller letter tiles
+- Very bottom row: date or hospital name in smallest tiles
 
-STRICT ANCHORS: Dark slate surface, white floating card with strong shadow, amber accent line, editorial layout, architectural premium mood.
-Mobile readability: title 32pt+, body 13pt+.`,
+OPTIONAL: 1-2 small decorative elements on the felt board — a tiny heart tile, a star tile, or a small plant/succulent at the bottom corner of the frame for lifestyle feel.
+
+THE BLACK FELT TEXTURE, WOOD FRAME, AND INDIVIDUAL LETTER TILES ARE MANDATORY.
+
+STRICT ANCHORS: Black felt board with grooves, natural wood frame, white plastic letter tiles with individual tile shadows, letter board realism, trendy cafe aesthetic.
+INSPIRED FREEDOM: Frame wood type (oak/walnut/white), decorative tiles (heart/star/arrow), plant accent, groove spacing.
+Mobile readability: title letters large enough to read, content letters 12pt+ equivalent.`,
     },
 
 
