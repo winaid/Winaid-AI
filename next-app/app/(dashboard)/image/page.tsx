@@ -94,9 +94,9 @@ export default function ImagePage() {
   // ── 달력 테마 옵션 (12종 — 4그룹) ──
   const CALENDAR_THEME_OPTIONS: { value: string; label: string; emoji: string; desc: string; group: string; groupColor: string }[] = [
     // 시즌
-    { value: 'sch_cherry_blossom', label: '벚꽃 봄', emoji: '🌸', desc: '핑크 워터컬러 + 흩날리는 꽃잎', group: '계절', groupColor: '#ec4899' },
-    { value: 'sch_maple_autumn', label: '단풍 가을', emoji: '🍁', desc: '오렌지 그라데이션 + 흩날리는 단풍잎', group: '계절', groupColor: '#ec4899' },
-    { value: 'sch_snowflake_winter', label: '눈꽃 겨울', emoji: '❄️', desc: '눈 결정 패턴 + 아이시 블루', group: '계절', groupColor: '#ec4899' },
+    { value: 'sch_cherry_blossom', label: '벚꽃 봄', emoji: '🌸', desc: '핑크 워터컬러 + 흩날리는 꽃잎', group: '자연', groupColor: '#ec4899' },
+    { value: 'sch_maple_autumn', label: '단풍 가을', emoji: '🍁', desc: '오렌지 그라데이션 + 흩날리는 단풍잎', group: '자연', groupColor: '#ec4899' },
+    { value: 'sch_snowflake_winter', label: '눈꽃 겨울', emoji: '❄️', desc: '눈 결정 패턴 + 아이시 블루', group: '자연', groupColor: '#ec4899' },
     // 전통
     { value: 'sch_korean_classic', label: '한방 전통', emoji: '🏛️', desc: '기와 문양 + 한지 프레임', group: '전통', groupColor: '#92400e' },
     { value: 'sch_bojagi_holiday', label: '보자기 명절', emoji: '🎀', desc: '보자기 매듭 + 금색 테두리', group: '전통', groupColor: '#92400e' },
@@ -112,7 +112,7 @@ export default function ImagePage() {
   ];
 
   const SCHEDULE_GROUPS: { label: string; desc: string; values: string[] }[] = [
-    { label: '🌸 계절', desc: '봄·가을·겨울', values: ['sch_cherry_blossom', 'sch_maple_autumn', 'sch_snowflake_winter'] },
+    { label: '🌸 자연', desc: '벚꽃·단풍·눈꽃', values: ['sch_cherry_blossom', 'sch_maple_autumn', 'sch_snowflake_winter'] },
     { label: '🏛️ 전통', desc: '한방·명절·수묵화', values: ['sch_korean_classic', 'sch_bojagi_holiday', 'sch_ink_wash'] },
     { label: '💎 기본', desc: '네이비·베이지·코랄', values: ['sch_navy_professional', 'sch_beige_gold', 'sch_coral_sns'] },
     { label: '✨ 특수', desc: '키즈·민트·해바라기', values: ['sch_kids_pastel', 'sch_mint_wellness', 'sch_sunflower_summer'] },
