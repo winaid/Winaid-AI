@@ -24,7 +24,17 @@ This is a DESIGNED POSTER that contains a calendar section — NOT a calendar th
 Structure: decorative header/frame (30-40%) + calendar grid (50-60%) + footer ONLY if user provided notice text.
 The poster must have visual identity: background texture, decorative elements, branded header.
 DO NOT make the calendar grid fill 100% of the image.
-DO NOT add any information the user did not provide (no clinic hours, no lunch time, no phone number unless user entered them).
+⛔ STRICT CONTENT RULES:
+- ⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
+- DO NOT add fake disclaimers, footnotes, or fine print (e.g. ※ sentences). These often come out as nonsensical gibberish.
+- DO NOT invent hospital names, phone numbers, addresses, or medical information.
+- ONLY use text that the user explicitly provided in their input. If no text was provided for a section, leave it empty or use a simple label.
+- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
+- DO NOT add fake disclaimers, footnotes, or fine print (e.g. ※ sentences). These often come out as nonsensical gibberish.
+- DO NOT invent hospital names, phone numbers, addresses, or medical information.
+- ONLY use text that the user explicitly provided in their input. If no text was provided for a section, leave it empty or use a simple label.
 
 Korean hospital monthly schedule poster — Premium Spring Cherry Blossom theme.
 
@@ -55,7 +65,17 @@ This is a DESIGNED POSTER that contains a calendar section — NOT a calendar th
 Structure: decorative header/frame (30-40%) + calendar grid (50-60%) + footer ONLY if user provided notice text.
 The poster must have visual identity: background texture, decorative elements, branded header.
 DO NOT make the calendar grid fill 100% of the image.
-DO NOT add any information the user did not provide (no clinic hours, no lunch time, no phone number unless user entered them).
+⛔ STRICT CONTENT RULES:
+- ⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
+- DO NOT add fake disclaimers, footnotes, or fine print (e.g. ※ sentences). These often come out as nonsensical gibberish.
+- DO NOT invent hospital names, phone numbers, addresses, or medical information.
+- ONLY use text that the user explicitly provided in their input. If no text was provided for a section, leave it empty or use a simple label.
+- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
+- DO NOT add fake disclaimers, footnotes, or fine print (e.g. ※ sentences). These often come out as nonsensical gibberish.
+- DO NOT invent hospital names, phone numbers, addresses, or medical information.
+- ONLY use text that the user explicitly provided in their input. If no text was provided for a section, leave it empty or use a simple label.
 
 Korean hospital monthly schedule poster — Premium Autumn Maple Leaf theme.
 
@@ -84,7 +104,17 @@ This is a DESIGNED POSTER that contains a calendar section — NOT a calendar th
 Structure: decorative header/frame (30-40%) + calendar grid (50-60%) + footer ONLY if user provided notice text.
 The poster must have visual identity: background texture, decorative elements, branded header.
 DO NOT make the calendar grid fill 100% of the image.
-DO NOT add any information the user did not provide (no clinic hours, no lunch time, no phone number unless user entered them).
+⛔ STRICT CONTENT RULES:
+- ⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
+- DO NOT add fake disclaimers, footnotes, or fine print (e.g. ※ sentences). These often come out as nonsensical gibberish.
+- DO NOT invent hospital names, phone numbers, addresses, or medical information.
+- ONLY use text that the user explicitly provided in their input. If no text was provided for a section, leave it empty or use a simple label.
+- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
+- DO NOT add fake disclaimers, footnotes, or fine print (e.g. ※ sentences). These often come out as nonsensical gibberish.
+- DO NOT invent hospital names, phone numbers, addresses, or medical information.
+- ONLY use text that the user explicitly provided in their input. If no text was provided for a section, leave it empty or use a simple label.
 
 Korean hospital monthly schedule poster — Winter Snowflake theme.
 VISUAL MOTIFS: Geometric snowflake crystal patterns scattered at 12% opacity in background. Sparkle accents. Frosted glass effect on calendar card.
@@ -115,7 +145,12 @@ CALENDAR GRID: Warm brown (#92400e) text. Grid styled with traditional aesthetic
 MARKERS: Closed — deep red seal stamp style marker + "휴진" label below. Shortened — amber brush stroke accent + "단축" label below. Vacation — purple marker + "휴가" label below. ONLY mark the dates specified by the user.
 STRICT MODE ANCHORS: (1) Roof tile border decoration (2) Traditional pattern corners (3) Warm brown palette (4) Cream background (5) 꽃살 lattice motifs.
 INSPIRED MODE FREEDOM: (1) Traditional motif variety (2) Color warmth level (3) Pattern complexity.
-⛔ Do NOT add any information the user didn't provide — no business hours, lunch hours, phone numbers, addresses. Do NOT draw empty boxes or blank placeholder sections. If no notice text was provided, end the poster after the calendar grid with NO empty area below.
+⛔ ⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
+- DO NOT add fake disclaimers, footnotes, or fine print (e.g. ※ sentences). These often come out as nonsensical gibberish.
+- DO NOT invent hospital names, phone numbers, addresses, or medical information.
+- ONLY use text that the user explicitly provided in their input. If no text was provided for a section, leave it empty or use a simple label. Do NOT draw empty boxes or blank placeholder sections. If no notice text was provided, end the poster after the calendar grid with NO empty area below.
 Dignified traditional Korean aesthetic with warm readable typography.`,
     },
 
@@ -127,7 +162,17 @@ This is a DESIGNED POSTER that contains a calendar section — NOT a calendar th
 Structure: decorative header/frame (30-40%) + calendar grid (50-60%) + footer ONLY if user provided notice text.
 The poster must have visual identity: background texture, decorative elements, branded header.
 DO NOT make the calendar grid fill 100% of the image.
-DO NOT add any information the user did not provide (no clinic hours, no lunch time, no phone number unless user entered them).
+⛔ STRICT CONTENT RULES:
+- ⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
+- DO NOT add fake disclaimers, footnotes, or fine print (e.g. ※ sentences). These often come out as nonsensical gibberish.
+- DO NOT invent hospital names, phone numbers, addresses, or medical information.
+- ONLY use text that the user explicitly provided in their input. If no text was provided for a section, leave it empty or use a simple label.
+- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
+- DO NOT add fake disclaimers, footnotes, or fine print (e.g. ※ sentences). These often come out as nonsensical gibberish.
+- DO NOT invent hospital names, phone numbers, addresses, or medical information.
+- ONLY use text that the user explicitly provided in their input. If no text was provided for a section, leave it empty or use a simple label.
 
 Korean hospital monthly schedule poster — Korean Traditional Bojagi Holiday theme.
 VISUAL MOTIFS: Korean bojagi (wrapping cloth) knot decoration at top center, large and prominent. Gold border frame around entire image. Color stripe accents (red, blue, yellow, green — Korean saekdong).
@@ -148,7 +193,17 @@ This is a DESIGNED POSTER that contains a calendar section — NOT a calendar th
 Structure: decorative header/frame (30-40%) + calendar grid (50-60%) + footer ONLY if user provided notice text.
 The poster must have visual identity: background texture, decorative elements, branded header.
 DO NOT make the calendar grid fill 100% of the image.
-DO NOT add any information the user did not provide (no clinic hours, no lunch time, no phone number unless user entered them).
+⛔ STRICT CONTENT RULES:
+- ⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
+- DO NOT add fake disclaimers, footnotes, or fine print (e.g. ※ sentences). These often come out as nonsensical gibberish.
+- DO NOT invent hospital names, phone numbers, addresses, or medical information.
+- ONLY use text that the user explicitly provided in their input. If no text was provided for a section, leave it empty or use a simple label.
+- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
+- DO NOT add fake disclaimers, footnotes, or fine print (e.g. ※ sentences). These often come out as nonsensical gibberish.
+- DO NOT invent hospital names, phone numbers, addresses, or medical information.
+- ONLY use text that the user explicitly provided in their input. If no text was provided for a section, leave it empty or use a simple label.
 
 Korean hospital monthly schedule poster — East Asian Ink Wash Painting theme.
 VISUAL MOTIFS: Ink wash bamboo or plum blossom branch illustration at one corner (subtle, elegant). Ink wash splash/bleed effect at header background. Single red seal stamp as accent.
@@ -169,7 +224,17 @@ This is a DESIGNED POSTER that contains a calendar section — NOT a calendar th
 Structure: decorative header/frame (30-40%) + calendar grid (50-60%) + footer ONLY if user provided notice text.
 The poster must have visual identity: background texture, decorative elements, branded header.
 DO NOT make the calendar grid fill 100% of the image.
-DO NOT add any information the user did not provide (no clinic hours, no lunch time, no phone number unless user entered them).
+⛔ STRICT CONTENT RULES:
+- ⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
+- DO NOT add fake disclaimers, footnotes, or fine print (e.g. ※ sentences). These often come out as nonsensical gibberish.
+- DO NOT invent hospital names, phone numbers, addresses, or medical information.
+- ONLY use text that the user explicitly provided in their input. If no text was provided for a section, leave it empty or use a simple label.
+- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
+- DO NOT add fake disclaimers, footnotes, or fine print (e.g. ※ sentences). These often come out as nonsensical gibberish.
+- DO NOT invent hospital names, phone numbers, addresses, or medical information.
+- ONLY use text that the user explicitly provided in their input. If no text was provided for a section, leave it empty or use a simple label.
 
 Korean hospital monthly schedule poster — Kids Pastel Rainbow theme.
 VISUAL MOTIFS: Pastel rainbow arch at top of image (large, prominent). Cute cloud illustrations floating. Small star decorations scattered. Everything soft and rounded.
@@ -189,7 +254,17 @@ This is a DESIGNED POSTER that contains a calendar section — NOT a calendar th
 Structure: decorative header/frame (30-40%) + calendar grid (50-60%) + footer ONLY if user provided notice text.
 The poster must have visual identity: background texture, decorative elements, branded header.
 DO NOT make the calendar grid fill 100% of the image.
-DO NOT add any information the user did not provide (no clinic hours, no lunch time, no phone number unless user entered them).
+⛔ STRICT CONTENT RULES:
+- ⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
+- DO NOT add fake disclaimers, footnotes, or fine print (e.g. ※ sentences). These often come out as nonsensical gibberish.
+- DO NOT invent hospital names, phone numbers, addresses, or medical information.
+- ONLY use text that the user explicitly provided in their input. If no text was provided for a section, leave it empty or use a simple label.
+- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
+- DO NOT add fake disclaimers, footnotes, or fine print (e.g. ※ sentences). These often come out as nonsensical gibberish.
+- DO NOT invent hospital names, phone numbers, addresses, or medical information.
+- ONLY use text that the user explicitly provided in their input. If no text was provided for a section, leave it empty or use a simple label.
 
 Korean hospital monthly schedule poster — Premium Clean Blue Corporate theme.
 
@@ -221,7 +296,17 @@ This is a DESIGNED POSTER that contains a calendar section — NOT a calendar th
 Structure: decorative header/frame (30-40%) + calendar grid (50-60%) + footer ONLY if user provided notice text.
 The poster must have visual identity: background texture, decorative elements, branded header.
 DO NOT make the calendar grid fill 100% of the image.
-DO NOT add any information the user did not provide (no clinic hours, no lunch time, no phone number unless user entered them).
+⛔ STRICT CONTENT RULES:
+- ⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
+- DO NOT add fake disclaimers, footnotes, or fine print (e.g. ※ sentences). These often come out as nonsensical gibberish.
+- DO NOT invent hospital names, phone numbers, addresses, or medical information.
+- ONLY use text that the user explicitly provided in their input. If no text was provided for a section, leave it empty or use a simple label.
+- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
+- DO NOT add fake disclaimers, footnotes, or fine print (e.g. ※ sentences). These often come out as nonsensical gibberish.
+- DO NOT invent hospital names, phone numbers, addresses, or medical information.
+- ONLY use text that the user explicitly provided in their input. If no text was provided for a section, leave it empty or use a simple label.
 
 Korean hospital monthly schedule poster — Rose Gold Premium theme.
 
@@ -249,7 +334,17 @@ This is a DESIGNED POSTER that contains a calendar section — NOT a calendar th
 Structure: decorative header/frame (30-40%) + calendar grid (50-60%) + footer ONLY if user provided notice text.
 The poster must have visual identity: background texture, decorative elements, branded header.
 DO NOT make the calendar grid fill 100% of the image.
-DO NOT add any information the user did not provide (no clinic hours, no lunch time, no phone number unless user entered them).
+⛔ STRICT CONTENT RULES:
+- ⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
+- DO NOT add fake disclaimers, footnotes, or fine print (e.g. ※ sentences). These often come out as nonsensical gibberish.
+- DO NOT invent hospital names, phone numbers, addresses, or medical information.
+- ONLY use text that the user explicitly provided in their input. If no text was provided for a section, leave it empty or use a simple label.
+- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
+- DO NOT add fake disclaimers, footnotes, or fine print (e.g. ※ sentences). These often come out as nonsensical gibberish.
+- DO NOT invent hospital names, phone numbers, addresses, or medical information.
+- ONLY use text that the user explicitly provided in their input. If no text was provided for a section, leave it empty or use a simple label.
 
 Korean hospital monthly schedule poster — Green Botanical Natural theme.
 
@@ -277,7 +372,17 @@ This is a DESIGNED POSTER that contains a calendar section — NOT a calendar th
 Structure: decorative header/frame (30-40%) + calendar grid (50-60%) + footer ONLY if user provided notice text.
 The poster must have visual identity: background texture, decorative elements, branded header.
 DO NOT make the calendar grid fill 100% of the image.
-DO NOT add any information the user did not provide (no clinic hours, no lunch time, no phone number unless user entered them).
+⛔ STRICT CONTENT RULES:
+- ⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
+- DO NOT add fake disclaimers, footnotes, or fine print (e.g. ※ sentences). These often come out as nonsensical gibberish.
+- DO NOT invent hospital names, phone numbers, addresses, or medical information.
+- ONLY use text that the user explicitly provided in their input. If no text was provided for a section, leave it empty or use a simple label.
+- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
+- DO NOT add fake disclaimers, footnotes, or fine print (e.g. ※ sentences). These often come out as nonsensical gibberish.
+- DO NOT invent hospital names, phone numbers, addresses, or medical information.
+- ONLY use text that the user explicitly provided in their input. If no text was provided for a section, leave it empty or use a simple label.
 
 Korean hospital monthly schedule poster — Korean National Flag Patriotic theme for national holidays.
 
@@ -305,7 +410,17 @@ This is a DESIGNED POSTER that contains a calendar section — NOT a calendar th
 Structure: decorative header/frame (30-40%) + calendar grid (50-60%) + footer ONLY if user provided notice text.
 The poster must have visual identity: background texture, decorative elements, branded header.
 DO NOT make the calendar grid fill 100% of the image.
-DO NOT add any information the user did not provide (no clinic hours, no lunch time, no phone number unless user entered them).
+⛔ STRICT CONTENT RULES:
+- ⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
+- DO NOT add fake disclaimers, footnotes, or fine print (e.g. ※ sentences). These often come out as nonsensical gibberish.
+- DO NOT invent hospital names, phone numbers, addresses, or medical information.
+- ONLY use text that the user explicitly provided in their input. If no text was provided for a section, leave it empty or use a simple label.
+- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
+- DO NOT add fake disclaimers, footnotes, or fine print (e.g. ※ sentences). These often come out as nonsensical gibberish.
+- DO NOT invent hospital names, phone numbers, addresses, or medical information.
+- ONLY use text that the user explicitly provided in their input. If no text was provided for a section, leave it empty or use a simple label.
 
 Korean hospital monthly schedule poster — Christmas Holiday theme for December/year-end.
 
@@ -332,8 +447,13 @@ Mobile readability: minimum body text 11pt, date numbers 14pt bold, title 24pt+.
       id: "evt_gold_luxury", name: "골드 럭셔리", color: "#b8860b", accent: "#8b6914", bg: "#faf5ef",
       desc: "메탈릭 골드 텍스처 + 크림 배경 — 고급스러운 프리미엄 스타일", layoutHint: "luxury",
       aiPrompt: `[CRITICAL — THIS IS A PREMIUM DESIGNED POSTER, NOT A GENERIC FLYER]
-DO NOT add any information the user did not provide.
-DO NOT write any placeholder hospital name.
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
+- DO NOT add fake disclaimers, footnotes, or fine print (e.g. ※ sentences). These often come out as nonsensical gibberish.
+- DO NOT invent hospital names, phone numbers, addresses, or medical information.
+- ONLY use text that the user explicitly provided in their input. If no text was provided for a section, leave it empty or use a simple label.
+
 
 Korean hospital event/promotion poster — Luxury Gold theme. Pure design style — works for ANY type of event.
 
@@ -357,8 +477,13 @@ Mobile readability: title 48pt+, body 12pt+.`,
       id: "evt_deep_navy", name: "딥 네이비", color: "#0a1628", accent: "#1e3a5f", bg: "#0a1628",
       desc: "다크 네이비 + 흰 대형 타이포 + 골드 라인 — 권위 있는 모던 스타일", layoutHint: "navy",
       aiPrompt: `[CRITICAL — THIS IS A PREMIUM CORPORATE POSTER]
-DO NOT add any information the user did not provide.
-DO NOT write any placeholder hospital name.
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
+- DO NOT add fake disclaimers, footnotes, or fine print (e.g. ※ sentences). These often come out as nonsensical gibberish.
+- DO NOT invent hospital names, phone numbers, addresses, or medical information.
+- ONLY use text that the user explicitly provided in their input. If no text was provided for a section, leave it empty or use a simple label.
+
 
 Korean hospital event/promotion poster — Deep Navy Corporate theme. Pure design style — works for ANY type of event.
 
@@ -380,8 +505,13 @@ Mobile readability: title 44pt+, body 12pt+ (white on navy contrast 15:1+).`,
       id: "evt_sky_blue", name: "스카이 블루", color: "#3b82f6", accent: "#1e3a8a", bg: "#eff6ff",
       desc: "하늘색 그라데이션 + 클린 카드 — 깔끔하고 신뢰감 있는 스타일", layoutHint: "sky",
       aiPrompt: `[CRITICAL — THIS IS A CLEAN PROFESSIONAL POSTER]
-DO NOT add any information the user did not provide.
-DO NOT write any placeholder hospital name.
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
+- DO NOT add fake disclaimers, footnotes, or fine print (e.g. ※ sentences). These often come out as nonsensical gibberish.
+- DO NOT invent hospital names, phone numbers, addresses, or medical information.
+- ONLY use text that the user explicitly provided in their input. If no text was provided for a section, leave it empty or use a simple label.
+
 
 Korean hospital event/promotion poster — Clean Sky Blue theme. Pure design style — works for ANY type of event.
 
@@ -405,8 +535,13 @@ Mobile readability: title 28pt+, body 12pt+.`,
       id: "evt_sage_botanical", name: "세이지 보태니컬", color: "#16a34a", accent: "#14532d", bg: "#f0fdf4",
       desc: "세이지 워터컬러 + 유칼립투스 실루엣 — 자연스럽고 차분한 스타일", layoutHint: "botanical",
       aiPrompt: `[CRITICAL — THIS IS A PREMIUM WELLNESS-MOOD POSTER]
-DO NOT add any information the user did not provide.
-DO NOT write any placeholder hospital name.
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
+- DO NOT add fake disclaimers, footnotes, or fine print (e.g. ※ sentences). These often come out as nonsensical gibberish.
+- DO NOT invent hospital names, phone numbers, addresses, or medical information.
+- ONLY use text that the user explicitly provided in their input. If no text was provided for a section, leave it empty or use a simple label.
+
 
 Korean hospital event/promotion poster — Sage Botanical theme. Pure design style — works for ANY type of event.
 
@@ -428,8 +563,13 @@ Mobile readability: title 28pt+, body 12pt+.`,
       id: "evt_ocean_cool", name: "오션 쿨", color: "#0ea5e9", accent: "#0e7490", bg: "#ecfeff",
       desc: "틸→시안 그라데이션 + 물결 패턴 — 시원하고 세련된 스타일", layoutHint: "ocean",
       aiPrompt: `[CRITICAL — THIS IS A PREMIUM POSTER, NOT A BEACH FLYER]
-DO NOT add any information the user did not provide.
-DO NOT write any placeholder hospital name.
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
+- DO NOT add fake disclaimers, footnotes, or fine print (e.g. ※ sentences). These often come out as nonsensical gibberish.
+- DO NOT invent hospital names, phone numbers, addresses, or medical information.
+- ONLY use text that the user explicitly provided in their input. If no text was provided for a section, leave it empty or use a simple label.
+
 
 Korean hospital event/promotion poster — Ocean Cool theme. Pure design style — works for ANY type of event.
 
@@ -453,8 +593,13 @@ Mobile readability: title 32pt+, body 12pt+.`,
       id: "evt_blush_warm", name: "블러시 웜", color: "#881337", accent: "#9f1239", bg: "#fef7ed",
       desc: "샴페인→블러시 그라데이션 + 기하학 눈꽃 — 따뜻하고 우아한 스타일", layoutHint: "warm",
       aiPrompt: `[CRITICAL — THIS IS A PREMIUM POSTER, NOT A CHRISTMAS CARD]
-DO NOT add any information the user did not provide.
-DO NOT write any placeholder hospital name.
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
+- DO NOT add fake disclaimers, footnotes, or fine print (e.g. ※ sentences). These often come out as nonsensical gibberish.
+- DO NOT invent hospital names, phone numbers, addresses, or medical information.
+- ONLY use text that the user explicitly provided in their input. If no text was provided for a section, leave it empty or use a simple label.
+
 
 Korean hospital event/promotion poster — Blush Warm theme. Pure design style — works for ANY type of event.
 
