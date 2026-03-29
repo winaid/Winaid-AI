@@ -329,193 +329,162 @@ Mobile readability: minimum body text 11pt, date numbers 14pt bold, title 24pt+.
 
   event: [
     {
-      id: 'evt_sale_banner', name: '할인 배너', color: '#ef4444', accent: '#b91c1c', bg: '#fef2f2',
-      desc: '대각선 분할 배너형 — 할인율 최대 강조, 시술명+가격 수직 계층, 하단 CTA 바',
-      layoutHint: 'price',
-      aiPrompt: `Korean hospital discount promotion — diagonal split banner with dominant discount number. Modeled on Korean 피부과/성형외과 X배너 → 인스타 어댑션 style.
+      id: "evt_gold_celebration", name: "골드 셀레브레이션", color: "#b8860b", accent: "#8b6914", bg: "#faf7f2",
+      desc: "아이보리 + 골드 타이포 + 미니멀 콘페티 — 개원/리뉴얼 축하", layoutHint: "celebration",
+      aiPrompt: `[CRITICAL — THIS IS A POSTER, NOT A DATA SHEET]
+This is a DESIGNED POSTER — sophisticated, elegant, premium.
+Structure: decorative header (30-40%) + content area (35-40%) + footer (15-20%) ONLY if user provided info.
+DO NOT add any information the user did not provide (no phone, no address, no hours unless user entered them).
+If no footer content was provided, end the poster after the content area.
 
-=== ZONE LAYOUT (vertical stack) ===
-ZONE A – HEADER BAR (15%): Full-width solid red (#ef4444) bar. Hospital logo or name in small white (12px) at top-left. Right side: "EVENT" in white condensed caps (letter-spacing 3px). This bar anchors the brand.
-ZONE B – DISCOUNT HERO (30%): White background with a large diagonal red (#ef4444) slash from top-left to bottom-right at 30° angle. In the red triangle area: massive white discount number "50" (72px, weight 900) with "%" beside it (40px). In the white triangle area: treatment name e.g. "보톡스 100단위" in bold red (#b91c1c, 28px, weight 800). The diagonal creates dynamic tension.
-ZONE C – PRICE BLOCK (30%): Light red (#fef2f2) background. Centered layout: original price "정가 350,000원" with strikethrough in gray (16px). Below: "이벤트 특별가" label in dark gray (14px). Below: discounted price "175,000원" in massive bold red (#ef4444, 36px, weight 900). Thin red line separator above and below this block.
-ZONE D – CTA + PERIOD (25%): White background. Full-width rounded red (#ef4444) CTA button: "지금 바로 예약하세요" in bold white (18px). Below button: event period "2024.03.01 ~ 03.31" in gray (12px). Bottom edge: "※ 의료법에 의해 부작용 등 주의사항을 확인하세요" in tiny gray (9px) — 의료광고법 compliance disclaimer.
+Korean hospital grand opening / renewal celebration poster — Gold Celebration theme.
 
-=== PRICE HIERARCHY (must follow this order of visual dominance) ===
-1st: Discount percentage (largest, 72px) 2nd: Treatment name (28px) 3rd: Discounted price (36px) 4th: Original price strikethrough (16px) 5th: Period + CTA
+BACKGROUND: Entire background warm ivory (#faf7f2) with very subtle linen texture at 3% opacity. Scattered gold confetti dots across the ENTIRE background at 8-12% opacity — tiny circles and rectangles in gold (#d4a853) at random rotations. Festive but refined.
 
-=== STRICT MODE ANCHORS ===
-• Diagonal split angle: 30° ± 5°
-• Zone A/B/C/D proportions: 15/30/30/25 (± 3%)
-• Discount number always largest element on canvas
-• 의료광고법 disclaimer always present at bottom
-• CTA button must span ≥ 80% of canvas width
+TITLE AREA (top 40%): Large elegant title in gold (#b8860b) bold serif typography. Below: hospital name in warm brown (#5c4a32) sans-serif. Thin gold (#d4a853) decorative line below title (width 40%, centered). Generous whitespace.
 
-=== INSPIRED MODE FREEDOM ===
-• Diagonal angle can shift 15°–45°
-• Color intensity of red zones can vary
-• Price block can use card with shadow instead of flat background
-• Additional decorative elements like subtle dot patterns allowed in margins
-• CTA button shape can be pill or rectangle
+CONTENT AREA (middle 35%): Clean white card (rounded 12px, warm shadow) with event details. Large numbers in gold. Hierarchy: title > price > period > details.
 
-=== MOBILE READABILITY ===
-• All text ≥ 11px. Discount number ≥ 60px even on small canvas.
-• Price figures must have comma separators (e.g. "175,000원")
-• Minimum 8px padding on all sides`,
+FOOTER (bottom 25%): Ivory continues. Small warm brown text. Gold decorative line above footer.
+
+MOOD: Luxury hotel grand opening invitation. Warm, sophisticated, celebratory but not flashy. Gold confetti is the ONLY decorative element.
+
+STRICT ANCHORS: Ivory background, gold confetti scatter, gold serif title, warm brown body, gold decorative lines, luxury minimal.
+INSPIRED FREEDOM: Confetti density, gold shade, serif font, card treatment.
+Mobile readability: minimum body text 11pt, title 28pt+, prices 24pt+.`,
     },
     {
-      id: 'evt_elegant_event', name: '엘레강스 이벤트', color: '#a855f7', accent: '#7e22ce', bg: '#faf5ff',
-      desc: '퍼플 + 세리프 타이틀 (프리미엄 시술)',
-      layoutHint: 'elegant',
-      aiPrompt: `Korean premium aesthetic clinic promotion — dark navy background with gold accents. Inspired by 청담/강남 성형외과 프리미엄 이벤트 포스터.
+      id: "evt_navy_open", name: "모던 네이비 오픈", color: "#0f2444", accent: "#1e3a5f", bg: "#0f2444",
+      desc: "딥 네이비 + 흰 대형 타이포 + 골드 악센트 — 대학병원급 개원", layoutHint: "navy_open",
+      aiPrompt: `[CRITICAL — THIS IS A POSTER, NOT A DATA SHEET]
+This is a DESIGNED POSTER — sophisticated, elegant, premium.
+Structure: decorative header (30-40%) + content area (35-40%) + footer (15-20%) ONLY if user provided info.
+DO NOT add any information the user did not provide (no phone, no address, no hours unless user entered them).
+If no footer content was provided, end the poster after the content area.
 
-=== ZONE LAYOUT (vertical stack on dark navy) ===
-ZONE A – GOLD FRAME + BRAND (10%): Deep navy (#0f172a) full bleed. Hospital name in small gold (#d4a853, 11px, letter-spacing 3px) centered. Thin gold horizontal rule (50% width, 0.5px) below. Gold double-line border framing entire canvas (outer 1.5px, inner 0.5px, 6px gap). Four small gold corner bracket ornaments.
-ZONE B – LABEL + TREATMENT (30%): "SPECIAL EVENT" or "프리미엄 시술" in small gold caps (10px, letter-spacing 4px) centered. Treatment name in large bold white (32px, weight 800) centered below. Thin gold divider line (40% width) below treatment name.
-ZONE C – PRICE HERO (35%): Discounted price in massive bold gold (#d4a853, 44px, weight 900) centered. Original price with strikethrough in small muted gray (#94a3b8, 14px) above discounted price. "특별가" label in small gold (12px) above original price.
-ZONE D – PERIOD + FOOTER (25%): Event period "2024.03.01 ~ 03.31" in muted gold (#b8860b, 12px) centered. Hospital name in small gold at bottom. "※ 의료광고법 준수" disclaimer in tiny gray (9px).
+Korean hospital grand opening / renewal poster — Modern Navy theme.
 
-=== STRICT MODE ANCHORS ===
-• Navy (#0f172a) background must be full bleed — no white areas
-• Gold (#d4a853) and white are the only text colors on navy
-• Gold double-line border always present
-• Zone proportions: 10/30/35/25 (± 3%)
-• Price is the largest element after treatment name
+BACKGROUND: Entire background deep navy (#0f2444). Smooth, clean — NO patterns. Subtle lighter navy (#1e3a5f) radial gradient at center for depth.
 
-=== INSPIRED MODE FREEDOM ===
-• Gold border can be single line or ornamental
-• Corner brackets can be Art Deco flourishes
-• Subtle radial navy gradient (lighter center) allowed
-• Price can have metallic shimmer text effect
-• Additional thin gold decorative lines between zones
+TITLE AREA (top 45%): Massive bold white title (36pt+, weight 900). Below: hospital name in sky blue (#7dd3fc, 14pt). Single thin gold (#c9a96e) horizontal line (width 30%) below title. Extreme whitespace — title floats in navy.
 
-=== MOBILE READABILITY ===
-• Treatment name ≥ 28px. Price ≥ 36px. Period ≥ 11px.
-• Gold on navy contrast ratio ≥ 4.5:1
-• Frame inset ≥ 6px from canvas edge`,
+CONTENT AREA (middle 30%): White floating card (rounded 14px, soft glow) with event details in navy text. Or: no card, white text on navy. Gold accent for important numbers.
+
+FOOTER (bottom 25%): Navy continues. White text. Gold line above. Hospital name in sky blue at bottom.
+
+MOOD: Samsung Medical Center authority. Power comes from white-on-navy contrast and generous negative space. Zero clutter.
+
+STRICT ANCHORS: Deep navy background, white bold title, gold accent lines, sky blue secondary, authoritative corporate, maximum whitespace.
+INSPIRED FREEDOM: Navy shade, gold line style, card vs no-card, title alignment.
+Mobile readability: minimum body text 11pt, title 28pt+, prices 24pt+.`,
     },
     {
-      id: 'evt_pop_colorful', name: '팝 컬러풀', color: '#f59e0b', accent: '#d97706', bg: '#fffbeb',
-      desc: '앰버 원형 배지 + 대형 할인숫자',
-      layoutHint: 'pop',
-      aiPrompt: `Korean hospital promotion — bright amber accent on clean white, attention-grabbing. Modeled on 한국 피부과/치과 인스타그램 이벤트 게시물.
+      id: "evt_clean_sky", name: "클린 스카이", color: "#0284c7", accent: "#0369a1", bg: "#f0f9ff",
+      desc: "하늘색 그라데이션 + 의료 하트 아이콘 — 건강검진 프로모션", layoutHint: "sky",
+      aiPrompt: `[CRITICAL — THIS IS A POSTER, NOT A DATA SHEET]
+This is a DESIGNED POSTER — sophisticated, elegant, premium.
+Structure: decorative header (30-40%) + content area (35-40%) + footer (15-20%) ONLY if user provided info.
+DO NOT add any information the user did not provide (no phone, no address, no hours unless user entered them).
+If no footer content was provided, end the poster after the content area.
 
-=== ZONE LAYOUT (vertical stack) ===
-ZONE A – BADGE + BRAND (20%): Clean white background. Round amber (#f59e0b) badge (circle, 60px diameter) positioned top-right with massive discount number in bold white (36px) and "%OFF" below (12px). Hospital name in small amber (#d97706, 11px) text top-left.
-ZONE B – TREATMENT NAME (25%): Treatment name in massive bold amber (#f59e0b, 36px, weight 900) centered. "이벤트" subtitle in darker amber (#d97706, 14px) below.
-ZONE C – PRICE CARD (30%): White card with soft shadow (0 4px 16px rgba(0,0,0,0.08), radius 12px) and thin amber border (1px #f59e0b). Inside: original price strikethrough in gray (#9ca3af, 14px) at top, discounted price in massive bold amber (#f59e0b, 44px, weight 900) centered, event period in small gray (11px) at bottom of card.
-ZONE D – CTA (25%): Rounded amber (#f59e0b) CTA pill button (80% width, 48px height) with white bold text "예약하기" (16px). Below button: "☎ 02-XXX-XXXX" in small gray (10px). 의료광고법 disclaimer in tiny gray (9px).
+Korean hospital health checkup promotion poster — Clean Sky Blue theme.
 
-=== STRICT MODE ANCHORS ===
-• Round amber badge always in top-right corner
-• Discount number inside badge is the eye-catching entry point
-• Price card with shadow is the central element
-• Zone proportions: 20/25/30/25 (± 3%)
-• CTA button spans ≥ 70% width
+BACKGROUND: Smooth gradient — sky blue (#7dd3fc) at top fading to very light blue (#f0f9ff) at bottom to white. Clean, airy, like a clear morning sky. NO clouds, NO patterns — pure smooth gradient.
 
-=== INSPIRED MODE FREEDOM ===
-• Badge can be positioned top-left or centered
-• Badge shape can be rounded square instead of circle
-• Price card can have amber top-border accent instead of full border
-• Additional decorative dots/confetti in amber at low opacity
-• CTA can be rectangular with rounded corners
+DECORATIVE: Single small medical heart icon at top-right in white, 15% opacity, small (5% of image). ONLY decorative element.
 
-=== MOBILE READABILITY ===
-• Treatment name ≥ 28px. Price ≥ 36px. Badge discount ≥ 28px.
-• Price card padding ≥ 14px. CTA tap target ≥ 44px height.
-• All text ≥ 10px`,
+TITLE AREA (top 35%): Bold deep blue (#0369a1) title on sky gradient. Large clean sans-serif. Hospital name in lighter blue (#0284c7).
+
+CONTENT AREA (middle 40%): White frosted card (rounded 16px, 92% opacity) floating on gradient. Event details in dark blue. Prices in bold deep blue.
+
+FOOTER (bottom 25%): Gradient fades to white. Blue text on white.
+
+MOOD: University hospital health check center official poster. Clinical trust meets approachable warmth.
+
+STRICT ANCHORS: Sky-to-white gradient, single heart icon, white frosted card, blue typography, clean medical professional.
+INSPIRED FREEDOM: Blue range, card opacity, icon type, title size.
+Mobile readability: minimum body text 11pt, title 28pt+, prices 24pt+.`,
     },
     {
-      id: 'evt_minimal_modern', name: '미니멀 모던', color: '#64748b', accent: '#334155', bg: '#f8fafc',
-      desc: '타이포 중심 + 최대 여백 (고급 시술)',
-      layoutHint: 'minimal',
-      aiPrompt: `Korean premium clinic promotion — ultra-minimal typography-focused design. Inspired by 고급 에스테틱 브랜드 마케팅 and Swiss typography posters.
+      id: "evt_green_wellness", name: "그린 웰니스", color: "#16a34a", accent: "#15803d", bg: "#f0fdf4",
+      desc: "세이지 그린 + 잎 실루엣 + 체크마크 — 건강검진 웰니스", layoutHint: "wellness",
+      aiPrompt: `[CRITICAL — THIS IS A POSTER, NOT A DATA SHEET]
+This is a DESIGNED POSTER — sophisticated, elegant, premium.
+Structure: decorative header (30-40%) + content area (35-40%) + footer (15-20%) ONLY if user provided info.
+DO NOT add any information the user did not provide (no phone, no address, no hours unless user entered them).
+If no footer content was provided, end the poster after the content area.
 
-=== ZONE LAYOUT (vertical stack, maximum whitespace) ===
-ZONE A – LABEL (10%): Off-white (#fafafa) background, no patterns. "EVENT" in tiny light gray (#cbd5e1, 10px) small caps with wide letter-spacing (4px). Short charcoal (#334155) accent underline (20px wide, 2px thick) centered below.
-ZONE B – TREATMENT HERO (35%): Treatment name in massive bold charcoal (#1a1a1a, 44px, weight 900). Left-aligned or centered. This is the dominant visual element. Generous whitespace above and below (20px+). No other elements in this zone.
-ZONE C – PRICE BLOCK (25%): Original price strikethrough in small light gray (#94a3b8, 14px). "할인가" label in small gray (#64748b, 11px). Discounted price in large bold charcoal (#1a1a1a, 36px, weight 800). All centered with 12px vertical spacing between elements.
-ZONE D – FOOTER (15%): Event period dates in light gray (#94a3b8, 12px). Hospital name in tiny gray (#cbd5e1, 10px, letter-spacing 2px). Remaining 15% is pure empty whitespace.
+Korean hospital health checkup promotion poster — Green Wellness theme.
 
-=== STRICT MODE ANCHORS ===
-• Off-white (#fafafa) background — no colors, no gradients
-• Only charcoal (#1a1a1a) and gray (#94a3b8) text — no accent colors
-• Treatment name is always the largest element (44px+)
-• Zone proportions: 10/35/25/15 (± 3%, remaining 15% breathing room)
-• Maximum whitespace — no decorative elements whatsoever
+BACKGROUND: Soft sage green gradient (#ecfdf5 to #f0fdf4). Very subtle leaf silhouettes (eucalyptus/fern) scattered across ENTIRE background at 6-10% opacity in slightly darker sage (#bbf7d0). Organic, natural wellness atmosphere.
 
-=== INSPIRED MODE FREEDOM ===
-• Treatment name alignment can shift (left, center, right)
-• A single thin hairline divider between zones allowed
-• Font weight contrast can increase (ultra-light vs ultra-bold)
-• Subtle off-white background tint shift allowed
-• Price can be left-aligned to match treatment name
+DECORATIVE: Small check mark icon in emerald (#10b981) at top — simple, geometric. Represents health check.
 
-=== MOBILE READABILITY ===
-• Treatment name ≥ 36px. Price ≥ 28px.
-• Minimum 16px padding on all sides
-• All text ≥ 10px`,
+TITLE AREA (top 35%): Dark green (#15803d) bold title. Clean modern sans-serif. Hospital name in medium green (#16a34a).
+
+CONTENT AREA (middle 40%): White card (rounded 14px, soft shadow) with event details. Green accent headings. Checkup items with green bullets. Price in bold dark green.
+
+FOOTER (bottom 25%): Sage continues. Dark green text. Emerald line above footer.
+
+MOOD: Premium wellness clinic. Natural, calming, trustworthy. Like walking into a clean, plant-filled clinic.
+
+STRICT ANCHORS: Sage green gradient, leaf silhouettes across background, check icon, dark green typography, white card, wellness mood.
+INSPIRED FREEDOM: Leaf type/density, green range, icon style, card treatment.
+Mobile readability: minimum body text 11pt, title 28pt+, prices 24pt+.`,
     },
     {
-      id: 'evt_gradient_wave', name: '그라데이션 웨이브', color: '#06b6d4', accent: '#0891b2', bg: '#ecfeff',
-      desc: '틸 물결 곡선 + 플로팅 가격 카드',
-      layoutHint: 'wave',
-      aiPrompt: `Korean hospital promotion — fresh teal/cyan gradient with floating price card. Modeled on 한국 병원 인스타그램 모던 이벤트 게시물.
+      id: "evt_summer_cool", name: "써머 쿨", color: "#0ea5e9", accent: "#0284c7", bg: "#f0f9ff",
+      desc: "시원한 블루 그라데이션 + 물결 패턴 — 여름 시즌 할인", layoutHint: "summer",
+      aiPrompt: `[CRITICAL — THIS IS A POSTER, NOT A DATA SHEET]
+This is a DESIGNED POSTER — sophisticated, elegant, premium.
+Structure: decorative header (30-40%) + content area (35-40%) + footer (15-20%) ONLY if user provided info.
+DO NOT add any information the user did not provide (no phone, no address, no hours unless user entered them).
+If no footer content was provided, end the poster after the content area.
 
-=== ZONE LAYOUT (vertical stack with floating card) ===
-ZONE A – HEADER (20%): White background with subtle teal (#06b6d4) gradient at top edge (5-10% opacity). Hospital name in small teal (#0891b2, 11px) centered. Treatment name in large bold cyan (#06b6d4, 32px, weight 800) centered. "이벤트" subtitle in darker teal (#0891b2, 13px) below.
-ZONE B – FLOATING PRICE CARD (40%): White background with subtle teal gradient at edges. Floating white card (radius 16px, shadow 0 6px 24px rgba(0,0,0,0.1)) centered, width 85%. Inside card: original price strikethrough in gray (#9ca3af, 14px) at top, discounted price in massive bold cyan (#06b6d4, 44px, weight 900) centered, thin teal divider (60% width, 1px), event period dates in small gray (#6b7280, 11px) at bottom. Card internal padding 20px.
-ZONE C – CTA + CONTACT (20%): Rounded teal-to-cyan gradient (#06b6d4 → #0891b2) CTA pill button (75% width, 48px) "예약하기" in bold white (16px). Below button: "☎ 02-XXX-XXXX" in small gray (10px). Hospital name in teal (10px).
-ZONE D – DISCLAIMER (10%): Light teal tint (#ecfeff) bar. "※ 부작용 등 주의사항 확인" in tiny gray (9px).
+Korean hospital summer season discount promotion poster — Summer Cool theme.
 
-=== STRICT MODE ANCHORS ===
-• Floating price card with shadow is the focal point
-• Card must appear to "float" above background (shadow required)
-• Teal/cyan is the only accent color — no warm colors
-• Zone proportions: 20/40/20/10 (± 3%, remaining 10% spacing)
-• CTA button has gradient fill
+BACKGROUND: Vibrant blue gradient — deep ocean (#0369a1) at top to bright sky (#38bdf8) at middle to white at bottom. Subtle wave pattern (smooth flowing sine curves) across ENTIRE background at 8-12% opacity in lighter blue (#7dd3fc). Refreshing ocean summer atmosphere. Waves must be smooth and elegant, not cartoon.
 
-=== INSPIRED MODE FREEDOM ===
-• Card shadow depth and blur can vary
-• Teal gradient intensity on background edges can vary
-• Card can have subtle teal top-border accent
-• Wavy/curved decorative line between zones allowed
-• CTA can be solid teal instead of gradient
+DECORATIVE: Small sparkle marks in white at 15% opacity (3-4 total). No illustrations — no beach, no sun, no umbrella.
 
-=== MOBILE READABILITY ===
-• Treatment name ≥ 28px. Price ≥ 36px.
-• Card width 80-90% of canvas. Card padding ≥ 16px.
-• CTA tap target ≥ 44px height`,
+TITLE AREA (top 40%): Bold white title — large, impactful, modern sans-serif. Hospital name in light blue (#bae6fd).
+
+CONTENT AREA (middle 35%): White card (rounded 16px, soft shadow) floating on blue gradient. Discount numbers in bold blue (#0284c7). Period with blue accent.
+
+FOOTER (bottom 25%): Gradient continues to white. Blue text on lighter background.
+
+MOOD: Premium resort pool invitation — not a beach flyer. Refreshing, cool, sophisticated.
+
+STRICT ANCHORS: Ocean-to-sky gradient, subtle wave pattern, white bold title, sparkle accents, refreshing cool mood, no cartoon elements.
+INSPIRED FREEDOM: Wave style, blue range, sparkle count, card treatment.
+Mobile readability: minimum body text 11pt, title 28pt+, prices 24pt+.`,
     },
     {
-      id: 'evt_season_special', name: '시즌 스페셜', color: '#22c55e', accent: '#15803d', bg: '#f0fdf4',
-      desc: '그린 시즌 배너 + 자연 모티프',
-      layoutHint: 'season',
-      aiPrompt: `Korean hospital seasonal promotion — fresh green with "시즌 한정" badge. For seasonal campaigns (수능, 새학기, 여름, 연말). Inspired by 한국 피부과/성형외과 시즌 할인 배너.
+      id: "evt_winter_warm", name: "윈터 웜", color: "#dc2626", accent: "#b91c1c", bg: "#fef2f2",
+      desc: "따뜻한 크림→코랄 그라데이션 + 눈꽃 패턴 — 겨울 시즌 할인", layoutHint: "winter",
+      aiPrompt: `[CRITICAL — THIS IS A POSTER, NOT A DATA SHEET]
+This is a DESIGNED POSTER — sophisticated, elegant, premium.
+Structure: decorative header (30-40%) + content area (35-40%) + footer (15-20%) ONLY if user provided info.
+DO NOT add any information the user did not provide (no phone, no address, no hours unless user entered them).
+If no footer content was provided, end the poster after the content area.
 
-=== ZONE LAYOUT (vertical stack on mint background) ===
-ZONE A – SEASON BADGE + BRAND (15%): Light mint (#f0fdf4) to white gradient background. Hospital name in small green (#16a34a, 11px) text top-center. "시즌 한정" inside a rounded green (#22c55e) pill badge (white text, 11px bold, padding 4px 12px) centered below hospital name.
-ZONE B – TREATMENT CARD (45%): White card (radius 12px, shadow 0 4px 16px rgba(0,0,0,0.08)), width 88%, centered. Inside card: treatment name in large bold green (#22c55e, 32px, weight 800) centered. "이벤트" subtitle in darker green (#15803d, 13px). Thin green divider (50% width, 1px). Light green (#f0fdf4) background area for price section: original price strikethrough in gray (#9ca3af, 14px), discounted price in massive bold green (#22c55e, 44px, weight 900). Card internal padding 18px.
-ZONE C – CTA + PERIOD (25%): Event period "2024.03.01 ~ 03.31" in small gray (#6b7280, 12px) centered. Green gradient (#22c55e → #16a34a) CTA pill button (75% width, 48px) "예약하기" in bold white (16px). Hospital name small in green below.
-ZONE D – DISCLAIMER (10%): "※ 의료법에 의한 부작용 안내 확인" in tiny gray (9px). Thin mint (#d1fae5) bar.
+Korean hospital winter season discount promotion poster — Winter Warm theme.
 
-=== STRICT MODE ANCHORS ===
-• "시즌 한정" pill badge always present at top
-• White card on mint background is the core composition
-• Green is the only accent color (no red/orange/blue)
-• Zone proportions: 15/45/25/10 (± 3%, remaining 5% spacing)
-• Treatment card is the largest visual element
+BACKGROUND: Warm gradient — soft cream (#fef7ed) at top through warm pink (#fecdd3) at middle to light coral (#fef2f2) at bottom. Geometric snowflake patterns scattered across ENTIRE background at 8-12% opacity in white/light pink. Cozy warm winter — NOT cold blue winter.
 
-=== INSPIRED MODE FREEDOM ===
-• Season badge can include season name (e.g., "🌸 봄 시즌 한정")
-• Card can have green top-border accent instead of full shadow
-• Decorative leaf/nature motifs at low opacity allowed
-• CTA can be solid green instead of gradient
-• Price area background tint can be cream instead of mint
+DECORATIVE: Small snowflake shapes in white at 12-18% opacity, various sizes, scattered. Maybe 1-2 tiny gold sparkles. No illustrations — no scarf, no mug.
 
-=== MOBILE READABILITY ===
-• Treatment name ≥ 28px. Price ≥ 36px. Badge ≥ 10px.
-• Card width 85-92% of canvas. Card padding ≥ 14px.
-• CTA tap target ≥ 44px height`,
+TITLE AREA (top 40%): Bold deep coral (#b91c1c) title — large, warm, modern sans-serif. Hospital name in warm brown (#78350f).
+
+CONTENT AREA (middle 35%): White card (rounded 14px, warm shadow with pink tint) floating on gradient. Discount numbers in bold coral (#dc2626). Period in warm brown.
+
+FOOTER (bottom 25%): Warm gradient continues. Warm brown text. Coral accent line.
+
+MOOD: Luxury department store Christmas sale — warm, inviting, special occasion. Like being wrapped in cashmere.
+
+STRICT ANCHORS: Cream-to-coral warm gradient, snowflake patterns, coral/red typography, white card, warm cozy mood, no cold blue.
+INSPIRED FREEDOM: Gradient warmth range, snowflake density, coral shade, gold sparkle amount.
+Mobile readability: minimum body text 11pt, title 28pt+, prices 24pt+.`,
     },
   ],
 
