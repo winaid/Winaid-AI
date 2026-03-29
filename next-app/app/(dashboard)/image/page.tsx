@@ -1615,10 +1615,15 @@ Add subtle professional touches: refined gradients, elegant typography, clean wh
 
                 {/* 프리뷰 확대 모달 */}
                 {previewZoom && (
-                  <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" onClick={() => setPreviewZoom(null)}>
-                    <div className="relative max-w-lg w-full max-h-[80vh] bg-white rounded-2xl overflow-hidden shadow-2xl" onClick={e => e.stopPropagation()}>
-                      <button type="button" onClick={() => setPreviewZoom(null)} className="absolute top-2 right-2 z-10 w-8 h-8 bg-black/50 hover:bg-black/70 text-white rounded-full flex items-center justify-center text-lg">×</button>
-                      <CalendarThemePreview themeValue={previewZoom} groupColor={CALENDAR_THEME_OPTIONS.find(t => t.value === previewZoom)?.groupColor} size="lg" />
+                  <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-6" onClick={() => setPreviewZoom(null)}>
+                    <div className="relative" onClick={e => e.stopPropagation()}>
+                      <button type="button" onClick={() => setPreviewZoom(null)} className="absolute -top-3 -right-3 z-10 w-8 h-8 bg-black/70 hover:bg-black text-white rounded-full flex items-center justify-center text-lg shadow-lg">×</button>
+                      <img
+                        src={`/calendar-previews/${previewZoom}.${previewZoom === 'sch_korean_classic' ? 'png' : 'jpg'}`}
+                        alt={previewZoom}
+                        className="max-w-[90vw] max-h-[85vh] rounded-2xl shadow-2xl"
+                        onError={(e) => { (e.target as HTMLImageElement).src = `/calendar-previews/${previewZoom}.png`; }}
+                      />
                     </div>
                   </div>
                 )}
