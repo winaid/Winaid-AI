@@ -1641,7 +1641,7 @@ The DESIGN must be VISUALLY IDENTICAL to the reference image.`;
                                   <button key={t.value} type="button" onClick={() => setCalendarTheme(t.value)} onDoubleClick={(e) => { e.preventDefault(); setPreviewZoomCategory('schedule'); setPreviewZoom(t.value); }}
                                     className={`group relative rounded-2xl overflow-hidden transition-all duration-200 ${isSelected ? 'shadow-xl ring-2 ring-offset-2' : 'shadow-sm hover:shadow-md border border-slate-200/80'}`}
                                     style={isSelected ? { '--tw-ring-color': t.groupColor } as React.CSSProperties : undefined}>
-                                    <div className="relative" style={{ aspectRatio: '1/1' }}>
+                                    <div className="relative" style={{ aspectRatio: '3/4' }}>
                                       <CalendarThemePreview themeValue={t.value} groupColor={t.groupColor} size="sm" />
                                       {isSelected && (
                                         <div className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full flex items-center justify-center shadow-lg" style={{ backgroundColor: t.groupColor }}>
@@ -1713,7 +1713,7 @@ The DESIGN must be VISUALLY IDENTICAL to the reference image.`;
                             style={isSelected ? { '--tw-ring-color': tmpl.color } as React.CSSProperties : undefined}
                           >
                             {/* 카테고리별 프리뷰 이미지 또는 fallback */}
-                            <div className="relative w-full overflow-hidden" style={{ aspectRatio: '1/1' }}>
+                            <div className="relative w-full overflow-hidden" style={{ aspectRatio: '3/4' }}>
                               <ThemePreview themeValue={tmpl.id} category={selectedTemplate || 'event'} groupColor={tmpl.color} label={tmpl.name} size="sm" />
                               {/* 스타일 태그 뱃지 */}
                               <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-md text-[8px] font-bold shadow-sm" style={{ backgroundColor: tmpl.color, color: 'white' }}>
