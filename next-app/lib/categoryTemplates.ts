@@ -804,7 +804,7 @@ Mobile readability: name 28pt+, credentials 12pt+.`,
     {
       id: "ntc_clean_white", name: "클린 화이트", color: "#374151", accent: "#111827", bg: "#ffffff",
       desc: "순백 배경 + 차콜 타이포 + 얇은 라인 — 가장 깔끔한 공지", layoutHint: "minimal",
-      aiPrompt: `[CRITICAL — THIS IS A PREMIUM NOTICE POSTER, NOT A WORD DOCUMENT]
+      aiPrompt: `[CRITICAL — THIS IS A PREMIUM DESIGNED POSTER, NOT A TEXT DOCUMENT]
 ⛔ STRICT CONTENT RULES:
 - DO NOT add any information the user did not provide.
 - DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
@@ -812,25 +812,26 @@ Mobile readability: name 28pt+, credentials 12pt+.`,
 - DO NOT invent hospital names, phone numbers, addresses, or medical information.
 - ONLY use text that the user explicitly provided in their input.
 
-Korean hospital notice poster — Clean White Minimal theme.
+Korean hospital notice poster — Clean White Premium Minimal theme.
 
-BACKGROUND: Pure white (#ffffff). No texture, no pattern. Whiteness is the design.
+BACKGROUND: Pure white (#ffffff) base. Across ENTIRE background: subtle geometric thin lines forming large-scale grid at 3-4% opacity in light gray (#f3f4f6). Architectural depth like premium embossed stationery.
 
-TITLE (top 30%): LARGE bold charcoal (#111827), 40pt+, weight 900, sans-serif. Below: single thin line (1px, #e5e7eb, full width). ONLY decorative element.
+HEADER AREA (top 35%): Large solid charcoal (#1e293b) rectangular block spanning full width. Inside: notice title in MASSIVE bold white text (44pt+, weight 900). Dark block creates dramatic contrast — THIS is the design statement.
 
-CONTENT (middle 50%): Dark gray (#374151), 15pt. Line spacing 1.8. Items with thin left-border (2px, #e5e7eb). No bullet points.
+CONTENT AREA (middle 45%): White area below dark block. Charcoal (#374151) text, 15pt, generous spacing. Thin charcoal left-border accent (3px) alongside text block. Editorial magazine layout feel.
 
-FOOTER (bottom 20%): Light gray (#f9fafb) bg. Small gray (#6b7280) text. Thin line above.
+FOOTER (bottom 20%): Thin charcoal line (1.5px, full width). Small gray (#9ca3af) text.
 
-BANNED: No icons, no emojis, no colors except grayscale, no boxes. Pure typography + whitespace.
+MOOD: Monocle magazine or Kinfolk editorial. Dark header block on white = powerful minimal editorial.
 
-STRICT ANCHORS: Pure white, charcoal type, thin gray lines, extreme whitespace, Apple minimalism.
-Mobile readability: title 36pt+, body 14pt+.`,
+STRICT ANCHORS: Dark charcoal header block, massive white title, architectural grid background, editorial left-border, magazine minimalism.
+Mobile readability: title 40pt+, body 14pt+.`,
     },
+
     {
       id: "ntc_soft_blue", name: "소프트 블루", color: "#1e3a8a", accent: "#3b82f6", bg: "#eff6ff",
       desc: "연한 하늘색 배경 + 네이비 타이포 — 신뢰감 있는 공지", layoutHint: "blue",
-      aiPrompt: `[CRITICAL — THIS IS A PREMIUM NOTICE POSTER, NOT A WORD DOCUMENT]
+      aiPrompt: `[CRITICAL — THIS IS A PREMIUM DESIGNED POSTER, NOT A TEXT DOCUMENT]
 ⛔ STRICT CONTENT RULES:
 - DO NOT add any information the user did not provide.
 - DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
@@ -838,27 +839,26 @@ Mobile readability: title 36pt+, body 14pt+.`,
 - DO NOT invent hospital names, phone numbers, addresses, or medical information.
 - ONLY use text that the user explicitly provided in their input.
 
-Korean hospital notice poster — Soft Blue Trust theme.
+Korean hospital notice poster — Soft Blue Immersive theme.
 
-BACKGROUND: Gradient — light blue (#dbeafe) at top to very light blue (#eff6ff) to white at bottom.
+BACKGROUND: Smooth blue gradient filling ENTIRE image — deep blue (#1e40af) at top through sky blue (#60a5fa) to very light blue (#eff6ff) at bottom. Across ENTIRE background: subtle soft circular bokeh in lighter blue (#93c5fd) at 8-12% opacity. Dreamy professional medical atmosphere.
 
-TITLE (top 35%): Bold deep navy (#1e3a8a), 38pt+. Thin blue line (1px, #93c5fd, width 30%) below.
+HEADER AREA (top 35%): On deep blue. MASSIVE bold white title (42pt+, weight 900). Thin white line (1px, width 25%, 60% opacity) below. Hospital name in light blue (#bfdbfe) small above.
 
-CONTENT (middle 45%): White frosted card (rounded 16px, 92% opacity). Deep navy text, 14pt. Blue (#bfdbfe) left-border (2px) per item.
+CONTENT CARD (middle 45%): White frosted card (rounded 20px, backdrop-blur, 90% opacity, blue-tinted shadow). Inside: deep navy (#1e3a8a) text, 14pt. Blue (#93c5fd) left-border accent (2px). Blue gradient visible AROUND and THROUGH card.
 
-FOOTER (bottom 20%): White. Small blue text.
+FOOTER (bottom 20%): Gradient continues. Small white/light blue text.
 
-SINGLE ACCENT: Tiny plus (+) in navy at 15% opacity, top-right.
+MOOD: Samsung Medical Center digital signage. Full-bleed IMMERSIVE blue atmosphere, not a strip of blue at top.
 
-BANNED: No medical illustrations. Blue gradient = trust.
-
-STRICT ANCHORS: Blue-to-white gradient, navy type, frosted card, blue left-border, medical trust.
-Mobile readability: title 34pt+, body 13pt+.`,
+STRICT ANCHORS: Full-bleed blue gradient, bokeh lights, frosted card on blue, massive white title, immersive medical atmosphere.
+Mobile readability: title 38pt+, body 13pt+.`,
     },
+
     {
       id: "ntc_warm_cream", name: "웜 크림", color: "#78583d", accent: "#c9a96e", bg: "#faf7f2",
       desc: "따뜻한 크림 배경 + 갈색 타이포 + 골드 악센트 — 고급 공지", layoutHint: "cream",
-      aiPrompt: `[CRITICAL — THIS IS A PREMIUM NOTICE POSTER, NOT A WORD DOCUMENT]
+      aiPrompt: `[CRITICAL — THIS IS A PREMIUM DESIGNED POSTER, NOT A TEXT DOCUMENT]
 ⛔ STRICT CONTENT RULES:
 - DO NOT add any information the user did not provide.
 - DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
@@ -866,25 +866,26 @@ Mobile readability: title 34pt+, body 13pt+.`,
 - DO NOT invent hospital names, phone numbers, addresses, or medical information.
 - ONLY use text that the user explicitly provided in their input.
 
-Korean hospital notice poster — Warm Cream Premium theme.
+Korean hospital notice poster — Warm Cream Luxury theme.
 
-BACKGROUND: Warm ivory (#faf7f2). Subtle linen texture at 3% opacity.
+BACKGROUND: Rich warm ivory (#faf5ef) filling ENTIRE image. Subtle METALLIC GOLD SHIMMER texture across whole surface at 4-6% opacity — brushed gold leaf paper. Top and bottom: soft gold (#d4a853) gradient glow at edges (10% opacity). Entire poster feels like luxury invitation on gold-flecked paper.
 
-TITLE (top 30%): Warm brown (#78583d), 36pt+, serif feel. Gold (#c9a96e) decorative line (1px, width 25%) with diamond centered below.
+HEADER AREA (top 35%): Deep warm brown (#5c3d1e) title, 40pt+, serif feel. Below: two thin parallel gold (#c9a96e) lines (0.5px each, 3px gap, width 30%, centered) with small gold diamond centered between.
 
-CONTENT (middle 50%): Warm brown (#5c4a32), 14pt. Thin warm border-left (2px, #e8ddd0) per item.
+CONTENT AREA (middle 45%): Warm brown (#5c4a32) text, 14pt. Floats on gold-shimmer ivory — NO card. Items separated by thin gold dotted lines. Important words in darker brown.
 
-FOOTER (bottom 20%): Gold lines at top/bottom edges (full width, 0.5px). Small warm brown text.
+FOOTER (bottom 20%): Gold lines framing top/bottom edges (0.5px, full width). Small warm brown text.
 
-BANNED: No heavy frames. Luxury from warmth + texture + restrained gold.
+MOOD: Luxury hotel concierge notice on custom stationery. Gold shimmer IS the design.
 
-STRICT ANCHORS: Ivory/linen, warm brown serif title, gold diamond line, gilded borders, luxury warm.
-Mobile readability: title 32pt+, body 13pt+.`,
+STRICT ANCHORS: Gold shimmer across entire surface, warm brown serif title, parallel gold lines with diamond, gilded borders, luxury stationery.
+Mobile readability: title 36pt+, body 13pt+.`,
     },
+
     {
       id: "ntc_mint_fresh", name: "민트 프레시", color: "#0f766e", accent: "#10b981", bg: "#f0fdfa",
       desc: "민트 그라데이션 + 다크그린 타이포 — 상쾌한 공지", layoutHint: "mint",
-      aiPrompt: `[CRITICAL — THIS IS A PREMIUM NOTICE POSTER, NOT A WORD DOCUMENT]
+      aiPrompt: `[CRITICAL — THIS IS A PREMIUM DESIGNED POSTER, NOT A TEXT DOCUMENT]
 ⛔ STRICT CONTENT RULES:
 - DO NOT add any information the user did not provide.
 - DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
@@ -892,25 +893,26 @@ Mobile readability: title 32pt+, body 13pt+.`,
 - DO NOT invent hospital names, phone numbers, addresses, or medical information.
 - ONLY use text that the user explicitly provided in their input.
 
-Korean hospital notice poster — Mint Fresh theme.
+Korean hospital notice poster — Mint Fresh Botanical theme.
 
-BACKGROUND: Soft mint gradient (#ecfdf5 to #f0fdfa). Single small leaf silhouette (#a7f3d0) at bottom-right at 8% opacity.
+BACKGROUND: Soft mint gradient filling ENTIRE image — light sage (#ecfdf5) through mint (#f0fdfa). Across ENTIRE background: scattered watercolor eucalyptus leaf shapes at 8-12% opacity in sage green (#a7f3d0). Various sizes and rotations. Immersive botanical wallpaper — NOT one leaf in corner, but gentle scatter across WHOLE surface.
 
-TITLE (top 30%): Dark teal (#0f766e), 36pt+, sans-serif. Thin emerald (#10b981) line (1px, width 20%) below.
+HEADER AREA (top 35%): Dark teal (#0f766e) solid rounded rectangle (rounded 16px, 85% width, centered). Inside: bold white title (38pt+). Dark teal block on mint = fresh contrast.
 
-CONTENT (middle 50%): White card (rounded 14px, border: 1px solid #d1fae5). Dark teal (#134e4a) text, 14pt. Emerald left-border (2px) per item.
+CONTENT CARD (middle 45%): White card (rounded 16px, natural shadow, border: 1px solid #d1fae5). Dark teal (#134e4a) text, 14pt. Emerald (#10b981) left-border accent (2px).
 
-FOOTER (bottom 20%): Mint continues. Small teal text. Thin emerald line above.
+FOOTER (bottom 20%): Mint continues with leaf scatter. Small dark teal text.
 
-BANNED: No leaves except ONE silhouette. Mint gradient = freshness.
+MOOD: Premium wellness clinic lobby. Scattered leaf wallpaper = lush and natural, not sterile.
 
-STRICT ANCHORS: Mint gradient, single leaf, dark teal type, emerald accents, white card, fresh mood.
-Mobile readability: title 32pt+, body 13pt+.`,
+STRICT ANCHORS: Immersive leaf scatter, dark teal header block, white card, emerald accents, botanical wellness.
+Mobile readability: title 34pt+, body 13pt+.`,
     },
+
     {
       id: "ntc_slate_modern", name: "슬레이트 모던", color: "#334155", accent: "#64748b", bg: "#f8fafc",
       desc: "연한 슬레이트 배경 + 기하학 라인 — 모던한 공지", layoutHint: "slate",
-      aiPrompt: `[CRITICAL — THIS IS A PREMIUM NOTICE POSTER, NOT A WORD DOCUMENT]
+      aiPrompt: `[CRITICAL — THIS IS A PREMIUM DESIGNED POSTER, NOT A TEXT DOCUMENT]
 ⛔ STRICT CONTENT RULES:
 - DO NOT add any information the user did not provide.
 - DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
@@ -920,23 +922,24 @@ Mobile readability: title 32pt+, body 13pt+.`,
 
 Korean hospital notice poster — Slate Modern Geometric theme.
 
-BACKGROUND: Light slate (#f8fafc). Geometric grid lines (0.5px, #e2e8f0) at 4% opacity.
+BACKGROUND: Dark slate (#1e293b) filling ENTIRE image — rich deep warm dark gray-blue. Across ENTIRE background: subtle geometric diagonal lines at 4-6% opacity in lighter slate (#334155). Sophisticated dark geometric atmosphere like premium tech product page.
 
-TITLE (top 30%): Dark slate (#1e293b), 38pt+, weight 900, tight tracking. Short bold accent line (3px, 40px width) below.
+HEADER AREA (top 40%): MASSIVE bold white (#f1f5f9) title, 44pt+, weight 900, tight tracking. White POPS against dark slate — dramatic contrast is the design. Below: single thin amber (#d97706) line (2px, width 20%). Amber is ONLY color accent.
 
-CONTENT (middle 50%): Slate (#334155), 14pt. Items separated by thin lines (1px, #e2e8f0). Grid-like layout.
+CONTENT AREA (middle 40%): White (#e2e8f0) text, 14pt, on dark slate — NO card. Items with generous spacing (20px+). Important words pure white bold. Numbers in amber (#d97706).
 
-SIGNATURE: Small rotated diamond in slate (#94a3b8), 8x8px, bottom-right.
+FOOTER (bottom 20%): Thin amber line (1px). Small stone (#94a3b8) text.
 
-BANNED: No curves, no gradients, no warmth. Everything ANGULAR, GEOMETRIC, PRECISE.
+MOOD: Bloomberg terminal or Stripe website. Dark, technical, premium. Geometric pattern + amber = sophisticated modern.
 
-STRICT ANCHORS: Light slate, grid lines, dark slate type, bold accent line, diamond mark, Swiss precision.
-Mobile readability: title 34pt+, body 13pt+.`,
+STRICT ANCHORS: Dark slate, geometric diagonal pattern, massive white title, amber accent line, monochrome + amber, tech-premium.
+Mobile readability: title 40pt+, body 13pt+ (contrast 12:1+).`,
     },
+
     {
       id: "ntc_peach_soft", name: "피치 소프트", color: "#9a3412", accent: "#f97316", bg: "#fff7ed",
       desc: "연한 피치/살몬 배경 + 따뜻한 브라운 — 부드러운 공지", layoutHint: "peach",
-      aiPrompt: `[CRITICAL — THIS IS A PREMIUM NOTICE POSTER, NOT A WORD DOCUMENT]
+      aiPrompt: `[CRITICAL — THIS IS A PREMIUM DESIGNED POSTER, NOT A TEXT DOCUMENT]
 ⛔ STRICT CONTENT RULES:
 - DO NOT add any information the user did not provide.
 - DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
@@ -946,18 +949,18 @@ Mobile readability: title 34pt+, body 13pt+.`,
 
 Korean hospital notice poster — Peach Soft Warm theme.
 
-BACKGROUND: Soft gradient — light peach (#fed7aa) at top through warm cream (#fff7ed) to white. Subtle bokeh circles (#ffedd5) at 6-8% opacity.
+BACKGROUND: Warm gradient filling ENTIRE image — soft peach (#fdba74) at top through warm cream (#fff7ed) to near-white (#fffbf5) at bottom. Across ENTIRE background: subtle soft circular bokeh (large blurred circles) in lighter peach (#fed7aa) at 10-15% opacity. Multiple sizes. Dreamy warm sunset glow across whole surface.
 
-TITLE (top 35%): Deep warm brown (#9a3412), 36pt+, rounded sans-serif. Thin coral (#fb923c) line (1px, width 20%) below.
+HEADER AREA (top 35%): Deep brown (#78350f) title, 40pt+, rounded sans-serif. Friendly inviting. Below: thin coral (#fb923c) line (2px, width 20%). Hospital name in warm brown small above.
 
-CONTENT (middle 45%): White card with VERY rounded corners (22px), warm shadow. Warm brown (#78350f), 14pt. Coral (#fdba74) left-border (2px) per item.
+CONTENT CARD (middle 45%): White card VERY rounded corners (24px), warm shadow (rgba(249,115,22,0.12)). Warm brown (#78350f) text, 14pt. Coral (#fdba74) left-border (3px). Everything rounded, warm, approachable.
 
-FOOTER (bottom 20%): Warm cream. Small warm brown text.
+FOOTER (bottom 20%): Gradient to cream. Small warm brown text.
 
-BANNED: No sharp edges. Everything rounded and soft. No corporate coldness.
+MOOD: Premium cafe menu or boutique clinic notice. Immersive peach glow with bokeh = warm and special, not clinical.
 
-STRICT ANCHORS: Peach-to-cream gradient, bokeh glow, very rounded card, warm brown type, coral accents, friendly warm.
-Mobile readability: title 32pt+, body 13pt+.`,
+STRICT ANCHORS: Immersive peach gradient, bokeh across surface, deep brown title, very rounded card, coral accents, warm friendly.
+Mobile readability: title 36pt+, body 13pt+.`,
     },
   ],
 
