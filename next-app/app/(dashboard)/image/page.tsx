@@ -468,9 +468,13 @@ ${layoutRules}
 디자인 테마: "${themeName}" — ${themeDesc}
 ⛔ "2026년", "${schYear}년" 같은 연도 텍스트를 이미지 어디에도 표시하지 마세요! "${schMonth}월"만 사용하세요.
 ${layoutExtra}`;
-    if (closedDays.length > 0) p += `휴진일: ${closedDays.map(d => `${d}일`).join(', ')} — 빨간색 배경 또는 빨간 동그라미로 강조. 해당 날짜 숫자 아래에 반드시 "휴진" 텍스트를 작게 표시하세요.\n`;
-    if (shortened.length > 0) p += `단축진료: ${shortened.join(', ')} — 주황/앰버 표시. 해당 날짜 숫자 아래에 반드시 "단축" 텍스트를 작게 표시하세요.\n`;
-    if (vacations.length > 0) p += `휴가: ${vacations.join(', ')} — 보라색 표시. 해당 날짜 숫자 아래에 반드시 "휴가" 텍스트를 작게 표시하세요.\n`;
+    if (closedDays.length === 0 && shortened.length === 0 && vacations.length === 0) {
+      p += `⛔ 사용자가 휴진/단축/휴가 날짜를 하나도 선택하지 않았습니다. 모든 날짜를 동일하게 일반 날짜로 표시하세요. 어떤 날짜에도 "휴진", "단축", "휴가" 라벨을 붙이지 마세요. 어떤 날짜도 빨간색/주황색/보라색으로 강조하지 마세요. 깨끗한 달력만 그리세요.\n`;
+    } else {
+      if (closedDays.length > 0) p += `휴진일: ${closedDays.map(d => `${d}일`).join(', ')} — 빨간색 배경 또는 빨간 동그라미로 강조. 해당 날짜 숫자 아래에 반드시 "휴진" 텍스트를 작게 표시하세요.\n`;
+      if (shortened.length > 0) p += `단축진료: ${shortened.join(', ')} — 주황/앰버 표시. 해당 날짜 숫자 아래에 반드시 "단축" 텍스트를 작게 표시하세요.\n`;
+      if (vacations.length > 0) p += `휴가: ${vacations.join(', ')} — 보라색 표시. 해당 날짜 숫자 아래에 반드시 "휴가" 텍스트를 작게 표시하세요.\n`;
+    }
     if (noticeLines.length > 0) {
       p += `하단 안내 영역: "${noticeLines.join(' / ')}" — 이 텍스트를 달력 아래에 표시하세요.\n`;
     } else {
