@@ -26,14 +26,24 @@ The poster must have visual identity: background texture, decorative elements, b
 DO NOT make the calendar grid fill 100% of the image.
 DO NOT add any information the user did not provide (no clinic hours, no lunch time, no phone number unless user entered them).
 
-Korean hospital monthly schedule poster — Spring Cherry Blossom theme.
-VISUAL MOTIFS: Watercolor cherry blossom petals at top-left and bottom-right corners. Falling petals (2-3) scattered. Rose-pink frame border around calendar area.
-COLORS: Background soft pink #fdf2f8. Title deep rose #be185d. Calendar frame rose-pink #ec4899.
-HEADER: Large bold title with cherry blossom petal accents. Hospital name small above.
-CALENDAR: White card with soft pink header row. Closed days in coral circle + "휴진" label below. Shortened in amber + "단축" label below.
-FOOTER: Subtle pink area with legend only.
-STRICT ANCHORS: Cherry blossom corner illustrations, pink frame, falling petals, rose color family, watercolor art style.
-INSPIRED FREEDOM: Petal density, pink shade variation, additional spring elements.
+Korean hospital monthly schedule poster — Premium Spring Cherry Blossom theme.
+
+BACKGROUND: Entire background filled with soft pink watercolor wash (#fdf2f8 to #fce7f3 gradient). Scattered cherry blossom petals ACROSS THE ENTIRE background at varying sizes and 15-30% opacity — not just corners. Creates a dreamy, immersive spring atmosphere.
+
+DECORATIVE LAYER: 2-3 detailed cherry blossom branches with flowers — one reaching in from top-right, one from bottom-left. Petals caught mid-fall throughout the image. Watercolor painting style, not clip-art.
+
+CALENDAR CARD: White frosted card (backdrop-blur feel, 90% opacity, rounded 16px, soft shadow) floating on the pink background. The pink background and petals should be visible around and slightly through the card.
+
+TITLE: Deep rose (#9f1239) elegant bold text on pink background above the card. Subtle petal accents near the title.
+
+TYPOGRAPHY: Clean, modern Korean sans-serif. Title large and impactful. Date numbers crisp and readable.
+
+COLOR PALETTE: Soft pink #fdf2f8, deep rose #9f1239, white, warm coral accent for closed days.
+
+QUALITY: This must look like a premium template — sophisticated, not cute or childish. Think luxury skincare brand aesthetic applied to a hospital calendar.
+
+STRICT ANCHORS: Full-background petal scatter, watercolor branch illustrations, frosted white card, rose color family, immersive spring mood.
+INSPIRED FREEDOM: Branch placement, petal density, pink shade variation, card opacity.
 Mobile readability: minimum body text 11pt, date numbers 14pt bold, title 24pt+.`,
     },
     {
@@ -46,14 +56,22 @@ The poster must have visual identity: background texture, decorative elements, b
 DO NOT make the calendar grid fill 100% of the image.
 DO NOT add any information the user did not provide (no clinic hours, no lunch time, no phone number unless user entered them).
 
-Korean hospital monthly schedule poster — Summer Sunflower theme.
-VISUAL MOTIFS: Large sunflower illustration at top-right or top-left corner. Bright sunshine rays from top. Clear blue sky accent at top edge.
-COLORS: Background warm yellow #fefce8. Title golden brown #ca8a04. Sky blue accent #38bdf8.
-HEADER: Bold title with sunflower beside it. Warm golden gradient header bar.
-CALENDAR: White card on yellow background. Closed days in red circle + "휴진" label below. Shortened in amber + "단축" label below.
-FOOTER: Light yellow with legend.
-STRICT ANCHORS: Sunflower illustration, yellow/gold palette, sunshine rays, warm bright mood.
-INSPIRED FREEDOM: Sunflower size/position, sky element, gradient angle.
+Korean hospital monthly schedule poster — Premium Summer Sunflower theme.
+
+BACKGROUND: Warm golden gradient filling entire background (#fefce8 to #fef3c7). Soft sunlight rays radiating diagonally from top-left corner across the entire image at 10-15% opacity. Warm, bright, summery atmosphere everywhere.
+
+DECORATIVE LAYER: 3-4 large photorealistic sunflower illustrations — clustered at top-right corner and bottom-left corner, overlapping the calendar card edges slightly. One smaller sunflower peeking from bottom-right. Sunflowers should feel lush and vibrant, not flat clip-art. Include green leaves.
+
+CALENDAR CARD: White card (rounded 14px, subtle warm shadow) floating on the golden background. Card should feel like it's sitting among the sunflowers.
+
+TITLE: Rich golden brown (#92400e) bold text on the warm background above the card. Large and confident.
+
+COLOR PALETTE: Warm yellow #fefce8, golden brown #92400e, sunflower yellow #eab308, green leaf accent, sky blue hint at top.
+
+QUALITY: Premium summer festival poster quality — vibrant but sophisticated. Not a children's drawing. Think high-end resort or wellness clinic summer announcement.
+
+STRICT ANCHORS: Full golden gradient background, sunlight rays, lush sunflower illustrations at corners, warm golden palette, vibrant summer mood.
+INSPIRED FREEDOM: Sunflower arrangement, ray direction, sky blue amount, leaf detail.
 Mobile readability: minimum body text 11pt, date numbers 14pt bold, title 24pt+.`,
     },
     {
@@ -66,14 +84,22 @@ The poster must have visual identity: background texture, decorative elements, b
 DO NOT make the calendar grid fill 100% of the image.
 DO NOT add any information the user did not provide (no clinic hours, no lunch time, no phone number unless user entered them).
 
-Korean hospital monthly schedule poster — Autumn Maple Leaf theme.
-VISUAL MOTIFS: Watercolor maple leaves (red, orange, gold) clustered at top corners. Falling leaves (2-3) scattered. Warm gradient header.
-COLORS: Background warm cream #fff7ed. Header gradient orange #f97316 to peach #fed7aa. Title white on gradient.
-HEADER: Orange gradient banner with maple leaf accents. Bold white title.
-CALENDAR: White rounded card. Closed days in amber pill badge + "휴진" label below. Shortened in light orange + "단축" label below.
-FOOTER: Warm cream area with leaf accent and legend.
-STRICT ANCHORS: Maple leaf corner art, orange gradient header, falling leaves, warm autumn colors.
-INSPIRED FREEDOM: Leaf density/color mix, gradient direction, additional fall elements.
+Korean hospital monthly schedule poster — Premium Autumn Maple Leaf theme.
+
+BACKGROUND: Rich warm gradient filling entire background — burnt orange (#ea580c) at top fading to warm cream (#fff7ed) at bottom. Scattered autumn leaves (maple, ginkgo) ACROSS THE ENTIRE background at varying sizes, colors (red, orange, gold, brown), and 20-40% opacity. Creates immersive autumn atmosphere.
+
+DECORATIVE LAYER: Cluster of detailed watercolor maple leaves at top-left and bottom-right — vivid reds, oranges, and golds. 3-4 individual leaves caught mid-fall across the middle area. Watercolor painting style with visible brush texture.
+
+CALENDAR CARD: White card (rounded 14px, warm-toned shadow) floating on the gradient. Warm cream tint. A leaf or two slightly overlapping the card edge.
+
+TITLE: Bold white text on the orange gradient area at top. Large, confident, with subtle leaf accent beside it.
+
+COLOR PALETTE: Burnt orange #ea580c, warm cream #fff7ed, maple red #dc2626, gold #eab308, brown #92400e.
+
+QUALITY: Premium autumn harvest poster — rich, warm, abundant. Like a luxury hotel's seasonal announcement. Watercolor art quality, not digital clip-art.
+
+STRICT ANCHORS: Full orange-to-cream gradient, scattered leaves across entire background, watercolor leaf clusters at corners, warm autumn palette, immersive fall mood.
+INSPIRED FREEDOM: Leaf density and color mix, gradient angle, additional fall elements (ginkgo, acorns), card tint.
 Mobile readability: minimum body text 11pt, date numbers 14pt bold, title 24pt+.`,
     },
     {
