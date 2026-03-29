@@ -474,63 +474,66 @@ INSPIRED FREEDOM: Gold shade, shimmer intensity, line placement, card opacity.
 Mobile readability: title 48pt+, body 12pt+.`,
     },
     {
-      id: "evt_deep_navy", name: "딥 네이비", color: "#0a1628", accent: "#1e3a5f", bg: "#0a1628",
-      desc: "다크 네이비 + 흰 대형 타이포 + 골드 라인 — 권위 있는 모던 스타일", layoutHint: "navy",
-      aiPrompt: `[CRITICAL — THIS IS A PREMIUM CORPORATE POSTER]
+      id: "evt_coral_peach", name: "코랄 피치", color: "#f97316", accent: "#ea580c", bg: "#fff7ed",
+      desc: "코랄→피치 따뜻한 그라데이션 + 라운드 — 밝고 따뜻한 스타일", layoutHint: "coral",
+      aiPrompt: `[CRITICAL — THIS IS A PREMIUM DESIGNED POSTER, NOT A GENERIC FLYER]
 ⛔ STRICT CONTENT RULES:
 - DO NOT add any information the user did not provide.
 - DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
-- DO NOT add fake disclaimers, footnotes, or fine print (e.g. ※ sentences). These often come out as nonsensical gibberish.
+- DO NOT add fake disclaimers, footnotes, or fine print. These often come out as nonsensical gibberish.
 - DO NOT invent hospital names, phone numbers, addresses, or medical information.
-- ONLY use text that the user explicitly provided in their input. If no text was provided for a section, leave it empty or use a simple label.
+- ONLY use text that the user explicitly provided in their input.
 
+Korean hospital event/promotion poster — Coral Peach Warm theme. Pure design style — works for ANY type of event.
 
-Korean hospital event/promotion poster — Deep Navy Corporate theme. Pure design style — works for ANY type of event.
+BACKGROUND: Warm gradient filling ENTIRE image — vivid coral (#f97316) at top fading through soft peach (#fdba74) at middle to warm cream (#fff7ed) at bottom. The gradient is SMOOTH, warm, and inviting like a sunset. Across the background: very subtle soft circular bokeh shapes (large, blurred circles) in lighter peach (#fed7aa) at 8-12% opacity. Creates a dreamy warm glow.
 
-BACKGROUND: Deep navy (#0a1628) filling entire image — darker than typical navy, almost black-navy. Single subtle spotlight effect: slightly lighter circle (#0f2444) at center (20% of image), creating depth like stage light. NO patterns, NO textures — pure deep color with lighting.
+TYPOGRAPHY HERO (top 40%): Bold white title — 44pt+, weight 900, rounded sans-serif feel. Friendly and approachable, not corporate. Below: thin white line (1px, width 20%, centered). Below: subtitle in warm cream (#fef3c7), 14pt.
 
-TYPOGRAPHY HERO (top 50%): Massive white (#ffffff) title — 56pt+, weight 900, tight letter-spacing (-1px). Feels like projected onto a dark screen. Below: single thin gold (#c9a96e) horizontal line (width 20%, centered, 1px). Below line: subtitle in sky blue (#7dd3fc), 14pt, letter-spacing +2px.
+CONTENT CARD (middle 35%): White card with VERY rounded corners (border-radius 24px), soft warm shadow (rgba(249,115,22,0.15)). All elements inside rounded too. Text in warm brown (#78350f). Numbers in bold coral (#ea580c).
 
-CONTENT AREA (middle 30%): NO card — text floats directly on navy. Details in white, 14pt. Important numbers in gold (#c9a96e), bold. Dates in sky blue (#7dd3fc). Each line separated by generous spacing (24px+). Center-aligned, floating in dark space.
+FOOTER (bottom 25%): Gradient continues to cream. Small warm brown text.
 
-BOTTOM EDGE (bottom 20%): Subtle gold gradient line (1px, gold to transparent) at 80%. Hospital name in small sky blue at very bottom. Nothing else.
+MOOD: Think trendy Korean cafe menu or popup store poster. Warm, inviting, Instagram-worthy. Everything rounded and soft.
 
-BANNED: No white cards, no boxes, no frames, no borders. Power is in DARKNESS + WHITE TYPOGRAPHY + NEGATIVE SPACE. Like a movie title sequence.
+BANNED: No sharp rectangles, no corporate grids, no medical icons. Warmth and roundness is the design language.
 
-STRICT ANCHORS: Near-black navy, spotlight effect, massive white title, gold accent line, sky blue secondary, cinematic typography, extreme minimalism.
-INSPIRED FREEDOM: Spotlight position, navy darkness, gold line placement, text alignment.
-Mobile readability: title 44pt+, body 12pt+ (white on navy contrast 15:1+).`,
+STRICT ANCHORS: Coral-to-cream warm gradient, bokeh glow circles, very rounded card (24px), white bold title, warm brown body, friendly mood.
+INSPIRED FREEDOM: Coral shade, bokeh density, card radius, gradient warmth.
+Mobile readability: title 36pt+, body 12pt+.`,
     },
     {
-      id: "evt_sky_blue", name: "스카이 블루", color: "#3b82f6", accent: "#1e3a8a", bg: "#eff6ff",
-      desc: "하늘색 그라데이션 + 클린 카드 — 깔끔하고 신뢰감 있는 스타일", layoutHint: "sky",
-      aiPrompt: `[CRITICAL — THIS IS A CLEAN PROFESSIONAL POSTER]
+      id: "evt_lavender_dream", name: "라벤더 드림", color: "#7c3aed", accent: "#6d28d9", bg: "#f5f3ff",
+      desc: "보라 그라데이션 + 별/스파클 — 몽환적이고 세련된 스타일", layoutHint: "lavender",
+      aiPrompt: `[CRITICAL — THIS IS A PREMIUM DESIGNED POSTER, NOT A GENERIC FLYER]
 ⛔ STRICT CONTENT RULES:
 - DO NOT add any information the user did not provide.
 - DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
-- DO NOT add fake disclaimers, footnotes, or fine print (e.g. ※ sentences). These often come out as nonsensical gibberish.
+- DO NOT add fake disclaimers, footnotes, or fine print. These often come out as nonsensical gibberish.
 - DO NOT invent hospital names, phone numbers, addresses, or medical information.
-- ONLY use text that the user explicitly provided in their input. If no text was provided for a section, leave it empty or use a simple label.
+- ONLY use text that the user explicitly provided in their input.
 
+Korean hospital event/promotion poster — Lavender Dream theme. Pure design style — works for ANY type of event.
 
-Korean hospital event/promotion poster — Clean Sky Blue theme. Pure design style — works for ANY type of event.
+BACKGROUND: Dreamy gradient filling ENTIRE image — deep purple (#6d28d9) at top corners fading through medium lavender (#8b5cf6) to soft lilac (#ede9fe) at center, then to near-white lavender (#f5f3ff) at bottom. Across ENTIRE background: scattered sparkle marks in white and light purple at 10-20% opacity, various sizes, 5-8 total. Creates magical dreamy night sky atmosphere.
 
-BACKGROUND: Smooth vertical gradient — medium blue (#3b82f6) at very top (10%) through sky blue (#7dd3fc) to very light blue (#eff6ff) at 40%, then to pure white at bottom. SMOOTH like clear morning sky. NO clouds, NO patterns.
+DECORATIVE: One subtle starburst — 3 sparkle marks close together at top-left, white, 25% opacity. Like a gentle star twinkling.
 
-SINGLE ICON: Top-right area, ONE simple geometric plus-sign (+) in white, 25% opacity, medium size. ONLY non-text visual element.
+TYPOGRAPHY HERO (top 40%): Bold white title — 40pt+, weight 800. White text GLOWS against purple gradient. Below: thin white line (1px, width 15%, 30% opacity). Below: subtitle in light lavender (#c4b5fd), 14pt.
 
-TITLE AREA (top 35%): Bold white title (32pt+, weight 800) on blue gradient. Hospital name in light blue (#bfdbfe), small, above title.
+CONTENT AREA (middle 35%): Frosted white card (rounded 18px, 90% opacity, border: 0.5px solid rgba(139,92,246,0.2)). Deep purple (#4c1d95) text. Numbers in bold violet (#7c3aed).
 
-CONTENT AREA (middle 40%): As gradient reaches white, content in deep blue (#1e3a8a) text. Generous spacing. List items with thin blue (#93c5fd) left-border accent (2px) — NOT bullet points. Numbers in bold deep blue.
+FOOTER (bottom 25%): Gradient continues to light lavender. Small purple text.
 
-FOOTER (bottom 25%): Pure white. Info in medium blue (#3b82f6), small. Thin blue line (1px, #93c5fd) divider.
+MOOD: Luxury perfume ad or premium beauty clinic event. Dreamy, ethereal, sophisticated. NOT childish.
 
-BANNED: No hearts, no pulse lines, no stethoscopes, no medical illustrations. Blue gradient IS the trust signal.
+BANNED: No stars, no moons, no clouds, no cartoon elements. Only geometric sparkle marks. Dreaminess from gradient depth and sparkle subtlety.
 
-STRICT ANCHORS: Blue-to-white smooth gradient, single plus icon, white-on-blue title, deep blue body text, left-border list style, zero clutter.
-INSPIRED FREEDOM: Blue shade range, plus icon size/position, gradient speed.
-Mobile readability: title 28pt+, body 12pt+.`,
+STRICT ANCHORS: Deep purple-to-lilac gradient, sparkle marks, starburst cluster, frosted card, white glowing title, magical ethereal mood.
+INSPIRED FREEDOM: Purple shade range, sparkle count/size, starburst position, card opacity.
+Mobile readability: title 36pt+, body 12pt+.`,
     },
+
     {
       id: "evt_sage_botanical", name: "세이지 보태니컬", color: "#16a34a", accent: "#14532d", bg: "#f0fdf4",
       desc: "세이지 워터컬러 + 유칼립투스 실루엣 — 자연스럽고 차분한 스타일", layoutHint: "botanical",
@@ -560,35 +563,37 @@ INSPIRED FREEDOM: Watercolor intensity, branch type, green shade range.
 Mobile readability: title 28pt+, body 12pt+.`,
     },
     {
-      id: "evt_ocean_cool", name: "오션 쿨", color: "#0ea5e9", accent: "#0e7490", bg: "#ecfeff",
-      desc: "틸→시안 그라데이션 + 물결 패턴 — 시원하고 세련된 스타일", layoutHint: "ocean",
-      aiPrompt: `[CRITICAL — THIS IS A PREMIUM POSTER, NOT A BEACH FLYER]
+      id: "evt_charcoal_modern", name: "차콜 모던", color: "#292524", accent: "#44403c", bg: "#292524",
+      desc: "차콜 다크 + 화이트 타이포 — 모던하고 도시적인 스타일", layoutHint: "charcoal",
+      aiPrompt: `[CRITICAL — THIS IS A PREMIUM DESIGNED POSTER, NOT A GENERIC FLYER]
 ⛔ STRICT CONTENT RULES:
 - DO NOT add any information the user did not provide.
 - DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
-- DO NOT add fake disclaimers, footnotes, or fine print (e.g. ※ sentences). These often come out as nonsensical gibberish.
+- DO NOT add fake disclaimers, footnotes, or fine print. These often come out as nonsensical gibberish.
 - DO NOT invent hospital names, phone numbers, addresses, or medical information.
-- ONLY use text that the user explicitly provided in their input. If no text was provided for a section, leave it empty or use a simple label.
+- ONLY use text that the user explicitly provided in their input.
 
+Korean hospital event/promotion poster — Charcoal Modern theme. Pure design style — works for ANY type of event.
 
-Korean hospital event/promotion poster — Ocean Cool theme. Pure design style — works for ANY type of event.
+BACKGROUND: Warm charcoal (#292524) filling entire image — NOT cold black, NOT navy. Warm dark brown-gray like espresso. Subtle noise/grain texture at 3% opacity. Single subtle warm spotlight: lighter area (#44403c) at upper-center (15% of image).
 
-BACKGROUND: Deep-to-light blue gradient — deep teal (#0e7490) at top corners through cerulean (#0ea5e9) to light cyan (#cffafe) at center-bottom. Across ENTIRE background: subtle flowing wave lines (smooth sine curves, 3-4 waves) in lighter blue (#67e8f9) at 6-10% opacity. Smooth and elegant, NOT cartoon waves.
+TYPOGRAPHY HERO (top 45%): Massive warm white (#f5f5f4) title — 52pt+, weight 900, tight tracking (-1.5px). Typography dominance is extreme. Below: thin warm gray (#a8a29e) line (1px, width 25%). Below: subtitle in stone (#d6d3d1), 14pt, letter-spacing +1px.
 
-TYPOGRAPHY HERO (top 40%): Bold white title (36pt+, weight 900). Below: thin white line (1px, width 15%). Below: subtitle in light cyan (#a5f3fc), 14pt.
+CONTENT AREA (middle 30%): NO card. Text floats on charcoal. Details in warm white (#e7e5e4), 14pt. Numbers in pure white, bold, larger. 20px+ line spacing. Left-aligned — editorial magazine layout.
 
-CONTENT AREA (middle 35%): Frosted white card (rounded 16px, backdrop-blur, 88% opacity). Dark teal (#134e4a) text inside. Numbers in bold cerulean (#0891b2).
+SIGNATURE: Single thin amber (#d97706) or copper (#b45309) vertical line — 2px width, at left edge, running 20% to 80% of image height. ONLY non-monochrome element.
 
-FOOTER (bottom 25%): Gradient continues lighter. Small teal text.
+FOOTER (bottom 25%): Charcoal continues. Stone (#a8a29e) small text. Left-aligned.
 
-ACCENT: 2-3 very small sparkle marks in white at 10% opacity. No other decoration.
+MOOD: GQ magazine editorial or MUJI ad. Urban, sophisticated, editorial. Warm charcoal creates inviting darkness. Single amber line adds life.
 
-BANNED: No sun, no beach, no palm trees, no ice cream. Blue gradient is the mood signal.
+BANNED: No boxes, no cards, no frames, no icons, no gradients (except spotlight). Only typography weight contrast and single amber line. Architecture portfolio page aesthetic.
 
-STRICT ANCHORS: Teal-to-cyan gradient, subtle wave lines, frosted card, white bold title, sparkle accents, sophisticated cool mood.
-INSPIRED FREEDOM: Blue/teal range, wave count, card opacity, sparkle count.
-Mobile readability: title 32pt+, body 12pt+.`,
+STRICT ANCHORS: Warm charcoal, grain texture, massive white typography, left-aligned editorial, single amber vertical line, warm monochrome, magazine editorial mood.
+INSPIRED FREEDOM: Charcoal warmth, accent line color, text alignment, grain intensity.
+Mobile readability: title 44pt+, body 12pt+ (warm white on charcoal contrast 12:1+).`,
     },
+
     {
       id: "evt_blush_warm", name: "블러시 웜", color: "#881337", accent: "#9f1239", bg: "#fef7ed",
       desc: "샴페인→블러시 그라데이션 + 기하학 눈꽃 — 따뜻하고 우아한 스타일", layoutHint: "warm",
