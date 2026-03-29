@@ -95,27 +95,27 @@ export default function ImagePage() {
   const CALENDAR_THEME_OPTIONS: { value: string; label: string; emoji: string; desc: string; group: string; groupColor: string }[] = [
     // 시즌
     { value: 'sch_cherry_blossom', label: '벚꽃 봄', emoji: '🌸', desc: '핑크 워터컬러 + 흩날리는 꽃잎', group: '시즌', groupColor: '#ec4899' },
-    { value: 'sch_sunflower_summer', label: '해바라기 여름', emoji: '🌻', desc: '골드 그라데이션 + 해바라기 클러스터', group: '시즌', groupColor: '#ec4899' },
     { value: 'sch_maple_autumn', label: '단풍 가을', emoji: '🍁', desc: '오렌지 그라데이션 + 흩날리는 단풍잎', group: '시즌', groupColor: '#ec4899' },
     { value: 'sch_snowflake_winter', label: '눈꽃 겨울', emoji: '❄️', desc: '눈 결정 패턴 + 아이시 블루', group: '시즌', groupColor: '#ec4899' },
     // 전통
     { value: 'sch_korean_classic', label: '한방 전통', emoji: '🏛️', desc: '기와 문양 + 한지 프레임', group: '전통', groupColor: '#92400e' },
     { value: 'sch_bojagi_holiday', label: '보자기 명절', emoji: '🎀', desc: '보자기 매듭 + 금색 테두리', group: '전통', groupColor: '#92400e' },
     { value: 'sch_ink_wash', label: '수묵화', emoji: '🖌️', desc: '먹 번짐 + 대나무/매화', group: '전통', groupColor: '#92400e' },
-    // 모던
-    { value: 'sch_navy_professional', label: '네이비 프로', emoji: '💎', desc: '딥 네이비 + 흰 카드 + 골드', group: '모던', groupColor: '#1e3a5f' },
-    { value: 'sch_mint_wellness', label: '민트 웰니스', emoji: '🌿', desc: '민트 그라데이션 + 잎사귀', group: '모던', groupColor: '#1e3a5f' },
-    { value: 'sch_coral_sns', label: '코랄 SNS', emoji: '📱', desc: '코랄 그라데이션 + 라운드', group: '모던', groupColor: '#1e3a5f' },
+    // 기본
+    { value: 'sch_navy_professional', label: '네이비 프로', emoji: '💎', desc: '딥 네이비 + 흰 카드 + 골드', group: '기본', groupColor: '#1e3a5f' },
+    { value: 'sch_beige_gold', label: '베이지 골드', emoji: '✨', desc: '리넨 질감 + 골드 라인', group: '기본', groupColor: '#1e3a5f' },
+    { value: 'sch_coral_sns', label: '코랄 SNS', emoji: '📱', desc: '코랄 그라데이션 + 라운드', group: '기본', groupColor: '#1e3a5f' },
     // 특수
     { value: 'sch_kids_pastel', label: '키즈 파스텔', emoji: '🌈', desc: '무지개 + 구름/별', group: '특수', groupColor: '#a855f7' },
-    { value: 'sch_beige_gold', label: '베이지 골드', emoji: '✨', desc: '리넨 질감 + 골드 라인', group: '특수', groupColor: '#a855f7' },
+    { value: 'sch_mint_wellness', label: '민트 웰니스', emoji: '🌿', desc: '민트 그라데이션 + 잎사귀', group: '특수', groupColor: '#a855f7' },
+    { value: 'sch_sunflower_summer', label: '해바라기 여름', emoji: '🌻', desc: '골드 그라데이션 + 해바라기 클러스터', group: '특수', groupColor: '#a855f7' },
   ];
 
   const SCHEDULE_GROUPS: { label: string; desc: string; values: string[] }[] = [
-    { label: '🌸 시즌', desc: '봄·여름·가을·겨울', values: ['sch_cherry_blossom', 'sch_sunflower_summer', 'sch_maple_autumn', 'sch_snowflake_winter'] },
+    { label: '🌸 시즌', desc: '봄·가을·겨울', values: ['sch_cherry_blossom', 'sch_maple_autumn', 'sch_snowflake_winter'] },
     { label: '🏛️ 전통', desc: '한방·명절·수묵화', values: ['sch_korean_classic', 'sch_bojagi_holiday', 'sch_ink_wash'] },
-    { label: '💎 모던', desc: '네이비·민트·코랄', values: ['sch_navy_professional', 'sch_mint_wellness', 'sch_coral_sns'] },
-    { label: '✨ 특수', desc: '소아과·프리미엄', values: ['sch_kids_pastel', 'sch_beige_gold'] },
+    { label: '💎 기본', desc: '네이비·베이지·코랄', values: ['sch_navy_professional', 'sch_beige_gold', 'sch_coral_sns'] },
+    { label: '✨ 특수', desc: '키즈·민트·해바라기', values: ['sch_kids_pastel', 'sch_mint_wellness', 'sch_sunflower_summer'] },
   ];
 
   const [customMessage, setCustomMessage] = useState('');
