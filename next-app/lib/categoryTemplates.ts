@@ -630,188 +630,170 @@ Mobile readability: title 32pt+, body 12pt+.`,
   // 색상: 화이트/라이트그레이 + 네이비(신뢰), 브랜드 컬러 악센트바, 베이지/크림(피부과)
   doctor: [
     {
-      id: 'doc_portrait_formal', name: '매거진 커버', color: '#1e40af', accent: '#1e3a8a', bg: '#eff6ff',
-      desc: '매거진 커버형 + 하단 정보 오버레이',
-      layoutHint: 'portrait',
-      aiPrompt: `Korean hospital doctor profile — formal, authoritative, top photo + bottom info.
-TOP SECTION (55%): Light gray (#f1f5f9) or soft blue tint background. Hospital name with short accent underline at top-left. Large circular photo placeholder centered — white fill, soft shadow. This is a professional headshot area (white coat, neutral background).
-BOTTOM SECTION (45%): Clean white band. Doctor name in massive bold navy (#1e40af, 32px, weight 800). Rounded navy pill badge with white text for specialty (e.g., "치과 전문의"). Credentials listed below in clean gray text — each on its own line (학력, 경력, 자격). Clear separation between photo zone and info zone.
-Information hierarchy: photo → name → specialty badge → credentials. Formal, trustworthy. Korean medical law: no superlatives.`,
+      id: "doc_clean_white", name: "클린 화이트", color: "#374151", accent: "#111827", bg: "#ffffff",
+      desc: "순백 배경 + 얇은 라인 + 미니멀 타이포 — 깔끔한 프로필", layoutHint: "minimal",
+      aiPrompt: `[CRITICAL — THIS IS A PREMIUM DOCTOR PROFILE POSTER]
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- DO NOT invent hospital names, phone numbers, addresses, or medical information.
+- ONLY use text that the user explicitly provided in their input.
+
+Korean hospital doctor introduction poster — Clean White Minimal theme.
+
+BACKGROUND: Pure white (#ffffff). No texture, no pattern, no gradient. Like an Apple product page.
+
+PHOTO AREA (top/left 45%): Large area for doctor photo. If no photo, light gray (#f3f4f6) placeholder (rounded 12px). NO border.
+
+NAME & TITLE: Doctor name LARGE bold charcoal (#111827), 36pt+, weight 800. Specialty in medium gray (#6b7280), 16pt, letter-spacing +1px. Thin line (1px, #e5e7eb, width 30%) separating name from credentials.
+
+CREDENTIALS (bottom 40%): Dark gray (#374151), 13pt. NO bullet points — thin left-border accent (2px, #e5e7eb) per item. Generous spacing.
+
+SIGNATURE: One thin horizontal line (1px, #e5e7eb) full width at ~55% from top.
+
+BANNED: No icons, no decorations, no colors except gray scale. Power in WHITESPACE and TYPOGRAPHY only.
+
+STRICT ANCHORS: Pure white, charcoal typography, thin gray lines, extreme whitespace, Apple minimalism.
+Mobile readability: name 32pt+, credentials 12pt+.`,
     },
     {
-      id: 'doc_friendly_curve', name: '친근한 곡선', color: '#10b981', accent: '#059669', bg: '#ecfdf5',
-      desc: '민트 곡선 + 인사말 강조 (가정의학)',
-      layoutHint: 'curve',
-      aiPrompt: `Korean neighborhood clinic doctor profile — friendly, approachable, mint/green accent.
-BACKGROUND: Clean white with very subtle mint (#ecfdf5) tint.
-TOP (15%): Hospital name in small green (#10b981) text centered.
-MIDDLE-TOP (35%): Large circular photo placeholder centered — white fill, thin green (#10b981) border, soft shadow. Professional headshot area.
-MIDDLE-BOTTOM (30%): Doctor name in large bold green (#10b981, 28px, weight 800) centered. Specialty in green accent text (e.g., "가정의학과 전문의"). Credentials listed in gray text — clean bullet points or vertical list.
-BOTTOM (20%): Doctor greeting message in warm gray italic (e.g., "온 가족의 주치의가 되겠습니다"). Hospital name small at bottom.
-Rounded, soft shapes throughout. Friendly, warm, patient-first aesthetic. Green = health, freshness. For family medicine, pediatrics, neighborhood clinics.`,
+      id: "doc_deep_navy", name: "딥 네이비", color: "#0f2444", accent: "#c9a96e", bg: "#0f2444",
+      desc: "다크 네이비 + 골드 악센트 — 권위 있는 프로필", layoutHint: "navy",
+      aiPrompt: `[CRITICAL — THIS IS A PREMIUM DOCTOR PROFILE POSTER]
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- DO NOT invent hospital names, phone numbers, addresses, or medical information.
+- ONLY use text that the user explicitly provided in their input.
+
+Korean hospital doctor introduction poster — Deep Navy Authoritative theme.
+
+BACKGROUND: Deep navy (#0f2444). Subtle warm spotlight (#1e3a5f) at center-top for depth. Rich, presidential.
+
+PHOTO AREA (top 40%): Centered. If no photo, light navy placeholder. Thin gold (#c9a96e) border (0.5px).
+
+NAME & TITLE: Name bold white (#ffffff), 34pt+. Specialty in gold (#c9a96e), 16pt, letter-spacing +2px. Thin gold line (1px, width 25%) below.
+
+CREDENTIALS (bottom 40%): White (#e2e8f0) on navy, 13pt. Sky blue (#7dd3fc) for key words. NO cards — text floats on dark.
+
+SIGNATURE: Two thin parallel gold lines (0.5px each, 3px gap) at ~50%, 60% width centered.
+
+BANNED: No white cards, no boxes. Power in white/gold typography on navy.
+
+STRICT ANCHORS: Deep navy, gold lines, white name, gold specialty, sky blue keywords, authoritative mood.
+Mobile readability: name 30pt+, credentials 12pt+ (contrast 14:1+).`,
     },
     {
-      id: 'doc_modern_split', name: '모던 분할', color: '#6366f1', accent: '#4f46e5', bg: '#eef2ff',
-      desc: '좌우 2단 분할 — 좌측 사진+우측 정보, 한국 병원 가장 보편적 레이아웃, 종합병원/전문의 프로필',
-      layoutHint: 'split',
-      aiPrompt: `Korean hospital doctor profile — left-right split layout (가장 많이 사용되는 의사 소개 형식). Inspired by 네이버 병원 찾기 의사 프로필 and 병원 홈페이지 의료진 소개.
+      id: "doc_soft_beige", name: "소프트 베이지", color: "#78583d", accent: "#c9a96e", bg: "#faf7f2",
+      desc: "아이보리 배경 + 골드 라인 + 세리프 — 고급 의원 프로필", layoutHint: "beige",
+      aiPrompt: `[CRITICAL — THIS IS A PREMIUM DOCTOR PROFILE POSTER]
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- DO NOT invent hospital names, phone numbers, addresses, or medical information.
+- ONLY use text that the user explicitly provided in their input.
 
-=== ZONE LAYOUT (horizontal split: left photo | right info) ===
-LEFT PANEL (42% width, full height):
-  Light indigo (#eef2ff) background, full height. Hospital name "○○병원" in small indigo (#6366f1, 10px) at top-left corner (8px margin). Large circular photo placeholder centered both horizontally and vertically within panel (diameter ~70% of panel width). White fill, indigo (#6366f1, 2px) border, soft shadow (0 4px 16px rgba(0,0,0,0.08)). Professional studio headshot: white coat, neutral background, shoulders-up. Below photo: thin indigo decorative line (50% of panel width) centered.
+Korean hospital doctor introduction poster — Soft Beige Premium theme.
 
-RIGHT PANEL (58% width, full height):
-  White background. Content vertically centered with top padding ~15%.
-  ROW 1 – NAME: Doctor name "박○○" in bold indigo (#6366f1, 28px, weight 800). Left-aligned.
-  ROW 2 – SPECIALTY BADGE: Rounded indigo (#6366f1) pill badge "정형외과 전문의" in white text (12px, bold). 8px below name.
-  ROW 3 – CREDENTIALS: Structured list, 12px below badge:
-    • "학력: 연세대학교 의과대학 졸업" (gray #4b5563, 12px)
-    • "경력: ○○대학교병원 정형외과 전임의" (gray, 12px)
-    • "전공: 관절경 수술, 스포츠 의학" (gray, 12px)
-    • "학회: 대한정형외과학회 정회원" (gray, 12px)
-  Each with small indigo (#6366f1) dot bullet. 5px line spacing.
-  ROW 4 – GREETING: Thin indigo hairline above (80% width). "환자 한 분 한 분에게 정성을 다하겠습니다" in italic gray (#6b7280, 12px). 12px below credentials.
+BACKGROUND: Warm ivory (#faf7f2). Subtle linen texture at 3% opacity. Luxury clinic brochure feel.
 
-=== SPLIT DIVIDER ===
-Vertical thin indigo (#6366f1, 1px opacity 30%) line between left and right panels, or clean edge with no visible divider.
+PHOTO AREA (top/center 40%): Thin gold (#c9a96e) border (1px), rounded 8px. Warm shadow. If no photo, cream (#f5f0e8) placeholder.
 
-=== STRICT MODE ANCHORS ===
-• Left-right split must be maintained (not top-bottom)
-• Photo on left, info on right (never reversed)
-• Split ratio: 42/58 (± 5%)
-• Photo always circular within left panel
-• Credentials structured as labeled list (학력/경력/전공/학회)
-• Korean medical law: NEVER use 최고, 유일, 첫, 가장 or any superlative
+NAME & TITLE: Warm brown (#78583d), 32pt+, weight 700, serif feel. Specialty in gold (#c9a96e), 15pt. Gold decorative line (1px, width 20%) with diamond (◆) centered.
 
-=== INSPIRED MODE FREEDOM ===
-• Split ratio can shift 35/65 to 50/50
-• Left panel background tint can vary
-• Photo shape can be rounded rectangle
-• Divider can be visible line, color edge, or gradient blend
-• Right panel can have subtle indigo accent bar at top
+CREDENTIALS (bottom 40%): Warm brown (#5c4a32), 13pt. Subtle border-left (2px, #e8ddd0) per item.
 
-=== MOBILE READABILITY ===
-• Doctor name ≥ 24px. Credentials ≥ 11px. Badge ≥ 11px.
-• On very narrow canvas, layout can stack vertically (photo top, info bottom)
-• Credential labels (학력/경력) in bold for scanability`,
+SIGNATURE: Gold lines at top and bottom edges (full width, 0.5px). Gilded page border.
+
+BANNED: No heavy frames, no complex ornaments. Luxury from warmth, texture, gold accents.
+
+STRICT ANCHORS: Ivory/linen, gold photo border, warm brown serif name, gold diamond line, gilded border, luxury mood.
+Mobile readability: name 28pt+, credentials 12pt+.`,
     },
     {
-      id: 'doc_warm_story', name: '따뜻한 스토리', color: '#f97316', accent: '#ea580c', bg: '#fff7ed',
-      desc: '좌측 사이드바+우측 인사말 매거진 — 인사말이 주역, 소형 프로필 사이드바, 소아과/가정의학 친화',
-      layoutHint: 'story',
-      aiPrompt: `Korean hospital doctor profile — magazine-style with sidebar photo and greeting as main content. Inspired by 소아과/가정의학과 블로그형 원장 인사말 페이지.
+      id: "doc_modern_gray", name: "모던 그레이", color: "#374151", accent: "#6b7280", bg: "#f9fafb",
+      desc: "라이트 그레이 그라데이션 + 기하학 라인 — 모던 프로필", layoutHint: "gray",
+      aiPrompt: `[CRITICAL — THIS IS A PREMIUM DOCTOR PROFILE POSTER]
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- DO NOT invent hospital names, phone numbers, addresses, or medical information.
+- ONLY use text that the user explicitly provided in their input.
 
-=== ZONE LAYOUT (horizontal: narrow sidebar | wide content) ===
-LEFT SIDEBAR (22% width, full height):
-  Warm orange (#f97316) at 8% opacity fill, full height. Top (20% of sidebar): small circular photo placeholder (diameter ~80% of sidebar width), centered. White fill, thin orange (#f97316, 1.5px) border. Below photo: doctor name "이○○ 원장" in warm orange (#f97316, 13px, weight 700) centered. Bottom of sidebar: hospital name "○○소아과" in tiny orange (#ea580c, 9px) centered. Thin orange (#f97316, 1px) right border separating sidebar from main.
+Korean hospital doctor introduction poster — Modern Gray Geometric theme.
 
-RIGHT MAIN AREA (78% width, full height):
-  Warm cream (#fff7ed) background.
-  ZONE A – GREETING (top 50%): Generous padding (20px top, 16px sides). Doctor greeting in warm dark gray (#374151, 16px, line-height 1.8, weight 400): e.g. "아이들의 건강한 성장을 위해 항상 곁에서 함께하겠습니다. 작은 증상도 꼼꼼히 살피고, 부모님의 걱정을 덜어드리는 의사가 되겠습니다." This is the MAIN CONTENT — 2–3 sentences of warm, personal commitment. Opening quotation mark "「" in large orange (#f97316, 32px) as decorative element at top-left of greeting.
-  ZONE B – CREDENTIALS (middle 30%): Thin orange hairline above. Specialty "소아청소년과 전문의" in bold orange (#f97316, 14px). Below: credentials as pipe-separated byline: "고려대 의대 졸업 | ○○병원 소아과 전임의 | 대한소아과학회 정회원" in gray (#6b7280, 11px, line-height 1.6).
-  ZONE C – FOOTER (bottom 20%): Thin orange hairline above. Hospital name + contact in small gray (10px).
+BACKGROUND: Subtle gradient — very light gray (#f9fafb) to (#f3f4f6). Geometric grid lines (0.5px, #e5e7eb) at 5% opacity. Architectural blueprint feel.
 
-=== STRICT MODE ANCHORS ===
-• Sidebar always on LEFT, narrow (20–25% width)
-• Greeting text is the dominant content (largest text area)
-• Photo is small and contained in sidebar (not main area)
-• Sidebar has tinted background; main area has cream/white
-• Korean medical law: NEVER use 최고, 유일, 첫, 가장 or any superlative
-• Greeting must be warm and patient-centered, never boastful
+PHOTO AREA (left 40%): Thin gray (#d1d5db) border (1.5px), SHARP corners (no radius). If no photo, light gray placeholder. Sharp corners = design signature.
 
-=== INSPIRED MODE FREEDOM ===
-• Sidebar can be right instead of left
-• Greeting can be 1–4 sentences
-• Decorative quotation mark style can vary (「」, "", ornamental)
-• Sidebar tint color intensity can vary 5–15%
-• Credentials can be vertical list instead of pipe-separated
+NAME & TITLE (right): Dark charcoal (#1f2937), 30pt+, weight 800, tight tracking. Specialty in gray (#6b7280), 14pt, uppercase, letter-spacing +3px. Short bold line (2px, width 40px) below name.
 
-=== MOBILE READABILITY ===
-• Greeting text ≥ 14px with line-height ≥ 1.6
-• Doctor name ≥ 12px. Credentials ≥ 10px.
-• Sidebar photo ≥ 48px diameter
-• On narrow canvas, sidebar can collapse to horizontal strip at top`,
+CREDENTIALS (below name, right): Dark gray (#374151), 13pt. Items separated by thin lines (1px, #e5e7eb). Grid-like layout.
+
+SIGNATURE: Small gray (#9ca3af) square (8x8px) at bottom-right, rotated 45° (diamond).
+
+BANNED: No curves, no gradients (except subtle bg). Everything GEOMETRIC and ANGULAR. Swiss design.
+
+STRICT ANCHORS: Light gray gradient, grid lines, sharp-cornered frame, short bold accent, diamond mark, architectural precision.
+Mobile readability: name 28pt+, credentials 12pt+.`,
     },
     {
-      id: 'doc_dark_luxury', name: '다크 럭셔리', color: '#d4a017', accent: '#b8860b', bg: '#1a1a2e',
-      desc: '다크 네이비+골드 전면 — VIP 원장 프로필, 성형외과/에스테틱 특화, 골드 프레임+코너 장식',
-      layoutHint: 'luxury',
-      aiPrompt: `Korean premium clinic doctor profile — dark navy full-bleed with gold accents. Inspired by 청담/강남 성형외과 VIP 원장 소개 페이지 and 호텔급 피부과 브랜딩.
+      id: "doc_sky_medical", name: "스카이 메디컬", color: "#0284c7", accent: "#0369a1", bg: "#f0f9ff",
+      desc: "하늘색 그라데이션 + 클린 카드 — 신뢰감 있는 프로필", layoutHint: "sky",
+      aiPrompt: `[CRITICAL — THIS IS A PREMIUM DOCTOR PROFILE POSTER]
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- DO NOT invent hospital names, phone numbers, addresses, or medical information.
+- ONLY use text that the user explicitly provided in their input.
 
-=== ZONE LAYOUT (centered vertical axis on dark background) ===
-ZONE A – BRAND HEADER (10%): Deep navy (#0f172a) background. Hospital name "○○성형외과" in small gold (#d4a017, 11px, letter-spacing 3px) centered. Thin gold horizontal rule (0.5px, 40% width) below.
-ZONE B – PHOTO SHOWCASE (40%): Navy background continues. Circular photo placeholder centered (diameter ~50% of canvas width). Gold (#d4a017, 2.5px) ring border around photo. Four L-shaped gold corner brackets positioned at corners of an imaginary square around the photo (each bracket ~12px). Inside photo: professional studio headshot — white coat or suit, dark/neutral background. Subtle gold glow effect (box-shadow 0 0 20px rgba(212,160,23,0.15)) around photo.
-ZONE C – IDENTITY + CREDENTIALS (35%): Doctor name "최○○ 대표원장" in bold gold (#d4a017, 28px, weight 800) centered. Below: specialty "성형외과 전문의" in smaller gold (#b8860b, 14px) centered. Thin gold line (30% width) divider. Credentials in light gray (#94a3b8, 12px) centered, each on own line:
-  • "서울대학교 의과대학 졸업"
-  • "○○대학교병원 성형외과 전문의 취득"
-  • "대한성형외과학회 정회원"
-  • "대한미용성형외과학회 정회원"
-  5px line spacing. No bullets — clean centered lines.
-ZONE D – FOOTER (15%): Thin gold horizontal line (60% width). Hospital name in small gold (#d4a017, 10px) centered. "상담 예약: 02-XXX-XXXX" in muted gold (#b8976a, 10px) below.
+Korean hospital doctor introduction poster — Sky Medical Trust theme.
 
-=== FRAMING ===
-Gold double-line border around entire canvas: outer 1px, inner 0.5px, 5px gap. Creates luxury frame effect.
+BACKGROUND: Blue gradient — medium blue (#3b82f6) at top (15%) through sky blue (#7dd3fc) to light blue (#f0f9ff) at 40%, then white. NO patterns.
 
-=== STRICT MODE ANCHORS ===
-• Navy (#0f172a) background must be full bleed — no white areas anywhere
-• Gold (#d4a017) and gray (#94a3b8) are the only text colors
-• Corner brackets around photo always present
-• Photo always circular with gold ring border
-• Zone proportions: 10/40/35/15 (± 3%)
-• Korean medical law: NEVER use 최고, 유일, 첫, 가장, 독보적 or any superlative
+PHOTO AREA (top center, on blue): White card frame (rounded 14px, white border 3px, soft shadow). Photo floats on blue. If no photo, light blue (#dbeafe) placeholder.
 
-=== INSPIRED MODE FREEDOM ===
-• Corner brackets can be ornamental flourishes or minimal angles
-• Gold ring can have double-ring effect
-• Subtle navy gradient (radial, slightly lighter center) allowed
-• Credentials can have small gold dot separators
-• Additional decorative thin gold lines between credential items
+NAME & TITLE (below photo): Deep blue (#1e3a8a), 30pt+, weight 800. Specialty in medium blue (#0284c7), 15pt. Thin line (1px, #93c5fd, width 25%).
 
-=== MOBILE READABILITY ===
-• Doctor name ≥ 24px. Credentials ≥ 11px.
-• Photo diameter ≥ 40% of canvas width
-• Gold text on navy must maintain contrast ratio ≥ 4.5:1
-• Frame border inset ≥ 6px from canvas edge`,
+CREDENTIALS (bottom 35%): On white area. Deep blue (#1e3a8a), 13pt. Thin blue (#bfdbfe) left-border (2px) per item.
+
+SINGLE ICON: Tiny plus (+) in white at 20% opacity on blue gradient (top-right).
+
+BANNED: No stethoscopes, no hearts. Blue gradient = medical trust.
+
+STRICT ANCHORS: Blue-to-white gradient, white-framed photo, deep blue typography, blue left-border credentials, medical trust mood.
+Mobile readability: name 28pt+, credentials 12pt+.`,
     },
     {
-      id: 'doc_clean_grid', name: '클린 그리드', color: '#0ea5e9', accent: '#0284c7', bg: '#f0f9ff',
-      desc: '2x2 인포그래픽 카드 그리드 — 자격사항 4분할 카드, 빠른 스캔 최적화, 치과/종합병원 특화',
-      layoutHint: 'grid',
-      aiPrompt: `Korean hospital doctor profile — infographic 2x2 card grid layout for credential highlights. Inspired by 네이버 의사 프로필 카드 and 병원 앱 의료진 정보 UI.
+      id: "doc_sage_natural", name: "세이지 내추럴", color: "#15803d", accent: "#10b981", bg: "#f0fdf4",
+      desc: "세이지 그린 + 잎 실루엣 — 자연스러운 프로필", layoutHint: "sage",
+      aiPrompt: `[CRITICAL — THIS IS A PREMIUM DOCTOR PROFILE POSTER]
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- DO NOT invent hospital names, phone numbers, addresses, or medical information.
+- ONLY use text that the user explicitly provided in their input.
 
-=== ZONE LAYOUT (vertical: photo header + grid + footer) ===
-ZONE A – PHOTO + NAME (30%): Light sky blue (#f0f9ff) gradient to white background. Hospital name "○○치과" in small sky blue (#0ea5e9, 10px) top-left. Circular photo placeholder centered (diameter ~40% of canvas width). White fill, sky blue (#0ea5e9, 2px) border, soft shadow. Below photo: doctor name "정○○ 원장" in bold sky blue (#0ea5e9, 24px, weight 800) centered. "치과보존과 전문의" in sky blue (#0284c7, 13px) centered below name.
+Korean hospital doctor introduction poster — Sage Natural Wellness theme.
 
-ZONE B – CREDENTIAL GRID (45%): White background. 2x2 grid of info cards with 8px gap between cards. Each card: white fill, subtle sky blue (#0ea5e9, 1px) border, radius 8px, soft shadow (0 1px 4px rgba(0,0,0,0.05)), internal padding 10px.
-  Card layout — sky blue label at top (bold, 10px, letter-spacing 1px, uppercase-style) + value text below in dark gray (#1f2937, 12px):
-  TOP-LEFT card:  "학력" → "서울대학교 치의학대학원"
-  TOP-RIGHT card: "전공" → "근관치료, 심미수복"
-  BOTTOM-LEFT card:  "경력" → "○○병원 보존과 5년"
-  BOTTOM-RIGHT card: "학회" → "대한치과보존학회 정회원"
-  Each card identical size (48% width, auto height). Grid centered in zone.
+BACKGROUND: Soft sage (#f0fdf4). Subtle watercolor wash. At bottom-right: single eucalyptus branch silhouette (#86efac) at 8-12% opacity, ~20% into image.
 
-ZONE C – FOOTER (15%): Light sky blue (#f0f9ff) background. Hospital name in small gray (10px) centered. Optional: rounded sky blue (#0ea5e9) pill badge with specialty summary.
+PHOTO AREA (top center 40%): Soft shadow, thin sage (#bbf7d0) border (1px, rounded 12px). If no photo, light sage (#ecfdf5) placeholder.
 
-=== STRICT MODE ANCHORS ===
-• 2x2 grid layout must be maintained (4 cards)
-• Each card has identical dimensions and styling
-• Card labels are always: 학력, 전공, 경력, 학회 (in this order)
-• Photo above grid, footer below grid
-• Zone proportions: 30/45/15 (± 3%, remaining 10% spacing)
-• Korean medical law: NEVER use 최고, 유일, 첫, 가장 or any superlative
+NAME & TITLE: Dark forest green (#14532d), 30pt+, weight 700. Specialty in emerald (#059669), 15pt. Thin emerald (#10b981) line (1px, width 20%).
 
-=== INSPIRED MODE FREEDOM ===
-• Grid can shift to 1x4 vertical stack on narrow canvas
-• Cards can have colored left-border accent instead of full border
-• Card backgrounds can have subtle sky blue tint
-• Additional 5th card can be added as full-width row below grid
-• Icons can accompany card labels (🎓 학력, 🏥 경력, 📋 전공, 🏛️ 학회)
+CREDENTIALS (bottom 35%): White card (rounded 14px, shadow, border: 1px solid #dcfce7). Dark green (#15803d), 13pt. Items separated by thin sage lines.
 
-=== MOBILE READABILITY ===
-• Doctor name ≥ 20px. Card labels ≥ 10px. Card values ≥ 11px.
-• Card minimum width: 45% of canvas width
-• Card internal padding ≥ 8px
-• Grid gap ≥ 6px for touch-friendly separation`,
+BANNED: No leaf illustrations except ONE silhouette. Botanical presence MINIMAL.
+
+STRICT ANCHORS: Sage watercolor, eucalyptus silhouette, dark green typography, emerald accents, white card, wellness mood.
+Mobile readability: name 28pt+, credentials 12pt+.`,
     },
   ],
 
