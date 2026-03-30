@@ -396,84 +396,97 @@ export default function ImagePage() {
     let layoutExtra = '';
 
     if (schLayout === 'week') {
-      // 마킹된 날짜 중 첫 번째가 속한 주를 찾아서 표시
-      const markedDays = [...dayMarks].map(([d]) => d).sort((a, b) => a - b);
-      const targetDay = markedDays[0] || 1;
-      const targetDate = new Date(schYear, schMonth - 1, targetDay);
-      const dayOfWeek = targetDate.getDay();
-      const weekStart = new Date(targetDate);
-      weekStart.setDate(targetDate.getDate() - dayOfWeek);
-      const weekEnd = new Date(weekStart);
-      weekEnd.setDate(weekStart.getDate() + 6);
-      const fmtDate = (d: Date) => `${d.getMonth() + 1}월 ${d.getDate()}일`;
-      // 7일 날짜 목록 생성
-      const weekDates: string[] = [];
-      for (let di = 0; di < 7; di++) {
-        const dd = new Date(weekStart);
-        dd.setDate(weekStart.getDate() + di);
-        const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
-        weekDates.push(`${dd.getDate()}일(${dayNames[di]})`);
+      // 마킹된 날짜 중 첫 번째가 속한 주 계산
+      const markedDays = [...dayMarks.keys()].sort((a, b) => a - b);
+      const firstDayOfMonth = new Date(schYear, schMonth - 1, 1).getDay(); // 0=일
+      const lastDate = new Date(schYear, schMonth, 0).getDate();
+      const dows = ['일', '월', '화', '수', '목', '금', '토'];
+
+      // 타겟 주 결정
+      let targetWeek = 0;
+      if (markedDays.length > 0) {
+        targetWeek = Math.floor((markedDays[0] + firstDayOfMonth - 1) / 7);
       }
-      layoutExtra = `표시할 7일: ${weekDates.join(', ')}\n표시할 주 범위: ${fmtDate(weekStart)}(일) ~ ${fmtDate(weekEnd)}(토)\n`;
 
-      layoutRules = `[CRITICAL LAYOUT — WEEKLY VIEW (한 주만 표시)]
-⚠️ THIS IS A WEEKLY VIEW. DO NOT draw a full monthly calendar!
-⚠️ Show ONLY 7 days (one week) in a SINGLE HORIZONTAL ROW.
-⚠️ If you draw a 7-column × 5-row monthly grid, you have FAILED.
+      // 해당 주의 7일 계산
+      const weekDateDetails: string[] = [];
+      const weekDateNums: (number | null)[] = [];
+      for (let i = 0; i < 7; i++) {
+        const dayNum = targetWeek * 7 - firstDayOfMonth + i + 1;
+        if (dayNum >= 1 && dayNum <= lastDate) {
+          weekDateNums.push(dayNum);
+          const mark = dayMarks.get(dayNum);
+          const status = mark === 'closed' ? '휴진' : mark === 'shortened' ? '단축' : mark === 'vacation' ? '휴가' : '정상';
+          weekDateDetails.push(`${dayNum}일(${dows[i]}): ${status}`);
+        } else {
+          weekDateNums.push(null);
+          weekDateDetails.push(`${dows[i]}: —`);
+        }
+      }
 
-STRUCTURE:
-- TOP 30%: Decorative header with title "${title}" and week range
-- MIDDLE 50%: Exactly 7 LARGE date boxes in ONE horizontal row (일~토)
-  Each box: day name on top (small), date number LARGE below (30pt+)
-  Box size: at least 60px wide each
-- BOTTOM 20%: Legend/info area
+      const validDays = weekDateNums.filter(d => d !== null) as number[];
+      const rangeStr = validDays.length > 0
+        ? `${schMonth}월 ${validDays[0]}일(${dows[weekDateNums.indexOf(validDays[0])]}) ~ ${validDays[validDays.length - 1]}일(${dows[weekDateNums.lastIndexOf(validDays[validDays.length - 1])]})`
+        : `${schMonth}월`;
 
-DATE BOX STYLES:
-- 휴진 (closed): RED (#ef4444) background, white number, "휴진" label below
-- 단축 (shortened): ORANGE (#f59e0b) background, white number, "단축" label below
-- 일반 (normal): white/light background, dark number
-- 일요일: red text, 토요일: blue text
+      layoutExtra = `이번 주 7일 상세:\n${weekDateDetails.join(' / ')}\n주 범위: ${rangeStr}\n`;
 
-ABSOLUTE RULES:
-- ONLY 1 row of 7 boxes. NOT 5 rows. NOT a monthly grid.
-- Each box must be clearly separated and large enough to read
+      layoutRules = `[CRITICAL — THIS IS A WEEKLY SCHEDULE, NOT A MONTHLY CALENDAR]
+⚠️ DO NOT draw a full 30-day monthly calendar! You must show ONLY 7 days (ONE week) in a SINGLE horizontal row!
+⚠️ If you draw 5 rows of 7 cells = monthly grid, you have FAILED the task.
+
+LAYOUT:
+TOP 25%: 제목 "${title}" + "${rangeStr}" 날짜 범위
+CENTER 50%: 7개의 큰 날짜 카드가 가로로 한 줄 배치 (일 월 화 수 목 금 토)
+• 각 카드: 요일 이름(상단) + 큰 날짜 숫자(중앙) + 상태 라벨(하단)
+• 휴진일: 빨간색 배경 + 흰색 숫자 + "휴진" 라벨
+• 단축진료: 주황색 배경 + "단축" 라벨
+• 정상진료: 흰색/밝은 배경
+• 토요일: 파란 텍스트, 일요일: 빨간 텍스트
+BOTTOM 25%: 안내 문구 + 병원명
+
+⛔ ABSOLUTE RULES:
+- ONLY 1 row of 7 cells. NOT 5 rows. NOT a monthly grid.
+- DO NOT show dates from other weeks.
 - ⛔ No fake clinic hours, phone numbers, addresses
 - ⛔ No "2026년" — use "${schMonth}월" only
-- ⛔ No font size specs (pt/px) visible in image`;
+- ⛔ No font size specs visible in image`;
     } else if (schLayout === 'highlight') {
-      // 마킹된 날짜 목록을 명시적으로 포함
+      // 강조할 날짜 목록 생성
       const highlightItems: string[] = [];
-      closedDays.forEach(d => highlightItems.push(`${d}일(휴진)`));
-      [...dayMarks].filter(([, m]) => m === 'shortened').sort(([a], [b]) => a - b).forEach(([d]) => highlightItems.push(`${d}일(단축진료)`));
-      vacations.forEach(v => highlightItems.push(v.replace('(', '(').replace(')', ')')));
-      if (highlightItems.length > 0) {
-        layoutExtra = `강조할 날짜: ${highlightItems.join(', ')}\n`;
+      closedDays.forEach(d => highlightItems.push(`${d}일(휴진, 빨간색)`));
+      [...dayMarks].filter(([, m]) => m === 'shortened').sort(([a], [b]) => a - b).forEach(([d]) => highlightItems.push(`${d}일(단축, 주황색)`));
+      vacations.forEach(v => highlightItems.push(v));
+
+      if (highlightItems.length === 0) {
+        // 마킹 없으면 full_calendar로 폴백 메시지
+        layoutExtra = `마킹된 날짜 없음 — 달력 없이 제목만 크게 표시\n`;
+      } else {
+        layoutExtra = `강조 날짜: ${highlightItems.join(', ')}\n`;
       }
 
-      layoutRules = `[CRITICAL LAYOUT — HIGHLIGHT VIEW (날짜 강조)]
-⚠️ THIS IS A HIGHLIGHT VIEW. DO NOT draw a monthly calendar grid!
-⚠️ Show ONLY the marked dates as LARGE highlighted circles/cards.
-⚠️ If you draw a 7-column calendar table, you have FAILED.
+      const circleCount = highlightItems.length || 1;
+      const circleSize = circleCount <= 2 ? '매우 큰 원(직경 150px+)' : '큰 원(직경 100px+)';
 
-STRUCTURE:
-- TOP 35%: Decorative header with title "${title}" — large, bold
-- MIDDLE 40%: The marked dates displayed as LARGE circles or rounded cards
-  Each circle: 80px+ diameter, date number inside (40pt+)
-  Label below each circle: "휴진" / "단축" / "휴가"
-  If multiple dates: arrange horizontally in a row
-- BOTTOM 25%: Legend and any additional info
+      layoutRules = `[CRITICAL — THIS IS A DATE HIGHLIGHT POSTER, NOT A CALENDAR]
+⚠️ DO NOT draw a monthly calendar grid! Show ONLY the highlighted dates as large visual elements!
+⚠️ If you draw a 7-column calendar table, you have FAILED the task.
 
-CIRCLE STYLES:
-- 휴진: RED (#ef4444) circle, white number, "휴진" below
-- 단축: ORANGE (#f59e0b) circle, white number, "단축" below
-- 휴가: PURPLE (#7c3aed) circle, white number, "휴가" below
+LAYOUT:
+TOP 30%: 제목 "${title}" 크게 + "${schMonth}월" + 병원명
+CENTER 45%: 마킹된 날짜만 ${circleSize}로 중앙 표시
+• 휴진일: 큰 빨간 원 안에 흰색 날짜 숫자 + 아래에 "휴진" 라벨
+• 단축진료: 큰 주황색 원 + "단축" 라벨
+• 휴가: 큰 보라색 원 + "휴가" 라벨
+• 여러 날이면 가로로 나열
+BOTTOM 25%: 안내 문구
 
-ABSOLUTE RULES:
-- NO 7-column grid. NO 5-row layout. NO calendar table.
-- The circles/cards ARE the content — not a calendar
+⛔ ABSOLUTE RULES:
+- DO NOT draw a 7-column calendar grid
+- DO NOT show all 30 days — ONLY show the marked dates as large circles/cards
 - ⛔ No fake clinic hours, phone numbers, addresses
 - ⛔ No "2026년" — use "${schMonth}월" only
-- ⛔ No font size specs (pt/px) visible in image`;
+- ⛔ No font size specs visible in image`;
     } else {
       // full_calendar — 기존 그대로
       layoutRules = `[CRITICAL LAYOUT RULES]
@@ -513,12 +526,13 @@ ${layoutExtra}`;
     p += `\n[DESIGN QUALITY]
 - 프리미엄 병원 인스타그램 피드 수준
 - 깔끔한 sans-serif 타이포, 세련된 색상 팔레트
-- 요일 헤더는 "일 월 화 수 목 금 토" 한글 한 글자씩만 표시. 일요일 글자색은 빨간색, 토요일 글자색은 파란색으로 설정하되, "(빨강)", "(파랑)" 같은 괄호 텍스트를 이미지에 절대 표시하지 마세요.
-- 휴진/단축/휴가로 표시된 날짜에는 날짜 숫자 아래에 "휴진"/"단축"/"휴가" 라벨을 반드시 작은 글씨로 렌더링하세요. 라벨이 없으면 사용자가 어떤 날이 휴진인지 알 수 없습니다!
-- 충분한 여백, 정돈된 그리드, 고급스러운 느낌
-- 절대 엑셀/스프레드시트처럼 보이면 안 됨
-
-[ABSOLUTE FORBIDDEN — 이미지에 절대 포함하면 안 되는 것]
+- 휴진/단축/휴가로 표시된 날짜에는 "휴진"/"단축"/"휴가" 라벨을 반드시 표시하세요.
+- 충분한 여백, 고급스러운 느낌`;
+    if (schLayout === 'full_calendar') {
+      p += `\n- 요일 헤더는 "일 월 화 수 목 금 토" 한 글자씩. 일요일 빨간색, 토요일 파란색. "(빨강)" 같은 괄호 텍스트 금지.
+- 정돈된 7열 그리드, 엑셀/스프레드시트처럼 보이면 안 됨`;
+    }
+    p += `\n\n[ABSOLUTE FORBIDDEN — 이미지에 절대 포함하면 안 되는 것]
 - "pt", "px", "28-40pt", "(16pt)" 같은 폰트 크기/기술 용어
 - 사용자가 입력하지 않은 가짜 진료시간, 점심시간, 전화번호, 주소
 - 연도 텍스트 ("2026년" 등)
