@@ -1174,16 +1174,14 @@ The DESIGN must be VISUALLY IDENTICAL to the reference image.`;
                   <input type="text" value={clinicPhone} onChange={e => setClinicPhone(e.target.value)} onBlur={saveHospitalInfo} placeholder="전화번호: 02-1234-5678" className="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs outline-none focus:border-blue-400 bg-white" />
                   <input type="text" value={clinicHours} onChange={e => setClinicHours(e.target.value)} onBlur={saveHospitalInfo} placeholder="진료시간: 평일 09:00~18:00" className="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs outline-none focus:border-blue-400 bg-white" />
                   <input type="text" value={clinicAddress} onChange={e => setClinicAddress(e.target.value)} onBlur={saveHospitalInfo} placeholder="주소: 서울시 강남구 테헤란로 123" className="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs outline-none focus:border-blue-400 bg-white" />
-                  <div className="flex gap-2">
-                    <div className="flex-1 flex items-center gap-1">
+                  <div className="flex gap-2 items-center">
+                    <div className="flex items-center gap-1">
                       <label className="text-[10px] text-slate-400 whitespace-nowrap">메인</label>
-                      <input type="color" value={brandColor || '#4F46E5'} onChange={e => setBrandColor(e.target.value)} onBlur={saveHospitalInfo} className="w-5 h-5 rounded border border-slate-200 cursor-pointer p-0.5" />
-                      <input type="text" value={brandColor} onChange={e => setBrandColor(e.target.value)} onBlur={saveHospitalInfo} placeholder="#4F46E5" className="flex-1 px-2 py-1 border border-slate-200 rounded text-[10px] font-mono outline-none focus:border-blue-400 bg-white" />
+                      <input type="color" value={brandColor || '#4F46E5'} onChange={e => setBrandColor(e.target.value)} onBlur={saveHospitalInfo} className="w-6 h-6 rounded border border-slate-200 cursor-pointer p-0.5" />
                     </div>
-                    <div className="flex-1 flex items-center gap-1">
+                    <div className="flex items-center gap-1">
                       <label className="text-[10px] text-slate-400 whitespace-nowrap">포인트</label>
-                      <input type="color" value={brandAccent || '#F59E0B'} onChange={e => setBrandAccent(e.target.value)} onBlur={saveHospitalInfo} className="w-5 h-5 rounded border border-slate-200 cursor-pointer p-0.5" />
-                      <input type="text" value={brandAccent} onChange={e => setBrandAccent(e.target.value)} onBlur={saveHospitalInfo} placeholder="#F59E0B" className="flex-1 px-2 py-1 border border-slate-200 rounded text-[10px] font-mono outline-none focus:border-blue-400 bg-white" />
+                      <input type="color" value={brandAccent || '#F59E0B'} onChange={e => setBrandAccent(e.target.value)} onBlur={saveHospitalInfo} className="w-6 h-6 rounded border border-slate-200 cursor-pointer p-0.5" />
                     </div>
                   </div>
                 </div>
