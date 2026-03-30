@@ -431,23 +431,32 @@ export default function ImagePage() {
 
       layoutExtra = `이번 주 7일 상세:\n${weekDateDetails.join(' / ')}\n주 범위: ${rangeStr}\n`;
 
-      layoutRules = `[CRITICAL — THIS IS A WEEKLY SCHEDULE, NOT A MONTHLY CALENDAR]
-⚠️ DO NOT draw a full 30-day monthly calendar! You must show ONLY 7 days (ONE week) in a SINGLE horizontal row!
-⚠️ If you draw 5 rows of 7 cells = monthly grid, you have FAILED the task.
+      layoutRules = `[CRITICAL — WEEKLY SCHEDULE POSTER]
+⚠️ DO NOT draw a full 30-day monthly calendar grid!
+This shows ONLY 7 days (one week) in a horizontal row.
 
-LAYOUT:
-TOP 25%: 제목 "${title}" + "${rangeStr}" 날짜 범위
-CENTER 50%: 7개의 큰 날짜 카드가 가로로 한 줄 배치 (일 월 화 수 목 금 토)
-• 각 카드: 요일 이름(상단) + 큰 날짜 숫자(중앙) + 상태 라벨(하단)
-• 휴진일: 빨간색 배경 + 흰색 숫자 + "휴진" 라벨
-• 단축진료: 주황색 배경 + "단축" 라벨
-• 정상진료: 흰색/밝은 배경
-• 토요일: 파란 텍스트, 일요일: 빨간 텍스트
-BOTTOM 25%: 안내 문구 + 병원명
+POSTER STRUCTURE:
+TOP 30%: "${title}" 제목 + "${rangeStr}" 날짜 범위.
+선택된 디자인 테마의 장식/배경을 이 영역에 적용 (벚꽃이면 벚꽃, 눈꽃이면 눈꽃 등).
+MIDDLE 10%: 테마에 맞는 장식 요소 (꽃, 눈, 구름, 일러스트 등) — 포스터에 디자인 완성도를 더함.
+CENTER 40%: 7개 날짜 카드가 가로 한 줄로 배치.
+각 카드는 둥근 사각형 (rounded 8px):
+• 상단: 요일 (일/월/화/수/목/금/토)
+• 중앙: 큰 날짜 숫자
+• 하단: 상태 라벨
+색상 규칙:
+• 휴진: 빨간 배경 + 흰 글씨 + "휴진" 라벨
+• 단축: 주황 배경 + "단축" 라벨
+• 정상: 흰색/밝은 배경
+• 일요일: 빨간 텍스트, 토요일: 파란 텍스트
+BOTTOM 20%: 안내 문구 + 병원명
+
+${weekDateDetails.join(' / ')}
 
 ⛔ ABSOLUTE RULES:
-- ONLY 1 row of 7 cells. NOT 5 rows. NOT a monthly grid.
-- DO NOT show dates from other weeks.
+- ONLY 1 row of 7 cards. NOT 5 rows.
+- DO NOT show dates outside this week.
+- If you draw a full monthly calendar, you have FAILED.
 - ⛔ No fake clinic hours, phone numbers, addresses
 - ⛔ No "2026년" — use "${schMonth}월" only
 - ⛔ No font size specs visible in image`;
@@ -468,22 +477,37 @@ BOTTOM 25%: 안내 문구 + 병원명
       const circleCount = highlightItems.length || 1;
       const circleSize = circleCount <= 2 ? '매우 큰 원(직경 150px+)' : '큰 원(직경 100px+)';
 
-      layoutRules = `[CRITICAL — THIS IS A DATE HIGHLIGHT POSTER, NOT A CALENDAR]
-⚠️ DO NOT draw a monthly calendar grid! Show ONLY the highlighted dates as large visual elements!
-⚠️ If you draw a 7-column calendar table, you have FAILED the task.
+      // 날짜 설명 생성
+      const markedDatesDesc = highlightItems.length > 0
+        ? highlightItems.map(item => `• ${item}`).join('\n')
+        : '• 마킹된 날짜 없음';
 
-LAYOUT:
-TOP 30%: 제목 "${title}" 크게 + "${schMonth}월" + 병원명
-CENTER 45%: 마킹된 날짜만 ${circleSize}로 중앙 표시
-• 휴진일: 큰 빨간 원 안에 흰색 날짜 숫자 + 아래에 "휴진" 라벨
-• 단축진료: 큰 주황색 원 + "단축" 라벨
-• 휴가: 큰 보라색 원 + "휴가" 라벨
-• 여러 날이면 가로로 나열
-BOTTOM 25%: 안내 문구
+      layoutRules = `[CRITICAL — HIGHLIGHT DATE POSTER]
+⚠️ DO NOT draw a full 30-day monthly calendar grid!
+This is a DATE HIGHLIGHT poster — show only the specific marked dates prominently.
+
+POSTER STRUCTURE:
+TOP 35%: "${title}" 제목을 크고 굵게 표시.
+선택된 디자인 테마의 장식 요소를 적용 (벚꽃이면 벚꽃, 눈꽃이면 눈꽃 등).
+테마의 배경색/분위기를 전체 포스터에 적용.
+MIDDLE 30%: 테마에 맞는 장식 일러스트 영역.
+의료 관련 일러스트(청진기, 병원 건물, 의사 캐릭터) 또는
+테마 장식(꽃, 눈, 단풍 등)이 이 영역을 채움.
+이 영역이 비어있으면 안 됨 — 디자인의 핵심.
+BOTTOM 35%: 날짜 강조 카드 영역.
+흰색 또는 밝은 배경의 둥근 카드(rounded 16px) 안에:
+${markedDatesDesc}
+날짜 표시 방식:
+• 휴진: 상단에 "휴진" 빨간 배지 → 큰 날짜 숫자 (bold) → 아래에 요일
+• 단축: 주황 배지 + 날짜
+• 카드 상단에 빨간/주황 색띠 (헤더 스트라이프)
 
 ⛔ ABSOLUTE RULES:
-- DO NOT draw a 7-column calendar grid
-- DO NOT show all 30 days — ONLY show the marked dates as large circles/cards
+- DO NOT draw a 7-column × 5-row calendar grid.
+- DO NOT show all 30/31 days.
+- ONLY show the marked dates in the bottom card.
+- The middle area MUST have visual content (illustration/decoration), NOT be empty.
+- If you draw a full monthly calendar, you have FAILED.
 - ⛔ No fake clinic hours, phone numbers, addresses
 - ⛔ No "2026년" — use "${schMonth}월" only
 - ⛔ No font size specs visible in image`;
@@ -500,8 +524,10 @@ BOTTOM 25%: 안내 문구
     }
 
     const posterType = schLayout === 'week' ? 'weekly schedule' : schLayout === 'highlight' ? 'schedule highlight' : 'monthly schedule';
+    const hospitalLine = hospitalName.trim() ? `병원명: "${hospitalName}"` : '';
     let p = `Korean hospital ${schMonth}월 ${posterType} poster — PREMIUM DESIGN.
 제목: "${title}"
+${hospitalLine}
 
 ${layoutRules}
 
@@ -546,7 +572,7 @@ ${layoutExtra}`;
     if (customMessage) p += `\n추가 문구: "${customMessage}"`;
     if (extraPrompt) p += `\n${extraPrompt}`;
     return p;
-  }, [schYear, schMonth, schTitle, schLayout, dayMarks, shortenedHours, vacationReasons, schNotices, customMessage, extraPrompt, calendarTheme]);
+  }, [schYear, schMonth, schTitle, schLayout, dayMarks, shortenedHours, vacationReasons, schNotices, customMessage, extraPrompt, calendarTheme, hospitalName]);
 
   const buildEventPrompt = useCallback((): string => {
     const title = evTitle || '이벤트';
