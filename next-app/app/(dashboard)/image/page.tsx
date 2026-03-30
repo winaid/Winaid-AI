@@ -222,7 +222,7 @@ export default function ImagePage() {
   const [pricingNotice, setPricingNotice] = useState('상기 금액은 부가세 포함 금액이며, 환자 상태에 따라 달라질 수 있습니다.');
 
   // ── 공통 템플릿 옵션 (OLD parity) ──
-  const [templateAppMode, setTemplateAppMode] = useState<'strict' | 'inspired'>('inspired');
+  const [templateAppMode, setTemplateAppMode] = useState<'strict' | 'inspired'>('strict');
 
   // ── AI_STYLE_PRESETS (OLD parity — 12개 내장 스타일) ──
   interface StylePreset { id: string; name: string; color: string; accent: string; bg: string; desc: string; mood: string; aiPrompt: string; }
