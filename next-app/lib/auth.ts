@@ -1,11 +1,28 @@
 import { getSupabaseClient } from './supabase';
 
-/** 이름 + 팀ID → 내부용 이메일 생성 (기존 Vite 앱과 동일한 로직) */
-export const nameTeamToEmail = (name: string, teamId: number): string => {
-  const hexName = Array.from(name.trim())
+/** 이름 + 팀ID → 내부용 이메일 생성 (기존 호환 + 신규 방식) */
+const nameToOldHex = (name: string): string =>
+  Array.from(name.trim())
     .map(c => c.charCodeAt(0).toString(16).toUpperCase().padStart(4, '0'))
     .join('');
-  return `t${teamId}_${hexName}@winaid.kr`;
+
+const nameToShortHash = (name: string): string => {
+  const trimmed = name.trim().toLowerCase();
+  let hash = 0;
+  for (let i = 0; i < trimmed.length; i++) {
+    hash = ((hash << 5) - hash + trimmed.charCodeAt(i)) | 0;
+  }
+  return Math.abs(hash).toString(36);
+};
+
+export const nameTeamToEmail = (name: string, teamId: number): string => {
+  const safeName = nameToShortHash(name.trim());
+  return `t${teamId}_${safeName}@winaid.kr`;
+};
+
+/** 기존 hex 방식 이메일 (하위 호환용) */
+export const nameTeamToOldEmail = (name: string, teamId: number): string => {
+  return `t${teamId}_${nameToOldHex(name)}@winaid.kr`;
 };
 
 /** 팀 내부 로그인 */
@@ -16,10 +33,22 @@ export const signInWithTeam = async (
 ) => {
   const supabase = getSupabaseClient();
   const email = nameTeamToEmail(displayName, teamId);
-  const { data, error } = await supabase.auth.signInWithPassword({
+  let { data, error } = await supabase.auth.signInWithPassword({
     email,
     password,
   });
+
+  // 새 방식 실패 → 기존 hex 방식으로 재시도 (하위 호환)
+  if (error) {
+    const oldEmail = nameTeamToOldEmail(displayName, teamId);
+    if (oldEmail !== email) {
+      const retry = await supabase.auth.signInWithPassword({ email: oldEmail, password });
+      if (!retry.error) {
+        data = retry.data;
+        error = null;
+      }
+    }
+  }
 
   // 로그인 성공 시 profiles 자동 생성 (기존 유저 호환)
   if (data.user && !error) {
