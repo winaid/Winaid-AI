@@ -1097,7 +1097,14 @@ Korean hospital Lunar New Year greeting poster — BOKJUMONI GOLD style.
 VISUAL STRUCTURE:
 BACKGROUND: Festive red (#dc2626) to darker red (#991b1b) gradient. Subtle traditional cloud patterns at 8-10% opacity.
 
-MAIN ILLUSTRATION (center 40%): LARGE Korean bokjumoni (lucky pouch) illustration. Traditional silk fabric in red/pink/gold, golden drawstring cord, gold embroidered pattern. Surrounding: scattered gold coins, ingots, golden sparkle accents. Semi-realistic, premium quality.
+MAIN ILLUSTRATION (center 40%): LARGE Korean 복주머니 (bokjumoni) illustration — must be clearly KOREAN traditional style, NOT Chinese:
+- Small rounded silk pouch shape (NOT a Chinese red envelope)
+- Colorful Korean silk fabric in vibrant red, pink, or multi-colored saekdong style
+- Korean-style knotting cord (매듭) tied at top with decorative tassel
+- Korean traditional embroidery patterns (flowers or 복 character)
+- Surrounding: small Korean traditional coins (엽전), golden sparkles
+- Style: warm, charming, semi-realistic Korean folk art quality
+⛔ Do NOT draw Chinese red envelopes, Chinese lanterns, or Chinese New Year imagery.
 
 TEXT AREA (below illustration 35%): Greeting in bold gold (#d4a853) text. Thin gold decorative line. Hospital name in light gold/cream.
 

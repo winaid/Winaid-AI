@@ -997,6 +997,11 @@ The DESIGN must be VISUALLY IDENTICAL to the reference image.`;
     }
 
     try {
+      // 병원명이 비어있으면 프롬프트에 병원명 비표시 지시 추가
+      if (!hospitalName.trim()) {
+        effectivePrompt += `\n\n⛔ 병원명이 입력되지 않았습니다. 이미지에 "병원명", "OO병원", "OO치과" 같은 placeholder 병원명을 절대 표시하지 마세요. 병원명 자리를 완전히 비워두세요.`;
+      }
+
       const res = await fetch('/api/image', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
