@@ -33,8 +33,13 @@ export function useAuthGuard(): AuthGuardResult {
         if (!mounted) return;
         if (session?.user) {
           setUser(session.user);
+        } else {
+          // 세션 없으면 로그인 페이지로 리다이렉트
+          if (typeof window !== 'undefined') {
+            window.location.href = '/auth';
+            return;
+          }
         }
-        // 세션 없어도 guest로 진입 (리다이렉트 안 함)
       } catch {
         // Supabase 오류 시에도 guest로 진입
       } finally {
