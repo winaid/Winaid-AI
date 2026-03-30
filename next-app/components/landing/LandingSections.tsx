@@ -561,7 +561,7 @@ function LandingSections() {
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <a
-              href="/app"
+              href="/auth"
               className="group px-14 py-6 bg-white text-blue-700 font-black text-lg rounded-2xl hover:bg-blue-50 transition-all duration-300 shadow-2xl shadow-blue-500/10 hover:-translate-y-1 ring-4 ring-white/20"
             >
               {CTA.primaryButton}
