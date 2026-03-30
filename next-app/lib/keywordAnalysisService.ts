@@ -196,31 +196,23 @@ ${existingBlogTitles.map(t => `- ${t}`).join('\n')}
 `
     : '';
 
-  const prompt = `당신은 네이버 블로그 SEO 키워드 전문가입니다.
-
-아래 병원의 주소를 기반으로, 반경 ${radius}km 이내에서 실제 사람들이 네이버에 검색할 법한 지역+진료 키워드를 생성해주세요.
+  const prompt = `당신은 네이버 검색어 전문가입니다.
+아래 병원 정보로 네이버 자동완성에 입력할 "씨앗 키워드"를 만드세요.
 
 병원명: ${hospitalName}
 주소: ${address}
 진료과: ${category || '치과'}
-탐색 반경: ${radius}km (${radius === 3 ? '수도권 - 인근 주요 지역까지 포함' : '지방 - 넓은 범위로 주변 지역 포함'})
 ${existingBlock}${buildClinicContextBlock(clinicCtx)}
 규칙:
-1. 주소에서 동/구/읍/면 추출
-2. 반경 ${radius}km 이내 주요 지하철역 이름 포함
-3. 인근 유명 동네/지역명 포함
-4. 다양한 치과 관련 키워드를 포함:
-   - 시술: 임플란트, 치아교정, 라미네이트, 치아미백, 스케일링, 충치치료, 신경치료, 사랑니발치, 틀니, 브릿지, 크라운, 레진, 인레이
-   - 증상: 치통, 잇몸출혈, 잇몸염증, 이갈이, 턱관절, 시린이, 충치, 풍치
-   - 대상: 소아치과, 어린이치과
-   - 기타: 치과 추천, 치과 잘하는곳, 야간진료 치과, 주말진료 치과
-5. 키워드 조합: "{지역} {시술/증상/기타}", "{역명} {시술/증상/기타}" 등
-6. 병원명은 포함하지 않는다
-7. "비용", "가격" 관련 키워드는 절대 포함하지 않는다
-8. 실제 네이버에서 검색량이 있을 법한 키워드만
-9. 정확히 15개 생성
+1. 반드시 2~3단어 이내 (예: "백석동 치과", "일산 임플란트")
+2. 실제 사람들이 네이버 검색창에 타이핑하기 시작하는 단어 조합
+3. "{지역} {진료과}" + "{지역} {시술}" + "{지역} {증상}" 조합 위주
+4. 절대 4단어 이상 금지 (예: "백석동 소아 치과 치아 불소 도포 주기" ← 이런 거 금지)
+5. 병원명은 포함하지 않는다
+6. "비용", "가격" 관련 키워드는 제외
+7. 10개 생성
 
-JSON 배열로만 응답하세요:
+JSON 배열로만 응답:
 ["키워드1", "키워드2", ...]`;
 
   try {
@@ -229,7 +221,7 @@ JSON 배열로만 응답하세요:
     if (!jsonMatch) return fallbackKeywordGeneration(address, category);
     const parsed = JSON.parse(jsonMatch[0]);
     if (Array.isArray(parsed)) {
-      return parsed.filter((k: unknown) => typeof k === 'string' && (k as string).trim()).slice(0, 15);
+      return parsed.filter((k: unknown) => typeof k === 'string' && (k as string).trim() && (k as string).split(/\s+/).length <= 4).slice(0, 10);
     }
     return fallbackKeywordGeneration(address, category);
   } catch {
@@ -412,12 +404,36 @@ export async function analyzeHospitalKeywords(
     onProgress?.('근처 지역 키워드 생성 중...');
   }
 
-  // Step 1: AI 키워드 후보 생성 (기존 글 제목 전달하여 중복 우선순위 낮춤)
-  const candidates = await generateKeywordsWithAI(hospitalName, address, category, existingTitles, clinicCtx);
+  // Step 1: AI 씨앗 키워드 생성 (2~3단어 조합)
+  const seedKeywords = await generateKeywordsWithAI(hospitalName, address, category, existingTitles, clinicCtx);
 
-  if (candidates.length === 0) {
+  if (seedKeywords.length === 0) {
     throw new Error('키워드를 생성할 수 없습니다.');
   }
+
+  // Step 1.5: 네이버 자동완성으로 확장 (실제 검색어 기반)
+  onProgress?.(`${seedKeywords.length}개 씨앗 키워드로 자동완성 확장 중...`);
+  const allSuggestions: string[] = [...seedKeywords];
+  for (let si = 0; si < seedKeywords.length; si++) {
+    try {
+      const suggestRes = await fetch('/api/naver/suggest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: seedKeywords[si] }),
+      });
+      if (suggestRes.ok) {
+        const suggestData = (await suggestRes.json()) as { suggestions?: string[] };
+        const suggestions = (suggestData.suggestions || [])
+          .filter((s: string) => s.split(/\s+/).length <= 4); // 4단어 이하만
+        allSuggestions.push(...suggestions);
+      }
+    } catch { /* 자동완성 실패 시 스킵 */ }
+    if (si < seedKeywords.length - 1) await new Promise(r => setTimeout(r, 100));
+  }
+
+  // 중복 제거 + 최대 100개
+  const candidates = [...new Set(allSuggestions)].slice(0, MAX_KEYWORDS);
+  onProgress?.(`자동완성 확장 완료: ${candidates.length}개 키워드`);
 
   // Step 2: 검색량 + 발행량 조회
   onProgress?.(`${candidates.length}개 키워드 검색량 분석 중...`);
@@ -428,7 +444,8 @@ export async function analyzeHospitalKeywords(
   }
 
   const filteredStats = stats
-    .filter(s => s.monthlySearchVolume >= 1)
+    .filter(s => s.monthlySearchVolume >= 100) // 검색량 100 미만 제거
+    .filter(s => s.keyword.split(/\s+/).length <= 4) // 5단어 이상 롱테일 제거
     .sort((a, b) => b.monthlySearchVolume - a.monthlySearchVolume);
 
   // Step 3: 블루오션 분석
