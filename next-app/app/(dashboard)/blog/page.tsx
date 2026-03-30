@@ -21,8 +21,11 @@ import { BLOG_STAGES, BLOG_MESSAGE_POOL, MSG_ROTATION_INTERVAL } from './blogCon
 import { normalizeBlogStructure } from './normalizeBlog';
 import BlogResultArea from './BlogResultArea';
 import BlogFormPanel from './BlogFormPanel';
+import { useCreditContext } from '../layout';
+import { useCredit as blogUseCredit } from '../../../lib/creditService';
 
 function BlogForm() {
+  const creditCtx = useCreditContext();
   const searchParams = useSearchParams();
 
   // ── 폼 상태 ──
@@ -791,6 +794,16 @@ JSON 형식으로 응답해주세요.`;
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!topic.trim() || isGenerating) return;
+
+    // 크레딧 체크 + 차감
+    if (creditCtx.userId && creditCtx.creditInfo) {
+      const creditResult = await blogUseCredit(creditCtx.userId);
+      if (!creditResult.success) {
+        setError(creditResult.error === 'no_credits' ? '크레딧이 모두 소진되었습니다.' : '크레딧 차감에 실패했습니다.');
+        return;
+      }
+      creditCtx.setCreditInfo({ credits: creditResult.remaining, totalUsed: (creditCtx.creditInfo.totalUsed || 0) + 1 });
+    }
 
     const request: GenerationRequest = {
       category,

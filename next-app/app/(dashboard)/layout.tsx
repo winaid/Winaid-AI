@@ -1,9 +1,19 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, createContext, useContext } from 'react';
 import { useAuthGuard } from '../../hooks/useAuthGuard';
 import { Sidebar } from '../../components/Sidebar';
 import { MobileHeader } from '../../components/MobileHeader';
+import { getCredits, type CreditInfo } from '../../lib/creditService';
+
+// 크레딧 Context
+interface CreditContextType {
+  creditInfo: CreditInfo | null;
+  userId: string | null;
+  setCreditInfo: (info: CreditInfo | null) => void;
+}
+const CreditContext = createContext<CreditContextType>({ creditInfo: null, userId: null, setCreditInfo: () => {} });
+export const useCreditContext = () => useContext(CreditContext);
 
 export default function AppLayout({
   children,
@@ -13,6 +23,16 @@ export default function AppLayout({
   const { user, userEmail, loading, isGuest, handleLogout } = useAuthGuard();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [creditInfo, setCreditInfo] = useState<CreditInfo | null>(null);
+
+  // 크레딧 조회
+  useEffect(() => {
+    if (user?.id) {
+      getCredits(user.id).then(info => {
+        if (info) setCreditInfo(info);
+      });
+    }
+  }, [user?.id]);
 
   if (loading) {
     return (
@@ -26,26 +46,29 @@ export default function AppLayout({
   }
 
   return (
-    <div className="min-h-screen bg-[#f7f7f8] flex">
-      <Sidebar
-        collapsed={sidebarCollapsed}
-        onToggleCollapse={() => setSidebarCollapsed(v => !v)}
-        isLoggedIn={!isGuest}
-        userEmail={isGuest ? 'Guest' : userEmail}
-        onLogout={handleLogout}
-      />
-      <div className="flex-1 flex flex-col min-w-0">
-        <MobileHeader
+    <CreditContext.Provider value={{ creditInfo, userId: user?.id || null, setCreditInfo }}>
+      <div className="min-h-screen bg-[#f7f7f8] flex">
+        <Sidebar
+          collapsed={sidebarCollapsed}
+          onToggleCollapse={() => setSidebarCollapsed(v => !v)}
           isLoggedIn={!isGuest}
           userEmail={isGuest ? 'Guest' : userEmail}
-          showUserMenu={showUserMenu}
-          onToggleUserMenu={() => setShowUserMenu(v => !v)}
           onLogout={handleLogout}
+          credits={creditInfo?.credits ?? null}
         />
-        <main className="flex-1">
-          {children}
-        </main>
+        <div className="flex-1 flex flex-col min-w-0">
+          <MobileHeader
+            isLoggedIn={!isGuest}
+            userEmail={isGuest ? 'Guest' : userEmail}
+            showUserMenu={showUserMenu}
+            onToggleUserMenu={() => setShowUserMenu(v => !v)}
+            onLogout={handleLogout}
+          />
+          <main className="flex-1">
+            {children}
+          </main>
+        </div>
       </div>
-    </div>
+    </CreditContext.Provider>
   );
 }

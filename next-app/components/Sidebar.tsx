@@ -12,6 +12,7 @@ interface SidebarProps {
   isLoggedIn: boolean;
   userEmail?: string;
   onLogout: () => void;
+  credits?: number | null;
 }
 
 const contentItems: { id: ContentTab; label: string; icon: string; href: string }[] = [
@@ -37,6 +38,7 @@ export function Sidebar({
   isLoggedIn,
   userEmail,
   onLogout,
+  credits,
 }: SidebarProps) {
   const pathname = usePathname();
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -112,6 +114,21 @@ export function Sidebar({
 
       {/* 하단 */}
       <div className="border-t py-3 px-2 space-y-1 border-slate-100">
+        {/* 크레딧 배지 */}
+        {credits !== null && credits !== undefined && (
+          <div className={`flex items-center gap-1.5 rounded-xl transition-all mb-1 ${
+            collapsed ? 'justify-center px-2 py-2' : 'px-3 py-2'
+          } ${credits > 0 ? 'bg-violet-50' : 'bg-red-50'}`}>
+            <span className={credits > 0 ? 'text-violet-500' : 'text-red-500'}>⚡</span>
+            {!collapsed && (
+              <>
+                <span className={`text-xs font-bold ${credits > 0 ? 'text-violet-700' : 'text-red-600'}`}>{credits}</span>
+                <span className={`text-[10px] ${credits > 0 ? 'text-violet-400' : 'text-red-400'}`}>크레딧</span>
+              </>
+            )}
+            {collapsed && <span className={`text-[10px] font-bold ${credits > 0 ? 'text-violet-700' : 'text-red-600'}`}>{credits}</span>}
+          </div>
+        )}
         {isLoggedIn && userEmail ? (
           <div className="relative">
             <button

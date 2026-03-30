@@ -12,6 +12,8 @@ import { PromptChat } from '../../../components/PromptChat';
 import type { CategoryTemplate } from '../../../lib/categoryTemplateTypes';
 import { TemplateSVGPreview } from '../../../components/TemplatePreviews';
 import { CalendarThemePreview, ThemePreview } from '../../../components/CalendarPreviews';
+import { useCreditContext } from '../layout';
+import { useCredit } from '../../../lib/creditService';
 
 type AspectRatio = '1:1' | '16:9' | '3:4' | '9:16' | 'auto';
 type DayMark = 'closed' | 'shortened' | 'vacation';
@@ -42,6 +44,7 @@ const TEMPLATE_CATEGORIES = [
 const inputCls = 'w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm outline-none focus:border-emerald-400 focus:bg-white focus:ring-2 focus:ring-emerald-500/10 transition-all placeholder:text-slate-300 placeholder:font-normal';
 
 export default function ImagePage() {
+  const creditCtx = useCreditContext();
   const [mode, setMode] = useState<'template' | 'free'>('template');
   const [prompt, setPrompt] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>('schedule');
@@ -943,6 +946,16 @@ Add subtle professional touches: refined gradients, elegant typography, clean wh
     }
 
     if (!effectivePrompt || generating) return;
+
+    // 크레딧 체크 + 차감
+    if (creditCtx.userId && creditCtx.creditInfo) {
+      const creditResult = await useCredit(creditCtx.userId);
+      if (!creditResult.success) {
+        setError(creditResult.error === 'no_credits' ? '크레딧이 모두 소진되었습니다.' : '크레딧 차감에 실패했습니다.');
+        return;
+      }
+      creditCtx.setCreditInfo({ credits: creditResult.remaining, totalUsed: (creditCtx.creditInfo.totalUsed || 0) + 1 });
+    }
 
     setGenerating(true);
     setError(null);
