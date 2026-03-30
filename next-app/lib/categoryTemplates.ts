@@ -1195,188 +1195,150 @@ Mobile readability: greeting, body.`,
  ],
 
  // ─── 명절 인사: 추석 (6개) ───
- greeting_추석: [
- {
- id: 'grt_chsk_fullmoon', name: '보름달 전통', color: '#f59e0b', accent: '#d97706', bg: '#fffbeb',
- desc: '보름달·벼이삭·감 격식 있는 한가위 전통 인사장',
- layoutHint: 'traditional',
- aiPrompt: `[추석 — 전통/격식]
-=== STRICT MODE ANCHORS (반드시 유지) ===
-• 4-ZONE 수직 레이아웃 비율: 상단 35% → 중앙 25% → 인사말 25% → 푸터 15%
-• 네이비+골드 팔레트: #1a1a2e, #d4a017, #fbbf24
-• 보름달(滿月) 메인 비주얼 필수
-• 인사말 텍스트 반드시 포함: "풍성한 한가위 보내세요"
-• 병원/의원 로고·명칭 표시 영역 확보
-• 휴진 기간 안내 영역 확보
+  greeting_추석: [
+    {
+      id: "grt_chsk_moonrabbit", name: "보름달 토끼", color: "#1e3a5f", accent: "#eab308", bg: "#1e3a5f",
+      desc: "큰 보름달 + 토끼 실루엣 + 밤하늘 — 서정적인 추석", layoutHint: "moonrabbit",
+      aiPrompt: `[CRITICAL — THIS IS A PREMIUM CHUSEOK GREETING POSTER]
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. Leave areas blank or use only user-provided text.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- ONLY use text the user explicitly provided.
 
-=== INSPIRED MODE FREEDOM (변형 가능) ===
-• 달토끼 실루엣 투명도·크기 자유
-• 벼이삭·감·밤 배치 구성 자유
-• 팔각문/사각문 등 전통 문양 선택 자유
+Korean hospital Chuseok greeting poster — FULL MOON & RABBIT style.
 
-=== ZONE 구성 ===
-ZONE 1 — 보름달 (top 35%): 중앙에 거대한 보름달 — 연금(#fde68a) → 따뜻한 흰색 그라디언트 원, 앰버(#f59e0b 30%) 외곽 글로우. 달 안에 달토끼(절구 찧는 모습) 실루엣 15% 불투명도. 달 가장자리에 따뜻한 금빛 구름 띠(#d4a017 15%).
+BACKGROUND: Deep navy-blue (#1e3a5f) night sky. Scattered tiny stars at 10% opacity.
 
-ZONE 2 — 풍요 프레임 (middle 25%): 좌우 대칭 — 금색 벼이삭(#d4a017) 곡선으로 안쪽 향함. 중앙에 감(#ea580c) 2~3개 + 밤(#92400e) 2개. 빨강·금 매듭 장식 악센트.
+FULL MOON (center-top 40%): LARGE luminous golden-white (#fef9c3) full moon, diameter 35% of image. Realistic surface detail. Soft golden GLOW outward.
 
-ZONE 3 — 인사말·휴진 안내 (next 25%): "풍성한 한가위 보내세요" — 큰 볼드 금색(#fbbf24) 캘리그래피 한글, 중앙. 금 다이아몬드 장식 디바이더. 2~3줄 추석 인사 부드러운 금(#d4a017 80%). 병원명 밝은 금. 「 」스타일 금 괄호 프레임. 아래에 "휴진 안내: OO월 OO일 ~ OO월 OO일" (금 50%, 작은 크기).
+RABBIT SILHOUETTE: Charming rabbit on/near the moon — pounding rice cake with mortar and pestle (traditional 달토끼). Small, elegant silhouette.
 
-ZONE 4 — 푸터 (bottom 15%): 금색 구름문(#d4a017 20%) 하단 흐름. 치아 아이콘(보름달 모티프) 금 외곽선. "2026 추석" 우아한 금 텍스트.
+GROUND (bottom 15%): Dark silhouette of hills and silver grass (억새) swaying.
 
-=== BACKGROUND ===
-딥 네이비(#1a1a2e) → 다크 앰버(#451a03) 그라디언트. 팔각문 5% 불투명도 골드 오버레이. 가을밤 하늘 분위기 — 장엄하고 격조 있는 한가위.`,
- },
- {
- id: 'grt_chsk_songpyeon', name: '송편 일러스트', color: '#22c55e', accent: '#15803d', bg: '#f0fdf4',
- desc: '손그림 송편·과일 수채화풍 따뜻한 추석 인사장',
- layoutHint: 'warm',
- aiPrompt: `[추석 — 따뜻한/손그림]
-=== STRICT MODE ANCHORS (반드시 유지) ===
-• 4-ZONE 수직 레이아웃 비율: 상단 18% → 중앙 45% → 인사말 22% → 푸터 15%
-• 수채화/손그림 일러스트 스타일 유지
-• 송편 일러스트 메인 비주얼 필수
-• 인사말 텍스트 반드시 포함: "건강한 한가위 되세요"
-• 병원/의원 로고·명칭 표시 영역 확보
-• 휴진 기간 안내 영역 확보
+TEXT (bottom 35%): Greeting in warm gold (#eab308). Thin gold line. Hospital name in light gold if provided.
 
-=== INSPIRED MODE FREEDOM (변형 가능) ===
-• 송편 색상·개수(8~12개) 자유
-• 과일 종류(배, 감, 대추, 밤) 구성 자유
-• 소반/접시 디자인 자유
+THE LARGE MOON AND RABBIT SILHOUETTE ARE MANDATORY.
 
-=== ZONE 구성 ===
-ZONE 1 — 상단 헤더 (top 18%): "즐거운 추석 보내세요" — 큰 볼드 진녹(#15803d) 손글씨풍. 좌우 솔가지(#22c55e) 일러스트. 병원명 짙은 녹색(#166534). 점선 녹색 구분선.
+STRICT ANCHORS: Dark night sky, large glowing moon, rabbit silhouette, silver grass, warm gold text, serene autumn night.`,
+    },
+    {
+      id: "grt_chsk_songpyeon", name: "송편", color: "#15803d", accent: "#16a34a", bg: "#f0fdf4",
+      desc: "예쁜 송편 일러스트 + 솔잎 + 따뜻한 톤 — 정감 있는 추석", layoutHint: "songpyeon",
+      aiPrompt: `[CRITICAL — THIS IS A PREMIUM CHUSEOK GREETING POSTER]
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. Leave areas blank or use only user-provided text.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- ONLY use text the user explicitly provided.
 
-ZONE 2 — 메인 일러스트 (middle 45%): 둥근 나무 소반 위 솔잎 깔고 송편 8~10개 — 흰색, 연분홍(#fda4af), 연녹(#86efac), 연노랑(#fde68a) 반달형. 한 개는 깨/팥 소 단면. 주변에 배(좌), 감(#ea580c 우), 대추·밤. 갓 찐 송편 수증기. 수채화 번짐 효과.
+Korean hospital Chuseok greeting poster — SONGPYEON style.
 
-ZONE 3 — 인사말·휴진 안내 (next 22%): 연녹 테두리(#86efac, 1.5px) 라운드 카드, 흰색 92%, border-radius 14px. 안: ① 추석 인사 (진녹 #14532d, line-height 1.7) ② "건강한 한가위 되세요" 볼드 녹색(#15803d) ③ "휴진 안내: OO월 OO일 ~ OO월 OO일" (회색 #78716c, 작은 크기). 송편 아이콘 불릿.
+BACKGROUND: Warm cream (#fefce8) to soft sage (#f0fdf4) gradient. Subtle hanji texture at 3%.
 
-ZONE 4 — 푸터 (bottom 15%): 작은 치아 캐릭터(앞치마, 송편 들고 있는 포즈) 녹색(#15803d) 선 드로잉. "2026" 및 병원 정보 진녹 텍스트.
+MAIN ILLUSTRATION (center 40%): Beautiful arrangement of Korean songpyeon (half-moon rice cakes). 5-7 in pastel colors — white, light pink, light green, light yellow. Traditional half-moon shape with crimped edges. Surrounding: pine needles (솔잎) in dark green. Semi-realistic watercolor style, NOT flat clip art.
 
-=== BACKGROUND ===
-세이지그린-크림 그라디언트(#f0fdf4 → #fefce8). 수채화 워시 12% 불투명도. 솔잎 패턴 5% 대각선. 포근한 가족 모임 초대 느낌.`,
- },
- {
- id: 'grt_chsk_modern', name: '모던 한가위', color: '#6366f1', accent: '#4f46e5', bg: '#eef2ff',
- desc: '기하학적 보름달·토끼 울트라클린 추석 카드',
- layoutHint: 'minimal',
- aiPrompt: `[추석 — 미니멀/타이포]
-=== STRICT MODE ANCHORS (반드시 유지) ===
-• 4-ZONE 수직 레이아웃 비율: 상단 15% → 중앙 40% → 타이포 30% → 푸터 15%
-• 인디고+실버그레이 2색 한정 — 따뜻한 색 절대 금지
-• 최대 여백 원칙
-• 인사말 텍스트 반드시 포함: "풍성한 한가위 보내세요"
-• 병원/의원 로고·명칭 표시 영역 확보
-• 휴진 기간 안내 영역 확보
+TEXT (below illustration 35%): Greeting in dark forest green (#14532d) bold. Thin emerald (#10b981) line. Hospital name in warm brown if provided.
 
-=== INSPIRED MODE FREEDOM (변형 가능) ===
-• 토끼 실루엣 포즈(앉기/서기) 자유
-• 단풍잎 위치·크기 자유
-• 원(보름달) 선 두께(1~3px) 자유
+THE SONGPYEON WITH PINE NEEDLES IS MANDATORY.
 
-=== ZONE 구성 ===
-ZONE 1 — 상단 헤더 (top 15%): 병원명 인디고(#4f46e5) 산세리프, 좌측 10%. 인디고(#6366f1) 가로선 80% 폭. "추석" 라벨 우측 정렬 작은 인디고.
+STRICT ANCHORS: Warm cream, colorful songpyeon, pine needles, forest green text, warm homey atmosphere.`,
+    },
+    {
+      id: "grt_chsk_autumn_leaves", name: "가을 단풍", color: "#c2410c", accent: "#ea580c", bg: "#fff7ed",
+      desc: "수채화 단풍잎 프레임 + 따뜻한 가을 — 가을빛 추석", layoutHint: "autumnleaves",
+      aiPrompt: `[CRITICAL — THIS IS A PREMIUM CHUSEOK GREETING POSTER]
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. Leave areas blank or use only user-provided text.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- ONLY use text the user explicitly provided.
 
-ZONE 2 — 메인 비주얼 (middle 40%): 큰 원(보름달) — 인디고(#6366f1, 2px) 외곽선만, 채움 없음. 원 안 하단 1/3에 토끼 실루엣(#4f46e5) 미니멀 기하학. 토끼 아래 절구 선화. 원 바깥 우하에 단풍잎 하나(#a5b4fc 40%). 극대화된 여백.
+Korean hospital Chuseok greeting poster — AUTUMN LEAVES FRAME style.
 
-ZONE 3 — 타이포·휴진 안내 (next 30%): "풍성한 한가위 보내세요" — 큰 볼드 인디고(#4f46e5) 산세리프, letter-spacing 0.05em. 2줄 인사말 회색(#64748b). "2026 추석" 실버(#a5b4fc). 아래 "휴진 안내: OO월 OO일 ~ OO월 OO일" (회색 #94a3b8, 작은 크기).
+BACKGROUND: Warm cream (#fff7ed).
 
-ZONE 4 — 푸터 (bottom 15%): 기하학 치아 아이콘 인디고 외곽선, 중앙. 병원 연락처 회색(#94a3b8). 인디고 가로선.
+AUTUMN LEAF FRAME: Lush WATERCOLOR autumn leaves at TOP-LEFT and BOTTOM-RIGHT corners, reaching 25-30% into image. Colors: fiery red (#dc2626), burnt orange (#ea580c), golden yellow (#eab308), warm brown (#92400e). WATERCOLOR technique — visible brush strokes, color bleeding. Mixed with small branches and berries.
 
-=== BACKGROUND ===
-깨끗한 오프화이트(#eef2ff). 희미한 기하 그리드(#6366f1 4%). 스위스 미니멀리즘 — 세련되고 지적인 의료 브랜드 추석 카드.`,
- },
- {
- id: 'grt_chsk_rabbit', name: '토끼 캐릭터', color: '#ec4899', accent: '#be185d', bg: '#fdf2f8',
- desc: '달토끼·치아 캐릭터 떡 찧기 귀여운 추석 카드',
- layoutHint: 'cute',
- aiPrompt: `[추석 — 귀여운/캐릭터]
-=== STRICT MODE ANCHORS (반드시 유지) ===
-• 4-ZONE 수직 레이아웃 비율: 상단 15% → 중앙 45% → 인사말 25% → 푸터 15%
-• 핑크-라벤더-골드 파스텔 팔레트
-• 달토끼 캐릭터 + 치아 캐릭터 반드시 포함
-• 인사말 텍스트 반드시 포함: "즐거운 한가위!"
-• 병원/의원 로고·명칭 표시 영역 확보
-• 휴진 기간 안내 영역 확보
+CENTER (50%): Greeting in bold warm brown (#78350f). Thin orange (#ea580c) line. Hospital name in brown if provided.
 
-=== INSPIRED MODE FREEDOM (변형 가능) ===
-• 토끼 의상(한복 색상) 변형 가능
-• 떠다니는 낙엽 수·색상 자유
-• 캐릭터 표정·포즈 자유
+THE WATERCOLOR AUTUMN LEAF FRAME IS MANDATORY.
 
-=== ZONE 구성 ===
-ZONE 1 — 상단 헤더 (top 15%): "즐거운 한가위!" — 큰 볼드 핫핑크(#ec4899) 둥근 한글, 핑크 텍스트 쉐도우. 좌우 금색 초승달·별. 병원명 딥핑크(#be185d).
+STRICT ANCHORS: Warm cream, watercolor autumn leaf corners (red/orange/yellow), warm brown text, cozy autumn mood.`,
+    },
+    {
+      id: "grt_chsk_harvest", name: "전통 풍요", color: "#92400e", accent: "#d97706", bg: "#fffbeb",
+      desc: "전통 문양 + 감/과일/곡식 일러스트 — 풍요로운 추석", layoutHint: "harvest",
+      aiPrompt: `[CRITICAL — THIS IS A PREMIUM CHUSEOK GREETING POSTER]
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. Leave areas blank or use only user-provided text.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- ONLY use text the user explicitly provided.
 
-ZONE 2 — 메인 일러스트 (middle 45%): 연노랑(#fef3c7) 보름달 원 배경 중앙. 달 위에 달토끼 캐릭터 — 큰 눈, 핑크 귀속(#f9a8d4), 분홍 볼(#fda4af), 파스텔 핑크 한복 저고리 착용, 떡메로 떡 찧는 모습. 떡 조각 위로 튕김. 옆에 치아 캐릭터(흰 둥근 사각형, 점눈, 큰 미소, 핑크 리본) — 라벤더 한복 치마, 부채 들고 있음. 주변에 단풍잎(빨강 #ef4444), 은행잎(노랑 #fbbf24), 파스텔 송편 떠다님.
+Korean hospital Chuseok greeting poster — HARVEST ABUNDANCE style.
 
-ZONE 3 — 인사말·휴진 안내 (next 25%): 핑크 테두리(#f9a8d4, 2px) 알약형 카드, 흰색 95%, border-radius 24px. 안: ① 추석 인사 (딥핑크 #9f1239, 둥근 서체) ② "달토끼와 함께 행복한 추석!" 볼드 핑크(#ec4899) ③ "휴진 안내: OO월 OO일 ~ OO월 OO일" (회색 #78716c). ☽ 아이콘 불릿.
+BACKGROUND: Warm ivory (#fffbeb) with subtle traditional Korean pattern at 4-5% opacity.
 
-ZONE 4 — 푸터 (bottom 15%): 작은 캐릭터 아이콘 가로 반복(토끼, 달, 송편, 단풍잎, 치아) 핑크(#ec4899) 외곽선. "2026 추석" 핑크 텍스트. 병원 정보 로즈(#be185d).
+MAIN ILLUSTRATION (center 40%): Bountiful harvest arrangement — Korean persimmons (감, bright orange), chestnuts (밤 with spiky shells), rice stalks (벼이삭, golden drooping). Watercolor illustration style, warm and rich. Like a traditional offering table display.
 
-=== BACKGROUND ===
-핑크-라벤더 그라디언트(#fdf2f8 → #f3e8ff). 금·핑크 작은 별 20% 불투명도. 상단 따뜻한 핑크 글로우(#fda4af 10%). 가족 친화적 소아/가족 치과 추석 카드.`,
- },
- {
- id: 'grt_chsk_premium', name: '달빛 프리미엄', color: '#d4a017', accent: '#b8860b', bg: '#1a1a2e',
- desc: '네이비·금박 보름달 감나무 프리미엄 추석 인사장',
- layoutHint: 'luxury',
- aiPrompt: `[추석 — 럭셔리/금박]
-=== STRICT MODE ANCHORS (반드시 유지) ===
-• 4-ZONE 수직 레이아웃 비율: 상단 12% → 중앙 40% → 인사말 28% → 푸터 20%
-• 네이비+골드 2색 한정 — 다른 색상 절대 금지
-• 금박 메탈릭 질감 전체 적용
-• 인사말 텍스트 반드시 포함: "풍성한 한가위 보내세요"
-• 병원/의원 로고·명칭 표시 영역 확보
-• 휴진 기간 안내 영역 확보
+DECORATIVE: Traditional Korean corner ornaments (꽃살문양) at four corners at 10% opacity.
 
-=== INSPIRED MODE FREEDOM (변형 가능) ===
-• 감나무 가지 각도·감 개수 자유
-• 제수용 과일 구성 자유
-• 봉황 실루엣 크기·자세 자유
+TEXT (below illustration 30%): Greeting in bold warm brown (#78350f) serif. Thin gold (#d97706) line with diamond. Hospital name if provided.
 
-=== ZONE 구성 ===
-ZONE 1 — 상단 악센트 (top 12%): 좌우 대칭 금박 벼이삭(#d4a017) — 좌우에서 중앙으로 곡선. 이삭 끝 금 도트. 중앙 상단에 달 떠오르는 은은한 금빛 글로우.
+THE HARVEST FRUIT/GRAIN ILLUSTRATION IS MANDATORY.
 
-ZONE 2 — 달빛 센터피스 (middle 40%): 거대한 보름달 — 금 그라디언트(#fbbf24 → #d4a017), 사실적 달 표면 텍스처, 금 할로 효과(#f59e0b 25%). 달 안에 토끼 실루엣(깊은 금 12%). 좌우에 금박 감나무 가지 — 양쪽 감 2개씩(#b8860b). 달 아래 제수 과일(배, 사과, 밤) 금 실루엣.
+STRICT ANCHORS: Ivory with traditional pattern, harvest arrangement (persimmon+chestnut+rice), corner ornaments, warm brown serif, abundant harvest mood.`,
+    },
+    {
+      id: "grt_chsk_cosmos", name: "코스모스 억새", color: "#be185d", accent: "#ec4899", bg: "#fdf2f8",
+      desc: "코스모스 + 억새밭 + 황혼 — 가을 풍경 추석", layoutHint: "cosmos",
+      aiPrompt: `[CRITICAL — THIS IS A PREMIUM CHUSEOK GREETING POSTER]
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. Leave areas blank or use only user-provided text.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- ONLY use text the user explicitly provided.
 
-ZONE 3 — 인사말·휴진 안내 (next 28%): "풍성한 한가위 보내세요" — 큰 우아한 금(#fbbf24) 캘리그래피. 연꽃 모티프 금 디바이더. 2줄 인사말 부드러운 금(#d4a017 70%). 병원명 밝은 금. 「 」금 괄호 프레임. 아래 "휴진 안내: OO월 OO일 ~ OO월 OO일" (연금 #d4a017 50%, 작은 크기).
+Korean hospital Chuseok greeting poster — COSMOS & SILVER GRASS style.
 
-ZONE 4 — 푸터 (bottom 20%): 금박 봉황 2마리 대칭(20% 불투명도) + 방패형 치아 엠블럼(초승달 디테일, #d4a017). "2026 추석" 금 텍스트. 파도문 10% 하단.
+ILLUSTRATION (top 55%): Korean autumn countryside landscape:
+- SKY: Warm sunset gradient — soft pink (#fce7f3) through orange (#fdba74) to golden (#fef9c3).
+- SILVER GRASS (억새): Fluffy white-silver pampas grass backlit by sunset glow.
+- COSMOS FLOWERS (코스모스): Pink (#ec4899), white, light purple cosmos flowers. Natural, wild, growing freely.
+- Stylized watercolor illustration style.
 
-=== BACKGROUND ===
-미드나잇 네이비(#1a1a2e) 전면. 실크 텍스처 6% 불투명도. 금 이중선 장식 테두리 4% 안쪽, 모서리 한국 전통 장식. VIP 프리미엄 추석 카드.`,
- },
- {
- id: 'grt_chsk_autumn', name: '가을 풍경', color: '#ea580c', accent: '#c2410c', bg: '#fff7ed',
- desc: '단풍·황금 들판·초가집 수채화 가을 풍경 인사장',
- layoutHint: 'nature',
- aiPrompt: `[추석 — 자연/풍경]
-=== STRICT MODE ANCHORS (반드시 유지) ===
-• 4-ZONE 수직 레이아웃 비율: 상단 25% → 중앙 35% → 인사말 25% → 푸터 15%
-• 가을 석양 그라디언트 (복숭아 → 앰버 → 번트오렌지)
-• 한국 가을 시골 풍경 필수
-• 인사말 텍스트 반드시 포함: "풍성한 한가위 보내세요"
-• 병원/의원 로고·명칭 표시 영역 확보
-• 휴진 기간 안내 영역 확보
+TEXT (bottom 40%): On warm cream (#fff7ed). Greeting in bold deep rose (#9f1239). Thin pink line. Hospital name if provided.
 
-=== INSPIRED MODE FREEDOM (변형 가능) ===
-• 기러기 V자 편대 수(3~7마리) 자유
-• 초가집/감나무 배치 자유
-• 단풍나무 색조 비율 자유
+THE COSMOS FLOWERS AND SILVER GRASS ARE MANDATORY.
 
-=== ZONE 구성 ===
-ZONE 1 — 하늘·보름달 (top 25%): 복숭아-앰버 석양 하늘. 우상에 보름달(연크림 #fef3c7, 글로우 20%). 기러기 V자 편대(3~5마리) 갈색(#92400e 30%) 실루엣.
+STRICT ANCHORS: Sunset sky, silver grass backlit, cosmos flowers, autumn countryside, warm cream text area, romantic autumn mood.`,
+    },
+    {
+      id: "grt_chsk_gold_moon", name: "골드 보름달", color: "#0f172a", accent: "#d4a853", bg: "#0f172a",
+      desc: "다크 + 골드 큰 달 + 전통 구름 — 럭셔리 추석", layoutHint: "goldmoon",
+      aiPrompt: `[CRITICAL — THIS IS A PREMIUM CHUSEOK GREETING POSTER]
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. Leave areas blank or use only user-provided text.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- ONLY use text the user explicitly provided.
 
-ZONE 2 — 가을 풍경 (middle 35%): 수채화 한국 가을 시골 파노라마 — 빨강(#dc2626)·번트오렌지(#ea580c)·금노랑(#f59e0b) 단풍나무 언덕. 황금 들판 사이 오솔길. 중경에 초가집(볏짚 지붕, 굴뚝 연기). 감나무(밝은 주황 감). 전경 좌우에 클로즈업 단풍 가지 프레이밍. 수채화 번짐 효과.
+Korean hospital Chuseok greeting poster — GOLD FULL MOON LUXURY style.
 
-ZONE 3 — 인사말·휴진 안내 (next 25%): 반투명 따뜻한 흰색 카드(88%, border-radius 14px), 번트오렌지 테두리(#fb923c, 1px). 안: ① "풍성한 한가위 보내세요" 큰 볼드 진갈(#78350f) ② 2~3줄 인사 중갈(#92400e) ③ "건강하고 행복한 추석 되세요" 번트오렌지(#ea580c) 볼드 ④ "휴진 안내: OO월 OO일 ~ OO월 OO일" (갈색 #92400e 60%, 작은 크기). 단풍잎 아이콘 악센트.
+BACKGROUND: Deep dark navy (#0f172a). Traditional Korean cloud patterns (구름문양) in gold (#d4a853) at 6-8% opacity.
 
-ZONE 4 — 푸터 (bottom 15%): 낙엽(단풍·은행) 수채화 40% 불투명도 하단 가장자리. 치아 아이콘(단풍잎 악센트, #ea580c 외곽선). "2026 추석" 갈색(#92400e) 텍스트.
+LARGE GOLD MOON (center-top 35%): HUGE golden moon (#d4a853), diameter 40% of image. Subtle surface texture. Warm golden GLOW (20% opacity, blur 25px). Inside/in front of moon: delicate gold line art — flower branch or flying crane silhouette. Moon is THE dominant visual.
 
-=== BACKGROUND ===
-가을 석양 그라디언트 — 연복숭아(#fff7ed) → 앰버(#fed7aa) → 번트오렌지(#ea580c 20%). 수채화 워시 15% 불투명도. 한국 가을 시골 풍경 — 풍요와 향수.`,
- },
- ],
+GOLD FRAME: Very thin gold line (0.5px) inset 3% with traditional corner ornaments.
+
+TEXT (below moon 40%): Greeting in bold gold with subtle glow. Thin gold line. Hospital name in small gold if provided.
+
+THE GIANT GOLD MOON WITH LINE ART IS MANDATORY.
+
+STRICT ANCHORS: Dark background, gold cloud patterns, giant gold moon with line art, gold glow, gold text, luxurious autumn night.`,
+    },
+  ],
 
  // ─── 명절 인사: 새해 (6개) ───
   greeting_새해: [
