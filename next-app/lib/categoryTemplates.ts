@@ -1041,7 +1041,7 @@ Korean hospital Lunar New Year greeting poster — HANBOK TRADITIONAL style.
 VISUAL STRUCTURE:
 BACKGROUND: Warm cream (#fef7ed) with subtle hanji paper texture at 5% opacity.
 
-MAIN ILLUSTRATION (center-top 45%): Charming illustration of people in traditional Korean hanbok doing sebae (New Year bow). Colorful hanbok — red, blue, gold, green (saekdong colors). Premium greeting card illustration quality. Stylized but clearly showing hanbok and bowing posture.
+MAIN ILLUSTRATION (center-top 45%): Charming illustration of a person or family in traditional Korean hanbok doing sebae (New Year bow) FACING THE VIEWER (정면). They should be bowing TOWARD the viewer, NOT toward each other. One or two figures kneeling and bowing forward with hands on the floor, facing front. Colorful hanbok — red, blue, gold, green (saekdong colors). Premium greeting card illustration quality. ⛔ Do NOT draw two people facing each other and bowing — they must face the CAMERA/VIEWER.
 
 TEXT AREA (center-bottom 35%): Greeting text in bold warm brown (#5c3d1e) serif. Below: thin gold (#c9a96e) decorative line. Hospital name if provided.
 
@@ -1159,7 +1159,7 @@ GOLD FRAME: Thin gold (#d4a853) border (1px) with traditional corner ornaments. 
 INSIDE FRAME:
 - Small gold traditional ornament at center-top
 - Greeting in MASSIVE bold gold (#d4a853) text with slight glow effect (gold at 20% opacity, blur 8px)
-- Year in elegant gold serif
+- "2026" in elegant gold serif below greeting
 - Thin gold line (width 25%)
 - Hospital name in small gold
 
