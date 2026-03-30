@@ -948,23 +948,27 @@ Add subtle professional touches: refined gradients, elegant typography, clean wh
     setError(null);
     setProgress('이미지 생성 중...');
 
-    // schedule strict 모드에서 프리뷰 참조 이미지 로드
-    let scheduleRefImage: string | undefined;
-    if (isScheduleMode && templateAppMode === 'strict') {
-      try {
-        // jpg 먼저, 실패하면 png 시도
-        let refRes = await fetch(`/schedule-previews/${calendarTheme}.jpg`);
-        if (!refRes.ok) refRes = await fetch(`/schedule-previews/${calendarTheme}.png`);
-        if (refRes.ok) {
-          const blob = await refRes.blob();
-          const buf = await blob.arrayBuffer();
-          const b64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
-          const mime = blob.type || 'image/jpeg';
-          scheduleRefImage = `data:${mime};base64,${b64}`;
-          setProgress('참조 이미지 준비 완료, 달력 데이터 준비 중...');
+    // strict("그대로") 모드에서 프리뷰 참조 이미지 로드 (모든 카테고리)
+    let templateRefImage: string | undefined;
+    if (templateAppMode === 'strict') {
+      // 카테고리별 폴더 + 템플릿 ID 결정
+      const refCategory = isScheduleMode ? 'schedule' : (selectedTemplate || 'event');
+      const refId = isScheduleMode ? calendarTheme : (selectedCatTemplate?.id || '');
+      if (refId) {
+        try {
+          let refRes = await fetch(`/${refCategory}-previews/${refId}.jpg`);
+          if (!refRes.ok) refRes = await fetch(`/${refCategory}-previews/${refId}.png`);
+          if (refRes.ok) {
+            const blob = await refRes.blob();
+            const buf = await blob.arrayBuffer();
+            const b64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
+            const mime = blob.type || 'image/jpeg';
+            templateRefImage = `data:${mime};base64,${b64}`;
+            setProgress('참조 이미지 준비 완료...');
+          }
+        } catch {
+          // fetch 실패 → 참조 이미지 없이 기존 방식 사용
         }
-      } catch {
-        // fetch 실패 → 참조 이미지 없이 기존 방식 사용
       }
     }
     setGeneratingStep(0);
@@ -991,18 +995,28 @@ Add subtle professional touches: refined gradients, elegant typography, clean wh
       }
     }
 
-    // schedule strict 모드 + 참조 이미지 있을 때: 프롬프트에 참조 이미지 복제 지시 추가
-    if (scheduleRefImage) {
-      effectivePrompt += `\n\n[REFERENCE IMAGE PROVIDED — STRICT DESIGN REPRODUCTION]
-A reference image is attached. Reproduce the EXACT visual design from this reference:
-- EXACT same background color, gradient, and texture
-- EXACT same decorative elements (flowers, leaves, patterns, frames, illustrations)
-- EXACT same layout structure (header size, calendar position)
-- EXACT same color palette and visual mood
-- EXACT same calendar card shape, border, and shadow style
-⛔ DO NOT copy any text, dates, numbers, or labels from the reference image.
-The reference image is ONLY for visual design. All text content (month, dates, hospital name, markings) must come from the user input above.
-The DESIGN must be VISUALLY IDENTICAL to the reference image.`;
+    // strict("그대로") + 참조 이미지: 프롬프트에 강력한 복제 지시 추가
+    if (templateRefImage) {
+      effectivePrompt += `\n\n[🔒 CRITICAL — REFERENCE IMAGE ATTACHED — CLONE THIS DESIGN]
+A reference image is attached. You MUST create an image that looks ALMOST IDENTICAL to this reference.
+
+MANDATORY CLONE RULES:
+1. SAME background — exact same color, gradient direction, gradient stops, texture
+2. SAME decorative elements — exact same illustrations, patterns, shapes in same positions
+3. SAME layout — exact same proportions (header %, body %, footer %)
+4. SAME color palette — use the exact same colors as the reference
+5. SAME typography style — same font weight, size hierarchy, alignment
+6. SAME card/frame style — same border radius, shadow, opacity
+7. SAME overall mood and atmosphere
+
+The output should be INDISTINGUISHABLE from the reference at a glance.
+A viewer should think "this is the same template, just with different text."
+
+⛔ DO NOT copy text/dates/numbers FROM the reference image.
+Use ONLY the text from the user input above (title, dates, hospital name).
+The reference is for VISUAL DESIGN ONLY.
+
+If the result looks significantly different from the reference, you have FAILED.`;
     }
 
     // 로고 지시문
@@ -1052,8 +1066,8 @@ The DESIGN must be VISUALLY IDENTICAL to the reference image.`;
           brandColors: brandColors || undefined,
           logoBase64: logoEnabled && logoDataUrl ? logoDataUrl : undefined,
           calendarImage: calendarImage || undefined,
-          referenceImage: scheduleRefImage
-            ? scheduleRefImage
+          referenceImage: templateRefImage
+            ? templateRefImage
             : isDoctorMode && docPhotoBase64 ? docPhotoBase64
             : isHiringMode && hiringPhotos.length > 0 ? hiringPhotos[0]
             : selectedUploadedStyle?.referenceImageUrl
