@@ -332,11 +332,14 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
                   />
                   {/* 노출 중 숨기기 토글 (상위권 체크 완료 시만) */}
                   {rankResults.size > 0 && (
-                    <button type="button" onClick={() => setHideRanked(!hideRanked)}
-                      className={`px-2 py-1.5 text-[10px] font-semibold rounded-lg border transition-all whitespace-nowrap ${hideRanked ? 'bg-emerald-50 border-emerald-300 text-emerald-700' : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300'}`}
-                    >
-                      {hideRanked ? '✅ 노출 중 숨김' : '노출 중 포함'}
-                    </button>
+                    <>
+                      <button type="button" onClick={() => setHideRanked(!hideRanked)}
+                        className={`px-2 py-1.5 text-[10px] font-semibold rounded-lg border transition-all whitespace-nowrap ${hideRanked ? 'bg-emerald-50 border-emerald-300 text-emerald-700' : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300'}`}
+                      >
+                        {hideRanked ? '✅ 노출 중 숨김' : '노출 중 포함'}
+                      </button>
+                      <span className="text-[9px] text-slate-400 whitespace-nowrap">※ API 블로그탭 기준</span>
+                    </>
                   )}
                   <div className="flex items-center gap-1.5">
                     <span className="text-[10px] text-slate-400 whitespace-nowrap">최소</span>
@@ -406,8 +409,11 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
                                   {(() => {
                                     const r = rankResults.get(stat.keyword);
                                     if (!r) return <span className="text-slate-300">-</span>;
-                                    if (r.isRanked) return <span className="text-[10px] font-bold text-emerald-600" title={r.matchedTitle || ''}>{r.rank}위 ✅</span>;
-                                    return <span className="text-[10px] text-slate-400">미노출</span>;
+                                    if (r.isRanked && r.rank) {
+                                      const emoji = r.rank <= 5 ? '🟢' : r.rank <= 10 ? '🔵' : '🟡';
+                                      return <span className={`text-[10px] font-bold ${r.rank <= 5 ? 'text-emerald-600' : r.rank <= 10 ? 'text-blue-600' : 'text-amber-600'}`} title={r.matchedTitle || ''}>{emoji} {r.rank}위</span>;
+                                    }
+                                    return <span className="text-[10px] text-slate-400">20위권 밖</span>;
                                   })()}
                                 </td>
                               )}

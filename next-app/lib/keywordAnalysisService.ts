@@ -25,7 +25,7 @@ export interface KeywordAnalysisResult {
 
 export interface KeywordRankResult {
   keyword: string;
-  isRanked: boolean;      // 상위 10에 노출 여부
+  isRanked: boolean;      // 상위 20에 노출 여부
   rank?: number;          // 몇 위인지 (1-based)
   matchedTitle?: string;  // 매칭된 블로그 제목
 }
@@ -35,7 +35,7 @@ export const MAX_KEYWORDS = 100;
 // ── 상위권 체크 ──
 
 /**
- * 키워드별 네이버 블로그 검색 상위 10에 해당 병원 블로그가 있는지 체크
+ * 키워드별 네이버 블로그 검색 상위 20에 해당 병원 블로그가 있는지 체크 (API 블로그탭 기준)
  * blogIds: 병원의 네이버 블로그 ID 목록 (예: ['x577wqy3', 'ekttwj8518'])
  */
 export async function checkKeywordRankings(
@@ -57,7 +57,7 @@ export async function checkKeywordRankings(
           const res = await fetch('/api/naver/search', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ query: keyword, display: 10 }),
+            body: JSON.stringify({ query: keyword, display: 20, type: 'blog' }),
           });
           if (!res.ok) return { keyword, isRanked: false };
 
