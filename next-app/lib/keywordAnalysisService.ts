@@ -38,13 +38,40 @@ export const MAX_KEYWORDS = 100;
  * 키워드별 네이버 블로그 검색 상위 20에 해당 병원 블로그가 있는지 체크 (API 블로그탭 기준)
  * blogIds: 병원의 네이버 블로그 ID 목록 (예: ['x577wqy3', 'ekttwj8518'])
  */
+// 키워드 관련성 검증: 검색된 글 제목이 키워드의 핵심 단어를 포함하는지 확인
+function isKeywordRelevant(keyword: string, title: string): boolean {
+  const keyTerms = keyword.split(/\s+/).filter(t => t.length >= 2);
+  if (keyTerms.length === 0) return true;
+
+  const cleanTitle = title
+    .replace(/<[^>]+>/g, '')
+    .replace(/&[a-z]+;/g, ' ')
+    .replace(/\s+/g, '')
+    .toLowerCase();
+
+  let matchCount = 0;
+  for (const term of keyTerms) {
+    if (cleanTitle.includes(term.replace(/\s+/g, '').toLowerCase())) {
+      matchCount++;
+    }
+  }
+
+  const requiredCount = keyTerms.length <= 2
+    ? keyTerms.length
+    : keyTerms.length - 1;
+
+  return matchCount >= requiredCount;
+}
+
 export async function checkKeywordRankings(
   keywords: string[],
   blogIds: string[],
   onProgress?: (msg: string) => void,
+  hospitalName?: string,
 ): Promise<KeywordRankResult[]> {
   const results: KeywordRankResult[] = [];
   const blogIdSet = new Set(blogIds.map(id => id.toLowerCase()));
+  const hospitalNameNorm = hospitalName?.replace(/\s/g, '').toLowerCase() || '';
 
   // 3개씩 배치 (rate limit 방지)
   for (let i = 0; i < keywords.length; i += 3) {
@@ -57,7 +84,7 @@ export async function checkKeywordRankings(
           const res = await fetch('/api/naver/search', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ query: keyword, display: 20, type: 'blog' }),
+            body: JSON.stringify({ query: keyword, display: 20 }),
           });
           if (!res.ok) return { keyword, isRanked: false };
 
@@ -69,10 +96,16 @@ export async function checkKeywordRankings(
           for (let rank = 0; rank < items.length; rank++) {
             const item = items[rank];
             const link = item.link || '';
-            // 블로그 URL에서 blogId 추출
+            // 블로그 URL에서 blogId 추출 + bloggername 병원명 매칭
             const blogIdMatch = link.match(/blog\.naver\.com\/([^/?#]+)/);
-            if (blogIdMatch && blogIdSet.has(blogIdMatch[1].toLowerCase())) {
-              const cleanTitle = (item.title || '')
+            const bloggerName = (item.bloggername || '').replace(/<[^>]+>/g, '').replace(/\s/g, '').toLowerCase();
+            const isBlogIdMatch = blogIdMatch && blogIdSet.has(blogIdMatch[1].toLowerCase());
+            const isBloggerNameMatch = hospitalNameNorm.length >= 2 && bloggerName.includes(hospitalNameNorm);
+            if (isBlogIdMatch || isBloggerNameMatch) {
+              const rawTitle = item.title || '';
+              // 키워드 관련성 검증: 제목이 검색 키워드의 핵심 단어를 포함해야 매칭
+              if (!isKeywordRelevant(keyword, rawTitle)) continue;
+              const cleanTitle = rawTitle
                 .replace(/<[^>]+>/g, '')
                 .replace(/&[a-z]+;/g, ' ')
                 .trim();

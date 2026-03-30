@@ -338,7 +338,7 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
                       >
                         {hideRanked ? '✅ 노출 중 숨김' : '노출 중 포함'}
                       </button>
-                      <span className="text-[9px] text-slate-400 whitespace-nowrap">※ API 블로그탭 기준</span>
+                      <span className="text-[9px] text-slate-400 whitespace-nowrap">※ 네이버 통합검색 기준. 키워드+제목 일치만 표시</span>
                     </>
                   )}
                   <div className="flex items-center gap-1.5">

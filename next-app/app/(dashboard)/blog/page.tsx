@@ -270,6 +270,7 @@ function BlogForm() {
         keywordStats.map(s => s.keyword),
         blogIds,
         (msg) => setKeywordProgress(msg),
+        hospitalName,
       );
       const map = new Map<string, KeywordRankResult>();
       for (const r of results) map.set(r.keyword, r);
