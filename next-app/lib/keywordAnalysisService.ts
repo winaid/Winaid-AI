@@ -38,10 +38,22 @@ export const MAX_KEYWORDS = 100;
  * 키워드별 네이버 블로그 검색 상위 20에 해당 병원 블로그가 있는지 체크 (API 블로그탭 기준)
  * blogIds: 병원의 네이버 블로그 ID 목록 (예: ['x577wqy3', 'ekttwj8518'])
  */
-// 키워드 관련성 검증: 검색된 글 제목이 키워드의 핵심 단어를 모두 포함하는지 확인
+// 지역명 패턴: 동/구/읍/면/리/역 + 일반 지역명
+const LOCATION_SUFFIXES = /[동구읍면리역시군]$/;
+
+// 키워드에서 지역명을 제외한 시술/진료 단어만 추출
+function extractMedicalTerms(keyword: string): string[] {
+  return keyword.split(/\s+/)
+    .filter(t => t.length >= 2)
+    .filter(t => !LOCATION_SUFFIXES.test(t)); // 지역명 제외
+}
+
+// 키워드 관련성 검증: 블로그 ID는 이미 확인됨 → 시술/진료 단어가 제목에 있는지만 체크
 function isKeywordRelevant(keyword: string, title: string): boolean {
-  const keyTerms = keyword.split(/\s+/).filter(t => t.length >= 2);
-  if (keyTerms.length === 0) return true;
+  const medicalTerms = extractMedicalTerms(keyword);
+
+  // 시술 단어가 없으면 (예: "불당동 치과" → 지역+과만) → 매칭 OK
+  if (medicalTerms.length === 0) return true;
 
   const cleanTitle = title
     .replace(/<[^>]+>/g, '')
@@ -49,20 +61,13 @@ function isKeywordRelevant(keyword: string, title: string): boolean {
     .replace(/\s+/g, '')
     .toLowerCase();
 
-  // 핵심 단어 매칭 카운트
-  let matchCount = 0;
-  for (const term of keyTerms) {
+  // 시술/진료 단어 중 최소 1개가 제목에 포함되어야 매칭
+  for (const term of medicalTerms) {
     if (cleanTitle.includes(term.replace(/\s+/g, '').toLowerCase())) {
-      matchCount++;
+      return true;
     }
   }
-
-  // 매칭 기준: 2개 이하면 전부, 3개 이상이면 N-1개
-  const requiredCount = keyTerms.length <= 2
-    ? keyTerms.length
-    : keyTerms.length - 1;
-
-  return matchCount >= requiredCount;
+  return false;
 }
 
 // 의료광고법 저촉 키워드 필터
@@ -129,6 +134,8 @@ export async function checkKeywordRankings(
             const isBloggerNameMatch = hospitalNameNorm.length >= 2 && bloggerName.includes(hospitalNameNorm);
             if (isBlogIdMatch || isBloggerNameMatch) {
               const rawTitle = item.title || '';
+              // 시술/진료 단어가 제목에 있는지 체크 (지역명은 블로그 ID로 이미 확인됨)
+              if (!isKeywordRelevant(keyword, rawTitle)) continue;
               const cleanTitle = rawTitle
                 .replace(/<[^>]+>/g, '')
                 .replace(/&[a-z]+;/g, ' ')
