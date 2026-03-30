@@ -38,7 +38,7 @@ export const MAX_KEYWORDS = 100;
  * 키워드별 네이버 블로그 검색 상위 20에 해당 병원 블로그가 있는지 체크 (API 블로그탭 기준)
  * blogIds: 병원의 네이버 블로그 ID 목록 (예: ['x577wqy3', 'ekttwj8518'])
  */
-// 키워드 관련성 검증: 검색된 글 제목이 키워드의 핵심 단어를 포함하는지 확인
+// 키워드 관련성 검증: 검색된 글 제목이 키워드의 핵심 단어를 모두 포함하는지 확인
 function isKeywordRelevant(keyword: string, title: string): boolean {
   const keyTerms = keyword.split(/\s+/).filter(t => t.length >= 2);
   if (keyTerms.length === 0) return true;
@@ -49,18 +49,37 @@ function isKeywordRelevant(keyword: string, title: string): boolean {
     .replace(/\s+/g, '')
     .toLowerCase();
 
-  let matchCount = 0;
+  // 모든 핵심 단어가 제목에 포함되어야 매칭 (100% 일치)
   for (const term of keyTerms) {
-    if (cleanTitle.includes(term.replace(/\s+/g, '').toLowerCase())) {
-      matchCount++;
+    if (!cleanTitle.includes(term.replace(/\s+/g, '').toLowerCase())) {
+      return false;
     }
   }
+  return true;
+}
 
-  const requiredCount = keyTerms.length <= 2
-    ? keyTerms.length
-    : keyTerms.length - 1;
+// 의료광고법 저촉 키워드 필터
+const MEDICAL_AD_BANNED_WORDS = [
+  // 최상급/비교 표현
+  '최고', '최초', '최상', '유일', '1등', '1위', '넘버원', '가장', '독보적', '압도적',
+  '최저가', '최저', '최다',
+  // 보장/확정 표현
+  '보장', '확실', '완치', '100%', '무조건', '반드시', '확정', '절대',
+  // 비교 우위
+  '가장 잘하는', '제일 잘하는', '최고의',
+  // 환자 유인
+  '무료시술', '공짜', '무료치료', '할인율',
+  // 허위 과장
+  '기적', '획기적', '혁신적', '놀라운', '충격', '대박',
+  // 전후 비교 유도
+  '전후사진', '비포애프터', 'before after',
+];
 
-  return matchCount >= requiredCount;
+function filterMedicalAdKeywords(keywords: string[]): string[] {
+  return keywords.filter(kw => {
+    const lower = kw.toLowerCase();
+    return !MEDICAL_AD_BANNED_WORDS.some(banned => lower.includes(banned));
+  });
 }
 
 export async function checkKeywordRankings(
@@ -210,7 +229,8 @@ ${existingBlock}${buildClinicContextBlock(clinicCtx)}
 4. 절대 4단어 이상 금지 (예: "백석동 소아 치과 치아 불소 도포 주기" ← 이런 거 금지)
 5. 병원명은 포함하지 않는다
 6. "비용", "가격" 관련 키워드는 제외
-7. 10개 생성
+7. 의료광고법 저촉 키워드 금지: "최고", "최초", "1위", "보장", "완치", "100%", "무료", "기적", "전후사진" 등 과장/비교/보장 표현 제외
+8. 10개 생성
 
 JSON 배열로만 응답:
 ["키워드1", "키워드2", ...]`;
@@ -221,7 +241,8 @@ JSON 배열로만 응답:
     if (!jsonMatch) return fallbackKeywordGeneration(address, category);
     const parsed = JSON.parse(jsonMatch[0]);
     if (Array.isArray(parsed)) {
-      return parsed.filter((k: unknown) => typeof k === 'string' && (k as string).trim() && (k as string).split(/\s+/).length <= 4).slice(0, 10);
+      const cleaned = parsed.filter((k: unknown) => typeof k === 'string' && (k as string).trim() && (k as string).split(/\s+/).length <= 4).slice(0, 15);
+      return filterMedicalAdKeywords(cleaned as string[]).slice(0, 10);
     }
     return fallbackKeywordGeneration(address, category);
   } catch {
@@ -431,8 +452,8 @@ export async function analyzeHospitalKeywords(
     if (si < seedKeywords.length - 1) await new Promise(r => setTimeout(r, 100));
   }
 
-  // 중복 제거 + 최대 100개
-  const candidates = [...new Set(allSuggestions)].slice(0, MAX_KEYWORDS);
+  // 중복 제거 + 의료광고법 필터 + 최대 100개
+  const candidates = filterMedicalAdKeywords([...new Set(allSuggestions)]).slice(0, MAX_KEYWORDS);
   onProgress?.(`자동완성 확장 완료: ${candidates.length}개 키워드`);
 
   // Step 2: 검색량 + 발행량 조회
