@@ -151,10 +151,9 @@ export default function ImagePage() {
   const [greetClosure, setGreetClosure] = useState('');
 
   const HOLIDAY_DEFAULTS: Record<string, { msg: string; closure: string }> = {
+    '새해': { msg: 'Happy New Year!\n새해에도 건강하시길 바랍니다', closure: '1/1(수)' },
     '설날': { msg: '새해 복 많이 받으세요\n건강하고 행복한 한 해 되시길 바랍니다', closure: '1/28(화) ~ 1/30(목)' },
     '추석': { msg: '풍성한 한가위 보내세요\n가족과 함께 행복한 추석 되세요', closure: '10/5(일) ~ 10/7(화)' },
-    '새해': { msg: 'Happy New Year!\n새해에도 건강하시길 바랍니다', closure: '1/1(수)' },
-    '어버이날': { msg: '감사합니다, 사랑합니다\n어버이날을 진심으로 축하드립니다', closure: '' },
     '크리스마스': { msg: 'Merry Christmas!\n따뜻하고 행복한 성탄절 보내세요', closure: '12/25(목)' },
   };
 
@@ -1424,7 +1423,7 @@ The DESIGN must be VISUALLY IDENTICAL to the reference image.`;
                 <div>
                   <label className="block text-[11px] font-semibold text-slate-500 mb-1">명절 종류</label>
                   <div className="flex gap-1.5">
-                    {(['설날', '추석', '새해', '어버이날', '크리스마스'] as const).map(h => (
+                    {(['새해', '설날', '추석', '크리스마스'] as const).map(h => (
                       <button key={h} type="button" onClick={() => {
                         setGreetHoliday(h);
                         const d = HOLIDAY_DEFAULTS[h];
