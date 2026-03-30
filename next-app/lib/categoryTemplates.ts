@@ -1027,182 +1027,163 @@ Mobile readability: title 34pt+, body 13pt+.`,
   // 캔바/미리캔버스 한국 명절 템플릿 패턴 참고, 2025 뱀띠해 등 동물 테마
   greeting_설날: [
     {
-      id: 'grt_seol_traditional', name: '전통 한복', color: '#dc2626', accent: '#991b1b', bg: '#fef2f2',
-      desc: '단청·기와지붕 격식 있는 전통 설날 인사장',
-      layoutHint: 'traditional',
-      aiPrompt: `[설날 — 전통/격식]
-=== STRICT MODE ANCHORS (반드시 유지) ===
-• 4-ZONE 수직 레이아웃 비율: 상단 18% → 중앙 40% → 인사말 27% → 푸터 15%
-• 단청(丹靑) 색상 팔레트: 적색 #dc2626, 금색 #d4a017, 버건디 #991b1b
-• 인사말 텍스트 반드시 포함: "새해 복 많이 받으세요"
-• 병원/의원 로고·명칭 표시 영역 확보 (ZONE 1 또는 ZONE 3)
-• 휴진 기간 안내 영역 확보 (ZONE 3 카드 내부 하단)
+      id: "grt_hanbok_seollal", name: "전통 한복", color: "#dc2626", accent: "#991b1b", bg: "#fef2f2",
+      desc: "한복 캐릭터 + 세배 포즈 + 크림 배경 — 따뜻한 전통 설날", layoutHint: "hanbok",
+      aiPrompt: `[CRITICAL — THIS IS A PREMIUM LUNAR NEW YEAR GREETING POSTER]
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- ONLY use text the user explicitly provided.
 
-=== INSPIRED MODE FREEDOM (변형 가능) ===
-• 매화·소나무 배치 각도 및 밀도 자유
-• 한복 인물 실루엣 추가 가능
-• 구름문·보상화문·당초문 등 전통 문양 선택 자유
+Korean hospital Lunar New Year greeting poster — HANBOK TRADITIONAL style.
 
-=== ZONE 구성 ===
-ZONE 1 — 상단 헤더 (top 18%): 기와지붕(瓦) 실루엣이 전체 폭을 덮는 진한 버건디(#7f1d1d) 지붕선. 지붕 아래 중앙에 "새해 복 많이 받으세요" — 큰 금색(#fbbf24) 궁서체/캘리그래피. 병원명은 흰색 80% 불투명도로 바로 아래 작게 배치.
+VISUAL STRUCTURE:
+BACKGROUND: Warm cream (#fef7ed) with subtle hanji paper texture at 5% opacity.
 
-ZONE 2 — 메인 일러스트 (middle 40%): 중앙 구도 — 큰 원형 프레임 안에 금박 "福/복" 글자(#d4a017 shimmer). 원 좌측에서 소나무(松) 가지가 녹색 솔잎과 함께 뻗어 나오고, 우측에서 매화(梅) 가지가 분홍-흰 꽃과 함께 진입. 원 아래로 빨강·금 매듭(매듭) 장식 한 쌍이 대칭으로 늘어짐. 배경 전체에 단청 기하 패턴 10% 불투명도 오버레이.
+MAIN ILLUSTRATION (center-top 45%): Charming illustration of people in traditional Korean hanbok doing sebae (New Year bow). Colorful hanbok — red, blue, gold, green (saekdong colors). Premium greeting card illustration quality. Stylized but clearly showing hanbok and bowing posture.
 
-ZONE 3 — 인사말·휴진 안내 (next 27%): 흰색 반투명 라운드 카드(85% opacity, border-radius 16px), 좌우 8% 여백. 카드 안: ① 2~3줄 새해 인사 (버건디 #7f1d1d, 중간 크기, line-height 1.6) ② 금색 가는 구분선 ③ "휴진 안내: OO월 OO일 ~ OO월 OO일" (회색 #78716c, 작은 크기). 카드 상하에 금색 세선 디바이더.
+TEXT AREA (center-bottom 35%): Greeting text in bold warm brown (#5c3d1e) serif (36pt+). Below: thin gold (#c9a96e) decorative line. Hospital name if provided.
 
-ZONE 4 — 푸터 (bottom 15%): 금색(#d4a017) 구름문(雲紋) 25% 불투명도로 좌→우 흐름. 중앙에 작은 치아 아이콘(금색 외곽선)에 한복 갓을 얹은 형태. "2026" 금색 작은 텍스트.
+DECORATIVE: Small traditional cloud patterns at corners at 10% opacity. Red/gold accents.
 
-=== BACKGROUND ===
-적색-버건디 그라디언트(#dc2626 → #991b1b) 전면. 금색 이중선 테두리 가장자리에서 3% 안쪽. 격조 있고 왕실풍의 설날 분위기 — 만화적 요소 없이 품격 유지.`,
+THE HANBOK ILLUSTRATION WITH SEBAE POSE IS MANDATORY.
+
+STRICT ANCHORS: Hanbok figures doing sebae, hanji texture, warm cream, traditional colors, greeting card warmth.
+Mobile readability: greeting 32pt+, body 13pt+.`,
     },
     {
-      id: 'grt_seol_tteokguk', name: '떡국 일러스트', color: '#f97316', accent: '#ea580c', bg: '#fff7ed',
-      desc: '손그림 떡국·설 음식 수채화풍 따뜻한 인사장',
-      layoutHint: 'warm',
-      aiPrompt: `[설날 — 따뜻한/손그림]
-=== STRICT MODE ANCHORS (반드시 유지) ===
-• 4-ZONE 수직 레이아웃 비율: 상단 18% → 중앙 45% → 인사말 22% → 푸터 15%
-• 수채화/손그림 일러스트 스타일 유지
-• 인사말 텍스트 반드시 포함: "따뜻한 새해 되세요"
-• 병원/의원 로고·명칭 표시 영역 확보
-• 휴진 기간 안내 영역 확보
+      id: "grt_saekdong_frame", name: "색동 프레임", color: "#e11d48", accent: "#be123c", bg: "#fffbeb",
+      desc: "전통 색동 줄무늬 프레임 + 깔끔한 내부 — 모던 전통 설날", layoutHint: "saekdong",
+      aiPrompt: `[CRITICAL — THIS IS A PREMIUM LUNAR NEW YEAR GREETING POSTER]
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- ONLY use text the user explicitly provided.
 
-=== INSPIRED MODE FREEDOM (변형 가능) ===
-• 떡국 그릇 디자인·반찬 종류 변형 가능
-• 수저 배치 방향 자유
-• 김치·나물 등 곁들임 반찬 구성 자유
+Korean hospital Lunar New Year greeting poster — SAEKDONG FRAME style.
 
-=== ZONE 구성 ===
-ZONE 1 — 상단 헤더 (top 18%): "설날 인사드립니다" — 큰 볼드 따뜻한 갈색(#92400e) 손글씨풍 한글, 중앙 정렬. 병원명은 부드러운 오렌지(#ea580c) 작은 텍스트. 오렌지(#f97316) 점선 가로 구분선.
+VISUAL STRUCTURE:
+BACKGROUND: Warm ivory (#fffbeb) clean interior.
 
-ZONE 2 — 메인 일러스트 (middle 45%): 중앙에 큰 수채화 떡국 그릇 — 흰 도자기 그릇에 파란 테두리 문양, 안에 흰 떡(가래떡 어슷썰기), 파 고명, 노란 지단, 김 가루. 그릇 위로 3줄기 물결 모양 수증기(따뜻한 흰색). 오른쪽에 나무 젓가락·금속 수저 가지런히 배치, 따뜻한 나무결 식탁면. 좌우 작은 그릇에 김치·나물 반찬. 전체 수채화 번짐 효과.
+SAEKDONG FRAME: Thick decorative border around ENTIRE image — vertical stripes of RED (#dc2626), BLUE (#2563eb), YELLOW (#eab308), GREEN (#16a34a), PINK (#ec4899) running along all four edges. Frame width 5-6% of image. Clean, geometric, modern interpretation. THIS is the signature element.
 
-ZONE 3 — 인사말·휴진 안내 (next 22%): 부드러운 오렌지 테두리(#fdba74, 1px) 라운드 사각 카드, 흰색 90% 불투명도, border-radius 12px. 안: ① 따뜻한 새해 인사 (진한 갈색 #78350f, line-height 1.8) ② "따뜻한 새해 되세요" 볼드 오렌지(#f97316) 강조 ③ "휴진 안내: OO월 OO일 ~ OO월 OO일" (회색 #78716c, 작은 크기).
+INSIDE FRAME:
+- Top: Small traditional ornament in gold (#c9a96e)
+- Center: Greeting text in bold dark red (#991b1b) (38pt+)
+- Below: year text in elegant serif
+- Below: thin gold line + hospital name
 
-ZONE 4 — 푸터 (bottom 15%): 작은 치아 캐릭터(둥근 사각형, 점눈, 미소) — 요리사 모자 쓰고 작은 수저 들고 있는 선 드로잉, 따뜻한 갈색(#92400e) 외곽선. "2026" 및 병원 정보 작은 갈색 텍스트.
+Interior is CLEAN and MINIMAL — saekdong frame provides all visual interest.
 
-=== BACKGROUND ===
-따뜻한 크림-복숭아 그라디언트(#fff7ed → #fed7aa). 수채화 텍스처 15% 불투명도. 상단 절반에 따뜻한 흰색 보케 원형 10% 불투명도. 포근하고 가정적인 설날 식사 초대 느낌.`,
+THE SAEKDONG COLOR STRIPE FRAME IS MANDATORY.
+
+STRICT ANCHORS: Saekdong multi-color stripe frame, clean ivory interior, dark red greeting, gold ornament, modern-meets-traditional.
+Mobile readability: greeting 34pt+, body 13pt+.`,
     },
     {
-      id: 'grt_seol_modern', name: '모던 세뱃돈', color: '#6366f1', accent: '#4f46e5', bg: '#eef2ff',
-      desc: '세뱃돈 봉투 중심 울트라클린 타이포그래피 인사장',
-      layoutHint: 'minimal',
-      aiPrompt: `[설날 — 미니멀/타이포]
-=== STRICT MODE ANCHORS (반드시 유지) ===
-• 4-ZONE 수직 레이아웃 비율: 상단 15% → 중앙 40% → 타이포 30% → 푸터 15%
-• 인디고+골드 2색 제한 팔레트
-• 최대 여백(negative space) 원칙 — 장식 최소화
-• 인사말 텍스트 반드시 포함: "새해 복 많이 받으세요"
-• 병원/의원 로고·명칭 표시 영역 확보
-• 휴진 기간 안내 영역 확보
+      id: "grt_bokjumoni_gold", name: "복주머니 골드", color: "#b91c1c", accent: "#dc2626", bg: "#fef2f2",
+      desc: "큰 복주머니 일러스트 + 금색 장식 — 복 가득한 설날", layoutHint: "bokjumoni",
+      aiPrompt: `[CRITICAL — THIS IS A PREMIUM LUNAR NEW YEAR GREETING POSTER]
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- ONLY use text the user explicitly provided.
 
-=== INSPIRED MODE FREEDOM (변형 가능) ===
-• 세뱃돈 봉투 기울기(0~10°) 자유
-• 봉투 위 문양(격자문/빗살문 등) 선택 자유
-• 추상 원형 장식 크기·위치 자유
+Korean hospital Lunar New Year greeting poster — BOKJUMONI GOLD style.
 
-=== ZONE 구성 ===
-ZONE 1 — 상단 헤더 (top 15%): 병원명 — 작은 인디고(#4f46e5) 텍스트, 좌측 정렬 10% 좌여백. 아래 가는 인디고(#6366f1) 가로선 80% 폭 중앙 정렬.
+VISUAL STRUCTURE:
+BACKGROUND: Festive red (#dc2626) to darker red (#991b1b) gradient. Subtle traditional cloud patterns at 8-10% opacity.
 
-ZONE 2 — 메인 비주얼 (middle 40%): 중앙에 단일 세뱃돈 봉투(세뱃돈 봉투) — 깨끗한 흰색 바탕에 인디고(#6366f1) 미니멀 선화. 봉투 상단에 골드(#d4a017) 봉인. 봉투 중앙에 골드 "복" 자. 봉투 5° 기울임. 뒤에 가는 골드 원 외곽선 하나. 그 외 요소 없음 — 극대화된 여백.
+MAIN ILLUSTRATION (center 40%): LARGE Korean bokjumoni (lucky pouch) illustration. Traditional silk fabric in red/pink/gold, golden drawstring cord, gold embroidered pattern. Surrounding: scattered gold coins, ingots, golden sparkle accents. Semi-realistic, premium quality.
 
-ZONE 3 — 타이포·휴진 안내 (next 30%): "새해 복 많이 받으세요" — 큰 볼드 인디고(#4f46e5) 현대 산세리프 한글, 중앙, letter-spacing 0.05em. 2줄 인사말 중간 회색(#64748b). "2026 설날" 골드(#d4a017) 악센트. 가는 구분선 아래 "휴진 안내: OO월 OO일 ~ OO월 OO일" (회색 #94a3b8, 작은 크기).
+TEXT AREA (below illustration 35%): Greeting in bold gold (#d4a853) text (36pt+). Thin gold decorative line. Hospital name in light gold/cream.
 
-ZONE 4 — 푸터 (bottom 15%): 작은 인디고 치아 아이콘(기하학/미니멀), 중앙. 병원 연락처 작은 회색(#94a3b8). 헤더와 동일한 가는 인디고 라인.
+THE LARGE BOKJUMONI ILLUSTRATION IS MANDATORY.
 
-=== BACKGROUND ===
-깨끗한 오프화이트(#eef2ff). 매우 희미한 격자문(#6366f1 at 5%) 배경 텍스처. 스위스/미니멀리스트 타이포그래피. 프리미엄 의료 브랜드 명절 카드.`,
+STRICT ANCHORS: Red gradient, cloud patterns, large bokjumoni, gold coins/sparkles, gold text on red, festive mood.
+Mobile readability: greeting 32pt+, body 13pt+.`,
     },
     {
-      id: 'grt_seol_bokjumeoni', name: '복주머니', color: '#e11d48', accent: '#be123c', bg: '#fff1f2',
-      desc: '복주머니·금동전 캐릭터 중심 귀여운 설날 카드',
-      layoutHint: 'cute',
-      aiPrompt: `[설날 — 귀여운/캐릭터]
-=== STRICT MODE ANCHORS (반드시 유지) ===
-• 4-ZONE 수직 레이아웃 비율: 상단 15% → 중앙 45% → 인사말 25% → 푸터 15%
-• 핑크-빨강-골드 파스텔 팔레트
-• 치아 캐릭터(한복 착용) 반드시 포함
-• 인사말 텍스트 반드시 포함: "복 많이 받으세요!"
-• 병원/의원 로고·명칭 표시 영역 확보
-• 휴진 기간 안내 영역 확보
+      id: "grt_ink_geunha", name: "수묵화 근하신년", color: "#374151", accent: "#dc2626", bg: "#f9fafb",
+      desc: "수묵화 매화/소나무 + 붓글씨 타이포 + 낙관 — 격조 있는 설날", layoutHint: "inkwash",
+      aiPrompt: `[CRITICAL — THIS IS A PREMIUM LUNAR NEW YEAR GREETING POSTER]
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- ONLY use text the user explicitly provided.
 
-=== INSPIRED MODE FREEDOM (변형 가능) ===
-• 복주머니 색상·자수 문양 변형 가능
-• 금동전 개수(5~10개)·배치 자유
-• 캐릭터 표정·포즈 자유
+Korean hospital Lunar New Year greeting poster — INK WASH CALLIGRAPHY style.
 
-=== ZONE 구성 ===
-ZONE 1 — 상단 헤더 (top 15%): "복 많이 받으세요!" — 큰 볼드 로즈레드(#e11d48) 둥근 한글 폰트, 핑크 텍스트 쉐도우. 좌우에 작은 골드 악센트 마크. 병원명 작은 딥로즈(#be123c).
+VISUAL STRUCTURE:
+BACKGROUND: Pure white to light warm gray (#f9fafb). Like rice paper. Subtle paper texture.
 
-ZONE 2 — 메인 일러스트 (middle 45%): 복주머니 3개 가로 배열 — 좌(빨강 #dc2626, 금 졸라매), 중앙(가장 크게 1.3배, 핫핑크 #e11d48, 전통 꽃자수), 우(코랄 #fb7185, 금 졸라매). 각 복주머니에 금색 "복" 자수. 위로 금동전(사각 구멍 있는 동전) 5~7개 떠다님. 복주머니 사이에 치아 캐릭터 — 흰 둥근 사각형, 점눈, 미소, 분홍 볼, 핑크·노랑 한복 저고리 착용.
+INK WASH ILLUSTRATIONS: Plum blossom or pine branch in traditional ink wash technique — black ink with varying brush strokes. Branch reaches 30% into image. Must look like REAL brush strokes.
 
-ZONE 3 — 인사말·휴진 안내 (next 25%): 핑크 테두리(#fda4af, 2px) 알약형 카드, 흰색 채움, border-radius 24px. 안: ① 밝은 새해 인사 (딥로즈 #9f1239, 둥근 서체) ② "휴진 안내: OO월 OO일 ~ OO월 OO일" (회색 #78716c, 작은 크기) ③ 작은 ☘ 아이콘 불릿.
+CALLIGRAPHY TEXT (center 40%): Greeting in BOLD BRUSH CALLIGRAPHY style — thick, expressive Korean brush strokes. Black (#1f2937) ink. Must look hand-written.
 
-ZONE 4 — 푸터 (bottom 15%): 골드 외곽선 작은 행운 아이콘 가로 배열(말굽, 클로버, 동전). "2026" 핑크(#e11d48). 병원 정보 로즈(#be123c).
+RED SEAL: One small traditional red seal stamp (#dc2626) near the calligraphy. THE signature element.
 
-=== BACKGROUND ===
-부드러운 로즈핑크 그라디언트(#fff1f2 → #fce7f3). 골드·빨강·핑크 작은 기하 도트 20% 불투명도. 중앙 따뜻한 방사 글로우(흰색 15%). 밝고 활기찬 가족 친화적 설날 카드.`,
+THE INK WASH BRANCH, CALLIGRAPHY TEXT, AND RED SEAL ARE MANDATORY.
+
+STRICT ANCHORS: White rice paper, ink wash branch, brush calligraphy, red seal stamp, traditional East Asian art, maximum elegance.
+Mobile readability: calligraphy text large and bold, body 13pt+.`,
     },
     {
-      id: 'grt_seol_gold_luxury', name: '금박 프리미엄', color: '#d4a017', accent: '#b8860b', bg: '#fefce8',
-      desc: '버건디·금박 봉황 문양 프리미엄 설날 인사장',
-      layoutHint: 'luxury',
-      aiPrompt: `[설날 — 럭셔리/금박]
-=== STRICT MODE ANCHORS (반드시 유지) ===
-• 4-ZONE 수직 레이아웃 비율: 상단 12% → 중앙 40% → 인사말 28% → 푸터 20%
-• 버건디+골드 2색 한정 팔레트 — 다른 색상 절대 금지
-• 금박(gold foil) 메탈릭 질감 전체 적용
-• 인사말 텍스트 반드시 포함: "새해 복 많이 받으세요"
-• 병원/의원 로고·명칭 표시 영역 확보
-• 휴진 기간 안내 영역 확보
+      id: "grt_black_gold", name: "블랙 골드", color: "#0f172a", accent: "#d4a853", bg: "#0f172a",
+      desc: "다크 배경 + 골드 타이포 + 전통 구름 문양 — 럭셔리 설날", layoutHint: "blackgold",
+      aiPrompt: `[CRITICAL — THIS IS A PREMIUM LUNAR NEW YEAR GREETING POSTER]
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- ONLY use text the user explicitly provided.
 
-=== INSPIRED MODE FREEDOM (변형 가능) ===
-• 보상화문/연꽃문/당초문 등 전통 문양 선택 자유
-• 봉황 실루엣 크기·자세 자유
-• 소나무 가지 밀도 자유
+Korean hospital Lunar New Year greeting poster — BLACK GOLD LUXURY style.
 
-=== ZONE 구성 ===
-ZONE 1 — 상단 악센트 (top 12%): 금박 소나무(松) 가지 일러스트 — 60% 폭 중앙, 정밀한 솔잎 디테일(#d4a017), 금 시머 효과. 가지 끝에 작은 골드 도트.
+VISUAL STRUCTURE:
+BACKGROUND: Deep black-navy (#0f172a). Across ENTIRE background: traditional Korean cloud patterns in gold (#d4a853) at 8-12% opacity. Flowing, layered, elegant traditional clouds.
 
-ZONE 2 — 메인 센터피스 (middle 40%): 큰 원형 금 프레임(3px #d4a017 선, 반지름 ~30%). 원 안에 "복" — 초대형 금 캘리그래피(#fbbf24 → #d4a017 그라디언트), 붓터치 스타일. 원 둘레에 보상화문/연꽃문 금박 40% 불투명도 만다라형 링. 대각선 위치에 전통 모서리 장식 4개.
+GOLD FRAME: Thin gold (#d4a853) border (1px) with traditional corner ornaments. Inset 4% from edges.
 
-ZONE 3 — 인사말·휴진 안내 (next 28%): "새해 복 많이 받으세요" — 우아한 금색(#fbbf24) 세리프/캘리그래피 한글, 중앙, 넓은 자간. 금 디바이더 선(60% 폭). 2줄 인사말 부드러운 금(#d4a017 70%). 병원명 밝은 금. 구분선 아래 "휴진 안내: OO월 OO일 ~ OO월 OO일" (연금색 #d4a017 50%, 작은 크기).
+INSIDE FRAME:
+- Small gold traditional ornament at center-top
+- Greeting in MASSIVE bold gold (#d4a853) text (42pt+) with slight glow effect (gold at 20% opacity, blur 8px)
+- Year in elegant gold serif
+- Thin gold line (width 25%)
+- Hospital name in small gold
 
-ZONE 4 — 푸터 (bottom 20%): 금박 엠보싱 효과 — 대칭 봉황(鳳凰) 실루엣 2마리(골드 25% 불투명도)가 방패형 치아 엠블럼 좌우 배치. "2026" 작은 골드 텍스트.
+THE GOLD CLOUD PATTERN ON DARK BACKGROUND IS MANDATORY.
 
-=== BACKGROUND ===
-진한 버건디(#7f1d1d) 전면. 고급 리넨 텍스처 8% 불투명도. 금 이중선 장식 테두리 4% 안쪽, 모서리에 다이아몬드. 울트라 프리미엄 VIP 설날 카드.`,
+STRICT ANCHORS: Dark background, gold cloud patterns, gold frame, massive glowing gold text, traditional Korean luxury.
+Mobile readability: greeting 38pt+, body 13pt+.`,
     },
     {
-      id: 'grt_seol_sunrise', name: '새해 일출', color: '#f59e0b', accent: '#d97706', bg: '#fffbeb',
-      desc: '산 능선 위 해돋이·한옥 마을 수채화 풍경 인사장',
-      layoutHint: 'nature',
-      aiPrompt: `[설날 — 자연/풍경]
-=== STRICT MODE ANCHORS (반드시 유지) ===
-• 4-ZONE 수직 레이아웃 비율: 상단 20% → 중앙 35% → 인사말 30% → 푸터 15%
-• 새벽-일출 그라디언트 하늘 (네이비 → 앰버 → 골드)
-• 3겹 산 능선 실루엣 필수
-• 인사말 텍스트 반드시 포함: "새해 복 많이 받으세요"
-• 병원/의원 로고·명칭 표시 영역 확보
-• 휴진 기간 안내 영역 확보
+      id: "grt_sunrise", name: "새해 일출", color: "#ea580c", accent: "#0284c7", bg: "#fff7ed",
+      desc: "산 위 해돋이 + 블루/오렌지 그라데이션 — 희망찬 새해", layoutHint: "sunrise",
+      aiPrompt: `[CRITICAL — THIS IS A PREMIUM LUNAR NEW YEAR GREETING POSTER]
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- ONLY use text the user explicitly provided.
 
-=== INSPIRED MODE FREEDOM (변형 가능) ===
-• 한옥 마을 가옥 수(3~5채) 자유
-• 산 능선 색조·곡선 자유
-• 별·초승달 밀도 자유
+Korean hospital Lunar New Year greeting poster — SUNRISE LANDSCAPE style.
 
-=== ZONE 구성 ===
-ZONE 1 — 상단 하늘 (top 20%): 딥네이비-인디고(#1e3a5f → #312e81)에서 따뜻한 톤으로 전환. 흰 별 30% 불투명도 흩어짐. 우상단에 초승달 외곽선(연금 #fde68a, 15% 불투명도).
+VISUAL STRUCTURE:
+BACKGROUND/ILLUSTRATION (top 55%): Sunrise landscape — sun rising over mountains. Sky gradient: deep blue (#1e3a8a) at top, through purple (#7c3aed) to warm orange (#ea580c) to golden yellow (#eab308) at horizon. Mountain silhouettes in dark blue, 3-4 layers at different distances. Sun is warm golden-white circle at horizon with light rays. Premium stylized landscape illustration.
 
-ZONE 2 — 일출·산 (middle 35%): 산 능선 뒤에서 떠오르는 태양 원반 — 빛나는 그라디언트 원(#fbbf24 → #f59e0b), 부드러운 금빛 광선 20% 불투명도 방사. 산 실루엣 3겹: 먼 산(먼지 보라 #6b5b73), 중간 산(따뜻한 갈색 #92400e 60%), 가까운 산(진한 앰버 #78350f). 산 사이 한옥(韓屋) 3~4채 — 곡선 기와 지붕, 굴뚝 연기.
+LIGHT AREA (bottom 45%): Warm cream (#fff7ed) below mountains.
 
-ZONE 3 — 인사말·휴진 안내 (next 30%): 황금빛 일출 글로우 영역. "새해 복 많이 받으세요" — 큰 볼드 진한 갈색(#78350f) 우아한 한글, 골드 텍스트 쉐도우. 가는 금 디바이더(#d97706, 50% 폭). 2~3줄 인사 중간 갈색(#92400e). 병원명 앰버(#d97706). 구분선 아래 "휴진 안내: OO월 OO일 ~ OO월 OO일" (갈색 #78350f 60%, 작은 크기).
+TEXT AREA (on light area): Greeting in bold deep navy (#1e3a8a) text (36pt+). Thin orange (#ea580c) line (width 20%). Hospital name in warm gray.
 
-ZONE 4 — 푸터 (bottom 15%): 하단 가장자리 소나무 실루엣(진한 앰버 #92400e 40%). 중앙 치아 아이콘(떠오르는 해 형태) 골드(#d97706) 외곽선. "2026" 따뜻한 금 텍스트.
+THE SUNRISE MOUNTAIN LANDSCAPE IS MANDATORY.
 
-=== BACKGROUND ===
-새벽 하늘 그라디언트 — 딥네이비(#1e3a5f) → 앰버(#f59e0b) → 복숭아(#fbbf24) → 연금(#fffbeb). 한국 산 일출 수채화 풍경 — 새로운 시작의 평화로움.`,
+STRICT ANCHORS: Blue-to-orange gradient sky, layered mountain silhouettes, golden sun, light rays, warm cream text area, hopeful new dawn.
+Mobile readability: greeting 32pt+, body 13pt+.`,
     },
   ],
 
