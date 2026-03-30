@@ -49,13 +49,20 @@ function isKeywordRelevant(keyword: string, title: string): boolean {
     .replace(/\s+/g, '')
     .toLowerCase();
 
-  // 모든 핵심 단어가 제목에 포함되어야 매칭 (100% 일치)
+  // 핵심 단어 매칭 카운트
+  let matchCount = 0;
   for (const term of keyTerms) {
-    if (!cleanTitle.includes(term.replace(/\s+/g, '').toLowerCase())) {
-      return false;
+    if (cleanTitle.includes(term.replace(/\s+/g, '').toLowerCase())) {
+      matchCount++;
     }
   }
-  return true;
+
+  // 매칭 기준: 2개 이하면 전부, 3개 이상이면 N-1개
+  const requiredCount = keyTerms.length <= 2
+    ? keyTerms.length
+    : keyTerms.length - 1;
+
+  return matchCount >= requiredCount;
 }
 
 // 의료광고법 저촉 키워드 필터
@@ -103,7 +110,7 @@ export async function checkKeywordRankings(
           const res = await fetch('/api/naver/search', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ query: keyword, display: 20 }),
+            body: JSON.stringify({ query: keyword, display: 30 }),
           });
           if (!res.ok) return { keyword, isRanked: false };
 
@@ -122,8 +129,6 @@ export async function checkKeywordRankings(
             const isBloggerNameMatch = hospitalNameNorm.length >= 2 && bloggerName.includes(hospitalNameNorm);
             if (isBlogIdMatch || isBloggerNameMatch) {
               const rawTitle = item.title || '';
-              // 키워드 관련성 검증: 제목이 검색 키워드의 핵심 단어를 포함해야 매칭
-              if (!isKeywordRelevant(keyword, rawTitle)) continue;
               const cleanTitle = rawTitle
                 .replace(/<[^>]+>/g, '')
                 .replace(/&[a-z]+;/g, ' ')
@@ -215,25 +220,23 @@ ${existingBlogTitles.map(t => `- ${t}`).join('\n')}
 `
     : '';
 
-  const prompt = `당신은 네이버 검색어 전문가입니다.
-아래 병원 정보로 네이버 자동완성에 입력할 "씨앗 키워드"를 만드세요.
+  const prompt = `네이버 검색창에 사람들이 실제로 타이핑하는 짧은 검색어를 만드세요.
 
 병원명: ${hospitalName}
 주소: ${address}
 진료과: ${category || '치과'}
 ${existingBlock}${buildClinicContextBlock(clinicCtx)}
 규칙:
-1. 반드시 2~3단어 이내 (예: "백석동 치과", "일산 임플란트")
-2. 실제 사람들이 네이버 검색창에 타이핑하기 시작하는 단어 조합
-3. "{지역} {진료과}" + "{지역} {시술}" + "{지역} {증상}" 조합 위주
-4. 절대 4단어 이상 금지 (예: "백석동 소아 치과 치아 불소 도포 주기" ← 이런 거 금지)
-5. 병원명은 포함하지 않는다
-6. "비용", "가격" 관련 키워드는 제외
-7. 의료광고법 저촉 키워드 금지: "최고", "최초", "1위", "보장", "완치", "100%", "무료", "기적", "전후사진" 등 과장/비교/보장 표현 제외
+1. 반드시 2단어 조합만 (예: "불당동 치과", "불당동 임플란트")
+2. "{지역명} {진료과/시술}" 패턴만 허용
+3. 지역명: 주소에서 동/구/읍 추출 + 인근 지하철역
+4. 시술: 임플란트, 치아교정, 스케일링, 충치치료, 신경치료, 사랑니, 소아치과, 치아미백, 라미네이트, 틀니
+5. 절대 3단어 이상 금지
+6. 병원명은 포함하지 않는다
+7. "비용", "가격" 관련 키워드는 제외
 8. 10개 생성
 
-JSON 배열로만 응답:
-["키워드1", "키워드2", ...]`;
+JSON 배열로만: ["불당동 치과", "불당동 임플란트", ...]`;
 
   try {
     const result = await callGeminiForKeywords(prompt);
@@ -465,7 +468,7 @@ export async function analyzeHospitalKeywords(
   }
 
   const filteredStats = stats
-    .filter(s => s.monthlySearchVolume >= 100) // 검색량 100 미만 제거
+    .filter(s => s.monthlySearchVolume >= 10) // 검색량 10 미만 제거
     .filter(s => s.keyword.split(/\s+/).length <= 4) // 5단어 이상 롱테일 제거
     .sort((a, b) => b.monthlySearchVolume - a.monthlySearchVolume);
 
@@ -522,7 +525,8 @@ export async function loadMoreKeywords(
     if (apiErrors?.length) allApiErrors.push(...apiErrors);
 
     const roundStats = stats
-      .filter(s => s.monthlySearchVolume >= 1)
+      .filter(s => s.monthlySearchVolume >= 10)
+      .filter(s => s.keyword.split(/\s+/).length <= 4)
       .filter(s => !allUsedKeywords.has(s.keyword.toLowerCase()));
 
     for (const s of roundStats) {

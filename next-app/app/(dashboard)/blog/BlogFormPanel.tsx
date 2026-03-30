@@ -338,7 +338,7 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
                       >
                         {hideRanked ? '✅ 노출 중 숨김' : '노출 중 포함'}
                       </button>
-                      <span className="text-[9px] text-slate-400 whitespace-nowrap">※ 네이버 통합검색 기준. 키워드+제목 일치만 표시</span>
+                      <span className="text-[9px] text-slate-400 whitespace-nowrap">※ API 참고용 (실제 순위와 다를 수 있음)</span>
                     </>
                   )}
                   <div className="flex items-center gap-1.5">
@@ -374,7 +374,7 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
                           <th className="text-right px-3 py-2 font-semibold">월간 검색량</th>
                           <th className="text-right px-3 py-2 font-semibold">발행량</th>
                           <th className="text-right px-3 py-2 font-semibold">포화도</th>
-                          {rankResults.size > 0 && <th className="text-center px-2 py-2 font-semibold">상위권</th>}
+                          {rankResults.size > 0 && <th className="text-center px-2 py-2 font-semibold" title="네이버 API 기준 참고 순위 (실제와 다를 수 있음)">순위<span className="text-[8px] text-slate-400 ml-0.5">참고</span></th>}
                         </tr>
                       </thead>
                       <tbody>
@@ -413,7 +413,7 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
                                       const emoji = r.rank <= 5 ? '🟢' : r.rank <= 10 ? '🔵' : '🟡';
                                       return <span className={`text-[10px] font-bold ${r.rank <= 5 ? 'text-emerald-600' : r.rank <= 10 ? 'text-blue-600' : 'text-amber-600'}`} title={r.matchedTitle || ''}>{emoji} {r.rank}위</span>;
                                     }
-                                    return <span className="text-[10px] text-slate-400">20위권 밖</span>;
+                                    return <span className="text-[10px] text-slate-400">30위권 밖</span>;
                                   })()}
                                 </td>
                               )}
