@@ -115,7 +115,7 @@ export async function checkKeywordRankings(
           if (!res.ok) return { keyword, isRanked: false };
 
           const data = (await res.json()) as {
-            items?: Array<{ link?: string; title?: string; bloggername?: string }>;
+            items?: Array<{ link?: string; title?: string; description?: string; bloggername?: string }>;
           };
 
           const items = data.items || [];
@@ -129,8 +129,9 @@ export async function checkKeywordRankings(
             const isBloggerNameMatch = hospitalNameNorm.length >= 2 && bloggerName.includes(hospitalNameNorm);
             if (isBlogIdMatch || isBloggerNameMatch) {
               const rawTitle = item.title || '';
-              // 시술/진료 단어가 제목에 있는지 체크 (지역명은 블로그 ID로 이미 확인됨)
-              if (!isKeywordRelevant(keyword, rawTitle)) continue;
+              const rawDesc = item.description || '';
+              // 키워드가 제목 또는 본문에 연속 포함되어야 매칭
+              if (!isKeywordRelevant(keyword, rawTitle) && !isKeywordRelevant(keyword, rawDesc)) continue;
               const cleanTitle = rawTitle
                 .replace(/<[^>]+>/g, '')
                 .replace(/&[a-z]+;/g, ' ')

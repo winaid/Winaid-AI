@@ -135,17 +135,18 @@ export default function AdminPage() {
         body: JSON.stringify({ query: keyword, display: 30 }),
       });
       if (!res.ok) return null;
-      const data = (await res.json()) as { items?: Array<{ link?: string; title?: string }> };
+      const data = (await res.json()) as { items?: Array<{ link?: string; title?: string; description?: string }> };
       const blogIdSet = new Set(blogIds.map(id => id.toLowerCase()));
       const kwNoSpace = keyword.replace(/\s+/g, '').toLowerCase();
       for (let i = 0; i < (data.items || []).length; i++) {
         const item = data.items![i];
         const match = (item.link || '').match(/blog\.naver\.com\/([^/?#]+)/);
         if (match && blogIdSet.has(match[1].toLowerCase())) {
-          // 키워드가 제목에 연속으로 포함되어야 매칭
-          const titleClean = (item.title || '').replace(/<[^>]+>/g, '').replace(/&[a-z]+;/g, ' ').replace(/\s+/g, '').toLowerCase();
-          if (titleClean.includes(kwNoSpace)) return i + 1;
-          // 제목 불일치 → 스킵, 다음 결과 확인
+          const clean = (s: string) => s.replace(/<[^>]+>/g, '').replace(/&[a-z]+;/g, ' ').replace(/\s+/g, '').toLowerCase();
+          const titleClean = clean(item.title || '');
+          const descClean = clean(item.description || '');
+          // 키워드가 제목 또는 본문에 연속 포함되면 매칭
+          if (titleClean.includes(kwNoSpace) || descClean.includes(kwNoSpace)) return i + 1;
         }
       }
       return null;
