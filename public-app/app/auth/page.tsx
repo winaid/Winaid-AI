@@ -3,15 +3,14 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { isSupabaseConfigured, supabase } from '../../lib/supabase';
-import { signInWithTeam, signUpWithTeam } from '../../lib/auth';
-import { TEAM_DATA } from '../../lib/teamData';
+import { signInWithEmail, signUpWithEmail } from '../../lib/auth';
 
 type AuthMode = 'login' | 'register';
 
 export default function AuthPage() {
   const router = useRouter();
   const [mode, setMode] = useState<AuthMode>('login');
-  const [teamId, setTeamId] = useState<number>(TEAM_DATA[0].id);
+  const [email, setEmail] = useState('');
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -21,29 +20,24 @@ export default function AuthPage() {
   const [checkingSession, setCheckingSession] = useState(true);
   const [rememberMe, setRememberMe] = useState(true);
 
-  // 저장된 로그인 정보 복원
+  // 저장된 이메일 복원
   useEffect(() => {
     try {
-      const saved = localStorage.getItem('winaid_remember');
-      if (saved) {
-        const { name: savedName, teamId: savedTeam } = JSON.parse(saved);
-        if (savedName) setName(savedName);
-        if (savedTeam) setTeamId(savedTeam);
-      }
+      const savedEmail = localStorage.getItem('winaid_remember_email');
+      if (savedEmail) setEmail(savedEmail);
     } catch { /* ignore */ }
   }, []);
 
-  // 마운트 시 세션 체크 + OAuth 콜백 처리
+  // 마운트 시 세션 체크
   useEffect(() => {
     if (!isSupabaseConfigured || !supabase) {
       setCheckingSession(false);
       return;
     }
 
-    const checkSessionAndOAuth = async () => {
+    const checkSession = async () => {
       const hash = window.location.hash;
 
-      // OAuth 콜백 (access_token이 URL에 있는 경우)
       if (hash && (hash.includes('access_token') || hash.includes('refresh_token'))) {
         const { data: { session } } = await supabase!.auth.getSession();
         if (session) {
@@ -52,7 +46,6 @@ export default function AuthPage() {
         }
       }
 
-      // 일반 세션 체크
       const { data: { session } } = await supabase!.auth.getSession();
       if (session) {
         router.push('/app');
@@ -62,7 +55,7 @@ export default function AuthPage() {
       setCheckingSession(false);
     };
 
-    checkSessionAndOAuth();
+    checkSession();
   }, [router]);
 
   // Supabase 미설정 시 안내 화면
@@ -95,18 +88,18 @@ export default function AuthPage() {
     );
   }
 
-  // 팀 로그인
-  const handleTeamLogin = async (e: React.FormEvent) => {
+  // 로그인
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setIsLoading(true);
 
     try {
-      const { data, error: authError } = await signInWithTeam(name.trim(), teamId, password);
+      const { data, error: authError } = await signInWithEmail(email.trim(), password);
 
       if (authError) {
         if (authError.message.includes('Invalid login credentials')) {
-          setError('이름 또는 비밀번호가 올바르지 않습니다.');
+          setError('이메일 또는 비밀번호가 올바르지 않습니다.');
         } else {
           setError(authError.message);
         }
@@ -115,11 +108,10 @@ export default function AuthPage() {
       }
 
       if (data.user) {
-        // 기기 기억하기
         if (rememberMe) {
-          try { localStorage.setItem('winaid_remember', JSON.stringify({ name: name.trim(), teamId })); } catch { /* ignore */ }
+          try { localStorage.setItem('winaid_remember_email', email.trim()); } catch { /* ignore */ }
         } else {
-          try { localStorage.removeItem('winaid_remember'); } catch { /* ignore */ }
+          try { localStorage.removeItem('winaid_remember_email'); } catch { /* ignore */ }
         }
         router.push('/app');
       }
@@ -129,8 +121,8 @@ export default function AuthPage() {
     setIsLoading(false);
   };
 
-  // 팀 회원가입
-  const handleTeamRegister = async (e: React.FormEvent) => {
+  // 회원가입
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
@@ -139,24 +131,24 @@ export default function AuthPage() {
       return;
     }
 
-    if (password !== confirmPassword) {
-      setError('비밀번호가 일치하지 않습니다.');
+    if (password.length < 6) {
+      setError('비밀번호는 6자 이상이어야 합니다.');
       return;
     }
 
-    if (password.length < 6) {
-      setError('비밀번호는 6자 이상이어야 합니다.');
+    if (password !== confirmPassword) {
+      setError('비밀번호가 일치하지 않습니다.');
       return;
     }
 
     setIsLoading(true);
 
     try {
-      const { data, error: authError } = await signUpWithTeam(name.trim(), teamId, password);
+      const { data, error: authError } = await signUpWithEmail(email.trim(), password, name.trim());
 
       if (authError) {
         if (authError.message.includes('already registered') || authError.message.includes('User already registered')) {
-          setError('이미 가입된 이름입니다. 다른 이름을 사용하거나 로그인해주세요.');
+          setError('이미 가입된 이메일입니다. 로그인해주세요.');
         } else {
           setError(authError.message);
         }
@@ -207,21 +199,6 @@ export default function AuthPage() {
     </svg>
   );
 
-  const teamField = (
-    <div>
-      <label className="block text-sm font-medium text-slate-600 mb-1.5">콘텐츠팀 선택</label>
-      <select
-        value={teamId}
-        onChange={(e) => setTeamId(Number(e.target.value))}
-        className={inputCls}
-      >
-        {TEAM_DATA.map((team) => (
-          <option key={team.id} value={team.id}>{team.label}</option>
-        ))}
-      </select>
-    </div>
-  );
-
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
       <div className="w-full max-w-[420px]">
@@ -257,15 +234,14 @@ export default function AuthPage() {
 
           {/* Login Form */}
           {mode === 'login' && (
-            <form onSubmit={handleTeamLogin} className="space-y-4">
-              {teamField}
+            <form onSubmit={handleLogin} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-600 mb-1.5">이름</label>
+                <label className="block text-sm font-medium text-slate-600 mb-1.5">이메일</label>
                 <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="홍길동"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="email@example.com"
                   required
                   className={inputCls}
                 />
@@ -288,7 +264,7 @@ export default function AuthPage() {
                   onChange={(e) => setRememberMe(e.target.checked)}
                   className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                 />
-                <span className="text-sm text-slate-500">이 기기에서 기억하기</span>
+                <span className="text-sm text-slate-500">로그인 정보 기억</span>
               </label>
               <button type="submit" disabled={isLoading} className={btnPrimaryCls}>
                 {isLoading ? <span className="flex items-center justify-center gap-2">{spinner} 로그인 중...</span> : '로그인'}
@@ -298,8 +274,7 @@ export default function AuthPage() {
 
           {/* Register Form */}
           {mode === 'register' && (
-            <form onSubmit={handleTeamRegister} className="space-y-4">
-              {teamField}
+            <form onSubmit={handleRegister} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-slate-600 mb-1.5">이름</label>
                 <input
@@ -307,6 +282,17 @@ export default function AuthPage() {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="홍길동"
+                  required
+                  className={inputCls}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-600 mb-1.5">이메일</label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="email@example.com"
                   required
                   className={inputCls}
                 />
