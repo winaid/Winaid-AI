@@ -132,7 +132,7 @@ export default function AdminPage() {
       const res = await fetch('/api/naver/search', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: keyword, display: 30 }),
+        body: JSON.stringify({ query: keyword, display: 30, type: 'blog' }),
       });
       if (!res.ok) return null;
       const data = (await res.json()) as { items?: Array<{ link?: string; title?: string; description?: string }> };

@@ -110,7 +110,7 @@ export async function checkKeywordRankings(
           const res = await fetch('/api/naver/search', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ query: keyword, display: 30 }),
+            body: JSON.stringify({ query: keyword, display: 30, type: 'blog' }),
           });
           if (!res.ok) return { keyword, isRanked: false };
 

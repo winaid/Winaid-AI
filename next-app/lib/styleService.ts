@@ -1046,7 +1046,7 @@ export async function crawlAndScoreAllHospitals(
                 const rankRes = await fetch('/api/naver/search', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ query: firstWord, display: 30 }),
+                  body: JSON.stringify({ query: firstWord, display: 30, type: 'blog' }),
                 });
                 console.log(`[순위] API 응답 상태: ${rankRes.status}`);
                 if (rankRes.ok) {
