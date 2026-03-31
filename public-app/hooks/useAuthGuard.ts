@@ -34,7 +34,9 @@ export function useAuthGuard(): AuthGuardResult {
         if (session?.user) {
           setUser(session.user);
         } else {
-          if (typeof window !== 'undefined') {
+          // 게스트 체험 모드: ?guest=1 파라미터가 있으면 리다이렉트 안 함
+          const isGuestMode = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('guest') === '1';
+          if (!isGuestMode && typeof window !== 'undefined') {
             window.location.href = '/auth';
             return;
           }

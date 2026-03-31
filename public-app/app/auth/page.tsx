@@ -269,6 +269,18 @@ export default function AuthPage() {
               <button type="submit" disabled={isLoading} className={btnPrimaryCls}>
                 {isLoading ? <span className="flex items-center justify-center gap-2">{spinner} 로그인 중...</span> : '로그인'}
               </button>
+
+              <div className="relative my-2">
+                <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-200" /></div>
+                <div className="relative flex justify-center text-xs"><span className="bg-white px-3 text-slate-400">또는</span></div>
+              </div>
+
+              <a
+                href="/app?guest=1"
+                className="block w-full py-3 text-center text-sm font-medium text-slate-500 border border-slate-200 rounded-xl hover:bg-slate-50 transition-all"
+              >
+                로그인 없이 체험하기
+              </a>
             </form>
           )}
 
