@@ -48,26 +48,21 @@ function extractMedicalTerms(keyword: string): string[] {
     .filter(t => !LOCATION_SUFFIXES.test(t)); // 지역명 제외
 }
 
-// 키워드 관련성 검증: 블로그 ID는 이미 확인됨 → 시술/진료 단어가 제목에 있는지만 체크
+// 키워드 관련성 검증: 키워드가 제목에 "연속으로" 포함되어야 매칭
+// "불광동 충치치료" → 제목에 "불광동충치치료"가 연속으로 있어야 함
+// "불광동 ~~~ 충치치료" 처럼 떨어져 있으면 매칭 실패
 function isKeywordRelevant(keyword: string, title: string): boolean {
-  const medicalTerms = extractMedicalTerms(keyword);
-
-  // 시술 단어가 없으면 (예: "불당동 치과" → 지역+과만) → 매칭 OK
-  if (medicalTerms.length === 0) return true;
-
   const cleanTitle = title
     .replace(/<[^>]+>/g, '')
     .replace(/&[a-z]+;/g, ' ')
     .replace(/\s+/g, '')
     .toLowerCase();
 
-  // 시술/진료 단어 중 최소 1개가 제목에 포함되어야 매칭
-  for (const term of medicalTerms) {
-    if (cleanTitle.includes(term.replace(/\s+/g, '').toLowerCase())) {
-      return true;
-    }
-  }
-  return false;
+  // 키워드에서 공백 제거 후 연속 포함 체크
+  const keywordNoSpace = keyword.replace(/\s+/g, '').toLowerCase();
+  if (keywordNoSpace.length < 2) return true;
+
+  return cleanTitle.includes(keywordNoSpace);
 }
 
 // 의료광고법 저촉 키워드 필터
