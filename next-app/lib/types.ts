@@ -40,6 +40,7 @@ export interface GenerationRequest {
   customImagePrompt?: string;
   learnedStyleId?: string;
   customSubheadings?: string;
+  keywordDensity?: number | 'auto';
   medicalLawMode?: 'strict' | 'relaxed';
   includeFaq?: boolean;
   faqCount?: number;

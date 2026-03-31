@@ -289,18 +289,23 @@ export function buildBlogPrompt(req: GenerationRequest): {
   );
 
   // ── 키워드 규칙 ──
+  const kwDensity = req.keywordDensity;
+  const kwCountGuide = kwDensity === 'auto' || kwDensity === undefined
+    ? '자연스럽게 분산 배치하세요. 과도한 반복은 피하세요'
+    : `본문에 정확히 ${kwDensity}회 삽입하세요. 소제목, 본문, 결론에 골고루 분산. 어색하게 끼워넣지 말고 문맥에 맞게 삽입`;
+
   if (req.disease && req.keywords) {
     promptParts.push(
       '',
       `[키워드·질환 역할 분리]`,
       `SEO 키워드: "${req.keywords}" / 질환: "${req.disease}"`,
-      `→ 키워드는 SEO용(글 전체에 4~5회, 자연스러운 위치에 배치), 질환이 글의 실제 주제. 다른 질환명 추가 금지.`,
+      `→ 키워드는 SEO용 — ${kwCountGuide}. 질환이 글의 실제 주제. 다른 질환명 추가 금지.`,
     );
   } else if (req.keywords) {
     promptParts.push(
       '',
       `[키워드]`,
-      `"${req.keywords}" - 글 전체에 4~5회, 자연스러운 위치에 배치. 도입부 첫 2문장에서는 금지. 다른 질환명 추가 금지.`,
+      `"${req.keywords}" - ${kwCountGuide}. 도입부 첫 2문장에서는 금지. 다른 질환명 추가 금지.`,
     );
   }
 

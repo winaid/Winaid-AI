@@ -31,6 +31,7 @@ function BlogForm() {
   const topicParam = searchParams.get('topic');
   const [topic, setTopic] = useState(topicParam || '');
   const [keywords, setKeywords] = useState('');
+  const [keywordDensity, setKeywordDensity] = useState<number | 'auto'>('auto');
   const [disease, setDisease] = useState('');
   const [customSubheadings, setCustomSubheadings] = useState('');
   const [category, setCategory] = useState<ContentCategory>(ContentCategory.DENTAL);
@@ -812,6 +813,7 @@ JSON 형식으로 응답해주세요.`;
       imageCount,
       cssTheme,
       writingStyle,
+      keywordDensity,
       medicalLawMode,
       includeFaq,
       faqCount: includeFaq ? faqCount : undefined,
@@ -1677,7 +1679,7 @@ ${generatedContent.substring(0, 2000)}
     <div className="flex flex-col lg:flex-row gap-5 lg:items-start p-5">
       {/* ── 입력 폼 — BlogFormPanel 컴포넌트로 분리 ── */}
       <BlogFormPanel
-        topic={topic} keywords={keywords} disease={disease} category={category}
+        topic={topic} keywords={keywords} keywordDensity={keywordDensity} disease={disease} category={category}
         persona={persona} tone={tone} audienceMode={audienceMode}
         imageStyle={imageStyle} imageCount={imageCount} textLength={textLength}
         hospitalName={hospitalName}
@@ -1697,7 +1699,7 @@ ${generatedContent.substring(0, 2000)}
         seoTitles={seoTitles} trendingItems={trendingItems}
         isLoadingTitles={isLoadingTitles} isLoadingTrends={isLoadingTrends}
         isGenerating={isGenerating}
-        setTopic={setTopic} setKeywords={setKeywords} setDisease={setDisease}
+        setTopic={setTopic} setKeywords={setKeywords} setKeywordDensity={setKeywordDensity} setDisease={setDisease}
         setCategory={setCategory} setPersona={setPersona} setTone={setTone}
         setAudienceMode={setAudienceMode} setImageStyle={setImageStyle}
         setImageCount={setImageCount} setTextLength={setTextLength}

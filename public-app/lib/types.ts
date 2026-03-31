@@ -1,5 +1,6 @@
 /**
- * 콘텐츠 생성 관련 타입
+ * 콘텐츠 생성 관련 타입 — 기존 src/types.ts에서 블로그 생성에 필요한 핵심만 추출
+ * 마이그레이션 완료 후 통합 예정
  */
 
 export type CardNewsDesignTemplateId = 'medical-clean' | 'spring-floral' | 'modern-grid' | 'simple-pin' | 'medical-illust';
@@ -39,6 +40,7 @@ export interface GenerationRequest {
   customImagePrompt?: string;
   learnedStyleId?: string;
   customSubheadings?: string;
+  keywordDensity?: number | 'auto';
   medicalLawMode?: 'strict' | 'relaxed';
   includeFaq?: boolean;
   faqCount?: number;

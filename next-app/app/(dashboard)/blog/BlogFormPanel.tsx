@@ -13,6 +13,7 @@ export interface BlogFormPanelProps {
   // ── 폼 상태 ──
   topic: string;
   keywords: string;
+  keywordDensity: number | 'auto';
   disease: string;
   category: ContentCategory;
   persona: string;
@@ -61,6 +62,7 @@ export interface BlogFormPanelProps {
   // ── 폼 setter ──
   setTopic: (v: string) => void;
   setKeywords: (v: string | ((prev: string) => string)) => void;
+  setKeywordDensity: (v: number | 'auto') => void;
   setDisease: (v: string) => void;
   setCategory: (v: ContentCategory) => void;
   setPersona: (v: string) => void;
@@ -103,7 +105,7 @@ export interface BlogFormPanelProps {
 
 export default function BlogFormPanel(props: BlogFormPanelProps) {
   const {
-    topic, keywords, disease, category, persona, tone, audienceMode, imageStyle, imageCount, textLength,
+    topic, keywords, keywordDensity, disease, category, persona, tone, audienceMode, imageStyle, imageCount, textLength,
     hospitalName, selectedTeam, showHospitalDropdown, selectedManager, selectedHospitalAddress,
     homepageUrl, clinicContext, isCrawling, crawlProgress,
     includeFaq, faqCount, showCustomInput, customPrompt, customSubheadings,
@@ -112,7 +114,7 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
     keywordSortBy, keywordSearch, keywordMinVolume, isCheckingRanks, rankResults, hideRanked, isLoadingMoreKeywords,
     seoTitles, trendingItems, isLoadingTitles, isLoadingTrends,
     isGenerating,
-    setTopic, setKeywords, setDisease, setCategory, setPersona, setTone, setAudienceMode,
+    setTopic, setKeywords, setKeywordDensity, setDisease, setCategory, setPersona, setTone, setAudienceMode,
     setImageStyle, setImageCount, setTextLength, setHospitalName, setSelectedTeam,
     setShowHospitalDropdown, setSelectedManager, setSelectedHospitalAddress,
     setHomepageUrl, setClinicContext, setCrawlProgress,
@@ -507,6 +509,19 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
               className={inputCls}
             />
           </div>
+
+          {/* 키워드 반복 횟수 */}
+          {keywords.trim() && (
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] text-slate-400 whitespace-nowrap">반복</span>
+              {(['auto', 3, 5, 7] as const).map(opt => (
+                <button key={opt} type="button" onClick={() => setKeywordDensity(opt)}
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all ${keywordDensity === opt ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>
+                  {opt === 'auto' ? '자동' : `${opt}회`}
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* 질환명 */}
           <div>
