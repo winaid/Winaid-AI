@@ -40,6 +40,11 @@ export interface BlogResultAreaProps {
   isSeoLoading?: boolean;
   // 빈 상태
   topic: string;
+  // 인라인 채팅 수정
+  chatInput?: string;
+  setChatInput?: (v: string) => void;
+  isChatRefining?: boolean;
+  onChatRefine?: () => void;
 }
 
 /** 블로그 결과 영역 — 생성 중 / 에러 / 결과 / 빈 상태 4가지 렌더링 */
@@ -52,6 +57,7 @@ export default function BlogResultArea({
   onImageRegenerate, regeneratingImage,
   seoReport, isSeoLoading,
   topic,
+  chatInput = '', setChatInput, isChatRefining = false, onChatRefine,
 }: BlogResultAreaProps) {
 
   // ── 카운트다운 타이머 (생성 중에만 동작) ──
@@ -151,6 +157,43 @@ export default function BlogResultArea({
           onImageRegenerate={onImageRegenerate}
           regeneratingImage={regeneratingImage}
         />
+
+        {/* 인라인 수정 채팅 */}
+        {setChatInput && onChatRefine && (
+          <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-xs font-bold text-violet-600">✨ AI 수정</span>
+              <span className="text-[10px] text-slate-400">생성된 글을 명령어로 바로 수정합니다</span>
+            </div>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={chatInput}
+                onChange={e => setChatInput(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); onChatRefine(); } }}
+                placeholder="예: 도입부를 더 자연스럽게 / 3번째 소제목 내용 보강 / 전체적으로 톤을 부드럽게"
+                disabled={isChatRefining}
+                className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-400 disabled:opacity-50"
+              />
+              <button
+                onClick={onChatRefine}
+                disabled={!chatInput.trim() || isChatRefining}
+                className="px-5 py-3 bg-violet-600 text-white text-xs font-bold rounded-xl hover:bg-violet-700 disabled:opacity-50 flex-shrink-0 flex items-center gap-2"
+              >
+                {isChatRefining ? (
+                  <><div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />수정 중...</>
+                ) : '수정 요청'}
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-1.5 mt-2">
+              {['도입부 자연스럽게', '전체 톤 부드럽게', '결론 강화', '문장 다듬기', 'AI 냄새 제거'].map(chip => (
+                <button key={chip} onClick={() => setChatInput(chip)}
+                  className="px-2.5 py-1 text-[10px] font-medium rounded-lg bg-slate-100 text-slate-500 hover:bg-violet-50 hover:text-violet-600 transition-colors"
+                >{chip}</button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     );
   }

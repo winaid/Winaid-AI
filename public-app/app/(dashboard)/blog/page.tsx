@@ -18,6 +18,7 @@ import { analyzeHospitalKeywords, loadMoreKeywords, checkKeywordRankings, MAX_KE
 import { analyzeClinicContent, type ClinicContext } from '../../../lib/clinicContextService';
 import { BLOG_STAGES, BLOG_MESSAGE_POOL, MSG_ROTATION_INTERVAL } from './blogConstants';
 import { normalizeBlogStructure } from './normalizeBlog';
+import { buildChatRefinePrompt } from '../../../lib/refinePrompt';
 import BlogResultArea from './BlogResultArea';
 import BlogFormPanel from './BlogFormPanel';
 import { useCreditContext } from '../layout';
@@ -108,6 +109,8 @@ function BlogForm() {
   const [error, setError] = useState<string | null>(null);
   const [isRetryable, setIsRetryable] = useState(false);
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
+  const [chatInput, setChatInput] = useState('');
+  const [isChatRefining, setIsChatRefining] = useState(false);
   // 생성 시간 추정
   const [generationStartTime, setGenerationStartTime] = useState<number>(0);
   const [estimatedTotalSeconds, setEstimatedTotalSeconds] = useState<number>(0);
@@ -1295,6 +1298,41 @@ ${subs.length > 0 ? `경쟁 글 소제목: ${subs.join(' / ')}` : ''}
     }
   };
 
+  // ── 인라인 채팅 수정 (결과 화면에서 바로 수정) ──
+  const handleChatRefine = useCallback(async () => {
+    if (!chatInput.trim() || !generatedContent || isChatRefining) return;
+    setIsChatRefining(true);
+    try {
+      const { systemInstruction, prompt } = buildChatRefinePrompt({
+        workingContent: generatedContent,
+        userMessage: chatInput.trim(),
+      });
+      const res = await fetch('/api/gemini', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt, systemInstruction,
+          model: 'gemini-3.1-pro-preview',
+          temperature: 0.7,
+          maxOutputTokens: 16384,
+        }),
+      });
+      const data = await res.json() as { text?: string };
+      if (res.ok && data.text) {
+        let refined = data.text.trim();
+        refined = refined.replace(/^```html?\s*\n?/i, '').replace(/\n?```\s*$/, '');
+        if (refined.includes('<')) {
+          setGeneratedContent(refined);
+          setChatInput('');
+          setSaveStatus(null);
+          const sections = parseBlogSections(refined);
+          setBlogSections(sections);
+        }
+      }
+    } catch { /* 수정 실패 무시 */ }
+    finally { setIsChatRefining(false); }
+  }, [chatInput, generatedContent, isChatRefining]);
+
   // ── 이미지 클릭 → 액션 모달 열기 ──
   const handleImageClick = useCallback((imageIndex: number) => {
     const promptIdx = imageIndex - 1;
@@ -1639,6 +1677,10 @@ ${generatedContent.substring(0, 2000)}
         seoReport={seoReport}
         isSeoLoading={isSeoLoading}
         topic={topic}
+        chatInput={chatInput}
+        setChatInput={setChatInput}
+        isChatRefining={isChatRefining}
+        onChatRefine={handleChatRefine}
       />
 
       {/* ── 블로그 이미지 액션 모달 (다운로드/재생성 선택) ── */}
