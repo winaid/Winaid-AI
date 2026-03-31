@@ -55,7 +55,7 @@ export default function AdminPage() {
   const [loginError, setLoginError] = useState('');
   const [loginLoading, setLoginLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
 
   // 팀/병원 데이터 (DB 우선, fallback: teamData.ts)
   const [TEAM_DATA, setTeamData] = useState<TeamData[]>(TEAM_DATA_FALLBACK);
@@ -211,8 +211,8 @@ export default function AdminPage() {
 
   // 세션 복원
   useEffect(() => {
-    const saved = sessionStorage.getItem('ADMIN_AUTHENTICATED');
-    const savedToken = sessionStorage.getItem('ADMIN_TOKEN');
+    const saved = localStorage.getItem('ADMIN_AUTHENTICATED') || sessionStorage.getItem('ADMIN_AUTHENTICATED');
+    const savedToken = localStorage.getItem('ADMIN_TOKEN') || sessionStorage.getItem('ADMIN_TOKEN');
     if (saved === 'true' && savedToken) {
       setAuthenticated(true);
       setPassword(savedToken);
@@ -260,7 +260,7 @@ export default function AdminPage() {
   }, [tab, authenticated]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const getToken = useCallback(() => {
-    return sessionStorage.getItem('ADMIN_TOKEN') || password;
+    return localStorage.getItem('ADMIN_TOKEN') || sessionStorage.getItem('ADMIN_TOKEN') || password;
   }, [password]);
 
   const loadStats = useCallback(async () => {
@@ -486,10 +486,10 @@ export default function AdminPage() {
     if (s) {
       sessionStorage.setItem('ADMIN_AUTHENTICATED', 'true');
       sessionStorage.setItem('ADMIN_TOKEN', password.trim());
-      // admin 로그인 시 크레딧 무제한 플래그
       try { localStorage.setItem('winaid_admin', 'true'); } catch { /* ignore */ }
       if (rememberMe) {
-        sessionStorage.setItem('ADMIN_PERSIST', 'true');
+        localStorage.setItem('ADMIN_AUTHENTICATED', 'true');
+        localStorage.setItem('ADMIN_TOKEN', password.trim());
       }
       setAuthenticated(true);
       setStats(s);
@@ -503,7 +503,9 @@ export default function AdminPage() {
     sessionStorage.removeItem('ADMIN_AUTHENTICATED');
     sessionStorage.removeItem('ADMIN_TOKEN');
     sessionStorage.removeItem('ADMIN_PERSIST');
-    try { localStorage.removeItem('winaid_admin'); } catch { /* ignore */ }
+    localStorage.removeItem('ADMIN_AUTHENTICATED');
+    localStorage.removeItem('ADMIN_TOKEN');
+    localStorage.removeItem('winaid_admin');
     // legacy cleanup
     localStorage.removeItem('ADMIN_PERSIST');
     localStorage.removeItem('ADMIN_TOKEN');
