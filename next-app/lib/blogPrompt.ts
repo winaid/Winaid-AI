@@ -287,8 +287,15 @@ export function buildBlogPrompt(req: GenerationRequest): {
     promptParts.push(
       '',
       `[FAQ 섹션]`,
-      `본문 마무리 전에 FAQ를 ${req.faqCount || 3}개 포함하세요.`,
-      '형식: <h3>자주 묻는 질문</h3> 아래에 Q/A를 <p> 태그로 작성.',
+      `본문을 완전히 마무리한 후(결론/마무리 문단 이후에) FAQ를 ${req.faqCount || 3}개 작성하세요.`,
+      'FAQ는 글의 맨 마지막에 위치해야 합니다. 마무리 인사 뒤에 작성하세요.',
+      `형식:
+<div style="margin-top:32px;padding:20px 24px;background:#f8fafc;border-radius:12px;border:1px solid #e2e8f0;">
+<h3 style="margin:0 0 16px 0;font-size:17px;color:#1e293b;">💬 자주 묻는 질문</h3>
+각 Q/A:
+<p style="margin:12px 0 4px 0;font-weight:700;color:#334155;">Q. 질문내용</p>
+<p style="margin:0 0 12px 0;color:#64748b;">A. 답변내용</p>
+</div>`,
     );
   }
 
