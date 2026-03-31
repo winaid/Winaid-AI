@@ -20,7 +20,6 @@ export default function PressPage() {
     { value: 1800, label: '긴 기사', desc: '심층 보도' },
   ];
   const [category, setCategory] = useState('치과');
-  const [hospitalWebsite, setHospitalWebsite] = useState('');
 
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState('');
@@ -41,44 +40,11 @@ export default function PressPage() {
     setSaveStatus(null);
 
     try {
-      // 1) 병원 크롤링 + 말투 로드 병렬 실행
-      setProgress('🏥 병원 정보 수집 중...');
-
-      const crawlPromise = (async (): Promise<string> => {
-        if (!hospitalWebsite.trim()) return '';
-        try {
-          const crawlRes = await fetch('/api/naver/crawl-hospital-blog', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ blogUrl: hospitalWebsite.trim(), maxPosts: 1 }),
-          });
-          if (!crawlRes.ok) return '';
-          const crawlData = await crawlRes.json() as { posts?: Array<{ content?: string }> };
-          const siteContent = crawlData.posts?.[0]?.content || '';
-          if (!siteContent) return '';
-          const analysisRes = await fetch('/api/gemini', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              prompt: `다음은 ${hospitalName || 'OO병원'}의 웹사이트 내용입니다.\n\n${siteContent.slice(0, 3000)}\n\n위 병원 웹사이트에서 다음 정보를 추출해주세요:\n1. 병원의 핵심 강점 (3~5개)\n2. 특화 진료과목이나 특별한 의료 서비스\n3. 차별화된 특징 (장비, 시스템, 의료진 등)\n4. 수상 경력이나 인증 사항\n\n간결하게 핵심만 추출해주세요.`,
-              model: 'gemini-3.1-flash-lite-preview', temperature: 0.3, maxOutputTokens: 1000,
-            }),
-          });
-          if (!analysisRes.ok) return '';
-          const analysis = await analysisRes.json() as { text?: string };
-          return analysis.text ? `[🏥 ${hospitalName || 'OO병원'} 병원 정보 - 웹사이트 분석 결과]\n${analysis.text}` : '';
-        } catch { return ''; }
-      })();
-
-      // 병원 정보 대기
-      const hospitalInfo = await crawlPromise;
-
-      // 2) 프롬프트 조립
+      // 프롬프트 조립
       setProgress('🗞️ 보도자료 작성 중...');
       const { systemInstruction, prompt } = buildPressPrompt({
         topic: topic.trim(), keywords: keywords.trim() || undefined, hospitalName: hospitalName || undefined,
         doctorName: doctorName.trim(), doctorTitle, pressType, textLength, category,
-        hospitalInfo: hospitalInfo || undefined,
       });
 
       const finalPrompt = prompt;
@@ -170,13 +136,6 @@ export default function PressPage() {
           <div>
             <label className={labelCls}>병원명 (선택)</label>
             <input type="text" value={hospitalName} onChange={e => setHospitalName(e.target.value)} placeholder="병원 이름을 입력하세요 (예: OO치과)" className={inputCls} />
-          </div>
-
-          {/* 병원 웹사이트 */}
-          <div>
-            <label className={labelCls}>병원 웹사이트 (선택)</label>
-            <input type="url" value={hospitalWebsite} onChange={e => setHospitalWebsite(e.target.value)} placeholder="https://www.hospital.com" className={inputCls} />
-            <p className="text-[10px] text-slate-400 mt-0.5">입력하면 병원 강점을 분석해 기사에 반영합니다</p>
           </div>
 
           {/* 의료진 + 직함 + 진료과 */}

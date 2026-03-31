@@ -113,27 +113,8 @@ export default function RefinePage() {
     const msg = chatInput;
     setChatInput(''); setIsChatting(true);
     try {
-      // URL 감지 + 크롤링
-      const urls = msg.match(/(https?:\/\/[^\s]+)|(www\.[^\s]+)/gi);
-      let crawledContent = '';
-      if (urls) {
-        for (const url of urls) {
-          const fullUrl = url.startsWith('www.') ? `https://${url}` : url;
-          try {
-            const r = await fetch('/api/naver/crawl-hospital-blog', {
-              method: 'POST', headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ blogUrl: fullUrl, maxPosts: 1 }),
-            });
-            if (r.ok) {
-              const d = await r.json() as { posts?: Array<{ content?: string }> };
-              if (d.posts?.[0]?.content) crawledContent += `\n[${fullUrl}]\n${d.posts[0].content.slice(0, 2000)}\n`;
-              else crawledContent += `\n[${fullUrl} — 내용 없음]\n`;
-            } else crawledContent += `\n[${fullUrl} — 크롤링 실패]\n`;
-          } catch { crawledContent += `\n[${fullUrl} — 접근 불가]\n`; }
-        }
-      }
       const { systemInstruction, prompt } = buildChatRefinePrompt({
-        workingContent: getWorkingContent(), userMessage: msg, crawledContent: crawledContent || undefined,
+        workingContent: getWorkingContent(), userMessage: msg,
       });
       const res = await fetch('/api/gemini', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -145,12 +126,7 @@ export default function RefinePage() {
       if (!html.startsWith('<')) html = `<p>${html.replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br/>')}</p>`;
       setRefinedHtml(applyTheme(html));
       try { setFactCheck(computeFactCheck(html)); } catch { /* factCheck 실패 무시 */ }
-      let reply = '수정 완료! 오른쪽 결과를 확인해주세요.';
-      if (urls) {
-        const ok = (crawledContent.match(/\[https?/g) || []).length - (crawledContent.match(/실패|불가|없음/g) || []).length;
-        if (ok > 0) reply = `✅ ${ok}개 사이트 참고하여 수정 완료!`;
-      }
-      setChatMessages(prev => [...prev, { role: 'assistant', content: reply, ts: new Date() }]);
+      setChatMessages(prev => [...prev, { role: 'assistant', content: '수정 완료! 오른쪽 결과를 확인해주세요.', ts: new Date() }]);
     } catch (err) {
       setChatMessages(prev => [...prev, { role: 'assistant', content: `❌ 수정 실패: ${(err as Error).message}`, ts: new Date() }]);
     } finally { setIsChatting(false); }
