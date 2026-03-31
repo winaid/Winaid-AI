@@ -575,15 +575,16 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
                 <p className="text-xs font-semibold text-slate-500 mb-1.5">글 길이</p>
                 <div className="grid grid-cols-3 gap-1.5">
                   {([
-                    { value: 1500, label: '짧은 글' },
-                    { value: 2500, label: '중간 글' },
-                    { value: 3500, label: '긴 글' },
+                    { value: 1500, label: '짧은 글', desc: '1,000~2,000자' },
+                    { value: 2500, label: '중간 글', desc: '2,000~3,000자' },
+                    { value: 3500, label: '긴 글', desc: '3,000자~' },
                   ]).map(opt => (
                     <button key={opt.value} type="button"
                       onClick={() => setTextLength(opt.value)}
                       className={`py-2 rounded-lg border transition-all text-center ${textLength === opt.value ? 'border-blue-400 bg-blue-50 text-blue-700' : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300'}`}
                     >
-                      <span className="text-[11px] font-semibold">{opt.label}</span>
+                      <span className="text-[11px] font-semibold block">{opt.label}</span>
+                      <span className={`text-[9px] ${textLength === opt.value ? 'text-blue-400' : 'text-slate-400'}`}>{opt.desc}</span>
                     </button>
                   ))}
                 </div>
