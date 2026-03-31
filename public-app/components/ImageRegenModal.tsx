@@ -159,7 +159,9 @@ export const ImageRegenModal: React.FC<ImageRegenModalProps> = ({
           </div>
         </div>
 
-        <div className="px-8 py-6 border-t border-slate-200 flex items-center justify-end gap-3">
+        <div className="px-8 py-6 border-t border-slate-200 flex items-center justify-between">
+          <span className="text-[10px] text-slate-400">이미지 재생성은 크레딧이 소모되지 않습니다</span>
+          <div className="flex items-center gap-3">
           <button type="button" onClick={onClose}
             className="px-6 py-3 rounded-2xl font-black text-sm bg-slate-100 hover:bg-slate-200">취소</button>
           <button type="button" onClick={onSubmit} disabled={isRegenerating || !prompt.trim()}
@@ -168,6 +170,7 @@ export const ImageRegenModal: React.FC<ImageRegenModalProps> = ({
               <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />재생성 중...</>
             ) : '이 프롬프트로 재생성'}
           </button>
+          </div>
         </div>
       </div>
     </div>

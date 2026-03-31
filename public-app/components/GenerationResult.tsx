@@ -245,6 +245,7 @@ function BlogSectionPanel({
           {sectionProgress}
         </div>
       )}
+      <p className="text-[9px] text-slate-400 mt-2 text-center">소제목 재생성은 크레딧이 소모되지 않습니다</p>
     </div>
   );
 }
