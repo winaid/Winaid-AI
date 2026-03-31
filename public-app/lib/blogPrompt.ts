@@ -92,6 +92,8 @@ ${imageCount >= 4 ? '[IMG_4]' : ''}`;
   return html;
 }
 
+import { getMedicalLawPromptBlock } from './medicalLawRules';
+
 export function buildBlogPrompt(req: GenerationRequest): {
   systemInstruction: string;
   prompt: string;
@@ -100,18 +102,7 @@ export function buildBlogPrompt(req: GenerationRequest): {
   const personaGuide = PERSONA_GUIDES[req.persona] || PERSONA_GUIDES.hospital_info;
   const toneGuide = TONE_GUIDES[req.tone] || TONE_GUIDES.warm;
   const styleGuide = STYLE_GUIDES[req.writingStyle || 'empathy'] || '';
-  const medLawNote = req.medicalLawMode === 'relaxed'
-    ? '의료광고법 준수는 유지하되, "~수 있습니다", "~에 도움이 됩니다" 등의 표현을 적극 활용합니다.'
-    : [
-      '의료광고법을 엄격히 준수합니다. 아래 금지어를 절대 사용하지 마세요.',
-      '🚫 최상급/과장: 극대화, 최고, 최초, 최상, 최첨단, 최선, 최적, 독보적, 유일한, 탁월한, 혁신적, 획기적, 가장 좋은, 가장 뛰어난, 압도적, 독자적, 세계 최초',
-      '🚫 보장성: 100%, 완벽, 확실, 보장, 반드시 낫는, 완치, 근본 치료, 영구적, 절대',
-      '🚫 수치/무통: 수술 성공률 N%, 부작용 없는, 부작용 제로, 통증 없는, 무통',
-      '🚫 최소/최대: 최소 침습, 최소 통증, 최대 효과 (→ "부담을 줄인", "효과를 높인"으로 대체)',
-      '🚫 비교: ~보다 우수, ~보다 뛰어난, 타 병원 대비, 업계 최고',
-      '🚫 유인: 무료, 공짜, 파격 할인, 이벤트 가격, 특가',
-      '→ 대신 사용: 극대화→향상/개선, 최첨단→최신/현대적인, 완벽→꼼꼼한/체계적인, 확실→~에 도움이 됩니다, 최고→우수한/신뢰할 수 있는, 혁신적→새로운 방식의, 보장→~을 기대할 수 있습니다, 최소 침습→부담을 줄인, 무통→불편감을 줄인',
-    ].join('\n');
+  const medLawNote = getMedicalLawPromptBlock(req.medicalLawMode !== 'relaxed');
 
   const targetImageCount = req.imageCount ?? 0;
   const rawTarget = req.textLength || 1500;
@@ -125,12 +116,25 @@ export function buildBlogPrompt(req: GenerationRequest): {
   const targetLength = range.target;
   const imageStyleGuide = getImageStyleGuide(req);
 
-  // 소제목 개수 가이드 (old gpt52-prompts-staged.ts 동일)
-  let subheadingGuide: string;
-  if (targetLength < 2000) subheadingGuide = '4개';
-  else if (targetLength < 2500) subheadingGuide = '4~5개';
-  else if (targetLength < 3000) subheadingGuide = '5개';
-  else subheadingGuide = '5~6개';
+  // 소제목 개수와 분량 설계
+  let subheadingCount: number;
+  if (targetLength < 2000) subheadingCount = 4;
+  else if (targetLength < 2500) subheadingCount = 5;
+  else if (targetLength < 3000) subheadingCount = 5;
+  else subheadingCount = 6;
+  const subheadingGuide = `${subheadingCount}개`;
+
+  // 구조적 분량 설계 (글자수를 구조로 강제)
+  const introChars = 200;
+  const outroChars = 200;
+  const bodyCharsPerSection = Math.round((range.target - introChars - outroChars) / subheadingCount);
+  const volumeDesign = `[분량 설계 — 글자수를 구조로 확보]
+목표: 공백 포함 ${range.min}~${range.max}자
+- 도입부: 2문단 × 각 100자 = ${introChars}자
+- 소제목 ${subheadingCount}개 × 각 2~3문단 × 각 ${Math.round(bodyCharsPerSection / 2.5)}자 = ${bodyCharsPerSection * subheadingCount}자
+- 마무리: 2문단 × 각 100자 = ${outroChars}자
+- 합계 목표: ${range.target}자
+각 문단은 최소 3문장, 문장당 평균 30~40자. 2문장짜리 짧은 문단은 만들지 마세요.`;
 
   // 말투 학습이 적용되면 IDENTITY의 화자/시점 규칙을 무시 (학습된 말투 우선)
   const hasLearnedStyle = !!(req.learnedStyleId || (req.hospitalStyleSource === 'explicit_selected_hospital' && req.hospitalName));
@@ -209,14 +213,17 @@ export function buildBlogPrompt(req: GenerationRequest): {
     '네이버 스마트블록 SEO에 최적화된 HTML 구조로 작성합니다.',
     '출력은 반드시 HTML입니다. <h3>으로 소제목, <p>로 문단을 작성합니다.',
     '',
-    '🚨🚨🚨 [태그 규칙 - 절대 위반 금지] 🚨🚨🚨',
-    '- <h1> 태그 사용 금지. 절대 사용하지 마세요.',
-    '- <h2> 태그 사용 금지. 절대 사용하지 마세요.',
-    '- 소제목은 오직 <h3> 태그만 사용합니다.',
-    '- 마크다운 문법 금지: #, ##, ###, **, *, ``` 등 일체 금지.',
-    '- 순수 HTML 태그만 사용합니다. (<h3>, <p>, <strong>, <em> 등)',
+    '[태그 규칙]',
+    '소제목: <h3>만 사용. <h1>, <h2> 금지. 마크다운(#, ##, **, ```) 금지.',
+    '출력: 순수 HTML(<h3>, <p>, <strong>, <em>)만 사용.',
     '',
-    `🚨 [글자 수 규칙 — 가장 중요!] 목표 글자 수(공백 포함): ${range.min}~${range.max}자. 이 범위를 반드시 지킵니다. ${range.max}자를 초과하면 절대 실패! 짧은 글은 짧게, 긴 글은 길게. 쓰다 보니 길어지는 것 금지 — 미리 분량을 계획하고 쓰세요.`,
+    volumeDesign,
+    '',
+    `[좋은 글의 기준]`,
+    `도입부 좋은 예: "임플란트 수술 후 잇몸이 욱신거리면 괜히 겁이 납니다. 어디까지가 정상이고, 언제 병원에 가야 하는 걸까요."`,
+    `소제목 좋은 예: "찬 물만 마시면 이가 시린 이유" (검색형, 구어체, 15~25자)`,
+    `문단 연결 좋은 예: 증상 설명 → "이런 증상이 나타난다면 원인을 알아볼 필요가 있습니다" → 원인 소제목`,
+    `마무리 좋은 예: 핵심을 한 문장으로 요약 + "궁금한 점은 가까운 치과에서 상담받아보시길 바랍니다"`,
   ].filter(Boolean).join('\n');
 
   const promptParts: string[] = [];
@@ -259,7 +266,7 @@ export function buildBlogPrompt(req: GenerationRequest): {
 
   promptParts.push(
     `- 이미지: ${targetImageCount}장`,
-    `- 🚨 목표 글자 수: 공백 포함 ${range.min}~${range.max}자 (이 범위를 반드시 지키세요. ${range.max}자 초과 절대 금지!)`,
+    `- 목표 글자 수: 공백 포함 ${range.min}~${range.max}자 (위 분량 설계 참고)`,
   );
 
   // ── 소제목 구조 규칙 (old 동일) ──
@@ -283,13 +290,12 @@ export function buildBlogPrompt(req: GenerationRequest): {
     '- 좋은 예: "찬 물만 마시면 이가 시린 이유" / "충치인 줄 알았는데 잇몸이 문제?"',
     '- 각 소제목은 하나의 역할만 담당 (정의/원인/증상/치료/관리 등). 앞 소제목에서 다룬 정보 반복 금지',
     '',
-    '🚨 [구조 위반 체크리스트 — 출력 전 반드시 확인]',
-    '□ <h1>, <h2> 태그가 단 1개라도 있으면 → 실패',
-    '□ 마크다운 ##, ### 이 있으면 → 실패',
-    '□ <h3> 소제목이 4개 미만이면 → 실패',
-    '□ 소제목 아래 <p>가 2개 미만이면 → 실패',
-    '□ 마무리 섹션이 없으면 → 실패',
-    `□ 전체 글자 수(공백 포함)가 ${range.max}자를 넘으면 → 실패 (목표: ${range.min}~${range.max}자)`,
+    '[출력 전 체크리스트]',
+    '□ <h1>, <h2> 태그 없는가?',
+    '□ <h3> 소제목 4개 이상인가?',
+    '□ 각 소제목 아래 <p> 2개 이상인가?',
+    '□ 마무리 섹션이 있는가?',
+    `□ 전체 글자 수 ${range.min}~${range.max}자 범위인가?`,
   );
 
   // ── 키워드 규칙 ──
@@ -362,20 +368,20 @@ export function buildBlogPrompt(req: GenerationRequest): {
 
   promptParts.push(
     '',
-    `🚨 일반 소제목: <p> 2~3개 / 마무리: <p> 2개 (도입부와 비슷한 분량)`,
+    `일반 소제목: <p> 2~3개 / 마무리: <p> 2개 (도입부와 비슷한 분량)`,
   );
 
   // ── 이미지 프롬프트 규칙 (old 동일) ──
   if (targetImageCount > 0) {
     promptParts.push(
       '',
-      `[이미지 프롬프트 규칙] 🚨 정확히 ${targetImageCount}개 필수!`,
+      `[이미지 프롬프트 규칙] 정확히 ${targetImageCount}개 필수`,
       `글 마지막에 [IMAGE_PROMPTS] 블록으로 이미지 프롬프트를 작성하세요.`,
       `- 스타일: ${imageStyleGuide}`,
       '- 사람이 등장할 경우 반드시 "한국인" 명시 (예: "한국인 여성", "한국인 의사")',
       '',
-      '🚨🚨🚨 [이미지 프롬프트 절대 금지 — 위반 시 실패] 🚨🚨🚨',
-      '- 이미지 안에 글자, 문장, 제목, 캡션, 라벨, 간판, 로고, 워터마크 절대 금지',
+      '[이미지 프롬프트 금지]',
+      '- 이미지 안에 글자, 문장, 제목, 캡션, 라벨, 간판, 로고, 워터마크 금지',
       '- 병원명, 브랜드명, 전화번호, URL, 소셜 핸들 절대 금지',
       '- 포스터, 전단지, 브로셔, 인포그래픽, 카드뉴스, 광고 소재 레이아웃 절대 금지',
       '- 불릿 리스트, 번호 리스트, 표, 차트 등 정보 전달 요소 절대 금지',
