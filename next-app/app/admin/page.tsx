@@ -476,6 +476,8 @@ export default function AdminPage() {
     if (s) {
       sessionStorage.setItem('ADMIN_AUTHENTICATED', 'true');
       sessionStorage.setItem('ADMIN_TOKEN', password.trim());
+      // admin 로그인 시 크레딧 무제한 플래그
+      try { localStorage.setItem('winaid_admin', 'true'); } catch { /* ignore */ }
       if (rememberMe) {
         sessionStorage.setItem('ADMIN_PERSIST', 'true');
       }
@@ -491,6 +493,7 @@ export default function AdminPage() {
     sessionStorage.removeItem('ADMIN_AUTHENTICATED');
     sessionStorage.removeItem('ADMIN_TOKEN');
     sessionStorage.removeItem('ADMIN_PERSIST');
+    try { localStorage.removeItem('winaid_admin'); } catch { /* ignore */ }
     // legacy cleanup
     localStorage.removeItem('ADMIN_PERSIST');
     localStorage.removeItem('ADMIN_TOKEN');
