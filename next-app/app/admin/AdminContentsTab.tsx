@@ -28,6 +28,7 @@ export interface AdminContentsTabProps {
   onLoadMore: () => void;
   onRefresh: () => void;
   onDelete: (postId: string) => void;
+  userNameMap?: Record<string, string>;
   showDeleteAllModal: boolean;
   setShowDeleteAllModal: (v: boolean) => void;
   deleteAllConfirmText: string;
@@ -47,7 +48,7 @@ export default function AdminContentsTab(props: AdminContentsTabProps) {
     hasMorePosts, stats, onLoadMore, onRefresh, onDelete,
     showDeleteAllModal, setShowDeleteAllModal,
     deleteAllConfirmText, setDeleteAllConfirmText,
-    deleteAllLoading, deleteAllError, setDeleteAllError, onDeleteAll,
+    deleteAllLoading, deleteAllError, setDeleteAllError, onDeleteAll, userNameMap,
   } = props;
 
   const hospitalScrollRef = useRef<HTMLDivElement>(null);
@@ -275,7 +276,7 @@ export default function AdminContentsTab(props: AdminContentsTabProps) {
                               <span>{formatDate(post.created_at)}</span>
                               {post.hospital_name && <span className="px-1.5 py-0.5 bg-emerald-50 text-emerald-600 rounded text-[11px] font-medium">{post.hospital_name}</span>}
                               {post.category && <span className="px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded text-[11px]">{post.category}</span>}
-                              {post.user_email && <span className="text-blue-400">{post.user_email}</span>}
+                              {post.user_email && <span className="text-blue-400">{userNameMap?.[post.user_email] || post.user_email}</span>}
                               {post.char_count && post.post_type !== 'image' && <span className="text-slate-300">{post.char_count.toLocaleString()}자</span>}
                             </div>
                             <p className="text-xs text-slate-400 line-clamp-1">

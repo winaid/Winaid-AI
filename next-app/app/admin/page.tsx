@@ -822,6 +822,7 @@ export default function AdminPage() {
           typeFilter={typeFilter}
           setTypeFilter={setTypeFilter}
           selectedPost={selectedPost}
+          userNameMap={Object.fromEntries(users.filter(u => u.email).map(u => [u.email!, u.full_name || u.email!]))}
           setSelectedPost={setSelectedPost}
           TEAM_DATA={TEAM_DATA}
           selectedContentTeam={selectedContentTeam}
