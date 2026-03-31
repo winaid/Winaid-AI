@@ -209,7 +209,7 @@ export default function AuthPage() {
 
   const teamField = (
     <div>
-      <label className="block text-sm font-medium text-slate-600 mb-1.5">팀 선택</label>
+      <label className="block text-sm font-medium text-slate-600 mb-1.5">콘텐츠팀 선택</label>
       <select
         value={teamId}
         onChange={(e) => setTeamId(Number(e.target.value))}
