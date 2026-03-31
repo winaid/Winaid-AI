@@ -7,13 +7,15 @@ import { ContentCategory, type GenerationRequest, type AudienceMode, type ImageS
 import { buildBlogPrompt } from '../../../lib/blogPrompt';
 import { savePost } from '../../../lib/postStorage';
 import { getSessionSafe, supabase } from '../../../lib/supabase';
+import { getHospitalStylePrompt } from '../../../lib/styleService';
 import { type ScoreBarData } from '../../../components/GenerationResult';
+import { getStyleById, getStylePromptForGeneration } from '../../../components/WritingStyleLearner';
 import type { BlogSection } from '../../../lib/types';
 import { parseBlogSections, replaceSectionHtml } from '../../../lib/blogSectionParser';
 import { downloadWord, downloadPDF } from '../../../lib/blogExport';
 import { ImageActionModal, ImageRegenModal } from '../../../components/ImageRegenModal';
 import { analyzeHospitalKeywords, loadMoreKeywords, checkKeywordRankings, MAX_KEYWORDS, type KeywordStat, type KeywordRankResult } from '../../../lib/keywordAnalysisService';
-import { type ClinicContext } from '../../../lib/clinicContextService';
+import { analyzeClinicContent, type ClinicContext } from '../../../lib/clinicContextService';
 import { BLOG_STAGES, BLOG_MESSAGE_POOL, MSG_ROTATION_INTERVAL } from './blogConstants';
 import { normalizeBlogStructure } from './normalizeBlog';
 import BlogResultArea from './BlogResultArea';
@@ -49,6 +51,7 @@ function BlogForm() {
   const [includeFaq, setIncludeFaq] = useState(false);
   const [faqCount, setFaqCount] = useState(3);
   const [showAdvanced, setShowAdvanced] = useState(true);
+  const [learnedStyleId, setLearnedStyleId] = useState<string | undefined>(undefined);
   const [customPrompt, setCustomPrompt] = useState('');
   const [showCustomInput, setShowCustomInput] = useState(false);
 
@@ -69,6 +72,8 @@ function BlogForm() {
   // ── 병원 홈페이지/블로그 크롤링 상태 ──
   const [homepageUrl, setHomepageUrl] = useState('');
   const [clinicContext, setClinicContext] = useState<ClinicContext | null>(null);
+  const [isCrawling, setIsCrawling] = useState(false);
+  const [crawlProgress, setCrawlProgress] = useState('');
   const [includeHospitalIntro, setIncludeHospitalIntro] = useState(false);
 
   // localStorage에서 커스텀 프롬프트 복원 (old 동일)
@@ -173,6 +178,27 @@ function BlogForm() {
     } finally {
       setIsAnalyzingKeywords(false);
       setKeywordProgress('');
+    }
+  };
+
+  // ── 병원 홈페이지 크롤링 ──
+  const handleCrawlHomepage = async () => {
+    if (!homepageUrl.trim()) return;
+    setIsCrawling(true);
+    setCrawlProgress('');
+    try {
+      const ctx = await analyzeClinicContent(homepageUrl.trim(), setCrawlProgress);
+      setClinicContext(ctx);
+      if (ctx) {
+        setCrawlProgress(`분석 완료! 서비스 ${ctx.actualServices.length}개, 특화 ${ctx.specialties.length}개 발견`);
+      } else {
+        setCrawlProgress('분석할 콘텐츠를 찾지 못했습니다.');
+      }
+    } catch {
+      setCrawlProgress('크롤링 실패');
+      setClinicContext(null);
+    } finally {
+      setIsCrawling(false);
     }
   };
 
@@ -901,7 +927,20 @@ ${subs.length > 0 ? `경쟁 글 소제목: ${subs.join(' / ')}` : ''}
         }
       })() : Promise.resolve('');
 
-      const stylePromise = Promise.resolve('');
+      const stylePromise = (async () => {
+        if (learnedStyleId) {
+          const learnedStyle = getStyleById(learnedStyleId);
+          if (learnedStyle) {
+            return `\n\n[🎓🎓🎓 학습된 말투 적용 - 최우선 적용! 🎓🎓🎓]\n${getStylePromptForGeneration(learnedStyle)}\n\n⚠️ 위 학습된 말투를 반드시 적용하세요!\n- 문장 끝 패턴을 정확히 따라하세요\n- 자주 사용하는 표현을 자연스럽게 활용하세요\n- 전체적인 어조와 분위기를 일관되게 유지하세요`;
+          }
+        } else if (hospitalName) {
+          try {
+            const sp = await getHospitalStylePrompt(hospitalName);
+            if (sp) return `\n\n[병원 블로그 학습 말투 - 반드시 적용]\n${sp}`;
+          } catch { /* 프로파일 없으면 기본 */ }
+        }
+        return '';
+      })();
 
       // 두 작업 동시 완료 대기
       const [competitorInstruction, styleInstruction] = await Promise.all([competitorPromise, stylePromise]);
@@ -1590,9 +1629,10 @@ ${generatedContent.substring(0, 2000)}
         hospitalName={hospitalName}
         selectedHospitalAddress={selectedHospitalAddress}
         homepageUrl={homepageUrl} clinicContext={clinicContext}
+        isCrawling={isCrawling} crawlProgress={crawlProgress}
         includeFaq={includeFaq} faqCount={faqCount}
         showCustomInput={showCustomInput} customPrompt={customPrompt}
-        customSubheadings={customSubheadings}
+        customSubheadings={customSubheadings} learnedStyleId={learnedStyleId}
         showAdvanced={showAdvanced} includeHospitalIntro={includeHospitalIntro}
         keywordStats={keywordStats} keywordAiRec={keywordAiRec}
         keywordProgress={keywordProgress} isAnalyzingKeywords={isAnalyzingKeywords}
@@ -1610,16 +1650,18 @@ ${generatedContent.substring(0, 2000)}
         setHospitalName={setHospitalName}
         setSelectedHospitalAddress={setSelectedHospitalAddress}
         setHomepageUrl={setHomepageUrl} setClinicContext={setClinicContext}
+        setCrawlProgress={setCrawlProgress}
         setIncludeFaq={setIncludeFaq} setFaqCount={setFaqCount}
         setShowCustomInput={setShowCustomInput} setCustomPrompt={setCustomPrompt}
         setCustomSubheadings={setCustomSubheadings}
-        setShowAdvanced={setShowAdvanced}
+        setLearnedStyleId={setLearnedStyleId} setShowAdvanced={setShowAdvanced}
         setIncludeHospitalIntro={setIncludeHospitalIntro}
         setKeywordStats={setKeywordStats} setShowKeywordPanel={setShowKeywordPanel}
         setKeywordSortBy={setKeywordSortBy} setKeywordSearch={setKeywordSearch}
         setKeywordMinVolume={setKeywordMinVolume} setHideRanked={setHideRanked}
         onSubmit={handleSubmit}
         onAnalyzeKeywords={handleAnalyzeKeywords}
+        onCrawlHomepage={handleCrawlHomepage}
         onLoadMoreKeywords={handleLoadMoreKeywords}
         onCheckRanks={handleCheckRanks}
         onRecommendTitles={handleRecommendTitles}

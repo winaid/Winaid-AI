@@ -5,6 +5,7 @@ import type { ContentCategory, AudienceMode, ImageStyle, CssTheme } from '../../
 import type { KeywordStat, KeywordRankResult } from '../../../lib/keywordAnalysisService';
 import type { ClinicContext } from '../../../lib/clinicContextService';
 import type { TrendingItem, SeoTitleItem } from '../../../lib/types';
+import WritingStyleLearner from '../../../components/WritingStyleLearner';
 import { MAX_KEYWORDS } from '../../../lib/keywordAnalysisService';
 
 export interface BlogFormPanelProps {
@@ -23,11 +24,14 @@ export interface BlogFormPanelProps {
   selectedHospitalAddress: string;
   homepageUrl: string;
   clinicContext: ClinicContext | null;
+  isCrawling: boolean;
+  crawlProgress: string;
   includeFaq: boolean;
   faqCount: number;
   showCustomInput: boolean;
   customPrompt: string;
   customSubheadings: string;
+  learnedStyleId: string | undefined;
   showAdvanced: boolean;
   includeHospitalIntro: boolean;
   // ── 키워드 분석 상태 ──
@@ -65,11 +69,13 @@ export interface BlogFormPanelProps {
   setSelectedHospitalAddress: (v: string) => void;
   setHomepageUrl: (v: string) => void;
   setClinicContext: (v: ClinicContext | null) => void;
+  setCrawlProgress: (v: string) => void;
   setIncludeFaq: (v: boolean) => void;
   setFaqCount: (v: number) => void;
   setShowCustomInput: (v: boolean) => void;
   setCustomPrompt: (v: string) => void;
   setCustomSubheadings: (v: string) => void;
+  setLearnedStyleId: (v: string | undefined) => void;
   setShowAdvanced: (v: boolean) => void;
   setIncludeHospitalIntro: (v: boolean) => void;
   setKeywordStats: (v: KeywordStat[]) => void;
@@ -81,6 +87,7 @@ export interface BlogFormPanelProps {
   // ── 핸들러 ──
   onSubmit: (e: React.FormEvent) => void;
   onAnalyzeKeywords: () => void;
+  onCrawlHomepage: () => void;
   onLoadMoreKeywords: () => void;
   onCheckRanks: () => void;
   onRecommendTitles: () => void;
@@ -91,9 +98,9 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
   const {
     topic, keywords, disease, category, persona, tone, audienceMode, imageStyle, imageCount, textLength,
     hospitalName, selectedHospitalAddress,
-    homepageUrl, clinicContext,
+    homepageUrl, clinicContext, isCrawling, crawlProgress,
     includeFaq, faqCount, showCustomInput, customPrompt, customSubheadings,
-    showAdvanced, includeHospitalIntro,
+    learnedStyleId, showAdvanced, includeHospitalIntro,
     keywordStats, keywordAiRec, keywordProgress, isAnalyzingKeywords, showKeywordPanel,
     keywordSortBy, keywordSearch, keywordMinVolume, isCheckingRanks, rankResults, hideRanked, isLoadingMoreKeywords,
     seoTitles, trendingItems, isLoadingTitles, isLoadingTrends,
@@ -101,12 +108,13 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
     setTopic, setKeywords, setDisease, setCategory, setPersona, setTone, setAudienceMode,
     setImageStyle, setImageCount, setTextLength, setHospitalName,
     setSelectedHospitalAddress,
-    setHomepageUrl, setClinicContext,
+    setHomepageUrl, setClinicContext, setCrawlProgress,
     setIncludeFaq, setFaqCount, setShowCustomInput, setCustomPrompt, setCustomSubheadings,
-    setShowAdvanced, setIncludeHospitalIntro,
+    setLearnedStyleId, setShowAdvanced, setIncludeHospitalIntro,
     setKeywordStats, setShowKeywordPanel, setKeywordSortBy, setKeywordSearch, setKeywordMinVolume, setHideRanked,
     onSubmit: handleSubmit,
     onAnalyzeKeywords: handleAnalyzeKeywords,
+    onCrawlHomepage: handleCrawlHomepage,
     onLoadMoreKeywords: handleLoadMoreKeywords,
     onCheckRanks: handleCheckRanks,
     onRecommendTitles: handleRecommendTitles,
@@ -140,13 +148,26 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
           {hospitalName && (
             <div>
               <p className="text-[11px] font-semibold text-slate-500 mb-1.5">병원 홈페이지/블로그 URL</p>
-              <input
-                type="url"
-                value={homepageUrl}
-                onChange={e => { setHomepageUrl(e.target.value); setClinicContext(null); }}
-                placeholder="https://blog.naver.com/..."
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:border-blue-400 outline-none bg-white"
-              />
+              <div className="flex gap-1.5">
+                <input
+                  type="url"
+                  value={homepageUrl}
+                  onChange={e => { setHomepageUrl(e.target.value); setClinicContext(null); setCrawlProgress(''); }}
+                  placeholder="https://blog.naver.com/..."
+                  className="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-xs focus:border-blue-400 outline-none bg-white"
+                />
+                <button
+                  type="button"
+                  onClick={handleCrawlHomepage}
+                  disabled={isCrawling || !homepageUrl.trim()}
+                  className="px-3 py-2 rounded-lg text-xs font-semibold transition-all bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-40 whitespace-nowrap"
+                >
+                  {isCrawling ? '분석 중...' : '분석'}
+                </button>
+              </div>
+              {crawlProgress && (
+                <p className="mt-1 text-[10px] text-slate-400">{crawlProgress}</p>
+              )}
               {clinicContext && (
                 <div className="mt-1.5 p-2 bg-emerald-50 rounded-lg border border-emerald-100">
                   <p className="text-[10px] font-semibold text-emerald-700 mb-1">
@@ -572,15 +593,23 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
                   </div>
                 )}
               </div>
-              {/* 화자/어조 */}
-              <div className="grid grid-cols-2 gap-2">
-                <select value={persona} onChange={e => setPersona(e.target.value)} className={inputCls}>
-                  {PERSONAS.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
-                </select>
-                <select value={tone} onChange={e => setTone(e.target.value)} className={inputCls}>
-                  {TONES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-                </select>
-              </div>
+              {/* 말투 학습 */}
+              <WritingStyleLearner
+                onStyleSelect={(styleId) => setLearnedStyleId(styleId)}
+                selectedStyleId={learnedStyleId}
+                contentType="blog"
+              />
+              {/* 화자/어조 (학습된 말투 적용 시 숨김) */}
+              {!learnedStyleId && (
+                <div className="grid grid-cols-2 gap-2">
+                  <select value={persona} onChange={e => setPersona(e.target.value)} className={inputCls}>
+                    {PERSONAS.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
+                  </select>
+                  <select value={tone} onChange={e => setTone(e.target.value)} className={inputCls}>
+                    {TONES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                  </select>
+                </div>
+              )}
             </div>
           </div>
           )}
