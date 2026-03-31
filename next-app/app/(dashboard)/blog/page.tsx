@@ -854,7 +854,7 @@ JSON 형식으로 응답해주세요.`;
     setSaveStatus(null);
     // 예상 시간 계산
     setGenerationStartTime(Date.now());
-    let estimated = 35; // 텍스트 생성 (~30초) + 후처리 (~5초)
+    let estimated = 25; // 텍스트 생성 (~20초) + 경쟁분석 병렬 (~5초)
     if (request.imageCount && request.imageCount > 0) estimated += request.imageCount * 25;
     setEstimatedTotalSeconds(estimated);
     setBlogSections([]);
@@ -899,7 +899,7 @@ JSON 형식으로 응답해주세요.`;
               model: 'gemini-3.1-flash-lite-preview',
               temperature: 0.3,
               responseType: 'json',
-              timeout: 15000,
+              timeout: 8000,
             }),
           });
           if (!competitorRes.ok) return '';
@@ -1084,8 +1084,9 @@ ${subs.length > 0 ? `경쟁 글 소제목: ${subs.join(' / ')}` : ''}
 
             console.info(`[BLOG] Stage 1.5: 금지패턴=${isBadPattern}, 모호브릿지=${hasVagueBridge}, 나열형=${isListingPattern}${listingEndings ? '(' + listingEndings.length + '회)' : ''}, 3문단+=${isTooManyParagraphs}${introParagraphs ? '(' + introParagraphs.length + '문단)' : ''}`);
 
-            const needsRegen = isBadPattern || hasVagueBridge || isTooManyParagraphs || isListingPattern;
-            const regenReason = isBadPattern ? '금지 패턴' : hasVagueBridge ? '브릿지 모호' : isListingPattern ? '나열형 도입' : '3문단 이상';
+            // 프롬프트 강화로 재생성 기준을 금지 패턴(정의형/메타설명형)만으로 축소
+            const needsRegen = isBadPattern;
+            const regenReason = '금지 패턴';
 
             if (needsRegen) {
               console.info(`[BLOG] Stage 1.5: ⚠️ 도입부 품질 미달(${regenReason}) → 재생성 시작`);
