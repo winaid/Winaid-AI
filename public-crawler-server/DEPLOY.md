@@ -18,7 +18,7 @@ Railway Dashboard > 프로젝트 > **Variables** 탭에서:
 
 | 변수 | 값 | 설명 |
 |------|-----|------|
-| `ALLOWED_ORIGINS` | `https://your-app.vercel.app,http://localhost:3000` | Vercel 배포 URL로 교체 |
+| `ALLOWED_ORIGINS` | `https://winai.kr,http://localhost:3000` | Vercel 배포 URL로 교체 |
 | `NODE_ENV` | `production` | |
 
 `PORT`는 Railway가 자동 설정하므로 넣지 않아도 됩니다.
