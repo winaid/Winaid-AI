@@ -40,8 +40,8 @@ function BlogForm() {
   const [writingStyle, setWritingStyle] = useState<WritingStyle>('empathy');
   const [cssTheme, setCssTheme] = useState<CssTheme>('modern');
   const [imageStyle, setImageStyle] = useState<ImageStyle>('photo');
-  const [imageCount, setImageCount] = useState(0);
-  const [textLength, setTextLength] = useState(1500);
+  const [imageCount, setImageCount] = useState(2);
+  const [textLength, setTextLength] = useState(2500);
   const [hospitalName, setHospitalName] = useState('');
   const [selectedHospitalAddress, setSelectedHospitalAddress] = useState('');
   const [medicalLawMode, setMedicalLawMode] = useState<'strict' | 'relaxed'>(() => {
@@ -50,7 +50,7 @@ function BlogForm() {
   });
   const [includeFaq, setIncludeFaq] = useState(false);
   const [faqCount, setFaqCount] = useState(3);
-  const [showAdvanced, setShowAdvanced] = useState(true);
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [learnedStyleId, setLearnedStyleId] = useState<string | undefined>(undefined);
   const [customPrompt, setCustomPrompt] = useState('');
   const [showCustomInput, setShowCustomInput] = useState(false);
