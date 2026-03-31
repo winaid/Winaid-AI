@@ -251,7 +251,9 @@ export function buildBlogPrompt(req: GenerationRequest): {
     if (ctx.locationSignals.length > 0) {
       ctxParts.push(`- 주변 지역: ${ctx.locationSignals.join(', ')}`);
     }
-    ctxParts.push('→ 위 정보를 자연스럽게 반영하되, 없는 서비스를 언급하지 마세요.');
+    ctxParts.push(`→ 위 정보 중 현재 글의 주제("${req.topic}")와 관련 있는 정보만 참고하세요.`);
+    ctxParts.push('→ 주제와 무관한 시술, 장비, 서비스 정보는 절대 포함하지 마세요.');
+    ctxParts.push('→ 없는 서비스를 언급하지 마세요.');
     promptParts.push(...ctxParts);
   }
 

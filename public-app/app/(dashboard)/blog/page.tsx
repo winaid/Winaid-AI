@@ -843,7 +843,7 @@ JSON 형식으로 응답해주세요.`;
     // 예상 시간 계산
     setGenerationStartTime(Date.now());
     let estimated = 25; // 텍스트 생성 (~20초) + 경쟁분석 병렬 (~5초)
-    if (request.imageCount && request.imageCount > 0) estimated += request.imageCount * 25;
+    if (request.imageCount && request.imageCount > 0) estimated += request.imageCount * 45;
     setEstimatedTotalSeconds(estimated);
     setBlogSections([]);
     setRegeneratingSection(null);

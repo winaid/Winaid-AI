@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useRef, useCallback } from 'react';
+import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import type { BlogSection } from '../lib/types';
 
 // ── 간이 Markdown → HTML 변환 ──
@@ -324,6 +324,26 @@ export function ResultPanel({
 
   const hasBlogSections = postType === 'blog' && blogSections && blogSections.length > 0 && onSectionRegenerate;
 
+  // 이미지 재생성 시 해당 이미지 위에 오버레이 추가/제거
+  useEffect(() => {
+    if (!editorRef.current) return;
+    const OVERLAY_CLASS = 'img-regen-overlay';
+    // 기존 오버레이 제거
+    editorRef.current.querySelectorAll(`.${OVERLAY_CLASS}`).forEach(el => el.remove());
+    if (regeneratingImage == null) return;
+    const img = editorRef.current.querySelector(`img[data-image-index="${regeneratingImage}"]`);
+    if (!img) return;
+    const wrapper = img.closest('.content-image-wrapper') || img.parentElement;
+    if (!wrapper) return;
+    (wrapper as HTMLElement).style.position = 'relative';
+    const overlay = document.createElement('div');
+    overlay.className = OVERLAY_CLASS;
+    overlay.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.4);border-radius:12px;z-index:10;';
+    overlay.innerHTML = '<div style="display:flex;align-items:center;gap:8px;padding:10px 20px;background:white;border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,0.15);"><div style="width:16px;height:16px;border:2px solid #3b82f6;border-top-color:transparent;border-radius:50%;animation:spin 1s linear infinite;"></div><span style="font-size:13px;font-weight:700;color:#3b82f6;">재생성 중...</span></div>';
+    wrapper.appendChild(overlay);
+    return () => { overlay.remove(); };
+  }, [regeneratingImage]);
+
   // content가 이미 HTML이면 markdownToHtml 스킵 (old는 innerHTML 직접 렌더)
   const isHtml = /<(?:h[1-6]|p|div|ul|ol|table)\b/i.test(content);
   const renderedHtml = useMemo(
@@ -596,14 +616,7 @@ export function ResultPanel({
                 }
               }}
             />
-            {regeneratingImage != null && (
-              <div className="absolute inset-0 bg-white/60 flex items-center justify-center z-10">
-                <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 rounded-xl border border-blue-200">
-                  <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-                  <span className="text-xs font-bold text-blue-600">이미지 {regeneratingImage} 재생성 중...</span>
-                </div>
-              </div>
-            )}
+            {/* 이미지 재생성 오버레이는 useEffect로 해당 이미지 위에 표시 */}
           </div>
         )}
       </div>

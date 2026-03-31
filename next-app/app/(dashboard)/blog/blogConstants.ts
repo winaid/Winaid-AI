@@ -6,7 +6,7 @@ export const BLOG_STAGES: Record<number, { icon: string; label: string; defaultM
   0: { icon: '✍️', label: '글 준비 중', defaultMsg: '좋은 문장을 한 줄씩 꺼내고 있어요', hint: '키워드를 분석하고 구조를 설계합니다' },
   1: { icon: '✍️', label: '글 준비 중', defaultMsg: '좋은 문장을 한 줄씩 꺼내고 있어요', hint: '전문 의료 콘텐츠를 작성하고 있습니다' },
   2: { icon: '✨', label: '내용 다듬는 중', defaultMsg: '읽는 맛이 나도록 다듬고 있어요', hint: '문체 교정과 정확성 검토를 진행합니다' },
-  3: { icon: '🎨', label: '이미지 만드는 중', defaultMsg: '글과 잘 어울리는 비주얼을 고르는 중이에요', hint: '이미지 수에 따라 30초~2분 정도 걸립니다' },
+  3: { icon: '🎨', label: '이미지 만드는 중', defaultMsg: '글과 잘 어울리는 비주얼을 고르는 중이에요', hint: '이미지 수에 따라 2~5분 정도 걸립니다' },
   4: { icon: '🎉', label: '마무리하는 중', defaultMsg: '거의 다 왔어요, 마지막 손질만 남았어요', hint: '결과를 저장하고 있습니다' },
 };
 
