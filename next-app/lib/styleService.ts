@@ -1050,7 +1050,7 @@ export async function crawlAndScoreAllHospitals(
                 });
                 console.log(`[순위] API 응답 상태: ${rankRes.status}`);
                 if (rankRes.ok) {
-                  const rankData = (await rankRes.json()) as { items?: Array<{ link?: string }> };
+                  const rankData = (await rankRes.json()) as { items?: Array<{ link?: string; title?: string; description?: string }> };
                   const items = rankData.items || [];
                   console.log(`[순위] "${firstWord}" 검색 결과 ${items.length}건`);
                   const lowerBlogId = blogId.toLowerCase();
@@ -1059,7 +1059,7 @@ export async function crawlAndScoreAllHospitals(
                   console.log(`[순위] 매칭 조건 — blogId: ${lowerBlogId}, logNo: ${postLogNo}`);
                   const kwNoSpace = firstWord.replace(/\s+/g, '').toLowerCase();
                   for (let ri = 0; ri < items.length; ri++) {
-                    const item = items[ri] as { link?: string; title?: string; description?: string };
+                    const item = items[ri];
                     const link = item.link || '';
                     const linkLower = link.toLowerCase();
                     if (!linkLower.includes(lowerBlogId)) continue;
