@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuthGuard } from '../../../hooks/useAuthGuard';
-import InternalFeedback from '../../../components/InternalFeedback';
 import UserManual from '../../../components/UserManual';
 
 type ContentTab = 'blog' | 'card_news' | 'press' | 'refine' | 'image' | 'history';
@@ -14,14 +13,6 @@ export default function DashboardPage() {
   const { user, userName } = useAuthGuard();
   const [quickInput, setQuickInput] = useState('');
   const showGuide = searchParams.get('guide') === '1';
-
-  useEffect(() => {
-    if (window.location.hash === '#feedback') {
-      setTimeout(() => {
-        document.getElementById('feedback')?.scrollIntoView({ behavior: 'smooth' });
-      }, 100);
-    }
-  }, []);
 
   const navigateTo = (tab: ContentTab) => router.push(`/${tab}`);
 
@@ -184,9 +175,6 @@ export default function DashboardPage() {
           </button>
         ))}
       </div>
-
-      {/* 내부 피드백 — UI 숨김 (기능 유지, id="feedback" 앵커 유지) */}
-      <div id="feedback" className="hidden" />
 
     </div>
   );

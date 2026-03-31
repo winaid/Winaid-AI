@@ -3,7 +3,7 @@
 import { CATEGORIES, PERSONAS, TONES } from '../../../lib/constants';
 import type { ContentCategory, AudienceMode, ImageStyle, CssTheme } from '../../../lib/types';
 import type { KeywordStat, KeywordRankResult } from '../../../lib/keywordAnalysisService';
-import type { ClinicContext } from '../../../lib/clinicContextService';
+import type { ClinicContext } from '../../../lib/types';
 import type { TrendingItem, SeoTitleItem } from '../../../lib/types';
 import { MAX_KEYWORDS } from '../../../lib/keywordAnalysisService';
 

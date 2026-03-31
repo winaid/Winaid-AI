@@ -87,9 +87,7 @@ export default function HistoryPage() {
     setError(null);
     try {
       const { userId } = await getSessionSafe();
-      const isAdmin = typeof sessionStorage !== 'undefined'
-        && sessionStorage.getItem('ADMIN_AUTHENTICATED') === 'true';
-      const result = await listPosts(userId, { showAll: isAdmin });
+      const result = await listPosts(userId);
       if ('error' in result) {
         setError(result.error);
       } else {

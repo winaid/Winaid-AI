@@ -13,7 +13,7 @@ import { parseBlogSections, replaceSectionHtml } from '../../../lib/blogSectionP
 import { downloadWord, downloadPDF } from '../../../lib/blogExport';
 import { ImageActionModal, ImageRegenModal } from '../../../components/ImageRegenModal';
 import { analyzeHospitalKeywords, loadMoreKeywords, checkKeywordRankings, MAX_KEYWORDS, type KeywordStat, type KeywordRankResult } from '../../../lib/keywordAnalysisService';
-import { type ClinicContext } from '../../../lib/clinicContextService';
+import { type ClinicContext } from '../../../lib/types';
 import { BLOG_STAGES, BLOG_MESSAGE_POOL, MSG_ROTATION_INTERVAL } from './blogConstants';
 import { normalizeBlogStructure } from './normalizeBlog';
 import BlogResultArea from './BlogResultArea';

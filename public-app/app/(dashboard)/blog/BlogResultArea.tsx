@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { BLOG_STAGES, BLOG_MESSAGE_POOL } from './blogConstants';
 import { ErrorPanel, ResultPanel, type ScoreBarData } from '../../../components/GenerationResult';
-import ContentAnalysisPanel from '../../../components/ContentAnalysisPanel';
 import SeoDetailPanel from '../../../components/SeoDetailPanel';
 import type { BlogSection, CssTheme, SeoReport } from '../../../lib/types';
 
@@ -127,7 +126,6 @@ export default function BlogResultArea({
   if (generatedContent) {
     return (
       <div className="flex-1 min-w-0">
-        <ContentAnalysisPanel html={generatedContent} keyword={topic?.split(',')[0]?.trim()} />
         {seoReport ? (
           <SeoDetailPanel report={seoReport} />
         ) : isSeoLoading ? (

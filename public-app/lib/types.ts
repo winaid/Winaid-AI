@@ -1,7 +1,17 @@
 /**
- * 콘텐츠 생성 관련 타입 — 기존 src/types.ts에서 블로그 생성에 필요한 핵심만 추출
- * 마이그레이션 완료 후 통합 예정
+ * 콘텐츠 생성 관련 타입
  */
+
+/** 병원 홈페이지/블로그 분석 결과 */
+export interface ClinicContext {
+  actualServices: string[];
+  specialties: string[];
+  locationSignals: string[];
+  brandKeywords: string[];
+  recurringTerms: Record<string, number>;
+  confidence: number;
+  sourceType: 'homepage' | 'blog' | 'unknown';
+}
 
 export type CardNewsDesignTemplateId = 'medical-clean' | 'spring-floral' | 'modern-grid' | 'simple-pin' | 'medical-illust';
 

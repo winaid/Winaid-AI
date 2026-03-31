@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { buildPressPrompt, PRESS_TYPES, DOCTOR_TITLES, CATEGORIES, PRESS_CSS, type PressType } from '../../../lib/pressPrompt';
 import { savePost } from '../../../lib/postStorage';
 import { getSessionSafe } from '../../../lib/supabase';
-import { getHospitalStylePrompt } from '../../../lib/styleService';
 import { ErrorPanel } from '../../../components/GenerationResult';
 
 export default function PressPage() {
@@ -71,13 +70,8 @@ export default function PressPage() {
         } catch { return ''; }
       })();
 
-      const stylePromise = (async (): Promise<string> => {
-        if (!hospitalName) return '';
-        try { return await getHospitalStylePrompt(hospitalName) || ''; } catch { return ''; }
-      })();
-
-      // 병렬 대기
-      const [hospitalInfo, stylePrompt] = await Promise.all([crawlPromise, stylePromise]);
+      // 병원 정보 대기
+      const hospitalInfo = await crawlPromise;
 
       // 2) 프롬프트 조립
       setProgress('🗞️ 보도자료 작성 중...');
@@ -87,9 +81,7 @@ export default function PressPage() {
         hospitalInfo: hospitalInfo || undefined,
       });
 
-      // 3) 병원 말투 주입
-      let finalPrompt = prompt;
-      if (stylePrompt) finalPrompt = `${prompt}\n\n[병원 블로그 학습 말투 - 보도자료 스타일 유지하며 적용]\n${stylePrompt}`;
+      const finalPrompt = prompt;
 
       // 4) Google Search 연동으로 생성
       setProgress('🔍 최신 의료 정보 검색 + 기사 작성 중...');
