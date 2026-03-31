@@ -6,7 +6,7 @@
  * - ClinicContext 기반 키워드 품질 향상
  */
 
-import type { ClinicContext } from './types';
+import type { ClinicContext } from './clinicContextService';
 
 export interface KeywordStat {
   keyword: string;
