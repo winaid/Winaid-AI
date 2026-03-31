@@ -5,6 +5,7 @@ import { CATEGORIES } from '../../../lib/constants';
 import { buildCardNewsPrompt, type CardNewsRequest } from '../../../lib/cardNewsPrompt';
 import { savePost } from '../../../lib/postStorage';
 import { getSessionSafe, supabase } from '../../../lib/supabase';
+import { getHospitalStylePrompt } from '../../../lib/styleService';
 import { CARD_NEWS_DESIGN_TEMPLATES } from '../../../lib/cardNewsDesignTemplates';
 import { ErrorPanel } from '../../../components/GenerationResult';
 import { CardRegenModal, type CardPromptHistoryItem, CARD_PROMPT_HISTORY_KEY, CARD_REF_IMAGE_KEY } from '../../../components/CardRegenModal';
@@ -147,12 +148,19 @@ export default function CardNewsPage() {
 
     try {
       const { systemInstruction, prompt } = buildCardNewsPrompt(request);
+      let finalPrompt = prompt;
+      if (hospitalName) {
+        try {
+          const stylePrompt = await getHospitalStylePrompt(hospitalName);
+          if (stylePrompt) finalPrompt += `\n\n[병원 말투 적용]\n${stylePrompt}`;
+        } catch { /* ignore */ }
+      }
 
       const res = await fetch('/api/gemini', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          prompt, systemInstruction,
+          prompt: finalPrompt, systemInstruction,
           model: 'gemini-3.1-pro-preview', temperature: 0.85, maxOutputTokens: 8192,
         }),
       });

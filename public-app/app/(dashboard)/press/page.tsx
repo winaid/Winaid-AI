@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { buildPressPrompt, PRESS_TYPES, DOCTOR_TITLES, CATEGORIES, PRESS_CSS, type PressType } from '../../../lib/pressPrompt';
 import { savePost } from '../../../lib/postStorage';
 import { getSessionSafe } from '../../../lib/supabase';
+import { getHospitalStylePrompt } from '../../../lib/styleService';
 import { ErrorPanel } from '../../../components/GenerationResult';
 
 export default function PressPage() {
@@ -47,9 +48,16 @@ export default function PressPage() {
         doctorName: doctorName.trim(), doctorTitle, pressType, textLength, category,
       });
 
-      const finalPrompt = prompt;
+      // 병원 말투 적용
+      let finalPrompt = prompt;
+      if (hospitalName) {
+        try {
+          const stylePrompt = await getHospitalStylePrompt(hospitalName);
+          if (stylePrompt) finalPrompt = `${prompt}\n\n[병원 블로그 학습 말투 - 보도자료 스타일 유지하며 적용]\n${stylePrompt}`;
+        } catch { /* 프로파일 없으면 기본 */ }
+      }
 
-      // 4) Google Search 연동으로 생성
+      // Google Search 연동으로 생성
       setProgress('🔍 최신 의료 정보 검색 + 기사 작성 중...');
       const res = await fetch('/api/gemini', {
         method: 'POST',
