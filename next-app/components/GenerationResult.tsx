@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useCallback } from 'react';
 import type { BlogSection } from '../lib/types';
 
 // ── 간이 Markdown → HTML 변환 ──
@@ -288,7 +288,39 @@ export function ResultPanel({
   const [copyFeedback, setCopyFeedback] = useState(false);
   const [activeTab, setActiveTab] = useState<'preview' | 'html'>('preview');
   const [showSectionPanel, setShowSectionPanel] = useState(false);
+  const [showLinkInput, setShowLinkInput] = useState(false);
+  const [linkUrl, setLinkUrl] = useState('');
   const editorRef = useRef<HTMLDivElement>(null);
+
+  // ── 서식 명령 ──
+  const execFormat = useCallback((command: string, value?: string) => {
+    editorRef.current?.focus();
+    document.execCommand(command, false, value);
+  }, []);
+
+  const handleInsertLink = useCallback(() => {
+    if (!linkUrl.trim()) return;
+    const url = linkUrl.startsWith('http') ? linkUrl : `https://${linkUrl}`;
+    execFormat('createLink', url);
+    // target="_blank" 추가
+    setTimeout(() => {
+      const links = editorRef.current?.querySelectorAll('a:not([target])');
+      links?.forEach(a => { a.setAttribute('target', '_blank'); a.setAttribute('rel', 'noopener'); });
+    }, 50);
+    setLinkUrl('');
+    setShowLinkInput(false);
+  }, [linkUrl, execFormat]);
+
+  const handleLineBreak = useCallback(() => {
+    if (!editorRef.current) return;
+    const html = editorRef.current.innerHTML;
+    // 마침표 뒤 공백 + 다음 문장 시작 지점에 <br> 삽입 (제목 태그 내부 제외)
+    const processed = html.replace(/(<p[^>]*>)([\s\S]*?)(<\/p>)/gi, (match, open, inner, close) => {
+      const newInner = inner.replace(/\.(\s+)(?!<br)(?=[가-힣A-Z])/g, '.<br>');
+      return `${open}${newInner}${close}`;
+    });
+    editorRef.current.innerHTML = processed;
+  }, []);
 
   const hasBlogSections = postType === 'blog' && blogSections && blogSections.length > 0 && onSectionRegenerate;
 
@@ -344,6 +376,41 @@ export function ResultPanel({
               HTML
             </button>
           </div>
+
+          {/* 서식 툴바 (preview 모드에서만) */}
+          {activeTab === 'preview' && (
+            <div className="flex items-center gap-0.5">
+              {/* 기본 서식 */}
+              <button type="button" onClick={() => execFormat('bold')} title="볼드" className="w-8 h-8 flex items-center justify-center rounded-lg text-xs font-black text-slate-600 hover:bg-slate-200 transition-all">B</button>
+              <button type="button" onClick={() => execFormat('italic')} title="이탤릭" className="w-8 h-8 flex items-center justify-center rounded-lg text-xs italic text-slate-600 hover:bg-slate-200 transition-all">I</button>
+              <button type="button" onClick={() => execFormat('underline')} title="밑줄" className="w-8 h-8 flex items-center justify-center rounded-lg text-xs underline text-slate-600 hover:bg-slate-200 transition-all">U</button>
+              <div className="w-px h-5 bg-slate-200 mx-1" />
+              {/* 정렬 */}
+              <button type="button" onClick={() => execFormat('justifyLeft')} title="왼쪽 정렬" className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-500 hover:bg-slate-200 transition-all">
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" d="M3 6h18M3 12h12M3 18h18" /></svg>
+              </button>
+              <button type="button" onClick={() => execFormat('justifyCenter')} title="가운데 정렬" className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-500 hover:bg-slate-200 transition-all">
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" d="M3 6h18M6 12h12M3 18h18" /></svg>
+              </button>
+              <button type="button" onClick={() => execFormat('justifyRight')} title="오른쪽 정렬" className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-500 hover:bg-slate-200 transition-all">
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" d="M3 6h18M9 12h12M3 18h18" /></svg>
+              </button>
+              <div className="w-px h-5 bg-slate-200 mx-1" />
+              {/* 줄바꿈 */}
+              <button type="button" onClick={handleLineBreak} title="한 문장씩 줄바꿈" className="px-2 h-8 flex items-center justify-center rounded-lg text-[10px] font-bold text-slate-500 hover:bg-slate-200 transition-all whitespace-nowrap">↵ 줄바꿈</button>
+              <div className="w-px h-5 bg-slate-200 mx-1" />
+              {/* 링크 */}
+              <div className="relative">
+                <button type="button" onClick={() => setShowLinkInput(!showLinkInput)} title="링크 삽입" className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-500 hover:bg-slate-200 transition-all text-sm">🔗</button>
+                {showLinkInput && (
+                  <div className="absolute top-full left-0 mt-1 z-50 flex gap-1.5 bg-white border border-slate-200 rounded-xl shadow-lg p-2">
+                    <input type="url" value={linkUrl} onChange={e => setLinkUrl(e.target.value)} placeholder="https://..." className="w-48 px-2.5 py-1.5 text-xs border border-slate-200 rounded-lg outline-none focus:border-blue-400" onKeyDown={e => { if (e.key === 'Enter') handleInsertLink(); }} autoFocus />
+                    <button type="button" onClick={handleInsertLink} className="px-3 py-1.5 text-xs font-bold bg-blue-500 text-white rounded-lg hover:bg-blue-600">삽입</button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* 소제목 수정 토글 (blog 전용) */}
           {hasBlogSections && (
