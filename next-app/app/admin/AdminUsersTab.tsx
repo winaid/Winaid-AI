@@ -97,7 +97,7 @@ export default function AdminUsersTab({
                         <span className="text-[11px] px-2 py-0.5 bg-blue-50 text-blue-600 rounded-full font-medium">{team.label}</span>
                       )}
                     </div>
-                    <p className="text-xs text-slate-400 truncate mt-0.5">{user.email}</p>
+                    {/* 이메일 비표시 — 이름+팀만 */}
                   </div>
                   <select
                     value={user.team_id ?? ''}
