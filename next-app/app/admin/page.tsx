@@ -222,6 +222,7 @@ export default function AdminPage() {
     loadStats();
     loadPosts();
     loadTeamData();
+    loadUsers();
   }, [authenticated]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 필터 변경 시 재로드

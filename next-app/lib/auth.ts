@@ -50,40 +50,20 @@ export const signInWithTeam = async (
     }
   }
 
-  // 로그인 성공 시 profiles 자동 생성 (기존 유저 호환)
+  // 로그인 성공 시 profiles 항상 업데이트 (이름/팀 최신화)
   if (data.user && !error) {
     try {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('id', data.user.id)
-        .single();
-
-      if (!profile) {
-        await supabase.from('profiles').upsert(
-          {
-            id: data.user.id,
-            email,
-            full_name: displayName,
-            team_id: teamId,
-            created_at: new Date().toISOString(),
-          } as any,
-          { onConflict: 'id' }
-        );
-
-        await supabase.from('subscriptions').upsert(
-          {
-            user_id: data.user.id,
-            plan_type: 'free',
-            credits_total: 10,
-            credits_used: 0,
-            expires_at: null,
-          } as any,
-          { onConflict: 'user_id' }
-        );
-      }
+      await supabase.from('profiles').upsert(
+        {
+          id: data.user.id,
+          email: data.user.email || email,
+          full_name: displayName,
+          team_id: teamId,
+        } as Record<string, unknown>,
+        { onConflict: 'id' }
+      );
     } catch (e) {
-      console.error('프로필 확인/생성 실패 (무시):', e);
+      console.error('프로필 업데이트 실패 (무시):', e);
     }
   }
 
