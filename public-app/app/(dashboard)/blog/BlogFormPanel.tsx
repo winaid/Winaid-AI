@@ -1,12 +1,10 @@
 'use client';
 
 import { CATEGORIES, PERSONAS, TONES } from '../../../lib/constants';
-import { TEAM_DATA } from '../../../lib/teamData';
 import type { ContentCategory, AudienceMode, ImageStyle, CssTheme } from '../../../lib/types';
 import type { KeywordStat, KeywordRankResult } from '../../../lib/keywordAnalysisService';
 import type { ClinicContext } from '../../../lib/clinicContextService';
 import type { TrendingItem, SeoTitleItem } from '../../../lib/types';
-import WritingStyleLearner from '../../../components/WritingStyleLearner';
 import { MAX_KEYWORDS } from '../../../lib/keywordAnalysisService';
 
 export interface BlogFormPanelProps {
@@ -22,20 +20,14 @@ export interface BlogFormPanelProps {
   imageCount: number;
   textLength: number;
   hospitalName: string;
-  selectedTeam: number | null;
-  showHospitalDropdown: boolean;
-  selectedManager: string;
   selectedHospitalAddress: string;
   homepageUrl: string;
   clinicContext: ClinicContext | null;
-  isCrawling: boolean;
-  crawlProgress: string;
   includeFaq: boolean;
   faqCount: number;
   showCustomInput: boolean;
   customPrompt: string;
   customSubheadings: string;
-  learnedStyleId: string | undefined;
   showAdvanced: boolean;
   includeHospitalIntro: boolean;
   // ── 키워드 분석 상태 ──
@@ -70,19 +62,14 @@ export interface BlogFormPanelProps {
   setImageCount: (v: number) => void;
   setTextLength: (v: number) => void;
   setHospitalName: (v: string) => void;
-  setSelectedTeam: (v: number | null) => void;
-  setShowHospitalDropdown: (v: boolean) => void;
-  setSelectedManager: (v: string) => void;
   setSelectedHospitalAddress: (v: string) => void;
   setHomepageUrl: (v: string) => void;
   setClinicContext: (v: ClinicContext | null) => void;
-  setCrawlProgress: (v: string) => void;
   setIncludeFaq: (v: boolean) => void;
   setFaqCount: (v: number) => void;
   setShowCustomInput: (v: boolean) => void;
   setCustomPrompt: (v: string) => void;
   setCustomSubheadings: (v: string) => void;
-  setLearnedStyleId: (v: string | undefined) => void;
   setShowAdvanced: (v: boolean) => void;
   setIncludeHospitalIntro: (v: boolean) => void;
   setKeywordStats: (v: KeywordStat[]) => void;
@@ -94,7 +81,6 @@ export interface BlogFormPanelProps {
   // ── 핸들러 ──
   onSubmit: (e: React.FormEvent) => void;
   onAnalyzeKeywords: () => void;
-  onCrawlHomepage: () => void;
   onLoadMoreKeywords: () => void;
   onCheckRanks: () => void;
   onRecommendTitles: () => void;
@@ -104,24 +90,23 @@ export interface BlogFormPanelProps {
 export default function BlogFormPanel(props: BlogFormPanelProps) {
   const {
     topic, keywords, disease, category, persona, tone, audienceMode, imageStyle, imageCount, textLength,
-    hospitalName, selectedTeam, showHospitalDropdown, selectedManager, selectedHospitalAddress,
-    homepageUrl, clinicContext, isCrawling, crawlProgress,
+    hospitalName, selectedHospitalAddress,
+    homepageUrl, clinicContext,
     includeFaq, faqCount, showCustomInput, customPrompt, customSubheadings,
-    learnedStyleId, showAdvanced, includeHospitalIntro,
+    showAdvanced, includeHospitalIntro,
     keywordStats, keywordAiRec, keywordProgress, isAnalyzingKeywords, showKeywordPanel,
     keywordSortBy, keywordSearch, keywordMinVolume, isCheckingRanks, rankResults, hideRanked, isLoadingMoreKeywords,
     seoTitles, trendingItems, isLoadingTitles, isLoadingTrends,
     isGenerating,
     setTopic, setKeywords, setDisease, setCategory, setPersona, setTone, setAudienceMode,
-    setImageStyle, setImageCount, setTextLength, setHospitalName, setSelectedTeam,
-    setShowHospitalDropdown, setSelectedManager, setSelectedHospitalAddress,
-    setHomepageUrl, setClinicContext, setCrawlProgress,
+    setImageStyle, setImageCount, setTextLength, setHospitalName,
+    setSelectedHospitalAddress,
+    setHomepageUrl, setClinicContext,
     setIncludeFaq, setFaqCount, setShowCustomInput, setCustomPrompt, setCustomSubheadings,
-    setLearnedStyleId, setShowAdvanced, setIncludeHospitalIntro,
+    setShowAdvanced, setIncludeHospitalIntro,
     setKeywordStats, setShowKeywordPanel, setKeywordSortBy, setKeywordSearch, setKeywordMinVolume, setHideRanked,
     onSubmit: handleSubmit,
     onAnalyzeKeywords: handleAnalyzeKeywords,
-    onCrawlHomepage: handleCrawlHomepage,
     onLoadMoreKeywords: handleLoadMoreKeywords,
     onCheckRanks: handleCheckRanks,
     onRecommendTitles: handleRecommendTitles,
@@ -139,131 +124,29 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
             <h2 className="text-base font-bold text-slate-800">블로그 생성</h2>
           </div>
 
-          {/* 팀 선택 + 병원명 (old 동일) */}
-          <div className="flex bg-slate-100 rounded-lg p-0.5">
-            {TEAM_DATA.map(team => (
-              <button
-                key={team.id}
-                type="button"
-                onClick={() => { setSelectedTeam(team.id); setShowHospitalDropdown(true); }}
-                className={`flex-1 py-1.5 rounded-md text-xs font-bold transition-all ${
-                  selectedTeam === team.id
-                    ? 'bg-white text-blue-600 shadow-sm'
-                    : 'text-slate-400 hover:text-slate-600'
-                }`}
-              >
-                {team.label}
-              </button>
-            ))}
-          </div>
-
-          <div className="relative">
-            {selectedTeam !== null ? (
-            <>
-              <div className="relative">
-                <input
-                  type="text"
-                  value={hospitalName}
-                  onChange={e => setHospitalName(e.target.value)}
-                  placeholder="병원명 선택"
-                  className={inputCls}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowHospitalDropdown(!showHospitalDropdown)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 transition-colors"
-                >
-                  <svg className={`w-4 h-4 transition-transform ${showHospitalDropdown ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-                </button>
-              </div>
-              {showHospitalDropdown && (
-                <>
-                  <div className="fixed inset-0 z-10" onClick={() => setShowHospitalDropdown(false)} />
-                  <div className="absolute z-50 mt-1 w-full bg-white rounded-xl border border-slate-200 shadow-lg overflow-hidden">
-                    {/* 팀 헤더 */}
-                    <div className="px-3 py-2 bg-blue-50 border-b border-blue-100">
-                      <span className="text-xs font-bold text-blue-600">{TEAM_DATA.find(t => t.id === selectedTeam)?.label}</span>
-                    </div>
-                    {/* 병원 목록 (매니저별 그룹) */}
-                    {(() => {
-                      const team = TEAM_DATA.find(t => t.id === selectedTeam);
-                      if (!team || team.hospitals.length === 0) {
-                        return <div className="p-4 text-center text-xs text-slate-400">등록된 병원이 없습니다</div>;
-                      }
-                      const managers = [...new Set(team.hospitals.map(h => h.manager))];
-                      return (
-                        <div className="max-h-64 overflow-y-auto">
-                          {managers.map(manager => (
-                            <div key={manager}>
-                              <div className="px-3 py-2 bg-slate-50 text-[11px] font-bold text-slate-500 sticky top-0">
-                                {manager}
-                              </div>
-                              {team.hospitals.filter(h => h.manager === manager).map(hospital => (
-                                <button
-                                  key={`${hospital.name}-${hospital.manager}`}
-                                  type="button"
-                                  onClick={() => {
-                                    setHospitalName(hospital.name.replace(/ \(.*\)$/, ''));
-                                    setSelectedManager(hospital.manager);
-                                    setSelectedHospitalAddress(hospital.address || '');
-                                    setHomepageUrl('');
-                                    setClinicContext(null);
-                                    setCrawlProgress('');
-                                    setKeywordStats([]);
-                                    setShowKeywordPanel(false);
-                                    setShowHospitalDropdown(false);
-                                  }}
-                                  className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-blue-50 hover:text-blue-700 transition-colors flex items-center justify-between"
-                                >
-                                  <span>{hospital.name.replace(/ \(.*\)$/, '')}</span>
-                                  {hospitalName === hospital.name.replace(/ \(.*\)$/, '') && (
-                                    <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                                  )}
-                                </button>
-                              ))}
-                            </div>
-                          ))}
-                        </div>
-                      );
-                    })()}
-                  </div>
-                </>
-              )}
-              {selectedManager && hospitalName && (
-                <p className="mt-1 text-[11px] text-slate-400">담당: {selectedManager}</p>
-              )}
-            </>
-            ) : (
-              <div className="px-3 py-2.5 border border-slate-200 rounded-lg text-sm text-slate-400 bg-slate-50">
-                팀을 먼저 선택해주세요
-              </div>
-            )}
+          {/* 병원명 */}
+          <div>
+            <label className={labelCls}>병원명</label>
+            <input
+              type="text"
+              value={hospitalName}
+              onChange={e => setHospitalName(e.target.value)}
+              placeholder="병원 이름을 입력하세요 (예: OO치과)"
+              className={inputCls}
+            />
           </div>
 
           {/* 병원 홈페이지/블로그 URL 입력 */}
           {hospitalName && (
             <div>
               <p className="text-[11px] font-semibold text-slate-500 mb-1.5">병원 홈페이지/블로그 URL</p>
-              <div className="flex gap-1.5">
-                <input
-                  type="url"
-                  value={homepageUrl}
-                  onChange={e => { setHomepageUrl(e.target.value); setClinicContext(null); setCrawlProgress(''); }}
-                  placeholder="https://blog.naver.com/..."
-                  className="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-xs focus:border-blue-400 outline-none bg-white"
-                />
-                <button
-                  type="button"
-                  onClick={handleCrawlHomepage}
-                  disabled={isCrawling || !homepageUrl.trim()}
-                  className="px-3 py-2 rounded-lg text-xs font-semibold transition-all bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-40 whitespace-nowrap"
-                >
-                  {isCrawling ? '분석 중...' : '분석'}
-                </button>
-              </div>
-              {crawlProgress && (
-                <p className="mt-1 text-[10px] text-slate-400">{crawlProgress}</p>
-              )}
+              <input
+                type="url"
+                value={homepageUrl}
+                onChange={e => { setHomepageUrl(e.target.value); setClinicContext(null); }}
+                placeholder="https://blog.naver.com/..."
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:border-blue-400 outline-none bg-white"
+              />
               {clinicContext && (
                 <div className="mt-1.5 p-2 bg-emerald-50 rounded-lg border border-emerald-100">
                   <p className="text-[10px] font-semibold text-emerald-700 mb-1">
@@ -689,23 +572,15 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
                   </div>
                 )}
               </div>
-              {/* 말투 학습 (old 동일 위치: 이미지 스타일 아래, 화자/어조 위) */}
-              <WritingStyleLearner
-                onStyleSelect={(styleId) => setLearnedStyleId(styleId)}
-                selectedStyleId={learnedStyleId}
-                contentType="blog"
-              />
-              {/* 화자/어조 (학습된 말투 적용 시 숨김 — old 동일) */}
-              {!learnedStyleId && (
-                <div className="grid grid-cols-2 gap-2">
-                  <select value={persona} onChange={e => setPersona(e.target.value)} className={inputCls}>
-                    {PERSONAS.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
-                  </select>
-                  <select value={tone} onChange={e => setTone(e.target.value)} className={inputCls}>
-                    {TONES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-                  </select>
-                </div>
-              )}
+              {/* 화자/어조 */}
+              <div className="grid grid-cols-2 gap-2">
+                <select value={persona} onChange={e => setPersona(e.target.value)} className={inputCls}>
+                  {PERSONAS.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
+                </select>
+                <select value={tone} onChange={e => setTone(e.target.value)} className={inputCls}>
+                  {TONES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                </select>
+              </div>
             </div>
           </div>
           )}
