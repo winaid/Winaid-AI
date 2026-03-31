@@ -127,7 +127,7 @@ export default function AuthPage() {
     setError(null);
 
     if (!name.trim()) {
-      setError('이름을 입력해주세요.');
+      setError('병원명을 입력해주세요.');
       return;
     }
 
@@ -276,12 +276,12 @@ export default function AuthPage() {
           {mode === 'register' && (
             <form onSubmit={handleRegister} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-600 mb-1.5">이름</label>
+                <label className="block text-sm font-medium text-slate-600 mb-1.5">병원명</label>
                 <input
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="홍길동"
+                  placeholder="OO치과"
                   required
                   className={inputCls}
                 />
