@@ -1678,188 +1678,148 @@ ZONE 4 — 하단 정원 가장자리 (bottom 10%): 잔디 텍스처 녹색(#86e
  ],
 
  // ─── 명절 인사: 크리스마스 (6개) ───
- greeting_크리스마스: [
- {
- id: 'grt_xmas_tree', name: '크리스마스 트리', color: '#22c55e', accent: '#15803d', bg: '#f0fdf4',
- desc: '오너먼트·가랜드 장식 트리 전통 크리스마스 인사장',
- layoutHint: 'traditional',
- aiPrompt: `[크리스마스 — 전통/격식]
-=== STRICT MODE ANCHORS (반드시 유지) ===
-• 4-ZONE 수직 레이아웃 비율: 상단 15% → 중앙 50% → 인사말 20% → 하단 10% (나머지 여유)
-• 녹색-빨강-골드 클래식 크리스마스 팔레트
-• 크리스마스 트리 메인 비주얼 필수
-• 인사말 텍스트 반드시 포함: "메리 크리스마스"
-• 병원/의원 로고·명칭 표시 영역 확보
-• 휴진 기간 안내 영역 확보
+  greeting_크리스마스: [
+    {
+      id: "grt_xmas_classic_tree", name: "클래식 트리", color: "#15803d", accent: "#dc2626", bg: "#f0fdf4",
+      desc: "큰 크리스마스 트리 + 별 + 선물 상자 — 따뜻한 전통 크리스마스", layoutHint: "tree",
+      aiPrompt: `[CRITICAL — THIS IS A PREMIUM CHRISTMAS GREETING POSTER]
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. Leave areas blank or use only user-provided text.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- ONLY use text the user explicitly provided.
 
-=== INSPIRED MODE FREEDOM (변형 가능) ===
-• 오너먼트 색상 조합 자유
-• 트리 형태(뾰족/넓은) 자유
-• 선물 상자 개수(2~5개) 자유
+Christmas greeting poster — CLASSIC TREE style.
 
-=== ZONE 구성 ===
-ZONE 1 — 별 트리토퍼 (top 15%): 큰 금별(#FFD700) 트리 꼭대기, 방사 광선(얇은 선 8%). 주변 반짝임 도트(금 3~5px, 30%).
+BACKGROUND: Warm cream (#fefce8) to soft green (#f0fdf4) gradient. Cozy warm holiday atmosphere.
 
-ZONE 2 — 크리스마스 트리 (center, 50%): 삼각형 상록수 — 진녹(#22c55e → #15803d) 그라디언트. 겹겹이 가지 텍스처. 장식: 컬러풀 오너먼트 볼(빨강 #dc2626, 금 #d4a017, 파랑 #3b82f6, 8~12px 원), 반짝이 라이트 도트(흰/노랑 3px, 글로우), 금 가랜드(#d4a017) 물결 드레이핑. 따뜻한 갈색(#92400e) 줄기.
+MAIN ILLUSTRATION (center 50%): Beautiful lush CHRISTMAS TREE — deep green, decorated with colorful ornaments (red, gold, blue, silver), twinkling lights, gold garland, and bright GOLD STAR at top with subtle rays. At base: 2-3 wrapped gift boxes in red, green, gold with ribbons. Premium illustration quality.
 
-ZONE 3 — 선물·인사·휴진 안내 (next 20%): 트리 아래 선물 상자 3~4개(빨강·녹색·금, 리본 매듭). "Merry Christmas" 빨강(#dc2626, 12px, letter-spacing 2px). "메리 크리스마스" 녹색(#15803d, 22px, weight 700). 병원명 빨강(#b91c1c, 13px). 아래 "휴진 안내: OO월 OO일 ~ OO월 OO일" (회색 #78716c, 작은 크기).
+TEXT (bottom 30%): Greeting in elegant dark green (#14532d) serif. Thin red line. Hospital name if provided.
 
-ZONE 4 — 하단 (bottom 10%): 바닥 금빛 글로우(8%). 가는 녹색 장식선.
+SUBTLE SNOW: Tiny white snowflakes at 8-10% opacity.
 
-=== BACKGROUND ===
-따뜻한 크림(#fffbeb) → 소프트 화이트 그라디언트. 중앙 따뜻한 방사 글로우(금 #fbbf24 3%). 클래식 거실 크리스마스 분위기.`,
- },
- {
- id: 'grt_xmas_snow', name: '눈 내리는 밤', color: '#0ea5e9', accent: '#0284c7', bg: '#f0f9ff',
- desc: '눈 덮인 마을·가로등 수채화 겨울밤 풍경 카드',
- layoutHint: 'nature',
- aiPrompt: `[크리스마스 — 자연/풍경]
-=== STRICT MODE ANCHORS (반드시 유지) ===
-• 4-ZONE 수직 레이아웃 비율: 전면 눈 오버레이 → 마을 45% → 인사말 25% → 하단 10% (나머지 여유)
-• 딥블루-화이트 겨울밤 팔레트
-• 눈 내리는 마을 풍경 필수
-• 인사말 텍스트 반드시 포함: "메리 크리스마스"
-• 병원/의원 로고·명칭 표시 영역 확보
-• 휴진 기간 안내 영역 확보
+THE DECORATED CHRISTMAS TREE WITH STAR AND GIFTS IS MANDATORY.
 
-=== INSPIRED MODE FREEDOM (변형 가능) ===
-• 집 수(3~5채)·스타일 자유
-• 가로등 유무 자유
-• 눈송이 크기·밀도 자유
+STRICT ANCHORS: Warm cream, lush decorated tree, gold star, gift boxes, falling snow, classic cozy Christmas.`,
+    },
+    {
+      id: "grt_xmas_wreath", name: "수채화 리스", color: "#166534", accent: "#dc2626", bg: "#fef2f2",
+      desc: "수채화 크리스마스 리스 + 열매/솔방울 — 감성 내추럴 크리스마스", layoutHint: "wreath",
+      aiPrompt: `[CRITICAL — THIS IS A PREMIUM CHRISTMAS GREETING POSTER]
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. Leave areas blank or use only user-provided text.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- ONLY use text the user explicitly provided.
 
-=== ZONE 구성 ===
-ZONE 1 — 눈 (full overlay): 전체에 눈송이 파티클 — 작은 도트(2~3px, 흰, 40~70%) + 큰 결정 눈송이(8~12px, 흰, 20~30%, 육각형). 크기 변화로 깊이감. 일부에 모션 블러.
+Christmas greeting poster — WATERCOLOR WREATH style.
 
-ZONE 2 — 마을 풍경 (center-bottom, 45%): 아늑한 집 3~4채 — 눈 덮인 지붕(흰 #f0f9ff 두꺼운 캡), 창문에서 따뜻한 금빛(#fbbf24) 빛. 우측 교회 첨탑. 수채화 스타일, 부드러운 가장자리. 눈 덮인 대지(연파랑흰 #e0f2fe). 좌측 빈티지 가로등 — 금빛 글로우 원(#fbbf24 30%, 40px 반지름).
+BACKGROUND: Soft cream (#fefdf8) with watercolor paper texture.
 
-ZONE 3 — 인사말·휴진 안내 (upper-center, 25%): "Merry Christmas" 흰(14px, letter-spacing 3px, 80%). "메리 크리스마스" 흰(22px, weight 700), 글로우 텍스트 쉐도우. 병원명 아이스블루(#7dd3fc, 12px). 아래 "휴진 안내: OO월 OO일 ~ OO월 OO일" (흰 50%, 작은 크기).
+MAIN ILLUSTRATION (center 55%): Large circular CHRISTMAS WREATH in WATERCOLOR style — visible brush strokes, color bleeding. Made of green pine branches (various greens), red holly berries, brown pine cones, small red bows. Wreath forms full circle with center OPEN — greeting text sits inside.
 
-ZONE 4 — 하단 눈밭 (bottom 10%): 물결 모양 눈 덮인 대지, 수채화 가장자리 페이드아웃.
+TEXT (inside wreath center): Greeting in dark green (#14532d) serif calligraphy. Hospital name below.
 
-=== BACKGROUND ===
-딥 겨울밤 파랑(#0c1445) → 미드나잇(#1e1b4b) 그라디언트. 평화롭고 마법 같은 고요한 밤 — 아늑한 크리스마스 이브.`,
- },
- {
- id: 'grt_xmas_minimal', name: '미니멀 노엘', color: '#dc2626', accent: '#b91c1c', bg: '#fef2f2',
- desc: '단일 오너먼트 볼 레드&화이트 울트라미니멀 카드',
- layoutHint: 'minimal',
- aiPrompt: `[크리스마스 — 미니멀/타이포]
-=== STRICT MODE ANCHORS (반드시 유지) ===
-• 4-ZONE 수직 레이아웃 비율: 상단 30% → 중앙 25% → 타이포 20% → 하단 20% (나머지 여유)
-• 레드+화이트 2색 한정 (골드 캡만 예외)
-• 단일 오너먼트 볼 포컬 포인트
-• 인사말 텍스트 반드시 포함: "메리 크리스마스"
-• 병원/의원 로고·명칭 표시 영역 확보
-• 휴진 기간 안내 영역 확보
+BOTTOM (20%): Small text on cream. Thin green line.
 
-=== INSPIRED MODE FREEDOM (변형 가능) ===
-• 줄 길이(25~35%) 자유
-• 오너먼트 볼 크기(40~60px) 자유
-• 눈송이 패턴 유무 자유
+THE WATERCOLOR WREATH WITH TEXT INSIDE IS MANDATORY. Must look hand-painted.
 
-=== ZONE 구성 ===
-ZONE 1 — 매달린 줄 (top 30%): 단일 가는 세로선(1px, 레드 #dc2626 40%) 상단 중앙에서 아래로. 깔끔하고 정밀.
+STRICT ANCHORS: Cream background, watercolor circular wreath, pine/berries/pinecones, text inside wreath, hand-painted quality.`,
+    },
+    {
+      id: "grt_xmas_gold_ornament", name: "골드 오너먼트", color: "#0f172a", accent: "#d4a853", bg: "#0f172a",
+      desc: "다크 배경 + 금/빨간 오너먼트 볼 — 럭셔리 크리스마스", layoutHint: "ornament",
+      aiPrompt: `[CRITICAL — THIS IS A PREMIUM CHRISTMAS GREETING POSTER]
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. Leave areas blank or use only user-provided text.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- ONLY use text the user explicitly provided.
 
-ZONE 2 — 오너먼트 볼 (center, 25%): 줄에 매달린 단일 크리스마스 오너먼트 — 완벽한 원(50px), 레드(#dc2626) 솔리드, 상단에 골드(#d4a017) 캡+고리. 좌상에 하이라이트 반사(흰 호, 15%). 아래 부드러운 그림자(4px blur, 5%).
+Christmas greeting poster — GOLD ORNAMENT LUXURY style.
 
-ZONE 3 — 타이포·휴진 안내 (next 20%): "Merry Christmas" 깨끗한 산세리프(14px, letter-spacing 4px, #b91c1c). "메리 크리스마스" 레드(#dc2626, 20px, weight 700). 병원명 연회색(#d1d5db, 11px, letter-spacing 2px). 아래 "휴진 안내: OO월 OO일 ~ OO월 OO일" (연회색 #d1d5db 60%, 작은 크기).
+BACKGROUND: Deep dark navy (#0f172a). Subtle sparkle dots at 5% opacity.
 
-ZONE 4 — 하단 (bottom 20%): 넓은 빈 흰 공간. 여백의 미.
+ORNAMENT BALLS (top 45%): 3-5 large CHRISTMAS ORNAMENT BALLS hanging on thin gold strings. Large gold metallic (#d4a853) ball — shiny reflective 3D. Large red metallic (#dc2626) ball — glossy. Smaller silver ball. Different heights, elegant arrangement. REALISTIC 3D reflective surfaces. Gold sparkle stars between balls.
 
-=== BACKGROUND ===
-순수 화이트(#ffffff). 매우 희미한 눈송이 패턴(연회색 #f1f5f9 4%). 울트라 미니멀 — 단일 오너먼트가 포컬 포인트. Less is more.`,
- },
- {
- id: 'grt_xmas_character', name: '산타 캐릭터', color: '#ef4444', accent: '#dc2626', bg: '#fef2f2',
- desc: '산타·엘프 치아·눈사람 캐릭터 귀여운 크리스마스 카드',
- layoutHint: 'cute',
- aiPrompt: `[크리스마스 — 귀여운/캐릭터]
-=== STRICT MODE ANCHORS (반드시 유지) ===
-• 4-ZONE 수직 레이아웃 비율: 상단 15% → 중앙 45% → 인사말 20% → 하단 10% (나머지 여유)
-• 레드-그린-골드 밝은 파스텔 팔레트
-• 산타 + 치아 캐릭터(엘프 복장) 반드시 포함
-• 인사말 텍스트 반드시 포함: "메리 크리스마스"
-• 병원/의원 로고·명칭 표시 영역 확보
-• 휴진 기간 안내 영역 확보
+TEXT (bottom 40%): Greeting in MASSIVE bold gold (#d4a853) with glow. Thin gold line. Hospital name in small gold if provided.
 
-=== INSPIRED MODE FREEDOM (변형 가능) ===
-• 눈사람 유무·크기 자유
-• 과자·캔디케인 장식 개수 자유
-• 캐릭터 포즈·표정 자유
+THE HANGING 3D ORNAMENT BALLS ON DARK BACKGROUND ARE MANDATORY.
 
-=== ZONE 구성 ===
-ZONE 1 — 배너 (top 15%): 스캘럽 레드(#ef4444) 배너, 흰 텍스트 "Merry Christmas!"(14px, weight 700). 배너 양 끝 홀리 잎. 위에 작은 금별 흩뿌림(5~8개, 4px, 30%).
+STRICT ANCHORS: Dark navy, hanging 3D metallic ornament balls, gold strings, sparkles, gold text, luxury premium Christmas.`,
+    },
+    {
+      id: "grt_xmas_snowflake", name: "눈꽃 미니멀", color: "#1e40af", accent: "#3b82f6", bg: "#eff6ff",
+      desc: "순백 + 파란 눈꽃 결정 + 미니멀 타이포 — 깔끔한 크리스마스", layoutHint: "snowflake",
+      aiPrompt: `[CRITICAL — THIS IS A PREMIUM CHRISTMAS GREETING POSTER]
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. Leave areas blank or use only user-provided text.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- ONLY use text the user explicitly provided.
 
-ZONE 2 — 캐릭터 씬 (center, 45%): 중앙에 산타(둥근 몸, 큰 빨간 모자+흰 폼폼, 분홍 볼, 눈감은 미소) — 빨간 선물 보따리. 좌측에 치아 캐릭터(엘프 복장: 녹색 모자, 뾰족 귀, 큰 미소). 우측에 둥근 눈사람(당근 코, 빨간 목도리). 모두 심플 일러스트 — 큰 머리, 작은 몸, 파스텔 셰이딩. 발 주변 캔디케인, 진저브레드맨, 롤리팝.
+Christmas greeting poster — SNOWFLAKE MINIMAL style. Scandinavian clean.
 
-ZONE 3 — 인사말·휴진 안내 (next 20%): "메리 크리스마스" 밝은 빨강(#ef4444, 22px, weight 800). "즐거운 성탄절 보내세요" 녹색(#16a34a, 13px). 병원명 빨강(#dc2626, 12px). 아래 "휴진 안내: OO월 OO일 ~ OO월 OO일" (빨강 #dc2626 50%, 작은 크기).
+BACKGROUND: Pure white to very light blue (#eff6ff) gradient. Ultra clean.
 
-ZONE 4 — 하단 (bottom 10%): 작은 선물 상자 아이콘 가로 배열(빨강·녹색·금, 리본). 하단 가장자리 눈 도트.
+SNOWFLAKE ILLUSTRATIONS: 5-7 geometric snowflake crystals in various sizes — thin blue (#3b82f6) lines. Each with unique 6-fold symmetry patterns. 1 large (center-top), 2-3 medium at edges, 2-3 small scattered. GEOMETRIC LINE ART — precise, mathematical.
 
-=== BACKGROUND ===
-소프트 레드(#fef2f2) → 화이트 그라디언트. 캔디케인 대각선 줄무늬(#fca5a5+흰, 4%). 귀엽고 밝은 크리스마스 파티 — 어린이 친화적.`,
- },
- {
- id: 'grt_xmas_gold', name: '골드 오너먼트', color: '#d4a017', accent: '#b8860b', bg: '#1a1a2e',
- desc: '네이비·골드 매달린 오너먼트 럭셔리 크리스마스 카드',
- layoutHint: 'luxury',
- aiPrompt: `[크리스마스 — 럭셔리/금박]
-=== STRICT MODE ANCHORS (반드시 유지) ===
-• 4-ZONE 수직 레이아웃 비율: 상단 40% → 중앙 15% → 인사말 25% → 하단 10% (나머지 여유)
-• 네이비+골드 2색 한정
-• 매달린 오너먼트 메인 비주얼 필수
-• 인사말 텍스트 반드시 포함: "메리 크리스마스"
-• 병원/의원 로고·명칭 표시 영역 확보
-• 휴진 기간 안내 영역 확보
+TEXT (center 35%): Greeting in bold deep blue (#1e40af) modern sans-serif. Thin blue line. Hospital name in medium blue. Generous whitespace.
 
-=== INSPIRED MODE FREEDOM (변형 가능) ===
-• 오너먼트 형태(원·물방울·타원·별) 조합 자유
-• 결정 눈송이 밀도 자유
-• 스파클 도트 밀도 자유
+THE GEOMETRIC SNOWFLAKE LINE ART IS MANDATORY.
 
-=== ZONE 구성 ===
-ZONE 1 — 매달린 오너먼트 (top 40%): 5개 우아한 오너먼트 — 상단에서 금(#d4a017) 가는 줄에 다른 길이로 매달림. 형태: 원·물방울·타원·별·원 — 금(#d4a017)과 밝은 금(#FFD700) 메탈릭 광택. 각각 장식 금 캡. 걸이에 금 리본 매듭. 주변 시머/스파클 도트(흰 2px, 50%).
+STRICT ANCHORS: White/light blue, geometric snowflake line art, deep blue typography, extreme whitespace, Scandinavian minimal.`,
+    },
+    {
+      id: "grt_xmas_neon", name: "네온 크리스마스", color: "#dc2626", accent: "#22c55e", bg: "#0f172a",
+      desc: "다크 배경 + 네온 트리/별 글로우 — 트렌디 크리스마스", layoutHint: "neon",
+      aiPrompt: `[CRITICAL — THIS IS A PREMIUM CHRISTMAS GREETING POSTER]
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. Leave areas blank or use only user-provided text.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- ONLY use text the user explicitly provided.
 
-ZONE 2 — 결정 눈송이 (middle, 15%): 3~4개 큰 기하학적 결정 눈송이(흰 10~20%, 육각형 프랙탈, 보석 같은 정밀함).
+Christmas greeting poster — NEON CHRISTMAS style.
 
-ZONE 3 — 인사말·휴진 안내 (next 25%): "Merry Christmas" 금박 효과(#FFD700 → #d4a017, 16px, 세리프, letter-spacing 3px). "메리 크리스마스" 밝은 금(#FFD700, 24px, weight 700), 메탈릭 효과. 병원명 뮤트 골드(#b8860b, 12px). 아래 "휴진 안내: OO월 OO일 ~ OO월 OO일" (연금 #b8860b 50%, 작은 크기).
+BACKGROUND: Deep dark (#0f172a) with dark brick wall texture at 6-8% opacity.
 
-ZONE 4 — 하단 (bottom 10%): 가는 금 이중선 테두리. 중앙 작은 금 리본.
+NEON TREE (center-top 45%): Christmas tree shape made of NEON TUBES — bright green (#22c55e) outline. Zigzag or layered triangles. NEON GLOW: outer glow (green 25% opacity, blur 15px), inner white-green core. NEON STAR at top in red (#dc2626) or yellow with glow.
 
-=== BACKGROUND ===
-딥 네이비(#1a1a2e) → 블랙(#0a0a1a) 그라디언트. 금 더스트 파티클(1~2px, #d4a017, 5%). 고급스럽고 화려한 프리미엄 크리스마스 카드.`,
- },
- {
- id: 'grt_xmas_wreath', name: '리스 장식', color: '#16a34a', accent: '#15803d', bg: '#f0fdf4',
- desc: '솔가지·열매 리스 프레임 빨간 리본 따뜻한 카드',
- layoutHint: 'warm',
- aiPrompt: `[크리스마스 — 따뜻한/리스]
-=== STRICT MODE ANCHORS (반드시 유지) ===
-• 리스 원형 레이아웃: 리스 70% → 리본 6시 방향 → 중앙 텍스트 → 모서리 여유
-• 녹색-빨강 전통 크리스마스 팔레트
-• 원형 리스 프레임 메인 구조 필수
-• 인사말 텍스트 반드시 포함: "메리 크리스마스"
-• 병원/의원 로고·명칭 표시 영역 확보
-• 휴진 기간 안내 영역 확보
+NEON TEXT (below 35%): Greeting as NEON TUBE TEXT in bright red (#dc2626) with glow. Neon line separator in warm yellow. Hospital name in regular white (NOT neon) if provided.
 
-=== INSPIRED MODE FREEDOM (변형 가능) ===
-• 솔방울·겨우살이 배치 자유
-• 리본 크기·색조 자유
-• 열매 클러스터 밀도 자유
+THE NEON TREE AND NEON TEXT WITH GLOW ARE MANDATORY.
 
-=== ZONE 구성 ===
-ZONE 1 — 리스 원 (centered, 70% of card): 원형 크리스마스 리스 — 풍성한 솔가지(#16a34a → #15803d) 두꺼운 링(지름의 ~15%). 바늘 텍스처, 겹겹이 풍성. 장식: 빨간 홀리 열매(#dc2626) 3개씩 클러스터, 진녹 홀리 잎(#166534), 솔방울(#92400e) 3~4개, 겨우살이(흰 열매). 리스 뒤 부드러운 그림자(6px blur, 8%).
+STRICT ANCHORS: Dark textured wall, neon tube tree outline, neon star, neon text with glow, red/green/yellow neon, trendy nightlife Christmas.`,
+    },
+    {
+      id: "grt_xmas_candy_stripe", name: "캔디 스트라이프", color: "#dc2626", accent: "#ffffff", bg: "#fef2f2",
+      desc: "빨강/흰색 줄무늬 + 눈 + 캔디케인 — 팝하고 귀여운 크리스마스", layoutHint: "candystripe",
+      aiPrompt: `[CRITICAL — THIS IS A PREMIUM CHRISTMAS GREETING POSTER]
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. Leave areas blank or use only user-provided text.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- ONLY use text the user explicitly provided.
 
-ZONE 2 — 빨간 리본 (wreath 6시): 큰 장식 빨간(#dc2626) 새틴 리본 매듭, 흐르는 리본 꼬리 2개. 포컬 악센트.
+Christmas greeting poster — CANDY STRIPE POP style. Fun, cute, Instagram-friendly.
 
-ZONE 3 — 중앙 텍스트·휴진 안내 (inside wreath): "Merry Christmas" 진녹(#15803d, 13px, letter-spacing 2px). "메리 크리스마스" 빨강(#dc2626, 22px, weight 700). 병원명 녹색(#16a34a, 12px). 리스 원 안쪽 중앙 정렬. 텍스트 뒤 따뜻한 촛불 글로우(#fbbf24 6%). 아래 "휴진 안내: OO월 OO일 ~ OO월 OO일" (녹색 #16a34a 50%, 작은 크기).
+BACKGROUND: Bright red (#dc2626) and white diagonal stripes filling ENTIRE image — candy cane pattern, 15-20px wide, 45 degree angle. Energetic festive pop-art.
 
-ZONE 4 — 모서리 (outside wreath): 모서리에 흩어진 솔잎·단일 열매(15% 불투명도). 리스 바깥은 깔끔.
+WHITE CENTER CARD: Large white card (rounded 24px, shadow) at center, 78% width, 75% height. Card ON TOP of candy stripes — stripes visible around edges.
 
-=== BACKGROUND ===
-따뜻한 크림(#f0fdf4), 중앙 따뜻한 금빛 글로우(#fbbf24 5%). 따뜻하고 아늑한 가족 크리스마스 리스 — 환영하는 축제 분위기.`,
- },
- ],
+CANDY CANE: 2 crossed candy canes at top of card forming X. Red/white spiral stripes, curved hook. Small red bow.
+
+ON CARD: Greeting in bold red (#dc2626) playful rounded font. Cute small illustrations — snowflakes, stars, holly. Hospital name if provided.
+
+SNOW: Tiny snowflakes on red stripes at 15% opacity.
+
+THE CANDY STRIPE BACKGROUND AND CANDY CANES ARE MANDATORY.
+
+STRICT ANCHORS: Red/white stripe background, white card, crossed candy canes, playful red typography, cute pop Christmas.`,
+    },
+  ],
 
  // ─── 명절 인사: 기본 fallback (구 greeting) ───
  greeting: [
