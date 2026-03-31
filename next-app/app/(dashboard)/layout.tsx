@@ -20,7 +20,7 @@ export default function AppLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, userEmail, loading, isGuest, handleLogout } = useAuthGuard();
+  const { user, userEmail, userName, loading, isGuest, handleLogout } = useAuthGuard();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [creditInfo, setCreditInfo] = useState<CreditInfo | null>(null);
@@ -52,14 +52,14 @@ export default function AppLayout({
           collapsed={sidebarCollapsed}
           onToggleCollapse={() => setSidebarCollapsed(v => !v)}
           isLoggedIn={!isGuest}
-          userEmail={isGuest ? 'Guest' : userEmail}
+          userEmail={isGuest ? 'Guest' : (userName || userEmail)}
           onLogout={handleLogout}
           credits={creditInfo?.credits ?? null}
         />
         <div className="flex-1 flex flex-col min-w-0">
           <MobileHeader
             isLoggedIn={!isGuest}
-            userEmail={isGuest ? 'Guest' : userEmail}
+            userEmail={isGuest ? 'Guest' : (userName || userEmail)}
             showUserMenu={showUserMenu}
             onToggleUserMenu={() => setShowUserMenu(v => !v)}
             onLogout={handleLogout}

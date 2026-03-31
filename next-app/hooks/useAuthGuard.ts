@@ -82,6 +82,10 @@ export function useAuthGuard(): AuthGuardResult {
             localStorage.removeItem(key);
           }
         });
+        // admin 플래그도 제거
+        localStorage.removeItem('winaid_admin');
+        // auth 페이지로 리다이렉트
+        window.location.href = '/auth';
       }
     }
   };
