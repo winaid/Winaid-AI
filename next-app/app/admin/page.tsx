@@ -190,11 +190,20 @@ export default function AdminPage() {
       if (i < coreKeywords.length - 1) await new Promise(r => setTimeout(r, 200));
     }
 
-    // 수동 키워드도 있으면 추가
-    const manual = rankCheckKeyword[hospitalName]?.trim();
-    if (manual && !coreKeywords.includes(manual)) {
-      const rank = await checkSingleRank(manual, blogIds);
-      results.unshift({ keyword: manual, rank });
+    // 수동 키워드: 쉼표로 분리, "치과/의원/병원"으로 끝나는 부분까지가 키워드
+    const manualRaw = rankCheckKeyword[hospitalName]?.trim();
+    if (manualRaw) {
+      const manualKeywords = manualRaw.split(/[,，]/).map(k => k.trim()).filter(Boolean);
+      for (const mk of manualKeywords) {
+        // "을지로입구치과 턱관절" → "을지로입구치과"가 키워드
+        const clinicMatch = mk.match(/^(.+?(?:치과|의원|병원|한의원|피부과|내과|외과|안과|이비인후과|정형외과|소아과))/);
+        const keyword = clinicMatch ? clinicMatch[1] : mk;
+        if (!coreKeywords.includes(keyword) && !results.some(r => r.keyword === keyword)) {
+          const rank = await checkSingleRank(keyword, blogIds);
+          results.unshift({ keyword, rank });
+          await new Promise(r => setTimeout(r, 200));
+        }
+      }
     }
 
     setRankResults(prev => ({ ...prev, [hospitalName]: { keywords: results, checking: false } }));
