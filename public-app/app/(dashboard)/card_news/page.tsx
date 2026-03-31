@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import { TEAM_DATA } from '../../../lib/teamData';
 import { CATEGORIES } from '../../../lib/constants';
 import { buildCardNewsPrompt, type CardNewsRequest } from '../../../lib/cardNewsPrompt';
 import { savePost } from '../../../lib/postStorage';
@@ -36,7 +35,6 @@ export default function CardNewsPage() {
   const [topic, setTopic] = useState('');
   const [keywords, setKeywords] = useState('');
   const [hospitalName, setHospitalName] = useState('');
-  const [showHospitalPicker, setShowHospitalPicker] = useState(false);
   const [slideCount, setSlideCount] = useState(6);
   const [designTemplateId, setDesignTemplateId] = useState<CardNewsDesignTemplateId | undefined>(undefined);
   const [imageStyle, setImageStyle] = useState<ImageStyleType>('illustration');
@@ -645,30 +643,10 @@ ${newsContext ? `\n[📰 최신 네이버 뉴스 분석]\n${newsContext}\n\n⚠�
 
             {showAdvanced && (
               <div className="space-y-4 p-3 bg-slate-50 rounded-xl border border-slate-100">
-                {/* 병원 선택 */}
+                {/* 병원명 */}
                 <div>
-                  <label className={labelCls}>병원 선택 (선택)</label>
-                  <div className="relative">
-                    <input type="text" value={hospitalName} onChange={e => setHospitalName(e.target.value)} onFocus={() => setShowHospitalPicker(true)} placeholder="병원명 입력 또는 선택" className={inputCls} />
-                    {showHospitalPicker && (
-                      <>
-                        <div className="fixed inset-0 z-10" onClick={() => setShowHospitalPicker(false)} />
-                        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg z-20 max-h-64 overflow-y-auto">
-                          {TEAM_DATA.map(team => (
-                            <div key={team.id}>
-                              <div className="px-3 py-1.5 text-[10px] font-bold text-slate-400 uppercase bg-slate-50 sticky top-0">{team.label}</div>
-                              {team.hospitals.map(h => (
-                                <button key={`${team.id}-${h.name}`} type="button" onClick={() => { setHospitalName(h.name); setShowHospitalPicker(false); }}
-                                  className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-pink-50 hover:text-pink-700 transition-colors">
-                                  {h.name}<span className="text-[11px] text-slate-400 ml-2">{h.manager}</span>
-                                </button>
-                              ))}
-                            </div>
-                          ))}
-                        </div>
-                      </>
-                    )}
-                  </div>
+                  <label className={labelCls}>병원명 (선택)</label>
+                  <input type="text" value={hospitalName} onChange={e => setHospitalName(e.target.value)} placeholder="병원 이름을 입력하세요 (예: OO치과)" className={inputCls} />
                 </div>
 
                 {/* 디자인 템플릿 */}

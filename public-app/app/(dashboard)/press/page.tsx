@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { TEAM_DATA } from '../../../lib/teamData';
 import { buildPressPrompt, PRESS_TYPES, DOCTOR_TITLES, CATEGORIES, PRESS_CSS, type PressType } from '../../../lib/pressPrompt';
 import { savePost } from '../../../lib/postStorage';
 import { getSessionSafe } from '../../../lib/supabase';
@@ -12,7 +11,6 @@ export default function PressPage() {
   const [topic, setTopic] = useState('');
   const [keywords, setKeywords] = useState('');
   const [hospitalName, setHospitalName] = useState('');
-  const [showHospitalPicker, setShowHospitalPicker] = useState(false);
   const [doctorName, setDoctorName] = useState('');
   const [doctorTitle, setDoctorTitle] = useState('원장');
   const [pressType, setPressType] = useState<PressType>('achievement');
@@ -176,24 +174,10 @@ export default function PressPage() {
           <div className="flex items-center gap-2 mb-1"><span className="text-lg">🗞️</span><h2 className="text-base font-bold text-slate-800">보도자료 생성</h2></div>
           <p className="text-[11px] text-slate-400 bg-slate-50 rounded-lg px-3 py-2 leading-relaxed">본 보도자료는 홍보 목적의 자료이며, 의학적 조언이나 언론 보도로 사용될 경우 법적 책임은 사용자에게 있습니다.</p>
 
-          {/* 병원 선택 */}
+          {/* 병원명 */}
           <div>
-            <label className={labelCls}>병원 선택 (선택)</label>
-            <div className="relative">
-              <input type="text" value={hospitalName} onChange={e => setHospitalName(e.target.value)} onFocus={() => setShowHospitalPicker(true)} placeholder="병원명 입력 또는 선택" className={inputCls} />
-              {showHospitalPicker && (<>
-                <div className="fixed inset-0 z-10" onClick={() => setShowHospitalPicker(false)} />
-                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg z-20 max-h-64 overflow-y-auto">
-                  {TEAM_DATA.map(team => (<div key={team.id}>
-                    <div className="px-3 py-1.5 text-[10px] font-bold text-slate-400 uppercase bg-slate-50 sticky top-0">{team.label}</div>
-                    {team.hospitals.map(h => (
-                      <button key={`${team.id}-${h.name}`} type="button" onClick={() => { setHospitalName(h.name); setShowHospitalPicker(false); }}
-                        className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-amber-50 hover:text-amber-700 transition-colors">{h.name}<span className="text-[11px] text-slate-400 ml-2">{h.manager}</span></button>
-                    ))}
-                  </div>))}
-                </div>
-              </>)}
-            </div>
+            <label className={labelCls}>병원명 (선택)</label>
+            <input type="text" value={hospitalName} onChange={e => setHospitalName(e.target.value)} placeholder="병원 이름을 입력하세요 (예: OO치과)" className={inputCls} />
           </div>
 
           {/* 병원 웹사이트 */}
