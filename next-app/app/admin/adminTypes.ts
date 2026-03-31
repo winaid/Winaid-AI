@@ -152,10 +152,17 @@ export async function getUsers(): Promise<UserProfile[]> {
   if (!supabase) return [];
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, email, full_name, team_id, created_at')
+    .select('id, email, full_name, name, team_id, created_at')
     .order('created_at', { ascending: false });
   if (error || !data) return [];
-  return data as UserProfile[];
+  // full_name이 없으면 name 컬럼을 fallback으로 사용
+  return (data as (UserProfile & { name?: string | null })[]).map(u => ({
+    id: u.id,
+    email: u.email,
+    full_name: u.full_name || u.name || null,
+    team_id: u.team_id,
+    created_at: u.created_at,
+  }));
 }
 
 // ── 유틸 ──

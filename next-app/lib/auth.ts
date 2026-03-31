@@ -53,15 +53,26 @@ export const signInWithTeam = async (
   // 로그인 성공 시 profiles 항상 업데이트 (이름/팀 최신화)
   if (data.user && !error) {
     try {
-      await supabase.from('profiles').upsert(
-        {
+      // upsert는 INSERT 정책이 없어 실패할 수 있으므로, UPDATE를 먼저 시도
+      const { error: updateErr } = await supabase
+        .from('profiles')
+        .update({
+          email: data.user.email || email,
+          full_name: displayName,
+          name: displayName,
+          team_id: teamId,
+        } as Record<string, unknown>)
+        .eq('id', data.user.id);
+      // UPDATE 실패 시 (row가 없는 경우) INSERT 시도
+      if (updateErr) {
+        await supabase.from('profiles').insert({
           id: data.user.id,
           email: data.user.email || email,
           full_name: displayName,
+          name: displayName,
           team_id: teamId,
-        } as Record<string, unknown>,
-        { onConflict: 'id' }
-      );
+        } as Record<string, unknown>);
+      }
     } catch (e) {
       console.error('프로필 업데이트 실패 (무시):', e);
     }
@@ -89,16 +100,27 @@ export const signUpWithTeam = async (
 
   if (data.user) {
     try {
-      await supabase.from('profiles').upsert(
-        {
+      // 트리거(handle_new_user)가 name만 저장하므로, full_name/team_id를 UPDATE로 보완
+      const { error: updateErr } = await supabase
+        .from('profiles')
+        .update({
+          email,
+          full_name: displayName,
+          name: displayName,
+          team_id: teamId,
+        } as any)
+        .eq('id', data.user.id);
+      // 트리거가 아직 실행 안 됐을 수 있으므로, UPDATE 실패 시 INSERT
+      if (updateErr) {
+        await supabase.from('profiles').insert({
           id: data.user.id,
           email,
           full_name: displayName,
+          name: displayName,
           team_id: teamId,
           created_at: new Date().toISOString(),
-        } as any,
-        { onConflict: 'id' }
-      );
+        } as any);
+      }
 
       await supabase.from('subscriptions').upsert(
         {
