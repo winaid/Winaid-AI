@@ -1631,9 +1631,9 @@ ${generatedContent.substring(0, 2000)}
   }, [blogSections, generatedContent, regeneratingSection]);
 
   // ── Word / PDF 다운로드 ──
-  const handleDownloadWord = useCallback(() => {
+  const handleDownloadWord = useCallback(async () => {
     if (!generatedContent) return;
-    downloadWord(generatedContent);
+    await downloadWord(generatedContent);
   }, [generatedContent]);
 
   const handleDownloadPDF = useCallback(() => {

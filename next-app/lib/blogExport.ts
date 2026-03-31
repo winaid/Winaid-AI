@@ -4,6 +4,47 @@
  * blog 전용 — card_news 분기 제외
  */
 
+/** 외부 URL 이미지를 base64로 변환 */
+async function imageUrlToBase64(url: string): Promise<string | null> {
+  // 이미 data: URL이면 그대로 반환
+  if (url.startsWith('data:')) return url;
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
+}
+
+/** HTML 내 이미지를 base64로 인라인 임베딩 */
+async function embedImagesAsBase64(html: string): Promise<string> {
+  const imgRegex = /<img[^>]+src="([^"]+)"[^>]*>/gi;
+  const matches = [...html.matchAll(imgRegex)];
+  if (matches.length === 0) return html;
+
+  let result = html;
+  for (const match of matches) {
+    const fullTag = match[0];
+    const src = match[1];
+    if (src.startsWith('data:')) continue; // 이미 base64
+    const base64 = await imageUrlToBase64(src);
+    if (base64) {
+      result = result.replace(fullTag, fullTag.replace(src, base64));
+    } else {
+      // 이미지 로드 실패 → 텍스트로 대체
+      result = result.replace(fullTag, '<p style="color:#999;font-size:10pt;">[이미지 로드 실패]</p>');
+    }
+  }
+  return result;
+}
+
 /** Word 호환 HTML 변환 (root resultPreviewUtils.convertToWordCompatibleHtml 동일) */
 function convertToWordCompatibleHtml(html: string): string {
   let r = html;
@@ -60,9 +101,11 @@ function convertToWordCompatibleHtml(html: string): string {
   return r;
 }
 
-/** Word (.doc) 다운로드 — root useDocumentExport.handleDownloadWord 동일 */
-export function downloadWord(html: string): void {
-  const wordCompatHtml = convertToWordCompatibleHtml(html);
+/** Word (.doc) 다운로드 — 이미지를 base64로 임베딩 */
+export async function downloadWord(html: string): Promise<void> {
+  // 이미지를 base64로 인라인 임베딩 (오프라인에서도 표시)
+  const htmlWithImages = await embedImagesAsBase64(html);
+  const wordCompatHtml = convertToWordCompatibleHtml(htmlWithImages);
 
   const wordDoc = `<!DOCTYPE html>
 <html xmlns:o="urn:schemas-microsoft-com:office:office"

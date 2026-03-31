@@ -595,8 +595,9 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
                   <label className="text-xs font-semibold text-slate-500">AI 이미지 수</label>
                   <span className={`text-xs font-semibold ${imageCount === 0 ? 'text-slate-400' : 'text-blue-600'}`}>{imageCount === 0 ? '없음' : `${imageCount}장`}</span>
                 </div>
-                <input type="range" min={0} max={5} step={1} value={imageCount} onChange={e => setImageCount(Number(e.target.value))} className="w-full accent-blue-500 h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer" aria-label={`AI 이미지 수: ${imageCount}장`} />
-                <div className="flex justify-between mt-1 text-[10px] text-slate-400"><span>0장</span><span>5장</span></div>
+                <input type="range" min={0} max={10} step={1} value={imageCount} onChange={e => setImageCount(Number(e.target.value))} className="w-full accent-blue-500 h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer" aria-label={`AI 이미지 수: ${imageCount}장`} />
+                <div className="flex justify-between mt-1 text-[10px] text-slate-400"><span>0장</span><span>10장</span></div>
+                {imageCount >= 6 && <p className="text-[10px] text-amber-600 mt-1">이미지가 많을수록 생성 시간이 길어집니다 (6장 이상: 약 3~5분)</p>}
               </div>
               {/* FAQ 토글 */}
               <div className="flex items-center justify-between p-3 bg-white rounded-xl border border-slate-200">

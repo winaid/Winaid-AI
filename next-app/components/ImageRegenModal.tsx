@@ -84,7 +84,7 @@ export const ImageRegenModal: React.FC<ImageRegenModalProps> = ({
             <div className="text-sm font-black text-slate-900">✨ {imageIndex}번 이미지 재생성</div>
             <div className="text-xs text-slate-500">프롬프트를 수정하여 새 이미지를 생성합니다.</div>
           </div>
-          <button type="button" onClick={onClose} disabled={isRegenerating}
+          <button type="button" onClick={onClose}
             className="px-4 py-2 rounded-xl text-xs font-black bg-slate-100 hover:bg-slate-200">닫기</button>
         </div>
 
@@ -135,7 +135,7 @@ export const ImageRegenModal: React.FC<ImageRegenModalProps> = ({
         </div>
 
         <div className="px-8 py-6 border-t border-slate-200 flex items-center justify-end gap-3">
-          <button type="button" onClick={onClose} disabled={isRegenerating}
+          <button type="button" onClick={onClose}
             className="px-6 py-3 rounded-2xl font-black text-sm bg-slate-100 hover:bg-slate-200">취소</button>
           <button type="button" onClick={onSubmit} disabled={isRegenerating || !prompt.trim()}
             className="px-8 py-3 rounded-2xl font-black text-sm bg-indigo-600 text-white hover:bg-indigo-700 active:scale-95 transition-all disabled:opacity-50 flex items-center gap-2">
