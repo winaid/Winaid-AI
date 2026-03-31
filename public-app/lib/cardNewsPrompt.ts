@@ -7,6 +7,7 @@
 
 import type { CardNewsDesignTemplateId } from './types';
 import { CARD_NEWS_DESIGN_TEMPLATES } from './cardNewsDesignTemplates';
+import { getMedicalLawPromptBlock } from './medicalLawRules';
 
 export interface CardNewsRequest {
   topic: string;
@@ -34,19 +35,12 @@ export function buildCardNewsPrompt(req: CardNewsRequest): {
     '인스타그램/블로그용 카드뉴스 원고를 작성합니다.',
     style,
     '',
-    '[의료광고법 제56조 준수 — 절대 금지 표현]',
-    '- "최고", "최초", "유일", "100%", "완치", "보장" 등 과장/단정 표현 금지',
-    '- "~하세요", "~받으세요", "~예약하세요" 등 행동 유도 명령형 금지',
-    '- "효과가 뛰어난", "성공률 높은", "가장 좋은" 등 효과 보장 표현 금지',
-    '- "전후 사진", "체험기", "추천사" 등 치료 결과 암시 금지',
-    '- 특정 시술/약품 효능을 단정하는 표현 금지',
-    '- 다른 의료기관 비교·비방 금지',
+    getMedicalLawPromptBlock(true),
     '',
-    '[대신 사용할 표현]',
-    '- "~할 수 있습니다" → "~로 알려져 있습니다", "~라고 합니다"',
-    '- "치료 효과" → "치료 과정", "치료 방법"',
-    '- "최고의 기술" → "전문적인 진료"',
-    '- 객관적 정보 전달 중심, 관찰형 서술',
+    '[슬라이드 분량 기준]',
+    '- 표지: 제목 15자 이내, 부제 25자 이내',
+    '- 본문 슬라이드: 제목 15자 이내, 본문 2~3문장 (각 20~30자)',
+    '- 마무리: 행동 유도 문구 20자 이내',
     '',
     '각 슬라이드는 3초 안에 핵심을 전달할 수 있도록 짧고 임팩트 있게 작성합니다.',
     '전문 용어는 쉬운 말로 바꿔 설명합니다.',
@@ -79,8 +73,8 @@ export function buildCardNewsPrompt(req: CardNewsRequest): {
     `## 슬라이드 구성 가이드`,
     slideGuide,
     '',
-    `## 출력 형식`,
-    '각 슬라이드를 아래 형식으로 작성해주세요:',
+    `## 출력 형식 (마크다운)`,
+    '각 슬라이드를 아래 마크다운 형식으로 정확히 작성해주세요 (HTML 아님):',
     '',
     '### 1장: 표지',
     '**제목**: (메인 타이틀)',
