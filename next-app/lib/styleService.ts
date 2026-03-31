@@ -1144,10 +1144,18 @@ export async function crawlAndScoreAllHospitals(
   for (let i = 0; i < total; i++) {
     const hospital = hospitalUrls[i];
     try {
-      await processHospital(hospital, i);
+      // 병원 단위 타임아웃: 5분
+      const timeout = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('타임아웃 (5분 초과)')), 300000)
+      );
+      await Promise.race([processHospital(hospital, i), timeout]);
     } catch (err) {
-      onProgress?.(`${hospital.name} 실패: ${(err as Error).message?.slice(0, 60)}`, i, total);
+      const msg = (err as Error).message?.slice(0, 60) || '알 수 없는 오류';
+      console.error(`[크롤링] ${hospital.name} 실패:`, msg);
+      onProgress?.(`${hospital.name} 실패: ${msg} — 다음 병원으로`, i, total);
     }
+    // 병원 간 딜레이 (rate limit 방지)
+    if (i < total - 1) await new Promise(r => setTimeout(r, 500));
   }
 
   onProgress?.('전체 완료!', total, total);

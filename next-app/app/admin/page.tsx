@@ -648,12 +648,20 @@ export default function AdminPage() {
       setCrawlAllStatus({ loading: true, progress: '채점 완료! 전체 노출 순위 체크 중...' });
       loadStyleProfiles();
       // 전체 병원 자동 순위 체크
+      let rankDone = 0;
+      const rankTotal = TEAM_DATA.reduce((sum, t) => sum + t.hospitals.filter(h => h.naverBlogUrls?.some(Boolean)).length, 0);
       for (const team of TEAM_DATA) {
         for (const h of team.hospitals) {
           const baseName = h.name.replace(/ \(.*\)$/, '');
           const urls = h.naverBlogUrls?.filter(Boolean) || [];
           if (urls.length > 0) {
-            await handleAutoRankCheck(baseName, urls, h.address);
+            try {
+              rankDone++;
+              setCrawlAllStatus({ loading: true, progress: `순위 체크 [${rankDone}/${rankTotal}] ${baseName}` });
+              await handleAutoRankCheck(baseName, urls, h.address);
+            } catch {
+              // 개별 순위 체크 실패 → 스킵
+            }
             await new Promise(r => setTimeout(r, 300));
           }
         }
