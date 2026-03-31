@@ -257,9 +257,16 @@ function BlogForm() {
     const team = TEAM_DATA.find(t => t.id === selectedTeam);
     const hospital = team?.hospitals.find(h => h.name.replace(/ \(.*\)$/, '') === hospitalName);
     const blogUrls = hospital?.naverBlogUrls || [];
-    const blogIds = blogUrls
-      .map(url => url.match(/blog\.naver\.com\/([^/?#]+)/)?.[1])
-      .filter((id): id is string => !!id);
+    const blogIds: string[] = [];
+    for (const url of blogUrls) {
+      const naverMatch = url.match(/blog\.naver\.com\/([^/?#]+)/);
+      if (naverMatch) {
+        blogIds.push(naverMatch[1]);
+      } else {
+        // 나만의닥터 등 외부 사이트 → 도메인 자체를 ID로 사용
+        try { blogIds.push(new URL(url).hostname); } catch { /* 무시 */ }
+      }
+    }
 
     if (blogIds.length === 0) {
       setKeywordProgress('블로그 URL이 등록되지 않은 병원입니다.');

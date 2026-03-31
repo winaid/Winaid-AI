@@ -122,12 +122,15 @@ export async function checkKeywordRankings(
           for (let rank = 0; rank < items.length; rank++) {
             const item = items[rank];
             const link = item.link || '';
-            // 블로그 URL에서 blogId 추출 + bloggername 병원명 매칭
+            const linkLower = link.toLowerCase();
+            // 블로그 URL에서 blogId 추출
             const blogIdMatch = link.match(/blog\.naver\.com\/([^/?#]+)/);
             const bloggerName = (item.bloggername || '').replace(/<[^>]+>/g, '').replace(/\s/g, '').toLowerCase();
             const isBlogIdMatch = blogIdMatch && blogIdSet.has(blogIdMatch[1].toLowerCase());
+            // blogIds에 도메인(나만의닥터 등)이 포함되어 있으면 해당 도메인도 매칭
+            const isDomainMatch = [...blogIdSet].some(id => id.includes('.') && linkLower.includes(id));
             const isBloggerNameMatch = hospitalNameNorm.length >= 2 && bloggerName.includes(hospitalNameNorm);
-            if (isBlogIdMatch || isBloggerNameMatch) {
+            if (isBlogIdMatch || isDomainMatch || isBloggerNameMatch) {
               const rawTitle = item.title || '';
               const rawDesc = item.description || '';
               // 키워드가 제목 AND 본문 모두에 연속 포함되어야 매칭
