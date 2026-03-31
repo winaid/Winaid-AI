@@ -34,8 +34,9 @@ export function useAuthGuard(): AuthGuardResult {
         if (session?.user) {
           setUser(session.user);
         } else {
-          // 세션 없으면 로그인 페이지로 리다이렉트
-          if (typeof window !== 'undefined') {
+          // admin 로그인 상태면 리다이렉트 안 함
+          const isAdmin = typeof window !== 'undefined' && localStorage.getItem('winaid_admin') === 'true';
+          if (!isAdmin && typeof window !== 'undefined') {
             window.location.href = '/auth';
             return;
           }
