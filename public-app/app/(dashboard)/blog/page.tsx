@@ -1188,6 +1188,30 @@ ${topic.trim()}${disease.trim() ? ', 질환: ' + disease.trim() : ''}
         }
       }
 
+      // 3.8) 의료광고법 금지어 자동 대체
+      {
+        const medLawReplacements: [RegExp, string][] = [
+          [/극대화/g, '향상'], [/최첨단/g, '최신'], [/완벽(한|하게|히)?/g, '꼼꼼$1'], [/확실(한|하게|히)?/g, '체계적$1'],
+          [/혁신적(인|으로)?/g, '새로운 방식$1'], [/획기적(인|으로)?/g, '효과적$1'], [/독보적(인|으로)?/g, '전문적$1'],
+          [/탁월(한|하게)?/g, '우수$1'], [/압도적(인|으로)?/g, '뛰어난'], [/독자적(인|으로)?/g, '고유한'],
+          [/완치/g, '호전'], [/근본\s?치료/g, '근본적인 관리'], [/영구적(인|으로)?/g, '장기적$1'],
+          [/100%/g, '높은 비율로'], [/가장\s(좋은|뛰어난|우수한)/g, '매우 $1'],
+        ];
+        let replacedCount = 0;
+        const foundTerms: string[] = [];
+        for (const [pattern, replacement] of medLawReplacements) {
+          const matches = blogText.match(pattern);
+          if (matches) {
+            foundTerms.push(`${matches[0]}(${matches.length}건)`);
+            replacedCount += matches.length;
+            blogText = blogText.replace(pattern, replacement);
+          }
+        }
+        if (replacedCount > 0) {
+          console.info(`[BLOG] 의료법 금지어 자동 대체: ${replacedCount}건 — ${foundTerms.join(', ')}`);
+        }
+      }
+
       // 4) 이미지 없으면 마커 strip 후 바로 표시
       if (imageCount === 0 || imagePrompts.length === 0) {
         blogText = blogText.replace(/\[IMG_\d+\]\n*/g, '');

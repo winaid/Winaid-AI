@@ -102,7 +102,14 @@ export function buildBlogPrompt(req: GenerationRequest): {
   const styleGuide = STYLE_GUIDES[req.writingStyle || 'empathy'] || '';
   const medLawNote = req.medicalLawMode === 'relaxed'
     ? '의료광고법 준수는 유지하되, "~수 있습니다", "~에 도움이 됩니다" 등의 표현을 적극 활용합니다.'
-    : '의료광고법을 엄격히 준수합니다. "최고", "최초", "100%", 과장 표현 금지.';
+    : [
+      '의료광고법을 엄격히 준수합니다. 아래 금지어를 절대 사용하지 마세요.',
+      '🚫 최상급/과장: 극대화, 최고, 최초, 최상, 최첨단, 최선, 최적, 독보적, 유일한, 탁월한, 혁신적, 획기적, 가장 좋은, 가장 뛰어난, 압도적, 독자적, 세계 최초',
+      '🚫 보장성: 100%, 완벽, 확실, 보장, 반드시 낫는, 완치, 근본 치료, 영구적, 절대',
+      '🚫 비교: ~보다 우수, ~보다 뛰어난, 타 병원 대비, 업계 최고',
+      '🚫 유인: 무료, 공짜, 파격 할인, 이벤트 가격, 특가',
+      '→ 대신 사용: 극대화→향상/개선, 최첨단→최신/현대적인, 완벽→꼼꼼한/체계적인, 확실→~에 도움이 됩니다, 최고→우수한/신뢰할 수 있는, 혁신적→새로운 방식의, 보장→~을 기대할 수 있습니다',
+    ].join('\n');
 
   const targetImageCount = req.imageCount ?? 0;
   const rawTarget = req.textLength || 1500;
