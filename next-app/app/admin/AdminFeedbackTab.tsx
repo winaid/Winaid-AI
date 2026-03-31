@@ -128,7 +128,9 @@ export default function AdminFeedbackTab({
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-0.5">
                     <span className="text-xs font-semibold text-slate-700">{fb.user_name}</span>
-                    <span className="text-[10px] text-slate-400">{fb.user_id === 'anonymous' ? '(비로그인)' : fb.user_id.slice(0, 8)}</span>
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${fb.page === 'idea' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>
+                      {fb.page === 'idea' ? '💡 아이디어' : '💬 피드백'}
+                    </span>
                     <span className="text-[10px] text-slate-400">{new Date(fb.created_at).toLocaleString('ko-KR')}</span>
                   </div>
                   <p className="text-sm text-slate-600 whitespace-pre-wrap break-words leading-relaxed">{fb.content}</p>

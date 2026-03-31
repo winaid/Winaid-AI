@@ -293,7 +293,7 @@ export default function AdminPage() {
   const loadAdminFeedbacks = useCallback(async (appendOffset?: number) => {
     setFeedbacksLoading(true);
     const offset = appendOffset ?? 0;
-    const list = await listFeedbacks('dashboard', { limit: 50, offset });
+    const list = await listFeedbacks(undefined, { limit: 50, offset });
     if (appendOffset !== undefined && appendOffset > 0) {
       setAdminFeedbacks(prev => [...prev, ...list]);
     } else {
