@@ -19,6 +19,19 @@ export default function AuthPage() {
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [checkingSession, setCheckingSession] = useState(true);
+  const [rememberMe, setRememberMe] = useState(true);
+
+  // 저장된 로그인 정보 복원
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('winaid_remember');
+      if (saved) {
+        const { name: savedName, teamId: savedTeam } = JSON.parse(saved);
+        if (savedName) setName(savedName);
+        if (savedTeam) setTeamId(savedTeam);
+      }
+    } catch { /* ignore */ }
+  }, []);
 
   // 마운트 시 세션 체크 + OAuth 콜백 처리
   useEffect(() => {
@@ -102,6 +115,12 @@ export default function AuthPage() {
       }
 
       if (data.user) {
+        // 기기 기억하기
+        if (rememberMe) {
+          try { localStorage.setItem('winaid_remember', JSON.stringify({ name: name.trim(), teamId })); } catch { /* ignore */ }
+        } else {
+          try { localStorage.removeItem('winaid_remember'); } catch { /* ignore */ }
+        }
         router.push('/app');
       }
     } catch {
@@ -262,6 +281,15 @@ export default function AuthPage() {
                   className={inputCls}
                 />
               </div>
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span className="text-sm text-slate-500">이 기기에서 기억하기</span>
+              </label>
               <button type="submit" disabled={isLoading} className={btnPrimaryCls}>
                 {isLoading ? <span className="flex items-center justify-center gap-2">{spinner} 로그인 중...</span> : '로그인'}
               </button>
