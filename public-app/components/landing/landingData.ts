@@ -9,7 +9,7 @@ export const QUICK_TAGS = [
   '#임플란트 블로그 자동 생성',
   '#의료광고법 검증',
   '#카드뉴스 제작',
-  '#네이버 상위노출 SEO',
+  '#블로그 SEO 최적화',
   '#교정 마케팅 콘텐츠',
   '#보도자료 작성',
 ] as const;
@@ -64,7 +64,7 @@ export interface AiSolution {
 export const AI_SOLUTIONS: AiSolution[] = [
   {
     title: 'AI 블로그 자동 생성',
-    desc: '키워드 하나면 의료광고법을 준수하는 네이버 최적화 블로그 원고가 1분 만에 완성됩니다.',
+    desc: '키워드 하나면 의료광고법을 준수하는 SEO 최적화 블로그 원고가 1분 만에 완성됩니다.',
     iconName: 'blog',
   },
   {
@@ -86,7 +86,7 @@ export interface SubFeature {
 }
 
 export const SUB_FEATURES: SubFeature[] = [
-  { label: 'SEO 최적화', desc: '네이버 상위노출', iconName: 'seo' },
+  { label: 'SEO 최적화', desc: '검색엔진 최적화 글쓰기', iconName: 'seo' },
   { label: 'AI 정밀보정', desc: 'AI 흔적 제거', iconName: 'refine' },
   { label: '보도자료', desc: '언론보도 작성', iconName: 'press' },
 ];
@@ -104,7 +104,7 @@ export const USE_CASES: UseCase[] = [
   {
     pain: '블로그 쓸 시간이 없다',
     solution: 'AI가 1분 만에 작성',
-    desc: '키워드 하나면 네이버 스마트블록 최적화 원고가 자동 완성',
+    desc: '키워드 하나면 SEO 최적화된 블로그 원고가 자동 완성',
     iconName: 'time',
   },
   {
@@ -148,7 +148,7 @@ export const TESTIMONIALS: Testimonial[] = [
   { name: '김OO 원장님', hospital: '서울 강남 S치과', text: '블로그 글 하나 쓰는 데 2시간 걸렸는데, 이제 1분이면 끝나요. 의료광고법 검증까지 자동이라 너무 편합니다.', rating: 5 },
   { name: '이OO 원장님', hospital: '부산 해운대 M치과', text: '마케팅 대행 비용 월 200만원 쓰다가 윈에이드로 바꿨어요. 퀄리티는 오히려 더 좋아졌습니다.', rating: 5 },
   { name: '박OO 원장님', hospital: '대전 유성 P치과', text: '카드뉴스 자동 생성이 정말 혁신적이에요. 인스타그램 콘텐츠를 매일 올릴 수 있게 됐습니다.', rating: 5 },
-  { name: '정OO 원장님', hospital: '인천 연수 J치과', text: 'SEO 최적화가 정말 잘 되어 있어요. 블로그 포스팅 후 네이버 상위노출이 확실히 개선됐습니다.', rating: 5 },
+  { name: '정OO 원장님', hospital: '인천 연수 J치과', text: 'SEO 최적화가 정말 잘 되어 있어요. 블로그 포스팅 퀄리티가 확실히 달라졌습니다.', rating: 5 },
   { name: '최OO 원장님', hospital: '경기 분당 C치과', text: 'AI가 생성한 글이 자연스러워서 놀랐어요. 환자들도 블로그를 보고 많이 찾아오시더라고요.', rating: 5 },
   { name: '한OO 원장님', hospital: '광주 서구 H치과', text: '보도자료 작성 기능이 특히 좋아요. 언론보도가 쉬워지니 병원 신뢰도가 확실히 올랐습니다.', rating: 5 },
 ];
@@ -165,7 +165,7 @@ export interface AboutItem {
 
 export const ABOUT_ITEMS: AboutItem[] = [
   { text: '300+ 치과 마케팅 운영 경험', iconName: 'hospital' },
-  { text: '네이버 플레이스 상위노출 전략', iconName: 'chart' },
+  { text: 'SEO 최적화 콘텐츠 전략', iconName: 'chart' },
   { text: '500+ 원장님과의 지속적 파트너십', iconName: 'people' },
   { text: '의료광고법 전문 컨설팅 & AI 검증', iconName: 'law' },
 ];
