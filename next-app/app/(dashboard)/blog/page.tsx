@@ -97,6 +97,7 @@ function BlogForm() {
   const [generatedContent, setGeneratedContent] = useState<string | null>(null);
   const [savedImagePrompts, setSavedImagePrompts] = useState<string[]>([]);
   const [regeneratingImage, setRegeneratingImage] = useState<number | null>(null);
+  const [imageHistory, setImageHistory] = useState<Record<number, string[]>>({});
   // 블로그 이미지 모달 state
   const [imgActionModalOpen, setImgActionModalOpen] = useState(false);
   const [imgRegenModalOpen, setImgRegenModalOpen] = useState(false);
@@ -1310,6 +1311,8 @@ ${topic.trim()}${disease.trim() ? ', 질환: ' + disease.trim() : ''}
           return generateAndUpload(p, index).then(result => {
             // 이미지 완성 즉시 해당 슬롯의 플레이스홀더를 실제 이미지로 교체
             if (result.url) {
+              // 이미지 히스토리 초기화
+              setImageHistory(prev => ({ ...prev, [result.index]: [result.url!] }));
               setGeneratedContent(prev => {
                 if (!prev) return prev;
                 const imgTag = '<div class="content-image-wrapper"><img src="' + result.url + '" alt="blog image ' + result.index + '" data-image-index="' + result.index + '" style="max-width:100%;height:auto;border-radius:12px;" /></div>';
@@ -1461,6 +1464,24 @@ ${topic.trim()}${disease.trim() ? ', 질환: ' + disease.trim() : ''}
     finally { setIsRecommendingPrompt(false); }
   }, [generatedContent, selectedImgIndex, isRecommendingPrompt]);
 
+  // ── 이미지 히스토리에서 선택 → HTML 교체 ──
+  const handleSelectHistoryImage = useCallback((imageIndex: number, url: string) => {
+    setGeneratedContent(prev => {
+      if (!prev) return prev;
+      const div = document.createElement('div');
+      div.innerHTML = prev;
+      const imgs = div.querySelectorAll(`img[data-image-index="${imageIndex}"]`);
+      imgs.forEach(img => img.setAttribute('src', url));
+      return div.innerHTML;
+    });
+    // 선택된 이미지를 히스토리 맨 끝으로 이동
+    setImageHistory(prev => {
+      const arr = prev[imageIndex] || [];
+      const filtered = arr.filter(u => u !== url);
+      return { ...prev, [imageIndex]: [...filtered, url] };
+    });
+  }, []);
+
   // ── 이미지 재생성 실행 (모달에서 호출) ──
   const handleImageRegenerateSubmit = useCallback(async () => {
     const imageIndex = selectedImgIndex;
@@ -1501,6 +1522,12 @@ ${topic.trim()}${disease.trim() ? ', 질환: ' + disease.trim() : ''}
           if (!uploadErr) {
             const { data: urlData } = supabase.storage.from('blog-images').getPublicUrl(fileName);
             if (urlData?.publicUrl) {
+              // 히스토리에 새 이미지 추가 (최대 5개)
+              setImageHistory(prev => {
+                const arr = prev[imageIndex] || [];
+                const updated = [...arr, urlData.publicUrl].slice(-5);
+                return { ...prev, [imageIndex]: updated };
+              });
               setGeneratedContent(prev => {
                 if (!prev) return prev;
                 const div = document.createElement('div');
@@ -1518,6 +1545,11 @@ ${topic.trim()}${disease.trim() ? ', 질환: ' + disease.trim() : ''}
       }
 
       // base64 fallback
+      setImageHistory(prev => {
+        const arr = prev[imageIndex] || [];
+        const updated = [...arr, imgData.imageDataUrl!].slice(-5);
+        return { ...prev, [imageIndex]: updated };
+      });
       setGeneratedContent(prev => {
         if (!prev) return prev;
         const div = document.createElement('div');
@@ -1760,6 +1792,8 @@ ${generatedContent.substring(0, 2000)}
         onSubmit={handleImageRegenerateSubmit}
         isRecommending={isRecommendingPrompt}
         onRecommend={handleRecommendPrompt}
+        imageHistory={imageHistory[selectedImgIndex] || []}
+        onSelectHistoryImage={(url) => { handleSelectHistoryImage(selectedImgIndex, url); setImgRegenModalOpen(false); }}
       />
     </div>
   );

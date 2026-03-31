@@ -55,11 +55,15 @@ interface ImageRegenModalProps {
   /** AI 프롬프트 추천 */
   isRecommending?: boolean;
   onRecommend?: () => void;
+  /** 이미지 히스토리 (이전 버전들) */
+  imageHistory?: string[];
+  onSelectHistoryImage?: (url: string) => void;
 }
 
 export const ImageRegenModal: React.FC<ImageRegenModalProps> = ({
   open, onClose, imageIndex, prompt, setPrompt,
   isRegenerating, onSubmit, isRecommending, onRecommend,
+  imageHistory, onSelectHistoryImage,
 }) => {
   const [refImage, setRefImage] = useState<string | null>(null);
   const [refName, setRefName] = useState('');
@@ -118,6 +122,27 @@ export const ImageRegenModal: React.FC<ImageRegenModalProps> = ({
               💡 팁: 한글로 원하는 이미지를 설명하세요! &quot;AI 프롬프트 추천&quot; 버튼을 누르면 글 내용에 맞는 최적의 프롬프트를 자동 생성합니다.
             </div>
           </div>
+
+          {/* 이전 버전 */}
+          {imageHistory && imageHistory.length >= 2 && onSelectHistoryImage && (
+            <div>
+              <div className="text-xs font-black text-slate-700 mb-2">이전 버전 ({imageHistory.length - 1}개)</div>
+              <div className="flex gap-2 overflow-x-auto pb-2">
+                {imageHistory.slice(0, -1).reverse().map((url, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => onSelectHistoryImage(url)}
+                    className="flex-shrink-0 w-20 h-20 rounded-xl border-2 border-slate-200 hover:border-purple-400 overflow-hidden transition-all hover:shadow-md"
+                    title={`이전 버전 ${imageHistory.length - 1 - idx}`}
+                  >
+                    <img src={url} alt={`이전 버전 ${idx + 1}`} className="w-full h-full object-cover" />
+                  </button>
+                ))}
+              </div>
+              <div className="text-[10px] text-slate-400 mt-1">클릭하면 해당 이미지로 교체됩니다</div>
+            </div>
+          )}
 
           {/* 참고 이미지 */}
           <div>
