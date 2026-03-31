@@ -440,6 +440,7 @@ export function ResultPanel({
               {charCount.toLocaleString()}
             </span>
             <span className={`text-[10px] ${charColor}`}>({charLabel})</span>
+            <span className="text-[9px] text-slate-400">공백 제외</span>
           </div>
 
           {/* 저장 상태 */}

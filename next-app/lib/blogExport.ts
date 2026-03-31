@@ -181,11 +181,16 @@ img { max-width: 100%; height: auto; margin: 25px auto; display: block; border-r
 .hidden-title { display: none; }
 </style></head>
 <body>${html}
+<div style="text-align:center;padding:12px 0 0;font-size:12px;color:#94a3b8;">
+  💡 PDF로 저장하려면 인쇄 대화상자에서 "PDF로 저장"을 선택하세요
+</div>
 <script>
 window.onload = function() {
   var imgs = document.querySelectorAll('img');
   var loaded = 0, total = imgs.length;
-  function tryPrint() { setTimeout(function() { window.print(); }, 500); }
+  function tryPrint() {
+    setTimeout(function() { window.print(); }, 500);
+  }
   if (total === 0) { tryPrint(); return; }
   for (var i = 0; i < imgs.length; i++) {
     if (imgs[i].complete) { loaded++; }
@@ -194,6 +199,7 @@ window.onload = function() {
   if (loaded >= total) tryPrint();
   setTimeout(function() { window.print(); }, 5000);
 };
+window.onafterprint = function() { window.close(); };
 <\/script></body></html>`);
   printWindow.document.close();
 }
