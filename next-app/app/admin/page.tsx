@@ -145,8 +145,8 @@ export default function AdminPage() {
           const clean = (s: string) => s.replace(/<[^>]+>/g, '').replace(/&[a-z]+;/g, ' ').replace(/\s+/g, '').toLowerCase();
           const titleClean = clean(item.title || '');
           const descClean = clean(item.description || '');
-          // 키워드가 제목 또는 본문에 연속 포함되면 매칭
-          if (titleClean.includes(kwNoSpace) || descClean.includes(kwNoSpace)) return i + 1;
+          // 키워드가 제목 AND 본문 모두에 연속 포함되어야 매칭
+          if (titleClean.includes(kwNoSpace) && descClean.includes(kwNoSpace)) return i + 1;
         }
       }
       return null;

@@ -130,8 +130,8 @@ export async function checkKeywordRankings(
             if (isBlogIdMatch || isBloggerNameMatch) {
               const rawTitle = item.title || '';
               const rawDesc = item.description || '';
-              // 키워드가 제목 또는 본문에 연속 포함되어야 매칭
-              if (!isKeywordRelevant(keyword, rawTitle) && !isKeywordRelevant(keyword, rawDesc)) continue;
+              // 키워드가 제목 AND 본문 모두에 연속 포함되어야 매칭
+              if (!isKeywordRelevant(keyword, rawTitle) || !isKeywordRelevant(keyword, rawDesc)) continue;
               const cleanTitle = rawTitle
                 .replace(/<[^>]+>/g, '')
                 .replace(/&[a-z]+;/g, ' ')
