@@ -131,7 +131,8 @@ export async function checkKeywordRankings(
               const rawTitle = item.title || '';
               const rawDesc = item.description || '';
               // 키워드가 제목 AND 본문 모두에 연속 포함되어야 매칭
-              if (!isKeywordRelevant(keyword, rawTitle) || !isKeywordRelevant(keyword, rawDesc)) continue;
+              // 제목에 키워드가 연속 포함되면 매칭
+              if (!isKeywordRelevant(keyword, rawTitle)) continue;
               const cleanTitle = rawTitle
                 .replace(/<[^>]+>/g, '')
                 .replace(/&[a-z]+;/g, ' ')

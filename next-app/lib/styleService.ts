@@ -1034,7 +1034,11 @@ export async function crawlAndScoreAllHospitals(
             try {
               const cleanTitle = (post.title || '')
                 .replace(/&#39;/g, "'").replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"');
-              const firstWord = cleanTitle.split(/[\s,?!.·:]/)[0].replace(/['""\[\]()【】]/g, '').trim();
+              // 키워드 추출: "치과/의원/병원"으로 끝나는 부분까지, 없으면 첫 단어
+              const clinicMatch = cleanTitle.match(/^(.+?(?:치과|의원|병원|한의원|피부과|내과|외과|안과|이비인후과|정형외과|소아과))/);
+              const firstWord = clinicMatch
+                ? clinicMatch[1].replace(/['""\[\]()【】]/g, '').trim()
+                : cleanTitle.split(/[\s,?!.·:]/)[0].replace(/['""\[\]()【】]/g, '').trim();
               console.log(`[순위] 제목: "${post.title}" → 키워드: "${firstWord}" / blogId: ${blogId} / url: ${post.url}`);
               if (firstWord.length >= 2) {
                 naverRankKeyword = firstWord;
@@ -1053,14 +1057,17 @@ export async function crawlAndScoreAllHospitals(
                   const postLogNo = post.url.match(/\/(\d{5,})$/)?.[1]
                     || post.url.match(/logNo=(\d+)/)?.[1];
                   console.log(`[순위] 매칭 조건 — blogId: ${lowerBlogId}, logNo: ${postLogNo}`);
+                  const kwNoSpace = firstWord.replace(/\s+/g, '').toLowerCase();
                   for (let ri = 0; ri < items.length; ri++) {
-                    const link = items[ri].link || '';
-                    console.log(`[순위]   ${ri + 1}위: ${link}`);
+                    const item = items[ri] as { link?: string; title?: string; description?: string };
+                    const link = item.link || '';
                     const linkLower = link.toLowerCase();
                     if (!linkLower.includes(lowerBlogId)) continue;
-                    if (postLogNo && (link.includes(`/${postLogNo}`) || link.includes(`logNo=${postLogNo}`))) {
+                    // blogId 매칭 + 제목에 키워드 연속 포함
+                    const titleClean = (item.title || '').replace(/<[^>]+>/g, '').replace(/&[a-z]+;/g, ' ').replace(/\s+/g, '').toLowerCase();
+                    if (titleClean.includes(kwNoSpace)) {
                       naverRank = ri + 1;
-                      console.log(`[순위] ✅ 매칭! ${ri + 1}위`);
+                      console.log(`[순위] ✅ 매칭! ${ri + 1}위 (키워드: ${firstWord})`);
                       break;
                     }
                   }
