@@ -370,7 +370,8 @@ export function buildBlogPrompt(req: GenerationRequest): {
     '2. 본문 작성이 끝나면 아래 형식으로 자가평가 점수를 붙이세요:',
     '',
     '---SCORES---',
-    '{"seo": [점수], "medical": [점수], "conversion": [점수]}',
+    '{"seo": [0~100 점수], "medical": [0~100 점수], "conversion": [0~100 점수]}',
+    '⚠️ 점수는 반드시 0~100 범위의 정수! seo: SEO 최적화 점수, medical: 의료광고법 준수 점수, conversion: 전환/행동유도 점수. 평범한 글 = 60~75, 잘 쓴 글 = 75~90.',
   );
 
   if (targetImageCount > 0) {

@@ -1016,9 +1016,14 @@ ${subs.length > 0 ? `경쟁 글 소제목: ${subs.join(' / ')}` : ''}
           const jsonMatch = afterScores.match(/\{[\s\S]*?\}/);
           if (jsonMatch) {
             const raw = JSON.parse(jsonMatch[0]) as Record<string, unknown>;
-            const seo = typeof raw.seo === 'number' ? raw.seo : undefined;
-            const medical = typeof raw.medical === 'number' ? raw.medical : undefined;
-            const conversion = typeof raw.conversion === 'number' ? raw.conversion : undefined;
+            // 점수가 10 이하면 10점 만점으로 응답한 것 → 10배 보정
+            const fix = (v: unknown) => {
+              if (typeof v !== 'number') return undefined;
+              return v <= 10 ? v * 10 : Math.min(v, 100);
+            };
+            const seo = fix(raw.seo);
+            const medical = fix(raw.medical);
+            const conversion = fix(raw.conversion);
             if (seo != null || medical != null || conversion != null) {
               parsed = { seoScore: seo, safetyScore: medical, conversionScore: conversion };
             }
