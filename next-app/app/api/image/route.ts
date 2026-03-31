@@ -324,7 +324,18 @@ ABSOLUTE PROHIBITIONS:
 OUTPUT DIRECTION:
 - Generate a clean editorial-style photograph or natural scene illustration
 - Focus on visual mood, people, spaces, objects, lighting, atmosphere
-- The image must work as a blog body illustration that contains NO information text`;
+- The image must work as a blog body illustration that contains NO information text
+
+[AI ARTIFACT PREVENTION — CRITICAL]
+- NO perfectly symmetrical faces or poses
+- NO unnaturally smooth/porcelain skin
+- NO unrealistic perfect teeth or hair
+- NO studio-perfect lighting without any shadows
+- NO empty/blank backgrounds — always include environmental context
+- NO stock photo poses (thumbs up, pointing, crossed arms with smile)
+- ADD subtle imperfections: natural skin texture, slight asymmetry, environmental clutter
+- ADD realistic lighting: directional light source, natural shadows, ambient occlusion
+- The image should be indistinguishable from a real photograph taken in a Korean medical clinic`;
 
   const fullPrompt = isCardNewsMode
     ? buildCardNewsPromptFull(body)
