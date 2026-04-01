@@ -103,6 +103,9 @@ export interface BlogFormPanelProps {
   onCheckRanks: () => void;
   onRecommendTitles: () => void;
   onRecommendTrends: () => void;
+  onSaveSettings?: () => void;
+  onLoadSettings?: () => void;
+  settingsToast?: string;
 }
 
 export default function BlogFormPanel(props: BlogFormPanelProps) {
@@ -130,6 +133,7 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
     onCheckRanks: handleCheckRanks,
     onRecommendTitles: handleRecommendTitles,
     onRecommendTrends: handleRecommendTrends,
+    onSaveSettings, onLoadSettings, settingsToast,
   } = props;
 
   const inputCls = "w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all";
@@ -327,11 +331,15 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
               includeHospitalIntro,
             ].filter(Boolean).length;
             return (
-              <button type="button" onClick={() => setShowAdvanced(!showAdvanced)}
-                className="w-full flex items-center justify-between px-3 py-2 bg-slate-50 hover:bg-slate-100 rounded-lg text-xs font-semibold text-slate-500 transition-all border border-slate-100">
-                <span>⚙️ 세부 옵션{advancedCount > 0 ? ` (${advancedCount}개 설정됨)` : ''}</span>
-                <svg className={`w-4 h-4 transition-transform ${showAdvanced ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
-              </button>
+              <div className="flex gap-1.5">
+                <button type="button" onClick={() => setShowAdvanced(!showAdvanced)}
+                  className="flex-1 flex items-center justify-between px-3 py-2 bg-slate-50 hover:bg-slate-100 rounded-lg text-xs font-semibold text-slate-500 transition-all border border-slate-100">
+                  <span>⚙️ 세부 옵션{advancedCount > 0 ? ` (${advancedCount}개)` : ''}</span>
+                  <svg className={`w-4 h-4 transition-transform ${showAdvanced ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
+                </button>
+                {onSaveSettings && <button type="button" onClick={onSaveSettings} className="px-2.5 py-2 bg-blue-50 hover:bg-blue-100 rounded-lg text-xs text-blue-600 border border-blue-100" title="현재 설정 저장">💾</button>}
+                {onLoadSettings && <button type="button" onClick={onLoadSettings} className="px-2.5 py-2 bg-slate-50 hover:bg-slate-100 rounded-lg text-xs text-slate-500 border border-slate-100" title="저장된 설정 불러오기">📂</button>}
+              </div>
             );
           })()}
 
@@ -593,6 +601,11 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
             )}
           </button>
         </form>
+        {settingsToast && (
+          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2 bg-slate-800 text-white text-sm font-bold rounded-xl shadow-lg">
+            {settingsToast}
+          </div>
+        )}
       </div>
   );
 }

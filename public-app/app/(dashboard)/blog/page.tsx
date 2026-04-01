@@ -131,6 +131,48 @@ function BlogForm() {
   const [isRetryable, setIsRetryable] = useState(false);
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
   const [chatInput, setChatInput] = useState('');
+  const [settingsToast, setSettingsToast] = useState('');
+
+  const handleSaveSettings = useCallback(() => {
+    const s = { category, hospitalName, selectedHospitalAddress, homepageUrl, textLength, imageCount, imageAspectRatio, imageStyle, audienceMode, persona, tone, writingStyle, medicalLawMode, includeFaq, faqCount, includeHospitalIntro };
+    localStorage.setItem('winaid_blog_settings', JSON.stringify(s));
+    setSettingsToast('💾 설정 저장됨');
+    setTimeout(() => setSettingsToast(''), 1500);
+  }, [category, hospitalName, selectedHospitalAddress, homepageUrl, textLength, imageCount, imageAspectRatio, imageStyle, audienceMode, persona, tone, writingStyle, medicalLawMode, includeFaq, faqCount, includeHospitalIntro]);
+
+  const applySettings = useCallback((raw: string) => {
+    try {
+      const s = JSON.parse(raw);
+      if (s.category) setCategory(s.category);
+      if (s.hospitalName) setHospitalName(s.hospitalName);
+      if (s.selectedHospitalAddress) setSelectedHospitalAddress(s.selectedHospitalAddress);
+      if (s.homepageUrl) setHomepageUrl(s.homepageUrl);
+      if (s.textLength) setTextLength(s.textLength);
+      if (s.imageCount !== undefined) setImageCount(s.imageCount);
+      if (s.imageAspectRatio) setImageAspectRatio(s.imageAspectRatio);
+      if (s.imageStyle) setImageStyle(s.imageStyle);
+      if (s.audienceMode) setAudienceMode(s.audienceMode);
+      if (s.persona) setPersona(s.persona);
+      if (s.tone) setTone(s.tone);
+      if (s.medicalLawMode) setMedicalLawMode(s.medicalLawMode);
+      if (s.includeFaq !== undefined) setIncludeFaq(s.includeFaq);
+      if (s.faqCount) setFaqCount(s.faqCount);
+      if (s.includeHospitalIntro !== undefined) setIncludeHospitalIntro(s.includeHospitalIntro);
+      return true;
+    } catch { return false; }
+  }, []);
+
+  const handleLoadSettings = useCallback(() => {
+    const raw = localStorage.getItem('winaid_blog_settings');
+    if (!raw) { setSettingsToast('저장된 설정 없음'); setTimeout(() => setSettingsToast(''), 1500); return; }
+    if (applySettings(raw)) { setSettingsToast('📂 설정 불러옴'); setTimeout(() => setSettingsToast(''), 1500); }
+  }, [applySettings]);
+
+  // 페이지 진입 시 자동 불러오기
+  useEffect(() => {
+    const raw = localStorage.getItem('winaid_blog_settings');
+    if (raw) applySettings(raw);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const [isChatRefining, setIsChatRefining] = useState(false);
   // 생성 시간 추정
   const [generationStartTime, setGenerationStartTime] = useState<number>(0);
@@ -1671,6 +1713,9 @@ ${generatedContent.substring(0, 2000)}
         onCheckRanks={handleCheckRanks}
         onRecommendTitles={handleRecommendTitles}
         onRecommendTrends={handleRecommendTrends}
+        onSaveSettings={handleSaveSettings}
+        onLoadSettings={handleLoadSettings}
+        settingsToast={settingsToast}
       />
 
       {/* ── 결과 영역 — BlogResultArea 컴포넌트로 분리 ── */}
