@@ -80,7 +80,13 @@ const DESIGN_RULE = `[디자인 규칙 — 프리미엄 품질 필수]
 - 여러 폰트 혼용
 - 원색 위주의 촌스러운 색 조합
 - 빽빽하고 답답한 레이아웃
-- 워터마크, 스티커 효과`;
+- 워터마크, 스티커 효과
+
+[FONT]
+콘텐츠의 목적과 분위기에 가장 어울리는 Google Fonts 한국어 폰트를 자동으로 선택하세요.
+제목과 본문에 서로 다른 폰트를 쓸 수 있습니다.
+단, 한국어 텍스트가 깨지거나 읽기 어려울 바에는 깔끔한 고딕체(sans-serif)를 기본으로 사용하세요.
+가독성 > 디자인. 예쁘지만 읽을 수 없는 폰트보다 평범하지만 또렷한 폰트가 낫습니다.`;
 
 // ── 달력 감지 ──
 
@@ -143,7 +149,8 @@ function getKoreanHolidays(year: number, month: number): string[] {
 
 const CARD_NEWS_PERSONA = `[ROLE] Korean medical SNS card news designer.
 [GOAL] Generate a 1:1 square card image with Korean text rendered directly into pixels.
-[PRIORITY] Text readability > visual aesthetics. Mobile-first. Korean medical ad law compliant.`;
+[PRIORITY] Text readability > visual aesthetics. Mobile-first. Korean medical ad law compliant.
+[FONT] 콘텐츠 분위기에 맞는 Google Fonts 한국어 폰트를 자동 선택. 한국어가 깨질 바에는 깔끔한 고딕체(sans-serif) 기본 사용. 가독성 > 디자인.`;
 
 const CARD_FRAME_RULE = `[LAYOUT RULES]
 - NO colored borders, frames, or outlines around the edges
