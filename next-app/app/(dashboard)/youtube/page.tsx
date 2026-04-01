@@ -285,12 +285,28 @@ JSON 배열만 출력:
     }
   };
 
-  // ── 구간 링크 복사 ──
-  const handleCopyClipLink = (start: number) => {
-    const link = `https://www.youtube.com/watch?v=${videoId}&t=${start}`;
-    navigator.clipboard.writeText(link);
+  // ── 클립보드 복사 (focus 안전 처리) ──
+  const safeCopy = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      // fallback: textarea 방식
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+    }
     setCopyToast(true);
     setTimeout(() => setCopyToast(false), 1500);
+  };
+
+  // ── 구간 링크 복사 ──
+  const handleCopyClipLink = (start: number) => {
+    safeCopy(`https://www.youtube.com/watch?v=${videoId}&t=${start}`);
   };
 
   // ── 복사 (출처 제외) ──
@@ -300,9 +316,7 @@ JSON 배열만 출력:
     temp.innerHTML = generatedContent;
     const refFooter = temp.querySelector('.references-footer');
     if (refFooter) refFooter.remove();
-    navigator.clipboard.writeText(temp.innerHTML);
-    setCopyToast(true);
-    setTimeout(() => setCopyToast(false), 1500);
+    safeCopy(temp.innerHTML);
   };
 
   return (
