@@ -150,7 +150,8 @@ function getKoreanHolidays(year: number, month: number): string[] {
 const CARD_NEWS_PERSONA = `[ROLE] Korean medical SNS card news designer.
 [GOAL] Generate a 1:1 square card image with Korean text rendered directly into pixels.
 [PRIORITY] Text readability > visual aesthetics. Mobile-first. Korean medical ad law compliant.
-[FONT] 콘텐츠 분위기에 맞는 Google Fonts 한국어 폰트를 자동 선택. 한국어가 깨질 바에는 깔끔한 고딕체(sans-serif) 기본 사용. 가독성 > 디자인.`;
+[FONT] 콘텐츠 분위기에 맞는 Google Fonts 한국어 폰트를 자동 선택. 한국어가 깨질 바에는 깔끔한 고딕체(sans-serif) 기본 사용. 가독성 > 디자인.
+[HOSPITAL NAME] 프롬프트에 명시된 병원명만 사용하세요. 명시되지 않은 병원명, 로고, 브랜드를 절대 지어내지 마세요.`;
 
 const CARD_FRAME_RULE = `[LAYOUT RULES]
 - NO colored borders, frames, or outlines around the edges

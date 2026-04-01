@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { TEAM_DATA } from '../../../lib/teamData';
 import { CATEGORIES } from '../../../lib/constants';
 import { buildCardNewsPrompt, type CardNewsRequest } from '../../../lib/cardNewsPrompt';
@@ -37,6 +37,10 @@ export default function CardNewsPage() {
   const [keywords, setKeywords] = useState('');
   const [hospitalName, setHospitalName] = useState('');
   const [showHospitalPicker, setShowHospitalPicker] = useState(false);
+  const [hospitalNameMode, setHospitalNameMode] = useState<'all' | 'first_last' | 'none'>('first_last');
+  const [logoDataUrl, setLogoDataUrl] = useState<string | null>(null);
+  const [logoEnabled, setLogoEnabled] = useState(false);
+  const logoInputRef = useRef<HTMLInputElement>(null);
   const [slideCount, setSlideCount] = useState(6);
   const [designTemplateId, setDesignTemplateId] = useState<CardNewsDesignTemplateId | undefined>(undefined);
   const [imageStyle, setImageStyle] = useState<ImageStyleType>('illustration');
@@ -83,7 +87,8 @@ export default function CardNewsPage() {
       const needsTemplate = tmpl && !prompt.includes('[디자인 템플릿:');
       const templateBlock = needsTemplate ? `\n[디자인 템플릿: ${tmpl.name}]\n${tmpl.stylePrompt}\n배경색: ${tmpl.colors.background}` : '';
       const customBlock = imageStyle === 'custom' && customImagePrompt ? `\n[사용자 지정 스타일]\n${customImagePrompt}` : '';
-      const fullPrompt = `${prompt}${templateBlock}${customBlock}`.trim();
+      const logoBlock = (logoEnabled && logoDataUrl && hospitalName) ? `\n[로고] "${hospitalName}" 로고를 상단에 작게 배치` : '';
+      const fullPrompt = `${prompt}${templateBlock}${customBlock}${logoBlock}`.trim();
 
       const res = await fetch('/api/image', {
         method: 'POST',
@@ -94,6 +99,7 @@ export default function CardNewsPage() {
           mode: 'card_news',
           imageStyle,
           referenceImage: refImage || undefined,
+          logoBase64: (logoEnabled && logoDataUrl) ? logoDataUrl : undefined,
         }),
       });
       if (!res.ok) return null;
@@ -221,11 +227,22 @@ export default function CardNewsPage() {
         `${c.index}장 [${c.role}]: 제목="${c.title}" / 본문="${c.body}"`
       ).join('\n');
 
+      // 병원명 지시
+      const hospitalNameInstruction = (() => {
+        if (!hospitalName) return `⚠️ 어떤 슬라이드에도 병원명을 넣지 마세요. 가짜 병원명을 지어내지 마세요.`;
+        if (hospitalNameMode === 'none') return `⚠️ 병원명 "${hospitalName}"은 참고용. 카드 이미지에 병원명 표시 금지.`;
+        if (hospitalNameMode === 'all') return `⚠️ 모든 슬라이드 상단에 "${hospitalName}" 병원명을 작은 뱃지로 표시. 다른 병원명 절대 금지.`;
+        return `⚠️ 1장(표지)과 마지막 장에만 "${hospitalName}" 병원명 표시. 중간 슬라이드에는 넣지 마세요. 다른 병원명 절대 금지.`;
+      })();
+
       const promptGenPrompt = `당신은 카드뉴스 이미지 프롬프트 전문가입니다.
 아래 카드뉴스 원고를 보고, 각 슬라이드의 이미지 생성용 프롬프트를 작성해주세요.
 
 [주제] ${topic}
+${hospitalName ? `[병원명] ${hospitalName}` : ''}
 ${tmplMood}
+
+${hospitalNameInstruction}
 
 [원고]
 ${cardsInfo}
@@ -347,8 +364,12 @@ visual: (배경 비주얼 묘사)
     } finally { setIsGeneratingImages(false); setProgress(''); }
   };
 
-  // ── 초기 로드: 프롬프트 히스토리 + 참고 이미지 ──
+  // ── 초기 로드: 로고 + 프롬프트 히스토리 + 참고 이미지 ──
   useEffect(() => {
+    try {
+      const savedLogo = localStorage.getItem('hospital-logo-dataurl');
+      if (savedLogo) setLogoDataUrl(savedLogo);
+    } catch { /* ignore */ }
     try {
       const saved = localStorage.getItem(CARD_PROMPT_HISTORY_KEY);
       if (saved) setPromptHistory(JSON.parse(saved));
@@ -672,6 +693,52 @@ ${newsContext ? `\n[📰 최신 네이버 뉴스 분석]\n${newsContext}\n\n⚠�
                           ))}
                         </div>
                       </>
+                    )}
+                  </div>
+                </div>
+
+                {/* 카드에 병원명 표시 */}
+                {hospitalName && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] text-slate-400 whitespace-nowrap">병원명 표시</span>
+                    {([
+                      { value: 'first_last' as const, label: '표지+마무리' },
+                      { value: 'all' as const, label: '전체' },
+                      { value: 'none' as const, label: '안 함' },
+                    ]).map(opt => (
+                      <button key={opt.value} type="button" onClick={() => setHospitalNameMode(opt.value)}
+                        className={`px-2.5 py-1 rounded-lg text-[10px] font-semibold transition-all ${hospitalNameMode === opt.value ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* 로고 */}
+                <div>
+                  <label className="text-[11px] font-semibold text-slate-500 mb-1.5 block">병원 로고 (선택)</label>
+                  <div className="flex items-center gap-3">
+                    {logoDataUrl ? (
+                      <div className="relative">
+                        <img src={logoDataUrl} alt="로고" className="h-10 w-auto rounded-lg border border-slate-200 bg-white p-1" />
+                        <button type="button" onClick={() => { setLogoDataUrl(null); setLogoEnabled(false); try { localStorage.removeItem('hospital-logo-dataurl'); } catch {} }}
+                          className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white rounded-full text-[8px] flex items-center justify-center">✕</button>
+                      </div>
+                    ) : (
+                      <button type="button" onClick={() => logoInputRef.current?.click()}
+                        className="h-10 px-4 border-2 border-dashed border-slate-200 rounded-lg text-xs text-slate-400 hover:border-pink-400 hover:text-pink-500 transition-all">+ 로고 업로드</button>
+                    )}
+                    <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={e => {
+                      const file = e.target.files?.[0]; if (!file) return;
+                      const reader = new FileReader();
+                      reader.onload = () => { const d = reader.result as string; setLogoDataUrl(d); setLogoEnabled(true); try { localStorage.setItem('hospital-logo-dataurl', d); } catch {} };
+                      reader.readAsDataURL(file); e.target.value = '';
+                    }} />
+                    {logoDataUrl && (
+                      <label className="flex items-center gap-1.5 cursor-pointer">
+                        <input type="checkbox" checked={logoEnabled} onChange={e => setLogoEnabled(e.target.checked)} className="w-3.5 h-3.5 rounded border-slate-300 text-pink-500" />
+                        <span className="text-[11px] text-slate-500">카드에 로고 넣기</span>
+                      </label>
                     )}
                   </div>
                 </div>

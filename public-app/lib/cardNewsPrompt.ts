@@ -61,6 +61,7 @@ export function buildCardNewsPrompt(req: CardNewsRequest): {
   }
   if (req.hospitalName) {
     promptParts.push(`- 병원명: ${req.hospitalName}`);
+    promptParts.push(`⚠️ 원고에서 병원명이 필요한 경우 반드시 "${req.hospitalName}"만 사용. 다른 병원명 지어내기 절대 금지.`);
   }
   if (req.designTemplateId) {
     const tmpl = CARD_NEWS_DESIGN_TEMPLATES.find(t => t.id === req.designTemplateId);
