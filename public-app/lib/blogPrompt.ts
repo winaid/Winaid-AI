@@ -324,7 +324,8 @@ export function buildBlogPrompt(req: GenerationRequest): {
     '',
     '[작성 요청]',
     `- 진료과: ${req.category}`,
-    `- 제목/주제: ${req.topic}`,
+    `- 주제(글의 방향): ${req.topic}`,
+    ...(req.blogTitle && req.blogTitle !== req.topic ? [`- 블로그 제목: ${req.blogTitle}`] : []),
     `- SEO 키워드: ${req.keywords || '없음'}`,
   );
 
@@ -415,6 +416,18 @@ export function buildBlogPrompt(req: GenerationRequest): {
       '',
       '[사용자 지정 소제목 - 반드시 이 소제목 사용]',
       req.customSubheadings,
+    );
+  }
+
+  // ── 병원 특장점 ──
+  if (req.hospitalStrengths?.trim()) {
+    promptParts.push(
+      '',
+      '[병원 특장점 — 등록된 정보]',
+      req.hospitalStrengths.trim(),
+      '→ 위 특장점 중 글의 주제와 연관 있는 부분만 자연스럽게 반영.',
+      '→ 주제와 무관한 특장점은 언급하지 마세요.',
+      '→ 나열하지 말고 본문 흐름에 녹여서 서술.',
     );
   }
 

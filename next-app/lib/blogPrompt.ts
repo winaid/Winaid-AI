@@ -324,7 +324,8 @@ export function buildBlogPrompt(req: GenerationRequest): {
     '',
     '[작성 요청]',
     `- 진료과: ${req.category}`,
-    `- 제목/주제: ${req.topic}`,
+    `- 주제(글의 방향): ${req.topic}`,
+    ...(req.blogTitle && req.blogTitle !== req.topic ? [`- 블로그 제목: ${req.blogTitle}`] : []),
     `- SEO 키워드: ${req.keywords || '없음'}`,
   );
 

@@ -25,6 +25,7 @@ export type WritingStyle = 'expert' | 'empathy' | 'conversion';
 export interface GenerationRequest {
   category: ContentCategory;
   topic: string;
+  blogTitle?: string;
   keywords: string;
   disease?: string;
   tone: string;

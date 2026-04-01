@@ -12,6 +12,7 @@ import { MAX_KEYWORDS } from '../../../lib/keywordAnalysisService';
 export interface BlogFormPanelProps {
   // ── 폼 상태 ──
   topic: string;
+  blogTitle: string;
   keywords: string;
   keywordDensity: number | 'auto';
   disease: string;
@@ -62,6 +63,7 @@ export interface BlogFormPanelProps {
   isGenerating: boolean;
   // ── 폼 setter ──
   setTopic: (v: string) => void;
+  setBlogTitle: (v: string) => void;
   setKeywords: (v: string | ((prev: string) => string)) => void;
   setKeywordDensity: (v: number | 'auto') => void;
   setDisease: (v: string) => void;
@@ -110,7 +112,7 @@ export interface BlogFormPanelProps {
 
 export default function BlogFormPanel(props: BlogFormPanelProps) {
   const {
-    topic, keywords, keywordDensity, disease, category, persona, tone, audienceMode, imageStyle, imageCount, imageAspectRatio, textLength,
+    topic, blogTitle, keywords, keywordDensity, disease, category, persona, tone, audienceMode, imageStyle, imageCount, imageAspectRatio, textLength,
     hospitalName, selectedTeam, showHospitalDropdown, selectedManager, selectedHospitalAddress,
     homepageUrl, clinicContext, isCrawling, crawlProgress,
     includeFaq, faqCount, showCustomInput, customPrompt, customSubheadings,
@@ -119,7 +121,7 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
     keywordSortBy, keywordSearch, keywordMinVolume, isCheckingRanks, rankResults, hideRanked, isLoadingMoreKeywords,
     seoTitles, trendingItems, isLoadingTitles, isLoadingTrends,
     isGenerating,
-    setTopic, setKeywords, setKeywordDensity, setDisease, setCategory, setPersona, setTone, setAudienceMode,
+    setTopic, setBlogTitle, setKeywords, setKeywordDensity, setDisease, setCategory, setPersona, setTone, setAudienceMode,
     setImageStyle, setImageCount, setImageAspectRatio, setTextLength, setHospitalName, setSelectedTeam,
     setShowHospitalDropdown, setSelectedManager, setSelectedHospitalAddress,
     setHomepageUrl, setClinicContext, setCrawlProgress,
@@ -274,6 +276,16 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
             />
           </div>
 
+          {/* 제목 */}
+          <div>
+            <label className={labelCls}>
+              제목
+              <span className="text-[10px] text-slate-400 ml-1.5 font-normal">비워두면 주제가 제목이 됩니다</span>
+            </label>
+            <input type="text" value={blogTitle} onChange={e => setBlogTitle(e.target.value)}
+              placeholder="예: 임플란트 수술 후 관리법, 미리 살펴볼 점" className={inputCls} />
+          </div>
+
           {/* AI 제목 추천 + 트렌드 주제 (2버튼 가로) */}
           <div className="flex gap-2">
             <button type="button" onClick={handleRecommendTitles} disabled={isLoadingTitles || !(topic || disease || keywords)}
@@ -290,7 +302,7 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
           {seoTitles.length > 0 && (
             <div className="space-y-1">
               {seoTitles.map((item, idx) => (
-                <button key={idx} type="button" onClick={() => setTopic(item.title)}
+                <button key={idx} type="button" onClick={() => setBlogTitle(item.title)}
                   className="w-full text-left px-3 py-2 bg-white border border-slate-100 rounded-lg hover:border-blue-400 transition-all group relative">
                   <div className="absolute top-2 right-2 text-[10px] font-semibold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">SEO {item.score}</div>
                   <span className="text-[10px] text-slate-400 block">{item.type}</span>

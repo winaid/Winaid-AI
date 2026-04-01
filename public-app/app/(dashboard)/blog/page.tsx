@@ -32,6 +32,7 @@ function BlogForm() {
   const topicParam = searchParams.get('topic');
   const youtubeTranscriptParam = searchParams.get('youtubeTranscript');
   const [topic, setTopic] = useState(topicParam || '');
+  const [blogTitle, setBlogTitle] = useState('');
   const [youtubeTranscript] = useState(youtubeTranscriptParam ? decodeURIComponent(youtubeTranscriptParam) : '');
   const [keywords, setKeywords] = useState('');
   const [keywordDensity, setKeywordDensity] = useState<number | 'auto'>('auto');
@@ -868,6 +869,7 @@ JSON 형식으로 응답해주세요.`;
     const request: GenerationRequest = {
       category,
       topic: topic.trim(),
+      blogTitle: blogTitle.trim() || undefined,
       keywords: keywords.trim(),
       disease: disease.trim() || undefined,
       tone,
@@ -1107,7 +1109,8 @@ ${subs.length > 0 ? `경쟁 글 소제목: ${subs.join(' / ')}` : ''}
       // 3.6) 메인 제목 주입 (old resultAssembler.ts 동일: <h2 class="main-title">)
       const hasMainTitle = blogText.includes('class="main-title"') || blogText.includes("class='main-title'");
       if (!hasMainTitle) {
-        blogText = `<h2 class="main-title">${topic.trim()}</h2>\n${blogText}`;
+        const finalTitle = blogTitle.trim() || topic.trim();
+        blogText = `<h2 class="main-title">${finalTitle}</h2>\n${blogText}`;
         console.info(`[BLOG] 메인 제목 주입: "${topic.trim()}"`);
       }
       if (parsed) {
@@ -1670,7 +1673,7 @@ ${generatedContent.substring(0, 2000)}
     <div className="flex flex-col lg:flex-row gap-5 lg:items-start p-5">
       {/* ── 입력 폼 — BlogFormPanel 컴포넌트로 분리 ── */}
       <BlogFormPanel
-        topic={topic} keywords={keywords} keywordDensity={keywordDensity} disease={disease} category={category}
+        topic={topic} blogTitle={blogTitle} keywords={keywords} keywordDensity={keywordDensity} disease={disease} category={category}
         persona={persona} tone={tone} audienceMode={audienceMode}
         imageStyle={imageStyle} imageCount={imageCount} imageAspectRatio={imageAspectRatio} textLength={textLength}
         hospitalName={hospitalName} hospitalNameFromProfile={hospitalNameFromProfile}
@@ -1690,7 +1693,7 @@ ${generatedContent.substring(0, 2000)}
         seoTitles={seoTitles} trendingItems={trendingItems}
         isLoadingTitles={isLoadingTitles} isLoadingTrends={isLoadingTrends}
         isGenerating={isGenerating}
-        setTopic={setTopic} setKeywords={setKeywords} setKeywordDensity={setKeywordDensity} setDisease={setDisease}
+        setTopic={setTopic} setBlogTitle={setBlogTitle} setKeywords={setKeywords} setKeywordDensity={setKeywordDensity} setDisease={setDisease}
         setCategory={setCategory} setPersona={setPersona} setTone={setTone}
         setAudienceMode={setAudienceMode} setImageStyle={setImageStyle}
         setImageCount={setImageCount} setImageAspectRatio={setImageAspectRatio} setTextLength={setTextLength}
