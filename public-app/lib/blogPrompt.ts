@@ -418,6 +418,19 @@ export function buildBlogPrompt(req: GenerationRequest): {
     );
   }
 
+  // ── 유튜브 자막 참고 ──
+  if (req.youtubeTranscript?.trim()) {
+    const trimmed = req.youtubeTranscript.trim().slice(0, 8000);
+    promptParts.push(
+      '',
+      '[참고 영상 자막]',
+      '아래는 유튜브 영상의 자막입니다. 핵심 정보를 추출하여 블로그 문체로 재구성하세요.',
+      '자막을 그대로 복사하지 말고, 구체적 수치/사례/설명을 활용하세요.',
+      '글의 주제와 관련 없는 내용은 무시하세요.',
+      '', trimmed,
+    );
+  }
+
   // ── FAQ ──
   if (req.includeFaq) {
     promptParts.push(

@@ -41,6 +41,7 @@ export interface GenerationRequest {
   learnedStyleId?: string;
   customSubheadings?: string;
   keywordDensity?: number | 'auto';
+  youtubeTranscript?: string;
   medicalLawMode?: 'strict' | 'relaxed';
   includeFaq?: boolean;
   faqCount?: number;

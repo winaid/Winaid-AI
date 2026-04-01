@@ -31,7 +31,9 @@ function BlogForm() {
 
   // ── 폼 상태 ──
   const topicParam = searchParams.get('topic');
+  const youtubeTranscriptParam = searchParams.get('youtubeTranscript');
   const [topic, setTopic] = useState(topicParam || '');
+  const [youtubeTranscript] = useState(youtubeTranscriptParam ? decodeURIComponent(youtubeTranscriptParam) : '');
   const [keywords, setKeywords] = useState('');
   const [keywordDensity, setKeywordDensity] = useState<number | 'auto'>('auto');
   const [disease, setDisease] = useState('');
@@ -833,6 +835,7 @@ JSON 형식으로 응답해주세요.`;
       cssTheme,
       writingStyle,
       keywordDensity,
+      youtubeTranscript: youtubeTranscript || undefined,
       medicalLawMode,
       includeFaq,
       faqCount: includeFaq ? faqCount : undefined,
