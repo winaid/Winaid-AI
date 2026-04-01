@@ -136,7 +136,10 @@ JSON만 출력:
       const cleaned = data.text.replace(/```json?\s*\n?/gi, '').replace(/\n?```\s*$/g, '').trim();
       try {
         const parsed = JSON.parse(cleaned);
-        const summaryText = parsed.summary || '';
+        const summaryText = (parsed.summary || '')
+          .replace(/<br\s*\/?>/gi, '\n')
+          .replace(/<[^>]+>/g, '')
+          .trim();
         setTranscript(summaryText);
         setSummary(summaryText);
         setSuggestedTopics(parsed.topics || []);
