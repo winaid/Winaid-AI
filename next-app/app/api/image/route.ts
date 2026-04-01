@@ -38,14 +38,15 @@ function getAspectInstruction(ratio: AspectRatio): string {
 }
 
 const DESIGNER_PERSONA = `[DESIGNER IDENTITY]
-You are a world-class Korean hospital marketing designer.
-Premium quality: every image must look like a professional agency deliverable.
+You are a premium Korean hospital marketing designer.
+Every image must look like a ₩500,000+ professional agency deliverable.
 
-[DESIGN PHILOSOPHY]
-- Surfaces: Subtle soft shadows, refined rounded corners, clean card layouts
-- Textures: Subtle gradients, soft frosted glass effects — NOT flat or boring
+[CORE PRINCIPLES]
+- Apple-level clean design meets Korean medical professionalism
 - Information hierarchy: title (biggest) > key data > supporting details > footer
-- DO NOT render CSS code, technical specs, or design tokens as visible text`;
+- Surfaces: subtle shadows, rounded corners, elegant gradients
+- Korean text: crystal clear rendering. If text might be garbled, use fewer/shorter words.
+- DO NOT render CSS specs, design tokens, or technical notes as visible text`;
 
 const DESIGN_RULE = `[디자인 규칙 — 프리미엄 품질 필수]
 1. 사용자가 지정한 색상, 레이아웃, 분위기를 정확히 따르되, 항상 고급스럽게 표현하세요.
@@ -72,7 +73,15 @@ const DESIGN_RULE = `[디자인 규칙 — 프리미엄 품질 필수]
 콘텐츠의 목적과 분위기에 가장 어울리는 Google Fonts 한국어 폰트를 자동으로 선택하세요.
 제목과 본문에 서로 다른 폰트를 쓸 수 있습니다.
 단, 한국어 텍스트가 깨지거나 읽기 어려울 바에는 깔끔한 고딕체(sans-serif)를 기본으로 사용하세요.
-가독성 > 디자인. 예쁘지만 읽을 수 없는 폰트보다 평범하지만 또렷한 폰트가 낫습니다.`;
+가독성 > 디자인. 예쁘지만 읽을 수 없는 폰트보다 평범하지만 또렷한 폰트가 낫습니다.
+
+[한국어 텍스트 렌더링 — CRITICAL]
+한국어 텍스트가 이미지에서 가장 중요한 요소입니다. 텍스트가 깨지면 이미지 전체가 쓸모없어집니다.
+- 모든 한국어 글자가 정확히 읽혀야 합니다. 한 글자라도 깨지면 실패.
+- 글자 간격(자간)이 균일해야 합니다. 글자가 겹치거나 너무 벌어지면 안 됩니다.
+- 받침이 있는 글자(강, 봄, 든)가 특히 깨지기 쉬우니 주의하세요.
+- 텍스트가 정확하지 않을 바에는 텍스트를 줄이세요. 긴 문장보다 짧은 키워드가 안전합니다.
+- 제목은 최대 10자, 부제는 최대 20자를 권장합니다. 길수록 깨질 확률이 높아집니다.`;
 
 // ── 달력 감지 ──
 
@@ -140,7 +149,18 @@ const CARD_NEWS_PERSONA = `[ROLE] Korean medical SNS card news designer.
 [SERIES CONSISTENCY — MOST IMPORTANT]
 This card is part of a multi-slide series. ALL slides MUST look identical except for text content and illustration subject.
 EXACT same background, text layout zones, font style/size/color, padding, decorative elements.
-Text zones: Top 15% subtitle, Center 40% mainTitle (bold), Bottom 25% description+visual.`;
+Text zones: Top 15% subtitle, Center 40% mainTitle (bold), Bottom 25% description+visual.
+[TEXT RENDERING QUALITY]
+Every Korean character must be perfectly readable. If any character is garbled, the entire card fails.
+Keep titles under 10 characters, subtitles under 20. Shorter text = safer rendering.
+[CRITICAL — DESIGN SYSTEM LOCK]
+Before generating each card, mentally recall the reference image and answer:
+- What is the EXACT background color/gradient? → Use the same.
+- Where is the title text positioned? → Put it in the same spot.
+- What illustration style was used? → Use the same style.
+- What decorative elements exist? → Replicate them.
+If you cannot answer these questions, look at the reference image again.
+Consistency score: If a human cannot instantly tell these cards are from the same series, the generation has FAILED.`;
 
 const CARD_FRAME_RULE = `[LAYOUT RULES]
 - Fill the entire canvas area edge-to-edge
@@ -156,6 +176,7 @@ function buildCardStyleBlock(imageStyle: string): string {
 - photorealistic, DSLR, 35mm lens, natural lighting, shallow depth of field, bokeh
 - realistic skin texture, real fabric texture, 4K ultra high resolution
 - 실제 한국인 인물, 실제 병원/의료 환경
+QUALITY REFERENCE: Think Apple product page or Samsung Health app photography — clean, editorial, aspirational. NOT stock photo website or generic hospital brochure.
 ⛔ 금지: 3D render, illustration, cartoon, anime, vector, clay`;
 
   if (imageStyle === 'medical') return `[STYLE - 의학 3D (MEDICAL 3D RENDER)]
@@ -173,6 +194,7 @@ function buildCardStyleBlock(imageStyle: string): string {
 - clean matte 3D surfaces with subtle texture, rounded edges
 - 밝은 파스텔 톤, 파란색/흰색/연한 색상 팔레트
 - cute stylized characters, friendly expressions
+QUALITY REFERENCE: Think 카카오프렌즈/LINE Friends level 3D quality — smooth, polished, professional. NOT cheap mobile game ad or low-poly 3D.
 ⛔ 금지: photorealistic, real photo, DSLR, realistic texture`;
 }
 
@@ -252,6 +274,64 @@ ${body.prompt}
 Background: ${bgColor} gradient. Clean readable Korean font.
 ⛔ No hashtags, watermarks, logos. Do NOT render instruction labels.`.trim();
 }
+
+// ── 이미지 카테고리 감지 (default 모드용) ──
+
+function detectImageCategory(prompt: string): string {
+  if (/진료.*일정|휴진|달력|캘린더/.test(prompt)) return 'schedule';
+  if (/이벤트|할인|프로모션|특가/.test(prompt)) return 'event';
+  if (/의사.*소개|전문의.*부임|원장/.test(prompt)) return 'doctor';
+  if (/공지|안내|변경|이전/.test(prompt)) return 'notice';
+  if (/명절|설날|추석|새해|인사/.test(prompt)) return 'greeting';
+  if (/채용|모집|구인/.test(prompt)) return 'hiring';
+  if (/주의.*사항|시술.*후|관리/.test(prompt)) return 'caution';
+  if (/비급여|가격|수가|비용/.test(prompt)) return 'pricing';
+  return 'general';
+}
+
+const CATEGORY_DESIGN_HINTS: Record<string, string> = {
+  schedule: `[진료일정 디자인 가이드]
+- 달력이 메인. 날짜 숫자가 크고 명확하게.
+- 휴진일은 빨간색, 단축은 주황, 야간은 파란 배경으로 확실히 구분.
+- 정보 전달이 최우선. 장식은 최소화.`,
+
+  event: `[이벤트 디자인 가이드]
+- 시선을 끄는 강렬한 제목. 할인율이나 혜택이 가장 크게.
+- 기간, 조건이 명확히 읽혀야 함.
+- 밝고 활기찬 색감. 단, 의료 신뢰감 유지.`,
+
+  doctor: `[의사소개 디자인 가이드]
+- 이름, 전문분야, 주요 경력이 핵심 정보.
+- 전문적이고 신뢰감 있는 레이아웃. 차분한 색감.
+- 사진 영역과 텍스트 영역이 명확히 분리.`,
+
+  notice: `[공지사항 디자인 가이드]
+- 정보 전달 최우선. 깔끔하고 명확하게.
+- 변경 사항/날짜가 가장 눈에 띄게.
+- 심플한 디자인. 장식 최소.`,
+
+  greeting: `[명절인사 디자인 가이드]
+- 따뜻하고 한국적인 분위기. 전통 색감 활용 가능.
+- 병원명 + 인사 메시지가 핵심.
+- 휴진 기간이 있으면 하단에 명확히 표시.`,
+
+  hiring: `[채용공고 디자인 가이드]
+- 모집 직종과 조건이 핵심.
+- 전문적이면서도 친근한 톤.
+- 지원 방법/연락처 영역 확보.`,
+
+  caution: `[주의사항 디자인 가이드]
+- 항목별로 읽기 쉽게 구조화. 번호 또는 아이콘 활용.
+- 중요 항목은 색상으로 강조.
+- 의료 신뢰감 있는 차분한 디자인.`,
+
+  pricing: `[비급여안내 디자인 가이드]
+- 표 형태가 가장 적합. 시술명-가격 깔끔하게.
+- 가격 숫자가 크고 명확하게 읽혀야 함.
+- "~부터", "상담 후 결정" 같은 범위 표현 허용.`,
+
+  general: '',
+};
 
 interface ImageRequestBody {
   prompt: string;
@@ -352,6 +432,15 @@ OUTPUT DIRECTION:
 - Avoid dead center subject placement
 - Natural eye-level or slightly elevated camera angle
 
+[이미지 프롬프트 품질 — ❌/✅ 예시]
+Gemini에 보내는 이미지 프롬프트의 품질이 결과를 결정합니다.
+❌ 나쁜 프롬프트: "치과에서 상담하는 장면"
+→ 결과: 어색한 포즈, 빈 배경, AI 느낌
+✅ 좋은 프롬프트: "밝은 창가 옆 진료실에서 30대 한국인 여성 환자가 치과 의사와 X-ray 사진을 보며 이야기하는 장면. 환자는 약간 걱정스러운 표정, 의사는 차분하게 설명 중. 진료 의자, 데스크 위 치과 기구, 창으로 들어오는 자연광. Canon EOS R5, 35mm, f/2.8. no text, no watermark"
+❌ 나쁜 프롬프트: "무릎 통증 환자"
+→ 결과: 스톡 사진 느낌, 정면 응시
+✅ 좋은 프롬프트: "물리치료실에서 50대 한국인 남성이 무릎에 체외충격파 장비를 대고 있는 장면. 물리치료사가 옆에서 장비를 조절 중. 밝은 형광등 + 따뜻한 간접 조명. 약간 elevated angle. 배경에 재활 기구와 운동 매트. no text, no watermark"
+
 [CAMERA POV — CRITICAL FOR MIRROR/REFLECTION SCENES]
 - Mirror scenes: Camera MUST be positioned BEHIND or BESIDE the subject
   - Show the subject's back/side + their face reflected in the mirror
@@ -369,9 +458,13 @@ OUTPUT DIRECTION:
         aspectInstruction,
         'Generate at high resolution. Sharp edges, no blur, no compression artifacts.',
       ].filter(Boolean).join('\n\n')
-    : [
+    : (() => {
+      const imageCategory = detectImageCategory(body.prompt);
+      const categoryHint = CATEGORY_DESIGN_HINTS[imageCategory] || '';
+      return [
         DESIGNER_PERSONA,
         DESIGN_RULE,
+        categoryHint,
         languageRule,
         calendarInstruction,
         calendarContext,
@@ -386,6 +479,7 @@ OUTPUT DIRECTION:
 - NEVER render placeholder contact info, garbled Korean, or fake information.
 - Do NOT render instruction labels like "[MAIN TITLE]", "날짜:", "제목:". If no info given, leave empty.`,
       ].filter(Boolean).join('\n\n');
+    })()
 
   // 멀티모달 parts 구성: 텍스트 + 참조 이미지들
   const parts: Array<Record<string, unknown>> = [{ text: fullPrompt }];
