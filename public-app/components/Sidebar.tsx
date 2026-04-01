@@ -15,10 +15,13 @@ interface SidebarProps {
   credits?: number | null;
 }
 
-const contentItems: { id: ContentTab; label: string; icon: string; href: string }[] = [
+const writeItems: { id: ContentTab; label: string; icon: string; href: string }[] = [
   { id: 'blog', label: '블로그', icon: '📝', href: '/blog' },
   { id: 'clinical', label: '임상글 작성', icon: '🔬', href: '/clinical' },
   { id: 'press', label: '언론보도', icon: '🗞️', href: '/press' },
+];
+
+const visualItems: { id: ContentTab; label: string; icon: string; href: string }[] = [
   { id: 'card_news', label: '카드뉴스', icon: '🎨', href: '/card_news' },
   { id: 'image', label: '이미지 생성', icon: '🖼️', href: '/image' },
 ];
@@ -99,9 +102,14 @@ export function Sidebar({
       {/* 네비게이션 */}
       <nav className="flex-1 py-3 px-2 space-y-1 overflow-y-auto">
         <div className={`px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider ${collapsed ? 'text-center' : ''} text-slate-400`}>
-          {collapsed ? '···' : '콘텐츠'}
+          {collapsed ? '···' : '글 작성'}
         </div>
-        {contentItems.map(navButton)}
+        {writeItems.map(navButton)}
+
+        <div className={`px-2 py-1.5 mt-4 text-[10px] font-bold uppercase tracking-wider ${collapsed ? 'text-center' : ''} text-slate-400`}>
+          {collapsed ? '···' : '이미지'}
+        </div>
+        {visualItems.map(navButton)}
 
         <div className={`px-2 py-1.5 mt-4 text-[10px] font-bold uppercase tracking-wider ${collapsed ? 'text-center' : ''} text-slate-400`}>
           {collapsed ? '···' : '도구'}
