@@ -7,7 +7,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
     python3 \
     python3-pip \
-    && pip3 install --break-system-packages yt-dlp \
+    && pip3 install --break-system-packages --upgrade yt-dlp \
     && rm -rf /var/lib/apt/lists/*
 
 # Chromium 경로를 환경변수로 설정
