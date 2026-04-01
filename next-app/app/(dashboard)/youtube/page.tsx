@@ -37,6 +37,8 @@ export default function YoutubePage() {
   const [isDetectingMoments, setIsDetectingMoments] = useState(false);
   const [momentsError, setMomentsError] = useState('');
   const [playingMoment, setPlayingMoment] = useState<KeyMoment | null>(null);
+  const [generatingGifIdx, setGeneratingGifIdx] = useState<number | null>(null);
+  const [generatedGifs, setGeneratedGifs] = useState<Map<number, string>>(new Map());
 
   const handleAnalyze = async () => {
     if (!youtubeUrl.trim() || isAnalyzing) return;
@@ -124,6 +126,33 @@ export default function YoutubePage() {
   const handlePlayMoment = (moment: KeyMoment) => {
     setPlayingMoment(moment);
   };
+
+  const handleGenerateGif = useCallback(async (moment: KeyMoment, index: number) => {
+    if (generatingGifIdx !== null) return;
+    const crawlerUrl = process.env.NEXT_PUBLIC_CRAWLER_URL;
+    if (!crawlerUrl) {
+      alert('크롤러 서버(NEXT_PUBLIC_CRAWLER_URL)가 설정되지 않았습니다.');
+      return;
+    }
+    setGeneratingGifIdx(index);
+    try {
+      const res = await fetch(`${crawlerUrl}/api/youtube/gif`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ videoUrl: youtubeUrl, start: moment.start, end: moment.end }),
+      });
+      const data = await res.json();
+      if (data.success && data.gifDataUrl) {
+        setGeneratedGifs(prev => new Map(prev).set(index, data.gifDataUrl));
+      } else {
+        alert(data.error || 'GIF 생성에 실패했습니다.');
+      }
+    } catch {
+      alert('크롤러 서버에 연결할 수 없습니다.');
+    } finally {
+      setGeneratingGifIdx(null);
+    }
+  }, [generatingGifIdx, youtubeUrl]);
 
   const videoId = extractVideoId(youtubeUrl);
 
@@ -285,10 +314,32 @@ export default function YoutubePage() {
                           className="px-3 py-1.5 bg-red-500 text-white text-xs font-bold rounded-lg hover:bg-red-600 transition-all flex items-center gap-1 flex-shrink-0">
                           ▶ 구간 보기
                         </button>
-                        <button disabled
-                          className="px-3 py-1.5 bg-slate-100 text-slate-400 text-xs font-bold rounded-lg cursor-not-allowed flex-shrink-0" title="준비 중">
-                          🎬 GIF
+                        <button onClick={() => handleGenerateGif(m, i)}
+                          disabled={generatingGifIdx !== null}
+                          className={`px-3 py-1.5 text-xs font-bold rounded-lg flex-shrink-0 transition-all flex items-center gap-1 ${generatingGifIdx === i ? 'bg-violet-100 text-violet-600' : 'bg-violet-500 text-white hover:bg-violet-600 disabled:opacity-50'}`}>
+                          {generatingGifIdx === i ? (
+                            <><div className="w-3 h-3 border-2 border-violet-300 border-t-violet-600 rounded-full animate-spin" />생성 중</>
+                          ) : '🎬 GIF'}
                         </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* 생성된 GIF 미리보기 */}
+                {generatedGifs.size > 0 && (
+                  <div className="space-y-3">
+                    <span className="text-xs font-bold text-slate-700">생성된 GIF ({generatedGifs.size}개)</span>
+                    {[...generatedGifs.entries()].map(([idx, dataUrl]) => (
+                      <div key={idx} className="rounded-xl border border-slate-200 bg-white p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs text-slate-500">구간 {idx + 1}: {formatTime(moments[idx]?.start || 0)}~{formatTime(moments[idx]?.end || 0)}</span>
+                          <a href={dataUrl} download={`winaid-gif-${idx + 1}.gif`}
+                            className="px-3 py-1.5 bg-emerald-500 text-white text-xs font-bold rounded-lg hover:bg-emerald-600">
+                            다운로드
+                          </a>
+                        </div>
+                        <img src={dataUrl} alt={`GIF ${idx + 1}`} className="max-w-full rounded-lg" />
                       </div>
                     ))}
                   </div>

@@ -4,6 +4,10 @@ FROM node:22-slim
 RUN apt-get update && apt-get install -y --no-install-recommends \
     chromium \
     fonts-noto-cjk \
+    ffmpeg \
+    python3 \
+    python3-pip \
+    && pip3 install --break-system-packages yt-dlp \
     && rm -rf /var/lib/apt/lists/*
 
 # Chromium 경로를 환경변수로 설정
