@@ -161,7 +161,7 @@ JSON만 출력: { "analysis": "...", "topics": [{ "topic": "...", "title": "..."
           model: 'gemini-3.1-flash-lite-preview',
           temperature: 0.7,
           maxOutputTokens: 4096,
-          responseType: 'json',
+          timeout: 30000,
         }),
       });
 
