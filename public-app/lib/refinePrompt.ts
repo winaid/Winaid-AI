@@ -6,7 +6,6 @@
  */
 
 import { getMedicalLawPromptBlock } from './medicalLawRules';
-import { getTrustedSourcesPromptBlock } from './trustedMedicalSources';
 
 export type RefineMode = 'natural' | 'professional' | 'shorter' | 'longer' | 'medical_law' | 'seo';
 
@@ -40,21 +39,14 @@ const BASE_RULES = `
 - ${getMedicalLawPromptBlock(true)}
 - AI 냄새 제거: "또한", "더불어", "아울러", "이러한", "해당" → 삭제 또는 자연스러운 표현
 - 출처/인용 표현 금지: "~에 따르면", "연구에 따르면" → 정보를 자연스럽게 녹여서 서술
-- 만연체 금지: 한 문장 최대 50자, 쉼표 2개 이상이면 문장 분리
-- "해당/상기/동일한" → "이런/이"
-
-[출력 형식]
-반드시 순수 HTML로 출력. (<p>, <h2>, <h3> 태그)
-마크다운 금지. JSON 금지. 코드블록 금지. 설명/코멘트 금지.
-수정된 글만 출력하세요.
-
-${getTrustedSourcesPromptBlock()}`;
+- "해당/상기/동일한" → "이런/이"`;
 
 // 격식체 모드 전용 (professional, medical_law, seo)
 const FORMAL_RULES = `
 [격식체 규칙]
 - "~요/~죠" 종결어미 → "~입니다/~합니다" 사용
-- "~하세요" 행동유도 → "~할 수 있습니다" 가능성 표현`;
+- "~하세요" 행동유도 → "~할 수 있습니다" 가능성 표현
+- 만연체 금지: 한 문장 최대 50자, 쉼표 2개 이상이면 문장 분리`;
 
 // 원문 어투 보존 (natural, shorter, longer)
 const PRESERVE_TONE_RULES = `
@@ -71,9 +63,6 @@ const MARK_CHANGES = `
 - 새로 추가한 문장: <mark class="added">추가된 텍스트</mark>
 - 표현을 바꾼 부분: <mark class="changed">변경된 텍스트</mark>
 - 삭제는 그냥 삭제 (표시 불필요)`;
-
-// 하위 호환: 채팅 모드에서 사용
-const COMMON_RULES = `${BASE_RULES}\n${FORMAL_RULES}`;
 
 /*
  * natural 모드 전후 비교:
@@ -100,8 +89,7 @@ const MODE_INSTRUCTIONS: Record<RefineMode, string> = {
 - 원문에 없는 새 정보 추가
 - 소제목 구조 변경
 ${BASE_RULES}
-${PRESERVE_TONE_RULES}
-${MARK_CHANGES}`,
+${PRESERVE_TONE_RULES}`,
 
   professional: `아래 글을 더 전문적이고 신뢰감 있게 다듬어주세요.
 
@@ -115,8 +103,7 @@ ${MARK_CHANGES}`,
   예: "잇몸병이 생길 수 있습니다" → "치주 포켓에 세균이 축적되면 잇몸 염증으로 진행될 수 있습니다"
 - 단계/분류가 있으면 구조화 (초기/중기/후기 등)
 ${BASE_RULES}
-${FORMAL_RULES}
-${MARK_CHANGES}`,
+${FORMAL_RULES}`,
 
   shorter: `아래 글을 핵심만 남기고 간결하게 줄여주세요.
 - 반복되는 내용 제거
@@ -124,8 +111,7 @@ ${MARK_CHANGES}`,
 - 핵심 메시지는 반드시 유지
 - 원본의 50~70% 분량
 ${BASE_RULES}
-${PRESERVE_TONE_RULES}
-${MARK_CHANGES}`,
+${PRESERVE_TONE_RULES}`,
 
   longer: `아래 글의 내용을 더 풍성하고 구체적으로 확장해주세요.
 
@@ -139,30 +125,20 @@ ${MARK_CHANGES}`,
 - 원문에 없는 새 주제를 만들지 마세요. 기존 내용의 깊이만 추가.
 - 원본의 130~150% 분량. 원문 어투 유지.
 ${BASE_RULES}
-${PRESERVE_TONE_RULES}
-${MARK_CHANGES}`,
+${PRESERVE_TONE_RULES}`,
 
   medical_law: `아래 글에서 의료광고법 위반 리스크가 있는 표현을 모두 찾아 자동으로 수정해주세요.
-[의료법 제56조 기준 자동 수정]
-- "최고", "최초", "유일" → 삭제 또는 중립 표현
-- "완치", "100% 치료" → "개선될 수 있습니다"
-- "효과가 뛰어난" → "도움이 될 수 있는"
-- "부작용 없이" → "개인차가 있을 수 있으며"
-- "~하세요", "~받으세요" → "~하는 것을 고려할 수 있습니다"
-- 환자 체험기, 전후 비교 암시 → 삭제
 - 수정한 부분은 원래 의미를 최대한 살리면서 의료광고법에 적합하게
 ${BASE_RULES}
-${FORMAL_RULES}
-${MARK_CHANGES}`,
+${FORMAL_RULES}`,
 
   seo: `아래 글을 네이버/구글 검색 노출에 유리하도록 구조를 개선해주세요.
-- 소제목(<h2>, <h3>)을 활용하여 섹션을 나눔
+- 소제목(<h3>)을 활용하여 섹션을 나눔
 - 핵심 키워드가 제목, 첫 문단, 소제목에 자연스럽게 포함
 - 문단 길이를 적절하게 조절 (300자 이내)
 - 내용 자체는 바꾸지 않고 구조만 개선
 ${BASE_RULES}
-${FORMAL_RULES}
-${MARK_CHANGES}`,
+${FORMAL_RULES}`,
 };
 
 export function buildRefinePrompt(req: RefineRequest): {
@@ -171,9 +147,10 @@ export function buildRefinePrompt(req: RefineRequest): {
 } {
   const systemInstruction = `당신은 한국 병원 블로그 콘텐츠를 다듬는 전문 에디터입니다.
 원본의 핵심 내용과 의도를 유지하면서, 요청된 방향으로 글을 수정합니다.
-반드시 순수 HTML(<p>, <h2>, <h3>)로만 출력합니다.`;
+반드시 순수 HTML(<p>, <h3>)로만 출력합니다.`;
 
   const prompt = `${MODE_INSTRUCTIONS[req.mode]}
+${MARK_CHANGES}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 📄 원문
@@ -264,13 +241,18 @@ export function buildChatRefinePrompt(req: ChatRefineRequest): {
   const systemInstruction = `당신은 스마트 글 보정 AI입니다.
 사용자 요청을 정확히 이해하고, 요청한 부분만 수정합니다.
 요청하지 않은 부분은 원본 그대로 유지합니다. 절대 전체를 재작성하지 마세요.
-순수 HTML(<p>, <h2>, <h3>)로만 출력합니다. 설명/코멘트 금지.`;
+순수 HTML(<p>, <h3>)로만 출력합니다. 설명/코멘트 금지.`;
+
+  // 동적 규칙: 자연스럽게 요청 시 격식체 대신 어투 보존 규칙 적용
+  const chatRules = wantsHumanize
+    ? `${BASE_RULES}\n${PRESERVE_TONE_RULES}`
+    : `${BASE_RULES}\n${FORMAL_RULES}`;
 
   const prompt = `[독자 인식]
 이 글의 독자는 특정 증상/질환 때문에 병원을 알아보는 본인 또는 가족이다.
 행동 요구 금지, 불안 자극 금지, 판단은 독자에게.
 
-${COMMON_RULES}
+${chatRules}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🎯 사용자 요청: ${userMessage}
@@ -294,12 +276,8 @@ ${crawledContent ? `\n[참고 자료 — 출처 표시 없이 내용만 참고]\
 ${workingContent}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-${wantsExpand ? '📈 확장 모드: 요청 부분에 1~2문장 추가, 전체 130~150%' : ''}
-${wantsShorter ? '📉 축소 모드: 핵심만 남기기, 전체 60~80%' : ''}
-${wantsHumanize ? '🗣️ 자연스럽게: AI 문체 → 사람 말맛으로. 원문 어투 유지.' : ''}
-
-수정한 전체 글을 HTML로 출력하세요. 수정하지 않은 부분도 포함하여 전체를 출력하세요.
-수정한 부분은 <mark class="changed">변경된 텍스트</mark>, 추가한 부분은 <mark class="added">추가된 텍스트</mark>로 표시하세요.`;
+${MARK_CHANGES}
+수정한 전체 글을 HTML로 출력하세요. 수정하지 않은 부분도 포함하여 전체를 출력하세요.`;
 
   return { systemInstruction, prompt };
 }
