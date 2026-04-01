@@ -23,9 +23,9 @@ export interface YoutubeArticleRequest {
 }
 
 export const YOUTUBE_WRITING_STYLES = [
-  { value: 'blog', label: '블로그 문체', icon: '📝', desc: '환자 대상, 부드러운 정보 전달' },
-  { value: 'clinical', label: '임상글 문체', icon: '🔬', desc: '원장 1인칭, 전문적이면서 친근' },
-  { value: 'summary', label: '영상 요약', icon: '📋', desc: '핵심 내용 구조적 정리' },
+  { value: 'blog', label: '환자용 글', icon: '📝', desc: '쉽고 부드러운 정보 전달' },
+  { value: 'clinical', label: '원장님 글', icon: '🩺', desc: '전문적이면서 친근한 설명' },
+  { value: 'summary', label: '핵심 정리', icon: '📋', desc: '영상 내용 구조적 요약' },
 ];
 
 const STYLE_SYSTEM_INSTRUCTIONS: Record<YoutubeWritingStyle, string> = {
