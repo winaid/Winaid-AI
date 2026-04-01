@@ -8,6 +8,7 @@
 import type { CardNewsDesignTemplateId } from './types';
 import { CARD_NEWS_DESIGN_TEMPLATES } from './cardNewsDesignTemplates';
 import { getMedicalLawPromptBlock } from './medicalLawRules';
+import { getTrustedSourcesPromptBlock } from './trustedMedicalSources';
 
 export interface CardNewsRequest {
   topic: string;
@@ -44,6 +45,8 @@ export function buildCardNewsPrompt(req: CardNewsRequest): {
     '',
     '각 슬라이드는 3초 안에 핵심을 전달할 수 있도록 짧고 임팩트 있게 작성합니다.',
     '전문 용어는 쉬운 말로 바꿔 설명합니다.',
+    '',
+    getTrustedSourcesPromptBlock(),
   ].join('\n');
 
   const slideGuide = buildSlideGuide(req.slideCount);

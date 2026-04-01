@@ -6,6 +6,7 @@
  */
 
 import { getMedicalLawPromptBlock } from './medicalLawRules';
+import { getTrustedSourcesPromptBlock } from './trustedMedicalSources';
 
 export type RefineMode = 'natural' | 'professional' | 'shorter' | 'longer' | 'medical_law' | 'seo';
 
@@ -45,7 +46,9 @@ const BASE_RULES = `
 [출력 형식]
 반드시 순수 HTML로 출력. (<p>, <h2>, <h3> 태그)
 마크다운 금지. JSON 금지. 코드블록 금지. 설명/코멘트 금지.
-수정된 글만 출력하세요.`;
+수정된 글만 출력하세요.
+
+${getTrustedSourcesPromptBlock()}`;
 
 // 격식체 모드 전용 (professional, medical_law, seo)
 const FORMAL_RULES = `

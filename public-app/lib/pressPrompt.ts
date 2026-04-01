@@ -46,6 +46,7 @@ export const CATEGORIES = [
 ];
 
 import { getMedicalLawPromptBlock } from './medicalLawRules';
+import { getTrustedSourcesPromptBlock } from './trustedMedicalSources';
 
 export function buildPressPrompt(req: PressReleaseRequest): {
   systemInstruction: string;
@@ -106,7 +107,9 @@ ${getMedicalLawPromptBlock(true)}
 전문의 인용 형식:
 <p>${hospitalName} ${req.category || ''} ${req.doctorName} ${req.doctorTitle}은 "인용문"이라고 설명했다.</p>
 ⛔ blockquote 태그 사용 금지! <p> 태그 안에서 기사체로 인용!
-⛔ h2 부제 태그 출력 금지!`;
+⛔ h2 부제 태그 출력 금지!
+
+${getTrustedSourcesPromptBlock(req.category)}`;
 
   const promptParts = [
     `[기본 정보]`,

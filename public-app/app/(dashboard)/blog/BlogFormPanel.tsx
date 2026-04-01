@@ -545,7 +545,7 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
                   <span className="text-sm">❓</span>
                   <div>
                     <span className="text-xs font-semibold text-slate-700">FAQ 섹션</span>
-                    <p className="text-[10px] text-slate-400">네이버 질문 + 질병관리청 정보</p>
+                    <p className="text-[10px] text-slate-400">네이버 질문 + 의료 학회/기관 정보</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
