@@ -1,5 +1,5 @@
 /**
- * 유튜브 자막 기반 글 생성 프롬프트
+ * 유튜브 영상 분석 기반 글 생성 프롬프트
  *
  * 3가지 문체 선택 가능:
  * - blog: 블로그 문체 (3인칭 에디터)
@@ -13,7 +13,7 @@ export type YoutubeWritingStyle = 'blog' | 'clinical' | 'summary';
 
 export interface YoutubeArticleRequest {
   topic: string;
-  transcript: string;
+  transcript: string;           // 영상 요약 (Gemini가 분석한 결과)
   writingStyle: YoutubeWritingStyle;
   category: string;
   hospitalName?: string;
@@ -30,7 +30,7 @@ export const YOUTUBE_WRITING_STYLES = [
 
 const STYLE_SYSTEM_INSTRUCTIONS: Record<YoutubeWritingStyle, string> = {
   blog: `당신은 한국 병원 블로그 전담 에디터입니다.
-유튜브 영상 자막을 바탕으로 환자가 읽기 쉬운 블로그 글을 작성합니다.
+유튜브 영상 분석 결과를 바탕으로 환자가 읽기 쉬운 블로그 글을 작성합니다.
 
 [문체]
 - 3인칭 에디터 시점. 의사가 아니라 정보를 잘 정리하는 사람.
@@ -45,12 +45,11 @@ const STYLE_SYSTEM_INSTRUCTIONS: Record<YoutubeWritingStyle, string> = {
 - 마무리 (핵심 요약 + 부드러운 상담 안내)
 
 [핵심 원칙]
-- 자막을 그대로 복사하지 마세요. 블로그 문체로 완전히 재구성.
-- 영상에서 언급한 구체적 수치/사례/과정을 적극 활용.
-- 영상 주제와 관련 없는 잡담, 인사말, 구독 요청 등은 무시.`,
+- 분석 내용을 그대로 복사하지 마세요. 블로그 문체로 완전히 재구성.
+- 영상에서 언급한 구체적 수치/사례/과정을 적극 활용.`,
 
   clinical: `당신은 한국 병원 원장이 직접 쓰는 임상 블로그 글을 대필하는 전문 작성자입니다.
-유튜브 영상 자막을 바탕으로, 원장이 직접 설명하는 느낌의 글을 작성합니다.
+유튜브 영상 분석 결과를 바탕으로, 원장이 직접 설명하는 느낌의 글을 작성합니다.
 
 [문체]
 - 원장 1인칭 시점 ("저는", "제가 설명드리면", "상담해 드렸습니다")
@@ -66,11 +65,11 @@ const STYLE_SYSTEM_INSTRUCTIONS: Record<YoutubeWritingStyle, string> = {
 - 마무리: 핵심 정리 + 정기검진/상담 권유
 
 [핵심 원칙]
-- 자막을 그대로 복사하지 마세요. 원장 말투로 재구성.
+- 분석 내용을 그대로 복사하지 마세요. 원장 말투로 재구성.
 - 영상에서 보여준 과정/사례를 "실제 치료 과정에서는 ~" 식으로 활용.`,
 
   summary: `당신은 의료 콘텐츠 요약 전문가입니다.
-유튜브 영상 자막을 바탕으로 핵심 내용을 구조적으로 정리합니다.
+유튜브 영상 분석 결과를 바탕으로 핵심 내용을 구조적으로 정리합니다.
 
 [문체]
 - 객관적이고 깔끔한 정리체.
@@ -121,12 +120,11 @@ ${getMedicalLawPromptBlock(true)}
   const trimmedTranscript = req.transcript.trim().slice(0, 10000);
   promptParts.push(
     '',
-    '[유튜브 영상 자막 — 원본 자료]',
-    '아래는 유튜브 영상의 자막입니다.',
+    '[유튜브 영상 분석 결과 — 원본 자료]',
+    '아래는 유튜브 영상을 AI가 분석한 내용입니다.',
     '이 내용을 바탕으로 글을 작성하세요.',
-    '⚠️ 자막을 그대로 복사하지 마세요. 위 문체에 맞게 완전히 재구성하세요.',
+    '⚠️ 요약 내용을 그대로 복사하지 마세요. 위 문체에 맞게 완전히 재구성하세요.',
     '⚠️ 영상의 핵심 정보(수치, 과정, 사례)는 적극 활용하세요.',
-    '⚠️ 인사말, 구독 요청, 영상 홍보 등은 무시하세요.',
     '',
     trimmedTranscript,
   );

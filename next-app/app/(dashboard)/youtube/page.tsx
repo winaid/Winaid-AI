@@ -57,59 +57,60 @@ export default function YoutubePage() {
     setSuggestedTopics([]);
 
     try {
-      // 1. 자막 추출
-      const extractRes = await fetch('/api/youtube/transcript', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: youtubeUrl.trim() }),
-      });
-      const extractData = await extractRes.json();
-      if (!extractData.success) throw new Error(extractData.error);
-
-      setTranscript(extractData.transcript);
-
-      // 2. AI 요약 + 주제 추천
-      const analysisRes = await fetch('/api/gemini', {
+      // Gemini + Google Search로 영상 직접 분석
+      const res = await fetch('/api/gemini', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          prompt: `아래는 병원/의료 관련 유튜브 영상의 자막입니다.
+          prompt: `아래 YouTube 영상의 내용을 분석해주세요.
 
-[자막]
-${extractData.transcript.slice(0, 8000)}
+YouTube URL: ${youtubeUrl.trim()}
 
-[요청]
-1. 이 영상의 핵심 내용을 3~5줄로 요약하세요.
-2. 이 자막을 바탕으로 블로그에 쓸 수 있는 주제 5개를 추천하세요.
+[분석 요청]
+1. 이 영상의 전체 내용을 상세하게 요약하세요 (500~1000자).
+   - 영상에서 설명하는 핵심 내용, 치료/시술 과정, 의학적 정보를 빠짐없이 정리
+   - 구체적 수치, 기간, 횟수 등이 있으면 반드시 포함
+   - 영상 진행 순서대로 정리
 
-각 주제:
-- topic: 글의 방향 (20자 이내)
-- title: 네이버 블로그 제목 (30~40자)
-- keywords: SEO 키워드 2~3개
+2. 이 영상 내용을 바탕으로 병원 블로그에 쓸 수 있는 주제 5개를 추천하세요.
+   각 주제:
+   - topic: 글의 방향 (20자 이내)
+   - title: 네이버 블로그 제목 (30~40자)
+   - keywords: SEO 키워드 2~3개
 
-JSON만 출력: { "summary": "...", "topics": [{ "topic": "...", "title": "...", "keywords": "..." }] }`,
+⚠️ 인사말, 구독 요청, 광고 등은 무시하고 의학/치료 내용만 분석하세요.
+
+JSON만 출력:
+{
+  "summary": "영상 상세 요약...",
+  "topics": [{ "topic": "...", "title": "...", "keywords": "..." }]
+}`,
           model: 'gemini-3.1-flash-lite-preview',
           temperature: 0.5,
-          maxOutputTokens: 2048,
+          maxOutputTokens: 4096,
           responseType: 'json',
+          googleSearch: true,
         }),
       });
 
-      const analysisData = await analysisRes.json();
-      if (analysisData.text) {
-        try {
-          const cleaned = analysisData.text.replace(/```json?\s*\n?/gi, '').replace(/\n?```\s*$/g, '').trim();
-          const parsed = JSON.parse(cleaned);
-          setSummary(parsed.summary || '');
-          setSuggestedTopics(parsed.topics || []);
-        } catch {
-          setSummary(analysisData.text);
-        }
+      const data = await res.json();
+      if (!res.ok || !data.text) throw new Error(data.error || '영상 분석에 실패했습니다.');
+
+      const cleaned = data.text.replace(/```json?\s*\n?/gi, '').replace(/\n?```\s*$/g, '').trim();
+      try {
+        const parsed = JSON.parse(cleaned);
+        const summaryText = parsed.summary || '';
+        setTranscript(summaryText);
+        setSummary(summaryText);
+        setSuggestedTopics(parsed.topics || []);
+      } catch {
+        setTranscript(data.text);
+        setSummary(data.text);
       }
 
       setPipelineStep('configure');
     } catch (err) {
-      setError(err instanceof Error ? err.message : '자막 추출 실패');
+      setError(err instanceof Error ? err.message : '영상 분석 중 오류가 발생했습니다.');
     } finally {
       setIsExtracting(false);
     }
@@ -190,13 +191,13 @@ JSON만 출력: { "summary": "...", "topics": [{ "topic": "...", "title": "...",
       {/* 헤더 */}
       <div className="mb-8">
         <h1 className="text-2xl font-black text-slate-800">▶️ 유튜브 → 블로그 글</h1>
-        <p className="text-sm text-slate-500 mt-1">영상 자막을 추출하고, 원하는 문체로 블로그 글을 생성합니다</p>
+        <p className="text-sm text-slate-500 mt-1">영상을 AI가 분석하고, 원하는 문체로 블로그 글을 생성합니다</p>
       </div>
 
       {/* 파이프라인 인디케이터 */}
       <div className="flex items-center gap-2 mb-6">
         {(['extract', 'configure', 'result'] as const).map((step, i) => {
-          const labels = ['▶️ 자막 추출', '⚙️ 설정 + 생성', '📄 결과'];
+          const labels = ['▶️ 영상 분석', '⚙️ 설정 + 생성', '📄 결과'];
           const isActive = pipelineStep === step;
           const isDone = (['extract', 'configure', 'result'] as const).indexOf(pipelineStep) > i;
           return (
@@ -239,7 +240,7 @@ JSON만 출력: { "summary": "...", "topics": [{ "topic": "...", "title": "...",
 
           <button onClick={handleExtract} disabled={isExtracting || !youtubeUrl.trim()}
             className="w-full py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 disabled:opacity-50 transition-all flex items-center justify-center gap-2">
-            {isExtracting ? (<><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />자막 추출 중...</>) : '▶️ 자막 추출 시작'}
+            {isExtracting ? (<><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />영상 분석 중...</>) : '▶️ 영상 분석 시작'}
           </button>
         </div>
       )}
@@ -260,7 +261,7 @@ JSON만 출력: { "summary": "...", "topics": [{ "topic": "...", "title": "...",
             <div className="rounded-2xl border border-slate-200 overflow-hidden">
               <button onClick={() => setTranscriptExpanded(!transcriptExpanded)}
                 className="w-full flex items-center justify-between px-4 py-3 bg-slate-50 text-left">
-                <span className="text-xs font-semibold text-slate-600">📝 자막 전문 ({transcript.length.toLocaleString()}자)</span>
+                <span className="text-xs font-semibold text-slate-600">📝 영상 요약 ({transcript.length.toLocaleString()}자)</span>
                 <span className="text-xs text-slate-400">{transcriptExpanded ? '접기 ▲' : '펼치기 ▼'}</span>
               </button>
               {transcriptExpanded && (
