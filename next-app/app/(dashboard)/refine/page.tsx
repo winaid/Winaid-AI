@@ -13,6 +13,7 @@ export default function RefinePage() {
   const [originalText, setOriginalText] = useState('');
   const [selectedMode, setSelectedMode] = useState<RefineMode>('natural');
   const [refinedHtml, setRefinedHtml] = useState<string | null>(null);
+  const [showChanges, setShowChanges] = useState(true);
   const [isRefining, setIsRefining] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
@@ -159,16 +160,18 @@ export default function RefinePage() {
   // ── HTML 복사 (맑은 고딕 12pt) ──
   const handleCopy = async () => {
     if (!refinedHtml) return;
+    // 복사 시 mark 태그 제거 (변경점 표시는 UI용)
+    const cleanHtml = refinedHtml.replace(/<mark[^>]*>([\s\S]*?)<\/mark>/gi, '$1');
     try {
-      const styled = refinedHtml
+      const styled = cleanHtml
         .replace(/<p>/g, '<p style="font-family:\'맑은 고딕\',sans-serif;font-size:12pt;margin:0 0 1em;line-height:1.6;">')
         .replace(/<h2>/g, '<h2 style="font-family:\'맑은 고딕\',sans-serif;font-size:14pt;font-weight:bold;margin:1.5em 0 0.5em;">')
         .replace(/<h3>/g, '<h3 style="font-family:\'맑은 고딕\',sans-serif;font-size:13pt;font-weight:bold;margin:1.2em 0 0.4em;">');
       const htmlBlob = new Blob([styled], { type: 'text/html' });
-      const textBlob = new Blob([refinedHtml.replace(/<[^>]+>/g, '')], { type: 'text/plain' });
+      const textBlob = new Blob([cleanHtml.replace(/<[^>]+>/g, '')], { type: 'text/plain' });
       await navigator.clipboard.write([new ClipboardItem({ 'text/html': htmlBlob, 'text/plain': textBlob })]);
     } catch {
-      const div = document.createElement('div'); div.innerHTML = refinedHtml;
+      const div = document.createElement('div'); div.innerHTML = cleanHtml;
       await navigator.clipboard.writeText(div.textContent || '');
     }
   };
@@ -275,7 +278,13 @@ export default function RefinePage() {
                   <span className="text-xs font-bold text-violet-600">✨ 보정 완료</span>
                   {saveStatus && <span className={`text-[10px] px-2 py-0.5 rounded-full ${saveStatus.includes('완료') ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-500'}`}>{saveStatus}</span>}
                 </div>
-                <button onClick={handleCopy} className="px-3 py-1.5 text-xs font-medium text-slate-500 hover:text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-all">복사 (맑은 고딕)</button>
+                <div className="flex items-center gap-2">
+                  <button onClick={() => setShowChanges(!showChanges)}
+                    className={`px-2.5 py-1.5 text-[10px] font-semibold rounded-lg border transition-all ${showChanges ? 'bg-amber-50 border-amber-200 text-amber-700' : 'bg-white border-slate-200 text-slate-400'}`}>
+                    {showChanges ? '변경점 표시 중' : '변경점 숨김'}
+                  </button>
+                  <button onClick={handleCopy} className="px-3 py-1.5 text-xs font-medium text-slate-500 hover:text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-all">복사 (맑은 고딕)</button>
+                </div>
               </div>
               {/* factCheck 결과 */}
               {factCheck && (
@@ -292,7 +301,8 @@ export default function RefinePage() {
                   </div>
                 </div>
               )}
-              <div className="p-6" dangerouslySetInnerHTML={{ __html: refinedHtml }} />
+              <style>{`mark.added { background: #dcfce7; padding: 0 2px; border-radius: 2px; } mark.changed { background: #fef3c7; padding: 0 2px; border-radius: 2px; }`}</style>
+              <div className="p-6" dangerouslySetInnerHTML={{ __html: showChanges ? refinedHtml : refinedHtml.replace(/<mark[^>]*>([\s\S]*?)<\/mark>/gi, '$1') }} />
             </div>
             <button type="button" onClick={() => { setOriginalText(refinedHtml); setRefinedHtml(null); setSaveStatus(null); }}
               className="w-full py-2.5 text-xs font-bold text-violet-600 bg-violet-50 border border-violet-200 rounded-xl hover:bg-violet-100 transition-all flex items-center justify-center gap-2">
