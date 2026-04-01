@@ -1,7 +1,25 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useAuthGuard } from '../../../hooks/useAuthGuard';
+
+interface KeyMoment {
+  start: number;
+  end: number;
+  description: string;
+  usage: string;
+}
+
+function formatTime(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
+function extractVideoId(url: string): string | null {
+  const m = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/);
+  return m ? m[1] : null;
+}
 
 export default function YoutubePage() {
   useAuthGuard();
@@ -15,6 +33,10 @@ export default function YoutubePage() {
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState<'transcript' | 'gif'>('transcript');
   const [copyFeedback, setCopyFeedback] = useState('');
+  const [moments, setMoments] = useState<KeyMoment[]>([]);
+  const [isDetectingMoments, setIsDetectingMoments] = useState(false);
+  const [momentsError, setMomentsError] = useState('');
+  const [playingMoment, setPlayingMoment] = useState<KeyMoment | null>(null);
 
   const handleAnalyze = async () => {
     if (!youtubeUrl.trim() || isAnalyzing) return;
@@ -74,6 +96,36 @@ export default function YoutubePage() {
     const encoded = encodeURIComponent(transcript.slice(0, 8000));
     window.location.href = `/blog?youtubeTranscript=${encoded}`;
   };
+
+  const handleDetectMoments = useCallback(async () => {
+    if (!transcript || isDetectingMoments) return;
+    setIsDetectingMoments(true);
+    setMomentsError('');
+    setMoments([]);
+    try {
+      const res = await fetch('/api/youtube/key-moments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ transcript }),
+      });
+      const data = await res.json();
+      if (data.success && data.moments) {
+        setMoments(data.moments);
+      } else {
+        setMomentsError(data.error || '핵심 장면 분석에 실패했습니다.');
+      }
+    } catch {
+      setMomentsError('서버 연결에 실패했습니다.');
+    } finally {
+      setIsDetectingMoments(false);
+    }
+  }, [transcript, isDetectingMoments]);
+
+  const handlePlayMoment = (moment: KeyMoment) => {
+    setPlayingMoment(moment);
+  };
+
+  const videoId = extractVideoId(youtubeUrl);
 
   const inputCls = 'w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all';
 
@@ -189,12 +241,78 @@ export default function YoutubePage() {
             )}
 
             {activeTab === 'gif' && (
-              <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-12 text-center">
-                <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4 mx-auto bg-slate-50">
-                  <span className="text-3xl">🎬</span>
-                </div>
-                <h3 className="text-lg font-bold text-slate-700 mb-2">GIF 추출 기능</h3>
-                <p className="text-sm text-slate-400">곧 추가 예정입니다</p>
+              <div className="space-y-4">
+                {/* 핵심 장면 분석 */}
+                {moments.length === 0 && !isDetectingMoments && (
+                  <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-8 text-center">
+                    <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4 mx-auto bg-gradient-to-br from-red-50 to-pink-50">
+                      <span className="text-3xl">🎬</span>
+                    </div>
+                    <h3 className="text-lg font-bold text-slate-700 mb-2">핵심 장면 감지</h3>
+                    <p className="text-sm text-slate-400 mb-4">AI가 자막을 분석하여 블로그/SNS에 활용하기 좋은 핵심 구간을 찾습니다</p>
+                    <button onClick={handleDetectMoments} disabled={!transcript}
+                      className="px-6 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 disabled:opacity-50 transition-all">
+                      핵심 장면 분석 시작
+                    </button>
+                    {momentsError && <p className="mt-3 text-sm text-red-500">{momentsError}</p>}
+                  </div>
+                )}
+
+                {isDetectingMoments && (
+                  <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-12 flex flex-col items-center">
+                    <div className="w-10 h-10 border-[3px] border-blue-100 border-t-blue-500 rounded-full animate-spin mb-4" />
+                    <p className="text-sm font-medium text-slate-700">핵심 장면을 분석하고 있어요</p>
+                  </div>
+                )}
+
+                {/* 구간 목록 */}
+                {moments.length > 0 && (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-xs font-bold text-slate-700">핵심 장면 {moments.length}개</span>
+                      <button onClick={handleDetectMoments} className="text-[10px] text-blue-500 hover:text-blue-700">다시 분석</button>
+                    </div>
+                    {moments.map((m, i) => (
+                      <div key={i} className="flex items-center gap-3 p-4 border border-slate-200 rounded-xl bg-white hover:border-blue-200 transition-all">
+                        <div className="text-sm font-mono text-blue-600 whitespace-nowrap bg-blue-50 px-2 py-1 rounded-lg">
+                          {formatTime(m.start)}~{formatTime(m.end)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium text-slate-700 truncate">{m.description}</div>
+                          <div className="text-[10px] text-slate-400">{m.usage}</div>
+                        </div>
+                        <button onClick={() => handlePlayMoment(m)}
+                          className="px-3 py-1.5 bg-red-500 text-white text-xs font-bold rounded-lg hover:bg-red-600 transition-all flex items-center gap-1 flex-shrink-0">
+                          ▶ 구간 보기
+                        </button>
+                        <button disabled
+                          className="px-3 py-1.5 bg-slate-100 text-slate-400 text-xs font-bold rounded-lg cursor-not-allowed flex-shrink-0" title="준비 중">
+                          🎬 GIF
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* YouTube 플레이어 */}
+                {playingMoment && videoId && (
+                  <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+                    <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-100 bg-slate-50/80">
+                      <span className="text-xs font-bold text-slate-700">
+                        {formatTime(playingMoment.start)}~{formatTime(playingMoment.end)} — {playingMoment.description}
+                      </span>
+                      <button onClick={() => setPlayingMoment(null)} className="text-xs text-slate-400 hover:text-slate-600">닫기</button>
+                    </div>
+                    <div className="aspect-video">
+                      <iframe
+                        src={`https://www.youtube.com/embed/${videoId}?start=${playingMoment.start}&end=${playingMoment.end}&autoplay=1`}
+                        className="w-full h-full"
+                        allow="autoplay; encrypted-media"
+                        allowFullScreen
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
