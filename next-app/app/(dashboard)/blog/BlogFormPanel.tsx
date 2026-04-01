@@ -244,249 +244,18 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
             )}
           </div>
 
-          {/* 병원 홈페이지/블로그 URL 입력 */}
-          {hospitalName && (
-            <div>
-              <p className="text-[11px] font-semibold text-slate-500 mb-1.5">병원 홈페이지/블로그 URL</p>
-              <div className="flex gap-1.5">
-                <input
-                  type="url"
-                  value={homepageUrl}
-                  onChange={e => { setHomepageUrl(e.target.value); setClinicContext(null); setCrawlProgress(''); }}
-                  placeholder="https://blog.naver.com/..."
-                  className="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-xs focus:border-blue-400 outline-none bg-white"
-                />
-                <button
-                  type="button"
-                  onClick={handleCrawlHomepage}
-                  disabled={isCrawling || !homepageUrl.trim()}
-                  className="px-3 py-2 rounded-lg text-xs font-semibold transition-all bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-40 whitespace-nowrap"
-                >
-                  {isCrawling ? '분석 중...' : '분석'}
-                </button>
-              </div>
-              {crawlProgress && (
-                <p className="mt-1 text-[10px] text-slate-400">{crawlProgress}</p>
-              )}
-              {clinicContext && (
-                <div className="mt-1.5 p-2 bg-emerald-50 rounded-lg border border-emerald-100">
-                  <p className="text-[10px] font-semibold text-emerald-700 mb-1">
-                    분석 결과 (신뢰도 {Math.round(clinicContext.confidence * 100)}%)
-                  </p>
-                  {clinicContext.actualServices.length > 0 && (
-                    <p className="text-[10px] text-slate-600">
-                      서비스: {clinicContext.actualServices.join(', ')}
-                    </p>
-                  )}
-                  {clinicContext.specialties.length > 0 && (
-                    <p className="text-[10px] text-slate-600">
-                      특화: {clinicContext.specialties.join(', ')}
-                    </p>
-                  )}
-                  {clinicContext.locationSignals.length > 0 && (
-                    <p className="text-[10px] text-slate-600">
-                      지역: {clinicContext.locationSignals.join(', ')}
-                    </p>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* 키워드 분석 버튼 */}
-          {selectedHospitalAddress && hospitalName && (
-            <button
-              type="button"
-              onClick={handleAnalyzeKeywords}
-              disabled={isAnalyzingKeywords}
-              className="w-full py-2.5 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-2 bg-blue-600 text-white hover:bg-blue-700 shadow-sm disabled:opacity-50"
-            >
-              <span>🔍</span>
-              <span>{isAnalyzingKeywords ? '키워드 분석 중...' : '키워드 분석'}</span>
-            </button>
-          )}
-
-          {/* 키워드 분석 결과 패널 (old InputForm 동일) */}
-          {showKeywordPanel && (
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-              <div className="flex items-center justify-between px-3 py-2 bg-slate-50 border-b border-slate-100">
-                <span className="text-xs font-bold text-slate-700">키워드 분석 ({keywordStats.length}개)</span>
-                <div className="flex items-center gap-1">
-                  {(['volume', 'blog', 'saturation'] as const).map(sort => (
-                    <button key={sort} type="button" onClick={() => setKeywordSortBy(sort)}
-                      className={`px-2 py-0.5 rounded text-[10px] font-semibold transition-all ${keywordSortBy === sort ? 'bg-blue-500 text-white' : 'text-slate-400 hover:text-slate-600'}`}
-                    >
-                      {sort === 'volume' ? '검색량' : sort === 'blog' ? '발행량' : '포화도'}
-                    </button>
-                  ))}
-                  <button type="button" onClick={() => setShowKeywordPanel(false)} className="ml-1 text-slate-400 hover:text-slate-600">
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                  </button>
-                </div>
-              </div>
-              {/* 검색 + 최소 검색량 필터 */}
-              {!isAnalyzingKeywords && keywordStats.length > 0 && (
-                <div className="flex gap-2 px-3 py-2 border-b border-slate-100 bg-white">
-                  <input
-                    type="text"
-                    value={keywordSearch}
-                    onChange={e => setKeywordSearch(e.target.value)}
-                    placeholder="키워드 검색..."
-                    className="flex-1 px-2.5 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:border-blue-400 placeholder:text-slate-300"
-                  />
-                  {/* 노출 중 숨기기 토글 (상위권 체크 완료 시만) */}
-                  {rankResults.size > 0 && (
-                    <>
-                      <button type="button" onClick={() => setHideRanked(!hideRanked)}
-                        className={`px-2 py-1.5 text-[10px] font-semibold rounded-lg border transition-all whitespace-nowrap ${hideRanked ? 'bg-emerald-50 border-emerald-300 text-emerald-700' : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300'}`}
-                      >
-                        {hideRanked ? '✅ 노출 중 숨김' : '노출 중 포함'}
-                      </button>
-                      <span className="text-[9px] text-slate-400 whitespace-nowrap">※ API 참고용 (실제 순위와 다를 수 있음)</span>
-                    </>
-                  )}
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] text-slate-400 whitespace-nowrap">최소</span>
-                    <select
-                      value={keywordMinVolume}
-                      onChange={e => setKeywordMinVolume(Number(e.target.value))}
-                      className="px-1.5 py-1.5 text-[11px] border border-slate-200 rounded-lg focus:outline-none focus:border-blue-400 bg-white text-slate-600"
-                    >
-                      <option value={0}>전체</option>
-                      <option value={10}>10+</option>
-                      <option value={50}>50+</option>
-                      <option value={100}>100+</option>
-                      <option value={500}>500+</option>
-                      <option value={1000}>1,000+</option>
-                      <option value={5000}>5,000+</option>
-                    </select>
-                  </div>
-                </div>
-              )}
-              {isAnalyzingKeywords ? (
-                <div className="p-6 text-center">
-                  <div className="w-6 h-6 border-2 border-blue-200 border-t-blue-500 rounded-full animate-spin mx-auto mb-2" />
-                  <p className="text-xs text-slate-400">{keywordProgress || '검색량 분석 중...'}</p>
-                </div>
-              ) : keywordStats.length > 0 ? (
-                <>
-                  <div className="max-h-72 overflow-y-auto">
-                    <table className="w-full text-xs">
-                      <thead className="sticky top-0 bg-slate-50">
-                        <tr className="text-slate-500">
-                          <th className="text-left px-3 py-2 font-semibold">키워드</th>
-                          <th className="text-right px-3 py-2 font-semibold">월간 검색량</th>
-                          <th className="text-right px-3 py-2 font-semibold">발행량</th>
-                          <th className="text-right px-3 py-2 font-semibold">포화도</th>
-                          {rankResults.size > 0 && <th className="text-center px-2 py-2 font-semibold" title="네이버 API 기준 참고 순위 (실제와 다를 수 있음)">순위<span className="text-[8px] text-slate-400 ml-0.5">참고</span></th>}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {[...keywordStats]
-                          .filter(s => {
-                            if (keywordMinVolume > 0 && s.monthlySearchVolume < keywordMinVolume) return false;
-                            if (keywordSearch && !s.keyword.includes(keywordSearch.trim())) return false;
-                            if (hideRanked && rankResults.get(s.keyword)?.isRanked) return false;
-                            return true;
-                          })
-                          .sort((a, b) => {
-                            if (keywordSortBy === 'volume') return b.monthlySearchVolume - a.monthlySearchVolume;
-                            if (keywordSortBy === 'blog') return b.blogPostCount - a.blogPostCount;
-                            return (a.saturation || 0) - (b.saturation || 0);
-                          })
-                          .map((stat, idx) => (
-                            <tr
-                              key={stat.keyword}
-                              className={`border-t border-slate-50 hover:bg-blue-50 cursor-pointer transition-colors ${idx % 2 === 0 ? '' : 'bg-slate-50/50'}`}
-                              onClick={() => setKeywords(k => k ? `${k}, ${stat.keyword}` : stat.keyword)}
-                            >
-                              <td className="px-3 py-2 font-medium text-slate-700">{stat.keyword}</td>
-                              <td className="px-3 py-2 text-right text-slate-600">{stat.monthlySearchVolume.toLocaleString()}</td>
-                              <td className="px-3 py-2 text-right text-slate-600">{stat.blogPostCount.toLocaleString()}</td>
-                              <td className="px-3 py-2 text-right">
-                                <span className={`font-semibold ${(stat.saturation || 0) < 1 ? 'text-emerald-600' : (stat.saturation || 0) < 3 ? 'text-amber-600' : 'text-red-600'}`}>
-                                  {stat.saturation?.toFixed(1) || '0.0'}
-                                </span>
-                              </td>
-                              {rankResults.size > 0 && (
-                                <td className="px-2 py-2 text-center">
-                                  {(() => {
-                                    const r = rankResults.get(stat.keyword);
-                                    if (!r) return <span className="text-slate-300">-</span>;
-                                    if (r.isRanked && r.rank) {
-                                      const emoji = r.rank <= 5 ? '🟢' : r.rank <= 10 ? '🔵' : '🟡';
-                                      return <span className={`text-[10px] font-bold ${r.rank <= 5 ? 'text-emerald-600' : r.rank <= 10 ? 'text-blue-600' : 'text-amber-600'}`} title={r.matchedTitle || ''}>{emoji} {r.rank}위</span>;
-                                    }
-                                    return <span className="text-[10px] text-slate-400">30위권 밖</span>;
-                                  })()}
-                                </td>
-                              )}
-                            </tr>
-                          ))}
-                      </tbody>
-                    </table>
-                  </div>
-                  {/* 더보기 + 상위권 체크 버튼 */}
-                  <div className="px-3 py-2 border-t border-slate-100 flex gap-2">
-                    {keywordStats.length < MAX_KEYWORDS && (
-                      <button type="button" onClick={handleLoadMoreKeywords} disabled={isLoadingMoreKeywords}
-                        className="flex-1 py-1.5 text-xs font-semibold text-blue-600 hover:bg-blue-50 rounded transition-all disabled:opacity-50 flex items-center justify-center gap-1">
-                        {isLoadingMoreKeywords ? (
-                          <><div className="w-3 h-3 border-2 border-blue-300 border-t-blue-600 rounded-full animate-spin" />로딩 중...</>
-                        ) : (
-                          <>더보기 ({keywordStats.length}/{MAX_KEYWORDS})</>
-                        )}
-                      </button>
-                    )}
-                    <button type="button" onClick={handleCheckRanks} disabled={isCheckingRanks || keywordStats.length === 0}
-                      className="flex-1 py-1.5 text-xs font-semibold text-emerald-600 hover:bg-emerald-50 rounded border border-emerald-200 transition-all disabled:opacity-50 flex items-center justify-center gap-1">
-                      {isCheckingRanks ? (
-                        <><div className="w-3 h-3 border-2 border-emerald-300 border-t-emerald-600 rounded-full animate-spin" />체크 중...</>
-                      ) : (
-                        <>🔍 상위권 체크</>
-                      )}
-                    </button>
-                  </div>
-                  {keywordProgress && <p className="text-[10px] text-slate-400 text-center px-3 pb-2">{keywordProgress}</p>}
-                  {/* AI 블루오션 분석 결과 */}
-                  {keywordAiRec && (
-                    <div className="px-3 py-3 border-t border-slate-100 bg-blue-50/50">
-                      <p className="text-[11px] font-bold text-blue-700 mb-1">💡 AI 키워드 분석</p>
-                      <div className="text-[11px] text-slate-600 whitespace-pre-wrap leading-relaxed">{keywordAiRec}</div>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <div className="p-4 text-center text-xs text-slate-400">분석 결과가 없습니다</div>
-              )}
-            </div>
-          )}
-
-          {/* 진료과 + 대상 독자 (old 동일: grid-cols-2 select) */}
-          <div className="grid grid-cols-2 gap-3">
-            <select
-              value={category}
-              onChange={e => setCategory(e.target.value as ContentCategory)}
-              className={inputCls}
-              disabled={isGenerating}
-              aria-label="진료과 선택"
-            >
-              {CATEGORIES.map(cat => (
-                <option key={cat.value} value={cat.value}>{cat.label}</option>
-              ))}
-            </select>
-            <select
-              value={audienceMode}
-              onChange={e => setAudienceMode(e.target.value as AudienceMode)}
-              className={inputCls}
-              disabled={isGenerating}
-              aria-label="타겟 청중 선택"
-            >
-              <option value="환자용(친절/공감)">환자용 (친절/공감)</option>
-              <option value="보호자용(가족걱정)">보호자용 (부모님/자녀 걱정)</option>
-              <option value="전문가용(신뢰/정보)">전문가용 (신뢰/정보)</option>
-            </select>
-          </div>
+          {/* 진료과 */}
+          <select
+            value={category}
+            onChange={e => setCategory(e.target.value as ContentCategory)}
+            className={inputCls}
+            disabled={isGenerating}
+            aria-label="진료과 선택"
+          >
+            {CATEGORIES.map(cat => (
+              <option key={cat.value} value={cat.value}>{cat.label}</option>
+            ))}
+          </select>
 
           {/* 주제 */}
           <div>
@@ -497,41 +266,6 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
               onChange={e => setTopic(e.target.value)}
               placeholder="예: 임플란트 수술 후 관리법"
               required
-              className={inputCls}
-            />
-          </div>
-
-          {/* 키워드 */}
-          <div>
-            <input
-              type="text"
-              value={keywords}
-              onChange={e => setKeywords(e.target.value)}
-              placeholder="SEO 키워드 (예: 강남 치과, 임플란트 가격)"
-              className={inputCls}
-            />
-          </div>
-
-          {/* 키워드 반복 횟수 */}
-          {keywords.trim() && (
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] text-slate-400 whitespace-nowrap">반복</span>
-              {(['auto', 3, 5, 7] as const).map(opt => (
-                <button key={opt} type="button" onClick={() => setKeywordDensity(opt)}
-                  className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all ${keywordDensity === opt ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>
-                  {opt === 'auto' ? '자동' : `${opt}회`}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* 질환명 */}
-          <div>
-            <input
-              type="text"
-              value={disease}
-              onChange={e => setDisease(e.target.value)}
-              placeholder="질환명 (예: 치주염, 충치) - 글의 실제 주제"
               className={inputCls}
             />
           </div>
@@ -576,17 +310,110 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
             </div>
           )}
 
-          {/* 상세 설정 토글 */}
-          <button type="button" onClick={() => setShowAdvanced(!showAdvanced)}
-            className="w-full flex items-center justify-between px-3 py-2 bg-slate-50 hover:bg-slate-100 rounded-lg text-xs font-semibold text-slate-500 transition-all border border-slate-100">
-            <span>⚙️ 상세 설정</span>
-            <svg className={`w-4 h-4 transition-transform ${showAdvanced ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
-          </button>
+          {/* 세부 옵션 토글 */}
+          {(() => {
+            const advancedCount = [
+              audienceMode !== '환자용(친절/공감)',
+              keywords.trim(),
+              disease.trim(),
+              homepageUrl.trim(),
+              textLength !== 2500,
+              imageCount !== 2,
+              imageStyle !== 'photo',
+              customSubheadings.trim(),
+              persona !== PERSONAS[0].value,
+              tone !== TONES[0].value,
+              includeFaq,
+              includeHospitalIntro,
+            ].filter(Boolean).length;
+            return (
+              <button type="button" onClick={() => setShowAdvanced(!showAdvanced)}
+                className="w-full flex items-center justify-between px-3 py-2 bg-slate-50 hover:bg-slate-100 rounded-lg text-xs font-semibold text-slate-500 transition-all border border-slate-100">
+                <span>⚙️ 세부 옵션{advancedCount > 0 ? ` (${advancedCount}개 설정됨)` : ''}</span>
+                <svg className={`w-4 h-4 transition-transform ${showAdvanced ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
+              </button>
+            );
+          })()}
 
-          {/* 상세 설정 패널 */}
+          {/* 세부 옵션 패널 */}
           {showAdvanced && (
           <div className="space-y-4 p-3 bg-slate-50 rounded-xl border border-slate-100">
             <div className="space-y-3">
+              {/* 대상 독자 */}
+              <div>
+                <label className={labelCls}>대상 독자</label>
+                <select value={audienceMode} onChange={e => setAudienceMode(e.target.value as AudienceMode)} className={inputCls} disabled={isGenerating}>
+                  <option value="환자용(친절/공감)">환자용 (친절/공감)</option>
+                  <option value="보호자용(가족걱정)">보호자용 (부모님/자녀 걱정)</option>
+                  <option value="전문가용(신뢰/정보)">전문가용 (신뢰/정보)</option>
+                </select>
+              </div>
+              {/* 키워드 */}
+              <div>
+                <label className={labelCls}>SEO 키워드</label>
+                <input type="text" value={keywords} onChange={e => setKeywords(e.target.value)} placeholder="예: 강남 치과, 임플란트 가격" className={inputCls} />
+              </div>
+              {keywords.trim() && (
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] text-slate-400 whitespace-nowrap">반복</span>
+                  {(['auto', 3, 5, 7] as const).map(opt => (
+                    <button key={opt} type="button" onClick={() => setKeywordDensity(opt)}
+                      className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all ${keywordDensity === opt ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>
+                      {opt === 'auto' ? '자동' : `${opt}회`}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {/* 질환명 */}
+              <div>
+                <label className={labelCls}>질환명</label>
+                <input type="text" value={disease} onChange={e => setDisease(e.target.value)} placeholder="예: 치주염, 충치 — 글의 실제 주제" className={inputCls} />
+              </div>
+              {/* 블로그 URL (말투 학습) */}
+              {hospitalName && (
+                <div>
+                  <label className={labelCls}>병원 홈페이지/블로그 URL</label>
+                  <div className="flex gap-1.5">
+                    <input type="url" value={homepageUrl} onChange={e => { setHomepageUrl(e.target.value); setClinicContext(null); setCrawlProgress(''); }}
+                      placeholder="https://blog.naver.com/..." className="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-xs focus:border-blue-400 outline-none bg-white" />
+                    <button type="button" onClick={handleCrawlHomepage} disabled={isCrawling || !homepageUrl.trim()}
+                      className="px-3 py-2 rounded-lg text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-40 whitespace-nowrap">
+                      {isCrawling ? '분석 중...' : '분석'}
+                    </button>
+                  </div>
+                  {crawlProgress && <p className="mt-1 text-[10px] text-slate-400">{crawlProgress}</p>}
+                  {clinicContext && (
+                    <div className="mt-1.5 p-2 bg-emerald-50 rounded-lg border border-emerald-100">
+                      <p className="text-[10px] font-semibold text-emerald-700 mb-1">분석 결과 (신뢰도 {Math.round(clinicContext.confidence * 100)}%)</p>
+                      {clinicContext.actualServices.length > 0 && <p className="text-[10px] text-slate-600">서비스: {clinicContext.actualServices.join(', ')}</p>}
+                      {clinicContext.specialties.length > 0 && <p className="text-[10px] text-slate-600">특화: {clinicContext.specialties.join(', ')}</p>}
+                      {clinicContext.locationSignals.length > 0 && <p className="text-[10px] text-slate-600">지역: {clinicContext.locationSignals.join(', ')}</p>}
+                    </div>
+                  )}
+                </div>
+              )}
+              {/* 키워드 분석 */}
+              {selectedHospitalAddress && hospitalName && (
+                <button type="button" onClick={handleAnalyzeKeywords} disabled={isAnalyzingKeywords}
+                  className="w-full py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50">
+                  🔍 {isAnalyzingKeywords ? '키워드 분석 중...' : '키워드 분석'}
+                </button>
+              )}
+              {showKeywordPanel && keywordStats.length > 0 && (
+                <div className="bg-white rounded-lg border border-slate-200 max-h-48 overflow-y-auto">
+                  <div className="px-3 py-1.5 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-slate-600">키워드 {keywordStats.length}개</span>
+                    <button type="button" onClick={() => setShowKeywordPanel(false)} className="text-slate-400 hover:text-slate-600 text-xs">✕</button>
+                  </div>
+                  {keywordStats.slice(0, 10).map(s => (
+                    <button key={s.keyword} type="button" onClick={() => setKeywords(k => k ? `${k}, ${s.keyword}` : s.keyword)}
+                      className="w-full px-3 py-1.5 text-left text-xs hover:bg-blue-50 flex justify-between border-b border-slate-50">
+                      <span className="text-slate-700">{s.keyword}</span>
+                      <span className="text-slate-400">{s.monthlySearchVolume.toLocaleString()}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
               {/* 글 길이 */}
               <div>
                 <p className="text-xs font-semibold text-slate-500 mb-1.5">글 길이</p>

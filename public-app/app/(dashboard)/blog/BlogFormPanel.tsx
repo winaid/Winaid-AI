@@ -366,31 +366,10 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
             </div>
           )}
 
-          {/* 진료과 + 대상 독자 (old 동일: grid-cols-2 select) */}
-          <div className="grid grid-cols-2 gap-3">
-            <select
-              value={category}
-              onChange={e => setCategory(e.target.value as ContentCategory)}
-              className={inputCls}
-              disabled={isGenerating}
-              aria-label="진료과 선택"
-            >
-              {CATEGORIES.map(cat => (
-                <option key={cat.value} value={cat.value}>{cat.label}</option>
-              ))}
-            </select>
-            <select
-              value={audienceMode}
-              onChange={e => setAudienceMode(e.target.value as AudienceMode)}
-              className={inputCls}
-              disabled={isGenerating}
-              aria-label="타겟 청중 선택"
-            >
-              <option value="환자용(친절/공감)">환자용 (친절/공감)</option>
-              <option value="보호자용(가족걱정)">보호자용 (부모님/자녀 걱정)</option>
-              <option value="전문가용(신뢰/정보)">전문가용 (신뢰/정보)</option>
-            </select>
-          </div>
+          {/* 진료과 */}
+          <select value={category} onChange={e => setCategory(e.target.value as ContentCategory)} className={inputCls} disabled={isGenerating} aria-label="진료과 선택">
+            {CATEGORIES.map(cat => <option key={cat.value} value={cat.value}>{cat.label}</option>)}
+          </select>
 
           {/* 주제 */}
           <div>
@@ -401,41 +380,6 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
               onChange={e => setTopic(e.target.value)}
               placeholder="예: 임플란트 수술 후 관리법"
               required
-              className={inputCls}
-            />
-          </div>
-
-          {/* 키워드 */}
-          <div>
-            <input
-              type="text"
-              value={keywords}
-              onChange={e => setKeywords(e.target.value)}
-              placeholder="SEO 키워드 (예: 강남 치과, 임플란트 가격)"
-              className={inputCls}
-            />
-          </div>
-
-          {/* 키워드 반복 횟수 */}
-          {keywords.trim() && (
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] text-slate-400 whitespace-nowrap">반복</span>
-              {(['auto', 3, 5, 7] as const).map(opt => (
-                <button key={opt} type="button" onClick={() => setKeywordDensity(opt)}
-                  className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all ${keywordDensity === opt ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>
-                  {opt === 'auto' ? '자동' : `${opt}회`}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* 질환명 */}
-          <div>
-            <input
-              type="text"
-              value={disease}
-              onChange={e => setDisease(e.target.value)}
-              placeholder="질환명 (예: 치주염, 충치) - 글의 실제 주제"
               className={inputCls}
             />
           </div>
@@ -480,17 +424,86 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
             </div>
           )}
 
-          {/* 상세 설정 토글 */}
-          <button type="button" onClick={() => setShowAdvanced(!showAdvanced)}
-            className="w-full flex items-center justify-between px-3 py-2 bg-slate-50 hover:bg-slate-100 rounded-lg text-xs font-semibold text-slate-500 transition-all border border-slate-100">
-            <span>⚙️ 상세 설정</span>
-            <svg className={`w-4 h-4 transition-transform ${showAdvanced ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
-          </button>
+          {/* 세부 옵션 토글 */}
+          {(() => {
+            const advancedCount = [
+              audienceMode !== '환자용(친절/공감)',
+              keywords.trim(),
+              disease.trim(),
+              homepageUrl.trim(),
+              textLength !== 2500,
+              imageCount !== 2,
+              imageStyle !== 'photo',
+              customSubheadings.trim(),
+              includeFaq,
+              includeHospitalIntro,
+            ].filter(Boolean).length;
+            return (
+              <button type="button" onClick={() => setShowAdvanced(!showAdvanced)}
+                className="w-full flex items-center justify-between px-3 py-2 bg-slate-50 hover:bg-slate-100 rounded-lg text-xs font-semibold text-slate-500 transition-all border border-slate-100">
+                <span>⚙️ 세부 옵션{advancedCount > 0 ? ` (${advancedCount}개 설정됨)` : ''}</span>
+                <svg className={`w-4 h-4 transition-transform ${showAdvanced ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
+              </button>
+            );
+          })()}
 
-          {/* 상세 설정 패널 */}
+          {/* 세부 옵션 패널 */}
           {showAdvanced && (
           <div className="space-y-4 p-3 bg-slate-50 rounded-xl border border-slate-100">
             <div className="space-y-3">
+              {/* 대상 독자 */}
+              <div>
+                <label className={labelCls}>대상 독자</label>
+                <select value={audienceMode} onChange={e => setAudienceMode(e.target.value as AudienceMode)} className={inputCls} disabled={isGenerating}>
+                  <option value="환자용(친절/공감)">환자용 (친절/공감)</option>
+                  <option value="보호자용(가족걱정)">보호자용 (부모님/자녀 걱정)</option>
+                  <option value="전문가용(신뢰/정보)">전문가용 (신뢰/정보)</option>
+                </select>
+              </div>
+              {/* 키워드 */}
+              <div>
+                <label className={labelCls}>SEO 키워드</label>
+                <input type="text" value={keywords} onChange={e => setKeywords(e.target.value)} placeholder="예: 강남 치과, 임플란트 가격" className={inputCls} />
+              </div>
+              {keywords.trim() && (
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] text-slate-400 whitespace-nowrap">반복</span>
+                  {(['auto', 3, 5, 7] as const).map(opt => (
+                    <button key={opt} type="button" onClick={() => setKeywordDensity(opt)}
+                      className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all ${keywordDensity === opt ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>
+                      {opt === 'auto' ? '자동' : `${opt}회`}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {/* 질환명 */}
+              <div>
+                <label className={labelCls}>질환명</label>
+                <input type="text" value={disease} onChange={e => setDisease(e.target.value)} placeholder="예: 치주염, 충치 — 글의 실제 주제" className={inputCls} />
+              </div>
+              {/* 블로그 URL */}
+              {hospitalName && (
+                <div>
+                  <label className={labelCls}>병원 홈페이지/블로그 URL</label>
+                  <div className="flex gap-1.5">
+                    <input type="url" value={homepageUrl} onChange={e => { setHomepageUrl(e.target.value); setClinicContext(null); setCrawlProgress(''); }}
+                      placeholder="https://blog.naver.com/..." className="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-xs focus:border-blue-400 outline-none bg-white" />
+                    <button type="button" onClick={handleCrawlHomepage} disabled={isCrawling || !homepageUrl.trim()}
+                      className="px-3 py-2 rounded-lg text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-40 whitespace-nowrap">
+                      {isCrawling ? '분석 중...' : '분석'}
+                    </button>
+                  </div>
+                  {crawlProgress && <p className="mt-1 text-[10px] text-slate-400">{crawlProgress}</p>}
+                  {clinicContext && (
+                    <div className="mt-1.5 p-2 bg-emerald-50 rounded-lg border border-emerald-100">
+                      <p className="text-[10px] font-semibold text-emerald-700 mb-1">분석 결과 (신뢰도 {Math.round(clinicContext.confidence * 100)}%)</p>
+                      {clinicContext.actualServices.length > 0 && <p className="text-[10px] text-slate-600">서비스: {clinicContext.actualServices.join(', ')}</p>}
+                      {clinicContext.specialties.length > 0 && <p className="text-[10px] text-slate-600">특화: {clinicContext.specialties.join(', ')}</p>}
+                      {clinicContext.locationSignals.length > 0 && <p className="text-[10px] text-slate-600">지역: {clinicContext.locationSignals.join(', ')}</p>}
+                    </div>
+                  )}
+                </div>
+              )}
               {/* 글 길이 */}
               <div>
                 <p className="text-xs font-semibold text-slate-500 mb-1.5">글 길이</p>
