@@ -148,16 +148,24 @@ function getKoreanHolidays(year: number, month: number): string[] {
 // ── 카드뉴스 전용 페르소나 + 프레임/스타일 블록 (OLD cardNewsImageService.ts 동일) ──
 
 const CARD_NEWS_PERSONA = `[ROLE] Korean medical SNS card news designer.
-[GOAL] Generate a 1:1 square card image with Korean text rendered directly into pixels.
+[GOAL] Generate a 1:1 square (1080x1080px) card image with Korean text rendered directly into pixels.
 [PRIORITY] Text readability > visual aesthetics. Mobile-first. Korean medical ad law compliant.
 [FONT] 콘텐츠 분위기에 맞는 Google Fonts 한국어 폰트를 자동 선택. 한국어가 깨질 바에는 깔끔한 고딕체(sans-serif) 기본 사용. 가독성 > 디자인.
-[HOSPITAL NAME] 프롬프트에 명시된 병원명만 사용하세요. 명시되지 않은 병원명, 로고, 브랜드를 절대 지어내지 마세요.`;
+[HOSPITAL NAME] 프롬프트에 명시된 병원명만 사용하세요. 명시되지 않은 병원명, 로고, 브랜드를 절대 지어내지 마세요.
+[SERIES CONSISTENCY — MOST IMPORTANT]
+This card is part of a multi-slide series. ALL slides MUST look identical except for text content and illustration subject.
+EXACT same background, text layout zones, font style/size/color, padding, decorative elements.
+Text zones: Top 15% subtitle, Center 40% mainTitle (bold), Bottom 25% description+visual. Minimum 40px edge padding.
+Output MUST be exactly 1:1 square.`;
 
 const CARD_FRAME_RULE = `[LAYOUT RULES]
+- Fill the entire 1080x1080 area edge-to-edge
 - NO colored borders, frames, or outlines around the edges
-- Fill the entire image area edge-to-edge with content
-- Rounded corners on the overall image only
-- Clean minimal design, no decorative borders`;
+- Rounded corners on overall image only
+- Clean minimal design
+- Text must be centered horizontally
+- Minimum 40px padding from all edges
+- All text must be legible at mobile phone size`;
 
 function buildCardStyleBlock(imageStyle: string): string {
   if (imageStyle === 'photo') return `[STYLE - 실사 촬영 (PHOTOREALISTIC)]
@@ -212,16 +220,19 @@ function buildCardNewsPromptFull(body: ImageRequestBody): string {
 
   // 참조 이미지 스타일 복제 지시
   const refImageRule = hasRefImage ? `
-🔒 [STYLE CONSISTENCY — CRITICAL]
-A reference image is attached. You MUST replicate its exact style:
-- SAME background color, gradient direction, and color palette
-- SAME layout structure (text position: top/center/bottom)
-- SAME illustration style (3D render / flat / watercolor / photo)
-- SAME decorative elements (flowers, icons, shapes) in similar positions
-- SAME text styling (font weight, color, size ratio between title/subtitle)
-- SAME overall composition and whitespace ratio
-- ONLY change the text content and specific illustration subject
-- The card must look like it belongs to the SAME series as the reference` : '';
+🔒 [STYLE LOCK — ZERO DEVIATION ALLOWED]
+A reference image is attached. You MUST clone its design system exactly:
+CLONE these from the reference:
+✅ Background: exact same color values, gradient angle, gradient stops
+✅ Text zones: exact same Y-position for subtitle, mainTitle, description
+✅ Font: exact same weight, exact same color, exact same relative size
+✅ Padding: exact same distance from edges
+✅ Decorative elements: exact same style, position, size, opacity
+✅ Card shape: exact same rounded corners, shadows, inner frame
+CHANGE only:
+✅ The actual text words (subtitle, mainTitle, description)
+✅ The illustration subject (keep same style, size, position)
+The viewer should tell these cards are from the SAME series at a glance.` : '';
 
   const hasText = subtitle || mainTitle;
 

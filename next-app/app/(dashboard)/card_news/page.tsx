@@ -251,13 +251,19 @@ ${hospitalNameInstruction}
 [원고]
 ${cardsInfo}
 
-[⚠️ 가장 중요: 스타일 통일]
-모든 카드가 하나의 시리즈처럼 보여야 합니다:
-- 모든 카드의 배경색/그라데이션을 동일하게 지정하세요
-- 모든 카드의 일러스트 스타일을 동일하게 (예: 3D 캐릭터면 전부 3D 캐릭터)
-- 모든 카드의 텍스트 배치 구조를 동일하게 (예: 상단 부제 → 중앙 제목 → 하단 설명)
-- 모든 카드의 장식 요소를 동일하게 (예: 벚꽃이면 전부 벚꽃, 의료아이콘이면 전부 의료아이콘)
-- visual 필드에 동일한 스타일 키워드를 반복 사용하세요
+[🔒 레이아웃 고정 — 절대 규칙]
+모든 카드가 아래 동일한 레이아웃 그리드를 사용:
+- 상단 15%: subtitle 영역 (작은 텍스트, 부제)
+- 중앙 40%: mainTitle 영역 (큰 볼드 텍스트, 제목)
+- 하단 30%: visual 영역 (일러스트/아이콘)
+- 최하단 15%: description 영역 (설명 텍스트)
+
+규칙:
+- 배경색, 그라데이션, 장식 요소는 모든 카드에서 완전 동일
+- 일러스트 스타일 동일 (3D면 전부 3D)
+- 텍스트 크기/색상/위치 동일 — 내용만 변경
+- visual 필드에 동일한 스타일 키워드를 매 카드에 반복
+- 표지(1장)와 마무리(마지막 장)도 같은 그리드 사용. 예외 없음
 
 [프롬프트 작성 규칙]
 1. 각 카드에 표시될 한글 텍스트:
@@ -333,10 +339,12 @@ visual: (배경 비주얼 묘사)
 
       if (cards.length > 1) {
         const remaining = cards.slice(1);
+        const styleContext = `[1장 스타일 참조]\n1장 프롬프트: ${firstCard.imagePrompt}\n→ 위 프롬프트의 배경색, 일러스트 스타일, 레이아웃을 정확히 따라하세요. 차이가 있으면 실패입니다.`;
         let completed = 1;
         const restResults = await Promise.all(
           remaining.map(async (card) => {
-            const url = await generateCardImage(card.imagePrompt, card.index, firstImageUrl || undefined);
+            const enrichedPrompt = `${styleContext}\n\n${card.imagePrompt}`;
+            const url = await generateCardImage(enrichedPrompt, card.index, firstImageUrl || undefined);
             completed++;
             setProgress(`이미지 생성 중... (${completed}/${cards.length}장)`);
             return { index: card.index, url };
