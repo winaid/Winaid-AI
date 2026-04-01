@@ -81,35 +81,44 @@ export default function YoutubePage() {
     setVideoId(extractVideoId(youtubeUrl));
 
     try {
+      const analysisPrompt = `당신은 병원 마케팅 콘텐츠 전문가입니다.
+아래 YouTube 영상의 내용을 Google Search를 통해 분석해주세요.
+
+YouTube URL: ${youtubeUrl.trim()}
+
+[분석 규칙 — 매우 중요]
+⚠️ Google Search로 확인할 수 있는 정보만 분석하세요.
+⚠️ 영상 제목, 설명, 댓글, 채널 정보 등 공개된 메타데이터를 근거로 하세요.
+⚠️ 영상 내부의 대화나 내용은 실제로 확인할 수 없으므로, "영상 제목/설명에 따르면" 식으로 출처를 명시하세요.
+⚠️ 영상 내용을 추측하여 지어내지 마세요. 확인 불가능한 내용은 "영상에서 직접 확인 필요"라고 쓰세요.
+⚠️ 만약 영상 정보를 전혀 찾을 수 없다면, "영상 정보를 확인할 수 없습니다"라고 솔직히 답하세요.
+
+[요청 1: 영상 요약]
+확인 가능한 정보를 바탕으로 구조적으로 정리:
+- 영상의 전체 주제를 한 문장으로
+- 확인된 핵심 포인트를 "첫째, 둘째, 셋째..." 번호로 정리 (각 2~3문장)
+- 각 포인트에 구체적 수치/사례/용어가 있으면 반드시 포함
+- 확인 불가능한 부분은 "영상 시청 후 확인 필요"로 표시
+
+[요청 2: 블로그 주제 추천]
+확인된 정보를 바탕으로 병원 블로그에 쓸 수 있는 주제 5개 추천.
+- topic: 글의 방향 (20자 이내)
+- title: 네이버 블로그 제목 (30~40자, 검색 친화적)
+- keywords: SEO 키워드 2~3개
+
+JSON만 출력:
+{
+  "summary": "영상 요약 (구조적으로, 첫째/둘째/셋째 형식)...",
+  "topics": [{ "topic": "...", "title": "...", "keywords": "..." }]
+}`;
+
       const res = await fetch('/api/gemini', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          prompt: `아래 YouTube 영상의 내용을 분석해주세요.
-
-YouTube URL: ${youtubeUrl.trim()}
-
-[분석 요청]
-1. 이 영상의 전체 내용을 상세하게 요약하세요 (500~1000자).
-   - 영상에서 설명하는 핵심 내용, 치료/시술 과정, 의학적 정보를 빠짐없이 정리
-   - 구체적 수치, 기간, 횟수 등이 있으면 반드시 포함
-   - 영상 진행 순서대로 정리
-
-2. 이 영상 내용을 바탕으로 병원 블로그에 쓸 수 있는 주제 5개를 추천하세요.
-   각 주제:
-   - topic: 글의 방향 (20자 이내)
-   - title: 네이버 블로그 제목 (30~40자)
-   - keywords: SEO 키워드 2~3개
-
-⚠️ 인사말, 구독 요청, 광고 등은 무시하고 의학/치료 내용만 분석하세요.
-
-JSON만 출력:
-{
-  "summary": "영상 상세 요약...",
-  "topics": [{ "topic": "...", "title": "...", "keywords": "..." }]
-}`,
+          prompt: analysisPrompt,
           model: 'gemini-3.1-flash-lite-preview',
-          temperature: 0.5,
+          temperature: 0.3,
           maxOutputTokens: 4096,
           googleSearch: true,
           thinkingLevel: 'none',
