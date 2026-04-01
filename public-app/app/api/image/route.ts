@@ -335,7 +335,22 @@ OUTPUT DIRECTION:
 - NO stock photo poses (thumbs up, pointing, crossed arms with smile)
 - ADD subtle imperfections: natural skin texture, slight asymmetry, environmental clutter
 - ADD realistic lighting: directional light source, natural shadows, ambient occlusion
-- The image should be indistinguishable from a real photograph taken in a Korean medical clinic`;
+- The image should be indistinguishable from a real photograph taken in a Korean medical clinic
+
+[KOREAN MEDICAL CLINIC AUTHENTICITY]
+- The setting MUST look like a real Korean hospital/clinic (한국 병원)
+- Korean-style interior: clean white walls, wood accents, modern minimalist design
+- Medical staff: Korean-style white coats (not American hospital scrubs)
+- Waiting room: comfortable modern chairs, reception desk
+- Equipment: modern but not futuristic-looking
+- Lighting: fluorescent ceiling lights mixed with warm accent lighting
+
+[COMPOSITION RULES]
+- Rule of thirds composition
+- Leave breathing room around subjects (not too tightly cropped)
+- Include foreground/midground/background depth
+- Avoid dead center subject placement
+- Natural eye-level or slightly elevated camera angle`;
 
   const fullPrompt = isCardNewsMode
     ? buildCardNewsPromptFull(body)

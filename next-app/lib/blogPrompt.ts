@@ -113,6 +113,27 @@ const CATEGORY_DEPTH_GUIDES: Record<string, string> = {
 - 직업/활동별 맞춤: 사무직/운동선수/고령자별 차이`,
 };
 
+const CATEGORY_IMAGE_GUIDES: Record<string, string> = {
+  '치과': `[치과 이미지 장면 추천]
+- 상담: 치과의사가 X-ray를 환자에게 보여주며 설명, 밝은 진료실, 자연광
+- 시술: 치과 유닛체어에서 치료 중인 전체 환경 (클로즈업 X)
+- 장비: CT 기계, 디지털 스캐너, 마이크로스코프
+- 회복: 치료 후 거울 보며 미소짓는 환자
+- 피할 것: 무서운 기구 클로즈업, 피 나는 장면, 고통스러운 표정`,
+  '피부과': `[피부과 이미지 장면 추천]
+- 상담: 피부 확대경으로 환자 피부를 관찰하는 의사
+- 시술: 레이저/필링 시술 장면 (시술실 전체 분위기 중심)
+- 스킨케어: 세안, 선크림 바르기, 마스크팩 등 일상 관리
+- 결과: 건강하고 맑은 피부의 한국인 (자연광, 과보정 금지)
+- 피할 것: Before/After 대비, 과도하게 보정된 피부`,
+  '정형외과': `[정형외과 이미지 장면 추천]
+- 진단: MRI/X-ray 영상을 보며 설명하는 의사, 관절 모형
+- 치료: 물리치료실에서 운동하는 환자, 재활 기구
+- 일상: 무릎 보호대를 하고 가벼운 산책하는 사람
+- 운동: 스트레칭, 근력 운동 (재활/예방 목적)
+- 피할 것: 고통스러운 표정, 심한 부상, 수술실 내부`,
+};
+
 import { getMedicalLawPromptBlock } from './medicalLawRules';
 
 export function buildBlogPrompt(req: GenerationRequest): {
@@ -406,6 +427,8 @@ export function buildBlogPrompt(req: GenerationRequest): {
       '- 병원명, 브랜드명, 전화번호, URL 금지',
       '- 포스터, 인포그래픽, 카드뉴스, 광고 레이아웃 금지',
       '- 프롬프트에 병원 이름이나 고유명사를 포함하지 마세요',
+      '',
+      ...(CATEGORY_IMAGE_GUIDES[req.category] ? [CATEGORY_IMAGE_GUIDES[req.category]] : []),
       '',
       '[이미지-본문 매칭 규칙]',
       '- 각 [IMG_N] 위치의 이미지 프롬프트는 바로 위/아래 문단의 주제를 시각적 장면으로 표현',

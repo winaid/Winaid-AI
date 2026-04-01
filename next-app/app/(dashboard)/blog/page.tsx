@@ -1149,7 +1149,7 @@ ${subs.length > 0 ? `경쟁 글 소제목: ${subs.join(' / ')}` : ''}
             const imgRes = await fetch('/api/image', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ prompt, aspectRatio: '16:9' as const, mode: 'blog' as const }),
+              body: JSON.stringify({ prompt, aspectRatio: '4:3' as const, mode: 'blog' as const }),
             });
             if (!imgRes.ok) return { index, url: null };
             const imgData = await imgRes.json() as { imageDataUrl?: string };
@@ -1425,7 +1425,7 @@ ${subs.length > 0 ? `경쟁 글 소제목: ${subs.join(' / ')}` : ''}
       const imgRes = await fetch('/api/image', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: newPrompt, aspectRatio: '16:9', mode: 'blog' }),
+        body: JSON.stringify({ prompt: newPrompt, aspectRatio: '4:3', mode: 'blog' }),
       });
       if (!imgRes.ok) throw new Error('이미지 생성 실패');
 
