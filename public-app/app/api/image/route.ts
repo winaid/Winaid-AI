@@ -21,15 +21,17 @@ function getKeys(): string[] {
 
 let keyIndex = 0;
 
-type AspectRatio = '1:1' | '16:9' | '3:4' | '9:16' | '4:3' | 'auto';
+type AspectRatio = '1:1' | '4:5' | 'A4' | '16:9' | '3:4' | '9:16' | '4:3' | 'auto';
 
 function getAspectInstruction(ratio: AspectRatio): string {
   switch (ratio) {
     case '1:1': return '정사각형(1:1, 1080x1080) 비율로 생성해주세요.';
     case '16:9': return '가로형(16:9, 1920x1080) 와이드 비율로 생성해주세요.';
     case '3:4': return '세로형(3:4, 1080x1440) 비율로 생성해주세요.';
+    case '4:5': return '세로형(4:5, 1080x1350) 인스타그램 세로 비율로 생성해주세요.';
     case '9:16': return '세로형(9:16, 1080x1920) 모바일 비율로 생성해주세요.';
     case '4:3': return '4:3 비율로 생성해주세요.';
+    case 'A4': return 'A4 인쇄용(세로방향, 210mm×297mm) 비율로 생성해주세요. 인쇄 품질에 적합한 고해상도로 생성하세요.';
     case 'auto': return '콘텐츠에 가장 적합한 비율을 자동으로 선택해주세요.';
     default: return '';
   }

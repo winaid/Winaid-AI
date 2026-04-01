@@ -15,16 +15,14 @@ import { CalendarThemePreview, ThemePreview } from '../../../components/Calendar
 import { useCreditContext } from '../layout';
 import { useCredit } from '../../../lib/creditService';
 
-type AspectRatio = '1:1' | '16:9' | '3:4' | '9:16' | 'auto';
+type AspectRatio = '1:1' | '4:5' | 'A4' | '16:9' | '3:4' | '9:16' | '4:3' | 'auto';
 type DayMark = 'closed' | 'shortened' | 'vacation' | 'night';
 type ScheduleLayout = 'full_calendar' | 'week' | 'highlight';
 
 const ASPECT_RATIOS: { value: AspectRatio; label: string; icon: string; desc: string }[] = [
-  { value: '1:1', label: '1080x1080', icon: '⬜', desc: '인스타 피드' },
-  { value: '16:9', label: '1920x1080', icon: '🖥️', desc: '가로형 배너' },
-  { value: '3:4', label: '1080x1440', icon: '📋', desc: '3:4 세로' },
-  { value: '9:16', label: '1080x1920', icon: '📱', desc: '9:16 세로' },
-  { value: 'auto', label: '자동', icon: '✨', desc: '콘텐츠 맞춤' },
+  { value: '1:1', label: '1080×1080', icon: '⬜', desc: '인스타 피드' },
+  { value: '4:5', label: '1080×1350', icon: '📋', desc: '인스타 세로' },
+  { value: 'A4', label: 'A4', icon: '📄', desc: '인쇄용' },
 ];
 
 const LOGO_STORAGE_KEY = 'hospital-logo-dataurl';
@@ -48,7 +46,8 @@ export default function ImagePage() {
   const [mode, setMode] = useState<'template' | 'free'>('template');
   const [prompt, setPrompt] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>('schedule');
-  const [aspectRatio, setAspectRatio] = useState<AspectRatio>('3:4');
+  const [aspectRatio, setAspectRatio] = useState<AspectRatio>('1:1');
+  const [customRatio, setCustomRatio] = useState('');
   const [generating, setGenerating] = useState(false);
   const [progress, setProgress] = useState('');
   const [resultImages, setResultImages] = useState<string[]>([]);
@@ -1169,6 +1168,20 @@ If the result looks significantly different from the reference, you have FAILED.
     }
   }, [resultImages]);
 
+  const handlePdfDownload = useCallback((pageIndex?: number) => {
+    const img = resultImages[pageIndex ?? currentPage];
+    if (!img) return;
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+    printWindow.document.write(`<!DOCTYPE html><html><head><title>WINAID</title>
+<style>@page{size:A4 portrait;margin:0}*{margin:0;padding:0}body{width:210mm;height:297mm;display:flex;align-items:center;justify-content:center}
+img{width:100%;height:100%;object-fit:contain}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style>
+</head><body><img src="${img}"/>
+<script>window.onload=function(){setTimeout(function(){window.print()},500)};window.onafterprint=function(){window.close()};<\/script>
+</body></html>`);
+    printWindow.document.close();
+  }, [resultImages, currentPage]);
+
   return (
     <div className="flex flex-col lg:flex-row gap-5 lg:items-start w-full">
       {/* 좌측: 입력 폼 */}
@@ -1705,16 +1718,22 @@ If the result looks significantly different from the reference, you have FAILED.
                 {/* 이미지 사이즈 (OLD 위치: 추가 프롬프트 아래, 내 스타일 위) */}
                 <div>
                   <label className="block text-xs font-semibold text-slate-600 mb-2">이미지 사이즈</label>
-                  <div className="grid grid-cols-5 gap-1.5">
+                  <div className="grid grid-cols-3 gap-1.5">
                     {ASPECT_RATIOS.map((r) => (
-                      <button key={r.value} type="button" onClick={() => setAspectRatio(r.value)} disabled={generating}
-                        className={`py-2 px-1 rounded-xl text-center transition-all ${aspectRatio === r.value ? 'bg-slate-800 text-white shadow-md' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>
+                      <button key={r.value} type="button" onClick={() => { setAspectRatio(r.value); setCustomRatio(''); }} disabled={generating}
+                        className={`py-2 px-1 rounded-xl text-center transition-all ${aspectRatio === r.value && !customRatio ? 'bg-slate-800 text-white shadow-md' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>
                         <div className="text-sm leading-none">{r.icon}</div>
                         <div className="text-[10px] font-bold mt-1 leading-tight">{r.label}</div>
-                        <div className={`text-[8px] mt-0.5 ${aspectRatio === r.value ? 'text-slate-300' : 'text-slate-400'}`}>{r.desc}</div>
+                        <div className={`text-[8px] mt-0.5 ${aspectRatio === r.value && !customRatio ? 'text-slate-300' : 'text-slate-400'}`}>{r.desc}</div>
                       </button>
                     ))}
                   </div>
+                  <div className="flex items-center gap-2 mt-2">
+                    <span className="text-[10px] text-slate-400 whitespace-nowrap">직접 입력</span>
+                    <input type="text" value={customRatio} onChange={e => { setCustomRatio(e.target.value); if (e.target.value.trim()) setAspectRatio(e.target.value.trim() as AspectRatio); }}
+                      placeholder="예: 16:9, 9:16, 3:4" className="flex-1 px-2.5 py-1.5 text-xs border border-slate-200 rounded-lg outline-none focus:border-slate-400 bg-white" />
+                  </div>
+                  {aspectRatio === 'A4' && <p className="text-[10px] text-blue-600 mt-1">A4는 인쇄용입니다. 생성 후 PDF 다운로드 버튼으로 출력할 수 있습니다.</p>}
                 </div>
 
                 {/* 내 스타일 히스토리 (업로드 스타일 — 선택 시 내장 프리셋보다 우선) */}
@@ -2009,6 +2028,11 @@ If the result looks significantly different from the reference, you have FAILED.
               <button onClick={() => handleDownload(currentPage)} className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-sm transition-colors shadow-lg">
                 {resultImages.length > 1 ? `${currentPage + 1}장 다운로드` : '다운로드'}
               </button>
+              {aspectRatio === 'A4' && (
+                <button onClick={() => handlePdfDownload(currentPage)} className="px-6 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-xl font-bold text-sm transition-colors flex items-center gap-2">
+                  📄 PDF 다운로드
+                </button>
+              )}
               {resultImages.length > 1 && (
                 <button onClick={() => handleDownload()} className="px-6 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-bold text-sm transition-colors">전체 다운로드</button>
               )}
