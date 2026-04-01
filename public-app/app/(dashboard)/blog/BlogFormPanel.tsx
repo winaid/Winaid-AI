@@ -20,6 +20,7 @@ export interface BlogFormPanelProps {
   audienceMode: AudienceMode;
   imageStyle: ImageStyle;
   imageCount: number;
+  imageAspectRatio: '4:3' | '16:9' | '1:1';
   textLength: number;
   hospitalName: string;
   selectedHospitalAddress: string;
@@ -66,6 +67,7 @@ export interface BlogFormPanelProps {
   setAudienceMode: (v: AudienceMode) => void;
   setImageStyle: (v: ImageStyle) => void;
   setImageCount: (v: number) => void;
+  setImageAspectRatio: (v: '4:3' | '16:9' | '1:1') => void;
   setTextLength: (v: number) => void;
   setHospitalName: (v: string) => void;
   setSelectedHospitalAddress: (v: string) => void;
@@ -98,7 +100,7 @@ export interface BlogFormPanelProps {
 
 export default function BlogFormPanel(props: BlogFormPanelProps) {
   const {
-    topic, keywords, keywordDensity, disease, category, persona, tone, audienceMode, imageStyle, imageCount, textLength,
+    topic, keywords, keywordDensity, disease, category, persona, tone, audienceMode, imageStyle, imageCount, imageAspectRatio, textLength,
     hospitalName, selectedHospitalAddress,
     homepageUrl, clinicContext, isCrawling, crawlProgress,
     includeFaq, faqCount, showCustomInput, customPrompt, customSubheadings,
@@ -108,7 +110,7 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
     seoTitles, trendingItems, isLoadingTitles, isLoadingTrends,
     isGenerating,
     setTopic, setKeywords, setKeywordDensity, setDisease, setCategory, setPersona, setTone, setAudienceMode,
-    setImageStyle, setImageCount, setTextLength, setHospitalName,
+    setImageStyle, setImageCount, setImageAspectRatio, setTextLength, setHospitalName,
     setSelectedHospitalAddress,
     setHomepageUrl, setClinicContext, setCrawlProgress,
     setIncludeFaq, setFaqCount, setShowCustomInput, setCustomPrompt, setCustomSubheadings,
@@ -518,6 +520,25 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
                 <div className="flex justify-between mt-1 text-[10px] text-slate-400"><span>0장</span><span>10장</span></div>
                 {imageCount >= 6 && <p className="text-[10px] text-amber-600 mt-1">이미지가 많을수록 생성 시간이 길어집니다 (6장 이상: 약 3~5분)</p>}
               </div>
+              {/* 이미지 비율 */}
+              {imageCount > 0 && (
+                <div>
+                  <p className="text-[11px] font-semibold text-slate-500 mb-1.5">이미지 비율</p>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {([
+                      { id: '4:3' as const, label: '4:3', desc: '블로그 최적' },
+                      { id: '16:9' as const, label: '16:9', desc: '와이드' },
+                      { id: '1:1' as const, label: '1:1', desc: '정사각' },
+                    ]).map(r => (
+                      <button key={r.id} type="button" onClick={() => setImageAspectRatio(r.id)}
+                        className={`py-2 rounded-lg border transition-all text-center ${imageAspectRatio === r.id ? 'border-blue-400 bg-blue-50 text-blue-700' : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300'}`}>
+                        <span className="text-[11px] font-semibold block">{r.label}</span>
+                        <span className={`text-[9px] ${imageAspectRatio === r.id ? 'text-blue-400' : 'text-slate-400'}`}>{r.desc}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
               {/* FAQ 토글 */}
               <div className="flex items-center justify-between p-3 bg-white rounded-xl border border-slate-200">
                 <div className="flex items-center gap-2">

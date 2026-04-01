@@ -43,6 +43,7 @@ function BlogForm() {
   const [cssTheme, setCssTheme] = useState<CssTheme>('modern');
   const [imageStyle, setImageStyle] = useState<ImageStyle>('photo');
   const [imageCount, setImageCount] = useState(2);
+  const [imageAspectRatio, setImageAspectRatio] = useState<'4:3' | '16:9' | '1:1'>('4:3');
   const [textLength, setTextLength] = useState(2500);
   const [hospitalName, setHospitalName] = useState('');
   const [selectedHospitalAddress, setSelectedHospitalAddress] = useState('');
@@ -1134,7 +1135,7 @@ ${subs.length > 0 ? `경쟁 글 소제목: ${subs.join(' / ')}` : ''}
             const imgRes = await fetch('/api/image', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ prompt, aspectRatio: '4:3' as const, mode: 'blog' as const }),
+              body: JSON.stringify({ prompt, aspectRatio: imageAspectRatio, mode: 'blog' as const }),
             });
             if (!imgRes.ok) return { index, url: null };
             const imgData = await imgRes.json() as { imageDataUrl?: string };
@@ -1408,7 +1409,7 @@ ${subs.length > 0 ? `경쟁 글 소제목: ${subs.join(' / ')}` : ''}
       const imgRes = await fetch('/api/image', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: newPrompt, aspectRatio: '4:3', mode: 'blog' }),
+        body: JSON.stringify({ prompt: newPrompt, aspectRatio: imageAspectRatio, mode: 'blog' }),
       });
       if (!imgRes.ok) throw new Error('이미지 생성 실패');
 
@@ -1608,7 +1609,7 @@ ${generatedContent.substring(0, 2000)}
       <BlogFormPanel
         topic={topic} keywords={keywords} keywordDensity={keywordDensity} disease={disease} category={category}
         persona={persona} tone={tone} audienceMode={audienceMode}
-        imageStyle={imageStyle} imageCount={imageCount} textLength={textLength}
+        imageStyle={imageStyle} imageCount={imageCount} imageAspectRatio={imageAspectRatio} textLength={textLength}
         hospitalName={hospitalName}
         selectedHospitalAddress={selectedHospitalAddress}
         homepageUrl={homepageUrl} clinicContext={clinicContext}
@@ -1629,7 +1630,7 @@ ${generatedContent.substring(0, 2000)}
         setTopic={setTopic} setKeywords={setKeywords} setKeywordDensity={setKeywordDensity} setDisease={setDisease}
         setCategory={setCategory} setPersona={setPersona} setTone={setTone}
         setAudienceMode={setAudienceMode} setImageStyle={setImageStyle}
-        setImageCount={setImageCount} setTextLength={setTextLength}
+        setImageCount={setImageCount} setImageAspectRatio={setImageAspectRatio} setTextLength={setTextLength}
         setHospitalName={setHospitalName}
         setSelectedHospitalAddress={setSelectedHospitalAddress}
         setHomepageUrl={setHomepageUrl} setClinicContext={setClinicContext}
