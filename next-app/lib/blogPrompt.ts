@@ -431,6 +431,18 @@ export function buildBlogPrompt(req: GenerationRequest): {
     );
   }
 
+  // ── 임상 이미지 분석 결과 ──
+  if (req.clinicalContext?.trim()) {
+    promptParts.push(
+      '',
+      '[임상 이미지 분석 결과 — 참고 자료]',
+      '아래는 업로드된 임상/시술 이미지를 AI가 분석한 결과입니다.',
+      '이 내용을 바탕으로 정확하고 구체적인 블로그 글을 작성하세요.',
+      '분석 결과에 언급된 시술/장비/상태를 적극 활용하세요.',
+      '', req.clinicalContext.trim(),
+    );
+  }
+
   // ── 유튜브 자막 참고 ──
   if (req.youtubeTranscript?.trim()) {
     const trimmed = req.youtubeTranscript.trim().slice(0, 8000);

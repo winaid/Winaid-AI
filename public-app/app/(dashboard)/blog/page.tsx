@@ -30,11 +30,15 @@ function BlogForm() {
 
   // ── 폼 상태 ──
   const topicParam = searchParams.get('topic');
+  const titleParam = searchParams.get('title');
+  const keywordsParam = searchParams.get('keywords');
   const youtubeTranscriptParam = searchParams.get('youtubeTranscript');
+  const clinicalContextParam = searchParams.get('clinicalContext');
   const [topic, setTopic] = useState(topicParam || '');
-  const [blogTitle, setBlogTitle] = useState('');
+  const [blogTitle, setBlogTitle] = useState(titleParam || '');
   const [youtubeTranscript] = useState(youtubeTranscriptParam ? decodeURIComponent(youtubeTranscriptParam) : '');
-  const [keywords, setKeywords] = useState('');
+  const [clinicalContext] = useState(clinicalContextParam ? decodeURIComponent(clinicalContextParam) : '');
+  const [keywords, setKeywords] = useState(keywordsParam || '');
   const [keywordDensity, setKeywordDensity] = useState<number | 'auto'>('auto');
   const [disease, setDisease] = useState('');
   const [customSubheadings, setCustomSubheadings] = useState('');
@@ -883,6 +887,7 @@ JSON 형식으로 응답해주세요.`;
       writingStyle,
       keywordDensity,
       youtubeTranscript: youtubeTranscript || undefined,
+      clinicalContext: clinicalContext || undefined,
       medicalLawMode,
       includeFaq,
       faqCount: includeFaq ? faqCount : undefined,

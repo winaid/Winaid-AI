@@ -44,6 +44,7 @@ export interface GenerationRequest {
   keywordDensity?: number | 'auto';
   youtubeTranscript?: string;
   hospitalStrengths?: string;
+  clinicalContext?: string;
   medicalLawMode?: 'strict' | 'relaxed';
   includeFaq?: boolean;
   faqCount?: number;
