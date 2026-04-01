@@ -24,8 +24,8 @@ const contentItems: { id: ContentTab; label: string; icon: string; href: string 
 
 const toolItems: { id: ContentTab; label: string; icon: string; href: string }[] = [
   { id: 'refine', label: 'AI 보정', icon: '✨', href: '/refine' },
-  { id: 'history', label: '히스토리', icon: '🕐', href: '/history' },
   { id: 'youtube', label: '유튜브', icon: '▶️', href: '/youtube' },
+  { id: 'history', label: '히스토리', icon: '🕐', href: '/history' },
 ];
 
 const extraItems: { label: string; icon: string; href: string }[] = [
