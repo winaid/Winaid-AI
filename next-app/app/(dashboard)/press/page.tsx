@@ -92,6 +92,13 @@ export default function PressPage() {
       // 3) 병원 말투 주입
       let finalPrompt = prompt;
       if (stylePrompt) finalPrompt = `${prompt}\n\n[병원 블로그 학습 말투 - 보도자료 스타일 유지하며 적용]\n${stylePrompt}`;
+      if (hospitalName) {
+        try {
+          const data = JSON.parse(localStorage.getItem('winaid_hospital_strengths') || '{}');
+          const hs = data[hospitalName];
+          if (hs) finalPrompt += `\n\n[병원 특장점]\n${hs}\n→ 주제와 관련 있는 부분만 기사체로 반영.`;
+        } catch { /* ignore */ }
+      }
 
       // 4) Google Search 연동으로 생성
       setProgress('🔍 최신 의료 정보 검색 + 기사 작성 중...');

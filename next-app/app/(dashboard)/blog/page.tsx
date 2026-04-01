@@ -836,6 +836,12 @@ JSON 형식으로 응답해주세요.`;
       writingStyle,
       keywordDensity,
       youtubeTranscript: youtubeTranscript || undefined,
+      hospitalStrengths: (() => {
+        try {
+          const data = JSON.parse(localStorage.getItem('winaid_hospital_strengths') || '{}');
+          return data[hospitalName] || undefined;
+        } catch { return undefined; }
+      })(),
       medicalLawMode,
       includeFaq,
       faqCount: includeFaq ? faqCount : undefined,

@@ -156,6 +156,11 @@ export default function CardNewsPage() {
           const stylePrompt = await getHospitalStylePrompt(hospitalName);
           if (stylePrompt) finalPrompt += `\n\n[병원 말투 적용]\n${stylePrompt}`;
         } catch { /* ignore */ }
+        try {
+          const data = JSON.parse(localStorage.getItem('winaid_hospital_strengths') || '{}');
+          const hs = data[hospitalName];
+          if (hs) finalPrompt += `\n\n[병원 특장점]\n${hs}\n→ 주제와 관련 있는 부분만 자연스럽게 반영.`;
+        } catch { /* ignore */ }
       }
 
       const res = await fetch('/api/gemini', {

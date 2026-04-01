@@ -418,6 +418,18 @@ export function buildBlogPrompt(req: GenerationRequest): {
     );
   }
 
+  // ── 병원 특장점 ──
+  if (req.hospitalStrengths?.trim()) {
+    promptParts.push(
+      '',
+      '[병원 특장점 — 등록된 정보]',
+      req.hospitalStrengths.trim(),
+      '→ 위 특장점 중 글의 주제와 연관 있는 부분만 자연스럽게 반영.',
+      '→ 주제와 무관한 특장점은 언급하지 마세요.',
+      '→ 나열하지 말고 본문 흐름에 녹여서 서술.',
+    );
+  }
+
   // ── 유튜브 자막 참고 ──
   if (req.youtubeTranscript?.trim()) {
     const trimmed = req.youtubeTranscript.trim().slice(0, 8000);

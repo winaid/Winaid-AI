@@ -42,6 +42,7 @@ export interface GenerationRequest {
   customSubheadings?: string;
   keywordDensity?: number | 'auto';
   youtubeTranscript?: string;
+  hospitalStrengths?: string;
   medicalLawMode?: 'strict' | 'relaxed';
   includeFaq?: boolean;
   faqCount?: number;
