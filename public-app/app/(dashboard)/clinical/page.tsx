@@ -119,7 +119,7 @@ ${imageDescription ? `[사용자 설명] ${imageDescription}` : ''}
 
 JSON만 출력: { "analysis": "...", "topics": [{ "topic": "...", "title": "...", "keywords": "..." }] }`,
           images: imageData,
-          model: 'gemini-3.1-pro-preview',
+          model: 'gemini-3.1-flash-lite-preview',
           temperature: 0.7,
           maxOutputTokens: 4096,
           responseType: 'json',
