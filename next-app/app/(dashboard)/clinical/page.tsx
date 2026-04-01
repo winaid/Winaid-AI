@@ -52,17 +52,56 @@ export default function ClinicalPage() {
   }, []);
 
   // ── 이미지 핸들러 ──
-  const processFiles = (files: File[]) => {
+  const compressImage = (file: File): Promise<string> => {
+    const MAX_DIM = 1024;
+    const QUALITY = 0.8;
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const reader = new FileReader();
+      reader.onload = () => {
+        img.onload = () => {
+          let { width, height } = img;
+          if (width > MAX_DIM || height > MAX_DIM) {
+            if (width > height) {
+              height = Math.round(height * (MAX_DIM / width));
+              width = MAX_DIM;
+            } else {
+              width = Math.round(width * (MAX_DIM / height));
+              height = MAX_DIM;
+            }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) { reject(new Error('Canvas not supported')); return; }
+          ctx.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/jpeg', QUALITY));
+        };
+        img.onerror = () => reject(new Error('Image load failed'));
+        img.src = reader.result as string;
+      };
+      reader.onerror = () => reject(new Error('File read failed'));
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const processFiles = async (files: File[]) => {
     const remaining = 10 - images.length;
     if (remaining <= 0) return;
     const toAdd = files.filter(f => f.type.startsWith('image/') && f.size <= 10 * 1024 * 1024).slice(0, remaining);
-    toAdd.forEach(file => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        setImages(prev => [...prev, { file, dataUrl: reader.result as string }]);
-      };
-      reader.readAsDataURL(file);
-    });
+    for (const file of toAdd) {
+      try {
+        const compressedDataUrl = await compressImage(file);
+        setImages(prev => [...prev, { file, dataUrl: compressedDataUrl }]);
+      } catch {
+        const reader = new FileReader();
+        reader.onload = () => {
+          setImages(prev => [...prev, { file, dataUrl: reader.result as string }]);
+        };
+        reader.readAsDataURL(file);
+      }
+    }
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
