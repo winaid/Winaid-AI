@@ -34,8 +34,8 @@ router.post('/gif', async (req, res) => {
     await new Promise((resolve, reject) => {
       const args = [
         '--no-check-certificates',
-        '--extractor-args', 'youtube:player_client=web',
-        '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        '--extractor-args', 'youtube:player_client=android',
+        '--geo-bypass',
         '-f', 'bestvideo[height<=480][ext=mp4]+bestaudio[ext=m4a]/best[height<=480][ext=mp4]/best',
         '--download-sections', `*${start}-${start + duration}`,
         '-o', videoPath,
