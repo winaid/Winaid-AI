@@ -162,6 +162,7 @@ JSON만 출력: { "analysis": "...", "topics": [{ "topic": "...", "title": "..."
           temperature: 0.7,
           maxOutputTokens: 4096,
           timeout: 30000,
+          thinkingLevel: 'none',
         }),
       });
 

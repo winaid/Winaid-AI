@@ -492,6 +492,7 @@ JSON 배열로 출력한다. 각 항목은 다음 구조를 따른다:
           model: 'gemini-3.1-flash-lite-preview',
           responseType: 'json',
           timeout: 60000,
+          thinkingLevel: 'none',
           schema: {
             type: 'ARRAY',
             items: {
@@ -601,6 +602,7 @@ JSON 배열로 출력한다. 각 항목은 다음 구조를 따른다:
                 model: 'gemini-3.1-flash-lite-preview',
                 temperature: 0.4,
                 maxOutputTokens: 1000,
+                thinkingLevel: 'none',
               }),
             });
             const analysisData = await analysisRes.json() as { text?: string };
@@ -623,6 +625,7 @@ JSON 배열로 출력한다. 각 항목은 다음 구조를 따른다:
               googleSearch: true,
               temperature: 0.4,
               maxOutputTokens: 800,
+              thinkingLevel: 'none',
             }),
           });
           const fallbackData = await fallbackRes.json() as { text?: string };
@@ -679,6 +682,7 @@ ${newsContext ? '6. **뉴스 트렌드 1~2개 반드시 포함**: 위 뉴스 분
           responseType: 'json',
           googleSearch: true,
           temperature: 0.9,
+          thinkingLevel: 'none',
           timeout: 60000,
           schema: {
             type: 'ARRAY',
@@ -830,7 +834,7 @@ JSON 형식으로 응답해주세요.`;
       const seoRes = await fetch('/api/gemini', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: seoPrompt, model: 'gemini-3.1-flash-lite-preview', responseType: 'json', schema: seoSchema, temperature: 0.3, maxOutputTokens: 4096 }),
+        body: JSON.stringify({ prompt: seoPrompt, model: 'gemini-3.1-flash-lite-preview', responseType: 'json', schema: seoSchema, temperature: 0.3, maxOutputTokens: 4096, thinkingLevel: 'none' }),
       });
       const seoData = await seoRes.json() as { text?: string; error?: string };
 
@@ -969,6 +973,7 @@ JSON 형식으로 응답해주세요.`;
               temperature: 0.3,
               responseType: 'json',
               timeout: 8000,
+              thinkingLevel: 'none',
             }),
           });
           if (!competitorRes.ok) return '';
@@ -1448,7 +1453,7 @@ ${subs.length > 0 ? `경쟁 글 소제목: ${subs.join(' / ')}` : ''}
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           prompt: `아래 병원 블로그 글의 ${selectedImgIndex}번째 이미지에 어울리는 프롬프트를 한국어로 1개만 작성해주세요. 프롬프트만 출력하세요.\n\n글 내용:\n${textOnly}`,
-          model: 'gemini-3.1-flash-lite-preview', temperature: 0.7, maxOutputTokens: 300,
+          model: 'gemini-3.1-flash-lite-preview', temperature: 0.7, maxOutputTokens: 300, thinkingLevel: 'none',
         }),
       });
       const data = await res.json() as { text?: string };

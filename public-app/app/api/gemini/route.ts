@@ -210,7 +210,11 @@ export async function POST(request: NextRequest) {
     apiBody.tools = [{ googleSearch: {} }];
   }
 
-  if (body.thinkingLevel && body.thinkingLevel !== 'none') {
+  if (body.thinkingLevel === 'none') {
+    (apiBody.generationConfig as Record<string, unknown>).thinkingConfig = {
+      thinkingBudget: 0,
+    };
+  } else if (body.thinkingLevel) {
     const budget: Record<string, number> = { low: 1024, medium: 4096, high: 8192 };
     (apiBody.generationConfig as Record<string, unknown>).thinkingConfig = {
       thinkingBudget: budget[body.thinkingLevel] || 4096,

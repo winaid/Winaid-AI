@@ -88,8 +88,8 @@ JSON만 출력:
           model: 'gemini-3.1-flash-lite-preview',
           temperature: 0.5,
           maxOutputTokens: 4096,
-          responseType: 'json',
           googleSearch: true,
+          thinkingLevel: 'none',
         }),
       });
 
