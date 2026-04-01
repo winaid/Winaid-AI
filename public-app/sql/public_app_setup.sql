@@ -123,7 +123,7 @@ CREATE TABLE IF NOT EXISTS public.subscriptions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID UNIQUE NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   plan_type TEXT NOT NULL DEFAULT 'free' CHECK (plan_type IN ('free', 'basic', 'standard', 'premium')),
-  credits_total INT NOT NULL DEFAULT 10,
+  credits_total INT NOT NULL DEFAULT 20,
   credits_used INT NOT NULL DEFAULT 0,
   expires_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -182,7 +182,7 @@ CREATE INDEX IF NOT EXISTS idx_api_usage_created_at ON public.api_usage_logs(cre
 CREATE TABLE IF NOT EXISTS public.user_credits (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  credits INTEGER NOT NULL DEFAULT 10,
+  credits INTEGER NOT NULL DEFAULT 20,
   total_used INTEGER NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -207,7 +207,7 @@ DECLARE
   current_credits INTEGER;
 BEGIN
   INSERT INTO user_credits (user_id, credits, total_used)
-  VALUES (p_user_id, 10, 0)
+  VALUES (p_user_id, 20, 0)
   ON CONFLICT (user_id) DO NOTHING;
 
   SELECT credits INTO current_credits
@@ -232,7 +232,7 @@ DECLARE
   result RECORD;
 BEGIN
   INSERT INTO user_credits (user_id, credits, total_used)
-  VALUES (p_user_id, 10, 0)
+  VALUES (p_user_id, 20, 0)
   ON CONFLICT (user_id) DO NOTHING;
 
   SELECT credits, total_used INTO result

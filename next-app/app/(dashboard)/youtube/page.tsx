@@ -1,397 +1,612 @@
 'use client';
 
-import { useState, useCallback } from 'react';
-import { useAuthGuard } from '../../../hooks/useAuthGuard';
+import { useState, useEffect } from 'react';
+import { buildYoutubePrompt, YOUTUBE_WRITING_STYLES } from '../../../lib/youtubePrompt';
+import { supabase } from '../../../lib/supabase';
+import { CATEGORIES } from '../../../lib/constants';
 
-interface KeyMoment {
-  start: number;
-  end: number;
-  description: string;
-  usage: string;
+const inputCls = 'w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm outline-none focus:border-blue-400 focus:bg-white focus:ring-2 focus:ring-blue-500/10 transition-all placeholder:text-slate-300';
+
+const CRAWLER_URL = process.env.NEXT_PUBLIC_CRAWLER_URL || '';
+
+interface SuggestedTopic { topic: string; title: string; keywords: string; }
+interface KeyMoment { start: number; end: number; description: string; usage: string; }
+
+function extractVideoId(url: string): string {
+  const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/);
+  return match?.[1] || '';
 }
 
-function formatTime(seconds: number): string {
+function formatTime(seconds: number) {
   const m = Math.floor(seconds / 60);
-  const s = Math.floor(seconds % 60);
+  const s = seconds % 60;
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
-function extractVideoId(url: string): string | null {
-  const m = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/);
-  return m ? m[1] : null;
-}
-
 export default function YoutubePage() {
-  useAuthGuard();
-
+  // ── Step 1 ──
   const [youtubeUrl, setYoutubeUrl] = useState('');
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isExtracting, setIsExtracting] = useState(false);
   const [transcript, setTranscript] = useState('');
-  const [transcriptLanguage, setTranscriptLanguage] = useState('');
   const [summary, setSummary] = useState('');
-  const [isSummarizing, setIsSummarizing] = useState(false);
+  const [suggestedTopics, setSuggestedTopics] = useState<SuggestedTopic[]>([]);
   const [error, setError] = useState('');
-  const [activeTab, setActiveTab] = useState<'transcript' | 'gif'>('transcript');
-  const [copyFeedback, setCopyFeedback] = useState('');
-  const [moments, setMoments] = useState<KeyMoment[]>([]);
-  const [isDetectingMoments, setIsDetectingMoments] = useState(false);
-  const [momentsError, setMomentsError] = useState('');
-  const [playingMoment, setPlayingMoment] = useState<KeyMoment | null>(null);
-  const [generatingGifIdx, setGeneratingGifIdx] = useState<number | null>(null);
-  const [generatedGifs, setGeneratedGifs] = useState<Map<number, string>>(new Map());
+  const [transcriptExpanded, setTranscriptExpanded] = useState(false);
+  const [videoId, setVideoId] = useState('');
 
-  const handleAnalyze = async () => {
-    if (!youtubeUrl.trim() || isAnalyzing) return;
-    setIsAnalyzing(true);
+  // ── Step 2: 글 생성 설정 ──
+  const [selectedTopic, setSelectedTopic] = useState('');
+  const [customTopic, setCustomTopic] = useState('');
+  const [writingStyle, setWritingStyle] = useState<'blog' | 'clinical' | 'summary'>('blog');
+  const [category, setCategory] = useState('치과');
+  const [hospitalName, setHospitalName] = useState('');
+  const [doctorName, setDoctorName] = useState('');
+  const [textLength, setTextLength] = useState(2500);
+  const [keywords, setKeywords] = useState('');
+
+  // ── Step 2: 모드 선택 (글 생성 / GIF) ──
+  const [activeMode, setActiveMode] = useState<'article' | 'gif'>('article');
+
+  // ── GIF 관련 ──
+  const [keyMoments, setKeyMoments] = useState<KeyMoment[]>([]);
+  const [isDetectingMoments, setIsDetectingMoments] = useState(false);
+  const [generatingGifIndex, setGeneratingGifIndex] = useState<number | null>(null);
+  const [generatedGifs, setGeneratedGifs] = useState<Map<number, { dataUrl: string; fileSize: number }>>(new Map());
+
+  // ── Step 3: 결과 ──
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generatedContent, setGeneratedContent] = useState<string | null>(null);
+  const [scores, setScores] = useState<{ accuracy?: number; relevance?: number; readability?: number } | null>(null);
+  const [pipelineStep, setPipelineStep] = useState<'extract' | 'configure' | 'result'>('extract');
+  const [copyToast, setCopyToast] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        if (!supabase) return;
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user?.user_metadata?.name) setHospitalName(user.user_metadata.name);
+      } catch { /* ignore */ }
+    })();
+  }, []);
+
+  // ── Step 1: 영상 분석 ──
+  const handleExtract = async () => {
+    if (!youtubeUrl.trim()) return;
+    setIsExtracting(true);
     setError('');
     setTranscript('');
     setSummary('');
-    setTranscriptLanguage('');
+    setSuggestedTopics([]);
+    setVideoId(extractVideoId(youtubeUrl));
 
     try {
-      const res = await fetch('/api/youtube/transcript', {
+      const res = await fetch('/api/gemini', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: youtubeUrl.trim() }),
+        body: JSON.stringify({
+          prompt: `아래 YouTube 영상의 내용을 분석해주세요.
+
+YouTube URL: ${youtubeUrl.trim()}
+
+[분석 요청]
+1. 이 영상의 전체 내용을 상세하게 요약하세요 (500~1000자).
+   - 영상에서 설명하는 핵심 내용, 치료/시술 과정, 의학적 정보를 빠짐없이 정리
+   - 구체적 수치, 기간, 횟수 등이 있으면 반드시 포함
+   - 영상 진행 순서대로 정리
+
+2. 이 영상 내용을 바탕으로 병원 블로그에 쓸 수 있는 주제 5개를 추천하세요.
+   각 주제:
+   - topic: 글의 방향 (20자 이내)
+   - title: 네이버 블로그 제목 (30~40자)
+   - keywords: SEO 키워드 2~3개
+
+⚠️ 인사말, 구독 요청, 광고 등은 무시하고 의학/치료 내용만 분석하세요.
+
+JSON만 출력:
+{
+  "summary": "영상 상세 요약...",
+  "topics": [{ "topic": "...", "title": "...", "keywords": "..." }]
+}`,
+          model: 'gemini-3.1-flash-lite-preview',
+          temperature: 0.5,
+          maxOutputTokens: 4096,
+          googleSearch: true,
+          thinkingLevel: 'none',
+        }),
       });
+
       const data = await res.json();
+      if (!res.ok || !data.text) throw new Error(data.error || '영상 분석에 실패했습니다.');
 
-      if (!data.success) {
-        setError(data.error || '자막 추출에 실패했습니다.');
-        return;
-      }
-
-      setTranscript(data.transcript);
-      setTranscriptLanguage(data.language);
-
-      // AI 요약 자동 실행
-      setIsSummarizing(true);
+      const cleaned = data.text.replace(/```json?\s*\n?/gi, '').replace(/\n?```\s*$/g, '').trim();
       try {
-        const sumRes = await fetch('/api/gemini', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            prompt: `아래는 병원 관련 유튜브 영상의 자막입니다. 핵심 내용을 3~5개 포인트로 요약해주세요. 각 포인트는 한 줄로 간결하게.\n\n${data.transcript.slice(0, 8000)}`,
-            model: 'gemini-3.1-flash-lite-preview',
-            temperature: 0.3,
-            maxOutputTokens: 500,
-          }),
-        });
-        const sumData = await sumRes.json();
-        if (sumData.text) setSummary(sumData.text);
-      } catch { /* 요약 실패 무시 */ }
-      finally { setIsSummarizing(false); }
-    } catch {
-      setError('서버 연결에 실패했습니다.');
+        const parsed = JSON.parse(cleaned);
+        const summaryText = parsed.summary || '';
+        setTranscript(summaryText);
+        setSummary(summaryText);
+        setSuggestedTopics(parsed.topics || []);
+      } catch {
+        setTranscript(data.text);
+        setSummary(data.text);
+      }
+
+      setPipelineStep('configure');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '영상 분석 중 오류가 발생했습니다.');
     } finally {
-      setIsAnalyzing(false);
+      setIsExtracting(false);
     }
   };
 
-  const handleCopy = (text: string, label: string) => {
-    navigator.clipboard.writeText(text);
-    setCopyFeedback(label);
-    setTimeout(() => setCopyFeedback(''), 1500);
-  };
+  // ── 글 생성 ──
+  const handleGenerate = async () => {
+    const topic = selectedTopic || customTopic.trim();
+    if (!topic || !transcript) return;
+    setIsGenerating(true);
+    setGeneratedContent(null);
+    setScores(null);
 
-  const handleUseBlog = () => {
-    const encoded = encodeURIComponent(transcript.slice(0, 8000));
-    window.location.href = `/blog?youtubeTranscript=${encoded}`;
-  };
-
-  const handleDetectMoments = useCallback(async () => {
-    if (!transcript || isDetectingMoments) return;
-    setIsDetectingMoments(true);
-    setMomentsError('');
-    setMoments([]);
     try {
-      const res = await fetch('/api/youtube/key-moments', {
+      const { systemInstruction, prompt } = buildYoutubePrompt({
+        topic,
+        transcript,
+        writingStyle,
+        category,
+        hospitalName: hospitalName || undefined,
+        doctorName: writingStyle === 'clinical' ? (doctorName || undefined) : undefined,
+        textLength,
+        keywords: keywords || undefined,
+      });
+
+      const res = await fetch('/api/gemini', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ transcript }),
+        body: JSON.stringify({
+          prompt, systemInstruction,
+          model: 'gemini-3.1-pro-preview',
+          temperature: 0.7,
+          maxOutputTokens: 16384,
+          timeout: 120000,
+        }),
       });
-      const data = await res.json();
-      if (data.success && data.moments) {
-        setMoments(data.moments);
-      } else {
-        setMomentsError(data.error || '핵심 장면 분석에 실패했습니다.');
-      }
-    } catch {
-      setMomentsError('서버 연결에 실패했습니다.');
-    } finally {
-      setIsDetectingMoments(false);
-    }
-  }, [transcript, isDetectingMoments]);
 
-  const handlePlayMoment = (moment: KeyMoment) => {
-    setPlayingMoment(moment);
+      const data = await res.json();
+      if (!res.ok || !data.text) throw new Error(data.error || '생성 실패');
+
+      let html = data.text.trim();
+      html = html.replace(/^```html?\s*\n?/i, '').replace(/\n?```\s*$/, '');
+
+      const scoresIdx = html.lastIndexOf('---SCORES---');
+      if (scoresIdx !== -1) {
+        const after = html.substring(scoresIdx + 12);
+        try {
+          const jsonMatch = after.match(/\{[\s\S]*?\}/);
+          if (jsonMatch) setScores(JSON.parse(jsonMatch[0]));
+        } catch { /* ignore */ }
+        html = html.substring(0, scoresIdx).trim();
+      }
+
+      setGeneratedContent(html);
+      setPipelineStep('result');
+    } catch (err) {
+      alert(err instanceof Error ? err.message : '생성 실패');
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
-  const handleGenerateGif = useCallback(async (moment: KeyMoment, index: number) => {
-    if (generatingGifIdx !== null) return;
-    const crawlerUrl = process.env.NEXT_PUBLIC_CRAWLER_URL;
-    if (!crawlerUrl) {
-      alert('크롤러 서버(NEXT_PUBLIC_CRAWLER_URL)가 설정되지 않았습니다.');
+  // ── GIF: 핵심 구간 감지 ──
+  const handleDetectMoments = async () => {
+    if (!summary) return;
+    setIsDetectingMoments(true);
+
+    try {
+      const res = await fetch('/api/gemini', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: `아래는 병원 유튜브 영상의 요약입니다.
+
+[영상 요약]
+${summary}
+
+[요청]
+블로그나 SNS에 GIF로 활용하기 좋은 핵심 장면 3~5개를 추출해주세요.
+
+각 장면:
+- start: 예상 시작 시간 (초 단위, 정수)
+- end: 예상 끝 시간 (초 단위, start + 3~8초 범위)
+- description: 이 구간에 어떤 장면이 있는지 (한 줄)
+- usage: 추천 용도 (블로그 삽입 / SNS 공유 / 카드뉴스 배경)
+
+⚠️ 영상의 흐름을 기준으로 시간을 추정하세요.
+⚠️ 각 구간은 3~8초가 적당합니다.
+
+JSON 배열만 출력:
+[{ "start": 45, "end": 52, "description": "...", "usage": "..." }]`,
+          model: 'gemini-3.1-flash-lite-preview',
+          temperature: 0.5,
+          maxOutputTokens: 1024,
+          thinkingLevel: 'none',
+        }),
+      });
+
+      const data = await res.json();
+      if (data.text) {
+        const cleaned = data.text.replace(/```json?\s*\n?/gi, '').replace(/\n?```\s*$/g, '').trim();
+        const parsed = JSON.parse(cleaned);
+        if (Array.isArray(parsed)) setKeyMoments(parsed);
+      }
+    } catch { /* ignore */ }
+    finally { setIsDetectingMoments(false); }
+  };
+
+  // ── GIF: 생성 ──
+  const handleGenerateGif = async (index: number, start: number, end: number) => {
+    if (!CRAWLER_URL) {
+      alert('크롤러 서버 URL이 설정되지 않았습니다.');
       return;
     }
-    setGeneratingGifIdx(index);
+    setGeneratingGifIndex(index);
+
     try {
-      const res = await fetch(`${crawlerUrl}/api/youtube/gif`, {
+      const res = await fetch(`${CRAWLER_URL}/api/youtube/gif`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ videoUrl: youtubeUrl, start: moment.start, end: moment.end }),
+        body: JSON.stringify({ videoUrl: youtubeUrl, start, end, width: 480 }),
       });
+
       const data = await res.json();
-      if (data.success && data.gifDataUrl) {
-        setGeneratedGifs(prev => new Map(prev).set(index, data.gifDataUrl));
+      if (!data.success) throw new Error(data.error);
+
+      if (index >= 0) {
+        setGeneratedGifs(prev => new Map(prev).set(index, { dataUrl: data.gifDataUrl, fileSize: data.fileSize }));
       } else {
-        alert(data.error || 'GIF 생성에 실패했습니다.');
+        const newIdx = keyMoments.length;
+        setKeyMoments(prev => [...prev, { start, end, description: `커스텀 구간 ${start}~${end}초`, usage: '직접 지정' }]);
+        setGeneratedGifs(prev => new Map(prev).set(newIdx, { dataUrl: data.gifDataUrl, fileSize: data.fileSize }));
       }
-    } catch {
-      alert('크롤러 서버에 연결할 수 없습니다.');
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'GIF 생성 실패');
     } finally {
-      setGeneratingGifIdx(null);
+      setGeneratingGifIndex(null);
     }
-  }, [generatingGifIdx, youtubeUrl]);
+  };
 
-  const videoId = extractVideoId(youtubeUrl);
-
-  const inputCls = 'w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all';
+  // ── 복사 (출처 제외) ──
+  const handleCopy = () => {
+    if (!generatedContent) return;
+    const temp = document.createElement('div');
+    temp.innerHTML = generatedContent;
+    const refFooter = temp.querySelector('.references-footer');
+    if (refFooter) refFooter.remove();
+    navigator.clipboard.writeText(temp.innerHTML);
+    setCopyToast(true);
+    setTimeout(() => setCopyToast(false), 1500);
+  };
 
   return (
-    <div className="flex flex-col lg:flex-row gap-5 lg:items-start p-5">
-      {/* 입력 패널 */}
-      <div className="w-full lg:w-[380px] lg:flex-none">
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-lg">▶️</span>
-            <h2 className="text-base font-bold text-slate-800">유튜브 영상 분석</h2>
-          </div>
-          <p className="text-[11px] text-slate-400 bg-slate-50 rounded-lg px-3 py-2 leading-relaxed">
-            원장님 인터뷰, 시술 설명 영상의 자막을 추출하고 핵심을 요약합니다.
-            추출된 자막을 블로그 원고의 참고 자료로 활용할 수 있습니다.
-          </p>
-
-          <div>
-            <label className="block text-xs font-semibold text-slate-500 mb-1.5">유튜브 URL</label>
-            <input
-              type="url"
-              value={youtubeUrl}
-              onChange={e => setYoutubeUrl(e.target.value)}
-              placeholder="https://www.youtube.com/watch?v=..."
-              className={inputCls}
-              onKeyDown={e => { if (e.key === 'Enter') handleAnalyze(); }}
-            />
-          </div>
-
-          <button
-            onClick={handleAnalyze}
-            disabled={isAnalyzing || !youtubeUrl.trim()}
-            className="w-full py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-          >
-            {isAnalyzing ? (
-              <><svg className="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" /></svg>분석 중...</>
-            ) : '분석 시작'}
-          </button>
-        </div>
+    <div className="max-w-4xl mx-auto px-4 py-8">
+      <div className="mb-8">
+        <h1 className="text-2xl font-black text-slate-800">▶️ 유튜브 → 블로그 글</h1>
+        <p className="text-sm text-slate-500 mt-1">영상을 AI가 분석하고, 원하는 문체로 블로그 글을 생성합니다</p>
       </div>
 
-      {/* 결과 영역 */}
-      <div className="flex-1 min-w-0">
-        {error ? (
-          <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-center">
-            <p className="text-sm text-red-600 font-medium">{error}</p>
-            <button onClick={() => setError('')} className="mt-3 text-xs text-red-500 hover:text-red-700">닫기</button>
-          </div>
-        ) : transcript ? (
-          <div className="space-y-4">
-            {/* 탭 전환 */}
-            <div className="flex p-1 rounded-xl bg-slate-100 w-fit">
-              <button onClick={() => setActiveTab('transcript')}
-                className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all ${activeTab === 'transcript' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-400'}`}>
-                📝 자막/원고
-              </button>
-              <button onClick={() => setActiveTab('gif')}
-                className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all ${activeTab === 'gif' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-400'}`}>
-                🎬 GIF 추출
-              </button>
+      {/* 파이프라인 인디케이터 */}
+      <div className="flex items-center gap-2 mb-6">
+        {(['extract', 'configure', 'result'] as const).map((step, i) => {
+          const labels = ['▶️ 영상 분석', '⚙️ 설정 + 생성', '📄 결과'];
+          const isActive = pipelineStep === step;
+          const isDone = (['extract', 'configure', 'result'] as const).indexOf(pipelineStep) > i;
+          return (
+            <div key={step} className="flex items-center gap-2">
+              {i > 0 && <div className={`w-8 h-0.5 ${isDone || isActive ? 'bg-blue-400' : 'bg-slate-200'}`} />}
+              <button onClick={() => { if (isDone) setPipelineStep(step); }} disabled={!isDone && !isActive}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                  isActive ? 'bg-blue-500 text-white' : isDone ? 'bg-blue-50 text-blue-600 hover:bg-blue-100 cursor-pointer' : 'bg-slate-100 text-slate-400'
+                }`}>{labels[i]}</button>
             </div>
+          );
+        })}
+      </div>
 
-            {activeTab === 'transcript' && (
-              <div className="space-y-4">
-                {/* AI 요약 */}
-                {(isSummarizing || summary) && (
-                  <div className="rounded-2xl border border-violet-200 bg-violet-50 p-5">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-bold text-violet-700">✨ 핵심 요약</span>
-                      {summary && (
-                        <button onClick={() => handleCopy(summary, '요약')} className="text-[10px] text-violet-500 hover:text-violet-700">
-                          {copyFeedback === '요약' ? '✅ 복사됨' : '📋 복사'}
-                        </button>
-                      )}
-                    </div>
-                    {isSummarizing ? (
-                      <div className="flex items-center gap-2 text-xs text-violet-500">
-                        <div className="w-3 h-3 border-2 border-violet-300 border-t-violet-600 rounded-full animate-spin" />
-                        요약 생성 중...
-                      </div>
-                    ) : (
-                      <p className="text-sm text-violet-800 whitespace-pre-wrap leading-relaxed">{summary}</p>
-                    )}
-                  </div>
-                )}
+      {/* ═══ Step 1 ═══ */}
+      {pipelineStep === 'extract' && (
+        <div className="space-y-4">
+          <div>
+            <label className="block text-[11px] font-semibold text-slate-500 mb-1">YouTube URL</label>
+            <input type="url" value={youtubeUrl} onChange={e => setYoutubeUrl(e.target.value)}
+              placeholder="https://www.youtube.com/watch?v=..."
+              className={inputCls}
+              onKeyDown={e => { if (e.key === 'Enter') handleExtract(); }} />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-[11px] font-semibold text-slate-500 mb-1">진료과</label>
+              <select value={category} onChange={e => setCategory(e.target.value)} className={inputCls}>
+                {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-[11px] font-semibold text-slate-500 mb-1">병원명 (선택)</label>
+              <input value={hospitalName} onChange={e => setHospitalName(e.target.value)} placeholder="OO치과" className={inputCls} />
+            </div>
+          </div>
+          {error && <p className="text-sm text-red-500">{error}</p>}
+          <button onClick={handleExtract} disabled={isExtracting || !youtubeUrl.trim()}
+            className="w-full py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 disabled:opacity-50 transition-all flex items-center justify-center gap-2">
+            {isExtracting ? (<><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />영상 분석 중...</>) : '▶️ 영상 분석 시작'}
+          </button>
+        </div>
+      )}
 
-                {/* 자막 전문 */}
-                <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-                  <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100 bg-slate-50/80">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold text-slate-700">전체 자막</span>
-                      <span className="text-[10px] text-slate-400">{transcript.length.toLocaleString()}자</span>
-                      <span className="text-[10px] px-1.5 py-0.5 bg-slate-100 rounded text-slate-500">
-                        {transcriptLanguage === 'ko' ? '한국어' : transcriptLanguage === 'en' ? '영어' : '자동'}
-                      </span>
+      {/* ═══ Step 2 ═══ */}
+      {pipelineStep === 'configure' && (
+        <div className="space-y-5">
+          {/* 영상 요약 */}
+          {summary && (
+            <div className="p-4 bg-violet-50 rounded-2xl border border-violet-200">
+              <h3 className="text-sm font-bold text-violet-700 mb-2">✨ 영상 요약</h3>
+              <p className="text-sm text-violet-800 leading-relaxed whitespace-pre-wrap">{summary}</p>
+            </div>
+          )}
+
+          {/* 모드 선택 탭 */}
+          <div className="flex gap-2">
+            <button onClick={() => setActiveMode('article')}
+              className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-all ${
+                activeMode === 'article' ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+              }`}>
+              📝 글 생성
+            </button>
+            <button onClick={() => { setActiveMode('gif'); if (keyMoments.length === 0 && summary) handleDetectMoments(); }}
+              className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-all ${
+                activeMode === 'gif' ? 'bg-purple-500 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+              }`}>
+              🎬 GIF 만들기
+            </button>
+          </div>
+
+          {/* ── 글 생성 모드 ── */}
+          {activeMode === 'article' && (
+            <div className="space-y-5">
+              {/* 요약 접기 */}
+              {transcript && (
+                <div className="rounded-2xl border border-slate-200 overflow-hidden">
+                  <button onClick={() => setTranscriptExpanded(!transcriptExpanded)}
+                    className="w-full flex items-center justify-between px-4 py-3 bg-slate-50 text-left">
+                    <span className="text-xs font-semibold text-slate-600">📝 영상 요약 ({transcript.length.toLocaleString()}자)</span>
+                    <span className="text-xs text-slate-400">{transcriptExpanded ? '접기 ▲' : '펼치기 ▼'}</span>
+                  </button>
+                  {transcriptExpanded && (
+                    <div className="p-4 max-h-[200px] overflow-y-auto">
+                      <p className="text-xs text-slate-600 leading-relaxed whitespace-pre-wrap">{transcript}</p>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <button onClick={() => handleCopy(transcript, '자막')}
-                        className="px-3 py-1.5 text-xs font-medium text-slate-500 hover:text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-all">
-                        {copyFeedback === '자막' ? '✅ 복사됨' : '📋 복사'}
-                      </button>
-                      <button onClick={handleUseBlog}
-                        className="px-3 py-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-all">
-                        📝 블로그에 활용
-                      </button>
-                    </div>
-                  </div>
-                  <div className="p-5 max-h-[400px] overflow-y-auto">
-                    <p className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">{transcript}</p>
-                  </div>
+                  )}
+                </div>
+              )}
+
+              {/* 주제 선택 */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 mb-2">주제 선택</label>
+                {suggestedTopics.map((t, i) => (
+                  <button key={i} onClick={() => { setSelectedTopic(t.topic); setKeywords(t.keywords); setCustomTopic(''); }}
+                    className={`w-full text-left p-3 mb-1.5 rounded-xl border transition-all ${
+                      selectedTopic === t.topic ? 'border-blue-400 bg-blue-50' : 'border-slate-200 hover:border-blue-300'
+                    }`}>
+                    <div className="text-sm font-semibold text-slate-800">{t.title}</div>
+                    <div className="text-[11px] text-slate-400 mt-0.5">키워드: {t.keywords}</div>
+                  </button>
+                ))}
+                <input value={customTopic} onChange={e => { setCustomTopic(e.target.value); setSelectedTopic(''); }}
+                  placeholder="직접 입력" className={inputCls + ' mt-2'} />
+              </div>
+
+              {/* 문체 선택 */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 mb-2">문체 선택</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {YOUTUBE_WRITING_STYLES.map(s => (
+                    <button key={s.value} onClick={() => setWritingStyle(s.value as typeof writingStyle)}
+                      className={`p-3 rounded-xl border text-left transition-all ${
+                        writingStyle === s.value ? 'border-blue-400 bg-blue-50' : 'border-slate-200 hover:border-blue-300'
+                      }`}>
+                      <span className="text-lg">{s.icon}</span>
+                      <div className="text-xs font-semibold mt-1">{s.label}</div>
+                      <div className="text-[10px] text-slate-400">{s.desc}</div>
+                    </button>
+                  ))}
                 </div>
               </div>
-            )}
 
-            {activeTab === 'gif' && (
-              <div className="space-y-4">
-                {/* 핵심 장면 분석 */}
-                {moments.length === 0 && !isDetectingMoments && (
-                  <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-8 text-center">
-                    <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4 mx-auto bg-gradient-to-br from-red-50 to-pink-50">
-                      <span className="text-3xl">🎬</span>
-                    </div>
-                    <h3 className="text-lg font-bold text-slate-700 mb-2">핵심 장면 감지</h3>
-                    <p className="text-sm text-slate-400 mb-4">AI가 자막을 분석하여 블로그/SNS에 활용하기 좋은 핵심 구간을 찾습니다</p>
-                    <button onClick={handleDetectMoments} disabled={!transcript}
-                      className="px-6 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 disabled:opacity-50 transition-all">
-                      핵심 장면 분석 시작
+              {writingStyle === 'clinical' && (
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-500 mb-1">원장명 (선택)</label>
+                  <input value={doctorName} onChange={e => setDoctorName(e.target.value)} placeholder="홍길동" className={inputCls} />
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 mb-2">분량</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {[{ v: 1500, l: '짧은 글', d: '1,200~1,800자' }, { v: 2500, l: '중간 글', d: '2,000~3,000자' }, { v: 3500, l: '긴 글', d: '3,000자~' }].map(o => (
+                    <button key={o.v} onClick={() => setTextLength(o.v)}
+                      className={`py-2.5 rounded-xl border text-center transition-all ${
+                        textLength === o.v ? 'border-blue-400 bg-blue-50 text-blue-700' : 'border-slate-200 text-slate-500'
+                      }`}>
+                      <span className="text-[11px] font-semibold block">{o.l}</span>
+                      <span className={`text-[9px] ${textLength === o.v ? 'text-blue-400' : 'text-slate-400'}`}>{o.d}</span>
                     </button>
-                    {momentsError && <p className="mt-3 text-sm text-red-500">{momentsError}</p>}
-                  </div>
-                )}
-
-                {isDetectingMoments && (
-                  <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-12 flex flex-col items-center">
-                    <div className="w-10 h-10 border-[3px] border-blue-100 border-t-blue-500 rounded-full animate-spin mb-4" />
-                    <p className="text-sm font-medium text-slate-700">핵심 장면을 분석하고 있어요</p>
-                  </div>
-                )}
-
-                {/* 구간 목록 */}
-                {moments.length > 0 && (
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-xs font-bold text-slate-700">핵심 장면 {moments.length}개</span>
-                      <button onClick={handleDetectMoments} className="text-[10px] text-blue-500 hover:text-blue-700">다시 분석</button>
-                    </div>
-                    {moments.map((m, i) => (
-                      <div key={i} className="flex items-center gap-3 p-4 border border-slate-200 rounded-xl bg-white hover:border-blue-200 transition-all">
-                        <div className="text-sm font-mono text-blue-600 whitespace-nowrap bg-blue-50 px-2 py-1 rounded-lg">
-                          {formatTime(m.start)}~{formatTime(m.end)}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="text-sm font-medium text-slate-700 truncate">{m.description}</div>
-                          <div className="text-[10px] text-slate-400">{m.usage}</div>
-                        </div>
-                        <button onClick={() => handlePlayMoment(m)}
-                          className="px-3 py-1.5 bg-red-500 text-white text-xs font-bold rounded-lg hover:bg-red-600 transition-all flex items-center gap-1 flex-shrink-0">
-                          ▶ 구간 보기
-                        </button>
-                        <button onClick={() => handleGenerateGif(m, i)}
-                          disabled={generatingGifIdx !== null}
-                          className={`px-3 py-1.5 text-xs font-bold rounded-lg flex-shrink-0 transition-all flex items-center gap-1 ${generatingGifIdx === i ? 'bg-violet-100 text-violet-600' : 'bg-violet-500 text-white hover:bg-violet-600 disabled:opacity-50'}`}>
-                          {generatingGifIdx === i ? (
-                            <><div className="w-3 h-3 border-2 border-violet-300 border-t-violet-600 rounded-full animate-spin" />생성 중</>
-                          ) : '🎬 GIF'}
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* 생성된 GIF 미리보기 */}
-                {generatedGifs.size > 0 && (
-                  <div className="space-y-3">
-                    <span className="text-xs font-bold text-slate-700">생성된 GIF ({generatedGifs.size}개)</span>
-                    {[...generatedGifs.entries()].map(([idx, dataUrl]) => (
-                      <div key={idx} className="rounded-xl border border-slate-200 bg-white p-4">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-xs text-slate-500">구간 {idx + 1}: {formatTime(moments[idx]?.start || 0)}~{formatTime(moments[idx]?.end || 0)}</span>
-                          <a href={dataUrl} download={`winaid-gif-${idx + 1}.gif`}
-                            className="px-3 py-1.5 bg-emerald-500 text-white text-xs font-bold rounded-lg hover:bg-emerald-600">
-                            다운로드
-                          </a>
-                        </div>
-                        <img src={dataUrl} alt={`GIF ${idx + 1}`} className="max-w-full rounded-lg" />
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* YouTube 플레이어 */}
-                {playingMoment && videoId && (
-                  <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-                    <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-100 bg-slate-50/80">
-                      <span className="text-xs font-bold text-slate-700">
-                        {formatTime(playingMoment.start)}~{formatTime(playingMoment.end)} — {playingMoment.description}
-                      </span>
-                      <button onClick={() => setPlayingMoment(null)} className="text-xs text-slate-400 hover:text-slate-600">닫기</button>
-                    </div>
-                    <div className="aspect-video">
-                      <iframe
-                        src={`https://www.youtube.com/embed/${videoId}?start=${playingMoment.start}&end=${playingMoment.end}&autoplay=1`}
-                        className="w-full h-full"
-                        allow="autoplay; encrypted-media"
-                        allowFullScreen
-                      />
-                    </div>
-                  </div>
-                )}
+                  ))}
+                </div>
               </div>
-            )}
-          </div>
-        ) : !isAnalyzing ? (
-          <div className="rounded-2xl border border-slate-200 bg-white shadow-sm flex-1 min-h-[480px] flex flex-col items-center justify-center px-12 py-16">
-            <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-6 bg-gradient-to-br from-red-50 to-pink-50 border border-red-100">
-              <span className="text-3xl">▶️</span>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-500 mb-1">SEO 키워드 (선택)</label>
+                <input value={keywords} onChange={e => setKeywords(e.target.value)} placeholder="예: 임플란트 비용, 임플란트 과정" className={inputCls} />
+              </div>
+
+              <button onClick={handleGenerate} disabled={isGenerating || (!selectedTopic && !customTopic.trim())}
+                className="w-full py-3.5 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 disabled:opacity-50 transition-all flex items-center justify-center gap-2 text-[15px]">
+                {isGenerating ? (<><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />글 생성 중...</>) : '📝 글 생성'}
+              </button>
             </div>
-            <h2 className="text-2xl font-black text-slate-800 mb-3">유튜브 영상 분석</h2>
-            <p className="text-sm text-slate-400 text-center leading-relaxed">
-              유튜브 URL을 입력하면<br />자막을 추출하고 핵심을 요약합니다
-            </p>
-            <div className="mt-6 flex flex-col items-center gap-2">
-              {['자막 자동 추출 (한국어 우선)', 'AI 핵심 요약', '블로그 원고에 바로 활용'].map(text => (
-                <div key={text} className="flex items-center gap-3 px-4 py-2 text-xs text-slate-400">
-                  <span className="text-[10px] text-blue-400">✦</span>{text}
+          )}
+
+          {/* ── GIF 모드 ── */}
+          {activeMode === 'gif' && (
+            <div className="space-y-4">
+              {/* YouTube 임베드 */}
+              {videoId && (
+                <div className="rounded-xl overflow-hidden border border-slate-200">
+                  <iframe
+                    id="yt-player"
+                    src={`https://www.youtube.com/embed/${videoId}`}
+                    className="w-full aspect-video"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  />
+                </div>
+              )}
+
+              {isDetectingMoments ? (
+                <div className="text-center py-8 text-sm text-slate-400">
+                  <div className="w-5 h-5 border-2 border-purple-400 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+                  핵심 장면 분석 중...
+                </div>
+              ) : keyMoments.length > 0 ? (
+                <div className="space-y-2">
+                  <h3 className="text-sm font-bold text-slate-700">🎬 핵심 장면 ({keyMoments.length}개)</h3>
+                  {keyMoments.map((m, i) => {
+                    const gif = generatedGifs.get(i);
+                    return (
+                      <div key={i} className="p-3 bg-white rounded-xl border border-slate-200">
+                        <div className="flex items-center gap-3">
+                          <div className="text-sm font-mono text-purple-600 flex-shrink-0">
+                            {formatTime(m.start)}~{formatTime(m.end)}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-medium text-slate-800 truncate">{m.description}</div>
+                            <div className="text-[10px] text-slate-400">{m.usage}</div>
+                          </div>
+                          <div className="flex gap-1.5 flex-shrink-0">
+                            <button onClick={() => {
+                              const iframe = document.getElementById('yt-player') as HTMLIFrameElement;
+                              if (iframe) iframe.src = `https://www.youtube.com/embed/${videoId}?start=${m.start}&autoplay=1`;
+                            }} className="px-2.5 py-1.5 bg-slate-100 text-slate-600 text-xs font-semibold rounded-lg hover:bg-slate-200">
+                              ▶ 재생
+                            </button>
+                            <button
+                              onClick={() => handleGenerateGif(i, m.start, m.end)}
+                              disabled={generatingGifIndex !== null}
+                              className="px-2.5 py-1.5 bg-purple-500 text-white text-xs font-bold rounded-lg hover:bg-purple-600 disabled:opacity-50"
+                            >
+                              {generatingGifIndex === i ? '생성 중...' : gif ? '다시 만들기' : '🎬 GIF'}
+                            </button>
+                          </div>
+                        </div>
+                        {gif && (
+                          <div className="mt-3 border-t border-slate-100 pt-3">
+                            <img src={gif.dataUrl} alt={`GIF ${i + 1}`} className="max-w-full rounded-lg border" />
+                            <div className="flex items-center gap-2 mt-2">
+                              <span className="text-[10px] text-slate-400">{(gif.fileSize / 1024).toFixed(0)}KB</span>
+                              <button onClick={() => {
+                                const a = document.createElement('a');
+                                a.href = gif.dataUrl;
+                                a.download = `clip_${m.start}-${m.end}.gif`;
+                                a.click();
+                              }} className="text-xs text-purple-600 font-semibold hover:text-purple-700">
+                                💾 다운로드
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-sm text-slate-400">
+                  영상 분석 결과가 필요합니다. 먼저 영상을 분석해주세요.
+                </div>
+              )}
+
+              {/* 커스텀 구간 GIF */}
+              <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
+                <h4 className="text-xs font-bold text-slate-500 mb-2">직접 구간 지정</h4>
+                <div className="flex gap-2 items-end">
+                  <div>
+                    <label className="text-[10px] text-slate-400">시작(초)</label>
+                    <input id="gif-start" type="number" min={0} defaultValue={0} className="w-20 px-2 py-1.5 border border-slate-200 rounded-lg text-sm" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-slate-400">끝(초)</label>
+                    <input id="gif-end" type="number" min={1} defaultValue={5} className="w-20 px-2 py-1.5 border border-slate-200 rounded-lg text-sm" />
+                  </div>
+                  <button onClick={() => {
+                    const s = parseInt((document.getElementById('gif-start') as HTMLInputElement).value) || 0;
+                    const e = parseInt((document.getElementById('gif-end') as HTMLInputElement).value) || 5;
+                    handleGenerateGif(-1, s, e);
+                  }} disabled={generatingGifIndex !== null}
+                    className="px-4 py-1.5 bg-purple-500 text-white text-xs font-bold rounded-lg hover:bg-purple-600 disabled:opacity-50">
+                    🎬 GIF 만들기
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ═══ Step 3: 결과 ═══ */}
+      {pipelineStep === 'result' && generatedContent && (
+        <div className="space-y-5">
+          {scores && (
+            <div className="flex gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-200">
+              {[
+                { label: '정확 반영', value: scores.accuracy, color: 'text-blue-600' },
+                { label: '주제 집중', value: scores.relevance, color: 'text-purple-600' },
+                { label: '가독성', value: scores.readability, color: 'text-green-600' },
+              ].map(s => s.value != null && (
+                <div key={s.label} className="flex-1 text-center">
+                  <div className={`text-xl font-black ${s.color}`}>{s.value}</div>
+                  <div className="text-[10px] text-slate-400 mt-0.5">{s.label}</div>
                 </div>
               ))}
             </div>
+          )}
+
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8">
+            <style>{`
+              .yt-content h3 { font-size: 18px; font-weight: 700; color: #1a1a1a; margin: 28px 0 14px 0; line-height: 1.4; }
+              .yt-content p { font-size: 15px; color: #444; margin: 0 0 12px 0; line-height: 1.8; }
+              .yt-content ul { margin: 12px 0; padding-left: 24px; }
+              .yt-content li { font-size: 15px; color: #444; margin: 6px 0; line-height: 1.7; }
+              .yt-content strong { color: #1e293b; }
+              .references-footer { user-select: none; opacity: 0.6; }
+            `}</style>
+            <div className="yt-content" dangerouslySetInnerHTML={{ __html: generatedContent }} />
           </div>
-        ) : (
-          <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-12 flex flex-col items-center justify-center min-h-[400px]">
-            <div className="w-14 h-14 border-[3px] border-blue-100 border-t-blue-500 rounded-full animate-spin mb-6" />
-            <p className="text-sm font-medium text-slate-700">자막을 추출하고 있어요</p>
-            <p className="text-xs text-slate-400 mt-1">영상 길이에 따라 10~30초 정도 걸립니다</p>
+
+          <div className="flex gap-2">
+            <button onClick={handleCopy}
+              className="flex-1 py-2.5 bg-blue-500 hover:bg-blue-600 text-white rounded-xl font-bold text-sm transition-colors">
+              📋 복사 (출처 제외)
+            </button>
+            <button onClick={() => { setPipelineStep('configure'); setGeneratedContent(null); setScores(null); }}
+              className="py-2.5 px-5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl font-bold text-sm transition-colors">
+              ↩ 다시 생성
+            </button>
           </div>
-        )}
-      </div>
+        </div>
+      )}
+
+      {copyToast && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-5 py-2.5 bg-blue-600 text-white text-sm font-bold rounded-xl shadow-lg">
+          📋 복사되었습니다 (출처 제외)
+        </div>
+      )}
     </div>
   );
 }

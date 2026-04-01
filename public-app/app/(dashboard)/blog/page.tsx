@@ -6,7 +6,7 @@ import { CATEGORIES, PERSONAS, TONES } from '../../../lib/constants';
 import { ContentCategory, type GenerationRequest, type AudienceMode, type ImageStyle, type WritingStyle, type CssTheme, type TrendingItem, type SeoTitleItem, type SeoReport } from '../../../lib/types';
 import { buildBlogPrompt } from '../../../lib/blogPrompt';
 import { savePost } from '../../../lib/postStorage';
-import { getSessionSafe, supabase } from '../../../lib/supabase';
+import { getSessionSafe, supabase, getSupabaseClient, isSupabaseConfigured } from '../../../lib/supabase';
 import { getHospitalStylePrompt } from '../../../lib/styleService';
 import { type ScoreBarData } from '../../../components/GenerationResult';
 import { getStyleById, getStylePromptForGeneration } from '../../../components/WritingStyleLearner';
@@ -30,10 +30,15 @@ function BlogForm() {
 
   // ── 폼 상태 ──
   const topicParam = searchParams.get('topic');
+  const titleParam = searchParams.get('title');
+  const keywordsParam = searchParams.get('keywords');
   const youtubeTranscriptParam = searchParams.get('youtubeTranscript');
+  const clinicalContextParam = searchParams.get('clinicalContext');
   const [topic, setTopic] = useState(topicParam || '');
+  const [blogTitle, setBlogTitle] = useState(titleParam || '');
   const [youtubeTranscript] = useState(youtubeTranscriptParam ? decodeURIComponent(youtubeTranscriptParam) : '');
-  const [keywords, setKeywords] = useState('');
+  const [clinicalContext] = useState(clinicalContextParam ? decodeURIComponent(clinicalContextParam) : '');
+  const [keywords, setKeywords] = useState(keywordsParam || '');
   const [keywordDensity, setKeywordDensity] = useState<number | 'auto'>('auto');
   const [disease, setDisease] = useState('');
   const [customSubheadings, setCustomSubheadings] = useState('');
@@ -48,6 +53,24 @@ function BlogForm() {
   const [imageAspectRatio, setImageAspectRatio] = useState<'4:3' | '16:9' | '1:1'>('4:3');
   const [textLength, setTextLength] = useState(2500);
   const [hospitalName, setHospitalName] = useState('');
+  const [hospitalNameFromProfile, setHospitalNameFromProfile] = useState('');
+
+  // 프로필에서 병원명 자동 로드
+  useEffect(() => {
+    if (!isSupabaseConfigured) return;
+    (async () => {
+      try {
+        const sb = getSupabaseClient();
+        const { data: { user } } = await sb.auth.getUser();
+        if (!user) return;
+        const nameFromMeta = user.user_metadata?.name;
+        if (nameFromMeta) { setHospitalName(nameFromMeta); setHospitalNameFromProfile(nameFromMeta); return; }
+        const { data: profile } = await sb.from('profiles').select('name, full_name').eq('id', user.id).single();
+        const pName = profile?.name || profile?.full_name;
+        if (pName) { setHospitalName(pName); setHospitalNameFromProfile(pName); }
+      } catch { /* ignore */ }
+    })();
+  }, []);
   const [selectedHospitalAddress, setSelectedHospitalAddress] = useState('');
   const [medicalLawMode, setMedicalLawMode] = useState<'strict' | 'relaxed'>(() => {
     if (typeof window === 'undefined') return 'strict';
@@ -113,6 +136,48 @@ function BlogForm() {
   const [isRetryable, setIsRetryable] = useState(false);
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
   const [chatInput, setChatInput] = useState('');
+  const [settingsToast, setSettingsToast] = useState('');
+
+  const handleSaveSettings = useCallback(() => {
+    const s = { category, hospitalName, selectedHospitalAddress, homepageUrl, textLength, imageCount, imageAspectRatio, imageStyle, audienceMode, persona, tone, writingStyle, medicalLawMode, includeFaq, faqCount, includeHospitalIntro };
+    localStorage.setItem('winaid_blog_settings', JSON.stringify(s));
+    setSettingsToast('💾 설정 저장됨');
+    setTimeout(() => setSettingsToast(''), 1500);
+  }, [category, hospitalName, selectedHospitalAddress, homepageUrl, textLength, imageCount, imageAspectRatio, imageStyle, audienceMode, persona, tone, writingStyle, medicalLawMode, includeFaq, faqCount, includeHospitalIntro]);
+
+  const applySettings = useCallback((raw: string) => {
+    try {
+      const s = JSON.parse(raw);
+      if (s.category) setCategory(s.category);
+      if (s.hospitalName) setHospitalName(s.hospitalName);
+      if (s.selectedHospitalAddress) setSelectedHospitalAddress(s.selectedHospitalAddress);
+      if (s.homepageUrl) setHomepageUrl(s.homepageUrl);
+      if (s.textLength) setTextLength(s.textLength);
+      if (s.imageCount !== undefined) setImageCount(s.imageCount);
+      if (s.imageAspectRatio) setImageAspectRatio(s.imageAspectRatio);
+      if (s.imageStyle) setImageStyle(s.imageStyle);
+      if (s.audienceMode) setAudienceMode(s.audienceMode);
+      if (s.persona) setPersona(s.persona);
+      if (s.tone) setTone(s.tone);
+      if (s.medicalLawMode) setMedicalLawMode(s.medicalLawMode);
+      if (s.includeFaq !== undefined) setIncludeFaq(s.includeFaq);
+      if (s.faqCount) setFaqCount(s.faqCount);
+      if (s.includeHospitalIntro !== undefined) setIncludeHospitalIntro(s.includeHospitalIntro);
+      return true;
+    } catch { return false; }
+  }, []);
+
+  const handleLoadSettings = useCallback(() => {
+    const raw = localStorage.getItem('winaid_blog_settings');
+    if (!raw) { setSettingsToast('저장된 설정 없음'); setTimeout(() => setSettingsToast(''), 1500); return; }
+    if (applySettings(raw)) { setSettingsToast('📂 설정 불러옴'); setTimeout(() => setSettingsToast(''), 1500); }
+  }, [applySettings]);
+
+  // 페이지 진입 시 자동 불러오기
+  useEffect(() => {
+    const raw = localStorage.getItem('winaid_blog_settings');
+    if (raw) applySettings(raw);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const [isChatRefining, setIsChatRefining] = useState(false);
   // 생성 시간 추정
   const [generationStartTime, setGenerationStartTime] = useState<number>(0);
@@ -426,6 +491,7 @@ JSON 배열로 출력한다. 각 항목은 다음 구조를 따른다:
           model: 'gemini-3.1-flash-lite-preview',
           responseType: 'json',
           timeout: 60000,
+          thinkingLevel: 'none',
           schema: {
             type: 'ARRAY',
             items: {
@@ -535,6 +601,7 @@ JSON 배열로 출력한다. 각 항목은 다음 구조를 따른다:
                 model: 'gemini-3.1-flash-lite-preview',
                 temperature: 0.4,
                 maxOutputTokens: 1000,
+                thinkingLevel: 'none',
               }),
             });
             const analysisData = await analysisRes.json() as { text?: string };
@@ -557,6 +624,7 @@ JSON 배열로 출력한다. 각 항목은 다음 구조를 따른다:
               googleSearch: true,
               temperature: 0.4,
               maxOutputTokens: 800,
+              thinkingLevel: 'none',
             }),
           });
           const fallbackData = await fallbackRes.json() as { text?: string };
@@ -613,6 +681,7 @@ ${newsContext ? '6. **뉴스 트렌드 1~2개 반드시 포함**: 위 뉴스 분
           responseType: 'json',
           googleSearch: true,
           temperature: 0.9,
+          thinkingLevel: 'none',
           timeout: 60000,
           schema: {
             type: 'ARRAY',
@@ -764,7 +833,7 @@ JSON 형식으로 응답해주세요.`;
       const seoRes = await fetch('/api/gemini', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: seoPrompt, model: 'gemini-3.1-flash-lite-preview', responseType: 'json', schema: seoSchema, temperature: 0.3, maxOutputTokens: 4096 }),
+        body: JSON.stringify({ prompt: seoPrompt, model: 'gemini-3.1-flash-lite-preview', responseType: 'json', schema: seoSchema, temperature: 0.3, maxOutputTokens: 4096, thinkingLevel: 'none' }),
       });
       const seoData = await seoRes.json() as { text?: string; error?: string };
 
@@ -808,6 +877,7 @@ JSON 형식으로 응답해주세요.`;
     const request: GenerationRequest = {
       category,
       topic: topic.trim(),
+      blogTitle: blogTitle.trim() || undefined,
       keywords: keywords.trim(),
       disease: disease.trim() || undefined,
       tone,
@@ -821,6 +891,7 @@ JSON 형식으로 응답해주세요.`;
       writingStyle,
       keywordDensity,
       youtubeTranscript: youtubeTranscript || undefined,
+      clinicalContext: clinicalContext || undefined,
       medicalLawMode,
       includeFaq,
       faqCount: includeFaq ? faqCount : undefined,
@@ -895,6 +966,7 @@ JSON 형식으로 응답해주세요.`;
               temperature: 0.3,
               responseType: 'json',
               timeout: 8000,
+              thinkingLevel: 'none',
             }),
           });
           if (!competitorRes.ok) return '';
@@ -1047,7 +1119,8 @@ ${subs.length > 0 ? `경쟁 글 소제목: ${subs.join(' / ')}` : ''}
       // 3.6) 메인 제목 주입 (old resultAssembler.ts 동일: <h2 class="main-title">)
       const hasMainTitle = blogText.includes('class="main-title"') || blogText.includes("class='main-title'");
       if (!hasMainTitle) {
-        blogText = `<h2 class="main-title">${topic.trim()}</h2>\n${blogText}`;
+        const finalTitle = blogTitle.trim() || topic.trim();
+        blogText = `<h2 class="main-title">${finalTitle}</h2>\n${blogText}`;
         console.info(`[BLOG] 메인 제목 주입: "${topic.trim()}"`);
       }
       if (parsed) {
@@ -1372,7 +1445,7 @@ ${subs.length > 0 ? `경쟁 글 소제목: ${subs.join(' / ')}` : ''}
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           prompt: `아래 병원 블로그 글의 ${selectedImgIndex}번째 이미지에 어울리는 프롬프트를 한국어로 1개만 작성해주세요. 프롬프트만 출력하세요.\n\n글 내용:\n${textOnly}`,
-          model: 'gemini-3.1-flash-lite-preview', temperature: 0.7, maxOutputTokens: 300,
+          model: 'gemini-3.1-flash-lite-preview', temperature: 0.7, maxOutputTokens: 300, thinkingLevel: 'none',
         }),
       });
       const data = await res.json() as { text?: string };
@@ -1610,10 +1683,10 @@ ${generatedContent.substring(0, 2000)}
     <div className="flex flex-col lg:flex-row gap-5 lg:items-start p-5">
       {/* ── 입력 폼 — BlogFormPanel 컴포넌트로 분리 ── */}
       <BlogFormPanel
-        topic={topic} keywords={keywords} keywordDensity={keywordDensity} disease={disease} category={category}
+        topic={topic} blogTitle={blogTitle} keywords={keywords} keywordDensity={keywordDensity} disease={disease} category={category}
         persona={persona} tone={tone} audienceMode={audienceMode}
         imageStyle={imageStyle} imageCount={imageCount} imageAspectRatio={imageAspectRatio} textLength={textLength}
-        hospitalName={hospitalName}
+        hospitalName={hospitalName} hospitalNameFromProfile={hospitalNameFromProfile}
         selectedHospitalAddress={selectedHospitalAddress}
         homepageUrl={homepageUrl} clinicContext={clinicContext}
         isCrawling={isCrawling} crawlProgress={crawlProgress}
@@ -1630,7 +1703,7 @@ ${generatedContent.substring(0, 2000)}
         seoTitles={seoTitles} trendingItems={trendingItems}
         isLoadingTitles={isLoadingTitles} isLoadingTrends={isLoadingTrends}
         isGenerating={isGenerating}
-        setTopic={setTopic} setKeywords={setKeywords} setKeywordDensity={setKeywordDensity} setDisease={setDisease}
+        setTopic={setTopic} setBlogTitle={setBlogTitle} setKeywords={setKeywords} setKeywordDensity={setKeywordDensity} setDisease={setDisease}
         setCategory={setCategory} setPersona={setPersona} setTone={setTone}
         setAudienceMode={setAudienceMode} setImageStyle={setImageStyle}
         setImageCount={setImageCount} setImageAspectRatio={setImageAspectRatio} setTextLength={setTextLength}
@@ -1653,6 +1726,9 @@ ${generatedContent.substring(0, 2000)}
         onCheckRanks={handleCheckRanks}
         onRecommendTitles={handleRecommendTitles}
         onRecommendTrends={handleRecommendTrends}
+        onSaveSettings={handleSaveSettings}
+        onLoadSettings={handleLoadSettings}
+        settingsToast={settingsToast}
       />
 
       {/* ── 결과 영역 — BlogResultArea 컴포넌트로 분리 ── */}

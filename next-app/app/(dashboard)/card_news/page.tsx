@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { TEAM_DATA } from '../../../lib/teamData';
 import { CATEGORIES } from '../../../lib/constants';
 import { buildCardNewsPrompt, type CardNewsRequest } from '../../../lib/cardNewsPrompt';
@@ -13,6 +13,8 @@ import { CardRegenModal, type CardPromptHistoryItem, CARD_PROMPT_HISTORY_KEY, CA
 import { ContentCategory } from '../../../lib/types';
 import type { WritingStyle, CardNewsDesignTemplateId, TrendingItem, AudienceMode } from '../../../lib/types';
 
+interface CardImageHistoryItem { url: string; prompt: string; createdAt: number; }
+
 interface CardSlide {
   index: number;
   role: string;
@@ -20,6 +22,7 @@ interface CardSlide {
   body: string;
   imagePrompt: string;
   imageUrl: string | null;
+  imageHistory: CardImageHistoryItem[];
 }
 
 const IMAGE_STYLE_OPTIONS = [
@@ -37,6 +40,10 @@ export default function CardNewsPage() {
   const [keywords, setKeywords] = useState('');
   const [hospitalName, setHospitalName] = useState('');
   const [showHospitalPicker, setShowHospitalPicker] = useState(false);
+  const [hospitalNameMode, setHospitalNameMode] = useState<'all' | 'first_last' | 'none'>('first_last');
+  const [logoDataUrl, setLogoDataUrl] = useState<string | null>(null);
+  const [logoEnabled, setLogoEnabled] = useState(false);
+  const logoInputRef = useRef<HTMLInputElement>(null);
   const [slideCount, setSlideCount] = useState(6);
   const [designTemplateId, setDesignTemplateId] = useState<CardNewsDesignTemplateId | undefined>(undefined);
   const [imageStyle, setImageStyle] = useState<ImageStyleType>('illustration');
@@ -83,7 +90,8 @@ export default function CardNewsPage() {
       const needsTemplate = tmpl && !prompt.includes('[디자인 템플릿:');
       const templateBlock = needsTemplate ? `\n[디자인 템플릿: ${tmpl.name}]\n${tmpl.stylePrompt}\n배경색: ${tmpl.colors.background}` : '';
       const customBlock = imageStyle === 'custom' && customImagePrompt ? `\n[사용자 지정 스타일]\n${customImagePrompt}` : '';
-      const fullPrompt = `${prompt}${templateBlock}${customBlock}`.trim();
+      const logoBlock = (logoEnabled && logoDataUrl && hospitalName) ? `\n[로고] "${hospitalName}" 로고를 상단에 작게 배치` : '';
+      const fullPrompt = `${prompt}${templateBlock}${customBlock}${logoBlock}`.trim();
 
       const res = await fetch('/api/image', {
         method: 'POST',
@@ -94,6 +102,7 @@ export default function CardNewsPage() {
           mode: 'card_news',
           imageStyle,
           referenceImage: refImage || undefined,
+          logoBase64: (logoEnabled && logoDataUrl) ? logoDataUrl : undefined,
         }),
       });
       if (!res.ok) return null;
@@ -191,11 +200,12 @@ export default function CardNewsPage() {
           body: bodyMatch?.[1]?.trim() || '',
           imagePrompt: '', // Step 2에서 생성
           imageUrl: null,
+          imageHistory: [],
         });
       }
       if (parsedCards.length === 0) {
         for (let i = 0; i < slideCount; i++) {
-          parsedCards.push({ index: i + 1, role: i === 0 ? '표지' : i === slideCount - 1 ? '마무리' : `본문 ${i}`, title: `슬라이드 ${i + 1}`, body: '', imagePrompt: '', imageUrl: null });
+          parsedCards.push({ index: i + 1, role: i === 0 ? '표지' : i === slideCount - 1 ? '마무리' : `본문 ${i}`, title: `슬라이드 ${i + 1}`, body: '', imagePrompt: '', imageUrl: null, imageHistory: [] });
         }
       }
 
@@ -221,22 +231,39 @@ export default function CardNewsPage() {
         `${c.index}장 [${c.role}]: 제목="${c.title}" / 본문="${c.body}"`
       ).join('\n');
 
+      // 병원명 지시
+      const hospitalNameInstruction = (() => {
+        if (!hospitalName) return `⚠️ 어떤 슬라이드에도 병원명을 넣지 마세요. 가짜 병원명을 지어내지 마세요.`;
+        if (hospitalNameMode === 'none') return `⚠️ 병원명 "${hospitalName}"은 참고용. 카드 이미지에 병원명 표시 금지.`;
+        if (hospitalNameMode === 'all') return `⚠️ 모든 슬라이드 상단에 "${hospitalName}" 병원명을 작은 뱃지로 표시. 다른 병원명 절대 금지.`;
+        return `⚠️ 1장(표지)과 마지막 장에만 "${hospitalName}" 병원명 표시. 중간 슬라이드에는 넣지 마세요. 다른 병원명 절대 금지.`;
+      })();
+
       const promptGenPrompt = `당신은 카드뉴스 이미지 프롬프트 전문가입니다.
 아래 카드뉴스 원고를 보고, 각 슬라이드의 이미지 생성용 프롬프트를 작성해주세요.
 
 [주제] ${topic}
+${hospitalName ? `[병원명] ${hospitalName}` : ''}
 ${tmplMood}
+
+${hospitalNameInstruction}
 
 [원고]
 ${cardsInfo}
 
-[⚠️ 가장 중요: 스타일 통일]
-모든 카드가 하나의 시리즈처럼 보여야 합니다:
-- 모든 카드의 배경색/그라데이션을 동일하게 지정하세요
-- 모든 카드의 일러스트 스타일을 동일하게 (예: 3D 캐릭터면 전부 3D 캐릭터)
-- 모든 카드의 텍스트 배치 구조를 동일하게 (예: 상단 부제 → 중앙 제목 → 하단 설명)
-- 모든 카드의 장식 요소를 동일하게 (예: 벚꽃이면 전부 벚꽃, 의료아이콘이면 전부 의료아이콘)
-- visual 필드에 동일한 스타일 키워드를 반복 사용하세요
+[🔒 레이아웃 고정 — 절대 규칙]
+모든 카드가 아래 동일한 레이아웃 그리드를 사용:
+- 상단 15%: subtitle 영역 (작은 텍스트, 부제)
+- 중앙 40%: mainTitle 영역 (큰 볼드 텍스트, 제목)
+- 하단 30%: visual 영역 (일러스트/아이콘)
+- 최하단 15%: description 영역 (설명 텍스트)
+
+규칙:
+- 배경색, 그라데이션, 장식 요소는 모든 카드에서 완전 동일
+- 일러스트 스타일 동일 (3D면 전부 3D)
+- 텍스트 크기/색상/위치 동일 — 내용만 변경
+- visual 필드에 동일한 스타일 키워드를 매 카드에 반복
+- 표지(1장)와 마무리(마지막 장)도 같은 그리드 사용. 예외 없음
 
 [프롬프트 작성 규칙]
 1. 각 카드에 표시될 한글 텍스트:
@@ -312,10 +339,12 @@ visual: (배경 비주얼 묘사)
 
       if (cards.length > 1) {
         const remaining = cards.slice(1);
+        const styleContext = `[1장 스타일 참조]\n1장 프롬프트: ${firstCard.imagePrompt}\n→ 위 프롬프트의 배경색, 일러스트 스타일, 레이아웃을 정확히 따라하세요. 차이가 있으면 실패입니다.`;
         let completed = 1;
         const restResults = await Promise.all(
           remaining.map(async (card) => {
-            const url = await generateCardImage(card.imagePrompt, card.index, firstImageUrl || undefined);
+            const enrichedPrompt = `${styleContext}\n\n${card.imagePrompt}`;
+            const url = await generateCardImage(enrichedPrompt, card.index, firstImageUrl || undefined);
             completed++;
             setProgress(`이미지 생성 중... (${completed}/${cards.length}장)`);
             return { index: card.index, url };
@@ -326,7 +355,11 @@ visual: (배경 비주얼 묘사)
 
       const finalCards = cards.map(card => {
         const result = imageResults.find(r => r.index === card.index);
-        return { ...card, imageUrl: result?.url || null };
+        return {
+          ...card,
+          imageUrl: result?.url || null,
+          imageHistory: result?.url ? [{ url: result.url, prompt: card.imagePrompt, createdAt: Date.now() }] : [],
+        };
       });
       setCards(finalCards);
       setPipelineStep('idle');
@@ -347,8 +380,12 @@ visual: (배경 비주얼 묘사)
     } finally { setIsGeneratingImages(false); setProgress(''); }
   };
 
-  // ── 초기 로드: 프롬프트 히스토리 + 참고 이미지 ──
+  // ── 초기 로드: 로고 + 프롬프트 히스토리 + 참고 이미지 ──
   useEffect(() => {
+    try {
+      const savedLogo = localStorage.getItem('hospital-logo-dataurl');
+      if (savedLogo) setLogoDataUrl(savedLogo);
+    } catch { /* ignore */ }
     try {
       const saved = localStorage.getItem(CARD_PROMPT_HISTORY_KEY);
       if (saved) setPromptHistory(JSON.parse(saved));
@@ -421,11 +458,13 @@ visual: (배경 비주얼 묘사)
       const promptToUse = editImagePrompt || `subtitle: "${editSubtitle}"\nmainTitle: "${editMainTitle}"\n${editDescription ? `description: "${editDescription}"\n` : ''}비주얼: ${topic || '의료 건강'} 관련 밝고 친근한 분위기 일러스트`;
       const url = await generateCardImage(promptToUse, cardRegenIndex, cardRegenRefImage || undefined);
 
-      setCards(prev => prev.map(c =>
-        c.index === cardRegenIndex
-          ? { ...c, imageUrl: url, imagePrompt: promptToUse, title: editMainTitle || c.title, body: editDescription || c.body, role: editSubtitle || c.role }
-          : c
-      ));
+      setCards(prev => prev.map(c => {
+        if (c.index !== cardRegenIndex) return c;
+        const newHistory = [...c.imageHistory];
+        if (c.imageUrl) newHistory.push({ url: c.imageUrl, prompt: c.imagePrompt, createdAt: Date.now() });
+        while (newHistory.length > 5) newHistory.shift();
+        return { ...c, imageUrl: url, imagePrompt: promptToUse, title: editMainTitle || c.title, body: editDescription || c.body, role: editSubtitle || c.role, imageHistory: newHistory };
+      }));
       setCardRegenModalOpen(false);
     } catch (err) {
       console.error('카드 재생성 실패:', err);
@@ -672,6 +711,52 @@ ${newsContext ? `\n[📰 최신 네이버 뉴스 분석]\n${newsContext}\n\n⚠�
                           ))}
                         </div>
                       </>
+                    )}
+                  </div>
+                </div>
+
+                {/* 카드에 병원명 표시 */}
+                {hospitalName && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] text-slate-400 whitespace-nowrap">병원명 표시</span>
+                    {([
+                      { value: 'first_last' as const, label: '표지+마무리' },
+                      { value: 'all' as const, label: '전체' },
+                      { value: 'none' as const, label: '안 함' },
+                    ]).map(opt => (
+                      <button key={opt.value} type="button" onClick={() => setHospitalNameMode(opt.value)}
+                        className={`px-2.5 py-1 rounded-lg text-[10px] font-semibold transition-all ${hospitalNameMode === opt.value ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* 로고 */}
+                <div>
+                  <label className="text-[11px] font-semibold text-slate-500 mb-1.5 block">병원 로고 (선택)</label>
+                  <div className="flex items-center gap-3">
+                    {logoDataUrl ? (
+                      <div className="relative">
+                        <img src={logoDataUrl} alt="로고" className="h-10 w-auto rounded-lg border border-slate-200 bg-white p-1" />
+                        <button type="button" onClick={() => { setLogoDataUrl(null); setLogoEnabled(false); try { localStorage.removeItem('hospital-logo-dataurl'); } catch {} }}
+                          className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white rounded-full text-[8px] flex items-center justify-center">✕</button>
+                      </div>
+                    ) : (
+                      <button type="button" onClick={() => logoInputRef.current?.click()}
+                        className="h-10 px-4 border-2 border-dashed border-slate-200 rounded-lg text-xs text-slate-400 hover:border-pink-400 hover:text-pink-500 transition-all">+ 로고 업로드</button>
+                    )}
+                    <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={e => {
+                      const file = e.target.files?.[0]; if (!file) return;
+                      const reader = new FileReader();
+                      reader.onload = () => { const d = reader.result as string; setLogoDataUrl(d); setLogoEnabled(true); try { localStorage.setItem('hospital-logo-dataurl', d); } catch {} };
+                      reader.readAsDataURL(file); e.target.value = '';
+                    }} />
+                    {logoDataUrl && (
+                      <label className="flex items-center gap-1.5 cursor-pointer">
+                        <input type="checkbox" checked={logoEnabled} onChange={e => setLogoEnabled(e.target.checked)} className="w-3.5 h-3.5 rounded border-slate-300 text-pink-500" />
+                        <span className="text-[11px] text-slate-500">카드에 로고 넣기</span>
+                      </label>
                     )}
                   </div>
                 </div>
@@ -945,6 +1030,31 @@ ${newsContext ? `\n[📰 최신 네이버 뉴스 분석]\n${newsContext}\n\n⚠�
                       )}
                     </div>
                   </div>
+
+                  {/* 이전 버전 히스토리 */}
+                  {card.imageHistory.length > 1 && (
+                    <div className="px-2 py-1.5 bg-slate-50 border-t border-slate-100">
+                      <div className="text-[9px] text-slate-400 mb-1">이전 버전 ({card.imageHistory.length - 1}개)</div>
+                      <div className="flex gap-1 overflow-x-auto pb-0.5">
+                        {card.imageHistory.slice(0, -1).reverse().map((h, hi) => (
+                          <button key={hi} type="button" title="클릭하여 이 버전으로 되돌리기"
+                            onClick={() => setCards(prev => prev.map(c => {
+                              if (c.index !== card.index) return c;
+                              const updated = [...c.imageHistory];
+                              if (c.imageUrl) updated.push({ url: c.imageUrl, prompt: c.imagePrompt, createdAt: Date.now() });
+                              const target = card.imageHistory.slice(0, -1).reverse()[hi];
+                              const idx = updated.findIndex(u => u.url === target.url);
+                              if (idx >= 0) updated.splice(idx, 1);
+                              while (updated.length > 5) updated.shift();
+                              return { ...c, imageUrl: target.url, imagePrompt: target.prompt, imageHistory: updated };
+                            }))}
+                            className="flex-shrink-0 w-10 h-10 rounded border border-slate-200 overflow-hidden hover:ring-2 hover:ring-blue-400 transition-all">
+                            <img src={h.url} alt={`v${hi + 1}`} className="w-full h-full object-cover" />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   {/* 텍스트 */}
                   <div className="p-3">

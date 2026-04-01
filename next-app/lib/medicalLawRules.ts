@@ -48,9 +48,15 @@ export const REPLACEMENT_MAP: Record<string, string> = {
 };
 
 /** 프롬프트에 삽입할 의료광고법 금지 규칙 텍스트 */
-export function getMedicalLawPromptBlock(strictMode = true): string {
+export function getMedicalLawPromptBlock(strictMode: boolean | 'brief' = true): string {
   if (!strictMode) {
     return '의료광고법 준수는 유지하되, "~할 수 있습니다", "~에 도움이 됩니다" 등의 표현을 적극 활용합니다.';
+  }
+  if (strictMode === 'brief') {
+    return `[의료광고법 — 간결 버전]
+- "최고/최초/유일/완치/100%/보장" 단정 금지
+- "~하세요/~받으세요" 행동 유도 금지
+- "전후 비교/체험기" 암시 금지`;
   }
   return `[의료광고법 제56조 — 절대 금지 표현]
 - 최상급/과장: ${FORBIDDEN_EXPRESSIONS.superlative.slice(0, 10).join(', ')} 등

@@ -34,6 +34,8 @@ router.post('/gif', async (req, res) => {
     await new Promise((resolve, reject) => {
       const args = [
         '--no-check-certificates',
+        '--extractor-args', 'youtube:player_client=web',
+        '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
         '-f', 'bestvideo[height<=480][ext=mp4]+bestaudio[ext=m4a]/best[height<=480][ext=mp4]/best',
         '--download-sections', `*${start}-${start + duration}`,
         '-o', videoPath,
@@ -44,7 +46,7 @@ router.post('/gif', async (req, res) => {
       execFile('yt-dlp', args, { timeout: 60000 }, (err, stdout, stderr) => {
         if (err) {
           console.error('[yt-dlp] Error:', stderr || err.message);
-          reject(new Error('영상 다운로드 실패'));
+          reject(new Error(`영상 다운로드 실패: ${stderr || err.message}`));
         } else {
           resolve(stdout);
         }

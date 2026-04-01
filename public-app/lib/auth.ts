@@ -54,7 +54,7 @@ export const signUpWithEmail = async (
         {
           user_id: data.user.id,
           plan_type: 'free',
-          credits_total: 10,
+          credits_total: 20,
           credits_used: 0,
           expires_at: null,
         } as Record<string, unknown>,

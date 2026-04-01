@@ -25,6 +25,7 @@ export type WritingStyle = 'expert' | 'empathy' | 'conversion';
 export interface GenerationRequest {
   category: ContentCategory;
   topic: string;
+  blogTitle?: string;
   keywords: string;
   disease?: string;
   tone: string;
@@ -43,6 +44,7 @@ export interface GenerationRequest {
   keywordDensity?: number | 'auto';
   youtubeTranscript?: string;
   hospitalStrengths?: string;
+  clinicalContext?: string;
   medicalLawMode?: 'strict' | 'relaxed';
   includeFaq?: boolean;
   faqCount?: number;

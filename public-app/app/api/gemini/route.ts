@@ -134,6 +134,7 @@ interface GeminiRequestBody {
   thinkingLevel?: string;
   timeout?: number;
   googleSearch?: boolean;
+  images?: { base64: string; mimeType: string }[];
 }
 
 interface GeminiCandidate {
@@ -176,9 +177,18 @@ export async function POST(request: NextRequest) {
   const systemText = body.systemInstruction || '';
   const userText = body.prompt;
 
+  // 멀티모달: 이미지 + 텍스트
+  const userParts: Array<Record<string, unknown>> = [];
+  if (body.images && Array.isArray(body.images)) {
+    for (const img of body.images as { base64: string; mimeType: string }[]) {
+      userParts.push({ inlineData: { mimeType: img.mimeType, data: img.base64 } });
+    }
+  }
+  userParts.push({ text: userText });
+
   // Gemini API body 조립
   const apiBody: Record<string, unknown> = {
-    contents: [{ role: 'user', parts: [{ text: userText }] }],
+    contents: [{ role: 'user', parts: userParts }],
     generationConfig: {
       temperature: body.temperature ?? 0.85,
       topP: body.topP ?? 0.95,
@@ -200,7 +210,11 @@ export async function POST(request: NextRequest) {
     apiBody.tools = [{ googleSearch: {} }];
   }
 
-  if (body.thinkingLevel && body.thinkingLevel !== 'none') {
+  if (body.thinkingLevel === 'none') {
+    (apiBody.generationConfig as Record<string, unknown>).thinkingConfig = {
+      thinkingBudget: 0,
+    };
+  } else if (body.thinkingLevel) {
     const budget: Record<string, number> = { low: 1024, medium: 4096, high: 8192 };
     (apiBody.generationConfig as Record<string, unknown>).thinkingConfig = {
       thinkingBudget: budget[body.thinkingLevel] || 4096,

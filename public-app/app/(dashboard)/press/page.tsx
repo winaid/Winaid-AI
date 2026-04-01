@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { buildPressPrompt, PRESS_TYPES, DOCTOR_TITLES, CATEGORIES, PRESS_CSS, type PressType } from '../../../lib/pressPrompt';
 import { savePost } from '../../../lib/postStorage';
-import { getSessionSafe } from '../../../lib/supabase';
+import { getSessionSafe, getSupabaseClient, isSupabaseConfigured } from '../../../lib/supabase';
 import { getHospitalStylePrompt } from '../../../lib/styleService';
 import { ErrorPanel } from '../../../components/GenerationResult';
 
@@ -11,6 +11,10 @@ export default function PressPage() {
   const [topic, setTopic] = useState('');
   const [keywords, setKeywords] = useState('');
   const [hospitalName, setHospitalName] = useState('');
+  useEffect(() => {
+    if (!isSupabaseConfigured) return;
+    (async () => { try { const sb = getSupabaseClient(); const { data: { user } } = await sb.auth.getUser(); if (user?.user_metadata?.name) setHospitalName(user.user_metadata.name); } catch {} })();
+  }, []);
   const [doctorName, setDoctorName] = useState('');
   const [doctorTitle, setDoctorTitle] = useState('원장');
   const [pressType, setPressType] = useState<PressType>('achievement');

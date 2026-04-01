@@ -11,6 +11,7 @@ import { MAX_KEYWORDS } from '../../../lib/keywordAnalysisService';
 export interface BlogFormPanelProps {
   // ── 폼 상태 ──
   topic: string;
+  blogTitle: string;
   keywords: string;
   keywordDensity: number | 'auto';
   disease: string;
@@ -23,6 +24,7 @@ export interface BlogFormPanelProps {
   imageAspectRatio: '4:3' | '16:9' | '1:1';
   textLength: number;
   hospitalName: string;
+  hospitalNameFromProfile?: string;
   selectedHospitalAddress: string;
   homepageUrl: string;
   clinicContext: ClinicContext | null;
@@ -58,6 +60,7 @@ export interface BlogFormPanelProps {
   isGenerating: boolean;
   // ── 폼 setter ──
   setTopic: (v: string) => void;
+  setBlogTitle: (v: string) => void;
   setKeywords: (v: string | ((prev: string) => string)) => void;
   setKeywordDensity: (v: number | 'auto') => void;
   setDisease: (v: string) => void;
@@ -96,12 +99,15 @@ export interface BlogFormPanelProps {
   onCheckRanks: () => void;
   onRecommendTitles: () => void;
   onRecommendTrends: () => void;
+  onSaveSettings?: () => void;
+  onLoadSettings?: () => void;
+  settingsToast?: string;
 }
 
 export default function BlogFormPanel(props: BlogFormPanelProps) {
   const {
-    topic, keywords, keywordDensity, disease, category, persona, tone, audienceMode, imageStyle, imageCount, imageAspectRatio, textLength,
-    hospitalName, selectedHospitalAddress,
+    topic, blogTitle, keywords, keywordDensity, disease, category, persona, tone, audienceMode, imageStyle, imageCount, imageAspectRatio, textLength,
+    hospitalName, hospitalNameFromProfile, selectedHospitalAddress,
     homepageUrl, clinicContext, isCrawling, crawlProgress,
     includeFaq, faqCount, showCustomInput, customPrompt, customSubheadings,
     learnedStyleId, showAdvanced, includeHospitalIntro,
@@ -109,7 +115,7 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
     keywordSortBy, keywordSearch, keywordMinVolume, isCheckingRanks, rankResults, hideRanked, isLoadingMoreKeywords,
     seoTitles, trendingItems, isLoadingTitles, isLoadingTrends,
     isGenerating,
-    setTopic, setKeywords, setKeywordDensity, setDisease, setCategory, setPersona, setTone, setAudienceMode,
+    setTopic, setBlogTitle, setKeywords, setKeywordDensity, setDisease, setCategory, setPersona, setTone, setAudienceMode,
     setImageStyle, setImageCount, setImageAspectRatio, setTextLength, setHospitalName,
     setSelectedHospitalAddress,
     setHomepageUrl, setClinicContext, setCrawlProgress,
@@ -123,6 +129,7 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
     onCheckRanks: handleCheckRanks,
     onRecommendTitles: handleRecommendTitles,
     onRecommendTrends: handleRecommendTrends,
+    onSaveSettings, onLoadSettings, settingsToast,
   } = props;
 
   const inputCls = "w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all";
@@ -146,59 +153,34 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
               placeholder="병원 이름을 입력하세요 (예: OO치과)"
               className={inputCls}
             />
+            {hospitalNameFromProfile && hospitalName === hospitalNameFromProfile && (
+              <p className="text-[10px] text-blue-400 mt-1">회원 정보에서 자동 입력됨</p>
+            )}
           </div>
 
-          {/* 병원 홈페이지/블로그 URL 입력 */}
+          {/* 진료과 */}
+          <select value={category} onChange={e => setCategory(e.target.value as ContentCategory)} className={inputCls} disabled={isGenerating} aria-label="진료과 선택">
+            {CATEGORIES.map(cat => <option key={cat.value} value={cat.value}>{cat.label}</option>)}
+          </select>
+
+          {/* 병원 주소 + 키워드 분석 */}
           {hospitalName && (
             <div>
-              <p className="text-[11px] font-semibold text-slate-500 mb-1.5">병원 홈페이지/블로그 URL</p>
+              <label className={labelCls}>병원 주소 (키워드 분석용)</label>
               <div className="flex gap-1.5">
-                <input
-                  type="url"
-                  value={homepageUrl}
-                  onChange={e => { setHomepageUrl(e.target.value); setClinicContext(null); setCrawlProgress(''); }}
-                  placeholder="https://blog.naver.com/..."
-                  className="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-xs focus:border-blue-400 outline-none bg-white"
-                />
-                <button
-                  type="button"
-                  onClick={handleCrawlHomepage}
-                  disabled={isCrawling || !homepageUrl.trim()}
-                  className="px-3 py-2 rounded-lg text-xs font-semibold transition-all bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-40 whitespace-nowrap"
-                >
-                  {isCrawling ? '분석 중...' : '분석'}
+                <input type="text" value={selectedHospitalAddress} onChange={e => setSelectedHospitalAddress(e.target.value)}
+                  placeholder="예: 서울 강남구 역삼동" className="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-xs focus:border-blue-400 outline-none bg-white" />
+                <button type="button" onClick={handleAnalyzeKeywords}
+                  disabled={isAnalyzingKeywords || !selectedHospitalAddress.trim()}
+                  className="px-3 py-2 rounded-lg text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 whitespace-nowrap">
+                  {isAnalyzingKeywords ? '분석 중...' : '🔍 키워드 분석'}
                 </button>
               </div>
-              {crawlProgress && (
-                <p className="mt-1 text-[10px] text-slate-400">{crawlProgress}</p>
-              )}
-              {clinicContext && (
-                <div className="mt-1.5 p-2 bg-emerald-50 rounded-lg border border-emerald-100">
-                  <p className="text-[10px] font-semibold text-emerald-700 mb-1">
-                    분석 결과 (신뢰도 {Math.round(clinicContext.confidence * 100)}%)
-                  </p>
-                  {clinicContext.actualServices.length > 0 && (
-                    <p className="text-[10px] text-slate-600">
-                      서비스: {clinicContext.actualServices.join(', ')}
-                    </p>
-                  )}
-                  {clinicContext.specialties.length > 0 && (
-                    <p className="text-[10px] text-slate-600">
-                      특화: {clinicContext.specialties.join(', ')}
-                    </p>
-                  )}
-                  {clinicContext.locationSignals.length > 0 && (
-                    <p className="text-[10px] text-slate-600">
-                      지역: {clinicContext.locationSignals.join(', ')}
-                    </p>
-                  )}
-                </div>
-              )}
             </div>
           )}
 
-          {/* 키워드 분석 버튼 */}
-          {selectedHospitalAddress && hospitalName && (
+          {/* 키워드 분석 결과 */}
+          {selectedHospitalAddress && hospitalName && showKeywordPanel && (
             <button
               type="button"
               onClick={handleAnalyzeKeywords}
@@ -366,32 +348,6 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
             </div>
           )}
 
-          {/* 진료과 + 대상 독자 (old 동일: grid-cols-2 select) */}
-          <div className="grid grid-cols-2 gap-3">
-            <select
-              value={category}
-              onChange={e => setCategory(e.target.value as ContentCategory)}
-              className={inputCls}
-              disabled={isGenerating}
-              aria-label="진료과 선택"
-            >
-              {CATEGORIES.map(cat => (
-                <option key={cat.value} value={cat.value}>{cat.label}</option>
-              ))}
-            </select>
-            <select
-              value={audienceMode}
-              onChange={e => setAudienceMode(e.target.value as AudienceMode)}
-              className={inputCls}
-              disabled={isGenerating}
-              aria-label="타겟 청중 선택"
-            >
-              <option value="환자용(친절/공감)">환자용 (친절/공감)</option>
-              <option value="보호자용(가족걱정)">보호자용 (부모님/자녀 걱정)</option>
-              <option value="전문가용(신뢰/정보)">전문가용 (신뢰/정보)</option>
-            </select>
-          </div>
-
           {/* 주제 */}
           <div>
             <label className={labelCls}>주제 *</label>
@@ -405,39 +361,14 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
             />
           </div>
 
-          {/* 키워드 */}
+          {/* 제목 */}
           <div>
-            <input
-              type="text"
-              value={keywords}
-              onChange={e => setKeywords(e.target.value)}
-              placeholder="SEO 키워드 (예: 강남 치과, 임플란트 가격)"
-              className={inputCls}
-            />
-          </div>
-
-          {/* 키워드 반복 횟수 */}
-          {keywords.trim() && (
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] text-slate-400 whitespace-nowrap">반복</span>
-              {(['auto', 3, 5, 7] as const).map(opt => (
-                <button key={opt} type="button" onClick={() => setKeywordDensity(opt)}
-                  className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all ${keywordDensity === opt ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>
-                  {opt === 'auto' ? '자동' : `${opt}회`}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* 질환명 */}
-          <div>
-            <input
-              type="text"
-              value={disease}
-              onChange={e => setDisease(e.target.value)}
-              placeholder="질환명 (예: 치주염, 충치) - 글의 실제 주제"
-              className={inputCls}
-            />
+            <label className={labelCls}>
+              제목
+              <span className="text-[10px] text-slate-400 ml-1.5 font-normal">비워두면 주제가 제목이 됩니다</span>
+            </label>
+            <input type="text" value={blogTitle} onChange={e => setBlogTitle(e.target.value)}
+              placeholder="예: 임플란트 수술 후 관리법, 미리 살펴볼 점" className={inputCls} />
           </div>
 
           {/* AI 제목 추천 + 트렌드 주제 (2버튼 가로) */}
@@ -456,7 +387,7 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
           {seoTitles.length > 0 && (
             <div className="space-y-1">
               {seoTitles.map((item, idx) => (
-                <button key={idx} type="button" onClick={() => setTopic(item.title)}
+                <button key={idx} type="button" onClick={() => setBlogTitle(item.title)}
                   className="w-full text-left px-3 py-2 bg-white border border-slate-100 rounded-lg hover:border-blue-400 transition-all group relative">
                   <div className="absolute top-2 right-2 text-[10px] font-semibold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">SEO {item.score}</div>
                   <span className="text-[10px] text-slate-400 block">{item.type}</span>
@@ -480,17 +411,90 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
             </div>
           )}
 
-          {/* 상세 설정 토글 */}
-          <button type="button" onClick={() => setShowAdvanced(!showAdvanced)}
-            className="w-full flex items-center justify-between px-3 py-2 bg-slate-50 hover:bg-slate-100 rounded-lg text-xs font-semibold text-slate-500 transition-all border border-slate-100">
-            <span>⚙️ 상세 설정</span>
-            <svg className={`w-4 h-4 transition-transform ${showAdvanced ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
-          </button>
+          {/* 세부 옵션 토글 */}
+          {(() => {
+            const advancedCount = [
+              audienceMode !== '환자용(친절/공감)',
+              keywords.trim(),
+              disease.trim(),
+              homepageUrl.trim(),
+              textLength !== 2500,
+              imageCount !== 2,
+              imageStyle !== 'photo',
+              customSubheadings.trim(),
+              includeFaq,
+              includeHospitalIntro,
+            ].filter(Boolean).length;
+            return (
+              <div className="flex gap-1.5">
+                <button type="button" onClick={() => setShowAdvanced(!showAdvanced)}
+                  className="flex-1 flex items-center justify-between px-3 py-2 bg-slate-50 hover:bg-slate-100 rounded-lg text-xs font-semibold text-slate-500 transition-all border border-slate-100">
+                  <span>⚙️ 세부 옵션{advancedCount > 0 ? ` (${advancedCount}개)` : ''}</span>
+                  <svg className={`w-4 h-4 transition-transform ${showAdvanced ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
+                </button>
+                {onSaveSettings && <button type="button" onClick={onSaveSettings} className="px-2.5 py-2 bg-blue-50 hover:bg-blue-100 rounded-lg text-xs text-blue-600 border border-blue-100" title="현재 설정 저장">💾</button>}
+                {onLoadSettings && <button type="button" onClick={onLoadSettings} className="px-2.5 py-2 bg-slate-50 hover:bg-slate-100 rounded-lg text-xs text-slate-500 border border-slate-100" title="저장된 설정 불러오기">📂</button>}
+              </div>
+            );
+          })()}
 
-          {/* 상세 설정 패널 */}
+          {/* 세부 옵션 패널 */}
           {showAdvanced && (
           <div className="space-y-4 p-3 bg-slate-50 rounded-xl border border-slate-100">
             <div className="space-y-3">
+              {/* 대상 독자 */}
+              <div>
+                <label className={labelCls}>대상 독자</label>
+                <select value={audienceMode} onChange={e => setAudienceMode(e.target.value as AudienceMode)} className={inputCls} disabled={isGenerating}>
+                  <option value="환자용(친절/공감)">환자용 (친절/공감)</option>
+                  <option value="보호자용(가족걱정)">보호자용 (부모님/자녀 걱정)</option>
+                  <option value="전문가용(신뢰/정보)">전문가용 (신뢰/정보)</option>
+                </select>
+              </div>
+              {/* 키워드 */}
+              <div>
+                <label className={labelCls}>SEO 키워드</label>
+                <input type="text" value={keywords} onChange={e => setKeywords(e.target.value)} placeholder="예: 강남 치과, 임플란트 가격" className={inputCls} />
+              </div>
+              {keywords.trim() && (
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] text-slate-400 whitespace-nowrap">반복</span>
+                  {(['auto', 3, 5, 7] as const).map(opt => (
+                    <button key={opt} type="button" onClick={() => setKeywordDensity(opt)}
+                      className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all ${keywordDensity === opt ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>
+                      {opt === 'auto' ? '자동' : `${opt}회`}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {/* 질환명 */}
+              <div>
+                <label className={labelCls}>질환명</label>
+                <input type="text" value={disease} onChange={e => setDisease(e.target.value)} placeholder="예: 치주염, 충치 — 글의 실제 주제" className={inputCls} />
+              </div>
+              {/* 블로그 URL */}
+              {hospitalName && (
+                <div>
+                  <label className={labelCls}>병원 홈페이지/블로그 URL</label>
+                  <div className="flex gap-1.5">
+                    <input type="url" value={homepageUrl} onChange={e => { setHomepageUrl(e.target.value); setClinicContext(null); setCrawlProgress(''); }}
+                      placeholder="https://blog.naver.com/..." className="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-xs focus:border-blue-400 outline-none bg-white" />
+                    <button type="button" onClick={handleCrawlHomepage} disabled={isCrawling || !homepageUrl.trim()}
+                      className="px-3 py-2 rounded-lg text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-40 whitespace-nowrap">
+                      {isCrawling ? '분석 중...' : '분석'}
+                    </button>
+                  </div>
+                  {crawlProgress && <p className="mt-1 text-[10px] text-slate-400">{crawlProgress}</p>}
+                  {clinicContext && (
+                    <div className="mt-1.5 p-2 bg-emerald-50 rounded-lg border border-emerald-100">
+                      <p className="text-[10px] font-semibold text-emerald-700 mb-1">분석 결과 (신뢰도 {Math.round(clinicContext.confidence * 100)}%)</p>
+                      {clinicContext.actualServices.length > 0 && <p className="text-[10px] text-slate-600">서비스: {clinicContext.actualServices.join(', ')}</p>}
+                      {clinicContext.specialties.length > 0 && <p className="text-[10px] text-slate-600">특화: {clinicContext.specialties.join(', ')}</p>}
+                      {clinicContext.locationSignals.length > 0 && <p className="text-[10px] text-slate-600">지역: {clinicContext.locationSignals.join(', ')}</p>}
+                    </div>
+                  )}
+                </div>
+              )}
               {/* 글 길이 */}
               <div>
                 <p className="text-xs font-semibold text-slate-500 mb-1.5">글 길이</p>
@@ -670,6 +674,11 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
             )}
           </button>
         </form>
+        {settingsToast && (
+          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2 bg-slate-800 text-white text-sm font-bold rounded-xl shadow-lg">
+            {settingsToast}
+          </div>
+        )}
       </div>
   );
 }
