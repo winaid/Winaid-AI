@@ -64,12 +64,6 @@ const MARK_CHANGES = `
 - 표현을 바꾼 부분: <mark class="changed">변경된 텍스트</mark>
 - 삭제는 그냥 삭제 (표시 불필요)`;
 
-/*
- * natural 모드 전후 비교:
- * 원문: "임플란트는 치아를 대체하는 시술인데요. 잇몸뼈에 인공치근을 심는 거예요."
- * ✅ 좋은 보정: "임플란트는 치아를 대체하는 시술인데요. 잇몸뼈에 인공치근을 심게 됩니다."  (어투 유지, 어색한 부분만 수정)
- * ❌ 나쁜 보정: "임플란트는 치아를 대체하는 시술입니다. 잇몸뼈에 인공치근을 식립합니다."  (어투를 ~입니다로 일괄 변경)
- */
 const MODE_INSTRUCTIONS: Record<RefineMode, string> = {
   natural: `아래 글을 더 자연스럽고 읽기 편하게 다듬어주세요.
 
@@ -82,6 +76,12 @@ const MODE_INSTRUCTIONS: Record<RefineMode, string> = {
 - 불필요한 반복 표현 제거
 - AI 특유의 기계적 표현 → 사람이 쓸 법한 표현 (예: "해당 부분" → "이 부분", "~하는 것이 중요합니다" → 문맥에 맞게)
 - 같은 종결어미 연속 반복 → 다양하게 변주
+
+[변환 예시]
+❌ "임플란트는 치아를 대체하는 좋은 시술입니다. 많은 분들이 만족하고 계십니다."
+✅ "임플란트는 빠진 치아를 대신하는 시술입니다. 잇몸뼈에 나사를 심고, 그 위에 치아를 얹습니다."
+❌ "해당 치료의 경우 다양한 장점이 있는 것으로 알려져 있습니다."
+✅ "이 치료는 인접 치아를 깎지 않아도 되고, 저작력이 자연치아의 80~90%까지 회복됩니다."
 
 [절대 하지 말 것]
 - 원문의 종결어미(~요/~죠/~입니다)를 일괄 변경
@@ -102,18 +102,41 @@ ${PRESERVE_TONE_RULES}`,
 - 원인-결과를 명확히 연결
   예: "잇몸병이 생길 수 있습니다" → "치주 포켓에 세균이 축적되면 잇몸 염증으로 진행될 수 있습니다"
 - 단계/분류가 있으면 구조화 (초기/중기/후기 등)
+
+[진료과별 전문 용어 예시]
+- 피부과: "피부 벗기기" → "화학 박피(chemical peeling)", "주름 펴기" → "보톡스(보툴리눔톡신 A 주사)"
+- 정형외과: "무릎 물차기" → "관절 천자(joint aspiration)", "디스크 수술" → "추간판 절제술(discectomy)"
 ${BASE_RULES}
 ${FORMAL_RULES}`,
 
   shorter: `아래 글을 핵심만 남기고 간결하게 줄여주세요.
-- 반복되는 내용 제거
-- 부연 설명 최소화
-- 핵심 메시지는 반드시 유지
-- 원본의 50~70% 분량
+
+[삭제 우선순위 — 위에서부터 먼저 삭제]
+1순위: 같은 내용을 다른 표현으로 반복한 문장
+2순위: "~할 수 있습니다", "~에 도움이 됩니다" 같은 뭉뚱그리기 문장
+3순위: 부연 설명 (핵심 정보가 없는 "즉,", "다시 말해," 문장)
+4순위: 마무리 인사/권유가 2문단 이상이면 1문단으로 압축
+
+[절대 삭제 금지]
+- 구체적 수치/기간/횟수가 포함된 문장
+- 소제목 (구조 유지)
+- 의료법 관련 주의 문구
+
+[변환 예시]
+원문 (3문장): "잇몸병은 초기에 발견하면 치료가 비교적 간단합니다. 하지만 진행되면 치료 기간이 길어지고 비용도 늘어날 수 있습니다. 따라서 정기적인 검진을 통해 조기에 발견하는 것이 중요합니다."
+✅ 축소 (1문장): "잇몸병은 초기 발견 시 치료가 간단하지만, 진행되면 기간과 비용이 늘어날 수 있어 정기 검진이 중요합니다."
+
+원본의 50~70% 분량
 ${BASE_RULES}
 ${PRESERVE_TONE_RULES}`,
 
   longer: `아래 글의 내용을 더 풍성하고 구체적으로 확장해주세요.
+
+[확장 우선순위]
+1순위: 구체적 수치/기간이 없는 문장에 수치 보강
+2순위: "왜?"가 빠진 곳에 원인/이유 1문장 추가
+3순위: 환자 관점 디테일 (시술 후 느낌, 회복 중 생활, 음식 제한 등)
+4순위: 비교/대안 정보 (다른 치료 옵션과의 차이)
 
 [확장 방법 — 아무거나 늘리지 마세요]
 - 각 소제목 아래에 "왜?"를 한 번 더 설명 추가
@@ -132,11 +155,24 @@ ${PRESERVE_TONE_RULES}`,
 ${BASE_RULES}
 ${FORMAL_RULES}`,
 
-  seo: `아래 글을 네이버/구글 검색 노출에 유리하도록 구조를 개선해주세요.
-- 소제목(<h3>)을 활용하여 섹션을 나눔
-- 핵심 키워드가 제목, 첫 문단, 소제목에 자연스럽게 포함
-- 문단 길이를 적절하게 조절 (300자 이내)
-- 내용 자체는 바꾸지 않고 구조만 개선
+  seo: `아래 글을 네이버 검색 노출에 유리하도록 구조를 개선해주세요.
+
+[네이버 SEO 구체적 규칙]
+- 소제목: <h3>만 사용. 각 소제목에 핵심 키워드 1개 이상 포함
+- 첫 문단: 핵심 키워드가 자연스럽게 2회 이상 등장
+- 문단 길이: 3~5문장 (너무 짧으면 스마트블록에 안 잡힘, 너무 길면 가독성 저하)
+- 소제목 간격: 2~3문단마다 소제목 1개
+- 키워드 밀도: 전체 글에서 핵심 키워드가 자연스럽게 5~8회 등장
+- 네이버 스마트블록 최적화: 질문형 소제목 1~2개 포함 ("~할까요?", "~일까요?")
+
+[하지 말 것]
+- 키워드 억지 삽입 (문맥에 안 맞는 곳에 끼워넣기)
+- 소제목 순서 변경 (정보 흐름은 유지)
+- 내용 자체를 바꾸지 말고 구조만 개선
+
+[변환 예시]
+❌ 소제목: "치료 방법" → ✅ "임플란트 치료, 어떻게 진행될까요?"
+❌ 첫 문단: "치아가 빠지면 불편합니다." → ✅ "임플란트는 빠진 치아를 대체하는 대표적인 치료법입니다."
 ${BASE_RULES}
 ${FORMAL_RULES}`,
 };
@@ -195,6 +231,16 @@ export function buildChatRefinePrompt(req: ChatRefineRequest): {
   const wantsMedLaw = /의료법|의료광고|금지|위반|법적/.test(userMessage);
   const wantsDentalLab = /기공소|보철|기공사|지르코니아|CAD|밀링/.test(userMessage);
 
+  // 구조 변경
+  const wantsReorder = /순서|위치.*바꿔|앞으로|뒤로|올려|내려/.test(userMessage);
+  const wantsSubheading = /소제목.*바꿔|소제목.*수정|제목.*변경/.test(userMessage);
+  const wantsEmphasis = /강조|볼드|굵게|하이라이트|중요/.test(userMessage);
+
+  // 콘텐츠 특화
+  const wantsExample = /예시|사례|예를.*들|경우/.test(userMessage);
+  const wantsFAQ = /FAQ|자주.*묻|질문|Q&A/.test(userMessage);
+  const wantsSimplify = /쉽게|간단히|이해.*쉽|풀어/.test(userMessage);
+
   // 구체성 판단
   const isSpecific = !!(targetSection || targetIntro || targetConclusion || targetSpecificText);
 
@@ -228,10 +274,22 @@ export function buildChatRefinePrompt(req: ChatRefineRequest): {
     actionInstruction = '기공소/보철 전문성 보강: 보철 재료(지르코니아/PFM/e.max), 기공 과정(CAD/CAM, 밀링), 기공사 역할 등 디테일 추가.';
   } else if (wantsMedLaw) {
     actionInstruction = '의료광고법 수정: 위반 가능성이 있는 표현을 찾아 중립적으로 수정하세요.';
+  } else if (wantsReorder) {
+    actionInstruction = '순서 변경: 지정된 문단/소제목의 위치를 이동하세요. 앞뒤 연결이 자연스럽게.';
+  } else if (wantsSubheading) {
+    actionInstruction = '소제목 수정: 해당 소제목을 변경하세요. 네이버 검색 친화적이고 짧게 (10~25자).';
+  } else if (wantsEmphasis) {
+    actionInstruction = '강조: 해당 부분을 <strong> 태그로 감싸거나 문장을 더 임팩트 있게 수정하세요.';
+  } else if (wantsExample) {
+    actionInstruction = '예시 추가: 구체적인 사례나 비유를 추가하세요. 환자가 체감할 수 있는 예시로.';
+  } else if (wantsFAQ) {
+    actionInstruction = 'FAQ 추가: 환자가 자주 묻는 질문 3~5개를 글 마지막에 Q&A 형태로 추가하세요.';
+  } else if (wantsSimplify) {
+    actionInstruction = '쉽게 풀기: 전문 용어에 괄호 설명을 추가하고, 복잡한 문장을 2~3개로 나누세요.';
   }
 
   // 모호한 요청 시 보수적 접근
-  if (!isSpecific && !wantsDelete && !wantsReplace && !wantsAdd && !wantsTone && !wantsFact && !wantsSEO && !wantsMedLaw && !wantsDentalLab) {
+  if (!isSpecific && !wantsDelete && !wantsReplace && !wantsAdd && !wantsTone && !wantsFact && !wantsSEO && !wantsMedLaw && !wantsDentalLab && !wantsReorder && !wantsSubheading && !wantsEmphasis && !wantsExample && !wantsFAQ && !wantsSimplify) {
     actionInstruction += '\n사용자의 요청이 구체적이지 않습니다. 수정 범위를 최소화하세요. 확실한 부분만 수정하고, 불확실하면 원본을 유지하세요.';
   }
 
@@ -265,7 +323,7 @@ ${actionInstruction ? `\n[동작 지침] ${actionInstruction}` : ''}
 • 표현 변경: ${wantsRephrase ? '예' : '아니오'}
 • 자연스럽게: ${wantsHumanize ? '예' : '아니오'}
 • 특정 위치 지정: ${isSpecific ? '예' : '아니오 (전체 대상)'}
-${wantsDelete ? '• 삭제 요청: 예' : ''}${wantsAdd ? '• 추가 요청: 예' : ''}${wantsTone ? '• 톤 변경: 예' : ''}${wantsFact ? '• 팩트 보강: 예' : ''}${wantsSEO ? '• SEO 개선: 예' : ''}${wantsMedLaw ? '• 의료법 수정: 예' : ''}${wantsDentalLab ? '• 기공소/보철 보강: 예' : ''}
+${wantsDelete ? '• 삭제 요청: 예' : ''}${wantsAdd ? '• 추가 요청: 예' : ''}${wantsTone ? '• 톤 변경: 예' : ''}${wantsFact ? '• 팩트 보강: 예' : ''}${wantsSEO ? '• SEO 개선: 예' : ''}${wantsMedLaw ? '• 의료법 수정: 예' : ''}${wantsDentalLab ? '• 기공소/보철 보강: 예' : ''}${wantsReorder ? '• 순서 변경: 예' : ''}${wantsSubheading ? '• 소제목 수정: 예' : ''}${wantsEmphasis ? '• 강조: 예' : ''}${wantsExample ? '• 예시 추가: 예' : ''}${wantsFAQ ? '• FAQ 추가: 예' : ''}${wantsSimplify ? '• 쉽게 풀기: 예' : ''}
 
 현재 글자 수: ${currentLength}자
 ${crawledContent ? `\n[참고 자료 — 출처 표시 없이 내용만 참고]\n${crawledContent}` : ''}
