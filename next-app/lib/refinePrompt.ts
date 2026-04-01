@@ -191,18 +191,73 @@ export function buildChatRefinePrompt(req: ChatRefineRequest): {
 } {
   const { workingContent, userMessage, crawledContent } = req;
 
-  // 의도 분석
-  const wantsExpand = /자세히|자세하게|더 쓰|길게|확장|추가|더 설명|상세|구체적|늘려/.test(userMessage);
+  // ── 의도 분석 (대폭 확장) ──
+
+  // 기본 동작
+  const wantsExpand = /자세히|자세하게|더 쓰|길게|확장|더 설명|상세|구체적|늘려|보강/.test(userMessage);
   const wantsShorter = /짧게|줄여|간결|요약|압축/.test(userMessage);
   const wantsRephrase = /다시|다르게|바꿔|고쳐|수정/.test(userMessage);
   const wantsHumanize = /사람|자연|AI|인공|딱딱|부드럽/.test(userMessage);
 
-  // 현재 글자 수 (HTML 태그 제거)
+  // 위치/범위 특정
+  const targetSection = userMessage.match(/(\d+)\s*번째?\s*(소제목|문단|섹션)/);
+  const targetIntro = /도입|서론|첫\s*문단|시작\s*부분/.test(userMessage);
+  const targetConclusion = /결론|마무리|마지막|끝\s*부분/.test(userMessage);
+  const targetSpecificText = userMessage.match(/["""](.+?)["""]/);
+
+  // 동작 유형
+  const wantsDelete = /삭제|지워|빼|제거/.test(userMessage);
+  const wantsReplace = /바꿔|교체|대신|으로\s*변경/.test(userMessage);
+  const wantsAdd = /추가|넣어|더해|삽입|CTA|콜투액션/.test(userMessage);
+  const wantsTone = /톤|분위기|느낌|어투|말투/.test(userMessage);
+  const wantsFact = /수치|데이터|통계|근거|출처|팩트/.test(userMessage);
+  const wantsSEO = /SEO|키워드|검색|네이버|상위노출/.test(userMessage);
+  const wantsMedLaw = /의료법|의료광고|금지|위반|법적/.test(userMessage);
+
+  // 구체성 판단
+  const isSpecific = !!(targetSection || targetIntro || targetConclusion || targetSpecificText);
+
+  // ── 수정 범위 지시 ──
+  let scopeInstruction = '';
+  if (targetSection) {
+    scopeInstruction = `\n⚠️ 수정 범위: ${targetSection[1]}번째 ${targetSection[2]}만 수정하세요. 나머지는 원본 그대로 유지.`;
+  } else if (targetIntro) {
+    scopeInstruction = '\n⚠️ 수정 범위: 도입부(첫 번째 <h3> 태그 이전)만 수정하세요. 나머지는 원본 그대로.';
+  } else if (targetConclusion) {
+    scopeInstruction = '\n⚠️ 수정 범위: 마지막 소제목 섹션만 수정하세요. 나머지는 원본 그대로.';
+  } else if (targetSpecificText) {
+    scopeInstruction = `\n⚠️ 수정 범위: "${targetSpecificText[1]}" 부분만 수정하세요. 나머지는 원본 그대로.`;
+  }
+
+  // ── 동작별 지침 ──
+  let actionInstruction = '';
+  if (wantsDelete) {
+    actionInstruction = '삭제 요청: 해당 부분을 제거하고, 앞뒤 문맥이 자연스럽게 연결되도록 다듬으세요.';
+  } else if (wantsReplace) {
+    actionInstruction = '교체 요청: 해당 표현을 사용자가 원하는 방향으로 바꾸되, 전체 톤을 유지하세요.';
+  } else if (wantsAdd) {
+    actionInstruction = '추가 요청: 요청된 내용을 적절한 위치에 자연스럽게 삽입하세요. 기존 흐름을 깨지 마세요.';
+  } else if (wantsTone) {
+    actionInstruction = '톤 변경: 전체 글의 어투/분위기를 요청대로 조정하세요.';
+  } else if (wantsFact) {
+    actionInstruction = '팩트 보강: 관련 수치, 통계, 의학적 근거를 추가하세요. 확실하지 않은 수치는 넣지 마세요.';
+  } else if (wantsSEO) {
+    actionInstruction = 'SEO 개선: 키워드를 자연스럽게 배치하고 소제목을 검색 친화적으로 다듬으세요.';
+  } else if (wantsMedLaw) {
+    actionInstruction = '의료광고법 수정: 위반 가능성이 있는 표현을 찾아 중립적으로 수정하세요.';
+  }
+
+  // 모호한 요청 시 보수적 접근
+  if (!isSpecific && !wantsDelete && !wantsReplace && !wantsAdd && !wantsTone && !wantsFact && !wantsSEO && !wantsMedLaw) {
+    actionInstruction += '\n사용자의 요청이 구체적이지 않습니다. 수정 범위를 최소화하세요. 확실한 부분만 수정하고, 불확실하면 원본을 유지하세요.';
+  }
+
   const textOnly = workingContent.replace(/<[^>]+>/g, '').trim();
   const currentLength = textOnly.length;
 
   const systemInstruction = `당신은 스마트 글 보정 AI입니다.
 사용자 요청을 정확히 이해하고, 요청한 부분만 수정합니다.
+요청하지 않은 부분은 원본 그대로 유지합니다. 절대 전체를 재작성하지 마세요.
 순수 HTML(<p>, <h2>, <h3>)로만 출력합니다. 설명/코멘트 금지.`;
 
   const prompt = `[독자 인식]
@@ -213,12 +268,16 @@ ${COMMON_RULES}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🎯 사용자 요청: ${userMessage}
+${scopeInstruction}
+${actionInstruction ? `\n[동작 지침] ${actionInstruction}` : ''}
 
 [의도 파악]
 • 확장: ${wantsExpand ? '예' : '아니오'}
 • 축소: ${wantsShorter ? '예' : '아니오'}
 • 표현 변경: ${wantsRephrase ? '예' : '아니오'}
 • 자연스럽게: ${wantsHumanize ? '예' : '아니오'}
+• 특정 위치 지정: ${isSpecific ? '예' : '아니오 (전체 대상)'}
+${wantsDelete ? '• 삭제 요청: 예' : ''}${wantsAdd ? '• 추가 요청: 예' : ''}${wantsTone ? '• 톤 변경: 예' : ''}${wantsFact ? '• 팩트 보강: 예' : ''}${wantsSEO ? '• SEO 개선: 예' : ''}${wantsMedLaw ? '• 의료법 수정: 예' : ''}
 
 현재 글자 수: ${currentLength}자
 ${crawledContent ? `\n[참고 자료 — 출처 표시 없이 내용만 참고]\n${crawledContent}` : ''}
@@ -229,11 +288,12 @@ ${crawledContent ? `\n[참고 자료 — 출처 표시 없이 내용만 참고]\
 ${workingContent}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-${wantsExpand ? '📈 확장 모드: 1~2문장 추가 허용, 현재의 130~150%' : ''}
-${wantsShorter ? '📉 축소 모드: 핵심만 남기기, 현재의 60~80%' : ''}
-${wantsHumanize ? '🗣️ 자연스럽게: AI 문체 → 사람 말맛으로' : ''}
+${wantsExpand ? '📈 확장 모드: 요청 부분에 1~2문장 추가, 전체 130~150%' : ''}
+${wantsShorter ? '📉 축소 모드: 핵심만 남기기, 전체 60~80%' : ''}
+${wantsHumanize ? '🗣️ 자연스럽게: AI 문체 → 사람 말맛으로. 원문 어투 유지.' : ''}
 
-요청에 따라 수정한 전체 글을 HTML로 출력하세요. 수정하지 않은 부분도 포함하여 전체를 출력하세요.`;
+수정한 전체 글을 HTML로 출력하세요. 수정하지 않은 부분도 포함하여 전체를 출력하세요.
+수정한 부분은 <mark class="changed">변경된 텍스트</mark>, 추가한 부분은 <mark class="added">추가된 텍스트</mark>로 표시하세요.`;
 
   return { systemInstruction, prompt };
 }
