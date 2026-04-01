@@ -216,6 +216,7 @@ export function buildChatRefinePrompt(req: ChatRefineRequest): {
   const wantsFact = /수치|데이터|통계|근거|출처|팩트/.test(userMessage);
   const wantsSEO = /SEO|키워드|검색|네이버|상위노출/.test(userMessage);
   const wantsMedLaw = /의료법|의료광고|금지|위반|법적/.test(userMessage);
+  const wantsDentalLab = /기공소|보철|기공사|지르코니아|CAD|밀링/.test(userMessage);
 
   // 구체성 판단
   const isSpecific = !!(targetSection || targetIntro || targetConclusion || targetSpecificText);
@@ -246,12 +247,14 @@ export function buildChatRefinePrompt(req: ChatRefineRequest): {
     actionInstruction = '팩트 보강: 관련 수치, 통계, 의학적 근거를 추가하세요. 확실하지 않은 수치는 넣지 마세요.';
   } else if (wantsSEO) {
     actionInstruction = 'SEO 개선: 키워드를 자연스럽게 배치하고 소제목을 검색 친화적으로 다듬으세요.';
+  } else if (wantsDentalLab) {
+    actionInstruction = '기공소/보철 전문성 보강: 보철 재료(지르코니아/PFM/e.max), 기공 과정(CAD/CAM, 밀링), 기공사 역할 등 디테일 추가.';
   } else if (wantsMedLaw) {
     actionInstruction = '의료광고법 수정: 위반 가능성이 있는 표현을 찾아 중립적으로 수정하세요.';
   }
 
   // 모호한 요청 시 보수적 접근
-  if (!isSpecific && !wantsDelete && !wantsReplace && !wantsAdd && !wantsTone && !wantsFact && !wantsSEO && !wantsMedLaw) {
+  if (!isSpecific && !wantsDelete && !wantsReplace && !wantsAdd && !wantsTone && !wantsFact && !wantsSEO && !wantsMedLaw && !wantsDentalLab) {
     actionInstruction += '\n사용자의 요청이 구체적이지 않습니다. 수정 범위를 최소화하세요. 확실한 부분만 수정하고, 불확실하면 원본을 유지하세요.';
   }
 
@@ -280,7 +283,7 @@ ${actionInstruction ? `\n[동작 지침] ${actionInstruction}` : ''}
 • 표현 변경: ${wantsRephrase ? '예' : '아니오'}
 • 자연스럽게: ${wantsHumanize ? '예' : '아니오'}
 • 특정 위치 지정: ${isSpecific ? '예' : '아니오 (전체 대상)'}
-${wantsDelete ? '• 삭제 요청: 예' : ''}${wantsAdd ? '• 추가 요청: 예' : ''}${wantsTone ? '• 톤 변경: 예' : ''}${wantsFact ? '• 팩트 보강: 예' : ''}${wantsSEO ? '• SEO 개선: 예' : ''}${wantsMedLaw ? '• 의료법 수정: 예' : ''}
+${wantsDelete ? '• 삭제 요청: 예' : ''}${wantsAdd ? '• 추가 요청: 예' : ''}${wantsTone ? '• 톤 변경: 예' : ''}${wantsFact ? '• 팩트 보강: 예' : ''}${wantsSEO ? '• SEO 개선: 예' : ''}${wantsMedLaw ? '• 의료법 수정: 예' : ''}${wantsDentalLab ? '• 기공소/보철 보강: 예' : ''}
 
 현재 글자 수: ${currentLength}자
 ${crawledContent ? `\n[참고 자료 — 출처 표시 없이 내용만 참고]\n${crawledContent}` : ''}
