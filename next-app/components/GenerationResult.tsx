@@ -358,17 +358,19 @@ export function ResultPanel({
 
   const handleCopy = () => {
     if (typeof navigator === 'undefined') return;
-    // 편집된 HTML이 있으면 그것을 복사, 없으면 원본
     const editedHtml = editorRef.current?.innerHTML || renderedHtml;
     const plainText = editorRef.current?.innerText || content;
+    // 출처 블록 제거 후 복사
+    const htmlWithoutRefs = editedHtml.replace(/<div[^>]*class="references-footer"[^>]*>[\s\S]*?<\/div>/gi, '');
+    const plainWithoutRefs = plainText.replace(/참고 자료[\s\S]*$/, '').trim();
     try {
-      const blob = new Blob([editedHtml], { type: 'text/html' });
-      const plainBlob = new Blob([plainText], { type: 'text/plain' });
+      const blob = new Blob([htmlWithoutRefs], { type: 'text/html' });
+      const plainBlob = new Blob([plainWithoutRefs], { type: 'text/plain' });
       navigator.clipboard.write([
         new ClipboardItem({ 'text/html': blob, 'text/plain': plainBlob }),
       ]);
     } catch {
-      navigator.clipboard.writeText(plainText);
+      navigator.clipboard.writeText(plainWithoutRefs);
     }
     setCopyFeedback(true);
     setTimeout(() => setCopyFeedback(false), 1500);
@@ -564,6 +566,10 @@ export function ResultPanel({
               .rp-preview .content-image-wrapper img { max-width: 100%; height: auto; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.1); cursor: pointer; transition: opacity 0.2s; }
               .rp-preview .content-image-wrapper img:hover { opacity: 0.85; }
               .rp-preview .content-image-wrapper img::after { content: '🔄 클릭하여 재생성'; }
+
+              /* ── references footer ── */
+              .rp-preview .references-footer { opacity: 0.6; position: relative; user-select: none; -webkit-user-select: none; }
+              .rp-preview .references-footer::after { content: '📋 블로그 복사 시 이 부분은 제외됩니다'; display: block; margin-top: 8px; font-size: 10px; color: #cbd5e1; font-style: italic; }
 
               /* ── modern ── */
               .rp-theme-modern { background: #fff; padding: 40px; color: #333; }

@@ -103,8 +103,10 @@ function convertToWordCompatibleHtml(html: string): string {
 
 /** Word (.doc) 다운로드 — 이미지를 base64로 임베딩 */
 export async function downloadWord(html: string): Promise<void> {
+  // 출처 블록 제거 (워드에는 포함하지 않음)
+  const htmlWithoutRefs = html.replace(/<div[^>]*class="references-footer"[^>]*>[\s\S]*?<\/div>/gi, '');
   // 이미지를 base64로 인라인 임베딩 (오프라인에서도 표시)
-  const htmlWithImages = await embedImagesAsBase64(html);
+  const htmlWithImages = await embedImagesAsBase64(htmlWithoutRefs);
   const wordCompatHtml = convertToWordCompatibleHtml(htmlWithImages);
 
   const wordDoc = `<!DOCTYPE html>

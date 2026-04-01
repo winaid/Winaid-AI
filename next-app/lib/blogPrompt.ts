@@ -471,7 +471,17 @@ export function buildBlogPrompt(req: GenerationRequest): {
     targetImageCount > 0
       ? `   본문 안에 [IMG_1]~[IMG_${targetImageCount}] 마커를 위 구조대로 배치하세요.`
       : '   이미지 마커 없이 작성하세요.',
-    '2. 본문 작성이 끝나면 아래 형식으로 자가평가 점수를 붙이세요:',
+    '2. 본문 마지막(마무리 문단 이후, FAQ가 있으면 FAQ 이후)에 참고 출처 블록 추가:',
+    '',
+    `<div class="references-footer" data-no-copy="true">`,
+    `<p style="margin-top:32px;padding-top:16px;border-top:1px solid #e2e8f0;font-size:11px;color:#94a3b8;font-weight:600;">참고 자료</p>`,
+    `<ul style="font-size:11px;color:#94a3b8;padding-left:20px;margin:8px 0 0 0;line-height:1.8;">`,
+    `<li>기관명 — 관련 정보 주제</li>`,
+    `</ul></div>`,
+    '',
+    '출처 규칙: 본문에서 참고한 의학 정보의 출처를 2~4개 기재. 신뢰 기관만(질병관리청, 대한OO학회, 대학병원 등). URL 금지, 기관명+주제만. 없는 자료를 지어내지 마세요.',
+    '',
+    '3. 출처 블록 다음에 자가평가 점수를 붙이세요:',
     '',
     '---SCORES---',
     '{"seo": [0~100 점수], "medical": [0~100 점수], "conversion": [0~100 점수]}',
