@@ -242,10 +242,11 @@ JSON 배열만 출력:
     finally { setIsDetectingMoments(false); }
   };
 
-  // ── GIF: 생성 ──
+  // ── GIF: 생성 (서버 사용 가능 시) ──
   const handleGenerateGif = async (index: number, start: number, end: number) => {
     if (!CRAWLER_URL) {
-      alert('크롤러 서버 URL이 설정되지 않았습니다.');
+      // 크롤러 없으면 구간 링크 복사로 대체
+      handleCopyClipLink(start);
       return;
     }
     setGeneratingGifIndex(index);
@@ -267,11 +268,20 @@ JSON 배열만 출력:
         setKeyMoments(prev => [...prev, { start, end, description: `커스텀 구간 ${start}~${end}초`, usage: '직접 지정' }]);
         setGeneratedGifs(prev => new Map(prev).set(newIdx, { dataUrl: data.gifDataUrl, fileSize: data.fileSize }));
       }
-    } catch (err) {
-      alert(err instanceof Error ? err.message : 'GIF 생성 실패');
+    } catch {
+      // GIF 실패 시 구간 링크 복사로 대체
+      handleCopyClipLink(start);
     } finally {
       setGeneratingGifIndex(null);
     }
+  };
+
+  // ── 구간 링크 복사 ──
+  const handleCopyClipLink = (start: number) => {
+    const link = `https://www.youtube.com/watch?v=${videoId}&t=${start}`;
+    navigator.clipboard.writeText(link);
+    setCopyToast(true);
+    setTimeout(() => setCopyToast(false), 1500);
   };
 
   // ── 복사 (출처 제외) ──
@@ -364,7 +374,7 @@ JSON 배열만 출력:
               className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-all ${
                 activeMode === 'gif' ? 'bg-purple-500 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
               }`}>
-              🎬 GIF 만들기
+              🎬 핵심 장면
             </button>
           </div>
 
@@ -497,13 +507,19 @@ JSON 배열만 출력:
                             }} className="px-2.5 py-1.5 bg-slate-100 text-slate-600 text-xs font-semibold rounded-lg hover:bg-slate-200">
                               ▶ 재생
                             </button>
-                            <button
-                              onClick={() => handleGenerateGif(i, m.start, m.end)}
-                              disabled={generatingGifIndex !== null}
-                              className="px-2.5 py-1.5 bg-purple-500 text-white text-xs font-bold rounded-lg hover:bg-purple-600 disabled:opacity-50"
-                            >
-                              {generatingGifIndex === i ? '생성 중...' : gif ? '다시 만들기' : '🎬 GIF'}
+                            <button onClick={() => handleCopyClipLink(m.start)}
+                              className="px-2.5 py-1.5 bg-blue-500 text-white text-xs font-bold rounded-lg hover:bg-blue-600">
+                              🔗 링크
                             </button>
+                            {CRAWLER_URL && (
+                              <button
+                                onClick={() => handleGenerateGif(i, m.start, m.end)}
+                                disabled={generatingGifIndex !== null}
+                                className="px-2.5 py-1.5 bg-purple-500 text-white text-xs font-bold rounded-lg hover:bg-purple-600 disabled:opacity-50"
+                              >
+                                {generatingGifIndex === i ? '생성 중...' : gif ? '다시' : '🎬 GIF'}
+                              </button>
+                            )}
                           </div>
                         </div>
                         {gif && (
@@ -532,7 +548,7 @@ JSON 배열만 출력:
                 </div>
               )}
 
-              {/* 커스텀 구간 GIF */}
+              {/* 직접 구간 지정 */}
               <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
                 <h4 className="text-xs font-bold text-slate-500 mb-2">직접 구간 지정</h4>
                 <div className="flex gap-2 items-end">
@@ -546,12 +562,27 @@ JSON 배열만 출력:
                   </div>
                   <button onClick={() => {
                     const s = parseInt((document.getElementById('gif-start') as HTMLInputElement).value) || 0;
-                    const e = parseInt((document.getElementById('gif-end') as HTMLInputElement).value) || 5;
-                    handleGenerateGif(-1, s, e);
-                  }} disabled={generatingGifIndex !== null}
-                    className="px-4 py-1.5 bg-purple-500 text-white text-xs font-bold rounded-lg hover:bg-purple-600 disabled:opacity-50">
-                    🎬 GIF 만들기
+                    const iframe = document.getElementById('yt-player') as HTMLIFrameElement;
+                    if (iframe) iframe.src = `https://www.youtube.com/embed/${videoId}?start=${s}&autoplay=1`;
+                  }} className="px-3 py-1.5 bg-slate-200 text-slate-700 text-xs font-bold rounded-lg hover:bg-slate-300">
+                    ▶ 재생
                   </button>
+                  <button onClick={() => {
+                    const s = parseInt((document.getElementById('gif-start') as HTMLInputElement).value) || 0;
+                    handleCopyClipLink(s);
+                  }} className="px-3 py-1.5 bg-blue-500 text-white text-xs font-bold rounded-lg hover:bg-blue-600">
+                    🔗 링크
+                  </button>
+                  {CRAWLER_URL && (
+                    <button onClick={() => {
+                      const s = parseInt((document.getElementById('gif-start') as HTMLInputElement).value) || 0;
+                      const e = parseInt((document.getElementById('gif-end') as HTMLInputElement).value) || 5;
+                      handleGenerateGif(-1, s, e);
+                    }} disabled={generatingGifIndex !== null}
+                      className="px-3 py-1.5 bg-purple-500 text-white text-xs font-bold rounded-lg hover:bg-purple-600 disabled:opacity-50">
+                      🎬 GIF
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -604,7 +635,7 @@ JSON 배열만 출력:
 
       {copyToast && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-5 py-2.5 bg-blue-600 text-white text-sm font-bold rounded-xl shadow-lg">
-          📋 복사되었습니다 (출처 제외)
+          📋 복사되었습니다
         </div>
       )}
     </div>
