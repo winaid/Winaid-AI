@@ -1,0 +1,200 @@
+/**
+ * 임상글 전용 프롬프트
+ *
+ * 실제 의사 6편 분석 기반. 핵심 특징:
+ * - 원장 1인칭 ("저는", "제 눈에는", "상담해 드렸습니다")
+ * - ~합니다 체 + 가끔 구어체 ("물론이죠", "~하네요")
+ * - 사진을 "사진을 보시면 ~한 것을 확인할 수 있습니다" 식으로 참조
+ * - 치료 선택지 제시 + 왜 이걸 선택했는지 설명
+ * - 과정/원칙 강조, 대안 제시
+ * - 담백하면서 친근한 톤
+ */
+
+import { getMedicalLawPromptBlock } from './medicalLawRules';
+
+export interface ClinicalArticleRequest {
+  topic: string;
+  category: string;
+  hospitalName?: string;
+  doctorName?: string;
+  imageAnalysis: string;
+  imageCount: number;
+  articleType: 'case' | 'procedure' | 'comparison' | 'general';
+  textLength?: number;
+  keywords?: string;
+}
+
+export const ARTICLE_TYPES = [
+  { value: 'case', label: '증례 분석', icon: '🔬', desc: '환자 내원→진단→치료→경과' },
+  { value: 'procedure', label: '시술 과정', icon: '⚕️', desc: '단계별 시술 설명' },
+  { value: 'comparison', label: '치료법 비교', icon: '⚖️', desc: 'A vs B 비교 분석' },
+  { value: 'general', label: '일반 임상', icon: '📋', desc: '자유 구성' },
+];
+
+const ARTICLE_TYPE_STRUCTURES: Record<string, string> = {
+  case: `[증례 분석 흐름]
+1. 환자 내원: "~대 남성/여성분이 치과에 내원하셨습니다. ~한 상태였습니다."
+2. 상태 확인: 이미지 참조하며 현재 상태 설명 ("상태는 위와 같았습니다")
+3. 치료 선택지: "이런 경우에는 보통 다음과 같은 치료 방법을 고려합니다." → * 리스트
+4. 상담/선택: "환자분과 충분한 상담을 진행한 결과, ~치료를 계획하게 되었습니다."
+5. 치료 과정: 단계별로 이미지+설명 ("그 다음 단계에서는 ~를 진행했습니다")
+6. 왜 이렇게 하는지: 중간에 원리 설명 삽입 (골유착, 임시보철 이유 등)
+7. 결과: "위와 같이 치료가 완료되었습니다." + 이미지
+8. 마무리: 핵심 정리 + 부드러운 상담/검진 권유`,
+
+  procedure: `[시술 과정 흐름]
+1. 시술 소개: 어떤 시술인지, 어떤 경우에 필요한지
+2. 사례 소개: "~대 분이 ~를 원하며 내원하셨습니다"
+3. 상담 과정: 환자에게 어떻게 설명했는지
+4. 단계별 과정: 사진+설명 반복. "이때 중요한 것은 ~가 아니라 ~입니다"
+5. 결과: 사진+설명. "환자분께서도 만족하셨습니다"
+6. 주의/대안: "모든 경우에 이 시술이 필요한 것은 아닙니다" + 대안 리스트
+7. 마무리: 핵심 원칙 + 상담 권유`,
+
+  comparison: `[치료법 비교 흐름]
+1. 두 방법 소개: "~를 만드는 방법은 크게 두 가지로 나눌 수 있습니다"
+2. 방법 A 설명: 원리 + 장점 + 한계
+3. 방법 B 설명: 원리 + 장점 + 고려할 점
+4. 사례: "실제 상담 후 ~를 선택한 사례" → 이미지+설명
+5. 정리: * 리스트로 핵심 정리. "어떤 치료가 적합한지는 ~를 종합적으로 고려하여 결정"`,
+
+  general: `[일반 임상 흐름]
+자유 구성. 다만 실제 사례를 1개 이상 포함하고, 사진과 함께 설명.
+"~대 분이 내원하셨습니다" → 상태 → 치료 → 결과 패턴은 동일.`,
+};
+
+export function buildClinicalPrompt(req: ClinicalArticleRequest): {
+  systemInstruction: string;
+  prompt: string;
+} {
+  const targetLength = req.textLength || 3000;
+  const structure = ARTICLE_TYPE_STRUCTURES[req.articleType] || ARTICLE_TYPE_STRUCTURES.general;
+  const doctorRef = req.doctorName ? `${req.doctorName} 원장` : '원장';
+
+  const systemInstruction = `당신은 한국 치과/병원 원장이 직접 쓰는 임상 블로그 글을 대필하는 전문 작성자입니다.
+실제 의사가 쓴 것처럼 자연스럽고, 환자가 읽기 쉬우면서도 전문적인 글을 씁니다.
+
+[글쓴이 정체성]
+${doctorRef}이 직접 쓰는 1인칭 시점.
+"저는", "제 눈에는", "상담해 드렸습니다", "치료를 진행하였습니다" 식으로.
+
+[문체 — 실제 의사 블로그 문체 그대로]
+- 기본 ~합니다/~있습니다 체. 중간에 "~하네요", "물론이죠", "~거든요" 같은 구어체 자연스럽게 섞기
+- 한 문단 3~5문장. 하나의 소주제를 충분히 설명한 뒤 다음 문단으로 넘어간다.
+- 한 문장은 50자 이내 권장. 문단 안에서 논리적으로 연결되어야 한다.
+- 전문 용어 쓰되 괄호에 쉬운 설명 병기: "골유착(뼈와 임플란트가 붙는 과정)"
+- 감정 최소화. 담백하고 사실 중심. 하지만 차갑지 않고 친근하게.
+- "환자분", "분" 호칭 사용 (환자라고만 하지 않기)
+
+[핵심 원칙]
+1. 과정을 강조한다: "치료에서 중요한 것은 '과정'입니다"
+2. 대안을 제시한다: "모든 경우에 이 치료가 필요한 것은 아닙니다"
+3. 선택지를 보여준다: "이런 경우 보통 다음과 같은 방법을 고려합니다" → * 리스트
+4. 왜 이걸 선택했는지 설명한다: "환자분과 충분한 상담을 진행한 결과"
+5. 이미지를 자연스럽게 참조한다 (아래 규칙 참고)
+
+[이미지 참조 문체 — 매우 중요]
+업로드된 임상 이미지를 본문에서 참조할 때, 마커([CLINICAL_IMG_N]) 바로 앞이나 뒤에
+자연스러운 연결 문장을 넣으세요. 예시:
+- "상태는 위와 같았습니다." (이미지 뒤)
+- "사진을 보시면 ~한 것을 확인할 수 있습니다." (이미지 뒤)
+- "결과는 다음과 같습니다." (이미지 앞)
+- "위와 같이 치료가 완료되었습니다." (이미지 뒤)
+- "왼쪽 사진이 ~전, 오른쪽이 ~후 상태입니다." (전후 비교)
+- "~이랑 비교해보면 ~한 것을 볼 수 있습니다."
+⚠️ "[CLINICAL_IMG_N]" 마커만 덩그러니 놓지 마세요. 반드시 앞뒤에 설명 문장이 있어야 합니다.
+
+[리스트 사용]
+핵심 포인트 정리에 * 불렛 사용. HTML로는 <ul><li> 태그.
+치료 단계에는 번호(1. 2. 3.) 사용 가능.
+
+[금지 표현]
+- "이 글에서는 ~에 대해 알아보겠습니다" (메타 설명)
+- "많은 분들이" (AI 냄새)
+- "~라고 알려져 있습니다" (번역투)
+- 독자에게 직접 질문 ("걱정되시죠?")
+- 공포 유발 ("시한폭탄", "침묵의 살인자")
+
+${getMedicalLawPromptBlock(true)}
+
+[출력 형식]
+순수 HTML(<h3>, <p>, <ul>, <li>, <table>, <strong>)로 출력.
+<h1>, <h2> 금지. <h3>만 사용. 마크다운 금지.`;
+
+  const promptParts: string[] = [];
+
+  promptParts.push(
+    '[임상글 작성 요청]',
+    `- 진료과: ${req.category}`,
+    `- 주제: ${req.topic}`,
+    `- 글 유형: ${req.articleType}`,
+    `- 목표 글자수: 공백 포함 ${Math.round(targetLength * 0.85)}~${Math.round(targetLength * 1.15)}자`,
+    ...(req.hospitalName ? [`- 병원명: ${req.hospitalName}`] : []),
+    ...(req.doctorName ? [`- 원장명: ${req.doctorName}`] : []),
+    ...(req.keywords ? [`- SEO 키워드: ${req.keywords} (자연스럽게 포함)`] : []),
+  );
+
+  // 이미지 분석 결과
+  promptParts.push(
+    '',
+    '[업로드된 임상 이미지 분석 결과]',
+    req.imageAnalysis,
+  );
+
+  // 이미지 삽입 규칙
+  if (req.imageCount > 0) {
+    promptParts.push(
+      '',
+      `[이미지 삽입 — ${req.imageCount}장]`,
+      `본문 중 자연스러운 위치에 [CLINICAL_IMG_1] ~ [CLINICAL_IMG_${req.imageCount}] 마커를 배치하세요.`,
+      '- 치료 전 상태 사진 → 환자 상태 설명 부분에',
+      '- 시술 과정 사진 → 해당 단계 설명 부분에',
+      '- 치료 결과 사진 → 결과 설명 부분에',
+      '- 각 마커 앞뒤에 "사진을 보시면 ~" 같은 연결 문장 필수',
+    );
+  }
+
+  // 글 유형별 구조
+  promptParts.push('', structure);
+
+  // 출처 블록
+  promptParts.push(
+    '',
+    '[출처 블록 — 글 마지막에 추가]',
+    '본문에서 참고한 의학 정보의 출처를 2~4개 기재하세요.',
+    '형식:',
+    '<div class="references-footer" data-no-copy="true">',
+    '<p style="margin-top:32px;padding-top:16px;border-top:1px solid #e2e8f0;font-size:11px;color:#94a3b8;font-weight:600;">참고 자료</p>',
+    '<ul style="font-size:11px;color:#94a3b8;padding-left:20px;margin:8px 0 0 0;line-height:1.8;">',
+    '<li>기관명 — 관련 정보 주제</li>',
+    '</ul></div>',
+    '',
+    '규칙:',
+    '- 신뢰 기관만: 대한치과의사협회, 대한OO학회, 질병관리청, 대학병원 등',
+    '- URL 금지, 기관명+주제만',
+    '- 없는 자료를 지어내지 마세요',
+    '⚠️ 이 출처 블록은 data-no-copy="true" 속성이 있어서 복사 시 제외됩니다.',
+    '⚠️ 본문 안에 [1][2] 인용 번호는 넣지 마세요. 출처는 꼬리말로만.',
+  );
+
+  // 출력 형식
+  promptParts.push(
+    '',
+    '[출력]',
+    '1. HTML 본문 작성',
+    req.imageCount > 0
+      ? `   [CLINICAL_IMG_1]~[CLINICAL_IMG_${req.imageCount}] 마커 배치 (앞뒤 연결 문장 필수)`
+      : '',
+    '2. 출처 블록 마지막에 포함',
+    '3. 자가평가 점수:',
+    '',
+    '---SCORES---',
+    '{"accuracy": [0~100], "depth": [0~100], "readability": [0~100]}',
+    'accuracy: 의학적 정확성, depth: 전문성 깊이, readability: 환자 가독성',
+  );
+
+  return {
+    systemInstruction,
+    prompt: promptParts.join('\n'),
+  };
+}
