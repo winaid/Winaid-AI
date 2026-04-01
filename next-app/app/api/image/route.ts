@@ -350,7 +350,15 @@ OUTPUT DIRECTION:
 - Leave breathing room around subjects (not too tightly cropped)
 - Include foreground/midground/background depth
 - Avoid dead center subject placement
-- Natural eye-level or slightly elevated camera angle`;
+- Natural eye-level or slightly elevated camera angle
+
+[CAMERA POV — CRITICAL FOR MIRROR/REFLECTION SCENES]
+- Mirror scenes: Camera MUST be positioned BEHIND or BESIDE the subject
+  - Show the subject's back/side + their face reflected in the mirror
+  - NEVER shoot from the front with the mirror facing the camera
+- Consultation scenes: Camera at slight angle (30-45 degrees), not dead-on frontal
+- Treatment scenes: Camera at patient's eye level or slightly above
+- AVOID: Subjects looking directly at camera (breaks editorial/documentary feel)`;
 
   const fullPrompt = isCardNewsMode
     ? buildCardNewsPromptFull(body)
