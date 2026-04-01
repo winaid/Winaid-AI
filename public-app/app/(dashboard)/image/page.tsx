@@ -16,7 +16,7 @@ import { useCreditContext } from '../layout';
 import { useCredit } from '../../../lib/creditService';
 
 type AspectRatio = '1:1' | '16:9' | '3:4' | '9:16' | 'auto';
-type DayMark = 'closed' | 'shortened' | 'vacation';
+type DayMark = 'closed' | 'shortened' | 'vacation' | 'night';
 type ScheduleLayout = 'full_calendar' | 'week' | 'highlight';
 
 const ASPECT_RATIOS: { value: AspectRatio; label: string; icon: string; desc: string }[] = [
@@ -91,6 +91,8 @@ export default function ImagePage() {
   const [dayMarks, setDayMarks] = useState<Map<number, DayMark>>(new Map());
   const [shortenedHours, setShortenedHours] = useState<Map<number, string>>(new Map());
   const [vacationReasons, setVacationReasons] = useState<Map<number, string>>(new Map());
+  const [nightHours, setNightHours] = useState<Map<number, string>>(new Map());
+  const [closedReasons, setClosedReasons] = useState<Map<number, string>>(new Map());
   const [markMode, setMarkMode] = useState<DayMark>('closed');
   const [calendarTheme, setCalendarTheme] = useState<string>('sch_cherry_blossom');
   const [previewZoom, setPreviewZoom] = useState<string | null>(null);
@@ -357,6 +359,8 @@ export default function ImagePage() {
       m.delete(day);
       const sh = new Map(shortenedHours); sh.delete(day); setShortenedHours(sh);
       const vr = new Map(vacationReasons); vr.delete(day); setVacationReasons(vr);
+      const nh = new Map(nightHours); nh.delete(day); setNightHours(nh);
+      const cr = new Map(closedReasons); cr.delete(day); setClosedReasons(cr);
     } else { m.set(day, markMode); }
     setDayMarks(m);
   };
@@ -364,9 +368,10 @@ export default function ImagePage() {
   const closedCount = [...dayMarks.values()].filter(v => v === 'closed').length;
   const shortenedCount = [...dayMarks.values()].filter(v => v === 'shortened').length;
   const vacationCount = [...dayMarks.values()].filter(v => v === 'vacation').length;
+  const nightCount = [...dayMarks.values()].filter(v => v === 'night').length;
 
   // 월/년 변경 시 마킹 초기화
-  useEffect(() => { setDayMarks(new Map()); setShortenedHours(new Map()); setVacationReasons(new Map()); }, [schMonth, schYear]);
+  useEffect(() => { setDayMarks(new Map()); setShortenedHours(new Map()); setVacationReasons(new Map()); setNightHours(new Map()); setClosedReasons(new Map()); }, [schMonth, schYear]);
 
   // greeting 기본값 (OLD parity: 명절 선택 시 자동 기본값)
   useEffect(() => {
@@ -383,9 +388,13 @@ export default function ImagePage() {
   // ── schedule/event 전용 프롬프트 빌더 ──
   const buildSchedulePrompt = useCallback((): string => {
     const title = schTitle || `${schMonth}월 휴진 안내`;
-    const closedDays = [...dayMarks].filter(([, m]) => m === 'closed').map(([d]) => d).sort((a, b) => a - b);
+    const closedDays = [...dayMarks].filter(([, m]) => m === 'closed').map(([d]) => {
+      const reason = closedReasons.get(d);
+      return reason ? `${d}일(${reason} 휴진)` : `${d}일(휴진)`;
+    }).sort();
     const shortened = [...dayMarks].filter(([, m]) => m === 'shortened').map(([d]) => `${d}일(${shortenedHours.get(d) || '단축진료'})`).sort();
     const vacations = [...dayMarks].filter(([, m]) => m === 'vacation').map(([d]) => `${d}일(${vacationReasons.get(d) || '휴가'})`).sort();
+    const nights = [...dayMarks].filter(([, m]) => m === 'night').map(([d]) => `${d}일(${nightHours.get(d) || '야간 18:00~21:00'})`).sort();
     const noticeLines = schNotices.split('\n').filter(Boolean);
     const layoutLabel = schLayout === 'full_calendar' ? '전체 달력(월간 캘린더)' : schLayout === 'week' ? '한 주(주간 캘린더)' : '강조형(날짜 강조)';
 
@@ -419,7 +428,7 @@ export default function ImagePage() {
         if (dayNum >= 1 && dayNum <= lastDate) {
           weekDateNums.push(dayNum);
           const mark = dayMarks.get(dayNum);
-          const status = mark === 'closed' ? '휴진' : mark === 'shortened' ? '단축' : mark === 'vacation' ? '휴가' : '정상';
+          const status = mark === 'closed' ? '휴진' : mark === 'shortened' ? '단축' : mark === 'vacation' ? '휴가' : mark === 'night' ? '야간' : '정상';
           weekDateDetails.push(`${dayNum}일(${dows[i]}): ${status}`);
         } else {
           weekDateNums.push(null);
@@ -466,9 +475,10 @@ ${weekDateDetails.join(' / ')}
     } else if (schLayout === 'highlight') {
       // 강조할 날짜 목록 생성
       const highlightItems: string[] = [];
-      closedDays.forEach(d => highlightItems.push(`${d}일(휴진, 빨간색)`));
+      closedDays.forEach(d => highlightItems.push(`${d}(빨간색)`));
       [...dayMarks].filter(([, m]) => m === 'shortened').sort(([a], [b]) => a - b).forEach(([d]) => highlightItems.push(`${d}일(단축, 주황색)`));
       vacations.forEach(v => highlightItems.push(v));
+      nights.forEach(n => highlightItems.push(n.replace('야간 ', '야간, 파란색) ')));
 
       if (highlightItems.length === 0) {
         // 마킹 없으면 full_calendar로 폴백 메시지
@@ -540,12 +550,13 @@ ${layoutRules}
 디자인 테마: "${themeName}" — ${themeDesc}
 ⛔ "2026년", "${schYear}년" 같은 연도 텍스트를 이미지 어디에도 표시하지 마세요! "${schMonth}월"만 사용하세요.
 ${layoutExtra}`;
-    if (closedDays.length === 0 && shortened.length === 0 && vacations.length === 0) {
-      p += `⛔ 사용자가 휴진/단축/휴가 날짜를 하나도 선택하지 않았습니다. 모든 날짜를 동일하게 일반 날짜로 표시하세요. 어떤 날짜에도 "휴진", "단축", "휴가" 라벨을 붙이지 마세요. 어떤 날짜도 빨간색/주황색/보라색으로 강조하지 마세요. 깨끗한 달력만 그리세요.\n`;
+    if (closedDays.length === 0 && shortened.length === 0 && vacations.length === 0 && nights.length === 0) {
+      p += `⛔ 사용자가 휴진/단축/휴가/야간 날짜를 하나도 선택하지 않았습니다. 모든 날짜를 동일하게 일반 날짜로 표시하세요. 어떤 날짜에도 라벨을 붙이지 마세요. 깨끗한 달력만 그리세요.\n`;
     } else {
-      if (closedDays.length > 0) p += `휴진일: ${closedDays.map(d => `${d}일`).join(', ')} — 빨간색 배경 또는 빨간 동그라미로 강조. 해당 날짜 숫자 아래에 반드시 "휴진" 텍스트를 작게 표시하세요.\n`;
-      if (shortened.length > 0) p += `단축진료: ${shortened.join(', ')} — 주황/앰버 표시. 해당 날짜 숫자 아래에 반드시 "단축" 텍스트를 작게 표시하세요.\n`;
-      if (vacations.length > 0) p += `휴가: ${vacations.join(', ')} — 보라색 표시. 해당 날짜 숫자 아래에 반드시 "휴가" 텍스트를 작게 표시하세요.\n`;
+      if (closedDays.length > 0) p += `휴진일: ${closedDays.join(', ')} — 빨간색 배경. 해당 날짜 아래에 "휴진" 표시.\n`;
+      if (shortened.length > 0) p += `단축진료: ${shortened.join(', ')} — 주황/앰버 표시. 해당 날짜 아래에 "단축" 표시.\n`;
+      if (vacations.length > 0) p += `휴가: ${vacations.join(', ')} — 보라색 표시. 해당 날짜 아래에 "휴가" 표시.\n`;
+      if (nights.length > 0) p += `야간진료: ${nights.join(', ')} — 파란색 표시. 해당 날짜 아래에 "야간" 표시.\n`;
     }
     if (noticeLines.length > 0) {
       p += `하단 안내 영역: "${noticeLines.join(' / ')}" — 이 텍스트를 달력 아래에 표시하세요.\n`;
@@ -555,7 +566,7 @@ ${layoutExtra}`;
     p += `\n[DESIGN QUALITY]
 - 프리미엄 병원 인스타그램 피드 수준
 - 깔끔한 sans-serif 타이포, 세련된 색상 팔레트
-- 휴진/단축/휴가로 표시된 날짜에는 "휴진"/"단축"/"휴가" 라벨을 반드시 표시하세요.
+- 마킹된 날짜에는 "휴진"/"단축"/"휴가"/"야간" 라벨을 반드시 표시하세요.
 - 충분한 여백, 고급스러운 느낌`;
     if (schLayout === 'full_calendar') {
       p += `\n- 요일 헤더는 "일 월 화 수 목 금 토" 한 글자씩. 일요일 빨간색, 토요일 파란색. "(빨강)" 같은 괄호 텍스트 금지.
@@ -575,7 +586,7 @@ ${layoutExtra}`;
     if (customMessage) p += `\n추가 문구: "${customMessage}"`;
     if (extraPrompt) p += `\n${extraPrompt}`;
     return p;
-  }, [schYear, schMonth, schTitle, schLayout, dayMarks, shortenedHours, vacationReasons, schNotices, customMessage, extraPrompt, calendarTheme, hospitalName]);
+  }, [schYear, schMonth, schTitle, schLayout, dayMarks, shortenedHours, vacationReasons, nightHours, closedReasons, schNotices, customMessage, extraPrompt, calendarTheme, hospitalName]);
 
   const buildEventPrompt = useCallback((): string => {
     const title = evTitle || '이벤트';
@@ -1303,6 +1314,7 @@ If the result looks significantly different from the reference, you have FAILED.
                       { m: 'closed' as DayMark, l: '휴진', bg: 'bg-red-500', r: 'ring-red-300' },
                       { m: 'shortened' as DayMark, l: '단축', bg: 'bg-amber-500', r: 'ring-amber-300' },
                       { m: 'vacation' as DayMark, l: '휴가', bg: 'bg-purple-500', r: 'ring-purple-300' },
+                      { m: 'night' as DayMark, l: '야간', bg: 'bg-blue-600', r: 'ring-blue-300' },
                     ]).map(({ m: md, l, bg, r }) => (
                       <button key={md} type="button" onClick={() => setMarkMode(md)}
                         className={`flex-1 py-2 px-3 rounded-lg text-sm font-bold transition-all ${markMode === md ? `${bg} text-white ring-2 ${r} shadow-md` : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>
@@ -1329,6 +1341,7 @@ If the result looks significantly different from the reference, you have FAILED.
                         if (mark === 'closed') { bg = 'bg-red-50 ring-1 ring-red-300'; tx = 'text-red-600 font-bold'; badge = '휴진'; }
                         else if (mark === 'shortened') { bg = 'bg-amber-50 ring-1 ring-amber-300'; tx = 'text-amber-600 font-bold'; badge = '단축'; }
                         else if (mark === 'vacation') { bg = 'bg-purple-50 ring-1 ring-purple-300'; tx = 'text-purple-600 font-bold'; badge = '휴가'; }
+                        else if (mark === 'night') { bg = 'bg-blue-50 ring-1 ring-blue-300'; tx = 'text-blue-600 font-bold'; badge = '야간'; }
                         else if (isSun || isH) tx = 'text-red-500';
                         else if (isSat) tx = 'text-blue-500';
                         return (
@@ -1345,11 +1358,30 @@ If the result looks significantly different from the reference, you have FAILED.
                   </table>
                 </div>
                 {/* 마킹 요약 뱃지 */}
-                {(closedCount > 0 || shortenedCount > 0 || vacationCount > 0) && (
+                {(closedCount > 0 || shortenedCount > 0 || vacationCount > 0 || nightCount > 0) && (
                   <div className="flex gap-2 flex-wrap text-xs">
                     {closedCount > 0 && <span className="px-2 py-1 bg-red-50 text-red-600 rounded-full font-semibold">휴진 {closedCount}일</span>}
                     {shortenedCount > 0 && <span className="px-2 py-1 bg-amber-50 text-amber-600 rounded-full font-semibold">단축 {shortenedCount}일</span>}
                     {vacationCount > 0 && <span className="px-2 py-1 bg-purple-50 text-purple-600 rounded-full font-semibold">휴가 {vacationCount}일</span>}
+                    {nightCount > 0 && <span className="px-2 py-1 bg-blue-50 text-blue-600 rounded-full font-semibold">야간 {nightCount}일</span>}
+                  </div>
+                )}
+                {/* 휴진 사유 입력 */}
+                {closedCount > 0 && (
+                  <div className="space-y-2">
+                    <label className="block text-[11px] font-semibold text-slate-500">휴진 사유</label>
+                    {[...dayMarks].filter(([, m]) => m === 'closed').sort(([a], [b]) => a - b).map(([day]) => (
+                      <div key={day} className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-red-600 w-12">{day}일</span>
+                        <div className="flex gap-1 flex-1">
+                          {['공휴일', '학술일정', '원장 부재', '시설 점검'].map(preset => (
+                            <button key={preset} type="button" onClick={() => { const m = new Map(closedReasons); m.set(day, preset); setClosedReasons(m); }}
+                              className={`px-1.5 py-1 text-[10px] rounded-md border transition-all ${closedReasons.get(day) === preset ? 'bg-red-50 border-red-300 text-red-600' : 'border-slate-200 text-slate-400 hover:border-red-200'}`}>{preset}</button>
+                          ))}
+                          <input type="text" value={closedReasons.get(day) || ''} onChange={e => { const m = new Map(closedReasons); m.set(day, e.target.value); setClosedReasons(m); }} placeholder="직접 입력" className="flex-1 px-2 py-1 border border-slate-200 rounded-lg text-xs outline-none focus:border-red-400 bg-white min-w-0" />
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 )}
                 {/* 단축진료 시간 입력 */}
@@ -1372,6 +1404,18 @@ If the result looks significantly different from the reference, you have FAILED.
                       <div key={day} className="flex items-center gap-2">
                         <span className="text-sm font-medium text-purple-600 w-12">{day}일</span>
                         <input type="text" value={vacationReasons.get(day) || ''} onChange={e => { const m = new Map(vacationReasons); m.set(day, e.target.value); setVacationReasons(m); }} placeholder="예: 원장님 학회" className="flex-1 px-2 py-1.5 border border-slate-200 rounded-lg text-xs outline-none focus:border-blue-400 bg-white" />
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {/* 야간진료 시간 입력 */}
+                {nightCount > 0 && (
+                  <div className="space-y-2">
+                    <label className="block text-[11px] font-semibold text-slate-500">야간진료 시간</label>
+                    {[...dayMarks].filter(([, m]) => m === 'night').sort(([a], [b]) => a - b).map(([day]) => (
+                      <div key={day} className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-blue-600 w-12">{day}일</span>
+                        <input type="text" value={nightHours.get(day) || '18:00~21:00'} onChange={e => { const m = new Map(nightHours); m.set(day, e.target.value); setNightHours(m); }} placeholder="18:00~21:00" className="flex-1 px-2 py-1.5 border border-slate-200 rounded-lg text-xs outline-none focus:border-blue-400 bg-white" />
                       </div>
                     ))}
                   </div>
