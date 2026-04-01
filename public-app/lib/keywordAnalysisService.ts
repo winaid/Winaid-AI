@@ -210,6 +210,21 @@ function buildClinicContextBlock(ctx: ClinicContext | null | undefined): string 
   return lines.join('\n');
 }
 
+// ── 진료과별 시술 목록 ──
+
+const CATEGORY_PROCEDURES: Record<string, string> = {
+  '치과': '임플란트, 치아교정, 스케일링, 충치치료, 신경치료, 사랑니, 소아치과, 치아미백, 라미네이트, 틀니, 보철, 잇몸치료',
+  '피부과': '피부과, 레이저토닝, 피코레이저, 프락셀, 보톡스, 필러, 리프팅, 울쎄라, 써마지, 인모드, 슈링크, 스킨부스터, 더마펜, 여드름치료, 기미치료, 제모, 모공치료, 주름치료, 실리프팅',
+  '정형외과': '정형외과, 무릎관절, 어깨통증, 허리디스크, 척추, 관절경, 인공관절, 물리치료, 재활치료, 체외충격파, 도수치료, 오십견, 회전근개, 프롤로주사',
+  '내과': '내과, 건강검진, 위내시경, 대장내시경, 초음파, 당뇨, 고혈압, 갑상선, 종합검진',
+  '안과': '안과, 라식, 라섹, 백내장, 녹내장, 안검하수, 안구건조증, 노안교정',
+  '이비인후과': '이비인후과, 코수술, 비중격, 축농증, 편도, 보청기, 어지럼증, 이명',
+};
+
+function getCategoryProcedures(category?: string): string {
+  return CATEGORY_PROCEDURES[category || ''] || CATEGORY_PROCEDURES['치과'];
+}
+
 // ── AI 키워드 후보 생성 ──
 
 async function generateKeywordsWithAI(
@@ -237,7 +252,7 @@ ${existingBlock}${buildClinicContextBlock(clinicCtx)}
 1. 반드시 2단어 조합만 (예: "불당동 치과", "불당동 임플란트")
 2. "{지역명} {진료과/시술}" 패턴만 허용
 3. 지역명: 주소에서 동/구/읍 추출 + 인근 지하철역
-4. 시술: 임플란트, 치아교정, 스케일링, 충치치료, 신경치료, 사랑니, 소아치과, 치아미백, 라미네이트, 틀니
+4. 시술: ${getCategoryProcedures(category)}
 5. 절대 3단어 이상 금지
 6. 병원명은 포함하지 않는다
 7. "비용", "가격" 관련 키워드는 제외
@@ -330,9 +345,15 @@ function fallbackKeywordGeneration(address: string, category?: string): string[]
       if (dong.length >= 2 && dong.length <= 6) locations.push(dong);
     }
   }
-  const terms = category === '치과'
-    ? ['치과', '임플란트', '치아교정', '스케일링']
-    : ['병원', '진료', '검진'];
+  const categoryFallbackTerms: Record<string, string[]> = {
+    '치과': ['치과', '임플란트', '치아교정', '스케일링'],
+    '피부과': ['피부과', '레이저토닝', '보톡스', '필러', '리프팅', '여드름치료'],
+    '정형외과': ['정형외과', '무릎관절', '허리디스크', '물리치료', '도수치료'],
+    '내과': ['내과', '건강검진', '위내시경', '종합검진'],
+    '안과': ['안과', '라식', '백내장', '녹내장'],
+    '이비인후과': ['이비인후과', '비염', '축농증', '편도'],
+  };
+  const terms = categoryFallbackTerms[category || ''] || ['병원', '진료', '검진'];
   const keywords: string[] = [];
   for (const loc of [...new Set(locations)]) {
     for (const term of terms) keywords.push(`${loc} ${term}`);
