@@ -6,7 +6,7 @@ import { CATEGORIES, PERSONAS, TONES } from '../../../lib/constants';
 import { ContentCategory, type GenerationRequest, type AudienceMode, type ImageStyle, type WritingStyle, type CssTheme, type TrendingItem, type SeoTitleItem, type SeoReport } from '../../../lib/types';
 import { buildBlogPrompt } from '../../../lib/blogPrompt';
 import { savePost } from '../../../lib/postStorage';
-import { getSessionSafe, supabase } from '../../../lib/supabase';
+import { getSessionSafe, supabase, getSupabaseClient, isSupabaseConfigured } from '../../../lib/supabase';
 import { getHospitalStylePrompt } from '../../../lib/styleService';
 import { type ScoreBarData } from '../../../components/GenerationResult';
 import { getStyleById, getStylePromptForGeneration } from '../../../components/WritingStyleLearner';
@@ -48,6 +48,24 @@ function BlogForm() {
   const [imageAspectRatio, setImageAspectRatio] = useState<'4:3' | '16:9' | '1:1'>('4:3');
   const [textLength, setTextLength] = useState(2500);
   const [hospitalName, setHospitalName] = useState('');
+  const [hospitalNameFromProfile, setHospitalNameFromProfile] = useState('');
+
+  // 프로필에서 병원명 자동 로드
+  useEffect(() => {
+    if (!isSupabaseConfigured) return;
+    (async () => {
+      try {
+        const sb = getSupabaseClient();
+        const { data: { user } } = await sb.auth.getUser();
+        if (!user) return;
+        const nameFromMeta = user.user_metadata?.name;
+        if (nameFromMeta) { setHospitalName(nameFromMeta); setHospitalNameFromProfile(nameFromMeta); return; }
+        const { data: profile } = await sb.from('profiles').select('name, full_name').eq('id', user.id).single();
+        const pName = profile?.name || profile?.full_name;
+        if (pName) { setHospitalName(pName); setHospitalNameFromProfile(pName); }
+      } catch { /* ignore */ }
+    })();
+  }, []);
   const [selectedHospitalAddress, setSelectedHospitalAddress] = useState('');
   const [medicalLawMode, setMedicalLawMode] = useState<'strict' | 'relaxed'>(() => {
     if (typeof window === 'undefined') return 'strict';
@@ -1613,7 +1631,7 @@ ${generatedContent.substring(0, 2000)}
         topic={topic} keywords={keywords} keywordDensity={keywordDensity} disease={disease} category={category}
         persona={persona} tone={tone} audienceMode={audienceMode}
         imageStyle={imageStyle} imageCount={imageCount} imageAspectRatio={imageAspectRatio} textLength={textLength}
-        hospitalName={hospitalName}
+        hospitalName={hospitalName} hospitalNameFromProfile={hospitalNameFromProfile}
         selectedHospitalAddress={selectedHospitalAddress}
         homepageUrl={homepageUrl} clinicContext={clinicContext}
         isCrawling={isCrawling} crawlProgress={crawlProgress}

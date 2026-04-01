@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { CATEGORIES } from '../../../lib/constants';
 import { buildCardNewsPrompt, type CardNewsRequest } from '../../../lib/cardNewsPrompt';
 import { savePost } from '../../../lib/postStorage';
-import { getSessionSafe, supabase } from '../../../lib/supabase';
+import { getSessionSafe, supabase, getSupabaseClient, isSupabaseConfigured } from '../../../lib/supabase';
 import { getHospitalStylePrompt } from '../../../lib/styleService';
 import { CARD_NEWS_DESIGN_TEMPLATES } from '../../../lib/cardNewsDesignTemplates';
 import { ErrorPanel } from '../../../components/GenerationResult';
@@ -35,6 +35,10 @@ export default function CardNewsPage() {
   const [topic, setTopic] = useState('');
   const [keywords, setKeywords] = useState('');
   const [hospitalName, setHospitalName] = useState('');
+  useEffect(() => {
+    if (!isSupabaseConfigured) return;
+    (async () => { try { const sb = getSupabaseClient(); const { data: { user } } = await sb.auth.getUser(); if (user?.user_metadata?.name) setHospitalName(user.user_metadata.name); } catch {} })();
+  }, []);
   const [slideCount, setSlideCount] = useState(6);
   const [designTemplateId, setDesignTemplateId] = useState<CardNewsDesignTemplateId | undefined>(undefined);
   const [imageStyle, setImageStyle] = useState<ImageStyleType>('illustration');
