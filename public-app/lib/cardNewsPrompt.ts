@@ -8,7 +8,6 @@
 import type { CardNewsDesignTemplateId } from './types';
 import { CARD_NEWS_DESIGN_TEMPLATES } from './cardNewsDesignTemplates';
 import { getMedicalLawPromptBlock } from './medicalLawRules';
-import { getTrustedSourcesPromptBlock } from './trustedMedicalSources';
 
 export interface CardNewsRequest {
   topic: string;
@@ -22,7 +21,7 @@ export interface CardNewsRequest {
 const STYLE_GUIDES: Record<string, string> = {
   empathy: '독자의 고민에 공감하며, 걱정을 덜어주는 톤으로 작성합니다.',
   expert: '전문적 근거와 수치를 활용하여 신뢰감을 높입니다.',
-  conversion: '독자가 상담 예약이나 문의를 하도록 자연스럽게 유도합니다.',
+  conversion: '마지막 슬라이드에서 부드러운 상담 안내를 포함합니다. (○ "궁금한 점은 상담을 통해 확인할 수 있습니다", ✕ "지금 바로 예약하세요")',
 };
 
 export function buildCardNewsPrompt(req: CardNewsRequest): {
@@ -36,7 +35,7 @@ export function buildCardNewsPrompt(req: CardNewsRequest): {
     '인스타그램/블로그용 카드뉴스 원고를 작성합니다.',
     style,
     '',
-    getMedicalLawPromptBlock(true),
+    getMedicalLawPromptBlock('brief'),
     '',
     '[슬라이드 분량 기준]',
     '- 표지: 제목 15자 이내, 부제 25자 이내',
@@ -45,8 +44,6 @@ export function buildCardNewsPrompt(req: CardNewsRequest): {
     '',
     '각 슬라이드는 3초 안에 핵심을 전달할 수 있도록 짧고 임팩트 있게 작성합니다.',
     '전문 용어는 쉬운 말로 바꿔 설명합니다.',
-    '',
-    getTrustedSourcesPromptBlock(),
   ].join('\n');
 
   const slideGuide = buildSlideGuide(req.slideCount);
