@@ -38,40 +38,26 @@ function getAspectInstruction(ratio: AspectRatio): string {
 }
 
 const DESIGNER_PERSONA = `[DESIGNER IDENTITY]
-You are a world-class Korean hospital marketing designer with 15+ years at top agencies (똑닥, 강남언니, 미리캔버스).
-Your work is featured on premium Korean medical clinic Instagram accounts — 치과, 피부과, 성형외과, 내과, 한의원.
+You are a world-class Korean hospital marketing designer.
+Premium quality: every image must look like a professional agency deliverable.
 
-[DESIGN PHILOSOPHY — PREMIUM QUALITY]
-- Every image must look like a ₩500,000+ professional design agency deliverable
-- Reference quality: Apple-level clean design meets Korean medical professionalism
-- Typography: Pretendard/Noto Sans KR style. Headings bold and impactful (28-40pt), body clean and readable (14-16pt)
-- Color: Maximum 3 colors. Sophisticated palette — NO cheap neon, NO garish combinations. Think: soft blue + navy + white, beige + gold + charcoal, sage green + cream + dark green
-- Layout: Generous whitespace, clear visual hierarchy, balanced proportions, aligned grids
+[DESIGN PHILOSOPHY]
 - Surfaces: Subtle soft shadows, refined rounded corners, clean card layouts
-- Textures: Subtle gradients, soft frosted glass effects, elegant line dividers — NOT flat or boring
-- Korean text: Crystal clear rendering, perfect kerning, appropriate line-height
-- Mobile-first: All content legible on phone at arm's distance
+- Textures: Subtle gradients, soft frosted glass effects — NOT flat or boring
 - Information hierarchy: title (biggest) > key data > supporting details > footer
-
-[PREMIUM DESIGN MARKERS — MUST INCLUDE]
-- Sophisticated color gradients (subtle, two to three stops max)
-- Refined typography scale with clear contrast between heading, body, caption
-- Elegant spacing rhythm with consistent padding and generous margins
-- Professional icon usage if needed (line icons, NOT clip art)
-- Clean information blocks with subtle separators
-- Polished, cohesive visual identity throughout the image
-- DO NOT render any CSS code, technical specs, or design tokens as visible text in the image`;
+- DO NOT render CSS code, technical specs, or design tokens as visible text`;
 
 const DESIGN_RULE = `[디자인 규칙 — 프리미엄 품질 필수]
 1. 사용자가 지정한 색상, 레이아웃, 분위기를 정확히 따르되, 항상 고급스럽게 표현하세요.
 2. 한국어 텍스트를 크고 선명하게 렌더링하세요. 최소 14pt, 제목은 28pt 이상.
 3. 여백을 넉넉하게 쓰세요 — 빽빽한 디자인은 금지. 요소 간 충분한 간격을 두세요.
-4. 색상은 세련되고 조화로운 팔레트를 사용하세요. 원색 그대로 쓰지 말고 톤 다운된 프리미엄 컬러를 쓰세요.
+4. 색상은 최대 3색. 세련되고 조화로운 팔레트. 원색 대신 톤 다운된 프리미엄 컬러.
 5. 그라데이션은 미묘하고 우아하게. 2-3 스톱, 부드러운 전환.
 6. 카드/박스는 둥근 모서리와 미세한 그림자로 고급스러운 입체감.
-7. 사용자가 입력하지 않은 전화번호, URL, 이메일을 절대 넣지 마세요. "02-000-0000", "www.hospital.com" 같은 더미 텍스트 금지.
+7. 사용자가 제공하지 않은 텍스트(전화번호, URL, 주소, 병원명)를 절대 지어내지 마세요.
 8. 휴진/휴무 표시는 지정된 색상으로 모든 해당 날짜에 일관되게 적용.
 9. 결과물은 실제 프리미엄 병원 인스타그램에 바로 올릴 수 있는 수준이어야 합니다.
+10. 모바일에서 팔 길이 거리에서 모든 텍스트가 읽혀야 합니다.
 
 [금지 사항]
 - 싸구려 느낌의 starburst, 폭발 효과, 만화 스타일
@@ -148,18 +134,16 @@ function getKoreanHolidays(year: number, month: number): string[] {
 // ── 카드뉴스 전용 페르소나 + 프레임/스타일 블록 (OLD cardNewsImageService.ts 동일) ──
 
 const CARD_NEWS_PERSONA = `[ROLE] Korean medical SNS card news designer.
-[GOAL] Generate a 1:1 square (1080x1080px) card image with Korean text rendered directly into pixels.
-[PRIORITY] Text readability > visual aesthetics. Mobile-first. Korean medical ad law compliant.
-[FONT] 콘텐츠 분위기에 맞는 Google Fonts 한국어 폰트를 자동 선택. 한국어가 깨질 바에는 깔끔한 고딕체(sans-serif) 기본 사용. 가독성 > 디자인.
+[GOAL] 1:1 square (1080x1080px) card image. Korean text rendered directly into pixels. Output MUST be exactly square.
+[PRIORITY] Text readability > visual aesthetics. Korean medical ad law compliant.
 [HOSPITAL NAME] 프롬프트에 명시된 병원명만 사용하세요. 명시되지 않은 병원명, 로고, 브랜드를 절대 지어내지 마세요.
 [SERIES CONSISTENCY — MOST IMPORTANT]
 This card is part of a multi-slide series. ALL slides MUST look identical except for text content and illustration subject.
 EXACT same background, text layout zones, font style/size/color, padding, decorative elements.
-Text zones: Top 15% subtitle, Center 40% mainTitle (bold), Bottom 25% description+visual. Minimum 40px edge padding.
-Output MUST be exactly 1:1 square.`;
+Text zones: Top 15% subtitle, Center 40% mainTitle (bold), Bottom 25% description+visual.`;
 
 const CARD_FRAME_RULE = `[LAYOUT RULES]
-- Fill the entire 1080x1080 area edge-to-edge
+- Fill the entire canvas area edge-to-edge
 - NO colored borders, frames, or outlines around the edges
 - Rounded corners on overall image only
 - Clean minimal design
@@ -186,7 +170,7 @@ function buildCardStyleBlock(imageStyle: string): string {
   return `[STYLE - 3D 일러스트 (3D ILLUSTRATION)]
 - 3D rendered illustration, Blender/Cinema4D style, soft 3D render
 - soft studio lighting, ambient occlusion, gentle shadows
-- smooth plastic-like surfaces, matte finish, rounded edges
+- clean matte 3D surfaces with subtle texture, rounded edges
 - 밝은 파스텔 톤, 파란색/흰색/연한 색상 팔레트
 - cute stylized characters, friendly expressions
 ⛔ 금지: photorealistic, real photo, DSLR, realistic texture`;
@@ -247,7 +231,7 @@ ${description ? `DESCRIPTION (small, below title): "${description}"` : ''}
 
 ${visual ? `ILLUSTRATION: "${visual}" — draw exactly this!` : ''}
 
-1:1 square card. Background: ${bgColor} gradient.
+Background: ${bgColor} gradient.
 ${CARD_FRAME_RULE}
 ${styleBlock}
 
@@ -259,7 +243,6 @@ ${templateBlock}
   return `${CARD_NEWS_PERSONA}
 ${refImageRule}
 
-1:1 square social media card image.
 ${CARD_FRAME_RULE}
 ${styleBlock}
 
@@ -337,15 +320,11 @@ export async function POST(request: NextRequest) {
   const BLOG_IMAGE_RULE = `[STRICT IMAGE RULES — BLOG ILLUSTRATION MODE]
 You are generating a blog body illustration image. This is NOT a poster, flyer, ad, or infographic.
 ABSOLUTE PROHIBITIONS:
-- NO readable text, titles, captions, labels, signage, logos, or watermarks anywhere in the image
-- NO hospital names, brand names, phone numbers, URLs, social handles
-- NO bullet lists, numbered lists, tables, charts, diagrams, infographics
-- NO poster layout, flyer layout, brochure layout, card news layout, banner layout
-- NO typography of any kind — zero letters, zero words, zero characters
+- NO text of any kind: no letters, words, labels, logos, watermarks, signage, phone numbers, URLs
+- NO poster/flyer/infographic/card news layout — this is a pure visual illustration. Zero typography.
 OUTPUT DIRECTION:
 - Generate a clean editorial-style photograph or natural scene illustration
 - Focus on visual mood, people, spaces, objects, lighting, atmosphere
-- The image must work as a blog body illustration that contains NO information text
 
 [AI ARTIFACT PREVENTION — CRITICAL]
 - NO perfectly symmetrical faces or poses
@@ -388,7 +367,7 @@ OUTPUT DIRECTION:
         BLOG_IMAGE_RULE,
         body.prompt.trim(),
         aspectInstruction,
-        'Generate at high resolution. Sharp edges, no blur, no compression artifacts. Absolutely no text in the image.',
+        'Generate at high resolution. Sharp edges, no blur, no compression artifacts.',
       ].filter(Boolean).join('\n\n')
     : [
         DESIGNER_PERSONA,
@@ -402,13 +381,10 @@ OUTPUT DIRECTION:
         body.brandColors || '',
         aspectInstruction,
         'Generate at high resolution. Sharp edges, crisp text, no blur, no compression artifacts.',
-        `⛔ ABSOLUTE TEXT RULES:
-- ONLY render Korean text that appears in "quotes" in the prompt above. Do NOT invent any Korean text.
-- NEVER render placeholder contact info (02-000-0000, www.hospital.com, etc.)
-- NEVER render garbled/random Korean (찬당쩡, 맘보행, 양모가능 = WRONG)
-- NEVER render fake operating hours, fake addresses, or fake info the user didn't provide
-- If no contact info was given, leave that area COMPLETELY EMPTY or omit it
-- Do NOT render instruction labels like "[MAIN TITLE]", "날짜:", "제목:"`,
+        `⛔ TEXT SAFETY:
+- ONLY render Korean text that appears in "quotes" in the prompt. Do NOT invent text.
+- NEVER render placeholder contact info, garbled Korean, or fake information.
+- Do NOT render instruction labels like "[MAIN TITLE]", "날짜:", "제목:". If no info given, leave empty.`,
       ].filter(Boolean).join('\n\n');
 
   // 멀티모달 parts 구성: 텍스트 + 참조 이미지들
