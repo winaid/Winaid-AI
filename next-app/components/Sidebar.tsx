@@ -17,7 +17,6 @@ interface SidebarProps {
 
 const writeItems: { id: ContentTab; label: string; icon: string; href: string }[] = [
   { id: 'blog', label: '블로그', icon: '📝', href: '/blog' },
-  { id: 'clinical', label: '임상글 작성', icon: '🔬', href: '/clinical' },
   { id: 'press', label: '언론보도', icon: '🗞️', href: '/press' },
 ];
 
@@ -28,7 +27,6 @@ const visualItems: { id: ContentTab; label: string; icon: string; href: string }
 
 const toolItems: { id: ContentTab; label: string; icon: string; href: string }[] = [
   { id: 'refine', label: 'AI 보정', icon: '✨', href: '/refine' },
-  { id: 'youtube', label: '유튜브', icon: '▶️', href: '/youtube' },
   { id: 'strengths', label: '특장점', icon: '💪', href: '/strengths' },
   { id: 'history', label: '히스토리', icon: '🕐', href: '/history' },
 ];
