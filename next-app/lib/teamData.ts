@@ -84,4 +84,9 @@ export const TEAM_DATA: TeamData[] = [
       { name: '연세하늘치과 (최소현)', manager: '최소현 매니저님', address: '서울 중구 충무로2가', naverBlogUrls: ['https://blog.naver.com/jkj9799'] },
     ],
   },
+  {
+    id: 4,
+    label: '콘텐츠팀',
+    hospitals: [],
+  },
 ];

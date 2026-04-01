@@ -34,6 +34,8 @@ function LandingHero() {
   const [searchText, setSearchText] = useState('');
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [isChatting, setIsChatting] = useState(false);
+  const [chatCount, setChatCount] = useState(0);
+  const MAX_CHAT_COUNT = 10;
   const chatOpen = chatMessages.length > 0;
   const chatEndRef = useRef<HTMLDivElement>(null);
 
@@ -51,10 +53,21 @@ function LandingHero() {
     const question = searchText.trim();
     if (!question || isChatting) return;
 
+    // 세션당 최대 호출 횟수 제한
+    if (chatCount >= MAX_CHAT_COUNT) {
+      setChatMessages(prev => [...prev,
+        { role: 'user', content: question },
+        { role: 'assistant', content: '무료 대화 횟수를 모두 사용했어요. 더 많은 기능을 사용하려면 로그인하세요! 👉 윈에이드에서 블로그, 카드뉴스, 보도자료까지 무제한으로 만들 수 있어요.' },
+      ]);
+      setSearchText('');
+      return;
+    }
+
     const userMsg: ChatMessage = { role: 'user', content: question };
     setChatMessages(prev => [...prev, userMsg]);
     setSearchText('');
     setIsChatting(true);
+    setChatCount(prev => prev + 1);
 
     try {
       const history = [...chatMessages, userMsg]
@@ -101,7 +114,7 @@ function LandingHero() {
             </span>
           </div>
           <a
-            href="/app"
+            href="/auth"
             className="px-7 py-3 rounded-full font-black text-sm bg-blue-600 text-white hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/30 hover:shadow-blue-600/40 hover:-translate-y-0.5 ring-2 ring-blue-600/20"
           >
             무료로 시작하기 &rarr;
@@ -202,7 +215,7 @@ function LandingHero() {
                   {chatMessages.length > 0 && chatMessages[chatMessages.length - 1].role === 'assistant' && !isChatting && (
                     <div className="flex justify-center pt-2 pb-1">
                       <a
-                        href="/app"
+                        href="/auth"
                         className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white text-xs font-bold rounded-full shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 hover:-translate-y-0.5 transition-all flex items-center gap-2"
                       >
                         윈에이드에서 직접 체험해보기 &rarr;
@@ -253,7 +266,7 @@ function LandingHero() {
                   </button>
                 ) : (
                   <a
-                    href="/app"
+                    href="/auth"
                     className="px-8 py-3.5 bg-blue-600 hover:bg-blue-700 rounded-xl text-white font-black text-sm transition-all flex items-center gap-2 flex-shrink-0 shadow-lg shadow-blue-600/25 hover:shadow-blue-600/40"
                   >
                     시작하기
@@ -272,7 +285,7 @@ function LandingHero() {
               {QUICK_TAGS.map((tag) => (
                 <a
                   key={tag}
-                  href="/app"
+                  href="/auth"
                   className="px-4 py-2 rounded-full text-[13px] font-medium text-slate-500 bg-white/80 backdrop-blur border border-slate-200/60 hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50/80 hover:shadow-sm transition-all"
                 >
                   {tag}
@@ -284,7 +297,7 @@ function LandingHero() {
                 {MORE_TAGS.map((tag) => (
                   <a
                     key={tag}
-                    href="/app"
+                    href="/auth"
                     className="px-4 py-2 rounded-full text-[13px] font-medium text-slate-500 bg-white/80 backdrop-blur border border-slate-200/60 hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50/80 hover:shadow-sm transition-all"
                   >
                     {tag}

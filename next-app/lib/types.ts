@@ -3,8 +3,12 @@
  * 마이그레이션 완료 후 통합 예정
  */
 
+export type CardNewsDesignTemplateId = 'medical-clean' | 'spring-floral' | 'modern-grid' | 'simple-pin' | 'medical-illust';
+
 export enum ContentCategory {
   DENTAL = '치과',
+  DERMATOLOGY = '피부과',
+  ORTHOPEDICS = '정형외과',
 }
 
 export type AudienceMode =
@@ -36,11 +40,20 @@ export interface GenerationRequest {
   customImagePrompt?: string;
   learnedStyleId?: string;
   customSubheadings?: string;
+  keywordDensity?: number | 'auto';
+  youtubeTranscript?: string;
+  hospitalStrengths?: string;
   medicalLawMode?: 'strict' | 'relaxed';
   includeFaq?: boolean;
   faqCount?: number;
+  includeHospitalIntro?: boolean;
   hospitalName?: string;
   hospitalStyleSource?: 'explicit_selected_hospital' | 'generic_default';
+  clinicContext?: {
+    actualServices: string[];
+    specialties: string[];
+    locationSignals: string[];
+  } | null;
 }
 
 export interface TrendingItem {
@@ -69,9 +82,11 @@ export interface CrawledPostScore {
   score_typo: number;
   score_spelling: number;
   score_medical_law: number;
+  score_naver_seo: number;
   score_total: number;
   typo_issues: Array<{ original: string; correction: string; context: string; type?: string }>;
   law_issues: Array<{ word: string; severity: string; replacement: string[]; context: string; law_article?: string }>;
+  seo_issues?: Array<{ item: string; score: number; reason: string }>;
 }
 
 /** DB 크롤링 글 — root types.ts CrawledPost 기준 */
@@ -88,10 +103,32 @@ export interface DBCrawledPost {
   score_typo?: number;
   score_spelling?: number;
   score_medical_law?: number;
+  score_naver_seo?: number;
   score_total?: number;
   typo_issues?: CrawledPostScore['typo_issues'];
   law_issues?: CrawledPostScore['law_issues'];
+  seo_issues?: CrawledPostScore['seo_issues'];
   corrected_content?: string;
+  naver_rank?: number | null;
+  naver_rank_keyword?: string;
   crawled_at: string;
   scored_at?: string;
+}
+
+// ── SEO 상세 평가 리포트 (Gemini 반환 구조) ──
+
+export interface SeoReportCategory {
+  score: number;
+  feedback: string;
+  [key: string]: number | string;
+}
+
+export interface SeoReport {
+  total: number;
+  title: SeoReportCategory;
+  keyword_structure: SeoReportCategory;
+  user_retention: SeoReportCategory;
+  medical_safety: SeoReportCategory;
+  conversion: SeoReportCategory;
+  improvement_suggestions: string[];
 }

@@ -1,0 +1,91 @@
+-- ============================================
+-- hospital_crawled_posts 테이블 마이그레이션
+-- 출처 블로그별 최대 10개 보관 + 채점 결과 저장
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS public.hospital_crawled_posts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  hospital_name TEXT NOT NULL,
+  url TEXT NOT NULL,
+  content TEXT,
+  source_blog_id TEXT,                    -- 출처 블로그 ID (blog.naver.com/{blogId})
+  score_typo INTEGER,                     -- 오타/맞춤법 점수 (0~100, 높을수록 좋음)
+  score_medical_law INTEGER,              -- 의료광고법 준수 점수 (0~100)
+  score_total INTEGER,                    -- 종합 점수
+  typo_issues JSONB DEFAULT '[]',         -- [{original, correction, context}]
+  law_issues JSONB DEFAULT '[]',          -- [{word, severity, replacement, context}]
+  corrected_content TEXT,                 -- 사용자가 수정한 본문
+  title TEXT,                             -- 블로그 글 제목
+  published_at TIMESTAMPTZ,              -- 블로그 글 실제 작성일 (og:createdate)
+  summary TEXT,                           -- 본문 요약 (200자)
+  thumbnail TEXT,                         -- 대표 이미지 URL
+  crawled_at TIMESTAMPTZ DEFAULT NOW(),
+  scored_at TIMESTAMPTZ,
+  UNIQUE(hospital_name, url)
+);
+
+-- RLS 활성화
+ALTER TABLE public.hospital_crawled_posts ENABLE ROW LEVEL SECURITY;
+
+-- 인증된 사용자 조회 허용
+CREATE POLICY "Authenticated users can view crawled posts" ON public.hospital_crawled_posts
+  FOR SELECT USING (auth.role() = 'authenticated');
+
+-- 인증된 사용자 생성/수정 허용
+CREATE POLICY "Authenticated users can insert crawled posts" ON public.hospital_crawled_posts
+  FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+
+CREATE POLICY "Authenticated users can update crawled posts" ON public.hospital_crawled_posts
+  FOR UPDATE USING (auth.role() = 'authenticated');
+
+CREATE POLICY "Authenticated users can delete crawled posts" ON public.hospital_crawled_posts
+  FOR DELETE USING (auth.role() = 'authenticated');
+
+-- 인덱스
+CREATE INDEX IF NOT EXISTS idx_crawled_posts_hospital ON public.hospital_crawled_posts(hospital_name);
+CREATE INDEX IF NOT EXISTS idx_crawled_posts_published_at ON public.hospital_crawled_posts(published_at DESC NULLS LAST);
+CREATE INDEX IF NOT EXISTS idx_crawled_posts_crawled_at ON public.hospital_crawled_posts(crawled_at DESC);
+CREATE INDEX IF NOT EXISTS idx_crawled_posts_hospital_source ON public.hospital_crawled_posts(hospital_name, source_blog_id);
+
+-- BEFORE INSERT: source_blog_id 자동 설정
+CREATE OR REPLACE FUNCTION set_crawled_post_source_blog_id()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.source_blog_id IS NULL THEN
+    NEW.source_blog_id := coalesce(
+      (regexp_match(NEW.url, 'blog\.naver\.com/([^/?#]+)'))[1],
+      'unknown'
+    );
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- AFTER INSERT: 출처 블로그별 10개 초과 시 오래된 것 삭제
+CREATE OR REPLACE FUNCTION limit_crawled_posts_per_hospital()
+RETURNS TRIGGER AS $$
+BEGIN
+  DELETE FROM public.hospital_crawled_posts
+  WHERE hospital_name = NEW.hospital_name
+    AND source_blog_id = NEW.source_blog_id
+    AND id NOT IN (
+      SELECT id FROM public.hospital_crawled_posts
+      WHERE hospital_name = NEW.hospital_name
+        AND source_blog_id = NEW.source_blog_id
+      ORDER BY crawled_at DESC
+      LIMIT 10
+    );
+  RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_limit_crawled_posts ON public.hospital_crawled_posts;
+DROP TRIGGER IF EXISTS trg_set_source_blog_id ON public.hospital_crawled_posts;
+
+CREATE TRIGGER trg_set_source_blog_id
+  BEFORE INSERT ON public.hospital_crawled_posts
+  FOR EACH ROW EXECUTE FUNCTION set_crawled_post_source_blog_id();
+
+CREATE TRIGGER trg_limit_crawled_posts
+  AFTER INSERT ON public.hospital_crawled_posts
+  FOR EACH ROW EXECUTE FUNCTION limit_crawled_posts_per_hospital();

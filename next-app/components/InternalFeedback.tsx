@@ -15,6 +15,7 @@ import {
   addFeedback,
   deleteFeedback,
   analyzeFeedbacks,
+  uploadFeedbackImage,
   type InternalFeedback as FeedbackItem,
   type FeedbackAnalysis,
 } from '../lib/feedbackService';
@@ -52,6 +53,9 @@ export default function InternalFeedback({ page, userId, userName, writeOnly }: 
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [submitOk, setSubmitOk] = useState(false);
+  const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   // AI 분석
   const [analysis, setAnalysis] = useState<FeedbackAnalysis | null>(null);
@@ -69,21 +73,48 @@ export default function InternalFeedback({ page, userId, userName, writeOnly }: 
   }, [load]);
 
   const handleSubmit = async () => {
-    if (!text.trim() || submitting) return;
+    if (!text.trim() || submitting || isUploading) return;
     setSubmitting(true);
     setSubmitError('');
     setSubmitOk(false);
 
-    const result = await addFeedback(page, resolvedUserId, resolvedUserName, text);
+    // 이미지 업로드
+    let uploadedUrls: string[] = [];
+    if (attachedFiles.length > 0) {
+      setIsUploading(true);
+      const results = await Promise.all(
+        attachedFiles.map(f => uploadFeedbackImage(f, resolvedUserId))
+      );
+      uploadedUrls = results.filter((u): u is string => u !== null);
+      setIsUploading(false);
+    }
+
+    const result = await addFeedback(page, resolvedUserId, resolvedUserName, text, uploadedUrls.length > 0 ? uploadedUrls : undefined);
     if (result.success && result.feedback) {
       setFeedbacks(prev => [...prev, result.feedback!]);
       setText('');
+      setAttachedFiles([]);
       setSubmitOk(true);
       setTimeout(() => setSubmitOk(false), 2000);
     } else {
       setSubmitError(result.error || '저장에 실패했습니다.');
     }
     setSubmitting(false);
+  };
+
+  const handleFileSelect = (files: FileList | null) => {
+    if (!files) return;
+    const newFiles = Array.from(files).slice(0, 3 - attachedFiles.length);
+    const valid: File[] = [];
+    for (const f of newFiles) {
+      if (f.size > 5 * 1024 * 1024) {
+        setSubmitError(`${f.name}: 5MB 이하만 첨부 가능합니다.`);
+        continue;
+      }
+      if (!f.type.startsWith('image/')) continue;
+      valid.push(f);
+    }
+    setAttachedFiles(prev => [...prev, ...valid].slice(0, 3));
   };
 
   const handleDelete = async (feedbackId: string) => {
@@ -156,6 +187,16 @@ export default function InternalFeedback({ page, userId, userName, writeOnly }: 
                   )}
                 </div>
                 <p className="text-sm text-slate-600 whitespace-pre-wrap break-words mt-0.5 leading-relaxed">{fb.content}</p>
+                {fb.image_urls && fb.image_urls.length > 0 && (
+                  <div className="flex gap-2 mt-2">
+                    {fb.image_urls.map((url, i) => (
+                      <button key={i} type="button" onClick={() => setPreviewImage(url)}
+                        className="w-16 h-16 rounded-lg overflow-hidden border border-slate-200 hover:border-blue-400 transition-all">
+                        <img src={url} alt={`첨부 ${i + 1}`} className="w-full h-full object-cover" />
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           ))}
@@ -182,6 +223,28 @@ export default function InternalFeedback({ page, userId, userName, writeOnly }: 
                 }
               }}
             />
+            {/* 이미지 첨부 */}
+            <div className="flex items-center gap-2 mt-1.5">
+              <label className="px-2.5 py-1 text-[11px] font-medium text-slate-500 bg-slate-100 rounded-lg hover:bg-slate-200 cursor-pointer transition-all flex items-center gap-1">
+                📎 이미지 첨부
+                <input type="file" accept="image/*" multiple className="hidden"
+                  onChange={e => { handleFileSelect(e.target.files); e.target.value = ''; }} />
+              </label>
+              <span className="text-[10px] text-slate-400">최대 3장, 5MB 이하</span>
+            </div>
+            {/* 첨부 이미지 미리보기 */}
+            {attachedFiles.length > 0 && (
+              <div className="flex gap-2 mt-2">
+                {attachedFiles.map((f, i) => (
+                  <div key={i} className="relative w-16 h-16 rounded-lg overflow-hidden border border-slate-200">
+                    <img src={URL.createObjectURL(f)} alt={f.name} className="w-full h-full object-cover" />
+                    <button type="button"
+                      onClick={() => setAttachedFiles(prev => prev.filter((_, j) => j !== i))}
+                      className="absolute top-0 right-0 w-5 h-5 bg-red-500 text-white text-[10px] rounded-bl-lg flex items-center justify-center hover:bg-red-600">✕</button>
+                  </div>
+                ))}
+              </div>
+            )}
             <div className="flex items-center justify-between mt-1.5">
               <div className="flex items-center gap-2">
                 <span className="text-[10px] text-slate-400">Ctrl+Enter로 전송</span>
@@ -194,10 +257,10 @@ export default function InternalFeedback({ page, userId, userName, writeOnly }: 
               </div>
               <button
                 onClick={handleSubmit}
-                disabled={!text.trim() || submitting}
+                disabled={!text.trim() || submitting || isUploading}
                 className="px-3 py-1.5 text-xs font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
               >
-                {submitting ? '저장 중...' : '피드백 작성'}
+                {isUploading ? '이미지 업로드 중...' : submitting ? '저장 중...' : '피드백 작성'}
               </button>
             </div>
           </div>
@@ -271,6 +334,18 @@ export default function InternalFeedback({ page, userId, userName, writeOnly }: 
           </div>
         )}
       </div>}
+
+      {/* 이미지 확대 모달 */}
+      {previewImage && (
+        <div className="fixed inset-0 z-[9999] bg-black/70 flex items-center justify-center p-6"
+          onClick={() => setPreviewImage(null)}>
+          <div className="relative max-w-3xl max-h-[80vh]">
+            <img src={previewImage} alt="미리보기" className="max-w-full max-h-[80vh] rounded-xl shadow-2xl" />
+            <button type="button" onClick={() => setPreviewImage(null)}
+              className="absolute -top-3 -right-3 w-8 h-8 bg-white rounded-full shadow-lg flex items-center justify-center text-slate-600 hover:bg-slate-100">✕</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

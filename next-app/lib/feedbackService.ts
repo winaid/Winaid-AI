@@ -13,23 +13,25 @@ export interface InternalFeedback {
   user_name: string;
   content: string;
   page: string;
+  image_urls?: string[];
   created_at: string;
 }
 
 /** 특정 페이지의 피드백 목록 (오래된 순, limit/offset 지원) */
 export async function listFeedbacks(
-  page: string,
+  page?: string,
   options?: { limit?: number; offset?: number },
 ): Promise<InternalFeedback[]> {
   if (!supabase) return [];
   const limit = options?.limit ?? 50;
   const offset = options?.offset ?? 0;
-  const { data, error } = await supabase
+  let query = supabase
     .from('internal_feedbacks')
-    .select('id, user_id, user_name, content, page, created_at')
-    .eq('page', page)
+    .select('id, user_id, user_name, content, page, image_urls, created_at')
     .order('created_at', { ascending: true })
     .range(offset, offset + limit - 1);
+  if (page) query = query.eq('page', page);
+  const { data, error } = await query;
   if (error) {
     console.error('[feedbackService] listFeedbacks error:', error.message);
     return [];
@@ -43,19 +45,27 @@ export async function addFeedback(
   userId: string,
   userName: string,
   content: string,
+  imageUrls?: string[],
 ): Promise<{ success: boolean; feedback?: InternalFeedback; error?: string }> {
   if (!supabase) return { success: false, error: 'Supabase 미설정' };
+  if (!page || typeof page !== 'string' || !page.trim()) return { success: false, error: '페이지 정보가 필요합니다.' };
   if (!content.trim()) return { success: false, error: '내용을 입력하세요.' };
+  if (content.length > 10000) return { success: false, error: '피드백은 10,000자 이내로 작성해주세요.' };
+
+  const insertData: Record<string, unknown> = {
+    user_id: userId,
+    user_name: userName,
+    content: content.trim(),
+    page,
+  };
+  if (imageUrls && imageUrls.length > 0) {
+    insertData.image_urls = imageUrls;
+  }
 
   const { data, error } = await supabase
     .from('internal_feedbacks')
-    .insert({
-      user_id: userId,
-      user_name: userName,
-      content: content.trim(),
-      page,
-    })
-    .select('id, user_id, user_name, content, page, created_at')
+    .insert(insertData)
+    .select('id, user_id, user_name, content, page, image_urls, created_at')
     .single();
 
   if (error) {
@@ -77,6 +87,44 @@ export async function deleteFeedback(feedbackId: string): Promise<boolean> {
     return false;
   }
   return true;
+}
+
+// ── 이미지 업로드 ──
+
+const ALLOWED_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'];
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
+
+/** 피드백 이미지를 Supabase Storage에 업로드 → public URL 반환 */
+export async function uploadFeedbackImage(file: File, userId: string): Promise<string | null> {
+  if (!supabase) return null;
+  if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+    console.warn('[feedbackService] 허용되지 않는 파일 형식:', file.type);
+    return null;
+  }
+  if (file.size > MAX_IMAGE_SIZE) {
+    console.warn('[feedbackService] 파일 크기 초과:', file.size);
+    return null;
+  }
+
+  const ext = file.name.split('.').pop() || 'png';
+  const fileName = `feedback/${userId}/${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${ext}`;
+
+  try {
+    const { error: uploadErr } = await supabase.storage
+      .from('feedback-images')
+      .upload(fileName, file, { contentType: file.type, upsert: false });
+
+    if (uploadErr) {
+      console.error('[feedbackService] 업로드 실패:', uploadErr.message);
+      return null;
+    }
+
+    const { data: urlData } = supabase.storage.from('feedback-images').getPublicUrl(fileName);
+    return urlData?.publicUrl || null;
+  } catch (err) {
+    console.error('[feedbackService] 업로드 예외:', err);
+    return null;
+  }
 }
 
 // ── AI 분석 ──
@@ -168,7 +216,12 @@ ${numbered.join('\n')}
     if (json.error) return { success: false, error: json.error };
     if (!json.text) return { success: false, error: 'AI 응답이 비어 있습니다.' };
 
-    const analysis = JSON.parse(json.text) as FeedbackAnalysis;
+    let analysis: FeedbackAnalysis;
+    try {
+      analysis = JSON.parse(json.text) as FeedbackAnalysis;
+    } catch {
+      return { success: false, error: 'AI 응답 JSON 파싱 실패' };
+    }
     return { success: true, analysis };
   } catch (err: unknown) {
     return { success: false, error: (err as Error).message || '분석 중 오류' };

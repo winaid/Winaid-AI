@@ -4,77 +4,38 @@ import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { CATEGORIES, PERSONAS, TONES } from '../../../lib/constants';
 import { TEAM_DATA } from '../../../lib/teamData';
-import { ContentCategory, type GenerationRequest, type AudienceMode, type ImageStyle, type WritingStyle, type CssTheme, type TrendingItem, type SeoTitleItem } from '../../../lib/types';
+import { ContentCategory, type GenerationRequest, type AudienceMode, type ImageStyle, type WritingStyle, type CssTheme, type TrendingItem, type SeoTitleItem, type SeoReport } from '../../../lib/types';
 import { buildBlogPrompt } from '../../../lib/blogPrompt';
 import { savePost } from '../../../lib/postStorage';
 import { getSessionSafe, supabase } from '../../../lib/supabase';
 import { getHospitalStylePrompt } from '../../../lib/styleService';
-import { ErrorPanel, ResultPanel, type ScoreBarData } from '../../../components/GenerationResult';
-import WritingStyleLearner, { getStyleById, getStylePromptForGeneration } from '../../../components/WritingStyleLearner';
+import { type ScoreBarData } from '../../../components/GenerationResult';
+import { getStyleById, getStylePromptForGeneration } from '../../../components/WritingStyleLearner';
 import type { BlogSection } from '../../../lib/types';
 import { parseBlogSections, replaceSectionHtml } from '../../../lib/blogSectionParser';
 import { downloadWord, downloadPDF } from '../../../lib/blogExport';
+import { ImageActionModal, ImageRegenModal } from '../../../components/ImageRegenModal';
 import { analyzeHospitalKeywords, loadMoreKeywords, checkKeywordRankings, MAX_KEYWORDS, type KeywordStat, type KeywordRankResult } from '../../../lib/keywordAnalysisService';
-
-// ── old GenerateWorkspace.tsx 동일: 블로그 displayStage → 단계 정보 ──
-const BLOG_STAGES: Record<number, { icon: string; label: string; defaultMsg: string; hint: string }> = {
-  0: { icon: '✍️', label: '글 준비 중', defaultMsg: '좋은 문장을 한 줄씩 꺼내고 있어요', hint: '키워드를 분석하고 구조를 설계합니다' },
-  1: { icon: '✍️', label: '글 준비 중', defaultMsg: '좋은 문장을 한 줄씩 꺼내고 있어요', hint: '전문 의료 콘텐츠를 작성하고 있습니다' },
-  2: { icon: '✨', label: '내용 다듬는 중', defaultMsg: '읽는 맛이 나도록 다듬고 있어요', hint: '문체 교정과 정확성 검토를 진행합니다' },
-  3: { icon: '🎨', label: '이미지 만드는 중', defaultMsg: '글과 잘 어울리는 비주얼을 고르는 중이에요', hint: '이미지 수에 따라 30초~2분 정도 걸립니다' },
-  4: { icon: '🎉', label: '마무리하는 중', defaultMsg: '거의 다 왔어요, 마지막 손질만 남았어요', hint: '결과를 저장하고 있습니다' },
-};
-
-// ── old GenerateWorkspace.tsx 동일: 단계별 문구 로테이션 풀 ──
-const BLOG_MESSAGE_POOL: Record<number, string[]> = {
-  0: [
-    '좋은 문장을 한 줄씩 꺼내고 있어요',
-    '글의 흐름을 차근차근 잡고 있어요',
-    '읽기 편한 시작점을 만들고 있어요',
-    '핵심이 잘 보이도록 내용을 정리하고 있어요',
-    '첫 문장부터 자연스럽게 이어지게 다듬고 있어요',
-  ],
-  1: [
-    '좋은 문장을 한 줄씩 꺼내고 있어요',
-    '글의 흐름을 차근차근 잡고 있어요',
-    '읽기 편한 시작점을 만들고 있어요',
-    '핵심이 잘 보이도록 내용을 정리하고 있어요',
-    '첫 문장부터 자연스럽게 이어지게 다듬고 있어요',
-    '각 소주제를 꼼꼼히 채워가고 있어요',
-  ],
-  2: [
-    '읽는 맛이 나도록 다듬고 있어요',
-    '문장 사이의 흐름을 매끈하게 정리하고 있어요',
-    '너무 딱딱하지 않게, 너무 가볍지 않게 맞추고 있어요',
-    '처음부터 끝까지 자연스럽게 이어지게 손보고 있어요',
-    '한 번 더 읽어도 편안한 글로 정리하고 있어요',
-  ],
-  3: [
-    '글과 잘 어울리는 비주얼을 고르는 중이에요',
-    '장면을 하나씩 정리하고 있어요',
-    '내용과 잘 맞는 이미지를 살펴보고 있어요',
-    '화면이 심심하지 않도록 이미지를 준비하고 있어요',
-    '글에 딱 맞는 장면을 찾고 있어요',
-    '거의 다 왔어요, 마지막 장면을 고르고 있어요',
-  ],
-  4: [
-    '거의 다 왔어요, 마지막 손질만 남았어요',
-    '보기 좋게 정리해서 보여드릴 준비 중이에요',
-    '결과를 한 번 더 살피고 있어요',
-    '깔끔하게 마무리해서 가져오고 있어요',
-    '마지막 점검 후 바로 보여드릴게요',
-  ],
-};
-
-const MSG_ROTATION_INTERVAL = 3200;
+import { analyzeClinicContent, type ClinicContext } from '../../../lib/clinicContextService';
+import { BLOG_STAGES, BLOG_MESSAGE_POOL, MSG_ROTATION_INTERVAL } from './blogConstants';
+import { normalizeBlogStructure } from './normalizeBlog';
+import { buildChatRefinePrompt } from '../../../lib/refinePrompt';
+import BlogResultArea from './BlogResultArea';
+import BlogFormPanel from './BlogFormPanel';
+import { useCreditContext } from '../layout';
+import { useCredit as blogUseCredit } from '../../../lib/creditService';
 
 function BlogForm() {
+  const creditCtx = useCreditContext();
   const searchParams = useSearchParams();
 
   // ── 폼 상태 ──
   const topicParam = searchParams.get('topic');
+  const youtubeTranscriptParam = searchParams.get('youtubeTranscript');
   const [topic, setTopic] = useState(topicParam || '');
+  const [youtubeTranscript] = useState(youtubeTranscriptParam ? decodeURIComponent(youtubeTranscriptParam) : '');
   const [keywords, setKeywords] = useState('');
+  const [keywordDensity, setKeywordDensity] = useState<number | 'auto'>('auto');
   const [disease, setDisease] = useState('');
   const [customSubheadings, setCustomSubheadings] = useState('');
   const [category, setCategory] = useState<ContentCategory>(ContentCategory.DENTAL);
@@ -85,13 +46,17 @@ function BlogForm() {
   const [cssTheme, setCssTheme] = useState<CssTheme>('modern');
   const [imageStyle, setImageStyle] = useState<ImageStyle>('photo');
   const [imageCount, setImageCount] = useState(0);
+  const [imageAspectRatio, setImageAspectRatio] = useState<'4:3' | '16:9' | '1:1'>('4:3');
   const [textLength, setTextLength] = useState(1500);
   const [hospitalName, setHospitalName] = useState('');
   const [selectedTeam, setSelectedTeam] = useState<number | null>(null);
   const [selectedManager, setSelectedManager] = useState('');
   const [showHospitalDropdown, setShowHospitalDropdown] = useState(false);
   const [selectedHospitalAddress, setSelectedHospitalAddress] = useState('');
-  const [medicalLawMode] = useState<'strict' | 'relaxed'>('strict');
+  const [medicalLawMode, setMedicalLawMode] = useState<'strict' | 'relaxed'>(() => {
+    if (typeof window === 'undefined') return 'strict';
+    return (localStorage.getItem('medicalLawMode') as 'strict' | 'relaxed') || 'strict';
+  });
   const [includeFaq, setIncludeFaq] = useState(false);
   const [faqCount, setFaqCount] = useState(3);
   const [showAdvanced, setShowAdvanced] = useState(true);
@@ -113,6 +78,13 @@ function BlogForm() {
   const [rankResults, setRankResults] = useState<Map<string, KeywordRankResult>>(new Map());
   const [hideRanked, setHideRanked] = useState(false);
 
+  // ── 병원 홈페이지/블로그 크롤링 상태 ──
+  const [homepageUrl, setHomepageUrl] = useState('');
+  const [clinicContext, setClinicContext] = useState<ClinicContext | null>(null);
+  const [isCrawling, setIsCrawling] = useState(false);
+  const [crawlProgress, setCrawlProgress] = useState('');
+  const [includeHospitalIntro, setIncludeHospitalIntro] = useState(false);
+
   // localStorage에서 커스텀 프롬프트 복원 (old 동일)
   useEffect(() => {
     const saved = localStorage.getItem('hospital_custom_image_prompt');
@@ -128,9 +100,27 @@ function BlogForm() {
   // ── 생성 상태 ──
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedContent, setGeneratedContent] = useState<string | null>(null);
+  const [savedImagePrompts, setSavedImagePrompts] = useState<string[]>([]);
+  const [regeneratingImage, setRegeneratingImage] = useState<number | null>(null);
+  const [imageHistory, setImageHistory] = useState<Record<number, string[]>>({});
+  // 블로그 이미지 모달 state
+  const [imgActionModalOpen, setImgActionModalOpen] = useState(false);
+  const [imgRegenModalOpen, setImgRegenModalOpen] = useState(false);
+  const [selectedImgIndex, setSelectedImgIndex] = useState(0);
+  const [selectedImgSrc, setSelectedImgSrc] = useState('');
+  const [regenPrompt, setRegenPrompt] = useState('');
+  const [isRecommendingPrompt, setIsRecommendingPrompt] = useState(false);
   const [scores, setScores] = useState<ScoreBarData | undefined>(undefined);
+  const [seoReport, setSeoReport] = useState<SeoReport | null>(null);
+  const [isSeoLoading, setIsSeoLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isRetryable, setIsRetryable] = useState(false);
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
+  const [chatInput, setChatInput] = useState('');
+  const [isChatRefining, setIsChatRefining] = useState(false);
+  // 생성 시간 추정
+  const [generationStartTime, setGenerationStartTime] = useState<number>(0);
+  const [estimatedTotalSeconds, setEstimatedTotalSeconds] = useState<number>(0);
 
   // ── 블로그 섹션 상태 (소제목 재생성 + export) ──
   const [blogSections, setBlogSections] = useState<BlogSection[]>([]);
@@ -166,6 +156,9 @@ function BlogForm() {
   // ── 키워드 분석 (old InputForm handleAnalyzeKeywords 동일) ──
   const handleAnalyzeKeywords = async () => {
     if (!selectedHospitalAddress || !hospitalName) return;
+    console.info(`[KEYWORD] ========== 키워드 분석 시작 ==========`);
+    console.info(`[KEYWORD] 병원="${hospitalName}" 주소="${selectedHospitalAddress}" 진료과="${category}"`);
+    console.info(`[KEYWORD] clinicContext=${clinicContext ? `신뢰도 ${Math.round(clinicContext.confidence * 100)}%, 서비스 ${clinicContext.actualServices.length}개` : '없음'}`);
     setIsAnalyzingKeywords(true);
     setShowKeywordPanel(true);
     setKeywordAiRec('');
@@ -175,10 +168,14 @@ function BlogForm() {
         hospitalName,
         selectedHospitalAddress,
         category,
-        (msg) => setKeywordProgress(msg),
+        (msg) => { setKeywordProgress(msg); console.info(`[KEYWORD] ${msg}`); },
+        clinicContext,
       );
+      console.info(`[KEYWORD] 결과: ${result.stats.length}개 키워드, API 에러: ${result.apiErrors?.length || 0}건`);
+      result.stats.slice(0, 5).forEach(s => console.info(`[KEYWORD]   "${s.keyword}" — 검색량: ${s.monthlySearchVolume}, 발행량: ${s.blogPostCount}, 포화도: ${s.saturation}`));
       setKeywordStats(result.stats);
       if (result.apiErrors?.length) {
+        console.warn(`[KEYWORD] API 에러:`, result.apiErrors);
         const blogErr = result.apiErrors.find(e => e.includes('블로그') || e.includes('Blog') || e.includes('CLIENT'));
         setKeywordAiRec(
           (result.aiRecommendation || '') + (blogErr ? `\n\n⚠️ **발행량 조회 오류:** ${blogErr}` : ''),
@@ -186,8 +183,9 @@ function BlogForm() {
       } else {
         setKeywordAiRec(result.aiRecommendation || '');
       }
+      console.info(`[KEYWORD] ========== 키워드 분석 완료 ==========`);
     } catch (e) {
-      console.error('키워드 분석 실패:', e);
+      console.error('[KEYWORD] ❌ 키워드 분석 실패:', e);
       setKeywordStats([]);
     } finally {
       setIsAnalyzingKeywords(false);
@@ -195,9 +193,40 @@ function BlogForm() {
     }
   };
 
+  // ── 병원 홈페이지 크롤링 ──
+  const handleCrawlHomepage = async () => {
+    if (!homepageUrl.trim()) return;
+    console.info(`[CRAWL] ========== 홈페이지 분석 시작 ==========`);
+    console.info(`[CRAWL] URL="${homepageUrl.trim()}"`);
+    setIsCrawling(true);
+    setCrawlProgress('');
+    try {
+      const ctx = await analyzeClinicContent(homepageUrl.trim(), setCrawlProgress);
+      setClinicContext(ctx);
+      if (ctx) {
+        console.info(`[CRAWL] 분석 완료 — 신뢰도: ${Math.round(ctx.confidence * 100)}%, 유형: ${ctx.sourceType}`);
+        console.info(`[CRAWL]   서비스: ${ctx.actualServices.join(', ') || '없음'}`);
+        console.info(`[CRAWL]   특화: ${ctx.specialties.join(', ') || '없음'}`);
+        console.info(`[CRAWL]   지역: ${ctx.locationSignals.join(', ') || '없음'}`);
+        console.info(`[CRAWL] ========== 홈페이지 분석 완료 ==========`);
+        setCrawlProgress(`분석 완료! 서비스 ${ctx.actualServices.length}개, 특화 ${ctx.specialties.length}개 발견`);
+      } else {
+        console.warn(`[CRAWL] 분석 결과 없음`);
+        setCrawlProgress('분석할 콘텐츠를 찾지 못했습니다.');
+      }
+    } catch (e) {
+      console.error('[CRAWL] ❌ 크롤링 실패:', e);
+      setCrawlProgress('크롤링 실패');
+      setClinicContext(null);
+    } finally {
+      setIsCrawling(false);
+    }
+  };
+
   const handleLoadMoreKeywords = async () => {
     if (!selectedHospitalAddress || !hospitalName) return;
     if (keywordStats.length >= MAX_KEYWORDS) return;
+    console.info(`[KEYWORD] 추가 키워드 로드 시작 — 현재 ${keywordStats.length}개 / 최대 ${MAX_KEYWORDS}개`);
     setIsLoadingMoreKeywords(true);
     setKeywordProgress('');
     try {
@@ -207,6 +236,7 @@ function BlogForm() {
         keywordStats,
         category,
         (msg) => setKeywordProgress(msg),
+        clinicContext,
       );
       if (moreStats.length > 0) {
         setKeywordStats(prev => {
@@ -229,13 +259,22 @@ function BlogForm() {
   // ── 상위권 체크 ──
   const handleCheckRanks = async () => {
     if (keywordStats.length === 0 || !hospitalName) return;
+    console.info(`[RANK] ========== 상위권 체크 시작 ==========`);
+    console.info(`[RANK] 병원="${hospitalName}" 키워드 ${keywordStats.length}개`);
     // 병원의 블로그 ID 가져오기
     const team = TEAM_DATA.find(t => t.id === selectedTeam);
     const hospital = team?.hospitals.find(h => h.name.replace(/ \(.*\)$/, '') === hospitalName);
     const blogUrls = hospital?.naverBlogUrls || [];
-    const blogIds = blogUrls
-      .map(url => url.match(/blog\.naver\.com\/([^/?#]+)/)?.[1])
-      .filter((id): id is string => !!id);
+    const blogIds: string[] = [];
+    for (const url of blogUrls) {
+      const naverMatch = url.match(/blog\.naver\.com\/([^/?#]+)/);
+      if (naverMatch) {
+        blogIds.push(naverMatch[1]);
+      } else {
+        // 나만의닥터 등 외부 사이트 → 도메인 자체를 ID로 사용
+        try { blogIds.push(new URL(url).hostname); } catch { /* 무시 */ }
+      }
+    }
 
     if (blogIds.length === 0) {
       setKeywordProgress('블로그 URL이 등록되지 않은 병원입니다.');
@@ -249,12 +288,17 @@ function BlogForm() {
         keywordStats.map(s => s.keyword),
         blogIds,
         (msg) => setKeywordProgress(msg),
+        hospitalName,
       );
       const map = new Map<string, KeywordRankResult>();
       for (const r of results) map.set(r.keyword, r);
       setRankResults(map);
+      const ranked = results.filter(r => r.isRanked);
+      console.info(`[RANK] 결과: ${ranked.length}/${results.length}개 키워드 노출 중`);
+      ranked.forEach(r => console.info(`[RANK]   "${r.keyword}" → ${r.rank}위`));
+      console.info(`[RANK] ========== 상위권 체크 완료 ==========`);
     } catch (e) {
-      console.error('상위권 체크 실패:', e);
+      console.error('[RANK] ❌ 상위권 체크 실패:', e);
     } finally {
       setIsCheckingRanks(false);
       setTimeout(() => setKeywordProgress(''), 3000);
@@ -265,6 +309,8 @@ function BlogForm() {
   const handleRecommendTitles = async () => {
     const topicForSeo = topic || disease || keywords || '';
     if (!topicForSeo) return;
+    console.info(`[TITLE] ========== 제목 추천 시작 ==========`);
+    console.info(`[TITLE] 주제="${topicForSeo}" 키워드="${keywords}" 질환="${disease}"`);
     setIsLoadingTitles(true);
     setSeoTitles([]);
     setTrendingItems([]);
@@ -416,15 +462,21 @@ JSON 배열로 출력한다. 각 항목은 다음 구조를 따른다:
       const titles: SeoTitleItem[] = JSON.parse(data.text);
       const sorted = titles.sort((a, b) => b.score - a.score);
       setSeoTitles(sorted);
-    } catch {
+      console.info(`[TITLE] 결과: ${sorted.length}개 제목 생성`);
+      sorted.forEach((t, i) => console.info(`[TITLE]   ${i + 1}. [${t.score}점] "${t.title}"`));
+      console.info(`[TITLE] ========== 제목 추천 완료 ==========`);
+    } catch (e) {
+      console.error('[TITLE] ❌ 제목 추천 실패:', e);
       setError('제목 추천 실패');
     } finally {
       setIsLoadingTitles(false);
     }
   };
 
-  // ── 트렌드 주제 (old handleRecommendTrends 동일) ──
+  // ── 트렌드 주제 (네이버 뉴스 크롤링 → Gemini 분석 — OLD seoService.ts 동일) ──
   const handleRecommendTrends = async () => {
+    console.info(`[TREND] ========== 트렌드 주제 추천 시작 ==========`);
+    console.info(`[TREND] 진료과="${category}"`);
     setIsLoadingTrends(true);
     setTrendingItems([]);
     setSeoTitles([]);
@@ -456,13 +508,78 @@ JSON 배열로 출력한다. 각 항목은 다음 구조를 따른다:
 
       const categoryHints: Record<string, string> = {
         '정형외과': '관절통, 허리디스크, 어깨통증, 무릎연골, 오십견, 척추관협착증',
-        '피부과': '여드름, 아토피, 건선, 탈모, 피부건조, 대상포진',
+        '피부과': '여드름, 아토피, 색소침착, 기미, 모공, 주름, 탄력, 레이저토닝, 피코레이저, 프락셀, IPL, 울쎄라, 인모드, 써마지, 슈링크, 보톡스, 필러, 스킨부스터, 더마펜, 제모레이저, 리프팅, 실리프팅, 물광주사',
         '내과': '당뇨, 고혈압, 갑상선, 위장질환, 간기능, 건강검진',
         '치과': '충치, 잇몸질환, 임플란트, 치아미백, 교정, 사랑니, 치주염',
         '안과': '안구건조증, 노안, 백내장, 녹내장, 시력교정',
         '이비인후과': '비염, 축농증, 어지럼증, 이명, 편도염',
       };
 
+      // ── STEP 1: 네이버 뉴스 크롤링 (OLD searchNewsForTrends 동일) ──
+      const newsSearchKeywords: Record<string, string> = {
+        '정형외과': '관절 통증 OR 허리디스크 OR 어깨통증',
+        '피부과': '피부과 시술 OR 레이저토닝 OR 보톡스 필러 OR 피부 관리 OR 리프팅',
+        '내과': '건강검진 OR 당뇨 OR 고혈압',
+        '치과': '치과 치료 OR 임플란트 OR 잇몸',
+        '안과': '안구건조증 OR 시력 OR 백내장',
+        '이비인후과': '비염 OR 축농증 OR 편도염',
+      };
+      const searchKeyword = newsSearchKeywords[category] || `${category} 건강`;
+
+      let newsContext = '';
+      try {
+        console.info(`[TREND] 네이버 뉴스 검색: "${searchKeyword}"`);
+        const newsRes = await fetch(`/api/naver/news?query=${encodeURIComponent(searchKeyword)}&display=10`);
+        if (newsRes.ok) {
+          const newsData = await newsRes.json() as {
+            items?: Array<{ title?: string; description?: string; pubDate?: string }>;
+          };
+          const newsItems = (newsData.items || []).slice(0, 5);
+          if (newsItems.length > 0) {
+            // 뉴스 결과를 Gemini Flash로 분석
+            const newsText = newsItems.map((item, i) =>
+              `${i + 1}. ${(item.title || '').replace(/<[^>]*>/g, '')} — ${(item.description || '').replace(/<[^>]*>/g, '').substring(0, 100)}`
+            ).join('\n');
+
+            console.info(`[TREND] 네이버 뉴스 ${newsItems.length}건 → Gemini 분석 중...`);
+            const analysisRes = await fetch('/api/gemini', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                prompt: `다음은 "${category}" 관련 최신 네이버 뉴스 검색 결과입니다:\n\n${newsText}\n\n이 뉴스들을 분석하여 다음을 추출해주세요:\n1. 현재 가장 핫한 건강 이슈 3가지\n2. 블로그 키워드로 활용 가능한 SEO 키워드 5개\n3. 뉴스 기반 콘텐츠 아이디어 2개\n4. 의료광고법 주의사항\n\n간결하게 정리해주세요.`,
+                model: 'gemini-3.1-flash-lite-preview',
+                temperature: 0.4,
+                maxOutputTokens: 1000,
+              }),
+            });
+            const analysisData = await analysisRes.json() as { text?: string };
+            if (analysisData.text) {
+              newsContext = analysisData.text;
+              console.info(`[TREND] 뉴스 분석 완료 (${newsContext.length}자)`);
+            }
+          }
+        }
+      } catch (newsErr) {
+        console.warn('[TREND] 네이버 뉴스 크롤링 실패 (Gemini 단독 분석으로 진행):', newsErr);
+        // fallback: Gemini googleSearch
+        try {
+          const fallbackRes = await fetch('/api/gemini', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              prompt: `최근 한국 "${category}" 관련 건강 뉴스 트렌드를 검색하여 핵심 이슈 3가지를 요약해주세요.`,
+              model: 'gemini-3.1-flash-lite-preview',
+              googleSearch: true,
+              temperature: 0.4,
+              maxOutputTokens: 800,
+            }),
+          });
+          const fallbackData = await fallbackRes.json() as { text?: string };
+          if (fallbackData.text) newsContext = fallbackData.text;
+        } catch { /* 최종 fallback — 뉴스 없이 진행 */ }
+      }
+
+      // ── STEP 2: 최종 Gemini 트렌드 분석 (뉴스 컨텍스트 포함) ──
       const currentSeasonContext = seasonalContext[month] || '';
       const categoryKeywords = categoryHints[category] || '일반적인 건강 증상, 예방, 관리';
 
@@ -477,6 +594,12 @@ ${currentSeasonContext}
 
 [🏥 ${category} 관련 키워드 풀]
 ${categoryKeywords}
+${newsContext ? `
+[📰 최신 네이버 뉴스 분석 결과 — 반드시 반영!]
+${newsContext}
+
+⚠️ 위 뉴스 분석에서 1~2개의 뉴스 기반 트렌드 주제를 반드시 포함하세요.
+뉴스 기반 주제의 seasonal_factor에는 "📰 뉴스 트렌드" 태그를 붙여주세요.` : ''}
 
 [⚠️ 중요 규칙]
 1. **매번 다른 결과 필수**: 이전 응답과 다른 새로운 주제를 선정하세요 (시드: ${randomSeed})
@@ -484,6 +607,7 @@ ${categoryKeywords}
 3. **현재 시점 반영**: ${month}월 ${day}일 기준 계절/시기 특성 반드시 반영
 4. **롱테일 키워드**: 블로그 작성에 바로 쓸 수 있는 구체적인 키워드 조합 제시
 5. **다양한 난이도**: 경쟁 높은 주제 2개 + 틈새 주제 3개 섞어서
+${newsContext ? '6. **뉴스 트렌드 1~2개 반드시 포함**: 위 뉴스 분석에서 추출한 이슈 반영' : ''}
 
 [📊 점수 산정]
 - SEO 점수(0~100): 검색량 높고 + 블로그 경쟁도 낮을수록 고점수
@@ -502,6 +626,7 @@ ${categoryKeywords}
           prompt,
           model: 'gemini-3.1-flash-lite-preview',
           responseType: 'json',
+          googleSearch: true,
           temperature: 0.9,
           timeout: 60000,
           schema: {
@@ -525,648 +650,46 @@ ${categoryKeywords}
 
       const items: TrendingItem[] = JSON.parse(data.text);
       setTrendingItems(items);
-    } catch {
+      console.info(`[TREND] 결과: ${items.length}개 트렌드 주제`);
+      items.forEach((t, i) => console.info(`[TREND]   ${i + 1}. [${t.score}점] "${t.topic}" — ${t.keywords} (${t.seasonal_factor})`));
+      console.info(`[TREND] ========== 트렌드 주제 추천 완료 ==========`);
+    } catch (e) {
+      console.error('[TREND] ❌ 트렌드 로딩 실패:', e);
       setError('트렌드 로딩 실패');
     } finally {
       setIsLoadingTrends(false);
     }
   };
 
-  // ── 구조 보정 함수 (old legacyBlogGeneration.ts 동일) ──
-  function normalizeBlogStructure(html: string, topicFallback: string): { html: string; log: string[] } {
-    const log: string[] = [];
-    let out = html;
-    const cleanedPatterns: string[] = [];
+  // normalizeBlogStructure — ./normalizeBlog.ts로 분리됨 (파일 상단 import 참조)
 
-    // 0) JSON escape 정리 (old legacyBlogGeneration.ts:1570-1596 동일)
-    // 0a) JSON escaped closing tags: <\/p> → </p> etc.
-    if (/<\\\//.test(out)) {
-      out = out
-        .replace(/<\\\/p>/g, '</p>')
-        .replace(/<\\\/h2>/g, '</h3>')  // h2→h3도 함께
-        .replace(/<\\\/h3>/g, '</h3>')
-        .replace(/<\\\/div>/g, '</div>')
-        .replace(/<\\\/span>/g, '</span>')
-        .replace(/<\\\/strong>/g, '</strong>')
-        .replace(/<\\\/em>/g, '</em>');
-      cleanedPatterns.push('JSON escaped tags (<\\/p> etc.)');
+  // ── 에러 분류 (사용자 친화적 메시지 + 재시도 가능 여부) ──
+  function classifyError(err: unknown): { message: string; retryable: boolean } {
+    const raw = err instanceof Error ? err.message : String(err);
+    if (raw.includes('timeout') || raw.includes('Timeout') || raw.includes('504')) {
+      return { message: 'AI 응답이 느려 시간이 초과되었습니다. 다시 시도해주세요.', retryable: true };
     }
-    // 0b) 남은 \/ 제거
-    if (/\\\//.test(out)) {
-      out = out.replace(/\\\//g, '/');
-      cleanedPatterns.push('escaped slash (\\/)');
+    if (raw.includes('429') || raw.includes('rate') || raw.includes('quota')) {
+      return { message: 'AI 요청이 일시적으로 제한되었습니다. 30초 후 다시 시도해주세요.', retryable: true };
     }
-    // 0c) \\n 리터럴 문자열 제거 (JSON escape 잔여물)
-    if (/\\n/.test(out)) {
-      out = out.replace(/\\n/g, '');
-      cleanedPatterns.push('literal \\n');
+    if (raw.includes('503') || raw.includes('500') || raw.includes('upstream')) {
+      return { message: 'AI 서버가 일시적으로 불안정합니다. 잠시 후 다시 시도해주세요.', retryable: true };
     }
-    // 0d) 연속 줄바꿈 정리
-    out = out.replace(/\n\n+/g, '\n');
-    // 0e) JSON 형식 잔여물 제거 (AI가 JSON으로 감싼 경우)
-    const hadJsonWrapper =
-      /^\s*\{\s*"title"\s*:\s*"/.test(out) ||
-      /^\s*\{\s*"content"\s*:\s*"/.test(out);
-    if (hadJsonWrapper) {
-      out = out
-        .replace(/^\s*\{\s*"title"\s*:\s*"[^"]*"\s*,\s*"content"\s*:\s*"/i, '')
-        .replace(/"\s*,\s*"imagePrompts"\s*:\s*\[.*?\]\s*\}\s*$/i, '')
-        .replace(/^\s*\{\s*"content"\s*:\s*"/i, '')
-        .replace(/"\s*\}\s*$/i, '');
-      cleanedPatterns.push('JSON wrapper ({\"content\":\"...\"})');
+    if (raw.includes('fetch') || raw.includes('network') || raw.includes('Failed to fetch')) {
+      return { message: '네트워크 연결을 확인해주세요.', retryable: true };
     }
-    // 0f) 이미지 없음 텍스트 제거
-    out = out
-      .replace(/\(이미지 없음\)/g, '')
-      .replace(/\(이미지가 없습니다\)/g, '')
-      .replace(/\[이미지 없음\]/g, '');
-
-    if (cleanedPatterns.length > 0) {
-      log.push(`[ESCAPE] JSON escape 정리: ${cleanedPatterns.join(', ')}`);
-    }
-
-    // 1) h1 → h3
-    const h1Count = (out.match(/<h1[\s>]/gi) || []).length;
-    if (h1Count > 0) {
-      out = out.replace(/<h1([^>]*)>/gi, '<h3$1>').replace(/<\/h1>/gi, '</h3>');
-      log.push(`[STRUCTURE] h1→h3 변환: ${h1Count}개`);
-    }
-
-    // 2) h2 → h3 (old와 동일)
-    const h2Count = (out.match(/<h2[\s>]/gi) || []).length;
-    if (h2Count > 0) {
-      out = out.replace(/<h2([^>]*)>/gi, '<h3$1>').replace(/<\/h2>/gi, '</h3>');
-      log.push(`[STRUCTURE] h2→h3 변환: ${h2Count}개`);
-    }
-
-    // 3) markdown ## → h3
-    const mdHeadings = out.match(/^#{1,3}\s+.+$/gm) || [];
-    if (mdHeadings.length > 0) {
-      out = out.replace(/^#{1,3}\s+(.+)$/gm, '<h3>$1</h3>');
-      log.push(`[STRUCTURE] markdown heading→h3 변환: ${mdHeadings.length}개`);
-    }
-
-    // 4) 해시태그 제거 (old 동일)
-    out = out.replace(/#[가-힣a-zA-Z0-9_]+(\s*#[가-힣a-zA-Z0-9_]+)*/g, '');
-
-    // 5) 이모지 제거 (old 동일 — 전문 의료 콘텐츠 톤)
-    out = out
-      .replace(/[\u{1F300}-\u{1F9FF}]/gu, '')
-      .replace(/[\u{2600}-\u{26FF}]/gu, '')
-      .replace(/[\u{2700}-\u{27BF}]/gu, '')
-      .replace(/[\u{FE00}-\u{FE0F}]/gu, '')
-      .replace(/[\u{1F000}-\u{1F02F}]/gu, '');
-
-    // 6) 빈 p 태그 제거
-    out = out.replace(/<p>\s*<\/p>/g, '');
-
-    // 7) h3 개수 확인 — 최소 5개 보장
-    const h3Matches = out.match(/<h3[^>]*>[\s\S]*?<\/h3>/gi) || [];
-    const h3Count = h3Matches.length;
-    log.push(`[STRUCTURE] 소제목(h3) 수: ${h3Count}개`);
-
-    if (h3Count === 0) {
-      // 소제목이 전혀 없으면 첫 줄을 제목으로 승격하고 기본 구조 보정
-      log.push(`[STRUCTURE] ⚠️ 소제목 0개 — 기본 구조 보정 시도`);
-    }
-
-    // 8) 제목 확인 — 첫 번째 h3 전까지 도입부가 있는지
-    const firstH3Idx = out.search(/<h3[\s>]/i);
-    if (firstH3Idx === 0) {
-      // 도입부 없이 바로 h3로 시작 → 첫 h3을 제목으로 간주, 도입부 부재 경고
-      log.push(`[STRUCTURE] ⚠️ 도입부 없음 — h3으로 바로 시작`);
-    } else if (firstH3Idx > 0) {
-      const introPart = out.substring(0, firstH3Idx);
-      const introPs = (introPart.match(/<p[^>]*>/gi) || []).length;
-      log.push(`[STRUCTURE] 도입부 문단: ${introPs}개`);
-    }
-
-    // 9) 각 소제목 아래 문단 수 검증
-    const sections = out.split(/<h3[^>]*>/i).slice(1); // h3 이후 각 섹션
-    const sectionParagraphCounts: number[] = [];
-    for (const section of sections) {
-      const nextH3 = section.search(/<h3[\s>]/i);
-      const sectionContent = nextH3 > 0 ? section.substring(0, nextH3) : section;
-      const pCount = (sectionContent.match(/<p[^>]*>/gi) || []).length;
-      sectionParagraphCounts.push(pCount);
-    }
-    const shortSections = sectionParagraphCounts.filter(c => c < 2).length;
-    if (shortSections > 0) {
-      log.push(`[STRUCTURE] ⚠️ 문단 2개 미만 섹션: ${shortSections}개 (보정 불필요 — 프롬프트 강화로 대응)`);
-    }
-    log.push(`[STRUCTURE] 섹션별 문단 수: [${sectionParagraphCounts.join(', ')}]`);
-
-    out = out.trim();
-    return { html: out, log };
+    return { message: raw, retryable: false };
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!topic.trim()) return;
-
-    const request: GenerationRequest = {
-      category,
-      topic: topic.trim(),
-      keywords: keywords.trim(),
-      disease: disease.trim() || undefined,
-      tone,
-      audienceMode,
-      persona,
-      imageStyle,
-      postType: 'blog',
-      textLength,
-      imageCount,
-      cssTheme,
-      writingStyle,
-      medicalLawMode,
-      includeFaq,
-      faqCount: includeFaq ? faqCount : undefined,
-      customSubheadings: customSubheadings.trim() || undefined,
-      customImagePrompt: imageStyle === 'custom' ? (customPrompt?.trim() || undefined) : undefined,
-      hospitalName: hospitalName || undefined,
-      hospitalStyleSource: hospitalName ? 'explicit_selected_hospital' : 'generic_default',
-    };
-
-    setIsGenerating(true);
-    setDisplayStage(1);
-    setRotationIdx(0);
-    setError(null);
-    setGeneratedContent(null);
-    setScores(undefined);
-    setSaveStatus(null);
-    setBlogSections([]);
-    setRegeneratingSection(null);
-    setSectionProgress('');
-
-    // ── 로그: 요청 시작 ──
-    console.info(`[BLOG] ========== 블로그 생성 시작 ==========`);
-    console.info(`[BLOG] topic="${request.topic}" disease="${request.disease || '없음'}" imageCount=${request.imageCount} textLength=${request.textLength}`);
-    console.info(`[BLOG] category="${request.category}" persona="${request.persona}" tone="${request.tone}" audience="${request.audienceMode}"`);
-    if (request.customSubheadings) {
-      console.info(`[BLOG] customSubheadings="${request.customSubheadings.substring(0, 100)}..."`);
-    }
-
+  // ── SEO 평가 (백그라운드 — fire-and-forget) ──
+  const runSeoEvaluation = async (blogHtml: string, topicStr: string, keywordsStr: string) => {
+    setIsSeoLoading(true);
+    console.info('[BLOG] 📊 SEO 자동 평가 시작 (백그라운드)...');
     try {
-      const { systemInstruction, prompt } = buildBlogPrompt(request);
-      console.info(`[BLOG] 프롬프트 조립 완료 — system: ${systemInstruction.length}자, prompt: ${prompt.length}자`);
+      const seoTitle = (blogHtml.match(/<h3[^>]*>([^<]+)<\/h3>/) || blogHtml.match(/^(.+)/))?.[1]?.replace(/<[^>]*>/g, '').trim() || topicStr;
+      const currentYear = new Date().getFullYear();
 
-      // ── 경쟁 블로그 분석 (old legacyBlogGeneration.ts line 674-724 동일) ──
-      let competitorInstruction = '';
-      if (keywords.trim()) {
-        console.info(`[BLOG] 경쟁 블로그 분석 시작 — 키워드: "${keywords.trim()}"`);
-        try {
-          const competitorRes = await fetch('/api/gemini', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              prompt: `너는 네이버 블로그 SEO 분석 전문가다.
-"${keywords.trim()}" 키워드로 네이버 통합탭에서 1위를 차지할 블로그 글의 구조를 분석해줘.
-
-실제 네이버 상위 블로그를 참고하여 아래 형식의 JSON으로만 답변해.
-설명 없이 JSON만 출력.
-
-{
-  "title": "예상 1위 블로그 제목 (30~40자)",
-  "charCount": 예상 글자수(숫자),
-  "subtitleCount": 예상 소제목 수(숫자),
-  "subtitles": ["소제목1", "소제목2", "소제목3", ...],
-  "imageCount": 예상 이미지 수(숫자),
-  "keyAngles": ["이 키워드에서 자주 다루는 핵심 관점 3~5개"]
-}`,
-              model: 'gemini-3.1-flash-lite-preview',
-              temperature: 0.3,
-              responseType: 'json',
-              timeout: 15000,
-            }),
-          });
-
-          if (competitorRes.ok) {
-            const cData = await competitorRes.json() as { text?: string };
-            if (cData.text) {
-              let cText = cData.text;
-              const cJsonMatch = cText.match(/```(?:json)?\s*([\s\S]*?)```/);
-              if (cJsonMatch) cText = cJsonMatch[1];
-              const c = JSON.parse(cText.trim()) as {
-                title?: string; charCount?: number; subtitleCount?: number;
-                subtitles?: string[]; imageCount?: number; keyAngles?: string[];
-              };
-              const subs = c.subtitles || [];
-              competitorInstruction = `
-[경쟁 블로그 분석 결과 - 이 글보다 상위에 노출되어야 함]
-현재 "${keywords.trim()}" 통합탭 상위 블로그 예상 구조:
-- 제목: ${c.title || '미분석'}
-- 글자 수: ${c.charCount || 0}자
-- 소제목 수: ${subs.length}개
-- 이미지 수: ${c.imageCount || 0}개
-${subs.length > 0 ? `- 소제목 목록: ${subs.join(' / ')}` : ''}
-
-[경쟁 분석 기반 작성 전략]
-1. 글자 수: 경쟁 글(${c.charCount || 0}자)보다 충분한 분량 확보
-2. 소제목: 경쟁 글(${subs.length}개)보다 더 다양한 관점 제공
-3. 이미지: 경쟁 글(${c.imageCount || 0}개)과 동등 이상
-4. 구조: 더 읽기 쉽고 체류 시간이 길어지는 구조 설계
-
-[차별화 앵글 설계 - 경쟁 글과 다른 관점 필수]
-${subs.length > 0 ? `경쟁 글 소제목: ${subs.join(' / ')}` : ''}
-위 소제목이 이미 다루는 내용은 "같은 말 다시 하기"가 아니라 "더 깊은 메커니즘/숫자"로 차별화.
-경쟁 글이 빠뜨린 앵글을 최소 1~2개 추가:
-- 빠진 관점 후보: 자가 관리법, 연령대별 차이, 시술 후 관리, 비용/기간 현실 정보, 잘못 알려진 상식 바로잡기
-- 경쟁 글이 나열형이면 → 우리는 "독자 상황별 분기"나 "흔한 오해" 앵글로 차별화
-- 경쟁 글이 감성 위주면 → 우리는 구체적 숫자/메커니즘으로 차별화
-`;
-            }
-          }
-        } catch (compErr) {
-          // 경쟁 분석 실패해도 생성은 계속 진행
-          console.warn(`[BLOG] 경쟁 분석 실패 (무시):`, compErr);
-        }
-      }
-
-      console.info(`[BLOG] 경쟁 분석 결과: ${competitorInstruction ? '성공 (' + competitorInstruction.length + '자)' : '없음/스킵'}`);
-
-      // 프롬프트 조립: 기본 + 경쟁 분석 + 말투
-      let finalPrompt = prompt;
-      if (competitorInstruction) {
-        finalPrompt += `\n\n${competitorInstruction}`;
-      }
-
-      // 말투 주입 우선순위 (old 동일): 1) 수동 학습(localStorage) → 2) 병원 블로그 학습(Supabase)
-      if (learnedStyleId) {
-        const learnedStyle = getStyleById(learnedStyleId);
-        if (learnedStyle) {
-          finalPrompt += `\n\n[🎓🎓🎓 학습된 말투 적용 - 최우선 적용! 🎓🎓🎓]\n${getStylePromptForGeneration(learnedStyle)}\n\n⚠️ 위 학습된 말투를 반드시 적용하세요!\n- 문장 끝 패턴을 정확히 따라하세요\n- 자주 사용하는 표현을 자연스럽게 활용하세요\n- 전체적인 어조와 분위기를 일관되게 유지하세요`;
-        }
-      } else if (hospitalName) {
-        try {
-          const stylePrompt = await getHospitalStylePrompt(hospitalName);
-          if (stylePrompt) {
-            finalPrompt += `\n\n[병원 블로그 학습 말투 - 반드시 적용]\n${stylePrompt}`;
-          }
-        } catch { /* 프로파일 없으면 기본 동작 */ }
-      }
-
-      console.info(`[BLOG] 최종 프롬프트 길이: ${finalPrompt.length}자 (system: ${systemInstruction.length}자)`);
-      console.info(`[BLOG] Gemini 호출 시작 — model=gemini-3.1-pro-preview, temp=0.85`);
-
-      const res = await fetch('/api/gemini', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          prompt: finalPrompt,
-          systemInstruction,
-          model: 'gemini-3.1-pro-preview',
-          temperature: 0.85,
-          maxOutputTokens: 65536,
-        }),
-      });
-
-      const data = await res.json() as { text?: string; error?: string; details?: string };
-
-      if (!res.ok || !data.text) {
-        const errMsg = data.error || data.details || `서버 오류 (${res.status})`;
-        console.error(`[BLOG] ❌ 생성 실패: ${errMsg}`);
-        setError(errMsg);
-        return;
-      }
-
-      console.info(`[BLOG] Gemini 응답 수신 — 원본 길이: ${data.text.length}자`);
-      setDisplayStage(2); // old displayStage 2: 내용 다듬는 중
-
-      // ── 응답 파싱: 본문 / SCORES / IMAGE_PROMPTS 분리 ──
-      let blogText = data.text;
-      let parsed: ScoreBarData | undefined;
-      const imagePrompts: string[] = [];
-
-      // 1) ---IMAGE_PROMPTS--- 블록 추출 + 제거
-      const imgPromptsMarker = '---IMAGE_PROMPTS---';
-      const imgIdx = blogText.indexOf(imgPromptsMarker);
-      if (imgIdx !== -1) {
-        const afterImg = blogText.substring(imgIdx + imgPromptsMarker.length).trim();
-        afterImg.split('\n').forEach(line => {
-          const trimmed = line.replace(/^\d+[\.\)]\s*/, '').trim();
-          if (trimmed && !trimmed.startsWith('---') && !trimmed.startsWith('[') && !trimmed.startsWith('{')) {
-            imagePrompts.push(trimmed);
-          }
-        });
-        blogText = blogText.substring(0, imgIdx).replace(/\n+$/, '');
-      }
-
-      // 2) ---SCORES--- 블록 추출 + 제거
-      const scoresMarker = '---SCORES---';
-      const scoresIdx = blogText.lastIndexOf(scoresMarker);
-      if (scoresIdx !== -1) {
-        const afterScores = blogText.substring(scoresIdx + scoresMarker.length);
-        try {
-          const jsonMatch = afterScores.match(/\{[\s\S]*?\}/);
-          if (jsonMatch) {
-            const raw = JSON.parse(jsonMatch[0]) as Record<string, unknown>;
-            const seo = typeof raw.seo === 'number' ? raw.seo : undefined;
-            const medical = typeof raw.medical === 'number' ? raw.medical : undefined;
-            const conversion = typeof raw.conversion === 'number' ? raw.conversion : undefined;
-            if (seo != null || medical != null || conversion != null) {
-              parsed = { seoScore: seo, safetyScore: medical, conversionScore: conversion };
-            }
-          }
-        } catch { /* 파싱 실패 무시 */ }
-        blogText = blogText.substring(0, scoresIdx).replace(/\n*```\s*$/, '').replace(/\n+$/, '');
-      }
-
-      // 3) HTML 정리: 코드블록 fence 제거
-      blogText = blogText.replace(/^```html?\s*\n?/i, '').replace(/\n?```\s*$/, '');
-
-      // 3.5) 구조 보정 (old legacyBlogGeneration.ts 동일: h1/h2→h3, markdown→h3, 이모지/해시태그 제거)
-      const beforeLen = blogText.length;
-      const { html: normalizedHtml, log: structureLogs } = normalizeBlogStructure(blogText, topic.trim());
-      blogText = normalizedHtml;
-      structureLogs.forEach(l => console.info(`[BLOG] ${l}`));
-      console.info(`[BLOG] 구조 보정 완료 — ${beforeLen}자 → ${blogText.length}자`);
-
-      // 3.6) 메인 제목 주입 (old resultAssembler.ts 동일: <h2 class="main-title">)
-      const hasMainTitle = blogText.includes('class="main-title"') || blogText.includes("class='main-title'");
-      if (!hasMainTitle) {
-        blogText = `<h2 class="main-title">${topic.trim()}</h2>\n${blogText}`;
-        console.info(`[BLOG] 메인 제목 주입: "${topic.trim()}"`);
-      }
-      if (parsed) {
-        console.info(`[BLOG] 자가평가 점수 — SEO: ${parsed.seoScore ?? '?'}, 의료법: ${parsed.safetyScore ?? '?'}, 전환: ${parsed.conversionScore ?? '?'}`);
-      }
-      console.info(`[BLOG] 이미지 프롬프트: ${imagePrompts.length}개 (요청: ${imageCount}개)`);
-
-      // ── Stage 1.5: 도입부 품질 게이트 (old legacyBlogGeneration.ts:1621-1711 동일) ──
-      if (blogText.length > 300) {
-        try {
-          console.info(`[BLOG] Stage 1.5: 도입부 품질 판정 시작`);
-          const firstHeadingIdx = blogText.search(/<h[23][^>]*>/);
-          const introHtml = firstHeadingIdx > 0 ? blogText.slice(0, firstHeadingIdx) : '';
-          const introText = introHtml.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
-          console.info(`[BLOG] Stage 1.5: 도입부 길이=${introText.length}자, HTML=${introHtml.length}자`);
-
-          if (introText.length > 30) {
-            // 정의형/메타설명형 (절대 금지)
-            const isBadPattern = /이란|질환입니다|알아보겠|살펴보겠|에 대해|많은 분들이|누구나 한 번/.test(introText);
-            // 브릿지 부재 (모호한 연결어)
-            const hasVagueBridge = /관련된\s*요인|환경과\s*관련|차근차근\s*짚어|짚어볼\s*필요|살펴볼\s*필요|알아볼\s*필요/.test(introText);
-            // 나열형 (2회 이상 반복)
-            const listingEndings = introText.match(/경우가 있습니다|하기도 합니다|찾아옵니다|나타나기도|겪기도 합니다|보이기도 합니다/g);
-            const isListingPattern = !!(listingEndings && listingEndings.length >= 2);
-            // 3문단 이상
-            const introParagraphs = introHtml.match(/<p[^>]*>/g);
-            const isTooManyParagraphs = !!(introParagraphs && introParagraphs.length > 2);
-
-            console.info(`[BLOG] Stage 1.5: 금지패턴=${isBadPattern}, 모호브릿지=${hasVagueBridge}, 나열형=${isListingPattern}${listingEndings ? '(' + listingEndings.length + '회)' : ''}, 3문단+=${isTooManyParagraphs}${introParagraphs ? '(' + introParagraphs.length + '문단)' : ''}`);
-
-            const needsRegen = isBadPattern || hasVagueBridge || isTooManyParagraphs || isListingPattern;
-            const regenReason = isBadPattern ? '금지 패턴' : hasVagueBridge ? '브릿지 모호' : isListingPattern ? '나열형 도입' : '3문단 이상';
-
-            if (needsRegen) {
-              console.info(`[BLOG] Stage 1.5: ⚠️ 도입부 품질 미달(${regenReason}) → 재생성 시작`);
-              const introRegenPrompt = `아래 블로그 글의 도입부가 품질 기준에 미달합니다.
-도입부만 새로 작성해주세요.
-
-[시작 방식 - 주제에 맞는 것을 골라 쓰세요]
-A. 일상 장면형: 장소+동작+감각 (정형외과, 재활 등에 적합)
-B. 상황 제시형: 주변 상황 → 나에게 영향 (감염병 등에 적합)
-C. 변화 관찰형: 평소와 다른 점 발견 (내과, 피부과 등에 적합)
-D. 비교형: 같은 환경인데 나만 다름 (알레르기, 체질 등에 적합)
-E. 계기형: 일상적 계기 → 잠깐의 멈춤 (예방, 검진, 무증상 질환에 적합)
-⚠️ 증상이 없는 주제에 A/C를 쓰면 억지 장면이 됩니다! E를 사용하세요.
-
-[필수 - 검색 의도 브릿지]
-마지막 1~2문장에서 반드시 글의 주제(키워드)와 연결해야 합니다.
-독자가 "아, 이 글이 그 얘기구나"라고 3초 안에 파악할 수 있어야 합니다.
-브릿지에는 키워드/질환명을 자연스럽게 포함해도 됩니다.
-❌ "주변 환경과 관련된 요인에서 시작되기도 합니다" → 모호
-❌ 제목을 그대로/바꿔 말하며 반복 (제목 복붙)
-❌ 본문에서 설명할 이유/원인을 미리 말하기 (답을 주면 읽을 이유 없음)
-✅ "접촉을 통해 노로바이러스에 감염된 경우일 수 있습니다" → 직결 + 궁금증 유지
-
-[핵심 - 하나의 장면, 하나의 흐름]
-하나의 사건이 자연스럽게 전개되는 이야기여야 합니다.
-여러 상황을 나열하지 마세요.
-
-[금지]
-- 질환명으로 시작 (브릿지에서는 OK)
-- "~이란", "~에 대해", "알아보겠습니다", "많은 분들이"
-- 독자에게 질문하거나 말 걸기
-- "습니다" 체 유지
-- 여러 상황 나열 (각 문장이 별개의 경우/사례이면 실패)
-
-[현재 도입부]
-${introHtml}
-
-[글의 주제]
-${topic.trim()}${disease.trim() ? ', 질환: ' + disease.trim() : ''}
-
-새 도입부를 HTML(<p> 태그)로 작성하세요. 3~5문장, 2문단 권장.
-· 1문단(<p>): 장면/상황 전개 (2~3문장)
-· 2문단(<p>): 검색 의도 브릿지 (1~2문장)
-장면과 브릿지를 별도 <p>로 분리해야 호흡이 생깁니다.`;
-
-              try {
-                const introRes = await fetch('/api/gemini', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    prompt: introRegenPrompt,
-                    model: 'gemini-3.1-flash-lite-preview',
-                    temperature: 0.9,
-                    timeout: 60000,
-                  }),
-                });
-
-                if (introRes.ok) {
-                  const introData = await introRes.json() as { text?: string };
-                  const newIntro = introData.text?.trim() || '';
-                  if (newIntro.includes('<p>') && newIntro.length > 50) {
-                    // 코드블록 fence 제거
-                    const cleanIntro = newIntro.replace(/^```html?\s*\n?/i, '').replace(/\n?```\s*$/, '').trim();
-                    const beforeIntroLen = introHtml.length;
-                    blogText = cleanIntro + blogText.slice(firstHeadingIdx);
-                    console.info(`[BLOG] Stage 1.5: ✅ 도입부 재생성 완료 — 이전 ${beforeIntroLen}자 → 새 ${cleanIntro.length}자`);
-                  } else {
-                    console.warn(`[BLOG] Stage 1.5: ⚠️ 재생성 응답 부적합 (길이=${newIntro.length}, <p> 포함=${newIntro.includes('<p>')}), 원본 유지`);
-                  }
-                } else {
-                  console.warn(`[BLOG] Stage 1.5: ⚠️ 재생성 API 실패 (${introRes.status}), 원본 유지`);
-                }
-              } catch (introErr) {
-                console.warn(`[BLOG] Stage 1.5: ⚠️ 재생성 예외, 원본 유지:`, introErr);
-              }
-            } else {
-              console.info(`[BLOG] Stage 1.5: ✅ 도입부 품질 통과`);
-            }
-          } else {
-            console.info(`[BLOG] Stage 1.5: 도입부 텍스트 30자 미만 — 검증 스킵`);
-          }
-        } catch (stageErr) {
-          console.warn(`[BLOG] Stage 1.5: 도입부 검증 스킵 (예외):`, stageErr);
-        }
-      } else {
-        console.info(`[BLOG] Stage 1.5: 본문 300자 미만 — 검증 스킵`);
-      }
-
-      // ── Stage 2: 소제목 개수 검사 (최소 5개 정책 — 보정 없음, PO 결정) ──
-      {
-        const h3Tags = blogText.match(/<h3[^>]*>([\s\S]*?)<\/h3>/gi) || [];
-        const h3Count = h3Tags.length;
-        console.info(`[BLOG] Stage 2: 소제목 수 판정 — 현재 ${h3Count}개 (최소 5개)`);
-
-        if (h3Count >= 5) {
-          console.info(`[BLOG] Stage 2: ✅ 소제목 수 충분 (${h3Count}개)`);
-        }
-      }
-
-      // ── 글자수 목표 대비 검증 (old legacyBlogGeneration.ts:1474-1498 동일) ──
-      {
-        const textOnly = blogText.replace(/<[^>]+>/g, '');
-        const charCountNoSpaces = textOnly.replace(/\s/g, '').length;
-        const targetMin = textLength;
-        const targetMax = textLength + 300;
-        const deviation = charCountNoSpaces - textLength;
-
-        if (charCountNoSpaces < targetMin) {
-          console.info(`[BLOG] 글자수 부족: 목표=${textLength}자, 실제=${charCountNoSpaces}자 (${deviation}자 부족)`);
-        } else if (charCountNoSpaces > targetMax) {
-          console.info(`[BLOG] 글자수 초과: 목표=${textLength}자, 실제=${charCountNoSpaces}자 (+${deviation}자) — 그대로 진행`);
-        } else {
-          console.info(`[BLOG] ✅ 글자수 적정: 목표=${textLength}자, 실제=${charCountNoSpaces}자 (${deviation >= 0 ? '+' : ''}${deviation}자)`);
-        }
-      }
-
-      // 4) 이미지 없으면 마커 strip 후 바로 표시
-      if (imageCount === 0 || imagePrompts.length === 0) {
-        blogText = blogText.replace(/\[IMG_\d+\]\n*/g, '');
-        setGeneratedContent(blogText);
-        setScores(parsed);
-      } else {
-        setDisplayStage(3); // old displayStage 3: 이미지 만드는 중
-        // 5) 마커가 있는 본문을 먼저 표시 (이미지 자리에 로딩 표시)
-        let htmlWithPlaceholders = blogText;
-        for (let i = 1; i <= imageCount; i++) {
-          htmlWithPlaceholders = htmlWithPlaceholders.replace(
-            new RegExp(`\\[IMG_${i}\\]`, 'g'),
-            `<div class="content-image-wrapper" data-img-slot="${i}" style="text-align:center;padding:24px 0;"><div style="display:inline-flex;align-items:center;gap:8px;padding:12px 20px;background:#f1f5f9;border-radius:12px;font-size:13px;color:#64748b;">🖼️ 이미지 ${i}/${imageCount} 생성 중...</div></div>`,
-          );
-        }
-        // 혹시 남은 초과 마커 정리
-        htmlWithPlaceholders = htmlWithPlaceholders.replace(/\[IMG_\d+\]\n*/g, '');
-        setGeneratedContent(htmlWithPlaceholders);
-        setScores(parsed);
-
-        // 6) 이미지 생성 → Storage 업로드 → public URL
-        const generateAndUpload = async (prompt: string, index: number): Promise<{ index: number; url: string | null }> => {
-          try {
-            // 6a) /api/image → base64
-            const imgRes = await fetch('/api/image', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ prompt, aspectRatio: '16:9' as const, mode: 'blog' as const }),
-            });
-            if (!imgRes.ok) return { index, url: null };
-            const imgData = await imgRes.json() as { imageDataUrl?: string };
-            const dataUrl = imgData.imageDataUrl;
-            if (!dataUrl) return { index, url: null };
-
-            // 6b) base64 → Supabase Storage 업로드
-            if (supabase) {
-              try {
-                const commaIdx = dataUrl.indexOf(',');
-                const base64Data = dataUrl.substring(commaIdx + 1);
-                const metaPart = dataUrl.substring(0, commaIdx);
-                const mimeMatch = metaPart.match(/data:(.*?);base64/);
-                const mimeType = mimeMatch?.[1] || 'image/png';
-                const ext = mimeType === 'image/jpeg' ? 'jpg' : 'png';
-
-                // binary 변환
-                const byteChars = atob(base64Data);
-                const byteArray = new Uint8Array(byteChars.length);
-                for (let i = 0; i < byteChars.length; i++) {
-                  byteArray[i] = byteChars.charCodeAt(i);
-                }
-                const blob = new Blob([byteArray], { type: mimeType });
-
-                const fileName = `blog/${Date.now()}_${index}.${ext}`;
-                const { error: uploadErr } = await supabase.storage
-                  .from('blog-images')
-                  .upload(fileName, blob, { contentType: mimeType, upsert: false });
-
-                if (!uploadErr) {
-                  const { data: urlData } = supabase.storage.from('blog-images').getPublicUrl(fileName);
-                  if (urlData?.publicUrl) {
-                    return { index, url: urlData.publicUrl };
-                  }
-                }
-                console.warn(`[IMG_UPLOAD] IMG_${index}: 업로드 실패, base64 fallback`, uploadErr?.message);
-              } catch (uploadErr) {
-                console.warn(`[IMG_UPLOAD] IMG_${index}: 업로드 예외, base64 fallback`, uploadErr);
-              }
-            }
-
-            // 6c) Storage 실패 시 base64 fallback
-            return { index, url: dataUrl };
-          } catch {
-            return { index, url: null };
-          }
-        };
-
-        // 최대 imageCount개까지만 생성
-        const prompts = imagePrompts.slice(0, imageCount);
-        const imageResults = await Promise.all(
-          prompts.map((p, i) => generateAndUpload(p, i + 1)),
-        );
-
-        // 7) [IMG_N] 마커를 실제 이미지로 교체 (old insertImageData 동일)
-        let finalHtml = blogText;
-        for (const img of imageResults) {
-          const pattern = new RegExp(`\\[IMG_${img.index}\\]`, 'gi');
-          if (img.url) {
-            const imgTag = `<div class="content-image-wrapper"><img src="${img.url}" alt="blog image ${img.index}" data-image-index="${img.index}" style="max-width:100%;height:auto;border-radius:12px;" /></div>`;
-            finalHtml = finalHtml.replace(pattern, imgTag);
-          } else {
-            finalHtml = finalHtml.replace(pattern, '');
-          }
-        }
-        // 미매칭 마커 제거
-        finalHtml = finalHtml.replace(/\[IMG_\d+\]\n*/g, '');
-        setGeneratedContent(finalHtml);
-        blogText = finalHtml;
-      }
-
-      // ── fact_check 기본값 설정 (old legacyBlogGeneration.ts:1713-1740 동일) ──
-      // Gemini가 ---SCORES--- 블록을 반환하지 않았거나 필드가 빠진 경우 기본값으로 보완
-      {
-        if (!parsed) parsed = {};
-        // conversion_score: 없거나 0이면 기본값 75
-        if (!parsed.conversionScore || parsed.conversionScore === 0) {
-          parsed.conversionScore = 75;
-          console.log('[BLOG] ⚠️ conversion_score 기본값 75점 설정 (AI 미반환)');
-        }
-        // safety_score: undefined/null이면 기본값 90
-        if (parsed.safetyScore === undefined || parsed.safetyScore === null) {
-          parsed.safetyScore = 90;
-        }
-        // fact_score, ai_smell_score, verified_facts_count는 ScoreBarData에 없으므로 로그만 기록
-        const factScore = 85;
-        const aiSmellScore = 12;
-        const verifiedFactsCount = 5;
-        console.log('[BLOG] ⚠️ ai_smell_score 기본값 12점 설정 (AI 미반환)');
-        console.log(`[BLOG] 📊 fact_check 최종값: conversion_score=${parsed.conversionScore}, fact_score=${factScore}, safety_score=${parsed.safetyScore}, ai_smell_score=${aiSmellScore}, verified_facts_count=${verifiedFactsCount}`);
-        // scores state 업데이트
-        setScores({ ...parsed });
-      }
-
-      // ── SEO 자동 평가 (old legacyBlogGeneration.ts:1742-1794 동일 — 평가만, 재생성 없음) ──
-      if (blogText && topic.trim()) {
-        setDisplayStage(4); // old displayStage 4: 마무리하는 중
-        console.info('[BLOG] 📊 SEO 자동 평가 시작...');
-        try {
-          const seoHtml = blogText;
-          const seoTitle = (blogText.match(/<h3[^>]*>([^<]+)<\/h3>/) || blogText.match(/^(.+)/))?.[1]?.replace(/<[^>]*>/g, '').trim() || topic.trim();
-          const seoTopic = topic.trim();
-          const seoKeywords = keywords.trim() || '';
-          const currentYear = new Date().getFullYear();
-
-          const seoPrompt = `당신은 네이버 블로그 SEO 전문가이자 병원 마케팅 콘텐츠 분석가입니다.
+      const seoPrompt = `당신은 네이버 블로그 SEO 전문가이자 병원 마케팅 콘텐츠 분석가입니다.
 
 아래 블로그 콘텐츠의 SEO 점수를 100점 만점으로 평가해주세요.
 
@@ -1176,10 +699,10 @@ ${topic.trim()}${disease.trim() ? ', 질환: ' + disease.trim() : ''}
 
 [※ 평가 대상 콘텐츠]
 - 제목: "${seoTitle}"
-- 주제: "${seoTopic}"
-- 핵심 키워드: "${seoKeywords}"
+- 주제: "${topicStr}"
+- 핵심 키워드: "${keywordsStr}"
 - 본문:
-${seoHtml.substring(0, 8000)}
+${blogHtml.substring(0, 8000)}
 
 ---
 ① 제목 최적화 (25점 만점)
@@ -1239,110 +762,518 @@ ${seoHtml.substring(0, 8000)}
 
 JSON 형식으로 응답해주세요.`;
 
-          const seoSchema = {
-            type: 'OBJECT',
-            properties: {
-              total: { type: 'INTEGER' },
-              title: {
-                type: 'OBJECT',
-                properties: {
-                  score: { type: 'INTEGER' }, keyword_natural: { type: 'INTEGER' },
-                  seasonality: { type: 'INTEGER' }, judgment_inducing: { type: 'INTEGER' },
-                  medical_law_safe: { type: 'INTEGER' }, feedback: { type: 'STRING' }
-                },
-                required: ['score', 'keyword_natural', 'seasonality', 'judgment_inducing', 'medical_law_safe', 'feedback']
-              },
-              keyword_structure: {
-                type: 'OBJECT',
-                properties: {
-                  score: { type: 'INTEGER' }, main_keyword_exposure: { type: 'INTEGER' },
-                  related_keyword_spread: { type: 'INTEGER' }, subheading_variation: { type: 'INTEGER' },
-                  no_meaningless_repeat: { type: 'INTEGER' }, feedback: { type: 'STRING' }
-                },
-                required: ['score', 'main_keyword_exposure', 'related_keyword_spread', 'subheading_variation', 'no_meaningless_repeat', 'feedback']
-              },
-              user_retention: {
-                type: 'OBJECT',
-                properties: {
-                  score: { type: 'INTEGER' }, intro_problem_recognition: { type: 'INTEGER' },
-                  relatable_examples: { type: 'INTEGER' }, mid_engagement_points: { type: 'INTEGER' },
-                  no_info_overload: { type: 'INTEGER' }, feedback: { type: 'STRING' }
-                },
-                required: ['score', 'intro_problem_recognition', 'relatable_examples', 'mid_engagement_points', 'no_info_overload', 'feedback']
-              },
-              medical_safety: {
-                type: 'OBJECT',
-                properties: {
-                  score: { type: 'INTEGER' }, no_definitive_guarantee: { type: 'INTEGER' },
-                  individual_difference: { type: 'INTEGER' }, self_diagnosis_limit: { type: 'INTEGER' },
-                  minimal_direct_promo: { type: 'INTEGER' }, feedback: { type: 'STRING' }
-                },
-                required: ['score', 'no_definitive_guarantee', 'individual_difference', 'self_diagnosis_limit', 'minimal_direct_promo', 'feedback']
-              },
-              conversion: {
-                type: 'OBJECT',
-                properties: {
-                  score: { type: 'INTEGER' }, cta_flow_natural: { type: 'INTEGER' },
-                  time_fixed_sentence: { type: 'INTEGER' }, feedback: { type: 'STRING' }
-                },
-                required: ['score', 'cta_flow_natural', 'time_fixed_sentence', 'feedback']
-              },
-              improvement_suggestions: { type: 'ARRAY', items: { type: 'STRING' } }
-            },
-            required: ['total', 'title', 'keyword_structure', 'user_retention', 'medical_safety', 'conversion', 'improvement_suggestions']
-          };
+      const seoSchema = {
+        type: 'OBJECT',
+        properties: {
+          total: { type: 'INTEGER' },
+          title: { type: 'OBJECT', properties: { score: { type: 'INTEGER' }, keyword_natural: { type: 'INTEGER' }, seasonality: { type: 'INTEGER' }, judgment_inducing: { type: 'INTEGER' }, medical_law_safe: { type: 'INTEGER' }, feedback: { type: 'STRING' } }, required: ['score', 'feedback'] },
+          keyword_structure: { type: 'OBJECT', properties: { score: { type: 'INTEGER' }, main_keyword_exposure: { type: 'INTEGER' }, related_keyword_spread: { type: 'INTEGER' }, subheading_variation: { type: 'INTEGER' }, no_meaningless_repeat: { type: 'INTEGER' }, feedback: { type: 'STRING' } }, required: ['score', 'feedback'] },
+          user_retention: { type: 'OBJECT', properties: { score: { type: 'INTEGER' }, intro_problem_recognition: { type: 'INTEGER' }, relatable_examples: { type: 'INTEGER' }, mid_engagement_points: { type: 'INTEGER' }, no_info_overload: { type: 'INTEGER' }, feedback: { type: 'STRING' } }, required: ['score', 'feedback'] },
+          medical_safety: { type: 'OBJECT', properties: { score: { type: 'INTEGER' }, no_definitive_guarantee: { type: 'INTEGER' }, individual_difference: { type: 'INTEGER' }, self_diagnosis_limit: { type: 'INTEGER' }, minimal_direct_promo: { type: 'INTEGER' }, feedback: { type: 'STRING' } }, required: ['score', 'feedback'] },
+          conversion: { type: 'OBJECT', properties: { score: { type: 'INTEGER' }, cta_flow_natural: { type: 'INTEGER' }, time_fixed_sentence: { type: 'INTEGER' }, feedback: { type: 'STRING' } }, required: ['score', 'feedback'] },
+          improvement_suggestions: { type: 'ARRAY', items: { type: 'STRING' } }
+        },
+        required: ['total', 'title', 'keyword_structure', 'user_retention', 'medical_safety', 'conversion', 'improvement_suggestions']
+      };
 
-          const seoRes = await fetch('/api/gemini', {
+      const seoRes = await fetch('/api/gemini', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: seoPrompt, model: 'gemini-3.1-flash-lite-preview', responseType: 'json', schema: seoSchema, temperature: 0.3, maxOutputTokens: 4096 }),
+      });
+      const seoData = await seoRes.json() as { text?: string; error?: string };
+
+      if (seoRes.ok && seoData.text) {
+        const report = JSON.parse(seoData.text);
+        report.total = (report.title?.score || 0) + (report.keyword_structure?.score || 0) + (report.user_retention?.score || 0) + (report.medical_safety?.score || 0) + (report.conversion?.score || 0);
+
+        console.log(`[BLOG] 📊 SEO 평가 완료 - 총점: ${report.total}점`);
+        console.log(`[BLOG]   ① 제목: ${report.title?.score || 0}/25  ② 키워드: ${report.keyword_structure?.score || 0}/25  ③ 체류: ${report.user_retention?.score || 0}/20  ④ 의료법: ${report.medical_safety?.score || 0}/20  ⑤ 전환: ${report.conversion?.score || 0}/10`);
+
+        setSeoReport(report as SeoReport);
+        setScores(prev => ({ ...prev, seoScore: report.total }));
+
+        if (report.improvement_suggestions?.length) {
+          console.log(`[BLOG] 📝 SEO 개선 제안: ${report.improvement_suggestions.join(' | ')}`);
+        }
+      } else {
+        console.error(`[BLOG] ❌ SEO 평가 불가: ${seoData.error || 'API 응답 없음'}`);
+      }
+    } catch (seoError) {
+      console.error('[BLOG] ❌ SEO 평가 오류:', seoError);
+    } finally {
+      setIsSeoLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!topic.trim() || isGenerating) return;
+
+    // 크레딧 체크 + 차감
+    if (creditCtx.userId && creditCtx.creditInfo) {
+      const creditResult = await blogUseCredit(creditCtx.userId);
+      if (!creditResult.success) {
+        setError(creditResult.error === 'no_credits' ? '크레딧이 모두 소진되었습니다.' : '크레딧 차감에 실패했습니다.');
+        return;
+      }
+      creditCtx.setCreditInfo({ credits: creditResult.remaining, totalUsed: (creditCtx.creditInfo.totalUsed || 0) + 1 });
+    }
+
+    const request: GenerationRequest = {
+      category,
+      topic: topic.trim(),
+      keywords: keywords.trim(),
+      disease: disease.trim() || undefined,
+      tone,
+      audienceMode,
+      persona,
+      imageStyle,
+      postType: 'blog',
+      textLength,
+      imageCount,
+      cssTheme,
+      writingStyle,
+      keywordDensity,
+      youtubeTranscript: youtubeTranscript || undefined,
+      hospitalStrengths: (() => {
+        try {
+          const data = JSON.parse(localStorage.getItem('winaid_hospital_strengths') || '{}');
+          return data[hospitalName] || undefined;
+        } catch { return undefined; }
+      })(),
+      medicalLawMode,
+      includeFaq,
+      faqCount: includeFaq ? faqCount : undefined,
+      customSubheadings: customSubheadings.trim() || undefined,
+      customImagePrompt: imageStyle === 'custom' ? (customPrompt?.trim() || undefined) : undefined,
+      hospitalName: hospitalName || undefined,
+      hospitalStyleSource: hospitalName ? 'explicit_selected_hospital' : 'generic_default',
+      includeHospitalIntro,
+      clinicContext: clinicContext ? {
+        actualServices: clinicContext.actualServices,
+        specialties: clinicContext.specialties,
+        locationSignals: clinicContext.locationSignals,
+      } : undefined,
+    };
+
+    setIsGenerating(true);
+    setDisplayStage(1);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setRotationIdx(0);
+    setError(null);
+    setIsRetryable(false);
+    setGeneratedContent(null);
+    setScores(undefined);
+    setSeoReport(null);
+    setIsSeoLoading(false);
+    setSaveStatus(null);
+    // 예상 시간 계산
+    setGenerationStartTime(Date.now());
+    let estimated = 25; // 텍스트 생성 (~20초) + 경쟁분석 병렬 (~5초)
+    if (request.imageCount && request.imageCount > 0) estimated += request.imageCount * 45;
+    setEstimatedTotalSeconds(estimated);
+    setBlogSections([]);
+    setRegeneratingSection(null);
+    setSectionProgress('');
+
+    // ── 로그: 요청 시작 ──
+    console.info(`[BLOG] ========== 블로그 생성 시작 ==========`);
+    console.info(`[BLOG] topic="${request.topic}" disease="${request.disease || '없음'}" imageCount=${request.imageCount} textLength=${request.textLength}`);
+    console.info(`[BLOG] category="${request.category}" persona="${request.persona}" tone="${request.tone}" audience="${request.audienceMode}"`);
+    if (request.customSubheadings) {
+      console.info(`[BLOG] customSubheadings="${request.customSubheadings.substring(0, 100)}..."`);
+    }
+
+    try {
+      const { systemInstruction, prompt } = buildBlogPrompt(request);
+      console.info(`[BLOG] 프롬프트 조립 완료 — system: ${systemInstruction.length}자, prompt: ${prompt.length}자`);
+
+      // ── 병렬 실행: 경쟁 블로그 분석 + 말투 로드 (서로 독립적) ──
+      console.info(`[BLOG] 경쟁 분석 + 말투 로드 병렬 시작`);
+
+      const competitorPromise = keywords.trim() ? (async () => {
+        try {
+          const competitorRes = await fetch('/api/gemini', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              prompt: seoPrompt,
+              prompt: `너는 네이버 블로그 SEO 분석 전문가다.
+"${keywords.trim()}" 키워드로 네이버 통합탭에서 1위를 차지할 블로그 글의 구조를 분석해줘.
+
+실제 네이버 상위 블로그를 참고하여 아래 형식의 JSON으로만 답변해.
+설명 없이 JSON만 출력.
+
+{
+  "title": "예상 1위 블로그 제목 (30~40자)",
+  "charCount": 예상 글자수(숫자),
+  "subtitleCount": 예상 소제목 수(숫자),
+  "subtitles": ["소제목1", "소제목2", "소제목3", ...],
+  "imageCount": 예상 이미지 수(숫자),
+  "keyAngles": ["이 키워드에서 자주 다루는 핵심 관점 3~5개"]
+}`,
               model: 'gemini-3.1-flash-lite-preview',
-              responseType: 'json',
-              schema: seoSchema,
               temperature: 0.3,
-              maxOutputTokens: 4096,
+              responseType: 'json',
+              timeout: 8000,
             }),
           });
-          const seoData = await seoRes.json() as { text?: string; error?: string };
+          if (!competitorRes.ok) return '';
+          const cData = await competitorRes.json() as { text?: string };
+          if (!cData.text) return '';
+          let cText = cData.text;
+          const cJsonMatch = cText.match(/```(?:json)?\s*([\s\S]*?)```/);
+          if (cJsonMatch) cText = cJsonMatch[1];
+          const c = JSON.parse(cText.trim()) as {
+            title?: string; charCount?: number; subtitleCount?: number;
+            subtitles?: string[]; imageCount?: number; keyAngles?: string[];
+          };
+          const subs = c.subtitles || [];
+          return `
+[경쟁 블로그 분석 결과 - 이 글보다 상위에 노출되어야 함]
+현재 "${keywords.trim()}" 통합탭 상위 블로그 예상 구조:
+- 제목: ${c.title || '미분석'}
+- 글자 수: ${c.charCount || 0}자
+- 소제목 수: ${subs.length}개
+- 이미지 수: ${c.imageCount || 0}개
+${subs.length > 0 ? `- 소제목 목록: ${subs.join(' / ')}` : ''}
 
-          if (seoRes.ok && seoData.text) {
-            const seoReport = JSON.parse(seoData.text);
-            // 총점 재계산 (old seoService.ts:980-988 동일)
-            const calculatedTotal =
-              (seoReport.title?.score || 0) +
-              (seoReport.keyword_structure?.score || 0) +
-              (seoReport.user_retention?.score || 0) +
-              (seoReport.medical_safety?.score || 0) +
-              (seoReport.conversion?.score || 0);
-            seoReport.total = calculatedTotal;
+[경쟁 분석 기반 작성 전략]
+1. 글자 수: 경쟁 글(${c.charCount || 0}자)보다 충분한 분량 확보
+2. 소제목: 경쟁 글(${subs.length}개)보다 더 다양한 관점 제공
+3. 이미지: 경쟁 글(${c.imageCount || 0}개)과 동등 이상
+4. 구조: 더 읽기 쉽고 체류 시간이 길어지는 구조 설계
 
-            console.log(`[BLOG] 📊 SEO 평가 완료 - 총점: ${seoReport.total}점`);
-            console.log(`[BLOG]   ① 제목 최적화: ${seoReport.title?.score || 0}/25`);
-            console.log(`[BLOG]   ② 본문 키워드: ${seoReport.keyword_structure?.score || 0}/25`);
-            console.log(`[BLOG]   ③ 사용자 체류: ${seoReport.user_retention?.score || 0}/20`);
-            console.log(`[BLOG]   ④ 의료법 안전: ${seoReport.medical_safety?.score || 0}/20`);
-            console.log(`[BLOG]   ⑤ 전환 연결성: ${seoReport.conversion?.score || 0}/10`);
+[차별화 앵글 설계 - 경쟁 글과 다른 관점 필수]
+${subs.length > 0 ? `경쟁 글 소제목: ${subs.join(' / ')}` : ''}
+위 소제목이 이미 다루는 내용은 "같은 말 다시 하기"가 아니라 "더 깊은 메커니즘/숫자"로 차별화.
+경쟁 글이 빠뜨린 앵글을 최소 1~2개 추가:
+- 빠진 관점 후보: 자가 관리법, 연령대별 차이, 시술 후 관리, 비용/기간 현실 정보, 잘못 알려진 상식 바로잡기
+- 경쟁 글이 나열형이면 → 우리는 "독자 상황별 분기"나 "흔한 오해" 앵글로 차별화
+- 경쟁 글이 감성 위주면 → 우리는 구체적 숫자/메커니즘으로 차별화
+`;
+        } catch (e) {
+          console.warn(`[BLOG] 경쟁 분석 실패 (무시):`, e);
+          return '';
+        }
+      })() : Promise.resolve('');
 
-            if (seoReport.total >= 85) {
-              console.log(`[BLOG] ✅ SEO 점수 85점 이상!`);
-            } else {
-              console.log(`[BLOG] ℹ️ SEO 점수 ${seoReport.total}점 - 참고용`);
+      const stylePromise = (async () => {
+        if (learnedStyleId) {
+          const learnedStyle = getStyleById(learnedStyleId);
+          if (learnedStyle) {
+            return `\n\n[🎓🎓🎓 학습된 말투 적용 - 최우선 적용! 🎓🎓🎓]\n${getStylePromptForGeneration(learnedStyle)}\n\n⚠️ 위 학습된 말투를 반드시 적용하세요!\n- 문장 끝 패턴을 정확히 따라하세요\n- 자주 사용하는 표현을 자연스럽게 활용하세요\n- 전체적인 어조와 분위기를 일관되게 유지하세요`;
+          }
+        } else if (hospitalName) {
+          try {
+            const sp = await getHospitalStylePrompt(hospitalName);
+            if (sp) return `\n\n[병원 블로그 학습 말투 - 반드시 적용]\n${sp}`;
+          } catch { /* 프로파일 없으면 기본 */ }
+        }
+        return '';
+      })();
+
+      // 두 작업 동시 완료 대기
+      const [competitorInstruction, styleInstruction] = await Promise.all([competitorPromise, stylePromise]);
+
+      console.info(`[BLOG] 병렬 완료 — 경쟁: ${competitorInstruction ? competitorInstruction.length + '자' : '없음'}, 말투: ${styleInstruction ? styleInstruction.length + '자' : '없음'}`);
+
+      let finalPrompt = prompt;
+      if (competitorInstruction) finalPrompt += `\n\n${competitorInstruction}`;
+      if (styleInstruction) finalPrompt += styleInstruction;
+
+      console.info(`[BLOG] 최종 프롬프트 길이: ${finalPrompt.length}자 (system: ${systemInstruction.length}자)`);
+      console.info(`[BLOG] Gemini 호출 시작 — model=gemini-3.1-pro-preview, temp=0.85`);
+
+      const res = await fetch('/api/gemini', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: finalPrompt,
+          systemInstruction,
+          model: 'gemini-3.1-pro-preview',
+          temperature: 0.85,
+          maxOutputTokens: 65536,
+        }),
+      });
+
+      const data = await res.json() as { text?: string; error?: string; details?: string };
+
+      if (!res.ok || !data.text) {
+        const errMsg = data.error || data.details || `서버 오류 (${res.status})`;
+        console.error(`[BLOG] ❌ 생성 실패: ${errMsg}`);
+        setError(errMsg);
+        setIsGenerating(false);
+        setDisplayStage(0);
+        return;
+      }
+
+      console.info(`[BLOG] Gemini 응답 수신 — 원본 길이: ${data.text.length}자`);
+      setDisplayStage(2); // old displayStage 2: 내용 다듬는 중
+
+      // ── 응답 파싱: 본문 / SCORES / IMAGE_PROMPTS 분리 ──
+      let blogText = data.text;
+      let parsed: ScoreBarData | undefined;
+      const imagePrompts: string[] = [];
+
+      // 1) ---IMAGE_PROMPTS--- 블록 추출 + 제거
+      const imgPromptsMarker = '---IMAGE_PROMPTS---';
+      const imgIdx = blogText.indexOf(imgPromptsMarker);
+      if (imgIdx !== -1) {
+        const afterImg = blogText.substring(imgIdx + imgPromptsMarker.length).trim();
+        afterImg.split('\n').forEach(line => {
+          const trimmed = line.replace(/^\d+[\.\)]\s*/, '').trim();
+          if (trimmed && !trimmed.startsWith('---') && !trimmed.startsWith('[') && !trimmed.startsWith('{')) {
+            imagePrompts.push(trimmed);
+          }
+        });
+        blogText = blogText.substring(0, imgIdx).replace(/\n+$/, '');
+      }
+
+      // 2) ---SCORES--- 블록 추출 + 제거
+      const scoresMarker = '---SCORES---';
+      const scoresIdx = blogText.lastIndexOf(scoresMarker);
+      if (scoresIdx !== -1) {
+        const afterScores = blogText.substring(scoresIdx + scoresMarker.length);
+        try {
+          const jsonMatch = afterScores.match(/\{[\s\S]*?\}/);
+          if (jsonMatch) {
+            const raw = JSON.parse(jsonMatch[0]) as Record<string, unknown>;
+            // 점수가 10 이하면 10점 만점으로 응답한 것 → 10배 보정
+            const fix = (v: unknown) => {
+              if (typeof v !== 'number') return undefined;
+              return v <= 10 ? v * 10 : Math.min(v, 100);
+            };
+            const seo = fix(raw.seo);
+            const medical = fix(raw.medical);
+            const conversion = fix(raw.conversion);
+            if (seo != null || medical != null || conversion != null) {
+              parsed = { seoScore: seo, safetyScore: medical, conversionScore: conversion };
+            }
+          }
+        } catch { /* 파싱 실패 무시 */ }
+        blogText = blogText.substring(0, scoresIdx).replace(/\n*```\s*$/, '').replace(/\n+$/, '');
+      }
+
+      // 3) HTML 정리: 코드블록 fence 제거
+      blogText = blogText.replace(/^```html?\s*\n?/i, '').replace(/\n?```\s*$/, '');
+
+      // 3.5) 구조 보정 (old legacyBlogGeneration.ts 동일: h1/h2→h3, markdown→h3, 이모지/해시태그 제거)
+      const beforeLen = blogText.length;
+      const { html: normalizedHtml, log: structureLogs } = normalizeBlogStructure(blogText, topic.trim());
+      blogText = normalizedHtml;
+      structureLogs.forEach(l => console.info(`[BLOG] ${l}`));
+      console.info(`[BLOG] 구조 보정 완료 — ${beforeLen}자 → ${blogText.length}자`);
+
+      // 3.6) 메인 제목 주입 (old resultAssembler.ts 동일: <h2 class="main-title">)
+      const hasMainTitle = blogText.includes('class="main-title"') || blogText.includes("class='main-title'");
+      if (!hasMainTitle) {
+        blogText = `<h2 class="main-title">${topic.trim()}</h2>\n${blogText}`;
+        console.info(`[BLOG] 메인 제목 주입: "${topic.trim()}"`);
+      }
+      if (parsed) {
+        console.info(`[BLOG] 자가평가 점수 — SEO: ${parsed.seoScore ?? '?'}, 의료법: ${parsed.safetyScore ?? '?'}, 전환: ${parsed.conversionScore ?? '?'}`);
+      }
+      console.info(`[BLOG] 이미지 프롬프트: ${imagePrompts.length}개 (요청: ${imageCount}개)`);
+      setSavedImagePrompts(imagePrompts);
+
+      // ── Stage 2: 소제목 개수 검사 (최소 4개 정책) ──
+      {
+        const h3Tags = blogText.match(/<h3[^>]*>([\s\S]*?)<\/h3>/gi) || [];
+        const h3Count = h3Tags.length;
+        console.info(`[BLOG] Stage 2: 소제목 수 판정 — 현재 ${h3Count}개 (최소 4개)`);
+
+        if (h3Count >= 4) {
+          console.info(`[BLOG] Stage 2: ✅ 소제목 수 충분 (${h3Count}개)`);
+        }
+      }
+
+      // ── 글자수 목표 대비 검증 (old legacyBlogGeneration.ts:1474-1498 동일) ──
+      {
+        const textOnly = blogText.replace(/<[^>]+>/g, '');
+        const charCountNoSpaces = textOnly.replace(/\s/g, '').length;
+        const targetMin = textLength;
+        const targetMax = textLength + 300;
+        const deviation = charCountNoSpaces - textLength;
+
+        if (charCountNoSpaces < targetMin) {
+          console.info(`[BLOG] 글자수 부족: 목표=${textLength}자, 실제=${charCountNoSpaces}자 (${deviation}자 부족)`);
+        } else if (charCountNoSpaces > targetMax) {
+          console.info(`[BLOG] 글자수 초과: 목표=${textLength}자, 실제=${charCountNoSpaces}자 (+${deviation}자) — 그대로 진행`);
+        } else {
+          console.info(`[BLOG] ✅ 글자수 적정: 목표=${textLength}자, 실제=${charCountNoSpaces}자 (${deviation >= 0 ? '+' : ''}${deviation}자)`);
+        }
+      }
+
+      // 3.8) 의료광고법 금지어 자동 대체
+      {
+        const medLawReplacements: [RegExp, string][] = [
+          [/극대화/g, '향상'], [/최첨단/g, '최신'], [/완벽(한|하게|히)?/g, '꼼꼼$1'], [/확실(한|하게|히)?/g, '체계적$1'],
+          [/혁신적(인|으로)?/g, '새로운 방식$1'], [/획기적(인|으로)?/g, '효과적$1'], [/독보적(인|으로)?/g, '전문적$1'],
+          [/탁월(한|하게)?/g, '우수$1'], [/압도적(인|으로)?/g, '뛰어난'], [/독자적(인|으로)?/g, '고유한'],
+          [/완치/g, '호전'], [/근본\s?치료/g, '근본적인 관리'], [/영구적(인|으로)?/g, '장기적$1'],
+          [/100%/g, '높은 비율로'], [/가장\s(좋은|뛰어난|우수한)/g, '매우 $1'],
+          [/최소\s?침습/g, '부담을 줄인'], [/최소\s?통증/g, '불편감을 줄인'], [/최대\s?효과/g, '효과를 높인'],
+          [/무통\s/g, '불편감을 줄인 '], [/부작용\s?(없는|제로|zero)/g, '부작용 위험을 줄인'],
+          [/통증\s?없는/g, '불편감을 줄인'],
+        ];
+        let replacedCount = 0;
+        const foundTerms: string[] = [];
+        for (const [pattern, replacement] of medLawReplacements) {
+          const matches = blogText.match(pattern);
+          if (matches) {
+            foundTerms.push(`${matches[0]}(${matches.length}건)`);
+            replacedCount += matches.length;
+            blogText = blogText.replace(pattern, replacement);
+          }
+        }
+        if (replacedCount > 0) {
+          console.info(`[BLOG] 의료법 금지어 자동 대체: ${replacedCount}건 — ${foundTerms.join(', ')}`);
+        }
+      }
+
+      // 4) 이미지 없으면 마커 strip 후 바로 표시
+      if (imageCount === 0 || imagePrompts.length === 0) {
+        blogText = blogText.replace(/\[IMG_\d+\]\n*/g, '');
+        setGeneratedContent(blogText);
+        setScores(parsed);
+      } else {
+        setDisplayStage(3); // old displayStage 3: 이미지 만드는 중
+        // 5) 마커가 있는 본문을 먼저 표시 (이미지 자리에 로딩 표시)
+        let htmlWithPlaceholders = blogText;
+        for (let i = 1; i <= imageCount; i++) {
+          htmlWithPlaceholders = htmlWithPlaceholders.replace(
+            new RegExp(`\\[IMG_${i}\\]`, 'g'),
+            `<div class="content-image-wrapper" data-img-slot="${i}" style="text-align:center;padding:24px 0;"><div style="display:inline-flex;align-items:center;gap:8px;padding:12px 20px;background:#f1f5f9;border-radius:12px;font-size:13px;color:#64748b;">🖼️ 이미지 ${i}/${imageCount} 생성 중...</div></div>`,
+          );
+        }
+        // 혹시 남은 초과 마커 정리
+        htmlWithPlaceholders = htmlWithPlaceholders.replace(/\[IMG_\d+\]\n*/g, '');
+        setGeneratedContent(htmlWithPlaceholders);
+        setScores(parsed);
+
+        // 6) 이미지 생성 → Storage 업로드 → public URL
+        const generateAndUpload = async (prompt: string, index: number): Promise<{ index: number; url: string | null }> => {
+          try {
+            // 6a) /api/image → base64
+            const imgRes = await fetch('/api/image', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ prompt, aspectRatio: imageAspectRatio, mode: 'blog' as const }),
+            });
+            if (!imgRes.ok) return { index, url: null };
+            const imgData = await imgRes.json() as { imageDataUrl?: string };
+            const dataUrl = imgData.imageDataUrl;
+            if (!dataUrl) return { index, url: null };
+
+            // 6b) base64 → Supabase Storage 업로드
+            if (supabase) {
+              try {
+                const commaIdx = dataUrl.indexOf(',');
+                const base64Data = dataUrl.substring(commaIdx + 1);
+                const metaPart = dataUrl.substring(0, commaIdx);
+                const mimeMatch = metaPart.match(/data:(.*?);base64/);
+                const mimeType = mimeMatch?.[1] || 'image/png';
+                const ext = mimeType === 'image/jpeg' ? 'jpg' : 'png';
+
+                // binary 변환
+                const byteChars = atob(base64Data);
+                const byteArray = new Uint8Array(byteChars.length);
+                for (let i = 0; i < byteChars.length; i++) {
+                  byteArray[i] = byteChars.charCodeAt(i);
+                }
+                const blob = new Blob([byteArray], { type: mimeType });
+
+                const fileName = `blog/${Date.now()}_${index}.${ext}`;
+                const { error: uploadErr } = await supabase.storage
+                  .from('blog-images')
+                  .upload(fileName, blob, { contentType: mimeType, upsert: false });
+
+                if (!uploadErr) {
+                  const { data: urlData } = supabase.storage.from('blog-images').getPublicUrl(fileName);
+                  if (urlData?.publicUrl) {
+                    return { index, url: urlData.publicUrl };
+                  }
+                }
+                console.warn(`[IMG_UPLOAD] IMG_${index}: 업로드 실패, base64 fallback`, uploadErr?.message);
+              } catch (uploadErr) {
+                console.warn(`[IMG_UPLOAD] IMG_${index}: 업로드 예외, base64 fallback`, uploadErr);
+              }
             }
 
-            if (seoReport.improvement_suggestions?.length) {
-              console.log(`[BLOG] 📝 SEO 개선 제안:`);
-              seoReport.improvement_suggestions.forEach((s: string, i: number) => {
-                console.log(`[BLOG]   ${i + 1}. ${s}`);
+            // 6c) Storage 실패 시 base64 fallback
+            return { index, url: dataUrl };
+          } catch {
+            return { index, url: null };
+          }
+        };
+
+        // 최대 imageCount개까지만 생성 — 각 이미지 완성 즉시 화면에 반영
+        const prompts = imagePrompts.slice(0, imageCount);
+        const imagePromises = prompts.map((p, i) => {
+          const index = i + 1;
+          return generateAndUpload(p, index).then(result => {
+            // 이미지 완성 즉시 해당 슬롯의 플레이스홀더를 실제 이미지로 교체
+            if (result.url) {
+              // 이미지 히스토리 초기화
+              setImageHistory(prev => ({ ...prev, [result.index]: [result.url!] }));
+              setGeneratedContent(prev => {
+                if (!prev) return prev;
+                const imgTag = '<div class="content-image-wrapper"><img src="' + result.url + '" alt="blog image ' + result.index + '" data-image-index="' + result.index + '" style="max-width:100%;height:auto;border-radius:12px;" /></div>';
+                return prev.replace(
+                  new RegExp('<div class="content-image-wrapper" data-img-slot="' + result.index + '"[^>]*>[\\s\\S]*?</div>\\s*</div>', ''),
+                  imgTag,
+                );
               });
             }
+            return result;
+          });
+        });
+        const imageResults = await Promise.all(imagePromises);
+
+        // 7) [IMG_N] 마커를 실제 이미지로 교체 (old insertImageData 동일)
+        let finalHtml = blogText;
+        for (const img of imageResults) {
+          const pattern = new RegExp(`\\[IMG_${img.index}\\]`, 'gi');
+          if (img.url) {
+            const imgTag = `<div class="content-image-wrapper"><img src="${img.url}" alt="blog image ${img.index}" data-image-index="${img.index}" style="max-width:100%;height:auto;border-radius:12px;" /></div>`;
+            finalHtml = finalHtml.replace(pattern, imgTag);
           } else {
-            console.error(`[BLOG] ❌ SEO 평가 불가: ${seoData.error || 'API 응답 없음'}`);
+            finalHtml = finalHtml.replace(pattern, '');
           }
-        } catch (seoError) {
-          console.error('[BLOG] ❌ SEO 평가 오류:', seoError);
         }
-        console.info('[BLOG] ✅ Step 2 완료: 글 작성 및 SEO 평가 완료');
+        // 미매칭 마커 제거
+        finalHtml = finalHtml.replace(/\[IMG_\d+\]\n*/g, '');
+        setGeneratedContent(finalHtml);
+        blogText = finalHtml;
+      }
+
+      // ── fact_check 기본값 설정 (old legacyBlogGeneration.ts:1713-1740 동일) ──
+      // Gemini가 ---SCORES--- 블록을 반환하지 않았거나 필드가 빠진 경우 기본값으로 보완
+      {
+        if (!parsed) parsed = {};
+        // conversion_score: 없거나 0이면 기본값 75
+        if (!parsed.conversionScore || parsed.conversionScore === 0) {
+          parsed.conversionScore = 75;
+          console.log('[BLOG] ⚠️ conversion_score 기본값 75점 설정 (AI 미반환)');
+        }
+        // safety_score: undefined/null이면 기본값 90
+        if (parsed.safetyScore === undefined || parsed.safetyScore === null) {
+          parsed.safetyScore = 90;
+        }
+        // fact_score, ai_smell_score, verified_facts_count는 ScoreBarData에 없으므로 로그만 기록
+        const factScore = 85;
+        const aiSmellScore = 12;
+        const verifiedFactsCount = 5;
+        console.log('[BLOG] ⚠️ ai_smell_score 기본값 12점 설정 (AI 미반환)');
+        console.log(`[BLOG] 📊 fact_check 최종값: conversion_score=${parsed.conversionScore}, fact_score=${factScore}, safety_score=${parsed.safetyScore}, ai_smell_score=${aiSmellScore}, verified_facts_count=${verifiedFactsCount}`);
+        // scores state 업데이트
+        setScores({ ...parsed });
+      }
+
+      // ── SEO 평가는 백그라운드에서 실행 (사용자가 글을 바로 볼 수 있도록) ──
+      if (blogText && topic.trim()) {
+        runSeoEvaluation(blogText, topic.trim(), keywords.trim());
       }
 
       // ── 섹션 파싱 (소제목 재생성 기능용) ──
@@ -1354,7 +1285,7 @@ JSON 형식으로 응답해주세요.`;
       console.info(`[BLOG] 저장 시작 — 최종 콘텐츠 길이: ${blogText.length}자`);
       try {
         const { userId, userEmail } = await getSessionSafe();
-        const titleMatch = blogText.match(/<h3[^>]*>([^<]+)<\/h3>/) || blogText.match(/^(.+)/);
+        const titleMatch = blogText.match(/<h2[^>]*class="[^"]*main-title[^"]*"[^>]*>([^<]+)<\/h2>/) || blogText.match(/<h3[^>]*>([^<]+)<\/h3>/) || blogText.match(/^(.+)/);
         const extractedTitle = titleMatch ? titleMatch[1].replace(/<[^>]*>/g, '').trim().substring(0, 200) : topic.trim();
         console.info(`[BLOG] 추출 제목: "${extractedTitle}"`);
 
@@ -1383,14 +1314,198 @@ JSON 형식으로 응답해주세요.`;
       }
       console.info(`[BLOG] ========== 블로그 생성 완료 ==========`);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : '네트워크 오류';
-      console.error(`[BLOG] ❌ 생성 실패: ${msg}`, err);
-      setError(msg);
+      const { message, retryable } = classifyError(err);
+      console.error(`[BLOG] ❌ 생성 실패: ${message}`, err);
+      setError(message);
+      setIsRetryable(retryable);
     } finally {
       setIsGenerating(false);
       setDisplayStage(0);
     }
   };
+
+  // ── 인라인 채팅 수정 (결과 화면에서 바로 수정) ──
+  const handleChatRefine = useCallback(async () => {
+    if (!chatInput.trim() || !generatedContent || isChatRefining) return;
+    setIsChatRefining(true);
+    try {
+      const { systemInstruction, prompt } = buildChatRefinePrompt({
+        workingContent: generatedContent,
+        userMessage: chatInput.trim(),
+      });
+      const res = await fetch('/api/gemini', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt, systemInstruction,
+          model: 'gemini-3.1-pro-preview',
+          temperature: 0.7,
+          maxOutputTokens: 16384,
+        }),
+      });
+      const data = await res.json() as { text?: string };
+      if (res.ok && data.text) {
+        let refined = data.text.trim();
+        refined = refined.replace(/^```html?\s*\n?/i, '').replace(/\n?```\s*$/, '');
+        if (refined.includes('<')) {
+          setGeneratedContent(refined);
+          setChatInput('');
+          setSaveStatus(null);
+          const sections = parseBlogSections(refined);
+          setBlogSections(sections);
+        }
+      }
+    } catch { /* 수정 실패 무시 */ }
+    finally { setIsChatRefining(false); }
+  }, [chatInput, generatedContent, isChatRefining]);
+
+  // ── 이미지 클릭 → 액션 모달 열기 ──
+  const handleImageClick = useCallback((imageIndex: number) => {
+    const promptIdx = imageIndex - 1;
+    const originalPrompt = savedImagePrompts[promptIdx];
+    if (!originalPrompt) return;
+    // 현재 이미지 src 가져오기
+    if (generatedContent) {
+      const div = document.createElement('div');
+      div.innerHTML = generatedContent;
+      const img = div.querySelector(`img[data-image-index="${imageIndex}"]`);
+      setSelectedImgSrc(img?.getAttribute('src') || '');
+    }
+    setSelectedImgIndex(imageIndex);
+    setRegenPrompt(originalPrompt);
+    setImgActionModalOpen(true);
+  }, [savedImagePrompts, generatedContent]);
+
+  // ── 이미지 다운로드 ──
+  const handleImageDownload = useCallback((src: string, index: number) => {
+    const a = document.createElement('a');
+    a.href = src;
+    a.download = `blog_image_${index}.png`;
+    a.click();
+  }, []);
+
+  // ── AI 프롬프트 추천 (이미지 재생성 모달) ──
+  const handleRecommendPrompt = useCallback(async () => {
+    if (!generatedContent || isRecommendingPrompt) return;
+    setIsRecommendingPrompt(true);
+    try {
+      const textOnly = generatedContent.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 2000);
+      const res = await fetch('/api/gemini', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: `아래 병원 블로그 글의 ${selectedImgIndex}번째 이미지에 어울리는 프롬프트를 한국어로 1개만 작성해주세요. 프롬프트만 출력하세요.\n\n글 내용:\n${textOnly}`,
+          model: 'gemini-3.1-flash-lite-preview', temperature: 0.7, maxOutputTokens: 300,
+        }),
+      });
+      const data = await res.json() as { text?: string };
+      if (data.text) setRegenPrompt(data.text.trim());
+    } catch { /* 추천 실패 무시 */ }
+    finally { setIsRecommendingPrompt(false); }
+  }, [generatedContent, selectedImgIndex, isRecommendingPrompt]);
+
+  // ── 이미지 히스토리에서 선택 → HTML 교체 ──
+  const handleSelectHistoryImage = useCallback((imageIndex: number, url: string) => {
+    setGeneratedContent(prev => {
+      if (!prev) return prev;
+      const div = document.createElement('div');
+      div.innerHTML = prev;
+      const imgs = div.querySelectorAll(`img[data-image-index="${imageIndex}"]`);
+      imgs.forEach(img => img.setAttribute('src', url));
+      return div.innerHTML;
+    });
+    // 선택된 이미지를 히스토리 맨 끝으로 이동
+    setImageHistory(prev => {
+      const arr = prev[imageIndex] || [];
+      const filtered = arr.filter(u => u !== url);
+      return { ...prev, [imageIndex]: [...filtered, url] };
+    });
+  }, []);
+
+  // ── 이미지 재생성 실행 (모달에서 호출) ──
+  const handleImageRegenerateSubmit = useCallback(async () => {
+    const imageIndex = selectedImgIndex;
+    const newPrompt = regenPrompt;
+    if (!newPrompt.trim()) return;
+
+    setImgRegenModalOpen(false);
+    setRegeneratingImage(imageIndex);
+    console.info(`[BLOG] 이미지 ${imageIndex} 재생성 시작 — 프롬프트: "${newPrompt.substring(0, 60)}..."`);
+
+    try {
+      const imgRes = await fetch('/api/image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: newPrompt, aspectRatio: imageAspectRatio, mode: 'blog' }),
+      });
+      if (!imgRes.ok) throw new Error('이미지 생성 실패');
+
+      const imgData = await imgRes.json() as { imageDataUrl?: string };
+      if (!imgData.imageDataUrl) throw new Error('이미지 데이터 없음');
+
+      // Supabase Storage 업로드
+      if (supabase) {
+        try {
+          const dataUrl = imgData.imageDataUrl;
+          const commaIdx = dataUrl.indexOf(',');
+          const base64Data = dataUrl.substring(commaIdx + 1);
+          const metaPart = dataUrl.substring(0, commaIdx);
+          const mimeMatch = metaPart.match(/data:(.*?);base64/);
+          const mimeType = mimeMatch?.[1] || 'image/png';
+          const ext = mimeType === 'image/jpeg' ? 'jpg' : 'png';
+          const byteChars = atob(base64Data);
+          const byteArray = new Uint8Array(byteChars.length);
+          for (let i = 0; i < byteChars.length; i++) byteArray[i] = byteChars.charCodeAt(i);
+          const blob = new Blob([byteArray], { type: mimeType });
+          const fileName = `blog/${Date.now()}_regen_${imageIndex}.${ext}`;
+          const { error: uploadErr } = await supabase.storage.from('blog-images').upload(fileName, blob, { contentType: mimeType, upsert: false });
+          if (!uploadErr) {
+            const { data: urlData } = supabase.storage.from('blog-images').getPublicUrl(fileName);
+            if (urlData?.publicUrl) {
+              // 히스토리에 새 이미지 추가 (최대 5개)
+              setImageHistory(prev => {
+                const arr = prev[imageIndex] || [];
+                const updated = [...arr, urlData.publicUrl].slice(-5);
+                return { ...prev, [imageIndex]: updated };
+              });
+              setGeneratedContent(prev => {
+                if (!prev) return prev;
+                const div = document.createElement('div');
+                div.innerHTML = prev;
+                const imgs = div.querySelectorAll(`img[data-image-index="${imageIndex}"]`);
+                imgs.forEach(img => img.setAttribute('src', urlData.publicUrl));
+                return div.innerHTML;
+              });
+              setSavedImagePrompts(prev => { const next = [...prev]; next[imageIndex - 1] = newPrompt; return next; });
+              console.info(`[BLOG] 이미지 ${imageIndex} 재생성 완료 (Storage)`);
+              return;
+            }
+          }
+        } catch { /* Storage 실패 → base64 fallback */ }
+      }
+
+      // base64 fallback
+      setImageHistory(prev => {
+        const arr = prev[imageIndex] || [];
+        const updated = [...arr, imgData.imageDataUrl!].slice(-5);
+        return { ...prev, [imageIndex]: updated };
+      });
+      setGeneratedContent(prev => {
+        if (!prev) return prev;
+        const div = document.createElement('div');
+        div.innerHTML = prev;
+        const imgs = div.querySelectorAll(`img[data-image-index="${imageIndex}"]`);
+        imgs.forEach(img => img.setAttribute('src', imgData.imageDataUrl!));
+        return div.innerHTML;
+      });
+      setSavedImagePrompts(prev => { const next = [...prev]; next[imageIndex - 1] = newPrompt; return next; });
+      console.info(`[BLOG] 이미지 ${imageIndex} 재생성 완료 (base64)`);
+    } catch (err) {
+      console.error(`[BLOG] 이미지 ${imageIndex} 재생성 실패:`, err);
+      alert('이미지 재생성에 실패했습니다.');
+    } finally {
+      setRegeneratingImage(null);
+    }
+  }, [selectedImgIndex, regenPrompt, supabase]);
 
   // ── 소제목 재생성 (root useAiRefine.ts + faqService.ts + gpt52-prompts-staged.ts 기준) ──
   const handleSectionRegenerate = useCallback(async (sectionIndex: number) => {
@@ -1502,9 +1617,9 @@ ${generatedContent.substring(0, 2000)}
   }, [blogSections, generatedContent, regeneratingSection]);
 
   // ── Word / PDF 다운로드 ──
-  const handleDownloadWord = useCallback(() => {
+  const handleDownloadWord = useCallback(async () => {
     if (!generatedContent) return;
-    downloadWord(generatedContent);
+    await downloadWord(generatedContent);
   }, [generatedContent]);
 
   const handleDownloadPDF = useCallback(() => {
@@ -1517,638 +1632,112 @@ ${generatedContent.substring(0, 2000)}
 
   return (
     <div className="flex flex-col lg:flex-row gap-5 lg:items-start p-5">
-      {/* ── 입력 폼 ── */}
-      <div className="w-full lg:w-[340px] xl:w-[380px] lg:flex-none">
-        <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-lg">📝</span>
-            <h2 className="text-base font-bold text-slate-800">블로그 생성</h2>
-          </div>
+      {/* ── 입력 폼 — BlogFormPanel 컴포넌트로 분리 ── */}
+      <BlogFormPanel
+        topic={topic} keywords={keywords} keywordDensity={keywordDensity} disease={disease} category={category}
+        persona={persona} tone={tone} audienceMode={audienceMode}
+        imageStyle={imageStyle} imageCount={imageCount} imageAspectRatio={imageAspectRatio} textLength={textLength}
+        hospitalName={hospitalName} selectedTeam={selectedTeam}
+        showHospitalDropdown={showHospitalDropdown} selectedManager={selectedManager}
+        selectedHospitalAddress={selectedHospitalAddress}
+        homepageUrl={homepageUrl} clinicContext={clinicContext}
+        isCrawling={isCrawling} crawlProgress={crawlProgress}
+        includeFaq={includeFaq} faqCount={faqCount}
+        showCustomInput={showCustomInput} customPrompt={customPrompt}
+        customSubheadings={customSubheadings} learnedStyleId={learnedStyleId}
+        showAdvanced={showAdvanced} includeHospitalIntro={includeHospitalIntro}
+        keywordStats={keywordStats} keywordAiRec={keywordAiRec}
+        keywordProgress={keywordProgress} isAnalyzingKeywords={isAnalyzingKeywords}
+        showKeywordPanel={showKeywordPanel} keywordSortBy={keywordSortBy}
+        keywordSearch={keywordSearch} keywordMinVolume={keywordMinVolume}
+        isCheckingRanks={isCheckingRanks} rankResults={rankResults}
+        hideRanked={hideRanked} isLoadingMoreKeywords={isLoadingMoreKeywords}
+        seoTitles={seoTitles} trendingItems={trendingItems}
+        isLoadingTitles={isLoadingTitles} isLoadingTrends={isLoadingTrends}
+        isGenerating={isGenerating}
+        setTopic={setTopic} setKeywords={setKeywords} setKeywordDensity={setKeywordDensity} setDisease={setDisease}
+        setCategory={setCategory} setPersona={setPersona} setTone={setTone}
+        setAudienceMode={setAudienceMode} setImageStyle={setImageStyle}
+        setImageCount={setImageCount} setImageAspectRatio={setImageAspectRatio} setTextLength={setTextLength}
+        setHospitalName={setHospitalName} setSelectedTeam={setSelectedTeam}
+        setShowHospitalDropdown={setShowHospitalDropdown}
+        setSelectedManager={setSelectedManager}
+        setSelectedHospitalAddress={setSelectedHospitalAddress}
+        setHomepageUrl={setHomepageUrl} setClinicContext={setClinicContext}
+        setCrawlProgress={setCrawlProgress}
+        setIncludeFaq={setIncludeFaq} setFaqCount={setFaqCount}
+        setShowCustomInput={setShowCustomInput} setCustomPrompt={setCustomPrompt}
+        setCustomSubheadings={setCustomSubheadings}
+        setLearnedStyleId={setLearnedStyleId} setShowAdvanced={setShowAdvanced}
+        setIncludeHospitalIntro={setIncludeHospitalIntro}
+        setKeywordStats={setKeywordStats} setShowKeywordPanel={setShowKeywordPanel}
+        setKeywordSortBy={setKeywordSortBy} setKeywordSearch={setKeywordSearch}
+        setKeywordMinVolume={setKeywordMinVolume} setHideRanked={setHideRanked}
+        onSubmit={handleSubmit}
+        onAnalyzeKeywords={handleAnalyzeKeywords}
+        onCrawlHomepage={handleCrawlHomepage}
+        onLoadMoreKeywords={handleLoadMoreKeywords}
+        onCheckRanks={handleCheckRanks}
+        onRecommendTitles={handleRecommendTitles}
+        onRecommendTrends={handleRecommendTrends}
+      />
 
-          {/* 팀 선택 + 병원명 (old 동일) */}
-          <div className="flex bg-slate-100 rounded-lg p-0.5">
-            {TEAM_DATA.map(team => (
-              <button
-                key={team.id}
-                type="button"
-                onClick={() => { setSelectedTeam(team.id); setShowHospitalDropdown(true); }}
-                className={`flex-1 py-1.5 rounded-md text-xs font-bold transition-all ${
-                  selectedTeam === team.id
-                    ? 'bg-white text-blue-600 shadow-sm'
-                    : 'text-slate-400 hover:text-slate-600'
-                }`}
-              >
-                {team.label}
-              </button>
-            ))}
-          </div>
+      {/* ── 결과 영역 — BlogResultArea 컴포넌트로 분리 ── */}
+      <BlogResultArea
+        isGenerating={isGenerating}
+        displayStage={displayStage}
+        rotationIdx={rotationIdx}
+        generationStartTime={generationStartTime}
+        estimatedTotalSeconds={estimatedTotalSeconds}
+        error={error}
+        onDismissError={() => setError(null)}
+        isRetryable={isRetryable}
+        onRetry={() => { setError(null); setTimeout(() => { const form = document.querySelector('form'); if (form) form.requestSubmit(); }, 300); }}
+        generatedContent={generatedContent}
+        saveStatus={saveStatus}
+        scores={scores}
+        cssTheme={cssTheme}
+        blogSections={blogSections}
+        regeneratingSection={regeneratingSection}
+        sectionProgress={sectionProgress}
+        onSectionRegenerate={handleSectionRegenerate}
+        onDownloadWord={handleDownloadWord}
+        onDownloadPDF={handleDownloadPDF}
+        onImageRegenerate={handleImageClick}
+        regeneratingImage={regeneratingImage}
+        seoReport={seoReport}
+        isSeoLoading={isSeoLoading}
+        topic={topic}
+        chatInput={chatInput}
+        setChatInput={setChatInput}
+        isChatRefining={isChatRefining}
+        onChatRefine={handleChatRefine}
+      />
 
-          <div className="relative">
-            {selectedTeam !== null ? (
-            <>
-              <div className="relative">
-                <input
-                  type="text"
-                  value={hospitalName}
-                  onChange={e => setHospitalName(e.target.value)}
-                  placeholder="병원명 선택"
-                  className={inputCls}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowHospitalDropdown(!showHospitalDropdown)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 transition-colors"
-                >
-                  <svg className={`w-4 h-4 transition-transform ${showHospitalDropdown ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-                </button>
-              </div>
-              {showHospitalDropdown && (
-                <>
-                  <div className="fixed inset-0 z-10" onClick={() => setShowHospitalDropdown(false)} />
-                  <div className="absolute z-50 mt-1 w-full bg-white rounded-xl border border-slate-200 shadow-lg overflow-hidden">
-                    {/* 팀 헤더 */}
-                    <div className="px-3 py-2 bg-blue-50 border-b border-blue-100">
-                      <span className="text-xs font-bold text-blue-600">{TEAM_DATA.find(t => t.id === selectedTeam)?.label}</span>
-                    </div>
-                    {/* 병원 목록 (매니저별 그룹) */}
-                    {(() => {
-                      const team = TEAM_DATA.find(t => t.id === selectedTeam);
-                      if (!team || team.hospitals.length === 0) {
-                        return <div className="p-4 text-center text-xs text-slate-400">등록된 병원이 없습니다</div>;
-                      }
-                      const managers = [...new Set(team.hospitals.map(h => h.manager))];
-                      return (
-                        <div className="max-h-64 overflow-y-auto">
-                          {managers.map(manager => (
-                            <div key={manager}>
-                              <div className="px-3 py-2 bg-slate-50 text-[11px] font-bold text-slate-500 sticky top-0">
-                                {manager}
-                              </div>
-                              {team.hospitals.filter(h => h.manager === manager).map(hospital => (
-                                <button
-                                  key={`${hospital.name}-${hospital.manager}`}
-                                  type="button"
-                                  onClick={() => {
-                                    setHospitalName(hospital.name.replace(/ \(.*\)$/, ''));
-                                    setSelectedManager(hospital.manager);
-                                    setSelectedHospitalAddress(hospital.address || '');
-                                    setKeywordStats([]);
-                                    setShowKeywordPanel(false);
-                                    setShowHospitalDropdown(false);
-                                  }}
-                                  className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-blue-50 hover:text-blue-700 transition-colors flex items-center justify-between"
-                                >
-                                  <span>{hospital.name.replace(/ \(.*\)$/, '')}</span>
-                                  {hospitalName === hospital.name.replace(/ \(.*\)$/, '') && (
-                                    <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                                  )}
-                                </button>
-                              ))}
-                            </div>
-                          ))}
-                        </div>
-                      );
-                    })()}
-                  </div>
-                </>
-              )}
-              {selectedManager && hospitalName && (
-                <p className="mt-1 text-[11px] text-slate-400">담당: {selectedManager}</p>
-              )}
-            </>
-            ) : (
-              <div className="px-3 py-2.5 border border-slate-200 rounded-lg text-sm text-slate-400 bg-slate-50">
-                팀을 먼저 선택해주세요
-              </div>
-            )}
-          </div>
+      {/* ── 블로그 이미지 액션 모달 (다운로드/재생성 선택) ── */}
+      <ImageActionModal
+        open={imgActionModalOpen}
+        onClose={() => setImgActionModalOpen(false)}
+        imageSrc={selectedImgSrc}
+        imageIndex={selectedImgIndex}
+        onDownload={handleImageDownload}
+        onRegenerate={() => setImgRegenModalOpen(true)}
+      />
 
-          {/* 키워드 분석 버튼 (old InputForm 동일: 병원 선택 후 표시) */}
-          {selectedHospitalAddress && hospitalName && (
-            <button
-              type="button"
-              onClick={handleAnalyzeKeywords}
-              disabled={isAnalyzingKeywords}
-              className="w-full py-2.5 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-2 bg-blue-600 text-white hover:bg-blue-700 shadow-sm disabled:opacity-50"
-            >
-              <span>🔍</span>
-              <span>{isAnalyzingKeywords ? '키워드 분석 중...' : '키워드 분석'}</span>
-            </button>
-          )}
-
-          {/* 키워드 분석 결과 패널 (old InputForm 동일) */}
-          {showKeywordPanel && (
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-              <div className="flex items-center justify-between px-3 py-2 bg-slate-50 border-b border-slate-100">
-                <span className="text-xs font-bold text-slate-700">키워드 분석 ({keywordStats.length}개)</span>
-                <div className="flex items-center gap-1">
-                  {(['volume', 'blog', 'saturation'] as const).map(sort => (
-                    <button key={sort} type="button" onClick={() => setKeywordSortBy(sort)}
-                      className={`px-2 py-0.5 rounded text-[10px] font-semibold transition-all ${keywordSortBy === sort ? 'bg-blue-500 text-white' : 'text-slate-400 hover:text-slate-600'}`}
-                    >
-                      {sort === 'volume' ? '검색량' : sort === 'blog' ? '발행량' : '포화도'}
-                    </button>
-                  ))}
-                  <button type="button" onClick={() => setShowKeywordPanel(false)} className="ml-1 text-slate-400 hover:text-slate-600">
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                  </button>
-                </div>
-              </div>
-              {/* 검색 + 최소 검색량 필터 */}
-              {!isAnalyzingKeywords && keywordStats.length > 0 && (
-                <div className="flex gap-2 px-3 py-2 border-b border-slate-100 bg-white">
-                  <input
-                    type="text"
-                    value={keywordSearch}
-                    onChange={e => setKeywordSearch(e.target.value)}
-                    placeholder="키워드 검색..."
-                    className="flex-1 px-2.5 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:border-blue-400 placeholder:text-slate-300"
-                  />
-                  {/* 노출 중 숨기기 토글 (상위권 체크 완료 시만) */}
-                  {rankResults.size > 0 && (
-                    <button type="button" onClick={() => setHideRanked(!hideRanked)}
-                      className={`px-2 py-1.5 text-[10px] font-semibold rounded-lg border transition-all whitespace-nowrap ${hideRanked ? 'bg-emerald-50 border-emerald-300 text-emerald-700' : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300'}`}
-                    >
-                      {hideRanked ? '✅ 노출 중 숨김' : '노출 중 포함'}
-                    </button>
-                  )}
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] text-slate-400 whitespace-nowrap">최소</span>
-                    <select
-                      value={keywordMinVolume}
-                      onChange={e => setKeywordMinVolume(Number(e.target.value))}
-                      className="px-1.5 py-1.5 text-[11px] border border-slate-200 rounded-lg focus:outline-none focus:border-blue-400 bg-white text-slate-600"
-                    >
-                      <option value={0}>전체</option>
-                      <option value={10}>10+</option>
-                      <option value={50}>50+</option>
-                      <option value={100}>100+</option>
-                      <option value={500}>500+</option>
-                      <option value={1000}>1,000+</option>
-                      <option value={5000}>5,000+</option>
-                    </select>
-                  </div>
-                </div>
-              )}
-              {isAnalyzingKeywords ? (
-                <div className="p-6 text-center">
-                  <div className="w-6 h-6 border-2 border-blue-200 border-t-blue-500 rounded-full animate-spin mx-auto mb-2" />
-                  <p className="text-xs text-slate-400">{keywordProgress || '검색량 분석 중...'}</p>
-                </div>
-              ) : keywordStats.length > 0 ? (
-                <>
-                  <div className="max-h-72 overflow-y-auto">
-                    <table className="w-full text-xs">
-                      <thead className="sticky top-0 bg-slate-50">
-                        <tr className="text-slate-500">
-                          <th className="text-left px-3 py-2 font-semibold">키워드</th>
-                          <th className="text-right px-3 py-2 font-semibold">월간 검색량</th>
-                          <th className="text-right px-3 py-2 font-semibold">발행량</th>
-                          <th className="text-right px-3 py-2 font-semibold">포화도</th>
-                          {rankResults.size > 0 && <th className="text-center px-2 py-2 font-semibold">상위권</th>}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {[...keywordStats]
-                          .filter(s => {
-                            if (keywordMinVolume > 0 && s.monthlySearchVolume < keywordMinVolume) return false;
-                            if (keywordSearch && !s.keyword.includes(keywordSearch.trim())) return false;
-                            if (hideRanked && rankResults.get(s.keyword)?.isRanked) return false;
-                            return true;
-                          })
-                          .sort((a, b) => {
-                            if (keywordSortBy === 'volume') return b.monthlySearchVolume - a.monthlySearchVolume;
-                            if (keywordSortBy === 'blog') return b.blogPostCount - a.blogPostCount;
-                            return (a.saturation || 0) - (b.saturation || 0);
-                          })
-                          .map((stat, idx) => (
-                            <tr
-                              key={stat.keyword}
-                              className={`border-t border-slate-50 hover:bg-blue-50 cursor-pointer transition-colors ${idx % 2 === 0 ? '' : 'bg-slate-50/50'}`}
-                              onClick={() => setKeywords(k => k ? `${k}, ${stat.keyword}` : stat.keyword)}
-                            >
-                              <td className="px-3 py-2 font-medium text-slate-700">{stat.keyword}</td>
-                              <td className="px-3 py-2 text-right text-slate-600">{stat.monthlySearchVolume.toLocaleString()}</td>
-                              <td className="px-3 py-2 text-right text-slate-600">{stat.blogPostCount.toLocaleString()}</td>
-                              <td className="px-3 py-2 text-right">
-                                <span className={`font-semibold ${(stat.saturation || 0) < 1 ? 'text-emerald-600' : (stat.saturation || 0) < 3 ? 'text-amber-600' : 'text-red-600'}`}>
-                                  {stat.saturation?.toFixed(1) || '0.0'}
-                                </span>
-                              </td>
-                              {rankResults.size > 0 && (
-                                <td className="px-2 py-2 text-center">
-                                  {(() => {
-                                    const r = rankResults.get(stat.keyword);
-                                    if (!r) return <span className="text-slate-300">-</span>;
-                                    if (r.isRanked) return <span className="text-[10px] font-bold text-emerald-600" title={r.matchedTitle || ''}>{r.rank}위 ✅</span>;
-                                    return <span className="text-[10px] text-slate-400">미노출</span>;
-                                  })()}
-                                </td>
-                              )}
-                            </tr>
-                          ))}
-                      </tbody>
-                    </table>
-                  </div>
-                  {/* 더보기 + 상위권 체크 버튼 */}
-                  <div className="px-3 py-2 border-t border-slate-100 flex gap-2">
-                    {keywordStats.length < MAX_KEYWORDS && (
-                      <button type="button" onClick={handleLoadMoreKeywords} disabled={isLoadingMoreKeywords}
-                        className="flex-1 py-1.5 text-xs font-semibold text-blue-600 hover:bg-blue-50 rounded transition-all disabled:opacity-50 flex items-center justify-center gap-1">
-                        {isLoadingMoreKeywords ? (
-                          <><div className="w-3 h-3 border-2 border-blue-300 border-t-blue-600 rounded-full animate-spin" />로딩 중...</>
-                        ) : (
-                          <>더보기 ({keywordStats.length}/{MAX_KEYWORDS})</>
-                        )}
-                      </button>
-                    )}
-                    <button type="button" onClick={handleCheckRanks} disabled={isCheckingRanks || keywordStats.length === 0}
-                      className="flex-1 py-1.5 text-xs font-semibold text-emerald-600 hover:bg-emerald-50 rounded border border-emerald-200 transition-all disabled:opacity-50 flex items-center justify-center gap-1">
-                      {isCheckingRanks ? (
-                        <><div className="w-3 h-3 border-2 border-emerald-300 border-t-emerald-600 rounded-full animate-spin" />체크 중...</>
-                      ) : (
-                        <>🔍 상위권 체크</>
-                      )}
-                    </button>
-                  </div>
-                  {keywordProgress && <p className="text-[10px] text-slate-400 text-center px-3 pb-2">{keywordProgress}</p>}
-                  {/* AI 블루오션 분석 결과 */}
-                  {keywordAiRec && (
-                    <div className="px-3 py-3 border-t border-slate-100 bg-blue-50/50">
-                      <p className="text-[11px] font-bold text-blue-700 mb-1">💡 AI 키워드 분석</p>
-                      <div className="text-[11px] text-slate-600 whitespace-pre-wrap leading-relaxed">{keywordAiRec}</div>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <div className="p-4 text-center text-xs text-slate-400">분석 결과가 없습니다</div>
-              )}
-            </div>
-          )}
-
-          {/* 진료과 + 대상 독자 (old 동일: grid-cols-2 select) */}
-          <div className="grid grid-cols-2 gap-3">
-            <select
-              value={category}
-              onChange={e => setCategory(e.target.value as ContentCategory)}
-              className={inputCls}
-              disabled={isGenerating}
-              aria-label="진료과 선택"
-            >
-              {CATEGORIES.map(cat => (
-                <option key={cat.value} value={cat.value}>{cat.label}</option>
-              ))}
-            </select>
-            <select
-              value={audienceMode}
-              onChange={e => setAudienceMode(e.target.value as AudienceMode)}
-              className={inputCls}
-              disabled={isGenerating}
-              aria-label="타겟 청중 선택"
-            >
-              <option value="환자용(친절/공감)">환자용 (친절/공감)</option>
-              <option value="보호자용(가족걱정)">보호자용 (부모님/자녀 걱정)</option>
-              <option value="전문가용(신뢰/정보)">전문가용 (신뢰/정보)</option>
-            </select>
-          </div>
-
-          {/* 주제 */}
-          <div>
-            <label className={labelCls}>주제 *</label>
-            <input
-              type="text"
-              value={topic}
-              onChange={e => setTopic(e.target.value)}
-              placeholder="예: 임플란트 수술 후 관리법"
-              required
-              className={inputCls}
-            />
-          </div>
-
-          {/* 키워드 */}
-          <div>
-            <input
-              type="text"
-              value={keywords}
-              onChange={e => setKeywords(e.target.value)}
-              placeholder="SEO 키워드 (예: 강남 치과, 임플란트 가격)"
-              className={inputCls}
-            />
-          </div>
-
-          {/* 질환명 */}
-          <div>
-            <input
-              type="text"
-              value={disease}
-              onChange={e => setDisease(e.target.value)}
-              placeholder="질환명 (예: 치주염, 충치) - 글의 실제 주제"
-              className={inputCls}
-            />
-          </div>
-
-          {/* AI 제목 추천 + 트렌드 주제 (2버튼 가로) */}
-          <div className="flex gap-2">
-            <button type="button" onClick={handleRecommendTitles} disabled={isLoadingTitles || !(topic || disease || keywords)}
-              className="flex-1 py-2 bg-slate-100 text-slate-600 rounded-lg text-xs font-semibold hover:bg-slate-200 transition-all disabled:opacity-40 flex items-center justify-center gap-1">
-              {isLoadingTitles ? <><div className="w-3 h-3 border-2 border-slate-400 border-t-slate-600 rounded-full animate-spin" />생성 중...</> : <>✨ AI 제목 추천</>}
-            </button>
-            <button type="button" onClick={handleRecommendTrends} disabled={isLoadingTrends}
-              className="flex-1 py-2 bg-slate-100 text-slate-600 rounded-lg text-xs font-semibold hover:bg-slate-200 transition-all disabled:opacity-40 flex items-center justify-center gap-1">
-              {isLoadingTrends ? <><div className="w-3 h-3 border-2 border-slate-400 border-t-slate-600 rounded-full animate-spin" />분석 중...</> : <>🔥 트렌드 주제</>}
-            </button>
-          </div>
-
-          {/* SEO 제목 추천 결과 */}
-          {seoTitles.length > 0 && (
-            <div className="space-y-1">
-              {seoTitles.map((item, idx) => (
-                <button key={idx} type="button" onClick={() => setTopic(item.title)}
-                  className="w-full text-left px-3 py-2 bg-white border border-slate-100 rounded-lg hover:border-blue-400 transition-all group relative">
-                  <div className="absolute top-2 right-2 text-[10px] font-semibold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">SEO {item.score}</div>
-                  <span className="text-[10px] text-slate-400 block">{item.type}</span>
-                  <span className="text-xs font-medium text-slate-700 group-hover:text-blue-600 block pr-12">{item.title}</span>
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* 트렌드 주제 결과 */}
-          {trendingItems.length > 0 && (
-            <div className="space-y-1">
-              {trendingItems.map((item, idx) => (
-                <button key={idx} type="button" onClick={() => { setDisease(item.topic); }}
-                  className="w-full text-left px-3 py-2 bg-white border border-slate-100 rounded-lg hover:border-blue-400 transition-all group relative">
-                  <div className="absolute top-2 right-2 text-[10px] font-semibold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">SEO {item.score}</div>
-                  <span className="text-xs font-semibold text-slate-800 group-hover:text-blue-600 block pr-12">{item.topic}</span>
-                  <p className="text-[11px] text-slate-400 truncate">{item.keywords} · {item.seasonal_factor}</p>
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* 상세 설정 토글 */}
-          <button type="button" onClick={() => setShowAdvanced(!showAdvanced)}
-            className="w-full flex items-center justify-between px-3 py-2 bg-slate-50 hover:bg-slate-100 rounded-lg text-xs font-semibold text-slate-500 transition-all border border-slate-100">
-            <span>⚙️ 상세 설정</span>
-            <svg className={`w-4 h-4 transition-transform ${showAdvanced ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
-          </button>
-
-          {/* 상세 설정 패널 */}
-          {showAdvanced && (
-          <div className="space-y-4 p-3 bg-slate-50 rounded-xl border border-slate-100">
-            <div className="space-y-3">
-              {/* 글자 수 */}
-              <div>
-                <div className="flex justify-between mb-1.5">
-                  <label className="text-xs font-semibold text-slate-500">글자 수</label>
-                  <span className="text-xs font-semibold text-blue-600">{textLength}자</span>
-                </div>
-                <input type="range" min={1500} max={3500} step={100} value={textLength} onChange={e => setTextLength(Number(e.target.value))} className="w-full accent-blue-500 h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer" aria-label={`글자 수: ${textLength}자`} />
-                <div className="flex justify-between mt-1 text-[10px] text-slate-400"><span>1500</span><span>2500</span><span>3500</span></div>
-              </div>
-              {/* AI 이미지 수 */}
-              <div>
-                <div className="flex justify-between mb-1.5">
-                  <label className="text-xs font-semibold text-slate-500">AI 이미지 수</label>
-                  <span className={`text-xs font-semibold ${imageCount === 0 ? 'text-slate-400' : 'text-blue-600'}`}>{imageCount === 0 ? '없음' : `${imageCount}장`}</span>
-                </div>
-                <input type="range" min={0} max={5} step={1} value={imageCount} onChange={e => setImageCount(Number(e.target.value))} className="w-full accent-blue-500 h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer" aria-label={`AI 이미지 수: ${imageCount}장`} />
-                <div className="flex justify-between mt-1 text-[10px] text-slate-400"><span>0장</span><span>5장</span></div>
-              </div>
-              {/* FAQ 토글 */}
-              <div className="flex items-center justify-between p-3 bg-white rounded-xl border border-slate-200">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm">❓</span>
-                  <div>
-                    <span className="text-xs font-semibold text-slate-700">FAQ 섹션</span>
-                    <p className="text-[10px] text-slate-400">네이버 질문 + 질병관리청 정보</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  {includeFaq && (
-                    <div className="flex gap-0.5">
-                      {[3, 4, 5].map(num => (
-                        <button key={num} type="button" onClick={() => setFaqCount(num)}
-                          className={`w-7 h-7 rounded-md text-[10px] font-semibold transition-all ${faqCount === num ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
-                        >{num}</button>
-                      ))}
-                    </div>
-                  )}
-                  <button type="button" onClick={() => setIncludeFaq(!includeFaq)}
-                    className={`relative rounded-full transition-colors ${includeFaq ? 'bg-blue-500' : 'bg-slate-300'}`}
-                    style={{ width: 40, height: 22 }}
-                  >
-                    <span className={`absolute top-[3px] left-[3px] w-4 h-4 bg-white rounded-full shadow transition-all duration-200 ${includeFaq ? 'translate-x-[18px]' : 'translate-x-0'}`} />
-                  </button>
-                </div>
-              </div>
-              {/* 이미지 스타일 (old 동일: 4버튼 + 커스텀 textarea) */}
-              <div>
-                <p className="text-[11px] font-semibold text-slate-500 mb-1.5">이미지 스타일</p>
-                <div className="grid grid-cols-4 gap-1.5">
-                  {([
-                    { id: 'photo' as ImageStyle, icon: '📸', label: '실사' },
-                    { id: 'illustration' as ImageStyle, icon: '🎨', label: '일러스트' },
-                    { id: 'medical' as ImageStyle, icon: '🫀', label: '의학 3D' },
-                    { id: 'custom' as ImageStyle, icon: '✏️', label: '커스텀' },
-                  ]).map(s => (
-                    <button key={s.id} type="button"
-                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); setImageStyle(s.id); setShowCustomInput(s.id === 'custom'); }}
-                      className={`py-2 rounded-lg border transition-all flex flex-col items-center gap-0.5 ${imageStyle === s.id ? 'border-blue-400 bg-blue-50 text-blue-700' : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300'}`}
-                    >
-                      <span className="text-base">{s.icon}</span>
-                      <span className="text-[10px] font-semibold">{s.label}</span>
-                    </button>
-                  ))}
-                </div>
-                {showCustomInput && imageStyle === 'custom' && (
-                  <div className="mt-2 p-2.5 bg-white rounded-lg border border-slate-200">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-[11px] font-semibold text-slate-600">커스텀 프롬프트</span>
-                      {customPrompt && (
-                        <button type="button" onClick={() => localStorage.setItem('hospital_custom_image_prompt', customPrompt)}
-                          className="px-2 py-0.5 bg-slate-800 text-white text-[10px] font-medium rounded hover:bg-slate-900">저장</button>
-                      )}
-                    </div>
-                    <textarea value={customPrompt} onChange={(e) => setCustomPrompt(e.target.value)}
-                      placeholder="파스텔톤, 손그림 느낌의 일러스트, 부드러운 선..."
-                      className="w-full p-2 bg-slate-50 border border-slate-200 rounded text-xs focus:border-blue-400 outline-none resize-none" rows={2}
-                    />
-                  </div>
-                )}
-              </div>
-              {/* CSS 테마 (old 동일: 5가지 미리보기 테마 선택) */}
-              <div>
-                <p className="text-[11px] font-semibold text-slate-500 mb-1.5">미리보기 테마</p>
-                <div className="grid grid-cols-5 gap-1.5">
-                  {([
-                    { id: 'modern' as CssTheme, label: '모던', color: 'bg-slate-700' },
-                    { id: 'premium' as CssTheme, label: '프리미엄', color: 'bg-amber-700' },
-                    { id: 'minimal' as CssTheme, label: '미니멀', color: 'bg-gray-500' },
-                    { id: 'warm' as CssTheme, label: '따뜻한', color: 'bg-orange-500' },
-                    { id: 'professional' as CssTheme, label: '전문', color: 'bg-blue-700' },
-                  ]).map(t => (
-                    <button key={t.id} type="button"
-                      onClick={(e) => { e.preventDefault(); setCssTheme(t.id); }}
-                      className={`py-2 rounded-lg border transition-all flex flex-col items-center gap-0.5 ${cssTheme === t.id ? 'border-blue-400 bg-blue-50 text-blue-700' : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300'}`}
-                    >
-                      <div className={`w-4 h-4 rounded-full ${t.color}`} />
-                      <span className="text-[10px] font-semibold">{t.label}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-              {/* 소제목 직접 입력 */}
-              <div>
-                <p className="text-[11px] font-semibold text-slate-500 mb-1.5">소제목 직접 입력 <span className="text-slate-400 font-normal">(선택 · 한 줄에 하나씩)</span></p>
-                <textarea
-                  value={customSubheadings}
-                  onChange={e => setCustomSubheadings(e.target.value)}
-                  placeholder={"임플란트 수술 과정과 기간\n임플란트 후 관리법\n임플란트 비용 비교"}
-                  className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-xs focus:border-blue-400 outline-none resize-none placeholder:text-slate-300"
-                  rows={3}
-                />
-              </div>
-              {/* 말투 학습 (old 동일 위치: 이미지 스타일 아래, 화자/어조 위) */}
-              <WritingStyleLearner
-                onStyleSelect={(styleId) => setLearnedStyleId(styleId)}
-                selectedStyleId={learnedStyleId}
-                contentType="blog"
-              />
-              {/* 화자/어조 (학습된 말투 적용 시 숨김 — old 동일) */}
-              {!learnedStyleId && (
-                <div className="grid grid-cols-2 gap-2">
-                  <select value={persona} onChange={e => setPersona(e.target.value)} className={inputCls}>
-                    {PERSONAS.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
-                  </select>
-                  <select value={tone} onChange={e => setTone(e.target.value)} className={inputCls}>
-                    {TONES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-                  </select>
-                </div>
-              )}
-            </div>
-          </div>
-          )}
-
-          {/* 생성 버튼 */}
-          <button
-            type="submit"
-            disabled={isGenerating || !topic.trim()}
-            className="w-full py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-          >
-            {isGenerating ? (
-              <>
-                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                </svg>
-                생성 중...
-              </>
-            ) : (
-              '블로그 생성하기'
-            )}
-          </button>
-        </form>
-      </div>
-
-      {/* ── 결과 영역 ── */}
-      <div className="flex-1 min-w-0">
-        {isGenerating ? (() => {
-          const stage = BLOG_STAGES[displayStage] || BLOG_STAGES[1];
-          const pool = BLOG_MESSAGE_POOL[displayStage] || BLOG_MESSAGE_POOL[1];
-          const displayMsg = pool[rotationIdx % pool.length];
-          return (
-          <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-12 flex flex-col items-center justify-center text-center min-h-[480px]">
-            {/* 상단: 현재 단계 배지 (old 동일) */}
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold mb-6 bg-blue-50 text-blue-600 border border-blue-100">
-              <span>{stage.icon}</span>
-              <span>{stage.label}</span>
-            </div>
-            {/* 중단: 스피너 (old 동일) */}
-            <div className="relative mb-6">
-              <div className="w-14 h-14 border-[3px] border-blue-100 border-t-blue-500 rounded-full animate-spin" />
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-blue-50">
-                  <svg className="w-3.5 h-3.5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" /></svg>
-                </div>
-              </div>
-            </div>
-            {/* 중단: 상세 진행 메시지 — 부드러운 전환 (old 동일) */}
-            <p className="text-sm font-medium text-slate-700 mb-2 min-h-[20px] transition-opacity duration-500">
-              {displayMsg}
-            </p>
-            {/* 하단: 짧은 안내 (old 동일) */}
-            <p className="text-xs text-slate-400 max-w-xs">
-              {stage.hint}
-            </p>
-          </div>
-          );
-        })() : error ? (
-          <ErrorPanel error={error} onDismiss={() => setError(null)} />
-        ) : generatedContent ? (
-          <ResultPanel
-            content={generatedContent}
-            saveStatus={saveStatus}
-            postType="blog"
-            scores={scores}
-            cssTheme={cssTheme}
-            blogSections={blogSections}
-            regeneratingSection={regeneratingSection}
-            sectionProgress={sectionProgress}
-            onSectionRegenerate={handleSectionRegenerate}
-            onDownloadWord={handleDownloadWord}
-            onDownloadPDF={handleDownloadPDF}
-          />
-        ) : (
-          /* EmptyState */
-          <div className="rounded-2xl border border-slate-200 bg-white shadow-[0_2px_16px_rgba(0,0,0,0.06)] flex-1 min-h-[520px] overflow-hidden flex flex-col">
-            <div className="flex items-center gap-1 px-4 py-2.5 border-b border-slate-100 bg-slate-50/80">
-              {['B', 'I', 'U'].map(t => (
-                <div key={t} className="w-7 h-7 rounded flex items-center justify-center text-xs font-bold text-slate-300">{t}</div>
-              ))}
-              <div className="w-px h-4 mx-1 bg-slate-200" />
-              {[1, 2, 3].map(i => (
-                <div key={i} className="w-7 h-7 rounded flex items-center justify-center text-slate-300">
-                  <div className="space-y-[3px]">
-                    {Array.from({ length: i === 1 ? 3 : i === 2 ? 2 : 1 }).map((_, j) => (
-                      <div key={j} className="h-0.5 rounded bg-slate-300" style={{ width: j === 0 ? '14px' : j === 1 ? '10px' : '12px' }} />
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="flex-1 flex flex-col items-center justify-center px-12 py-16 select-none">
-              <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-6 bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100">
-                <svg className="w-7 h-7 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
-                </svg>
-              </div>
-              <div className="max-w-sm text-center">
-                <h2 className="text-3xl font-black tracking-tight leading-tight mb-3 text-slate-800">
-                  AI가 작성하는<br /><span className="text-blue-600">의료 콘텐츠</span>
-                </h2>
-                <p className="text-sm leading-relaxed text-slate-400">
-                  키워드 하나로 SEO 최적화된<br />블로그 글을 자동 생성합니다
-                </p>
-              </div>
-              <div className="mt-8 flex flex-col items-center gap-2">
-                {['병원 말투 학습 기반 생성', 'SEO 키워드 자동 최적화', '의료광고법 준수 검토'].map(text => (
-                  <div key={text} className="flex items-center gap-3 px-4 py-2 rounded-lg text-xs text-slate-400">
-                    <span className="text-[10px] text-blue-400">✦</span>
-                    {text}
-                  </div>
-                ))}
-              </div>
-              <div className="mt-8 inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold bg-blue-50 text-blue-500 border border-blue-100">
-                <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse" />
-                AI 대기 중
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
+      {/* ── 블로그 이미지 재생성 모달 (프롬프트 편집) ── */}
+      <ImageRegenModal
+        open={imgRegenModalOpen}
+        onClose={() => setImgRegenModalOpen(false)}
+        imageIndex={selectedImgIndex}
+        prompt={regenPrompt}
+        setPrompt={setRegenPrompt}
+        isRegenerating={regeneratingImage !== null}
+        onSubmit={handleImageRegenerateSubmit}
+        isRecommending={isRecommendingPrompt}
+        onRecommend={handleRecommendPrompt}
+        imageHistory={imageHistory[selectedImgIndex] || []}
+        onSelectHistoryImage={(url) => { handleSelectHistoryImage(selectedImgIndex, url); setImgRegenModalOpen(false); }}
+      />
     </div>
   );
 }

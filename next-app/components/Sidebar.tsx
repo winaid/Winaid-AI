@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 
-type ContentTab = 'blog' | 'card_news' | 'press' | 'refine' | 'image' | 'history';
+type ContentTab = 'blog' | 'card_news' | 'press' | 'refine' | 'image' | 'history' | 'youtube' | 'strengths';
 
 interface SidebarProps {
   collapsed: boolean;
@@ -12,22 +12,26 @@ interface SidebarProps {
   isLoggedIn: boolean;
   userEmail?: string;
   onLogout: () => void;
+  credits?: number | null;
 }
 
 const contentItems: { id: ContentTab; label: string; icon: string; href: string }[] = [
   { id: 'blog', label: '블로그', icon: '📝', href: '/blog' },
-  { id: 'card_news', label: '카드뉴스', icon: '🎨', href: '/card_news' },
   { id: 'press', label: '언론보도', icon: '🗞️', href: '/press' },
+  { id: 'card_news', label: '카드뉴스', icon: '🎨', href: '/card_news' },
+  { id: 'image', label: '이미지 생성', icon: '🖼️', href: '/image' },
 ];
 
 const toolItems: { id: ContentTab; label: string; icon: string; href: string }[] = [
   { id: 'refine', label: 'AI 보정', icon: '✨', href: '/refine' },
-  { id: 'image', label: '이미지 생성', icon: '🖼️', href: '/image' },
   { id: 'history', label: '히스토리', icon: '🕐', href: '/history' },
+  { id: 'youtube', label: '유튜브', icon: '▶️', href: '/youtube' },
+  { id: 'strengths', label: '특장점', icon: '💪', href: '/strengths' },
 ];
 
 const extraItems: { label: string; icon: string; href: string }[] = [
-  { label: '피드백', icon: '💬', href: '/app#feedback' },
+  { label: '사용 가이드', icon: '📖', href: '/app?guide=1' },
+  { label: '피드백', icon: '💬', href: '/feedback' },
 ];
 
 export function Sidebar({
@@ -36,6 +40,7 @@ export function Sidebar({
   isLoggedIn,
   userEmail,
   onLogout,
+  credits,
 }: SidebarProps) {
   const pathname = usePathname();
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -111,6 +116,31 @@ export function Sidebar({
 
       {/* 하단 */}
       <div className="border-t py-3 px-2 space-y-1 border-slate-100">
+        {/* 크레딧 배지 */}
+        {credits !== null && credits !== undefined && (
+          <div className={`flex items-center gap-1.5 rounded-xl transition-all mb-1 ${
+            collapsed ? 'justify-center px-2 py-2' : 'px-3 py-2'
+          } ${credits > 0 ? 'bg-violet-50' : 'bg-red-50'}`}>
+            <span className={credits > 0 ? 'text-violet-500' : 'text-red-500'}>⚡</span>
+            {!collapsed && (
+              <>
+                <span className={`text-xs font-bold ${credits > 0 ? 'text-violet-700' : 'text-red-600'}`}>{credits}</span>
+                <span className={`text-[10px] ${credits > 0 ? 'text-violet-400' : 'text-red-400'}`}>크레딧</span>
+              </>
+            )}
+            {collapsed && <span className={`text-[10px] font-bold ${credits > 0 ? 'text-violet-700' : 'text-red-600'}`}>{credits}</span>}
+            {!collapsed && (
+              <div className="group relative ml-auto">
+                <span className="text-[10px] text-slate-400 cursor-help">?</span>
+                <div className="hidden group-hover:block absolute bottom-full right-0 mb-2 w-52 p-3 bg-white border border-slate-200 rounded-xl shadow-lg z-50 text-[10px] text-slate-600 leading-relaxed">
+                  <p className="font-bold text-slate-700 mb-1">크레딧 소모 기준</p>
+                  <p className="text-emerald-600">✅ 소모: 블로그/카드뉴스/보도자료/이미지 새 생성</p>
+                  <p className="text-blue-600 mt-0.5">🆓 무료: 이미지 재생성, 소제목 수정, AI 채팅 수정, AI 보정</p>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
         {isLoggedIn && userEmail ? (
           <div className="relative">
             <button

@@ -47,3 +47,5 @@ playwright-report/
 next-app/.next/
 next-app/node_modules/
 next-app/out/
+.next/
+*.tsbuildinfo

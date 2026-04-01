@@ -27,6 +27,11 @@ npm run dev
 |------|------|
 | `GEMINI_API_KEY_2` | Gemini 백업 키 (멀티키 로테이션) |
 | `GEMINI_API_KEY_3` | Gemini 백업 키 (멀티키 로테이션) |
+| `NEXT_PUBLIC_CRAWLER_URL` | 크롤러 서버 URL (말투 학습용) |
+| `CRON_SECRET` | Vercel Cron 인증 토큰 |
+
+- `NEXT_PUBLIC_CRAWLER_URL` 없으면 → 글쓰기 스타일 학습(크롤링) 기능 비활성 (나머지 기능은 정상)
+- `CRON_SECRET` 없으면 → /api/cron/crawl-all 자동 크롤링 비활성 (수동 크롤링은 가능)
 
 ## .env.local 예시
 
@@ -34,6 +39,9 @@ npm run dev
 NEXT_PUBLIC_SUPABASE_URL=https://abcdefgh.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 GEMINI_API_KEY=AIzaSy...
+
+# NEXT_PUBLIC_CRAWLER_URL=https://your-crawler.railway.app
+# CRON_SECRET=your-random-secret
 ```
 
 ## 검증 방법

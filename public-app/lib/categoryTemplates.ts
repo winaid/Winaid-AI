@@ -1,0 +1,2705 @@
+/**
+ * categoryTemplates — 카테고리별 AI 이미지 생성 프리셋
+ *
+ * calendarTemplateService.ts에서 추출.
+ * 78개 템플릿 프리셋 (진료일정 12 + 이벤트 6 + 의사소개 6 + 공지 6 + 명절 30 + 채용 6 + 주의사항 6 + 비급여 6)
+ * 각 프리셋은 AI 프롬프트 + 색상 + 레이아웃 힌트를 포함.
+ */
+
+// 타입은 별도 파일에서 re-export (번들 최적화: 타입만 필요한 곳에서 데이터 import 방지)
+export type { CategoryTemplate } from './categoryTemplateTypes';
+import type { CategoryTemplate } from './categoryTemplateTypes';
+
+export const CATEGORY_TEMPLATES: Record<string, CategoryTemplate[]> = {
+
+ // ─── 진료 일정 (12개) ───
+ // 4계절(봄/여름/가을/겨울) + 전통(한방/보자기/수묵화) + 모던(네이비/민트/코랄) + 특수(키즈/베이지골드)
+ // 모든 템플릿에 AI가 그릴 수 있는 구체적 일러스트/장식 소재 포함
+ schedule: [
+ {
+ id: "sch_cherry_blossom", name: "벚꽃 봄", color: "#ec4899", accent: "#be185d", bg: "#fdf2f8",
+ desc: "수채화 벚꽃잎 코너 장식 + 로즈핑크 프레임 — 3~5월 봄", layoutHint: "cal_spring", previewImage: "/schedule-previews/sch_cherry_blossom.jpg",
+ aiPrompt: `[CRITICAL — THIS IS A POSTER, NOT A SPREADSHEET]
+This is a DESIGNED POSTER that contains a calendar section — NOT a calendar that fills the entire image.
+Structure: decorative header/frame (30-40%) + calendar grid (50-60%) + footer ONLY if user provided notice text.
+The poster must have visual identity: background texture, decorative elements, branded header.
+DO NOT make the calendar grid fill 100% of the image.
+⛔ STRICT CONTENT RULES:
+- ⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
+- DO NOT add fake disclaimers, footnotes, or fine print (e.g. ※ sentences). These often come out as nonsensical gibberish.
+- DO NOT invent hospital names, phone numbers, addresses, or medical information.
+- ONLY use text that the user explicitly provided in their input. If no text was provided for a section, leave it empty or use a simple label.
+- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
+- DO NOT add fake disclaimers, footnotes, or fine print (e.g. ※ sentences). These often come out as nonsensical gibberish.
+- DO NOT invent hospital names, phone numbers, addresses, or medical information.
+- ONLY use text that the user explicitly provided in their input. If no text was provided for a section, leave it empty or use a simple label.
+
+Korean hospital monthly schedule poster — Premium Spring Cherry Blossom theme.
+
+BACKGROUND: Entire background filled with soft pink watercolor wash (#fdf2f8 to #fce7f3 gradient). Scattered cherry blossom petals ACROSS THE ENTIRE background at varying sizes and 15-30% opacity — not just corners. Creates a dreamy, immersive spring atmosphere.
+
+DECORATIVE LAYER: 2-3 detailed cherry blossom branches with flowers — one reaching in from top-right, one from bottom-left. Petals caught mid-fall throughout the image. Watercolor painting style, not clip-art.
+
+CALENDAR CARD: White frosted card (backdrop-blur feel, 90% opacity, rounded 16px, soft shadow) floating on the pink background. The pink background and petals should be visible around and slightly through the card.
+
+TITLE: Deep rose (#9f1239) elegant bold text on pink background above the card. Subtle petal accents near the title.
+
+TYPOGRAPHY: Clean, modern Korean sans-serif. Title large and impactful. Date numbers crisp and readable.
+
+COLOR PALETTE: Soft pink #fdf2f8, deep rose #9f1239, white, warm coral accent for closed days.
+
+QUALITY: This must look like a premium template — sophisticated, not cute or childish. Think luxury skincare brand aesthetic applied to a hospital calendar.
+
+STRICT ANCHORS: Full-background petal scatter, watercolor branch illustrations, frosted white card, rose color family, immersive spring mood.
+INSPIRED FREEDOM: Branch placement, petal density, pink shade variation, card opacity.
+Mobile readability: minimum body text , date numbers bold, title.`,
+ },
+
+ {
+ id: "sch_maple_autumn", name: "단풍 가을", color: "#ea580c", accent: "#c2410c", bg: "#fff7ed",
+ desc: "수채화 단풍잎 + 오렌지 그라데이션 — 9~11월 가을", layoutHint: "cal_autumn", previewImage: "/schedule-previews/sch_maple_autumn.jpg",
+ aiPrompt: `[CRITICAL — THIS IS A POSTER, NOT A SPREADSHEET]
+This is a DESIGNED POSTER that contains a calendar section — NOT a calendar that fills the entire image.
+Structure: decorative header/frame (30-40%) + calendar grid (50-60%) + footer ONLY if user provided notice text.
+The poster must have visual identity: background texture, decorative elements, branded header.
+DO NOT make the calendar grid fill 100% of the image.
+⛔ STRICT CONTENT RULES:
+- ⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
+- DO NOT add fake disclaimers, footnotes, or fine print (e.g. ※ sentences). These often come out as nonsensical gibberish.
+- DO NOT invent hospital names, phone numbers, addresses, or medical information.
+- ONLY use text that the user explicitly provided in their input. If no text was provided for a section, leave it empty or use a simple label.
+- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
+- DO NOT add fake disclaimers, footnotes, or fine print (e.g. ※ sentences). These often come out as nonsensical gibberish.
+- DO NOT invent hospital names, phone numbers, addresses, or medical information.
+- ONLY use text that the user explicitly provided in their input. If no text was provided for a section, leave it empty or use a simple label.
+
+Korean hospital monthly schedule poster — Premium Autumn Maple Leaf theme.
+
+BACKGROUND: Rich warm gradient filling entire background — burnt orange (#ea580c) at top fading to warm cream (#fff7ed) at bottom. Scattered autumn leaves (maple, ginkgo) ACROSS THE ENTIRE background at varying sizes, colors (red, orange, gold, brown), and 20-40% opacity. Creates immersive autumn atmosphere.
+
+DECORATIVE LAYER: Cluster of detailed watercolor maple leaves at top-left and bottom-right — vivid reds, oranges, and golds. 3-4 individual leaves caught mid-fall across the middle area. Watercolor painting style with visible brush texture.
+
+CALENDAR CARD: White card (rounded 14px, warm-toned shadow) floating on the gradient. Warm cream tint. A leaf or two slightly overlapping the card edge.
+
+TITLE: Bold white text on the orange gradient area at top. Large, confident, with subtle leaf accent beside it.
+
+COLOR PALETTE: Burnt orange #ea580c, warm cream #fff7ed, maple red #dc2626, gold #eab308, brown #92400e.
+
+QUALITY: Premium autumn harvest poster — rich, warm, abundant. Like a luxury hotel's seasonal announcement. Watercolor art quality, not digital clip-art.
+
+STRICT ANCHORS: Full orange-to-cream gradient, scattered leaves across entire background, watercolor leaf clusters at corners, warm autumn palette, immersive fall mood.
+INSPIRED FREEDOM: Leaf density and color mix, gradient angle, additional fall elements (ginkgo, acorns), card tint.
+Mobile readability: minimum body text , date numbers bold, title.`,
+ },
+
+ {
+ id: "sch_snowflake_winter", name: "눈꽃 겨울", color: "#0ea5e9", accent: "#0284c7", bg: "#f0f9ff",
+ desc: "기하학적 눈 결정 패턴 + 아이시 블루 — 12~2월 겨울", layoutHint: "cal_winter", previewImage: "/schedule-previews/sch_snowflake_winter.jpg",
+ aiPrompt: `[CRITICAL — THIS IS A POSTER, NOT A SPREADSHEET]
+This is a DESIGNED POSTER that contains a calendar section — NOT a calendar that fills the entire image.
+Structure: decorative header/frame (30-40%) + calendar grid (50-60%) + footer ONLY if user provided notice text.
+The poster must have visual identity: background texture, decorative elements, branded header.
+DO NOT make the calendar grid fill 100% of the image.
+⛔ STRICT CONTENT RULES:
+- ⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
+- DO NOT add fake disclaimers, footnotes, or fine print (e.g. ※ sentences). These often come out as nonsensical gibberish.
+- DO NOT invent hospital names, phone numbers, addresses, or medical information.
+- ONLY use text that the user explicitly provided in their input. If no text was provided for a section, leave it empty or use a simple label.
+- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
+- DO NOT add fake disclaimers, footnotes, or fine print (e.g. ※ sentences). These often come out as nonsensical gibberish.
+- DO NOT invent hospital names, phone numbers, addresses, or medical information.
+- ONLY use text that the user explicitly provided in their input. If no text was provided for a section, leave it empty or use a simple label.
+
+Korean hospital monthly schedule poster — Winter Snowflake theme.
+VISUAL MOTIFS: Geometric snowflake crystal patterns scattered at 12% opacity in background. Sparkle accents. Frosted glass effect on calendar card.
+COLORS: Background icy blue gradient #e0f2fe to white. Title deep blue #0c4a6e. Accent sky blue #0ea5e9.
+HEADER: Icy gradient with snowflake patterns. Bold deep blue title with sparkle accents.
+CALENDAR: Frosted white card (border 1px #bae6fd). Closed days in icy blue pill badge + "휴진" label below. Shortened in amber + "단축" label below.
+FOOTER: Light icy background with legend.
+STRICT ANCHORS: Geometric snowflakes, ice-blue gradient, frosted card effect, blue monochrome, sparkle accents.
+INSPIRED FREEDOM: Snowflake density/size, gradient direction, additional winter elements.
+Mobile readability: minimum body text , date numbers bold, title.`,
+ },
+
+ {
+ id: "sch_korean_classic", name: "한방 전통", color: "#92400e", accent: "#78350f", bg: "#fef3c7",
+ desc: "기와지붕 실루엣 + 전통 꽃살문양 — 한의원/명절", layoutHint: "cal_hanok", previewImage: "/schedule-previews/sch_korean_classic.png",
+ aiPrompt: `[CRITICAL — THIS IS A POSTER, NOT A SPREADSHEET]
+This is a DESIGNED POSTER that contains a calendar section — NOT a calendar that fills the entire image.
+Structure must be: decorative header/frame (30-40%) + calendar grid (50-60%) + footer ONLY if user provided notice text.
+The poster must have visual identity: background texture, decorative elements, branded header, styled frame.
+The calendar grid is ONE ELEMENT inside the poster, not the whole image.
+DO NOT make the calendar grid fill 100% of the image.
+⛔ If no footer text was provided by the user, do NOT draw any footer area, empty box, or blank rectangle below the calendar. End the poster cleanly after the calendar grid.
+Think of this as an Instagram-worthy hospital announcement poster that happens to show a monthly calendar.
+
+Korean hospital monthly schedule poster — Korean Traditional Hanok Style.
+STRUCTURE: Warm cream (#f5e6d0) background evoking traditional Korean paper. Traditional roof tile (기와) silhouette decorative border at TOP EDGE ONLY — a single horizontal strip across the top. Small flower lattice (꽃살) decorations in top corners only. ⛔ Do NOT draw roof tiles on the left side, right side, or bottom of the image. ⛔ Do NOT draw a sun, half-circle sun, or sunrise motif anywhere. The left, right, and bottom edges must be clean with NO decorative borders — just the warm cream background.
+CALENDAR GRID: Warm brown (#92400e) text. Grid styled with traditional aesthetic, subtle borders.
+MARKERS: Closed — deep red seal stamp style marker + "휴진" label below. Shortened — amber brush stroke accent + "단축" label below. Vacation — purple marker + "휴가" label below. ONLY mark the dates specified by the user.
+STRICT MODE ANCHORS: (1) Roof tile border decoration (2) Traditional pattern corners (3) Warm brown palette (4) Cream background (5) 꽃살 lattice motifs.
+INSPIRED MODE FREEDOM: (1) Traditional motif variety (2) Color warmth level (3) Pattern complexity.
+⛔ ⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
+- DO NOT add fake disclaimers, footnotes, or fine print (e.g. ※ sentences). These often come out as nonsensical gibberish.
+- DO NOT invent hospital names, phone numbers, addresses, or medical information.
+- ONLY use text that the user explicitly provided in their input. If no text was provided for a section, leave it empty or use a simple label. Do NOT draw empty boxes or blank placeholder sections. If no notice text was provided, end the poster after the calendar grid with NO empty area below.
+Dignified traditional Korean aesthetic with warm readable typography.`,
+ },
+
+ {
+ id: "sch_bojagi_holiday", name: "보자기 명절", color: "#b91c1c", accent: "#991b1b", bg: "#fef2f2",
+ desc: "보자기 매듭 장식 + 금색 테두리 + 전통 색동 — 설날/추석", layoutHint: "cal_holiday", previewImage: "/schedule-previews/sch_bojagi_holiday.jpg",
+ aiPrompt: `[CRITICAL — THIS IS A POSTER, NOT A SPREADSHEET]
+This is a DESIGNED POSTER that contains a calendar section — NOT a calendar that fills the entire image.
+Structure: decorative header/frame (30-40%) + calendar grid (50-60%) + footer ONLY if user provided notice text.
+The poster must have visual identity: background texture, decorative elements, branded header.
+DO NOT make the calendar grid fill 100% of the image.
+⛔ STRICT CONTENT RULES:
+- ⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
+- DO NOT add fake disclaimers, footnotes, or fine print (e.g. ※ sentences). These often come out as nonsensical gibberish.
+- DO NOT invent hospital names, phone numbers, addresses, or medical information.
+- ONLY use text that the user explicitly provided in their input. If no text was provided for a section, leave it empty or use a simple label.
+- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
+- DO NOT add fake disclaimers, footnotes, or fine print (e.g. ※ sentences). These often come out as nonsensical gibberish.
+- DO NOT invent hospital names, phone numbers, addresses, or medical information.
+- ONLY use text that the user explicitly provided in their input. If no text was provided for a section, leave it empty or use a simple label.
+
+Korean hospital monthly schedule poster — Korean Traditional Bojagi Holiday theme.
+VISUAL MOTIFS: Korean bojagi (wrapping cloth) knot decoration at top center, large and prominent. Gold border frame around entire image. Color stripe accents (red, blue, yellow, green — Korean saekdong).
+COLORS: Background warm hanji texture cream. Frame gold #c9a96e. Title deep red #991b1b. Saekdong accents.
+HEADER: Bojagi knot decoration + gold frame top. Bold title below knot.
+CALENDAR: White area inside gold frame. Closed days in red circle + "휴진" label below. Holidays in gold circle with name.
+FOOTER: Gold frame bottom with legend.
+STRICT ANCHORS: Bojagi knot, gold frame border, saekdong color accents, hanji texture, traditional Korean motifs.
+INSPIRED FREEDOM: Knot style variation, additional traditional patterns, texture intensity.
+Mobile readability: minimum body text , date numbers bold, title.`,
+ },
+
+ {
+ id: "sch_ink_wash", name: "수묵화", color: "#374151", accent: "#1f2937", bg: "#f9fafb",
+ desc: "먹 번짐 효과 + 대나무/매화 수묵 일러스트 — 고급 한의원", layoutHint: "cal_inkwash", previewImage: "/schedule-previews/sch_ink_wash.jpg",
+ aiPrompt: `[CRITICAL — THIS IS A POSTER, NOT A SPREADSHEET]
+This is a DESIGNED POSTER that contains a calendar section — NOT a calendar that fills the entire image.
+Structure: decorative header/frame (30-40%) + calendar grid (50-60%) + footer ONLY if user provided notice text.
+The poster must have visual identity: background texture, decorative elements, branded header.
+DO NOT make the calendar grid fill 100% of the image.
+⛔ STRICT CONTENT RULES:
+- ⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
+- DO NOT add fake disclaimers, footnotes, or fine print (e.g. ※ sentences). These often come out as nonsensical gibberish.
+- DO NOT invent hospital names, phone numbers, addresses, or medical information.
+- ONLY use text that the user explicitly provided in their input. If no text was provided for a section, leave it empty or use a simple label.
+- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
+- DO NOT add fake disclaimers, footnotes, or fine print (e.g. ※ sentences). These often come out as nonsensical gibberish.
+- DO NOT invent hospital names, phone numbers, addresses, or medical information.
+- ONLY use text that the user explicitly provided in their input. If no text was provided for a section, leave it empty or use a simple label.
+
+Korean hospital monthly schedule poster — East Asian Ink Wash Painting theme.
+VISUAL MOTIFS: Ink wash bamboo or plum blossom branch illustration at one corner (subtle, elegant). Ink wash splash/bleed effect at header background. Single red seal stamp as accent.
+COLORS: Background pure white #ffffff. Text charcoal #1f2937. Ink wash grays from light to dark. One red seal accent #dc2626.
+HEADER: Ink wash splash background fading to white. Elegant serif-style title in dark charcoal.
+CALENDAR: Clean white area with minimal thin gray lines. Closed days marked with small red circle (seal style) + "휴진" label below.
+FOOTER: Minimal, ink wash fade at bottom edge.
+STRICT ANCHORS: Ink wash bamboo/plum illustration, ink splash background, red seal stamp, monochrome palette, traditional east asian painting style.
+INSPIRED FREEDOM: Plant type (bamboo vs plum vs orchid), ink intensity, seal position.
+Mobile readability: minimum body text , date numbers bold, title.`,
+ },
+
+ {
+ id: "sch_kids_pastel", name: "키즈 파스텔", color: "#a855f7", accent: "#7c3aed", bg: "#faf5ff",
+ desc: "파스텔 무지개 + 구름/별 일러스트 — 소아과/소아치과", layoutHint: "cal_kids",
+ aiPrompt: `[CRITICAL — THIS IS A POSTER, NOT A SPREADSHEET]
+This is a DESIGNED POSTER that contains a calendar section — NOT a calendar that fills the entire image.
+Structure: decorative header/frame (30-40%) + calendar grid (50-60%) + footer ONLY if user provided notice text.
+The poster must have visual identity: background texture, decorative elements, branded header.
+DO NOT make the calendar grid fill 100% of the image.
+⛔ STRICT CONTENT RULES:
+- ⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
+- DO NOT add fake disclaimers, footnotes, or fine print (e.g. ※ sentences). These often come out as nonsensical gibberish.
+- DO NOT invent hospital names, phone numbers, addresses, or medical information.
+- ONLY use text that the user explicitly provided in their input. If no text was provided for a section, leave it empty or use a simple label.
+- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
+- DO NOT add fake disclaimers, footnotes, or fine print (e.g. ※ sentences). These often come out as nonsensical gibberish.
+- DO NOT invent hospital names, phone numbers, addresses, or medical information.
+- ONLY use text that the user explicitly provided in their input. If no text was provided for a section, leave it empty or use a simple label.
+
+Korean hospital monthly schedule poster — Kids Pastel Rainbow theme.
+VISUAL MOTIFS: Pastel rainbow arch at top of image (large, prominent). Cute cloud illustrations floating. Small star decorations scattered. Everything soft and rounded.
+COLORS: Background light lavender #faf5ff. Rainbow colors in soft pastel (pink, peach, yellow, mint, sky blue, lavender). Title purple #7c3aed.
+HEADER: Large pastel rainbow arch with clouds. Cute bold title below rainbow.
+CALENDAR: White rounded card with colorful pastel cell backgrounds. Closed days in purple circle + "휴진" label below. Shortened in pink + "단축" label below.
+FOOTER: Pastel area with star decorations and legend.
+STRICT ANCHORS: Pastel rainbow arch, cloud illustrations, star decorations, soft rounded shapes, playful kids aesthetic.
+INSPIRED FREEDOM: Rainbow size, cloud density, star placement, pastel color intensity.
+Mobile readability: minimum body text , date numbers bold, title.`,
+ },
+ {
+ id: "sch_clean_blue", name: "클린 블루", color: "#3b82f6", accent: "#1d4ed8", bg: "#eff6ff",
+ desc: "파란 그라데이션 헤더 + 흰 카드 — 가장 보편적 병원 스타일", layoutHint: "cal_corporate",
+ aiPrompt: `[CRITICAL — THIS IS A POSTER, NOT A SPREADSHEET]
+This is a DESIGNED POSTER that contains a calendar section — NOT a calendar that fills the entire image.
+Structure: decorative header/frame (30-40%) + calendar grid (50-60%) + footer ONLY if user provided notice text.
+The poster must have visual identity: background texture, decorative elements, branded header.
+DO NOT make the calendar grid fill 100% of the image.
+⛔ STRICT CONTENT RULES:
+- ⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
+- DO NOT add fake disclaimers, footnotes, or fine print (e.g. ※ sentences). These often come out as nonsensical gibberish.
+- DO NOT invent hospital names, phone numbers, addresses, or medical information.
+- ONLY use text that the user explicitly provided in their input. If no text was provided for a section, leave it empty or use a simple label.
+- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
+- DO NOT add fake disclaimers, footnotes, or fine print (e.g. ※ sentences). These often come out as nonsensical gibberish.
+- DO NOT invent hospital names, phone numbers, addresses, or medical information.
+- ONLY use text that the user explicitly provided in their input. If no text was provided for a section, leave it empty or use a simple label.
+
+Korean hospital monthly schedule poster — Premium Clean Blue Corporate theme.
+
+BACKGROUND: Entire background is a SMOOTH, CLEAN blue gradient — deep navy (#1e3a8a) at top corners fading to sky blue (#93c5fd) at center, then to very light blue (#eff6ff) at bottom. NO patterns, NO hexagons, NO waves, NO geometric shapes. Just a pure, smooth, elegant blue gradient like a clear winter sky. The gradient itself is the decoration.
+
+DECORATIVE LAYER: MINIMAL decoration. Only a thin white horizontal line (1px, 40% opacity) separating title area from calendar area. A single small white medical cross icon (+) at top-right corner at 20% opacity. That is it — no other decorations.
+
+CALENDAR CARD: Large white card (rounded 16px, soft shadow 0 4px 20px rgba(0,0,0,0.1)) taking up 65% of the image. Card should feel like it is floating elegantly on the blue gradient. Clean grid inside with thin light gray (#e5e7eb) lines. Day header row has very light blue (#dbeafe) background.
+
+TITLE: Bold white text on the blue gradient area above the card. Large, clean, sans-serif. Hospital name small white text above the main title.
+
+TYPOGRAPHY: Modern Korean sans-serif throughout. Title bold white. Date numbers clean black. Sunday red, Saturday blue.
+
+FOOTER: Below the card, on the blue gradient — small white text legend only. No box, no background.
+
+COLOR PALETTE: Navy #1e3a8a, sky blue #93c5fd, light blue #eff6ff, white, light gray #e5e7eb. ONLY blue family + white + gray. No other colors except red for closed days.
+
+QUALITY: Think Samsung Medical Center or university hospital official notice level. Extremely clean, trustworthy, no-nonsense corporate medical design. The beauty comes from the smooth gradient and generous whitespace, not from decorations.
+
+STRICT ANCHORS: Smooth blue gradient (no patterns), large white floating card, minimal decoration (cross icon only), corporate sans-serif typography, generous whitespace, trustworthy medical mood.
+INSPIRED FREEDOM: Gradient blue shade range, card shadow intensity, cross icon opacity, title alignment.
+Mobile readability: minimum body text , date numbers bold, title.`,
+ },
+ {
+ id: "sch_rose_gold", name: "로즈 골드", color: "#be185d", accent: "#9f1239", bg: "#fdf2f8",
+ desc: "대리석 질감 + 로즈골드 라인 — 피부과/성형외과 프리미엄", layoutHint: "cal_premium",
+ aiPrompt: `[CRITICAL — THIS IS A POSTER, NOT A SPREADSHEET]
+This is a DESIGNED POSTER that contains a calendar section — NOT a calendar that fills the entire image.
+Structure: decorative header/frame (30-40%) + calendar grid (50-60%) + footer ONLY if user provided notice text.
+The poster must have visual identity: background texture, decorative elements, branded header.
+DO NOT make the calendar grid fill 100% of the image.
+⛔ STRICT CONTENT RULES:
+- ⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
+- DO NOT add fake disclaimers, footnotes, or fine print (e.g. ※ sentences). These often come out as nonsensical gibberish.
+- DO NOT invent hospital names, phone numbers, addresses, or medical information.
+- ONLY use text that the user explicitly provided in their input. If no text was provided for a section, leave it empty or use a simple label.
+- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
+- DO NOT add fake disclaimers, footnotes, or fine print (e.g. ※ sentences). These often come out as nonsensical gibberish.
+- DO NOT invent hospital names, phone numbers, addresses, or medical information.
+- ONLY use text that the user explicitly provided in their input. If no text was provided for a section, leave it empty or use a simple label.
+
+Korean hospital monthly schedule poster — Rose Gold Premium theme.
+
+BACKGROUND: Entire background white marble texture with very subtle gray veining at 5-8% opacity. Luxurious, high-end aesthetic clinic feel throughout.
+
+DECORATIVE LAYER: Thin rose-gold (#b76e79) decorative lines — one below title, one above footer. Rose-gold corner ornaments (simple geometric). Subtle pink (#fdf2f8) wash over the marble at edges.
+
+CALENDAR CARD: White area with very subtle marble texture continuing. Thin rose-gold border (0.5px). Elegant, minimal grid lines in light warm gray.
+
+TITLE: Deep rose (#9f1239) elegant text, slightly serif feel. Hospital name in rose-gold (#b76e79) small above.
+
+COLOR PALETTE: Rose-gold #b76e79, deep rose #9f1239, white marble, warm gray #9ca3af, subtle pink #fdf2f8.
+
+QUALITY: High-end beauty clinic or dermatology office. Think luxury brand aesthetic. Marble + rose gold = instant luxury.
+
+STRICT ANCHORS: Marble texture background, rose-gold decorative lines, rose-gold corner ornaments, serif-leaning typography, luxury minimal aesthetic.
+INSPIRED FREEDOM: Marble vein intensity, ornament complexity, pink wash amount, line style.
+Mobile readability: minimum body text , date numbers bold, title.`,
+ },
+ {
+ id: "sch_green_botanical", name: "그린 보태니컬", color: "#16a34a", accent: "#15803d", bg: "#f0fdf4",
+ desc: "유칼립투스 잎 일러스트 + 내추럴 톤 — 웰니스/재활", layoutHint: "cal_botanical",
+ aiPrompt: `[CRITICAL — THIS IS A POSTER, NOT A SPREADSHEET]
+This is a DESIGNED POSTER that contains a calendar section — NOT a calendar that fills the entire image.
+Structure: decorative header/frame (30-40%) + calendar grid (50-60%) + footer ONLY if user provided notice text.
+The poster must have visual identity: background texture, decorative elements, branded header.
+DO NOT make the calendar grid fill 100% of the image.
+⛔ STRICT CONTENT RULES:
+- ⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
+- DO NOT add fake disclaimers, footnotes, or fine print (e.g. ※ sentences). These often come out as nonsensical gibberish.
+- DO NOT invent hospital names, phone numbers, addresses, or medical information.
+- ONLY use text that the user explicitly provided in their input. If no text was provided for a section, leave it empty or use a simple label.
+- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
+- DO NOT add fake disclaimers, footnotes, or fine print (e.g. ※ sentences). These often come out as nonsensical gibberish.
+- DO NOT invent hospital names, phone numbers, addresses, or medical information.
+- ONLY use text that the user explicitly provided in their input. If no text was provided for a section, leave it empty or use a simple label.
+
+Korean hospital monthly schedule poster — Green Botanical Natural theme.
+
+BACKGROUND: Entire background soft natural green (#f0fdf4 to #ecfdf5) with subtle linen/paper texture at 3% opacity. Organic, calming, natural wellness mood throughout.
+
+DECORATIVE LAYER: Watercolor eucalyptus branches and leaves reaching in from top-right and bottom-left corners. Leaves in sage green, olive, and emerald tones. Natural, organic painting style. 2-3 small individual leaves scattered at 15-25% opacity across the background.
+
+CALENDAR CARD: White card (rounded 14px, soft natural shadow) floating on the green background. Subtle sage border.
+
+TITLE: Dark green (#15803d) clean text on the natural background. Small leaf accent beside title.
+
+COLOR PALETTE: Sage green #86efac, dark green #15803d, olive #4d7c0f, white, warm linen cream.
+
+QUALITY: Premium wellness clinic or health spa. Think Aesop brand aesthetic. Natural, calming, sophisticated botanical illustration quality.
+
+STRICT ANCHORS: Watercolor eucalyptus illustrations, natural green palette, linen texture, organic mood, botanical art style.
+INSPIRED FREEDOM: Leaf type (eucalyptus/olive/monstera), branch placement, texture intensity, green shade range.
+Mobile readability: minimum body text , date numbers bold, title.`,
+ },
+ {
+ id: "sch_taegeuk_national", name: "태극기", color: "#1e3a5f", accent: "#c81e1e", bg: "#f8f9fa",
+ desc: "세련된 태극 모티프 + 건곤 패턴 — 삼일절/광복절", layoutHint: "cal_national",
+ aiPrompt: `[CRITICAL — THIS IS A POSTER, NOT A SPREADSHEET]
+This is a DESIGNED POSTER that contains a calendar section — NOT a calendar that fills the entire image.
+Structure: decorative header/frame (30-40%) + calendar grid (50-60%) + footer ONLY if user provided notice text.
+The poster must have visual identity: background texture, decorative elements, branded header.
+DO NOT make the calendar grid fill 100% of the image.
+⛔ STRICT CONTENT RULES:
+- ⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
+- DO NOT add fake disclaimers, footnotes, or fine print (e.g. ※ sentences). These often come out as nonsensical gibberish.
+- DO NOT invent hospital names, phone numbers, addresses, or medical information.
+- ONLY use text that the user explicitly provided in their input. If no text was provided for a section, leave it empty or use a simple label.
+- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
+- DO NOT add fake disclaimers, footnotes, or fine print (e.g. ※ sentences). These often come out as nonsensical gibberish.
+- DO NOT invent hospital names, phone numbers, addresses, or medical information.
+- ONLY use text that the user explicitly provided in their input. If no text was provided for a section, leave it empty or use a simple label.
+
+Korean hospital monthly schedule poster — Korean National Flag Patriotic theme for national holidays.
+
+BACKGROUND: Clean white (#f8f9fa) background. Subtle watermark of taegeuk (yin-yang symbol) at 5-8% opacity in center background, very large and elegant. Refined, modern patriotic design.
+
+DECORATIVE LAYER: Modern, stylized taegeuk symbol (red #c81e1e and blue #1e3a5f) at top center, medium size, clean geometric rendering. Trigram patterns used as subtle decorative borders or corner accents at 15% opacity. Thin navy and red accent lines framing the calendar area.
+
+CALENDAR CARD: White card with thin navy (#1e3a5f) border. Clean grid. National holidays highlighted with red circle.
+
+TITLE: Bold navy (#1e3a5f) text. Confident, dignified. Small taegeuk accent beside title.
+
+COLOR PALETTE: Navy #1e3a5f, red #c81e1e, white, light gray #f8f9fa. ONLY these colors.
+
+QUALITY: REFINED and MODERN — like a government ministry official design. Clean typography, generous whitespace, sophisticated use of national colors.
+
+STRICT ANCHORS: Taegeuk symbol, navy/red/white only palette, trigram pattern accents, refined patriotic mood, generous whitespace.
+INSPIRED FREEDOM: Taegeuk size and placement, trigram pattern density, line thickness, typography weight.
+Mobile readability: minimum body text , date numbers bold, title.`,
+ },
+ {
+ id: "sch_christmas", name: "크리스마스", color: "#dc2626", accent: "#15803d", bg: "#fef2f2",
+ desc: "크리스마스 트리 + 선물 + 눈 — 연말 특별 안내", layoutHint: "cal_christmas",
+ aiPrompt: `[CRITICAL — THIS IS A POSTER, NOT A SPREADSHEET]
+This is a DESIGNED POSTER that contains a calendar section — NOT a calendar that fills the entire image.
+Structure: decorative header/frame (30-40%) + calendar grid (50-60%) + footer ONLY if user provided notice text.
+The poster must have visual identity: background texture, decorative elements, branded header.
+DO NOT make the calendar grid fill 100% of the image.
+⛔ STRICT CONTENT RULES:
+- ⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
+- DO NOT add fake disclaimers, footnotes, or fine print (e.g. ※ sentences). These often come out as nonsensical gibberish.
+- DO NOT invent hospital names, phone numbers, addresses, or medical information.
+- ONLY use text that the user explicitly provided in their input. If no text was provided for a section, leave it empty or use a simple label.
+- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
+- DO NOT add fake disclaimers, footnotes, or fine print (e.g. ※ sentences). These often come out as nonsensical gibberish.
+- DO NOT invent hospital names, phone numbers, addresses, or medical information.
+- ONLY use text that the user explicitly provided in their input. If no text was provided for a section, leave it empty or use a simple label.
+
+Korean hospital monthly schedule poster — Christmas Holiday theme for December/year-end.
+
+BACKGROUND: Entire background deep festive red (#991b1b) to dark green (#14532d) diagonal gradient, OR rich cream/ivory with red and green accents. Scattered snowflakes across the entire background at 10-15% opacity. Warm, festive, joyful Christmas atmosphere.
+
+DECORATIVE LAYER: Christmas tree illustration at one corner (stylized, elegant). Gift boxes with ribbons at opposite corner. Gold star at tree top. Holly leaves and berries as small accents. String lights (small dots of warm yellow) along the top edge.
+
+CALENDAR CARD: White or cream card (rounded 14px, warm shadow) floating on the festive background. Red and green accent colors for grid elements.
+
+TITLE: Bold white or gold text on the dark festive background. Christmas star accent.
+
+COLOR PALETTE: Christmas red #dc2626, forest green #15803d, gold #eab308, white, cream, warm brown.
+
+QUALITY: Premium Christmas card quality — warm, inviting, festive but sophisticated.
+
+STRICT ANCHORS: Christmas tree illustration, gift boxes, snowflake scatter, red/green/gold palette, festive warm mood, string light dots.
+INSPIRED FREEDOM: Tree style, gift placement, snowflake density, gradient direction, gold amount.
+Mobile readability: minimum body text , date numbers bold, title.`,
+ },
+ ],
+
+ event: [
+ {
+ id: "evt_gold_luxury", name: "골드 럭셔리", color: "#b8860b", accent: "#8b6914", bg: "#faf5ef",
+ desc: "골드 시머 텍스처 + 세리프 타이포 — 럭셔리 초대장 스타일", layoutHint: "luxury",
+ aiPrompt: `[CRITICAL — THIS IS A PREMIUM DESIGNED POSTER]
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. Leave areas blank or use only user-provided text.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- ONLY use text the user explicitly provided.
+
+Korean hospital event poster — LUXURY GOLD STATIONERY style. Like a Cartier invitation card.
+
+VISUAL STRUCTURE:
+BACKGROUND: Rich cream (#faf5ef) with visible METALLIC GOLD SHIMMER texture across entire surface at 5-7% opacity — like real gold-flecked luxury paper. Subtle diagonal light rays from top-left at 3% opacity.
+
+GOLD DOUBLE FRAME: Thin double-line gold (#c9a96e) rectangular frame (outer 1px, inner 0.5px, 4px gap) inset 5% from edges. Four gold corner bracket ornaments.
+
+INSIDE FRAME:
+- Top: Event title in deep gold (#8B6914) MASSIVE serif typography. Typography IS the luxury.
+- Below title: two thin parallel gold lines (0.5px each, 3px gap, width 30%) with diamond centered.
+- Middle: Content in warm brown (#5c4a32) serif text, generous spacing. Numbers in bold gold.
+- Bottom: small warm brown text.
+
+THE GOLD DOUBLE FRAME WITH CORNER BRACKETS AND DIAMOND ARE MANDATORY.
+
+STRICT ANCHORS: Gold shimmer texture, double frame, corner brackets, serif title, diamond ornament, luxury invitation mood.
+Mobile readability: title, body.`,
+ },
+
+ {
+ id: "evt_coral_peach", name: "코랄 피치", color: "#f97316", accent: "#ea580c", bg: "#fff7ed",
+ desc: "핑크/민트 분할 배경 + 기하학 원 + 3D 의료 오브제 — 트렌디 클리닉", layoutHint: "coral",
+ aiPrompt: `[CRITICAL — THIS IS A PREMIUM DESIGNED POSTER WITH 3D ELEMENTS]
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. Leave areas blank or use only user-provided text.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- ONLY use text the user explicitly provided.
+
+Korean hospital event poster — 3D OBJECT + GEOMETRIC style. Like a modern dental/dermatology clinic social media ad.
+
+VISUAL STRUCTURE:
+BACKGROUND: Split diagonally — soft pink (#fce7f3) on top-left half, mint/teal (#ccfbf1) on bottom-right half. The diagonal split creates dynamic energy.
+
+GEOMETRIC SHAPES: Scattered across background — circles (outlined and filled), half-circles, ring shapes in pink (#f9a8d4), mint (#5eead4), and white at 20-40% opacity. 8-10 shapes total, various sizes.
+
+3D OBJECT AREA (top 40%): A large soft circle (#f5f5f4) in center-top as a spotlight for a 3D medical illustration. Realistic 3D rendering of a medical object (tooth/implant for dental, syringe/vial for injection, skin layer for dermatology). If no specific topic, draw a 3D medical cross or pill capsule. Glossy, modern, soft shadows.
+
+TEXT AREA (bottom 50%):
+- Clinic name small in gray
+- Event title in MASSIVE bold dark (#1e1b4b) text
+- Subtitle in coral (#f97316) bold
+- Content: price large and bold, date in gray
+- CTA: rounded coral pill button shape
+
+THE DIAGONAL SPLIT BACKGROUND AND 3D OBJECT ARE MANDATORY.
+
+STRICT ANCHORS: Pink/mint diagonal split, geometric shapes, 3D medical object in circle spotlight, massive title, modern clinic social media aesthetic.
+Mobile readability: title, body.`,
+ },
+
+ {
+ id: "evt_lavender_dream", name: "라벤더 드림", color: "#7c3aed", accent: "#6d28d9", bg: "#f5f3ff",
+ desc: "보라 그라데이션 + 유리 카드 + 블러 효과 — 글라스모피즘 스타일", layoutHint: "lavender",
+ aiPrompt: `[CRITICAL — THIS IS A PREMIUM DESIGNED POSTER WITH GLASSMORPHISM]
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. Leave areas blank or use only user-provided text.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- ONLY use text the user explicitly provided.
+
+Korean hospital event poster — GLASSMORPHISM style. Trendy UI/UX inspired poster design.
+
+VISUAL STRUCTURE:
+BACKGROUND: Rich gradient — deep purple (#4c1d95) at top-left flowing through violet (#7c3aed) to soft lavender (#c4b5fd) at bottom-right. Large blurred color blobs — a pink (#f0abfc) blob (200px, 30% opacity) at top-right, a blue (#818cf8) blob (150px, 25% opacity) at bottom-left. These blobs create depth for the glass effect.
+
+GLASS CARD: A frosted glass card at center — white at 15-20% opacity, backdrop-blur effect (blobs behind are blurred through the card), border: 1px solid rgba(255,255,255,0.3), rounded 24px. Subtle white glow at card edges. This glass card is THE signature element.
+
+INSIDE GLASS CARD:
+- Event title in bold white text — floats on the frosted surface
+- Below title: thin white line (50% opacity)
+- Content in white/light lavender text, generous spacing
+- Numbers in bold white, slightly larger
+
+SPARKLES: 3-5 small sparkle marks in white at 20-40% opacity scattered around the card.
+
+THE FROSTED GLASS CARD AND COLOR BLOBS ARE MANDATORY.
+
+STRICT ANCHORS: Purple gradient, color blobs, frosted glass card with blur effect, white text on glass, sparkle accents, glassmorphism UI aesthetic.
+Mobile readability: title, body.`,
+ },
+
+
+ {
+ id: "evt_sage_botanical", name: "세이지 보태니컬", color: "#16a34a", accent: "#14532d", bg: "#f0fdf4",
+ desc: "수채화 약초/잎 일러스트 + 자연 톤 — 웰니스 보태니컬 스타일", layoutHint: "botanical",
+ aiPrompt: `[CRITICAL — THIS IS A PREMIUM DESIGNED POSTER WITH BOTANICAL ILLUSTRATION]
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. Leave areas blank or use only user-provided text.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- ONLY use text the user explicitly provided.
+
+Korean hospital event poster — BOTANICAL WATERCOLOR ILLUSTRATION style. Like an Aesop product poster.
+
+VISUAL STRUCTURE:
+BACKGROUND: Soft sage (#f0fdf4) with subtle watercolor wash — lighter and darker sage areas blending organically like real watercolor paper.
+
+BOTANICAL ILLUSTRATIONS: Lush watercolor botanical illustrations — eucalyptus branches, olive leaves, herb sprigs, or fern fronds. NOT clip art, but WATERCOLOR PAINTING style with visible brush strokes, water bleeding, and color gradation. Placed at TOP-LEFT corner and BOTTOM-RIGHT corner, reaching 25-30% into the image. The botanicals frame the content area.
+
+CONTENT AREA (center 60%): White semi-transparent card (rounded 16px, 92% opacity, border: 1px solid #d1fae5). Inside:
+- Event title in dark forest green (#14532d) bold text
+- Below title: thin emerald (#10b981) line with small leaf accent
+- Content in dark teal (#134e4a), generous spacing
+- Numbers/prices in bold emerald
+
+THE WATERCOLOR BOTANICAL ILLUSTRATIONS (NOT CLIP ART) ARE MANDATORY.
+
+STRICT ANCHORS: Sage watercolor wash, lush watercolor botanical corners, white content card, dark green typography, emerald accents, organic premium mood.
+Mobile readability: title, body.`,
+ },
+
+ {
+ id: "evt_charcoal_modern", name: "차콜 모던", color: "#292524", accent: "#44403c", bg: "#292524",
+ desc: "다크 배경 + 네온 글로우 라인/텍스트 — 네온 사인 스타일", layoutHint: "charcoal",
+ aiPrompt: `[CRITICAL — THIS IS A PREMIUM DESIGNED POSTER WITH NEON EFFECT]
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. Leave areas blank or use only user-provided text.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- ONLY use text the user explicitly provided.
+
+Korean hospital event poster — NEON SIGN ON DARK WALL style. Like a trendy bar or boutique clinic sign at night.
+
+VISUAL STRUCTURE:
+BACKGROUND: Dark charcoal (#1c1917) with subtle dark brick or concrete wall texture at 8-10% opacity. Creates a real wall surface for the neon.
+
+NEON ELEMENTS:
+- Event title rendered as NEON TUBE TEXT — bright cyan (#22d3ee) or hot pink (#ec4899) or warm amber (#fbbf24), with realistic NEON GLOW effect: outer glow (same color at 30% opacity, blur 20px), inner bright white core. Looks like actual glowing neon tubes mounted on the dark wall.
+- Below title: a NEON LINE separator — thin glowing line in a different neon color, same glow effect.
+- Optional: a simple NEON ICON outline (heart, cross, or star) glowing beside the title.
+
+CONTENT BELOW NEON:
+- Regular white (#e2e8f0) text for event details — NOT neon, just clean white. , generous spacing.
+- Numbers/prices in the same neon color as title, but smaller glow.
+- Date in gray (#94a3b8).
+
+THE WALL TEXTURE AND NEON GLOW EFFECT ARE MANDATORY.
+
+STRICT ANCHORS: Dark textured wall, neon tube text with glow, neon line separator, neon icon, white content text, trendy night aesthetic.
+Mobile readability: title, body.`,
+ },
+
+
+ {
+ id: "evt_blush_warm", name: "블러시 웜", color: "#881337", accent: "#9f1239", bg: "#fef7ed",
+ desc: "따뜻한 톤 + 겹쳐진 둥근 종이 레이어들 — 페이퍼 레이어 스타일", layoutHint: "warm",
+ aiPrompt: `[CRITICAL — THIS IS A PREMIUM DESIGNED POSTER WITH PAPER LAYERS]
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. Leave areas blank or use only user-provided text.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- ONLY use text the user explicitly provided.
+
+Korean hospital event poster — LAYERED PAPER CUTOUT style. Like handcrafted paper art.
+
+VISUAL STRUCTURE:
+BACKGROUND: Warm cream (#fef7ed) base.
+
+PAPER LAYERS: 3-4 overlapping rounded paper shapes stacked, each with visible drop shadow creating real depth/elevation. Like paper cutouts layered on a desk.
+- Bottom layer: large warm pink (#fce7f3) rounded rectangle, rotated -3 degrees, soft shadow
+- Middle layer: soft peach (#fed7aa) rounded rectangle, rotated +2 degrees, slightly smaller, higher shadow
+- Top layer: white (#ffffff) rounded rectangle (24px radius), centered, straight, strongest shadow — content lives here
+
+Each layer has subtle paper texture. Shadows between layers create satisfying 3D paper stack.
+
+ON THE TOP WHITE LAYER:
+- Event title in deep wine (#881337) or warm brown (#78350f) bold text
+- Below title: thin rose-gold (#b76e79) line
+- Content in warm brown, generous spacing
+- Numbers in bold wine
+
+Colored layers peek out behind the white layer, creating warm color frame effect.
+
+THE MULTIPLE OVERLAPPING PAPER LAYERS WITH SHADOWS ARE MANDATORY. At least 3 layers.
+
+STRICT ANCHORS: Cream background, 3-4 overlapping rounded paper layers, progressive shadows, paper texture, warm pink/peach/white progression, paper craft aesthetic.
+Mobile readability: title, body.`,
+ },
+ ],
+
+ // ─── 의사 소개 (6개) ───
+ // 연구 기반: 좌우 분할 레이아웃 우세, 자격증 목록, 스튜디오 촬영 사진(백의), 중립 배경
+ // 의료법 준수: 최고/유일/첫 등 최상급 표현 금지, 미검증 비교 금지
+ // 색상: 화이트/라이트그레이 + 네이비(신뢰), 브랜드 컬러 악센트바, 베이지/크림(피부과)
+ doctor: [
+ {
+ id: "doc_clean_white", name: "클린 화이트", color: "#374151", accent: "#111827", bg: "#ffffff",
+ desc: "순백 배경 + 얇은 라인 + 미니멀 타이포 — 깔끔한 프로필", layoutHint: "minimal",
+ aiPrompt: `[CRITICAL — THIS IS A PREMIUM DOCTOR PROFILE POSTER]
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- DO NOT invent hospital names, phone numbers, addresses, or medical information.
+- ONLY use text that the user explicitly provided in their input.
+
+Korean hospital doctor introduction poster — Clean White Minimal theme.
+
+BACKGROUND: Pure white (#ffffff). No texture, no pattern, no gradient. Like an Apple product page.
+
+PHOTO AREA (top/left 45%): Large area for doctor photo. If no photo, light gray (#f3f4f6) placeholder (rounded 12px). NO border.
+
+NAME & TITLE: Doctor name LARGE bold charcoal (#111827), weight 800. Specialty in medium gray (#6b7280), letter-spacing +1px. Thin line (1px, #e5e7eb, width 30%) separating name from credentials.
+
+CREDENTIALS (bottom 40%): Dark gray (#374151), . NO bullet points — thin left-border accent (2px, #e5e7eb) per item. Generous spacing.
+
+SIGNATURE: One thin horizontal line (1px, #e5e7eb) full width at ~55% from top.
+
+BANNED: No icons, no decorations, no colors except gray scale. Power in WHITESPACE and TYPOGRAPHY only.
+
+STRICT ANCHORS: Pure white, charcoal typography, thin gray lines, extreme whitespace, Apple minimalism.
+Mobile readability: name, credentials.`,
+ },
+ {
+ id: "doc_deep_navy", name: "딥 네이비", color: "#0f2444", accent: "#c9a96e", bg: "#0f2444",
+ desc: "다크 네이비 + 골드 악센트 — 권위 있는 프로필", layoutHint: "navy",
+ aiPrompt: `[CRITICAL — THIS IS A PREMIUM DOCTOR PROFILE POSTER]
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- DO NOT invent hospital names, phone numbers, addresses, or medical credentials.
+- DO NOT render any font sizes (pt, px), hex color codes (#7dd3fc), or technical specs as visible text in the image.
+- ONLY use text the user explicitly provided.
+
+Korean hospital doctor introduction poster — Deep Navy Authoritative theme.
+
+BACKGROUND: Deep navy (#0f2444). Subtle warm spotlight at center-top for depth. Rich, presidential.
+
+PHOTO AREA (top 40%): Centered. If no photo provided, show a light navy rounded placeholder. Thin gold border.
+
+NAME & TITLE: Name in bold white, LARGE. Specialty in gold, smaller, letter-spacing wide. Thin gold line below name.
+
+CREDENTIALS (bottom 40%): White text on navy, generous spacing. Key words highlighted in sky blue. NO cards — text floats on dark.
+
+SIGNATURE: Two thin parallel gold lines at center.
+
+BANNED: No white cards, no boxes, no fake text, no font size numbers visible. Power in white/gold typography on navy.
+
+STRICT ANCHORS: Deep navy, gold lines, white name, gold specialty, sky blue keywords, authoritative mood.`,
+ },
+ {
+ id: "doc_soft_beige", name: "소프트 베이지", color: "#78583d", accent: "#c9a96e", bg: "#faf7f2",
+ desc: "아이보리 배경 + 골드 라인 + 세리프 — 고급 의원 프로필", layoutHint: "beige",
+ aiPrompt: `[CRITICAL — THIS IS A PREMIUM DOCTOR PROFILE POSTER]
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- DO NOT invent hospital names, phone numbers, addresses, or medical information.
+- ONLY use text that the user explicitly provided in their input.
+
+Korean hospital doctor introduction poster — Soft Beige Premium theme.
+
+BACKGROUND: Warm ivory (#faf7f2). Subtle linen texture at 3% opacity. Luxury clinic brochure feel.
+
+PHOTO AREA (top/center 40%): Thin gold (#c9a96e) border (1px), rounded 8px. Warm shadow. If no photo, cream (#f5f0e8) placeholder.
+
+NAME & TITLE: Warm brown (#78583d), weight 700, serif feel. Specialty in gold (#c9a96e), . Gold decorative line (1px, width 20%) with diamond (◆) centered.
+
+CREDENTIALS (bottom 40%): Warm brown (#5c4a32), . Subtle border-left (2px, #e8ddd0) per item.
+
+SIGNATURE: Gold lines at top and bottom edges (full width, 0.5px). Gilded page border.
+
+BANNED: No heavy frames, no complex ornaments. Luxury from warmth, texture, gold accents.
+
+STRICT ANCHORS: Ivory/linen, gold photo border, warm brown serif name, gold diamond line, gilded border, luxury mood.
+Mobile readability: name, credentials.`,
+ },
+ {
+ id: "doc_modern_gray", name: "모던 그레이", color: "#374151", accent: "#6b7280", bg: "#f9fafb",
+ desc: "라이트 그레이 그라데이션 + 기하학 라인 — 모던 프로필", layoutHint: "gray",
+ aiPrompt: `[CRITICAL — THIS IS A PREMIUM DOCTOR PROFILE POSTER]
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- DO NOT invent hospital names, phone numbers, addresses, or medical information.
+- ONLY use text that the user explicitly provided in their input.
+
+Korean hospital doctor introduction poster — Modern Gray Geometric theme.
+
+BACKGROUND: Subtle gradient — very light gray (#f9fafb) to (#f3f4f6). Geometric grid lines (0.5px, #e5e7eb) at 5% opacity. Architectural blueprint feel.
+
+PHOTO AREA (left 40%): Thin gray (#d1d5db) border (1.5px), SHARP corners (no radius). If no photo, light gray placeholder. Sharp corners = design signature.
+
+NAME & TITLE (right): Dark charcoal (#1f2937), weight 800, tight tracking. Specialty in gray (#6b7280), uppercase, letter-spacing +3px. Short bold line (2px, width 40px) below name.
+
+CREDENTIALS (below name, right): Dark gray (#374151), . Items separated by thin lines (1px, #e5e7eb). Grid-like layout.
+
+SIGNATURE: Small gray (#9ca3af) square (8x8px) at bottom-right, rotated 45° (diamond).
+
+BANNED: No curves, no gradients (except subtle bg). Everything GEOMETRIC and ANGULAR. Swiss design.
+
+STRICT ANCHORS: Light gray gradient, grid lines, sharp-cornered frame, short bold accent, diamond mark, architectural precision.
+Mobile readability: name, credentials.`,
+ },
+ {
+ id: "doc_sky_medical", name: "스카이 메디컬", color: "#0284c7", accent: "#0369a1", bg: "#f0f9ff",
+ desc: "하늘색 그라데이션 + 클린 카드 — 신뢰감 있는 프로필", layoutHint: "sky",
+ aiPrompt: `[CRITICAL — THIS IS A PREMIUM DOCTOR PROFILE POSTER]
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- DO NOT invent hospital names, phone numbers, addresses, or medical information.
+- ONLY use text that the user explicitly provided in their input.
+
+Korean hospital doctor introduction poster — Sky Medical Trust theme.
+
+BACKGROUND: Blue gradient — medium blue (#3b82f6) at top (15%) through sky blue (#7dd3fc) to light blue (#f0f9ff) at 40%, then white. NO patterns.
+
+PHOTO AREA (top center, on blue): White card frame (rounded 14px, white border 3px, soft shadow). Photo floats on blue. If no photo, light blue (#dbeafe) placeholder.
+
+NAME & TITLE (below photo): Deep blue (#1e3a8a), weight 800. Specialty in medium blue (#0284c7), . Thin line (1px, #93c5fd, width 25%).
+
+CREDENTIALS (bottom 35%): On white area. Deep blue (#1e3a8a), . Thin blue (#bfdbfe) left-border (2px) per item.
+
+SINGLE ICON: Tiny plus (+) in white at 20% opacity on blue gradient (top-right).
+
+BANNED: No stethoscopes, no hearts. Blue gradient = medical trust.
+
+STRICT ANCHORS: Blue-to-white gradient, white-framed photo, deep blue typography, blue left-border credentials, medical trust mood.
+Mobile readability: name, credentials.`,
+ },
+ {
+ id: "doc_sage_natural", name: "세이지 내추럴", color: "#15803d", accent: "#10b981", bg: "#f0fdf4",
+ desc: "세이지 그린 + 잎 실루엣 — 자연스러운 프로필", layoutHint: "sage",
+ aiPrompt: `[CRITICAL — THIS IS A PREMIUM DOCTOR PROFILE POSTER]
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- DO NOT invent hospital names, phone numbers, addresses, or medical information.
+- ONLY use text that the user explicitly provided in their input.
+
+Korean hospital doctor introduction poster — Sage Natural Wellness theme.
+
+BACKGROUND: Soft sage (#f0fdf4). Subtle watercolor wash. At bottom-right: single eucalyptus branch silhouette (#86efac) at 8-12% opacity, ~20% into image.
+
+PHOTO AREA (top center 40%): Soft shadow, thin sage (#bbf7d0) border (1px, rounded 12px). If no photo, light sage (#ecfdf5) placeholder.
+
+NAME & TITLE: Dark forest green (#14532d), weight 700. Specialty in emerald (#059669), . Thin emerald (#10b981) line (1px, width 20%).
+
+CREDENTIALS (bottom 35%): White card (rounded 14px, shadow, border: 1px solid #dcfce7). Dark green (#15803d), . Items separated by thin sage lines.
+
+BANNED: No leaf illustrations except ONE silhouette. Botanical presence MINIMAL.
+
+STRICT ANCHORS: Sage watercolor, eucalyptus silhouette, dark green typography, emerald accents, white card, wellness mood.
+Mobile readability: name, credentials.`,
+ },
+ ],
+
+ // ─── 공지사항 (6개) ───
+ // 연구 기반: 똑닥 템플릿(PDF/PPT/SNS), 중앙 단일카드, 구조화된 행, 연락처 포함
+ // 색상: 화이트+네이비/다크그레이(기본), 계절 악센트(핑크/오렌지), 서브듀드 전문적
+ notice: [
+ {
+ id: "ntc_clean_white", name: "클린 화이트", color: "#374151", accent: "#111827", bg: "#ffffff",
+ desc: "순백 배경 + 차콜 타이포 + 얇은 라인 — 가장 깔끔한 공지", layoutHint: "minimal",
+ aiPrompt: `[CRITICAL — THIS IS A DESIGNED NOTICE POSTER WITH PHYSICAL OBJECTS]
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. Leave areas blank or use only user-provided text.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- ONLY use text the user explicitly provided.
+
+Korean hospital notice poster — TAPED PAPER ON BEIGE WALL theme.
+
+VISUAL CONCEPT: A white sheet of paper taped to a warm beige wall. The paper has real paper texture with subtle creases/folds. Two pieces of light blue masking tape (washi tape) — one at top-left corner, one at bottom-right corner — holding the paper to the wall. The tape looks realistic, slightly wrinkled, semi-transparent.
+
+BACKGROUND (THE WALL): Warm beige/tan (#d4c5a9) with subtle diagonal shadow lines (like sunlight through blinds) at 10% opacity. Real wall texture.
+
+THE PAPER (centered, 80% of image): White paper (#ffffff) with very subtle paper texture and light crease lines. Slightly rotated (-1 to 1 degree) to feel natural/casual. Soft drop shadow behind paper.
+
+ON THE PAPER:
+- Top area: date in small serif gray text if user provided
+- Center: Large title in elegant brown/gold serif typography
+- Below title: thin gray horizontal line
+- Below line: notice content in dark gray (#374151) clean sans-serif text
+- Bottom: thin gray line + hospital name in small text
+
+THE BLUE TAPE AND PAPER TEXTURE ARE MANDATORY. Without them it is just text on white.
+
+STRICT ANCHORS: Beige wall background, white paper with creases, blue masking tape at two corners, shadow lines on wall, serif title, realistic stationery feel.
+Mobile readability: title, body.`,
+ },
+
+
+
+
+ {
+ id: "ntc_soft_blue", name: "소프트 블루", color: "#1e3a8a", accent: "#3b82f6", bg: "#eff6ff",
+ desc: "연한 하늘색 배경 + 네이비 타이포 — 신뢰감 있는 공지", layoutHint: "blue",
+ aiPrompt: `[CRITICAL — THIS IS A DESIGNED NOTICE POSTER WITH PHYSICAL OBJECTS]
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. Leave areas blank or use only user-provided text.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- ONLY use text the user explicitly provided.
+
+Korean hospital notice poster — BLUE FRAME WITH ICON theme.
+
+VISUAL CONCEPT: Clean poster with a prominent light blue (#bfdbfe) thick border frame around the entire image. Inside the frame: white background. A large circular icon in the center acts as the visual anchor.
+
+BACKGROUND: Pure white inside the frame. Light blue (#e0f2fe) outside/behind the frame (visible as the thick border).
+
+FRAME: Light blue (#93c5fd) thick border — 20px on all sides. Creates a clean framed bulletin board feel.
+
+INSIDE THE FRAME:
+- Top 30%: Small label text "NOTICE" in light blue, letter-spacing +4px, uppercase. Below: notice title in MASSIVE bold dark navy (#0f172a) text.
+- Center 35%: Large circular icon (80px diameter) — light blue (#3b82f6) circle with white simple icon inside (calendar with checkmark, or megaphone, or bell). This icon is THE visual centerpiece.
+- Bottom 35%: Notice content in dark text, centered. Date/time highlighted with light blue background strip.
+
+THE THICK BLUE FRAME AND CENTER ICON ARE MANDATORY.
+
+STRICT ANCHORS: Thick light blue border frame, large circular icon centerpiece, bold dark title, clean white interior, bulletin board aesthetic.
+Mobile readability: title, body.`,
+ },
+
+
+
+
+ {
+ id: "ntc_warm_cream", name: "웜 크림", color: "#78583d", accent: "#c9a96e", bg: "#faf7f2",
+ desc: "따뜻한 크림 배경 + 갈색 타이포 + 골드 악센트 — 고급 공지", layoutHint: "cream",
+ aiPrompt: `[CRITICAL — THIS IS A DESIGNED NOTICE POSTER WITH PHYSICAL OBJECTS]
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. Leave areas blank or use only user-provided text.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- ONLY use text the user explicitly provided.
+
+Korean hospital notice poster — CORK BOARD WITH PINNED NOTE theme.
+
+VISUAL CONCEPT: A cork bulletin board texture as the background. A white note card pinned to the board with a colorful push pin at the top center. The note card has a slight shadow and slight rotation for realism.
+
+BACKGROUND: Cork board texture (#c4a265 to #b8956a) — realistic cork material with visible grain and small dots. Fills entire image.
+
+THE NOTE CARD: White card (#ffffff) with rounded corners (8px), centered, spanning 80% width and 85% height. Slight rotation (-0.5 to 0.5 degree). Realistic drop shadow (offset 4px, blur 12px). Paper texture visible on the card.
+
+PUSH PIN: At top-center of the card. Realistic 3D push pin — red or gold metallic, with visible pin shaft and shadow. THE key visual element.
+
+ON THE CARD:
+- Top: Notice title in warm brown (#5c3d1e) bold serif text
+- Below title: thin gold (#c9a96e) decorative line with small diamond
+- Middle: Content text in warm brown (#5c4a32), generous spacing
+- Bottom: Date and hospital name in lighter brown
+
+THE CORK TEXTURE AND PUSH PIN ARE MANDATORY.
+
+STRICT ANCHORS: Cork board background, white pinned note card, realistic push pin, paper shadow, warm brown serif typography, bulletin board realism.
+Mobile readability: title, body.`,
+ },
+
+
+
+
+ {
+ id: "ntc_mint_fresh", name: "민트 프레시", color: "#0f766e", accent: "#10b981", bg: "#f0fdfa",
+ desc: "민트 그라데이션 + 다크그린 타이포 — 상쾌한 공지", layoutHint: "mint",
+ aiPrompt: `[CRITICAL — THIS IS A DESIGNED NOTICE POSTER WITH PHYSICAL OBJECTS]
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. Leave areas blank or use only user-provided text.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- ONLY use text the user explicitly provided.
+
+Korean hospital notice poster — LETTER FROM ENVELOPE theme.
+
+VISUAL CONCEPT: A mint/sage colored envelope at the bottom, with a white letter/card partially pulled out from it, extending upward. The letter contains the notice content.
+
+BACKGROUND: Soft mint (#f0fdfa) to white gradient, clean and fresh.
+
+THE ENVELOPE: At the bottom 25% of image. Mint/sage (#a7f3d0) colored envelope, slightly open at top, realistic paper texture. The flap is open, revealing the letter. Subtle shadow.
+
+THE LETTER: White card/paper extending from the envelope upward, spanning top 75% of image. Clean white with subtle paper texture. Slight shadow separating it from envelope.
+
+ON THE LETTER:
+- Top: Small "NOTICE" label in emerald (#10b981), letter-spacing +3px
+- Center: Notice title in dark teal (#0f766e) bold text
+- Below: thin emerald line
+- Content: dark teal text, generous spacing
+
+THE ENVELOPE AND LETTER-PULLING-OUT EFFECT ARE MANDATORY.
+
+STRICT ANCHORS: Mint envelope at bottom, white letter pulled out, paper textures, teal typography, emerald accents, mail/letter metaphor.
+Mobile readability: title, body.`,
+ },
+
+
+
+
+ {
+ id: "ntc_slate_modern", name: "슬레이트 모던", color: "#334155", accent: "#64748b", bg: "#f8fafc",
+ desc: "검정 펠트 레터보드 + 흰 글자 — 감성 레터보드 스타일", layoutHint: "slate",
+ aiPrompt: `[CRITICAL — THIS IS A DESIGNED NOTICE POSTER WITH PHYSICAL OBJECTS]
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. Leave areas blank or use only user-provided text.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- ONLY use text the user explicitly provided.
+
+Korean hospital notice poster — FELT LETTER BOARD theme. Like a trendy cafe or boutique clinic felt letter board.
+
+VISUAL CONCEPT: A realistic BLACK FELT LETTER BOARD with thin horizontal grooves (slots) where white plastic letters are inserted. The board has a natural wood or oak frame around it. This is a physical object — it must look like a REAL letter board photographed straight-on.
+
+THE FRAME: Natural light oak or walnut wood frame surrounding the entire image. Frame width about 3-4% of image on each side. Visible wood grain texture. Clean, simple rectangular frame.
+
+THE FELT BOARD: Inside the frame — black felt (#1a1a1a) surface with visible felt texture (soft, slightly fuzzy). Subtle horizontal grooves/ridges running across the entire surface at regular intervals (every ~20px). These grooves are where the letters sit. The grooves are very subtle — slightly lighter black lines (#2a2a2a).
+
+THE LETTERS: White (#ffffff) plastic letter tiles inserted into the grooves. Each letter is a small rectangular tile with rounded corners, slightly raised (subtle shadow beneath each letter). The letters form the notice text:
+- Title: large letters (one letter per tile), bold, taking up 2-3 rows
+- Below: smaller letters for content
+- Letters should look like real physical plastic tiles — not flat text. Each letter has its own tile with a tiny gap between tiles.
+
+LAYOUT:
+- Top rows: Notice title in large letter tiles
+- Middle: thin decorative row of arrow tiles or dash tiles as separator
+- Bottom rows: Content in smaller letter tiles
+- Very bottom row: date or hospital name in smallest tiles
+
+OPTIONAL: 1-2 small decorative elements on the felt board — a tiny heart tile, a star tile, or a small plant/succulent at the bottom corner of the frame for lifestyle feel.
+
+THE BLACK FELT TEXTURE, WOOD FRAME, AND INDIVIDUAL LETTER TILES ARE MANDATORY.
+
+STRICT ANCHORS: Black felt board with grooves, natural wood frame, white plastic letter tiles with individual tile shadows, letter board realism, trendy cafe aesthetic.
+INSPIRED FREEDOM: Frame wood type (oak/walnut/white), decorative tiles (heart/star/arrow), plant accent, groove spacing.
+Mobile readability: title letters large enough to read, content letters equivalent.`,
+ },
+
+
+
+
+ {
+ id: "ntc_peach_soft", name: "피치 소프트", color: "#9a3412", accent: "#f97316", bg: "#fff7ed",
+ desc: "연한 피치/살몬 배경 + 따뜻한 브라운 — 부드러운 공지", layoutHint: "peach",
+ aiPrompt: `[CRITICAL — THIS IS A DESIGNED NOTICE POSTER WITH PHYSICAL OBJECTS]
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. Leave areas blank or use only user-provided text.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- ONLY use text the user explicitly provided.
+
+Korean hospital notice poster — MEMO PAD WITH WASHI TAPE theme.
+
+VISUAL CONCEPT: A warm peach background with a white memo pad/notepad in the center. Colorful washi tape strips at top and bottom of the memo pad. Cute, warm, approachable.
+
+BACKGROUND: Warm peach (#fdba74) to cream (#fff7ed) gradient. Soft, warm, inviting.
+
+THE MEMO PAD: White paper/card at center, spanning 82% width and 78% height. VERY rounded corners (20px). Subtle paper texture. Warm soft shadow.
+
+WASHI TAPE: Two strips of decorative washi tape:
+- Top of memo pad: coral/pink (#fb923c) washi tape strip, slightly diagonal, semi-transparent, with pattern texture (subtle stripes or dots)
+- Bottom of memo pad: different color washi tape (mint or yellow), also slightly diagonal
+
+ON THE MEMO PAD:
+- Title in deep brown (#78350f) bold rounded text. Friendly, not corporate.
+- Below: thin coral line
+- Content in warm brown (#78350f), generous spacing
+
+THE WASHI TAPE STRIPS ARE MANDATORY.
+
+STRICT ANCHORS: Peach gradient background, white rounded memo pad, washi tape strips at top/bottom, warm brown text, friendly approachable mood.
+Mobile readability: title, body.`,
+ },
+ ],
+
+ // ─── 명절 인사: 설날 (6개) ───
+ // 연구 기반: 네이비+골드(보름달), 베이지+전통색동(현대적), 서예체 인사말
+ // 캔바/미리캔버스 한국 명절 템플릿 패턴 참고, 2025 뱀띠해 등 동물 테마
+ greeting_설날: [
+ {
+ id: "grt_hanbok_seollal", name: "전통 한복", color: "#dc2626", accent: "#991b1b", bg: "#fef2f2",
+ desc: "한복 캐릭터 + 세배 포즈 + 크림 배경 — 따뜻한 전통 설날", layoutHint: "hanbok",
+ aiPrompt: `[CRITICAL — THIS IS A PREMIUM LUNAR NEW YEAR GREETING POSTER]
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- ONLY use text the user explicitly provided.
+
+Korean hospital Lunar New Year greeting poster — HANBOK TRADITIONAL style.
+
+VISUAL STRUCTURE:
+BACKGROUND: Warm cream (#fef7ed) with subtle hanji paper texture at 5% opacity.
+
+MAIN ILLUSTRATION (center-top 45%): Charming illustration of a person or family in traditional Korean hanbok doing sebae (New Year bow) FACING THE VIEWER (정면). They should be bowing TOWARD the viewer, NOT toward each other. One or two figures kneeling and bowing forward with hands on the floor, facing front. Colorful hanbok — red, blue, gold, green (saekdong colors). Premium greeting card illustration quality. ⛔ Do NOT draw two people facing each other and bowing — they must face the CAMERA/VIEWER.
+
+TEXT AREA (center-bottom 35%): Greeting text in bold warm brown (#5c3d1e) serif. Below: thin gold (#c9a96e) decorative line. Hospital name if provided.
+
+DECORATIVE: Small traditional cloud patterns at corners at 10% opacity. Red/gold accents.
+
+THE HANBOK ILLUSTRATION WITH SEBAE POSE IS MANDATORY.
+
+STRICT ANCHORS: Hanbok figures doing sebae, hanji texture, warm cream, traditional colors, greeting card warmth.
+Mobile readability: greeting, body.`,
+ },
+ {
+ id: "grt_saekdong_frame", name: "색동 프레임", color: "#e11d48", accent: "#be123c", bg: "#fffbeb",
+ desc: "전통 색동 줄무늬 프레임 + 깔끔한 내부 — 모던 전통 설날", layoutHint: "saekdong",
+ aiPrompt: `[CRITICAL — THIS IS A PREMIUM LUNAR NEW YEAR GREETING POSTER]
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- ONLY use text the user explicitly provided.
+
+Korean hospital Lunar New Year greeting poster — SAEKDONG FRAME style.
+
+VISUAL STRUCTURE:
+BACKGROUND: Warm ivory (#fffbeb) clean interior.
+
+SAEKDONG FRAME: Thick decorative border around ENTIRE image — vertical stripes of RED (#dc2626), BLUE (#2563eb), YELLOW (#eab308), GREEN (#16a34a), PINK (#ec4899) running along all four edges. Frame width 5-6% of image. Clean, geometric, modern interpretation. THIS is the signature element.
+
+INSIDE FRAME:
+- Top: Small traditional ornament in gold (#c9a96e)
+- Center: Greeting text in bold dark red (#991b1b)
+- Below: year text in elegant serif
+- Below: thin gold line + hospital name
+
+Interior is CLEAN and MINIMAL — saekdong frame provides all visual interest.
+
+THE SAEKDONG COLOR STRIPE FRAME IS MANDATORY.
+
+STRICT ANCHORS: Saekdong multi-color stripe frame, clean ivory interior, dark red greeting, gold ornament, modern-meets-traditional.
+Mobile readability: greeting, body.`,
+ },
+ {
+ id: "grt_bokjumoni_gold", name: "복주머니 골드", color: "#b91c1c", accent: "#dc2626", bg: "#fef2f2",
+ desc: "큰 복주머니 일러스트 + 금색 장식 — 복 가득한 설날", layoutHint: "bokjumoni",
+ aiPrompt: `[CRITICAL — THIS IS A PREMIUM LUNAR NEW YEAR GREETING POSTER]
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- ONLY use text the user explicitly provided.
+
+Korean hospital Lunar New Year greeting poster — BOKJUMONI GOLD style.
+
+VISUAL STRUCTURE:
+BACKGROUND: Festive red (#dc2626) to darker red (#991b1b) gradient. Subtle traditional cloud patterns at 8-10% opacity.
+
+MAIN ILLUSTRATION (center 40%): LARGE Korean 복주머니 (bokjumoni) illustration — must be clearly KOREAN traditional style, NOT Chinese:
+- Small rounded silk pouch shape (NOT a Chinese red envelope)
+- Colorful Korean silk fabric in vibrant red, pink, or multi-colored saekdong style
+- Korean-style knotting cord (매듭) tied at top with decorative tassel
+- Korean traditional embroidery patterns (flowers or 복 character)
+- Surrounding: small Korean traditional coins (엽전), golden sparkles
+- Style: warm, charming, semi-realistic Korean folk art quality
+⛔ Do NOT draw Chinese red envelopes, Chinese lanterns, or Chinese New Year imagery.
+
+TEXT AREA (below illustration 35%): Greeting in bold gold (#d4a853) text. Thin gold decorative line. Hospital name in light gold/cream.
+
+THE LARGE BOKJUMONI ILLUSTRATION IS MANDATORY.
+
+STRICT ANCHORS: Red gradient, cloud patterns, large bokjumoni, gold coins/sparkles, gold text on red, festive mood.
+Mobile readability: greeting, body.`,
+ },
+ {
+ id: "grt_ink_geunha", name: "수묵화 근하신년", color: "#374151", accent: "#dc2626", bg: "#f9fafb",
+ desc: "수묵화 매화/소나무 + 붓글씨 타이포 + 낙관 — 격조 있는 설날", layoutHint: "inkwash",
+ aiPrompt: `[CRITICAL — THIS IS A PREMIUM LUNAR NEW YEAR GREETING POSTER]
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- ONLY use text the user explicitly provided.
+
+Korean hospital Lunar New Year greeting poster — INK WASH CALLIGRAPHY style.
+
+VISUAL STRUCTURE:
+BACKGROUND: Pure white to light warm gray (#f9fafb). Like rice paper. Subtle paper texture.
+
+INK WASH ILLUSTRATIONS: Plum blossom or pine branch in traditional ink wash technique — black ink with varying brush strokes. Branch reaches 30% into image. Must look like REAL brush strokes.
+
+CALLIGRAPHY TEXT (center 40%): Greeting in BOLD BRUSH CALLIGRAPHY style — thick, expressive Korean brush strokes. Black (#1f2937) ink. Must look hand-written.
+
+RED SEAL: One small traditional red seal stamp (#dc2626) near the calligraphy. THE signature element.
+
+THE INK WASH BRANCH, CALLIGRAPHY TEXT, AND RED SEAL ARE MANDATORY.
+
+STRICT ANCHORS: White rice paper, ink wash branch, brush calligraphy, red seal stamp, traditional East Asian art, maximum elegance.
+Mobile readability: calligraphy text large and bold, body.`,
+ },
+ {
+ id: "grt_black_gold", name: "블랙 골드", color: "#0f172a", accent: "#d4a853", bg: "#0f172a",
+ desc: "다크 배경 + 골드 타이포 + 전통 구름 문양 — 럭셔리 설날", layoutHint: "blackgold",
+ aiPrompt: `[CRITICAL — THIS IS A PREMIUM LUNAR NEW YEAR GREETING POSTER]
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- ONLY use text the user explicitly provided.
+
+Korean hospital Lunar New Year greeting poster — BLACK GOLD LUXURY style.
+
+VISUAL STRUCTURE:
+BACKGROUND: Deep black-navy (#0f172a). Across ENTIRE background: traditional Korean cloud patterns in gold (#d4a853) at 8-12% opacity. Flowing, layered, elegant traditional clouds.
+
+GOLD FRAME: Thin gold (#d4a853) border (1px) with traditional corner ornaments. Inset 4% from edges.
+
+INSIDE FRAME:
+- Small gold traditional ornament at center-top
+- Greeting in MASSIVE bold gold (#d4a853) text with slight glow effect (gold at 20% opacity, blur 8px)
+- "2026" in elegant gold serif below greeting
+- Thin gold line (width 25%)
+- Hospital name in small gold
+
+THE GOLD CLOUD PATTERN ON DARK BACKGROUND IS MANDATORY.
+
+STRICT ANCHORS: Dark background, gold cloud patterns, gold frame, massive glowing gold text, traditional Korean luxury.
+Mobile readability: greeting, body.`,
+ },
+ {
+ id: "grt_sunrise", name: "새해 일출", color: "#ea580c", accent: "#0284c7", bg: "#fff7ed",
+ desc: "산 위 해돋이 + 블루/오렌지 그라데이션 — 희망찬 새해", layoutHint: "sunrise",
+ aiPrompt: `[CRITICAL — THIS IS A PREMIUM LUNAR NEW YEAR GREETING POSTER]
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. If you cannot write real Korean, leave that area blank or use only the text the user provided.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- ONLY use text the user explicitly provided.
+
+Korean hospital Lunar New Year greeting poster — SUNRISE LANDSCAPE style.
+
+VISUAL STRUCTURE:
+BACKGROUND/ILLUSTRATION (top 55%): Sunrise landscape — sun rising over mountains. Sky gradient: deep blue (#1e3a8a) at top, through purple (#7c3aed) to warm orange (#ea580c) to golden yellow (#eab308) at horizon. Mountain silhouettes in dark blue, 3-4 layers at different distances. Sun is warm golden-white circle at horizon with light rays. Premium stylized landscape illustration.
+
+LIGHT AREA (bottom 45%): Warm cream (#fff7ed) below mountains.
+
+TEXT AREA (on light area): Greeting in bold deep navy (#1e3a8a) text. Thin orange (#ea580c) line (width 20%). Hospital name in warm gray.
+
+THE SUNRISE MOUNTAIN LANDSCAPE IS MANDATORY.
+
+STRICT ANCHORS: Blue-to-orange gradient sky, layered mountain silhouettes, golden sun, light rays, warm cream text area, hopeful new dawn.
+Mobile readability: greeting, body.`,
+ },
+ ],
+
+ // ─── 명절 인사: 추석 (6개) ───
+  greeting_추석: [
+    {
+      id: "grt_chsk_moonrabbit", name: "보름달 토끼", color: "#1e3a5f", accent: "#eab308", bg: "#1e3a5f",
+      desc: "큰 보름달 + 토끼 실루엣 + 밤하늘 — 서정적인 추석", layoutHint: "moonrabbit",
+      aiPrompt: `[CRITICAL — THIS IS A PREMIUM CHUSEOK GREETING POSTER]
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. Leave areas blank or use only user-provided text.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- ONLY use text the user explicitly provided.
+
+Korean hospital Chuseok greeting poster — FULL MOON & RABBIT style.
+
+BACKGROUND: Deep navy-blue (#1e3a5f) night sky. Scattered tiny stars at 10% opacity.
+
+FULL MOON (center-top 40%): LARGE luminous golden-white (#fef9c3) full moon, diameter 35% of image. Realistic surface detail. Soft golden GLOW outward.
+
+RABBIT SILHOUETTE: Charming rabbit on/near the moon — pounding rice cake with mortar and pestle (traditional 달토끼). Small, elegant silhouette.
+
+GROUND (bottom 15%): Dark silhouette of hills and silver grass (억새) swaying.
+
+TEXT (bottom 35%): Greeting in warm gold (#eab308). Thin gold line. Hospital name in light gold if provided.
+
+THE LARGE MOON AND RABBIT SILHOUETTE ARE MANDATORY.
+
+STRICT ANCHORS: Dark night sky, large glowing moon, rabbit silhouette, silver grass, warm gold text, serene autumn night.`,
+    },
+    {
+      id: "grt_chsk_songpyeon", name: "송편", color: "#15803d", accent: "#16a34a", bg: "#f0fdf4",
+      desc: "예쁜 송편 일러스트 + 솔잎 + 따뜻한 톤 — 정감 있는 추석", layoutHint: "songpyeon",
+      aiPrompt: `[CRITICAL — THIS IS A PREMIUM CHUSEOK GREETING POSTER]
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. Leave areas blank or use only user-provided text.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- ONLY use text the user explicitly provided.
+
+Korean hospital Chuseok greeting poster — SONGPYEON style.
+
+BACKGROUND: Warm cream (#fefce8) to soft sage (#f0fdf4) gradient. Subtle hanji texture at 3%.
+
+MAIN ILLUSTRATION (center 40%): Beautiful arrangement of Korean songpyeon (half-moon rice cakes). 5-7 in pastel colors — white, light pink, light green, light yellow. Traditional half-moon shape with crimped edges. Surrounding: pine needles (솔잎) in dark green. Semi-realistic watercolor style, NOT flat clip art.
+
+TEXT (below illustration 35%): Greeting in dark forest green (#14532d) bold. Thin emerald (#10b981) line. Hospital name in warm brown if provided.
+
+THE SONGPYEON WITH PINE NEEDLES IS MANDATORY.
+
+STRICT ANCHORS: Warm cream, colorful songpyeon, pine needles, forest green text, warm homey atmosphere.`,
+    },
+    {
+      id: "grt_chsk_autumn_leaves", name: "가을 단풍", color: "#c2410c", accent: "#ea580c", bg: "#fff7ed",
+      desc: "수채화 단풍잎 프레임 + 따뜻한 가을 — 가을빛 추석", layoutHint: "autumnleaves",
+      aiPrompt: `[CRITICAL — THIS IS A PREMIUM CHUSEOK GREETING POSTER]
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. Leave areas blank or use only user-provided text.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- ONLY use text the user explicitly provided.
+
+Korean hospital Chuseok greeting poster — AUTUMN LEAVES FRAME style.
+
+BACKGROUND: Warm cream (#fff7ed).
+
+AUTUMN LEAF FRAME: Lush WATERCOLOR autumn leaves at TOP-LEFT and BOTTOM-RIGHT corners, reaching 25-30% into image. Colors: fiery red (#dc2626), burnt orange (#ea580c), golden yellow (#eab308), warm brown (#92400e). WATERCOLOR technique — visible brush strokes, color bleeding. Mixed with small branches and berries.
+
+CENTER (50%): Greeting in bold warm brown (#78350f). Thin orange (#ea580c) line. Hospital name in brown if provided.
+
+THE WATERCOLOR AUTUMN LEAF FRAME IS MANDATORY.
+
+STRICT ANCHORS: Warm cream, watercolor autumn leaf corners (red/orange/yellow), warm brown text, cozy autumn mood.`,
+    },
+    {
+      id: "grt_chsk_harvest", name: "전통 풍요", color: "#92400e", accent: "#d97706", bg: "#fffbeb",
+      desc: "전통 문양 + 감/과일/곡식 일러스트 — 풍요로운 추석", layoutHint: "harvest",
+      aiPrompt: `[CRITICAL — THIS IS A PREMIUM CHUSEOK GREETING POSTER]
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. Leave areas blank or use only user-provided text.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- ONLY use text the user explicitly provided.
+
+Korean hospital Chuseok greeting poster — HARVEST ABUNDANCE style.
+
+BACKGROUND: Warm ivory (#fffbeb) with subtle traditional Korean pattern at 4-5% opacity.
+
+MAIN ILLUSTRATION (center 40%): Bountiful harvest arrangement — Korean persimmons (감, bright orange), chestnuts (밤 with spiky shells), rice stalks (벼이삭, golden drooping). Watercolor illustration style, warm and rich. Like a traditional offering table display.
+
+DECORATIVE: Traditional Korean corner ornaments (꽃살문양) at four corners at 10% opacity.
+
+TEXT (below illustration 30%): Greeting in bold warm brown (#78350f) serif. Thin gold (#d97706) line with diamond. Hospital name if provided.
+
+THE HARVEST FRUIT/GRAIN ILLUSTRATION IS MANDATORY.
+
+STRICT ANCHORS: Ivory with traditional pattern, harvest arrangement (persimmon+chestnut+rice), corner ornaments, warm brown serif, abundant harvest mood.`,
+    },
+    {
+      id: "grt_chsk_cosmos", name: "코스모스 억새", color: "#be185d", accent: "#ec4899", bg: "#fdf2f8",
+      desc: "코스모스 + 억새밭 + 황혼 — 가을 풍경 추석", layoutHint: "cosmos",
+      aiPrompt: `[CRITICAL — THIS IS A PREMIUM CHUSEOK GREETING POSTER]
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. Leave areas blank or use only user-provided text.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- ONLY use text the user explicitly provided.
+
+Korean hospital Chuseok greeting poster — COSMOS & SILVER GRASS style.
+
+ILLUSTRATION (top 55%): Korean autumn countryside landscape:
+- SKY: Warm sunset gradient — soft pink (#fce7f3) through orange (#fdba74) to golden (#fef9c3).
+- SILVER GRASS (억새): Fluffy white-silver pampas grass backlit by sunset glow.
+- COSMOS FLOWERS (코스모스): Pink (#ec4899), white, light purple cosmos flowers. Natural, wild, growing freely.
+- Stylized watercolor illustration style.
+
+TEXT (bottom 40%): On warm cream (#fff7ed). Greeting in bold deep rose (#9f1239). Thin pink line. Hospital name if provided.
+
+THE COSMOS FLOWERS AND SILVER GRASS ARE MANDATORY.
+
+STRICT ANCHORS: Sunset sky, silver grass backlit, cosmos flowers, autumn countryside, warm cream text area, romantic autumn mood.`,
+    },
+    {
+      id: "grt_chsk_gold_moon", name: "골드 보름달", color: "#0f172a", accent: "#d4a853", bg: "#0f172a",
+      desc: "다크 + 골드 큰 달 + 전통 구름 — 럭셔리 추석", layoutHint: "goldmoon",
+      aiPrompt: `[CRITICAL — THIS IS A PREMIUM CHUSEOK GREETING POSTER]
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. Leave areas blank or use only user-provided text.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- ONLY use text the user explicitly provided.
+
+Korean hospital Chuseok greeting poster — GOLD FULL MOON LUXURY style.
+
+BACKGROUND: Deep dark navy (#0f172a). Traditional Korean cloud patterns (구름문양) in gold (#d4a853) at 6-8% opacity.
+
+LARGE GOLD MOON (center-top 35%): HUGE golden moon (#d4a853), diameter 40% of image. Subtle surface texture. Warm golden GLOW (20% opacity, blur 25px). Inside/in front of moon: delicate gold line art — flower branch or flying crane silhouette. Moon is THE dominant visual.
+
+GOLD FRAME: Very thin gold line (0.5px) inset 3% with traditional corner ornaments.
+
+TEXT (below moon 40%): Greeting in bold gold with subtle glow. Thin gold line. Hospital name in small gold if provided.
+
+THE GIANT GOLD MOON WITH LINE ART IS MANDATORY.
+
+STRICT ANCHORS: Dark background, gold cloud patterns, giant gold moon with line art, gold glow, gold text, luxurious autumn night.`,
+    },
+  ],
+
+ // ─── 명절 인사: 새해 (6개) ───
+  greeting_새해: [
+    {
+      id: "grt_newy_fireworks", name: "불꽃놀이", color: "#1e1b4b", accent: "#eab308", bg: "#1e1b4b",
+      desc: "다크 밤하늘 + 화려한 불꽃놀이 + \"2026\" — 축제 분위기 새해", layoutHint: "fireworks",
+      aiPrompt: `[CRITICAL — THIS IS A PREMIUM NEW YEAR CELEBRATION POSTER]
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. Leave areas blank or use only user-provided text.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- ONLY use text the user explicitly provided.
+
+New Year celebration poster — FIREWORKS NIGHT SKY style.
+
+VISUAL STRUCTURE:
+BACKGROUND: Deep dark indigo-navy (#0f0a2e) night sky filling ENTIRE image. Scattered tiny white stars at 15% opacity.
+
+FIREWORKS (top 50%): 4-6 LARGE spectacular firework bursts — gold (#FFD700), hot pink (#ec4899), electric blue (#3b82f6), emerald (#10b981). Radiating thin spark lines + glowing particle trails + bright center bloom. SPECTACULAR and REALISTIC.
+
+YEAR NUMBER (center 20%): "2026" in MASSIVE bold gold (#FFD700) with golden glow effect.
+
+TEXT AREA (bottom 30%): Greeting in bold white. Below: thin gold line. Hospital name in small gold if provided.
+
+THE SPECTACULAR FIREWORKS AND LARGE YEAR NUMBER ARE MANDATORY.
+
+STRICT ANCHORS: Dark night sky, multi-color firework bursts, golden "2026", white greeting, festive night mood.`,
+    },
+    {
+      id: "grt_newy_balloon", name: "골드 풍선", color: "#d4a853", accent: "#92400e", bg: "#fffbeb",
+      desc: "금색 풍선 숫자 \"2026\" + 컨페티 — 밝고 화려한 새해", layoutHint: "balloon",
+      aiPrompt: `[CRITICAL — THIS IS A PREMIUM NEW YEAR CELEBRATION POSTER]
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. Leave areas blank or use only user-provided text.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- ONLY use text the user explicitly provided.
+
+New Year celebration poster — GOLD BALLOON style.
+
+VISUAL STRUCTURE:
+BACKGROUND: Warm cream (#fffbeb) to white gradient. Bright party feel.
+
+BALLOON NUMBERS (center-top 45%): "2026" formed by METALLIC GOLD FOIL BALLOONS — each digit is a separate inflated balloon. REALISTIC 3D — shiny, reflective gold foil, visible light reflections, puffy shape. Thin gold ribbons hanging down.
+
+CONFETTI (scattered entire image): Tiny confetti in gold (#d4a853), pink (#ec4899), light blue (#7dd3fc), white — 15-25% opacity. Circles, rectangles, curled ribbons.
+
+TEXT AREA (bottom 40%): Greeting in bold warm brown (#5c3d1e). Thin gold line. Hospital name if provided.
+
+THE METALLIC GOLD FOIL BALLOON "2026" IS MANDATORY.
+
+STRICT ANCHORS: Cream background, realistic gold foil balloon numbers, confetti, warm brown text, bright celebratory mood.`,
+    },
+    {
+      id: "grt_newy_confetti", name: "컨페티 셀레브레이션", color: "#ec4899", accent: "#8b5cf6", bg: "#fdf2f8",
+      desc: "컬러풀 컨페티/리본 + 밝은 톤 — 화려한 축하 새해", layoutHint: "confetti",
+      aiPrompt: `[CRITICAL — THIS IS A PREMIUM NEW YEAR CELEBRATION POSTER]
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. Leave areas blank or use only user-provided text.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- ONLY use text the user explicitly provided.
+
+New Year celebration poster — COLORFUL CONFETTI EXPLOSION style.
+
+VISUAL STRUCTURE:
+BACKGROUND: Soft pink (#fdf2f8) to lavender (#f5f3ff) gradient.
+
+CONFETTI EXPLOSION (across ENTIRE image): DENSE colorful confetti, streamers, curled ribbons EVERYWHERE — hot pink (#ec4899), violet (#8b5cf6), gold (#eab308), sky blue (#38bdf8), coral (#fb923c), emerald (#10b981). Circles, stars, hearts, rectangles, long streamers. 30-40% of surface. Denser at top/edges, sparser at center for text. Like a confetti cannon just went off.
+
+TEXT AREA (center 40%): "2026" in large bold dark (#1e1b4b). Below: greeting in bold pink (#be185d). Thin gold line. Hospital name in violet if provided.
+
+THE DENSE MULTI-COLOR CONFETTI IS MANDATORY.
+
+STRICT ANCHORS: Pink-lavender gradient, dense confetti explosion, large "2026", joyful maximum celebration.`,
+    },
+    {
+      id: "grt_newy_minimal", name: "미니멀 타이포", color: "#111827", accent: "#d4a853", bg: "#ffffff",
+      desc: "순백 + 거대한 \"2026\" 타이포 + 골드 라인 — 세련된 미니멀 새해", layoutHint: "minimal",
+      aiPrompt: `[CRITICAL — THIS IS A PREMIUM NEW YEAR GREETING POSTER]
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. Leave areas blank or use only user-provided text.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- ONLY use text the user explicitly provided.
+
+New Year greeting poster — ULTRA MINIMAL TYPOGRAPHY style. Like an Apple event invitation.
+
+VISUAL STRUCTURE:
+BACKGROUND: Pure white (#ffffff). Nothing else.
+
+TYPOGRAPHY HERO (center 60%): "2026" in MASSIVE display typography — very large, weight 900, charcoal (#111827), tight letter-spacing. Dominates entire poster. Below: thin gold (#d4a853) line (1px, width 15%). Below: greeting in elegant charcoal, light weight, letter-spacing wide.
+
+BOTTOM (20%): Hospital name in small gray if provided.
+TOP (20%): Pure white. Single tiny gold diamond at top-center, 20% opacity.
+
+THE MASSIVE "2026" ON PURE WHITE IS MANDATORY. No decorations, no images. Typography + whitespace = luxury.
+
+STRICT ANCHORS: Pure white, massive year typography, gold line, single diamond, extreme whitespace (60%+), Apple minimalism.`,
+    },
+    {
+      id: "grt_newy_fresh", name: "프레시 그린", color: "#16a34a", accent: "#15803d", bg: "#f0fdf4",
+      desc: "새싹/나뭇잎 + 그린 톤 + 새로운 시작 — 자연 희망 새해", layoutHint: "fresh",
+      aiPrompt: `[CRITICAL — THIS IS A PREMIUM NEW YEAR GREETING POSTER]
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. Leave areas blank or use only user-provided text.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- ONLY use text the user explicitly provided.
+
+New Year greeting poster — FRESH GREEN NEW BEGINNING style.
+
+VISUAL STRUCTURE:
+BACKGROUND: Soft sage (#f0fdf4) to white gradient.
+
+BOTANICAL ILLUSTRATION (top and sides, 40%): Watercolor green leaves and SPROUTS — young plant shoots, unfurling fern fronds, budding branches. Watercolor style in various greens (sage #86efac, emerald #34d399, forest #166534). At top-left and bottom-right, reaching 25-30%. Symbolizes NEW GROWTH = NEW YEAR.
+
+YEAR + TEXT (center 40%): "2026" in bold forest green (#14532d). Below: greeting in dark green (#15803d). Thin emerald (#10b981) line. Hospital name if provided.
+
+LIGHT: Subtle warm sunlight glow from top-right at 5% opacity.
+
+THE WATERCOLOR SPROUT/LEAF ILLUSTRATIONS ARE MANDATORY.
+
+STRICT ANCHORS: Sage green, watercolor sprouts/leaves, forest green text, emerald accents, new growth/hope mood.`,
+    },
+    {
+      id: "grt_newy_neon", name: "네온 카운트다운", color: "#22d3ee", accent: "#ec4899", bg: "#0f172a",
+      desc: "다크 배경 + 네온 글로우 \"2026\" + 시계 — 트렌디 카운트다운", layoutHint: "neon",
+      aiPrompt: `[CRITICAL — THIS IS A PREMIUM NEW YEAR GREETING POSTER]
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. Leave areas blank or use only user-provided text.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- ONLY use text the user explicitly provided.
+
+New Year greeting poster — NEON COUNTDOWN style.
+
+VISUAL STRUCTURE:
+BACKGROUND: Deep dark navy (#0f172a) with subtle dark brick/concrete texture at 6-8% opacity.
+
+NEON "2026" (center-top 40%): "2026" as NEON TUBE TEXT — bright cyan (#22d3ee) with NEON GLOW: outer glow (cyan 30% opacity, blur 20px), inner white core. Looks like actual glowing neon tubes. LARGE.
+
+NEON CLOCK (above "2026", small): Simple neon outline clock face showing 12:00 midnight — in hot pink (#ec4899) glow. About 15% of image width.
+
+NEON LINE: Thin amber (#fbbf24) neon line separator below "2026".
+
+TEXT (bottom 35%): Greeting in regular white (#e2e8f0), NOT neon. Hospital name in small gray if provided.
+
+THE NEON "2026" AND NEON CLOCK ARE MANDATORY.
+
+STRICT ANCHORS: Dark textured wall, neon tube "2026", neon clock midnight, amber neon line, trendy nightlife countdown.`,
+    },
+  ],
+
+ // ─── 명절 인사: 어버이날 (6개) ───
+ greeting_어버이날: [
+ {
+ id: 'grt_parent_carnation', name: '카네이션 전통', color: '#dc2626', accent: '#b91c1c', bg: '#fef2f2',
+ desc: '빨간 카네이션 테두리 격식 있는 어버이날 감사 인사장',
+ layoutHint: 'traditional',
+ aiPrompt: `[어버이날 — 전통/격식]
+=== STRICT MODE ANCHORS (반드시 유지) ===
+• 4-ZONE 수직 레이아웃 비율: 테두리 10% → 메인 40% → 인사말 25% → 하단 10% (나머지 여유)
+• 레드+크림 팔레트: #dc2626, #991b1b, #fef2f2
+• 카네이션 메인 비주얼 필수
+• 인사말 텍스트 반드시 포함: "감사합니다"
+• 병원/의원 로고·명칭 표시 영역 확보
+• 휴진 기간 안내 영역 확보 (어버이날은 5/8이므로 연휴 휴진 있을 수 있음)
+
+=== INSPIRED MODE FREEDOM (변형 가능) ===
+• 카네이션 꽃잎 디테일 수준 자유
+• 리본 색상·형태 자유
+• 테두리 꽃봉오리 밀도 자유
+
+=== ZONE 구성 ===
+ZONE 1 — 꽃 테두리 (outer border, 10% inset): 빨간(#dc2626) 카네이션 꽃잎 테두리 — 사면 가장자리에 작은 꽃봉오리·녹색 잎 수채화 스타일(60~80% 불투명도). 모서리에 2~3송이 풀블룸 클러스터.
+
+ZONE 2 — 메인 카네이션 (center-top, 40%): 큰 사실적 빨간 카네이션(#dc2626) 중심 — 겹겹이 쌓인 꽃잎 텍스처, 가장자리에 연핑크(#fca5a5) 하이라이트. 진녹(#166534) 줄기 + 잎 2개. 줄기 아래 녹색 새틴 리본 매듭. 꽃 아래 부드러운 그림자(4px blur, 10%).
+
+ZONE 3 — 인사말·휴진 안내 (center-lower, 25%): "감사합니다" — 우아한 붓글씨체(28px, weight 700, 딥레드 #991b1b). "어버이날을 축하합니다" 따뜻한 회색(#78716c, 14px). 병원명 레드(#b91c1c, 13px). 아래 "휴진 안내: OO월 OO일 ~ OO월 OO일" (회색 #78716c 60%, 작은 크기).
+
+ZONE 4 — 하단 악센트 (bottom 10%): 흩어지는 작은 카네이션 꽃잎(5~7개, 회전, 20~40% 불투명도). 가는 레드(#dc2626) 선 10%.
+
+=== BACKGROUND ===
+따뜻한 크림(#fef2f2) → 소프트 화이트 그라디언트. 전통적이고 진심 어린 한국식 감사 미학.`,
+ },
+ {
+ id: 'grt_parent_watercolor', name: '수채화 꽃다발', color: '#f472b6', accent: '#ec4899', bg: '#fdf2f8',
+ desc: '루즈한 수채화 카네이션 꽃다발 감성 인사장',
+ layoutHint: 'warm',
+ aiPrompt: `[어버이날 — 따뜻한/손그림]
+=== STRICT MODE ANCHORS (반드시 유지) ===
+• 4-ZONE 수직 레이아웃 비율: 상단 50% → 좌우 10% → 인사말 25% → 하단 10% (나머지 여유)
+• 수채화 페인팅 스타일 — 하드 아웃라인 없음
+• 카네이션 꽃다발 필수
+• 인사말 텍스트 반드시 포함: "감사합니다"
+• 병원/의원 로고·명칭 표시 영역 확보
+• 휴진 기간 안내 영역 확보
+
+=== INSPIRED MODE FREEDOM (변형 가능) ===
+• 카네이션 색상 배합(핑크/레드/코랄) 자유
+• 수채화 번짐·드립 정도 자유
+• 잎사귀 톤(녹색/민트) 자유
+
+=== ZONE 구성 ===
+ZONE 1 — 수채화 꽃다발 (top-center, 50%): 자유롭고 표현적인 수채화 카네이션 꽃다발 — 5~7송이 다양한 핑크(#f472b6, #ec4899, #fda4af)와 레드(#ef4444). 보이는 붓자국, 꽃잎 만나는 곳 색 번짐. 녹색(#86efac) 줄기·잎 웻온웻 효과. 꽃다발 하단 물감 드립·스플래시(핑크 15%). 모든 요소 부드럽고 회화적.
+
+ZONE 2 — 예술적 스플래시 (sides, 10%씩): 좌우 여백에 추상 수채화 도트·스플래시(핑크+민트그린) 15~25% 불투명도.
+
+ZONE 3 — 인사말·휴진 안내 (center-lower, 25%): "감사합니다" — 손글씨 붓스크립트(26px, weight 600, 따뜻한 핑크 #ec4899), 자연스러운 획 두께 변화. "사랑하는 부모님께" 소프트 회색(#9ca3af, 13px, 손글씨). 병원명 핑크(#f472b6, 12px). 아래 "휴진 안내: OO월 OO일 ~ OO월 OO일" (회색 #9ca3af 50%, 작은 크기).
+
+ZONE 4 — 하단 (bottom 10%): 희미한 블러시 핑크(#fce7f3) 수채화 워시 줄무늬 20% 불투명도.
+
+=== BACKGROUND ===
+소프트 핑크 워시(#fdf2f8), 수채화 종이 텍스처(미세 결, 8%). 회화적 아름다움으로 표현하는 가족 사랑.`,
+ },
+ {
+ id: 'grt_parent_modern', name: '모던 감사', color: '#6366f1', accent: '#4f46e5', bg: '#eef2ff',
+ desc: '카네이션 선화 울트라클린 미니멀 감사 카드',
+ layoutHint: 'minimal',
+ aiPrompt: `[어버이날 — 미니멀/타이포]
+=== STRICT MODE ANCHORS (반드시 유지) ===
+• 4-ZONE 수직 레이아웃 비율: 상단 20% → 중앙 35% → 타이포 25% → 하단 15% (나머지 여유)
+• 인디고+화이트 2색 한정
+• 최대 여백 원칙
+• 인사말 텍스트 반드시 포함: "감사합니다"
+• 병원/의원 로고·명칭 표시 영역 확보
+• 휴진 기간 안내 영역 확보
+
+=== INSPIRED MODE FREEDOM (변형 가능) ===
+• 카네이션 선화 디테일 수준 자유
+• 하트 외곽선 유무·위치 자유
+• 선 두께(1~2px) 자유
+
+=== ZONE 구성 ===
+ZONE 1 — 상단 여백 (top 20%): 순수 흰 공간. 인디고(#6366f1 6%) 가로선 50% 폭, 중앙.
+
+ZONE 2 — 카네이션 선화 (center, 35%): 단일 우아한 카네이션 — 인디고(#6366f1) 세밀한 선화(1.5px), 미니멀 디테일, 건축 도면 스타일. 기하학적 꽃잎 형태. 곧은 줄기 + 잎 2개. 외곽선만 — 채움 없음. 꽃 우상에 작은 하트 외곽선(인디고 15%).
+
+ZONE 3 — 타이포·휴진 안내 (next 25%): "감사합니다" — 현대 산세리프(28px, weight 700, 인디고 #4f46e5), letter-spacing 1px. 가는 인디고 선 30px, 30% 불투명도. 병원명 연인디고(#a5b4fc, 12px, letter-spacing 2px). 아래 "휴진 안내: OO월 OO일 ~ OO월 OO일" (연인디고 #a5b4fc 50%, 작은 크기).
+
+ZONE 4 — 하단 (bottom 15%): 작은 하트 외곽선 2개 인디고 8%, 중앙에서 약간 어긋남. 깨끗한 흰 공간.
+
+=== BACKGROUND ===
+화이트(#ffffff) → 매우 희미한 인디고(#eef2ff) 그라디언트. 선화의 세련됨 + 최대 여백. 절제된 의료 브랜드 우아함.`,
+ },
+ {
+ id: 'grt_parent_photo', name: '포토 프레임', color: '#f97316', accent: '#ea580c', bg: '#fff7ed',
+ desc: '폴라로이드·카네이션 화환 스크랩북 귀여운 감사 카드',
+ layoutHint: 'cute',
+ aiPrompt: `[어버이날 — 귀여운/캐릭터]
+=== STRICT MODE ANCHORS (반드시 유지) ===
+• 4-ZONE 수직 레이아웃 비율: 상단 15% → 중앙 40% → 좌우 15%씩 → 하단 15% (나머지 여유)
+• 오렌지+크림+핑크 따뜻한 팔레트
+• 폴라로이드 프레임 메인 비주얼 필수
+• 인사말 텍스트 반드시 포함: "소중한 우리 가족"
+• 병원/의원 로고·명칭 표시 영역 확보
+• 휴진 기간 안내 영역 확보
+
+=== INSPIRED MODE FREEDOM (변형 가능) ===
+• 프레임 기울기(0~5°) 자유
+• 스크랩북 스티커 종류·배치 자유
+• 카네이션 화환 밀도 자유
+
+=== ZONE 구성 ===
+ZONE 1 — 장식 상단 (top 15%): 오렌지(#f97316) 외곽선 스캘럽 에지 배너 — "Happy Parents Day" 손글씨(14px, weight 600). 좌우 하트 낙서(오렌지).
+
+ZONE 2 — 포토 프레임 (center, 40%): 폴라로이드 스타일 흰 프레임(3° 기울임, 드롭쉐도우 4px 10%). 상단 하트 모양 클립(#ea580c). 프레임 안 복숭아(#fed7aa) → 오렌지(#fdba74) 그라디언트 플레이스홀더. 아래 "소중한 우리 가족" 손글씨(12px, 회색 #78716c). 프레임 위로 카네이션 화환 아치(핑크·레드 꽃봉오리 + 녹색 덩굴).
+
+ZONE 3 — 스크랩북·휴진 안내 (sides, 15%씩): 하트 낙서, 별 스티커, 마스킹테이프(오렌지 줄무늬), "LOVE" 원형 스탬프 — 30~50% 불투명도. 아래 "휴진 안내: OO월 OO일 ~ OO월 OO일" (오렌지 #ea580c 50%, 작은 크기).
+
+ZONE 4 — 하단 (bottom 15%): 병원명 오렌지(#ea580c, 13px). 손그림 화살표. 작은 카네이션 스티커.
+
+=== BACKGROUND ===
+따뜻한 크림(#fff7ed), 크래프트 종이 텍스처 6% 불투명도. 가족 앨범 스크랩북 감성 — 귀엽고 진심 어린.`,
+ },
+ {
+ id: 'grt_parent_gold', name: '금장 카네이션', color: '#d4a017', accent: '#b8860b', bg: '#fefce8',
+ desc: '버건디·금박 카네이션 메탈릭 프리미엄 감사 카드',
+ layoutHint: 'luxury',
+ aiPrompt: `[어버이날 — 럭셔리/금박]
+=== STRICT MODE ANCHORS (반드시 유지) ===
+• 4-ZONE 수직 레이아웃 비율: 테두리 8% → 메인 40% → 인사말 25% → 하단 10% (나머지 여유)
+• 버건디+골드 2색 한정
+• 금박 카네이션 메인 비주얼 필수
+• 인사말 텍스트 반드시 포함: "감사합니다"
+• 병원/의원 로고·명칭 표시 영역 확보
+• 휴진 기간 안내 영역 확보
+
+=== INSPIRED MODE FREEDOM (변형 가능) ===
+• 코너 플로리시 스타일 자유
+• 카네이션 꽃잎 금박 광택 강도 자유
+• 리본 형태 자유
+
+=== ZONE 구성 ===
+ZONE 1 — 금 프레임 (outer border, 8% inset): 장식적 금(#d4a017) 이중선 프레임 — 코너 스크롤워크 플로리시. 안쪽 선 1px, 바깥 선 2px, 4px 간격. 금 80% 불투명도, 메탈릭 광택.
+
+ZONE 2 — 금 카네이션 (center-top, 40%): 메탈릭 금(#d4a017) 카네이션 일러스트, 밝은 금(#FFD700) 하이라이트. 포일 스탬핑 효과 — 꽃잎에 은은한 광택 그라디언트. 줄기·잎 다크 골드(#92400e). 줄기에 금 리본 매듭, 흐르는 리본 꼬리. 꽃 주변 금 글로우(8px blur, 15%).
+
+ZONE 3 — 인사말·휴진 안내 (center-lower, 25%): "감사합니다" 금(#FFD700, 26px, weight 700, 세리프). 메탈릭 포일 텍스트. "어버이날을 축하합니다" 연금(#fde68a, 13px). 병원명 금(#d4a017, 13px, letter-spacing 2px). 아래 "휴진 안내: OO월 OO일 ~ OO월 OO일" (연금 #fde68a 50%, 작은 크기).
+
+ZONE 4 — 하단 악센트 (bottom 10%): 중앙 작은 금 리본 매듭 일러스트. 가는 금 선 20%.
+
+=== BACKGROUND ===
+딥 버건디(#450a0a) → 다크 와인(#7f1d1d) 그라디언트. 엠보싱 리넨 텍스처 5% 불투명도. 프리미엄 금박 우아함 — 고급 의료 브랜드.`,
+ },
+ {
+ id: 'grt_parent_garden', name: '정원 풍경', color: '#22c55e', accent: '#15803d', bg: '#f0fdf4',
+ desc: '아침 햇살 카네이션 정원 수채화 풍경 감사 카드',
+ layoutHint: 'nature',
+ aiPrompt: `[어버이날 — 자연/풍경]
+=== STRICT MODE ANCHORS (반드시 유지) ===
+• 4-ZONE 수직 레이아웃 비율: 상단 25% → 중앙 40% → 인사말 20% → 하단 10% (나머지 여유)
+• 녹색+따뜻한 자연색 팔레트
+• 카네이션 정원 풍경 필수
+• 인사말 텍스트 반드시 포함: "감사합니다"
+• 병원/의원 로고·명칭 표시 영역 확보
+• 휴진 기간 안내 영역 확보
+
+=== INSPIRED MODE FREEDOM (변형 가능) ===
+• 정원 벤치 유무 자유
+• 오솔길 형태 자유
+• 나비 실루엣 유무 자유
+
+=== ZONE 구성 ===
+ZONE 1 — 하늘·빛 (top 25%): 부드러운 파란 하늘 + 흰 구름 2~3개. 우상에서 대각선 아침 햇살(#fbbf24 10%) 부채꼴. 평화로운 아침 분위기.
+
+ZONE 2 — 카네이션 정원 (center, 40%): 풍성한 정원 장면 — 빨강(#dc2626), 핑크(#f472b6), 흰 카네이션 밀집 열. 수채화 보태니컬 스타일. 높이·개화 정도 다양. 풍성한 녹색(#22c55e) 잎. 중앙에 따뜻한 돌색(#d6d3d1) 오솔길. 우측에 나무 정원 벤치(꽃에 둘러싸인).
+
+ZONE 3 — 인사말·휴진 안내 (lower, 20%): "감사합니다" 진녹(#15803d, 24px, weight 700). "사랑과 감사를 담아" 따뜻한 녹색(#4ade80, 13px). 병원명 녹색(#22c55e, 12px). 아래 "휴진 안내: OO월 OO일 ~ OO월 OO일" (녹색 #22c55e 50%, 작은 크기).
+
+ZONE 4 — 하단 정원 가장자리 (bottom 10%): 잔디 텍스처 녹색(#86efac 15%) 페이드아웃. 우하단에 나비 실루엣(녹색 20%).
+
+=== BACKGROUND ===
+소프트 모닝 스카이 블루(#f0fdf4) → 가든 그린(#dcfce7) 그라디언트. 금빛 워시 8% 불투명도. 평화로운 카네이션 정원의 아침 햇살.`,
+ },
+ ],
+
+ // ─── 명절 인사: 크리스마스 (6개) ───
+  greeting_크리스마스: [
+    {
+      id: "grt_xmas_classic_tree", name: "클래식 트리", color: "#15803d", accent: "#dc2626", bg: "#f0fdf4",
+      desc: "큰 크리스마스 트리 + 별 + 선물 상자 — 따뜻한 전통 크리스마스", layoutHint: "tree",
+      aiPrompt: `[CRITICAL — THIS IS A PREMIUM CHRISTMAS GREETING POSTER]
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. Leave areas blank or use only user-provided text.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- ONLY use text the user explicitly provided.
+
+Christmas greeting poster — CLASSIC TREE style.
+
+BACKGROUND: Warm cream (#fefce8) to soft green (#f0fdf4) gradient. Cozy warm holiday atmosphere.
+
+MAIN ILLUSTRATION (center 50%): Beautiful lush CHRISTMAS TREE — deep green, decorated with colorful ornaments (red, gold, blue, silver), twinkling lights, gold garland, and bright GOLD STAR at top with subtle rays. At base: 2-3 wrapped gift boxes in red, green, gold with ribbons. Premium illustration quality.
+
+TEXT (bottom 30%): Greeting in elegant dark green (#14532d) serif. Thin red line. Hospital name if provided.
+
+SUBTLE SNOW: Tiny white snowflakes at 8-10% opacity.
+
+THE DECORATED CHRISTMAS TREE WITH STAR AND GIFTS IS MANDATORY.
+
+STRICT ANCHORS: Warm cream, lush decorated tree, gold star, gift boxes, falling snow, classic cozy Christmas.`,
+    },
+    {
+      id: "grt_xmas_wreath", name: "수채화 리스", color: "#166534", accent: "#dc2626", bg: "#fef2f2",
+      desc: "수채화 크리스마스 리스 + 열매/솔방울 — 감성 내추럴 크리스마스", layoutHint: "wreath",
+      aiPrompt: `[CRITICAL — THIS IS A PREMIUM CHRISTMAS GREETING POSTER]
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. Leave areas blank or use only user-provided text.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- ONLY use text the user explicitly provided.
+
+Christmas greeting poster — WATERCOLOR WREATH style.
+
+BACKGROUND: Soft cream (#fefdf8) with watercolor paper texture.
+
+MAIN ILLUSTRATION (center 55%): Large circular CHRISTMAS WREATH in WATERCOLOR style — visible brush strokes, color bleeding. Made of green pine branches (various greens), red holly berries, brown pine cones, small red bows. Wreath forms full circle with center OPEN — greeting text sits inside.
+
+TEXT (inside wreath center): Greeting in dark green (#14532d) serif calligraphy. Hospital name below.
+
+BOTTOM (20%): Small text on cream. Thin green line.
+
+THE WATERCOLOR WREATH WITH TEXT INSIDE IS MANDATORY. Must look hand-painted.
+
+STRICT ANCHORS: Cream background, watercolor circular wreath, pine/berries/pinecones, text inside wreath, hand-painted quality.`,
+    },
+    {
+      id: "grt_xmas_gold_ornament", name: "골드 오너먼트", color: "#0f172a", accent: "#d4a853", bg: "#0f172a",
+      desc: "다크 배경 + 금/빨간 오너먼트 볼 — 럭셔리 크리스마스", layoutHint: "ornament",
+      aiPrompt: `[CRITICAL — THIS IS A PREMIUM CHRISTMAS GREETING POSTER]
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. Leave areas blank or use only user-provided text.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- ONLY use text the user explicitly provided.
+
+Christmas greeting poster — GOLD ORNAMENT LUXURY style.
+
+BACKGROUND: Deep dark navy (#0f172a). Subtle sparkle dots at 5% opacity.
+
+ORNAMENT BALLS (top 45%): 3-5 large CHRISTMAS ORNAMENT BALLS hanging on thin gold strings. Large gold metallic (#d4a853) ball — shiny reflective 3D. Large red metallic (#dc2626) ball — glossy. Smaller silver ball. Different heights, elegant arrangement. REALISTIC 3D reflective surfaces. Gold sparkle stars between balls.
+
+TEXT (bottom 40%): Greeting in MASSIVE bold gold (#d4a853) with glow. Thin gold line. Hospital name in small gold if provided.
+
+THE HANGING 3D ORNAMENT BALLS ON DARK BACKGROUND ARE MANDATORY.
+
+STRICT ANCHORS: Dark navy, hanging 3D metallic ornament balls, gold strings, sparkles, gold text, luxury premium Christmas.`,
+    },
+    {
+      id: "grt_xmas_snowflake", name: "눈꽃 미니멀", color: "#1e40af", accent: "#3b82f6", bg: "#eff6ff",
+      desc: "순백 + 파란 눈꽃 결정 + 미니멀 타이포 — 깔끔한 크리스마스", layoutHint: "snowflake",
+      aiPrompt: `[CRITICAL — THIS IS A PREMIUM CHRISTMAS GREETING POSTER]
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. Leave areas blank or use only user-provided text.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- ONLY use text the user explicitly provided.
+
+Christmas greeting poster — SNOWFLAKE MINIMAL style. Scandinavian clean.
+
+BACKGROUND: Pure white to very light blue (#eff6ff) gradient. Ultra clean.
+
+SNOWFLAKE ILLUSTRATIONS: 5-7 geometric snowflake crystals in various sizes — thin blue (#3b82f6) lines. Each with unique 6-fold symmetry patterns. 1 large (center-top), 2-3 medium at edges, 2-3 small scattered. GEOMETRIC LINE ART — precise, mathematical.
+
+TEXT (center 35%): Greeting in bold deep blue (#1e40af) modern sans-serif. Thin blue line. Hospital name in medium blue. Generous whitespace.
+
+THE GEOMETRIC SNOWFLAKE LINE ART IS MANDATORY.
+
+STRICT ANCHORS: White/light blue, geometric snowflake line art, deep blue typography, extreme whitespace, Scandinavian minimal.`,
+    },
+    {
+      id: "grt_xmas_neon", name: "네온 크리스마스", color: "#dc2626", accent: "#22c55e", bg: "#0f172a",
+      desc: "다크 배경 + 네온 트리/별 글로우 — 트렌디 크리스마스", layoutHint: "neon",
+      aiPrompt: `[CRITICAL — THIS IS A PREMIUM CHRISTMAS GREETING POSTER]
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. Leave areas blank or use only user-provided text.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- ONLY use text the user explicitly provided.
+
+Christmas greeting poster — NEON CHRISTMAS style.
+
+BACKGROUND: Deep dark (#0f172a) with dark brick wall texture at 6-8% opacity.
+
+NEON TREE (center-top 45%): Christmas tree shape made of NEON TUBES — bright green (#22c55e) outline. Zigzag or layered triangles. NEON GLOW: outer glow (green 25% opacity, blur 15px), inner white-green core. NEON STAR at top in red (#dc2626) or yellow with glow.
+
+NEON TEXT (below 35%): Greeting as NEON TUBE TEXT in bright red (#dc2626) with glow. Neon line separator in warm yellow. Hospital name in regular white (NOT neon) if provided.
+
+THE NEON TREE AND NEON TEXT WITH GLOW ARE MANDATORY.
+
+STRICT ANCHORS: Dark textured wall, neon tube tree outline, neon star, neon text with glow, red/green/yellow neon, trendy nightlife Christmas.`,
+    },
+    {
+      id: "grt_xmas_candy_stripe", name: "캔디 스트라이프", color: "#dc2626", accent: "#ffffff", bg: "#fef2f2",
+      desc: "빨강/흰색 줄무늬 + 눈 + 캔디케인 — 팝하고 귀여운 크리스마스", layoutHint: "candystripe",
+      aiPrompt: `[CRITICAL — THIS IS A PREMIUM CHRISTMAS GREETING POSTER]
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. Leave areas blank or use only user-provided text.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- ONLY use text the user explicitly provided.
+
+Christmas greeting poster — CANDY STRIPE POP style. Fun, cute, Instagram-friendly.
+
+BACKGROUND: Bright red (#dc2626) and white diagonal stripes filling ENTIRE image — candy cane pattern, 15-20px wide, 45 degree angle. Energetic festive pop-art.
+
+WHITE CENTER CARD: Large white card (rounded 24px, shadow) at center, 78% width, 75% height. Card ON TOP of candy stripes — stripes visible around edges.
+
+CANDY CANE: 2 crossed candy canes at top of card forming X. Red/white spiral stripes, curved hook. Small red bow.
+
+ON CARD: Greeting in bold red (#dc2626) playful rounded font. Cute small illustrations — snowflakes, stars, holly. Hospital name if provided.
+
+SNOW: Tiny snowflakes on red stripes at 15% opacity.
+
+THE CANDY STRIPE BACKGROUND AND CANDY CANES ARE MANDATORY.
+
+STRICT ANCHORS: Red/white stripe background, white card, crossed candy canes, playful red typography, cute pop Christmas.`,
+    },
+  ],
+
+ // ─── 명절 인사: 기본 fallback (구 greeting) ───
+ greeting: [
+ {
+ id: 'grt_traditional_korean', name: '전통 한국풍', color: '#dc2626', accent: '#991b1b', bg: '#fef2f2',
+ desc: '단청·매화·학 격식 있는 범용 명절 인사장 (설/추석 겸용)',
+ layoutHint: 'traditional',
+ aiPrompt: `[범용 명절 — 전통/격식]
+=== STRICT MODE ANCHORS (반드시 유지) ===
+• 4-ZONE 수직 레이아웃 비율: 테두리 8% → 장식 30% → 인사말 30% → 하단 15% (나머지 여유)
+• 빨강+금 전통 팔레트: #dc2626, #d4a017, #991b1b
+• 한지(韓紙) 질감 배경 필수
+• 인사말 텍스트 반드시 포함: "명절을 축하합니다"
+• 병원/의원 로고·명칭 표시 영역 확보
+• 휴진 기간 안내 영역 확보 — 이 템플릿은 설/추석 범용이므로 휴진 안내가 매우 중요
+
+=== INSPIRED MODE FREEDOM (변형 가능) ===
+• 매화/소나무 선택 또는 둘 다 가능
+• 학 실루엣 수(1~3마리) 자유
+• 구름문/매듭 장식 유무 자유
+
+=== ZONE 구성 ===
+ZONE 1 — 전통 프레임 (outer border, 8% inset): 빨강(#dc2626)+금(#d4a017) 단청풍 기하 패턴 테두리. 모서리에 양식화된 구름문(#d4a017 60%). 이중선(빨강 1px 외, 금 1px 내, 3px 간격).
+
+ZONE 2 — 장식 요소 (top-center, 30%): 우아한 매화(梅) 가지 — 진갈(#57534e) 가지에 빨강(#dc2626)+핑크(#fca5a5) 오엽 꽃. 상부에 학(鶴) 실루엣 2~3마리 금(#d4a017 20%). 작은 구름문 흩뿌림.
+
+ZONE 3 — 인사말·휴진 안내 (center, 30%): "명절을 축하합니다" — 붓 캘리그래피(26px, weight 800, 딥레드 #991b1b). 아래 "휴진 안내: OO월 OO일 ~ OO월 OO일" — 따뜻한 회색(#78716c, 13px). 병원명 빨강(#dc2626, 14px, weight 600) + 전통 프레임 밑줄.
+
+ZONE 4 — 하단 악센트 (bottom 15%): 소나무(松) 실루엣(진녹 #166534, 15%). 빨강+금 가는 장식선. 중앙 빨간 전통 매듭 장식.
+
+=== BACKGROUND ===
+따뜻한 크림(#fef2f2), 한지 텍스처 5% 불투명도. 격조 있는 한국 전통 축제 미학 — 빨강과 금 단청 우아함.`,
+ },
+ {
+ id: 'grt_warm_family', name: '따뜻한 가족', color: '#f97316', accent: '#ea580c', bg: '#fff7ed',
+ desc: '촛불·가족 실루엣 수채화 손그림 범용 명절 인사장',
+ layoutHint: 'warm',
+ aiPrompt: `[범용 명절 — 따뜻한/손그림]
+=== STRICT MODE ANCHORS (반드시 유지) ===
+• 4-ZONE 수직 레이아웃 비율: 상단 15% → 중앙 40% → 인사말 25% → 하단 10% (나머지 여유)
+• 오렌지+크림+피치 따뜻한 팔레트
+• 가족 실루엣/일러스트 필수
+• 인사말 텍스트 반드시 포함: "따뜻한 명절 보내세요"
+• 병원/의원 로고·명칭 표시 영역 확보
+• 휴진 기간 안내 영역 확보
+
+=== INSPIRED MODE FREEDOM (변형 가능) ===
+• 가족 구성(어른 2명 + 아이 1~2명) 자유
+• 촛불/보케 밀도 자유
+• 하트 형태/위치 자유
+
+=== ZONE 구성 ===
+ZONE 1 — 따뜻한 헤더 (top 15%): 상단 중앙에 작은 촛불 일러스트(따뜻한 오렌지 #f97316, 글로우 효과). 아래 오렌지(#fdba74 20%) 손그림 물결 선.
+
+ZONE 2 — 가족 일러스트 (center, 40%): 따뜻한 손그림 스타일 — 가족 실루엣(어른 2명, 아이 1~2명) 손잡고 있는 심플 선화, 따뜻한 갈색(#92400e 50%). 뒤에 수채화 워시 소프트 오렌지(#fed7aa 15%). 가족 위에 하트 형태(오렌지 30%). 포근하고 심플.
+
+ZONE 3 — 인사말·휴진 안내 (next 25%): "따뜻한 명절 보내세요" 따뜻한 오렌지갈색(#ea580c, 22px, weight 700). "휴진 안내: OO월 OO일 ~ OO월 OO일" 따뜻한 회색(#78716c, 12px). 병원명 오렌지(#f97316, 13px).
+
+ZONE 4 — 하단 글로우 (bottom 10%): 하단 중앙에서 촛불 글로우 — 금(#fbbf24 5%) 방사 그라디언트 페이드. 피치색 손그림 가로선 15%.
+
+=== BACKGROUND ===
+소프트 크림(#fff7ed) → 피치(#fed7aa) 미묘한 그라디언트. 따뜻한 금 보케 원 5~8개(#fbbf24, 8~15%, 20~60px). 가족 중심의 따뜻하고 감성적인 의료 인사.`,
+ },
+ {
+ id: 'grt_modern_minimal', name: '모던 미니멀', color: '#6366f1', accent: '#4f46e5', bg: '#eef2ff',
+ desc: '타이포 중심 울트라클린 범용 명절 카드 (휴진 안내 강조)',
+ layoutHint: 'minimal',
+ aiPrompt: `[범용 명절 — 미니멀/타이포]
+=== STRICT MODE ANCHORS (반드시 유지) ===
+• 4-ZONE 수직 레이아웃 비율: 상단 25% → 중앙 30% → 스케줄 20% → 하단 20% (나머지 여유)
+• 인디고+화이트 2색 한정
+• 최대 여백 원칙
+• 인사말 텍스트 반드시 포함: "행복한 명절 되세요"
+• 병원/의원 로고·명칭 표시 영역 확보
+• 휴진 기간 안내 영역 강조 — 이 템플릿의 핵심 기능
+
+=== INSPIRED MODE FREEDOM (변형 가능) ===
+• 기하 심볼(별/오너먼트/원) 선택 자유
+• 가로선 위치·길이 자유
+• 기하 도트 유무 자유
+
+=== ZONE 구성 ===
+ZONE 1 — 상단 여백 (top 25%): 깨끗한 흰 공간. 인디고(#6366f1 8%) 가로선 40% 폭, 중앙. 선 위에 작은 기하 명절 심볼(별 또는 오너먼트 선화, 인디고 25%, 24px).
+
+ZONE 2 — 메인 타이포 (center, 30%): "Happy Holidays" 깨끗한 산세리프(14px, letter-spacing 4px, 인디고 #6366f1 60%). 아래 "행복한 명절 되세요" 볼드 인디고(#4f46e5, 24px, weight 700). 줄 사이 넉넉한 여백(20px gap).
+
+ZONE 3 — 스케줄·휴진 안내 (next 20%): 가는 인디고 선(30px, 1px, 15%). "휴진 안내" 인디고(#6366f1, 11px, weight 600, letter-spacing 2px). 휴진 날짜 연회색(#94a3b8, 12px). 병원명 인디고(#a5b4fc, 12px, letter-spacing 2px).
+
+ZONE 4 — 하단 (bottom 20%): 순수 흰 공간. 중앙 작은 기하 도트(인디고 10%).
+
+=== BACKGROUND ===
+순수 화이트(#ffffff). 매우 미세한 기하 그리드(연인디고 #e0e7ff 3%). 모던 미니멀 타이포 정밀함 — 세련된 의료 브랜드.`,
+ },
+ {
+ id: 'grt_nature_season', name: '자연 사계절', color: '#22c55e', accent: '#15803d', bg: '#f0fdf4',
+ desc: '보태니컬 아치·사계절 풍경 비네트 수채화 범용 인사장',
+ layoutHint: 'nature',
+ aiPrompt: `[범용 명절 — 자연/풍경]
+=== STRICT MODE ANCHORS (반드시 유지) ===
+• 4-ZONE 수직 레이아웃 비율: 상단 30% → 중앙 30% → 인사말 25% → 하단 10% (나머지 여유)
+• 녹색+따뜻한 자연색 팔레트
+• 수채화 보태니컬 스타일 필수
+• 인사말 텍스트 반드시 포함: "행복한 명절 되세요"
+• 병원/의원 로고·명칭 표시 영역 확보
+• 휴진 기간 안내 영역 확보
+
+=== INSPIRED MODE FREEDOM (변형 가능) ===
+• 계절별 꽃(벚꽃/해바라기/단풍/소나무) 선택 자유
+• 풍경 비네트 구성 자유
+• 유칼립투스/올리브 잎 밀도 자유
+
+=== ZONE 구성 ===
+ZONE 1 — 보태니컬 헤더 (top 30%): 수채화 보태니컬 아치 — 유칼립투스·작은 잎·계절 단풍 아치/가랜드 형태. 색상: 세이지그린(#22c55e), 올리브(#65a30d), 민트(#86efac), 어스브라운(#92400e) 줄기. 수채화 스타일 — 번짐, 자연스러운 불완전함. 계절 꽃(봄 벚꽃, 여름 해바라기, 가을 단풍, 겨울 소나무) 배치.
+
+ZONE 2 — 풍경 비네트 (center, 30%): 작은 원형 비네트(수채화, 부드러운 가장자리 페더) — 고요한 계절 풍경(완만한 녹색 언덕, 나무 한 그루, 잔잔한 하늘). 어스톤(#92400e, #22c55e, #38bdf8) 루즈 수채화 워시.
+
+ZONE 3 — 인사말·휴진 안내 (next 25%): "행복한 명절 되세요" 진녹(#15803d, 22px, weight 700). "휴진 안내: OO월 OO일 ~ OO월 OO일" 따뜻한 회색(#78716c, 12px). 병원명 녹색(#22c55e, 13px).
+
+ZONE 4 — 하단 보태니컬 (bottom 10%): 하단 모서리에 수채화 잎 가지(세이지그린 20%). 녹색 손그림 스타일 가로선 10%.
+
+=== BACKGROUND ===
+세이지그린(#f0fdf4) → 따뜻한 크림(#fefce8) 그라디언트. 고요하고 자연 영감의 계절감 — 평화롭고 상쾌한.`,
+ },
+ {
+ id: 'grt_luxury_gold', name: '럭셔리 골드', color: '#d4a017', accent: '#b8860b', bg: '#fefce8',
+ desc: '네이비·골드 오너먼트 아르데코 프리미엄 범용 명절 카드',
+ layoutHint: 'luxury',
+ aiPrompt: `[범용 명절 — 럭셔리/금박]
+=== STRICT MODE ANCHORS (반드시 유지) ===
+• 4-ZONE 수직 레이아웃 비율: 테두리 6% → 오너먼트 35% → 인사말 30% → 하단 12% (나머지 여유)
+• 네이비+골드 2색 한정
+• 금박 메탈릭 효과 전체 적용
+• 인사말 텍스트 반드시 포함: "행복한 명절 되세요"
+• 병원/의원 로고·명칭 표시 영역 확보
+• 휴진 기간 안내 영역 확보
+
+=== INSPIRED MODE FREEDOM (변형 가능) ===
+• 오너먼트 형태(원/물방울) 조합 자유
+• 코너 플로리시 스타일(아르데코/클래식) 자유
+• 금별 밀도 자유
+
+=== ZONE 구성 ===
+ZONE 1 — 금 테두리 (outer frame, 6% inset): 금(#d4a017) 이중선 프레임 — 외선 2px, 내선 1px, 4px 간격. 모서리 장식 플로리시(아르데코 스크롤워크). 금박 효과 + 하이라이트 그라디언트.
+
+ZONE 2 — 오너먼트 디스플레이 (top-center, 35%): 3개 우아한 오너먼트 — 중앙 크게(원, 40px, 금 + 정교한 각인 패턴), 좌우 작게(물방울, 28px). 모두 금(#d4a017 → #FFD700) 그라디언트, 메탈릭 광택. 주변 금별(4px, 30%).
+
+ZONE 3 — 인사말·휴진 안내 (center, 30%): "Happy Holidays" 금박 세리프(14px, letter-spacing 3px, #FFD700). "행복한 명절 되세요" 밝은 금(#FFD700, 24px, weight 700), 메탈릭 시머. 가는 금 선(40px, 1px). 병원명 뮤트 골드(#b8860b, 12px, letter-spacing 2px). 아래 "휴진 안내: OO월 OO일 ~ OO월 OO일" (연금 #fde68a 60%, 11px).
+
+ZONE 4 — 하단 (bottom 12%): 하단 중앙 작은 금 리본 오너먼트.
+
+=== BACKGROUND ===
+딥 네이비(#0f172a) → 다크 차콜(#1e293b) 그라디언트. 프리미엄 리넨 텍스처 4% 불투명도. 고급스럽고 격조 있는 금-네이비 의료 브랜드 카드.`,
+ },
+ {
+ id: 'grt_cute_character', name: '귀여운 캐릭터', color: '#ec4899', accent: '#be185d', bg: '#fdf2f8',
+ desc: '치아 캐릭터·말풍선 파스텔 파티 귀여운 범용 명절 카드',
+ layoutHint: 'cute',
+ aiPrompt: `[범용 명절 — 귀여운/캐릭터]
+=== STRICT MODE ANCHORS (반드시 유지) ===
+• 4-ZONE 수직 레이아웃 비율: 상단 15% → 중앙 45% → 말풍선 20% → 하단 15% (나머지 여유)
+• 파스텔 멀티컬러 팔레트 (핑크, 노랑, 민트, 라벤더)
+• 치아 캐릭터(파티모자) 반드시 포함
+• 인사말 텍스트 반드시 포함: "행복한 명절 보내세요!"
+• 병원/의원 로고·명칭 표시 영역 확보
+• 휴진 기간 안내 영역 확보
+
+=== INSPIRED MODE FREEDOM (변형 가능) ===
+• 동반 캐릭터(별/하트) 유무 자유
+• 번팅/깃발 장식 유무 자유
+• 말풍선 형태(둥근/구름형) 자유
+
+=== ZONE 구성 ===
+ZONE 1 — 축제 악센트 (top 15%): 파스텔 별·도트 흩뿌림 — 핑크(#ec4899), 골드(#fbbf24), 민트(#34d399) — 15~30% 불투명도, 4~8px. 파스텔 번팅/깃발 배너 상단 가장자리.
+
+ZONE 2 — 캐릭터 씬 (center, 45%): 중앙에 치아 캐릭터 — 흰 치아 형태, 큰 둥근 눈, 분홍 볼, 넓은 미소, 핑크+금도트 파티모자. 작은 깃발 들고 있음. 좌측에 별 캐릭터(노란, 행복 표정). 우측에 하트 캐릭터(핑크, 행복 표정). 심플 일러스트 — 둥근 형태, 미니멀 디테일, 최대 귀여움. 주변 기하 악센트.
+
+ZONE 3 — 말풍선·휴진 안내 (next 20%): 둥근 말풍선(흰 채움, 핑크 #ec4899 2px 테두리) — "행복한 명절 보내세요!" 핑크(#be185d, 18px, weight 700). 안에 작은 하트 악센트. 말풍선 꼬리 → 치아 캐릭터 향함. 아래 "휴진 안내: OO월 OO일 ~ OO월 OO일" (핑크 #ec4899 40%, 작은 크기).
+
+ZONE 4 — 하단 (bottom 15%): 병원명 핑크(#ec4899, 13px). 작은 축제 아이콘 가로 배열(선물, 별, 하트, 사탕) 파스텔 25%.
+
+=== BACKGROUND ===
+소프트 핑크(#fdf2f8) → 화이트 그라디언트. 파스텔 기하 도트(핑크 #f9a8d4, 노랑 #fde68a, 민트 #a7f3d0, 라벤더 #c4b5fd) 8% 불투명도, 2~4px 원. 귀엽고 즐거운 파스텔 축하 — 어린이 친화적 치과 인사.`,
+ },
+ ],
+
+ // ─── 채용/공고 (6개) ───
+ // 연구 기반: 실제 근무환경 사진 > 스톡, FAQ 말풍선 디자인, 가독성 최우선
+ // 색상: 브랜드 컬러 + 화이트 + 1악센트, 틸/민트(환영), 코랄(활기), 네이비+옐로(주목)
+ // 레이아웃: 단일 볼드 카드, 분할 사진/텍스트, 캐러셀(표지+혜택+지원방법)
+ hiring: [
+ {
+ id: 'hir_corporate_clean', name: '기업 표준형', color: '#1e40af', accent: '#1e3a8a', bg: '#eff6ff',
+ desc: '네이비 헤더 + 교대색 행 테이블 — 대형병원·종합병원 정규직 공채 표준 포맷',
+ layoutHint: 'corporate',
+ aiPrompt: `STRUCTURED TABLE POSTING LAYOUT — standard Korean hospital recruitment format. Navy header band, striped data table rows, CTA footer. Information flows: 모집분야 → 자격요건 → 근무조건 → 복리후생 → 지원방법.
+
+ZONE 1 — HEADER (top 18%): Solid navy (#1e40af) filled rectangle, full width. Hospital name in small white text (13px, weight 500, letter-spacing 2px) centered at top of bar. "함께할 OO을 찾습니다" in largest bold white text (28px, weight 800) centered below. This bar is a single solid block — no gradients, no rounded corners.
+ZONE 2 — TABLE BODY (middle 57%): White background (#ffffff). Rows alternate white / light blue (#eff6ff at 50%). Each row is a full-width horizontal band (row height ~48px), split into LEFT LABEL COLUMN (28% width, navy #1e40af text, 14px bold) and RIGHT VALUE COLUMN (72% width, dark gray #374151 text, 14px regular). Thin navy (#1e40af, 1px) horizontal lines separate rows.
+- Row 1: "모집분야" | "간호사 (정규직 / 계약직)"
+- Row 2: "자격요건" | "간호사 면허 소지자, 유관 경력 2년 이상 우대"
+- Row 3: "근무형태" | "주 5일 (월~금), 3교대 / 협의 가능"
+- Row 4: "급여조건" | "경력에 따른 협의, 야간수당 별도"
+- Row 5: "복리후생" | "4대보험 · 식대 · 교육비 · 경조금 · 연차"
+- Row 6: "지원방법" | "이메일(recruit@hospital.co.kr) 또는 방문 접수"
+ZONE 3 — CTA FOOTER (bottom 25%): Solid navy (#1e40af) filled rectangle, full width. "지원하기" in large bold white text (22px) centered. Contact phone "☎ 02-000-0000" in small white text (12px) below. "채용 시 마감" in tiny white text (10px, 60% opacity).
+
+STRICT MODE ANCHORS: Navy header bar, table row structure with label|value split, navy CTA footer bar, alternating row stripes. These structural elements must be preserved.
+INSPIRED MODE FREEDOM: Row count (5-8), specific label/value text, row height, label column width ratio (25-35%), additional sub-rows or merged cells.
+MOBILE: Minimum 13px font. Label column can stack above value on narrow screens. Row height minimum 40px for tap targets.`,
+ },
+ {
+ id: 'hir_friendly_team', name: '팀워크 카드형', color: '#22c55e', accent: '#16a34a', bg: '#f0fdf4',
+ desc: '민트 배경 + 좌측 보더 스택 카드 — 동네 의원·소규모 병원 따뜻한 채용 공고',
+ layoutHint: 'team',
+ aiPrompt: `STACKED INFO CARDS LAYOUT — warm, approachable neighborhood clinic recruitment. Mint background, white cards with green left-border, friendly language. Information flow: 모집분야 → 자격요건 → 복리후생 → 지원방법.
+
+BACKGROUND: Soft mint (#f0fdf4) solid fill, full canvas.
+ZONE 1 — HEADER (top 20%): Rounded rectangle card (white fill, 12px border-radius, subtle shadow, 90% width centered). Inside: "함께 일할 동료를 찾습니다 :)" in bold green (#16a34a) text (22px) centered. "간호사 · 간호조무사 모집" in large bold dark text (#111827, 18px) below.
+ZONE 2 — INFO CARDS (middle 55%): 4 horizontal card rows stacked vertically with 10px gap. Each card is a white rounded rectangle (90% width centered, 10px border-radius, subtle shadow) with 4px solid green (#22c55e) LEFT border. Inside each card, left-aligned with 16px padding:
+- Card 1: Green circle icon (user silhouette) → "모집분야" in small bold green (11px) → "정규직 간호사 / 간호조무사 (신입·경력 무관)" in medium dark text (14px).
+- Card 2: Green circle icon (clipboard) → "자격요건" in small bold green → "해당 면허 소지자, 성실하고 밝은 분 환영" in medium dark text.
+- Card 3: Green circle icon (heart) → "복리후생" in small bold green → "4대보험 · 점심 제공 · 연차 · 교육비 · 명절 상여" in medium dark text.
+- Card 4: Green circle icon (phone) → "지원방법" in small bold green → "전화 문의 (010-0000-0000) 또는 이메일 접수" in medium dark text.
+ZONE 3 — CTA BOTTOM (bottom 25%): Green (#22c55e) rounded pill button (220px wide, 48px tall, centered) with "지원하기" in bold white text (16px). Hospital name "OO내과의원" in small green (#16a34a) text below button. "서울시 OO구 OO로 000" 주소 in tiny gray text.
+
+STRICT MODE ANCHORS: Mint background, stacked card layout with green left-border, pill CTA button. Cards must be vertically stacked (not grid).
+INSPIRED MODE FREEDOM: Card count (3-5), icon shapes, card padding, border-radius, shadow intensity, card content text, button width.
+MOBILE: Cards stack naturally. Minimum card height 60px. Text minimum 13px. Button minimum 44px height for touch.`,
+ },
+ {
+ id: 'hir_modern_startup', name: '모던 아이콘 그리드', color: '#8b5cf6', accent: '#7c3aed', bg: '#1e1b4b',
+ desc: '다크 인디고 배경 + 2×3 복리후생 아이콘 그리드 — IT·스타트업 감성 모던 채용',
+ layoutHint: 'modern',
+ aiPrompt: `DARK ICON GRID LAYOUT — modern tech-forward recruitment poster. Dark indigo background, 2x3 icon grid showcasing benefits, purple accent CTA. Structure: Title → Benefits Grid → CTA.
+
+BACKGROUND: Solid dark indigo (#1e1b4b), full canvas.
+ZONE 1 — TITLE (top 22%): Hospital/clinic name in small light purple (#a78bfa, 11px, letter-spacing 3px, uppercase) centered at very top. "간호사 모집" in largest bold white text (26px, weight 800) centered. "정규직 · 경력우대 · 즉시 입사 가능" in medium light purple (#a78bfa, 14px) text centered below. Thin horizontal line (1px, purple #8b5cf6 at 40% opacity) spanning 50% width, centered, as divider.
+ZONE 2 — ICON GRID (middle 53%): 2 columns x 3 rows grid of benefit cells, centered, 12px gap. Each cell is a rounded square (dark purple #2e1065 fill, 12px border-radius, ~46% width, equal height) containing:
+- Top: Simple geometric icon shape (30px) in purple (#8b5cf6).
+- Bottom: Label in small bold white (12px) + one-line description in tiny gray (#94a3b8, 10px).
+Grid cells:
+- [1,1]: Shield → "4대보험" / "국민·건강·고용·산재"
+- [1,2]: Utensils → "식대 지원" / "중식 제공 또는 월 10만원"
+- [2,1]: Calendar → "연차 보장" / "입사 즉시 발생"
+- [2,2]: Coins → "인센티브" / "분기별 성과급"
+- [3,1]: Book → "교육 지원" / "학회·세미나·자격증"
+- [3,2]: Clock → "유연 근무" / "협의 가능"
+ZONE 3 — CTA (bottom 25%): Purple (#8b5cf6) rounded button (220px wide, 48px, centered) with "지원하기" in bold white text (16px). "recruit@hospital.co.kr" in small light purple (#a78bfa, 11px) below. "☎ 02-000-0000" in small gray (#94a3b8, 11px).
+
+STRICT MODE ANCHORS: Dark indigo background, 2x3 grid of rounded-square cells, purple accent color, dark-on-dark cell contrast. Grid structure must remain 2-column.
+INSPIRED MODE FREEDOM: Grid cell content/icons, cell border-radius, gap size, description text, icon style (outline vs filled), CTA button shape.
+MOBILE: Grid cells minimum 44px tall. Icon minimum 24px. Label text minimum 12px. High contrast white-on-dark required.`,
+ },
+ {
+ id: 'hir_benefits_focus', name: '복리후생 강조형', color: '#f59e0b', accent: '#d97706', bg: '#fffbeb',
+ desc: '2×2 혜택 카드 그리드 + 상세 설명 — 복리후생을 전면에 내세운 채용 공고',
+ layoutHint: 'benefits',
+ aiPrompt: `BENEFITS-FOCUSED CARD GRID — recruitment poster where benefits are the hero element. Warm cream background, 2x2 benefit card grid dominates the layout. Structure: Position → Benefits Grid → CTA.
+
+BACKGROUND: Warm cream (#fffbeb), full canvas.
+ZONE 1 — POSITION HEADER (top 18%): "간호사 · 물리치료사 모집" in large bold dark text (#78350f, 22px) centered. "정규직 · 경력우대 · 수습 3개월" in medium amber (#d97706, 14px) below. Thin amber (#f59e0b) horizontal line divider (50% width, centered, 1px).
+ZONE 2 — BENEFITS GRID (middle 57%): "이런 복리후생이 준비되어 있습니다" in medium bold amber (#d97706, 15px) text, left-aligned with 6% left margin. Below: 2x2 grid of benefit cards, centered, 12px gap. Each card is a white rounded rectangle (46% width, equal height ~120px, 12px border-radius, subtle shadow, 3px top border in amber #f59e0b). Inside each card (padding 14px):
+- Top: Simple geometric icon shape in amber (#f59e0b, 28px) centered.
+- Middle: Benefit name in medium bold dark text (#78350f, 15px) centered.
+- Bottom: Two-line description in small gray (#6b7280, 11px) centered.
+Cards:
+- [1,1]: Shield icon → "4대보험 완비" / "국민연금·건강보험\n고용·산재보험 전액"
+- [1,2]: Utensils icon → "식대 지원" / "점심 제공 또는\n월 식대 10만원 별도"
+- [2,1]: Graduation cap → "교육비 지원" / "직무교육·학회 참가비\n자격증 취득 지원"
+- [2,2]: Gift icon → "경조금·상여" / "경조사 지원·경조휴가\n명절 상여금 지급"
+ZONE 3 — CTA FOOTER (bottom 25%): Amber (#f59e0b) rounded pill button (220px, 48px, centered) with "지원하기" in bold white text (16px). Hospital name "병원명" in small amber text (12px) below. "☎ 02-000-0000 | recruit@hospital.co.kr" in small gray text (11px).
+
+STRICT MODE ANCHORS: Warm cream background, 2x2 card grid with amber top-border, amber pill CTA. Grid must remain 2x2.
+INSPIRED MODE FREEDOM: Card content, icon style, card dimensions, description length, additional benefit cards (can expand to 2x3), shadow/border style.
+MOBILE: Cards can reflow to single column on narrow screens. Card minimum height 100px. Text minimum 12px. Touch target minimum 44px.`,
+ },
+ {
+ id: 'hir_urgent_now', name: '급구 긴급형', color: '#ef4444', accent: '#dc2626', bg: '#fef2f2',
+ desc: '레드 대각 분할 + "급구" 대형 타이포 — 즉시 채용이 필요한 긴급 구인 공고',
+ layoutHint: 'urgent',
+ aiPrompt: `DIAGONAL SPLIT URGENT LAYOUT — high-contrast urgent recruitment poster. Bold red diagonal division creates visual tension. Structure: Urgent Banner → Job Details → Immediate CTA.
+
+BACKGROUND: Diagonal split — upper-left triangle filled with solid red (#ef4444), lower-right triangle filled with white (#ffffff). Diagonal line from top-right to bottom-left corner.
+ZONE 1 — RED TRIANGLE (upper-left, ~42% of canvas): "URGENT" in small white text (10px, letter-spacing 4px, 40% opacity) centered above main text. "급구" in massive bold white text (52px, weight 900) positioned in center of red triangle. Creates immediate visual impact and urgency.
+ZONE 2 — WHITE TRIANGLE (lower-right, ~40% of canvas): Job details in dark text, left-aligned within white area with 8% padding:
+- "간호사 모집" in large bold red (#ef4444, 20px) as section title.
+- Bullet list with red (#ef4444) filled circle bullets (6px):
+ - "정규직 채용 (수습 없음)" in medium dark text (#1f2937, 14px)
+ - "간호사 면허 소지자" in medium dark text
+ - "경력 우대, 신입 지원 가능" in medium dark text
+ - "4대보험 · 식대 · 야간수당 · 인센티브" in medium dark text
+- "※ 면접 후 즉시 근무 가능" in small bold red (#dc2626, 12px) below bullet list.
+ZONE 3 — BOTTOM STRIP (bottom 18%): Solid red (#dc2626) horizontal bar, full width. "지금 바로 지원하기" in bold white text (18px) centered. "☎ 02-000-0000 (평일 09:00~18:00)" in small white text (11px) below. Hospital name in tiny white text (10px, 70% opacity).
+
+STRICT MODE ANCHORS: Diagonal split composition (red upper-left / white lower-right), "급구" oversized text, red bottom CTA bar. The diagonal is the defining structural element.
+INSPIRED MODE FREEDOM: Diagonal angle (35-55 degrees), bullet content, font sizes, additional urgency indicators (blinking effect description, exclamation marks), red shade variations.
+MOBILE: "급구" minimum 36px. Bullet text minimum 13px. Bottom bar minimum 60px height. Ensure white-area text doesn't overlap diagonal edge.`,
+ },
+ {
+ id: 'hir_premium_brand', name: '프리미엄 브랜드형', color: '#78716c', accent: '#57534e', bg: '#fafaf9',
+ desc: '오프화이트 + 골드 라인 에디토리얼 — 대학병원·고급 의원 브랜드 채용 공고',
+ layoutHint: 'brand',
+ aiPrompt: `PREMIUM EDITORIAL LAYOUT — elegant, minimal recruitment poster. Warm off-white canvas, charcoal typography, gold line accents. Magazine editorial feel. Structure: Brand → Title → Details → Contact.
+
+BACKGROUND: Warm off-white (#fafaf9), full canvas.
+ZONE 1 — TOP BRANDING (top 12%): Hospital name "OO대학교병원" in medium charcoal (#57534e, 14px, letter-spacing 4px, weight 500) text, centered. Thin gold (#b8860b) horizontal line (70% width, centered, 1px) below name with 12px spacing.
+ZONE 2 — MAIN TITLE (next 23%): "함께할 인재를 모십니다" in largest bold charcoal (#44403c, 26px, weight 700) text, centered. "간호사" in large bold gold (#b8860b, 20px) text centered below. "정규직 채용 | 경력 3년 이상" in medium charcoal (#57534e, 13px) text centered below that.
+ZONE 3 — DETAILS (middle 40%): Thin gold horizontal line divider (50% width, centered). Below, centered minimal list with generous line spacing (32px between items):
+- Small gold diamond (◆, 8px) then "모집분야 | 내과 병동 간호사 (00명)" in medium charcoal text (14px)
+- Small gold diamond (◆) then "자격요건 | 간호사 면허, 유관 경력 3년 이상" in medium charcoal text
+- Small gold diamond (◆) then "근무조건 | 주 5일, 3교대, 협의 가능" in medium charcoal text
+- Small gold diamond (◆) then "복리후생 | 4대보험 · 식대 · 교육비 · 학자금 · 경조금" in medium charcoal text
+Gold (#b8860b) pipe "|" as separator in each line. Thin gold horizontal line divider below the list (50% width, centered).
+ZONE 4 — CONTACT CTA (bottom 25%): "지원 및 문의" in medium bold charcoal (#44403c, 16px) text centered. "채용담당: recruit@hospital.ac.kr" in small charcoal text (12px) below. "☎ 02-000-0000 (인사팀)" in small charcoal text (12px). Thin gold horizontal line at very bottom (70% width). No button — elegant text-based CTA befitting premium brand.
+
+STRICT MODE ANCHORS: Off-white background, gold horizontal line dividers, gold diamond bullets, charcoal typography, editorial vertical rhythm. No buttons, no cards — pure typography.
+INSPIRED MODE FREEDOM: Gold line widths, diamond bullet style, line-spacing, detail item count (3-6), font weight variations, letter-spacing values, line lengths.
+MOBILE: Body text minimum 13px. Gold lines minimum 40% width. Generous vertical spacing (24px+) between sections for thumb scrolling.`,
+ },
+ ],
+
+ // ─── 주의사항 (6개) ───
+ // 연구 기반: 체크리스트/번호 카드뉴스(5-10슬라이드), 아이콘+텍스트 페어링, DO/DON'T 색상 코딩
+ // 대형 병원(서울아산, 서울대) 참고: 거즈관리→냉찜질→식단→금연/금주→복약→후속방문 순서
+ // 색상: 라이트블루/민트+다크텍스트(신뢰), 레드/코랄(경고), 그린(허용)
+ caution: [
+ {
+ id: 'cau_medical_checklist', name: '의료 체크리스트 표준형', color: '#3b82f6', accent: '#2563eb', bg: '#eff6ff',
+ desc: '번호 원형 배지 + 세로 진행선 — 시술 후 주의사항 표준 체크리스트 (인쇄용)',
+ layoutHint: 'checklist',
+ aiPrompt: `MEDICAL NUMBERED CHECKLIST LAYOUT — vertical numbered list with connecting progress line. Patient safety focus. High readability for all ages. Optimized for print handout.
+
+BACKGROUND: White with very subtle blue tint (#f8fbff), full canvas.
+ZONE 1 — HEADER (top 18%): Blue (#3b82f6) solid header bar spanning full width. Hospital name "병원명" in small white text (11px, weight 500) at top-left with 5% left margin. Procedure name "발치 후 주의사항" in bold large white text (22px, weight 700) centered below. Clean, professional medical header — single solid bar, no gradient.
+ZONE 2 — CHECKLIST BODY (middle 57%): White background. Left side: thin vertical line in light blue (#93c5fd, 2px) running from first to last item, 12% from left edge. 5 numbered items stacked vertically with 20px gap.
+EACH ITEM: Filled blue circle (#3b82f6, 28px diameter) with white number (1-5, 14px bold) centered, positioned ON the vertical line. To the right (16px gap): instruction text in dark gray (#374151, 15px, weight 500), single line.
+- Item 1: "거즈를 1시간 동안 꽉 물고 계세요"
+- Item 2: "당일은 뜨거운 음식과 자극적인 음식을 피하세요"
+- Item 3: "처방된 약을 시간에 맞춰 복용하세요"
+- Item 4: "시술 부위를 손이나 혀로 만지지 마세요"
+- Item 5: "심한 운동, 음주, 흡연은 3일간 피하세요"
+ZONE 3 — EMERGENCY CONTACT (bottom 25%): Light blue (#eff6ff) rounded rectangle (90% width, centered, 12px radius, 16px padding). Inside: red warning icon (▲, #ef4444, 16px) + "이런 증상이 있으면 즉시 연락하세요" in bold dark text (14px). Below: "출혈이 30분 이상 지속 / 심한 부기·통증 / 38도 이상 발열" in dark gray (13px). Blue (#3b82f6) rounded pill (80% width, centered, 40px height): "☎ 이상 증상 시: 02-000-0000" in bold white text (14px). Hospital name in small gray text (11px) below pill.
+
+STRICT MODE ANCHORS: Blue header bar, vertical progress line with numbered circles, emergency contact box at bottom. Numbered list structure must be preserved.
+INSPIRED MODE FREEDOM: Number of items (4-6), instruction text content, circle size, vertical line position, emergency symptom list, header procedure name.
+MOBILE: Instruction text minimum 14px. Number circles minimum 24px. Line spacing minimum 18px. Emergency phone number must be tappable size (minimum 44px height).`,
+ },
+ {
+ id: 'cau_warning_bold', name: '경고 강조형', color: '#ef4444', accent: '#dc2626', bg: '#fef2f2',
+ desc: '▲ 경고 삼각형 + 레드 하이라이트 행 — 긴급 주의가 필요한 시술 후 경고 카드',
+ layoutHint: 'warning',
+ aiPrompt: `BOLD WARNING CARD LAYOUT — high-contrast red warning design for critical post-treatment precautions. Patient safety is paramount — every element designed for unmissable visibility.
+
+BACKGROUND: White (#ffffff) with light red tint (#fef2f2 at 30%) at edges.
+ZONE 1 — WARNING HEADER (top 22%): Large warning triangle icon (▲) in red (#ef4444) centered, 44px tall. Below: "시술 후 주의사항" in bold red (#ef4444, 24px) text centered. "아래 사항을 반드시 지켜주세요" in dark gray (#4b5563, 14px) centered. Hospital name "병원명" in small gray text (11px) above triangle.
+ZONE 2 — WARNING LIST (middle 53%): 5 numbered precaution items, each on its own row, full width with 5% horizontal margin.
+EACH ITEM: Red filled circle (#ef4444, 26px) with white number (14px bold) on the left. Instruction text in dark (#1f2937, 15px, weight 500) to the right with 12px gap.
+CRITICAL ROWS (items 1, 4): Light red background strip (#fef2f2, full row width, 8px vertical padding) to visually highlight the most dangerous warnings.
+NORMAL ROWS (items 2, 3, 5): White background.
+- Item 1 [CRITICAL]: "출혈이 30분 이상 멈추지 않으면 즉시 내원하세요"
+- Item 2: "시술 당일 음주 및 흡연은 절대 금지입니다"
+- Item 3: "뜨거운 음식, 맵고 자극적인 음식을 피하세요"
+- Item 4 [CRITICAL]: "심한 부기·통증·발열 시 즉시 연락하세요"
+- Item 5: "거즈는 1시간 후 제거하고, 입안을 헹구지 마세요"
+ZONE 3 — EMERGENCY BAR (bottom 25%): Solid red (#ef4444) bar spanning full width, 60px height. "이상 발생 시 즉시 연락" in bold white text (16px) centered. "☎ 02-000-0000 (진료시간 외: 010-0000-0000)" in white text (13px) below. Hospital name in tiny white text (10px, 70% opacity).
+
+STRICT MODE ANCHORS: Warning triangle icon, red numbered list with highlighted critical rows, solid red emergency bar at bottom. Critical row highlighting is essential.
+INSPIRED MODE FREEDOM: Number of items (4-6), which items are critical (1-2 max), instruction text content, triangle size, highlight color intensity.
+MOBILE: Warning text minimum 14px. Red bar minimum 56px height. Phone number tappable (44px+). Critical row background must be clearly distinguishable from normal rows.`,
+ },
+ {
+ id: 'cau_friendly_guide', name: '친절한 단계 안내형', color: '#10b981', accent: '#059669', bg: '#ecfdf5',
+ desc: '세로 점선 + 단계별 안내 + 다음 내원일 — 불안한 환자를 위한 친절 가이드',
+ layoutHint: 'guide',
+ aiPrompt: `FRIENDLY STEP-BY-STEP GUIDE LAYOUT — calming green design with connected numbered steps. Warm, reassuring tone reduces patient anxiety. Includes next-visit date field.
+
+BACKGROUND: Soft mint (#ecfdf5) to white vertical gradient (mint at top, white at bottom).
+ZONE 1 — HEADER (top 18%): Hospital name "병원명" in green (#059669, 12px, weight 500) left-aligned with 6% left margin. "임플란트 시술 후 관리 안내" in bold dark green (#065f46, 20px) below. "차근차근 따라해 주세요 :)" in warm gray (#6b7280, 13px) as friendly subtitle. Approachable, non-clinical header tone.
+ZONE 2 — STEP-BY-STEP (middle 52%): 4 numbered steps arranged vertically with 24px spacing. Vertical dotted line in light green (#6ee7b7, 2px dots, 4px gap) running through all step circles, connecting top to bottom, positioned 10% from left edge.
+EACH STEP: Green filled circle (#10b981, 32px) with white number (①②③④, 16px) centered ON the dotted line. To the right (14px gap): instruction text in dark gray (#374151, 15px). Friendly Korean ~세요 endings throughout.
+- Step ①: "시술 후 2시간은 아무것도 드시지 마세요"
+- Step ②: "부기가 있으면 찬 수건이나 아이스팩으로 찜질해 주세요"
+- Step ③: "처방해 드린 약은 시간 맞춰 꼭 드세요"
+- Step ④: "불편하시면 언제든지 편하게 전화주세요"
+Color coding hint: green text for "허용" items, amber (#d97706) for "주의" items if mixed.
+ZONE 3 — NEXT VISIT + CONTACT (bottom 30%): Light green (#d1fae5) rounded rectangle (90% width, centered, 12px radius, 16px padding).
+- Top: "다음 내원 예정일" in bold dark green (#065f46, 14px). Below: "____년 __월 __일 (___요일) __시" with underline blanks for handwriting.
+- Divider: thin dotted green line.
+- Bottom: "궁금한 점이 있으시면 연락주세요" in green (#059669, 13px). "☎ 02-000-0000" in bold green (15px). Hospital name and address in small gray (11px).
+
+STRICT MODE ANCHORS: Mint background, vertical dotted connecting line, numbered step circles, next-visit date box with blanks at bottom. The dotted line + circles structure is defining.
+INSPIRED MODE FREEDOM: Step count (3-5), instruction text, circle size, dotted line style, next-visit box layout, additional tips section.
+MOBILE: Step text minimum 14px. Circles minimum 28px. Next-visit box minimum 80px height. Generous touch spacing between steps (20px+).`,
+ },
+ {
+ id: 'cau_timeline_recovery', name: '회복 타임라인형', color: '#8b5cf6', accent: '#7c3aed', bg: '#f5f3ff',
+ desc: '당일→3일→1주→1개월 수평 타임라인 — 회복 단계별 관리법 한눈에 보기',
+ layoutHint: 'timeline',
+ aiPrompt: `RECOVERY TIMELINE LAYOUT — horizontal timeline showing care instructions across recovery stages. Color transitions from amber (caution) to green (healed). Patients see their recovery journey at a glance.
+
+BACKGROUND: Soft lavender (#f5f3ff) to white gradient (lavender at top, white at bottom).
+ZONE 1 — HEADER (top 15%): Hospital name "병원명" in small gray text (#6b7280, 11px) centered at top. "발치 후 회복 가이드" in bold purple (#8b5cf6, 22px) centered below. Thin purple line (#8b5cf6, 1px, 40% width) centered as divider.
+ZONE 2 — TIMELINE (middle 55%): Horizontal progress bar spanning 85% width, centered, 8px tall, rounded ends. Color gradient left to right: amber (#f59e0b) then light purple (#a78bfa) then blue (#3b82f6) then green (#10b981).
+4 circular markers (24px diameter) positioned ON the bar at equal intervals:
+- Marker 1 (left end): Amber (#f59e0b) filled circle. Label "당일" above in bold amber text (13px).
+- Marker 2 (33%): Light purple (#a78bfa) circle. Label "3일 후" above in bold purple (13px).
+- Marker 3 (66%): Blue (#3b82f6) circle. Label "1주일" above in bold blue (13px).
+- Marker 4 (right end): Green (#10b981) circle. Label "1개월" above in bold green (13px).
+INSTRUCTIONS BELOW EACH MARKER: 2 lines of instruction text in small dark gray (#4b5563, 12px), centered under each marker, max width per column ~22%.
+- 당일: "거즈 1시간 유지 / 냉찜질 / 금주·금연"
+- 3일 후: "부기 서서히 감소 / 미지근한 부드러운 음식"
+- 1주일: "실밥 제거 내원 / 일상 식사 서서히 가능"
+- 1개월: "완전 회복 확인 / 정상 활동 가능"
+ZONE 3 — EMERGENCY CONTACT (bottom 30%): Purple (#8b5cf6) rounded pill bar (80% width, centered, 44px height): "회복 중 이상 증상 시 ☎ 02-000-0000" in bold white text (14px). Below pill: "출혈 지속 · 심한 통증 · 38도 이상 발열 → 즉시 내원" in small purple text (#7c3aed, 12px). Hospital name in tiny gray text (10px).
+
+STRICT MODE ANCHORS: Horizontal timeline bar with gradient, 4 time markers with labels above and instructions below, pill-shaped emergency contact. Timeline bar is the defining structural element.
+INSPIRED MODE FREEDOM: Number of markers (3-5), time intervals, instruction text, gradient colors, marker size, instruction line count, additional recovery percentage indicators.
+MOBILE: Timeline can wrap to 2 rows on very narrow screens. Marker labels minimum 12px. Instructions minimum 11px. Emergency pill minimum 44px height.`,
+ },
+ {
+ id: 'cau_infographic', name: 'O/X 인포그래픽형', color: '#f59e0b', accent: '#d97706', bg: '#fffbeb',
+ desc: '2×3 O/X 카드 그리드 — 허용(O)과 금지(X)를 한눈에 구분하는 시각 인포그래픽',
+ layoutHint: 'infographic',
+ aiPrompt: `O/X INFOGRAPHIC GRID LAYOUT — 2x3 grid of icon cards showing DO (O) and DON'T (X) instructions. Instant visual comprehension — patients understand in seconds without reading long paragraphs. Color coding: green=allowed, red=prohibited.
+
+BACKGROUND: Warm cream (#fffbeb), full canvas.
+ZONE 1 — HEADER (top 15%): Hospital name "병원명" in small gray text (#6b7280, 11px) centered at top. "시술 후 주의사항" in bold amber (#d97706, 22px) centered. "O는 해도 좋아요, X는 하지 마세요" in medium gray (#6b7280, 13px) as explanatory subtitle.
+ZONE 2 — O/X GRID (middle 60%): 2 columns x 3 rows grid, centered, 10px gap. Left column = O (DO) cards, Right column = X (DON'T) cards. Each card is a rounded rectangle (~46% width, ~80px height, 12px radius).
+O CARDS (left column, green): Light green background (#f0fdf4), 2px green (#22c55e) border. Large green "O" letter (36px, bold, #22c55e) on the left side of card. Instruction text (14px, dark #1f2937) to the right.
+- O Card 1: "냉찜질 해주세요"
+- O Card 2: "부드러운 음식 드세요"
+- O Card 3: "처방약 복용하세요"
+X CARDS (right column, red): Light red background (#fef2f2), 2px red (#ef4444) border. Large red "X" letter (36px, bold, #ef4444) on the left side of card. Instruction text (14px, dark #1f2937) to the right.
+- X Card 1: "뜨거운 음식 금지"
+- X Card 2: "음주 · 흡연 금지"
+- X Card 3: "사우나 · 찜질방 금지"
+The O and X letters are the dominant visual elements — instantly recognizable at a glance.
+ZONE 3 — EMERGENCY (bottom 25%): Amber (#f59e0b) rounded pill (80% width, centered, 44px): "☎ 이상 증상 시: 02-000-0000" in bold white text (14px). "출혈 · 부기 · 통증 지속 시 즉시 내원" in small amber text (#d97706, 12px) below. Hospital name in tiny gray (10px).
+
+STRICT MODE ANCHORS: 2-column O/X grid structure, green for O cards, red for X cards, large O/X letters as primary visual. Grid layout is the defining element.
+INSPIRED MODE FREEDOM: Grid size (2x2 to 2x4), card content, O/X letter size, card dimensions, additional amber "△ 주의" cards for caution-level items, icon additions.
+MOBILE: O/X letters minimum 28px. Card text minimum 13px. Cards minimum 60px height. Grid can reflow to single column with O/X prefix on narrow screens.`,
+ },
+ {
+ id: 'cau_clean_card', name: 'DO/DON\'T 분할형', color: '#0ea5e9', accent: '#0284c7', bg: '#f0f9ff',
+ desc: 'DO/DON\'T 좌우 2열 분할 — 해야 할 것과 하지 말아야 할 것을 양쪽으로 비교',
+ layoutHint: 'card',
+ aiPrompt: `DO / DON'T TWO-COLUMN SPLIT LAYOUT — left column for recommended actions, right column for prohibited actions. Most intuitive format for behavioral instructions. Green=allowed, Red=prohibited color coding.
+
+BACKGROUND: White (#ffffff), full canvas.
+ZONE 1 — HEADER (top 18%): Hospital name "병원명" in small gray text (#6b7280, 11px) centered at top. "보톡스 시술 후 주의사항" in bold sky blue (#0ea5e9, 22px) centered. Thin sky blue line (#0ea5e9, 1px, 60% width) centered as separator.
+ZONE 2 — TWO-COLUMN BODY (middle 57%): Content area split into two equal columns (48% width each) side by side with 4% center gap.
+LEFT COLUMN — "이렇게 하세요 ✓": Green header bar (#22c55e, full column width, 36px height, 8px top radius) with "이렇게 하세요 ✓" in bold white text (14px) centered. Below: 4 items stacked vertically with 8px gap. Each item is a card (light green #f0fdf4 background, 8px radius, 12px padding) with small green checkmark circle (✓, #22c55e, 20px) on the left, instruction text (#374151, 14px) on the right.
+- "냉찜질을 10분씩 반복하세요"
+- "부드러운 미지근한 음식을 드세요"
+- "처방약을 꼭 복용하세요"
+- "시술 후 4시간은 충분히 쉬세요"
+CENTER DIVIDER: Vertical dashed line (#d1d5db, 1px, 4px dash) from top of content area to bottom.
+RIGHT COLUMN — "이것은 안 돼요 ✗": Red header bar (#ef4444, full column width, 36px height, 8px top radius) with "이것은 안 돼요 ✗" in bold white text (14px) centered. Below: 4 items with light red (#fef2f2) background cards, small red X circle (✗, #ef4444, 20px) on the left.
+- "당일 음주 · 흡연 절대 금지"
+- "사우나 · 찜질방 · 뜨거운 목욕 금지"
+- "시술 부위를 손으로 만지지 마세요"
+- "격한 운동은 3일간 피하세요"
+ZONE 3 — EMERGENCY CONTACT (bottom 25%): Sky blue (#0ea5e9) rounded rectangle (90% width, centered, 12px radius, 50px height): "☎ 이상 증상 시 연락: 02-000-0000" in bold white text (15px) centered. "진료시간: 월~금 09:00~18:00 / 토 09:00~13:00" in small white text (11px, 70% opacity). Hospital name and address in tiny gray text (10px) below.
+
+STRICT MODE ANCHORS: Two-column split with green DO header and red DON'T header, vertical center divider, checkmark/X icons, sky blue emergency bar. The dual-column comparison is the defining structure.
+INSPIRED MODE FREEDOM: Item count per column (3-5), instruction text, header text, icon style, card padding, column width ratio, additional "주의" amber middle section.
+MOBILE: On narrow screens, columns can stack vertically (DO on top, DON'T below). Item text minimum 13px. Header bars minimum 32px. Emergency bar minimum 48px height for touch.`,
+ },
+ ], // ─── 비급여 진료비 안내 (6개) ───
+ // 연구 기반: 테이블/메뉴보드 형식(법적 요구), 교대 행 배경, 최소 장식, 가격 우측 정렬
+ // 의료법 제45조: 비급여 진료비 투명 공개 의무, 최종 수정일 표시
+ // 색상: 화이트+다크그레이/네이비(가장 보편적), 베이지/크림(프리미엄)
+ pricing: [
+ {
+ id: "prc_clean_table", name: "클린 테이블", color: "#374151", accent: "#6366f1", bg: "#ffffff",
+ desc: "순백 + 깔끔한 테이블 + 인디고 헤더 — 미니멀 가격표", layoutHint: "table",
+ aiPrompt: `[CRITICAL — THIS IS A PREMIUM PRICE LIST POSTER]
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. Leave areas blank or use only user-provided text.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- ONLY use text the user explicitly provided.
+
+Korean hospital non-covered medical fee price list poster — CLEAN TABLE style.
+
+VISUAL STRUCTURE:
+BACKGROUND: Pure white (#ffffff). Clean, minimal.
+
+HEADER (top 20%): Indigo (#6366f1) solid rounded rectangle (rounded 12px) spanning 85% width, centered. Inside: title in bold white text. Hospital name small white above.
+
+TABLE AREA (middle 65%): Clean price table on white.
+- Header row: light indigo (#eef2ff) background, bold dark text
+- Each row: thin gray line (1px, #e5e7eb) separator
+- Item LEFT in dark gray (#374151), price RIGHT in bold dark (#111827)
+- Alternating rows: white and very light gray (#f9fafb)
+- Generous row height (40px+)
+- Looks like premium restaurant menu
+
+FOOTER (bottom 15%): Small gray text. Thin indigo line above.
+
+THE STRUCTURED TABLE WITH HEADER ROW IS MANDATORY.
+
+STRICT ANCHORS: Indigo header block, clean structured table, alternating rows, bold prices right-aligned, minimal white.
+Mobile readability: header, table text, prices bold.`,
+ },
+ {
+ id: "prc_dark_premium", name: "다크 프리미엄", color: "#0f172a", accent: "#d4a853", bg: "#0f172a",
+ desc: "블랙 배경 + 골드 가격 — 럭셔리 가격표", layoutHint: "dark",
+ aiPrompt: `[CRITICAL — THIS IS A PREMIUM PRICE LIST POSTER]
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. Leave areas blank or use only user-provided text.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- ONLY use text the user explicitly provided.
+
+Korean hospital non-covered medical fee price list poster — DARK LUXURY style. Like a 5-star hotel room service menu.
+
+VISUAL STRUCTURE:
+BACKGROUND: Deep navy-black (#0f172a). Subtle dark texture (leather or linen) at 5% opacity.
+
+GOLD FRAME: Thin gold (#d4a853) double-line rectangular frame (outer 1px, inner 0.5px, 3px gap) inset 4% from edges. Gold corner bracket ornaments.
+
+INSIDE FRAME:
+- Top: title in bold gold (#d4a853) serif text. Small diamond accent.
+- Below title: thin gold line
+
+PRICE LIST:
+- Each item: name in white (#e2e8f0) LEFT, dotted gold leader line in middle, price in bold gold RIGHT
+- Items separated by generous spacing (24px+)
+- The dotted leader line connecting name to price is THE signature element
+- 6-8 items max
+
+BOTTOM: Small gold text for hospital name.
+
+THE GOLD FRAME AND DOTTED LEADER LINES ARE MANDATORY.
+
+STRICT ANCHORS: Dark background, gold double frame, white names, gold prices, dotted leader lines, luxury menu.
+Mobile readability: title, items, prices bold.`,
+ },
+ {
+ id: "prc_soft_card", name: "소프트 카드", color: "#7c3aed", accent: "#a78bfa", bg: "#f5f3ff",
+ desc: "각 항목이 둥근 카드로 분리 + 파스텔 — 카드형 가격표", layoutHint: "card",
+ aiPrompt: `[CRITICAL — THIS IS A PREMIUM PRICE LIST POSTER]
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. Leave areas blank or use only user-provided text.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- ONLY use text the user explicitly provided.
+
+Korean hospital non-covered medical fee price list poster — SOFT CARD style. Each item is its own card.
+
+VISUAL STRUCTURE:
+BACKGROUND: Soft lavender (#f5f3ff) to white gradient.
+
+HEADER (top 15%): Title in bold violet (#5b21b6) text. Small sparkle accent.
+
+CARD GRID (middle 75%): Each price item is a separate WHITE ROUNDED CARD (rounded 16px, soft shadow, border: 1px solid #ede9fe). Cards in 2-column grid or single column.
+- Inside each card: treatment name in violet (#5b21b6) bold (), price in large bold dark (#111827, ) below
+- Generous padding (16px+)
+- Tiny violet accent dot at top-left corner
+- 4-6 cards total
+
+FOOTER (bottom 10%): Small violet text.
+
+THE INDIVIDUAL ROUNDED CARDS FOR EACH ITEM ARE MANDATORY.
+
+STRICT ANCHORS: Lavender gradient, individual white rounded cards, violet accents, card grid layout, modern friendly.
+Mobile readability: title, item names, prices bold.`,
+ },
+ {
+ id: "prc_blue_medical", name: "블루 메디컬", color: "#1e40af", accent: "#3b82f6", bg: "#eff6ff",
+ desc: "블루 헤더 + 흰 테이블 + 체크 아이콘 — 공식 수가표", layoutHint: "medical",
+ aiPrompt: `[CRITICAL — THIS IS A PREMIUM PRICE LIST POSTER]
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. Leave areas blank or use only user-provided text.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- ONLY use text the user explicitly provided.
+
+Korean hospital non-covered medical fee price list poster — BLUE MEDICAL OFFICIAL style. Like a hospital official posted fee schedule.
+
+VISUAL STRUCTURE:
+BACKGROUND: Blue gradient top (deep blue #1e40af to sky #60a5fa) taking 30%, then white 70%.
+
+HEADER (on blue, top 30%): Title in MASSIVE bold white text. Hospital name in light blue (#bfdbfe) small. White plus (+) icon at 15% opacity top-right.
+
+TABLE AREA (on white, middle 60%): Official structured table.
+- Thin blue (#3b82f6) border around table (1.5px)
+- Header row: medium blue (#3b82f6) background, white bold text
+- Each row: white, thin blue (#dbeafe) bottom border
+- Item LEFT with small blue check icon prefix
+- Price RIGHT in bold dark navy (#1e3a8a)
+- Generous row padding
+
+FOOTER (bottom 10%): Small blue text.
+
+THE BLUE TABLE WITH CHECK ICONS AND BLUE HEADER ARE MANDATORY.
+
+STRICT ANCHORS: Blue gradient header, structured bordered table, blue check icons, bold navy prices, official medical document.
+Mobile readability: header, table text, prices bold.`,
+ },
+ {
+ id: "prc_gradient_modern", name: "그라데이션 모던", color: "#ec4899", accent: "#8b5cf6", bg: "#fdf2f8",
+ desc: "핑크→퍼플 그라데이션 상단 + 흰 가격 리스트 — 모던 가격표", layoutHint: "gradient",
+ aiPrompt: `[CRITICAL — THIS IS A PREMIUM PRICE LIST POSTER]
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. Leave areas blank or use only user-provided text.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- ONLY use text the user explicitly provided.
+
+Korean hospital non-covered medical fee price list poster — GRADIENT MODERN style. Trendy beauty clinic price list.
+
+VISUAL STRUCTURE:
+BACKGROUND: Top 35% vibrant gradient — hot pink (#ec4899) to purple (#8b5cf6). Bottom 65% clean white.
+
+HEADER (on gradient, top 35%): Title in bold white text. Thin white line (60% opacity). Hospital name white small.
+
+PRICE LIST (on white, middle 55%): Clean modern list — NOT traditional table.
+- Each item: name in dark (#1f2937) bold left, price in bold pink (#ec4899) right
+- Between: thin dotted line (#e5e7eb) connecting them
+- Items separated by 20px
+- Small pink circle bullet before item name
+- 5-7 items
+
+FOOTER (bottom 10%): Small gray text.
+
+THE VIBRANT GRADIENT HEADER AND DOTTED CONNECTOR LINES ARE MANDATORY.
+
+STRICT ANCHORS: Pink-to-purple gradient header, white price list, dotted connectors, gradient-colored prices, trendy beauty clinic.
+Mobile readability: header, items, prices bold.`,
+ },
+ {
+ id: "prc_menu_board", name: "메뉴보드", color: "#1c1917", accent: "#a3836a", bg: "#1c1917",
+ desc: "다크 보드 + 세리프 타이포 + 도트 라인 — 카페 메뉴판 스타일", layoutHint: "menuboard",
+ aiPrompt: `[CRITICAL — THIS IS A PREMIUM PRICE LIST POSTER]
+⛔ STRICT CONTENT RULES:
+- DO NOT add any information the user did not provide.
+- DO NOT generate fake Korean text. Leave areas blank or use only user-provided text.
+- DO NOT add fake disclaimers, footnotes, or fine print.
+- ONLY use text the user explicitly provided.
+
+Korean hospital non-covered medical fee price list poster — MENU BOARD style. Like a premium cafe chalkboard menu — but for a hospital.
+
+VISUAL STRUCTURE:
+BACKGROUND: Dark charcoal (#1c1917) or dark forest green (#1a2e1a). Subtle matte texture (chalkboard or dark wood) at 6-8% opacity.
+
+NATURAL WOOD FRAME: Thin natural wood border around entire image — like a real menu board frame. Light oak or walnut tone, 2-3% of image width. Visible wood grain.
+
+INSIDE THE BOARD:
+- Top: title in cream/ivory (#fef3c7) elegant serif text, letter-spacing +2px. Below: thin cream decorative line with small ornament.
+
+PRICE ITEMS:
+- Each item: name in warm cream (#fef3c7) serif LEFT, dotted leader line (cream dots) in middle, price in bold cream RIGHT
+- Price slightly larger than name ( vs )
+- Items grouped by category — headers in warm brown (#a3836a) small caps
+- Between groups: thin cream decorative divider
+- 5-8 items
+
+BOTTOM: Small cream text for hospital name.
+
+THE WOOD FRAME, DARK BOARD, AND SERIF TYPOGRAPHY ARE MANDATORY.
+
+STRICT ANCHORS: Dark board, wood frame, cream serif typography, dotted leader lines, category grouping, premium cafe menu board.
+Mobile readability: title, items, prices bold.`,
+ },
+ ],
+};
+
+// ── AI 이미지 생성: 템플릿 데이터 → Nano Banana Pro ──
+
+
+export type TemplateApplicationMode = 'strict' | 'inspired';
+
+interface AiTemplateRequest {
+ category: 'schedule' | 'event' | 'doctor' | 'notice' | 'greeting' | 'hiring' | 'caution' | 'pricing';
+ stylePrompt: string;
+ textContent: string;
+ hospitalName?: string;
+ logoBase64?: string | null;
+ brandingPosition?: 'top' | 'bottom';
+ extraPrompt?: string;
+ imageSize?: { width: number; height: number };
+ hospitalInfo?: string[];
+ brandColor?: string;
+ brandAccent?: string;
+ calendarTheme?: string;
+ applicationMode?: TemplateApplicationMode;
+}
+
+/** 달력 테마별 AI 스타일 프롬프트 — SVG 템플릿의 실제 디자인 특성을 반영 */
+const CALENDAR_THEME_AI_STYLE: Record<string, string> = {
+ spring_kids: `[CALENDAR THEME: Spring Kindergarten / 봄 어린이]
+MANDATORY VISUAL STYLE:
+- Background: soft sky-blue gradient (top #AEE0F5 → bottom #EAF8F0), warm and cheerful
+- Top decoration: large GREEN RIBBON BOW (forest green #5D9A3C) crossing the top like a gift wrap
+- White oval center area containing the calendar content
+- Yellow BUTTERFLY decoration on the right side
+- Small STAR-SHAPED FLOWERS (yellow petals #FFD54F, orange center) scattered as accents
+- Flower text markers (✿) beside the clinic name
+- Green BANNER RIBBON behind the month title (light green #D5E9C0 with darker edges)
+- WHITE FLUFFY CLOUDS in the sky area
+- Bottom landscape: rolling GREEN HILLS with WOODEN FENCE (brown #8D6E63), round TREES with yellow/orange foliage, small yellow GROUND FLOWERS
+- Scalloped green grass edge along the hills
+- Calendar header row: dark background with white text for day names
+- Sunday dates in pink/red, weekday dates in dark gray
+- Events shown with pencil-style dashed underlines
+- Overall mood: bright, cheerful, kindergarten-like, spring garden feel
+- Color palette: sky blue, forest green, yellow, orange, white, pink
+- NO confetti, NO party decorations — this is a nature/garden theme`,
+
+ cherry_blossom: `[CALENDAR THEME: Cherry Blossom Dental / 벚꽃 치과]
+MANDATORY VISUAL STYLE:
+- Background: soft pink gradient (#FFF0F5 → #FFE4EC), romantic spring feel
+- Large CHERRY BLOSSOM PETALS (soft pink ellipses) scattered around edges, overlapping the borders
+- Each petal cluster has 5 rounded petals with a darker pink center
+- Falling petals effect throughout the design
+- Calendar header: pink (#E91E63) background with white text
+- Event markers: colored CIRCLE BADGES with event type text inside
+- Night events: purple (#8E24AA), Seminar: dark blue (#283593), Closed: pink (#E91E63)
+- Month title in elegant serif-style font, dark pink color
+- Clinic name in a soft banner above the calendar
+- Notices at bottom with small bullet points
+- Overall mood: elegant, feminine, soft, romantic spring
+- Color palette: pink, soft pink, white, dark rose, touches of purple
+- NO cartoon characters — sophisticated floral design`,
+
+ autumn: `[CALENDAR THEME: Autumn Maple / 가을 단풍]
+MANDATORY VISUAL STYLE:
+- Background: warm cream/beige (#FFF8E7) with FALLING MAPLE LEAVES
+- Large detailed MAPLE LEAVES in various autumn colors: deep orange (#D84315), red-brown, golden yellow, burnt sienna
+- Leaves scattered around the edges, some overlapping the calendar card
+- Calendar sits inside a white rounded CARD with subtle shadow, slight inset from edges
+- Warm brown header text for month title
+- Subtitle text in warm gray below the title
+- Calendar header: warm orange/brown background
+- Event markers: golden yellow PILL-SHAPED badges with dark text
+- Closed days highlighted with warm accent colors
+- Compact 5-week layout (last row may show dual dates like "23/30")
+- Bottom area: more maple leaves and a warm gradient fade
+- Overall mood: cozy, warm, autumnal, harvest season
+- Color palette: orange, brown, golden yellow, cream, deep red
+- NO cold colors — everything warm-toned`,
+
+ korean_traditional: `[CALENDAR THEME: Korean Traditional / 한국 전통]
+MANDATORY VISUAL STYLE:
+- Background: elegant beige/parchment (#F5EDD5) with subtle texture feel
+- Traditional Korean CRANE (학) silhouettes in gray, flying gracefully (one left, one right)
+- MOUNTAIN/LANDSCAPE silhouette at bottom in soft muted blue-gray, inspired by Korean ink painting (산수화)
+- Pine tree silhouettes along the mountain edges
+- Calendar inside a clean white card with very subtle border
+- Title area: refined serif-style typography with traditional feel
+- Subtitle in classical Korean style
+- Calendar header: dark navy/charcoal (#37474F) background
+- Event markers: colored CIRCLES with Korean text — deep red (#8B1A2A) for closed, purple for night, blue for normal
+- Traditional Korean patterns as subtle border decorations (optional)
+- Overall mood: dignified, classical, refined, cultured
+- Color palette: beige, navy, deep red, soft gold (#D4A853), gray-blue
+- Inspired by Korean traditional art (한국화) — NOT cartoonish`,
+
+ medical_notebook: `[CALENDAR THEME: Medical Notebook / 의료 노트북]
+MANDATORY VISUAL STYLE:
+- Background: clean sky blue (#E3F2FD) or soft blue
+- Main content area styled like a SPIRAL NOTEBOOK page: white with blue LEFT MARGIN LINE, horizontal RULED LINES
+- SPIRAL BINDING rings along the left edge (gray circles/ovals)
+- Cute DOCTOR CHARACTER illustration: person in white coat with stethoscope, friendly smile
+- Doctor character placed prominently above or beside the calendar
+- Teal/turquoise (#26A69A) accent color for doctor's undershirt and highlights
+- Calendar below the doctor character area
+- Calendar header: teal/blue (#0097A7) background with white text
+- Event markers with clean medical-style badges
+- Font style: clean sans-serif, slightly casual/friendly
+- A small tooth or medical icon as accent
+- Overall mood: friendly, approachable, medical but not intimidating, slightly playful
+- Color palette: white, teal, sky blue, gray, touches of coral
+- Like a friendly doctor's personal notebook`,
+
+ winter: `[CALENDAR THEME: Winter Christmas / 겨울 크리스마스]
+MANDATORY VISUAL STYLE:
+- Background: deep navy blue (#1A2A4A → #2C3E6B gradient), cold winter night sky
+- SNOWFLAKES scattered throughout: 6-pointed crystal snowflakes in soft blue-white (#7BA7CF), varying sizes and opacities
+- SANTA SLEIGH with REINDEER silhouette in the upper portion (subtle, semi-transparent)
+- Pine TREE silhouettes along the bottom in dark navy/forest green
+- Small warm LIGHTS or stars twinkling in the sky
+- Calendar sits inside a white rounded card with soft shadow
+- Title area: white or light text on dark background, elegant winter typography
+- Red accent (#D32F2F) for Christmas-specific events
+- Calendar header: dark blue (#283593) or navy background
+- Snowdrift or snow-covered ground at the bottom
+- Overall mood: serene, magical, winter wonderland, festive but elegant
+- Color palette: deep navy, white, soft blue, red accent, silver
+- NOT overly cartoonish — elegant winter/holiday aesthetic`,
+
+ autumn_spring_note: `[CALENDAR THEME: Autumn Spring Note / 가을 스프링노트]
+MANDATORY VISUAL STYLE:
+- Background: warm off-white/cream with subtle gradient
+- Main content area styled like a SPIRAL-BOUND NOTEBOOK: spiral binding dots/rings along the top edge
+- MAPLE LEAVES (orange-brown #D2691E) scattered around edges with 0.85 opacity
+- Decorative cloud shapes in warm cream (#F5E6C8)
+- Simplified AUTUMN TREES with brown trunks (#6B4C2A) and warm foliage crowns
+- Earth tone color palette: browns, tans, creams, warm oranges
+- Calendar sits inside the notebook page area
+- Title in warm brown/dark chocolate color
+- Event markers in warm autumn tones
+- Overall mood: cozy, nostalgic, warm autumn notebook feel
+- Color palette: cream, chocolate brown, burnt orange, tan, warm gold
+- Like a personal planner page for autumn — handcrafted feel`,
+
+ autumn_holiday: `[CALENDAR THEME: Autumn Holiday / 가을 Holiday]
+MANDATORY VISUAL STYLE:
+- Background: warm beige/cream (#FDF5EC)
+- Large AUTUMN LEAVES at corners: maple-style with stems in rust (#C0543B), golden brown (#C97B3A), and amber (#D4A24E)
+- Brush stroke accents with low opacity for East Asian ink-wash aesthetic
+- Calendar inside a white card with subtle drop shadow
+- Round leaf shapes for variety mixed with pointed maple leaves
+- Various leaf rotations creating natural scattered effect
+- Clean title typography in dark brown
+- Event markers: ROUND CIRCLE BADGES with colored backgrounds
+- Closed days in red, normal in warm accents
+- Overall mood: refined autumn with traditional East Asian artistic sensibility
+- Color palette: beige, rust brown, golden amber, dark brown (#8B6914), cream white
+- Elegant and minimal — NOT cartoonish`,
+
+ hanok_roof: `[CALENDAR THEME: Hanok Roof / 한옥 기와]
+MANDATORY VISUAL STYLE:
+- Background: warm beige (#F0E6D3)
+- Large SALMON/CORAL HALF-CIRCLE (#E8856A) at top center (stylized sun)
+- Traditional Korean HANOK ROOF TILES structure: curved ridge line with repeated tile pattern in dark gray (#4A4A4A, #3A3A3A)
+- Beige CLOUDS with 0.5 opacity in East Asian ink-painting style
+- Korean traditional CORNER PATTERNS: concentric geometric squares in brown (#8B7355)
+- Calendar inside a bordered frame with traditional feel
+- Title in dignified serif-style Korean typography
+- Event colors: red for closed, purple for night, coral for normal, brown for seminar
+- Overall mood: cultural heritage, sophisticated, celebrating Korean traditional architecture
+- Color palette: beige, coral/salmon, dark gray, brown, cream
+- Inspired by Korean hanok buildings — dignified and respectful`,
+
+ dark_green_clinic: `[CALENDAR THEME: Dark Green Clinic / 다크그린 클리닉]
+MANDATORY VISUAL STYLE:
+- Background: split design — dark teal/green header (#2C4A4A) on top, lighter area below
+- Professional medical palette: dark teals, forest greens (#3A7D5C, #2E7D52)
+- WHITE TOOTH ICON (molar silhouette) as medical branding element
+- Event markers: DIAMOND-SHAPED BADGES (45-degree rotated squares) for type differentiation
+- Layered green rectangles with low opacity suggesting healthcare facility
+- Calendar with clean grid layout on white/light background
+- Red accents (#D32F2F) for closed days
+- Title in white text on dark green header
+- Overall mood: professional, trustworthy, medical/dental clinic branding
+- Color palette: dark teal, forest green, white, red accent, light gray
+- Clean and clinical — premium healthcare aesthetic`,
+
+ dark_blue_modern: `[CALENDAR THEME: Dark Blue Modern / 다크블루 모던]
+MANDATORY VISUAL STYLE:
+- Background: DEEP NAVY gradient (#0D1B3E → #162850), dark and premium
+- QUARTER-CIRCLE HALFTONE DOT PATTERNS in all four corners: blue dots (#5A8DBF) with varying sizes, 0.25 opacity
+- Modern tech/corporate aesthetic with elegant bokeh-like dot effects
+- Calendar displayed as a TABLE GRID with clear borders on dark background
+- White or light text on dark navy background throughout
+- Clean modern sans-serif typography
+- Day headers in bold, dates in clean grid cells
+- Closed days highlighted with red or contrasting accent
+- Event text inside the calendar cells with subtle color coding
+- Overall mood: contemporary, minimalist, premium, sleek corporate
+- Color palette: deep navy, white, cool blue (#5A8DBF), subtle gray, red accent
+- Like a premium tech company's internal calendar — NOT a typical hospital design
+- NO cute illustrations — pure modern minimalist design`,
+
+ lavender_sparkle: `[CALENDAR THEME: Lavender Sparkle / 라벤더 스파클]
+MANDATORY VISUAL STYLE:
+- Background: soft LAVENDER GRADIENT (#F3E8FF → #FDFCFF), light and airy
+- SPARKLE/STAR shapes scattered throughout: four-pointed stars in various purple shades (#7C3AED, #A78BFA, #C4B5FD) with 0.7 opacity
+- Multiple sparkles in varying sizes creating magical, whimsical effect
+- Calendar header: rounded rectangle in light purple (#E8D5F5)
+- Title in deep purple (#5B21B6), elegant and bold
+- Vibrant purple (#7C3AED) as primary accent color
+- Sunday dates in red (#DC2626), other dates in dark gray
+- Clean rounded shapes throughout the design
+- Event markers with purple-toned badges
+- Overall mood: playful, magical, feminine, modern and cheerful
+- Color palette: lavender, deep purple, light violet, white, red accent
+- Sparkly and enchanting — like a magical planner design`,
+};

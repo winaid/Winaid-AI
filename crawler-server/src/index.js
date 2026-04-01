@@ -5,6 +5,7 @@ const compression = require('compression');
 require('dotenv').config();
 
 const naverCrawlerRouter = require('./routes/naver-crawler');
+const youtubeGifRouter = require('./routes/youtube-gif');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -49,6 +50,7 @@ app.get('/health', (req, res) => {
 
 // API 라우트
 app.use('/api/naver', naverCrawlerRouter);
+app.use('/api/youtube', youtubeGifRouter);
 
 // 404 핸들러
 app.use((req, res) => {
