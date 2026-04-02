@@ -93,6 +93,12 @@ const PRESS_TYPE_STRUCTURES: Record<PressType, string> = {
 마무리: 일반적인 건강 관리 권고`,
 };
 
+const PRESS_CATEGORY_GUIDES: Record<string, string> = {
+  '치과': '임플란트, CAD/CAM 보철, 디지털 교정, 마이크로스코프, 네비게이션 임플란트, 자체 기공소',
+  '피부과': '피코레이저, 울쎄라 HIFU, 써마지 FLX, 인모드, 스킨부스터(쥬베룩/리쥬란), 엑소좀 시술, 더마펜4, 올리지오, 실리프팅',
+  '정형외과': '관절경, 로봇 인공관절, 척추 내시경(FESS/BESS), 체외충격파(ESWT), 프롤로테라피',
+};
+
 export function buildPressPrompt(req: PressReleaseRequest): {
   systemInstruction: string;
   prompt: string;
@@ -178,7 +184,8 @@ ${getMedicalLawPromptBlock(true)}
 ⛔ blockquote 태그 사용 금지! <p> 태그 안에서 기사체로 인용!
 ⛔ h2 부제 태그 출력 금지!
 
-${getTrustedSourcesPromptBlock(req.category)}`;
+${getTrustedSourcesPromptBlock(req.category)}
+${PRESS_CATEGORY_GUIDES[req.category || ''] ? `\n[${req.category} 전문 용어 — 기사에 정확한 명칭 사용]\n${PRESS_CATEGORY_GUIDES[req.category || '']}` : ''}`;
 
   const promptParts = [
     `[기본 정보]`,
