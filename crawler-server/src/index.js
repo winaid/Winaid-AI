@@ -80,6 +80,7 @@ app.get('/health', (req, res) => {
     ffmpegVersion,
     hasCookies,
     hasProxy: !!process.env.PROXY_URL,
+    cachedVideos: youtubeGifRouter.getCacheSize ? youtubeGifRouter.getCacheSize() : 0,
   });
 });
 
