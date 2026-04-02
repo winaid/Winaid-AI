@@ -8,7 +8,6 @@ const router = express.Router();
 
 const PROXY_URL = process.env.PROXY_URL || '';
 
-// 쿠키 파일 경로: 여러 후보 중 존재하는 것 사용
 function findCookiePath() {
   const candidates = [
     path.join(__dirname, '..', '..', 'youtube-cookies.txt'),
@@ -29,11 +28,7 @@ function ytdlpDownload(videoUrl, outputPath, start, end) {
     const sectionStart = Math.max(0, start - 5);
     const sectionEnd = end + 5;
 
-    const args = [
-      '-f', 'bestvideo[height<=480][ext=mp4]/bestvideo[height<=480]/best[height<=480]',
-      '--merge-output-format', 'mp4',
-      '--download-sections', `*${sectionStart}-${sectionEnd}`,
-      '--force-keyframes-at-cuts',
+    const commonArgs = [
       '--no-check-certificates',
       '--extractor-args', 'youtube:player_client=web',
       '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
@@ -42,44 +37,65 @@ function ytdlpDownload(videoUrl, outputPath, start, end) {
       '-o', outputPath,
       '--no-playlist',
       '--no-warnings',
-      videoUrl,
     ];
 
-    console.log(`[yt-dlp] Downloading section ${sectionStart}s~${sectionEnd}s (480p mp4)...`);
-    execFile('yt-dlp', args, { timeout: 60000 }, (err, stdout, stderr) => {
-      if (err) {
-        const detail = (stderr || err.message || '').substring(0, 500);
-        console.error('[yt-dlp] Error:', detail);
-
-        console.log('[yt-dlp] Section download failed, trying full download (low quality)...');
-        const fallbackArgs = [
-          '-f', 'worst[ext=mp4]/worst',
+    const attempts = [
+      {
+        label: '480p 구간 다운로드',
+        args: [
+          '-f', 'bestvideo[height<=480]+bestaudio/best[height<=480]/bestvideo+bestaudio/best',
           '--merge-output-format', 'mp4',
-          '--no-check-certificates',
-          '--extractor-args', 'youtube:player_client=web',
-          '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
-          ...(cookiePath ? ['--cookies', cookiePath] : []),
-          ...(PROXY_URL ? ['--proxy', PROXY_URL] : []),
-          '-o', outputPath,
-          '--no-playlist',
-          '--no-warnings',
-          videoUrl,
-        ];
-        execFile('yt-dlp', fallbackArgs, { timeout: 120000 }, (err2, stdout2, stderr2) => {
-          if (err2) {
-            const detail2 = (stderr2 || err2.message || '').substring(0, 500);
-            console.error('[yt-dlp fallback] Error:', detail2);
-            reject(new Error(`영상 다운로드 실패: ${detail2}`));
-          } else {
-            console.log('[yt-dlp fallback] Download complete');
-            resolve(stdout2);
-          }
-        });
-      } else {
-        console.log('[yt-dlp] Section download complete');
-        resolve(stdout);
+          '--download-sections', `*${sectionStart}-${sectionEnd}`,
+          '--force-keyframes-at-cuts',
+          ...commonArgs, videoUrl,
+        ],
+        timeout: 60000,
+      },
+      {
+        label: '아무 포맷 구간 다운로드',
+        args: [
+          '--merge-output-format', 'mp4',
+          '--download-sections', `*${sectionStart}-${sectionEnd}`,
+          '--force-keyframes-at-cuts',
+          ...commonArgs, videoUrl,
+        ],
+        timeout: 60000,
+      },
+      {
+        label: '전체 다운로드 (최저화질)',
+        args: [
+          '-f', 'worstvideo+worstaudio/worst',
+          '--merge-output-format', 'mp4',
+          ...commonArgs, videoUrl,
+        ],
+        timeout: 120000,
+      },
+    ];
+
+    const tryAttempt = (idx) => {
+      if (idx >= attempts.length) {
+        reject(new Error('모든 다운로드 방식 실패. 영상 URL을 확인하세요.'));
+        return;
       }
-    });
+      const { label, args: attemptArgs, timeout } = attempts[idx];
+      console.log(`[yt-dlp] 시도 ${idx + 1}/${attempts.length}: ${label}...`);
+
+      // 이전 시도 파일 정리
+      try { if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath); } catch {}
+
+      execFile('yt-dlp', attemptArgs, { timeout }, (err, stdout, stderr) => {
+        if (err) {
+          const detail = (stderr || err.message || '').substring(0, 300);
+          console.error(`[yt-dlp] ${label} 실패:`, detail);
+          tryAttempt(idx + 1);
+        } else {
+          console.log(`[yt-dlp] ${label} 성공`);
+          resolve(stdout);
+        }
+      });
+    };
+
+    tryAttempt(0);
   });
 }
 
