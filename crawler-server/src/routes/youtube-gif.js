@@ -7,6 +7,7 @@ const os = require('os');
 const router = express.Router();
 
 const COOKIE_PATH = path.join(__dirname, '..', '..', 'youtube-cookies.txt');
+const PROXY_URL = process.env.PROXY_URL || '';
 
 function downloadWithYtdlp(videoUrl, start, duration, outputPath, useCookies, useSection) {
   return new Promise((resolve, reject) => {
@@ -15,6 +16,7 @@ function downloadWithYtdlp(videoUrl, start, duration, outputPath, useCookies, us
       '--extractor-args', 'youtube:player_client=web',
       '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
       ...(useCookies && fs.existsSync(COOKIE_PATH) ? ['--cookies', COOKIE_PATH] : []),
+      ...(PROXY_URL ? ['--proxy', PROXY_URL] : []),
       '-f', 'bv*[height<=720]+ba/b[height<=720]/b',
       ...(useSection ? ['--download-sections', `*${start}-${start + duration}`, '--force-keyframes-at-cuts'] : []),
       '-o', outputPath,
