@@ -4,6 +4,7 @@ import { useState, useEffect, createContext, useContext } from 'react';
 import { useAuthGuard } from '../../hooks/useAuthGuard';
 import { Sidebar } from '../../components/Sidebar';
 import { MobileHeader } from '../../components/MobileHeader';
+import { UpdateNotes } from '../../components/UpdateNotes';
 import { getCredits, type CreditInfo } from '../../lib/creditService';
 
 // 크레딧 Context
@@ -68,6 +69,7 @@ export default function AppLayout({
             {children}
           </main>
         </div>
+        <UpdateNotes />
       </div>
     </CreditContext.Provider>
   );
