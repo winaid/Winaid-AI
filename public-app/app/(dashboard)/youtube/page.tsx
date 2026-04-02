@@ -132,19 +132,41 @@ JSON만 출력:
       const data = await res.json();
       if (!res.ok || !data.text) throw new Error(data.error || '영상 분석에 실패했습니다.');
 
-      const cleaned = data.text.replace(/```json?\s*\n?/gi, '').replace(/\n?```\s*$/g, '').trim();
+      let text = data.text.replace(/```json?\s*\n?/gi, '').replace(/\n?```\s*$/g, '').trim();
+
+      // JSON 파싱 2단계 시도
+      let parsed: { summary?: string; topics?: { topic: string; title: string; keywords: string }[] } | null = null;
       try {
-        const parsed = JSON.parse(cleaned);
-        const summaryText = (parsed.summary || '')
+        parsed = JSON.parse(text);
+      } catch {
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          try { parsed = JSON.parse(jsonMatch[0]); } catch { /* 최종 실패 */ }
+        }
+      }
+
+      if (parsed && parsed.summary) {
+        const summaryText = parsed.summary
           .replace(/<br\s*\/?>/gi, '\n')
           .replace(/<[^>]+>/g, '')
           .trim();
         setTranscript(summaryText);
         setSummary(summaryText);
         setSuggestedTopics(parsed.topics || []);
-      } catch {
-        setTranscript(data.text);
-        setSummary(data.text);
+      } else {
+        // JSON 파싱 실패 — 읽을 수 있는 텍스트로 변환
+        const plainText = text
+          .replace(/[{}\[\]"]/g, '')
+          .replace(/summary:\s*/gi, '')
+          .replace(/topics?:\s*/gi, '')
+          .replace(/topic:\s*/gi, '주제: ')
+          .replace(/title:\s*/gi, '제목: ')
+          .replace(/keywords?:\s*/gi, '키워드: ')
+          .replace(/,\s*$/gm, '')
+          .replace(/\n{3,}/g, '\n\n')
+          .trim() || '영상 분석 결과를 파싱할 수 없습니다. 다시 시도해주세요.';
+        setTranscript(plainText);
+        setSummary(plainText);
       }
 
       setPipelineStep('configure');
