@@ -21,7 +21,6 @@ function ytdlpDownload(videoUrl, outputPath) {
       '-o', outputPath,
       '--no-playlist',
       '--no-warnings',
-      '--merge-output-format', 'mp4',
       videoUrl,
     ];
     console.log('[yt-dlp] Starting download...');
