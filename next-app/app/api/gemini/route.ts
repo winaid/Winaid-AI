@@ -146,22 +146,7 @@ interface GeminiCandidate {
 }
 
 export async function POST(request: NextRequest) {
-  // 인증: Supabase 세션 쿠키 체크 (랜딩 챗봇은 비로그인 허용)
-  const cookies = request.headers.get('cookie') || '';
-  const hasAuthCookie = cookies.includes('sb-') && cookies.includes('-auth-token');
-
-  if (!hasAuthCookie) {
-    try {
-      const clonedBody = await request.clone().json();
-      const isLandingChat = clonedBody?.systemInstruction &&
-        (clonedBody.systemInstruction.includes('윈에이드') || clonedBody.systemInstruction.includes('WINAID'));
-      if (!isLandingChat) {
-        return NextResponse.json({ error: '인증이 필요합니다.' }, { status: 401 });
-      }
-    } catch {
-      return NextResponse.json({ error: '인증이 필요합니다.' }, { status: 401 });
-    }
-  }
+  // 내부용은 인증 스킵 (팀 선택 방식, Supabase 쿠키 없음)
 
   // ═══ body 파싱 (스트리밍/비스트리밍 공통) ═══
   let body: GeminiRequestBody;
