@@ -10,6 +10,8 @@ import { getHospitalStylePrompt } from '../../../lib/styleService';
 import { CARD_NEWS_DESIGN_TEMPLATES } from '../../../lib/cardNewsDesignTemplates';
 import { ErrorPanel } from '../../../components/GenerationResult';
 import { CardRegenModal, type CardPromptHistoryItem, CARD_PROMPT_HISTORY_KEY, CARD_REF_IMAGE_KEY } from '../../../components/CardRegenModal';
+import { useCreditContext } from '../layout';
+import { useCredit } from '../../../lib/creditService';
 import { ContentCategory } from '../../../lib/types';
 import type { WritingStyle, CardNewsDesignTemplateId, TrendingItem, AudienceMode } from '../../../lib/types';
 
@@ -35,6 +37,8 @@ const IMAGE_STYLE_OPTIONS = [
 type ImageStyleType = 'photo' | 'illustration' | 'medical' | 'custom';
 
 export default function CardNewsPage() {
+  const creditCtx = useCreditContext();
+
   // ── 폼 상태 ──
   const [topic, setTopic] = useState('');
   const [keywords, setKeywords] = useState('');
@@ -139,6 +143,16 @@ export default function CardNewsPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!topic.trim() || isGenerating) return;
+
+    // 크레딧 차감 (첫 생성만)
+    if (creditCtx.userId && creditCtx.creditInfo) {
+      const creditResult = await useCredit(creditCtx.userId);
+      if (!creditResult.success) {
+        setError(creditResult.error === 'no_credits' ? '크레딧이 모두 소진되었습니다.' : '크레딧 차감에 실패했습니다.');
+        return;
+      }
+      creditCtx.setCreditInfo({ credits: creditResult.remaining, totalUsed: (creditCtx.creditInfo.totalUsed || 0) + 1 });
+    }
 
     const derivedWritingStyle: WritingStyle = audienceMode === '전문가용(신뢰/정보)' ? 'expert' : 'empathy';
     const request: CardNewsRequest = {
