@@ -29,65 +29,60 @@ function ytdlpDownload(videoUrl, outputPath, start, end) {
     const sectionStart = Math.max(0, start - 5);
     const sectionEnd = end + 5;
 
-    const baseArgs = (playerClient) => [
+    const baseArgs = (playerClient, useCookies = false) => [
       '--no-check-certificates',
       ...(playerClient ? ['--extractor-args', `youtube:player_client=${playerClient}`] : []),
       '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
-      ...(cookiePath ? ['--cookies', cookiePath] : []),
+      ...(useCookies && cookiePath ? ['--cookies', cookiePath] : []),
       ...(PROXY_URL ? ['--proxy', PROXY_URL] : []),
       '-o', outputPath,
       '--no-playlist',
       '--no-warnings',
     ];
 
+    const noCookie = !!PROXY_URL;
     const attempts = [
       {
-        label: 'android 클라이언트 + 구간',
+        label: 'android + 구간 (쿠키 없이)',
         args: [
           '-f', 'bestvideo[height<=480]+bestaudio/best[height<=480]/best',
           '--merge-output-format', 'mp4',
           '--download-sections', `*${sectionStart}-${sectionEnd}`,
           '--force-keyframes-at-cuts',
-          ...baseArgs('android'), videoUrl,
+          ...baseArgs('android', !noCookie), videoUrl,
         ],
         timeout: 60000,
       },
       {
-        label: 'ios 클라이언트 + 구간',
+        label: 'android + 전체 (쿠키 없이)',
         args: [
           '-f', 'bestvideo[height<=480]+bestaudio/best[height<=480]/best',
           '--merge-output-format', 'mp4',
-          '--download-sections', `*${sectionStart}-${sectionEnd}`,
-          '--force-keyframes-at-cuts',
-          ...baseArgs('ios'), videoUrl,
-        ],
-        timeout: 60000,
-      },
-      {
-        label: 'mweb 클라이언트 + 구간',
-        args: [
-          '--merge-output-format', 'mp4',
-          '--download-sections', `*${sectionStart}-${sectionEnd}`,
-          '--force-keyframes-at-cuts',
-          ...baseArgs('mweb'), videoUrl,
-        ],
-        timeout: 60000,
-      },
-      {
-        label: 'android 전체 다운로드 (최저화질)',
-        args: [
-          '-f', 'worstvideo+worstaudio/worst',
-          '--merge-output-format', 'mp4',
-          ...baseArgs('android'), videoUrl,
+          ...baseArgs('android', !noCookie), videoUrl,
         ],
         timeout: 120000,
       },
       {
-        label: '기본값 전체 다운로드 (최후 수단)',
+        label: '기본 클라이언트 + 전체',
         args: [
-          '-f', 'worst',
           '--merge-output-format', 'mp4',
-          ...baseArgs(null), videoUrl,
+          ...baseArgs(null, !noCookie), videoUrl,
+        ],
+        timeout: 120000,
+      },
+      {
+        label: 'android + 쿠키 포함',
+        args: [
+          '-f', 'bestvideo[height<=480]+bestaudio/best[height<=480]/best',
+          '--merge-output-format', 'mp4',
+          ...baseArgs('android', true), videoUrl,
+        ],
+        timeout: 120000,
+      },
+      {
+        label: '최후 수단 (제한 없음)',
+        args: [
+          ...baseArgs(null, true), videoUrl,
         ],
         timeout: 120000,
       },
