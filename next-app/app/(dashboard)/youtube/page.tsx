@@ -81,92 +81,84 @@ export default function YoutubePage() {
     setVideoId(extractVideoId(youtubeUrl));
 
     try {
-      const analysisPrompt = `당신은 병원 마케팅 콘텐츠 전문가입니다.
+      // ── 1단계: 영상 요약 (텍스트로 받기 — 파싱 실패 없음) ──
+      const summaryRes = await fetch('/api/gemini', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: `당신은 병원 마케팅 콘텐츠 전문가입니다.
 아래 YouTube 영상의 내용을 Google Search를 통해 분석해주세요.
 
 YouTube URL: ${youtubeUrl.trim()}
 
-[분석 규칙 — 매우 중요]
-⚠️ Google Search로 이 영상의 제목, 설명, 채널 정보, 관련 기사/블로그, 댓글 요약 등을 최대한 수집하세요.
-⚠️ 이 영상에서 실제로 다루는 내용만 요약하세요. 영상과 관련 없는 일반 의학 지식을 추가하지 마세요.
-⚠️ 검색으로 찾은 정보가 이 영상의 내용인지 다른 영상/기사의 내용인지 구분하세요.
-⚠️ 영상 제목/설명에서 확인되는 내용만 포인트로 작성하세요.
-⚠️ 포인트 수가 부족하면 억지로 채우지 말고 확인된 것만 2~3개라도 작성하세요.
+[분석 규칙]
+⚠️ Google Search로 이 영상의 제목, 설명, 채널 정보 등을 수집하세요.
+⚠️ 이 영상에서 실제로 다루는 내용만 요약하세요.
+⚠️ 영상과 관련 없는 일반 의학 지식을 추가하지 마세요.
 ⚠️ "영상에서 확인 필요" 같은 문구는 쓰지 마세요.
 
-[요청 1: 영상 요약]
-영상의 핵심 내용을 구조적으로 정리:
+[요청: 영상 요약]
+영상의 핵심 내용을 구조적으로 정리하세요:
 - 영상의 전체 주제를 한 문장으로 (첫 줄)
-- 빈 줄(\n\n) 후 "첫째," 로 시작하는 포인트. 각 포인트는 2~3문장.
-- 각 포인트 사이에 반드시 빈 줄(\n\n)을 넣어 구분
-- 각 포인트에 구체적 수치/사례/용어가 있으면 반드시 포함
-- 3~5개 포인트로 빈틈 없이 채우세요. 빈 포인트나 "확인 필요" 금지.
+- 빈 줄 후 "첫째," 로 시작하는 포인트. 각 포인트는 2~3문장.
+- 각 포인트 사이에 반드시 빈 줄을 넣어 구분
+- 구체적 수치/사례/용어가 있으면 반드시 포함
 - 마지막에 빈 줄 후 "결론적으로," 한 문장 정리
 
-⚠️ summary 값 안에 줄바꿈(\n)을 반드시 포함하세요. 하나의 긴 문단으로 쓰지 마세요.
-
-[요청 2: 블로그 주제 추천]
-확인된 정보를 바탕으로 병원 블로그에 쓸 수 있는 주제 5개 추천.
-- topic: 글의 방향 (20자 이내)
-- title: 네이버 블로그 제목 (30~40자, 검색 친화적)
-- keywords: SEO 키워드 2~3개
-
-JSON만 출력:
-{
-  "summary": "영상 요약 (구조적으로, 첫째/둘째/셋째 형식)...",
-  "topics": [{ "topic": "...", "title": "...", "keywords": "..." }]
-}`;
-
-      const res = await fetch('/api/gemini', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          prompt: analysisPrompt,
+⚠️ JSON이 아닌 일반 텍스트로 작성하세요.`,
           model: 'gemini-3.1-pro-preview',
           temperature: 0.2,
-          maxOutputTokens: 4096,
+          maxOutputTokens: 2048,
           googleSearch: true,
         }),
       });
 
-      const data = await res.json();
-      if (!res.ok || !data.text) throw new Error(data.error || '영상 분석에 실패했습니다.');
+      const summaryData = await summaryRes.json();
+      if (!summaryRes.ok || !summaryData.text) throw new Error(summaryData.error || '영상 분석에 실패했습니다.');
 
-      let text = data.text.replace(/```json?\s*\n?/gi, '').replace(/\n?```\s*$/g, '').trim();
+      const summaryText = summaryData.text
+        .replace(/<br\s*\/?>/gi, '\n')
+        .replace(/<[^>]+>/g, '')
+        .trim();
+      setSummary(summaryText);
+      setTranscript(summaryText);
 
-      // JSON 파싱 2단계 시도
-      let parsed: { summary?: string; topics?: { topic: string; title: string; keywords: string }[] } | null = null;
+      // ── 2단계: 주제 추천 (짧은 JSON 배열) ──
       try {
-        parsed = JSON.parse(text);
-      } catch {
-        const jsonMatch = text.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          try { parsed = JSON.parse(jsonMatch[0]); } catch { /* 최종 실패 */ }
-        }
-      }
+        const topicsRes = await fetch('/api/gemini', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            prompt: `아래 영상 요약을 바탕으로 병원 블로그에 쓸 수 있는 주제 5개를 추천하세요.
 
-      if (parsed && parsed.summary) {
-        const summaryText = parsed.summary
-          .replace(/<br\s*\/?>/gi, '\n')
-          .replace(/<[^>]+>/g, '')
-          .trim();
-        setTranscript(summaryText);
-        setSummary(summaryText);
-        setSuggestedTopics(parsed.topics || []);
-      } else {
-        // JSON 파싱 실패 — 읽을 수 있는 텍스트로 변환
-        const plainText = text
-          .replace(/[{}\[\]"]/g, '')
-          .replace(/summary:\s*/gi, '')
-          .replace(/topics?:\s*/gi, '')
-          .replace(/topic:\s*/gi, '주제: ')
-          .replace(/title:\s*/gi, '제목: ')
-          .replace(/keywords?:\s*/gi, '키워드: ')
-          .replace(/,\s*$/gm, '')
-          .replace(/\n{3,}/g, '\n\n')
-          .trim() || '영상 분석 결과를 파싱할 수 없습니다. 다시 시도해주세요.';
-        setTranscript(plainText);
-        setSummary(plainText);
+[영상 요약]
+${summaryText.slice(0, 2000)}
+
+각 주제를 JSON 배열로만 출력하세요. 다른 텍스트 없이 배열만:
+[{"topic":"20자 이내","title":"30~40자 블로그 제목","keywords":"키워드1, 키워드2"}]`,
+            model: 'gemini-3.1-flash-lite-preview',
+            temperature: 0.3,
+            maxOutputTokens: 1024,
+            thinkingLevel: 'none',
+          }),
+        });
+
+        const topicsData = await topicsRes.json();
+        if (topicsData.text) {
+          const cleaned = topicsData.text.replace(/```json?\s*\n?/gi, '').replace(/\n?```\s*$/g, '').trim();
+          let parsed = JSON.parse(cleaned);
+          if (!Array.isArray(parsed) && parsed.topics) parsed = parsed.topics;
+          if (Array.isArray(parsed)) setSuggestedTopics(parsed);
+        }
+      } catch {
+        // 주제 파싱 실패해도 요약은 정상 표시
+        const arrMatch = summaryData.text.match(/\[[\s\S]*\]/);
+        if (arrMatch) {
+          try {
+            const arr = JSON.parse(arrMatch[0]);
+            if (Array.isArray(arr)) setSuggestedTopics(arr);
+          } catch { /* 주제 없이 진행 */ }
+        }
       }
 
       setPipelineStep('configure');
