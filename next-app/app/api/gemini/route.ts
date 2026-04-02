@@ -136,6 +136,7 @@ interface GeminiRequestBody {
   timeout?: number;
   googleSearch?: boolean;
   images?: { base64: string; mimeType: string }[];
+  stream?: boolean;
 }
 
 interface GeminiCandidate {
@@ -162,20 +163,101 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  const keys = getKeys();
-  if (keys.length === 0) {
-    return NextResponse.json(
-      { error: '[env] GEMINI_API_KEY 누락. .env.local에 GEMINI_API_KEY=your_key 추가 필요.' },
-      { status: 500 },
-    );
-  }
-
+  // ═══ body 파싱 (스트리밍/비스트리밍 공통) ═══
   let body: GeminiRequestBody;
   try {
     body = await request.json() as GeminiRequestBody;
   } catch {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
   }
+
+  const keys = getKeys();
+  if (keys.length === 0) {
+    return NextResponse.json({ error: '[env] GEMINI_API_KEY 누락' }, { status: 500 });
+  }
+
+  // ═══ 스트리밍 모드 ═══
+  if (body.stream === true) {
+    const model = body.model || 'gemini-3.1-pro-preview';
+    const ki = keyIndex % keys.length;
+    keyIndex = (ki + 1) % keys.length;
+
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?key=${keys[ki]}&alt=sse`;
+
+    const streamApiBody: Record<string, unknown> = {
+      contents: [{ role: 'user', parts: [{ text: body.prompt || '' }] }],
+      generationConfig: {
+        temperature: body.temperature ?? 0.7,
+        maxOutputTokens: body.maxOutputTokens ?? 8192,
+        ...(body.responseType === 'json' ? { responseMimeType: 'application/json' } : {}),
+        ...(body.schema ? { responseSchema: body.schema } : {}),
+      },
+    };
+
+    if (body.systemInstruction) {
+      streamApiBody.system_instruction = { parts: [{ text: body.systemInstruction }] };
+    }
+    if (body.googleSearch) {
+      streamApiBody.tools = [{ google_search: {} }];
+    }
+    if (body.thinkingLevel === 'none') {
+      (streamApiBody.generationConfig as Record<string, unknown>).thinkingConfig = { thinkingBudget: 0 };
+    } else if (body.thinkingLevel) {
+      const budget: Record<string, number> = { low: 1024, medium: 4096, high: 8192 };
+      (streamApiBody.generationConfig as Record<string, unknown>).thinkingConfig = { thinkingBudget: budget[body.thinkingLevel] || 4096 };
+    }
+
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), body.timeout || 180000);
+
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(streamApiBody),
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        return NextResponse.json({ error: `Gemini API ${response.status}`, details: errorText.substring(0, 300) }, { status: 502 });
+      }
+
+      const stream = new ReadableStream({
+        async start(ctrl) {
+          const reader = response.body!.getReader();
+          const decoder = new TextDecoder();
+          try {
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              const chunk = decoder.decode(value, { stream: true });
+              for (const line of chunk.split('\n')) {
+                if (line.startsWith('data: ')) {
+                  try {
+                    const json = JSON.parse(line.slice(6));
+                    const text = json?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+                    if (text) ctrl.enqueue(new TextEncoder().encode(text));
+                  } catch { /* partial chunk */ }
+                }
+              }
+            }
+          } catch (err) { console.error('[gemini/stream]', err); }
+          finally { ctrl.close(); }
+        },
+      });
+
+      return new Response(stream, {
+        headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-cache' },
+      });
+    } catch (err: unknown) {
+      if ((err as Error).name === 'AbortError') return NextResponse.json({ error: '요청 시간 초과' }, { status: 504 });
+      return NextResponse.json({ error: (err as Error).message || '서버 오류' }, { status: 500 });
+    }
+  }
+
+  // ═══ 비스트리밍 모드 (기존) ═══
 
   if (!body.prompt) {
     return NextResponse.json({ error: 'prompt is required' }, { status: 400 });

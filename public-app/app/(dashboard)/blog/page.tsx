@@ -1036,6 +1036,7 @@ ${subs.length > 0 ? `경쟁 글 소제목: ${subs.join(' / ')}` : ''}
       console.info(`[BLOG] 최종 프롬프트 길이: ${finalPrompt.length}자 (system: ${systemInstruction.length}자)`);
       console.info(`[BLOG] Gemini 호출 시작 — model=gemini-3.1-pro-preview, temp=0.85`);
 
+      // ═══ 스트리밍 모드로 Gemini 호출 ═══
       const res = await fetch('/api/gemini', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1044,14 +1045,14 @@ ${subs.length > 0 ? `경쟁 글 소제목: ${subs.join(' / ')}` : ''}
           systemInstruction,
           model: 'gemini-3.1-pro-preview',
           temperature: 0.85,
-          maxOutputTokens: 65536,
+          maxOutputTokens: 16384,
+          stream: true,
         }),
       });
 
-      const data = await res.json() as { text?: string; error?: string; details?: string };
-
-      if (!res.ok || !data.text) {
-        const errMsg = data.error || data.details || `서버 오류 (${res.status})`;
+      if (!res.ok) {
+        let errMsg = `서버 오류 (${res.status})`;
+        try { const errData = await res.json(); errMsg = errData.error || errData.details || errMsg; } catch {}
         console.error(`[BLOG] ❌ 생성 실패: ${errMsg}`);
         setError(errMsg);
         setIsGenerating(false);
@@ -1059,26 +1060,101 @@ ${subs.length > 0 ? `경쟁 글 소제목: ${subs.join(' / ')}` : ''}
         return;
       }
 
-      console.info(`[BLOG] Gemini 응답 수신 — 원본 길이: ${data.text.length}자`);
-      setDisplayStage(2); // old displayStage 2: 내용 다듬는 중
-
-      // ── 응답 파싱: 본문 / SCORES / IMAGE_PROMPTS 분리 ──
-      let blogText = data.text;
-      let parsed: ScoreBarData | undefined;
+      // ── 스트리밍 수신 ──
+      const reader = res.body!.getReader();
+      const decoder = new TextDecoder();
+      let fullText = '';
+      let imagePromptsExtracted = false;
       const imagePrompts: string[] = [];
+      let imageResultsPromise: Promise<{ index: number; url: string | null }[]> | null = null;
+      let lastRenderTime = 0;
 
-      // 1) ---IMAGE_PROMPTS--- 블록 추출 + 제거
-      const imgPromptsMarker = '---IMAGE_PROMPTS---';
-      const imgIdx = blogText.indexOf(imgPromptsMarker);
-      if (imgIdx !== -1) {
-        const afterImg = blogText.substring(imgIdx + imgPromptsMarker.length).trim();
-        afterImg.split('\n').forEach(line => {
-          const trimmed = line.replace(/^\d+[\.\)]\s*/, '').trim();
-          if (trimmed && !trimmed.startsWith('---') && !trimmed.startsWith('[') && !trimmed.startsWith('{')) {
-            imagePrompts.push(trimmed);
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        fullText += decoder.decode(value, { stream: true });
+
+        // IMAGE_PROMPTS 조기 추출 (BLOG_START 감지 시)
+        if (!imagePromptsExtracted && fullText.includes('---BLOG_START---')) {
+          const beforeBlog = fullText.split('---BLOG_START---')[0];
+          const imgMarker = '---IMAGE_PROMPTS---';
+          const imgMarkerIdx = beforeBlog.indexOf(imgMarker);
+          if (imgMarkerIdx !== -1) {
+            const afterMarker = beforeBlog.substring(imgMarkerIdx + imgMarker.length).trim();
+            afterMarker.split('\n').forEach(line => {
+              const trimmed = line.replace(/^\d+[\.\)]\s*/, '').trim();
+              if (trimmed && !trimmed.startsWith('---') && !trimmed.startsWith('[') && !trimmed.startsWith('{')) {
+                imagePrompts.push(trimmed);
+              }
+            });
+            console.info(`[BLOG] 🎯 이미지 프롬프트 조기 추출: ${imagePrompts.length}개`);
           }
-        });
-        blogText = blogText.substring(0, imgIdx).replace(/\n+$/, '');
+          imagePromptsExtracted = true;
+
+          // 이미지 즉시 병렬 생성 시작 (본문 스트리밍과 동시에!)
+          if (imagePrompts.length > 0 && imageCount > 0 && !imageResultsPromise) {
+            setDisplayStage(3);
+            console.info(`[BLOG] 🚀 이미지 생성 즉시 시작 (텍스트 스트리밍 중)`);
+            const prompts = imagePrompts.slice(0, imageCount);
+            imageResultsPromise = Promise.all(
+              prompts.map((p, i) => {
+                const index = i + 1;
+                return fetch('/api/image', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ prompt: p, aspectRatio: imageAspectRatio, mode: 'blog' as const }),
+                }).then(r => r.ok ? r.json() : null)
+                  .then(d => ({ index, url: d?.imageDataUrl || null }))
+                  .catch(() => ({ index, url: null as string | null }));
+              })
+            );
+          }
+        }
+
+        // 본문 실시간 렌더링 (300ms 디바운스)
+        const now = Date.now();
+        if (now - lastRenderTime > 300 && fullText.includes('---BLOG_START---')) {
+          let blogPart = fullText.split('---BLOG_START---').slice(1).join('---BLOG_START---');
+          const scoresIdx = blogPart.indexOf('---SCORES---');
+          if (scoresIdx !== -1) blogPart = blogPart.substring(0, scoresIdx);
+          blogPart = blogPart.replace(/^```html?\s*\n?/i, '').replace(/\n?```\s*$/, '').trim();
+          if (blogPart) {
+            setGeneratedContent(blogPart);
+            setDisplayStage(2);
+            lastRenderTime = now;
+          }
+        }
+      }
+
+      console.info(`[BLOG] Gemini 스트리밍 완료 — 전체 ${fullText.length}자`);
+
+      // ── 최종 파싱 ──
+      let blogText = fullText;
+      let parsed: ScoreBarData | undefined;
+
+      // BLOG_START 이후만 본문으로
+      if (blogText.includes('---BLOG_START---')) {
+        blogText = blogText.split('---BLOG_START---').slice(1).join('---BLOG_START---');
+      }
+      // OUTLINE/IMAGE_PROMPTS 블록 제거
+      blogText = blogText.replace(/---OUTLINE---[\s\S]*?(?=---IMAGE_PROMPTS---|---BLOG_START---|$)/i, '');
+      blogText = blogText.replace(/---IMAGE_PROMPTS---[\s\S]*?(?=---BLOG_START---|$)/i, '');
+
+      // 이미지 프롬프트가 조기 추출 안 됐으면 기존 방식으로 추출
+      if (imagePrompts.length === 0) {
+        const imgMarker = '---IMAGE_PROMPTS---';
+        const imgIdx = fullText.indexOf(imgMarker);
+        if (imgIdx !== -1) {
+          const afterImg = fullText.substring(imgIdx + imgMarker.length);
+          const endIdx = afterImg.indexOf('---BLOG_START---');
+          const imgBlock = endIdx !== -1 ? afterImg.substring(0, endIdx) : afterImg;
+          imgBlock.trim().split('\n').forEach(line => {
+            const trimmed = line.replace(/^\d+[\.\)]\s*/, '').trim();
+            if (trimmed && !trimmed.startsWith('---') && !trimmed.startsWith('[') && !trimmed.startsWith('{')) {
+              imagePrompts.push(trimmed);
+            }
+          });
+        }
       }
 
       // 2) ---SCORES--- 블록 추출 + 제거
@@ -1260,11 +1336,16 @@ ${subs.length > 0 ? `경쟁 글 소제목: ${subs.join(' / ')}` : ''}
           }
         };
 
-        // 최대 imageCount개까지만 생성 — 각 이미지 완성 즉시 화면에 반영
+        // 이미 스트리밍 중에 시작된 이미지가 있으면 그 결과 사용, 없으면 새로 생성
         const prompts = imagePrompts.slice(0, imageCount);
+        const earlyResults = imageResultsPromise ? await imageResultsPromise : null;
         const imagePromises = prompts.map((p, i) => {
           const index = i + 1;
-          return generateAndUpload(p, index).then(result => {
+          const earlyResult = earlyResults?.[i];
+          const uploadOrGenerate = earlyResult?.url
+            ? Promise.resolve(earlyResult)
+            : generateAndUpload(p, index);
+          return uploadOrGenerate.then(result => {
             // 이미지 완성 즉시 해당 슬롯의 플레이스홀더를 실제 이미지로 교체
             if (result.url) {
               setImageHistory(prev => ({ ...prev, [result.index]: [result.url!] }));
