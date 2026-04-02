@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { listPosts, type SavedPost } from '../../../lib/postStorage';
 import { getSessionSafe } from '../../../lib/supabase';
+import { sanitizeHtml } from '../../../lib/sanitize';
 
 // ── 상대 시간 ──
 
@@ -195,7 +196,7 @@ export default function HistoryPage() {
                 <article
                   className="max-w-none"
                   style={{ fontFamily: "'Malgun Gothic', sans-serif", lineHeight: 1.9 }}
-                  dangerouslySetInnerHTML={{ __html: mdToHtml(selectedPost.content) }}
+                  dangerouslySetInnerHTML={{ __html: sanitizeHtml(mdToHtml(selectedPost.content)) }}
                 />
               )}
             </div>

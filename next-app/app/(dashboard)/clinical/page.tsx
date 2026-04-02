@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { buildClinicalPrompt, ARTICLE_TYPES } from '../../../lib/clinicalPrompt';
 import { getSessionSafe, supabase } from '../../../lib/supabase';
 import { CATEGORIES } from '../../../lib/constants';
+import { sanitizeHtml } from '../../../lib/sanitize';
 
 const inputCls = 'w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm outline-none focus:border-blue-400 focus:bg-white focus:ring-2 focus:ring-blue-500/10 transition-all placeholder:text-slate-300';
 
@@ -474,7 +475,7 @@ JSON만 출력: { "analysis": "...", "topics": [{ "topic": "...", "title": "..."
               .clinical-img img { max-width: 100%; border-radius: 12px; border: 1px solid #e2e8f0; }
               .references-footer { user-select: none; opacity: 0.6; }
             `}</style>
-            <div className="clinical-content" dangerouslySetInnerHTML={{ __html: generatedContent }} />
+            <div className="clinical-content" dangerouslySetInnerHTML={{ __html: sanitizeHtml(generatedContent) }} />
           </div>
 
           {/* 버튼 */}

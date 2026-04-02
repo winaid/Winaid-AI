@@ -12,6 +12,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { checkAuth } from '../../../../lib/apiAuth';
 
 // ── 상수 ──
 
@@ -476,6 +477,9 @@ async function fetchPostsBatch(
 // ── 메인 핸들러 ──
 
 export async function POST(request: NextRequest) {
+  const authError = await checkAuth(request);
+  if (authError) return authError;
+
   const timer = createTimer();
   const diagnostics: string[] = [];
 

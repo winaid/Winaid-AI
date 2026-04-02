@@ -7,6 +7,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { checkAuth } from '../../../../lib/apiAuth';
 
 // ── HMAC-SHA256 서명 생성 (네이버 검색광고 API 인증) ──
 
@@ -118,6 +119,9 @@ async function getBlogPostCount(keyword: string): Promise<{ count: number; error
 // ── 메인 핸들러 ──
 
 export async function POST(request: NextRequest) {
+  const authError = await checkAuth(request);
+  if (authError) return authError;
+
   try {
     const body = (await request.json()) as { keywords?: string[] };
     const { keywords } = body;
