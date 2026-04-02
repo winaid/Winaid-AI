@@ -2,7 +2,17 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const compression = require('compression');
+const fs = require('fs');
+const pathModule = require('path');
+const { execSync } = require('child_process');
 require('dotenv').config();
+
+// 환경변수에서 YouTube 쿠키 파일 생성
+if (process.env.YOUTUBE_COOKIES) {
+  const cookiePath = pathModule.join(__dirname, '..', 'youtube-cookies.txt');
+  fs.writeFileSync(cookiePath, process.env.YOUTUBE_COOKIES);
+  console.log('✅ YouTube 쿠키 파일 생성 완료');
+}
 
 const naverCrawlerRouter = require('./routes/naver-crawler');
 const youtubeGifRouter = require('./routes/youtube-gif');
@@ -41,10 +51,15 @@ app.use(express.urlencoded({ extended: true }));
 
 // Health check
 app.get('/health', (req, res) => {
+  let ytdlpVersion = 'unknown';
+  try { ytdlpVersion = execSync('yt-dlp --version').toString().trim(); } catch {}
+  const cookiePath = pathModule.join(__dirname, '..', 'youtube-cookies.txt');
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
-    uptime: process.uptime()
+    uptime: process.uptime(),
+    ytdlpVersion,
+    hasCookies: fs.existsSync(cookiePath),
   });
 });
 
