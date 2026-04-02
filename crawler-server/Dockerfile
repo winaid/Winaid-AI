@@ -1,5 +1,7 @@
 FROM node:22-slim
 
+ARG CACHE_BUST=20260402v2
+
 # Chromium 의존성 설치 (puppeteer-core용)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     chromium \
