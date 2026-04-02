@@ -122,11 +122,10 @@ JSON만 출력:
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           prompt: analysisPrompt,
-          model: 'gemini-3.1-flash-lite-preview',
+          model: 'gemini-3.1-pro-preview',
           temperature: 0.2,
           maxOutputTokens: 4096,
           googleSearch: true,
-          thinkingLevel: 'none',
         }),
       });
 
