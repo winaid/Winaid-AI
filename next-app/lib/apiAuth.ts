@@ -1,15 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 /**
- * API route 인증 체크 — Supabase 세션 쿠키 존재 확인
- * @returns null이면 인증 성공, NextResponse면 401 반환
+ * API route 인증 체크
+ * 내부용(next-app)은 팀 선택 방식이라 Supabase 쿠키가 없음 → 항상 통과
  */
-export async function checkAuth(req: NextRequest): Promise<NextResponse | null> {
-  const cookies = req.headers.get('cookie') || '';
-  const hasAuthCookie = cookies.includes('sb-') && cookies.includes('-auth-token');
-
-  if (!hasAuthCookie) {
-    return NextResponse.json({ error: '인증이 필요합니다.' }, { status: 401 });
-  }
-  return null;
+export async function checkAuth(_req: NextRequest): Promise<NextResponse | null> {
+  return null; // 내부용은 인증 스킵
 }
