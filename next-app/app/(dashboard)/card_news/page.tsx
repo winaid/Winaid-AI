@@ -49,7 +49,7 @@ export default function CardNewsPage() {
   const [imageStyle, setImageStyle] = useState<ImageStyleType>('illustration');
   const [category, setCategory] = useState<ContentCategory>(ContentCategory.DENTAL);
   const [audienceMode, setAudienceMode] = useState<AudienceMode>('환자용(친절/공감)');
-  const [showAdvanced, setShowAdvanced] = useState(true);
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [customImagePrompt, setCustomImagePrompt] = useState('');
   // 트렌드 주제
   const [isLoadingTrends, setIsLoadingTrends] = useState(false);
@@ -148,6 +148,7 @@ export default function CardNewsPage() {
       slideCount,
       writingStyle: derivedWritingStyle,
       designTemplateId,
+      category,
     };
 
     setIsGenerating(true);
@@ -603,13 +604,13 @@ DECORATIVE: (장식 요소)`,
 
       const categoryHints: Record<string, string> = {
         '치과': '충치, 잇몸질환, 임플란트, 치아미백, 교정, 사랑니, 치주염',
-        '피부과': '여드름, 아토피, 건선, 탈모, 피부건조, 대상포진',
+        '피부과': '여드름, 아토피, 색소침착, 기미, 모공, 주름, 탄력, 레이저토닝, 피코레이저, 프락셀, IPL, 울쎄라, 인모드, 써마지, 슈링크, 보톡스, 필러, 스킨부스터, 더마펜, 제모레이저, 리프팅, 실리프팅, 물광주사',
         '정형외과': '관절통, 허리디스크, 어깨통증, 무릎연골, 오십견, 척추관협착증',
       };
 
       const newsSearchKeywords: Record<string, string> = {
         '치과': '치과 치료 OR 임플란트 OR 잇몸',
-        '피부과': '피부 건강 OR 아토피 OR 탈모',
+        '피부과': '피부과 시술 OR 레이저토닝 OR 보톡스 필러 OR 피부 관리 OR 리프팅',
         '정형외과': '관절 통증 OR 허리디스크 OR 어깨통증',
       };
       const searchKeyword = newsSearchKeywords[category] || `${category} 건강`;

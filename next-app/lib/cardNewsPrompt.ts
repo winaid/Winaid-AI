@@ -16,12 +16,34 @@ export interface CardNewsRequest {
   slideCount: number;         // 4–7
   writingStyle?: 'expert' | 'empathy' | 'conversion';
   designTemplateId?: CardNewsDesignTemplateId;
+  category?: string;
 }
 
 const STYLE_GUIDES: Record<string, string> = {
   empathy: '독자의 고민에 공감하며, 걱정을 덜어주는 톤으로 작성합니다.',
   expert: '전문적 근거와 수치를 활용하여 신뢰감을 높입니다.',
   conversion: '마지막 슬라이드에서 부드러운 상담 안내를 포함합니다. (○ "궁금한 점은 상담을 통해 확인할 수 있습니다", ✕ "지금 바로 예약하세요")',
+};
+
+const CATEGORY_CARD_GUIDES: Record<string, string> = {
+  '치과': `[치과 카드뉴스 가이드]
+- 시술: 임플란트, 라미네이트, 교정(메탈/세라믹/투명), 크라운, 인레이/온레이, 스케일링
+- 증상: 충치, 치주염, 잇몸출혈, 시린이, 턱관절, 사랑니
+- 포인트: 보험 적용 여부, 시술 과정 단계별 설명, Before/After 개념 설명`,
+
+  '피부과': `[피부과 카드뉴스 가이드]
+- 레이저: 피코레이저(색소), 레이저토닝(기미), IPL(홍조/잡티), CO2(점/흉터), 엔디야그(혈관/문신)
+- 리프팅: 울쎄라(초음파 HIFU), 써마지(고주파 RF), 인모드, 슈링크, 올리지오, 실리프팅(PDO/PCL)
+- 주사: 보톡스(주름/사각턱), 필러(쥬비덤/레스틸렌), 스킨부스터(쥬베룩/리쥬란/엑소좀), 물광, PRP
+- 재생: 더마펜, 화학박피(AHA/BHA), 아쿠아필, LED
+- 증상매칭: 기미=토닝+부스터, 모공=프락셀+더마펜+써마지, 주름=보톡스+필러+리프팅
+- 포인트: 시술 비교(원리/다운타임/유지기간), 시술 전후 주의사항, 계절별 추천 시술`,
+
+  '정형외과': `[정형외과 카드뉴스 가이드]
+- 비수술: 물리치료, 도수치료, 체외충격파(ESWT), 프롤로, DNS주사, 신경차단술
+- 수술: 관절경, 인공관절, 척추 내시경(FESS/BESS), 척추유합술
+- 증상: 디스크, 오십견, 무릎연골, 족저근막염, 거북목, 척추관협착증
+- 포인트: 운동법 카드(동작+횟수), 증상 자가체크 리스트, 시술 비교`,
 };
 
 type CardTopicType = 'symptom' | 'procedure' | 'compare' | 'tips' | 'general';
@@ -40,12 +62,14 @@ export function buildCardNewsPrompt(req: CardNewsRequest): {
   prompt: string;
 } {
   const style = STYLE_GUIDES[req.writingStyle || 'empathy'] || STYLE_GUIDES.empathy;
+  const categoryGuide = CATEGORY_CARD_GUIDES[req.category || ''] || '';
 
   const systemInstruction = [
     '당신은 한국의 병원 마케팅 전문 카드뉴스 원고 작성자입니다.',
     '인스타그램/블로그용 카드뉴스 원고를 작성합니다.',
     style,
     '',
+    ...(categoryGuide ? [categoryGuide, ''] : []),
     getMedicalLawPromptBlock('brief'),
     '',
     '[슬라이드 분량 — 초과하면 실패]',
