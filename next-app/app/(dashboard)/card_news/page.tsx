@@ -192,13 +192,33 @@ export default function CardNewsPage() {
         const num = parseInt(slideBlocks[i], 10);
         const block = slideBlocks[i + 1] || '';
         const roleMatch = block.match(/^(.+?)[\n\r]/);
-        const titleMatch = block.match(/\*\*제목\*\*[:\s]*(.+)/m) || block.match(/\*\*메인.*?\*\*[:\s]*(.+)/m);
-        const bodyMatch = block.match(/\*\*본문\*\*[:\s]*([\s\S]*?)(?=\*\*|$)/m) || block.match(/\*\*부제\*\*[:\s]*(.+)/m);
+        const titleMatch = block.match(/\*\*제목\*\*[:\s]*(.+)/m)
+          || block.match(/\*\*메인.*?\*\*[:\s]*(.+)/m)
+          || block.match(/\*\*핵심.*?\*\*[:\s]*(.+)/m)
+          || block.match(/\*\*마무리.*?\*\*[:\s]*(.+)/m)
+          || block.match(/\*\*타이틀\*\*[:\s]*(.+)/m)
+          || block.match(/\*\*메시지\*\*[:\s]*(.+)/m);
+        const bodyMatch = block.match(/\*\*본문\*\*[:\s]*([\s\S]*?)(?=\*\*|$)/m)
+          || block.match(/\*\*부제\*\*[:\s]*(.+)/m)
+          || block.match(/\*\*설명\*\*[:\s]*([\s\S]*?)(?=\*\*|$)/m)
+          || block.match(/\*\*내용\*\*[:\s]*([\s\S]*?)(?=\*\*|$)/m)
+          || block.match(/\*\*상담.*?\*\*[:\s]*(.+)/m)
+          || block.match(/\*\*안내\*\*[:\s]*(.+)/m);
+
+        const role = roleMatch?.[1]?.replace(/\*\*/g, '').trim() || `${num}장`;
+        let title = titleMatch?.[1]?.trim();
+        let body = bodyMatch?.[1]?.trim() || '';
+        if (!title) {
+          const lines = block.split('\n').map(l => l.replace(/\*\*/g, '').replace(/^[-*]\s*/, '').trim()).filter(Boolean);
+          title = lines[1] || lines[0] || `슬라이드 ${num}`;
+          body = lines.slice(2).join(' ').substring(0, 100) || body;
+        }
+
         parsedCards.push({
           index: num,
-          role: roleMatch?.[1]?.replace(/\*\*/g, '').trim() || `${num}장`,
-          title: titleMatch?.[1]?.trim() || `슬라이드 ${num}`,
-          body: bodyMatch?.[1]?.trim() || '',
+          role,
+          title: title || `슬라이드 ${num}`,
+          body,
           imagePrompt: '', // Step 2에서 생성
           imageUrl: null,
           imageHistory: [],
@@ -206,7 +226,9 @@ export default function CardNewsPage() {
       }
       if (parsedCards.length === 0) {
         for (let i = 0; i < slideCount; i++) {
-          parsedCards.push({ index: i + 1, role: i === 0 ? '표지' : i === slideCount - 1 ? '마무리' : `본문 ${i}`, title: `슬라이드 ${i + 1}`, body: '', imagePrompt: '', imageUrl: null, imageHistory: [] });
+          const fallbackRole = i === 0 ? '표지' : i === slideCount - 1 ? '마무리 표지' : `본문 ${i}`;
+          const fallbackTitle = i === 0 ? topic : i === slideCount - 1 ? '상담을 기다립니다' : `슬라이드 ${i + 1}`;
+          parsedCards.push({ index: i + 1, role: fallbackRole, title: fallbackTitle, body: '', imagePrompt: '', imageUrl: null, imageHistory: [] });
         }
       }
 
