@@ -9,9 +9,21 @@ require('dotenv').config();
 
 // 환경변수에서 YouTube 쿠키 파일 생성
 if (process.env.YOUTUBE_COOKIES) {
-  const cookiePath = pathModule.join(__dirname, '..', 'youtube-cookies.txt');
-  fs.writeFileSync(cookiePath, process.env.YOUTUBE_COOKIES);
+  const paths = [
+    pathModule.join(__dirname, '..', 'youtube-cookies.txt'),
+    pathModule.join(__dirname, '..', 'cookies.txt'),
+  ];
+  for (const p of paths) {
+    fs.writeFileSync(p, process.env.YOUTUBE_COOKIES);
+  }
   console.log('✅ YouTube 쿠키 파일 생성 완료');
+} else {
+  const fallback = pathModule.join(__dirname, '..', 'cookies.txt');
+  if (fs.existsSync(fallback)) {
+    console.log('📎 기존 cookies.txt 사용');
+  } else {
+    console.log('⚠️ YouTube 쿠키 없음 — YOUTUBE_COOKIES 환경변수 설정 권장');
+  }
 }
 
 const naverCrawlerRouter = require('./routes/naver-crawler');
@@ -51,15 +63,22 @@ app.use(express.urlencoded({ extended: true }));
 
 // Health check
 app.get('/health', (req, res) => {
-  let ytdlpVersion = 'unknown';
+  let ytdlpVersion = 'not installed';
+  let ffmpegVersion = 'not installed';
   try { ytdlpVersion = execSync('yt-dlp --version').toString().trim(); } catch {}
-  const cookiePath = pathModule.join(__dirname, '..', 'youtube-cookies.txt');
+  try { ffmpegVersion = execSync('ffmpeg -version 2>&1 | head -1').toString().trim(); } catch {}
+  const cookiePaths = [
+    pathModule.join(__dirname, '..', 'youtube-cookies.txt'),
+    pathModule.join(__dirname, '..', 'cookies.txt'),
+  ];
+  const hasCookies = cookiePaths.some(p => fs.existsSync(p));
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
     ytdlpVersion,
-    hasCookies: fs.existsSync(cookiePath),
+    ffmpegVersion,
+    hasCookies,
     hasProxy: !!process.env.PROXY_URL,
   });
 });
