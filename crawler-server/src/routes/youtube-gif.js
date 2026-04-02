@@ -3,6 +3,7 @@ const { execFile } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const { glob } = require('fs').promises ? fs : { glob: null };
 
 const router = express.Router();
 
@@ -28,9 +29,9 @@ function ytdlpDownload(videoUrl, outputPath, start, end) {
     const sectionStart = Math.max(0, start - 5);
     const sectionEnd = end + 5;
 
-    const commonArgs = [
+    const baseArgs = (playerClient) => [
       '--no-check-certificates',
-      '--extractor-args', 'youtube:player_client=web',
+      ...(playerClient ? ['--extractor-args', `youtube:player_client=${playerClient}`] : []),
       '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
       ...(cookiePath ? ['--cookies', cookiePath] : []),
       ...(PROXY_URL ? ['--proxy', PROXY_URL] : []),
@@ -41,32 +42,52 @@ function ytdlpDownload(videoUrl, outputPath, start, end) {
 
     const attempts = [
       {
-        label: '480p 구간 다운로드',
+        label: 'android 클라이언트 + 구간',
         args: [
-          '-f', 'bestvideo[height<=480]+bestaudio/best[height<=480]/bestvideo+bestaudio/best',
+          '-f', 'bestvideo[height<=480]+bestaudio/best[height<=480]/best',
           '--merge-output-format', 'mp4',
           '--download-sections', `*${sectionStart}-${sectionEnd}`,
           '--force-keyframes-at-cuts',
-          ...commonArgs, videoUrl,
+          ...baseArgs('android'), videoUrl,
         ],
         timeout: 60000,
       },
       {
-        label: '아무 포맷 구간 다운로드',
+        label: 'ios 클라이언트 + 구간',
         args: [
+          '-f', 'bestvideo[height<=480]+bestaudio/best[height<=480]/best',
           '--merge-output-format', 'mp4',
           '--download-sections', `*${sectionStart}-${sectionEnd}`,
           '--force-keyframes-at-cuts',
-          ...commonArgs, videoUrl,
+          ...baseArgs('ios'), videoUrl,
         ],
         timeout: 60000,
       },
       {
-        label: '전체 다운로드 (최저화질)',
+        label: 'mweb 클라이언트 + 구간',
+        args: [
+          '--merge-output-format', 'mp4',
+          '--download-sections', `*${sectionStart}-${sectionEnd}`,
+          '--force-keyframes-at-cuts',
+          ...baseArgs('mweb'), videoUrl,
+        ],
+        timeout: 60000,
+      },
+      {
+        label: 'android 전체 다운로드 (최저화질)',
         args: [
           '-f', 'worstvideo+worstaudio/worst',
           '--merge-output-format', 'mp4',
-          ...commonArgs, videoUrl,
+          ...baseArgs('android'), videoUrl,
+        ],
+        timeout: 120000,
+      },
+      {
+        label: '기본값 전체 다운로드 (최후 수단)',
+        args: [
+          '-f', 'worst',
+          '--merge-output-format', 'mp4',
+          ...baseArgs(null), videoUrl,
         ],
         timeout: 120000,
       },
@@ -74,7 +95,7 @@ function ytdlpDownload(videoUrl, outputPath, start, end) {
 
     const tryAttempt = (idx) => {
       if (idx >= attempts.length) {
-        reject(new Error('모든 다운로드 방식 실패. 영상 URL을 확인하세요.'));
+        reject(new Error('모든 다운로드 방식 실패. YouTube가 서버 IP를 차단했을 수 있습니다. Railway 로그에서 상세 에러를 확인하세요.'));
         return;
       }
       const { label, args: attemptArgs, timeout } = attempts[idx];
