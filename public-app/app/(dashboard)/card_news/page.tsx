@@ -261,6 +261,13 @@ ${cardsInfo}
 - visual 필드에 동일한 스타일 키워드를 매 카드에 반복
 - 표지와 마무리도 같은 그리드 사용. 예외 없음
 
+[⚠️ 비주얼 일관성 — 가장 중요한 규칙]
+모든 카드의 visual 필드에 반드시 동일한 스타일 키워드를 포함하세요:
+- 동일한 배경색 (예: "연한 핑크 배경" → 모든 카드에 "연한 핑크 배경")
+- 동일한 일러스트 스타일 (예: "3D 파스텔 일러스트" → 모든 카드에 "3D 파스텔 일러스트")
+- 동일한 장식 요소 (예: "둥근 도형 장식" → 모든 카드에 "둥근 도형 장식")
+- 달라지는 것은 오직 일러스트의 "주제"만 (예: 치아, 잇몸, 임플란트...)
+
 [프롬프트 작성 규칙]
 1. 각 카드에 표시될 한글 텍스트:
    - subtitle: 8자 이내 짧은 문구
@@ -289,17 +296,28 @@ visual: (배경 비주얼 묘사)
       const data = await res.json() as { text?: string; error?: string };
       if (!res.ok || !data.text) { setError(data.error || '프롬프트 생성 실패'); return; }
 
-      // 파싱: ---CARD N--- 구분
-      const promptBlocks = data.text.split(/---CARD\s*\d+---/i).filter(b => b.trim());
+      // 파싱: ---CARD N--- 구분 (다양한 구분자 지원)
+      let promptBlocks = data.text.split(/---\s*CARD\s*\d+\s*---/i).filter(b => b.trim());
+      if (promptBlocks.length < cards.length) {
+        promptBlocks = data.text.split(/(?:CARD\s*\d+[:\s]|\[\s*CARD\s*\d+\s*\])/i).filter(b => b.trim());
+      }
+      if (promptBlocks.length < cards.length) {
+        promptBlocks = data.text.split(/(?=subtitle:)/i).filter(b => b.trim());
+      }
+      console.log(`[카드뉴스] 프롬프트 블록 ${promptBlocks.length}개 파싱 (카드 ${cards.length}장)`);
       // 디자인 템플릿 블록 (API route의 buildCardNewsPromptFull이 파싱)
       const tmplBlock = tmpl ? `\n[디자인 템플릿: ${tmpl.name}]\n${tmpl.stylePrompt}\n배경색: ${tmpl.colors.background}` : '';
 
       const updatedCards = cards.map((card, idx) => {
         const block = promptBlocks[idx] || '';
-        const sub = block.match(/subtitle:\s*(.+)/i)?.[1]?.trim().replace(/^["']|["']$/g, '') || card.role;
-        const main = block.match(/mainTitle:\s*(.+)/i)?.[1]?.trim().replace(/^["']|["']$/g, '') || card.title;
-        const desc = block.match(/description:\s*(.+)/i)?.[1]?.trim().replace(/^["']|["']$/g, '') || '';
-        const visual = block.match(/visual:\s*(.+)/i)?.[1]?.trim().replace(/^["']|["']$/g, '') || `${topic} 관련 의료 일러스트`;
+        const isDuplicate = idx > 0 && block === promptBlocks[idx - 1];
+        if (!block.trim() || isDuplicate) {
+          console.warn(`[카드뉴스] 카드 ${card.index} 프롬프트 파싱 실패, 원고 기반 폴백`);
+        }
+        const sub = (!isDuplicate && block.match(/subtitle:\s*(.+)/i)?.[1]?.trim().replace(/^["']|["']$/g, '')) || card.role;
+        const main = (!isDuplicate && block.match(/mainTitle:\s*(.+)/i)?.[1]?.trim().replace(/^["']|["']$/g, '')) || card.title;
+        const desc = (!isDuplicate && block.match(/description:\s*(.+)/i)?.[1]?.trim().replace(/^["']|["']$/g, '')) || card.body?.substring(0, 30) || '';
+        const visual = (!isDuplicate && block.match(/visual:\s*(.+)/i)?.[1]?.trim().replace(/^["']|["']$/g, '')) || `${topic} 관련 의료 일러스트`;
 
         // API route의 buildCardNewsPromptFull 파서가 인식하는 형식으로 조립
         const imagePrompt = [
@@ -327,34 +345,85 @@ visual: (배경 비주얼 묘사)
     setProgress(`이미지 생성 중... (0/${cards.length}장)`);
 
     try {
-      // 1장: 스타일 기준 (직렬), 2장~: 1장 참조하여 병렬 생성
+      // ═══ Phase 1: 카드 1 생성 (스타일 기준) ═══
       setProgress(`이미지 생성 중... (1/${cards.length}장) — 스타일 기준 설정`);
       const firstCard = cards[0];
-      const firstImageUrl = await generateCardImage(firstCard.imagePrompt, firstCard.index);
-      const imageResults: { index: number; url: string | null }[] = [{ index: firstCard.index, url: firstImageUrl }];
+      let firstImageUrl = await generateCardImage(firstCard.imagePrompt, firstCard.index);
+      if (!firstImageUrl) {
+        setProgress('카드 1 재시도 중...');
+        firstImageUrl = await generateCardImage(firstCard.imagePrompt, firstCard.index);
+      }
+      if (!firstImageUrl) {
+        setError('첫 번째 카드 이미지 생성에 실패했습니다. 다시 시도해주세요.');
+        return;
+      }
 
-      if (cards.length > 1) {
-        const remaining = cards.slice(1);
-        const styleContext = `[1장 스타일 참조]\n1장 프롬프트: ${firstCard.imagePrompt}\n→ 위 프롬프트의 배경색, 일러스트 스타일, 레이아웃을 정확히 따라하세요.`;
-        let completed = 1;
-        const restResults = await Promise.all(
-          remaining.map(async (card) => {
-            const enrichedPrompt = `${styleContext}\n\n${card.imagePrompt}`;
-            const url = await generateCardImage(enrichedPrompt, card.index, firstImageUrl || undefined);
-            completed++;
-            setProgress(`이미지 생성 중... (${completed}/${cards.length}장)`);
-            return { index: card.index, url };
+      // ═══ Phase 2: 카드 1 스타일 분석 ═══
+      setProgress('스타일 분석 중... (일관성 향상)');
+      let styleSheet = '1장과 동일한 배경색, 레이아웃, 일러스트 스타일을 사용하세요.';
+      try {
+        const styleRes = await fetch('/api/gemini', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            prompt: `아래 카드뉴스 1장의 프롬프트를 보고 디자인 스타일을 추출해주세요.
+
+[1장 프롬프트]
+${firstCard.imagePrompt}
+
+아래 형식으로만 출력:
+BACKGROUND: (배경색/그라데이션)
+ILLUSTRATION_STYLE: (일러스트 스타일 키워드 5개)
+LAYOUT: (텍스트/일러스트 배치)
+DECORATIVE: (장식 요소)`,
+            model: 'gemini-3.1-flash-lite-preview',
+            temperature: 0.2,
+            maxOutputTokens: 300,
+            thinkingLevel: 'none',
           }),
-        );
-        imageResults.push(...restResults);
+        });
+        const styleData = await styleRes.json();
+        if (styleData.text) styleSheet = styleData.text.trim();
+      } catch { /* 스타일 분석 실패 시 기본 텍스트 사용 */ }
+
+      // ═══ Phase 3: 카드 2~N 순차 생성 (체인 참조) ═══
+      const imageResults: { index: number; url: string | null }[] = [
+        { index: firstCard.index, url: firstImageUrl },
+      ];
+      let prevImageUrl = firstImageUrl;
+
+      for (let i = 1; i < cards.length; i++) {
+        const card = cards[i];
+        setProgress(`이미지 생성 중... (${i + 1}/${cards.length}장)`);
+
+        const consistencyBlock = `[🔒 스타일 시트 — 1장에서 추출. 절대 변경 금지]\n${styleSheet}\n\n[⚠️ 위 스타일을 100% 동일하게 적용하세요.]`;
+        const enrichedPrompt = `${consistencyBlock}\n\n${card.imagePrompt}`;
+
+        let url = await generateCardImage(enrichedPrompt, card.index, prevImageUrl);
+        if (!url) {
+          setProgress(`카드 ${i + 1} 재시도 중...`);
+          url = await generateCardImage(enrichedPrompt, card.index, firstImageUrl);
+        }
+
+        imageResults.push({ index: card.index, url });
+        if (url) prevImageUrl = url;
       }
 
       const finalCards = cards.map(card => {
         const result = imageResults.find(r => r.index === card.index);
-        return { ...card, imageUrl: result?.url || null, imageHistory: result?.url ? [{ url: result.url, prompt: card.imagePrompt, createdAt: Date.now() }] : [] };
+        return {
+          ...card,
+          imageUrl: result?.url || null,
+          imageHistory: result?.url ? [{ url: result.url, prompt: card.imagePrompt, createdAt: Date.now() }] : [],
+        };
       });
       setCards(finalCards);
       setPipelineStep('idle');
+
+      const failedCount = finalCards.filter(c => !c.imageUrl).length;
+      if (failedCount > 0) {
+        setError(`${failedCount}장의 이미지 생성에 실패했습니다. 해당 카드를 클릭하여 재생성하세요.`);
+      }
 
       // 저장
       try {
