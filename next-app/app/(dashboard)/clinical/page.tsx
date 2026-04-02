@@ -5,6 +5,8 @@ import { buildClinicalPrompt, ARTICLE_TYPES } from '../../../lib/clinicalPrompt'
 import { getSessionSafe, supabase } from '../../../lib/supabase';
 import { CATEGORIES } from '../../../lib/constants';
 import { sanitizeHtml } from '../../../lib/sanitize';
+import { useCreditContext } from '../layout';
+import { useCredit } from '../../../lib/creditService';
 
 const inputCls = 'w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm outline-none focus:border-blue-400 focus:bg-white focus:ring-2 focus:ring-blue-500/10 transition-all placeholder:text-slate-300';
 
@@ -15,6 +17,8 @@ interface SuggestedTopic {
 }
 
 export default function ClinicalPage() {
+  const creditCtx = useCreditContext();
+
   // ── Step 1: 이미지 분석 ──
   const [images, setImages] = useState<{ file: File; dataUrl: string }[]>([]);
   const [category, setCategory] = useState('치과');
@@ -191,6 +195,17 @@ JSON만 출력: { "analysis": "...", "topics": [{ "topic": "...", "title": "..."
   const handleGenerate = async () => {
     const topic = selectedTopic || customTopic.trim();
     if (!topic) return;
+
+    // 크레딧 차감 (첫 생성만)
+    if (creditCtx.userId && creditCtx.creditInfo) {
+      const creditResult = await useCredit(creditCtx.userId);
+      if (!creditResult.success) {
+        setError(creditResult.error === 'no_credits' ? '크레딧이 모두 소진되었습니다.' : '크레딧 차감에 실패했습니다.');
+        return;
+      }
+      creditCtx.setCreditInfo({ credits: creditResult.remaining, totalUsed: (creditCtx.creditInfo.totalUsed || 0) + 1 });
+    }
+
     setIsGenerating(true);
     setGeneratedContent(null);
     setScores(null);

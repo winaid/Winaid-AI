@@ -8,8 +8,12 @@ import { getSessionSafe } from '../../../lib/supabase';
 import { getHospitalStylePrompt } from '../../../lib/styleService';
 import { ErrorPanel } from '../../../components/GenerationResult';
 import { sanitizeHtml } from '../../../lib/sanitize';
+import { useCreditContext } from '../layout';
+import { useCredit } from '../../../lib/creditService';
 
 export default function PressPage() {
+  const creditCtx = useCreditContext();
+
   const [topic, setTopic] = useState('');
   const [keywords, setKeywords] = useState('');
   const [hospitalName, setHospitalName] = useState('');
@@ -38,6 +42,16 @@ export default function PressPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!topic.trim() || !doctorName.trim() || isGenerating) return;
+
+    // 크레딧 차감 (첫 생성만)
+    if (creditCtx.userId && creditCtx.creditInfo) {
+      const creditResult = await useCredit(creditCtx.userId);
+      if (!creditResult.success) {
+        setError(creditResult.error === 'no_credits' ? '크레딧이 모두 소진되었습니다.' : '크레딧 차감에 실패했습니다.');
+        return;
+      }
+      creditCtx.setCreditInfo({ credits: creditResult.remaining, totalUsed: (creditCtx.creditInfo.totalUsed || 0) + 1 });
+    }
 
     setIsGenerating(true);
     setError(null);

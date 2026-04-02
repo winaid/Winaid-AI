@@ -5,6 +5,8 @@ import { buildYoutubePrompt, YOUTUBE_WRITING_STYLES } from '../../../lib/youtube
 import { supabase } from '../../../lib/supabase';
 import { CATEGORIES } from '../../../lib/constants';
 import { sanitizeHtml } from '../../../lib/sanitize';
+import { useCreditContext } from '../layout';
+import { useCredit } from '../../../lib/creditService';
 
 const inputCls = 'w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm outline-none focus:border-blue-400 focus:bg-white focus:ring-2 focus:ring-blue-500/10 transition-all placeholder:text-slate-300';
 
@@ -25,6 +27,8 @@ function formatTime(seconds: number) {
 }
 
 export default function YoutubePage() {
+  const creditCtx = useCreditContext();
+
   // ── Step 1 ──
   const [youtubeUrl, setYoutubeUrl] = useState('');
   const [isExtracting, setIsExtracting] = useState(false);
@@ -208,6 +212,17 @@ ${summaryText.slice(0, 2000)}
   const handleGenerate = async () => {
     const topic = selectedTopic || customTopic.trim();
     if (!topic || !transcript) return;
+
+    // 크레딧 차감 (첫 생성만)
+    if (creditCtx.userId && creditCtx.creditInfo) {
+      const creditResult = await useCredit(creditCtx.userId);
+      if (!creditResult.success) {
+        setError(creditResult.error === 'no_credits' ? '크레딧이 모두 소진되었습니다.' : '크레딧 차감에 실패했습니다.');
+        return;
+      }
+      creditCtx.setCreditInfo({ credits: creditResult.remaining, totalUsed: (creditCtx.creditInfo.totalUsed || 0) + 1 });
+    }
+
     setIsGenerating(true);
     setGeneratedContent(null);
     setScores(null);
