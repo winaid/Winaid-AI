@@ -5,10 +5,14 @@
  * GET ?query=키워드&display=10
  */
 import { NextRequest, NextResponse } from 'next/server';
+import { checkAuth } from '../../../../lib/apiAuth';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
+  const authError = await checkAuth(request);
+  if (authError) return authError;
+
   const { searchParams } = request.nextUrl;
   const query = searchParams.get('query');
   const rawDisplay = parseInt(searchParams.get('display') || '10', 10);

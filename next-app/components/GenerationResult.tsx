@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import type { BlogSection } from '../lib/types';
+import { sanitizeHtml } from '../lib/sanitize';
 
 // ── 간이 Markdown → HTML 변환 ──
 
@@ -49,13 +50,6 @@ function escapeHtml(str: string): string {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
-}
-
-function sanitizeHtml(html: string): string {
-  return html
-    .replace(/<script[\s\S]*?<\/script>/gi, '')
-    .replace(/on\w+\s*=\s*["'][^"']*["']/gi, '')
-    .replace(/javascript\s*:/gi, '');
 }
 
 // ── 에러 패널 ──

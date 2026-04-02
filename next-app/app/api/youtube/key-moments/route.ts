@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { checkAuth } from '../../../../lib/apiAuth';
 
 export const maxDuration = 60;
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest) {
+  const authError = await checkAuth(req);
+  if (authError) return authError;
+
   try {
     const { transcript } = await req.json() as { transcript?: string };
     if (!transcript?.trim()) {

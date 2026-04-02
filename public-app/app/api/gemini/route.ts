@@ -6,6 +6,7 @@
  * 미포함: 크레딧 차감, generation token, raw mode, 이미지 생성
  */
 import { NextRequest, NextResponse } from 'next/server';
+import { checkAuth } from '../../../lib/apiAuth';
 
 export const maxDuration = 300;
 export const dynamic = 'force-dynamic';
@@ -144,6 +145,14 @@ interface GeminiCandidate {
 }
 
 export async function POST(request: NextRequest) {
+  // 랜딩 챗봇은 비로그인 허용 (systemInstruction에 "윈에이드" 또는 "WINAID" 포함)
+  const clonedBody = await request.clone().json();
+  const isLandingChat = (clonedBody?.systemInstruction || '').match(/윈에이드|WINAID/i);
+  if (!isLandingChat) {
+    const authError = await checkAuth(request);
+    if (authError) return authError;
+  }
+
   const keys = getKeys();
   if (keys.length === 0) {
     return NextResponse.json(

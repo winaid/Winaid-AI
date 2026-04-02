@@ -5,6 +5,7 @@ import { buildRefinePrompt, buildChatRefinePrompt, REFINE_OPTIONS, type RefineMo
 import { savePost } from '../../../lib/postStorage';
 import { getSessionSafe } from '../../../lib/supabase';
 import { ErrorPanel } from '../../../components/GenerationResult';
+import { sanitizeHtml } from '../../../lib/sanitize';
 
 interface ChatMsg { role: 'user' | 'assistant'; content: string; ts: Date; }
 
@@ -302,7 +303,7 @@ export default function RefinePage() {
                 </div>
               )}
               <style>{`mark.added { background: #dcfce7; padding: 0 2px; border-radius: 2px; } mark.changed { background: #fef3c7; padding: 0 2px; border-radius: 2px; }`}</style>
-              <div className="p-6" dangerouslySetInnerHTML={{ __html: showChanges ? refinedHtml : refinedHtml.replace(/<mark[^>]*>([\s\S]*?)<\/mark>/gi, '$1') }} />
+              <div className="p-6" dangerouslySetInnerHTML={{ __html: sanitizeHtml(showChanges ? refinedHtml : refinedHtml.replace(/<mark[^>]*>([\s\S]*?)<\/mark>/gi, '$1')) }} />
             </div>
             <button type="button" onClick={() => { setOriginalText(refinedHtml); setRefinedHtml(null); setSaveStatus(null); }}
               className="w-full py-2.5 text-xs font-bold text-violet-600 bg-violet-50 border border-violet-200 rounded-xl hover:bg-violet-100 transition-all flex items-center justify-center gap-2">

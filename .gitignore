@@ -49,3 +49,5 @@ next-app/node_modules/
 next-app/out/
 .next/
 *.tsbuildinfo
+cookies.txt
+youtube-cookies.txt

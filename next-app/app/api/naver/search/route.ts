@@ -5,8 +5,12 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { checkAuth } from '../../../../lib/apiAuth';
 
 export async function POST(request: NextRequest) {
+  const authError = await checkAuth(request);
+  if (authError) return authError;
+
   try {
     const body = (await request.json()) as { query?: string; display?: number; type?: string };
     const { query, display: rawDisplay = 10, type = 'webkr' } = body;

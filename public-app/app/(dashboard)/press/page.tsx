@@ -6,6 +6,7 @@ import { savePost } from '../../../lib/postStorage';
 import { getSessionSafe, getSupabaseClient, isSupabaseConfigured } from '../../../lib/supabase';
 import { getHospitalStylePrompt } from '../../../lib/styleService';
 import { ErrorPanel } from '../../../components/GenerationResult';
+import { sanitizeHtml } from '../../../lib/sanitize';
 
 export default function PressPage() {
   const [topic, setTopic] = useState('');
@@ -244,7 +245,7 @@ export default function PressPage() {
               <textarea value={editHtml} onChange={e => setEditHtml(e.target.value)}
                 className="w-full min-h-[600px] p-6 text-sm font-mono text-slate-700 border-none outline-none resize-none" />
             ) : (
-              <div className="p-6" dangerouslySetInnerHTML={{ __html: generatedHtml }} />
+              <div className="p-6" dangerouslySetInnerHTML={{ __html: sanitizeHtml(generatedHtml) }} />
             )}
           </div>
         ) : (
