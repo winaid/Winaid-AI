@@ -60,6 +60,7 @@ app.get('/health', (req, res) => {
     uptime: process.uptime(),
     ytdlpVersion,
     hasCookies: fs.existsSync(cookiePath),
+    hasProxy: !!process.env.PROXY_URL,
   });
 });
 
