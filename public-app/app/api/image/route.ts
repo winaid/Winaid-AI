@@ -275,6 +275,96 @@ Background: ${bgColor} gradient. Clean readable Korean font.
 ⛔ No hashtags, watermarks, logos. Do NOT render instruction labels.`.trim();
 }
 
+/** Stage 1: Flash용 — 일러스트/배경만 (텍스트 없이) */
+function buildCardNewsIllustrationPrompt(body: ImageRequestBody): string {
+  const style = body.imageStyle || 'illustration';
+  const styleBlock = buildCardStyleBlock(style);
+  const hasRefImage = !!body.referenceImage;
+
+  const visualMatch = body.prompt.match(/비주얼:\s*([^\n]+)/i);
+  const visual = visualMatch?.[1]?.trim() || '';
+  const bgMatch = body.prompt.match(/배경색:\s*(#[A-Fa-f0-9]{3,6})/i);
+  const bgColor = bgMatch?.[1] || '#E8F4FD';
+  const tmplMatch = body.prompt.match(/\[디자인 템플릿:[^\]]*\][\s\S]*/m);
+  const templateBlock = tmplMatch?.[0] || '';
+
+  const refImageRule = hasRefImage ? `
+🔒 [STYLE CLONE] A reference image is attached.
+Clone its EXACT design: same background color/gradient, same illustration style, same layout, same decorative elements.
+Change ONLY the illustration subject.` : '';
+
+  return `[ROLE] Korean medical card news BACKGROUND DESIGNER.
+[GOAL] 1:1 square (1080x1080px) card background image.
+[CRITICAL] Generate ONLY the background and illustration. DO NOT render ANY text, letters, words, or characters.
+
+${refImageRule}
+
+🚫 ABSOLUTE RULE: ZERO TEXT IN THIS IMAGE
+- No Korean text, no English text, no numbers, no letters
+- No title, no subtitle, no description, no labels
+- No watermarks, no logos, no brand names
+- The image must be PURE VISUAL — illustration and background ONLY
+
+[LAYOUT ZONES — leave space for text overlay later]
+- Top 15%: clean background (subtitle will be added later)
+- Center 30%: clean background (main title will be added later)
+- Bottom 40%: illustration/visual element here
+- Bottom 15%: clean background (description will be added later)
+
+${visual ? `[ILLUSTRATION] ${visual}` : ''}
+[BACKGROUND] ${bgColor} gradient, clean and minimal
+${CARD_FRAME_RULE}
+${styleBlock}
+${templateBlock}
+
+Generate a beautiful card background. NO TEXT WHATSOEVER.`.trim();
+}
+
+/** Stage 2: Pro용 — 기존 이미지 위에 한글 텍스트만 추가 */
+function buildCardNewsTextOverlayPrompt(body: ImageRequestBody): string {
+  const parseField = (text: string, key: string): string => {
+    const match = text.match(new RegExp(`${key}:\\s*"((?:[^"\\\\]|\\\\.)*)"`, 'i'))
+      || text.match(new RegExp(`${key}:\\s*([^\\n,]+)`, 'i'));
+    return match?.[1]?.trim().replace(/^["']|["']$/g, '') || '';
+  };
+
+  const subtitle = parseField(body.prompt, 'subtitle');
+  const mainTitle = parseField(body.prompt, 'mainTitle');
+  const description = parseField(body.prompt, 'description');
+
+  if (!subtitle && !mainTitle) return '';
+
+  return `[ROLE] Korean typography specialist. You add text to existing images.
+[GOAL] Take the attached image and add ONLY Korean text. Do NOT change the background, illustration, or any visual element.
+
+🔒 [IMAGE PRESERVATION — MOST IMPORTANT]
+The attached image is the final background. You MUST keep it EXACTLY as is:
+- Same background color, gradient, illustration
+- Same layout, decorative elements, everything
+- ONLY ADD text on top. Nothing else changes.
+
+🚨 [RENDER THIS EXACT KOREAN TEXT]
+${subtitle ? `SUBTITLE (small, top area, 14-16pt): "${subtitle}"` : ''}
+MAIN TITLE (large, bold, center area, 28-36pt): "${mainTitle}"
+${description ? `DESCRIPTION (small, below title, 12-14pt): "${description}"` : ''}
+
+[TEXT STYLE]
+- Clean, modern Korean sans-serif font
+- Title: bold, dark color (#1A1A1A or white depending on background)
+- Subtitle: lighter weight, slightly muted color
+- Description: small, muted color
+- All text horizontally centered
+- Ensure maximum readability against the background
+
+[QUALITY]
+- Every Korean character MUST be perfectly readable
+- If any character might be garbled, use fewer/shorter words
+- Text must be crisp and sharp, not blurry
+
+⛔ Do NOT add new visual elements, decorations, or change the background in any way.
+⛔ Do NOT add hashtags, watermarks, or placeholder text.`.trim();
+}
+
 // ── 이미지 카테고리 감지 (default 모드용) ──
 
 function detectImageCategory(prompt: string): string {
@@ -511,6 +601,86 @@ Gemini에 보내는 이미지 프롬프트의 품질이 결과를 결정합니�
       parts.push({
         inlineData: { mimeType: match[1], data: match[2] },
       });
+    }
+  }
+
+  // ═══ 카드뉴스 2단계 생성: Flash(밑그림) → Pro(글씨) ═══
+  if (isCardNewsMode) {
+    const illustrationPrompt = buildCardNewsIllustrationPrompt(body);
+    const textOverlayPrompt = buildCardNewsTextOverlayPrompt(body);
+    const hasTextToRender = !!textOverlayPrompt;
+
+    // ── Stage 1: Flash로 일러스트 생성 ──
+    const stage1Parts: Array<Record<string, unknown>> = [{ text: illustrationPrompt }];
+    if (body.referenceImage) {
+      const refMatch = body.referenceImage.match(/^data:(image\/\w+);base64,(.+)$/);
+      if (refMatch) stage1Parts.push({ inlineData: { mimeType: refMatch[1], data: refMatch[2] } });
+    }
+
+    const FLASH_MODELS = ['gemini-3.1-flash-image-preview', 'gemini-2.5-flash-image'];
+    let stage1Image: { mimeType: string; data: string } | null = null;
+
+    for (const model of FLASH_MODELS) {
+      for (let ki = 0; ki < keys.length; ki++) {
+        const keyIdx = (keyIndex + ki) % keys.length;
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 60000);
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${keys[keyIdx]}`;
+        try {
+          const response = await fetch(apiUrl, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contents: [{ role: 'user', parts: stage1Parts }], generationConfig: { responseModalities: ['IMAGE', 'TEXT'], temperature: 0.6 } }),
+            signal: controller.signal,
+          });
+          clearTimeout(timeoutId);
+          if (!response.ok) { const s = response.status; if (s === 429 || s === 503) { await new Promise(r => setTimeout(r, 1500)); continue; } if (s === 400 || s === 404) break; continue; }
+          keyIndex = (keyIdx + 1) % keys.length;
+          const data = await response.json();
+          const imgPart = (data?.candidates?.[0]?.content?.parts || []).find((p: { inlineData?: { data?: string } }) => p.inlineData?.data);
+          if (imgPart?.inlineData) { stage1Image = { mimeType: imgPart.inlineData.mimeType || 'image/png', data: imgPart.inlineData.data }; break; }
+        } catch (err: unknown) { clearTimeout(timeoutId); if ((err as Error).name === 'AbortError') break; await new Promise(r => setTimeout(r, 1500)); continue; }
+      }
+      if (stage1Image) break;
+    }
+
+    if (!stage1Image) {
+      console.log('[card_news] Stage 1 (Flash) failed, falling back to single-stage Pro');
+    } else if (!hasTextToRender) {
+      return NextResponse.json({ imageDataUrl: `data:${stage1Image.mimeType};base64,${stage1Image.data}`, mimeType: stage1Image.mimeType, model: 'flash(illustration)' });
+    } else {
+      // ── Stage 2: Pro로 텍스트 오버레이 ──
+      const stage2Parts: Array<Record<string, unknown>> = [
+        { text: textOverlayPrompt },
+        { inlineData: { mimeType: stage1Image.mimeType, data: stage1Image.data } },
+      ];
+      const PRO_MODELS = ['gemini-3-pro-image-preview', 'gemini-3.1-flash-image-preview'];
+
+      for (const model of PRO_MODELS) {
+        for (let ki = 0; ki < keys.length; ki++) {
+          const keyIdx = (keyIndex + ki) % keys.length;
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 120000);
+          const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${keys[keyIdx]}`;
+          try {
+            const response = await fetch(apiUrl, {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ contents: [{ role: 'user', parts: stage2Parts }], generationConfig: { responseModalities: ['IMAGE', 'TEXT'], temperature: 0.4 } }),
+              signal: controller.signal,
+            });
+            clearTimeout(timeoutId);
+            if (!response.ok) { const s = response.status; if (s === 429 || s === 503) { await new Promise(r => setTimeout(r, 1500)); continue; } if (s === 400 || s === 404) break; continue; }
+            keyIndex = (keyIdx + 1) % keys.length;
+            const data = await response.json();
+            const imgPart = (data?.candidates?.[0]?.content?.parts || []).find((p: { inlineData?: { data?: string } }) => p.inlineData?.data);
+            if (imgPart?.inlineData) {
+              return NextResponse.json({ imageDataUrl: `data:${imgPart.inlineData.mimeType || 'image/png'};base64,${imgPart.inlineData.data}`, mimeType: imgPart.inlineData.mimeType || 'image/png', model: `flash(illustration)+${model}(text)` });
+            }
+          } catch (err: unknown) { clearTimeout(timeoutId); if ((err as Error).name === 'AbortError') break; await new Promise(r => setTimeout(r, 1500)); continue; }
+        }
+      }
+
+      console.log('[card_news] Stage 2 (Pro text) failed, returning Stage 1 image without text');
+      return NextResponse.json({ imageDataUrl: `data:${stage1Image.mimeType};base64,${stage1Image.data}`, mimeType: stage1Image.mimeType, model: 'flash(illustration-only)' });
     }
   }
 
