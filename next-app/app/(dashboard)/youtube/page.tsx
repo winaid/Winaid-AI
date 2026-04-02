@@ -48,6 +48,7 @@ export default function YoutubePage() {
   const [activeMode, setActiveMode] = useState<'article' | 'gif'>('article');
 
   // ── GIF 관련 ──
+  const [videoDuration, setVideoDuration] = useState<number>(0);
   const [keyMoments, setKeyMoments] = useState<KeyMoment[]>([]);
   const [isDetectingMoments, setIsDetectingMoments] = useState(false);
   const [generatingGifIndex, setGeneratingGifIndex] = useState<number | null>(null);
@@ -78,33 +79,55 @@ export default function YoutubePage() {
     setTranscript('');
     setSummary('');
     setSuggestedTopics([]);
+    setKeyMoments([]);
+    setGeneratedGifs(new Map());
+    setVideoDuration(0);
     setVideoId(extractVideoId(youtubeUrl));
 
     try {
-      // ── 1단계: 영상 요약 (텍스트로 받기 — 파싱 실패 없음) ──
+      // ── 1단계: 영상 전체 시간순 분석 ──
       const summaryRes = await fetch('/api/gemini', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           prompt: `당신은 병원 마케팅 콘텐츠 전문가입니다.
-아래 YouTube 영상의 내용을 Google Search를 통해 분석해주세요.
+아래 YouTube 영상을 Google Search를 통해 **처음부터 끝까지** 분석해주세요.
 
 YouTube URL: ${youtubeUrl.trim()}
 
 [분석 규칙]
-⚠️ Google Search로 이 영상의 제목, 설명, 채널 정보 등을 수집하세요.
-⚠️ 이 영상에서 실제로 다루는 내용만 요약하세요.
-⚠️ 영상과 관련 없는 일반 의학 지식을 추가하지 마세요.
+⚠️ Google Search로 이 영상의 제목, 설명, 채널, 영상 길이 등 메타데이터를 수집하세요.
+⚠️ 영상의 **전체 흐름을 시간순으로** 분석하세요 — 도입부부터 마무리까지.
+⚠️ 영상과 관련 없는 일반 지식을 추가하지 마세요.
 ⚠️ "영상에서 확인 필요" 같은 문구는 쓰지 마세요.
 
-[요청: 영상 요약]
-영상의 핵심 내용을 구조적으로 정리하세요:
-- 영상의 전체 주제를 한 문장으로 (첫 줄)
-- 빈 줄 후 "첫째," 로 시작하는 포인트. 각 포인트는 2~3문장.
-- 각 포인트 사이에 반드시 빈 줄을 넣어 구분
-- 구체적 수치/사례/용어가 있으면 반드시 포함
-- 마지막에 빈 줄 후 "결론적으로," 한 문장 정리
+[요청: 시간순 전체 분석]
+다음 형식으로 작성하세요:
 
+영상 길이: 약 N분
+
+전체 주제: (한 문장)
+
+[도입부 0:00~]
+2~3문장으로 영상의 시작 부분 설명
+
+[전개 1 약 N:NN~]
+2~3문장으로 첫 번째 핵심 내용
+
+[전개 2 약 N:NN~]
+2~3문장으로 두 번째 핵심 내용
+
+[전개 3 약 N:NN~]
+2~3문장으로 세 번째 핵심 내용
+
+(영상 길이에 따라 전개 구간을 4~8개로 나누세요)
+
+[마무리 약 N:NN~]
+2~3문장으로 영상의 결론/마무리
+
+⚠️ 각 구간의 시작 시간을 반드시 포함하세요 (추정치라도).
+⚠️ 영상의 처음부터 끝까지 빠짐없이 다루세요.
+⚠️ 구체적 수치, 사례, 용어가 있으면 반드시 포함.
 ⚠️ JSON이 아닌 일반 텍스트로 작성하세요.`,
           model: 'gemini-3.1-pro-preview',
           temperature: 0.2,
@@ -123,7 +146,19 @@ YouTube URL: ${youtubeUrl.trim()}
       setSummary(summaryText);
       setTranscript(summaryText);
 
-      // ── 2단계: 주제 추천 (짧은 JSON 배열) ──
+      // 영상 길이 추출
+      const durationMatch = summaryText.match(/영상\s*길이[:\s]*약?\s*(\d+)\s*분/);
+      if (durationMatch) {
+        setVideoDuration(parseInt(durationMatch[1]) * 60);
+      } else {
+        const timeMatches = [...summaryText.matchAll(/(\d{1,2}):(\d{2})/g)];
+        if (timeMatches.length > 0) {
+          const last = timeMatches[timeMatches.length - 1];
+          setVideoDuration(parseInt(last[1]) * 60 + parseInt(last[2]) + 60);
+        }
+      }
+
+      // ── 2단계: 주제 추천 ──
       try {
         const topicsRes = await fetch('/api/gemini', {
           method: 'POST',
@@ -151,7 +186,6 @@ ${summaryText.slice(0, 2000)}
           if (Array.isArray(parsed)) setSuggestedTopics(parsed);
         }
       } catch {
-        // 주제 파싱 실패해도 요약은 정상 표시
         const arrMatch = summaryData.text.match(/\[[\s\S]*\]/);
         if (arrMatch) {
           try {
@@ -226,37 +260,53 @@ ${summaryText.slice(0, 2000)}
     }
   };
 
-  // ── GIF: 핵심 구간 감지 ──
+  // ── GIF: 핵심 구간 감지 (정확히 5개, 전체 영상 커버) ──
   const handleDetectMoments = async () => {
     if (!summary) return;
     setIsDetectingMoments(true);
+
+    const durationInfo = videoDuration > 0
+      ? `이 영상의 총 길이는 약 ${Math.round(videoDuration / 60)}분(${videoDuration}초)입니다.`
+      : '영상의 총 길이는 요약 내용에서 추정하세요.';
 
     try {
       const res = await fetch('/api/gemini', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          prompt: `아래는 병원 유튜브 영상의 요약입니다.
+          prompt: `아래는 병원 유튜브 영상의 시간순 분석입니다.
 
-[영상 요약]
+[영상 분석]
 ${summary}
 
+[영상 길이]
+${durationInfo}
+
 [요청]
-블로그나 SNS에 GIF로 활용하기 좋은 핵심 장면 3~5개를 추출해주세요.
+블로그나 SNS에 GIF로 활용하기 좋은 핵심 장면을 **정확히 5개** 추출해주세요.
+
+[필수 규칙]
+⚠️ 반드시 5개를 추출하세요 — 4개도 6개도 안 됩니다.
+⚠️ 영상의 **처음부터 끝까지 균등하게** 분포시키세요:
+   - 1번째: 영상 초반 (0~20% 지점)
+   - 2번째: 영상 전반부 (20~40% 지점)
+   - 3번째: 영상 중반 (40~60% 지점)
+   - 4번째: 영상 후반부 (60~80% 지점)
+   - 5번째: 영상 종반 (80~100% 지점)
+⚠️ 각 구간은 3~8초가 적당합니다.
+⚠️ start/end는 초 단위 정수입니다.
+⚠️ 위 영상 분석에 나온 시간대를 최대한 활용하세요.
 
 각 장면:
-- start: 예상 시작 시간 (초 단위, 정수)
-- end: 예상 끝 시간 (초 단위, start + 3~8초 범위)
-- description: 이 구간에 어떤 장면이 있는지 (한 줄)
-- usage: 추천 용도 (블로그 삽입 / SNS 공유 / 카드뉴스 배경)
+- start: 시작 시간 (초 단위, 정수)
+- end: 끝 시간 (초 단위, start + 3~8초)
+- description: 이 구간의 장면 설명 (한 줄)
+- usage: 추천 용도 (블로그 삽입 / SNS 공유 / 카드뉴스 배경 / 썸네일 / 인스타그램)
 
-⚠️ 영상의 흐름을 기준으로 시간을 추정하세요.
-⚠️ 각 구간은 3~8초가 적당합니다.
-
-JSON 배열만 출력:
-[{ "start": 45, "end": 52, "description": "...", "usage": "..." }]`,
+JSON 배열만 출력 (정확히 5개):
+[{ "start": 15, "end": 21, "description": "...", "usage": "..." }, ...]`,
           model: 'gemini-3.1-flash-lite-preview',
-          temperature: 0.5,
+          temperature: 0.3,
           maxOutputTokens: 1024,
           thinkingLevel: 'none',
         }),
@@ -266,7 +316,7 @@ JSON 배열만 출력:
       if (data.text) {
         const cleaned = data.text.replace(/```json?\s*\n?/gi, '').replace(/\n?```\s*$/g, '').trim();
         const parsed = JSON.parse(cleaned);
-        if (Array.isArray(parsed)) setKeyMoments(parsed);
+        if (Array.isArray(parsed)) setKeyMoments(parsed.slice(0, 5));
       }
     } catch { /* ignore */ }
     finally { setIsDetectingMoments(false); }
@@ -531,7 +581,7 @@ JSON 배열만 출력:
                 </div>
               ) : keyMoments.length > 0 ? (
                 <div className="space-y-2">
-                  <h3 className="text-sm font-bold text-slate-700">🎬 핵심 장면 ({keyMoments.length}개)</h3>
+                  <h3 className="text-sm font-bold text-slate-700">🎬 추천 GIF 장면 ({keyMoments.length}/5)</h3>
                   {keyMoments.map((m, i) => {
                     const gif = generatedGifs.get(i);
                     return (
