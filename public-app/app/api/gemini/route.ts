@@ -6,7 +6,7 @@
  * 미포함: 크레딧 차감, generation token, raw mode, 이미지 생성
  */
 import { NextRequest, NextResponse } from 'next/server';
-import { checkAuth } from '../../../lib/apiAuth';
+
 
 export const maxDuration = 300;
 export const dynamic = 'force-dynamic';
@@ -145,12 +145,21 @@ interface GeminiCandidate {
 }
 
 export async function POST(request: NextRequest) {
-  // 랜딩 챗봇은 비로그인 허용 (systemInstruction에 "윈에이드" 또는 "WINAID" 포함)
-  const clonedBody = await request.clone().json();
-  const isLandingChat = (clonedBody?.systemInstruction || '').match(/윈에이드|WINAID/i);
-  if (!isLandingChat) {
-    const authError = await checkAuth(request);
-    if (authError) return authError;
+  // 인증: Supabase 세션 쿠키 체크 (랜딩 챗봇은 비로그인 허용)
+  const cookies = request.headers.get('cookie') || '';
+  const hasAuthCookie = cookies.includes('sb-') && cookies.includes('-auth-token');
+
+  if (!hasAuthCookie) {
+    try {
+      const clonedBody = await request.clone().json();
+      const isLandingChat = clonedBody?.systemInstruction &&
+        (clonedBody.systemInstruction.includes('윈에이드') || clonedBody.systemInstruction.includes('WINAID'));
+      if (!isLandingChat) {
+        return NextResponse.json({ error: '인증이 필요합니다.' }, { status: 401 });
+      }
+    } catch {
+      return NextResponse.json({ error: '인증이 필요합니다.' }, { status: 401 });
+    }
   }
 
   const keys = getKeys();
