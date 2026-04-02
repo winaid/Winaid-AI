@@ -35,7 +35,7 @@ router.post('/gif', async (req, res) => {
     '--no-check-certificates',
     '--extractor-args', 'youtube:player_client=web',
     '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
-    '-f', 'bestvideo[height<=480][ext=mp4]/best[height<=480][ext=mp4]/best[ext=mp4]/best',
+    '-f', 'best[height<=720]/best',
     '--no-playlist',
     '--no-warnings',
     ...(HAS_COOKIES ? ['--cookies', COOKIES_PATH] : []),
