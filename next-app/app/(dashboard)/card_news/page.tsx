@@ -53,6 +53,7 @@ export default function CardNewsPage() {
   const [imageStyle, setImageStyle] = useState<ImageStyleType>('illustration');
   const [category, setCategory] = useState<ContentCategory>(ContentCategory.DENTAL);
   const [audienceMode, setAudienceMode] = useState<AudienceMode>('환자용(친절/공감)');
+  const [contentMode, setContentMode] = useState<'simple' | 'detailed'>('simple');
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [customImagePrompt, setCustomImagePrompt] = useState('');
   // 트렌드 주제
@@ -163,6 +164,7 @@ export default function CardNewsPage() {
       writingStyle: derivedWritingStyle,
       designTemplateId,
       category,
+      contentMode,
     };
 
     setIsGenerating(true);
@@ -199,41 +201,59 @@ export default function CardNewsPage() {
       const data = await res.json() as { text?: string; error?: string };
       if (!res.ok || !data.text) { setError(data.error || `서버 오류 (${res.status})`); return; }
 
-      // 파싱
+      // 파싱: ### N장 구분 → 제목/본문/비주얼 추출 (원고+이미지프롬프트 통합)
       const parsedCards: CardSlide[] = [];
       const slideBlocks = data.text.split(/###\s*(\d+)장[:\s]*/);
+      const tmpl = designTemplateId ? CARD_NEWS_DESIGN_TEMPLATES.find(t => t.id === designTemplateId) : undefined;
+      const tmplBlock = tmpl ? `\n[디자인 템플릿: ${tmpl.name}]\n${tmpl.stylePrompt}\n배경색: ${tmpl.colors.background}` : '';
+
       for (let i = 1; i < slideBlocks.length; i += 2) {
         const num = parseInt(slideBlocks[i], 10);
         const block = slideBlocks[i + 1] || '';
         const roleMatch = block.match(/^(.+?)[\n\r]/);
+
         const titleMatch = block.match(/\*\*제목\*\*[:\s]*(.+)/m)
           || block.match(/\*\*메인.*?\*\*[:\s]*(.+)/m)
           || block.match(/\*\*핵심.*?\*\*[:\s]*(.+)/m)
           || block.match(/\*\*마무리.*?\*\*[:\s]*(.+)/m)
           || block.match(/\*\*타이틀\*\*[:\s]*(.+)/m)
           || block.match(/\*\*메시지\*\*[:\s]*(.+)/m);
-        const bodyMatch = block.match(/\*\*본문\*\*[:\s]*([\s\S]*?)(?=\*\*|$)/m)
+
+        const bodyMatch = block.match(/\*\*본문\*\*[:\s]*([\s\S]*?)(?=\*\*비주얼|\*\*이미지|\*\*배경|\*\*|$)/m)
           || block.match(/\*\*부제\*\*[:\s]*(.+)/m)
           || block.match(/\*\*설명\*\*[:\s]*([\s\S]*?)(?=\*\*|$)/m)
           || block.match(/\*\*내용\*\*[:\s]*([\s\S]*?)(?=\*\*|$)/m)
-          || block.match(/\*\*상담.*?\*\*[:\s]*(.+)/m)
           || block.match(/\*\*안내\*\*[:\s]*(.+)/m);
+
+        const visualMatch = block.match(/\*\*비주얼\*\*[:\s]*(.+)/m)
+          || block.match(/\*\*이미지\*\*[:\s]*(.+)/m)
+          || block.match(/\*\*배경\*\*[:\s]*(.+)/m);
 
         const role = roleMatch?.[1]?.replace(/\*\*/g, '').trim() || `${num}장`;
         let title = titleMatch?.[1]?.trim();
         let body = bodyMatch?.[1]?.trim() || '';
+        const visual = visualMatch?.[1]?.trim() || `${topic} 관련 의료 일러스트`;
+
         if (!title) {
           const lines = block.split('\n').map(l => l.replace(/\*\*/g, '').replace(/^[-*]\s*/, '').trim()).filter(Boolean);
           title = lines[1] || lines[0] || `슬라이드 ${num}`;
           body = lines.slice(2).join(' ').substring(0, 100) || body;
         }
 
+        const imagePrompt = [
+          `subtitle: "${role}"`,
+          `mainTitle: "${title}"`,
+          body ? `description: "${body.substring(0, 50)}"` : '',
+          `비주얼: ${visual}`,
+          tmplBlock,
+        ].filter(Boolean).join('\n');
+
         parsedCards.push({
           index: num,
           role,
           title: title || `슬라이드 ${num}`,
           body,
-          imagePrompt: '', // Step 2에서 생성
+          imagePrompt,
           imageUrl: null,
           imageHistory: [],
         });
@@ -762,6 +782,25 @@ ${newsContext ? `\n[📰 최신 네이버 뉴스 분석]\n${newsContext}\n\n⚠�
             {/* 주제 */}
             <input type="text" value={topic} onChange={e => setTopic(e.target.value)} placeholder="카드뉴스 주제 (예: 임플란트 시술 과정 안내)" required className={inputCls} />
 
+            {/* 콘텐츠 분량 */}
+            <div>
+              <label className={labelCls}>콘텐츠 분량</label>
+              <div className="grid grid-cols-2 gap-2">
+                <button type="button" onClick={() => setContentMode('simple')}
+                  className={`py-2.5 rounded-xl border transition-all text-center ${contentMode === 'simple' ? 'border-pink-400 bg-pink-50 text-pink-700' : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300'}`}>
+                  <span className="text-base block">⚡</span>
+                  <span className="text-[10px] font-semibold block">간단</span>
+                  <span className="text-[9px] text-slate-400 block">짧고 임팩트</span>
+                </button>
+                <button type="button" onClick={() => setContentMode('detailed')}
+                  className={`py-2.5 rounded-xl border transition-all text-center ${contentMode === 'detailed' ? 'border-pink-400 bg-pink-50 text-pink-700' : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300'}`}>
+                  <span className="text-base block">📋</span>
+                  <span className="text-[10px] font-semibold block">상세</span>
+                  <span className="text-[9px] text-slate-400 block">정보 충실</span>
+                </button>
+              </div>
+            </div>
+
             {/* 🔥 트렌드 주제 (OLD parity) */}
             <button type="button" onClick={handleRecommendTrends} disabled={isLoadingTrends}
               className="w-full py-2 bg-slate-100 text-slate-600 rounded-lg text-xs font-semibold hover:bg-slate-200 transition-all disabled:opacity-40 flex items-center justify-center gap-1">
@@ -995,9 +1034,9 @@ ${newsContext ? `\n[📰 최신 네이버 뉴스 분석]\n${newsContext}\n\n⚠�
               ))}
             </div>
 
-            <button onClick={handleGeneratePrompts} disabled={isGeneratingPrompts}
-              className="w-full py-3.5 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20 disabled:opacity-50">
-              원고 승인 → 프롬프트 생성하기
+            <button onClick={handleGenerateImages} disabled={isGeneratingImages}
+              className="w-full py-3.5 bg-pink-600 text-white font-bold rounded-xl hover:bg-pink-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-pink-500/20 disabled:opacity-50">
+              🎨 원고 승인 → 이미지 생성 ({cards.length}장)
             </button>
           </div>
         ) : pipelineStep === 'promptReview' && cards.length > 0 && !cards.some(c => c.imageUrl) ? (
