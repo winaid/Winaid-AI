@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 
-const CURRENT_VERSION = '2026.04.02';
+const CURRENT_VERSION = '2026.04.02-2';
 const STORAGE_KEY = 'winaid_changelog_seen';
 
 const CHANGELOG = [
@@ -18,6 +18,8 @@ const CHANGELOG = [
   {
     category: '📝 블로그',
     items: [
+      '🚀 스트리밍 생성 — 글이 실시간으로 써지는 걸 볼 수 있음 (GPT처럼)',
+      '이미지 병렬 생성 — 글 쓰는 동안 이미지 동시 생성 (체감 속도 40% 단축)',
       '주제 유형 자동 분류 (6종) — 유형별 흐름 가이드 자동 적용',
       '도입부 5가지 패턴 / 마무리 3가지 패턴 추가',
       '[문체 — 사람처럼 쓰기] 가이드 강화',
@@ -40,6 +42,8 @@ const CHANGELOG = [
       '스타일 체인 생성 — 1장 스타일 분석 후 2~N장 순차 적용',
       '프롬프트 파싱 3단계 강화 (텍스트 반복 버그 수정)',
       '진료과별 카드뉴스 가이드 추가',
+      '3단계→2단계 플로우 — 원고+비주얼 통합 생성 → 바로 이미지',
+      '간단/상세 모드 — 콘텐츠 분량 선택 (⚡짧고 임팩트 / 📋정보 충실)',
     ],
   },
   {
