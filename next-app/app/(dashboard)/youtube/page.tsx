@@ -108,7 +108,7 @@ YouTube URL: ${youtubeUrl.trim()}
 ⚠️ JSON이 아닌 일반 텍스트로 작성하세요.`,
           model: 'gemini-3.1-pro-preview',
           temperature: 0.2,
-          maxOutputTokens: 2048,
+          maxOutputTokens: 65536,
           googleSearch: true,
         }),
       });
@@ -196,7 +196,7 @@ ${summaryText.slice(0, 2000)}
           prompt, systemInstruction,
           model: 'gemini-3.1-pro-preview',
           temperature: 0.7,
-          maxOutputTokens: 16384,
+          maxOutputTokens: 65536,
           timeout: 120000,
         }),
       });
