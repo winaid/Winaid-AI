@@ -545,14 +545,38 @@ export function buildBlogPrompt(req: GenerationRequest): {
   }
 
   // ── 출력 형식 ──
+  if (targetImageCount > 0) {
+    promptParts.push(
+      '',
+      '⚠️ [출력 순서 — 반드시 지키세요]',
+      '',
+      '1단계: 글 골격을 먼저 출력하세요:',
+      '---OUTLINE---',
+      '소제목 1: (제목)',
+      '소제목 2: (제목)',
+      '... (전체 소제목 목록, 각 1줄)',
+      '',
+      '2단계: 골격에 맞는 이미지 프롬프트를 출력하세요:',
+      '---IMAGE_PROMPTS---',
+      `[정확히 ${targetImageCount}줄, 한 줄에 하나씩, 한국어로 작성]`,
+      '각 프롬프트는 해당 [IMG_N] 위치 소제목의 맥락에 맞는 장면 묘사',
+      '',
+      '3단계: HTML 블로그 본문을 작성하세요:',
+      '---BLOG_START---',
+      '(여기부터 HTML 본문)',
+      `본문 안에 [IMG_1]~[IMG_${targetImageCount}] 마커를 위 구조대로 배치하세요.`,
+    );
+  } else {
+    promptParts.push(
+      '',
+      '[출력 형식]',
+      '1. HTML 본문을 작성하세요. 이미지 마커 없이.',
+    );
+  }
+
   promptParts.push(
     '',
-    '[출력 형식]',
-    '1. 먼저 HTML 본문을 작성하세요.',
-    targetImageCount > 0
-      ? `   본문 안에 [IMG_1]~[IMG_${targetImageCount}] 마커를 위 구조대로 배치하세요.`
-      : '   이미지 마커 없이 작성하세요.',
-    '2. 본문 마지막(마무리 문단 이후, FAQ가 있으면 FAQ 이후)에 참고 출처 블록 추가:',
+    '본문 마지막에 참고 출처 블록 추가:',
     '',
     `<div class="references-footer" data-no-copy="true">`,
     `<p style="margin-top:32px;padding-top:16px;border-top:1px solid #e2e8f0;font-size:11px;color:#94a3b8;font-weight:600;">참고 자료</p>`,
@@ -560,24 +584,14 @@ export function buildBlogPrompt(req: GenerationRequest): {
     `<li>기관명 — 관련 정보 주제</li>`,
     `</ul></div>`,
     '',
-    '출처 규칙: 본문에서 참고한 의학 정보의 출처를 2~4개 기재. 신뢰 기관만(질병관리청, 대한OO학회, 대학병원 등). URL 금지, 기관명+주제만. 없는 자료를 지어내지 마세요.',
+    '출처 규칙: 본문에서 참고한 의학 정보의 출처를 2~4개 기재. 신뢰 기관만. URL 금지.',
     '',
-    '3. 출처 블록 다음에 자가평가 점수를 붙이세요:',
+    '출처 블록 다음에 자가평가 점수를 붙이세요:',
     '',
     '---SCORES---',
     '{"seo": [0~100 점수], "medical": [0~100 점수], "conversion": [0~100 점수]}',
-    '⚠️ 점수는 반드시 0~100 범위의 정수! seo: SEO 최적화 점수, medical: 의료광고법 준수 점수, conversion: 전환/행동유도 점수. 평범한 글 = 60~75, 잘 쓴 글 = 75~90.',
+    '⚠️ 점수는 반드시 0~100 범위의 정수!',
   );
-
-  if (targetImageCount > 0) {
-    promptParts.push(
-      '',
-      `3. 점수 블록 다음에 이미지 프롬프트를 작성하세요:`,
-      '',
-      '---IMAGE_PROMPTS---',
-      `[정확히 ${targetImageCount}줄, 한 줄에 하나씩, 한국어로 작성]`,
-    );
-  }
 
   return {
     systemInstruction,
