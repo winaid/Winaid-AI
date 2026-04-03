@@ -5,13 +5,14 @@
  * GET ?query=키워드&display=10
  */
 import { NextRequest, NextResponse } from 'next/server';
-import { checkAuth } from '../../../../lib/apiAuth';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
-  const authError = await checkAuth(request);
-  if (authError) return authError;
+  const cookies = request.headers.get('cookie') || '';
+  if (!/sb-[a-z]+-auth-token/.test(cookies)) {
+    return NextResponse.json({ error: '인증이 필요합니다.' }, { status: 401 });
+  }
 
   const { searchParams } = request.nextUrl;
   const query = searchParams.get('query');

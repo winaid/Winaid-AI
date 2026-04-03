@@ -5,7 +5,6 @@
  * responseModalities: ["IMAGE", "TEXT"] 사용.
  */
 import { NextRequest, NextResponse } from 'next/server';
-import { checkAuth } from '../../../lib/apiAuth';
 
 export const maxDuration = 300;
 export const dynamic = 'force-dynamic';
@@ -438,8 +437,10 @@ interface ImageRequestBody {
 }
 
 export async function POST(request: NextRequest) {
-  const authError = await checkAuth(request);
-  if (authError) return authError;
+  const cookies = request.headers.get('cookie') || '';
+  if (!/sb-[a-z]+-auth-token/.test(cookies)) {
+    return NextResponse.json({ error: '인증이 필요합니다.' }, { status: 401 });
+  }
 
   const keys = getKeys();
   if (keys.length === 0) {

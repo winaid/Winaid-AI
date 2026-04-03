@@ -174,7 +174,7 @@ export async function POST(request: NextRequest) {
       contents: [{ role: 'user', parts: [{ text: body.prompt || '' }] }],
       generationConfig: {
         temperature: body.temperature ?? 0.7,
-        maxOutputTokens: body.maxOutputTokens ?? 8192,
+        maxOutputTokens: body.maxOutputTokens ?? 32768,
         ...(body.responseType === 'json' ? { responseMimeType: 'application/json' } : {}),
         ...(body.schema ? { responseSchema: body.schema } : {}),
       },
@@ -287,7 +287,7 @@ export async function POST(request: NextRequest) {
     generationConfig: {
       temperature: body.temperature ?? 0.85,
       topP: body.topP ?? 0.95,
-      maxOutputTokens: body.maxOutputTokens ?? 8192,
+      maxOutputTokens: body.maxOutputTokens ?? 32768,
       responseMimeType: body.responseType === 'json' ? 'application/json' : 'text/plain',
     },
   };

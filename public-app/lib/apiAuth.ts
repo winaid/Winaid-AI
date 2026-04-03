@@ -6,9 +6,7 @@ import { NextRequest, NextResponse } from 'next/server';
  */
 export async function checkAuth(req: NextRequest): Promise<NextResponse | null> {
   const cookies = req.headers.get('cookie') || '';
-  const hasAuthCookie = cookies.includes('sb-') && cookies.includes('-auth-token');
-
-  if (!hasAuthCookie) {
+  if (!/sb-[a-z]+-auth-token/.test(cookies)) {
     return NextResponse.json({ error: '인증이 필요합니다.' }, { status: 401 });
   }
   return null;

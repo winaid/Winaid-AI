@@ -5,13 +5,14 @@
  * 응답: { suggestions: ["백석동 치과 추천", "백석동 치과 임플란트", ...] }
  */
 import { NextRequest, NextResponse } from 'next/server';
-import { checkAuth } from '../../../../lib/apiAuth';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
-  const authError = await checkAuth(request);
-  if (authError) return authError;
+  const cookies = request.headers.get('cookie') || '';
+  if (!/sb-[a-z]+-auth-token/.test(cookies)) {
+    return NextResponse.json({ error: '인증이 필요합니다.' }, { status: 401 });
+  }
 
   try {
     const { query } = (await request.json()) as { query?: string };

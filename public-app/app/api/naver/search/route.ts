@@ -5,11 +5,12 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { checkAuth } from '../../../../lib/apiAuth';
 
 export async function POST(request: NextRequest) {
-  const authError = await checkAuth(request);
-  if (authError) return authError;
+  const cookies = request.headers.get('cookie') || '';
+  if (!/sb-[a-z]+-auth-token/.test(cookies)) {
+    return NextResponse.json({ error: '인증이 필요합니다.' }, { status: 401 });
+  }
 
   try {
     const body = (await request.json()) as { query?: string; display?: number; type?: string };

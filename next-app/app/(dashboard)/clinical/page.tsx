@@ -5,6 +5,7 @@ import { buildClinicalPrompt, ARTICLE_TYPES } from '../../../lib/clinicalPrompt'
 import { getSessionSafe, supabase } from '../../../lib/supabase';
 import { CATEGORIES } from '../../../lib/constants';
 import { sanitizeHtml } from '../../../lib/sanitize';
+import { stripDoctype } from '../../../lib/htmlUtils';
 import { useCreditContext } from '../layout';
 import { useCredit } from '../../../lib/creditService';
 
@@ -165,7 +166,7 @@ JSON만 출력: { "analysis": "...", "topics": [{ "topic": "...", "title": "..."
           images: imageData,
           model: 'gemini-3.1-flash-lite-preview',
           temperature: 0.7,
-          maxOutputTokens: 4096,
+          maxOutputTokens: 8192,
           timeout: 30000,
           thinkingLevel: 'none',
         }),
@@ -231,7 +232,7 @@ JSON만 출력: { "analysis": "...", "topics": [{ "topic": "...", "title": "..."
           systemInstruction,
           model: 'gemini-3.1-pro-preview',
           temperature: 0.7,
-          maxOutputTokens: 16384,
+          maxOutputTokens: 65536,
           timeout: 120000,
         }),
       });
@@ -239,7 +240,7 @@ JSON만 출력: { "analysis": "...", "topics": [{ "topic": "...", "title": "..."
       const data = await res.json();
       if (!res.ok || !data.text) throw new Error(data.error || '생성 실패');
 
-      let html = data.text.trim();
+      let html = stripDoctype(data.text.trim());
       html = html.replace(/^```html?\s*\n?/i, '').replace(/\n?```\s*$/, '');
 
       // SCORES 파싱

@@ -6,6 +6,7 @@ import { savePost } from '../../../lib/postStorage';
 import { getSessionSafe } from '../../../lib/supabase';
 import { ErrorPanel } from '../../../components/GenerationResult';
 import { sanitizeHtml } from '../../../lib/sanitize';
+import { stripDoctype } from '../../../lib/htmlUtils';
 
 interface ChatMsg { role: 'user' | 'assistant'; content: string; ts: Date; }
 
@@ -88,11 +89,11 @@ export default function RefinePage() {
       const { systemInstruction, prompt } = buildRefinePrompt({ originalText: originalText.trim(), mode: selectedMode });
       const res = await fetch('/api/gemini', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt, systemInstruction, model: 'gemini-3.1-pro-preview', temperature: 0.6, maxOutputTokens: 8192, googleSearch: selectedMode === 'seo' }),
+        body: JSON.stringify({ prompt, systemInstruction, model: 'gemini-3.1-pro-preview', temperature: 0.6, maxOutputTokens: 32768, googleSearch: selectedMode === 'seo' }),
       });
       const data = await res.json() as { text?: string; error?: string };
       if (!res.ok || !data.text) { setError(data.error || `서버 오류 (${res.status})`); return; }
-      let html = data.text.replace(/```html?\n?/gi, '').replace(/```\n?/gi, '').trim();
+      let html = stripDoctype(data.text.replace(/```html?\n?/gi, '').replace(/```\n?/gi, '').trim());
       if (!html.startsWith('<')) html = `<p>${html.replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br/>')}</p>`;
       const themed = applyTheme(html);
       setRefinedHtml(themed);
@@ -139,11 +140,11 @@ export default function RefinePage() {
       });
       const res = await fetch('/api/gemini', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt, systemInstruction, model: 'gemini-3.1-pro-preview', temperature: 0.6, maxOutputTokens: 8192, googleSearch: true }),
+        body: JSON.stringify({ prompt, systemInstruction, model: 'gemini-3.1-pro-preview', temperature: 0.6, maxOutputTokens: 32768, googleSearch: true }),
       });
       const data = await res.json() as { text?: string; error?: string };
       if (!res.ok || !data.text) throw new Error(data.error || '생성 실패');
-      let html = data.text.replace(/```html?\n?/gi, '').replace(/```\n?/gi, '').trim();
+      let html = stripDoctype(data.text.replace(/```html?\n?/gi, '').replace(/```\n?/gi, '').trim());
       if (!html.startsWith('<')) html = `<p>${html.replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br/>')}</p>`;
       setRefinedHtml(applyTheme(html));
       try { setFactCheck(computeFactCheck(html)); } catch { /* factCheck 실패 무시 */ }

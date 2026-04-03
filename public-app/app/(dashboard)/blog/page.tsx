@@ -1045,7 +1045,7 @@ ${subs.length > 0 ? `경쟁 글 소제목: ${subs.join(' / ')}` : ''}
           systemInstruction,
           model: 'gemini-3.1-pro-preview',
           temperature: 0.85,
-          maxOutputTokens: 16384,
+          maxOutputTokens: 65536,
           stream: true,
         }),
       });
@@ -1472,7 +1472,7 @@ ${subs.length > 0 ? `경쟁 글 소제목: ${subs.join(' / ')}` : ''}
           prompt, systemInstruction,
           model: 'gemini-3.1-pro-preview',
           temperature: 0.7,
-          maxOutputTokens: 16384,
+          maxOutputTokens: 65536,
         }),
       });
       const data = await res.json() as { text?: string };
@@ -1702,7 +1702,7 @@ ${generatedContent.substring(0, 2000)}
           systemInstruction: systemPrompt,
           model: 'gemini-3.1-pro-preview',
           temperature: 0.85,
-          maxOutputTokens: 8192,
+          maxOutputTokens: 32768,
           timeout: 60000,
         }),
       });

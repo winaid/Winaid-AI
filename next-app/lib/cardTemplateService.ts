@@ -121,7 +121,7 @@ export async function analyzeDesignFromImages(imageDataUrls: string[]): Promise<
         prompt,
         model: 'gemini-3.1-pro-preview',
         temperature: 0.3,
-        maxOutputTokens: 4096,
+        maxOutputTokens: 8192,
         inlineImages: imageDataUrls,
       }),
     });
