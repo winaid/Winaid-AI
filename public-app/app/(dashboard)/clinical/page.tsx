@@ -5,6 +5,7 @@ import { buildClinicalPrompt, ARTICLE_TYPES } from '../../../lib/clinicalPrompt'
 import { getSessionSafe, supabase } from '../../../lib/supabase';
 import { CATEGORIES } from '../../../lib/constants';
 import { sanitizeHtml } from '../../../lib/sanitize';
+import { stripDoctype } from '../../../lib/htmlUtils';
 
 const inputCls = 'w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm outline-none focus:border-blue-400 focus:bg-white focus:ring-2 focus:ring-blue-500/10 transition-all placeholder:text-slate-300';
 
@@ -224,7 +225,7 @@ JSON만 출력: { "analysis": "...", "topics": [{ "topic": "...", "title": "..."
       const data = await res.json();
       if (!res.ok || !data.text) throw new Error(data.error || '생성 실패');
 
-      let html = data.text.trim();
+      let html = stripDoctype(data.text.trim());
       html = html.replace(/^```html?\s*\n?/i, '').replace(/\n?```\s*$/, '');
 
       // SCORES 파싱
