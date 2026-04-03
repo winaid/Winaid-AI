@@ -1121,13 +1121,35 @@ If the result looks significantly different from the reference, you have FAILED.
           const titleText = effectivePrompt.length > 60
             ? effectivePrompt.substring(0, 60) + '...'
             : effectivePrompt;
+
+          let savedContent = data.imageDataUrl;
+          if (supabase && data.imageDataUrl.startsWith('data:image')) {
+            try {
+              const commaIdx = data.imageDataUrl.indexOf(',');
+              const base64Data = data.imageDataUrl.substring(commaIdx + 1);
+              const mimeMatch = data.imageDataUrl.substring(0, commaIdx).match(/data:(.*?);base64/);
+              const mimeType = mimeMatch?.[1] || 'image/png';
+              const ext = mimeType === 'image/jpeg' ? 'jpg' : 'png';
+              const byteChars = atob(base64Data);
+              const byteArray = new Uint8Array(byteChars.length);
+              for (let i = 0; i < byteChars.length; i++) byteArray[i] = byteChars.charCodeAt(i);
+              const blob = new Blob([byteArray], { type: mimeType });
+              const fileName = `images/${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${ext}`;
+              const { error: uploadErr } = await supabase.storage.from('blog-images').upload(fileName, blob, { contentType: mimeType, upsert: false });
+              if (!uploadErr) {
+                const { data: urlData } = supabase.storage.from('blog-images').getPublicUrl(fileName);
+                if (urlData?.publicUrl) savedContent = urlData.publicUrl;
+              }
+            } catch { /* Storage 실패 시 base64 폴백 */ }
+          }
+
           await savePost({
             userId,
             userEmail,
             hospitalName: hospitalName || undefined,
             postType: 'image',
             title: titleText || '이미지 생성',
-            content: data.imageDataUrl,
+            content: savedContent,
             topic: effectivePrompt,
           });
         } catch {
