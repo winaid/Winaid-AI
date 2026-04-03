@@ -178,7 +178,7 @@ export default function HistoryPage() {
 
             {/* 본문 */}
             <div className="px-6 py-6">
-              {selectedPost.post_type === 'image' && selectedPost.content.startsWith('data:image') ? (
+              {selectedPost.post_type === 'image' && (selectedPost.content.startsWith('data:image') || selectedPost.content.startsWith('https://')) ? (
                 <div className="flex flex-col items-center gap-4">
                   <img src={selectedPost.content} alt={selectedPost.title || '생성된 이미지'} className="max-w-full rounded-xl shadow-md border border-slate-200" />
                   {selectedPost.topic && <p className="text-sm text-slate-500 text-center">프롬프트: {selectedPost.topic}</p>}
@@ -196,7 +196,7 @@ export default function HistoryPage() {
 
             {/* 하단 액션 */}
             <div className="px-6 py-3 border-t border-slate-100 bg-slate-50/50 flex items-center gap-3">
-              {selectedPost.post_type === 'image' && selectedPost.content.startsWith('data:image') ? (
+              {selectedPost.post_type === 'image' && (selectedPost.content.startsWith('data:image') || selectedPost.content.startsWith('https://')) ? (
                 <a
                   href={selectedPost.content}
                   download={`image-${selectedPost.id.slice(0, 8)}.png`}
@@ -315,7 +315,7 @@ export default function HistoryPage() {
                   <div className="flex items-start justify-between gap-4">
                     {/* 썸네일 */}
                     {(() => {
-                      if (post.post_type === 'image' && post.content?.startsWith('data:image')) {
+                      if (post.post_type === 'image' && (post.content?.startsWith('data:image') || post.content?.startsWith('https://'))) {
                         return <div className="flex-shrink-0"><img src={post.content} alt={post.title} className="w-14 h-14 rounded-lg object-cover border border-slate-200" /></div>;
                       }
                       if (post.post_type === 'card_news') {
