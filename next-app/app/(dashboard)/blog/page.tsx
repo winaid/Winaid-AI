@@ -1192,6 +1192,7 @@ ${subs.length > 0 ? `경쟁 글 소제목: ${subs.join(' / ')}` : ''}
 
       // 3) HTML 정리: 코드블록 fence 제거
       blogText = blogText.replace(/^```html?\s*\n?/i, '').replace(/\n?```\s*$/, '');
+      blogText = stripDoctype(blogText);
 
       // 3.5) 구조 보정 (old legacyBlogGeneration.ts 동일: h1/h2→h3, markdown→h3, 이모지/해시태그 제거)
       const beforeLen = blogText.length;
