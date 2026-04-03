@@ -8,6 +8,7 @@ import { getSessionSafe } from '../../../lib/supabase';
 import { getHospitalStylePrompt } from '../../../lib/styleService';
 import { ErrorPanel } from '../../../components/GenerationResult';
 import { sanitizeHtml } from '../../../lib/sanitize';
+import { stripDoctype } from '../../../lib/htmlUtils';
 import { useCreditContext } from '../layout';
 import { useCredit } from '../../../lib/creditService';
 
@@ -122,14 +123,14 @@ export default function PressPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           prompt: finalPrompt, systemInstruction, model: 'gemini-3.1-pro-preview',
-          temperature: 0.7, maxOutputTokens: 8192, googleSearch: true,
+          temperature: 0.7, maxOutputTokens: 32768, googleSearch: true,
         }),
       });
       const data = await res.json() as { text?: string; error?: string; details?: string };
       if (!res.ok || !data.text) { setError(data.error || data.details || `서버 오류 (${res.status})`); return; }
 
       // 5) HTML 후처리
-      let html = data.text.replace(/```html?\n?/gi, '').replace(/```\n?/gi, '').trim();
+      let html = stripDoctype(data.text.replace(/```html?\n?/gi, '').replace(/```\n?/gi, '').trim());
       if (!html.includes('class="press-release-container"')) html = `<div class="press-release-container">${html}</div>`;
       const finalHtml = PRESS_CSS + html;
       setGeneratedHtml(finalHtml);

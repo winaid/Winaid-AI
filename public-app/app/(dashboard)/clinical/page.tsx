@@ -161,7 +161,7 @@ JSON만 출력: { "analysis": "...", "topics": [{ "topic": "...", "title": "..."
           images: imageData,
           model: 'gemini-3.1-flash-lite-preview',
           temperature: 0.7,
-          maxOutputTokens: 4096,
+          maxOutputTokens: 8192,
           timeout: 30000,
           thinkingLevel: 'none',
         }),
@@ -216,7 +216,7 @@ JSON만 출력: { "analysis": "...", "topics": [{ "topic": "...", "title": "..."
           systemInstruction,
           model: 'gemini-3.1-pro-preview',
           temperature: 0.7,
-          maxOutputTokens: 16384,
+          maxOutputTokens: 65536,
           timeout: 120000,
         }),
       });

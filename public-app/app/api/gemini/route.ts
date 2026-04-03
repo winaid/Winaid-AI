@@ -147,7 +147,18 @@ interface GeminiCandidate {
 }
 
 export async function POST(request: NextRequest) {
-  // 내부용은 인증 스킵 (팀 선택 방식, Supabase 쿠키 없음)
+  const cookies = request.headers.get('cookie') || '';
+  if (!/sb-[a-z]+-auth-token/.test(cookies)) {
+    try {
+      const cloned = await request.clone().json();
+      const si = (cloned.systemInstruction || '').toLowerCase();
+      if (!si.includes('윈에이드') && !si.includes('winaid')) {
+        return NextResponse.json({ error: '인증이 필요합니다.' }, { status: 401 });
+      }
+    } catch {
+      return NextResponse.json({ error: '인증이 필요합니다.' }, { status: 401 });
+    }
+  }
 
   // ═══ body 파싱 (스트리밍/비스트리밍 공통) ═══
   let body: GeminiRequestBody;
@@ -174,7 +185,7 @@ export async function POST(request: NextRequest) {
       contents: [{ role: 'user', parts: [{ text: body.prompt || '' }] }],
       generationConfig: {
         temperature: body.temperature ?? 0.7,
-        maxOutputTokens: body.maxOutputTokens ?? 8192,
+        maxOutputTokens: body.maxOutputTokens ?? 32768,
         ...(body.responseType === 'json' ? { responseMimeType: 'application/json' } : {}),
         ...(body.schema ? { responseSchema: body.schema } : {}),
       },
@@ -287,7 +298,7 @@ export async function POST(request: NextRequest) {
     generationConfig: {
       temperature: body.temperature ?? 0.85,
       topP: body.topP ?? 0.95,
-      maxOutputTokens: body.maxOutputTokens ?? 8192,
+      maxOutputTokens: body.maxOutputTokens ?? 32768,
       responseMimeType: body.responseType === 'json' ? 'application/json' : 'text/plain',
     },
   };

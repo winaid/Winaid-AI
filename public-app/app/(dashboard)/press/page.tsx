@@ -69,7 +69,7 @@ export default function PressPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           prompt: finalPrompt, systemInstruction, model: 'gemini-3.1-pro-preview',
-          temperature: 0.7, maxOutputTokens: 8192, googleSearch: true,
+          temperature: 0.7, maxOutputTokens: 32768, googleSearch: true,
         }),
       });
       const data = await res.json() as { text?: string; error?: string; details?: string };

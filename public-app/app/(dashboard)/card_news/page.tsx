@@ -220,7 +220,7 @@ export default function CardNewsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           prompt: finalPrompt, systemInstruction,
-          model: 'gemini-3.1-pro-preview', temperature: 0.85, maxOutputTokens: 8192,
+          model: 'gemini-3.1-pro-preview', temperature: 0.85, maxOutputTokens: 32768,
         }),
       });
 
@@ -357,6 +357,16 @@ ${cardsInfo}
 - 동일한 장식 요소 (예: "둥근 도형 장식" → 모든 카드에 "둥근 도형 장식")
 - 달라지는 것은 오직 일러스트의 "주제"만 (예: 치아, 잇몸, 임플란트...)
 
+[⚠️ 6장 디자인 완전 통일]
+1장에서 결정한 디자인을 6장까지 100% 동일하게 유지:
+- 배경색: 모든 카드 동일한 hex 값 (예: 전부 #FFF0F5)
+- 일러스트 스타일: 전부 동일 (예: 전부 "3D 파스텔 둥근 스타일")
+- 장식 요소: 전부 동일
+
+visual 필드 작성법:
+"[공통] 연한 핑크 그라데이션, 3D 파스텔 일러스트, 상단 장식 원 [개별] 치아 단면도"
+↑ [공통] 부분이 6장 모두 완전히 동일해야 함. [개별] 부분만 다름.
+
 [프롬프트 작성 규칙]
 1. 각 카드에 표시될 한글 텍스트:
    - subtitle: 8자 이내 짧은 문구
@@ -379,7 +389,7 @@ visual: (배경 비주얼 묘사)
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           prompt: promptGenPrompt,
-          model: 'gemini-3.1-pro-preview', temperature: 0.7, maxOutputTokens: 4096,
+          model: 'gemini-3.1-pro-preview', temperature: 0.7, maxOutputTokens: 16384,
         }),
       });
       const data = await res.json() as { text?: string; error?: string };
@@ -596,7 +606,7 @@ DECORATIVE: (장식 요소)`,
           systemInstruction: '이미지 프롬프트 전문가. subtitle/mainTitle/비주얼 형식으로만 출력.',
           model: 'gemini-3.1-pro-preview',
           temperature: 0.7,
-          maxOutputTokens: 500,
+          maxOutputTokens: 2048,
         }),
       });
       const data = await res.json() as { text?: string };
