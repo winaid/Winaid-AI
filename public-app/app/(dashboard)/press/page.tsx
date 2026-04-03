@@ -77,7 +77,7 @@ export default function PressPage() {
       if (!res.ok || !data.text) { setError(data.error || data.details || `서버 오류 (${res.status})`); return; }
 
       // 5) HTML 후처리
-      let html = data.text.replace(/```html?\n?/gi, '').replace(/```\n?/gi, '').trim();
+      let html = stripDoctype(data.text.replace(/```html?\n?/gi, '').replace(/```\n?/gi, '').trim());
       if (!html.includes('class="press-release-container"')) html = `<div class="press-release-container">${html}</div>`;
       const finalHtml = PRESS_CSS + html;
       setGeneratedHtml(finalHtml);
