@@ -136,6 +136,7 @@ interface GeminiRequestBody {
   timeout?: number;
   googleSearch?: boolean;
   images?: { base64: string; mimeType: string }[];
+  inlineImages?: string[];  // data:image/... URL 배열 (카드뉴스 스타일 분석용)
   stream?: boolean;
 }
 
@@ -146,22 +147,7 @@ interface GeminiCandidate {
 }
 
 export async function POST(request: NextRequest) {
-  // 인증: Supabase 세션 쿠키 체크 (랜딩 챗봇은 비로그인 허용)
-  const cookies = request.headers.get('cookie') || '';
-  const hasAuthCookie = cookies.includes('sb-') && cookies.includes('-auth-token');
-
-  if (!hasAuthCookie) {
-    try {
-      const clonedBody = await request.clone().json();
-      const isLandingChat = clonedBody?.systemInstruction &&
-        (clonedBody.systemInstruction.includes('윈에이드') || clonedBody.systemInstruction.includes('WINAID'));
-      if (!isLandingChat) {
-        return NextResponse.json({ error: '인증이 필요합니다.' }, { status: 401 });
-      }
-    } catch {
-      return NextResponse.json({ error: '인증이 필요합니다.' }, { status: 401 });
-    }
-  }
+  // 내부용은 인증 스킵 (팀 선택 방식, Supabase 쿠키 없음)
 
   // ═══ body 파싱 (스트리밍/비스트리밍 공통) ═══
   let body: GeminiRequestBody;
@@ -282,6 +268,15 @@ export async function POST(request: NextRequest) {
   if (body.images && Array.isArray(body.images)) {
     for (const img of body.images as { base64: string; mimeType: string }[]) {
       userParts.push({ inlineData: { mimeType: img.mimeType, data: img.base64 } });
+    }
+  }
+  // inlineImages: data:image/... URL 배열 지원
+  if (body.inlineImages && Array.isArray(body.inlineImages)) {
+    for (const imgUrl of body.inlineImages) {
+      const match = (imgUrl as string).match(/^data:(image\/\w+);base64,(.+)$/);
+      if (match) {
+        userParts.push({ inlineData: { mimeType: match[1], data: match[2] } });
+      }
     }
   }
   userParts.push({ text: userText });

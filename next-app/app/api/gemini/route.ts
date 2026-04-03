@@ -136,6 +136,7 @@ interface GeminiRequestBody {
   timeout?: number;
   googleSearch?: boolean;
   images?: { base64: string; mimeType: string }[];
+  inlineImages?: string[];  // data:image/... URL 배열 (카드뉴스 스타일 분석용)
   stream?: boolean;
 }
 
@@ -267,6 +268,15 @@ export async function POST(request: NextRequest) {
   if (body.images && Array.isArray(body.images)) {
     for (const img of body.images as { base64: string; mimeType: string }[]) {
       userParts.push({ inlineData: { mimeType: img.mimeType, data: img.base64 } });
+    }
+  }
+  // inlineImages: data:image/... URL 배열 지원
+  if (body.inlineImages && Array.isArray(body.inlineImages)) {
+    for (const imgUrl of body.inlineImages) {
+      const match = (imgUrl as string).match(/^data:(image\/\w+);base64,(.+)$/);
+      if (match) {
+        userParts.push({ inlineData: { mimeType: match[1], data: match[2] } });
+      }
     }
   }
   userParts.push({ text: userText });
