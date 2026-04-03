@@ -10,6 +10,7 @@ import { CARD_NEWS_DESIGN_TEMPLATES } from '../../../lib/cardNewsDesignTemplates
 import { ErrorPanel } from '../../../components/GenerationResult';
 import { CardRegenModal, type CardPromptHistoryItem, CARD_PROMPT_HISTORY_KEY, CARD_REF_IMAGE_KEY } from '../../../components/CardRegenModal';
 import CardTemplateManager from '../../../components/CardTemplateManager';
+import CardNewsRenderer from '../../../components/CardNewsRenderer';
 import type { CardTemplate } from '../../../lib/cardTemplateService';
 import { ContentCategory } from '../../../lib/types';
 import type { WritingStyle, CardNewsDesignTemplateId, TrendingItem, AudienceMode } from '../../../lib/types';
@@ -1005,10 +1006,17 @@ ${newsContext ? `\n[📰 최신 네이버 뉴스 분석]\n${newsContext}\n\n⚠�
               ))}
             </div>
 
-            <button onClick={handleGenerateImages} disabled={isGeneratingImages}
-              className="w-full py-3.5 bg-pink-600 text-white font-bold rounded-xl hover:bg-pink-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-pink-500/20 disabled:opacity-50">
-              🎨 원고 승인 → 이미지 생성 ({cards.length}장)
-            </button>
+            {learnedTemplate ? (
+              <button onClick={() => setPipelineStep('idle')}
+                className="w-full py-3.5 bg-pink-600 text-white font-bold rounded-xl hover:bg-pink-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-pink-500/20">
+                ✨ 카드뉴스 미리보기 ({cards.length}장)
+              </button>
+            ) : (
+              <button onClick={handleGenerateImages} disabled={isGeneratingImages}
+                className="w-full py-3.5 bg-pink-600 text-white font-bold rounded-xl hover:bg-pink-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-pink-500/20 disabled:opacity-50">
+                🎨 원고 승인 → 이미지 생성 ({cards.length}장)
+              </button>
+            )}
           </div>
         ) : pipelineStep === 'promptReview' && cards.length > 0 && !cards.some(c => c.imageUrl) ? (
           /* ── Step 4: 프롬프트 승인 단계 (필드별 UI) ── */
@@ -1094,6 +1102,27 @@ ${newsContext ? `\n[📰 최신 네이버 뉴스 분석]\n${newsContext}\n\n⚠�
               </button>
             </div>
           </div>
+        ) : learnedTemplate && cards.length > 0 && pipelineStep === 'idle' ? (
+          <CardNewsRenderer
+            slides={cards.map(c => ({
+              index: c.index,
+              role: c.role,
+              subtitle: c.role,
+              title: c.title,
+              description: c.body,
+              visual: '',
+            }))}
+            template={learnedTemplate}
+            onSlidesChange={(updated) => {
+              setCards(prev => prev.map((c, i) => ({
+                ...c,
+                role: updated[i]?.subtitle || c.role,
+                title: updated[i]?.title || c.title,
+                body: updated[i]?.description || c.body,
+              })));
+            }}
+            hospitalName={hospitalName}
+          />
         ) : cards.length > 0 ? (
           <div className="space-y-4">
             {/* 헤더 */}
