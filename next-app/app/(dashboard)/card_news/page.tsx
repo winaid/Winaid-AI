@@ -91,16 +91,50 @@ export default function CardNewsPage() {
   const [promptHistory, setPromptHistory] = useState<CardPromptHistoryItem[]>([]);
   const [showHistoryDropdown, setShowHistoryDropdown] = useState(false);
 
+  // ── 로고 오버레이 ──
+  const overlayLogo = (baseImageDataUrl: string, logoSrc: string): Promise<string> => {
+    return new Promise((resolve) => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      if (!ctx) { resolve(baseImageDataUrl); return; }
+      const baseImg = new Image();
+      baseImg.crossOrigin = 'anonymous';
+      baseImg.onload = () => {
+        canvas.width = baseImg.width;
+        canvas.height = baseImg.height;
+        ctx.drawImage(baseImg, 0, 0);
+        const logoImg = new Image();
+        logoImg.crossOrigin = 'anonymous';
+        logoImg.onload = () => {
+          const maxW = Math.min(baseImg.width * 0.15, 120);
+          const scale = maxW / logoImg.width;
+          const w = logoImg.width * scale;
+          const h = logoImg.height * scale;
+          const x = canvas.width - w - 20;
+          const y = 20;
+          ctx.fillStyle = 'rgba(255,255,255,0.85)';
+          ctx.beginPath();
+          ctx.roundRect(x - 8, y - 8, w + 16, h + 16, 8);
+          ctx.fill();
+          ctx.drawImage(logoImg, x, y, w, h);
+          resolve(canvas.toDataURL('image/png'));
+        };
+        logoImg.onerror = () => resolve(baseImageDataUrl);
+        logoImg.src = logoSrc;
+      };
+      baseImg.onerror = () => resolve(baseImageDataUrl);
+      baseImg.src = baseImageDataUrl;
+    });
+  };
+
   // ── 이미지 생성 헬퍼 ──
   const generateCardImage = async (prompt: string, index: number, refImage?: string): Promise<string | null> => {
     try {
-      // 디자인 템플릿 블록: 프롬프트에 없으면 자동 추가
       const tmpl = designTemplateId ? CARD_NEWS_DESIGN_TEMPLATES.find(t => t.id === designTemplateId) : undefined;
       const needsTemplate = tmpl && !prompt.includes('[디자인 템플릿:');
       const templateBlock = needsTemplate ? `\n[디자인 템플릿: ${tmpl.name}]\n${tmpl.stylePrompt}\n배경색: ${tmpl.colors.background}` : '';
       const customBlock = imageStyle === 'custom' && customImagePrompt ? `\n[사용자 지정 스타일]\n${customImagePrompt}` : '';
-      const logoBlock = (logoEnabled && logoDataUrl && hospitalName) ? `\n[로고] "${hospitalName}" 로고를 상단에 작게 배치` : '';
-      const fullPrompt = `${prompt}${templateBlock}${customBlock}${logoBlock}`.trim();
+      const fullPrompt = `${prompt}${templateBlock}${customBlock}`.trim();
 
       const res = await fetch('/api/image', {
         method: 'POST',
@@ -111,17 +145,21 @@ export default function CardNewsPage() {
           mode: 'card_news',
           imageStyle,
           referenceImage: refImage || undefined,
-          logoBase64: (logoEnabled && logoDataUrl) ? logoDataUrl : undefined,
         }),
       });
       if (!res.ok) return null;
       const data = await res.json() as { imageDataUrl?: string };
       if (!data.imageDataUrl) return null;
 
+      let finalImageDataUrl = data.imageDataUrl;
+      if (logoEnabled && logoDataUrl) {
+        try { finalImageDataUrl = await overlayLogo(data.imageDataUrl, logoDataUrl); } catch { /* 원본 사용 */ }
+      }
+
       // Supabase Storage 업로드
       if (supabase) {
         try {
-          const dataUrl = data.imageDataUrl;
+          const dataUrl = finalImageDataUrl;
           const commaIdx = dataUrl.indexOf(',');
           const base64Data = dataUrl.substring(commaIdx + 1);
           const mimeType = dataUrl.substring(0, commaIdx).match(/data:(.*?);base64/)?.[1] || 'image/png';
@@ -138,7 +176,7 @@ export default function CardNewsPage() {
           }
         } catch { /* fallback to base64 */ }
       }
-      return data.imageDataUrl;
+      return finalImageDataUrl;
     } catch {
       return null;
     }
@@ -490,12 +528,23 @@ DECORATIVE: (장식 요소)`,
         setError(`${failedCount}장의 이미지 생성에 실패했습니다. 해당 카드를 클릭하여 재생성하세요.`);
       }
 
-      // 저장
+      // 저장 (이미지 포함 HTML)
       try {
         const { userId, userEmail } = await getSessionSafe();
+        const cardHtmlContent = finalCards.map(card => {
+          const imgTag = card.imageUrl
+            ? `<div style="text-align:center;margin:8px 0;"><img src="${card.imageUrl}" alt="카드 ${card.index}" style="max-width:100%;border-radius:12px;" /></div>`
+            : '';
+          return `<div style="margin-bottom:24px;padding:16px;border:1px solid #e2e8f0;border-radius:12px;">
+            <div style="font-size:12px;color:#e84393;font-weight:600;margin-bottom:4px;">${card.index}장 · ${card.role}</div>
+            <div style="font-size:16px;font-weight:700;margin-bottom:8px;">${card.title}</div>
+            ${card.body ? `<div style="font-size:14px;color:#64748b;margin-bottom:8px;">${card.body}</div>` : ''}
+            ${imgTag}
+          </div>`;
+        }).join('\n');
         await savePost({
           userId, userEmail, hospitalName: hospitalName || undefined, postType: 'card_news',
-          title: finalCards[0]?.title || topic, content: rawScriptText,
+          title: finalCards[0]?.title || topic, content: cardHtmlContent,
           topic: topic.trim(),
           keywords: keywords.trim() ? keywords.split(',').map(k => k.trim()).filter(Boolean) : undefined,
         });

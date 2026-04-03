@@ -180,16 +180,11 @@ export default function HistoryPage() {
             <div className="px-6 py-6">
               {selectedPost.post_type === 'image' && selectedPost.content.startsWith('data:image') ? (
                 <div className="flex flex-col items-center gap-4">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={selectedPost.content}
-                    alt={selectedPost.title || '생성된 이미지'}
-                    className="max-w-full rounded-xl shadow-md border border-slate-200"
-                  />
-                  {selectedPost.topic && (
-                    <p className="text-sm text-slate-500 text-center">프롬프트: {selectedPost.topic}</p>
-                  )}
+                  <img src={selectedPost.content} alt={selectedPost.title || '생성된 이미지'} className="max-w-full rounded-xl shadow-md border border-slate-200" />
+                  {selectedPost.topic && <p className="text-sm text-slate-500 text-center">프롬프트: {selectedPost.topic}</p>}
                 </div>
+              ) : selectedPost.post_type === 'card_news' && selectedPost.content.includes('<img') ? (
+                <div className="space-y-4" dangerouslySetInnerHTML={{ __html: sanitizeHtml(selectedPost.content) }} />
               ) : (
                 <article
                   className="max-w-none"
@@ -318,17 +313,18 @@ export default function HistoryPage() {
                   className="w-full text-left bg-white rounded-xl border border-slate-200 p-4 hover:border-blue-200 hover:shadow-sm transition-all group"
                 >
                   <div className="flex items-start justify-between gap-4">
-                    {/* 이미지 타입 썸네일 */}
-                    {post.post_type === 'image' && post.content?.startsWith('data:image') && (
-                      <div className="flex-shrink-0">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={post.content}
-                          alt={post.title}
-                          className="w-14 h-14 rounded-lg object-cover border border-slate-200"
-                        />
-                      </div>
-                    )}
+                    {/* 썸네일 */}
+                    {(() => {
+                      if (post.post_type === 'image' && post.content?.startsWith('data:image')) {
+                        return <div className="flex-shrink-0"><img src={post.content} alt={post.title} className="w-14 h-14 rounded-lg object-cover border border-slate-200" /></div>;
+                      }
+                      if (post.post_type === 'card_news') {
+                        const imgMatch = post.content?.match(/<img[^>]+src="([^"]+)"/);
+                        if (imgMatch?.[1]) return <div className="flex-shrink-0"><img src={imgMatch[1]} alt={post.title} className="w-14 h-14 rounded-lg object-cover border border-slate-200" /></div>;
+                        return <div className="flex-shrink-0 w-14 h-14 rounded-lg bg-pink-50 border border-pink-100 flex items-center justify-center text-lg">🌸</div>;
+                      }
+                      return null;
+                    })()}
                     <div className="min-w-0 flex-1">
                       <h3 className="text-sm font-bold text-slate-800 truncate group-hover:text-blue-700 transition-colors">
                         {post.title}
