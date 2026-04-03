@@ -9,6 +9,8 @@ import { getHospitalStylePrompt } from '../../../lib/styleService';
 import { CARD_NEWS_DESIGN_TEMPLATES } from '../../../lib/cardNewsDesignTemplates';
 import { ErrorPanel } from '../../../components/GenerationResult';
 import { CardRegenModal, type CardPromptHistoryItem, CARD_PROMPT_HISTORY_KEY, CARD_REF_IMAGE_KEY } from '../../../components/CardRegenModal';
+import CardTemplateManager from '../../../components/CardTemplateManager';
+import type { CardTemplate } from '../../../lib/cardTemplateService';
 import { ContentCategory } from '../../../lib/types';
 import type { WritingStyle, CardNewsDesignTemplateId, TrendingItem, AudienceMode } from '../../../lib/types';
 
@@ -52,6 +54,7 @@ export default function CardNewsPage() {
   const [category, setCategory] = useState<ContentCategory>(ContentCategory.DENTAL);
   const [audienceMode, setAudienceMode] = useState<AudienceMode>('환자용(친절/공감)');
   const [contentMode, setContentMode] = useState<'simple' | 'detailed'>('simple');
+  const [learnedTemplate, setLearnedTemplate] = useState<CardTemplate | null>(null);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [customImagePrompt, setCustomImagePrompt] = useState('');
   // 트렌드 주제
@@ -783,6 +786,12 @@ ${newsContext ? `\n[📰 최신 네이버 뉴스 분석]\n${newsContext}\n\n⚠�
                 </button>
               </div>
             </div>
+
+            {/* 디자인 스타일 학습 */}
+            <CardTemplateManager
+              onSelectTemplate={setLearnedTemplate}
+              selectedTemplateId={learnedTemplate?.id}
+            />
 
             {/* 🔥 트렌드 주제 (OLD parity) */}
             <button type="button" onClick={handleRecommendTrends} disabled={isLoadingTrends}
