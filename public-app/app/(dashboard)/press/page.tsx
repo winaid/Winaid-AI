@@ -7,6 +7,7 @@ import { getSessionSafe, getSupabaseClient, isSupabaseConfigured } from '../../.
 import { getHospitalStylePrompt } from '../../../lib/styleService';
 import { ErrorPanel } from '../../../components/GenerationResult';
 import { sanitizeHtml } from '../../../lib/sanitize';
+import { stripDoctype } from '../../../lib/htmlUtils';
 
 export default function PressPage() {
   const [topic, setTopic] = useState('');
