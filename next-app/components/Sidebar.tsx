@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 
-type ContentTab = 'blog' | 'clinical' | 'card_news' | 'press' | 'refine' | 'image' | 'history' | 'youtube' | 'strengths';
+type ContentTab = 'blog' | 'clinical' | 'card_news' | 'press' | 'refine' | 'image' | 'history' | 'youtube' | 'strengths' | 'mypage';
 
 interface SidebarProps {
   collapsed: boolean;
@@ -31,6 +31,7 @@ const toolItems: { id: ContentTab; label: string; icon: string; href: string }[]
   { id: 'youtube', label: '유튜브', icon: '▶️', href: '/youtube' },
   { id: 'strengths', label: '특장점', icon: '💪', href: '/strengths' },
   { id: 'history', label: '히스토리', icon: '🕐', href: '/history' },
+  { id: 'mypage', label: '마이페이지', icon: '👤', href: '/mypage' },
 ];
 
 const extraItems: { label: string; icon: string; href: string }[] = [
