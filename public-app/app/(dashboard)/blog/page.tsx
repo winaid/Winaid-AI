@@ -1381,6 +1381,17 @@ ${subs.length > 0 ? `경쟁 글 소제목: ${subs.join(' / ')}` : ''}
         }
         // 미매칭 마커 제거
         finalHtml = finalHtml.replace(/\[IMG_\d+\]\n*/g, '');
+        // 의료광고법 최종 대체 (이미지 삽입 후)
+        {
+          const lawReplacements: [RegExp, string][] = [
+            [/극대화/g, '향상'], [/최첨단/g, '최신'], [/완벽(한|하게|히)?/g, '꼼꼼$1'], [/확실(한|하게|히)?/g, '체계적$1'],
+            [/혁신적(인|으로)?/g, '새로운 방식$1'], [/획기적(인|으로)?/g, '효과적$1'], [/독보적(인|으로)?/g, '전문적$1'],
+            [/완치/g, '호전'], [/100%/g, '높은 비율로'], [/영구적(인|으로)?/g, '장기적$1'],
+            [/유일(한|하게)?/g, '차별화된$1'], [/세계\s?최초/g, '새로운 방식의'], [/국내\s?유일/g, '전문적인'],
+            [/부작용\s?없/g, '부작용 위험을 줄인'], [/통증\s?없는/g, '불편감을 줄인'],
+          ];
+          for (const [p, r] of lawReplacements) finalHtml = finalHtml.replace(p, r);
+        }
         setGeneratedContent(finalHtml);
         blogText = finalHtml;
       }
