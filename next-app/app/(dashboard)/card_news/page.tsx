@@ -32,13 +32,6 @@ interface CardSlide {
   imageHistory: CardImageHistoryItem[];
 }
 
-const IMAGE_STYLE_OPTIONS = [
-  { id: 'photo', icon: '📸', label: '실사' },
-  { id: 'illustration', icon: '🎨', label: '일러스트' },
-  { id: 'medical', icon: '🫀', label: '의학 3D' },
-  { id: 'custom', icon: '✏️', label: '커스텀' },
-] as const;
-
 type ImageStyleType = 'photo' | 'illustration' | 'medical' | 'custom';
 
 export default function CardNewsPage() {
@@ -49,13 +42,15 @@ export default function CardNewsPage() {
   const [keywords, setKeywords] = useState('');
   const [hospitalName, setHospitalName] = useState('');
   const [showHospitalPicker, setShowHospitalPicker] = useState(false);
-  const [hospitalNameMode, setHospitalNameMode] = useState<'all' | 'first_last' | 'none'>('first_last');
+  // 병원명 표시 모드는 프로 모드에서 의미 없음(1장/마지막 장 자동). 레거시 코드 경로 참조용 고정값.
+  const hospitalNameMode: 'all' | 'first_last' | 'none' = 'first_last';
   const [logoDataUrl, setLogoDataUrl] = useState<string | null>(null);
   const [logoEnabled, setLogoEnabled] = useState(false);
   const logoInputRef = useRef<HTMLInputElement>(null);
   const [slideCount, setSlideCount] = useState(6);
   const [designTemplateId, setDesignTemplateId] = useState<CardNewsDesignTemplateId | undefined>(undefined);
-  const [imageStyle, setImageStyle] = useState<ImageStyleType>('illustration');
+  // 이미지 스타일 UI는 상세설정과 함께 제거됨. 레거시 AI 이미지 플로우 참조용 고정값.
+  const imageStyle: ImageStyleType = 'illustration';
   const [category, setCategory] = useState<ContentCategory>(ContentCategory.DENTAL);
   const [audienceMode, setAudienceMode] = useState<AudienceMode>('환자용(친절/공감)');
   const [contentMode, setContentMode] = useState<'simple' | 'detailed'>('simple');
@@ -78,11 +73,11 @@ export default function CardNewsPage() {
       fontFamily: learnedTemplate.typography.fontFamily || prev.fontFamily,
     }));
   }, [learnedTemplate]);
-  const [showAdvanced, setShowAdvanced] = useState(false);
   const [showStyleUpload, setShowStyleUpload] = useState(false);
   const [savedStylesVersion, setSavedStylesVersion] = useState(0);
   const savedStyles = (() => { void savedStylesVersion; return getSavedTemplates(); })();
-  const [customImagePrompt, setCustomImagePrompt] = useState('');
+  // 커스텀 이미지 프롬프트 UI는 상세설정과 함께 제거됨. 레거시 플로우 참조용 고정값.
+  const customImagePrompt = '';
   // 트렌드 주제
   const [isLoadingTrends, setIsLoadingTrends] = useState(false);
   const [trendingItems, setTrendingItems] = useState<TrendingItem[]>([]);
@@ -1068,110 +1063,60 @@ ${newsContext ? `\n[📰 최신 네이버 뉴스 분석]\n${newsContext}\n\n⚠�
               )}
             </div>
 
-            {/* ⚙️ 상세 설정 (OLD parity: 접기/펼치기) */}
-            <button type="button" onClick={() => setShowAdvanced(!showAdvanced)}
-              className="w-full flex items-center justify-between px-3 py-2 bg-slate-50 hover:bg-slate-100 rounded-lg text-xs font-semibold text-slate-500 transition-all border border-slate-100">
-              <span>⚙️ 상세 설정</span>
-              <svg className={`w-4 h-4 transition-transform ${showAdvanced ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
-            </button>
-
-            {showAdvanced && (
-              <div className="space-y-4 p-3 bg-slate-50 rounded-xl border border-slate-100">
-                {/* 병원 선택 */}
-                <div>
-                  <label className={labelCls}>병원 선택 (선택)</label>
-                  <div className="relative">
-                    <input type="text" value={hospitalName} onChange={e => setHospitalName(e.target.value)} onFocus={() => setShowHospitalPicker(true)} placeholder="병원명 입력 또는 선택" className={inputCls} />
-                    {showHospitalPicker && (
-                      <>
-                        <div className="fixed inset-0 z-10" onClick={() => setShowHospitalPicker(false)} />
-                        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg z-20 max-h-64 overflow-y-auto">
-                          {TEAM_DATA.map(team => (
-                            <div key={team.id}>
-                              <div className="px-3 py-1.5 text-[10px] font-bold text-slate-400 uppercase bg-slate-50 sticky top-0">{team.label}</div>
-                              {team.hospitals.map(h => (
-                                <button key={`${team.id}-${h.name}`} type="button" onClick={() => { setHospitalName(h.name); setShowHospitalPicker(false); }}
-                                  className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-pink-50 hover:text-pink-700 transition-colors">
-                                  {h.name}<span className="text-[11px] text-slate-400 ml-2">{h.manager}</span>
-                                </button>
-                              ))}
-                            </div>
+            {/* 병원 선택 (선택) */}
+            <div>
+              <label className={labelCls}>병원 선택 (선택)</label>
+              <div className="relative">
+                <input type="text" value={hospitalName} onChange={e => setHospitalName(e.target.value)} onFocus={() => setShowHospitalPicker(true)} placeholder="병원명 입력 또는 선택" className={inputCls} />
+                {showHospitalPicker && (
+                  <>
+                    <div className="fixed inset-0 z-10" onClick={() => setShowHospitalPicker(false)} />
+                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg z-20 max-h-64 overflow-y-auto">
+                      {TEAM_DATA.map(team => (
+                        <div key={team.id}>
+                          <div className="px-3 py-1.5 text-[10px] font-bold text-slate-400 uppercase bg-slate-50 sticky top-0">{team.label}</div>
+                          {team.hospitals.map(h => (
+                            <button key={`${team.id}-${h.name}`} type="button" onClick={() => { setHospitalName(h.name); setShowHospitalPicker(false); }}
+                              className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-pink-50 hover:text-pink-700 transition-colors">
+                              {h.name}<span className="text-[11px] text-slate-400 ml-2">{h.manager}</span>
+                            </button>
                           ))}
                         </div>
-                      </>
-                    )}
-                  </div>
-                </div>
-
-                {/* 카드에 병원명 표시 */}
-                {hospitalName && (
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] text-slate-400 whitespace-nowrap">병원명 표시</span>
-                    {([
-                      { value: 'first_last' as const, label: '표지+마무리' },
-                      { value: 'all' as const, label: '전체' },
-                      { value: 'none' as const, label: '안 함' },
-                    ]).map(opt => (
-                      <button key={opt.value} type="button" onClick={() => setHospitalNameMode(opt.value)}
-                        className={`px-2.5 py-1 rounded-lg text-[10px] font-semibold transition-all ${hospitalNameMode === opt.value ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>
-                        {opt.label}
-                      </button>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  </>
                 )}
-
-                {/* 로고 */}
-                <div>
-                  <label className="text-[11px] font-semibold text-slate-500 mb-1.5 block">병원 로고 (선택)</label>
-                  <div className="flex items-center gap-3">
-                    {logoDataUrl ? (
-                      <div className="relative">
-                        <img src={logoDataUrl} alt="로고" className="h-10 w-auto rounded-lg border border-slate-200 bg-white p-1" />
-                        <button type="button" onClick={() => { setLogoDataUrl(null); setLogoEnabled(false); try { localStorage.removeItem('hospital-logo-dataurl'); } catch {} }}
-                          className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white rounded-full text-[8px] flex items-center justify-center">✕</button>
-                      </div>
-                    ) : (
-                      <button type="button" onClick={() => logoInputRef.current?.click()}
-                        className="h-10 px-4 border-2 border-dashed border-slate-200 rounded-lg text-xs text-slate-400 hover:border-pink-400 hover:text-pink-500 transition-all">+ 로고 업로드</button>
-                    )}
-                    <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={e => {
-                      const file = e.target.files?.[0]; if (!file) return;
-                      const reader = new FileReader();
-                      reader.onload = () => { const d = reader.result as string; setLogoDataUrl(d); setLogoEnabled(true); try { localStorage.setItem('hospital-logo-dataurl', d); } catch {} };
-                      reader.readAsDataURL(file); e.target.value = '';
-                    }} />
-                    {logoDataUrl && (
-                      <label className="flex items-center gap-1.5 cursor-pointer">
-                        <input type="checkbox" checked={logoEnabled} onChange={e => setLogoEnabled(e.target.checked)} className="w-3.5 h-3.5 rounded border-slate-300 text-pink-500" />
-                        <span className="text-[11px] text-slate-500">카드에 로고 넣기</span>
-                      </label>
-                    )}
-                  </div>
-                </div>
-
-
-                {/* 이미지 스타일 (OLD parity: 4종) */}
-                <div>
-                  <label className={labelCls}>이미지 스타일</label>
-                  <div className="grid grid-cols-4 gap-1.5">
-                    {IMAGE_STYLE_OPTIONS.map(s => (
-                      <button key={s.id} type="button" onClick={() => setImageStyle(s.id)}
-                        className={`py-2 rounded-lg border transition-all flex flex-col items-center gap-0.5 ${imageStyle === s.id ? 'border-pink-400 bg-pink-50 text-pink-700' : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300'}`}
-                      >
-                        <span className="text-base">{s.icon}</span>
-                        <span className="text-[10px] font-semibold">{s.label}</span>
-                      </button>
-                    ))}
-                  </div>
-                  {/* 커스텀 프롬프트 (커스텀 선택 시) */}
-                  {imageStyle === 'custom' && (
-                    <textarea value={customImagePrompt} onChange={e => setCustomImagePrompt(e.target.value)}
-                      placeholder="원하는 이미지 스타일을 직접 입력하세요 (예: 수채화 느낌, 따뜻한 파스텔톤, 손그림 스타일...)"
-                      rows={2} className="w-full mt-2 px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-pink-500/20 resize-none" />
-                  )}
-                </div>
               </div>
-            )}
+            </div>
+
+            {/* 병원 로고 (선택) */}
+            <div>
+              <label className={labelCls}>병원 로고 (선택)</label>
+              <div className="flex items-center gap-3">
+                {logoDataUrl ? (
+                  <div className="relative">
+                    <img src={logoDataUrl} alt="로고" className="h-10 w-auto rounded-lg border border-slate-200 bg-white p-1" />
+                    <button type="button" onClick={() => { setLogoDataUrl(null); setLogoEnabled(false); try { localStorage.removeItem('hospital-logo-dataurl'); } catch {} }}
+                      className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white rounded-full text-[8px] flex items-center justify-center">✕</button>
+                  </div>
+                ) : (
+                  <button type="button" onClick={() => logoInputRef.current?.click()}
+                    className="h-10 px-4 border-2 border-dashed border-slate-200 rounded-lg text-xs text-slate-400 hover:border-pink-400 hover:text-pink-500 transition-all">+ 로고 업로드</button>
+                )}
+                <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={e => {
+                  const file = e.target.files?.[0]; if (!file) return;
+                  const reader = new FileReader();
+                  reader.onload = () => { const d = reader.result as string; setLogoDataUrl(d); setLogoEnabled(true); try { localStorage.setItem('hospital-logo-dataurl', d); } catch {} };
+                  reader.readAsDataURL(file); e.target.value = '';
+                }} />
+                {logoDataUrl && (
+                  <label className="flex items-center gap-1.5 cursor-pointer">
+                    <input type="checkbox" checked={logoEnabled} onChange={e => setLogoEnabled(e.target.checked)} className="w-3.5 h-3.5 rounded border-slate-300 text-pink-500" />
+                    <span className="text-[11px] text-slate-500">카드에 로고 넣기</span>
+                  </label>
+                )}
+              </div>
+            </div>
 
             {/* 생성 버튼 */}
             <button type="submit" disabled={isGenerating || !topic.trim()}
