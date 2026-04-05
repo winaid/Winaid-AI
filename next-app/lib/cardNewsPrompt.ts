@@ -288,10 +288,25 @@ export function buildCardNewsProPrompt(req: CardNewsRequest): {
 5. 의료광고법 준수: "완치", "100%", "최첨단", "완벽", "획기적", "유일", "국내 최초", "1위" 등 최상급/단정 표현 금지.
 6. 모든 텍스트는 한국어. 한 문장은 짧고 명확하게(25자 내외).
 7. 이모지는 UTF-8 단일 이모지(🦷 💉 ⏱️ 🔬 🩺 ✨ 💡 📊 🎯 ⚠️ 등)만 사용.
-8. 출력은 JSON 객체 하나. { "slides": [ ... ] } 형태. 마크다운 코드블록·설명·주석 금지.`;
+8. 출력은 JSON 객체 하나. { "font": "...", "slides": [ ... ] } 형태. 마크다운 코드블록·설명·주석 금지.
+9. 최상위 font 필드에 주제 분위기에 맞는 폰트 id를 하나 선택(선택 옵션):
+   - 전문적/의료/신뢰: "pretendard", "noto-sans", "gothic-a1", "ibm-plex"
+   - 고급/품격: "noto-serif", "nanum-myeongjo", "hahmlet", "gowun-batang"
+   - 강렬한/임팩트: "black-han", "do-hyeon", "orbit"
+   - 친근한/부드러운: "jua", "sunflower", "nanum-gothic"
+   - 손글씨/감성: "gaegu", "hi-melody", "gowun-dodum"
+10. 중간 슬라이드(cover/closing 제외)마다 visualKeyword 필드를 포함(영문 1~2줄):
+    실제 장비·치아 모델·진료 장면 등 해당 슬라이드를 표현하는 이미지 프롬프트.
+    예: "dental implant titanium screws close-up, clean white background, 3D render"
+11. imagePosition은 레이아웃에 어울리게 선택:
+    - "top": 이미지가 제목 위 (info/steps/checklist에 권장)
+    - "background": 이미지가 배경, 텍스트가 오버레이 (표지·강렬한 수치 강조에 권장)
+    - "center": 이미지가 중앙 큰 비중 (data-highlight에도 가능)
+    cover/closing은 visualKeyword/imagePosition 생략 가능.`;
 
   const example = `예시 스키마:
 {
+  "font": "noto-sans",
   "slides": [
     {
       "index": 1,
@@ -304,6 +319,8 @@ export function buildCardNewsProPrompt(req: CardNewsRequest): {
       "layout": "comparison",
       "title": "일반 vs 네비게이션 임플란트",
       "subtitle": "핵심 차이를 숫자로 확인하세요",
+      "visualKeyword": "dental implant titanium screws comparison, clean white background, 3D render, photo-realistic",
+      "imagePosition": "top",
       "compareLabels": ["수술 방식", "절개 범위", "수술 시간", "회복 기간"],
       "columns": [
         { "header": "일반", "highlight": false, "items": ["2D 엑스레이", "15mm 이상", "40~60분", "7~10일"] },
@@ -314,6 +331,8 @@ export function buildCardNewsProPrompt(req: CardNewsRequest): {
       "index": 3,
       "layout": "icon-grid",
       "title": "네비게이션 임플란트의 4가지 장점",
+      "visualKeyword": "modern dental clinic 3D CT scanner, bright operating room, minimalist illustration",
+      "imagePosition": "background",
       "icons": [
         { "emoji": "🎯", "title": "0.1mm 정밀도", "desc": "3D 모의수술로 오차 최소화" },
         { "emoji": "💉", "title": "적은 통증", "desc": "최소 절개로 출혈 감소" },
@@ -325,6 +344,8 @@ export function buildCardNewsProPrompt(req: CardNewsRequest): {
       "index": 4,
       "layout": "steps",
       "title": "네비게이션 임플란트 치료 과정",
+      "visualKeyword": "dental surgery step-by-step infographic, teeth model, clean white background",
+      "imagePosition": "top",
       "steps": [
         { "label": "3D CT 정밀 진단", "desc": "골조직·신경·혈관 위치 파악" },
         { "label": "컴퓨터 모의수술", "desc": "최적 식립 경로 설계" },
@@ -336,6 +357,8 @@ export function buildCardNewsProPrompt(req: CardNewsRequest): {
       "index": 5,
       "layout": "data-highlight",
       "title": "숫자로 보는 네비게이션 임플란트",
+      "visualKeyword": "healthy white teeth close-up, professional dental photography",
+      "imagePosition": "background",
       "dataPoints": [
         { "value": "0.1mm", "label": "모의수술 오차 범위", "highlight": true },
         { "value": "30년+", "label": "디지털 임플란트 임상 데이터" },

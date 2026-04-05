@@ -42,6 +42,8 @@ export interface SlideDataPoint {
   highlight?: boolean;
 }
 
+export type SlideImagePosition = 'background' | 'top' | 'center';
+
 export interface SlideData {
   index: number;
   layout: SlideLayoutType;
@@ -66,6 +68,11 @@ export interface SlideData {
 
   // data-highlight
   dataPoints?: SlideDataPoint[];
+
+  // AI 이미지 (프로 모드 전용 — 선택)
+  visualKeyword?: string;   // AI가 지정한 이미지 프롬프트 키워드(영문)
+  imageUrl?: string;        // /api/image 결과 dataURL
+  imagePosition?: SlideImagePosition;
 }
 
 export interface CardNewsTheme {
@@ -77,8 +84,9 @@ export interface CardNewsTheme {
   accentColor: string;
   cardBgColor: string;
   fontFamily: string;
+  fontId?: string;           // CARD_FONTS[].id (없으면 fontFamily 사용)
   hospitalName?: string;
-  hospitalLogo?: string; // base64 dataUrl
+  hospitalLogo?: string;     // base64 dataUrl
 }
 
 /** 기본 테마: 네이비 배경 + 골드 악센트 (프로 치과 벤치마크) */
@@ -224,16 +232,21 @@ export const LAYOUT_LABELS: Record<SlideLayoutType, string> = {
 };
 
 /**
- * AI가 출력한 JSON을 파싱해 SlideData[]로 변환.
+ * AI가 출력한 JSON을 파싱해 { slides, font }로 변환.
  * 누락 필드는 info 레이아웃 fallback + 기본값 채움.
  */
-export function parseProSlidesJson(rawText: string): SlideData[] {
+export interface ParsedProResult {
+  slides: SlideData[];
+  fontId?: string;
+}
+
+export function parseProSlidesJson(rawText: string): ParsedProResult {
   const cleaned = rawText
     .replace(/```json?\s*\n?/gi, '')
     .replace(/\n?```\s*$/g, '')
     .trim();
 
-  let parsed: { slides?: Partial<SlideData>[] };
+  let parsed: { slides?: Partial<SlideData>[]; font?: unknown };
   try {
     parsed = JSON.parse(cleaned);
   } catch {
@@ -245,11 +258,18 @@ export function parseProSlidesJson(rawText: string): SlideData[] {
   }
 
   const rawSlides = Array.isArray(parsed.slides) ? parsed.slides : [];
-  return rawSlides.map((s, i) => normalizeSlide(s, i));
+  const slides = rawSlides.map((s, i) => normalizeSlide(s, i));
+  const fontId = typeof parsed.font === 'string' && CARD_FONTS.some(f => f.id === parsed.font)
+    ? (parsed.font as string)
+    : undefined;
+  return { slides, fontId };
 }
 
 function normalizeSlide(raw: Partial<SlideData>, i: number): SlideData {
   const layout = isValidLayout(raw.layout) ? raw.layout : 'info';
+  const position = raw.imagePosition;
+  const validPosition: SlideImagePosition | undefined =
+    position === 'background' || position === 'top' || position === 'center' ? position : undefined;
   return {
     index: raw.index ?? i + 1,
     layout,
@@ -262,10 +282,70 @@ function normalizeSlide(raw: Partial<SlideData>, i: number): SlideData {
     steps: raw.steps,
     checkItems: raw.checkItems,
     dataPoints: raw.dataPoints,
+    visualKeyword: raw.visualKeyword,
+    imageUrl: raw.imageUrl,
+    imagePosition: validPosition,
   };
 }
 
 function isValidLayout(v: unknown): v is SlideLayoutType {
   return typeof v === 'string' &&
     ['cover', 'info', 'comparison', 'icon-grid', 'steps', 'checklist', 'data-highlight', 'closing'].includes(v);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Google Fonts — 한글 지원 카드뉴스 전용 폰트 목록
+// ═══════════════════════════════════════════════════════════════
+
+export interface CardFont {
+  id: string;
+  name: string;
+  family: string;
+  /** Google Fonts CSS2 families 쿼리값. null이면 로컬 폰트(Pretendard 등). */
+  googleImport: string | null;
+  category: '기본' | '명조' | '임팩트' | '친근' | '손글씨';
+}
+
+export const FONT_CATEGORIES = ['기본', '명조', '임팩트', '친근', '손글씨'] as const;
+
+export const CARD_FONTS: CardFont[] = [
+  // 기본 (산세리프/고딕)
+  { id: 'pretendard', name: 'Pretendard', family: "'Pretendard Variable', 'Pretendard', sans-serif", googleImport: null, category: '기본' },
+  { id: 'noto-sans', name: '노토 산스', family: "'Noto Sans KR', sans-serif", googleImport: 'Noto+Sans+KR:wght@400;500;700;800;900', category: '기본' },
+  { id: 'gothic-a1', name: 'Gothic A1', family: "'Gothic A1', sans-serif", googleImport: 'Gothic+A1:wght@400;600;700;800;900', category: '기본' },
+  { id: 'ibm-plex', name: 'IBM Plex', family: "'IBM Plex Sans KR', sans-serif", googleImport: 'IBM+Plex+Sans+KR:wght@400;500;600;700', category: '기본' },
+  { id: 'nanum-gothic', name: '나눔 고딕', family: "'Nanum Gothic', sans-serif", googleImport: 'Nanum+Gothic:wght@400;700;800', category: '기본' },
+  { id: 'gowun-dodum', name: '고운 돋움', family: "'Gowun Dodum', sans-serif", googleImport: 'Gowun+Dodum', category: '기본' },
+
+  // 명조 (세리프)
+  { id: 'noto-serif', name: '노토 세리프', family: "'Noto Serif KR', serif", googleImport: 'Noto+Serif+KR:wght@400;600;700;900', category: '명조' },
+  { id: 'nanum-myeongjo', name: '나눔 명조', family: "'Nanum Myeongjo', serif", googleImport: 'Nanum+Myeongjo:wght@400;700;800', category: '명조' },
+  { id: 'gowun-batang', name: '고운 바탕', family: "'Gowun Batang', serif", googleImport: 'Gowun+Batang:wght@400;700', category: '명조' },
+  { id: 'hahmlet', name: '함렛', family: "'Hahmlet', serif", googleImport: 'Hahmlet:wght@400;500;600;700;800;900', category: '명조' },
+  { id: 'song-myung', name: '송명', family: "'Song Myung', serif", googleImport: 'Song+Myung', category: '명조' },
+
+  // 임팩트
+  { id: 'black-han', name: '블랙한산스', family: "'Black Han Sans', sans-serif", googleImport: 'Black+Han+Sans', category: '임팩트' },
+  { id: 'do-hyeon', name: '도현', family: "'Do Hyeon', sans-serif", googleImport: 'Do+Hyeon', category: '임팩트' },
+  { id: 'gugi', name: '구기', family: "'Gugi', cursive", googleImport: 'Gugi', category: '임팩트' },
+  { id: 'orbit', name: 'Orbit', family: "'Orbit', sans-serif", googleImport: 'Orbit', category: '임팩트' },
+
+  // 친근
+  { id: 'jua', name: '주아', family: "'Jua', sans-serif", googleImport: 'Jua', category: '친근' },
+  { id: 'sunflower', name: '해바라기', family: "'Sunflower', sans-serif", googleImport: 'Sunflower:wght@300;500;700', category: '친근' },
+  { id: 'gamja-flower', name: '감자꽃', family: "'Gamja Flower', cursive", googleImport: 'Gamja+Flower', category: '친근' },
+  { id: 'stylish', name: '스타일리시', family: "'Stylish', sans-serif", googleImport: 'Stylish', category: '친근' },
+
+  // 손글씨
+  { id: 'gaegu', name: '개구', family: "'Gaegu', cursive", googleImport: 'Gaegu:wght@300;400;700', category: '손글씨' },
+  { id: 'hi-melody', name: '하이멜로디', family: "'Hi Melody', cursive", googleImport: 'Hi+Melody', category: '손글씨' },
+  { id: 'poor-story', name: '푸어스토리', family: "'Poor Story', cursive", googleImport: 'Poor+Story', category: '손글씨' },
+  { id: 'east-sea', name: '동해독도', family: "'East Sea Dokdo', cursive", googleImport: 'East+Sea+Dokdo', category: '손글씨' },
+  { id: 'yeon-sung', name: '연성', family: "'Yeon Sung', cursive", googleImport: 'Yeon+Sung', category: '손글씨' },
+];
+
+/** fontId로 CardFont 찾기. 못 찾으면 기본(Pretendard) 반환 */
+export function getCardFont(fontId?: string): CardFont {
+  if (!fontId) return CARD_FONTS[0];
+  return CARD_FONTS.find(f => f.id === fontId) ?? CARD_FONTS[0];
 }

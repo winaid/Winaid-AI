@@ -2,7 +2,21 @@
 
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import type { SlideData, CardNewsTheme, SlideLayoutType } from '../lib/cardNewsLayouts';
-import { LAYOUT_LABELS } from '../lib/cardNewsLayouts';
+import { LAYOUT_LABELS, CARD_FONTS, FONT_CATEGORIES, getCardFont } from '../lib/cardNewsLayouts';
+
+/** Google Fonts CDN에서 한 번만 로드. 이미 있으면 스킵 */
+function ensureGoogleFontLoaded(fontId: string) {
+  if (typeof document === 'undefined') return;
+  const font = CARD_FONTS.find(f => f.id === fontId);
+  if (!font || !font.googleImport) return;
+  const linkId = `gfont-${font.id}`;
+  if (document.getElementById(linkId)) return;
+  const link = document.createElement('link');
+  link.id = linkId;
+  link.rel = 'stylesheet';
+  link.href = `https://fonts.googleapis.com/css2?family=${font.googleImport}&display=swap`;
+  document.head.appendChild(link);
+}
 
 interface Props {
   slides: SlideData[];
@@ -24,7 +38,7 @@ interface Props {
  *   transform: scale(컨테이너폭 / 1080)로 축소한다. 다운로드는 별도의
  *   captureNodeAsCanvas 헬퍼가 scale을 제거한 복제본을 풀사이즈로 캡처.
  */
-export default function CardNewsProRenderer({ slides, theme, onSlidesChange }: Props) {
+export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onThemeChange }: Props) {
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
   const boxRefs = useRef<(HTMLDivElement | null)[]>([]);
   const [downloading, setDownloading] = useState(false);
@@ -51,10 +65,20 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange }: P
     };
   }, [slides.length, editingIdx]);
 
+  // 선택된 폰트가 Google Fonts 기반이면 CDN에서 로드
+  useEffect(() => {
+    if (theme.fontId) ensureGoogleFontLoaded(theme.fontId);
+  }, [theme.fontId]);
+
   /** 특정 슬라이드 업데이트 (얕은 머지) */
   const updateSlide = (idx: number, patch: Partial<SlideData>) => {
     onSlidesChange(slides.map((s, i) => (i === idx ? { ...s, ...patch } : s)));
   };
+
+  /** theme.fontId → CARD_FONTS family 우선, 없으면 theme.fontFamily */
+  const effectiveFontFamily = theme.fontId
+    ? getCardFont(theme.fontId).family
+    : theme.fontFamily;
 
   // ═══════════════════════════════════════
   // 다운로드
@@ -89,6 +113,10 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange }: P
     tempContainer.appendChild(clone);
 
     try {
+      // 폰트(특히 Google Fonts)가 DOM에 적용될 때까지 대기 — 이미지 캡처 전 필수
+      if (typeof document !== 'undefined' && 'fonts' in document) {
+        try { await (document as Document & { fonts: { ready: Promise<FontFaceSet> } }).fonts.ready; } catch { /* best-effort */ }
+      }
       const html2canvas = (await import('html2canvas')).default;
       return await html2canvas(tempContainer, {
         scale: 2,
@@ -153,8 +181,11 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange }: P
     height: '1080px',
     position: 'relative',
     overflow: 'hidden',
+    // isolation: 'isolate'는 자체 스택 컨텍스트를 만들어서 음수 z-index 자식
+    // (renderImageLayer의 배경 이미지)이 부모 배경보다 위에 그려지게 한다.
+    isolation: 'isolate',
     background: theme.backgroundGradient || theme.backgroundColor,
-    fontFamily: theme.fontFamily,
+    fontFamily: effectiveFontFamily,
     display: 'flex',
     flexDirection: 'column',
     padding: '80px 70px',
@@ -173,10 +204,105 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange }: P
     />
   );
 
+  /**
+   * 이미지 레이어 — imagePosition에 따라 배경/상단/중앙으로 배치.
+   *
+   * 'background'와 'center'는 position:absolute + z-index:-1 로 콘텐츠 뒤에 깔린다.
+   * (CSS 페인팅 순서상 음수 z-index 요소는 부모 배경 위, 일반 플로우 자식 아래에
+   * 그려지기 때문에 각 렌더 함수의 콘텐츠에 z-index를 따로 주지 않아도 위에 보인다.)
+   * 'top'은 normal flow 요소로 콘텐츠 맨 위에 inline 삽입되므로 다른 처리가 필요 없음.
+   */
+  const renderImageLayer = (slide: SlideData) => {
+    if (!slide.imageUrl) return null;
+    const position = slide.imagePosition || 'top';
+
+    if (position === 'background') {
+      return (
+        <>
+          <div
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              backgroundImage: `url(${slide.imageUrl})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              opacity: 0.32,
+              zIndex: -1,
+            }}
+          />
+          <div
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              background: 'linear-gradient(180deg, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.55) 100%)',
+              zIndex: -1,
+            }}
+          />
+        </>
+      );
+    }
+
+    if (position === 'top') {
+      return (
+        <div
+          style={{
+            width: '100%',
+            height: '300px',
+            overflow: 'hidden',
+            borderRadius: '20px',
+            marginBottom: '28px',
+            boxShadow: '0 10px 30px rgba(0,0,0,0.25)',
+            flexShrink: 0,
+          }}
+        >
+          <img
+            src={slide.imageUrl}
+            alt=""
+            crossOrigin="anonymous"
+            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+          />
+        </div>
+      );
+    }
+
+    // center
+    return (
+      <div
+        style={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          width: '60%',
+          maxHeight: '60%',
+          overflow: 'hidden',
+          borderRadius: '24px',
+          boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+          zIndex: -1,
+          opacity: 0.55,
+        }}
+      >
+        <img
+          src={slide.imageUrl}
+          alt=""
+          crossOrigin="anonymous"
+          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+        />
+      </div>
+    );
+  };
+
   const hospitalFooter = theme.hospitalName ? (
     <div
       style={{
         position: 'absolute',
+        zIndex: 4,
         bottom: '40px',
         left: 0,
         right: 0,
@@ -205,6 +331,7 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange }: P
         textAlign: 'center',
       }}
     >
+      {renderImageLayer(slide)}
       <div
         style={{
           width: '120px',
@@ -248,6 +375,7 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange }: P
 
   const renderInfo = (slide: SlideData) => (
     <div style={cardContainerStyle}>
+      {renderImageLayer(slide)}
       {topBar}
       <h2
         style={{
@@ -305,6 +433,7 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange }: P
 
     return (
       <div style={cardContainerStyle}>
+        {renderImageLayer(slide)}
         {topBar}
         <h2
           style={{
@@ -420,6 +549,7 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange }: P
 
     return (
       <div style={cardContainerStyle}>
+        {renderImageLayer(slide)}
         {topBar}
         <h2
           style={{
@@ -508,6 +638,7 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange }: P
 
     return (
       <div style={cardContainerStyle}>
+        {renderImageLayer(slide)}
         {topBar}
         <h2
           style={{
@@ -610,6 +741,7 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange }: P
 
   const renderChecklist = (slide: SlideData) => (
     <div style={cardContainerStyle}>
+      {renderImageLayer(slide)}
       {topBar}
       <h2
         style={{
@@ -696,6 +828,7 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange }: P
     const cols = Math.min(points.length, 3);
     return (
       <div style={cardContainerStyle}>
+        {renderImageLayer(slide)}
         {topBar}
         <h2
           style={{
@@ -786,6 +919,7 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange }: P
         textAlign: 'center',
       }}
     >
+      {renderImageLayer(slide)}
       {slide.subtitle && (
         <h2
           style={{
@@ -878,7 +1012,7 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange }: P
 
   return (
     <div className="space-y-4">
-      {/* 상단 컨트롤 — 테마 선택은 폼에서 하므로 여기는 라벨 + 전체 다운로드만 */}
+      {/* 상단 컨트롤 */}
       <div className="flex flex-wrap items-center justify-between gap-2 bg-white rounded-xl border border-slate-200 p-3">
         <div className="flex items-center gap-2">
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">
@@ -886,13 +1020,36 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange }: P
           </span>
           <span className="text-xs font-bold text-slate-700">{slides.length}장</span>
         </div>
-        <button
-          onClick={downloadAll}
-          disabled={downloading}
-          className="px-3 py-1.5 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
-        >
-          {downloading ? '⏳ 다운로드 중...' : '📦 전체 다운로드'}
-        </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* 글씨체 드롭다운 */}
+          <label className="flex items-center gap-1.5">
+            <span className="text-[10px] font-semibold text-slate-500">글씨체</span>
+            <select
+              value={theme.fontId || 'pretendard'}
+              onChange={(e) => {
+                const newFontId = e.target.value;
+                ensureGoogleFontLoaded(newFontId);
+                onThemeChange({ ...theme, fontId: newFontId });
+              }}
+              className="px-2 py-1 text-xs bg-slate-50 border border-slate-200 rounded-lg font-medium text-slate-700 focus:outline-none focus:border-blue-400"
+            >
+              {FONT_CATEGORIES.map(cat => (
+                <optgroup key={cat} label={cat}>
+                  {CARD_FONTS.filter(f => f.category === cat).map(f => (
+                    <option key={f.id} value={f.id}>{f.name}</option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
+          </label>
+          <button
+            onClick={downloadAll}
+            disabled={downloading}
+            className="px-3 py-1.5 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+          >
+            {downloading ? '⏳ 다운로드 중...' : '📦 전체 다운로드'}
+          </button>
+        </div>
       </div>
 
       {/* 카드 그리드 (축소 미리보기 + 인라인 편집 패널) */}
