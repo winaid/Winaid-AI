@@ -31,15 +31,9 @@ export async function getCredits(userId: string): Promise<CreditInfo | null> {
   }
 }
 
-/** admin 여부 확인 */
-function isAdmin(): boolean {
-  if (typeof window === 'undefined') return false;
-  try { return localStorage.getItem('winaid_admin') === 'true'; } catch { return false; }
-}
-
-/** 크레딧 1 차감 — Supabase 미설정 또는 admin이면 항상 성공 */
+/** 크레딧 1 차감 — Supabase 미설정 시에만 항상 성공 (개발 환경) */
 export async function useCredit(userId: string): Promise<CreditResult> {
-  if (!isSupabaseConfigured || isAdmin()) {
+  if (!isSupabaseConfigured) {
     return { success: true, remaining: 999 };
   }
   try {
