@@ -52,7 +52,7 @@ export interface SlideDataPoint {
   highlight?: boolean;
 }
 
-export type SlideImagePosition = 'background' | 'top' | 'center';
+export type SlideImagePosition = 'background' | 'top' | 'center' | 'bottom';
 
 /** 슬라이드 이미지 생성 스타일 프리셋 */
 export const SLIDE_IMAGE_STYLES = [
@@ -333,7 +333,7 @@ function normalizeSlide(raw: Partial<SlideData>, i: number): SlideData {
   const layout = isValidLayout(raw.layout) ? raw.layout : 'info';
   const position = raw.imagePosition;
   const validPosition: SlideImagePosition | undefined =
-    position === 'background' || position === 'top' || position === 'center' ? position : undefined;
+    position === 'background' || position === 'top' || position === 'center' || position === 'bottom' ? position : undefined;
   return {
     index: raw.index ?? i + 1,
     layout,

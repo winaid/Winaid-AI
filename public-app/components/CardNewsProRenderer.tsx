@@ -56,6 +56,87 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
   const [chatLoading, setChatLoading] = useState(false);
   const chatEndRef = useRef<HTMLDivElement | null>(null);
 
+  // 폰트 즉시 반영 + 커스텀 폰트 업로드
+  const [fontLoaded, setFontLoaded] = useState(0);
+  const [customFontName, setCustomFontName] = useState<string | null>(null);
+  const [customFontDisplayName, setCustomFontDisplayName] = useState<string | null>(null);
+  const customFontInputRef = useRef<HTMLInputElement | null>(null);
+
+  // 선택된 폰트가 Google Fonts 기반이면 CDN 로드 후 fontLoaded 증가 → 카드 re-mount
+  useEffect(() => {
+    const fontId = theme.fontId || 'pretendard';
+    if (fontId === 'custom') {
+      setFontLoaded(v => v + 1);
+      return;
+    }
+    ensureGoogleFontLoaded(fontId);
+    if (typeof document !== 'undefined' && 'fonts' in document) {
+      (document as Document & { fonts: { ready: Promise<FontFaceSet> } }).fonts.ready
+        .then(() => setFontLoaded(v => v + 1))
+        .catch(() => setFontLoaded(v => v + 1));
+    } else {
+      setFontLoaded(v => v + 1);
+    }
+  }, [theme.fontId]);
+
+  // 저장된 커스텀 폰트 복원 (마운트 시 1회)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const saved = localStorage.getItem('winaid_custom_font');
+      if (!saved) return;
+      const parsed = JSON.parse(saved) as { name: string; displayName: string; data: string };
+      fetch(parsed.data)
+        .then(r => r.arrayBuffer())
+        .then(buf => {
+          const fontFace = new FontFace(parsed.name, buf);
+          return fontFace.load().then(face => {
+            (document.fonts as unknown as { add: (f: FontFace) => void }).add(face);
+            setCustomFontName(parsed.name);
+            setCustomFontDisplayName(parsed.displayName);
+            setFontLoaded(v => v + 1);
+          });
+        })
+        .catch(() => { /* 복원 실패 무시 */ });
+    } catch { /* ignore */ }
+  }, []);
+
+  const handleCustomFontUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const rawName = file.name.replace(/\.[^.]+$/, '');
+    const fontName = `custom-${rawName.replace(/[^a-zA-Z0-9가-힣_-]/g, '')}` || `custom-font-${Date.now()}`;
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const fontFace = new FontFace(fontName, arrayBuffer);
+      const loaded = await fontFace.load();
+      (document.fonts as unknown as { add: (f: FontFace) => void }).add(loaded);
+
+      setCustomFontName(fontName);
+      setCustomFontDisplayName(rawName);
+      onThemeChange({ ...theme, fontId: 'custom' });
+      setFontLoaded(v => v + 1);
+
+      // localStorage에 base64로 저장 (최대 ~4MB까지)
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          localStorage.setItem('winaid_custom_font', JSON.stringify({
+            name: fontName,
+            displayName: rawName,
+            data: reader.result,
+          }));
+        } catch {
+          // 용량 초과 → 세션에만 유지
+        }
+      };
+      reader.readAsDataURL(file);
+    } catch (err) {
+      console.warn('[CARD_NEWS_PRO] 커스텀 폰트 로드 실패', err);
+    }
+    e.target.value = '';
+  };
+
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chatMessages, chatLoading]);
@@ -79,11 +160,6 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
       window.removeEventListener('resize', recompute);
     };
   }, [slides.length, editingIdx]);
-
-  // 선택된 폰트가 Google Fonts 기반이면 CDN에서 로드
-  useEffect(() => {
-    if (theme.fontId) ensureGoogleFontLoaded(theme.fontId);
-  }, [theme.fontId]);
 
   /** 특정 슬라이드 업데이트 (얕은 머지) */
   const updateSlide = (idx: number, patch: Partial<SlideData>) => {
@@ -478,10 +554,16 @@ JSON 한 객체만 출력:
     }
   };
 
-  /** theme.fontId → CARD_FONTS family 우선, 없으면 theme.fontFamily */
-  const effectiveFontFamily = theme.fontId
-    ? getCardFont(theme.fontId).family
-    : theme.fontFamily;
+  /**
+   * theme.fontId → CARD_FONTS family 우선, custom이면 customFontName, 둘 다 없으면 theme.fontFamily
+   */
+  const effectiveFontFamily = (() => {
+    if (theme.fontId === 'custom' && customFontName) {
+      return `'${customFontName}', 'Pretendard Variable', 'Pretendard', sans-serif`;
+    }
+    if (theme.fontId) return getCardFont(theme.fontId).family;
+    return theme.fontFamily;
+  })();
 
   // ═══════════════════════════════════════
   // 다운로드
@@ -593,6 +675,10 @@ JSON 한 객체만 출력:
     flexDirection: 'column',
     padding: '80px 70px',
     boxSizing: 'border-box',
+    // 기본 좌측 정렬 + 적정 줄 간격. cover/closing 등 중앙 정렬 레이아웃은
+    // 각 렌더 함수에서 textAlign:'center'로 오버라이드.
+    textAlign: 'left',
+    lineHeight: 1.5,
   };
 
   const topBar = (
@@ -608,12 +694,13 @@ JSON 한 객체만 출력:
   );
 
   /**
-   * 이미지 레이어 — imagePosition에 따라 배경/상단/중앙으로 배치.
+   * 이미지 레이어 — imagePosition에 따라 배경/상단/하단/중앙으로 배치.
    *
-   * 'background'와 'center'는 position:absolute + z-index:-1 로 콘텐츠 뒤에 깔린다.
-   * (CSS 페인팅 순서상 음수 z-index 요소는 부모 배경 위, 일반 플로우 자식 아래에
-   * 그려지기 때문에 각 렌더 함수의 콘텐츠에 z-index를 따로 주지 않아도 위에 보인다.)
-   * 'top'은 normal flow 요소로 콘텐츠 맨 위에 inline 삽입되므로 다른 처리가 필요 없음.
+   * top/bottom: flex 아이템으로 inline 렌더. marginTop:auto(bottom) / (top은 기본)
+   *   objectFit: 'contain'으로 비율 유지, 배경은 테마 카드 색으로 채워 잘림 방지.
+   * background: absolute + z-index:-1로 콘텐츠 뒤에 깔고 테마 배경색 기반 반투명
+   *   오버레이로 가독성 확보 (네이비 테마면 네이비 오버레이 → 회색빛 제거)
+   * center: 작은 장식 이미지로 절대 배치.
    */
   const renderImageLayer = (slide: SlideData) => {
     if (!slide.imageUrl) return null;
@@ -635,6 +722,7 @@ JSON 한 객체만 출력:
               zIndex: -1,
             }}
           />
+          {/* 테마 배경색 기반 오버레이 — 회색빛 대신 테마 색조 유지 */}
           <div
             style={{
               position: 'absolute',
@@ -642,7 +730,7 @@ JSON 한 객체만 출력:
               left: 0,
               width: '100%',
               height: '100%',
-              background: 'linear-gradient(180deg, rgba(0,0,0,0.50) 0%, rgba(0,0,0,0.72) 100%)',
+              background: `linear-gradient(180deg, ${theme.backgroundColor}CC 0%, ${theme.backgroundColor}EE 100%)`,
               zIndex: -1,
             }}
           />
@@ -650,7 +738,7 @@ JSON 한 객체만 출력:
       );
     }
 
-    if (position === 'top') {
+    if (position === 'top' || position === 'bottom') {
       return (
         <div
           style={{
@@ -658,16 +746,29 @@ JSON 한 객체만 출력:
             height: '420px',
             overflow: 'hidden',
             borderRadius: '20px',
-            marginBottom: '32px',
+            marginBottom: position === 'top' ? '32px' : 0,
+            marginTop: position === 'bottom' ? 'auto' : 0,
             boxShadow: '0 10px 30px rgba(0,0,0,0.25)',
             flexShrink: 0,
+            // 잘림 방지: 여백을 테마 배경색으로 채우기
+            background: theme.backgroundColor,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
           }}
         >
           <img
             src={slide.imageUrl}
             alt=""
             crossOrigin="anonymous"
-            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+            style={{
+              maxWidth: '100%',
+              maxHeight: '100%',
+              width: 'auto',
+              height: 'auto',
+              objectFit: 'contain',
+              display: 'block',
+            }}
           />
         </div>
       );
@@ -694,7 +795,7 @@ JSON 한 객체만 출력:
           src={slide.imageUrl}
           alt=""
           crossOrigin="anonymous"
-          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+          style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block', background: theme.backgroundColor }}
         />
       </div>
     );
@@ -1651,14 +1752,14 @@ JSON 한 객체만 출력:
           <span className="text-xs font-bold text-slate-700">{slides.length}장</span>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          {/* 글씨체 드롭다운 */}
+          {/* 글씨체 드롭다운 + 커스텀 폰트 업로드 */}
           <label className="flex items-center gap-1.5">
             <span className="text-[10px] font-semibold text-slate-500">글씨체</span>
             <select
               value={theme.fontId || 'pretendard'}
               onChange={(e) => {
                 const newFontId = e.target.value;
-                ensureGoogleFontLoaded(newFontId);
+                if (newFontId !== 'custom') ensureGoogleFontLoaded(newFontId);
                 onThemeChange({ ...theme, fontId: newFontId });
               }}
               className="px-2 py-1 text-xs bg-slate-50 border border-slate-200 rounded-lg font-medium text-slate-700 focus:outline-none focus:border-blue-400"
@@ -1670,8 +1771,28 @@ JSON 한 객체만 출력:
                   ))}
                 </optgroup>
               ))}
+              {customFontName && (
+                <optgroup label="내 폰트">
+                  <option value="custom">📁 {customFontDisplayName || customFontName}</option>
+                </optgroup>
+              )}
             </select>
           </label>
+          <button
+            type="button"
+            onClick={() => customFontInputRef.current?.click()}
+            className="px-2.5 py-1.5 bg-slate-100 text-slate-600 text-[10px] font-bold rounded-lg hover:bg-slate-200 border border-slate-200"
+            title="TTF, OTF, WOFF 파일 업로드"
+          >
+            📁 내 폰트
+          </button>
+          <input
+            ref={customFontInputRef}
+            type="file"
+            accept=".ttf,.otf,.woff,.woff2"
+            className="hidden"
+            onChange={handleCustomFontUpload}
+          />
           <button
             onClick={downloadAll}
             disabled={downloading}
@@ -1687,7 +1808,7 @@ JSON 한 객체만 출력:
         {slides.map((slide, idx) => {
           const isEditing = editingIdx === idx;
           return (
-            <div key={idx} className={`bg-white rounded-xl border transition-all ${isEditing ? 'border-blue-400 ring-2 ring-blue-100 sm:col-span-2 lg:col-span-3' : 'border-slate-200'}`}>
+            <div key={`${idx}-${theme.fontId || 'default'}-${fontLoaded}`} className={`bg-white rounded-xl border transition-all ${isEditing ? 'border-blue-400 ring-2 ring-blue-100 sm:col-span-2 lg:col-span-3' : 'border-slate-200'}`}>
               {/* 프리뷰 영역 — 셀 폭을 꽉 채우는 1:1 박스 + ResizeObserver 동적 스케일 */}
               <div
                 ref={(el) => { boxRefs.current[idx] = el; }}
@@ -1952,14 +2073,17 @@ function SlideEditor({
     </>
   );
 
-  // ── 슬라이드 이미지 섹션 (모든 레이아웃 공통) ──
+  // ── 슬라이드 이미지 섹션 (이미지 유무와 무관하게 모든 UI 상시 노출) ──
+  const hasImage = !!slide.imageUrl;
   const imageSection = (
     <div className="pt-2 mt-2 border-t border-slate-200 space-y-2">
       <label className="text-[10px] font-semibold text-slate-500">슬라이드 이미지</label>
-      {slide.imageUrl ? (
+
+      {/* 이미지가 있으면 프리뷰 + 삭제 + 위치 4가지 */}
+      {hasImage && (
         <div className="space-y-1.5">
           <div className="relative">
-            <img src={slide.imageUrl} alt="" className="w-full h-32 object-cover rounded-lg border border-slate-200" />
+            <img src={slide.imageUrl} alt="" className="w-full h-32 object-contain bg-slate-100 rounded-lg border border-slate-200" />
             <button
               type="button"
               onClick={() => onChange({ imageUrl: undefined })}
@@ -1968,99 +2092,101 @@ function SlideEditor({
               삭제
             </button>
           </div>
-          <div className="flex gap-1">
-            {(['top', 'background', 'center'] as const).map((pos) => (
+          <div className="grid grid-cols-4 gap-1">
+            {(['top', 'bottom', 'background', 'center'] as const).map((pos) => (
               <button
                 key={pos}
                 type="button"
                 onClick={() => onChange({ imagePosition: pos as SlideImagePosition })}
-                className={`flex-1 py-1 text-[9px] font-bold rounded transition-colors ${
+                className={`py-1 text-[9px] font-bold rounded transition-colors ${
                   (slide.imagePosition || 'top') === pos
                     ? 'bg-blue-500 text-white'
                     : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
                 }`}
               >
-                {pos === 'top' ? '상단' : pos === 'background' ? '배경' : '중앙'}
+                {pos === 'top' ? '상단' : pos === 'bottom' ? '하단' : pos === 'background' ? '배경' : '중앙'}
               </button>
             ))}
           </div>
         </div>
-      ) : (
-        <div className="space-y-2">
-          {/* 이미지 프롬프트 (visualKeyword) + AI 추천 */}
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-[10px] font-semibold text-slate-500">이미지 프롬프트 (영문)</span>
-              <button
-                type="button"
-                onClick={onSuggestImagePrompt}
-                disabled={aiSuggestingKey === `${slideIdx}:imgprompt`}
-                className="text-[9px] font-bold text-purple-600 hover:text-purple-700 disabled:opacity-50"
-              >
-                {aiSuggestingKey === `${slideIdx}:imgprompt` ? '추천 중...' : '✨ AI 추천'}
-              </button>
-            </div>
-            <textarea
-              value={slide.visualKeyword || ''}
-              onChange={(e) => onChange({ visualKeyword: e.target.value })}
-              placeholder="예: dental implant titanium screws, 3D render, clean white background"
-              rows={2}
-              className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg text-[11px] text-slate-700 resize-none focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-200"
-            />
-          </div>
-          {/* 이미지 스타일 선택 */}
-          <div className="flex gap-1 flex-wrap">
-            {SLIDE_IMAGE_STYLES.map((style) => {
-              const active = (slide.imageStyle || 'illustration') === style.id;
-              return (
-                <button
-                  key={style.id}
-                  type="button"
-                  onClick={() => onChange({ imageStyle: style.id as SlideImageStyle })}
-                  className={`px-2 py-1 text-[9px] rounded-lg border transition-all ${
-                    active
-                      ? 'border-blue-400 bg-blue-50 text-blue-700 font-bold'
-                      : 'border-slate-200 text-slate-500 hover:border-slate-300'
-                  }`}
-                >
-                  {style.name}
-                </button>
-              );
-            })}
-          </div>
-          {/* 생성/업로드 버튼 */}
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={onGenerateImage}
-              disabled={generatingImage}
-              className="flex-1 py-2 bg-blue-50 text-blue-600 text-[10px] font-bold rounded-lg border border-blue-200 hover:bg-blue-100 disabled:opacity-50"
-            >
-              {generatingImage ? (
-                <span className="flex items-center justify-center gap-1">
-                  <span className="w-3 h-3 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
-                  생성 중...
-                </span>
-              ) : (
-                '🎨 AI 이미지 생성'
-              )}
-            </button>
-            <label className="flex-1 py-2 bg-slate-50 text-slate-600 text-[10px] font-bold rounded-lg border border-slate-200 hover:bg-slate-100 cursor-pointer text-center flex items-center justify-center">
-              📁 직접 업로드
-              <input
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) onUploadImage(file);
-                  e.target.value = '';
-                }}
-              />
-            </label>
-          </div>
-        </div>
       )}
+
+      {/* 프롬프트 textarea + AI 추천 — 항상 표시 */}
+      <div>
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-[10px] font-semibold text-slate-500">이미지 프롬프트 (영문)</span>
+          <button
+            type="button"
+            onClick={onSuggestImagePrompt}
+            disabled={aiSuggestingKey === `${slideIdx}:imgprompt`}
+            className="text-[9px] font-bold text-purple-600 hover:text-purple-700 disabled:opacity-50"
+          >
+            {aiSuggestingKey === `${slideIdx}:imgprompt` ? '추천 중...' : '✨ AI 추천'}
+          </button>
+        </div>
+        <textarea
+          value={slide.visualKeyword || ''}
+          onChange={(e) => onChange({ visualKeyword: e.target.value })}
+          placeholder="예: dental implant titanium screws, 3D render, clean white background"
+          rows={2}
+          className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg text-[11px] text-slate-700 resize-none focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-200"
+        />
+      </div>
+
+      {/* 이미지 스타일 6종 — 항상 표시 */}
+      <div className="flex gap-1 flex-wrap">
+        {SLIDE_IMAGE_STYLES.map((style) => {
+          const active = (slide.imageStyle || 'illustration') === style.id;
+          return (
+            <button
+              key={style.id}
+              type="button"
+              onClick={() => onChange({ imageStyle: style.id as SlideImageStyle })}
+              className={`px-2 py-1 text-[9px] rounded-lg border transition-all ${
+                active
+                  ? 'border-blue-400 bg-blue-50 text-blue-700 font-bold'
+                  : 'border-slate-200 text-slate-500 hover:border-slate-300'
+              }`}
+            >
+              {style.name}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* 생성(또는 재생성) + 업로드(또는 교체) — 항상 표시 */}
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={onGenerateImage}
+          disabled={generatingImage}
+          className="flex-1 py-2 bg-blue-50 text-blue-600 text-[10px] font-bold rounded-lg border border-blue-200 hover:bg-blue-100 disabled:opacity-50"
+        >
+          {generatingImage ? (
+            <span className="flex items-center justify-center gap-1">
+              <span className="w-3 h-3 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
+              생성 중...
+            </span>
+          ) : hasImage ? (
+            '🔄 AI 이미지 재생성'
+          ) : (
+            '🎨 AI 이미지 생성'
+          )}
+        </button>
+        <label className="flex-1 py-2 bg-slate-50 text-slate-600 text-[10px] font-bold rounded-lg border border-slate-200 hover:bg-slate-100 cursor-pointer text-center flex items-center justify-center">
+          {hasImage ? '📁 이미지 교체' : '📁 직접 업로드'}
+          <input
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) onUploadImage(file);
+              e.target.value = '';
+            }}
+          />
+        </label>
+      </div>
     </div>
   );
 
