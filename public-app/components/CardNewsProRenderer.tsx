@@ -272,14 +272,19 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
       const styleId = slide.imageStyle || 'illustration';
       const styleDef = SLIDE_IMAGE_STYLES.find(s => s.id === styleId) || SLIDE_IMAGE_STYLES[0];
       const subject = slide.visualKeyword || slide.title;
-      const fullPrompt = `${subject}, ${styleDef.prompt}`;
+      // 카드 레이아웃(프레임/비교표/텍스트 박스 등)은 우리 HTML이 담당.
+      // AI는 '순수 일러스트/사진'만 생성해야 함.
+      const fullPrompt = `${subject}, ${styleDef.prompt}
+
+⚠️ 순수 일러스트/사진만 생성. 텍스트·프레임·카드 레이아웃·빈 공간·UI 요소 절대 포함하지 말 것. 배경은 단색 또는 투명.`;
       const res = await fetch('/api/image', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           prompt: fullPrompt,
-          aspectRatio: '16:9',
-          mode: 'card_news',
+          aspectRatio: slide.imagePosition === 'background' ? '1:1' : '16:9',
+          // 'card_news'는 카드뉴스 프레임까지 생성하므로 우리 HTML과 겹침. 'blog'는 순수 이미지.
+          mode: 'blog',
           imageStyle: 'illustration',
         }),
       });
@@ -603,13 +608,90 @@ JSON 한 객체만 출력:
     fontFamily: effectiveFontFamily,
     display: 'flex',
     flexDirection: 'column',
-    padding: '80px 70px',
+    padding: '60px 64px',
     boxSizing: 'border-box',
     // 기본 좌측 정렬 + 적정 줄 간격. cover/closing 등 중앙 정렬 레이아웃은
     // 각 렌더 함수에서 textAlign:'center'로 오버라이드.
     textAlign: 'left',
     lineHeight: 1.5,
   };
+
+  // 테마가 어두운지 판정 (배경색 기준). 밝은 테마에선 내부 카드·그림자·텍스트 그림자를 미세 조정.
+  const isDarkTheme = (() => {
+    const hex = theme.backgroundColor.replace('#', '');
+    if (hex.length !== 6) return true;
+    const r = parseInt(hex.slice(0, 2), 16);
+    const g = parseInt(hex.slice(2, 4), 16);
+    const b = parseInt(hex.slice(4, 6), 16);
+    // 간단한 luminance 판정
+    return (r * 299 + g * 587 + b * 114) / 1000 < 140;
+  })();
+
+  /** 내부 카드·비교표 셀 공통 베이스 색 (테마 대비 자동) */
+  const innerCardBg = isDarkTheme ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)';
+  const innerCardBorder = isDarkTheme ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)';
+
+  /**
+   * 공통 배경 장식 — 모든 렌더 함수의 루트 div 최상단에 삽입.
+   * radial gradient 2개로 미세한 깊이감, 상/하단 accent 라인으로 포인트.
+   */
+  const backgroundDecoration = (
+    <>
+      <div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          backgroundImage: isDarkTheme
+            ? `radial-gradient(circle at 15% 85%, ${theme.accentColor}12 0%, transparent 45%), radial-gradient(circle at 85% 15%, ${theme.accentColor}0A 0%, transparent 45%)`
+            : `radial-gradient(circle at 15% 85%, ${theme.accentColor}18 0%, transparent 45%), radial-gradient(circle at 85% 15%, ${theme.accentColor}14 0%, transparent 45%)`,
+          zIndex: 0,
+          pointerEvents: 'none',
+        }}
+      />
+      <div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: '6px',
+          background: `linear-gradient(90deg, ${theme.accentColor}, ${theme.accentColor}80, transparent)`,
+          zIndex: 3,
+          pointerEvents: 'none',
+        }}
+      />
+      <div
+        style={{
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          height: '4px',
+          background: `linear-gradient(90deg, transparent, ${theme.accentColor}60, ${theme.accentColor})`,
+          zIndex: 3,
+          pointerEvents: 'none',
+        }}
+      />
+    </>
+  );
+
+  /** 섹션 헤더용 장식 라인 (제목 위 accent 바) */
+  const titleAccent = (align: 'left' | 'center' = 'left') => (
+    <div
+      style={{
+        width: '60px',
+        height: '5px',
+        background: theme.accentColor,
+        borderRadius: '3px',
+        marginBottom: '20px',
+        marginLeft: align === 'center' ? 'auto' : 0,
+        marginRight: align === 'center' ? 'auto' : 0,
+      }}
+    />
+  );
 
   const topBar = (
     <div
@@ -681,10 +763,12 @@ JSON 한 객체만 출력:
             boxShadow: '0 10px 30px rgba(0,0,0,0.25)',
             flexShrink: 0,
             // 잘림 방지: 여백을 테마 배경색으로 채우기
-            background: theme.backgroundColor,
+            background: 'transparent',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
+            position: 'relative',
+            zIndex: 2,
           }}
         >
           <img
@@ -752,130 +836,93 @@ JSON 한 객체만 출력:
   ) : null;
 
   // ═══════════════════════════════════════
-  // 레이아웃별 렌더
+  // 레이아웃별 렌더 (16종, 꽉 채움 + 깊이감 디자인)
   // ═══════════════════════════════════════
+  //
+  // 공통 규칙:
+  // - 모든 함수는 {cardContainerStyle} div 최상단에 {backgroundDecoration} 삽입
+  // - imagePosition 처리:
+  //   · 'top' → content 앞에서 inline 이미지
+  //   · 'bottom' → content 뒤에서 inline 이미지
+  //   · 'background' / 'center' → renderImageLayer가 absolute + negative z-index로 처리
+  // - 콘텐츠 영역은 flex:1 + position:relative + zIndex:2 로 배경 장식 위에 배치
+  // - 각 섹션에 gap을 두고, 데이터 행에 flex:1을 주어 카드 전체를 꽉 채움
 
   const renderCover = (slide: SlideData) => (
-    <div
-      style={{
-        ...cardContainerStyle,
-        justifyContent: 'center',
-        alignItems: 'center',
-        textAlign: 'center',
-      }}
-    >
+    <div style={cardContainerStyle}>
+      {backgroundDecoration}
       {renderImageLayer(slide)}
       <div
         style={{
-          width: '120px',
-          height: '5px',
-          background: theme.accentColor,
-          marginBottom: '40px',
-          borderRadius: '3px',
-        }}
-      />
-      <h1
-        style={{
-          color: theme.titleColor,
-          fontSize: '64px',
-          fontWeight: 900,
-          lineHeight: 1.25,
-          marginBottom: '28px',
-          wordBreak: 'keep-all',
-          maxWidth: '860px',
-          letterSpacing: '-0.02em',
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          alignItems: 'center',
+          textAlign: 'center',
+          position: 'relative',
+          zIndex: 2,
+          gap: '28px',
         }}
       >
-        {slide.title}
-      </h1>
-      {slide.subtitle && (
-        <p
+        <div style={{ width: '72px', height: '5px', background: theme.accentColor, borderRadius: '3px' }} />
+        <h1
           style={{
-            color: theme.subtitleColor,
-            fontSize: '26px',
-            fontWeight: 700,
-            lineHeight: 1.5,
-            maxWidth: '820px',
+            color: theme.titleColor,
+            fontSize: '64px',
+            fontWeight: 900,
+            lineHeight: 1.2,
             wordBreak: 'keep-all',
+            letterSpacing: '-0.02em',
+            textShadow: isDarkTheme ? '0 2px 24px rgba(0,0,0,0.25)' : 'none',
+            maxWidth: '90%',
           }}
         >
-          {slide.subtitle}
-        </p>
-      )}
+          {slide.title}
+        </h1>
+        {slide.subtitle && (
+          <p
+            style={{
+              color: theme.subtitleColor,
+              fontSize: '26px',
+              fontWeight: 700,
+              lineHeight: 1.55,
+              maxWidth: '85%',
+              wordBreak: 'keep-all',
+            }}
+          >
+            {slide.subtitle}
+          </p>
+        )}
+      </div>
       {hospitalFooter}
     </div>
   );
 
   const renderInfo = (slide: SlideData) => (
     <div style={cardContainerStyle}>
+      {backgroundDecoration}
       {renderImageLayer(slide)}
-      {topBar}
-      <h2
+      {slide.imagePosition === 'top' && null /* renderImageLayer가 이미 top이면 inline 렌더 */}
+      <div
         style={{
-          color: theme.titleColor,
-          fontSize: '48px',
-          fontWeight: 800,
-          marginBottom: '20px',
-          wordBreak: 'keep-all',
-          lineHeight: 1.3,
-          letterSpacing: '-0.02em',
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          position: 'relative',
+          zIndex: 2,
+          gap: '22px',
         }}
       >
-        {slide.title}
-      </h2>
-      {slide.subtitle && (
-        <p
-          style={{
-            color: theme.subtitleColor,
-            fontSize: '22px',
-            fontWeight: 700,
-            marginBottom: '36px',
-            lineHeight: 1.6,
-            wordBreak: 'keep-all',
-          }}
-        >
-          {slide.subtitle}
-        </p>
-      )}
-      {slide.body && (
-        <p
-          style={{
-            color: theme.bodyColor,
-            fontSize: '22px',
-            lineHeight: 1.85,
-            whiteSpace: 'pre-line',
-            wordBreak: 'keep-all',
-            flex: 1,
-          }}
-        >
-          {slide.body}
-        </p>
-      )}
-      {hospitalFooter}
-    </div>
-  );
-
-  const renderComparison = (slide: SlideData) => {
-    const cols = slide.columns || [];
-    const labels = slide.compareLabels || [];
-    const hasLabels = labels.length > 0;
-    const rowCount = hasLabels ? labels.length : (cols[0]?.items.length || 0);
-    const gridCols = hasLabels
-      ? `140px repeat(${cols.length}, 1fr)`
-      : `repeat(${cols.length}, 1fr)`;
-
-    return (
-      <div style={cardContainerStyle}>
-        {renderImageLayer(slide)}
-        {topBar}
+        {titleAccent('left')}
         <h2
           style={{
             color: theme.titleColor,
-            fontSize: '42px',
+            fontSize: '48px',
             fontWeight: 800,
-            marginBottom: '10px',
-            textAlign: 'center',
             wordBreak: 'keep-all',
+            lineHeight: 1.25,
             letterSpacing: '-0.02em',
           }}
         >
@@ -885,42 +932,68 @@ JSON 한 객체만 출력:
           <p
             style={{
               color: theme.subtitleColor,
-              fontSize: '20px',
+              fontSize: '24px',
               fontWeight: 600,
-              textAlign: 'center',
-              marginBottom: '36px',
+              lineHeight: 1.55,
               wordBreak: 'keep-all',
             }}
           >
             {slide.subtitle}
           </p>
         )}
-        <div
-          style={{
-            flex: 1,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '2px',
-            borderRadius: '18px',
-            overflow: 'hidden',
-            alignSelf: 'center',
-            width: '100%',
-            maxHeight: '700px',
-          }}
-        >
+        {slide.body && (
+          <div
+            style={{
+              color: theme.bodyColor,
+              fontSize: '21px',
+              lineHeight: 1.8,
+              whiteSpace: 'pre-line',
+              background: innerCardBg,
+              borderRadius: '18px',
+              padding: '32px 36px',
+              borderLeft: `5px solid ${theme.accentColor}`,
+              wordBreak: 'keep-all',
+            }}
+          >
+            {slide.body}
+          </div>
+        )}
+      </div>
+      {hospitalFooter}
+    </div>
+  );
+
+  const renderComparison = (slide: SlideData) => {
+    const cols = slide.columns || [];
+    const labels = slide.compareLabels || [];
+    const rowCount = labels.length || (cols[0]?.items?.length || 0);
+    const gridTemplate = labels.length > 0 ? `160px repeat(${cols.length}, 1fr)` : `repeat(${cols.length}, 1fr)`;
+
+    return (
+      <div style={cardContainerStyle}>
+        {backgroundDecoration}
+        {renderImageLayer(slide)}
+        <div style={{ position: 'relative', zIndex: 2, marginBottom: '24px' }}>
+          {titleAccent('center')}
+          <h2 style={{ color: theme.titleColor, fontSize: '42px', fontWeight: 800, textAlign: 'center', wordBreak: 'keep-all', lineHeight: 1.25, letterSpacing: '-0.02em' }}>
+            {slide.title}
+          </h2>
+          {slide.subtitle && <p style={{ color: theme.subtitleColor, fontSize: '20px', textAlign: 'center', marginTop: '10px', fontWeight: 600 }}>{slide.subtitle}</p>}
+        </div>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '3px', borderRadius: '20px', overflow: 'hidden', position: 'relative', zIndex: 2 }}>
           {/* 헤더 행 */}
-          <div style={{ display: 'grid', gridTemplateColumns: gridCols, gap: '2px' }}>
-            {hasLabels && <div style={{ background: 'transparent' }} />}
+          <div style={{ display: 'grid', gridTemplateColumns: gridTemplate, gap: '3px' }}>
+            {labels.length > 0 && <div style={{ background: 'transparent' }} />}
             {cols.map((col, ci) => (
               <div
                 key={ci}
                 style={{
                   background: col.highlight ? theme.accentColor : theme.cardBgColor,
                   color: col.highlight ? '#FFFFFF' : '#1A1A2E',
-                  padding: '22px 16px',
+                  padding: '24px 18px',
                   textAlign: 'center',
                   fontSize: '22px',
-                  fontWeight: 800,
+                  fontWeight: 900,
                   letterSpacing: '-0.01em',
                 }}
               >
@@ -928,17 +1001,17 @@ JSON 한 객체만 출력:
               </div>
             ))}
           </div>
-          {/* 데이터 행 */}
+          {/* 데이터 행 — flex:1로 남은 공간 균등 분배 */}
           {Array.from({ length: rowCount }).map((_, ri) => (
-            <div key={ri} style={{ display: 'grid', gridTemplateColumns: gridCols, gap: '2px' }}>
-              {hasLabels && (
+            <div key={ri} style={{ display: 'grid', gridTemplateColumns: gridTemplate, gap: '3px', flex: 1 }}>
+              {labels.length > 0 && (
                 <div
                   style={{
-                    background: 'rgba(255,255,255,0.10)',
+                    background: isDarkTheme ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.06)',
                     color: theme.titleColor,
-                    padding: '22px 14px',
+                    padding: '18px 14px',
                     fontSize: '17px',
-                    fontWeight: 700,
+                    fontWeight: 800,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -953,9 +1026,9 @@ JSON 한 객체만 출력:
                 <div
                   key={ci}
                   style={{
-                    background: col.highlight ? 'rgba(245,166,35,0.18)' : 'rgba(255,255,255,0.06)',
+                    background: col.highlight ? `${theme.accentColor}1F` : innerCardBg,
                     color: col.highlight ? theme.accentColor : theme.titleColor,
-                    padding: '22px 14px',
+                    padding: '18px 14px',
                     textAlign: 'center',
                     fontSize: '19px',
                     fontWeight: col.highlight ? 800 : 500,
@@ -963,6 +1036,7 @@ JSON 한 객체만 출력:
                     alignItems: 'center',
                     justifyContent: 'center',
                     wordBreak: 'keep-all',
+                    lineHeight: 1.4,
                   }}
                 >
                   {col.items[ri] || ''}
@@ -978,83 +1052,39 @@ JSON 한 객체만 출력:
 
   const renderIconGrid = (slide: SlideData) => {
     const items = slide.icons || [];
-    const cols = items.length <= 3 ? items.length : 2;
-
+    const cols = items.length <= 3 ? Math.max(items.length, 1) : 2;
     return (
       <div style={cardContainerStyle}>
+        {backgroundDecoration}
         {renderImageLayer(slide)}
-        {topBar}
-        <h2
-          style={{
-            color: theme.titleColor,
-            fontSize: '42px',
-            fontWeight: 800,
-            marginBottom: '10px',
-            textAlign: 'center',
-            wordBreak: 'keep-all',
-            letterSpacing: '-0.02em',
-          }}
-        >
-          {slide.title}
-        </h2>
-        {slide.subtitle && (
-          <p
-            style={{
-              color: theme.subtitleColor,
-              fontSize: '20px',
-              fontWeight: 600,
-              textAlign: 'center',
-              marginBottom: '46px',
-              wordBreak: 'keep-all',
-            }}
-          >
-            {slide.subtitle}
-          </p>
-        )}
-        <div
-          style={{
-            flex: 1,
-            display: 'grid',
-            gridTemplateColumns: `repeat(${cols}, 1fr)`,
-            gap: '24px',
-            alignContent: 'center',
-          }}
-        >
+        <div style={{ position: 'relative', zIndex: 2, marginBottom: '24px' }}>
+          {titleAccent('center')}
+          <h2 style={{ color: theme.titleColor, fontSize: '42px', fontWeight: 800, textAlign: 'center', wordBreak: 'keep-all', letterSpacing: '-0.02em' }}>
+            {slide.title}
+          </h2>
+          {slide.subtitle && <p style={{ color: theme.subtitleColor, fontSize: '20px', textAlign: 'center', marginTop: '10px', fontWeight: 600 }}>{slide.subtitle}</p>}
+        </div>
+        <div style={{ flex: 1, display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: '22px', alignContent: 'stretch', position: 'relative', zIndex: 2 }}>
           {items.map((item, i) => (
             <div
               key={i}
               style={{
                 background: 'rgba(255,255,255,0.96)',
                 borderRadius: '24px',
-                padding: '38px 24px',
+                padding: '40px 26px',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
                 textAlign: 'center',
-                gap: '14px',
+                gap: '16px',
                 boxShadow: '0 10px 30px rgba(0,0,0,0.15)',
+                border: '1px solid rgba(0,0,0,0.05)',
               }}
             >
               <span style={{ fontSize: '56px', lineHeight: 1 }}>{item.emoji}</span>
-              <span
-                style={{
-                  fontSize: '22px',
-                  fontWeight: 800,
-                  color: '#1A1A2E',
-                  wordBreak: 'keep-all',
-                }}
-              >
-                {item.title}
-              </span>
+              <span style={{ fontSize: '22px', fontWeight: 900, color: '#1A1A2E', wordBreak: 'keep-all' }}>{item.title}</span>
               {item.desc && (
-                <span
-                  style={{
-                    fontSize: '16px',
-                    color: '#5C5C6E',
-                    lineHeight: 1.55,
-                    wordBreak: 'keep-all',
-                  }}
-                >
+                <span style={{ fontSize: '16px', color: '#555', lineHeight: 1.55, wordBreak: 'keep-all', fontWeight: 500 }}>
                   {item.desc}
                 </span>
               )}
@@ -1068,98 +1098,54 @@ JSON 한 객체만 출력:
 
   const renderSteps = (slide: SlideData) => {
     const items = slide.steps || [];
-
     return (
       <div style={cardContainerStyle}>
+        {backgroundDecoration}
         {renderImageLayer(slide)}
-        {topBar}
-        <h2
-          style={{
-            color: theme.titleColor,
-            fontSize: '42px',
-            fontWeight: 800,
-            marginBottom: '10px',
-            textAlign: 'center',
-            wordBreak: 'keep-all',
-            letterSpacing: '-0.02em',
-          }}
-        >
-          {slide.title}
-        </h2>
-        {slide.subtitle && (
-          <p
-            style={{
-              color: theme.subtitleColor,
-              fontSize: '20px',
-              fontWeight: 600,
-              textAlign: 'center',
-              marginBottom: '56px',
-              wordBreak: 'keep-all',
-            }}
-          >
-            {slide.subtitle}
-          </p>
-        )}
-        <div
-          style={{
-            flex: 1,
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            gap: '22px',
-          }}
-        >
+        <div style={{ position: 'relative', zIndex: 2, marginBottom: '24px' }}>
+          {titleAccent('center')}
+          <h2 style={{ color: theme.titleColor, fontSize: '42px', fontWeight: 800, textAlign: 'center', wordBreak: 'keep-all', letterSpacing: '-0.02em' }}>{slide.title}</h2>
+          {slide.subtitle && <p style={{ color: theme.subtitleColor, fontSize: '20px', textAlign: 'center', marginTop: '10px', fontWeight: 600 }}>{slide.subtitle}</p>}
+        </div>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '20px', position: 'relative', zIndex: 2 }}>
           {items.map((step, i) => (
             <div
               key={i}
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '20px',
-                background: 'rgba(255,255,255,0.08)',
-                borderRadius: '18px',
-                padding: '24px 28px',
-                borderLeft: `5px solid ${theme.accentColor}`,
+                gap: '24px',
+                background: innerCardBg,
+                borderRadius: '20px',
+                padding: '26px 30px',
+                borderLeft: `6px solid ${theme.accentColor}`,
+                boxShadow: isDarkTheme ? 'none' : '0 4px 12px rgba(0,0,0,0.04)',
               }}
             >
               <div
                 style={{
-                  width: '56px',
-                  height: '56px',
+                  width: '64px',
+                  height: '64px',
                   borderRadius: '50%',
                   background: theme.accentColor,
                   color: '#FFFFFF',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontSize: '26px',
+                  fontSize: '28px',
                   fontWeight: 900,
                   flexShrink: 0,
+                  boxShadow: `0 6px 18px ${theme.accentColor}40`,
                 }}
               >
                 {i + 1}
               </div>
               <div style={{ flex: 1 }}>
-                <div
-                  style={{
-                    color: theme.titleColor,
-                    fontSize: '22px',
-                    fontWeight: 800,
-                    marginBottom: step.desc ? '6px' : 0,
-                    wordBreak: 'keep-all',
-                  }}
-                >
+                <div style={{ color: theme.titleColor, fontSize: '24px', fontWeight: 800, wordBreak: 'keep-all', marginBottom: step.desc ? '6px' : 0 }}>
                   {step.label}
                 </div>
                 {step.desc && (
-                  <div
-                    style={{
-                      color: theme.bodyColor,
-                      fontSize: '16px',
-                      lineHeight: 1.5,
-                      wordBreak: 'keep-all',
-                    }}
-                  >
+                  <div style={{ color: theme.bodyColor, fontSize: '17px', lineHeight: 1.55, wordBreak: 'keep-all' }}>
                     {step.desc}
                   </div>
                 )}
@@ -1174,42 +1160,14 @@ JSON 한 객체만 출력:
 
   const renderChecklist = (slide: SlideData) => (
     <div style={cardContainerStyle}>
+      {backgroundDecoration}
       {renderImageLayer(slide)}
-      {topBar}
-      <h2
-        style={{
-          color: theme.titleColor,
-          fontSize: '44px',
-          fontWeight: 800,
-          marginBottom: '10px',
-          wordBreak: 'keep-all',
-          letterSpacing: '-0.02em',
-        }}
-      >
-        {slide.title}
-      </h2>
-      {slide.subtitle && (
-        <p
-          style={{
-            color: theme.subtitleColor,
-            fontSize: '20px',
-            fontWeight: 600,
-            marginBottom: '40px',
-            wordBreak: 'keep-all',
-          }}
-        >
-          {slide.subtitle}
-        </p>
-      )}
-      <div
-        style={{
-          flex: 1,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '18px',
-          justifyContent: 'center',
-        }}
-      >
+      <div style={{ position: 'relative', zIndex: 2, marginBottom: '24px' }}>
+        {titleAccent('left')}
+        <h2 style={{ color: theme.titleColor, fontSize: '44px', fontWeight: 800, wordBreak: 'keep-all', letterSpacing: '-0.02em' }}>{slide.title}</h2>
+        {slide.subtitle && <p style={{ color: theme.subtitleColor, fontSize: '20px', marginTop: '10px', fontWeight: 600 }}>{slide.subtitle}</p>}
+      </div>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '14px', justifyContent: 'center', position: 'relative', zIndex: 2 }}>
         {(slide.checkItems || []).map((item, i) => (
           <div
             key={i}
@@ -1217,16 +1175,17 @@ JSON 한 객체만 출력:
               display: 'flex',
               alignItems: 'center',
               gap: '20px',
-              background: 'rgba(255,255,255,0.08)',
-              borderRadius: '14px',
+              background: innerCardBg,
+              borderRadius: '16px',
               padding: '24px 28px',
+              border: `1px solid ${innerCardBorder}`,
             }}
           >
             <div
               style={{
-                width: '40px',
-                height: '40px',
-                borderRadius: '10px',
+                width: '44px',
+                height: '44px',
+                borderRadius: '12px',
                 background: theme.accentColor,
                 color: '#FFFFFF',
                 display: 'flex',
@@ -1239,14 +1198,7 @@ JSON 한 객체만 출력:
             >
               ✓
             </div>
-            <span
-              style={{
-                color: theme.titleColor,
-                fontSize: '22px',
-                fontWeight: 600,
-                wordBreak: 'keep-all',
-              }}
-            >
+            <span style={{ color: theme.titleColor, fontSize: '22px', fontWeight: 600, wordBreak: 'keep-all', flex: 1 }}>
               {item}
             </span>
           </div>
@@ -1258,81 +1210,42 @@ JSON 한 객체만 출력:
 
   const renderDataHighlight = (slide: SlideData) => {
     const points = slide.dataPoints || [];
-    const cols = Math.min(points.length, 3);
+    const cols = Math.min(Math.max(points.length, 1), 3);
     return (
       <div style={cardContainerStyle}>
+        {backgroundDecoration}
         {renderImageLayer(slide)}
-        {topBar}
-        <h2
-          style={{
-            color: theme.titleColor,
-            fontSize: '42px',
-            fontWeight: 800,
-            marginBottom: '10px',
-            textAlign: 'center',
-            wordBreak: 'keep-all',
-            letterSpacing: '-0.02em',
-          }}
-        >
-          {slide.title}
-        </h2>
-        {slide.subtitle && (
-          <p
-            style={{
-              color: theme.subtitleColor,
-              fontSize: '20px',
-              fontWeight: 600,
-              textAlign: 'center',
-              marginBottom: '46px',
-              wordBreak: 'keep-all',
-            }}
-          >
-            {slide.subtitle}
-          </p>
-        )}
-        <div
-          style={{
-            flex: 1,
-            display: 'grid',
-            gridTemplateColumns: `repeat(${cols}, 1fr)`,
-            gap: '22px',
-            alignContent: 'center',
-          }}
-        >
+        <div style={{ position: 'relative', zIndex: 2, marginBottom: '24px' }}>
+          {titleAccent('center')}
+          <h2 style={{ color: theme.titleColor, fontSize: '42px', fontWeight: 800, textAlign: 'center', wordBreak: 'keep-all', letterSpacing: '-0.02em' }}>{slide.title}</h2>
+          {slide.subtitle && <p style={{ color: theme.subtitleColor, fontSize: '20px', textAlign: 'center', marginTop: '10px', fontWeight: 600 }}>{slide.subtitle}</p>}
+        </div>
+        <div style={{ flex: 1, display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: '24px', alignContent: 'center', position: 'relative', zIndex: 2 }}>
           {points.map((dp, i) => (
             <div
               key={i}
               style={{
                 textAlign: 'center',
-                padding: '46px 22px',
-                background: dp.highlight ? 'rgba(245,166,35,0.16)' : 'rgba(255,255,255,0.06)',
-                borderRadius: '20px',
-                border: dp.highlight
-                  ? `2px solid ${theme.accentColor}`
-                  : '1px solid rgba(255,255,255,0.12)',
+                padding: '56px 28px',
+                background: dp.highlight ? `${theme.accentColor}1F` : innerCardBg,
+                borderRadius: '24px',
+                border: dp.highlight ? `3px solid ${theme.accentColor}` : `2px solid ${innerCardBorder}`,
+                boxShadow: dp.highlight ? `0 12px 36px ${theme.accentColor}33` : 'none',
               }}
             >
               <div
                 style={{
                   color: dp.highlight ? theme.accentColor : theme.titleColor,
-                  fontSize: '64px',
+                  fontSize: '76px',
                   fontWeight: 900,
-                  marginBottom: '14px',
+                  marginBottom: '16px',
                   lineHeight: 1,
-                  letterSpacing: '-0.03em',
+                  letterSpacing: '-0.04em',
                 }}
               >
                 {dp.value}
               </div>
-              <div
-                style={{
-                  color: theme.bodyColor,
-                  fontSize: '18px',
-                  fontWeight: 500,
-                  wordBreak: 'keep-all',
-                  lineHeight: 1.4,
-                }}
-              >
+              <div style={{ color: theme.bodyColor, fontSize: '19px', fontWeight: 600, wordBreak: 'keep-all', lineHeight: 1.4 }}>
                 {dp.label}
               </div>
             </div>
@@ -1344,109 +1257,120 @@ JSON 한 객체만 출력:
   };
 
   const renderClosing = (slide: SlideData) => (
-    <div
-      style={{
-        ...cardContainerStyle,
-        justifyContent: 'center',
-        alignItems: 'center',
-        textAlign: 'center',
-      }}
-    >
+    <div style={cardContainerStyle}>
+      {backgroundDecoration}
       {renderImageLayer(slide)}
-      {slide.subtitle && (
-        <h2
-          style={{
-            color: theme.accentColor,
-            fontSize: '32px',
-            fontWeight: 700,
-            marginBottom: '24px',
-            letterSpacing: '-0.01em',
-          }}
-        >
-          {slide.subtitle}
-        </h2>
-      )}
-      <h1
+      <div
         style={{
-          color: theme.titleColor,
-          fontSize: '56px',
-          fontWeight: 900,
-          lineHeight: 1.3,
-          marginBottom: '32px',
-          wordBreak: 'keep-all',
-          maxWidth: '860px',
-          letterSpacing: '-0.02em',
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          alignItems: 'center',
+          textAlign: 'center',
+          position: 'relative',
+          zIndex: 2,
+          gap: '26px',
         }}
       >
-        {slide.title}
-      </h1>
-      {slide.body && (
-        <p
-          style={{
-            color: theme.bodyColor,
-            fontSize: '22px',
-            lineHeight: 1.65,
-            marginBottom: '48px',
-            maxWidth: '780px',
-            wordBreak: 'keep-all',
-          }}
-        >
-          {slide.body}
-        </p>
-      )}
-      {theme.hospitalName && (
-        <div
+        {slide.subtitle && (
+          <div
+            style={{
+              display: 'inline-block',
+              padding: '10px 24px',
+              background: `${theme.accentColor}22`,
+              color: theme.accentColor,
+              borderRadius: '999px',
+              fontSize: '20px',
+              fontWeight: 800,
+              letterSpacing: '0.02em',
+            }}
+          >
+            {slide.subtitle}
+          </div>
+        )}
+        <h1
           style={{
             color: theme.titleColor,
-            fontSize: '24px',
-            fontWeight: 700,
-            letterSpacing: '4px',
-            paddingTop: '20px',
-            borderTop: `2px solid ${theme.accentColor}`,
-            display: 'inline-block',
-            paddingLeft: '40px',
-            paddingRight: '40px',
+            fontSize: '56px',
+            fontWeight: 900,
+            lineHeight: 1.25,
+            wordBreak: 'keep-all',
+            maxWidth: '90%',
+            letterSpacing: '-0.02em',
+            textShadow: isDarkTheme ? '0 2px 24px rgba(0,0,0,0.25)' : 'none',
           }}
         >
-          {theme.hospitalName}
-        </div>
-      )}
+          {slide.title}
+        </h1>
+        {slide.body && (
+          <p
+            style={{
+              color: theme.bodyColor,
+              fontSize: '22px',
+              lineHeight: 1.7,
+              maxWidth: '80%',
+              wordBreak: 'keep-all',
+            }}
+          >
+            {slide.body}
+          </p>
+        )}
+        {theme.hospitalName && (
+          <div
+            style={{
+              marginTop: '12px',
+              color: theme.titleColor,
+              fontSize: '24px',
+              fontWeight: 800,
+              letterSpacing: '4px',
+              paddingTop: '20px',
+              borderTop: `3px solid ${theme.accentColor}`,
+              paddingLeft: '40px',
+              paddingRight: '40px',
+            }}
+          >
+            {theme.hospitalName}
+          </div>
+        )}
+      </div>
     </div>
   );
 
-  // ═══════════════════════════════════════
-  // 확장 레이아웃 8종
-  // ═══════════════════════════════════════
-
   const renderBeforeAfter = (slide: SlideData) => (
     <div style={cardContainerStyle}>
+      {backgroundDecoration}
       {renderImageLayer(slide)}
-      {topBar}
-      <h2 style={{ color: theme.titleColor, fontSize: '40px', fontWeight: 800, textAlign: 'center', marginBottom: '32px', letterSpacing: '-0.02em', wordBreak: 'keep-all' }}>
-        {slide.title}
-      </h2>
-      <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', alignContent: 'center' }}>
+      <div style={{ position: 'relative', zIndex: 2, marginBottom: '24px' }}>
+        {titleAccent('center')}
+        <h2 style={{ color: theme.titleColor, fontSize: '42px', fontWeight: 800, textAlign: 'center', wordBreak: 'keep-all', letterSpacing: '-0.02em' }}>{slide.title}</h2>
+      </div>
+      <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '22px', position: 'relative', zIndex: 2 }}>
         {/* BEFORE */}
-        <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: '18px', padding: '28px 24px', border: '1px solid rgba(255,255,255,0.12)' }}>
-          <div style={{ color: theme.bodyColor, fontSize: '16px', fontWeight: 800, textAlign: 'center', marginBottom: '22px', textTransform: 'uppercase', letterSpacing: '3px' }}>
+        <div style={{ background: innerCardBg, borderRadius: '20px', padding: '32px 26px', border: `1px solid ${innerCardBorder}`, display: 'flex', flexDirection: 'column' }}>
+          <div style={{ color: theme.bodyColor, fontSize: '18px', fontWeight: 900, textAlign: 'center', marginBottom: '24px', letterSpacing: '4px' }}>
             {slide.beforeLabel || 'BEFORE'}
           </div>
-          {(slide.beforeItems || []).map((item, i) => (
-            <div key={i} style={{ color: theme.bodyColor, fontSize: '18px', padding: '12px 0', borderBottom: '1px solid rgba(255,255,255,0.08)', wordBreak: 'keep-all' }}>
-              • {item}
-            </div>
-          ))}
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '14px', justifyContent: 'center' }}>
+            {(slide.beforeItems || []).map((item, i) => (
+              <div key={i} style={{ color: theme.bodyColor, fontSize: '19px', padding: '8px 0', borderBottom: `1px solid ${innerCardBorder}`, wordBreak: 'keep-all', lineHeight: 1.5 }}>
+                • {item}
+              </div>
+            ))}
+          </div>
         </div>
         {/* AFTER */}
-        <div style={{ background: `${theme.accentColor}1F`, borderRadius: '18px', padding: '28px 24px', border: `2px solid ${theme.accentColor}` }}>
-          <div style={{ color: theme.accentColor, fontSize: '16px', fontWeight: 800, textAlign: 'center', marginBottom: '22px', textTransform: 'uppercase', letterSpacing: '3px' }}>
+        <div style={{ background: `${theme.accentColor}1F`, borderRadius: '20px', padding: '32px 26px', border: `2px solid ${theme.accentColor}`, display: 'flex', flexDirection: 'column', boxShadow: `0 10px 30px ${theme.accentColor}22` }}>
+          <div style={{ color: theme.accentColor, fontSize: '18px', fontWeight: 900, textAlign: 'center', marginBottom: '24px', letterSpacing: '4px' }}>
             {slide.afterLabel || 'AFTER'}
           </div>
-          {(slide.afterItems || []).map((item, i) => (
-            <div key={i} style={{ color: theme.titleColor, fontSize: '18px', fontWeight: 700, padding: '12px 0', borderBottom: '1px solid rgba(255,255,255,0.08)', wordBreak: 'keep-all' }}>
-              ✓ {item}
-            </div>
-          ))}
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '14px', justifyContent: 'center' }}>
+            {(slide.afterItems || []).map((item, i) => (
+              <div key={i} style={{ color: theme.titleColor, fontSize: '19px', fontWeight: 700, padding: '8px 0', borderBottom: `1px solid ${theme.accentColor}33`, wordBreak: 'keep-all', lineHeight: 1.5 }}>
+                ✓ {item}
+              </div>
+            ))}
+          </div>
         </div>
       </div>
       {hospitalFooter}
@@ -1455,21 +1379,58 @@ JSON 한 객체만 출력:
 
   const renderQna = (slide: SlideData) => (
     <div style={cardContainerStyle}>
+      {backgroundDecoration}
       {renderImageLayer(slide)}
-      {topBar}
-      <h2 style={{ color: theme.titleColor, fontSize: '40px', fontWeight: 800, marginBottom: '36px', letterSpacing: '-0.02em', wordBreak: 'keep-all' }}>
-        {slide.title}
-      </h2>
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '28px', justifyContent: 'center' }}>
+      <div style={{ position: 'relative', zIndex: 2, marginBottom: '24px' }}>
+        {titleAccent('left')}
+        <h2 style={{ color: theme.titleColor, fontSize: '44px', fontWeight: 800, wordBreak: 'keep-all', letterSpacing: '-0.02em' }}>{slide.title}</h2>
+      </div>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '20px', justifyContent: 'center', position: 'relative', zIndex: 2 }}>
         {(slide.questions || []).map((qa, i) => (
-          <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '18px' }}>
-              <span style={{ flexShrink: 0, width: '44px', height: '44px', borderRadius: '12px', background: theme.accentColor, color: '#fff', fontSize: '22px', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Q</span>
-              <span style={{ color: theme.titleColor, fontSize: '22px', fontWeight: 800, lineHeight: 1.5, wordBreak: 'keep-all', flex: 1, paddingTop: '6px' }}>{qa.q}</span>
+          <div key={i} style={{ background: innerCardBg, borderRadius: '18px', padding: '24px 28px', border: `1px solid ${innerCardBorder}` }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px', marginBottom: '14px' }}>
+              <span
+                style={{
+                  flexShrink: 0,
+                  width: '44px',
+                  height: '44px',
+                  borderRadius: '12px',
+                  background: theme.accentColor,
+                  color: '#fff',
+                  fontSize: '22px',
+                  fontWeight: 900,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                Q
+              </span>
+              <span style={{ color: theme.titleColor, fontSize: '22px', fontWeight: 800, lineHeight: 1.4, paddingTop: '8px', flex: 1, wordBreak: 'keep-all' }}>
+                {qa.q}
+              </span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '18px' }}>
-              <span style={{ flexShrink: 0, width: '44px', height: '44px', borderRadius: '12px', background: 'rgba(255,255,255,0.12)', color: theme.accentColor, fontSize: '22px', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>A</span>
-              <span style={{ color: theme.bodyColor, fontSize: '19px', lineHeight: 1.65, wordBreak: 'keep-all', flex: 1, paddingTop: '8px' }}>{qa.a}</span>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
+              <span
+                style={{
+                  flexShrink: 0,
+                  width: '44px',
+                  height: '44px',
+                  borderRadius: '12px',
+                  background: isDarkTheme ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)',
+                  color: theme.accentColor,
+                  fontSize: '22px',
+                  fontWeight: 900,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                A
+              </span>
+              <span style={{ color: theme.bodyColor, fontSize: '19px', lineHeight: 1.65, paddingTop: '10px', flex: 1, wordBreak: 'keep-all' }}>
+                {qa.a}
+              </span>
             </div>
           </div>
         ))}
@@ -1480,19 +1441,38 @@ JSON 한 객체만 출력:
 
   const renderTimeline = (slide: SlideData) => (
     <div style={cardContainerStyle}>
+      {backgroundDecoration}
       {renderImageLayer(slide)}
-      {topBar}
-      <h2 style={{ color: theme.titleColor, fontSize: '40px', fontWeight: 800, marginBottom: '36px', letterSpacing: '-0.02em', wordBreak: 'keep-all' }}>
-        {slide.title}
-      </h2>
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', position: 'relative', paddingLeft: '50px' }}>
-        <div style={{ position: 'absolute', left: '20px', top: '8px', bottom: '8px', width: '3px', background: `${theme.accentColor}55` }} />
+      <div style={{ position: 'relative', zIndex: 2, marginBottom: '24px' }}>
+        {titleAccent('left')}
+        <h2 style={{ color: theme.titleColor, fontSize: '44px', fontWeight: 800, wordBreak: 'keep-all', letterSpacing: '-0.02em' }}>{slide.title}</h2>
+      </div>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', position: 'relative', paddingLeft: '56px', zIndex: 2 }}>
+        <div style={{ position: 'absolute', left: '24px', top: '12px', bottom: '12px', width: '4px', background: `${theme.accentColor}55`, borderRadius: '2px' }} />
         {(slide.timelineItems || []).map((item, i) => (
           <div key={i} style={{ marginBottom: '28px', position: 'relative' }}>
-            <div style={{ position: 'absolute', left: '-40px', top: '4px', width: '18px', height: '18px', borderRadius: '50%', background: theme.accentColor, border: `4px solid ${theme.backgroundColor}`, boxShadow: `0 0 0 3px ${theme.accentColor}55` }} />
-            <div style={{ color: theme.accentColor, fontSize: '16px', fontWeight: 800, marginBottom: '6px', letterSpacing: '1px' }}>{item.time}</div>
-            <div style={{ color: theme.titleColor, fontSize: '22px', fontWeight: 800, wordBreak: 'keep-all' }}>{item.title}</div>
-            {item.desc && <div style={{ color: theme.bodyColor, fontSize: '16px', marginTop: '6px', lineHeight: 1.55, wordBreak: 'keep-all' }}>{item.desc}</div>}
+            <div
+              style={{
+                position: 'absolute',
+                left: '-44px',
+                top: '6px',
+                width: '20px',
+                height: '20px',
+                borderRadius: '50%',
+                background: theme.accentColor,
+                border: `5px solid ${theme.backgroundColor}`,
+                boxShadow: `0 0 0 3px ${theme.accentColor}77`,
+              }}
+            />
+            <div style={{ color: theme.accentColor, fontSize: '17px', fontWeight: 900, marginBottom: '6px', letterSpacing: '1px' }}>
+              {item.time}
+            </div>
+            <div style={{ color: theme.titleColor, fontSize: '23px', fontWeight: 800, wordBreak: 'keep-all' }}>{item.title}</div>
+            {item.desc && (
+              <div style={{ color: theme.bodyColor, fontSize: '17px', marginTop: '8px', lineHeight: 1.55, wordBreak: 'keep-all' }}>
+                {item.desc}
+              </div>
+            )}
           </div>
         ))}
       </div>
@@ -1501,49 +1481,100 @@ JSON 한 객체만 출력:
   );
 
   const renderQuote = (slide: SlideData) => (
-    <div style={{ ...cardContainerStyle, justifyContent: 'center', alignItems: 'center', textAlign: 'center' }}>
+    <div style={cardContainerStyle}>
+      {backgroundDecoration}
       {renderImageLayer(slide)}
-      <div style={{ fontSize: '120px', color: theme.accentColor, opacity: 0.35, lineHeight: 0.9, fontFamily: 'Georgia, serif' }}>&ldquo;</div>
-      <p style={{ color: theme.titleColor, fontSize: '32px', fontWeight: 700, lineHeight: 1.65, maxWidth: '820px', margin: '24px 0 40px', wordBreak: 'keep-all' }}>
-        {slide.quoteText || slide.body}
-      </p>
-      {slide.quoteAuthor && (
-        <div style={{ color: theme.accentColor, fontSize: '22px', fontWeight: 800, marginBottom: '4px' }}>— {slide.quoteAuthor}</div>
-      )}
-      {slide.quoteRole && <div style={{ color: theme.bodyColor, fontSize: '18px' }}>{slide.quoteRole}</div>}
+      <div
+        style={{
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          alignItems: 'center',
+          textAlign: 'center',
+          position: 'relative',
+          zIndex: 2,
+          gap: '30px',
+        }}
+      >
+        <div style={{ fontSize: '140px', color: theme.accentColor, opacity: 0.35, lineHeight: 0.85, fontFamily: 'Georgia, serif' }}>
+          &ldquo;
+        </div>
+        <p
+          style={{
+            color: theme.titleColor,
+            fontSize: '34px',
+            fontWeight: 700,
+            lineHeight: 1.6,
+            maxWidth: '85%',
+            wordBreak: 'keep-all',
+            letterSpacing: '-0.01em',
+          }}
+        >
+          {slide.quoteText || slide.body}
+        </p>
+        {slide.quoteAuthor && (
+          <div style={{ marginTop: '12px' }}>
+            <div style={{ color: theme.accentColor, fontSize: '24px', fontWeight: 900, marginBottom: '6px' }}>
+              — {slide.quoteAuthor}
+            </div>
+            {slide.quoteRole && (
+              <div style={{ color: theme.bodyColor, fontSize: '18px', fontWeight: 500 }}>{slide.quoteRole}</div>
+            )}
+          </div>
+        )}
+      </div>
       {hospitalFooter}
     </div>
   );
 
   const renderNumberedList = (slide: SlideData) => (
     <div style={cardContainerStyle}>
+      {backgroundDecoration}
       {renderImageLayer(slide)}
-      {topBar}
-      <h2 style={{ color: theme.titleColor, fontSize: '40px', fontWeight: 800, marginBottom: '32px', letterSpacing: '-0.02em', wordBreak: 'keep-all' }}>
-        {slide.title}
-      </h2>
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '20px', justifyContent: 'center' }}>
+      <div style={{ position: 'relative', zIndex: 2, marginBottom: '24px' }}>
+        {titleAccent('left')}
+        <h2 style={{ color: theme.titleColor, fontSize: '44px', fontWeight: 800, wordBreak: 'keep-all', letterSpacing: '-0.02em' }}>{slide.title}</h2>
+      </div>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '18px', justifyContent: 'center', position: 'relative', zIndex: 2 }}>
         {(slide.numberedItems || []).map((item, i) => (
-          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '22px' }}>
-            <span style={{
-              flexShrink: 0,
-              width: '56px',
-              height: '56px',
-              borderRadius: '14px',
-              background: theme.accentColor,
-              color: '#FFFFFF',
-              fontSize: '26px',
-              fontWeight: 900,
+          <div
+            key={i}
+            style={{
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: `0 8px 20px ${theme.accentColor}55`,
-            }}>
+              gap: '24px',
+              background: innerCardBg,
+              borderRadius: '18px',
+              padding: '22px 28px',
+              border: `1px solid ${innerCardBorder}`,
+            }}
+          >
+            <span
+              style={{
+                flexShrink: 0,
+                width: '60px',
+                height: '60px',
+                borderRadius: '16px',
+                background: theme.accentColor,
+                color: '#FFFFFF',
+                fontSize: '26px',
+                fontWeight: 900,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: `0 8px 24px ${theme.accentColor}44`,
+              }}
+            >
               {item.num || String(i + 1).padStart(2, '0')}
             </span>
             <div style={{ flex: 1 }}>
               <div style={{ color: theme.titleColor, fontSize: '22px', fontWeight: 800, wordBreak: 'keep-all' }}>{item.title}</div>
-              {item.desc && <div style={{ color: theme.bodyColor, fontSize: '16px', marginTop: '4px', lineHeight: 1.5, wordBreak: 'keep-all' }}>{item.desc}</div>}
+              {item.desc && (
+                <div style={{ color: theme.bodyColor, fontSize: '16px', marginTop: '6px', lineHeight: 1.5, wordBreak: 'keep-all' }}>
+                  {item.desc}
+                </div>
+              )}
             </div>
           </div>
         ))}
@@ -1554,33 +1585,38 @@ JSON 한 객체만 출력:
 
   const renderProsCons = (slide: SlideData) => (
     <div style={cardContainerStyle}>
+      {backgroundDecoration}
       {renderImageLayer(slide)}
-      {topBar}
-      <h2 style={{ color: theme.titleColor, fontSize: '40px', fontWeight: 800, textAlign: 'center', marginBottom: '32px', letterSpacing: '-0.02em', wordBreak: 'keep-all' }}>
-        {slide.title}
-      </h2>
-      <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', alignContent: 'center' }}>
-        <div style={{ background: 'rgba(52,211,153,0.12)', borderRadius: '18px', padding: '28px 22px', border: '1px solid rgba(52,211,153,0.4)' }}>
-          <div style={{ color: '#34D399', fontSize: '22px', fontWeight: 900, textAlign: 'center', marginBottom: '20px' }}>
+      <div style={{ position: 'relative', zIndex: 2, marginBottom: '24px' }}>
+        {titleAccent('center')}
+        <h2 style={{ color: theme.titleColor, fontSize: '42px', fontWeight: 800, textAlign: 'center', wordBreak: 'keep-all', letterSpacing: '-0.02em' }}>{slide.title}</h2>
+      </div>
+      <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', position: 'relative', zIndex: 2 }}>
+        <div style={{ background: 'rgba(52,211,153,0.14)', borderRadius: '20px', padding: '32px 28px', border: '2px solid rgba(52,211,153,0.45)', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ color: '#34D399', fontSize: '22px', fontWeight: 900, textAlign: 'center', marginBottom: '22px' }}>
             {slide.prosLabel || '✓ 장점'}
           </div>
-          {(slide.pros || []).map((p, i) => (
-            <div key={i} style={{ color: theme.titleColor, fontSize: '17px', padding: '10px 0', display: 'flex', gap: '10px', wordBreak: 'keep-all' }}>
-              <span style={{ color: '#34D399', fontWeight: 900, flexShrink: 0 }}>○</span>
-              <span>{p}</span>
-            </div>
-          ))}
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '12px', justifyContent: 'center' }}>
+            {(slide.pros || []).map((p, i) => (
+              <div key={i} style={{ color: theme.titleColor, fontSize: '18px', padding: '8px 0', display: 'flex', gap: '12px', wordBreak: 'keep-all', lineHeight: 1.5 }}>
+                <span style={{ color: '#34D399', fontWeight: 900, flexShrink: 0 }}>○</span>
+                <span>{p}</span>
+              </div>
+            ))}
+          </div>
         </div>
-        <div style={{ background: 'rgba(239,68,68,0.12)', borderRadius: '18px', padding: '28px 22px', border: '1px solid rgba(239,68,68,0.4)' }}>
-          <div style={{ color: '#F87171', fontSize: '22px', fontWeight: 900, textAlign: 'center', marginBottom: '20px' }}>
+        <div style={{ background: 'rgba(239,68,68,0.14)', borderRadius: '20px', padding: '32px 28px', border: '2px solid rgba(239,68,68,0.45)', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ color: '#F87171', fontSize: '22px', fontWeight: 900, textAlign: 'center', marginBottom: '22px' }}>
             {slide.consLabel || '⚠ 주의점'}
           </div>
-          {(slide.cons || []).map((c, i) => (
-            <div key={i} style={{ color: theme.titleColor, fontSize: '17px', padding: '10px 0', display: 'flex', gap: '10px', wordBreak: 'keep-all' }}>
-              <span style={{ color: '#F87171', fontWeight: 900, flexShrink: 0 }}>✕</span>
-              <span>{c}</span>
-            </div>
-          ))}
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '12px', justifyContent: 'center' }}>
+            {(slide.cons || []).map((c, i) => (
+              <div key={i} style={{ color: theme.titleColor, fontSize: '18px', padding: '8px 0', display: 'flex', gap: '12px', wordBreak: 'keep-all', lineHeight: 1.5 }}>
+                <span style={{ color: '#F87171', fontWeight: 900, flexShrink: 0 }}>✕</span>
+                <span>{c}</span>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
       {hospitalFooter}
@@ -1589,22 +1625,48 @@ JSON 한 객체만 출력:
 
   const renderPriceTable = (slide: SlideData) => (
     <div style={cardContainerStyle}>
+      {backgroundDecoration}
       {renderImageLayer(slide)}
-      {topBar}
-      <h2 style={{ color: theme.titleColor, fontSize: '40px', fontWeight: 800, textAlign: 'center', marginBottom: '28px', letterSpacing: '-0.02em', wordBreak: 'keep-all' }}>
-        {slide.title}
-      </h2>
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '3px', alignSelf: 'center', width: '100%', maxWidth: '820px', justifyContent: 'center' }}>
+      <div style={{ position: 'relative', zIndex: 2, marginBottom: '24px' }}>
+        {titleAccent('center')}
+        <h2 style={{ color: theme.titleColor, fontSize: '42px', fontWeight: 800, textAlign: 'center', wordBreak: 'keep-all', letterSpacing: '-0.02em' }}>{slide.title}</h2>
+      </div>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '3px', borderRadius: '20px', overflow: 'hidden', position: 'relative', zIndex: 2 }}>
         <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '3px' }}>
-          <div style={{ background: theme.accentColor, color: '#FFFFFF', padding: '20px', fontWeight: 900, fontSize: '20px', textAlign: 'center', borderRadius: '12px 0 0 0' }}>시술 항목</div>
-          <div style={{ background: theme.accentColor, color: '#FFFFFF', padding: '20px', fontWeight: 900, fontSize: '20px', textAlign: 'center', borderRadius: '0 12px 0 0' }}>예상 비용</div>
+          <div style={{ background: theme.accentColor, color: '#fff', padding: '22px 20px', fontWeight: 900, fontSize: '22px', textAlign: 'center' }}>시술 항목</div>
+          <div style={{ background: theme.accentColor, color: '#fff', padding: '22px 20px', fontWeight: 900, fontSize: '22px', textAlign: 'center' }}>예상 비용</div>
         </div>
         {(slide.priceItems || []).map((item, i) => (
-          <div key={i} style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '3px' }}>
-            <div style={{ background: 'rgba(255,255,255,0.07)', padding: '20px', color: theme.titleColor, fontWeight: 600, fontSize: '19px', textAlign: 'center', wordBreak: 'keep-all' }}>{item.name}</div>
-            <div style={{ background: 'rgba(255,255,255,0.07)', padding: '18px 20px', color: theme.accentColor, fontWeight: 900, fontSize: '22px', textAlign: 'center' }}>
-              {item.price}
-              {item.note && <div style={{ fontSize: '12px', color: theme.bodyColor, marginTop: '3px', fontWeight: 500 }}>{item.note}</div>}
+          <div key={i} style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '3px', flex: 1 }}>
+            <div
+              style={{
+                background: innerCardBg,
+                padding: '22px',
+                color: theme.titleColor,
+                fontWeight: 700,
+                fontSize: '21px',
+                textAlign: 'center',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                wordBreak: 'keep-all',
+              }}
+            >
+              {item.name}
+            </div>
+            <div
+              style={{
+                background: innerCardBg,
+                padding: '18px 22px',
+                textAlign: 'center',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <span style={{ color: theme.accentColor, fontWeight: 900, fontSize: '26px', letterSpacing: '-0.01em' }}>{item.price}</span>
+              {item.note && <span style={{ fontSize: '13px', color: theme.bodyColor, marginTop: '4px', fontWeight: 500 }}>{item.note}</span>}
             </div>
           </div>
         ))}
@@ -1615,26 +1677,34 @@ JSON 한 객체만 출력:
 
   const renderWarning = (slide: SlideData) => (
     <div style={cardContainerStyle}>
+      {backgroundDecoration}
       {renderImageLayer(slide)}
-      <div style={{ textAlign: 'center', marginBottom: '16px' }}>
-        <span style={{ fontSize: '72px', lineHeight: 1 }}>⚠️</span>
+      <div style={{ textAlign: 'center', marginBottom: '16px', position: 'relative', zIndex: 2 }}>
+        <span style={{ fontSize: '80px', lineHeight: 1 }}>⚠️</span>
       </div>
-      <h2 style={{ color: theme.accentColor, fontSize: '42px', fontWeight: 900, textAlign: 'center', marginBottom: '32px', letterSpacing: '-0.02em', wordBreak: 'keep-all' }}>
-        {slide.warningTitle || slide.title}
-      </h2>
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '16px', justifyContent: 'center' }}>
+      <div style={{ position: 'relative', zIndex: 2, marginBottom: '24px' }}>
+        <h2 style={{ color: theme.accentColor, fontSize: '44px', fontWeight: 900, textAlign: 'center', wordBreak: 'keep-all', letterSpacing: '-0.02em' }}>
+          {slide.warningTitle || slide.title}
+        </h2>
+      </div>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '16px', justifyContent: 'center', position: 'relative', zIndex: 2 }}>
         {(slide.warningItems || []).map((item, i) => (
-          <div key={i} style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '18px',
-            background: 'rgba(239,68,68,0.12)',
-            borderRadius: '14px',
-            padding: '22px 26px',
-            borderLeft: '5px solid #F87171',
-          }}>
-            <span style={{ color: '#F87171', fontSize: '22px', flexShrink: 0, fontWeight: 900 }}>❗</span>
-            <span style={{ color: theme.titleColor, fontSize: '19px', fontWeight: 600, wordBreak: 'keep-all' }}>{item}</span>
+          <div
+            key={i}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '20px',
+              background: 'rgba(239,68,68,0.14)',
+              borderRadius: '16px',
+              padding: '24px 28px',
+              borderLeft: '6px solid #F87171',
+            }}
+          >
+            <span style={{ color: '#F87171', fontSize: '24px', flexShrink: 0, fontWeight: 900 }}>❗</span>
+            <span style={{ color: theme.titleColor, fontSize: '20px', fontWeight: 600, wordBreak: 'keep-all', lineHeight: 1.5, flex: 1 }}>
+              {item}
+            </span>
           </div>
         ))}
       </div>
