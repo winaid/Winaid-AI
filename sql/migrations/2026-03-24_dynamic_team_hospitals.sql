@@ -62,13 +62,15 @@ INSERT INTO public.hospitals (team_id, name, manager, address, naver_blog_urls) 
   (1, '서울삼성치과', '김주열 팀장님', '서울 관악구 봉천동', ARRAY['https://blog.naver.com/pagfoco0q3q','https://blog.naver.com/i0v5id9o']),
   -- 1팀 김소영
   (1, '닥터신치과', '김소영 매니저님', '경기 성남시 중원구 상대원동', ARRAY['https://blog.naver.com/hkyrsp9710']),
-  (1, '논산중앙치과', '김소영 매니저님', '충남 논산시 반월동', ARRAY['https://blog.naver.com/cha1636ndsu']),
   (1, '아산베스트치과', '김소영 매니저님', '충남 아산시 용화동', ARRAY['https://blog.naver.com/soiidinmfve75174','https://blog.naver.com/czzhuy6104']),
-  (1, '바른플란트치과', '김소영 매니저님', '서울 중랑구 망우동', ARRAY['https://blog.naver.com/brplant','https://blog.naver.com/wwwlsl123']),
   (1, '검단일등치과', '김소영 매니저님', '인천 서구 불로동', ARRAY['https://blog.naver.com/geomdan1stdental','https://blog.naver.com/o48j69omlwlnj6']),
   (1, '코랄치과 (김소영)', '김소영 매니저님', '서울 강동구 성내동', ARRAY['https://blog.naver.com/timber12502','https://blog.naver.com/ffpvksk4i','https://blog.naver.com/ran2hoho']),
-  -- 1팀 휘원
-  (1, '부천그랜드치과', '휘원 매니저님', '경기 부천시 원미구 중동', ARRAY['https://blog.naver.com/dnautmqq']),
+  -- 1팀 김소현
+  (1, '바른플란트치과', '김소현 매니저님', '서울 중랑구 망우동', ARRAY['https://blog.naver.com/brplant','https://blog.naver.com/wwwlsl123']),
+  -- 1팀 이지안
+  (1, '논산중앙치과', '이지안 매니저님', '충남 논산시 반월동', ARRAY['https://blog.naver.com/cha1636ndsu']),
+  -- 1팀 최휘원
+  (1, '부천그랜드치과', '최휘원 매니저님', '경기 부천시 원미구 중동', ARRAY['https://blog.naver.com/dnautmqq']),
   -- 2팀 신미정
   (2, '유성온치과', '신미정 팀장님', '대전 유성구 봉명동', ARRAY['https://blog.naver.com/yuseong_on']),
   (2, 'A플란트치과', '신미정 팀장님', '서울 성동구 도선동', ARRAY['https://blog.naver.com/aplant2020']),
