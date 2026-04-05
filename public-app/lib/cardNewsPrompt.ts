@@ -269,8 +269,11 @@ export function buildCardNewsProPrompt(req: CardNewsRequest): {
 
   const systemInstruction = `당신은 프로급 의료 카드뉴스 기획자입니다.
 주제를 받으면 슬라이드별로 가장 적합한 레이아웃을 선택하고, 반드시 JSON 형식으로만 출력합니다.
+웹 검색이 활성화되어 있으므로 최신 수치(비용 평균, 성공률, 회복 기간, 건보 적용 여부 등)를 반드시 확인하고 반영하세요.
 
-사용 가능한 레이아웃:
+사용 가능한 레이아웃 (16종):
+
+[기본 8종]
 - cover: 표지 (title + subtitle). 슬라이드 1장은 반드시 cover.
 - info: 정보형 (title + subtitle + body 텍스트). 개념 설명에 적합.
 - comparison: 비교표. columns(2~3개) + compareLabels(행 라벨 3~5개). 수치/특징 비교에 필수.
@@ -280,10 +283,29 @@ export function buildCardNewsProPrompt(req: CardNewsRequest): {
 - data-highlight: 수치 강조. dataPoints 배열(2~3개, value+label+highlight). 성공률/기간/비용 등 임팩트 있는 숫자 제시.
 - closing: 마무리 (title + subtitle + body). 마지막 슬라이드는 반드시 closing.
 
+[확장 8종]
+- before-after: 시술 전후 비교. beforeLabel, afterLabel, beforeItems[], afterItems[] (각 3~5개 항목).
+- qna: Q&A. questions: [{q, a}] (2~4쌍). 환자가 자주 묻는 질문에 적합.
+- timeline: 타임라인. timelineItems: [{time, title, desc?}] (3~5개). 시술 후 1일/1주/1달 경과 등.
+- quote: 인용/후기. quoteText(30~80자) + quoteAuthor + quoteRole. 환자 후기·의사 코멘트.
+- numbered-list: 번호 리스트. numberedItems: [{num?, title, desc?}] (3~5개). TOP 5/3가지 이유 등.
+- pros-cons: 장단점. pros[], cons[] (각 3~5개), prosLabel/consLabel(선택).
+- price-table: 가격표. priceItems: [{name, price, note?}] (3~5행). 웹 검색 결과 기반 실제 시세 반영 필수.
+- warning: 주의사항. warningTitle(선택) + warningItems[] (3~5개). 금기·부작용·회복기 수칙 등.
+
+[웹 검색 활용]
+- 주제에 대해 웹 검색으로 최신 데이터 확인:
+  · 시술/진료 비용 (2024~2025년 기준 한국 평균)
+  · 성공률·부작용 비율·임상 데이터
+  · 시술 시간·회복 기간·내원 횟수
+  · 건강보험 적용 여부 및 본인부담금
+- 수치는 반드시 구체적 범위로 (예: "80~120만원", "3~6개월", "90~95%")
+- price-table에는 반드시 검색으로 확인한 실제 시세를 반영
+
 절대 규칙:
-1. 1장은 cover, ${slideCount}장은 closing. 중간 ${middleCount}장은 다양한 레이아웃을 혼합.
-2. 같은 레이아웃을 3번 이상 연속/반복 사용 금지.
-3. comparison과 data-highlight에는 반드시 구체적 수치(%/년/개월/만원/mm 등) 포함.
+1. 1장은 cover, ${slideCount}장은 closing. 중간 ${middleCount}장은 16종 레이아웃 중 주제에 맞는 것을 다양하게 혼합.
+2. 같은 레이아웃을 3번 이상 연속/반복 사용 금지. 가능하면 서로 다른 6~8종을 섞으세요.
+3. comparison / data-highlight / price-table / timeline / warning 에는 반드시 구체적 수치(%/년/개월/만원/mm 등) 포함.
 4. "중요합니다", "전문의 상담", "것이 좋습니다" 같은 뻔한 표현 금지.
 5. 의료광고법 준수: "완치", "100%", "최첨단", "완벽", "획기적", "유일", "국내 최초", "1위" 등 최상급/단정 표현 금지.
 6. 모든 텍스트는 한국어. 한 문장은 짧고 명확하게(25자 내외).
@@ -373,7 +395,33 @@ export function buildCardNewsProPrompt(req: CardNewsRequest): {
       "body": "잇몸뼈 두께, 잔여 치아 개수, 기저질환 여부. 3D CT 정밀 진단으로 1:1 맞춤 치료 계획을 세워보세요."
     }
   ]
-}`;
+}
+
+[확장 레이아웃 필드 예시] (각 레이아웃을 쓸 때 이 필드들을 채우세요)
+
+// before-after
+{ "layout": "before-after", "title": "수술 전후 차이", "beforeLabel": "기존 방식", "afterLabel": "네비게이션", "beforeItems": ["2D 엑스레이 의존","15mm 절개","회복 7~10일"], "afterItems": ["3D CT 모의수술","3~5mm 최소 절개","당일~3일 회복"] }
+
+// qna
+{ "layout": "qna", "title": "자주 묻는 질문", "questions": [ { "q": "수술 시간은 얼마나 걸리나요?", "a": "1식립 기준 15분 내외, 전체 2시간 전후입니다." }, { "q": "통증이 많이 심한가요?", "a": "최소 절개로 진행해 붓기·통증이 적어 대부분 당일 귀가합니다." } ] }
+
+// timeline
+{ "layout": "timeline", "title": "시술 후 경과", "timelineItems": [ { "time": "당일", "title": "지혈 + 냉찜질", "desc": "4시간 동안 거즈 압박" }, { "time": "1주", "title": "실밥 제거", "desc": "부드러운 식사 유지" }, { "time": "3개월", "title": "보철 장착", "desc": "뼈와 임플란트 결합 완료" } ] }
+
+// quote
+{ "layout": "quote", "title": "환자 후기", "quoteText": "당일 시술이라 부담이 적었고, 3개월 뒤부터는 본래 치아처럼 씹을 수 있어요.", "quoteAuthor": "40대 남성 환자", "quoteRole": "임플란트 2개 식립" }
+
+// numbered-list
+{ "layout": "numbered-list", "title": "임플란트 선택 TOP 5 체크포인트", "numberedItems": [ { "num": "01", "title": "잔여 잇몸뼈 두께", "desc": "최소 10mm 이상 권장" }, { "num": "02", "title": "기저질환 여부", "desc": "당뇨·고혈압 관리 필수" } ] }
+
+// pros-cons
+{ "layout": "pros-cons", "title": "네비게이션 임플란트", "prosLabel": "✓ 장점", "consLabel": "⚠ 주의점", "pros": ["0.1mm 정밀 시술","회복 기간 단축","신경 손상 위험↓"], "cons": ["일반 대비 10~20% 비용 증가","모든 치과가 장비 보유 X"] }
+
+// price-table (웹 검색으로 2024~2025 한국 평균 시세 반영)
+{ "layout": "price-table", "title": "임플란트 비용 안내", "priceItems": [ { "name": "일반 임플란트", "price": "80~120만원", "note": "치아 1개 기준" }, { "name": "네비게이션 임플란트", "price": "120~180만원", "note": "3D CT 포함" }, { "name": "건보 적용 (만 65세↑)", "price": "약 45~65만원", "note": "본인부담 30%" } ] }
+
+// warning
+{ "layout": "warning", "title": "시술 후 주의사항", "warningItems": ["수술 당일 양치·가글 금지","딱딱한 음식 최소 2주간 피하기","흡연·음주 4주간 금지","이상 출혈 시 즉시 내원"] }`;
 
   const requestBlock = [
     `주제: ${req.topic}`,

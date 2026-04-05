@@ -8,8 +8,9 @@
  * 실제 프로 치과 카드뉴스(더찬한치과/라이프치과)급 퀄리티 달성.
  */
 
-/** 슬라이드 레이아웃 유형 */
+/** 슬라이드 레이아웃 유형 (16종) */
 export type SlideLayoutType =
+  // 기본 8종
   | 'cover'           // 표지: 큰 제목 + 부제
   | 'info'            // 정보형: 제목 + 본문 텍스트
   | 'comparison'      // 비교표: 2~3열 비교 (행 라벨 선택)
@@ -17,7 +18,16 @@ export type SlideLayoutType =
   | 'steps'           // 단계형: 화살표 플로우
   | 'checklist'       // 체크리스트: 체크 아이콘 + 항목
   | 'data-highlight'  // 수치 강조: 큰 숫자 + 라벨
-  | 'closing';        // 마무리: 병원명 + CTA
+  | 'closing'         // 마무리: 병원명 + CTA
+  // 확장 8종
+  | 'before-after'    // 시술 전후 비교 (좌우 분할)
+  | 'qna'             // Q&A (질문+답변)
+  | 'timeline'        // 타임라인 (시술 후 1일·1주·1달)
+  | 'quote'           // 인용/후기
+  | 'numbered-list'   // 번호 리스트 (TOP 5·3가지 이유)
+  | 'pros-cons'       // 장단점 (O/X)
+  | 'price-table'     // 가격표/비용 비교
+  | 'warning';        // 주의사항/경고
 
 export interface SlideComparisonColumn {
   header: string;
@@ -80,6 +90,39 @@ export interface SlideData {
 
   // data-highlight
   dataPoints?: SlideDataPoint[];
+
+  // before-after
+  beforeLabel?: string;
+  afterLabel?: string;
+  beforeItems?: string[];
+  afterItems?: string[];
+
+  // qna
+  questions?: { q: string; a: string }[];
+
+  // timeline
+  timelineItems?: { time: string; title: string; desc?: string }[];
+
+  // quote
+  quoteText?: string;
+  quoteAuthor?: string;
+  quoteRole?: string;
+
+  // numbered-list
+  numberedItems?: { num?: string; title: string; desc?: string }[];
+
+  // pros-cons
+  pros?: string[];
+  cons?: string[];
+  prosLabel?: string;
+  consLabel?: string;
+
+  // price-table
+  priceItems?: { name: string; price: string; note?: string }[];
+
+  // warning
+  warningTitle?: string;
+  warningItems?: string[];
 
   // AI 이미지 (프로 모드 전용 — 선택)
   visualKeyword?: string;   // AI가 지정한 이미지 프롬프트 키워드(영문)
@@ -242,6 +285,14 @@ export const LAYOUT_LABELS: Record<SlideLayoutType, string> = {
   checklist: '체크리스트',
   'data-highlight': '수치 강조',
   closing: '마무리',
+  'before-after': '전후 비교',
+  qna: 'Q&A',
+  timeline: '타임라인',
+  quote: '인용/후기',
+  'numbered-list': '번호 리스트',
+  'pros-cons': '장단점',
+  'price-table': '가격표',
+  warning: '주의사항',
 };
 
 /**
@@ -295,6 +346,25 @@ function normalizeSlide(raw: Partial<SlideData>, i: number): SlideData {
     steps: raw.steps,
     checkItems: raw.checkItems,
     dataPoints: raw.dataPoints,
+    // 확장 레이아웃 필드
+    beforeLabel: raw.beforeLabel,
+    afterLabel: raw.afterLabel,
+    beforeItems: raw.beforeItems,
+    afterItems: raw.afterItems,
+    questions: raw.questions,
+    timelineItems: raw.timelineItems,
+    quoteText: raw.quoteText,
+    quoteAuthor: raw.quoteAuthor,
+    quoteRole: raw.quoteRole,
+    numberedItems: raw.numberedItems,
+    pros: raw.pros,
+    cons: raw.cons,
+    prosLabel: raw.prosLabel,
+    consLabel: raw.consLabel,
+    priceItems: raw.priceItems,
+    warningTitle: raw.warningTitle,
+    warningItems: raw.warningItems,
+    // AI 이미지 필드
     visualKeyword: raw.visualKeyword,
     imageUrl: raw.imageUrl,
     imagePosition: validPosition,
@@ -306,7 +376,10 @@ function normalizeSlide(raw: Partial<SlideData>, i: number): SlideData {
 
 function isValidLayout(v: unknown): v is SlideLayoutType {
   return typeof v === 'string' &&
-    ['cover', 'info', 'comparison', 'icon-grid', 'steps', 'checklist', 'data-highlight', 'closing'].includes(v);
+    [
+      'cover', 'info', 'comparison', 'icon-grid', 'steps', 'checklist', 'data-highlight', 'closing',
+      'before-after', 'qna', 'timeline', 'quote', 'numbered-list', 'pros-cons', 'price-table', 'warning',
+    ].includes(v);
 }
 
 // ═══════════════════════════════════════════════════════════════

@@ -167,6 +167,58 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
     }
   };
 
+  /** 현재 슬라이드를 웹 검색으로 보강 (googleSearch=true) */
+  const handleAiEnrichSlide = async (idx: number) => {
+    const slide = slides[idx];
+    if (!slide) return;
+    const key = `${idx}:enrich`;
+    setAiSuggestingKey(key);
+    try {
+      const res = await fetch('/api/gemini', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: `아래는 카드뉴스 슬라이드 JSON이다. 웹에서 2024~2025년 한국 기준 최신 수치(비용 평균, 성공률, 회복 기간, 건보 적용 등)를 검색해 이 슬라이드의 내용을 보강해라.
+- 레이아웃(${slide.layout})은 유지.
+- 제목·부제·본문·배열 필드들을 필요한 만큼 수정.
+- 추가로 필요한 필드만 포함한 부분 패치(JSON 객체)를 출력. 슬라이드 전체가 아니라 수정할 필드만.
+- 구체적 수치는 반드시 범위(예: "80~120만원", "3~6개월")로.
+- 의료광고법 준수 (완치/최첨단/100%/유일 등 금지).
+- 설명·마크다운 코드블록 금지. 순수 JSON 객체 하나만.
+
+현재 슬라이드:
+${JSON.stringify(slide, null, 2)}`,
+          systemInstruction: '카드뉴스 콘텐츠 전문가. 웹 검색 결과 기반 최신 수치만 사용. JSON 부분 패치만 출력.',
+          model: 'gemini-3.1-pro-preview',
+          temperature: 0.5,
+          maxOutputTokens: 2048,
+          googleSearch: true,
+        }),
+      });
+      const data = await res.json() as { text?: string };
+      if (data.text) {
+        const cleaned = data.text.replace(/```json?\s*\n?/gi, '').replace(/\n?```\s*$/g, '').trim();
+        const start = cleaned.indexOf('{');
+        const end = cleaned.lastIndexOf('}');
+        if (start !== -1 && end !== -1) {
+          try {
+            const patch = JSON.parse(cleaned.slice(start, end + 1)) as Partial<SlideData>;
+            // layout은 보존
+            const { layout: _ignore, ...safePatch } = patch as { layout?: string } & Partial<SlideData>;
+            void _ignore;
+            updateSlide(idx, safePatch);
+          } catch (parseErr) {
+            console.warn('[CARD_NEWS_PRO] enrich JSON 파싱 실패', parseErr);
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('[CARD_NEWS_PRO] 웹 검색 보강 실패', err);
+    } finally {
+      setAiSuggestingKey(null);
+    }
+  };
+
   /** AI 비교표 자동 채우기 */
   const handleAiSuggestComparison = async (idx: number) => {
     const slide = slides[idx];
@@ -1113,27 +1165,255 @@ JSON 한 객체만 출력:
   );
 
   // ═══════════════════════════════════════
+  // 확장 레이아웃 8종
+  // ═══════════════════════════════════════
+
+  const renderBeforeAfter = (slide: SlideData) => (
+    <div style={cardContainerStyle}>
+      {renderImageLayer(slide)}
+      {topBar}
+      <h2 style={{ color: theme.titleColor, fontSize: '40px', fontWeight: 800, textAlign: 'center', marginBottom: '32px', letterSpacing: '-0.02em', wordBreak: 'keep-all' }}>
+        {slide.title}
+      </h2>
+      <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', alignContent: 'center' }}>
+        {/* BEFORE */}
+        <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: '18px', padding: '28px 24px', border: '1px solid rgba(255,255,255,0.12)' }}>
+          <div style={{ color: theme.bodyColor, fontSize: '16px', fontWeight: 800, textAlign: 'center', marginBottom: '22px', textTransform: 'uppercase', letterSpacing: '3px' }}>
+            {slide.beforeLabel || 'BEFORE'}
+          </div>
+          {(slide.beforeItems || []).map((item, i) => (
+            <div key={i} style={{ color: theme.bodyColor, fontSize: '18px', padding: '12px 0', borderBottom: '1px solid rgba(255,255,255,0.08)', wordBreak: 'keep-all' }}>
+              • {item}
+            </div>
+          ))}
+        </div>
+        {/* AFTER */}
+        <div style={{ background: `${theme.accentColor}1F`, borderRadius: '18px', padding: '28px 24px', border: `2px solid ${theme.accentColor}` }}>
+          <div style={{ color: theme.accentColor, fontSize: '16px', fontWeight: 800, textAlign: 'center', marginBottom: '22px', textTransform: 'uppercase', letterSpacing: '3px' }}>
+            {slide.afterLabel || 'AFTER'}
+          </div>
+          {(slide.afterItems || []).map((item, i) => (
+            <div key={i} style={{ color: theme.titleColor, fontSize: '18px', fontWeight: 700, padding: '12px 0', borderBottom: '1px solid rgba(255,255,255,0.08)', wordBreak: 'keep-all' }}>
+              ✓ {item}
+            </div>
+          ))}
+        </div>
+      </div>
+      {hospitalFooter}
+    </div>
+  );
+
+  const renderQna = (slide: SlideData) => (
+    <div style={cardContainerStyle}>
+      {renderImageLayer(slide)}
+      {topBar}
+      <h2 style={{ color: theme.titleColor, fontSize: '40px', fontWeight: 800, marginBottom: '36px', letterSpacing: '-0.02em', wordBreak: 'keep-all' }}>
+        {slide.title}
+      </h2>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '28px', justifyContent: 'center' }}>
+        {(slide.questions || []).map((qa, i) => (
+          <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '18px' }}>
+              <span style={{ flexShrink: 0, width: '44px', height: '44px', borderRadius: '12px', background: theme.accentColor, color: '#fff', fontSize: '22px', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Q</span>
+              <span style={{ color: theme.titleColor, fontSize: '22px', fontWeight: 800, lineHeight: 1.5, wordBreak: 'keep-all', flex: 1, paddingTop: '6px' }}>{qa.q}</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '18px' }}>
+              <span style={{ flexShrink: 0, width: '44px', height: '44px', borderRadius: '12px', background: 'rgba(255,255,255,0.12)', color: theme.accentColor, fontSize: '22px', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>A</span>
+              <span style={{ color: theme.bodyColor, fontSize: '19px', lineHeight: 1.65, wordBreak: 'keep-all', flex: 1, paddingTop: '8px' }}>{qa.a}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+      {hospitalFooter}
+    </div>
+  );
+
+  const renderTimeline = (slide: SlideData) => (
+    <div style={cardContainerStyle}>
+      {renderImageLayer(slide)}
+      {topBar}
+      <h2 style={{ color: theme.titleColor, fontSize: '40px', fontWeight: 800, marginBottom: '36px', letterSpacing: '-0.02em', wordBreak: 'keep-all' }}>
+        {slide.title}
+      </h2>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', position: 'relative', paddingLeft: '50px' }}>
+        <div style={{ position: 'absolute', left: '20px', top: '8px', bottom: '8px', width: '3px', background: `${theme.accentColor}55` }} />
+        {(slide.timelineItems || []).map((item, i) => (
+          <div key={i} style={{ marginBottom: '28px', position: 'relative' }}>
+            <div style={{ position: 'absolute', left: '-40px', top: '4px', width: '18px', height: '18px', borderRadius: '50%', background: theme.accentColor, border: `4px solid ${theme.backgroundColor}`, boxShadow: `0 0 0 3px ${theme.accentColor}55` }} />
+            <div style={{ color: theme.accentColor, fontSize: '16px', fontWeight: 800, marginBottom: '6px', letterSpacing: '1px' }}>{item.time}</div>
+            <div style={{ color: theme.titleColor, fontSize: '22px', fontWeight: 800, wordBreak: 'keep-all' }}>{item.title}</div>
+            {item.desc && <div style={{ color: theme.bodyColor, fontSize: '16px', marginTop: '6px', lineHeight: 1.55, wordBreak: 'keep-all' }}>{item.desc}</div>}
+          </div>
+        ))}
+      </div>
+      {hospitalFooter}
+    </div>
+  );
+
+  const renderQuote = (slide: SlideData) => (
+    <div style={{ ...cardContainerStyle, justifyContent: 'center', alignItems: 'center', textAlign: 'center' }}>
+      {renderImageLayer(slide)}
+      <div style={{ fontSize: '120px', color: theme.accentColor, opacity: 0.35, lineHeight: 0.9, fontFamily: 'Georgia, serif' }}>&ldquo;</div>
+      <p style={{ color: theme.titleColor, fontSize: '32px', fontWeight: 700, lineHeight: 1.65, maxWidth: '820px', margin: '24px 0 40px', wordBreak: 'keep-all' }}>
+        {slide.quoteText || slide.body}
+      </p>
+      {slide.quoteAuthor && (
+        <div style={{ color: theme.accentColor, fontSize: '22px', fontWeight: 800, marginBottom: '4px' }}>— {slide.quoteAuthor}</div>
+      )}
+      {slide.quoteRole && <div style={{ color: theme.bodyColor, fontSize: '18px' }}>{slide.quoteRole}</div>}
+      {hospitalFooter}
+    </div>
+  );
+
+  const renderNumberedList = (slide: SlideData) => (
+    <div style={cardContainerStyle}>
+      {renderImageLayer(slide)}
+      {topBar}
+      <h2 style={{ color: theme.titleColor, fontSize: '40px', fontWeight: 800, marginBottom: '32px', letterSpacing: '-0.02em', wordBreak: 'keep-all' }}>
+        {slide.title}
+      </h2>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '20px', justifyContent: 'center' }}>
+        {(slide.numberedItems || []).map((item, i) => (
+          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '22px' }}>
+            <span style={{
+              flexShrink: 0,
+              width: '56px',
+              height: '56px',
+              borderRadius: '14px',
+              background: theme.accentColor,
+              color: '#FFFFFF',
+              fontSize: '26px',
+              fontWeight: 900,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: `0 8px 20px ${theme.accentColor}55`,
+            }}>
+              {item.num || String(i + 1).padStart(2, '0')}
+            </span>
+            <div style={{ flex: 1 }}>
+              <div style={{ color: theme.titleColor, fontSize: '22px', fontWeight: 800, wordBreak: 'keep-all' }}>{item.title}</div>
+              {item.desc && <div style={{ color: theme.bodyColor, fontSize: '16px', marginTop: '4px', lineHeight: 1.5, wordBreak: 'keep-all' }}>{item.desc}</div>}
+            </div>
+          </div>
+        ))}
+      </div>
+      {hospitalFooter}
+    </div>
+  );
+
+  const renderProsCons = (slide: SlideData) => (
+    <div style={cardContainerStyle}>
+      {renderImageLayer(slide)}
+      {topBar}
+      <h2 style={{ color: theme.titleColor, fontSize: '40px', fontWeight: 800, textAlign: 'center', marginBottom: '32px', letterSpacing: '-0.02em', wordBreak: 'keep-all' }}>
+        {slide.title}
+      </h2>
+      <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', alignContent: 'center' }}>
+        <div style={{ background: 'rgba(52,211,153,0.12)', borderRadius: '18px', padding: '28px 22px', border: '1px solid rgba(52,211,153,0.4)' }}>
+          <div style={{ color: '#34D399', fontSize: '22px', fontWeight: 900, textAlign: 'center', marginBottom: '20px' }}>
+            {slide.prosLabel || '✓ 장점'}
+          </div>
+          {(slide.pros || []).map((p, i) => (
+            <div key={i} style={{ color: theme.titleColor, fontSize: '17px', padding: '10px 0', display: 'flex', gap: '10px', wordBreak: 'keep-all' }}>
+              <span style={{ color: '#34D399', fontWeight: 900, flexShrink: 0 }}>○</span>
+              <span>{p}</span>
+            </div>
+          ))}
+        </div>
+        <div style={{ background: 'rgba(239,68,68,0.12)', borderRadius: '18px', padding: '28px 22px', border: '1px solid rgba(239,68,68,0.4)' }}>
+          <div style={{ color: '#F87171', fontSize: '22px', fontWeight: 900, textAlign: 'center', marginBottom: '20px' }}>
+            {slide.consLabel || '⚠ 주의점'}
+          </div>
+          {(slide.cons || []).map((c, i) => (
+            <div key={i} style={{ color: theme.titleColor, fontSize: '17px', padding: '10px 0', display: 'flex', gap: '10px', wordBreak: 'keep-all' }}>
+              <span style={{ color: '#F87171', fontWeight: 900, flexShrink: 0 }}>✕</span>
+              <span>{c}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+      {hospitalFooter}
+    </div>
+  );
+
+  const renderPriceTable = (slide: SlideData) => (
+    <div style={cardContainerStyle}>
+      {renderImageLayer(slide)}
+      {topBar}
+      <h2 style={{ color: theme.titleColor, fontSize: '40px', fontWeight: 800, textAlign: 'center', marginBottom: '28px', letterSpacing: '-0.02em', wordBreak: 'keep-all' }}>
+        {slide.title}
+      </h2>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '3px', alignSelf: 'center', width: '100%', maxWidth: '820px', justifyContent: 'center' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '3px' }}>
+          <div style={{ background: theme.accentColor, color: '#FFFFFF', padding: '20px', fontWeight: 900, fontSize: '20px', textAlign: 'center', borderRadius: '12px 0 0 0' }}>시술 항목</div>
+          <div style={{ background: theme.accentColor, color: '#FFFFFF', padding: '20px', fontWeight: 900, fontSize: '20px', textAlign: 'center', borderRadius: '0 12px 0 0' }}>예상 비용</div>
+        </div>
+        {(slide.priceItems || []).map((item, i) => (
+          <div key={i} style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '3px' }}>
+            <div style={{ background: 'rgba(255,255,255,0.07)', padding: '20px', color: theme.titleColor, fontWeight: 600, fontSize: '19px', textAlign: 'center', wordBreak: 'keep-all' }}>{item.name}</div>
+            <div style={{ background: 'rgba(255,255,255,0.07)', padding: '18px 20px', color: theme.accentColor, fontWeight: 900, fontSize: '22px', textAlign: 'center' }}>
+              {item.price}
+              {item.note && <div style={{ fontSize: '12px', color: theme.bodyColor, marginTop: '3px', fontWeight: 500 }}>{item.note}</div>}
+            </div>
+          </div>
+        ))}
+      </div>
+      {hospitalFooter}
+    </div>
+  );
+
+  const renderWarning = (slide: SlideData) => (
+    <div style={cardContainerStyle}>
+      {renderImageLayer(slide)}
+      <div style={{ textAlign: 'center', marginBottom: '16px' }}>
+        <span style={{ fontSize: '72px', lineHeight: 1 }}>⚠️</span>
+      </div>
+      <h2 style={{ color: theme.accentColor, fontSize: '42px', fontWeight: 900, textAlign: 'center', marginBottom: '32px', letterSpacing: '-0.02em', wordBreak: 'keep-all' }}>
+        {slide.warningTitle || slide.title}
+      </h2>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '16px', justifyContent: 'center' }}>
+        {(slide.warningItems || []).map((item, i) => (
+          <div key={i} style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '18px',
+            background: 'rgba(239,68,68,0.12)',
+            borderRadius: '14px',
+            padding: '22px 26px',
+            borderLeft: '5px solid #F87171',
+          }}>
+            <span style={{ color: '#F87171', fontSize: '22px', flexShrink: 0, fontWeight: 900 }}>❗</span>
+            <span style={{ color: theme.titleColor, fontSize: '19px', fontWeight: 600, wordBreak: 'keep-all' }}>{item}</span>
+          </div>
+        ))}
+      </div>
+      {hospitalFooter}
+    </div>
+  );
+
+  // ═══════════════════════════════════════
   // 레이아웃 분기
   // ═══════════════════════════════════════
 
   const renderSlide = (slide: SlideData) => {
     switch (slide.layout) {
-      case 'cover':
-        return renderCover(slide);
-      case 'comparison':
-        return renderComparison(slide);
-      case 'icon-grid':
-        return renderIconGrid(slide);
-      case 'steps':
-        return renderSteps(slide);
-      case 'checklist':
-        return renderChecklist(slide);
-      case 'data-highlight':
-        return renderDataHighlight(slide);
-      case 'closing':
-        return renderClosing(slide);
-      default:
-        return renderInfo(slide);
+      case 'cover':          return renderCover(slide);
+      case 'comparison':     return renderComparison(slide);
+      case 'icon-grid':      return renderIconGrid(slide);
+      case 'steps':          return renderSteps(slide);
+      case 'checklist':      return renderChecklist(slide);
+      case 'data-highlight': return renderDataHighlight(slide);
+      case 'closing':        return renderClosing(slide);
+      case 'before-after':   return renderBeforeAfter(slide);
+      case 'qna':            return renderQna(slide);
+      case 'timeline':       return renderTimeline(slide);
+      case 'quote':          return renderQuote(slide);
+      case 'numbered-list':  return renderNumberedList(slide);
+      case 'pros-cons':      return renderProsCons(slide);
+      case 'price-table':    return renderPriceTable(slide);
+      case 'warning':        return renderWarning(slide);
+      default:               return renderInfo(slide);
     }
   };
 
@@ -1259,6 +1539,7 @@ JSON 한 객체만 출력:
                     onUploadImage={(file) => handleUploadSlideImage(idx, file)}
                     onAiSuggestText={(field) => handleAiSuggestText(idx, field)}
                     onAiSuggestComparison={() => handleAiSuggestComparison(idx)}
+                    onAiEnrich={() => handleAiEnrichSlide(idx)}
                     generatingImage={generatingImageIdx === idx}
                     aiSuggestingKey={aiSuggestingKey}
                   />
@@ -1284,6 +1565,7 @@ interface SlideEditorProps {
   onUploadImage: (file: File) => void;
   onAiSuggestText: (field: 'title' | 'subtitle' | 'body') => void;
   onAiSuggestComparison: () => void;
+  onAiEnrich: () => void;
   generatingImage: boolean;
   aiSuggestingKey: string | null;
 }
@@ -1296,6 +1578,7 @@ function SlideEditor({
   onUploadImage,
   onAiSuggestText,
   onAiSuggestComparison,
+  onAiEnrich,
   generatingImage,
   aiSuggestingKey,
 }: SlideEditorProps) {
@@ -1320,9 +1603,19 @@ function SlideEditor({
     </div>
   );
 
-  // 공통 필드: title, subtitle
+  const isEnriching = aiSuggestingKey === `${slideIdx}:enrich`;
+
+  // 공통 필드: title, subtitle + 🔍 웹 검색 보강 버튼
   const common = (
     <>
+      <button
+        type="button"
+        onClick={onAiEnrich}
+        disabled={isEnriching}
+        className="w-full py-2 bg-green-50 text-green-700 text-[11px] font-bold rounded-lg border border-green-200 hover:bg-green-100 disabled:opacity-50"
+      >
+        {isEnriching ? '🔍 웹 검색 중...' : '🔍 웹 검색으로 내용 보강'}
+      </button>
       <div>
         {fieldLabel('제목', 'title')}
         <input type="text" value={slide.title} onChange={(e) => onChange({ title: e.target.value })} className={inputCls} />

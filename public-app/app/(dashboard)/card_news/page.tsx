@@ -272,7 +272,7 @@ export default function CardNewsPage() {
           model: 'gemini-3.1-pro-preview',
           temperature: 0.7,
           maxOutputTokens: 32768,
-          responseType: 'json',
+          googleSearch: true,
         }),
       });
       const data = await res.json() as { text?: string; error?: string; details?: string };
@@ -992,6 +992,19 @@ ${newsContext ? `\n[📰 최신 네이버 뉴스 분석]\n${newsContext}\n\n⚠�
               </div>
             </div>
 
+            {/* 슬라이드 수 (4~10장) */}
+            <div>
+              <label className={labelCls}>
+                슬라이드 수 <span className="text-blue-600 font-bold">{slideCount}장</span>
+              </label>
+              <input type="range" min={4} max={10} step={1} value={slideCount}
+                onChange={e => setSlideCount(Number(e.target.value))}
+                className="w-full accent-blue-600" />
+              <div className="flex justify-between text-[10px] text-slate-400 mt-0.5">
+                <span>4장 (간단)</span><span>7장 (기본)</span><span>10장 (상세)</span>
+              </div>
+            </div>
+
             {/* 디자인 스타일 — 한 행에 전부 (+ 새 스타일 학습 / 테마 / 학습 템플릿) */}
             <div>
               <label className={labelCls}>디자인 스타일</label>
@@ -1131,13 +1144,6 @@ ${newsContext ? `\n[📰 최신 네이버 뉴스 분석]\n${newsContext}\n\n⚠�
                       </label>
                     )}
                   </div>
-                </div>
-
-                {/* 카드뉴스 장수 */}
-                <div>
-                  <label className={labelCls}>카드뉴스 장수 <span className="text-pink-600 font-bold">{slideCount}장</span></label>
-                  <input type="range" min={4} max={7} step={1} value={slideCount} onChange={e => setSlideCount(Number(e.target.value))} className="w-full accent-pink-600" />
-                  <div className="flex justify-between text-[10px] text-slate-400 mt-0.5"><span>4장</span><span>7장</span></div>
                 </div>
 
                 {/* 이미지 스타일 (OLD parity: 4종) */}
