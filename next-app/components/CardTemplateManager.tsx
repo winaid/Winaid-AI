@@ -21,6 +21,11 @@ interface Props {
   builtInTemplates?: BuiltInDesignOption[];
   selectedBuiltInId?: string;
   onSelectBuiltIn?: (id: string | undefined) => void;
+  /**
+   * uploadOnly: true면 라벨/AI 자동 타일/학습 템플릿 행을 모두 숨기고
+   * 업로드 폼만 렌더링. (프로 모드에서 상위가 자체 행을 가지고 있을 때 사용)
+   */
+  uploadOnly?: boolean;
 }
 
 export default function CardTemplateManager({
@@ -29,11 +34,12 @@ export default function CardTemplateManager({
   builtInTemplates = [],
   selectedBuiltInId,
   onSelectBuiltIn,
+  uploadOnly = false,
 }: Props) {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
   const [templates, setTemplates] = useState<CardTemplate[]>(() => getSavedTemplates());
-  const [showUpload, setShowUpload] = useState(false);
+  const [showUpload, setShowUpload] = useState(uploadOnly); // uploadOnly면 업로드 UI 기본 열림
   const [templateName, setTemplateName] = useState('');
   const [progress, setProgress] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -112,66 +118,71 @@ export default function CardTemplateManager({
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <label className="text-xs font-semibold text-slate-500">디자인 스타일</label>
-        <button type="button" onClick={() => setShowUpload(!showUpload)}
-          className="text-[10px] font-semibold text-pink-600 hover:text-pink-700">
-          {showUpload ? '닫기' : '+ 새 스타일 학습'}
-        </button>
-      </div>
-
-      <div className="flex gap-2 overflow-x-auto pb-1">
-        {/* AI 자동 */}
-        <button type="button" onClick={handleAiAuto}
-          className={`flex-shrink-0 w-16 h-16 rounded-xl border-2 transition-all flex items-center justify-center text-[10px] font-semibold ${
-            nothingSelected ? 'border-pink-500 bg-pink-50 text-pink-700' : 'border-slate-200 bg-white text-slate-400 hover:border-slate-300'
-          }`}>
-          AI 자동
-        </button>
-
-        {/* 기본 제공 디자인 템플릿 */}
-        {builtInTemplates.map(tmpl => (
-          <button key={tmpl.id} type="button" onClick={() => handleBuiltIn(tmpl.id)}
-            className={`flex-shrink-0 w-16 h-16 rounded-xl border-2 transition-all overflow-hidden flex flex-col ${
-              selectedBuiltInId === tmpl.id ? 'border-pink-500 ring-2 ring-pink-200' : 'border-slate-200 hover:border-slate-300'
-            }`}
-            title={tmpl.description || tmpl.name}>
-            {tmpl.previewSvg ? (
-              <div className="w-full flex-1 overflow-hidden" dangerouslySetInnerHTML={{ __html: tmpl.previewSvg }} />
-            ) : (
-              <div className="w-full flex-1 flex items-center justify-center text-lg">{tmpl.icon || '🎨'}</div>
-            )}
-            <span className="text-[8px] font-semibold text-slate-600 leading-tight text-center py-0.5 bg-white">{tmpl.name}</span>
-          </button>
-        ))}
-
-        {/* 학습한 템플릿 */}
-        {templates.map(tmpl => (
-          <div key={tmpl.id} className="relative flex-shrink-0">
-            <button type="button" onClick={() => handleLearned(tmpl)}
-              className={`w-16 h-16 rounded-xl border-2 transition-all overflow-hidden ${
-                selectedTemplateId === tmpl.id ? 'border-pink-500 ring-2 ring-pink-200' : 'border-slate-200 hover:border-slate-300'
-              }`}>
-              {tmpl.thumbnailDataUrl ? (
-                <img src={tmpl.thumbnailDataUrl} alt={tmpl.name} className="w-full h-full object-cover" />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-[9px] text-slate-400 p-1 text-center">{tmpl.name}</div>
-              )}
+      {/* uploadOnly 모드에서는 라벨·타일 행·안내문 전부 숨김 (상위가 자체 행을 가지고 있을 때 사용) */}
+      {!uploadOnly && (
+        <>
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-semibold text-slate-500">디자인 스타일</label>
+            <button type="button" onClick={() => setShowUpload(!showUpload)}
+              className="text-[10px] font-semibold text-pink-600 hover:text-pink-700">
+              {showUpload ? '닫기' : '+ 새 스타일 학습'}
             </button>
-            <button type="button" onClick={(e) => { e.stopPropagation(); handleDelete(tmpl.id); }}
-              className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full text-[8px] flex items-center justify-center hover:bg-red-600">✕</button>
           </div>
-        ))}
-      </div>
 
-      {/* 선택 설명 */}
-      {selectedBuiltInId && (
-        <p className="text-[10px] text-pink-700 font-medium">
-          {builtInTemplates.find(t => t.id === selectedBuiltInId)?.icon}{' '}
-          {builtInTemplates.find(t => t.id === selectedBuiltInId)?.description || builtInTemplates.find(t => t.id === selectedBuiltInId)?.name}
-        </p>
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {/* AI 자동 */}
+            <button type="button" onClick={handleAiAuto}
+              className={`flex-shrink-0 w-16 h-16 rounded-xl border-2 transition-all flex items-center justify-center text-[10px] font-semibold ${
+                nothingSelected ? 'border-pink-500 bg-pink-50 text-pink-700' : 'border-slate-200 bg-white text-slate-400 hover:border-slate-300'
+              }`}>
+              AI 자동
+            </button>
+
+            {/* 기본 제공 디자인 템플릿 */}
+            {builtInTemplates.map(tmpl => (
+              <button key={tmpl.id} type="button" onClick={() => handleBuiltIn(tmpl.id)}
+                className={`flex-shrink-0 w-16 h-16 rounded-xl border-2 transition-all overflow-hidden flex flex-col ${
+                  selectedBuiltInId === tmpl.id ? 'border-pink-500 ring-2 ring-pink-200' : 'border-slate-200 hover:border-slate-300'
+                }`}
+                title={tmpl.description || tmpl.name}>
+                {tmpl.previewSvg ? (
+                  <div className="w-full flex-1 overflow-hidden" dangerouslySetInnerHTML={{ __html: tmpl.previewSvg }} />
+                ) : (
+                  <div className="w-full flex-1 flex items-center justify-center text-lg">{tmpl.icon || '🎨'}</div>
+                )}
+                <span className="text-[8px] font-semibold text-slate-600 leading-tight text-center py-0.5 bg-white">{tmpl.name}</span>
+              </button>
+            ))}
+
+            {/* 학습한 템플릿 */}
+            {templates.map(tmpl => (
+              <div key={tmpl.id} className="relative flex-shrink-0">
+                <button type="button" onClick={() => handleLearned(tmpl)}
+                  className={`w-16 h-16 rounded-xl border-2 transition-all overflow-hidden ${
+                    selectedTemplateId === tmpl.id ? 'border-pink-500 ring-2 ring-pink-200' : 'border-slate-200 hover:border-slate-300'
+                  }`}>
+                  {tmpl.thumbnailDataUrl ? (
+                    <img src={tmpl.thumbnailDataUrl} alt={tmpl.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-[9px] text-slate-400 p-1 text-center">{tmpl.name}</div>
+                  )}
+                </button>
+                <button type="button" onClick={(e) => { e.stopPropagation(); handleDelete(tmpl.id); }}
+                  className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full text-[8px] flex items-center justify-center hover:bg-red-600">✕</button>
+              </div>
+            ))}
+          </div>
+
+          {/* 선택 설명 */}
+          {selectedBuiltInId && (
+            <p className="text-[10px] text-pink-700 font-medium">
+              {builtInTemplates.find(t => t.id === selectedBuiltInId)?.icon}{' '}
+              {builtInTemplates.find(t => t.id === selectedBuiltInId)?.description || builtInTemplates.find(t => t.id === selectedBuiltInId)?.name}
+            </p>
+          )}
+          {nothingSelected && <p className="text-[10px] text-slate-400">선택하지 않으면 AI가 자동으로 디자인합니다.</p>}
+        </>
       )}
-      {nothingSelected && <p className="text-[10px] text-slate-400">선택하지 않으면 AI가 자동으로 디자인합니다.</p>}
 
       {showUpload && (
         <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
