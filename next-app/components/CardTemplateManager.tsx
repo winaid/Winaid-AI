@@ -3,12 +3,33 @@
 import { useState, useRef, useCallback } from 'react';
 import { analyzeDesignFromImages, saveTemplate, getSavedTemplates, deleteTemplate, type CardTemplate } from '../lib/cardTemplateService';
 
+/** 선택 가능한 built-in 디자인 템플릿 (card_news/page.tsx에서 주입) */
+export interface BuiltInDesignOption {
+  id: string;
+  name: string;
+  /** 아이콘 이모지 (대체 썸네일) */
+  icon?: string;
+  /** 작은 SVG 프리뷰 HTML 문자열 */
+  previewSvg?: string;
+  description?: string;
+}
+
 interface Props {
   onSelectTemplate: (template: CardTemplate | null) => void;
   selectedTemplateId?: string;
+  /** 디자인 스타일 통합: 기본 제공 템플릿 8종을 같은 행에 노출 */
+  builtInTemplates?: BuiltInDesignOption[];
+  selectedBuiltInId?: string;
+  onSelectBuiltIn?: (id: string | undefined) => void;
 }
 
-export default function CardTemplateManager({ onSelectTemplate, selectedTemplateId }: Props) {
+export default function CardTemplateManager({
+  onSelectTemplate,
+  selectedTemplateId,
+  builtInTemplates = [],
+  selectedBuiltInId,
+  onSelectBuiltIn,
+}: Props) {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
   const [templates, setTemplates] = useState<CardTemplate[]>(() => getSavedTemplates());
@@ -54,6 +75,7 @@ export default function CardTemplateManager({ onSelectTemplate, selectedTemplate
       saveTemplate(newTemplate);
       setTemplates(getSavedTemplates());
       onSelectTemplate(newTemplate);
+      onSelectBuiltIn?.(undefined);
       setUploadedImages([]);
       setTemplateName('');
       setShowUpload(false);
@@ -70,6 +92,24 @@ export default function CardTemplateManager({ onSelectTemplate, selectedTemplate
     if (selectedTemplateId === id) onSelectTemplate(null);
   };
 
+  const handleAiAuto = () => {
+    onSelectTemplate(null);
+    onSelectBuiltIn?.(undefined);
+  };
+
+  const handleBuiltIn = (id: string) => {
+    // 이미 선택된 것을 다시 누르면 해제
+    onSelectBuiltIn?.(selectedBuiltInId === id ? undefined : id);
+    onSelectTemplate(null);
+  };
+
+  const handleLearned = (tmpl: CardTemplate) => {
+    onSelectTemplate(tmpl);
+    onSelectBuiltIn?.(undefined);
+  };
+
+  const nothingSelected = !selectedTemplateId && !selectedBuiltInId;
+
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
@@ -81,16 +121,34 @@ export default function CardTemplateManager({ onSelectTemplate, selectedTemplate
       </div>
 
       <div className="flex gap-2 overflow-x-auto pb-1">
-        <button type="button" onClick={() => onSelectTemplate(null)}
-          className={`flex-shrink-0 w-16 h-16 rounded-xl border-2 transition-all flex items-center justify-center text-[10px] text-slate-400 ${
-            !selectedTemplateId ? 'border-pink-500 bg-pink-50' : 'border-slate-200 bg-white hover:border-slate-300'
+        {/* AI 자동 */}
+        <button type="button" onClick={handleAiAuto}
+          className={`flex-shrink-0 w-16 h-16 rounded-xl border-2 transition-all flex items-center justify-center text-[10px] font-semibold ${
+            nothingSelected ? 'border-pink-500 bg-pink-50 text-pink-700' : 'border-slate-200 bg-white text-slate-400 hover:border-slate-300'
           }`}>
           AI 자동
         </button>
 
+        {/* 기본 제공 디자인 템플릿 */}
+        {builtInTemplates.map(tmpl => (
+          <button key={tmpl.id} type="button" onClick={() => handleBuiltIn(tmpl.id)}
+            className={`flex-shrink-0 w-16 h-16 rounded-xl border-2 transition-all overflow-hidden flex flex-col ${
+              selectedBuiltInId === tmpl.id ? 'border-pink-500 ring-2 ring-pink-200' : 'border-slate-200 hover:border-slate-300'
+            }`}
+            title={tmpl.description || tmpl.name}>
+            {tmpl.previewSvg ? (
+              <div className="w-full flex-1 overflow-hidden" dangerouslySetInnerHTML={{ __html: tmpl.previewSvg }} />
+            ) : (
+              <div className="w-full flex-1 flex items-center justify-center text-lg">{tmpl.icon || '🎨'}</div>
+            )}
+            <span className="text-[8px] font-semibold text-slate-600 leading-tight text-center py-0.5 bg-white">{tmpl.name}</span>
+          </button>
+        ))}
+
+        {/* 학습한 템플릿 */}
         {templates.map(tmpl => (
           <div key={tmpl.id} className="relative flex-shrink-0">
-            <button type="button" onClick={() => onSelectTemplate(tmpl)}
+            <button type="button" onClick={() => handleLearned(tmpl)}
               className={`w-16 h-16 rounded-xl border-2 transition-all overflow-hidden ${
                 selectedTemplateId === tmpl.id ? 'border-pink-500 ring-2 ring-pink-200' : 'border-slate-200 hover:border-slate-300'
               }`}>
@@ -105,6 +163,15 @@ export default function CardTemplateManager({ onSelectTemplate, selectedTemplate
           </div>
         ))}
       </div>
+
+      {/* 선택 설명 */}
+      {selectedBuiltInId && (
+        <p className="text-[10px] text-pink-700 font-medium">
+          {builtInTemplates.find(t => t.id === selectedBuiltInId)?.icon}{' '}
+          {builtInTemplates.find(t => t.id === selectedBuiltInId)?.description || builtInTemplates.find(t => t.id === selectedBuiltInId)?.name}
+        </p>
+      )}
+      {nothingSelected && <p className="text-[10px] text-slate-400">선택하지 않으면 AI가 자동으로 디자인합니다.</p>}
 
       {showUpload && (
         <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">

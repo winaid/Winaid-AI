@@ -1,8 +1,8 @@
 'use client';
 
 import { useRef, useState, type CSSProperties } from 'react';
-import type { SlideData, CardNewsTheme } from '../lib/cardNewsLayouts';
-import { DEFAULT_THEME, LAYOUT_LABELS, THEME_PRESETS } from '../lib/cardNewsLayouts';
+import type { SlideData, CardNewsTheme, SlideLayoutType } from '../lib/cardNewsLayouts';
+import { LAYOUT_LABELS, THEME_PRESETS } from '../lib/cardNewsLayouts';
 
 interface Props {
   slides: SlideData[];
@@ -15,12 +15,18 @@ interface Props {
  * 프로 카드뉴스 렌더러
  * - 1080x1080 고정 (Instagram/네이버 규격)
  * - 레이아웃 유형별 다른 HTML/CSS
- * - 축소 미리보기 + 개별/전체 PNG 다운로드
+ * - 축소 미리보기 + 인라인 편집 패널 + 레이아웃 변경 + PNG 다운로드
  */
 export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onThemeChange }: Props) {
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
   const [downloading, setDownloading] = useState(false);
   const [showThemePicker, setShowThemePicker] = useState(false);
+  const [editingIdx, setEditingIdx] = useState<number | null>(null);
+
+  /** 특정 슬라이드 업데이트 (얕은 머지) */
+  const updateSlide = (idx: number, patch: Partial<SlideData>) => {
+    onSlidesChange(slides.map((s, i) => (i === idx ? { ...s, ...patch } : s)));
+  };
 
   // ═══════════════════════════════════════
   // 다운로드
@@ -863,52 +869,268 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
         </div>
       )}
 
-      {/* 카드 그리드 (축소 미리보기) */}
+      {/* 카드 그리드 (축소 미리보기 + 인라인 편집 패널) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {slides.map((slide, idx) => (
-          <div
-            key={idx}
-            className="group relative overflow-hidden rounded-xl bg-slate-100 cursor-pointer"
-            style={{ aspectRatio: '1 / 1' }}
-            onClick={() => downloadCard(idx)}
-          >
-            {/* 라벨 */}
-            <div className="absolute top-2 left-2 z-20 px-2 py-0.5 rounded-full bg-black/60 text-white text-[10px] font-bold backdrop-blur-sm">
-              {idx + 1} · {LAYOUT_LABELS[slide.layout]}
-            </div>
-            {/* 다운로드 버튼 */}
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                downloadCard(idx);
-              }}
-              className="absolute top-2 right-2 z-20 px-2 py-1 bg-white/90 hover:bg-white rounded-lg text-[10px] font-bold text-slate-700 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
-            >
-              💾 PNG
-            </button>
-            {/* 실제 렌더링 (1080x1080을 0.25배 스케일) */}
-            <div
-              ref={(el) => {
-                cardRefs.current[idx] = el;
-              }}
-              style={{
-                transform: 'scale(0.25)',
-                transformOrigin: 'top left',
-                width: '1080px',
-                height: '1080px',
-                position: 'absolute',
-                top: 0,
-                left: 0,
-              }}
-            >
-              {renderSlide(slide)}
-            </div>
-          </div>
-        ))}
-      </div>
+        {slides.map((slide, idx) => {
+          const isEditing = editingIdx === idx;
+          return (
+            <div key={idx} className={`bg-white rounded-xl border transition-all ${isEditing ? 'border-blue-400 ring-2 ring-blue-100 sm:col-span-2 lg:col-span-3' : 'border-slate-200'}`}>
+              {/* 프리뷰 영역 */}
+              <div
+                className="group relative overflow-hidden rounded-t-xl bg-slate-100"
+                style={{ aspectRatio: '1 / 1' }}
+              >
+                {/* 라벨 */}
+                <div className="absolute top-2 left-2 z-20 px-2 py-0.5 rounded-full bg-black/60 text-white text-[10px] font-bold backdrop-blur-sm">
+                  {idx + 1} · {LAYOUT_LABELS[slide.layout]}
+                </div>
+                {/* PNG 다운로드 */}
+                <button
+                  type="button"
+                  onClick={() => downloadCard(idx)}
+                  className="absolute top-2 right-2 z-20 px-2 py-1 bg-white/90 hover:bg-white rounded-lg text-[10px] font-bold text-slate-700 shadow-sm"
+                  title="이 카드를 PNG로 저장"
+                >
+                  💾 PNG
+                </button>
+                {/* 실제 렌더링 (1080x1080을 0.25배 스케일) */}
+                <div
+                  ref={(el) => {
+                    cardRefs.current[idx] = el;
+                  }}
+                  style={{
+                    transform: 'scale(0.25)',
+                    transformOrigin: 'top left',
+                    width: '1080px',
+                    height: '1080px',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                  }}
+                >
+                  {renderSlide(slide)}
+                </div>
+              </div>
 
-      {/* 빈 사용 경고를 없애기 위해 onSlidesChange 참조 (현재는 미사용, 향후 편집 기능 확장 예정) */}
-      <div className="hidden">{slides.length > 0 && typeof onSlidesChange === 'function' ? '' : ''}</div>
+              {/* 편집 툴바 — 레이아웃 드롭다운 + 편집 토글 */}
+              <div className="flex items-center gap-2 px-3 py-2 border-t border-slate-100">
+                <select
+                  value={slide.layout}
+                  onChange={(e) => updateSlide(idx, { layout: e.target.value as SlideLayoutType })}
+                  className="text-[11px] bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 font-semibold text-slate-700 focus:outline-none focus:border-blue-400"
+                  title="슬라이드 레이아웃 변경"
+                >
+                  {Object.entries(LAYOUT_LABELS).map(([key, label]) => (
+                    <option key={key} value={key}>{label}</option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={() => setEditingIdx(isEditing ? null : idx)}
+                  className={`ml-auto px-3 py-1 text-[11px] font-bold rounded-lg transition-colors ${
+                    isEditing ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-blue-50 text-blue-700 hover:bg-blue-100'
+                  }`}
+                >
+                  {isEditing ? '✓ 완료' : '✏️ 수정'}
+                </button>
+              </div>
+
+              {/* 편집 패널 */}
+              {isEditing && (
+                <div className="px-3 pb-3 pt-1 space-y-2 border-t border-slate-100 bg-slate-50/50">
+                  <SlideEditor slide={slide} onChange={(patch) => updateSlide(idx, patch)} />
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SlideEditor: 현재 슬라이드 레이아웃에 맞는 폼을 렌더링
+// ═══════════════════════════════════════════════════════════════
+
+interface SlideEditorProps {
+  slide: SlideData;
+  onChange: (patch: Partial<SlideData>) => void;
+}
+
+function SlideEditor({ slide, onChange }: SlideEditorProps) {
+  const inputCls = 'w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-200';
+  const labelCls = 'block text-[10px] font-semibold text-slate-500 mb-0.5';
+  const textareaCls = `${inputCls} resize-none`;
+
+  // 공통 필드: title, subtitle
+  const common = (
+    <>
+      <div>
+        <label className={labelCls}>제목</label>
+        <input type="text" value={slide.title} onChange={(e) => onChange({ title: e.target.value })} className={inputCls} />
+      </div>
+      <div>
+        <label className={labelCls}>부제</label>
+        <input type="text" value={slide.subtitle || ''} onChange={(e) => onChange({ subtitle: e.target.value })} className={inputCls} placeholder="(선택)" />
+      </div>
+    </>
+  );
+
+  if (slide.layout === 'cover') return <>{common}</>;
+
+  if (slide.layout === 'info' || slide.layout === 'closing') {
+    return (
+      <>
+        {common}
+        <div>
+          <label className={labelCls}>본문</label>
+          <textarea rows={3} value={slide.body || ''} onChange={(e) => onChange({ body: e.target.value })} className={textareaCls} />
+        </div>
+      </>
+    );
+  }
+
+  if (slide.layout === 'comparison') {
+    const cols = slide.columns || [];
+    const labels = slide.compareLabels || [];
+    const updateCol = (ci: number, patch: Partial<typeof cols[number]>) => {
+      const next = cols.map((c, i) => (i === ci ? { ...c, ...patch } : c));
+      onChange({ columns: next });
+    };
+    const updateColItem = (ci: number, ri: number, value: string) => {
+      const next = cols.map((c, i) => {
+        if (i !== ci) return c;
+        const items = [...c.items];
+        items[ri] = value;
+        return { ...c, items };
+      });
+      onChange({ columns: next });
+    };
+    const updateLabel = (ri: number, value: string) => {
+      const next = [...labels];
+      next[ri] = value;
+      onChange({ compareLabels: next });
+    };
+    return (
+      <>
+        {common}
+        <div>
+          <label className={labelCls}>비교 행 라벨 + 컬럼별 값</label>
+          <div className="space-y-1.5">
+            {labels.map((lbl, ri) => (
+              <div key={ri} className="grid grid-cols-[110px_1fr_1fr] gap-1.5 items-center">
+                <input type="text" value={lbl} onChange={(e) => updateLabel(ri, e.target.value)} className={inputCls} placeholder={`라벨 ${ri + 1}`} />
+                {cols.map((c, ci) => (
+                  <input key={ci} type="text" value={c.items[ri] || ''} onChange={(e) => updateColItem(ci, ri, e.target.value)} className={inputCls} placeholder={c.header} />
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+        <div>
+          <label className={labelCls}>컬럼 헤더</label>
+          <div className="grid grid-cols-2 gap-1.5">
+            {cols.map((c, ci) => (
+              <input key={ci} type="text" value={c.header} onChange={(e) => updateCol(ci, { header: e.target.value })} className={inputCls} />
+            ))}
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  if (slide.layout === 'icon-grid') {
+    const items = slide.icons || [];
+    const updateIcon = (i: number, patch: Partial<typeof items[number]>) => {
+      onChange({ icons: items.map((it, k) => (k === i ? { ...it, ...patch } : it)) });
+    };
+    return (
+      <>
+        {common}
+        <div>
+          <label className={labelCls}>아이콘 항목</label>
+          <div className="space-y-1.5">
+            {items.map((it, i) => (
+              <div key={i} className="grid grid-cols-[44px_1fr_1.6fr] gap-1.5">
+                <input type="text" value={it.emoji} onChange={(e) => updateIcon(i, { emoji: e.target.value })} className={`${inputCls} text-center`} />
+                <input type="text" value={it.title} onChange={(e) => updateIcon(i, { title: e.target.value })} className={inputCls} placeholder="제목" />
+                <input type="text" value={it.desc || ''} onChange={(e) => updateIcon(i, { desc: e.target.value })} className={inputCls} placeholder="설명 (선택)" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  if (slide.layout === 'steps') {
+    const steps = slide.steps || [];
+    const updateStep = (i: number, patch: Partial<typeof steps[number]>) => {
+      onChange({ steps: steps.map((s, k) => (k === i ? { ...s, ...patch } : s)) });
+    };
+    return (
+      <>
+        {common}
+        <div>
+          <label className={labelCls}>단계</label>
+          <div className="space-y-1.5">
+            {steps.map((s, i) => (
+              <div key={i} className="grid grid-cols-[1fr_1.6fr] gap-1.5">
+                <input type="text" value={s.label} onChange={(e) => updateStep(i, { label: e.target.value })} className={inputCls} placeholder={`단계 ${i + 1}`} />
+                <input type="text" value={s.desc || ''} onChange={(e) => updateStep(i, { desc: e.target.value })} className={inputCls} placeholder="설명" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  if (slide.layout === 'checklist') {
+    const checks = slide.checkItems || [];
+    const updateCheck = (i: number, value: string) => {
+      const next = [...checks];
+      next[i] = value;
+      onChange({ checkItems: next });
+    };
+    return (
+      <>
+        {common}
+        <div>
+          <label className={labelCls}>체크리스트 항목</label>
+          <div className="space-y-1.5">
+            {checks.map((c, i) => (
+              <input key={i} type="text" value={c} onChange={(e) => updateCheck(i, e.target.value)} className={inputCls} />
+            ))}
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  if (slide.layout === 'data-highlight') {
+    const points = slide.dataPoints || [];
+    const updateDp = (i: number, patch: Partial<typeof points[number]>) => {
+      onChange({ dataPoints: points.map((p, k) => (k === i ? { ...p, ...patch } : p)) });
+    };
+    return (
+      <>
+        {common}
+        <div>
+          <label className={labelCls}>수치 데이터</label>
+          <div className="space-y-1.5">
+            {points.map((p, i) => (
+              <div key={i} className="grid grid-cols-[1fr_2fr] gap-1.5">
+                <input type="text" value={p.value} onChange={(e) => updateDp(i, { value: e.target.value })} className={`${inputCls} font-bold text-center`} placeholder="예: 90%" />
+                <input type="text" value={p.label} onChange={(e) => updateDp(i, { label: e.target.value })} className={inputCls} placeholder="라벨" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  return <>{common}</>;
 }

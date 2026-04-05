@@ -946,11 +946,22 @@ ${newsContext ? `\n[📰 최신 네이버 뉴스 분석]\n${newsContext}\n\n⚠�
               </div>
             </div>
 
-            {/* 디자인 스타일 학습 */}
-            <CardTemplateManager
-              onSelectTemplate={setLearnedTemplate}
-              selectedTemplateId={learnedTemplate?.id}
-            />
+            {/* 디자인 스타일 (AI 자동 + 기본 템플릿 8종 + 학습 템플릿 + 새 스타일 학습) */}
+            {!proMode && (
+              <CardTemplateManager
+                onSelectTemplate={setLearnedTemplate}
+                selectedTemplateId={learnedTemplate?.id}
+                builtInTemplates={CARD_NEWS_DESIGN_TEMPLATES.map(t => ({
+                  id: t.id,
+                  name: t.name,
+                  icon: t.icon,
+                  previewSvg: t.previewSvg,
+                  description: t.description,
+                }))}
+                selectedBuiltInId={designTemplateId}
+                onSelectBuiltIn={(id) => setDesignTemplateId(id as typeof designTemplateId)}
+              />
+            )}
 
             {/* 🔥 트렌드 주제 (OLD parity) */}
             <button type="button" onClick={handleRecommendTrends} disabled={isLoadingTrends}
@@ -1030,37 +1041,6 @@ ${newsContext ? `\n[📰 최신 네이버 뉴스 분석]\n${newsContext}\n\n⚠�
                       </label>
                     )}
                   </div>
-                </div>
-
-                {/* 디자인 템플릿 */}
-                <div>
-                  <label className={labelCls}>디자인 템플릿</label>
-                  <div className="grid grid-cols-5 gap-1.5">
-                    {CARD_NEWS_DESIGN_TEMPLATES.map(tmpl => (
-                      <button key={tmpl.id} type="button"
-                        onClick={() => setDesignTemplateId(designTemplateId === tmpl.id ? undefined : tmpl.id)}
-                        className={`relative flex flex-col items-center gap-1 p-1.5 rounded-xl border-2 transition-all ${designTemplateId === tmpl.id ? 'border-pink-500 bg-pink-50 shadow-md shadow-pink-500/20' : 'border-slate-200 bg-white hover:border-slate-300'}`}
-                      >
-                        {designTemplateId === tmpl.id && (
-                          <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-pink-500 rounded-full flex items-center justify-center">
-                            <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                          </span>
-                        )}
-                        <div className="w-full aspect-square rounded-lg overflow-hidden" dangerouslySetInnerHTML={{ __html: tmpl.previewSvg }} />
-                        <span className="text-[9px] font-semibold text-slate-600 leading-tight text-center">{tmpl.name}</span>
-                      </button>
-                    ))}
-                  </div>
-                  {designTemplateId ? (
-                    <div className="mt-2 px-2.5 py-1.5 bg-pink-50 rounded-lg border border-pink-200">
-                      <p className="text-[10px] text-pink-700 font-medium">
-                        {CARD_NEWS_DESIGN_TEMPLATES.find(t => t.id === designTemplateId)?.icon}{' '}
-                        {CARD_NEWS_DESIGN_TEMPLATES.find(t => t.id === designTemplateId)?.description}
-                      </p>
-                    </div>
-                  ) : (
-                    <p className="mt-1 text-[10px] text-slate-400">선택하지 않으면 AI가 자동으로 디자인합니다.</p>
-                  )}
                 </div>
 
                 {/* 카드뉴스 장수 */}
@@ -1364,10 +1344,32 @@ ${newsContext ? `\n[📰 최신 네이버 뉴스 분석]\n${newsContext}\n\n⚠�
                   )}
 
                   {/* 텍스트 */}
-                  <div className="p-3">
+                  <div className="px-3 pt-3 pb-2">
                     <p className="text-[10px] text-pink-500 font-semibold mb-0.5">{card.role}</p>
                     <p className="text-xs font-bold text-slate-800 mb-1 line-clamp-2">{card.title}</p>
                     {card.body && <p className="text-[11px] text-slate-500 line-clamp-3">{card.body}</p>}
+                  </div>
+
+                  {/* 상시 표시되는 액션 버튼 */}
+                  <div className="px-3 pb-3 flex gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => openCardRegenModal(card.index)}
+                      disabled={regeneratingCard !== null}
+                      className="flex-1 py-1.5 bg-pink-50 text-pink-600 text-[10px] font-bold rounded-lg hover:bg-pink-100 transition-colors disabled:opacity-40"
+                    >
+                      ✏️ 수정/재생성
+                    </button>
+                    {card.imageUrl && (
+                      <button
+                        type="button"
+                        onClick={() => handleCardDownload(card)}
+                        className="px-3 py-1.5 bg-slate-50 text-slate-500 text-[10px] font-bold rounded-lg hover:bg-slate-100 transition-colors"
+                        title="PNG 다운로드"
+                      >
+                        💾
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}
