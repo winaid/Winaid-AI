@@ -48,13 +48,7 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
   const [generatingImageIdx, setGeneratingImageIdx] = useState<number | null>(null);
   const [aiSuggestingKey, setAiSuggestingKey] = useState<string | null>(null); // `${idx}:${field}`
 
-  // 카드뉴스의 신 채팅
-  interface ChatMessage { role: 'user' | 'assistant'; text: string }
-  const [chatOpen, setChatOpen] = useState(false);
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
-  const [chatInput, setChatInput] = useState('');
-  const [chatLoading, setChatLoading] = useState(false);
-  const chatEndRef = useRef<HTMLDivElement | null>(null);
+  // 카드별 AI 채팅은 SlideEditor 내부에서 관리 (글로벌 채팅 제거)
 
   // 폰트 즉시 반영 + 커스텀 폰트 업로드
   const [fontLoaded, setFontLoaded] = useState(0);
@@ -137,10 +131,6 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
     e.target.value = '';
   };
 
-  useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [chatMessages, chatLoading]);
-
   // 미리보기 박스 폭에 맞춰 scale 재계산
   useEffect(() => {
     const recompute = () => {
@@ -164,6 +154,113 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
   /** 특정 슬라이드 업데이트 (얕은 머지) */
   const updateSlide = (idx: number, patch: Partial<SlideData>) => {
     onSlidesChange(slides.map((s, i) => (i === idx ? { ...s, ...patch } : s)));
+  };
+
+  /**
+   * 레이아웃 변경 — 새 레이아웃에 필요한 필드가 비어 있으면 플레이스홀더 기본값을 채운다.
+   * 이렇게 해야 드롭다운에서 레이아웃을 바꿨을 때 편집 폼이 즉시 새 필드를 노출하고,
+   * 사용자는 미리 채워진 예시를 수정하는 방식으로 빠르게 작성할 수 있다.
+   */
+  const handleLayoutChange = (idx: number, newLayout: SlideLayoutType) => {
+    const curr = slides[idx];
+    if (!curr) return;
+    const base: SlideData = { ...curr, layout: newLayout };
+
+    switch (newLayout) {
+      case 'checklist':
+        if (!base.checkItems?.length) base.checkItems = ['항목 1', '항목 2', '항목 3'];
+        break;
+      case 'icon-grid':
+        if (!base.icons?.length) base.icons = [
+          { emoji: '🦷', title: '항목 1', desc: '설명' },
+          { emoji: '💉', title: '항목 2', desc: '설명' },
+          { emoji: '⏱️', title: '항목 3', desc: '설명' },
+          { emoji: '✨', title: '항목 4', desc: '설명' },
+        ];
+        break;
+      case 'steps':
+        if (!base.steps?.length) base.steps = [
+          { label: '1단계', desc: '설명' },
+          { label: '2단계', desc: '설명' },
+          { label: '3단계', desc: '설명' },
+        ];
+        break;
+      case 'comparison':
+        if (!base.columns?.length) {
+          base.compareLabels = ['항목 1', '항목 2', '항목 3'];
+          base.columns = [
+            { header: 'A 방식', highlight: false, items: ['-', '-', '-'] },
+            { header: 'B 방식', highlight: true, items: ['-', '-', '-'] },
+          ];
+        }
+        break;
+      case 'data-highlight':
+        if (!base.dataPoints?.length) base.dataPoints = [
+          { value: '00%', label: '항목 1', highlight: true },
+          { value: '00', label: '항목 2' },
+          { value: '00', label: '항목 3' },
+        ];
+        break;
+      case 'qna':
+        if (!base.questions?.length) base.questions = [
+          { q: '질문을 입력하세요?', a: '답변을 입력하세요.' },
+          { q: '두 번째 질문?', a: '답변.' },
+        ];
+        break;
+      case 'timeline':
+        if (!base.timelineItems?.length) base.timelineItems = [
+          { time: '1일차', title: '항목', desc: '설명' },
+          { time: '1주차', title: '항목', desc: '설명' },
+          { time: '1개월', title: '항목', desc: '설명' },
+        ];
+        break;
+      case 'quote':
+        if (!base.quoteText) {
+          base.quoteText = '여기에 인용문을 입력하세요.';
+          base.quoteAuthor = base.quoteAuthor || '작성자';
+          base.quoteRole = base.quoteRole || '역할';
+        }
+        break;
+      case 'before-after':
+        if (!base.beforeItems?.length) {
+          base.beforeLabel = base.beforeLabel || 'BEFORE';
+          base.afterLabel = base.afterLabel || 'AFTER';
+          base.beforeItems = ['항목 1', '항목 2', '항목 3'];
+          base.afterItems = ['항목 1', '항목 2', '항목 3'];
+        }
+        break;
+      case 'pros-cons':
+        if (!base.pros?.length) {
+          base.pros = ['장점 1', '장점 2', '장점 3'];
+          base.cons = ['주의점 1', '주의점 2', '주의점 3'];
+        }
+        break;
+      case 'price-table':
+        if (!base.priceItems?.length) base.priceItems = [
+          { name: '시술 A', price: '00만원', note: '기준' },
+          { name: '시술 B', price: '00만원', note: '기준' },
+          { name: '시술 C', price: '00만원', note: '기준' },
+        ];
+        break;
+      case 'numbered-list':
+        if (!base.numberedItems?.length) base.numberedItems = [
+          { num: '01', title: '항목 1', desc: '설명' },
+          { num: '02', title: '항목 2', desc: '설명' },
+          { num: '03', title: '항목 3', desc: '설명' },
+        ];
+        break;
+      case 'warning':
+        if (!base.warningItems?.length) base.warningItems = [
+          '주의사항 1',
+          '주의사항 2',
+          '주의사항 3',
+        ];
+        break;
+      default:
+        break;
+    }
+
+    onSlidesChange(slides.map((s, i) => (i === idx ? base : s)));
   };
 
   /** 슬라이드별 AI 이미지 생성 */
@@ -347,173 +444,6 @@ ${JSON.stringify(slide, null, 2)}`,
       setAiSuggestingKey(null);
     }
   };
-
-  /** 카드뉴스의 신 — 채팅으로 전체 슬라이드 수정 */
-  const handleChatSend = async () => {
-    const userMsg = chatInput.trim();
-    if (!userMsg || chatLoading) return;
-
-    setChatMessages(prev => [...prev, { role: 'user', text: userMsg }]);
-    setChatInput('');
-    setChatLoading(true);
-
-    try {
-      // 슬라이드를 슬림하게 직렬화 (이미지 dataUrl 제외해서 토큰 절약)
-      const slidesForContext = slides.map(s => ({
-        index: s.index,
-        layout: s.layout,
-        title: s.title,
-        subtitle: s.subtitle,
-        body: s.body,
-        columns: s.columns,
-        compareLabels: s.compareLabels,
-        icons: s.icons,
-        steps: s.steps,
-        checkItems: s.checkItems,
-        dataPoints: s.dataPoints,
-        beforeLabel: s.beforeLabel,
-        afterLabel: s.afterLabel,
-        beforeItems: s.beforeItems,
-        afterItems: s.afterItems,
-        questions: s.questions,
-        timelineItems: s.timelineItems,
-        quoteText: s.quoteText,
-        quoteAuthor: s.quoteAuthor,
-        quoteRole: s.quoteRole,
-        numberedItems: s.numberedItems,
-        pros: s.pros,
-        cons: s.cons,
-        prosLabel: s.prosLabel,
-        consLabel: s.consLabel,
-        priceItems: s.priceItems,
-        warningTitle: s.warningTitle,
-        warningItems: s.warningItems,
-      }));
-
-      const res = await fetch('/api/gemini', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          prompt: `현재 카드뉴스 슬라이드:
-${JSON.stringify(slidesForContext, null, 2)}
-
-사용자 요청: "${userMsg}"
-
-아래 형식으로 응답해주세요:
-1. 먼저 간단한 설명 (2~3문장, 한국어): 무엇을 어떻게 수정했는지 + 왜 그렇게 바꿨는지
-2. 그 다음 구분자 ---SLIDES_JSON--- 이후에 수정된 전체 slides 배열을 JSON으로 출력
-
-출력 예시:
-3장의 본문을 구체적인 수치로 보강했고, 5장에 비교표를 추가했어요. 의료광고법 위반 표현 "완벽" 1개는 "꼼꼼"으로 바꿨습니다.
----SLIDES_JSON---
-[{"index":1,"layout":"cover","title":"..."}, ...]
-
-규칙:
-- 특정 장만 수정 요청이면 해당 장만 바꾸고 나머지는 그대로.
-- 레이아웃 변경 요청 시 적절한 레이아웃으로 교체하고 필요한 필드를 채움.
-- 16종 레이아웃: cover/info/comparison/icon-grid/steps/checklist/data-highlight/closing/before-after/qna/timeline/quote/numbered-list/pros-cons/price-table/warning
-- 반드시 모든 슬라이드가 JSON 배열에 포함되어야 함(전체 재출력).
-- 의료광고법 위반 표현(완치/100%/최첨단/완벽/획기적/유일/국내 최초/1위 등) 사용 금지.
-- 구체적 수치는 범위로(예: "80~120만원", "3~6개월").
-- JSON은 파싱 가능해야 함. 설명 안에는 JSON 금지.`,
-          systemInstruction: `당신은 "카드뉴스의 신"입니다. 병원 마케팅 카드뉴스 분야 10년 경력, 7,000개 이상의 카드뉴스를 제작한 대한민국 최고의 카드뉴스 기획자입니다.
-
-성격:
-- 친근하지만 전문적. "~해드릴게요", "~추천드려요" 톤.
-- 구체적 수치와 데이터를 사랑. "대략" 같은 말 금지.
-- 디자인 감각이 뛰어나 레이아웃 추천을 잘 함.
-- 의료광고법을 꿰뚫어서 위반 표현 즉시 지적.
-
-응답 규칙:
-1. 사용자 요청을 정확히 반영한 수정본 제시
-2. 수정 이유를 1~2문장으로 간결하게 설명
-3. 추가 개선 제안이 있으면 한 줄
-4. 의료광고법 위반 시 즉시 지적하고 대체
-5. 16종 레이아웃 자유자재로 활용
-6. 형식: 설명 → ---SLIDES_JSON--- → JSON 배열`,
-          model: 'gemini-3.1-pro-preview',
-          temperature: 0.7,
-          maxOutputTokens: 32768,
-          googleSearch: true,
-        }),
-      });
-
-      const data = await res.json() as { text?: string; error?: string };
-      if (!res.ok || !data.text) {
-        setChatMessages(prev => [...prev, { role: 'assistant', text: `⚠️ 오류가 발생했어요. ${data.error || '다시 시도해주세요.'}` }]);
-        return;
-      }
-
-      const separator = '---SLIDES_JSON---';
-      const sepIdx = data.text.indexOf(separator);
-
-      if (sepIdx >= 0) {
-        const explanation = data.text.substring(0, sepIdx).trim();
-        const jsonPart = data.text.substring(sepIdx + separator.length).trim();
-        setChatMessages(prev => [...prev, { role: 'assistant', text: explanation || '수정했어요.' }]);
-
-        try {
-          const cleaned = jsonPart
-            .replace(/```json?\s*\n?/gi, '')
-            .replace(/\n?```\s*$/g, '')
-            .trim();
-          // 배열 또는 { slides: [...] } 둘 다 처리
-          let parsed: unknown;
-          try {
-            parsed = JSON.parse(cleaned);
-          } catch {
-            const startArr = cleaned.indexOf('[');
-            const endArr = cleaned.lastIndexOf(']');
-            const startObj = cleaned.indexOf('{');
-            const endObj = cleaned.lastIndexOf('}');
-            if (startArr !== -1 && endArr !== -1 && (startObj === -1 || startArr < startObj)) {
-              parsed = JSON.parse(cleaned.slice(startArr, endArr + 1));
-            } else if (startObj !== -1 && endObj !== -1) {
-              parsed = JSON.parse(cleaned.slice(startObj, endObj + 1));
-            } else {
-              throw new Error('JSON 경계 탐지 실패');
-            }
-          }
-
-          const newSlidesRaw: unknown = Array.isArray(parsed)
-            ? parsed
-            : (parsed as { slides?: unknown[] })?.slides;
-
-          if (!Array.isArray(newSlidesRaw) || newSlidesRaw.length === 0) {
-            throw new Error('빈 배열');
-          }
-
-          // 기존 슬라이드의 imageUrl/imagePosition/imageStyle/visualKeyword 유지 (AI가 안 돌려준 경우)
-          const merged: SlideData[] = (newSlidesRaw as Partial<SlideData>[]).map((s, i) => {
-            const prev = slides.find(p => p.index === (s.index ?? i + 1)) || slides[i];
-            return {
-              ...(prev || {}),
-              ...s,
-              index: s.index ?? i + 1,
-              // 이미지는 AI 응답에 명시적으로 포함되지 않으면 기존 것 유지
-              imageUrl: s.imageUrl ?? prev?.imageUrl,
-              imagePosition: s.imagePosition ?? prev?.imagePosition,
-              imageStyle: s.imageStyle ?? prev?.imageStyle,
-              visualKeyword: s.visualKeyword ?? prev?.visualKeyword,
-            } as SlideData;
-          });
-          onSlidesChange(merged);
-        } catch (parseErr) {
-          console.warn('[CARD_NEWS_CHAT] JSON 파싱 실패', parseErr);
-          setChatMessages(prev => [...prev, { role: 'assistant', text: '(⚠️ 슬라이드 업데이트를 적용하지 못했어요. 조금 더 구체적으로 요청해주세요.)' }]);
-        }
-      } else {
-        // 구분자 없이 일반 텍스트 응답
-        setChatMessages(prev => [...prev, { role: 'assistant', text: data.text as string }]);
-      }
-    } catch (err) {
-      console.warn('[CARD_NEWS_CHAT] 오류', err);
-      setChatMessages(prev => [...prev, { role: 'assistant', text: '⚠️ 네트워크 오류가 발생했어요. 다시 시도해주세요.' }]);
-    } finally {
-      setChatLoading(false);
-    }
-  };
-
   /** AI 비교표 자동 채우기 */
   const handleAiSuggestComparison = async (idx: number) => {
     const slide = slides[idx];
@@ -1849,7 +1779,7 @@ JSON 한 객체만 출력:
               <div className="flex items-center gap-2 px-3 py-2 border-t border-slate-100">
                 <select
                   value={slide.layout}
-                  onChange={(e) => updateSlide(idx, { layout: e.target.value as SlideLayoutType })}
+                  onChange={(e) => handleLayoutChange(idx, e.target.value as SlideLayoutType)}
                   className="text-[11px] bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 font-semibold text-slate-700 focus:outline-none focus:border-blue-400"
                   title="슬라이드 레이아웃 변경"
                 >
@@ -1891,108 +1821,6 @@ JSON 한 객체만 출력:
         })}
       </div>
 
-      {/* ═══ 카드뉴스의 신 AI 채팅 ═══ */}
-      <button
-        type="button"
-        onClick={() => setChatOpen(v => !v)}
-        className="w-full mt-2 py-3 bg-gradient-to-r from-purple-500 to-blue-500 text-white font-bold text-sm rounded-xl hover:from-purple-600 hover:to-blue-600 transition-all flex items-center justify-center gap-2 shadow-lg shadow-purple-500/20"
-      >
-        {chatOpen ? '✕ 닫기' : '💬 카드뉴스의 신에게 물어보기'}
-      </button>
-
-      {chatOpen && (
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-lg overflow-hidden">
-          {/* 헤더 */}
-          <div className="px-4 py-3 bg-gradient-to-r from-purple-50 to-blue-50 border-b border-slate-100">
-            <div className="flex items-center gap-2">
-              <span className="text-lg">🎨</span>
-              <div className="flex-1">
-                <div className="text-sm font-bold text-slate-800">카드뉴스의 신</div>
-                <div className="text-[10px] text-slate-500">병원 마케팅 카드뉴스 10년 경력 · 의료광고법 전문가</div>
-              </div>
-            </div>
-          </div>
-
-          {/* 메시지 목록 */}
-          <div className="h-72 overflow-y-auto p-4 space-y-3">
-            {chatMessages.length === 0 && (
-              <div className="text-center text-sm text-slate-400 py-6">
-                <p className="text-2xl mb-2">🎨</p>
-                <p className="font-semibold text-slate-600">안녕하세요! 카드뉴스의 신입니다.</p>
-                <p className="mt-1 text-[12px]">슬라이드 수정·레이아웃 추천·내용 보강<br />무엇이든 물어봐주세요.</p>
-                <div className="flex flex-wrap gap-1.5 justify-center mt-4">
-                  {[
-                    '3장 내용이 약한데 보강해줘',
-                    '비교표를 추가하고 싶어',
-                    '전체적으로 톤을 더 친근하게',
-                    '가격 정보 슬라이드 넣어줘',
-                  ].map(q => (
-                    <button
-                      key={q}
-                      type="button"
-                      onClick={() => setChatInput(q)}
-                      className="px-2.5 py-1 bg-slate-100 text-slate-600 text-[10px] rounded-full hover:bg-purple-100 hover:text-purple-700 transition-colors"
-                    >
-                      {q}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-            {chatMessages.map((msg, i) => (
-              <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                <div
-                  className={`max-w-[82%] px-3.5 py-2.5 rounded-2xl text-sm whitespace-pre-wrap leading-relaxed ${
-                    msg.role === 'user'
-                      ? 'bg-blue-500 text-white rounded-br-sm'
-                      : 'bg-slate-100 text-slate-700 rounded-bl-sm'
-                  }`}
-                >
-                  {msg.text}
-                </div>
-              </div>
-            ))}
-            {chatLoading && (
-              <div className="flex justify-start">
-                <div className="bg-slate-100 px-3.5 py-2.5 rounded-2xl rounded-bl-sm">
-                  <div className="flex gap-1">
-                    <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                    <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                    <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                  </div>
-                </div>
-              </div>
-            )}
-            <div ref={chatEndRef} />
-          </div>
-
-          {/* 입력창 */}
-          <div className="p-3 border-t border-slate-100 flex gap-2">
-            <input
-              type="text"
-              value={chatInput}
-              onChange={(e) => setChatInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  handleChatSend();
-                }
-              }}
-              placeholder="수정 요청을 입력하세요..."
-              disabled={chatLoading}
-              className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-400 disabled:opacity-50"
-            />
-            <button
-              type="button"
-              onClick={handleChatSend}
-              disabled={chatLoading || !chatInput.trim()}
-              className="px-4 py-2 bg-gradient-to-r from-purple-500 to-blue-500 text-white text-sm font-bold rounded-xl hover:from-purple-600 hover:to-blue-600 disabled:opacity-40 transition-all"
-            >
-              전송
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -2033,6 +1861,207 @@ function SlideEditor({
   const textareaCls = `${inputCls} resize-none`;
 
   const isSuggesting = (field: string) => aiSuggestingKey === `${slideIdx}:${field}`;
+
+  // 카드별 AI 채팅 (SlideEditor 인스턴스마다 독립 state)
+  type CardChatMessage = { role: 'user' | 'assistant'; text: string };
+  const [cardChatOpen, setCardChatOpen] = useState(false);
+  const [cardChatMessages, setCardChatMessages] = useState<CardChatMessage[]>([]);
+  const [cardChatInput, setCardChatInput] = useState('');
+  const [cardChatLoading, setCardChatLoading] = useState(false);
+
+  const handleCardChatSend = async () => {
+    const userMsg = cardChatInput.trim();
+    if (!userMsg || cardChatLoading) return;
+    setCardChatMessages(prev => [...prev, { role: 'user', text: userMsg }]);
+    setCardChatInput('');
+    setCardChatLoading(true);
+    try {
+      // 이미지 dataUrl은 제외 (토큰 절약)
+      const slideForContext = {
+        index: slide.index,
+        layout: slide.layout,
+        title: slide.title,
+        subtitle: slide.subtitle,
+        body: slide.body,
+        columns: slide.columns,
+        compareLabels: slide.compareLabels,
+        icons: slide.icons,
+        steps: slide.steps,
+        checkItems: slide.checkItems,
+        dataPoints: slide.dataPoints,
+        questions: slide.questions,
+        timelineItems: slide.timelineItems,
+        quoteText: slide.quoteText,
+        quoteAuthor: slide.quoteAuthor,
+        quoteRole: slide.quoteRole,
+        numberedItems: slide.numberedItems,
+        pros: slide.pros,
+        cons: slide.cons,
+        prosLabel: slide.prosLabel,
+        consLabel: slide.consLabel,
+        priceItems: slide.priceItems,
+        warningTitle: slide.warningTitle,
+        warningItems: slide.warningItems,
+        beforeLabel: slide.beforeLabel,
+        afterLabel: slide.afterLabel,
+        beforeItems: slide.beforeItems,
+        afterItems: slide.afterItems,
+      };
+
+      const res = await fetch('/api/gemini', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: `현재 슬라이드 (${slide.index}장, 레이아웃: ${slide.layout}):
+${JSON.stringify(slideForContext, null, 2)}
+
+사용자 요청: "${userMsg}"
+
+이 슬라이드만 수정해서 응답해줘.
+
+출력 형식:
+1. 뭘 수정했는지 한국어 1~2문장
+2. ---SLIDE_JSON--- 구분자
+3. 수정된 슬라이드 1개의 JSON (이 슬라이드만, 배열 아님)
+
+⚠️ 레이아웃 변경이 필요하면 layout 필드도 바꾸고 해당 레이아웃의 필드들(예: qna면 questions, timeline이면 timelineItems)을 채워줘.
+⚠️ JSON 객체 하나만. 배열 금지. 설명 안에 JSON 금지.
+⚠️ 의료광고법 준수: "완치/100%/최첨단/완벽/획기적/유일/국내 최초/1위" 금지.
+⚠️ 구체적 수치는 범위로("80~120만원", "3~6개월").`,
+          systemInstruction: '병원 마케팅 카드뉴스 전문가. 의료광고법 준수. 구체적 수치 사용. JSON 정확하게 출력.',
+          model: 'gemini-3.1-pro-preview',
+          temperature: 0.7,
+          maxOutputTokens: 4096,
+          googleSearch: true,
+        }),
+      });
+      const data = await res.json() as { text?: string; error?: string };
+      if (!res.ok || !data.text) {
+        setCardChatMessages(prev => [...prev, { role: 'assistant', text: `⚠️ 오류: ${data.error || '다시 시도해주세요.'}` }]);
+        return;
+      }
+      const sep = '---SLIDE_JSON---';
+      const sepIdx = data.text.indexOf(sep);
+      if (sepIdx >= 0) {
+        const explanation = data.text.substring(0, sepIdx).trim();
+        const jsonPart = data.text.substring(sepIdx + sep.length).trim();
+        setCardChatMessages(prev => [...prev, { role: 'assistant', text: explanation || '수정했어요.' }]);
+        try {
+          const cleaned = jsonPart.replace(/```json?\s*\n?/gi, '').replace(/\n?```\s*$/g, '').trim();
+          let parsed: Partial<SlideData>;
+          try {
+            parsed = JSON.parse(cleaned) as Partial<SlideData>;
+          } catch {
+            const start = cleaned.indexOf('{');
+            const end = cleaned.lastIndexOf('}');
+            if (start === -1 || end === -1) throw new Error('no braces');
+            parsed = JSON.parse(cleaned.slice(start, end + 1)) as Partial<SlideData>;
+          }
+          // layout 포함 모든 필드 머지 (이미지 필드는 보존)
+          onChange({
+            ...parsed,
+            index: slide.index,
+            imageUrl: parsed.imageUrl ?? slide.imageUrl,
+            imagePosition: parsed.imagePosition ?? slide.imagePosition,
+            imageStyle: parsed.imageStyle ?? slide.imageStyle,
+            visualKeyword: parsed.visualKeyword ?? slide.visualKeyword,
+          });
+        } catch (parseErr) {
+          console.warn('[CARD_CHAT] JSON 파싱 실패', parseErr);
+          setCardChatMessages(prev => [...prev, { role: 'assistant', text: '(⚠️ 수정 적용 실패. 더 구체적으로 다시 요청해주세요.)' }]);
+        }
+      } else {
+        setCardChatMessages(prev => [...prev, { role: 'assistant', text: data.text as string }]);
+      }
+    } catch (err) {
+      console.warn('[CARD_CHAT] 오류', err);
+      setCardChatMessages(prev => [...prev, { role: 'assistant', text: '⚠️ 네트워크 오류가 발생했어요.' }]);
+    } finally {
+      setCardChatLoading(false);
+    }
+  };
+
+  const cardChatSection = (
+    <div className="mt-3 pt-3 border-t border-slate-100">
+      <button
+        type="button"
+        onClick={() => setCardChatOpen(v => !v)}
+        className="w-full py-2 bg-gradient-to-r from-blue-50 to-purple-50 text-blue-600 font-bold text-[11px] rounded-lg border border-blue-200 hover:from-blue-100 hover:to-purple-100"
+      >
+        {cardChatOpen ? '✕ 채팅 닫기' : '💬 AI 채팅으로 이 카드 수정'}
+      </button>
+
+      {cardChatOpen && (
+        <div className="mt-2 bg-slate-50 rounded-xl border border-slate-200 overflow-hidden">
+          <div className="h-40 overflow-y-auto p-3 space-y-2">
+            {cardChatMessages.length === 0 && (
+              <div className="text-center py-4">
+                <p className="text-[11px] text-slate-500 mb-2">이 슬라이드에 대해 물어보세요</p>
+                <div className="flex flex-wrap gap-1 justify-center">
+                  {['내용 보강해줘', '더 구체적으로', '톤 바꿔줘', '수치 넣어줘'].map(q => (
+                    <button
+                      key={q}
+                      type="button"
+                      onClick={() => setCardChatInput(q)}
+                      className="px-2 py-0.5 bg-white text-slate-500 text-[9px] rounded-full border border-slate-200 hover:bg-slate-100"
+                    >
+                      {q}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            {cardChatMessages.map((msg, i) => (
+              <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                <div
+                  className={`max-w-[85%] px-2.5 py-1.5 rounded-lg text-[11px] whitespace-pre-wrap leading-relaxed ${
+                    msg.role === 'user' ? 'bg-blue-500 text-white' : 'bg-white text-slate-700 border border-slate-200'
+                  }`}
+                >
+                  {msg.text}
+                </div>
+              </div>
+            ))}
+            {cardChatLoading && (
+              <div className="flex justify-start">
+                <div className="bg-white px-2.5 py-1.5 rounded-lg border border-slate-200">
+                  <div className="flex gap-1">
+                    <div className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" />
+                    <div className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                    <div className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+          <div className="p-2 border-t border-slate-200 flex gap-1.5">
+            <input
+              type="text"
+              value={cardChatInput}
+              onChange={(e) => setCardChatInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleCardChatSend();
+                }
+              }}
+              placeholder="수정 요청..."
+              disabled={cardChatLoading}
+              className="flex-1 px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-[11px] focus:outline-none focus:ring-1 focus:ring-blue-400 disabled:opacity-50"
+            />
+            <button
+              type="button"
+              onClick={handleCardChatSend}
+              disabled={cardChatLoading || !cardChatInput.trim()}
+              className="px-3 py-1.5 bg-blue-500 text-white text-[10px] font-bold rounded-lg disabled:opacity-50"
+            >
+              전송
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 
   /** AI 추천 버튼이 붙은 라벨 */
   const fieldLabel = (label: string, field: 'title' | 'subtitle' | 'body') => (
@@ -2079,37 +2108,40 @@ function SlideEditor({
     <div className="pt-2 mt-2 border-t border-slate-200 space-y-2">
       <label className="text-[10px] font-semibold text-slate-500">슬라이드 이미지</label>
 
-      {/* 이미지가 있으면 프리뷰 + 삭제 + 위치 4가지 */}
+      {/* 이미지가 있을 때만 프리뷰 + 삭제 */}
       {hasImage && (
-        <div className="space-y-1.5">
-          <div className="relative">
-            <img src={slide.imageUrl} alt="" className="w-full h-32 object-contain bg-slate-100 rounded-lg border border-slate-200" />
-            <button
-              type="button"
-              onClick={() => onChange({ imageUrl: undefined })}
-              className="absolute top-1 right-1 px-2 py-0.5 bg-red-500 text-white text-[9px] font-bold rounded-md shadow hover:bg-red-600"
-            >
-              삭제
-            </button>
-          </div>
-          <div className="grid grid-cols-4 gap-1">
-            {(['top', 'bottom', 'background', 'center'] as const).map((pos) => (
-              <button
-                key={pos}
-                type="button"
-                onClick={() => onChange({ imagePosition: pos as SlideImagePosition })}
-                className={`py-1 text-[9px] font-bold rounded transition-colors ${
-                  (slide.imagePosition || 'top') === pos
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
-                }`}
-              >
-                {pos === 'top' ? '상단' : pos === 'bottom' ? '하단' : pos === 'background' ? '배경' : '중앙'}
-              </button>
-            ))}
-          </div>
+        <div className="relative">
+          <img src={slide.imageUrl} alt="" className="w-full h-32 object-contain bg-slate-100 rounded-lg border border-slate-200" />
+          <button
+            type="button"
+            onClick={() => onChange({ imageUrl: undefined })}
+            className="absolute top-1 right-1 px-2 py-0.5 bg-red-500 text-white text-[9px] font-bold rounded-md shadow hover:bg-red-600"
+          >
+            삭제
+          </button>
         </div>
       )}
+
+      {/* 이미지 위치 — 항상 표시 (이미지 생성 전에도 미리 선택 가능) */}
+      <div>
+        <label className="text-[10px] font-semibold text-slate-500 mb-1 block">이미지 위치</label>
+        <div className="grid grid-cols-4 gap-1">
+          {(['top', 'bottom', 'background', 'center'] as const).map((pos) => (
+            <button
+              key={pos}
+              type="button"
+              onClick={() => onChange({ imagePosition: pos as SlideImagePosition })}
+              className={`py-1.5 text-[10px] font-bold rounded-lg transition-colors ${
+                (slide.imagePosition || 'top') === pos
+                  ? 'bg-blue-500 text-white'
+                  : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+              }`}
+            >
+              {pos === 'top' ? '상단' : pos === 'bottom' ? '하단' : pos === 'background' ? '배경' : '중앙'}
+            </button>
+          ))}
+        </div>
+      </div>
 
       {/* 프롬프트 textarea + AI 추천 — 항상 표시 */}
       <div>
@@ -2190,7 +2222,7 @@ function SlideEditor({
     </div>
   );
 
-  if (slide.layout === 'cover') return <>{common}{imageSection}</>;
+  if (slide.layout === 'cover') return <>{common}{imageSection}{cardChatSection}</>;
 
   if (slide.layout === 'info' || slide.layout === 'closing') {
     return (
@@ -2201,6 +2233,7 @@ function SlideEditor({
           <textarea rows={3} value={slide.body || ''} onChange={(e) => onChange({ body: e.target.value })} className={textareaCls} />
         </div>
         {imageSection}
+        {cardChatSection}
       </>
     );
   }
@@ -2260,6 +2293,7 @@ function SlideEditor({
           </div>
         </div>
         {imageSection}
+        {cardChatSection}
       </>
     );
   }
@@ -2285,6 +2319,7 @@ function SlideEditor({
           </div>
         </div>
         {imageSection}
+        {cardChatSection}
       </>
     );
   }
@@ -2309,6 +2344,7 @@ function SlideEditor({
           </div>
         </div>
         {imageSection}
+        {cardChatSection}
       </>
     );
   }
@@ -2332,6 +2368,7 @@ function SlideEditor({
           </div>
         </div>
         {imageSection}
+        {cardChatSection}
       </>
     );
   }
@@ -2356,9 +2393,10 @@ function SlideEditor({
           </div>
         </div>
         {imageSection}
+        {cardChatSection}
       </>
     );
   }
 
-  return <>{common}{imageSection}</>;
+  return <>{common}{imageSection}{cardChatSection}</>;
 }

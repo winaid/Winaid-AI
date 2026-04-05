@@ -14,7 +14,7 @@ import CardTemplateManager from '../../../components/CardTemplateManager';
 import CardNewsRenderer from '../../../components/CardNewsRenderer';
 import CardNewsProRenderer from '../../../components/CardNewsProRenderer';
 import { DEFAULT_THEME, THEME_PRESETS, parseProSlidesJson, type SlideData as ProSlideData, type CardNewsTheme } from '../../../lib/cardNewsLayouts';
-import { getSavedTemplates, type CardTemplate } from '../../../lib/cardTemplateService';
+import { getSavedTemplates, deleteTemplate, type CardTemplate } from '../../../lib/cardTemplateService';
 import { useCreditContext } from '../layout';
 import { useCredit } from '../../../lib/creditService';
 import { ContentCategory } from '../../../lib/types';
@@ -1020,32 +1020,45 @@ ${newsContext ? `\n[📰 최신 네이버 뉴스 분석]\n${newsContext}\n\n⚠�
                   );
                 })}
 
-                {/* 학습 템플릿 */}
+                {/* 학습 템플릿 — 각 타일에 ✕ 삭제 버튼 */}
                 {savedStyles.map(tmpl => (
-                  <button key={tmpl.id} type="button"
-                    onClick={() => {
-                      setLearnedTemplate(tmpl);
-                      setProTheme(prev => ({
-                          ...prev,
-                          backgroundColor: tmpl.colors.background,
-                          backgroundGradient: tmpl.colors.backgroundGradient || '',
-                          titleColor: tmpl.colors.titleColor,
-                          subtitleColor: tmpl.colors.subtitleColor,
-                          bodyColor: tmpl.colors.bodyColor,
-                          accentColor: tmpl.colors.accentColor,
-                          fontFamily: tmpl.typography.fontFamily || prev.fontFamily,
-                        }));
-                    }}
-                    className={`flex-shrink-0 w-16 h-16 rounded-xl border-2 transition-all overflow-hidden ${
-                      learnedTemplate?.id === tmpl.id ? 'border-pink-500 ring-2 ring-pink-200' : 'border-slate-200 hover:border-slate-300'
-                    }`}
-                    title={tmpl.name}>
-                    {tmpl.thumbnailDataUrl ? (
-                      <img src={tmpl.thumbnailDataUrl} alt={tmpl.name} className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-[9px] text-slate-400 p-1 text-center">{tmpl.name}</div>
-                    )}
-                  </button>
+                  <div key={tmpl.id} className="relative flex-shrink-0">
+                    <button type="button"
+                      onClick={() => {
+                        setLearnedTemplate(tmpl);
+                        setProTheme(prev => ({
+                            ...prev,
+                            backgroundColor: tmpl.colors.background,
+                            backgroundGradient: tmpl.colors.backgroundGradient || '',
+                            titleColor: tmpl.colors.titleColor,
+                            subtitleColor: tmpl.colors.subtitleColor,
+                            bodyColor: tmpl.colors.bodyColor,
+                            accentColor: tmpl.colors.accentColor,
+                            fontFamily: tmpl.typography.fontFamily || prev.fontFamily,
+                          }));
+                      }}
+                      className={`w-16 h-16 rounded-xl border-2 transition-all overflow-hidden ${
+                        learnedTemplate?.id === tmpl.id ? 'border-pink-500 ring-2 ring-pink-200' : 'border-slate-200 hover:border-slate-300'
+                      }`}
+                      title={tmpl.name}>
+                      {tmpl.thumbnailDataUrl ? (
+                        <img src={tmpl.thumbnailDataUrl} alt={tmpl.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-[9px] text-slate-400 p-1 text-center">{tmpl.name}</div>
+                      )}
+                    </button>
+                    <button type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deleteTemplate(tmpl.id);
+                        if (learnedTemplate?.id === tmpl.id) setLearnedTemplate(null);
+                        setSavedStylesVersion(v => v + 1);
+                      }}
+                      className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full text-[8px] font-bold flex items-center justify-center hover:bg-red-600 shadow-sm"
+                      title="이 학습 스타일 삭제">
+                      ✕
+                    </button>
+                  </div>
                 ))}
               </div>
 
