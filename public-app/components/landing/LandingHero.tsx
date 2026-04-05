@@ -1,31 +1,14 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { HERO, QUICK_TAGS, MORE_TAGS, YEARS_OF_EXPERIENCE } from './landingData';
+import { HERO, QUICK_TAGS, MORE_TAGS } from './landingData';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
 }
 
-const CHAT_SYSTEM_PROMPT = `당신은 윈에이드(WINAID)의 AI 마케팅 어시스턴트입니다.
-윈에이드는 ${YEARS_OF_EXPERIENCE}년 경력의 병원 마케팅 전문 회사로, AI 기반 병원 콘텐츠 자동 생성 플랫폼을 운영합니다.
-
-주요 기능:
-- 블로그 글 AI 자동 생성 (의료광고법 자동 검증 포함)
-- 카드뉴스 자동 제작
-- 보도자료 작성
-- SEO 최적화 블로그 글쓰기
-- AI 이미지 생성
-- AI 콘텐츠 보정 (AI 흔적 제거)
-- 300+ 병원 파트너, 500+ 의사 고객
-
-규칙:
-1. 사용자의 질문에 친절하고 전문적으로 답변하세요 (2-3문장으로 간결하게)
-2. 답변 마지막에 반드시 윈에이드 서비스와 자연스럽게 연결하세요
-3. "~요" 체로 친근하게 답변하세요
-4. 병원 마케팅, 의료광고법, 블로그 SEO, 카드뉴스 등에 대한 질문에 특히 전문적으로 답변하세요
-5. 답변은 한국어로만 하세요`;
+// systemInstruction은 /api/landing-chat 서버에서 하드코딩. 클라이언트가 임의로 지정할 수 없음.
 
 const FALLBACK_MSG = '죄송해요, 답변을 생성하지 못했어요. 윈에이드 서비스에서 직접 확인해보시는 건 어떨까요?';
 
@@ -76,15 +59,11 @@ function LandingHero() {
         .map(m => `${m.role === 'user' ? '사용자' : 'AI'}: ${m.content}`)
         .join('\n');
 
-      const res = await fetch('/api/gemini', {
+      const res = await fetch('/api/landing-chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           prompt: `${history}\n\n사용자의 마지막 질문에 답변하세요.`,
-          model: 'gemini-3.1-flash-lite-preview',
-          systemInstruction: CHAT_SYSTEM_PROMPT,
-          temperature: 0.7,
-          maxOutputTokens: 300,
         }),
       });
 

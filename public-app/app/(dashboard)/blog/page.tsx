@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { CATEGORIES, PERSONAS, TONES } from '../../../lib/constants';
 import { ContentCategory, type GenerationRequest, type AudienceMode, type ImageStyle, type WritingStyle, type CssTheme, type TrendingItem, type SeoTitleItem, type SeoReport } from '../../../lib/types';
 import { buildBlogPrompt } from '../../../lib/blogPrompt';
+import { applyContentFilters } from '../../../lib/medicalLawFilter';
 import { savePost } from '../../../lib/postStorage';
 import { getSessionSafe, supabase, getSupabaseClient, isSupabaseConfigured } from '../../../lib/supabase';
 import { getHospitalStylePrompt } from '../../../lib/styleService';
@@ -1038,6 +1039,9 @@ ${subs.length > 0 ? `경쟁 글 소제목: ${subs.join(' / ')}` : ''}
       console.info(`[BLOG] Gemini 호출 시작 — model=gemini-3.1-pro-preview, temp=0.85`);
 
       // ═══ 스트리밍 모드로 Gemini 호출 ═══
+      // 동적 토큰 예산: 목표 글자수 × 4 (한글 1자 ≈ 2~3 토큰 + SEO/이미지 마커 여유)
+      // 최소 8192, 최대 32768. 이전 65536은 과다해 모델이 2500자 요청에도 7000자 초과 출력.
+      const dynamicMaxTokens = Math.max(8192, Math.min(textLength * 4, 32768));
       const res = await fetch('/api/gemini', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1046,7 +1050,7 @@ ${subs.length > 0 ? `경쟁 글 소제목: ${subs.join(' / ')}` : ''}
           systemInstruction,
           model: 'gemini-3.1-pro-preview',
           temperature: 0.85,
-          maxOutputTokens: 65536,
+          maxOutputTokens: dynamicMaxTokens,
           stream: true,
         }),
       });
@@ -1235,31 +1239,10 @@ ${subs.length > 0 ? `경쟁 글 소제목: ${subs.join(' / ')}` : ''}
         }
       }
 
-      // 3.8) 의료광고법 금지어 자동 대체
+      // 3.8) 의료광고법 금지어 자동 대체 + 출력 아티팩트 필터 (lib/medicalLawFilter.ts)
       {
-        const medLawReplacements: [RegExp, string][] = [
-          [/극대화/g, '향상'], [/최첨단/g, '최신'], [/완벽(한|하게|히)?/g, '꼼꼼$1'], [/확실(한|하게|히)?/g, '체계적$1'],
-          [/혁신적(인|으로)?/g, '새로운 방식$1'], [/획기적(인|으로)?/g, '효과적$1'], [/독보적(인|으로)?/g, '전문적$1'],
-          [/탁월(한|하게)?/g, '우수$1'], [/압도적(인|으로)?/g, '뛰어난'], [/독자적(인|으로)?/g, '고유한'],
-          [/완치/g, '호전'], [/근본\s?치료/g, '근본적인 관리'], [/영구적(인|으로)?/g, '장기적$1'],
-          [/100%/g, '높은 비율로'], [/가장\s(좋은|뛰어난|우수한)/g, '매우 $1'],
-          [/최소\s?침습/g, '부담을 줄인'], [/최소\s?통증/g, '불편감을 줄인'], [/최대\s?효과/g, '효과를 높인'],
-          [/무통\s/g, '불편감을 줄인 '], [/부작용\s?(없는|제로|zero)/g, '부작용 위험을 줄인'],
-          [/통증\s?없는/g, '불편감을 줄인'],
-          [/유일(한|하게)?/g, '차별화된$1'], [/기적적(인|으로)?/g, '의미 있는$1'],
-          [/놀라운/g, '주목할 만한'], [/세계 최초/g, '새로운 방식의'], [/국내 유일/g, '전문적인'],
-          [/부작용 없/g, '부작용 위험을 줄인'],
-        ];
-        let replacedCount = 0;
-        const foundTerms: string[] = [];
-        for (const [pattern, replacement] of medLawReplacements) {
-          const matches = blogText.match(pattern);
-          if (matches) {
-            foundTerms.push(`${matches[0]}(${matches.length}건)`);
-            replacedCount += matches.length;
-            blogText = blogText.replace(pattern, replacement);
-          }
-        }
+        const { filtered, replacedCount, foundTerms } = applyContentFilters(blogText);
+        blogText = filtered;
         if (replacedCount > 0) {
           console.info(`[BLOG] 의료법 금지어 자동 대체: ${replacedCount}건 — ${foundTerms.join(', ')}`);
         }

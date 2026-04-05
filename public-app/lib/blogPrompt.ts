@@ -233,14 +233,23 @@ export function buildBlogPrompt(req: GenerationRequest): {
   const introChars = 200;
   const outroChars = 200;
   const bodyCharsPerSection = Math.round((range.target - introChars - outroChars) / subheadingCount);
-  const volumeDesign = `[분량 설계 — 글자수를 구조로 확보]
-목표: 공백 포함 ${range.min}~${range.max}자
+  const volumeDesign = `[🚨 글자수 절대 규칙 — 반드시 준수]
+목표: 공백 포함 ${range.min}~${range.max}자 (목표값 ${range.target}자)
+허용 한계: ${range.max}자 초과 시 실패입니다. 핵심만 추리세요.
+
+[분량 설계 — 글자수를 구조로 확보]
 - 도입부: 2문단 × 각 100자 = ${introChars}자
 - 소제목 ${subheadingCount}개 × 각 2~3문단 × 각 ${Math.round(bodyCharsPerSection / 2.5)}자 = ${bodyCharsPerSection * subheadingCount}자
 - 마무리: 2문단 × 각 100자 = ${outroChars}자
 - 합계 목표: ${range.target}자
 각 문단은 최소 3문장, 문장당 평균 35~50자. 2문장짜리 짧은 문단 금지.
-⚠️ ${range.max}자를 초과하면 실패입니다. 절대 초과하지 마세요. 글이 길어질 것 같으면 문단을 줄이세요.`;
+
+⚠️ ${range.max}자를 초과하면 실패입니다. 절대 초과하지 마세요.
+⚠️ 소제목당 2~3문단(각 3~4문장)이면 충분합니다. 더 쓰려는 유혹을 이기세요.
+⚠️ 같은 내용을 다른 말로 반복하는 "패딩 문장" 금지. 배경 설명·원론적 경고 금지.
+⚠️ 작성을 끝낸 후 머릿속으로 대략의 글자수를 세고, ${range.max}자를 넘었다면
+    가장 덜 중요한 문단부터 삭제한 뒤 출력하세요.
+⚠️ 글자수가 초과된 상태로 출력하면 해당 응답은 폐기됩니다.`;
 
   // 말투 학습이 적용되면 IDENTITY의 화자/시점 규칙을 무시 (학습된 말투 우선)
   const hasLearnedStyle = !!(req.learnedStyleId || (req.hospitalStyleSource === 'explicit_selected_hospital' && req.hospitalName));

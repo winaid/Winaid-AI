@@ -147,17 +147,10 @@ interface GeminiCandidate {
 }
 
 export async function POST(request: NextRequest) {
+  // 로그인 세션 필수. 랜딩 챗봇은 /api/landing-chat 으로 분리되었다.
   const cookies = request.headers.get('cookie') || '';
   if (!/sb-[a-z]+-auth-token/.test(cookies)) {
-    try {
-      const cloned = await request.clone().json();
-      const si = (cloned.systemInstruction || '').toLowerCase();
-      if (!si.includes('윈에이드') && !si.includes('winaid')) {
-        return NextResponse.json({ error: '인증이 필요합니다.' }, { status: 401 });
-      }
-    } catch {
-      return NextResponse.json({ error: '인증이 필요합니다.' }, { status: 401 });
-    }
+    return NextResponse.json({ error: '인증이 필요합니다.' }, { status: 401 });
   }
 
   // ═══ body 파싱 (스트리밍/비스트리밍 공통) ═══
