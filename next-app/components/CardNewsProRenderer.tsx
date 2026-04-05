@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState, type CSSProperties } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import type { SlideData, CardNewsTheme, SlideLayoutType } from '../lib/cardNewsLayouts';
 import { LAYOUT_LABELS, THEME_PRESETS } from '../lib/cardNewsLayouts';
 
@@ -16,12 +16,40 @@ interface Props {
  * - 1080x1080 고정 (Instagram/네이버 규격)
  * - 레이아웃 유형별 다른 HTML/CSS
  * - 축소 미리보기 + 인라인 편집 패널 + 레이아웃 변경 + PNG 다운로드
+ *
+ * 미리보기 스케일 전략:
+ *   카드 콘텐츠는 항상 1080×1080 고정. 미리보기 컨테이너는 그리드 셀을
+ *   꽉 채우는 1:1 박스(width: 100%, aspect-ratio: 1/1)이고, 그 안의
+ *   1080×1080 원본을 ResizeObserver로 측정한 컨테이너 폭에 맞춰 동적으로
+ *   transform: scale(컨테이너폭 / 1080)로 축소한다. 다운로드는 별도의
+ *   captureNodeAsCanvas 헬퍼가 scale을 제거한 복제본을 풀사이즈로 캡처.
  */
 export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onThemeChange }: Props) {
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const boxRefs = useRef<(HTMLDivElement | null)[]>([]);
   const [downloading, setDownloading] = useState(false);
-  const [showThemePicker, setShowThemePicker] = useState(false);
   const [editingIdx, setEditingIdx] = useState<number | null>(null);
+  const [scales, setScales] = useState<number[]>([]);
+
+  // 미리보기 박스 폭에 맞춰 scale 재계산
+  useEffect(() => {
+    const recompute = () => {
+      const next = boxRefs.current.map(box => (box ? box.clientWidth / 1080 : 0.25));
+      setScales(prev => {
+        if (prev.length === next.length && prev.every((v, i) => Math.abs(v - next[i]) < 0.0005)) return prev;
+        return next;
+      });
+    };
+    recompute();
+
+    const observer = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(recompute) : null;
+    boxRefs.current.forEach(el => { if (el && observer) observer.observe(el); });
+    window.addEventListener('resize', recompute);
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener('resize', recompute);
+    };
+  }, [slides.length, editingIdx]);
 
   /** 특정 슬라이드 업데이트 (얕은 머지) */
   const updateSlide = (idx: number, patch: Partial<SlideData>) => {
@@ -858,43 +886,44 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
           </span>
           <span className="text-xs font-bold text-slate-700">{slides.length}장</span>
         </div>
-        <div className="flex gap-2">
-          <button
-            onClick={() => setShowThemePicker(v => !v)}
-            className="px-3 py-1.5 bg-slate-100 text-slate-700 text-xs font-bold rounded-lg hover:bg-slate-200 transition-colors"
-          >
-            🎨 테마
-          </button>
-          <button
-            onClick={downloadAll}
-            disabled={downloading}
-            className="px-3 py-1.5 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
-          >
-            {downloading ? '⏳ 다운로드 중...' : '📦 전체 다운로드'}
-          </button>
-        </div>
+        <button
+          onClick={downloadAll}
+          disabled={downloading}
+          className="px-3 py-1.5 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+        >
+          {downloading ? '⏳ 다운로드 중...' : '📦 전체 다운로드'}
+        </button>
       </div>
 
-      {/* 테마 선택 */}
-      {showThemePicker && (
-        <div className="bg-white rounded-xl border border-slate-200 p-3 flex gap-2">
-          {Object.entries(THEME_PRESETS).map(([key, preset]) => (
+      {/* 테마 선택 — 8가지 프리셋 가로 스크롤 */}
+      <div className="flex items-center gap-2 bg-white rounded-xl border border-slate-200 p-3 overflow-x-auto">
+        <span className="text-[10px] font-semibold text-slate-400 flex-shrink-0 mr-1">테마</span>
+        {THEME_PRESETS.map(preset => {
+          const isActive = theme.backgroundColor === preset.theme.backgroundColor;
+          return (
             <button
-              key={key}
-              onClick={() => onThemeChange({ ...preset, hospitalName: theme.hospitalName, hospitalLogo: theme.hospitalLogo })}
-              className="flex-1 h-16 rounded-lg border-2 transition-all"
-              style={{
-                background: preset.backgroundGradient || preset.backgroundColor,
-                borderColor: theme.backgroundColor === preset.backgroundColor ? preset.accentColor : 'transparent',
-              }}
+              key={preset.id}
+              type="button"
+              onClick={() => onThemeChange({ ...preset.theme, hospitalName: theme.hospitalName, hospitalLogo: theme.hospitalLogo })}
+              className={`flex-shrink-0 flex flex-col items-center gap-1 transition-all ${isActive ? 'scale-105' : 'opacity-75 hover:opacity-100'}`}
+              title={preset.name}
             >
-              <span className="text-xs font-bold" style={{ color: preset.titleColor }}>
-                {key}
-              </span>
+              <div
+                className={`w-10 h-10 rounded-lg border-2 ${isActive ? 'border-blue-500 ring-2 ring-blue-200' : 'border-slate-200'}`}
+                style={{ background: preset.theme.backgroundGradient || preset.theme.backgroundColor }}
+              >
+                <div
+                  className="w-full h-full rounded flex items-center justify-center"
+                  style={{ color: preset.theme.titleColor }}
+                >
+                  <span className="text-[8px] font-black">Aa</span>
+                </div>
+              </div>
+              <span className={`text-[9px] font-semibold ${isActive ? 'text-blue-700' : 'text-slate-500'}`}>{preset.name}</span>
             </button>
-          ))}
-        </div>
-      )}
+          );
+        })}
+      </div>
 
       {/* 카드 그리드 (축소 미리보기 + 인라인 편집 패널) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -902,10 +931,11 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
           const isEditing = editingIdx === idx;
           return (
             <div key={idx} className={`bg-white rounded-xl border transition-all ${isEditing ? 'border-blue-400 ring-2 ring-blue-100 sm:col-span-2 lg:col-span-3' : 'border-slate-200'}`}>
-              {/* 프리뷰 영역 */}
+              {/* 프리뷰 영역 — 셀 폭을 꽉 채우는 1:1 박스 + ResizeObserver 동적 스케일 */}
               <div
+                ref={(el) => { boxRefs.current[idx] = el; }}
                 className="group relative overflow-hidden rounded-t-xl bg-slate-100"
-                style={{ aspectRatio: '1 / 1' }}
+                style={{ width: '100%', aspectRatio: '1 / 1' }}
               >
                 {/* 라벨 */}
                 <div className="absolute top-2 left-2 z-20 px-2 py-0.5 rounded-full bg-black/60 text-white text-[10px] font-bold backdrop-blur-sm">
@@ -920,19 +950,17 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
                 >
                   💾 PNG
                 </button>
-                {/* 실제 렌더링 (1080x1080을 0.25배 스케일) */}
+                {/* 실제 렌더링 — 컨테이너 폭 / 1080 으로 동적 스케일 */}
                 <div
-                  ref={(el) => {
-                    cardRefs.current[idx] = el;
-                  }}
+                  ref={(el) => { cardRefs.current[idx] = el; }}
                   style={{
-                    transform: 'scale(0.25)',
-                    transformOrigin: 'top left',
-                    width: '1080px',
-                    height: '1080px',
                     position: 'absolute',
                     top: 0,
                     left: 0,
+                    width: '1080px',
+                    height: '1080px',
+                    transform: `scale(${scales[idx] ?? 0.25})`,
+                    transformOrigin: 'top left',
                   }}
                 >
                   {renderSlide(slide)}

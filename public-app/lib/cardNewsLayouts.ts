@@ -93,24 +93,123 @@ export const DEFAULT_THEME: CardNewsTheme = {
   fontFamily: "'Pretendard Variable', 'Pretendard', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif",
 };
 
-/** 추가 테마 프리셋 (향후 테마 선택 UI에서 사용) */
-export const THEME_PRESETS: Record<string, CardNewsTheme> = {
-  navy: DEFAULT_THEME,
-  emerald: {
-    ...DEFAULT_THEME,
-    backgroundColor: '#0F3D3E',
-    backgroundGradient: 'linear-gradient(180deg, #0F3D3E 0%, #072A2B 100%)',
-    subtitleColor: '#F4D35E',
-    accentColor: '#F4D35E',
+const PRETENDARD = "'Pretendard Variable', 'Pretendard', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif";
+
+/** 테마 프리셋 — 실제 병원 카드뉴스에서 자주 쓰는 8가지 색상 조합 */
+export const THEME_PRESETS: { id: string; name: string; theme: CardNewsTheme }[] = [
+  {
+    id: 'navy',
+    name: '네이비',
+    theme: {
+      backgroundColor: '#1B2A4A',
+      backgroundGradient: 'linear-gradient(180deg, #1B2A4A 0%, #152238 100%)',
+      titleColor: '#FFFFFF',
+      subtitleColor: '#F5A623',
+      bodyColor: '#D6D8E0',
+      accentColor: '#F5A623',
+      cardBgColor: '#FFFFFF',
+      fontFamily: PRETENDARD,
+    },
   },
-  burgundy: {
-    ...DEFAULT_THEME,
-    backgroundColor: '#4A1B2A',
-    backgroundGradient: 'linear-gradient(180deg, #4A1B2A 0%, #2E0F1A 100%)',
-    subtitleColor: '#F5C16C',
-    accentColor: '#F5C16C',
+  {
+    id: 'sky',
+    name: '스카이블루',
+    theme: {
+      backgroundColor: '#E8F4FD',
+      backgroundGradient: 'linear-gradient(180deg, #E8F4FD 0%, #D1E8F8 100%)',
+      titleColor: '#1A365D',
+      subtitleColor: '#2B6CB0',
+      bodyColor: '#4A5568',
+      accentColor: '#3182CE',
+      cardBgColor: '#FFFFFF',
+      fontFamily: PRETENDARD,
+    },
   },
-};
+  {
+    id: 'pink',
+    name: '소프트 핑크',
+    theme: {
+      backgroundColor: '#FFF0F5',
+      backgroundGradient: 'linear-gradient(180deg, #FFF0F5 0%, #FFE4EE 100%)',
+      titleColor: '#702459',
+      subtitleColor: '#D53F8C',
+      bodyColor: '#553C4E',
+      accentColor: '#ED64A6',
+      cardBgColor: '#FFFFFF',
+      fontFamily: PRETENDARD,
+    },
+  },
+  {
+    id: 'emerald',
+    name: '에메랄드',
+    theme: {
+      backgroundColor: '#064E3B',
+      backgroundGradient: 'linear-gradient(180deg, #064E3B 0%, #053B2E 100%)',
+      titleColor: '#FFFFFF',
+      subtitleColor: '#6EE7B7',
+      bodyColor: '#D1D5DB',
+      accentColor: '#34D399',
+      cardBgColor: '#FFFFFF',
+      fontFamily: PRETENDARD,
+    },
+  },
+  {
+    id: 'burgundy',
+    name: '버건디',
+    theme: {
+      backgroundColor: '#4A1942',
+      backgroundGradient: 'linear-gradient(180deg, #4A1942 0%, #3A1235 100%)',
+      titleColor: '#FFFFFF',
+      subtitleColor: '#F9A8D4',
+      bodyColor: '#D1D5DB',
+      accentColor: '#EC4899',
+      cardBgColor: '#FFFFFF',
+      fontFamily: PRETENDARD,
+    },
+  },
+  {
+    id: 'warm',
+    name: '웜 베이지',
+    theme: {
+      backgroundColor: '#FDF6EC',
+      backgroundGradient: 'linear-gradient(180deg, #FDF6EC 0%, #F5E6D0 100%)',
+      titleColor: '#78350F',
+      subtitleColor: '#D97706',
+      bodyColor: '#6B5B3E',
+      accentColor: '#F59E0B',
+      cardBgColor: '#FFFFFF',
+      fontFamily: PRETENDARD,
+    },
+  },
+  {
+    id: 'slate',
+    name: '모던 그레이',
+    theme: {
+      backgroundColor: '#1E293B',
+      backgroundGradient: 'linear-gradient(180deg, #1E293B 0%, #0F172A 100%)',
+      titleColor: '#F8FAFC',
+      subtitleColor: '#38BDF8',
+      bodyColor: '#CBD5E1',
+      accentColor: '#0EA5E9',
+      cardBgColor: '#FFFFFF',
+      fontFamily: PRETENDARD,
+    },
+  },
+  {
+    id: 'white',
+    name: '클린 화이트',
+    theme: {
+      backgroundColor: '#FFFFFF',
+      backgroundGradient: 'linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 100%)',
+      titleColor: '#1A202C',
+      subtitleColor: '#4299E1',
+      bodyColor: '#4A5568',
+      accentColor: '#3182CE',
+      cardBgColor: '#EDF2F7',
+      fontFamily: PRETENDARD,
+    },
+  },
+];
 
 /** 레이아웃 유형 → 한국어 라벨 */
 export const LAYOUT_LABELS: Record<SlideLayoutType, string> = {

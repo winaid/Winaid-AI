@@ -12,7 +12,7 @@ import { CardRegenModal, type CardPromptHistoryItem, CARD_PROMPT_HISTORY_KEY, CA
 import CardTemplateManager from '../../../components/CardTemplateManager';
 import CardNewsRenderer from '../../../components/CardNewsRenderer';
 import CardNewsProRenderer from '../../../components/CardNewsProRenderer';
-import { DEFAULT_THEME, parseProSlidesJson, type SlideData as ProSlideData, type CardNewsTheme } from '../../../lib/cardNewsLayouts';
+import { DEFAULT_THEME, THEME_PRESETS, parseProSlidesJson, type SlideData as ProSlideData, type CardNewsTheme } from '../../../lib/cardNewsLayouts';
 import type { CardTemplate } from '../../../lib/cardTemplateService';
 import { ContentCategory } from '../../../lib/types';
 import type { WritingStyle, CardNewsDesignTemplateId, TrendingItem, AudienceMode } from '../../../lib/types';
@@ -66,6 +66,20 @@ export default function CardNewsPage() {
   const [proSlides, setProSlides] = useState<ProSlideData[]>([]);
   const [proTheme, setProTheme] = useState<CardNewsTheme>({ ...DEFAULT_THEME });
   const [learnedTemplate, setLearnedTemplate] = useState<CardTemplate | null>(null);
+  // 학습한 디자인 템플릿이 선택되면 프로 모드 테마에도 자동 반영
+  useEffect(() => {
+    if (!learnedTemplate) return;
+    setProTheme(prev => ({
+      ...prev,
+      backgroundColor: learnedTemplate.colors.background,
+      backgroundGradient: learnedTemplate.colors.backgroundGradient || '',
+      titleColor: learnedTemplate.colors.titleColor,
+      subtitleColor: learnedTemplate.colors.subtitleColor,
+      bodyColor: learnedTemplate.colors.bodyColor,
+      accentColor: learnedTemplate.colors.accentColor,
+      fontFamily: learnedTemplate.typography.fontFamily || prev.fontFamily,
+    }));
+  }, [learnedTemplate]);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [customImagePrompt, setCustomImagePrompt] = useState('');
   // 트렌드 주제
@@ -946,8 +960,42 @@ ${newsContext ? `\n[📰 최신 네이버 뉴스 분석]\n${newsContext}\n\n⚠�
               </div>
             </div>
 
-            {/* 디자인 스타일 (AI 자동 + 기본 템플릿 8종 + 학습 템플릿 + 새 스타일 학습) */}
-            {!proMode && (
+            {/* 디자인 스타일 */}
+            {proMode ? (
+              // 프로 레이아웃 모드: 8가지 테마 프리셋 + 학습 템플릿 한 행
+              <div>
+                <label className={labelCls}>디자인 스타일 (테마)</label>
+                <div className="flex gap-2 overflow-x-auto pb-2">
+                  {THEME_PRESETS.map(preset => {
+                    const isActive = proTheme.backgroundColor === preset.theme.backgroundColor && !learnedTemplate;
+                    return (
+                      <button key={preset.id} type="button"
+                        onClick={() => { setLearnedTemplate(null); setProTheme({ ...preset.theme, hospitalName: hospitalName || undefined }); }}
+                        className={`flex-shrink-0 w-16 h-16 rounded-xl border-2 transition-all overflow-hidden flex flex-col ${
+                          isActive ? 'border-blue-500 ring-2 ring-blue-200' : 'border-slate-200 hover:border-slate-300'
+                        }`}
+                        style={{ background: preset.theme.backgroundGradient || preset.theme.backgroundColor }}
+                        title={preset.name}
+                      >
+                        <div className="flex-1 flex items-center justify-center">
+                          <span className="text-[11px] font-black" style={{ color: preset.theme.titleColor }}>Aa</span>
+                        </div>
+                        <span className="text-[8px] font-semibold text-center py-0.5 bg-white/90 text-slate-700">{preset.name}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="text-[10px] text-slate-400 mt-0.5">학습한 스타일도 아래에서 선택 가능합니다 ↓</p>
+                {/* 프로 모드에서도 학습 템플릿 + 새 스타일 학습 UI 제공 */}
+                <div className="mt-2">
+                  <CardTemplateManager
+                    onSelectTemplate={setLearnedTemplate}
+                    selectedTemplateId={learnedTemplate?.id}
+                  />
+                </div>
+              </div>
+            ) : (
+              // AI 이미지 모드: AI 자동 + 기본 템플릿 8종 + 학습 템플릿
               <CardTemplateManager
                 onSelectTemplate={setLearnedTemplate}
                 selectedTemplateId={learnedTemplate?.id}
