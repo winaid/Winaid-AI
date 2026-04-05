@@ -525,6 +525,27 @@ JSON 한 객체만 출력:
     return theme.fontFamily;
   })();
 
+  /**
+   * 카드별 폰트 계산 — slide.fontId가 있으면 그 폰트를, 없으면 상단 전체 폰트를 사용.
+   * Google Font는 필요 시 CDN 로드.
+   */
+  const getSlideFontFamily = (slide: SlideData): string => {
+    if (!slide.fontId) return effectiveFontFamily;
+    if (slide.fontId === 'custom' && customFontName) {
+      return `'${customFontName}', 'Pretendard Variable', 'Pretendard', sans-serif`;
+    }
+    const font = CARD_FONTS.find(f => f.id === slide.fontId);
+    if (!font) return effectiveFontFamily;
+    if (font.googleImport) ensureGoogleFontLoaded(font.id);
+    return font.family;
+  };
+
+  /** 슬라이드별 컨테이너 스타일 — cardContainerStyle + 카드별 폰트 */
+  const getCardStyle = (slide: SlideData): CSSProperties => ({
+    ...cardContainerStyle,
+    fontFamily: getSlideFontFamily(slide),
+  });
+
   // ═══════════════════════════════════════
   // 다운로드
   // ═══════════════════════════════════════
@@ -727,6 +748,7 @@ JSON 한 객체만 출력:
     </>
   ) : (
     <>
+      {/* 레이어 1 — 다이아몬드/도트 패턴 (프로 병원 카드뉴스 공통 장식) */}
       <div
         style={{
           position: 'absolute',
@@ -735,32 +757,51 @@ JSON 한 객체만 출력:
           width: '100%',
           height: '100%',
           backgroundImage: isDarkTheme
-            ? `radial-gradient(circle at 15% 85%, ${theme.accentColor}12 0%, transparent 45%), radial-gradient(circle at 85% 15%, ${theme.accentColor}0A 0%, transparent 45%)`
-            : `radial-gradient(circle at 15% 85%, ${theme.accentColor}18 0%, transparent 45%), radial-gradient(circle at 85% 15%, ${theme.accentColor}14 0%, transparent 45%)`,
+            ? `linear-gradient(45deg, ${theme.accentColor}08 25%, transparent 25%), linear-gradient(-45deg, ${theme.accentColor}08 25%, transparent 25%), linear-gradient(45deg, transparent 75%, ${theme.accentColor}08 75%), linear-gradient(-45deg, transparent 75%, ${theme.accentColor}08 75%)`
+            : `linear-gradient(45deg, ${theme.accentColor}10 25%, transparent 25%), linear-gradient(-45deg, ${theme.accentColor}10 25%, transparent 25%), linear-gradient(45deg, transparent 75%, ${theme.accentColor}10 75%), linear-gradient(-45deg, transparent 75%, ${theme.accentColor}10 75%)`,
+          backgroundSize: '32px 32px',
+          backgroundPosition: '0 0, 0 16px, 16px -16px, -16px 0',
           zIndex: 0,
           pointerEvents: 'none',
         }}
       />
+      {/* 레이어 2 — 코너 radial 글로우 */}
+      <div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          backgroundImage: isDarkTheme
+            ? `radial-gradient(circle at 12% 88%, ${theme.accentColor}1A 0%, transparent 45%), radial-gradient(circle at 88% 12%, ${theme.accentColor}14 0%, transparent 45%)`
+            : `radial-gradient(circle at 12% 88%, ${theme.accentColor}1E 0%, transparent 48%), radial-gradient(circle at 88% 12%, ${theme.accentColor}18 0%, transparent 48%)`,
+          zIndex: 0,
+          pointerEvents: 'none',
+        }}
+      />
+      {/* 상단 그라데이션 바 (강조) */}
       <div
         style={{
           position: 'absolute',
           top: 0,
           left: 0,
           right: 0,
-          height: '6px',
-          background: `linear-gradient(90deg, ${theme.accentColor}, ${theme.accentColor}80, transparent)`,
+          height: '8px',
+          background: `linear-gradient(90deg, ${theme.accentColor}, ${theme.accentColor}A0, transparent)`,
           zIndex: 3,
           pointerEvents: 'none',
         }}
       />
+      {/* 하단 장식 바 */}
       <div
         style={{
           position: 'absolute',
           bottom: 0,
           left: 0,
           right: 0,
-          height: '4px',
-          background: `linear-gradient(90deg, transparent, ${theme.accentColor}60, ${theme.accentColor})`,
+          height: '5px',
+          background: `linear-gradient(90deg, transparent, ${theme.accentColor}80, ${theme.accentColor})`,
           zIndex: 3,
           pointerEvents: 'none',
         }}
@@ -924,10 +965,10 @@ JSON 한 객체만 출력:
         left: 0,
         right: 0,
         textAlign: 'center',
-        color: theme.bodyColor,
+        color: theme.titleColor,
         fontSize: '16px',
-        fontWeight: 500,
-        opacity: 0.7,
+        fontWeight: 600,
+        opacity: 0.82,
         letterSpacing: '3px',
       }}
     >
@@ -949,7 +990,7 @@ JSON 한 객체만 출력:
   // - 각 섹션에 gap을 두고, 데이터 행에 flex:1을 주어 카드 전체를 꽉 채움
 
   const renderCover = (slide: SlideData) => (
-    <div style={cardContainerStyle}>
+    <div style={getCardStyle(slide)}>
       {backgroundDecoration}
       {renderImageLayer(slide)}
       <div
@@ -1000,7 +1041,7 @@ JSON 한 객체만 출력:
   );
 
   const renderInfo = (slide: SlideData) => (
-    <div style={cardContainerStyle}>
+    <div style={getCardStyle(slide)}>
       {backgroundDecoration}
       {renderImageLayer(slide)}
       {slide.imagePosition === 'top' && null /* renderImageLayer가 이미 top이면 inline 렌더 */}
@@ -1070,7 +1111,7 @@ JSON 한 객체만 출력:
     const gridTemplate = labels.length > 0 ? `160px repeat(${cols.length}, 1fr)` : `repeat(${cols.length}, 1fr)`;
 
     return (
-      <div style={cardContainerStyle}>
+      <div style={getCardStyle(slide)}>
         {backgroundDecoration}
         {renderImageLayer(slide)}
         <div style={{ position: 'relative', zIndex: 2, marginBottom: '24px' }}>
@@ -1154,7 +1195,7 @@ JSON 한 객체만 출력:
     const items = slide.icons || [];
     const cols = items.length <= 3 ? Math.max(items.length, 1) : 2;
     return (
-      <div style={cardContainerStyle}>
+      <div style={getCardStyle(slide)}>
         {backgroundDecoration}
         {renderImageLayer(slide)}
         <div style={{ position: 'relative', zIndex: 2, marginBottom: '24px' }}>
@@ -1169,22 +1210,40 @@ JSON 한 객체만 출력:
             <div
               key={i}
               style={{
-                background: 'rgba(255,255,255,0.96)',
+                background: 'rgba(255,255,255,0.97)',
                 borderRadius: '24px',
                 padding: '40px 26px',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
                 textAlign: 'center',
-                gap: '16px',
-                boxShadow: '0 10px 30px rgba(0,0,0,0.15)',
+                gap: '14px',
+                boxShadow: '0 12px 34px rgba(0,0,0,0.18)',
                 border: '1px solid rgba(0,0,0,0.05)',
+                position: 'relative',
+                overflow: 'hidden',
               }}
             >
-              <span style={{ fontSize: '56px', lineHeight: 1 }}>{item.emoji}</span>
-              <span style={{ fontSize: '22px', fontWeight: 900, color: '#1A1A2E', wordBreak: 'keep-all' }}>{item.title}</span>
+              {/* 배경 번호 (01, 02, 03 ...) — 프로 병원 카드뉴스 시그니처 요소 */}
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '-14px',
+                  left: '14px',
+                  fontSize: '96px',
+                  fontWeight: 900,
+                  color: 'rgba(0,0,0,0.05)',
+                  lineHeight: 1,
+                  pointerEvents: 'none',
+                  letterSpacing: '-0.04em',
+                }}
+              >
+                {String(i + 1).padStart(2, '0')}
+              </div>
+              <span style={{ fontSize: '56px', lineHeight: 1, position: 'relative', zIndex: 1 }}>{item.emoji}</span>
+              <span style={{ fontSize: '22px', fontWeight: 900, color: '#1A1A2E', wordBreak: 'keep-all', position: 'relative', zIndex: 1 }}>{item.title}</span>
               {item.desc && (
-                <span style={{ fontSize: '16px', color: '#555', lineHeight: 1.55, wordBreak: 'keep-all', fontWeight: 500 }}>
+                <span style={{ fontSize: '16px', color: '#555', lineHeight: 1.55, wordBreak: 'keep-all', fontWeight: 500, position: 'relative', zIndex: 1 }}>
                   {item.desc}
                 </span>
               )}
@@ -1199,7 +1258,7 @@ JSON 한 객체만 출력:
   const renderSteps = (slide: SlideData) => {
     const items = slide.steps || [];
     return (
-      <div style={cardContainerStyle}>
+      <div style={getCardStyle(slide)}>
         {backgroundDecoration}
         {renderImageLayer(slide)}
         <div style={{ position: 'relative', zIndex: 2, marginBottom: '24px' }}>
@@ -1259,7 +1318,7 @@ JSON 한 객체만 출력:
   };
 
   const renderChecklist = (slide: SlideData) => (
-    <div style={cardContainerStyle}>
+    <div style={getCardStyle(slide)}>
       {backgroundDecoration}
       {renderImageLayer(slide)}
       <div style={{ position: 'relative', zIndex: 2, marginBottom: '24px' }}>
@@ -1312,7 +1371,7 @@ JSON 한 객체만 출력:
     const points = slide.dataPoints || [];
     const cols = Math.min(Math.max(points.length, 1), 3);
     return (
-      <div style={cardContainerStyle}>
+      <div style={getCardStyle(slide)}>
         {backgroundDecoration}
         {renderImageLayer(slide)}
         <div style={{ position: 'relative', zIndex: 2, marginBottom: '24px' }}>
@@ -1357,7 +1416,7 @@ JSON 한 객체만 출력:
   };
 
   const renderClosing = (slide: SlideData) => (
-    <div style={cardContainerStyle}>
+    <div style={getCardStyle(slide)}>
       {backgroundDecoration}
       {renderImageLayer(slide)}
       <div
@@ -1438,7 +1497,7 @@ JSON 한 객체만 출력:
   );
 
   const renderBeforeAfter = (slide: SlideData) => (
-    <div style={cardContainerStyle}>
+    <div style={getCardStyle(slide)}>
       {backgroundDecoration}
       {renderImageLayer(slide)}
       <div style={{ position: 'relative', zIndex: 2, marginBottom: '24px' }}>
@@ -1478,7 +1537,7 @@ JSON 한 객체만 출력:
   );
 
   const renderQna = (slide: SlideData) => (
-    <div style={cardContainerStyle}>
+    <div style={getCardStyle(slide)}>
       {backgroundDecoration}
       {renderImageLayer(slide)}
       <div style={{ position: 'relative', zIndex: 2, marginBottom: '24px' }}>
@@ -1540,7 +1599,7 @@ JSON 한 객체만 출력:
   );
 
   const renderTimeline = (slide: SlideData) => (
-    <div style={cardContainerStyle}>
+    <div style={getCardStyle(slide)}>
       {backgroundDecoration}
       {renderImageLayer(slide)}
       <div style={{ position: 'relative', zIndex: 2, marginBottom: '24px' }}>
@@ -1581,7 +1640,7 @@ JSON 한 객체만 출력:
   );
 
   const renderQuote = (slide: SlideData) => (
-    <div style={cardContainerStyle}>
+    <div style={getCardStyle(slide)}>
       {backgroundDecoration}
       {renderImageLayer(slide)}
       <div
@@ -1629,7 +1688,7 @@ JSON 한 객체만 출력:
   );
 
   const renderNumberedList = (slide: SlideData) => (
-    <div style={cardContainerStyle}>
+    <div style={getCardStyle(slide)}>
       {backgroundDecoration}
       {renderImageLayer(slide)}
       <div style={{ position: 'relative', zIndex: 2, marginBottom: '24px' }}>
@@ -1684,7 +1743,7 @@ JSON 한 객체만 출력:
   );
 
   const renderProsCons = (slide: SlideData) => (
-    <div style={cardContainerStyle}>
+    <div style={getCardStyle(slide)}>
       {backgroundDecoration}
       {renderImageLayer(slide)}
       <div style={{ position: 'relative', zIndex: 2, marginBottom: '24px' }}>
@@ -1724,7 +1783,7 @@ JSON 한 객체만 출력:
   );
 
   const renderPriceTable = (slide: SlideData) => (
-    <div style={cardContainerStyle}>
+    <div style={getCardStyle(slide)}>
       {backgroundDecoration}
       {renderImageLayer(slide)}
       <div style={{ position: 'relative', zIndex: 2, marginBottom: '24px' }}>
@@ -1776,7 +1835,7 @@ JSON 한 객체만 출력:
   );
 
   const renderWarning = (slide: SlideData) => (
-    <div style={cardContainerStyle}>
+    <div style={getCardStyle(slide)}>
       {backgroundDecoration}
       {renderImageLayer(slide)}
       <div style={{ textAlign: 'center', marginBottom: '16px', position: 'relative', zIndex: 2 }}>
@@ -1983,6 +2042,8 @@ JSON 한 객체만 출력:
                     onSuggestImagePrompt={() => handleSuggestImagePrompt(idx)}
                     generatingImage={generatingImageIdx === idx}
                     aiSuggestingKey={aiSuggestingKey}
+                    customFontName={customFontName}
+                    customFontDisplayName={customFontDisplayName}
                   />
                 </div>
               )}
@@ -2011,6 +2072,8 @@ interface SlideEditorProps {
   onSuggestImagePrompt: () => void;
   generatingImage: boolean;
   aiSuggestingKey: string | null;
+  customFontName: string | null;
+  customFontDisplayName: string | null;
 }
 
 function SlideEditor({
@@ -2025,6 +2088,8 @@ function SlideEditor({
   onSuggestImagePrompt,
   generatingImage,
   aiSuggestingKey,
+  customFontName,
+  customFontDisplayName,
 }: SlideEditorProps) {
   const inputCls = 'w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-200';
   const labelCls = 'block text-[10px] font-semibold text-slate-500 mb-0.5';
@@ -2268,6 +2333,31 @@ ${JSON.stringify(slideForContext, null, 2)}
       <div>
         {fieldLabel('부제', 'subtitle')}
         <input type="text" value={slide.subtitle || ''} onChange={(e) => onChange({ subtitle: e.target.value })} className={inputCls} placeholder="(선택)" />
+      </div>
+      {/* 카드별 글씨체 — 비워두면 상단 전체 폰트 사용 */}
+      <div>
+        <label className={labelCls}>이 카드 글씨체 (선택)</label>
+        <select
+          value={slide.fontId || ''}
+          onChange={(e) => onChange({ fontId: e.target.value || undefined })}
+          className={inputCls}
+        >
+          <option value="">전체 설정 따름</option>
+          {FONT_CATEGORIES.map((cat) => (
+            <optgroup key={cat} label={cat}>
+              {CARD_FONTS.filter((f) => f.category === cat).map((f) => (
+                <option key={f.id} value={f.id}>
+                  {f.name}
+                </option>
+              ))}
+            </optgroup>
+          ))}
+          {customFontName && (
+            <optgroup label="내 폰트">
+              <option value="custom">📁 {customFontDisplayName || customFontName}</option>
+            </optgroup>
+          )}
+        </select>
       </div>
     </>
   );

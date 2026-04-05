@@ -129,6 +129,9 @@ export interface SlideData {
   imageUrl?: string;        // /api/image 결과 dataURL
   imagePosition?: SlideImagePosition;
   imageStyle?: SlideImageStyle; // 이미지 생성 스타일
+
+  // 카드별 폰트 오버라이드 — 비어 있으면 상단 전체 폰트를 따름
+  fontId?: string;
 }
 
 export interface CardNewsTheme {
@@ -179,12 +182,12 @@ export const THEME_PRESETS: { id: string; name: string; theme: CardNewsTheme }[]
     id: 'sky',
     name: '스카이블루',
     theme: {
-      backgroundColor: '#E8F4FD',
-      backgroundGradient: 'linear-gradient(180deg, #E8F4FD 0%, #D1E8F8 100%)',
-      titleColor: '#1A365D',
-      subtitleColor: '#2B6CB0',
-      bodyColor: '#4A5568',
-      accentColor: '#3182CE',
+      backgroundColor: '#DCEBF8',
+      backgroundGradient: 'linear-gradient(160deg, #E3F0FB 0%, #B9D5EF 100%)',
+      titleColor: '#0F2B46',
+      subtitleColor: '#1A5A9B',
+      bodyColor: '#3A5068',
+      accentColor: '#1C6BC1',
       cardBgColor: '#FFFFFF',
       fontFamily: PRETENDARD,
     },
@@ -193,12 +196,12 @@ export const THEME_PRESETS: { id: string; name: string; theme: CardNewsTheme }[]
     id: 'pink',
     name: '소프트 핑크',
     theme: {
-      backgroundColor: '#FFF0F5',
-      backgroundGradient: 'linear-gradient(180deg, #FFF0F5 0%, #FFE4EE 100%)',
-      titleColor: '#702459',
-      subtitleColor: '#D53F8C',
-      bodyColor: '#553C4E',
-      accentColor: '#ED64A6',
+      backgroundColor: '#FCE4EE',
+      backgroundGradient: 'linear-gradient(160deg, #FFEEF4 0%, #F9C6D9 100%)',
+      titleColor: '#4A1034',
+      subtitleColor: '#B02569',
+      bodyColor: '#50384A',
+      accentColor: '#C7317E',
       cardBgColor: '#FFFFFF',
       fontFamily: PRETENDARD,
     },
@@ -235,12 +238,12 @@ export const THEME_PRESETS: { id: string; name: string; theme: CardNewsTheme }[]
     id: 'warm',
     name: '웜 베이지',
     theme: {
-      backgroundColor: '#FDF6EC',
-      backgroundGradient: 'linear-gradient(180deg, #FDF6EC 0%, #F5E6D0 100%)',
-      titleColor: '#78350F',
-      subtitleColor: '#D97706',
-      bodyColor: '#6B5B3E',
-      accentColor: '#F59E0B',
+      backgroundColor: '#F7EAD2',
+      backgroundGradient: 'linear-gradient(160deg, #FDF4E0 0%, #EED4A6 100%)',
+      titleColor: '#4A230A',
+      subtitleColor: '#B5630E',
+      bodyColor: '#62452A',
+      accentColor: '#D97706',
       cardBgColor: '#FFFFFF',
       fontFamily: PRETENDARD,
     },
@@ -263,13 +266,13 @@ export const THEME_PRESETS: { id: string; name: string; theme: CardNewsTheme }[]
     id: 'white',
     name: '클린 화이트',
     theme: {
-      backgroundColor: '#FFFFFF',
-      backgroundGradient: 'linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 100%)',
-      titleColor: '#1A202C',
-      subtitleColor: '#4299E1',
-      bodyColor: '#4A5568',
-      accentColor: '#3182CE',
-      cardBgColor: '#EDF2F7',
+      backgroundColor: '#F5F8FC',
+      backgroundGradient: 'linear-gradient(160deg, #FFFFFF 0%, #E6EEF8 100%)',
+      titleColor: '#0A1628',
+      subtitleColor: '#1E4E8C',
+      bodyColor: '#3A4A5E',
+      accentColor: '#1E4E8C',
+      cardBgColor: '#FFFFFF',
       fontFamily: PRETENDARD,
     },
   },
@@ -371,6 +374,7 @@ function normalizeSlide(raw: Partial<SlideData>, i: number): SlideData {
     imageStyle: raw.imageStyle && SLIDE_IMAGE_STYLES.some(s => s.id === raw.imageStyle)
       ? raw.imageStyle
       : undefined,
+    fontId: typeof raw.fontId === 'string' ? raw.fontId : undefined,
   };
 }
 
