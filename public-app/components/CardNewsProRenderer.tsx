@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import type { SlideData, CardNewsTheme, SlideLayoutType } from '../lib/cardNewsLayouts';
-import { LAYOUT_LABELS, THEME_PRESETS } from '../lib/cardNewsLayouts';
+import { LAYOUT_LABELS } from '../lib/cardNewsLayouts';
 
 interface Props {
   slides: SlideData[];
@@ -24,7 +24,7 @@ interface Props {
  *   transform: scale(컨테이너폭 / 1080)로 축소한다. 다운로드는 별도의
  *   captureNodeAsCanvas 헬퍼가 scale을 제거한 복제본을 풀사이즈로 캡처.
  */
-export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onThemeChange }: Props) {
+export default function CardNewsProRenderer({ slides, theme, onSlidesChange }: Props) {
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
   const boxRefs = useRef<(HTMLDivElement | null)[]>([]);
   const [downloading, setDownloading] = useState(false);
@@ -878,7 +878,7 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
 
   return (
     <div className="space-y-4">
-      {/* 상단 컨트롤 */}
+      {/* 상단 컨트롤 — 테마 선택은 폼에서 하므로 여기는 라벨 + 전체 다운로드만 */}
       <div className="flex flex-wrap items-center justify-between gap-2 bg-white rounded-xl border border-slate-200 p-3">
         <div className="flex items-center gap-2">
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">
@@ -893,36 +893,6 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
         >
           {downloading ? '⏳ 다운로드 중...' : '📦 전체 다운로드'}
         </button>
-      </div>
-
-      {/* 테마 선택 — 8가지 프리셋 가로 스크롤 */}
-      <div className="flex items-center gap-2 bg-white rounded-xl border border-slate-200 p-3 overflow-x-auto">
-        <span className="text-[10px] font-semibold text-slate-400 flex-shrink-0 mr-1">테마</span>
-        {THEME_PRESETS.map(preset => {
-          const isActive = theme.backgroundColor === preset.theme.backgroundColor;
-          return (
-            <button
-              key={preset.id}
-              type="button"
-              onClick={() => onThemeChange({ ...preset.theme, hospitalName: theme.hospitalName, hospitalLogo: theme.hospitalLogo })}
-              className={`flex-shrink-0 flex flex-col items-center gap-1 transition-all ${isActive ? 'scale-105' : 'opacity-75 hover:opacity-100'}`}
-              title={preset.name}
-            >
-              <div
-                className={`w-10 h-10 rounded-lg border-2 ${isActive ? 'border-blue-500 ring-2 ring-blue-200' : 'border-slate-200'}`}
-                style={{ background: preset.theme.backgroundGradient || preset.theme.backgroundColor }}
-              >
-                <div
-                  className="w-full h-full rounded flex items-center justify-center"
-                  style={{ color: preset.theme.titleColor }}
-                >
-                  <span className="text-[8px] font-black">Aa</span>
-                </div>
-              </div>
-              <span className={`text-[9px] font-semibold ${isActive ? 'text-blue-700' : 'text-slate-500'}`}>{preset.name}</span>
-            </button>
-          );
-        })}
       </div>
 
       {/* 카드 그리드 (축소 미리보기 + 인라인 편집 패널) */}

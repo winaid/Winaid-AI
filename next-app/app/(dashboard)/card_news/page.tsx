@@ -14,7 +14,7 @@ import CardTemplateManager from '../../../components/CardTemplateManager';
 import CardNewsRenderer from '../../../components/CardNewsRenderer';
 import CardNewsProRenderer from '../../../components/CardNewsProRenderer';
 import { DEFAULT_THEME, THEME_PRESETS, parseProSlidesJson, type SlideData as ProSlideData, type CardNewsTheme } from '../../../lib/cardNewsLayouts';
-import type { CardTemplate } from '../../../lib/cardTemplateService';
+import { getSavedTemplates, type CardTemplate } from '../../../lib/cardTemplateService';
 import { useCreditContext } from '../layout';
 import { useCredit } from '../../../lib/creditService';
 import { ContentCategory } from '../../../lib/types';
@@ -79,6 +79,9 @@ export default function CardNewsPage() {
     }));
   }, [learnedTemplate]);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [showStyleUpload, setShowStyleUpload] = useState(false);
+  const [savedStylesVersion, setSavedStylesVersion] = useState(0);
+  const savedStyles = (() => { void savedStylesVersion; return getSavedTemplates(); })();
   const [customImagePrompt, setCustomImagePrompt] = useState('');
   // 트렌드 주제
   const [isLoadingTrends, setIsLoadingTrends] = useState(false);
@@ -906,8 +909,26 @@ ${newsContext ? `\n[📰 최신 네이버 뉴스 분석]\n${newsContext}\n\n⚠�
               </select>
             </div>
 
-            {/* 주제 */}
-            <input type="text" value={topic} onChange={e => setTopic(e.target.value)} placeholder="카드뉴스 주제 (예: 임플란트 시술 과정 안내)" required className={inputCls} />
+            {/* 주제 + 트렌드 버튼 */}
+            <div>
+              <input type="text" value={topic} onChange={e => setTopic(e.target.value)} placeholder="카드뉴스 주제 (예: 임플란트 시술 과정 안내)" required className={inputCls} />
+              <button type="button" onClick={handleRecommendTrends} disabled={isLoadingTrends}
+                className="w-full mt-2 py-2 bg-blue-50 text-blue-600 text-xs font-semibold rounded-xl border border-blue-200 hover:bg-blue-100 transition-all disabled:opacity-40 flex items-center justify-center gap-1">
+                {isLoadingTrends ? <><div className="w-3 h-3 border-2 border-blue-300 border-t-blue-600 rounded-full animate-spin" />분석 중...</> : <>🔥 트렌드 주제 추천</>}
+              </button>
+              {trendingItems.length > 0 && (
+                <div className="mt-2 space-y-1">
+                  {trendingItems.map((item, idx) => (
+                    <button key={idx} type="button" onClick={() => setTopic(item.topic)}
+                      className="w-full text-left px-3 py-2 bg-white border border-slate-100 rounded-lg hover:border-blue-400 transition-all group relative">
+                      <div className="absolute top-2 right-2 text-[10px] font-semibold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">SEO {item.score}</div>
+                      <span className="text-xs font-semibold text-slate-800 group-hover:text-blue-600 block pr-12">{item.topic}</span>
+                      <p className="text-[11px] text-slate-400 truncate">{item.keywords} · {item.seasonal_factor}</p>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
 
             {/* 생성 모드 */}
             <div>
@@ -947,17 +968,26 @@ ${newsContext ? `\n[📰 최신 네이버 뉴스 분석]\n${newsContext}\n\n⚠�
               </div>
             </div>
 
-            {/* 디자인 스타일 */}
-            {proMode ? (
-              // 프로 레이아웃 모드: 8가지 테마 프리셋 + 학습 템플릿 한 행
-              <div>
-                <label className={labelCls}>디자인 스타일 (테마)</label>
-                <div className="flex gap-2 overflow-x-auto pb-2">
-                  {THEME_PRESETS.map(preset => {
+            {/* 디자인 스타일 — 한 행에 전부 (AI 자동/테마/기본 템플릿/학습 템플릿) */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className={labelCls}>디자인 스타일</label>
+                <button type="button" onClick={() => setShowStyleUpload(v => !v)}
+                  className="text-[10px] font-semibold text-pink-600 hover:text-pink-700">
+                  {showStyleUpload ? '닫기' : '+ 새 스타일 학습'}
+                </button>
+              </div>
+              <div className="flex gap-2 overflow-x-auto pb-2">
+                {proMode ? (
+                  THEME_PRESETS.map(preset => {
                     const isActive = proTheme.backgroundColor === preset.theme.backgroundColor && !learnedTemplate;
                     return (
                       <button key={preset.id} type="button"
-                        onClick={() => { setLearnedTemplate(null); setProTheme({ ...preset.theme, hospitalName: hospitalName || undefined }); }}
+                        onClick={() => {
+                          setProTheme({ ...preset.theme, hospitalName: hospitalName || undefined });
+                          setLearnedTemplate(null);
+                          setDesignTemplateId(undefined);
+                        }}
                         className={`flex-shrink-0 w-16 h-16 rounded-xl border-2 transition-all overflow-hidden flex flex-col ${
                           isActive ? 'border-blue-500 ring-2 ring-blue-200' : 'border-slate-200 hover:border-slate-300'
                         }`}
@@ -970,53 +1000,73 @@ ${newsContext ? `\n[📰 최신 네이버 뉴스 분석]\n${newsContext}\n\n⚠�
                         <span className="text-[8px] font-semibold text-center py-0.5 bg-white/90 text-slate-700">{preset.name}</span>
                       </button>
                     );
-                  })}
-                </div>
-                <p className="text-[10px] text-slate-400 mt-0.5">학습한 스타일도 아래에서 선택 가능합니다 ↓</p>
-                {/* 프로 모드에서도 학습 템플릿 + 새 스타일 학습 UI 제공 */}
-                <div className="mt-2">
-                  <CardTemplateManager
-                    onSelectTemplate={setLearnedTemplate}
-                    selectedTemplateId={learnedTemplate?.id}
-                  />
-                </div>
-              </div>
-            ) : (
-              // AI 이미지 모드: AI 자동 + 기본 템플릿 8종 + 학습 템플릿
-              <CardTemplateManager
-                onSelectTemplate={setLearnedTemplate}
-                selectedTemplateId={learnedTemplate?.id}
-                builtInTemplates={CARD_NEWS_DESIGN_TEMPLATES.map(t => ({
-                  id: t.id,
-                  name: t.name,
-                  icon: t.icon,
-                  previewSvg: t.previewSvg,
-                  description: t.description,
-                }))}
-                selectedBuiltInId={designTemplateId}
-                onSelectBuiltIn={(id) => setDesignTemplateId(id as typeof designTemplateId)}
-              />
-            )}
+                  })
+                ) : (
+                  <>
+                    <button type="button"
+                      onClick={() => { setDesignTemplateId(undefined); setLearnedTemplate(null); }}
+                      className={`flex-shrink-0 w-16 h-16 rounded-xl border-2 transition-all flex items-center justify-center text-[10px] font-semibold ${
+                        !designTemplateId && !learnedTemplate ? 'border-pink-500 bg-pink-50 text-pink-700' : 'border-slate-200 bg-white text-slate-400 hover:border-slate-300'
+                      }`}>
+                      AI 자동
+                    </button>
+                    {CARD_NEWS_DESIGN_TEMPLATES.map(tmpl => (
+                      <button key={tmpl.id} type="button"
+                        onClick={() => { setDesignTemplateId(designTemplateId === tmpl.id ? undefined : tmpl.id); setLearnedTemplate(null); }}
+                        className={`flex-shrink-0 w-16 h-16 rounded-xl border-2 transition-all overflow-hidden flex flex-col ${
+                          designTemplateId === tmpl.id ? 'border-pink-500 ring-2 ring-pink-200' : 'border-slate-200 hover:border-slate-300'
+                        }`}
+                        title={tmpl.description || tmpl.name}>
+                        <div className="w-full flex-1 overflow-hidden" dangerouslySetInnerHTML={{ __html: tmpl.previewSvg }} />
+                        <span className="text-[8px] font-semibold text-slate-600 leading-tight text-center py-0.5 bg-white">{tmpl.name}</span>
+                      </button>
+                    ))}
+                  </>
+                )}
 
-            {/* 🔥 트렌드 주제 (OLD parity) */}
-            <button type="button" onClick={handleRecommendTrends} disabled={isLoadingTrends}
-              className="w-full py-2 bg-slate-100 text-slate-600 rounded-lg text-xs font-semibold hover:bg-slate-200 transition-all disabled:opacity-40 flex items-center justify-center gap-1">
-              {isLoadingTrends ? <><div className="w-3 h-3 border-2 border-slate-400 border-t-slate-600 rounded-full animate-spin" />분석 중...</> : <>🔥 트렌드 주제</>}
-            </button>
-
-            {/* 트렌드 주제 결과 */}
-            {trendingItems.length > 0 && (
-              <div className="space-y-1">
-                {trendingItems.map((item, idx) => (
-                  <button key={idx} type="button" onClick={() => setTopic(item.topic)}
-                    className="w-full text-left px-3 py-2 bg-white border border-slate-100 rounded-lg hover:border-blue-400 transition-all group relative">
-                    <div className="absolute top-2 right-2 text-[10px] font-semibold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">SEO {item.score}</div>
-                    <span className="text-xs font-semibold text-slate-800 group-hover:text-blue-600 block pr-12">{item.topic}</span>
-                    <p className="text-[11px] text-slate-400 truncate">{item.keywords} · {item.seasonal_factor}</p>
+                {savedStyles.map(tmpl => (
+                  <button key={tmpl.id} type="button"
+                    onClick={() => {
+                      setLearnedTemplate(tmpl);
+                      setDesignTemplateId(undefined);
+                      if (proMode) {
+                        setProTheme(prev => ({
+                          ...prev,
+                          backgroundColor: tmpl.colors.background,
+                          backgroundGradient: tmpl.colors.backgroundGradient || '',
+                          titleColor: tmpl.colors.titleColor,
+                          subtitleColor: tmpl.colors.subtitleColor,
+                          bodyColor: tmpl.colors.bodyColor,
+                          accentColor: tmpl.colors.accentColor,
+                          fontFamily: tmpl.typography.fontFamily || prev.fontFamily,
+                        }));
+                      }
+                    }}
+                    className={`flex-shrink-0 w-16 h-16 rounded-xl border-2 transition-all overflow-hidden ${
+                      learnedTemplate?.id === tmpl.id ? 'border-pink-500 ring-2 ring-pink-200' : 'border-slate-200 hover:border-slate-300'
+                    }`}
+                    title={tmpl.name}>
+                    {tmpl.thumbnailDataUrl ? (
+                      <img src={tmpl.thumbnailDataUrl} alt={tmpl.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-[9px] text-slate-400 p-1 text-center">{tmpl.name}</div>
+                    )}
                   </button>
                 ))}
               </div>
-            )}
+
+              {showStyleUpload && (
+                <div className="mt-2">
+                  <CardTemplateManager
+                    onSelectTemplate={(tmpl) => {
+                      setLearnedTemplate(tmpl);
+                      setSavedStylesVersion(v => v + 1);
+                    }}
+                    selectedTemplateId={learnedTemplate?.id}
+                  />
+                </div>
+              )}
+            </div>
 
             {/* ⚙️ 상세 설정 (OLD parity: 접기/펼치기) */}
             <button type="button" onClick={() => setShowAdvanced(!showAdvanced)}
