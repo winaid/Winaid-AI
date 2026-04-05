@@ -40,8 +40,6 @@ export default function CardNewsPage() {
   const [topic, setTopic] = useState('');
   const [keywords, setKeywords] = useState('');
   const [hospitalName, setHospitalName] = useState('');
-  // 병원명 표시 모드는 프로 모드에서 의미 없음(1장/마지막 장 자동). 레거시 코드 경로 참조용 고정값.
-  const hospitalNameMode: 'all' | 'first_last' | 'none' = 'first_last';
   const [logoDataUrl, setLogoDataUrl] = useState<string | null>(null);
   const [logoEnabled, setLogoEnabled] = useState(false);
   const logoInputRef = useRef<HTMLInputElement>(null);
@@ -154,7 +152,8 @@ export default function CardNewsPage() {
       const tmpl = designTemplateId ? CARD_NEWS_DESIGN_TEMPLATES.find(t => t.id === designTemplateId) : undefined;
       const needsTemplate = tmpl && !prompt.includes('[디자인 템플릿:');
       const templateBlock = needsTemplate ? `\n[디자인 템플릿: ${tmpl.name}]\n${tmpl.stylePrompt}\n배경색: ${tmpl.colors.background}` : '';
-      const customBlock = imageStyle === 'custom' && customImagePrompt ? `\n[사용자 지정 스타일]\n${customImagePrompt}` : '';
+      // imageStyle은 'illustration'로 고정(상세 설정 제거). 커스텀 블록 없음.
+      const customBlock = '';
       const fullPrompt = `${prompt}${templateBlock}${customBlock}`.trim();
 
       const res = await fetch('/api/image', {
@@ -440,8 +439,7 @@ export default function CardNewsPage() {
 
       const hospitalNameInstruction = (() => {
         if (!hospitalName) return `⚠️ 어떤 슬라이드에도 병원명을 넣지 마세요. 가짜 병원명을 지어내지 마세요.`;
-        if (hospitalNameMode === 'none') return `⚠️ 병원명 "${hospitalName}"은 참고용. 카드에 병원명 표시 금지.`;
-        if (hospitalNameMode === 'all') return `⚠️ 모든 슬라이드에 "${hospitalName}" 표시. 다른 병원명 절대 금지.`;
+        // hospitalNameMode는 'first_last' 고정(상세 설정 제거). 다른 모드 브랜치 제거됨.
         return `⚠️ 1장과 마지막 장에만 "${hospitalName}" 표시. 중간 슬라이드 금지. 다른 병원명 절대 금지.`;
       })();
 
