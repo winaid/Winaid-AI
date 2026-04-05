@@ -179,6 +179,47 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
     }
   };
 
+  /** 슬라이드 내용 기반 이미지 프롬프트(visualKeyword) AI 추천 */
+  const handleSuggestImagePrompt = async (idx: number) => {
+    const slide = slides[idx];
+    if (!slide) return;
+    const key = `${idx}:imgprompt`;
+    setAiSuggestingKey(key);
+    try {
+      const res = await fetch('/api/gemini', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: `카드뉴스 슬라이드 제목: "${slide.title}"
+부제: "${slide.subtitle || ''}"
+본문: "${slide.body || ''}"
+레이아웃: ${slide.layout}
+
+이 슬라이드에 어울리는 이미지를 영어로 묘사해.
+규칙:
+- 1줄, 영어로만 (한국어 금지)
+- 의료/치과 맥락 유지
+- 스타일 키워드 포함 (3D render / illustration / photograph / infographic 중)
+- 깨끗한 배경·프로페셔널 품질 암시
+- 프롬프트만 출력, 따옴표·설명 없이`,
+          systemInstruction: '이미지 프롬프트 전문가. 영어 프롬프트 한 줄만 출력. 따옴표·설명 금지.',
+          model: 'gemini-3.1-flash-lite-preview',
+          temperature: 0.8,
+          maxOutputTokens: 200,
+        }),
+      });
+      const data = await res.json() as { text?: string };
+      if (data.text) {
+        const cleaned = data.text.replace(/^["'`]+|["'`]+$/g, '').replace(/\n/g, ' ').trim();
+        if (cleaned) updateSlide(idx, { visualKeyword: cleaned });
+      }
+    } catch (err) {
+      console.warn('[CARD_NEWS_PRO] 이미지 프롬프트 추천 실패', err);
+    } finally {
+      setAiSuggestingKey(null);
+    }
+  };
+
   /** 현재 슬라이드를 웹 검색으로 보강 (googleSearch=true) */
   const handleAiEnrichSlide = async (idx: number) => {
     const slide = slides[idx];
@@ -1718,6 +1759,7 @@ JSON 한 객체만 출력:
                     onAiSuggestText={(field) => handleAiSuggestText(idx, field)}
                     onAiSuggestComparison={() => handleAiSuggestComparison(idx)}
                     onAiEnrich={() => handleAiEnrichSlide(idx)}
+                    onSuggestImagePrompt={() => handleSuggestImagePrompt(idx)}
                     generatingImage={generatingImageIdx === idx}
                     aiSuggestingKey={aiSuggestingKey}
                   />
@@ -1847,6 +1889,7 @@ interface SlideEditorProps {
   onAiSuggestText: (field: 'title' | 'subtitle' | 'body') => void;
   onAiSuggestComparison: () => void;
   onAiEnrich: () => void;
+  onSuggestImagePrompt: () => void;
   generatingImage: boolean;
   aiSuggestingKey: string | null;
 }
@@ -1860,6 +1903,7 @@ function SlideEditor({
   onAiSuggestText,
   onAiSuggestComparison,
   onAiEnrich,
+  onSuggestImagePrompt,
   generatingImage,
   aiSuggestingKey,
 }: SlideEditorProps) {
@@ -1943,6 +1987,27 @@ function SlideEditor({
         </div>
       ) : (
         <div className="space-y-2">
+          {/* 이미지 프롬프트 (visualKeyword) + AI 추천 */}
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[10px] font-semibold text-slate-500">이미지 프롬프트 (영문)</span>
+              <button
+                type="button"
+                onClick={onSuggestImagePrompt}
+                disabled={aiSuggestingKey === `${slideIdx}:imgprompt`}
+                className="text-[9px] font-bold text-purple-600 hover:text-purple-700 disabled:opacity-50"
+              >
+                {aiSuggestingKey === `${slideIdx}:imgprompt` ? '추천 중...' : '✨ AI 추천'}
+              </button>
+            </div>
+            <textarea
+              value={slide.visualKeyword || ''}
+              onChange={(e) => onChange({ visualKeyword: e.target.value })}
+              placeholder="예: dental implant titanium screws, 3D render, clean white background"
+              rows={2}
+              className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg text-[11px] text-slate-700 resize-none focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-200"
+            />
+          </div>
           {/* 이미지 스타일 선택 */}
           <div className="flex gap-1 flex-wrap">
             {SLIDE_IMAGE_STYLES.map((style) => {
