@@ -1,8 +1,53 @@
 /**
  * 카드뉴스 디자인 템플릿 서비스
- * - 참고 이미지 → Gemini Vision 분석 → 디자인 토큰 추출
+ * - 참고 이미지 → Gemini Vision 분석 → 상세 디자인 토큰 추출
  * - localStorage 저장/불러오기
+ *
+ * v2: 색상뿐 아니라 배경 패턴·내부 카드 스타일·장식 요소·레이아웃 규칙까지
+ *     추출해서 렌더러가 거의 동일한 디자인을 재현할 수 있게 확장.
  */
+
+export interface CardTemplateBackgroundStyle {
+  type: 'solid' | 'gradient' | 'pattern';
+  gradient?: string;         // CSS gradient (e.g. "linear-gradient(180deg, #111 0%, #222 100%)")
+  patternCSS?: string;       // background-image 문자열 (radial/linear 조합 등)
+  hasTopAccent: boolean;
+  topAccentCSS?: string;     // "height: 6px; background: linear-gradient(...)"
+  hasBottomAccent: boolean;
+  bottomAccentCSS?: string;
+}
+
+export interface CardTemplateInnerCardStyle {
+  background: string;
+  borderRadius: string;
+  border: string;            // "1px solid rgba(...)" 또는 "none"
+  boxShadow: string;         // "0 4px 20px rgba(...)" 또는 "none"
+  padding: string;
+}
+
+export interface CardTemplateHighlightStyle {
+  background: string;
+  color: string;
+  borderRadius: string;
+}
+
+export interface CardTemplateDecorations {
+  hasDividerLine: boolean;
+  dividerCSS?: string;
+  hasAccentBar: boolean;
+  accentBarCSS?: string;     // "width: 60px; height: 5px; background: #F5A623; border-radius: 3px"
+  hasCornerDecor: boolean;
+  cornerDecorCSS?: string;
+  hasShapeDecor: boolean;
+  shapeDecorCSS?: string;    // "top: 40px; right: 40px; width: 120px; height: 120px; background: ..."
+}
+
+export interface CardTemplateLayoutRules {
+  titleAlign: 'left' | 'center';
+  contentPadding: string;    // "60px 64px"
+  gap: string;               // "20px"
+  headerStyle: 'bar' | 'rounded' | 'underline' | 'none';
+}
 
 export interface CardTemplate {
   id: string;
@@ -23,6 +68,7 @@ export interface CardTemplate {
     bodySize: string;
     fontFamily: string;
   };
+  // 이전 버전 호환 — 단순 레이아웃 힌트 (사용 빈도 낮음)
   layout: {
     subtitlePosition: 'top' | 'bottom';
     titlePosition: 'center' | 'top-third';
@@ -37,6 +83,14 @@ export interface CardTemplate {
     shapeStyle?: string;
     overlay?: string;
   };
+
+  // ── v2 신규 토큰 ──
+  backgroundStyle?: CardTemplateBackgroundStyle;
+  innerCardStyle?: CardTemplateInnerCardStyle;
+  highlightStyle?: CardTemplateHighlightStyle;
+  decorations?: CardTemplateDecorations;
+  layoutRules?: CardTemplateLayoutRules;
+
   rawAnalysis: string;
   cssTemplate: string;
   thumbnailDataUrl?: string;
@@ -72,48 +126,95 @@ export async function analyzeDesignFromImages(imageDataUrls: string[]): Promise<
   template: Omit<CardTemplate, 'id' | 'name' | 'createdAt' | 'thumbnailDataUrl'>;
 } | null> {
   try {
-    const prompt = `당신은 카드뉴스 디자인 분석 전문가입니다.
-첨부된 카드뉴스 이미지 ${imageDataUrls.length}개의 디자인 패턴을 분석해주세요.
+    const prompt = `당신은 카드뉴스 디자인 리버스 엔지니어링 전문가입니다.
+첨부된 카드뉴스 이미지 ${imageDataUrls.length}개를 정밀 분석해, 이 디자인을 HTML/CSS로 **거의 완벽하게 재현**할 수 있는 상세 토큰을 추출하세요.
 
-반드시 아래 JSON 형식으로만 출력하세요:
+분석 항목:
+1. 색상: 배경, 제목, 부제, 본문, 강조, 내부 카드 배경
+2. 배경: 단색인지 그라데이션인지, 미세 패턴/텍스처가 있는지
+3. 상/하단 장식: 색상 바, 라인, 그라데이션 바 유무
+4. 내부 카드: 비교표·아이콘 등의 컨테이너 배경·라운드·그림자·보더
+5. 강조 스타일: 하이라이트된 셀/항목의 배경·색상·라운드
+6. 장식 요소: 구분선·제목 바·모서리 장식·도형(원, 육각형 등)
+7. 타이포그래피: 제목/부제/본문 크기·굵기·정렬·자간
+8. 레이아웃: 전체 패딩, 요소 간 간격, 정렬 방식
+
+여러 이미지가 있으면 공통 패턴을 추출하고, 가장 자주 나타나는 스타일을 채택하세요.
+CSS 값은 반드시 실제 동작하는 CSS여야 합니다.
+
+반드시 아래 JSON 스키마로만 출력하세요. 마크다운 코드블록·주석·설명 금지:
 
 {
   "colors": {
     "background": "#hex",
-    "backgroundGradient": "linear-gradient(...) 또는 빈 문자열",
+    "backgroundGradient": "linear-gradient(...) 또는 ''",
     "titleColor": "#hex",
     "subtitleColor": "#hex",
     "bodyColor": "#hex",
     "accentColor": "#hex"
   },
   "typography": {
-    "titleSize": "28px~36px",
+    "titleSize": "42px~64px",
     "titleWeight": "700~900",
-    "subtitleSize": "14px~18px",
-    "bodySize": "13px~16px",
-    "fontFamily": "Pretendard, sans-serif"
+    "subtitleSize": "18px~26px",
+    "bodySize": "16px~22px",
+    "fontFamily": "'Pretendard', sans-serif"
+  },
+  "backgroundStyle": {
+    "type": "solid|gradient|pattern",
+    "gradient": "CSS gradient 문자열 또는 ''",
+    "patternCSS": "background-image로 표현한 패턴 또는 ''",
+    "hasTopAccent": true,
+    "topAccentCSS": "height: 6px; background: linear-gradient(90deg, #F5A623, rgba(245,166,35,0.4), transparent)",
+    "hasBottomAccent": false,
+    "bottomAccentCSS": ""
+  },
+  "innerCardStyle": {
+    "background": "rgba(255,255,255,0.06) 또는 #hex",
+    "borderRadius": "18px~24px",
+    "border": "1px solid rgba(255,255,255,0.1) 또는 'none'",
+    "boxShadow": "0 10px 30px rgba(0,0,0,0.15) 또는 'none'",
+    "padding": "28px 32px"
+  },
+  "highlightStyle": {
+    "background": "rgba(245,166,35,0.18) 또는 #hex",
+    "color": "#hex",
+    "borderRadius": "14px"
+  },
+  "decorations": {
+    "hasDividerLine": false,
+    "dividerCSS": "",
+    "hasAccentBar": true,
+    "accentBarCSS": "width: 60px; height: 5px; background: #F5A623; border-radius: 3px",
+    "hasCornerDecor": false,
+    "cornerDecorCSS": "",
+    "hasShapeDecor": false,
+    "shapeDecorCSS": ""
+  },
+  "layoutRules": {
+    "titleAlign": "left",
+    "contentPadding": "60px 64px",
+    "gap": "24px",
+    "headerStyle": "bar"
   },
   "layout": {
-    "subtitlePosition": "top 또는 bottom",
-    "titlePosition": "center 또는 top-third",
-    "visualPosition": "bottom 또는 center 또는 background",
-    "padding": "30px~50px",
-    "borderRadius": "0px 또는 12px 또는 20px"
+    "subtitlePosition": "top",
+    "titlePosition": "center",
+    "visualPosition": "bottom",
+    "padding": "60px 64px",
+    "borderRadius": "0px"
   },
   "decoration": {
-    "hasFrame": true/false,
-    "frameStyle": "CSS border 또는 빈 문자열",
-    "hasShapes": true/false,
-    "shapeStyle": "장식 설명 또는 빈 문자열",
-    "overlay": "CSS 또는 빈 문자열"
+    "hasFrame": false,
+    "frameStyle": "",
+    "hasShapes": false,
+    "shapeStyle": "",
+    "overlay": ""
   },
-  "cssTemplate": "1080x1080 정사각형 카드를 재현하는 CSS. .card-container(position:relative) 안에 .subtitle, .title, .description, .visual 영역을 position:absolute로 배치. 배경/장식 포함.",
-  "description": "이 디자인의 느낌을 한 문장으로"
-}
+  "cssTemplate": ".card-container { ... } 전체 재현용 CSS. 비어도 무방.",
+  "description": "이 디자인의 전체 느낌과 특징을 2~3문장으로"
+}`;
 
-⚠️ JSON만 출력. 마크다운 코드블록도 쓰지 마세요.`;
-
-    // 이미지를 inlineImages로 전달
     const res = await fetch('/api/gemini', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -129,7 +230,13 @@ export async function analyzeDesignFromImages(imageDataUrls: string[]): Promise<
     const data = await res.json();
     if (!data.text) return null;
 
-    const cleaned = data.text.replace(/```json?\s*\n?/gi, '').replace(/\n?```\s*$/g, '').trim();
+    let cleaned = (data.text as string).replace(/```json?\s*\n?/gi, '').replace(/\n?```\s*$/g, '').trim();
+    // 혹시 앞뒤에 설명이 붙으면 첫 { 부터 마지막 } 까지만 추출
+    const firstBrace = cleaned.indexOf('{');
+    const lastBrace = cleaned.lastIndexOf('}');
+    if (firstBrace !== -1 && lastBrace !== -1 && firstBrace < lastBrace) {
+      cleaned = cleaned.slice(firstBrace, lastBrace + 1);
+    }
     const parsed = JSON.parse(cleaned);
 
     return {
@@ -137,8 +244,22 @@ export async function analyzeDesignFromImages(imageDataUrls: string[]): Promise<
       template: {
         colors: parsed.colors,
         typography: parsed.typography,
-        layout: parsed.layout,
-        decoration: parsed.decoration,
+        layout: parsed.layout || {
+          subtitlePosition: 'top',
+          titlePosition: 'center',
+          visualPosition: 'bottom',
+          padding: '60px 64px',
+          borderRadius: '0px',
+        },
+        decoration: parsed.decoration || {
+          hasFrame: false,
+          hasShapes: false,
+        },
+        backgroundStyle: parsed.backgroundStyle,
+        innerCardStyle: parsed.innerCardStyle,
+        highlightStyle: parsed.highlightStyle,
+        decorations: parsed.decorations,
+        layoutRules: parsed.layoutRules,
         rawAnalysis: data.text,
         cssTemplate: parsed.cssTemplate || '',
       },

@@ -63,6 +63,8 @@ export default function CardTemplateManager({
     if (e.dataTransfer.files.length > 0) handleFiles(e.dataTransfer.files);
   }, [handleFiles]);
 
+  const [lastAnalyzed, setLastAnalyzed] = useState<{ template: CardTemplate; analysis: string } | null>(null);
+
   const handleAnalyze = async () => {
     if (uploadedImages.length === 0) return;
     setIsAnalyzing(true);
@@ -82,9 +84,9 @@ export default function CardTemplateManager({
       setTemplates(getSavedTemplates());
       onSelectTemplate(newTemplate);
       onSelectBuiltIn?.(undefined);
+      setLastAnalyzed({ template: newTemplate, analysis: result.analysis });
       setUploadedImages([]);
       setTemplateName('');
-      setShowUpload(false);
       setProgress('');
     } else {
       setProgress('분석에 실패했습니다. 다시 시도해주세요.');
@@ -228,6 +230,70 @@ export default function CardTemplateManager({
               <>🎨 스타일 분석 ({uploadedImages.length}개 이미지)</>
             )}
           </button>
+
+          {/* 학습 완료 후 미리보기 */}
+          {lastAnalyzed && (
+            <div className="mt-3 p-3 rounded-xl border border-green-200 bg-green-50/40">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-[11px] font-bold text-green-700">✓ 학습 완료 — 미리보기</p>
+                <button type="button" onClick={() => setLastAnalyzed(null)}
+                  className="text-[10px] text-slate-400 hover:text-slate-600">닫기</button>
+              </div>
+              <div className="flex gap-3 items-start">
+                <div
+                  style={{
+                    width: '160px',
+                    height: '160px',
+                    borderRadius: '12px',
+                    overflow: 'hidden',
+                    background: lastAnalyzed.template.backgroundStyle?.gradient
+                      || lastAnalyzed.template.colors.backgroundGradient
+                      || lastAnalyzed.template.colors.background,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'center',
+                    alignItems: lastAnalyzed.template.layoutRules?.titleAlign === 'center' ? 'center' : 'flex-start',
+                    padding: '20px',
+                    textAlign: lastAnalyzed.template.layoutRules?.titleAlign === 'center' ? 'center' : 'left',
+                    fontFamily: lastAnalyzed.template.typography.fontFamily,
+                    position: 'relative',
+                    flexShrink: 0,
+                  }}
+                >
+                  <div style={{
+                    width: '30px',
+                    height: '3px',
+                    background: lastAnalyzed.template.colors.accentColor,
+                    marginBottom: '8px',
+                    borderRadius: '2px',
+                  }} />
+                  <div style={{
+                    color: lastAnalyzed.template.colors.titleColor,
+                    fontSize: '14px',
+                    fontWeight: 900,
+                    lineHeight: 1.25,
+                  }}>샘플 제목</div>
+                  <div style={{
+                    color: lastAnalyzed.template.colors.subtitleColor,
+                    fontSize: '10px',
+                    marginTop: '4px',
+                    fontWeight: 600,
+                  }}>부제 텍스트</div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[11px] font-bold text-slate-700 truncate">
+                    {lastAnalyzed.template.name}
+                  </p>
+                  <p className="text-[10px] text-slate-500 mt-1 line-clamp-4">
+                    {lastAnalyzed.analysis || '디자인 분석이 완료되었습니다.'}
+                  </p>
+                  <p className="text-[10px] text-green-700 mt-2 font-semibold">
+                    자동 선택됨 — 아래 &quot;닫기&quot;를 눌러 돌아가세요.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

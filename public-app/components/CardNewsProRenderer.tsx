@@ -3,6 +3,27 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import type { SlideData, CardNewsTheme, SlideLayoutType, SlideImagePosition, SlideImageStyle, SlideComparisonColumn } from '../lib/cardNewsLayouts';
 import { LAYOUT_LABELS, CARD_FONTS, FONT_CATEGORIES, getCardFont, SLIDE_IMAGE_STYLES } from '../lib/cardNewsLayouts';
+import type { CardTemplate } from '../lib/cardTemplateService';
+
+/**
+ * CSS 선언 문자열 "height: 6px; background: red" 를 React 스타일 객체로 파싱.
+ * AI가 추출한 학습 템플릿의 CSS 힌트를 style prop에 직접 꽂기 위한 헬퍼.
+ */
+function parseCSSString(css: string | undefined): CSSProperties {
+  const result: Record<string, string> = {};
+  if (!css) return result as CSSProperties;
+  css.split(';').forEach(rule => {
+    const idx = rule.indexOf(':');
+    if (idx <= 0) return;
+    const key = rule.slice(0, idx).trim();
+    const value = rule.slice(idx + 1).trim();
+    if (!key || !value) return;
+    // kebab-case → camelCase
+    const camel = key.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase());
+    result[camel] = value;
+  });
+  return result as CSSProperties;
+}
 
 /** Google Fonts CDN에서 한 번만 로드. 이미 있으면 스킵 */
 function ensureGoogleFontLoaded(fontId: string) {
@@ -23,6 +44,8 @@ interface Props {
   theme: CardNewsTheme;
   onSlidesChange: (slides: SlideData[]) => void;
   onThemeChange: (theme: CardNewsTheme) => void;
+  /** 학습한 디자인 템플릿 — 있으면 배경/내부카드/장식을 학습 값으로 오버라이드 */
+  learnedTemplate?: CardTemplate | null;
 }
 
 /**
@@ -38,7 +61,9 @@ interface Props {
  *   transform: scale(컨테이너폭 / 1080)로 축소한다. 다운로드는 별도의
  *   captureNodeAsCanvas 헬퍼가 scale을 제거한 복제본을 풀사이즈로 캡처.
  */
-export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onThemeChange }: Props) {
+export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onThemeChange, learnedTemplate }: Props) {
+  // shorthand — 학습 템플릿이 있을 때 상세 토큰으로 렌더 오버라이드
+  const lt = learnedTemplate || null;
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
   const boxRefs = useRef<(HTMLDivElement | null)[]>([]);
   const [downloading, setDownloading] = useState(false);
@@ -596,6 +621,8 @@ JSON 한 객체만 출력:
   // 공통 스타일
   // ═══════════════════════════════════════
 
+  // 학습 템플릿이 있으면 배경/레이아웃을 학습 값으로 오버라이드
+  const learnedBgGradient = lt?.backgroundStyle?.gradient || lt?.colors?.backgroundGradient;
   const cardContainerStyle: CSSProperties = {
     width: '1080px',
     height: '1080px',
@@ -604,15 +631,15 @@ JSON 한 객체만 출력:
     // isolation: 'isolate'는 자체 스택 컨텍스트를 만들어서 음수 z-index 자식
     // (renderImageLayer의 배경 이미지)이 부모 배경보다 위에 그려지게 한다.
     isolation: 'isolate',
-    background: theme.backgroundGradient || theme.backgroundColor,
+    background: learnedBgGradient || theme.backgroundGradient || theme.backgroundColor,
     fontFamily: effectiveFontFamily,
     display: 'flex',
     flexDirection: 'column',
-    padding: '60px 64px',
+    padding: lt?.layoutRules?.contentPadding || '60px 64px',
     boxSizing: 'border-box',
     // 기본 좌측 정렬 + 적정 줄 간격. cover/closing 등 중앙 정렬 레이아웃은
     // 각 렌더 함수에서 textAlign:'center'로 오버라이드.
-    textAlign: 'left',
+    textAlign: lt?.layoutRules?.titleAlign || 'left',
     lineHeight: 1.5,
   };
 
@@ -627,15 +654,78 @@ JSON 한 객체만 출력:
     return (r * 299 + g * 587 + b * 114) / 1000 < 140;
   })();
 
-  /** 내부 카드·비교표 셀 공통 베이스 색 (테마 대비 자동) */
-  const innerCardBg = isDarkTheme ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)';
-  const innerCardBorder = isDarkTheme ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)';
+  /** 내부 카드·비교표 셀 공통 베이스 색 (테마 대비 자동, 학습 템플릿이 있으면 그 값 우선) */
+  const innerCardBg = lt?.innerCardStyle?.background
+    || (isDarkTheme ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)');
+  const innerCardBorderRaw = lt?.innerCardStyle?.border;
+  const innerCardBorder = (innerCardBorderRaw && innerCardBorderRaw !== 'none' ? innerCardBorderRaw : null)
+    || (isDarkTheme ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)');
+  const innerCardRadius = lt?.innerCardStyle?.borderRadius || '18px';
+  const innerCardShadow = lt?.innerCardStyle?.boxShadow && lt.innerCardStyle.boxShadow !== 'none'
+    ? lt.innerCardStyle.boxShadow
+    : (isDarkTheme ? 'none' : '0 4px 12px rgba(0,0,0,0.04)');
 
   /**
-   * 공통 배경 장식 — 모든 렌더 함수의 루트 div 최상단에 삽입.
-   * radial gradient 2개로 미세한 깊이감, 상/하단 accent 라인으로 포인트.
+   * 공통 배경 장식 — 학습 템플릿의 토큰이 있으면 그것을, 없으면 기본 decoration 사용.
    */
-  const backgroundDecoration = (
+  const backgroundDecoration = lt && (lt.backgroundStyle || lt.decorations) ? (
+    <>
+      {/* 학습된 패턴 배경 */}
+      {lt.backgroundStyle?.patternCSS && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            backgroundImage: lt.backgroundStyle.patternCSS,
+            zIndex: 0,
+            pointerEvents: 'none',
+          }}
+        />
+      )}
+      {/* 학습된 상단 accent */}
+      {lt.backgroundStyle?.hasTopAccent && lt.backgroundStyle.topAccentCSS && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            zIndex: 3,
+            pointerEvents: 'none',
+            ...parseCSSString(lt.backgroundStyle.topAccentCSS),
+          }}
+        />
+      )}
+      {/* 학습된 하단 accent */}
+      {lt.backgroundStyle?.hasBottomAccent && lt.backgroundStyle.bottomAccentCSS && (
+        <div
+          style={{
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            zIndex: 3,
+            pointerEvents: 'none',
+            ...parseCSSString(lt.backgroundStyle.bottomAccentCSS),
+          }}
+        />
+      )}
+      {/* 학습된 도형 장식 */}
+      {lt.decorations?.hasShapeDecor && lt.decorations.shapeDecorCSS && (
+        <div
+          style={{
+            position: 'absolute',
+            zIndex: 0,
+            pointerEvents: 'none',
+            ...parseCSSString(lt.decorations.shapeDecorCSS),
+          }}
+        />
+      )}
+    </>
+  ) : (
     <>
       <div
         style={{
@@ -678,20 +768,30 @@ JSON 한 객체만 출력:
     </>
   );
 
-  /** 섹션 헤더용 장식 라인 (제목 위 accent 바) */
-  const titleAccent = (align: 'left' | 'center' = 'left') => (
-    <div
-      style={{
-        width: '60px',
-        height: '5px',
-        background: theme.accentColor,
-        borderRadius: '3px',
-        marginBottom: '20px',
-        marginLeft: align === 'center' ? 'auto' : 0,
-        marginRight: align === 'center' ? 'auto' : 0,
-      }}
-    />
-  );
+  /** 섹션 헤더용 장식 라인 (제목 위 accent 바) — 학습 템플릿이 있으면 그 CSS 우선 */
+  const learnedAccentBarStyle = lt?.decorations?.hasAccentBar && lt.decorations.accentBarCSS
+    ? parseCSSString(lt.decorations.accentBarCSS)
+    : null;
+  const titleAccent = (align: 'left' | 'center' = 'left') => {
+    if (lt && lt.decorations && !lt.decorations.hasAccentBar) {
+      // 학습 템플릿이 accent bar 없음을 명시하면 표시 안 함
+      return null;
+    }
+    return (
+      <div
+        style={{
+          width: '60px',
+          height: '5px',
+          background: theme.accentColor,
+          borderRadius: '3px',
+          marginBottom: '20px',
+          marginLeft: align === 'center' ? 'auto' : 0,
+          marginRight: align === 'center' ? 'auto' : 0,
+          ...(learnedAccentBarStyle || {}),
+        }}
+      />
+    );
+  };
 
   const topBar = (
     <div
