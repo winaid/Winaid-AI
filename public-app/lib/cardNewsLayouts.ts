@@ -44,6 +44,18 @@ export interface SlideDataPoint {
 
 export type SlideImagePosition = 'background' | 'top' | 'center';
 
+/** 슬라이드 이미지 생성 스타일 프리셋 */
+export const SLIDE_IMAGE_STYLES = [
+  { id: 'illustration',  name: '일러스트',    prompt: 'soft 3D pastel illustration, cute rounded style, clean background' },
+  { id: 'medical-3d',    name: '3D 해부',     prompt: 'medical 3D anatomical render, scientific visualization, detailed cross-section' },
+  { id: 'photo',         name: '실사 사진',    prompt: 'professional medical photograph, clinic setting, natural lighting' },
+  { id: 'infographic',   name: '인포그래픽',  prompt: 'flat design infographic element, minimal vector style, clean icons' },
+  { id: 'xray',          name: 'X-ray/CT',    prompt: 'dental X-ray or CT scan style, dark background, medical imaging' },
+  { id: 'watercolor',    name: '수채화',      prompt: 'soft watercolor painting style, gentle colors, artistic medical illustration' },
+] as const;
+
+export type SlideImageStyle = typeof SLIDE_IMAGE_STYLES[number]['id'];
+
 export interface SlideData {
   index: number;
   layout: SlideLayoutType;
@@ -73,6 +85,7 @@ export interface SlideData {
   visualKeyword?: string;   // AI가 지정한 이미지 프롬프트 키워드(영문)
   imageUrl?: string;        // /api/image 결과 dataURL
   imagePosition?: SlideImagePosition;
+  imageStyle?: SlideImageStyle; // 이미지 생성 스타일
 }
 
 export interface CardNewsTheme {
@@ -285,6 +298,9 @@ function normalizeSlide(raw: Partial<SlideData>, i: number): SlideData {
     visualKeyword: raw.visualKeyword,
     imageUrl: raw.imageUrl,
     imagePosition: validPosition,
+    imageStyle: raw.imageStyle && SLIDE_IMAGE_STYLES.some(s => s.id === raw.imageStyle)
+      ? raw.imageStyle
+      : undefined,
   };
 }
 

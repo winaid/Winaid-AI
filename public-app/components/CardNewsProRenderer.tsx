@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
-import type { SlideData, CardNewsTheme, SlideLayoutType } from '../lib/cardNewsLayouts';
-import { LAYOUT_LABELS, CARD_FONTS, FONT_CATEGORIES, getCardFont } from '../lib/cardNewsLayouts';
+import type { SlideData, CardNewsTheme, SlideLayoutType, SlideImagePosition, SlideImageStyle, SlideComparisonColumn } from '../lib/cardNewsLayouts';
+import { LAYOUT_LABELS, CARD_FONTS, FONT_CATEGORIES, getCardFont, SLIDE_IMAGE_STYLES } from '../lib/cardNewsLayouts';
 
 /** Google Fonts CDN에서 한 번만 로드. 이미 있으면 스킵 */
 function ensureGoogleFontLoaded(fontId: string) {
@@ -44,6 +44,9 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
   const [downloading, setDownloading] = useState(false);
   const [editingIdx, setEditingIdx] = useState<number | null>(null);
   const [scales, setScales] = useState<number[]>([]);
+  // 슬라이드별 AI 이미지/텍스트 생성 상태
+  const [generatingImageIdx, setGeneratingImageIdx] = useState<number | null>(null);
+  const [aiSuggestingKey, setAiSuggestingKey] = useState<string | null>(null); // `${idx}:${field}`
 
   // 미리보기 박스 폭에 맞춰 scale 재계산
   useEffect(() => {
@@ -73,6 +76,135 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
   /** 특정 슬라이드 업데이트 (얕은 머지) */
   const updateSlide = (idx: number, patch: Partial<SlideData>) => {
     onSlidesChange(slides.map((s, i) => (i === idx ? { ...s, ...patch } : s)));
+  };
+
+  /** 슬라이드별 AI 이미지 생성 */
+  const handleGenerateSlideImage = async (idx: number) => {
+    const slide = slides[idx];
+    if (!slide) return;
+    setGeneratingImageIdx(idx);
+    try {
+      const styleId = slide.imageStyle || 'illustration';
+      const styleDef = SLIDE_IMAGE_STYLES.find(s => s.id === styleId) || SLIDE_IMAGE_STYLES[0];
+      const subject = slide.visualKeyword || slide.title;
+      const fullPrompt = `${subject}, ${styleDef.prompt}`;
+      const res = await fetch('/api/image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: fullPrompt,
+          aspectRatio: '16:9',
+          mode: 'card_news',
+          imageStyle: 'illustration',
+        }),
+      });
+      const data = await res.json() as { imageDataUrl?: string; error?: string };
+      if (res.ok && data.imageDataUrl) {
+        updateSlide(idx, {
+          imageUrl: data.imageDataUrl,
+          imagePosition: slide.imagePosition || 'top',
+        });
+      } else {
+        console.warn('[CARD_NEWS_PRO] AI 이미지 생성 실패', data.error);
+      }
+    } catch (err) {
+      console.warn('[CARD_NEWS_PRO] AI 이미지 생성 에러', err);
+    } finally {
+      setGeneratingImageIdx(null);
+    }
+  };
+
+  /** 사용자 파일 업로드 */
+  const handleUploadSlideImage = (idx: number, file: File) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const slide = slides[idx];
+      updateSlide(idx, {
+        imageUrl: reader.result as string,
+        imagePosition: slide?.imagePosition || 'top',
+      });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  /** AI 텍스트 필드 추천 (title / subtitle / body) */
+  const handleAiSuggestText = async (idx: number, field: 'title' | 'subtitle' | 'body') => {
+    const slide = slides[idx];
+    if (!slide) return;
+    const key = `${idx}:${field}`;
+    setAiSuggestingKey(key);
+    try {
+      const context = `카드뉴스 슬라이드 ${slide.index}장 (레이아웃: ${slide.layout})
+현재 제목: ${slide.title}
+현재 부제: ${slide.subtitle || ''}
+현재 본문: ${slide.body || ''}
+전체 주제: ${slides[0]?.title || ''}`;
+      const prompts: Record<string, string> = {
+        title: '위 카드뉴스 슬라이드의 제목을 더 매력적으로 다시 써줘. 20자 이내. 제목 한 줄만 출력. 따옴표·설명 금지.',
+        subtitle: '위 슬라이드의 부제를 써줘. 25자 이내. 부제 한 줄만 출력. 따옴표·설명 금지.',
+        body: '위 슬라이드의 본문을 구체적 수치 포함해 다시 써줘. 3문장 이내. 본문만 출력. 따옴표·설명 금지.',
+      };
+      const res = await fetch('/api/gemini', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: `${context}\n\n${prompts[field]}`,
+          systemInstruction: '카드뉴스 콘텐츠 전문가. 요청한 필드 값만 반환. 의료광고법 준수. 최상급/단정 표현 금지.',
+          model: 'gemini-3.1-flash-lite-preview',
+          temperature: 0.8,
+          maxOutputTokens: 200,
+        }),
+      });
+      const data = await res.json() as { text?: string };
+      if (data.text) {
+        const cleaned = data.text.replace(/^["'`]+|["'`]+$/g, '').trim();
+        if (cleaned) updateSlide(idx, { [field]: cleaned } as Partial<SlideData>);
+      }
+    } catch (err) {
+      console.warn('[CARD_NEWS_PRO] AI 추천 실패', err);
+    } finally {
+      setAiSuggestingKey(null);
+    }
+  };
+
+  /** AI 비교표 자동 채우기 */
+  const handleAiSuggestComparison = async (idx: number) => {
+    const slide = slides[idx];
+    if (!slide || slide.layout !== 'comparison') return;
+    const key = `${idx}:comparison`;
+    setAiSuggestingKey(key);
+    try {
+      const res = await fetch('/api/gemini', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: `"${slide.title}" 주제로 2열 비교표를 만들어줘.
+JSON 한 객체만 출력:
+{"compareLabels": ["항목1","항목2","항목3","항목4"], "columns": [{"header":"A","highlight":false,"items":["값","값","값","값"]},{"header":"B","highlight":true,"items":["값","값","값","값"]}]}`,
+          systemInstruction: 'JSON만 출력. 의료 전문가. 구체적 수치 포함. 최상급/단정 표현 금지.',
+          model: 'gemini-3.1-flash-lite-preview',
+          temperature: 0.7,
+          maxOutputTokens: 500,
+          responseType: 'json',
+        }),
+      });
+      const data = await res.json() as { text?: string };
+      if (data.text) {
+        try {
+          const cleaned = data.text.replace(/```json?\s*\n?/gi, '').replace(/\n?```\s*$/g, '').trim();
+          const parsed = JSON.parse(cleaned) as { compareLabels?: string[]; columns?: SlideComparisonColumn[] };
+          if (parsed.compareLabels && parsed.columns) {
+            updateSlide(idx, { compareLabels: parsed.compareLabels, columns: parsed.columns });
+          }
+        } catch (parseErr) {
+          console.warn('[CARD_NEWS_PRO] comparison JSON 파싱 실패', parseErr);
+        }
+      }
+    } catch (err) {
+      console.warn('[CARD_NEWS_PRO] AI 비교 추천 실패', err);
+    } finally {
+      setAiSuggestingKey(null);
+    }
   };
 
   /** theme.fontId → CARD_FONTS family 우선, 없으면 theme.fontFamily */
@@ -229,7 +361,6 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
               backgroundImage: `url(${slide.imageUrl})`,
               backgroundSize: 'cover',
               backgroundPosition: 'center',
-              opacity: 0.32,
               zIndex: -1,
             }}
           />
@@ -240,7 +371,7 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
               left: 0,
               width: '100%',
               height: '100%',
-              background: 'linear-gradient(180deg, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.55) 100%)',
+              background: 'linear-gradient(180deg, rgba(0,0,0,0.50) 0%, rgba(0,0,0,0.72) 100%)',
               zIndex: -1,
             }}
           />
@@ -253,10 +384,10 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
         <div
           style={{
             width: '100%',
-            height: '300px',
+            height: '420px',
             overflow: 'hidden',
             borderRadius: '20px',
-            marginBottom: '28px',
+            marginBottom: '32px',
             boxShadow: '0 10px 30px rgba(0,0,0,0.25)',
             flexShrink: 0,
           }}
@@ -1120,7 +1251,17 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
               {/* 편집 패널 */}
               {isEditing && (
                 <div className="px-3 pb-3 pt-1 space-y-2 border-t border-slate-100 bg-slate-50/50">
-                  <SlideEditor slide={slide} onChange={(patch) => updateSlide(idx, patch)} />
+                  <SlideEditor
+                    slide={slide}
+                    slideIdx={idx}
+                    onChange={(patch) => updateSlide(idx, patch)}
+                    onGenerateImage={() => handleGenerateSlideImage(idx)}
+                    onUploadImage={(file) => handleUploadSlideImage(idx, file)}
+                    onAiSuggestText={(field) => handleAiSuggestText(idx, field)}
+                    onAiSuggestComparison={() => handleAiSuggestComparison(idx)}
+                    generatingImage={generatingImageIdx === idx}
+                    aiSuggestingKey={aiSuggestingKey}
+                  />
                 </div>
               )}
             </div>
@@ -1137,38 +1278,164 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
 
 interface SlideEditorProps {
   slide: SlideData;
+  slideIdx: number;
   onChange: (patch: Partial<SlideData>) => void;
+  onGenerateImage: () => void;
+  onUploadImage: (file: File) => void;
+  onAiSuggestText: (field: 'title' | 'subtitle' | 'body') => void;
+  onAiSuggestComparison: () => void;
+  generatingImage: boolean;
+  aiSuggestingKey: string | null;
 }
 
-function SlideEditor({ slide, onChange }: SlideEditorProps) {
+function SlideEditor({
+  slide,
+  slideIdx,
+  onChange,
+  onGenerateImage,
+  onUploadImage,
+  onAiSuggestText,
+  onAiSuggestComparison,
+  generatingImage,
+  aiSuggestingKey,
+}: SlideEditorProps) {
   const inputCls = 'w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-200';
   const labelCls = 'block text-[10px] font-semibold text-slate-500 mb-0.5';
   const textareaCls = `${inputCls} resize-none`;
+
+  const isSuggesting = (field: string) => aiSuggestingKey === `${slideIdx}:${field}`;
+
+  /** AI 추천 버튼이 붙은 라벨 */
+  const fieldLabel = (label: string, field: 'title' | 'subtitle' | 'body') => (
+    <div className="flex items-center justify-between mb-0.5">
+      <label className="text-[10px] font-semibold text-slate-500">{label}</label>
+      <button
+        type="button"
+        onClick={() => onAiSuggestText(field)}
+        disabled={isSuggesting(field)}
+        className="text-[9px] font-bold text-purple-600 hover:text-purple-700 disabled:opacity-50"
+      >
+        {isSuggesting(field) ? '추천 중...' : '✨ AI 추천'}
+      </button>
+    </div>
+  );
 
   // 공통 필드: title, subtitle
   const common = (
     <>
       <div>
-        <label className={labelCls}>제목</label>
+        {fieldLabel('제목', 'title')}
         <input type="text" value={slide.title} onChange={(e) => onChange({ title: e.target.value })} className={inputCls} />
       </div>
       <div>
-        <label className={labelCls}>부제</label>
+        {fieldLabel('부제', 'subtitle')}
         <input type="text" value={slide.subtitle || ''} onChange={(e) => onChange({ subtitle: e.target.value })} className={inputCls} placeholder="(선택)" />
       </div>
     </>
   );
 
-  if (slide.layout === 'cover') return <>{common}</>;
+  // ── 슬라이드 이미지 섹션 (모든 레이아웃 공통) ──
+  const imageSection = (
+    <div className="pt-2 mt-2 border-t border-slate-200 space-y-2">
+      <label className="text-[10px] font-semibold text-slate-500">슬라이드 이미지</label>
+      {slide.imageUrl ? (
+        <div className="space-y-1.5">
+          <div className="relative">
+            <img src={slide.imageUrl} alt="" className="w-full h-32 object-cover rounded-lg border border-slate-200" />
+            <button
+              type="button"
+              onClick={() => onChange({ imageUrl: undefined })}
+              className="absolute top-1 right-1 px-2 py-0.5 bg-red-500 text-white text-[9px] font-bold rounded-md shadow hover:bg-red-600"
+            >
+              삭제
+            </button>
+          </div>
+          <div className="flex gap-1">
+            {(['top', 'background', 'center'] as const).map((pos) => (
+              <button
+                key={pos}
+                type="button"
+                onClick={() => onChange({ imagePosition: pos as SlideImagePosition })}
+                className={`flex-1 py-1 text-[9px] font-bold rounded transition-colors ${
+                  (slide.imagePosition || 'top') === pos
+                    ? 'bg-blue-500 text-white'
+                    : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                }`}
+              >
+                {pos === 'top' ? '상단' : pos === 'background' ? '배경' : '중앙'}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {/* 이미지 스타일 선택 */}
+          <div className="flex gap-1 flex-wrap">
+            {SLIDE_IMAGE_STYLES.map((style) => {
+              const active = (slide.imageStyle || 'illustration') === style.id;
+              return (
+                <button
+                  key={style.id}
+                  type="button"
+                  onClick={() => onChange({ imageStyle: style.id as SlideImageStyle })}
+                  className={`px-2 py-1 text-[9px] rounded-lg border transition-all ${
+                    active
+                      ? 'border-blue-400 bg-blue-50 text-blue-700 font-bold'
+                      : 'border-slate-200 text-slate-500 hover:border-slate-300'
+                  }`}
+                >
+                  {style.name}
+                </button>
+              );
+            })}
+          </div>
+          {/* 생성/업로드 버튼 */}
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={onGenerateImage}
+              disabled={generatingImage}
+              className="flex-1 py-2 bg-blue-50 text-blue-600 text-[10px] font-bold rounded-lg border border-blue-200 hover:bg-blue-100 disabled:opacity-50"
+            >
+              {generatingImage ? (
+                <span className="flex items-center justify-center gap-1">
+                  <span className="w-3 h-3 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
+                  생성 중...
+                </span>
+              ) : (
+                '🎨 AI 이미지 생성'
+              )}
+            </button>
+            <label className="flex-1 py-2 bg-slate-50 text-slate-600 text-[10px] font-bold rounded-lg border border-slate-200 hover:bg-slate-100 cursor-pointer text-center flex items-center justify-center">
+              📁 직접 업로드
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) onUploadImage(file);
+                  e.target.value = '';
+                }}
+              />
+            </label>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  if (slide.layout === 'cover') return <>{common}{imageSection}</>;
 
   if (slide.layout === 'info' || slide.layout === 'closing') {
     return (
       <>
         {common}
         <div>
-          <label className={labelCls}>본문</label>
+          {fieldLabel('본문', 'body')}
           <textarea rows={3} value={slide.body || ''} onChange={(e) => onChange({ body: e.target.value })} className={textareaCls} />
         </div>
+        {imageSection}
       </>
     );
   }
@@ -1194,9 +1461,18 @@ function SlideEditor({ slide, onChange }: SlideEditorProps) {
       next[ri] = value;
       onChange({ compareLabels: next });
     };
+    const isSuggestingComparison = aiSuggestingKey === `${slideIdx}:comparison`;
     return (
       <>
         {common}
+        <button
+          type="button"
+          onClick={onAiSuggestComparison}
+          disabled={isSuggestingComparison}
+          className="w-full py-1.5 bg-purple-50 text-purple-600 text-[10px] font-bold rounded-lg border border-purple-200 hover:bg-purple-100 disabled:opacity-50"
+        >
+          {isSuggestingComparison ? '생성 중...' : '✨ AI로 비교 데이터 자동 채우기'}
+        </button>
         <div>
           <label className={labelCls}>비교 행 라벨 + 컬럼별 값</label>
           <div className="space-y-1.5">
@@ -1218,6 +1494,7 @@ function SlideEditor({ slide, onChange }: SlideEditorProps) {
             ))}
           </div>
         </div>
+        {imageSection}
       </>
     );
   }
@@ -1242,6 +1519,7 @@ function SlideEditor({ slide, onChange }: SlideEditorProps) {
             ))}
           </div>
         </div>
+        {imageSection}
       </>
     );
   }
@@ -1265,6 +1543,7 @@ function SlideEditor({ slide, onChange }: SlideEditorProps) {
             ))}
           </div>
         </div>
+        {imageSection}
       </>
     );
   }
@@ -1287,6 +1566,7 @@ function SlideEditor({ slide, onChange }: SlideEditorProps) {
             ))}
           </div>
         </div>
+        {imageSection}
       </>
     );
   }
@@ -1310,9 +1590,10 @@ function SlideEditor({ slide, onChange }: SlideEditorProps) {
             ))}
           </div>
         </div>
+        {imageSection}
       </>
     );
   }
 
-  return <>{common}</>;
+  return <>{common}{imageSection}</>;
 }

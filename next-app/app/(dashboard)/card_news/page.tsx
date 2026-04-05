@@ -63,8 +63,6 @@ export default function CardNewsPage() {
   const proMode = true as const;
   const [proSlides, setProSlides] = useState<ProSlideData[]>([]);
   const [proTheme, setProTheme] = useState<CardNewsTheme>({ ...DEFAULT_THEME });
-  // 프로 레이아웃에서 AI 일러스트를 포함할지 (체크 시 시간 더 걸림)
-  const [proImageEnabled, setProImageEnabled] = useState(false);
   const [learnedTemplate, setLearnedTemplate] = useState<CardTemplate | null>(null);
   // 학습한 디자인 템플릿이 선택되면 프로 모드 테마에도 자동 반영
   useEffect(() => {
@@ -286,39 +284,6 @@ export default function CardNewsPage() {
 
       setProSlides(slides);
       setPipelineStep('idle');
-
-      if (proImageEnabled) {
-        setProgress('AI 일러스트 생성 중... (슬라이드당 30~90초)');
-        const withImages: ProSlideData[] = [];
-        for (const slide of slides) {
-          if (!slide.visualKeyword) {
-            withImages.push(slide);
-            continue;
-          }
-          try {
-            const imgRes = await fetch('/api/image', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                prompt: slide.visualKeyword,
-                aspectRatio: '1:1',
-                mode: 'card_news',
-                imageStyle: 'illustration',
-              }),
-            });
-            const imgData = await imgRes.json() as { imageDataUrl?: string };
-            if (imgRes.ok && imgData.imageDataUrl) {
-              withImages.push({ ...slide, imageUrl: imgData.imageDataUrl });
-              setProSlides([...withImages, ...slides.slice(withImages.length)]);
-              continue;
-            }
-          } catch (imgErr) {
-            console.warn('[CARD_NEWS_PRO] 이미지 생성 실패', slide.index, imgErr);
-          }
-          withImages.push(slide);
-        }
-        setProSlides(withImages);
-      }
     } catch (err) {
       setError(err instanceof Error ? err.message : '네트워크 오류');
     } finally {
@@ -990,15 +955,6 @@ ${newsContext ? `\n[📰 최신 네이버 뉴스 분석]\n${newsContext}\n\n⚠�
                 </div>
               )}
             </div>
-
-            {/* AI 일러스트 포함 옵션 */}
-            <label className="flex items-center gap-2 cursor-pointer px-3 py-2 bg-slate-50 rounded-xl border border-slate-100">
-              <input type="checkbox" checked={proImageEnabled}
-                onChange={e => setProImageEnabled(e.target.checked)}
-                className="w-4 h-4 rounded border-slate-300 text-blue-500" />
-              <span className="text-xs text-slate-600 font-medium">✨ AI 일러스트 포함 생성</span>
-              <span className="text-[10px] text-slate-400 ml-auto">시간 더 걸림</span>
-            </label>
 
             {/* 콘텐츠 분량 */}
             <div>
