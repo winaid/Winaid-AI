@@ -42,10 +42,6 @@ export const TEAM_DATA: TeamData[] = [
       { name: '아산베스트치과', manager: '김소영 매니저님', address: '충남 아산시 용화동', naverBlogUrls: ['https://blog.naver.com/soiidinmfve75174', 'https://blog.naver.com/czzhuy6104'] },
       { name: '검단일등치과', manager: '김소영 매니저님', address: '인천 서구 불로동', naverBlogUrls: ['https://blog.naver.com/geomdan1stdental', 'https://blog.naver.com/o48j69omlwlnj6'] },
       { name: '코랄치과 (김소영)', manager: '김소영 매니저님', address: '서울 강동구 성내동', naverBlogUrls: ['https://blog.naver.com/timber12502', 'https://blog.naver.com/ffpvksk4i', 'https://blog.naver.com/ran2hoho'] },
-      // 김소현 매니저님
-      { name: '바른플란트치과', manager: '김소현 매니저님', address: '서울 중랑구 망우동', naverBlogUrls: ['https://blog.naver.com/brplant', 'https://blog.naver.com/wwwlsl123'] },
-      // 이지안 매니저님
-      { name: '논산중앙치과', manager: '이지안 매니저님', address: '충남 논산시 반월동', naverBlogUrls: ['https://blog.naver.com/cha1636ndsu'] },
       // 최휘원 매니저님
       { name: '부천그랜드치과', manager: '최휘원 매니저님', address: '경기 부천시 원미구 중동', naverBlogUrls: ['https://blog.naver.com/dnautmqq'] },
     ],
@@ -84,6 +80,9 @@ export const TEAM_DATA: TeamData[] = [
       // 최소현 매니저님
       { name: '오늘안치과 (최소현)', manager: '최소현 매니저님', address: '경기 성남시 수정구 태평동', naverBlogUrls: ['https://blog.naver.com/clinical641'] },
       { name: '연세하늘치과 (최소현)', manager: '최소현 매니저님', address: '서울 중구 충무로2가', naverBlogUrls: ['https://blog.naver.com/jkj9799'] },
+      { name: '바른플란트치과', manager: '최소현 매니저님', address: '서울 중랑구 망우동', naverBlogUrls: ['https://blog.naver.com/brplant', 'https://blog.naver.com/wwwlsl123'] },
+      // 이지안 매니저님
+      { name: '논산중앙치과', manager: '이지안 매니저님', address: '충남 논산시 반월동', naverBlogUrls: ['https://blog.naver.com/cha1636ndsu'] },
     ],
   },
   {

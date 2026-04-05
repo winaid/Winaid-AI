@@ -65,10 +65,6 @@ INSERT INTO public.hospitals (team_id, name, manager, address, naver_blog_urls) 
   (1, '아산베스트치과', '김소영 매니저님', '충남 아산시 용화동', ARRAY['https://blog.naver.com/soiidinmfve75174','https://blog.naver.com/czzhuy6104']),
   (1, '검단일등치과', '김소영 매니저님', '인천 서구 불로동', ARRAY['https://blog.naver.com/geomdan1stdental','https://blog.naver.com/o48j69omlwlnj6']),
   (1, '코랄치과 (김소영)', '김소영 매니저님', '서울 강동구 성내동', ARRAY['https://blog.naver.com/timber12502','https://blog.naver.com/ffpvksk4i','https://blog.naver.com/ran2hoho']),
-  -- 1팀 김소현
-  (1, '바른플란트치과', '김소현 매니저님', '서울 중랑구 망우동', ARRAY['https://blog.naver.com/brplant','https://blog.naver.com/wwwlsl123']),
-  -- 1팀 이지안
-  (1, '논산중앙치과', '이지안 매니저님', '충남 논산시 반월동', ARRAY['https://blog.naver.com/cha1636ndsu']),
   -- 1팀 최휘원
   (1, '부천그랜드치과', '최휘원 매니저님', '경기 부천시 원미구 중동', ARRAY['https://blog.naver.com/dnautmqq']),
   -- 2팀 신미정
@@ -94,7 +90,10 @@ INSERT INTO public.hospitals (team_id, name, manager, address, naver_blog_urls) 
   (3, '이고운치과', '이도화 선임님', '경기 파주시 목동동', ARRAY['https://blog.naver.com/tdhhnx5899']),
   -- 3팀 최소현
   (3, '오늘안치과 (최소현)', '최소현 매니저님', '경기 성남시 수정구 태평동', ARRAY['https://blog.naver.com/clinical641']),
-  (3, '연세하늘치과 (최소현)', '최소현 매니저님', '서울 중구 충무로2가', ARRAY['https://blog.naver.com/jkj9799'])
+  (3, '연세하늘치과 (최소현)', '최소현 매니저님', '서울 중구 충무로2가', ARRAY['https://blog.naver.com/jkj9799']),
+  (3, '바른플란트치과', '최소현 매니저님', '서울 중랑구 망우동', ARRAY['https://blog.naver.com/brplant','https://blog.naver.com/wwwlsl123']),
+  -- 3팀 이지안
+  (3, '논산중앙치과', '이지안 매니저님', '충남 논산시 반월동', ARRAY['https://blog.naver.com/cha1636ndsu'])
 ON CONFLICT (name) DO UPDATE SET
   team_id = EXCLUDED.team_id,
   manager = EXCLUDED.manager,
