@@ -31,14 +31,38 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
   // ═══════════════════════════════════════
   // 다운로드
   // ═══════════════════════════════════════
+  //
+  // cardRefs는 미리보기 영역의 transform:scale(0.25)된 div를 가리킨다.
+  // 그대로 html2canvas에 넘기면 270×270 이미지의 좌상단에만 콘텐츠가 잡혀
+  // 나머지가 검은색으로 나온다. 그래서 다운로드 시점에만:
+  //   1) 해당 div를 cloneNode(true)로 복제
+  //   2) transform 제거 + 화면 밖(-9999px)의 임시 컨테이너에 붙임
+  //   3) 풀사이즈 1080×1080 상태에서 캡처
+  //   4) 임시 컨테이너 제거
+  // 방식으로 처리한다.
 
-  const downloadCard = async (index: number) => {
-    const el = cardRefs.current[index];
-    if (!el) return;
-    setDownloading(true);
+  const captureNodeAsCanvas = async (sourceEl: HTMLElement) => {
+    const tempContainer = document.createElement('div');
+    tempContainer.style.position = 'fixed';
+    tempContainer.style.left = '-9999px';
+    tempContainer.style.top = '0';
+    tempContainer.style.width = '1080px';
+    tempContainer.style.height = '1080px';
+    tempContainer.style.zIndex = '-1';
+    tempContainer.style.pointerEvents = 'none';
+    document.body.appendChild(tempContainer);
+
+    const clone = sourceEl.cloneNode(true) as HTMLElement;
+    clone.style.transform = 'none';
+    clone.style.position = 'static';
+    clone.style.width = '1080px';
+    clone.style.height = '1080px';
+    clone.style.pointerEvents = 'auto';
+    tempContainer.appendChild(clone);
+
     try {
       const html2canvas = (await import('html2canvas')).default;
-      const canvas = await html2canvas(el, {
+      return await html2canvas(tempContainer, {
         scale: 2,
         useCORS: true,
         backgroundColor: null,
@@ -47,6 +71,17 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
         windowWidth: 1080,
         windowHeight: 1080,
       });
+    } finally {
+      document.body.removeChild(tempContainer);
+    }
+  };
+
+  const downloadCard = async (index: number) => {
+    const sourceEl = cardRefs.current[index];
+    if (!sourceEl) return;
+    setDownloading(true);
+    try {
+      const canvas = await captureNodeAsCanvas(sourceEl);
       const a = document.createElement('a');
       a.href = canvas.toDataURL('image/png');
       a.download = `card_${index + 1}.png`;
@@ -59,21 +94,12 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
   const downloadAll = async () => {
     setDownloading(true);
     try {
-      const html2canvas = (await import('html2canvas')).default;
       const JSZip = (await import('jszip')).default;
       const zip = new JSZip();
       for (let i = 0; i < slides.length; i++) {
-        const el = cardRefs.current[i];
-        if (!el) continue;
-        const canvas = await html2canvas(el, {
-          scale: 2,
-          useCORS: true,
-          backgroundColor: null,
-          width: 1080,
-          height: 1080,
-          windowWidth: 1080,
-          windowHeight: 1080,
-        });
+        const sourceEl = cardRefs.current[i];
+        if (!sourceEl) continue;
+        const canvas = await captureNodeAsCanvas(sourceEl);
         const blob = await new Promise<Blob>((resolve) => {
           canvas.toBlob((b) => resolve(b as Blob), 'image/png');
         });
@@ -84,6 +110,7 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
       a.href = URL.createObjectURL(zipBlob);
       a.download = `cardnews_pro_${Date.now()}.zip`;
       a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
     } finally {
       setDownloading(false);
     }
