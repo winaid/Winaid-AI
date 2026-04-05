@@ -246,3 +246,133 @@ function buildSlideGuide(slideCount: number, topicType: CardTopicType): string {
 
   return guides.join('\n');
 }
+
+// ═══════════════════════════════════════════════════════════════
+// Pro Mode: 구조화된 JSON 레이아웃 출력
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * 프로 카드뉴스 프롬프트
+ *
+ * 기존 buildCardNewsPrompt는 "제목 + 본문 + 비주얼 묘사"의 텍스트 원고만 생성했지만,
+ * 이 함수는 AI가 슬라이드별로 최적의 레이아웃(cover/comparison/icon-grid/steps/
+ * checklist/data-highlight/closing)을 선택하고 구조화된 JSON을 출력하게 한다.
+ *
+ * 이 JSON은 이후 CardNewsProRenderer가 레이아웃별 HTML/CSS로 렌더링한다.
+ */
+export function buildCardNewsProPrompt(req: CardNewsRequest): {
+  systemInstruction: string;
+  prompt: string;
+} {
+  const slideCount = req.slideCount || 6;
+  const middleCount = Math.max(0, slideCount - 2);
+
+  const systemInstruction = `당신은 프로급 의료 카드뉴스 기획자입니다.
+주제를 받으면 슬라이드별로 가장 적합한 레이아웃을 선택하고, 반드시 JSON 형식으로만 출력합니다.
+
+사용 가능한 레이아웃:
+- cover: 표지 (title + subtitle). 슬라이드 1장은 반드시 cover.
+- info: 정보형 (title + subtitle + body 텍스트). 개념 설명에 적합.
+- comparison: 비교표. columns(2~3개) + compareLabels(행 라벨 3~5개). 수치/특징 비교에 필수.
+- icon-grid: 아이콘 그리드. icons 배열(3~4개, emoji+title+desc). 장점/특징 나열에 적합.
+- steps: 단계형. steps 배열(3~5개, label+desc). 시술 과정/절차 설명에 적합.
+- checklist: 체크리스트. checkItems 배열(4~6개 문자열). 자가 진단/체크사항에 적합.
+- data-highlight: 수치 강조. dataPoints 배열(2~3개, value+label+highlight). 성공률/기간/비용 등 임팩트 있는 숫자 제시.
+- closing: 마무리 (title + subtitle + body). 마지막 슬라이드는 반드시 closing.
+
+절대 규칙:
+1. 1장은 cover, ${slideCount}장은 closing. 중간 ${middleCount}장은 다양한 레이아웃을 혼합.
+2. 같은 레이아웃을 3번 이상 연속/반복 사용 금지.
+3. comparison과 data-highlight에는 반드시 구체적 수치(%/년/개월/만원/mm 등) 포함.
+4. "중요합니다", "전문의 상담", "것이 좋습니다" 같은 뻔한 표현 금지.
+5. 의료광고법 준수: "완치", "100%", "최첨단", "완벽", "획기적", "유일", "국내 최초", "1위" 등 최상급/단정 표현 금지.
+6. 모든 텍스트는 한국어. 한 문장은 짧고 명확하게(25자 내외).
+7. 이모지는 UTF-8 단일 이모지(🦷 💉 ⏱️ 🔬 🩺 ✨ 💡 📊 🎯 ⚠️ 등)만 사용.
+8. 출력은 JSON 객체 하나. { "slides": [ ... ] } 형태. 마크다운 코드블록·설명·주석 금지.`;
+
+  const example = `예시 스키마:
+{
+  "slides": [
+    {
+      "index": 1,
+      "layout": "cover",
+      "title": "10년 쓸 내 치아, '가격'만 보고 고르시나요?",
+      "subtitle": "3분 만에 끝내는 임플란트 비교 가이드"
+    },
+    {
+      "index": 2,
+      "layout": "comparison",
+      "title": "일반 vs 네비게이션 임플란트",
+      "subtitle": "핵심 차이를 숫자로 확인하세요",
+      "compareLabels": ["수술 방식", "절개 범위", "수술 시간", "회복 기간"],
+      "columns": [
+        { "header": "일반", "highlight": false, "items": ["2D 엑스레이", "15mm 이상", "40~60분", "7~10일"] },
+        { "header": "네비게이션", "highlight": true, "items": ["3D CT 모의수술", "3~5mm", "15분 내외", "당일~3일"] }
+      ]
+    },
+    {
+      "index": 3,
+      "layout": "icon-grid",
+      "title": "네비게이션 임플란트의 4가지 장점",
+      "icons": [
+        { "emoji": "🎯", "title": "0.1mm 정밀도", "desc": "3D 모의수술로 오차 최소화" },
+        { "emoji": "💉", "title": "적은 통증", "desc": "최소 절개로 출혈 감소" },
+        { "emoji": "⏱️", "title": "15분 시술", "desc": "1식립당 평균 수술 시간" },
+        { "emoji": "🩺", "title": "당일 귀가", "desc": "바쁜 일상에 부담 없음" }
+      ]
+    },
+    {
+      "index": 4,
+      "layout": "steps",
+      "title": "네비게이션 임플란트 치료 과정",
+      "steps": [
+        { "label": "3D CT 정밀 진단", "desc": "골조직·신경·혈관 위치 파악" },
+        { "label": "컴퓨터 모의수술", "desc": "최적 식립 경로 설계" },
+        { "label": "가이드 제작", "desc": "환자 맞춤형 수술 가이드" },
+        { "label": "정밀 식립", "desc": "가이드 기반 15분 시술" }
+      ]
+    },
+    {
+      "index": 5,
+      "layout": "data-highlight",
+      "title": "숫자로 보는 네비게이션 임플란트",
+      "dataPoints": [
+        { "value": "0.1mm", "label": "모의수술 오차 범위", "highlight": true },
+        { "value": "30년+", "label": "디지털 임플란트 임상 데이터" },
+        { "value": "80~90%", "label": "자연치아 저작력 회복률" }
+      ]
+    },
+    {
+      "index": 6,
+      "layout": "closing",
+      "title": "내 잇몸뼈 상태, 오늘 확인해보세요",
+      "subtitle": "3가지 조건으로 내게 맞는 방식을 결정합니다",
+      "body": "잇몸뼈 두께, 잔여 치아 개수, 기저질환 여부. 3D CT 정밀 진단으로 1:1 맞춤 치료 계획을 세워보세요."
+    }
+  ]
+}`;
+
+  const requestBlock = [
+    `주제: ${req.topic}`,
+    req.keywords ? `키워드: ${req.keywords}` : '',
+    req.hospitalName ? `병원명: ${req.hospitalName} (본문에 직접 언급 금지, 마지막 장 아래에만 표시)` : '',
+    `진료과: ${req.category || '치과'}`,
+    `슬라이드 수: ${slideCount}장`,
+    `톤: ${req.writingStyle === 'expert' ? '전문가형(신뢰/정보)' : '친절형(공감/쉬움)'}`,
+  ].filter(Boolean).join('\n');
+
+  const prompt = `${requestBlock}
+
+위 주제에 맞는 카드뉴스 ${slideCount}장을 구조화된 JSON으로 출력하세요.
+- 1장: cover, ${slideCount}장: closing
+- 중간 ${middleCount}장은 comparison / icon-grid / steps / checklist / data-highlight / info 중 주제에 맞는 것을 혼합
+- 수치·기간·비용 등 구체적 숫자를 최소 5개 이상 슬라이드 전체에 분포
+- 같은 표현 반복 금지, 매 슬라이드 새로운 정보 제공
+- 마지막 장은 구체적 행동 유도(CTA) 포함
+
+${example}
+
+이제 실제 주제에 맞춰 JSON만 출력하세요. 설명·주석·마크다운 금지.`;
+
+  return { systemInstruction, prompt };
+}

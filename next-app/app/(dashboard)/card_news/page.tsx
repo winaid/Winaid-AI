@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { TEAM_DATA } from '../../../lib/teamData';
 import { CATEGORIES } from '../../../lib/constants';
-import { buildCardNewsPrompt, type CardNewsRequest } from '../../../lib/cardNewsPrompt';
+import { buildCardNewsPrompt, buildCardNewsProPrompt, type CardNewsRequest } from '../../../lib/cardNewsPrompt';
 import { savePost } from '../../../lib/postStorage';
 import { getSessionSafe, supabase } from '../../../lib/supabase';
 import { getHospitalStylePrompt } from '../../../lib/styleService';
@@ -12,6 +12,8 @@ import { ErrorPanel } from '../../../components/GenerationResult';
 import { CardRegenModal, type CardPromptHistoryItem, CARD_PROMPT_HISTORY_KEY, CARD_REF_IMAGE_KEY } from '../../../components/CardRegenModal';
 import CardTemplateManager from '../../../components/CardTemplateManager';
 import CardNewsRenderer from '../../../components/CardNewsRenderer';
+import CardNewsProRenderer from '../../../components/CardNewsProRenderer';
+import { DEFAULT_THEME, parseProSlidesJson, type SlideData as ProSlideData, type CardNewsTheme } from '../../../lib/cardNewsLayouts';
 import type { CardTemplate } from '../../../lib/cardTemplateService';
 import { useCreditContext } from '../layout';
 import { useCredit } from '../../../lib/creditService';
@@ -57,6 +59,10 @@ export default function CardNewsPage() {
   const [category, setCategory] = useState<ContentCategory>(ContentCategory.DENTAL);
   const [audienceMode, setAudienceMode] = useState<AudienceMode>('환자용(친절/공감)');
   const [contentMode, setContentMode] = useState<'simple' | 'detailed'>('simple');
+  // 프로 레이아웃 모드: AI가 JSON으로 구조화된 데이터 출력 → HTML/CSS로 렌더링
+  const [proMode, setProMode] = useState(false);
+  const [proSlides, setProSlides] = useState<ProSlideData[]>([]);
+  const [proTheme, setProTheme] = useState<CardNewsTheme>({ ...DEFAULT_THEME });
   const [learnedTemplate, setLearnedTemplate] = useState<CardTemplate | null>(null);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [customImagePrompt, setCustomImagePrompt] = useState('');
@@ -212,9 +218,53 @@ export default function CardNewsPage() {
     setIsGenerating(true);
     setError(null);
     setCards([]);
+    setProSlides([]);
     setSaveStatus(null);
     setPipelineStep('idle');
-    setProgress('슬라이드 원고 작성 중...');
+    setProgress(proMode ? '프로 레이아웃 구성 중...' : '슬라이드 원고 작성 중...');
+
+    // ═══ Pro Mode: JSON 레이아웃 출력 → HTML/CSS 렌더링 ═══
+    if (proMode) {
+      try {
+        const { systemInstruction: proSI, prompt: proPrompt } = buildCardNewsProPrompt(request);
+        const res = await fetch('/api/gemini', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            prompt: proPrompt,
+            systemInstruction: proSI,
+            model: 'gemini-3.1-pro-preview',
+            temperature: 0.7,
+            maxOutputTokens: 32768,
+            responseType: 'json',
+          }),
+        });
+        const data = await res.json() as { text?: string; error?: string; details?: string };
+        if (!res.ok || !data.text) {
+          setError(data.error || data.details || `서버 오류 (${res.status})`);
+          return;
+        }
+        try {
+          const parsed = parseProSlidesJson(data.text);
+          if (parsed.length === 0) {
+            setError('프로 레이아웃 파싱 결과가 비어 있습니다. 다시 시도해주세요.');
+            return;
+          }
+          setProSlides(parsed);
+          setProTheme(prev => ({ ...prev, hospitalName: hospitalName || undefined }));
+          setPipelineStep('idle');
+        } catch (parseErr) {
+          console.error('[CARD_NEWS_PRO] JSON parse failed', parseErr);
+          setError('AI가 유효한 JSON을 반환하지 않았습니다. 다시 시도해주세요.');
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : '네트워크 오류');
+      } finally {
+        setIsGenerating(false);
+        setProgress('');
+      }
+      return;
+    }
 
     try {
       const { systemInstruction, prompt } = buildCardNewsPrompt(request);
@@ -845,6 +895,25 @@ ${newsContext ? `\n[📰 최신 네이버 뉴스 분석]\n${newsContext}\n\n⚠�
             {/* 주제 */}
             <input type="text" value={topic} onChange={e => setTopic(e.target.value)} placeholder="카드뉴스 주제 (예: 임플란트 시술 과정 안내)" required className={inputCls} />
 
+            {/* 생성 모드 */}
+            <div>
+              <label className={labelCls}>생성 모드</label>
+              <div className="grid grid-cols-2 gap-2">
+                <button type="button" onClick={() => setProMode(false)}
+                  className={`py-2.5 rounded-xl border transition-all text-center ${!proMode ? 'border-pink-400 bg-pink-50 text-pink-700' : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300'}`}>
+                  <span className="text-base block">🖼️</span>
+                  <span className="text-[10px] font-semibold block">AI 이미지</span>
+                  <span className="text-[9px] text-slate-400 block">AI가 이미지 생성</span>
+                </button>
+                <button type="button" onClick={() => setProMode(true)}
+                  className={`py-2.5 rounded-xl border transition-all text-center ${proMode ? 'border-blue-400 bg-blue-50 text-blue-700' : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300'}`}>
+                  <span className="text-base block">📊</span>
+                  <span className="text-[10px] font-semibold block">프로 레이아웃</span>
+                  <span className="text-[9px] text-slate-400 block">비교표/아이콘/차트</span>
+                </button>
+              </div>
+            </div>
+
             {/* 콘텐츠 분량 */}
             <div>
               <label className={labelCls}>콘텐츠 분량</label>
@@ -1069,6 +1138,14 @@ ${newsContext ? `\n[📰 최신 네이버 뉴스 분석]\n${newsContext}\n\n⚠�
           </div>
         ) : error ? (
           <ErrorPanel error={error} onDismiss={() => setError(null)} />
+        ) : proMode && proSlides.length > 0 ? (
+          /* ── Pro Mode: JSON → HTML/CSS 렌더링 ── */
+          <CardNewsProRenderer
+            slides={proSlides}
+            theme={proTheme}
+            onSlidesChange={setProSlides}
+            onThemeChange={setProTheme}
+          />
         ) : pipelineStep === 'scriptReview' && cards.length > 0 ? (
           /* ── Step 2: 원고 승인 단계 ── */
           <div className="space-y-4">
