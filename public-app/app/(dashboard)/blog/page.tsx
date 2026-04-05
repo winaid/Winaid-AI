@@ -25,6 +25,7 @@ import BlogResultArea from './BlogResultArea';
 import BlogFormPanel from './BlogFormPanel';
 import { useCreditContext } from '../layout';
 import { useCredit as blogUseCredit } from '../../../lib/creditService';
+import { consumeGuestCredit } from '../../../lib/guestCredits';
 
 function BlogForm() {
   const creditCtx = useCreditContext();
@@ -867,13 +868,30 @@ JSON 형식으로 응답해주세요.`;
     if (!topic.trim() || isGenerating) return;
 
     // 크레딧 체크 + 차감
-    if (creditCtx.userId && creditCtx.creditInfo) {
-      const creditResult = await blogUseCredit(creditCtx.userId);
-      if (!creditResult.success) {
-        setError(creditResult.error === 'no_credits' ? '크레딧이 모두 소진되었습니다.' : '크레딧 차감에 실패했습니다.');
+    if (creditCtx.creditInfo) {
+      if (creditCtx.creditInfo.credits <= 0) {
+        setError(creditCtx.userId
+          ? '크레딧이 모두 소진되었습니다.'
+          : '무료 체험 크레딧이 모두 소진되었습니다. 로그인하면 더 많은 크레딧을 사용할 수 있어요.');
         return;
       }
-      creditCtx.setCreditInfo({ credits: creditResult.remaining, totalUsed: (creditCtx.creditInfo.totalUsed || 0) + 1 });
+      if (creditCtx.userId) {
+        // 로그인 사용자: Supabase 차감
+        const creditResult = await blogUseCredit(creditCtx.userId);
+        if (!creditResult.success) {
+          setError(creditResult.error === 'no_credits' ? '크레딧이 모두 소진되었습니다.' : '크레딧 차감에 실패했습니다.');
+          return;
+        }
+        creditCtx.setCreditInfo({ credits: creditResult.remaining, totalUsed: (creditCtx.creditInfo.totalUsed || 0) + 1 });
+      } else {
+        // 게스트: localStorage 차감
+        const next = consumeGuestCredit();
+        if (!next) {
+          setError('무료 체험 크레딧이 모두 소진되었습니다. 로그인하면 더 많은 크레딧을 사용할 수 있어요.');
+          return;
+        }
+        creditCtx.setCreditInfo({ credits: next.credits, totalUsed: next.totalUsed });
+      }
     }
 
     const request: GenerationRequest = {

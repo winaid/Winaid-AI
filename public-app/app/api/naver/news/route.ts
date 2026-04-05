@@ -5,13 +5,15 @@
  * GET ?query=키워드&display=10
  */
 import { NextRequest, NextResponse } from 'next/server';
+import { gateGuestRequest } from '../../../../lib/guestRateLimit';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
-  const cookies = request.headers.get('cookie') || '';
-  if (!/sb-[a-z]+-auth-token/.test(cookies)) {
-    return NextResponse.json({ error: '인증이 필요합니다.' }, { status: 401 });
+  // 게스트 허용: 로그인 쿠키 없으면 IP 기반 분당 10회 제한
+  const gate = gateGuestRequest(request);
+  if (!gate.ok) {
+    return NextResponse.json({ error: gate.error }, { status: gate.status });
   }
 
   const { searchParams } = request.nextUrl;

@@ -16,6 +16,9 @@ import { DEFAULT_THEME, parseProSlidesJson, type SlideData as ProSlideData, type
 import type { CardTemplate } from '../../../lib/cardTemplateService';
 import { ContentCategory } from '../../../lib/types';
 import type { WritingStyle, CardNewsDesignTemplateId, TrendingItem, AudienceMode } from '../../../lib/types';
+import { useCreditContext } from '../layout';
+import { useCredit as cardNewsUseCredit } from '../../../lib/creditService';
+import { consumeGuestCredit } from '../../../lib/guestCredits';
 
 interface CardImageHistoryItem { url: string; prompt: string; createdAt: number; }
 
@@ -39,6 +42,7 @@ const IMAGE_STYLE_OPTIONS = [
 type ImageStyleType = 'photo' | 'illustration' | 'medical' | 'custom';
 
 export default function CardNewsPage() {
+  const creditCtx = useCreditContext();
   // ── 폼 상태 ──
   const [topic, setTopic] = useState('');
   const [keywords, setKeywords] = useState('');
@@ -203,6 +207,31 @@ export default function CardNewsPage() {
       category,
       contentMode,
     };
+
+    // 크레딧 체크 + 차감 (로그인 사용자는 Supabase, 게스트는 localStorage 3개)
+    if (creditCtx.creditInfo) {
+      if (creditCtx.creditInfo.credits <= 0) {
+        setError(creditCtx.userId
+          ? '크레딧이 모두 소진되었습니다.'
+          : '무료 체험 크레딧이 모두 소진되었습니다. 로그인하면 더 많은 크레딧을 사용할 수 있어요.');
+        return;
+      }
+      if (creditCtx.userId) {
+        const creditResult = await cardNewsUseCredit(creditCtx.userId);
+        if (!creditResult.success) {
+          setError(creditResult.error === 'no_credits' ? '크레딧이 모두 소진되었습니다.' : '크레딧 차감에 실패했습니다.');
+          return;
+        }
+        creditCtx.setCreditInfo({ credits: creditResult.remaining, totalUsed: (creditCtx.creditInfo.totalUsed || 0) + 1 });
+      } else {
+        const next = consumeGuestCredit();
+        if (!next) {
+          setError('무료 체험 크레딧이 모두 소진되었습니다. 로그인하면 더 많은 크레딧을 사용할 수 있어요.');
+          return;
+        }
+        creditCtx.setCreditInfo({ credits: next.credits, totalUsed: next.totalUsed });
+      }
+    }
 
     setIsGenerating(true);
     setError(null);

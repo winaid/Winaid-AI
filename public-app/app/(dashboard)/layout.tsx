@@ -5,6 +5,7 @@ import { useAuthGuard } from '../../hooks/useAuthGuard';
 import { Sidebar } from '../../components/Sidebar';
 import { MobileHeader } from '../../components/MobileHeader';
 import { getCredits, type CreditInfo } from '../../lib/creditService';
+import { initGuestCredits } from '../../lib/guestCredits';
 
 // 크레딧 Context
 interface CreditContextType {
@@ -25,14 +26,17 @@ export default function AppLayout({
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [creditInfo, setCreditInfo] = useState<CreditInfo | null>(null);
 
-  // 크레딧 조회
+  // 크레딧 조회 — 로그인 사용자는 Supabase, 게스트는 localStorage 기반 3개
   useEffect(() => {
     if (user?.id) {
       getCredits(user.id).then(info => {
         if (info) setCreditInfo(info);
       });
+    } else if (isGuest && !loading) {
+      const guest = initGuestCredits();
+      setCreditInfo({ credits: guest.credits, totalUsed: guest.totalUsed });
     }
-  }, [user?.id]);
+  }, [user?.id, isGuest, loading]);
 
   if (loading) {
     return (

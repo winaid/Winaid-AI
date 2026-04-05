@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { gateGuestRequest } from '../../../../lib/guestRateLimit';
 
 export const maxDuration = 60;
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest) {
-  const cookies = req.headers.get('cookie') || '';
-  if (!/sb-[a-z]+-auth-token/.test(cookies)) {
-    return NextResponse.json({ error: '인증이 필요합니다.' }, { status: 401 });
+  // 게스트 허용: 로그인 쿠키 없으면 IP 기반 분당 10회 제한
+  const gate = gateGuestRequest(req);
+  if (!gate.ok) {
+    return NextResponse.json({ error: gate.error }, { status: gate.status });
   }
 
   try {

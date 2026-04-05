@@ -6,6 +6,7 @@
  * 미포함: 크레딧 차감, generation token, raw mode, 이미지 생성
  */
 import { NextRequest, NextResponse } from 'next/server';
+import { gateGuestRequest } from '../../../lib/guestRateLimit';
 
 
 export const maxDuration = 300;
@@ -147,10 +148,10 @@ interface GeminiCandidate {
 }
 
 export async function POST(request: NextRequest) {
-  // 로그인 세션 필수. 랜딩 챗봇은 /api/landing-chat 으로 분리되었다.
-  const cookies = request.headers.get('cookie') || '';
-  if (!/sb-[a-z]+-auth-token/.test(cookies)) {
-    return NextResponse.json({ error: '인증이 필요합니다.' }, { status: 401 });
+  // 게스트 허용: 로그인 쿠키 없으면 IP 기반 분당 10회 제한
+  const gate = gateGuestRequest(request);
+  if (!gate.ok) {
+    return NextResponse.json({ error: gate.error }, { status: gate.status });
   }
 
   // ═══ body 파싱 (스트리밍/비스트리밍 공통) ═══

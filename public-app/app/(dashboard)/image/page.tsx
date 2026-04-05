@@ -14,6 +14,7 @@ import { TemplateSVGPreview } from '../../../components/TemplatePreviews';
 import { CalendarThemePreview, ThemePreview } from '../../../components/CalendarPreviews';
 import { useCreditContext } from '../layout';
 import { useCredit } from '../../../lib/creditService';
+import { consumeGuestCredit } from '../../../lib/guestCredits';
 
 type AspectRatio = '1:1' | '4:5' | 'A4' | '16:9' | '3:4' | '9:16' | '4:3' | 'auto';
 type DayMark = 'closed' | 'shortened' | 'vacation' | 'night';
@@ -958,13 +959,28 @@ Add subtle professional touches: refined gradients, elegant typography, clean wh
     if (!effectivePrompt || generating) return;
 
     // 크레딧 체크 + 차감
-    if (creditCtx.userId && creditCtx.creditInfo) {
-      const creditResult = await useCredit(creditCtx.userId);
-      if (!creditResult.success) {
-        setError(creditResult.error === 'no_credits' ? '크레딧이 모두 소진되었습니다.' : '크레딧 차감에 실패했습니다.');
+    if (creditCtx.creditInfo) {
+      if (creditCtx.creditInfo.credits <= 0) {
+        setError(creditCtx.userId
+          ? '크레딧이 모두 소진되었습니다.'
+          : '무료 체험 크레딧이 모두 소진되었습니다. 로그인하면 더 많은 크레딧을 사용할 수 있어요.');
         return;
       }
-      creditCtx.setCreditInfo({ credits: creditResult.remaining, totalUsed: (creditCtx.creditInfo.totalUsed || 0) + 1 });
+      if (creditCtx.userId) {
+        const creditResult = await useCredit(creditCtx.userId);
+        if (!creditResult.success) {
+          setError(creditResult.error === 'no_credits' ? '크레딧이 모두 소진되었습니다.' : '크레딧 차감에 실패했습니다.');
+          return;
+        }
+        creditCtx.setCreditInfo({ credits: creditResult.remaining, totalUsed: (creditCtx.creditInfo.totalUsed || 0) + 1 });
+      } else {
+        const next = consumeGuestCredit();
+        if (!next) {
+          setError('무료 체험 크레딧이 모두 소진되었습니다. 로그인하면 더 많은 크레딧을 사용할 수 있어요.');
+          return;
+        }
+        creditCtx.setCreditInfo({ credits: next.credits, totalUsed: next.totalUsed });
+      }
     }
 
     setGenerating(true);

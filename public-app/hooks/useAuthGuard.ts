@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { isSupabaseConfigured, getSupabaseClient } from '../lib/supabase';
+import { resetGuestCredits } from '../lib/guestCredits';
 import type { User } from '@supabase/supabase-js';
 
 interface AuthGuardResult {
@@ -75,6 +76,8 @@ export function useAuthGuard(): AuthGuardResult {
       console.error('로그아웃 에러:', e);
     } finally {
       setUser(null);
+      // 게스트 크레딧 초기화 (재방문 시 3개 새로 받음)
+      resetGuestCredits();
       if (typeof window !== 'undefined') {
         const keys = Array.from(Object.keys(localStorage));
         keys.forEach(key => {
