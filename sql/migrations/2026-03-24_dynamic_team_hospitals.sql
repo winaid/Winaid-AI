@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS public.teams (
 );
 
 ALTER TABLE public.teams ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Anon can read teams" ON public.teams;
 CREATE POLICY "Anon can read teams" ON public.teams FOR SELECT USING (true);
 
 -- 2) hospitals 테이블
@@ -30,6 +31,10 @@ CREATE TABLE IF NOT EXISTS public.hospitals (
 );
 
 ALTER TABLE public.hospitals ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Anon can read hospitals" ON public.hospitals;
+DROP POLICY IF EXISTS "Anon can insert hospitals" ON public.hospitals;
+DROP POLICY IF EXISTS "Anon can update hospitals" ON public.hospitals;
+DROP POLICY IF EXISTS "Anon can delete hospitals" ON public.hospitals;
 CREATE POLICY "Anon can read hospitals" ON public.hospitals FOR SELECT USING (true);
 CREATE POLICY "Anon can insert hospitals" ON public.hospitals FOR INSERT WITH CHECK (true);
 CREATE POLICY "Anon can update hospitals" ON public.hospitals FOR UPDATE USING (true);
