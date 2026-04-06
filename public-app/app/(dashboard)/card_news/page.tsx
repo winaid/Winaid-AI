@@ -1028,7 +1028,7 @@ DECORATIVE: (장식 요소)`,
         <div className="max-w-3xl mx-auto">
           {/* 주제 추천 칩 */}
           <div className="mb-4">
-            <p className="text-xs text-slate-400 mb-2">이런 주제는 어때요?</p>
+            <p className="text-sm font-semibold text-slate-500 mb-3">이런 주제는 어때요?</p>
             <div className="flex gap-2 flex-wrap">
               {topicSuggestions.map((t, i) => (
                 <button key={i} type="button" onClick={() => setTopic(t)}
