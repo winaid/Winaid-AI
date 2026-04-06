@@ -879,99 +879,66 @@ JSON 한 객체만 출력:
     if (!slide.imageUrl) return null;
     const position = slide.imagePosition || 'top';
 
+    // ── 배경: 카드 전체를 덮음, 위에 반투명 테마색 오버레이 ──
     if (position === 'background') {
       return (
         <>
-          <div
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              width: '100%',
-              height: '100%',
-              backgroundImage: `url(${slide.imageUrl})`,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-              zIndex: -1,
-            }}
-          />
-          {/* 테마 배경색 기반 오버레이 — 회색빛 대신 테마 색조 유지 */}
-          <div
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              width: '100%',
-              height: '100%',
-              background: `linear-gradient(180deg, ${theme.backgroundColor}CC 0%, ${theme.backgroundColor}EE 100%)`,
-              zIndex: -1,
-            }}
-          />
+          <div style={{
+            position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
+            zIndex: 0,
+          }}>
+            <img src={slide.imageUrl} alt="" crossOrigin="anonymous"
+              style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center' }} />
+          </div>
+          <div style={{
+            position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
+            background: `linear-gradient(180deg, ${theme.backgroundColor}CC 0%, ${theme.backgroundColor}EE 100%)`,
+            zIndex: 1,
+          }} />
         </>
       );
     }
 
-    if (position === 'top' || position === 'bottom') {
+    // ── 중앙: 카드 중앙에 반투명으로 (워터마크 느낌) ──
+    if (position === 'center') {
       return (
-        <div
-          style={{
-            width: '100%',
-            height: '340px',
-            overflow: 'hidden',
-            borderRadius: '20px',
-            marginBottom: position === 'top' ? '16px' : 0,
-            marginTop: position === 'bottom' ? 'auto' : 0,
-            boxShadow: isDarkTheme ? '0 10px 30px rgba(0,0,0,0.3)' : '0 4px 16px rgba(0,0,0,0.08)',
-            flexShrink: 0,
-            // 잘림 방지: 여백을 테마 배경색으로 채우기
-            background: 'transparent',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            position: 'relative',
-            zIndex: 2,
-          }}
-        >
-          <img
-            src={slide.imageUrl}
-            alt=""
-            crossOrigin="anonymous"
-            style={{
-              maxWidth: '100%',
-              maxHeight: '100%',
-              width: 'auto',
-              height: 'auto',
-              objectFit: 'contain',
-              display: 'block',
-            }}
-          />
+        <div style={{
+          position: 'absolute', top: '50%', left: '50%',
+          transform: 'translate(-50%, -50%)',
+          width: '65%',
+          opacity: 0.35,
+          zIndex: 0,
+          pointerEvents: 'none' as const,
+        }}>
+          <img src={slide.imageUrl} alt="" crossOrigin="anonymous"
+            style={{ width: '100%', height: 'auto', objectFit: 'contain', borderRadius: '20px' }} />
         </div>
       );
     }
 
-    // center
+    // ── 상단/하단: 너비 100%, 높이는 이미지 비율에 맞게 (최대 45%) ──
     return (
-      <div
-        style={{
-          position: 'absolute',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          width: '60%',
-          maxHeight: '60%',
-          overflow: 'hidden',
-          borderRadius: '24px',
-          boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
-          zIndex: -1,
-          opacity: 0.55,
-        }}
-      >
-        <img
-          src={slide.imageUrl}
-          alt=""
-          crossOrigin="anonymous"
-          style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block', background: theme.backgroundColor }}
-        />
+      <div style={{
+        width: '100%',
+        maxHeight: '45%',
+        overflow: 'hidden',
+        borderRadius: '16px',
+        flexShrink: 0,
+        marginBottom: position === 'top' ? '16px' : 0,
+        marginTop: position === 'bottom' ? 'auto' : 0,
+        boxShadow: isDarkTheme ? '0 8px 24px rgba(0,0,0,0.25)' : '0 4px 12px rgba(0,0,0,0.08)',
+        position: 'relative',
+        zIndex: 2,
+      }}>
+        <img src={slide.imageUrl} alt="" crossOrigin="anonymous"
+          style={{
+            width: '100%',
+            height: 'auto',
+            display: 'block',
+            maxHeight: '100%',
+            objectFit: 'cover',
+            objectPosition: 'center',
+          }} />
       </div>
     );
   };
