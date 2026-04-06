@@ -1346,7 +1346,7 @@ JSON 한 객체만 출력:
       {slide.imagePosition === 'top' && renderImageLayer(slide)}
         <div style={{ position: 'relative', zIndex: 2, marginBottom: '24px' }}>
           {titleAccent('center')}
-          <h2 style={{ color: theme.titleColor, fontSize: `${calcTitleSize(slide.title, 52, 36)}px`, fontWeight: 800, textAlign: 'center', wordBreak: 'keep-all', lineHeight: 1.25, letterSpacing: '-0.02em' }}>
+          <h2 style={{ ...getTitleStyle(slide, { fontSize: calcTitleSize(slide.title, 52, 36), textAlign: 'center' }), lineHeight: 1.25 }}>
             {slide.title}
           </h2>
           {slide.subtitle && <p style={{ color: theme.subtitleColor, fontSize: '22px', textAlign: 'center', marginTop: '10px', fontWeight: 600 }}>{slide.subtitle}</p>}
@@ -1437,7 +1437,7 @@ JSON 한 객체만 출력:
       {slide.imagePosition === 'top' && renderImageLayer(slide)}
         <div style={{ position: 'relative', zIndex: 2, marginBottom: '24px' }}>
           {titleAccent('center')}
-          <h2 style={{ color: theme.titleColor, fontSize: `${calcTitleSize(slide.title, 52, 36)}px`, fontWeight: 800, textAlign: 'center', wordBreak: 'keep-all', letterSpacing: '-0.02em' }}>
+          <h2 style={{ ...getTitleStyle(slide, { fontSize: calcTitleSize(slide.title, 52, 36), textAlign: 'center' }) }}>
             {slide.title}
           </h2>
           {slide.subtitle && <p style={{ color: theme.subtitleColor, fontSize: '22px', textAlign: 'center', marginTop: '10px', fontWeight: 600 }}>{slide.subtitle}</p>}
@@ -1505,7 +1505,7 @@ JSON 한 객체만 출력:
         {slide.imagePosition === 'top' && renderImageLayer(slide)}
         <div style={{ position: 'relative', zIndex: 2, marginBottom: '24px' }}>
           {titleAccent('center')}
-          <h2 style={{ color: theme.titleColor, fontSize: `${calcTitleSize(slide.title, 52, 36)}px`, fontWeight: 800, textAlign: 'center', wordBreak: 'keep-all', letterSpacing: '-0.02em' }}>{slide.title}</h2>
+          <h2 style={{ ...getTitleStyle(slide, { fontSize: calcTitleSize(slide.title, 52, 36), textAlign: 'center' }) }}>{slide.title}</h2>
           {slide.subtitle && <p style={{ color: theme.subtitleColor, fontSize: '22px', textAlign: 'center', marginTop: '10px', fontWeight: 600 }}>{slide.subtitle}</p>}
         </div>
         <div style={{ flex: 1, display: 'flex', flexDirection: isHorizontal ? 'row' : 'column', justifyContent: 'center', gap: `${stepsLayout.gap}px`, position: 'relative', zIndex: 2 }}>
@@ -1560,7 +1560,7 @@ JSON 한 객체만 출력:
       {slide.imagePosition === 'top' && renderImageLayer(slide)}
       <div style={{ position: 'relative', zIndex: 2, marginBottom: '24px' }}>
         {titleAccent('left')}
-        <h2 style={{ color: theme.titleColor, fontSize: `${calcTitleSize(slide.title, 52, 36)}px`, fontWeight: 800, wordBreak: 'keep-all', letterSpacing: '-0.02em' }}>{slide.title}</h2>
+        <h2 style={{ ...getTitleStyle(slide, { fontSize: calcTitleSize(slide.title, 52, 36) }) }}>{slide.title}</h2>
         {slide.subtitle && <p style={{ color: theme.subtitleColor, fontSize: '22px', marginTop: '10px', fontWeight: 600 }}>{slide.subtitle}</p>}
       </div>
       {(() => {
@@ -1623,7 +1623,7 @@ JSON 한 객체만 출력:
         {slide.imagePosition === 'top' && renderImageLayer(slide)}
         <div style={{ position: 'relative', zIndex: 2, marginBottom: '24px' }}>
           {titleAccent('center')}
-          <h2 style={{ color: theme.titleColor, fontSize: `${calcTitleSize(slide.title, 52, 36)}px`, fontWeight: 800, textAlign: 'center', wordBreak: 'keep-all', letterSpacing: '-0.02em' }}>{slide.title}</h2>
+          <h2 style={{ ...getTitleStyle(slide, { fontSize: calcTitleSize(slide.title, 52, 36), textAlign: 'center' }) }}>{slide.title}</h2>
           {slide.subtitle && <p style={{ color: theme.subtitleColor, fontSize: '22px', textAlign: 'center', marginTop: '10px', fontWeight: 600 }}>{slide.subtitle}</p>}
         </div>
         <div style={{ flex: 1, display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: '24px', alignContent: 'center', position: 'relative', zIndex: 2 }}>
@@ -1756,7 +1756,7 @@ JSON 한 객체만 출력:
       {slide.imagePosition === 'top' && renderImageLayer(slide)}
       <div style={{ position: 'relative', zIndex: 2, marginBottom: '24px' }}>
         {titleAccent('center')}
-        <h2 style={{ color: theme.titleColor, fontSize: `${calcTitleSize(slide.title, 52, 36)}px`, fontWeight: 800, textAlign: 'center', wordBreak: 'keep-all', letterSpacing: '-0.02em' }}>{slide.title}</h2>
+        <h2 style={{ ...getTitleStyle(slide, { fontSize: calcTitleSize(slide.title, 52, 36), textAlign: 'center' }) }}>{slide.title}</h2>
       </div>
       <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '22px', position: 'relative', zIndex: 2 }}>
         {/* ⇄ 화살표 */}
@@ -1803,7 +1803,7 @@ JSON 한 객체만 출력:
       {slide.imagePosition === 'top' && renderImageLayer(slide)}
       <div style={{ position: 'relative', zIndex: 2, marginBottom: '24px' }}>
         {titleAccent('left')}
-        <h2 style={{ color: theme.titleColor, fontSize: `${calcTitleSize(slide.title, 52, 36)}px`, fontWeight: 800, wordBreak: 'keep-all', letterSpacing: '-0.02em' }}>{slide.title}</h2>
+        <h2 style={{ ...getTitleStyle(slide, { fontSize: calcTitleSize(slide.title, 52, 36) }) }}>{slide.title}</h2>
       </div>
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: `${qaLayout.gap}px`, justifyContent: 'center', position: 'relative', zIndex: 2 }}>
         {(slide.questions || []).map((qa, i) => (
@@ -1869,7 +1869,7 @@ JSON 한 객체만 출력:
       {slide.imagePosition === 'top' && renderImageLayer(slide)}
       <div style={{ position: 'relative', zIndex: 2, marginBottom: '24px' }}>
         {titleAccent('left')}
-        <h2 style={{ color: theme.titleColor, fontSize: `${calcTitleSize(slide.title, 52, 36)}px`, fontWeight: 800, wordBreak: 'keep-all', letterSpacing: '-0.02em' }}>{slide.title}</h2>
+        <h2 style={{ ...getTitleStyle(slide, { fontSize: calcTitleSize(slide.title, 52, 36) }) }}>{slide.title}</h2>
       </div>
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', position: 'relative', paddingLeft: '56px', zIndex: 2 }}>
         <div style={{ position: 'absolute', left: '24px', top: '12px', bottom: '12px', width: '4px', background: `${theme.accentColor}55`, borderRadius: '2px' }} />
@@ -1982,7 +1982,7 @@ JSON 한 객체만 출력:
       {slide.imagePosition === 'top' && renderImageLayer(slide)}
       <div style={{ position: 'relative', zIndex: 2, marginBottom: '24px' }}>
         {titleAccent('left')}
-        <h2 style={{ color: theme.titleColor, fontSize: `${calcTitleSize(slide.title, 52, 36)}px`, fontWeight: 800, wordBreak: 'keep-all', letterSpacing: '-0.02em' }}>{slide.title}</h2>
+        <h2 style={{ ...getTitleStyle(slide, { fontSize: calcTitleSize(slide.title, 52, 36) }) }}>{slide.title}</h2>
       </div>
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: `${nlLayout.gap}px`, justifyContent: 'center', position: 'relative', zIndex: 2 }}>
         {nlItems.map((item, i) => (
@@ -2048,7 +2048,7 @@ JSON 한 객체만 출력:
       {slide.imagePosition === 'top' && renderImageLayer(slide)}
       <div style={{ position: 'relative', zIndex: 2, marginBottom: '24px' }}>
         {titleAccent('center')}
-        <h2 style={{ color: theme.titleColor, fontSize: `${calcTitleSize(slide.title, 52, 36)}px`, fontWeight: 800, textAlign: 'center', wordBreak: 'keep-all', letterSpacing: '-0.02em' }}>{slide.title}</h2>
+        <h2 style={{ ...getTitleStyle(slide, { fontSize: calcTitleSize(slide.title, 52, 36), textAlign: 'center' }) }}>{slide.title}</h2>
       </div>
       {(() => {
         const pcLayout = calcItemLayout(Math.max((slide.pros || []).length, (slide.cons || []).length));
@@ -2100,7 +2100,7 @@ JSON 한 객체만 출력:
       {slide.imagePosition === 'top' && renderImageLayer(slide)}
       <div style={{ position: 'relative', zIndex: 2, marginBottom: '24px' }}>
         {titleAccent('center')}
-        <h2 style={{ color: theme.titleColor, fontSize: `${calcTitleSize(slide.title, 52, 36)}px`, fontWeight: 800, textAlign: 'center', wordBreak: 'keep-all', letterSpacing: '-0.02em' }}>{slide.title}</h2>
+        <h2 style={{ ...getTitleStyle(slide, { fontSize: calcTitleSize(slide.title, 52, 36), textAlign: 'center' }) }}>{slide.title}</h2>
       </div>
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '3px', borderRadius: '20px', overflow: 'hidden', position: 'relative', zIndex: 2 }}>
         <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '3px' }}>
@@ -2159,7 +2159,7 @@ JSON 한 객체만 출력:
         <span style={{ fontSize: '80px', lineHeight: 1 }}>⚠️</span>
       </div>
       <div style={{ position: 'relative', zIndex: 2, marginBottom: '24px' }}>
-        <h2 style={{ color: theme.accentColor, fontSize: `${calcTitleSize(slide.warningTitle || slide.title, 52, 36)}px`, fontWeight: 900, textAlign: 'center', wordBreak: 'keep-all', letterSpacing: '-0.02em' }}>
+        <h2 style={{ ...getTitleStyle(slide, { fontSize: calcTitleSize(slide.warningTitle || slide.title, 52, 36), textAlign: 'center' }), color: theme.accentColor, fontWeight: 900 as CSSProperties['fontWeight'] }}>
           {slide.warningTitle || slide.title}
         </h2>
       </div>

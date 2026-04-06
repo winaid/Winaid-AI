@@ -12,7 +12,7 @@ import { CardRegenModal, type CardPromptHistoryItem, CARD_PROMPT_HISTORY_KEY, CA
 import CardTemplateManager from '../../../components/CardTemplateManager';
 import CardNewsRenderer from '../../../components/CardNewsRenderer';
 import CardNewsProRenderer from '../../../components/CardNewsProRenderer';
-import { DEFAULT_THEME, THEME_PRESETS, DESIGN_PRESETS, COVER_TEMPLATES, type DesignPreset, type DesignPresetStyle, parseProSlidesJson, type SlideData as ProSlideData, type CardNewsTheme } from '../../../lib/cardNewsLayouts';
+import { DEFAULT_THEME, THEME_PRESETS, DESIGN_PRESETS, COVER_TEMPLATES, CARD_FONTS, FONT_CATEGORIES, type DesignPreset, type DesignPresetStyle, parseProSlidesJson, type SlideData as ProSlideData, type CardNewsTheme } from '../../../lib/cardNewsLayouts';
 import { getSavedTemplates, deleteTemplate, type CardTemplate } from '../../../lib/cardTemplateService';
 import { ContentCategory } from '../../../lib/types';
 import type { WritingStyle, CardNewsDesignTemplateId, TrendingItem, AudienceMode } from '../../../lib/types';
@@ -1170,7 +1170,7 @@ DECORATIVE: (장식 요소)`,
                 <div className="grid grid-cols-5 sm:grid-cols-8 gap-2 mt-2">
                   {DESIGN_PRESETS.filter(p => presetCategory === 'all' || p.category === presetCategory).map(preset => (
                     <button key={preset.id} type="button"
-                      onClick={() => { setProTheme({ ...preset.theme, hospitalName: hospitalName || undefined }); setPresetStyle(preset.style); setCurrentPresetId(preset.id); setLearnedTemplate(null); }}
+                      onClick={() => { setProTheme({ ...preset.theme, fontId: 'pretendard', hospitalName: hospitalName || undefined }); setPresetStyle(preset.style); setCurrentPresetId(preset.id); setLearnedTemplate(null); }}
                       className={`relative rounded-xl overflow-hidden aspect-square border-2 transition-all ${currentPresetId === preset.id ? 'border-blue-500 ring-2 ring-blue-200' : 'border-slate-200'}`}>
                       <div style={{ background: preset.thumbnail, width: '100%', height: '100%' }} className="flex items-center justify-center">
                         <span className="text-[11px] font-black" style={{ color: preset.theme.titleColor }}>Aa</span>
@@ -1197,6 +1197,22 @@ DECORATIVE: (장식 요소)`,
                     <CardTemplateManager uploadOnly onSelectTemplate={(tmpl) => { setLearnedTemplate(tmpl); setSavedStylesVersion(v => v + 1); }} selectedTemplateId={learnedTemplate?.id} />
                   </div>
                 )}
+              </div>
+
+              {/* 전체 글씨체 */}
+              <div>
+                <label className={labelCls}>전체 글씨체</label>
+                <select value={proTheme.fontId || 'pretendard'}
+                  onChange={e => setProTheme(prev => ({ ...prev, fontId: e.target.value }))}
+                  className={inputCls}>
+                  {FONT_CATEGORIES.map(cat => (
+                    <optgroup key={cat} label={cat}>
+                      {CARD_FONTS.filter(f => f.category === cat).map(f => (
+                        <option key={f.id} value={f.id}>{f.name}</option>
+                      ))}
+                    </optgroup>
+                  ))}
+                </select>
               </div>
 
               {/* 병원명 */}
