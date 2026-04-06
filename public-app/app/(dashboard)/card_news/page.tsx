@@ -47,7 +47,7 @@ export default function CardNewsPage() {
     if (!isSupabaseConfigured) return;
     (async () => { try { const sb = getSupabaseClient(); const { data: { user } } = await sb.auth.getUser(); if (user?.user_metadata?.name) setHospitalName(user.user_metadata.name); } catch {} })();
   }, []);
-  const [slideCount, setSlideCount] = useState(6);
+  const [slideCount, setSlideCount] = useState(0); // 0 = 자동
   const [proCardRatio, setProCardRatio] = useState<'1:1' | '3:4' | '4:5' | '9:16' | '16:9'>('1:1');
   const [designTemplateId, setDesignTemplateId] = useState<CardNewsDesignTemplateId | undefined>(undefined);
   // 이미지 스타일 UI는 상세설정과 함께 제거됨. 레거시 AI 이미지 플로우 참조용 고정값.
@@ -412,9 +412,10 @@ export default function CardNewsPage() {
       }
 
       if (parsedCards.length === 0) {
-        for (let i = 0; i < slideCount; i++) {
-          const fallbackRole = i === 0 ? '표지' : i === slideCount - 1 ? '마무리 표지' : `본문 ${i}`;
-          const fallbackTitle = i === 0 ? topic : i === slideCount - 1 ? '상담을 기다립니다' : `슬라이드 ${i + 1}`;
+        const fallbackCount = slideCount || 6;
+        for (let i = 0; i < fallbackCount; i++) {
+          const fallbackRole = i === 0 ? '표지' : i === fallbackCount - 1 ? '마���리 표지' : `���문 ${i}`;
+          const fallbackTitle = i === 0 ? topic : i === fallbackCount - 1 ? '상담을 기다립니다' : `슬라이드 ${i + 1}`;
           parsedCards.push({ index: i + 1, role: fallbackRole, title: fallbackTitle, body: '', imagePrompt: '', imageUrl: null, imageHistory: [] });
         }
       }
@@ -947,16 +948,26 @@ DECORATIVE: (장식 요소)`,
               </div>
             </div>
 
-            {/* 슬라이드 수 (4~10장) */}
+            {/* 슬라이드 수 */}
             <div>
               <label className={labelCls}>
-                슬라이드 수 <span className="text-blue-600 font-bold">{slideCount}장</span>
+                슬라이드 수 {slideCount === 0 ? <span className="text-purple-600 font-bold">자동</span> : <span className="text-blue-600 font-bold">{slideCount}장</span>}
               </label>
-              <input type="range" min={4} max={10} step={1} value={slideCount}
-                onChange={e => setSlideCount(Number(e.target.value))}
-                className="w-full accent-blue-600" />
-              <div className="flex justify-between text-[10px] text-slate-400 mt-0.5">
-                <span>4장 (간단)</span><span>7장 (기본)</span><span>10장 (상세)</span>
+              <div className="flex gap-1.5 flex-wrap">
+                <button type="button" onClick={() => setSlideCount(0)}
+                  className={`px-4 py-2 rounded-xl text-sm font-bold border-2 transition-all ${
+                    slideCount === 0 ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-slate-200 text-slate-400'
+                  }`}>
+                  ✨ 자동
+                </button>
+                {[4, 5, 6, 7, 8, 10].map(n => (
+                  <button key={n} type="button" onClick={() => setSlideCount(n)}
+                    className={`px-3 py-2 rounded-xl text-sm font-bold border-2 transition-all ${
+                      slideCount === n ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-slate-200 text-slate-400'
+                    }`}>
+                    {n}장
+                  </button>
+                ))}
               </div>
             </div>
 
@@ -1158,7 +1169,7 @@ DECORATIVE: (장식 요소)`,
               ))}
             </div>
             <div className="relative mb-6"><div className="w-14 h-14 border-[3px] border-pink-100 border-t-pink-500 rounded-full animate-spin" /></div>
-            <p className="text-sm font-medium text-slate-700 mb-2">{progress || (isGeneratingImages ? '카드 이미지를 생성하고 있어요' : isGeneratingPrompts ? '이미지 프롬프트를 만들고 있어요' : `${slideCount}장 분량의 원고를 작성하고 있어요`)}</p>
+            <p className="text-sm font-medium text-slate-700 mb-2">{progress || (isGeneratingImages ? '카드 이미지를 생성하고 있어요' : isGeneratingPrompts ? '이미지 프롬프트를 만들고 있어요' : `${slideCount === 0 ? '최적 장수로' : `${slideCount}장 분량의`} 원고를 작성���고 있어요`)}</p>
           </div>
         ) : error ? (
           <ErrorPanel error={error} onDismiss={() => setError(null)} />

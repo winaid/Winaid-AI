@@ -156,7 +156,7 @@ export function buildCardNewsPrompt(req: CardNewsRequest): {
   }
 
   promptParts.push(
-    `- 슬라이드 수: ${req.slideCount}장`,
+    `- 슬라이드 수: ${!req.slideCount || req.slideCount === 0 ? '자동 (4~10장, AI가 주제에 맞게 결정)' : `${req.slideCount}장`}`,
     '',
     `## 슬라이드 구성 가이드`,
     slideGuide,
@@ -264,8 +264,9 @@ export function buildCardNewsProPrompt(req: CardNewsRequest): {
   systemInstruction: string;
   prompt: string;
 } {
-  const slideCount = req.slideCount || 6;
-  const middleCount = Math.max(0, slideCount - 2);
+  const isAutoCount = !req.slideCount || req.slideCount === 0;
+  const slideCount = isAutoCount ? 0 : req.slideCount;
+  const middleCount = isAutoCount ? 0 : Math.max(0, slideCount - 2);
 
   const systemInstruction = `당신은 프로급 의료 카드뉴스 기획자입니다.
 주제를 받으면 슬라이드별로 가장 적합한 레이아웃을 선택하고, 반드시 JSON 형식으로만 출력합니다.
@@ -303,7 +304,7 @@ export function buildCardNewsProPrompt(req: CardNewsRequest): {
 - price-table에는 반드시 검색으로 확인한 실제 시세를 반영
 
 절대 규칙:
-1. 1장은 cover, ${slideCount}장은 closing. 중간 ${middleCount}장은 16종 레이아웃 중 주제에 맞는 것을 다양하게 혼합.
+1. 1장은 cover, 마지막 장은 closing.${isAutoCount ? ' 주제에 맞게 적절한 장수(4~10장)를 자동 결정하세요. 커버 + 내용 + 마무리 구성.' : ` 총 ${slideCount}장, 중간 ${middleCount}장은 16종 레이아웃 중 주제에 맞는 것을 다양하게 혼합.`}
 2. 같은 레이아웃을 3번 이상 연속/반복 사용 금지. 가능하면 서로 다른 6~8종을 섞으세요.
 3. comparison / data-highlight / price-table / timeline / warning 에는 반드시 구체적 수치(%/년/개월/만원/mm 등) 포함.
 4. "중요합니다", "전문의 상담", "것이 좋습니다" 같은 뻔한 표현 금지.
