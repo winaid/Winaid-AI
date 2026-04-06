@@ -980,7 +980,7 @@ DECORATIVE: (장식 요소)`,
     <div className={`p-5 max-w-6xl mx-auto ${mainTab === 'create' && pageStep === 1 ? 'min-h-[calc(100vh-80px)] flex flex-col justify-center' : ''}`}>
 
       {/* ══════ 상단: 탭 + 스텝 ══════ */}
-      <div className="flex items-end justify-between border-b border-slate-200 mb-6 flex-shrink-0">
+      <div className="flex items-end justify-center border-b border-slate-200 mb-6 flex-shrink-0 gap-6">
         <div className="flex gap-0">
           <button type="button" onClick={() => setMainTab('create')}
             className={`px-5 py-3 border-b-2 transition-all text-left ${mainTab === 'create' ? 'border-blue-600' : 'border-transparent'}`}>
