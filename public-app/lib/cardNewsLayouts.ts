@@ -133,6 +133,25 @@ export interface SlideData {
 
   // 카드별 폰트 오버라이드 — 비어 있으면 상단 전체 폰트를 따름
   fontId?: string;
+
+  // 요소별 스타일 오버라이드 (Mirra 스타일 편집)
+  titleFontId?: string;
+  titleFontSize?: number;
+  titleFontWeight?: string;
+  titleColor?: string;
+  titleLetterSpacing?: number;
+  titleLineHeight?: number;
+
+  subtitleFontId?: string;
+  subtitleFontSize?: number;
+  subtitleFontWeight?: string;
+  subtitleColor?: string;
+  subtitleLetterSpacing?: number;
+  subtitleLineHeight?: number;
+
+  bodyFontSize?: number;
+  bodyColor?: string;
+  bodyLineHeight?: number;
 }
 
 export interface CardNewsTheme {

@@ -630,6 +630,40 @@ JSON 한 객체만 출력:
     padding: calcCardPadding(slide),
   });
 
+  /** 슬라이드별 제목 스타일 — 개별 오버라이드 + 테마 기본값 */
+  const getTitleStyle = (slide: SlideData, defaults: { fontSize: number; textAlign?: string }): CSSProperties => ({
+    color: slide.titleColor || theme.titleColor,
+    fontSize: `${slide.titleFontSize || defaults.fontSize}px`,
+    fontWeight: (slide.titleFontWeight || '800') as CSSProperties['fontWeight'],
+    letterSpacing: slide.titleLetterSpacing ? `${slide.titleLetterSpacing}px` : '-0.02em',
+    lineHeight: slide.titleLineHeight || 1.25,
+    wordBreak: 'keep-all',
+    ...(defaults.textAlign ? { textAlign: defaults.textAlign as CSSProperties['textAlign'] } : {}),
+    ...(slide.titleFontId ? { fontFamily: getSlideFontFamily({ ...slide, fontId: slide.titleFontId }) } : {}),
+  });
+
+  /** 슬라이드별 부제 스타일 */
+  const getSubtitleStyle = (slide: SlideData): CSSProperties => ({
+    color: slide.subtitleColor || theme.subtitleColor,
+    fontSize: `${slide.subtitleFontSize || 22}px`,
+    fontWeight: (slide.subtitleFontWeight || '600') as CSSProperties['fontWeight'],
+    letterSpacing: slide.subtitleLetterSpacing ? `${slide.subtitleLetterSpacing}px` : undefined,
+    lineHeight: slide.subtitleLineHeight || 1.55,
+    wordBreak: 'keep-all',
+    ...(slide.subtitleFontId ? { fontFamily: getSlideFontFamily({ ...slide, fontId: slide.subtitleFontId }) } : {}),
+  });
+
+  /** 슬라이드별 본문 스타일 */
+  const getBodyStyle = (slide: SlideData): CSSProperties => {
+    const auto = calcBodySize(slide.body || '');
+    return {
+      color: slide.bodyColor || theme.bodyColor,
+      fontSize: `${slide.bodyFontSize || auto.fontSize}px`,
+      lineHeight: slide.bodyLineHeight || auto.lineHeight,
+      wordBreak: 'keep-all',
+    };
+  };
+
   // ═══════════════════════════════════════
   // 다운로드
   // ═══════════════════════════════════════
@@ -1047,18 +1081,13 @@ JSON 한 객체만 출력:
         }}
       >
         <div style={{ width: '72px', height: '5px', background: theme.accentColor, borderRadius: '3px' }} />
-        <h1
-          style={{
-            color: theme.titleColor,
-            fontSize: `${calcTitleSize(slide.title, 64, 42)}px`,
-            fontWeight: 900,
-            lineHeight: 1.2,
-            wordBreak: 'keep-all',
-            letterSpacing: '-0.02em',
+        <h1 style={{
+            ...getTitleStyle(slide, { fontSize: calcTitleSize(slide.title, 64, 42), textAlign: 'center' }),
+            fontWeight: (slide.titleFontWeight || '900') as CSSProperties['fontWeight'],
+            lineHeight: slide.titleLineHeight || 1.2,
             textShadow: isDarkTheme ? '0 2px 24px rgba(0,0,0,0.25)' : 'none',
             maxWidth: '90%',
-          }}
-        >
+          }}>
           {slide.title}
         </h1>
         {slide.subtitle && (
@@ -1127,9 +1156,7 @@ JSON 한 객체만 출력:
         {slide.body && (
           <div
             style={{
-              color: theme.bodyColor,
-              fontSize: `${calcBodySize(slide.body || '').fontSize}px`,
-              lineHeight: calcBodySize(slide.body || '').lineHeight,
+              ...getBodyStyle(slide),
               whiteSpace: 'pre-line',
               background: innerCardBg,
               borderRadius: '18px',
@@ -1509,18 +1536,13 @@ JSON 한 객체만 출력:
             {slide.subtitle}
           </div>
         )}
-        <h1
-          style={{
-            color: theme.titleColor,
-            fontSize: `${calcTitleSize(slide.title, 64, 42)}px`,
-            fontWeight: 900,
-            lineHeight: 1.25,
-            wordBreak: 'keep-all',
-            maxWidth: '90%',
-            letterSpacing: '-0.02em',
+        <h1 style={{
+            ...getTitleStyle(slide, { fontSize: calcTitleSize(slide.title, 64, 42), textAlign: 'center' }),
+            fontWeight: (slide.titleFontWeight || '900') as CSSProperties['fontWeight'],
+            lineHeight: slide.titleLineHeight || 1.25,
             textShadow: isDarkTheme ? '0 2px 24px rgba(0,0,0,0.25)' : 'none',
-          }}
-        >
+            maxWidth: '90%',
+          }}>
           {slide.title}
         </h1>
         {slide.body && (
@@ -2211,6 +2233,131 @@ JSON 한 객체만 출력:
 }
 
 // ═══════════════════════════════════════════════════════════════
+// Mirra 스타일 편집 컴포넌트
+// ═══════════════════════════════════════════════════════════════
+
+function ElementAccordion({ icon, label, defaultOpen = false, children }: {
+  icon: string; label: string; defaultOpen?: boolean; children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className={`border rounded-xl transition-all ${open ? 'border-blue-200 bg-blue-50/30' : 'border-slate-200'}`}>
+      <button type="button" onClick={() => setOpen(!open)}
+        className="w-full flex items-center gap-3 px-4 py-3 text-left">
+        <span className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold ${
+          icon === 'T' ? 'bg-green-100 text-green-700' :
+          icon === '🖼' ? 'bg-blue-100 text-blue-700' :
+          'bg-orange-100 text-orange-700'
+        }`}>{icon}</span>
+        <span className="flex-1 text-sm font-semibold text-slate-700 truncate">{label}</span>
+        <span className={`text-slate-400 transition-transform ${open ? 'rotate-180' : ''}`}>▾</span>
+      </button>
+      {open && <div className="px-4 pb-4 pt-1">{children}</div>}
+    </div>
+  );
+}
+
+function TextElementEditor({ value, onChange, multiline, fontSize, fontWeight, fontColor,
+  letterSpacing, lineHeight, onStyleChange, prefix = 'title',
+}: {
+  value: string; onChange: (v: string) => void; multiline?: boolean;
+  fontSize?: number; fontWeight?: string; fontColor?: string;
+  letterSpacing?: number; lineHeight?: number;
+  onStyleChange: (key: string, val: string | number | undefined) => void; prefix?: string;
+}) {
+  return (
+    <div className="space-y-3">
+      {/* 텍스트 입력 */}
+      {multiline ? (
+        <textarea value={value || ''} onChange={e => onChange(e.target.value)}
+          className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg resize-none focus:outline-none focus:border-blue-400" rows={3} />
+      ) : (
+        <input type="text" value={value || ''} onChange={e => onChange(e.target.value)}
+          className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-blue-400" />
+      )}
+
+      {/* 크기 + 빠른 선택 */}
+      <div>
+        <p className="text-[10px] text-slate-400 mb-1">크기</p>
+        <div className="flex items-center gap-1 mb-2">
+          <button type="button" onClick={() => onStyleChange(`${prefix}FontSize`, (fontSize || 48) - 2)}
+            className="w-7 h-7 bg-slate-100 rounded text-xs font-bold hover:bg-slate-200">−</button>
+          <input type="number" value={fontSize || 48}
+            onChange={e => onStyleChange(`${prefix}FontSize`, Number(e.target.value))}
+            className="w-14 h-7 text-center text-xs bg-white border border-slate-200 rounded" />
+          <button type="button" onClick={() => onStyleChange(`${prefix}FontSize`, (fontSize || 48) + 2)}
+            className="w-7 h-7 bg-slate-100 rounded text-xs font-bold hover:bg-slate-200">+</button>
+        </div>
+        <div className="flex flex-wrap gap-1">
+          {[16, 20, 24, 32, 40, 48, 56, 64, 80].map(s => (
+            <button key={s} type="button" onClick={() => onStyleChange(`${prefix}FontSize`, s)}
+              className={`px-2 py-0.5 text-[10px] rounded border ${
+                fontSize === s ? 'bg-blue-500 text-white border-blue-500' : 'bg-white text-slate-500 border-slate-200 hover:border-blue-300'
+              }`}>{s}</button>
+          ))}
+        </div>
+      </div>
+
+      {/* 색상 팔레트 */}
+      <div>
+        <p className="text-[10px] text-slate-400 mb-1">색상</p>
+        <div className="flex flex-wrap gap-1.5">
+          {['#FFFFFF', '#000000', '#333333', '#666666', '#999999',
+            '#EF4444', '#F97316', '#EAB308', '#22C55E', '#3B82F6', '#8B5CF6', '#EC4899'].map(c => (
+            <button key={c} type="button" onClick={() => onStyleChange(`${prefix}Color`, c)}
+              className={`w-6 h-6 rounded-full border-2 transition-transform ${
+                fontColor === c ? 'border-blue-500 scale-110' : 'border-slate-200 hover:scale-105'
+              }`} style={{ background: c }} />
+          ))}
+        </div>
+      </div>
+
+      {/* 굵기 */}
+      <div>
+        <p className="text-[10px] text-slate-400 mb-1">굵기</p>
+        <div className="flex gap-1">
+          {[{ label: 'L', value: '400' }, { label: 'N', value: '500' }, { label: 'M', value: '600' },
+            { label: 'SB', value: '700' }, { label: 'B', value: '800' }, { label: 'XB', value: '900' }].map(w => (
+            <button key={w.label} type="button" onClick={() => onStyleChange(`${prefix}FontWeight`, w.value)}
+              className={`flex-1 py-1.5 text-[11px] font-semibold rounded-lg border ${
+                (fontWeight || '800') === w.value ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'
+              }`}>{w.label}</button>
+          ))}
+        </div>
+      </div>
+
+      {/* 자간 + 행간 */}
+      <div className="flex gap-3">
+        <div className="flex-1">
+          <p className="text-[10px] text-slate-400 mb-1">자간</p>
+          <div className="flex items-center gap-1">
+            <button type="button" onClick={() => onStyleChange(`${prefix}LetterSpacing`, (letterSpacing || 0) - 0.5)}
+              className="w-7 h-7 bg-slate-100 rounded text-xs font-bold hover:bg-slate-200">−</button>
+            <input type="number" step="0.5" value={letterSpacing || 0}
+              onChange={e => onStyleChange(`${prefix}LetterSpacing`, Number(e.target.value))}
+              className="w-12 h-7 text-center text-xs bg-white border border-slate-200 rounded" />
+            <button type="button" onClick={() => onStyleChange(`${prefix}LetterSpacing`, (letterSpacing || 0) + 0.5)}
+              className="w-7 h-7 bg-slate-100 rounded text-xs font-bold hover:bg-slate-200">+</button>
+          </div>
+        </div>
+        <div className="flex-1">
+          <p className="text-[10px] text-slate-400 mb-1">행간</p>
+          <div className="flex items-center gap-1">
+            <button type="button" onClick={() => onStyleChange(`${prefix}LineHeight`, Math.round(((lineHeight || 1.3) - 0.1) * 10) / 10)}
+              className="w-7 h-7 bg-slate-100 rounded text-xs font-bold hover:bg-slate-200">−</button>
+            <input type="number" step="0.1" value={lineHeight || 1.3}
+              onChange={e => onStyleChange(`${prefix}LineHeight`, Number(e.target.value))}
+              className="w-12 h-7 text-center text-xs bg-white border border-slate-200 rounded" />
+            <button type="button" onClick={() => onStyleChange(`${prefix}LineHeight`, Math.round(((lineHeight || 1.3) + 0.1) * 10) / 10)}
+              className="w-7 h-7 bg-slate-100 rounded text-xs font-bold hover:bg-slate-200">+</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
 // SlideEditor: 현재 슬라이드 레이아웃에 맞는 폼을 렌더링
 // ═══════════════════════════════════════════════════════════════
 
@@ -2265,6 +2412,9 @@ function SlideEditor({
   const [imageSearchQuery, setImageSearchQuery] = useState('');
   const [imageSearchResults, setImageSearchResults] = useState<{ id: string; url: string; thumb: string; alt: string; source: string; photographer?: string }[]>([]);
   const [imageSearchLoading, setImageSearchLoading] = useState(false);
+
+  // 편집/AI 2탭
+  const [editMode, setEditMode] = useState<'edit' | 'ai'>('edit');
 
   // 탭 전환 시 자동 키워드 채우기
   useEffect(() => {
@@ -2740,118 +2890,82 @@ ${JSON.stringify(slideForContext, null, 2)}
     </div>
   );
 
-  if (slide.layout === 'cover') return <>{common}{imageSection}{cardChatSection}</>;
-
-  if (slide.layout === 'info' || slide.layout === 'closing') {
-    return (
-      <>
-        {common}
-        <div>
-          {fieldLabel('본문', 'body')}
-          <textarea rows={3} value={slide.body || ''} onChange={(e) => onChange({ body: e.target.value })} className={textareaCls} />
-        </div>
-        {imageSection}
-        {cardChatSection}
-      </>
-    );
-  }
-
-  if (slide.layout === 'comparison') {
-    const cols = slide.columns || [];
-    const labels = slide.compareLabels || [];
-    const updateCol = (ci: number, patch: Partial<typeof cols[number]>) => {
-      const next = cols.map((c, i) => (i === ci ? { ...c, ...patch } : c));
-      onChange({ columns: next });
-    };
-    const updateColItem = (ci: number, ri: number, value: string) => {
-      const next = cols.map((c, i) => {
-        if (i !== ci) return c;
-        const items = [...c.items];
-        items[ri] = value;
-        return { ...c, items };
-      });
-      onChange({ columns: next });
-    };
-    const updateLabel = (ri: number, value: string) => {
-      const next = [...labels];
-      next[ri] = value;
-      onChange({ compareLabels: next });
-    };
-    const isSuggestingComparison = aiSuggestingKey === `${slideIdx}:comparison`;
-    return (
-      <>
-        {common}
-        <button
-          type="button"
-          onClick={onAiSuggestComparison}
-          disabled={isSuggestingComparison}
-          className="w-full py-1.5 bg-purple-50 text-purple-600 text-[10px] font-bold rounded-lg border border-purple-200 hover:bg-purple-100 disabled:opacity-50"
-        >
-          {isSuggestingComparison ? '생성 중...' : '✨ AI로 비교 데이터 자동 채우기'}
-        </button>
-        <div>
-          <label className={labelCls}>비교 행 라벨 + 컬럼별 값</label>
-          <div className="space-y-1.5">
-            {labels.map((lbl, ri) => (
-              <div key={ri} className="grid grid-cols-[110px_1fr_1fr] gap-1.5 items-center">
-                <input type="text" value={lbl} onChange={(e) => updateLabel(ri, e.target.value)} className={inputCls} placeholder={`라벨 ${ri + 1}`} />
-                {cols.map((c, ci) => (
-                  <input key={ci} type="text" value={c.items[ri] || ''} onChange={(e) => updateColItem(ci, ri, e.target.value)} className={inputCls} placeholder={c.header} />
-                ))}
-              </div>
-            ))}
+  // ── 레이아웃별 데이터 편집 (아코디언 안에 들어갈 내용) ──
+  const renderLayoutDataEditor = () => {
+    if (slide.layout === 'info' || slide.layout === 'closing') {
+      return (
+        <ElementAccordion icon="T" label="본문" defaultOpen={false}>
+          <TextElementEditor value={slide.body || ''} onChange={v => onChange({ body: v })} multiline
+            fontSize={slide.bodyFontSize} fontColor={slide.bodyColor} lineHeight={slide.bodyLineHeight}
+            onStyleChange={(key, val) => onChange({ [key]: val })} prefix="body" />
+        </ElementAccordion>
+      );
+    }
+    if (slide.layout === 'comparison') {
+      const cols = slide.columns || [];
+      const labels = slide.compareLabels || [];
+      const updateCol = (ci: number, patch: Partial<typeof cols[number]>) => {
+        onChange({ columns: cols.map((c, i) => (i === ci ? { ...c, ...patch } : c)) });
+      };
+      const updateColItem = (ci: number, ri: number, value: string) => {
+        onChange({ columns: cols.map((c, i) => {
+          if (i !== ci) return c;
+          const items = [...c.items]; items[ri] = value; return { ...c, items };
+        }) });
+      };
+      const updateLabel = (ri: number, value: string) => {
+        const next = [...labels]; next[ri] = value; onChange({ compareLabels: next });
+      };
+      return (
+        <ElementAccordion icon="T" label={`비교표 (${cols.length}열 × ${labels.length}행)`} defaultOpen={false}>
+          <div className="space-y-2">
+            <label className={labelCls}>컬럼 헤더</label>
+            <div className="grid grid-cols-2 gap-1.5">
+              {cols.map((c, ci) => (
+                <input key={ci} type="text" value={c.header} onChange={(e) => updateCol(ci, { header: e.target.value })} className={inputCls} />
+              ))}
+            </div>
+            <label className={labelCls}>행 데이터</label>
+            <div className="space-y-1.5">
+              {labels.map((lbl, ri) => (
+                <div key={ri} className="grid grid-cols-[110px_1fr_1fr] gap-1.5 items-center">
+                  <input type="text" value={lbl} onChange={(e) => updateLabel(ri, e.target.value)} className={inputCls} placeholder={`라벨 ${ri + 1}`} />
+                  {cols.map((c, ci) => (
+                    <input key={ci} type="text" value={c.items[ri] || ''} onChange={(e) => updateColItem(ci, ri, e.target.value)} className={inputCls} placeholder={c.header} />
+                  ))}
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
-        <div>
-          <label className={labelCls}>컬럼 헤더</label>
-          <div className="grid grid-cols-2 gap-1.5">
-            {cols.map((c, ci) => (
-              <input key={ci} type="text" value={c.header} onChange={(e) => updateCol(ci, { header: e.target.value })} className={inputCls} />
-            ))}
-          </div>
-        </div>
-        {imageSection}
-        {cardChatSection}
-      </>
-    );
-  }
-
-  if (slide.layout === 'icon-grid') {
-    const items = slide.icons || [];
-    const updateIcon = (i: number, patch: Partial<typeof items[number]>) => {
-      onChange({ icons: items.map((it, k) => (k === i ? { ...it, ...patch } : it)) });
-    };
-    return (
-      <>
-        {common}
-        <div>
-          <label className={labelCls}>아이콘 항목</label>
+        </ElementAccordion>
+      );
+    }
+    if (slide.layout === 'icon-grid') {
+      const items = slide.icons || [];
+      const updateIcon = (i: number, patch: Partial<typeof items[number]>) => {
+        onChange({ icons: items.map((it, k) => (k === i ? { ...it, ...patch } : it)) });
+      };
+      return (
+        <ElementAccordion icon="T" label={`아이콘 (${items.length}개)`} defaultOpen={false}>
           <div className="space-y-1.5">
             {items.map((it, i) => (
               <div key={i} className="grid grid-cols-[44px_1fr_1.6fr] gap-1.5">
                 <input type="text" value={it.emoji} onChange={(e) => updateIcon(i, { emoji: e.target.value })} className={`${inputCls} text-center`} />
                 <input type="text" value={it.title} onChange={(e) => updateIcon(i, { title: e.target.value })} className={inputCls} placeholder="제목" />
-                <input type="text" value={it.desc || ''} onChange={(e) => updateIcon(i, { desc: e.target.value })} className={inputCls} placeholder="설명 (선택)" />
+                <input type="text" value={it.desc || ''} onChange={(e) => updateIcon(i, { desc: e.target.value })} className={inputCls} placeholder="설명" />
               </div>
             ))}
           </div>
-        </div>
-        {imageSection}
-        {cardChatSection}
-      </>
-    );
-  }
-
-  if (slide.layout === 'steps') {
-    const steps = slide.steps || [];
-    const updateStep = (i: number, patch: Partial<typeof steps[number]>) => {
-      onChange({ steps: steps.map((s, k) => (k === i ? { ...s, ...patch } : s)) });
-    };
-    return (
-      <>
-        {common}
-        <div>
-          <label className={labelCls}>단계</label>
+        </ElementAccordion>
+      );
+    }
+    if (slide.layout === 'steps') {
+      const steps = slide.steps || [];
+      const updateStep = (i: number, patch: Partial<typeof steps[number]>) => {
+        onChange({ steps: steps.map((s, k) => (k === i ? { ...s, ...patch } : s)) });
+      };
+      return (
+        <ElementAccordion icon="T" label={`단계 (${steps.length}개)`} defaultOpen={false}>
           <div className="space-y-1.5">
             {steps.map((s, i) => (
               <div key={i} className="grid grid-cols-[1fr_1.6fr] gap-1.5">
@@ -2860,61 +2974,145 @@ ${JSON.stringify(slideForContext, null, 2)}
               </div>
             ))}
           </div>
-        </div>
-        {imageSection}
-        {cardChatSection}
-      </>
-    );
-  }
-
-  if (slide.layout === 'checklist') {
-    const checks = slide.checkItems || [];
-    const updateCheck = (i: number, value: string) => {
-      const next = [...checks];
-      next[i] = value;
-      onChange({ checkItems: next });
-    };
-    return (
-      <>
-        {common}
-        <div>
-          <label className={labelCls}>체크리스트 항목</label>
+        </ElementAccordion>
+      );
+    }
+    if (slide.layout === 'checklist') {
+      const checks = slide.checkItems || [];
+      const updateCheck = (i: number, value: string) => { const next = [...checks]; next[i] = value; onChange({ checkItems: next }); };
+      return (
+        <ElementAccordion icon="T" label={`체크리스트 (${checks.length}개)`} defaultOpen={false}>
           <div className="space-y-1.5">
             {checks.map((c, i) => (
               <input key={i} type="text" value={c} onChange={(e) => updateCheck(i, e.target.value)} className={inputCls} />
             ))}
           </div>
-        </div>
-        {imageSection}
-        {cardChatSection}
-      </>
-    );
-  }
-
-  if (slide.layout === 'data-highlight') {
-    const points = slide.dataPoints || [];
-    const updateDp = (i: number, patch: Partial<typeof points[number]>) => {
-      onChange({ dataPoints: points.map((p, k) => (k === i ? { ...p, ...patch } : p)) });
-    };
-    return (
-      <>
-        {common}
-        <div>
-          <label className={labelCls}>수치 데이터</label>
+        </ElementAccordion>
+      );
+    }
+    if (slide.layout === 'data-highlight') {
+      const points = slide.dataPoints || [];
+      const updateDp = (i: number, patch: Partial<typeof points[number]>) => {
+        onChange({ dataPoints: points.map((p, k) => (k === i ? { ...p, ...patch } : p)) });
+      };
+      return (
+        <ElementAccordion icon="T" label={`수치 데이터 (${points.length}개)`} defaultOpen={false}>
           <div className="space-y-1.5">
             {points.map((p, i) => (
               <div key={i} className="grid grid-cols-[1fr_2fr] gap-1.5">
-                <input type="text" value={p.value} onChange={(e) => updateDp(i, { value: e.target.value })} className={`${inputCls} font-bold text-center`} placeholder="예: 90%" />
+                <input type="text" value={p.value} onChange={(e) => updateDp(i, { value: e.target.value })} className={`${inputCls} font-bold text-center`} placeholder="90%" />
                 <input type="text" value={p.label} onChange={(e) => updateDp(i, { label: e.target.value })} className={inputCls} placeholder="라벨" />
               </div>
             ))}
           </div>
-        </div>
-        {imageSection}
-        {cardChatSection}
-      </>
-    );
-  }
+        </ElementAccordion>
+      );
+    }
+    return null;
+  };
 
-  return <>{common}{imageSection}{cardChatSection}</>;
+  // ═══════════════════════════════════════
+  // 최종 렌더: 편집 / AI 2탭
+  // ═══════════════════════════════════════
+  return (
+    <div className="space-y-3">
+      {/* 2탭 헤더 */}
+      <div className="flex border-b border-slate-200">
+        <button type="button" onClick={() => setEditMode('edit')}
+          className={`flex-1 py-2.5 text-sm font-bold border-b-2 transition-all ${
+            editMode === 'edit' ? 'border-blue-500 text-blue-600' : 'border-transparent text-slate-400'
+          }`}>
+          ⚙️ 편집
+        </button>
+        <button type="button" onClick={() => setEditMode('ai')}
+          className={`flex-1 py-2.5 text-sm font-bold border-b-2 transition-all ${
+            editMode === 'ai' ? 'border-purple-500 text-purple-600' : 'border-transparent text-slate-400'
+          }`}>
+          ✨ AI 디자이너
+        </button>
+      </div>
+
+      {/* ── 편집 탭 ── */}
+      {editMode === 'edit' && (
+        <div className="space-y-2">
+          {/* 이미지 */}
+          <ElementAccordion icon="🖼" label={slide.imageUrl ? '이미지' : '이미지 추가'} defaultOpen={false}>
+            {imageSection}
+          </ElementAccordion>
+
+          {/* 제목 */}
+          <ElementAccordion icon="T" label={slide.title || '제목'} defaultOpen={true}>
+            <TextElementEditor value={slide.title} onChange={v => onChange({ title: v })}
+              fontSize={slide.titleFontSize} fontWeight={slide.titleFontWeight}
+              fontColor={slide.titleColor} letterSpacing={slide.titleLetterSpacing}
+              lineHeight={slide.titleLineHeight}
+              onStyleChange={(key, val) => onChange({ [key]: val })} prefix="title" />
+          </ElementAccordion>
+
+          {/* 부제 */}
+          <ElementAccordion icon="T" label={slide.subtitle || '부제'} defaultOpen={false}>
+            <TextElementEditor value={slide.subtitle || ''} onChange={v => onChange({ subtitle: v })}
+              fontSize={slide.subtitleFontSize} fontWeight={slide.subtitleFontWeight}
+              fontColor={slide.subtitleColor} letterSpacing={slide.subtitleLetterSpacing}
+              lineHeight={slide.subtitleLineHeight}
+              onStyleChange={(key, val) => onChange({ [key]: val })} prefix="subtitle" />
+          </ElementAccordion>
+
+          {/* 레이아웃별 데이터 */}
+          {renderLayoutDataEditor()}
+
+          {/* 카드별 글씨체 */}
+          <ElementAccordion icon="🎨" label="카드 글씨체" defaultOpen={false}>
+            <select value={slide.fontId || ''} onChange={(e) => { onChange({ fontId: e.target.value || undefined }); onFontChange(e.target.value || undefined); }} className={inputCls}>
+              <option value="">전체 설정 따름</option>
+              {FONT_CATEGORIES.map((cat) => (
+                <optgroup key={cat} label={cat}>
+                  {CARD_FONTS.filter((f) => f.category === cat).map((f) => (
+                    <option key={f.id} value={f.id}>{f.name}</option>
+                  ))}
+                </optgroup>
+              ))}
+              {customFontName && <optgroup label="내 폰트"><option value="custom">📁 {customFontDisplayName || customFontName}</option></optgroup>}
+            </select>
+          </ElementAccordion>
+        </div>
+      )}
+
+      {/* ── AI 디자이너 탭 ── */}
+      {editMode === 'ai' && (
+        <div className="space-y-3">
+          <button type="button" onClick={onAiEnrich}
+            disabled={aiSuggestingKey === `${slideIdx}:enrich`}
+            className="w-full py-2.5 bg-green-50 text-green-600 text-sm font-bold rounded-xl border border-green-200 hover:bg-green-100 disabled:opacity-50">
+            {aiSuggestingKey === `${slideIdx}:enrich` ? '🔍 웹 검색 중...' : '🔍 웹 검색으로 내용 보강'}
+          </button>
+          <button type="button" onClick={() => onAiSuggestText('title')}
+            disabled={isSuggesting('title')}
+            className="w-full py-2.5 bg-purple-50 text-purple-600 text-sm font-bold rounded-xl border border-purple-200 hover:bg-purple-100 disabled:opacity-50">
+            {isSuggesting('title') ? '추천 중...' : '✨ AI 제목 추천'}
+          </button>
+          <button type="button" onClick={() => onAiSuggestText('subtitle')}
+            disabled={isSuggesting('subtitle')}
+            className="w-full py-2.5 bg-purple-50 text-purple-600 text-sm font-bold rounded-xl border border-purple-200 hover:bg-purple-100 disabled:opacity-50">
+            {isSuggesting('subtitle') ? '추천 중...' : '✨ AI 부제 추천'}
+          </button>
+          {slide.layout === 'comparison' && (
+            <button type="button" onClick={onAiSuggestComparison}
+              disabled={aiSuggestingKey === `${slideIdx}:comparison`}
+              className="w-full py-2.5 bg-purple-50 text-purple-600 text-sm font-bold rounded-xl border border-purple-200 hover:bg-purple-100 disabled:opacity-50">
+              {aiSuggestingKey === `${slideIdx}:comparison` ? '생성 중...' : '✨ AI 비교 데이터 자동 채우기'}
+            </button>
+          )}
+          <button type="button" onClick={onSuggestImagePrompt}
+            disabled={aiSuggestingKey === `${slideIdx}:imgprompt`}
+            className="w-full py-2.5 bg-blue-50 text-blue-600 text-sm font-bold rounded-xl border border-blue-200 hover:bg-blue-100 disabled:opacity-50">
+            {aiSuggestingKey === `${slideIdx}:imgprompt` ? '추천 중...' : '🎨 AI 이미지 프롬프트 추천'}
+          </button>
+
+          {/* AI 채팅 */}
+          {cardChatSection}
+        </div>
+      )}
+    </div>
+  );
 }
