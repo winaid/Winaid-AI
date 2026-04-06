@@ -341,11 +341,17 @@ export default function CardNewsPage() {
     // ═══ Pro Mode: 항상 프로 레이아웃으로 생성 ═══
     try {
       const { systemInstruction: proSI, prompt: proPrompt } = buildCardNewsProPrompt(request);
+      // 학습 템플릿의 레이아웃 순서/선호도 반영
+      const layoutHint = learnedTemplate?.slideStructure?.length
+        ? `\n\n[학습된 레이아웃 순서]\n반드시 다음 순서로 슬라이드를 구성:\n${learnedTemplate.slideStructure.map((l: string, i: number) => `${i+1}번: layout="${l}"`).join('\n')}`
+        : learnedTemplate?.layoutMatch?.length
+        ? `\n\n[학습된 레이아웃 선호]\n가능하면 다음 레이아웃을 우선 사용: ${learnedTemplate.layoutMatch.join(', ')}`
+        : '';
       const res = await fetch('/api/gemini', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          prompt: proPrompt,
+          prompt: proPrompt + layoutHint,
           systemInstruction: proSI,
           model: 'gemini-3.1-pro-preview',
           temperature: 0.7,

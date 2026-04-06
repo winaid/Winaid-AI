@@ -91,6 +91,10 @@ export interface CardTemplate {
   decorations?: CardTemplateDecorations;
   layoutRules?: CardTemplateLayoutRules;
 
+  // v3: 레이아웃 학습
+  layoutMatch?: string[];        // 매칭 레이아웃 (최대 3개)
+  slideStructure?: string[];     // 추천 슬라이드 구성 순서
+
   rawAnalysis: string;
   cssTemplate: string;
   thumbnailDataUrl?: string;
@@ -211,6 +215,8 @@ CSS 값은 반드시 실제 동작하는 CSS여야 합니다.
     "shapeStyle": "",
     "overlay": ""
   },
+  "layoutMatch": ["16종 중 이 디자인에 가장 어울리는 레이아웃 1~3개: cover/info/comparison/checklist/steps/icon-grid/data-highlight/qna/timeline/before-after/pros-cons/price-table/warning/quote/numbered-list/closing"],
+  "slideStructure": ["이 스타일로 6장 카드뉴스를 만든다면 추천 레이아웃 순서, 예: cover,icon-grid,comparison,steps,checklist,closing"],
   "cssTemplate": ".card-container { ... } 전체 재현용 CSS. 비어도 무방.",
   "description": "이 디자인의 전체 느낌과 특징을 2~3문장으로"
 }`;
@@ -260,6 +266,8 @@ CSS 값은 반드시 실제 동작하는 CSS여야 합니다.
         highlightStyle: parsed.highlightStyle,
         decorations: parsed.decorations,
         layoutRules: parsed.layoutRules,
+        layoutMatch: Array.isArray(parsed.layoutMatch) ? parsed.layoutMatch : [],
+        slideStructure: Array.isArray(parsed.slideStructure) ? parsed.slideStructure : [],
         rawAnalysis: data.text,
         cssTemplate: parsed.cssTemplate || '',
       },
