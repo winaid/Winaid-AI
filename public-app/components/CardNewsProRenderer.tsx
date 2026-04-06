@@ -2430,6 +2430,7 @@ JSON 한 객체만 출력:
                     learnedTemplate={learnedTemplate}
                     presetStyle={presetStyle}
                     maxWidth={650}
+                    onSlideChange={(patch) => updateSlide(editingIdx, patch)}
                   />
                 ) : (
                 <div style={{ width: '100%', maxWidth: '650px', aspectRatio: cardAspect, position: 'relative', overflow: 'hidden', borderRadius: '16px', boxShadow: '0 20px 60px rgba(0,0,0,0.15)' }}>
