@@ -2392,6 +2392,58 @@ JSON 한 객체만 출력:
                     style={{ position: 'absolute', top: 0, left: 0, width: `${cardWidth}px`, height: `${cardHeight}px`, transform: `scale(${650 / cardWidth})`, transformOrigin: 'top left' }}>
                     {renderSlide(eSlide)}
                   </div>
+                  {/* 드래그 오버레이 — 제목/부제/장식 위치 이동 */}
+                  <div style={{ position: 'absolute', inset: 0, zIndex: 20 }}
+                    onMouseDown={(e) => {
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      const clickX = ((e.clientX - rect.left) / rect.width) * 100;
+                      const clickY = ((e.clientY - rect.top) / rect.height) * 100;
+
+                      // 장식 요소 중 가장 가까운 것 찾기
+                      let closestDeco: string | null = null;
+                      let closestDist = 999;
+                      (eSlide.decorations || []).forEach(d => {
+                        const dx = parseFloat(d.position.left) - clickX;
+                        const dy = parseFloat(d.position.top) - clickY;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+                        if (dist < closestDist) { closestDist = dist; closestDeco = d.id; }
+                      });
+
+                      // 제목/부제 거리
+                      const titlePos = eSlide.titlePosition || { x: 50, y: 35 };
+                      const subPos = eSlide.subtitlePosition || { x: 50, y: 50 };
+                      const distTitle = Math.sqrt((clickX - titlePos.x) ** 2 + (clickY - titlePos.y) ** 2);
+                      const distSub = Math.sqrt((clickX - subPos.x) ** 2 + (clickY - subPos.y) ** 2);
+
+                      let dragTarget: 'title' | 'subtitle' | 'deco' = 'title';
+                      let decoId = '';
+                      if (closestDist < 15 && closestDist < distTitle && closestDist < distSub) {
+                        dragTarget = 'deco'; decoId = closestDeco || '';
+                      } else if (distSub < distTitle) {
+                        dragTarget = 'subtitle';
+                      }
+
+                      const sx = e.clientX, sy = e.clientY;
+                      const startX = dragTarget === 'title' ? titlePos.x : dragTarget === 'subtitle' ? subPos.x : parseFloat((eSlide.decorations || []).find(d => d.id === decoId)?.position.left || '50');
+                      const startY = dragTarget === 'title' ? titlePos.y : dragTarget === 'subtitle' ? subPos.y : parseFloat((eSlide.decorations || []).find(d => d.id === decoId)?.position.top || '50');
+
+                      const onMove = (ev: MouseEvent) => {
+                        const dx = ((ev.clientX - sx) / rect.width) * 100;
+                        const dy = ((ev.clientY - sy) / rect.height) * 100;
+                        const nx = Math.round(Math.max(2, Math.min(98, startX + dx)));
+                        const ny = Math.round(Math.max(2, Math.min(98, startY + dy)));
+                        if (dragTarget === 'title') updateSlide(editingIdx, { titlePosition: { x: nx, y: ny } });
+                        else if (dragTarget === 'subtitle') updateSlide(editingIdx, { subtitlePosition: { x: nx, y: ny } });
+                        else if (dragTarget === 'deco' && decoId) {
+                          updateSlide(editingIdx, { decorations: (eSlide.decorations || []).map(d => d.id === decoId ? { ...d, position: { top: `${ny}%`, left: `${nx}%` } } : d) });
+                        }
+                      };
+                      const onUp = () => { document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); };
+                      document.addEventListener('mousemove', onMove);
+                      document.addEventListener('mouseup', onUp);
+                    }}
+                    style={{ cursor: 'grab' }}
+                  />
                 </div>
               </div>
               {/* 우: 편집 패널 */}
@@ -3599,23 +3651,42 @@ ${JSON.stringify(slideForContext, null, 2)}
                 ))}
               </div>
               {(slide.decorations || []).map((deco) => (
-                <div key={deco.id} className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg">
-                  <span className="text-[10px] font-bold text-slate-500 w-10 shrink-0">
-                    {deco.type === 'star' ? '⭐' : deco.type === 'circle' ? '⭕' : deco.type === 'line' ? '➖' : deco.type === 'arrow' ? '›' : deco.type === 'badge' ? '🏷️' : deco.type === 'corner' ? '┏' : deco.type === 'dots' ? '•••' : '〰️'}
-                  </span>
-                  <div className="flex-1 flex items-center gap-1">
-                    <span className="text-[9px] text-slate-400">크기</span>
-                    <input type="range" min="20" max="120" value={deco.size}
-                      onChange={e => onChange({ decorations: (slide.decorations || []).map(d => d.id === deco.id ? { ...d, size: Number(e.target.value) } : d) })}
-                      className="w-14 h-1 accent-blue-500" />
-                    <span className="text-[9px] text-slate-400 ml-1">투명도</span>
-                    <input type="range" min="10" max="100" value={Math.round(deco.opacity * 100)}
-                      onChange={e => onChange({ decorations: (slide.decorations || []).map(d => d.id === deco.id ? { ...d, opacity: Number(e.target.value) / 100 } : d) })}
-                      className="w-14 h-1 accent-blue-500" />
+                <div key={deco.id} className="p-2.5 bg-slate-50 rounded-lg space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold text-slate-500 w-8 shrink-0">
+                      {deco.type === 'star' ? '⭐' : deco.type === 'circle' ? '⭕' : deco.type === 'line' ? '➖' : deco.type === 'arrow' ? '›' : deco.type === 'badge' ? '🏷️' : deco.type === 'corner' ? '┏' : deco.type === 'dots' ? '•••' : '〰️'}
+                    </span>
+                    <div className="flex-1 flex items-center gap-1">
+                      <span className="text-[8px] text-slate-400">크기</span>
+                      <input type="range" min="20" max="120" value={deco.size}
+                        onChange={e => onChange({ decorations: (slide.decorations || []).map(d => d.id === deco.id ? { ...d, size: Number(e.target.value) } : d) })}
+                        className="w-12 h-1 accent-blue-500" />
+                      <span className="text-[8px] text-slate-400">투명</span>
+                      <input type="range" min="10" max="100" value={Math.round(deco.opacity * 100)}
+                        onChange={e => onChange({ decorations: (slide.decorations || []).map(d => d.id === deco.id ? { ...d, opacity: Number(e.target.value) / 100 } : d) })}
+                        className="w-12 h-1 accent-blue-500" />
+                    </div>
+                    <button type="button" onClick={() => onChange({ decorations: (slide.decorations || []).filter(d => d.id !== deco.id) })}
+                      className="text-red-400 hover:text-red-600 text-xs font-bold shrink-0">✕</button>
                   </div>
-                  <button type="button"
-                    onClick={() => onChange({ decorations: (slide.decorations || []).filter(d => d.id !== deco.id) })}
-                    className="text-red-400 hover:text-red-600 text-xs font-bold shrink-0">✕</button>
+                  {/* 색상 + 위치 */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-[8px] text-slate-400">색상</span>
+                    <div className="flex gap-1">
+                      {['#FFFFFF', '#000000', '#F5A623', '#3B82F6', '#EF4444', '#22C55E'].map(c => (
+                        <button key={c} type="button" onClick={() => onChange({ decorations: (slide.decorations || []).map(d => d.id === deco.id ? { ...d, color: c } : d) })}
+                          className={`w-4 h-4 rounded-full border ${deco.color === c ? 'border-blue-500 scale-110' : 'border-slate-200'}`} style={{ background: c }} />
+                      ))}
+                      <label className="w-4 h-4 rounded-full border border-slate-200 overflow-hidden cursor-pointer bg-gradient-to-br from-red-400 via-green-400 to-blue-400">
+                        <input type="color" value={deco.color} onChange={e => onChange({ decorations: (slide.decorations || []).map(d => d.id === deco.id ? { ...d, color: e.target.value } : d) })} className="opacity-0 w-0 h-0" />
+                      </label>
+                    </div>
+                    <span className="text-[8px] text-slate-400 ml-1">위치</span>
+                    <input type="text" value={deco.position.top} onChange={e => onChange({ decorations: (slide.decorations || []).map(d => d.id === deco.id ? { ...d, position: { ...d.position, top: e.target.value } } : d) })}
+                      className="w-12 px-1 py-0.5 text-[9px] bg-white border border-slate-200 rounded" placeholder="top" />
+                    <input type="text" value={deco.position.left} onChange={e => onChange({ decorations: (slide.decorations || []).map(d => d.id === deco.id ? { ...d, position: { ...d.position, left: e.target.value } } : d) })}
+                      className="w-12 px-1 py-0.5 text-[9px] bg-white border border-slate-200 rounded" placeholder="left" />
+                  </div>
                 </div>
               ))}
             </div>
