@@ -527,165 +527,48 @@ JSON 배열로 출력한다. 각 항목은 다음 구조를 따른다:
     }
   };
 
-  // ── 트렌드 주제 (네이버 뉴스 크롤링 → Gemini 분석 — OLD seoService.ts 동일) ──
+  // ── 트렌드 주제: 키워드 있으면 세부 주제, 없으면 진료과별 핫 키워드 ──
   const handleRecommendTrends = async () => {
-    console.info(`[TREND] ========== 트렌드 주제 추천 시작 ==========`);
-    console.info(`[TREND] 진료과="${category}"`);
     setIsLoadingTrends(true);
     setTrendingItems([]);
     setSeoTitles([]);
     try {
-      const now = new Date();
-      const koreaTime = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
-      const year = koreaTime.getFullYear();
-      const month = koreaTime.getMonth() + 1;
-      const day = koreaTime.getDate();
-      const hour = koreaTime.getHours();
-      const dayOfWeek = ['일', '월', '화', '수', '목', '금', '토'][koreaTime.getDay()];
-      const dateStr = `${year}년 ${month}월 ${day}일 (${dayOfWeek}) ${hour}시`;
-      const randomSeed = Math.floor(Math.random() * 1000);
+      const userKeyword = (disease.trim() || topic.trim());
 
-      const seasonalContext: Record<number, string> = {
-        1: '신년 건강검진 시즌, 겨울철 독감/감기, 난방으로 인한 건조',
-        2: '설 연휴 후 피로, 환절기 시작, 미세먼지 증가',
-        3: '본격 환절기, 꽃가루 알레르기, 황사/미세먼지',
-        4: '봄철 야외활동 증가, 알레르기 비염 최고조',
-        5: '초여름, 식중독 주의 시작, 냉방병 예고',
-        6: '장마철 습도, 무좀/피부질환, 식중독 급증',
-        7: '폭염, 열사병/일사병, 냉방병 본격화',
-        8: '극심한 폭염, 온열질환 피크, 휴가 후 피로',
-        9: '환절기 시작, 가을 알레르기, 일교차 큰 시기',
-        10: '환절기 감기, 독감 예방접종 시즌, 건강검진 시즌',
-        11: '본격 독감 시즌, 난방 시작, 건조한 피부',
-        12: '독감 절정기, 연말 피로, 동상/저체온증'
-      };
+      let prompt: string;
+      if (userKeyword) {
+        prompt = `"${userKeyword}" 키워드와 관련된 병원 마케팅용 블로그 주제를 5개 추천해줘.
 
-      const categoryHints: Record<string, string> = {
-        '정형외과': '관절통, 허리디스크, 어깨통증, 무릎연골, 오십견, 척추관협착증',
-        '피부과': '여드름, 아토피, 색소침착, 기미, 모공, 주름, 탄력, 레이저토닝, 피코레이저, 프락셀, IPL, 울쎄라, 인모드, 써마지, 슈링크, 보톡스, 필러, 스킨부스터, 더마펜, 제모레이저, 리프팅, 실리프팅, 물광주사',
-        '내과': '당뇨, 고혈압, 갑상선, 위장질환, 간기능, 건강검진',
-        '치과': '충치, 잇몸질환, 임플란트, 치아미백, 교정, 사랑니, 치주염',
-        '안과': '안구건조증, 노안, 백내장, 녹내장, 시력교정',
-        '이비인후과': '비염, 축농증, 어지럼증, 이명, 편도염',
-      };
+규칙:
+1. 환자가 실제로 검색할만한 구체적인 주제
+2. 각 주제는 30자 이내
+3. 다양한 각도 (비용, 과정, 비교, 주의사항, 후기, 사후관리 등)
+4. 의료광고법 위반 없는 주제
+5. 웹 검색으로 2024~2025년 최신 트렌드 반영
+6. 네이버 블로그 SEO에 유리한 롱테일 키워드 포함`;
+      } else {
+        prompt = `${category} 분야에서 요즘 환자들이 가장 많이 검색하는 핫한 블로그 주제 5개를 추천해줘.
 
-      // ── STEP 1: 네이버 뉴스 크롤링 (OLD searchNewsForTrends 동일) ──
-      const newsSearchKeywords: Record<string, string> = {
-        '정형외과': '관절 통증 OR 허리디스크 OR 어깨통증',
-        '피부과': '피부과 시술 OR 레이저토닝 OR 보톡스 필러 OR 피부 관리 OR 리프팅',
-        '내과': '건강검진 OR 당뇨 OR 고혈압',
-        '치과': '치과 치료 OR 임플란트 OR 잇몸',
-        '안과': '안구건조증 OR 시력 OR 백내장',
-        '이비인후과': '비염 OR 축농증 OR 편도염',
-      };
-      const searchKeyword = newsSearchKeywords[category] || `${category} 건강`;
-
-      let newsContext = '';
-      try {
-        console.info(`[TREND] 네이버 뉴스 검색: "${searchKeyword}"`);
-        const newsRes = await fetch(`/api/naver/news?query=${encodeURIComponent(searchKeyword)}&display=10`);
-        if (newsRes.ok) {
-          const newsData = await newsRes.json() as {
-            items?: Array<{ title?: string; description?: string; pubDate?: string }>;
-          };
-          const newsItems = (newsData.items || []).slice(0, 5);
-          if (newsItems.length > 0) {
-            // 뉴스 결과를 Gemini Flash로 분석
-            const newsText = newsItems.map((item, i) =>
-              `${i + 1}. ${(item.title || '').replace(/<[^>]*>/g, '')} — ${(item.description || '').replace(/<[^>]*>/g, '').substring(0, 100)}`
-            ).join('\n');
-
-            console.info(`[TREND] 네이버 뉴스 ${newsItems.length}건 → Gemini 분석 중...`);
-            const analysisRes = await fetch('/api/gemini', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                prompt: `다음은 "${category}" 관련 최신 네이버 뉴스 검색 결과입니다:\n\n${newsText}\n\n이 뉴스들을 분석하여 다음을 추출해주세요:\n1. 현재 가장 핫한 건강 이슈 3가지\n2. 블로그 키워드로 활용 가능한 SEO 키워드 5개\n3. 뉴스 기반 콘텐츠 아이디어 2개\n4. 의료광고법 주의사항\n\n간결하게 정리해주세요.`,
-                model: 'gemini-3.1-flash-lite-preview',
-                temperature: 0.4,
-                maxOutputTokens: 1000,
-                thinkingLevel: 'none',
-              }),
-            });
-            const analysisData = await analysisRes.json() as { text?: string };
-            if (analysisData.text) {
-              newsContext = analysisData.text;
-              console.info(`[TREND] 뉴스 분석 완료 (${newsContext.length}자)`);
-            }
-          }
-        }
-      } catch (newsErr) {
-        console.warn('[TREND] 네이버 뉴스 크롤링 실패 (Gemini 단독 분석으로 진행):', newsErr);
-        // fallback: Gemini googleSearch
-        try {
-          const fallbackRes = await fetch('/api/gemini', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              prompt: `최근 한국 "${category}" 관련 건강 뉴스 트렌드를 검색하여 핵심 이슈 3가지를 요약해주세요.`,
-              model: 'gemini-3.1-flash-lite-preview',
-              googleSearch: true,
-              temperature: 0.4,
-              maxOutputTokens: 800,
-              thinkingLevel: 'none',
-            }),
-          });
-          const fallbackData = await fallbackRes.json() as { text?: string };
-          if (fallbackData.text) newsContext = fallbackData.text;
-        } catch { /* 최종 fallback — 뉴스 없이 진행 */ }
+규칙:
+1. 2024~2025년 기준 실제 검색 트렌드 반영 (웹 검색으로 확인)
+2. 각 주제는 30자 이내
+3. 환자 입장에서 관심 가질 구체적 주제
+4. 시즌/계절 트렌드 포함 (지금 시기에 맞는)
+5. 의료광고법 위반 없는 주제
+6. 네이버 블로그 SEO에 유리한 롱테일 키워드 포함`;
       }
-
-      // ── STEP 2: 최종 Gemini 트렌드 분석 (뉴스 컨텍스트 포함) ──
-      const currentSeasonContext = seasonalContext[month] || '';
-      const categoryKeywords = categoryHints[category] || '일반적인 건강 증상, 예방, 관리';
-
-      const prompt = `[🕐 정확한 현재 시각: ${dateStr} 기준 (한국 표준시)]
-[🎲 다양성 시드: ${randomSeed}]
-
-당신은 네이버/구글 검색 트렌드 분석 전문가입니다.
-'${category}' 진료과와 관련하여 **지금 이 시점**에 검색량이 급상승하거나 관심이 높은 건강/의료 주제 5가지를 추천해주세요.
-
-[📅 ${month}월 시즌 특성]
-${currentSeasonContext}
-
-[🏥 ${category} 관련 키워드 풀]
-${categoryKeywords}
-${newsContext ? `
-[📰 최신 네이버 뉴스 분석 결과 — 반드시 반영!]
-${newsContext}
-
-⚠️ 위 뉴스 분석에서 1~2개의 뉴스 기반 트렌드 주제를 반드시 포함하세요.
-뉴스 기반 주제의 seasonal_factor에는 "📰 뉴스 트렌드" 태그를 붙여주세요.` : ''}
-
-[⚠️ 중요 규칙]
-1. **매번 다른 결과 필수**: 이전 응답과 다른 새로운 주제를 선정하세요 (시드: ${randomSeed})
-2. **구체적인 주제**: "어깨통증" 대신 "겨울철 난방 후 어깨 뻣뻣함" 처럼 구체적으로
-3. **현재 시점 반영**: ${month}월 ${day}일 기준 계절/시기 특성 반드시 반영
-4. **롱테일 키워드**: 블로그 작성에 바로 쓸 수 있는 구체적인 키워드 조합 제시
-5. **다양한 난이도**: 경쟁 높은 주제 2개 + 틈새 주제 3개 섞어서
-${newsContext ? '6. **뉴스 트렌드 1~2개 반드시 포함**: 위 뉴스 분석에서 추출한 이슈 반영' : ''}
-
-[📊 점수 산정]
-- SEO 점수(0~100): 검색량 높고 + 블로그 경쟁도 낮을수록 고점수
-- 점수 높은 순 정렬
-
-[🎯 출력 형식]
-- topic: 구체적인 주제명
-- keywords: 블로그 제목에 쓸 롱테일 키워드
-- score: SEO 점수 (70~95 사이)
-- seasonal_factor: 왜 지금 이 주제가 뜨는지 한 줄 설명`;
 
       const res = await fetch('/api/gemini', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           prompt,
+          systemInstruction: '병원 마케팅 트렌드 분석 전문가. JSON만 출력. 마크다운/코드블록 금지.',
           model: 'gemini-3.1-flash-lite-preview',
           responseType: 'json',
           googleSearch: true,
-          temperature: 0.9,
-          thinkingLevel: 'none',
-          timeout: 60000,
+          temperature: 0.7,
+          maxOutputTokens: 1500,
           schema: {
             type: 'ARRAY',
             items: {
@@ -694,11 +577,11 @@ ${newsContext ? '6. **뉴스 트렌드 1~2개 반드시 포함**: 위 뉴스 분
                 topic: { type: 'STRING' },
                 keywords: { type: 'STRING' },
                 score: { type: 'NUMBER' },
-                seasonal_factor: { type: 'STRING' }
+                seasonal_factor: { type: 'STRING' },
               },
-              required: ['topic', 'keywords', 'score', 'seasonal_factor']
-            }
-          }
+              required: ['topic', 'keywords', 'score', 'seasonal_factor'],
+            },
+          },
         }),
       });
 
@@ -707,9 +590,6 @@ ${newsContext ? '6. **뉴스 트렌드 1~2개 반드시 포함**: 위 뉴스 분
 
       const items: TrendingItem[] = JSON.parse(data.text);
       setTrendingItems(items);
-      console.info(`[TREND] 결과: ${items.length}개 트렌드 주제`);
-      items.forEach((t, i) => console.info(`[TREND]   ${i + 1}. [${t.score}점] "${t.topic}" — ${t.keywords} (${t.seasonal_factor})`));
-      console.info(`[TREND] ========== 트렌드 주제 추천 완료 ==========`);
     } catch (e) {
       console.error('[TREND] ❌ 트렌드 로딩 실패:', e);
       setError('트렌드 로딩 실패');
@@ -1812,7 +1692,7 @@ ${generatedContent.substring(0, 2000)}
         setIncludeHospitalIntro={setIncludeHospitalIntro}
         setKeywordStats={setKeywordStats} setShowKeywordPanel={setShowKeywordPanel}
         setKeywordSortBy={setKeywordSortBy} setKeywordSearch={setKeywordSearch}
-        setKeywordMinVolume={setKeywordMinVolume} setHideRanked={setHideRanked}
+        setKeywordMinVolume={setKeywordMinVolume} setHideRanked={setHideRanked} setTrendingItems={setTrendingItems}
         onSubmit={handleSubmit}
         onAnalyzeKeywords={handleAnalyzeKeywords}
         onCrawlHomepage={handleCrawlHomepage}
