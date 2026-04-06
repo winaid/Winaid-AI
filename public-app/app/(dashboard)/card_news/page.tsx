@@ -979,49 +979,46 @@ DECORATIVE: (장식 요소)`,
   return (
     <div className={`p-5 max-w-6xl mx-auto ${mainTab === 'create' && pageStep === 1 ? 'min-h-[calc(100vh-80px)] flex flex-col justify-center' : ''}`}>
 
-      {/* ══════ 상단: 탭 + 스텝 ══════ */}
-      <div className="flex items-end justify-center border-b border-slate-200 mb-6 flex-shrink-0 gap-6">
-        <div className="flex gap-0">
-          <button type="button" onClick={() => setMainTab('create')}
-            className={`px-5 py-3 border-b-2 transition-all text-left ${mainTab === 'create' ? 'border-blue-600' : 'border-transparent'}`}>
-            <span className={`text-sm font-bold block ${mainTab === 'create' ? 'text-blue-600' : 'text-slate-400'}`}>✨ 카드뉴스 생성</span>
-            <span className="text-[10px] text-slate-400">저장된 템플릿으로 콘텐츠 생성</span>
+      {/* ══════ 상단 탭 ══════ */}
+      <div className="flex justify-center border-b border-slate-200 mb-4 flex-shrink-0">
+        {[
+          { id: 'create' as const, label: '✨ 카드뉴스 생성', color: 'blue' },
+          { id: 'learn' as const, label: '🎨 스타일 학습', color: 'purple' },
+          { id: 'history' as const, label: '📋 생성기록', color: 'slate' },
+        ].map(tab => (
+          <button key={tab.id} type="button" onClick={() => setMainTab(tab.id)}
+            className={`px-6 py-3 text-sm font-bold border-b-2 transition-all ${
+              mainTab === tab.id ? `border-${tab.color}-600 text-${tab.color}-600` : 'border-transparent text-slate-400 hover:text-slate-600'
+            }`}>
+            {tab.label}
           </button>
-          <button type="button" onClick={() => setMainTab('learn')}
-            className={`px-5 py-3 border-b-2 transition-all text-left ${mainTab === 'learn' ? 'border-purple-600' : 'border-transparent'}`}>
-            <span className={`text-sm font-bold block ${mainTab === 'learn' ? 'text-purple-600' : 'text-slate-400'}`}>🎨 나만의 디자인 학습</span>
-            <span className="text-[10px] text-slate-400">참고할 이미지로 템플릿 만들기</span>
-          </button>
-          <button type="button" onClick={() => setMainTab('history')}
-            className={`px-5 py-3 border-b-2 transition-all text-left ${mainTab === 'history' ? 'border-slate-600' : 'border-transparent'}`}>
-            <span className={`text-sm font-bold block ${mainTab === 'history' ? 'text-slate-600' : 'text-slate-400'}`}>🕐 카드뉴스 생성기록</span>
-          </button>
-        </div>
-        {/* 스텝 인디케이터 (생성 탭, 우측) */}
-        {mainTab === 'create' && (
-          <div className="flex items-center gap-0 pb-3 mr-2">
-            {[
-              { n: 1, label: '디자인 선택' },
-              { n: 2, label: '콘텐츠 입력' },
-              { n: 3, label: '결과 확인' },
-            ].map((s, i) => {
-              const done = pageStep === 2 ? s.n <= 2 : s.n < 1;
-              const isCurrent = (pageStep === 1 && s.n === 2) || (pageStep === 2 && s.n === 3);
-              return (
-                <div key={s.n} className="flex items-center">
-                  <div className="flex flex-col items-center" style={{ minWidth: '70px' }}>
-                    <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold mb-1 ${
-                      isCurrent ? 'bg-blue-600 text-white shadow-sm shadow-blue-200' : done ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-400'
-                    }`}>{s.n}</div>
-                    <span className={`text-[10px] font-semibold ${isCurrent ? 'text-blue-600' : 'text-slate-400'}`}>{s.label}</span>
-                  </div>
-                  {i < 2 && <div className={`w-8 h-px -mt-4 ${done || isCurrent ? 'bg-blue-200' : 'bg-slate-200'}`} />}
-                </div>
-              );
-            })}
-          </div>
-        )}
+        ))}
       </div>
+
+      {/* 스텝 인디케이터 (생성 탭) */}
+      {mainTab === 'create' && (
+        <div className="flex items-center justify-center gap-0 mb-6 flex-shrink-0">
+          {[
+            { n: 1, label: '디자인 선택' },
+            { n: 2, label: '콘텐츠 입력' },
+            { n: 3, label: '결과 확인' },
+          ].map((s, i) => {
+            const done = pageStep === 2 ? s.n <= 2 : s.n < 1;
+            const isCurrent = (pageStep === 1 && s.n === 2) || (pageStep === 2 && s.n === 3);
+            return (
+              <div key={s.n} className="flex items-center">
+                <div className="flex flex-col items-center" style={{ minWidth: '80px' }}>
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold mb-1.5 ${
+                    isCurrent ? 'bg-blue-600 text-white shadow-md shadow-blue-200' : done ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-400'
+                  }`}>{s.n}</div>
+                  <span className={`text-[11px] font-semibold ${isCurrent ? 'text-blue-600' : 'text-slate-400'}`}>{s.label}</span>
+                </div>
+                {i < 2 && <div className={`w-12 h-px -mt-5 ${done || isCurrent ? 'bg-blue-300' : 'bg-slate-200'}`} />}
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* ══════ 탭 1: 카드뉴스 생성 ══════ */}
       {mainTab === 'create' && pageStep === 1 && (
@@ -1053,6 +1050,26 @@ DECORATIVE: (장식 요소)`,
               rows={2}
               className="w-full text-base font-medium text-slate-800 placeholder:text-slate-300 resize-none border-none outline-none bg-transparent" />
           </div>
+          <button type="button" onClick={handleRecommendTrends} disabled={isLoadingTrends}
+            className="w-full mb-4 py-2.5 bg-blue-50 text-blue-600 text-sm font-semibold rounded-xl border border-blue-200 hover:bg-blue-100 disabled:opacity-50">
+            {isLoadingTrends ? '검색 중...' : topic.trim()
+              ? <>🔍 &ldquo;{topic.trim().length > 10 ? topic.trim().slice(0, 10) + '…' : topic.trim()}&rdquo; 관련 주제 추천</>
+              : <>🔥 트렌드 주제 추천</>}
+          </button>
+          {trendingItems.length > 0 && (
+            <div className="mb-4 space-y-1.5">
+              {trendingItems.map((item, idx) => (
+                <button key={idx} type="button" onClick={() => { setTopic(item.topic); setTrendingItems([]); }}
+                  className="w-full text-left px-4 py-3 bg-white border border-slate-200 rounded-xl hover:border-blue-300 hover:bg-blue-50 transition-all group">
+                  <div className="flex items-center gap-2">
+                    <span className="text-blue-500 font-bold text-sm">{idx + 1}</span>
+                    <span className="font-semibold text-slate-800 text-sm group-hover:text-blue-700">{item.topic}</span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 mt-1 pl-5">{item.seasonal_factor}</p>
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* 진료과 */}
           <div className="mb-4">
@@ -1093,34 +1110,39 @@ DECORATIVE: (장식 요소)`,
           </div>
 
           {/* 추가 옵션 (접기) */}
-          <details className="text-xs text-slate-400">
-            <summary className="cursor-pointer hover:text-slate-600 py-2">추가 옵션</summary>
-            <div className="pt-2 pb-4 space-y-3">
-              <div className="flex gap-2">
-                <div className="flex-1">
-                  <label className="text-[10px] font-bold text-slate-500 mb-1 block">병원명</label>
-                  <input type="text" value={hospitalName} onChange={e => setHospitalName(e.target.value)} placeholder="예: 더찬한치과" className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg" />
-                </div>
-                <div className="flex-1">
-                  <label className="text-[10px] font-bold text-slate-500 mb-1 block">병원 로고</label>
-                  <div className="flex items-center gap-2">
-                    {logoDataUrl ? (
-                      <div className="relative">
-                        <img src={logoDataUrl} alt="로고" className="h-9 w-auto rounded-lg border border-slate-200 bg-white p-0.5" />
-                        <button type="button" onClick={() => { setLogoDataUrl(null); setLogoEnabled(false); try { localStorage.removeItem('hospital-logo-dataurl'); } catch {} }}
-                          className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full text-[8px] flex items-center justify-center">✕</button>
-                      </div>
-                    ) : (
-                      <button type="button" onClick={() => logoInputRef.current?.click()}
-                        className="h-9 px-3 border-2 border-dashed border-slate-200 rounded-lg text-[10px] text-slate-400 hover:border-blue-400 hover:text-blue-500">+ 업로드</button>
-                    )}
-                    <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={e => {
-                      const file = e.target.files?.[0]; if (!file) return;
-                      const reader = new FileReader();
-                      reader.onload = () => { const d = reader.result as string; setLogoDataUrl(d); setLogoEnabled(true); try { localStorage.setItem('hospital-logo-dataurl', d); } catch {} };
-                      reader.readAsDataURL(file); e.target.value = '';
-                    }} />
-                  </div>
+          <details className="text-sm text-slate-500 bg-slate-50 rounded-xl px-5 py-3 mt-2">
+            <summary className="cursor-pointer hover:text-slate-700 font-semibold">추가 옵션</summary>
+            <div className="pt-4 pb-2 grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs font-bold text-slate-500 mb-1.5 block">병원명</label>
+                <input type="text" value={hospitalName} onChange={e => setHospitalName(e.target.value)} placeholder="예: 더찬한치과의원"
+                  className="w-full px-4 py-2.5 text-sm border border-slate-200 rounded-xl bg-white" />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-slate-500 mb-1.5 block">병원 로고</label>
+                <div className="flex items-center gap-3 h-[42px]">
+                  {logoDataUrl ? (
+                    <div className="relative">
+                      <img src={logoDataUrl} alt="로고" className="h-10 w-auto rounded-xl border border-slate-200 bg-white p-1" />
+                      <button type="button" onClick={() => { setLogoDataUrl(null); setLogoEnabled(false); try { localStorage.removeItem('hospital-logo-dataurl'); } catch {} }}
+                        className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-full text-[9px] flex items-center justify-center shadow-sm">✕</button>
+                    </div>
+                  ) : (
+                    <button type="button" onClick={() => logoInputRef.current?.click()}
+                      className="h-full px-5 border-2 border-dashed border-slate-300 rounded-xl text-xs text-slate-400 hover:border-blue-400 hover:text-blue-500 hover:bg-blue-50 transition-all">+ 로고 업로드</button>
+                  )}
+                  <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={e => {
+                    const file = e.target.files?.[0]; if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = () => { const d = reader.result as string; setLogoDataUrl(d); setLogoEnabled(true); try { localStorage.setItem('hospital-logo-dataurl', d); } catch {} };
+                    reader.readAsDataURL(file); e.target.value = '';
+                  }} />
+                  {logoDataUrl && (
+                    <label className="flex items-center gap-1.5 cursor-pointer">
+                      <input type="checkbox" checked={logoEnabled} onChange={e => setLogoEnabled(e.target.checked)} className="w-3.5 h-3.5 rounded" />
+                      <span className="text-[11px] text-slate-400">카드에 넣기</span>
+                    </label>
+                  )}
                 </div>
               </div>
             </div>
