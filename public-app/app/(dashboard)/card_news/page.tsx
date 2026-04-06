@@ -3,6 +3,8 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { CATEGORIES } from '../../../lib/constants';
 import { buildCardNewsPrompt, buildCardNewsProPrompt, type CardNewsRequest } from '../../../lib/cardNewsPrompt';
+import { savePost, listPosts, deletePost, type SavedPost } from '../../../lib/postStorage';
+import { getSessionSafe } from '../../../lib/supabase';
 import { savePost } from '../../../lib/postStorage';
 import { getSessionSafe, supabase, getSupabaseClient, isSupabaseConfigured } from '../../../lib/supabase';
 import { getHospitalStylePrompt } from '../../../lib/styleService';
@@ -89,6 +91,8 @@ export default function CardNewsPage() {
 
   // ── 생성 상태 ──
   const [mainTab, setMainTab] = useState<'create' | 'learn' | 'history'>('create');
+  const [historyPosts, setHistoryPosts] = useState<SavedPost[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
   const [pageStep, setPageStep] = useState<1 | 2>(1);
   const TOPIC_SUGGESTIONS: Record<string, string[]> = {
     '치과': ['임플란트 사후관리', '치아미백 전후비교', '스케일링 중요성', '충치 예방 꿀팁', '잇몸 건강 체크리스트', '교정 장치 종류 비교', '사랑니 발치 가이드'],
@@ -397,6 +401,20 @@ export default function CardNewsPage() {
       setProSlides(withBg);
       setPipelineStep('idle');
       setPageStep(2); // 생성 완료 → 편집 단계로 전환
+
+      // 생성 기록 저장
+      try {
+        const { userId } = await getSessionSafe();
+        await savePost({
+          userId: userId || undefined,
+          postType: 'card_news',
+          title: topic,
+          content: JSON.stringify(withBg.map(s => ({ title: s.title, layout: s.layout }))),
+          topic,
+          hospitalName: hospitalName || undefined,
+          keywords: [],
+        });
+      } catch { /* 저장 실패 무시 */ }
     } catch (err) {
       setError(err instanceof Error ? err.message : '네트워크 오류');
     } finally {
@@ -1246,12 +1264,41 @@ DECORATIVE: (장식 요소)`,
       )}
 
       {/* ══════ 탭 3: 생성기록 ══════ */}
-      {mainTab === 'history' && (
-        <div className="max-w-3xl mx-auto">
-          <h2 className="text-lg font-bold text-slate-800 mb-4">생성기록</h2>
-          <p className="text-center text-slate-400 py-12">아직 생성한 카드뉴스가 없어요<br /><span className="text-xs">카드뉴스를 생성하면 여기에 기록됩니다</span></p>
-        </div>
-      )}
+      {mainTab === 'history' && (() => {
+        // 히스토리 로드 (탭 전환 시)
+        if (!historyLoading && historyPosts.length === 0) {
+          setHistoryLoading(true);
+          getSessionSafe().then(({ userId }) => listPosts(userId)).then(result => {
+            if ('posts' in result) setHistoryPosts(result.posts.filter(p => p.post_type === 'card_news'));
+          }).finally(() => setHistoryLoading(false));
+        }
+        return (
+          <div className="max-w-3xl mx-auto">
+            <h2 className="text-lg font-bold text-slate-800 mb-4">생성기록</h2>
+            {historyLoading && <div className="text-center py-12"><div className="w-8 h-8 border-[3px] border-blue-100 border-t-blue-500 rounded-full animate-spin mx-auto" /></div>}
+            {!historyLoading && historyPosts.length === 0 && (
+              <p className="text-center text-slate-400 py-12">아직 생성한 카드뉴스가 없어요<br /><span className="text-xs">카드뉴스를 생성하면 여기에 기록됩니다</span></p>
+            )}
+            {!historyLoading && historyPosts.length > 0 && (
+              <div className="space-y-2">
+                {historyPosts.map(post => (
+                  <div key={post.id} className="bg-white rounded-xl border border-slate-200 p-4 flex items-center justify-between hover:border-blue-200 transition-all">
+                    <div>
+                      <h3 className="text-sm font-bold text-slate-800">{post.title}</h3>
+                      <div className="flex items-center gap-2 mt-1 text-xs text-slate-400">
+                        {post.hospital_name && <span>{post.hospital_name}</span>}
+                        <span>{new Date(post.created_at).toLocaleDateString('ko-KR')}</span>
+                      </div>
+                    </div>
+                    <button type="button" onClick={async () => { await deletePost(post.id); setHistoryPosts(prev => prev.filter(p => p.id !== post.id)); }}
+                      className="text-red-400 hover:text-red-600 text-xs font-bold px-2 py-1 rounded hover:bg-red-50">🗑</button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* ── 추천 디자인 모달 ── */}
       {showDesignModal && (

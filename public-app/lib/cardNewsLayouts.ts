@@ -195,6 +195,9 @@ export interface SlideData {
   prosIcon?: string;
   consIcon?: string;
 
+  // 도형 스타일 (data-highlight 등)
+  dataShape?: 'circle' | 'rounded' | 'pill' | 'diamond' | 'hexagon';
+
   // 병원명 스타일
   hospitalFontSize?: number;
   hospitalColor?: string;

@@ -1645,8 +1645,9 @@ JSON 한 객체만 출력:
                 textAlign: 'center',
                 padding: '40px 20px',
                 background: dp.highlight ? `${theme.accentColor}15` : innerCardBg,
-                borderRadius: '50%',
-                aspectRatio: '1 / 1',
+                borderRadius: slide.dataShape === 'rounded' ? '24px' : slide.dataShape === 'pill' ? '999px' : slide.dataShape === 'diamond' ? '24px' : slide.dataShape === 'hexagon' ? '24px' : '50%',
+                aspectRatio: slide.dataShape === 'pill' ? undefined : '1 / 1',
+                clipPath: slide.dataShape === 'diamond' ? 'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)' : slide.dataShape === 'hexagon' ? 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)' : undefined,
                 border: dp.highlight ? `3px solid ${theme.accentColor}` : `1px solid ${innerCardBorder}`,
                 boxShadow: dp.highlight ? `0 8px 30px ${theme.accentColor}25` : 'none',
                 display: 'flex', flexDirection: 'column' as const, justifyContent: 'center', alignItems: 'center',
@@ -3495,6 +3496,24 @@ ${JSON.stringify(slideForContext, null, 2)}
               <IconChangerPopover currentIcon={slide.checkIcon || '✓'} onSelect={ic => onChange({ checkIcon: ic })} />
             </ElementAccordion>
           )}
+          {slide.layout === 'data-highlight' && (
+            <ElementAccordion icon="⬡" label="도형 모양" defaultOpen={false}>
+              <div className="flex gap-1.5 flex-wrap">
+                {([
+                  { id: 'circle' as const, label: '⭕ 원형' },
+                  { id: 'rounded' as const, label: '⬜ 라운드' },
+                  { id: 'pill' as const, label: '💊 필' },
+                  { id: 'diamond' as const, label: '◆ 다이아몬드' },
+                  { id: 'hexagon' as const, label: '⬡ 육각형' },
+                ]).map(shape => (
+                  <button key={shape.id} type="button" onClick={() => onChange({ dataShape: shape.id })}
+                    className={`px-3 py-1.5 text-[10px] font-semibold rounded-lg border transition-all ${
+                      (slide.dataShape || 'circle') === shape.id ? 'bg-blue-500 text-white border-blue-500' : 'bg-white text-slate-500 border-slate-200 hover:border-blue-300'
+                    }`}>{shape.label}</button>
+                ))}
+              </div>
+            </ElementAccordion>
+          )}
           {slide.layout === 'comparison' && (
             <ElementAccordion icon="⚡" label="VS 아이콘" defaultOpen={false}>
               <IconChangerPopover currentIcon={slide.vsIcon || 'VS'} onSelect={ic => onChange({ vsIcon: ic })} />
@@ -3640,6 +3659,22 @@ ${JSON.stringify(slideForContext, null, 2)}
               ))}
             </div>
           </ElementAccordion>
+
+          {/* 요소 추가 */}
+          <div className="pt-3 border-t border-slate-100 mt-2">
+            <p className="text-[10px] text-slate-400 mb-2">요소 추가</p>
+            <div className="grid grid-cols-3 gap-2">
+              <button type="button" onClick={() => onChange({ body: (slide.body || '') + '\n추가 텍스트' })}
+                className="py-2.5 text-[11px] font-semibold bg-white rounded-xl border border-slate-200 hover:border-blue-300 hover:bg-blue-50 transition-all">T 텍스트</button>
+              <button type="button" onClick={() => {
+                // 이미지 탭 열기
+                setImageTab('pexels');
+              }}
+                className="py-2.5 text-[11px] font-semibold bg-white rounded-xl border border-slate-200 hover:border-blue-300 hover:bg-blue-50 transition-all">🖼 이미지</button>
+              <button type="button" onClick={() => onChange({ showBadge: true, badge: slide.badge || '병원명' })}
+                className="py-2.5 text-[11px] font-semibold bg-white rounded-xl border border-slate-200 hover:border-blue-300 hover:bg-blue-50 transition-all">🏥 로고</button>
+            </div>
+          </div>
         </div>
       )}
 
