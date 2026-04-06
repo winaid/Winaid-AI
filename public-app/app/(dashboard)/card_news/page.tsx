@@ -12,7 +12,7 @@ import { CardRegenModal, type CardPromptHistoryItem, CARD_PROMPT_HISTORY_KEY, CA
 import CardTemplateManager from '../../../components/CardTemplateManager';
 import CardNewsRenderer from '../../../components/CardNewsRenderer';
 import CardNewsProRenderer from '../../../components/CardNewsProRenderer';
-import { DEFAULT_THEME, THEME_PRESETS, parseProSlidesJson, type SlideData as ProSlideData, type CardNewsTheme } from '../../../lib/cardNewsLayouts';
+import { DEFAULT_THEME, THEME_PRESETS, DESIGN_PRESETS, type DesignPreset, type DesignPresetStyle, parseProSlidesJson, type SlideData as ProSlideData, type CardNewsTheme } from '../../../lib/cardNewsLayouts';
 import { getSavedTemplates, deleteTemplate, type CardTemplate } from '../../../lib/cardTemplateService';
 import { ContentCategory } from '../../../lib/types';
 import type { WritingStyle, CardNewsDesignTemplateId, TrendingItem, AudienceMode } from '../../../lib/types';
@@ -60,6 +60,9 @@ export default function CardNewsPage() {
   const [proSlides, setProSlides] = useState<ProSlideData[]>([]);
   const [proTheme, setProTheme] = useState<CardNewsTheme>({ ...DEFAULT_THEME });
   const [learnedTemplate, setLearnedTemplate] = useState<CardTemplate | null>(null);
+  const [presetCategory, setPresetCategory] = useState<string>('all');
+  const [currentPresetId, setCurrentPresetId] = useState<string>('');
+  const [presetStyle, setPresetStyle] = useState<DesignPresetStyle | null>(null);
   // 학습한 디자인 템플릿이 선택되면 프로 모드 테마에도 자동 반영
   useEffect(() => {
     if (!learnedTemplate) return;
@@ -993,28 +996,42 @@ DECORATIVE: (장식 요소)`,
                   <span className="text-[8px] font-semibold leading-tight text-center px-0.5">새 스타일{'\n'}학습</span>
                 </button>
 
-                {/* 테마 프리셋 8종 */}
-                {THEME_PRESETS.map(preset => {
-                  const isActive = proTheme.backgroundColor === preset.theme.backgroundColor && !learnedTemplate;
-                  return (
+                {/* 카테고리 필터 */}
+                {(['all', 'professional', 'modern', 'minimal', 'warm', 'bold'] as const).map(cat => (
+                  <button key={cat} type="button" onClick={() => setPresetCategory(cat)}
+                    className={`flex-shrink-0 px-3 py-1 text-[9px] font-bold rounded-full whitespace-nowrap ${
+                      presetCategory === cat ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                    }`}>
+                    {cat === 'all' ? '전체' : cat === 'professional' ? '전문적' : cat === 'modern' ? '모던' : cat === 'minimal' ? '미니멀' : cat === 'warm' ? '따뜻한' : '강렬한'}
+                  </button>
+                ))}
+              </div>
+              {/* 디자인 프리셋 20종 그리드 */}
+              <div className="grid grid-cols-5 gap-2 mt-2">
+                {DESIGN_PRESETS
+                  .filter(p => presetCategory === 'all' || p.category === presetCategory)
+                  .map(preset => (
                     <button key={preset.id} type="button"
                       onClick={() => {
                         setProTheme({ ...preset.theme, hospitalName: hospitalName || undefined });
+                        setPresetStyle(preset.style);
+                        setCurrentPresetId(preset.id);
                         setLearnedTemplate(null);
                       }}
-                      className={`flex-shrink-0 w-16 h-16 rounded-xl border-2 transition-all overflow-hidden flex flex-col ${
-                        isActive ? 'border-blue-500 ring-2 ring-blue-200' : 'border-slate-200 hover:border-slate-300'
-                      }`}
-                      style={{ background: preset.theme.backgroundGradient || preset.theme.backgroundColor }}
-                      title={preset.name}
-                    >
-                      <div className="flex-1 flex items-center justify-center">
+                      className={`relative rounded-xl overflow-hidden aspect-square border-2 transition-all ${
+                        currentPresetId === preset.id ? 'border-blue-500 ring-2 ring-blue-200' : 'border-slate-200 hover:border-slate-300'
+                      }`}>
+                      <div style={{ background: preset.thumbnail, width: '100%', height: '100%' }} className="flex items-center justify-center">
                         <span className="text-[11px] font-black" style={{ color: preset.theme.titleColor }}>Aa</span>
                       </div>
-                      <span className="text-[8px] font-semibold text-center py-0.5 bg-white/90 text-slate-700">{preset.name}</span>
+                      <div className="absolute bottom-0 left-0 right-0 bg-black/50 px-1 py-0.5">
+                        <span className="text-[7px] text-white font-bold">{preset.name}</span>
+                      </div>
                     </button>
-                  );
-                })}
+                  ))}
+              </div>
+              {/* 학습 템플릿 */}
+              <div className="flex gap-2 overflow-x-auto pb-2 mt-2">
 
                 {/* 학습 템플릿 — 각 타일에 ✕ 삭제 버튼 */}
                 {savedStyles.map(tmpl => (
@@ -1154,6 +1171,7 @@ DECORATIVE: (장식 요소)`,
             onThemeChange={setProTheme}
             learnedTemplate={learnedTemplate}
             cardRatio={proCardRatio}
+            presetStyle={presetStyle}
           />
         ) : pipelineStep === 'scriptReview' && cards.length > 0 ? (
           /* ── Step 2: 원고 승인 단계 ── */

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
-import type { SlideData, SlideDecoration, CardNewsTheme, SlideLayoutType, SlideImagePosition, SlideImageStyle, SlideComparisonColumn } from '../lib/cardNewsLayouts';
+import type { SlideData, SlideDecoration, CardNewsTheme, SlideLayoutType, SlideImagePosition, SlideImageStyle, SlideComparisonColumn, DesignPresetStyle } from '../lib/cardNewsLayouts';
 import { LAYOUT_LABELS, CARD_FONTS, FONT_CATEGORIES, getCardFont, SLIDE_IMAGE_STYLES } from '../lib/cardNewsLayouts';
 import type { CardTemplate } from '../lib/cardTemplateService';
 
@@ -48,6 +48,8 @@ interface Props {
   learnedTemplate?: CardTemplate | null;
   /** 카드 비율 */
   cardRatio?: '1:1' | '3:4' | '4:5' | '9:16' | '16:9';
+  /** 디자인 프리셋 스타일 */
+  presetStyle?: DesignPresetStyle | null;
 }
 
 /**
@@ -63,7 +65,7 @@ interface Props {
  *   transform: scale(컨테이너폭 / 1080)로 축소한다. 다운로드는 별도의
  *   captureNodeAsCanvas 헬퍼가 scale을 제거한 복제본을 풀사이즈로 캡처.
  */
-export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onThemeChange, learnedTemplate, cardRatio = '1:1' }: Props) {
+export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onThemeChange, learnedTemplate, cardRatio = '1:1', presetStyle }: Props) {
   // shorthand — 학습 템플릿이 있을 때 상세 토큰으로 렌더 오버라이드
   const lt = learnedTemplate || null;
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -891,49 +893,51 @@ JSON 한 객체만 출력:
       )}
     </>
   ) : (
-    <>
-      {/* 헤링본(V자) 패턴 — 프로급 병원 카드뉴스 공통 장식 */}
-      <div
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          width: '100%',
-          height: '100%',
-          backgroundImage: isDarkTheme
-            ? `repeating-linear-gradient(-45deg, transparent, transparent 12px, rgba(255,255,255,0.02) 12px, rgba(255,255,255,0.02) 14px), repeating-linear-gradient(45deg, transparent, transparent 12px, rgba(255,255,255,0.02) 12px, rgba(255,255,255,0.02) 14px)`
-            : `repeating-linear-gradient(-45deg, transparent, transparent 12px, rgba(0,0,0,0.015) 12px, rgba(0,0,0,0.015) 14px), repeating-linear-gradient(45deg, transparent, transparent 12px, rgba(0,0,0,0.015) 12px, rgba(0,0,0,0.015) 14px)`,
-          zIndex: 0,
-          pointerEvents: 'none' as const,
-        }}
-      />
-      {/* 상단 악센트 바 */}
-      <div
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          height: '8px',
-          background: `linear-gradient(90deg, ${theme.accentColor}, ${theme.accentColor}80, transparent)`,
-          zIndex: 5,
-          pointerEvents: 'none' as const,
-        }}
-      />
-      {/* 하단 악센트 바 */}
-      <div
-        style={{
-          position: 'absolute',
-          bottom: 0,
-          left: 0,
-          right: 0,
-          height: '4px',
-          background: `linear-gradient(90deg, transparent, ${theme.accentColor}50, ${theme.accentColor})`,
-          zIndex: 5,
-          pointerEvents: 'none' as const,
-        }}
-      />
-    </>
+    (() => {
+      const ptn = presetStyle?.backgroundPattern || 'herringbone';
+      const ptnOp = presetStyle?.patternOpacity ?? (isDarkTheme ? 0.02 : 0.015);
+      const topH = presetStyle?.topBarHeight ?? 8;
+      const botH = presetStyle?.bottomBarHeight ?? 4;
+      const darkC = `rgba(255,255,255,${ptnOp})`;
+      const lightC = `rgba(0,0,0,${ptnOp})`;
+      const c = isDarkTheme ? darkC : lightC;
+
+      const patternCSS = (() => {
+        if (ptn === 'none') return 'none';
+        if (ptn === 'herringbone') return `repeating-linear-gradient(-45deg, transparent, transparent 12px, ${c} 12px, ${c} 14px), repeating-linear-gradient(45deg, transparent, transparent 12px, ${c} 12px, ${c} 14px)`;
+        if (ptn === 'diamond') return `linear-gradient(45deg, ${c} 25%, transparent 25%), linear-gradient(-45deg, ${c} 25%, transparent 25%), linear-gradient(45deg, transparent 75%, ${c} 75%), linear-gradient(-45deg, transparent 75%, ${c} 75%)`;
+        if (ptn === 'dots') return `radial-gradient(circle, ${c} 1px, transparent 1px)`;
+        if (ptn === 'lines') return `repeating-linear-gradient(0deg, transparent, transparent 20px, ${c} 20px, ${c} 21px)`;
+        return 'none';
+      })();
+
+      return (
+        <>
+          {ptn !== 'none' && (
+            <div style={{
+              position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
+              backgroundImage: patternCSS,
+              backgroundSize: ptn === 'diamond' ? '32px 32px' : ptn === 'dots' ? '20px 20px' : undefined,
+              zIndex: 0, pointerEvents: 'none' as const,
+            }} />
+          )}
+          {topH > 0 && (
+            <div style={{
+              position: 'absolute', top: 0, left: 0, right: 0, height: `${topH}px`,
+              background: `linear-gradient(90deg, ${theme.accentColor}, ${theme.accentColor}80, transparent)`,
+              zIndex: 5, pointerEvents: 'none' as const,
+            }} />
+          )}
+          {botH > 0 && (
+            <div style={{
+              position: 'absolute', bottom: 0, left: 0, right: 0, height: `${botH}px`,
+              background: `linear-gradient(90deg, transparent, ${theme.accentColor}50, ${theme.accentColor})`,
+              zIndex: 5, pointerEvents: 'none' as const,
+            }} />
+          )}
+        </>
+      );
+    })()
   );
 
   /** 섹션 헤더용 장식 라인 (제목 위 accent 바) — 학습 템플릿이 있으면 그 CSS 우선 */
