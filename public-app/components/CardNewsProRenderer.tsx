@@ -1170,11 +1170,15 @@ JSON 한 객체만 출력:
             <p style={{ color: t.colors.subtitle, fontSize: `${t.layout.subtitleSize}px`, fontWeight: 500, letterSpacing: '1px' }}>&ldquo;{slide.subtitle}&rdquo;</p>
           )}
           {showLine && <div style={{ width: '60px', height: '3px', background: t.colors.accent, borderRadius: '2px', margin: t.layout.titlePosition.includes('center') ? '0 auto' : '0' }} />}
-          <h1 style={{ ...getTitleStyle(slide, { fontSize: t.layout.titleSize, textAlign: posMap[t.layout.titlePosition]?.textAlign as string }), color: slide.titleColor || t.colors.title, fontWeight: (slide.titleFontWeight || String(t.layout.titleWeight)) as CSSProperties['fontWeight'], maxWidth: t.layout.titleMaxWidth }}>
-            {slide.title}
-          </h1>
+          <div style={slide.titlePosition ? { position: 'absolute', left: `${slide.titlePosition.x}%`, top: `${slide.titlePosition.y}%`, transform: 'translate(-50%, -50%)', zIndex: 10 } : {}}>
+            <h1 style={{ ...getTitleStyle(slide, { fontSize: t.layout.titleSize, textAlign: posMap[t.layout.titlePosition]?.textAlign as string }), color: slide.titleColor || t.colors.title, fontWeight: (slide.titleFontWeight || String(t.layout.titleWeight)) as CSSProperties['fontWeight'], maxWidth: t.layout.titleMaxWidth }}>
+              {slide.title}
+            </h1>
+          </div>
           {t.layout.subtitlePosition === 'below-title' && slide.subtitle && (
-            <p style={{ color: slide.subtitleColor || t.colors.subtitle, fontSize: `${slide.subtitleFontSize || t.layout.subtitleSize}px`, fontWeight: 500, maxWidth: '85%' }}>{slide.subtitle}</p>
+            <div style={slide.subtitlePosition ? { position: 'absolute', left: `${slide.subtitlePosition.x}%`, top: `${slide.subtitlePosition.y}%`, transform: 'translate(-50%, -50%)', zIndex: 10 } : {}}>
+              <p style={{ color: slide.subtitleColor || t.colors.subtitle, fontSize: `${slide.subtitleFontSize || t.layout.subtitleSize}px`, fontWeight: 500, maxWidth: '85%' }}>{slide.subtitle}</p>
+            </div>
           )}
         </div>
         {/* 해시태그 */}
@@ -2409,6 +2413,46 @@ JSON 한 객체만 출력:
 // Mirra 스타일 편집 컴포넌트
 // ═══════════════════════════════════════════════════════════════
 
+function DraggableText({ children, position, onPositionChange, containerRef }: {
+  children: React.ReactNode;
+  position?: { x: number; y: number };
+  onPositionChange: (pos: { x: number; y: number }) => void;
+  containerRef: React.RefObject<HTMLDivElement | null>;
+}) {
+  const [dragging, setDragging] = useState(false);
+  const startRef = useRef({ x: 0, y: 0, sx: 0, sy: 0 });
+  if (!position) return <>{children}</>;
+  return (
+    <div
+      style={{
+        position: 'absolute', left: `${position.x}%`, top: `${position.y}%`,
+        transform: 'translate(-50%, -50%)', cursor: 'move', zIndex: dragging ? 100 : 10,
+        border: dragging ? '2px solid #3B82F6' : '2px dashed transparent',
+        padding: '4px', borderRadius: '4px', transition: dragging ? 'none' : 'border-color 0.2s',
+      }}
+      onMouseEnter={e => { e.currentTarget.style.borderColor = '#93C5FD'; }}
+      onMouseLeave={e => { if (!dragging) e.currentTarget.style.borderColor = 'transparent'; }}
+      onMouseDown={e => {
+        e.preventDefault(); e.stopPropagation();
+        setDragging(true);
+        const rect = containerRef.current?.getBoundingClientRect();
+        if (!rect) return;
+        startRef.current = { x: position.x, y: position.y, sx: e.clientX, sy: e.clientY };
+        const onMove = (ev: MouseEvent) => {
+          const dx = ((ev.clientX - startRef.current.sx) / rect.width) * 100;
+          const dy = ((ev.clientY - startRef.current.sy) / rect.height) * 100;
+          onPositionChange({ x: Math.round(Math.max(5, Math.min(95, startRef.current.x + dx))), y: Math.round(Math.max(5, Math.min(95, startRef.current.y + dy))) });
+        };
+        const onUp = () => { setDragging(false); document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); };
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onUp);
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
 function ElementAccordion({ icon, label, defaultOpen = false, children }: {
   icon: string; label: string; defaultOpen?: boolean; children: React.ReactNode;
 }) {
@@ -3301,6 +3345,29 @@ ${JSON.stringify(slideForContext, null, 2)}
               </ElementAccordion>
               <ElementAccordion icon="#" label="해시태그" defaultOpen={false}>
                 <input type="text" value={(slide.hashtags || []).join(', ')} onChange={e => onChange({ hashtags: e.target.value.split(',').map(t => t.trim()).filter(Boolean) })} placeholder="쉼표로 구분: 임플란트, 치과추천" className="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-lg" />
+              </ElementAccordion>
+              <ElementAccordion icon="📐" label="텍스트 위치" defaultOpen={false}>
+                <div className="space-y-3">
+                  <p className="text-[10px] text-slate-400">편집 프리뷰에서 텍스트를 드래그하거나, 아래 좌표를 직접 입력하세요.</p>
+                  <div className="flex gap-3">
+                    <div className="flex-1">
+                      <p className="text-[10px] text-slate-500 font-semibold mb-1">제목 X/Y (%)</p>
+                      <div className="flex gap-1">
+                        <input type="number" min={0} max={100} value={slide.titlePosition?.x ?? 50} onChange={e => onChange({ titlePosition: { x: Number(e.target.value), y: slide.titlePosition?.y ?? 50 } })} className="w-14 px-2 py-1 text-xs bg-white border border-slate-200 rounded" />
+                        <input type="number" min={0} max={100} value={slide.titlePosition?.y ?? 50} onChange={e => onChange({ titlePosition: { x: slide.titlePosition?.x ?? 50, y: Number(e.target.value) } })} className="w-14 px-2 py-1 text-xs bg-white border border-slate-200 rounded" />
+                      </div>
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-[10px] text-slate-500 font-semibold mb-1">부제 X/Y (%)</p>
+                      <div className="flex gap-1">
+                        <input type="number" min={0} max={100} value={slide.subtitlePosition?.x ?? 50} onChange={e => onChange({ subtitlePosition: { x: Number(e.target.value), y: slide.subtitlePosition?.y ?? 50 } })} className="w-14 px-2 py-1 text-xs bg-white border border-slate-200 rounded" />
+                        <input type="number" min={0} max={100} value={slide.subtitlePosition?.y ?? 50} onChange={e => onChange({ subtitlePosition: { x: slide.subtitlePosition?.x ?? 50, y: Number(e.target.value) } })} className="w-14 px-2 py-1 text-xs bg-white border border-slate-200 rounded" />
+                      </div>
+                    </div>
+                  </div>
+                  <button type="button" onClick={() => onChange({ titlePosition: undefined, subtitlePosition: undefined })}
+                    className="px-3 py-1.5 text-[10px] font-semibold bg-slate-100 text-slate-500 rounded-lg hover:bg-slate-200">↺ 위치 초기화</button>
+                </div>
               </ElementAccordion>
             </>
           )}

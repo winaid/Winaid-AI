@@ -176,6 +176,10 @@ export interface SlideData {
   showHashtags?: boolean;
   showHandle?: boolean;
   showLine?: boolean;
+
+  // 텍스트 위치 (드래그로 변경, % 기준)
+  titlePosition?: { x: number; y: number };
+  subtitlePosition?: { x: number; y: number };
 }
 
 // ── 커버 템플릿 ──
