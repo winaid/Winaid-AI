@@ -648,6 +648,14 @@ JSON 한 객체만 출력:
     whiteSpace: 'pre-line',
     textAlign: (slide.titleAlign || defaults.textAlign || undefined) as CSSProperties['textAlign'],
     ...(slide.titleFontId ? { fontFamily: getSlideFontFamily({ ...slide, fontId: slide.titleFontId }) } : {}),
+    // 드래그 위치 반영
+    ...(slide.titlePosition ? {
+      position: 'absolute' as const,
+      left: `${slide.titlePosition.x}%`,
+      top: `${slide.titlePosition.y}%`,
+      transform: 'translate(-50%, -50%)',
+      zIndex: 10,
+    } : {}),
   });
 
   /** 슬라이드별 부제 스타일 */
@@ -660,6 +668,14 @@ JSON 한 객체만 출력:
     wordBreak: 'keep-all',
     whiteSpace: 'pre-line',
     ...(slide.subtitleFontId ? { fontFamily: getSlideFontFamily({ ...slide, fontId: slide.subtitleFontId }) } : {}),
+    // 드래그 위치 반영
+    ...(slide.subtitlePosition ? {
+      position: 'absolute' as const,
+      left: `${slide.subtitlePosition.x}%`,
+      top: `${slide.subtitlePosition.y}%`,
+      transform: 'translate(-50%, -50%)',
+      zIndex: 10,
+    } : {}),
   });
 
   /** 슬라이드별 본문 스타일 */
