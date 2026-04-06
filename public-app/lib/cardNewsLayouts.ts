@@ -180,6 +180,13 @@ export interface SlideData {
   // 텍스트 위치 (드래그로 변경, % 기준)
   titlePosition?: { x: number; y: number };
   subtitlePosition?: { x: number; y: number };
+
+  // 커스텀 아이콘 (요소 클릭으로 변경)
+  baArrowIcon?: string;
+  vsIcon?: string;
+  checkIcon?: string;
+  prosIcon?: string;
+  consIcon?: string;
 }
 
 // ── 커버 템플릿 ──

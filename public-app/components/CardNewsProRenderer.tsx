@@ -1354,7 +1354,7 @@ JSON 한 객체만 출력:
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '3px', borderRadius: '20px', overflow: 'hidden', position: 'relative', zIndex: 2 }}>
           {/* VS 뱃지 (2열일 때) */}
           {cols.length === 2 && labels.length === 0 && (
-            <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '48px', height: '48px', borderRadius: '50%', background: theme.accentColor, color: '#fff', fontSize: '16px', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10, boxShadow: `0 4px 16px ${theme.accentColor}44` }}>VS</div>
+            <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '48px', height: '48px', borderRadius: '50%', background: theme.accentColor, color: '#fff', fontSize: '16px', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10, boxShadow: `0 4px 16px ${theme.accentColor}44` }}>{slide.vsIcon || 'VS'}</div>
           )}
           {/* 헤더 행 */}
           <div style={{ display: 'grid', gridTemplateColumns: gridTemplate, gap: '3px' }}>
@@ -1596,7 +1596,7 @@ JSON 한 객체만 출력:
                     flexShrink: 0,
                   }}
                 >
-                  ✓
+                  {slide.checkIcon || '✓'}
                 </div>
                 <span style={{ color: theme.titleColor, fontSize: `${checkLayout.fontSize}px`, fontWeight: 600, wordBreak: 'keep-all', flex: 1 }}>
                   {item}
@@ -1760,7 +1760,7 @@ JSON 한 객체만 출력:
       </div>
       <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '22px', position: 'relative', zIndex: 2 }}>
         {/* ⇄ 화살표 */}
-        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '44px', height: '44px', borderRadius: '50%', background: theme.accentColor, color: '#fff', fontSize: '20px', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10, boxShadow: `0 4px 12px ${theme.accentColor}44` }}>→</div>
+        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '44px', height: '44px', borderRadius: '50%', background: theme.accentColor, color: '#fff', fontSize: '20px', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10, boxShadow: `0 4px 12px ${theme.accentColor}44` }}>{slide.baArrowIcon || '→'}</div>
         {/* BEFORE */}
         <div style={{ background: innerCardBg, borderRadius: '20px', padding: '32px 26px', border: `1px solid ${innerCardBorder}`, display: 'flex', flexDirection: 'column' }}>
           <div style={{ color: theme.bodyColor, fontSize: '18px', fontWeight: 900, textAlign: 'center', marginBottom: '24px', letterSpacing: '4px' }}>
@@ -2055,7 +2055,7 @@ JSON 한 객체만 출력:
         return (
         <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', position: 'relative', zIndex: 2 }}>
           <div style={{ background: 'rgba(52,211,153,0.14)', borderRadius: '20px', padding: '28px 24px', border: '2px solid rgba(52,211,153,0.45)', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: '#34D399', color: '#fff', fontSize: '28px', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px' }}>O</div>
+            <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: '#34D399', color: '#fff', fontSize: '28px', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px' }}>{slide.prosIcon || 'O'}</div>
             <div style={{ color: '#34D399', fontSize: '18px', fontWeight: 900, textAlign: 'center', marginBottom: '16px' }}>
               {slide.prosLabel || '장점'}
             </div>
@@ -2070,7 +2070,7 @@ JSON 한 객체만 출력:
             </div>
           </div>
           <div style={{ background: 'rgba(239,68,68,0.14)', borderRadius: '20px', padding: '28px 24px', border: '2px solid rgba(239,68,68,0.45)', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: '#EF4444', color: '#fff', fontSize: '28px', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px' }}>X</div>
+            <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: '#EF4444', color: '#fff', fontSize: '28px', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px' }}>{slide.consIcon || 'X'}</div>
             <div style={{ color: '#F87171', fontSize: '18px', fontWeight: 900, textAlign: 'center', marginBottom: '16px' }}>
               {slide.consLabel || '주의점'}
             </div>
@@ -2462,6 +2462,42 @@ function DraggableText({ children, position, onPositionChange, containerRef }: {
       }}
     >
       {children}
+    </div>
+  );
+}
+
+function IconChangerPopover({ currentIcon, onSelect }: { currentIcon: string; onSelect: (icon: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const icons = ['→', '›', '»', '⇒', '▶', '●', '◆', '★', '✓', '✕', '•', '⊕', '↔', '⇄', 'O', 'X'];
+  return (
+    <div className="relative">
+      <button type="button" onClick={() => setOpen(!open)} className="w-7 h-7 flex items-center justify-center hover:bg-slate-100 rounded text-xs" title="아이콘 변경">🔄</button>
+      {open && (
+        <div className="absolute top-full left-0 mt-1 bg-white shadow-xl rounded-lg p-2 border border-slate-200 grid grid-cols-4 gap-1 z-[200]">
+          {icons.map(ic => (
+            <button key={ic} type="button" onClick={() => { onSelect(ic); setOpen(false); }}
+              className={`w-8 h-8 flex items-center justify-center rounded hover:bg-blue-50 text-lg ${currentIcon === ic ? 'bg-blue-100 ring-2 ring-blue-400' : ''}`}>{ic}</button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ColorMiniPicker({ onSelect }: { onSelect: (color: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const colors = ['#FFFFFF', '#000000', '#F5A623', '#3B82F6', '#EF4444', '#22C55E', '#8B5CF6', '#EC4899'];
+  return (
+    <div className="relative">
+      <button type="button" onClick={() => setOpen(!open)} className="w-7 h-7 flex items-center justify-center hover:bg-slate-100 rounded text-xs" title="색상">🎨</button>
+      {open && (
+        <div className="absolute top-full left-0 mt-1 bg-white shadow-xl rounded-lg p-2 border border-slate-200 flex gap-1 z-[200]">
+          {colors.map(c => (
+            <button key={c} type="button" onClick={() => { onSelect(c); setOpen(false); }}
+              className="w-6 h-6 rounded-full border-2 border-slate-200 hover:scale-110 transition-transform" style={{ background: c }} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -3337,6 +3373,31 @@ ${JSON.stringify(slideForContext, null, 2)}
 
           {/* 레이아웃별 데이터 */}
           {renderLayoutDataEditor()}
+
+          {/* 아이콘 커스텀 (레이아웃별) */}
+          {slide.layout === 'checklist' && (
+            <ElementAccordion icon="✓" label="체크 아이콘" defaultOpen={false}>
+              <IconChangerPopover currentIcon={slide.checkIcon || '✓'} onSelect={ic => onChange({ checkIcon: ic })} />
+            </ElementAccordion>
+          )}
+          {slide.layout === 'comparison' && (
+            <ElementAccordion icon="⚡" label="VS 아이콘" defaultOpen={false}>
+              <IconChangerPopover currentIcon={slide.vsIcon || 'VS'} onSelect={ic => onChange({ vsIcon: ic })} />
+            </ElementAccordion>
+          )}
+          {slide.layout === 'before-after' && (
+            <ElementAccordion icon="→" label="화살표 아이콘" defaultOpen={false}>
+              <IconChangerPopover currentIcon={slide.baArrowIcon || '→'} onSelect={ic => onChange({ baArrowIcon: ic })} />
+            </ElementAccordion>
+          )}
+          {slide.layout === 'pros-cons' && (
+            <ElementAccordion icon="⚖" label="장단점 아이콘" defaultOpen={false}>
+              <div className="flex gap-4">
+                <div><p className="text-[10px] text-slate-400 mb-1">장점</p><IconChangerPopover currentIcon={slide.prosIcon || 'O'} onSelect={ic => onChange({ prosIcon: ic })} /></div>
+                <div><p className="text-[10px] text-slate-400 mb-1">단점</p><IconChangerPopover currentIcon={slide.consIcon || 'X'} onSelect={ic => onChange({ consIcon: ic })} /></div>
+              </div>
+            </ElementAccordion>
+          )}
 
           {/* 커버/마무리 전용 요소 */}
           {(slide.layout === 'cover' || slide.layout === 'closing') && (
