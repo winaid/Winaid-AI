@@ -10,7 +10,6 @@ export default function CardNewsPage() {
       <p className="text-slate-500 text-sm leading-relaxed max-w-sm">
         더 프로페셔널한 카드뉴스를 위해<br/>
         열심히 공사 중입니다 🔨<br/><br/>
-        <span className="text-xs text-slate-400">외부용(public-app)에서 먼저 체험하실 수 있습니다</span>
       </p>
     </div>
   );
