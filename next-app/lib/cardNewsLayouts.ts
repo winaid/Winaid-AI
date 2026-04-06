@@ -66,6 +66,16 @@ export const SLIDE_IMAGE_STYLES = [
 
 export type SlideImageStyle = typeof SLIDE_IMAGE_STYLES[number]['id'];
 
+export interface SlideDecoration {
+  id: string;
+  type: 'star' | 'circle' | 'line' | 'arrow' | 'badge' | 'corner' | 'dots' | 'wave';
+  position: { top: string; left: string };
+  size: number;
+  color: string;
+  opacity: number;
+  rotation: number;
+}
+
 export interface SlideData {
   index: number;
   layout: SlideLayoutType;
@@ -152,6 +162,9 @@ export interface SlideData {
   bodyFontSize?: number;
   bodyColor?: string;
   bodyLineHeight?: number;
+
+  // 장식 요소
+  decorations?: SlideDecoration[];
 }
 
 export interface CardNewsTheme {

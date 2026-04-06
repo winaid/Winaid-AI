@@ -48,7 +48,7 @@ export default function CardNewsPage() {
     (async () => { try { const sb = getSupabaseClient(); const { data: { user } } = await sb.auth.getUser(); if (user?.user_metadata?.name) setHospitalName(user.user_metadata.name); } catch {} })();
   }, []);
   const [slideCount, setSlideCount] = useState(6);
-  const [proCardRatio, setProCardRatio] = useState<'1:1' | '3:4'>('1:1');
+  const [proCardRatio, setProCardRatio] = useState<'1:1' | '3:4' | '4:5' | '9:16' | '16:9'>('1:1');
   const [designTemplateId, setDesignTemplateId] = useState<CardNewsDesignTemplateId | undefined>(undefined);
   // 이미지 스타일 UI는 상세설정과 함께 제거됨. 레거시 AI 이미지 플로우 참조용 고정값.
   const imageStyle: ImageStyleType = 'illustration';
@@ -960,19 +960,22 @@ DECORATIVE: (장식 요소)`,
             {/* 카드 사이즈 */}
             <div>
               <label className={labelCls}>카드 사이즈</label>
-              <div className="flex gap-2">
-                <button type="button" onClick={() => setProCardRatio('1:1')}
-                  className={`flex-1 py-2.5 rounded-xl text-sm font-bold border-2 transition-all ${
-                    proCardRatio === '1:1' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-slate-200 text-slate-400'
-                  }`}>
-                  1:1 정사각형
-                </button>
-                <button type="button" onClick={() => setProCardRatio('3:4')}
-                  className={`flex-1 py-2.5 rounded-xl text-sm font-bold border-2 transition-all ${
-                    proCardRatio === '3:4' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-slate-200 text-slate-400'
-                  }`}>
-                  3:4 세로형
-                </button>
+              <div className="flex gap-1.5 flex-wrap">
+                {([
+                  { id: '1:1' as const, label: '1:1', desc: '정사각형' },
+                  { id: '4:5' as const, label: '4:5', desc: '인스타' },
+                  { id: '3:4' as const, label: '3:4', desc: '세로형' },
+                  { id: '9:16' as const, label: '9:16', desc: '릴스/숏츠' },
+                  { id: '16:9' as const, label: '16:9', desc: '가로형' },
+                ]).map(opt => (
+                  <button key={opt.id} type="button" onClick={() => setProCardRatio(opt.id)}
+                    className={`flex-1 min-w-[60px] py-2 rounded-xl text-center border-2 transition-all ${
+                      proCardRatio === opt.id ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-slate-200 text-slate-400'
+                    }`}>
+                    <span className="block text-sm font-bold">{opt.label}</span>
+                    <span className="block text-[9px]">{opt.desc}</span>
+                  </button>
+                ))}
               </div>
             </div>
 

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
-import type { SlideData, CardNewsTheme, SlideLayoutType, SlideImagePosition, SlideImageStyle, SlideComparisonColumn } from '../lib/cardNewsLayouts';
+import type { SlideData, SlideDecoration, CardNewsTheme, SlideLayoutType, SlideImagePosition, SlideImageStyle, SlideComparisonColumn } from '../lib/cardNewsLayouts';
 import { LAYOUT_LABELS, CARD_FONTS, FONT_CATEGORIES, getCardFont, SLIDE_IMAGE_STYLES } from '../lib/cardNewsLayouts';
 import type { CardTemplate } from '../lib/cardTemplateService';
 
@@ -46,8 +46,8 @@ interface Props {
   onThemeChange: (theme: CardNewsTheme) => void;
   /** 학습한 디자인 템플릿 — 있으면 배경/내부카드/장식을 학습 값으로 오버라이드 */
   learnedTemplate?: CardTemplate | null;
-  /** 카드 비율 — '1:1' (1080x1080) 또는 '3:4' (1080x1440) */
-  cardRatio?: '1:1' | '3:4';
+  /** 카드 비율 */
+  cardRatio?: '1:1' | '3:4' | '4:5' | '9:16' | '16:9';
 }
 
 /**
@@ -762,8 +762,24 @@ JSON 한 객체만 출력:
 
   // 카드 사이즈 계산
   const cardWidth = 1080;
-  const cardHeight = cardRatio === '3:4' ? 1440 : 1080;
-  const cardAspect = cardRatio === '3:4' ? '3 / 4' : '1 / 1';
+  const cardHeight = (() => {
+    switch (cardRatio) {
+      case '3:4': return 1440;
+      case '4:5': return 1350;
+      case '9:16': return 1920;
+      case '16:9': return 608;
+      default: return 1080;
+    }
+  })();
+  const cardAspect = (() => {
+    switch (cardRatio) {
+      case '3:4': return '3 / 4';
+      case '4:5': return '4 / 5';
+      case '9:16': return '9 / 16';
+      case '16:9': return '16 / 9';
+      default: return '1 / 1';
+    }
+  })();
 
   // 학습 템플릿이 있으면 배경/레이아웃을 학습 값으로 오버라이드
   const learnedBgGradient = lt?.backgroundStyle?.gradient || lt?.colors?.backgroundGradient;
@@ -1034,6 +1050,41 @@ JSON 한 객체만 출력:
     );
   };
 
+  /** 슬라이드 장식 요소 렌더링 */
+  const renderDecorations = (slide: SlideData) => {
+    if (!slide.decorations?.length) return null;
+    return slide.decorations.map(deco => {
+      const base: CSSProperties = {
+        position: 'absolute', top: deco.position.top, left: deco.position.left,
+        opacity: deco.opacity, transform: `rotate(${deco.rotation}deg)`,
+        zIndex: 3, pointerEvents: 'none' as const,
+      };
+      switch (deco.type) {
+        case 'star':
+          return <div key={deco.id} style={{ ...base, width: `${deco.size}px`, height: `${deco.size}px` }}>
+            <div style={{ width: '100%', height: '100%', clipPath: 'polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)', background: deco.color }} />
+          </div>;
+        case 'circle':
+          return <div key={deco.id} style={{ ...base, width: `${deco.size}px`, height: `${deco.size}px`, borderRadius: '50%', border: `3px solid ${deco.color}` }} />;
+        case 'line':
+          return <div key={deco.id} style={{ ...base, width: `${deco.size * 3}px`, height: '4px', background: deco.color, borderRadius: '2px' }} />;
+        case 'arrow':
+          return <div key={deco.id} style={{ ...base, fontSize: `${deco.size}px`, color: deco.color, letterSpacing: '-8px', fontWeight: 900 }}>›››</div>;
+        case 'badge':
+          return <div key={deco.id} style={{ ...base, padding: '8px 20px', borderRadius: '999px', background: deco.color, color: '#fff', fontSize: '14px', fontWeight: 800 }}>NEW</div>;
+        case 'corner':
+          return <div key={deco.id} style={{ ...base, width: `${deco.size}px`, height: `${deco.size}px`, borderTop: `4px solid ${deco.color}`, borderLeft: `4px solid ${deco.color}` }} />;
+        case 'dots':
+          return <div key={deco.id} style={{ ...base, display: 'flex', gap: '8px' }}>
+            {[0,1,2].map(j => <div key={j} style={{ width: `${deco.size/3}px`, height: `${deco.size/3}px`, borderRadius: '50%', background: deco.color }} />)}
+          </div>;
+        case 'wave':
+          return <div key={deco.id} style={{ ...base, width: `${deco.size*4}px`, height: `${deco.size}px`, borderBottom: `3px solid ${deco.color}`, borderRadius: '0 0 50% 50%' }} />;
+        default: return null;
+      }
+    });
+  };
+
   const hospitalFooter = theme.hospitalName ? (
     <div style={{
       marginTop: 'auto', paddingTop: '24px',
@@ -1065,6 +1116,7 @@ JSON 한 객체만 출력:
   const renderCover = (slide: SlideData) => (
     <div style={getCardStyle(slide)}>
       {backgroundDecoration}
+      {renderDecorations(slide)}
       {(slide.imagePosition === 'background' || slide.imagePosition === 'center') && renderImageLayer(slide)}
       {slide.imagePosition === 'top' && renderImageLayer(slide)}
       <div
@@ -1113,6 +1165,7 @@ JSON 한 객체만 출력:
   const renderInfo = (slide: SlideData) => (
     <div style={getCardStyle(slide)}>
       {backgroundDecoration}
+      {renderDecorations(slide)}
       {(slide.imagePosition === 'background' || slide.imagePosition === 'center') && renderImageLayer(slide)}
       {slide.imagePosition === 'top' && renderImageLayer(slide)}
 
@@ -1183,6 +1236,7 @@ JSON 한 객체만 출력:
     return (
       <div style={getCardStyle(slide)}>
         {backgroundDecoration}
+      {renderDecorations(slide)}
         {(slide.imagePosition === 'background' || slide.imagePosition === 'center') && renderImageLayer(slide)}
       {slide.imagePosition === 'top' && renderImageLayer(slide)}
         <div style={{ position: 'relative', zIndex: 2, marginBottom: '24px' }}>
@@ -1273,6 +1327,7 @@ JSON 한 객체만 출력:
     return (
       <div style={getCardStyle(slide)}>
         {backgroundDecoration}
+      {renderDecorations(slide)}
         {(slide.imagePosition === 'background' || slide.imagePosition === 'center') && renderImageLayer(slide)}
       {slide.imagePosition === 'top' && renderImageLayer(slide)}
         <div style={{ position: 'relative', zIndex: 2, marginBottom: '24px' }}>
@@ -1340,6 +1395,7 @@ JSON 한 객체만 출력:
     return (
       <div style={getCardStyle(slide)}>
         {backgroundDecoration}
+      {renderDecorations(slide)}
         {(slide.imagePosition === 'background' || slide.imagePosition === 'center') && renderImageLayer(slide)}
         {slide.imagePosition === 'top' && renderImageLayer(slide)}
         <div style={{ position: 'relative', zIndex: 2, marginBottom: '24px' }}>
@@ -1394,6 +1450,7 @@ JSON 한 객체만 출력:
   const renderChecklist = (slide: SlideData) => (
     <div style={getCardStyle(slide)}>
       {backgroundDecoration}
+      {renderDecorations(slide)}
       {(slide.imagePosition === 'background' || slide.imagePosition === 'center') && renderImageLayer(slide)}
       {slide.imagePosition === 'top' && renderImageLayer(slide)}
       <div style={{ position: 'relative', zIndex: 2, marginBottom: '24px' }}>
@@ -1456,6 +1513,7 @@ JSON 한 객체만 출력:
     return (
       <div style={getCardStyle(slide)}>
         {backgroundDecoration}
+      {renderDecorations(slide)}
         {(slide.imagePosition === 'background' || slide.imagePosition === 'center') && renderImageLayer(slide)}
         {slide.imagePosition === 'top' && renderImageLayer(slide)}
         <div style={{ position: 'relative', zIndex: 2, marginBottom: '24px' }}>
@@ -1505,6 +1563,7 @@ JSON 한 객체만 출력:
   const renderClosing = (slide: SlideData) => (
     <div style={getCardStyle(slide)}>
       {backgroundDecoration}
+      {renderDecorations(slide)}
       {(slide.imagePosition === 'background' || slide.imagePosition === 'center') && renderImageLayer(slide)}
       {slide.imagePosition === 'top' && renderImageLayer(slide)}
       <div
@@ -1583,6 +1642,7 @@ JSON 한 객체만 출력:
   const renderBeforeAfter = (slide: SlideData) => (
     <div style={getCardStyle(slide)}>
       {backgroundDecoration}
+      {renderDecorations(slide)}
       {(slide.imagePosition === 'background' || slide.imagePosition === 'center') && renderImageLayer(slide)}
       {slide.imagePosition === 'top' && renderImageLayer(slide)}
       <div style={{ position: 'relative', zIndex: 2, marginBottom: '24px' }}>
@@ -1629,6 +1689,7 @@ JSON 한 객체만 출력:
     return (
     <div style={getCardStyle(slide)}>
       {backgroundDecoration}
+      {renderDecorations(slide)}
       {(slide.imagePosition === 'background' || slide.imagePosition === 'center') && renderImageLayer(slide)}
       {slide.imagePosition === 'top' && renderImageLayer(slide)}
       <div style={{ position: 'relative', zIndex: 2, marginBottom: '24px' }}>
@@ -1694,6 +1755,7 @@ JSON 한 객체만 출력:
   const renderTimeline = (slide: SlideData) => (
     <div style={getCardStyle(slide)}>
       {backgroundDecoration}
+      {renderDecorations(slide)}
       {(slide.imagePosition === 'background' || slide.imagePosition === 'center') && renderImageLayer(slide)}
       {slide.imagePosition === 'top' && renderImageLayer(slide)}
       <div style={{ position: 'relative', zIndex: 2, marginBottom: '24px' }}>
@@ -1748,6 +1810,7 @@ JSON 한 객체만 출력:
   const renderQuote = (slide: SlideData) => (
     <div style={getCardStyle(slide)}>
       {backgroundDecoration}
+      {renderDecorations(slide)}
       {/* 배경 장식 원 */}
       <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '300px', height: '300px', borderRadius: '50%', background: `${theme.accentColor}08`, zIndex: 0, pointerEvents: 'none' as const }} />
       {(slide.imagePosition === 'background' || slide.imagePosition === 'center') && renderImageLayer(slide)}
@@ -1805,6 +1868,7 @@ JSON 한 객체만 출력:
     return (
     <div style={getCardStyle(slide)}>
       {backgroundDecoration}
+      {renderDecorations(slide)}
       {(slide.imagePosition === 'background' || slide.imagePosition === 'center') && renderImageLayer(slide)}
       {slide.imagePosition === 'top' && renderImageLayer(slide)}
       <div style={{ position: 'relative', zIndex: 2, marginBottom: '24px' }}>
@@ -1870,6 +1934,7 @@ JSON 한 객체만 출력:
   const renderProsCons = (slide: SlideData) => (
     <div style={getCardStyle(slide)}>
       {backgroundDecoration}
+      {renderDecorations(slide)}
       {(slide.imagePosition === 'background' || slide.imagePosition === 'center') && renderImageLayer(slide)}
       {slide.imagePosition === 'top' && renderImageLayer(slide)}
       <div style={{ position: 'relative', zIndex: 2, marginBottom: '24px' }}>
@@ -1921,6 +1986,7 @@ JSON 한 객체만 출력:
   const renderPriceTable = (slide: SlideData) => (
     <div style={getCardStyle(slide)}>
       {backgroundDecoration}
+      {renderDecorations(slide)}
       {(slide.imagePosition === 'background' || slide.imagePosition === 'center') && renderImageLayer(slide)}
       {slide.imagePosition === 'top' && renderImageLayer(slide)}
       <div style={{ position: 'relative', zIndex: 2, marginBottom: '24px' }}>
@@ -1975,6 +2041,7 @@ JSON 한 객체만 출력:
   const renderWarning = (slide: SlideData) => (
     <div style={getCardStyle(slide)}>
       {backgroundDecoration}
+      {renderDecorations(slide)}
       {/* 빨간 상단 바 */}
       <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '8px', background: 'linear-gradient(90deg, #EF4444, #F87171, #EF4444)', zIndex: 10, pointerEvents: 'none' as const }} />
       {(slide.imagePosition === 'background' || slide.imagePosition === 'center') && renderImageLayer(slide)}
@@ -2214,6 +2281,7 @@ JSON 한 객체만 출력:
                             setFontLoaded(v => v + 1);
                           }
                         }}
+                        accentColor={theme.accentColor}
                         generatingImage={generatingImageIdx === idx}
                         aiSuggestingKey={aiSuggestingKey}
                         customFontName={customFontName}
@@ -2372,6 +2440,7 @@ interface SlideEditorProps {
   onAiEnrich: () => void;
   onSuggestImagePrompt: () => void;
   onFontChange: (fontId: string | undefined) => void;
+  accentColor: string;
   generatingImage: boolean;
   aiSuggestingKey: string | null;
   customFontName: string | null;
@@ -2389,6 +2458,7 @@ function SlideEditor({
   onAiEnrich,
   onSuggestImagePrompt,
   onFontChange,
+  accentColor,
   generatingImage,
   aiSuggestingKey,
   customFontName,
@@ -3074,6 +3144,61 @@ ${JSON.stringify(slideForContext, null, 2)}
               ))}
               {customFontName && <optgroup label="내 폰트"><option value="custom">📁 {customFontDisplayName || customFontName}</option></optgroup>}
             </select>
+          </ElementAccordion>
+
+          {/* 장식 요소 */}
+          <ElementAccordion icon="🎨" label={`장식 요소${(slide.decorations?.length || 0) > 0 ? ` (${slide.decorations!.length})` : ''}`} defaultOpen={false}>
+            <div className="space-y-3">
+              <div className="flex flex-wrap gap-1.5">
+                {([
+                  { type: 'star' as const, icon: '⭐', label: '별' },
+                  { type: 'circle' as const, icon: '⭕', label: '원' },
+                  { type: 'line' as const, icon: '➖', label: '선' },
+                  { type: 'arrow' as const, icon: '›', label: '화살표' },
+                  { type: 'badge' as const, icon: '🏷️', label: '뱃지' },
+                  { type: 'corner' as const, icon: '┏', label: '코너' },
+                  { type: 'dots' as const, icon: '•••', label: '점' },
+                  { type: 'wave' as const, icon: '〰️', label: '물결' },
+                ]).map(item => (
+                  <button key={item.type} type="button"
+                    onClick={() => {
+                      const newDeco: SlideDecoration = {
+                        id: `deco-${Date.now()}-${Math.random().toString(36).slice(2,6)}`,
+                        type: item.type,
+                        position: { top: `${20 + Math.random() * 60}%`, left: `${10 + Math.random() * 70}%` },
+                        size: item.type === 'line' ? 30 : item.type === 'badge' ? 40 : 50,
+                        color: accentColor,
+                        opacity: 0.3,
+                        rotation: item.type === 'star' ? Math.floor(Math.random() * 30) - 15 : 0,
+                      };
+                      onChange({ decorations: [...(slide.decorations || []), newDeco] });
+                    }}
+                    className="px-3 py-1.5 text-[10px] font-semibold bg-slate-100 text-slate-600 rounded-lg hover:bg-blue-50 hover:text-blue-600 transition-all">
+                    {item.icon} {item.label}
+                  </button>
+                ))}
+              </div>
+              {(slide.decorations || []).map((deco) => (
+                <div key={deco.id} className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg">
+                  <span className="text-[10px] font-bold text-slate-500 w-10 shrink-0">
+                    {deco.type === 'star' ? '⭐' : deco.type === 'circle' ? '⭕' : deco.type === 'line' ? '➖' : deco.type === 'arrow' ? '›' : deco.type === 'badge' ? '🏷️' : deco.type === 'corner' ? '┏' : deco.type === 'dots' ? '•••' : '〰️'}
+                  </span>
+                  <div className="flex-1 flex items-center gap-1">
+                    <span className="text-[9px] text-slate-400">크기</span>
+                    <input type="range" min="20" max="120" value={deco.size}
+                      onChange={e => onChange({ decorations: (slide.decorations || []).map(d => d.id === deco.id ? { ...d, size: Number(e.target.value) } : d) })}
+                      className="w-14 h-1 accent-blue-500" />
+                    <span className="text-[9px] text-slate-400 ml-1">투명도</span>
+                    <input type="range" min="10" max="100" value={Math.round(deco.opacity * 100)}
+                      onChange={e => onChange({ decorations: (slide.decorations || []).map(d => d.id === deco.id ? { ...d, opacity: Number(e.target.value) / 100 } : d) })}
+                      className="w-14 h-1 accent-blue-500" />
+                  </div>
+                  <button type="button"
+                    onClick={() => onChange({ decorations: (slide.decorations || []).filter(d => d.id !== deco.id) })}
+                    className="text-red-400 hover:text-red-600 text-xs font-bold shrink-0">✕</button>
+                </div>
+              ))}
+            </div>
           </ElementAccordion>
         </div>
       )}
