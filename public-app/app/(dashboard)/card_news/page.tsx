@@ -48,6 +48,7 @@ export default function CardNewsPage() {
     (async () => { try { const sb = getSupabaseClient(); const { data: { user } } = await sb.auth.getUser(); if (user?.user_metadata?.name) setHospitalName(user.user_metadata.name); } catch {} })();
   }, []);
   const [slideCount, setSlideCount] = useState(6);
+  const [proCardRatio, setProCardRatio] = useState<'1:1' | '3:4'>('1:1');
   const [designTemplateId, setDesignTemplateId] = useState<CardNewsDesignTemplateId | undefined>(undefined);
   // 이미지 스타일 UI는 상세설정과 함께 제거됨. 레거시 AI 이미지 플로우 참조용 고정값.
   const imageStyle: ImageStyleType = 'illustration';
@@ -998,6 +999,25 @@ ${newsContext ? `\n[📰 최신 네이버 뉴스 분석]\n${newsContext}\n\n⚠�
               </div>
             </div>
 
+            {/* 카드 사이즈 */}
+            <div>
+              <label className={labelCls}>카드 사이즈</label>
+              <div className="flex gap-2">
+                <button type="button" onClick={() => setProCardRatio('1:1')}
+                  className={`flex-1 py-2.5 rounded-xl text-sm font-bold border-2 transition-all ${
+                    proCardRatio === '1:1' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-slate-200 text-slate-400'
+                  }`}>
+                  1:1 정사각형
+                </button>
+                <button type="button" onClick={() => setProCardRatio('3:4')}
+                  className={`flex-1 py-2.5 rounded-xl text-sm font-bold border-2 transition-all ${
+                    proCardRatio === '3:4' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-slate-200 text-slate-400'
+                  }`}>
+                  3:4 세로형
+                </button>
+              </div>
+            </div>
+
             {/* 디자인 스타일 — 한 행에 전부 (+ 새 스타일 학습 / 테마 / 학습 템플릿) */}
             <div>
               <label className={labelCls}>디자인 스타일</label>
@@ -1172,6 +1192,7 @@ ${newsContext ? `\n[📰 최신 네이버 뉴스 분석]\n${newsContext}\n\n⚠�
             onSlidesChange={setProSlides}
             onThemeChange={setProTheme}
             learnedTemplate={learnedTemplate}
+            cardRatio={proCardRatio}
           />
         ) : pipelineStep === 'scriptReview' && cards.length > 0 ? (
           /* ── Step 2: 원고 승인 단계 ── */

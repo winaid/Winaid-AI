@@ -46,6 +46,8 @@ interface Props {
   onThemeChange: (theme: CardNewsTheme) => void;
   /** 학습한 디자인 템플릿 — 있으면 배경/내부카드/장식을 학습 값으로 오버라이드 */
   learnedTemplate?: CardTemplate | null;
+  /** 카드 비율 — '1:1' (1080x1080) 또는 '3:4' (1080x1440) */
+  cardRatio?: '1:1' | '3:4';
 }
 
 /**
@@ -61,7 +63,7 @@ interface Props {
  *   transform: scale(컨테이너폭 / 1080)로 축소한다. 다운로드는 별도의
  *   captureNodeAsCanvas 헬퍼가 scale을 제거한 복제본을 풀사이즈로 캡처.
  */
-export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onThemeChange, learnedTemplate }: Props) {
+export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onThemeChange, learnedTemplate, cardRatio = '1:1' }: Props) {
   // shorthand — 학습 템플릿이 있을 때 상세 토큰으로 렌더 오버라이드
   const lt = learnedTemplate || null;
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -159,7 +161,7 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
   // 미리보기 박스 폭에 맞춰 scale 재계산
   useEffect(() => {
     const recompute = () => {
-      const next = boxRefs.current.map(box => (box ? box.clientWidth / 1080 : 0.25));
+      const next = boxRefs.current.map(box => (box ? box.clientWidth / cardWidth : 0.25));
       setScales(prev => {
         if (prev.length === next.length && prev.every((v, i) => Math.abs(v - next[i]) < 0.0005)) return prev;
         return next;
@@ -382,38 +384,61 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
     }
   };
 
-  /** 슬라이드 내용 기반 이미지 프롬프트(visualKeyword) AI 추천 */
+  /** 슬라이드 내용 기반 이미지 프롬프트(visualKeyword) AI 추천 — 전체 맥락 활용 */
   const handleSuggestImagePrompt = async (idx: number) => {
     const slide = slides[idx];
     if (!slide) return;
     const key = `${idx}:imgprompt`;
     setAiSuggestingKey(key);
     try {
+      const allTitles = slides.map(s => `${s.index}장: ${s.title}`).join('\n');
+      const slideDetail = JSON.stringify({
+        title: slide.title,
+        subtitle: slide.subtitle,
+        body: slide.body,
+        layout: slide.layout,
+        checkItems: slide.checkItems,
+        icons: slide.icons,
+        steps: slide.steps,
+        columns: slide.columns,
+        compareLabels: slide.compareLabels,
+      });
       const res = await fetch('/api/gemini', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          prompt: `카드뉴스 슬라이드 제목: "${slide.title}"
-부제: "${slide.subtitle || ''}"
-본문: "${slide.body || ''}"
-레이아웃: ${slide.layout}
+          prompt: `당신은 의료 마케팅 이미지 프롬프트 전문가입니다.
 
-이 슬라이드에 어울리는 이미지를 영어로 묘사해.
+이 카드뉴스의 전체 구성:
+${allTitles}
+
+현재 슬라이드 (${slide.index}장, 레이아웃: ${slide.layout}):
+${slideDetail}
+
+이미지 위치: ${slide.imagePosition || 'top'}
+
+위 내용에 어울리는 이미지를 영어 프롬프트로 작성해주세요.
+
 규칙:
-- 1줄, 영어로만 (한국어 금지)
-- 의료/치과 맥락 유지
-- 스타일 키워드 포함 (3D render / illustration / photograph / infographic 중)
-- 깨끗한 배경·프로페셔널 품질 암시
-- 프롬프트만 출력, 따옴표·설명 없이`,
-          systemInstruction: '이미지 프롬프트 전문가. 영어 프롬프트 한 줄만 출력. 따옴표·설명 금지.',
+1. 프롬프트만 출력 (다른 텍스트 없이)
+2. 영어로 작성
+3. 의료/치과 맥락에 정확하게 맞추기
+4. 비현실적인 크기 금지 (예: 거대한 이빨 X) — 실제 비율에 맞는 의료 일러스트
+5. 배경은 깨끗하고 단순하게 (복잡한 배경 X)
+6. 카드뉴스에 어울리는 구도 (텍스트가 들어갈 공간 고려)
+7. 스타일: ${slide.imageStyle || 'professional medical illustration, clean and modern'}
+8. ${slide.imagePosition === 'top' || slide.imagePosition === 'bottom' ? '가로로 넓은 구도 (16:9 비율)' : '정사각형 구도 (1:1 비율)'}
+9. 색상: 카드뉴스 테마에 어울리는 톤
+10. 의료 장비/시술 이미지는 사실적이되 깨끗하고 전문적으로`,
+          systemInstruction: '의료 마케팅 이미지 프롬프트 전문가. 영어 프롬프트 1줄만 출력. 마크다운/따옴표 금지.',
           model: 'gemini-3.1-flash-lite-preview',
-          temperature: 0.8,
-          maxOutputTokens: 200,
+          temperature: 0.7,
+          maxOutputTokens: 300,
         }),
       });
       const data = await res.json() as { text?: string };
       if (data.text) {
-        const cleaned = data.text.replace(/^["'`]+|["'`]+$/g, '').replace(/\n/g, ' ').trim();
+        const cleaned = data.text.replace(/^["'`]+|["'`]+$/g, '').replace(/\n/g, ' ').replace(/```/g, '').trim();
         if (cleaned) updateSlide(idx, { visualKeyword: cleaned });
       }
     } catch (err) {
@@ -564,8 +589,8 @@ JSON 한 객체만 출력:
     tempContainer.style.position = 'fixed';
     tempContainer.style.left = '-9999px';
     tempContainer.style.top = '0';
-    tempContainer.style.width = '1080px';
-    tempContainer.style.height = '1080px';
+    tempContainer.style.width = `${cardWidth}px`;
+    tempContainer.style.height = `${cardHeight}px`;
     tempContainer.style.zIndex = '-1';
     tempContainer.style.pointerEvents = 'none';
     document.body.appendChild(tempContainer);
@@ -573,8 +598,8 @@ JSON 한 객체만 출력:
     const clone = sourceEl.cloneNode(true) as HTMLElement;
     clone.style.transform = 'none';
     clone.style.position = 'static';
-    clone.style.width = '1080px';
-    clone.style.height = '1080px';
+    clone.style.width = `${cardWidth}px`;
+    clone.style.height = `${cardHeight}px`;
     clone.style.pointerEvents = 'auto';
     tempContainer.appendChild(clone);
 
@@ -588,10 +613,10 @@ JSON 한 객체만 출력:
         scale: 2,
         useCORS: true,
         backgroundColor: null,
-        width: 1080,
-        height: 1080,
-        windowWidth: 1080,
-        windowHeight: 1080,
+        width: cardWidth,
+        height: cardHeight,
+        windowWidth: cardWidth,
+        windowHeight: cardHeight,
       });
     } finally {
       document.body.removeChild(tempContainer);
@@ -642,11 +667,16 @@ JSON 한 객체만 출력:
   // 공통 스타일
   // ═══════════════════════════════════════
 
+  // 카드 사이즈 계산
+  const cardWidth = 1080;
+  const cardHeight = cardRatio === '3:4' ? 1440 : 1080;
+  const cardAspect = cardRatio === '3:4' ? '3 / 4' : '1 / 1';
+
   // 학습 템플릿이 있으면 배경/레이아웃을 학습 값으로 오버라이드
   const learnedBgGradient = lt?.backgroundStyle?.gradient || lt?.colors?.backgroundGradient;
   const cardContainerStyle: CSSProperties = {
-    width: '1080px',
-    height: '1080px',
+    width: `${cardWidth}px`,
+    height: `${cardHeight}px`,
     position: 'relative',
     overflow: 'hidden',
     // isolation: 'isolate'는 자체 스택 컨텍스트를 만들어서 음수 z-index 자식
@@ -753,7 +783,7 @@ JSON 한 객체만 출력:
     </>
   ) : (
     <>
-      {/* 다이아몬드 타일 패턴 */}
+      {/* 헤링본(V자) 패턴 — 프로급 병원 카드뉴스 공통 장식 */}
       <div
         style={{
           position: 'absolute',
@@ -761,14 +791,9 @@ JSON 한 객체만 출력:
           left: 0,
           width: '100%',
           height: '100%',
-          backgroundImage: `
-            linear-gradient(45deg, ${theme.accentColor}${isDarkTheme ? '06' : '0A'} 25%, transparent 25%),
-            linear-gradient(-45deg, ${theme.accentColor}${isDarkTheme ? '06' : '0A'} 25%, transparent 25%),
-            linear-gradient(45deg, transparent 75%, ${theme.accentColor}${isDarkTheme ? '06' : '0A'} 75%),
-            linear-gradient(-45deg, transparent 75%, ${theme.accentColor}${isDarkTheme ? '06' : '0A'} 75%)
-          `,
-          backgroundSize: '32px 32px',
-          backgroundPosition: '0 0, 0 16px, 16px -16px, -16px 0px',
+          backgroundImage: isDarkTheme
+            ? `repeating-linear-gradient(-45deg, transparent, transparent 12px, rgba(255,255,255,0.02) 12px, rgba(255,255,255,0.02) 14px), repeating-linear-gradient(45deg, transparent, transparent 12px, rgba(255,255,255,0.02) 12px, rgba(255,255,255,0.02) 14px)`
+            : `repeating-linear-gradient(-45deg, transparent, transparent 12px, rgba(0,0,0,0.015) 12px, rgba(0,0,0,0.015) 14px), repeating-linear-gradient(45deg, transparent, transparent 12px, rgba(0,0,0,0.015) 12px, rgba(0,0,0,0.015) 14px)`,
           zIndex: 0,
           pointerEvents: 'none' as const,
         }}
@@ -889,12 +914,12 @@ JSON 한 객체만 출력:
         <div
           style={{
             width: '100%',
-            height: '420px',
+            height: '340px',
             overflow: 'hidden',
             borderRadius: '20px',
-            marginBottom: position === 'top' ? '32px' : 0,
+            marginBottom: position === 'top' ? '16px' : 0,
             marginTop: position === 'bottom' ? 'auto' : 0,
-            boxShadow: '0 10px 30px rgba(0,0,0,0.25)',
+            boxShadow: isDarkTheme ? '0 10px 30px rgba(0,0,0,0.3)' : '0 4px 16px rgba(0,0,0,0.08)',
             flexShrink: 0,
             // 잘림 방지: 여백을 테마 배경색으로 채우기
             background: 'transparent',
@@ -1387,7 +1412,7 @@ JSON 한 객체만 출력:
               <div
                 style={{
                   color: dp.highlight ? theme.accentColor : theme.titleColor,
-                  fontSize: '80px',
+                  fontSize: `${Math.min(80, Math.floor(280 / Math.max((dp.value || '').length, 1)))}px`,
                   fontWeight: 900,
                   marginBottom: '16px',
                   lineHeight: 1,
@@ -1964,7 +1989,7 @@ JSON 한 객체만 출력:
               <div
                 ref={(el) => { boxRefs.current[idx] = el; }}
                 className="group relative overflow-hidden rounded-t-xl bg-slate-100"
-                style={{ width: '100%', aspectRatio: '1 / 1' }}
+                style={{ width: '100%', aspectRatio: cardAspect }}
               >
                 {/* 라벨 */}
                 <div className="absolute top-2 left-2 z-20 px-2 py-0.5 rounded-full bg-black/60 text-white text-[10px] font-bold backdrop-blur-sm">
@@ -1982,12 +2007,13 @@ JSON 한 객체만 출력:
                 {/* 실제 렌더링 — 컨테이너 폭 / 1080 으로 동적 스케일 */}
                 <div
                   ref={(el) => { cardRefs.current[idx] = el; }}
+                  key={`card-render-${idx}-${fontLoaded}-${theme.fontId || ''}-${slide.fontId || ''}`}
                   style={{
                     position: 'absolute',
                     top: 0,
                     left: 0,
-                    width: '1080px',
-                    height: '1080px',
+                    width: `${cardWidth}px`,
+                    height: `${cardHeight}px`,
                     transform: `scale(${scales[idx] ?? 0.25})`,
                     transformOrigin: 'top left',
                   }}
@@ -2019,24 +2045,45 @@ JSON 한 객체만 출력:
                 </button>
               </div>
 
-              {/* 편집 패널 */}
+              {/* 편집 패널 — 좌우 분할: 카드 프리뷰 + 편집 폼 */}
               {isEditing && (
-                <div className="px-3 pb-3 pt-1 space-y-2 border-t border-slate-100 bg-slate-50/50">
-                  <SlideEditor
-                    slide={slide}
-                    slideIdx={idx}
-                    onChange={(patch) => updateSlide(idx, patch)}
-                    onGenerateImage={() => handleGenerateSlideImage(idx)}
-                    onUploadImage={(file) => handleUploadSlideImage(idx, file)}
-                    onAiSuggestText={(field) => handleAiSuggestText(idx, field)}
-                    onAiSuggestComparison={() => handleAiSuggestComparison(idx)}
-                    onAiEnrich={() => handleAiEnrichSlide(idx)}
-                    onSuggestImagePrompt={() => handleSuggestImagePrompt(idx)}
-                    generatingImage={generatingImageIdx === idx}
-                    aiSuggestingKey={aiSuggestingKey}
-                    customFontName={customFontName}
-                    customFontDisplayName={customFontDisplayName}
-                  />
+                <div className="border-t border-slate-100 bg-slate-50/50">
+                  <div className="grid grid-cols-1 lg:grid-cols-5 gap-0">
+                    {/* 좌: 카드 프리뷰 (2열) */}
+                    <div className="lg:col-span-2 p-3 flex items-start justify-center">
+                      <div className="w-full" style={{ maxWidth: '400px', aspectRatio: cardAspect, position: 'relative', overflow: 'hidden', borderRadius: '12px', background: '#f1f5f9' }}>
+                        <div
+                          key={`edit-preview-${idx}-${fontLoaded}-${theme.fontId || ''}-${slide.fontId || ''}`}
+                          style={{
+                            position: 'absolute', top: 0, left: 0,
+                            width: `${cardWidth}px`, height: `${cardHeight}px`,
+                            transform: 'scale(0.37)',
+                            transformOrigin: 'top left',
+                          }}
+                        >
+                          {renderSlide(slide)}
+                        </div>
+                      </div>
+                    </div>
+                    {/* 우: 편집 폼 (3열) */}
+                    <div className="lg:col-span-3 p-3 overflow-y-auto" style={{ maxHeight: '520px' }}>
+                      <SlideEditor
+                        slide={slide}
+                        slideIdx={idx}
+                        onChange={(patch) => updateSlide(idx, patch)}
+                        onGenerateImage={() => handleGenerateSlideImage(idx)}
+                        onUploadImage={(file) => handleUploadSlideImage(idx, file)}
+                        onAiSuggestText={(field) => handleAiSuggestText(idx, field)}
+                        onAiSuggestComparison={() => handleAiSuggestComparison(idx)}
+                        onAiEnrich={() => handleAiEnrichSlide(idx)}
+                        onSuggestImagePrompt={() => handleSuggestImagePrompt(idx)}
+                        generatingImage={generatingImageIdx === idx}
+                        aiSuggestingKey={aiSuggestingKey}
+                        customFontName={customFontName}
+                        customFontDisplayName={customFontDisplayName}
+                      />
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
