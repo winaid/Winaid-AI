@@ -2018,7 +2018,7 @@ JSON 한 객체만 출력:
         {slides.map((slide, idx) => {
           const isEditing = editingIdx === idx;
           return (
-            <div key={`${idx}-${theme.fontId || 'default'}-${fontLoaded}`} className={`bg-white rounded-xl border transition-all ${isEditing ? 'border-blue-400 ring-2 ring-blue-100 sm:col-span-2 lg:col-span-3' : 'border-slate-200'}`}>
+            <div key={`${idx}-${theme.fontId || 'default'}-${slide.fontId || ''}-${fontLoaded}`} className={`bg-white rounded-xl border transition-all ${isEditing ? 'border-blue-400 ring-2 ring-blue-100 sm:col-span-2 lg:col-span-3' : 'border-slate-200'}`}>
               {/* 프리뷰 영역 — 셀 폭을 꽉 채우는 1:1 박스 + ResizeObserver 동적 스케일 */}
               <div
                 ref={(el) => { boxRefs.current[idx] = el; }}
@@ -2111,6 +2111,18 @@ JSON 한 객체만 출력:
                         onAiSuggestComparison={() => handleAiSuggestComparison(idx)}
                         onAiEnrich={() => handleAiEnrichSlide(idx)}
                         onSuggestImagePrompt={() => handleSuggestImagePrompt(idx)}
+                        onFontChange={(newFontId) => {
+                          if (newFontId && newFontId !== 'custom') {
+                            ensureGoogleFontLoaded(newFontId);
+                            if (typeof document !== 'undefined' && 'fonts' in document) {
+                              (document as Document & { fonts: { ready: Promise<FontFaceSet> } }).fonts.ready
+                                .then(() => setFontLoaded(v => v + 1))
+                                .catch(() => setFontLoaded(v => v + 1));
+                            }
+                          } else {
+                            setFontLoaded(v => v + 1);
+                          }
+                        }}
                         generatingImage={generatingImageIdx === idx}
                         aiSuggestingKey={aiSuggestingKey}
                         customFontName={customFontName}
@@ -2143,6 +2155,7 @@ interface SlideEditorProps {
   onAiSuggestComparison: () => void;
   onAiEnrich: () => void;
   onSuggestImagePrompt: () => void;
+  onFontChange: (fontId: string | undefined) => void;
   generatingImage: boolean;
   aiSuggestingKey: string | null;
   customFontName: string | null;
@@ -2159,6 +2172,7 @@ function SlideEditor({
   onAiSuggestComparison,
   onAiEnrich,
   onSuggestImagePrompt,
+  onFontChange,
   generatingImage,
   aiSuggestingKey,
   customFontName,
@@ -2412,7 +2426,11 @@ ${JSON.stringify(slideForContext, null, 2)}
         <label className={labelCls}>이 카드 글씨체 (선택)</label>
         <select
           value={slide.fontId || ''}
-          onChange={(e) => onChange({ fontId: e.target.value || undefined })}
+          onChange={(e) => {
+            const newFontId = e.target.value || undefined;
+            onChange({ fontId: newFontId });
+            onFontChange(newFontId);
+          }}
           className={inputCls}
         >
           <option value="">전체 설정 따름</option>
