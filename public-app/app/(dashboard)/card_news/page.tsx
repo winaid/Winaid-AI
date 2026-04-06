@@ -258,12 +258,16 @@ export default function CardNewsPage() {
   const refreshDesignImages = async () => {
     setLoadingPreviews(true);
     try {
-      const query = lastPexelsQuery || await fetchPexelsQuery();
+      // 매번 새 검색어 생성해서 다른 결과
+      const query = await fetchPexelsQuery();
       const orientation = proCardRatio === '1:1' ? 'square' : 'portrait';
-      const res = await fetch(`/api/pexels?query=${encodeURIComponent(query)}&orientation=${orientation}&per_page=15&page=${Math.floor(Math.random() * 10) + 1}`);
+      const page = Math.floor(Math.random() * 20) + 1;
+      const res = await fetch(`/api/pexels?query=${encodeURIComponent(query)}&orientation=${orientation}&per_page=15&page=${page}`);
       const data = await res.json();
       const photos = data.photos || [];
-      setDesignPreviews(prev => prev.map((p, i) => ({ ...p, imageUrl: photos[i % Math.max(photos.length, 1)]?.url || p.imageUrl })));
+      if (photos.length > 0) {
+        setDesignPreviews(prev => prev.map((p, i) => ({ ...p, imageUrl: photos[i % photos.length]?.url || p.imageUrl })));
+      }
     } catch { /* ignore */ }
     setLoadingPreviews(false);
   };
@@ -1278,8 +1282,36 @@ DECORATIVE: (장식 요소)`,
               </div>
             </div>
 
+            {/* 스타일 필터 */}
+            <div className="px-8 pt-4 pb-2 flex gap-2">
+              {[
+                { id: 'photo', label: '📸 실사', query: '' },
+                { id: 'illustration', label: '🎨 일러스트', query: 'illustration flat design' },
+                { id: 'gradient', label: '🌈 그라데이션', query: 'abstract gradient background' },
+                { id: 'minimal', label: '⬜ 미니멀', query: 'minimal clean white background' },
+              ].map(style => (
+                <button key={style.id} type="button"
+                  onClick={async () => {
+                    setLoadingPreviews(true);
+                    try {
+                      const baseQuery = lastPexelsQuery || 'professional clinic';
+                      const finalQuery = style.query ? `${style.query} ${baseQuery}` : baseQuery;
+                      const orientation = proCardRatio === '1:1' ? 'square' : 'portrait';
+                      const res = await fetch(`/api/pexels?query=${encodeURIComponent(finalQuery)}&orientation=${orientation}&per_page=15&page=${Math.floor(Math.random() * 5) + 1}`);
+                      const data = await res.json();
+                      const photos = data.photos || [];
+                      setDesignPreviews(prev => prev.map((p, i) => ({ ...p, imageUrl: photos[i % Math.max(photos.length, 1)]?.url || p.imageUrl })));
+                    } catch { /* ignore */ }
+                    setLoadingPreviews(false);
+                  }}
+                  className="px-4 py-2 text-sm font-semibold rounded-xl border-2 border-slate-200 text-slate-600 hover:border-blue-400 hover:bg-blue-50 transition-all">
+                  {style.label}
+                </button>
+              ))}
+            </div>
+
             {/* 프리뷰 그리드 */}
-            <div className="px-8 py-6 overflow-y-auto max-h-[60vh]">
+            <div className="px-8 py-4 overflow-y-auto max-h-[55vh]">
               {loadingPreviews ? (
                 <div className="text-center py-20 text-slate-400">
                   <div className="text-4xl mb-3">🎨</div>
