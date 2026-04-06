@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
-import type { SlideData, SlideDecoration, CardNewsTheme, SlideLayoutType, SlideImagePosition, SlideImageStyle, SlideComparisonColumn, DesignPresetStyle } from '../lib/cardNewsLayouts';
-import { LAYOUT_LABELS, CARD_FONTS, FONT_CATEGORIES, getCardFont, SLIDE_IMAGE_STYLES } from '../lib/cardNewsLayouts';
+import type { SlideData, SlideDecoration, CardNewsTheme, SlideLayoutType, SlideImagePosition, SlideImageStyle, SlideComparisonColumn, DesignPresetStyle, CoverTemplate } from '../lib/cardNewsLayouts';
+import { LAYOUT_LABELS, CARD_FONTS, FONT_CATEGORIES, getCardFont, SLIDE_IMAGE_STYLES, COVER_TEMPLATES } from '../lib/cardNewsLayouts';
 import type { CardTemplate } from '../lib/cardTemplateService';
 
 /**
@@ -1117,7 +1117,103 @@ JSON 한 객체만 출력:
   // - 콘텐츠 영역은 flex:1 + position:relative + zIndex:2 로 배경 장식 위에 배치
   // - 각 섹션에 gap을 두고, 데이터 행에 flex:1을 주어 카드 전체를 꽉 채움
 
-  const renderCover = (slide: SlideData) => (
+  /** 커버 템플릿 기반 렌더링 */
+  const renderCoverFromTemplate = (slide: SlideData, t: CoverTemplate) => {
+    const showArrows = slide.showArrows !== undefined ? slide.showArrows : t.decorations.hasArrows;
+    const showBadgeD = slide.showBadge !== undefined ? slide.showBadge : t.decorations.hasBadge;
+    const showHashtags = slide.showHashtags !== undefined ? slide.showHashtags : t.decorations.hasHashtags;
+    const showHandle = slide.showHandle !== undefined ? slide.showHandle : t.decorations.hasHandle;
+    const showLine = slide.showLine !== undefined ? slide.showLine : t.decorations.hasLine;
+
+    const bgStyle: CSSProperties = {};
+    if (t.background.type === 'gradient') bgStyle.background = t.background.gradient;
+    else if (t.background.type === 'solid') bgStyle.background = t.background.solidColor;
+
+    const posMap: Record<string, CSSProperties> = {
+      'center': { justifyContent: 'center', alignItems: 'center', textAlign: 'center' },
+      'bottom-left': { justifyContent: 'flex-end', alignItems: 'flex-start', textAlign: 'left', paddingBottom: '100px' },
+      'bottom-center': { justifyContent: 'flex-end', alignItems: 'center', textAlign: 'center', paddingBottom: '80px' },
+      'top-left': { justifyContent: 'flex-start', alignItems: 'flex-start', textAlign: 'left', paddingTop: '80px' },
+      'top-right': { justifyContent: 'flex-start', alignItems: 'flex-end', textAlign: 'right', paddingTop: '80px' },
+    };
+
+    return (
+      <div style={{ ...getCardStyle(slide), ...bgStyle, padding: '60px' }}>
+        {backgroundDecoration}
+        {renderDecorations(slide)}
+        {/* 배경 이미지 */}
+        {(t.background.type === 'image-full' || t.background.type === 'image-half') && slide.imageUrl && (
+          <>
+            <img src={slide.imageUrl} alt="" crossOrigin="anonymous"
+              style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: t.background.type === 'image-half' ? '50%' : '100%', objectFit: 'cover', objectPosition: slide.imageFocalPoint ? `${slide.imageFocalPoint.x}% ${slide.imageFocalPoint.y}%` : 'center', zIndex: 0 }} />
+            {t.background.overlayGradient && <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', background: t.background.overlayGradient, zIndex: 1 }} />}
+            {t.background.overlayColor && <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', background: t.background.overlayColor, zIndex: 1 }} />}
+          </>
+        )}
+        {/* split: 좌텍스트 우이미지 */}
+        {t.background.type === 'split' && slide.imageUrl && (
+          <div style={{ position: 'absolute', top: 0, right: 0, width: '50%', height: '100%', zIndex: 0 }}>
+            <img src={slide.imageUrl} alt="" crossOrigin="anonymous" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          </div>
+        )}
+        {/* 뱃지 */}
+        {showBadgeD && (slide.badge || theme.hospitalName) && (
+          <div style={{
+            position: 'absolute', top: '40px', zIndex: 5,
+            ...(t.decorations.badgePosition === 'top-left' ? { left: '40px' } : t.decorations.badgePosition === 'top-right' ? { right: '40px' } : { left: '50%', transform: 'translateX(-50%)' }),
+            padding: '8px 20px', background: t.colors.accent, color: '#fff', fontSize: '13px', fontWeight: 800, borderRadius: '6px', letterSpacing: '1px',
+          }}>{slide.badge || theme.hospitalName || 'CARDNEWS'}</div>
+        )}
+        {/* 메인 텍스트 */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 3, gap: '16px', ...posMap[t.layout.titlePosition] }}>
+          {t.layout.subtitlePosition === 'above-title' && slide.subtitle && (
+            <p style={{ color: t.colors.subtitle, fontSize: `${t.layout.subtitleSize}px`, fontWeight: 500, letterSpacing: '1px' }}>&ldquo;{slide.subtitle}&rdquo;</p>
+          )}
+          {showLine && <div style={{ width: '60px', height: '3px', background: t.colors.accent, borderRadius: '2px', margin: t.layout.titlePosition.includes('center') ? '0 auto' : '0' }} />}
+          <h1 style={{ ...getTitleStyle(slide, { fontSize: t.layout.titleSize, textAlign: posMap[t.layout.titlePosition]?.textAlign as string }), color: slide.titleColor || t.colors.title, fontWeight: (slide.titleFontWeight || String(t.layout.titleWeight)) as CSSProperties['fontWeight'], maxWidth: t.layout.titleMaxWidth }}>
+            {slide.title}
+          </h1>
+          {t.layout.subtitlePosition === 'below-title' && slide.subtitle && (
+            <p style={{ color: slide.subtitleColor || t.colors.subtitle, fontSize: `${slide.subtitleFontSize || t.layout.subtitleSize}px`, fontWeight: 500, maxWidth: '85%' }}>{slide.subtitle}</p>
+          )}
+        </div>
+        {/* 해시태그 */}
+        {showHashtags && (
+          <div style={{ position: 'absolute', bottom: '80px', left: '60px', right: '60px', display: 'flex', gap: '12px', flexWrap: 'wrap', zIndex: 5, justifyContent: t.layout.titlePosition.includes('center') ? 'center' : 'flex-start' }}>
+            {(slide.hashtags || slide.title?.split(' ').slice(0, 3).map(w => `#${w}`) || []).map((tag, i) => (
+              <span key={i} style={{ padding: '8px 20px', borderRadius: '999px', border: `1.5px solid ${t.colors.hashtag}60`, color: t.colors.hashtag, fontSize: '15px', fontWeight: 700 }}>
+                {tag.startsWith('#') ? tag : `#${tag}`}
+              </span>
+            ))}
+          </div>
+        )}
+        {/* 화살표 */}
+        {showArrows && (
+          <div style={{ position: 'absolute', bottom: '40px', right: '60px', zIndex: 5 }}>
+            {t.decorations.arrowStyle === 'circle' ? (
+              <div style={{ width: '48px', height: '48px', borderRadius: '50%', border: `2px solid ${t.colors.title}60`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: t.colors.title, fontSize: '20px' }}>→</div>
+            ) : (
+              <span style={{ color: t.colors.title, fontSize: '24px', fontWeight: 300, letterSpacing: '4px', opacity: 0.6 }}>› › › ›</span>
+            )}
+          </div>
+        )}
+        {/* SNS 핸들 */}
+        {showHandle && theme.hospitalName && (
+          <div style={{ position: 'absolute', bottom: '40px', left: '50%', transform: 'translateX(-50%)', color: t.colors.subtitle, fontSize: '13px', fontWeight: 500, zIndex: 5 }}>
+            @{theme.hospitalName.replace(/\s/g, '_').toLowerCase()}
+          </div>
+        )}
+        {hospitalFooter}
+      </div>
+    );
+  };
+
+  const renderCover = (slide: SlideData) => {
+    // 커버 템플릿이 선택되어 있으면 템플릿 기반 렌더링
+    const tmpl = slide.coverTemplateId ? COVER_TEMPLATES.find(t => t.id === slide.coverTemplateId) : null;
+    if (tmpl) return renderCoverFromTemplate(slide, tmpl);
+
+    return (
     <div style={getCardStyle(slide)}>
       {backgroundDecoration}
       {renderDecorations(slide)}
@@ -1164,7 +1260,8 @@ JSON 한 객체만 출력:
       {slide.imagePosition === 'bottom' && renderImageLayer(slide)}
       {hospitalFooter}
     </div>
-  );
+    );
+  };
 
   const renderInfo = (slide: SlideData) => (
     <div style={getCardStyle(slide)}>
@@ -1564,7 +1661,10 @@ JSON 한 객체만 출력:
     );
   };
 
-  const renderClosing = (slide: SlideData) => (
+  const renderClosing = (slide: SlideData) => {
+    const tmpl = slide.coverTemplateId ? COVER_TEMPLATES.find(t => t.id === slide.coverTemplateId) : null;
+    if (tmpl) return renderCoverFromTemplate(slide, tmpl);
+    return (
     <div style={getCardStyle(slide)}>
       {backgroundDecoration}
       {renderDecorations(slide)}
@@ -1641,7 +1741,8 @@ JSON 한 객체만 출력:
       </div>
       {slide.imagePosition === 'bottom' && renderImageLayer(slide)}
     </div>
-  );
+    );
+  };
 
   const renderBeforeAfter = (slide: SlideData) => (
     <div style={getCardStyle(slide)}>
@@ -3179,6 +3280,30 @@ ${JSON.stringify(slideForContext, null, 2)}
 
           {/* 레이아웃별 데이터 */}
           {renderLayoutDataEditor()}
+
+          {/* 커버/마무리 전용 요소 */}
+          {(slide.layout === 'cover' || slide.layout === 'closing') && (
+            <>
+              <ElementAccordion icon="🎨" label="커버 스타일" defaultOpen={false}>
+                <div className="grid grid-cols-5 gap-1.5">
+                  <button type="button" onClick={() => onChange({ coverTemplateId: undefined })}
+                    className={`rounded-lg overflow-hidden aspect-[4/5] border-2 flex items-center justify-center text-[10px] text-slate-400 ${!slide.coverTemplateId ? 'border-blue-500 bg-blue-50' : 'border-slate-200'}`}>기본</button>
+                  {COVER_TEMPLATES.map(tmpl => (
+                    <button key={tmpl.id} type="button" onClick={() => onChange({ coverTemplateId: tmpl.id })}
+                      className={`rounded-lg overflow-hidden aspect-[4/5] border-2 ${slide.coverTemplateId === tmpl.id ? 'border-blue-500' : 'border-slate-200'}`}>
+                      <div style={{ background: tmpl.thumbnail, width: '100%', height: '100%' }} />
+                    </button>
+                  ))}
+                </div>
+              </ElementAccordion>
+              <ElementAccordion icon="🏷" label={slide.badge || '뱃지 (선택)'} defaultOpen={false}>
+                <input type="text" value={slide.badge || ''} onChange={e => onChange({ badge: e.target.value || undefined })} placeholder="예: 2025 BEST" className="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-lg" />
+              </ElementAccordion>
+              <ElementAccordion icon="#" label="해시태그" defaultOpen={false}>
+                <input type="text" value={(slide.hashtags || []).join(', ')} onChange={e => onChange({ hashtags: e.target.value.split(',').map(t => t.trim()).filter(Boolean) })} placeholder="쉼표로 구분: 임플란트, 치과추천" className="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-lg" />
+              </ElementAccordion>
+            </>
+          )}
 
           {/* 카드별 글씨체 */}
           <ElementAccordion icon="🎨" label="카드 글씨체" defaultOpen={false}>

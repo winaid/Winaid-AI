@@ -166,7 +166,113 @@ export interface SlideData {
 
   // 장식 요소
   decorations?: SlideDecoration[];
+
+  // 커버/마무리 전용
+  coverTemplateId?: string;
+  hashtags?: string[];
+  badge?: string;
+  showArrows?: boolean;
+  showBadge?: boolean;
+  showHashtags?: boolean;
+  showHandle?: boolean;
+  showLine?: boolean;
 }
+
+// ── 커버 템플릿 ──
+
+export interface CoverTemplate {
+  id: string;
+  name: string;
+  thumbnail: string;
+  background: {
+    type: 'image-full' | 'image-half' | 'solid' | 'gradient' | 'split';
+    overlayColor?: string;
+    overlayGradient?: string;
+    solidColor?: string;
+    gradient?: string;
+  };
+  layout: {
+    titlePosition: 'center' | 'bottom-left' | 'bottom-center' | 'top-left' | 'top-right';
+    titleSize: number;
+    titleWeight: number;
+    titleMaxWidth: string;
+    subtitlePosition: 'above-title' | 'below-title' | 'top';
+    subtitleSize: number;
+  };
+  decorations: {
+    hasHashtags: boolean;
+    hasArrows: boolean;
+    hasBadge: boolean;
+    hasHandle: boolean;
+    hasLine: boolean;
+    arrowStyle: 'circle' | 'plain' | 'none';
+    badgePosition: 'top-left' | 'top-right' | 'top-center';
+  };
+  colors: { title: string; subtitle: string; accent: string; hashtag: string };
+}
+
+export const COVER_TEMPLATES: CoverTemplate[] = [
+  { id: 'full-image-bottom', name: '감성 풀이미지', thumbnail: 'linear-gradient(180deg, #333 50%, #000 100%)',
+    background: { type: 'image-full', overlayGradient: 'linear-gradient(180deg, transparent 30%, rgba(0,0,0,0.7) 100%)' },
+    layout: { titlePosition: 'bottom-left', titleSize: 56, titleWeight: 900, titleMaxWidth: '85%', subtitlePosition: 'below-title', subtitleSize: 20 },
+    decorations: { hasHashtags: false, hasArrows: true, hasBadge: false, hasHandle: false, hasLine: false, arrowStyle: 'plain', badgePosition: 'top-left' },
+    colors: { title: '#FFFFFF', subtitle: 'rgba(255,255,255,0.7)', accent: '#FFFFFF', hashtag: '#FFFFFF' },
+  },
+  { id: 'centered-hashtags', name: '해시태그 중앙', thumbnail: 'linear-gradient(180deg, #1a1a2e, #16213e)',
+    background: { type: 'image-full', overlayGradient: 'linear-gradient(180deg, rgba(0,0,0,0.3), rgba(0,0,0,0.6))' },
+    layout: { titlePosition: 'center', titleSize: 64, titleWeight: 900, titleMaxWidth: '80%', subtitlePosition: 'above-title', subtitleSize: 18 },
+    decorations: { hasHashtags: true, hasArrows: false, hasBadge: false, hasHandle: true, hasLine: false, arrowStyle: 'none', badgePosition: 'top-center' },
+    colors: { title: '#FFFFFF', subtitle: 'rgba(255,255,255,0.8)', accent: '#FFFFFF', hashtag: '#FFFFFF' },
+  },
+  { id: 'badge-split', name: '뱃지 분할', thumbnail: 'linear-gradient(180deg, #000 50%, #1a1a2e 100%)',
+    background: { type: 'split', solidColor: '#000000' },
+    layout: { titlePosition: 'top-left', titleSize: 80, titleWeight: 900, titleMaxWidth: '70%', subtitlePosition: 'below-title', subtitleSize: 16 },
+    decorations: { hasHashtags: true, hasArrows: false, hasBadge: true, hasHandle: false, hasLine: true, arrowStyle: 'none', badgePosition: 'top-left' },
+    colors: { title: '#FFFFFF', subtitle: 'rgba(255,255,255,0.7)', accent: '#FF4444', hashtag: 'rgba(255,255,255,0.5)' },
+  },
+  { id: 'stars-arrows', name: '별 장식 화살표', thumbnail: 'linear-gradient(135deg, #8B4513, #654321)',
+    background: { type: 'image-full', overlayGradient: 'linear-gradient(180deg, transparent 20%, rgba(0,0,0,0.6) 80%)' },
+    layout: { titlePosition: 'bottom-left', titleSize: 52, titleWeight: 900, titleMaxWidth: '75%', subtitlePosition: 'below-title', subtitleSize: 18 },
+    decorations: { hasHashtags: false, hasArrows: true, hasBadge: true, hasHandle: false, hasLine: false, arrowStyle: 'plain', badgePosition: 'top-right' },
+    colors: { title: '#FFFFFF', subtitle: 'rgba(255,255,255,0.7)', accent: '#FFFFFF', hashtag: '#FFFFFF' },
+  },
+  { id: 'minimal-solid', name: '미니멀 단색', thumbnail: 'linear-gradient(180deg, #F5F0EB, #E8DDD4)',
+    background: { type: 'solid', solidColor: '#F5F0EB' },
+    layout: { titlePosition: 'center', titleSize: 48, titleWeight: 700, titleMaxWidth: '80%', subtitlePosition: 'below-title', subtitleSize: 20 },
+    decorations: { hasHashtags: false, hasArrows: true, hasBadge: false, hasHandle: false, hasLine: true, arrowStyle: 'circle', badgePosition: 'top-center' },
+    colors: { title: '#2D2D2D', subtitle: '#666666', accent: '#2D2D2D', hashtag: '#999999' },
+  },
+  { id: 'hospital-pro', name: '병원 프로', thumbnail: 'linear-gradient(180deg, #1B2A4A, #152238)',
+    background: { type: 'gradient', gradient: 'linear-gradient(180deg, #1B2A4A, #152238)' },
+    layout: { titlePosition: 'center', titleSize: 56, titleWeight: 900, titleMaxWidth: '85%', subtitlePosition: 'below-title', subtitleSize: 22 },
+    decorations: { hasHashtags: false, hasArrows: false, hasBadge: false, hasHandle: false, hasLine: true, arrowStyle: 'none', badgePosition: 'top-center' },
+    colors: { title: '#FFFFFF', subtitle: '#F5A623', accent: '#F5A623', hashtag: '#F5A623' },
+  },
+  { id: 'gradient-overlay', name: '그라데이션', thumbnail: 'linear-gradient(135deg, #667eea, #764ba2)',
+    background: { type: 'image-full', overlayGradient: 'linear-gradient(135deg, rgba(102,126,234,0.85), rgba(118,75,162,0.85))' },
+    layout: { titlePosition: 'center', titleSize: 60, titleWeight: 900, titleMaxWidth: '80%', subtitlePosition: 'below-title', subtitleSize: 20 },
+    decorations: { hasHashtags: false, hasArrows: false, hasBadge: true, hasHandle: false, hasLine: false, arrowStyle: 'none', badgePosition: 'top-center' },
+    colors: { title: '#FFFFFF', subtitle: 'rgba(255,255,255,0.8)', accent: '#FBBF24', hashtag: '#FFFFFF' },
+  },
+  { id: 'image-top-text', name: '상단 이미지', thumbnail: 'linear-gradient(180deg, #666 50%, #fff 50%)',
+    background: { type: 'image-half' },
+    layout: { titlePosition: 'bottom-center', titleSize: 44, titleWeight: 800, titleMaxWidth: '90%', subtitlePosition: 'below-title', subtitleSize: 18 },
+    decorations: { hasHashtags: false, hasArrows: false, hasBadge: false, hasHandle: false, hasLine: true, arrowStyle: 'none', badgePosition: 'top-center' },
+    colors: { title: '#1A1A2E', subtitle: '#555555', accent: '#3182CE', hashtag: '#999999' },
+  },
+  { id: 'left-text-right-image', name: '좌텍스트 우이미지', thumbnail: 'linear-gradient(90deg, #1B2A4A 50%, #888 50%)',
+    background: { type: 'split' },
+    layout: { titlePosition: 'top-left', titleSize: 48, titleWeight: 900, titleMaxWidth: '90%', subtitlePosition: 'below-title', subtitleSize: 18 },
+    decorations: { hasHashtags: false, hasArrows: false, hasBadge: false, hasHandle: false, hasLine: true, arrowStyle: 'none', badgePosition: 'top-left' },
+    colors: { title: '#FFFFFF', subtitle: '#F5A623', accent: '#F5A623', hashtag: '#FFFFFF' },
+  },
+  { id: 'magazine', name: '매거진', thumbnail: 'linear-gradient(180deg, #000, #1a1a1a)',
+    background: { type: 'image-full', overlayColor: 'rgba(0,0,0,0.4)' },
+    layout: { titlePosition: 'center', titleSize: 72, titleWeight: 900, titleMaxWidth: '90%', subtitlePosition: 'above-title', subtitleSize: 14 },
+    decorations: { hasHashtags: false, hasArrows: true, hasBadge: true, hasHandle: false, hasLine: true, arrowStyle: 'plain', badgePosition: 'top-left' },
+    colors: { title: '#FFFFFF', subtitle: 'rgba(255,255,255,0.6)', accent: '#FF4444', hashtag: '#FFFFFF' },
+  },
+];
 
 export interface CardNewsTheme {
   backgroundColor: string;

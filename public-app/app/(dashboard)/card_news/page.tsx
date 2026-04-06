@@ -209,6 +209,35 @@ export default function CardNewsPage() {
   };
 
   // ── Step 1: 원고 생성 ──
+  /** 커버/마무리 슬라이드에 Pexels 배경 자동 적용 */
+  const autoApplyBackgrounds = async (slides: ProSlideData[]): Promise<ProSlideData[]> => {
+    const coverSlides = slides.filter(s => s.layout === 'cover' || s.layout === 'closing');
+    if (coverSlides.length === 0) return slides;
+    try {
+      const kwMap: Record<string, string> = {
+        '임플란트': 'dental implant clinic', '치아': 'dental care smile', '교정': 'orthodontics braces',
+        '피부': 'skincare dermatology', '보톡스': 'beauty clinic', '정형': 'orthopedic clinic',
+        '병원': 'modern hospital', '스케일링': 'dental hygiene',
+      };
+      let query = 'medical clinic professional';
+      for (const [kr, en] of Object.entries(kwMap)) {
+        if (topic.includes(kr)) { query = en; break; }
+      }
+      const res = await fetch(`/api/pexels?query=${encodeURIComponent(query)}&orientation=square&per_page=15&page=${Math.floor(Math.random() * 3) + 1}`);
+      const data = await res.json();
+      const photos = data.photos || [];
+      if (photos.length > 0) {
+        for (const cs of coverSlides) {
+          const photo = photos[Math.floor(Math.random() * photos.length)];
+          cs.imageUrl = photo.url;
+          cs.imagePosition = 'background';
+          if (!cs.coverTemplateId) cs.coverTemplateId = 'full-image-bottom';
+        }
+      }
+    } catch { /* Pexels 실패 시 무시 */ }
+    return slides;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!topic.trim() || isGenerating) return;
@@ -302,8 +331,9 @@ export default function CardNewsPage() {
         fontId: parsedFontId || prev.fontId,
       }));
 
-      // 텍스트 원고만 즉시 노출. 이미지는 사용자가 편집에서 슬라이드별로 개별 추가.
-      setProSlides(slides);
+      // 텍스트 원고만 즉시 노출. 커버/마무리에는 Pexels 배경 자동 적용.
+      const withBg = await autoApplyBackgrounds(slides);
+      setProSlides(withBg);
       setPipelineStep('idle');
       setPageStep(2); // 생성 완료 → 편집 단계로 전환
     } catch (err) {
