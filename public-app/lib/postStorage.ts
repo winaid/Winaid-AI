@@ -206,3 +206,32 @@ export async function getPost(postId: string): Promise<{ post: SavedPost } | { e
 
   return { post: data as SavedPost };
 }
+
+/** 포스트 삭제 */
+export async function deletePost(postId: string): Promise<{ success: boolean; error?: string }> {
+  // Guest post
+  if (postId.startsWith('guest_')) {
+    const guestPosts = getGuestPosts();
+    const filtered = guestPosts.filter(p => p.id !== postId);
+    if (typeof window !== 'undefined') {
+      try { localStorage.setItem('winaid_guest_posts', JSON.stringify(filtered)); } catch { /* ignore */ }
+    }
+    return { success: true };
+  }
+
+  if (!isSupabaseConfigured || !supabase) {
+    return { success: false, error: 'Supabase 미설정' };
+  }
+
+  const { error } = await supabase
+    .from('generated_posts')
+    .delete()
+    .eq('id', postId);
+
+  if (error) {
+    console.error('[postStorage] delete error:', error.message);
+    return { success: false, error: error.message };
+  }
+
+  return { success: true };
+}
