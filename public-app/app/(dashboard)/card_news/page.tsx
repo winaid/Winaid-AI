@@ -983,7 +983,7 @@ DECORATIVE: (장식 요소)`,
   };
 
   return (
-    <div className="p-5 max-w-6xl mx-auto min-h-[calc(100vh-80px)] flex flex-col justify-center">
+    <div className="p-5 max-w-6xl mx-auto min-h-[calc(100vh-80px)] flex flex-col" style={{ paddingTop: '8vh' }}>
 
       {/* ══════ 상단 탭 ══════ */}
       <div className="flex justify-center border-b border-slate-200 mb-4 flex-shrink-0">
