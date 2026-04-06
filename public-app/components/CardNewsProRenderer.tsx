@@ -286,6 +286,10 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
           '주의사항 3',
         ];
         break;
+      case 'info':
+      case 'closing':
+        if (!base.body) base.body = '내용을 입력하세요';
+        break;
       default:
         break;
     }
