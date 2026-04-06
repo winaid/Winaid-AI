@@ -977,10 +977,10 @@ DECORATIVE: (장식 요소)`,
   };
 
   return (
-    <div className="p-5 max-w-6xl mx-auto">
+    <div className={`p-5 max-w-6xl mx-auto ${mainTab === 'create' && pageStep === 1 ? 'min-h-[calc(100vh-80px)] flex flex-col justify-center' : ''}`}>
 
       {/* ══════ 상단 3탭 ══════ */}
-      <div className="flex gap-0 border-b border-slate-200 mb-8 justify-center items-center">
+      <div className="flex gap-0 border-b border-slate-200 mb-6 justify-center items-center flex-shrink-0">
         <button type="button" onClick={() => setMainTab('create')}
           className={`px-5 py-3 text-left text-sm font-bold border-b-2 transition-all ${mainTab === 'create' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>
           ✨ 카드뉴스 생성
@@ -997,7 +997,7 @@ DECORATIVE: (장식 요소)`,
 
       {/* 스텝 인디케이터 (생성 탭일 때만) */}
       {mainTab === 'create' && (
-        <div className="flex items-center justify-center gap-0 mb-8 max-w-md mx-auto">
+        <div className="flex items-center justify-center gap-0 mb-6 max-w-md mx-auto flex-shrink-0">
           {[
             { n: 1, label: '디자인 선택' },
             { n: 2, label: '콘텐츠 입력' },
@@ -1023,7 +1023,7 @@ DECORATIVE: (장식 요소)`,
 
       {/* ══════ 탭 1: 카드뉴스 생성 ══════ */}
       {mainTab === 'create' && pageStep === 1 && (
-        <div className="max-w-3xl mx-auto flex flex-col justify-center" style={{ minHeight: 'calc(100vh - 220px)' }}>
+        <div className="max-w-3xl mx-auto">
           {/* 주제 추천 칩 */}
           <div className="mb-4">
             <p className="text-xs text-slate-400 mb-2">이런 주제는 어때요?</p>
