@@ -1330,10 +1330,23 @@ DECORATIVE: (장식 요소)`,
               <button type="button" disabled={loadingPreviews || isGenerating}
                 onClick={async () => {
                   const selected = designPreviews[selectedPreviewIdx];
+                  const tmpl = COVER_TEMPLATES.find(t => t.id === selected?.templateId);
                   setShowDesignModal(false);
-                  // 선택한 템플릿 + 이미지를 저장해두고 생성
                   const coverBgUrl = selected?.imageUrl || '';
                   const coverTmplId = selected?.templateId || '';
+                  // 선택한 레이아웃의 색상을 전체 테마에 적용
+                  if (tmpl) {
+                    setProTheme(prev => ({
+                      ...prev,
+                      backgroundColor: '#1B2A4A',
+                      backgroundGradient: 'linear-gradient(180deg, #1B2A4A, #152238)',
+                      titleColor: '#FFFFFF',
+                      subtitleColor: tmpl.colors.subtitle,
+                      accentColor: tmpl.colors.accent,
+                      bodyColor: '#D6D8E0',
+                      fontId: prev.fontId || 'pretendard',
+                    }));
+                  }
                   await (handleSubmit as any)(new Event('submit'));
                   // 생성 후 커버/마무리에 선택한 디자인 적용
                   setProSlides(prev => prev.map(s => {
