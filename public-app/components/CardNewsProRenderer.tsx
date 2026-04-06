@@ -1218,7 +1218,7 @@ JSON 한 객체만 출력:
           </div>
         )}
         {slide.imagePosition === 'bottom' && renderImageLayer(slide)}
-        {hospitalFooter}
+        {renderHospitalFooter(slide)}
       </div>
     );
   };
@@ -1273,7 +1273,7 @@ JSON 한 객체만 출력:
         )}
       </div>
       {slide.imagePosition === 'bottom' && renderImageLayer(slide)}
-      {hospitalFooter}
+      {renderHospitalFooter(slide)}
     </div>
     );
   };
@@ -1339,7 +1339,7 @@ JSON 한 객체만 출력:
         )}
       </div>
       {slide.imagePosition === 'bottom' && renderImageLayer(slide)}
-      {hospitalFooter}
+      {renderHospitalFooter(slide)}
     </div>
   );
 
@@ -1432,7 +1432,7 @@ JSON 한 객체만 출력:
           ))}
         </div>
         {slide.imagePosition === 'bottom' && renderImageLayer(slide)}
-        {hospitalFooter}
+        {renderHospitalFooter(slide)}
       </div>
     );
   };
@@ -1499,7 +1499,7 @@ JSON 한 객체만 출력:
           ))}
         </div>
         {slide.imagePosition === 'bottom' && renderImageLayer(slide)}
-        {hospitalFooter}
+        {renderHospitalFooter(slide)}
       </div>
     );
   };
@@ -1558,7 +1558,7 @@ JSON 한 객체만 출력:
           ))}
         </div>
         {slide.imagePosition === 'bottom' && renderImageLayer(slide)}
-        {hospitalFooter}
+        {renderHospitalFooter(slide)}
       </div>
     );
   };
@@ -1618,7 +1618,7 @@ JSON 한 객체만 출력:
         );
       })()}
       {slide.imagePosition === 'bottom' && renderImageLayer(slide)}
-      {hospitalFooter}
+      {renderHospitalFooter(slide)}
     </div>
   );
 
@@ -1672,7 +1672,7 @@ JSON 한 객체만 출력:
           ))}
         </div>
         {slide.imagePosition === 'bottom' && renderImageLayer(slide)}
-        {hospitalFooter}
+        {renderHospitalFooter(slide)}
       </div>
     );
   };
@@ -1801,7 +1801,7 @@ JSON 한 객체만 출력:
         </div>
       </div>
       {slide.imagePosition === 'bottom' && renderImageLayer(slide)}
-      {hospitalFooter}
+      {renderHospitalFooter(slide)}
     </div>
   );
 
@@ -1868,7 +1868,7 @@ JSON 한 객체만 출력:
         ))}
       </div>
       {slide.imagePosition === 'bottom' && renderImageLayer(slide)}
-      {hospitalFooter}
+      {renderHospitalFooter(slide)}
     </div>
     );
   };
@@ -1924,7 +1924,7 @@ JSON 한 객체만 출력:
         })}
       </div>
       {slide.imagePosition === 'bottom' && renderImageLayer(slide)}
-      {hospitalFooter}
+      {renderHospitalFooter(slide)}
     </div>
   );
 
@@ -1979,7 +1979,7 @@ JSON 한 객체만 출력:
         )}
       </div>
       {slide.imagePosition === 'bottom' && renderImageLayer(slide)}
-      {hospitalFooter}
+      {renderHospitalFooter(slide)}
     </div>
   );
 
@@ -2047,7 +2047,7 @@ JSON 한 객체만 출력:
         ))}
       </div>
       {slide.imagePosition === 'bottom' && renderImageLayer(slide)}
-      {hospitalFooter}
+      {renderHospitalFooter(slide)}
     </div>
     );
   };
@@ -2100,7 +2100,7 @@ JSON 한 객체만 출력:
         );
       })()}
       {slide.imagePosition === 'bottom' && renderImageLayer(slide)}
-      {hospitalFooter}
+      {renderHospitalFooter(slide)}
     </div>
   );
 
@@ -2155,7 +2155,7 @@ JSON 한 객체만 출력:
         ))}
       </div>
       {slide.imagePosition === 'bottom' && renderImageLayer(slide)}
-      {hospitalFooter}
+      {renderHospitalFooter(slide)}
     </div>
   );
 
@@ -2197,7 +2197,7 @@ JSON 한 객체만 출력:
         ))}
       </div>
       {slide.imagePosition === 'bottom' && renderImageLayer(slide)}
-      {hospitalFooter}
+      {renderHospitalFooter(slide)}
     </div>
   );
 
@@ -3548,45 +3548,6 @@ ${JSON.stringify(slideForContext, null, 2)}
                   ))}
                 </div>
               </ElementAccordion>
-              <ElementAccordion icon="🏷" label={slide.badge || '뱃지 (선택)'} defaultOpen={false}>
-                <input type="text" value={slide.badge || ''} onChange={e => onChange({ badge: e.target.value || undefined })} placeholder="예: 2025 BEST" className="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-lg" />
-              </ElementAccordion>
-              <ElementAccordion icon="#" label="해시태그" defaultOpen={false}>
-                <input type="text" value={(slide.hashtags || []).join(', ')} onChange={e => onChange({ hashtags: e.target.value.split(',').map(t => t.trim()).filter(Boolean) })} placeholder="쉼표로 구분: 임플란트, 치과추천" className="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-lg" />
-              </ElementAccordion>
-              <ElementAccordion icon="📐" label="텍스트 위치" defaultOpen={false}>
-                <div className="space-y-3">
-                  <p className="text-[10px] text-slate-400">편집 프리뷰에서 텍스트를 드래그하거나, 아래 좌표를 직접 입력하세요.</p>
-                  <div className="flex gap-3">
-                    <div className="flex-1">
-                      <p className="text-[10px] text-slate-500 font-semibold mb-1">제목 X/Y (%)</p>
-                      <div className="flex gap-1">
-                        <input type="number" min={0} max={100} value={slide.titlePosition?.x ?? 50} onChange={e => onChange({ titlePosition: { x: Number(e.target.value), y: slide.titlePosition?.y ?? 50 } })} className="w-14 px-2 py-1 text-xs bg-white border border-slate-200 rounded" />
-                        <input type="number" min={0} max={100} value={slide.titlePosition?.y ?? 50} onChange={e => onChange({ titlePosition: { x: slide.titlePosition?.x ?? 50, y: Number(e.target.value) } })} className="w-14 px-2 py-1 text-xs bg-white border border-slate-200 rounded" />
-                      </div>
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-[10px] text-slate-500 font-semibold mb-1">부제 X/Y (%)</p>
-                      <div className="flex gap-1">
-                        <input type="number" min={0} max={100} value={slide.subtitlePosition?.x ?? 50} onChange={e => onChange({ subtitlePosition: { x: Number(e.target.value), y: slide.subtitlePosition?.y ?? 50 } })} className="w-14 px-2 py-1 text-xs bg-white border border-slate-200 rounded" />
-                        <input type="number" min={0} max={100} value={slide.subtitlePosition?.y ?? 50} onChange={e => onChange({ subtitlePosition: { x: slide.subtitlePosition?.x ?? 50, y: Number(e.target.value) } })} className="w-14 px-2 py-1 text-xs bg-white border border-slate-200 rounded" />
-                      </div>
-                    </div>
-                  </div>
-                  <button type="button" onClick={() => onChange({ titlePosition: undefined, subtitlePosition: undefined })}
-                    className="px-3 py-1.5 text-[10px] font-semibold bg-slate-100 text-slate-500 rounded-lg hover:bg-slate-200">↺ 위치 초기화</button>
-                  {/* 정렬 */}
-                  <div>
-                    <p className="text-[10px] text-slate-500 font-semibold mb-1 mt-2">제목 정렬</p>
-                    <div className="flex gap-1">
-                      {([{ v: 'left', l: '◀ 좌' }, { v: 'center', l: '▮ 중앙' }, { v: 'right', l: '▶ 우' }] as const).map(a => (
-                        <button key={a.v} type="button" onClick={() => onChange({ titleAlign: a.v })}
-                          className={`flex-1 py-1.5 text-[10px] font-bold rounded-lg ${(slide.titleAlign || 'center') === a.v ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-500'}`}>{a.l}</button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </ElementAccordion>
             </>
           )}
 
@@ -3727,10 +3688,7 @@ ${JSON.stringify(slideForContext, null, 2)}
               className="w-full py-2 bg-green-50 text-green-600 text-xs font-bold rounded-xl border border-green-200 hover:bg-green-100 disabled:opacity-50">
               {aiSuggestingKey === `${slideIdx}:enrich` ? '🔍 웹 검색 중...' : '🔍 웹 검색으로 내용 보강'}
             </button>
-            <button type="button" onClick={onSuggestImagePrompt} disabled={aiSuggestingKey === `${slideIdx}:imgprompt`}
-              className="w-full py-2 bg-blue-50 text-blue-600 text-xs font-bold rounded-xl border border-blue-200 hover:bg-blue-100 disabled:opacity-50">
-              {aiSuggestingKey === `${slideIdx}:imgprompt` ? '추천 중...' : '🎨 AI 이미지 프롬프트 추천'}
-            </button>
+            {/* AI 이미지 프롬프트 추천은 편집 탭 이미지 섹션에 있음 */}
           </div>
 
           {/* AI 채팅 */}
