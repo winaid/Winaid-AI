@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
     const base64 = toBase64(buffer);
 
     const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-preview:generateContent?key=${geminiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -60,7 +60,8 @@ export async function POST(req: NextRequest) {
       });
     }
     return NextResponse.json({ error: 'Background removal failed' }, { status: 500 });
-  } catch {
-    return NextResponse.json({ error: 'Failed' }, { status: 500 });
+  } catch (err) {
+    console.error('remove-bg error:', err);
+    return NextResponse.json({ error: 'Background removal failed. remove.bg API key를 .env.local에 추가하세요.' }, { status: 500 });
   }
 }
