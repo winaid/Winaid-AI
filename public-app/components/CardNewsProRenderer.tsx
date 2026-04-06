@@ -686,6 +686,11 @@ JSON 한 객체만 출력:
     ? lt.innerCardStyle.boxShadow
     : (isDarkTheme ? 'none' : '0 4px 12px rgba(0,0,0,0.04)');
 
+  // 프로급 내부 카드 색상 (테마 대비 자동)
+  const whiteCardBg = isDarkTheme ? 'rgba(255,255,255,0.95)' : '#FFFFFF';
+  const whiteCardText = isDarkTheme ? '#1A1A2E' : theme.titleColor;
+  const whiteCardSub = isDarkTheme ? '#666' : theme.bodyColor;
+
   /**
    * 공통 배경 장식 — 학습 템플릿의 토큰이 있으면 그것을, 없으면 기본 decoration 사용.
    */
@@ -748,7 +753,7 @@ JSON 한 객체만 출력:
     </>
   ) : (
     <>
-      {/* 레이어 1 — 다이아몬드/도트 패턴 (프로 병원 카드뉴스 공통 장식) */}
+      {/* 다이아몬드 타일 패턴 */}
       <div
         style={{
           position: 'absolute',
@@ -756,31 +761,19 @@ JSON 한 객체만 출력:
           left: 0,
           width: '100%',
           height: '100%',
-          backgroundImage: isDarkTheme
-            ? `linear-gradient(45deg, ${theme.accentColor}08 25%, transparent 25%), linear-gradient(-45deg, ${theme.accentColor}08 25%, transparent 25%), linear-gradient(45deg, transparent 75%, ${theme.accentColor}08 75%), linear-gradient(-45deg, transparent 75%, ${theme.accentColor}08 75%)`
-            : `linear-gradient(45deg, ${theme.accentColor}10 25%, transparent 25%), linear-gradient(-45deg, ${theme.accentColor}10 25%, transparent 25%), linear-gradient(45deg, transparent 75%, ${theme.accentColor}10 75%), linear-gradient(-45deg, transparent 75%, ${theme.accentColor}10 75%)`,
+          backgroundImage: `
+            linear-gradient(45deg, ${theme.accentColor}${isDarkTheme ? '06' : '0A'} 25%, transparent 25%),
+            linear-gradient(-45deg, ${theme.accentColor}${isDarkTheme ? '06' : '0A'} 25%, transparent 25%),
+            linear-gradient(45deg, transparent 75%, ${theme.accentColor}${isDarkTheme ? '06' : '0A'} 75%),
+            linear-gradient(-45deg, transparent 75%, ${theme.accentColor}${isDarkTheme ? '06' : '0A'} 75%)
+          `,
           backgroundSize: '32px 32px',
-          backgroundPosition: '0 0, 0 16px, 16px -16px, -16px 0',
+          backgroundPosition: '0 0, 0 16px, 16px -16px, -16px 0px',
           zIndex: 0,
-          pointerEvents: 'none',
+          pointerEvents: 'none' as const,
         }}
       />
-      {/* 레이어 2 — 코너 radial 글로우 */}
-      <div
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          width: '100%',
-          height: '100%',
-          backgroundImage: isDarkTheme
-            ? `radial-gradient(circle at 12% 88%, ${theme.accentColor}1A 0%, transparent 45%), radial-gradient(circle at 88% 12%, ${theme.accentColor}14 0%, transparent 45%)`
-            : `radial-gradient(circle at 12% 88%, ${theme.accentColor}1E 0%, transparent 48%), radial-gradient(circle at 88% 12%, ${theme.accentColor}18 0%, transparent 48%)`,
-          zIndex: 0,
-          pointerEvents: 'none',
-        }}
-      />
-      {/* 상단 그라데이션 바 (강조) */}
+      {/* 상단 악센트 바 */}
       <div
         style={{
           position: 'absolute',
@@ -788,22 +781,22 @@ JSON 한 객체만 출력:
           left: 0,
           right: 0,
           height: '8px',
-          background: `linear-gradient(90deg, ${theme.accentColor}, ${theme.accentColor}A0, transparent)`,
-          zIndex: 3,
-          pointerEvents: 'none',
+          background: `linear-gradient(90deg, ${theme.accentColor}, ${theme.accentColor}80, transparent)`,
+          zIndex: 5,
+          pointerEvents: 'none' as const,
         }}
       />
-      {/* 하단 장식 바 */}
+      {/* 하단 악센트 바 */}
       <div
         style={{
           position: 'absolute',
           bottom: 0,
           left: 0,
           right: 0,
-          height: '5px',
-          background: `linear-gradient(90deg, transparent, ${theme.accentColor}80, ${theme.accentColor})`,
-          zIndex: 3,
-          pointerEvents: 'none',
+          height: '4px',
+          background: `linear-gradient(90deg, transparent, ${theme.accentColor}50, ${theme.accentColor})`,
+          zIndex: 5,
+          pointerEvents: 'none' as const,
         }}
       />
     </>
@@ -822,10 +815,10 @@ JSON 한 객체만 출력:
       <div
         style={{
           width: '60px',
-          height: '5px',
+          height: '4px',
           background: theme.accentColor,
-          borderRadius: '3px',
-          marginBottom: '20px',
+          borderRadius: '2px',
+          marginBottom: '24px',
           marginLeft: align === 'center' ? 'auto' : 0,
           marginRight: align === 'center' ? 'auto' : 0,
           ...(learnedAccentBarStyle || {}),
@@ -957,22 +950,17 @@ JSON 한 객체만 출력:
   };
 
   const hospitalFooter = theme.hospitalName ? (
-    <div
-      style={{
-        position: 'absolute',
-        zIndex: 4,
-        bottom: '40px',
-        left: 0,
-        right: 0,
-        textAlign: 'center',
-        color: theme.titleColor,
-        fontSize: '16px',
-        fontWeight: 600,
-        opacity: 0.82,
+    <div style={{
+      marginTop: 'auto', paddingTop: '24px',
+      textAlign: 'center', position: 'relative', zIndex: 4,
+    }}>
+      <div style={{
+        color: isDarkTheme ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.3)',
+        fontSize: '14px', fontWeight: 600,
         letterSpacing: '3px',
-      }}
-    >
-      {theme.hospitalName}
+      }}>
+        {theme.hospitalName}
+      </div>
     </div>
   ) : null;
 
@@ -1025,8 +1013,8 @@ JSON 한 객체만 출력:
           <p
             style={{
               color: theme.subtitleColor,
-              fontSize: '26px',
-              fontWeight: 700,
+              fontSize: '22px',
+              fontWeight: 600,
               lineHeight: 1.55,
               maxWidth: '85%',
               wordBreak: 'keep-all',
@@ -1073,7 +1061,7 @@ JSON 한 객체만 출력:
           <p
             style={{
               color: theme.subtitleColor,
-              fontSize: '24px',
+              fontSize: '22px',
               fontWeight: 600,
               lineHeight: 1.55,
               wordBreak: 'keep-all',
@@ -1086,7 +1074,7 @@ JSON 한 객체만 출력:
           <div
             style={{
               color: theme.bodyColor,
-              fontSize: '21px',
+              fontSize: '20px',
               lineHeight: 1.8,
               whiteSpace: 'pre-line',
               background: innerCardBg,
@@ -1116,10 +1104,10 @@ JSON 한 객체만 출력:
         {renderImageLayer(slide)}
         <div style={{ position: 'relative', zIndex: 2, marginBottom: '24px' }}>
           {titleAccent('center')}
-          <h2 style={{ color: theme.titleColor, fontSize: '42px', fontWeight: 800, textAlign: 'center', wordBreak: 'keep-all', lineHeight: 1.25, letterSpacing: '-0.02em' }}>
+          <h2 style={{ color: theme.titleColor, fontSize: '48px', fontWeight: 800, textAlign: 'center', wordBreak: 'keep-all', lineHeight: 1.25, letterSpacing: '-0.02em' }}>
             {slide.title}
           </h2>
-          {slide.subtitle && <p style={{ color: theme.subtitleColor, fontSize: '20px', textAlign: 'center', marginTop: '10px', fontWeight: 600 }}>{slide.subtitle}</p>}
+          {slide.subtitle && <p style={{ color: theme.subtitleColor, fontSize: '22px', textAlign: 'center', marginTop: '10px', fontWeight: 600 }}>{slide.subtitle}</p>}
         </div>
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '3px', borderRadius: '20px', overflow: 'hidden', position: 'relative', zIndex: 2 }}>
           {/* 헤더 행 */}
@@ -1171,7 +1159,7 @@ JSON 한 객체만 출력:
                     color: col.highlight ? theme.accentColor : theme.titleColor,
                     padding: '18px 14px',
                     textAlign: 'center',
-                    fontSize: '19px',
+                    fontSize: '18px',
                     fontWeight: col.highlight ? 800 : 500,
                     display: 'flex',
                     alignItems: 'center',
@@ -1200,26 +1188,26 @@ JSON 한 객체만 출력:
         {renderImageLayer(slide)}
         <div style={{ position: 'relative', zIndex: 2, marginBottom: '24px' }}>
           {titleAccent('center')}
-          <h2 style={{ color: theme.titleColor, fontSize: '42px', fontWeight: 800, textAlign: 'center', wordBreak: 'keep-all', letterSpacing: '-0.02em' }}>
+          <h2 style={{ color: theme.titleColor, fontSize: '48px', fontWeight: 800, textAlign: 'center', wordBreak: 'keep-all', letterSpacing: '-0.02em' }}>
             {slide.title}
           </h2>
-          {slide.subtitle && <p style={{ color: theme.subtitleColor, fontSize: '20px', textAlign: 'center', marginTop: '10px', fontWeight: 600 }}>{slide.subtitle}</p>}
+          {slide.subtitle && <p style={{ color: theme.subtitleColor, fontSize: '22px', textAlign: 'center', marginTop: '10px', fontWeight: 600 }}>{slide.subtitle}</p>}
         </div>
         <div style={{ flex: 1, display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: '22px', alignContent: 'stretch', position: 'relative', zIndex: 2 }}>
           {items.map((item, i) => (
             <div
               key={i}
               style={{
-                background: 'rgba(255,255,255,0.97)',
-                borderRadius: '24px',
-                padding: '40px 26px',
+                background: whiteCardBg,
+                borderRadius: '20px',
+                padding: '36px 24px',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
                 textAlign: 'center',
-                gap: '14px',
-                boxShadow: '0 12px 34px rgba(0,0,0,0.18)',
-                border: '1px solid rgba(0,0,0,0.05)',
+                gap: '12px',
+                boxShadow: isDarkTheme ? '0 8px 32px rgba(0,0,0,0.2)' : '0 4px 20px rgba(0,0,0,0.08)',
+                border: `1px solid ${innerCardBorder}`,
                 position: 'relative',
                 overflow: 'hidden',
               }}
@@ -1228,22 +1216,22 @@ JSON 한 객체만 출력:
               <div
                 style={{
                   position: 'absolute',
-                  top: '-14px',
-                  left: '14px',
-                  fontSize: '96px',
+                  top: '-10px',
+                  left: '12px',
+                  fontSize: '80px',
                   fontWeight: 900,
-                  color: 'rgba(0,0,0,0.05)',
+                  color: isDarkTheme ? 'rgba(0,0,0,0.04)' : 'rgba(0,0,0,0.03)',
                   lineHeight: 1,
-                  pointerEvents: 'none',
-                  letterSpacing: '-0.04em',
+                  pointerEvents: 'none' as const,
+                  userSelect: 'none' as const,
                 }}
               >
                 {String(i + 1).padStart(2, '0')}
               </div>
               <span style={{ fontSize: '56px', lineHeight: 1, position: 'relative', zIndex: 1 }}>{item.emoji}</span>
-              <span style={{ fontSize: '22px', fontWeight: 900, color: '#1A1A2E', wordBreak: 'keep-all', position: 'relative', zIndex: 1 }}>{item.title}</span>
+              <span style={{ fontSize: '22px', fontWeight: 900, color: whiteCardText, wordBreak: 'keep-all', position: 'relative', zIndex: 1 }}>{item.title}</span>
               {item.desc && (
-                <span style={{ fontSize: '16px', color: '#555', lineHeight: 1.55, wordBreak: 'keep-all', fontWeight: 500, position: 'relative', zIndex: 1 }}>
+                <span style={{ fontSize: '15px', color: whiteCardSub, lineHeight: 1.55, wordBreak: 'keep-all', fontWeight: 500, position: 'relative', zIndex: 1 }}>
                   {item.desc}
                 </span>
               )}
@@ -1263,8 +1251,8 @@ JSON 한 객체만 출력:
         {renderImageLayer(slide)}
         <div style={{ position: 'relative', zIndex: 2, marginBottom: '24px' }}>
           {titleAccent('center')}
-          <h2 style={{ color: theme.titleColor, fontSize: '42px', fontWeight: 800, textAlign: 'center', wordBreak: 'keep-all', letterSpacing: '-0.02em' }}>{slide.title}</h2>
-          {slide.subtitle && <p style={{ color: theme.subtitleColor, fontSize: '20px', textAlign: 'center', marginTop: '10px', fontWeight: 600 }}>{slide.subtitle}</p>}
+          <h2 style={{ color: theme.titleColor, fontSize: '48px', fontWeight: 800, textAlign: 'center', wordBreak: 'keep-all', letterSpacing: '-0.02em' }}>{slide.title}</h2>
+          {slide.subtitle && <p style={{ color: theme.subtitleColor, fontSize: '22px', textAlign: 'center', marginTop: '10px', fontWeight: 600 }}>{slide.subtitle}</p>}
         </div>
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '20px', position: 'relative', zIndex: 2 }}>
           {items.map((step, i) => (
@@ -1279,6 +1267,7 @@ JSON 한 객체만 출력:
                 padding: '26px 30px',
                 borderLeft: `6px solid ${theme.accentColor}`,
                 boxShadow: isDarkTheme ? 'none' : '0 4px 12px rgba(0,0,0,0.04)',
+                flex: 1,
               }}
             >
               <div
@@ -1323,8 +1312,8 @@ JSON 한 객체만 출력:
       {renderImageLayer(slide)}
       <div style={{ position: 'relative', zIndex: 2, marginBottom: '24px' }}>
         {titleAccent('left')}
-        <h2 style={{ color: theme.titleColor, fontSize: '44px', fontWeight: 800, wordBreak: 'keep-all', letterSpacing: '-0.02em' }}>{slide.title}</h2>
-        {slide.subtitle && <p style={{ color: theme.subtitleColor, fontSize: '20px', marginTop: '10px', fontWeight: 600 }}>{slide.subtitle}</p>}
+        <h2 style={{ color: theme.titleColor, fontSize: '48px', fontWeight: 800, wordBreak: 'keep-all', letterSpacing: '-0.02em' }}>{slide.title}</h2>
+        {slide.subtitle && <p style={{ color: theme.subtitleColor, fontSize: '22px', marginTop: '10px', fontWeight: 600 }}>{slide.subtitle}</p>}
       </div>
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '14px', justifyContent: 'center', position: 'relative', zIndex: 2 }}>
         {(slide.checkItems || []).map((item, i) => (
@@ -1338,6 +1327,7 @@ JSON 한 객체만 출력:
               borderRadius: '16px',
               padding: '24px 28px',
               border: `1px solid ${innerCardBorder}`,
+              flex: 1,
             }}
           >
             <div
@@ -1357,7 +1347,7 @@ JSON 한 객체만 출력:
             >
               ✓
             </div>
-            <span style={{ color: theme.titleColor, fontSize: '22px', fontWeight: 600, wordBreak: 'keep-all', flex: 1 }}>
+            <span style={{ color: theme.titleColor, fontSize: '20px', fontWeight: 600, wordBreak: 'keep-all', flex: 1 }}>
               {item}
             </span>
           </div>
@@ -1376,8 +1366,8 @@ JSON 한 객체만 출력:
         {renderImageLayer(slide)}
         <div style={{ position: 'relative', zIndex: 2, marginBottom: '24px' }}>
           {titleAccent('center')}
-          <h2 style={{ color: theme.titleColor, fontSize: '42px', fontWeight: 800, textAlign: 'center', wordBreak: 'keep-all', letterSpacing: '-0.02em' }}>{slide.title}</h2>
-          {slide.subtitle && <p style={{ color: theme.subtitleColor, fontSize: '20px', textAlign: 'center', marginTop: '10px', fontWeight: 600 }}>{slide.subtitle}</p>}
+          <h2 style={{ color: theme.titleColor, fontSize: '48px', fontWeight: 800, textAlign: 'center', wordBreak: 'keep-all', letterSpacing: '-0.02em' }}>{slide.title}</h2>
+          {slide.subtitle && <p style={{ color: theme.subtitleColor, fontSize: '22px', textAlign: 'center', marginTop: '10px', fontWeight: 600 }}>{slide.subtitle}</p>}
         </div>
         <div style={{ flex: 1, display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: '24px', alignContent: 'center', position: 'relative', zIndex: 2 }}>
           {points.map((dp, i) => (
@@ -1385,26 +1375,28 @@ JSON 한 객체만 출력:
               key={i}
               style={{
                 textAlign: 'center',
-                padding: '56px 28px',
-                background: dp.highlight ? `${theme.accentColor}1F` : innerCardBg,
+                padding: '40px 20px',
+                background: dp.highlight ? `${theme.accentColor}15` : innerCardBg,
                 borderRadius: '24px',
-                border: dp.highlight ? `3px solid ${theme.accentColor}` : `2px solid ${innerCardBorder}`,
-                boxShadow: dp.highlight ? `0 12px 36px ${theme.accentColor}33` : 'none',
+                border: dp.highlight ? `3px solid ${theme.accentColor}` : `1px solid ${innerCardBorder}`,
+                boxShadow: dp.highlight ? `0 8px 30px ${theme.accentColor}25` : 'none',
+                flex: 1,
+                display: 'flex', flexDirection: 'column' as const, justifyContent: 'center',
               }}
             >
               <div
                 style={{
                   color: dp.highlight ? theme.accentColor : theme.titleColor,
-                  fontSize: '76px',
+                  fontSize: '80px',
                   fontWeight: 900,
                   marginBottom: '16px',
                   lineHeight: 1,
-                  letterSpacing: '-0.04em',
+                  letterSpacing: '-0.03em',
                 }}
               >
                 {dp.value}
               </div>
-              <div style={{ color: theme.bodyColor, fontSize: '19px', fontWeight: 600, wordBreak: 'keep-all', lineHeight: 1.4 }}>
+              <div style={{ color: theme.bodyColor, fontSize: '18px', fontWeight: 600, wordBreak: 'keep-all', lineHeight: 1.4 }}>
                 {dp.label}
               </div>
             </div>
@@ -1440,7 +1432,7 @@ JSON 한 객체만 출력:
               background: `${theme.accentColor}22`,
               color: theme.accentColor,
               borderRadius: '999px',
-              fontSize: '20px',
+              fontSize: '22px',
               fontWeight: 800,
               letterSpacing: '0.02em',
             }}
@@ -1451,7 +1443,7 @@ JSON 한 객체만 출력:
         <h1
           style={{
             color: theme.titleColor,
-            fontSize: '56px',
+            fontSize: '64px',
             fontWeight: 900,
             lineHeight: 1.25,
             wordBreak: 'keep-all',
@@ -1466,7 +1458,7 @@ JSON 한 객체만 출력:
           <p
             style={{
               color: theme.bodyColor,
-              fontSize: '22px',
+              fontSize: '20px',
               lineHeight: 1.7,
               maxWidth: '80%',
               wordBreak: 'keep-all',
@@ -1502,7 +1494,7 @@ JSON 한 객체만 출력:
       {renderImageLayer(slide)}
       <div style={{ position: 'relative', zIndex: 2, marginBottom: '24px' }}>
         {titleAccent('center')}
-        <h2 style={{ color: theme.titleColor, fontSize: '42px', fontWeight: 800, textAlign: 'center', wordBreak: 'keep-all', letterSpacing: '-0.02em' }}>{slide.title}</h2>
+        <h2 style={{ color: theme.titleColor, fontSize: '48px', fontWeight: 800, textAlign: 'center', wordBreak: 'keep-all', letterSpacing: '-0.02em' }}>{slide.title}</h2>
       </div>
       <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '22px', position: 'relative', zIndex: 2 }}>
         {/* BEFORE */}
@@ -1512,7 +1504,7 @@ JSON 한 객체만 출력:
           </div>
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '14px', justifyContent: 'center' }}>
             {(slide.beforeItems || []).map((item, i) => (
-              <div key={i} style={{ color: theme.bodyColor, fontSize: '19px', padding: '8px 0', borderBottom: `1px solid ${innerCardBorder}`, wordBreak: 'keep-all', lineHeight: 1.5 }}>
+              <div key={i} style={{ color: theme.bodyColor, fontSize: '20px', padding: '8px 0', borderBottom: `1px solid ${innerCardBorder}`, wordBreak: 'keep-all', lineHeight: 1.5, flex: 1 }}>
                 • {item}
               </div>
             ))}
@@ -1525,7 +1517,7 @@ JSON 한 객체만 출력:
           </div>
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '14px', justifyContent: 'center' }}>
             {(slide.afterItems || []).map((item, i) => (
-              <div key={i} style={{ color: theme.titleColor, fontSize: '19px', fontWeight: 700, padding: '8px 0', borderBottom: `1px solid ${theme.accentColor}33`, wordBreak: 'keep-all', lineHeight: 1.5 }}>
+              <div key={i} style={{ color: theme.titleColor, fontSize: '20px', fontWeight: 700, padding: '8px 0', borderBottom: `1px solid ${theme.accentColor}33`, wordBreak: 'keep-all', lineHeight: 1.5, flex: 1 }}>
                 ✓ {item}
               </div>
             ))}
@@ -1542,7 +1534,7 @@ JSON 한 객체만 출력:
       {renderImageLayer(slide)}
       <div style={{ position: 'relative', zIndex: 2, marginBottom: '24px' }}>
         {titleAccent('left')}
-        <h2 style={{ color: theme.titleColor, fontSize: '44px', fontWeight: 800, wordBreak: 'keep-all', letterSpacing: '-0.02em' }}>{slide.title}</h2>
+        <h2 style={{ color: theme.titleColor, fontSize: '48px', fontWeight: 800, wordBreak: 'keep-all', letterSpacing: '-0.02em' }}>{slide.title}</h2>
       </div>
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '20px', justifyContent: 'center', position: 'relative', zIndex: 2 }}>
         {(slide.questions || []).map((qa, i) => (
@@ -1587,7 +1579,7 @@ JSON 한 객체만 출력:
               >
                 A
               </span>
-              <span style={{ color: theme.bodyColor, fontSize: '19px', lineHeight: 1.65, paddingTop: '10px', flex: 1, wordBreak: 'keep-all' }}>
+              <span style={{ color: theme.bodyColor, fontSize: '18px', lineHeight: 1.65, paddingTop: '10px', flex: 1, wordBreak: 'keep-all' }}>
                 {qa.a}
               </span>
             </div>
@@ -1604,7 +1596,7 @@ JSON 한 객체만 출력:
       {renderImageLayer(slide)}
       <div style={{ position: 'relative', zIndex: 2, marginBottom: '24px' }}>
         {titleAccent('left')}
-        <h2 style={{ color: theme.titleColor, fontSize: '44px', fontWeight: 800, wordBreak: 'keep-all', letterSpacing: '-0.02em' }}>{slide.title}</h2>
+        <h2 style={{ color: theme.titleColor, fontSize: '48px', fontWeight: 800, wordBreak: 'keep-all', letterSpacing: '-0.02em' }}>{slide.title}</h2>
       </div>
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', position: 'relative', paddingLeft: '56px', zIndex: 2 }}>
         <div style={{ position: 'absolute', left: '24px', top: '12px', bottom: '12px', width: '4px', background: `${theme.accentColor}55`, borderRadius: '2px' }} />
@@ -1623,10 +1615,10 @@ JSON 한 객체만 출력:
                 boxShadow: `0 0 0 3px ${theme.accentColor}77`,
               }}
             />
-            <div style={{ color: theme.accentColor, fontSize: '17px', fontWeight: 900, marginBottom: '6px', letterSpacing: '1px' }}>
+            <div style={{ color: theme.accentColor, fontSize: '16px', fontWeight: 900, marginBottom: '6px', letterSpacing: '1px' }}>
               {item.time}
             </div>
-            <div style={{ color: theme.titleColor, fontSize: '23px', fontWeight: 800, wordBreak: 'keep-all' }}>{item.title}</div>
+            <div style={{ color: theme.titleColor, fontSize: '22px', fontWeight: 800, wordBreak: 'keep-all' }}>{item.title}</div>
             {item.desc && (
               <div style={{ color: theme.bodyColor, fontSize: '17px', marginTop: '8px', lineHeight: 1.55, wordBreak: 'keep-all' }}>
                 {item.desc}
@@ -1662,7 +1654,7 @@ JSON 한 객체만 출력:
         <p
           style={{
             color: theme.titleColor,
-            fontSize: '34px',
+            fontSize: '28px',
             fontWeight: 700,
             lineHeight: 1.6,
             maxWidth: '85%',
@@ -1693,7 +1685,7 @@ JSON 한 객체만 출력:
       {renderImageLayer(slide)}
       <div style={{ position: 'relative', zIndex: 2, marginBottom: '24px' }}>
         {titleAccent('left')}
-        <h2 style={{ color: theme.titleColor, fontSize: '44px', fontWeight: 800, wordBreak: 'keep-all', letterSpacing: '-0.02em' }}>{slide.title}</h2>
+        <h2 style={{ color: theme.titleColor, fontSize: '48px', fontWeight: 800, wordBreak: 'keep-all', letterSpacing: '-0.02em' }}>{slide.title}</h2>
       </div>
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '18px', justifyContent: 'center', position: 'relative', zIndex: 2 }}>
         {(slide.numberedItems || []).map((item, i) => (
@@ -1730,7 +1722,7 @@ JSON 한 객체만 출력:
             <div style={{ flex: 1 }}>
               <div style={{ color: theme.titleColor, fontSize: '22px', fontWeight: 800, wordBreak: 'keep-all' }}>{item.title}</div>
               {item.desc && (
-                <div style={{ color: theme.bodyColor, fontSize: '16px', marginTop: '6px', lineHeight: 1.5, wordBreak: 'keep-all' }}>
+                <div style={{ color: theme.bodyColor, fontSize: '17px', marginTop: '6px', lineHeight: 1.5, wordBreak: 'keep-all' }}>
                   {item.desc}
                 </div>
               )}
@@ -1748,7 +1740,7 @@ JSON 한 객체만 출력:
       {renderImageLayer(slide)}
       <div style={{ position: 'relative', zIndex: 2, marginBottom: '24px' }}>
         {titleAccent('center')}
-        <h2 style={{ color: theme.titleColor, fontSize: '42px', fontWeight: 800, textAlign: 'center', wordBreak: 'keep-all', letterSpacing: '-0.02em' }}>{slide.title}</h2>
+        <h2 style={{ color: theme.titleColor, fontSize: '48px', fontWeight: 800, textAlign: 'center', wordBreak: 'keep-all', letterSpacing: '-0.02em' }}>{slide.title}</h2>
       </div>
       <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', position: 'relative', zIndex: 2 }}>
         <div style={{ background: 'rgba(52,211,153,0.14)', borderRadius: '20px', padding: '32px 28px', border: '2px solid rgba(52,211,153,0.45)', display: 'flex', flexDirection: 'column' }}>
@@ -1757,7 +1749,7 @@ JSON 한 객체만 출력:
           </div>
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '12px', justifyContent: 'center' }}>
             {(slide.pros || []).map((p, i) => (
-              <div key={i} style={{ color: theme.titleColor, fontSize: '18px', padding: '8px 0', display: 'flex', gap: '12px', wordBreak: 'keep-all', lineHeight: 1.5 }}>
+              <div key={i} style={{ color: theme.titleColor, fontSize: '20px', padding: '8px 0', display: 'flex', gap: '12px', wordBreak: 'keep-all', lineHeight: 1.5, flex: 1 }}>
                 <span style={{ color: '#34D399', fontWeight: 900, flexShrink: 0 }}>○</span>
                 <span>{p}</span>
               </div>
@@ -1770,7 +1762,7 @@ JSON 한 객체만 출력:
           </div>
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '12px', justifyContent: 'center' }}>
             {(slide.cons || []).map((c, i) => (
-              <div key={i} style={{ color: theme.titleColor, fontSize: '18px', padding: '8px 0', display: 'flex', gap: '12px', wordBreak: 'keep-all', lineHeight: 1.5 }}>
+              <div key={i} style={{ color: theme.titleColor, fontSize: '20px', padding: '8px 0', display: 'flex', gap: '12px', wordBreak: 'keep-all', lineHeight: 1.5, flex: 1 }}>
                 <span style={{ color: '#F87171', fontWeight: 900, flexShrink: 0 }}>✕</span>
                 <span>{c}</span>
               </div>
@@ -1788,7 +1780,7 @@ JSON 한 객체만 출력:
       {renderImageLayer(slide)}
       <div style={{ position: 'relative', zIndex: 2, marginBottom: '24px' }}>
         {titleAccent('center')}
-        <h2 style={{ color: theme.titleColor, fontSize: '42px', fontWeight: 800, textAlign: 'center', wordBreak: 'keep-all', letterSpacing: '-0.02em' }}>{slide.title}</h2>
+        <h2 style={{ color: theme.titleColor, fontSize: '48px', fontWeight: 800, textAlign: 'center', wordBreak: 'keep-all', letterSpacing: '-0.02em' }}>{slide.title}</h2>
       </div>
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '3px', borderRadius: '20px', overflow: 'hidden', position: 'relative', zIndex: 2 }}>
         <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '3px' }}>
@@ -1803,7 +1795,7 @@ JSON 한 객체만 출력:
                 padding: '22px',
                 color: theme.titleColor,
                 fontWeight: 700,
-                fontSize: '21px',
+                fontSize: '20px',
                 textAlign: 'center',
                 display: 'flex',
                 alignItems: 'center',
@@ -1824,7 +1816,7 @@ JSON 한 객체만 출력:
                 justifyContent: 'center',
               }}
             >
-              <span style={{ color: theme.accentColor, fontWeight: 900, fontSize: '26px', letterSpacing: '-0.01em' }}>{item.price}</span>
+              <span style={{ color: theme.accentColor, fontWeight: 900, fontSize: '24px', letterSpacing: '-0.01em' }}>{item.price}</span>
               {item.note && <span style={{ fontSize: '13px', color: theme.bodyColor, marginTop: '4px', fontWeight: 500 }}>{item.note}</span>}
             </div>
           </div>
@@ -1842,7 +1834,7 @@ JSON 한 객체만 출력:
         <span style={{ fontSize: '80px', lineHeight: 1 }}>⚠️</span>
       </div>
       <div style={{ position: 'relative', zIndex: 2, marginBottom: '24px' }}>
-        <h2 style={{ color: theme.accentColor, fontSize: '44px', fontWeight: 900, textAlign: 'center', wordBreak: 'keep-all', letterSpacing: '-0.02em' }}>
+        <h2 style={{ color: theme.accentColor, fontSize: '48px', fontWeight: 900, textAlign: 'center', wordBreak: 'keep-all', letterSpacing: '-0.02em' }}>
           {slide.warningTitle || slide.title}
         </h2>
       </div>

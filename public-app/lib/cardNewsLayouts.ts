@@ -183,11 +183,11 @@ export const THEME_PRESETS: { id: string; name: string; theme: CardNewsTheme }[]
     name: '스카이블루',
     theme: {
       backgroundColor: '#DCEBF8',
-      backgroundGradient: 'linear-gradient(160deg, #E3F0FB 0%, #B9D5EF 100%)',
+      backgroundGradient: 'linear-gradient(160deg, #E3F0FB 0%, #C5DCF0 100%)',
       titleColor: '#0F2B46',
-      subtitleColor: '#1A5A9B',
+      subtitleColor: '#1A5A8A',
       bodyColor: '#3A5068',
-      accentColor: '#1C6BC1',
+      accentColor: '#2176C7',
       cardBgColor: '#FFFFFF',
       fontFamily: PRETENDARD,
     },
@@ -197,7 +197,7 @@ export const THEME_PRESETS: { id: string; name: string; theme: CardNewsTheme }[]
     name: '소프트 핑크',
     theme: {
       backgroundColor: '#FCE4EE',
-      backgroundGradient: 'linear-gradient(160deg, #FFEEF4 0%, #F9C6D9 100%)',
+      backgroundGradient: 'linear-gradient(160deg, #FFF0F5 0%, #FFD6E8 100%)',
       titleColor: '#4A1034',
       subtitleColor: '#B02569',
       bodyColor: '#50384A',
@@ -239,7 +239,7 @@ export const THEME_PRESETS: { id: string; name: string; theme: CardNewsTheme }[]
     name: '웜 베이지',
     theme: {
       backgroundColor: '#F7EAD2',
-      backgroundGradient: 'linear-gradient(160deg, #FDF4E0 0%, #EED4A6 100%)',
+      backgroundGradient: 'linear-gradient(160deg, #FDF6EC 0%, #F5E0C0 100%)',
       titleColor: '#4A230A',
       subtitleColor: '#B5630E',
       bodyColor: '#62452A',
@@ -267,7 +267,7 @@ export const THEME_PRESETS: { id: string; name: string; theme: CardNewsTheme }[]
     name: '클린 화이트',
     theme: {
       backgroundColor: '#F5F8FC',
-      backgroundGradient: 'linear-gradient(160deg, #FFFFFF 0%, #E6EEF8 100%)',
+      backgroundGradient: 'linear-gradient(160deg, #FFFFFF 0%, #EDF2F7 100%)',
       titleColor: '#0A1628',
       subtitleColor: '#1E4E8C',
       bodyColor: '#3A4A5E',
