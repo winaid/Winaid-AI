@@ -1252,9 +1252,7 @@ DECORATIVE: (장식 요소)`,
                     </button>
                     <button type="button" onClick={() => { deleteTemplate(style.id); if (learnedTemplate?.id === style.id) setLearnedTemplate(null); setSavedStylesVersion(v => v + 1); }}
                       className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full text-[10px] opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">✕</button>
-                    <div className="flex gap-1 mt-1">
-                      <button type="button" onClick={() => { setLearnedTemplate(style); setMainTab('create'); }}
-                        className="flex-1 text-[9px] font-bold text-purple-600 bg-purple-50 rounded py-1 hover:bg-purple-100">스타일 적용</button>
+                    <div className="mt-1">
                       <button type="button" onClick={async () => {
                         if (!style.thumbnailDataUrl) return;
                         setProgress('템플릿 변환 중...');
@@ -1268,7 +1266,7 @@ DECORATIVE: (장식 요소)`,
                           setMainTab('create');
                         }
                       }}
-                        className="flex-1 text-[9px] font-bold text-blue-600 bg-blue-50 rounded py-1 hover:bg-blue-100">템플릿 편집</button>
+                        className="w-full text-[9px] font-bold text-blue-600 bg-blue-50 rounded py-1.5 hover:bg-blue-100">템플릿으로 편집</button>
                     </div>
                   </div>
                 ))}
@@ -1323,7 +1321,7 @@ DECORATIVE: (장식 요소)`,
             <div className="px-8 py-6 border-b border-slate-100">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-xl font-bold text-slate-800">✨ 디자인을 선택하���요</h2>
+                  <h2 className="text-xl font-bold text-slate-800">디자인을 선택하세요</h2>
                   <p className="text-sm text-slate-500 mt-1">&ldquo;{topic}&rdquo; — 마음에 드는 스타일을 골라주세요</p>
                 </div>
                 <div className="flex gap-2">
@@ -1341,18 +1339,18 @@ DECORATIVE: (장식 요소)`,
             <div className="px-8 pt-4 pb-2 flex gap-2">
               {[
                 { id: 'photo', label: '📸 실사', query: '' },
-                { id: 'illustration', label: '🎨 일러스트', query: 'illustration flat design' },
-                { id: 'gradient', label: '🌈 그라데이션', query: 'abstract gradient background' },
-                { id: 'minimal', label: '⬜ 미니멀', query: 'minimal clean white background' },
+                { id: 'illustration', label: '🎨 일러스트', query: 'flat illustration vector colorful' },
+                { id: 'gradient', label: '🌈 그라데이션', query: 'abstract colorful gradient neon' },
+                { id: 'minimal', label: '⬜ 미니멀', query: 'minimal white clean simple' },
               ].map(style => (
                 <button key={style.id} type="button"
                   onClick={async () => {
                     setLoadingPreviews(true);
                     try {
-                      const baseQuery = lastPexelsQuery || 'professional clinic';
-                      const finalQuery = style.query ? `${style.query} ${baseQuery}` : baseQuery;
+                      const finalQuery = style.query || lastPexelsQuery || 'professional clinic';
                       const orientation = proCardRatio === '1:1' ? 'square' : 'portrait';
-                      const res = await fetch(`/api/pexels?query=${encodeURIComponent(finalQuery)}&orientation=${orientation}&per_page=15&page=${Math.floor(Math.random() * 5) + 1}`);
+                      const page = Math.floor(Math.random() * 10) + 1;
+                      const res = await fetch(`/api/pexels?query=${encodeURIComponent(finalQuery)}&orientation=${orientation}&per_page=15&page=${page}`);
                       const data = await res.json();
                       const photos = data.photos || [];
                       setDesignPreviews(prev => prev.map((p, i) => ({ ...p, imageUrl: photos[i % Math.max(photos.length, 1)]?.url || p.imageUrl })));
