@@ -640,7 +640,7 @@ JSON 한 객체만 출력:
     letterSpacing: slide.titleLetterSpacing ? `${slide.titleLetterSpacing}px` : '-0.02em',
     lineHeight: slide.titleLineHeight || 1.25,
     wordBreak: 'keep-all',
-    ...(defaults.textAlign ? { textAlign: defaults.textAlign as CSSProperties['textAlign'] } : {}),
+    textAlign: (slide.titleAlign || defaults.textAlign || undefined) as CSSProperties['textAlign'],
     ...(slide.titleFontId ? { fontFamily: getSlideFontFamily({ ...slide, fontId: slide.titleFontId }) } : {}),
   });
 
@@ -3441,6 +3441,16 @@ ${JSON.stringify(slideForContext, null, 2)}
                   </div>
                   <button type="button" onClick={() => onChange({ titlePosition: undefined, subtitlePosition: undefined })}
                     className="px-3 py-1.5 text-[10px] font-semibold bg-slate-100 text-slate-500 rounded-lg hover:bg-slate-200">↺ 위치 초기화</button>
+                  {/* 정렬 */}
+                  <div>
+                    <p className="text-[10px] text-slate-500 font-semibold mb-1 mt-2">제목 정렬</p>
+                    <div className="flex gap-1">
+                      {([{ v: 'left', l: '◀ 좌' }, { v: 'center', l: '▮ 중앙' }, { v: 'right', l: '▶ 우' }] as const).map(a => (
+                        <button key={a.v} type="button" onClick={() => onChange({ titleAlign: a.v })}
+                          className={`flex-1 py-1.5 text-[10px] font-bold rounded-lg ${(slide.titleAlign || 'center') === a.v ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-500'}`}>{a.l}</button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </ElementAccordion>
             </>

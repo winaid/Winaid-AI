@@ -181,6 +181,13 @@ export interface SlideData {
   titlePosition?: { x: number; y: number };
   subtitlePosition?: { x: number; y: number };
 
+  // 정렬
+  titleAlign?: 'left' | 'center' | 'right';
+
+  // 로고/병원명 위치
+  logoPosition?: { x: number; y: number };
+  hospitalNamePosition?: { x: number; y: number };
+
   // 커스텀 아이콘 (요소 클릭으로 변경)
   baArrowIcon?: string;
   vsIcon?: string;

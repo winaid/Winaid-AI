@@ -215,27 +215,27 @@ export default function CardNewsPage() {
   // ── Step 1: 원고 생성 ──
   /** 커버/마무리 슬라이드에 Pexels 배경 자동 적용 */
   /** Pexels 배경 검색 키워드 매핑 */
-  const getPexelsQuery = () => {
-    const kwMap: Record<string, string> = {
-      '임플란트': 'dental implant clinic', '치아': 'dental care smile', '교정': 'orthodontics braces',
-      '피부': 'skincare dermatology', '보톡스': 'beauty clinic', '정형': 'orthopedic clinic',
-      '병원': 'modern hospital', '스케일링': 'dental hygiene', '건강': 'health wellness',
-    };
-    let query = 'medical clinic professional';
-    for (const [kr, en] of Object.entries(kwMap)) {
-      if (topic.includes(kr)) { query = en; break; }
-    }
-    return query;
+  const [lastPexelsQuery, setLastPexelsQuery] = useState('');
+
+  /** Gemini로 Pexels 검색어 자동 생성 */
+  const fetchPexelsQuery = async (): Promise<string> => {
+    try {
+      const res = await fetch('/api/pexels-query', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ topic }) });
+      const { query } = await res.json();
+      setLastPexelsQuery(query);
+      return query;
+    } catch { return 'professional clinic'; }
   };
 
-  /** 추천 디자인 모달 열기 — Pexels 이미지 × 커버 템플릿 조합 */
+  /** 추천 디자인 모달 열기 — Gemini 번역 + Pexels 검색 */
   const openDesignModal = async () => {
     setShowDesignModal(true);
     setLoadingPreviews(true);
     setSelectedPreviewIdx(0);
     try {
+      const query = await fetchPexelsQuery();
       const orientation = proCardRatio === '1:1' ? 'square' : 'portrait';
-      const res = await fetch(`/api/pexels?query=${encodeURIComponent(getPexelsQuery())}&orientation=${orientation}&per_page=15&page=${Math.floor(Math.random() * 3) + 1}`);
+      const res = await fetch(`/api/pexels?query=${encodeURIComponent(query)}&orientation=${orientation}&per_page=15&page=${Math.floor(Math.random() * 3) + 1}`);
       const data = await res.json();
       const photos = data.photos || [];
       setDesignPreviews(COVER_TEMPLATES.map((tmpl, i) => ({
@@ -251,8 +251,9 @@ export default function CardNewsPage() {
   const refreshDesignImages = async () => {
     setLoadingPreviews(true);
     try {
+      const query = lastPexelsQuery || await fetchPexelsQuery();
       const orientation = proCardRatio === '1:1' ? 'square' : 'portrait';
-      const res = await fetch(`/api/pexels?query=${encodeURIComponent(getPexelsQuery())}&orientation=${orientation}&per_page=15&page=${Math.floor(Math.random() * 10) + 1}`);
+      const res = await fetch(`/api/pexels?query=${encodeURIComponent(query)}&orientation=${orientation}&per_page=15&page=${Math.floor(Math.random() * 10) + 1}`);
       const data = await res.json();
       const photos = data.photos || [];
       setDesignPreviews(prev => prev.map((p, i) => ({ ...p, imageUrl: photos[i % Math.max(photos.length, 1)]?.url || p.imageUrl })));
@@ -264,15 +265,7 @@ export default function CardNewsPage() {
     const coverSlides = slides.filter(s => s.layout === 'cover' || s.layout === 'closing');
     if (coverSlides.length === 0) return slides;
     try {
-      const kwMap: Record<string, string> = {
-        '임플란트': 'dental implant clinic', '치아': 'dental care smile', '교정': 'orthodontics braces',
-        '피부': 'skincare dermatology', '보톡스': 'beauty clinic', '정형': 'orthopedic clinic',
-        '병원': 'modern hospital', '스케일링': 'dental hygiene',
-      };
-      let query = 'medical clinic professional';
-      for (const [kr, en] of Object.entries(kwMap)) {
-        if (topic.includes(kr)) { query = en; break; }
-      }
+      const query = lastPexelsQuery || await fetchPexelsQuery();
       const res = await fetch(`/api/pexels?query=${encodeURIComponent(query)}&orientation=square&per_page=15&page=${Math.floor(Math.random() * 3) + 1}`);
       const data = await res.json();
       const photos = data.photos || [];
