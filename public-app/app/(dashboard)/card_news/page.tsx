@@ -979,47 +979,49 @@ DECORATIVE: (장식 요소)`,
   return (
     <div className={`p-5 max-w-6xl mx-auto ${mainTab === 'create' && pageStep === 1 ? 'min-h-[calc(100vh-80px)] flex flex-col justify-center' : ''}`}>
 
-      {/* ══════ 상단 3탭 ══════ */}
-      <div className="flex gap-0 border-b border-slate-200 mb-6 justify-center items-center flex-shrink-0">
-        <button type="button" onClick={() => setMainTab('create')}
-          className={`px-5 py-3 text-left text-sm font-bold border-b-2 transition-all ${mainTab === 'create' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>
-          ✨ 카드뉴스 생성
-        </button>
-        <button type="button" onClick={() => setMainTab('learn')}
-          className={`px-5 py-3 text-left text-sm font-bold border-b-2 transition-all ${mainTab === 'learn' ? 'border-purple-600 text-purple-600' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>
-          🎨 스타일 학습
-        </button>
-        <button type="button" onClick={() => setMainTab('history')}
-          className={`px-5 py-3 text-left text-sm font-bold border-b-2 transition-all ${mainTab === 'history' ? 'border-slate-600 text-slate-600' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>
-          📋 생성기록
-        </button>
-      </div>
-
-      {/* 스텝 인디케이터 (생성 탭일 때만) */}
-      {mainTab === 'create' && (
-        <div className="flex items-center justify-center gap-0 mb-6 max-w-md mx-auto flex-shrink-0">
-          {[
-            { n: 1, label: '디자인 선택' },
-            { n: 2, label: '콘텐츠 입력' },
-            { n: 3, label: '결과 확인' },
-          ].map((s, i) => {
-            const active = pageStep === 1 ? (i < 2 ? i + 1 : 0) : 3;
-            const done = pageStep === 2 ? s.n <= 2 : s.n < 1;
-            const isCurrent = (pageStep === 1 && s.n === 2) || (pageStep === 2 && s.n === 3);
-            return (
-              <div key={s.n} className="flex items-center flex-1">
-                <div className="flex flex-col items-center flex-1">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold mb-1.5 transition-all ${
-                    isCurrent ? 'bg-blue-600 text-white shadow-md shadow-blue-200' : done ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-400'
-                  }`}>{s.n}</div>
-                  <span className={`text-[11px] font-semibold ${isCurrent ? 'text-blue-600' : 'text-slate-400'}`}>{s.label}</span>
-                </div>
-                {i < 2 && <div className={`h-px flex-1 -mt-5 ${done || isCurrent ? 'bg-blue-200' : 'bg-slate-200'}`} />}
-              </div>
-            );
-          })}
+      {/* ══════ 상단: 탭 + 스텝 ══════ */}
+      <div className="flex items-end justify-between border-b border-slate-200 mb-6 flex-shrink-0">
+        <div className="flex gap-0">
+          <button type="button" onClick={() => setMainTab('create')}
+            className={`px-5 py-3 border-b-2 transition-all text-left ${mainTab === 'create' ? 'border-blue-600' : 'border-transparent'}`}>
+            <span className={`text-sm font-bold block ${mainTab === 'create' ? 'text-blue-600' : 'text-slate-400'}`}>✨ 카드뉴스 생성</span>
+            <span className="text-[10px] text-slate-400">저장된 템플릿으로 콘텐츠 생성</span>
+          </button>
+          <button type="button" onClick={() => setMainTab('learn')}
+            className={`px-5 py-3 border-b-2 transition-all text-left ${mainTab === 'learn' ? 'border-purple-600' : 'border-transparent'}`}>
+            <span className={`text-sm font-bold block ${mainTab === 'learn' ? 'text-purple-600' : 'text-slate-400'}`}>🎨 나만의 디자인 학습</span>
+            <span className="text-[10px] text-slate-400">참고할 이미지로 템플릿 만들기</span>
+          </button>
+          <button type="button" onClick={() => setMainTab('history')}
+            className={`px-5 py-3 border-b-2 transition-all text-left ${mainTab === 'history' ? 'border-slate-600' : 'border-transparent'}`}>
+            <span className={`text-sm font-bold block ${mainTab === 'history' ? 'text-slate-600' : 'text-slate-400'}`}>🕐 카드뉴스 생성기록</span>
+          </button>
         </div>
-      )}
+        {/* 스텝 인디케이터 (생성 탭, 우측) */}
+        {mainTab === 'create' && (
+          <div className="flex items-center gap-0 pb-3 mr-2">
+            {[
+              { n: 1, label: '디자인 선택' },
+              { n: 2, label: '콘텐츠 입력' },
+              { n: 3, label: '결과 확인' },
+            ].map((s, i) => {
+              const done = pageStep === 2 ? s.n <= 2 : s.n < 1;
+              const isCurrent = (pageStep === 1 && s.n === 2) || (pageStep === 2 && s.n === 3);
+              return (
+                <div key={s.n} className="flex items-center">
+                  <div className="flex flex-col items-center" style={{ minWidth: '70px' }}>
+                    <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold mb-1 ${
+                      isCurrent ? 'bg-blue-600 text-white shadow-sm shadow-blue-200' : done ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-400'
+                    }`}>{s.n}</div>
+                    <span className={`text-[10px] font-semibold ${isCurrent ? 'text-blue-600' : 'text-slate-400'}`}>{s.label}</span>
+                  </div>
+                  {i < 2 && <div className={`w-8 h-px -mt-4 ${done || isCurrent ? 'bg-blue-200' : 'bg-slate-200'}`} />}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
 
       {/* ══════ 탭 1: 카드뉴스 생성 ══════ */}
       {mainTab === 'create' && pageStep === 1 && (
@@ -1062,7 +1064,7 @@ DECORATIVE: (장식 요소)`,
           <div className="flex items-center gap-3 mb-4 flex-wrap">
             <div className="flex items-center gap-1 text-xs text-slate-500">
               <span>비율</span>
-              {(['1:1', '4:5', '3:4'] as const).map(r => (
+              {(['1:1', '4:5', '9:16', '16:9', '3:4'] as const).map(r => (
                 <button key={r} type="button" onClick={() => setProCardRatio(r)}
                   className={`px-2 py-1 rounded-md font-bold ${proCardRatio === r ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>{r}</button>
               ))}
@@ -1072,7 +1074,7 @@ DECORATIVE: (장식 요소)`,
               <span>장수</span>
               <button type="button" onClick={() => setSlideCount(0)}
                 className={`px-2 py-1 rounded-md font-bold ${slideCount === 0 ? 'bg-purple-500 text-white' : 'bg-slate-100 text-slate-500'}`}>자동</button>
-              {[5, 6, 7, 8].map(n => (
+              {[4, 5, 6, 7, 8, 9, 10].map(n => (
                 <button key={n} type="button" onClick={() => setSlideCount(n)}
                   className={`px-2 py-1 rounded-md font-bold ${slideCount === n ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-500'}`}>{n}</button>
               ))}
