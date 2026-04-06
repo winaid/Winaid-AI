@@ -309,7 +309,9 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           prompt: fullPrompt,
-          aspectRatio: slide.imagePosition === 'background' ? '1:1' : '16:9',
+          aspectRatio: slide.imagePosition === 'background'
+            ? (cardRatio === '3:4' ? '3:4' : '1:1')
+            : (cardRatio === '3:4' ? '3:4' : '16:9'),
           // 'card_news'는 카드뉴스 프레임까지 생성하므로 우리 HTML과 겹침. 'blog'는 순수 이미지.
           mode: 'blog',
           imageStyle: 'illustration',
@@ -1005,7 +1007,8 @@ JSON 한 객체만 출력:
   const renderCover = (slide: SlideData) => (
     <div style={getCardStyle(slide)}>
       {backgroundDecoration}
-      {renderImageLayer(slide)}
+      {(slide.imagePosition === 'background' || slide.imagePosition === 'center') && renderImageLayer(slide)}
+      {slide.imagePosition === 'top' && renderImageLayer(slide)}
       <div
         style={{
           flex: 1,
@@ -1049,6 +1052,7 @@ JSON 한 객체만 출력:
           </p>
         )}
       </div>
+      {slide.imagePosition === 'bottom' && renderImageLayer(slide)}
       {hospitalFooter}
     </div>
   );
@@ -1056,8 +1060,9 @@ JSON 한 객체만 출력:
   const renderInfo = (slide: SlideData) => (
     <div style={getCardStyle(slide)}>
       {backgroundDecoration}
-      {renderImageLayer(slide)}
-      {slide.imagePosition === 'top' && null /* renderImageLayer가 이미 top이면 inline 렌더 */}
+      {(slide.imagePosition === 'background' || slide.imagePosition === 'center') && renderImageLayer(slide)}
+      {slide.imagePosition === 'top' && renderImageLayer(slide)}
+
       <div
         style={{
           flex: 1,
@@ -1113,6 +1118,7 @@ JSON 한 객체만 출력:
           </div>
         )}
       </div>
+      {slide.imagePosition === 'bottom' && renderImageLayer(slide)}
       {hospitalFooter}
     </div>
   );
@@ -1126,7 +1132,8 @@ JSON 한 객체만 출력:
     return (
       <div style={getCardStyle(slide)}>
         {backgroundDecoration}
-        {renderImageLayer(slide)}
+        {(slide.imagePosition === 'background' || slide.imagePosition === 'center') && renderImageLayer(slide)}
+      {slide.imagePosition === 'top' && renderImageLayer(slide)}
         <div style={{ position: 'relative', zIndex: 2, marginBottom: '24px' }}>
           {titleAccent('center')}
           <h2 style={{ color: theme.titleColor, fontSize: '48px', fontWeight: 800, textAlign: 'center', wordBreak: 'keep-all', lineHeight: 1.25, letterSpacing: '-0.02em' }}>
@@ -1199,6 +1206,7 @@ JSON 한 객체만 출력:
             </div>
           ))}
         </div>
+        {slide.imagePosition === 'bottom' && renderImageLayer(slide)}
         {hospitalFooter}
       </div>
     );
@@ -1210,7 +1218,8 @@ JSON 한 객체만 출력:
     return (
       <div style={getCardStyle(slide)}>
         {backgroundDecoration}
-        {renderImageLayer(slide)}
+        {(slide.imagePosition === 'background' || slide.imagePosition === 'center') && renderImageLayer(slide)}
+      {slide.imagePosition === 'top' && renderImageLayer(slide)}
         <div style={{ position: 'relative', zIndex: 2, marginBottom: '24px' }}>
           {titleAccent('center')}
           <h2 style={{ color: theme.titleColor, fontSize: '48px', fontWeight: 800, textAlign: 'center', wordBreak: 'keep-all', letterSpacing: '-0.02em' }}>
@@ -1263,6 +1272,7 @@ JSON 한 객체만 출력:
             </div>
           ))}
         </div>
+        {slide.imagePosition === 'bottom' && renderImageLayer(slide)}
         {hospitalFooter}
       </div>
     );
@@ -1273,7 +1283,8 @@ JSON 한 객체만 출력:
     return (
       <div style={getCardStyle(slide)}>
         {backgroundDecoration}
-        {renderImageLayer(slide)}
+        {(slide.imagePosition === 'background' || slide.imagePosition === 'center') && renderImageLayer(slide)}
+      {slide.imagePosition === 'top' && renderImageLayer(slide)}
         <div style={{ position: 'relative', zIndex: 2, marginBottom: '24px' }}>
           {titleAccent('center')}
           <h2 style={{ color: theme.titleColor, fontSize: '48px', fontWeight: 800, textAlign: 'center', wordBreak: 'keep-all', letterSpacing: '-0.02em' }}>{slide.title}</h2>
@@ -1326,6 +1337,7 @@ JSON 한 객체만 출력:
             </div>
           ))}
         </div>
+        {slide.imagePosition === 'bottom' && renderImageLayer(slide)}
         {hospitalFooter}
       </div>
     );
@@ -1334,7 +1346,8 @@ JSON 한 객체만 출력:
   const renderChecklist = (slide: SlideData) => (
     <div style={getCardStyle(slide)}>
       {backgroundDecoration}
-      {renderImageLayer(slide)}
+      {(slide.imagePosition === 'background' || slide.imagePosition === 'center') && renderImageLayer(slide)}
+      {slide.imagePosition === 'top' && renderImageLayer(slide)}
       <div style={{ position: 'relative', zIndex: 2, marginBottom: '24px' }}>
         {titleAccent('left')}
         <h2 style={{ color: theme.titleColor, fontSize: '48px', fontWeight: 800, wordBreak: 'keep-all', letterSpacing: '-0.02em' }}>{slide.title}</h2>
@@ -1378,6 +1391,7 @@ JSON 한 객체만 출력:
           </div>
         ))}
       </div>
+      {slide.imagePosition === 'bottom' && renderImageLayer(slide)}
       {hospitalFooter}
     </div>
   );
@@ -1388,7 +1402,8 @@ JSON 한 객체만 출력:
     return (
       <div style={getCardStyle(slide)}>
         {backgroundDecoration}
-        {renderImageLayer(slide)}
+        {(slide.imagePosition === 'background' || slide.imagePosition === 'center') && renderImageLayer(slide)}
+      {slide.imagePosition === 'top' && renderImageLayer(slide)}
         <div style={{ position: 'relative', zIndex: 2, marginBottom: '24px' }}>
           {titleAccent('center')}
           <h2 style={{ color: theme.titleColor, fontSize: '48px', fontWeight: 800, textAlign: 'center', wordBreak: 'keep-all', letterSpacing: '-0.02em' }}>{slide.title}</h2>
@@ -1427,6 +1442,7 @@ JSON 한 객체만 출력:
             </div>
           ))}
         </div>
+        {slide.imagePosition === 'bottom' && renderImageLayer(slide)}
         {hospitalFooter}
       </div>
     );
@@ -1435,7 +1451,8 @@ JSON 한 객체만 출력:
   const renderClosing = (slide: SlideData) => (
     <div style={getCardStyle(slide)}>
       {backgroundDecoration}
-      {renderImageLayer(slide)}
+      {(slide.imagePosition === 'background' || slide.imagePosition === 'center') && renderImageLayer(slide)}
+      {slide.imagePosition === 'top' && renderImageLayer(slide)}
       <div
         style={{
           flex: 1,
@@ -1510,13 +1527,15 @@ JSON 한 객체만 출력:
           </div>
         )}
       </div>
+      {slide.imagePosition === 'bottom' && renderImageLayer(slide)}
     </div>
   );
 
   const renderBeforeAfter = (slide: SlideData) => (
     <div style={getCardStyle(slide)}>
       {backgroundDecoration}
-      {renderImageLayer(slide)}
+      {(slide.imagePosition === 'background' || slide.imagePosition === 'center') && renderImageLayer(slide)}
+      {slide.imagePosition === 'top' && renderImageLayer(slide)}
       <div style={{ position: 'relative', zIndex: 2, marginBottom: '24px' }}>
         {titleAccent('center')}
         <h2 style={{ color: theme.titleColor, fontSize: '48px', fontWeight: 800, textAlign: 'center', wordBreak: 'keep-all', letterSpacing: '-0.02em' }}>{slide.title}</h2>
@@ -1549,6 +1568,7 @@ JSON 한 객체만 출력:
           </div>
         </div>
       </div>
+      {slide.imagePosition === 'bottom' && renderImageLayer(slide)}
       {hospitalFooter}
     </div>
   );
@@ -1556,7 +1576,8 @@ JSON 한 객체만 출력:
   const renderQna = (slide: SlideData) => (
     <div style={getCardStyle(slide)}>
       {backgroundDecoration}
-      {renderImageLayer(slide)}
+      {(slide.imagePosition === 'background' || slide.imagePosition === 'center') && renderImageLayer(slide)}
+      {slide.imagePosition === 'top' && renderImageLayer(slide)}
       <div style={{ position: 'relative', zIndex: 2, marginBottom: '24px' }}>
         {titleAccent('left')}
         <h2 style={{ color: theme.titleColor, fontSize: '48px', fontWeight: 800, wordBreak: 'keep-all', letterSpacing: '-0.02em' }}>{slide.title}</h2>
@@ -1611,6 +1632,7 @@ JSON 한 객체만 출력:
           </div>
         ))}
       </div>
+      {slide.imagePosition === 'bottom' && renderImageLayer(slide)}
       {hospitalFooter}
     </div>
   );
@@ -1618,7 +1640,8 @@ JSON 한 객체만 출력:
   const renderTimeline = (slide: SlideData) => (
     <div style={getCardStyle(slide)}>
       {backgroundDecoration}
-      {renderImageLayer(slide)}
+      {(slide.imagePosition === 'background' || slide.imagePosition === 'center') && renderImageLayer(slide)}
+      {slide.imagePosition === 'top' && renderImageLayer(slide)}
       <div style={{ position: 'relative', zIndex: 2, marginBottom: '24px' }}>
         {titleAccent('left')}
         <h2 style={{ color: theme.titleColor, fontSize: '48px', fontWeight: 800, wordBreak: 'keep-all', letterSpacing: '-0.02em' }}>{slide.title}</h2>
@@ -1652,6 +1675,7 @@ JSON 한 객체만 출력:
           </div>
         ))}
       </div>
+      {slide.imagePosition === 'bottom' && renderImageLayer(slide)}
       {hospitalFooter}
     </div>
   );
@@ -1659,7 +1683,8 @@ JSON 한 객체만 출력:
   const renderQuote = (slide: SlideData) => (
     <div style={getCardStyle(slide)}>
       {backgroundDecoration}
-      {renderImageLayer(slide)}
+      {(slide.imagePosition === 'background' || slide.imagePosition === 'center') && renderImageLayer(slide)}
+      {slide.imagePosition === 'top' && renderImageLayer(slide)}
       <div
         style={{
           flex: 1,
@@ -1700,6 +1725,7 @@ JSON 한 객체만 출력:
           </div>
         )}
       </div>
+      {slide.imagePosition === 'bottom' && renderImageLayer(slide)}
       {hospitalFooter}
     </div>
   );
@@ -1707,7 +1733,8 @@ JSON 한 객체만 출력:
   const renderNumberedList = (slide: SlideData) => (
     <div style={getCardStyle(slide)}>
       {backgroundDecoration}
-      {renderImageLayer(slide)}
+      {(slide.imagePosition === 'background' || slide.imagePosition === 'center') && renderImageLayer(slide)}
+      {slide.imagePosition === 'top' && renderImageLayer(slide)}
       <div style={{ position: 'relative', zIndex: 2, marginBottom: '24px' }}>
         {titleAccent('left')}
         <h2 style={{ color: theme.titleColor, fontSize: '48px', fontWeight: 800, wordBreak: 'keep-all', letterSpacing: '-0.02em' }}>{slide.title}</h2>
@@ -1755,6 +1782,7 @@ JSON 한 객체만 출력:
           </div>
         ))}
       </div>
+      {slide.imagePosition === 'bottom' && renderImageLayer(slide)}
       {hospitalFooter}
     </div>
   );
@@ -1762,7 +1790,8 @@ JSON 한 객체만 출력:
   const renderProsCons = (slide: SlideData) => (
     <div style={getCardStyle(slide)}>
       {backgroundDecoration}
-      {renderImageLayer(slide)}
+      {(slide.imagePosition === 'background' || slide.imagePosition === 'center') && renderImageLayer(slide)}
+      {slide.imagePosition === 'top' && renderImageLayer(slide)}
       <div style={{ position: 'relative', zIndex: 2, marginBottom: '24px' }}>
         {titleAccent('center')}
         <h2 style={{ color: theme.titleColor, fontSize: '48px', fontWeight: 800, textAlign: 'center', wordBreak: 'keep-all', letterSpacing: '-0.02em' }}>{slide.title}</h2>
@@ -1795,6 +1824,7 @@ JSON 한 객체만 출력:
           </div>
         </div>
       </div>
+      {slide.imagePosition === 'bottom' && renderImageLayer(slide)}
       {hospitalFooter}
     </div>
   );
@@ -1802,7 +1832,8 @@ JSON 한 객체만 출력:
   const renderPriceTable = (slide: SlideData) => (
     <div style={getCardStyle(slide)}>
       {backgroundDecoration}
-      {renderImageLayer(slide)}
+      {(slide.imagePosition === 'background' || slide.imagePosition === 'center') && renderImageLayer(slide)}
+      {slide.imagePosition === 'top' && renderImageLayer(slide)}
       <div style={{ position: 'relative', zIndex: 2, marginBottom: '24px' }}>
         {titleAccent('center')}
         <h2 style={{ color: theme.titleColor, fontSize: '48px', fontWeight: 800, textAlign: 'center', wordBreak: 'keep-all', letterSpacing: '-0.02em' }}>{slide.title}</h2>
@@ -1847,6 +1878,7 @@ JSON 한 객체만 출력:
           </div>
         ))}
       </div>
+      {slide.imagePosition === 'bottom' && renderImageLayer(slide)}
       {hospitalFooter}
     </div>
   );
@@ -1854,7 +1886,8 @@ JSON 한 객체만 출력:
   const renderWarning = (slide: SlideData) => (
     <div style={getCardStyle(slide)}>
       {backgroundDecoration}
-      {renderImageLayer(slide)}
+      {(slide.imagePosition === 'background' || slide.imagePosition === 'center') && renderImageLayer(slide)}
+      {slide.imagePosition === 'top' && renderImageLayer(slide)}
       <div style={{ textAlign: 'center', marginBottom: '16px', position: 'relative', zIndex: 2 }}>
         <span style={{ fontSize: '80px', lineHeight: 1 }}>⚠️</span>
       </div>
@@ -1884,6 +1917,7 @@ JSON 한 객체만 출력:
           </div>
         ))}
       </div>
+      {slide.imagePosition === 'bottom' && renderImageLayer(slide)}
       {hospitalFooter}
     </div>
   );
