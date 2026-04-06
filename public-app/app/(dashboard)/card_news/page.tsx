@@ -980,19 +980,17 @@ DECORATIVE: (장식 요소)`,
     <div className="p-5 max-w-6xl mx-auto">
 
       {/* ══════ 상단 3탭 ══════ */}
-      <div className="flex gap-1 border-b border-slate-200 mb-8">
+      <div className="flex gap-0 border-b border-slate-200 mb-8">
         <button type="button" onClick={() => setMainTab('create')}
-          className={`px-6 py-3 text-sm font-bold border-b-2 transition-all ${mainTab === 'create' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-400'}`}>
+          className={`px-5 py-3 text-left text-sm font-bold border-b-2 transition-all ${mainTab === 'create' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>
           ✨ 카드뉴스 생성
-          <span className="block text-[10px] font-normal text-slate-400">주제만 입력하면 AI가 만들어줘요</span>
         </button>
         <button type="button" onClick={() => setMainTab('learn')}
-          className={`px-6 py-3 text-sm font-bold border-b-2 transition-all ${mainTab === 'learn' ? 'border-purple-600 text-purple-600' : 'border-transparent text-slate-400'}`}>
-          🎨 나만의 디자인 학습
-          <span className="block text-[10px] font-normal text-slate-400">참고 이미지로 템플릿 만들기</span>
+          className={`px-5 py-3 text-left text-sm font-bold border-b-2 transition-all ${mainTab === 'learn' ? 'border-purple-600 text-purple-600' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>
+          🎨 스타일 학습
         </button>
         <button type="button" onClick={() => setMainTab('history')}
-          className={`px-6 py-3 text-sm font-bold border-b-2 transition-all ${mainTab === 'history' ? 'border-slate-600 text-slate-600' : 'border-transparent text-slate-400'}`}>
+          className={`px-5 py-3 text-left text-sm font-bold border-b-2 transition-all ${mainTab === 'history' ? 'border-slate-600 text-slate-600' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>
           📋 생성기록
         </button>
       </div>
@@ -1077,12 +1075,6 @@ DECORATIVE: (장식 요소)`,
               </div>
             </div>
           </details>
-
-          {/* 하단 링크 */}
-          <div className="flex justify-between mt-6 pt-4 border-t border-slate-100">
-            <button type="button" onClick={() => setMainTab('learn')} className="text-sm text-purple-500 font-semibold hover:text-purple-700">🎨 나만의 스타일 학습</button>
-            <span className="text-xs text-slate-300">주제만 입력하면 프로 카드뉴스가 자동 생성돼요</span>
-          </div>
 
           {/* 로딩/에러 */}
           {(isGenerating || isGeneratingPrompts || isGeneratingImages) && (
