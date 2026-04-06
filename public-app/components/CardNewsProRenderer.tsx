@@ -2385,17 +2385,16 @@ JSON 한 객체만 출력:
             {/* 좌(프리뷰) + 우(편집) */}
             <div className="flex-1 flex overflow-hidden">
               {/* 좌: 카드 프리뷰 */}
-              <div className="flex-1 bg-slate-100 flex items-center justify-center p-8 overflow-auto">
-                <div style={{ width: '100%', maxWidth: '500px', aspectRatio: cardAspect, position: 'relative', overflow: 'hidden', borderRadius: '16px', boxShadow: '0 20px 60px rgba(0,0,0,0.15)' }}>
+              <div className="flex-[3] bg-slate-100 flex items-center justify-center p-6 overflow-auto">
+                <div style={{ width: '100%', maxWidth: '650px', aspectRatio: cardAspect, position: 'relative', overflow: 'hidden', borderRadius: '16px', boxShadow: '0 20px 60px rgba(0,0,0,0.15)' }}>
                   <div key={`edit-fs-${editingIdx}-${fontLoaded}-${theme.fontId || ''}-${eSlide.fontId || ''}`}
-                    style={{ position: 'absolute', top: 0, left: 0, width: `${cardWidth}px`, height: `${cardHeight}px`, transform: `scale(${500 / cardWidth})`, transformOrigin: 'top left' }}>
+                    style={{ position: 'absolute', top: 0, left: 0, width: `${cardWidth}px`, height: `${cardHeight}px`, transform: `scale(${650 / cardWidth})`, transformOrigin: 'top left' }}>
                     {renderSlide(eSlide)}
                   </div>
-                  {/* 프리뷰 클릭 안내 */}
                 </div>
               </div>
               {/* 우: 편집 패널 */}
-              <div className="w-[400px] border-l border-slate-200 bg-white overflow-y-auto p-4">
+              <div className="flex-[2] min-w-[380px] max-w-[520px] border-l border-slate-200 bg-white overflow-y-auto p-5">
                 <SlideEditor
                   slide={eSlide}
                   slideIdx={editingIdx}
