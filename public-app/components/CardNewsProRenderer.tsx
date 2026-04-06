@@ -645,6 +645,7 @@ JSON 한 객체만 출력:
     letterSpacing: slide.titleLetterSpacing ? `${slide.titleLetterSpacing}px` : '-0.02em',
     lineHeight: slide.titleLineHeight || 1.25,
     wordBreak: 'keep-all',
+    whiteSpace: 'pre-line',
     textAlign: (slide.titleAlign || defaults.textAlign || undefined) as CSSProperties['textAlign'],
     ...(slide.titleFontId ? { fontFamily: getSlideFontFamily({ ...slide, fontId: slide.titleFontId }) } : {}),
   });
@@ -657,6 +658,7 @@ JSON 한 객체만 출력:
     letterSpacing: slide.subtitleLetterSpacing ? `${slide.subtitleLetterSpacing}px` : undefined,
     lineHeight: slide.subtitleLineHeight || 1.55,
     wordBreak: 'keep-all',
+    whiteSpace: 'pre-line',
     ...(slide.subtitleFontId ? { fontFamily: getSlideFontFamily({ ...slide, fontId: slide.subtitleFontId }) } : {}),
   });
 
@@ -3644,34 +3646,58 @@ ${JSON.stringify(slideForContext, null, 2)}
 
       {/* ── AI 디자이너 탭 ── */}
       {editMode === 'ai' && (
-        <div className="space-y-3">
-          <button type="button" onClick={onAiEnrich}
-            disabled={aiSuggestingKey === `${slideIdx}:enrich`}
-            className="w-full py-2.5 bg-green-50 text-green-600 text-sm font-bold rounded-xl border border-green-200 hover:bg-green-100 disabled:opacity-50">
-            {aiSuggestingKey === `${slideIdx}:enrich` ? '🔍 웹 검색 중...' : '🔍 웹 검색으로 내용 보강'}
-          </button>
-          <button type="button" onClick={() => onAiSuggestText('title')}
-            disabled={isSuggesting('title')}
-            className="w-full py-2.5 bg-purple-50 text-purple-600 text-sm font-bold rounded-xl border border-purple-200 hover:bg-purple-100 disabled:opacity-50">
-            {isSuggesting('title') ? '추천 중...' : '✨ AI 제목 추천'}
-          </button>
-          <button type="button" onClick={() => onAiSuggestText('subtitle')}
-            disabled={isSuggesting('subtitle')}
-            className="w-full py-2.5 bg-purple-50 text-purple-600 text-sm font-bold rounded-xl border border-purple-200 hover:bg-purple-100 disabled:opacity-50">
-            {isSuggesting('subtitle') ? '추천 중...' : '✨ AI 부제 추천'}
-          </button>
-          {slide.layout === 'comparison' && (
-            <button type="button" onClick={onAiSuggestComparison}
-              disabled={aiSuggestingKey === `${slideIdx}:comparison`}
-              className="w-full py-2.5 bg-purple-50 text-purple-600 text-sm font-bold rounded-xl border border-purple-200 hover:bg-purple-100 disabled:opacity-50">
-              {aiSuggestingKey === `${slideIdx}:comparison` ? '생성 중...' : '✨ AI 비교 데이터 자동 채우기'}
+        <div className="space-y-4">
+          {/* 헤더 */}
+          <div className="text-center py-4">
+            <div className="text-3xl mb-2">💬</div>
+            <h3 className="text-base font-bold text-slate-800">무엇을 수정할까요?</h3>
+            <p className="text-xs text-slate-400 mt-1">배경색, 폰트, 레이아웃 등 원하는 수정을 자연어로 말해주세요.</p>
+          </div>
+
+          {/* 예시 */}
+          <div>
+            <p className="text-[10px] text-slate-400 mb-2">💡 이렇게 말해보세요:</p>
+            <div className="space-y-1.5">
+              {['"배경색을 더 밝은 베이지로 바꿔줘"', '"제목 폰트를 더 크고 굵게 해줘"', '"텍스트에 은은한 그림자 효과 추가해줘"'].map((ex, i) => (
+                <button key={i} type="button" onClick={() => setCardChatInput(ex.replace(/"/g, ''))}
+                  className="w-full text-left px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-600 hover:border-purple-300 hover:bg-purple-50 transition-all">
+                  {ex}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* 빠른 수정 버튼 */}
+          <div>
+            <p className="text-[10px] text-slate-400 mb-2">빠른 수정:</p>
+            <div className="flex flex-wrap gap-1.5">
+              {[
+                { label: '더 밝게', action: () => onAiSuggestText('title') },
+                { label: '더 어둡게', action: () => onAiSuggestText('subtitle') },
+                { label: '따뜻한 톤', action: () => onAiEnrich() },
+                { label: '차가운 톤', action: () => onAiEnrich() },
+                { label: '폰트 크게', action: () => onChange({ titleFontSize: (slide.titleFontSize || 48) + 8 }) },
+                { label: '폰트 작게', action: () => onChange({ titleFontSize: Math.max(24, (slide.titleFontSize || 48) - 8) }) },
+              ].map(btn => (
+                <button key={btn.label} type="button" onClick={btn.action}
+                  className="px-3 py-1.5 text-xs font-semibold bg-white border border-slate-200 rounded-lg hover:border-purple-300 hover:bg-purple-50 text-slate-600 transition-all">
+                  {btn.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* 기능 버튼 */}
+          <div className="space-y-2 pt-2 border-t border-slate-100">
+            <button type="button" onClick={onAiEnrich} disabled={aiSuggestingKey === `${slideIdx}:enrich`}
+              className="w-full py-2 bg-green-50 text-green-600 text-xs font-bold rounded-xl border border-green-200 hover:bg-green-100 disabled:opacity-50">
+              {aiSuggestingKey === `${slideIdx}:enrich` ? '🔍 웹 검색 중...' : '🔍 웹 검색으로 내용 보강'}
             </button>
-          )}
-          <button type="button" onClick={onSuggestImagePrompt}
-            disabled={aiSuggestingKey === `${slideIdx}:imgprompt`}
-            className="w-full py-2.5 bg-blue-50 text-blue-600 text-sm font-bold rounded-xl border border-blue-200 hover:bg-blue-100 disabled:opacity-50">
-            {aiSuggestingKey === `${slideIdx}:imgprompt` ? '추천 중...' : '🎨 AI 이미지 프롬프트 추천'}
-          </button>
+            <button type="button" onClick={onSuggestImagePrompt} disabled={aiSuggestingKey === `${slideIdx}:imgprompt`}
+              className="w-full py-2 bg-blue-50 text-blue-600 text-xs font-bold rounded-xl border border-blue-200 hover:bg-blue-100 disabled:opacity-50">
+              {aiSuggestingKey === `${slideIdx}:imgprompt` ? '추천 중...' : '🎨 AI 이미지 프롬프트 추천'}
+            </button>
+          </div>
 
           {/* AI 채팅 */}
           {cardChatSection}
