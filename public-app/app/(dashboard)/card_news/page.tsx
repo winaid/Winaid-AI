@@ -88,6 +88,7 @@ export default function CardNewsPage() {
   const [trendingItems, setTrendingItems] = useState<TrendingItem[]>([]);
 
   // ── 생성 상태 ──
+  const [pageStep, setPageStep] = useState<1 | 2>(1);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isGeneratingPrompts, setIsGeneratingPrompts] = useState(false);
   const [isGeneratingImages, setIsGeneratingImages] = useState(false);
@@ -304,6 +305,7 @@ export default function CardNewsPage() {
       // 텍스트 원고만 즉시 노출. 이미지는 사용자가 편집에서 슬라이드별로 개별 추가.
       setProSlides(slides);
       setPipelineStep('idle');
+      setPageStep(2); // 생성 완료 → 편집 단계로 전환
     } catch (err) {
       setError(err instanceof Error ? err.message : '네트워크 오류');
     } finally {
@@ -881,37 +883,30 @@ DECORATIVE: (장식 요소)`,
   const labelCls = "block text-xs font-semibold text-slate-500 mb-1.5";
 
   return (
-    <div className="flex flex-col lg:flex-row gap-5 lg:items-start p-5">
-      {/* ── 입력 폼 ── */}
-      <div className="w-full lg:w-[340px] xl:w-[380px] lg:flex-none">
-        <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-          {/* ── 핑크 헤더 (OLD parity) ── */}
-          <div className="flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-pink-50 to-rose-50 border-b border-pink-100">
-            <span className="text-lg">🌸</span>
-            <h2 className="text-base font-bold text-pink-700">카드뉴스</h2>
-          </div>
+    <div className="p-5 max-w-6xl mx-auto">
 
-          <div className="p-5 space-y-4">
-            {/* 진료과 + 대상 독자 (OLD parity: grid-cols-2 select) */}
-            <div className="grid grid-cols-2 gap-3">
-              <select value={category} onChange={e => setCategory(e.target.value as ContentCategory)} className={inputCls} disabled={isGenerating} aria-label="진료과 선택">
-                {CATEGORIES.map(cat => (
-                  <option key={cat.value} value={cat.value}>{cat.label}</option>
-                ))}
-              </select>
-              <select value={audienceMode} onChange={e => setAudienceMode(e.target.value as AudienceMode)} className={inputCls} disabled={isGenerating} aria-label="대상 독자">
-                <option value="환자용(친절/공감)">환자용 (친절/공감)</option>
-                <option value="보호자용(가족걱정)">보호자용 (부모님/자녀 걱정)</option>
-                <option value="전문가용(신뢰/정보)">전문가용 (신뢰/정보)</option>
-              </select>
+      {/* ══════════════════════════════════════ */}
+      {/* 1단계: 짧은 폼 + 라이브 미리보기        */}
+      {/* ══════════════════════════════════════ */}
+      {pageStep === 1 && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* ── 좌: 폼 ── */}
+          <div className="space-y-5">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-2xl">🎨</span>
+              <h1 className="text-xl font-bold text-slate-800">카드뉴스 만들기</h1>
             </div>
 
-            {/* 주제 + 트렌드 버튼 */}
+            {/* 주제 */}
             <div>
-              <input type="text" value={topic} onChange={e => setTopic(e.target.value)} placeholder="카드뉴스 주제 (예: 임플란트 시술 과정 안내)" required className={inputCls} />
+              <label className="text-sm font-bold text-slate-700 mb-1 block">주제</label>
+              <input type="text" value={topic} onChange={e => setTopic(e.target.value)}
+                placeholder="예: 임플란트 사후관리 가이드" className={inputCls} />
               <button type="button" onClick={handleRecommendTrends} disabled={isLoadingTrends}
-                className="w-full mt-2 py-2.5 bg-blue-50 text-blue-600 text-sm font-semibold rounded-xl border border-blue-200 hover:bg-blue-100 transition-all disabled:opacity-50 flex items-center justify-center gap-1">
-                {isLoadingTrends ? <><div className="w-3 h-3 border-2 border-blue-300 border-t-blue-600 rounded-full animate-spin" />검색 중...</> : topic.trim() ? <>🔍 &ldquo;{topic.trim().length > 10 ? topic.trim().slice(0, 10) + '…' : topic.trim()}&rdquo; 관련 주제 추천</> : <>🔥 트렌드 주제 추천</>}
+                className="w-full mt-2 py-2.5 bg-blue-50 text-blue-600 text-sm font-semibold rounded-xl border border-blue-200 hover:bg-blue-100 disabled:opacity-50">
+                {isLoadingTrends ? '검색 중...' : topic.trim()
+                  ? <>🔍 &ldquo;{topic.trim().length > 10 ? topic.trim().slice(0, 10) + '…' : topic.trim()}&rdquo; 관련 주제 추천</>
+                  : <>🔥 트렌드 주제 추천</>}
               </button>
               {trendingItems.length > 0 && (
                 <div className="mt-2 space-y-1.5">
@@ -929,556 +924,254 @@ DECORATIVE: (장식 요소)`,
               )}
             </div>
 
-            {/* 콘텐츠 분량 */}
+            {/* 진료과 */}
             <div>
-              <label className={labelCls}>콘텐츠 분량</label>
-              <div className="grid grid-cols-2 gap-2">
-                <button type="button" onClick={() => setContentMode('simple')}
-                  className={`py-2.5 rounded-xl border transition-all text-center ${contentMode === 'simple' ? 'border-pink-400 bg-pink-50 text-pink-700' : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300'}`}>
-                  <span className="text-base block">⚡</span>
-                  <span className="text-[10px] font-semibold block">간단</span>
-                  <span className="text-[9px] text-slate-400 block">짧고 임팩트</span>
-                </button>
-                <button type="button" onClick={() => setContentMode('detailed')}
-                  className={`py-2.5 rounded-xl border transition-all text-center ${contentMode === 'detailed' ? 'border-pink-400 bg-pink-50 text-pink-700' : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300'}`}>
-                  <span className="text-base block">📋</span>
-                  <span className="text-[10px] font-semibold block">상세</span>
-                  <span className="text-[9px] text-slate-400 block">정보 충실</span>
-                </button>
+              <label className="text-sm font-bold text-slate-700 mb-1 block">진료과</label>
+              <div className="flex gap-2">
+                {CATEGORIES.map(cat => (
+                  <button key={cat.value} type="button" onClick={() => setCategory(cat.value)}
+                    className={`flex-1 py-2.5 rounded-xl text-sm font-bold border-2 transition-all ${
+                      category === cat.value ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-slate-200 text-slate-400 hover:border-slate-300'
+                    }`}>{cat.label}</button>
+                ))}
               </div>
             </div>
 
             {/* 슬라이드 수 */}
             <div>
-              <label className={labelCls}>
-                슬라이드 수 {slideCount === 0 ? <span className="text-purple-600 font-bold">자동</span> : <span className="text-blue-600 font-bold">{slideCount}장</span>}
-              </label>
+              <label className="text-sm font-bold text-slate-700 mb-1 block">슬라이드 수</label>
               <div className="flex gap-1.5 flex-wrap">
                 <button type="button" onClick={() => setSlideCount(0)}
                   className={`px-4 py-2 rounded-xl text-sm font-bold border-2 transition-all ${
                     slideCount === 0 ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-slate-200 text-slate-400'
-                  }`}>
-                  ✨ 자동
-                </button>
+                  }`}>✨ 자동</button>
                 {[4, 5, 6, 7, 8, 10].map(n => (
                   <button key={n} type="button" onClick={() => setSlideCount(n)}
                     className={`px-3 py-2 rounded-xl text-sm font-bold border-2 transition-all ${
                       slideCount === n ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-slate-200 text-slate-400'
-                    }`}>
-                    {n}장
-                  </button>
+                    }`}>{n}장</button>
                 ))}
               </div>
             </div>
 
             {/* 카드 사이즈 */}
             <div>
-              <label className={labelCls}>카드 사이즈</label>
-              <div className="flex gap-1.5 flex-wrap">
+              <label className="text-sm font-bold text-slate-700 mb-1 block">카드 사이즈</label>
+              <div className="flex gap-2">
                 {([
-                  { id: '1:1' as const, label: '1:1', desc: '정사각형' },
-                  { id: '4:5' as const, label: '4:5', desc: '인스타' },
-                  { id: '3:4' as const, label: '3:4', desc: '세로형' },
-                  { id: '9:16' as const, label: '9:16', desc: '릴스/숏츠' },
-                  { id: '16:9' as const, label: '16:9', desc: '가로형' },
-                ]).map(opt => (
-                  <button key={opt.id} type="button" onClick={() => setProCardRatio(opt.id)}
-                    className={`flex-1 min-w-[60px] py-2 rounded-xl text-center border-2 transition-all ${
-                      proCardRatio === opt.id ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-slate-200 text-slate-400'
-                    }`}>
-                    <span className="block text-sm font-bold">{opt.label}</span>
-                    <span className="block text-[9px]">{opt.desc}</span>
-                  </button>
+                  { id: '1:1' as const, label: '1:1 정사각형' },
+                  { id: '4:5' as const, label: '4:5 세로형' },
+                  { id: '3:4' as const, label: '3:4 세로형' },
+                ]).map(size => (
+                  <button key={size.id} type="button" onClick={() => setProCardRatio(size.id)}
+                    className={`flex-1 py-2.5 rounded-xl text-sm font-bold border-2 transition-all ${
+                      proCardRatio === size.id ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-slate-200 text-slate-400'
+                    }`}>{size.label}</button>
                 ))}
-              </div>
-            </div>
-
-            {/* 디자인 스타일 — 한 행에 전부 (+ 새 스타일 학습 / 테마 / 학습 템플릿) */}
-            <div>
-              <label className={labelCls}>디자인 스타일</label>
-              <div className="flex gap-2 overflow-x-auto pb-2">
-                {/* + 새 스타일 학습 — 첫 타일, 다른 타일과 동일 크기 */}
-                <button type="button" onClick={() => setShowStyleUpload(v => !v)}
-                  className={`flex-shrink-0 w-16 h-16 rounded-xl border-2 border-dashed transition-all overflow-hidden flex flex-col items-center justify-center gap-0.5 ${
-                    showStyleUpload ? 'border-pink-500 bg-pink-50 text-pink-700' : 'border-slate-300 bg-white text-slate-400 hover:border-pink-400 hover:text-pink-600'
-                  }`}
-                  title={showStyleUpload ? '업로드 닫기' : '새 스타일 학습'}>
-                  <span className="text-xl leading-none">＋</span>
-                  <span className="text-[8px] font-semibold leading-tight text-center px-0.5">새 스타일{'\n'}학습</span>
-                </button>
-
-                {/* 카테고리 필터 */}
-                {(['all', 'professional', 'modern', 'minimal', 'warm', 'bold'] as const).map(cat => (
-                  <button key={cat} type="button" onClick={() => setPresetCategory(cat)}
-                    className={`flex-shrink-0 px-3 py-1 text-[9px] font-bold rounded-full whitespace-nowrap ${
-                      presetCategory === cat ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
-                    }`}>
-                    {cat === 'all' ? '전체' : cat === 'professional' ? '전문적' : cat === 'modern' ? '모던' : cat === 'minimal' ? '미니멀' : cat === 'warm' ? '따뜻한' : '강렬한'}
-                  </button>
-                ))}
-              </div>
-              {/* 디자인 프리셋 20종 그리드 */}
-              <div className="grid grid-cols-5 gap-2 mt-2">
-                {DESIGN_PRESETS
-                  .filter(p => presetCategory === 'all' || p.category === presetCategory)
-                  .map(preset => (
-                    <button key={preset.id} type="button"
-                      onClick={() => {
-                        setProTheme({ ...preset.theme, hospitalName: hospitalName || undefined });
-                        setPresetStyle(preset.style);
-                        setCurrentPresetId(preset.id);
-                        setLearnedTemplate(null);
-                      }}
-                      className={`relative rounded-xl overflow-hidden aspect-square border-2 transition-all ${
-                        currentPresetId === preset.id ? 'border-blue-500 ring-2 ring-blue-200' : 'border-slate-200 hover:border-slate-300'
-                      }`}>
-                      <div style={{ background: preset.thumbnail, width: '100%', height: '100%' }} className="flex items-center justify-center">
-                        <span className="text-[11px] font-black" style={{ color: preset.theme.titleColor }}>Aa</span>
-                      </div>
-                      <div className="absolute bottom-0 left-0 right-0 bg-black/50 px-1 py-0.5">
-                        <span className="text-[7px] text-white font-bold">{preset.name}</span>
-                      </div>
-                    </button>
-                  ))}
-              </div>
-              {/* 학습 템플릿 */}
-              <div className="flex gap-2 overflow-x-auto pb-2 mt-2">
-
-                {/* 학습 템플릿 — 각 타일에 ✕ 삭제 버튼 */}
-                {savedStyles.map(tmpl => (
-                  <div key={tmpl.id} className="relative flex-shrink-0">
-                    <button type="button"
-                      onClick={() => {
-                        setLearnedTemplate(tmpl);
-                        setProTheme(prev => ({
-                            ...prev,
-                            backgroundColor: tmpl.colors.background,
-                            backgroundGradient: tmpl.colors.backgroundGradient || '',
-                            titleColor: tmpl.colors.titleColor,
-                            subtitleColor: tmpl.colors.subtitleColor,
-                            bodyColor: tmpl.colors.bodyColor,
-                            accentColor: tmpl.colors.accentColor,
-                            fontFamily: tmpl.typography.fontFamily || prev.fontFamily,
-                          }));
-                      }}
-                      className={`w-16 h-16 rounded-xl border-2 transition-all overflow-hidden ${
-                        learnedTemplate?.id === tmpl.id ? 'border-pink-500 ring-2 ring-pink-200' : 'border-slate-200 hover:border-slate-300'
-                      }`}
-                      title={tmpl.name}>
-                      {tmpl.thumbnailDataUrl ? (
-                        <img src={tmpl.thumbnailDataUrl} alt={tmpl.name} className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-[9px] text-slate-400 p-1 text-center">{tmpl.name}</div>
-                      )}
-                    </button>
-                    <button type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        deleteTemplate(tmpl.id);
-                        if (learnedTemplate?.id === tmpl.id) setLearnedTemplate(null);
-                        setSavedStylesVersion(v => v + 1);
-                      }}
-                      className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full text-[8px] font-bold flex items-center justify-center hover:bg-red-600 shadow-sm"
-                      title="이 학습 스타일 삭제">
-                      ✕
-                    </button>
-                  </div>
-                ))}
-              </div>
-
-              {/* 스타일 업로드 UI (토글) — CardTemplateManager의 업로드 폼만 사용 */}
-              {showStyleUpload && (
-                <div className="mt-2">
-                  <CardTemplateManager
-                    uploadOnly
-                    onSelectTemplate={(tmpl) => {
-                      setLearnedTemplate(tmpl);
-                      setSavedStylesVersion(v => v + 1);
-                    }}
-                    selectedTemplateId={learnedTemplate?.id}
-                  />
-                </div>
-              )}
-            </div>
-
-            {/* 병원명 (선택) */}
-            <div>
-              <label className={labelCls}>병원명 (선택)</label>
-              <input type="text" value={hospitalName} onChange={e => setHospitalName(e.target.value)} placeholder="병원 이름을 입력하세요 (예: OO치과)" className={inputCls} />
-            </div>
-
-            {/* 병원 로고 (선택) */}
-            <div>
-              <label className={labelCls}>병원 로고 (선택)</label>
-              <div className="flex items-center gap-3">
-                {logoDataUrl ? (
-                  <div className="relative">
-                    <img src={logoDataUrl} alt="로고" className="h-10 w-auto rounded-lg border border-slate-200 bg-white p-1" />
-                    <button type="button" onClick={() => { setLogoDataUrl(null); setLogoEnabled(false); try { localStorage.removeItem('hospital-logo-dataurl'); } catch {} }}
-                      className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white rounded-full text-[8px] flex items-center justify-center">✕</button>
-                  </div>
-                ) : (
-                  <button type="button" onClick={() => logoInputRef.current?.click()}
-                    className="h-10 px-4 border-2 border-dashed border-slate-200 rounded-lg text-xs text-slate-400 hover:border-pink-400 hover:text-pink-500 transition-all">+ 로고 업로드</button>
-                )}
-                <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={e => {
-                  const file = e.target.files?.[0]; if (!file) return;
-                  const reader = new FileReader();
-                  reader.onload = () => { const d = reader.result as string; setLogoDataUrl(d); setLogoEnabled(true); try { localStorage.setItem('hospital-logo-dataurl', d); } catch {} };
-                  reader.readAsDataURL(file); e.target.value = '';
-                }} />
-                {logoDataUrl && (
-                  <label className="flex items-center gap-1.5 cursor-pointer">
-                    <input type="checkbox" checked={logoEnabled} onChange={e => setLogoEnabled(e.target.checked)} className="w-3.5 h-3.5 rounded border-slate-300 text-pink-500" />
-                    <span className="text-[11px] text-slate-500">카드에 로고 넣기</span>
-                  </label>
-                )}
               </div>
             </div>
 
             {/* 생성 버튼 */}
-            <button type="submit" disabled={isGenerating || !topic.trim()}
-              className="w-full py-3 bg-pink-600 text-white font-bold rounded-xl hover:bg-pink-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-            >
-              {isGenerating ? (
-                <><svg className="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" /></svg>원고 생성 중...</>
-              ) : '원고 생성하기'}
+            <button type="button" onClick={handleSubmit as any} disabled={isGenerating || !topic.trim()}
+              className="w-full py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white text-lg font-bold rounded-2xl hover:from-blue-700 hover:to-blue-800 disabled:opacity-50 shadow-lg shadow-blue-200 transition-all">
+              {isGenerating ? '✨ 생성 중...' : '✨ 카드뉴스 생성'}
             </button>
           </div>
-        </form>
-      </div>
 
-      {/* ── 결과 영역 ── */}
-      <div className="flex-1 min-w-0">
-        {(isGenerating || isGeneratingPrompts || isGeneratingImages) ? (
-          <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-12 flex flex-col items-center justify-center text-center min-h-[480px]">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold mb-6 bg-pink-50 text-pink-600 border border-pink-100">
-              <span>🎨</span><span>{isGeneratingImages ? '이미지 생성 중' : isGeneratingPrompts ? '프롬프트 생성 중' : '원고 작성 중'}</span>
-            </div>
-            {/* 진행 단계 표시 */}
-            <div className="flex items-center gap-1 mb-6">
-              {['원고', '승인', '프롬프트', '승인', '이미지'].map((step, i) => (
-                <div key={i} className="flex items-center gap-1">
-                  <div className={`w-6 h-6 rounded-full text-[9px] font-bold flex items-center justify-center ${
-                    (i === 0 && isGenerating) || (i === 2 && isGeneratingPrompts) || (i === 4 && isGeneratingImages)
-                      ? 'bg-pink-500 text-white animate-pulse' : i < (isGenerating ? 0 : isGeneratingPrompts ? 2 : 4)
-                      ? 'bg-pink-100 text-pink-600' : 'bg-slate-100 text-slate-400'
-                  }`}>{i + 1}</div>
-                  {i < 4 && <div className="w-3 h-px bg-slate-200" />}
-                </div>
-              ))}
-            </div>
-            <div className="relative mb-6"><div className="w-14 h-14 border-[3px] border-pink-100 border-t-pink-500 rounded-full animate-spin" /></div>
-            <p className="text-sm font-medium text-slate-700 mb-2">{progress || (isGeneratingImages ? '카드 이미지를 생성하고 있어요' : isGeneratingPrompts ? '이미지 프롬프트를 만들고 있어요' : `${slideCount === 0 ? '최적 장수로' : `${slideCount}장 분량의`} 원고를 작성���고 있어요`)}</p>
-          </div>
-        ) : error ? (
-          <ErrorPanel error={error} onDismiss={() => setError(null)} />
-        ) : proSlides.length > 0 ? (
-          /* ── Pro Mode: JSON → HTML/CSS 렌더링 ── */
-          <CardNewsProRenderer
-            slides={proSlides}
-            theme={proTheme}
-            onSlidesChange={setProSlides}
-            onThemeChange={setProTheme}
-            learnedTemplate={learnedTemplate}
-            cardRatio={proCardRatio}
-            presetStyle={presetStyle}
-          />
-        ) : pipelineStep === 'scriptReview' && cards.length > 0 ? (
-          /* ── Step 2: 원고 승인 단계 ── */
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">Step 1</span>
-              <span className="text-xs font-bold text-slate-700">원고 확인</span>
-              <span className="text-xs text-slate-400">· 제목/본문을 수정한 뒤 프롬프트를 생성하세요</span>
+          {/* ── 우: 라이브 미리보기 ── */}
+          <div className="space-y-5">
+            <h3 className="text-sm font-bold text-slate-700">📱 디자인 미리보기</h3>
+            <div style={{
+              width: '100%',
+              aspectRatio: proCardRatio === '3:4' ? '3/4' : proCardRatio === '4:5' ? '4/5' : '1/1',
+              borderRadius: '16px', overflow: 'hidden', position: 'relative',
+              background: proTheme.backgroundGradient || proTheme.backgroundColor,
+              display: 'flex', flexDirection: 'column', justifyContent: 'center',
+              alignItems: 'center', padding: '40px', textAlign: 'center',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.12)', transition: 'all 0.3s ease',
+              maxHeight: '400px',
+            }}>
+              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '6px', background: proTheme.accentColor }} />
+              <div style={{ width: '50px', height: '4px', background: proTheme.accentColor, borderRadius: '2px', marginBottom: '20px' }} />
+              <div style={{ color: proTheme.titleColor, fontSize: '24px', fontWeight: 900, marginBottom: '12px', wordBreak: 'keep-all', lineHeight: 1.3 }}>
+                {topic || '주제를 입력해보세요'}
+              </div>
+              <div style={{ color: proTheme.subtitleColor, fontSize: '13px', fontWeight: 600 }}>
+                {topic ? `${slideCount === 0 ? '자동' : slideCount}장 카드뉴스` : '실시간 미리보기'}
+              </div>
+              {proTheme.hospitalName && (
+                <div style={{ position: 'absolute', bottom: '16px', color: proTheme.titleColor, fontSize: '10px', opacity: 0.4, letterSpacing: '2px' }}>{proTheme.hospitalName}</div>
+              )}
+              <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '3px', background: `linear-gradient(90deg, transparent, ${proTheme.accentColor})` }} />
             </div>
 
-            <div className="space-y-2">
-              {cards.map((card, idx) => (
-                <div key={card.index} className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                  <div className="flex items-center gap-2 px-4 py-2 bg-slate-50 border-b border-slate-100">
-                    <span className="w-5 h-5 rounded-full bg-pink-500 text-white text-[9px] font-bold flex items-center justify-center flex-none">{card.index}</span>
-                    <span className="text-xs font-bold text-slate-700">{card.role}</span>
-                  </div>
-                  <div className="p-3 space-y-2">
-                    <div>
-                      <label className="block text-[10px] font-semibold text-slate-400 mb-0.5">제목</label>
-                      <input type="text" value={card.title}
-                        onChange={e => setCards(prev => prev.map((c, i) => i === idx ? { ...c, title: e.target.value } : c))}
-                        className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-400" />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] font-semibold text-slate-400 mb-0.5">본문</label>
-                      <textarea value={card.body} rows={2}
-                        onChange={e => setCards(prev => prev.map((c, i) => i === idx ? { ...c, body: e.target.value } : c))}
-                        className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-pink-500/20 resize-none" />
-                    </div>
-                  </div>
-                </div>
-              ))}
+            {/* 현재 설정 요약 */}
+            <div className="bg-slate-50 rounded-xl p-4">
+              <h3 className="text-xs font-bold text-slate-500 mb-2">⚙️ 현재 설정</h3>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="bg-white rounded-lg px-3 py-2"><span className="text-slate-400">진료과</span><span className="block font-bold text-slate-700 mt-0.5">{CATEGORIES.find(c => c.value === category)?.label || '치과'}</span></div>
+                <div className="bg-white rounded-lg px-3 py-2"><span className="text-slate-400">슬라이드</span><span className="block font-bold text-slate-700 mt-0.5">{slideCount === 0 ? '✨ 자동' : `${slideCount}장`}</span></div>
+                <div className="bg-white rounded-lg px-3 py-2"><span className="text-slate-400">사이즈</span><span className="block font-bold text-slate-700 mt-0.5">{proCardRatio}</span></div>
+                <div className="bg-white rounded-lg px-3 py-2"><span className="text-slate-400">디자인</span><span className="block font-bold text-slate-700 mt-0.5">{currentPresetId ? DESIGN_PRESETS.find(p => p.id === currentPresetId)?.name : '기본'}</span></div>
+              </div>
             </div>
 
-            {learnedTemplate ? (
-              <button onClick={() => setPipelineStep('idle')}
-                className="w-full py-3.5 bg-pink-600 text-white font-bold rounded-xl hover:bg-pink-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-pink-500/20">
-                ✨ 카드뉴스 미리보기 ({cards.length}장)
-              </button>
-            ) : (
-              <button onClick={handleGenerateImages} disabled={isGeneratingImages}
-                className="w-full py-3.5 bg-pink-600 text-white font-bold rounded-xl hover:bg-pink-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-pink-500/20 disabled:opacity-50">
-                🎨 원고 승인 → 이미지 생성 ({cards.length}장)
-              </button>
+            {/* 제작 팁 */}
+            <div className="bg-blue-50/50 rounded-xl p-4 border border-blue-100">
+              <h3 className="text-xs font-bold text-blue-600 mb-2">💡 제작 팁</h3>
+              <ul className="text-[11px] text-blue-500 space-y-1">
+                <li>• 구체적 주제가 더 좋은 결과를 만들어요</li>
+                <li>• 🔥 트렌드에서 인기 주제를 확인하세요</li>
+                <li>• 생성 후 카드를 클릭하면 개별 편집 가능</li>
+              </ul>
+            </div>
+
+            {/* 로딩 중 (1단계에서도 표시) */}
+            {(isGenerating || isGeneratingPrompts || isGeneratingImages) && (
+              <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center">
+                <div className="w-12 h-12 border-[3px] border-blue-100 border-t-blue-500 rounded-full animate-spin mx-auto mb-4" />
+                <p className="text-sm font-medium text-slate-700">{progress || (slideCount === 0 ? '최적 장수로 원고를 작성하고 있어요' : `${slideCount}장 분량의 원고를 작성하고 있어요`)}</p>
+              </div>
             )}
+
+            {/* 에러 */}
+            {error && <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600">{error}</div>}
           </div>
-        ) : pipelineStep === 'promptReview' && cards.length > 0 && !cards.some(c => c.imageUrl) ? (
-          /* ── Step 4: 프롬프트 승인 단계 (필드별 UI) ── */
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-pink-50 text-pink-700 border border-pink-200">Step 2</span>
-              <span className="text-xs font-bold text-slate-700">이미지 프롬프트 확인</span>
-              <span className="text-xs text-slate-400">· 이미지에 들어갈 텍스트와 배경을 수정하세요</span>
-            </div>
+        </div>
+      )}
 
-            <div className="space-y-3">
-              {cards.map((card, idx) => {
-                // 프롬프트에서 필드 추출
-                const getField = (key: string) => {
-                  const m = card.imagePrompt.match(new RegExp(`${key}:\\s*"?([^"\\n]+)"?`, 'i'));
-                  return m?.[1]?.trim() || '';
-                };
-                const pSub = getField('subtitle');
-                const pMain = getField('mainTitle');
-                const pDesc = getField('description');
-                const vMatch = card.imagePrompt.match(/비주얼:\s*(.+)/i);
-                const pVisual = vMatch?.[1]?.trim() || '';
-
-                // 필드 수정 시 프롬프트 재조립
-                const updateField = (field: string, value: string) => {
-                  const fields = { subtitle: pSub, mainTitle: pMain, description: pDesc, visual: pVisual, [field]: value };
-                  // 디자인 템플릿 블록 유지
-                  const tmplMatch = card.imagePrompt.match(/(\[디자인 템플릿:[\s\S]*$)/m);
-                  const tmplPart = tmplMatch?.[1] || '';
-                  const newPrompt = [
-                    `subtitle: "${fields.subtitle}"`,
-                    `mainTitle: "${fields.mainTitle}"`,
-                    fields.description ? `description: "${fields.description}"` : '',
-                    `비주얼: ${fields.visual}`,
-                    tmplPart,
-                  ].filter(Boolean).join('\n');
-                  setCards(prev => prev.map((c, i) => i === idx ? { ...c, imagePrompt: newPrompt } : c));
-                };
-
-                return (
-                  <div key={card.index} className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                    <div className="flex items-center gap-2 px-4 py-2 bg-slate-50 border-b border-slate-100">
-                      <span className="w-5 h-5 rounded-full bg-pink-500 text-white text-[9px] font-bold flex items-center justify-center flex-none">{card.index}</span>
-                      <span className="text-xs font-bold text-slate-700">{card.role}</span>
-                    </div>
-                    <div className="p-3 space-y-2">
-                      <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <label className="block text-[10px] font-semibold text-slate-400 mb-0.5">작은 글씨 (부제)</label>
-                          <input type="text" value={pSub} onChange={e => updateField('subtitle', e.target.value)}
-                            className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-pink-500/20" />
-                        </div>
-                        <div>
-                          <label className="block text-[10px] font-semibold text-slate-400 mb-0.5">큰 제목 (메인)</label>
-                          <input type="text" value={pMain} onChange={e => updateField('mainTitle', e.target.value)}
-                            className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-sm font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-pink-500/20" />
-                        </div>
-                      </div>
-                      <div>
-                        <label className="block text-[10px] font-semibold text-slate-400 mb-0.5">설명 문구 (선택)</label>
-                        <input type="text" value={pDesc} onChange={e => updateField('description', e.target.value)} placeholder="없으면 비워두세요"
-                          className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-pink-500/20" />
-                      </div>
-                      <div>
-                        <label className="block text-[10px] font-semibold text-amber-600 mb-0.5">배경 이미지 묘사</label>
-                        <input type="text" value={pVisual} onChange={e => updateField('visual', e.target.value)}
-                          className="w-full px-2.5 py-1.5 bg-amber-50 border border-amber-200 rounded-lg text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-500/20" />
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="flex gap-2">
-              <button onClick={() => setPipelineStep('scriptReview')}
-                className="px-4 py-3 bg-slate-100 text-slate-600 font-semibold rounded-xl hover:bg-slate-200 transition-all text-sm">
-                ← 원고 수정
-              </button>
-              <button onClick={handleGenerateImages} disabled={isGeneratingImages}
-                className="flex-1 py-3.5 bg-pink-600 text-white font-bold rounded-xl hover:bg-pink-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-pink-500/20 disabled:opacity-50">
-                🎨 이미지 생성하기 ({cards.length}장)
-              </button>
+      {/* ══════════════════════════════════════ */}
+      {/* 2단계: 디자인 설정(접기) + 카드 편집      */}
+      {/* ══════════════════════════════════════ */}
+      {pageStep === 2 && (
+        <div>
+          {/* 상단 바 */}
+          <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-200">
+            <div className="flex items-center gap-3">
+              <button type="button" onClick={() => setPageStep(1)}
+                className="px-3 py-1.5 text-xs font-semibold text-slate-500 bg-slate-100 rounded-lg hover:bg-slate-200">← 새로 만들기</button>
+              <h2 className="text-sm font-bold text-slate-700 truncate max-w-xs">{topic}</h2>
+              <span className="text-[10px] text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">{proSlides.length}장 · {proCardRatio}</span>
             </div>
           </div>
-        ) : learnedTemplate && cards.length > 0 && pipelineStep === 'idle' ? (
-          <CardNewsRenderer
-            slides={cards.map(c => ({
-              index: c.index,
-              role: c.role,
-              subtitle: c.role,
-              title: c.title,
-              description: c.body,
-              visual: '',
-            }))}
-            template={learnedTemplate}
-            onSlidesChange={(updated) => {
-              setCards(prev => prev.map((c, i) => ({
-                ...c,
-                role: updated[i]?.subtitle || c.role,
-                title: updated[i]?.title || c.title,
-                body: updated[i]?.description || c.body,
-              })));
-            }}
-            hospitalName={hospitalName}
-          />
-        ) : cards.length > 0 ? (
-          <div className="space-y-4">
-            {/* 헤더 */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-slate-700">카드뉴스 · {cards.length}장</span>
-                {saveStatus && <span className="text-[10px] text-green-600 bg-green-50 px-2 py-0.5 rounded-full">{saveStatus}</span>}
-              </div>
+
+          {/* 로딩 */}
+          {(isGenerating || isGeneratingPrompts || isGeneratingImages) && (
+            <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center mb-4">
+              <div className="w-12 h-12 border-[3px] border-blue-100 border-t-blue-500 rounded-full animate-spin mx-auto mb-4" />
+              <p className="text-sm font-medium text-slate-700">{progress || '생성 중...'}</p>
             </div>
+          )}
 
-            {/* 카드 그리드 */}
-            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-              {cards.map(card => (
-                <div key={card.index} className="group relative bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-                  {/* 카드 번호 배지 */}
-                  <div className="absolute top-2 left-2 z-10 w-6 h-6 rounded-full bg-black/60 text-white text-[10px] font-bold flex items-center justify-center">
-                    {card.index}
-                  </div>
+          {error && <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600 mb-4">{error}</div>}
 
-                  {/* 이미지 */}
-                  <div className="aspect-square bg-slate-100 relative">
-                    {card.imageUrl ? (
-                      <img src={card.imageUrl} alt={`카드 ${card.index}`} className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-slate-300">
-                        <svg className="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0022.5 18.75V5.25A2.25 2.25 0 0020.25 3H3.75A2.25 2.25 0 001.5 5.25v13.5A2.25 2.25 0 003.75 21z" /></svg>
-                      </div>
-                    )}
-
-                    {/* 재생성 중 오버레이 */}
-                    {regeneratingCard === card.index && (
-                      <div className="absolute inset-0 bg-white/70 flex items-center justify-center">
-                        <div className="w-8 h-8 border-3 border-pink-200 border-t-pink-500 rounded-full animate-spin" />
-                      </div>
-                    )}
-
-                    {/* 호버 액션 버튼 */}
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
-                      <button onClick={() => openCardRegenModal(card.index)} disabled={regeneratingCard !== null}
-                        className="px-3 py-1.5 bg-white rounded-lg text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors shadow-lg"
-                      >🔄 재생성</button>
-                      {card.imageUrl && (
-                        <button onClick={() => handleCardDownload(card)}
-                          className="px-3 py-1.5 bg-white rounded-lg text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors shadow-lg"
-                        >💾 저장</button>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* 이전 버전 히스토리 */}
-                  {card.imageHistory.length > 1 && (
-                    <div className="px-2 py-1.5 bg-slate-50 border-t border-slate-100">
-                      <div className="text-[9px] text-slate-400 mb-1">이전 버전 ({card.imageHistory.length - 1}개)</div>
-                      <div className="flex gap-1 overflow-x-auto pb-0.5">
-                        {card.imageHistory.slice(0, -1).reverse().map((h, hi) => (
-                          <button key={hi} type="button" title="클릭하여 이 버전으로 되돌리기"
-                            onClick={() => setCards(prev => prev.map(c => {
-                              if (c.index !== card.index) return c;
-                              const updated = [...c.imageHistory];
-                              if (c.imageUrl) updated.push({ url: c.imageUrl, prompt: c.imagePrompt, createdAt: Date.now() });
-                              const target = card.imageHistory.slice(0, -1).reverse()[hi];
-                              const idx = updated.findIndex(u => u.url === target.url);
-                              if (idx >= 0) updated.splice(idx, 1);
-                              while (updated.length > 5) updated.shift();
-                              return { ...c, imageUrl: target.url, imagePrompt: target.prompt, imageHistory: updated };
-                            }))}
-                            className="flex-shrink-0 w-10 h-10 rounded border border-slate-200 overflow-hidden hover:ring-2 hover:ring-blue-400 transition-all">
-                            <img src={h.url} alt={`v${hi + 1}`} className="w-full h-full object-cover" />
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* 텍스트 */}
-                  <div className="px-3 pt-3 pb-2">
-                    <p className="text-[10px] text-pink-500 font-semibold mb-0.5">{card.role}</p>
-                    <p className="text-xs font-bold text-slate-800 mb-1 line-clamp-2">{card.title}</p>
-                    {card.body && <p className="text-[11px] text-slate-500 line-clamp-3">{card.body}</p>}
-                  </div>
-
-                  {/* 상시 표시되는 액션 버튼 */}
-                  <div className="px-3 pb-3 flex gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => openCardRegenModal(card.index)}
-                      disabled={regeneratingCard !== null}
-                      className="flex-1 py-1.5 bg-pink-50 text-pink-600 text-[10px] font-bold rounded-lg hover:bg-pink-100 transition-colors disabled:opacity-40"
-                    >
-                      ✏️ 수정/재생성
+          {/* 디자인 설정 (접기) */}
+          <details className="mb-4 bg-slate-50 rounded-xl border border-slate-200">
+            <summary className="px-4 py-3 text-sm font-bold text-slate-600 cursor-pointer hover:text-slate-800">
+              🎨 디자인 설정 (테마 · 글씨체 · 병원명)
+            </summary>
+            <div className="px-4 pb-4 pt-2 space-y-4 border-t border-slate-200">
+              {/* 디자인 프리셋 */}
+              <div>
+                <label className={labelCls}>디자인 스타일</label>
+                <div className="flex gap-2 overflow-x-auto pb-2">
+                  <button type="button" onClick={() => setShowStyleUpload(v => !v)}
+                    className={`flex-shrink-0 w-16 h-16 rounded-xl border-2 border-dashed transition-all overflow-hidden flex flex-col items-center justify-center gap-0.5 ${showStyleUpload ? 'border-pink-500 bg-pink-50 text-pink-700' : 'border-slate-300 bg-white text-slate-400'}`}>
+                    <span className="text-xl leading-none">＋</span>
+                    <span className="text-[8px] font-semibold leading-tight text-center px-0.5">새 스타일{'\n'}학습</span>
+                  </button>
+                  {(['all', 'professional', 'modern', 'minimal', 'warm', 'bold'] as const).map(cat => (
+                    <button key={cat} type="button" onClick={() => setPresetCategory(cat)}
+                      className={`flex-shrink-0 px-3 py-1 text-[9px] font-bold rounded-full whitespace-nowrap ${presetCategory === cat ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-500'}`}>
+                      {cat === 'all' ? '전체' : cat === 'professional' ? '전문적' : cat === 'modern' ? '모던' : cat === 'minimal' ? '미니멀' : cat === 'warm' ? '따뜻한' : '강렬한'}
                     </button>
-                    {card.imageUrl && (
-                      <button
-                        type="button"
-                        onClick={() => handleCardDownload(card)}
-                        className="px-3 py-1.5 bg-slate-50 text-slate-500 text-[10px] font-bold rounded-lg hover:bg-slate-100 transition-colors"
-                        title="PNG 다운로드"
-                      >
-                        💾
-                      </button>
-                    )}
-                  </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          </div>
-        ) : (
-          /* EmptyState */
-          <div className="rounded-2xl border border-slate-200 bg-white shadow-[0_2px_16px_rgba(0,0,0,0.06)] flex-1 min-h-[520px] overflow-hidden flex flex-col">
-            <div className="flex items-center gap-1 px-4 py-2.5 border-b border-slate-100 bg-slate-50/80">
-              {[4, 5, 6, 7].map(n => (
-                <div key={n} className="w-7 h-7 rounded flex items-center justify-center text-xs font-bold text-slate-300">{n}</div>
-              ))}
-              <div className="w-px h-4 mx-1 bg-slate-200" />
-              <div className="text-[10px] text-slate-300 font-medium">slides</div>
-            </div>
-            <div className="flex-1 flex flex-col items-center justify-center px-12 py-16 select-none">
-              <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-6 bg-gradient-to-br from-pink-50 to-rose-50 border border-pink-100">
-                <svg className="w-7 h-7 text-pink-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0022.5 18.75V5.25A2.25 2.25 0 0020.25 3H3.75A2.25 2.25 0 001.5 5.25v13.5A2.25 2.25 0 003.75 21z" />
-                </svg>
-              </div>
-              <div className="max-w-sm text-center">
-                <h2 className="text-3xl font-black tracking-tight leading-tight mb-3 text-slate-800">
-                  AI가 만드는<br /><span className="text-pink-600">카드뉴스</span>
-                </h2>
-                <p className="text-sm leading-relaxed text-slate-400">주제 하나로 슬라이드별 원고 + 이미지를<br />자동 생성합니다</p>
-              </div>
-              <div className="mt-8 flex flex-col items-center gap-2">
-                {['슬라이드별 역할 자동 배분', '카드별 이미지 자동 생성', '3초 임팩트 카피라이팅', '의료광고법 준수'].map(text => (
-                  <div key={text} className="flex items-center gap-3 px-4 py-2 rounded-lg text-xs text-slate-400">
-                    <span className="text-[10px] text-pink-400">✦</span>{text}
+                <div className="grid grid-cols-5 sm:grid-cols-8 gap-2 mt-2">
+                  {DESIGN_PRESETS.filter(p => presetCategory === 'all' || p.category === presetCategory).map(preset => (
+                    <button key={preset.id} type="button"
+                      onClick={() => { setProTheme({ ...preset.theme, hospitalName: hospitalName || undefined }); setPresetStyle(preset.style); setCurrentPresetId(preset.id); setLearnedTemplate(null); }}
+                      className={`relative rounded-xl overflow-hidden aspect-square border-2 transition-all ${currentPresetId === preset.id ? 'border-blue-500 ring-2 ring-blue-200' : 'border-slate-200'}`}>
+                      <div style={{ background: preset.thumbnail, width: '100%', height: '100%' }} className="flex items-center justify-center">
+                        <span className="text-[11px] font-black" style={{ color: preset.theme.titleColor }}>Aa</span>
+                      </div>
+                      <div className="absolute bottom-0 left-0 right-0 bg-black/50 px-1 py-0.5"><span className="text-[7px] text-white font-bold">{preset.name}</span></div>
+                    </button>
+                  ))}
+                </div>
+                {/* 학습 템플릿 */}
+                <div className="flex gap-2 overflow-x-auto pb-2 mt-2">
+                  {savedStyles.map(tmpl => (
+                    <div key={tmpl.id} className="relative flex-shrink-0">
+                      <button type="button" onClick={() => { setLearnedTemplate(tmpl); setProTheme(prev => ({ ...prev, backgroundColor: tmpl.colors.background, backgroundGradient: tmpl.colors.backgroundGradient || '', titleColor: tmpl.colors.titleColor, subtitleColor: tmpl.colors.subtitleColor, bodyColor: tmpl.colors.bodyColor, accentColor: tmpl.colors.accentColor, fontFamily: tmpl.typography.fontFamily || prev.fontFamily })); }}
+                        className={`w-16 h-16 rounded-xl border-2 transition-all overflow-hidden ${learnedTemplate?.id === tmpl.id ? 'border-pink-500 ring-2 ring-pink-200' : 'border-slate-200'}`} title={tmpl.name}>
+                        {tmpl.thumbnailDataUrl ? <img src={tmpl.thumbnailDataUrl} alt={tmpl.name} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-[9px] text-slate-400 p-1 text-center">{tmpl.name}</div>}
+                      </button>
+                      <button type="button" onClick={(e) => { e.stopPropagation(); deleteTemplate(tmpl.id); if (learnedTemplate?.id === tmpl.id) setLearnedTemplate(null); setSavedStylesVersion(v => v + 1); }}
+                        className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full text-[8px] font-bold flex items-center justify-center hover:bg-red-600 shadow-sm">✕</button>
+                    </div>
+                  ))}
+                </div>
+                {showStyleUpload && (
+                  <div className="mt-2">
+                    <CardTemplateManager uploadOnly onSelectTemplate={(tmpl) => { setLearnedTemplate(tmpl); setSavedStylesVersion(v => v + 1); }} selectedTemplateId={learnedTemplate?.id} />
                   </div>
-                ))}
+                )}
               </div>
-              <div className="mt-8 inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold bg-pink-50 text-pink-500 border border-pink-100">
-                <div className="w-1.5 h-1.5 bg-pink-500 rounded-full animate-pulse" />AI 대기 중
+
+              {/* 병원명 */}
+              <div>
+                <label className={labelCls}>병원명</label>
+                <input type="text" value={hospitalName} onChange={e => setHospitalName(e.target.value)} placeholder="병원 이름 (선택)" className={inputCls} />
+              </div>
+
+              {/* 병원 로고 */}
+              <div>
+                <label className={labelCls}>병원 로고</label>
+                <div className="flex items-center gap-3">
+                  {logoDataUrl ? (
+                    <div className="relative">
+                      <img src={logoDataUrl} alt="로고" className="h-10 w-auto rounded-lg border border-slate-200 bg-white p-1" />
+                      <button type="button" onClick={() => { setLogoDataUrl(null); setLogoEnabled(false); try { localStorage.removeItem('hospital-logo-dataurl'); } catch {} }}
+                        className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white rounded-full text-[8px] flex items-center justify-center">✕</button>
+                    </div>
+                  ) : (
+                    <button type="button" onClick={() => logoInputRef.current?.click()}
+                      className="h-10 px-4 border-2 border-dashed border-slate-200 rounded-lg text-xs text-slate-400 hover:border-pink-400 hover:text-pink-500">+ 로고 업로드</button>
+                  )}
+                  <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={e => {
+                    const file = e.target.files?.[0]; if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = () => { const d = reader.result as string; setLogoDataUrl(d); setLogoEnabled(true); try { localStorage.setItem('hospital-logo-dataurl', d); } catch {} };
+                    reader.readAsDataURL(file); e.target.value = '';
+                  }} />
+                  {logoDataUrl && (
+                    <label className="flex items-center gap-1.5 cursor-pointer">
+                      <input type="checkbox" checked={logoEnabled} onChange={e => setLogoEnabled(e.target.checked)} className="w-3.5 h-3.5 rounded border-slate-300 text-pink-500" />
+                      <span className="text-[11px] text-slate-500">카드에 로고 넣기</span>
+                    </label>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-        )}
-      </div>
+          </details>
 
-      {/* ── 카드 재생성 모달 ── */}
+          {/* 카드 편집 */}
+          {proSlides.length > 0 && (
+            <CardNewsProRenderer
+              slides={proSlides}
+              theme={proTheme}
+              onSlidesChange={setProSlides}
+              onThemeChange={setProTheme}
+              learnedTemplate={learnedTemplate}
+              cardRatio={proCardRatio}
+              presetStyle={presetStyle}
+            />
+          )}
+        </div>
+      )}
+
+      {/* 모달 */}
       <CardRegenModal
         open={cardRegenModalOpen}
         onClose={() => setCardRegenModalOpen(false)}
