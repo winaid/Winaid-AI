@@ -309,9 +309,9 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           prompt: fullPrompt,
-          aspectRatio: slide.imagePosition === 'background'
+          aspectRatio: slide.imageRatio || (slide.imagePosition === 'background'
             ? (cardRatio === '3:4' ? '3:4' : '1:1')
-            : (cardRatio === '3:4' ? '3:4' : '16:9'),
+            : (cardRatio === '3:4' ? '3:4' : '16:9')),
           // 'card_news'는 카드뉴스 프레임까지 생성하므로 우리 HTML과 겹침. 'blog'는 순수 이미지.
           mode: 'blog',
           imageStyle: 'illustration',
@@ -2699,6 +2699,23 @@ ${JSON.stringify(slideForContext, null, 2)}
                 {style.name}
               </button>
             ))}
+          </div>
+          {/* 이미지 비율 선택 */}
+          <div>
+            <label className="text-[10px] font-semibold text-slate-500 mb-1 block">이미지 비율</label>
+            <div className="flex gap-1">
+              {(['1:1', '4:5', '9:16', '16:9', '3:4'] as const).map(ratio => (
+                <button key={ratio} type="button"
+                  onClick={() => onChange({ imageRatio: ratio })}
+                  className={`flex-1 py-1.5 text-[10px] font-bold rounded-lg transition-all ${
+                    (slide.imageRatio || '1:1') === ratio
+                      ? 'bg-purple-500 text-white'
+                      : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                  }`}>
+                  {ratio}
+                </button>
+              ))}
+            </div>
           </div>
           {/* AI 생성 버튼 */}
           <button type="button" onClick={onGenerateImage} disabled={generatingImage}
