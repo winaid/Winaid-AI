@@ -980,7 +980,7 @@ DECORATIVE: (장식 요소)`,
     <div className="p-5 max-w-6xl mx-auto">
 
       {/* ══════ 상단 3탭 ══════ */}
-      <div className="flex gap-0 border-b border-slate-200 mb-8">
+      <div className="flex gap-0 border-b border-slate-200 mb-8 justify-center">
         <button type="button" onClick={() => setMainTab('create')}
           className={`px-5 py-3 text-left text-sm font-bold border-b-2 transition-all ${mainTab === 'create' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>
           ✨ 카드뉴스 생성
