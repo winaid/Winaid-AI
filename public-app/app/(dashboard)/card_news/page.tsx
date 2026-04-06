@@ -12,7 +12,7 @@ import { CardRegenModal, type CardPromptHistoryItem, CARD_PROMPT_HISTORY_KEY, CA
 import CardTemplateManager from '../../../components/CardTemplateManager';
 import CardNewsRenderer from '../../../components/CardNewsRenderer';
 import CardNewsProRenderer from '../../../components/CardNewsProRenderer';
-import { DEFAULT_THEME, THEME_PRESETS, DESIGN_PRESETS, type DesignPreset, type DesignPresetStyle, parseProSlidesJson, type SlideData as ProSlideData, type CardNewsTheme } from '../../../lib/cardNewsLayouts';
+import { DEFAULT_THEME, THEME_PRESETS, DESIGN_PRESETS, COVER_TEMPLATES, type DesignPreset, type DesignPresetStyle, parseProSlidesJson, type SlideData as ProSlideData, type CardNewsTheme } from '../../../lib/cardNewsLayouts';
 import { getSavedTemplates, deleteTemplate, type CardTemplate } from '../../../lib/cardTemplateService';
 import { ContentCategory } from '../../../lib/types';
 import type { WritingStyle, CardNewsDesignTemplateId, TrendingItem, AudienceMode } from '../../../lib/types';
@@ -89,6 +89,10 @@ export default function CardNewsPage() {
 
   // ── 생성 상태 ──
   const [pageStep, setPageStep] = useState<1 | 2>(1);
+  const [showDesignModal, setShowDesignModal] = useState(false);
+  const [designPreviews, setDesignPreviews] = useState<{ id: string; imageUrl: string; templateId: string }[]>([]);
+  const [selectedPreviewIdx, setSelectedPreviewIdx] = useState(0);
+  const [loadingPreviews, setLoadingPreviews] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isGeneratingPrompts, setIsGeneratingPrompts] = useState(false);
   const [isGeneratingImages, setIsGeneratingImages] = useState(false);
@@ -210,6 +214,52 @@ export default function CardNewsPage() {
 
   // ── Step 1: 원고 생성 ──
   /** 커버/마무리 슬라이드에 Pexels 배경 자동 적용 */
+  /** Pexels 배경 검색 키워드 매핑 */
+  const getPexelsQuery = () => {
+    const kwMap: Record<string, string> = {
+      '임플란트': 'dental implant clinic', '치아': 'dental care smile', '교정': 'orthodontics braces',
+      '피부': 'skincare dermatology', '보톡스': 'beauty clinic', '정형': 'orthopedic clinic',
+      '병원': 'modern hospital', '스케일링': 'dental hygiene', '건강': 'health wellness',
+    };
+    let query = 'medical clinic professional';
+    for (const [kr, en] of Object.entries(kwMap)) {
+      if (topic.includes(kr)) { query = en; break; }
+    }
+    return query;
+  };
+
+  /** 추천 디자인 모달 열기 — Pexels 이미지 × 커버 템플릿 조합 */
+  const openDesignModal = async () => {
+    setShowDesignModal(true);
+    setLoadingPreviews(true);
+    setSelectedPreviewIdx(0);
+    try {
+      const orientation = proCardRatio === '1:1' ? 'square' : 'portrait';
+      const res = await fetch(`/api/pexels?query=${encodeURIComponent(getPexelsQuery())}&orientation=${orientation}&per_page=15&page=${Math.floor(Math.random() * 3) + 1}`);
+      const data = await res.json();
+      const photos = data.photos || [];
+      setDesignPreviews(COVER_TEMPLATES.map((tmpl, i) => ({
+        id: `preview-${i}`,
+        imageUrl: photos[i % Math.max(photos.length, 1)]?.url || '',
+        templateId: tmpl.id,
+      })));
+    } catch { /* ignore */ }
+    setLoadingPreviews(false);
+  };
+
+  /** 모달에서 이미지 새로고침 */
+  const refreshDesignImages = async () => {
+    setLoadingPreviews(true);
+    try {
+      const orientation = proCardRatio === '1:1' ? 'square' : 'portrait';
+      const res = await fetch(`/api/pexels?query=${encodeURIComponent(getPexelsQuery())}&orientation=${orientation}&per_page=15&page=${Math.floor(Math.random() * 10) + 1}`);
+      const data = await res.json();
+      const photos = data.photos || [];
+      setDesignPreviews(prev => prev.map((p, i) => ({ ...p, imageUrl: photos[i % Math.max(photos.length, 1)]?.url || p.imageUrl })));
+    } catch { /* ignore */ }
+    setLoadingPreviews(false);
+  };
+
   const autoApplyBackgrounds = async (slides: ProSlideData[]): Promise<ProSlideData[]> => {
     const coverSlides = slides.filter(s => s.layout === 'cover' || s.layout === 'closing');
     if (coverSlides.length === 0) return slides;
@@ -1001,8 +1051,8 @@ DECORATIVE: (장식 요소)`,
               </div>
             </div>
 
-            {/* 생성 버튼 */}
-            <button type="button" onClick={handleSubmit as any} disabled={isGenerating || !topic.trim()}
+            {/* 생성 버튼 → 디자인 모달 */}
+            <button type="button" onClick={openDesignModal} disabled={isGenerating || !topic.trim()}
               className="w-full py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white text-lg font-bold rounded-2xl hover:from-blue-700 hover:to-blue-800 disabled:opacity-50 shadow-lg shadow-blue-200 transition-all">
               {isGenerating ? '✨ 생성 중...' : '✨ 카드뉴스 생성'}
             </button>
@@ -1198,6 +1248,97 @@ DECORATIVE: (장식 요소)`,
               presetStyle={presetStyle}
             />
           )}
+        </div>
+      )}
+
+      {/* ── 추천 디자인 모달 ── */}
+      {showDesignModal && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setShowDesignModal(false)}>
+          <div className="bg-white rounded-3xl max-w-5xl w-full max-h-[90vh] overflow-hidden" onClick={e => e.stopPropagation()}>
+            {/* 헤더 */}
+            <div className="px-8 py-6 border-b border-slate-100">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-bold text-slate-800">✨ 디자인을 선택하���요</h2>
+                  <p className="text-sm text-slate-500 mt-1">&ldquo;{topic}&rdquo; — 마음에 드는 스타일을 골라주세요</p>
+                </div>
+                <div className="flex gap-2">
+                  <button type="button" onClick={refreshDesignImages} disabled={loadingPreviews}
+                    className="px-4 py-2 text-sm font-semibold text-slate-500 bg-slate-100 rounded-lg hover:bg-slate-200 disabled:opacity-50">
+                    🔄 다른 이미지
+                  </button>
+                  <button type="button" onClick={() => setShowDesignModal(false)}
+                    className="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100">✕</button>
+                </div>
+              </div>
+            </div>
+
+            {/* 프리뷰 그리드 */}
+            <div className="px-8 py-6 overflow-y-auto max-h-[60vh]">
+              {loadingPreviews ? (
+                <div className="text-center py-20 text-slate-400">
+                  <div className="text-4xl mb-3">🎨</div>
+                  <p>추천 디자인을 준비하고 있어요...</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-3 lg:grid-cols-5 gap-4">
+                  {designPreviews.map((preview, i) => {
+                    const tmpl = COVER_TEMPLATES.find(t => t.id === preview.templateId);
+                    return (
+                      <button key={preview.id} type="button" onClick={() => setSelectedPreviewIdx(i)}
+                        className={`relative rounded-2xl overflow-hidden border-3 transition-all ${
+                          proCardRatio === '3:4' ? 'aspect-[3/4]' : proCardRatio === '4:5' ? 'aspect-[4/5]' : 'aspect-square'
+                        } ${selectedPreviewIdx === i ? 'border-blue-500 ring-4 ring-blue-100 scale-[1.02]' : 'border-transparent hover:border-slate-300 hover:shadow-xl'}`}>
+                        {preview.imageUrl && <img src={preview.imageUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />}
+                        <div className="absolute inset-0" style={{ background: tmpl?.background.overlayGradient || tmpl?.background.overlayColor || 'linear-gradient(180deg, transparent 20%, rgba(0,0,0,0.7) 100%)' }} />
+                        <div className="absolute inset-0 flex flex-col p-5" style={{
+                          justifyContent: tmpl?.layout.titlePosition === 'center' ? 'center' : tmpl?.layout.titlePosition?.includes('top') ? 'flex-start' : 'flex-end',
+                          alignItems: tmpl?.layout.titlePosition?.includes('left') ? 'flex-start' : 'center',
+                          textAlign: (tmpl?.layout.titlePosition?.includes('left') ? 'left' : 'center') as 'left' | 'center',
+                        }}>
+                          <div style={{ width: '30px', height: '3px', background: '#fff', borderRadius: '2px', marginBottom: '10px', opacity: 0.7 }} />
+                          <div style={{ color: '#fff', fontSize: '14px', fontWeight: 900, lineHeight: 1.3, wordBreak: 'keep-all', textShadow: '0 2px 8px rgba(0,0,0,0.5)' }}>
+                            {topic.length > 15 ? topic.slice(0, 15) + '…' : topic}
+                          </div>
+                          <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: '9px', marginTop: '6px' }}>카드뉴스</div>
+                        </div>
+                        {selectedPreviewIdx === i && (
+                          <div className="absolute top-2 right-2 w-7 h-7 bg-blue-500 rounded-full flex items-center justify-center shadow-lg"><span className="text-white text-xs font-bold">✓</span></div>
+                        )}
+                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent px-3 py-1.5">
+                          <span className="text-[9px] text-white/80 font-semibold">{tmpl?.name || ''}</span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* 하단 */}
+            <div className="px-8 py-5 border-t border-slate-100 bg-slate-50 flex items-center justify-between">
+              <button type="button" onClick={() => setShowDesignModal(false)} className="px-6 py-2.5 text-sm font-semibold text-slate-500">취소</button>
+              <button type="button" disabled={loadingPreviews || isGenerating}
+                onClick={async () => {
+                  const selected = designPreviews[selectedPreviewIdx];
+                  setShowDesignModal(false);
+                  // 선택한 템플릿 + 이미지를 저장해두고 생성
+                  const coverBgUrl = selected?.imageUrl || '';
+                  const coverTmplId = selected?.templateId || '';
+                  await (handleSubmit as any)(new Event('submit'));
+                  // 생성 후 커버/마무리에 선택한 디자인 적용
+                  setProSlides(prev => prev.map(s => {
+                    if ((s.layout === 'cover' || s.layout === 'closing') && coverBgUrl) {
+                      return { ...s, coverTemplateId: coverTmplId, imageUrl: coverBgUrl, imagePosition: 'background' as const };
+                    }
+                    return s;
+                  }));
+                }}
+                className="px-8 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white text-sm font-bold rounded-xl shadow-lg disabled:opacity-50">
+                {isGenerating ? '생성 중...' : '✨ 이 디자인으로 생성하기'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
