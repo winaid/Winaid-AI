@@ -2260,6 +2260,59 @@ function SlideEditor({
   const [cardChatInput, setCardChatInput] = useState('');
   const [cardChatLoading, setCardChatLoading] = useState(false);
 
+  // 이미지 소스 4탭
+  const [imageTab, setImageTab] = useState<'pexels' | 'google' | 'pinterest' | 'ai'>('pexels');
+  const [imageSearchQuery, setImageSearchQuery] = useState('');
+  const [imageSearchResults, setImageSearchResults] = useState<{ id: string; url: string; thumb: string; alt: string; source: string; photographer?: string }[]>([]);
+  const [imageSearchLoading, setImageSearchLoading] = useState(false);
+
+  // 탭 전환 시 자동 키워드 채우기
+  useEffect(() => {
+    if (imageTab !== 'ai' && slide?.title && !imageSearchQuery) {
+      const keywords: Record<string, string> = {
+        '임플란트': 'dental implant', '치아': 'teeth dental', '교정': 'orthodontics',
+        '스케일링': 'dental cleaning', '충치': 'cavity', '잇몸': 'gum disease',
+        '피부': 'skin care', '보톡스': 'botox', '레이저': 'laser treatment',
+        '정형외과': 'orthopedic', '관절': 'joint', '척추': 'spine',
+        '병원': 'hospital clinic', '의사': 'doctor physician',
+      };
+      let autoQuery = imageTab === 'pexels' ? 'dental clinic' : '치과';
+      for (const [kr, en] of Object.entries(keywords)) {
+        if (slide.title.includes(kr)) {
+          autoQuery = imageTab === 'pexels' ? en : kr;
+          break;
+        }
+      }
+      setImageSearchQuery(autoQuery);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [imageTab]);
+
+  const handleImageSearch = async () => {
+    if (!imageSearchQuery.trim()) return;
+    setImageSearchLoading(true);
+    try {
+      let endpoint = '';
+      const orientation = 'landscape'; // 카드뉴스용
+      if (imageTab === 'pexels') {
+        endpoint = `/api/pexels?query=${encodeURIComponent(imageSearchQuery)}&orientation=${orientation}&per_page=12`;
+      } else if (imageTab === 'google') {
+        endpoint = `/api/google-images?query=${encodeURIComponent(imageSearchQuery)}`;
+      } else if (imageTab === 'pinterest') {
+        endpoint = `/api/pinterest-images?query=${encodeURIComponent(imageSearchQuery)}`;
+      }
+      const res = await fetch(endpoint);
+      const data = await res.json();
+      setImageSearchResults(data.photos || []);
+    } catch { /* ignore */ }
+    setImageSearchLoading(false);
+  };
+
+  const handleSelectSearchImage = (photo: { url: string }) => {
+    onChange({ imageUrl: photo.url });
+    setImageSearchResults([]);
+  };
+
   const handleCardChatSend = async () => {
     const userMsg = cardChatInput.trim();
     if (!userMsg || cardChatLoading) return;
@@ -2522,121 +2575,149 @@ ${JSON.stringify(slideForContext, null, 2)}
     </>
   );
 
-  // ── 슬라이드 이미지 섹션 (이미지 유무와 무관하게 모든 UI 상시 노출) ──
+  // ── 슬라이드 이미지 섹션 (4탭: Pexels / Google / Pinterest / AI 생성) ──
   const hasImage = !!slide.imageUrl;
   const imageSection = (
     <div className="pt-2 mt-2 border-t border-slate-200 space-y-2">
       <label className="text-[10px] font-semibold text-slate-500">슬라이드 이미지</label>
 
-      {/* 이미지가 있을 때만 프리뷰 + 삭제 */}
+      {/* 이미지 프리뷰 + 삭제 */}
       {hasImage && (
         <div className="relative">
           <img src={slide.imageUrl} alt="" className="w-full h-32 object-contain bg-slate-100 rounded-lg border border-slate-200" />
-          <button
-            type="button"
-            onClick={() => onChange({ imageUrl: undefined })}
-            className="absolute top-1 right-1 px-2 py-0.5 bg-red-500 text-white text-[9px] font-bold rounded-md shadow hover:bg-red-600"
-          >
+          <button type="button" onClick={() => onChange({ imageUrl: undefined })}
+            className="absolute top-1 right-1 px-2 py-0.5 bg-red-500 text-white text-[9px] font-bold rounded-md shadow hover:bg-red-600">
             삭제
           </button>
         </div>
       )}
 
-      {/* 이미지 위치 — 항상 표시 (이미지 생성 전에도 미리 선택 가능) */}
+      {/* 이미지 위치 */}
       <div>
         <label className="text-[10px] font-semibold text-slate-500 mb-1 block">이미지 위치</label>
         <div className="grid grid-cols-4 gap-1">
           {(['top', 'bottom', 'background', 'center'] as const).map((pos) => (
-            <button
-              key={pos}
-              type="button"
+            <button key={pos} type="button"
               onClick={() => onChange({ imagePosition: pos as SlideImagePosition })}
               className={`py-1.5 text-[10px] font-bold rounded-lg transition-colors ${
-                (slide.imagePosition || 'top') === pos
-                  ? 'bg-blue-500 text-white'
-                  : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
-              }`}
-            >
+                (slide.imagePosition || 'top') === pos ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+              }`}>
               {pos === 'top' ? '상단' : pos === 'bottom' ? '하단' : pos === 'background' ? '배경' : '중앙'}
             </button>
           ))}
         </div>
       </div>
 
-      {/* 프롬프트 textarea + AI 추천 — 항상 표시 */}
-      <div>
-        <div className="flex items-center justify-between mb-1">
-          <span className="text-[10px] font-semibold text-slate-500">이미지 프롬프트 (영문)</span>
-          <button
-            type="button"
-            onClick={onSuggestImagePrompt}
-            disabled={aiSuggestingKey === `${slideIdx}:imgprompt`}
-            className="text-[9px] font-bold text-purple-600 hover:text-purple-700 disabled:opacity-50"
-          >
-            {aiSuggestingKey === `${slideIdx}:imgprompt` ? '추천 중...' : '✨ AI 추천'}
+      {/* ── 4탭 소스 선택 ── */}
+      <div className="flex gap-1">
+        {([
+          { id: 'pexels' as const, label: 'Pexels', icon: '📷' },
+          { id: 'google' as const, label: 'Google', icon: '🔍' },
+          { id: 'pinterest' as const, label: 'Pinterest', icon: '📌' },
+          { id: 'ai' as const, label: 'AI 생성', icon: '🎨' },
+        ]).map(tab => (
+          <button key={tab.id} type="button" onClick={() => { setImageTab(tab.id); setImageSearchResults([]); }}
+            className={`flex-1 py-1.5 text-[10px] font-bold rounded-lg transition-all ${
+              imageTab === tab.id ? 'bg-blue-500 text-white shadow-sm' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+            }`}>
+            {tab.icon} {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* ── 검색 탭 (Pexels / Google / Pinterest) ── */}
+      {imageTab !== 'ai' && (
+        <div className="space-y-2">
+          <div className="flex gap-2">
+            <input type="text" value={imageSearchQuery}
+              onChange={e => setImageSearchQuery(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleImageSearch()}
+              placeholder={imageTab === 'pexels' ? '영문 예: dental clinic, teeth' : '예: 치과 임플란트, 병원'}
+              className="flex-1 px-3 py-2 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-blue-400" />
+            <button type="button" onClick={handleImageSearch} disabled={imageSearchLoading}
+              className="px-4 py-2 bg-blue-500 text-white text-xs font-bold rounded-lg disabled:opacity-50 hover:bg-blue-600">
+              {imageSearchLoading ? '...' : '검색'}
+            </button>
+          </div>
+
+          {imageSearchResults.length > 0 && (
+            <>
+              <div className="grid grid-cols-3 gap-2 max-h-[280px] overflow-y-auto">
+                {imageSearchResults.map((photo) => (
+                  <button key={photo.id} type="button" onClick={() => handleSelectSearchImage(photo)}
+                    className="relative group rounded-lg overflow-hidden border border-slate-200 hover:border-blue-400 transition-all aspect-square">
+                    <img src={photo.thumb || photo.url} alt={photo.alt || ''}
+                      className="w-full h-full object-cover"
+                      onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all flex items-center justify-center">
+                      <span className="text-white text-[10px] font-bold opacity-0 group-hover:opacity-100">선택</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+              {imageTab === 'pexels' && (
+                <p className="text-[9px] text-slate-400 text-center">📷 Photos by <a href="https://www.pexels.com" target="_blank" rel="noreferrer" className="underline">Pexels</a> · 저작권 무료</p>
+              )}
+              {imageTab === 'google' && (
+                <p className="text-[9px] text-red-400 text-center">⚠️ Google 이미지는 저작권이 있을 수 있습니다. 상업용은 Pexels 추천</p>
+              )}
+              {imageTab === 'pinterest' && (
+                <p className="text-[9px] text-red-400 text-center">⚠️ Pinterest 이미지는 참고용으로만 사용하세요</p>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
+      {/* ── AI 생성 탭 ── */}
+      {imageTab === 'ai' && (
+        <div className="space-y-2">
+          {/* 프롬프트 */}
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[10px] font-semibold text-slate-500">이미지 프롬프트 (영문)</span>
+              <button type="button" onClick={onSuggestImagePrompt}
+                disabled={aiSuggestingKey === `${slideIdx}:imgprompt`}
+                className="text-[9px] font-bold text-purple-600 hover:text-purple-700 disabled:opacity-50">
+                {aiSuggestingKey === `${slideIdx}:imgprompt` ? '추천 중...' : '✨ AI 추천'}
+              </button>
+            </div>
+            <textarea value={slide.visualKeyword || ''} onChange={(e) => onChange({ visualKeyword: e.target.value })}
+              placeholder="예: dental implant titanium screws, 3D render, clean white background"
+              rows={2} className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg text-[11px] text-slate-700 resize-none focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-200" />
+          </div>
+          {/* 스타일 */}
+          <div className="flex gap-1 flex-wrap">
+            {SLIDE_IMAGE_STYLES.map((style) => (
+              <button key={style.id} type="button"
+                onClick={() => onChange({ imageStyle: style.id as SlideImageStyle })}
+                className={`px-2 py-1 text-[9px] rounded-lg border transition-all ${
+                  (slide.imageStyle || 'illustration') === style.id
+                    ? 'border-blue-400 bg-blue-50 text-blue-700 font-bold'
+                    : 'border-slate-200 text-slate-500 hover:border-slate-300'
+                }`}>
+                {style.name}
+              </button>
+            ))}
+          </div>
+          {/* AI 생성 버튼 */}
+          <button type="button" onClick={onGenerateImage} disabled={generatingImage}
+            className="w-full py-2 bg-blue-50 text-blue-600 text-[10px] font-bold rounded-lg border border-blue-200 hover:bg-blue-100 disabled:opacity-50">
+            {generatingImage ? (
+              <span className="flex items-center justify-center gap-1">
+                <span className="w-3 h-3 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />생성 중...
+              </span>
+            ) : hasImage ? '🔄 AI 이미지 재생성' : '🎨 AI 이미지 생성'}
           </button>
         </div>
-        <textarea
-          value={slide.visualKeyword || ''}
-          onChange={(e) => onChange({ visualKeyword: e.target.value })}
-          placeholder="예: dental implant titanium screws, 3D render, clean white background"
-          rows={2}
-          className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg text-[11px] text-slate-700 resize-none focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-200"
-        />
-      </div>
+      )}
 
-      {/* 이미지 스타일 6종 — 항상 표시 */}
-      <div className="flex gap-1 flex-wrap">
-        {SLIDE_IMAGE_STYLES.map((style) => {
-          const active = (slide.imageStyle || 'illustration') === style.id;
-          return (
-            <button
-              key={style.id}
-              type="button"
-              onClick={() => onChange({ imageStyle: style.id as SlideImageStyle })}
-              className={`px-2 py-1 text-[9px] rounded-lg border transition-all ${
-                active
-                  ? 'border-blue-400 bg-blue-50 text-blue-700 font-bold'
-                  : 'border-slate-200 text-slate-500 hover:border-slate-300'
-              }`}
-            >
-              {style.name}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* 생성(또는 재생성) + 업로드(또는 교체) — 항상 표시 */}
-      <div className="flex gap-2">
-        <button
-          type="button"
-          onClick={onGenerateImage}
-          disabled={generatingImage}
-          className="flex-1 py-2 bg-blue-50 text-blue-600 text-[10px] font-bold rounded-lg border border-blue-200 hover:bg-blue-100 disabled:opacity-50"
-        >
-          {generatingImage ? (
-            <span className="flex items-center justify-center gap-1">
-              <span className="w-3 h-3 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
-              생성 중...
-            </span>
-          ) : hasImage ? (
-            '🔄 AI 이미지 재생성'
-          ) : (
-            '🎨 AI 이미지 생성'
-          )}
-        </button>
-        <label className="flex-1 py-2 bg-slate-50 text-slate-600 text-[10px] font-bold rounded-lg border border-slate-200 hover:bg-slate-100 cursor-pointer text-center flex items-center justify-center">
+      {/* ── 직접 업로드 (항상 표시) ── */}
+      <div className="pt-2 border-t border-slate-100">
+        <label className="w-full py-2 bg-slate-50 text-slate-600 text-[10px] font-bold rounded-lg border border-slate-200 hover:bg-slate-100 cursor-pointer text-center flex items-center justify-center">
           {hasImage ? '📁 이미지 교체' : '📁 직접 업로드'}
-          <input
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) onUploadImage(file);
-              e.target.value = '';
-            }}
-          />
+          <input type="file" accept="image/*" className="hidden"
+            onChange={(e) => { const file = e.target.files?.[0]; if (file) onUploadImage(file); e.target.value = ''; }} />
         </label>
       </div>
     </div>
