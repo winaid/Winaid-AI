@@ -977,7 +977,7 @@ DECORATIVE: (장식 요소)`,
   };
 
   return (
-    <div className={`p-5 max-w-6xl mx-auto ${mainTab === 'create' && pageStep === 1 ? 'min-h-[calc(100vh-80px)] flex flex-col justify-center' : ''}`}>
+    <div className={`p-5 max-w-6xl mx-auto ${(mainTab === 'create' && pageStep === 1) || mainTab === 'learn' || mainTab === 'history' ? 'min-h-[calc(100vh-80px)] flex flex-col justify-center' : ''}`}>
 
       {/* ══════ 상단 탭 ══════ */}
       <div className="flex justify-center border-b border-slate-200 mb-4 flex-shrink-0">
