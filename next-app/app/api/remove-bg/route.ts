@@ -1,7 +1,5 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from 'next/server';
 
-// @ts-expect-error — Buffer is available in Node.js runtime
 const toBase64 = (buf: ArrayBuffer): string => Buffer.from(buf).toString('base64');
 
 export async function POST(req: NextRequest) {
