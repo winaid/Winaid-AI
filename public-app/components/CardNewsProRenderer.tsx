@@ -1116,7 +1116,14 @@ JSON 한 객체만 출력:
   const renderHospitalFooter = (slide?: SlideData) => {
     if (!theme.hospitalName && !theme.hospitalLogo) return null;
     return (
-      <div style={{ marginTop: 'auto', paddingTop: '24px', textAlign: 'center', position: 'relative', zIndex: 4, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+      <div style={{
+        ...(slide?.hospitalNamePosition ? {
+          position: 'absolute' as const, left: `${slide.hospitalNamePosition.x}%`, top: `${slide.hospitalNamePosition.y}%`,
+          transform: 'translate(-50%, -50%)', zIndex: 10,
+        } : { marginTop: 'auto', paddingTop: '24px' }),
+        textAlign: 'center', position: slide?.hospitalNamePosition ? 'absolute' as const : 'relative', zIndex: slide?.hospitalNamePosition ? 10 : 4,
+        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px',
+      }}>
         {theme.hospitalLogo && (
           <img src={theme.hospitalLogo} alt="" crossOrigin="anonymous" style={{ height: '28px', objectFit: 'contain' }} />
         )}
@@ -2425,33 +2432,45 @@ JSON 한 객체만 출력:
                         if (dist < closestDist) { closestDist = dist; closestDeco = d.id; }
                       });
 
-                      // 제목/부제 거리
-                      const titlePos = eSlide.titlePosition || { x: 50, y: 35 };
-                      const subPos = eSlide.subtitlePosition || { x: 50, y: 50 };
-                      const distTitle = Math.sqrt((clickX - titlePos.x) ** 2 + (clickY - titlePos.y) ** 2);
-                      const distSub = Math.sqrt((clickX - subPos.x) ** 2 + (clickY - subPos.y) ** 2);
+                      // 모든 드래그 대상 + 거리 계산
+                      const titlePos = eSlide.titlePosition || { x: 50, y: 30 };
+                      const subPos = eSlide.subtitlePosition || { x: 50, y: 45 };
+                      const imgPos = eSlide.imageFocalPoint || { x: 50, y: 50 };
+                      const hospPos = eSlide.hospitalNamePosition || { x: 50, y: 92 };
 
-                      let dragTarget: 'title' | 'subtitle' | 'deco' = 'title';
-                      let decoId = '';
-                      if (closestDist < 15 && closestDist < distTitle && closestDist < distSub) {
-                        dragTarget = 'deco'; decoId = closestDeco || '';
-                      } else if (distSub < distTitle) {
-                        dragTarget = 'subtitle';
+                      const targets = [
+                        { id: 'title', x: titlePos.x, y: titlePos.y },
+                        { id: 'subtitle', x: subPos.x, y: subPos.y },
+                        { id: 'image', x: imgPos.x, y: imgPos.y },
+                        { id: 'hospital', x: hospPos.x, y: hospPos.y },
+                      ];
+                      if (closestDeco && closestDist < 999) {
+                        targets.push({ id: `deco:${closestDeco}`, x: parseFloat((eSlide.decorations || []).find(d => d.id === closestDeco)?.position.left || '50'), y: parseFloat((eSlide.decorations || []).find(d => d.id === closestDeco)?.position.top || '50') });
                       }
 
+                      // 클릭 위치에서 가장 가까운 요소 선택
+                      let bestTarget = targets[0];
+                      let bestDist = 999;
+                      targets.forEach(t => {
+                        const d = Math.sqrt((clickX - t.x) ** 2 + (clickY - t.y) ** 2);
+                        if (d < bestDist) { bestDist = d; bestTarget = t; }
+                      });
+
                       const sx = e.clientX, sy = e.clientY;
-                      const startX = dragTarget === 'title' ? titlePos.x : dragTarget === 'subtitle' ? subPos.x : parseFloat((eSlide.decorations || []).find(d => d.id === decoId)?.position.left || '50');
-                      const startY = dragTarget === 'title' ? titlePos.y : dragTarget === 'subtitle' ? subPos.y : parseFloat((eSlide.decorations || []).find(d => d.id === decoId)?.position.top || '50');
+                      const startX = bestTarget.x, startY = bestTarget.y;
 
                       const onMove = (ev: MouseEvent) => {
                         const dx = ((ev.clientX - sx) / rect.width) * 100;
                         const dy = ((ev.clientY - sy) / rect.height) * 100;
                         const nx = Math.round(Math.max(2, Math.min(98, startX + dx)));
                         const ny = Math.round(Math.max(2, Math.min(98, startY + dy)));
-                        if (dragTarget === 'title') updateSlide(editingIdx, { titlePosition: { x: nx, y: ny } });
-                        else if (dragTarget === 'subtitle') updateSlide(editingIdx, { subtitlePosition: { x: nx, y: ny } });
-                        else if (dragTarget === 'deco' && decoId) {
-                          updateSlide(editingIdx, { decorations: (eSlide.decorations || []).map(d => d.id === decoId ? { ...d, position: { top: `${ny}%`, left: `${nx}%` } } : d) });
+                        if (bestTarget.id === 'title') updateSlide(editingIdx, { titlePosition: { x: nx, y: ny } });
+                        else if (bestTarget.id === 'subtitle') updateSlide(editingIdx, { subtitlePosition: { x: nx, y: ny } });
+                        else if (bestTarget.id === 'image') updateSlide(editingIdx, { imageFocalPoint: { x: nx, y: ny } });
+                        else if (bestTarget.id === 'hospital') updateSlide(editingIdx, { hospitalNamePosition: { x: nx, y: ny } });
+                        else if (bestTarget.id.startsWith('deco:')) {
+                          const did = bestTarget.id.split(':')[1];
+                          updateSlide(editingIdx, { decorations: (eSlide.decorations || []).map(d => d.id === did ? { ...d, position: { top: `${ny}%`, left: `${nx}%` } } : d) });
                         }
                       };
                       const onUp = () => { document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); };
