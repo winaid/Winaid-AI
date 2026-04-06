@@ -1059,27 +1059,22 @@ DECORATIVE: (장식 요소)`,
           </div>
 
           {/* 하단 옵션 바 */}
-          <div className="flex items-center gap-3 mb-4 flex-wrap">
-            <div className="flex items-center gap-1 text-xs text-slate-500">
-              <span>비율</span>
-              {(['1:1', '4:5', '3:4'] as const).map(r => (
-                <button key={r} type="button" onClick={() => setProCardRatio(r)}
-                  className={`px-2 py-1 rounded-md font-bold ${proCardRatio === r ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>{r}</button>
-              ))}
-            </div>
-            <div className="w-px h-5 bg-slate-200" />
-            <div className="flex items-center gap-1 text-xs text-slate-500">
-              <span>장수</span>
-              <button type="button" onClick={() => setSlideCount(0)}
-                className={`px-2 py-1 rounded-md font-bold ${slideCount === 0 ? 'bg-purple-500 text-white' : 'bg-slate-100 text-slate-500'}`}>자동</button>
-              {[5, 6, 7, 8].map(n => (
-                <button key={n} type="button" onClick={() => setSlideCount(n)}
-                  className={`px-2 py-1 rounded-md font-bold ${slideCount === n ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-500'}`}>{n}</button>
-              ))}
-            </div>
+          <div className="flex items-center gap-2 mb-4 py-2.5 px-4 bg-slate-800 rounded-xl text-white text-xs font-bold">
+            <span className="text-slate-400">이미지 비율</span>
+            {(['1:1', '4:5', '9:16', '16:9', '3:4'] as const).map(r => (
+              <button key={r} type="button" onClick={() => setProCardRatio(r)}
+                className={`px-2.5 py-1 rounded-md transition-all ${proCardRatio === r ? 'bg-purple-500 text-white' : 'text-slate-300 hover:bg-slate-700'}`}>{r}</button>
+            ))}
+            <div className="w-px h-4 bg-slate-600 mx-1" />
+            <button type="button" onClick={() => setSlideCount(0)}
+              className={`px-2.5 py-1 rounded-md transition-all ${slideCount === 0 ? 'bg-purple-500 text-white' : 'text-slate-300 hover:bg-slate-700'}`}>자동</button>
+            <button type="button" onClick={() => setSlideCount(Math.max(0, (slideCount || 6) - 1))} className="text-slate-400 hover:text-white">−</button>
+            <span className="w-5 text-center text-white">{slideCount === 0 ? 'A' : slideCount}</span>
+            <button type="button" onClick={() => setSlideCount(Math.min(10, (slideCount || 6) + 1))} className="text-slate-400 hover:text-white">+</button>
+            <span className="text-slate-400">장</span>
             <div className="flex-1" />
             <button type="button" onClick={openDesignModal} disabled={!topic.trim() || isGenerating}
-              className="px-8 py-3 bg-blue-600 text-white text-sm font-bold rounded-xl hover:bg-blue-700 disabled:opacity-50 shadow-lg shadow-blue-200 transition-all">
+              className="px-6 py-2 bg-blue-500 text-white text-sm font-bold rounded-lg hover:bg-blue-600 disabled:opacity-50 transition-all">
               {isGenerating ? '생성 중...' : '✨ 카드뉴스 생성'}
             </button>
           </div>
