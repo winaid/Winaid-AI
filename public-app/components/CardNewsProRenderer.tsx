@@ -1146,15 +1146,9 @@ JSON 한 객체만 출력:
       <div style={{ ...getCardStyle(slide), ...bgStyle, padding: '60px' }}>
         {backgroundDecoration}
         {renderDecorations(slide)}
-        {/* 배경 이미지 */}
-        {(t.background.type === 'image-full' || t.background.type === 'image-half') && slide.imageUrl && (
-          <>
-            <img src={slide.imageUrl} alt="" crossOrigin="anonymous"
-              style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: t.background.type === 'image-half' ? '50%' : '100%', objectFit: 'cover', objectPosition: slide.imageFocalPoint ? `${slide.imageFocalPoint.x}% ${slide.imageFocalPoint.y}%` : 'center', zIndex: 0 }} />
-            {t.background.overlayGradient && <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', background: t.background.overlayGradient, zIndex: 1 }} />}
-            {t.background.overlayColor && <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', background: t.background.overlayColor, zIndex: 1 }} />}
-          </>
-        )}
+        {/* 이미지: slide.imagePosition 우선, 없으면 템플릿 background.type 사용 */}
+        {(slide.imagePosition === 'background' || slide.imagePosition === 'center' || (!slide.imagePosition && (t.background.type === 'image-full' || t.background.type === 'image-half'))) && renderImageLayer(slide)}
+        {slide.imagePosition === 'top' && renderImageLayer(slide)}
         {/* split: 좌텍스트 우이미지 */}
         {t.background.type === 'split' && slide.imageUrl && (
           <div style={{ position: 'absolute', top: 0, right: 0, width: '50%', height: '100%', zIndex: 0 }}>
@@ -1212,6 +1206,7 @@ JSON 한 객체만 출력:
             @{theme.hospitalName.replace(/\s/g, '_').toLowerCase()}
           </div>
         )}
+        {slide.imagePosition === 'bottom' && renderImageLayer(slide)}
         {hospitalFooter}
       </div>
     );
@@ -2385,6 +2380,39 @@ JSON 한 객체만 출력:
                     style={{ position: 'absolute', top: 0, left: 0, width: `${cardWidth}px`, height: `${cardHeight}px`, transform: `scale(${500 / cardWidth})`, transformOrigin: 'top left' }}>
                     {renderSlide(eSlide)}
                   </div>
+                  {/* 드래그 오버레이 — 제목/부제 위치 이동 */}
+                  {(eSlide.titlePosition || eSlide.subtitlePosition || eSlide.layout === 'cover' || eSlide.layout === 'closing') && (
+                    <div style={{ position: 'absolute', inset: 0, zIndex: 20 }}
+                      onMouseDown={(e) => {
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        const x = ((e.clientX - rect.left) / rect.width) * 100;
+                        const y = ((e.clientY - rect.top) / rect.height) * 100;
+                        // 가까운 요소 결정 (제목 or 부제)
+                        const titlePos = eSlide.titlePosition || { x: 50, y: 40 };
+                        const subPos = eSlide.subtitlePosition || { x: 50, y: 55 };
+                        const distTitle = Math.hypot(x - titlePos.x, y - titlePos.y);
+                        const distSub = Math.hypot(x - subPos.x, y - subPos.y);
+                        const field = distTitle <= distSub ? 'titlePosition' : 'subtitlePosition';
+                        const startPos = field === 'titlePosition' ? titlePos : subPos;
+                        const sx = e.clientX, sy = e.clientY;
+                        e.currentTarget.style.cursor = 'grabbing';
+                        const onMove = (ev: MouseEvent) => {
+                          const dx = ((ev.clientX - sx) / rect.width) * 100;
+                          const dy = ((ev.clientY - sy) / rect.height) * 100;
+                          updateSlide(editingIdx, { [field]: { x: Math.round(Math.max(5, Math.min(95, startPos.x + dx))), y: Math.round(Math.max(5, Math.min(95, startPos.y + dy))) } });
+                        };
+                        const onUp = () => { document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); };
+                        document.addEventListener('mousemove', onMove);
+                        document.addEventListener('mouseup', onUp);
+                      }}>
+                      <div style={{ position: 'absolute', left: `${(eSlide.titlePosition?.x ?? 50)}%`, top: `${(eSlide.titlePosition?.y ?? 40)}%`, transform: 'translate(-50%, -50%)', cursor: 'grab', padding: '8px 16px', border: '2px dashed rgba(59,130,246,0.5)', borderRadius: '8px', color: 'rgba(59,130,246,0.8)', fontSize: '11px', fontWeight: 700, background: 'rgba(255,255,255,0.3)', backdropFilter: 'blur(2px)' }}>
+                        제목 드래그
+                      </div>
+                      <div style={{ position: 'absolute', left: `${(eSlide.subtitlePosition?.x ?? 50)}%`, top: `${(eSlide.subtitlePosition?.y ?? 55)}%`, transform: 'translate(-50%, -50%)', cursor: 'grab', padding: '6px 12px', border: '2px dashed rgba(139,92,246,0.5)', borderRadius: '8px', color: 'rgba(139,92,246,0.8)', fontSize: '10px', fontWeight: 700, background: 'rgba(255,255,255,0.3)', backdropFilter: 'blur(2px)' }}>
+                        부제 드래그
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
               {/* 우: 편집 패널 */}
