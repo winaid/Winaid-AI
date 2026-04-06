@@ -4,8 +4,6 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { CATEGORIES } from '../../../lib/constants';
 import { buildCardNewsPrompt, buildCardNewsProPrompt, type CardNewsRequest } from '../../../lib/cardNewsPrompt';
 import { savePost, listPosts, deletePost, type SavedPost } from '../../../lib/postStorage';
-import { getSessionSafe } from '../../../lib/supabase';
-import { savePost } from '../../../lib/postStorage';
 import { getSessionSafe, supabase, getSupabaseClient, isSupabaseConfigured } from '../../../lib/supabase';
 import { getHospitalStylePrompt } from '../../../lib/styleService';
 import { CARD_NEWS_DESIGN_TEMPLATES } from '../../../lib/cardNewsDesignTemplates';
@@ -15,7 +13,7 @@ import CardTemplateManager from '../../../components/CardTemplateManager';
 import CardNewsRenderer from '../../../components/CardNewsRenderer';
 import CardNewsProRenderer from '../../../components/CardNewsProRenderer';
 import { DEFAULT_THEME, THEME_PRESETS, DESIGN_PRESETS, COVER_TEMPLATES, CARD_FONTS, FONT_CATEGORIES, type DesignPreset, type DesignPresetStyle, parseProSlidesJson, type SlideData as ProSlideData, type CardNewsTheme } from '../../../lib/cardNewsLayouts';
-import { getSavedTemplates, deleteTemplate, type CardTemplate } from '../../../lib/cardTemplateService';
+import { getSavedTemplates, deleteTemplate, imageToEditableTemplate, type CardTemplate } from '../../../lib/cardTemplateService';
 import { ContentCategory } from '../../../lib/types';
 import type { WritingStyle, CardNewsDesignTemplateId, TrendingItem, AudienceMode } from '../../../lib/types';
 import { useCreditContext } from '../layout';
@@ -1254,7 +1252,24 @@ DECORATIVE: (장식 요소)`,
                     </button>
                     <button type="button" onClick={() => { deleteTemplate(style.id); if (learnedTemplate?.id === style.id) setLearnedTemplate(null); setSavedStylesVersion(v => v + 1); }}
                       className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full text-[10px] opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">✕</button>
-                    <p className="text-[10px] text-slate-500 mt-1 text-center truncate">{style.name}</p>
+                    <div className="flex gap-1 mt-1">
+                      <button type="button" onClick={() => { setLearnedTemplate(style); setMainTab('create'); }}
+                        className="flex-1 text-[9px] font-bold text-purple-600 bg-purple-50 rounded py-1 hover:bg-purple-100">스타일 적용</button>
+                      <button type="button" onClick={async () => {
+                        if (!style.thumbnailDataUrl) return;
+                        setProgress('템플릿 변환 중...');
+                        const result = await imageToEditableTemplate(style.thumbnailDataUrl);
+                        setProgress('');
+                        if (result) {
+                          const newSlide = { index: 1, ...result.slide, layout: result.slide.layout as any } as ProSlideData;
+                          setProTheme(prev => ({ ...prev, ...result.colors }));
+                          setProSlides([newSlide]);
+                          setPageStep(2);
+                          setMainTab('create');
+                        }
+                      }}
+                        className="flex-1 text-[9px] font-bold text-blue-600 bg-blue-50 rounded py-1 hover:bg-blue-100">템플릿 편집</button>
+                    </div>
                   </div>
                 ))}
               </div>

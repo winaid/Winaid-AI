@@ -277,3 +277,92 @@ CSS 값은 반드시 실제 동작하는 CSS여야 합니다.
     return null;
   }
 }
+
+/**
+ * 이미지를 분석해서 편집 가능한 SlideData 템플릿으로 변환.
+ * Mirra 스타일 — 이미지의 레이아웃을 재현하되, 텍스트/이미지를 교체 가능하게.
+ */
+export async function imageToEditableTemplate(imageDataUrl: string): Promise<{
+  slide: {
+    layout: string;
+    title: string;
+    subtitle?: string;
+    body?: string;
+    columns?: { header: string; items: string[]; highlight: boolean }[];
+    compareLabels?: string[];
+    icons?: { emoji: string; title: string; desc?: string }[];
+    steps?: { label: string; desc?: string }[];
+    checkItems?: string[];
+    dataPoints?: { value: string; label: string; highlight?: boolean }[];
+    questions?: { q: string; a: string }[];
+    imagePosition?: string;
+  };
+  colors: {
+    background: string;
+    backgroundGradient?: string;
+    titleColor: string;
+    subtitleColor: string;
+    bodyColor: string;
+    accentColor: string;
+  };
+} | null> {
+  try {
+    const res = await fetch('/api/gemini', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        prompt: `이 카드뉴스 이미지를 분석해서 편집 가능한 템플릿으로 변환해줘.
+
+이미지의 레이아웃 구조, 텍스트 내용, 색상을 정확히 파악해서 JSON으로 출력.
+
+사용 가능한 layout 타입:
+cover, info, comparison, icon-grid, steps, checklist, data-highlight, qna, timeline, before-after, pros-cons, price-table, warning, quote, numbered-list, closing
+
+출력 형식 (JSON만, 마크다운 금지):
+{
+  "slide": {
+    "layout": "comparison 등 16종 중 하나",
+    "title": "이미지에서 읽은 제목",
+    "subtitle": "부제 (있으면)",
+    "body": "본문 (있으면)",
+    "columns": [{"header":"헤더","items":["항목1","항목2"],"highlight":false}],
+    "compareLabels": ["라벨1","라벨2"],
+    "icons": [{"emoji":"🦷","title":"항목","desc":"설명"}],
+    "steps": [{"label":"단계","desc":"설명"}],
+    "checkItems": ["항목1"],
+    "dataPoints": [{"value":"95%","label":"라벨","highlight":true}],
+    "questions": [{"q":"질문","a":"답변"}],
+    "imagePosition": "top 또는 background 또는 없음"
+  },
+  "colors": {
+    "background": "#hex",
+    "backgroundGradient": "linear-gradient(...) 또는 빈 문자열",
+    "titleColor": "#hex",
+    "subtitleColor": "#hex",
+    "bodyColor": "#hex",
+    "accentColor": "#hex"
+  }
+}
+
+이미지에 없는 필드는 생략. layout에 맞는 필드만 포함.`,
+        model: 'gemini-3.1-pro-preview',
+        temperature: 0.3,
+        maxOutputTokens: 4096,
+        inlineImages: [imageDataUrl],
+      }),
+    });
+
+    const data = await res.json();
+    if (!data.text) return null;
+
+    let cleaned = (data.text as string).replace(/```json?\s*\n?/gi, '').replace(/\n?```\s*$/g, '').trim();
+    const firstBrace = cleaned.indexOf('{');
+    const lastBrace = cleaned.lastIndexOf('}');
+    if (firstBrace !== -1 && lastBrace !== -1) cleaned = cleaned.slice(firstBrace, lastBrace + 1);
+
+    return JSON.parse(cleaned);
+  } catch (err) {
+    console.error('[cardTemplate] 이미지→템플릿 변환 실패:', err);
+    return null;
+  }
+}
