@@ -334,6 +334,7 @@ export default function CardNewsPage() {
     }
 
     setIsGenerating(true);
+    setPageStep(2); // 즉시 결과 확인 단계로 전환
     setError(null);
     setCards([]);
     setProSlides([]);
@@ -1158,15 +1159,7 @@ DECORATIVE: (장식 요소)`,
             </div>
           </details>
 
-          {/* 로딩/에러 */}
-          {(isGenerating || isGeneratingPrompts || isGeneratingImages) && (
-            <div className="mt-6 bg-white rounded-2xl border border-slate-200 p-8 text-center">
-              <div className="w-12 h-12 border-[3px] border-blue-100 border-t-blue-500 rounded-full animate-spin mx-auto mb-4" />
-              <p className="text-sm font-medium text-slate-700">{progress || '카드뉴스를 생성하고 있어요...'}</p>
-              <p className="text-xs text-slate-400 mt-2">보통 30초~1분 정도 걸려요</p>
-            </div>
-          )}
-          {error && <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600">{error}</div>}
+          {/* 로딩/에러는 2단계에서 표시 */}
         </div>
       )}
 
