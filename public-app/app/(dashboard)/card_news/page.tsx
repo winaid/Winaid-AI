@@ -88,7 +88,14 @@ export default function CardNewsPage() {
   const [trendingItems, setTrendingItems] = useState<TrendingItem[]>([]);
 
   // ── 생성 상태 ──
+  const [mainTab, setMainTab] = useState<'create' | 'learn' | 'history'>('create');
   const [pageStep, setPageStep] = useState<1 | 2>(1);
+  const TOPIC_SUGGESTIONS: Record<string, string[]> = {
+    '치과': ['임플란트 사후관리', '치아미백 전후비교', '스케일링 중요성', '충치 예방 꿀팁', '잇몸 건강 체크리스트', '교정 장치 종류 비교', '사랑니 발치 가이드'],
+    '피부과': ['보톡스 Q&A', '여드름 관리법', '레이저 시술 비교', '자외선 차단 가이드', '피부 타입별 관리', '탈모 예방 습관', '주름 개선 시술'],
+    '정형외과': ['관절 건강 체크', '척추 자세 교정', '운동 부상 예방', '무릎 관절 Q&A', '어깨 통증 원인', '허리디스크 예방', '골다공증 예방법'],
+  };
+  const [topicSuggestions, setTopicSuggestions] = useState<string[]>(TOPIC_SUGGESTIONS['치과'].slice(0, 5));
   const [showDesignModal, setShowDesignModal] = useState(false);
   const [designPreviews, setDesignPreviews] = useState<{ id: string; imageUrl: string; templateId: string }[]>([]);
   const [selectedPreviewIdx, setSelectedPreviewIdx] = useState(0);
@@ -955,308 +962,225 @@ DECORATIVE: (장식 요소)`,
   const inputCls = "w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-400 transition-all";
   const labelCls = "block text-xs font-semibold text-slate-500 mb-1.5";
 
+  const handleRefreshSuggestions = () => {
+    const topics = TOPIC_SUGGESTIONS[category] || TOPIC_SUGGESTIONS['치과'];
+    setTopicSuggestions([...topics].sort(() => Math.random() - 0.5).slice(0, 5));
+  };
+
+  const applyPreset = (presetId: string) => {
+    const preset = DESIGN_PRESETS.find(p => p.id === presetId);
+    if (!preset) return;
+    setProTheme({ ...preset.theme, fontId: 'pretendard', hospitalName: hospitalName || undefined });
+    setPresetStyle(preset.style);
+    setCurrentPresetId(preset.id);
+    setLearnedTemplate(null);
+  };
+
   return (
     <div className="p-5 max-w-6xl mx-auto">
 
-      {/* ══════════════════════════════════════ */}
-      {/* 1단계: 짧은 폼 + 라이브 미리보기        */}
-      {/* ══════════════════════════════════════ */}
-      {pageStep === 1 && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* ── 좌: 폼 ── */}
-          <div className="space-y-5">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-2xl">🎨</span>
-              <h1 className="text-xl font-bold text-slate-800">카드뉴스 만들기</h1>
-            </div>
+      {/* ══════ 상단 3탭 ══════ */}
+      <div className="flex gap-1 border-b border-slate-200 mb-8">
+        <button type="button" onClick={() => setMainTab('create')}
+          className={`px-6 py-3 text-sm font-bold border-b-2 transition-all ${mainTab === 'create' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-400'}`}>
+          ✨ 카드뉴스 생성
+          <span className="block text-[10px] font-normal text-slate-400">주제만 입력하면 AI가 만들어줘요</span>
+        </button>
+        <button type="button" onClick={() => setMainTab('learn')}
+          className={`px-6 py-3 text-sm font-bold border-b-2 transition-all ${mainTab === 'learn' ? 'border-purple-600 text-purple-600' : 'border-transparent text-slate-400'}`}>
+          🎨 나만의 디자인 학습
+          <span className="block text-[10px] font-normal text-slate-400">참고 이미지로 템플릿 만들기</span>
+        </button>
+        <button type="button" onClick={() => setMainTab('history')}
+          className={`px-6 py-3 text-sm font-bold border-b-2 transition-all ${mainTab === 'history' ? 'border-slate-600 text-slate-600' : 'border-transparent text-slate-400'}`}>
+          📋 생성기록
+        </button>
+      </div>
 
-            {/* 주제 */}
-            <div>
-              <label className="text-sm font-bold text-slate-700 mb-1 block">주제</label>
-              <input type="text" value={topic} onChange={e => setTopic(e.target.value)}
-                placeholder="예: 임플란트 사후관리 가이드" className={inputCls} />
-              <button type="button" onClick={handleRecommendTrends} disabled={isLoadingTrends}
-                className="w-full mt-2 py-2.5 bg-blue-50 text-blue-600 text-sm font-semibold rounded-xl border border-blue-200 hover:bg-blue-100 disabled:opacity-50">
-                {isLoadingTrends ? '검색 중...' : topic.trim()
-                  ? <>🔍 &ldquo;{topic.trim().length > 10 ? topic.trim().slice(0, 10) + '…' : topic.trim()}&rdquo; 관련 주제 추천</>
-                  : <>🔥 트렌드 주제 추천</>}
-              </button>
-              {trendingItems.length > 0 && (
-                <div className="mt-2 space-y-1.5">
-                  {trendingItems.map((item, idx) => (
-                    <button key={idx} type="button" onClick={() => { setTopic(item.topic); setTrendingItems([]); }}
-                      className="w-full text-left px-4 py-3 bg-white border border-slate-200 rounded-xl hover:border-blue-300 hover:bg-blue-50 transition-all group">
-                      <div className="flex items-center gap-2">
-                        <span className="text-blue-500 font-bold text-sm">{idx + 1}</span>
-                        <span className="font-semibold text-slate-800 text-sm group-hover:text-blue-700">{item.topic}</span>
-                      </div>
-                      <p className="text-[11px] text-slate-400 mt-1 pl-5">{item.seasonal_factor}</p>
-                    </button>
-                  ))}
-                </div>
-              )}
+      {/* ══════ 탭 1: 카드뉴스 생성 ══════ */}
+      {mainTab === 'create' && pageStep === 1 && (
+        <div className="max-w-3xl mx-auto">
+          {/* 주제 추천 칩 */}
+          <div className="mb-4">
+            <p className="text-xs text-slate-400 mb-2">이런 주제는 어때요?</p>
+            <div className="flex gap-2 flex-wrap">
+              {topicSuggestions.map((t, i) => (
+                <button key={i} type="button" onClick={() => setTopic(t)}
+                  className={`px-4 py-2 text-sm font-semibold rounded-full border transition-all ${topic === t ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-slate-200 text-slate-600 hover:border-blue-300'}`}>
+                  {t}
+                </button>
+              ))}
+              <button type="button" onClick={handleRefreshSuggestions} className="px-3 py-2 text-sm text-slate-400 hover:text-blue-500">🔄</button>
             </div>
+          </div>
 
-            {/* 진료과 */}
-            <div>
-              <label className="text-sm font-bold text-slate-700 mb-1 block">진료과</label>
-              <div className="flex gap-2">
-                {CATEGORIES.map(cat => (
-                  <button key={cat.value} type="button" onClick={() => setCategory(cat.value)}
-                    className={`flex-1 py-2.5 rounded-xl text-sm font-bold border-2 transition-all ${
-                      category === cat.value ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-slate-200 text-slate-400 hover:border-slate-300'
-                    }`}>{cat.label}</button>
-                ))}
-              </div>
+          {/* 콘텐츠 입력 (큰 텍스트박스) */}
+          <div className="border-2 border-dashed border-slate-200 rounded-2xl p-6 mb-4 focus-within:border-blue-400 transition-all">
+            <textarea value={topic} onChange={e => setTopic(e.target.value)}
+              placeholder="주제를 입력하세요 (예: 임플란트 사후관리 5단계 가이드)"
+              className="w-full text-lg font-medium text-slate-800 placeholder:text-slate-300 resize-none border-none outline-none bg-transparent min-h-[100px]" />
+          </div>
+
+          {/* 진료과 */}
+          <div className="mb-4">
+            <div className="flex gap-2">
+              {CATEGORIES.map(cat => (
+                <button key={cat.value} type="button" onClick={() => { setCategory(cat.value); setTopicSuggestions((TOPIC_SUGGESTIONS[cat.value] || TOPIC_SUGGESTIONS['치과']).sort(() => Math.random() - 0.5).slice(0, 5)); }}
+                  className={`flex-1 py-2.5 rounded-xl text-sm font-bold border-2 transition-all ${category === cat.value ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-slate-200 text-slate-400 hover:border-slate-300'}`}>
+                  {cat.label}
+                </button>
+              ))}
             </div>
+          </div>
 
-            {/* 슬라이드 수 */}
-            <div>
-              <label className="text-sm font-bold text-slate-700 mb-1 block">슬라이드 수</label>
-              <div className="flex gap-1.5 flex-wrap">
-                <button type="button" onClick={() => setSlideCount(0)}
-                  className={`px-4 py-2 rounded-xl text-sm font-bold border-2 transition-all ${
-                    slideCount === 0 ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-slate-200 text-slate-400'
-                  }`}>✨ 자동</button>
-                {[4, 5, 6, 7, 8, 10].map(n => (
-                  <button key={n} type="button" onClick={() => setSlideCount(n)}
-                    className={`px-3 py-2 rounded-xl text-sm font-bold border-2 transition-all ${
-                      slideCount === n ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-slate-200 text-slate-400'
-                    }`}>{n}장</button>
-                ))}
-              </div>
+          {/* 하단 옵션 바 */}
+          <div className="flex items-center gap-3 mb-4 flex-wrap">
+            <div className="flex items-center gap-1 text-xs text-slate-500">
+              <span>비율</span>
+              {(['1:1', '4:5', '3:4'] as const).map(r => (
+                <button key={r} type="button" onClick={() => setProCardRatio(r)}
+                  className={`px-2 py-1 rounded-md font-bold ${proCardRatio === r ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>{r}</button>
+              ))}
             </div>
-
-            {/* 카드 사이즈 */}
-            <div>
-              <label className="text-sm font-bold text-slate-700 mb-1 block">카드 사이즈</label>
-              <div className="flex gap-2">
-                {([
-                  { id: '1:1' as const, label: '1:1 정사각형' },
-                  { id: '4:5' as const, label: '4:5 세로형' },
-                  { id: '3:4' as const, label: '3:4 세로형' },
-                ]).map(size => (
-                  <button key={size.id} type="button" onClick={() => setProCardRatio(size.id)}
-                    className={`flex-1 py-2.5 rounded-xl text-sm font-bold border-2 transition-all ${
-                      proCardRatio === size.id ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-slate-200 text-slate-400'
-                    }`}>{size.label}</button>
-                ))}
-              </div>
+            <div className="w-px h-5 bg-slate-200" />
+            <div className="flex items-center gap-1 text-xs text-slate-500">
+              <span>장수</span>
+              <button type="button" onClick={() => setSlideCount(0)}
+                className={`px-2 py-1 rounded-md font-bold ${slideCount === 0 ? 'bg-purple-500 text-white' : 'bg-slate-100 text-slate-500'}`}>자동</button>
+              {[5, 6, 7, 8].map(n => (
+                <button key={n} type="button" onClick={() => setSlideCount(n)}
+                  className={`px-2 py-1 rounded-md font-bold ${slideCount === n ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-500'}`}>{n}</button>
+              ))}
             </div>
-
-            {/* 생성 버튼 → 디자인 모달 */}
-            <button type="button" onClick={openDesignModal} disabled={isGenerating || !topic.trim()}
-              className="w-full py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white text-lg font-bold rounded-2xl hover:from-blue-700 hover:to-blue-800 disabled:opacity-50 shadow-lg shadow-blue-200 transition-all">
-              {isGenerating ? '✨ 생성 중...' : '✨ 카드뉴스 생성'}
+            <div className="flex-1" />
+            <button type="button" onClick={openDesignModal} disabled={!topic.trim() || isGenerating}
+              className="px-8 py-3 bg-blue-600 text-white text-sm font-bold rounded-xl hover:bg-blue-700 disabled:opacity-50 shadow-lg shadow-blue-200 transition-all">
+              {isGenerating ? '생성 중...' : '✨ 카드뉴스 생성'}
             </button>
           </div>
 
-          {/* ── 우: 라이브 미리보기 ── */}
-          <div className="space-y-5">
-            <h3 className="text-sm font-bold text-slate-700">📱 디자인 미리보기</h3>
-            <div style={{
-              width: '100%',
-              aspectRatio: proCardRatio === '3:4' ? '3/4' : proCardRatio === '4:5' ? '4/5' : '1/1',
-              borderRadius: '16px', overflow: 'hidden', position: 'relative',
-              background: proTheme.backgroundGradient || proTheme.backgroundColor,
-              display: 'flex', flexDirection: 'column', justifyContent: 'center',
-              alignItems: 'center', padding: '40px', textAlign: 'center',
-              boxShadow: '0 8px 32px rgba(0,0,0,0.12)', transition: 'all 0.3s ease',
-              maxHeight: '400px',
-            }}>
-              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '6px', background: proTheme.accentColor }} />
-              <div style={{ width: '50px', height: '4px', background: proTheme.accentColor, borderRadius: '2px', marginBottom: '20px' }} />
-              <div style={{ color: proTheme.titleColor, fontSize: '24px', fontWeight: 900, marginBottom: '12px', wordBreak: 'keep-all', lineHeight: 1.3 }}>
-                {topic || '주제를 입력해보세요'}
-              </div>
-              <div style={{ color: proTheme.subtitleColor, fontSize: '13px', fontWeight: 600 }}>
-                {topic ? `${slideCount === 0 ? '자동' : slideCount}장 카드뉴스` : '실시간 미리보기'}
-              </div>
-              {proTheme.hospitalName && (
-                <div style={{ position: 'absolute', bottom: '16px', color: proTheme.titleColor, fontSize: '10px', opacity: 0.4, letterSpacing: '2px' }}>{proTheme.hospitalName}</div>
-              )}
-              <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '3px', background: `linear-gradient(90deg, transparent, ${proTheme.accentColor})` }} />
-            </div>
-
-            {/* 현재 설정 요약 */}
-            <div className="bg-slate-50 rounded-xl p-4">
-              <h3 className="text-xs font-bold text-slate-500 mb-2">⚙️ 현재 설정</h3>
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                <div className="bg-white rounded-lg px-3 py-2"><span className="text-slate-400">진료과</span><span className="block font-bold text-slate-700 mt-0.5">{CATEGORIES.find(c => c.value === category)?.label || '치과'}</span></div>
-                <div className="bg-white rounded-lg px-3 py-2"><span className="text-slate-400">슬라이드</span><span className="block font-bold text-slate-700 mt-0.5">{slideCount === 0 ? '✨ 자동' : `${slideCount}장`}</span></div>
-                <div className="bg-white rounded-lg px-3 py-2"><span className="text-slate-400">사이즈</span><span className="block font-bold text-slate-700 mt-0.5">{proCardRatio}</span></div>
-                <div className="bg-white rounded-lg px-3 py-2"><span className="text-slate-400">디자인</span><span className="block font-bold text-slate-700 mt-0.5">{currentPresetId ? DESIGN_PRESETS.find(p => p.id === currentPresetId)?.name : '기본'}</span></div>
+          {/* 추가 옵션 (접기) */}
+          <details className="text-xs text-slate-400">
+            <summary className="cursor-pointer hover:text-slate-600 py-2">추가 옵션</summary>
+            <div className="pt-2 pb-4 space-y-3">
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <label className="text-[10px] font-bold text-slate-500 mb-1 block">병원명</label>
+                  <input type="text" value={hospitalName} onChange={e => setHospitalName(e.target.value)} placeholder="예: 더찬한치과" className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg" />
+                </div>
+                <div className="flex-1">
+                  <label className="text-[10px] font-bold text-slate-500 mb-1 block">디자인 프리셋</label>
+                  <select value={currentPresetId} onChange={e => applyPreset(e.target.value)} className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg">
+                    {DESIGN_PRESETS.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                  </select>
+                </div>
               </div>
             </div>
+          </details>
 
-            {/* 제작 팁 */}
-            <div className="bg-blue-50/50 rounded-xl p-4 border border-blue-100">
-              <h3 className="text-xs font-bold text-blue-600 mb-2">💡 제작 팁</h3>
-              <ul className="text-[11px] text-blue-500 space-y-1">
-                <li>• 구체적 주제가 더 좋은 결과를 만들어요</li>
-                <li>• 🔥 트렌드에서 인기 주제를 확인하세요</li>
-                <li>• 생성 후 카드를 클릭하면 개별 편집 가능</li>
-              </ul>
-            </div>
-
-            {/* 로딩 중 (1단계에서도 표시) */}
-            {(isGenerating || isGeneratingPrompts || isGeneratingImages) && (
-              <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center">
-                <div className="w-12 h-12 border-[3px] border-blue-100 border-t-blue-500 rounded-full animate-spin mx-auto mb-4" />
-                <p className="text-sm font-medium text-slate-700">{progress || (slideCount === 0 ? '최적 장수로 원고를 작성하고 있어요' : `${slideCount}장 분량의 원고를 작성하고 있어요`)}</p>
-              </div>
-            )}
-
-            {/* 에러 */}
-            {error && <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600">{error}</div>}
+          {/* 하단 링크 */}
+          <div className="flex justify-between mt-6 pt-4 border-t border-slate-100">
+            <button type="button" onClick={() => setMainTab('learn')} className="text-sm text-purple-500 font-semibold hover:text-purple-700">🎨 나만의 스타일 학습</button>
+            <span className="text-xs text-slate-300">주제만 입력하면 프로 카드뉴스가 자동 생성돼요</span>
           </div>
+
+          {/* 로딩/에러 */}
+          {(isGenerating || isGeneratingPrompts || isGeneratingImages) && (
+            <div className="mt-6 bg-white rounded-2xl border border-slate-200 p-8 text-center">
+              <div className="w-12 h-12 border-[3px] border-blue-100 border-t-blue-500 rounded-full animate-spin mx-auto mb-4" />
+              <p className="text-sm font-medium text-slate-700">{progress || '카드뉴스를 생성하고 있어요...'}</p>
+            </div>
+          )}
+          {error && <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600">{error}</div>}
         </div>
       )}
 
-      {/* ══════════════════════════════════════ */}
-      {/* 2단계: 디자인 설정(접기) + 카드 편집      */}
-      {/* ══════════════════════════════════════ */}
-      {pageStep === 2 && (
+      {/* ══════ 탭 1: 2단계 결과 + 편집 ══════ */}
+      {mainTab === 'create' && pageStep === 2 && (
         <div>
-          {/* 상단 바 */}
-          <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-200">
+          <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
-              <button type="button" onClick={() => setPageStep(1)}
-                className="px-3 py-1.5 text-xs font-semibold text-slate-500 bg-slate-100 rounded-lg hover:bg-slate-200">← 새로 만들기</button>
-              <h2 className="text-sm font-bold text-slate-700 truncate max-w-xs">{topic}</h2>
-              <span className="text-[10px] text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">{proSlides.length}장 · {proCardRatio}</span>
+              <button type="button" onClick={() => setPageStep(1)} className="text-sm text-slate-500 hover:text-slate-700">← 새로 만들기</button>
+              <h2 className="text-lg font-bold text-slate-800">{topic}</h2>
+              <span className="text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">{proSlides.length}장</span>
             </div>
           </div>
-
-          {/* 로딩 */}
           {(isGenerating || isGeneratingPrompts || isGeneratingImages) && (
             <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center mb-4">
               <div className="w-12 h-12 border-[3px] border-blue-100 border-t-blue-500 rounded-full animate-spin mx-auto mb-4" />
               <p className="text-sm font-medium text-slate-700">{progress || '생성 중...'}</p>
             </div>
           )}
-
           {error && <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600 mb-4">{error}</div>}
-
-          {/* 디자인 설정 (접기) */}
           <details className="mb-4 bg-slate-50 rounded-xl border border-slate-200">
-            <summary className="px-4 py-3 text-sm font-bold text-slate-600 cursor-pointer hover:text-slate-800">
-              🎨 디자인 설정 (테마 · 글씨체 · 병원명)
-            </summary>
+            <summary className="px-4 py-3 text-sm font-bold text-slate-600 cursor-pointer">🎨 디자인 설정</summary>
             <div className="px-4 pb-4 pt-2 space-y-4 border-t border-slate-200">
-              {/* 디자인 프리셋 */}
               <div>
-                <label className={labelCls}>디자인 스타일</label>
-                <div className="flex gap-2 overflow-x-auto pb-2">
-                  <button type="button" onClick={() => setShowStyleUpload(v => !v)}
-                    className={`flex-shrink-0 w-16 h-16 rounded-xl border-2 border-dashed transition-all overflow-hidden flex flex-col items-center justify-center gap-0.5 ${showStyleUpload ? 'border-pink-500 bg-pink-50 text-pink-700' : 'border-slate-300 bg-white text-slate-400'}`}>
-                    <span className="text-xl leading-none">＋</span>
-                    <span className="text-[8px] font-semibold leading-tight text-center px-0.5">새 스타일{'\n'}학습</span>
-                  </button>
-                  {(['all', 'professional', 'modern', 'minimal', 'warm', 'bold'] as const).map(cat => (
-                    <button key={cat} type="button" onClick={() => setPresetCategory(cat)}
-                      className={`flex-shrink-0 px-3 py-1 text-[9px] font-bold rounded-full whitespace-nowrap ${presetCategory === cat ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-500'}`}>
-                      {cat === 'all' ? '전체' : cat === 'professional' ? '전문적' : cat === 'modern' ? '모던' : cat === 'minimal' ? '미니멀' : cat === 'warm' ? '따뜻한' : '강렬한'}
-                    </button>
-                  ))}
-                </div>
-                <div className="grid grid-cols-5 sm:grid-cols-8 gap-2 mt-2">
-                  {DESIGN_PRESETS.filter(p => presetCategory === 'all' || p.category === presetCategory).map(preset => (
-                    <button key={preset.id} type="button"
-                      onClick={() => { setProTheme({ ...preset.theme, fontId: 'pretendard', hospitalName: hospitalName || undefined }); setPresetStyle(preset.style); setCurrentPresetId(preset.id); setLearnedTemplate(null); }}
+                <label className={labelCls}>전체 글씨체</label>
+                <select value={proTheme.fontId || 'pretendard'} onChange={e => setProTheme(prev => ({ ...prev, fontId: e.target.value }))} className={inputCls}>
+                  {FONT_CATEGORIES.map(cat => (<optgroup key={cat} label={cat}>{CARD_FONTS.filter(f => f.category === cat).map(f => (<option key={f.id} value={f.id}>{f.name}</option>))}</optgroup>))}
+                </select>
+              </div>
+              <div>
+                <label className={labelCls}>디자인 프리셋</label>
+                <div className="grid grid-cols-5 sm:grid-cols-8 gap-2">
+                  {DESIGN_PRESETS.map(preset => (
+                    <button key={preset.id} type="button" onClick={() => applyPreset(preset.id)}
                       className={`relative rounded-xl overflow-hidden aspect-square border-2 transition-all ${currentPresetId === preset.id ? 'border-blue-500 ring-2 ring-blue-200' : 'border-slate-200'}`}>
                       <div style={{ background: preset.thumbnail, width: '100%', height: '100%' }} className="flex items-center justify-center">
                         <span className="text-[11px] font-black" style={{ color: preset.theme.titleColor }}>Aa</span>
                       </div>
-                      <div className="absolute bottom-0 left-0 right-0 bg-black/50 px-1 py-0.5"><span className="text-[7px] text-white font-bold">{preset.name}</span></div>
                     </button>
                   ))}
                 </div>
-                {/* 학습 템플릿 */}
-                <div className="flex gap-2 overflow-x-auto pb-2 mt-2">
-                  {savedStyles.map(tmpl => (
-                    <div key={tmpl.id} className="relative flex-shrink-0">
-                      <button type="button" onClick={() => { setLearnedTemplate(tmpl); setProTheme(prev => ({ ...prev, backgroundColor: tmpl.colors.background, backgroundGradient: tmpl.colors.backgroundGradient || '', titleColor: tmpl.colors.titleColor, subtitleColor: tmpl.colors.subtitleColor, bodyColor: tmpl.colors.bodyColor, accentColor: tmpl.colors.accentColor, fontFamily: tmpl.typography.fontFamily || prev.fontFamily })); }}
-                        className={`w-16 h-16 rounded-xl border-2 transition-all overflow-hidden ${learnedTemplate?.id === tmpl.id ? 'border-pink-500 ring-2 ring-pink-200' : 'border-slate-200'}`} title={tmpl.name}>
-                        {tmpl.thumbnailDataUrl ? <img src={tmpl.thumbnailDataUrl} alt={tmpl.name} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-[9px] text-slate-400 p-1 text-center">{tmpl.name}</div>}
-                      </button>
-                      <button type="button" onClick={(e) => { e.stopPropagation(); deleteTemplate(tmpl.id); if (learnedTemplate?.id === tmpl.id) setLearnedTemplate(null); setSavedStylesVersion(v => v + 1); }}
-                        className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full text-[8px] font-bold flex items-center justify-center hover:bg-red-600 shadow-sm">✕</button>
-                    </div>
-                  ))}
-                </div>
-                {showStyleUpload && (
-                  <div className="mt-2">
-                    <CardTemplateManager uploadOnly onSelectTemplate={(tmpl) => { setLearnedTemplate(tmpl); setSavedStylesVersion(v => v + 1); }} selectedTemplateId={learnedTemplate?.id} />
-                  </div>
-                )}
               </div>
-
-              {/* 전체 글씨체 */}
-              <div>
-                <label className={labelCls}>전체 글씨체</label>
-                <select value={proTheme.fontId || 'pretendard'}
-                  onChange={e => setProTheme(prev => ({ ...prev, fontId: e.target.value }))}
-                  className={inputCls}>
-                  {FONT_CATEGORIES.map(cat => (
-                    <optgroup key={cat} label={cat}>
-                      {CARD_FONTS.filter(f => f.category === cat).map(f => (
-                        <option key={f.id} value={f.id}>{f.name}</option>
-                      ))}
-                    </optgroup>
-                  ))}
-                </select>
-              </div>
-
-              {/* 병원명 */}
               <div>
                 <label className={labelCls}>병원명</label>
                 <input type="text" value={hospitalName} onChange={e => setHospitalName(e.target.value)} placeholder="병원 이름 (선택)" className={inputCls} />
               </div>
-
-              {/* 병원 로고 */}
-              <div>
-                <label className={labelCls}>병원 로고</label>
-                <div className="flex items-center gap-3">
-                  {logoDataUrl ? (
-                    <div className="relative">
-                      <img src={logoDataUrl} alt="로고" className="h-10 w-auto rounded-lg border border-slate-200 bg-white p-1" />
-                      <button type="button" onClick={() => { setLogoDataUrl(null); setLogoEnabled(false); try { localStorage.removeItem('hospital-logo-dataurl'); } catch {} }}
-                        className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white rounded-full text-[8px] flex items-center justify-center">✕</button>
-                    </div>
-                  ) : (
-                    <button type="button" onClick={() => logoInputRef.current?.click()}
-                      className="h-10 px-4 border-2 border-dashed border-slate-200 rounded-lg text-xs text-slate-400 hover:border-pink-400 hover:text-pink-500">+ 로고 업로드</button>
-                  )}
-                  <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={e => {
-                    const file = e.target.files?.[0]; if (!file) return;
-                    const reader = new FileReader();
-                    reader.onload = () => { const d = reader.result as string; setLogoDataUrl(d); setLogoEnabled(true); try { localStorage.setItem('hospital-logo-dataurl', d); } catch {} };
-                    reader.readAsDataURL(file); e.target.value = '';
-                  }} />
-                  {logoDataUrl && (
-                    <label className="flex items-center gap-1.5 cursor-pointer">
-                      <input type="checkbox" checked={logoEnabled} onChange={e => setLogoEnabled(e.target.checked)} className="w-3.5 h-3.5 rounded border-slate-300 text-pink-500" />
-                      <span className="text-[11px] text-slate-500">카드에 로고 넣기</span>
-                    </label>
-                  )}
-                </div>
-              </div>
             </div>
           </details>
-
-          {/* 카드 편집 */}
           {proSlides.length > 0 && (
-            <CardNewsProRenderer
-              slides={proSlides}
-              theme={proTheme}
-              onSlidesChange={setProSlides}
-              onThemeChange={setProTheme}
-              learnedTemplate={learnedTemplate}
-              cardRatio={proCardRatio}
-              presetStyle={presetStyle}
-            />
+            <CardNewsProRenderer slides={proSlides} theme={proTheme} onSlidesChange={setProSlides} onThemeChange={setProTheme}
+              learnedTemplate={learnedTemplate} cardRatio={proCardRatio} presetStyle={presetStyle} />
           )}
+        </div>
+      )}
+
+      {/* ══════ 탭 2: 나만의 디자인 학습 ══════ */}
+      {mainTab === 'learn' && (
+        <div className="max-w-2xl mx-auto text-center">
+          <h2 className="text-2xl font-bold text-slate-800 mb-2">나만의 디자인 학습</h2>
+          <p className="text-slate-500 mb-8">마음에 드는 카드뉴스를 올리면 AI가 스타일을 학습해요</p>
+          <div className="mb-6">
+            <CardTemplateManager uploadOnly onSelectTemplate={(tmpl) => { setLearnedTemplate(tmpl); setSavedStylesVersion(v => v + 1); setMainTab('create'); }} selectedTemplateId={learnedTemplate?.id} />
+          </div>
+          {savedStyles.length > 0 && (
+            <div className="text-left">
+              <h3 className="text-sm font-bold text-slate-700 mb-3">학습된 스타일 ({savedStyles.length}개)</h3>
+              <div className="grid grid-cols-4 gap-3">
+                {savedStyles.map(style => (
+                  <div key={style.id} className="relative group">
+                    <button type="button" onClick={() => { setLearnedTemplate(style); setMainTab('create'); }}
+                      className="w-full rounded-xl overflow-hidden border-2 border-slate-200 hover:border-purple-400 aspect-square">
+                      {style.thumbnailDataUrl ? <img src={style.thumbnailDataUrl} alt={style.name} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-slate-100 flex items-center justify-center text-xs text-slate-400">{style.name}</div>}
+                    </button>
+                    <button type="button" onClick={() => { deleteTemplate(style.id); if (learnedTemplate?.id === style.id) setLearnedTemplate(null); setSavedStylesVersion(v => v + 1); }}
+                      className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full text-[10px] opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">✕</button>
+                    <p className="text-[10px] text-slate-500 mt-1 text-center truncate">{style.name}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ══════ 탭 3: 생성기록 ══════ */}
+      {mainTab === 'history' && (
+        <div className="max-w-3xl mx-auto">
+          <h2 className="text-lg font-bold text-slate-800 mb-4">생성기록</h2>
+          <p className="text-center text-slate-400 py-12">아직 생성한 카드뉴스가 없어요<br /><span className="text-xs">카드뉴스를 생성하면 여기에 기록됩니다</span></p>
         </div>
       )}
 
