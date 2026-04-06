@@ -1023,7 +1023,7 @@ DECORATIVE: (장식 요소)`,
 
       {/* ══════ 탭 1: 카드뉴스 생성 ══════ */}
       {mainTab === 'create' && pageStep === 1 && (
-        <div className="max-w-3xl mx-auto">
+        <div className="max-w-3xl mx-auto flex flex-col justify-center" style={{ minHeight: 'calc(100vh - 220px)' }}>
           {/* 주제 추천 칩 */}
           <div className="mb-4">
             <p className="text-xs text-slate-400 mb-2">이런 주제는 어때요?</p>
@@ -1089,10 +1089,25 @@ DECORATIVE: (장식 요소)`,
                   <input type="text" value={hospitalName} onChange={e => setHospitalName(e.target.value)} placeholder="예: 더찬한치과" className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg" />
                 </div>
                 <div className="flex-1">
-                  <label className="text-[10px] font-bold text-slate-500 mb-1 block">디자인 프리셋</label>
-                  <select value={currentPresetId} onChange={e => applyPreset(e.target.value)} className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg">
-                    {DESIGN_PRESETS.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                  </select>
+                  <label className="text-[10px] font-bold text-slate-500 mb-1 block">병원 로고</label>
+                  <div className="flex items-center gap-2">
+                    {logoDataUrl ? (
+                      <div className="relative">
+                        <img src={logoDataUrl} alt="로고" className="h-9 w-auto rounded-lg border border-slate-200 bg-white p-0.5" />
+                        <button type="button" onClick={() => { setLogoDataUrl(null); setLogoEnabled(false); try { localStorage.removeItem('hospital-logo-dataurl'); } catch {} }}
+                          className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full text-[8px] flex items-center justify-center">✕</button>
+                      </div>
+                    ) : (
+                      <button type="button" onClick={() => logoInputRef.current?.click()}
+                        className="h-9 px-3 border-2 border-dashed border-slate-200 rounded-lg text-[10px] text-slate-400 hover:border-blue-400 hover:text-blue-500">+ 업로드</button>
+                    )}
+                    <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={e => {
+                      const file = e.target.files?.[0]; if (!file) return;
+                      const reader = new FileReader();
+                      reader.onload = () => { const d = reader.result as string; setLogoDataUrl(d); setLogoEnabled(true); try { localStorage.setItem('hospital-logo-dataurl', d); } catch {} };
+                      reader.readAsDataURL(file); e.target.value = '';
+                    }} />
+                  </div>
                 </div>
               </div>
             </div>
