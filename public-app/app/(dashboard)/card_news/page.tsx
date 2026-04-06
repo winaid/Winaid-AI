@@ -995,6 +995,32 @@ DECORATIVE: (장식 요소)`,
         </button>
       </div>
 
+      {/* 스텝 인디케이터 (생성 탭일 때만) */}
+      {mainTab === 'create' && (
+        <div className="flex items-center justify-center gap-0 mb-8 max-w-md mx-auto">
+          {[
+            { n: 1, label: '디자인 선택' },
+            { n: 2, label: '콘텐츠 입력' },
+            { n: 3, label: '결과 확인' },
+          ].map((s, i) => {
+            const active = pageStep === 1 ? (i < 2 ? i + 1 : 0) : 3;
+            const done = pageStep === 2 ? s.n <= 2 : s.n < 1;
+            const isCurrent = (pageStep === 1 && s.n === 2) || (pageStep === 2 && s.n === 3);
+            return (
+              <div key={s.n} className="flex items-center flex-1">
+                <div className="flex flex-col items-center flex-1">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold mb-1.5 transition-all ${
+                    isCurrent ? 'bg-blue-600 text-white shadow-md shadow-blue-200' : done ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-400'
+                  }`}>{s.n}</div>
+                  <span className={`text-[11px] font-semibold ${isCurrent ? 'text-blue-600' : 'text-slate-400'}`}>{s.label}</span>
+                </div>
+                {i < 2 && <div className={`h-px flex-1 -mt-5 ${done || isCurrent ? 'bg-blue-200' : 'bg-slate-200'}`} />}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       {/* ══════ 탭 1: 카드뉴스 생성 ══════ */}
       {mainTab === 'create' && pageStep === 1 && (
         <div className="max-w-3xl mx-auto">
