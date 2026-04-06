@@ -995,7 +995,7 @@ JSON 한 객체만 출력:
             zIndex: 0,
           }}>
             <img src={slide.imageUrl} alt="" crossOrigin="anonymous"
-              style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center' }} />
+              style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: slide.imageFocalPoint ? `${slide.imageFocalPoint.x}% ${slide.imageFocalPoint.y}%` : 'center' }} />
           </div>
           <div style={{
             position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
@@ -1044,7 +1044,7 @@ JSON 한 객체만 출력:
             display: 'block',
             maxHeight: '100%',
             objectFit: 'cover',
-            objectPosition: 'center',
+            objectPosition: slide.imageFocalPoint ? `${slide.imageFocalPoint.x}% ${slide.imageFocalPoint.y}%` : 'center',
           }} />
       </div>
     );
@@ -2483,6 +2483,9 @@ function SlideEditor({
   const [imageSearchResults, setImageSearchResults] = useState<{ id: string; url: string; thumb: string; alt: string; source: string; photographer?: string }[]>([]);
   const [imageSearchLoading, setImageSearchLoading] = useState(false);
 
+  // 배경 제거
+  const [removingBg, setRemovingBg] = useState(false);
+
   // 편집/AI 2탭
   const [editMode, setEditMode] = useState<'edit' | 'ai'>('edit');
 
@@ -2809,6 +2812,48 @@ ${JSON.stringify(slideForContext, null, 2)}
             className="absolute top-1 right-1 px-2 py-0.5 bg-red-500 text-white text-[9px] font-bold rounded-md shadow hover:bg-red-600">
             삭제
           </button>
+        </div>
+      )}
+
+      {/* 배경 제거 + 초점 위치 (이미지 있을 때만) */}
+      {hasImage && (
+        <div className="space-y-2">
+          <button type="button" onClick={async () => {
+            if (!slide.imageUrl || removingBg) return;
+            setRemovingBg(true);
+            try {
+              const imgRes = await fetch(slide.imageUrl);
+              const blob = await imgRes.blob();
+              const fd = new FormData();
+              fd.append('image', blob, 'image.png');
+              const res = await fetch('/api/remove-bg', { method: 'POST', body: fd });
+              const data = await res.json();
+              if (data.image) onChange({ imageUrl: data.image });
+            } catch { /* ignore */ }
+            setRemovingBg(false);
+          }} disabled={removingBg}
+            className="w-full py-2 text-xs font-semibold bg-white border border-slate-200 rounded-lg hover:border-purple-300 hover:bg-purple-50 disabled:opacity-50">
+            {removingBg ? '처리 중...' : '✂️ 배경 제거'}
+          </button>
+          <div>
+            <label className="text-[10px] font-semibold text-slate-500 mb-1 block">초점 위치</label>
+            <div className="grid grid-cols-3 gap-1" style={{ maxWidth: '140px' }}>
+              {[
+                { label: '↖', x: 20, y: 20 }, { label: '↑', x: 50, y: 20 }, { label: '↗', x: 80, y: 20 },
+                { label: '←', x: 20, y: 50 }, { label: '●', x: 50, y: 50 }, { label: '→', x: 80, y: 50 },
+                { label: '↙', x: 20, y: 80 }, { label: '↓', x: 50, y: 80 }, { label: '↘', x: 80, y: 80 },
+              ].map(pos => (
+                <button key={pos.label} type="button"
+                  onClick={() => onChange({ imageFocalPoint: { x: pos.x, y: pos.y } })}
+                  className={`py-1.5 text-xs font-bold rounded ${
+                    (slide.imageFocalPoint?.x ?? 50) === pos.x && (slide.imageFocalPoint?.y ?? 50) === pos.y
+                      ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                  }`}>
+                  {pos.label}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       )}
 

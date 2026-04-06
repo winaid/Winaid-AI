@@ -140,6 +140,7 @@ export interface SlideData {
   imagePosition?: SlideImagePosition;
   imageStyle?: SlideImageStyle; // 이미지 생성 스타일
   imageRatio?: '1:1' | '4:5' | '9:16' | '16:9' | '3:4'; // AI 이미지 생성 비율
+  imageFocalPoint?: { x: number; y: number }; // 초점 위치 (0~100%, 기본 50,50)
 
   // 카드별 폰트 오버라이드 — 비어 있으면 상단 전체 폰트를 따름
   fontId?: string;
