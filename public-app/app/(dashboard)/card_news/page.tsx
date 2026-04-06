@@ -1026,6 +1026,12 @@ DECORATIVE: (장식 요소)`,
       {/* ══════ 탭 1: 카드뉴스 생성 ══════ */}
       {mainTab === 'create' && pageStep === 1 && (
         <div className="max-w-3xl mx-auto">
+          {/* 헤딩 */}
+          <div className="text-center mb-8">
+            <h2 className="text-2xl font-bold text-slate-800 mb-2">어떤 카드뉴스를 만들까요?</h2>
+            <p className="text-sm text-blue-500">주제를 입력하거나 추천 주제를 선택하세요</p>
+          </div>
+
           {/* 주제 추천 칩 */}
           <div className="mb-4">
             <p className="text-sm font-semibold text-slate-500 mb-3">이런 주제는 어때요?</p>
