@@ -770,7 +770,7 @@ DECORATIVE: (장식 요소)`,
 
   // ── 초기 로드: 프롬프트 히스토리 + 참고 이미지 ──
   useEffect(() => {
-    try { const sl = localStorage.getItem('hospital-logo-dataurl'); if (sl) setLogoDataUrl(sl); } catch {}
+    try { const sl = localStorage.getItem('hospital-logo-dataurl'); if (sl) { setLogoDataUrl(sl); setProTheme(prev => ({ ...prev, hospitalLogo: sl })); } } catch {}
     try {
       const saved = localStorage.getItem(CARD_PROMPT_HISTORY_KEY);
       if (saved) setPromptHistory(JSON.parse(saved));
@@ -1135,7 +1135,7 @@ DECORATIVE: (장식 요소)`,
                   {logoDataUrl ? (
                     <div className="relative">
                       <img src={logoDataUrl} alt="로고" className="h-10 w-auto rounded-xl border border-slate-200 bg-white p-1" />
-                      <button type="button" onClick={() => { setLogoDataUrl(null); setLogoEnabled(false); try { localStorage.removeItem('hospital-logo-dataurl'); } catch {} }}
+                      <button type="button" onClick={() => { setLogoDataUrl(null); setLogoEnabled(false); setProTheme(prev => ({ ...prev, hospitalLogo: undefined })); try { localStorage.removeItem('hospital-logo-dataurl'); } catch {} }}
                         className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-full text-[9px] flex items-center justify-center shadow-sm">✕</button>
                     </div>
                   ) : (
@@ -1145,7 +1145,7 @@ DECORATIVE: (장식 요소)`,
                   <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={e => {
                     const file = e.target.files?.[0]; if (!file) return;
                     const reader = new FileReader();
-                    reader.onload = () => { const d = reader.result as string; setLogoDataUrl(d); setLogoEnabled(true); try { localStorage.setItem('hospital-logo-dataurl', d); } catch {} };
+                    reader.onload = () => { const d = reader.result as string; setLogoDataUrl(d); setLogoEnabled(true); setProTheme(prev => ({ ...prev, hospitalLogo: d })); try { localStorage.setItem('hospital-logo-dataurl', d); } catch {} };
                     reader.readAsDataURL(file); e.target.value = '';
                   }} />
                   {logoDataUrl && (

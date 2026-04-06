@@ -1094,20 +1094,29 @@ JSON 한 객체만 출력:
     });
   };
 
-  const hospitalFooter = theme.hospitalName ? (
-    <div style={{
-      marginTop: 'auto', paddingTop: '24px',
-      textAlign: 'center', position: 'relative', zIndex: 4,
-    }}>
-      <div style={{
-        color: isDarkTheme ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.3)',
-        fontSize: '14px', fontWeight: 600,
-        letterSpacing: '3px',
-      }}>
-        {theme.hospitalName}
+  /** 슬라이드별 병원 푸터 (로고 + 병원명, 스타일 커스텀 가능) */
+  const renderHospitalFooter = (slide?: SlideData) => {
+    if (!theme.hospitalName && !theme.hospitalLogo) return null;
+    return (
+      <div style={{ marginTop: 'auto', paddingTop: '24px', textAlign: 'center', position: 'relative', zIndex: 4, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+        {theme.hospitalLogo && (
+          <img src={theme.hospitalLogo} alt="" crossOrigin="anonymous" style={{ height: '28px', objectFit: 'contain' }} />
+        )}
+        {theme.hospitalName && (
+          <div style={{
+            color: slide?.hospitalColor || (isDarkTheme ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.3)'),
+            fontSize: `${slide?.hospitalFontSize || 14}px`,
+            fontWeight: (slide?.hospitalFontWeight || '600') as CSSProperties['fontWeight'],
+            letterSpacing: '3px',
+          }}>
+            {theme.hospitalName}
+          </div>
+        )}
       </div>
-    </div>
-  ) : null;
+    );
+  };
+  // 하위 호환: 기존 hospitalFooter 참조를 유지
+  const hospitalFooter = renderHospitalFooter();
 
   // ═══════════════════════════════════════
   // 레이아웃별 렌더 (16종, 꽉 채움 + 깊이감 디자인)
@@ -2644,13 +2653,15 @@ function TextElementEditor({ value, onChange, multiline, fontId, fontSize, fontW
       <div>
         <p className="text-[10px] text-slate-400 mb-1">색상</p>
         <div className="flex flex-wrap gap-1.5">
-          {['#FFFFFF', '#000000', '#333333', '#666666', '#999999',
-            '#EF4444', '#F97316', '#EAB308', '#22C55E', '#3B82F6', '#8B5CF6', '#EC4899'].map(c => (
+          {['#FFFFFF', '#000000', '#333333', '#EF4444', '#3B82F6', '#22C55E', '#8B5CF6', '#EC4899'].map(c => (
             <button key={c} type="button" onClick={() => onStyleChange(`${prefix}Color`, c)}
               className={`w-6 h-6 rounded-full border-2 transition-transform ${
                 fontColor === c ? 'border-blue-500 scale-110' : 'border-slate-200 hover:scale-105'
               }`} style={{ background: c }} />
           ))}
+          <label className="w-6 h-6 rounded-full border-2 border-slate-200 overflow-hidden cursor-pointer hover:scale-105 transition-transform flex items-center justify-center bg-gradient-to-br from-red-400 via-green-400 to-blue-400" title="스포이드">
+            <input type="color" value={fontColor || '#000000'} onChange={e => onStyleChange(`${prefix}Color`, e.target.value)} className="opacity-0 w-0 h-0" />
+          </label>
         </div>
       </div>
 
@@ -3158,14 +3169,21 @@ ${JSON.stringify(slideForContext, null, 2)}
       {/* ── 검색 탭 (Pexels / Google / Pinterest) ── */}
       {imageTab !== 'ai' && (
         <div className="space-y-2">
-          <div className="flex gap-2">
+          <div className="flex gap-1.5">
             <input type="text" value={imageSearchQuery}
               onChange={e => setImageSearchQuery(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleImageSearch()}
-              placeholder={imageTab === 'pexels' ? '영문 예: dental clinic, teeth' : '예: 치과 임플란트, 병원'}
+              placeholder="영문 예: dental clinic, teeth"
               className="flex-1 px-3 py-2 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-blue-400" />
+            <button type="button" onClick={async () => {
+              try {
+                const res = await fetch('/api/pexels-query', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ topic: slide.title + ' ' + (slide.subtitle || '') }) });
+                const { query } = await res.json();
+                setImageSearchQuery(query);
+              } catch { /* ignore */ }
+            }} className="px-2.5 py-2 bg-purple-50 text-purple-600 text-[10px] font-bold rounded-lg border border-purple-200 hover:bg-purple-100 shrink-0">✨ AI</button>
             <button type="button" onClick={handleImageSearch} disabled={imageSearchLoading}
-              className="px-4 py-2 bg-blue-500 text-white text-xs font-bold rounded-lg disabled:opacity-50 hover:bg-blue-600">
+              className="px-3 py-2 bg-blue-500 text-white text-xs font-bold rounded-lg disabled:opacity-50 hover:bg-blue-600 shrink-0">
               {imageSearchLoading ? '...' : '검색'}
             </button>
           </div>
@@ -3432,6 +3450,43 @@ ${JSON.stringify(slideForContext, null, 2)}
 
           {/* 레이아웃별 데이터 */}
           {renderLayoutDataEditor()}
+
+          {/* 병원명 스타일 */}
+          {true && (
+            <ElementAccordion icon="🏥" label="병원명 스타일" defaultOpen={false}>
+              <div className="space-y-3">
+                <div>
+                  <p className="text-[10px] text-slate-400 mb-1">크기</p>
+                  <div className="flex items-center gap-1">
+                    <button type="button" onClick={() => onChange({ hospitalFontSize: (slide.hospitalFontSize || 14) - 1 })} className="w-7 h-7 bg-slate-100 rounded text-xs font-bold hover:bg-slate-200">−</button>
+                    <input type="number" value={slide.hospitalFontSize || 14} onChange={e => onChange({ hospitalFontSize: Number(e.target.value) })} className="w-14 h-7 text-center text-xs bg-white border border-slate-200 rounded" />
+                    <button type="button" onClick={() => onChange({ hospitalFontSize: (slide.hospitalFontSize || 14) + 1 })} className="w-7 h-7 bg-slate-100 rounded text-xs font-bold hover:bg-slate-200">+</button>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-[10px] text-slate-400 mb-1">색상</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {['#FFFFFF', '#000000', '#333333', '#999999', 'rgba(255,255,255,0.5)', 'rgba(0,0,0,0.3)'].map(c => (
+                      <button key={c} type="button" onClick={() => onChange({ hospitalColor: c })}
+                        className={`w-6 h-6 rounded-full border-2 transition-transform ${slide.hospitalColor === c ? 'border-blue-500 scale-110' : 'border-slate-200 hover:scale-105'}`} style={{ background: c }} />
+                    ))}
+                    <label className="w-6 h-6 rounded-full border-2 border-slate-200 overflow-hidden cursor-pointer hover:scale-105 bg-gradient-to-br from-red-400 via-green-400 to-blue-400" title="스포이드">
+                      <input type="color" value={slide.hospitalColor || '#000000'} onChange={e => onChange({ hospitalColor: e.target.value })} className="opacity-0 w-0 h-0" />
+                    </label>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-[10px] text-slate-400 mb-1">굵기</p>
+                  <div className="flex gap-1">
+                    {[{ l: 'L', v: '400' }, { l: 'N', v: '500' }, { l: 'M', v: '600' }, { l: 'B', v: '700' }, { l: 'XB', v: '800' }].map(w => (
+                      <button key={w.l} type="button" onClick={() => onChange({ hospitalFontWeight: w.v })}
+                        className={`flex-1 py-1.5 text-[10px] font-semibold rounded-lg border ${(slide.hospitalFontWeight || '600') === w.v ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-500 border-slate-200'}`}>{w.l}</button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </ElementAccordion>
+          )}
 
           {/* 아이콘 커스텀 (레이아웃별) */}
           {slide.layout === 'checklist' && (

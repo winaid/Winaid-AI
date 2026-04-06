@@ -194,6 +194,11 @@ export interface SlideData {
   checkIcon?: string;
   prosIcon?: string;
   consIcon?: string;
+
+  // 병원명 스타일
+  hospitalFontSize?: number;
+  hospitalColor?: string;
+  hospitalFontWeight?: string;
 }
 
 // ── 커버 템플릿 ──
