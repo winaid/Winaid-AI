@@ -2346,64 +2346,77 @@ JSON 한 객체만 출력:
                 </button>
               </div>
 
-              {/* 편집 패널 — 좌우 분할: 카드 프리뷰 + 편집 폼 */}
-              {isEditing && (
-                <div className="border-t border-slate-100 bg-slate-50/50">
-                  <div className="grid grid-cols-1 lg:grid-cols-5 gap-0">
-                    {/* 좌: 카드 프리뷰 (2열) */}
-                    <div className="lg:col-span-2 p-3 flex items-start justify-center">
-                      <div className="w-full" style={{ maxWidth: '400px', aspectRatio: cardAspect, position: 'relative', overflow: 'hidden', borderRadius: '12px', background: '#f1f5f9' }}>
-                        <div
-                          key={`edit-preview-${idx}-${fontLoaded}-${theme.fontId || ''}-${slide.fontId || ''}`}
-                          style={{
-                            position: 'absolute', top: 0, left: 0,
-                            width: `${cardWidth}px`, height: `${cardHeight}px`,
-                            transform: 'scale(0.37)',
-                            transformOrigin: 'top left',
-                          }}
-                        >
-                          {renderSlide(slide)}
-                        </div>
-                      </div>
-                    </div>
-                    {/* 우: 편집 폼 (3열) */}
-                    <div className="lg:col-span-3 p-3 overflow-y-auto" style={{ maxHeight: '520px' }}>
-                      <SlideEditor
-                        slide={slide}
-                        slideIdx={idx}
-                        onChange={(patch) => updateSlide(idx, patch)}
-                        onGenerateImage={() => handleGenerateSlideImage(idx)}
-                        onUploadImage={(file) => handleUploadSlideImage(idx, file)}
-                        onAiSuggestText={(field) => handleAiSuggestText(idx, field)}
-                        onAiSuggestComparison={() => handleAiSuggestComparison(idx)}
-                        onAiEnrich={() => handleAiEnrichSlide(idx)}
-                        onSuggestImagePrompt={() => handleSuggestImagePrompt(idx)}
-                        onFontChange={(newFontId) => {
-                          if (newFontId && newFontId !== 'custom') {
-                            ensureGoogleFontLoaded(newFontId);
-                            if (typeof document !== 'undefined' && 'fonts' in document) {
-                              (document as Document & { fonts: { ready: Promise<FontFaceSet> } }).fonts.ready
-                                .then(() => setFontLoaded(v => v + 1))
-                                .catch(() => setFontLoaded(v => v + 1));
-                            }
-                          } else {
-                            setFontLoaded(v => v + 1);
-                          }
-                        }}
-                        accentColor={theme.accentColor}
-                        generatingImage={generatingImageIdx === idx}
-                        aiSuggestingKey={aiSuggestingKey}
-                        customFontName={customFontName}
-                        customFontDisplayName={customFontDisplayName}
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
+                      {/* 인라인 편집 제거 — 풀스크린 모달로 이동 */}
             </div>
           );
         })}
       </div>
+
+      {/* ══════ 풀스크린 편집 모달 ══════ */}
+      {editingIdx !== null && slides[editingIdx] && (() => {
+        const eSlide = slides[editingIdx];
+        return (
+          <div className="fixed inset-0 bg-white z-50 flex flex-col">
+            {/* 상단 바 */}
+            <div className="flex items-center justify-between px-6 py-3 border-b border-slate-200 bg-white">
+              <div className="flex items-center gap-4">
+                <span className="text-lg font-bold text-slate-800">{editingIdx + 1}페이지 편집</span>
+                <div className="flex items-center gap-2">
+                  <button type="button" onClick={() => setEditingIdx(Math.max(0, editingIdx - 1))} disabled={editingIdx === 0}
+                    className="w-8 h-8 rounded-lg bg-slate-100 text-slate-500 disabled:opacity-30 flex items-center justify-center text-sm">‹</button>
+                  <span className="text-sm text-slate-500">{editingIdx + 1} / {slides.length}</span>
+                  <button type="button" onClick={() => setEditingIdx(Math.min(slides.length - 1, editingIdx + 1))} disabled={editingIdx === slides.length - 1}
+                    className="w-8 h-8 rounded-lg bg-slate-100 text-slate-500 disabled:opacity-30 flex items-center justify-center text-sm">›</button>
+                </div>
+              </div>
+              <button type="button" onClick={() => setEditingIdx(null)} className="px-5 py-2 text-sm font-bold text-white bg-blue-600 rounded-lg hover:bg-blue-700">✓ 완료</button>
+            </div>
+            {/* 좌(프리뷰) + 우(편집) */}
+            <div className="flex-1 flex overflow-hidden">
+              {/* 좌: 카드 프리뷰 */}
+              <div className="flex-1 bg-slate-100 flex items-center justify-center p-8 overflow-auto">
+                <div style={{ width: '100%', maxWidth: '500px', aspectRatio: cardAspect, position: 'relative', overflow: 'hidden', borderRadius: '16px', boxShadow: '0 20px 60px rgba(0,0,0,0.15)' }}>
+                  <div key={`edit-fs-${editingIdx}-${fontLoaded}-${theme.fontId || ''}-${eSlide.fontId || ''}`}
+                    style={{ position: 'absolute', top: 0, left: 0, width: `${cardWidth}px`, height: `${cardHeight}px`, transform: `scale(${500 / cardWidth})`, transformOrigin: 'top left' }}>
+                    {renderSlide(eSlide)}
+                  </div>
+                </div>
+              </div>
+              {/* 우: 편집 패널 */}
+              <div className="w-[400px] border-l border-slate-200 bg-white overflow-y-auto p-4">
+                <SlideEditor
+                  slide={eSlide}
+                  slideIdx={editingIdx}
+                  onChange={(patch) => updateSlide(editingIdx, patch)}
+                  onGenerateImage={() => handleGenerateSlideImage(editingIdx)}
+                  onUploadImage={(file) => handleUploadSlideImage(editingIdx, file)}
+                  onAiSuggestText={(field) => handleAiSuggestText(editingIdx, field)}
+                  onAiSuggestComparison={() => handleAiSuggestComparison(editingIdx)}
+                  onAiEnrich={() => handleAiEnrichSlide(editingIdx)}
+                  onSuggestImagePrompt={() => handleSuggestImagePrompt(editingIdx)}
+                  onFontChange={(newFontId) => {
+                    if (newFontId && newFontId !== 'custom') {
+                      ensureGoogleFontLoaded(newFontId);
+                      if (typeof document !== 'undefined' && 'fonts' in document) {
+                        (document as Document & { fonts: { ready: Promise<FontFaceSet> } }).fonts.ready
+                          .then(() => setFontLoaded(v => v + 1))
+                          .catch(() => setFontLoaded(v => v + 1));
+                      }
+                    } else {
+                      setFontLoaded(v => v + 1);
+                    }
+                  }}
+                  accentColor={theme.accentColor}
+                  generatingImage={generatingImageIdx === editingIdx}
+                  aiSuggestingKey={aiSuggestingKey}
+                  customFontName={customFontName}
+                  customFontDisplayName={customFontDisplayName}
+                />
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
     </div>
   );
