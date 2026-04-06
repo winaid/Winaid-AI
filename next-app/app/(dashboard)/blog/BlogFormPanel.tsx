@@ -151,7 +151,7 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
 
           {/* 팀 선택 + 병원명 (old 동일) */}
           <div className="flex bg-slate-100 rounded-lg p-0.5">
-            {TEAM_DATA.map(team => (
+            {TEAM_DATA.filter(team => team.hospitals.length > 0).map(team => (
               <button
                 key={team.id}
                 type="button"
