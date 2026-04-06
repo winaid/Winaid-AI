@@ -1013,10 +1013,11 @@ DECORATIVE: (장식 요소)`,
           </div>
 
           {/* 콘텐츠 입력 (큰 텍스트박스) */}
-          <div className="border-2 border-dashed border-slate-200 rounded-2xl p-6 mb-4 focus-within:border-blue-400 transition-all">
+          <div className="border-2 border-dashed border-slate-200 rounded-xl p-4 mb-4 focus-within:border-blue-400 transition-all">
             <textarea value={topic} onChange={e => setTopic(e.target.value)}
               placeholder="주제를 입력하세요 (예: 임플란트 사후관리 5단계 가이드)"
-              className="w-full text-lg font-medium text-slate-800 placeholder:text-slate-300 resize-none border-none outline-none bg-transparent min-h-[100px]" />
+              rows={2}
+              className="w-full text-base font-medium text-slate-800 placeholder:text-slate-300 resize-none border-none outline-none bg-transparent" />
           </div>
 
           {/* 진료과 */}
