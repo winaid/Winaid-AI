@@ -5,6 +5,7 @@ import type { SlideData, SlideDecoration, CardNewsTheme, SlideLayoutType, SlideI
 import { LAYOUT_LABELS, CARD_FONTS, FONT_CATEGORIES, getCardFont, SLIDE_IMAGE_STYLES, COVER_TEMPLATES } from '../lib/cardNewsLayouts';
 import type { CardTemplate } from '../lib/cardTemplateService';
 import { FONT_LIST, getFontById, loadGoogleFont, type FontItem } from '../lib/cardFonts';
+import CardNewsCanvas from './CardNewsCanvas';
 
 /**
  * CSS 선언 문자열 "height: 6px; background: red" 를 React 스타일 객체로 파싱.
@@ -79,6 +80,8 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
   const [aiSuggestingKey, setAiSuggestingKey] = useState<string | null>(null); // `${idx}:${field}`
 
   // 카드별 AI 채팅은 SlideEditor 내부에서 관리 (글로벌 채팅 제거)
+  // fabric.js 캔버스 모드 토글
+  const [useCanvas, setUseCanvas] = useState(false);
 
   // 폰트 즉시 반영 + 커스텀 폰트 업로드
   const [fontLoaded, setFontLoaded] = useState(0);
@@ -2404,19 +2407,38 @@ JSON 한 객체만 출력:
                     className="w-8 h-8 rounded-lg bg-slate-100 text-slate-500 disabled:opacity-30 flex items-center justify-center text-sm">›</button>
                 </div>
               </div>
-              <button type="button" onClick={() => setEditingIdx(null)} className="px-5 py-2 text-sm font-bold text-white bg-blue-600 rounded-lg hover:bg-blue-700">✓ 완료</button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setUseCanvas(v => !v)}
+                  className={`px-3 py-1.5 text-xs font-bold rounded-lg border transition-colors ${useCanvas ? 'bg-violet-600 text-white border-violet-600' : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'}`}
+                >
+                  {useCanvas ? 'Canvas' : 'HTML'}
+                </button>
+                <button type="button" onClick={() => setEditingIdx(null)} className="px-5 py-2 text-sm font-bold text-white bg-blue-600 rounded-lg hover:bg-blue-700">✓ 완료</button>
+              </div>
             </div>
             {/* 좌(프리뷰) + 우(편집) */}
             <div className="flex-1 flex overflow-hidden">
               {/* 좌: 카드 프리뷰 */}
               <div className="flex-[3] bg-slate-100 flex items-center justify-center p-6 overflow-auto">
+                {useCanvas ? (
+                  <CardNewsCanvas
+                    slide={eSlide}
+                    theme={theme}
+                    cardRatio={cardRatio}
+                    learnedTemplate={learnedTemplate}
+                    presetStyle={presetStyle}
+                    maxWidth={650}
+                  />
+                ) : (
                 <div style={{ width: '100%', maxWidth: '650px', aspectRatio: cardAspect, position: 'relative', overflow: 'hidden', borderRadius: '16px', boxShadow: '0 20px 60px rgba(0,0,0,0.15)' }}>
                   <div key={`edit-fs-${editingIdx}-${fontLoaded}-${theme.fontId || ''}-${eSlide.fontId || ''}`}
                     style={{ position: 'absolute', top: 0, left: 0, width: `${cardWidth}px`, height: `${cardHeight}px`, transform: `scale(${650 / cardWidth})`, transformOrigin: 'top left' }}>
                     {renderSlide(eSlide)}
                   </div>
                   {/* 드래그 오버레이 — 제목/부제/장식 위치 이동 */}
-                  <div style={{ position: 'absolute', inset: 0, zIndex: 20 }}
+                  <div style={{ position: 'absolute', inset: 0, zIndex: 20, cursor: 'grab' }}
                     onMouseDown={(e) => {
                       const rect = e.currentTarget.getBoundingClientRect();
                       const clickX = ((e.clientX - rect.left) / rect.width) * 100;
@@ -2477,9 +2499,9 @@ JSON 한 객체만 출력:
                       document.addEventListener('mousemove', onMove);
                       document.addEventListener('mouseup', onUp);
                     }}
-                    style={{ cursor: 'grab' }}
                   />
                 </div>
+                )}
               </div>
               {/* 우: 편집 패널 */}
               <div className="flex-[2] min-w-[380px] max-w-[520px] border-l border-slate-200 bg-white overflow-y-auto p-5">
