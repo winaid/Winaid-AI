@@ -983,7 +983,7 @@ DECORATIVE: (장식 요소)`,
   };
 
   return (
-    <div className="p-5 max-w-6xl mx-auto min-h-[calc(100vh-80px)] flex flex-col">
+    <div className="p-5 max-w-6xl mx-auto min-h-[calc(100vh-80px)] flex flex-col justify-center">
 
       {/* ══════ 상단 탭 ══════ */}
       <div className="flex justify-center border-b border-slate-200 mb-4 flex-shrink-0">
@@ -1028,7 +1028,7 @@ DECORATIVE: (장식 요소)`,
 
       {/* ══════ 탭 1: 카드뉴스 생성 ══════ */}
       {mainTab === 'create' && pageStep === 1 && (
-        <div className="max-w-3xl mx-auto flex-1 flex flex-col justify-center">
+        <div className="max-w-3xl mx-auto">
           {/* 헤딩 */}
           <div className="text-center mb-8">
             <h2 className="text-2xl font-bold text-slate-800 mb-2">어떤 카드뉴스를 만들까요?</h2>
