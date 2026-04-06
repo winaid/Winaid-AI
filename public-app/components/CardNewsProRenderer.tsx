@@ -2752,7 +2752,7 @@ function SlideEditor({
   const [cardChatLoading, setCardChatLoading] = useState(false);
 
   // 이미지 소스 4탭
-  const [imageTab, setImageTab] = useState<'pexels' | 'google' | 'pinterest' | 'ai'>('pexels');
+  const [imageTab, setImageTab] = useState<'pexels' | 'ai'>('pexels');
   const [imageSearchQuery, setImageSearchQuery] = useState('');
   const [imageSearchResults, setImageSearchResults] = useState<{ id: string; url: string; thumb: string; alt: string; source: string; photographer?: string }[]>([]);
   const [imageSearchLoading, setImageSearchLoading] = useState(false);
@@ -2789,15 +2789,8 @@ function SlideEditor({
     if (!imageSearchQuery.trim()) return;
     setImageSearchLoading(true);
     try {
-      let endpoint = '';
-      const orientation = 'landscape'; // 카드뉴스용
-      if (imageTab === 'pexels') {
-        endpoint = `/api/pexels?query=${encodeURIComponent(imageSearchQuery)}&orientation=${orientation}&per_page=12`;
-      } else if (imageTab === 'google') {
-        endpoint = `/api/google-images?query=${encodeURIComponent(imageSearchQuery)}`;
-      } else if (imageTab === 'pinterest') {
-        endpoint = `/api/pinterest-images?query=${encodeURIComponent(imageSearchQuery)}`;
-      }
+      const orientation = 'landscape';
+      const endpoint = `/api/pexels?query=${encodeURIComponent(imageSearchQuery)}&orientation=${orientation}&per_page=12`;
       const res = await fetch(endpoint);
       const data = await res.json();
       setImageSearchResults(data.photos || []);
@@ -3147,12 +3140,10 @@ ${JSON.stringify(slideForContext, null, 2)}
         </div>
       </div>
 
-      {/* ── 4탭 소스 선택 ── */}
+      {/* ── 2탭 소스 선택 ── */}
       <div className="flex gap-1">
         {([
-          { id: 'pexels' as const, label: 'Pexels', icon: '📷' },
-          { id: 'google' as const, label: 'Google', icon: '🔍' },
-          { id: 'pinterest' as const, label: 'Pinterest', icon: '📌' },
+          { id: 'pexels' as const, label: 'Pexels (저작권 무료)', icon: '📷' },
           { id: 'ai' as const, label: 'AI 생성', icon: '🎨' },
         ]).map(tab => (
           <button key={tab.id} type="button" onClick={() => { setImageTab(tab.id); setImageSearchResults([]); }}
@@ -3194,15 +3185,7 @@ ${JSON.stringify(slideForContext, null, 2)}
                   </button>
                 ))}
               </div>
-              {imageTab === 'pexels' && (
-                <p className="text-[9px] text-slate-400 text-center">📷 Photos by <a href="https://www.pexels.com" target="_blank" rel="noreferrer" className="underline">Pexels</a> · 저작권 무료</p>
-              )}
-              {imageTab === 'google' && (
-                <p className="text-[9px] text-red-400 text-center">⚠️ Google 이미지는 저작권이 있을 수 있습니다. 상업용은 Pexels 추천</p>
-              )}
-              {imageTab === 'pinterest' && (
-                <p className="text-[9px] text-red-400 text-center">⚠️ Pinterest 이미지는 참고용으로만 사용하세요</p>
-              )}
+              <p className="text-[9px] text-slate-400 text-center">📷 Photos by <a href="https://www.pexels.com" target="_blank" rel="noreferrer" className="underline">Pexels</a> · 저작권 무료</p>
             </>
           )}
         </div>
