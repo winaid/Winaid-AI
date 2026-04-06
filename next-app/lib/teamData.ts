@@ -85,9 +85,4 @@ export const TEAM_DATA: TeamData[] = [
       { name: '논산중앙치과', manager: '이지안 매니저님', address: '충남 논산시 반월동', naverBlogUrls: ['https://blog.naver.com/cha1636ndsu'] },
     ],
   },
-  {
-    id: 4,
-    label: '콘텐츠팀',
-    hospitals: [],
-  },
 ];

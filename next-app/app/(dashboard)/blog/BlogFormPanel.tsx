@@ -370,7 +370,7 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
               </div>
               {/* 키워드 */}
               <div>
-                <label className={labelCls}>SEO 키워드</label>
+                <label className={labelCls}>주요 키워드</label>
                 <input type="text" value={keywords} onChange={e => setKeywords(e.target.value)} placeholder="예: 강남 치과, 임플란트 가격" className={inputCls} />
               </div>
               {keywords.trim() && (
