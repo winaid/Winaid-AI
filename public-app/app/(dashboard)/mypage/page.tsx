@@ -329,8 +329,8 @@ export default function MyPage() {
                                 <span className="text-[10px] bg-blue-50 text-blue-600 font-bold px-2 py-0.5 rounded-full">{layoutLabel[s.layout as string] || String(s.layout)}</span>
                               </div>
                               <p className="text-sm font-bold text-slate-800 mb-1">{(s.title as string) || '(제목 없음)'}</p>
-                              {s.subtitle && <p className="text-xs text-slate-600 mb-2">{s.subtitle as string}</p>}
-                              {s.body && <p className="text-xs text-slate-500 mb-2 whitespace-pre-line">{s.body as string}</p>}
+                              {typeof s.subtitle === 'string' && s.subtitle && <p className="text-xs text-slate-600 mb-2">{s.subtitle}</p>}
+                              {typeof s.body === 'string' && s.body && <p className="text-xs text-slate-500 mb-2 whitespace-pre-line">{s.body}</p>}
                               {/* 체크리스트 */}
                               {Array.isArray(s.checkItems) && <div className="space-y-1 mt-1">{(s.checkItems as string[]).map((item, j) => <div key={j} className="flex items-center gap-1.5 text-xs text-slate-600"><span className="text-emerald-500">✓</span>{item}</div>)}</div>}
                               {/* 단계 */}
