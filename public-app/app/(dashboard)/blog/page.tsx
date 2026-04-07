@@ -110,7 +110,17 @@ function BlogForm() {
 
   // ── 병원 홈페이지/블로그 크롤링 상태 ──
   const [homepageUrl, setHomepageUrl] = useState('');
-  const [clinicContext, setClinicContext] = useState<ClinicContext | null>(null);
+  const [clinicContext, setClinicContext] = useState<ClinicContext | null>(() => {
+    if (typeof window === 'undefined') return null;
+    try {
+      const saved = localStorage.getItem('winaid_clinic_context');
+      if (!saved) return null;
+      const parsed = JSON.parse(saved) as { url: string; ctx: ClinicContext; ts: number };
+      // 7일 이내 캐시만 사용
+      if (Date.now() - parsed.ts > 7 * 24 * 60 * 60 * 1000) return null;
+      return parsed.ctx;
+    } catch { return null; }
+  });
   const [isCrawling, setIsCrawling] = useState(false);
   const [crawlProgress, setCrawlProgress] = useState('');
   const [includeHospitalIntro, setIncludeHospitalIntro] = useState(false);
@@ -267,8 +277,34 @@ function BlogForm() {
   };
 
   // ── 병원 홈페이지 크롤링 ──
+  // 프로필 로드 후 캐시된 clinicContext URL과 homepageUrl이 같으면 crawlProgress 표시
+  useEffect(() => {
+    if (!clinicContext || !homepageUrl) return;
+    try {
+      const saved = localStorage.getItem('winaid_clinic_context');
+      if (!saved) return;
+      const parsed = JSON.parse(saved) as { url: string };
+      if (parsed.url === homepageUrl.trim()) {
+        setCrawlProgress(`이전 분석 결과 불러옴 — 서비스 ${clinicContext.actualServices.length}개, 특화 ${clinicContext.specialties.length}개`);
+      }
+    } catch { /* ignore */ }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [homepageUrl]);
+
   const handleCrawlHomepage = async () => {
     if (!homepageUrl.trim()) return;
+    // 캐시된 결과가 같은 URL이면 재분석 스킵
+    try {
+      const saved = localStorage.getItem('winaid_clinic_context');
+      if (saved) {
+        const parsed = JSON.parse(saved) as { url: string; ctx: ClinicContext; ts: number };
+        if (parsed.url === homepageUrl.trim() && Date.now() - parsed.ts < 7 * 24 * 60 * 60 * 1000) {
+          setClinicContext(parsed.ctx);
+          setCrawlProgress(`이전 분석 결과 사용 — 서비스 ${parsed.ctx.actualServices.length}개, 특화 ${parsed.ctx.specialties.length}개 (다시 분석하려면 URL을 수정 후 재시도)`);
+          return;
+        }
+      }
+    } catch { /* ignore */ }
     setIsCrawling(true);
     setCrawlProgress('');
     try {
@@ -276,6 +312,10 @@ function BlogForm() {
       setClinicContext(ctx);
       if (ctx) {
         setCrawlProgress(`분석 완료! 서비스 ${ctx.actualServices.length}개, 특화 ${ctx.specialties.length}개 발견`);
+        // localStorage에 캐시 저장
+        try {
+          localStorage.setItem('winaid_clinic_context', JSON.stringify({ url: homepageUrl.trim(), ctx, ts: Date.now() }));
+        } catch { /* 용량 초과 등 무시 */ }
       } else {
         setCrawlProgress('분석할 콘텐츠를 찾지 못했습니다.');
       }
