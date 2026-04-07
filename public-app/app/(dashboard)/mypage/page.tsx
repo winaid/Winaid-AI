@@ -79,6 +79,8 @@ export default function MyPage() {
   const [loading, setLoading] = useState(true);
   const [editName, setEditName] = useState('');
   const [editHospital, setEditHospital] = useState('');
+  const [editHomepageUrl, setEditHomepageUrl] = useState('');
+  const [editAddress, setEditAddress] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState('');
 
@@ -102,6 +104,8 @@ export default function MyPage() {
         setProfile({ id: user.id, email: user.email || '', name: user.user_metadata?.name || '', hospitalName: user.user_metadata?.hospital_name || user.user_metadata?.name || '', createdAt: user.created_at || '' });
         setEditName(user.user_metadata?.name || '');
         setEditHospital(user.user_metadata?.hospital_name || user.user_metadata?.name || '');
+        setEditHomepageUrl(user.user_metadata?.homepage_url || '');
+        setEditAddress(user.user_metadata?.address || '');
         const credits = await getCredits(user.id);
         setCreditInfo(credits);
         try {
@@ -147,7 +151,7 @@ export default function MyPage() {
     setIsSaving(true); setSaveMsg('');
     try {
       const sb = getSupabaseClient();
-      const { error } = await sb.auth.updateUser({ data: { name: editName.trim(), hospital_name: editHospital.trim() } });
+      const { error } = await sb.auth.updateUser({ data: { name: editName.trim(), hospital_name: editHospital.trim(), homepage_url: editHomepageUrl.trim(), address: editAddress.trim() } });
       if (error) setSaveMsg('저장 실패: ' + error.message);
       else { setSaveMsg('저장되었습니다'); setProfile(prev => prev ? { ...prev, name: editName.trim(), hospitalName: editHospital.trim() } : prev); }
     } catch { setSaveMsg('저장 실패'); }
@@ -270,6 +274,15 @@ export default function MyPage() {
               <label className={labelCls}>병원명</label>
               <input type="text" value={editHospital} onChange={e => setEditHospital(e.target.value)} placeholder="병원 이름" className={inputCls} />
             </div>
+            <div>
+              <label className={labelCls}>홈페이지/블로그 URL</label>
+              <input type="url" value={editHomepageUrl} onChange={e => setEditHomepageUrl(e.target.value)} placeholder="https://blog.naver.com/..." className={inputCls} />
+            </div>
+            <div>
+              <label className={labelCls}>병원 주소</label>
+              <input type="text" value={editAddress} onChange={e => setEditAddress(e.target.value)} placeholder="예: 서울특별시 강남구 역삼동" className={inputCls} />
+            </div>
+            <p className="text-[11px] text-slate-400">홈페이지 URL과 병원 주소는 블로그 생성 시 자동으로 연동됩니다</p>
             <div className="flex items-center gap-3">
               <button onClick={handleSaveProfile} disabled={isSaving} className="px-6 py-2.5 bg-blue-600 text-white font-bold text-sm rounded-xl hover:bg-blue-700 disabled:opacity-50 transition-all">
                 {isSaving ? '저장 중...' : '변경사항 저장'}
