@@ -80,15 +80,41 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName;
+      const isInput = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
+
+      // Ctrl+Z: Undo
       if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
         e.preventDefault();
         undo();
+        return;
+      }
+
+      // 입력 중이면 나머지 단축키 무시
+      if (isInput) return;
+
+      // Escape: 편집 모달 닫기
+      if (e.key === 'Escape' && editingIdx !== null) {
+        e.preventDefault();
+        setEditingIdx(null);
+        return;
+      }
+
+      // 편집 모달 열린 상태에서 방향키: 이전/다음 슬라이드
+      if (editingIdx !== null) {
+        if (e.key === 'ArrowLeft' && editingIdx > 0) {
+          e.preventDefault();
+          setEditingIdx(editingIdx - 1);
+        } else if (e.key === 'ArrowRight' && editingIdx < slides.length - 1) {
+          e.preventDefault();
+          setEditingIdx(editingIdx + 1);
+        }
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slides]);
+  }, [slides, editingIdx]);
 
   // 선택된 폰트가 Google Fonts 기반이면 CDN 로드 후 fontLoaded 증가 → 카드 re-mount
   useEffect(() => {
