@@ -137,10 +137,13 @@ export function getCardStyle(
   cardContainerStyle: CSSProperties,
   slideFontFamily: string,
 ): CSSProperties {
+  const alignV = slide.contentAlignV || 'center';
   return {
     ...cardContainerStyle,
     fontFamily: slideFontFamily,
     padding: calcCardPadding(slide),
+    justifyContent: alignV === 'top' ? 'flex-start' : alignV === 'bottom' ? 'flex-end' : 'center',
+    textAlign: (slide.titleAlign || cardContainerStyle.textAlign || 'left') as CSSProperties['textAlign'],
   };
 }
 
