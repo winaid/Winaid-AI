@@ -1198,17 +1198,18 @@ ${subs.length > 0 ? `경쟁 글 소제목: ${subs.join(' / ')}` : ''}
 
         // 6) 이미지 생성 → Storage 업로드 → public URL
         const generateAndUpload = async (prompt: string, index: number): Promise<{ index: number; url: string | null }> => {
-          try {
-            // 6a) /api/image → base64
-            const imgRes = await fetch('/api/image', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ prompt, aspectRatio: imageAspectRatio, mode: 'blog' as const }),
-            });
-            if (!imgRes.ok) return { index, url: null };
-            const imgData = await imgRes.json() as { imageDataUrl?: string };
-            const dataUrl = imgData.imageDataUrl;
-            if (!dataUrl) return { index, url: null };
+          // 최대 2회 재시도 + Pexels fallback
+          for (let attempt = 0; attempt < 2; attempt++) {
+            try {
+              const imgRes = await fetch('/api/image', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ prompt, aspectRatio: imageAspectRatio, mode: 'blog' as const }),
+              });
+              if (imgRes.ok) {
+                const imgData = await imgRes.json() as { imageDataUrl?: string };
+                if (imgData.imageDataUrl) {
+                  const dataUrl = imgData.imageDataUrl;
 
             // 6b) base64 → Supabase Storage 업로드
             if (supabase) {
@@ -1247,9 +1248,23 @@ ${subs.length > 0 ? `경쟁 글 소제목: ${subs.join(' / ')}` : ''}
 
             // 6c) Storage 실패 시 base64 fallback
             return { index, url: dataUrl };
-          } catch {
-            return { index, url: null };
+                }
+              }
+              // API 성공했지만 이미지 없음 → 재시도
+              if (attempt === 0) { await new Promise(r => setTimeout(r, 2000)); continue; }
+            } catch {
+              if (attempt === 0) { await new Promise(r => setTimeout(r, 2000)); continue; }
+            }
           }
+          // 재시도 실패 → Pexels 대체 이미지
+          try {
+            const keywords = prompt.split(',').slice(0, 2).join(' ').replace(/[^a-zA-Z\s]/g, '').trim() || 'dental clinic';
+            const pRes = await fetch(`/api/pexels?query=${encodeURIComponent(keywords)}&orientation=landscape&per_page=1`);
+            const pData = await pRes.json();
+            const fallbackUrl = pData.photos?.[0]?.url;
+            if (fallbackUrl) return { index, url: fallbackUrl };
+          } catch { /* ignore */ }
+          return { index, url: null };
         };
 
         // 이미 스트리밍 중에 시작된 이미지가 있으면 그 결과 사용, 없으면 새로 생성
@@ -1273,6 +1288,15 @@ ${subs.length > 0 ? `경쟁 글 소제목: ${subs.join(' / ')}` : ''}
                   imgTag,
                 );
               });
+            } else {
+              // 이미지 생성 실패 → 플레이스홀더 제거
+              setGeneratedContent(prev => {
+                if (!prev) return prev;
+                return prev.replace(
+                  new RegExp('<div class="content-image-wrapper" data-img-slot="' + result.index + '"[^>]*>[\\s\\S]*?</div>\\s*</div>', ''),
+                  '',
+                );
+              });
             }
             return result;
           });
@@ -1292,6 +1316,10 @@ ${subs.length > 0 ? `경쟁 글 소제목: ${subs.join(' / ')}` : ''}
         }
         // 미매칭 마커 제거
         finalHtml = finalHtml.replace(/\[IMG_\d+\]\n*/g, '');
+        // 잘못된 img src 정리 (Gemini가 HTML을 src에 넣는 경우 방지)
+        finalHtml = finalHtml.replace(/<img\s+([^>]*?)src="(?!data:|https?:\/\/|\/)[^"]*"([^>]*?)>/gi, '');
+        // 빈 content-image-wrapper 정리
+        finalHtml = finalHtml.replace(/<div class="content-image-wrapper"[^>]*>\s*<\/div>/g, '');
         // 의료광고법 최종 대체 (이미지 삽입 후)
         {
           const lawReplacements: [RegExp, string][] = [
@@ -1303,6 +1331,9 @@ ${subs.length > 0 ? `경쟁 글 소제목: ${subs.join(' / ')}` : ''}
           ];
           for (const [p, r] of lawReplacements) finalHtml = finalHtml.replace(p, r);
         }
+        // 잘못된/빈 이미지 태그 최종 정리
+        finalHtml = finalHtml.replace(/<img\s+[^>]*src="(?!data:|https?:\/\/)[^"]*"[^>]*\/?>/gi, '');
+        finalHtml = finalHtml.replace(/<div[^>]*class="content-image-wrapper"[^>]*>\s*<\/div>/g, '');
         setGeneratedContent(finalHtml);
         blogText = finalHtml;
       }
