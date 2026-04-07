@@ -989,38 +989,42 @@ export function useSlideRenderer({ theme, learnedTemplate, presetStyle, cardRati
           {slide.subtitle && <p style={{ color: theme.subtitleColor, fontSize: '22px', textAlign: 'center', marginTop: '10px', fontWeight: 600 }}>{slide.subtitle}</p>}
         </div>
         <div style={{ flex: 1, display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: '24px', alignContent: 'center', position: 'relative', zIndex: 2 }}>
-          {points.map((dp, i) => (
-            <div
-              key={i}
-              style={{
-                textAlign: 'center',
-                padding: '40px 20px',
-                background: dp.highlight ? `${theme.accentColor}15` : innerCardBg,
-                borderRadius: slide.dataShape === 'rounded' ? '24px' : slide.dataShape === 'pill' ? '999px' : slide.dataShape === 'diamond' ? '24px' : slide.dataShape === 'hexagon' ? '24px' : '50%',
-                aspectRatio: slide.dataShape === 'pill' ? undefined : '1 / 1',
-                clipPath: slide.dataShape === 'diamond' ? 'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)' : slide.dataShape === 'hexagon' ? 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)' : undefined,
-                border: dp.highlight ? `3px solid ${theme.accentColor}` : `1px solid ${innerCardBorder}`,
-                boxShadow: dp.highlight ? `0 8px 30px ${theme.accentColor}25` : 'none',
-                display: 'flex', flexDirection: 'column' as const, justifyContent: 'center', alignItems: 'center',
-              }}
-            >
+          {points.map((dp, i) => {
+            const shape = slide.dataShape || 'rounded';
+            return (
               <div
+                key={i}
                 style={{
-                  color: dp.highlight ? theme.accentColor : theme.titleColor,
-                  fontSize: `${calcValueSize(dp.value, containerW)}px`,
-                  fontWeight: 900,
-                  marginBottom: '12px',
-                  lineHeight: 1,
-                  letterSpacing: '-0.03em',
+                  textAlign: 'center',
+                  padding: shape === 'rounded' ? '48px 28px' : '40px 20px',
+                  background: dp.highlight ? `${theme.accentColor}15` : innerCardBg,
+                  borderRadius: shape === 'rounded' ? '24px' : shape === 'pill' ? '999px' : shape === 'circle' ? '50%' : '24px',
+                  aspectRatio: shape === 'circle' ? '1 / 1' : undefined,
+                  border: dp.highlight ? `2px solid ${theme.accentColor}` : `1px solid ${innerCardBorder}`,
+                  boxShadow: dp.highlight
+                    ? `0 8px 30px ${theme.accentColor}25`
+                    : (isDarkTheme ? 'none' : '0 4px 16px rgba(0,0,0,0.06)'),
+                  display: 'flex', flexDirection: 'column' as const, justifyContent: 'center', alignItems: 'center',
                 }}
               >
-                {dp.value}
+                <div
+                  style={{
+                    color: dp.highlight ? theme.accentColor : theme.titleColor,
+                    fontSize: `${calcValueSize(dp.value, containerW)}px`,
+                    fontWeight: 900,
+                    marginBottom: '14px',
+                    lineHeight: 1,
+                    letterSpacing: '-0.03em',
+                  }}
+                >
+                  {dp.value}
+                </div>
+                <div style={{ color: theme.bodyColor, fontSize: '16px', fontWeight: 600, wordBreak: 'keep-all', lineHeight: 1.4 }}>
+                  {dp.label}
+                </div>
               </div>
-              <div style={{ color: theme.bodyColor, fontSize: '16px', fontWeight: 600, wordBreak: 'keep-all', lineHeight: 1.4 }}>
-                {dp.label}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
         {slide.imagePosition === 'bottom' && renderImageLayer(slide)}
         {renderHospitalFooter(slide)}
