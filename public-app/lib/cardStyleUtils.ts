@@ -129,6 +129,12 @@ export function calcCardPadding(slide: SlideData): string {
   return '60px 64px';
 }
 
+/** 세로 정렬 → CSS justifyContent 값 */
+export function getContentAlignV(slide: SlideData): string {
+  const v = slide.contentAlignV || 'center';
+  return v === 'top' ? 'flex-start' : v === 'bottom' ? 'flex-end' : 'center';
+}
+
 // ── 스타일 빌더 ──
 
 /** 슬라이드별 컨테이너 스타일 */
@@ -137,12 +143,10 @@ export function getCardStyle(
   cardContainerStyle: CSSProperties,
   slideFontFamily: string,
 ): CSSProperties {
-  const alignV = slide.contentAlignV || 'center';
   return {
     ...cardContainerStyle,
     fontFamily: slideFontFamily,
     padding: calcCardPadding(slide),
-    justifyContent: alignV === 'top' ? 'flex-start' : alignV === 'bottom' ? 'flex-end' : 'center',
     textAlign: (slide.titleAlign || cardContainerStyle.textAlign || 'left') as CSSProperties['textAlign'],
   };
 }

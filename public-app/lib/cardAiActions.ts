@@ -145,6 +145,8 @@ export async function fillLayoutContent(
     'warning': 'warningTitle + warningItems (문자열 배열 3~4개)',
     'info': 'body (본문 2~3문장)',
     'quote': 'quoteText + quoteAuthor + quoteRole',
+    'cover': 'subtitle (부제 1문장)',
+    'closing': 'subtitle (마무리 멘트 1문장) + body (행동 유도 문구)',
   };
   const fields = fieldMap[layout];
   if (!fields) return null;

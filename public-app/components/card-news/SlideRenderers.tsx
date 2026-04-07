@@ -11,7 +11,7 @@ import type { CardTemplate } from '../../lib/cardTemplateService';
 import { COVER_TEMPLATES } from '../../lib/cardNewsLayouts';
 import {
   parseCSSString, resolveEffectiveFontFamily, resolveSlideFontFamily,
-  calcTitleSize, calcValueSize, calcItemLayout, calcGridCols, calcBodySize, calcCardPadding,
+  calcTitleSize, calcValueSize, calcItemLayout, calcGridCols, calcBodySize, calcCardPadding, getContentAlignV,
   getCardStyle as buildCardStyle, getTitleStyle as buildTitleStyle,
   getSubtitleStyle as buildSubtitleStyle, getBodyStyle as buildBodyStyle,
 } from '../../lib/cardStyleUtils';
@@ -591,7 +591,7 @@ export function useSlideRenderer({ theme, learnedTemplate, presetStyle, cardRati
           flex: 1,
           display: 'flex',
           flexDirection: 'column',
-          justifyContent: 'center',
+          justifyContent: getContentAlignV(slide),
           alignItems: 'center',
           textAlign: 'center',
           position: 'relative',
@@ -642,7 +642,7 @@ export function useSlideRenderer({ theme, learnedTemplate, presetStyle, cardRati
           flex: 1,
           display: 'flex',
           flexDirection: 'column',
-          justifyContent: 'center',
+          justifyContent: getContentAlignV(slide),
           position: 'relative',
           zIndex: 2,
           gap: '22px',
@@ -872,7 +872,7 @@ export function useSlideRenderer({ theme, learnedTemplate, presetStyle, cardRati
           <h2 style={{ ...getTitleStyle(slide, { fontSize: calcTitleSize(slide.title, 52, 36), textAlign: 'center' }) }}>{slide.title}</h2>
           {slide.subtitle && <p style={{ color: theme.subtitleColor, fontSize: '22px', textAlign: 'center', marginTop: '10px', fontWeight: 600 }}>{slide.subtitle}</p>}
         </div>
-        <div style={{ flex: 1, display: 'flex', flexDirection: isHorizontal ? 'row' : 'column', justifyContent: 'center', gap: `${stepsLayout.gap}px`, position: 'relative', zIndex: 2 }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: isHorizontal ? 'row' : 'column', justifyContent: getContentAlignV(slide), gap: `${stepsLayout.gap}px`, position: 'relative', zIndex: 2 }}>
           {items.map((step, i) => (
             <div
               key={i}
@@ -930,7 +930,7 @@ export function useSlideRenderer({ theme, learnedTemplate, presetStyle, cardRati
       {(() => {
         const checkLayout = calcItemLayout((slide.checkItems || []).length);
         return (
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: `${checkLayout.gap}px`, justifyContent: 'center', position: 'relative', zIndex: 2 }}>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: `${checkLayout.gap}px`, justifyContent: getContentAlignV(slide), position: 'relative', zIndex: 2 }}>
             {(slide.checkItems || []).map((item, i) => (
               <div
                 key={i}
@@ -1048,7 +1048,7 @@ export function useSlideRenderer({ theme, learnedTemplate, presetStyle, cardRati
           flex: 1,
           display: 'flex',
           flexDirection: 'column',
-          justifyContent: 'center',
+          justifyContent: getContentAlignV(slide),
           alignItems: 'center',
           textAlign: 'center',
           position: 'relative',
@@ -1174,7 +1174,7 @@ export function useSlideRenderer({ theme, learnedTemplate, presetStyle, cardRati
         {titleAccent('left')}
         <h2 style={{ ...getTitleStyle(slide, { fontSize: calcTitleSize(slide.title, 52, 36) }) }}>{slide.title}</h2>
       </div>
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: `${qaLayout.gap}px`, justifyContent: 'center', position: 'relative', zIndex: 2 }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: `${qaLayout.gap}px`, justifyContent: getContentAlignV(slide), position: 'relative', zIndex: 2 }}>
         {(slide.questions || []).map((qa, i) => (
           <div key={i} style={{ background: innerCardBg, borderRadius: '18px', padding: `${qaLayout.padding}px 28px`, border: `1px solid ${innerCardBorder}` }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px', marginBottom: '14px' }}>
@@ -1240,7 +1240,7 @@ export function useSlideRenderer({ theme, learnedTemplate, presetStyle, cardRati
         {titleAccent('left')}
         <h2 style={{ ...getTitleStyle(slide, { fontSize: calcTitleSize(slide.title, 52, 36) }) }}>{slide.title}</h2>
       </div>
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', position: 'relative', paddingLeft: '56px', zIndex: 2 }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: getContentAlignV(slide), position: 'relative', paddingLeft: '56px', zIndex: 2 }}>
         <div style={{ position: 'absolute', left: '24px', top: '12px', bottom: '12px', width: '4px', background: `${theme.accentColor}55`, borderRadius: '2px' }} />
         {(slide.timelineItems || []).map((item, i) => {
           const tlLayout = calcItemLayout((slide.timelineItems || []).length);
@@ -1353,7 +1353,7 @@ export function useSlideRenderer({ theme, learnedTemplate, presetStyle, cardRati
         {titleAccent('left')}
         <h2 style={{ ...getTitleStyle(slide, { fontSize: calcTitleSize(slide.title, 52, 36) }) }}>{slide.title}</h2>
       </div>
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: `${nlLayout.gap}px`, justifyContent: 'center', position: 'relative', zIndex: 2 }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: `${nlLayout.gap}px`, justifyContent: getContentAlignV(slide), position: 'relative', zIndex: 2 }}>
         {nlItems.map((item, i) => (
           <div
             key={i}
@@ -1532,7 +1532,7 @@ export function useSlideRenderer({ theme, learnedTemplate, presetStyle, cardRati
           {slide.warningTitle || slide.title}
         </h2>
       </div>
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '16px', justifyContent: 'center', position: 'relative', zIndex: 2 }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '16px', justifyContent: getContentAlignV(slide), position: 'relative', zIndex: 2 }}>
         {(slide.warningItems || []).map((item, i) => (
           <div
             key={i}
