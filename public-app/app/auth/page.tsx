@@ -67,7 +67,6 @@ export default function AuthPage() {
         <div className="w-full max-w-[420px]">
           <div className="text-center mb-10">
             <div className="inline-flex items-center gap-2.5">
-              <img src="/280_logo.png" alt="WINAI" className="h-10 rounded-lg" />
               <span className="text-2xl font-black text-slate-800">WIN<span className="text-blue-500">AI</span></span>
             </div>
           </div>
@@ -207,7 +206,6 @@ export default function AuthPage() {
         {/* Logo */}
         <div className="text-center mb-10">
           <div className="inline-flex items-center gap-2.5">
-            <img src="/280_logo.png" alt="WINAI" className="h-10 rounded-lg" />
             <span className="text-2xl font-black text-slate-800">WIN<span className="text-blue-500">AI</span></span>
           </div>
           <p className="text-slate-400 text-sm mt-2">병원 마케팅 AI</p>

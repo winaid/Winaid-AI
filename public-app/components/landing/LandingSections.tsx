@@ -583,7 +583,6 @@ function LandingSections() {
         <div className="absolute inset-0 bg-[radial-gradient(circle,_rgba(255,255,255,0.04)_1px,_transparent_1px)] bg-[length:24px_24px] opacity-10" />
         <div className="max-w-6xl mx-auto px-6 lg:px-8 relative">
           <div className="flex items-center justify-center gap-3 mb-10">
-            <img src="/280_logo.png" alt="" className="h-8 w-8 rounded-lg bg-white p-0.5" />
             <span className="font-black text-xl tracking-tight text-slate-300">
               WIN<span className="text-blue-400">AI</span>
             </span>

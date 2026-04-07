@@ -88,7 +88,6 @@ function LandingHero() {
       }`}>
         <div className="max-w-7xl mx-auto px-6 lg:px-8 h-[72px] flex items-center justify-between">
           <div className={`flex items-center gap-3 transition-all duration-500 ${scrolled ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}`}>
-            <img src="/280_logo.png" alt="" className="h-8 w-8" />
             <span className="font-black text-xl tracking-tight text-slate-800">
               WIN<span className="text-blue-600">AI</span>
             </span>
@@ -116,7 +115,6 @@ function LandingHero() {
           {/* Logo */}
           <div className="flex flex-col items-center mb-12">
             <div className="flex items-center gap-3.5 mb-3">
-              <img src="/280_logo.png" alt="" className="h-14 w-14" />
               <div className="flex items-center gap-0">
                 {'윈에이드'.split('').map((char, i) => (
                   <span key={i} className="flex items-center">
