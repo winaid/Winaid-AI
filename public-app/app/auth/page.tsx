@@ -333,10 +333,20 @@ export default function AuthPage() {
                   className={inputCls}
                 />
               </div>
+              {/* 선택 정보 안내 */}
+              <div className="pt-2 pb-1">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="flex-1 h-px bg-slate-200" />
+                  <span className="text-[11px] font-semibold text-slate-400">병원 정보 (선택)</span>
+                  <div className="flex-1 h-px bg-slate-200" />
+                </div>
+                <p className="text-[11px] text-slate-400 text-center leading-relaxed">
+                  아래 정보를 입력하시면 블로그 생성 시 매번 다시 입력할 필요 없이<br />자동으로 연동됩니다.
+                </p>
+              </div>
               <div>
                 <label className="block text-sm font-medium text-slate-600 mb-1.5">
                   홈페이지/블로그 URL
-                  <span className="text-slate-400 font-normal ml-1">(선택)</span>
                 </label>
                 <input
                   type="url"
@@ -345,12 +355,10 @@ export default function AuthPage() {
                   placeholder="https://blog.naver.com/..."
                   className={inputCls}
                 />
-                <p className="text-[11px] text-slate-400 mt-1">입력하면 블로그 생성 시 자동으로 채워집니다</p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-600 mb-1.5">
                   병원 주소
-                  <span className="text-slate-400 font-normal ml-1">(선택)</span>
                 </label>
                 <input
                   type="text"
@@ -359,7 +367,6 @@ export default function AuthPage() {
                   placeholder="예: 서울특별시 강남구 역삼동"
                   className={inputCls}
                 />
-                <p className="text-[11px] text-slate-400 mt-1">키워드 분석 시 지역 기반 추천에 활용됩니다</p>
               </div>
               <button type="submit" disabled={isLoading} className={btnPrimaryCls}>
                 {isLoading ? <span className="flex items-center justify-center gap-2">{spinner} 가입 중...</span> : '회원가입'}
