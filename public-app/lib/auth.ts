@@ -55,7 +55,7 @@ export const signUpWithEmail = async (
         } as Record<string, unknown>);
       }
 
-      // 크레딧 설정 (윈에이드/윈에이아이 계정은 999 크레딧)
+      // 크레딧 설정 (윈에이아이/관리자 계정은 999 크레딧)
       const adminEmails = ['glorious.youtub@gmail.com'];
       const isAdmin = email.includes('winaid') || email.includes('winai') || adminEmails.includes(email.toLowerCase());
       const creditAmount = isAdmin ? 999 : 20;

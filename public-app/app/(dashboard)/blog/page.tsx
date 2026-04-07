@@ -180,6 +180,7 @@ function BlogForm() {
       if (s.audienceMode) setAudienceMode(s.audienceMode);
       if (s.persona) setPersona(s.persona);
       if (s.tone) setTone(s.tone);
+      if (s.writingStyle) setWritingStyle(s.writingStyle);
       if (s.medicalLawMode) setMedicalLawMode(s.medicalLawMode);
       if (s.includeFaq !== undefined) setIncludeFaq(s.includeFaq);
       if (s.faqCount) setFaqCount(s.faqCount);

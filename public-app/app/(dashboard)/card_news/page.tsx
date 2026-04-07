@@ -12,7 +12,7 @@ import { CardRegenModal, type CardPromptHistoryItem, CARD_PROMPT_HISTORY_KEY, CA
 import CardTemplateManager from '../../../components/CardTemplateManager';
 import CardNewsRenderer from '../../../components/CardNewsRenderer';
 import CardNewsProRenderer from '../../../components/CardNewsProRenderer';
-import { DEFAULT_THEME, THEME_PRESETS, DESIGN_PRESETS, COVER_TEMPLATES, CARD_FONTS, FONT_CATEGORIES, type DesignPreset, type DesignPresetStyle, parseProSlidesJson, type SlideData as ProSlideData, type CardNewsTheme } from '../../../lib/cardNewsLayouts';
+import { DEFAULT_THEME, COVER_TEMPLATES, CARD_FONTS, FONT_CATEGORIES, type DesignPresetStyle, parseProSlidesJson, type SlideData as ProSlideData, type CardNewsTheme } from '../../../lib/cardNewsLayouts';
 import { getSavedTemplates, deleteTemplate, imageToEditableTemplate, type CardTemplate } from '../../../lib/cardTemplateService';
 import { ContentCategory } from '../../../lib/types';
 import type { WritingStyle, CardNewsDesignTemplateId, TrendingItem, AudienceMode } from '../../../lib/types';
@@ -85,9 +85,6 @@ export default function CardNewsPage() {
   const [proSlides, setProSlides] = useState<ProSlideData[]>([]);
   const [proTheme, setProTheme] = useState<CardNewsTheme>({ ...DEFAULT_THEME });
   const [learnedTemplate, setLearnedTemplate] = useState<CardTemplate | null>(null);
-  const [presetCategory, setPresetCategory] = useState<string>('all');
-  const [currentPresetId, setCurrentPresetId] = useState<string>('');
-  const savedThemeRef = useRef<CardNewsTheme | null>(null);
   const [presetStyle, setPresetStyle] = useState<DesignPresetStyle | null>(null);
   // 학습한 디자인 템플릿이 선택되면 프로 모드 테마에도 자동 반영
   useEffect(() => {
@@ -1030,14 +1027,6 @@ DECORATIVE: (장식 요소)`,
     setTopicSuggestions([...topics].sort(() => Math.random() - 0.5).slice(0, 5));
   };
 
-  const applyPreset = (presetId: string) => {
-    const preset = DESIGN_PRESETS.find(p => p.id === presetId);
-    if (!preset) return;
-    setProTheme({ ...preset.theme, fontId: 'pretendard', hospitalName: hospitalName || undefined });
-    setPresetStyle(preset.style);
-    setCurrentPresetId(preset.id);
-    setLearnedTemplate(null);
-  };
 
   return (
     <div className="p-5 max-w-6xl mx-auto min-h-[calc(100vh-80px)] flex flex-col" style={{ paddingTop: '8vh' }}>
