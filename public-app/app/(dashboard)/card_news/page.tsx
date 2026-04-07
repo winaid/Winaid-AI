@@ -259,9 +259,10 @@ export default function CardNewsPage() {
           if (j < pixabay.length) photos.push(pixabay[j]);
         }
       } else {
-        // 일러스트/벡터: Pixabay만 (Pexels는 실사만 있으므로 호출하지 않음)
+        // 일러스트/벡터: Pixabay — 한국어 검색이 결과가 더 풍부
         const pixType = style === 'infographic' ? 'vector' : 'illustration';
-        const res = await fetch(`/api/pixabay?query=${encodeURIComponent(query)}&image_type=${pixType}&orientation=horizontal&per_page=${Math.min(count * 2, 20)}&page=${page}`);
+        const koreanQuery = topic.trim() || query;
+        const res = await fetch(`/api/pixabay?query=${encodeURIComponent(koreanQuery)}&image_type=${pixType}&orientation=horizontal&per_page=${Math.min(count * 2, 20)}&page=${page}`);
         const data = await res.json();
         photos = (data.photos || []).map((p: { url: string }) => p.url);
       }
@@ -304,7 +305,8 @@ export default function CardNewsPage() {
       } else {
         // 일러스트/벡터: Pixabay
         const pixType = imageStyle === 'infographic' ? 'vector' : 'illustration';
-        const res = await fetch(`/api/pixabay?query=${encodeURIComponent(baseQ)}&image_type=${pixType}&orientation=horizontal&per_page=20&page=${Math.floor(Math.random() * 3) + 1}`);
+        const koreanQ = topic.trim() || baseQ;
+        const res = await fetch(`/api/pixabay?query=${encodeURIComponent(koreanQ)}&image_type=${pixType}&orientation=horizontal&per_page=20&page=${Math.floor(Math.random() * 3) + 1}`);
         const data = await res.json();
         photos = (data.photos || []) as { url: string }[];
       }
