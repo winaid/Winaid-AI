@@ -236,41 +236,15 @@ export default function CardNewsPage() {
     } catch { return 'professional clinic'; }
   };
 
-  /** 추천 디자인 모달 열기 — Gemini 번역 + Pexels 검색 */
-  const openDesignModal = async () => {
+  /** 추천 디자인 모달 열기 — 템플릿 자체 정보로 프리뷰 구성 */
+  const openDesignModal = () => {
     setShowDesignModal(true);
-    setLoadingPreviews(true);
     setSelectedPreviewIdx(0);
-    try {
-      const query = await fetchPexelsQuery();
-      const orientation = proCardRatio === '1:1' ? 'square' : 'portrait';
-      const res = await fetch(`/api/pexels?query=${encodeURIComponent(query)}&orientation=${orientation}&per_page=15&page=${Math.floor(Math.random() * 3) + 1}`);
-      const data = await res.json();
-      const photos = data.photos || [];
-      setDesignPreviews(COVER_TEMPLATES.map((tmpl, i) => ({
-        id: `preview-${i}`,
-        imageUrl: photos[i % Math.max(photos.length, 1)]?.url || '',
-        templateId: tmpl.id,
-      })));
-    } catch { /* ignore */ }
-    setLoadingPreviews(false);
-  };
-
-  /** 모달에서 이미지 새로고침 */
-  const refreshDesignImages = async () => {
-    setLoadingPreviews(true);
-    try {
-      // 매번 새 검색어 생성해서 다른 결과
-      const query = await fetchPexelsQuery();
-      const orientation = proCardRatio === '1:1' ? 'square' : 'portrait';
-      const page = Math.floor(Math.random() * 20) + 1;
-      const res = await fetch(`/api/pexels?query=${encodeURIComponent(query)}&orientation=${orientation}&per_page=15&page=${page}`);
-      const data = await res.json();
-      const photos = data.photos || [];
-      if (photos.length > 0) {
-        setDesignPreviews(prev => prev.map((p, i) => ({ ...p, imageUrl: photos[i % photos.length]?.url || p.imageUrl })));
-      }
-    } catch { /* ignore */ }
+    setDesignPreviews(COVER_TEMPLATES.map((tmpl, i) => ({
+      id: `preview-${i}`,
+      imageUrl: '',
+      templateId: tmpl.id,
+    })));
     setLoadingPreviews(false);
   };
 
@@ -1321,100 +1295,136 @@ DECORATIVE: (장식 요소)`,
             <div className="px-8 py-6 border-b border-slate-100">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-xl font-bold text-slate-800">디자인을 선택하세요</h2>
-                  <p className="text-sm text-slate-500 mt-1">&ldquo;{topic}&rdquo; — 마음에 드는 스타일을 골라주세요</p>
+                  <h2 className="text-xl font-bold text-slate-800">커버 디자인을 선택하세요</h2>
+                  <p className="text-sm text-slate-500 mt-1">&ldquo;{topic}&rdquo; — 마음에 드는 레이아웃을 골라주세요</p>
                 </div>
-                <div className="flex gap-2">
-                  <button type="button" onClick={refreshDesignImages} disabled={loadingPreviews}
-                    className="px-4 py-2 text-sm font-semibold text-slate-500 bg-slate-100 rounded-lg hover:bg-slate-200 disabled:opacity-50">
-                    🔄 다른 이미지
-                  </button>
-                  <button type="button" onClick={() => setShowDesignModal(false)}
-                    className="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100">✕</button>
-                </div>
+                <button type="button" onClick={() => setShowDesignModal(false)}
+                  className="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100">✕</button>
               </div>
             </div>
 
-            {/* 스타일 필터 */}
-            <div className="px-8 pt-4 pb-2 flex gap-2">
-              {[
-                { id: 'photo', label: '📸 실사', query: '' },
-                { id: 'illustration', label: '🎨 일러스트', query: 'flat illustration vector colorful' },
-                { id: 'gradient', label: '🌈 그라데이션', query: 'abstract colorful gradient neon' },
-                { id: 'minimal', label: '⬜ 미니멀', query: 'minimal white clean simple' },
-              ].map(style => (
-                <button key={style.id} type="button"
-                  onClick={async () => {
-                    setLoadingPreviews(true);
-                    try {
-                      const finalQuery = style.query || lastPexelsQuery || 'professional clinic';
-                      const orientation = proCardRatio === '1:1' ? 'square' : 'portrait';
-                      const page = Math.floor(Math.random() * 10) + 1;
-                      const res = await fetch(`/api/pexels?query=${encodeURIComponent(finalQuery)}&orientation=${orientation}&per_page=15&page=${page}`);
-                      const data = await res.json();
-                      const photos = data.photos || [];
-                      setDesignPreviews(prev => prev.map((p, i) => ({ ...p, imageUrl: photos[i % Math.max(photos.length, 1)]?.url || p.imageUrl })));
-                    } catch { /* ignore */ }
-                    setLoadingPreviews(false);
-                  }}
-                  className="px-4 py-2 text-sm font-semibold rounded-xl border-2 border-slate-200 text-slate-600 hover:border-blue-400 hover:bg-blue-50 transition-all">
-                  {style.label}
-                </button>
-              ))}
-            </div>
+            {/* 프리뷰 그리드 — 템플릿 자체의 색상/레이아웃 시각화 */}
+            <div className="px-8 py-6 overflow-y-auto max-h-[60vh]">
+              <div className="grid grid-cols-3 lg:grid-cols-5 gap-4">
+                {COVER_TEMPLATES.map((tmpl, i) => {
+                  const titlePreview = topic.length > 12 ? topic.slice(0, 12) + '\u2026' : (topic || '제목 미리보기');
+                  return (
+                    <button key={tmpl.id} type="button" onClick={() => setSelectedPreviewIdx(i)}
+                      className={`relative rounded-2xl overflow-hidden border-3 transition-all ${
+                        proCardRatio === '3:4' ? 'aspect-[3/4]' : proCardRatio === '4:5' ? 'aspect-[4/5]' : 'aspect-square'
+                      } ${selectedPreviewIdx === i
+                        ? 'border-blue-500 ring-4 ring-blue-100 scale-[1.02]'
+                        : 'border-transparent hover:border-slate-300 hover:shadow-lg'}`}>
 
-            {/* 프리뷰 그리드 */}
-            <div className="px-8 py-4 overflow-y-auto max-h-[55vh]">
-              {loadingPreviews ? (
-                <div className="text-center py-20 text-slate-400">
-                  <div className="text-4xl mb-3">🎨</div>
-                  <p>추천 디자인을 준비하고 있어요...</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-3 lg:grid-cols-5 gap-4">
-                  {designPreviews.map((preview, i) => {
-                    const tmpl = COVER_TEMPLATES.find(t => t.id === preview.templateId);
-                    return (
-                      <button key={preview.id} type="button" onClick={() => setSelectedPreviewIdx(i)}
-                        className={`relative rounded-2xl overflow-hidden border-3 transition-all ${
-                          proCardRatio === '3:4' ? 'aspect-[3/4]' : proCardRatio === '4:5' ? 'aspect-[4/5]' : 'aspect-square'
-                        } ${selectedPreviewIdx === i ? 'border-blue-500 ring-4 ring-blue-100 scale-[1.02]' : 'border-transparent hover:border-slate-300 hover:shadow-xl'}`}>
-                        {preview.imageUrl && <img src={preview.imageUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />}
-                        <div className="absolute inset-0" style={{ background: tmpl?.background.overlayGradient || tmpl?.background.overlayColor || 'linear-gradient(180deg, transparent 20%, rgba(0,0,0,0.7) 100%)' }} />
-                        <div className="absolute inset-0 flex flex-col p-5" style={{
-                          justifyContent: tmpl?.layout.titlePosition === 'center' ? 'center' : tmpl?.layout.titlePosition?.includes('top') ? 'flex-start' : 'flex-end',
-                          alignItems: tmpl?.layout.titlePosition?.includes('left') ? 'flex-start' : 'center',
-                          textAlign: (tmpl?.layout.titlePosition?.includes('left') ? 'left' : 'center') as 'left' | 'center',
-                        }}>
-                          <div style={{ width: '30px', height: '3px', background: '#fff', borderRadius: '2px', marginBottom: '10px', opacity: 0.7 }} />
-                          <div style={{ color: '#fff', fontSize: '14px', fontWeight: 900, lineHeight: 1.3, wordBreak: 'keep-all', textShadow: '0 2px 8px rgba(0,0,0,0.5)' }}>
-                            {topic.length > 15 ? topic.slice(0, 15) + '…' : topic}
-                          </div>
-                          <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: '9px', marginTop: '6px' }}>카드뉴스</div>
-                        </div>
-                        {selectedPreviewIdx === i && (
-                          <div className="absolute top-2 right-2 w-7 h-7 bg-blue-500 rounded-full flex items-center justify-center shadow-lg"><span className="text-white text-xs font-bold">✓</span></div>
+                      {/* 배경: 템플릿 thumbnail gradient / solid */}
+                      <div className="absolute inset-0" style={{
+                        background: tmpl.background.gradient
+                          || tmpl.background.solidColor
+                          || tmpl.thumbnail
+                          || '#1a1a2e',
+                      }} />
+
+                      {/* 오버레이 (있으면) */}
+                      {tmpl.background.overlayGradient && (
+                        <div className="absolute inset-0" style={{ background: tmpl.background.overlayGradient }} />
+                      )}
+
+                      {/* 레이아웃 미리보기 */}
+                      <div className="absolute inset-0 flex flex-col p-4" style={{
+                        justifyContent: tmpl.layout.titlePosition === 'center' ? 'center'
+                          : tmpl.layout.titlePosition.includes('top') ? 'flex-start'
+                          : 'flex-end',
+                        alignItems: tmpl.layout.titlePosition.includes('left') ? 'flex-start'
+                          : tmpl.layout.titlePosition.includes('right') ? 'flex-end'
+                          : 'center',
+                        textAlign: (tmpl.layout.titlePosition.includes('left') ? 'left'
+                          : tmpl.layout.titlePosition.includes('right') ? 'right'
+                          : 'center') as 'left' | 'right' | 'center',
+                      }}>
+                        {/* 뱃지 */}
+                        {tmpl.decorations.hasBadge && (
+                          <div style={{
+                            position: 'absolute', top: '10px', zIndex: 5,
+                            ...(tmpl.decorations.badgePosition === 'top-left' ? { left: '10px' }
+                              : tmpl.decorations.badgePosition === 'top-right' ? { right: '10px' }
+                              : { left: '50%', transform: 'translateX(-50%)' }),
+                            background: tmpl.colors.accent, color: '#fff',
+                            fontSize: '7px', fontWeight: 800, padding: '3px 8px', borderRadius: '4px', letterSpacing: '0.5px',
+                          }}>BADGE</div>
                         )}
-                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent px-3 py-1.5">
-                          <span className="text-[9px] text-white/80 font-semibold">{tmpl?.name || ''}</span>
+
+                        {/* 핸들 */}
+                        {tmpl.decorations.hasHandle && (
+                          <div style={{ fontSize: '7px', color: tmpl.colors.subtitle, marginBottom: '4px', opacity: 0.7 }}>@hospital</div>
+                        )}
+
+                        {/* 부제 (above-title) */}
+                        {tmpl.layout.subtitlePosition === 'above-title' && (
+                          <div style={{ fontSize: '8px', color: tmpl.colors.subtitle, marginBottom: '4px', letterSpacing: '0.5px' }}>&ldquo;부제목&rdquo;</div>
+                        )}
+
+                        {/* 라인 장식 */}
+                        {tmpl.decorations.hasLine && (
+                          <div style={{ width: '24px', height: '2px', background: tmpl.colors.accent, borderRadius: '1px', marginBottom: '6px',
+                            ...(tmpl.layout.titlePosition.includes('center') ? { alignSelf: 'center' } : {}),
+                          }} />
+                        )}
+
+                        {/* 제목 */}
+                        <div style={{
+                          color: tmpl.colors.title,
+                          fontSize: '13px',
+                          fontWeight: tmpl.layout.titleWeight,
+                          lineHeight: 1.25,
+                          wordBreak: 'keep-all',
+                          maxWidth: tmpl.layout.titleMaxWidth,
+                        }}>
+                          {titlePreview}
                         </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
+
+                        {/* 부제 (below-title) */}
+                        {tmpl.layout.subtitlePosition === 'below-title' && (
+                          <div style={{ fontSize: '8px', color: tmpl.colors.subtitle, marginTop: '4px' }}>부제목 텍스트</div>
+                        )}
+
+                        {/* 해시태그 */}
+                        {tmpl.decorations.hasHashtags && (
+                          <div style={{ fontSize: '7px', color: tmpl.colors.hashtag, marginTop: '8px', opacity: 0.6 }}>#건강 #치과 #관리</div>
+                        )}
+
+                        {/* 화살표 */}
+                        {tmpl.decorations.hasArrows && (
+                          <div style={{ position: 'absolute', bottom: '10px', right: '10px', fontSize: '12px', color: tmpl.colors.accent, opacity: 0.7 }}>
+                            {tmpl.decorations.arrowStyle === 'circle' ? '\u25B7' : '\u203A'}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* 선택 체크 */}
+                      {selectedPreviewIdx === i && (
+                        <div className="absolute top-2 right-2 w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center shadow-lg z-10">
+                          <span className="text-white text-[10px] font-bold">\u2713</span>
+                        </div>
+                      )}
+
+                      {/* 템플릿 이름 */}
+                      <div className="absolute bottom-0 left-0 right-0 px-3 py-1.5" style={{ background: 'linear-gradient(transparent, rgba(0,0,0,0.5))' }}>
+                        <span className="text-[9px] text-white/90 font-bold">{tmpl.name}</span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             {/* 하단 */}
             <div className="px-8 py-5 border-t border-slate-100 bg-slate-50 flex items-center justify-between">
               <button type="button" onClick={() => setShowDesignModal(false)} className="px-6 py-2.5 text-sm font-semibold text-slate-500">취소</button>
-              <button type="button" disabled={loadingPreviews || isGenerating}
+              <button type="button" disabled={isGenerating}
                 onClick={async () => {
-                  const selected = designPreviews[selectedPreviewIdx];
-                  const tmpl = COVER_TEMPLATES.find(t => t.id === selected?.templateId);
+                  const tmpl = COVER_TEMPLATES[selectedPreviewIdx];
                   setShowDesignModal(false);
-                  const coverBgUrl = selected?.imageUrl || '';
-                  const coverTmplId = selected?.templateId || '';
+                  const coverTmplId = tmpl?.id || '';
                   // 선택한 레이아웃의 색상을 전체 테마에 적용
                   if (tmpl) {
                     setProTheme(prev => ({
@@ -1429,16 +1439,16 @@ DECORATIVE: (장식 요소)`,
                     }));
                   }
                   await (handleSubmit as any)(new Event('submit'));
-                  // 생성 후 커버/마무리에 선택한 디자인 적용
+                  // 생성 후 커버/마무리에 선택한 템플릿 적용
                   setProSlides(prev => prev.map(s => {
-                    if ((s.layout === 'cover' || s.layout === 'closing') && coverBgUrl) {
-                      return { ...s, coverTemplateId: coverTmplId, imageUrl: coverBgUrl, imagePosition: 'background' as const };
+                    if (s.layout === 'cover' || s.layout === 'closing') {
+                      return { ...s, coverTemplateId: coverTmplId };
                     }
                     return s;
                   }));
                 }}
                 className="px-8 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white text-sm font-bold rounded-xl shadow-lg disabled:opacity-50">
-                {isGenerating ? '생성 중...' : '✨ 이 디자인으로 생성하기'}
+                {isGenerating ? '생성 중...' : '\u2728 이 디자인으로 생성하기'}
               </button>
             </div>
           </div>
