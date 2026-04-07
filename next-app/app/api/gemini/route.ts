@@ -15,9 +15,11 @@ export const dynamic = 'force-dynamic';
 
 function getKeys(): string[] {
   const keys: string[] = [];
-  if (process.env.GEMINI_API_KEY) keys.push(process.env.GEMINI_API_KEY);
-  if (process.env.GEMINI_API_KEY_2) keys.push(process.env.GEMINI_API_KEY_2);
-  if (process.env.GEMINI_API_KEY_3) keys.push(process.env.GEMINI_API_KEY_3);
+  for (let i = 0; i <= 10; i++) {
+    const envName = i === 0 ? 'GEMINI_API_KEY' : `GEMINI_API_KEY_${i}`;
+    const val = process.env[envName];
+    if (val) keys.push(val);
+  }
   return keys;
 }
 
