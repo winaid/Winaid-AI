@@ -316,17 +316,60 @@ ${JSON.stringify(slideForContext, null, 2)}
   );
 
   /** AI 추천 버튼이 붙은 라벨 */
+  const [aiMenuField, setAiMenuField] = useState<string | null>(null);
+
   const fieldLabel = (label: string, field: 'title' | 'subtitle' | 'body') => (
     <div className="flex items-center justify-between mb-0.5">
       <label className="text-[10px] font-semibold text-slate-500">{label}</label>
-      <button
-        type="button"
-        onClick={() => onAiSuggestText(field)}
-        disabled={isSuggesting(field)}
-        className="text-[9px] font-bold text-purple-600 hover:text-purple-700 disabled:opacity-50"
-      >
-        {isSuggesting(field) ? '추천 중...' : '✨ AI 추천'}
-      </button>
+      <div className="relative">
+        <button
+          type="button"
+          onClick={() => setAiMenuField(aiMenuField === field ? null : field)}
+          disabled={isSuggesting(field)}
+          className="text-[9px] font-bold text-purple-600 hover:text-purple-700 disabled:opacity-50"
+        >
+          {isSuggesting(field) ? '✨ AI 작업 중...' : '✨ AI'}
+        </button>
+        {aiMenuField === field && (
+          <div className="absolute right-0 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-xl z-[200] py-1 min-w-[140px]">
+            <button type="button" onClick={() => { setAiMenuField(null); onAiSuggestText(field); }}
+              className="w-full text-left px-3 py-1.5 text-[11px] text-slate-700 hover:bg-blue-50 font-semibold">✨ 새로 추천</button>
+            <button type="button" onClick={async () => {
+              setAiMenuField(null);
+              const current = field === 'title' ? slide.title : field === 'subtitle' ? slide.subtitle : slide.body;
+              if (!current) return;
+              try {
+                const res = await fetch('/api/gemini', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ prompt: `"${current}"\n\n위 텍스트를 더 매력적이고 클릭하고 싶게 다시 써줘. 같은 의미, 더 끌리는 표현. 결과만 출력.`, model: 'gemini-3.1-flash-lite-preview', temperature: 0.8, maxOutputTokens: 200 }) });
+                const data = await res.json() as { text?: string };
+                if (data.text) onChange({ [field]: data.text.replace(/^["'`]+|["'`]+$/g, '').trim() });
+              } catch { /* ignore */ }
+            }} className="w-full text-left px-3 py-1.5 text-[11px] text-slate-700 hover:bg-blue-50">💡 더 끌리게</button>
+            <button type="button" onClick={async () => {
+              setAiMenuField(null);
+              const current = field === 'title' ? slide.title : field === 'subtitle' ? slide.subtitle : slide.body;
+              if (!current) return;
+              try {
+                const res = await fetch('/api/gemini', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ prompt: `"${current}"\n\n위 텍스트를 절반 길이로 줄여줘. 핵심만 남기고. 결과만 출력.`, model: 'gemini-3.1-flash-lite-preview', temperature: 0.5, maxOutputTokens: 100 }) });
+                const data = await res.json() as { text?: string };
+                if (data.text) onChange({ [field]: data.text.replace(/^["'`]+|["'`]+$/g, '').trim() });
+              } catch { /* ignore */ }
+            }} className="w-full text-left px-3 py-1.5 text-[11px] text-slate-700 hover:bg-blue-50">✂️ 줄여줘</button>
+            <button type="button" onClick={async () => {
+              setAiMenuField(null);
+              const current = field === 'title' ? slide.title : field === 'subtitle' ? slide.subtitle : slide.body;
+              if (!current) return;
+              try {
+                const res = await fetch('/api/gemini', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ prompt: `"${current}"\n\n위 텍스트를 더 따뜻하고 공감가는 톤으로 바꿔줘. 결과만 출력.`, model: 'gemini-3.1-flash-lite-preview', temperature: 0.8, maxOutputTokens: 200 }) });
+                const data = await res.json() as { text?: string };
+                if (data.text) onChange({ [field]: data.text.replace(/^["'`]+|["'`]+$/g, '').trim() });
+              } catch { /* ignore */ }
+            }} className="w-full text-left px-3 py-1.5 text-[11px] text-slate-700 hover:bg-blue-50">🤗 따뜻하게</button>
+          </div>
+        )}
+      </div>
     </div>
   );
 
