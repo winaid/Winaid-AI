@@ -62,6 +62,7 @@ export default function CardNewsPage() {
   const [learnedTemplate, setLearnedTemplate] = useState<CardTemplate | null>(null);
   const [presetCategory, setPresetCategory] = useState<string>('all');
   const [currentPresetId, setCurrentPresetId] = useState<string>('');
+  const savedThemeRef = useRef<CardNewsTheme | null>(null);
   const [presetStyle, setPresetStyle] = useState<DesignPresetStyle | null>(null);
   // 학습한 디자인 템플릿이 선택되면 프로 모드 테마에도 자동 반영
   useEffect(() => {
@@ -1184,8 +1185,20 @@ DECORATIVE: (장식 요소)`,
                 <label className={labelCls}>디자인 프리셋</label>
                 <div className="grid grid-cols-5 sm:grid-cols-8 gap-2">
                   {DESIGN_PRESETS.map(preset => (
-                    <button key={preset.id} type="button" onClick={() => applyPreset(preset.id)}
-                      className={`relative rounded-xl overflow-hidden aspect-square border-2 transition-all ${currentPresetId === preset.id ? 'border-blue-500 ring-2 ring-blue-200' : 'border-slate-200'}`}>
+                    <button key={preset.id} type="button"
+                      onClick={() => {
+                        savedThemeRef.current = null;
+                        applyPreset(preset.id);
+                      }}
+                      onMouseEnter={() => {
+                        if (!savedThemeRef.current) savedThemeRef.current = { ...proTheme };
+                        const target = DESIGN_PRESETS.find(p => p.id === preset.id);
+                        if (target) setProTheme(prev => ({ ...target.theme, fontId: prev.fontId || 'pretendard', hospitalName: prev.hospitalName, hospitalLogo: prev.hospitalLogo }));
+                      }}
+                      onMouseLeave={() => {
+                        if (savedThemeRef.current) { setProTheme(savedThemeRef.current); savedThemeRef.current = null; }
+                      }}
+                      className={`relative rounded-xl overflow-hidden aspect-square border-2 transition-all ${currentPresetId === preset.id ? 'border-blue-500 ring-2 ring-blue-200' : 'border-slate-200 hover:border-blue-300'}`}>
                       <div style={{ background: preset.thumbnail, width: '100%', height: '100%' }} className="flex items-center justify-center">
                         <span className="text-[11px] font-black" style={{ color: preset.theme.titleColor }}>Aa</span>
                       </div>

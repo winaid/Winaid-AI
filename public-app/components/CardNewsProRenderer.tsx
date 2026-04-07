@@ -244,14 +244,24 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
   };
   const handleDrop = (idx: number) => {
     if (dragIdx === null || dragIdx === idx) { setDragIdx(null); setDragOverIdx(null); return; }
+    const from = dragIdx;
+    const to = idx;
     const newSlides = [...slides];
-    const [moved] = newSlides.splice(dragIdx, 1);
-    newSlides.splice(idx, 0, moved);
+    const [moved] = newSlides.splice(from, 1);
+    newSlides.splice(to, 0, moved);
     onSlidesChange(newSlides.map((s, i) => ({ ...s, index: i + 1 })));
+    // 편집 중인 슬라이드 인덱스 추적
     if (editingIdx !== null) {
-      if (editingIdx === dragIdx) setEditingIdx(idx);
-      else if (dragIdx < editingIdx && idx >= editingIdx) setEditingIdx(editingIdx - 1);
-      else if (dragIdx > editingIdx && idx <= editingIdx) setEditingIdx(editingIdx + 1);
+      if (editingIdx === from) {
+        setEditingIdx(to);
+      } else {
+        let newIdx = editingIdx;
+        // from이 editingIdx 앞이었으면 제거로 -1
+        if (from < editingIdx) newIdx--;
+        // to가 newIdx 이하이면 삽입으로 +1
+        if (to <= newIdx) newIdx++;
+        setEditingIdx(newIdx);
+      }
     }
     setDragIdx(null); setDragOverIdx(null);
   };
@@ -2412,6 +2422,7 @@ JSON 한 객체만 출력:
                   className="absolute top-2 left-2 z-20 px-2 py-0.5 rounded-full bg-black/60 text-white text-[10px] font-bold backdrop-blur-sm cursor-grab active:cursor-grabbing"
                   draggable={!isEditing}
                   onDragStart={(e) => { e.stopPropagation(); handleDragStart(idx); }}
+                  onDragEnd={handleDragEnd}
                   title="드래그하여 순서 변경"
                 >
                   ⠿ {idx + 1} · {LAYOUT_LABELS[slide.layout]}
