@@ -436,10 +436,16 @@ ${JSON.stringify(slideForContext, null, 2)}
       {hasImage && (
         <div className="relative">
           <img src={slide.imageUrl} alt="" className="w-full h-32 object-contain bg-slate-100 rounded-lg border border-slate-200" />
-          <button type="button" onClick={() => onChange({ imageUrl: undefined })}
-            className="absolute top-1 right-1 px-2 py-0.5 bg-red-500 text-white text-[9px] font-bold rounded-md shadow hover:bg-red-600">
-            삭제
-          </button>
+          <div className="absolute top-1 right-1 flex gap-1">
+            <button type="button" onClick={() => { setImageSearchResults([]); handleImageSearch(); }}
+              className="px-2 py-0.5 bg-blue-500 text-white text-[9px] font-bold rounded-md shadow hover:bg-blue-600">
+              🔄 교체
+            </button>
+            <button type="button" onClick={() => onChange({ imageUrl: undefined })}
+              className="px-2 py-0.5 bg-red-500 text-white text-[9px] font-bold rounded-md shadow hover:bg-red-600">
+              삭제
+            </button>
+          </div>
         </div>
       )}
 
