@@ -1051,7 +1051,9 @@ ${subs.length > 0 ? `경쟁 글 소제목: ${subs.join(' / ')}` : ''}
           if (scoresIdx !== -1) blogPart = blogPart.substring(0, scoresIdx);
           blogPart = blogPart.replace(/^```html?\s*\n?/i, '').replace(/\n?```\s*$/, '').trim();
           if (blogPart) {
-            setGeneratedContent(blogPart);
+            // 스트리밍 중 [IMG_N ...] 마커를 로딩 표시로 교체
+            const previewHtml = blogPart.replace(/\[IMG_\d+[^\]]*\]/g, '<div style="text-align:center;padding:16px 0;color:#94a3b8;font-size:13px;">🖼️ 이미지 생성 대기 중...</div>');
+            setGeneratedContent(previewHtml);
             setDisplayStage(2);
             lastRenderTime = now;
           }
@@ -1185,7 +1187,7 @@ ${subs.length > 0 ? `경쟁 글 소제목: ${subs.join(' / ')}` : ''}
 
       // 4) 이미지 없으면 마커 strip 후 바로 표시
       if (imageCount === 0 || imagePrompts.length === 0) {
-        blogText = blogText.replace(/\[IMG_\d+\]\n*/g, '');
+        blogText = blogText.replace(/\[IMG_\d+[^\]]*\]\n*/g, '');
         setGeneratedContent(blogText);
         setScores(parsed);
       } else {
@@ -1194,12 +1196,12 @@ ${subs.length > 0 ? `경쟁 글 소제목: ${subs.join(' / ')}` : ''}
         let htmlWithPlaceholders = blogText;
         for (let i = 1; i <= imageCount; i++) {
           htmlWithPlaceholders = htmlWithPlaceholders.replace(
-            new RegExp(`\\[IMG_${i}\\]`, 'g'),
+            new RegExp(`\\[IMG_${i}[^\\]]*\\]`, 'g'),
             `<div class="content-image-wrapper" data-img-slot="${i}" style="text-align:center;padding:24px 0;"><div style="display:inline-flex;align-items:center;gap:8px;padding:12px 20px;background:#f1f5f9;border-radius:12px;font-size:13px;color:#64748b;">🖼️ 이미지 ${i}/${imageCount} 생성 중...</div></div>`,
           );
         }
         // 혹시 남은 초과 마커 정리
-        htmlWithPlaceholders = htmlWithPlaceholders.replace(/\[IMG_\d+\]\n*/g, '');
+        htmlWithPlaceholders = htmlWithPlaceholders.replace(/\[IMG_\d+[^\]]*\]\n*/g, '');
         setGeneratedContent(htmlWithPlaceholders);
         setScores(parsed);
 
@@ -1295,7 +1297,7 @@ ${subs.length > 0 ? `경쟁 글 소제목: ${subs.join(' / ')}` : ''}
         // 7) [IMG_N] 마커를 실제 이미지로 교체 (old insertImageData 동일)
         let finalHtml = blogText;
         for (const img of imageResults) {
-          const pattern = new RegExp(`\\[IMG_${img.index}\\]`, 'gi');
+          const pattern = new RegExp(`\\[IMG_${img.index}[^\\]]*\\]`, 'gi');
           if (img.url) {
             const imgTag = `<div class="content-image-wrapper"><img src="${img.url}" alt="blog image ${img.index}" data-image-index="${img.index}" style="max-width:100%;height:auto;border-radius:12px;" /></div>`;
             finalHtml = finalHtml.replace(pattern, imgTag);
@@ -1304,7 +1306,7 @@ ${subs.length > 0 ? `경쟁 글 소제목: ${subs.join(' / ')}` : ''}
           }
         }
         // 미매칭 마커 제거
-        finalHtml = finalHtml.replace(/\[IMG_\d+\]\n*/g, '');
+        finalHtml = finalHtml.replace(/\[IMG_\d+[^\]]*\]\n*/g, '');
         // 잘못된 img src 정리 (Gemini가 HTML을 src에 넣는 경우 방지)
         finalHtml = finalHtml.replace(/<img\s+([^>]*?)src="(?!data:|https?:\/\/|\/)[^"]*"([^>]*?)>/gi, '');
         // 빈 content-image-wrapper 정리
