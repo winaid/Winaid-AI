@@ -14,7 +14,8 @@ export const signInWithEmail = async (email: string, password: string) => {
 export const signUpWithEmail = async (
   email: string,
   password: string,
-  displayName: string
+  displayName: string,
+  homepageUrl?: string,
 ) => {
   const supabase = getSupabaseClient();
 
@@ -22,29 +23,30 @@ export const signUpWithEmail = async (
     email,
     password,
     options: {
-      data: { name: displayName },
+      data: { name: displayName, ...(homepageUrl ? { homepage_url: homepageUrl } : {}) },
     },
   });
 
   if (data.user) {
     try {
       // profiles upsert (트리거가 name만 저장하므로 full_name 보완)
+      const profileData: Record<string, unknown> = {
+        email,
+        full_name: displayName,
+        name: displayName,
+      };
+      if (homepageUrl) profileData.homepage_url = homepageUrl;
+
       const { error: updateErr } = await supabase
         .from('profiles')
-        .update({
-          email,
-          full_name: displayName,
-          name: displayName,
-        } as Record<string, unknown>)
+        .update(profileData)
         .eq('id', data.user.id);
 
       // UPDATE 실패 시 (row가 없는 경우) INSERT
       if (updateErr) {
         await supabase.from('profiles').insert({
           id: data.user.id,
-          email,
-          full_name: displayName,
-          name: displayName,
+          ...profileData,
           created_at: new Date().toISOString(),
         } as Record<string, unknown>);
       }

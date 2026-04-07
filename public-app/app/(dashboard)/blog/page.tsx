@@ -58,7 +58,7 @@ function BlogForm() {
   const [hospitalName, setHospitalName] = useState('');
   const [hospitalNameFromProfile, setHospitalNameFromProfile] = useState('');
 
-  // 프로필에서 병원명 자동 로드
+  // 프로필에서 병원명 + 홈페이지 URL 자동 로드
   useEffect(() => {
     if (!isSupabaseConfigured) return;
     (async () => {
@@ -67,12 +67,17 @@ function BlogForm() {
         const { data: { user } } = await sb.auth.getUser();
         if (!user) return;
         const nameFromMeta = user.user_metadata?.name;
-        if (nameFromMeta) { setHospitalName(nameFromMeta); setHospitalNameFromProfile(nameFromMeta); return; }
-        const { data: profile } = await sb.from('profiles').select('name, full_name').eq('id', user.id).single();
+        const urlFromMeta = user.user_metadata?.homepage_url;
+        if (nameFromMeta) { setHospitalName(nameFromMeta); setHospitalNameFromProfile(nameFromMeta); }
+        if (urlFromMeta && !homepageUrl) setHomepageUrl(urlFromMeta);
+        if (nameFromMeta) return;
+        const { data: profile } = await sb.from('profiles').select('name, full_name, homepage_url').eq('id', user.id).single();
         const pName = profile?.name || profile?.full_name;
         if (pName) { setHospitalName(pName); setHospitalNameFromProfile(pName); }
+        if (profile?.homepage_url && !homepageUrl) setHomepageUrl(profile.homepage_url);
       } catch { /* ignore */ }
     })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const [selectedHospitalAddress, setSelectedHospitalAddress] = useState('');
   const [medicalLawMode, setMedicalLawMode] = useState<'strict' | 'relaxed'>(() => {
