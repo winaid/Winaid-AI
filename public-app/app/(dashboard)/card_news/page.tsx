@@ -21,6 +21,25 @@ import { useCredit as cardNewsUseCredit } from '../../../lib/creditService';
 import { consumeGuestCredit } from '../../../lib/guestCredits';
 import { overlayLogo } from '../../../lib/cardDownloadUtils';
 
+function GeneratingTimer({ progress }: { progress: string }) {
+  const [elapsed, setElapsed] = useState(0);
+  useEffect(() => {
+    setElapsed(0);
+    const id = setInterval(() => setElapsed(s => s + 1), 1000);
+    return () => clearInterval(id);
+  }, []);
+  const min = Math.floor(elapsed / 60);
+  const sec = elapsed % 60;
+  const timeStr = min > 0 ? `${min}분 ${sec}초` : `${sec}초`;
+  return (
+    <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center mb-4">
+      <div className="w-12 h-12 border-[3px] border-blue-100 border-t-blue-500 rounded-full animate-spin mx-auto mb-4" />
+      <p className="text-sm font-medium text-slate-700">{progress || '생성 중...'}</p>
+      <p className="text-xs text-slate-400 mt-2">경과 시간: {timeStr}</p>
+    </div>
+  );
+}
+
 interface CardImageHistoryItem { url: string; prompt: string; createdAt: number; }
 
 interface CardSlide {
@@ -1179,53 +1198,21 @@ DECORATIVE: (장식 요소)`,
             </div>
           </div>
           {(isGenerating || isGeneratingPrompts || isGeneratingImages) && (
-            <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center mb-4">
-              <div className="w-12 h-12 border-[3px] border-blue-100 border-t-blue-500 rounded-full animate-spin mx-auto mb-4" />
-              <p className="text-sm font-medium text-slate-700">{progress || '생성 중...'}</p>
-              <p className="text-xs text-slate-400 mt-2">보통 30초~1분 정도 걸려요</p>
-            </div>
+            <GeneratingTimer progress={progress} />
           )}
           {error && <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600 mb-4">{error}</div>}
-          <details className="mb-4 bg-slate-50 rounded-xl border border-slate-200">
-            <summary className="px-4 py-3 text-sm font-bold text-slate-600 cursor-pointer">🎨 디자인 설정</summary>
-            <div className="px-4 pb-4 pt-2 space-y-4 border-t border-slate-200">
-              <div>
-                <label className={labelCls}>전체 글씨체</label>
-                <select value={proTheme.fontId || 'pretendard'} onChange={e => setProTheme(prev => ({ ...prev, fontId: e.target.value }))} className={inputCls}>
+          <div className="mb-4 bg-slate-50 rounded-xl border border-slate-200 px-4 py-3 flex items-center gap-3">
+              <div className="flex-1">
+                <label className="text-[10px] font-semibold text-slate-400 mb-1 block">글씨체</label>
+                <select value={proTheme.fontId || 'pretendard'} onChange={e => setProTheme(prev => ({ ...prev, fontId: e.target.value }))} className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-400">
                   {FONT_CATEGORIES.map(cat => (<optgroup key={cat} label={cat}>{CARD_FONTS.filter(f => f.category === cat).map(f => (<option key={f.id} value={f.id}>{f.name}</option>))}</optgroup>))}
                 </select>
               </div>
-              <div>
-                <label className={labelCls}>디자인 프리셋</label>
-                <div className="grid grid-cols-5 sm:grid-cols-8 gap-2">
-                  {DESIGN_PRESETS.map(preset => (
-                    <button key={preset.id} type="button"
-                      onClick={() => {
-                        savedThemeRef.current = null;
-                        applyPreset(preset.id);
-                      }}
-                      onMouseEnter={() => {
-                        if (!savedThemeRef.current) savedThemeRef.current = { ...proTheme };
-                        const target = DESIGN_PRESETS.find(p => p.id === preset.id);
-                        if (target) setProTheme(prev => ({ ...target.theme, fontId: prev.fontId || 'pretendard', hospitalName: prev.hospitalName, hospitalLogo: prev.hospitalLogo }));
-                      }}
-                      onMouseLeave={() => {
-                        if (savedThemeRef.current) { setProTheme(savedThemeRef.current); savedThemeRef.current = null; }
-                      }}
-                      className={`relative rounded-xl overflow-hidden aspect-square border-2 transition-all ${currentPresetId === preset.id ? 'border-blue-500 ring-2 ring-blue-200' : 'border-slate-200 hover:border-blue-300'}`}>
-                      <div style={{ background: preset.thumbnail, width: '100%', height: '100%' }} className="flex items-center justify-center">
-                        <span className="text-[11px] font-black" style={{ color: preset.theme.titleColor }}>Aa</span>
-                      </div>
-                    </button>
-                  ))}
-                </div>
+              <div className="flex-1">
+                <label className="text-[10px] font-semibold text-slate-400 mb-1 block">병원명</label>
+                <input type="text" value={hospitalName} onChange={e => setHospitalName(e.target.value)} placeholder="병원 이름 (선택)" className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-400" />
               </div>
-              <div>
-                <label className={labelCls}>병원명</label>
-                <input type="text" value={hospitalName} onChange={e => setHospitalName(e.target.value)} placeholder="병원 이름 (선택)" className={inputCls} />
-              </div>
-            </div>
-          </details>
+          </div>
           {proSlides.length > 0 && (
             <CardNewsProRenderer slides={proSlides} theme={proTheme} onSlidesChange={setProSlides} onThemeChange={setProTheme}
               learnedTemplate={learnedTemplate} cardRatio={proCardRatio} presetStyle={presetStyle} />
