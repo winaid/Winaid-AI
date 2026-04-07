@@ -12,12 +12,20 @@ export async function POST(req: NextRequest) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          contents: [{ parts: [{ text: `다음 한국어 주제에 어울리는 Pexels 스톡 사진 검색어를 영어 3단어로 만들어줘. 배경 사진으로 쓸 거라 추상적이고 분위기 있는 키워드가 좋아.
+          contents: [{ parts: [{ text: `다음 병원 마케팅 주제에 어울리는 Pexels 스톡 사진 검색어를 영어 2~3단어로 만들어줘.
+
+규칙:
+- 사람 얼굴이 안 나오는 사물/환경/장비 사진이 나올 검색어
+- 병원/의료/건강 관련 분위기
+- 카드뉴스 배경으로 쓸 거라 깔끔하고 밝은 톤
+
 예시:
-- "임플란트 사후관리" → "dental clinic interior"
-- "올바른 양치질과 치실 사용" → "toothbrush dental hygiene"
-- "피부 보톡스 효과" → "beauty skincare clinic"
-- "척추 디스크 예방" → "spine health wellness"
+- "임플란트 사후관리" → "dental tools clean"
+- "올바른 양치질" → "toothbrush mint fresh"
+- "피부 보톡스" → "skincare products minimal"
+- "척추 디스크" → "medical clinic bright"
+- "스케일링" → "dental chair equipment"
+- "치아미백" → "white teeth smile close"
 
 주제: "${topic}"
 영어 검색어만 출력 (따옴표 없이):` }] }],

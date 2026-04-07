@@ -218,7 +218,7 @@ export default function CardNewsPage() {
     try {
       const baseQuery = lastPexelsQuery || await fetchPexelsQuery();
       const count = COVER_TEMPLATES.length;
-      const query = style === 'photo' ? `${baseQuery} asian` : baseQuery;
+      const query = baseQuery;
       let photos: string[];
       if (style === 'photo') {
         const res = await fetch(`/api/pexels?query=${encodeURIComponent(query)}&orientation=square&per_page=${count}`);
@@ -1353,11 +1353,10 @@ DECORATIVE: (장식 요소)`,
                       }} />
                       {bgImage && (
                         <>
-                          <img src={bgImage} alt="" className="absolute inset-0 w-full h-full object-cover" crossOrigin="anonymous" />
+                          <img src={bgImage} alt="" className="absolute inset-0 w-full h-full object-cover" crossOrigin="anonymous"
+                            onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                           <div className="absolute inset-0" style={{
-                            background: tmpl.background.gradient
-                              ? `${tmpl.background.gradient.replace(/,\s*#/g, '99, #').replace(/100%\)/, '80%)') || tmpl.background.gradient}`
-                              : `linear-gradient(180deg, ${tmpl.colors.title === '#FFFFFF' ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.7)'} 0%, ${tmpl.colors.title === '#FFFFFF' ? 'rgba(0,0,0,0.8)' : 'rgba(255,255,255,0.85)'} 100%)`,
+                            background: `linear-gradient(180deg, transparent 30%, ${tmpl.colors.title === '#FFFFFF' ? 'rgba(0,0,0,0.45)' : 'rgba(255,255,255,0.5)'} 100%)`,
                           }} />
                         </>
                       )}
