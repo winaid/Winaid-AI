@@ -1014,8 +1014,8 @@ ${subs.length > 0 ? `경쟁 글 소제목: ${subs.join(' / ')}` : ''}
           if (imgMarkerIdx !== -1) {
             const afterMarker = beforeBlog.substring(imgMarkerIdx + imgMarker.length).trim();
             afterMarker.split('\n').forEach(line => {
-              const trimmed = line.replace(/^\d+[\.\)]\s*/, '').trim();
-              if (trimmed && !trimmed.startsWith('---') && !trimmed.startsWith('[') && !trimmed.startsWith('{')) {
+              const trimmed = line.replace(/^\d+[\.\)]\s*/, '').replace(/^[-•]\s*/, '').trim();
+              if (trimmed && trimmed.length > 10 && !trimmed.startsWith('---') && !trimmed.startsWith('{')) {
                 imagePrompts.push(trimmed);
               }
             });
@@ -1081,8 +1081,8 @@ ${subs.length > 0 ? `경쟁 글 소제목: ${subs.join(' / ')}` : ''}
           const endIdx = afterImg.indexOf('---BLOG_START---');
           const imgBlock = endIdx !== -1 ? afterImg.substring(0, endIdx) : afterImg;
           imgBlock.trim().split('\n').forEach(line => {
-            const trimmed = line.replace(/^\d+[\.\)]\s*/, '').trim();
-            if (trimmed && !trimmed.startsWith('---') && !trimmed.startsWith('[') && !trimmed.startsWith('{')) {
+            const trimmed = line.replace(/^\d+[\.\)]\s*/, '').replace(/^[-•]\s*/, '').trim();
+            if (trimmed && trimmed.length > 10 && !trimmed.startsWith('---') && !trimmed.startsWith('{')) {
               imagePrompts.push(trimmed);
             }
           });
