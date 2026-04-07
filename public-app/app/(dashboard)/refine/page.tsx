@@ -89,7 +89,7 @@ export default function RefinePage() {
       const { systemInstruction, prompt } = buildRefinePrompt({ originalText: originalText.trim(), mode: selectedMode });
       const res = await fetch('/api/gemini', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt, systemInstruction, model: 'gemini-3.1-pro-preview', temperature: 0.6, maxOutputTokens: 32768, googleSearch: selectedMode === 'seo' }),
+        body: JSON.stringify({ prompt, systemInstruction, model: 'gemini-3.1-flash-lite-preview', temperature: 0.6, maxOutputTokens: 32768, googleSearch: selectedMode === 'seo' }),
       });
       const data = await res.json() as { text?: string; error?: string };
       if (!res.ok || !data.text) { setError(data.error || `서버 오류 (${res.status})`); return; }
@@ -140,7 +140,7 @@ export default function RefinePage() {
       });
       const res = await fetch('/api/gemini', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt, systemInstruction, model: 'gemini-3.1-pro-preview', temperature: 0.6, maxOutputTokens: 32768, googleSearch: true }),
+        body: JSON.stringify({ prompt, systemInstruction, model: 'gemini-3.1-flash-lite-preview', temperature: 0.6, maxOutputTokens: 32768, googleSearch: true }),
       });
       const data = await res.json() as { text?: string; error?: string };
       if (!res.ok || !data.text) throw new Error(data.error || '생성 실패');

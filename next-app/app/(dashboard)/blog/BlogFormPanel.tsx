@@ -281,6 +281,12 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
             />
           </div>
 
+          {/* 주요 키워드 */}
+          <div>
+            <label className={labelCls}>주요 키워드</label>
+            <input type="text" value={keywords} onChange={e => setKeywords(e.target.value)} placeholder="예: 강남 치과, 임플란트 가격" className={inputCls} />
+          </div>
+
           {/* 제목 */}
           <div>
             <label className={labelCls}>
@@ -321,7 +327,7 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
           {trendingItems.length > 0 && (
             <div className="space-y-1.5">
               {trendingItems.map((item, idx) => (
-                <button key={idx} type="button" onClick={() => { setTopic(item.topic); setDisease(item.condition || item.topic); setKeywords(item.keywords || ''); setTrendingItems([]); }}
+                <button key={idx} type="button" onClick={() => { setTopic(item.topic); setDisease(item.condition || item.topic); setTrendingItems([]); }}
                   className="w-full text-left px-4 py-3 bg-white border border-slate-200 rounded-xl hover:border-blue-300 hover:bg-blue-50 transition-all group">
                   <div className="flex items-center gap-2">
                     <span className="text-blue-500 font-bold text-sm">{idx + 1}</span>
@@ -378,7 +384,6 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
           {(() => {
             const advancedCount = [
               audienceMode !== '환자용(친절/공감)',
-              keywords.trim(),
               disease.trim(),
               textLength !== 2500,
               imageCount !== 2,
@@ -415,11 +420,7 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
                   <option value="전문가용(신뢰/정보)">전문가용 (신뢰/정보)</option>
                 </select>
               </div>
-              {/* 키워드 */}
-              <div>
-                <label className={labelCls}>주요 키워드</label>
-                <input type="text" value={keywords} onChange={e => setKeywords(e.target.value)} placeholder="예: 강남 치과, 임플란트 가격" className={inputCls} />
-              </div>
+              {/* 키워드 반복 설정 (키워드 입력은 메인 영역으로 이동됨) */}
               {keywords.trim() && (
                 <div className="flex items-center gap-2">
                   <span className="text-[10px] text-slate-400 whitespace-nowrap">반복</span>

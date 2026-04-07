@@ -226,7 +226,7 @@ CSS 값은 반드시 실제 동작하는 CSS여야 합니다.
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         prompt,
-        model: 'gemini-3.1-pro-preview',
+        model: 'gemini-3.1-flash-lite-preview',
         temperature: 0.3,
         maxOutputTokens: 8192,
         inlineImages: imageDataUrls,
@@ -345,7 +345,7 @@ cover, info, comparison, icon-grid, steps, checklist, data-highlight, qna, timel
 }
 
 이미지에 없는 필드는 생략. layout에 맞는 필드만 포함.`,
-        model: 'gemini-3.1-pro-preview',
+        model: 'gemini-3.1-flash-lite-preview',
         temperature: 0.3,
         maxOutputTokens: 4096,
         inlineImages: [imageDataUrl],

@@ -181,7 +181,7 @@ ${JSON.stringify(slideForContext, null, 2)}
 ⚠️ 의료광고법 준수: "완치/100%/최첨단/완벽/획기적/유일/국내 최초/1위" 금지.
 ⚠️ 구체적 수치는 범위로("80~120만원", "3~6개월").`,
           systemInstruction: '병원 마케팅 카드뉴스 전문가. 의료광고법 준수. 구체적 수치 사용. JSON 정확하게 출력.',
-          model: 'gemini-3.1-pro-preview',
+          model: 'gemini-3.1-flash-lite-preview',
           temperature: 0.7,
           maxOutputTokens: 4096,
           googleSearch: true,

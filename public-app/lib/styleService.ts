@@ -504,7 +504,7 @@ ${sampleText.substring(0, 6000)}
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       prompt,
-      model: 'gemini-3.1-pro-preview',
+      model: 'gemini-3.1-flash-lite-preview',
       responseType: 'json',
     }),
   });

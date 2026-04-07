@@ -169,7 +169,7 @@ export async function POST(request: NextRequest) {
 
   // ═══ 스트리밍 모드 ═══
   if (body.stream === true) {
-    const model = body.model || 'gemini-3.1-pro-preview';
+    const model = body.model || 'gemini-3.1-flash-lite-preview';
     const ki = keyIndex % keys.length;
     keyIndex = (ki + 1) % keys.length;
 
@@ -264,7 +264,7 @@ export async function POST(request: NextRequest) {
   if (body.maxOutputTokens !== undefined) body.maxOutputTokens = Math.min(Math.max(body.maxOutputTokens, 1), 65536);
   if (body.timeout !== undefined) body.timeout = Math.min(Math.max(body.timeout, 5000), 180000);
 
-  const model = body.model || 'gemini-3.1-pro-preview';
+  const model = body.model || 'gemini-3.1-flash-lite-preview';
   const systemText = body.systemInstruction || '';
   const userText = body.prompt;
 

@@ -370,7 +370,7 @@ ${sampleText}
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           prompt,
-          model: 'gemini-3.1-pro-preview',
+          model: 'gemini-3.1-flash-lite-preview',
           temperature: 0.2,
           responseType: 'json',
         }),

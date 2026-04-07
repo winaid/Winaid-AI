@@ -70,7 +70,7 @@ export default function PressPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          prompt: finalPrompt, systemInstruction, model: 'gemini-3.1-pro-preview',
+          prompt: finalPrompt, systemInstruction, model: 'gemini-3.1-flash-lite-preview',
           temperature: 0.7, maxOutputTokens: 32768, googleSearch: true,
         }),
       });

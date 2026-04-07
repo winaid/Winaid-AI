@@ -216,7 +216,7 @@ JSON만 출력: { "analysis": "...", "topics": [{ "topic": "...", "title": "..."
         body: JSON.stringify({
           prompt,
           systemInstruction,
-          model: 'gemini-3.1-pro-preview',
+          model: 'gemini-3.1-flash-lite-preview',
           temperature: 0.7,
           maxOutputTokens: 65536,
           timeout: 120000,

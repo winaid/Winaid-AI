@@ -252,7 +252,7 @@ export async function enrichSlide(slide: SlideData): Promise<Partial<SlideData> 
 현재 슬라이드:
 ${JSON.stringify(slide, null, 2)}`,
       systemInstruction: '카드뉴스 콘텐츠 전문가. 웹 검색 결과 기반 최신 수치만 사용. JSON 부분 패치만 출력.',
-      model: 'gemini-3.1-pro-preview',
+      model: 'gemini-3.1-flash-lite-preview',
       temperature: 0.5,
       maxOutputTokens: 2048,
       googleSearch: true,
