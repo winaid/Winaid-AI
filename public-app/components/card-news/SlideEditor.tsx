@@ -842,6 +842,26 @@ ${JSON.stringify(slideForContext, null, 2)}
             </div>
           </div>
 
+          {/* 슬라이드 배경색 */}
+          <div>
+            <p className="text-[10px] text-slate-400 mb-1">배경색</p>
+            <div className="flex flex-wrap gap-1.5">
+              {['', '#FFFFFF', '#F7FAFC', '#FDF6EC', '#FFF0F5', '#E0F5EC', '#F3EEFF', '#1B2A4A', '#2D3436', '#000000'].map(c => (
+                <button key={c || 'default'} type="button"
+                  onClick={() => onChange({ bgColor: c || undefined, bgGradient: undefined })}
+                  className={`w-7 h-7 rounded-lg border-2 transition-transform ${
+                    (slide.bgColor || '') === c ? 'border-blue-500 scale-110' : 'border-slate-200 hover:scale-105'
+                  }`}
+                  style={{ background: c || 'linear-gradient(135deg, #eee 25%, transparent 25%, transparent 75%, #eee 75%)', backgroundSize: c ? undefined : '8px 8px' }}
+                  title={c || '테마 기본값'}
+                />
+              ))}
+              <label className="w-7 h-7 rounded-lg border-2 border-slate-200 overflow-hidden cursor-pointer hover:scale-105 bg-gradient-to-br from-red-400 via-green-400 to-blue-400" title="직접 선택">
+                <input type="color" value={slide.bgColor || '#FFFFFF'} onChange={e => onChange({ bgColor: e.target.value, bgGradient: undefined })} className="opacity-0 w-0 h-0" />
+              </label>
+            </div>
+          </div>
+
           {/* 텍스트 그림자 */}
           <label className="flex items-center gap-2 cursor-pointer">
             <input type="checkbox" checked={!!slide.textShadow} onChange={e => onChange({ textShadow: e.target.checked })}

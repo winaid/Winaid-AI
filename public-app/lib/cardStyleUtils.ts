@@ -148,6 +148,7 @@ export function getCardStyle(
     fontFamily: slideFontFamily,
     padding: calcCardPadding(slide),
     textAlign: (slide.titleAlign || cardContainerStyle.textAlign || 'left') as CSSProperties['textAlign'],
+    ...(slide.bgColor ? { background: slide.bgGradient || slide.bgColor } : {}),
   };
 }
 
