@@ -189,6 +189,23 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
     onSlidesChange(slides.map((s, i) => (i === idx ? { ...s, ...patch } : s)));
   };
 
+  /** 슬라이드 복제 */
+  const duplicateSlide = (idx: number) => {
+    const clone: SlideData = JSON.parse(JSON.stringify(slides[idx]));
+    const newSlides = [...slides];
+    newSlides.splice(idx + 1, 0, clone);
+    onSlidesChange(newSlides.map((s, i) => ({ ...s, index: i + 1 })));
+  };
+
+  /** 슬라이드 삭제 (최소 1장 유지) */
+  const removeSlide = (idx: number) => {
+    if (slides.length <= 1) return;
+    const newSlides = slides.filter((_, i) => i !== idx);
+    onSlidesChange(newSlides.map((s, i) => ({ ...s, index: i + 1 })));
+    if (editingIdx === idx) setEditingIdx(null);
+    else if (editingIdx !== null && editingIdx > idx) setEditingIdx(editingIdx - 1);
+  };
+
   /**
    * 레이아웃 변경 — 새 레이아웃에 필요한 필드가 비어 있으면 플레이스홀더 기본값을 채운다.
    * 이렇게 해야 드롭다운에서 레이아웃을 바꿨을 때 편집 폼이 즉시 새 필드를 노출하고,
@@ -2334,15 +2351,26 @@ JSON 한 객체만 출력:
                 <div className="absolute top-2 left-2 z-20 px-2 py-0.5 rounded-full bg-black/60 text-white text-[10px] font-bold backdrop-blur-sm">
                   {idx + 1} · {LAYOUT_LABELS[slide.layout]}
                 </div>
-                {/* PNG 다운로드 */}
-                <button
-                  type="button"
-                  onClick={() => downloadCard(idx)}
-                  className="absolute top-2 right-2 z-20 px-2 py-1 bg-white/90 hover:bg-white rounded-lg text-[10px] font-bold text-slate-700 shadow-sm"
-                  title="이 카드를 PNG로 저장"
-                >
-                  💾 PNG
-                </button>
+                {/* 버튼 그룹 — PNG + 복제 + 삭제 */}
+                <div className="absolute top-2 right-2 z-20 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button type="button" onClick={() => downloadCard(idx)}
+                    className="px-2 py-1 bg-white/90 hover:bg-white rounded-lg text-[10px] font-bold text-slate-700 shadow-sm"
+                    title="PNG 저장">
+                    💾
+                  </button>
+                  <button type="button" onClick={() => duplicateSlide(idx)}
+                    className="px-2 py-1 bg-white/90 hover:bg-white rounded-lg text-[10px] font-bold text-slate-700 shadow-sm"
+                    title="복제">
+                    📋
+                  </button>
+                  {slides.length > 1 && (
+                    <button type="button" onClick={() => { if (confirm('이 슬라이드를 삭제할까요?')) removeSlide(idx); }}
+                      className="px-2 py-1 bg-white/90 hover:bg-red-50 rounded-lg text-[10px] font-bold text-red-500 shadow-sm"
+                      title="삭제">
+                      🗑
+                    </button>
+                  )}
+                </div>
                 {/* 실제 렌더링 — 컨테이너 폭 / 1080 으로 동적 스케일 */}
                 <div
                   ref={(el) => { cardRefs.current[idx] = el; }}
