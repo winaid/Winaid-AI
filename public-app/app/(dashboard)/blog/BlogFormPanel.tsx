@@ -351,13 +351,17 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
 
           {/* 주제 */}
           <div>
-            <label className={labelCls}>주제 *</label>
+            <label className={labelCls}>
+              주제 *
+              <span className="text-[10px] text-slate-400 ml-1.5 font-normal">{topic.length}/30</span>
+            </label>
             <input
               type="text"
               value={topic}
               onChange={e => setTopic(e.target.value)}
               placeholder="예: 임플란트 수술 후 관리법"
               required
+              maxLength={30}
               className={inputCls}
             />
           </div>
