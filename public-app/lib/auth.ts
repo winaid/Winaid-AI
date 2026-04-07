@@ -55,12 +55,13 @@ export const signUpWithEmail = async (
         } as Record<string, unknown>);
       }
 
-      // subscriptions: free 플랜 생성
+      // subscriptions: 플랜 생성 (윈에이드/윈에이아이 계정은 999 크레딧)
+      const isAdmin = email.includes('winaid') || email.includes('winai');
       await supabase.from('subscriptions').upsert(
         {
           user_id: data.user.id,
-          plan_type: 'free',
-          credits_total: 20,
+          plan_type: isAdmin ? 'admin' : 'free',
+          credits_total: isAdmin ? 999 : 20,
           credits_used: 0,
           expires_at: null,
         } as Record<string, unknown>,
