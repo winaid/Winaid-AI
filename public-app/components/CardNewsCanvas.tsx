@@ -104,6 +104,12 @@ export default function CardNewsCanvas({
       if (disposed) { canvas.dispose(); return; }
       fabricRef.current = canvas;
 
+      // CSS 크기만 축소 (내부 좌표계는 1080 유지) — 마우스 좌표 매핑 정확도 보장
+      canvas.setDimensions(
+        { width: displayWidth, height: displayHeight },
+        { cssOnly: true },
+      );
+
       // ── 유틸: fabric Gradient (canvasLayouts에서 import) ──
       const mkGrad = (css: string, w: number, h: number) =>
         makeFabricGradient(F, css, w, h);
@@ -392,7 +398,6 @@ export default function CardNewsCanvas({
     >
       <canvas
         ref={canvasElRef}
-        style={{ width: displayWidth, height: displayHeight }}
       />
     </div>
   );
