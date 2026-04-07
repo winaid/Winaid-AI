@@ -19,6 +19,7 @@ import type { WritingStyle, CardNewsDesignTemplateId, TrendingItem, AudienceMode
 import { useCreditContext } from '../layout';
 import { useCredit as cardNewsUseCredit } from '../../../lib/creditService';
 import { consumeGuestCredit } from '../../../lib/guestCredits';
+import { overlayLogo } from '../../../lib/cardDownloadUtils';
 
 interface CardImageHistoryItem { url: string; prompt: string; createdAt: number; }
 
@@ -129,41 +130,7 @@ export default function CardNewsPage() {
   const [promptHistory, setPromptHistory] = useState<CardPromptHistoryItem[]>([]);
   const [showHistoryDropdown, setShowHistoryDropdown] = useState(false);
 
-  // ── 로고 오버레이: canvas로 이미지 위에 로고 합성 ──
-  const overlayLogo = (baseImageDataUrl: string, logoSrc: string): Promise<string> => {
-    return new Promise((resolve) => {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      if (!ctx) { resolve(baseImageDataUrl); return; }
-      const baseImg = new Image();
-      baseImg.crossOrigin = 'anonymous';
-      baseImg.onload = () => {
-        canvas.width = baseImg.width;
-        canvas.height = baseImg.height;
-        ctx.drawImage(baseImg, 0, 0);
-        const logoImg = new Image();
-        logoImg.crossOrigin = 'anonymous';
-        logoImg.onload = () => {
-          const maxW = Math.min(baseImg.width * 0.15, 120);
-          const scale = maxW / logoImg.width;
-          const w = logoImg.width * scale;
-          const h = logoImg.height * scale;
-          const x = canvas.width - w - 20;
-          const y = 20;
-          ctx.fillStyle = 'rgba(255,255,255,0.85)';
-          ctx.beginPath();
-          ctx.roundRect(x - 8, y - 8, w + 16, h + 16, 8);
-          ctx.fill();
-          ctx.drawImage(logoImg, x, y, w, h);
-          resolve(canvas.toDataURL('image/png'));
-        };
-        logoImg.onerror = () => resolve(baseImageDataUrl);
-        logoImg.src = logoSrc;
-      };
-      baseImg.onerror = () => resolve(baseImageDataUrl);
-      baseImg.src = baseImageDataUrl;
-    });
-  };
+  // overlayLogo — lib/cardDownloadUtils.ts에서 import
 
   // ── 이미지 생성 헬퍼 ──
   const generateCardImage = async (prompt: string, index: number, refImage?: string): Promise<string | null> => {

@@ -12,6 +12,7 @@ import {
   getCardStyle as buildCardStyle, getTitleStyle as buildTitleStyle,
   getSubtitleStyle as buildSubtitleStyle, getBodyStyle as buildBodyStyle,
 } from '../lib/cardStyleUtils';
+import { captureNodeAsCanvas, downloadCardAsPng, downloadAllAsZip } from '../lib/cardDownloadUtils';
 import CardNewsCanvas from './CardNewsCanvas';
 
 interface Props {
@@ -626,68 +627,12 @@ JSON 한 객체만 출력:
   const getBodyStyle = (slide: SlideData): CSSProperties =>
     buildBodyStyle(slide, theme);
 
-  // ═══════════════════════════════════════
-  // 다운로드
-  // ═══════════════════════════════════════
-  //
-  // cardRefs는 미리보기 영역의 transform:scale(0.25)된 div를 가리킨다.
-  // 그대로 html2canvas에 넘기면 270×270 이미지의 좌상단에만 콘텐츠가 잡혀
-  // 나머지가 검은색으로 나온다. 그래서 다운로드 시점에만:
-  //   1) 해당 div를 cloneNode(true)로 복제
-  //   2) transform 제거 + 화면 밖(-9999px)의 임시 컨테이너에 붙임
-  //   3) 풀사이즈 1080×1080 상태에서 캡처
-  //   4) 임시 컨테이너 제거
-  // 방식으로 처리한다.
-
-  const captureNodeAsCanvas = async (sourceEl: HTMLElement) => {
-    const tempContainer = document.createElement('div');
-    tempContainer.style.position = 'fixed';
-    tempContainer.style.left = '-9999px';
-    tempContainer.style.top = '0';
-    tempContainer.style.width = `${cardWidth}px`;
-    tempContainer.style.height = `${cardHeight}px`;
-    tempContainer.style.zIndex = '-1';
-    tempContainer.style.pointerEvents = 'none';
-    document.body.appendChild(tempContainer);
-
-    const clone = sourceEl.cloneNode(true) as HTMLElement;
-    clone.style.transform = 'none';
-    clone.style.position = 'static';
-    clone.style.width = `${cardWidth}px`;
-    clone.style.height = `${cardHeight}px`;
-    clone.style.pointerEvents = 'auto';
-    tempContainer.appendChild(clone);
-
-    try {
-      // 폰트(특히 Google Fonts)가 DOM에 적용될 때까지 대기 — 이미지 캡처 전 필수
-      if (typeof document !== 'undefined' && 'fonts' in document) {
-        try { await (document as Document & { fonts: { ready: Promise<FontFaceSet> } }).fonts.ready; } catch { /* best-effort */ }
-      }
-      const html2canvas = (await import('html2canvas')).default;
-      return await html2canvas(tempContainer, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: null,
-        width: cardWidth,
-        height: cardHeight,
-        windowWidth: cardWidth,
-        windowHeight: cardHeight,
-      });
-    } finally {
-      document.body.removeChild(tempContainer);
-    }
-  };
+  // ── 다운로드 (lib/cardDownloadUtils.ts 위임) ──
 
   const downloadCard = async (index: number) => {
-    const sourceEl = cardRefs.current[index];
-    if (!sourceEl) return;
     setDownloading(true);
     try {
-      const canvas = await captureNodeAsCanvas(sourceEl);
-      const a = document.createElement('a');
-      a.href = canvas.toDataURL('image/png');
-      a.download = `card_${index + 1}.png`;
-      a.click();
+      await downloadCardAsPng(cardRefs.current[index], index, cardWidth, cardHeight);
     } finally {
       setDownloading(false);
     }
@@ -696,23 +641,7 @@ JSON 한 객체만 출력:
   const downloadAll = async () => {
     setDownloading(true);
     try {
-      const JSZip = (await import('jszip')).default;
-      const zip = new JSZip();
-      for (let i = 0; i < slides.length; i++) {
-        const sourceEl = cardRefs.current[i];
-        if (!sourceEl) continue;
-        const canvas = await captureNodeAsCanvas(sourceEl);
-        const blob = await new Promise<Blob>((resolve) => {
-          canvas.toBlob((b) => resolve(b as Blob), 'image/png');
-        });
-        zip.file(`card_${i + 1}.png`, blob);
-      }
-      const zipBlob = await zip.generateAsync({ type: 'blob' });
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(zipBlob);
-      a.download = `cardnews_pro_${Date.now()}.zip`;
-      a.click();
-      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+      await downloadAllAsZip(cardRefs.current, slides.length, cardWidth, cardHeight);
     } finally {
       setDownloading(false);
     }
