@@ -1120,9 +1120,9 @@ DECORATIVE: (장식 요소)`,
             </button>
           </div>
 
-          {/* 추가 옵션 (접기) */}
+          {/* 로고 옵션 (접기) */}
           <details className="text-sm text-slate-500 bg-slate-50 rounded-xl px-5 py-3 mt-2">
-            <summary className="cursor-pointer hover:text-slate-700 font-semibold">추가 옵션</summary>
+            <summary className="cursor-pointer hover:text-slate-700 font-semibold">로고 옵션</summary>
             <div className="pt-4 pb-2 grid grid-cols-2 gap-4">
               <div>
                 <label className="text-xs font-bold text-slate-500 mb-1.5 block">병원명</label>
