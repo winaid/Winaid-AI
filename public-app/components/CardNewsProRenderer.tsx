@@ -74,6 +74,7 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
   const boxRefs = useRef<(HTMLDivElement | null)[]>([]);
   const [downloading, setDownloading] = useState(false);
   const [editingIdx, setEditingIdx] = useState<number | null>(null);
+  const [showAddSlide, setShowAddSlide] = useState(false);
   const [scales, setScales] = useState<number[]>([]);
   // 슬라이드별 AI 이미지/텍스트 생성 상태
   const [generatingImageIdx, setGeneratingImageIdx] = useState<number | null>(null);
@@ -195,6 +196,32 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
     const newSlides = [...slides];
     newSlides.splice(idx + 1, 0, clone);
     onSlidesChange(newSlides.map((s, i) => ({ ...s, index: i + 1 })));
+  };
+
+  /** 빈 슬라이드 추가 */
+  const addSlide = (layout: SlideLayoutType) => {
+    const newSlide: SlideData = {
+      index: slides.length + 1,
+      layout,
+      title: '새 슬라이드',
+      subtitle: '',
+      body: layout === 'info' || layout === 'closing' ? '내용을 입력하세요.' : undefined,
+      ...(layout === 'checklist' ? { checkItems: ['항목 1', '항목 2', '항목 3'] } : {}),
+      ...(layout === 'steps' ? { steps: [{ label: '단계 1', desc: '' }, { label: '단계 2', desc: '' }] } : {}),
+      ...(layout === 'icon-grid' ? { icons: [{ emoji: '🦷', title: '항목 1', desc: '' }, { emoji: '💊', title: '항목 2', desc: '' }, { emoji: '🏥', title: '항목 3', desc: '' }] } : {}),
+      ...(layout === 'comparison' ? { compareLabels: ['항목 1', '항목 2'], columns: [{ header: 'A', items: ['-', '-'], highlight: false }, { header: 'B', items: ['-', '-'], highlight: true }] } : {}),
+      ...(layout === 'qna' ? { questions: [{ q: '질문을 입력하세요', a: '답변을 입력하세요' }] } : {}),
+      ...(layout === 'timeline' ? { timelineItems: [{ time: '1단계', title: '내용', desc: '' }] } : {}),
+      ...(layout === 'before-after' ? { beforeLabel: 'Before', afterLabel: 'After', beforeItems: ['항목'], afterItems: ['항목'] } : {}),
+      ...(layout === 'pros-cons' ? { pros: ['장점 1'], cons: ['단점 1'] } : {}),
+      ...(layout === 'price-table' ? { priceItems: [{ name: '항목', price: '가격', note: '' }] } : {}),
+      ...(layout === 'warning' ? { warningTitle: '주의사항', warningItems: ['주의 항목 1'] } : {}),
+      ...(layout === 'quote' ? { quoteText: '인용문을 입력하세요', quoteAuthor: '', quoteRole: '' } : {}),
+      ...(layout === 'numbered-list' ? { numberedItems: [{ title: '항목 1', desc: '' }] } : {}),
+      ...(layout === 'data-highlight' ? { dataPoints: [{ value: '90%', label: '데이터', highlight: true }] } : {}),
+    };
+    onSlidesChange([...slides, newSlide]);
+    setShowAddSlide(false);
   };
 
   /** 슬라이드 삭제 (최소 1장 유지) */
@@ -2416,6 +2443,30 @@ JSON 한 객체만 출력:
             </div>
           );
         })}
+
+        {/* 슬라이드 추가 카드 */}
+        <div className="bg-white rounded-xl border-2 border-dashed border-slate-200 hover:border-blue-400 transition-all">
+          <div
+            className="w-full flex flex-col items-center justify-center cursor-pointer"
+            style={{ aspectRatio: cardAspect }}
+            onClick={() => setShowAddSlide(!showAddSlide)}
+          >
+            <div className="text-3xl text-slate-300 mb-2">+</div>
+            <div className="text-xs font-semibold text-slate-400">슬라이드 추가</div>
+          </div>
+          {showAddSlide && (
+            <div className="p-3 border-t border-slate-100 max-h-[200px] overflow-y-auto">
+              <div className="grid grid-cols-2 gap-1.5">
+                {(Object.entries(LAYOUT_LABELS) as [SlideLayoutType, string][]).map(([key, label]) => (
+                  <button key={key} type="button" onClick={() => addSlide(key)}
+                    className="px-2 py-2 text-[10px] font-semibold text-slate-600 bg-slate-50 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-all text-left">
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* ══════ 풀스크린 편집 모달 ══════ */}
