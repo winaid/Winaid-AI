@@ -68,13 +68,16 @@ function BlogForm() {
         if (!user) return;
         const nameFromMeta = user.user_metadata?.name;
         const urlFromMeta = user.user_metadata?.homepage_url;
+        const addrFromMeta = user.user_metadata?.address;
         if (nameFromMeta) { setHospitalName(nameFromMeta); setHospitalNameFromProfile(nameFromMeta); }
         if (urlFromMeta && !homepageUrl) setHomepageUrl(urlFromMeta);
+        if (addrFromMeta && !selectedHospitalAddress) setSelectedHospitalAddress(addrFromMeta);
         if (nameFromMeta) return;
-        const { data: profile } = await sb.from('profiles').select('name, full_name, homepage_url').eq('id', user.id).single();
+        const { data: profile } = await sb.from('profiles').select('name, full_name, homepage_url, address').eq('id', user.id).single();
         const pName = profile?.name || profile?.full_name;
         if (pName) { setHospitalName(pName); setHospitalNameFromProfile(pName); }
         if (profile?.homepage_url && !homepageUrl) setHomepageUrl(profile.homepage_url);
+        if (profile?.address && !selectedHospitalAddress) setSelectedHospitalAddress(profile.address);
       } catch { /* ignore */ }
     })();
   // eslint-disable-next-line react-hooks/exhaustive-deps

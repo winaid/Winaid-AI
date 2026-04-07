@@ -16,15 +16,18 @@ export const signUpWithEmail = async (
   password: string,
   displayName: string,
   homepageUrl?: string,
+  address?: string,
 ) => {
   const supabase = getSupabaseClient();
+
+  const metaData: Record<string, string> = { name: displayName };
+  if (homepageUrl) metaData.homepage_url = homepageUrl;
+  if (address) metaData.address = address;
 
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
-    options: {
-      data: { name: displayName, ...(homepageUrl ? { homepage_url: homepageUrl } : {}) },
-    },
+    options: { data: metaData },
   });
 
   if (data.user) {
@@ -36,6 +39,7 @@ export const signUpWithEmail = async (
         name: displayName,
       };
       if (homepageUrl) profileData.homepage_url = homepageUrl;
+      if (address) profileData.address = address;
 
       const { error: updateErr } = await supabase
         .from('profiles')

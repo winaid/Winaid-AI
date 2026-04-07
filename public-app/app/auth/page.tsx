@@ -15,6 +15,7 @@ export default function AuthPage() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [homepageUrl, setHomepageUrl] = useState('');
+  const [address, setAddress] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -145,7 +146,7 @@ export default function AuthPage() {
     setIsLoading(true);
 
     try {
-      const { data, error: authError } = await signUpWithEmail(email.trim(), password, name.trim(), homepageUrl.trim() || undefined);
+      const { data, error: authError } = await signUpWithEmail(email.trim(), password, name.trim(), homepageUrl.trim() || undefined, address.trim() || undefined);
 
       if (authError) {
         if (authError.message.includes('already registered') || authError.message.includes('User already registered')) {
@@ -345,6 +346,20 @@ export default function AuthPage() {
                   className={inputCls}
                 />
                 <p className="text-[11px] text-slate-400 mt-1">입력하면 블로그 생성 시 자동으로 채워집니다</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-600 mb-1.5">
+                  병원 주소
+                  <span className="text-slate-400 font-normal ml-1">(선택)</span>
+                </label>
+                <input
+                  type="text"
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  placeholder="예: 서울특별시 강남구 역삼동"
+                  className={inputCls}
+                />
+                <p className="text-[11px] text-slate-400 mt-1">키워드 분석 시 지역 기반 추천에 활용됩니다</p>
               </div>
               <button type="submit" disabled={isLoading} className={btnPrimaryCls}>
                 {isLoading ? <span className="flex items-center justify-center gap-2">{spinner} 가입 중...</span> : '회원가입'}
