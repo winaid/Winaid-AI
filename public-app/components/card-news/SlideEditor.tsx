@@ -345,11 +345,11 @@ ${JSON.stringify(slideForContext, null, 2)}
       </button>
       <div>
         {fieldLabel('제목', 'title')}
-        <input type="text" value={slide.title} onChange={(e) => onChange({ title: e.target.value })} className={inputCls} />
+        <textarea value={slide.title} onChange={(e) => onChange({ title: e.target.value })} className={textareaCls} rows={2} />
       </div>
       <div>
         {fieldLabel('부제', 'subtitle')}
-        <input type="text" value={slide.subtitle || ''} onChange={(e) => onChange({ subtitle: e.target.value })} className={inputCls} placeholder="(선택)" />
+        <textarea value={slide.subtitle || ''} onChange={(e) => onChange({ subtitle: e.target.value })} className={textareaCls} rows={2} placeholder="(선택)" />
       </div>
       {/* 카드별 글씨체 — 비워두면 상단 전체 폰트 사용 */}
       <div>
@@ -790,11 +790,19 @@ ${JSON.stringify(slideForContext, null, 2)}
             <ElementAccordion icon="🏥" label="병원명 스타일" defaultOpen={false}>
               <div className="space-y-3">
                 <div>
-                  <p className="text-[10px] text-slate-400 mb-1">크기</p>
+                  <p className="text-[10px] text-slate-400 mb-1">병원명 크기</p>
                   <div className="flex items-center gap-1">
                     <button type="button" onClick={() => onChange({ hospitalFontSize: (slide.hospitalFontSize || 14) - 1 })} className="w-7 h-7 bg-slate-100 rounded text-xs font-bold hover:bg-slate-200">−</button>
                     <input type="number" value={slide.hospitalFontSize || 14} onChange={e => onChange({ hospitalFontSize: Number(e.target.value) })} className="w-14 h-7 text-center text-xs bg-white border border-slate-200 rounded" />
                     <button type="button" onClick={() => onChange({ hospitalFontSize: (slide.hospitalFontSize || 14) + 1 })} className="w-7 h-7 bg-slate-100 rounded text-xs font-bold hover:bg-slate-200">+</button>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-[10px] text-slate-400 mb-1">로고 크기</p>
+                  <div className="flex items-center gap-1">
+                    <button type="button" onClick={() => onChange({ hospitalLogoSize: ((slide as any).hospitalLogoSize || 40) - 4 })} className="w-7 h-7 bg-slate-100 rounded text-xs font-bold hover:bg-slate-200">−</button>
+                    <input type="number" value={(slide as any).hospitalLogoSize || 40} onChange={e => onChange({ hospitalLogoSize: Number(e.target.value) } as any)} className="w-14 h-7 text-center text-xs bg-white border border-slate-200 rounded" />
+                    <button type="button" onClick={() => onChange({ hospitalLogoSize: ((slide as any).hospitalLogoSize || 40) + 4 })} className="w-7 h-7 bg-slate-100 rounded text-xs font-bold hover:bg-slate-200">+</button>
                   </div>
                 </div>
                 <div>

@@ -354,7 +354,7 @@ export function useSlideRenderer({ theme, learnedTemplate, presetStyle, cardRati
           </div>
           <div style={{
             position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
-            background: `linear-gradient(180deg, ${theme.backgroundColor}CC 0%, ${theme.backgroundColor}EE 100%)`,
+            background: `linear-gradient(180deg, ${theme.backgroundColor}55 0%, ${theme.backgroundColor}88 100%)`,
             zIndex: 1,
           }} />
         </>
@@ -453,7 +453,7 @@ export function useSlideRenderer({ theme, learnedTemplate, presetStyle, cardRati
         display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px',
       }}>
         {theme.hospitalLogo && (
-          <img src={theme.hospitalLogo} alt="" crossOrigin="anonymous" style={{ height: '28px', objectFit: 'contain' }} />
+          <img src={theme.hospitalLogo} alt="" crossOrigin="anonymous" style={{ height: `${(slide as SlideData & { hospitalLogoSize?: number }).hospitalLogoSize || 40}px`, objectFit: 'contain' }} />
         )}
         {theme.hospitalName && (
           <div style={{

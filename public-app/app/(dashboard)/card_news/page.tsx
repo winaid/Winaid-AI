@@ -258,20 +258,25 @@ export default function CardNewsPage() {
   };
 
   const autoApplyBackgrounds = async (slides: ProSlideData[]): Promise<ProSlideData[]> => {
-    const coverSlides = slides.filter(s => s.layout === 'cover' || s.layout === 'closing');
-    if (coverSlides.length === 0) return slides;
     try {
       const baseQ = lastPexelsQuery || await fetchPexelsQuery();
       const query = `${baseQ} asian`;
-      const res = await fetch(`/api/pexels?query=${encodeURIComponent(query)}&orientation=square&per_page=15&page=${Math.floor(Math.random() * 3) + 1}`);
+      const res = await fetch(`/api/pexels?query=${encodeURIComponent(query)}&orientation=square&per_page=20&page=${Math.floor(Math.random() * 3) + 1}`);
       const data = await res.json();
-      const photos = data.photos || [];
+      const photos = (data.photos || []) as { url: string }[];
       if (photos.length > 0) {
-        for (const cs of coverSlides) {
-          const photo = photos[Math.floor(Math.random() * photos.length)];
-          cs.imageUrl = photo.url;
-          cs.imagePosition = 'background';
-          if (!cs.coverTemplateId) cs.coverTemplateId = 'full-image-bottom';
+        for (let i = 0; i < slides.length; i++) {
+          const s = slides[i];
+          if (s.imageUrl) continue; // 이미 이미지가 있으면 스킵
+          const photo = photos[i % photos.length];
+          s.imageUrl = photo.url;
+          // 표지/마무리는 배경, 나머지는 상단 이미지
+          if (s.layout === 'cover' || s.layout === 'closing') {
+            s.imagePosition = 'background';
+            if (!s.coverTemplateId) s.coverTemplateId = 'full-image-bottom';
+          } else {
+            s.imagePosition = 'top';
+          }
         }
       }
     } catch { /* Pexels 실패 시 무시 */ }
