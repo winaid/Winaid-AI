@@ -130,95 +130,53 @@ export async function analyzeDesignFromImages(imageDataUrls: string[]): Promise<
   template: Omit<CardTemplate, 'id' | 'name' | 'createdAt' | 'thumbnailDataUrl'>;
 } | null> {
   try {
-    const prompt = `당신은 카드뉴스 디자인 리버스 엔지니어링 전문가입니다.
-첨부된 카드뉴스 이미지 ${imageDataUrls.length}개를 정밀 분석해, 이 디자인을 HTML/CSS로 **거의 완벽하게 재현**할 수 있는 상세 토큰을 추출하세요.
+    const prompt = `카드뉴스 이미지 ${imageDataUrls.length}장을 분석해서 디자인 토큰을 추출하세요.
 
-분석 항목:
-1. 색상: 배경, 제목, 부제, 본문, 강조, 내부 카드 배경
-2. 배경: 단색인지 그라데이션인지, 미세 패턴/텍스처가 있는지
-3. 상/하단 장식: 색상 바, 라인, 그라데이션 바 유무
-4. 내부 카드: 비교표·아이콘 등의 컨테이너 배경·라운드·그림자·보더
-5. 강조 스타일: 하이라이트된 셀/항목의 배경·색상·라운드
-6. 장식 요소: 구분선·제목 바·모서리 장식·도형(원, 육각형 등)
-7. 타이포그래피: 제목/부제/본문 크기·굵기·정렬·자간
-8. 레이아웃: 전체 패딩, 요소 간 간격, 정렬 방식
+**가장 중요한 것: 색상을 정확하게 뽑아주세요.** 스포이드로 찍듯이 정확한 hex 값.
 
-여러 이미지가 있으면 공통 패턴을 추출하고, 가장 자주 나타나는 스타일을 채택하세요.
-CSS 값은 반드시 실제 동작하는 CSS여야 합니다.
-
-반드시 아래 JSON 스키마로만 출력하세요. 마크다운 코드블록·주석·설명 금지:
+JSON만 출력. 마크다운/코드블록/설명 절대 금지:
 
 {
   "colors": {
-    "background": "#hex",
-    "backgroundGradient": "linear-gradient(...) 또는 ''",
-    "titleColor": "#hex",
-    "subtitleColor": "#hex",
-    "bodyColor": "#hex",
-    "accentColor": "#hex"
+    "background": "#hex (카드 전체 배경색)",
+    "backgroundGradient": "linear-gradient(...) 또는 빈 문자열",
+    "titleColor": "#hex (제목 색상)",
+    "subtitleColor": "#hex (부제/소제목 색상)",
+    "bodyColor": "#hex (본문 색상)",
+    "accentColor": "#hex (강조색 — 버튼, 장식, 아이콘 배경 등)"
   },
   "typography": {
-    "titleSize": "42px~64px",
-    "titleWeight": "700~900",
-    "subtitleSize": "18px~26px",
-    "bodySize": "16px~22px",
+    "titleSize": "48px",
+    "titleWeight": "800",
+    "subtitleSize": "22px",
+    "bodySize": "18px",
     "fontFamily": "'Pretendard', sans-serif"
   },
   "backgroundStyle": {
-    "type": "solid|gradient|pattern",
-    "gradient": "CSS gradient 문자열 또는 ''",
-    "patternCSS": "background-image로 표현한 패턴 또는 ''",
-    "hasTopAccent": true,
-    "topAccentCSS": "height: 6px; background: linear-gradient(90deg, #F5A623, rgba(245,166,35,0.4), transparent)",
-    "hasBottomAccent": false,
+    "type": "solid 또는 gradient",
+    "gradient": "CSS gradient 또는 빈 문자열",
+    "hasTopAccent": true/false,
+    "topAccentCSS": "height:6px;background:#hex 또는 빈 문자열",
+    "hasBottomAccent": true/false,
     "bottomAccentCSS": ""
   },
   "innerCardStyle": {
-    "background": "rgba(255,255,255,0.06) 또는 #hex",
-    "borderRadius": "18px~24px",
-    "border": "1px solid rgba(255,255,255,0.1) 또는 'none'",
-    "boxShadow": "0 10px 30px rgba(0,0,0,0.15) 또는 'none'",
-    "padding": "28px 32px"
-  },
-  "highlightStyle": {
-    "background": "rgba(245,166,35,0.18) 또는 #hex",
-    "color": "#hex",
-    "borderRadius": "14px"
+    "background": "rgba(...) 또는 #hex (내부 카드/셀 배경)",
+    "borderRadius": "18px",
+    "border": "1px solid rgba(...) 또는 none",
+    "boxShadow": "그림자 CSS 또는 none"
   },
   "decorations": {
-    "hasDividerLine": false,
-    "dividerCSS": "",
-    "hasAccentBar": true,
-    "accentBarCSS": "width: 60px; height: 5px; background: #F5A623; border-radius: 3px",
-    "hasCornerDecor": false,
-    "cornerDecorCSS": "",
-    "hasShapeDecor": false,
-    "shapeDecorCSS": ""
+    "hasAccentBar": true/false,
+    "accentBarCSS": "width:60px;height:4px;background:#hex;border-radius:2px"
   },
   "layoutRules": {
-    "titleAlign": "left",
-    "contentPadding": "60px 64px",
-    "gap": "24px",
-    "headerStyle": "bar"
+    "titleAlign": "left 또는 center",
+    "contentPadding": "60px 64px"
   },
-  "layout": {
-    "subtitlePosition": "top",
-    "titlePosition": "center",
-    "visualPosition": "bottom",
-    "padding": "60px 64px",
-    "borderRadius": "0px"
-  },
-  "decoration": {
-    "hasFrame": false,
-    "frameStyle": "",
-    "hasShapes": false,
-    "shapeStyle": "",
-    "overlay": ""
-  },
-  "layoutMatch": ["16종 중 이 디자인에 가장 어울리는 레이아웃 1~3개: cover/info/comparison/checklist/steps/icon-grid/data-highlight/qna/timeline/before-after/pros-cons/price-table/warning/quote/numbered-list/closing"],
-  "slideStructure": ["이 스타일로 6장 카드뉴스를 만든다면 추천 레이아웃 순서, 예: cover,icon-grid,comparison,steps,checklist,closing"],
-  "cssTemplate": ".card-container { ... } 전체 재현용 CSS. 비어도 무방.",
-  "description": "이 디자인의 전체 느낌과 특징을 2~3문장으로"
+  "layoutMatch": ["이 디자인에 어울리는 레이아웃 2~3개"],
+  "slideStructure": ["cover","icon-grid","comparison","steps","checklist","closing"],
+  "description": "이 디자인의 느낌을 2문장으로"
 }`;
 
     const res = await fetch('/api/gemini', {
@@ -226,9 +184,9 @@ CSS 값은 반드시 실제 동작하는 CSS여야 합니다.
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         prompt,
-        model: 'gemini-3.1-flash-lite-preview',
-        temperature: 0.3,
-        maxOutputTokens: 8192,
+        model: 'gemini-3.1-pro-preview',
+        temperature: 0.2,
+        maxOutputTokens: 4096,
         inlineImages: imageDataUrls,
       }),
     });
@@ -311,31 +269,32 @@ export async function imageToEditableTemplate(imageDataUrl: string): Promise<{
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        prompt: `이 카드뉴스 이미지를 분석해서 편집 가능한 템플릿으로 변환해줘.
+        prompt: `이 카드뉴스 이미지를 보고 편집 가능한 슬라이드 데이터로 변환해줘.
 
-이미지의 레이아웃 구조, 텍스트 내용, 색상을 정확히 파악해서 JSON으로 출력.
+1. 이미지에 보이는 텍스트를 정확히 읽어주세요
+2. 레이아웃 구조를 파악해서 가장 적합한 layout 타입을 선택
+3. 색상은 스포이드로 찍듯이 정확한 hex 값
 
-사용 가능한 layout 타입:
-cover, info, comparison, icon-grid, steps, checklist, data-highlight, qna, timeline, before-after, pros-cons, price-table, warning, quote, numbered-list, closing
+layout 타입: cover, info, comparison, icon-grid, steps, checklist, data-highlight, qna, timeline, before-after, pros-cons, price-table, warning, quote, numbered-list, closing
 
-출력 형식 (JSON만, 마크다운 금지):
+JSON만 출력 (마크다운/코드블록 절대 금지):
 {
   "slide": {
-    "layout": "comparison 등 16종 중 하나",
+    "layout": "16종 중 하나",
     "title": "이미지에서 읽은 제목",
     "subtitle": "부제 (있으면)",
     "body": "본문 (있으면)",
-    "columns": [{"header":"헤더","items":["항목1","항목2"],"highlight":false}],
-    "compareLabels": ["라벨1","라벨2"],
+    "columns": [{"header":"헤더","items":["항목"],"highlight":false}],
+    "compareLabels": ["라벨"],
     "icons": [{"emoji":"🦷","title":"항목","desc":"설명"}],
     "steps": [{"label":"단계","desc":"설명"}],
-    "checkItems": ["항목1"],
+    "checkItems": ["항목"],
     "dataPoints": [{"value":"95%","label":"라벨","highlight":true}],
     "questions": [{"q":"질문","a":"답변"}],
     "imagePosition": "top 또는 background 또는 없음"
   },
   "colors": {
-    "background": "#hex",
+    "background": "#hex (정확한 배경색)",
     "backgroundGradient": "linear-gradient(...) 또는 빈 문자열",
     "titleColor": "#hex",
     "subtitleColor": "#hex",
@@ -345,8 +304,8 @@ cover, info, comparison, icon-grid, steps, checklist, data-highlight, qna, timel
 }
 
 이미지에 없는 필드는 생략. layout에 맞는 필드만 포함.`,
-        model: 'gemini-3.1-flash-lite-preview',
-        temperature: 0.3,
+        model: 'gemini-3.1-pro-preview',
+        temperature: 0.2,
         maxOutputTokens: 4096,
         inlineImages: [imageDataUrl],
       }),
