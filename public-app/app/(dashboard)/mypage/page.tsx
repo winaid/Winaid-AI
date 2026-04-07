@@ -325,7 +325,7 @@ export default function MyPage() {
                             <div key={i} className="p-4 bg-slate-50 rounded-xl border border-slate-200">
                               <div className="flex items-center gap-2 mb-1">
                                 <span className="w-6 h-6 bg-blue-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">{i + 1}</span>
-                                <span className="text-[10px] text-slate-400 font-semibold">{s.layout || 'info'}</span>
+                                <span className="text-[10px] text-slate-400 font-semibold">{{ cover: '표지', info: '정보', comparison: '비교표', 'icon-grid': '아이콘', steps: '단계', checklist: '체크리스트', 'data-highlight': '수치 강조', closing: '마무리', 'before-after': '전후 비교', qna: 'Q&A', timeline: '타임라인', quote: '인용', 'numbered-list': '번호 리스트', 'pros-cons': '장단점', 'price-table': '가격표', warning: '주의사항' }[s.layout || 'info'] || s.layout}</span>
                               </div>
                               <p className="text-sm font-bold text-slate-800">{s.title || '(제목 없음)'}</p>
                               {s.subtitle && <p className="text-xs text-slate-500 mt-0.5">{s.subtitle}</p>}
