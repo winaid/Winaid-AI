@@ -5,41 +5,14 @@ import type { SlideData, SlideDecoration, CardNewsTheme, SlideLayoutType, SlideI
 import { LAYOUT_LABELS, CARD_FONTS, FONT_CATEGORIES, getCardFont, SLIDE_IMAGE_STYLES, COVER_TEMPLATES } from '../lib/cardNewsLayouts';
 import type { CardTemplate } from '../lib/cardTemplateService';
 import { FONT_LIST, getFontById, loadGoogleFont, type FontItem } from '../lib/cardFonts';
+import {
+  parseCSSString, ensureGoogleFontLoaded,
+  resolveEffectiveFontFamily, resolveSlideFontFamily,
+  calcTitleSize, calcValueSize, calcItemLayout, calcGridCols, calcBodySize, calcCardPadding,
+  getCardStyle as buildCardStyle, getTitleStyle as buildTitleStyle,
+  getSubtitleStyle as buildSubtitleStyle, getBodyStyle as buildBodyStyle,
+} from '../lib/cardStyleUtils';
 import CardNewsCanvas from './CardNewsCanvas';
-
-/**
- * CSS 선언 문자열 "height: 6px; background: red" 를 React 스타일 객체로 파싱.
- * AI가 추출한 학습 템플릿의 CSS 힌트를 style prop에 직접 꽂기 위한 헬퍼.
- */
-function parseCSSString(css: string | undefined): CSSProperties {
-  const result: Record<string, string> = {};
-  if (!css) return result as CSSProperties;
-  css.split(';').forEach(rule => {
-    const idx = rule.indexOf(':');
-    if (idx <= 0) return;
-    const key = rule.slice(0, idx).trim();
-    const value = rule.slice(idx + 1).trim();
-    if (!key || !value) return;
-    // kebab-case → camelCase
-    const camel = key.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase());
-    result[camel] = value;
-  });
-  return result as CSSProperties;
-}
-
-/** Google Fonts CDN에서 한 번만 로드. 이미 있으면 스킵 */
-function ensureGoogleFontLoaded(fontId: string) {
-  if (typeof document === 'undefined') return;
-  const font = CARD_FONTS.find(f => f.id === fontId);
-  if (!font || !font.googleImport) return;
-  const linkId = `gfont-${font.id}`;
-  if (document.getElementById(linkId)) return;
-  const link = document.createElement('link');
-  link.id = linkId;
-  link.rel = 'stylesheet';
-  link.href = `https://fonts.googleapis.com/css2?family=${font.googleImport}&display=swap`;
-  document.head.appendChild(link);
-}
 
 interface Props {
   slides: SlideData[];
@@ -632,143 +605,26 @@ JSON 한 객체만 출력:
   /**
    * theme.fontId → CARD_FONTS family 우선, custom이면 customFontName, 둘 다 없으면 theme.fontFamily
    */
-  const effectiveFontFamily = (() => {
-    if (theme.fontId === 'custom' && customFontName) {
-      return `'${customFontName}', 'Pretendard Variable', 'Pretendard', sans-serif`;
-    }
-    if (theme.fontId) return getCardFont(theme.fontId).family;
-    return theme.fontFamily;
-  })();
+  const effectiveFontFamily = resolveEffectiveFontFamily(theme, customFontName);
 
-  /**
-   * 카드별 폰트 계산 — slide.fontId가 있으면 그 폰트를, 없으면 상단 전체 폰트를 사용.
-   * Google Font는 필요 시 CDN 로드.
-   */
-  const getSlideFontFamily = (slide: SlideData): string => {
-    if (!slide.fontId) return effectiveFontFamily;
-    if (slide.fontId === 'custom' && customFontName) {
-      return `'${customFontName}', 'Pretendard Variable', 'Pretendard', sans-serif`;
-    }
-    const font = CARD_FONTS.find(f => f.id === slide.fontId);
-    if (!font) return effectiveFontFamily;
-    if (font.googleImport) ensureGoogleFontLoaded(font.id);
-    return font.family;
-  };
+  const getSlideFontFamily = (slide: SlideData): string =>
+    resolveSlideFontFamily(slide, effectiveFontFamily, customFontName);
 
-  // ════════════════════════════════════════
-  // 디자인 엔진: 내용에 따라 자동 계산
-  // ════════════════════════════════════════
+  // ── 스타일 래퍼 (lib/cardStyleUtils.ts 위임) ──
 
-  /** 제목 크기 자동 계산 (글자 수 기반) */
-  const calcTitleSize = (text: string, maxSize: number = 52, minSize: number = 36): number => {
-    const len = (text || '').length;
-    if (len <= 10) return maxSize;
-    if (len <= 15) return Math.min(maxSize, 56);
-    if (len <= 20) return Math.min(maxSize, 48);
-    if (len <= 30) return Math.min(maxSize, 42);
-    return minSize;
-  };
+  const getCardStyle = (slide: SlideData): CSSProperties =>
+    buildCardStyle(slide, cardContainerStyle, getSlideFontFamily(slide));
 
-  /** 수치 크기 자동 계산 */
-  const calcValueSize = (text: string, containerWidth: number = 300): number => {
-    const len = (text || '').length;
-    return Math.min(80, Math.max(36, Math.floor(containerWidth * 0.85 / Math.max(len, 1))));
-  };
+  const getTitleStyle = (slide: SlideData, defaults: { fontSize: number; textAlign?: string }): CSSProperties =>
+    buildTitleStyle(slide, defaults, theme, getSlideFontFamily(slide),
+      slide.titleFontId ? getSlideFontFamily({ ...slide, fontId: slide.titleFontId }) : undefined);
 
-  /** 항목 수에 따른 gap/padding/fontSize 자동 계산 */
-  const calcItemLayout = (itemCount: number) => {
-    if (itemCount <= 2) return { gap: 24, padding: 32, fontSize: 22 };
-    if (itemCount <= 3) return { gap: 20, padding: 28, fontSize: 20 };
-    if (itemCount <= 4) return { gap: 16, padding: 24, fontSize: 18 };
-    if (itemCount <= 5) return { gap: 12, padding: 20, fontSize: 17 };
-    return { gap: 10, padding: 16, fontSize: 16 };
-  };
+  const getSubtitleStyle = (slide: SlideData): CSSProperties =>
+    buildSubtitleStyle(slide, theme, getSlideFontFamily(slide),
+      slide.subtitleFontId ? getSlideFontFamily({ ...slide, fontId: slide.subtitleFontId }) : undefined);
 
-  /** 그리드 열 수 자동 계산 */
-  const calcGridCols = (itemCount: number): number => {
-    if (itemCount <= 1) return 1;
-    if (itemCount <= 2) return 2;
-    if (itemCount <= 4) return 2;
-    if (itemCount <= 6) return 3;
-    return 3;
-  };
-
-  /** 본문 크기 자동 계산 (글자 수 기반) */
-  const calcBodySize = (text: string): { fontSize: number; lineHeight: number } => {
-    const charCount = (text || '').length;
-    if (charCount <= 50) return { fontSize: 22, lineHeight: 1.7 };
-    if (charCount <= 100) return { fontSize: 20, lineHeight: 1.7 };
-    if (charCount <= 200) return { fontSize: 18, lineHeight: 1.65 };
-    return { fontSize: 16, lineHeight: 1.6 };
-  };
-
-  /** 카드 내부 패딩 계산 (이미지 유무 + 항목 수) */
-  const calcCardPadding = (slide: SlideData): string => {
-    const hasImage = !!slide.imageUrl && (slide.imagePosition === 'top' || slide.imagePosition === 'bottom');
-    const itemCount = (slide.checkItems || slide.steps || slide.icons || slide.numberedItems || []).length;
-    if (hasImage) return '40px 50px';
-    if (itemCount >= 5) return '50px 54px';
-    return '60px 64px';
-  };
-
-  /** 슬라이드별 컨테이너 스타일 — cardContainerStyle + 카드별 폰트 + 동적 패딩 */
-  const getCardStyle = (slide: SlideData): CSSProperties => ({
-    ...cardContainerStyle,
-    fontFamily: getSlideFontFamily(slide),
-    padding: calcCardPadding(slide),
-  });
-
-  /** 슬라이드별 제목 스타일 — 개별 오버라이드 + 테마 기본값 */
-  const getTitleStyle = (slide: SlideData, defaults: { fontSize: number; textAlign?: string }): CSSProperties => ({
-    color: slide.titleColor || theme.titleColor,
-    fontSize: `${slide.titleFontSize || defaults.fontSize}px`,
-    fontWeight: (slide.titleFontWeight || '800') as CSSProperties['fontWeight'],
-    letterSpacing: slide.titleLetterSpacing ? `${slide.titleLetterSpacing}px` : '-0.02em',
-    lineHeight: slide.titleLineHeight || 1.25,
-    wordBreak: 'keep-all',
-    whiteSpace: 'pre-line',
-    textAlign: (slide.titleAlign || defaults.textAlign || undefined) as CSSProperties['textAlign'],
-    ...(slide.titleFontId ? { fontFamily: getSlideFontFamily({ ...slide, fontId: slide.titleFontId }) } : {}),
-    // 드래그 위치 반영
-    ...(slide.titlePosition ? {
-      position: 'absolute' as const,
-      left: `${slide.titlePosition.x}%`,
-      top: `${slide.titlePosition.y}%`,
-      transform: 'translate(-50%, -50%)',
-      zIndex: 10,
-    } : {}),
-  });
-
-  /** 슬라이드별 부제 스타일 */
-  const getSubtitleStyle = (slide: SlideData): CSSProperties => ({
-    color: slide.subtitleColor || theme.subtitleColor,
-    fontSize: `${slide.subtitleFontSize || 22}px`,
-    fontWeight: (slide.subtitleFontWeight || '600') as CSSProperties['fontWeight'],
-    letterSpacing: slide.subtitleLetterSpacing ? `${slide.subtitleLetterSpacing}px` : undefined,
-    lineHeight: slide.subtitleLineHeight || 1.55,
-    wordBreak: 'keep-all',
-    whiteSpace: 'pre-line',
-    ...(slide.subtitleFontId ? { fontFamily: getSlideFontFamily({ ...slide, fontId: slide.subtitleFontId }) } : {}),
-    // 드래그 위치 반영
-    ...(slide.subtitlePosition ? {
-      position: 'absolute' as const,
-      left: `${slide.subtitlePosition.x}%`,
-      top: `${slide.subtitlePosition.y}%`,
-      transform: 'translate(-50%, -50%)',
-      zIndex: 10,
-    } : {}),
-  });
-
-  /** 슬라이드별 본문 스타일 */
-  const getBodyStyle = (slide: SlideData): CSSProperties => {
-    const auto = calcBodySize(slide.body || '');
-    return {
-      color: slide.bodyColor || theme.bodyColor,
-      fontSize: `${slide.bodyFontSize || auto.fontSize}px`,
-      lineHeight: slide.bodyLineHeight || auto.lineHeight,
-      wordBreak: 'keep-all',
-    };
-  };
+  const getBodyStyle = (slide: SlideData): CSSProperties =>
+    buildBodyStyle(slide, theme);
 
   // ═══════════════════════════════════════
   // 다운로드
