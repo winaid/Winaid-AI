@@ -319,17 +319,40 @@ export default function MyPage() {
                     <div className="space-y-3">
                       <p className="text-xs text-slate-400 mb-2">슬라이드 구성</p>
                       {(() => {
+                        const layoutLabel: Record<string, string> = { cover: '표지', info: '정보', comparison: '비교표', 'icon-grid': '아이콘', steps: '단계', checklist: '체크리스트', 'data-highlight': '수치 강조', closing: '마무리', 'before-after': '전후 비교', qna: 'Q&A', timeline: '타임라인', quote: '인용', 'numbered-list': '번호 리스트', 'pros-cons': '장단점', 'price-table': '가격표', warning: '주의사항' };
                         try {
-                          const slides = JSON.parse(selectedPost.content) as { title?: string; layout?: string; subtitle?: string; body?: string }[];
+                          const slides = JSON.parse(selectedPost.content) as Record<string, unknown>[];
                           return slides.map((s, i) => (
                             <div key={i} className="p-4 bg-slate-50 rounded-xl border border-slate-200">
-                              <div className="flex items-center gap-2 mb-1">
+                              <div className="flex items-center gap-2 mb-2">
                                 <span className="w-6 h-6 bg-blue-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">{i + 1}</span>
-                                <span className="text-[10px] text-slate-400 font-semibold">{{ cover: '표지', info: '정보', comparison: '비교표', 'icon-grid': '아이콘', steps: '단계', checklist: '체크리스트', 'data-highlight': '수치 강조', closing: '마무리', 'before-after': '전후 비교', qna: 'Q&A', timeline: '타임라인', quote: '인용', 'numbered-list': '번호 리스트', 'pros-cons': '장단점', 'price-table': '가격표', warning: '주의사항' }[s.layout || 'info'] || s.layout}</span>
+                                <span className="text-[10px] bg-blue-50 text-blue-600 font-bold px-2 py-0.5 rounded-full">{layoutLabel[s.layout as string] || s.layout}</span>
                               </div>
-                              <p className="text-sm font-bold text-slate-800">{s.title || '(제목 없음)'}</p>
-                              {s.subtitle && <p className="text-xs text-slate-500 mt-0.5">{s.subtitle}</p>}
-                              {s.body && <p className="text-xs text-slate-400 mt-1 line-clamp-2">{s.body}</p>}
+                              <p className="text-sm font-bold text-slate-800 mb-1">{(s.title as string) || '(제목 없음)'}</p>
+                              {s.subtitle && <p className="text-xs text-slate-600 mb-2">{s.subtitle as string}</p>}
+                              {s.body && <p className="text-xs text-slate-500 mb-2 whitespace-pre-line">{s.body as string}</p>}
+                              {/* 체크리스트 */}
+                              {Array.isArray(s.checkItems) && <div className="space-y-1 mt-1">{(s.checkItems as string[]).map((item, j) => <div key={j} className="flex items-center gap-1.5 text-xs text-slate-600"><span className="text-emerald-500">✓</span>{item}</div>)}</div>}
+                              {/* 단계 */}
+                              {Array.isArray(s.steps) && <div className="space-y-1 mt-1">{(s.steps as {label:string;desc?:string}[]).map((step, j) => <div key={j} className="text-xs text-slate-600"><span className="font-bold text-blue-600">{j+1}.</span> {step.label}{step.desc ? ` — ${step.desc}` : ''}</div>)}</div>}
+                              {/* 아이콘 그리드 */}
+                              {Array.isArray(s.icons) && <div className="flex flex-wrap gap-2 mt-1">{(s.icons as {emoji:string;title:string}[]).map((ic, j) => <span key={j} className="text-xs bg-white border border-slate-200 rounded-lg px-2 py-1">{ic.emoji} {ic.title}</span>)}</div>}
+                              {/* 비교표 */}
+                              {Array.isArray(s.columns) && <div className="mt-1 text-xs text-slate-600">{(s.columns as {header:string;items:string[]}[]).map((col, j) => <div key={j}><span className="font-bold">{col.header}:</span> {col.items?.join(', ')}</div>)}</div>}
+                              {/* 수치 */}
+                              {Array.isArray(s.dataPoints) && <div className="flex gap-3 mt-1">{(s.dataPoints as {value:string;label:string}[]).map((dp, j) => <div key={j} className="text-center"><div className="text-sm font-black text-blue-600">{dp.value}</div><div className="text-[10px] text-slate-400">{dp.label}</div></div>)}</div>}
+                              {/* QnA */}
+                              {Array.isArray(s.questions) && <div className="space-y-1 mt-1">{(s.questions as {q:string;a:string}[]).map((qa, j) => <div key={j} className="text-xs"><span className="font-bold text-blue-600">Q.</span> {qa.q}<br/><span className="font-bold text-emerald-600">A.</span> {qa.a}</div>)}</div>}
+                              {/* 타임라인 */}
+                              {Array.isArray(s.timelineItems) && <div className="space-y-1 mt-1">{(s.timelineItems as {time:string;title:string}[]).map((t, j) => <div key={j} className="text-xs text-slate-600"><span className="font-bold">{t.time}</span> {t.title}</div>)}</div>}
+                              {/* 장단점 */}
+                              {Array.isArray(s.pros) && <div className="mt-1 text-xs"><div className="text-emerald-600 font-bold">장점: {(s.pros as string[]).join(', ')}</div>{Array.isArray(s.cons) && <div className="text-red-500 font-bold">단점: {(s.cons as string[]).join(', ')}</div>}</div>}
+                              {/* 가격표 */}
+                              {Array.isArray(s.priceItems) && <div className="space-y-1 mt-1">{(s.priceItems as {name:string;price:string}[]).map((p, j) => <div key={j} className="text-xs text-slate-600 flex justify-between"><span>{p.name}</span><span className="font-bold">{p.price}</span></div>)}</div>}
+                              {/* 인용 */}
+                              {s.quoteText && <div className="mt-1 text-xs italic text-slate-500 border-l-2 border-slate-300 pl-2">&ldquo;{s.quoteText as string}&rdquo;</div>}
+                              {/* 주의사항 */}
+                              {Array.isArray(s.warningItems) && <div className="space-y-1 mt-1">{(s.warningItems as string[]).map((w, j) => <div key={j} className="text-xs text-red-600">⚠ {w}</div>)}</div>}
                             </div>
                           ));
                         } catch {
