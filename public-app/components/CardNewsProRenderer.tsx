@@ -444,6 +444,44 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
             onChange={handleCustomFontUpload}
           />
           <button
+            onClick={async () => {
+              if (!confirm('내용은 유지하고 색상/레이아웃만 바꿀까요?')) return;
+              setAiSuggestingKey('redesign');
+              try {
+                const res = await fetch('/api/gemini', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    prompt: `카드뉴스 슬라이드 ${slides.length}장의 디자인을 새롭게 바꿔줘.
+
+현재 슬라이드 제목들: ${slides.map(s => s.title).join(', ')}
+
+규칙:
+- 내용(title, subtitle, body, 데이터)은 절대 변경하지 마
+- 색상만 변경: backgroundColor, backgroundGradient, titleColor, subtitleColor, bodyColor, accentColor
+- 깔끔하고 전문적인 병원 카드뉴스에 어울리는 색상
+- 밝은 톤과 어두운 톤 중 하나를 일관되게 적용
+
+JSON만 출력:
+{"backgroundColor":"#hex","backgroundGradient":"linear-gradient(...)","titleColor":"#hex","subtitleColor":"#hex","bodyColor":"#hex","accentColor":"#hex"}`,
+                    model: 'gemini-3.1-flash-lite-preview', temperature: 0.9, maxOutputTokens: 500,
+                  })});
+                const data = await res.json() as { text?: string };
+                if (data.text) {
+                  const cleaned = data.text.replace(/```json?\s*\n?/gi, '').replace(/\n?```\s*$/g, '').trim();
+                  const start = cleaned.indexOf('{'); const end = cleaned.lastIndexOf('}');
+                  if (start !== -1 && end !== -1) {
+                    const colors = JSON.parse(cleaned.slice(start, end + 1));
+                    onThemeChange({ ...theme, ...colors });
+                  }
+                }
+              } catch { /* ignore */ }
+              setAiSuggestingKey(null);
+            }}
+            disabled={aiSuggestingKey === 'redesign'}
+            className="px-3 py-1.5 bg-purple-600 text-white text-xs font-bold rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50"
+          >
+            {aiSuggestingKey === 'redesign' ? '✨ 변경 중...' : '✨ AI 리디자인'}
+          </button>
+          <button
             onClick={downloadAll}
             disabled={downloading}
             className="px-3 py-1.5 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
