@@ -10,7 +10,7 @@
 
 export const GUEST_CREDIT_KEY = 'winaid_guest_credits';
 export const GUEST_TOTAL_USED_KEY = 'winaid_guest_credits_used';
-export const GUEST_CREDIT_DEFAULT = 3;
+export const GUEST_CREDIT_DEFAULT = 5;
 
 export interface GuestCreditState {
   credits: number;
