@@ -215,7 +215,7 @@ export default function CardNewsPage() {
   /** Gemini로 Pexels 검색어 자동 생성 */
   const fetchPexelsQuery = async (): Promise<string> => {
     try {
-      const res = await fetch('/api/pexels-query', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ topic }) });
+      const res = await fetch('/api/pexels-query', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ topic, category }) });
       const { query } = await res.json();
       setLastPexelsQuery(query);
       return query;
@@ -241,7 +241,7 @@ export default function CardNewsPage() {
       const page = force ? Math.floor(Math.random() * 5) + 1 : 1;
       let photos: string[];
       if (style === 'photo') {
-        // Pexels + Pixabay 동시 호출해서 합치기
+        // 실사: Pexels + Pixabay(photo) 동시 호출
         const [pexelsRes, pixabayRes] = await Promise.all([
           fetch(`/api/pexels?query=${encodeURIComponent(query)}&orientation=square&per_page=${count}&page=${page}`),
           fetch(`/api/pixabay?query=${encodeURIComponent(query)}&image_type=photo&orientation=horizontal&per_page=${count}&page=${page}`),
@@ -249,7 +249,6 @@ export default function CardNewsPage() {
         const [pexelsData, pixabayData] = await Promise.all([pexelsRes.json(), pixabayRes.json()]);
         const pexels: string[] = (pexelsData.photos || []).map((p: { url: string }) => p.url);
         const pixabay: string[] = (pixabayData.photos || []).map((p: { url: string }) => p.url);
-        // 번갈아 섞기
         photos = [];
         const maxLen = Math.max(pexels.length, pixabay.length);
         for (let j = 0; j < maxLen; j++) {
@@ -257,8 +256,9 @@ export default function CardNewsPage() {
           if (j < pixabay.length) photos.push(pixabay[j]);
         }
       } else {
+        // 일러스트/벡터: Pixabay만 (Pexels는 실사만 있으므로 호출하지 않음)
         const pixType = style === 'infographic' ? 'vector' : 'illustration';
-        const res = await fetch(`/api/pixabay?query=${encodeURIComponent(query)}&image_type=${pixType}&orientation=horizontal&per_page=${count}&page=${page}`);
+        const res = await fetch(`/api/pixabay?query=${encodeURIComponent(query)}&image_type=${pixType}&orientation=horizontal&per_page=${Math.min(count * 2, 20)}&page=${page}`);
         const data = await res.json();
         photos = (data.photos || []).map((p: { url: string }) => p.url);
       }

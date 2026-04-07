@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(req: NextRequest) {
-  const { topic } = await req.json();
+  const { topic, category } = await req.json();
   const geminiKey = process.env.GEMINI_API_KEY;
   if (!geminiKey) return NextResponse.json({ query: 'professional clinic' });
 
@@ -30,8 +30,9 @@ export async function POST(req: NextRequest) {
 절대 금지: 사람, 얼굴, 인물이 나올 수 있는 검색어 (portrait, person, doctor, patient, woman, man)
 반드시: 사물, 장비, 공간, 재료 위주 (tools, equipment, interior, products, ingredients)
 
+진료과: ${category || '치과'}
 주제: "${topic}"
-영어 검색어만 출력 (따옴표 없이):` }] }],
+영어 검색어만 출력 (따옴표 없이). 반드시 진료과에 맞는 검색어를 사용 (치과면 dental, 피부과면 skincare/dermatology, 정형외과면 orthopedic):` }] }],
           generationConfig: { temperature: 0.5, maxOutputTokens: 50 },
         }),
       }
