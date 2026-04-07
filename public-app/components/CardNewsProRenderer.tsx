@@ -2874,8 +2874,9 @@ function SlideEditor({
   const [cardChatInput, setCardChatInput] = useState('');
   const [cardChatLoading, setCardChatLoading] = useState(false);
 
-  // 이미지 소스 4탭
-  const [imageTab, setImageTab] = useState<'pexels' | 'ai'>('pexels');
+  // 이미지 소스 3탭
+  const [imageTab, setImageTab] = useState<'pexels' | 'pixabay' | 'ai'>('pexels');
+  const [pixabayType, setPixabayType] = useState<'all' | 'photo' | 'illustration' | 'vector'>('illustration');
   const [imageSearchQuery, setImageSearchQuery] = useState('');
   const [imageSearchResults, setImageSearchResults] = useState<{ id: string; url: string; thumb: string; alt: string; source: string; photographer?: string }[]>([]);
   const [imageSearchLoading, setImageSearchLoading] = useState(false);
@@ -2896,14 +2897,21 @@ function SlideEditor({
         '정형외과': 'orthopedic', '관절': 'joint', '척추': 'spine',
         '병원': 'hospital clinic', '의사': 'doctor physician',
       };
-      let autoQuery = imageTab === 'pexels' ? 'dental clinic' : '치과';
-      for (const [kr, en] of Object.entries(keywords)) {
-        if (slide.title.includes(kr)) {
-          autoQuery = imageTab === 'pexels' ? en : kr;
-          break;
+      if (imageTab === 'pixabay') {
+        // Pixabay는 한국어 검색 가능
+        let autoQuery = '치과';
+        for (const kr of Object.keys(keywords)) {
+          if (slide.title.includes(kr)) { autoQuery = kr; break; }
         }
+        setImageSearchQuery(autoQuery);
+      } else {
+        // Pexels는 영문
+        let autoQuery = 'dental clinic';
+        for (const [kr, en] of Object.entries(keywords)) {
+          if (slide.title.includes(kr)) { autoQuery = en; break; }
+        }
+        setImageSearchQuery(autoQuery);
       }
-      setImageSearchQuery(autoQuery);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [imageTab]);
@@ -2912,8 +2920,12 @@ function SlideEditor({
     if (!imageSearchQuery.trim()) return;
     setImageSearchLoading(true);
     try {
-      const orientation = 'landscape';
-      const endpoint = `/api/pexels?query=${encodeURIComponent(imageSearchQuery)}&orientation=${orientation}&per_page=12`;
+      let endpoint: string;
+      if (imageTab === 'pixabay') {
+        endpoint = `/api/pixabay?query=${encodeURIComponent(imageSearchQuery)}&image_type=${pixabayType}&orientation=horizontal&per_page=12`;
+      } else {
+        endpoint = `/api/pexels?query=${encodeURIComponent(imageSearchQuery)}&orientation=landscape&per_page=12`;
+      }
       const res = await fetch(endpoint);
       const data = await res.json();
       setImageSearchResults(data.photos || []);
@@ -3263,11 +3275,12 @@ ${JSON.stringify(slideForContext, null, 2)}
         </div>
       </div>
 
-      {/* ── 2탭 소스 선택 ── */}
+      {/* ── 3탭 소스 선택 ── */}
       <div className="flex gap-1">
         {([
-          { id: 'pexels' as const, label: 'Pexels (저작권 무료)', icon: '📷' },
-          { id: 'ai' as const, label: 'AI 생성', icon: '🎨' },
+          { id: 'pexels' as const, label: '실사 사진', icon: '📷' },
+          { id: 'pixabay' as const, label: '일러스트/벡터', icon: '🎨' },
+          { id: 'ai' as const, label: 'AI 생성', icon: '✨' },
         ]).map(tab => (
           <button key={tab.id} type="button" onClick={() => { setImageTab(tab.id); setImageSearchResults([]); }}
             className={`flex-1 py-1.5 text-[10px] font-bold rounded-lg transition-all ${
@@ -3278,14 +3291,32 @@ ${JSON.stringify(slideForContext, null, 2)}
         ))}
       </div>
 
-      {/* ── 검색 탭 (Pexels / Google / Pinterest) ── */}
+      {/* ── 검색 탭 (Pexels / Pixabay) ── */}
       {imageTab !== 'ai' && (
         <div className="space-y-2">
+          {imageTab === 'pixabay' && (
+            <div className="flex gap-1">
+              {([
+                { type: 'illustration' as const, label: '일러스트' },
+                { type: 'vector' as const, label: '벡터' },
+                { type: 'photo' as const, label: '사진' },
+                { type: 'all' as const, label: '전체' },
+              ]).map(t => (
+                <button key={t.type} type="button"
+                  onClick={() => setPixabayType(t.type)}
+                  className={`px-2 py-1 text-[9px] font-semibold rounded-md transition-all ${
+                    pixabayType === t.type ? 'bg-blue-100 text-blue-700' : 'bg-slate-50 text-slate-400 hover:bg-slate-100'
+                  }`}>
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          )}
           <div className="flex gap-1.5">
             <input type="text" value={imageSearchQuery}
               onChange={e => setImageSearchQuery(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleImageSearch()}
-              placeholder="영문 예: dental clinic, teeth"
+              placeholder={imageTab === 'pexels' ? '영문 예: dental clinic, teeth' : '예: 치아, 임플란트, dental'}
               className="flex-1 px-3 py-2 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-blue-400" />
             <button type="button" onClick={async () => {
               try {
@@ -3312,10 +3343,18 @@ ${JSON.stringify(slideForContext, null, 2)}
                     <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all flex items-center justify-center">
                       <span className="text-white text-[10px] font-bold opacity-0 group-hover:opacity-100">선택</span>
                     </div>
+                    <span className="absolute bottom-1 right-1 text-[8px] bg-black/50 text-white px-1.5 py-0.5 rounded">
+                      {photo.source === 'pixabay' ? 'Pixabay' : 'Pexels'}
+                    </span>
                   </button>
                 ))}
               </div>
-              <p className="text-[9px] text-slate-400 text-center">📷 Photos by <a href="https://www.pexels.com" target="_blank" rel="noreferrer" className="underline">Pexels</a> · 저작권 무료</p>
+              <p className="text-[9px] text-slate-400 text-center">
+                {imageTab === 'pixabay'
+                  ? <>🎨 Images by <a href="https://pixabay.com" target="_blank" rel="noreferrer" className="underline">Pixabay</a> · 저작권 무료</>
+                  : <>📷 Photos by <a href="https://www.pexels.com" target="_blank" rel="noreferrer" className="underline">Pexels</a> · 저작권 무료</>
+                }
+              </p>
             </>
           )}
         </div>
