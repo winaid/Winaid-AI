@@ -94,22 +94,22 @@ export function filterMedicalLawViolations(text: string): MedicalLawFilterResult
 /**
  * AI 티 반복 패턴과 브랜드명 누출을 후처리한다.
  *
- * - "winaid" / "윈에이드" 문자열이 본문에 섞여 나오는 경우 제거
+ * - "winaid" / "윈에이아이" 문자열이 본문에 섞여 나오는 경우 제거
  *   (랜딩 챗봇이나 시스템 프롬프트에 브랜드명이 포함될 때 모델이 자기 소개로 오해해
- *    본문에 "안녕하세요. 윈에이드입니다" 같은 문구를 넣는 사례 대응)
+ *    본문에 "안녕하세요. 윈에이아이입니다" 같은 문구를 넣는 사례 대응)
  * - "좋습니다" 3회 이상 반복 시 일부를 다른 표현으로 교체해 문체 단조로움 완화
  */
 export function filterOutputArtifacts(text: string): string {
   let result = text;
 
-  // 1) 브랜드명 누설 제거 — "안녕하세요. 위나이드(winaid) 입니다" 류 문장 통째로 제거
+  // 1) 브랜드명 누설 제거 — "안녕하세요. 윈에이아이(winaid) 입니다" 류 문장 통째로 제거
   result = result.replace(
-    /안녕하세요[^.!?\n]*(?:winaid|윈에이드|위나이드)[^.!?\n]*[.!?]\s*/gi,
+    /안녕하세요[^.!?\n]*(?:winaid|윈에이아이|윈에이아이)[^.!?\n]*[.!?]\s*/gi,
     '',
   );
   // 잔여 키워드 제거
-  result = result.replace(/\s*\(?(?:winaid|위나이드)\)?\s*/gi, ' ');
-  result = result.replace(/윈에이드/g, '');
+  result = result.replace(/\s*\(?(?:winaid|윈에이아이)\)?\s*/gi, ' ');
+  result = result.replace(/윈에이아이/g, '');
   // 공백 정리
   result = result.replace(/[ \t]{2,}/g, ' ');
 

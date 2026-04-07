@@ -352,13 +352,13 @@ export function buildBlogPrompt(req: GenerationRequest): {
   if (req.clinicContext) {
     const ctx = req.clinicContext;
     const ctxParts: string[] = ['', '[병원 실제 정보 (홈페이지/블로그 분석 결과)]'];
-    if (ctx.actualServices.length > 0) {
+    if (ctx.actualServices?.length > 0) {
       ctxParts.push(`- 실제 제공 서비스: ${ctx.actualServices.join(', ')}`);
     }
-    if (ctx.specialties.length > 0) {
+    if (ctx.specialties?.length > 0) {
       ctxParts.push(`- 특화/차별화 진료: ${ctx.specialties.join(', ')}`);
     }
-    if (ctx.locationSignals.length > 0) {
+    if (ctx.locationSignals?.length > 0) {
       ctxParts.push(`- 주변 지역: ${ctx.locationSignals.join(', ')}`);
     }
     ctxParts.push(`→ 위 정보 중 현재 글의 주제("${req.topic}")와 관련 있는 정보만 참고하세요.`);
@@ -497,9 +497,9 @@ export function buildBlogPrompt(req: GenerationRequest): {
       '',
       '[병원 소개 섹션 - 글 마지막에 삽입]',
       '마무리 섹션 바로 앞에 <h3>병원 소개</h3> 소제목을 추가하고, 아래 정보를 자연스럽게 2~3문단으로 작성하세요.',
-      ctx.actualServices.length > 0 ? `- 진료 서비스: ${ctx.actualServices.join(', ')}` : '',
-      ctx.specialties.length > 0 ? `- 특화 진료: ${ctx.specialties.join(', ')}` : '',
-      ctx.locationSignals.length > 0 ? `- 위치: ${ctx.locationSignals.join(', ')}` : '',
+      ctx.actualServices?.length > 0 ? `- 진료 서비스: ${ctx.actualServices.join(', ')}` : '',
+      ctx.specialties?.length > 0 ? `- 특화 진료: ${ctx.specialties.join(', ')}` : '',
+      ctx.locationSignals?.length > 0 ? `- 위치: ${ctx.locationSignals.join(', ')}` : '',
       '- 병원 소개는 광고가 아닌 정보 전달 톤으로 작성. 의료법 준수.',
     );
   }
