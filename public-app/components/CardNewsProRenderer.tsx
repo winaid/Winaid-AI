@@ -14,6 +14,7 @@ import {
 import { captureNodeAsCanvas, downloadCardAsPng, downloadAllAsZip } from '../lib/cardDownloadUtils';
 import CardNewsCanvas from './CardNewsCanvas';
 import { DraggableText, FontPicker, IconChangerPopover, ColorMiniPicker, ElementAccordion, TextElementEditor } from './card-news/EditorWidgets';
+import { createSlideRenderContext, type SlideRenderContext } from './card-news/SlideRenderers';
 
 interface Props {
   slides: SlideData[];
@@ -648,78 +649,13 @@ JSON 한 객체만 출력:
   };
 
   // ═══════════════════════════════════════
-  // 공통 스타일
+  // 공통 스타일 (SlideRenderContext에서 파생)
   // ═══════════════════════════════════════
 
-  // 카드 사이즈 계산
-  const cardWidth = 1080;
-  const cardHeight = (() => {
-    switch (cardRatio) {
-      case '3:4': return 1440;
-      case '4:5': return 1350;
-      case '9:16': return 1920;
-      case '16:9': return 608;
-      default: return 1080;
-    }
-  })();
-  const cardAspect = (() => {
-    switch (cardRatio) {
-      case '3:4': return '3 / 4';
-      case '4:5': return '4 / 5';
-      case '9:16': return '9 / 16';
-      case '16:9': return '16 / 9';
-      default: return '1 / 1';
-    }
-  })();
-
-  // 학습 템플릿이 있으면 배경/레이아웃을 학습 값으로 오버라이드
-  const learnedBgGradient = lt?.backgroundStyle?.gradient || lt?.colors?.backgroundGradient;
-  const cardContainerStyle: CSSProperties = {
-    width: `${cardWidth}px`,
-    height: `${cardHeight}px`,
-    position: 'relative',
-    overflow: 'hidden',
-    // isolation: 'isolate'는 자체 스택 컨텍스트를 만들어서 음수 z-index 자식
-    // (renderImageLayer의 배경 이미지)이 부모 배경보다 위에 그려지게 한다.
-    isolation: 'isolate',
-    background: learnedBgGradient || theme.backgroundGradient || theme.backgroundColor,
-    fontFamily: effectiveFontFamily,
-    display: 'flex',
-    flexDirection: 'column',
-    padding: lt?.layoutRules?.contentPadding || '60px 64px',
-    boxSizing: 'border-box',
-    // 기본 좌측 정렬 + 적정 줄 간격. cover/closing 등 중앙 정렬 레이아웃은
-    // 각 렌더 함수에서 textAlign:'center'로 오버라이드.
-    textAlign: lt?.layoutRules?.titleAlign || 'left',
-    lineHeight: 1.5,
-  };
-
-  // 테마가 어두운지 판정 (배경색 기준). 밝은 테마에선 내부 카드·그림자·텍스트 그림자를 미세 조정.
-  const isDarkTheme = (() => {
-    const hex = theme.backgroundColor.replace('#', '');
-    if (hex.length !== 6) return true;
-    const r = parseInt(hex.slice(0, 2), 16);
-    const g = parseInt(hex.slice(2, 4), 16);
-    const b = parseInt(hex.slice(4, 6), 16);
-    // 간단한 luminance 판정
-    return (r * 299 + g * 587 + b * 114) / 1000 < 140;
-  })();
-
-  /** 내부 카드·비교표 셀 공통 베이스 색 (테마 대비 자동, 학습 템플릿이 있으면 그 값 우선) */
-  const innerCardBg = lt?.innerCardStyle?.background
-    || (isDarkTheme ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)');
-  const innerCardBorderRaw = lt?.innerCardStyle?.border;
-  const innerCardBorder = (innerCardBorderRaw && innerCardBorderRaw !== 'none' ? innerCardBorderRaw : null)
-    || (isDarkTheme ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)');
-  const innerCardRadius = lt?.innerCardStyle?.borderRadius || '18px';
-  const innerCardShadow = lt?.innerCardStyle?.boxShadow && lt.innerCardStyle.boxShadow !== 'none'
-    ? lt.innerCardStyle.boxShadow
-    : (isDarkTheme ? 'none' : '0 4px 12px rgba(0,0,0,0.04)');
-
-  // 프로급 내부 카드 색상 (테마 대비 자동)
-  const whiteCardBg = isDarkTheme ? 'rgba(255,255,255,0.95)' : '#FFFFFF';
-  const whiteCardText = isDarkTheme ? '#1A1A2E' : theme.titleColor;
-  const whiteCardSub = isDarkTheme ? '#666' : theme.bodyColor;
+  const renderCtx = createSlideRenderContext(theme, lt, presetStyle, cardRatio, effectiveFontFamily, customFontName);
+  const { cardWidth, cardHeight, cardAspect, cardContainerStyle, isDarkTheme,
+    innerCardBg, innerCardBorder, innerCardRadius, innerCardShadow,
+    whiteCardBg, whiteCardText, whiteCardSub } = renderCtx;
 
   /**
    * 공통 배경 장식 — 학습 템플릿의 토큰이 있으면 그것을, 없으면 기본 decoration 사용.
