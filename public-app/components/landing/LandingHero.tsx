@@ -10,7 +10,7 @@ interface ChatMessage {
 
 // systemInstruction은 /api/landing-chat 서버에서 하드코딩. 클라이언트가 임의로 지정할 수 없음.
 
-const FALLBACK_MSG = '죄송해요, 답변을 생성하지 못했어요. 윈에이드 서비스에서 직접 확인해보시는 건 어떨까요?';
+const FALLBACK_MSG = '죄송해요, 답변을 생성하지 못했어요. 윈에이아이 서비스에서 직접 확인해보시는 건 어떨까요?';
 
 function LandingHero() {
   const [scrolled, setScrolled] = useState(false);
@@ -41,7 +41,7 @@ function LandingHero() {
     if (chatCount >= MAX_CHAT_COUNT) {
       setChatMessages(prev => [...prev,
         { role: 'user', content: question },
-        { role: 'assistant', content: '무료 대화 횟수를 모두 사용했어요. 더 많은 기능을 사용하려면 로그인하세요! 👉 윈에이드에서 블로그, 카드뉴스, 보도자료까지 무제한으로 만들 수 있어요.' },
+        { role: 'assistant', content: '무료 대화 횟수를 모두 사용했어요. 더 많은 기능을 사용하려면 로그인하세요! 👉 윈에이아이에서 블로그, 카드뉴스, 보도자료까지 무제한으로 만들 수 있어요.' },
       ]);
       setSearchText('');
       return;
@@ -114,17 +114,9 @@ function LandingHero() {
         <div className="relative max-w-5xl mx-auto text-center w-full pt-20">
           {/* Logo */}
           <div className="flex flex-col items-center mb-12">
-            <div className="flex items-center gap-3.5 mb-3">
-              <div className="flex items-center gap-0">
-                {'윈에이드'.split('').map((char, i) => (
-                  <span key={i} className="flex items-center">
-                    {i > 0 && <span className="w-px h-6 bg-slate-300 mx-2.5" />}
-                    <span className="font-black text-3xl text-slate-800 tracking-tight">{char}</span>
-                  </span>
-                ))}
-              </div>
-            </div>
-            <span className="text-[11px] font-semibold tracking-[0.35em] uppercase text-slate-400">advertising company</span>
+            <span className="font-black text-4xl tracking-tight text-slate-800">
+              WIN<span className="text-blue-600">AI</span>
+            </span>
           </div>
 
           {/* Badge */}
@@ -196,7 +188,7 @@ function LandingHero() {
                         href="/auth"
                         className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white text-xs font-bold rounded-full shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 hover:-translate-y-0.5 transition-all flex items-center gap-2"
                       >
-                        윈에이드에서 직접 체험해보기 &rarr;
+                        윈에이아이에서 직접 체험해보기 &rarr;
                       </a>
                     </div>
                   )}
