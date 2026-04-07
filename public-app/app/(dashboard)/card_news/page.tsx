@@ -238,14 +238,15 @@ export default function CardNewsPage() {
       const baseQuery = lastPexelsQuery || await fetchPexelsQuery();
       const count = COVER_TEMPLATES.length;
       const query = baseQuery;
+      const page = force ? Math.floor(Math.random() * 5) + 1 : 1;
       let photos: string[];
       if (style === 'photo') {
-        const res = await fetch(`/api/pexels?query=${encodeURIComponent(query)}&orientation=square&per_page=${count}`);
+        const res = await fetch(`/api/pexels?query=${encodeURIComponent(query)}&orientation=square&per_page=${count}&page=${page}`);
         const data = await res.json();
         photos = (data.photos || []).map((p: { url: string }) => p.url);
       } else {
         const pixType = style === 'infographic' ? 'vector' : 'illustration';
-        const res = await fetch(`/api/pixabay?query=${encodeURIComponent(query)}&image_type=${pixType}&orientation=horizontal&per_page=${count}`);
+        const res = await fetch(`/api/pixabay?query=${encodeURIComponent(query)}&image_type=${pixType}&orientation=horizontal&per_page=${count}&page=${page}`);
         const data = await res.json();
         photos = (data.photos || []).map((p: { url: string }) => p.url);
       }
@@ -1417,7 +1418,14 @@ DECORATIVE: (장식 요소)`,
 
             {/* 하단 */}
             <div className="px-8 py-5 border-t border-slate-100 bg-slate-50 flex items-center justify-between">
-              <button type="button" onClick={() => setShowDesignModal(false)} className="px-6 py-2.5 text-sm font-semibold text-slate-500">취소</button>
+              <div className="flex items-center gap-2">
+                <button type="button" onClick={() => setShowDesignModal(false)} className="px-6 py-2.5 text-sm font-semibold text-slate-500">취소</button>
+                <button type="button" onClick={() => { previewCacheRef.current.clear(); fetchPreviewImages(imageStyle, true); }}
+                  disabled={loadingPreviews}
+                  className="px-4 py-2.5 text-sm font-semibold text-blue-600 bg-blue-50 rounded-xl hover:bg-blue-100 disabled:opacity-50 transition-all">
+                  {loadingPreviews ? '로딩...' : '🔄 다른 이미지'}
+                </button>
+              </div>
               <button type="button" disabled={isGenerating}
                 onClick={async () => {
                   const tmpl = COVER_TEMPLATES[selectedPreviewIdx];
