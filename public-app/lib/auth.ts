@@ -55,14 +55,27 @@ export const signUpWithEmail = async (
         } as Record<string, unknown>);
       }
 
-      // subscriptions: 플랜 생성 (윈에이드/윈에이아이 계정은 999 크레딧)
+      // 크레딧 설정 (윈에이드/윈에이아이 계정은 999 크레딧)
       const adminEmails = ['glorious.youtub@gmail.com'];
       const isAdmin = email.includes('winaid') || email.includes('winai') || adminEmails.includes(email.toLowerCase());
+      const creditAmount = isAdmin ? 999 : 20;
+
+      // user_credits 테이블 (get_credits RPC가 읽는 곳)
+      await supabase.from('user_credits').upsert(
+        {
+          user_id: data.user.id,
+          credits: creditAmount,
+          total_used: 0,
+        } as Record<string, unknown>,
+        { onConflict: 'user_id' }
+      );
+
+      // subscriptions 테이블 (레거시 호환)
       await supabase.from('subscriptions').upsert(
         {
           user_id: data.user.id,
           plan_type: isAdmin ? 'admin' : 'free',
-          credits_total: isAdmin ? 999 : 20,
+          credits_total: creditAmount,
           credits_used: 0,
           expires_at: null,
         } as Record<string, unknown>,
