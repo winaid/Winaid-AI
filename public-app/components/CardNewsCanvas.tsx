@@ -1,10 +1,20 @@
 'use client';
 
-import { useEffect, useRef, useCallback } from 'react';
-import type { SlideData, SlideDecoration, CardNewsTheme } from '../lib/cardNewsLayouts';
-import { CARD_FONTS, getCardFont } from '../lib/cardNewsLayouts';
+import { useEffect, useRef } from 'react';
+import type { SlideData, CardNewsTheme } from '../lib/cardNewsLayouts';
 import type { CardTemplate } from '../lib/cardTemplateService';
 import type { DesignPresetStyle } from '../lib/cardNewsLayouts';
+import {
+  type CanvasLayoutContext,
+  OBJ, SELECTION_STYLE,
+  makeFabricGradient,
+  renderCoverToCanvas, renderInfoToCanvas, renderComparisonToCanvas,
+  renderChecklistToCanvas, renderStepsToCanvas, renderIconGridToCanvas,
+  renderDataHighlightToCanvas, renderQnaToCanvas, renderTimelineToCanvas,
+  renderBeforeAfterToCanvas, renderProsConsToCanvas, renderPriceTableToCanvas,
+  renderWarningToCanvas, renderQuoteToCanvas, renderNumberedListToCanvas,
+  renderClosingToCanvas, renderGenericToCanvas,
+} from '../lib/canvasLayouts';
 
 interface Props {
   slide: SlideData;
@@ -16,49 +26,6 @@ interface Props {
   /** 캔버스에서 오브젝트 수정 시 SlideData 업데이트 콜백 */
   onSlideChange?: (patch: Partial<SlideData>) => void;
 }
-
-// ── 디자인 엔진 헬퍼 (CardNewsProRenderer와 동일 로직) ──
-
-function calcTitleSize(text: string, maxSize = 52, minSize = 36): number {
-  const len = (text || '').length;
-  if (len <= 10) return maxSize;
-  if (len <= 15) return Math.min(maxSize, 56);
-  if (len <= 20) return Math.min(maxSize, 48);
-  if (len <= 30) return Math.min(maxSize, 42);
-  return minSize;
-}
-
-function calcBodySize(text: string): { fontSize: number; lineHeight: number } {
-  const charCount = (text || '').length;
-  if (charCount <= 50) return { fontSize: 22, lineHeight: 1.7 };
-  if (charCount <= 100) return { fontSize: 20, lineHeight: 1.7 };
-  if (charCount <= 200) return { fontSize: 18, lineHeight: 1.65 };
-  return { fontSize: 16, lineHeight: 1.6 };
-}
-
-function calcItemLayout(itemCount: number) {
-  if (itemCount <= 2) return { gap: 24, fontSize: 20 };
-  if (itemCount <= 3) return { gap: 20, fontSize: 19 };
-  if (itemCount <= 4) return { gap: 16, fontSize: 18 };
-  if (itemCount <= 5) return { gap: 12, fontSize: 17 };
-  return { gap: 10, fontSize: 16 };
-}
-
-/** 오브젝트 이름(name) 상수 — fabric 오브젝트 식별용 */
-const OBJ = {
-  BG: '__bg__',
-  PATTERN: '__pattern__',
-  ACCENT_TOP: '__accent_top__',
-  ACCENT_BOT: '__accent_bot__',
-  TITLE: '__title__',
-  SUBTITLE: '__subtitle__',
-  BODY: '__body__',
-  HOSPITAL: '__hospital__',
-  IMAGE: '__image__',
-  LOGO: '__logo__',
-  DECO_PREFIX: '__deco_',
-  ITEM_PREFIX: '__item_',
-} as const;
 
 export default function CardNewsCanvas({
   slide,
@@ -102,47 +69,6 @@ export default function CardNewsCanvas({
     return (r * 299 + g * 587 + b * 114) / 1000 < 140;
   })();
 
-  /** 폰트 family 문자열 계산 */
-  const getFontFamily = useCallback((fontId?: string): string => {
-    if (!fontId) {
-      if (theme.fontId) return getCardFont(theme.fontId).family;
-      return theme.fontFamily;
-    }
-    const font = CARD_FONTS.find(f => f.id === fontId);
-    return font ? font.family : getCardFont(theme.fontId).family;
-  }, [theme.fontId, theme.fontFamily]);
-
-  /** CSS font-family → fabric에 쓸 첫 번째 폰트명 추출 */
-  const extractFontName = useCallback((cssFamily: string): string => {
-    const m = cssFamily.match(/'([^']+)'/);
-    return m ? m[1] : cssFamily.split(',')[0].trim();
-  }, []);
-
-  // ── CSS 그라데이션 파싱 ──
-  const parseGradientStops = useCallback((gradientCSS: string) => {
-    const match = gradientCSS.match(/linear-gradient\([^,]+,\s*(.+)\)/);
-    if (!match) return [];
-    const stops: { color: string; offset: number }[] = [];
-    match[1].split(',').map(s => s.trim()).forEach(part => {
-      const m = part.match(/^(.+?)\s+([\d.]+)%$/);
-      if (m) stops.push({ color: m[1], offset: parseFloat(m[2]) / 100 });
-      else stops.push({ color: part, offset: stops.length === 0 ? 0 : 1 });
-    });
-    return stops;
-  }, []);
-
-  // ── 공통 선택 스타일 (파란 테두리 + 리사이즈 핸들) ──
-  const SELECTION_STYLE = {
-    borderColor: '#3B82F6',
-    cornerColor: '#3B82F6',
-    cornerStrokeColor: '#FFFFFF',
-    cornerStyle: 'circle' as const,
-    cornerSize: 10,
-    transparentCorners: false,
-    borderScaleFactor: 2,
-    padding: 4,
-  };
-
   // ══════════════════════════════════════════════════
   // 캔버스 빌드
   // ══════════════════════════════════════════════════
@@ -178,24 +104,9 @@ export default function CardNewsCanvas({
       if (disposed) { canvas.dispose(); return; }
       fabricRef.current = canvas;
 
-      // ── 유틸: fabric Gradient 생성 ──
-      const makeFabricGradient = (css: string, w: number, h: number) => {
-        const stops = parseGradientStops(css);
-        if (stops.length < 2) return undefined;
-        const am = css.match(/(\d+)deg/);
-        const angle = am ? parseInt(am[1]) : 180;
-        const rad = (angle - 90) * (Math.PI / 180);
-        return new F.Gradient({
-          type: 'linear',
-          coords: {
-            x1: w / 2 - Math.cos(rad) * w / 2,
-            y1: h / 2 - Math.sin(rad) * h / 2,
-            x2: w / 2 + Math.cos(rad) * w / 2,
-            y2: h / 2 + Math.sin(rad) * h / 2,
-          },
-          colorStops: stops.map(s => ({ offset: s.offset, color: s.color })),
-        });
-      };
+      // ── 유틸: fabric Gradient (canvasLayouts에서 import) ──
+      const mkGrad = (css: string, w: number, h: number) =>
+        makeFabricGradient(F, css, w, h);
 
       // ════════ 1. 배경 ════════
       const learnedBg = lt?.backgroundStyle?.gradient || lt?.colors?.backgroundGradient;
@@ -205,7 +116,7 @@ export default function CardNewsCanvas({
         selectable: false, evented: false, name: OBJ.BG,
       });
       if (bgSrc.includes('linear-gradient')) {
-        const grad = makeFabricGradient(bgSrc, cardWidth, cardHeight);
+        const grad = mkGrad(bgSrc, cardWidth, cardHeight);
         if (grad) bgRect.set('fill', grad);
         else bgRect.set('fill', theme.backgroundColor);
       } else {
@@ -366,143 +277,29 @@ export default function CardNewsCanvas({
         } catch { /* skip */ }
       }
 
-      // ════════ 7. 텍스트: 제목 ════════
-      const titleFontFamily = extractFontName(getFontFamily(slide.titleFontId || slide.fontId));
-      const titleFontSize = slide.titleFontSize || calcTitleSize(slide.title, 52, 36);
-      const titlePos = slide.titlePosition || { x: 50, y: 30 };
+      // ════════ 7~11. 레이아웃별 콘텐츠 렌더 ════════
+      const layoutCtx: CanvasLayoutContext = {
+        F, canvas, slide, theme, cardWidth, cardHeight, isDarkTheme, presetStyle, learnedTemplate: lt,
+      };
 
-      if (slide.title) {
-        const titleObj = new F.Textbox(slide.title, {
-          left: (titlePos.x / 100) * cardWidth,
-          top: (titlePos.y / 100) * cardHeight,
-          originX: 'center',
-          originY: 'center',
-          width: cardWidth * 0.85,
-          fontSize: titleFontSize,
-          fontFamily: titleFontFamily,
-          fontWeight: slide.titleFontWeight || '800',
-          fill: slide.titleColor || theme.titleColor,
-          textAlign: slide.titleAlign || 'center',
-          lineHeight: slide.titleLineHeight || 1.25,
-          charSpacing: (slide.titleLetterSpacing || -0.4) * 10,
-          name: OBJ.TITLE,
-          splitByGrapheme: true,
-          ...SELECTION_STYLE,
-        });
-        canvas.add(titleObj);
-      }
-
-      // ════════ 8. 텍스트: 부제 ════════
-      if (slide.subtitle) {
-        const subPos = slide.subtitlePosition || { x: 50, y: titlePos.y + 12 };
-        const subFontFamily = extractFontName(getFontFamily(slide.subtitleFontId || slide.fontId));
-        const subObj = new F.Textbox(slide.subtitle, {
-          left: (subPos.x / 100) * cardWidth,
-          top: (subPos.y / 100) * cardHeight,
-          originX: 'center',
-          originY: 'center',
-          width: cardWidth * 0.8,
-          fontSize: slide.subtitleFontSize || 22,
-          fontFamily: subFontFamily,
-          fontWeight: slide.subtitleFontWeight || '600',
-          fill: slide.subtitleColor || theme.subtitleColor,
-          textAlign: 'center',
-          lineHeight: slide.subtitleLineHeight || 1.55,
-          name: OBJ.SUBTITLE,
-          splitByGrapheme: true,
-          ...SELECTION_STYLE,
-        });
-        canvas.add(subObj);
-      }
-
-      // ════════ 9. 텍스트: 본문 (body) ════════
-      if (slide.body) {
-        const bodyAuto = calcBodySize(slide.body);
-        const bodyY = slide.subtitlePosition
-          ? slide.subtitlePosition.y + 15
-          : titlePos.y + 25;
-        const bodyObj = new F.Textbox(slide.body, {
-          left: cardWidth * 0.5,
-          top: (bodyY / 100) * cardHeight,
-          originX: 'center',
-          originY: 'top',
-          width: cardWidth * 0.78,
-          fontSize: slide.bodyFontSize || bodyAuto.fontSize,
-          fontFamily: extractFontName(getFontFamily(slide.fontId)),
-          fontWeight: '400',
-          fill: slide.bodyColor || theme.bodyColor,
-          textAlign: 'left',
-          lineHeight: bodyAuto.lineHeight,
-          name: OBJ.BODY,
-          splitByGrapheme: true,
-          ...SELECTION_STYLE,
-        });
-        canvas.add(bodyObj);
-      }
-
-      // ════════ 10. 리스트 아이템 (checkItems / steps / icons / numberedItems / questions 등) ════════
-      const items = getItemTexts(slide);
-      if (items.length > 0) {
-        const layout = calcItemLayout(items.length);
-        const startY = 0.5; // 중간부터 시작 (제목 아래)
-        const totalH = items.length * (layout.fontSize + layout.gap);
-        const offsetY = (startY * cardHeight) - totalH / 2;
-
-        items.forEach((item, i) => {
-          const yPos = offsetY + i * (layout.fontSize + layout.gap);
-          const itemObj = new F.Textbox(item.text, {
-            left: cardWidth * 0.12,
-            top: Math.max(yPos, 200 + i * (layout.fontSize + layout.gap)),
-            originX: 'left',
-            originY: 'top',
-            width: cardWidth * 0.76,
-            fontSize: layout.fontSize,
-            fontFamily: extractFontName(getFontFamily(slide.fontId)),
-            fontWeight: '500',
-            fill: slide.bodyColor || theme.bodyColor,
-            textAlign: 'left',
-            lineHeight: 1.5,
-            name: OBJ.ITEM_PREFIX + item.key,
-            splitByGrapheme: true,
-            ...SELECTION_STYLE,
-          });
-          // 아이템 앞 마커 (체크, 숫자 등)
-          if (item.marker) {
-            const marker = new F.Text(item.marker, {
-              left: cardWidth * 0.07,
-              top: Math.max(yPos, 200 + i * (layout.fontSize + layout.gap)),
-              originX: 'center',
-              originY: 'top',
-              fontSize: layout.fontSize,
-              fontWeight: '700',
-              fill: theme.accentColor,
-              selectable: false, evented: false,
-            });
-            canvas.add(marker);
-          }
-          canvas.add(itemObj);
-        });
-      }
-
-      // ════════ 11. 병원명 텍스트 ════════
-      if (theme.hospitalName) {
-        const hospPos = slide.hospitalNamePosition || { x: 50, y: 92 };
-        const hospObj = new F.Textbox(theme.hospitalName, {
-          left: (hospPos.x / 100) * cardWidth,
-          top: (hospPos.y / 100) * cardHeight,
-          originX: 'center',
-          originY: 'center',
-          width: cardWidth * 0.5,
-          fontSize: slide.hospitalFontSize || 18,
-          fontFamily: extractFontName(getFontFamily(slide.fontId)),
-          fontWeight: slide.hospitalFontWeight || '600',
-          fill: slide.hospitalColor || theme.subtitleColor,
-          textAlign: 'center',
-          name: OBJ.HOSPITAL,
-          splitByGrapheme: true,
-          ...SELECTION_STYLE,
-        });
-        canvas.add(hospObj);
+      switch (slide.layout) {
+        case 'cover':          renderCoverToCanvas(layoutCtx); break;
+        case 'info':           renderInfoToCanvas(layoutCtx); break;
+        case 'comparison':     renderComparisonToCanvas(layoutCtx); break;
+        case 'checklist':      renderChecklistToCanvas(layoutCtx); break;
+        case 'steps':          renderStepsToCanvas(layoutCtx); break;
+        case 'icon-grid':      renderIconGridToCanvas(layoutCtx); break;
+        case 'data-highlight': renderDataHighlightToCanvas(layoutCtx); break;
+        case 'qna':            renderQnaToCanvas(layoutCtx); break;
+        case 'timeline':       renderTimelineToCanvas(layoutCtx); break;
+        case 'before-after':   renderBeforeAfterToCanvas(layoutCtx); break;
+        case 'pros-cons':      renderProsConsToCanvas(layoutCtx); break;
+        case 'price-table':    renderPriceTableToCanvas(layoutCtx); break;
+        case 'warning':        renderWarningToCanvas(layoutCtx); break;
+        case 'quote':          renderQuoteToCanvas(layoutCtx); break;
+        case 'numbered-list':  renderNumberedListToCanvas(layoutCtx); break;
+        case 'closing':        renderClosingToCanvas(layoutCtx); break;
+        default:               renderGenericToCanvas(layoutCtx); break;
       }
 
       // ════════ 이벤트 핸들러 ════════
