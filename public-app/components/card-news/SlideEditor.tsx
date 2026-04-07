@@ -343,7 +343,7 @@ ${JSON.stringify(slideForContext, null, 2)}
                   body: JSON.stringify({ prompt: `"${current}"\n\n위 텍스트를 더 매력적이고 클릭하고 싶게 다시 써줘. 같은 의미, 더 끌리는 표현. 결과만 출력.`, model: 'gemini-3.1-flash-lite-preview', temperature: 0.8, maxOutputTokens: 200 }) });
                 const data = await res.json() as { text?: string };
                 if (data.text) onChange({ [field]: data.text.replace(/^["'`]+|["'`]+$/g, '').trim() });
-              } catch { /* ignore */ }
+              } catch { alert('AI 처리 중 오류가 발생했습니다.'); }
             }} className="w-full text-left px-3 py-1.5 text-[11px] text-slate-700 hover:bg-blue-50">💡 더 끌리게</button>
             <button type="button" onClick={async () => {
               setAiMenuField(null);
@@ -354,7 +354,7 @@ ${JSON.stringify(slideForContext, null, 2)}
                   body: JSON.stringify({ prompt: `"${current}"\n\n위 텍스트를 절반 길이로 줄여줘. 핵심만 남기고. 결과만 출력.`, model: 'gemini-3.1-flash-lite-preview', temperature: 0.5, maxOutputTokens: 100 }) });
                 const data = await res.json() as { text?: string };
                 if (data.text) onChange({ [field]: data.text.replace(/^["'`]+|["'`]+$/g, '').trim() });
-              } catch { /* ignore */ }
+              } catch { alert('AI 처리 중 오류가 발생했습니다.'); }
             }} className="w-full text-left px-3 py-1.5 text-[11px] text-slate-700 hover:bg-blue-50">✂️ 줄여줘</button>
             <button type="button" onClick={async () => {
               setAiMenuField(null);
@@ -365,7 +365,7 @@ ${JSON.stringify(slideForContext, null, 2)}
                   body: JSON.stringify({ prompt: `"${current}"\n\n위 텍스트를 더 따뜻하고 공감가는 톤으로 바꿔줘. 결과만 출력.`, model: 'gemini-3.1-flash-lite-preview', temperature: 0.8, maxOutputTokens: 200 }) });
                 const data = await res.json() as { text?: string };
                 if (data.text) onChange({ [field]: data.text.replace(/^["'`]+|["'`]+$/g, '').trim() });
-              } catch { /* ignore */ }
+              } catch { alert('AI 처리 중 오류가 발생했습니다.'); }
             }} className="w-full text-left px-3 py-1.5 text-[11px] text-slate-700 hover:bg-blue-50">🤗 따뜻하게</button>
           </div>
         )}
