@@ -176,7 +176,7 @@ export const CTA = {
   badge: '지금 바로 시작 가능',
   heading: '병원 마케팅의 미래,',
   headingHighlight: '지금 시작하세요',
-  sub: '원장님은 진료에만 집중하세요.\n마케팅은 WINAID AI가 책임집니다.',
+  sub: '원장님은 진료에만 집중하세요.\n마케팅은 WINAI가 책임집니다.',
   primaryButton: '지금 무료로 시작하기',
   secondaryButton: '상담 문의',
   phone: '02-584-9400',

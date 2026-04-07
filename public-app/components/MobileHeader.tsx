@@ -36,9 +36,9 @@ export function MobileHeader({
     <header className="lg:hidden backdrop-blur-2xl border-b sticky top-0 z-30 flex-none transition-all duration-300 bg-white/80 border-slate-100/80 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
       <div className="h-14 w-full px-5 flex justify-between items-center">
         <Link href="/app" className="flex items-center gap-2.5 hover:opacity-80 transition-opacity cursor-pointer group">
-          <img src="/280_logo.png" alt="WINAID" className="h-8 w-8 group-hover:scale-105 transition-transform" />
+          <img src="/280_logo.png" alt="WINAI" className="h-8 w-8 group-hover:scale-105 transition-transform" />
           <div className="flex flex-col leading-none">
-            <span className="font-black text-base tracking-[-0.02em] text-slate-800">WIN<span className="text-blue-600">AID</span></span>
+            <span className="font-black text-base tracking-[-0.02em] text-slate-800">WIN<span className="text-blue-600">AI</span></span>
             <span className="text-[8px] font-semibold tracking-wider uppercase text-slate-400">AI Marketing</span>
           </div>
         </Link>

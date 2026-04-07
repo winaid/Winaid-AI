@@ -119,7 +119,7 @@ export async function downloadWord(html: string): Promise<void> {
 <meta name="Generator" content="Microsoft Word 15">
 <meta name="Originator" content="Microsoft Word 15">
 <!--[if gte mso 9]>
-<xml><o:DocumentProperties><o:Author>WINAID</o:Author></o:DocumentProperties>
+<xml><o:DocumentProperties><o:Author>WINAI</o:Author></o:DocumentProperties>
 <w:WordDocument><w:View>Print</w:View><w:Zoom>100</w:Zoom><w:DoNotOptimizeForBrowser/></w:WordDocument></xml>
 <![endif]-->
 <style>
@@ -161,7 +161,7 @@ export function downloadPDF(html: string): void {
   }
 
   printWindow.document.write(`<!DOCTYPE html>
-<html><head><meta charset="utf-8"><title>WINAID Blog - PDF</title>
+<html><head><meta charset="utf-8"><title>WINAI Blog - PDF</title>
 <style>
 @page { size: A4; margin: 2cm; }
 @media print {

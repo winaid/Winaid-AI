@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 // ============================================
-// WINAID Public App — E2E Smoke Test
+// WINAI Public App — E2E Smoke Test
 // 9개 핵심 항목 검증
 // ============================================
 
@@ -14,7 +14,7 @@ const TEST_HOSPITAL = 'E2E테스트치과';
 test('1. 랜딩 페이지 정상 표시', async ({ page }) => {
   await page.goto('/');
   // 로고 + 핵심 CTA 확인
-  await expect(page.locator('text=WINAID').first()).toBeVisible();
+  await expect(page.locator('text=WINAI').first()).toBeVisible();
   await expect(page.locator('text=시작하기').first()).toBeVisible();
   // 기능 소개 섹션 존재 확인
   await expect(page.locator('text=AI 블로그').first()).toBeVisible();
@@ -94,7 +94,7 @@ test('8. 모바일 — UI 깨지지 않는지', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto('/');
   // 랜딩 페이지가 모바일에서도 표시되는지
-  await expect(page.locator('text=WINAID').first()).toBeVisible();
+  await expect(page.locator('text=WINAI').first()).toBeVisible();
   // 로그인 페이지
   await page.goto('/auth');
   await expect(page.locator('button:has-text("로그인")').first()).toBeVisible();

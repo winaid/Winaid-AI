@@ -1212,7 +1212,7 @@ If the result looks significantly different from the reference, you have FAILED.
     if (!img) return;
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
-    printWindow.document.write(`<!DOCTYPE html><html><head><title>WINAID</title>
+    printWindow.document.write(`<!DOCTYPE html><html><head><title>WINAI</title>
 <style>@page{size:A4 portrait;margin:0}*{margin:0;padding:0}body{width:210mm;height:297mm;display:flex;align-items:center;justify-content:center}
 img{width:100%;height:100%;object-fit:contain}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style>
 </head><body><img src="${img}"/>

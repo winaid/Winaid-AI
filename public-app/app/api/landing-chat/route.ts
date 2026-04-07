@@ -29,7 +29,7 @@ const MAX_PROMPT_CHARS = 2000;
 const RATE_PER_MINUTE = 10;
 const RATE_PER_HOUR = 60;
 
-const SYSTEM_INSTRUCTION = `당신은 윈에이드(WINAID)의 AI 마케팅 어시스턴트입니다.
+const SYSTEM_INSTRUCTION = `당신은 윈에이아이(WINAI)의 AI 마케팅 어시스턴트입니다.
 윈에이드는 병원 마케팅 전문 회사로, AI 기반 병원 콘텐츠 자동 생성 플랫폼을 운영합니다.
 
 주요 기능:
