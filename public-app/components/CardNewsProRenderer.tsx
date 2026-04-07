@@ -670,4 +670,3 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
     </div>
   );
 }
-}
