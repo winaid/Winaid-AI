@@ -203,31 +203,48 @@ export default function CardNewsPage() {
     } catch { return 'professional clinic'; }
   };
 
-  /** 추천 디자인 모달 열기 — 템플릿 자체 정보로 프리뷰 구성 */
+  /** 추천 디자인 모달 — 이미지 캐시 + 프리페치 */
   const [previewBgImages, setPreviewBgImages] = useState<string[]>([]);
+  const previewCacheRef = useRef<Map<string, string[]>>(new Map());
 
-  const fetchPreviewImages = async (style: ImageStyleType) => {
+  const fetchPreviewImages = async (style: ImageStyleType, force = false) => {
+    // 캐시 확인 — 같은 스타일+쿼리면 즉시 반환
+    const cacheKey = `${style}:${lastPexelsQuery || topic}`;
+    if (!force && previewCacheRef.current.has(cacheKey)) {
+      setPreviewBgImages(previewCacheRef.current.get(cacheKey)!);
+      return;
+    }
     setLoadingPreviews(true);
     try {
       const baseQuery = lastPexelsQuery || await fetchPexelsQuery();
       const count = COVER_TEMPLATES.length;
-      // 실사 사진은 'asian'을 붙여 동양인 위주 결과
       const query = style === 'photo' ? `${baseQuery} asian` : baseQuery;
+      let photos: string[];
       if (style === 'photo') {
-        // Pexels 실사 사진
         const res = await fetch(`/api/pexels?query=${encodeURIComponent(query)}&orientation=square&per_page=${count}`);
         const data = await res.json();
-        setPreviewBgImages((data.photos || []).map((p: { url: string }) => p.url));
+        photos = (data.photos || []).map((p: { url: string }) => p.url);
       } else {
-        // Pixabay 일러스트/벡터
         const pixType = style === 'infographic' ? 'vector' : 'illustration';
         const res = await fetch(`/api/pixabay?query=${encodeURIComponent(query)}&image_type=${pixType}&orientation=horizontal&per_page=${count}`);
         const data = await res.json();
-        setPreviewBgImages((data.photos || []).map((p: { url: string }) => p.url));
+        photos = (data.photos || []).map((p: { url: string }) => p.url);
       }
+      previewCacheRef.current.set(cacheKey, photos);
+      setPreviewBgImages(photos);
     } catch { /* 실패 시 색상 배경 유지 */ }
     setLoadingPreviews(false);
   };
+
+  // 주제 입력 후 2초 뒤 백그라운드 프리페치 (모달 열기 전 미리 로드)
+  useEffect(() => {
+    if (!topic.trim()) return;
+    const timer = setTimeout(() => {
+      fetchPreviewImages('illustration');
+    }, 2000);
+    return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [topic]);
 
   const openDesignModal = async () => {
     setShowDesignModal(true);
