@@ -87,7 +87,7 @@ export function PromptChat({ onApplyPrompt, disabled }: Props) {
         body: JSON.stringify({
           prompt,
           systemInstruction,
-          model: 'gemini-3.1-flash-lite-preview',
+          model: 'gemini-3.1-pro-preview',
           temperature: 0.7,
           maxOutputTokens: 1500,
         }),

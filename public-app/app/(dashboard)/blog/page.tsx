@@ -914,7 +914,7 @@ ${subs.length > 0 ? `경쟁 글 소제목: ${subs.join(' / ')}` : ''}
       if (styleInstruction) finalPrompt += styleInstruction;
 
       console.info(`[BLOG] 최종 프롬프트 길이: ${finalPrompt.length}자 (system: ${systemInstruction.length}자)`);
-      console.info(`[BLOG] Gemini 호출 시작 — model=gemini-3.1-flash-lite-preview, temp=0.85`);
+      console.info(`[BLOG] Gemini 호출 시작 — model=gemini-3.1-pro-preview, temp=0.85`);
 
       // ═══ 스트리밍 모드로 Gemini 호출 ═══
       // 동적 토큰 예산: 목표 글자수 × 4 (한글 1자 ≈ 2~3 토큰 + SEO/이미지 마커 여유)
@@ -926,7 +926,7 @@ ${subs.length > 0 ? `경쟁 글 소제목: ${subs.join(' / ')}` : ''}
         body: JSON.stringify({
           prompt: finalPrompt,
           systemInstruction,
-          model: 'gemini-3.1-flash-lite-preview',
+          model: 'gemini-3.1-pro-preview',
           temperature: 0.85,
           maxOutputTokens: dynamicMaxTokens,
           stream: true,
@@ -1347,7 +1347,7 @@ ${subs.length > 0 ? `경쟁 글 소제목: ${subs.join(' / ')}` : ''}
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           prompt, systemInstruction,
-          model: 'gemini-3.1-flash-lite-preview',
+          model: 'gemini-3.1-pro-preview',
           temperature: 0.7,
           maxOutputTokens: 65536,
         }),
@@ -1403,7 +1403,7 @@ ${subs.length > 0 ? `경쟁 글 소제목: ${subs.join(' / ')}` : ''}
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           prompt: `아래 병원 블로그 글의 ${selectedImgIndex}번째 이미지에 어울리는 프롬프트를 한국어로 1개만 작성해주세요. 프롬프트만 출력하세요.\n\n글 내용:\n${textOnly}`,
-          model: 'gemini-3.1-flash-lite-preview', temperature: 0.7, maxOutputTokens: 300, thinkingLevel: 'none',
+          model: 'gemini-3.1-pro-preview', temperature: 0.7, maxOutputTokens: 300, thinkingLevel: 'none',
         }),
       });
       const data = await res.json() as { text?: string };
@@ -1577,7 +1577,7 @@ ${generatedContent.substring(0, 2000)}
         body: JSON.stringify({
           prompt: `소제목 "${sectionTitle}" 섹션을 새로 작성해주세요.`,
           systemInstruction: systemPrompt,
-          model: 'gemini-3.1-flash-lite-preview',
+          model: 'gemini-3.1-pro-preview',
           temperature: 0.85,
           maxOutputTokens: 32768,
           timeout: 60000,

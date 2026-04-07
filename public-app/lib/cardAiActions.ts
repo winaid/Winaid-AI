@@ -164,7 +164,7 @@ export async function suggestSlideText(
     body: JSON.stringify({
       prompt: `${context}\n\n${prompts[field]}`,
       systemInstruction: '카드뉴스 콘텐츠 전문가. 요청한 필드 값만 반환. 의료광고법 준수. 최상급/단정 표현 금지.',
-      model: 'gemini-3.1-flash-lite-preview',
+      model: 'gemini-3.1-pro-preview',
       temperature: 0.8,
       maxOutputTokens: 200,
     }),
@@ -222,7 +222,7 @@ ${slideDetail}
 9. 색상: 카드뉴스 테마에 어울리는 톤
 10. 의료 장비/시술 이미지는 사실적이되 깨끗하고 전문적으로`,
       systemInstruction: '의료 마케팅 이미지 프롬프트 전문가. 영어 프롬프트 1줄만 출력. 마크다운/따옴표 금지.',
-      model: 'gemini-3.1-flash-lite-preview',
+      model: 'gemini-3.1-pro-preview',
       temperature: 0.7,
       maxOutputTokens: 300,
     }),
@@ -289,7 +289,7 @@ export async function suggestComparison(
 JSON 한 객체만 출력:
 {"compareLabels": ["항목1","항목2","항목3","항목4"], "columns": [{"header":"A","highlight":false,"items":["값","값","값","값"]},{"header":"B","highlight":true,"items":["값","값","값","값"]}]}`,
       systemInstruction: 'JSON만 출력. 의료 전문가. 구체적 수치 포함. 최상급/단정 표현 금지.',
-      model: 'gemini-3.1-flash-lite-preview',
+      model: 'gemini-3.1-pro-preview',
       temperature: 0.7,
       maxOutputTokens: 500,
       responseType: 'json',

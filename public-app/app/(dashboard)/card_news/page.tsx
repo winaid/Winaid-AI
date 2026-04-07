@@ -302,7 +302,7 @@ export default function CardNewsPage() {
         body: JSON.stringify({
           prompt: proPrompt + layoutHint,
           systemInstruction: proSI,
-          model: 'gemini-3.1-flash-lite-preview',
+          model: 'gemini-3.1-pro-preview',
           temperature: 0.7,
           maxOutputTokens: 32768,
           googleSearch: true,
@@ -395,7 +395,7 @@ export default function CardNewsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           prompt: finalPrompt, systemInstruction,
-          model: 'gemini-3.1-flash-lite-preview', temperature: 0.85, maxOutputTokens: 32768,
+          model: 'gemini-3.1-pro-preview', temperature: 0.85, maxOutputTokens: 32768,
         }),
       });
 
@@ -564,7 +564,7 @@ visual: (배경 비주얼 묘사)
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           prompt: promptGenPrompt,
-          model: 'gemini-3.1-flash-lite-preview', temperature: 0.7, maxOutputTokens: 16384,
+          model: 'gemini-3.1-pro-preview', temperature: 0.7, maxOutputTokens: 16384,
         }),
       });
       const data = await res.json() as { text?: string; error?: string };
@@ -779,7 +779,7 @@ DECORATIVE: (장식 요소)`,
         body: JSON.stringify({
           prompt: `다음 카드뉴스 슬라이드에 어울리는 이미지 프롬프트를 아래 형식으로 작성해주세요.\n부제: ${editSubtitle}\n제목: ${editMainTitle}\n설명: ${editDescription}\n\n반드시 아래 형식으로만 출력:\nsubtitle: "${editSubtitle}"\nmainTitle: "${editMainTitle}"\n${editDescription ? `description: "${editDescription}"\n` : ''}비주얼: (배경 일러스트/사진 묘사 30자 이내)`,
           systemInstruction: '이미지 프롬프트 전문가. subtitle/mainTitle/비주얼 형식으로만 출력.',
-          model: 'gemini-3.1-flash-lite-preview',
+          model: 'gemini-3.1-pro-preview',
           temperature: 0.7,
           maxOutputTokens: 2048,
         }),
