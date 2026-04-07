@@ -326,7 +326,7 @@ export default function MyPage() {
                             <div key={i} className="p-4 bg-slate-50 rounded-xl border border-slate-200">
                               <div className="flex items-center gap-2 mb-2">
                                 <span className="w-6 h-6 bg-blue-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">{i + 1}</span>
-                                <span className="text-[10px] bg-blue-50 text-blue-600 font-bold px-2 py-0.5 rounded-full">{layoutLabel[s.layout as string] || s.layout}</span>
+                                <span className="text-[10px] bg-blue-50 text-blue-600 font-bold px-2 py-0.5 rounded-full">{layoutLabel[s.layout as string] || String(s.layout)}</span>
                               </div>
                               <p className="text-sm font-bold text-slate-800 mb-1">{(s.title as string) || '(제목 없음)'}</p>
                               {s.subtitle && <p className="text-xs text-slate-600 mb-2">{s.subtitle as string}</p>}

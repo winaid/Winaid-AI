@@ -589,13 +589,11 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
                       // 모든 드래그 대상 + 거리 계산
                       const titlePos = eSlide.titlePosition || { x: 50, y: 30 };
                       const subPos = eSlide.subtitlePosition || { x: 50, y: 45 };
-                      const imgPos = eSlide.imageFocalPoint || { x: 50, y: 50 };
                       const hospPos = eSlide.hospitalNamePosition || { x: 50, y: 92 };
 
                       const targets = [
                         { id: 'title', x: titlePos.x, y: titlePos.y },
                         { id: 'subtitle', x: subPos.x, y: subPos.y },
-                        { id: 'image', x: imgPos.x, y: imgPos.y },
                         { id: 'hospital', x: hospPos.x, y: hospPos.y },
                       ];
                       if (closestDeco && closestDist < 999) {
@@ -620,7 +618,6 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
                         const ny = Math.round(Math.max(2, Math.min(98, startY + dy)));
                         if (bestTarget.id === 'title') updateSlide(editingIdx, { titlePosition: { x: nx, y: ny } });
                         else if (bestTarget.id === 'subtitle') updateSlide(editingIdx, { subtitlePosition: { x: nx, y: ny } });
-                        else if (bestTarget.id === 'image') updateSlide(editingIdx, { imageFocalPoint: { x: nx, y: ny } });
                         else if (bestTarget.id === 'hospital') updateSlide(editingIdx, { hospitalNamePosition: { x: nx, y: ny } });
                         else if (bestTarget.id.startsWith('deco:')) {
                           const did = bestTarget.id.split(':')[1];
