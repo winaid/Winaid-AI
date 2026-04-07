@@ -33,7 +33,7 @@ interface CardSlide {
   imageHistory: CardImageHistoryItem[];
 }
 
-type ImageStyleType = 'photo' | 'illustration' | 'medical' | 'custom';
+type ImageStyleType = 'photo' | 'illustration' | 'medical' | 'custom' | 'infographic';
 
 export default function CardNewsPage() {
   const creditCtx = useCreditContext();
