@@ -202,6 +202,7 @@ export interface SlideData {
   hospitalFontSize?: number;
   hospitalColor?: string;
   hospitalFontWeight?: string;
+  hospitalFontId?: string;
   hospitalLogoSize?: number;
 }
 

@@ -457,10 +457,11 @@ export function useSlideRenderer({ theme, learnedTemplate, presetStyle, cardRati
         )}
         {theme.hospitalName && (
           <div style={{
-            color: slide?.hospitalColor || (isDarkTheme ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.3)'),
+            color: slide?.hospitalColor || (isDarkTheme ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.7)'),
             fontSize: `${slide?.hospitalFontSize || 14}px`,
             fontWeight: (slide?.hospitalFontWeight || '600') as CSSProperties['fontWeight'],
             letterSpacing: '3px',
+            ...(slide?.hospitalFontId ? { fontFamily: getSlideFontFamily({ ...slide, fontId: slide.hospitalFontId }) } : {}),
           }}>
             {theme.hospitalName}
           </div>
@@ -656,6 +657,7 @@ export function useSlideRenderer({ theme, learnedTemplate, presetStyle, cardRati
             wordBreak: 'keep-all',
             lineHeight: 1.25,
             letterSpacing: '-0.02em',
+            whiteSpace: 'pre-line',
           }}
         >
           {slide.title}

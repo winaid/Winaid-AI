@@ -167,6 +167,8 @@ export function getTitleStyle(
       left: `${slide.titlePosition.x}%`,
       top: `${slide.titlePosition.y}%`,
       transform: 'translate(-50%, -50%)',
+      width: '90%',
+      maxWidth: '90%',
       zIndex: 10,
     } : {}),
   };
@@ -193,6 +195,8 @@ export function getSubtitleStyle(
       left: `${slide.subtitlePosition.x}%`,
       top: `${slide.subtitlePosition.y}%`,
       transform: 'translate(-50%, -50%)',
+      width: '85%',
+      maxWidth: '85%',
       zIndex: 10,
     } : {}),
   };

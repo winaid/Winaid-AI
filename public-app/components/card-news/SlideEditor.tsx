@@ -790,6 +790,14 @@ ${JSON.stringify(slideForContext, null, 2)}
             <ElementAccordion icon="🏥" label="병원명 스타일" defaultOpen={false}>
               <div className="space-y-3">
                 <div>
+                  <p className="text-[10px] text-slate-400 mb-1">병원명 글씨체</p>
+                  <select value={slide.hospitalFontId || ''} onChange={e => onChange({ hospitalFontId: e.target.value || undefined })}
+                    className="w-full px-2 py-1.5 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-blue-400">
+                    <option value="">전체 폰트와 동일</option>
+                    {CARD_FONTS.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
+                  </select>
+                </div>
+                <div>
                   <p className="text-[10px] text-slate-400 mb-1">병원명 크기</p>
                   <div className="flex items-center gap-1">
                     <button type="button" onClick={() => onChange({ hospitalFontSize: (slide.hospitalFontSize || 14) - 1 })} className="w-7 h-7 bg-slate-100 rounded text-xs font-bold hover:bg-slate-200">−</button>
