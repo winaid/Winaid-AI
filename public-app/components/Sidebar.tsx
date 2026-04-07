@@ -90,7 +90,7 @@ export function Sidebar({
       {/* 로고 */}
       <div className={`h-14 flex items-center ${collapsed ? 'justify-center px-2' : 'px-4'} border-b border-slate-100`}>
         <Link href="/app" className="flex items-center hover:opacity-80 transition-opacity cursor-pointer">
-          <span className="font-black text-base tracking-[-0.02em] text-slate-800">WIN<span className="text-blue-600">AID</span></span>
+          <span className="font-black text-base tracking-[-0.02em] text-slate-800">WIN<span className="text-blue-600">AI</span></span>
         </Link>
       </div>
 
