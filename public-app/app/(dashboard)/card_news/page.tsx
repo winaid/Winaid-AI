@@ -22,20 +22,26 @@ import { consumeGuestCredit } from '../../../lib/guestCredits';
 import { overlayLogo } from '../../../lib/cardDownloadUtils';
 
 function GeneratingTimer({ progress }: { progress: string }) {
-  const [elapsed, setElapsed] = useState(0);
+  const ESTIMATE = 90; // 예상 시간 90초
+  const [remaining, setRemaining] = useState(ESTIMATE);
   useEffect(() => {
-    setElapsed(0);
-    const id = setInterval(() => setElapsed(s => s + 1), 1000);
+    setRemaining(ESTIMATE);
+    const id = setInterval(() => setRemaining(s => Math.max(0, s - 1)), 1000);
     return () => clearInterval(id);
   }, []);
-  const min = Math.floor(elapsed / 60);
-  const sec = elapsed % 60;
-  const timeStr = min > 0 ? `${min}분 ${sec}초` : `${sec}초`;
+  const min = Math.floor(remaining / 60);
+  const sec = remaining % 60;
+  const pct = Math.min(100, Math.round(((ESTIMATE - remaining) / ESTIMATE) * 100));
   return (
     <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center mb-4">
-      <div className="w-12 h-12 border-[3px] border-blue-100 border-t-blue-500 rounded-full animate-spin mx-auto mb-4" />
+      {/* 프로그레스 바 */}
+      <div className="w-full h-2 bg-slate-100 rounded-full mb-5 overflow-hidden">
+        <div className="h-full bg-blue-500 rounded-full transition-all duration-1000" style={{ width: `${pct}%` }} />
+      </div>
       <p className="text-sm font-medium text-slate-700">{progress || '생성 중...'}</p>
-      <p className="text-xs text-slate-400 mt-2">경과 시간: {timeStr}</p>
+      <p className="text-xs text-slate-400 mt-2">
+        {remaining > 0 ? `약 ${min > 0 ? `${min}분 ` : ''}${sec}초 남음` : '거의 완료...'}
+      </p>
     </div>
   );
 }
