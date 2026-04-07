@@ -186,7 +186,7 @@ export default function BlogResultArea({
               </button>
             </div>
             <div className="flex flex-wrap gap-1.5 mt-2">
-              {['도입부 자연스럽게', '전체 톤 부드럽게', '결론 강화', '문장 다듬기', 'AI 냄새 제거'].map(chip => (
+              {['도입부 자연스럽게', '전체 톤 부드럽게', '결론 강화', '문장 다듬기', 'AI 느낌 제거'].map(chip => (
                 <button key={chip} onClick={() => setChatInput(chip)}
                   className="px-2.5 py-1 text-[10px] font-medium rounded-lg bg-slate-100 text-slate-500 hover:bg-violet-50 hover:text-violet-600 transition-colors"
                 >{chip}</button>

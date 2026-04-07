@@ -45,7 +45,6 @@ export interface LearnedWritingStyle {
 export interface HospitalStyleProfile {
   id?: string;
   hospital_name: string;
-  team_id?: number;
   naver_blog_url?: string;
   crawled_posts_count?: number;
   style_profile?: LearnedWritingStyle | null;
@@ -59,8 +58,8 @@ export async function getAllStyleProfiles(): Promise<HospitalStyleProfile[]> {
   if (!supabase) return [];
   const { data, error } = await supabase
     .from('hospital_style_profiles')
-    .select('id, hospital_name, team_id, naver_blog_url, crawled_posts_count, last_crawled_at, style_profile')
-    .order('team_id', { ascending: true });
+    .select('id, hospital_name, naver_blog_url, crawled_posts_count, last_crawled_at, style_profile')
+    .order('hospital_name', { ascending: true });
   if (error || !data) return [];
   return data as HospitalStyleProfile[];
 }
@@ -167,7 +166,7 @@ ${deepBlock}${bannedBlock}
 2. 병원명을 가려도 이 병원 톤으로 느껴지는가?
 3. 같은 어미가 3회 이상 연속 반복되지 않았는가?
 
-[AI 냄새 제거 + 의료법 준수]
+[AI 느낌 제거 + 의료법 준수]
 - "~가 핵심입니다" / "기억하세요" / "중요한 것은" → 삭제
 - '방문하세요', '예약하세요', '상담하세요' → "고려해 보실 수 있습니다"
 - '완치', '최고', '보장', '확실' → 과대광고 금지${referenceBlock}`;
@@ -175,14 +174,12 @@ ${deepBlock}${bannedBlock}
 
 export async function saveHospitalBlogUrl(
   hospitalName: string,
-  teamId: number,
   blogUrl: string,
 ): Promise<void> {
   if (!supabase) throw new Error('Supabase 미설정');
   const { error } = await (supabase.from('hospital_style_profiles') as any).upsert(
     {
       hospital_name: hospitalName,
-      team_id: teamId,
       naver_blog_url: blogUrl,
       updated_at: new Date().toISOString(),
     },
@@ -255,7 +252,6 @@ interface CrawledPost {
 
 export async function crawlAndLearnHospitalStyle(
   hospitalName: string,
-  teamId: number,
   blogUrls: string[],
   onProgress?: (msg: string) => void,
 ): Promise<{ posts: CrawledPost[] }> {
@@ -325,7 +321,6 @@ export async function crawlAndLearnHospitalStyle(
     await (supabase.from('hospital_style_profiles') as any).upsert(
       {
         hospital_name: hospitalName,
-        team_id: teamId,
         naver_blog_url: blogUrls.join(','),
         crawled_posts_count: dbPostCount,
         style_profile: analyzedStyle,
@@ -509,7 +504,7 @@ ${sampleText.substring(0, 6000)}
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       prompt,
-      model: 'gemini-3.1-pro-preview',
+      model: 'gemini-3.1-flash-lite-preview',
       responseType: 'json',
     }),
   });
@@ -940,41 +935,14 @@ export async function crawlAndScoreAllHospitals(
   const includeStyle = options?.includeStyleAnalysis ?? false;
   const crawlerBase = getCrawlerBaseUrl();
 
-  // DB 프로필 + teamData 병합하여 URL이 있는 병원 목록 구성
+  // DB 프로필에서 URL이 있는 병원 목록 구성
   const profiles = await getAllStyleProfiles();
-  const profileMap = new Map(profiles.map(p => [p.hospital_name, p]));
+  const hospitalUrls: { name: string; urls: string[] }[] = [];
 
-  // DB에서 팀/병원 로드 (fallback: teamData.ts)
-  const { getTeamDataFromDB } = await import('./hospitalService');
-  const TEAM_DATA = await getTeamDataFromDB();
-  const hospitalUrls: { name: string; teamId: number; urls: string[] }[] = [];
-  const seen = new Set<string>();
-
-  for (const team of TEAM_DATA) {
-    for (const h of team.hospitals) {
-      const baseName = h.name.replace(/ \(.*\)$/, '');
-      const profile = profileMap.get(baseName);
-      const dbUrls = profile?.naver_blog_url?.split(',').map(u => u.trim()).filter(Boolean);
-      const teamUrls = h.naverBlogUrls?.filter(Boolean);
-      const newUrls = (dbUrls && dbUrls.length > 0) ? dbUrls : (teamUrls || []);
-
-      if (seen.has(baseName)) {
-        // 중복 병원 — URL 합침 (이미 hospitalUrls에 있으면 추가, 없으면 새로 생성)
-        const existing = hospitalUrls.find(x => x.name === baseName);
-        if (existing) {
-          for (const u of newUrls) {
-            if (!existing.urls.includes(u)) existing.urls.push(u);
-          }
-        } else if (newUrls.length > 0) {
-          hospitalUrls.push({ name: baseName, teamId: team.id, urls: [...newUrls] });
-        }
-        continue;
-      }
-      seen.add(baseName);
-
-      if (newUrls.length > 0) {
-        hospitalUrls.push({ name: baseName, teamId: team.id, urls: [...newUrls] });
-      }
+  for (const profile of profiles) {
+    const urls = profile.naver_blog_url?.split(',').map(u => u.trim()).filter(Boolean) || [];
+    if (urls.length > 0) {
+      hospitalUrls.push({ name: profile.hospital_name, urls });
     }
   }
 
@@ -985,10 +953,10 @@ export async function crawlAndScoreAllHospitals(
 
   // ── 한 병원 처리 함수 ──
   async function processHospital(
-    hospital: { name: string; teamId: number; urls: string[] },
+    hospital: { name: string; urls: string[] },
     index: number,
   ) {
-    const { name, teamId, urls } = hospital;
+    const { name, urls } = hospital;
     const allContents: string[] = [];
     let totalPostsForHospital = 0;
 
@@ -1128,7 +1096,6 @@ export async function crawlAndScoreAllHospitals(
     if (totalPostsForHospital > 0 && supabase) {
       const profileData: Record<string, unknown> = {
         hospital_name: name,
-        team_id: teamId,
         naver_blog_url: urls.join(','),
         crawled_posts_count: totalPostsForHospital,
         last_crawled_at: new Date().toISOString(),

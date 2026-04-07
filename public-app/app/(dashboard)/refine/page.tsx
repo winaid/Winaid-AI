@@ -59,7 +59,7 @@ export default function RefinePage() {
       const m = text.match(pat.re);
       if (m) { issues.push(`${pat.msg} (${m.length}건)`); safety -= pat.p * m.length; }
     }
-    // AI 냄새 패턴
+    // AI 느낌 패턴
     const aiPatterns = [
       { re: /또한|더불어|아울러|이러한|해당|상기/g, msg: 'AI 문체 표현', p: 3 },
       { re: /~(입니다|합니다|됩니다)[\s.]*~?(입니다|합니다|됩니다)/g, msg: '어미 반복', p: 5 },
@@ -294,7 +294,7 @@ export default function RefinePage() {
                   <div className="flex items-center gap-3 flex-wrap text-[11px]">
                     <span className="font-bold text-slate-500">📊 검사</span>
                     <span className={`px-2 py-0.5 rounded-full font-bold ${factCheck.safety >= 80 ? 'bg-green-50 text-green-700' : 'bg-orange-50 text-orange-700'}`}>의료법 {factCheck.safety}점</span>
-                    <span className={`px-2 py-0.5 rounded-full font-bold ${factCheck.aiSmell <= 15 ? 'bg-green-50 text-green-700' : 'bg-orange-50 text-orange-700'}`}>AI냄새 {factCheck.aiSmell}점</span>
+                    <span className={`px-2 py-0.5 rounded-full font-bold ${factCheck.aiSmell <= 15 ? 'bg-green-50 text-green-700' : 'bg-orange-50 text-orange-700'}`}>AI느낌 {factCheck.aiSmell}점</span>
                     <span className={`px-2 py-0.5 rounded-full font-bold ${factCheck.conversion >= 70 ? 'bg-green-50 text-green-700' : 'bg-orange-50 text-orange-700'}`}>전환력 {factCheck.conversion}점</span>
                     {factCheck.issues.map((issue, i) => (
                       <span key={i} className="text-[10px] text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded">{issue}</span>
@@ -325,7 +325,7 @@ export default function RefinePage() {
               </p>
             </div>
             <div className="mt-8 flex flex-col items-center gap-2">
-              {['자연스러운 문체 교정', 'AI 냄새 제거', '의료광고법 검증', 'SEO 최적화 보정', '채팅으로 세밀하게 수정'].map(text => (
+              {['자연스러운 문체 교정', 'AI 느낌 제거', '의료광고법 검증', 'SEO 최적화 보정', '채팅으로 세밀하게 수정'].map(text => (
                 <div key={text} className="flex items-center gap-3 px-4 py-2 rounded-lg text-xs text-slate-400">
                   <span className="text-[10px] text-violet-400">✦</span>
                   {text}

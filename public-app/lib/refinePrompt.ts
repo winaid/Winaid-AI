@@ -2,7 +2,7 @@
  * AI 보정 프롬프트 — OLD ContentRefiner.tsx parity
  *
  * 2가지 모드: 자동 보정 (6종 방향) + 채팅 수정 (대화형)
- * HTML 출력, 의료광고법 준수, AI 냄새 제거, Google Search 연동
+ * HTML 출력, 의료광고법 준수, AI 느낌 제거, Google Search 연동
  */
 
 import { getMedicalLawPromptBlock } from './medicalLawRules';
@@ -37,7 +37,7 @@ export const REFINE_OPTIONS: { value: RefineMode; label: string; icon: string; d
 const BASE_RULES = `
 [공통 규칙]
 - ${getMedicalLawPromptBlock(true)}
-- AI 냄새 제거: "또한", "더불어", "아울러", "이러한", "해당" → 삭제 또는 자연스러운 표현
+- AI 느낌 제거: "또한", "더불어", "아울러", "이러한", "해당" → 삭제 또는 자연스러운 표현
 - 출처/인용 표현 금지: "~에 따르면", "연구에 따르면" → 정보를 자연스럽게 녹여서 서술
 - "해당/상기/동일한" → "이런/이"`;
 

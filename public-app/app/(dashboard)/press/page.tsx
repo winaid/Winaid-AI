@@ -98,7 +98,7 @@ export default function PressPage() {
         const textOnly = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
         const issues: string[] = [];
         let aiSmellScore = 100;
-        // AI 냄새 패턴 검사
+        // AI 느낌 패턴 검사
         const patterns = [
           { re: /~(입니다|합니다|됩니다|습니다)[.!]?\s*~?(입니다|합니다|됩니다|습니다)/g, msg: '같은 어미 연속 반복', penalty: 10 },
           { re: /중요합니다|핵심입니다|기억하세요|잊지 마세요/g, msg: '단정형/명령형 표현', penalty: 5 },
