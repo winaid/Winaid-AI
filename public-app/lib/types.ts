@@ -59,7 +59,8 @@ export interface GenerationRequest {
 }
 
 export interface TrendingItem {
-  topic: string;
+  topic: string;        // 전체 주제 (예: "임플란트 오래가는 5가지 방법")
+  condition: string;    // 질환/시술명만 (예: "임플란트")
   keywords: string;
   score: number;
   seasonal_factor: string;
