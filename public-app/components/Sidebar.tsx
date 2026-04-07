@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 
-type ContentTab = 'blog' | 'clinical' | 'card_news' | 'press' | 'refine' | 'image' | 'history' | 'youtube' | 'mypage';
+type ContentTab = 'blog' | 'clinical' | 'card_news' | 'press' | 'refine' | 'image' | 'history' | 'youtube' | 'video_edit' | 'mypage';
 
 interface SidebarProps {
   collapsed: boolean;
@@ -19,6 +19,7 @@ const writeItems: { id: ContentTab; label: string; icon: string; href: string }[
   { id: 'blog', label: '블로그', icon: '📝', href: '/blog' },
   { id: 'clinical', label: '임상글 작성', icon: '🔬', href: '/clinical' },
   { id: 'press', label: '언론보도', icon: '🗞️', href: '/press' },
+  { id: 'refine', label: 'AI 보정', icon: '✨', href: '/refine' },
 ];
 
 const visualItems: { id: ContentTab; label: string; icon: string; href: string }[] = [
@@ -26,9 +27,9 @@ const visualItems: { id: ContentTab; label: string; icon: string; href: string }
   { id: 'image', label: '이미지 생성', icon: '🖼️', href: '/image' },
 ];
 
-const toolItems: { id: ContentTab; label: string; icon: string; href: string }[] = [
-  { id: 'refine', label: 'AI 보정', icon: '✨', href: '/refine' },
+const videoItems: { id: ContentTab; label: string; icon: string; href: string }[] = [
   { id: 'youtube', label: '유튜브', icon: '▶️', href: '/youtube' },
+  { id: 'video_edit', label: '영상 편집', icon: '✂️', href: '/video_edit' },
 ];
 
 const extraItems: { label: string; icon: string; href: string }[] = [
@@ -112,9 +113,9 @@ export function Sidebar({
         {visualItems.map(navButton)}
 
         <div className={`px-2 py-1.5 mt-4 text-[10px] font-bold uppercase tracking-wider ${collapsed ? 'text-center' : ''} text-slate-400`}>
-          {collapsed ? '···' : '도구'}
+          {collapsed ? '···' : '영상'}
         </div>
-        {toolItems.map(navButton)}
+        {videoItems.map(navButton)}
 
         <div className="mt-3 border-t border-slate-100 pt-3">
           {extraItems.map(navButton)}
