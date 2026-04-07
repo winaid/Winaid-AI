@@ -113,6 +113,79 @@ export function buildLayoutDefaults(slide: SlideData, newLayout: SlideLayoutType
   return base;
 }
 
+/** 레이아웃 변경 후 AI로 내용 자동 채우기. 기존 제목/주제를 기반으로 새 레이아웃에 맞는 데이터 생성. */
+export async function fillLayoutContent(
+  slide: SlideData,
+  allSlides: SlideData[],
+): Promise<Partial<SlideData> | null> {
+  const layout = slide.layout;
+  // 이미 내용이 채워져 있으면 스킵 (플레이스홀더가 아닌 경우)
+  const hasRealContent = (
+    (slide.checkItems && slide.checkItems.some(i => !i.startsWith('항목'))) ||
+    (slide.steps && slide.steps.some(s => !s.label.includes('단계'))) ||
+    (slide.icons && slide.icons.some(i => !i.title.startsWith('항목'))) ||
+    (slide.columns && slide.columns.some(c => !c.header.startsWith('A') && !c.header.startsWith('B'))) ||
+    (slide.body && slide.body !== '내용을 입력하세요')
+  );
+  if (hasRealContent) return null;
+
+  const topic = allSlides[0]?.title || slide.title;
+  const fieldMap: Record<string, string> = {
+    'checklist': 'checkItems (문자열 배열 3~5개)',
+    'steps': 'steps (배열: [{label, desc}] 3~4개)',
+    'icon-grid': 'icons (배열: [{emoji, title, desc}] 3~6개, emoji는 실제 이모지)',
+    'comparison': 'compareLabels (문자열 배열 3~4개) + columns (배열: [{header, items, highlight}] 2개)',
+    'qna': 'questions (배열: [{q, a}] 2~3개)',
+    'timeline': 'timelineItems (배열: [{time, title, desc}] 3~4개)',
+    'before-after': 'beforeLabel + afterLabel + beforeItems (배열 3개) + afterItems (배열 3개)',
+    'pros-cons': 'pros (배열 3개) + cons (배열 3개)',
+    'price-table': 'priceItems (배열: [{name, price, note}] 3~5개)',
+    'data-highlight': 'dataPoints (배열: [{value, label, highlight}] 3개)',
+    'numbered-list': 'numberedItems (배열: [{title, desc}] 3~5개)',
+    'warning': 'warningTitle + warningItems (문자열 배열 3~4개)',
+    'info': 'body (본문 2~3문장)',
+    'quote': 'quoteText + quoteAuthor + quoteRole',
+  };
+  const fields = fieldMap[layout];
+  if (!fields) return null;
+
+  try {
+    const res = await fetch('/api/gemini', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        prompt: `카드뉴스 "${topic}" 주제의 "${slide.title}" 슬라이드를 "${layout}" 레이아웃에 맞게 채워줘.
+
+필요한 필드: ${fields}
+
+규칙:
+- 의료/건강 맥락에 맞는 구체적 내용
+- 의료광고법 준수 (과장/단정 금지)
+- 가격은 범위로 (예: 3~5만원)
+- JSON 객체만 출력. 마크다운/설명 금지.`,
+        systemInstruction: '카드뉴스 콘텐츠 전문가. 요청한 필드만 JSON으로 반환.',
+        model: 'gemini-3.1-flash-lite-preview',
+        temperature: 0.7,
+        maxOutputTokens: 1000,
+      }),
+    });
+    const data = await res.json() as { text?: string };
+    if (!data.text) return null;
+    const cleaned = data.text.replace(/```json?\s*\n?/gi, '').replace(/\n?```\s*$/g, '').trim();
+    const start = cleaned.indexOf('{');
+    const end = cleaned.lastIndexOf('}');
+    if (start === -1 || end === -1) return null;
+    const parsed = JSON.parse(cleaned.slice(start, end + 1));
+    // layout은 보존
+    delete parsed.layout;
+    delete parsed.index;
+    delete parsed.title;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
 /** AI 이미지 생성. 반환: imageDataUrl 또는 null */
 export async function generateSlideImage(
   slide: SlideData,

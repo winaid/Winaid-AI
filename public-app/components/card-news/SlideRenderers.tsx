@@ -453,7 +453,7 @@ export function useSlideRenderer({ theme, learnedTemplate, presetStyle, cardRati
         display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px',
       }}>
         {theme.hospitalLogo && (
-          <img src={theme.hospitalLogo} alt="" crossOrigin="anonymous" style={{ height: `${(slide as SlideData & { hospitalLogoSize?: number }).hospitalLogoSize || 40}px`, objectFit: 'contain' }} />
+          <img src={theme.hospitalLogo} alt="" crossOrigin="anonymous" style={{ height: `${slide.hospitalLogoSize || 40}px`, objectFit: 'contain' }} />
         )}
         {theme.hospitalName && (
           <div style={{

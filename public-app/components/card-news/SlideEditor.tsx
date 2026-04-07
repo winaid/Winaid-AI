@@ -800,9 +800,9 @@ ${JSON.stringify(slideForContext, null, 2)}
                 <div>
                   <p className="text-[10px] text-slate-400 mb-1">로고 크기</p>
                   <div className="flex items-center gap-1">
-                    <button type="button" onClick={() => onChange({ hospitalLogoSize: ((slide as any).hospitalLogoSize || 40) - 4 })} className="w-7 h-7 bg-slate-100 rounded text-xs font-bold hover:bg-slate-200">−</button>
-                    <input type="number" value={(slide as any).hospitalLogoSize || 40} onChange={e => onChange({ hospitalLogoSize: Number(e.target.value) } as any)} className="w-14 h-7 text-center text-xs bg-white border border-slate-200 rounded" />
-                    <button type="button" onClick={() => onChange({ hospitalLogoSize: ((slide as any).hospitalLogoSize || 40) + 4 })} className="w-7 h-7 bg-slate-100 rounded text-xs font-bold hover:bg-slate-200">+</button>
+                    <button type="button" onClick={() => onChange({ hospitalLogoSize: (slide.hospitalLogoSize || 40) - 4 })} className="w-7 h-7 bg-slate-100 rounded text-xs font-bold hover:bg-slate-200">−</button>
+                    <input type="number" value={slide.hospitalLogoSize || 40} onChange={e => onChange({ hospitalLogoSize: Number(e.target.value) })} className="w-14 h-7 text-center text-xs bg-white border border-slate-200 rounded" />
+                    <button type="button" onClick={() => onChange({ hospitalLogoSize: (slide.hospitalLogoSize || 40) + 4 })} className="w-7 h-7 bg-slate-100 rounded text-xs font-bold hover:bg-slate-200">+</button>
                   </div>
                 </div>
                 <div>

@@ -202,6 +202,7 @@ export interface SlideData {
   hospitalFontSize?: number;
   hospitalColor?: string;
   hospitalFontWeight?: string;
+  hospitalLogoSize?: number;
 }
 
 // ── 커버 템플릿 ──

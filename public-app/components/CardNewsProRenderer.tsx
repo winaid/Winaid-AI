@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { SlideData, CardNewsTheme, SlideLayoutType, DesignPresetStyle } from '../lib/cardNewsLayouts';
 import { LAYOUT_LABELS, CARD_FONTS, FONT_CATEGORIES } from '../lib/cardNewsLayouts';
-import { buildLayoutDefaults, generateSlideImage, suggestSlideText, suggestImagePrompt, enrichSlide, suggestComparison } from '../lib/cardAiActions';
+import { buildLayoutDefaults, fillLayoutContent, generateSlideImage, suggestSlideText, suggestImagePrompt, enrichSlide, suggestComparison } from '../lib/cardAiActions';
 import type { CardTemplate } from '../lib/cardTemplateService';
 import { ensureGoogleFontLoaded, resolveSlideFontFamily } from '../lib/cardStyleUtils';
 import { downloadCardAsPng, downloadAllAsZip } from '../lib/cardDownloadUtils';
@@ -237,11 +237,15 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
   };
   const handleDragEnd = () => { setDragIdx(null); setDragOverIdx(null); };
 
-  // ── 레이아웃 변경 (lib/cardAiActions.ts 위임) ──
-  const handleLayoutChange = (idx: number, newLayout: SlideLayoutType) => {
+  // ── 레이아웃 변경 + AI 자동 채우기 (lib/cardAiActions.ts 위임) ──
+  const handleLayoutChange = async (idx: number, newLayout: SlideLayoutType) => {
     const curr = slides[idx];
     if (!curr) return;
-    onSlidesChange(slides.map((s, i) => (i === idx ? buildLayoutDefaults(curr, newLayout) : s)));
+    const withDefaults = buildLayoutDefaults(curr, newLayout);
+    onSlidesChange(slides.map((s, i) => (i === idx ? withDefaults : s)));
+    // 백그라운드에서 AI가 내용 자동 채우기 (플레이스홀더만 있을 때)
+    const patch = await fillLayoutContent(withDefaults, slides);
+    if (patch) updateSlide(idx, patch);
   };
 
   // ── AI 액션 래퍼 (lib/cardAiActions.ts 위임) ──
