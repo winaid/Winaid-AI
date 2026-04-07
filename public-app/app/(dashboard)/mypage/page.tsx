@@ -321,16 +321,24 @@ export default function MyPage() {
                       {(() => {
                         const layoutLabel: Record<string, string> = { cover: '표지', info: '정보', comparison: '비교표', 'icon-grid': '아이콘', steps: '단계', checklist: '체크리스트', 'data-highlight': '수치 강조', closing: '마무리', 'before-after': '전후 비교', qna: 'Q&A', timeline: '타임라인', quote: '인용', 'numbered-list': '번호 리스트', 'pros-cons': '장단점', 'price-table': '가격표', warning: '주의사항' };
                         try {
-                          const slides = JSON.parse(selectedPost.content) as Record<string, unknown>[];
+                          const slides = JSON.parse(selectedPost.content) as {
+                            title?: string; layout?: string; subtitle?: string; body?: string;
+                            checkItems?: string[]; steps?: {label:string;desc?:string}[];
+                            icons?: {emoji:string;title:string}[]; columns?: {header:string;items:string[]}[];
+                            dataPoints?: {value:string;label:string}[]; questions?: {q:string;a:string}[];
+                            timelineItems?: {time:string;title:string}[]; pros?: string[]; cons?: string[];
+                            priceItems?: {name:string;price:string}[]; quoteText?: string;
+                            warningItems?: string[]; numberedItems?: {title:string;desc?:string}[];
+                          }[];
                           return slides.map((s, i) => (
                             <div key={i} className="p-4 bg-slate-50 rounded-xl border border-slate-200">
                               <div className="flex items-center gap-2 mb-2">
                                 <span className="w-6 h-6 bg-blue-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">{i + 1}</span>
-                                <span className="text-[10px] bg-blue-50 text-blue-600 font-bold px-2 py-0.5 rounded-full">{layoutLabel[s.layout as string] || String(s.layout)}</span>
+                                <span className="text-[10px] bg-blue-50 text-blue-600 font-bold px-2 py-0.5 rounded-full">{layoutLabel[s.layout || 'info'] || s.layout}</span>
                               </div>
-                              <p className="text-sm font-bold text-slate-800 mb-1">{(s.title as string) || '(제목 없음)'}</p>
-                              {typeof s.subtitle === 'string' && s.subtitle && <p className="text-xs text-slate-600 mb-2">{s.subtitle}</p>}
-                              {typeof s.body === 'string' && s.body && <p className="text-xs text-slate-500 mb-2 whitespace-pre-line">{s.body}</p>}
+                              <p className="text-sm font-bold text-slate-800 mb-1">{s.title || '(제목 없음)'}</p>
+                              {s.subtitle && <p className="text-xs text-slate-600 mb-2">{s.subtitle}</p>}
+                              {s.body && <p className="text-xs text-slate-500 mb-2 whitespace-pre-line">{s.body}</p>}
                               {/* 체크리스트 */}
                               {Array.isArray(s.checkItems) && <div className="space-y-1 mt-1">{(s.checkItems as string[]).map((item, j) => <div key={j} className="flex items-center gap-1.5 text-xs text-slate-600"><span className="text-emerald-500">✓</span>{item}</div>)}</div>}
                               {/* 단계 */}
