@@ -56,7 +56,8 @@ export const signUpWithEmail = async (
       }
 
       // subscriptions: 플랜 생성 (윈에이드/윈에이아이 계정은 999 크레딧)
-      const isAdmin = email.includes('winaid') || email.includes('winai');
+      const adminEmails = ['glorious.youtub@gmail.com'];
+      const isAdmin = email.includes('winaid') || email.includes('winai') || adminEmails.includes(email.toLowerCase());
       await supabase.from('subscriptions').upsert(
         {
           user_id: data.user.id,

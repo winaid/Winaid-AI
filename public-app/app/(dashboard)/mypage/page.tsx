@@ -315,6 +315,28 @@ export default function MyPage() {
                 <div className="px-6 py-6">
                   {selectedPost.post_type === 'image' && (selectedPost.content.startsWith('data:image') || selectedPost.content.startsWith('https://')) ? (
                     <img src={selectedPost.content} alt={selectedPost.title || ''} className="max-w-full rounded-xl shadow-md border border-slate-200" />
+                  ) : selectedPost.post_type === 'card_news' && selectedPost.content.trim().startsWith('[') ? (
+                    <div className="space-y-3">
+                      <p className="text-xs text-slate-400 mb-2">슬라이드 구성</p>
+                      {(() => {
+                        try {
+                          const slides = JSON.parse(selectedPost.content) as { title?: string; layout?: string; subtitle?: string; body?: string }[];
+                          return slides.map((s, i) => (
+                            <div key={i} className="p-4 bg-slate-50 rounded-xl border border-slate-200">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="w-6 h-6 bg-blue-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">{i + 1}</span>
+                                <span className="text-[10px] text-slate-400 font-semibold">{s.layout || 'info'}</span>
+                              </div>
+                              <p className="text-sm font-bold text-slate-800">{s.title || '(제목 없음)'}</p>
+                              {s.subtitle && <p className="text-xs text-slate-500 mt-0.5">{s.subtitle}</p>}
+                              {s.body && <p className="text-xs text-slate-400 mt-1 line-clamp-2">{s.body}</p>}
+                            </div>
+                          ));
+                        } catch {
+                          return <p className="text-sm text-slate-500">{selectedPost.content}</p>;
+                        }
+                      })()}
+                    </div>
                   ) : (
                     <article className="max-w-none" style={{ fontFamily: "'Malgun Gothic', sans-serif", lineHeight: 1.9 }}
                       dangerouslySetInnerHTML={{ __html: sanitizeHtml(mdToHtml(selectedPost.content)) }} />
