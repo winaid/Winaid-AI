@@ -34,24 +34,25 @@ function ensureCleanup() {
 /**
  * 게스트 요청을 허용할지 판단한다.
  * @param ip 클라이언트 IP (getClientIp로 추출)
- * @param maxPerMinute 분당 허용 요청 수 (기본 10)
+ * @param maxPerMinute 분당 허용 요청 수 (기본 30)
+ * @param route 경로 (IP+경로 조합으로 분리 카운팅. 안 넘기면 IP만 사용)
  * @returns true면 허용, false면 차단 (호출자가 429 응답)
  */
-export function checkGuestRateLimit(ip: string, maxPerMinute = 10): boolean {
+export function checkGuestRateLimit(ip: string, maxPerMinute = 30, route?: string): boolean {
   ensureCleanup();
   const now = Date.now();
   const windowMs = 60_000;
-  const list = rateLimitMap.get(ip) ?? [];
+  const key = route ? `${ip}:${route}` : ip;
+  const list = rateLimitMap.get(key) ?? [];
   const fresh = list.filter(t => now - t < windowMs);
 
   if (fresh.length >= maxPerMinute) {
-    // 상태 덮어쓰기해서 메모리 누수 방지
-    rateLimitMap.set(ip, fresh);
+    rateLimitMap.set(key, fresh);
     return false;
   }
 
   fresh.push(now);
-  rateLimitMap.set(ip, fresh);
+  rateLimitMap.set(key, fresh);
   return true;
 }
 
@@ -79,11 +80,13 @@ export function isAuthenticatedByCookie(request: Request): boolean {
  */
 export function gateGuestRequest(
   request: Request,
-  maxPerMinute = 10,
+  maxPerMinute = 30,
+  route?: string,
 ): { ok: true } | { ok: false; status: number; error: string } {
   if (isAuthenticatedByCookie(request)) return { ok: true };
   const ip = getClientIp(request);
-  if (!checkGuestRateLimit(ip, maxPerMinute)) {
+  const routeKey = route || new URL(request.url).pathname;
+  if (!checkGuestRateLimit(ip, maxPerMinute, routeKey)) {
     return { ok: false, status: 429, error: '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.' };
   }
   return { ok: true };

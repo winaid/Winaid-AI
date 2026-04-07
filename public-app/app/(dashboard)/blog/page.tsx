@@ -219,6 +219,7 @@ function BlogForm() {
 
   // ── 키워드 분석 (old InputForm handleAnalyzeKeywords 동일) ──
   const handleAnalyzeKeywords = async () => {
+    if (isAnalyzingKeywords) return;
     if (!selectedHospitalAddress || !hospitalName) return;
     console.info(`[KEYWORD] ========== 키워드 분석 시작 ==========`);
     console.info(`[KEYWORD] 병원="${hospitalName}" 주소="${selectedHospitalAddress}" 진료과="${category}"`);
