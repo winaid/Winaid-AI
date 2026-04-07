@@ -29,7 +29,7 @@ export default function DashboardPage() {
 
       {/* 타이틀 */}
       <h1 className="text-4xl md:text-5xl font-bold mb-3 text-center tracking-tight text-slate-900">
-        WINAID AI 워크스페이스
+        WINAID
       </h1>
       <p className="text-base mb-10 text-center text-slate-500">
         병원 마케팅 콘텐츠를 AI로 빠르게 만들어보세요
