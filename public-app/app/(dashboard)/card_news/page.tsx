@@ -241,9 +241,21 @@ export default function CardNewsPage() {
       const page = force ? Math.floor(Math.random() * 5) + 1 : 1;
       let photos: string[];
       if (style === 'photo') {
-        const res = await fetch(`/api/pexels?query=${encodeURIComponent(query)}&orientation=square&per_page=${count}&page=${page}`);
-        const data = await res.json();
-        photos = (data.photos || []).map((p: { url: string }) => p.url);
+        // Pexels + Pixabay 동시 호출해서 합치기
+        const [pexelsRes, pixabayRes] = await Promise.all([
+          fetch(`/api/pexels?query=${encodeURIComponent(query)}&orientation=square&per_page=${count}&page=${page}`),
+          fetch(`/api/pixabay?query=${encodeURIComponent(query)}&image_type=photo&orientation=horizontal&per_page=${count}&page=${page}`),
+        ]);
+        const [pexelsData, pixabayData] = await Promise.all([pexelsRes.json(), pixabayRes.json()]);
+        const pexels: string[] = (pexelsData.photos || []).map((p: { url: string }) => p.url);
+        const pixabay: string[] = (pixabayData.photos || []).map((p: { url: string }) => p.url);
+        // 번갈아 섞기
+        photos = [];
+        const maxLen = Math.max(pexels.length, pixabay.length);
+        for (let j = 0; j < maxLen; j++) {
+          if (j < pexels.length) photos.push(pexels[j]);
+          if (j < pixabay.length) photos.push(pixabay[j]);
+        }
       } else {
         const pixType = style === 'infographic' ? 'vector' : 'illustration';
         const res = await fetch(`/api/pixabay?query=${encodeURIComponent(query)}&image_type=${pixType}&orientation=horizontal&per_page=${count}&page=${page}`);
