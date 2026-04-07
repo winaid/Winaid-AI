@@ -332,6 +332,7 @@ export default function CardNewsPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!topic.trim() || isGenerating) return;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 
     const derivedWritingStyle: WritingStyle = audienceMode === '전문가용(신뢰/정보)' ? 'expert' : 'empathy';
     const request: CardNewsRequest = {

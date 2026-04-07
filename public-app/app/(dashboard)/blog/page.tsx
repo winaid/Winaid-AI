@@ -776,6 +776,7 @@ JSON 형식으로 응답해주세요.`;
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!topic.trim() || isGenerating) return;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 
     // 크레딧 체크 + 차감
     if (creditCtx.creditInfo) {
@@ -839,7 +840,6 @@ JSON 형식으로 응답해주세요.`;
 
     setIsGenerating(true);
     setDisplayStage(1);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
     setRotationIdx(0);
     setError(null);
     setIsRetryable(false);
