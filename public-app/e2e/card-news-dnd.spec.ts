@@ -3,9 +3,8 @@ import { test, expect, Page } from '@playwright/test';
 // ============================================
 // 카드뉴스 캔버스 드래그앤드롭 E2E 테스트
 //
-// 실행 방법:
-//   로컬:   npx playwright test e2e/card-news-dnd.spec.ts
-//   배포:   BASE_URL=https://winai.kr npx playwright test e2e/card-news-dnd.spec.ts
+// 실행:
+//   BASE_URL=https://winai.kr npx playwright test e2e/card-news-dnd.spec.ts
 // ============================================
 
 // API mock 데이터: 6종 레이아웃 (cover, info, checklist, steps, quote, closing)
@@ -78,8 +77,9 @@ async function mockApis(page: Page) {
 
 // ── 카드뉴스 페이지 이동 ──
 async function goToCardNews(page: Page) {
-  await page.goto('/card_news', { waitUntil: 'domcontentloaded', timeout: 60000 });
-  await page.waitForTimeout(3000); // Next.js hydration
+  await page.goto('/card_news', { timeout: 60000 });
+  // textarea가 보일 때까지 대기 (hydration 완료 시점)
+  await page.locator('textarea').first().waitFor({ timeout: 30000 });
 }
 
 // ── 카드뉴스 생성 (mock API) ──
