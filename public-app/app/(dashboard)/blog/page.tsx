@@ -1198,7 +1198,6 @@ ${subs.length > 0 ? `경쟁 글 소제목: ${subs.join(' / ')}` : ''}
 
         // 6) 이미지 생성 → Storage 업로드 → public URL
         const generateAndUpload = async (prompt: string, index: number): Promise<{ index: number; url: string | null }> => {
-          // 최대 2회 재시도 + Pexels fallback
           for (let attempt = 0; attempt < 2; attempt++) {
             try {
               const imgRes = await fetch('/api/image', {
@@ -1206,63 +1205,46 @@ ${subs.length > 0 ? `경쟁 글 소제목: ${subs.join(' / ')}` : ''}
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ prompt, aspectRatio: imageAspectRatio, mode: 'blog' as const }),
               });
-              if (imgRes.ok) {
-                const imgData = await imgRes.json() as { imageDataUrl?: string };
-                if (imgData.imageDataUrl) {
-                  const dataUrl = imgData.imageDataUrl;
+              if (!imgRes.ok) { if (attempt === 0) { await new Promise(r => setTimeout(r, 2000)); continue; } break; }
+              const imgData = await imgRes.json() as { imageDataUrl?: string };
+              const dataUrl = imgData.imageDataUrl;
+              if (!dataUrl) { if (attempt === 0) { await new Promise(r => setTimeout(r, 2000)); continue; } break; }
 
-            // 6b) base64 → Supabase Storage 업로드
-            if (supabase) {
-              try {
-                const commaIdx = dataUrl.indexOf(',');
-                const base64Data = dataUrl.substring(commaIdx + 1);
-                const metaPart = dataUrl.substring(0, commaIdx);
-                const mimeMatch = metaPart.match(/data:(.*?);base64/);
-                const mimeType = mimeMatch?.[1] || 'image/png';
-                const ext = mimeType === 'image/jpeg' ? 'jpg' : 'png';
-
-                // binary 변환
-                const byteChars = atob(base64Data);
-                const byteArray = new Uint8Array(byteChars.length);
-                for (let i = 0; i < byteChars.length; i++) {
-                  byteArray[i] = byteChars.charCodeAt(i);
-                }
-                const blob = new Blob([byteArray], { type: mimeType });
-
-                const fileName = `blog/${Date.now()}_${index}.${ext}`;
-                const { error: uploadErr } = await supabase.storage
-                  .from('blog-images')
-                  .upload(fileName, blob, { contentType: mimeType, upsert: false });
-
-                if (!uploadErr) {
-                  const { data: urlData } = supabase.storage.from('blog-images').getPublicUrl(fileName);
-                  if (urlData?.publicUrl) {
-                    return { index, url: urlData.publicUrl };
+              // Supabase Storage 업로드
+              if (supabase) {
+                try {
+                  const commaIdx = dataUrl.indexOf(',');
+                  const base64Data = dataUrl.substring(commaIdx + 1);
+                  const metaPart = dataUrl.substring(0, commaIdx);
+                  const mimeMatch = metaPart.match(/data:(.*?);base64/);
+                  const mimeType = mimeMatch?.[1] || 'image/png';
+                  const ext = mimeType === 'image/jpeg' ? 'jpg' : 'png';
+                  const byteChars = atob(base64Data);
+                  const byteArray = new Uint8Array(byteChars.length);
+                  for (let j = 0; j < byteChars.length; j++) byteArray[j] = byteChars.charCodeAt(j);
+                  const blob = new Blob([byteArray], { type: mimeType });
+                  const fileName = `blog/${Date.now()}_${index}.${ext}`;
+                  const { error: uploadErr } = await supabase.storage.from('blog-images').upload(fileName, blob, { contentType: mimeType, upsert: false });
+                  if (!uploadErr) {
+                    const { data: urlData } = supabase.storage.from('blog-images').getPublicUrl(fileName);
+                    if (urlData?.publicUrl) return { index, url: urlData.publicUrl };
                   }
-                }
-                console.warn(`[IMG_UPLOAD] IMG_${index}: 업로드 실패, base64 fallback`, uploadErr?.message);
-              } catch (uploadErr) {
-                console.warn(`[IMG_UPLOAD] IMG_${index}: 업로드 예외, base64 fallback`, uploadErr);
-              }
-            }
-
-            // 6c) Storage 실패 시 base64 fallback
-            return { index, url: dataUrl };
+                  console.warn(`[IMG_UPLOAD] IMG_${index}: 업로드 실패, base64 fallback`, uploadErr?.message);
+                } catch (uploadErr) {
+                  console.warn(`[IMG_UPLOAD] IMG_${index}: 업로드 예외, base64 fallback`, uploadErr);
                 }
               }
-              // API 성공했지만 이미지 없음 → 재시도
-              if (attempt === 0) { await new Promise(r => setTimeout(r, 2000)); continue; }
+              return { index, url: dataUrl };
             } catch {
               if (attempt === 0) { await new Promise(r => setTimeout(r, 2000)); continue; }
             }
           }
-          // 재시도 실패 → Pexels 대체 이미지
+          // 재시도 실패 → Pexels 대체
           try {
-            const keywords = prompt.split(',').slice(0, 2).join(' ').replace(/[^a-zA-Z\s]/g, '').trim() || 'dental clinic';
-            const pRes = await fetch(`/api/pexels?query=${encodeURIComponent(keywords)}&orientation=landscape&per_page=1`);
+            const kw = prompt.split(',').slice(0, 2).join(' ').replace(/[^a-zA-Z\s]/g, '').trim() || 'dental clinic';
+            const pRes = await fetch(`/api/pexels?query=${encodeURIComponent(kw)}&orientation=landscape&per_page=1`);
             const pData = await pRes.json();
-            const fallbackUrl = pData.photos?.[0]?.url;
-            if (fallbackUrl) return { index, url: fallbackUrl };
+            if (pData.photos?.[0]?.url) return { index, url: pData.photos[0].url };
           } catch { /* ignore */ }
           return { index, url: null };
         };
