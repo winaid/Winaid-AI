@@ -1925,8 +1925,612 @@ export function renderProsConsToCanvas(ctx: CanvasLayoutContext): void {
 
   addHospitalFooter(ctx);
 }
-export function renderPriceTableToCanvas(ctx: CanvasLayoutContext): void { renderGenericToCanvas(ctx); }
-export function renderWarningToCanvas(ctx: CanvasLayoutContext): void { renderGenericToCanvas(ctx); }
-export function renderQuoteToCanvas(ctx: CanvasLayoutContext): void { renderGenericToCanvas(ctx); }
-export function renderNumberedListToCanvas(ctx: CanvasLayoutContext): void { renderGenericToCanvas(ctx); }
-export function renderClosingToCanvas(ctx: CanvasLayoutContext): void { renderGenericToCanvas(ctx); }
+// ══════════════════════════════════════════════════
+// renderPriceTableToCanvas
+// ══════════════════════════════════════════════════
+
+export function renderPriceTableToCanvas(ctx: CanvasLayoutContext): void {
+  const { F, canvas, slide, theme, cardWidth, cardHeight, isDarkTheme } = ctx;
+  const PAD = 64;
+  const GAP = 3;
+  const fontName = resolveFontName(theme, slide.fontId);
+  const innerBg = getInnerCardBg(isDarkTheme);
+  const altBg = isDarkTheme ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)';
+  const items = slide.priceItems || [];
+
+  let curY = PAD;
+
+  // accent bar (중앙)
+  canvas.add(new F.Rect({
+    left: cardWidth / 2 - 30, top: curY, width: 60, height: 4,
+    fill: theme.accentColor, rx: 2, ry: 2,
+    selectable: false, evented: false,
+  }));
+  curY += 20;
+
+  // 제목
+  if (slide.title) {
+    const titleFs = slide.titleFontSize || calcTitleSize(slide.title, 52, 36);
+    const titlePos = slide.titlePosition;
+    canvas.add(new F.Textbox(slide.title, {
+      left: titlePos ? (titlePos.x / 100) * cardWidth : cardWidth / 2,
+      top: titlePos ? (titlePos.y / 100) * cardHeight : curY,
+      originX: 'center',
+      originY: titlePos ? 'center' : 'top',
+      width: cardWidth - PAD * 2,
+      fontSize: titleFs,
+      fontFamily: resolveFontName(theme, slide.titleFontId || slide.fontId),
+      fontWeight: slide.titleFontWeight || '800',
+      fill: slide.titleColor || theme.titleColor,
+      textAlign: 'center',
+      lineHeight: 1.25,
+      name: OBJ.TITLE,
+      splitByGrapheme: true,
+      ...SELECTION_STYLE,
+    }));
+    curY += titleFs * 1.3;
+  }
+
+  curY += 24;
+
+  // 테이블 영역
+  const tableTop = curY;
+  const tableBottom = cardHeight - 80;
+  const tableW = cardWidth - PAD * 2;
+  const nameColW = tableW * 0.58;  // 1.4fr
+  const priceColW = tableW * 0.42; // 1fr (가격+비고)
+  const headerH = 60;
+  const rowCount = items.length;
+  const rowH = Math.min(80, (tableBottom - tableTop - headerH - GAP * rowCount) / Math.max(rowCount, 1));
+
+  // 헤더: 시술 항목
+  canvas.add(new F.Rect({
+    left: PAD, top: tableTop, width: nameColW - GAP / 2, height: headerH,
+    fill: theme.accentColor, selectable: false, evented: false,
+  }));
+  canvas.add(new F.Text('💊 시술 항목', {
+    left: PAD + (nameColW - GAP / 2) / 2, top: tableTop + headerH / 2,
+    originX: 'center', originY: 'center',
+    fontSize: 22, fontWeight: '900', fill: '#FFFFFF', fontFamily: fontName,
+    selectable: false, evented: false,
+  }));
+
+  // 헤더: 예상 비용
+  canvas.add(new F.Rect({
+    left: PAD + nameColW + GAP / 2, top: tableTop, width: priceColW - GAP / 2, height: headerH,
+    fill: theme.accentColor, selectable: false, evented: false,
+  }));
+  canvas.add(new F.Text('💰 예상 비용', {
+    left: PAD + nameColW + GAP / 2 + (priceColW - GAP / 2) / 2, top: tableTop + headerH / 2,
+    originX: 'center', originY: 'center',
+    fontSize: 22, fontWeight: '900', fill: '#FFFFFF', fontFamily: fontName,
+    selectable: false, evented: false,
+  }));
+
+  // 데이터 행
+  items.forEach((item, i) => {
+    const ry = tableTop + headerH + GAP + i * (rowH + GAP);
+    const bg = i % 2 === 0 ? innerBg : altBg;
+
+    // 항목명 셀
+    canvas.add(new F.Rect({
+      left: PAD, top: ry, width: nameColW - GAP / 2, height: rowH,
+      fill: bg, selectable: false, evented: false,
+    }));
+    canvas.add(new F.Textbox(item.name, {
+      left: PAD + (nameColW - GAP / 2) / 2, top: ry + rowH / 2,
+      originX: 'center', originY: 'center',
+      width: nameColW - 40,
+      fontSize: 20, fontWeight: '700', fontFamily: fontName,
+      fill: theme.titleColor, textAlign: 'center',
+      name: OBJ.ITEM_PREFIX + `price_${i}`,
+      splitByGrapheme: true,
+      ...SELECTION_STYLE,
+    }));
+
+    // 가격 셀
+    const priceLeft = PAD + nameColW + GAP / 2;
+    canvas.add(new F.Rect({
+      left: priceLeft, top: ry, width: priceColW - GAP / 2, height: rowH,
+      fill: bg, selectable: false, evented: false,
+    }));
+    canvas.add(new F.Text(item.price, {
+      left: priceLeft + (priceColW - GAP / 2) / 2,
+      top: item.note ? ry + rowH / 2 - 10 : ry + rowH / 2,
+      originX: 'center', originY: 'center',
+      fontSize: 24, fontWeight: '900', fontFamily: fontName,
+      fill: theme.accentColor,
+      selectable: false, evented: false,
+    }));
+
+    // 비고
+    if (item.note) {
+      canvas.add(new F.Text(item.note, {
+        left: priceLeft + (priceColW - GAP / 2) / 2,
+        top: ry + rowH / 2 + 12,
+        originX: 'center', originY: 'center',
+        fontSize: 13, fontWeight: '500', fontFamily: fontName,
+        fill: theme.bodyColor,
+        selectable: false, evented: false,
+      }));
+    }
+  });
+
+  addHospitalFooter(ctx);
+}
+
+// ══════════════════════════════════════════════════
+// renderWarningToCanvas
+// ══════════════════════════════════════════════════
+
+export function renderWarningToCanvas(ctx: CanvasLayoutContext): void {
+  const { F, canvas, slide, theme, cardWidth, cardHeight, isDarkTheme } = ctx;
+  const PAD = 64;
+  const fontName = resolveFontName(theme, slide.fontId);
+  const items = slide.warningItems || [];
+  const layout = calcItemLayout(items.length);
+
+  // 빨간 상단 바
+  canvas.add(new F.Rect({
+    left: 0, top: 0, width: cardWidth, height: 8,
+    fill: '#EF4444',
+    selectable: false, evented: false,
+  }));
+
+  let curY = PAD + 16;
+
+  // ⚠️ 아이콘
+  canvas.add(new F.Text('⚠️', {
+    left: cardWidth / 2, top: curY,
+    originX: 'center', originY: 'top',
+    fontSize: 80,
+    selectable: false, evented: false,
+  }));
+  curY += 100;
+
+  // 경고 제목
+  const warnTitle = slide.warningTitle || slide.title;
+  if (warnTitle) {
+    const titleFs = slide.titleFontSize || calcTitleSize(warnTitle, 52, 36);
+    const titlePos = slide.titlePosition;
+    canvas.add(new F.Textbox(warnTitle, {
+      left: titlePos ? (titlePos.x / 100) * cardWidth : cardWidth / 2,
+      top: titlePos ? (titlePos.y / 100) * cardHeight : curY,
+      originX: 'center',
+      originY: titlePos ? 'center' : 'top',
+      width: cardWidth - PAD * 2,
+      fontSize: titleFs,
+      fontFamily: resolveFontName(theme, slide.titleFontId || slide.fontId),
+      fontWeight: '900',
+      fill: theme.accentColor,
+      textAlign: 'center',
+      lineHeight: 1.25,
+      name: OBJ.TITLE,
+      splitByGrapheme: true,
+      ...SELECTION_STYLE,
+    }));
+    curY += titleFs * 1.3 + 24;
+  }
+
+  // 경고 아이템
+  const itemAreaBottom = cardHeight - 80;
+  const itemH = layout.padding * 2 + layout.fontSize;
+  const totalH = items.length * itemH + (items.length - 1) * layout.gap;
+  const startY = Math.max(curY, (curY + itemAreaBottom) / 2 - totalH / 2);
+  const itemW = cardWidth - PAD * 2;
+
+  items.forEach((item, i) => {
+    const iy = startY + i * (itemH + layout.gap);
+
+    // 아이템 배경 (빨간 투명)
+    canvas.add(new F.Rect({
+      left: PAD, top: iy, width: itemW, height: itemH,
+      fill: 'rgba(239,68,68,0.14)', rx: 16, ry: 16,
+      selectable: false, evented: false,
+    }));
+
+    // 왼쪽 accent 보더
+    canvas.add(new F.Rect({
+      left: PAD, top: iy, width: 6, height: itemH,
+      fill: '#F87171', rx: 3, ry: 3,
+      selectable: false, evented: false,
+    }));
+
+    // ❗ 마커
+    canvas.add(new F.Text('❗', {
+      left: PAD + 36, top: iy + itemH / 2,
+      originX: 'center', originY: 'center',
+      fontSize: 24, fontWeight: '900', fill: '#F87171',
+      selectable: false, evented: false,
+    }));
+
+    // 텍스트
+    canvas.add(new F.Textbox(item, {
+      left: PAD + 64,
+      top: iy + itemH / 2,
+      originX: 'left',
+      originY: 'center',
+      width: itemW - 100,
+      fontSize: layout.fontSize,
+      fontFamily: fontName,
+      fontWeight: '600',
+      fill: theme.titleColor,
+      textAlign: 'left',
+      lineHeight: 1.5,
+      name: OBJ.ITEM_PREFIX + `warn_${i}`,
+      splitByGrapheme: true,
+      ...SELECTION_STYLE,
+    }));
+  });
+
+  addHospitalFooter(ctx);
+}
+
+// ══════════════════════════════════════════════════
+// renderQuoteToCanvas
+// ══════════════════════════════════════════════════
+
+export function renderQuoteToCanvas(ctx: CanvasLayoutContext): void {
+  const { F, canvas, slide, theme, cardWidth, cardHeight, isDarkTheme } = ctx;
+  const fontName = resolveFontName(theme, slide.fontId);
+  const quoteText = slide.quoteText || slide.body || '';
+
+  // 배경 장식 원
+  canvas.add(new F.Circle({
+    left: cardWidth / 2, top: cardHeight / 2,
+    originX: 'center', originY: 'center',
+    radius: 150,
+    fill: `${theme.accentColor}08`,
+    selectable: false, evented: false,
+  }));
+
+  // 여는 따옴표
+  canvas.add(new F.Text('\u201C', {
+    left: cardWidth / 2, top: cardHeight * 0.2,
+    originX: 'center', originY: 'center',
+    fontSize: 140,
+    fontFamily: 'Georgia, serif',
+    fill: theme.accentColor,
+    opacity: 0.35,
+    selectable: false, evented: false,
+  }));
+
+  // 인용문
+  if (quoteText) {
+    const quoteFs = calcTitleSize(quoteText, 28, 20);
+    canvas.add(new F.Textbox(quoteText, {
+      left: cardWidth / 2,
+      top: cardHeight * 0.46,
+      originX: 'center',
+      originY: 'center',
+      width: cardWidth * 0.85,
+      fontSize: quoteFs,
+      fontFamily: fontName,
+      fontWeight: '700',
+      fontStyle: 'italic',
+      fill: theme.titleColor,
+      textAlign: 'center',
+      lineHeight: 1.6,
+      charSpacing: -10,
+      name: OBJ.BODY,
+      splitByGrapheme: true,
+      ...SELECTION_STYLE,
+    }));
+
+    // 인용문 하단 구분선
+    canvas.add(new F.Rect({
+      left: cardWidth / 2 - cardWidth * 0.15,
+      top: cardHeight * 0.58,
+      width: cardWidth * 0.3,
+      height: 3,
+      fill: `${theme.accentColor}40`,
+      rx: 2, ry: 2,
+      selectable: false, evented: false,
+    }));
+  }
+
+  // 저자
+  let authorY = cardHeight * 0.66;
+  if (slide.quoteAuthor) {
+    canvas.add(new F.Text(`— ${slide.quoteAuthor}`, {
+      left: cardWidth / 2,
+      top: authorY,
+      originX: 'center', originY: 'center',
+      fontSize: 24,
+      fontFamily: fontName,
+      fontWeight: '900',
+      fill: theme.accentColor,
+      selectable: false, evented: false,
+    }));
+    authorY += 36;
+  }
+
+  // 역할
+  if (slide.quoteRole) {
+    canvas.add(new F.Text(slide.quoteRole, {
+      left: cardWidth / 2,
+      top: authorY,
+      originX: 'center', originY: 'center',
+      fontSize: 18,
+      fontFamily: fontName,
+      fontWeight: '500',
+      fill: theme.bodyColor,
+      selectable: false, evented: false,
+    }));
+  }
+
+  addHospitalFooter(ctx);
+}
+
+// ══════════════════════════════════════════════════
+// renderNumberedListToCanvas
+// ══════════════════════════════════════════════════
+
+export function renderNumberedListToCanvas(ctx: CanvasLayoutContext): void {
+  const { F, canvas, slide, theme, cardWidth, cardHeight, isDarkTheme } = ctx;
+  const PAD = 64;
+  const fontName = resolveFontName(theme, slide.fontId);
+  const innerBg = getInnerCardBg(isDarkTheme);
+  const innerBorder = getInnerCardBorder(isDarkTheme);
+  const items = slide.numberedItems || [];
+  const layout = calcItemLayout(items.length);
+
+  let curY = PAD;
+
+  // accent bar (왼쪽)
+  canvas.add(new F.Rect({
+    left: PAD, top: curY, width: 60, height: 4,
+    fill: theme.accentColor, rx: 2, ry: 2,
+    selectable: false, evented: false,
+  }));
+  curY += 20;
+
+  // 제목
+  if (slide.title) {
+    const titleFs = slide.titleFontSize || calcTitleSize(slide.title, 52, 36);
+    const titlePos = slide.titlePosition;
+    canvas.add(new F.Textbox(slide.title, {
+      left: titlePos ? (titlePos.x / 100) * cardWidth : PAD,
+      top: titlePos ? (titlePos.y / 100) * cardHeight : curY,
+      originX: titlePos ? 'center' : 'left',
+      originY: titlePos ? 'center' : 'top',
+      width: cardWidth - PAD * 2,
+      fontSize: titleFs,
+      fontFamily: resolveFontName(theme, slide.titleFontId || slide.fontId),
+      fontWeight: slide.titleFontWeight || '800',
+      fill: slide.titleColor || theme.titleColor,
+      textAlign: slide.titleAlign || 'left',
+      lineHeight: 1.25,
+      name: OBJ.TITLE,
+      splitByGrapheme: true,
+      ...SELECTION_STYLE,
+    }));
+    curY += titleFs * 1.3;
+  }
+
+  curY += 24;
+
+  // 아이템 영역
+  const areaBottom = cardHeight - 80;
+  const itemH = layout.padding * 2 + layout.fontSize;
+  const totalH = items.length * itemH + (items.length - 1) * layout.gap;
+  const startY = Math.max(curY, (curY + areaBottom) / 2 - totalH / 2);
+  const itemW = cardWidth - PAD * 2;
+  const numSize = 60;
+
+  items.forEach((item, i) => {
+    const iy = startY + i * (itemH + layout.gap);
+
+    // 연결선 (마지막 제외)
+    if (i < items.length - 1) {
+      canvas.add(new F.Rect({
+        left: PAD + numSize / 2 + 14 - 1.5,
+        top: iy + itemH,
+        width: 3,
+        height: layout.gap + 4,
+        fill: `${theme.accentColor}30`,
+        selectable: false, evented: false,
+      }));
+    }
+
+    // 아이템 배경
+    canvas.add(new F.Rect({
+      left: PAD, top: iy, width: itemW, height: itemH,
+      fill: innerBg, rx: 18, ry: 18,
+      stroke: innerBorder, strokeWidth: 1,
+      selectable: false, evented: false,
+    }));
+
+    // 번호 (rounded rect)
+    const numLeft = PAD + 14;
+    const numTop = iy + (itemH - numSize) / 2;
+    canvas.add(new F.Rect({
+      left: numLeft, top: numTop, width: numSize, height: numSize,
+      fill: theme.accentColor, rx: 16, ry: 16,
+      shadow: new F.Shadow({ color: theme.accentColor + '44', blur: 24, offsetX: 0, offsetY: 8 }),
+      selectable: false, evented: false,
+    }));
+    canvas.add(new F.Text(item.num || String(i + 1).padStart(2, '0'), {
+      left: numLeft + numSize / 2, top: numTop + numSize / 2,
+      originX: 'center', originY: 'center',
+      fontSize: 26, fontWeight: '900', fill: '#FFFFFF',
+      selectable: false, evented: false,
+    }));
+
+    // title 텍스트
+    const textLeft = numLeft + numSize + 24;
+    const textW = itemW - (numLeft - PAD) - numSize - 48;
+    const hasDesc = !!item.desc;
+
+    canvas.add(new F.Textbox(item.title, {
+      left: textLeft,
+      top: hasDesc ? iy + itemH / 2 - 12 : iy + itemH / 2,
+      originX: 'left',
+      originY: 'center',
+      width: textW,
+      fontSize: layout.fontSize,
+      fontFamily: fontName,
+      fontWeight: '800',
+      fill: theme.titleColor,
+      textAlign: 'left',
+      lineHeight: 1.3,
+      name: OBJ.ITEM_PREFIX + `num_${i}`,
+      splitByGrapheme: true,
+      ...SELECTION_STYLE,
+    }));
+
+    // desc
+    if (item.desc) {
+      canvas.add(new F.Textbox(item.desc, {
+        left: textLeft,
+        top: iy + itemH / 2 + 10,
+        originX: 'left',
+        originY: 'top',
+        width: textW,
+        fontSize: layout.fontSize - 4,
+        fontFamily: fontName,
+        fontWeight: '400',
+        fill: theme.bodyColor,
+        textAlign: 'left',
+        lineHeight: 1.5,
+        selectable: false, evented: false,
+      }));
+    }
+  });
+
+  addHospitalFooter(ctx);
+}
+
+// ══════════════════════════════════════════════════
+// renderClosingToCanvas
+// ══════════════════════════════════════════════════
+
+export function renderClosingToCanvas(ctx: CanvasLayoutContext): void {
+  const { slide } = ctx;
+  // 커버 템플릿이 있으면 커버와 동일하게 렌더
+  const tmpl = slide.coverTemplateId
+    ? COVER_TEMPLATES.find(t => t.id === slide.coverTemplateId)
+    : null;
+  if (tmpl) {
+    renderCoverFromTemplateToCanvas(ctx, tmpl);
+    return;
+  }
+
+  const { F, canvas, theme, cardWidth, cardHeight, isDarkTheme } = ctx;
+  const fontName = resolveFontName(theme, slide.titleFontId || slide.fontId);
+  const centerX = cardWidth / 2;
+  let curY = cardHeight * 0.3;
+
+  // accent bar (중앙)
+  canvas.add(new F.Rect({
+    left: centerX - 36, top: curY, width: 72, height: 5,
+    fill: theme.accentColor, rx: 3, ry: 3,
+    selectable: false, evented: false,
+  }));
+  curY += 40;
+
+  // 부제 (pill badge 형태)
+  if (slide.subtitle) {
+    const subPos = slide.subtitlePosition;
+    const subText = slide.subtitle;
+    const subW = Math.min(subText.length * 22 + 48, cardWidth * 0.7);
+    const subH = 48;
+    const sx = subPos ? (subPos.x / 100) * cardWidth : centerX;
+    const sy = subPos ? (subPos.y / 100) * cardHeight : curY;
+
+    // pill 배경
+    canvas.add(new F.Rect({
+      left: sx - subW / 2, top: sy - subH / 2, width: subW, height: subH,
+      fill: `${theme.accentColor}22`, rx: subH / 2, ry: subH / 2,
+      selectable: false, evented: false,
+    }));
+    canvas.add(new F.Textbox(subText, {
+      left: sx, top: sy,
+      originX: 'center', originY: 'center',
+      width: subW - 20,
+      fontSize: slide.subtitleFontSize || 22,
+      fontFamily: resolveFontName(theme, slide.subtitleFontId || slide.fontId),
+      fontWeight: '800',
+      fill: theme.accentColor,
+      textAlign: 'center',
+      charSpacing: 2,
+      name: OBJ.SUBTITLE,
+      splitByGrapheme: true,
+      ...SELECTION_STYLE,
+    }));
+    curY += subH + 24;
+  }
+
+  // 제목 (감사/마무리 메시지)
+  if (slide.title) {
+    const titleFs = slide.titleFontSize || calcTitleSize(slide.title, 64, 42);
+    const titlePos = slide.titlePosition;
+    canvas.add(new F.Textbox(slide.title, {
+      left: titlePos ? (titlePos.x / 100) * cardWidth : centerX,
+      top: titlePos ? (titlePos.y / 100) * cardHeight : curY,
+      originX: 'center',
+      originY: titlePos ? 'center' : 'top',
+      width: cardWidth * 0.9,
+      fontSize: titleFs,
+      fontFamily: fontName,
+      fontWeight: slide.titleFontWeight || '900',
+      fill: slide.titleColor || theme.titleColor,
+      textAlign: 'center',
+      lineHeight: slide.titleLineHeight || 1.25,
+      charSpacing: (slide.titleLetterSpacing || -0.4) * 10,
+      name: OBJ.TITLE,
+      splitByGrapheme: true,
+      shadow: isDarkTheme ? new F.Shadow({ color: 'rgba(0,0,0,0.25)', blur: 24, offsetX: 0, offsetY: 2 }) : undefined,
+      ...SELECTION_STYLE,
+    }));
+    curY += titleFs * 1.3 + 16;
+  }
+
+  // 본문
+  if (slide.body) {
+    canvas.add(new F.Textbox(slide.body, {
+      left: centerX, top: curY,
+      originX: 'center', originY: 'top',
+      width: cardWidth * 0.8,
+      fontSize: 20,
+      fontFamily: resolveFontName(theme, slide.fontId),
+      fontWeight: '400',
+      fill: theme.bodyColor,
+      textAlign: 'center',
+      lineHeight: 1.7,
+      name: OBJ.BODY,
+      splitByGrapheme: true,
+      ...SELECTION_STYLE,
+    }));
+    curY += 60;
+  }
+
+  // 병원명 강조
+  if (theme.hospitalName) {
+    const hospY = Math.max(curY + 12, cardHeight * 0.72);
+
+    // 상단 구분선
+    canvas.add(new F.Rect({
+      left: centerX - 60, top: hospY - 16,
+      width: 120, height: 3,
+      fill: theme.accentColor,
+      rx: 2, ry: 2,
+      selectable: false, evented: false,
+    }));
+
+    canvas.add(new F.Textbox(theme.hospitalName, {
+      left: centerX, top: hospY + 10,
+      originX: 'center', originY: 'top',
+      width: cardWidth * 0.6,
+      fontSize: 24,
+      fontFamily: fontName,
+      fontWeight: '800',
+      fill: theme.titleColor,
+      textAlign: 'center',
+      charSpacing: 40,
+      name: OBJ.HOSPITAL,
+      splitByGrapheme: true,
+      ...SELECTION_STYLE,
+    }));
+  }
+}
