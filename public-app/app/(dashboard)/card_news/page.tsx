@@ -206,6 +206,27 @@ export default function CardNewsPage() {
   /** 추천 디자인 모달 열기 — 템플릿 자체 정보로 프리뷰 구성 */
   const [previewBgImages, setPreviewBgImages] = useState<string[]>([]);
 
+  const fetchPreviewImages = async (style: ImageStyleType) => {
+    setLoadingPreviews(true);
+    try {
+      const query = lastPexelsQuery || await fetchPexelsQuery();
+      const count = COVER_TEMPLATES.length;
+      if (style === 'photo') {
+        // Pexels 실사 사진
+        const res = await fetch(`/api/pexels?query=${encodeURIComponent(query)}&orientation=square&per_page=${count}`);
+        const data = await res.json();
+        setPreviewBgImages((data.photos || []).map((p: { url: string }) => p.url));
+      } else {
+        // Pixabay 일러스트/벡터
+        const pixType = style === 'infographic' ? 'vector' : 'illustration';
+        const res = await fetch(`/api/pixabay?query=${encodeURIComponent(query)}&image_type=${pixType}&orientation=horizontal&per_page=${count}`);
+        const data = await res.json();
+        setPreviewBgImages((data.photos || []).map((p: { url: string }) => p.url));
+      }
+    } catch { /* 실패 시 색상 배경 유지 */ }
+    setLoadingPreviews(false);
+  };
+
   const openDesignModal = async () => {
     setShowDesignModal(true);
     setSelectedPreviewIdx(0);
@@ -214,16 +235,7 @@ export default function CardNewsPage() {
       imageUrl: '',
       templateId: tmpl.id,
     })));
-    setLoadingPreviews(true);
-    // Pexels에서 주제에 맞는 배경 이미지를 가져와 프리뷰에 적용
-    try {
-      const query = lastPexelsQuery || await fetchPexelsQuery();
-      const res = await fetch(`/api/pexels?query=${encodeURIComponent(query)}&orientation=square&per_page=${COVER_TEMPLATES.length}`);
-      const data = await res.json();
-      const photos: string[] = (data.photos || []).map((p: { url: string }) => p.url);
-      setPreviewBgImages(photos);
-    } catch { /* 실패 시 색상 배경 유지 */ }
-    setLoadingPreviews(false);
+    await fetchPreviewImages(imageStyle);
   };
 
   const autoApplyBackgrounds = async (slides: ProSlideData[]): Promise<ProSlideData[]> => {
@@ -1420,16 +1432,14 @@ DECORATIVE: (장식 요소)`,
 
             {/* 이미지 스타일 선택 */}
             <div className="px-8 py-4 border-t border-slate-100">
-              <p className="text-xs font-semibold text-slate-500 mb-2">이미지 스타일</p>
+              <p className="text-xs font-semibold text-slate-500 mb-2">배경 이미지 스타일</p>
               <div className="flex gap-2 flex-wrap">
                 {([
-                  { id: 'illustration' as const, label: '일러스트', icon: '🎨' },
-                  { id: 'photo' as const, label: '실사 사진', icon: '📷' },
-                  { id: 'medical-3d' as const, label: '3D 의료', icon: '🧬' },
-                  { id: 'infographic' as const, label: '인포그래픽', icon: '📊' },
-                  { id: 'watercolor' as const, label: '수채화', icon: '🖌️' },
+                  { id: 'illustration' as const, label: '일러스트', icon: '🎨', desc: 'Pixabay 일러스트' },
+                  { id: 'photo' as const, label: '실사 사진', icon: '📷', desc: 'Pexels 사진' },
+                  { id: 'infographic' as const, label: '아이콘/벡터', icon: '📊', desc: 'Pixabay 벡터' },
                 ]).map(s => (
-                  <button key={s.id} type="button" onClick={() => setImageStyle(s.id)}
+                  <button key={s.id} type="button" onClick={() => { setImageStyle(s.id); fetchPreviewImages(s.id); }}
                     className={`px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
                       imageStyle === s.id
                         ? 'bg-blue-600 text-white shadow-sm'
