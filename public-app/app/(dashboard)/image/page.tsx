@@ -1188,21 +1188,34 @@ If the result looks significantly different from the reference, you have FAILED.
 
   const handleDownload = useCallback((pageIndex?: number) => {
     if (resultImages.length === 0) return;
+    const downloadOne = (dataUrl: string, name: string) => {
+      // data URI → Blob → ObjectURL (Safari/큰 파일 호환)
+      try {
+        const [header, base64] = dataUrl.split(',');
+        const mime = header.match(/:(.*?);/)?.[1] || 'image/png';
+        const binary = atob(base64);
+        const arr = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) arr[i] = binary.charCodeAt(i);
+        const blob = new Blob([arr], { type: mime });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = name;
+        link.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      } catch {
+        // fallback: data URI 직접 다운로드
+        const link = document.createElement('a');
+        link.href = dataUrl;
+        link.download = name;
+        link.click();
+      }
+    };
     if (pageIndex !== undefined) {
-      // 단일 다운로드
-      const link = document.createElement('a');
-      link.href = resultImages[pageIndex];
-      link.download = `hospital-image-${pageIndex + 1}-${Date.now()}.png`;
-      link.click();
+      downloadOne(resultImages[pageIndex], `hospital-image-${pageIndex + 1}-${Date.now()}.png`);
     } else {
-      // 전체 다운로드
       resultImages.forEach((img, i) => {
-        setTimeout(() => {
-          const link = document.createElement('a');
-          link.href = img;
-          link.download = `hospital-image-${i + 1}-${Date.now()}.png`;
-          link.click();
-        }, i * 300);
+        setTimeout(() => downloadOne(img, `hospital-image-${i + 1}-${Date.now()}.png`), i * 300);
       });
     }
   }, [resultImages]);
