@@ -1374,63 +1374,16 @@ DECORATIVE: (장식 요소)`,
                           : tmpl.layout.titlePosition.includes('right') ? 'right'
                           : 'center') as 'left' | 'right' | 'center',
                       }}>
-                        {/* 뱃지 */}
-                        {tmpl.decorations.hasBadge && (
-                          <div style={{
-                            position: 'absolute', top: '10px', zIndex: 5,
-                            ...(tmpl.decorations.badgePosition === 'top-left' ? { left: '10px' }
-                              : tmpl.decorations.badgePosition === 'top-right' ? { right: '10px' }
-                              : { left: '50%', transform: 'translateX(-50%)' }),
-                            background: tmpl.colors.accent, color: '#fff',
-                            fontSize: '7px', fontWeight: 800, padding: '3px 8px', borderRadius: '4px', letterSpacing: '0.5px',
-                          }}>BADGE</div>
-                        )}
-
-                        {/* 핸들 */}
-                        {tmpl.decorations.hasHandle && (
-                          <div style={{ fontSize: '7px', color: tmpl.colors.subtitle, marginBottom: '4px', opacity: 0.7 }}>@hospital</div>
-                        )}
-
-                        {/* 부제 (above-title) */}
-                        {tmpl.layout.subtitlePosition === 'above-title' && (
-                          <div style={{ fontSize: '8px', color: tmpl.colors.subtitle, marginBottom: '4px', letterSpacing: '0.5px' }}>&ldquo;부제목&rdquo;</div>
-                        )}
-
-                        {/* 라인 장식 */}
-                        {tmpl.decorations.hasLine && (
-                          <div style={{ width: '24px', height: '2px', background: tmpl.colors.accent, borderRadius: '1px', marginBottom: '6px',
-                            ...(tmpl.layout.titlePosition.includes('center') ? { alignSelf: 'center' } : {}),
-                          }} />
-                        )}
-
-                        {/* 제목 */}
+                        {/* 제목만 깔끔하게 */}
                         <div style={{
                           color: tmpl.colors.title,
                           fontSize: '13px',
                           fontWeight: tmpl.layout.titleWeight,
-                          lineHeight: 1.25,
+                          lineHeight: 1.3,
                           wordBreak: 'keep-all',
-                          maxWidth: tmpl.layout.titleMaxWidth,
                         }}>
                           {titlePreview}
                         </div>
-
-                        {/* 부제 (below-title) */}
-                        {tmpl.layout.subtitlePosition === 'below-title' && (
-                          <div style={{ fontSize: '8px', color: tmpl.colors.subtitle, marginTop: '4px' }}>부제목 텍스트</div>
-                        )}
-
-                        {/* 해시태그 */}
-                        {tmpl.decorations.hasHashtags && (
-                          <div style={{ fontSize: '7px', color: tmpl.colors.hashtag, marginTop: '8px', opacity: 0.6 }}>#건강 #치과 #관리</div>
-                        )}
-
-                        {/* 화살표 */}
-                        {tmpl.decorations.hasArrows && (
-                          <div style={{ position: 'absolute', bottom: '10px', right: '10px', fontSize: '12px', color: tmpl.colors.accent, opacity: 0.7 }}>
-                            {tmpl.decorations.arrowStyle === 'circle' ? '▷' : '›'}
-                          </div>
-                        )}
                       </div>
 
                       {/* 선택 체크 */}
