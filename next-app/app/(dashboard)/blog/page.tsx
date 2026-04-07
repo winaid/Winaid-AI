@@ -907,7 +907,7 @@ ${subs.length > 0 ? `경쟁 글 소제목: ${subs.join(' / ')}` : ''}
       // ═══ 스트리밍 모드로 Gemini 호출 ═══
       // 동적 토큰 예산: 목표 글자수 × 4 (한글 1자 ≈ 2~3 토큰 + SEO/이미지 마커 여유)
       // 최소 8192, 최대 32768. 이전 65536은 과다해 모델이 2500자 요청에도 7000자 초과 출력.
-      const dynamicMaxTokens = Math.max(8192, Math.min(textLength * 4, 32768));
+      const dynamicMaxTokens = 65536;
       const res = await fetch('/api/gemini', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
