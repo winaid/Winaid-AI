@@ -298,10 +298,19 @@ export default function CardNewsPage() {
   const autoApplyBackgrounds = async (slides: ProSlideData[]): Promise<ProSlideData[]> => {
     try {
       const baseQ = lastPexelsQuery || await fetchPexelsQuery();
-      const query = `${baseQ} asian`;
-      const res = await fetch(`/api/pexels?query=${encodeURIComponent(query)}&orientation=square&per_page=20&page=${Math.floor(Math.random() * 3) + 1}`);
-      const data = await res.json();
-      const photos = (data.photos || []) as { url: string }[];
+      let photos: { url: string }[];
+      if (imageStyle === 'photo') {
+        // 실사: Pexels
+        const res = await fetch(`/api/pexels?query=${encodeURIComponent(baseQ)}&orientation=square&per_page=20&page=${Math.floor(Math.random() * 3) + 1}`);
+        const data = await res.json();
+        photos = (data.photos || []) as { url: string }[];
+      } else {
+        // 일러스트/벡터: Pixabay
+        const pixType = imageStyle === 'infographic' ? 'vector' : 'illustration';
+        const res = await fetch(`/api/pixabay?query=${encodeURIComponent(baseQ)}&image_type=${pixType}&orientation=horizontal&per_page=20&page=${Math.floor(Math.random() * 3) + 1}`);
+        const data = await res.json();
+        photos = (data.photos || []) as { url: string }[];
+      }
       if (photos.length > 0) {
         for (let i = 0; i < slides.length; i++) {
           const s = slides[i];
