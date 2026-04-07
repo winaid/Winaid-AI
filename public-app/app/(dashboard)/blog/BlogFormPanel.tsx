@@ -164,32 +164,48 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
             {CATEGORIES.map(cat => <option key={cat.value} value={cat.value}>{cat.label}</option>)}
           </select>
 
-          {/* 병원 주소 + 키워드 분석 */}
+          {/* 병원 주소 */}
           {hospitalName && (
             <div>
               <label className={labelCls}>병원 주소 (키워드 분석용)</label>
-              <div className="flex gap-1.5">
-                <input type="text" value={selectedHospitalAddress} onChange={e => setSelectedHospitalAddress(e.target.value)}
-                  placeholder="예: 서울 강남구 역삼동" className="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-xs focus:border-blue-400 outline-none bg-white" />
-                <button type="button" onClick={handleAnalyzeKeywords}
-                  disabled={isAnalyzingKeywords || !selectedHospitalAddress.trim()}
-                  className="px-3 py-2 rounded-lg text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 whitespace-nowrap">
-                  {isAnalyzingKeywords ? '분석 중...' : '🔍 키워드 분석'}
-                </button>
-              </div>
+              <input type="text" value={selectedHospitalAddress} onChange={e => setSelectedHospitalAddress(e.target.value)}
+                placeholder="예: 서울 강남구 역삼동" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:border-blue-400 outline-none bg-white" />
             </div>
           )}
 
-          {/* 키워드 분석 결과 */}
-          {selectedHospitalAddress && hospitalName && showKeywordPanel && (
-            <button
-              type="button"
-              onClick={handleAnalyzeKeywords}
-              disabled={isAnalyzingKeywords}
-              className="w-full py-2.5 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-2 bg-blue-600 text-white hover:bg-blue-700 shadow-sm disabled:opacity-50"
-            >
-              <span>🔍</span>
-              <span>{isAnalyzingKeywords ? '키워드 분석 중...' : '키워드 분석'}</span>
+          {/* 병원 홈페이지/블로그 URL */}
+          {hospitalName && (
+            <div>
+              <label className={labelCls}>병원 홈페이지/블로그 URL</label>
+              <div className="flex gap-1.5">
+                <input type="url" value={homepageUrl} onChange={e => { setHomepageUrl(e.target.value); setClinicContext(null); setCrawlProgress(''); }}
+                  placeholder="https://blog.naver.com/..." className="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-xs focus:border-blue-400 outline-none bg-white" />
+                <button type="button" onClick={handleCrawlHomepage} disabled={isCrawling || !homepageUrl.trim()}
+                  className="px-3 py-2 rounded-lg text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-40 whitespace-nowrap">
+                  {isCrawling ? '분석 중...' : '🔍 분석'}
+                </button>
+              </div>
+              {crawlProgress && <p className="mt-1 text-[10px] text-slate-400">{crawlProgress}</p>}
+              {clinicContext && (
+                <div className="mt-1.5 p-2 bg-emerald-50 rounded-lg border border-emerald-100">
+                  <p className="text-[10px] font-semibold text-emerald-700 mb-1">분석 결과 (신뢰도 {Math.round(clinicContext.confidence * 100)}%)</p>
+                  {clinicContext.actualServices.length > 0 && <p className="text-[10px] text-slate-600">서비스: {clinicContext.actualServices.join(', ')}</p>}
+                  {clinicContext.specialties.length > 0 && <p className="text-[10px] text-slate-600">특화: {clinicContext.specialties.join(', ')}</p>}
+                  {clinicContext.locationSignals.length > 0 && <p className="text-[10px] text-slate-600">지역: {clinicContext.locationSignals.join(', ')}</p>}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* 키워드 분석 버튼 */}
+          {hospitalName && selectedHospitalAddress && (
+            <button type="button" onClick={handleAnalyzeKeywords}
+              disabled={isAnalyzingKeywords || !selectedHospitalAddress.trim()}
+              className="w-full py-2.5 rounded-lg text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-2">
+              {isAnalyzingKeywords
+                ? <><div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />키워드 분석 중...</>
+                : <>🔍 키워드 분석{clinicContext ? ' (홈페이지 반영)' : ''}</>
+              }
             </button>
           )}
 
@@ -429,7 +445,6 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
               audienceMode !== '환자용(친절/공감)',
               keywords.trim(),
               disease.trim(),
-              homepageUrl.trim(),
               textLength !== 2500,
               imageCount !== 2,
               imageStyle !== 'photo',
@@ -484,29 +499,6 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
                 <label className={labelCls}>질환명</label>
                 <input type="text" value={disease} onChange={e => setDisease(e.target.value)} placeholder="예: 치주염, 충치 — 글의 실제 주제" className={inputCls} />
               </div>
-              {/* 블로그 URL */}
-              {hospitalName && (
-                <div>
-                  <label className={labelCls}>병원 홈페이지/블로그 URL</label>
-                  <div className="flex gap-1.5">
-                    <input type="url" value={homepageUrl} onChange={e => { setHomepageUrl(e.target.value); setClinicContext(null); setCrawlProgress(''); }}
-                      placeholder="https://blog.naver.com/..." className="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-xs focus:border-blue-400 outline-none bg-white" />
-                    <button type="button" onClick={handleCrawlHomepage} disabled={isCrawling || !homepageUrl.trim()}
-                      className="px-3 py-2 rounded-lg text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-40 whitespace-nowrap">
-                      {isCrawling ? '분석 중...' : '분석'}
-                    </button>
-                  </div>
-                  {crawlProgress && <p className="mt-1 text-[10px] text-slate-400">{crawlProgress}</p>}
-                  {clinicContext && (
-                    <div className="mt-1.5 p-2 bg-emerald-50 rounded-lg border border-emerald-100">
-                      <p className="text-[10px] font-semibold text-emerald-700 mb-1">분석 결과 (신뢰도 {Math.round(clinicContext.confidence * 100)}%)</p>
-                      {clinicContext.actualServices.length > 0 && <p className="text-[10px] text-slate-600">서비스: {clinicContext.actualServices.join(', ')}</p>}
-                      {clinicContext.specialties.length > 0 && <p className="text-[10px] text-slate-600">특화: {clinicContext.specialties.join(', ')}</p>}
-                      {clinicContext.locationSignals.length > 0 && <p className="text-[10px] text-slate-600">지역: {clinicContext.locationSignals.join(', ')}</p>}
-                    </div>
-                  )}
-                </div>
-              )}
               {/* 글 길이 */}
               <div>
                 <p className="text-xs font-semibold text-slate-500 mb-1.5">글 길이</p>
