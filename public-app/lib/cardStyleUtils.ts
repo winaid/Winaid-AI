@@ -168,6 +168,7 @@ export function getTitleStyle(
     wordBreak: 'keep-all',
     whiteSpace: 'pre-line',
     textAlign: (slide.titleAlign || defaults.textAlign || undefined) as CSSProperties['textAlign'],
+    ...(slide.textShadow ? { textShadow: '0 2px 12px rgba(0,0,0,0.5), 0 1px 3px rgba(0,0,0,0.3)' } : {}),
     ...(slide.titleFontId ? { fontFamily: titleFontFamily || slideFontFamily } : {}),
     ...(slide.titlePosition ? {
       position: 'absolute' as const,
@@ -196,6 +197,7 @@ export function getSubtitleStyle(
     lineHeight: slide.subtitleLineHeight || 1.55,
     wordBreak: 'keep-all',
     whiteSpace: 'pre-line',
+    ...(slide.textShadow ? { textShadow: '0 2px 8px rgba(0,0,0,0.4)' } : {}),
     ...(slide.subtitleFontId ? { fontFamily: subtitleFontFamily || slideFontFamily } : {}),
     ...(slide.subtitlePosition ? {
       position: 'absolute' as const,

@@ -184,6 +184,7 @@ export interface SlideData {
   // 정렬
   titleAlign?: 'left' | 'center' | 'right';
   contentAlignV?: 'top' | 'center' | 'bottom';
+  textShadow?: boolean;
 
   // 로고/병원명 위치
   logoPosition?: { x: number; y: number };

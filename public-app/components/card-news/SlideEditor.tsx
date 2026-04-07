@@ -842,6 +842,13 @@ ${JSON.stringify(slideForContext, null, 2)}
             </div>
           </div>
 
+          {/* 텍스트 그림자 */}
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" checked={!!slide.textShadow} onChange={e => onChange({ textShadow: e.target.checked })}
+              className="w-3.5 h-3.5 rounded border-slate-300 text-blue-600" />
+            <span className="text-[10px] font-semibold text-slate-500">텍스트 그림자 (배경 이미지 위 가독성)</span>
+          </label>
+
           {/* 부제 */}
           <ElementAccordion icon="T" label={slide.subtitle || '부제'} defaultOpen={false}>
             <TextElementEditor value={slide.subtitle || ''} onChange={v => onChange({ subtitle: v })}
