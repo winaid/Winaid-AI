@@ -62,6 +62,34 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
   const [customFontDisplayName, setCustomFontDisplayName] = useState<string | null>(null);
   const customFontInputRef = useRef<HTMLInputElement | null>(null);
 
+  // ── Undo 히스토리 (Ctrl+Z) ──
+  const undoStackRef = useRef<SlideData[][]>([]);
+  const MAX_UNDO = 30;
+
+  /** slides 변경 시 히스토리에 현재 상태 저장 후 변경 */
+  const pushAndChange = (newSlides: SlideData[]) => {
+    undoStackRef.current.push(JSON.parse(JSON.stringify(slides)));
+    if (undoStackRef.current.length > MAX_UNDO) undoStackRef.current.shift();
+    onSlidesChange(newSlides);
+  };
+
+  const undo = () => {
+    const prev = undoStackRef.current.pop();
+    if (prev) onSlidesChange(prev);
+  };
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        undo();
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slides]);
+
   // 선택된 폰트가 Google Fonts 기반이면 CDN 로드 후 fontLoaded 증가 → 카드 re-mount
   useEffect(() => {
     const fontId = theme.fontId || 'pretendard';
@@ -159,7 +187,7 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
 
   /** 특정 슬라이드 업데이트 (얕은 머지) */
   const updateSlide = (idx: number, patch: Partial<SlideData>) => {
-    onSlidesChange(slides.map((s, i) => (i === idx ? { ...s, ...patch } : s)));
+    pushAndChange(slides.map((s, i) => (i === idx ? { ...s, ...patch } : s)));
   };
 
   /** 슬라이드 복제 */
@@ -167,7 +195,7 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
     const clone: SlideData = JSON.parse(JSON.stringify(slides[idx]));
     const newSlides = [...slides];
     newSlides.splice(idx + 1, 0, clone);
-    onSlidesChange(newSlides.map((s, i) => ({ ...s, index: i + 1 })));
+    pushAndChange(newSlides.map((s, i) => ({ ...s, index: i + 1 })));
   };
 
   /** 빈 슬라이드 추가 */
@@ -192,7 +220,7 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
       ...(layout === 'numbered-list' ? { numberedItems: [{ title: '항목 1', desc: '' }] } : {}),
       ...(layout === 'data-highlight' ? { dataPoints: [{ value: '90%', label: '데이터', highlight: true }] } : {}),
     };
-    onSlidesChange([...slides, newSlide]);
+    pushAndChange([...slides, newSlide]);
     setShowAddSlide(false);
   };
 
@@ -200,7 +228,7 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
   const removeSlide = (idx: number) => {
     if (slides.length <= 1) return;
     const newSlides = slides.filter((_, i) => i !== idx);
-    onSlidesChange(newSlides.map((s, i) => ({ ...s, index: i + 1 })));
+    pushAndChange(newSlides.map((s, i) => ({ ...s, index: i + 1 })));
     if (editingIdx === idx) setEditingIdx(null);
     else if (editingIdx !== null && editingIdx > idx) setEditingIdx(editingIdx - 1);
   };
@@ -219,7 +247,7 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
     const newSlides = [...slides];
     const [moved] = newSlides.splice(from, 1);
     newSlides.splice(to, 0, moved);
-    onSlidesChange(newSlides.map((s, i) => ({ ...s, index: i + 1 })));
+    pushAndChange(newSlides.map((s, i) => ({ ...s, index: i + 1 })));
     // 편집 중인 슬라이드 인덱스 추적
     if (editingIdx !== null) {
       if (editingIdx === from) {
@@ -242,7 +270,7 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
     const curr = slides[idx];
     if (!curr) return;
     const withDefaults = buildLayoutDefaults(curr, newLayout);
-    onSlidesChange(slides.map((s, i) => (i === idx ? withDefaults : s)));
+    pushAndChange(slides.map((s, i) => (i === idx ? withDefaults : s)));
     // 백그라운드에서 AI가 내용 자동 채우기 (플레이스홀더만 있을 때)
     const patch = await fillLayoutContent(withDefaults, slides);
     if (patch) updateSlide(idx, patch);
