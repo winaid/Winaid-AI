@@ -51,8 +51,7 @@ export default function CardNewsPage() {
   const [slideCount, setSlideCount] = useState(0); // 0 = 자동
   const [proCardRatio, setProCardRatio] = useState<'1:1' | '3:4' | '4:5' | '9:16' | '16:9'>('1:1');
   const [designTemplateId, setDesignTemplateId] = useState<CardNewsDesignTemplateId | undefined>(undefined);
-  // 이미지 스타일 UI는 상세설정과 함께 제거됨. 레거시 AI 이미지 플로우 참조용 고정값.
-  const imageStyle: ImageStyleType = 'illustration';
+  const [imageStyle, setImageStyle] = useState<ImageStyleType>('illustration');
   const [category, setCategory] = useState<ContentCategory>(ContentCategory.DENTAL);
   const [audienceMode, setAudienceMode] = useState<AudienceMode>('환자용(친절/공감)');
   const [contentMode, setContentMode] = useState<'simple' | 'detailed'>('simple');
@@ -205,7 +204,9 @@ export default function CardNewsPage() {
   };
 
   /** 추천 디자인 모달 열기 — 템플릿 자체 정보로 프리뷰 구성 */
-  const openDesignModal = () => {
+  const [previewBgImages, setPreviewBgImages] = useState<string[]>([]);
+
+  const openDesignModal = async () => {
     setShowDesignModal(true);
     setSelectedPreviewIdx(0);
     setDesignPreviews(COVER_TEMPLATES.map((tmpl, i) => ({
@@ -213,6 +214,15 @@ export default function CardNewsPage() {
       imageUrl: '',
       templateId: tmpl.id,
     })));
+    setLoadingPreviews(true);
+    // Pexels에서 주제에 맞는 배경 이미지를 가져와 프리뷰에 적용
+    try {
+      const query = lastPexelsQuery || await fetchPexelsQuery();
+      const res = await fetch(`/api/pexels?query=${encodeURIComponent(query)}&orientation=square&per_page=${COVER_TEMPLATES.length}`);
+      const data = await res.json();
+      const photos: string[] = (data.photos || []).map((p: { url: string }) => p.url);
+      setPreviewBgImages(photos);
+    } catch { /* 실패 시 색상 배경 유지 */ }
     setLoadingPreviews(false);
   };
 
@@ -1287,7 +1297,8 @@ DECORATIVE: (장식 요소)`,
             <div className="px-8 py-6 overflow-y-auto max-h-[60vh]">
               <div className="grid grid-cols-3 lg:grid-cols-5 gap-4">
                 {COVER_TEMPLATES.map((tmpl, i) => {
-                  const titlePreview = topic.length > 12 ? topic.slice(0, 12) + '\u2026' : (topic || '제목 미리보기');
+                  const titlePreview = topic.length > 12 ? topic.slice(0, 12) + '...' : (topic || '제목 미리보기');
+                  const bgImage = previewBgImages[i % Math.max(previewBgImages.length, 1)];
                   return (
                     <button key={tmpl.id} type="button" onClick={() => setSelectedPreviewIdx(i)}
                       className={`relative rounded-2xl overflow-hidden border-3 transition-all ${
@@ -1296,13 +1307,23 @@ DECORATIVE: (장식 요소)`,
                         ? 'border-blue-500 ring-4 ring-blue-100 scale-[1.02]'
                         : 'border-transparent hover:border-slate-300 hover:shadow-lg'}`}>
 
-                      {/* 배경: 템플릿 thumbnail gradient / solid */}
+                      {/* 배경: Pexels 이미지 + 오버레이, 없으면 그라데이션 */}
                       <div className="absolute inset-0" style={{
                         background: tmpl.background.gradient
                           || tmpl.background.solidColor
                           || tmpl.thumbnail
                           || '#1a1a2e',
                       }} />
+                      {bgImage && (
+                        <>
+                          <img src={bgImage} alt="" className="absolute inset-0 w-full h-full object-cover" crossOrigin="anonymous" />
+                          <div className="absolute inset-0" style={{
+                            background: tmpl.background.gradient
+                              ? `${tmpl.background.gradient.replace(/,\s*#/g, '99, #').replace(/100%\)/, '80%)') || tmpl.background.gradient}`
+                              : `linear-gradient(180deg, ${tmpl.colors.title === '#FFFFFF' ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.7)'} 0%, ${tmpl.colors.title === '#FFFFFF' ? 'rgba(0,0,0,0.8)' : 'rgba(255,255,255,0.85)'} 100%)`,
+                          }} />
+                        </>
+                      )}
 
                       {/* 오버레이 (있으면) */}
                       {tmpl.background.overlayGradient && (
@@ -1375,7 +1396,7 @@ DECORATIVE: (장식 요소)`,
                         {/* 화살표 */}
                         {tmpl.decorations.hasArrows && (
                           <div style={{ position: 'absolute', bottom: '10px', right: '10px', fontSize: '12px', color: tmpl.colors.accent, opacity: 0.7 }}>
-                            {tmpl.decorations.arrowStyle === 'circle' ? '\u25B7' : '\u203A'}
+                            {tmpl.decorations.arrowStyle === 'circle' ? '▷' : '›'}
                           </div>
                         )}
                       </div>
@@ -1383,7 +1404,7 @@ DECORATIVE: (장식 요소)`,
                       {/* 선택 체크 */}
                       {selectedPreviewIdx === i && (
                         <div className="absolute top-2 right-2 w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center shadow-lg z-10">
-                          <span className="text-white text-[10px] font-bold">\u2713</span>
+                          <span className="text-white text-[10px] font-bold">{'✓'}</span>
                         </div>
                       )}
 
@@ -1394,6 +1415,29 @@ DECORATIVE: (장식 요소)`,
                     </button>
                   );
                 })}
+              </div>
+            </div>
+
+            {/* 이미지 스타일 선택 */}
+            <div className="px-8 py-4 border-t border-slate-100">
+              <p className="text-xs font-semibold text-slate-500 mb-2">이미지 스타일</p>
+              <div className="flex gap-2 flex-wrap">
+                {([
+                  { id: 'illustration' as const, label: '일러스트', icon: '🎨' },
+                  { id: 'photo' as const, label: '실사 사진', icon: '📷' },
+                  { id: 'medical-3d' as const, label: '3D 의료', icon: '🧬' },
+                  { id: 'infographic' as const, label: '인포그래픽', icon: '📊' },
+                  { id: 'watercolor' as const, label: '수채화', icon: '🖌️' },
+                ]).map(s => (
+                  <button key={s.id} type="button" onClick={() => setImageStyle(s.id)}
+                    className={`px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
+                      imageStyle === s.id
+                        ? 'bg-blue-600 text-white shadow-sm'
+                        : 'bg-white border border-slate-200 text-slate-600 hover:border-blue-300'
+                    }`}>
+                    {s.icon} {s.label}
+                  </button>
+                ))}
               </div>
             </div>
 
@@ -1428,7 +1472,7 @@ DECORATIVE: (장식 요소)`,
                   }));
                 }}
                 className="px-8 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white text-sm font-bold rounded-xl shadow-lg disabled:opacity-50">
-                {isGenerating ? '생성 중...' : '\u2728 이 디자인으로 생성하기'}
+                {isGenerating ? '생성 중...' : '✨ 이 디자인으로 생성하기'}
               </button>
             </div>
           </div>
