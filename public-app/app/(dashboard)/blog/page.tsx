@@ -1118,6 +1118,14 @@ ${subs.length > 0 ? `경쟁 글 소제목: ${subs.join(' / ')}` : ''}
       // 3) HTML 정리: 코드블록 fence 제거
       blogText = blogText.replace(/^```html?\s*\n?/i, '').replace(/\n?```\s*$/, '');
       blogText = stripDoctype(blogText);
+      // Gemini가 자체 삽입한 <img> 태그 제거 (우리가 [IMG_N]으로 관리하므로)
+      blogText = blogText.replace(/<img\s+[^>]*alt="[^"]*"[^>]*\/?>\s*/gi, (match) => {
+        // 우리가 삽입한 이미지(data-image-index)는 유지
+        if (match.includes('data-image-index')) return match;
+        return '';
+      });
+      // alt 텍스트만 남은 잔해 제거 (닫히지 않은 태그)
+      blogText = blogText.replace(/"\s*alt="[^"]*">\s*/g, '');
 
       // 3.5) 구조 보정 (old legacyBlogGeneration.ts 동일: h1/h2→h3, markdown→h3, 이모지/해시태그 제거)
       const beforeLen = blogText.length;
