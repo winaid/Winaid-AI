@@ -75,6 +75,8 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
   const [downloading, setDownloading] = useState(false);
   const [editingIdx, setEditingIdx] = useState<number | null>(null);
   const [showAddSlide, setShowAddSlide] = useState(false);
+  const [dragIdx, setDragIdx] = useState<number | null>(null);
+  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
   const [scales, setScales] = useState<number[]>([]);
   // 슬라이드별 AI 이미지/텍스트 생성 상태
   const [generatingImageIdx, setGeneratingImageIdx] = useState<number | null>(null);
@@ -232,6 +234,28 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
     if (editingIdx === idx) setEditingIdx(null);
     else if (editingIdx !== null && editingIdx > idx) setEditingIdx(editingIdx - 1);
   };
+
+  /** 드래그앤드롭 순서 변경 */
+  const handleDragStart = (idx: number) => { setDragIdx(idx); };
+  const handleDragOver = (e: React.DragEvent, idx: number) => {
+    e.preventDefault();
+    if (dragIdx === null || dragIdx === idx) return;
+    setDragOverIdx(idx);
+  };
+  const handleDrop = (idx: number) => {
+    if (dragIdx === null || dragIdx === idx) { setDragIdx(null); setDragOverIdx(null); return; }
+    const newSlides = [...slides];
+    const [moved] = newSlides.splice(dragIdx, 1);
+    newSlides.splice(idx, 0, moved);
+    onSlidesChange(newSlides.map((s, i) => ({ ...s, index: i + 1 })));
+    if (editingIdx !== null) {
+      if (editingIdx === dragIdx) setEditingIdx(idx);
+      else if (dragIdx < editingIdx && idx >= editingIdx) setEditingIdx(editingIdx - 1);
+      else if (dragIdx > editingIdx && idx <= editingIdx) setEditingIdx(editingIdx + 1);
+    }
+    setDragIdx(null); setDragOverIdx(null);
+  };
+  const handleDragEnd = () => { setDragIdx(null); setDragOverIdx(null); };
 
   /**
    * 레이아웃 변경 — 새 레이아웃에 필요한 필드가 비어 있으면 플레이스홀더 기본값을 채운다.
@@ -2367,16 +2391,30 @@ JSON 한 객체만 출력:
         {slides.map((slide, idx) => {
           const isEditing = editingIdx === idx;
           return (
-            <div key={`${idx}-${theme.fontId || 'default'}-${slide.fontId || ''}-${fontLoaded}`} className={`bg-white rounded-xl border transition-all ${isEditing ? 'border-blue-400 ring-2 ring-blue-100 sm:col-span-2 lg:col-span-3' : 'border-slate-200'}`}>
+            <div key={`${idx}-${theme.fontId || 'default'}-${slide.fontId || ''}-${fontLoaded}`}
+              onDragOver={(e) => handleDragOver(e, idx)}
+              onDrop={() => handleDrop(idx)}
+              onDragEnd={handleDragEnd}
+              className={`bg-white rounded-xl border transition-all ${
+                isEditing ? 'border-blue-400 ring-2 ring-blue-100 sm:col-span-2 lg:col-span-3'
+                : dragOverIdx === idx ? 'border-blue-400 border-2 bg-blue-50/50'
+                : dragIdx === idx ? 'opacity-40 border-slate-300'
+                : 'border-slate-200'
+              }`}>
               {/* 프리뷰 영역 — 셀 폭을 꽉 채우는 1:1 박스 + ResizeObserver 동적 스케일 */}
               <div
                 ref={(el) => { boxRefs.current[idx] = el; }}
                 className="group relative overflow-hidden rounded-t-xl bg-slate-100"
                 style={{ width: '100%', aspectRatio: cardAspect }}
               >
-                {/* 라벨 */}
-                <div className="absolute top-2 left-2 z-20 px-2 py-0.5 rounded-full bg-black/60 text-white text-[10px] font-bold backdrop-blur-sm">
-                  {idx + 1} · {LAYOUT_LABELS[slide.layout]}
+                {/* 라벨 (드래그 핸들) */}
+                <div
+                  className="absolute top-2 left-2 z-20 px-2 py-0.5 rounded-full bg-black/60 text-white text-[10px] font-bold backdrop-blur-sm cursor-grab active:cursor-grabbing"
+                  draggable={!isEditing}
+                  onDragStart={(e) => { e.stopPropagation(); handleDragStart(idx); }}
+                  title="드래그하여 순서 변경"
+                >
+                  ⠿ {idx + 1} · {LAYOUT_LABELS[slide.layout]}
                 </div>
                 {/* 버튼 그룹 — PNG + 복제 + 삭제 */}
                 <div className="absolute top-2 right-2 z-20 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
