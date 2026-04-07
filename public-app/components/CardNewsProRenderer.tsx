@@ -381,7 +381,7 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
   const downloadAll = async () => {
     setDownloading(true);
     try {
-      await downloadAllAsZip(cardRefs.current, slides.length, cardWidth, cardHeight);
+      await downloadAllAsZip(cardRefs.current, slides.length, cardWidth, cardHeight, slides[0]?.title);
     } finally {
       setDownloading(false);
     }

@@ -72,6 +72,7 @@ export async function downloadAllAsZip(
   slidesCount: number,
   cardWidth: number,
   cardHeight: number,
+  topic?: string,
 ): Promise<void> {
   const JSZip = (await import('jszip')).default;
   const zip = new JSZip();
@@ -87,7 +88,8 @@ export async function downloadAllAsZip(
   const zipBlob = await zip.generateAsync({ type: 'blob' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(zipBlob);
-  a.download = `cardnews_pro_${Date.now()}.zip`;
+  const safeTopic = topic ? topic.replace(/[^가-힣a-zA-Z0-9]/g, '_').slice(0, 20) : '';
+  a.download = safeTopic ? `카드뉴스_${safeTopic}.zip` : `cardnews_${Date.now()}.zip`;
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
