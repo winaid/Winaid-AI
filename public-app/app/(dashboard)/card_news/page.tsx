@@ -209,8 +209,10 @@ export default function CardNewsPage() {
   const fetchPreviewImages = async (style: ImageStyleType) => {
     setLoadingPreviews(true);
     try {
-      const query = lastPexelsQuery || await fetchPexelsQuery();
+      const baseQuery = lastPexelsQuery || await fetchPexelsQuery();
       const count = COVER_TEMPLATES.length;
+      // 실사 사진은 'asian'을 붙여 동양인 위주 결과
+      const query = style === 'photo' ? `${baseQuery} asian` : baseQuery;
       if (style === 'photo') {
         // Pexels 실사 사진
         const res = await fetch(`/api/pexels?query=${encodeURIComponent(query)}&orientation=square&per_page=${count}`);
@@ -242,7 +244,8 @@ export default function CardNewsPage() {
     const coverSlides = slides.filter(s => s.layout === 'cover' || s.layout === 'closing');
     if (coverSlides.length === 0) return slides;
     try {
-      const query = lastPexelsQuery || await fetchPexelsQuery();
+      const baseQ = lastPexelsQuery || await fetchPexelsQuery();
+      const query = `${baseQ} asian`;
       const res = await fetch(`/api/pexels?query=${encodeURIComponent(query)}&orientation=square&per_page=15&page=${Math.floor(Math.random() * 3) + 1}`);
       const data = await res.json();
       const photos = data.photos || [];
