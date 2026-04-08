@@ -76,8 +76,9 @@ async function searchViaRapidAPI(
       const cleanTag = tag.replace(/^#/, '').trim();
       if (!cleanTag) continue;
 
+      console.info(`[INFLUENCER] RapidAPI 검색: hashtag="${cleanTag}"`);
       const res = await fetch(
-        `https://${RAPIDAPI_HOST}/v1/hashtag?hashtag=${encodeURIComponent(cleanTag)}`,
+        `https://${RAPIDAPI_HOST}/v1.2/hashtag?hashtag=${encodeURIComponent(cleanTag)}`,
         {
           method: 'GET',
           headers: {
@@ -88,31 +89,42 @@ async function searchViaRapidAPI(
       );
 
       if (!res.ok) {
-        console.warn(`[INFLUENCER] RapidAPI hashtag "${cleanTag}" 실패: ${res.status}`);
+        const errText = await res.text().catch(() => '');
+        console.warn(`[INFLUENCER] RapidAPI hashtag "${cleanTag}" 실패: ${res.status} ${errText.substring(0, 200)}`);
         continue;
       }
 
       const data = await res.json();
-      const items = data?.data?.items || data?.items || [];
+      console.info(`[INFLUENCER] RapidAPI 응답 키: ${Object.keys(data).join(', ')}`);
+
+      // 다양한 응답 구조 대응
+      const items = data?.data?.items
+        || data?.data?.medias
+        || data?.items
+        || data?.medias
+        || data?.edge_hashtag_to_media?.edges?.map((e: Record<string, unknown>) => e.node)
+        || [];
+      console.info(`[INFLUENCER] RapidAPI 항목 수: ${items.length}`);
 
       for (const item of items) {
-        const user = item?.user || item?.owner || {};
-        const username = user?.username;
+        const user = item?.user || item?.owner || item?.caption?.user || {};
+        const username = user?.username || user?.pk && `user_${user.pk}`;
         if (!username || allProfiles.has(username)) continue;
 
-        const followerCount = user?.follower_count || user?.edge_followed_by?.count || 0;
-        if (followerCount < body.follower_min || followerCount > body.follower_max) continue;
+        const followerCount = user?.follower_count || user?.edge_followed_by?.count || user?.followers || 0;
+        // 팔로워 수를 모르면 일단 포함 (나중에 프로필 조회로 보완 가능)
+        if (followerCount > 0 && (followerCount < body.follower_min || followerCount > body.follower_max)) continue;
 
         const postCount = user?.media_count || user?.edge_owner_to_timeline_media?.count || 0;
-        const likes = item?.like_count || item?.edge_liked_by?.count || 0;
-        const comments = item?.comment_count || item?.edge_media_to_comment?.count || 0;
+        const likes = item?.like_count || item?.edge_liked_by?.count || item?.likes || 0;
+        const comments = item?.comment_count || item?.edge_media_to_comment?.count || item?.comments || 0;
         const engagementRate = followerCount > 0 ? ((likes + comments) / followerCount) * 100 : 0;
 
         if (engagementRate < body.min_engagement_rate) continue;
 
         // 위치 추정
         const locationName = item?.location?.name || '';
-        const caption = item?.caption?.text || item?.edge_media_to_caption?.edges?.[0]?.node?.text || '';
+        const caption = item?.caption?.text || item?.caption || item?.edge_media_to_caption?.edges?.[0]?.node?.text || (typeof item?.text === 'string' ? item.text : '') || '';
         const captionHashtags = caption.match(/#[가-힣a-zA-Z0-9_]+/g) || [];
         const estimatedLoc = estimateLocation(locationName, captionHashtags, body.location);
 
@@ -142,6 +154,7 @@ async function searchViaRapidAPI(
     }
 
     const results = Array.from(allProfiles.values());
+    console.info(`[INFLUENCER] RapidAPI 최종 결과: ${results.length}명`);
     if (results.length === 0) return null;
 
     return { results, source: 'rapidapi' };
