@@ -331,7 +331,8 @@ JSON 배열로만 응답하세요:
 
 // ── 폴백: 정적 파싱으로 키워드 생성 ──
 
-function fallbackKeywordGeneration(address: string, category?: string): string[] {
+/** 주소에서 지역명(구/동/읍/면) 추출 */
+function extractLocations(address: string): string[] {
   const locations: string[] = [];
   const guMatch = address.match(/([가-힣]+[구군시])\b/g);
   if (guMatch) {
@@ -345,6 +346,11 @@ function fallbackKeywordGeneration(address: string, category?: string): string[]
       if (dong.length >= 2 && dong.length <= 6) locations.push(dong);
     }
   }
+  return [...new Set(locations)];
+}
+
+function fallbackKeywordGeneration(address: string, category?: string): string[] {
+  const locations = extractLocations(address);
   const categoryFallbackTerms: Record<string, string[]> = {
     '치과': ['치과', '임플란트', '치아교정', '스케일링'],
     '피부과': ['피부과', '레이저토닝', '보톡스', '필러', '리프팅', '여드름치료'],
@@ -449,25 +455,29 @@ export async function analyzeHospitalKeywords(
   onProgress?: (msg: string) => void,
   clinicCtx?: ClinicContext | null,
 ): Promise<KeywordAnalysisResult> {
-  // Step 0: 이미 작성한 블로그 글 제목 가져오기
-  onProgress?.('기존 블로그 글 확인 중...');
-  const existingTitles = await fetchExistingBlogTitles(hospitalName);
-  if (existingTitles.length > 0) {
-    onProgress?.(`기존 글 ${existingTitles.length}개 확인 완료. 키워드 생성 중...`);
-  } else {
-    onProgress?.('근처 지역 키워드 생성 중...');
+  // Step 0: 주소에서 지역명 추출 (Gemini 없이)
+  onProgress?.('지역 키워드 생성 중...');
+  const localSeeds = fallbackKeywordGeneration(address, category);
+
+  // clinicContext에서 추가 시술 키워드 추출
+  if (clinicCtx?.actualServices?.length) {
+    const locations = extractLocations(address);
+    for (const svc of clinicCtx.actualServices.slice(0, 5)) {
+      for (const loc of locations.slice(0, 3)) {
+        localSeeds.push(`${loc} ${svc}`);
+      }
+    }
   }
 
-  // Step 1: AI 씨앗 키워드 생성 (2~3단어 조합)
-  const seedKeywords = await generateKeywordsWithAI(hospitalName, address, category, existingTitles, clinicCtx);
-
+  const seedKeywords = [...new Set(localSeeds)].slice(0, 20);
   if (seedKeywords.length === 0) {
-    throw new Error('키워드를 생성할 수 없습니다.');
+    throw new Error('주소에서 지역 키워드를 추출할 수 없습니다.');
   }
 
-  // Step 1.5: 네이버 자동완성으로 확장 (실제 검색어 기반)
-  onProgress?.(`${seedKeywords.length}개 씨앗 키워드로 자동완성 확장 중...`);
+  // Step 1: 네이버 자동완성으로 실제 검색어 수집 (핵심!)
+  onProgress?.(`${seedKeywords.length}개 지역 키워드로 네이버 자동완성 조회 중...`);
   const allSuggestions: string[] = [...seedKeywords];
+  let suggestCount = 0;
   for (let si = 0; si < seedKeywords.length; si++) {
     try {
       const suggestRes = await fetch('/api/naver/suggest', {
@@ -478,16 +488,29 @@ export async function analyzeHospitalKeywords(
       if (suggestRes.ok) {
         const suggestData = (await suggestRes.json()) as { suggestions?: string[] };
         const suggestions = (suggestData.suggestions || [])
-          .filter((s: string) => s.split(/\s+/).length <= 4); // 4단어 이하만
+          .filter((s: string) => s.split(/\s+/).length <= 4);
         allSuggestions.push(...suggestions);
+        suggestCount += suggestions.length;
       }
     } catch { /* 자동완성 실패 시 스킵 */ }
     if (si < seedKeywords.length - 1) await new Promise(r => setTimeout(r, 100));
+    if (si % 5 === 4) onProgress?.(`자동완성 조회 중... (${si + 1}/${seedKeywords.length})`);
+  }
+  onProgress?.(`실제 검색어 ${suggestCount}개 수집 완료`);
+
+  // Step 1.5: 자동완성 결과가 부족하면 Gemini로 보충 (보조 역할)
+  if (allSuggestions.length < 15) {
+    onProgress?.('AI로 추가 키워드 보충 중...');
+    try {
+      const existingTitles = await fetchExistingBlogTitles(hospitalName);
+      const aiSeeds = await generateKeywordsWithAI(hospitalName, address, category, existingTitles, clinicCtx);
+      allSuggestions.push(...aiSeeds);
+    } catch { /* AI 실패 시 무시 — 자동완성 결과만으로 진행 */ }
   }
 
   // 중복 제거 + 의료광고법 필터 + 최대 100개
   const candidates = filterMedicalAdKeywords([...new Set(allSuggestions)]).slice(0, MAX_KEYWORDS);
-  onProgress?.(`자동완성 확장 완료: ${candidates.length}개 키워드`);
+  onProgress?.(`총 ${candidates.length}개 키워드 확보`);
 
   // Step 2: 검색량 + 발행량 조회
   onProgress?.(`${candidates.length}개 키워드 검색량 분석 중...`);
