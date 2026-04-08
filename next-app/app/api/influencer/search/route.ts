@@ -339,16 +339,18 @@ export async function POST(request: NextRequest) {
     source = 'gemini';
   }
 
-  // 팔로워 범위 필터 — RapidAPI+Gemini 소스는 팔로워 0도 허용 (프로필 보충 실패 가능)
-  if (source === 'gemini') {
-    results = results.filter(r => r.follower_count > 0 && r.follower_count >= body.follower_min && r.follower_count <= body.follower_max);
-  } else {
-    // RapidAPI 소스: 팔로워 확인된 것만 범위 필터, 미확인(0)은 포함 (참여도 기반으로 가치 있음)
-    results = results.filter(r => {
-      if (r.follower_count > 0) return r.follower_count >= body.follower_min && r.follower_count <= body.follower_max;
-      return true; // 팔로워 미확인이지만 실제 게시물 데이터 있음
-    });
-  }
+  // 팔로워/참여도 필터
+  results = results.filter(r => {
+    // 팔로워 확인된 경우: 범위 필터
+    if (r.follower_count > 0) {
+      return r.follower_count >= body.follower_min && r.follower_count <= body.follower_max;
+    }
+    // 팔로워 미확인(RapidAPI): 참여도로 추정 필터
+    // 팔로워 3000명 계정의 평균 참여도 ≈ 좋아요+댓글 60~200
+    // follower_min에 비례하여 최소 참여도 설정
+    const minEngagement = Math.max(10, body.follower_min * 0.02);
+    return r.engagement_rate >= minEngagement;
+  });
 
   return NextResponse.json({ results: results.slice(0, 20), total_found: results.length, search_hashtags_used: searchHashtags, source });
 }
