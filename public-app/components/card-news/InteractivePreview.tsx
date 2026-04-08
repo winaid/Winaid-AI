@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import type { SlideData } from '../../lib/cardNewsLayouts';
+import type { SlideData, SlideDecoration } from '../../lib/cardNewsLayouts';
 
 interface TextHandle {
   id: string;
@@ -43,7 +43,7 @@ export default function InteractivePreview({
   const [editText, setEditText] = useState('');
   const editRef = useRef<HTMLTextAreaElement>(null);
 
-  // 텍스트 핸들 목록
+  // 텍스트 핸들 목록 (내용이 있는 것만)
   const handles: TextHandle[] = [
     {
       id: 'title',
@@ -51,23 +51,23 @@ export default function InteractivePreview({
       value: slide.title || '',
       posKey: 'titlePosition',
       valueKey: 'title',
-      pos: slide.titlePosition || { x: 50, y: 30 },
+      pos: slide.titlePosition || { x: 50, y: 35 },
     },
-    {
+    ...(slide.subtitle ? [{
       id: 'subtitle',
       label: '부제',
-      value: slide.subtitle || '',
-      posKey: 'subtitlePosition',
-      valueKey: 'subtitle',
-      pos: slide.subtitlePosition || { x: 50, y: 50 },
-    },
+      value: slide.subtitle,
+      posKey: 'subtitlePosition' as const,
+      valueKey: 'subtitle' as const,
+      pos: slide.subtitlePosition || { x: 50, y: 55 },
+    }] : []),
     ...(hospitalName ? [{
       id: 'hospital',
       label: '병원명',
       value: hospitalName,
       posKey: 'hospitalNamePosition' as const,
-      valueKey: 'title' as const, // 미사용
-      pos: slide.hospitalNamePosition || { x: 50, y: 92 },
+      valueKey: 'title' as const,
+      pos: slide.hospitalNamePosition || { x: 50, y: 90 },
     }] : []),
   ];
 
@@ -175,6 +175,45 @@ export default function InteractivePreview({
       >
         {renderSlide(slide)}
       </div>
+
+      {/* 장식 요소 드래그 핸들 */}
+      {(slide.decorations || []).map(deco => (
+        <div
+          key={deco.id}
+          style={{
+            position: 'absolute',
+            left: deco.position.left,
+            top: deco.position.top,
+            width: `${deco.size || 30}px`,
+            height: `${deco.size || 30}px`,
+            transform: `scale(${scale})`,
+            transformOrigin: 'top left',
+            zIndex: 21,
+            cursor: 'grab',
+            border: '2px dashed transparent',
+            borderRadius: '4px',
+          }}
+          onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(168,85,247,0.5)'; }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor = 'transparent'; }}
+          onMouseDown={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const rect = containerRef.current?.getBoundingClientRect();
+            if (!rect) return;
+            const sx = e.clientX, sy = e.clientY;
+            const startX = parseFloat(deco.position.left);
+            const startY = parseFloat(deco.position.top);
+            const onMove = (ev: MouseEvent) => {
+              const nx = Math.round(Math.max(2, Math.min(98, startX + ((ev.clientX - sx) / rect.width) * 100)));
+              const ny = Math.round(Math.max(2, Math.min(98, startY + ((ev.clientY - sy) / rect.height) * 100)));
+              onSlideChange({ decorations: (slide.decorations || []).map(d => d.id === deco.id ? { ...d, position: { top: `${ny}%`, left: `${nx}%` } } : d) });
+            };
+            const onUp = () => { document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); };
+            document.addEventListener('mousemove', onMove);
+            document.addEventListener('mouseup', onUp);
+          }}
+        />
+      ))}
 
       {/* 텍스트 핸들 오버레이 */}
       {handles.map(handle => {
