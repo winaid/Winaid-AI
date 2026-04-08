@@ -85,10 +85,6 @@ Google Search로 "site:instagram.com ${searchHashtags.slice(0, 3).join(' ')} ${b
 JSON 배열로만 출력. 최대 15명:
 [{"username":"...", "full_name":"...", "follower_count":5000, "engagement_rate":3.5, "estimated_location":"강남", "location_confidence":"medium", "primary_category":"맛집/카페", "recent_post_preview":"최근 게시물 텍스트..."}]`;
 
-  // Gemini API 호출 (Google Search 활용)
-  const key = keys[keyIndex % keys.length];
-  keyIndex++;
-
   try {
     // 기존 프로젝트의 /api/gemini 경유 방식과 동일하게 내부 API 호출
     const baseUrl = process.env.NEXT_PUBLIC_VERCEL_URL
