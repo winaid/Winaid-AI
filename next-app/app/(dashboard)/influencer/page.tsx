@@ -434,7 +434,7 @@ export default function InfluencerPage() {
                 {selectedInfluencer && (
                   <div className="text-xs text-slate-500">
                     {selectedInfluencer.username.startsWith('user_') ? '게시물 작성자' : `@${selectedInfluencer.username}`}님에게 보낼 메시지
-                    {hospitalInstagram && <span className="text-slate-400"> · 발송 계정: {hospitalInstagram}</span>}
+                    {hospitalInstagram && <span className="text-slate-400"> · 병원 계정: {hospitalInstagram}</span>}
                   </div>
                 )}
               </div>
