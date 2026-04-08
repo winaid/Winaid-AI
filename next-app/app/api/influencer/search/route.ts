@@ -180,19 +180,28 @@ function guessCategory(hashtags: string[], text: string): string {
 async function searchViaGeminiOnly(hashtags: string[], body: SearchRequest, postHints?: string): Promise<InfluencerResult[]> {
   const hintsBlock = postHints ? `\n\n[참고: 실제 인스타그램에서 수집된 게시물 데이터]\n${postHints}\n→ 위 게시물을 올린 계정의 username을 찾아주세요.\n` : '';
 
-  const prompt = `너는 인스타그램 인플루언서 리서치 전문가다.
+  const prompt = `너는 인스타그램 마이크로 인플루언서 리서치 전문가다.
 
-Google Search로 "site:instagram.com ${hashtags.slice(0, 3).join(' ')} ${body.location}" 를 검색해서
-${body.location} 지역 마이크로 인플루언서(팔로워 ${body.follower_min}~${body.follower_max})를 찾아줘.
+${body.location} 지역에서 활동하는 인스타그램 마이크로 인플루언서를 찾아줘.
+
+Google Search로 다음을 검색해:
+1. "instagram ${body.location} ${hashtags[0] || '맛집'} influencer"
+2. "인스타그램 ${body.location} 인플루언서 추천"
+3. "${body.location} 로컬 크리에이터 인스타"
 ${hintsBlock}
-[필수 조건]
-- 반드시 실제 존재하는 Instagram 계정만 (가짜 username 생성 절대 금지)
-- 각 계정의 실제 팔로워 수를 검색해서 확인
-- 팔로워 수를 모르면 해당 계정을 결과에 포함하지 마
-- 0명이어도 OK. 확실하지 않은 계정보다 정확한 소수가 낫다
+[조건]
+- 팔로워 ${body.follower_min.toLocaleString()}~${body.follower_max.toLocaleString()}명 범위
+- ${body.location} 지역에서 주로 활동하는 개인 크리에이터
+- 기업/브랜드 계정 제외
+- 팔로워 수는 추정치도 OK (정확하지 않아도 됨)
 
-JSON 배열만:
-[{"username":"실제아이디", "full_name":"표시이름", "follower_count":5000, "engagement_rate":3.5, "estimated_location":"강남", "location_confidence":"medium", "primary_category":"맛집/카페", "recent_post_preview":"최근 게시물 텍스트"}]`;
+[중요]
+- 최소 5명 이상 찾아줘. 10명이면 더 좋아.
+- 팔로워 수를 정확히 모르면 게시물 좋아요 수로 추정해. (좋아요 평균 100개 ≈ 팔로워 3000~5000)
+- 실제 존재할 가능성이 높은 계정만 포함. 하지만 확실하지 않아도 포함하되 location_confidence를 "low"로.
+
+JSON 배열:
+[{"username":"실제아이디", "full_name":"표시이름", "follower_count":5000, "engagement_rate":3.5, "estimated_location":"${body.location}", "location_confidence":"medium", "primary_category":"맛집/카페", "recent_post_preview":"최근 게시물 텍스트"}]`;
 
   const { text } = await callGeminiDirect({ prompt, model: 'gemini-3.1-pro-preview', temperature: 0.3, maxOutputTokens: 4096, googleSearch: true });
   if (!text) return [];
