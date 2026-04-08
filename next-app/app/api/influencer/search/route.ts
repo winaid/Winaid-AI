@@ -345,11 +345,8 @@ export async function POST(request: NextRequest) {
     if (r.follower_count > 0) {
       return r.follower_count >= body.follower_min && r.follower_count <= body.follower_max;
     }
-    // 팔로워 미확인(RapidAPI): 참여도로 추정 필터
-    // 팔로워 3000명 계정의 평균 참여도 ≈ 좋아요+댓글 60~200
-    // follower_min에 비례하여 최소 참여도 설정
-    const minEngagement = Math.max(10, body.follower_min * 0.02);
-    return r.engagement_rate >= minEngagement;
+    // 팔로워 미확인(RapidAPI): 최소 참여도 필터 (좋아요+댓글 평균 3 이상이면 포함)
+    return r.engagement_rate >= 3;
   });
 
   return NextResponse.json({ results: results.slice(0, 20), total_found: results.length, search_hashtags_used: searchHashtags, source });

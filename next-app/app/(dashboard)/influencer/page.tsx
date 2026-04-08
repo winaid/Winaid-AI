@@ -365,9 +365,12 @@ export default function InfluencerPage() {
                 {/* 정보 */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="font-bold text-sm text-slate-900">
-                      {inf.username.startsWith('user_') ? '👤 프로필 미확인' : `@${inf.username}`}
-                    </span>
+                    {inf.username.startsWith('user_') ? (
+                      <span className="font-bold text-sm text-slate-400">👤 프로필 미확인</span>
+                    ) : (
+                      <a href={`https://instagram.com/${inf.username}`} target="_blank" rel="noopener noreferrer"
+                        className="font-bold text-sm text-blue-600 hover:underline">@{inf.username} ↗</a>
+                    )}
                     {inf.full_name && <span className="text-xs text-slate-400">{inf.full_name}</span>}
                   </div>
                   <div className="flex flex-wrap gap-3 text-xs text-slate-500 mb-2">
@@ -387,7 +390,12 @@ export default function InfluencerPage() {
                     <span className="bg-slate-100 px-2 py-0.5 rounded-full">{inf.primary_category}</span>
                   </div>
                   {inf.recent_posts[0] && (
-                    <p className="text-xs text-slate-400 truncate">&ldquo;{inf.recent_posts[0].text.substring(0, 80)}...&rdquo;</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-xs text-slate-400 truncate flex-1">&ldquo;{inf.recent_posts[0].text.substring(0, 80)}...&rdquo;</p>
+                      {inf.recent_posts[0].likes > 0 && (
+                        <span className="text-[10px] text-slate-400 flex-shrink-0">❤️ {inf.recent_posts[0].likes} 💬 {inf.recent_posts[0].comments}</span>
+                      )}
+                    </div>
                   )}
                 </div>
 
@@ -423,7 +431,12 @@ export default function InfluencerPage() {
             <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
               <div>
                 <div className="text-sm font-black text-slate-900">💬 DM 자동 생성</div>
-                {selectedInfluencer && <div className="text-xs text-slate-500">@{selectedInfluencer.username}님에게 보낼 메시지</div>}
+                {selectedInfluencer && (
+                  <div className="text-xs text-slate-500">
+                    {selectedInfluencer.username.startsWith('user_') ? '게시물 작성자' : `@${selectedInfluencer.username}`}님에게 보낼 메시지
+                    {hospitalInstagram && <span className="text-slate-400"> · 발송 계정: {hospitalInstagram}</span>}
+                  </div>
+                )}
               </div>
               <button onClick={() => setDmModalOpen(false)} className="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 hover:bg-slate-200">닫기</button>
             </div>
