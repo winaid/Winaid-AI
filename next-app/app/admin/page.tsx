@@ -425,7 +425,7 @@ export default function AdminPage() {
     }));
 
     try {
-      await crawlAndLearnHospitalStyle(hospitalName, teamId, validUrls, (msg) => {
+      await crawlAndLearnHospitalStyle(hospitalName, validUrls, (msg) => {
         setCrawlingStatus(prev => ({
           ...prev,
           [hospitalName]: { loading: true, progress: msg },
