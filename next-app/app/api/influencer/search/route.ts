@@ -8,26 +8,12 @@
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { callGeminiDirect } from '../../../../lib/geminiDirect';
+import { generateInfluencerHashtags, LOCATION_HASHTAGS } from '../../../../lib/influencerHashtags';
 
 export const maxDuration = 120;
 export const dynamic = 'force-dynamic';
 
-const LOCATION_KEYWORDS: Record<string, string[]> = {
-  '강남': ['강남', '신사', '압구정', '청담', '역삼', '삼성동', '선릉', '논현'],
-  '서초': ['서초', '방배', '반포', '잠원', '교대'],
-  '마포': ['마포', '홍대', '합정', '상수', '연남', '망원'],
-  '성수': ['성수', '뚝섬', '서울숲'],
-  '잠실': ['잠실', '송파', '방이', '석촌', '문정'],
-  '분당': ['분당', '판교', '서현', '정자', '야탑', '미금'],
-  '일산': ['일산', '라페스타', '웨스턴돔', '킨텍스'],
-  '해운대': ['해운대', '광안리', '센텀', '마린시티'],
-  '대구': ['대구', '동성로', '수성구'],
-  '대전': ['대전', '유성', '둔산'],
-  '수원': ['수원', '인계동', '광교', '영통'],
-  '인천': ['인천', '송도', '부평'],
-  '제주': ['제주', '애월', '서귀포'],
-  '부산': ['부산', '서면', '남포동', '전포', '광안리'],
-};
+// 지역 키워드는 influencerHashtags.ts의 LOCATION_HASHTAGS 사용
 
 interface SearchRequest {
   location: string;
@@ -258,7 +244,7 @@ function ownerToResult(o: OwnerActivity, location: string): InfluencerResult {
 
 function estimateLocation(hashtags: string[], searchLocation: string): { location: string; confidence: 'high' | 'medium' | 'low' } {
   const allText = hashtags.join(' ').toLowerCase();
-  for (const [region, keywords] of Object.entries(LOCATION_KEYWORDS)) {
+  for (const [region, keywords] of Object.entries(LOCATION_HASHTAGS)) {
     if (keywords.some(kw => allText.includes(kw))) return { location: region, confidence: 'medium' };
   }
   return { location: searchLocation, confidence: 'low' };
@@ -307,7 +293,7 @@ export async function POST(request: NextRequest) {
   try { body = await request.json(); } catch { return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 }); }
   if (!body.location?.trim()) return NextResponse.json({ error: '위치를 입력해주세요' }, { status: 400 });
 
-  const searchHashtags = body.hashtags.length > 0 ? body.hashtags : generateHashtags(body.location, body.categories);
+  const searchHashtags = body.hashtags.length > 0 ? body.hashtags : generateInfluencerHashtags(body.location, body.categories);
   let results: InfluencerResult[] = [];
   let source = 'gemini';
 
@@ -353,21 +339,4 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({ results: results.slice(0, 20), total_found: results.length, search_hashtags_used: searchHashtags, source });
 }
 
-function generateHashtags(location: string, categories?: string[]): string[] {
-  const loc = location.replace(/역|구|동|시/g, '').trim();
-  if (!loc) return ['맛집', '일상', '카페'];
-  const tags = [`${loc}맛집`, `${loc}카페`, `${loc}일상`, `${loc}추천`, `${loc}핫플`];
-  const CAT_TAGS: Record<string, string[]> = {
-    food: ['맛집추천', '브런치', '디저트', '점심', '데이트'],
-    beauty: ['네일', '뷰티', '헤어', '피부관리', '미용실'],
-    lifestyle: ['라이프', '데일리', '주말', '산책', '동네'],
-    parenting: ['맘', '육아', '아이', '키즈카페'],
-    health: ['운동', '헬스', '필라테스', '요가'],
-    fashion: ['패션', '코디', '쇼핑', '스타일'],
-    local: ['소식', '동네맛집', '로컬', '신상'],
-  };
-  if (categories?.length) {
-    for (const cat of categories) { const t = CAT_TAGS[cat]; if (t) tags.push(...t.slice(0, 3).map(x => `${loc}${x}`)); }
-  }
-  return [...new Set(tags)];
-}
+// generateHashtags는 influencerHashtags.ts의 generateInfluencerHashtags로 대체됨

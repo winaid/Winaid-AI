@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import { INFLUENCER_CATEGORIES, generateInfluencerHashtags, hashtagsToString, stringToHashtags } from '../../../lib/influencerHashtags';
 
 // ── 타입 ──
 
@@ -41,15 +42,7 @@ const STATUS_LABELS: Record<OutreachStatus, { label: string; icon: string; color
   collaborating: { label: '협업 진행중', icon: '🤝', color: 'text-violet-500' },
 };
 
-const CATEGORIES = [
-  { id: 'food', label: '맛집/카페' },
-  { id: 'beauty', label: '뷰티/미용' },
-  { id: 'lifestyle', label: '일상/라이프스타일' },
-  { id: 'parenting', label: '육아/가족' },
-  { id: 'health', label: '건강/운동' },
-  { id: 'fashion', label: '패션' },
-  { id: 'local', label: '지역소식' },
-];
+const CATEGORIES = INFLUENCER_CATEGORIES;
 
 const DM_TONES = [
   { id: 'casual', label: '캐주얼', desc: '"안녕하세요~ 콘텐츠 잘 보고 있어요 :)"', icon: '😊' },
@@ -61,29 +54,7 @@ const inputCls = 'w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-x
 const btnPrimary = 'px-6 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed';
 const btnSecondary = 'px-4 py-2 bg-slate-100 text-slate-700 font-semibold rounded-xl hover:bg-slate-200 transition-all text-sm';
 
-// ── 지역 + 카테고리 기반 해시태그 자동 생성 ──
-const CATEGORY_TAG_MAP: Record<string, string[]> = {
-  food:      ['맛집추천', '브런치', '디저트', '점심', '데이트'],
-  beauty:    ['네일', '뷰티', '헤어', '피부관리', '미용실'],
-  lifestyle: ['라이프', '데일리', '주말', '산책', '동네'],
-  parenting: ['맘', '육아', '아이', '키즈카페', '어린이'],
-  health:    ['운동', '헬스', '필라테스', '요가', '다이어트'],
-  fashion:   ['패션', '코디', '쇼핑', '스타일', 'ootd'],
-  local:     ['소식', '동네맛집', '로컬', '신상', '오픈'],
-};
-
-function generateDefaultHashtags(location: string, categories?: string[]): string {
-  const loc = location.replace(/역|구|동|시/g, '').trim();
-  if (!loc) return '';
-  const base = [`${loc}맛집`, `${loc}카페`, `${loc}일상`, `${loc}추천`, `${loc}핫플`];
-  if (categories && categories.length > 0) {
-    for (const cat of categories) {
-      const tags = CATEGORY_TAG_MAP[cat];
-      if (tags) base.push(...tags.slice(0, 3).map(t => `${loc}${t}`));
-    }
-  }
-  return [...new Set(base)].join(', ');
-}
+// 해시태그 생성은 influencerHashtags.ts에서 import
 
 export default function InfluencerPage() {
   // ── STEP 1: 검색 조건 ──
@@ -96,7 +67,9 @@ export default function InfluencerPage() {
   const [followerMax, setFollowerMax] = useState(10000);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [minEngagement, setMinEngagement] = useState(2);
-  const [hashtags, setHashtags] = useState('');
+  const [hashtagList, setHashtagList] = useState<string[]>([]);
+  const [newTagInput, setNewTagInput] = useState('');
+  const [showAllTags, setShowAllTags] = useState(false);
 
   // ── STEP 2: 결과 ──
   const [results, setResults] = useState<InfluencerProfile[]>([]);
@@ -114,24 +87,32 @@ export default function InfluencerPage() {
   // ── 상태 추적 ──
   const [outreachStatuses, setOutreachStatuses] = useState<Record<string, OutreachStatus>>({});
 
-  // 병원 위치 또는 카테고리 변경 시 해시태그 자동 갱신
+  // 위치/카테고리 변경 시 해시태그 자동 재생성
+  const regenerateHashtags = (loc: string, cats: string[]) => {
+    setHashtagList(generateInfluencerHashtags(loc, cats));
+    setShowAllTags(false);
+  };
+
   const handleLocationChange = (loc: string) => {
     setHospitalLocation(loc);
-    const prev = generateDefaultHashtags(hospitalLocation, selectedCategories);
-    if (!hashtags || hashtags === prev) {
-      setHashtags(generateDefaultHashtags(loc, selectedCategories));
-    }
+    regenerateHashtags(loc, selectedCategories);
   };
 
   const handleCategoryToggle = (catId: string) => {
     setSelectedCategories(prev => {
       const next = prev.includes(catId) ? prev.filter(c => c !== catId) : [...prev, catId];
-      const prevTags = generateDefaultHashtags(hospitalLocation, prev);
-      if (!hashtags || hashtags === prevTags) {
-        setHashtags(generateDefaultHashtags(hospitalLocation, next));
-      }
+      regenerateHashtags(hospitalLocation, next);
       return next;
     });
+  };
+
+  const removeTag = (tag: string) => setHashtagList(prev => prev.filter(t => t !== tag));
+  const addTag = () => {
+    const tag = newTagInput.replace(/^#/, '').trim();
+    if (tag && !hashtagList.includes(tag)) {
+      setHashtagList(prev => [...prev, tag]);
+      setNewTagInput('');
+    }
   };
 
   // ── 검색 실행 ──
@@ -145,7 +126,7 @@ export default function InfluencerPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           location: hospitalLocation.trim(),
-          hashtags: hashtags.split(',').map(h => h.trim()).filter(Boolean),
+          hashtags: hashtagList,
           follower_min: followerMin,
           follower_max: followerMax,
           categories: selectedCategories,
@@ -165,7 +146,7 @@ export default function InfluencerPage() {
     } finally {
       setIsSearching(false);
     }
-  }, [hospitalLocation, hashtags, followerMin, followerMax, selectedCategories, minEngagement]);
+  }, [hospitalLocation, hashtagList, followerMin, followerMax, selectedCategories, minEngagement]);
 
   // ── DM 생성 ──
   const handleGenerateDm = useCallback(async (influencer: InfluencerProfile) => {
@@ -302,11 +283,35 @@ export default function InfluencerPage() {
               </div>
             </div>
 
-            {/* 해시태그 */}
+            {/* 해시태그 — 태그 칩 UI */}
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1.5">검색 해시태그 (쉼표 구분)</label>
-              <input value={hashtags} onChange={e => setHashtags(e.target.value)} className={inputCls} placeholder="강남맛집, 강남일상, 강남카페" />
-              <p className="text-[10px] text-slate-400 mt-1">병원 위치 기반으로 자동 생성됩니다. 수정 가능.</p>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-xs font-semibold text-slate-600">검색 해시태그 ({hashtagList.length}개)</label>
+                {hashtagList.length > 10 && (
+                  <button type="button" onClick={() => setShowAllTags(!showAllTags)} className="text-[10px] text-blue-500 font-semibold">
+                    {showAllTags ? '접기' : `+${hashtagList.length - 10}개 더 보기`}
+                  </button>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-1.5 mb-2">
+                {(showAllTags ? hashtagList : hashtagList.slice(0, 10)).map(tag => (
+                  <span key={tag} className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 text-blue-700 text-xs font-semibold rounded-lg border border-blue-200">
+                    #{tag}
+                    <button type="button" onClick={() => removeTag(tag)} className="text-blue-400 hover:text-red-500 text-[10px] font-bold">✕</button>
+                  </span>
+                ))}
+                {hashtagList.length === 0 && <span className="text-xs text-slate-400">위에서 위치와 카테고리를 선택하면 자동 생성됩니다</span>}
+              </div>
+              <div className="flex gap-2">
+                <input
+                  value={newTagInput}
+                  onChange={e => setNewTagInput(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addTag(); } }}
+                  className={`${inputCls} flex-1`}
+                  placeholder="해시태그 직접 추가 (Enter)"
+                />
+                <button type="button" onClick={addTag} className={btnSecondary}>추가</button>
+              </div>
             </div>
           </div>
 
