@@ -402,7 +402,7 @@ export default function AdminPage() {
       return;
     }
     try {
-      await saveHospitalBlogUrl(hospitalName, teamId, validUrls.join(','));
+      await saveHospitalBlogUrl(hospitalName, validUrls.join(','));
       toast.success(`URL ${validUrls.length}개 저장 완료!`);
       loadStyleProfiles();
     } catch (err: unknown) {
