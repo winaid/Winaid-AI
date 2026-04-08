@@ -259,12 +259,18 @@ export default function CardNewsPage() {
           if (j < pixabay.length) photos.push(pixabay[j]);
         }
       } else {
-        // 일러스트/벡터: Pixabay — 한국어 검색이 결과가 더 풍부
+        // 일러스트/벡터: Pixabay + Pexels 합쳐서 (Pixabay 일러스트만으로는 치과 이미지 부족)
         const pixType = style === 'infographic' ? 'vector' : 'illustration';
         const koreanQuery = topic.trim() || query;
-        const res = await fetch(`/api/pixabay?query=${encodeURIComponent(koreanQuery)}&image_type=${pixType}&orientation=horizontal&per_page=${Math.min(count * 2, 20)}&page=${page}`);
-        const data = await res.json();
-        photos = (data.photos || []).map((p: { url: string }) => p.url);
+        const [pixRes, pexRes] = await Promise.all([
+          fetch(`/api/pixabay?query=${encodeURIComponent(koreanQuery + ' 치과')}&image_type=${pixType}&orientation=horizontal&per_page=${count}&page=${page}`),
+          fetch(`/api/pexels?query=${encodeURIComponent(query + ' dental')}&orientation=square&per_page=${count}&page=${page}`),
+        ]);
+        const [pixData, pexData] = await Promise.all([pixRes.json(), pexRes.json()]);
+        const pixPhotos: string[] = (pixData.photos || []).map((p: { url: string }) => p.url);
+        const pexPhotos: string[] = (pexData.photos || []).map((p: { url: string }) => p.url);
+        // Pexels 우선 (치과 관련 결과가 더 정확), Pixabay 보충
+        photos = [...pexPhotos, ...pixPhotos].slice(0, count * 2);
       }
       previewCacheRef.current.set(cacheKey, photos);
       setPreviewBgImages(photos);
@@ -303,12 +309,14 @@ export default function CardNewsPage() {
         const data = await res.json();
         photos = (data.photos || []) as { url: string }[];
       } else {
-        // 일러스트/벡터: Pixabay
-        const pixType = imageStyle === 'infographic' ? 'vector' : 'illustration';
-        const koreanQ = topic.trim() || baseQ;
-        const res = await fetch(`/api/pixabay?query=${encodeURIComponent(koreanQ)}&image_type=${pixType}&orientation=horizontal&per_page=20&page=${Math.floor(Math.random() * 3) + 1}`);
-        const data = await res.json();
-        photos = (data.photos || []) as { url: string }[];
+        // 일러스트/벡터: Pexels(치과 정확) + Pixabay 합침
+        const rndPage = Math.floor(Math.random() * 3) + 1;
+        const [pexRes, pixRes] = await Promise.all([
+          fetch(`/api/pexels?query=${encodeURIComponent(baseQ + ' dental')}&orientation=square&per_page=15&page=${rndPage}`),
+          fetch(`/api/pixabay?query=${encodeURIComponent((topic.trim() || baseQ) + ' 치과')}&image_type=${imageStyle === 'infographic' ? 'vector' : 'illustration'}&orientation=horizontal&per_page=10&page=${rndPage}`),
+        ]);
+        const [pexData, pixData] = await Promise.all([pexRes.json(), pixRes.json()]);
+        photos = [...(pexData.photos || []), ...(pixData.photos || [])] as { url: string }[];
       }
       if (photos.length > 0) {
         for (let i = 0; i < slides.length; i++) {
@@ -1464,10 +1472,15 @@ DECORATIVE: (장식 요소)`,
                     }));
                   }
                   await (handleSubmit as any)(new Event('submit'));
-                  // 생성 후 커버/마무리에 선택한 템플릿 적용
-                  setProSlides(prev => prev.map(s => {
+                  // 생성 후 커버/마무리에 선택한 템플릿 + 프리뷰 이미지 적용
+                  setProSlides(prev => prev.map((s, i) => {
+                    const previewImg = previewBgImages[i % Math.max(previewBgImages.length, 1)];
                     if (s.layout === 'cover' || s.layout === 'closing') {
-                      return { ...s, coverTemplateId: coverTmplId };
+                      return { ...s, coverTemplateId: coverTmplId, ...(previewImg ? { imageUrl: previewImg, imagePosition: 'background' as const } : {}) };
+                    }
+                    // 내부 슬라이드에도 프리뷰 이미지 적용
+                    if (previewImg && !s.imageUrl) {
+                      return { ...s, imageUrl: previewImg, imagePosition: 'top' as const };
                     }
                     return s;
                   }));
