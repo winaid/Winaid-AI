@@ -9,6 +9,7 @@ import { ensureGoogleFontLoaded, resolveSlideFontFamily } from '../lib/cardStyle
 import { downloadCardAsPng, downloadAllAsZip } from '../lib/cardDownloadUtils';
 import CardNewsCanvas from './CardNewsCanvas';
 import SlideEditor from './card-news/SlideEditor';
+import InteractivePreview from './card-news/InteractivePreview';
 import { useSlideRenderer } from './card-news/SlideRenderers';
 
 interface Props {
@@ -656,72 +657,18 @@ JSON만 출력:
                     onSlideChange={(patch) => updateSlide(editingIdx, patch)}
                   />
                 ) : (
-                <div style={{ width: '100%', maxWidth: '650px', aspectRatio: cardAspect, position: 'relative', overflow: 'hidden', borderRadius: '16px', boxShadow: '0 20px 60px rgba(0,0,0,0.15)' }}>
-                  <div key={`edit-fs-${editingIdx}-${fontLoaded}-${theme.fontId || ''}-${eSlide.fontId || ''}`}
-                    style={{ position: 'absolute', top: 0, left: 0, width: `${cardWidth}px`, height: `${cardHeight}px`, transform: `scale(${650 / cardWidth})`, transformOrigin: 'top left' }}>
-                    {renderSlide(eSlide)}
-                  </div>
-                  {/* 드래그 오버레이 — 제목/부제/장식 위치 이동 */}
-                  <div style={{ position: 'absolute', inset: 0, zIndex: 20, cursor: 'grab' }}
-                    onMouseDown={(e) => {
-                      const rect = e.currentTarget.getBoundingClientRect();
-                      const clickX = ((e.clientX - rect.left) / rect.width) * 100;
-                      const clickY = ((e.clientY - rect.top) / rect.height) * 100;
-
-                      // 장식 요소 중 가장 가까운 것 찾기
-                      let closestDeco: string | null = null;
-                      let closestDist = 999;
-                      (eSlide.decorations || []).forEach(d => {
-                        const dx = parseFloat(d.position.left) - clickX;
-                        const dy = parseFloat(d.position.top) - clickY;
-                        const dist = Math.sqrt(dx * dx + dy * dy);
-                        if (dist < closestDist) { closestDist = dist; closestDeco = d.id; }
-                      });
-
-                      // 모든 드래그 대상 + 거리 계산
-                      const titlePos = eSlide.titlePosition || { x: 50, y: 30 };
-                      const subPos = eSlide.subtitlePosition || { x: 50, y: 45 };
-                      const hospPos = eSlide.hospitalNamePosition || { x: 50, y: 92 };
-
-                      const targets = [
-                        { id: 'title', x: titlePos.x, y: titlePos.y },
-                        { id: 'subtitle', x: subPos.x, y: subPos.y },
-                        { id: 'hospital', x: hospPos.x, y: hospPos.y },
-                      ];
-                      if (closestDeco && closestDist < 999) {
-                        targets.push({ id: `deco:${closestDeco}`, x: parseFloat((eSlide.decorations || []).find(d => d.id === closestDeco)?.position.left || '50'), y: parseFloat((eSlide.decorations || []).find(d => d.id === closestDeco)?.position.top || '50') });
-                      }
-
-                      // 클릭 위치에서 가장 가까운 요소 선택
-                      let bestTarget = targets[0];
-                      let bestDist = 999;
-                      targets.forEach(t => {
-                        const d = Math.sqrt((clickX - t.x) ** 2 + (clickY - t.y) ** 2);
-                        if (d < bestDist) { bestDist = d; bestTarget = t; }
-                      });
-
-                      const sx = e.clientX, sy = e.clientY;
-                      const startX = bestTarget.x, startY = bestTarget.y;
-
-                      const onMove = (ev: MouseEvent) => {
-                        const dx = ((ev.clientX - sx) / rect.width) * 100;
-                        const dy = ((ev.clientY - sy) / rect.height) * 100;
-                        const nx = Math.round(Math.max(2, Math.min(98, startX + dx)));
-                        const ny = Math.round(Math.max(2, Math.min(98, startY + dy)));
-                        if (bestTarget.id === 'title') updateSlide(editingIdx, { titlePosition: { x: nx, y: ny } });
-                        else if (bestTarget.id === 'subtitle') updateSlide(editingIdx, { subtitlePosition: { x: nx, y: ny } });
-                        else if (bestTarget.id === 'hospital') updateSlide(editingIdx, { hospitalNamePosition: { x: nx, y: ny } });
-                        else if (bestTarget.id.startsWith('deco:')) {
-                          const did = bestTarget.id.split(':')[1];
-                          updateSlide(editingIdx, { decorations: (eSlide.decorations || []).map(d => d.id === did ? { ...d, position: { top: `${ny}%`, left: `${nx}%` } } : d) });
-                        }
-                      };
-                      const onUp = () => { document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); };
-                      document.addEventListener('mousemove', onMove);
-                      document.addEventListener('mouseup', onUp);
-                    }}
-                  />
-                </div>
+                <InteractivePreview
+                  slide={eSlide}
+                  hospitalName={theme.hospitalName}
+                  cardWidth={cardWidth}
+                  cardHeight={cardHeight}
+                  cardAspect={cardAspect}
+                  renderSlide={renderSlide}
+                  onSlideChange={(patch) => updateSlide(editingIdx, patch)}
+                  fontLoaded={fontLoaded}
+                  fontId={theme.fontId}
+                  slideFontId={eSlide.fontId}
+                />
                 )}
               </div>
               {/* 우: 편집 패널 */}
