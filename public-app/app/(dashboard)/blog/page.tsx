@@ -66,7 +66,7 @@ function BlogForm() {
         const sb = getSupabaseClient();
         const { data: { user } } = await sb.auth.getUser();
         if (!user) return;
-        const nameFromMeta = user.user_metadata?.name;
+        const nameFromMeta = user.user_metadata?.hospital_name || user.user_metadata?.name;
         const urlFromMeta = user.user_metadata?.homepage_url;
         const addrFromMeta = user.user_metadata?.address;
         if (nameFromMeta) { setHospitalName(nameFromMeta); setHospitalNameFromProfile(nameFromMeta); }

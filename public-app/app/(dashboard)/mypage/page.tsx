@@ -152,8 +152,21 @@ export default function MyPage() {
     try {
       const sb = getSupabaseClient();
       const { error } = await sb.auth.updateUser({ data: { name: editName.trim(), hospital_name: editHospital.trim(), homepage_url: editHomepageUrl.trim(), address: editAddress.trim() } });
-      if (error) setSaveMsg('저장 실패: ' + error.message);
-      else { setSaveMsg('저장되었습니다'); setProfile(prev => prev ? { ...prev, name: editName.trim(), hospitalName: editHospital.trim() } : prev); }
+      if (error) { setSaveMsg('저장 실패: ' + error.message); }
+      else {
+        // profiles 테이블도 동기화
+        try {
+          await sb.from('profiles').update({
+            name: editName.trim(),
+            full_name: editName.trim(),
+            hospital_name: editHospital.trim(),
+            homepage_url: editHomepageUrl.trim(),
+            address: editAddress.trim(),
+          } as Record<string, unknown>).eq('id', profile.id);
+        } catch { /* profiles 업데이트 실패해도 user_metadata는 저장됨 */ }
+        setSaveMsg('저장되었습니다');
+        setProfile(prev => prev ? { ...prev, name: editName.trim(), hospitalName: editHospital.trim() } : prev);
+      }
     } catch { setSaveMsg('저장 실패'); }
     setIsSaving(false);
     setTimeout(() => setSaveMsg(''), 3000);
