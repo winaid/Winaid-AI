@@ -8,18 +8,6 @@ import { NextRequest, NextResponse } from 'next/server';
 export const maxDuration = 60;
 export const dynamic = 'force-dynamic';
 
-function getKeys(): string[] {
-  const keys: string[] = [];
-  for (let i = 0; i <= 10; i++) {
-    const envName = i === 0 ? 'GEMINI_API_KEY' : `GEMINI_API_KEY_${i}`;
-    const val = process.env[envName];
-    if (val) keys.push(val);
-  }
-  return keys;
-}
-
-let keyIndex = 0;
-
 interface GenerateDmRequest {
   influencer: {
     username: string;
@@ -58,11 +46,6 @@ function checkMedicalAdViolations(text: string): string[] {
 }
 
 export async function POST(request: NextRequest) {
-  const keys = getKeys();
-  if (keys.length === 0) {
-    return NextResponse.json({ error: 'GEMINI_API_KEY 미설정' }, { status: 500 });
-  }
-
   let body: GenerateDmRequest;
   try {
     body = await request.json();
@@ -128,30 +111,37 @@ ${toneGuides[tone] || toneGuides.casual}
 
 [{"tone":"${tone}","message":"DM 본문"},{"tone":"${tone} 변형1","message":"DM 본문"},{"tone":"${tone} 변형2","message":"DM 본문"}]`;
 
-  const key = keys[keyIndex % keys.length];
-  keyIndex++;
-
   try {
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-preview:generateContent?key=${key}`;
-    const response = await fetch(apiUrl, {
+    const baseUrl = process.env.NEXT_PUBLIC_VERCEL_URL
+      ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`
+      : process.env.VERCEL_URL
+        ? `https://${process.env.VERCEL_URL}`
+        : 'http://localhost:3000';
+
+    const response = await fetch(`${baseUrl}/api/gemini`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.8, maxOutputTokens: 2048, responseMimeType: 'application/json' },
+        prompt,
+        model: 'gemini-3.1-flash-preview',
+        temperature: 0.8,
+        maxOutputTokens: 2048,
+        responseType: 'json',
       }),
     });
 
     if (!response.ok) {
-      return NextResponse.json({ error: `Gemini API 오류: ${response.status}` }, { status: 500 });
+      return NextResponse.json({ error: `DM 생성 API 오류: ${response.status}` }, { status: 500 });
     }
 
-    const data = await response.json();
-    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
+    const data = await response.json() as { text?: string; error?: string };
+    if (!data.text) {
+      return NextResponse.json({ error: data.error || 'DM 생성 실패' }, { status: 500 });
+    }
 
     let parsed: Array<{ tone: string; message: string }>;
     try {
-      const jsonMatch = text.match(/\[[\s\S]*\]/);
+      const jsonMatch = data.text.match(/\[[\s\S]*\]/);
       parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : [];
     } catch {
       parsed = [];

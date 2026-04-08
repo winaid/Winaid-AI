@@ -27,18 +27,6 @@ const LOCATION_KEYWORDS: Record<string, string[]> = {
   '부산': ['부산', '서면', '남포동', '전포', '광안리'],
 };
 
-function getKeys(): string[] {
-  const keys: string[] = [];
-  for (let i = 0; i <= 10; i++) {
-    const envName = i === 0 ? 'GEMINI_API_KEY' : `GEMINI_API_KEY_${i}`;
-    const val = process.env[envName];
-    if (val) keys.push(val);
-  }
-  return keys;
-}
-
-let keyIndex = 0;
-
 interface SearchRequest {
   location: string;
   hashtags: string[];
@@ -49,11 +37,6 @@ interface SearchRequest {
 }
 
 export async function POST(request: NextRequest) {
-  const keys = getKeys();
-  if (keys.length === 0) {
-    return NextResponse.json({ error: 'GEMINI_API_KEY 미설정' }, { status: 500 });
-  }
-
   let body: SearchRequest;
   try {
     body = await request.json();
@@ -102,33 +85,44 @@ Google Search로 "site:instagram.com ${searchHashtags.slice(0, 3).join(' ')} ${b
 JSON 배열로만 출력. 최대 15명:
 [{"username":"...", "full_name":"...", "follower_count":5000, "engagement_rate":3.5, "estimated_location":"강남", "location_confidence":"medium", "primary_category":"맛집/카페", "recent_post_preview":"최근 게시물 텍스트..."}]`;
 
-  // Gemini API 호출
+  // Gemini API 호출 (Google Search 활용)
   const key = keys[keyIndex % keys.length];
   keyIndex++;
 
   try {
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-preview:generateContent?key=${key}`;
-    const response = await fetch(apiUrl, {
+    // 기존 프로젝트의 /api/gemini 경유 방식과 동일하게 내부 API 호출
+    const baseUrl = process.env.NEXT_PUBLIC_VERCEL_URL
+      ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`
+      : process.env.VERCEL_URL
+        ? `https://${process.env.VERCEL_URL}`
+        : 'http://localhost:3000';
+
+    const response = await fetch(`${baseUrl}/api/gemini`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.3, maxOutputTokens: 8192, responseMimeType: 'application/json' },
-        tools: [{ googleSearch: {} }],
+        prompt,
+        model: 'gemini-3.1-flash-preview',
+        temperature: 0.3,
+        maxOutputTokens: 8192,
+        googleSearch: true,
+        responseType: 'json',
       }),
     });
 
     if (!response.ok) {
-      const err = await response.text();
-      return NextResponse.json({ error: `Gemini API 오류: ${response.status}`, details: err.substring(0, 200) }, { status: 500 });
+      const err = await response.json().catch(() => ({ error: '알 수 없는 오류' }));
+      return NextResponse.json({ error: `검색 API 오류: ${response.status}`, details: (err as { error?: string }).error }, { status: 500 });
     }
 
-    const data = await response.json();
-    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
+    const data = await response.json() as { text?: string; error?: string };
+    if (!data.text) {
+      return NextResponse.json({ error: data.error || '검색 결과 없음' }, { status: 500 });
+    }
 
     let parsed: Array<Record<string, unknown>>;
     try {
-      const jsonMatch = text.match(/\[[\s\S]*\]/);
+      const jsonMatch = data.text.match(/\[[\s\S]*\]/);
       parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : [];
     } catch {
       parsed = [];
