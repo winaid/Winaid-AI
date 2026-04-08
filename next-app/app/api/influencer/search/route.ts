@@ -187,7 +187,7 @@ JSON 배열로만:
 
   const { text } = await callGeminiDirect({
     prompt,
-    model: 'gemini-3.1-flash-preview',
+    model: 'gemini-3.1-flash-lite-preview',
     temperature: 0.2,
     maxOutputTokens: 4096,
     googleSearch: true,
@@ -281,7 +281,7 @@ ${hintsBlock}
 JSON 배열만:
 [{"username":"실제아이디", "full_name":"표시이름", "follower_count":5000, "engagement_rate":3.5, "estimated_location":"강남", "location_confidence":"medium", "primary_category":"맛집/카페", "recent_post_preview":"최근 게시물 텍스트"}]`;
 
-  const { text } = await callGeminiDirect({ prompt, model: 'gemini-3.1-flash-preview', temperature: 0.3, maxOutputTokens: 4096, googleSearch: true });
+  const { text } = await callGeminiDirect({ prompt, model: 'gemini-3.1-flash-lite-preview', temperature: 0.3, maxOutputTokens: 4096, googleSearch: true });
   if (!text) return [];
   try {
     const parsed = JSON.parse(text.match(/\[[\s\S]*\]/)?.[0] || '[]');

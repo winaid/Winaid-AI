@@ -117,7 +117,7 @@ ${toneGuides[tone] || toneGuides.casual}
   try {
     const { text, error } = await callGeminiDirect({
       prompt,
-      model: 'gemini-3.1-flash-preview',
+      model: 'gemini-3.1-flash-lite-preview',
       temperature: 0.8,
       maxOutputTokens: 2048,
     });

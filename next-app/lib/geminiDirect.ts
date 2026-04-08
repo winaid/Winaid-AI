@@ -41,9 +41,17 @@ export async function callGeminiDirect(options: GeminiCallOptions): Promise<Gemi
     return { text: null, error: 'GEMINI_API_KEY 미설정' };
   }
 
-  const model = options.model || 'gemini-3.1-flash-preview';
+  // 모델 fallback: 요청한 모델 → pro → flash 순으로 시도
+  const models = [
+    options.model || 'gemini-3.1-flash-lite-preview',
+    'gemini-3.1-pro-preview',
+    'gemini-3.1-flash-lite-preview',
+  ];
+  // 중복 제거
+  const uniqueModels = [...new Set(models)];
 
-  for (let attempt = 0; attempt < Math.min(keys.length, 3); attempt++) {
+  for (const model of uniqueModels) {
+  for (let attempt = 0; attempt < Math.min(keys.length, 2); attempt++) {
     const key = keys[(keyIndex + attempt) % keys.length];
 
     const requestBody: Record<string, unknown> = {
@@ -88,7 +96,8 @@ export async function callGeminiDirect(options: GeminiCallOptions): Promise<Gemi
           continue;
         }
         if (status === 400 || status === 404) {
-          return { text: null, error: `모델 오류 (${status}): ${model}` };
+          console.warn(`[GeminiDirect] 모델 ${model} 실패 (${status}) → 다음 모델 시도`);
+          break; // 이 모델 포기, 다음 모델로
         }
         continue;
       }
@@ -109,7 +118,8 @@ export async function callGeminiDirect(options: GeminiCallOptions): Promise<Gemi
       }
       continue;
     }
-  }
+  } // end keys loop
+  } // end models loop
 
-  return { text: null, error: '모든 API 키 시도 실패' };
+  return { text: null, error: '모든 모델/키 시도 실패' };
 }
