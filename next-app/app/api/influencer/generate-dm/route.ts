@@ -54,10 +54,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }
 
-  const { influencer, hospital, tone } = body;
-  if (!influencer?.username || !hospital?.name) {
-    return NextResponse.json({ error: '인플루언서 또는 병원 정보 필요' }, { status: 400 });
+  const { influencer, tone } = body;
+  const hospital = body.hospital || { name: '저희 병원', location: '', features: '', instagram: '' };
+  if (!influencer) {
+    return NextResponse.json({ error: '인플루언서 정보가 없습니다' }, { status: 400 });
   }
+  if (!hospital.name) hospital.name = '저희 병원';
 
   const recentPostText = influencer.recent_posts?.[0]?.text || '';
 
