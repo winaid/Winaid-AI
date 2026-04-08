@@ -92,6 +92,20 @@ ${imageCount >= 4 ? '[IMG_4]' : ''}`;
   return html;
 }
 
+const DENTAL_PROSTHETIC_GUIDE = `
+■ 보철/기공소 파트
+1) 보철 역할: 저작 기능 회복, 발음 교정, 인접 치아 이동 방지, 악관절 균형 유지
+2) 기공소 역할: 치과의사 채득 인상 → 기공사가 0.01mm 단위로 보철물 성형, 색상 매칭, 교합 조정
+3) 보철 재료: 지르코니아(강도+심미), PFM(내구성, 금속비침), 올세라믹 e.max(심미 최고), 금(생체적합), 레진(임시)
+4) 디지털 기공: 구강스캐너(iTero/TRIOS) → CAD/CAM 설계 → 밀링/3D프린터 제작 (정밀도↑ 시간↓)
+5) 자체 기공소 vs 외주: 즉시 소통, 당일 수정, 색상 매칭 정확도 차이
+6) 환자 체감: 제작 기간(아날로그 5~7일 vs 디지털 1~3일), 이물감, 자연치아 구분`;
+
+function isProstheticTopic(topic: string, disease?: string): boolean {
+  const t = `${topic} ${disease || ''}`;
+  return /보철|임플란트|크라운|브릿지|틀니|인레이|온레이|기공|지르코니아|PFM|올세라믹|라미네이트/.test(t);
+}
+
 const CATEGORY_DEPTH_GUIDES: Record<string, string> = {
   '치과': `[치과 전문 콘텐츠 가이드]
 
@@ -99,14 +113,6 @@ const CATEGORY_DEPTH_GUIDES: Record<string, string> = {
 - 치료 단계별: 진단(파노라마/CT/구강스캐너) → 치료계획 수립 → 시술 → 경과 관찰
 - 장비명 + 환자 체감: "CT 촬영으로 잇몸뼈 상태를 3D로 확인 → 임플란트 위치와 각도를 미리 계획"
 - 환자 불안 해소: 마취 과정, 시술 중 느낌, 회복 기간을 솔직하게
-
-■ 보철/기공소 파트 — 보철 관련 주제 시 반드시 포함
-1) 보철 역할: 저작 기능 회복, 발음 교정, 인접 치아 이동 방지, 악관절 균형 유지
-2) 기공소 역할: 치과의사 채득 인상 → 기공사가 0.01mm 단위로 보철물 성형, 색상 매칭, 교합 조정
-3) 보철 재료: 지르코니아(강도+심미), PFM(내구성, 금속비침), 올세라믹 e.max(심미 최고), 금(생체적합), 레진(임시)
-4) 디지털 기공: 구강스캐너(iTero/TRIOS) → CAD/CAM 설계 → 밀링/3D프린터 제작 (정밀도↑ 시간↓)
-5) 자체 기공소 vs 외주: 즉시 소통, 당일 수정, 색상 매칭 정확도 차이
-6) 환자 체감: 제작 기간(아날로그 5~7일 vs 디지털 1~3일), 이물감, 자연치아 구분
 
 ■ 비용: "건강보험 적용 여부", "재료에 따른 차이" 수준으로. 65세 이상 틀니/임플란트 보험 적용 안내 가능`,
 
@@ -292,6 +298,7 @@ ${range.max}자 초과 시 → 가장 약한 문단을 삭제 후 출력. 패딩
     '- 의학 표현: 쉽게 쓰되 틀리면 안 됨. "불편함" → "움직일 때 걸리는 느낌"',
     '',
     ...(CATEGORY_DEPTH_GUIDES[req.category] ? [CATEGORY_DEPTH_GUIDES[req.category]] : []),
+    ...(req.category === '치과' && isProstheticTopic(req.topic, req.disease) ? [DENTAL_PROSTHETIC_GUIDE] : []),
     '',
     getTrustedSourcesPromptBlock(req.category),
     '',
