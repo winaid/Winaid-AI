@@ -223,8 +223,12 @@ JSON 배열로만:
         follower_count: info?.follower_count || 0,
         primary_category: info?.primary_category || guessCategory(o.hashtags, o.captions.join(' ')),
       };
-    }).filter(r => r.username && !r.username.startsWith('user_'));
-  } catch {
+    });
+    // Gemini가 username을 찾은 것 + 못 찾은 것(user_xxx) 모두 포함
+    console.info(`[INFLUENCER] Gemini 보충: ${enrichedResults.filter(r => !r.username.startsWith('user_')).length}명 username 확인, ${enrichedResults.filter(r => r.username.startsWith('user_')).length}명 미확인`);
+    return enrichedResults;
+  } catch (err) {
+    console.error('[INFLUENCER] Gemini 보충 실패:', err);
     return owners.slice(0, 15).map(o => ownerToResult(o, location));
   }
 }
@@ -335,11 +339,16 @@ export async function POST(request: NextRequest) {
     source = 'gemini';
   }
 
-  // 팔로워 범위 필터 (0은 제외)
-  results = results.filter(r => {
-    if (!r.follower_count) return false;
-    return r.follower_count >= body.follower_min && r.follower_count <= body.follower_max;
-  });
+  // 팔로워 범위 필터 — RapidAPI+Gemini 소스는 팔로워 0도 허용 (프로필 보충 실패 가능)
+  if (source === 'gemini') {
+    results = results.filter(r => r.follower_count > 0 && r.follower_count >= body.follower_min && r.follower_count <= body.follower_max);
+  } else {
+    // RapidAPI 소스: 팔로워 확인된 것만 범위 필터, 미확인(0)은 포함 (참여도 기반으로 가치 있음)
+    results = results.filter(r => {
+      if (r.follower_count > 0) return r.follower_count >= body.follower_min && r.follower_count <= body.follower_max;
+      return true; // 팔로워 미확인이지만 실제 게시물 데이터 있음
+    });
+  }
 
   return NextResponse.json({ results: results.slice(0, 20), total_found: results.length, search_hashtags_used: searchHashtags, source });
 }

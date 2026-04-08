@@ -153,8 +153,12 @@ export default function InfluencerPage() {
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || '검색 실패');
+      if (!res.ok) throw new Error(data.error || data.details || '검색 실패');
+      console.info('[INFLUENCER] 검색 결과:', { total: data.total_found, source: data.source, hashtags: data.search_hashtags_used });
       setResults(data.results || []);
+      if (data.total_found === 0) {
+        setSearchError(`결과 0명 (소스: ${data.source || '?'}, 해시태그: ${(data.search_hashtags_used || []).slice(0, 3).join(', ')}). 팔로워 범위를 넓히거나 해시태그를 변경해보세요.`);
+      }
       setStep(2);
     } catch (err) {
       setSearchError(err instanceof Error ? err.message : '검색 중 오류');
@@ -356,7 +360,9 @@ export default function InfluencerPage() {
                 {/* 정보 */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="font-bold text-sm text-slate-900">@{inf.username}</span>
+                    <span className="font-bold text-sm text-slate-900">
+                      {inf.username.startsWith('user_') ? '👤 프로필 미확인' : `@${inf.username}`}
+                    </span>
                     {inf.full_name && <span className="text-xs text-slate-400">{inf.full_name}</span>}
                   </div>
                   <div className="flex flex-wrap gap-3 text-xs text-slate-500 mb-2">
