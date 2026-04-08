@@ -228,6 +228,7 @@ export default function CardNewsPage() {
   /** 추천 디자인 모달 — 이미지 캐시 + 프리페치 */
   const [previewBgImages, setPreviewBgImages] = useState<string[]>([]);
   const previewCacheRef = useRef<Map<string, string[]>>(new Map());
+  const skipAutoImagesRef = useRef(false);
 
   const fetchPreviewImages = async (style: ImageStyleType, force = false) => {
     // 캐시 확인 — 같은 스타일+쿼리면 즉시 반환
@@ -438,8 +439,9 @@ export default function CardNewsPage() {
         fontId: parsedFontId || prev.fontId,
       }));
 
-      // 텍스트 원고만 즉시 노출. 커버/마무리에는 Pexels 배경 자동 적용.
-      const withBg = await autoApplyBackgrounds(slides);
+      // 텍스트 원고만 즉시 노출. 커버/마무리에는 Pexels 배경 자동 적용 (모달에서 이미지 선택한 경우 건너뜀).
+      const withBg = skipAutoImagesRef.current ? slides : await autoApplyBackgrounds(slides);
+      skipAutoImagesRef.current = false;
       setProSlides(withBg);
       setPipelineStep('idle');
       setPageStep(2); // 생성 완료 → 편집 단계로 전환
@@ -1458,32 +1460,44 @@ DECORATIVE: (장식 요소)`,
                   const tmpl = COVER_TEMPLATES[selectedPreviewIdx];
                   setShowDesignModal(false);
                   const coverTmplId = tmpl?.id || '';
-                  // 선택한 레이아웃의 색상을 전체 테마에 적용
+                  // 선택한 템플릿의 실제 색상을 테마에 적용 (하드코딩 X)
                   if (tmpl) {
+                    const isDark = tmpl.colors.title === '#FFFFFF';
                     setProTheme(prev => ({
                       ...prev,
-                      backgroundColor: '#1B2A4A',
-                      backgroundGradient: 'linear-gradient(180deg, #1B2A4A, #152238)',
-                      titleColor: '#FFFFFF',
+                      backgroundColor: isDark ? '#1B2A4A' : '#F5F0EB',
+                      backgroundGradient: tmpl.background.gradient || (isDark ? 'linear-gradient(180deg, #1B2A4A, #152238)' : ''),
+                      titleColor: tmpl.colors.title,
                       subtitleColor: tmpl.colors.subtitle,
                       accentColor: tmpl.colors.accent,
-                      bodyColor: '#D6D8E0',
+                      bodyColor: isDark ? '#D6D8E0' : '#4A5568',
                       fontId: prev.fontId || 'pretendard',
                     }));
                   }
+                  // autoApplyBackgrounds 건너뛰기 — 프리뷰 이미지를 직접 적용할 것
+                  skipAutoImagesRef.current = true;
                   await (handleSubmit as any)(new Event('submit'));
-                  // 생성 후 커버/마무리에 선택한 템플릿 + 프리뷰 이미지 적용
-                  setProSlides(prev => prev.map((s, i) => {
-                    const previewImg = previewBgImages[i % Math.max(previewBgImages.length, 1)];
-                    if (s.layout === 'cover' || s.layout === 'closing') {
-                      return { ...s, coverTemplateId: coverTmplId, ...(previewImg ? { imageUrl: previewImg, imagePosition: 'background' as const } : {}) };
-                    }
-                    // 내부 슬라이드에도 프리뷰 이미지 적용
-                    if (previewImg && !s.imageUrl) {
-                      return { ...s, imageUrl: previewImg, imagePosition: 'top' as const };
-                    }
-                    return s;
-                  }));
+                  // 생성 후 프리뷰에서 선택한 이미지를 슬라이드에 직접 적용
+                  if (previewBgImages.length > 0) {
+                    setProSlides(prev => prev.map((s, i) => {
+                      const previewImg = previewBgImages[i % previewBgImages.length];
+                      if (s.layout === 'cover' || s.layout === 'closing') {
+                        return { ...s, coverTemplateId: coverTmplId, imageUrl: previewImg, imagePosition: 'background' as const };
+                      }
+                      if (!s.imageUrl) {
+                        return { ...s, imageUrl: previewImg, imagePosition: 'top' as const };
+                      }
+                      return s;
+                    }));
+                  } else {
+                    // 프리뷰 이미지 없으면 템플릿만 적용
+                    setProSlides(prev => prev.map(s => {
+                      if (s.layout === 'cover' || s.layout === 'closing') {
+                        return { ...s, coverTemplateId: coverTmplId };
+                      }
+                      return s;
+                    }));
+                  }
                 }}
                 className="px-8 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white text-sm font-bold rounded-xl shadow-lg disabled:opacity-50">
                 {isGenerating ? '생성 중...' : '✨ 이 디자인으로 생성하기'}
