@@ -5,7 +5,6 @@
  * responseModalities: ["IMAGE", "TEXT"] 사용.
  */
 import { NextRequest, NextResponse } from 'next/server';
-import { gateGuestRequest } from '../../../lib/guestRateLimit';
 
 export const maxDuration = 300;
 export const dynamic = 'force-dynamic';
@@ -454,11 +453,7 @@ interface ImageRequestBody {
 }
 
 export async function POST(request: NextRequest) {
-  // 게스트 허용: 로그인 쿠키 없으면 IP 기반 분당 10회 제한
-  const gate = gateGuestRequest(request);
-  if (!gate.ok) {
-    return NextResponse.json({ error: gate.error }, { status: gate.status });
-  }
+  // 내부용: 게스트 제한 없음 (로그인 필수 환경)
 
   const keys = getKeys();
   if (keys.length === 0) {
