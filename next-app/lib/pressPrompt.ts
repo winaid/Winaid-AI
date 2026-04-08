@@ -168,10 +168,8 @@ ${getMedicalLawPromptBlock(true)}
   </div>
   <div class="press-footer">
     <div class="references-footer" data-no-copy="true">
-      <p style="font-size:11px;color:#94a3b8;font-weight:600;">참고 자료</p>
-      <ul style="font-size:11px;color:#94a3b8;padding-left:20px;margin:8px 0 0 0;line-height:1.8;">
-        <li>기관명 — 관련 정보 주제 (2~4개)</li>
-      </ul>
+      <p><strong>참고 자료</strong></p>
+      <ul><li>기관명 — 관련 정보 주제 (2~4개)</li></ul>
     </div>
     <div class="press-disclaimer">
       <p>※ 의학적 정보는 참고용이며, 정확한 진단은 전문의 판단이 필요합니다.</p>
