@@ -228,7 +228,7 @@ function ownerToResult(o: OwnerActivity, location: string): InfluencerResult {
     follower_count: 0,
     following_count: 0,
     post_count: o.post_count,
-    engagement_rate: 0,
+    engagement_rate: Math.round(o.avg_engagement * 10) / 10, // 게시물당 평균 참여(좋아요+댓글)
     estimated_location: locEst.location,
     location_confidence: locEst.confidence,
     primary_category: guessCategory(o.hashtags, o.captions.join(' ')),
@@ -312,9 +312,23 @@ export async function POST(request: NextRequest) {
       const owners = groupByOwner(allPosts);
       console.info(`[INFLUENCER] ${allPosts.length}개 게시물 → ${owners.length}명 고유 계정 (스팸 제외)`);
 
-      results = await enrichWithGemini(owners, body.location);
-      source = 'rapidapi+gemini';
-      console.info(`[INFLUENCER] Gemini 보충 후: ${results.length}명`);
+      // Gemini 보충 시도 (실패해도 RapidAPI 데이터만으로 결과 반환)
+      try {
+        const enriched = await enrichWithGemini(owners, body.location);
+        if (enriched.length > 0) {
+          results = enriched;
+          source = 'rapidapi+gemini';
+        }
+      } catch (err) {
+        console.warn('[INFLUENCER] Gemini 보충 실패, RapidAPI 데이터만 사용:', err);
+      }
+
+      // Gemini 보충 실패 시 RapidAPI 데이터만으로 결과 구성
+      if (results.length === 0) {
+        results = owners.slice(0, 20).map(o => ownerToResult(o, body.location));
+        source = 'rapidapi';
+        console.info(`[INFLUENCER] RapidAPI 단독 결과: ${results.length}명`);
+      }
     }
   }
 

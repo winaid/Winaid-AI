@@ -371,8 +371,16 @@ export default function InfluencerPage() {
                     {inf.full_name && <span className="text-xs text-slate-400">{inf.full_name}</span>}
                   </div>
                   <div className="flex flex-wrap gap-3 text-xs text-slate-500 mb-2">
-                    <span>팔로워 <strong className="text-slate-700">{inf.follower_count.toLocaleString()}</strong></span>
-                    <span>참여율 <strong className="text-blue-600">{inf.engagement_rate.toFixed(1)}%</strong></span>
+                    {inf.follower_count > 0 ? (
+                      <span>팔로워 <strong className="text-slate-700">{inf.follower_count.toLocaleString()}</strong></span>
+                    ) : (
+                      <span className="text-slate-400">팔로워 미확인</span>
+                    )}
+                    {inf.follower_count > 0 ? (
+                      <span>참여율 <strong className="text-blue-600">{inf.engagement_rate.toFixed(1)}%</strong></span>
+                    ) : inf.engagement_rate > 0 ? (
+                      <span>참여도 <strong className="text-blue-600">{inf.engagement_rate.toFixed(0)}</strong> (좋아요+댓글 평균)</span>
+                    ) : null}
                     <span className={inf.location_confidence === 'high' ? 'text-green-600' : inf.location_confidence === 'medium' ? 'text-amber-600' : 'text-slate-400'}>
                       📍 {inf.estimated_location} ({inf.location_confidence === 'high' ? '정확' : inf.location_confidence === 'medium' ? '추정' : '불확실'})
                     </span>
