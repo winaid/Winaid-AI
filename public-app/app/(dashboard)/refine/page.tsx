@@ -88,9 +88,10 @@ export default function RefinePage() {
     setIsRefining(true); setError(null); setRefinedHtml(null); setSaveStatus(null);
     try {
       const { systemInstruction, prompt } = buildRefinePrompt({ originalText: originalText.trim(), mode: selectedMode });
+      const needsSearch = selectedMode === 'seo' || selectedMode === 'professional' || selectedMode === 'longer';
       const res = await fetch('/api/gemini', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt, systemInstruction, model: 'gemini-3.1-pro-preview', temperature: 0.6, maxOutputTokens: 32768, googleSearch: selectedMode === 'seo' }),
+        body: JSON.stringify({ prompt, systemInstruction, model: 'gemini-3.1-pro-preview', temperature: 0.6, maxOutputTokens: 32768, googleSearch: needsSearch }),
       });
       const data = await res.json() as { text?: string; error?: string };
       if (!res.ok || !data.text) { setError(data.error || `서버 오류 (${res.status})`); return; }
