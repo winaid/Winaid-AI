@@ -123,7 +123,10 @@ ${toneGuides[tone] || toneGuides.casual}
     });
 
     if (!text) {
-      return NextResponse.json({ error: error || 'DM 생성 실패' }, { status: 500 });
+      console.error('[INFLUENCER DM] Gemini 응답 없음:', error);
+      return NextResponse.json({ drafts: [
+        { tone, message: `안녕하세요! ${hospital.name}입니다 😊\n${influencer.full_name || influencer.username || '크리에이터'}님의 콘텐츠를 보고 연락드렸어요.\n같은 ${hospital.location || '동네'}에서 활동하시는 것 같아 소소한 협업을 제안드리고 싶은데, 혹시 관심 있으시면 편하게 답장 주세요~`, warnings: [] },
+      ] });
     }
 
     let parsed: Array<{ tone: string; message: string }>;
@@ -131,7 +134,12 @@ ${toneGuides[tone] || toneGuides.casual}
       const jsonMatch = text.match(/\[[\s\S]*\]/);
       parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : [];
     } catch {
-      parsed = [];
+      // JSON 파싱 실패 — 텍스트 자체를 DM으로 사용
+      parsed = [{ tone, message: text.substring(0, 500) }];
+    }
+
+    if (parsed.length === 0) {
+      parsed = [{ tone, message: text.substring(0, 500) }];
     }
 
     // 의료광고법 검사
@@ -143,6 +151,7 @@ ${toneGuides[tone] || toneGuides.casual}
 
     return NextResponse.json({ drafts });
   } catch (err) {
+    console.error('[INFLUENCER DM] 오류:', err);
     return NextResponse.json({ error: `DM 생성 오류: ${(err as Error).message}` }, { status: 500 });
   }
 }
