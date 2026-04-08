@@ -265,7 +265,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: '위치를 입력해주세요' }, { status: 400 });
   }
 
-  const searchHashtags = body.hashtags.length > 0 ? body.hashtags : generateHashtags(body.location);
+  const searchHashtags = body.hashtags.length > 0 ? body.hashtags : generateHashtags(body.location, body.categories);
   const categoryFilter = body.categories.length > 0 ? body.categories.join(', ') : '맛집, 뷰티, 일상, 건강';
 
   let results: InfluencerResult[] = [];
@@ -298,8 +298,34 @@ export async function POST(request: NextRequest) {
   });
 }
 
-function generateHashtags(location: string): string[] {
+function generateHashtags(location: string, categories?: string[]): string[] {
   const loc = location.replace(/역|구|동|시/g, '').trim();
   if (!loc) return ['맛집', '일상', '카페'];
-  return [`${loc}맛집`, `${loc}일상`, `${loc}카페`, `${loc}추천`, `${loc}핫플`];
+
+  // 기본 지역 해시태그
+  const tags: string[] = [`${loc}맛집`, `${loc}카페`, `${loc}일상`, `${loc}추천`, `${loc}핫플`];
+
+  // 카테고리별 특화 해시태그
+  const CATEGORY_TAGS: Record<string, string[]> = {
+    food:      [`${loc}맛집추천`, `${loc}브런치`, `${loc}디저트`, `${loc}점심`, `${loc}데이트`],
+    beauty:    [`${loc}네일`, `${loc}뷰티`, `${loc}헤어`, `${loc}피부관리`, `${loc}미용실`],
+    lifestyle: [`${loc}라이프`, `${loc}데일리`, `${loc}주말`, `${loc}산책`, `${loc}동네`],
+    parenting: [`${loc}맘`, `${loc}육아`, `${loc}아이`, `${loc}키즈카페`, `${loc}어린이`],
+    health:    [`${loc}운동`, `${loc}헬스`, `${loc}필라테스`, `${loc}요가`, `${loc}다이어트`],
+    fashion:   [`${loc}패션`, `${loc}코디`, `${loc}쇼핑`, `${loc}스타일`, `${loc}ootd`],
+    local:     [`${loc}소식`, `${loc}동네맛집`, `${loc}로컬`, `${loc}신상`, `${loc}오픈`],
+  };
+
+  // 선택된 카테고리가 있으면 해당 태그 추가
+  if (categories && categories.length > 0) {
+    for (const cat of categories) {
+      const catTags = CATEGORY_TAGS[cat];
+      if (catTags) tags.push(...catTags);
+    }
+  } else {
+    // 카테고리 없으면 기본 인기 태그
+    tags.push(`${loc}브런치`, `${loc}데일리`, `${loc}동네맛집`);
+  }
+
+  return [...new Set(tags)]; // 중복 제거
 }

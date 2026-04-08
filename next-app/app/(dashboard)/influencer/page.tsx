@@ -61,11 +61,28 @@ const inputCls = 'w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-x
 const btnPrimary = 'px-6 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed';
 const btnSecondary = 'px-4 py-2 bg-slate-100 text-slate-700 font-semibold rounded-xl hover:bg-slate-200 transition-all text-sm';
 
-// ── 지역 키워드 기반 해시태그 자동 생성 ──
-function generateDefaultHashtags(location: string): string {
+// ── 지역 + 카테고리 기반 해시태그 자동 생성 ──
+const CATEGORY_TAG_MAP: Record<string, string[]> = {
+  food:      ['맛집추천', '브런치', '디저트', '점심', '데이트'],
+  beauty:    ['네일', '뷰티', '헤어', '피부관리', '미용실'],
+  lifestyle: ['라이프', '데일리', '주말', '산책', '동네'],
+  parenting: ['맘', '육아', '아이', '키즈카페', '어린이'],
+  health:    ['운동', '헬스', '필라테스', '요가', '다이어트'],
+  fashion:   ['패션', '코디', '쇼핑', '스타일', 'ootd'],
+  local:     ['소식', '동네맛집', '로컬', '신상', '오픈'],
+};
+
+function generateDefaultHashtags(location: string, categories?: string[]): string {
   const loc = location.replace(/역|구|동|시/g, '').trim();
   if (!loc) return '';
-  return [`${loc}맛집`, `${loc}일상`, `${loc}카페`, `${loc}추천`, `${loc}핫플`].join(', ');
+  const base = [`${loc}맛집`, `${loc}카페`, `${loc}일상`, `${loc}추천`, `${loc}핫플`];
+  if (categories && categories.length > 0) {
+    for (const cat of categories) {
+      const tags = CATEGORY_TAG_MAP[cat];
+      if (tags) base.push(...tags.slice(0, 3).map(t => `${loc}${t}`));
+    }
+  }
+  return [...new Set(base)].join(', ');
 }
 
 export default function InfluencerPage() {
@@ -97,12 +114,24 @@ export default function InfluencerPage() {
   // ── 상태 추적 ──
   const [outreachStatuses, setOutreachStatuses] = useState<Record<string, OutreachStatus>>({});
 
-  // 병원 위치 변경 시 해시태그 자동 생성
+  // 병원 위치 또는 카테고리 변경 시 해시태그 자동 갱신
   const handleLocationChange = (loc: string) => {
     setHospitalLocation(loc);
-    if (!hashtags || hashtags === generateDefaultHashtags(hospitalLocation)) {
-      setHashtags(generateDefaultHashtags(loc));
+    const prev = generateDefaultHashtags(hospitalLocation, selectedCategories);
+    if (!hashtags || hashtags === prev) {
+      setHashtags(generateDefaultHashtags(loc, selectedCategories));
     }
+  };
+
+  const handleCategoryToggle = (catId: string) => {
+    setSelectedCategories(prev => {
+      const next = prev.includes(catId) ? prev.filter(c => c !== catId) : [...prev, catId];
+      const prevTags = generateDefaultHashtags(hospitalLocation, prev);
+      if (!hashtags || hashtags === prevTags) {
+        setHashtags(generateDefaultHashtags(hospitalLocation, next));
+      }
+      return next;
+    });
   };
 
   // ── 검색 실행 ──
@@ -256,7 +285,7 @@ export default function InfluencerPage() {
                   <button
                     key={cat.id}
                     type="button"
-                    onClick={() => setSelectedCategories(prev => prev.includes(cat.id) ? prev.filter(c => c !== cat.id) : [...prev, cat.id])}
+                    onClick={() => handleCategoryToggle(cat.id)}
                     className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
                       selectedCategories.includes(cat.id)
                         ? 'bg-blue-50 border-blue-300 text-blue-700'
