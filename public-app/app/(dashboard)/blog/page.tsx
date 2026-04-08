@@ -367,8 +367,8 @@ function BlogForm() {
     if (keywordStats.length === 0 || !hospitalName) return;
     console.info(`[RANK] ========== 상위권 체크 시작 ==========`);
     console.info(`[RANK] 병원="${hospitalName}" 키워드 ${keywordStats.length}개`);
-    // 병원의 블로그 ID 가져오기 (SaaS: 추후 사용자별 블로그 URL 관리 기능으로 대체)
-    const blogUrls: string[] = [];
+    // 병원의 블로그 ID — 사용자가 입력한 homepageUrl 사용
+    const blogUrls: string[] = homepageUrl.trim() ? [homepageUrl.trim()] : [];
     const blogIds: string[] = [];
     for (const url of blogUrls) {
       const naverMatch = url.match(/blog\.naver\.com\/([^/?#]+)/);
@@ -381,7 +381,7 @@ function BlogForm() {
     }
 
     if (blogIds.length === 0) {
-      setKeywordProgress('블로그 URL이 등록되지 않은 병원입니다.');
+      setKeywordProgress('홈페이지/블로그 URL을 먼저 입력해주세요.');
       setTimeout(() => setKeywordProgress(''), 3000);
       return;
     }

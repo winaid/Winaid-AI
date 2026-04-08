@@ -317,7 +317,7 @@ function BlogForm() {
     // 병원의 블로그 ID 가져오기
     const team = TEAM_DATA.find(t => t.id === selectedTeam);
     const hospital = team?.hospitals.find(h => h.name.replace(/ \(.*\)$/, '') === hospitalName);
-    const blogUrls = hospital?.naverBlogUrls || [];
+    const blogUrls = hospital?.naverBlogUrls?.length ? hospital.naverBlogUrls : (homepageUrl.trim() ? [homepageUrl.trim()] : []);
     const blogIds: string[] = [];
     for (const url of blogUrls) {
       const naverMatch = url.match(/blog\.naver\.com\/([^/?#]+)/);
