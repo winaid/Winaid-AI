@@ -144,6 +144,14 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
             <h2 className="text-base font-bold text-slate-800">블로그 생성</h2>
           </div>
 
+          {/* 진료과 */}
+          <div>
+            <label className={labelCls}>진료과</label>
+            <select value={category} onChange={e => setCategory(e.target.value as ContentCategory)} className={inputCls} disabled={isGenerating} aria-label="진료과 선택">
+              {CATEGORIES.map(cat => <option key={cat.value} value={cat.value}>{cat.label}</option>)}
+            </select>
+          </div>
+
           {/* 병원명 */}
           <div>
             <label className={labelCls}>병원명</label>
@@ -158,11 +166,6 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
               <p className="text-[10px] text-blue-400 mt-1">회원 정보에서 자동 입력됨</p>
             )}
           </div>
-
-          {/* 진료과 */}
-          <select value={category} onChange={e => setCategory(e.target.value as ContentCategory)} className={inputCls} disabled={isGenerating} aria-label="진료과 선택">
-            {CATEGORIES.map(cat => <option key={cat.value} value={cat.value}>{cat.label}</option>)}
-          </select>
 
           {/* 병원 주소 */}
           {hospitalName && (
@@ -365,6 +368,16 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
             </div>
           )}
 
+          {/* 제목 */}
+          <div>
+            <label className={labelCls}>
+              제목
+              <span className="text-[10px] text-slate-400 ml-1.5 font-normal">비워두면 주제가 제목이 됩니다</span>
+            </label>
+            <input type="text" value={blogTitle} onChange={e => setBlogTitle(e.target.value)}
+              placeholder="예: 임플란트 수술 후 관리법, 미리 살펴볼 점" className={inputCls} />
+          </div>
+
           {/* 주제 */}
           <div>
             <label className={labelCls}>
@@ -388,14 +401,10 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
             <input type="text" value={keywords} onChange={e => setKeywords(e.target.value)} placeholder="예: 강남 치과, 임플란트 가격" className={inputCls} />
           </div>
 
-          {/* 제목 */}
+          {/* 질환명 */}
           <div>
-            <label className={labelCls}>
-              제목
-              <span className="text-[10px] text-slate-400 ml-1.5 font-normal">비워두면 주제가 제목이 됩니다</span>
-            </label>
-            <input type="text" value={blogTitle} onChange={e => setBlogTitle(e.target.value)}
-              placeholder="예: 임플란트 수술 후 관리법, 미리 살펴볼 점" className={inputCls} />
+            <label className={labelCls}>질환명</label>
+            <input type="text" value={disease} onChange={e => setDisease(e.target.value)} placeholder="예: 치주염, 충치 — 글의 실제 주제" className={inputCls} />
           </div>
 
           {/* AI 제목 추천 + 트렌드 주제 (2버튼 가로) */}
@@ -449,7 +458,6 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
           {(() => {
             const advancedCount = [
               audienceMode !== '환자용(친절/공감)',
-              disease.trim(),
               textLength !== 2500,
               imageCount !== 2,
               imageStyle !== 'photo',
@@ -495,11 +503,6 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
                   ))}
                 </div>
               )}
-              {/* 질환명 */}
-              <div>
-                <label className={labelCls}>질환명</label>
-                <input type="text" value={disease} onChange={e => setDisease(e.target.value)} placeholder="예: 치주염, 충치 — 글의 실제 주제" className={inputCls} />
-              </div>
               {/* 글 길이 */}
               <div>
                 <p className="text-xs font-semibold text-slate-500 mb-1.5">글 길이</p>
