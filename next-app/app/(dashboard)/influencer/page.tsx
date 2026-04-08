@@ -265,13 +265,13 @@ export default function InfluencerPage() {
             {/* 카테고리 */}
             <div className="mb-4">
               <label className="block text-xs font-semibold text-slate-600 mb-2">카테고리 (다중 선택)</label>
-              <div className="flex flex-wrap gap-2">
+              <div className="grid grid-cols-4 md:grid-cols-6 gap-2">
                 {CATEGORIES.map(cat => (
                   <button
                     key={cat.id}
                     type="button"
                     onClick={() => handleCategoryToggle(cat.id)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+                    className={`px-2 py-1.5 rounded-lg text-xs font-semibold border transition-all text-center ${
                       selectedCategories.includes(cat.id)
                         ? 'bg-blue-50 border-blue-300 text-blue-700'
                         : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300'
