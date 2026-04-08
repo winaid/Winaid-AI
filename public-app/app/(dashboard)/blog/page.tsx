@@ -879,23 +879,27 @@ JSON 형식으로 응답해주세요.`;
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               prompt: `너는 네이버 블로그 SEO 분석 전문가다.
-"${keywords.trim()}" 키워드로 네이버 통합탭에서 1위를 차지할 블로그 글의 구조를 분석해줘.
+"${keywords.trim()}" 키워드로 네이버 블로그탭 상위 1~5위 글의 공통 구조를 분석해줘.
 
-실제 네이버 상위 블로그를 참고하여 아래 형식의 JSON으로만 답변해.
-설명 없이 JSON만 출력.
+Google Search로 실제 네이버 상위 블로그를 검색하고, 실제 데이터를 기반으로 답변해.
+추측하지 마라. 검색 결과에서 확인된 정보만 포함해.
+
+JSON으로만 답변. 설명 없이.
 
 {
-  "title": "예상 1위 블로그 제목 (30~40자)",
-  "charCount": 예상 글자수(숫자),
-  "subtitleCount": 예상 소제목 수(숫자),
-  "subtitles": ["소제목1", "소제목2", "소제목3", ...],
-  "imageCount": 예상 이미지 수(숫자),
-  "keyAngles": ["이 키워드에서 자주 다루는 핵심 관점 3~5개"]
+  "title": "상위 1위 블로그의 실제 제목 (또는 가장 흔한 제목 패턴)",
+  "charCount": 상위 글 평균 글자수(숫자),
+  "subtitleCount": 상위 글 평균 소제목 수(숫자),
+  "subtitles": ["상위 글에서 공통으로 다루는 소제목 패턴 5~7개"],
+  "imageCount": 상위 글 평균 이미지 수(숫자),
+  "keyAngles": ["상위 글들이 공통으로 다루는 핵심 관점 3~5개"],
+  "missingAngles": ["상위 글들이 빠뜨리고 있는 관점 2~3개 — 차별화 기회"]
 }`,
               model: 'gemini-3.1-flash-lite-preview',
               temperature: 0.3,
               responseType: 'json',
-              timeout: 8000,
+              googleSearch: true,
+              timeout: 15000,
               thinkingLevel: 'none',
             }),
           });
@@ -908,30 +912,26 @@ JSON 형식으로 응답해주세요.`;
           const c = JSON.parse(cText.trim()) as {
             title?: string; charCount?: number; subtitleCount?: number;
             subtitles?: string[]; imageCount?: number; keyAngles?: string[];
+            missingAngles?: string[];
           };
           const subs = c.subtitles || [];
+          const missing = c.missingAngles || [];
           return `
-[경쟁 블로그 분석 결과 - 이 글보다 상위에 노출되어야 함]
-현재 "${keywords.trim()}" 통합탭 상위 블로그 예상 구조:
-- 제목: ${c.title || '미분석'}
-- 글자 수: ${c.charCount || 0}자
-- 소제목 수: ${subs.length}개
-- 이미지 수: ${c.imageCount || 0}개
-${subs.length > 0 ? `- 소제목 목록: ${subs.join(' / ')}` : ''}
+[경쟁 블로그 분석 결과 — 실제 네이버 상위 글 기반]
+"${keywords.trim()}" 상위 블로그 구조:
+- 제목 패턴: ${c.title || '미분석'}
+- 평균 글자 수: ${c.charCount || 0}자
+- 평균 소제목 수: ${subs.length}개
+- 평균 이미지 수: ${c.imageCount || 0}개
+${subs.length > 0 ? `- 공통 소제목: ${subs.join(' / ')}` : ''}
 
-[경쟁 분석 기반 작성 전략]
-1. 글자 수: 경쟁 글(${c.charCount || 0}자)보다 충분한 분량 확보
-2. 소제목: 경쟁 글(${subs.length}개)보다 더 다양한 관점 제공
-3. 이미지: 경쟁 글(${c.imageCount || 0}개)과 동등 이상
-4. 구조: 더 읽기 쉽고 체류 시간이 길어지는 구조 설계
-
-[차별화 앵글 설계 - 경쟁 글과 다른 관점 필수]
-${subs.length > 0 ? `경쟁 글 소제목: ${subs.join(' / ')}` : ''}
-위 소제목이 이미 다루는 내용은 "같은 말 다시 하기"가 아니라 "더 깊은 메커니즘/숫자"로 차별화.
-경쟁 글이 빠뜨린 앵글을 최소 1~2개 추가:
-- 빠진 관점 후보: 자가 관리법, 연령대별 차이, 시술 후 관리, 비용/기간 현실 정보, 잘못 알려진 상식 바로잡기
-- 경쟁 글이 나열형이면 → 우리는 "독자 상황별 분기"나 "흔한 오해" 앵글로 차별화
-- 경쟁 글이 감성 위주면 → 우리는 구체적 숫자/메커니즘으로 차별화
+[작성 전략 — 상위 글을 넘어서야 함]
+1. 분량: 경쟁 글(${c.charCount || 0}자) 이상 확보
+2. 깊이: 경쟁 글이 다루는 내용은 "더 구체적 수치/메커니즘"으로 차별화
+3. 차별화 앵글: 경쟁 글이 빠뜨린 관점을 1~2개 추가
+${missing.length > 0 ? `   → 경쟁 글이 놓친 관점: ${missing.join(', ')}` : '   → 후보: 자가 관리법, 연령대별 차이, 비용/기간 현실 정보, 잘못 알려진 상식'}
+4. 경쟁 글이 나열형이면 → "독자 상황별 분기"나 "흔한 오해" 앵글로 차별화
+5. 경쟁 글이 감성 위주면 → 구체적 숫자/메커니즘으로 차별화
 `;
         } catch (e) {
           console.warn(`[BLOG] 경쟁 분석 실패 (무시):`, e);
