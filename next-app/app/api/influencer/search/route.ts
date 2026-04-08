@@ -245,8 +245,13 @@ export async function POST(request: NextRequest) {
   console.info(`[INFLUENCER] Gemini 직접 검색 시작 (힌트: ${postHints ? '있음' : '없음'})`);
   results = await searchViaGeminiOnly(searchHashtags, body, postHints || undefined);
   source = postHints ? 'rapidapi+gemini' : 'gemini';
+  console.info(`[INFLUENCER] Gemini 결과 (필터 전): ${results.length}명`);
+  if (results.length > 0) {
+    console.info(`[INFLUENCER] 샘플: ${results.slice(0, 3).map(r => `@${r.username}(팔${r.follower_count})`).join(', ')}`);
+  }
 
   // 최종 필터: 팔로워 확인 + 범위 내 + username 확인된 것만
+  const beforeFilter = results.length;
   results = results.filter(r =>
     r.username &&
     !r.username.startsWith('user_') &&
@@ -254,6 +259,7 @@ export async function POST(request: NextRequest) {
     r.follower_count >= body.follower_min &&
     r.follower_count <= body.follower_max
   );
+  console.info(`[INFLUENCER] 필터 후: ${results.length}명 (${beforeFilter - results.length}명 제외)`);
 
   return NextResponse.json({ results: results.slice(0, 20), total_found: results.length, search_hashtags_used: searchHashtags, source });
 }

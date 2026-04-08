@@ -91,12 +91,13 @@ export async function callGeminiDirect(options: GeminiCallOptions): Promise<Gemi
 
       if (!response.ok) {
         const status = response.status;
+        const errBody = await response.text().catch(() => '');
+        console.error(`[GeminiDirect] ${model} 실패: ${status} ${errBody.substring(0, 300)}`);
         if (status === 429 || status === 503) {
           await new Promise(r => setTimeout(r, 1500));
           continue;
         }
         if (status === 400 || status === 404) {
-          console.warn(`[GeminiDirect] 모델 ${model} 실패 (${status}) → 다음 모델 시도`);
           break; // 이 모델 포기, 다음 모델로
         }
         continue;
@@ -120,6 +121,12 @@ export async function callGeminiDirect(options: GeminiCallOptions): Promise<Gemi
     }
   } // end keys loop
   } // end models loop
+
+  // Google Search가 켜져있었다면 끄고 한번 더 시도
+  if (options.googleSearch) {
+    console.warn('[GeminiDirect] Google Search 모드에서 전부 실패 → Search 없이 재시도');
+    return callGeminiDirect({ ...options, googleSearch: false });
+  }
 
   return { text: null, error: '모든 모델/키 시도 실패' };
 }
