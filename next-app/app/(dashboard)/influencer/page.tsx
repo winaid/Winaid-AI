@@ -472,7 +472,12 @@ export default function InfluencerPage() {
                 <div key={idx} className="bg-slate-50 rounded-2xl p-4 border border-slate-200">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-xs font-black text-slate-700">💬 DM 초안 {idx + 1} ({draft.tone})</span>
-                    <button onClick={() => copyToClipboard(draft.message)} className="px-3 py-1 bg-blue-500 text-white text-[10px] font-bold rounded-lg hover:bg-blue-600">📋 복사</button>
+                    <div className="flex gap-1.5">
+                      <button onClick={() => copyToClipboard(draft.message)} className="px-3 py-1 bg-slate-200 text-slate-700 text-[10px] font-bold rounded-lg hover:bg-slate-300">📋 복사</button>
+                      {selectedInfluencer && !selectedInfluencer.username.startsWith('user_') && (
+                        <button onClick={() => { copyToClipboard(draft.message); window.open(`https://instagram.com/direct/t/${selectedInfluencer!.username}`, '_blank'); }} className="px-3 py-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white text-[10px] font-bold rounded-lg hover:from-purple-600 hover:to-pink-600">📋 복사 + DM 열기</button>
+                      )}
+                    </div>
                   </div>
                   <div className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed bg-white rounded-xl p-4 border border-slate-100">{draft.message}</div>
                   {draft.warnings.length > 0 && (
