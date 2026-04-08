@@ -191,11 +191,18 @@ ${getMedicalLawPromptBlock(true)}
     ...(req.keywords ? [`- SEO 키워드: ${req.keywords} (자연스럽게 포함)`] : []),
   );
 
-  // 이미지 분석 결과
+  // 이미지 분석 결과 + 환각 방지
   promptParts.push(
     '',
     '[업로드된 임상 이미지 분석 결과]',
     req.imageAnalysis,
+    '',
+    '[장비/시술 정확성 — 환각 방지]',
+    '- 위 이미지 분석에서 언급된 장비/시술/재료만 글에 포함하세요.',
+    '- 분석에 없는 장비나 기술을 지어내지 마세요.',
+    '- 확실하지 않은 장비명/모델명은 일반적인 용어로 대체하세요.',
+    '  예: 불확실한 "OO사 ABC 스캐너" → "구강 스캐너"로 대체',
+    '- 실제 존재하는 의료 장비/시술만 언급. 미래 기술이나 가상의 장비 금지.',
   );
 
   // 진료과별 임상 가이드
@@ -226,11 +233,7 @@ ${getMedicalLawPromptBlock(true)}
     '[출처 블록 — 글 마지막에 추가]',
     '본문에서 참고한 의학 정보의 출처를 2~4개 기재하세요.',
     '형식:',
-    '<div class="references-footer" data-no-copy="true">',
-    '<p style="margin-top:32px;padding-top:16px;border-top:1px solid #e2e8f0;font-size:11px;color:#94a3b8;font-weight:600;">참고 자료</p>',
-    '<ul style="font-size:11px;color:#94a3b8;padding-left:20px;margin:8px 0 0 0;line-height:1.8;">',
-    '<li>기관명 — 관련 정보 주제</li>',
-    '</ul></div>',
+    '<div class="references-footer" data-no-copy="true"><p><strong>참고 자료</strong></p><ul><li>기관명 — 정보 주제</li></ul></div>',
     '',
     '규칙:',
     '- 신뢰 기관만: 대한치과의사협회, 대한OO학회, 질병관리청, 대학병원 등',
