@@ -248,6 +248,7 @@ ${summaryText.slice(0, 2000)}
           model: 'gemini-3.1-pro-preview',
           temperature: 0.7,
           maxOutputTokens: 65536,
+          googleSearch: true,
           timeout: 120000,
         }),
       });
