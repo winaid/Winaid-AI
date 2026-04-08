@@ -55,7 +55,7 @@ export default function InteractivePreview({
     }] : []),
     ...(hospitalName ? [{
       id: 'hospital', label: '병원명 (드래그로 이동)', value: hospitalName,
-      posKey: 'hospitalNamePosition' as const, valueKey: 'title' as const,
+      posKey: 'hospitalNamePosition' as const, valueKey: 'subtitle' as const, // 편집 차단됨, 안전장치
       pos: slide.hospitalNamePosition || { x: 50, y: 90 },
       hasExplicitPos: !!slide.hospitalNamePosition,
     }] : []),
@@ -74,9 +74,9 @@ export default function InteractivePreview({
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        if (editingId) commitEdit();
+        if (editingId) commitEdit(); // commitEdit이 setEditingId(null) 포함
+        else setEditingId(null);
         setSelectedId(null);
-        setEditingId(null);
       }
     };
     window.addEventListener('keydown', handler);
@@ -114,11 +114,9 @@ export default function InteractivePreview({
 
     const sx = e.clientX, sy = e.clientY;
     const startX = handle.pos.x, startY = handle.pos.y;
-    let moved = false;
     let lastNx = startX, lastNy = startY;
 
     const onMove = (ev: MouseEvent) => {
-      moved = true;
       const nx = Math.round(Math.max(BOUNDARY.min, Math.min(BOUNDARY.max, startX + ((ev.clientX - sx) / rect.width) * 100)));
       const ny = Math.round(Math.max(BOUNDARY.min, Math.min(BOUNDARY.max, startY + ((ev.clientY - sy) / rect.height) * 100)));
       if (nx !== lastNx || ny !== lastNy) {
