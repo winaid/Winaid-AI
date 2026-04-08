@@ -46,7 +46,7 @@ function BlogForm() {
   const [disease, setDisease] = useState('');
   const [customSubheadings, setCustomSubheadings] = useState('');
   const [category, setCategory] = useState<ContentCategory>(ContentCategory.DENTAL);
-  const [persona, setPersona] = useState(PERSONAS[0].value);
+  const [persona, setPersona] = useState('director_1st');
   const [tone, setTone] = useState(TONES[0].value);
   const [audienceMode, setAudienceMode] = useState<AudienceMode>('환자용(친절/공감)');
   const [writingStyle, setWritingStyle] = useState<WritingStyle>('empathy');
