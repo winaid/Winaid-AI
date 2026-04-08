@@ -223,13 +223,16 @@ export async function POST(request: NextRequest) {
   // 1차: RapidAPI로 실제 게시물 수집 → Gemini에 힌트로 전달
   let postHints = '';
   if (RAPIDAPI_KEY) {
-    console.info(`[INFLUENCER] RapidAPI 병렬 검색: ${searchHashtags.slice(0, 3).join(', ')}`);
+    console.info(`[INFLUENCER] RapidAPI 검색: ${searchHashtags.slice(0, 3).join(', ')}`);
+    const allPosts: RawPost[] = [];
 
-    // 병렬 수집 (직렬 3초 → 병렬 1초)
-    const postResults = await Promise.all(
-      searchHashtags.slice(0, 3).map(tag => fetchHashtagPosts(tag))
-    );
-    const allPosts = postResults.flat();
+    // 직렬 수집 (무료 플랜 분당 5회 제한 대응 — 1초 간격)
+    for (const tag of searchHashtags.slice(0, 3)) {
+      const posts = await fetchHashtagPosts(tag);
+      allPosts.push(...posts);
+      console.info(`[INFLUENCER] #${tag}: ${posts.length}개 게시물`);
+      if (posts.length > 0) await new Promise(r => setTimeout(r, 1200));
+    }
     console.info(`[INFLUENCER] RapidAPI 총 ${allPosts.length}개 게시물 수집`);
 
     if (allPosts.length > 0) {
