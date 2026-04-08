@@ -358,8 +358,8 @@ export default function InfluencerPage() {
                 <div className="text-lg font-black text-slate-300 w-6 text-center">{i + 1}</div>
 
                 {/* 프로필 */}
-                <div className="w-12 h-12 rounded-full bg-slate-200 overflow-hidden flex-shrink-0">
-                  {inf.profile_pic_url && <img src={inf.profile_pic_url} alt={inf.username} className="w-full h-full object-cover" />}
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center flex-shrink-0 text-white text-lg font-bold">
+                  {(inf.full_name || inf.username || '?').charAt(0).toUpperCase()}
                 </div>
 
                 {/* 정보 */}

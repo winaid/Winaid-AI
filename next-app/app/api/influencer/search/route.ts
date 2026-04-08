@@ -210,9 +210,10 @@ JSON 배열로만:
         primary_category: info?.primary_category || guessCategory(o.hashtags, o.captions.join(' ')),
       };
     });
-    // Gemini가 username을 찾은 것 + 못 찾은 것(user_xxx) 모두 포함
-    console.info(`[INFLUENCER] Gemini 보충: ${enrichedResults.filter(r => !r.username.startsWith('user_')).length}명 username 확인, ${enrichedResults.filter(r => r.username.startsWith('user_')).length}명 미확인`);
-    return enrichedResults;
+    // username 확인된 계정만 반환 (미확인은 쓸모없음)
+    const confirmed = enrichedResults.filter(r => !r.username.startsWith('user_') && r.follower_count > 0);
+    console.info(`[INFLUENCER] Gemini 보충: ${confirmed.length}명 확인 / ${enrichedResults.length - confirmed.length}명 제외 (미확인)`);
+    return confirmed;
   } catch (err) {
     console.error('[INFLUENCER] Gemini 보충 실패:', err);
     return owners.slice(0, 15).map(o => ownerToResult(o, location));
@@ -323,11 +324,9 @@ export async function POST(request: NextRequest) {
         console.warn('[INFLUENCER] Gemini 보충 실패, RapidAPI 데이터만 사용:', err);
       }
 
-      // Gemini 보충 실패 시 RapidAPI 데이터만으로 결과 구성
+      // Gemini 보충 실패 시 → Gemini fallback으로 넘어감 (프로필 미확인은 결과에 포함 안 함)
       if (results.length === 0) {
-        results = owners.slice(0, 20).map(o => ownerToResult(o, body.location));
-        source = 'rapidapi';
-        console.info(`[INFLUENCER] RapidAPI 단독 결과: ${results.length}명`);
+        console.info(`[INFLUENCER] Gemini 보충 실패 — Gemini fallback으로 전환`);
       }
     }
   }
