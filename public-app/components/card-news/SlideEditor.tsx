@@ -340,7 +340,7 @@ ${JSON.stringify(slideForContext, null, 2)}
               if (!current) return;
               try {
                 const res = await fetch('/api/gemini', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ prompt: `"${current}"\n\n위 텍스트를 더 매력적이고 클릭하고 싶게 다시 써줘. 같은 의미, 더 끌리는 표현. 결과만 출력.`, model: 'gemini-3.1-flash-lite-preview', temperature: 0.8, maxOutputTokens: 200 }) });
+                  body: JSON.stringify({ prompt: `"${current}"\n\n위 텍스트를 더 매력적이고 클릭하고 싶게 다시 써줘. 같은 의미, 더 끌리는 표현. 결과만 출력.\n⚠️ 의료광고법 준수: 최상급/단정/행동유도 금지.`, model: 'gemini-3.1-flash-lite-preview', temperature: 0.8, maxOutputTokens: 200 }) });
                 const data = await res.json() as { text?: string };
                 if (data.text) onChange({ [field]: data.text.replace(/^["'`]+|["'`]+$/g, '').trim() });
               } catch { alert('AI 처리 중 오류가 발생했습니다.'); }
@@ -351,7 +351,7 @@ ${JSON.stringify(slideForContext, null, 2)}
               if (!current) return;
               try {
                 const res = await fetch('/api/gemini', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ prompt: `"${current}"\n\n위 텍스트를 절반 길이로 줄여줘. 핵심만 남기고. 결과만 출력.`, model: 'gemini-3.1-flash-lite-preview', temperature: 0.5, maxOutputTokens: 100 }) });
+                  body: JSON.stringify({ prompt: `"${current}"\n\n위 텍스트를 절반 길이로 줄여줘. 핵심만 남기고. 결과만 출력.\n⚠️ 의료광고법 준수: 최상급/단정/행동유도 금지.`, model: 'gemini-3.1-flash-lite-preview', temperature: 0.5, maxOutputTokens: 100 }) });
                 const data = await res.json() as { text?: string };
                 if (data.text) onChange({ [field]: data.text.replace(/^["'`]+|["'`]+$/g, '').trim() });
               } catch { alert('AI 처리 중 오류가 발생했습니다.'); }
@@ -362,7 +362,7 @@ ${JSON.stringify(slideForContext, null, 2)}
               if (!current) return;
               try {
                 const res = await fetch('/api/gemini', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ prompt: `"${current}"\n\n위 텍스트를 더 따뜻하고 공감가는 톤으로 바꿔줘. 결과만 출력.`, model: 'gemini-3.1-flash-lite-preview', temperature: 0.8, maxOutputTokens: 200 }) });
+                  body: JSON.stringify({ prompt: `"${current}"\n\n위 텍스트를 더 따뜻하고 공감가는 톤으로 바꿔줘. 결과만 출력.\n⚠️ 의료광고법 준수: 최상급/단정/행동유도 금지.`, model: 'gemini-3.1-flash-lite-preview', temperature: 0.8, maxOutputTokens: 200 }) });
                 const data = await res.json() as { text?: string };
                 if (data.text) onChange({ [field]: data.text.replace(/^["'`]+|["'`]+$/g, '').trim() });
               } catch { alert('AI 처리 중 오류가 발생했습니다.'); }

@@ -316,7 +316,7 @@ export async function enrichSlide(slide: SlideData): Promise<Partial<SlideData> 
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      prompt: `아래는 카드뉴스 슬라이드 JSON이다. 웹에서 2024~2025년 한국 기준 최신 수치(비용 평균, 성공률, 회복 기간, 건보 적용 등)를 검색해 이 슬라이드의 내용을 보강해라.
+      prompt: `아래는 카드뉴스 슬라이드 JSON이다. 웹에서 ${new Date().getFullYear()}년 한국 기준 최신 수치(비용 평균, 성공률, 회복 기간, 건보 적용 등)를 검색해 이 슬라이드의 내용을 보강해라.
 - 레이아웃(${slide.layout})은 유지.
 - 제목·부제·본문·배열 필드들을 필요한 만큼 수정.
 - 추가로 필요한 필드만 포함한 부분 패치(JSON 객체)를 출력. 슬라이드 전체가 아니라 수정할 필드만.

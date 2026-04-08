@@ -1437,6 +1437,11 @@ ${missing.length > 0 ? `   → 경쟁 글이 놓친 관점: ${missing.join(', ')
         let refined = data.text.trim();
         refined = refined.replace(/^```html?\s*\n?/i, '').replace(/\n?```\s*$/, '');
         if (refined.includes('<')) {
+          // 의료광고법 금지어 자동 대체
+          const { applyContentFilters: filterContent } = await import('../../../lib/medicalLawFilter');
+          const { filtered, replacedCount, foundTerms } = filterContent(refined);
+          refined = filtered;
+          if (replacedCount > 0) console.info(`[BLOG_CHAT] 의료법 자동 대체: ${replacedCount}건 — ${foundTerms.join(', ')}`);
           setGeneratedContent(refined);
           setChatInput('');
           setSaveStatus(null);
