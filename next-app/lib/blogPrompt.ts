@@ -349,7 +349,12 @@ export function buildBlogPrompt(req: GenerationRequest): {
     promptParts.push(`- 질환(글의 핵심 주제): ${req.disease}`);
   }
   if (req.hospitalName) {
-    promptParts.push(`- 병원명: ${req.hospitalName}`);
+    if (req.includeHospitalIntro) {
+      promptParts.push(`- 병원명: ${req.hospitalName} (병원 소개 섹션에서만 사용)`);
+    } else {
+      promptParts.push(`- 병원명: ${req.hospitalName}`);
+      promptParts.push(`⚠️ 병원 소개 섹션이 비활성화되어 있으므로, 본문에 "${req.hospitalName}" 병원명을 직접 언급하지 마세요. 병원명 없이 일반적인 정보 글로 작성하세요.`);
+    }
   }
 
   // ── 병원 홈페이지/블로그 분석 결과 ──
