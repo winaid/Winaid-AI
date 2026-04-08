@@ -20,6 +20,7 @@ import { useCreditContext } from '../layout';
 import { useCredit as cardNewsUseCredit } from '../../../lib/creditService';
 import { consumeGuestCredit } from '../../../lib/guestCredits';
 import { overlayLogo } from '../../../lib/cardDownloadUtils';
+import { applyContentFilters } from '../../../lib/medicalLawFilter';
 
 function GeneratingTimer({ progress }: { progress: string }) {
   const ESTIMATE = 90; // 예상 시간 90초
@@ -419,7 +420,10 @@ export default function CardNewsPage() {
       let slides: ProSlideData[];
       let parsedFontId: string | undefined;
       try {
-        const parsed = parseProSlidesJson(data.text);
+        // 의료광고법 금지어 자동 대체 (JSON 파싱 전 텍스트 레벨)
+        const { filtered: filteredText, replacedCount, foundTerms } = applyContentFilters(data.text);
+        if (replacedCount > 0) console.info(`[CARD_NEWS] 의료법 금지어 자동 대체: ${replacedCount}건 — ${foundTerms.join(', ')}`);
+        const parsed = parseProSlidesJson(filteredText);
         if (parsed.slides.length === 0) {
           setError('프로 레이아웃 파싱 결과가 비어 있습니다. 다시 시도해주세요.');
           return;
@@ -506,10 +510,13 @@ export default function CardNewsPage() {
       const data = await res.json() as { text?: string; error?: string };
       if (!res.ok || !data.text) { setError(data.error || `서버 오류 (${res.status})`); return; }
 
-      // 파싱
+      // 의료광고법 금지어 자동 대체
+      const { filtered: filteredSimpleText, replacedCount: rc, foundTerms: ft } = applyContentFilters(data.text);
+      if (rc > 0) console.info(`[CARD_NEWS_SIMPLE] 의료법 금지어 자동 대체: ${rc}건 — ${ft.join(', ')}`);
+
       // 파싱: ### N장 구분 → 제목/본문/비주얼 추출 (원고+이미지프롬프트 통합)
       const parsedCards: CardSlide[] = [];
-      const slideBlocks = data.text.split(/###\s*(\d+)장[:\s]*/);
+      const slideBlocks = filteredSimpleText.split(/###\s*(\d+)장[:\s]*/);
       const tmpl = designTemplateId ? CARD_NEWS_DESIGN_TEMPLATES.find(t => t.id === designTemplateId) : undefined;
       const tmplBlock = tmpl ? `\n[디자인 템플릿: ${tmpl.name}]\n${tmpl.stylePrompt}\n배경색: ${tmpl.colors.background}` : '';
 

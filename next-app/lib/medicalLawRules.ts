@@ -72,18 +72,24 @@ export function getMedicalLawPromptBlock(strictMode: boolean | 'brief' = true): 
 - 객관적 정보 전달 + 가능성 표현("~할 수 있습니다") 중심`;
 }
 
-/** 생성 결과에서 금지어를 검출하는 함수 */
-export function detectForbiddenWords(text: string): { word: string; replacement?: string }[] {
+/** 생성 결과에서 금지어를 검출하는 함수 (모든 카테고리 포함) */
+export function detectForbiddenWords(text: string): { word: string; category: string; replacement?: string }[] {
   const plain = text.replace(/<[^>]+>/g, '');
-  const found: { word: string; replacement?: string }[] = [];
-  const allForbidden = [
-    ...FORBIDDEN_EXPRESSIONS.superlative,
-    ...FORBIDDEN_EXPRESSIONS.guarantee,
-    ...FORBIDDEN_EXPRESSIONS.resultClaim,
+  const found: { word: string; category: string; replacement?: string }[] = [];
+  const categories: [string, readonly string[]][] = [
+    ['최상급/과장', FORBIDDEN_EXPRESSIONS.superlative],
+    ['보장/단정', FORBIDDEN_EXPRESSIONS.guarantee],
+    ['비교', FORBIDDEN_EXPRESSIONS.comparison],
+    ['행동 유도', FORBIDDEN_EXPRESSIONS.inducement],
+    ['효과 주장', FORBIDDEN_EXPRESSIONS.resultClaim],
   ];
-  for (const word of allForbidden) {
-    if (plain.includes(word)) {
-      found.push({ word, replacement: REPLACEMENT_MAP[word] });
+  for (const [category, words] of categories) {
+    for (const word of words) {
+      // ~로 시작하는 패턴은 접미사 매칭 (예: "~하세요" → "하세요")
+      const searchWord = word.startsWith('~') ? word.slice(1) : word;
+      if (plain.includes(searchWord)) {
+        found.push({ word, category, replacement: REPLACEMENT_MAP[word] });
+      }
     }
   }
   return found;

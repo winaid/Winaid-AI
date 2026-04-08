@@ -5,6 +5,7 @@ import { buildYoutubePrompt, YOUTUBE_WRITING_STYLES } from '../../../lib/youtube
 import { supabase } from '../../../lib/supabase';
 import { CATEGORIES } from '../../../lib/constants';
 import { sanitizeHtml } from '../../../lib/sanitize';
+import { applyContentFilters } from '../../../lib/medicalLawFilter';
 import { useCreditContext } from '../layout';
 import { useCredit } from '../../../lib/creditService';
 
@@ -256,6 +257,12 @@ ${summaryText.slice(0, 2000)}
 
       let html = data.text.trim();
       html = html.replace(/^```html?\s*\n?/i, '').replace(/\n?```\s*$/, '');
+
+      // 의료광고법 금지어 자동 대체
+      { const { filtered, replacedCount, foundTerms } = applyContentFilters(html);
+        html = filtered;
+        if (replacedCount > 0) console.info(`[YOUTUBE] 의료법 자동 대체: ${replacedCount}건 — ${foundTerms.join(', ')}`);
+      }
 
       const scoresIdx = html.lastIndexOf('---SCORES---');
       if (scoresIdx !== -1) {

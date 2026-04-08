@@ -62,6 +62,27 @@ const MEDICAL_LAW_REPLACEMENTS: Array<[RegExp, string]> = [
   [/반드시\s*효과/g, '효과'],
   [/반드시\s*결과/g, '결과'],
   [/무조건/g, '대부분의 경우'],
+
+  // ── 행동 유도(inducement) — 의료광고법 민원 최빈 유형 ──
+  // "~하세요" 류는 문맥에 따라 자연스러운 경우가 있으므로, 의료 행위 유도에 한정
+  [/예약하세요/g, '예약을 고려해 보실 수 있습니다'],
+  [/예약해\s?보세요/g, '예약을 고려해 보실 수 있습니다'],
+  [/상담\s?받으세요/g, '상담을 받아보시는 것도 방법입니다'],
+  [/검사\s?받으세요/g, '검사를 받아보시는 것을 권합니다'],
+  [/치료\s?받으세요/g, '치료를 받아보시는 것을 권합니다'],
+  [/시술\s?받으세요/g, '시술을 고려해 보실 수 있습니다'],
+  [/내원하세요/g, '내원을 권합니다'],
+  [/방문하세요/g, '방문을 권합니다'],
+  [/추천합니다/g, '고려해 볼 수 있습니다'],
+  [/추천드립니다/g, '고려해 보실 수 있습니다'],
+  [/확인해\s?보세요/g, '확인해 보시는 것도 좋습니다'],
+
+  // ── 비교(comparison) — 타 병원 비교 금지 ──
+  [/타\s?병원\s?대비/g, '일반적인 경우와 비교하면'],
+  [/다른\s?병원보다/g, ''],
+  [/타\s?병원보다/g, ''],
+  [/업계\s?최고/g, '높은 수준의'],
+  [/가장\s?좋은\s?병원/g, '전문적인 병원'],
 ];
 
 export interface MedicalLawFilterResult {
@@ -102,13 +123,13 @@ export function filterMedicalLawViolations(text: string): MedicalLawFilterResult
 export function filterOutputArtifacts(text: string): string {
   let result = text;
 
-  // 1) 브랜드명 누설 제거 — "안녕하세요. 윈에이아이(winaid) 입니다" 류 문장 통째로 제거
+  // 1) 브랜드명 누설 제거 — "안녕하세요. 위나이드(winaid) 입니다" 류 문장 통째로 제거
   result = result.replace(
-    /안녕하세요[^.!?\n]*(?:winaid|윈에이아이|윈에이아이)[^.!?\n]*[.!?]\s*/gi,
+    /안녕하세요[^.!?\n]*(?:winaid|윈에이아이|위나이드)[^.!?\n]*[.!?]\s*/gi,
     '',
   );
   // 잔여 키워드 제거
-  result = result.replace(/\s*\(?(?:winaid|윈에이아이)\)?\s*/gi, ' ');
+  result = result.replace(/\s*\(?(?:winaid|위나이드)\)?\s*/gi, ' ');
   result = result.replace(/윈에이아이/g, '');
   // 공백 정리
   result = result.replace(/[ \t]{2,}/g, ' ');

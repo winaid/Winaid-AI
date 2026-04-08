@@ -7,6 +7,7 @@ import { getSessionSafe } from '../../../lib/supabase';
 import { ErrorPanel } from '../../../components/GenerationResult';
 import { sanitizeHtml } from '../../../lib/sanitize';
 import { stripDoctype } from '../../../lib/htmlUtils';
+import { applyContentFilters } from '../../../lib/medicalLawFilter';
 
 interface ChatMsg { role: 'user' | 'assistant'; content: string; ts: Date; }
 
@@ -95,6 +96,11 @@ export default function RefinePage() {
       if (!res.ok || !data.text) { setError(data.error || `서버 오류 (${res.status})`); return; }
       let html = stripDoctype(data.text.replace(/```html?\n?/gi, '').replace(/```\n?/gi, '').trim());
       if (!html.startsWith('<')) html = `<p>${html.replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br/>')}</p>`;
+      // 의료광고법 금지어 자동 대체
+      { const { filtered, replacedCount, foundTerms } = applyContentFilters(html);
+        html = filtered;
+        if (replacedCount > 0) console.info(`[REFINE] 의료법 자동 대체: ${replacedCount}건 — ${foundTerms.join(', ')}`);
+      }
       const themed = applyTheme(html);
       setRefinedHtml(themed);
       try { setFactCheck(computeFactCheck(html)); } catch { setFactCheck(null); }
@@ -146,6 +152,10 @@ export default function RefinePage() {
       if (!res.ok || !data.text) throw new Error(data.error || '생성 실패');
       let html = stripDoctype(data.text.replace(/```html?\n?/gi, '').replace(/```\n?/gi, '').trim());
       if (!html.startsWith('<')) html = `<p>${html.replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br/>')}</p>`;
+      { const { filtered, replacedCount, foundTerms } = applyContentFilters(html);
+        html = filtered;
+        if (replacedCount > 0) console.info(`[REFINE_CHAT] 의료법 자동 대체: ${replacedCount}건 — ${foundTerms.join(', ')}`);
+      }
       setRefinedHtml(applyTheme(html));
       try { setFactCheck(computeFactCheck(html)); } catch { /* factCheck 실패 무시 */ }
       let reply = '수정 완료! 오른쪽 결과를 확인해주세요.';
