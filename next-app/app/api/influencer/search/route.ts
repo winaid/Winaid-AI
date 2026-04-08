@@ -200,7 +200,7 @@ JSON 배열로만:
     const enriched: Array<{ index: number; username: string; full_name: string; follower_count: number; primary_category: string }> =
       jsonMatch ? JSON.parse(jsonMatch[0]) : [];
 
-    return owners.slice(0, 15).map((o, i) => {
+    const enrichedResults = owners.slice(0, 15).map((o, i) => {
       const info = enriched.find(e => e.index === i + 1);
       return {
         ...ownerToResult(o, location),
