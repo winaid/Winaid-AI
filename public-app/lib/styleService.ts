@@ -498,13 +498,13 @@ ${sampleText.substring(0, 6000)}
   "stylePrompt": "AI가 이 말투로 글을 쓸 때 반드시 지켜야 할 핵심 지침 (150-250자, 화자 태도 + 설명 흐름 + 의료 설명 방식 + 금지 패턴)"
 }`;
 
-  // root와 동일: PRO 모델 사용 (flash-lite → 3.1-pro-preview)
+  // 말투 분석은 미묘한 톤/패턴 추출이므로 flash 이상 필요
   const res = await fetch(resolveApiUrl('/api/gemini'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       prompt,
-      model: 'gemini-3.1-flash-lite-preview',
+      model: 'gemini-3.1-flash-preview',
       responseType: 'json',
     }),
   });
@@ -667,7 +667,7 @@ ${sliced}
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       prompt,
-      model: 'gemini-3.1-flash-lite-preview',
+      model: 'gemini-3.1-flash-preview',
       temperature: 0.1,
       responseType: 'json',
       timeout: 60000,
