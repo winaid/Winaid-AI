@@ -251,7 +251,7 @@ ${existingBlock}${buildClinicContextBlock(clinicCtx)}
 규칙:
 1. 반드시 2단어 조합만 (예: "불당동 치과", "불당동 임플란트")
 2. "{지역명} {진료과/시술}" 패턴만 허용
-3. 지역명: 주소에서 동/구/읍 추출 + 인근 지하철역
+3. 지역명: 주소에서 동/구/읍/면 추출 (지하철역 사용 금지 — 잘못된 역명 위험)
 4. 시술: ${getCategoryProcedures(category)}
 5. 절대 3단어 이상 금지
 6. 병원명은 포함하지 않는다
@@ -267,7 +267,7 @@ JSON 배열로만: ["불당동 치과", "불당동 임플란트", ...]`;
     if (!jsonMatch) return fallbackKeywordGeneration(address, category);
     const parsed = JSON.parse(jsonMatch[0]);
     if (Array.isArray(parsed)) {
-      const cleaned = parsed.filter((k: unknown) => typeof k === 'string' && (k as string).trim() && (k as string).split(/\s+/).length <= 4).slice(0, 15);
+      const cleaned = parsed.filter((k: unknown) => typeof k === 'string' && (k as string).trim() && (k as string).split(/\s+/).length <= 3).slice(0, 15);
       return filterMedicalAdKeywords(cleaned as string[]).slice(0, 10);
     }
     return fallbackKeywordGeneration(address, category);
