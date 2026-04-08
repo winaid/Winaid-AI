@@ -153,95 +153,8 @@ function groupByOwner(posts: RawPost[]): OwnerActivity[] {
   return results.sort((a, b) => b.avg_engagement - a.avg_engagement);
 }
 
-// ── Gemini로 프로필 정보 보충 ──
+// enrichWithGemini 제거됨 — Gemini 직접 검색으로 통합 (속도 개선)
 
-async function enrichWithGemini(owners: OwnerActivity[], location: string): Promise<InfluencerResult[]> {
-  if (owners.length === 0) return [];
-
-  const ownerSummaries = owners.slice(0, 15).map((o, i) =>
-    `${i + 1}. shortcode: ${o.shortcodes[0]} | 좋아요 평균: ${Math.round(o.avg_engagement)} | 해시태그: ${o.hashtags.slice(0, 5).join(', ')} | 캡션 미리보기: "${o.captions[0]?.substring(0, 60)}"`
-  ).join('\n');
-
-  const prompt = `아래는 인스타그램 "${location}" 지역 해시태그에서 수집된 게시물 데이터입니다.
-각 게시물의 shortcode로 Instagram에서 작성자를 찾아 프로필 정보를 조사해주세요.
-
-Google Search로 각 shortcode를 "instagram.com/p/{shortcode}" 형식으로 검색하여 작성자를 확인하세요.
-
-[수집된 게시물]
-${ownerSummaries}
-
-[조사할 정보]
-각 계정에 대해:
-1. username (인스타 아이디)
-2. full_name (표시 이름)
-3. follower_count (팔로워 수 추정)
-4. primary_category (맛집/뷰티/일상/육아/건강/패션/지역소식 중 택1)
-
-[규칙]
-- 실제 확인된 정보만. 추측이면 follower_count를 0으로.
-- 기업/브랜드 계정이면 username을 빈 문자열로.
-- 비공개 계정이면 제외.
-
-JSON 배열로만:
-[{"index":1, "username":"...", "full_name":"...", "follower_count":5000, "primary_category":"맛집/카페"}]`;
-
-  const { text } = await callGeminiDirect({
-    prompt,
-    model: 'gemini-3.1-flash-lite-preview',
-    temperature: 0.2,
-    maxOutputTokens: 4096,
-    googleSearch: true,
-  });
-
-  if (!text) return owners.slice(0, 15).map(o => ownerToResult(o, location));
-
-  try {
-    const jsonMatch = text.match(/\[[\s\S]*\]/);
-    const enriched: Array<{ index: number; username: string; full_name: string; follower_count: number; primary_category: string }> =
-      jsonMatch ? JSON.parse(jsonMatch[0]) : [];
-
-    const enrichedResults = owners.slice(0, 15).map((o, i) => {
-      const info = enriched.find(e => e.index === i + 1);
-      return {
-        ...ownerToResult(o, location),
-        username: info?.username || `user_${o.owner_id.substring(0, 8)}`,
-        full_name: info?.full_name || '',
-        follower_count: info?.follower_count || 0,
-        primary_category: info?.primary_category || guessCategory(o.hashtags, o.captions.join(' ')),
-      };
-    });
-    // username 확인된 계정만 반환 (미확인은 쓸모없음)
-    const confirmed = enrichedResults.filter(r => !r.username.startsWith('user_') && r.follower_count > 0);
-    console.info(`[INFLUENCER] Gemini 보충: ${confirmed.length}명 확인 / ${enrichedResults.length - confirmed.length}명 제외 (미확인)`);
-    return confirmed;
-  } catch (err) {
-    console.error('[INFLUENCER] Gemini 보충 실패:', err);
-    return owners.slice(0, 15).map(o => ownerToResult(o, location));
-  }
-}
-
-function ownerToResult(o: OwnerActivity, location: string): InfluencerResult {
-  const locEst = estimateLocation(o.hashtags, location);
-  return {
-    username: `user_${o.owner_id.substring(0, 8)}`,
-    full_name: '',
-    profile_pic_url: o.best_post.display_url || '',
-    follower_count: 0,
-    following_count: 0,
-    post_count: o.post_count,
-    engagement_rate: Math.round(o.avg_engagement * 10) / 10, // 게시물당 평균 참여(좋아요+댓글)
-    estimated_location: locEst.location,
-    location_confidence: locEst.confidence,
-    primary_category: guessCategory(o.hashtags, o.captions.join(' ')),
-    recent_posts: [{
-      text: o.best_post.caption,
-      likes: o.best_post.likes,
-      comments: o.best_post.comments,
-      hashtags: o.hashtags.slice(0, 10),
-      timestamp: o.best_post.timestamp,
-    }],
-  };
-}
 
 function estimateLocation(hashtags: string[], searchLocation: string): { location: string; confidence: 'high' | 'medium' | 'low' } {
   const allText = hashtags.join(' ').toLowerCase();
@@ -281,7 +194,7 @@ ${hintsBlock}
 JSON 배열만:
 [{"username":"실제아이디", "full_name":"표시이름", "follower_count":5000, "engagement_rate":3.5, "estimated_location":"강남", "location_confidence":"medium", "primary_category":"맛집/카페", "recent_post_preview":"최근 게시물 텍스트"}]`;
 
-  const { text } = await callGeminiDirect({ prompt, model: 'gemini-3.1-flash-lite-preview', temperature: 0.3, maxOutputTokens: 4096, googleSearch: true });
+  const { text } = await callGeminiDirect({ prompt, model: 'gemini-3.1-pro-preview', temperature: 0.3, maxOutputTokens: 4096, googleSearch: true });
   if (!text) return [];
   try {
     const parsed = JSON.parse(text.match(/\[[\s\S]*\]/)?.[0] || '[]');
@@ -307,51 +220,31 @@ export async function POST(request: NextRequest) {
   let results: InfluencerResult[] = [];
   let source = 'gemini';
 
-  // 1차: RapidAPI로 실제 게시물 수집 + Gemini로 프로필 보충
+  // 1차: RapidAPI로 실제 게시물 수집 → Gemini에 힌트로 전달
+  let postHints = '';
   if (RAPIDAPI_KEY) {
-    console.info(`[INFLUENCER] RapidAPI 검색 시작: ${searchHashtags.slice(0, 3).join(', ')}`);
-    const allPosts: RawPost[] = [];
-    for (const tag of searchHashtags.slice(0, 3)) {
-      const posts = await fetchHashtagPosts(tag);
-      allPosts.push(...posts);
-      console.info(`[INFLUENCER] #${tag}: ${posts.length}개 게시물`);
-      await new Promise(r => setTimeout(r, 500)); // Rate limit
-    }
+    console.info(`[INFLUENCER] RapidAPI 병렬 검색: ${searchHashtags.slice(0, 3).join(', ')}`);
+
+    // 병렬 수집 (직렬 3초 → 병렬 1초)
+    const postResults = await Promise.all(
+      searchHashtags.slice(0, 3).map(tag => fetchHashtagPosts(tag))
+    );
+    const allPosts = postResults.flat();
+    console.info(`[INFLUENCER] RapidAPI 총 ${allPosts.length}개 게시물 수집`);
 
     if (allPosts.length > 0) {
       const owners = groupByOwner(allPosts);
-      console.info(`[INFLUENCER] ${allPosts.length}개 게시물 → ${owners.length}명 고유 계정 (스팸 제외)`);
-
-      // Gemini 보충 시도 (실패해도 RapidAPI 데이터만으로 결과 반환)
-      try {
-        const enriched = await enrichWithGemini(owners, body.location);
-        if (enriched.length > 0) {
-          results = enriched;
-          source = 'rapidapi+gemini';
-        }
-      } catch (err) {
-        console.warn('[INFLUENCER] Gemini 보충 실패, RapidAPI 데이터만 사용:', err);
-      }
-
-      // Gemini 보충으로 확인된 계정이 없으면 fallback
-      if (results.length === 0) {
-        console.info(`[INFLUENCER] Gemini 보충에서 확인된 계정 0 → Gemini 직접 검색으로 전환`);
-        // RapidAPI에서 수집한 캡션/해시태그를 힌트로 제공
-        const hints = owners.slice(0, 5).map(o =>
-          `캡션: "${o.captions[0]?.substring(0, 60)}" / 해시태그: ${o.hashtags.slice(0, 5).join(', ')} / 좋아요평균: ${Math.round(o.avg_engagement)}`
-        ).join('\n');
-        results = await searchViaGeminiOnly(searchHashtags, body, hints);
-        source = 'gemini';
-      }
+      // 상위 5개 계정의 게시물 힌트를 Gemini에 전달
+      postHints = owners.slice(0, 5).map(o =>
+        `캡션: "${o.captions[0]?.substring(0, 80)}" / 해시태그: ${o.hashtags.slice(0, 5).join(', ')} / 좋아요평균: ${Math.round(o.avg_engagement)}`
+      ).join('\n');
     }
   }
 
-  // 2차: Gemini-only fallback (RapidAPI 키 없는 경우)
-  if (results.length === 0) {
-    console.info(`[INFLUENCER] ${RAPIDAPI_KEY ? '전부 실패' : 'RapidAPI 키 없음'} → Gemini 직접 검색`);
-    results = await searchViaGeminiOnly(searchHashtags, body);
-    source = 'gemini';
-  }
+  // Gemini 직접 검색 (RapidAPI 힌트 포함)
+  console.info(`[INFLUENCER] Gemini 직접 검색 시작 (힌트: ${postHints ? '있음' : '없음'})`);
+  results = await searchViaGeminiOnly(searchHashtags, body, postHints || undefined);
+  source = postHints ? 'rapidapi+gemini' : 'gemini';
 
   // 최종 필터: 팔로워 확인 + 범위 내 + username 확인된 것만
   results = results.filter(r =>
