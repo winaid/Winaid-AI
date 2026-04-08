@@ -1399,8 +1399,23 @@ ${missing.length > 0 ? `   → 경쟁 글이 놓친 관점: ${missing.join(', ')
       const res = await fetch('/api/gemini', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          prompt: `아래 병원 블로그 글의 ${selectedImgIndex}번째 이미지에 어울리는 프롬프트를 한국어로 1개만 작성해주세요. 프롬프트만 출력하세요.\n\n글 내용:\n${textOnly}`,
-          model: 'gemini-3.1-flash-lite-preview', temperature: 0.7, maxOutputTokens: 300, thinkingLevel: 'none',
+          prompt: `You are a medical blog image prompt specialist.
+Write ONE English image prompt for the ${selectedImgIndex}th image in the Korean hospital blog below.
+
+[RULES]
+- Write in English. Minimum 40 words.
+- Include: location (where), people (who, Korean, expression), action (doing what), props (surrounding objects), atmosphere (lighting, color)
+- End with: "no text, no watermark, no logo"
+- Camera angle: specify eye-level, slightly elevated, or over-the-shoulder
+- No direct eye contact with camera
+- No text/labels/signage in the image
+- Korean medical clinic setting: clean white walls, modern minimalist, warm lighting
+
+[BLOG CONTENT]
+${textOnly}
+
+Output ONLY the prompt. No explanation.`,
+          model: 'gemini-3.1-flash-lite-preview', temperature: 0.7, maxOutputTokens: 500, thinkingLevel: 'none',
         }),
       });
       const data = await res.json() as { text?: string };
@@ -1428,20 +1443,20 @@ ${missing.length > 0 ? `   → 경쟁 글이 놓친 관점: ${missing.join(', ')
   }, []);
 
   // ── 이미지 재생성 실행 (모달에서 호출) ──
-  const handleImageRegenerateSubmit = useCallback(async () => {
+  const handleImageRegenerateSubmit = useCallback(async (referenceImage?: string) => {
     const imageIndex = selectedImgIndex;
     const newPrompt = regenPrompt;
     if (!newPrompt.trim()) return;
 
     setImgRegenModalOpen(false);
     setRegeneratingImage(imageIndex);
-    console.info(`[BLOG] 이미지 ${imageIndex} 재생성 시작 — 프롬프트: "${newPrompt.substring(0, 60)}..."`);
+    console.info(`[BLOG] 이미지 ${imageIndex} 재생성 시작 — 프롬프트: "${newPrompt.substring(0, 60)}..."${referenceImage ? ' (참고 이미지 포함)' : ''}`);
 
     try {
       const imgRes = await fetch('/api/image', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: newPrompt, aspectRatio: imageAspectRatio, mode: 'blog' }),
+        body: JSON.stringify({ prompt: newPrompt, aspectRatio: imageAspectRatio, mode: 'blog', ...(referenceImage ? { referenceImage } : {}) }),
       });
       if (!imgRes.ok) throw new Error('이미지 생성 실패');
 

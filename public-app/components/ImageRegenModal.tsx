@@ -51,7 +51,7 @@ interface ImageRegenModalProps {
   prompt: string;
   setPrompt: (v: string) => void;
   isRegenerating: boolean;
-  onSubmit: () => void;
+  onSubmit: (referenceImage?: string) => void;
   /** AI 프롬프트 추천 */
   isRecommending?: boolean;
   onRecommend?: () => void;
@@ -106,11 +106,7 @@ export const ImageRegenModal: React.FC<ImageRegenModalProps> = ({
                 </button>
               )}
             </div>
-            {isEnglish && (
-              <div className="mb-2 p-3 bg-amber-50 border border-amber-200 rounded-xl">
-                <div className="text-xs text-amber-700 font-bold">⚠️ 현재 영어 프롬프트입니다. 한글로 수정하거나 &quot;AI 프롬프트 추천&quot; 버튼을 눌러 새 프롬프트를 받아보세요!</div>
-              </div>
-            )}
+            {/* 영어 프롬프트가 이미지 생성 품질에 유리합니다 */}
             <textarea
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
@@ -119,7 +115,7 @@ export const ImageRegenModal: React.FC<ImageRegenModalProps> = ({
               disabled={isRecommending || isRegenerating}
             />
             <div className="text-[11px] text-slate-500 mt-2">
-              💡 팁: 한글로 원하는 이미지를 설명하세요! &quot;AI 프롬프트 추천&quot; 버튼을 누르면 글 내용에 맞는 최적의 프롬프트를 자동 생성합니다.
+              💡 팁: 영어 프롬프트가 이미지 품질에 유리합니다. &quot;AI 프롬프트 추천&quot;을 누르면 글에 맞는 영어 프롬프트를 자동 생성합니다.
             </div>
           </div>
 
@@ -164,7 +160,7 @@ export const ImageRegenModal: React.FC<ImageRegenModalProps> = ({
           <div className="flex items-center gap-3">
           <button type="button" onClick={onClose}
             className="px-6 py-3 rounded-2xl font-black text-sm bg-slate-100 hover:bg-slate-200">취소</button>
-          <button type="button" onClick={onSubmit} disabled={isRegenerating || !prompt.trim()}
+          <button type="button" onClick={() => onSubmit(refImage || undefined)} disabled={isRegenerating || !prompt.trim()}
             className="px-8 py-3 rounded-2xl font-black text-sm bg-indigo-600 text-white hover:bg-indigo-700 active:scale-95 transition-all disabled:opacity-50 flex items-center gap-2">
             {isRegenerating ? (
               <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />재생성 중...</>
