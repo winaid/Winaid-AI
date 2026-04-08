@@ -487,11 +487,9 @@ ${range.max}자 초과 시 → 가장 약한 문단을 삭제 후 출력. 패딩
       '- 질문에 핵심 키워드 포함 (검색 노출용)',
       '- 답변은 2~3문장으로 명확하게 (네이버 AI 요약에 잡히는 길이)',
       `형식:
-<div style="margin-top:32px;padding:20px 24px;background:#f8fafc;border-radius:12px;border:1px solid #e2e8f0;">
-<h3 style="margin:0 0 16px 0;font-size:17px;color:#1e293b;">💬 자주 묻는 질문</h3>
-각 Q/A:
-<p style="margin:12px 0 4px 0;font-weight:700;color:#334155;">Q. 질문내용</p>
-<p style="margin:0 0 12px 0;color:#64748b;">A. 답변내용</p>
+<div class="faq-section"><h3>💬 자주 묻는 질문</h3>
+<p class="faq-q">Q. 질문내용</p>
+<p class="faq-a">A. 답변내용</p>
 </div>`,
     );
   }

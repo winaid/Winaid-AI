@@ -561,6 +561,12 @@ export function ResultPanel({
               .rp-preview .content-image-wrapper img:hover { opacity: 0.85; }
               .rp-preview .content-image-wrapper img::after { content: '🔄 클릭하여 재생성'; }
 
+              /* ── FAQ section ── */
+              .rp-preview .faq-section { margin-top: 32px; padding: 20px 24px; background: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0; }
+              .rp-preview .faq-section h3 { margin: 0 0 16px 0; font-size: 17px; color: #1e293b; }
+              .rp-preview .faq-q { margin: 12px 0 4px 0; font-weight: 700; color: #334155; }
+              .rp-preview .faq-a { margin: 0 0 12px 0; color: #64748b; }
+
               /* ── references footer ── */
               .rp-preview .references-footer { margin-top: 32px; padding-top: 16px; border-top: 1px solid #e2e8f0; opacity: 0.6; position: relative; user-select: none; -webkit-user-select: none; }
               .rp-preview .references-footer p { font-size: 11px; color: #94a3b8; font-weight: 600; margin: 0 0 8px 0; }
