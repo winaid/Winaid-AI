@@ -113,39 +113,71 @@ export function filterMedicalLawViolations(text: string): MedicalLawFilterResult
 }
 
 /**
- * AI 티 반복 패턴과 브랜드명 누출을 후처리한다.
- *
- * - "winaid" / "윈에이아이" 문자열이 본문에 섞여 나오는 경우 제거
- *   (랜딩 챗봇이나 시스템 프롬프트에 브랜드명이 포함될 때 모델이 자기 소개로 오해해
- *    본문에 "안녕하세요. 윈에이아이입니다" 같은 문구를 넣는 사례 대응)
- * - "좋습니다" 3회 이상 반복 시 일부를 다른 표현으로 교체해 문체 단조로움 완화
+ * AI 티 반복 패턴, 번역투 표현, 브랜드명 누출을 후처리한다.
  */
 export function filterOutputArtifacts(text: string): string {
   let result = text;
 
-  // 1) 브랜드명 누설 제거 — "안녕하세요. 위나이드(winaid) 입니다" 류 문장 통째로 제거
+  // 1) 브랜드명 누설 제거
   result = result.replace(
     /안녕하세요[^.!?\n]*(?:winaid|윈에이아이|위나이드)[^.!?\n]*[.!?]\s*/gi,
     '',
   );
-  // 잔여 키워드 제거
   result = result.replace(/\s*\(?(?:winaid|위나이드)\)?\s*/gi, ' ');
   result = result.replace(/윈에이아이/g, '');
-  // 공백 정리
-  result = result.replace(/[ \t]{2,}/g, ' ');
 
-  // 2) "좋습니다" 3회 이상이면 일부 교체
-  const goodMatches = result.match(/좋습니다/g);
-  if (goodMatches && goodMatches.length >= 3) {
-    let count = 0;
-    result = result.replace(/좋습니다/g, (match) => {
-      count++;
-      if (count === 2) return '바람직합니다';
-      if (count === 4) return '도움이 됩니다';
-      if (count >= 5) return '권장됩니다';
-      return match;
-    });
+  // 2) AI 탐지 표현 자동 치환 (번역투 + AI 패턴)
+  const AI_REPLACEMENTS: Array<[RegExp, string]> = [
+    // 번역투 (Tier 2)
+    [/에 해당합니다/g, '입니다'],
+    [/에 불과합니다/g, '뿐입니다'],
+    [/로 인해\s/g, '때문에 '],
+    [/를 통해\s/g, '로 '],
+    [/에 기인합니다/g, '때문입니다'],
+    [/을 야기합니다/g, '을 일으킵니다'],
+    [/하는 것이 중요합니다/g, '해야 합니다'],
+    [/에 의해 발생/g, '때문에 생기'],
+    // AI 패턴 (Tier 3)
+    [/이러한\s/g, '이런 '],
+    [/상기\s/g, '위 '],
+    [/동일한\s/g, '같은 '],
+    [/상술한\s/g, '앞서 말한 '],
+    // 접속부사 (Tier 4) — 문장 시작에서만
+    [/^또한[,\s]/gm, ''],
+    [/^더불어[,\s]/gm, ''],
+    [/^아울러[,\s]/gm, ''],
+    [/^나아가[,\s]/gm, ''],
+    [/^뿐만 아니라[,\s]/gm, ''],
+  ];
+
+  for (const [pattern, replacement] of AI_REPLACEMENTS) {
+    result = result.replace(pattern, replacement);
   }
+
+  // 3) 같은 어미 3회 연속 감지 + 3번째를 교체
+  const endingPatterns: Array<[RegExp, string[]]> = [
+    [/좋습니다/g, ['바람직합니다', '낫습니다', '권장됩니다']],
+    [/있습니다/g, ['있어요', '있거든요', '있는 편입니다']],
+    [/됩니다/g, ['돼요', '되거든요', '되는 편입니다']],
+    [/합니다/g, ['해요', '하거든요', '하는 편이에요']],
+  ];
+
+  for (const [pattern, alts] of endingPatterns) {
+    const matches = result.match(pattern);
+    if (matches && matches.length >= 3) {
+      let count = 0;
+      result = result.replace(pattern, (match) => {
+        count++;
+        // 3번째, 6번째, 9번째... 를 교체
+        if (count % 3 === 0) return alts[Math.floor(Math.random() * alts.length)];
+        return match;
+      });
+    }
+  }
+
+  // 4) 공백 정리
+  result = result.replace(/[ \t]{2,}/g, ' ');
+  result = result.replace(/\n{3,}/g, '\n\n');
 
   return result;
 }
