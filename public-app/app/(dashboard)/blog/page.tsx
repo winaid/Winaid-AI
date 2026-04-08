@@ -959,11 +959,14 @@ ${subs.length > 0 ? `경쟁 글 소제목: ${subs.join(' / ')}` : ''}
 
       console.info(`[BLOG] 병렬 완료 — 경쟁: ${competitorInstruction ? competitorInstruction.length + '자' : '없음'}, 말투: ${styleInstruction ? styleInstruction.length + '자' : '없음'}`);
 
+      // 말투는 system instruction에 (글쓰기 규칙), 경쟁 분석은 prompt에 (참고 정보)
+      let finalSystemInstruction = systemInstruction;
+      if (styleInstruction) finalSystemInstruction += styleInstruction;
+
       let finalPrompt = prompt;
       if (competitorInstruction) finalPrompt += `\n\n${competitorInstruction}`;
-      if (styleInstruction) finalPrompt += styleInstruction;
 
-      console.info(`[BLOG] 최종 프롬프트 길이: ${finalPrompt.length}자 (system: ${systemInstruction.length}자)`);
+      console.info(`[BLOG] 최종 프롬프트 길이: ${finalPrompt.length}자 (system: ${finalSystemInstruction.length}자)`);
       console.info(`[BLOG] Gemini 호출 시작 — model=gemini-3.1-pro-preview, temp=0.85`);
 
       // ═══ 스트리밍 모드로 Gemini 호출 ═══
@@ -974,7 +977,7 @@ ${subs.length > 0 ? `경쟁 글 소제목: ${subs.join(' / ')}` : ''}
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           prompt: finalPrompt,
-          systemInstruction,
+          systemInstruction: finalSystemInstruction,
           model: 'gemini-3.1-pro-preview',
           temperature: 0.85,
           maxOutputTokens: dynamicMaxTokens,
