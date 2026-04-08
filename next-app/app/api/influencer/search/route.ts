@@ -264,13 +264,22 @@ function guessCategory(hashtags: string[], text: string): string {
 
 // ── Gemini-only fallback ──
 
-async function searchViaGeminiOnly(hashtags: string[], body: SearchRequest): Promise<InfluencerResult[]> {
-  const prompt = `너는 인스타그램 인플루언서 리서치 전문가다.
-"site:instagram.com ${hashtags.slice(0, 3).join(' ')} ${body.location}" 로 검색해서
-${body.location} 지역 마이크로 인플루언서(팔로워 ${body.follower_min}~${body.follower_max})를 찾아줘.
+async function searchViaGeminiOnly(hashtags: string[], body: SearchRequest, postHints?: string): Promise<InfluencerResult[]> {
+  const hintsBlock = postHints ? `\n\n[참고: 실제 인스타그램에서 수집된 게시물 데이터]\n${postHints}\n→ 위 게시물을 올린 계정의 username을 찾아주세요.\n` : '';
 
-규칙: 실제 존재 계정만. 0개도 OK. JSON 배열만:
-[{"username":"...", "full_name":"...", "follower_count":5000, "engagement_rate":3.5, "estimated_location":"강남", "location_confidence":"medium", "primary_category":"맛집/카페", "recent_post_preview":"..."}]`;
+  const prompt = `너는 인스타그램 인플루언서 리서치 전문가다.
+
+Google Search로 "site:instagram.com ${hashtags.slice(0, 3).join(' ')} ${body.location}" 를 검색해서
+${body.location} 지역 마이크로 인플루언서(팔로워 ${body.follower_min}~${body.follower_max})를 찾아줘.
+${hintsBlock}
+[필수 조건]
+- 반드시 실제 존재하는 Instagram 계정만 (가짜 username 생성 절대 금지)
+- 각 계정의 실제 팔로워 수를 검색해서 확인
+- 팔로워 수를 모르면 해당 계정을 결과에 포함하지 마
+- 0명이어도 OK. 확실하지 않은 계정보다 정확한 소수가 낫다
+
+JSON 배열만:
+[{"username":"실제아이디", "full_name":"표시이름", "follower_count":5000, "engagement_rate":3.5, "estimated_location":"강남", "location_confidence":"medium", "primary_category":"맛집/카페", "recent_post_preview":"최근 게시물 텍스트"}]`;
 
   const { text } = await callGeminiDirect({ prompt, model: 'gemini-3.1-flash-preview', temperature: 0.3, maxOutputTokens: 4096, googleSearch: true });
   if (!text) return [];
@@ -324,29 +333,34 @@ export async function POST(request: NextRequest) {
         console.warn('[INFLUENCER] Gemini 보충 실패, RapidAPI 데이터만 사용:', err);
       }
 
-      // Gemini 보충 실패 시 → Gemini fallback으로 넘어감 (프로필 미확인은 결과에 포함 안 함)
+      // Gemini 보충으로 확인된 계정이 없으면 fallback
       if (results.length === 0) {
-        console.info(`[INFLUENCER] Gemini 보충 실패 — Gemini fallback으로 전환`);
+        console.info(`[INFLUENCER] Gemini 보충에서 확인된 계정 0 → Gemini 직접 검색으로 전환`);
+        // RapidAPI에서 수집한 캡션/해시태그를 힌트로 제공
+        const hints = owners.slice(0, 5).map(o =>
+          `캡션: "${o.captions[0]?.substring(0, 60)}" / 해시태그: ${o.hashtags.slice(0, 5).join(', ')} / 좋아요평균: ${Math.round(o.avg_engagement)}`
+        ).join('\n');
+        results = await searchViaGeminiOnly(searchHashtags, body, hints);
+        source = 'gemini';
       }
     }
   }
 
-  // 2차: Gemini-only fallback
+  // 2차: Gemini-only fallback (RapidAPI 키 없는 경우)
   if (results.length === 0) {
-    console.info(`[INFLUENCER] ${RAPIDAPI_KEY ? 'RapidAPI 결과 없음' : 'RapidAPI 키 없음'} → Gemini fallback`);
+    console.info(`[INFLUENCER] ${RAPIDAPI_KEY ? '전부 실패' : 'RapidAPI 키 없음'} → Gemini 직접 검색`);
     results = await searchViaGeminiOnly(searchHashtags, body);
     source = 'gemini';
   }
 
-  // 팔로워/참여도 필터
-  results = results.filter(r => {
-    // 팔로워 확인된 경우: 범위 필터
-    if (r.follower_count > 0) {
-      return r.follower_count >= body.follower_min && r.follower_count <= body.follower_max;
-    }
-    // 팔로워 미확인(RapidAPI): 최소 참여도 필터 (좋아요+댓글 평균 3 이상이면 포함)
-    return r.engagement_rate >= 3;
-  });
+  // 최종 필터: 팔로워 확인 + 범위 내 + username 확인된 것만
+  results = results.filter(r =>
+    r.username &&
+    !r.username.startsWith('user_') &&
+    r.follower_count > 0 &&
+    r.follower_count >= body.follower_min &&
+    r.follower_count <= body.follower_max
+  );
 
   return NextResponse.json({ results: results.slice(0, 20), total_found: results.length, search_hashtags_used: searchHashtags, source });
 }
