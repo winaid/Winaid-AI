@@ -334,13 +334,13 @@ JSON 배열로만 응답하세요:
 /** 주소에서 지역명(구/동/읍/면) 추출 */
 function extractLocations(address: string): string[] {
   const locations: string[] = [];
-  const guMatch = address.match(/([가-힣]+[구군시])\b/g);
+  const guMatch = address.match(/([가-힣]+[구군시])(?=[^가-힣]|$)/g);
   if (guMatch) {
     for (const gu of guMatch) {
       if (!/^(서울|부산|대구|인천|광주|대전|울산|세종)$/.test(gu)) locations.push(gu);
     }
   }
-  const dongMatch = address.match(/([가-힣]+[동읍면])\b/g);
+  const dongMatch = address.match(/([가-힣]+[동읍면])(?=[^가-힣]|$)/g);
   if (dongMatch) {
     for (const dong of dongMatch) {
       if (dong.length >= 2 && dong.length <= 6) locations.push(dong);
