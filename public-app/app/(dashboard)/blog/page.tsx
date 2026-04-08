@@ -674,40 +674,40 @@ ${blogHtml.substring(0, 8000)}
 ---
 ① 제목 최적화 (25점 만점)
 ---
-※ keyword_natural (10점): 핵심 키워드 자연 포함
-※ seasonality (5점): 시기성/상황성 포함
-※ judgment_inducing (5점): 판단 유도형 구조
-※ medical_law_safe (5점): 의료광고 리스크 없음
+※ keyword_natural (10점): 핵심 키워드가 제목에 자연스럽게 포함되어 있는가
+※ seasonality (5점): 계절/시기/트렌드 요소가 반영되어 있는가 (예: "2024년", "겨울철", "환절기")
+※ judgment_inducing (5점): 독자가 클릭할지 판단할 수 있는 구체적 정보가 제목에 있는가 (예: "3가지 방법", "비용 비교", "주의사항" — 막연한 "알아보기" 류는 감점)
+※ medical_law_safe (5점): 제목에 과장/단정/행동유도 표현이 없는가
 
 ---
 ② 본문 키워드 구조 (25점 만점)
 ---
-※ main_keyword_exposure (10점): 메인 키워드 3~5회 자연 노출
-※ related_keyword_spread (5점): 연관 키워드(LSI) 분산 배치
-※ subheading_variation (5점): 소제목에 키워드 변주 포함
-※ no_meaningless_repeat (5점): 의미 없는 반복 없음
+※ main_keyword_exposure (10점): 메인 키워드 3~5회 자연 노출 (2회 미만 -5, 8회 초과 스터핑 -5)
+※ related_keyword_spread (5점): 연관 키워드(LSI)가 소제목과 본문에 분산 배치되어 있는가
+※ subheading_variation (5점): 소제목에 키워드가 변주되어 포함되어 있는가 (동일 키워드 반복 아닌 변형)
+※ no_meaningless_repeat (5점): 같은 표현/정보를 다른 말로 반복하는 패딩이 없는가
 
 ---
 ③ 사용자 체류 구조 (20점 만점)
 ---
-※ intro_problem_recognition (5점): 도입부 5줄 이내 문제 인식
-※ relatable_examples (5점): '나 얘기 같다' 생활 예시
-※ mid_engagement_points (5점): 중간 이탈 방지 포인트
-※ no_info_overload (5점): 정보 과부하 없음
+※ intro_problem_recognition (5점): 도입부 5줄 이내에 독자의 증상/고민/상황을 구체적으로 언급하는가
+※ relatable_examples (5점): 독자가 "내 얘기다"라고 느낄 수 있는 일상 장면/감각 표현이 있는가 (예: "찬 물 마실 때 찌릿", "계단 내려갈 때 시큰")
+※ mid_engagement_points (5점): 글 중간에 독자가 계속 읽게 만드는 요소가 있는가 (수치/비교표/질문형 소제목/의외의 사실 등)
+※ no_info_overload (5점): 한 문단에 정보가 과밀하지 않은가 (300자 이상 연속 문단, 전문 용어 나열 등)
 
 ---
 ④ 의료법 안전성 + 신뢰 신호 (20점 만점)
 ---
-※ no_definitive_guarantee (5점): 단정·보장 표현 없음
-※ individual_difference (5점): 개인차/상황별 차이 자연 언급
-※ self_diagnosis_limit (5점): 자가진단 한계 명확화
-※ minimal_direct_promo (5점): 병원 직접 홍보 최소화
+※ no_definitive_guarantee (5점): "완치/100%/확실/보장" 단정 표현이 없는가
+※ individual_difference (5점): "개인차가 있을 수 있습니다" 류의 가능성 표현이 적절히 포함되어 있는가
+※ self_diagnosis_limit (5점): "정확한 진단은 전문의 상담이 필요합니다" 같은 자가진단 한계 명시가 있는가
+※ minimal_direct_promo (5점): "예약하세요/방문하세요" 같은 직접 홍보/행동 유도가 없는가
 
 ---
 ⑤ 전환 연결성 (10점 만점)
 ---
-※ cta_flow_natural (5점): CTA가 정보 흐름을 끊지 않음
-※ time_fixed_sentence (5점): 시점 고정형 문장 존재
+※ cta_flow_natural (5점): 마무리의 행동 유도(CTA)가 정보 흐름의 자연스러운 결론으로 이어지는가 (갑작스러운 "예약하세요" 금지)
+※ time_fixed_sentence (5점): "2주 이상 지속되면", "3개월 간격으로" 같이 독자가 구체적 행동 시점을 알 수 있는 문장이 있는가
 
 [중요]
 ⚠️ 평가 시 주의사항
