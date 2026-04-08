@@ -237,7 +237,7 @@ export default function InfluencerPage() {
                 <input value={hospitalFeatures} onChange={e => setHospitalFeatures(e.target.value)} className={inputCls} placeholder="예: 임플란트 전문, 당일 식사 가능" />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1.5">병원 인스타 계정</label>
+                <label className="block text-xs font-semibold text-slate-600 mb-1.5">발송 인스타 계정</label>
                 <input value={hospitalInstagram} onChange={e => setHospitalInstagram(e.target.value)} className={inputCls} placeholder="@seoulsmile_dental" />
               </div>
             </div>
@@ -434,7 +434,7 @@ export default function InfluencerPage() {
                 {selectedInfluencer && (
                   <div className="text-xs text-slate-500">
                     {selectedInfluencer.username.startsWith('user_') ? '게시물 작성자' : `@${selectedInfluencer.username}`}님에게 보낼 메시지
-                    {hospitalInstagram && <span className="text-slate-400"> · 병원 계정: {hospitalInstagram}</span>}
+                    {hospitalInstagram && <span className="text-slate-400"> · 발송 계정: {hospitalInstagram}</span>}
                   </div>
                 )}
               </div>
