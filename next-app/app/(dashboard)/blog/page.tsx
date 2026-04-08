@@ -1510,11 +1510,11 @@ ${subs.length > 0 ? `경쟁 글 소제목: ${subs.join(' / ')}` : ''}
     }
   }, [selectedImgIndex, regenPrompt, supabase]);
 
-  // ── 소제목 재생성 (root useAiRefine.ts + faqService.ts + gpt52-prompts-staged.ts 기준) ──
+  // ── 소제목 재생성 — 원본 설정값 + 진료과 전문성 + 의료법 필터 적용 ──
   const handleSectionRegenerate = useCallback(async (sectionIndex: number) => {
     const section = blogSections.find(s => s.index === sectionIndex);
     if (!section || !generatedContent) return;
-    if (regeneratingSection !== null) return; // 동시 재생성 방지
+    if (regeneratingSection !== null) return;
 
     setRegeneratingSection(sectionIndex);
     setSectionProgress(`"${section.type === 'intro' ? '도입부' : section.title}" 재생성 중...`);
@@ -1522,57 +1522,28 @@ ${subs.length > 0 ? `경쟁 글 소제목: ${subs.join(' / ')}` : ''}
     try {
       const sectionTitle = section.type === 'intro' ? '도입부' : section.title;
 
-      // root getSectionRegeneratePrompt 동일 구조
-      const systemPrompt = `[글쓴이 정체성]
-병원 블로그 전담 에디터. 의사가 아니라 건강 정보를 잘 정리하는 사람.
-- 의학 지식이 있지만 의사처럼 말하지 않는다
-- 독자에게 가르치지 않는다. 정보를 두고 갈 뿐이다
-- 문장이 짧다. 군더더기를 싫어한다
-
-[최상위 원칙] 쉽고 짧게 직접 말한다
-1. 짧게 쓴다. 한 문장은 40자 이내 권장
-2. 직접 말한다. 돌려 말하지 않는다
-3. 쉬운 말을 쓴다
-4. 의료광고법에 걸리는 표현만 피한다
-
-[문체] 본문은 ~습니다체. 소제목만 ~다체 허용
-[시점] 3인칭 관찰자. "나/저/우리/당신/여러분" 금지
-
-[톤 규칙]
-- "~할 수 있습니다" 금지 → "~는 경우도 있습니다"
-- "~하는 것이 좋습니다" 금지 → "~하는 편이 낫습니다"
-- "~에 도움이 됩니다" 금지
-- 질문형 문장 금지 ("~하신가요?", "~은 아닌가요?")
-
-[의료광고법 (strict)]
-- 치료 효과 단정 금지 ("완치", "확실히 나아집니다")
-- 비교 광고 금지 ("최고", "유일")
-- 환자 유인 금지
-- 개인차 언급 필수
-
-[미션] 아래 소제목 섹션만 새로 작성하라. 나머지 글과의 흐름은 유지.
-
-[소제목] ${sectionTitle}
-[현재 내용]
-${section.html}
-
-[전체 글 맥락 (참고용)]
-${generatedContent.substring(0, 2000)}
-
-[규칙]
-- 현재 내용과 다른 관점/표현으로 재작성
-- 같은 정보를 다루되 문장 구조와 어미를 변경
-- 2~3문단 유지
-- HTML <h3>과 <p> 태그로 출력
-
-[출력] ${section.type === 'intro' ? '<p>부터 시작하는 도입부 HTML만 출력.' : `<h3>${sectionTitle}</h3>부터 시작하는 HTML만 출력.`}`;
+      const { buildSectionRegeneratePrompt } = await import('../../../lib/blogPrompt');
+      const { systemInstruction: sysPrompt, prompt: userPrompt } = buildSectionRegeneratePrompt({
+        sectionTitle,
+        sectionHtml: section.html,
+        sectionType: section.type,
+        fullContext: generatedContent.substring(0, 3000),
+        category,
+        persona,
+        tone,
+        audienceMode,
+        writingStyle,
+        keywords,
+        disease,
+        medicalLawMode,
+      });
 
       const res = await fetch('/api/gemini', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          prompt: `소제목 "${sectionTitle}" 섹션을 새로 작성해주세요.`,
-          systemInstruction: systemPrompt,
+          prompt: userPrompt,
+          systemInstruction: sysPrompt,
           model: 'gemini-3.1-pro-preview',
           temperature: 0.85,
           maxOutputTokens: 32768,
@@ -1586,15 +1557,18 @@ ${generatedContent.substring(0, 2000)}
       }
 
       let newSectionHtml = data.text.trim();
-      // 코드블록 fence 제거
       newSectionHtml = newSectionHtml.replace(/^```html?\s*\n?/i, '').replace(/\n?```\s*$/, '');
 
-      // HTML 검증
       if (!newSectionHtml.includes('<')) {
         throw new Error('유효한 HTML이 반환되지 않았습니다');
       }
 
-      // 전체 HTML에서 해당 섹션 교체
+      // 의료광고법 금지어 자동 대체
+      const { applyContentFilters } = await import('../../../lib/medicalLawFilter');
+      const { filtered, replacedCount, foundTerms } = applyContentFilters(newSectionHtml);
+      newSectionHtml = filtered;
+      if (replacedCount > 0) console.info(`[BLOG_REGEN] 의료법 자동 대체: ${replacedCount}건 — ${foundTerms.join(', ')}`);
+
       const updatedHtml = replaceSectionHtml(
         generatedContent,
         section.html,
@@ -1603,8 +1577,6 @@ ${generatedContent.substring(0, 2000)}
       );
 
       setGeneratedContent(updatedHtml);
-
-      // 섹션 목록 갱신
       const newSections = parseBlogSections(updatedHtml);
       setBlogSections(newSections);
 
@@ -1617,7 +1589,7 @@ ${generatedContent.substring(0, 2000)}
     } finally {
       setRegeneratingSection(null);
     }
-  }, [blogSections, generatedContent, regeneratingSection]);
+  }, [blogSections, generatedContent, regeneratingSection, category, persona, tone, audienceMode, writingStyle, keywords, disease, medicalLawMode]);
 
   // ── Word / PDF 다운로드 ──
   const handleDownloadWord = useCallback(async () => {

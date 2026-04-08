@@ -627,3 +627,91 @@ ${range.max}자 초과 시 → 가장 약한 문단을 삭제 후 출력. 패딩
     prompt: promptParts.join('\n'),
   };
 }
+
+// ── 소제목 재생성 프롬프트 ──
+
+interface SectionRegenerateInput {
+  sectionTitle: string;
+  sectionHtml: string;
+  sectionType: 'intro' | 'section' | 'conclusion';
+  fullContext: string;
+  category: string;
+  persona: string;
+  tone: string;
+  audienceMode: string;
+  writingStyle: string;
+  keywords: string;
+  disease?: string;
+  medicalLawMode: 'strict' | 'relaxed';
+}
+
+export function buildSectionRegeneratePrompt(input: SectionRegenerateInput): {
+  systemInstruction: string;
+  prompt: string;
+} {
+  const personaGuide = PERSONA_GUIDES[input.persona] || PERSONA_GUIDES.hospital_info;
+  const audienceGuide = AUDIENCE_GUIDES[input.audienceMode] || AUDIENCE_GUIDES['환자용(친절/공감)'];
+  const toneGuide = TONE_GUIDES[input.tone] || TONE_GUIDES.warm;
+  const styleGuide = STYLE_GUIDES[input.writingStyle || 'empathy'] || '';
+  const medLawNote = getMedicalLawPromptBlock(input.medicalLawMode !== 'relaxed');
+  const categoryGuide = CATEGORY_DEPTH_GUIDES[input.category] || '';
+
+  const systemInstruction = [
+    '[최상위 원칙] 쉽고 짧게 직접 말한다',
+    '1. 짧게 쓴다. 한 문장 50자 이내 권장',
+    '2. 직접 말한다. 돌려 말하지 않는다',
+    '3. 쉬운 말을 쓴다',
+    '',
+    personaGuide,
+    audienceGuide,
+    `글의 어조: ${toneGuide}`,
+    styleGuide,
+    '',
+    medLawNote,
+    '',
+    '[문체 — 사람처럼 쓰기]',
+    '- 같은 어미 3연속 금지',
+    '- 긴 문장 → 짧은 문장 교차',
+    '- 감각 표현 포함: "찌릿한", "욱신거리는", "뻣뻣한"',
+    '- 구체적 숫자: "오래" → "약 3~6개월"',
+    '- 수식어 삭제: "매우 중요한" → "중요한"',
+    '',
+    '[금지 표현]',
+    'AI 느낌: "~라고 알려져 있습니다", "일반적으로", "~에 대해 알아보겠습니다", "~는 매우 중요합니다"',
+    '접속부사: "또한", "더불어", "아울러" → 내용 흐름으로 대체',
+    '끝맺음 연속 금지: 같은 어미 2회 연속 사용 금지.',
+    '',
+    categoryGuide,
+    '',
+    '[출력 규칙]',
+    '순수 HTML만 사용 (<h3>, <p>, <strong>, <em>). 마크다운/JSON/코드블록 금지.',
+  ].filter(Boolean).join('\n');
+
+  const prompt = [
+    `[미션] 아래 소제목 섹션만 새로 작성. 나머지 글과의 톤·흐름 유지.`,
+    '',
+    `[진료과] ${input.category}`,
+    input.disease ? `[질환] ${input.disease}` : '',
+    input.keywords ? `[SEO 키워드] ${input.keywords} — 재작성 본문에도 자연스럽게 1~2회 포함` : '',
+    '',
+    `[소제목] ${input.sectionTitle}`,
+    `[현재 내용]`,
+    input.sectionHtml,
+    '',
+    `[전체 글 맥락 (참고용 — 이 부분을 수정하는 것이 아닙니다)]`,
+    input.fullContext,
+    '',
+    '[재작성 방향]',
+    '- 같은 주제를 다루되, 아래 중 하나 이상을 변경:',
+    '  · 더 구체적인 수치/사례 추가 (기존에 없던 정보)',
+    '  · 문단 순서나 논리 구조 변경 (원인→증상 대신 증상→원인)',
+    '  · 환자 체감 중심으로 서술 각도 전환',
+    '- 기존 문장을 단순히 어순만 바꾸는 것은 금지. 새로운 정보나 관점이 있어야 합니다.',
+    '- 2~3문단 유지. 문단당 3~4문장.',
+    '',
+    `[출력] ${input.sectionType === 'intro' ? '<p>부터 시작하는 도입부 HTML만 출력.' : `<h3>${input.sectionTitle}</h3>부터 시작하는 HTML만 출력.`}`,
+    'HTML만 출력하세요. 설명, 주석, 코드블록 금지.',
+  ].filter(Boolean).join('\n');
+
+  return { systemInstruction, prompt };
+}
