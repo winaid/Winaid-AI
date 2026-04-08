@@ -817,9 +817,9 @@ JSON 형식으로 응답해주세요.`;
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               prompt: `너는 네이버 블로그 SEO 분석 전문가다.
-"${keywords.trim()}" 키워드로 네이버 블로그탭 상위 1~5위 글의 공통 구조를 분석해줘.
+"${keywords.trim()}" 키워드로 네이버 블로그 상위 1~5위 글의 공통 구조를 분석해줘.
 
-Google Search로 실제 네이버 상위 블로그를 검색하고, 실제 데이터를 기반으로 답변해.
+Google Search에서 "site:blog.naver.com ${keywords.trim()}" 로 검색하여 실제 네이버 블로그 상위 글을 찾고, 실제 데이터를 기반으로 답변해.
 추측하지 마라. 검색 결과에서 확인된 정보만 포함해.
 
 JSON으로만 답변. 설명 없이.

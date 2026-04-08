@@ -423,6 +423,18 @@ ${range.max}자 초과 시 → 가장 약한 문단을 삭제 후 출력. 패딩
     }
   }
 
+  // ── 환자 페르소나 타겟팅 ──
+  if (req.patientPersona?.trim()) {
+    promptParts.push(
+      '',
+      '[타겟 환자 페르소나]',
+      `이 글의 주요 독자: ${req.patientPersona.trim()}`,
+      '→ 이 독자가 가장 궁금해할 정보를 우선 배치하세요.',
+      '→ 이 독자의 언어 수준과 관심사에 맞춰 설명 깊이를 조절하세요.',
+      '→ 이 독자가 공감할 수 있는 상황/사례를 도입부나 본문에 반영하세요.',
+    );
+  }
+
   // ── 병원 홈페이지/블로그 분석 결과 ──
   if (req.clinicContext) {
     const ctx = req.clinicContext;
@@ -439,6 +451,11 @@ ${range.max}자 초과 시 → 가장 약한 문단을 삭제 후 출력. 패딩
     ctxParts.push(`→ 위 정보 중 현재 글의 주제("${req.topic}")와 관련 있는 정보만 참고하세요.`);
     ctxParts.push('→ 주제와 무관한 시술, 장비, 서비스 정보는 절대 포함하지 마세요.');
     ctxParts.push('→ 없는 서비스를 언급하지 마세요.');
+    ctxParts.push('');
+    ctxParts.push('[차별화 — 이 병원만의 글로 만들기]');
+    ctxParts.push('→ 위 병원 정보(특화 진료, 장비, 지역)를 본문에 자연스럽게 녹여서 이 병원에서만 나올 수 있는 글로 만드세요.');
+    ctxParts.push('→ 다른 병원 블로그에 그대로 복사해도 어색하지 않은 범용 글은 실패입니다.');
+    ctxParts.push('→ 최소 2곳 이상에서 이 병원의 고유 정보(지역명, 장비명, 특화 시술)를 언급하세요.');
     promptParts.push(...ctxParts);
   }
 

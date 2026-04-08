@@ -46,6 +46,7 @@ export interface GenerationRequest {
   hospitalStrengths?: string;
   clinicalContext?: string;
   medicalLawMode?: 'strict' | 'relaxed';
+  patientPersona?: string; // 예: "30대 직장인 여성, 비용 걱정" / "60대 남성, 임플란트 두려움"
   includeFaq?: boolean;
   faqCount?: number;
   includeHospitalIntro?: boolean;
