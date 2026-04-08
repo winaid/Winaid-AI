@@ -112,8 +112,9 @@ async function searchViaRapidAPI(
         if (!username || allProfiles.has(username)) continue;
 
         const followerCount = user?.follower_count || user?.edge_followed_by?.count || user?.followers || 0;
-        // 팔로워 수를 모르면 일단 포함 (나중에 프로필 조회로 보완 가능)
-        if (followerCount > 0 && (followerCount < body.follower_min || followerCount > body.follower_max)) continue;
+        // 팔로워 수 0이면 스킵 (의미 없는 결과)
+        if (!followerCount) continue;
+        if (followerCount < body.follower_min || followerCount > body.follower_max) continue;
 
         const postCount = user?.media_count || user?.edge_owner_to_timeline_media?.count || 0;
         const likes = item?.like_count || item?.edge_liked_by?.count || item?.likes || 0;
