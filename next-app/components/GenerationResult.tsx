@@ -562,7 +562,9 @@ export function ResultPanel({
               .rp-preview .content-image-wrapper img::after { content: '🔄 클릭하여 재생성'; }
 
               /* ── references footer ── */
-              .rp-preview .references-footer { opacity: 0.6; position: relative; user-select: none; -webkit-user-select: none; }
+              .rp-preview .references-footer { margin-top: 32px; padding-top: 16px; border-top: 1px solid #e2e8f0; opacity: 0.6; position: relative; user-select: none; -webkit-user-select: none; }
+              .rp-preview .references-footer p { font-size: 11px; color: #94a3b8; font-weight: 600; margin: 0 0 8px 0; }
+              .rp-preview .references-footer ul { font-size: 11px; color: #94a3b8; padding-left: 20px; margin: 0; line-height: 1.8; }
               .rp-preview .references-footer::after { content: '📋 블로그 복사 시 이 부분은 제외됩니다'; display: block; margin-top: 8px; font-size: 10px; color: #cbd5e1; font-style: italic; }
 
               /* ── modern ── */

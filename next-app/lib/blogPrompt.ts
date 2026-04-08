@@ -233,23 +233,13 @@ export function buildBlogPrompt(req: GenerationRequest): {
   const introChars = 200;
   const outroChars = 200;
   const bodyCharsPerSection = Math.round((range.target - introChars - outroChars) / subheadingCount);
-  const volumeDesign = `[🚨 글자수 절대 규칙 — 반드시 준수]
-목표: 공백 포함 ${range.min}~${range.max}자 (목표값 ${range.target}자)
-허용 한계: ${range.max}자 초과 시 실패입니다. 핵심만 추리세요.
-
-[분량 설계 — 글자수를 구조로 확보]
-- 도입부: 2문단 × 각 100자 = ${introChars}자
-- 소제목 ${subheadingCount}개 × 각 2~3문단 × 각 ${Math.round(bodyCharsPerSection / 2.5)}자 = ${bodyCharsPerSection * subheadingCount}자
-- 마무리: 2문단 × 각 100자 = ${outroChars}자
-- 합계 목표: ${range.target}자
-각 문단은 최소 3문장, 문장당 평균 35~50자. 2문장짜리 짧은 문단 금지.
-
-⚠️ ${range.max}자를 초과하면 실패입니다. 절대 초과하지 마세요.
-⚠️ 소제목당 2~3문단(각 3~4문장)이면 충분합니다. 더 쓰려는 유혹을 이기세요.
-⚠️ 같은 내용을 다른 말로 반복하는 "패딩 문장" 금지. 배경 설명·원론적 경고 금지.
-⚠️ 작성을 끝낸 후 머릿속으로 대략의 글자수를 세고, ${range.max}자를 넘었다면
-    가장 덜 중요한 문단부터 삭제한 뒤 출력하세요.
-⚠️ 글자수가 초과된 상태로 출력하면 해당 응답은 폐기됩니다.`;
+  const volumeDesign = `[분량 규칙 — ${range.min}~${range.max}자 (목표 ${range.target}자)]
+구조:
+- 도입부 ${introChars}자: 2문단 × 각 100자
+- 본문 ${bodyCharsPerSection * subheadingCount}자: 소제목 ${subheadingCount}개 × 각 2~3문단(문단당 ${Math.round(bodyCharsPerSection / 2.5)}자)
+- 마무리 ${outroChars}자: 2문단 × 각 100자
+문단 기준: 최소 3문장, 문장당 35~50자. 2문장 문단 금지.
+${range.max}자 초과 시 → 가장 약한 문단을 삭제 후 출력. 패딩(같은 말 반복, 원론적 경고) 금지.`;
 
   // 말투 학습이 적용되면 IDENTITY의 화자/시점 규칙을 무시 (학습된 말투 우선)
   const hasLearnedStyle = !!(req.learnedStyleId || (req.hospitalStyleSource === 'explicit_selected_hospital' && req.hospitalName));
@@ -305,24 +295,16 @@ export function buildBlogPrompt(req: GenerationRequest): {
     '',
     getTrustedSourcesPromptBlock(req.category),
     '',
-    // ── 금지 표현 (1곳에 통합) ──
+    // ── 금지 표현 + 끝맺음 (통합) ──
     '[금지 표현]',
-    'AI 느낌 (절대 사용 금지):',
-    '  "~라고 알려져 있습니다", "일반적으로", "대부분의 경우", "다양한/여러 가지"',
-    '  "~에 대해 알아보겠습니다", "살펴보겠습니다", "이 글에서는~"',
-    '  "~할 수 있습니다" 연속 2회 이상, "~는 매우 중요합니다"',
-    '  "또한", "더불어", "아울러", "한편" (접속부사 남용)',
-    '  "~적인", "~적으로" (불필요한 한자어 접미사)',
-    '딱딱한 단어: 측면/관점/맥락/양상/경향/요인 등 → 3회 이하',
-    '번역투: "~하는 것이 중요합니다", "~에 의해 발생"',
-    '독자 직접 말 걸기 금지 (✕ "걱정되시죠?", ○ "이런 증상이 반복되면 신경이 쓰일 수밖에 없습니다")',
+    'AI 느낌: "~라고 알려져 있습니다", "일반적으로", "대부분의 경우", "다양한/여러 가지", "~에 대해 알아보겠습니다", "살펴보겠습니다", "이 글에서는~", "~는 매우 중요합니다"',
+    '접속부사: "또한", "더불어", "아울러", "한편" → 내용 흐름으로 대체',
+    '한자어 접미사: "~적인", "~적으로" 불필요 시 삭제',
+    '딱딱한 단어: 측면/관점/맥락/양상/경향/요인 → 글 전체 3회 이하',
+    '번역투: "~하는 것이 중요합니다", "~에 의해 발생" → 직접 서술로 변환',
+    '독자 말 걸기 금지 (✕ "걱정되시죠?" ○ "이런 증상이 반복되면 신경이 쓰일 수밖에 없습니다")',
     '"해야", "바랍니다" 금지. 의인화 금지.',
-    '',
-    '[문장 끝맺음 다양화]',
-    '- "~좋습니다" 2회 이상 연속 금지',
-    '- "~해야 합니다" 3회 이상 연속 금지',
-    '- "~할 수 있습니다" 3회 이상 연속 금지',
-    '- 끝맺음 변주: "~됩니다" → "~이에요" → "~거든요" → "~합니다" 자연스럽게 섞기',
+    '끝맺음 연속 금지: 같은 어미("~좋습니다", "~해야 합니다", "~할 수 있습니다") 2회 연속 사용 금지. "~됩니다/~이에요/~거든요/~합니다" 자연스럽게 섞기.',
     '',
     // ── 태그 + 출력 (1곳에 통합) ──
     '[출력 규칙]',
@@ -402,7 +384,11 @@ export function buildBlogPrompt(req: GenerationRequest): {
     '   · 인사 후 바로 주제 연결: "오늘은 ~에 대해 이야기해보려고 합니다."',
     ...(req.persona === 'director_1st' && req.hospitalName
       ? [`⚠️ 이 글은 대표원장 1인칭이므로 반드시 F(원장 인사형)으로 시작하세요. 병원명: "${req.hospitalName}"`]
-      : ['⚠️ 증상 없는 주제에 A/C 쓰면 억지 장면이 됩니다. E를 사용하세요.']),
+      : topicType === 'symptom' ? ['⚠️ 증상 주제 → A(일상 장면형) 또는 B(시간 경과형) 권장.']
+      : topicType === 'compare' ? ['⚠️ 비교 주제 → C(오해 반전형) 또는 E(수치 시작형) 권장.']
+      : topicType === 'aftercare' ? ['⚠️ 관리 주제 → B(시간 경과형) 권장. 시술 직후 장면부터 시작.']
+      : topicType === 'qna' ? ['⚠️ Q&A 주제 → A(일상 장면형) 또는 E(수치 시작형) 권장.']
+      : ['⚠️ 주제에 맞는 패턴을 A~E 중 선택하세요. 증상 없는 주제에 A/B를 억지로 쓰지 마세요.']),
     '❌ 금지하는 첫 문장: "~를 찾는 분들이 많습니다", "~에 대해 알아보겠습니다", "~가 궁금하신 분들을 위해", "요즘 ~가 유행입니다"',
     '✅ 구체적 상황이나 수치로 시작: "임플란트 5년 생존율은 95%입니다" 또는 "수술 다음 날 거즈를 언제 빼야 할지 고민되셨나요?"',
     `- 본문: <h3> 소제목 최소 4개 (${subheadingGuide} 권장). 각 소제목 아래 2~3문단`,
@@ -625,15 +611,8 @@ export function buildBlogPrompt(req: GenerationRequest): {
     '- ❌ "지금 바로 예약하세요!" (과도한 광고)',
     '- ❌ "전화주세요" (직접 영업)',
     '',
-    '본문 마지막에 참고 출처 블록 추가:',
-    '',
-    `<div class="references-footer" data-no-copy="true">`,
-    `<p style="margin-top:32px;padding-top:16px;border-top:1px solid #e2e8f0;font-size:11px;color:#94a3b8;font-weight:600;">참고 자료</p>`,
-    `<ul style="font-size:11px;color:#94a3b8;padding-left:20px;margin:8px 0 0 0;line-height:1.8;">`,
-    `<li>기관명 — 관련 정보 주제</li>`,
-    `</ul></div>`,
-    '',
-    '출처 규칙: 본문에서 참고한 의학 정보의 출처를 2~4개 기재. 신뢰 기관만. URL 금지.',
+    '본문 마지막에 참고 출처 블록 추가 (2~4개, 신뢰 기관만, URL 금지):',
+    '<div class="references-footer" data-no-copy="true"><p><strong>참고 자료</strong></p><ul><li>기관명 — 정보 주제</li></ul></div>',
     '',
     '출처 블록 다음에 자가평가 점수를 붙이세요:',
     '',
