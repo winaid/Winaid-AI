@@ -5,6 +5,7 @@
  * Instagram 데이터는 Gemini의 Google Search를 통해 수집합니다.
  */
 import { NextRequest, NextResponse } from 'next/server';
+import { callGeminiDirect } from '../../../../lib/geminiDirect';
 
 export const maxDuration = 120;
 export const dynamic = 'force-dynamic';
@@ -86,39 +87,21 @@ JSON 배열로만 출력. 최대 15명:
 [{"username":"...", "full_name":"...", "follower_count":5000, "engagement_rate":3.5, "estimated_location":"강남", "location_confidence":"medium", "primary_category":"맛집/카페", "recent_post_preview":"최근 게시물 텍스트..."}]`;
 
   try {
-    // 기존 프로젝트의 /api/gemini 경유 방식과 동일하게 내부 API 호출
-    const baseUrl = process.env.NEXT_PUBLIC_VERCEL_URL
-      ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`
-      : process.env.VERCEL_URL
-        ? `https://${process.env.VERCEL_URL}`
-        : 'http://localhost:3000';
-
-    const response = await fetch(`${baseUrl}/api/gemini`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        prompt,
-        model: 'gemini-3.1-flash-preview',
-        temperature: 0.3,
-        maxOutputTokens: 8192,
-        googleSearch: true,
-        responseType: 'json',
-      }),
+    const { text, error } = await callGeminiDirect({
+      prompt,
+      model: 'gemini-3.1-flash-preview',
+      temperature: 0.3,
+      maxOutputTokens: 8192,
+      googleSearch: true,
     });
 
-    if (!response.ok) {
-      const err = await response.json().catch(() => ({ error: '알 수 없는 오류' }));
-      return NextResponse.json({ error: `검색 API 오류: ${response.status}`, details: (err as { error?: string }).error }, { status: 500 });
-    }
-
-    const data = await response.json() as { text?: string; error?: string };
-    if (!data.text) {
-      return NextResponse.json({ error: data.error || '검색 결과 없음' }, { status: 500 });
+    if (!text) {
+      return NextResponse.json({ error: error || '검색 결과 없음' }, { status: 500 });
     }
 
     let parsed: Array<Record<string, unknown>>;
     try {
-      const jsonMatch = data.text.match(/\[[\s\S]*\]/);
+      const jsonMatch = text.match(/\[[\s\S]*\]/);
       parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : [];
     } catch {
       parsed = [];

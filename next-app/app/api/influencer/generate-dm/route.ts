@@ -4,6 +4,7 @@
  * 인플루언서 프로필 + 병원 정보를 기반으로 개인화된 DM 3개를 생성합니다.
  */
 import { NextRequest, NextResponse } from 'next/server';
+import { callGeminiDirect } from '../../../../lib/geminiDirect';
 
 export const maxDuration = 60;
 export const dynamic = 'force-dynamic';
@@ -112,36 +113,20 @@ ${toneGuides[tone] || toneGuides.casual}
 [{"tone":"${tone}","message":"DM 본문"},{"tone":"${tone} 변형1","message":"DM 본문"},{"tone":"${tone} 변형2","message":"DM 본문"}]`;
 
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_VERCEL_URL
-      ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`
-      : process.env.VERCEL_URL
-        ? `https://${process.env.VERCEL_URL}`
-        : 'http://localhost:3000';
-
-    const response = await fetch(`${baseUrl}/api/gemini`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        prompt,
-        model: 'gemini-3.1-flash-preview',
-        temperature: 0.8,
-        maxOutputTokens: 2048,
-        responseType: 'json',
-      }),
+    const { text, error } = await callGeminiDirect({
+      prompt,
+      model: 'gemini-3.1-flash-preview',
+      temperature: 0.8,
+      maxOutputTokens: 2048,
     });
 
-    if (!response.ok) {
-      return NextResponse.json({ error: `DM 생성 API 오류: ${response.status}` }, { status: 500 });
-    }
-
-    const data = await response.json() as { text?: string; error?: string };
-    if (!data.text) {
-      return NextResponse.json({ error: data.error || 'DM 생성 실패' }, { status: 500 });
+    if (!text) {
+      return NextResponse.json({ error: error || 'DM 생성 실패' }, { status: 500 });
     }
 
     let parsed: Array<{ tone: string; message: string }>;
     try {
-      const jsonMatch = data.text.match(/\[[\s\S]*\]/);
+      const jsonMatch = text.match(/\[[\s\S]*\]/);
       parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : [];
     } catch {
       parsed = [];
