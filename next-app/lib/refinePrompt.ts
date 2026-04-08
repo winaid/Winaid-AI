@@ -151,7 +151,16 @@ ${BASE_RULES}
 ${PRESERVE_TONE_RULES}`,
 
   medical_law: `아래 글에서 의료광고법 위반 리스크가 있는 표현을 모두 찾아 자동으로 수정해주세요.
-- 수정한 부분은 원래 의미를 최대한 살리면서 의료광고법에 적합하게
+
+[의료광고법 제56조 위반 유형별 수정]
+1. 최상급/과장: "최고/최초/유일/탁월/혁신적" → "우수한/전문적인/새로운 방식의"
+2. 보장/단정: "완치/100%/확실/보장/부작용 없는" → "~에 도움이 될 수 있습니다/개인차가 있을 수 있으며"
+3. 행동 유도: "~하세요/~받으세요/~추천합니다" → "~을 고려해 보실 수 있습니다"
+4. 비교: "타 병원 대비/~보다 우수" → 삭제 또는 객관적 정보로 대체
+5. 효과 주장: "높은 성공률/효과가 뛰어난" → "도움이 될 수 있는"
+
+- 수정한 부분은 원래 의미를 최대한 살리면서 자연스럽게
+- 문맥상 문제없는 표현은 건드리지 마세요 (예: "완치가 어렵다" → 부정 맥락이므로 OK)
 ${BASE_RULES}
 ${FORMAL_RULES}`,
 
@@ -183,7 +192,15 @@ export function buildRefinePrompt(req: RefineRequest): {
 } {
   const systemInstruction = `당신은 한국 병원 블로그 콘텐츠를 다듬는 전문 에디터입니다.
 원본의 핵심 내용과 의도를 유지하면서, 요청된 방향으로 글을 수정합니다.
-반드시 순수 HTML(<p>, <h3>)로만 출력합니다.`;
+
+[문체 규칙]
+- 한 문장 50자 이내 권장. 같은 어미 3연속 금지.
+- 감각 표현 활용: "찌릿한", "욱신거리는", "뻣뻣한"
+- 구체적 숫자: "오래" → "약 3~6개월"
+- AI 느낌 금지: "일반적으로", "~라고 알려져 있습니다", "~에 대해 알아보겠습니다"
+- 접속부사 금지: "또한", "더불어", "아울러" → 내용 흐름으로 대체
+
+[출력] 순수 HTML(<p>, <h3>, <strong>, <em>)만. 마크다운/코드블록 금지.`;
 
   const prompt = `${MODE_INSTRUCTIONS[req.mode]}
 ${MARK_CHANGES}
@@ -296,15 +313,23 @@ export function buildChatRefinePrompt(req: ChatRefineRequest): {
   const textOnly = workingContent.replace(/<[^>]+>/g, '').trim();
   const currentLength = textOnly.length;
 
-  const systemInstruction = `당신은 스마트 글 보정 AI입니다.
+  const systemInstruction = `당신은 병원 블로그 콘텐츠 보정 전문 에디터입니다.
 사용자 요청을 정확히 이해하고, 요청한 부분만 수정합니다.
 요청하지 않은 부분은 원본 그대로 유지합니다. 절대 전체를 재작성하지 마세요.
-순수 HTML(<p>, <h3>)로만 출력합니다. 설명/코멘트 금지.`;
 
-  // 동적 규칙: 자연스럽게 요청 시 격식체 대신 어투 보존 규칙 적용
-  const chatRules = wantsHumanize
-    ? `${BASE_RULES}\n${PRESERVE_TONE_RULES}`
-    : `${BASE_RULES}\n${FORMAL_RULES}`;
+[문체 규칙]
+- 원문의 어투(~요/~죠/~입니다)를 기본적으로 유지
+- 한 문장 50자 이내 권장. 같은 어미 3연속 금지.
+- AI 느낌 금지: "일반적으로", "~라고 알려져 있습니다", "또한", "더불어"
+- ${getMedicalLawPromptBlock('brief')}
+
+[출력] 순수 HTML(<p>, <h3>, <strong>, <em>)만. 설명/코멘트 금지.`;
+
+  // 어투 보존이 기본. 격식체 전환은 명시적 요청(전문적/의료법/SEO) 시에만
+  const wantsFormal = wantsSEO || wantsMedLaw;
+  const chatRules = wantsFormal
+    ? `${BASE_RULES}\n${FORMAL_RULES}`
+    : `${BASE_RULES}\n${PRESERVE_TONE_RULES}`;
 
   const prompt = `[독자 인식]
 이 글의 독자는 특정 증상/질환 때문에 병원을 알아보는 본인 또는 가족이다.
@@ -317,13 +342,28 @@ ${chatRules}
 ${scopeInstruction}
 ${actionInstruction ? `\n[동작 지침] ${actionInstruction}` : ''}
 
-[의도 파악]
-• 확장: ${wantsExpand ? '예' : '아니오'}
-• 축소: ${wantsShorter ? '예' : '아니오'}
-• 표현 변경: ${wantsRephrase ? '예' : '아니오'}
-• 자연스럽게: ${wantsHumanize ? '예' : '아니오'}
-• 특정 위치 지정: ${isSpecific ? '예' : '아니오 (전체 대상)'}
-${wantsDelete ? '• 삭제 요청: 예' : ''}${wantsAdd ? '• 추가 요청: 예' : ''}${wantsTone ? '• 톤 변경: 예' : ''}${wantsFact ? '• 팩트 보강: 예' : ''}${wantsSEO ? '• SEO 개선: 예' : ''}${wantsMedLaw ? '• 의료법 수정: 예' : ''}${wantsDentalLab ? '• 기공소/보철 보강: 예' : ''}${wantsReorder ? '• 순서 변경: 예' : ''}${wantsSubheading ? '• 소제목 수정: 예' : ''}${wantsEmphasis ? '• 강조: 예' : ''}${wantsExample ? '• 예시 추가: 예' : ''}${wantsFAQ ? '• FAQ 추가: 예' : ''}${wantsSimplify ? '• 쉽게 풀기: 예' : ''}
+[감지된 의도]
+${[
+    wantsExpand && '확장',
+    wantsShorter && '축소',
+    wantsRephrase && '표현 변경',
+    wantsHumanize && '자연스럽게',
+    wantsDelete && '삭제',
+    wantsAdd && '추가',
+    wantsReplace && '교체',
+    wantsTone && '톤 변경',
+    wantsFact && '팩트 보강',
+    wantsSEO && 'SEO',
+    wantsMedLaw && '의료법',
+    wantsDentalLab && '기공소/보철',
+    wantsReorder && '순서 변경',
+    wantsSubheading && '소제목 수정',
+    wantsEmphasis && '강조',
+    wantsExample && '예시 추가',
+    wantsFAQ && 'FAQ',
+    wantsSimplify && '쉽게 풀기',
+    isSpecific && '특정 위치 지정',
+  ].filter(Boolean).join(', ') || '일반 수정'}
 
 현재 글자 수: ${currentLength}자
 ${crawledContent ? `\n[참고 자료 — 출처 표시 없이 내용만 참고]\n${crawledContent}` : ''}
