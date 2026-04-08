@@ -223,15 +223,28 @@ export async function POST(request: NextRequest) {
   // 1차: RapidAPI로 실제 게시물 수집 → Gemini에 힌트로 전달
   let postHints = '';
   if (RAPIDAPI_KEY) {
-    console.info(`[INFLUENCER] RapidAPI 검색: ${searchHashtags.slice(0, 3).join(', ')}`);
+    const tagsToSearch = searchHashtags.slice(0, 3);
+    console.info(`[INFLUENCER] RapidAPI 검색: ${tagsToSearch.join(', ')}`);
     const allPosts: RawPost[] = [];
 
-    // 직렬 수집 (무료 플랜 분당 5회 제한 대응 — 1초 간격)
-    for (const tag of searchHashtags.slice(0, 3)) {
-      const posts = await fetchHashtagPosts(tag);
-      allPosts.push(...posts);
-      console.info(`[INFLUENCER] #${tag}: ${posts.length}개 게시물`);
-      if (posts.length > 0) await new Promise(r => setTimeout(r, 1200));
+    // RAPIDAPI_PARALLEL=true 면 병렬 (유료 플랜), 아니면 직렬 (무료 플랜)
+    const canParallel = process.env.RAPIDAPI_PARALLEL === 'true';
+
+    if (canParallel) {
+      // 유료 플랜: 병렬 수집 (~1초)
+      const postResults = await Promise.all(tagsToSearch.map(tag => fetchHashtagPosts(tag)));
+      for (let i = 0; i < tagsToSearch.length; i++) {
+        allPosts.push(...postResults[i]);
+        console.info(`[INFLUENCER] #${tagsToSearch[i]}: ${postResults[i].length}개 게시물`);
+      }
+    } else {
+      // 무료 플랜: 직렬 수집 + 1.2초 간격 (~4초)
+      for (const tag of tagsToSearch) {
+        const posts = await fetchHashtagPosts(tag);
+        allPosts.push(...posts);
+        console.info(`[INFLUENCER] #${tag}: ${posts.length}개 게시물`);
+        if (posts.length > 0) await new Promise(r => setTimeout(r, 1200));
+      }
     }
     console.info(`[INFLUENCER] RapidAPI 총 ${allPosts.length}개 게시물 수집`);
 
