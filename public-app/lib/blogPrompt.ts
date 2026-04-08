@@ -47,22 +47,22 @@ function getImageStyleGuide(req: GenerationRequest): string {
 function buildHtmlTemplate(imageCount: number): string {
   let html = `<p>도입 1 - 구체적 상황 + 감각</p>
 <p>도입 2 - 공감</p>
-${imageCount >= 1 ? '[IMG_1]' : ''}
+${imageCount >= 1 ? '[IMG_1 alt="키워드 포함 설명"]' : ''}
 
 <h3>소제목 1</h3>
 <p>문단 1</p>
 <p>문단 2</p>
-${imageCount >= 2 ? '[IMG_2]' : ''}
+${imageCount >= 2 ? '[IMG_2 alt="키워드 포함 설명"]' : ''}
 
 <h3>소제목 2</h3>
 <p>문단 1</p>
 <p>문단 2</p>
-${imageCount >= 3 ? '[IMG_3]' : ''}
+${imageCount >= 3 ? '[IMG_3 alt="키워드 포함 설명"]' : ''}
 
 <h3>소제목 3</h3>
 <p>문단 1</p>
 <p>문단 2</p>
-${imageCount >= 4 ? '[IMG_4]' : ''}`;
+${imageCount >= 4 ? '[IMG_4 alt="키워드 포함 설명"]' : ''}`;
 
   if (imageCount >= 5) {
     html += `
@@ -521,10 +521,9 @@ ${range.max}자 초과 시 → 가장 약한 문단을 삭제 후 출력. 패딩
     `[HTML 구조] - 이미지 ${targetImageCount}장 기준`,
     buildHtmlTemplate(targetImageCount),
     '',
-    '[이미지 alt 텍스트 규칙]',
-    '- 모든 [IMG_N] 마커 위치의 이미지에는 검색 최적화된 alt 텍스트가 필요합니다',
-    '- 이미지 삽입 시 alt="핵심키워드 포함 설명" 형태로 작성',
-    '- 예: alt="임플란트 시술 후 관리하는 모습" (핵심 키워드 + 장면 설명)',
+    '[이미지 마커에 alt 텍스트 필수]',
+    '- 마커 형식: [IMG_N alt="설명"] (예: [IMG_1 alt="임플란트 시술 후 관리하는 모습"])',
+    '- alt에 SEO 키워드 + 장면 설명을 한국어로 포함',
   );
 
   promptParts.push(

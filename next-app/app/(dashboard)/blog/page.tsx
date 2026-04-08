@@ -1121,16 +1121,16 @@ ${subs.length > 0 ? `경쟁 글 소제목: ${subs.join(' / ')}` : ''}
         setScores(parsed);
       } else {
         setDisplayStage(3); // old displayStage 3: 이미지 만드는 중
-        // 5) 마커가 있는 본문을 먼저 표시 (이미지 자리에 로딩 표시)
+        // 5) 마커가 있는 본문을 먼저 표시 (이미지 자리에 로딩 표시) — alt 보존
         let htmlWithPlaceholders = blogText;
         for (let i = 1; i <= imageCount; i++) {
           htmlWithPlaceholders = htmlWithPlaceholders.replace(
-            new RegExp(`\\[IMG_${i}\\]`, 'g'),
-            `<div class="content-image-wrapper" data-img-slot="${i}" style="text-align:center;padding:24px 0;"><div style="display:inline-flex;align-items:center;gap:8px;padding:12px 20px;background:#f1f5f9;border-radius:12px;font-size:13px;color:#64748b;">🖼️ 이미지 ${i}/${imageCount} 생성 중...</div></div>`,
+            new RegExp(`\\[IMG_${i}(?:\\s+alt="([^"]*)")?[^\\]]*\\]`, 'g'),
+            (_m: string, alt: string | undefined) => `<div class="content-image-wrapper" data-img-slot="${i}" data-img-alt="${alt || ''}" style="text-align:center;padding:24px 0;"><div style="display:inline-flex;align-items:center;gap:8px;padding:12px 20px;background:#f1f5f9;border-radius:12px;font-size:13px;color:#64748b;">🖼️ 이미지 ${i}/${imageCount} 생성 중...</div></div>`,
           );
         }
         // 혹시 남은 초과 마커 정리
-        htmlWithPlaceholders = htmlWithPlaceholders.replace(/\[IMG_\d+\]\n*/g, '');
+        htmlWithPlaceholders = htmlWithPlaceholders.replace(/\[IMG_\d+[^\]]*\]\n*/g, '');
         setGeneratedContent(htmlWithPlaceholders);
         setScores(parsed);
 
@@ -1207,7 +1207,9 @@ ${subs.length > 0 ? `경쟁 글 소제목: ${subs.join(' / ')}` : ''}
               setImageHistory(prev => ({ ...prev, [result.index]: [result.url!] }));
               setGeneratedContent(prev => {
                 if (!prev) return prev;
-                const imgTag = '<div class="content-image-wrapper"><img src="' + result.url + '" alt="blog image ' + result.index + '" data-image-index="' + result.index + '" style="max-width:100%;height:auto;border-radius:12px;" /></div>';
+                const altMatch = prev.match(new RegExp('data-img-slot="' + result.index + '"[^>]*data-img-alt="([^"]*)"'));
+                const alt = altMatch?.[1] || 'blog image ' + result.index;
+                const imgTag = '<div class="content-image-wrapper"><img src="' + result.url + '" alt="' + alt + '" data-image-index="' + result.index + '" style="max-width:100%;height:auto;border-radius:12px;" /></div>';
                 return prev.replace(
                   new RegExp('<div class="content-image-wrapper" data-img-slot="' + result.index + '"[^>]*>[\\s\\S]*?</div>\\s*</div>', ''),
                   imgTag,
@@ -1219,19 +1221,21 @@ ${subs.length > 0 ? `경쟁 글 소제목: ${subs.join(' / ')}` : ''}
         });
         const imageResults = await Promise.all(imagePromises);
 
-        // 7) [IMG_N] 마커를 실제 이미지로 교체 (old insertImageData 동일)
+        // 7) [IMG_N alt="..."] 마커를 실제 이미지로 교체 — alt 텍스트 추출
         let finalHtml = blogText;
         for (const img of imageResults) {
-          const pattern = new RegExp(`\\[IMG_${img.index}\\]`, 'gi');
+          const markerPattern = new RegExp(`\\[IMG_${img.index}(?:\\s+alt="([^"]*)")?[^\\]]*\\]`, 'gi');
           if (img.url) {
-            const imgTag = `<div class="content-image-wrapper"><img src="${img.url}" alt="blog image ${img.index}" data-image-index="${img.index}" style="max-width:100%;height:auto;border-radius:12px;" /></div>`;
-            finalHtml = finalHtml.replace(pattern, imgTag);
+            finalHtml = finalHtml.replace(markerPattern, (_match: string, altText: string | undefined) => {
+              const alt = altText || `blog image ${img.index}`;
+              return `<div class="content-image-wrapper"><img src="${img.url}" alt="${alt}" data-image-index="${img.index}" style="max-width:100%;height:auto;border-radius:12px;" /></div>`;
+            });
           } else {
-            finalHtml = finalHtml.replace(pattern, '');
+            finalHtml = finalHtml.replace(markerPattern, '');
           }
         }
         // 미매칭 마커 제거
-        finalHtml = finalHtml.replace(/\[IMG_\d+\]\n*/g, '');
+        finalHtml = finalHtml.replace(/\[IMG_\d+[^\]]*\]\n*/g, '');
         // 의료광고법 최종 대체 (이미지 삽입 후)
         {
           const lawReplacements: [RegExp, string][] = [
