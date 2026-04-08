@@ -47,22 +47,22 @@ function getImageStyleGuide(req: GenerationRequest): string {
 function buildHtmlTemplate(imageCount: number): string {
   let html = `<p>도입 1 - 구체적 상황 + 감각</p>
 <p>도입 2 - 공감</p>
-${imageCount >= 1 ? '[IMG_1]' : ''}
+${imageCount >= 1 ? '[IMG_1 alt="키워드 포함 설명"]' : ''}
 
 <h3>소제목 1</h3>
 <p>문단 1</p>
 <p>문단 2</p>
-${imageCount >= 2 ? '[IMG_2]' : ''}
+${imageCount >= 2 ? '[IMG_2 alt="키워드 포함 설명"]' : ''}
 
 <h3>소제목 2</h3>
 <p>문단 1</p>
 <p>문단 2</p>
-${imageCount >= 3 ? '[IMG_3]' : ''}
+${imageCount >= 3 ? '[IMG_3 alt="키워드 포함 설명"]' : ''}
 
 <h3>소제목 3</h3>
 <p>문단 1</p>
 <p>문단 2</p>
-${imageCount >= 4 ? '[IMG_4]' : ''}`;
+${imageCount >= 4 ? '[IMG_4 alt="키워드 포함 설명"]' : ''}`;
 
   if (imageCount >= 5) {
     html += `
@@ -521,10 +521,9 @@ ${range.max}자 초과 시 → 가장 약한 문단을 삭제 후 출력. 패딩
     `[HTML 구조] - 이미지 ${targetImageCount}장 기준`,
     buildHtmlTemplate(targetImageCount),
     '',
-    '[이미지 alt 텍스트 규칙]',
-    '- 모든 [IMG_N] 마커 위치의 이미지에는 검색 최적화된 alt 텍스트가 필요합니다',
-    '- 이미지 삽입 시 alt="핵심키워드 포함 설명" 형태로 작성',
-    '- 예: alt="임플란트 시술 후 관리하는 모습" (핵심 키워드 + 장면 설명)',
+    '[이미지 마커에 alt 텍스트 필수]',
+    '- 마커 형식: [IMG_N alt="설명"] (예: [IMG_1 alt="임플란트 시술 후 관리하는 모습"])',
+    '- alt에 SEO 키워드 + 장면 설명을 한국어로 포함',
   );
 
   promptParts.push(
@@ -549,17 +548,13 @@ ${range.max}자 초과 시 → 가장 약한 문단을 삭제 후 출력. 패딩
       '- Bad: "dental consultation scene" (너무 짧음)',
       '- Good: "A bright dental clinic near a large window, a 30-year-old Korean female patient sitting in the dental chair looking at an X-ray on the monitor with a Korean male dentist explaining calmly. Dental instruments on the desk, natural daylight streaming in, warm color tone. eye-level shot. no text, no watermark, no logo"',
       '',
-      '[카메라 시점 규칙]',
-      '- 거울 장면: over-the-shoulder shot mandatory — camera behind/beside subject, face reflected in mirror. No frontal shots.',
-      '- Good: "camera positioned behind the patient\'s shoulder, back of head and hand mirror visible, bright smile reflected in the mirror. over-the-shoulder shot"',
-      '- 모든 이미지에 카메라 위치 명시 (eye-level, slightly elevated, over-the-shoulder 등)',
-      '- No direct eye contact with camera (documentary/editorial feel)',
+      '[카메라 시점]',
+      '- 거울 장면: over-the-shoulder mandatory. No frontal shots.',
+      '- 모든 이미지에 카메라 위치 명시 (eye-level, slightly elevated, over-the-shoulder)',
+      '- No direct eye contact with camera',
       '',
-      '[이미지 프롬프트 금지]',
-      '- 이미지 안에 글자, 문장, 제목, 캡션, 라벨, 간판, 로고, 워터마크 금지',
-      '- 병원명, 브랜드명, 전화번호, URL 금지',
-      '- 포스터, 인포그래픽, 카드뉴스, 광고 레이아웃 금지',
-      '- 프롬프트에 병원 이름이나 고유명사를 포함하지 마세요',
+      '[이미지 프롬프트 금지] 모든 프롬프트에 "no text, no watermark, no logo" 필수.',
+      '프롬프트에 병원 이름이나 고유명사 포함 금지.',
       '',
       ...(CATEGORY_IMAGE_GUIDES[req.category] ? [CATEGORY_IMAGE_GUIDES[req.category]] : []),
       '',

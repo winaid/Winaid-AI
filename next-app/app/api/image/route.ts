@@ -5,7 +5,7 @@
  * responseModalities: ["IMAGE", "TEXT"] 사용.
  */
 import { NextRequest, NextResponse } from 'next/server';
-import { checkAuth } from '../../../lib/apiAuth';
+import { gateGuestRequest } from '../../../lib/guestRateLimit';
 
 export const maxDuration = 300;
 export const dynamic = 'force-dynamic';
@@ -36,6 +36,20 @@ function getAspectInstruction(ratio: AspectRatio): string {
     case '4:3': return '4:3 비율로 생성해주세요.';
     case 'A4': return 'A4 인쇄용(세로방향, 210mm×297mm) 비율로 생성해주세요. 인쇄 품질에 적합한 고해상도로 생성하세요.';
     case 'auto': return '콘텐츠에 가장 적합한 비율을 자동으로 선택해주세요.';
+    default: return '';
+  }
+}
+
+function getAspectInstructionEn(ratio: AspectRatio): string {
+  switch (ratio) {
+    case '1:1': return 'Aspect ratio: square 1:1 (1080x1080).';
+    case '16:9': return 'Aspect ratio: landscape 16:9 (1920x1080).';
+    case '3:4': return 'Aspect ratio: portrait 3:4 (1080x1440).';
+    case '4:5': return 'Aspect ratio: portrait 4:5 (1080x1350).';
+    case '9:16': return 'Aspect ratio: vertical 9:16 (1080x1920).';
+    case '4:3': return 'Aspect ratio: 4:3.';
+    case 'A4': return 'Aspect ratio: A4 portrait (210x297mm). High resolution for print.';
+    case 'auto': return 'Choose the best aspect ratio for the content.';
     default: return '';
   }
 }
@@ -440,8 +454,11 @@ interface ImageRequestBody {
 }
 
 export async function POST(request: NextRequest) {
-  const authError = await checkAuth(request);
-  if (authError) return authError;
+  // 게스트 허용: 로그인 쿠키 없으면 IP 기반 분당 10회 제한
+  const gate = gateGuestRequest(request);
+  if (!gate.ok) {
+    return NextResponse.json({ error: gate.error }, { status: gate.status });
+  }
 
   const keys = getKeys();
   if (keys.length === 0) {
@@ -493,57 +510,26 @@ export async function POST(request: NextRequest) {
   const isBlogMode = body.mode === 'blog';
   const isCardNewsMode = body.mode === 'card_news';
 
-  const BLOG_IMAGE_RULE = `[STRICT IMAGE RULES — BLOG ILLUSTRATION MODE]
-You are generating a blog body illustration image. This is NOT a poster, flyer, ad, or infographic.
+  const BLOG_IMAGE_RULE = `[BLOG ILLUSTRATION — STRICT RULES]
+You are generating a blog body illustration. NOT a poster, flyer, ad, or infographic.
+
 ABSOLUTE PROHIBITIONS:
-- NO text of any kind: no letters, words, labels, logos, watermarks, signage, phone numbers, URLs
-- NO poster/flyer/infographic/card news layout — this is a pure visual illustration. Zero typography.
-OUTPUT DIRECTION:
-- Generate a clean editorial-style photograph or natural scene illustration
-- Focus on visual mood, people, spaces, objects, lighting, atmosphere
+- NO text, letters, words, labels, logos, watermarks, signage, phone numbers, URLs
+- NO poster/infographic/card news layout — pure visual illustration only
 
-[AI ARTIFACT PREVENTION — CRITICAL]
-- NO perfectly symmetrical faces or poses
-- NO unnaturally smooth/porcelain skin
-- NO unrealistic perfect teeth or hair
-- NO studio-perfect lighting without any shadows
-- NO empty/blank backgrounds — always include environmental context
-- NO stock photo poses (thumbs up, pointing, crossed arms with smile)
-- ADD subtle imperfections: natural skin texture, slight asymmetry, environmental clutter
-- ADD realistic lighting: directional light source, natural shadows, ambient occlusion
-- The image should be indistinguishable from a real photograph taken in a Korean medical clinic
+[AI ARTIFACT PREVENTION]
+- NO symmetrical faces/poses, unnaturally smooth skin, unrealistic perfect teeth
+- NO studio-perfect lighting without shadows, empty backgrounds, stock photo poses
+- ADD natural imperfections: skin texture, slight asymmetry, environmental details
+- ADD realistic lighting: directional source, natural shadows, ambient occlusion
 
-[KOREAN MEDICAL CLINIC AUTHENTICITY]
-- The setting MUST look like a real Korean hospital/clinic (한국 병원)
-- Korean-style interior: clean white walls, wood accents, modern minimalist design
-- Medical staff: Korean-style white coats (not American hospital scrubs)
-- Waiting room: comfortable modern chairs, reception desk
-- Equipment: modern but not futuristic-looking
-- Lighting: fluorescent ceiling lights mixed with warm accent lighting
+[KOREAN MEDICAL CLINIC SETTING]
+- Real Korean hospital/clinic interior: clean white walls, wood accents, modern minimalist
+- Korean-style white coats (not American scrubs), modern equipment, warm accent lighting
 
-[COMPOSITION RULES]
-- Rule of thirds composition
-- Leave breathing room around subjects (not too tightly cropped)
-- Include foreground/midground/background depth
-- Avoid dead center subject placement
-- Natural eye-level or slightly elevated camera angle
-
-[이미지 프롬프트 품질 — ❌/✅ 예시]
-Gemini에 보내는 이미지 프롬프트의 품질이 결과를 결정합니다.
-❌ 나쁜 프롬프트: "치과에서 상담하는 장면"
-→ 결과: 어색한 포즈, 빈 배경, AI 느낌
-✅ 좋은 프롬프트: "밝은 창가 옆 진료실에서 30대 한국인 여성 환자가 치과 의사와 X-ray 사진을 보며 이야기하는 장면. 환자는 약간 걱정스러운 표정, 의사는 차분하게 설명 중. 진료 의자, 데스크 위 치과 기구, 창으로 들어오는 자연광. Canon EOS R5, 35mm, f/2.8. no text, no watermark"
-❌ 나쁜 프롬프트: "무릎 통증 환자"
-→ 결과: 스톡 사진 느낌, 정면 응시
-✅ 좋은 프롬프트: "물리치료실에서 50대 한국인 남성이 무릎에 체외충격파 장비를 대고 있는 장면. 물리치료사가 옆에서 장비를 조절 중. 밝은 형광등 + 따뜻한 간접 조명. 약간 elevated angle. 배경에 재활 기구와 운동 매트. no text, no watermark"
-
-[CAMERA POV — CRITICAL FOR MIRROR/REFLECTION SCENES]
-- Mirror scenes: Camera MUST be positioned BEHIND or BESIDE the subject
-  - Show the subject's back/side + their face reflected in the mirror
-  - NEVER shoot from the front with the mirror facing the camera
-- Consultation scenes: Camera at slight angle (30-45 degrees), not dead-on frontal
-- Treatment scenes: Camera at patient's eye level or slightly above
-- AVOID: Subjects looking directly at camera (breaks editorial/documentary feel)`;
+[COMPOSITION]
+- Rule of thirds, breathing room around subjects, foreground/midground/background depth
+- Natural eye-level or slightly elevated angle, no dead center placement`;
 
   const fullPrompt = isCardNewsMode
     ? buildCardNewsPromptFull(body)
@@ -551,7 +537,7 @@ Gemini에 보내는 이미지 프롬프트의 품질이 결과를 결정합니�
     ? [
         BLOG_IMAGE_RULE,
         body.prompt.trim(),
-        aspectInstruction,
+        getAspectInstructionEn(aspectRatio),
         'Generate at high resolution. Sharp edges, no blur, no compression artifacts.',
       ].filter(Boolean).join('\n\n')
     : (() => {
