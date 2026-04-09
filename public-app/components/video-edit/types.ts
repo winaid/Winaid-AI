@@ -7,6 +7,9 @@ export type PipelineMode = 'auto' | 'manual';
 export type CropMode = 'face_tracking' | 'center' | 'skip';
 export type CropAspect = '9:16' | '4:5' | '1:1';
 export type SilenceIntensity = 'soft' | 'normal' | 'tight' | 'skip';
+export type SubtitleStyle = 'basic' | 'highlight' | 'single_line' | 'skip';
+export type SubtitlePosition = 'top' | 'center' | 'bottom';
+export type EffectsStyle = 'shorts' | 'vlog' | 'explanation' | 'interview' | 'skip';
 
 export interface FileInfo {
   name: string;
@@ -35,15 +38,48 @@ export interface StepSilenceState {
   removedPercent?: number;
 }
 
-// STEP 3~6 — 다음 프롬프트에서 정의
+// ── 자막 세그먼트 (STEP 3에서 사용) ──
+export interface SubtitleSegment {
+  start_time: number;
+  end_time: number;
+  text: string;
+  violations: Array<{
+    keyword: string;
+    category: string;
+    suggestion: string;
+    severity: 'high' | 'medium';
+  }>;
+}
+
+// ── 효과음 이벤트 (STEP 4에서 사용) ──
+export interface SoundEffect {
+  id: string;
+  time: number;        // 삽입 시점 (초)
+  sfxId: string;       // sfxLibrary의 id
+  sfxName: string;
+  sfxPath: string;
+  category: string;
+  reason: string;      // 왜 이 위치에 이 효과음인지
+}
+
 export interface StepSubtitleState {
   enabled: boolean;
   resultBlobUrl?: string;
+  style: SubtitleStyle;
+  position: SubtitlePosition;
+  dentalTerms: boolean;
+  medicalCheck: boolean;
+  subtitles?: SubtitleSegment[];
+  highViolations?: number;
+  mediumViolations?: number;
 }
 
 export interface StepEffectsState {
   enabled: boolean;
   resultBlobUrl?: string;
+  style: EffectsStyle;
+  density: number;         // 1~5
+  effects?: SoundEffect[];
 }
 
 export interface StepBgmState {
@@ -78,8 +114,8 @@ export const INITIAL_PIPELINE_STATE: PipelineState = {
   fileInfo: null,
   step1_crop: { enabled: true, mode: 'face_tracking', aspect: '9:16' },
   step2_silence: { enabled: true, intensity: 'normal' },
-  step3_subtitle: { enabled: true },
-  step4_effects: { enabled: true },
+  step3_subtitle: { enabled: true, style: 'highlight', position: 'bottom', dentalTerms: true, medicalCheck: true },
+  step4_effects: { enabled: true, style: 'shorts', density: 3 },
   step5_bgm: { enabled: true },
   step6_intro: { enabled: true },
   currentStep: 0,
@@ -103,8 +139,8 @@ export function isStepDone(state: PipelineState, step: number): boolean {
     case 0: return !!state.fileInfo;
     case 1: return !!state.step1_crop.resultBlobUrl || state.step1_crop.mode === 'skip' || !state.step1_crop.enabled;
     case 2: return !!state.step2_silence.resultBlobUrl || state.step2_silence.intensity === 'skip' || !state.step2_silence.enabled;
-    case 3: return !!state.step3_subtitle.resultBlobUrl || !state.step3_subtitle.enabled;
-    case 4: return !!state.step4_effects.resultBlobUrl || !state.step4_effects.enabled;
+    case 3: return !!state.step3_subtitle.subtitles || state.step3_subtitle.style === 'skip' || !state.step3_subtitle.enabled;
+    case 4: return !!state.step4_effects.effects || state.step4_effects.style === 'skip' || !state.step4_effects.enabled;
     case 5: return !!state.step5_bgm.resultBlobUrl || !state.step5_bgm.enabled;
     case 6: return !!state.step6_intro.resultBlobUrl || !state.step6_intro.enabled;
     default: return false;
@@ -116,8 +152,8 @@ export function isStepSkipped(state: PipelineState, step: number): boolean {
   switch (step) {
     case 1: return state.step1_crop.mode === 'skip' || !state.step1_crop.enabled;
     case 2: return state.step2_silence.intensity === 'skip' || !state.step2_silence.enabled;
-    case 3: return !state.step3_subtitle.enabled;
-    case 4: return !state.step4_effects.enabled;
+    case 3: return state.step3_subtitle.style === 'skip' || !state.step3_subtitle.enabled;
+    case 4: return state.step4_effects.style === 'skip' || !state.step4_effects.enabled;
     case 5: return !state.step5_bgm.enabled;
     case 6: return !state.step6_intro.enabled;
     default: return false;

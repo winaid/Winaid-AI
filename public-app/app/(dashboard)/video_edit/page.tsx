@@ -4,9 +4,12 @@ import { useState, useRef, useCallback } from 'react';
 import StepIndicator from '../../../components/video-edit/StepIndicator';
 import StepCrop from '../../../components/video-edit/StepCrop';
 import StepSilence from '../../../components/video-edit/StepSilence';
+import StepSubtitle from '../../../components/video-edit/StepSubtitle';
+import StepEffects from '../../../components/video-edit/StepEffects';
 import {
   type PipelineState, type PipelineMode, type FileInfo,
-  type StepCropState, type StepSilenceState,
+  type StepCropState, type StepSilenceState, type StepSubtitleState, type StepEffectsState,
+  type SubtitleSegment, type SoundEffect,
   INITIAL_PIPELINE_STATE, getInputForStep,
 } from '../../../components/video-edit/types';
 
@@ -51,6 +54,14 @@ export default function VideoEditPage() {
   const patchSilence = (p: Partial<StepSilenceState>) => setState(prev => ({
     ...prev,
     step2_silence: { ...prev.step2_silence, ...p },
+  }));
+  const patchSubtitle = (p: Partial<StepSubtitleState>) => setState(prev => ({
+    ...prev,
+    step3_subtitle: { ...prev.step3_subtitle, ...p },
+  }));
+  const patchEffects = (p: Partial<StepEffectsState>) => setState(prev => ({
+    ...prev,
+    step4_effects: { ...prev.step4_effects, ...p },
   }));
   const goStep = (step: number) => { setError(''); patch({ currentStep: step }); };
 
@@ -184,6 +195,128 @@ export default function VideoEditPage() {
     }
   };
 
+  // ── STEP 3: AI 자막 생성 처리 ──
+
+  const processSubtitle = async () => {
+    const input = getInputForStep(state, 3);
+    if (!input && !state.originalFile) return;
+
+    setStepProcessing(true);
+    setStepProgress('음성을 분석하고 있습니다...');
+    setError('');
+
+    try {
+      // 입력 파일 준비
+      let fileToSend: File;
+      if (typeof input === 'string') {
+        // blob URL → File로 변환
+        const res = await fetch(input);
+        const blob = await res.blob();
+        fileToSend = new File([blob], state.fileInfo?.name || 'audio.mp4', { type: blob.type });
+      } else {
+        fileToSend = input as File || state.originalFile!;
+      }
+
+      const formData = new FormData();
+      formData.append('file', fileToSend);
+      formData.append('subtitle_style', state.step3_subtitle.style);
+      formData.append('subtitle_position', state.step3_subtitle.position);
+      formData.append('dental_terms', String(state.step3_subtitle.dentalTerms));
+
+      setStepProgress('자막을 생성하고 있습니다...');
+      const res = await fetch('/api/video/generate-subtitles', { method: 'POST', body: formData });
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.error || '자막 생성 실패');
+
+      patchSubtitle({
+        subtitles: data.subtitles || [],
+        highViolations: data.high_violation_count || 0,
+        mediumViolations: data.medium_violation_count || 0,
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '자막 생성 실패');
+    } finally {
+      setStepProcessing(false);
+      setStepProgress('');
+    }
+  };
+
+  // ── STEP 4: 효과음 배치 처리 ──
+
+  const processEffects = async () => {
+    setStepProcessing(true);
+    setStepProgress('효과음을 배치하고 있습니다...');
+    setError('');
+
+    try {
+      // TODO: 실제 AI 효과음 배치 API 연동
+      // 현재는 자막 데이터 기반 시뮬레이션
+      await new Promise(r => setTimeout(r, 1500));
+
+      const { searchSfx, getRandomSfx } = await import('../../../lib/sfxLibrary');
+      const subs = state.step3_subtitle.subtitles || [];
+      const density = state.step4_effects.density;
+      const effects: SoundEffect[] = [];
+
+      // 자막이 있으면 자막 기반 배치, 없으면 시간 기반
+      if (subs.length > 0) {
+        // 매 N번째 자막에 효과음 삽입 (밀도에 따라)
+        const interval = Math.max(1, Math.round(6 - density));
+        for (let i = 0; i < subs.length; i += interval) {
+          const sub = subs[i];
+          // 자막 내용에 따라 카테고리 결정
+          const text = sub.text;
+          let sfx = text.includes('장점') || text.includes('좋') || text.includes('효과')
+            ? getRandomSfx('positive')
+            : text.includes('주의') || text.includes('위험') || text.includes('부작용')
+            ? getRandomSfx('negative')
+            : i === 0
+            ? getRandomSfx('transition')
+            : getRandomSfx('emphasis');
+
+          if (!sfx) sfx = getRandomSfx('emphasis');
+          if (sfx) {
+            effects.push({
+              id: `fx_${i}`,
+              time: sub.start_time,
+              sfxId: sfx.id,
+              sfxName: sfx.name,
+              sfxPath: sfx.path,
+              category: sfx.category,
+              reason: i === 0 ? '도입부 전환' : `자막 "${text.slice(0, 10)}..." 강조`,
+            });
+          }
+        }
+      } else {
+        // 자막 없을 때: 균등 간격으로 배치
+        const dur = state.fileInfo?.duration || 60;
+        const count = density * 2;
+        for (let i = 0; i < count; i++) {
+          const sfx = getRandomSfx(i === 0 ? 'transition' : 'emphasis');
+          if (sfx) {
+            effects.push({
+              id: `fx_${i}`,
+              time: Math.round((dur / (count + 1)) * (i + 1) * 10) / 10,
+              sfxId: sfx.id,
+              sfxName: sfx.name,
+              sfxPath: sfx.path,
+              category: sfx.category,
+              reason: i === 0 ? '도입부' : `${Math.round((dur / (count + 1)) * (i + 1))}초 강조`,
+            });
+          }
+        }
+      }
+
+      patchEffects({ effects });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '효과음 배치 실패');
+    } finally {
+      setStepProcessing(false);
+      setStepProgress('');
+    }
+  };
+
   // ── 자동 모드 실행 ──
 
   const runAutoMode = async () => {
@@ -207,8 +340,24 @@ export default function VideoEditPage() {
         patch({ currentStep: 2 });
       }
 
-      // STEP 3~6: TODO (다음 프롬프트)
-      patch({ currentStep: 3, autoProgress: 'STEP 3~6은 준비 중입니다.' });
+      // STEP 3: AI 자막
+      if (state.step3_subtitle.style !== 'skip') {
+        patch({ currentStep: 3, autoProgress: 'STEP 3/6: AI 자막 생성...' });
+        await processSubtitle();
+      } else {
+        patch({ currentStep: 3 });
+      }
+
+      // STEP 4: 효과음
+      if (state.step4_effects.style !== 'skip') {
+        patch({ currentStep: 4, autoProgress: 'STEP 4/6: 효과음 배치...' });
+        await processEffects();
+      } else {
+        patch({ currentStep: 4 });
+      }
+
+      // STEP 5~6: TODO
+      patch({ currentStep: 5, autoProgress: 'STEP 5~6은 준비 중입니다.' });
       await new Promise(r => setTimeout(r, 500));
 
       // 완료
@@ -404,8 +553,34 @@ export default function VideoEditPage() {
         />
       )}
 
-      {/* ══════ STEP 3~6: TODO ══════ */}
-      {state.currentStep >= 3 && state.mode === 'manual' && (
+      {/* ══════ STEP 3: AI 자막 ══════ */}
+      {state.currentStep === 3 && state.mode === 'manual' && (
+        <StepSubtitle
+          state={state}
+          onUpdate={patchSubtitle}
+          onProcess={processSubtitle}
+          onNext={() => goStep(4)}
+          onPrev={() => goStep(2)}
+          isProcessing={stepProcessing}
+          progress={stepProgress}
+        />
+      )}
+
+      {/* ══════ STEP 4: 효과음 ══════ */}
+      {state.currentStep === 4 && state.mode === 'manual' && (
+        <StepEffects
+          state={state}
+          onUpdate={patchEffects}
+          onProcess={processEffects}
+          onNext={() => goStep(5)}
+          onPrev={() => goStep(3)}
+          isProcessing={stepProcessing}
+          progress={stepProgress}
+        />
+      )}
+
+      {/* ══════ STEP 5~6: TODO ══════ */}
+      {state.currentStep >= 5 && state.mode === 'manual' && (
         <div className="space-y-6">
           <div className="p-8 bg-slate-50 border border-slate-200 rounded-2xl text-center">
             <div className="text-3xl mb-3">🚧</div>
@@ -413,7 +588,7 @@ export default function VideoEditPage() {
               STEP {state.currentStep}: 준비 중
             </div>
             <div className="text-xs text-slate-400 mt-1">
-              자막, 효과음, BGM/인트로 단계는 다음 업데이트에서 추가됩니다.
+              BGM/인트로 단계는 다음 업데이트에서 추가됩니다.
             </div>
           </div>
           <div className="flex gap-3">
