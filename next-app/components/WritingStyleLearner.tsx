@@ -266,7 +266,7 @@ ${sampleText}
   "uniqueExpressions": ["이 병원만의 고유 표현 5-10개"],
   "bannedGenericStyle": ["금지할 범용/AI식 표현 5-8개 — 이 병원 톤과 안 맞는 것"],
   "oneLineSummary": "이 병원 문체를 한 줄로 정의",
-  "goodExamples": ["이 병원다운 문장 예시 5개 — 원문에서 발췌하거나 스타일 기반 생성"],
+  "goodExamples": ["⚠️ 반드시 원문에서 그대로 복사-붙여넣기! 한 글자도 바꾸지 마세요. 이 병원다운 문장 5~8개를 원문에서 정확히 인용"],
   "badExamples": ["이 병원답지 않은 문장 예시 5개 — 이렇게 쓰면 안 됨"],
   "description": "이 말투를 한 줄로 설명",
   "stylePrompt": "AI가 이 말투로 글을 쓸 때 반드시 지켜야 할 핵심 지침 (150-250자, 구체적 행동 지침)"
