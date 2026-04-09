@@ -632,13 +632,16 @@ JSON만 출력:
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setUseCanvas(v => !v)}
-                  className={`px-3 py-1.5 text-xs font-bold rounded-lg border transition-colors ${useCanvas ? 'bg-violet-600 text-white border-violet-600' : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'}`}
-                >
-                  {useCanvas ? 'Canvas' : 'HTML'}
-                </button>
+                {/* HTML/Canvas 토글 — 개발용. 캔버스 안정화 후 삭제 예정 */}
+                {process.env.NODE_ENV === 'development' && (
+                  <button
+                    type="button"
+                    onClick={() => setUseCanvas(v => !v)}
+                    className={`px-3 py-1.5 text-xs font-bold rounded-lg border transition-colors ${useCanvas ? 'bg-violet-600 text-white border-violet-600' : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'}`}
+                  >
+                    {useCanvas ? 'Canvas' : 'HTML'}
+                  </button>
+                )}
                 <button type="button" onClick={() => setEditingIdx(null)} className="px-5 py-2 text-sm font-bold text-white bg-blue-600 rounded-lg hover:bg-blue-700">✓ 완료</button>
               </div>
             </div>
