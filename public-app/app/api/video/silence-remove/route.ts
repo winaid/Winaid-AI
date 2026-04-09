@@ -24,10 +24,17 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData();
     const res = await proxyFormData('/api/video/silence-remove', formData, 180000);
 
-    // 바이너리 응답을 그대로 전달
+    // 에러 응답이면 JSON으로 전달
+    if (!res.ok) {
+      const errText = await res.text();
+      let errMsg = '무음 제거 실패';
+      try { errMsg = JSON.parse(errText).error || errMsg; } catch { /* */ }
+      return NextResponse.json({ error: errMsg }, { status: res.status });
+    }
+
     const body = await res.arrayBuffer();
     return new NextResponse(body, {
-      status: res.status,
+      status: 200,
       headers: {
         'Content-Type': res.headers.get('content-type') || 'video/mp4',
         ...(res.headers.get('x-silence-metadata') ? { 'X-Silence-Metadata': res.headers.get('x-silence-metadata')! } : {}),
