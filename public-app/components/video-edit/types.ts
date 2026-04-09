@@ -10,6 +10,17 @@ export type SilenceIntensity = 'soft' | 'normal' | 'tight' | 'skip';
 export type SubtitleStyle = 'basic' | 'highlight' | 'single_line' | 'skip';
 export type SubtitlePosition = 'top' | 'center' | 'bottom';
 export type EffectsStyle = 'shorts' | 'vlog' | 'explanation' | 'interview' | 'skip';
+export type BgmMoodOption = 'bright' | 'calm' | 'emotional' | 'trendy' | 'corporate' | 'skip';
+export type IntroStyle = 'default' | 'simple' | 'none';
+export type OutroStyle = 'default' | 'simple' | 'cta' | 'none';
+
+export interface HospitalInfo {
+  name: string;
+  phone?: string;
+  logoUrl?: string;
+  link?: string;
+  desc?: string;
+}
 
 export interface FileInfo {
   name: string;
@@ -85,11 +96,18 @@ export interface StepEffectsState {
 export interface StepBgmState {
   enabled: boolean;
   resultBlobUrl?: string;
+  mood: BgmMoodOption;
+  bgmId?: string;
+  volume: number; // 0~50, 기본 15
 }
 
 export interface StepIntroState {
   enabled: boolean;
   resultBlobUrl?: string;
+  introStyle: IntroStyle;
+  outroStyle: OutroStyle;
+  hospital: HospitalInfo;
+  saveInfo: boolean;
 }
 
 export interface PipelineState {
@@ -116,8 +134,8 @@ export const INITIAL_PIPELINE_STATE: PipelineState = {
   step2_silence: { enabled: true, intensity: 'normal' },
   step3_subtitle: { enabled: true, style: 'highlight', position: 'bottom', dentalTerms: true, medicalCheck: true },
   step4_effects: { enabled: true, style: 'shorts', density: 3 },
-  step5_bgm: { enabled: true },
-  step6_intro: { enabled: true },
+  step5_bgm: { enabled: true, mood: 'calm', volume: 15 },
+  step6_intro: { enabled: true, introStyle: 'default', outroStyle: 'default', hospital: { name: '' }, saveInfo: false },
   currentStep: 0,
   mode: 'manual',
   isProcessing: false,
@@ -141,8 +159,8 @@ export function isStepDone(state: PipelineState, step: number): boolean {
     case 2: return !!state.step2_silence.resultBlobUrl || state.step2_silence.intensity === 'skip' || !state.step2_silence.enabled;
     case 3: return !!state.step3_subtitle.subtitles || state.step3_subtitle.style === 'skip' || !state.step3_subtitle.enabled;
     case 4: return !!state.step4_effects.effects || state.step4_effects.style === 'skip' || !state.step4_effects.enabled;
-    case 5: return !!state.step5_bgm.resultBlobUrl || !state.step5_bgm.enabled;
-    case 6: return !!state.step6_intro.resultBlobUrl || !state.step6_intro.enabled;
+    case 5: return !!state.step5_bgm.resultBlobUrl || state.step5_bgm.mood === 'skip' || !state.step5_bgm.enabled;
+    case 6: return !!state.step6_intro.resultBlobUrl || (state.step6_intro.introStyle === 'none' && state.step6_intro.outroStyle === 'none') || !state.step6_intro.enabled;
     default: return false;
   }
 }
@@ -154,8 +172,8 @@ export function isStepSkipped(state: PipelineState, step: number): boolean {
     case 2: return state.step2_silence.intensity === 'skip' || !state.step2_silence.enabled;
     case 3: return state.step3_subtitle.style === 'skip' || !state.step3_subtitle.enabled;
     case 4: return state.step4_effects.style === 'skip' || !state.step4_effects.enabled;
-    case 5: return !state.step5_bgm.enabled;
-    case 6: return !state.step6_intro.enabled;
+    case 5: return state.step5_bgm.mood === 'skip' || !state.step5_bgm.enabled;
+    case 6: return (state.step6_intro.introStyle === 'none' && state.step6_intro.outroStyle === 'none') || !state.step6_intro.enabled;
     default: return false;
   }
 }

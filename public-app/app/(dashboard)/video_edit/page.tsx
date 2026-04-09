@@ -6,9 +6,12 @@ import StepCrop from '../../../components/video-edit/StepCrop';
 import StepSilence from '../../../components/video-edit/StepSilence';
 import StepSubtitle from '../../../components/video-edit/StepSubtitle';
 import StepEffects from '../../../components/video-edit/StepEffects';
+import StepBgm from '../../../components/video-edit/StepBgm';
+import StepIntroOutro from '../../../components/video-edit/StepIntroOutro';
 import {
-  type PipelineState, type PipelineMode, type FileInfo,
+  type PipelineState, type PipelineMode, type FileInfo, type HospitalInfo,
   type StepCropState, type StepSilenceState, type StepSubtitleState, type StepEffectsState,
+  type StepBgmState, type StepIntroState,
   type SubtitleSegment, type SoundEffect,
   INITIAL_PIPELINE_STATE, getInputForStep,
 } from '../../../components/video-edit/types';
@@ -62,6 +65,18 @@ export default function VideoEditPage() {
   const patchEffects = (p: Partial<StepEffectsState>) => setState(prev => ({
     ...prev,
     step4_effects: { ...prev.step4_effects, ...p },
+  }));
+  const patchBgm = (p: Partial<StepBgmState>) => setState(prev => ({
+    ...prev,
+    step5_bgm: { ...prev.step5_bgm, ...p },
+  }));
+  const patchIntro = (p: Partial<StepIntroState>) => setState(prev => ({
+    ...prev,
+    step6_intro: { ...prev.step6_intro, ...p },
+  }));
+  const patchHospital = (p: Partial<HospitalInfo>) => setState(prev => ({
+    ...prev,
+    step6_intro: { ...prev.step6_intro, hospital: { ...prev.step6_intro.hospital, ...p } },
   }));
   const goStep = (step: number) => { setError(''); patch({ currentStep: step }); };
 
@@ -317,6 +332,92 @@ export default function VideoEditPage() {
     }
   };
 
+  // ── STEP 5: BGM 삽입 처리 ──
+
+  const processBgm = async () => {
+    const input = getInputForStep(state, 5);
+    if (!input) return;
+
+    setStepProcessing(true);
+    setStepProgress('BGM을 합성하고 있습니다...');
+    setError('');
+
+    try {
+      let fileToSend: File;
+      if (typeof input === 'string') {
+        const res = await fetch(input);
+        const blob = await res.blob();
+        fileToSend = new File([blob], state.fileInfo?.name || 'video.mp4', { type: blob.type });
+      } else {
+        fileToSend = input as File;
+      }
+
+      const formData = new FormData();
+      formData.append('file', fileToSend);
+      formData.append('bgm_id', state.step5_bgm.bgmId || 'calm_01');
+      formData.append('volume', String(state.step5_bgm.volume));
+
+      const res = await fetch('/api/video/add-bgm', { method: 'POST', body: formData });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({ error: '서버 오류' }));
+        throw new Error(errData.error || `BGM 합성 실패 (${res.status})`);
+      }
+
+      const blob = await res.blob();
+      patchBgm({ resultBlobUrl: URL.createObjectURL(blob) });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'BGM 합성 실패');
+    } finally {
+      setStepProcessing(false);
+      setStepProgress('');
+    }
+  };
+
+  // ── STEP 6: 인트로/아웃로 처리 ──
+
+  const processIntroOutro = async () => {
+    const input = getInputForStep(state, 6);
+    if (!input) return;
+
+    setStepProcessing(true);
+    setStepProgress('인트로/아웃로를 생성하고 있습니다...');
+    setError('');
+
+    try {
+      let fileToSend: File;
+      if (typeof input === 'string') {
+        const res = await fetch(input);
+        const blob = await res.blob();
+        fileToSend = new File([blob], state.fileInfo?.name || 'video.mp4', { type: blob.type });
+      } else {
+        fileToSend = input as File;
+      }
+
+      const formData = new FormData();
+      formData.append('file', fileToSend);
+      formData.append('hospital_name', state.step6_intro.hospital.name);
+      formData.append('hospital_phone', state.step6_intro.hospital.phone || '');
+      formData.append('hospital_desc', state.step6_intro.hospital.desc || '');
+      formData.append('hospital_link', state.step6_intro.hospital.link || '');
+      formData.append('intro_style', state.step6_intro.introStyle);
+      formData.append('outro_style', state.step6_intro.outroStyle);
+
+      const res = await fetch('/api/video/add-intro-outro', { method: 'POST', body: formData });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({ error: '서버 오류' }));
+        throw new Error(errData.error || `인트로/아웃로 합성 실패 (${res.status})`);
+      }
+
+      const blob = await res.blob();
+      patchIntro({ resultBlobUrl: URL.createObjectURL(blob) });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '인트로/아웃로 합성 실패');
+    } finally {
+      setStepProcessing(false);
+      setStepProgress('');
+    }
+  };
+
   // ── 자동 모드 실행 ──
 
   const runAutoMode = async () => {
@@ -356,9 +457,21 @@ export default function VideoEditPage() {
         patch({ currentStep: 4 });
       }
 
-      // STEP 5~6: TODO
-      patch({ currentStep: 5, autoProgress: 'STEP 5~6은 준비 중입니다.' });
-      await new Promise(r => setTimeout(r, 500));
+      // STEP 5: BGM
+      if (state.step5_bgm.mood !== 'skip') {
+        patch({ currentStep: 5, autoProgress: 'STEP 5/6: BGM 삽입...' });
+        await processBgm();
+      } else {
+        patch({ currentStep: 5 });
+      }
+
+      // STEP 6: 인트로/아웃로
+      if (state.step6_intro.introStyle !== 'none' || state.step6_intro.outroStyle !== 'none') {
+        if (state.step6_intro.hospital.name.trim()) {
+          patch({ currentStep: 6, autoProgress: 'STEP 6/6: 인트로/아웃로...' });
+          await processIntroOutro();
+        }
+      }
 
       // 완료
       patch({ currentStep: 6, autoProgress: undefined });
@@ -579,31 +692,31 @@ export default function VideoEditPage() {
         />
       )}
 
-      {/* ══════ STEP 5~6: TODO ══════ */}
-      {state.currentStep >= 5 && state.mode === 'manual' && (
-        <div className="space-y-6">
-          <div className="p-8 bg-slate-50 border border-slate-200 rounded-2xl text-center">
-            <div className="text-3xl mb-3">🚧</div>
-            <div className="text-sm font-bold text-slate-600">
-              STEP {state.currentStep}: 준비 중
-            </div>
-            <div className="text-xs text-slate-400 mt-1">
-              BGM/인트로 단계는 다음 업데이트에서 추가됩니다.
-            </div>
-          </div>
-          <div className="flex gap-3">
-            <button type="button" onClick={() => goStep(state.currentStep - 1)}
-              className="px-5 py-3 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 transition-all text-sm">
-              ← 이전
-            </button>
-            {state.currentStep < 6 && (
-              <button type="button" onClick={() => goStep(state.currentStep + 1)}
-                className="flex-1 py-3 bg-slate-200 text-slate-600 font-bold rounded-xl hover:bg-slate-300 transition-all text-sm">
-                다음 단계 →
-              </button>
-            )}
-          </div>
-        </div>
+      {/* ══════ STEP 5: BGM ══════ */}
+      {state.currentStep === 5 && state.mode === 'manual' && (
+        <StepBgm
+          state={state}
+          onUpdate={patchBgm}
+          onProcess={processBgm}
+          onNext={() => goStep(6)}
+          onPrev={() => goStep(4)}
+          isProcessing={stepProcessing}
+          progress={stepProgress}
+        />
+      )}
+
+      {/* ══════ STEP 6: 인트로/아웃로 ══════ */}
+      {state.currentStep === 6 && state.mode === 'manual' && (
+        <StepIntroOutro
+          state={state}
+          onUpdate={patchIntro}
+          onUpdateHospital={patchHospital}
+          onProcess={processIntroOutro}
+          onNext={() => goStep(7)}
+          onPrev={() => goStep(5)}
+          isProcessing={stepProcessing}
+          progress={stepProgress}
+        />
       )}
     </div>
   );
