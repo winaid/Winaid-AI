@@ -308,6 +308,20 @@ export default function CardNewsCanvas({
         default:               renderGenericToCanvas(layoutCtx); break;
       }
 
+      // ════════ 모든 객체를 선택/이동 가능하게 (배경만 제외) ════════
+      const BG_NAMES = [OBJ.BG, OBJ.PATTERN, OBJ.ACCENT_TOP, OBJ.ACCENT_BOT];
+      canvas.getObjects().forEach((obj: any) => {
+        const name: string = obj.name || '';
+        // 배경/패턴/악센트바만 고정, 나머지 전부 드래그+선택 가능
+        if (!BG_NAMES.includes(name) && !name.startsWith('__overlay')) {
+          obj.set({
+            selectable: true,
+            evented: true,
+            ...SELECTION_STYLE,
+          });
+        }
+      });
+
       // ════════ 이벤트 핸들러 ════════
 
       // 드래그 이동 완료 시 SlideData 업데이트
