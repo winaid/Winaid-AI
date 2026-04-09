@@ -292,12 +292,12 @@ ${JSON.stringify(slideForContext, null, 2)}
               value={cardChatInput}
               onChange={(e) => setCardChatInput(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();
                   handleCardChatSend();
                 }
               }}
-              placeholder="수정 요청... (Ctrl+Enter로 전송)"
+              placeholder="수정 요청... (Shift+Enter로 줄바꿈)"
               disabled={cardChatLoading}
               className="flex-1 px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-[11px] focus:outline-none focus:ring-1 focus:ring-blue-400 disabled:opacity-50"
             />

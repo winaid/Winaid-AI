@@ -95,7 +95,7 @@ export async function downloadAllAsZip(
 }
 
 /** 이미지 위에 로고를 canvas로 합성 */
-export function overlayLogo(baseImageDataUrl: string, logoSrc: string): Promise<string> {
+export function overlayLogo(baseImageDataUrl: string, logoSrc: string, opacity: number = 1): Promise<string> {
   return new Promise((resolve) => {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
@@ -115,11 +115,13 @@ export function overlayLogo(baseImageDataUrl: string, logoSrc: string): Promise<
         const h = logoImg.height * scale;
         const x = canvas.width - w - 20;
         const y = 20;
-        ctx.fillStyle = 'rgba(255,255,255,0.85)';
+        ctx.globalAlpha = opacity;
+        ctx.fillStyle = `rgba(255,255,255,${Math.min(0.85, opacity)})`;
         ctx.beginPath();
         ctx.roundRect(x - 8, y - 8, w + 16, h + 16, 8);
         ctx.fill();
         ctx.drawImage(logoImg, x, y, w, h);
+        ctx.globalAlpha = 1; // 복원
         resolve(canvas.toDataURL('image/png'));
       };
       logoImg.onerror = () => resolve(baseImageDataUrl);

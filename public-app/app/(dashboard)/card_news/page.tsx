@@ -69,6 +69,7 @@ export default function CardNewsPage() {
   const [hospitalName, setHospitalName] = useState('');
   const [logoDataUrl, setLogoDataUrl] = useState<string | null>(null);
   const [logoEnabled, setLogoEnabled] = useState(false);
+  const [logoOpacity, setLogoOpacity] = useState(100);
   const logoInputRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
     if (!isSupabaseConfigured) return;
@@ -182,7 +183,7 @@ export default function CardNewsPage() {
       // 로고 오버레이
       let finalImageDataUrl = data.imageDataUrl;
       if (logoEnabled && logoDataUrl) {
-        try { finalImageDataUrl = await overlayLogo(data.imageDataUrl, logoDataUrl); } catch { /* 원본 사용 */ }
+        try { finalImageDataUrl = await overlayLogo(data.imageDataUrl, logoDataUrl, logoOpacity / 100); } catch { /* 원본 사용 */ }
       }
 
       // Supabase Storage 업로드
@@ -1204,10 +1205,19 @@ DECORATIVE: (장식 요소)`,
                     reader.readAsDataURL(file); e.target.value = '';
                   }} />
                   {logoDataUrl && (
-                    <label className="flex items-center gap-1.5 cursor-pointer">
-                      <input type="checkbox" checked={logoEnabled} onChange={e => setLogoEnabled(e.target.checked)} className="w-3.5 h-3.5 rounded" />
-                      <span className="text-[11px] text-slate-400">카드에 넣기</span>
-                    </label>
+                    <div className="flex flex-col gap-2">
+                      <label className="flex items-center gap-1.5 cursor-pointer">
+                        <input type="checkbox" checked={logoEnabled} onChange={e => setLogoEnabled(e.target.checked)} className="w-3.5 h-3.5 rounded" />
+                        <span className="text-[11px] text-slate-400">카드에 넣기</span>
+                      </label>
+                      {logoEnabled && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] text-slate-400">선명도</span>
+                          <input type="range" min={10} max={100} step={5} value={logoOpacity} onChange={e => setLogoOpacity(Number(e.target.value))} className="w-24 accent-blue-500" />
+                          <span className="text-[10px] text-slate-500 font-semibold w-8">{logoOpacity}%</span>
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>
