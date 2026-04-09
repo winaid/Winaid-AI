@@ -272,39 +272,39 @@ export const SFX_LIBRARY: SfxFile[] = [
 export const BGM_LIBRARY: BgmFile[] = [
 
   // ── bright — 밝고 경쾌한 ──
-  { id: 'bright_01', path: '/sfx/bgm/bright/bright_01.mp3', name: '우쿨렐레경쾌한', mood: 'bright', duration: 60, tags: ['우쿨렐레', '경쾌', '밝은', '여름'] },
-  { id: 'bright_02', path: '/sfx/bgm/bright/bright_02.mp3', name: '피아노밝은', mood: 'bright', duration: 60, tags: ['피아노', '밝은', '행복', '아침'] },
-  { id: 'bright_03', path: '/sfx/bgm/bright/bright_03.mp3', name: '어쿠스틱해피', mood: 'bright', duration: 60, tags: ['어쿠스틱', '기타', '해피'] },
-  { id: 'bright_04', path: '/sfx/bgm/bright/bright_04.mp3', name: '글로켄슈필귀여운', mood: 'bright', duration: 60, tags: ['글로켄슈필', '귀여운', '동화'] },
-  { id: 'bright_05', path: '/sfx/bgm/bright/bright_05.mp3', name: '휘파람경쾌한', mood: 'bright', duration: 60, tags: ['휘파람', '경쾌', '산책'] },
+  { id: 'bright_01', path: '/sfx/bgm/bright/bright_01.mp3', name: '우쿨렐레 경쾌한', mood: 'bright', duration: 60, tags: ['우쿨렐레', '경쾌', '밝은', '여름'] },
+  { id: 'bright_02', path: '/sfx/bgm/bright/bright_02.mp3', name: '피아노 밝은', mood: 'bright', duration: 60, tags: ['피아노', '밝은', '행복', '아침'] },
+  { id: 'bright_03', path: '/sfx/bgm/bright/bright_03.mp3', name: '어쿠스틱 해피', mood: 'bright', duration: 60, tags: ['어쿠스틱', '기타', '해피'] },
+  { id: 'bright_04', path: '/sfx/bgm/bright/bright_04.mp3', name: '글로켄슈필 귀여운', mood: 'bright', duration: 60, tags: ['글로켄슈필', '귀여운', '동화'] },
+  { id: 'bright_05', path: '/sfx/bgm/bright/bright_05.mp3', name: '휘파람 경쾌한', mood: 'bright', duration: 60, tags: ['휘파람', '경쾌', '산책'] },
 
   // ── calm — 차분하고 신뢰감 (병원 추천) ──
-  { id: 'calm_01', path: '/sfx/bgm/calm/calm_01.mp3', name: '피아노차분한', mood: 'calm', duration: 60, tags: ['피아노', '차분', '신뢰', '병원'] },
-  { id: 'calm_02', path: '/sfx/bgm/calm/calm_02.mp3', name: '어쿠스틱따뜻한', mood: 'calm', duration: 60, tags: ['어쿠스틱', '따뜻', '편안'] },
-  { id: 'calm_03', path: '/sfx/bgm/calm/calm_03.mp3', name: '앰비언트부드러운', mood: 'calm', duration: 60, tags: ['앰비언트', '부드러운', '명상'] },
-  { id: 'calm_04', path: '/sfx/bgm/calm/calm_04.mp3', name: '스트링스우아한', mood: 'calm', duration: 60, tags: ['스트링스', '우아', '고급', '병원'] },
-  { id: 'calm_05', path: '/sfx/bgm/calm/calm_05.mp3', name: '로파이편안한', mood: 'calm', duration: 60, tags: ['로파이', '편안', '공부', '카페'] },
+  { id: 'calm_01', path: '/sfx/bgm/calm/calm_01.mp3', name: '피아노 차분한', mood: 'calm', duration: 60, tags: ['피아노', '차분', '신뢰', '병원'] },
+  { id: 'calm_02', path: '/sfx/bgm/calm/calm_02.mp3', name: '어쿠스틱 따뜻한', mood: 'calm', duration: 60, tags: ['어쿠스틱', '따뜻', '편안'] },
+  { id: 'calm_03', path: '/sfx/bgm/calm/calm_03.mp3', name: '앰비언트 부드러운', mood: 'calm', duration: 60, tags: ['앰비언트', '부드러운', '명상'] },
+  { id: 'calm_04', path: '/sfx/bgm/calm/calm_04.mp3', name: '스트링스 우아한', mood: 'calm', duration: 60, tags: ['스트링스', '우아', '고급', '병원'] },
+  { id: 'calm_05', path: '/sfx/bgm/calm/calm_05.mp3', name: '로파이 편안한', mood: 'calm', duration: 60, tags: ['로파이', '편안', '공부', '카페'] },
 
   // ── emotional — 감성적인 ──
-  { id: 'emotional_01', path: '/sfx/bgm/emotional/emotional_01.mp3', name: '피아노감동', mood: 'emotional', duration: 60, tags: ['피아노', '감동', '진심'] },
-  { id: 'emotional_02', path: '/sfx/bgm/emotional/emotional_02.mp3', name: '어쿠스틱서정적', mood: 'emotional', duration: 60, tags: ['어쿠스틱', '서정', '스토리'] },
-  { id: 'emotional_03', path: '/sfx/bgm/emotional/emotional_03.mp3', name: '스트링스감성', mood: 'emotional', duration: 60, tags: ['스트링스', '감성', '영화'] },
-  { id: 'emotional_04', path: '/sfx/bgm/emotional/emotional_04.mp3', name: '기타잔잔한', mood: 'emotional', duration: 60, tags: ['기타', '잔잔', '추억'] },
-  { id: 'emotional_05', path: '/sfx/bgm/emotional/emotional_05.mp3', name: '첼로따뜻한', mood: 'emotional', duration: 60, tags: ['첼로', '따뜻', '깊은'] },
+  { id: 'emotional_01', path: '/sfx/bgm/emotional/emotional_01.mp3', name: '피아노 감동', mood: 'emotional', duration: 60, tags: ['피아노', '감동', '진심'] },
+  { id: 'emotional_02', path: '/sfx/bgm/emotional/emotional_02.mp3', name: '어쿠스틱 서정적', mood: 'emotional', duration: 60, tags: ['어쿠스틱', '서정', '스토리'] },
+  { id: 'emotional_03', path: '/sfx/bgm/emotional/emotional_03.mp3', name: '스트링스 감성', mood: 'emotional', duration: 60, tags: ['스트링스', '감성', '영화'] },
+  { id: 'emotional_04', path: '/sfx/bgm/emotional/emotional_04.mp3', name: '기타 잔잔한', mood: 'emotional', duration: 60, tags: ['기타', '잔잔', '추억'] },
+  { id: 'emotional_05', path: '/sfx/bgm/emotional/emotional_05.mp3', name: '첼로 따뜻한', mood: 'emotional', duration: 60, tags: ['첼로', '따뜻', '깊은'] },
 
   // ── trendy — 트렌디/힙한 ──
-  { id: 'trendy_01', path: '/sfx/bgm/trendy/trendy_01.mp3', name: '로파이힙합', mood: 'trendy', duration: 60, tags: ['로파이', '힙합', '트렌디'] },
-  { id: 'trendy_02', path: '/sfx/bgm/trendy/trendy_02.mp3', name: '일렉트로닉팝', mood: 'trendy', duration: 60, tags: ['일렉트로닉', '팝', '에너지'] },
-  { id: 'trendy_03', path: '/sfx/bgm/trendy/trendy_03.mp3', name: '트랩비트가벼운', mood: 'trendy', duration: 60, tags: ['트랩', '비트', '힙한'] },
-  { id: 'trendy_04', path: '/sfx/bgm/trendy/trendy_04.mp3', name: '펑키그루브', mood: 'trendy', duration: 60, tags: ['펑키', '그루브', '신나는'] },
-  { id: 'trendy_05', path: '/sfx/bgm/trendy/trendy_05.mp3', name: '레트로신스웨이브', mood: 'trendy', duration: 60, tags: ['레트로', '신스', '80년대'] },
+  { id: 'trendy_01', path: '/sfx/bgm/trendy/trendy_01.mp3', name: '로파이 힙합', mood: 'trendy', duration: 60, tags: ['로파이', '힙합', '트렌디'] },
+  { id: 'trendy_02', path: '/sfx/bgm/trendy/trendy_02.mp3', name: '일렉트로닉 팝', mood: 'trendy', duration: 60, tags: ['일렉트로닉', '팝', '에너지'] },
+  { id: 'trendy_03', path: '/sfx/bgm/trendy/trendy_03.mp3', name: '트랩 비트 가벼운', mood: 'trendy', duration: 60, tags: ['트랩', '비트', '힙한'] },
+  { id: 'trendy_04', path: '/sfx/bgm/trendy/trendy_04.mp3', name: '펑키 그루브', mood: 'trendy', duration: 60, tags: ['펑키', '그루브', '신나는'] },
+  { id: 'trendy_05', path: '/sfx/bgm/trendy/trendy_05.mp3', name: '레트로 신스웨이브', mood: 'trendy', duration: 60, tags: ['레트로', '신스', '80년대'] },
 
   // ── corporate — 기업/전문적 (병원 공식 영상용) ──
-  { id: 'corporate_01', path: '/sfx/bgm/corporate/corporate_01.mp3', name: '기업프레젠테이션', mood: 'corporate', duration: 60, tags: ['기업', '발표', '전문'] },
-  { id: 'corporate_02', path: '/sfx/bgm/corporate/corporate_02.mp3', name: '테크모던', mood: 'corporate', duration: 60, tags: ['테크', '모던', '혁신'] },
+  { id: 'corporate_01', path: '/sfx/bgm/corporate/corporate_01.mp3', name: '기업 프레젠테이션', mood: 'corporate', duration: 60, tags: ['기업', '발표', '전문'] },
+  { id: 'corporate_02', path: '/sfx/bgm/corporate/corporate_02.mp3', name: '테크 모던', mood: 'corporate', duration: 60, tags: ['테크', '모던', '혁신'] },
   { id: 'corporate_03', path: '/sfx/bgm/corporate/corporate_03.mp3', name: '인스파이어링', mood: 'corporate', duration: 60, tags: ['영감', '동기부여', '성장'] },
-  { id: 'corporate_04', path: '/sfx/bgm/corporate/corporate_04.mp3', name: '깔끔한미니멀', mood: 'corporate', duration: 60, tags: ['미니멀', '깔끔', '심플'] },
-  { id: 'corporate_05', path: '/sfx/bgm/corporate/corporate_05.mp3', name: '신뢰감있는', mood: 'corporate', duration: 60, tags: ['신뢰', '안정', '병원', '전문'] },
+  { id: 'corporate_04', path: '/sfx/bgm/corporate/corporate_04.mp3', name: '깔끔한 미니멀', mood: 'corporate', duration: 60, tags: ['미니멀', '깔끔', '심플'] },
+  { id: 'corporate_05', path: '/sfx/bgm/corporate/corporate_05.mp3', name: '신뢰감 있는', mood: 'corporate', duration: 60, tags: ['신뢰', '안정', '병원', '전문'] },
 ];
 
 // ══════════════════════════════════════════════════

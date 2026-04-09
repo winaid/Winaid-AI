@@ -63,6 +63,25 @@ export async function POST(request: NextRequest) {
 
     // FFmpeg: BGM 합성
     const { execSync } = await import('child_process');
+
+    // FFmpeg 존재 확인
+    let ffmpegAvailable = false;
+    try { execSync('ffmpeg -version', { stdio: 'pipe', timeout: 5000 }); ffmpegAvailable = true; } catch { /* */ }
+
+    if (!ffmpegAvailable) {
+      // FFmpeg 없으면 원본 그대로 반환 (graceful skip)
+      const resultBuffer = fs.readFileSync(inputPath);
+      try { fs.unlinkSync(inputPath); } catch { /* */ }
+      return new NextResponse(resultBuffer, {
+        status: 200,
+        headers: {
+          'Content-Type': 'video/mp4',
+          'Content-Disposition': `attachment; filename="bgm_${file.name}"`,
+          'X-Bgm-Metadata': JSON.stringify({ bgm_applied: false, reason: 'FFmpeg가 서버에 설치되어 있지 않습니다.' }),
+        },
+      });
+    }
+
     const vol = Math.max(0, Math.min(0.5, volume)).toFixed(2);
     try {
       execSync(
@@ -73,7 +92,16 @@ export async function POST(request: NextRequest) {
       );
     } catch (err) {
       console.error('[add-bgm] FFmpeg 에러', err);
-      return NextResponse.json({ error: 'BGM 합성에 실패했습니다.' }, { status: 500 });
+      // FFmpeg 실패해도 원본 반환
+      const resultBuffer = fs.readFileSync(inputPath);
+      try { fs.unlinkSync(inputPath); } catch { /* */ }
+      return new NextResponse(resultBuffer, {
+        status: 200,
+        headers: {
+          'Content-Type': 'video/mp4',
+          'X-Bgm-Metadata': JSON.stringify({ bgm_applied: false, reason: 'BGM 합성 처리 실패. 원본을 반환합니다.' }),
+        },
+      });
     }
 
     const resultBuffer = fs.readFileSync(outputPath);

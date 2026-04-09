@@ -49,6 +49,21 @@ export async function POST(request: NextRequest) {
     const os = await import('os');
     const { execSync } = await import('child_process');
 
+    // FFmpeg 존재 확인
+    let ffmpegAvailable = false;
+    try { execSync('ffmpeg -version', { stdio: 'pipe', timeout: 5000 }); ffmpegAvailable = true; } catch { /* */ }
+
+    if (!ffmpegAvailable) {
+      const buf = Buffer.from(await file.arrayBuffer());
+      return new NextResponse(buf, {
+        status: 200,
+        headers: {
+          'Content-Type': 'video/mp4',
+          'X-Intro-Metadata': JSON.stringify({ intro_added: false, outro_added: false, reason: 'FFmpeg가 서버에 설치되어 있지 않습니다.' }),
+        },
+      });
+    }
+
     const tmpDir = os.tmpdir();
     const ts = Date.now();
 

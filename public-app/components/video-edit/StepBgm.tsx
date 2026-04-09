@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import type { PipelineState, StepBgmState, BgmMoodOption } from './types';
 import { BGM_LIBRARY, BGM_MOOD_LABELS, getBgmByMood, getRandomBgm, type BgmMood } from '../../lib/sfxLibrary';
 
@@ -26,6 +26,27 @@ interface Props {
 export default function StepBgm({ state, onUpdate, onProcess, onNext, onPrev, isProcessing, progress }: Props) {
   const { step5_bgm: bgm } = state;
   const hasResult = !!bgm.resultBlobUrl || bgm.mood === 'skip' || !bgm.enabled;
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [playingId, setPlayingId] = useState<string | null>(null);
+
+  // 미리듣기
+  const handlePreview = (path: string, id: string) => {
+    // 같은 걸 다시 누르면 정지
+    if (playingId === id && audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+      setPlayingId(null);
+      return;
+    }
+    // 기존 재생 중지
+    if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
+    const audio = new Audio(path);
+    audio.volume = 0.5;
+    audio.play().catch(() => { /* 파일 없으면 무시 */ });
+    audio.onended = () => setPlayingId(null);
+    audioRef.current = audio;
+    setPlayingId(id);
+  };
 
   // 선택된 분위기의 BGM 목록
   const bgmList = useMemo(() => {
@@ -108,7 +129,11 @@ export default function StepBgm({ state, onUpdate, onProcess, onNext, onPrev, is
                         {bgm.bgmId === b.id && <span className="w-2 h-2 bg-blue-500 rounded-full" />}
                       </span>
                       <span className={`text-sm font-bold ${bgm.bgmId === b.id ? 'text-blue-700' : 'text-slate-700'}`}>{b.name}</span>
-                      <span className="text-[9px] text-slate-400 ml-auto">{b.tags.slice(0, 3).join(', ')}</span>
+                      <button type="button"
+                        onClick={e => { e.stopPropagation(); handlePreview(b.path, b.id); }}
+                        className={`ml-auto px-2 py-0.5 text-[10px] font-bold rounded-md transition-all ${playingId === b.id ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-500 hover:bg-blue-50 hover:text-blue-600'}`}>
+                        {playingId === b.id ? '⏹ 정지' : '▶️ 듣기'}
+                      </button>
                     </button>
                   ))}
                 </div>

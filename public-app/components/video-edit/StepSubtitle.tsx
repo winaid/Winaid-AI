@@ -117,7 +117,17 @@ export default function StepSubtitle({ state, onUpdate, onProcess, onNext, onPre
                           <input type="text" value={seg.text} autoFocus
                             onChange={e => updateSubtitleText(idx, e.target.value)}
                             onBlur={() => setEditingIdx(null)}
-                            onKeyDown={e => { if (e.key === 'Enter') setEditingIdx(null); }}
+                            onKeyDown={e => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                // 다음 자막으로 이동, 마지막이면 편집 종료
+                                if (sub.subtitles && idx < sub.subtitles.length - 1) {
+                                  setEditingIdx(idx + 1);
+                                } else {
+                                  setEditingIdx(null);
+                                }
+                              }
+                            }}
                             className="w-full px-2 py-1 text-xs border border-blue-400 rounded-lg outline-none" />
                         ) : (
                           <div onClick={() => setEditingIdx(idx)} className="text-xs text-slate-800 cursor-text hover:bg-blue-50 rounded px-1 -mx-1">

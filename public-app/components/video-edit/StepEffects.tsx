@@ -1,5 +1,6 @@
 'use client';
 
+import { useRef, useState } from 'react';
 import type { PipelineState, StepEffectsState, EffectsStyle, SoundEffect } from './types';
 import { SFX_CATEGORY_LABELS, getRandomSfx, type SfxCategory } from '../../lib/sfxLibrary';
 
@@ -23,6 +24,22 @@ interface Props {
 
 export default function StepEffects({ state, onUpdate, onProcess, onNext, onPrev, isProcessing, progress }: Props) {
   const { step4_effects: fx } = state;
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [playingId, setPlayingId] = useState<string | null>(null);
+
+  // 효과음 미리듣기
+  const handlePreview = (path: string, id: string) => {
+    if (playingId === id && audioRef.current) {
+      audioRef.current.pause(); audioRef.current = null; setPlayingId(null); return;
+    }
+    if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
+    const audio = new Audio(path);
+    audio.volume = 0.7;
+    audio.play().catch(() => {});
+    audio.onended = () => setPlayingId(null);
+    audioRef.current = audio;
+    setPlayingId(id);
+  };
   const hasResult = !!fx.effects || fx.style === 'skip' || !fx.enabled;
 
   // 효과음 교체 (같은 카테고리 내 랜덤)
@@ -79,6 +96,10 @@ export default function StepEffects({ state, onUpdate, onProcess, onNext, onPrev
                     <div className="text-[9px] text-slate-400">{eff.reason}</div>
                   </div>
                   <div className="flex gap-1">
+                    <button type="button" onClick={() => handlePreview(eff.sfxPath, eff.id)}
+                      className={`px-2 py-1 text-[9px] font-bold rounded-lg ${playingId === eff.id ? 'bg-blue-600 text-white' : 'text-slate-500 bg-slate-50 hover:bg-blue-50 hover:text-blue-600'}`}>
+                      {playingId === eff.id ? '⏹' : '▶️'}
+                    </button>
                     <button type="button" onClick={() => replaceEffect(idx)}
                       className="px-2 py-1 text-[9px] font-bold text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100">
                       🔄
@@ -90,6 +111,18 @@ export default function StepEffects({ state, onUpdate, onProcess, onNext, onPrev
                   </div>
                 </div>
               ))}
+            </div>
+
+            {/* 효과음 수동 추가 */}
+            <div className="px-4 py-3 border-t border-slate-100">
+              <AddEffectButton
+                onAdd={(eff) => {
+                  if (!fx.effects) return;
+                  onUpdate({ effects: [...fx.effects, eff] });
+                }}
+                existingCount={fx.effects.length}
+                duration={state.fileInfo?.duration || 60}
+              />
             </div>
           </div>
         </div>
@@ -164,4 +197,113 @@ function fmtTime(sec: number): string {
   const m = Math.floor(sec / 60);
   const s = Math.floor(sec % 60);
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
+// ── 효과음 수동 추가 ──
+
+import { SFX_LIBRARY, type SfxFile, type SfxCategory as SfxCat } from '../../lib/sfxLibrary';
+
+const ADD_CATEGORIES: { id: SfxCat; label: string }[] = [
+  { id: 'emphasis', label: '강조' },
+  { id: 'transition', label: '전환' },
+  { id: 'positive', label: '긍정' },
+  { id: 'negative', label: '부정' },
+  { id: 'funny', label: '재미' },
+  { id: 'notification', label: '알림' },
+  { id: 'musical', label: '음악적' },
+];
+
+function AddEffectButton({ onAdd, existingCount, duration }: {
+  onAdd: (eff: SoundEffect) => void;
+  existingCount: number;
+  duration: number;
+}) {
+  const [open, setOpen] = useState(false);
+  const [cat, setCat] = useState<SfxCat>('emphasis');
+  const [time, setTime] = useState('');
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [playingId, setPlayingId] = useState<string | null>(null);
+
+  const items = SFX_LIBRARY.filter(s => s.category === cat);
+
+  const handlePreview = (sfx: SfxFile) => {
+    if (playingId === sfx.id && audioRef.current) {
+      audioRef.current.pause(); audioRef.current = null; setPlayingId(null); return;
+    }
+    if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
+    const audio = new Audio(sfx.path);
+    audio.volume = 0.7;
+    audio.play().catch(() => {});
+    audio.onended = () => setPlayingId(null);
+    audioRef.current = audio;
+    setPlayingId(sfx.id);
+  };
+
+  const handleAdd = (sfx: SfxFile) => {
+    const t = parseFloat(time) || 0;
+    onAdd({
+      id: `fx_manual_${existingCount}_${Date.now()}`,
+      time: Math.min(t, duration),
+      sfxId: sfx.id,
+      sfxName: sfx.name,
+      sfxPath: sfx.path,
+      category: sfx.category,
+      reason: '수동 추가',
+    });
+    setOpen(false);
+    setTime('');
+  };
+
+  if (!open) {
+    return (
+      <button type="button" onClick={() => setOpen(true)}
+        className="w-full py-2 text-xs font-bold text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-all">
+        + 효과음 추가
+      </button>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-bold text-slate-700">효과음 추가</span>
+        <button type="button" onClick={() => setOpen(false)} className="text-[10px] text-slate-400 hover:text-slate-600">닫기</button>
+      </div>
+
+      {/* 시간 입력 */}
+      <div>
+        <label className="block text-[10px] text-slate-400 mb-1">삽입 시간 (초)</label>
+        <input type="number" min={0} max={duration} step={0.1} value={time} placeholder="0.0"
+          onChange={e => setTime(e.target.value)}
+          className="w-full px-2 py-1.5 text-xs border border-slate-200 rounded-lg outline-none focus:border-blue-400" />
+      </div>
+
+      {/* 카테고리 탭 */}
+      <div className="flex gap-1 flex-wrap">
+        {ADD_CATEGORIES.map(c => (
+          <button key={c.id} type="button" onClick={() => setCat(c.id)}
+            className={`px-2 py-1 text-[10px] font-bold rounded-md ${cat === c.id ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600'}`}>
+            {c.label}
+          </button>
+        ))}
+      </div>
+
+      {/* 효과음 목록 */}
+      <div className="max-h-[150px] overflow-y-auto space-y-1">
+        {items.map(sfx => (
+          <div key={sfx.id} className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-50">
+            <button type="button" onClick={() => handlePreview(sfx)}
+              className={`text-[10px] ${playingId === sfx.id ? 'text-blue-600' : 'text-slate-400'}`}>
+              {playingId === sfx.id ? '⏹' : '▶️'}
+            </button>
+            <span className="text-xs text-slate-700 flex-1">{sfx.name}</span>
+            <button type="button" onClick={() => handleAdd(sfx)}
+              className="px-2 py-0.5 text-[10px] font-bold text-white bg-blue-500 rounded-md hover:bg-blue-600">
+              추가
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
