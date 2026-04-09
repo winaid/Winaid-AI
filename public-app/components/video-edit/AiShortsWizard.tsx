@@ -462,17 +462,101 @@ function StepImages({ state, patch }: { state: AiShortsState; patch: (p: Partial
 // ══════════════════════════════════════════
 
 function StepAssemble({ state, patch }: { state: AiShortsState; patch: (p: Partial<AiShortsState>) => void }) {
+  const [assembling, setAssembling] = useState(false);
+  const [addBgm, setAddBgm] = useState(true);
+  const [bgmMood, setBgmMood] = useState('calm');
+  const [bgmVolume, setBgmVolume] = useState(15);
+  const [phase, setPhase] = useState('');
+
+  const hasImages = state.scenes.some(s => !!s.imageUrl);
+
+  const runAssemble = async () => {
+    setAssembling(true);
+    patch({ isProcessing: true });
+
+    try {
+      // 장면별 이미지 + 타임스탬프
+      setPhase('영상 클립을 생성하고 있습니다...');
+      const sceneImages = state.scenes.map(s => ({
+        scene_number: s.sceneNumber,
+        image_url: s.imageUrl || '',
+        duration: s.endTime - s.startTime,
+      })).filter(s => !!s.image_url);
+
+      if (sceneImages.length === 0) {
+        throw new Error('이미지가 없습니다. STEP D에서 이미지를 먼저 생성해주세요.');
+      }
+
+      setPhase('영상을 조립하고 있습니다...');
+      const res = await fetch('/api/video/ai-assemble', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          scene_images: sceneImages,
+          audio_url: state.audioUrl,
+          add_bgm: addBgm,
+          bgm_mood: bgmMood,
+          bgm_volume: bgmVolume,
+        }),
+      });
+
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({ error: '조립 실패' }));
+        throw new Error(d.error);
+      }
+
+      const blob = await res.blob();
+      patch({ resultUrl: URL.createObjectURL(blob), currentStep: 5 });
+
+    } catch (err) {
+      setPhase(err instanceof Error ? err.message : '조립 실패');
+    } finally {
+      setAssembling(false);
+      patch({ isProcessing: false });
+    }
+  };
+
   return (
     <div className="space-y-5">
-      <div className="p-6 bg-slate-50 border border-slate-200 rounded-2xl text-center space-y-3">
-        <div className="text-3xl">🎬</div>
-        <div className="text-sm font-bold text-slate-700">영상 조립 준비</div>
-        <div className="text-xs text-slate-500">대본 {state.scenes.length}장면 · {state.duration}초 · {VIDEO_STYLES.find(s => s.id === state.styleId)?.name}</div>
-        <p className="text-[10px] text-amber-500 font-bold">영상 조립 — 곧 지원 예정. TTS + 이미지 + 자막 합성이 필요합니다.</p>
+      <div className="p-5 bg-slate-50 border border-slate-200 rounded-2xl space-y-3">
+        <div className="text-sm font-bold text-slate-700">🎬 최종 조립 옵션</div>
+        <div className="text-xs text-slate-500">
+          대본 {state.scenes.length}장면 · {state.duration}초 · {VIDEO_STYLES.find(s => s.id === state.styleId)?.name}
+        </div>
+
+        {/* BGM 옵션 */}
+        <div className="flex items-center justify-between p-3 bg-white rounded-xl border border-slate-200">
+          <div>
+            <div className="text-xs font-bold text-slate-700">BGM 추가</div>
+            <div className="text-[9px] text-slate-400">{bgmMood} · 볼륨 {bgmVolume}%</div>
+          </div>
+          <button type="button" onClick={() => setAddBgm(!addBgm)}
+            className={`w-10 h-5 rounded-full transition-colors ${addBgm ? 'bg-indigo-600' : 'bg-slate-300'}`}>
+            <span className={`block w-4 h-4 bg-white rounded-full shadow ml-0.5 transition-transform ${addBgm ? 'translate-x-5' : ''}`} />
+          </button>
+        </div>
+
+        {!hasImages && (
+          <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-700 font-bold">
+            이미지가 생성되지 않았습니다. STEP D에서 이미지를 먼저 생성해주세요.
+          </div>
+        )}
       </div>
+
+      {assembling && (
+        <div className="p-4 bg-indigo-50 border border-indigo-200 rounded-2xl text-center space-y-2">
+          <div className="w-6 h-6 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto" />
+          <div className="text-xs font-bold text-indigo-700">{phase || '조립 중...'}</div>
+          <div className="text-[9px] text-indigo-400">장면 수에 따라 1~3분 소요될 수 있습니다</div>
+        </div>
+      )}
+
       <div className="flex gap-3">
         <button type="button" onClick={() => patch({ currentStep: 3 })} className="px-5 py-3 bg-slate-100 text-slate-600 font-bold rounded-xl text-sm">← 이전</button>
-        <button type="button" onClick={() => patch({ currentStep: 5 })} className="flex-1 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-black rounded-xl text-sm shadow-lg">🎬 완성 보기</button>
+        <button type="button" onClick={runAssemble} disabled={assembling || !hasImages}
+          className="flex-1 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-black rounded-xl disabled:opacity-40 text-sm shadow-lg flex items-center justify-center gap-2">
+          {assembling ? '조립 중...' : '🎬 쇼츠 조립 시작'}
+        </button>
       </div>
     </div>
   );
@@ -483,31 +567,71 @@ function StepAssemble({ state, patch }: { state: AiShortsState; patch: (p: Parti
 // ══════════════════════════════════════════
 
 function StepComplete({ state, onBack }: { state: AiShortsState; onBack: () => void }) {
+  const handleDownload = () => {
+    if (!state.resultUrl) return;
+    const a = document.createElement('a');
+    a.href = state.resultUrl;
+    a.download = `ai_shorts_${Date.now()}.mp4`;
+    a.click();
+  };
+
   return (
     <div className="space-y-5">
       <div className="text-center py-4">
         <div className="text-4xl mb-2">🎬</div>
-        <h2 className="text-xl font-black text-slate-900">AI 쇼츠 대본 완성!</h2>
+        <h2 className="text-xl font-black text-slate-900">AI 쇼츠 완성!</h2>
         <p className="text-sm text-slate-500 mt-1">{state.scenes.length}장면 · {state.duration}초</p>
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-2xl p-4 space-y-2">
-        {state.scenes.map((scene, idx) => (
-          <div key={idx} className="flex gap-2 text-xs">
-            <span className="text-indigo-500 font-bold min-w-[40px]">[{scene.sceneNumber}]</span>
-            <span className="text-slate-700">{scene.narration}</span>
+      {/* 영상 미리보기 */}
+      {state.resultUrl && (
+        <div className="flex justify-center">
+          <div className="rounded-2xl overflow-hidden bg-black shadow-xl" style={{ maxWidth: '220px' }}>
+            <video controls src={state.resultUrl} className="w-full" style={{ aspectRatio: '9/16' }} />
           </div>
+        </div>
+      )}
+
+      {/* 처리 요약 */}
+      <div className="bg-white border border-slate-200 rounded-2xl p-4 space-y-2">
+        <div className="text-xs font-bold text-slate-700 mb-1">처리 요약</div>
+        <div className="text-[10px] text-slate-500 space-y-1">
+          <div>✅ 대본: {state.scenes.length}장면 ({state.tone})</div>
+          <div>✅ 스타일: {VIDEO_STYLES.find(s => s.id === state.styleId)?.name}</div>
+          <div>{state.audioUrl ? '✅' : '⏭️'} 나레이션: {state.voiceName}</div>
+          <div>{state.scenes.some(s => s.imageUrl) ? '✅' : '⏭️'} 이미지: {state.scenes.filter(s => s.imageUrl).length}장</div>
+          <div>{state.resultUrl ? '✅' : '⏭️'} 영상 조립</div>
+        </div>
+      </div>
+
+      {/* 다운로드 */}
+      <div className="flex gap-3">
+        {state.resultUrl && (
+          <button type="button" onClick={handleDownload}
+            className="flex-1 py-3.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-black rounded-xl shadow-lg text-sm flex items-center justify-center gap-2">
+            📥 영상 다운로드
+          </button>
+        )}
+      </div>
+
+      {/* 개별 수정 */}
+      <div className="flex flex-wrap gap-2">
+        {[
+          { step: 0, label: '대본 수정' },
+          { step: 1, label: '스타일 변경' },
+          { step: 2, label: '목소리 변경' },
+          { step: 3, label: '이미지 재생성' },
+        ].map(s => (
+          <button key={s.step} type="button" onClick={() => onBack()}
+            className="px-3 py-1.5 text-[11px] font-bold text-slate-600 bg-slate-100 rounded-lg hover:bg-indigo-50 hover:text-indigo-700">
+            {s.label}
+          </button>
         ))}
       </div>
 
-      <p className="text-[10px] text-center text-slate-400">
-        TTS 음성 생성, 이미지 생성, 영상 조립은 다음 업데이트에서 지원됩니다.<br />
-        현재는 대본 생성까지 사용할 수 있습니다.
-      </p>
-
       <button type="button" onClick={onBack}
-        className="w-full py-3 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 text-sm">
-        📱 처음으로 돌아가기
+        className="w-full py-3 bg-slate-50 text-slate-600 font-bold rounded-xl hover:bg-slate-100 text-sm border border-slate-200">
+        📱 새로 만들기
       </button>
     </div>
   );

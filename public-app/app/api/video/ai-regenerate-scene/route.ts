@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
     const style = getStyleById(body.style_id);
     const fullPrompt = `Generate an illustration: ${body.image_prompt}, ${style?.promptSuffix || ''}, vertical 9:16, no text, high quality`;
 
-    const models = ['gemini-3.1-flash-lite-preview', 'gemini-2.0-flash-exp'];
+    const models = ['gemini-3-pro-image-preview', 'gemini-3.1-flash-lite-preview'];
     let imageDataUrl = '';
 
     for (const model of models) {
