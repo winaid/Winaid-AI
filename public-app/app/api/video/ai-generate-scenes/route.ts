@@ -55,7 +55,7 @@ Requirements:
 - Suitable for healthcare/medical content`;
 
       try {
-        const models = ['gemini-3-pro-image-preview', 'gemini-3.1-flash-lite-preview'];
+        const models = ['gemini-3.1-flash-lite-preview', 'gemini-3-pro-image-preview'];
         let imageDataUrl = '';
 
         for (const model of models) {
