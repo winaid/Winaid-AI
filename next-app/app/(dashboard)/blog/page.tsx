@@ -1095,7 +1095,14 @@ ${missing.length > 0 ? `   → 경쟁 글이 놓친 관점: ${missing.join(', ')
         const targetMax = textLength + 300;
         const deviation = charCountNoSpaces - textLength;
 
-        if (charCountNoSpaces < targetMin) {
+        if (charCountNoSpaces < targetMin * 0.5) {
+          // 목표의 50% 미만 → 잘림으로 판단 → 크레딧 미차감
+          console.error(`[BLOG] ⚠️ 글 잘림: 목표=${textLength}자, 실제=${charCountNoSpaces}자 (50% 미만) — 크레딧 미차감`);
+          setError(`글이 잘렸습니다 (${charCountNoSpaces}/${textLength}자). 크레딧이 차감되지 않았습니다. 다시 시도해주세요.`);
+          setIsGenerating(false);
+          setDisplayStage(0);
+          return; // 크레딧 차감 전에 중단
+        } else if (charCountNoSpaces < targetMin) {
           console.info(`[BLOG] 글자수 부족: 목표=${textLength}자, 실제=${charCountNoSpaces}자 (${deviation}자 부족)`);
         } else if (charCountNoSpaces > targetMax) {
           console.info(`[BLOG] 글자수 초과: 목표=${textLength}자, 실제=${charCountNoSpaces}자 (+${deviation}자) — 그대로 진행`);
