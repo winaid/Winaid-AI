@@ -8,6 +8,8 @@ import StepSubtitle from '../../../components/video-edit/StepSubtitle';
 import StepEffects from '../../../components/video-edit/StepEffects';
 import StepBgm from '../../../components/video-edit/StepBgm';
 import StepIntroOutro from '../../../components/video-edit/StepIntroOutro';
+import CompletionScreen from '../../../components/video-edit/CompletionScreen';
+import PipelineProgress, { type AutoStepStatus } from '../../../components/video-edit/PipelineProgress';
 import {
   type PipelineState, type PipelineMode, type FileInfo, type HospitalInfo,
   type StepCropState, type StepSilenceState, type StepSubtitleState, type StepEffectsState,
@@ -46,6 +48,8 @@ export default function VideoEditPage() {
   const [error, setError] = useState('');
   const [stepProcessing, setStepProcessing] = useState(false);
   const [stepProgress, setStepProgress] = useState('');
+  const [autoStatuses, setAutoStatuses] = useState<AutoStepStatus[]>([]);
+  const cancelRef = useRef(false);
 
   // ── 상태 헬퍼 ──
 
@@ -422,64 +426,73 @@ export default function VideoEditPage() {
 
   const runAutoMode = async () => {
     if (!state.fileInfo) return;
+    cancelRef.current = false;
     patch({ isProcessing: true });
 
-    try {
-      // STEP 1: 세로 크롭
-      if (state.step1_crop.enabled && state.step1_crop.mode !== 'skip') {
-        patch({ currentStep: 1, autoProgress: 'STEP 1/6: 세로 크롭...' });
-        await processCrop();
-      } else {
-        patch({ currentStep: 1 });
+    // 초기 상태
+    const statuses: AutoStepStatus[] = [1, 2, 3, 4, 5, 6].map(step => ({
+      step,
+      status: 'pending' as const,
+    }));
+    setAutoStatuses([...statuses]);
+
+    const updateStatus = (step: number, update: Partial<AutoStepStatus>) => {
+      const idx = statuses.findIndex(s => s.step === step);
+      if (idx >= 0) statuses[idx] = { ...statuses[idx], ...update };
+      setAutoStatuses([...statuses]);
+    };
+
+    const steps: Array<{
+      step: number;
+      skip: () => boolean;
+      run: () => Promise<void>;
+      label: string;
+    }> = [
+      { step: 1, skip: () => !state.step1_crop.enabled || state.step1_crop.mode === 'skip', run: processCrop, label: '세로 크롭' },
+      { step: 2, skip: () => state.step2_silence.intensity === 'skip', run: processSilence, label: '무음 제거' },
+      { step: 3, skip: () => state.step3_subtitle.style === 'skip', run: processSubtitle, label: 'AI 자막 생성' },
+      { step: 4, skip: () => state.step4_effects.style === 'skip', run: processEffects, label: '효과음 배치' },
+      { step: 5, skip: () => state.step5_bgm.mood === 'skip', run: processBgm, label: 'BGM 삽입' },
+      { step: 6, skip: () => (state.step6_intro.introStyle === 'none' && state.step6_intro.outroStyle === 'none') || !state.step6_intro.hospital.name.trim(), run: processIntroOutro, label: '인트로/아웃로' },
+    ];
+
+    for (const s of steps) {
+      if (cancelRef.current) break;
+
+      if (s.skip()) {
+        updateStatus(s.step, { status: 'skipped' });
+        patch({ currentStep: s.step });
+        continue;
       }
 
-      // STEP 2: 무음 제거
-      if (state.step2_silence.intensity !== 'skip') {
-        patch({ currentStep: 2, autoProgress: 'STEP 2/6: 무음 제거...' });
-        await processSilence();
-      } else {
-        patch({ currentStep: 2 });
-      }
+      updateStatus(s.step, { status: 'processing' });
+      patch({ currentStep: s.step, autoProgress: `STEP ${s.step}/6: ${s.label}...` });
 
-      // STEP 3: AI 자막
-      if (state.step3_subtitle.style !== 'skip') {
-        patch({ currentStep: 3, autoProgress: 'STEP 3/6: AI 자막 생성...' });
-        await processSubtitle();
-      } else {
-        patch({ currentStep: 3 });
+      try {
+        await s.run();
+        updateStatus(s.step, { status: 'done' });
+      } catch (err) {
+        // 에러 발생해도 다음 단계 계속 진행
+        const msg = err instanceof Error ? err.message : '실패';
+        updateStatus(s.step, { status: 'error', error: msg });
       }
-
-      // STEP 4: 효과음
-      if (state.step4_effects.style !== 'skip') {
-        patch({ currentStep: 4, autoProgress: 'STEP 4/6: 효과음 배치...' });
-        await processEffects();
-      } else {
-        patch({ currentStep: 4 });
-      }
-
-      // STEP 5: BGM
-      if (state.step5_bgm.mood !== 'skip') {
-        patch({ currentStep: 5, autoProgress: 'STEP 5/6: BGM 삽입...' });
-        await processBgm();
-      } else {
-        patch({ currentStep: 5 });
-      }
-
-      // STEP 6: 인트로/아웃로
-      if (state.step6_intro.introStyle !== 'none' || state.step6_intro.outroStyle !== 'none') {
-        if (state.step6_intro.hospital.name.trim()) {
-          patch({ currentStep: 6, autoProgress: 'STEP 6/6: 인트로/아웃로...' });
-          await processIntroOutro();
-        }
-      }
-
-      // 완료
-      patch({ currentStep: 6, autoProgress: undefined });
-    } catch {
-      // 에러는 각 process 함수에서 처리
-    } finally {
-      patch({ isProcessing: false, autoProgress: undefined });
     }
+
+    // 완료 — 완성 화면(step 7)으로 이동
+    patch({ isProcessing: false, autoProgress: undefined, currentStep: 7 });
+  };
+
+  // 자동 모드 취소
+  const cancelAutoMode = () => {
+    cancelRef.current = true;
+    patch({ isProcessing: false, autoProgress: undefined });
+  };
+
+  // 전체 초기화
+  const resetPipeline = () => {
+    setState(prev => ({ ...INITIAL_PIPELINE_STATE, mode: prev.mode }));
+    setError('');
+    setAutoStatuses([]);
   };
 
   // ══════════════════════════════════════════
@@ -525,15 +538,10 @@ export default function VideoEditPage() {
         </div>
       )}
 
-      {/* 자동 모드 진행 중 */}
-      {state.isProcessing && state.mode === 'auto' && (
-        <div className="mb-6 p-6 bg-blue-50 border border-blue-200 rounded-2xl text-center space-y-3">
-          <div className="w-8 h-8 border-3 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto" />
-          <div className="text-sm font-bold text-blue-700">{state.autoProgress || '처리 중...'}</div>
-          <div className="w-full bg-blue-200 rounded-full h-2">
-            <div className="bg-blue-600 h-2 rounded-full transition-all"
-              style={{ width: `${Math.max(5, (state.currentStep / 6) * 100)}%` }} />
-          </div>
+      {/* 자동 모드 프로그레스 */}
+      {state.isProcessing && state.mode === 'auto' && autoStatuses.length > 0 && (
+        <div className="mb-6">
+          <PipelineProgress state={state} stepStatuses={autoStatuses} onCancel={cancelAutoMode} />
         </div>
       )}
 
@@ -589,7 +597,7 @@ export default function VideoEditPage() {
                   {state.fileInfo.isAudio && <span className="text-blue-600 font-bold">음성 파일</span>}
                 </div>
                 <button type="button"
-                  onClick={e => { e.stopPropagation(); setState(prev => ({ ...INITIAL_PIPELINE_STATE, mode: prev.mode })); setError(''); }}
+                  onClick={e => { e.stopPropagation(); resetPipeline(); }}
                   className="mt-2 text-xs text-red-500 hover:text-red-700 font-semibold">
                   파일 변경
                 </button>
@@ -717,6 +725,25 @@ export default function VideoEditPage() {
           isProcessing={stepProcessing}
           progress={stepProgress}
         />
+      )}
+
+      {/* ══════ 완성 화면 ══════ */}
+      {state.currentStep === 7 && (
+        <CompletionScreen
+          state={state}
+          onGoStep={(step) => { patch({ currentStep: step }); }}
+          onReset={resetPipeline}
+        />
+      )}
+
+      {/* 자동 모드 완료 후 (processing 끝나고 step이 7이 아닌 경우) — 완성 화면으로 이동 버튼 */}
+      {!state.isProcessing && state.mode === 'auto' && autoStatuses.length > 0 && state.currentStep !== 7 && state.currentStep > 0 && (
+        <div className="mt-4 text-center">
+          <button type="button" onClick={() => patch({ currentStep: 7 })}
+            className="px-6 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-all text-sm">
+            🎬 완성 화면 보기
+          </button>
+        </div>
       )}
     </div>
   );
