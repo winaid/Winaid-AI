@@ -56,12 +56,12 @@ export type SlideImagePosition = 'background' | 'top' | 'center' | 'bottom';
 
 /** 슬라이드 이미지 생성 스타일 프리셋 */
 export const SLIDE_IMAGE_STYLES = [
-  { id: 'illustration',  name: '일러스트',    prompt: 'soft 3D pastel illustration, cute rounded style, clean background' },
-  { id: 'medical-3d',    name: '3D 해부',     prompt: 'medical 3D anatomical render, scientific visualization, detailed cross-section' },
-  { id: 'photo',         name: '실사 사진',    prompt: 'professional medical photograph, clinic setting, natural lighting' },
-  { id: 'infographic',   name: '인포그래픽',  prompt: 'flat design infographic element, minimal vector style, clean icons' },
-  { id: 'xray',          name: 'X-ray/CT',    prompt: 'dental X-ray or CT scan style, dark background, medical imaging' },
-  { id: 'watercolor',    name: '수채화',      prompt: 'soft watercolor painting style, gentle colors, artistic medical illustration' },
+  { id: 'illustration',  name: '일러스트',    prompt: 'soft 3D rendered illustration, Blender/Cinema4D style, rounded cute characters, pastel color palette, soft studio lighting, ambient occlusion, gentle shadows. NOT flat, NOT 2D, NOT vector.' },
+  { id: 'medical-3d',    name: '3D 해부',     prompt: 'medical 3D anatomical render, scientific visualization, detailed cross-section, clinical lighting, translucent organs, x-ray glow effect' },
+  { id: 'photo',         name: '실사 사진',    prompt: 'professional DSLR photograph, Korean medical clinic setting, natural window lighting, shallow depth of field, warm tone, realistic skin texture. NOT illustration, NOT 3D render.' },
+  { id: 'infographic',   name: '아이콘/벡터',  prompt: 'flat 2D vector icon, solid colors, no gradients, no shadows, no 3D, geometric shapes only, single color background, SVG-like clean line art. Like a simple app icon or emoji. NOT 3D, NOT realistic, NOT illustration.' },
+  { id: 'xray',          name: 'X-ray/CT',    prompt: 'dental X-ray or CT scan style, dark background, medical imaging, blue-white glow, high contrast' },
+  { id: 'watercolor',    name: '수채화',      prompt: 'traditional watercolor painting, visible brush strokes, paint bleeding edges, soft wet-on-wet technique, muted artistic colors, paper texture visible. NOT digital, NOT clean edges.' },
 ] as const;
 
 export type SlideImageStyle = typeof SLIDE_IMAGE_STYLES[number]['id'];
@@ -166,7 +166,115 @@ export interface SlideData {
 
   // 장식 요소
   decorations?: SlideDecoration[];
+
+  // 커버/마무리 전용
+  coverTemplateId?: string;
+  hashtags?: string[];
+  badge?: string;
+  showArrows?: boolean;
+  showBadge?: boolean;
+  showHashtags?: boolean;
+  showHandle?: boolean;
+  showLine?: boolean;
+
+  // 텍스트 위치 (드래그로 변경, % 기준)
+  titlePosition?: { x: number; y: number };
+  subtitlePosition?: { x: number; y: number };
+
+  // 정렬
+  titleAlign?: 'left' | 'center' | 'right';
+  contentAlignV?: 'top' | 'center' | 'bottom';
+  textShadow?: boolean;
+  bgColor?: string;
+  bgGradient?: string;
+
+  // 로고/병원명 위치
+  logoPosition?: { x: number; y: number };
+  hospitalNamePosition?: { x: number; y: number };
+
+  // 커스텀 아이콘 (요소 클릭으로 변경)
+  baArrowIcon?: string;
+  vsIcon?: string;
+  checkIcon?: string;
+  prosIcon?: string;
+  consIcon?: string;
+
+  // 도형 스타일 (data-highlight 등)
+  dataShape?: 'circle' | 'rounded' | 'pill' | 'diamond' | 'hexagon';
+
+  // 병원명 스타일
+  hospitalFontSize?: number;
+  hospitalColor?: string;
+  hospitalFontWeight?: string;
+  hospitalFontId?: string;
+  hospitalLogoSize?: number;
 }
+
+// ── 커버 템플릿 ──
+
+export interface CoverTemplate {
+  id: string;
+  name: string;
+  thumbnail: string;
+  background: {
+    type: 'image-full' | 'image-half' | 'solid' | 'gradient' | 'split';
+    overlayColor?: string;
+    overlayGradient?: string;
+    solidColor?: string;
+    gradient?: string;
+  };
+  layout: {
+    titlePosition: 'center' | 'bottom-left' | 'bottom-center' | 'top-left' | 'top-right';
+    titleSize: number;
+    titleWeight: number;
+    titleMaxWidth: string;
+    subtitlePosition: 'above-title' | 'below-title' | 'top';
+    subtitleSize: number;
+  };
+  decorations: {
+    hasHashtags: boolean;
+    hasArrows: boolean;
+    hasBadge: boolean;
+    hasHandle: boolean;
+    hasLine: boolean;
+    arrowStyle: 'circle' | 'plain' | 'none';
+    badgePosition: 'top-left' | 'top-right' | 'top-center';
+  };
+  colors: { title: string; subtitle: string; accent: string; hashtag: string };
+}
+
+export const COVER_TEMPLATES: CoverTemplate[] = [
+  { id: 'full-image-bottom', name: '풀이미지 하단 제목', thumbnail: 'linear-gradient(180deg, transparent 40%, rgba(0,0,0,0.7) 100%)',
+    background: { type: 'image-full', overlayGradient: 'linear-gradient(180deg, transparent 40%, rgba(0,0,0,0.65) 100%)' },
+    layout: { titlePosition: 'bottom-left', titleSize: 56, titleWeight: 900, titleMaxWidth: '85%', subtitlePosition: 'below-title', subtitleSize: 20 },
+    decorations: { hasHashtags: false, hasArrows: false, hasBadge: false, hasHandle: false, hasLine: false, arrowStyle: 'none', badgePosition: 'top-left' },
+    colors: { title: '#FFFFFF', subtitle: 'rgba(255,255,255,0.8)', accent: '#FFFFFF', hashtag: '#FFFFFF' },
+  },
+  { id: 'center-overlay', name: '중앙 제목 + 배경', thumbnail: 'linear-gradient(180deg, rgba(0,0,0,0.3), rgba(0,0,0,0.5))',
+    background: { type: 'image-full', overlayGradient: 'linear-gradient(180deg, rgba(0,0,0,0.25), rgba(0,0,0,0.5))' },
+    layout: { titlePosition: 'center', titleSize: 64, titleWeight: 900, titleMaxWidth: '80%', subtitlePosition: 'below-title', subtitleSize: 20 },
+    decorations: { hasHashtags: false, hasArrows: false, hasBadge: false, hasHandle: false, hasLine: true, arrowStyle: 'none', badgePosition: 'top-center' },
+    colors: { title: '#FFFFFF', subtitle: 'rgba(255,255,255,0.8)', accent: '#FFFFFF', hashtag: '#FFFFFF' },
+  },
+  { id: 'minimal-solid', name: '미니멀 단색', thumbnail: 'linear-gradient(180deg, #F5F0EB, #E8DDD4)',
+    background: { type: 'solid', solidColor: '#F5F0EB' },
+    layout: { titlePosition: 'center', titleSize: 48, titleWeight: 700, titleMaxWidth: '80%', subtitlePosition: 'below-title', subtitleSize: 20 },
+    decorations: { hasHashtags: false, hasArrows: false, hasBadge: false, hasHandle: false, hasLine: true, arrowStyle: 'none', badgePosition: 'top-center' },
+    colors: { title: '#2D2D2D', subtitle: '#666666', accent: '#2D2D2D', hashtag: '#999999' },
+  },
+  { id: 'hospital-pro', name: '병원 프로', thumbnail: 'linear-gradient(180deg, #1B2A4A, #152238)',
+    background: { type: 'gradient', gradient: 'linear-gradient(180deg, #1B2A4A, #152238)' },
+    layout: { titlePosition: 'center', titleSize: 56, titleWeight: 900, titleMaxWidth: '85%', subtitlePosition: 'below-title', subtitleSize: 22 },
+    decorations: { hasHashtags: false, hasArrows: false, hasBadge: false, hasHandle: false, hasLine: true, arrowStyle: 'none', badgePosition: 'top-center' },
+    colors: { title: '#FFFFFF', subtitle: '#F5A623', accent: '#F5A623', hashtag: '#F5A623' },
+  },
+  { id: 'left-text-right-image', name: '좌우 분할', thumbnail: 'linear-gradient(90deg, #1B2A4A 50%, #888 50%)',
+    background: { type: 'split' },
+    layout: { titlePosition: 'top-left', titleSize: 48, titleWeight: 900, titleMaxWidth: '90%', subtitlePosition: 'below-title', subtitleSize: 18 },
+    decorations: { hasHashtags: false, hasArrows: false, hasBadge: false, hasHandle: false, hasLine: true, arrowStyle: 'none', badgePosition: 'top-left' },
+    colors: { title: '#FFFFFF', subtitle: 'rgba(255,255,255,0.7)', accent: '#4299E1', hashtag: '#FFFFFF' },
+  },
+];
 
 export interface CardNewsTheme {
   backgroundColor: string;
@@ -336,16 +444,52 @@ export interface DesignPreset {
 }
 
 export const DESIGN_PRESETS: DesignPreset[] = [
-  // ════ Professional ════
+  // ════ 밝은 톤 (병원/의료에 적합) ════
+  { id: 'clean-white', name: '클린 화이트', category: 'minimal',
+    thumbnail: 'linear-gradient(160deg, #FFFFFF, #EDF2F7)',
+    theme: { backgroundColor: '#FFFFFF', backgroundGradient: 'linear-gradient(160deg, #FFFFFF, #EDF2F7)', titleColor: '#1A202C', subtitleColor: '#2D3748', bodyColor: '#4A5568', accentColor: '#3182CE', cardBgColor: '#F7FAFC', fontFamily: PRETENDARD },
+    style: { backgroundPattern: 'none', patternOpacity: 0, topBarHeight: 4, bottomBarHeight: 0, titleAlign: 'left', innerCardStyle: 'outlined', innerCardRadius: 12, accentBarWidth: 40, footerStyle: 'simple', shadowIntensity: 'light' },
+  },
+  { id: 'sky-blue', name: '스카이 블루', category: 'minimal',
+    thumbnail: 'linear-gradient(160deg, #E3F0FB, #C5DCF0)',
+    theme: { backgroundColor: '#E3F0FB', backgroundGradient: 'linear-gradient(160deg, #E3F0FB, #C5DCF0)', titleColor: '#0F2B46', subtitleColor: '#1A5A8A', bodyColor: '#3A5068', accentColor: '#2176C7', cardBgColor: '#FFFFFF', fontFamily: PRETENDARD },
+    style: { backgroundPattern: 'none', patternOpacity: 0, topBarHeight: 6, bottomBarHeight: 3, titleAlign: 'center', innerCardStyle: 'rounded', innerCardRadius: 16, accentBarWidth: 50, footerStyle: 'simple', shadowIntensity: 'light' },
+  },
+  { id: 'cream-brown', name: '크림 브라운', category: 'warm',
+    thumbnail: 'linear-gradient(160deg, #FDF6EC, #F5E0C0)',
+    theme: { backgroundColor: '#FDF6EC', backgroundGradient: 'linear-gradient(160deg, #FDF6EC, #F5E0C0)', titleColor: '#4A230A', subtitleColor: '#8B4513', bodyColor: '#6B4226', accentColor: '#C7873A', cardBgColor: '#FFFFFF', fontFamily: PRETENDARD },
+    style: { backgroundPattern: 'dots', patternOpacity: 0.03, topBarHeight: 6, bottomBarHeight: 3, titleAlign: 'center', innerCardStyle: 'rounded', innerCardRadius: 20, accentBarWidth: 50, footerStyle: 'bordered', shadowIntensity: 'light' },
+  },
+  { id: 'rose-pink', name: '로즈 핑크', category: 'warm',
+    thumbnail: 'linear-gradient(160deg, #FFF0F5, #FFD6E8)',
+    theme: { backgroundColor: '#FFF0F5', backgroundGradient: 'linear-gradient(160deg, #FFF0F5, #FFD6E8)', titleColor: '#4A1034', subtitleColor: '#B83280', bodyColor: '#702459', accentColor: '#D53F8C', cardBgColor: '#FFFFFF', fontFamily: PRETENDARD },
+    style: { backgroundPattern: 'none', patternOpacity: 0, topBarHeight: 6, bottomBarHeight: 3, titleAlign: 'center', innerCardStyle: 'pill', innerCardRadius: 999, accentBarWidth: 50, footerStyle: 'simple', shadowIntensity: 'light' },
+  },
+  { id: 'mint-fresh', name: '민트 프레시', category: 'warm',
+    thumbnail: 'linear-gradient(160deg, #E0F5EC, #B2DFDB)',
+    theme: { backgroundColor: '#E0F5EC', backgroundGradient: 'linear-gradient(160deg, #E0F5EC, #B2DFDB)', titleColor: '#1A3C34', subtitleColor: '#2E7D6E', bodyColor: '#37574D', accentColor: '#38A89D', cardBgColor: '#FFFFFF', fontFamily: PRETENDARD },
+    style: { backgroundPattern: 'dots', patternOpacity: 0.02, topBarHeight: 4, bottomBarHeight: 2, titleAlign: 'left', innerCardStyle: 'rounded', innerCardRadius: 16, accentBarWidth: 40, footerStyle: 'simple', shadowIntensity: 'light' },
+  },
+  { id: 'lavender', name: '라벤더', category: 'warm',
+    thumbnail: 'linear-gradient(160deg, #F3EEFF, #E2D4F5)',
+    theme: { backgroundColor: '#F3EEFF', backgroundGradient: 'linear-gradient(160deg, #F3EEFF, #E2D4F5)', titleColor: '#2D1B69', subtitleColor: '#6B46C1', bodyColor: '#553C9A', accentColor: '#805AD5', cardBgColor: '#FFFFFF', fontFamily: PRETENDARD },
+    style: { backgroundPattern: 'none', patternOpacity: 0, topBarHeight: 4, bottomBarHeight: 2, titleAlign: 'center', innerCardStyle: 'rounded', innerCardRadius: 20, accentBarWidth: 50, footerStyle: 'simple', shadowIntensity: 'light' },
+  },
+  { id: 'peach', name: '피치', category: 'warm',
+    thumbnail: 'linear-gradient(160deg, #FFF5F0, #FDDCCC)',
+    theme: { backgroundColor: '#FFF5F0', backgroundGradient: 'linear-gradient(160deg, #FFF5F0, #FDDCCC)', titleColor: '#7B341E', subtitleColor: '#C05621', bodyColor: '#9C4221', accentColor: '#ED8936', cardBgColor: '#FFFFFF', fontFamily: PRETENDARD },
+    style: { backgroundPattern: 'none', patternOpacity: 0, topBarHeight: 6, bottomBarHeight: 3, titleAlign: 'center', innerCardStyle: 'rounded', innerCardRadius: 16, accentBarWidth: 50, footerStyle: 'simple', shadowIntensity: 'light' },
+  },
+  { id: 'soft-gray', name: '소프트 그레이', category: 'minimal',
+    thumbnail: 'linear-gradient(160deg, #F7FAFC, #E2E8F0)',
+    theme: { backgroundColor: '#F7FAFC', backgroundGradient: 'linear-gradient(160deg, #F7FAFC, #E2E8F0)', titleColor: '#1A202C', subtitleColor: '#4A5568', bodyColor: '#718096', accentColor: '#4A5568', cardBgColor: '#FFFFFF', fontFamily: PRETENDARD },
+    style: { backgroundPattern: 'none', patternOpacity: 0, topBarHeight: 0, bottomBarHeight: 0, titleAlign: 'center', innerCardStyle: 'rounded', innerCardRadius: 12, accentBarWidth: 30, footerStyle: 'none', shadowIntensity: 'light' },
+  },
+  // ════ 어두운 톤 (프리미엄/고급) ════
   { id: 'navy-gold', name: '네이비 골드', category: 'professional',
     thumbnail: 'linear-gradient(135deg, #1B2A4A, #1E3A5F)',
     theme: { backgroundColor: '#1B2A4A', backgroundGradient: 'linear-gradient(180deg, #1B2A4A, #152238)', titleColor: '#FFFFFF', subtitleColor: '#F5A623', bodyColor: '#D6D8E0', accentColor: '#F5A623', cardBgColor: '#FFFFFF', fontFamily: PRETENDARD },
     style: { backgroundPattern: 'herringbone', patternOpacity: 0.02, topBarHeight: 8, bottomBarHeight: 4, titleAlign: 'center', innerCardStyle: 'rounded', innerCardRadius: 20, accentBarWidth: 60, footerStyle: 'simple', shadowIntensity: 'medium' },
-  },
-  { id: 'dark-teal', name: '다크 틸', category: 'professional',
-    thumbnail: 'linear-gradient(135deg, #0D4B5E, #0A3D4E)',
-    theme: { backgroundColor: '#0D4B5E', backgroundGradient: 'linear-gradient(180deg, #0D4B5E, #083845)', titleColor: '#FFFFFF', subtitleColor: '#4FD1C5', bodyColor: '#CBD5E0', accentColor: '#4FD1C5', cardBgColor: '#FFFFFF', fontFamily: PRETENDARD },
-    style: { backgroundPattern: 'herringbone', patternOpacity: 0.02, topBarHeight: 6, bottomBarHeight: 3, titleAlign: 'center', innerCardStyle: 'rounded', innerCardRadius: 16, accentBarWidth: 50, footerStyle: 'bordered', shadowIntensity: 'medium' },
   },
   { id: 'charcoal-coral', name: '차콜 코랄', category: 'professional',
     thumbnail: 'linear-gradient(135deg, #2D3436, #3D4547)',
@@ -357,89 +501,41 @@ export const DESIGN_PRESETS: DesignPreset[] = [
     theme: { backgroundColor: '#2D1B69', backgroundGradient: 'linear-gradient(180deg, #2D1B69, #1A0F40)', titleColor: '#FFFFFF', subtitleColor: '#B794F4', bodyColor: '#C4B5E0', accentColor: '#B794F4', cardBgColor: '#FFFFFF', fontFamily: PRETENDARD },
     style: { backgroundPattern: 'diamond', patternOpacity: 0.03, topBarHeight: 8, bottomBarHeight: 4, titleAlign: 'center', innerCardStyle: 'pill', innerCardRadius: 999, accentBarWidth: 70, footerStyle: 'bordered', shadowIntensity: 'medium' },
   },
-  { id: 'black-gold', name: '블랙 골드', category: 'professional',
-    thumbnail: 'linear-gradient(135deg, #1A1A2E, #16213E)',
-    theme: { backgroundColor: '#1A1A2E', backgroundGradient: 'linear-gradient(180deg, #1A1A2E, #0F0F1A)', titleColor: '#FFFFFF', subtitleColor: '#FFD700', bodyColor: '#A0AEC0', accentColor: '#FFD700', cardBgColor: '#FFFFFF', fontFamily: PRETENDARD },
-    style: { backgroundPattern: 'lines', patternOpacity: 0.02, topBarHeight: 6, bottomBarHeight: 3, titleAlign: 'center', innerCardStyle: 'sharp', innerCardRadius: 4, accentBarWidth: 80, footerStyle: 'bordered', shadowIntensity: 'strong' },
-  },
-  { id: 'hospital-trust', name: '병원 신뢰', category: 'professional',
-    thumbnail: 'linear-gradient(135deg, #1E3A5F, #2B6CB0)',
-    theme: { backgroundColor: '#1E3A5F', backgroundGradient: 'linear-gradient(180deg, #1E3A5F, #153050)', titleColor: '#FFFFFF', subtitleColor: '#90CDF4', bodyColor: '#BEE3F8', accentColor: '#4299E1', cardBgColor: '#EBF8FF', fontFamily: PRETENDARD },
-    style: { backgroundPattern: 'herringbone', patternOpacity: 0.02, topBarHeight: 8, bottomBarHeight: 4, titleAlign: 'center', innerCardStyle: 'rounded', innerCardRadius: 20, accentBarWidth: 60, footerStyle: 'bordered', shadowIntensity: 'medium' },
-  },
-  { id: 'dental-premium', name: '치과 프리미엄', category: 'professional',
-    thumbnail: 'linear-gradient(135deg, #1B2A4A, #2C3E6B)',
-    theme: { backgroundColor: '#1B2A4A', backgroundGradient: 'linear-gradient(180deg, #1B2A4A, #152238)', titleColor: '#FFFFFF', subtitleColor: '#E8B84B', bodyColor: '#C7CCD8', accentColor: '#E8B84B', cardBgColor: '#FFFFFF', fontFamily: PRETENDARD },
-    style: { backgroundPattern: 'herringbone', patternOpacity: 0.025, topBarHeight: 8, bottomBarHeight: 4, titleAlign: 'center', innerCardStyle: 'rounded', innerCardRadius: 16, accentBarWidth: 70, footerStyle: 'bordered', shadowIntensity: 'medium' },
-  },
-  // ════ Modern ════
-  { id: 'ocean-blue', name: '오션 블루', category: 'modern',
-    thumbnail: 'linear-gradient(135deg, #1A365D, #2B6CB0)',
-    theme: { backgroundColor: '#1A365D', backgroundGradient: 'linear-gradient(160deg, #1A365D, #2C5282)', titleColor: '#FFFFFF', subtitleColor: '#63B3ED', bodyColor: '#BEE3F8', accentColor: '#63B3ED', cardBgColor: '#EBF8FF', fontFamily: PRETENDARD },
-    style: { backgroundPattern: 'herringbone', patternOpacity: 0.02, topBarHeight: 8, bottomBarHeight: 4, titleAlign: 'left', innerCardStyle: 'rounded', innerCardRadius: 20, accentBarWidth: 50, footerStyle: 'simple', shadowIntensity: 'light' },
+  { id: 'mono-black', name: '모노 블랙', category: 'minimal',
+    thumbnail: 'linear-gradient(135deg, #000000, #1A202C)',
+    theme: { backgroundColor: '#000000', backgroundGradient: 'linear-gradient(180deg, #0A0A0A, #000000)', titleColor: '#FFFFFF', subtitleColor: '#A0AEC0', bodyColor: '#718096', accentColor: '#FFFFFF', cardBgColor: '#1A202C', fontFamily: PRETENDARD },
+    style: { backgroundPattern: 'none', patternOpacity: 0, topBarHeight: 2, bottomBarHeight: 0, titleAlign: 'left', innerCardStyle: 'sharp', innerCardRadius: 0, accentBarWidth: 30, footerStyle: 'simple', shadowIntensity: 'none' },
   },
   { id: 'forest-green', name: '포레스트 그린', category: 'modern',
     thumbnail: 'linear-gradient(135deg, #064E3B, #065F46)',
     theme: { backgroundColor: '#064E3B', backgroundGradient: 'linear-gradient(180deg, #064E3B, #053D30)', titleColor: '#FFFFFF', subtitleColor: '#6EE7B7', bodyColor: '#A7F3D0', accentColor: '#34D399', cardBgColor: '#ECFDF5', fontFamily: PRETENDARD },
     style: { backgroundPattern: 'dots', patternOpacity: 0.02, topBarHeight: 6, bottomBarHeight: 3, titleAlign: 'center', innerCardStyle: 'rounded', innerCardRadius: 24, accentBarWidth: 60, footerStyle: 'simple', shadowIntensity: 'medium' },
   },
-  { id: 'sunset-orange', name: '선셋 오렌지', category: 'modern',
-    thumbnail: 'linear-gradient(135deg, #7B341E, #C05621)',
-    theme: { backgroundColor: '#7B341E', backgroundGradient: 'linear-gradient(160deg, #7B341E, #9C4221)', titleColor: '#FFFFFF', subtitleColor: '#FBD38D', bodyColor: '#FEEBC8', accentColor: '#ED8936', cardBgColor: '#FFFAF0', fontFamily: PRETENDARD },
-    style: { backgroundPattern: 'none', patternOpacity: 0, topBarHeight: 8, bottomBarHeight: 4, titleAlign: 'center', innerCardStyle: 'rounded', innerCardRadius: 16, accentBarWidth: 50, footerStyle: 'bordered', shadowIntensity: 'medium' },
-  },
-  // ════ Minimal ════
-  { id: 'clean-white', name: '클린 화이트', category: 'minimal',
-    thumbnail: 'linear-gradient(135deg, #FFFFFF, #F7FAFC)',
-    theme: { backgroundColor: '#FFFFFF', backgroundGradient: 'linear-gradient(160deg, #FFFFFF, #EDF2F7)', titleColor: '#0A1628', subtitleColor: '#2D3748', bodyColor: '#4A5568', accentColor: '#3182CE', cardBgColor: '#F7FAFC', fontFamily: PRETENDARD },
-    style: { backgroundPattern: 'none', patternOpacity: 0, topBarHeight: 4, bottomBarHeight: 0, titleAlign: 'left', innerCardStyle: 'outlined', innerCardRadius: 12, accentBarWidth: 40, footerStyle: 'simple', shadowIntensity: 'light' },
-  },
-  { id: 'soft-gray', name: '소프트 그레이', category: 'minimal',
-    thumbnail: 'linear-gradient(135deg, #F7FAFC, #EDF2F7)',
-    theme: { backgroundColor: '#F7FAFC', backgroundGradient: 'linear-gradient(160deg, #F7FAFC, #E2E8F0)', titleColor: '#1A202C', subtitleColor: '#4A5568', bodyColor: '#718096', accentColor: '#4A5568', cardBgColor: '#FFFFFF', fontFamily: PRETENDARD },
-    style: { backgroundPattern: 'none', patternOpacity: 0, topBarHeight: 0, bottomBarHeight: 0, titleAlign: 'center', innerCardStyle: 'rounded', innerCardRadius: 12, accentBarWidth: 30, footerStyle: 'none', shadowIntensity: 'light' },
-  },
-  { id: 'mono-black', name: '모노 블랙', category: 'minimal',
-    thumbnail: 'linear-gradient(135deg, #000000, #1A202C)',
-    theme: { backgroundColor: '#000000', backgroundGradient: 'linear-gradient(180deg, #0A0A0A, #000000)', titleColor: '#FFFFFF', subtitleColor: '#A0AEC0', bodyColor: '#718096', accentColor: '#FFFFFF', cardBgColor: '#1A202C', fontFamily: PRETENDARD },
-    style: { backgroundPattern: 'none', patternOpacity: 0, topBarHeight: 2, bottomBarHeight: 0, titleAlign: 'left', innerCardStyle: 'sharp', innerCardRadius: 0, accentBarWidth: 30, footerStyle: 'simple', shadowIntensity: 'none' },
-  },
-  { id: 'sky-blue', name: '스카이 블루', category: 'minimal',
-    thumbnail: 'linear-gradient(135deg, #E3F0FB, #C5DCF0)',
-    theme: { backgroundColor: '#E3F0FB', backgroundGradient: 'linear-gradient(160deg, #E3F0FB, #C5DCF0)', titleColor: '#0F2B46', subtitleColor: '#1A5A8A', bodyColor: '#3A5068', accentColor: '#2176C7', cardBgColor: '#FFFFFF', fontFamily: PRETENDARD },
-    style: { backgroundPattern: 'none', patternOpacity: 0, topBarHeight: 6, bottomBarHeight: 3, titleAlign: 'center', innerCardStyle: 'rounded', innerCardRadius: 16, accentBarWidth: 50, footerStyle: 'simple', shadowIntensity: 'light' },
-  },
-  // ════ Warm ════
-  { id: 'cream-brown', name: '크림 브라운', category: 'warm',
-    thumbnail: 'linear-gradient(135deg, #FDF6EC, #F5E0C0)',
-    theme: { backgroundColor: '#FDF6EC', backgroundGradient: 'linear-gradient(160deg, #FDF6EC, #F5E0C0)', titleColor: '#4A230A', subtitleColor: '#8B4513', bodyColor: '#6B4226', accentColor: '#C7873A', cardBgColor: '#FFFFFF', fontFamily: PRETENDARD },
-    style: { backgroundPattern: 'dots', patternOpacity: 0.03, topBarHeight: 6, bottomBarHeight: 3, titleAlign: 'center', innerCardStyle: 'rounded', innerCardRadius: 20, accentBarWidth: 50, footerStyle: 'bordered', shadowIntensity: 'light' },
-  },
-  { id: 'rose-pink', name: '로즈 핑크', category: 'warm',
-    thumbnail: 'linear-gradient(135deg, #FFF0F5, #FFD6E8)',
-    theme: { backgroundColor: '#FFF0F5', backgroundGradient: 'linear-gradient(160deg, #FFF0F5, #FFD6E8)', titleColor: '#4A1034', subtitleColor: '#B83280', bodyColor: '#702459', accentColor: '#D53F8C', cardBgColor: '#FFFFFF', fontFamily: PRETENDARD },
-    style: { backgroundPattern: 'none', patternOpacity: 0, topBarHeight: 6, bottomBarHeight: 3, titleAlign: 'center', innerCardStyle: 'pill', innerCardRadius: 999, accentBarWidth: 50, footerStyle: 'simple', shadowIntensity: 'light' },
-  },
-  { id: 'mint-fresh', name: '민트 프레시', category: 'warm',
-    thumbnail: 'linear-gradient(135deg, #E0F5EC, #B2DFDB)',
-    theme: { backgroundColor: '#E0F5EC', backgroundGradient: 'linear-gradient(160deg, #E0F5EC, #B2DFDB)', titleColor: '#1A3C34', subtitleColor: '#2E7D6E', bodyColor: '#37574D', accentColor: '#38A89D', cardBgColor: '#FFFFFF', fontFamily: PRETENDARD },
-    style: { backgroundPattern: 'dots', patternOpacity: 0.02, topBarHeight: 4, bottomBarHeight: 2, titleAlign: 'left', innerCardStyle: 'rounded', innerCardRadius: 16, accentBarWidth: 40, footerStyle: 'simple', shadowIntensity: 'light' },
-  },
-  // ════ Bold ════
+  // ════ 비비드 (눈에 띄는) ════
   { id: 'electric-blue', name: '일렉트릭 블루', category: 'bold',
     thumbnail: 'linear-gradient(135deg, #0052D4, #4364F7)',
     theme: { backgroundColor: '#0052D4', backgroundGradient: 'linear-gradient(135deg, #0052D4, #4364F7, #6FB1FC)', titleColor: '#FFFFFF', subtitleColor: '#BEE3F8', bodyColor: '#E2E8F0', accentColor: '#FFFFFF', cardBgColor: 'rgba(255,255,255,0.15)', fontFamily: PRETENDARD },
     style: { backgroundPattern: 'none', patternOpacity: 0, topBarHeight: 0, bottomBarHeight: 0, titleAlign: 'center', innerCardStyle: 'rounded', innerCardRadius: 20, accentBarWidth: 0, footerStyle: 'simple', shadowIntensity: 'strong' },
   },
-  { id: 'neon-gradient', name: '네온 그라데이션', category: 'bold',
-    thumbnail: 'linear-gradient(135deg, #667eea, #764ba2)',
-    theme: { backgroundColor: '#667eea', backgroundGradient: 'linear-gradient(135deg, #667eea, #764ba2)', titleColor: '#FFFFFF', subtitleColor: '#E9D8FD', bodyColor: '#E2E8F0', accentColor: '#FBBF24', cardBgColor: 'rgba(255,255,255,0.12)', fontFamily: PRETENDARD },
-    style: { backgroundPattern: 'none', patternOpacity: 0, topBarHeight: 0, bottomBarHeight: 0, titleAlign: 'center', innerCardStyle: 'rounded', innerCardRadius: 24, accentBarWidth: 50, footerStyle: 'simple', shadowIntensity: 'strong' },
+  { id: 'sunset-gradient', name: '선셋 그라데이션', category: 'bold',
+    thumbnail: 'linear-gradient(135deg, #F093FB, #F5576C)',
+    theme: { backgroundColor: '#F093FB', backgroundGradient: 'linear-gradient(135deg, #F093FB, #F5576C)', titleColor: '#FFFFFF', subtitleColor: '#FFF5F5', bodyColor: '#FED7D7', accentColor: '#FFFFFF', cardBgColor: 'rgba(255,255,255,0.15)', fontFamily: PRETENDARD },
+    style: { backgroundPattern: 'none', patternOpacity: 0, topBarHeight: 0, bottomBarHeight: 0, titleAlign: 'center', innerCardStyle: 'rounded', innerCardRadius: 24, accentBarWidth: 0, footerStyle: 'simple', shadowIntensity: 'strong' },
+  },
+  { id: 'ocean-gradient', name: '오션 그라데이션', category: 'bold',
+    thumbnail: 'linear-gradient(135deg, #43E97B, #38F9D7)',
+    theme: { backgroundColor: '#43E97B', backgroundGradient: 'linear-gradient(135deg, #43E97B, #38F9D7)', titleColor: '#064E3B', subtitleColor: '#065F46', bodyColor: '#047857', accentColor: '#064E3B', cardBgColor: 'rgba(255,255,255,0.25)', fontFamily: PRETENDARD },
+    style: { backgroundPattern: 'none', patternOpacity: 0, topBarHeight: 0, bottomBarHeight: 0, titleAlign: 'center', innerCardStyle: 'rounded', innerCardRadius: 20, accentBarWidth: 0, footerStyle: 'simple', shadowIntensity: 'medium' },
   },
   { id: 'fire-red', name: '파이어 레드', category: 'bold',
     thumbnail: 'linear-gradient(135deg, #C62828, #B71C1C)',
     theme: { backgroundColor: '#C62828', backgroundGradient: 'linear-gradient(180deg, #C62828, #8E0000)', titleColor: '#FFFFFF', subtitleColor: '#FFCDD2', bodyColor: '#FFEBEE', accentColor: '#FFD54F', cardBgColor: 'rgba(255,255,255,0.12)', fontFamily: PRETENDARD },
     style: { backgroundPattern: 'herringbone', patternOpacity: 0.03, topBarHeight: 8, bottomBarHeight: 4, titleAlign: 'center', innerCardStyle: 'rounded', innerCardRadius: 16, accentBarWidth: 60, footerStyle: 'bordered', shadowIntensity: 'strong' },
+  },
+  { id: 'warm-yellow', name: '웜 옐로', category: 'bold',
+    thumbnail: 'linear-gradient(135deg, #F6E05E, #ECC94B)',
+    theme: { backgroundColor: '#F6E05E', backgroundGradient: 'linear-gradient(160deg, #F6E05E, #ECC94B)', titleColor: '#744210', subtitleColor: '#975A16', bodyColor: '#744210', accentColor: '#D69E2E', cardBgColor: '#FFFFFF', fontFamily: PRETENDARD },
+    style: { backgroundPattern: 'none', patternOpacity: 0, topBarHeight: 6, bottomBarHeight: 3, titleAlign: 'center', innerCardStyle: 'rounded', innerCardRadius: 16, accentBarWidth: 50, footerStyle: 'simple', shadowIntensity: 'light' },
   },
 ];
 

@@ -56,12 +56,12 @@ export type SlideImagePosition = 'background' | 'top' | 'center' | 'bottom';
 
 /** 슬라이드 이미지 생성 스타일 프리셋 */
 export const SLIDE_IMAGE_STYLES = [
-  { id: 'illustration',  name: '일러스트',    prompt: 'soft 3D pastel illustration, cute rounded style, clean background' },
-  { id: 'medical-3d',    name: '3D 해부',     prompt: 'medical 3D anatomical render, scientific visualization, detailed cross-section' },
-  { id: 'photo',         name: '실사 사진',    prompt: 'professional medical photograph, clinic setting, natural lighting' },
-  { id: 'infographic',   name: '인포그래픽',  prompt: 'flat design infographic element, minimal vector style, clean icons' },
-  { id: 'xray',          name: 'X-ray/CT',    prompt: 'dental X-ray or CT scan style, dark background, medical imaging' },
-  { id: 'watercolor',    name: '수채화',      prompt: 'soft watercolor painting style, gentle colors, artistic medical illustration' },
+  { id: 'illustration',  name: '일러스트',    prompt: 'soft 3D rendered illustration, Blender/Cinema4D style, rounded cute characters, pastel color palette, soft studio lighting, ambient occlusion, gentle shadows. NOT flat, NOT 2D, NOT vector.' },
+  { id: 'medical-3d',    name: '3D 해부',     prompt: 'medical 3D anatomical render, scientific visualization, detailed cross-section, clinical lighting, translucent organs, x-ray glow effect' },
+  { id: 'photo',         name: '실사 사진',    prompt: 'professional DSLR photograph, Korean medical clinic setting, natural window lighting, shallow depth of field, warm tone, realistic skin texture. NOT illustration, NOT 3D render.' },
+  { id: 'infographic',   name: '아이콘/벡터',  prompt: 'flat 2D vector icon, solid colors, no gradients, no shadows, no 3D, geometric shapes only, single color background, SVG-like clean line art. Like a simple app icon or emoji. NOT 3D, NOT realistic, NOT illustration.' },
+  { id: 'xray',          name: 'X-ray/CT',    prompt: 'dental X-ray or CT scan style, dark background, medical imaging, blue-white glow, high contrast' },
+  { id: 'watercolor',    name: '수채화',      prompt: 'traditional watercolor painting, visible brush strokes, paint bleeding edges, soft wet-on-wet technique, muted artistic colors, paper texture visible. NOT digital, NOT clean edges.' },
 ] as const;
 
 export type SlideImageStyle = typeof SLIDE_IMAGE_STYLES[number]['id'];
