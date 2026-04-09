@@ -183,6 +183,13 @@ function StepScript({ state, patch, setError }: { state: AiShortsState; patch: (
                   <textarea value={scene.narration} rows={2} autoFocus
                     onChange={e => updateNarration(idx, e.target.value)}
                     onBlur={() => setEditingIdx(null)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        if (idx < state.scenes.length - 1) setEditingIdx(idx + 1);
+                        else setEditingIdx(null);
+                      }
+                    }}
                     className="w-full px-2 py-1 text-xs border border-indigo-400 rounded-lg outline-none resize-none" />
                 ) : (
                   <div onClick={() => setEditingIdx(idx)} className="text-sm text-slate-800 cursor-text hover:bg-indigo-50 rounded px-1 -mx-1">
