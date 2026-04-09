@@ -1,0 +1,19 @@
+{
+  "name": "winai-video-processor",
+  "version": "1.0.0",
+  "description": "WINAI 영상 처리 서버 — auto-editor + FFmpeg (Railway 배포)",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js"
+  },
+  "dependencies": {
+    "express": "^4.21.0",
+    "cors": "^2.8.5",
+    "helmet": "^7.1.0",
+    "compression": "^1.7.4",
+    "multer": "^1.4.5-lts.1",
+    "dotenv": "^16.4.0",
+    "uuid": "^9.0.0"
+  }
+}
