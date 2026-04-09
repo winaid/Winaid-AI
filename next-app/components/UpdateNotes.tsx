@@ -5,13 +5,16 @@ import { useState, useEffect } from 'react';
 const CURRENT_VERSION = '2026.04.09';
 const STORAGE_KEY = 'winaid_changelog_seen';
 
-const CHANGELOG = [
+const CHANGELOG_2026_04_09 = [
   {
-    category: '▶️ 유튜브 업데이트',
+    category: '▶️ 유튜브',
     items: [
       '🗑️ GIF 기능 삭제 — 핵심 글 생성 기능에 집중하기 위해 정리했습니다',
     ],
   },
+];
+
+const CHANGELOG_2026_04_02 = [
   {
     category: '🔒 보안',
     items: [
@@ -73,7 +76,6 @@ const CHANGELOG = [
       '영상 분석 — 시간순 전체 분석',
       '2단계 API 분리 — 요약(텍스트) + 주제(JSON)',
       '3가지 문체 선택 (환자용/원장님/핵심정리)',
-      '🗑️ GIF 기능 삭제 — 사용률 낮아 제거, 핵심 글 생성에 집중',
     ],
   },
   {
@@ -100,6 +102,9 @@ const CHANGELOG = [
     ],
   },
 ];
+
+// 팝업에는 최신 버전만 표시
+const CHANGELOG = CHANGELOG_2026_04_09;
 
 export function UpdateNotes() {
   const [show, setShow] = useState(false);
