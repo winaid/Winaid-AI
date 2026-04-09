@@ -3,6 +3,9 @@
 import { useState, useRef, useEffect } from 'react';
 import { buildClinicalPrompt, ARTICLE_TYPES } from '../../../lib/clinicalPrompt';
 import { getSessionSafe, supabase } from '../../../lib/supabase';
+import { useCreditContext } from '../layout';
+import { useCredit } from '../../../lib/creditService';
+import { consumeGuestCredit } from '../../../lib/guestCredits';
 import { CATEGORIES } from '../../../lib/constants';
 import { sanitizeHtml } from '../../../lib/sanitize';
 import { stripDoctype } from '../../../lib/htmlUtils';
@@ -17,6 +20,8 @@ interface SuggestedTopic {
 }
 
 export default function ClinicalPage() {
+  const creditCtx = useCreditContext();
+
   // ── Step 1: 이미지 분석 ──
   const [images, setImages] = useState<{ file: File; dataUrl: string }[]>([]);
   const [category, setCategory] = useState('치과');
@@ -200,6 +205,13 @@ JSON만 출력: { "analysis": "...", "topics": [{ "topic": "...", "title": "..."
   const handleGenerate = async () => {
     const topic = selectedTopic || customTopic.trim();
     if (!topic) return;
+
+    // 크레딧 체크 (차감은 성공 후)
+    if (creditCtx.creditInfo && creditCtx.creditInfo.credits <= 0) {
+      setError(creditCtx.userId ? '크레딧이 모두 소진되었습니다.' : '무료 체험 크레딧이 모두 소진되었습니다.');
+      return;
+    }
+
     setIsGenerating(true);
     setGeneratedContent(null);
     setScores(null);
@@ -266,6 +278,17 @@ JSON만 출력: { "analysis": "...", "topics": [{ "topic": "...", "title": "..."
 
       setGeneratedContent(html);
       setPipelineStep('result');
+
+      // 생성 성공 → 크레딧 차감
+      if (creditCtx.creditInfo) {
+        if (creditCtx.userId) {
+          const cr = await useCredit(creditCtx.userId);
+          if (cr.success) creditCtx.setCreditInfo({ credits: cr.remaining, totalUsed: (creditCtx.creditInfo.totalUsed || 0) + 1 });
+        } else {
+          const next = consumeGuestCredit();
+          if (next) creditCtx.setCreditInfo({ credits: next.credits, totalUsed: next.totalUsed });
+        }
+      }
     } catch (err) {
       alert(err instanceof Error ? err.message : '생성 실패');
     } finally {

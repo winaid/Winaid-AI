@@ -9,8 +9,12 @@ import { ErrorPanel } from '../../../components/GenerationResult';
 import { sanitizeHtml } from '../../../lib/sanitize';
 import { stripDoctype } from '../../../lib/htmlUtils';
 import { applyContentFilters } from '../../../lib/medicalLawFilter';
+import { useCreditContext } from '../layout';
+import { useCredit } from '../../../lib/creditService';
+import { consumeGuestCredit } from '../../../lib/guestCredits';
 
 export default function PressPage() {
+  const creditCtx = useCreditContext();
   const [topic, setTopic] = useState('');
   const [keywords, setKeywords] = useState('');
   const [hospitalName, setHospitalName] = useState('');
@@ -41,6 +45,12 @@ export default function PressPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!topic.trim() || !doctorName.trim() || isGenerating) return;
+
+    // 크레딧 체크
+    if (creditCtx.creditInfo && creditCtx.creditInfo.credits <= 0) {
+      setError(creditCtx.userId ? '크레딧이 모두 소진되었습니다.' : '무료 체험 크레딧이 모두 소진되었습니다.');
+      return;
+    }
 
     setIsGenerating(true);
     setError(null);
@@ -92,6 +102,17 @@ export default function PressPage() {
 
       const finalHtml = PRESS_CSS + html;
       setGeneratedHtml(finalHtml);
+
+      // 생성 성공 → 크레딧 차감
+      if (creditCtx.creditInfo) {
+        if (creditCtx.userId) {
+          const cr = await useCredit(creditCtx.userId);
+          if (cr.success) creditCtx.setCreditInfo({ credits: cr.remaining, totalUsed: (creditCtx.creditInfo.totalUsed || 0) + 1 });
+        } else {
+          const next = consumeGuestCredit();
+          if (next) creditCtx.setCreditInfo({ credits: next.credits, totalUsed: next.totalUsed });
+        }
+      }
 
       // 5.5) 품질 평가 (규칙 기반, OLD evaluateContentQuality 동등)
       try {

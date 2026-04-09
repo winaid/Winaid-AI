@@ -6,6 +6,9 @@ import { supabase } from '../../../lib/supabase';
 import { CATEGORIES } from '../../../lib/constants';
 import { sanitizeHtml } from '../../../lib/sanitize';
 import { applyContentFilters } from '../../../lib/medicalLawFilter';
+import { useCreditContext } from '../layout';
+import { useCredit } from '../../../lib/creditService';
+import { consumeGuestCredit } from '../../../lib/guestCredits';
 
 const inputCls = 'w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm outline-none focus:border-blue-400 focus:bg-white focus:ring-2 focus:ring-blue-500/10 transition-all placeholder:text-slate-300';
 
@@ -26,6 +29,7 @@ function formatTime(seconds: number) {
 }
 
 export default function YoutubePage() {
+  const creditCtx = useCreditContext();
   // ── Step 1 ──
   const [youtubeUrl, setYoutubeUrl] = useState('');
   const [isExtracting, setIsExtracting] = useState(false);
@@ -209,6 +213,13 @@ ${summaryText.slice(0, 2000)}
   const handleGenerate = async () => {
     const topic = selectedTopic || customTopic.trim();
     if (!topic || !transcript) return;
+
+    // 크레딧 체크
+    if (creditCtx.creditInfo && creditCtx.creditInfo.credits <= 0) {
+      setError(creditCtx.userId ? '크레딧이 모두 소진되었습니다.' : '무료 체험 크레딧이 모두 소진되었습니다.');
+      return;
+    }
+
     setIsGenerating(true);
     setGeneratedContent(null);
     setScores(null);
@@ -262,6 +273,17 @@ ${summaryText.slice(0, 2000)}
 
       setGeneratedContent(html);
       setPipelineStep('result');
+
+      // 생성 성공 → 크레딧 차감
+      if (creditCtx.creditInfo) {
+        if (creditCtx.userId) {
+          const cr = await useCredit(creditCtx.userId);
+          if (cr.success) creditCtx.setCreditInfo({ credits: cr.remaining, totalUsed: (creditCtx.creditInfo.totalUsed || 0) + 1 });
+        } else {
+          const next = consumeGuestCredit();
+          if (next) creditCtx.setCreditInfo({ credits: next.credits, totalUsed: next.totalUsed });
+        }
+      }
     } catch (err) {
       alert(err instanceof Error ? err.message : '생성 실패');
     } finally {
