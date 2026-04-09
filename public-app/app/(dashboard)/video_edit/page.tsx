@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useRef, useCallback } from 'react';
+import ModeSelector from '../../../components/video-edit/ModeSelector';
+import AiShortsWizard from '../../../components/video-edit/AiShortsWizard';
 import StepIndicator from '../../../components/video-edit/StepIndicator';
 import StepCrop from '../../../components/video-edit/StepCrop';
 import StepSilence from '../../../components/video-edit/StepSilence';
@@ -14,7 +16,7 @@ import CompletionScreen from '../../../components/video-edit/CompletionScreen';
 import PipelineProgress, { type AutoStepStatus } from '../../../components/video-edit/PipelineProgress';
 import StepStyle from '../../../components/video-edit/StepStyle';
 import {
-  type PipelineState, type PipelineMode, type FileInfo, type HospitalInfo,
+  type PipelineState, type PipelineMode, type FileInfo, type HospitalInfo, type EntryMode,
   type StepCropState, type StepStyleState, type StepSilenceState, type StepSubtitleState,
   type StepEffectsState, type StepZoomState, type StepBgmState, type StepIntroState, type StepThumbnailState,
   type SubtitleSegment, type SoundEffect,
@@ -45,6 +47,7 @@ function formatFileSize(bytes: number): string {
 // ══════════════════════════════════════════
 
 export default function VideoEditPage() {
+  const [entryMode, setEntryMode] = useState<EntryMode>('select');
   const [state, setState] = useState<PipelineState>(INITIAL_PIPELINE_STATE);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
@@ -623,9 +626,25 @@ export default function VideoEditPage() {
           🎬 쇼츠 메이커
         </h1>
         <p className="text-sm text-slate-500 mt-1">
-          영상 하나로 단계별 처리를 거쳐 쇼츠 완성본을 만듭니다
+          촬영 영상 편집 또는 AI로 처음부터 만들기
         </p>
       </div>
+
+      {/* ══════ 진입점 모드 선택 ══════ */}
+      {entryMode === 'select' && (
+        <ModeSelector
+          onSelectVideo={() => setEntryMode('video')}
+          onSelectAi={() => setEntryMode('ai')}
+        />
+      )}
+
+      {/* ══════ AI 쇼츠 생성기 ══════ */}
+      {entryMode === 'ai' && (
+        <AiShortsWizard onBack={() => setEntryMode('select')} />
+      )}
+
+      {/* ══════ 촬영 영상 파이프라인 ══════ */}
+      {entryMode === 'video' && (<>
 
       {/* 모드 토글 */}
       <div className="flex gap-1 mb-4 bg-slate-100 rounded-xl p-1">
@@ -838,6 +857,8 @@ export default function VideoEditPage() {
           </button>
         </div>
       )}
+
+      </>)}
     </div>
   );
 }

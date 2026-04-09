@@ -277,3 +277,77 @@ function getStepResultUrl(state: PipelineState, step: number): string | undefine
     default: return undefined;
   }
 }
+
+// ══════════════════════════════════════════════════
+// AI 쇼츠 생성기 타입
+// ══════════════════════════════════════════════════
+
+export type EntryMode = 'select' | 'video' | 'ai';
+export type AiInputType = 'keyword' | 'url' | 'manual';
+export type AiTone = 'professional' | 'friendly' | 'humorous';
+export type AiDuration = 30 | 60 | 90;
+
+export interface ScriptScene {
+  sceneNumber: number;
+  startTime: number;
+  endTime: number;
+  narration: string;
+  imagePrompt: string;
+  imageUrl?: string;
+  violations: Array<{
+    keyword: string;
+    category: string;
+    suggestion: string;
+    severity: 'high' | 'medium';
+  }>;
+}
+
+export interface AiShortsState {
+  currentStep: number; // 0=A대본, 1=B스타일, 2=C목소리, 3=D이미지, 4=E조립, 5=완성
+
+  // STEP A: 대본
+  inputType: AiInputType;
+  keyword: string;
+  url: string;
+  manualScript: string;
+  duration: AiDuration;
+  tone: AiTone;
+  scenes: ScriptScene[];
+
+  // STEP B: 스타일
+  styleId: string;
+
+  // STEP C: 목소리
+  voiceName: string;
+  voiceSpeed: number;
+  audioUrl?: string;
+
+  // STEP D: 이미지
+  // (imageUrl은 각 ScriptScene에 포함)
+
+  // STEP E: 조립 결과
+  resultUrl?: string;
+  thumbnailUrl?: string;
+
+  isProcessing: boolean;
+  progress: string;
+}
+
+export const INITIAL_AI_SHORTS_STATE: AiShortsState = {
+  currentStep: 0,
+  inputType: 'keyword',
+  keyword: '',
+  url: '',
+  manualScript: '',
+  duration: 60,
+  tone: 'friendly',
+  scenes: [],
+  styleId: 'medical_clean',
+  voiceName: 'ko-KR-Wavenet-A',
+  voiceSpeed: 1.0,
+  isProcessing: false,
+  progress: '',
+};
+
+export const AI_STEP_LABELS = ['대본', '스타일', '목소리', '이미지', '조립', '완성'];
+
