@@ -75,8 +75,8 @@ export default function StepStyle({ state, onUpdate, onProcess, onNext, onPrev, 
                         {s.name}
                       </div>
                       <div className="text-[9px] text-slate-400 mt-0.5">{s.description}</div>
-                      {!s.ready && s.id !== 'original' && (
-                        <div className="text-[8px] text-amber-500 font-bold mt-0.5">준비 중</div>
+                      {s.processingTime && s.id !== 'original' && (
+                        <div className="text-[8px] text-slate-400 mt-0.5">{s.processingTime}</div>
                       )}
                     </button>
                   );
@@ -102,10 +102,10 @@ export default function StepStyle({ state, onUpdate, onProcess, onNext, onPrev, 
         </button>
         {!hasResult && !isOriginal ? (
           <button type="button" onClick={onProcess}
-            disabled={isProcessing || !selectedStyle?.ready}
+            disabled={isProcessing}
             className="flex-1 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 disabled:opacity-40 transition-all text-sm flex items-center justify-center gap-2">
             {isProcessing ? (<><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />{progress}</>) :
-             !selectedStyle?.ready ? '🚧 이 스타일은 준비 중입니다' : '🎨 스타일 변환'}
+             `🎨 스타일 변환 (${selectedStyle?.processingTime || ''})`}
           </button>
         ) : (
           <button type="button" onClick={onNext}
