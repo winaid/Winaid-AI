@@ -30,22 +30,17 @@ export async function POST(request: NextRequest) {
     const accessToken = await getGcpAccessToken();
     if (!accessToken) return NextResponse.json({ error: 'Google Cloud 인증 실패.' }, { status: 503 });
 
+    // Gemini/Chirp3 목소리는 v1 API 미지원 → Legacy fallback
     const engine = body.engine || 'legacy';
-    let ttsBody: Record<string, unknown>;
+    const effectiveVoice = (engine === 'gemini' || engine === 'chirp3_hd')
+      ? 'ko-KR-Wavenet-A'
+      : (body.voice_name || 'ko-KR-Wavenet-A');
 
-    if (engine === 'gemini') {
-      ttsBody = {
-        input: { text: body.text.slice(0, 200), ...(body.style_prompt ? { prompt: body.style_prompt } : {}) },
-        voice: { languageCode: 'ko-KR', name: body.voice_name, ...(body.model ? { modelName: body.model } : {}) },
-        audioConfig: { audioEncoding: 'MP3' },
-      };
-    } else {
-      ttsBody = {
-        input: { text: body.text.slice(0, 200) },
-        voice: { languageCode: 'ko-KR', name: body.voice_name || 'ko-KR-Wavenet-A' },
-        audioConfig: { audioEncoding: 'MP3', speakingRate: body.speed || 1.0, sampleRateHertz: 24000 },
-      };
-    }
+    const ttsBody = {
+      input: { text: body.text.slice(0, 200) },
+      voice: { languageCode: 'ko-KR', name: effectiveVoice },
+      audioConfig: { audioEncoding: 'MP3', speakingRate: body.speed || 1.0, sampleRateHertz: 24000 },
+    };
 
     const ttsRes = await fetch('https://texttospeech.googleapis.com/v1/text:synthesize', {
       method: 'POST',

@@ -52,35 +52,16 @@ export async function POST(request: NextRequest) {
       // 엔진별 요청 body 구성
       let ttsBody: Record<string, unknown>;
 
-      if (engine === 'gemini') {
-        // Gemini 2.5 TTS — 모델 지정 + 스타일 프롬프트
-        ttsBody = {
-          input: {
-            text: scene.narration,
-            ...(body.style_prompt ? { prompt: body.style_prompt } : {}),
-          },
-          voice: {
-            languageCode: 'ko-KR',
-            name: voiceName,  // 'Kore', 'Charon' 등
-            ...(body.model ? { modelName: body.model } : {}),
-          },
-          audioConfig: { audioEncoding: 'MP3' },
-        };
-      } else if (engine === 'chirp3_hd') {
-        // Chirp 3 HD
-        ttsBody = {
-          input: { text: scene.narration },
-          voice: { languageCode: 'ko-KR', name: voiceName },
-          audioConfig: { audioEncoding: 'MP3' },
-        };
-      } else {
-        // Legacy (Standard/WaveNet/Neural2)
-        ttsBody = {
-          input: { text: scene.narration },
-          voice: { languageCode: 'ko-KR', name: voiceName },
-          audioConfig: { audioEncoding: 'MP3', speakingRate: speed, pitch: 0, sampleRateHertz: 24000 },
-        };
-      }
+      // Gemini/Chirp3 목소리는 v1 API에서 미지원 → Legacy 형식으로 fallback
+      const effectiveVoice = (engine === 'gemini' || engine === 'chirp3_hd')
+        ? 'ko-KR-Wavenet-A'  // Gemini/Chirp3 선택해도 안정적인 Wavenet으로 fallback
+        : voiceName;
+
+      ttsBody = {
+        input: { text: scene.narration },
+        voice: { languageCode: 'ko-KR', name: effectiveVoice },
+        audioConfig: { audioEncoding: 'MP3', speakingRate: speed, pitch: 0, sampleRateHertz: 24000 },
+      };
 
       const ttsRes = await fetch('https://texttospeech.googleapis.com/v1/text:synthesize', {
         method: 'POST',
