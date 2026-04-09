@@ -73,7 +73,7 @@ export default function CardNewsPage() {
   const logoInputRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
     if (!isSupabaseConfigured) return;
-    (async () => { try { const sb = getSupabaseClient(); const { data: { user } } = await sb.auth.getUser(); if (user?.user_metadata?.name) setHospitalName(user.user_metadata.name); } catch {} })();
+    (async () => { try { const sb = getSupabaseClient(); const { data: { user } } = await sb.auth.getUser(); const hName = user?.user_metadata?.hospital_name || user?.user_metadata?.hospitalName; if (hName) setHospitalName(hName); } catch {} })();
   }, []);
   const [slideCount, setSlideCount] = useState(0); // 0 = 자동
   const [proCardRatio, setProCardRatio] = useState<'1:1' | '3:4' | '4:5' | '9:16' | '16:9'>('1:1');
