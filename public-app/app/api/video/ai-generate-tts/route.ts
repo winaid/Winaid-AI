@@ -7,7 +7,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { gateGuestRequest } from '../../../../lib/guestRateLimit';
 import { getGcpAccessToken } from '../../../../lib/gcpAuth';
-import { getFfmpegPath, getFfprobePath } from '../../../../lib/ffmpegPath';
 
 export const maxDuration = 120;
 export const dynamic = 'force-dynamic';
@@ -96,93 +95,30 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: firstError || 'TTS 생성에 실패했습니다. Google Cloud Console에서 Text-to-Speech API를 활성화했는지 확인하세요.' }, { status: 502 });
     }
 
-    // FFmpeg로 합치기
-    const fs = await import('fs');
-    const path = await import('path');
-    const os = await import('os');
-    const { execSync } = await import('child_process');
-
-    const tmpDir = os.tmpdir();
-    const ts = Date.now();
-    const tmpFiles: string[] = [];
-
-    const ffmpeg = getFfmpegPath();
-    const ffprobe = getFfprobePath();
-
-    if (validBuffers.length === 1) {
-      // FFmpeg 없거나 장면 1개면 첫 번째 유효한 오디오 반환
-      const buf = new Uint8Array(validBuffers[0]);
-      return new NextResponse(buf, {
-        status: 200,
-        headers: {
-          'Content-Type': 'audio/mpeg',
-          'X-Tts-Metadata': JSON.stringify({
-            total_duration: 0,
-            scene_timestamps: body.scenes.map((s, i) => ({ scene_number: s.scene_number, start_time: i * 5, end_time: (i + 1) * 5 })),
-          }),
-        },
-      });
+    // 모든 유효한 오디오를 단순 연결 (MP3 이어붙이기)
+    const totalLength = validBuffers.reduce((sum, b) => sum + b.length, 0);
+    const combined = Buffer.alloc(totalLength);
+    let offset = 0;
+    for (const buf of validBuffers) {
+      buf.copy(combined, offset);
+      offset += buf.length;
     }
 
-    // 장면별 파일 저장
-    let currentTime = 0;
-    const concatParts: string[] = [];
+    // 간이 타임스탬프 (장면당 약 3~5초 추정)
+    const sceneTimestamps = body.scenes.map((s: { scene_number: number }, i: number) => ({
+      scene_number: s.scene_number,
+      start_time: i * 4,
+      end_time: (i + 1) * 4,
+    }));
 
-    // 0.3초 무음 파일
-    const silencePath = path.join(tmpDir, `tts_silence_${ts}.mp3`);
-    tmpFiles.push(silencePath);
-    try {
-      execSync(`"${ffmpeg}" -y -f lavfi -i anullsrc=r=24000:cl=mono -t 0.3 -c:a libmp3lame "${silencePath}"`, { timeout: 10000, stdio: 'pipe' });
-    } catch { /* 무음 생성 실패 무시 */ }
-
-    for (let i = 0; i < audioBuffers.length; i++) {
-      const buf = audioBuffers[i];
-      if (buf.length === 0) continue;
-
-      const scenePath = path.join(tmpDir, `tts_scene_${ts}_${i}.mp3`);
-      tmpFiles.push(scenePath);
-      fs.writeFileSync(scenePath, buf);
-
-      // 길이 측정
-      let duration = 3;
-      try {
-        const probe = execSync(`"${ffprobe}" -v error -show_entries format=duration -of csv=p=0 "${scenePath}"`, { timeout: 10000 }).toString().trim();
-        duration = parseFloat(probe) || 3;
-      } catch { /* fallback */ }
-
-      timestamps.push({
-        scene_number: body.scenes[i].scene_number,
-        start_time: Math.round(currentTime * 10) / 10,
-        end_time: Math.round((currentTime + duration) * 10) / 10,
-      });
-
-      concatParts.push(`file '${scenePath}'`);
-      if (i < audioBuffers.length - 1 && fs.existsSync(silencePath)) {
-        concatParts.push(`file '${silencePath}'`);
-        currentTime += 0.3;
-      }
-      currentTime += duration;
-    }
-
-    // concat
-    const listPath = path.join(tmpDir, `tts_list_${ts}.txt`);
-    const outputPath = path.join(tmpDir, `tts_output_${ts}.mp3`);
-    tmpFiles.push(listPath, outputPath);
-
-    fs.writeFileSync(listPath, concatParts.join('\n'));
-    execSync(`"${ffmpeg}" -y -f concat -safe 0 -i "${listPath}" -c copy "${outputPath}"`, { timeout: 60000, stdio: 'pipe' });
-
-    const resultBuffer = fs.readFileSync(outputPath);
-    for (const f of tmpFiles) { try { fs.unlinkSync(f); } catch { /* */ } }
-
-    return new NextResponse(resultBuffer, {
+    return new NextResponse(new Uint8Array(combined), {
       status: 200,
       headers: {
         'Content-Type': 'audio/mpeg',
         'Content-Disposition': 'attachment; filename="narration.mp3"',
         'X-Tts-Metadata': JSON.stringify({
-          total_duration: Math.round(currentTime * 10) / 10,
-          scene_timestamps: timestamps,
+          total_duration: sceneTimestamps.length * 4,
+          scene_timestamps: sceneTimestamps,
         }),
       },
     });

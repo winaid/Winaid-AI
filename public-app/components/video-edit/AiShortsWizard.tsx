@@ -352,35 +352,23 @@ function StepVoice({ state, patch }: { state: AiShortsState; patch: (p: Partial<
 
   return (
     <div className="space-y-5">
-      {/* 엔진 탭 */}
-      <div className="flex gap-1 bg-slate-100 rounded-xl p-1">
-        {(['gemini', 'chirp3_hd', 'legacy'] as TtsEngine[]).map(e => (
-          <button key={e} type="button" onClick={() => setEngine(e)}
-            className={`flex-1 py-1.5 text-[10px] font-bold rounded-lg transition-all ${engine === e ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500'}`}>
-            {ENGINE_LABELS[e].label}
-          </button>
-        ))}
-      </div>
-
-      {/* 추천 (Gemini만) */}
-      {engine === 'gemini' && recommended.length > 0 && (
-        <div className="space-y-1.5">
-          <label className="text-[10px] font-semibold text-indigo-500">⭐ 병원 영상 추천</label>
-          <div className="grid grid-cols-2 gap-1.5">
-            {recommended.map(v => (
-              <button key={v.id} type="button" onClick={() => selectVoice(v)}
-                className={`p-2 rounded-lg border text-left text-[10px] transition-all ${state.voiceId === v.id ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200 hover:border-indigo-300'}`}>
-                <div className={`font-bold ${state.voiceId === v.id ? 'text-indigo-700' : 'text-slate-700'}`}>{v.name}</div>
-                <div className="text-slate-400">{v.description.split('—')[0]}</div>
-              </button>
-            ))}
-          </div>
+      {/* 한국어 목소리 (Legacy — Wavenet/Neural2/Standard) */}
+      <div className="space-y-1.5">
+        <label className="text-[10px] font-semibold text-indigo-500">⭐ 추천 목소리</label>
+        <div className="grid grid-cols-2 gap-1.5">
+          {getVoicesByEngine('legacy').filter(v => v.name.includes('Wavenet')).map(v => (
+            <button key={v.id} type="button" onClick={() => selectVoice(v)}
+              className={`p-2 rounded-lg border text-left text-[10px] transition-all ${state.voiceId === v.id ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200 hover:border-indigo-300'}`}>
+              <div className={`font-bold ${state.voiceId === v.id ? 'text-indigo-700' : 'text-slate-700'}`}>{v.label}</div>
+              <div className="text-slate-400">{v.description}</div>
+            </button>
+          ))}
         </div>
-      )}
+      </div>
 
       {/* 성별 필터 */}
       <div className="flex gap-1">
-        {([['all', '전체'], ['female', '여성'], ['male', '남성'], ['neutral', '중성']] as const).map(([id, label]) => (
+        {([['all', '전체'], ['female', '여성'], ['male', '남성']] as const).map(([id, label]) => (
           <button key={id} type="button" onClick={() => setGenderFilter(id)}
             className={`px-2 py-1 text-[9px] font-bold rounded-md ${genderFilter === id ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500'}`}>
             {label}
@@ -406,23 +394,8 @@ function StepVoice({ state, patch }: { state: AiShortsState; patch: (p: Partial<
         ))}
       </div>
 
-      {/* 스타일 프롬프트 (Gemini만) */}
-      {engine === 'gemini' && (
-        <div className="space-y-1.5">
-          <label className="text-[10px] font-semibold text-slate-500">말하기 스타일</label>
-          <div className="flex gap-1 flex-wrap">
-            {Object.entries(TTS_STYLE_PRESETS).map(([key, preset]) => (
-              <button key={key} type="button" onClick={() => patch({ voiceStylePreset: key })}
-                className={`px-2 py-1 text-[10px] font-bold rounded-md ${state.voiceStylePreset === key ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600'}`}>
-                {preset.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* 속도 (Legacy만) */}
-      {engine === 'legacy' && (
+      {/* 속도 */}
+      {(
         <div className="space-y-1.5">
           <label className="text-[10px] font-semibold text-slate-500">속도: ×{state.voiceSpeed.toFixed(1)}</label>
           <input type="range" min={0.8} max={1.2} step={0.1} value={state.voiceSpeed}
