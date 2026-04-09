@@ -196,9 +196,10 @@ function StepScript({ state, patch, setError }: { state: AiShortsState; patch: (
                   <span className="text-[9px] text-slate-400">{scene.startTime.toFixed(0)}~{scene.endTime.toFixed(0)}초</span>
                 </div>
                 {editingIdx === idx ? (
-                  <textarea value={scene.narration} rows={2} autoFocus
+                  <textarea value={scene.narration} rows={2}
+                    ref={el => { if (el) requestAnimationFrame(() => el.focus()); }}
                     onChange={e => updateNarration(idx, e.target.value)}
-                    onBlur={() => { if (!movingRef.current) setEditingIdx(null); movingRef.current = false; }}
+                    onBlur={() => { setTimeout(() => { if (!movingRef.current) setEditingIdx(null); movingRef.current = false; }, 10); }}
                     onKeyDown={e => {
                       if (e.key === 'Enter' && !e.shiftKey) {
                         e.preventDefault();

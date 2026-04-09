@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { validateMedicalAd, countViolations } from '../../lib/medicalAdValidation';
 import { downloadSrt, type SrtSegment } from '../../lib/srtUtils';
 import type { PipelineState, StepSubtitleState, SubtitleStyle, SubtitlePosition, SubtitleSegment } from './types';
@@ -115,9 +115,10 @@ export default function StepSubtitle({ state, onUpdate, onProcess, onNext, onPre
                       </div>
                       <div className="flex-1">
                         {isEditing ? (
-                          <input type="text" value={seg.text} autoFocus
+                          <input type="text" value={seg.text}
+                            ref={el => { if (el) requestAnimationFrame(() => el.focus()); }}
                             onChange={e => updateSubtitleText(idx, e.target.value)}
-                            onBlur={() => { if (!movingRef.current) setEditingIdx(null); movingRef.current = false; }}
+                            onBlur={() => { setTimeout(() => { if (!movingRef.current) setEditingIdx(null); movingRef.current = false; }, 10); }}
                             onKeyDown={e => {
                               if (e.key === 'Enter') {
                                 e.preventDefault();

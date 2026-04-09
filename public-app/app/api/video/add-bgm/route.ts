@@ -23,9 +23,25 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData();
     const res = await proxyFormData('/api/video/add-bgm', formData, 120000);
 
+    if (!res.ok) {
+      // BGM 실패 → 원본 파일 그대로 반환 (graceful skip)
+      const file = formData.get('file') as File | null;
+      if (file) {
+        const buf = await file.arrayBuffer();
+        return new NextResponse(buf, {
+          status: 200,
+          headers: {
+            'Content-Type': 'video/mp4',
+            'X-Bgm-Metadata': JSON.stringify({ bgm_applied: false, reason: 'BGM 서버 처리 실패. 원본을 반환합니다.' }),
+          },
+        });
+      }
+      return NextResponse.json({ error: 'BGM 합성 실패' }, { status: 500 });
+    }
+
     const body = await res.arrayBuffer();
     return new NextResponse(body, {
-      status: res.status,
+      status: 200,
       headers: {
         'Content-Type': res.headers.get('content-type') || 'video/mp4',
         ...copyHeader(res, 'x-bgm-metadata'),
