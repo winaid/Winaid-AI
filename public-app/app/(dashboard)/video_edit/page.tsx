@@ -253,13 +253,15 @@ export default function VideoEditPage() {
         ))}
       </div>
 
-      {/* 스텝 인디케이터 */}
-      <div className="mb-6 bg-white border border-slate-200 rounded-xl px-3 py-1">
-        <StepIndicator
-          state={state}
-          onStepClick={state.mode === 'manual' && !stepProcessing ? goStep : undefined}
-        />
-      </div>
+      {/* 스텝 인디케이터 — 단계별 모드 or 자동 모드 처리 중에만 표시 */}
+      {(state.mode === 'manual' || state.isProcessing) && (
+        <div className="mb-6 bg-white border border-slate-200 rounded-xl px-3 py-1">
+          <StepIndicator
+            state={state}
+            onStepClick={state.mode === 'manual' && !stepProcessing ? goStep : undefined}
+          />
+        </div>
+      )}
 
       {/* 자동 모드 진행 중 */}
       {state.isProcessing && state.mode === 'auto' && (
@@ -283,6 +285,20 @@ export default function VideoEditPage() {
       {/* ══════ STEP 0: 업로드 ══════ */}
       {state.currentStep === 0 && (
         <div className="space-y-6">
+
+          {/* 자동 모드 — 간결한 안내 */}
+          {state.mode === 'auto' && !state.fileInfo && (
+            <div className="p-6 bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl text-center space-y-2">
+              <div className="text-3xl">⚡</div>
+              <div className="text-base font-black text-blue-800">영상만 올리면 끝</div>
+              <div className="text-xs text-blue-600 leading-relaxed">
+                세로 크롭 → 무음 제거 → 자막 → 효과음 → BGM<br />
+                전 단계를 기본값으로 자동 처리합니다
+              </div>
+            </div>
+          )}
+
+          {/* 업로드 영역 */}
           <div
             className={`relative border-2 border-dashed rounded-2xl p-8 text-center transition-all cursor-pointer ${
               dragOver ? 'border-blue-400 bg-blue-50'
@@ -325,20 +341,38 @@ export default function VideoEditPage() {
             )}
           </div>
 
-          {/* 업로드 완료 시 다음 버튼 */}
+          {/* 업로드 완료 시 — 모드별 CTA 차별화 */}
           {state.fileInfo && (
-            <div className="flex gap-3">
-              {state.mode === 'auto' ? (
-                <button type="button" onClick={runAutoMode} disabled={state.isProcessing || !!error}
-                  className="flex-1 py-4 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 disabled:opacity-40 transition-all text-sm flex items-center justify-center gap-2">
-                  ⚡ 자동 처리 시작
-                </button>
-              ) : (
-                <button type="button" onClick={() => goStep(1)}
-                  className="flex-1 py-4 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-all text-sm">
-                  다음 단계 →
-                </button>
-              )}
+            state.mode === 'auto' ? (
+              <button type="button" onClick={runAutoMode} disabled={state.isProcessing || !!error}
+                className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black rounded-xl hover:from-blue-700 hover:to-indigo-700 disabled:opacity-40 transition-all text-base flex items-center justify-center gap-2 shadow-lg shadow-blue-200">
+                ⚡ 자동 처리 시작
+              </button>
+            ) : (
+              <button type="button" onClick={() => goStep(1)}
+                className="w-full py-4 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-all text-sm">
+                다음 단계 →
+              </button>
+            )
+          )}
+
+          {/* 단계별 모드 — 각 단계 미리 설명 */}
+          {state.mode === 'manual' && !state.fileInfo && (
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { icon: '📐', label: '세로 크롭', desc: '9:16 비율' },
+                { icon: '✂️', label: '무음 제거', desc: '자동 컷' },
+                { icon: '💬', label: '자막 생성', desc: 'AI 인식' },
+                { icon: '🎵', label: '효과음', desc: '자동 배치' },
+                { icon: '🎶', label: 'BGM', desc: '배경음악' },
+                { icon: '🎬', label: '인트로', desc: '오프닝' },
+              ].map(s => (
+                <div key={s.label} className="p-3 bg-slate-50 rounded-xl text-center">
+                  <div className="text-lg">{s.icon}</div>
+                  <div className="text-[11px] font-bold text-slate-700 mt-0.5">{s.label}</div>
+                  <div className="text-[10px] text-slate-400">{s.desc}</div>
+                </div>
+              ))}
             </div>
           )}
         </div>
