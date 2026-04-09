@@ -41,14 +41,17 @@ export default function CardNewsCanvas({
   const internalChangeRef = useRef(false);
   const prevSlideJsonRef = useRef('');
 
-  // 선택된 텍스트 객체 → 플로팅 툴바 표시
+  // 선택된 객체 → 플로팅 툴바 표시
   const [selectedObjInfo, setSelectedObjInfo] = useState<{
-    type: 'text' | 'other';
+    type: 'text' | 'image' | 'other';
     top: number;
     left: number;
     textAlign?: string;
     name?: string;
   } | null>(null);
+
+  // 이미지 필터 상태
+  const [imgFilters, setImgFilters] = useState({ brightness: 0, contrast: 0, saturation: 0 });
 
   const cardWidth = 1080;
   const cardHeight = (() => {
@@ -397,14 +400,27 @@ export default function CardNewsCanvas({
       function updateToolbar(obj: any) {
         if (!obj) { setSelectedObjInfo(null); return; }
         const isText = obj.type === 'textbox' || obj.type === 'i-text' || obj.type === 'text';
+        const isImage = obj.type === 'image';
         const bounds = obj.getBoundingRect();
         setSelectedObjInfo({
-          type: isText ? 'text' : 'other',
-          top: Math.max(0, bounds.top * displayScale - 40),
+          type: isText ? 'text' : isImage ? 'image' : 'other',
+          top: Math.max(0, bounds.top * displayScale - 44),
           left: bounds.left * displayScale,
           textAlign: obj.textAlign,
           name: obj.name,
         });
+        // 이미지 선택 시 현재 필터값 읽기
+        if (isImage) {
+          const filters = obj.filters || [];
+          const br = filters.find((f: any) => f?.type === 'Brightness');
+          const ct = filters.find((f: any) => f?.type === 'Contrast');
+          const st = filters.find((f: any) => f?.type === 'Saturation');
+          setImgFilters({
+            brightness: br?.brightness ?? 0,
+            contrast: ct?.contrast ?? 0,
+            saturation: st?.saturation ?? 0,
+          });
+        }
       }
 
       // ════════ 스냅 가이드라인 (중앙 정렬 보조선) ════════
@@ -490,6 +506,64 @@ export default function CardNewsCanvas({
       }}
     >
       <canvas ref={canvasElRef} />
+
+      {/* 플로팅 이미지 필터 — 이미지 선택 시 표시 */}
+      {selectedObjInfo && selectedObjInfo.type === 'image' && (
+        <div
+          className="absolute z-20 bg-white/95 backdrop-blur-sm rounded-xl shadow-lg border border-slate-200 p-3 space-y-2"
+          style={{ top: Math.max(4, selectedObjInfo.top), left: Math.max(4, Math.min(selectedObjInfo.left, displayWidth - 200)) }}
+        >
+          {([
+            { key: 'brightness' as const, label: '밝기', min: -0.5, max: 0.5, step: 0.05, FilterClass: 'Brightness' },
+            { key: 'contrast' as const, label: '대비', min: -0.5, max: 0.5, step: 0.05, FilterClass: 'Contrast' },
+            { key: 'saturation' as const, label: '채도', min: -1, max: 1, step: 0.1, FilterClass: 'Saturation' },
+          ]).map(f => (
+            <div key={f.key} className="flex items-center gap-2">
+              <span className="text-[10px] text-slate-500 w-6">{f.label}</span>
+              <input
+                type="range" min={f.min} max={f.max} step={f.step}
+                value={imgFilters[f.key]}
+                onChange={async (e) => {
+                  const val = Number(e.target.value);
+                  setImgFilters(prev => ({ ...prev, [f.key]: val }));
+                  const canvas = fabricRef.current;
+                  if (!canvas) return;
+                  const obj = canvas.getActiveObject();
+                  if (!obj || obj.type !== 'image') return;
+                  const F = await import('fabric');
+                  // 기존 같은 타입 필터 제거
+                  obj.filters = (obj.filters || []).filter((fl: any) => fl?.type !== f.FilterClass);
+                  // 새 필터 추가 (0이 아닐 때만)
+                  if (val !== 0) {
+                    const FilterCls = (F.filters as any)?.[f.FilterClass];
+                    if (FilterCls) obj.filters.push(new FilterCls({ [f.key]: val }));
+                  }
+                  obj.applyFilters();
+                  canvas.renderAll();
+                }}
+                className="w-20 accent-blue-500"
+              />
+              <span className="text-[9px] text-slate-400 w-8">{imgFilters[f.key] > 0 ? '+' : ''}{(imgFilters[f.key] * 100).toFixed(0)}%</span>
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={async () => {
+              setImgFilters({ brightness: 0, contrast: 0, saturation: 0 });
+              const canvas = fabricRef.current;
+              if (!canvas) return;
+              const obj = canvas.getActiveObject();
+              if (!obj || obj.type !== 'image') return;
+              obj.filters = [];
+              obj.applyFilters();
+              canvas.renderAll();
+            }}
+            className="w-full text-[10px] text-slate-400 hover:text-red-500 transition-colors"
+          >
+            초기화
+          </button>
+        </div>
+      )}
 
       {/* 플로팅 정렬 툴바 — 텍스트 선택 시 표시 */}
       {selectedObjInfo && selectedObjInfo.type === 'text' && (
