@@ -108,7 +108,9 @@ export async function POST(request: NextRequest) {
       ...(dentalTerms ? {
         adaptation: {
           phraseSets: [{
-            phrases: DENTAL_PHRASE_HINTS.map(phrase => ({ value: phrase, boost: 10 })),
+            inlinePhraseSet: {
+              phrases: DENTAL_PHRASE_HINTS.map(phrase => ({ value: phrase, boost: 10 })),
+            },
           }],
         },
       } : {}),
