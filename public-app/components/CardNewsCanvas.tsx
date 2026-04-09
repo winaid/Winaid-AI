@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { SlideData, CardNewsTheme } from '../lib/cardNewsLayouts';
 import type { CardTemplate } from '../lib/cardTemplateService';
 import type { DesignPresetStyle } from '../lib/cardNewsLayouts';
@@ -38,10 +38,17 @@ export default function CardNewsCanvas({
 }: Props) {
   const canvasElRef = useRef<HTMLCanvasElement | null>(null);
   const fabricRef = useRef<any>(null);
-  // 내부 변경 중이면 props 변화에 의한 재렌더 무시
   const internalChangeRef = useRef(false);
-  // 직전 slide JSON → 변경 감지
   const prevSlideJsonRef = useRef('');
+
+  // 선택된 텍스트 객체 → 플로팅 툴바 표시
+  const [selectedObjInfo, setSelectedObjInfo] = useState<{
+    type: 'text' | 'other';
+    top: number;
+    left: number;
+    textAlign?: string;
+    name?: string;
+  } | null>(null);
 
   const cardWidth = 1080;
   const cardHeight = (() => {
@@ -381,6 +388,78 @@ export default function CardNewsCanvas({
         }
       });
 
+      // ════════ 선택 이벤트 → 플로팅 툴바 ════════
+      canvas.on('selection:created', (e: any) => updateToolbar(e.selected?.[0]));
+      canvas.on('selection:updated', (e: any) => updateToolbar(e.selected?.[0]));
+      canvas.on('selection:cleared', () => setSelectedObjInfo(null));
+      canvas.on('object:moving', (e: any) => updateToolbar(e.target));
+
+      function updateToolbar(obj: any) {
+        if (!obj) { setSelectedObjInfo(null); return; }
+        const isText = obj.type === 'textbox' || obj.type === 'i-text' || obj.type === 'text';
+        const bounds = obj.getBoundingRect();
+        setSelectedObjInfo({
+          type: isText ? 'text' : 'other',
+          top: Math.max(0, bounds.top * displayScale - 40),
+          left: bounds.left * displayScale,
+          textAlign: obj.textAlign,
+          name: obj.name,
+        });
+      }
+
+      // ════════ 스냅 가이드라인 (중앙 정렬 보조선) ════════
+      const guidelines: any[] = [];
+
+      canvas.on('object:moving', (e: any) => {
+        const obj = e.target;
+        if (!obj) return;
+
+        // 기존 가이드라인 제거
+        guidelines.forEach(g => canvas.remove(g));
+        guidelines.length = 0;
+
+        const F2 = fabricRef.current ? require('fabric') : null;
+        if (!F2) return;
+
+        const centerX = cardWidth / 2;
+        const centerY = cardHeight / 2;
+        const objCenterX = (obj.left || 0) + (obj.width || 0) * (obj.scaleX || 1) / 2;
+        const objCenterY = (obj.top || 0) + (obj.height || 0) * (obj.scaleY || 1) / 2;
+
+        const SNAP_THRESHOLD = 10;
+
+        // 수직 중앙선
+        if (Math.abs(objCenterX - centerX) < SNAP_THRESHOLD) {
+          obj.set('left', centerX - (obj.width || 0) * (obj.scaleX || 1) / 2);
+          const vLine = new F.Line([centerX, 0, centerX, cardHeight], {
+            stroke: '#EF4444', strokeWidth: 1.5, strokeDashArray: [5, 5],
+            selectable: false, evented: false, name: '__guide__',
+          });
+          canvas.add(vLine);
+          guidelines.push(vLine);
+        }
+
+        // 수평 중앙선
+        if (Math.abs(objCenterY - centerY) < SNAP_THRESHOLD) {
+          obj.set('top', centerY - (obj.height || 0) * (obj.scaleY || 1) / 2);
+          const hLine = new F.Line([0, centerY, cardWidth, centerY], {
+            stroke: '#EF4444', strokeWidth: 1.5, strokeDashArray: [5, 5],
+            selectable: false, evented: false, name: '__guide__',
+          });
+          canvas.add(hLine);
+          guidelines.push(hLine);
+        }
+
+        canvas.renderAll();
+      });
+
+      canvas.on('object:modified', () => {
+        // 이동 완료 시 가이드라인 제거
+        guidelines.forEach(g => canvas.remove(g));
+        guidelines.length = 0;
+        canvas.renderAll();
+      });
+
       canvas.renderAll();
     };
 
@@ -410,9 +489,41 @@ export default function CardNewsCanvas({
         boxShadow: '0 20px 60px rgba(0,0,0,0.15)',
       }}
     >
-      <canvas
-        ref={canvasElRef}
-      />
+      <canvas ref={canvasElRef} />
+
+      {/* 플로팅 정렬 툴바 — 텍스트 선택 시 표시 */}
+      {selectedObjInfo && selectedObjInfo.type === 'text' && (
+        <div
+          className="absolute z-20 flex items-center gap-1 bg-white/95 backdrop-blur-sm rounded-lg shadow-lg border border-slate-200 px-1.5 py-1"
+          style={{ top: Math.max(4, selectedObjInfo.top), left: Math.max(4, selectedObjInfo.left) }}
+        >
+          {(['left', 'center', 'right'] as const).map(align => (
+            <button
+              key={align}
+              type="button"
+              onClick={() => {
+                const canvas = fabricRef.current;
+                if (!canvas) return;
+                const obj = canvas.getActiveObject();
+                if (obj) {
+                  obj.set('textAlign', align);
+                  canvas.renderAll();
+                  if (onSlideChange && obj.name) {
+                    if (obj.name === OBJ.TITLE) onSlideChange({ titleAlign: align });
+                  }
+                  setSelectedObjInfo(prev => prev ? { ...prev, textAlign: align } : null);
+                }
+              }}
+              className={`w-7 h-7 flex items-center justify-center rounded text-xs font-bold transition-all ${
+                selectedObjInfo.textAlign === align ? 'bg-blue-500 text-white' : 'text-slate-500 hover:bg-slate-100'
+              }`}
+              title={align === 'left' ? '좌측 정렬' : align === 'center' ? '가운데 정렬' : '우측 정렬'}
+            >
+              {align === 'left' ? '≡←' : align === 'center' ? '≡' : '→≡'}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
