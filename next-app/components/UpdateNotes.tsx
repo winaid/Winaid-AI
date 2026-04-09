@@ -7,17 +7,6 @@ const STORAGE_KEY = 'winaid_changelog_seen';
 
 const CHANGELOG = [
   {
-    category: '🎬 쇼츠 메이커 (NEW)',
-    items: [
-      '10단계 파이프라인 — 세로크롭 → 스타일 → 무음제거 → 자막 → 효과음 → 줌 → BGM → 인트로 → 썸네일',
-      'AI 쇼츠 생성기 — 키워드만 입력하면 대본+TTS+이미지+영상 자동 생성',
-      '15가지 스타일 변환 — 웹툰/애니/수채화/네온 등 Gemini AI로 변환',
-      'AI 자막 생성 — Google Cloud STT + 의료광고법 자동 검증',
-      'BGM — Jamendo 50만곡 무료 검색 + AI 음악 생성 (MusicGen)',
-      'TTS 나레이션 — Google Cloud TTS 한국어 목소리',
-    ],
-  },
-  {
     category: '▶️ 유튜브',
     items: [
       '영상 분석 — 시간순 전체 분석',
