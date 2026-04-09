@@ -405,7 +405,7 @@ function LandingSections() {
             </div>
             <h2 className="text-4xl md:text-6xl font-black leading-tight text-slate-900">
               이런 고민,<br />
-              <span className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">WINAID AI가 해결합니다</span>
+              <span className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">WINAI AI가 해결합니다</span>
             </h2>
           </div>
 
@@ -508,7 +508,7 @@ function LandingSections() {
         <div className="max-w-5xl mx-auto px-6 lg:px-8 relative">
           <div ref={aboutRef} className={`text-center mb-20 ${fade(aboutV)}`}>
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/80 backdrop-blur border border-white/60 shadow-sm mb-6">
-              <span className="text-amber-700 font-bold text-xs tracking-widest uppercase">ABOUT WINAID</span>
+              <span className="text-amber-700 font-bold text-xs tracking-widest uppercase">ABOUT WINAI</span>
             </div>
             <h2 className="text-4xl md:text-6xl font-black text-slate-900 leading-tight">
               {YEARS_OF_EXPERIENCE}년 노하우를<br />
@@ -612,7 +612,7 @@ function LandingSections() {
             </span>
           </div>
           <div className="pt-8 border-t border-slate-800/50 text-center text-xs text-slate-600 font-medium">
-            &copy; {new Date().getFullYear()} WINAID. All rights reserved.
+            &copy; {new Date().getFullYear()} WINAI. All rights reserved.
           </div>
         </div>
       </footer>

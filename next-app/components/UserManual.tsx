@@ -6,7 +6,7 @@ type SectionKey = 'overview' | 'blog' | 'cardnews' | 'press' | 'refine' | 'image
 
 const SECTIONS: { id: SectionKey; title: string; icon: string; items: { heading: string; body: string }[] }[] = [
   { id: 'overview', title: '서비스 소개', icon: '🏥', items: [
-    { heading: 'WINAID란?', body: 'WINAID는 병원 마케팅 전문 AI 콘텐츠 생성 플랫폼입니다. 블로그, 카드뉴스, 언론 보도자료를 AI가 자동으로 생성하며, 의료광고법 준수 여부까지 자동 검증합니다.' },
+    { heading: 'WINAI란?', body: 'WINAI는 병원 마케팅 전문 AI 콘텐츠 생성 플랫폼입니다. 블로그, 카드뉴스, 언론 보도자료를 AI가 자동으로 생성하며, 의료광고법 준수 여부까지 자동 검증합니다.' },
     { heading: '주요 기능', body: '• 블로그 글 생성 (네이버 SEO 최적화)\n• 카드뉴스 생성\n• 언론 보도자료 작성\n• AI 글 보정\n• AI 이미지 생성\n• 의료광고법 자동 검증' },
     { heading: '권장 브라우저', body: 'Chrome, Edge 최신 버전을 권장합니다.' },
   ]},

@@ -70,7 +70,7 @@ function analyzeContent(html: string, keyword?: string) {
     }
   }
 
-  // ── AI 냄새 검사 ──
+  // ── AI 느낌 검사 ──
   const aiIssues: string[] = [];
   let aiScore = 100;
   const aiPatterns: Array<{ re: RegExp; label: string; severity: number }> = [
@@ -206,7 +206,7 @@ ${textOnly}
         <button onClick={() => setExpanded(false)} className="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 hover:bg-slate-200">접기 ▲</button>
       </div>
       <div className="flex border-b border-slate-100">
-        {[{ id: 'overview' as const, label: '종합' }, { id: 'law' as const, label: '의료법' }, { id: 'seo' as const, label: 'SEO' }, { id: 'ai' as const, label: 'AI 냄새' }].map(t => (
+        {[{ id: 'overview' as const, label: '종합' }, { id: 'law' as const, label: '의료법' }, { id: 'seo' as const, label: 'SEO' }, { id: 'ai' as const, label: 'AI 느낌' }].map(t => (
           <button key={t.id} onClick={() => setTab(t.id)} className={`flex-1 py-2.5 text-xs font-bold transition-all ${tab === t.id ? 'text-violet-700 border-b-2 border-violet-500' : 'text-slate-400'}`}>{t.label}</button>
         ))}
       </div>
@@ -243,7 +243,7 @@ ${textOnly}
           )}
         </div>}
         {tab === 'seo' && <div><p className="text-xs font-bold text-slate-500 mb-2">SEO 점수: {analysis.seo.score}점</p>{renderIssues(analysis.seo.issues)}</div>}
-        {tab === 'ai' && <div><p className="text-xs font-bold text-slate-500 mb-2">AI 냄새 점수: {analysis.ai.score}점 (낮을수록 자연스러움)</p>{renderIssues(analysis.ai.issues)}</div>}
+        {tab === 'ai' && <div><p className="text-xs font-bold text-slate-500 mb-2">AI 느낌 점수: {analysis.ai.score}점 (낮을수록 자연스러움)</p>{renderIssues(analysis.ai.issues)}</div>}
       </div>
     </div>
   );

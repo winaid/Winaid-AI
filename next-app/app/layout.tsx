@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'WINAID - 병원 AI 콘텐츠 생성',
+  title: 'WINAI - 병원 AI 콘텐츠 생성',
   description: '병원 마케팅을 위한 AI 콘텐츠 생성 플랫폼',
   icons: {
     icon: '/icon.svg',

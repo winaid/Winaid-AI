@@ -763,7 +763,7 @@ export default function AdminPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-xl font-bold text-slate-800">Admin Dashboard</h1>
-          <p className="text-slate-400 text-sm">WINAID 관리자</p>
+          <p className="text-slate-400 text-sm">WINAI 관리자</p>
         </div>
         <div className="flex items-center gap-2">
           <a href="/blog" className="px-4 py-2 bg-white border border-slate-200 text-slate-600 font-medium rounded-lg hover:bg-slate-50 transition-colors text-sm">앱으로 이동</a>

@@ -92,10 +92,10 @@ export function Sidebar({
       {/* 로고 */}
       <div className={`h-14 flex items-center ${collapsed ? 'justify-center px-2' : 'px-4'} border-b border-slate-100`}>
         <Link href="/app" className="flex items-center gap-2.5 hover:opacity-80 transition-opacity cursor-pointer group">
-          <img src="/280_logo.png" alt="WINAID" className="h-8 w-8 group-hover:scale-105 transition-transform flex-none" />
+          <img src="/280_logo.png" alt="WINAI" className="h-8 w-8 group-hover:scale-105 transition-transform flex-none" />
           {!collapsed && (
             <div className="flex flex-col leading-none">
-              <span className="font-black text-base tracking-[-0.02em] text-slate-800">WIN<span className="text-blue-600">AID</span></span>
+              <span className="font-black text-base tracking-[-0.02em] text-slate-800">WIN<span className="text-blue-600">AI</span></span>
               <span className="text-[8px] font-semibold tracking-wider uppercase text-slate-400">AI Marketing</span>
             </div>
           )}

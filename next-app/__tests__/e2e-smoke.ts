@@ -77,7 +77,7 @@ async function pageLoadTests() {
   console.log('\n📄 [1] 페이지 로드 테스트');
 
   const pages: { path: string; contains?: string }[] = [
-    { path: '/', contains: 'WINAID' },
+    { path: '/', contains: 'WINAI' },
     { path: '/auth' },
     { path: '/app' },
     { path: '/blog' },
