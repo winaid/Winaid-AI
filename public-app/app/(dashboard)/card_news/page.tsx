@@ -261,18 +261,18 @@ export default function CardNewsPage() {
           if (j < pixabay.length) photos.push(pixabay[j]);
         }
       } else {
-        // 일러스트/벡터: Pixabay + Pexels 합쳐서 (Pixabay 일러스트만으로는 치과 이미지 부족)
+        // 일러스트/벡터: Pixabay만 사용 (Pexels는 실사만 반환하므로 제외)
         const pixType = style === 'infographic' ? 'vector' : 'illustration';
         const koreanQuery = topic.trim() || query;
-        const [pixRes, pexRes] = await Promise.all([
+        // 영어+한국어 쿼리 병렬로 더 많은 결과 확보
+        const [pixRes1, pixRes2] = await Promise.all([
           fetch(`/api/pixabay?query=${encodeURIComponent(koreanQuery + ' 치과')}&image_type=${pixType}&orientation=horizontal&per_page=${count}&page=${page}`),
-          fetch(`/api/pexels?query=${encodeURIComponent(query + ' dental')}&orientation=square&per_page=${count}&page=${page}`),
+          fetch(`/api/pixabay?query=${encodeURIComponent(query + ' dental medical')}&image_type=${pixType}&orientation=horizontal&per_page=${count}&page=${page + 1}`),
         ]);
-        const [pixData, pexData] = await Promise.all([pixRes.json(), pexRes.json()]);
-        const pixPhotos: string[] = (pixData.photos || []).map((p: { url: string }) => p.url);
-        const pexPhotos: string[] = (pexData.photos || []).map((p: { url: string }) => p.url);
-        // Pexels 우선 (치과 관련 결과가 더 정확), Pixabay 보충
-        photos = [...pexPhotos, ...pixPhotos].slice(0, count * 2);
+        const [pixData1, pixData2] = await Promise.all([pixRes1.json(), pixRes2.json()]);
+        const p1: string[] = (pixData1.photos || []).map((p: { url: string }) => p.url);
+        const p2: string[] = (pixData2.photos || []).map((p: { url: string }) => p.url);
+        photos = [...new Set([...p1, ...p2])].slice(0, count * 2);
       }
       previewCacheRef.current.set(cacheKey, photos);
       setPreviewBgImages(photos);
