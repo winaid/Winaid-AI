@@ -357,22 +357,11 @@ export default function CardNewsPage() {
     };
 
     // 크레딧 체크 (차감은 생성 성공 후에)
-    if (creditCtx.creditInfo) {
-      if (creditCtx.creditInfo.credits <= 0) {
-        setError(creditCtx.userId
-          ? '크레딧이 모두 소진되었습니다.'
-          : '무료 체험 크레딧이 모두 소진되었습니다. 로그인하면 더 많은 크레딧을 사용할 수 있어요.');
-        return;
-      }
-      // 게스트도 체크만 (차감은 성공 후에)
-      if (!creditCtx.userId) {
-        const guestCredits = creditCtx.creditInfo.credits;
-        if (guestCredits <= 0) {
-          setError('무료 체험 크레딧이 모두 소진되었습니다. 로그인하면 더 많은 크레딧을 사용할 수 있어요.');
-          return;
-        }
-        creditCtx.setCreditInfo({ credits: next.credits, totalUsed: next.totalUsed });
-      }
+    if (creditCtx.creditInfo && creditCtx.creditInfo.credits <= 0) {
+      setError(creditCtx.userId
+        ? '크레딧이 모두 소진되었습니다.'
+        : '무료 체험 크레딧이 모두 소진되었습니다. 로그인하면 더 많은 크레딧을 사용할 수 있어요.');
+      return;
     }
 
     setIsGenerating(true);
