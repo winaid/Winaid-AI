@@ -1355,7 +1355,8 @@ DECORATIVE: (장식 요소)`,
                   const titlePreview = topic.length > 12 ? topic.slice(0, 12) + '...' : (topic || '제목 미리보기');
                   const bgImage = previewBgImages[i % Math.max(previewBgImages.length, 1)];
                   return (
-                    <button key={tmpl.id} type="button" onClick={() => setSelectedPreviewIdx(i)}
+                  <div key={tmpl.id}>
+                    <button type="button" onClick={() => setSelectedPreviewIdx(i)}
                       className={`relative rounded-2xl overflow-hidden border-3 transition-all ${
                         proCardRatio === '3:4' ? 'aspect-[3/4]' : proCardRatio === '4:5' ? 'aspect-[4/5]' : 'aspect-square'
                       } ${selectedPreviewIdx === i
@@ -1415,11 +1416,10 @@ DECORATIVE: (장식 요소)`,
                         </div>
                       )}
 
-                      {/* 템플릿 이름 */}
-                      <div className="absolute bottom-0 left-0 right-0 px-3 py-1.5" style={{ background: 'linear-gradient(transparent, rgba(0,0,0,0.5))' }}>
-                        <span className="text-[9px] text-white/90 font-bold">{tmpl.name}</span>
-                      </div>
                     </button>
+                    {/* 템플릿 이름 — 이미지 아래 */}
+                    <p className="text-[10px] text-slate-500 font-semibold text-center mt-1.5 truncate">{tmpl.name}</p>
+                  </div>
                   );
                 })}
               </div>
