@@ -23,7 +23,7 @@ interface Props {
 }
 
 export default function StepEffects({ state, onUpdate, onProcess, onNext, onPrev, isProcessing, progress }: Props) {
-  const { step4_effects: fx } = state;
+  const { step5_effects: fx } = state;
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [playingId, setPlayingId] = useState<string | null>(null);
 

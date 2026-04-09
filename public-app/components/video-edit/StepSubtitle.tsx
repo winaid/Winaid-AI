@@ -29,7 +29,7 @@ interface Props {
 }
 
 export default function StepSubtitle({ state, onUpdate, onProcess, onNext, onPrev, isProcessing, progress }: Props) {
-  const { step3_subtitle: sub } = state;
+  const { step4_subtitle: sub } = state;
   const hasResult = !!sub.subtitles || sub.style === 'skip' || !sub.enabled;
   const [editingIdx, setEditingIdx] = useState<number | null>(null);
 

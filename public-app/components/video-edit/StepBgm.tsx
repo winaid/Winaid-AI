@@ -24,7 +24,7 @@ interface Props {
 }
 
 export default function StepBgm({ state, onUpdate, onProcess, onNext, onPrev, isProcessing, progress }: Props) {
-  const { step5_bgm: bgm } = state;
+  const { step7_bgm: bgm } = state;
   const hasResult = !!bgm.resultBlobUrl || bgm.mood === 'skip' || !bgm.enabled;
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [playingId, setPlayingId] = useState<string | null>(null);

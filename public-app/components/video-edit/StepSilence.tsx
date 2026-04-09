@@ -20,7 +20,7 @@ interface Props {
 }
 
 export default function StepSilence({ state, onUpdate, onProcess, onNext, onPrev, isProcessing, progress }: Props) {
-  const { step2_silence: silence } = state;
+  const { step3_silence: silence } = state;
   const hasResult = !!silence.resultBlobUrl || silence.intensity === 'skip' || !silence.enabled;
 
   return (

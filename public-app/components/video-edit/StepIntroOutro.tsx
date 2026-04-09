@@ -28,7 +28,7 @@ interface Props {
 }
 
 export default function StepIntroOutro({ state, onUpdate, onUpdateHospital, onProcess, onNext, onPrev, isProcessing, progress }: Props) {
-  const { step6_intro: intro } = state;
+  const { step8_intro: intro } = state;
   const hasResult = !!intro.resultBlobUrl || (intro.introStyle === 'none' && intro.outroStyle === 'none');
   const needsHospital = intro.introStyle !== 'none' || intro.outroStyle !== 'none';
   const logoInputRef = useRef<HTMLInputElement>(null);

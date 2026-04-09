@@ -21,7 +21,7 @@ export default function CompletionScreen({ state, onGoStep, onReset }: Props) {
 
   // SRT 다운로드
   const handleSrtDownload = () => {
-    const subs = state.step3_subtitle.subtitles;
+    const subs = state.step4_subtitle.subtitles;
     if (!subs || subs.length === 0) return;
     const segs: SrtSegment[] = subs.map(s => ({ start_time: s.start_time, end_time: s.end_time, text: s.text }));
     downloadSrt(segs, state.fileInfo?.name.replace(/\.[^.]+$/, '') || 'subtitles');
@@ -59,12 +59,12 @@ export default function CompletionScreen({ state, onGoStep, onReset }: Props) {
         {/* 우: 처리 요약 */}
         <div className="flex-1 space-y-3">
           <div className="text-sm font-bold text-slate-700 mb-2">처리 요약</div>
-          {STEP_LABELS.slice(1, 7).map((label, i) => {
+          {STEP_LABELS.slice(1, 10).map((label, i) => {
             const step = i + 1;
             const done = isStepDone(state, step);
             const skipped = isStepSkipped(state, step);
             const detail = getStepDetail(state, step);
-            const hasViolation = step === 3 && (state.step3_subtitle.highViolations || 0) > 0;
+            const hasViolation = step === 3 && (state.step4_subtitle.highViolations || 0) > 0;
 
             return (
               <div key={step} className={`flex items-start gap-2 p-2 rounded-lg ${hasViolation ? 'bg-red-50' : ''}`}>
@@ -79,7 +79,7 @@ export default function CompletionScreen({ state, onGoStep, onReset }: Props) {
                   {hasViolation && (
                     <button type="button" onClick={() => onGoStep(3)}
                       className="text-[10px] font-bold text-red-600 hover:text-red-800 mt-0.5">
-                      ⛔ {state.step3_subtitle.highViolations}건 수정 필요 →
+                      ⛔ {state.step4_subtitle.highViolations}건 수정 필요 →
                     </button>
                   )}
                 </div>
@@ -105,7 +105,7 @@ export default function CompletionScreen({ state, onGoStep, onReset }: Props) {
           className="flex-1 py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black rounded-xl hover:from-blue-700 hover:to-indigo-700 disabled:opacity-40 transition-all text-sm shadow-lg shadow-blue-200 flex items-center justify-center gap-2">
           📥 영상 다운로드
         </button>
-        {state.step3_subtitle.subtitles && state.step3_subtitle.subtitles.length > 0 && (
+        {state.step4_subtitle.subtitles && state.step4_subtitle.subtitles.length > 0 && (
           <button type="button" onClick={handleSrtDownload}
             className="px-5 py-3.5 bg-slate-100 text-slate-700 font-bold rounded-xl hover:bg-slate-200 transition-all text-sm">
             📥 SRT
@@ -117,7 +117,7 @@ export default function CompletionScreen({ state, onGoStep, onReset }: Props) {
       <div className="space-y-2">
         <div className="text-xs font-semibold text-slate-400">각 단계 개별 수정</div>
         <div className="flex flex-wrap gap-2">
-          {STEP_LABELS.slice(1, 7).map((label, i) => {
+          {STEP_LABELS.slice(1, 10).map((label, i) => {
             const step = i + 1;
             return (
               <button key={step} type="button" onClick={() => onGoStep(step)}
@@ -142,17 +142,20 @@ export default function CompletionScreen({ state, onGoStep, onReset }: Props) {
 
 function getFinalResultUrl(state: PipelineState): string | null {
   // 가장 마지막 완료된 단계의 결과
-  for (let s = 6; s >= 1; s--) {
-    const url = [
-      undefined,
-      state.step1_crop.resultBlobUrl,
-      state.step2_silence.resultBlobUrl,
-      state.step3_subtitle.resultBlobUrl,
-      state.step4_effects.resultBlobUrl,
-      state.step5_bgm.resultBlobUrl,
-      state.step6_intro.resultBlobUrl,
-    ][s];
-    if (url) return url;
+  const urls = [
+    undefined,                              // 0
+    state.step1_crop.resultBlobUrl,          // 1
+    state.step2_style.resultBlobUrl,         // 2
+    state.step3_silence.resultBlobUrl,       // 3
+    state.step4_subtitle.resultBlobUrl,      // 4
+    state.step5_effects.resultBlobUrl,       // 5
+    state.step6_zoom.resultBlobUrl,          // 6
+    state.step7_bgm.resultBlobUrl,           // 7
+    state.step8_intro.resultBlobUrl,         // 8
+    state.step9_thumbnail.resultBlobUrl,     // 9
+  ];
+  for (let s = 9; s >= 1; s--) {
+    if (urls[s]) return urls[s]!;
   }
   // fallback: 원본
   if (state.originalFile) return URL.createObjectURL(state.originalFile);
@@ -167,35 +170,41 @@ function getStepDetail(state: PipelineState, step: number): string {
       return `${state.step1_crop.aspect} · ${state.step1_crop.mode === 'face_tracking' ? '얼굴 추적' : '중앙 고정'}`;
     }
     case 2: {
-      if (state.step2_silence.intensity === 'skip') return '건너뜀';
-      if (!state.step2_silence.resultBlobUrl) return '';
-      const pct = state.step2_silence.removedPercent || 0;
-      return `${state.step2_silence.intensity} · ${pct}% 단축`;
+      if (state.step2_style.styleId === 'original') return '건너뜀';
+      return state.step2_style.styleId;
     }
     case 3: {
-      if (state.step3_subtitle.style === 'skip') return '건너뜀';
-      const count = state.step3_subtitle.subtitles?.length || 0;
-      if (count === 0) return '';
-      return `${state.step3_subtitle.style} · ${count}개 자막`;
+      if (state.step3_silence.intensity === 'skip') return '건너뜀';
+      if (!state.step3_silence.resultBlobUrl) return '';
+      const pct = state.step3_silence.removedPercent || 0;
+      return `${state.step3_silence.intensity} · ${pct}% 단축`;
     }
     case 4: {
-      if (state.step4_effects.style === 'skip') return '건너뜀';
-      const count = state.step4_effects.effects?.length || 0;
+      if (state.step4_subtitle.style === 'skip') return '건너뜀';
+      const count = state.step4_subtitle.subtitles?.length || 0;
       if (count === 0) return '';
-      return `${state.step4_effects.style} · ${count}개 효과음`;
+      return `${state.step4_subtitle.style} · ${count}개 자막`;
     }
     case 5: {
-      if (state.step5_bgm.mood === 'skip') return '건너뜀';
-      if (!state.step5_bgm.resultBlobUrl) return '';
-      return `${state.step5_bgm.mood} · 볼륨 ${state.step5_bgm.volume}%`;
+      if (state.step5_effects.style === 'skip') return '건너뜀';
+      const count = state.step5_effects.effects?.length || 0;
+      if (count === 0) return '';
+      return `${state.step5_effects.style} · ${count}개 효과음`;
     }
-    case 6: {
-      if (state.step6_intro.introStyle === 'none' && state.step6_intro.outroStyle === 'none') return '건너뜀';
+    case 6: return !state.step6_zoom.enabled ? '건너뜀' : '';
+    case 7: {
+      if (state.step7_bgm.mood === 'skip') return '건너뜀';
+      if (!state.step7_bgm.resultBlobUrl) return '';
+      return `${state.step7_bgm.mood} · 볼륨 ${state.step7_bgm.volume}%`;
+    }
+    case 8: {
+      if (state.step8_intro.introStyle === 'none' && state.step8_intro.outroStyle === 'none') return '건너뜀';
       const parts: string[] = [];
-      if (state.step6_intro.introStyle !== 'none') parts.push(`인트로(${state.step6_intro.introStyle})`);
-      if (state.step6_intro.outroStyle !== 'none') parts.push(`아웃로(${state.step6_intro.outroStyle})`);
+      if (state.step8_intro.introStyle !== 'none') parts.push(`인트로(${state.step8_intro.introStyle})`);
+      if (state.step8_intro.outroStyle !== 'none') parts.push(`아웃로(${state.step8_intro.outroStyle})`);
       return parts.join(' + ');
     }
+    case 9: return !state.step9_thumbnail.enabled ? '건너뜀' : '';
     default: return '';
   }
 }
@@ -205,7 +214,7 @@ function buildStats(state: PipelineState): Array<{ label: string; value: string 
 
   if (state.fileInfo) {
     const origDur = state.fileInfo.duration;
-    const resultDur = state.step2_silence.resultDuration || origDur;
+    const resultDur = state.step3_silence.resultDuration || origDur;
     stats.push({ label: '원본 길이', value: fmtDur(origDur) });
     stats.push({ label: '결과 길이', value: fmtDur(resultDur) });
     if (state.fileInfo.width && state.fileInfo.height) {
@@ -213,13 +222,13 @@ function buildStats(state: PipelineState): Array<{ label: string; value: string 
     }
   }
 
-  const subCount = state.step3_subtitle.subtitles?.length || 0;
+  const subCount = state.step4_subtitle.subtitles?.length || 0;
   if (subCount > 0) stats.push({ label: '자막', value: `${subCount}개` });
 
-  const fxCount = state.step4_effects.effects?.length || 0;
+  const fxCount = state.step5_effects.effects?.length || 0;
   if (fxCount > 0) stats.push({ label: '효과음', value: `${fxCount}개` });
 
-  const violations = (state.step3_subtitle.highViolations || 0) + (state.step3_subtitle.mediumViolations || 0);
+  const violations = (state.step4_subtitle.highViolations || 0) + (state.step4_subtitle.mediumViolations || 0);
   if (violations > 0) stats.push({ label: '의료법 경고', value: `${violations}건` });
 
   return stats;

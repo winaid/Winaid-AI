@@ -10,12 +10,13 @@ import StepBgm from '../../../components/video-edit/StepBgm';
 import StepIntroOutro from '../../../components/video-edit/StepIntroOutro';
 import CompletionScreen from '../../../components/video-edit/CompletionScreen';
 import PipelineProgress, { type AutoStepStatus } from '../../../components/video-edit/PipelineProgress';
+import StepStyle from '../../../components/video-edit/StepStyle';
 import {
   type PipelineState, type PipelineMode, type FileInfo, type HospitalInfo,
-  type StepCropState, type StepSilenceState, type StepSubtitleState, type StepEffectsState,
-  type StepBgmState, type StepIntroState,
+  type StepCropState, type StepStyleState, type StepSilenceState, type StepSubtitleState,
+  type StepEffectsState, type StepBgmState, type StepIntroState,
   type SubtitleSegment, type SoundEffect,
-  INITIAL_PIPELINE_STATE, getInputForStep,
+  INITIAL_PIPELINE_STATE, TOTAL_STEPS, getInputForStep,
 } from '../../../components/video-edit/types';
 
 // ── 상수 ──
@@ -58,29 +59,33 @@ export default function VideoEditPage() {
     ...prev,
     step1_crop: { ...prev.step1_crop, ...p },
   }));
+  const patchStyle = (p: Partial<StepStyleState>) => setState(prev => ({
+    ...prev,
+    step2_style: { ...prev.step2_style, ...p },
+  }));
   const patchSilence = (p: Partial<StepSilenceState>) => setState(prev => ({
     ...prev,
-    step2_silence: { ...prev.step2_silence, ...p },
+    step3_silence: { ...prev.step3_silence, ...p },
   }));
   const patchSubtitle = (p: Partial<StepSubtitleState>) => setState(prev => ({
     ...prev,
-    step3_subtitle: { ...prev.step3_subtitle, ...p },
+    step4_subtitle: { ...prev.step4_subtitle, ...p },
   }));
   const patchEffects = (p: Partial<StepEffectsState>) => setState(prev => ({
     ...prev,
-    step4_effects: { ...prev.step4_effects, ...p },
+    step5_effects: { ...prev.step5_effects, ...p },
   }));
   const patchBgm = (p: Partial<StepBgmState>) => setState(prev => ({
     ...prev,
-    step5_bgm: { ...prev.step5_bgm, ...p },
+    step7_bgm: { ...prev.step7_bgm, ...p },
   }));
   const patchIntro = (p: Partial<StepIntroState>) => setState(prev => ({
     ...prev,
-    step6_intro: { ...prev.step6_intro, ...p },
+    step8_intro: { ...prev.step8_intro, ...p },
   }));
   const patchHospital = (p: Partial<HospitalInfo>) => setState(prev => ({
     ...prev,
-    step6_intro: { ...prev.step6_intro, hospital: { ...prev.step6_intro.hospital, ...p } },
+    step8_intro: { ...prev.step8_intro, hospital: { ...prev.step8_intro.hospital, ...p } },
   }));
   const goStep = (step: number) => { setError(''); patch({ currentStep: step }); };
 
@@ -175,11 +180,38 @@ export default function VideoEditPage() {
     }
   };
 
-  // ── STEP 2: 무음 제거 처리 ──
+  // ── STEP 2: 스타일 변환 처리 ──
+
+  const processStyle = async () => {
+    const input = getInputForStep(state, 2);
+    if (!input) return;
+    setStepProcessing(true);
+    setStepProgress('스타일을 변환하고 있습니다...');
+    setError('');
+    try {
+      let fileToSend: File;
+      if (typeof input === 'string') {
+        const r = await fetch(input); const b = await r.blob();
+        fileToSend = new File([b], state.fileInfo?.name || 'video.mp4', { type: b.type });
+      } else { fileToSend = input as File; }
+      const formData = new FormData();
+      formData.append('file', fileToSend);
+      formData.append('style_id', state.step2_style.styleId);
+      const res = await fetch('/api/video/apply-style', { method: 'POST', body: formData });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({ error: '서버 오류' }));
+        throw new Error(d.error || `스타일 변환 실패 (${res.status})`);
+      }
+      const blob = await res.blob();
+      patchStyle({ resultBlobUrl: URL.createObjectURL(blob) });
+    } catch (err) { setError(err instanceof Error ? err.message : '스타일 변환 실패'); }
+    finally { setStepProcessing(false); setStepProgress(''); }
+  };
+
+  // ── STEP 3: 무음 제거 처리 ──
 
   const processSilence = async () => {
-    // 이전 단계 결과 또는 원본 파일을 입력으로 사용
-    const input = getInputForStep(state, 2);
+    const input = getInputForStep(state, 3);
     if (!input) return;
 
     setStepProcessing(true);
@@ -195,7 +227,7 @@ export default function VideoEditPage() {
       setStepProgress('결과 생성 중...');
       await new Promise(r => setTimeout(r, 800));
 
-      const intensity = state.step2_silence.intensity;
+      const intensity = state.step3_silence.intensity;
       const dur = state.fileInfo?.duration || 0;
       const pct = intensity === 'soft' ? 12 : intensity === 'normal' ? 22 : 35;
       const removed = dur * (pct / 100);
@@ -217,7 +249,7 @@ export default function VideoEditPage() {
   // ── STEP 3: AI 자막 생성 처리 ──
 
   const processSubtitle = async () => {
-    const input = getInputForStep(state, 3);
+    const input = getInputForStep(state, 4);
     if (!input && !state.originalFile) return;
 
     setStepProcessing(true);
@@ -238,9 +270,9 @@ export default function VideoEditPage() {
 
       const formData = new FormData();
       formData.append('file', fileToSend);
-      formData.append('subtitle_style', state.step3_subtitle.style);
-      formData.append('subtitle_position', state.step3_subtitle.position);
-      formData.append('dental_terms', String(state.step3_subtitle.dentalTerms));
+      formData.append('subtitle_style', state.step4_subtitle.style);
+      formData.append('subtitle_position', state.step4_subtitle.position);
+      formData.append('dental_terms', String(state.step4_subtitle.dentalTerms));
 
       setStepProgress('자막을 생성하고 있습니다...');
       const res = await fetch('/api/video/generate-subtitles', { method: 'POST', body: formData });
@@ -274,8 +306,8 @@ export default function VideoEditPage() {
       await new Promise(r => setTimeout(r, 1500));
 
       const { searchSfx, getRandomSfx } = await import('../../../lib/sfxLibrary');
-      const subs = state.step3_subtitle.subtitles || [];
-      const density = state.step4_effects.density;
+      const subs = state.step4_subtitle.subtitles || [];
+      const density = state.step5_effects.density;
       const effects: SoundEffect[] = [];
 
       // 자막이 있으면 자막 기반 배치, 없으면 시간 기반
@@ -339,7 +371,7 @@ export default function VideoEditPage() {
   // ── STEP 5: BGM 삽입 처리 ──
 
   const processBgm = async () => {
-    const input = getInputForStep(state, 5);
+    const input = getInputForStep(state, 7);
     if (!input) return;
 
     setStepProcessing(true);
@@ -358,8 +390,8 @@ export default function VideoEditPage() {
 
       const formData = new FormData();
       formData.append('file', fileToSend);
-      formData.append('bgm_id', state.step5_bgm.bgmId || 'calm_01');
-      formData.append('volume', String(state.step5_bgm.volume));
+      formData.append('bgm_id', state.step7_bgm.bgmId || 'calm_01');
+      formData.append('volume', String(state.step7_bgm.volume));
 
       const res = await fetch('/api/video/add-bgm', { method: 'POST', body: formData });
       if (!res.ok) {
@@ -380,7 +412,7 @@ export default function VideoEditPage() {
   // ── STEP 6: 인트로/아웃로 처리 ──
 
   const processIntroOutro = async () => {
-    const input = getInputForStep(state, 6);
+    const input = getInputForStep(state, 8);
     if (!input) return;
 
     setStepProcessing(true);
@@ -399,12 +431,12 @@ export default function VideoEditPage() {
 
       const formData = new FormData();
       formData.append('file', fileToSend);
-      formData.append('hospital_name', state.step6_intro.hospital.name);
-      formData.append('hospital_phone', state.step6_intro.hospital.phone || '');
-      formData.append('hospital_desc', state.step6_intro.hospital.desc || '');
-      formData.append('hospital_link', state.step6_intro.hospital.link || '');
-      formData.append('intro_style', state.step6_intro.introStyle);
-      formData.append('outro_style', state.step6_intro.outroStyle);
+      formData.append('hospital_name', state.step8_intro.hospital.name);
+      formData.append('hospital_phone', state.step8_intro.hospital.phone || '');
+      formData.append('hospital_desc', state.step8_intro.hospital.desc || '');
+      formData.append('hospital_link', state.step8_intro.hospital.link || '');
+      formData.append('intro_style', state.step8_intro.introStyle);
+      formData.append('outro_style', state.step8_intro.outroStyle);
 
       const res = await fetch('/api/video/add-intro-outro', { method: 'POST', body: formData });
       if (!res.ok) {
@@ -430,8 +462,8 @@ export default function VideoEditPage() {
     patch({ isProcessing: true });
 
     // 초기 상태
-    const statuses: AutoStepStatus[] = [1, 2, 3, 4, 5, 6].map(step => ({
-      step,
+    const statuses: AutoStepStatus[] = Array.from({ length: TOTAL_STEPS }, (_, i) => ({
+      step: i + 1,
       status: 'pending' as const,
     }));
     setAutoStatuses([...statuses]);
@@ -449,11 +481,14 @@ export default function VideoEditPage() {
       label: string;
     }> = [
       { step: 1, skip: () => !state.step1_crop.enabled || state.step1_crop.mode === 'skip', run: processCrop, label: '세로 크롭' },
-      { step: 2, skip: () => state.step2_silence.intensity === 'skip', run: processSilence, label: '무음 제거' },
-      { step: 3, skip: () => state.step3_subtitle.style === 'skip', run: processSubtitle, label: 'AI 자막 생성' },
-      { step: 4, skip: () => state.step4_effects.style === 'skip', run: processEffects, label: '효과음 배치' },
-      { step: 5, skip: () => state.step5_bgm.mood === 'skip', run: processBgm, label: 'BGM 삽입' },
-      { step: 6, skip: () => (state.step6_intro.introStyle === 'none' && state.step6_intro.outroStyle === 'none') || !state.step6_intro.hospital.name.trim(), run: processIntroOutro, label: '인트로/아웃로' },
+      { step: 2, skip: () => state.step2_style.styleId === 'original', run: processStyle, label: '스타일 변환' },
+      { step: 3, skip: () => state.step3_silence.intensity === 'skip', run: processSilence, label: '무음 제거' },
+      { step: 4, skip: () => state.step4_subtitle.style === 'skip', run: processSubtitle, label: 'AI 자막' },
+      { step: 5, skip: () => state.step5_effects.style === 'skip', run: processEffects, label: '효과음' },
+      { step: 6, skip: () => true, run: async () => {}, label: '줌 (준비중)' },
+      { step: 7, skip: () => state.step7_bgm.mood === 'skip', run: processBgm, label: 'BGM' },
+      { step: 8, skip: () => (state.step8_intro.introStyle === 'none' && state.step8_intro.outroStyle === 'none') || !state.step8_intro.hospital.name.trim(), run: processIntroOutro, label: '인트로/아웃로' },
+      { step: 9, skip: () => true, run: async () => {}, label: '썸네일 (준비중)' },
     ];
 
     for (const s of steps) {
@@ -466,20 +501,19 @@ export default function VideoEditPage() {
       }
 
       updateStatus(s.step, { status: 'processing' });
-      patch({ currentStep: s.step, autoProgress: `STEP ${s.step}/6: ${s.label}...` });
+      patch({ currentStep: s.step, autoProgress: `STEP ${s.step}/${TOTAL_STEPS}: ${s.label}...` });
 
       try {
         await s.run();
         updateStatus(s.step, { status: 'done' });
       } catch (err) {
-        // 에러 발생해도 다음 단계 계속 진행
         const msg = err instanceof Error ? err.message : '실패';
         updateStatus(s.step, { status: 'error', error: msg });
       }
     }
 
-    // 완료 — 완성 화면(step 7)으로 이동
-    patch({ isProcessing: false, autoProgress: undefined, currentStep: 7 });
+    // 완료 — 완성 화면(step 10)으로 이동
+    patch({ isProcessing: false, autoProgress: undefined, currentStep: 10 });
   };
 
   // 자동 모드 취소
@@ -508,7 +542,7 @@ export default function VideoEditPage() {
           🎬 쇼츠 메이커
         </h1>
         <p className="text-sm text-slate-500 mt-1">
-          영상 하나로 6단계를 거쳐 쇼츠 완성본을 만듭니다
+          영상 하나로 단계별 처리를 거쳐 쇼츠 완성본을 만듭니다
         </p>
       </div>
 
@@ -630,12 +664,15 @@ export default function VideoEditPage() {
           {state.mode === 'manual' && !state.fileInfo && (
             <div className="grid grid-cols-3 gap-2">
               {[
-                { icon: '📐', label: '세로 크롭', desc: '9:16 비율' },
+                { icon: '📐', label: '세로 크롭', desc: '9:16' },
+                { icon: '🎨', label: '스타일', desc: '변환' },
                 { icon: '✂️', label: '무음 제거', desc: '자동 컷' },
-                { icon: '💬', label: '자막 생성', desc: 'AI 인식' },
-                { icon: '🎵', label: '효과음', desc: '자동 배치' },
-                { icon: '🎶', label: 'BGM', desc: '배경음악' },
+                { icon: '💬', label: '자막', desc: 'AI 인식' },
+                { icon: '🎵', label: '효과음', desc: '자동' },
+                { icon: '🔍', label: '줌', desc: '강조' },
+                { icon: '🎶', label: 'BGM', desc: '배경음' },
                 { icon: '🎬', label: '인트로', desc: '오프닝' },
+                { icon: '🖼️', label: '썸네일', desc: '자동' },
               ].map(s => (
                 <div key={s.label} className="p-3 bg-slate-50 rounded-xl text-center">
                   <div className="text-lg">{s.icon}</div>
@@ -650,85 +687,78 @@ export default function VideoEditPage() {
 
       {/* ══════ STEP 1: 세로 크롭 ══════ */}
       {state.currentStep === 1 && state.mode === 'manual' && (
-        <StepCrop
-          state={state}
-          onUpdate={patchCrop}
-          onProcess={processCrop}
-          onNext={() => goStep(2)}
-          onPrev={() => goStep(0)}
-          isProcessing={stepProcessing}
-          progress={stepProgress}
-        />
+        <StepCrop state={state} onUpdate={patchCrop} onProcess={processCrop}
+          onNext={() => goStep(2)} onPrev={() => goStep(0)} isProcessing={stepProcessing} progress={stepProgress} />
       )}
 
-      {/* ══════ STEP 2: 무음 제거 ══════ */}
+      {/* ══════ STEP 2: 스타일 변환 ══════ */}
       {state.currentStep === 2 && state.mode === 'manual' && (
-        <StepSilence
-          state={state}
-          onUpdate={patchSilence}
-          onProcess={processSilence}
-          onNext={() => goStep(3)}
-          onPrev={() => goStep(1)}
-          isProcessing={stepProcessing}
-          progress={stepProgress}
-        />
+        <StepStyle state={state} onUpdate={patchStyle} onProcess={processStyle}
+          onNext={() => goStep(3)} onPrev={() => goStep(1)} isProcessing={stepProcessing} progress={stepProgress} />
       )}
 
-      {/* ══════ STEP 3: AI 자막 ══════ */}
+      {/* ══════ STEP 3: 무음 제거 ══════ */}
       {state.currentStep === 3 && state.mode === 'manual' && (
-        <StepSubtitle
-          state={state}
-          onUpdate={patchSubtitle}
-          onProcess={processSubtitle}
-          onNext={() => goStep(4)}
-          onPrev={() => goStep(2)}
-          isProcessing={stepProcessing}
-          progress={stepProgress}
-        />
+        <StepSilence state={state} onUpdate={patchSilence} onProcess={processSilence}
+          onNext={() => goStep(4)} onPrev={() => goStep(2)} isProcessing={stepProcessing} progress={stepProgress} />
       )}
 
-      {/* ══════ STEP 4: 효과음 ══════ */}
+      {/* ══════ STEP 4: AI 자막 ══════ */}
       {state.currentStep === 4 && state.mode === 'manual' && (
-        <StepEffects
-          state={state}
-          onUpdate={patchEffects}
-          onProcess={processEffects}
-          onNext={() => goStep(5)}
-          onPrev={() => goStep(3)}
-          isProcessing={stepProcessing}
-          progress={stepProgress}
-        />
+        <StepSubtitle state={state} onUpdate={patchSubtitle} onProcess={processSubtitle}
+          onNext={() => goStep(5)} onPrev={() => goStep(3)} isProcessing={stepProcessing} progress={stepProgress} />
       )}
 
-      {/* ══════ STEP 5: BGM ══════ */}
+      {/* ══════ STEP 5: 효과음 ══════ */}
       {state.currentStep === 5 && state.mode === 'manual' && (
-        <StepBgm
-          state={state}
-          onUpdate={patchBgm}
-          onProcess={processBgm}
-          onNext={() => goStep(6)}
-          onPrev={() => goStep(4)}
-          isProcessing={stepProcessing}
-          progress={stepProgress}
-        />
+        <StepEffects state={state} onUpdate={patchEffects} onProcess={processEffects}
+          onNext={() => goStep(6)} onPrev={() => goStep(4)} isProcessing={stepProcessing} progress={stepProgress} />
       )}
 
-      {/* ══════ STEP 6: 인트로/아웃로 ══════ */}
+      {/* ══════ STEP 6: 줌인/줌아웃 (TODO) ══════ */}
       {state.currentStep === 6 && state.mode === 'manual' && (
-        <StepIntroOutro
-          state={state}
-          onUpdate={patchIntro}
-          onUpdateHospital={patchHospital}
-          onProcess={processIntroOutro}
-          onNext={() => goStep(7)}
-          onPrev={() => goStep(5)}
-          isProcessing={stepProcessing}
-          progress={stepProgress}
-        />
+        <div className="space-y-6">
+          <div className="p-8 bg-slate-50 border border-slate-200 rounded-2xl text-center">
+            <div className="text-3xl mb-3">🔍</div>
+            <div className="text-sm font-bold text-slate-600">줌인/줌아웃 — 준비 중</div>
+            <div className="text-xs text-slate-400 mt-1">다음 업데이트에서 추가됩니다.</div>
+          </div>
+          <div className="flex gap-3">
+            <button type="button" onClick={() => goStep(5)} className="px-5 py-3 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 text-sm">← 이전</button>
+            <button type="button" onClick={() => goStep(7)} className="flex-1 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 text-sm">다음 단계 →</button>
+          </div>
+        </div>
+      )}
+
+      {/* ══════ STEP 7: BGM ══════ */}
+      {state.currentStep === 7 && state.mode === 'manual' && (
+        <StepBgm state={state} onUpdate={patchBgm} onProcess={processBgm}
+          onNext={() => goStep(8)} onPrev={() => goStep(6)} isProcessing={stepProcessing} progress={stepProgress} />
+      )}
+
+      {/* ══════ STEP 8: 인트로/아웃로 ══════ */}
+      {state.currentStep === 8 && state.mode === 'manual' && (
+        <StepIntroOutro state={state} onUpdate={patchIntro} onUpdateHospital={patchHospital} onProcess={processIntroOutro}
+          onNext={() => goStep(9)} onPrev={() => goStep(7)} isProcessing={stepProcessing} progress={stepProgress} />
+      )}
+
+      {/* ══════ STEP 9: 썸네일 (TODO) ══════ */}
+      {state.currentStep === 9 && state.mode === 'manual' && (
+        <div className="space-y-6">
+          <div className="p-8 bg-slate-50 border border-slate-200 rounded-2xl text-center">
+            <div className="text-3xl mb-3">🖼️</div>
+            <div className="text-sm font-bold text-slate-600">썸네일 생성 — 준비 중</div>
+            <div className="text-xs text-slate-400 mt-1">다음 업데이트에서 추가됩니다.</div>
+          </div>
+          <div className="flex gap-3">
+            <button type="button" onClick={() => goStep(8)} className="px-5 py-3 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 text-sm">← 이전</button>
+            <button type="button" onClick={() => goStep(10)} className="flex-1 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black rounded-xl text-sm shadow-lg">🎬 완성 화면</button>
+          </div>
+        </div>
       )}
 
       {/* ══════ 완성 화면 ══════ */}
-      {state.currentStep === 7 && (
+      {state.currentStep === 10 && (
         <CompletionScreen
           state={state}
           onGoStep={(step) => { patch({ currentStep: step }); }}
@@ -737,9 +767,9 @@ export default function VideoEditPage() {
       )}
 
       {/* 자동 모드 완료 후 (processing 끝나고 step이 7이 아닌 경우) — 완성 화면으로 이동 버튼 */}
-      {!state.isProcessing && state.mode === 'auto' && autoStatuses.length > 0 && state.currentStep !== 7 && state.currentStep > 0 && (
+      {!state.isProcessing && state.mode === 'auto' && autoStatuses.length > 0 && state.currentStep !== 10 && state.currentStep > 0 && (
         <div className="mt-4 text-center">
-          <button type="button" onClick={() => patch({ currentStep: 7 })}
+          <button type="button" onClick={() => patch({ currentStep: 10 })}
             className="px-6 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-all text-sm">
             🎬 완성 화면 보기
           </button>
