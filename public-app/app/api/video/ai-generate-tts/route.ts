@@ -41,6 +41,7 @@ export async function POST(request: NextRequest) {
 
     const audioBuffers: Buffer[] = [];
     const timestamps: Array<{ scene_number: number; start_time: number; end_time: number }> = [];
+    let firstError = '';
 
     const engine = body.engine || 'legacy';
     const voiceName = body.voice_name || 'ko-KR-Wavenet-A';
@@ -90,7 +91,14 @@ export async function POST(request: NextRequest) {
       if (!ttsRes.ok) {
         const errText = await ttsRes.text();
         console.error(`[ai-generate-tts] TTS 실패 scene ${scene.scene_number}`, ttsRes.status, errText);
-        // 실패한 장면은 무음으로 대체 (graceful)
+        // 첫 번째 에러면 상세 메시지 저장
+        if (audioBuffers.length === 0) {
+          let detail = '';
+          try { detail = JSON.parse(errText).error?.message || ''; } catch { /* */ }
+          if (ttsRes.status === 403) detail = 'Google Cloud TTS API가 활성화되지 않았거나 권한이 없습니다. Cloud Console에서 Text-to-Speech API를 활성화하세요.';
+          if (ttsRes.status === 401) detail = 'Google Cloud 인증이 만료되었습니다. 서비스 계정을 확인하세요.';
+          if (detail) firstError = detail;
+        }
         audioBuffers.push(Buffer.alloc(0));
         continue;
       }
@@ -104,7 +112,7 @@ export async function POST(request: NextRequest) {
     // 유효한 오디오가 없으면 에러
     const validBuffers = audioBuffers.filter(b => b.length > 0);
     if (validBuffers.length === 0) {
-      return NextResponse.json({ error: 'TTS 생성에 실패했습니다. 모든 장면에서 오류 발생.' }, { status: 502 });
+      return NextResponse.json({ error: firstError || 'TTS 생성에 실패했습니다. Google Cloud Console에서 Text-to-Speech API를 활성화했는지 확인하세요.' }, { status: 502 });
     }
 
     // FFmpeg로 합치기
