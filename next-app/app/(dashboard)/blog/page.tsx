@@ -727,14 +727,10 @@ JSON 형식으로 응답해주세요.`;
     if (!topic.trim() || isGenerating) return;
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
-    // 크레딧 체크 + 차감
-    if (creditCtx.userId && creditCtx.creditInfo) {
-      const creditResult = await blogUseCredit(creditCtx.userId);
-      if (!creditResult.success) {
-        setError(creditResult.error === 'no_credits' ? '크레딧이 모두 소진되었습니다.' : '크레딧 차감에 실패했습니다.');
-        return;
-      }
-      creditCtx.setCreditInfo({ credits: creditResult.remaining, totalUsed: (creditCtx.creditInfo.totalUsed || 0) + 1 });
+    // 크레딧 체크 (차감은 생성 성공 후에)
+    if (creditCtx.userId && creditCtx.creditInfo && creditCtx.creditInfo.credits <= 0) {
+      setError('크레딧이 모두 소진되었습니다.');
+      return;
     }
 
     const request: GenerationRequest = {
@@ -1318,6 +1314,15 @@ ${missing.length > 0 ? `   → 경쟁 글이 놓친 관점: ${missing.join(', ')
         console.warn(`[BLOG] 저장 실패: Supabase 연결 불가`, saveErr);
         setSaveStatus('저장 실패: Supabase 연결 불가');
       }
+      // ── 생성 성공 → 크레딧 차감 ──
+      if (creditCtx.userId && creditCtx.creditInfo) {
+        const creditResult = await blogUseCredit(creditCtx.userId);
+        if (creditResult.success) {
+          creditCtx.setCreditInfo({ credits: creditResult.remaining, totalUsed: (creditCtx.creditInfo.totalUsed || 0) + 1 });
+          console.info(`[BLOG] ✅ 크레딧 차감 완료 (잔여: ${creditResult.remaining})`);
+        }
+      }
+
       console.info(`[BLOG] ========== 블로그 생성 완료 ==========`);
     } catch (err: unknown) {
       const { message, retryable } = classifyError(err);

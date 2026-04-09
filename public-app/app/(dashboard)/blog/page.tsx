@@ -778,30 +778,13 @@ JSON 형식으로 응답해주세요.`;
     if (!topic.trim() || isGenerating) return;
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
-    // 크레딧 체크 + 차감
+    // 크레딧 체크 (차감은 생성 성공 후에)
     if (creditCtx.creditInfo) {
       if (creditCtx.creditInfo.credits <= 0) {
         setError(creditCtx.userId
           ? '크레딧이 모두 소진되었습니다.'
           : '무료 체험 크레딧이 모두 소진되었습니다. 로그인하면 더 많은 크레딧을 사용할 수 있어요.');
         return;
-      }
-      if (creditCtx.userId) {
-        // 로그인 사용자: Supabase 차감
-        const creditResult = await blogUseCredit(creditCtx.userId);
-        if (!creditResult.success) {
-          setError(creditResult.error === 'no_credits' ? '크레딧이 모두 소진되었습니다.' : '크레딧 차감에 실패했습니다.');
-          return;
-        }
-        creditCtx.setCreditInfo({ credits: creditResult.remaining, totalUsed: (creditCtx.creditInfo.totalUsed || 0) + 1 });
-      } else {
-        // 게스트: localStorage 차감
-        const next = consumeGuestCredit();
-        if (!next) {
-          setError('무료 체험 크레딧이 모두 소진되었습니다. 로그인하면 더 많은 크레딧을 사용할 수 있어요.');
-          return;
-        }
-        creditCtx.setCreditInfo({ credits: next.credits, totalUsed: next.totalUsed });
       }
     }
 
@@ -1401,6 +1384,22 @@ ${missing.length > 0 ? `   → 경쟁 글이 놓친 관점: ${missing.join(', ')
         console.warn(`[BLOG] 저장 실패: Supabase 연결 불가`, saveErr);
         setSaveStatus('저장 실패: Supabase 연결 불가');
       }
+      // ── 생성 성공 → 크레딧 차감 (실패 시 크레딧 보존) ──
+      if (creditCtx.creditInfo) {
+        if (creditCtx.userId) {
+          const creditResult = await blogUseCredit(creditCtx.userId);
+          if (creditResult.success) {
+            creditCtx.setCreditInfo({ credits: creditResult.remaining, totalUsed: (creditCtx.creditInfo.totalUsed || 0) + 1 });
+            console.info(`[BLOG] ✅ 크레딧 차감 완료 (잔여: ${creditResult.remaining})`);
+          } else {
+            console.warn(`[BLOG] ⚠️ 크레딧 차감 실패 (글은 정상 생성됨)`);
+          }
+        } else {
+          const next = consumeGuestCredit();
+          if (next) creditCtx.setCreditInfo({ credits: next.credits, totalUsed: next.totalUsed });
+        }
+      }
+
       console.info(`[BLOG] ========== 블로그 생성 완료 ==========`);
     } catch (err: unknown) {
       const { message, retryable } = classifyError(err);
