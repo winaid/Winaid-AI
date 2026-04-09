@@ -56,6 +56,7 @@ export default function CardNewsCanvas({
   // WYSIWYG 편집 UX 상태
   const [hoverInfo, setHoverInfo] = useState<{ top: number; left: number; label: string } | null>(null);
   const [editingObj, setEditingObj] = useState(false);
+  const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const cardWidth = 1080;
   const cardHeight = (() => {
@@ -400,10 +401,45 @@ export default function CardNewsCanvas({
         }
       });
 
-      // ════════ 선택 이벤트 → 플로팅 툴바 ════════
-      canvas.on('selection:created', (e: any) => updateToolbar(e.selected?.[0]));
-      canvas.on('selection:updated', (e: any) => updateToolbar(e.selected?.[0]));
-      canvas.on('selection:cleared', () => setSelectedObjInfo(null));
+      // ════════ 선택 이벤트 → 플로팅 툴바 + 선택 배경 ════════
+      const applySelectionBg = (obj: any) => {
+        if (!obj) return;
+        const isT = obj.type === 'textbox' || obj.type === 'i-text' || obj.type === 'text';
+        if (isT) {
+          obj._origBgColor = obj._origBgColor ?? (obj.backgroundColor || '');
+          obj.set({ backgroundColor: 'rgba(255,255,255,0.35)' });
+          canvas.renderAll();
+        }
+      };
+      const clearAllSelectionBg = () => {
+        canvas.getObjects().forEach((o: any) => {
+          if ('_origBgColor' in o) {
+            o.set({ backgroundColor: o._origBgColor || '', shadow: null });
+            delete o._origBgColor;
+          }
+        });
+        canvas.renderAll();
+      };
+      canvas.on('selection:created', (e: any) => {
+        const obj = e.selected?.[0];
+        updateToolbar(obj);
+        applySelectionBg(obj);
+      });
+      canvas.on('selection:updated', (e: any) => {
+        // 이전 객체 배경 복원
+        const prev = e.deselected?.[0];
+        if (prev && '_origBgColor' in prev) {
+          prev.set({ backgroundColor: prev._origBgColor || '', shadow: null });
+          delete prev._origBgColor;
+        }
+        const obj = e.selected?.[0];
+        updateToolbar(obj);
+        applySelectionBg(obj);
+      });
+      canvas.on('selection:cleared', () => {
+        setSelectedObjInfo(null);
+        clearAllSelectionBg();
+      });
       canvas.on('object:moving', (e: any) => updateToolbar(e.target));
 
       function updateToolbar(obj: any) {
@@ -485,23 +521,29 @@ export default function CardNewsCanvas({
         canvas.renderAll();
       });
 
-      // ════════ WYSIWYG: 호버 힌트 (텍스트 편집 가능 표시) ════════
+      // ════════ WYSIWYG: 호버 힌트 (디바운스로 깜빡임 방지) ════════
       canvas.on('mouse:over', (e: any) => {
+        if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
         const obj = e.target;
         if (!obj) return;
         const isTextObj = obj.type === 'textbox' || obj.type === 'i-text' || obj.type === 'text';
         const objName: string = obj.name || '';
         if (isTextObj && !BG_NAMES.includes(objName) && !objName.startsWith('__overlay') && !objName.startsWith('__guide')) {
-          const bounds = obj.getBoundingRect();
-          const label = objName === OBJ.TITLE ? '제목' : objName === OBJ.SUBTITLE ? '부제' : objName === OBJ.BODY ? '본문' : objName === OBJ.HOSPITAL ? '병원명' : '텍스트';
-          setHoverInfo({
-            top: bounds.top * displayScale,
-            left: (bounds.left + bounds.width / 2) * displayScale,
-            label,
-          });
+          hoverTimeoutRef.current = setTimeout(() => {
+            const bounds = obj.getBoundingRect();
+            const label = objName === OBJ.TITLE ? '제목' : objName === OBJ.SUBTITLE ? '부제' : objName === OBJ.BODY ? '본문' : objName === OBJ.HOSPITAL ? '병원명' : '텍스트';
+            setHoverInfo({
+              top: bounds.top * displayScale,
+              left: (bounds.left + bounds.width / 2) * displayScale,
+              label,
+            });
+          }, 80);
         }
       });
-      canvas.on('mouse:out', () => setHoverInfo(null));
+      canvas.on('mouse:out', () => {
+        if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+        hoverTimeoutRef.current = setTimeout(() => setHoverInfo(null), 50);
+      });
 
       // ════════ WYSIWYG: 텍스트 인라인 편집 시각 피드백 ════════
       canvas.on('text:editing:entered', (e: any) => {
@@ -509,10 +551,11 @@ export default function CardNewsCanvas({
         if (!obj) return;
         setEditingObj(true);
         setHoverInfo(null);
-        obj._origBgColor = obj.backgroundColor || '';
+        obj._origBgColor = obj._origBgColor ?? (obj.backgroundColor || '');
         obj.set({
-          backgroundColor: 'rgba(255,255,255,0.92)',
+          backgroundColor: 'rgba(255,255,255,0.95)',
           editingBorderColor: '#3B82F6',
+          shadow: new F.Shadow({ color: 'rgba(59,130,246,0.15)', blur: 20, offsetX: 0, offsetY: 4 }),
         });
         canvas.renderAll();
       });
@@ -520,7 +563,12 @@ export default function CardNewsCanvas({
         const obj = e.target;
         if (!obj) return;
         setEditingObj(false);
-        obj.set({ backgroundColor: obj._origBgColor || '' });
+        // 선택 상태 유지 시 selection bg, 아니면 원본
+        const stillSelected = canvas.getActiveObject() === obj;
+        obj.set({
+          backgroundColor: stillSelected ? 'rgba(255,255,255,0.35)' : (obj._origBgColor || ''),
+          shadow: null,
+        });
         canvas.renderAll();
       });
 
@@ -533,6 +581,7 @@ export default function CardNewsCanvas({
       disposed = true;
       setHoverInfo(null);
       setEditingObj(false);
+      if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
       if (fabricRef.current) {
         fabricRef.current.dispose();
         fabricRef.current = null;
@@ -647,30 +696,35 @@ export default function CardNewsCanvas({
             </button>
           ))}
           <div className="w-px h-5 bg-slate-200 mx-0.5" />
-          <span className="text-[9px] text-slate-400 font-medium px-1 whitespace-nowrap">더블클릭 편집</span>
+          <span className="text-[9px] font-bold text-blue-500 px-0.5">
+            {selectedObjInfo.name === OBJ.TITLE ? '제목' : selectedObjInfo.name === OBJ.SUBTITLE ? '부제' : selectedObjInfo.name === OBJ.BODY ? '본문' : '텍스트'}
+          </span>
+          <span className="text-[9px] text-slate-400 font-medium whitespace-nowrap">· 더블클릭 편집</span>
         </div>
       )}
 
-      {/* WYSIWYG 호버 힌트 — 텍스트 위에 마우스 올릴 때 표시 */}
-      {hoverInfo && !editingObj && !selectedObjInfo && (
-        <div
-          className="absolute z-30 pointer-events-none"
-          style={{
-            top: Math.max(4, hoverInfo.top - 30),
-            left: Math.min(Math.max(50, hoverInfo.left), displayWidth - 50),
-            transform: 'translateX(-50%)',
-          }}
-        >
-          <div className="px-2.5 py-1 bg-slate-800/90 text-white text-[10px] font-bold rounded-md shadow-lg whitespace-nowrap backdrop-blur-sm">
-            클릭하여 {hoverInfo.label} 편집
-          </div>
+      {/* WYSIWYG 호버 힌트 — 부드러운 페이드 인/아웃 */}
+      <div
+        className="absolute z-30 pointer-events-none transition-opacity duration-150"
+        style={{
+          opacity: hoverInfo && !editingObj && !selectedObjInfo ? 1 : 0,
+          top: Math.max(4, (hoverInfo?.top ?? 0) - 32),
+          left: Math.min(Math.max(50, hoverInfo?.left ?? 0), displayWidth - 50),
+          transform: 'translateX(-50%)',
+        }}
+      >
+        <div className="px-2.5 py-1 bg-slate-800/90 text-white text-[10px] font-bold rounded-md shadow-lg whitespace-nowrap backdrop-blur-sm">
+          클릭하여 {hoverInfo?.label ?? ''} 편집
         </div>
-      )}
+      </div>
 
-      {/* 편집 모드 인디케이터 */}
+      {/* 편집 모드 인디케이터 — 펄스 도트 */}
       {editingObj && (
-        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-30 px-3 py-1.5 bg-blue-600 text-white text-[10px] font-bold rounded-full shadow-lg pointer-events-none">
-          ✏️ 입력하여 편집 · ESC로 완료
+        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-30 pointer-events-none">
+          <div className="px-3 py-1.5 bg-blue-600 text-white text-[10px] font-bold rounded-full shadow-lg flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
+            입력하여 편집 · ESC로 완료
+          </div>
         </div>
       )}
     </div>
