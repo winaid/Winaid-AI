@@ -53,6 +53,10 @@ export default function CardNewsCanvas({
   // 이미지 필터 상태
   const [imgFilters, setImgFilters] = useState({ brightness: 0, contrast: 0, saturation: 0 });
 
+  // WYSIWYG 편집 UX 상태
+  const [hoverInfo, setHoverInfo] = useState<{ top: number; left: number; label: string } | null>(null);
+  const [editingObj, setEditingObj] = useState(false);
+
   const cardWidth = 1080;
   const cardHeight = (() => {
     switch (cardRatio) {
@@ -319,7 +323,7 @@ export default function CardNewsCanvas({
       }
 
       // ════════ 모든 객체를 선택/이동 가능하게 (배경만 제외) ════════
-      const BG_NAMES = [OBJ.BG, OBJ.PATTERN, OBJ.ACCENT_TOP, OBJ.ACCENT_BOT];
+      const BG_NAMES: string[] = [OBJ.BG, OBJ.PATTERN, OBJ.ACCENT_TOP, OBJ.ACCENT_BOT];
       canvas.getObjects().forEach((obj: any) => {
         const name: string = obj.name || '';
         // 배경/패턴/악센트바만 고정, 나머지 전부 드래그+선택 가능
@@ -329,6 +333,11 @@ export default function CardNewsCanvas({
             evented: true,
             ...SELECTION_STYLE,
           });
+          // 텍스트 객체: 호버 시 텍스트 커서 표시 → 편집 가능 암시
+          const isTextObj = obj.type === 'textbox' || obj.type === 'i-text' || obj.type === 'text';
+          if (isTextObj) {
+            obj.set({ hoverCursor: 'text' });
+          }
         }
       });
 
@@ -476,6 +485,45 @@ export default function CardNewsCanvas({
         canvas.renderAll();
       });
 
+      // ════════ WYSIWYG: 호버 힌트 (텍스트 편집 가능 표시) ════════
+      canvas.on('mouse:over', (e: any) => {
+        const obj = e.target;
+        if (!obj) return;
+        const isTextObj = obj.type === 'textbox' || obj.type === 'i-text' || obj.type === 'text';
+        const objName: string = obj.name || '';
+        if (isTextObj && !BG_NAMES.includes(objName) && !objName.startsWith('__overlay') && !objName.startsWith('__guide')) {
+          const bounds = obj.getBoundingRect();
+          const label = objName === OBJ.TITLE ? '제목' : objName === OBJ.SUBTITLE ? '부제' : objName === OBJ.BODY ? '본문' : objName === OBJ.HOSPITAL ? '병원명' : '텍스트';
+          setHoverInfo({
+            top: bounds.top * displayScale,
+            left: (bounds.left + bounds.width / 2) * displayScale,
+            label,
+          });
+        }
+      });
+      canvas.on('mouse:out', () => setHoverInfo(null));
+
+      // ════════ WYSIWYG: 텍스트 인라인 편집 시각 피드백 ════════
+      canvas.on('text:editing:entered', (e: any) => {
+        const obj = e.target;
+        if (!obj) return;
+        setEditingObj(true);
+        setHoverInfo(null);
+        obj._origBgColor = obj.backgroundColor || '';
+        obj.set({
+          backgroundColor: 'rgba(255,255,255,0.92)',
+          editingBorderColor: '#3B82F6',
+        });
+        canvas.renderAll();
+      });
+      canvas.on('text:editing:exited', (e: any) => {
+        const obj = e.target;
+        if (!obj) return;
+        setEditingObj(false);
+        obj.set({ backgroundColor: obj._origBgColor || '' });
+        canvas.renderAll();
+      });
+
       canvas.renderAll();
     };
 
@@ -483,6 +531,8 @@ export default function CardNewsCanvas({
 
     return () => {
       disposed = true;
+      setHoverInfo(null);
+      setEditingObj(false);
       if (fabricRef.current) {
         fabricRef.current.dispose();
         fabricRef.current = null;
@@ -565,8 +615,8 @@ export default function CardNewsCanvas({
         </div>
       )}
 
-      {/* 플로팅 정렬 툴바 — 텍스트 선택 시 표시 */}
-      {selectedObjInfo && selectedObjInfo.type === 'text' && (
+      {/* 플로팅 정렬 툴바 — 텍스트 선택 시 표시 (편집 모드에서는 숨김) */}
+      {selectedObjInfo && selectedObjInfo.type === 'text' && !editingObj && (
         <div
           className="absolute z-20 flex items-center gap-1 bg-white/95 backdrop-blur-sm rounded-lg shadow-lg border border-slate-200 px-1.5 py-1"
           style={{ top: Math.max(4, selectedObjInfo.top), left: Math.max(4, selectedObjInfo.left) }}
@@ -596,6 +646,31 @@ export default function CardNewsCanvas({
               {align === 'left' ? '≡←' : align === 'center' ? '≡' : '→≡'}
             </button>
           ))}
+          <div className="w-px h-5 bg-slate-200 mx-0.5" />
+          <span className="text-[9px] text-slate-400 font-medium px-1 whitespace-nowrap">더블클릭 편집</span>
+        </div>
+      )}
+
+      {/* WYSIWYG 호버 힌트 — 텍스트 위에 마우스 올릴 때 표시 */}
+      {hoverInfo && !editingObj && !selectedObjInfo && (
+        <div
+          className="absolute z-30 pointer-events-none"
+          style={{
+            top: Math.max(4, hoverInfo.top - 30),
+            left: Math.min(Math.max(50, hoverInfo.left), displayWidth - 50),
+            transform: 'translateX(-50%)',
+          }}
+        >
+          <div className="px-2.5 py-1 bg-slate-800/90 text-white text-[10px] font-bold rounded-md shadow-lg whitespace-nowrap backdrop-blur-sm">
+            클릭하여 {hoverInfo.label} 편집
+          </div>
+        </div>
+      )}
+
+      {/* 편집 모드 인디케이터 */}
+      {editingObj && (
+        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-30 px-3 py-1.5 bg-blue-600 text-white text-[10px] font-bold rounded-full shadow-lg pointer-events-none">
+          ✏️ 입력하여 편집 · ESC로 완료
         </div>
       )}
     </div>
