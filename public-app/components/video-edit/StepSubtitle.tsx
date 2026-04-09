@@ -34,14 +34,14 @@ export default function StepSubtitle({ state, onUpdate, onProcess, onNext, onPre
   const [editingIdx, setEditingIdx] = useState<number | null>(null);
   const movingRef = useRef(false); // Enter로 이동 중인지 추적
 
-  // 자막 텍스트 편집
+  // 자막 텍스트 편집 → 시간 자동 재계산
   const updateSubtitleText = (idx: number, text: string) => {
     if (!sub.subtitles) return;
-    const updated = sub.subtitles.map((s, i) => {
+    const updated = recalcTimestamps(sub.subtitles.map((s, i) => {
       if (i !== idx) return s;
       const violations = validateMedicalAd(text);
       return { ...s, text, violations };
-    });
+    }));
     const allV = updated.flatMap(s => s.violations) as Array<{ severity: 'high' | 'medium' }>;
     const counts = countViolations(allV as never[]);
     onUpdate({ subtitles: updated, highViolations: counts.high, mediumViolations: counts.medium });
@@ -242,4 +242,20 @@ function fmtTime(sec: number): string {
   const m = Math.floor(sec / 60);
   const s = Math.floor(sec % 60);
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
+/** 자막 텍스트 길이에 따라 타임스탬프 자동 재계산 (한국어 기준 초당 ~4.5글자) */
+function recalcTimestamps(subtitles: SubtitleSegment[]): SubtitleSegment[] {
+  const CHARS_PER_SEC = 4.5;
+  const MIN_DURATION = 0.8;
+  let cursor = subtitles[0]?.start_time || 0;
+
+  return subtitles.map(s => {
+    const charCount = s.text.replace(/\s/g, '').length;
+    const duration = Math.max(MIN_DURATION, Math.round((charCount / CHARS_PER_SEC) * 10) / 10);
+    const start = Math.round(cursor * 100) / 100;
+    const end = Math.round((cursor + duration) * 100) / 100;
+    cursor = end;
+    return { ...s, start_time: start, end_time: end };
+  });
 }

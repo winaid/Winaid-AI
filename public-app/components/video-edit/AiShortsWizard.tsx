@@ -100,7 +100,22 @@ function StepScript({ state, patch, setError }: { state: AiShortsState; patch: (
   };
 
   const updateNarration = (idx: number, text: string) => {
-    const updated = state.scenes.map((s, i) => i === idx ? { ...s, narration: text, violations: validateMedicalAd(text) } : s);
+    // 텍스트 변경 + 시간 자동 재계산 (한국어 초당 ~4.5글자)
+    const CHARS_PER_SEC = 4.5;
+    const MIN_DUR = 1.0;
+    let cursor = 0;
+    const updated = state.scenes.map((s, i) => {
+      const narr = i === idx ? text : s.narration;
+      const charCount = narr.replace(/\s/g, '').length;
+      const dur = Math.max(MIN_DUR, Math.round((charCount / CHARS_PER_SEC) * 10) / 10);
+      const start = Math.round(cursor * 10) / 10;
+      const end = Math.round((cursor + dur) * 10) / 10;
+      cursor = end;
+      if (i === idx) {
+        return { ...s, narration: text, startTime: start, endTime: end, violations: validateMedicalAd(text) };
+      }
+      return { ...s, startTime: start, endTime: end };
+    });
     patch({ scenes: updated });
   };
 

@@ -232,24 +232,33 @@ export default function VideoEditPage() {
     setError('');
 
     try {
-      // TODO: 실제 silence-remove API 연동
-      // 현재는 시뮬레이션
-      await new Promise(r => setTimeout(r, 1000));
-      setStepProgress('무음 구간 제거 중...');
-      await new Promise(r => setTimeout(r, 1500));
-      setStepProgress('결과 생성 중...');
-      await new Promise(r => setTimeout(r, 800));
+      let fileToSend: File;
+      if (typeof input === 'string') {
+        const r = await fetch(input); const b = await r.blob();
+        fileToSend = new File([b], state.fileInfo?.name || 'video.mp4', { type: b.type });
+      } else { fileToSend = input as File; }
 
-      const intensity = state.step3_silence.intensity;
-      const dur = state.fileInfo?.duration || 0;
-      const pct = intensity === 'soft' ? 12 : intensity === 'normal' ? 22 : 35;
-      const removed = dur * (pct / 100);
+      const formData = new FormData();
+      formData.append('file', fileToSend);
+      formData.append('intensity', state.step3_silence.intensity);
+
+      setStepProgress('무음 구간 제거 중...');
+      const res = await fetch('/api/video/silence-remove', { method: 'POST', body: formData });
+
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({ error: '서버 오류' }));
+        throw new Error(d.error || `무음 제거 실패 (${res.status})`);
+      }
+
+      const metaHeader = res.headers.get('X-Silence-Metadata');
+      const meta = metaHeader ? JSON.parse(metaHeader) : {};
+      const blob = await res.blob();
 
       patchSilence({
-        resultBlobUrl: typeof input === 'string' ? input : URL.createObjectURL(input),
-        originalDuration: dur,
-        resultDuration: dur - removed,
-        removedPercent: pct,
+        resultBlobUrl: URL.createObjectURL(blob),
+        originalDuration: meta.original_duration || state.fileInfo?.duration || 0,
+        resultDuration: meta.result_duration || state.fileInfo?.duration || 0,
+        removedPercent: meta.removed_percent || 0,
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : '무음 제거 실패');
