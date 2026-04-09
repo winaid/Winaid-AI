@@ -287,13 +287,9 @@ export default function AdminContentsTab(props: AdminContentsTabProps) {
                           </div>
                           <div className="flex gap-1.5 flex-shrink-0">
                             <button onClick={async () => {
-                              if (post.content === '[이미지]' || (!post.content && post.post_type === 'image')) {
-                                const content = await getPostContent(post.id);
-                                if (content) setSelectedPost({ ...post, content });
-                                else setSelectedPost(post);
-                              } else {
-                                setSelectedPost(post);
-                              }
+                              // 모든 타입에서 content 별도 조회 (목록에는 content 미포함)
+                              const content = await getPostContent(post.id);
+                              setSelectedPost({ ...post, content: content || post.content || '' });
                             }} className="px-3 py-1.5 bg-blue-50 text-blue-600 font-medium rounded-lg hover:bg-blue-100 transition-colors text-xs">보기</button>
                             <button onClick={() => onDelete(post.id)} className="px-3 py-1.5 bg-red-50 text-red-500 font-medium rounded-lg hover:bg-red-100 transition-colors text-xs">삭제</button>
                           </div>
