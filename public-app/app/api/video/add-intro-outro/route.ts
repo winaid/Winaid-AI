@@ -10,6 +10,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { gateGuestRequest } from '../../../../lib/guestRateLimit';
+import { getFfmpegPath, getFfprobePath } from '../../../../lib/ffmpegPath';
 
 export const maxDuration = 300;
 export const dynamic = 'force-dynamic';
@@ -49,20 +50,8 @@ export async function POST(request: NextRequest) {
     const os = await import('os');
     const { execSync } = await import('child_process');
 
-    // FFmpeg 존재 확인
-    let ffmpegAvailable = false;
-    try { execSync('ffmpeg -version', { stdio: 'pipe', timeout: 5000 }); ffmpegAvailable = true; } catch { /* */ }
-
-    if (!ffmpegAvailable) {
-      const buf = Buffer.from(await file.arrayBuffer());
-      return new NextResponse(buf, {
-        status: 200,
-        headers: {
-          'Content-Type': 'video/mp4',
-          'X-Intro-Metadata': JSON.stringify({ intro_added: false, outro_added: false, reason: 'FFmpeg가 서버에 설치되어 있지 않습니다.' }),
-        },
-      });
-    }
+    const ffmpeg = getFfmpegPath();
+    const ffprobe = getFfprobePath();
 
     const tmpDir = os.tmpdir();
     const ts = Date.now();
@@ -76,7 +65,7 @@ export async function POST(request: NextRequest) {
     let vw = 1080, vh = 1920;
     try {
       const probe = execSync(
-        `ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of json "${mainPath}"`,
+        `"${ffprobe}" -v error -select_streams v:0 -show_entries stream=width,height -of json "${mainPath}"`,
         { timeout: 10000 },
       ).toString();
       const d = JSON.parse(probe);
@@ -113,7 +102,7 @@ export async function POST(request: NextRequest) {
       }
 
       execSync(
-        `ffmpeg -y -f lavfi -i color=c=white:s=${vw}x${vh}:d=${dur} -f lavfi -i anullsrc=r=44100:cl=stereo -vf "${vf}" -t ${dur} -c:v libx264 -preset ultrafast -pix_fmt yuv420p -c:a aac -shortest "${introPath}"`,
+        `"${ffmpeg}" -y -f lavfi -i color=c=white:s=${vw}x${vh}:d=${dur} -f lavfi -i anullsrc=r=44100:cl=stereo -vf "${vf}" -t ${dur} -c:v libx264 -preset ultrafast -pix_fmt yuv420p -c:a aac -shortest "${introPath}"`,
         { timeout: 30000, stdio: 'pipe' },
       );
     }
@@ -139,7 +128,7 @@ export async function POST(request: NextRequest) {
       }
 
       execSync(
-        `ffmpeg -y -f lavfi -i color=c=white:s=${vw}x${vh}:d=${dur} -f lavfi -i anullsrc=r=44100:cl=stereo -vf "${vf}" -t ${dur} -c:v libx264 -preset ultrafast -pix_fmt yuv420p -c:a aac -shortest "${outroPath}"`,
+        `"${ffmpeg}" -y -f lavfi -i color=c=white:s=${vw}x${vh}:d=${dur} -f lavfi -i anullsrc=r=44100:cl=stereo -vf "${vf}" -t ${dur} -c:v libx264 -preset ultrafast -pix_fmt yuv420p -c:a aac -shortest "${outroPath}"`,
         { timeout: 30000, stdio: 'pipe' },
       );
     }
@@ -158,7 +147,7 @@ export async function POST(request: NextRequest) {
     fs.writeFileSync(concatList, parts.join('\n'));
 
     execSync(
-      `ffmpeg -y -f concat -safe 0 -i "${concatList}" -c copy "${outputPath}"`,
+      `"${ffmpeg}" -y -f concat -safe 0 -i "${concatList}" -c copy "${outputPath}"`,
       { timeout: 120000, stdio: 'pipe' },
     );
 

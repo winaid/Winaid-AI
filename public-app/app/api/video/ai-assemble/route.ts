@@ -9,6 +9,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { gateGuestRequest } from '../../../../lib/guestRateLimit';
+import { getFfmpegPath, getFfprobePath } from '../../../../lib/ffmpegPath';
 
 export const maxDuration = 300;
 export const dynamic = 'force-dynamic';
@@ -43,10 +44,8 @@ export async function POST(request: NextRequest) {
     const os = await import('os');
     const { execSync } = await import('child_process');
 
-    // FFmpeg 확인
-    try { execSync('ffmpeg -version', { stdio: 'pipe', timeout: 5000 }); } catch {
-      return NextResponse.json({ error: 'FFmpeg가 서버에 설치되어 있지 않습니다.' }, { status: 503 });
-    }
+    const ffmpeg = getFfmpegPath();
+    const ffprobe = getFfprobePath();
 
     const tmpDir = path.join(os.tmpdir(), `ai_assemble_${Date.now()}`);
     fs.mkdirSync(tmpDir, { recursive: true });
@@ -76,7 +75,7 @@ export async function POST(request: NextRequest) {
       try {
         // Ken Burns 효과: 미세한 줌인으로 정지 이미지에 생동감
         execSync(
-          `ffmpeg -y -loop 1 -i "${imgPath}" -t ${dur} ` +
+          `"${ffmpeg}" -y -loop 1 -i "${imgPath}" -t ${dur} ` +
           `-vf "scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:black,` +
           `zoompan=z='min(1.06,1+0.0002*on)':d=${frames}:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=1080x1920:fps=30" ` +
           `-c:v libx264 -preset fast -pix_fmt yuv420p "${clipPath}"`,
@@ -98,7 +97,7 @@ export async function POST(request: NextRequest) {
 
     const scenesVideo = path.join(tmpDir, 'scenes.mp4');
     execSync(
-      `ffmpeg -y -f concat -safe 0 -i "${concatList}" -c copy "${scenesVideo}"`,
+      `"${ffmpeg}" -y -f concat -safe 0 -i "${concatList}" -c copy "${scenesVideo}"`,
       { timeout: 120000, stdio: 'pipe' },
     );
 
@@ -119,7 +118,7 @@ export async function POST(request: NextRequest) {
         const withNarration = path.join(tmpDir, 'with_narration.mp4');
         try {
           execSync(
-            `ffmpeg -y -i "${currentFile}" -i "${narrationPath}" -map 0:v -map 1:a -c:v copy -shortest "${withNarration}"`,
+            `"${ffmpeg}" -y -i "${currentFile}" -i "${narrationPath}" -map 0:v -map 1:a -c:v copy -shortest "${withNarration}"`,
             { timeout: 120000, stdio: 'pipe' },
           );
           currentFile = withNarration;
@@ -127,7 +126,7 @@ export async function POST(request: NextRequest) {
           // 나레이션 합성 실패 시 무음 영상으로 진행
           const withSilence = path.join(tmpDir, 'with_silence.mp4');
           execSync(
-            `ffmpeg -y -i "${currentFile}" -f lavfi -i anullsrc=r=44100:cl=stereo -map 0:v -map 1:a -shortest -c:v copy -c:a aac "${withSilence}"`,
+            `"${ffmpeg}" -y -i "${currentFile}" -f lavfi -i anullsrc=r=44100:cl=stereo -map 0:v -map 1:a -shortest -c:v copy -c:a aac "${withSilence}"`,
             { timeout: 30000, stdio: 'pipe' },
           );
           currentFile = withSilence;
@@ -136,7 +135,7 @@ export async function POST(request: NextRequest) {
         // 나레이션 없으면 무음 오디오 트랙 추가
         const withSilence = path.join(tmpDir, 'with_silence.mp4');
         execSync(
-          `ffmpeg -y -i "${currentFile}" -f lavfi -i anullsrc=r=44100:cl=stereo -map 0:v -map 1:a -shortest -c:v copy -c:a aac "${withSilence}"`,
+          `"${ffmpeg}" -y -i "${currentFile}" -f lavfi -i anullsrc=r=44100:cl=stereo -map 0:v -map 1:a -shortest -c:v copy -c:a aac "${withSilence}"`,
           { timeout: 30000, stdio: 'pipe' },
         );
         currentFile = withSilence;
@@ -153,7 +152,7 @@ export async function POST(request: NextRequest) {
         const vol = Math.max(0, Math.min(0.5, (body.bgm_volume || 15) / 100)).toFixed(2);
         try {
           execSync(
-            `ffmpeg -y -i "${currentFile}" -i "${bgmPath}" ` +
+            `"${ffmpeg}" -y -i "${currentFile}" -i "${bgmPath}" ` +
             `-filter_complex "[1]volume=${vol},aloop=loop=-1:size=2e+09[bgm];[0:a][bgm]amix=inputs=2:duration=first[out]" ` +
             `-map 0:v -map "[out]" -c:v copy -c:a aac "${withBgm}"`,
             { timeout: 120000, stdio: 'pipe' },
@@ -172,7 +171,7 @@ export async function POST(request: NextRequest) {
     // 영상 길이 측정
     let totalDuration = 0;
     try {
-      const probe = execSync(`ffprobe -v error -show_entries format=duration -of csv=p=0 "${currentFile}"`, { timeout: 10000 }).toString().trim();
+      const probe = execSync(`"${ffprobe}" -v error -show_entries format=duration -of csv=p=0 "${currentFile}"`, { timeout: 10000 }).toString().trim();
       totalDuration = parseFloat(probe) || 0;
     } catch { /* */ }
 

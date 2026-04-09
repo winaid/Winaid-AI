@@ -9,6 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { gateGuestRequest } from '../../../../lib/guestRateLimit';
 import { getStyleById } from '../../../../lib/videoStyles';
+import { getFfmpegPath, getFfprobePath } from '../../../../lib/ffmpegPath';
 
 export const maxDuration = 300;
 export const dynamic = 'force-dynamic';
@@ -47,17 +48,8 @@ export async function POST(request: NextRequest) {
     const os = await import('os');
     const { execSync } = await import('child_process');
 
-    // FFmpeg 확인
-    try { execSync('ffmpeg -version', { stdio: 'pipe', timeout: 5000 }); } catch {
-      const buf = Buffer.from(await file.arrayBuffer());
-      return new NextResponse(buf, {
-        status: 200,
-        headers: {
-          'Content-Type': 'video/mp4',
-          'X-Style-Metadata': JSON.stringify({ style_applied: 'original', method: 'ffmpeg_unavailable' }),
-        },
-      });
-    }
+    const ffmpeg = getFfmpegPath();
+    const ffprobe = getFfprobePath();
 
     const tmpDir = os.tmpdir();
     const ts = Date.now();
@@ -67,7 +59,7 @@ export async function POST(request: NextRequest) {
     fs.writeFileSync(inputPath, Buffer.from(await file.arrayBuffer()));
 
     execSync(
-      `ffmpeg -y -i "${inputPath}" -vf "${style.ffmpegFilter}" -c:a copy "${outputPath}"`,
+      `"${ffmpeg}" -y -i "${inputPath}" -vf "${style.ffmpegFilter}" -c:a copy "${outputPath}"`,
       { timeout: 300000, stdio: 'pipe' },
     );
 

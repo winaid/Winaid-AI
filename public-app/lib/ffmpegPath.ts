@@ -21,10 +21,10 @@ export function getFfmpegPath(): string {
 
   // npm 패키지
   try {
-    const installer = require('@ffmpeg-installer/ffmpeg');
+    const installer = require('@ffmpeg-installer/ffmpeg') as { path?: string };
     if (installer?.path) {
       cachedPath = installer.path;
-      return cachedPath;
+      return cachedPath!;
     }
   } catch { /* not installed */ }
 

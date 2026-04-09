@@ -9,6 +9,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { gateGuestRequest } from '../../../../lib/guestRateLimit';
+import { getFfmpegPath, getFfprobePath } from '../../../../lib/ffmpegPath';
 
 export const maxDuration = 60;
 export const dynamic = 'force-dynamic';
@@ -34,10 +35,8 @@ export async function POST(request: NextRequest) {
     const os = await import('os');
     const { execSync } = await import('child_process');
 
-    // FFmpeg 확인
-    try { execSync('ffmpeg -version', { stdio: 'pipe', timeout: 5000 }); } catch {
-      return NextResponse.json({ error: 'FFmpeg가 서버에 설치되어 있지 않습니다.' }, { status: 503 });
-    }
+    const ffmpeg = getFfmpegPath();
+    const ffprobe = getFfprobePath();
 
     const tmpDir = os.tmpdir();
     const ts = Date.now();
@@ -50,14 +49,14 @@ export async function POST(request: NextRequest) {
 
     // 프레임 추출
     execSync(
-      `ffmpeg -y -i "${inputPath}" -ss ${Math.max(0, frameTime)} -frames:v 1 -q:v 2 "${framePath}"`,
+      `"${ffmpeg}" -y -i "${inputPath}" -ss ${Math.max(0, frameTime)} -frames:v 1 -q:v 2 "${framePath}"`,
       { timeout: 15000, stdio: 'pipe' },
     );
 
     if (!fs.existsSync(framePath)) {
       // 실패 시 0초에서 추출
       execSync(
-        `ffmpeg -y -i "${inputPath}" -ss 0 -frames:v 1 -q:v 2 "${framePath}"`,
+        `"${ffmpeg}" -y -i "${inputPath}" -ss 0 -frames:v 1 -q:v 2 "${framePath}"`,
         { timeout: 15000, stdio: 'pipe' },
       );
     }
@@ -91,7 +90,7 @@ export async function POST(request: NextRequest) {
       const vf = `drawtext=text='${escaped}':fontsize=60${fontOpt}:${colors[textColor] || colors.white}:x=(w-text_w)/2:${positions[textPosition] || positions.center}`;
 
       execSync(
-        `ffmpeg -y -i "${framePath}" -vf "${vf}" -q:v 2 "${outputPath}"`,
+        `"${ffmpeg}" -y -i "${framePath}" -vf "${vf}" -q:v 2 "${outputPath}"`,
         { timeout: 15000, stdio: 'pipe' },
       );
     } else {

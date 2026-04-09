@@ -9,6 +9,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { gateGuestRequest } from '../../../../lib/guestRateLimit';
+import { getFfmpegPath, getFfprobePath } from '../../../../lib/ffmpegPath';
 
 export const maxDuration = 300;
 export const dynamic = 'force-dynamic';
@@ -64,28 +65,13 @@ export async function POST(request: NextRequest) {
     // FFmpeg: BGM 합성
     const { execSync } = await import('child_process');
 
-    // FFmpeg 존재 확인
-    let ffmpegAvailable = false;
-    try { execSync('ffmpeg -version', { stdio: 'pipe', timeout: 5000 }); ffmpegAvailable = true; } catch { /* */ }
-
-    if (!ffmpegAvailable) {
-      // FFmpeg 없으면 원본 그대로 반환 (graceful skip)
-      const resultBuffer = fs.readFileSync(inputPath);
-      try { fs.unlinkSync(inputPath); } catch { /* */ }
-      return new NextResponse(resultBuffer, {
-        status: 200,
-        headers: {
-          'Content-Type': 'video/mp4',
-          'Content-Disposition': `attachment; filename="bgm_${file.name}"`,
-          'X-Bgm-Metadata': JSON.stringify({ bgm_applied: false, reason: 'FFmpeg가 서버에 설치되어 있지 않습니다.' }),
-        },
-      });
-    }
+    const ffmpeg = getFfmpegPath();
+    const ffprobe = getFfprobePath();
 
     const vol = Math.max(0, Math.min(0.5, volume)).toFixed(2);
     try {
       execSync(
-        `ffmpeg -y -i "${inputPath}" -i "${bgmPath}" ` +
+        `"${ffmpeg}" -y -i "${inputPath}" -i "${bgmPath}" ` +
         `-filter_complex "[1]volume=${vol},aloop=loop=-1:size=2e+09[bgm];[0:a][bgm]amix=inputs=2:duration=first[out]" ` +
         `-map 0:v -map "[out]" -c:v copy -c:a aac -b:a 128k "${outputPath}"`,
         { timeout: 300000, stdio: 'pipe' },

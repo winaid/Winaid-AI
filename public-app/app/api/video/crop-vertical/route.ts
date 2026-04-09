@@ -12,6 +12,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { gateGuestRequest } from '../../../../lib/guestRateLimit';
+import { getFfmpegPath, getFfprobePath } from '../../../../lib/ffmpegPath';
 
 export const maxDuration = 300;
 export const dynamic = 'force-dynamic';
@@ -129,8 +130,9 @@ function buildCropFilter(
 async function getVideoInfo(filePath: string): Promise<{ width: number; height: number; duration: number } | null> {
   try {
     const { execSync } = await import('child_process');
+    const ffprobe = getFfprobePath();
     const probe = execSync(
-      `ffprobe -v error -select_streams v:0 -show_entries stream=width,height,duration -show_entries format=duration -of json "${filePath}"`,
+      `"${ffprobe}" -v error -select_streams v:0 -show_entries stream=width,height,duration -show_entries format=duration -of json "${filePath}"`,
       { timeout: 15000 },
     ).toString();
     const data = JSON.parse(probe);
@@ -213,9 +215,10 @@ export async function POST(request: NextRequest) {
 
     // FFmpeg 실행
     const { execSync } = await import('child_process');
+    const ffmpeg = getFfmpegPath();
     try {
       execSync(
-        `ffmpeg -y -i "${inputPath}" -vf "${vf}" -c:v libx264 -preset fast -crf 23 -c:a aac -b:a 128k "${outputPath}"`,
+        `"${ffmpeg}" -y -i "${inputPath}" -vf "${vf}" -c:v libx264 -preset fast -crf 23 -c:a aac -b:a 128k "${outputPath}"`,
         { timeout: 300000, stdio: 'pipe' },
       );
     } catch (ffmpegErr) {

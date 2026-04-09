@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { gateGuestRequest } from '../../../../lib/guestRateLimit';
 import { getGcpAccessToken } from '../../../../lib/gcpAuth';
+import { getFfmpegPath, getFfprobePath } from '../../../../lib/ffmpegPath';
 
 export const maxDuration = 120;
 export const dynamic = 'force-dynamic';
@@ -116,11 +117,10 @@ export async function POST(request: NextRequest) {
     const ts = Date.now();
     const tmpFiles: string[] = [];
 
-    // FFmpeg 확인
-    let ffmpegAvailable = false;
-    try { execSync('ffmpeg -version', { stdio: 'pipe', timeout: 5000 }); ffmpegAvailable = true; } catch { /* */ }
+    const ffmpeg = getFfmpegPath();
+    const ffprobe = getFfprobePath();
 
-    if (!ffmpegAvailable || validBuffers.length === 1) {
+    if (validBuffers.length === 1) {
       // FFmpeg 없거나 장면 1개면 첫 번째 유효한 오디오 반환
       const buf = new Uint8Array(validBuffers[0]);
       return new NextResponse(buf, {
@@ -143,7 +143,7 @@ export async function POST(request: NextRequest) {
     const silencePath = path.join(tmpDir, `tts_silence_${ts}.mp3`);
     tmpFiles.push(silencePath);
     try {
-      execSync(`ffmpeg -y -f lavfi -i anullsrc=r=24000:cl=mono -t 0.3 -c:a libmp3lame "${silencePath}"`, { timeout: 10000, stdio: 'pipe' });
+      execSync(`"${ffmpeg}" -y -f lavfi -i anullsrc=r=24000:cl=mono -t 0.3 -c:a libmp3lame "${silencePath}"`, { timeout: 10000, stdio: 'pipe' });
     } catch { /* 무음 생성 실패 무시 */ }
 
     for (let i = 0; i < audioBuffers.length; i++) {
@@ -157,7 +157,7 @@ export async function POST(request: NextRequest) {
       // 길이 측정
       let duration = 3;
       try {
-        const probe = execSync(`ffprobe -v error -show_entries format=duration -of csv=p=0 "${scenePath}"`, { timeout: 10000 }).toString().trim();
+        const probe = execSync(`"${ffprobe}" -v error -show_entries format=duration -of csv=p=0 "${scenePath}"`, { timeout: 10000 }).toString().trim();
         duration = parseFloat(probe) || 3;
       } catch { /* fallback */ }
 
@@ -181,7 +181,7 @@ export async function POST(request: NextRequest) {
     tmpFiles.push(listPath, outputPath);
 
     fs.writeFileSync(listPath, concatParts.join('\n'));
-    execSync(`ffmpeg -y -f concat -safe 0 -i "${listPath}" -c copy "${outputPath}"`, { timeout: 60000, stdio: 'pipe' });
+    execSync(`"${ffmpeg}" -y -f concat -safe 0 -i "${listPath}" -c copy "${outputPath}"`, { timeout: 60000, stdio: 'pipe' });
 
     const resultBuffer = fs.readFileSync(outputPath);
     for (const f of tmpFiles) { try { fs.unlinkSync(f); } catch { /* */ } }

@@ -11,6 +11,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { gateGuestRequest } from '../../../../lib/guestRateLimit';
+import { getFfmpegPath, getFfprobePath } from '../../../../lib/ffmpegPath';
 
 export const maxDuration = 300;
 export const dynamic = 'force-dynamic';
@@ -54,17 +55,8 @@ export async function POST(request: NextRequest) {
     const os = await import('os');
     const { execSync } = await import('child_process');
 
-    // FFmpeg 확인
-    try { execSync('ffmpeg -version', { stdio: 'pipe', timeout: 5000 }); } catch {
-      const buf = Buffer.from(await file.arrayBuffer());
-      return new NextResponse(buf, {
-        status: 200,
-        headers: {
-          'Content-Type': 'video/mp4',
-          'X-Zoom-Metadata': JSON.stringify({ zoom_applied: false, reason: 'FFmpeg 없음' }),
-        },
-      });
-    }
+    const ffmpeg = getFfmpegPath();
+    const ffprobe = getFfprobePath();
 
     const tmpDir = os.tmpdir();
     const ts = Date.now();
@@ -98,7 +90,7 @@ export async function POST(request: NextRequest) {
       // ffprobe로 fps 확인
       let fps = 30;
       try {
-        const probe = execSync(`ffprobe -v error -select_streams v:0 -show_entries stream=r_frame_rate -of csv=p=0 "${inputPath}"`, { timeout: 10000 }).toString().trim();
+        const probe = execSync(`"${ffprobe}" -v error -select_streams v:0 -show_entries stream=r_frame_rate -of csv=p=0 "${inputPath}"`, { timeout: 10000 }).toString().trim();
         const [num, den] = probe.split('/');
         if (num && den) fps = Math.round(parseInt(num) / parseInt(den));
       } catch { /* fallback 30fps */ }
@@ -112,7 +104,7 @@ export async function POST(request: NextRequest) {
       const zoomExpr = `1+(${(maxZ - 1).toFixed(3)})*abs(sin(on/${cycleFrames}*PI))`;
 
       execSync(
-        `ffmpeg -y -i "${inputPath}" -vf "scale=2*iw:2*ih,zoompan=z='${zoomExpr}':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=1:s=iw/2xiw/2:fps=${fps}" -c:a copy -shortest "${outputPath}"`,
+        `"${ffmpeg}" -y -i "${inputPath}" -vf "scale=2*iw:2*ih,zoompan=z='${zoomExpr}':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=1:s=iw/2xiw/2:fps=${fps}" -c:a copy -shortest "${outputPath}"`,
         { timeout: 300000, stdio: 'pipe' },
       );
     } catch {
