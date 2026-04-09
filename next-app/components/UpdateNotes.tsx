@@ -2,10 +2,30 @@
 
 import { useState, useEffect } from 'react';
 
-const CURRENT_VERSION = '2026.04.02-2';
+const CURRENT_VERSION = '2026.04.09';
 const STORAGE_KEY = 'winaid_changelog_seen';
 
 const CHANGELOG = [
+  {
+    category: '🎬 쇼츠 메이커 (NEW)',
+    items: [
+      '10단계 파이프라인 — 세로크롭 → 스타일 → 무음제거 → 자막 → 효과음 → 줌 → BGM → 인트로 → 썸네일',
+      'AI 쇼츠 생성기 — 키워드만 입력하면 대본+TTS+이미지+영상 자동 생성',
+      '15가지 스타일 변환 — 웹툰/애니/수채화/네온 등 Gemini AI로 변환',
+      'AI 자막 생성 — Google Cloud STT + 의료광고법 자동 검증',
+      'BGM — Jamendo 50만곡 무료 검색 + AI 음악 생성 (MusicGen)',
+      'TTS 나레이션 — Google Cloud TTS 한국어 목소리',
+    ],
+  },
+  {
+    category: '▶️ 유튜브',
+    items: [
+      '영상 분석 — 시간순 전체 분석',
+      '2단계 API 분리 — 요약(텍스트) + 주제(JSON)',
+      '3가지 문체 선택 (환자용/원장님/핵심정리)',
+      '🗑️ GIF 기능 삭제 — 사용률 낮아 제거, 핵심 글 생성에 집중',
+    ],
+  },
   {
     category: '🔒 보안',
     items: [
@@ -62,15 +82,7 @@ const CHANGELOG = [
       '진료과별 전문 용어 힌트 (피부과/정형외과)',
     ],
   },
-  {
-    category: '▶️ 유튜브',
-    items: [
-      '영상 분석 — 시간순 전체 분석 + GIF 5개 균등 분포',
-      '2단계 API 분리 — 요약(텍스트) + 주제(JSON)',
-      '3가지 문체 선택 (환자용/원장님/핵심정리)',
-      'GIF 탭 — 핵심 구간 감지 + 구간 재생/링크 복사',
-    ],
-  },
+  /* 유튜브 — 위에 통합 */
   {
     category: '🖼️ 이미지 생성',
     items: [
