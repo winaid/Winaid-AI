@@ -7,6 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { gateGuestRequest } from '../../../../lib/guestRateLimit';
+import { getFfmpegPath, getFfprobePath } from '../../../../lib/ffmpegPath';
 
 export const maxDuration = 300;
 export const dynamic = 'force-dynamic';
@@ -40,9 +41,8 @@ export async function POST(request: NextRequest) {
     const { execSync } = await import('child_process');
 
     // FFmpeg + auto-editor 확인
-    try { execSync('ffmpeg -version', { stdio: 'pipe', timeout: 5000 }); } catch {
-      return NextResponse.json({ error: 'FFmpeg가 서버에 설치되어 있지 않습니다.' }, { status: 503 });
-    }
+    const ffmpeg = getFfmpegPath();
+    const ffprobe = getFfprobePath();
 
     let autoEditorCmd = 'auto-editor';
     try { execSync('auto-editor --help', { stdio: 'pipe', timeout: 5000 }); } catch {
@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
     // 원본 길이
     let originalDuration = 0;
     try {
-      const probe = execSync(`ffprobe -v error -show_entries format=duration -of csv=p=0 "${inputPath}"`, { timeout: 15000 }).toString().trim();
+      const probe = execSync(`"${ffprobe}" -v error -show_entries format=duration -of csv=p=0 "${inputPath}"`, { timeout: 15000 }).toString().trim();
       originalDuration = parseFloat(probe) || 0;
     } catch { /* */ }
 
@@ -123,7 +123,7 @@ export async function POST(request: NextRequest) {
     // 결과 길이
     let resultDuration = originalDuration;
     try {
-      const probe = execSync(`ffprobe -v error -show_entries format=duration -of csv=p=0 "${outputPath}"`, { timeout: 15000 }).toString().trim();
+      const probe = execSync(`"${ffprobe}" -v error -show_entries format=duration -of csv=p=0 "${outputPath}"`, { timeout: 15000 }).toString().trim();
       resultDuration = parseFloat(probe) || originalDuration;
     } catch { /* */ }
 
