@@ -373,8 +373,6 @@ ${summaryText.slice(0, 2000)}
               className="flex-1 py-2.5 rounded-xl font-bold text-sm bg-blue-500 text-white">
               📝 글 생성
             </button>
-            {/* GIF 탭 제거됨 */
-            </button>
           </div>
 
           {/* ── 글 생성 모드 ── */}
