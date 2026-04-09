@@ -6,7 +6,7 @@ import { downloadSrt, type SrtSegment } from '../../../lib/srtUtils';
 
 // ── 공통 상수 ──
 
-type Tab = 'silence' | 'subtitle';
+type Tab = 'silence' | 'subtitle' | 'crop';
 type Intensity = 'soft' | 'normal' | 'tight';
 type SubtitleStyle = 'basic' | 'highlight' | 'single_line';
 type SubtitlePosition = 'top' | 'center' | 'bottom';
@@ -92,7 +92,7 @@ export default function VideoEditPage() {
           🎬 영상 편집
         </h1>
         <p className="text-sm text-slate-500 mt-1.5">
-          AI로 무음 제거, 자막 생성을 한 곳에서
+          AI로 무음 제거, 자막 생성, 세로 크롭을 한 곳에서
         </p>
       </div>
 
@@ -100,7 +100,8 @@ export default function VideoEditPage() {
       <div className="flex gap-1 mb-6 bg-slate-100 rounded-xl p-1">
         {([
           { id: 'silence' as Tab, label: '✂️ 무음 제거' },
-          { id: 'subtitle' as Tab, label: '💬 AI 자막 생성' },
+          { id: 'subtitle' as Tab, label: '💬 AI 자막' },
+          { id: 'crop' as Tab, label: '📐 세로 크롭' },
         ]).map(tab => (
           <button
             key={tab.id}
@@ -123,6 +124,9 @@ export default function VideoEditPage() {
       </div>
       <div style={{ display: activeTab === 'subtitle' ? 'block' : 'none' }}>
         <SubtitleGenerateTab />
+      </div>
+      <div style={{ display: activeTab === 'crop' ? 'block' : 'none' }}>
+        <VerticalCropTab />
       </div>
     </div>
   );
@@ -523,12 +527,325 @@ function SubtitleGenerateTab() {
 }
 
 // ══════════════════════════════════════════
+// 세로 자동 크롭 탭
+// ══════════════════════════════════════════
+
+type CropAspect = '9:16' | '4:5' | '1:1';
+type CropMode = 'face_tracking' | 'center' | 'manual';
+type CropResolution = '1080x1920' | '720x1280' | 'auto';
+
+const CROP_ASPECT_OPTIONS: { id: CropAspect; label: string; desc: string }[] = [
+  { id: '9:16', label: '9:16', desc: '쇼츠/릴스/틱톡' },
+  { id: '4:5', label: '4:5', desc: '인스타 피드' },
+  { id: '1:1', label: '1:1', desc: '정사각형' },
+];
+
+const CROP_MODE_OPTIONS: { id: CropMode; label: string; desc: string }[] = [
+  { id: 'face_tracking', label: '얼굴 추적', desc: '화자 얼굴을 자동 추적 — 인터뷰/설명 영상에 추천' },
+  { id: 'center', label: '중앙 고정', desc: '화면 중앙 기준 크롭 — 제품/시술 촬영에 추천' },
+  { id: 'manual', label: '수동 지정', desc: '크롭 영역을 직접 드래그로 지정' },
+];
+
+const CROP_RESOLUTION_OPTIONS: { id: CropResolution; label: string }[] = [
+  { id: '1080x1920', label: '1080×1920 (Full HD)' },
+  { id: '720x1280', label: '720×1280 (HD)' },
+  { id: 'auto', label: '원본 비율 유지' },
+];
+
+interface CropResult {
+  blobUrl: string;
+  originalResolution: string;
+  resultResolution: string;
+  originalAspect: string;
+  resultAspect: string;
+  facesDetected: number;
+  duration: number;
+}
+
+function VerticalCropTab() {
+  const [file, setFile] = useState<File | null>(null);
+  const [fileDuration, setFileDuration] = useState(0);
+  const [dragOver, setDragOver] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // 영상 메타
+  const [videoMeta, setVideoMeta] = useState<{ width: number; height: number } | null>(null);
+  const [isVertical, setIsVertical] = useState(false);
+
+  // 옵션
+  const [cropAspect, setCropAspect] = useState<CropAspect>('9:16');
+  const [cropMode, setCropMode] = useState<CropMode>('face_tracking');
+  const [cropResolution, setCropResolution] = useState<CropResolution>('1080x1920');
+  const [manualX, setManualX] = useState(0.5); // 0~1 비율
+
+  // 처리
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [progress, setProgress] = useState('');
+  const [error, setError] = useState('');
+
+  // 결과
+  const [result, setResult] = useState<CropResult | null>(null);
+
+  // 수동 모드 프리뷰
+  const previewRef = useRef<HTMLDivElement>(null);
+  const videoPreviewRef = useRef<HTMLVideoElement>(null);
+
+  const isVideoFile = (f: File) => f.type.startsWith('video/') || /\.(mp4|mov|avi)$/i.test(f.name);
+
+  const handleFile = useCallback((f: File) => {
+    setError(''); setResult(null); setVideoMeta(null); setIsVertical(false);
+
+    if (!isVideoFile(f)) { setError('영상 파일만 지원합니다 (MP4, MOV, AVI).'); return; }
+    if (f.size > MAX_SIZE_MB * 1024 * 1024) { setError(`파일 크기가 ${MAX_SIZE_MB}MB를 초과합니다.`); return; }
+
+    setFile(f);
+    const url = URL.createObjectURL(f);
+    const el = document.createElement('video');
+    el.preload = 'metadata';
+    el.onloadedmetadata = () => {
+      setFileDuration(el.duration);
+      setVideoMeta({ width: el.videoWidth, height: el.videoHeight });
+      if (el.videoHeight > el.videoWidth) setIsVertical(true);
+      URL.revokeObjectURL(url);
+      if (el.duration > MAX_DURATION_SEC) setError(`영상 길이가 ${Math.round(MAX_DURATION_SEC / 60)}분을 초과합니다.`);
+    };
+    el.onerror = () => URL.revokeObjectURL(url);
+    el.src = url;
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files[0]; if (f) handleFile(f); }, [handleFile]);
+
+  // 수동 모드 드래그 핸들러
+  const handleManualDrag = useCallback((e: React.MouseEvent) => {
+    const rect = previewRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const x = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    setManualX(x);
+  }, []);
+
+  // 크롭 실행
+  const handleCrop = async () => {
+    if (!file || isProcessing) return;
+    if (fileDuration > MAX_DURATION_SEC) return;
+
+    setIsProcessing(true);
+    setProgress('영상을 분석하고 있습니다...');
+    setError(''); setResult(null);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('aspect_ratio', cropAspect);
+      formData.append('crop_mode', cropMode);
+      formData.append('output_resolution', cropResolution);
+      if (cropMode === 'manual') formData.append('manual_x', String(manualX));
+
+      setProgress(cropMode === 'face_tracking' ? '얼굴을 추적하고 있습니다...' : '영상을 변환하고 있습니다...');
+
+      const res = await fetch('/api/video/crop-vertical', { method: 'POST', body: formData });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({ error: '서버 오류' }));
+        throw new Error(errData.error || `크롭 실패 (${res.status})`);
+      }
+
+      // 메타데이터는 헤더에
+      const metaHeader = res.headers.get('X-Crop-Metadata');
+      const meta = metaHeader ? JSON.parse(metaHeader) : {};
+
+      // 영상 바이너리
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+
+      setResult({
+        blobUrl,
+        originalResolution: meta.original_resolution || '',
+        resultResolution: meta.result_resolution || '',
+        originalAspect: meta.original_aspect || '',
+        resultAspect: meta.result_aspect || cropAspect,
+        facesDetected: meta.faces_detected || 0,
+        duration: meta.duration || 0,
+      });
+
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '크롭 중 오류가 발생했습니다.');
+    } finally {
+      setIsProcessing(false);
+      setProgress('');
+    }
+  };
+
+  const hasResult = !!result;
+
+  // 크롭 박스 비율 계산 (프리뷰용)
+  const getCropBoxStyle = (): { width: string; left: string } => {
+    if (!videoMeta || videoMeta.width === 0) return { width: '56.25%', left: '21.875%' };
+    const { w: rw, h: rh } = { '9:16': { w: 9, h: 16 }, '4:5': { w: 4, h: 5 }, '1:1': { w: 1, h: 1 } }[cropAspect];
+    const cropRatio = (rw / rh) / (videoMeta.width / videoMeta.height);
+    const widthPct = Math.min(100, cropRatio * 100);
+    const leftPct = cropMode === 'manual'
+      ? Math.max(0, Math.min(100 - widthPct, manualX * 100 - widthPct / 2))
+      : (100 - widthPct) / 2;
+    return { width: `${widthPct}%`, left: `${leftPct}%` };
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* 업로드 */}
+      <FileUploadArea file={file} dragOver={dragOver} fileDuration={fileDuration} fileInputRef={fileInputRef}
+        onFile={handleFile} onDragOver={() => setDragOver(true)} onDragLeave={() => setDragOver(false)}
+        onDrop={handleDrop} onClear={() => { setFile(null); setFileDuration(0); setResult(null); setError(''); setVideoMeta(null); setIsVertical(false); }}
+        acceptTypes=".mp4,.mov,.avi" label="영상 파일을 드래그하거나 클릭하여 선택" subLabel="MP4, MOV, AVI · 최대 500MB · 최대 10분" />
+
+      {/* 이미 세로 영상 경고 */}
+      {file && isVertical && !hasResult && (
+        <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-700 font-semibold">
+          이미 세로 영상입니다. 해상도 변경만 필요하면 그대로 진행할 수 있습니다.
+        </div>
+      )}
+
+      {/* 옵션 */}
+      {file && !hasResult && (
+        <div className="space-y-5">
+          {/* 출력 비율 */}
+          <div className="space-y-3">
+            <label className="block text-xs font-semibold text-slate-500">출력 비율</label>
+            <div className="flex gap-3">
+              {CROP_ASPECT_OPTIONS.map(opt => (
+                <button key={opt.id} type="button" onClick={() => setCropAspect(opt.id)}
+                  className={`flex-1 p-3 rounded-xl border-2 text-center transition-all ${cropAspect === opt.id ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200' : 'border-slate-200 hover:border-blue-300'}`}>
+                  <div className={`text-lg font-black ${cropAspect === opt.id ? 'text-blue-700' : 'text-slate-700'}`}>{opt.label}</div>
+                  <div className="text-[10px] text-slate-500 mt-0.5">{opt.desc}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* 크롭 모드 */}
+          <div className="space-y-3">
+            <label className="block text-xs font-semibold text-slate-500">크롭 모드</label>
+            <div className="space-y-2">
+              {CROP_MODE_OPTIONS.map(opt => (
+                <button key={opt.id} type="button" onClick={() => setCropMode(opt.id)}
+                  className={`w-full p-4 rounded-xl border-2 text-left transition-all ${cropMode === opt.id ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200' : 'border-slate-200 hover:border-blue-300'}`}>
+                  <div className={`text-sm font-bold ${cropMode === opt.id ? 'text-blue-700' : 'text-slate-700'}`}>
+                    {opt.id === 'face_tracking' && '👤 '}{opt.id === 'center' && '⊹ '}{opt.id === 'manual' && '✋ '}{opt.label}
+                    {opt.id === 'face_tracking' && <span className="ml-2 text-[10px] font-normal text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">Beta</span>}
+                  </div>
+                  <div className="text-[11px] text-slate-500 mt-1">{opt.desc}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* 수동 모드: 프리뷰 + 드래그 */}
+          {cropMode === 'manual' && file && (
+            <div className="space-y-2">
+              <label className="block text-xs font-semibold text-slate-500">크롭 위치 지정 (클릭/드래그)</label>
+              <div ref={previewRef} className="relative rounded-xl overflow-hidden bg-black cursor-crosshair"
+                onClick={handleManualDrag}>
+                <video ref={videoPreviewRef} src={URL.createObjectURL(file)} className="w-full" muted />
+                {/* 크롭 영역 오버레이 */}
+                <div className="absolute inset-0 bg-black/50" />
+                <div className="absolute top-0 bottom-0 border-2 border-blue-400 bg-transparent"
+                  style={{ ...getCropBoxStyle(), boxShadow: '0 0 0 9999px rgba(0,0,0,0.5)' }} />
+              </div>
+              <input type="range" min={0} max={1} step={0.01} value={manualX}
+                onChange={e => setManualX(parseFloat(e.target.value))}
+                className="w-full accent-blue-500" />
+            </div>
+          )}
+
+          {/* 출력 해상도 */}
+          <div className="space-y-3">
+            <label className="block text-xs font-semibold text-slate-500">출력 해상도</label>
+            <select value={cropResolution} onChange={e => setCropResolution(e.target.value as CropResolution)}
+              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm outline-none focus:border-blue-400">
+              {CROP_RESOLUTION_OPTIONS.map(opt => (
+                <option key={opt.id} value={opt.id}>{opt.label}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* 영상 메타 요약 */}
+          {videoMeta && (
+            <div className="flex gap-3 text-[11px] text-slate-500">
+              <span>원본: {videoMeta.width}×{videoMeta.height}</span>
+              {fileDuration > 0 && <span>길이: {formatDuration(fileDuration)}</span>}
+            </div>
+          )}
+        </div>
+      )}
+
+      {error && <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700 font-semibold">{error}</div>}
+
+      {/* 실행 */}
+      {file && !hasResult && (
+        <button type="button" onClick={handleCrop} disabled={isProcessing || fileDuration > MAX_DURATION_SEC || !!error}
+          className="w-full py-4 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all text-sm flex items-center justify-center gap-2">
+          {isProcessing ? (<><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />{progress}</>) : (<>📐 세로 크롭 시작</>)}
+        </button>
+      )}
+
+      {/* 결과 */}
+      {hasResult && result && (
+        <div className="space-y-5">
+          {/* 통계 */}
+          <div className="grid grid-cols-3 gap-3">
+            <div className="bg-slate-50 rounded-xl p-3 text-center">
+              <div className="text-[10px] text-slate-500 mb-0.5">원본</div>
+              <div className="text-sm font-bold text-slate-800">{result.originalResolution}</div>
+              <div className="text-[10px] text-slate-400">{result.originalAspect}</div>
+            </div>
+            <div className="bg-blue-50 rounded-xl p-3 text-center">
+              <div className="text-[10px] text-blue-600 mb-0.5">결과</div>
+              <div className="text-sm font-bold text-blue-700">{result.resultResolution}</div>
+              <div className="text-[10px] text-blue-400">{result.resultAspect}</div>
+            </div>
+            <div className="bg-emerald-50 rounded-xl p-3 text-center">
+              <div className="text-[10px] text-emerald-600 mb-0.5">감지된 얼굴</div>
+              <div className="text-sm font-bold text-emerald-700">{result.facesDetected}명</div>
+              <div className="text-[10px] text-emerald-400">{formatDuration(result.duration)}</div>
+            </div>
+          </div>
+
+          {/* 결과 영상 */}
+          <div className="flex justify-center">
+            <div className="rounded-xl overflow-hidden bg-black" style={{ maxWidth: '280px' }}>
+              <video controls src={result.blobUrl} className="w-full" style={{ aspectRatio: cropAspect === '9:16' ? '9/16' : cropAspect === '4:5' ? '4/5' : '1/1' }} />
+            </div>
+          </div>
+
+          {/* 다운로드 + 다시 */}
+          <div className="flex gap-3">
+            <button type="button"
+              onClick={() => { const a = document.createElement('a'); a.href = result.blobUrl; a.download = `cropped_${file?.name || 'output.mp4'}`; a.click(); }}
+              className="flex-1 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-all text-sm flex items-center justify-center gap-2">
+              📥 다운로드
+            </button>
+            <button type="button" onClick={() => { setResult(null); }}
+              className="px-5 py-3 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 transition-all text-sm">
+              🔄 다시 크롭
+            </button>
+            <button type="button" onClick={() => { setFile(null); setFileDuration(0); setResult(null); setError(''); setVideoMeta(null); setIsVertical(false); }}
+              className="px-5 py-3 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 transition-all text-sm">
+              새 파일
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════
 // 공통 컴포넌트: 파일 업로드 영역
 // ══════════════════════════════════════════
 
 function FileUploadArea({
   file, dragOver, fileDuration, fileInputRef,
   onFile, onDragOver, onDragLeave, onDrop, onClear,
+  acceptTypes, label, subLabel,
 }: {
   file: File | null;
   dragOver: boolean;
@@ -539,6 +856,9 @@ function FileUploadArea({
   onDragLeave: () => void;
   onDrop: (e: React.DragEvent) => void;
   onClear: () => void;
+  acceptTypes?: string;
+  label?: string;
+  subLabel?: string;
 }) {
   const isVideo = (f: File) => f.type.startsWith('video/') || /\.(mp4|mov|avi)$/i.test(f.name);
 
@@ -552,7 +872,7 @@ function FileUploadArea({
       onDrop={onDrop}
       onClick={() => fileInputRef.current?.click()}
     >
-      <input ref={fileInputRef} type="file" accept={ACCEPT_TYPES} className="hidden"
+      <input ref={fileInputRef} type="file" accept={acceptTypes || ACCEPT_TYPES} className="hidden"
         onChange={e => { const f = e.target.files?.[0]; if (f) onFile(f); }} />
 
       {file ? (
@@ -572,8 +892,8 @@ function FileUploadArea({
       ) : (
         <div className="space-y-3">
           <div className="text-4xl text-slate-300">📁</div>
-          <p className="text-sm font-semibold text-slate-600">영상 또는 오디오 파일을 드래그하거나 클릭하여 선택</p>
-          <p className="text-xs text-slate-400">MP4, MOV, AVI, MP3, WAV, AAC, M4A · 최대 {MAX_SIZE_MB}MB · 최대 {MAX_DURATION_SEC / 60}분</p>
+          <p className="text-sm font-semibold text-slate-600">{label || '영상 또는 오디오 파일을 드래그하거나 클릭하여 선택'}</p>
+          <p className="text-xs text-slate-400">{subLabel || `MP4, MOV, AVI, MP3, WAV, AAC, M4A · 최대 ${MAX_SIZE_MB}MB · 최대 ${MAX_DURATION_SEC / 60}분`}</p>
         </div>
       )}
     </div>
