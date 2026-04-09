@@ -21,9 +21,24 @@ app.get('/', (req, res) => {
 
 app.get('/health', (req, res) => {
   const checks = {};
-  try { execSync('ffmpeg -version', { stdio: 'pipe', timeout: 3000 }); checks.ffmpeg = true; } catch { checks.ffmpeg = false; }
-  try { execSync('auto-editor --version', { stdio: 'pipe', timeout: 3000 }); checks.autoEditor = true; } catch { checks.autoEditor = false; }
-  try { execSync('ffprobe -version', { stdio: 'pipe', timeout: 3000 }); checks.ffprobe = true; } catch { checks.ffprobe = false; }
+  const errors = {};
+  try { execSync('ffmpeg -version', { stdio: 'pipe', timeout: 3000 }); checks.ffmpeg = true; } catch (e) { checks.ffmpeg = false; errors.ffmpeg = e.message?.slice(0, 200); }
+
+  // auto-editor: 여러 경로 시도
+  let aeFound = false;
+  const aePaths = ['auto-editor', '/usr/local/bin/auto-editor', '/opt/autoeditor/bin/auto-editor'];
+  for (const p of aePaths) {
+    try { execSync(`${p} --version`, { stdio: 'pipe', timeout: 5000 }); aeFound = true; checks.autoEditorPath = p; break; } catch { /* next */ }
+  }
+  checks.autoEditor = aeFound;
+  if (!aeFound) {
+    // which/find로 어디 있는지 탐색
+    try { checks.autoEditorWhich = execSync('which auto-editor 2>/dev/null || find / -name auto-editor -type f 2>/dev/null | head -5', { stdio: 'pipe', timeout: 5000 }).toString().trim(); } catch { checks.autoEditorWhich = 'not found'; }
+    try { checks.pythonVersion = execSync('python3 --version', { stdio: 'pipe', timeout: 3000 }).toString().trim(); } catch { /* */ }
+    try { checks.pipList = execSync('/opt/autoeditor/bin/pip list 2>/dev/null | grep auto', { stdio: 'pipe', timeout: 3000 }).toString().trim(); } catch { checks.pipList = 'venv not found'; }
+  }
+
+  try { execSync('ffprobe -version', { stdio: 'pipe', timeout: 3000 }); checks.ffprobe = true; } catch (e) { checks.ffprobe = false; }
   res.json({ status: 'ok', checks });
 });
 
