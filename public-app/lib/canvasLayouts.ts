@@ -257,7 +257,7 @@ export function renderGenericToCanvas(ctx: CanvasLayoutContext): void {
       lineHeight: slide.titleLineHeight || 1.25,
       charSpacing: (slide.titleLetterSpacing || -0.4) * 10,
       name: OBJ.TITLE,
-      splitByGrapheme: true,
+      splitByGrapheme: false,
       ...SELECTION_STYLE,
     });
     canvas.add(titleObj);
@@ -280,7 +280,7 @@ export function renderGenericToCanvas(ctx: CanvasLayoutContext): void {
       textAlign: 'center',
       lineHeight: slide.subtitleLineHeight || 1.55,
       name: OBJ.SUBTITLE,
-      splitByGrapheme: true,
+      splitByGrapheme: false,
       ...SELECTION_STYLE,
     });
     canvas.add(subObj);
@@ -305,7 +305,7 @@ export function renderGenericToCanvas(ctx: CanvasLayoutContext): void {
       textAlign: 'left',
       lineHeight: bodyAuto.lineHeight,
       name: OBJ.BODY,
-      splitByGrapheme: true,
+      splitByGrapheme: false,
       ...SELECTION_STYLE,
     });
     canvas.add(bodyObj);
@@ -334,7 +334,7 @@ export function renderGenericToCanvas(ctx: CanvasLayoutContext): void {
         textAlign: 'left',
         lineHeight: 1.5,
         name: OBJ.ITEM_PREFIX + item.key,
-        splitByGrapheme: true,
+        splitByGrapheme: false,
         ...SELECTION_STYLE,
       });
       if (item.marker) {
@@ -370,7 +370,7 @@ export function renderGenericToCanvas(ctx: CanvasLayoutContext): void {
       fill: slide.hospitalColor || theme.subtitleColor,
       textAlign: 'center',
       name: OBJ.HOSPITAL,
-      splitByGrapheme: true,
+      splitByGrapheme: false,
       ...SELECTION_STYLE,
     });
     canvas.add(hospObj);
@@ -438,7 +438,7 @@ function renderDefaultCoverToCanvas(ctx: CanvasLayoutContext): void {
       lineHeight: slide.titleLineHeight || 1.2,
       charSpacing: (slide.titleLetterSpacing || -0.4) * 10,
       name: OBJ.TITLE,
-      splitByGrapheme: true,
+      splitByGrapheme: false,
       shadow: isDarkTheme ? new F.Shadow({ color: 'rgba(0,0,0,0.25)', blur: 24, offsetX: 0, offsetY: 2 }) : undefined,
       ...SELECTION_STYLE,
     }));
@@ -460,7 +460,7 @@ function renderDefaultCoverToCanvas(ctx: CanvasLayoutContext): void {
       textAlign: 'center',
       lineHeight: slide.subtitleLineHeight || 1.55,
       name: OBJ.SUBTITLE,
-      splitByGrapheme: true,
+      splitByGrapheme: false,
       ...SELECTION_STYLE,
     }));
   }
@@ -553,7 +553,7 @@ function renderCoverFromTemplateToCanvas(ctx: CanvasLayoutContext, t: CoverTempl
       textAlign: tPos.textAlign as any,
       charSpacing: 10,
       name: OBJ.SUBTITLE,
-      splitByGrapheme: true,
+      splitByGrapheme: false,
       ...SELECTION_STYLE,
     }));
   }
@@ -579,7 +579,7 @@ function renderCoverFromTemplateToCanvas(ctx: CanvasLayoutContext, t: CoverTempl
       lineHeight: slide.titleLineHeight || 1.25,
       charSpacing: (slide.titleLetterSpacing || -0.4) * 10,
       name: OBJ.TITLE,
-      splitByGrapheme: true,
+      splitByGrapheme: false,
       ...SELECTION_STYLE,
     }));
   }
@@ -599,7 +599,7 @@ function renderCoverFromTemplateToCanvas(ctx: CanvasLayoutContext, t: CoverTempl
       fill: slide.subtitleColor || t.colors.subtitle,
       textAlign: tPos.textAlign as any,
       name: OBJ.SUBTITLE,
-      splitByGrapheme: true,
+      splitByGrapheme: false,
       ...SELECTION_STYLE,
     }));
   }
@@ -748,7 +748,7 @@ function addHospitalFooter(ctx: CanvasLayoutContext): void {
     textAlign: 'center',
     charSpacing: 30,
     name: OBJ.HOSPITAL,
-    splitByGrapheme: true,
+    splitByGrapheme: false,
     ...SELECTION_STYLE,
   }));
 }
@@ -791,7 +791,7 @@ export function renderInfoToCanvas(ctx: CanvasLayoutContext): void {
       lineHeight: slide.titleLineHeight || 1.25,
       charSpacing: -20,
       name: OBJ.TITLE,
-      splitByGrapheme: true,
+      splitByGrapheme: false,
       ...SELECTION_STYLE,
     }));
     curY += titleFs * 1.3 + 22;
@@ -813,7 +813,7 @@ export function renderInfoToCanvas(ctx: CanvasLayoutContext): void {
       textAlign: 'left',
       lineHeight: slide.subtitleLineHeight || 1.55,
       name: OBJ.SUBTITLE,
-      splitByGrapheme: true,
+      splitByGrapheme: false,
       ...SELECTION_STYLE,
     }));
     curY += 22 * 1.6 + 22;
@@ -858,7 +858,7 @@ export function renderInfoToCanvas(ctx: CanvasLayoutContext): void {
       textAlign: 'left',
       lineHeight: bodyAuto.lineHeight,
       name: OBJ.BODY,
-      splitByGrapheme: true,
+      splitByGrapheme: false,
       ...SELECTION_STYLE,
     }));
   }
@@ -910,7 +910,7 @@ export function renderComparisonToCanvas(ctx: CanvasLayoutContext): void {
       textAlign: 'center',
       lineHeight: 1.25,
       name: OBJ.TITLE,
-      splitByGrapheme: true,
+      splitByGrapheme: false,
       ...SELECTION_STYLE,
     }));
     curY += titleFs * 1.3;
@@ -931,7 +931,7 @@ export function renderComparisonToCanvas(ctx: CanvasLayoutContext): void {
       fill: slide.subtitleColor || theme.subtitleColor,
       textAlign: 'center',
       name: OBJ.SUBTITLE,
-      splitByGrapheme: true,
+      splitByGrapheme: false,
       ...SELECTION_STYLE,
     }));
     curY += 40;
@@ -1073,7 +1073,7 @@ export function renderChecklistToCanvas(ctx: CanvasLayoutContext): void {
       textAlign: slide.titleAlign || 'left',
       lineHeight: 1.25,
       name: OBJ.TITLE,
-      splitByGrapheme: true,
+      splitByGrapheme: false,
       ...SELECTION_STYLE,
     }));
     curY += titleFs * 1.3;
@@ -1095,7 +1095,7 @@ export function renderChecklistToCanvas(ctx: CanvasLayoutContext): void {
       fill: slide.subtitleColor || theme.subtitleColor,
       textAlign: 'left',
       name: OBJ.SUBTITLE,
-      splitByGrapheme: true,
+      splitByGrapheme: false,
       ...SELECTION_STYLE,
     }));
     curY += 36;
@@ -1152,7 +1152,7 @@ export function renderChecklistToCanvas(ctx: CanvasLayoutContext): void {
       textAlign: 'left',
       lineHeight: 1.4,
       name: OBJ.ITEM_PREFIX + `check_${i}`,
-      splitByGrapheme: true,
+      splitByGrapheme: false,
       ...SELECTION_STYLE,
     }));
   });
@@ -1200,7 +1200,7 @@ export function renderStepsToCanvas(ctx: CanvasLayoutContext): void {
       textAlign: 'center',
       lineHeight: 1.25,
       name: OBJ.TITLE,
-      splitByGrapheme: true,
+      splitByGrapheme: false,
       ...SELECTION_STYLE,
     }));
     curY += titleFs * 1.3;
@@ -1222,7 +1222,7 @@ export function renderStepsToCanvas(ctx: CanvasLayoutContext): void {
       fill: slide.subtitleColor || theme.subtitleColor,
       textAlign: 'center',
       name: OBJ.SUBTITLE,
-      splitByGrapheme: true,
+      splitByGrapheme: false,
       ...SELECTION_STYLE,
     }));
     curY += 36;
@@ -1282,7 +1282,7 @@ export function renderStepsToCanvas(ctx: CanvasLayoutContext): void {
         textAlign: 'center',
         lineHeight: 1.3,
         name: OBJ.ITEM_PREFIX + `step_${i}`,
-        splitByGrapheme: true,
+        splitByGrapheme: false,
         ...SELECTION_STYLE,
       }));
 
@@ -1362,7 +1362,7 @@ export function renderStepsToCanvas(ctx: CanvasLayoutContext): void {
         textAlign: 'left',
         lineHeight: 1.3,
         name: OBJ.ITEM_PREFIX + `step_${i}`,
-        splitByGrapheme: true,
+        splitByGrapheme: false,
         ...SELECTION_STYLE,
       }));
 
@@ -1417,7 +1417,7 @@ export function renderIconGridToCanvas(ctx: CanvasLayoutContext): void {
       originX: 'center', originY: tp ? 'center' : 'top', width: cardWidth - PAD * 2,
       fontSize: titleFs, fontFamily: resolveFontName(theme, slide.titleFontId || slide.fontId),
       fontWeight: slide.titleFontWeight || '800', fill: slide.titleColor || theme.titleColor,
-      textAlign: 'center', lineHeight: 1.25, name: OBJ.TITLE, splitByGrapheme: true, ...SELECTION_STYLE,
+      textAlign: 'center', lineHeight: 1.25, name: OBJ.TITLE, splitByGrapheme: false, ...SELECTION_STYLE,
     }));
     curY += titleFs * 1.3;
   }
@@ -1428,7 +1428,7 @@ export function renderIconGridToCanvas(ctx: CanvasLayoutContext): void {
       originX: 'center', originY: sp ? 'center' : 'top', width: cardWidth - PAD * 2,
       fontSize: slide.subtitleFontSize || 22, fontFamily: resolveFontName(theme, slide.subtitleFontId || slide.fontId),
       fontWeight: '600', fill: slide.subtitleColor || theme.subtitleColor, textAlign: 'center',
-      name: OBJ.SUBTITLE, splitByGrapheme: true, ...SELECTION_STYLE,
+      name: OBJ.SUBTITLE, splitByGrapheme: false, ...SELECTION_STYLE,
     }));
     curY += 40;
   }
@@ -1468,7 +1468,7 @@ export function renderIconGridToCanvas(ctx: CanvasLayoutContext): void {
       left: cx + cellW / 2, top: cy + cellH * 0.55, originX: 'center', originY: 'top',
       width: cellW - 48, fontSize: 22, fontWeight: '900', fontFamily: fontName,
       fill: wcText, textAlign: 'center', lineHeight: 1.3,
-      name: OBJ.ITEM_PREFIX + `icon_${i}`, splitByGrapheme: true, ...SELECTION_STYLE,
+      name: OBJ.ITEM_PREFIX + `icon_${i}`, splitByGrapheme: false, ...SELECTION_STYLE,
     }));
 
     // 설명
@@ -1513,7 +1513,7 @@ export function renderDataHighlightToCanvas(ctx: CanvasLayoutContext): void {
       originX: 'center', originY: tp ? 'center' : 'top', width: cardWidth - PAD * 2,
       fontSize: titleFs, fontFamily: resolveFontName(theme, slide.titleFontId || slide.fontId),
       fontWeight: slide.titleFontWeight || '800', fill: slide.titleColor || theme.titleColor,
-      textAlign: 'center', lineHeight: 1.25, name: OBJ.TITLE, splitByGrapheme: true, ...SELECTION_STYLE,
+      textAlign: 'center', lineHeight: 1.25, name: OBJ.TITLE, splitByGrapheme: false, ...SELECTION_STYLE,
     }));
     curY += titleFs * 1.3;
   }
@@ -1524,7 +1524,7 @@ export function renderDataHighlightToCanvas(ctx: CanvasLayoutContext): void {
       originX: 'center', originY: sp ? 'center' : 'top', width: cardWidth - PAD * 2,
       fontSize: slide.subtitleFontSize || 22, fontFamily: resolveFontName(theme, slide.subtitleFontId || slide.fontId),
       fontWeight: '600', fill: slide.subtitleColor || theme.subtitleColor, textAlign: 'center',
-      name: OBJ.SUBTITLE, splitByGrapheme: true, ...SELECTION_STYLE,
+      name: OBJ.SUBTITLE, splitByGrapheme: false, ...SELECTION_STYLE,
     }));
     curY += 40;
   }
@@ -1621,7 +1621,7 @@ export function renderQnaToCanvas(ctx: CanvasLayoutContext): void {
       fontSize: titleFs, fontFamily: resolveFontName(theme, slide.titleFontId || slide.fontId),
       fontWeight: slide.titleFontWeight || '800', fill: slide.titleColor || theme.titleColor,
       textAlign: slide.titleAlign || 'left', lineHeight: 1.25,
-      name: OBJ.TITLE, splitByGrapheme: true, ...SELECTION_STYLE,
+      name: OBJ.TITLE, splitByGrapheme: false, ...SELECTION_STYLE,
     }));
     curY += titleFs * 1.3 + 24;
   }
@@ -1651,7 +1651,7 @@ export function renderQnaToCanvas(ctx: CanvasLayoutContext): void {
       left: qbX + badgeSize / 2 + 16, top: qbY, originX: 'left', originY: 'center',
       width: contentW - badgeSize - 72, fontSize: 22, fontWeight: '800', fontFamily: fontName,
       fill: theme.titleColor, textAlign: 'left', lineHeight: 1.4,
-      name: OBJ.ITEM_PREFIX + `qna_${i}`, splitByGrapheme: true, ...SELECTION_STYLE,
+      name: OBJ.ITEM_PREFIX + `qna_${i}`, splitByGrapheme: false, ...SELECTION_STYLE,
     }));
 
     // A 뱃지
@@ -1698,7 +1698,7 @@ export function renderTimelineToCanvas(ctx: CanvasLayoutContext): void {
       fontSize: titleFs, fontFamily: resolveFontName(theme, slide.titleFontId || slide.fontId),
       fontWeight: slide.titleFontWeight || '800', fill: slide.titleColor || theme.titleColor,
       textAlign: slide.titleAlign || 'left', lineHeight: 1.25,
-      name: OBJ.TITLE, splitByGrapheme: true, ...SELECTION_STYLE,
+      name: OBJ.TITLE, splitByGrapheme: false, ...SELECTION_STYLE,
     }));
     curY += titleFs * 1.3 + 24;
   }
@@ -1745,7 +1745,7 @@ export function renderTimelineToCanvas(ctx: CanvasLayoutContext): void {
       left: contentLeft, top: iy + 28, originX: 'left', originY: 'top',
       width: cardWidth - contentLeft - PAD, fontSize: layout.fontSize, fontWeight: '800', fontFamily: fontName,
       fill: theme.titleColor, textAlign: 'left', lineHeight: 1.3,
-      name: OBJ.ITEM_PREFIX + `timeline_${i}`, splitByGrapheme: true, ...SELECTION_STYLE,
+      name: OBJ.ITEM_PREFIX + `timeline_${i}`, splitByGrapheme: false, ...SELECTION_STYLE,
     }));
 
     // desc
@@ -1789,7 +1789,7 @@ export function renderBeforeAfterToCanvas(ctx: CanvasLayoutContext): void {
       originX: 'center', originY: tp ? 'center' : 'top', width: cardWidth - PAD * 2,
       fontSize: titleFs, fontFamily: resolveFontName(theme, slide.titleFontId || slide.fontId),
       fontWeight: slide.titleFontWeight || '800', fill: slide.titleColor || theme.titleColor,
-      textAlign: 'center', lineHeight: 1.25, name: OBJ.TITLE, splitByGrapheme: true, ...SELECTION_STYLE,
+      textAlign: 'center', lineHeight: 1.25, name: OBJ.TITLE, splitByGrapheme: false, ...SELECTION_STYLE,
     }));
     curY += titleFs * 1.3 + 24;
   }
@@ -1817,7 +1817,7 @@ export function renderBeforeAfterToCanvas(ctx: CanvasLayoutContext): void {
       left: bx + 46, top: iy, originX: 'left', originY: 'top', width: colW - 72,
       fontSize: 20, fontWeight: '400', fontFamily: fontName, fill: theme.bodyColor,
       textAlign: 'left', lineHeight: 1.5,
-      name: OBJ.ITEM_PREFIX + `check_${i}`, splitByGrapheme: true, ...SELECTION_STYLE,
+      name: OBJ.ITEM_PREFIX + `check_${i}`, splitByGrapheme: false, ...SELECTION_STYLE,
     }));
   });
 
@@ -1878,7 +1878,7 @@ export function renderProsConsToCanvas(ctx: CanvasLayoutContext): void {
       originX: 'center', originY: tp ? 'center' : 'top', width: cardWidth - PAD * 2,
       fontSize: titleFs, fontFamily: resolveFontName(theme, slide.titleFontId || slide.fontId),
       fontWeight: slide.titleFontWeight || '800', fill: slide.titleColor || theme.titleColor,
-      textAlign: 'center', lineHeight: 1.25, name: OBJ.TITLE, splitByGrapheme: true, ...SELECTION_STYLE,
+      textAlign: 'center', lineHeight: 1.25, name: OBJ.TITLE, splitByGrapheme: false, ...SELECTION_STYLE,
     }));
     curY += titleFs * 1.3 + 24;
   }
@@ -1915,7 +1915,7 @@ export function renderProsConsToCanvas(ctx: CanvasLayoutContext): void {
         left: x + 48, top: iy, originX: 'left', originY: 'top', width: colW - 72,
         fontSize: layout.fontSize, fontWeight: '500', fontFamily: fontName, fill: theme.titleColor,
         textAlign: 'left', lineHeight: 1.5,
-        name: OBJ.ITEM_PREFIX + `${keyPrefix}_${i}`, splitByGrapheme: true, ...SELECTION_STYLE,
+        name: OBJ.ITEM_PREFIX + `${keyPrefix}_${i}`, splitByGrapheme: false, ...SELECTION_STYLE,
       }));
     });
   };
@@ -1965,7 +1965,7 @@ export function renderPriceTableToCanvas(ctx: CanvasLayoutContext): void {
       textAlign: 'center',
       lineHeight: 1.25,
       name: OBJ.TITLE,
-      splitByGrapheme: true,
+      splitByGrapheme: false,
       ...SELECTION_STYLE,
     }));
     curY += titleFs * 1.3;
@@ -2024,7 +2024,7 @@ export function renderPriceTableToCanvas(ctx: CanvasLayoutContext): void {
       fontSize: 20, fontWeight: '700', fontFamily: fontName,
       fill: theme.titleColor, textAlign: 'center',
       name: OBJ.ITEM_PREFIX + `price_${i}`,
-      splitByGrapheme: true,
+      splitByGrapheme: false,
       ...SELECTION_STYLE,
     }));
 
@@ -2106,7 +2106,7 @@ export function renderWarningToCanvas(ctx: CanvasLayoutContext): void {
       textAlign: 'center',
       lineHeight: 1.25,
       name: OBJ.TITLE,
-      splitByGrapheme: true,
+      splitByGrapheme: false,
       ...SELECTION_STYLE,
     }));
     curY += titleFs * 1.3 + 24;
@@ -2158,7 +2158,7 @@ export function renderWarningToCanvas(ctx: CanvasLayoutContext): void {
       textAlign: 'left',
       lineHeight: 1.5,
       name: OBJ.ITEM_PREFIX + `warn_${i}`,
-      splitByGrapheme: true,
+      splitByGrapheme: false,
       ...SELECTION_STYLE,
     }));
   });
@@ -2213,7 +2213,7 @@ export function renderQuoteToCanvas(ctx: CanvasLayoutContext): void {
       lineHeight: 1.6,
       charSpacing: -10,
       name: OBJ.BODY,
-      splitByGrapheme: true,
+      splitByGrapheme: false,
       ...SELECTION_STYLE,
     }));
 
@@ -2302,7 +2302,7 @@ export function renderNumberedListToCanvas(ctx: CanvasLayoutContext): void {
       textAlign: slide.titleAlign || 'left',
       lineHeight: 1.25,
       name: OBJ.TITLE,
-      splitByGrapheme: true,
+      splitByGrapheme: false,
       ...SELECTION_STYLE,
     }));
     curY += titleFs * 1.3;
@@ -2375,7 +2375,7 @@ export function renderNumberedListToCanvas(ctx: CanvasLayoutContext): void {
       textAlign: 'left',
       lineHeight: 1.3,
       name: OBJ.ITEM_PREFIX + `num_${i}`,
-      splitByGrapheme: true,
+      splitByGrapheme: false,
       ...SELECTION_STYLE,
     }));
 
@@ -2455,7 +2455,7 @@ export function renderClosingToCanvas(ctx: CanvasLayoutContext): void {
       textAlign: 'center',
       charSpacing: 2,
       name: OBJ.SUBTITLE,
-      splitByGrapheme: true,
+      splitByGrapheme: false,
       ...SELECTION_STYLE,
     }));
     curY += subH + 24;
@@ -2479,7 +2479,7 @@ export function renderClosingToCanvas(ctx: CanvasLayoutContext): void {
       lineHeight: slide.titleLineHeight || 1.25,
       charSpacing: (slide.titleLetterSpacing || -0.4) * 10,
       name: OBJ.TITLE,
-      splitByGrapheme: true,
+      splitByGrapheme: false,
       shadow: isDarkTheme ? new F.Shadow({ color: 'rgba(0,0,0,0.25)', blur: 24, offsetX: 0, offsetY: 2 }) : undefined,
       ...SELECTION_STYLE,
     }));
@@ -2499,7 +2499,7 @@ export function renderClosingToCanvas(ctx: CanvasLayoutContext): void {
       textAlign: 'center',
       lineHeight: 1.7,
       name: OBJ.BODY,
-      splitByGrapheme: true,
+      splitByGrapheme: false,
       ...SELECTION_STYLE,
     }));
     curY += 60;
@@ -2529,7 +2529,7 @@ export function renderClosingToCanvas(ctx: CanvasLayoutContext): void {
       textAlign: 'center',
       charSpacing: 40,
       name: OBJ.HOSPITAL,
-      splitByGrapheme: true,
+      splitByGrapheme: false,
       ...SELECTION_STYLE,
     }));
   }
