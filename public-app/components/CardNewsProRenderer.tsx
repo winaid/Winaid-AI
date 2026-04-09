@@ -55,7 +55,7 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
 
   // 카드별 AI 채팅은 SlideEditor 내부에서 관리 (글로벌 채팅 제거)
   // fabric.js 캔버스 모드 토글
-  const [useCanvas, setUseCanvas] = useState(false);
+  const [useCanvas, setUseCanvas] = useState(true); // 캔버스 에디터 기본 사용
 
   // 폰트 즉시 반영 + 커스텀 폰트 업로드
   const [fontLoaded, setFontLoaded] = useState(0);
