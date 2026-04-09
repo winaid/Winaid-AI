@@ -72,8 +72,6 @@ export default function YoutubePage() {
     setTranscript('');
     setSummary('');
     setSuggestedTopics([]);
-    // GIF 관련 초기화 제거됨
-    setVideoDuration(0);
     setVideoId(extractVideoId(youtubeUrl));
 
     try {
@@ -137,18 +135,6 @@ YouTube URL: ${youtubeUrl.trim()}
         .trim();
       setSummary(summaryText);
       setTranscript(summaryText);
-
-      // 영상 길이 추출
-      const durationMatch = summaryText.match(/영상\s*길이[:\s]*약?\s*(\d+)\s*분/);
-      if (durationMatch) {
-        setVideoDuration(parseInt(durationMatch[1]) * 60);
-      } else {
-        const timeMatches = [...summaryText.matchAll(/(\d{1,2}):(\d{2})/g)];
-        if (timeMatches.length > 0) {
-          const last = timeMatches[timeMatches.length - 1];
-          setVideoDuration(parseInt(last[1]) * 60 + parseInt(last[2]) + 60);
-        }
-      }
 
       // ── 2단계: 주제 추천 ──
       try {
