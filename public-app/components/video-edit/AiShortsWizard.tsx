@@ -1,12 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import {
   type AiShortsState, type ScriptScene, type AiInputType, type AiTone, type AiDuration,
   AI_STEP_LABELS, INITIAL_AI_SHORTS_STATE,
 } from './types';
 import { validateMedicalAd } from '../../lib/medicalAdValidation';
 import { getStylesByCategory, VIDEO_STYLES } from '../../lib/videoStyles';
+import { KOREAN_VOICES, type TtsVoice } from '../../lib/ttsVoices';
 
 // ── 메인 위저드 ──
 
@@ -249,33 +250,86 @@ function StepStyleSelect({ state, patch }: { state: AiShortsState; patch: (p: Pa
 // STEP C: 목소리 (TTS)
 // ══════════════════════════════════════════
 
-const VOICE_OPTIONS = [
-  { id: 'ko-KR-Wavenet-A', label: '자연스러운 여성', gender: '여' },
-  { id: 'ko-KR-Wavenet-B', label: '자연스러운 남성', gender: '남' },
-  { id: 'ko-KR-Standard-A', label: '차분한 여성', gender: '여' },
-  { id: 'ko-KR-Standard-B', label: '밝은 여성', gender: '여' },
-  { id: 'ko-KR-Standard-C', label: '차분한 남성', gender: '남' },
-  { id: 'ko-KR-Standard-D', label: '밝은 남성', gender: '남' },
-];
-
 function StepVoice({ state, patch }: { state: AiShortsState; patch: (p: Partial<AiShortsState>) => void }) {
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [previewingId, setPreviewingId] = useState<string | null>(null);
+  const [generating, setGenerating] = useState(false);
+
+  const previewVoice = async (voice: TtsVoice) => {
+    if (previewingId === voice.name) {
+      audioRef.current?.pause(); audioRef.current = null; setPreviewingId(null); return;
+    }
+    if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
+    setPreviewingId(voice.name);
+    try {
+      const text = state.scenes[0]?.narration || '안녕하세요, 반갑습니다.';
+      const res = await fetch('/api/video/ai-preview-tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: text.slice(0, 50), voice_name: voice.name, speed: state.voiceSpeed }),
+      });
+      if (!res.ok) { setPreviewingId(null); return; }
+      const blob = await res.blob();
+      const audio = new Audio(URL.createObjectURL(blob));
+      audio.onended = () => setPreviewingId(null);
+      audio.play();
+      audioRef.current = audio;
+    } catch { setPreviewingId(null); }
+  };
+
+  const generateTts = async () => {
+    setGenerating(true);
+    patch({ isProcessing: true, progress: '나레이션을 생성하고 있습니다...' });
+    try {
+      const res = await fetch('/api/video/ai-generate-tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scenes: state.scenes, voice_name: state.voiceName, speed: state.voiceSpeed }),
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({ error: '실패' }));
+        throw new Error(d.error);
+      }
+      const blob = await res.blob();
+      const metaHeader = res.headers.get('X-Tts-Metadata');
+      const meta = metaHeader ? JSON.parse(metaHeader) : {};
+      patch({ audioUrl: URL.createObjectURL(blob), currentStep: 3 });
+    } catch (err) { console.error(err); }
+    finally { setGenerating(false); patch({ isProcessing: false, progress: '' }); }
+  };
+
+  const tiers = ['wavenet', 'neural2', 'standard'] as const;
+
   return (
     <div className="space-y-5">
-      <div className="space-y-2">
-        <label className="text-xs font-semibold text-slate-500">목소리 선택</label>
-        <div className="space-y-1.5">
-          {VOICE_OPTIONS.map(v => (
-            <button key={v.id} type="button" onClick={() => patch({ voiceName: v.id })}
-              className={`w-full flex items-center gap-3 p-3 rounded-xl border-2 transition-all ${state.voiceName === v.id ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200 hover:border-indigo-300'}`}>
-              <span className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${state.voiceName === v.id ? 'border-indigo-500' : 'border-slate-300'}`}>
-                {state.voiceName === v.id && <span className="w-2 h-2 bg-indigo-500 rounded-full" />}
-              </span>
-              <span className={`text-sm font-bold ${state.voiceName === v.id ? 'text-indigo-700' : 'text-slate-700'}`}>{v.label}</span>
-              <span className="text-[9px] text-slate-400 ml-auto">{v.gender}</span>
-            </button>
-          ))}
-        </div>
-      </div>
+      {tiers.map(tier => {
+        const voices = KOREAN_VOICES.filter(v => v.tier === tier);
+        if (voices.length === 0) return null;
+        return (
+          <div key={tier} className="space-y-2">
+            <label className="text-xs font-semibold text-slate-500">
+              {tier === 'wavenet' ? '추천' : tier === 'neural2' ? '프리미엄' : '기본'}
+            </label>
+            <div className="space-y-1.5">
+              {voices.map(v => (
+                <div key={v.name} className={`flex items-center gap-2 p-2.5 rounded-xl border-2 transition-all ${state.voiceName === v.name ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200'}`}>
+                  <button type="button" onClick={() => patch({ voiceName: v.name })} className="flex items-center gap-2 flex-1">
+                    <span className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center ${state.voiceName === v.name ? 'border-indigo-500' : 'border-slate-300'}`}>
+                      {state.voiceName === v.name && <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full" />}
+                    </span>
+                    <span className={`text-xs font-bold ${state.voiceName === v.name ? 'text-indigo-700' : 'text-slate-700'}`}>{v.label}</span>
+                    <span className="text-[9px] text-slate-400">{v.gender === 'female' ? '여' : '남'}</span>
+                  </button>
+                  <button type="button" onClick={() => previewVoice(v)}
+                    className={`px-2 py-0.5 text-[10px] font-bold rounded-md ${previewingId === v.name ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500 hover:bg-indigo-50'}`}>
+                    {previewingId === v.name ? '⏹' : '▶️ 듣기'}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })}
       <div className="space-y-2">
         <label className="text-xs font-semibold text-slate-500">속도: ×{state.voiceSpeed.toFixed(1)}</label>
         <div className="flex items-center gap-3">
@@ -285,11 +339,23 @@ function StepVoice({ state, patch }: { state: AiShortsState; patch: (p: Partial<
           <span className="text-[10px] text-slate-400">빠르게</span>
         </div>
       </div>
+      {state.audioUrl && (
+        <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl">
+          <div className="text-xs font-bold text-emerald-700 mb-2">✅ 나레이션 생성 완료</div>
+          <audio controls src={state.audioUrl} className="w-full" />
+        </div>
+      )}
       <div className="flex gap-3">
         <button type="button" onClick={() => patch({ currentStep: 1 })} className="px-5 py-3 bg-slate-100 text-slate-600 font-bold rounded-xl text-sm">← 이전</button>
-        <button type="button" onClick={() => patch({ currentStep: 3 })} className="flex-1 py-3 bg-indigo-600 text-white font-bold rounded-xl text-sm">다음: 이미지 →</button>
+        {!state.audioUrl ? (
+          <button type="button" onClick={generateTts} disabled={generating}
+            className="flex-1 py-3 bg-indigo-600 text-white font-bold rounded-xl disabled:opacity-40 text-sm flex items-center justify-center gap-2">
+            {generating ? (<><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />생성 중...</>) : '🎙️ 나레이션 생성'}
+          </button>
+        ) : (
+          <button type="button" onClick={() => patch({ currentStep: 3 })} className="flex-1 py-3 bg-indigo-600 text-white font-bold rounded-xl text-sm">다음: 이미지 →</button>
+        )}
       </div>
-      <p className="text-[10px] text-center text-slate-400">TTS 미리듣기 — 곧 지원 예정</p>
     </div>
   );
 }
@@ -299,27 +365,93 @@ function StepVoice({ state, patch }: { state: AiShortsState; patch: (p: Partial<
 // ══════════════════════════════════════════
 
 function StepImages({ state, patch }: { state: AiShortsState; patch: (p: Partial<AiShortsState>) => void }) {
+  const [generating, setGenerating] = useState(false);
+  const [regenIdx, setRegenIdx] = useState<number | null>(null);
+  const hasAllImages = state.scenes.every(s => !!s.imageUrl);
+
+  const generateAll = async () => {
+    setGenerating(true);
+    patch({ isProcessing: true, progress: '장면 이미지를 생성하고 있습니다...' });
+    try {
+      const res = await fetch('/api/video/ai-generate-scenes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          scenes: state.scenes.map(s => ({ scene_number: s.sceneNumber, image_prompt: s.imagePrompt, narration: s.narration })),
+          style_id: state.styleId,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      const updated = state.scenes.map(s => {
+        const img = (data.scene_images || []).find((si: { scene_number: number }) => si.scene_number === s.sceneNumber);
+        return img?.image_url ? { ...s, imageUrl: img.image_url } : s;
+      });
+      patch({ scenes: updated });
+    } catch (err) { console.error(err); }
+    finally { setGenerating(false); patch({ isProcessing: false, progress: '' }); }
+  };
+
+  const regenerateScene = async (idx: number) => {
+    const scene = state.scenes[idx];
+    setRegenIdx(idx);
+    try {
+      const res = await fetch('/api/video/ai-regenerate-scene', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scene_number: scene.sceneNumber, image_prompt: scene.imagePrompt, style_id: state.styleId }),
+      });
+      const data = await res.json();
+      if (data.image_url) {
+        const updated = state.scenes.map((s, i) => i === idx ? { ...s, imageUrl: data.image_url } : s);
+        patch({ scenes: updated });
+      }
+    } catch { /* */ }
+    finally { setRegenIdx(null); }
+  };
+
   return (
     <div className="space-y-5">
-      <div className="text-xs font-semibold text-slate-500">장면별 이미지 ({state.scenes.length}장면)</div>
+      <div className="flex items-center justify-between">
+        <div className="text-xs font-semibold text-slate-500">장면별 이미지 ({state.scenes.length}장면)</div>
+        <button type="button" onClick={generateAll} disabled={generating}
+          className="text-[10px] font-bold text-indigo-600 hover:text-indigo-800 disabled:opacity-40">
+          {generating ? '생성 중...' : hasAllImages ? '🔄 전체 재생성' : '✨ 전체 생성'}
+        </button>
+      </div>
       <div className="space-y-3">
         {state.scenes.map((scene, idx) => (
           <div key={idx} className="flex gap-3 p-3 bg-slate-50 rounded-xl">
-            <div className="w-20 h-20 bg-slate-200 rounded-lg flex items-center justify-center text-2xl flex-shrink-0">
-              {scene.imageUrl ? <img src={scene.imageUrl} alt="" className="w-full h-full object-cover rounded-lg" /> : '🖼️'}
+            <div className="w-20 h-28 bg-slate-200 rounded-lg flex items-center justify-center text-2xl flex-shrink-0 overflow-hidden relative">
+              {regenIdx === idx && <div className="absolute inset-0 bg-white/80 flex items-center justify-center"><div className="w-5 h-5 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" /></div>}
+              {scene.imageUrl ? <img src={scene.imageUrl} alt="" className="w-full h-full object-cover" /> : '🖼️'}
             </div>
             <div className="flex-1">
               <div className="text-[9px] text-indigo-500 font-bold">장면 {scene.sceneNumber}</div>
-              <div className="text-xs text-slate-700 mt-0.5">{scene.narration.slice(0, 40)}...</div>
-              <div className="text-[9px] text-slate-400 mt-1">{scene.imagePrompt.slice(0, 50)}...</div>
+              <div className="text-xs text-slate-700 mt-0.5">{scene.narration.slice(0, 50)}{scene.narration.length > 50 ? '...' : ''}</div>
+              <div className="flex gap-1.5 mt-2">
+                <button type="button" onClick={() => regenerateScene(idx)} disabled={regenIdx !== null}
+                  className="px-2 py-0.5 text-[9px] font-bold text-indigo-600 bg-indigo-50 rounded hover:bg-indigo-100 disabled:opacity-40">
+                  🔄 재생성
+                </button>
+              </div>
             </div>
           </div>
         ))}
       </div>
-      <p className="text-[10px] text-center text-amber-500 font-bold">이미지 AI 생성 — 곧 지원 예정. 지금은 플레이스홀더로 진행됩니다.</p>
+      {generating && (
+        <div className="p-3 bg-indigo-50 rounded-xl text-center">
+          <div className="w-5 h-5 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-1" />
+          <div className="text-xs text-indigo-600 font-bold">{state.progress || '이미지 생성 중...'}</div>
+          <div className="text-[9px] text-indigo-400 mt-0.5">장면당 약 10초 소요</div>
+        </div>
+      )}
       <div className="flex gap-3">
         <button type="button" onClick={() => patch({ currentStep: 2 })} className="px-5 py-3 bg-slate-100 text-slate-600 font-bold rounded-xl text-sm">← 이전</button>
-        <button type="button" onClick={() => patch({ currentStep: 4 })} className="flex-1 py-3 bg-indigo-600 text-white font-bold rounded-xl text-sm">다음: 조립 →</button>
+        <button type="button" onClick={() => patch({ currentStep: 4 })}
+          className="flex-1 py-3 bg-indigo-600 text-white font-bold rounded-xl text-sm">
+          다음: 조립 →
+        </button>
       </div>
     </div>
   );
