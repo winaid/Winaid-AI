@@ -356,7 +356,7 @@ export default function CardNewsPage() {
       contentMode,
     };
 
-    // 크레딧 체크 + 차감 (로그인 사용자는 Supabase, 게스트는 localStorage 3개)
+    // 크레딧 체크 (차감은 생성 성공 후에)
     if (creditCtx.creditInfo) {
       if (creditCtx.creditInfo.credits <= 0) {
         setError(creditCtx.userId
@@ -364,16 +364,10 @@ export default function CardNewsPage() {
           : '무료 체험 크레딧이 모두 소진되었습니다. 로그인하면 더 많은 크레딧을 사용할 수 있어요.');
         return;
       }
-      if (creditCtx.userId) {
-        const creditResult = await cardNewsUseCredit(creditCtx.userId);
-        if (!creditResult.success) {
-          setError(creditResult.error === 'no_credits' ? '크레딧이 모두 소진되었습니다.' : '크레딧 차감에 실패했습니다.');
-          return;
-        }
-        creditCtx.setCreditInfo({ credits: creditResult.remaining, totalUsed: (creditCtx.creditInfo.totalUsed || 0) + 1 });
-      } else {
-        const next = consumeGuestCredit();
-        if (!next) {
+      // 게스트도 체크만 (차감은 성공 후에)
+      if (!creditCtx.userId) {
+        const guestCredits = creditCtx.creditInfo.credits;
+        if (guestCredits <= 0) {
           setError('무료 체험 크레딧이 모두 소진되었습니다. 로그인하면 더 많은 크레딧을 사용할 수 있어요.');
           return;
         }
@@ -449,6 +443,17 @@ export default function CardNewsPage() {
       setProSlides(withBg);
       setPipelineStep('idle');
       setPageStep(2); // 생성 완료 → 편집 단계로 전환
+
+      // 생성 성공 → 크레딧 차감
+      if (creditCtx.creditInfo) {
+        if (creditCtx.userId) {
+          const creditResult = await cardNewsUseCredit(creditCtx.userId);
+          if (creditResult.success) creditCtx.setCreditInfo({ credits: creditResult.remaining, totalUsed: (creditCtx.creditInfo.totalUsed || 0) + 1 });
+        } else {
+          const next = consumeGuestCredit();
+          if (next) creditCtx.setCreditInfo({ credits: next.credits, totalUsed: next.totalUsed });
+        }
+      }
 
       // 생성 기록 저장
       try {

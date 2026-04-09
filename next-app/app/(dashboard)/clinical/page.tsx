@@ -205,14 +205,10 @@ JSON만 출력: { "analysis": "...", "topics": [{ "topic": "...", "title": "..."
     const topic = selectedTopic || customTopic.trim();
     if (!topic) return;
 
-    // 크레딧 차감 (첫 생성만)
-    if (creditCtx.userId && creditCtx.creditInfo) {
-      const creditResult = await useCredit(creditCtx.userId);
-      if (!creditResult.success) {
-        setError(creditResult.error === 'no_credits' ? '크레딧이 모두 소진되었습니다.' : '크레딧 차감에 실패했습니다.');
-        return;
-      }
-      creditCtx.setCreditInfo({ credits: creditResult.remaining, totalUsed: (creditCtx.creditInfo.totalUsed || 0) + 1 });
+    // 크레딧 체크 (차감은 생성 성공 후에)
+    if (creditCtx.userId && creditCtx.creditInfo && creditCtx.creditInfo.credits <= 0) {
+      setError('크레딧이 모두 소진되었습니다.');
+      return;
     }
 
     setIsGenerating(true);
@@ -281,6 +277,12 @@ JSON만 출력: { "analysis": "...", "topics": [{ "topic": "...", "title": "..."
 
       setGeneratedContent(html);
       setPipelineStep('result');
+
+      // 생성 성공 → 크레딧 차감
+      if (creditCtx.userId && creditCtx.creditInfo) {
+        const creditResult = await useCredit(creditCtx.userId);
+        if (creditResult.success) creditCtx.setCreditInfo({ credits: creditResult.remaining, totalUsed: (creditCtx.creditInfo.totalUsed || 0) + 1 });
+      }
     } catch (err) {
       alert(err instanceof Error ? err.message : '생성 실패');
     } finally {

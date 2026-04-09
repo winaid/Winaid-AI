@@ -45,14 +45,10 @@ export default function PressPage() {
     e.preventDefault();
     if (!topic.trim() || !doctorName.trim() || isGenerating) return;
 
-    // 크레딧 차감 (첫 생성만)
-    if (creditCtx.userId && creditCtx.creditInfo) {
-      const creditResult = await useCredit(creditCtx.userId);
-      if (!creditResult.success) {
-        setError(creditResult.error === 'no_credits' ? '크레딧이 모두 소진되었습니다.' : '크레딧 차감에 실패했습니다.');
-        return;
-      }
-      creditCtx.setCreditInfo({ credits: creditResult.remaining, totalUsed: (creditCtx.creditInfo.totalUsed || 0) + 1 });
+    // 크레딧 체크 (차감은 생성 성공 후에)
+    if (creditCtx.userId && creditCtx.creditInfo && creditCtx.creditInfo.credits <= 0) {
+      setError('크레딧이 모두 소진되었습니다.');
+      return;
     }
 
     setIsGenerating(true);
@@ -145,6 +141,12 @@ export default function PressPage() {
 
       const finalHtml = PRESS_CSS + html;
       setGeneratedHtml(finalHtml);
+
+      // 생성 성공 → 크레딧 차감
+      if (creditCtx.userId && creditCtx.creditInfo) {
+        const creditResult = await useCredit(creditCtx.userId);
+        if (creditResult.success) creditCtx.setCreditInfo({ credits: creditResult.remaining, totalUsed: (creditCtx.creditInfo.totalUsed || 0) + 1 });
+      }
 
       // 5.5) 품질 평가 (규칙 기반, OLD evaluateContentQuality 동등)
       try {

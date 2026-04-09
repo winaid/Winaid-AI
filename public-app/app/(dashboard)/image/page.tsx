@@ -958,28 +958,13 @@ Add subtle professional touches: refined gradients, elegant typography, clean wh
 
     if (!effectivePrompt || generating) return;
 
-    // 크레딧 체크 + 차감
+    // 크레딧 체크 (차감은 생성 성공 후에)
     if (creditCtx.creditInfo) {
       if (creditCtx.creditInfo.credits <= 0) {
         setError(creditCtx.userId
           ? '크레딧이 모두 소진되었습니다.'
           : '무료 체험 크레딧이 모두 소진되었습니다. 로그인하면 더 많은 크레딧을 사용할 수 있어요.');
         return;
-      }
-      if (creditCtx.userId) {
-        const creditResult = await useCredit(creditCtx.userId);
-        if (!creditResult.success) {
-          setError(creditResult.error === 'no_credits' ? '크레딧이 모두 소진되었습니다.' : '크레딧 차감에 실패했습니다.');
-          return;
-        }
-        creditCtx.setCreditInfo({ credits: creditResult.remaining, totalUsed: (creditCtx.creditInfo.totalUsed || 0) + 1 });
-      } else {
-        const next = consumeGuestCredit();
-        if (!next) {
-          setError('무료 체험 크레딧이 모두 소진되었습니다. 로그인하면 더 많은 크레딧을 사용할 수 있어요.');
-          return;
-        }
-        creditCtx.setCreditInfo({ credits: next.credits, totalUsed: next.totalUsed });
       }
     }
 
@@ -1124,6 +1109,17 @@ If the result looks significantly different from the reference, you have FAILED.
       if (data.imageDataUrl) {
         setResultImages(prev => { const next = [...prev, data.imageDataUrl]; setCurrentPage(next.length - 1); return next; });
         setProgress('');
+
+        // 생성 성공 → 크레딧 차감
+        if (creditCtx.creditInfo) {
+          if (creditCtx.userId) {
+            const creditResult = await useCredit(creditCtx.userId);
+            if (creditResult.success) creditCtx.setCreditInfo({ credits: creditResult.remaining, totalUsed: (creditCtx.creditInfo.totalUsed || 0) + 1 });
+          } else {
+            const next = consumeGuestCredit();
+            if (next) creditCtx.setCreditInfo({ credits: next.credits, totalUsed: next.totalUsed });
+          }
+        }
 
         // 이미지 생성 기록 저장 (generated_posts)
         try {

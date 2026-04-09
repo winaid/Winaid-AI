@@ -957,14 +957,10 @@ Add subtle professional touches: refined gradients, elegant typography, clean wh
 
     if (!effectivePrompt || generating) return;
 
-    // 크레딧 체크 + 차감
-    if (creditCtx.userId && creditCtx.creditInfo) {
-      const creditResult = await useCredit(creditCtx.userId);
-      if (!creditResult.success) {
-        setError(creditResult.error === 'no_credits' ? '크레딧이 모두 소진되었습니다.' : '크레딧 차감에 실패했습니다.');
-        return;
-      }
-      creditCtx.setCreditInfo({ credits: creditResult.remaining, totalUsed: (creditCtx.creditInfo.totalUsed || 0) + 1 });
+    // 크레딧 체크 (차감은 생성 성공 후에)
+    if (creditCtx.userId && creditCtx.creditInfo && creditCtx.creditInfo.credits <= 0) {
+      setError('크레딧이 모두 소진되었습니다.');
+      return;
     }
 
     setGenerating(true);
@@ -1107,6 +1103,12 @@ If the result looks significantly different from the reference, you have FAILED.
 
       if (data.imageDataUrl) {
         setResultImages(prev => { const next = [...prev, data.imageDataUrl]; setCurrentPage(next.length - 1); return next; });
+
+        // 생성 성공 → 크레딧 차감
+        if (creditCtx.userId && creditCtx.creditInfo) {
+          const creditResult = await useCredit(creditCtx.userId);
+          if (creditResult.success) creditCtx.setCreditInfo({ credits: creditResult.remaining, totalUsed: (creditCtx.creditInfo.totalUsed || 0) + 1 });
+        }
         setProgress('');
 
         // 이미지 생성 기록 저장 (generated_posts)
