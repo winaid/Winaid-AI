@@ -220,12 +220,125 @@ export const SFX_LIBRARY: SfxFile[] = [
   { id: 'clock_tick_01', path: '/sfx/ambient/clock_tick_01.mp3', name: '시계째깍', category: 'ambient', duration: 2.0, tags: ['시계', '째깍', '시간'] },
 
   // ════════════════════════════════════════
-  // (3/3에서 계속: musical, speech, ui + BGM_LIBRARY + 유틸 함수)
+  // musical — 음악적 효과음 (15개)
   // ════════════════════════════════════════
+
+  { id: 'stinger_happy_01', path: '/sfx/musical/stinger_happy_01.mp3', name: '해피스팅어 (밝은멜로디)', category: 'musical', duration: 1.5, tags: ['밝은', '멜로디', '좋은소식'] },
+  { id: 'stinger_happy_02', path: '/sfx/musical/stinger_happy_02.mp3', name: '해피스팅어 (경쾌한)', category: 'musical', duration: 1.2, tags: ['경쾌한', '시작', '인트로'] },
+  { id: 'stinger_sad_01', path: '/sfx/musical/stinger_sad_01.mp3', name: '슬픈스팅어', category: 'musical', duration: 1.5, tags: ['슬픈', '아쉬운', '안타까운'] },
+  { id: 'stinger_suspense_01', path: '/sfx/musical/stinger_suspense_01.mp3', name: '서스펜스스팅어', category: 'musical', duration: 1.5, tags: ['긴장', '서스펜스', '비밀'] },
+  { id: 'stinger_epic_01', path: '/sfx/musical/stinger_epic_01.mp3', name: '에픽스팅어', category: 'musical', duration: 2.0, tags: ['에픽', '대단한', '웅장'] },
+  { id: 'riser_01', path: '/sfx/musical/riser_01.mp3', name: '라이저 (점점올라가는)', category: 'musical', duration: 2.0, tags: ['라이저', '빌드업', '기대'] },
+  { id: 'riser_02', path: '/sfx/musical/riser_02.mp3', name: '라이저 (빠른)', category: 'musical', duration: 1.0, tags: ['라이저', '빠른', '긴장'] },
+  { id: 'drop_01', path: '/sfx/musical/drop_01.mp3', name: '드롭 (내려가는)', category: 'musical', duration: 1.0, tags: ['드롭', '하강', '마무리'] },
+  { id: 'drop_02', path: '/sfx/musical/drop_02.mp3', name: '드롭 (강한)', category: 'musical', duration: 0.8, tags: ['드롭', '강한', '임팩트'] },
+  { id: 'harp_01', path: '/sfx/musical/harp_01.mp3', name: '하프글리산도 (꿈같은)', category: 'musical', duration: 1.5, tags: ['하프', '꿈', '동화', '아름다운'] },
+  { id: 'piano_hit_01', path: '/sfx/musical/piano_hit_01.mp3', name: '피아노한음 (강조)', category: 'musical', duration: 0.8, tags: ['피아노', '강조', '진지'] },
+  { id: 'drum_roll_01', path: '/sfx/musical/drum_roll_01.mp3', name: '드럼롤 (두구두구두구)', category: 'musical', duration: 2.0, tags: ['드럼롤', '기대', '발표'] },
+  { id: 'cymbal_01', path: '/sfx/musical/cymbal_01.mp3', name: '심벌즈 (짝!)', category: 'musical', duration: 0.8, tags: ['심벌즈', '마무리', '짝'] },
+  { id: 'guitar_strum_01', path: '/sfx/musical/guitar_strum_01.mp3', name: '기타스트럼 (쨍)', category: 'musical', duration: 0.6, tags: ['기타', '쨍', '시작'] },
+  { id: 'orchestra_hit_01', path: '/sfx/musical/orchestra_hit_01.mp3', name: '오케스트라히트 (짠!)', category: 'musical', duration: 0.5, tags: ['오케스트라', '짠', '강조'] },
+
+  // ════════════════════════════════════════
+  // speech — 음성 관련 효과음 (5개)
+  // ════════════════════════════════════════
+
+  { id: 'mouth_pop_01', path: '/sfx/speech/mouth_pop_01.mp3', name: '입뽝소리', category: 'speech', duration: 0.2, tags: ['뽝', '입', '포인트'] },
+  { id: 'gasp_01', path: '/sfx/speech/gasp_01.mp3', name: '헉 (놀라는)', category: 'speech', duration: 0.5, tags: ['헉', '놀라움', '충격'] },
+  { id: 'hmm_01', path: '/sfx/speech/hmm_01.mp3', name: '음... (생각하는)', category: 'speech', duration: 0.8, tags: ['음', '생각', '고민'] },
+  { id: 'shh_01', path: '/sfx/speech/shh_01.mp3', name: '쉿 (조용히)', category: 'speech', duration: 0.5, tags: ['쉿', '조용', '비밀'] },
+  { id: 'ah_01', path: '/sfx/speech/ah_01.mp3', name: '아하! (깨달음)', category: 'speech', duration: 0.5, tags: ['아하', '깨달음', '이해'] },
+
+  // ════════════════════════════════════════
+  // ui — UI/텍스트 효과음 (10개)
+  // ════════════════════════════════════════
+
+  { id: 'text_appear_01', path: '/sfx/ui/text_appear_01.mp3', name: '글자나타남 (틱틱틱)', category: 'ui', duration: 0.6, tags: ['글자', '타이핑', '자막'] },
+  { id: 'text_appear_02', path: '/sfx/ui/text_appear_02.mp3', name: '타자기소리', category: 'ui', duration: 0.8, tags: ['타자기', '레트로', '글자'] },
+  { id: 'text_swoosh_01', path: '/sfx/ui/text_swoosh_01.mp3', name: '텍스트슉등장', category: 'ui', duration: 0.3, tags: ['텍스트', '등장', '빠른'] },
+  { id: 'checkmark_01', path: '/sfx/ui/checkmark_01.mp3', name: '체크표시 (삑)', category: 'ui', duration: 0.2, tags: ['체크', '완료', '확인'] },
+  { id: 'underline_01', path: '/sfx/ui/underline_01.mp3', name: '밑줄긋기 (슈르륵)', category: 'ui', duration: 0.4, tags: ['밑줄', '강조', '중요'] },
+  { id: 'highlight_01', path: '/sfx/ui/highlight_01.mp3', name: '형광펜 (쉭)', category: 'ui', duration: 0.3, tags: ['형광펜', '강조', '포인트'] },
+  { id: 'swipe_01', path: '/sfx/ui/swipe_01.mp3', name: '스와이프 (쓱)', category: 'ui', duration: 0.3, tags: ['스와이프', '넘기기', '다음'] },
+  { id: 'swipe_02', path: '/sfx/ui/swipe_02.mp3', name: '스와이프 (위로)', category: 'ui', duration: 0.3, tags: ['스와이프', '위로', '올리기'] },
+  { id: 'tab_switch_01', path: '/sfx/ui/tab_switch_01.mp3', name: '탭전환', category: 'ui', duration: 0.2, tags: ['탭', '전환', 'UI'] },
+  { id: 'loading_01', path: '/sfx/ui/loading_01.mp3', name: '로딩 (두두두)', category: 'ui', duration: 1.0, tags: ['로딩', '대기', '처리중'] },
 ];
 
-// ── BGM 라이브러리 (3/3에서 추가) ──
+// ══════════════════════════════════════════════════
+// BGM 라이브러리 (25개)
+// ══════════════════════════════════════════════════
 
-export const BGM_LIBRARY: BgmFile[] = [];
+export const BGM_LIBRARY: BgmFile[] = [
 
-// ── 유틸 함수 (3/3에서 추가) ──
+  // ── bright — 밝고 경쾌한 ──
+  { id: 'bright_01', path: '/sfx/bgm/bright/bright_01.mp3', name: '우쿨렐레경쾌한', mood: 'bright', duration: 60, tags: ['우쿨렐레', '경쾌', '밝은', '여름'] },
+  { id: 'bright_02', path: '/sfx/bgm/bright/bright_02.mp3', name: '피아노밝은', mood: 'bright', duration: 60, tags: ['피아노', '밝은', '행복', '아침'] },
+  { id: 'bright_03', path: '/sfx/bgm/bright/bright_03.mp3', name: '어쿠스틱해피', mood: 'bright', duration: 60, tags: ['어쿠스틱', '기타', '해피'] },
+  { id: 'bright_04', path: '/sfx/bgm/bright/bright_04.mp3', name: '글로켄슈필귀여운', mood: 'bright', duration: 60, tags: ['글로켄슈필', '귀여운', '동화'] },
+  { id: 'bright_05', path: '/sfx/bgm/bright/bright_05.mp3', name: '휘파람경쾌한', mood: 'bright', duration: 60, tags: ['휘파람', '경쾌', '산책'] },
+
+  // ── calm — 차분하고 신뢰감 (병원 추천) ──
+  { id: 'calm_01', path: '/sfx/bgm/calm/calm_01.mp3', name: '피아노차분한', mood: 'calm', duration: 60, tags: ['피아노', '차분', '신뢰', '병원'] },
+  { id: 'calm_02', path: '/sfx/bgm/calm/calm_02.mp3', name: '어쿠스틱따뜻한', mood: 'calm', duration: 60, tags: ['어쿠스틱', '따뜻', '편안'] },
+  { id: 'calm_03', path: '/sfx/bgm/calm/calm_03.mp3', name: '앰비언트부드러운', mood: 'calm', duration: 60, tags: ['앰비언트', '부드러운', '명상'] },
+  { id: 'calm_04', path: '/sfx/bgm/calm/calm_04.mp3', name: '스트링스우아한', mood: 'calm', duration: 60, tags: ['스트링스', '우아', '고급', '병원'] },
+  { id: 'calm_05', path: '/sfx/bgm/calm/calm_05.mp3', name: '로파이편안한', mood: 'calm', duration: 60, tags: ['로파이', '편안', '공부', '카페'] },
+
+  // ── emotional — 감성적인 ──
+  { id: 'emotional_01', path: '/sfx/bgm/emotional/emotional_01.mp3', name: '피아노감동', mood: 'emotional', duration: 60, tags: ['피아노', '감동', '진심'] },
+  { id: 'emotional_02', path: '/sfx/bgm/emotional/emotional_02.mp3', name: '어쿠스틱서정적', mood: 'emotional', duration: 60, tags: ['어쿠스틱', '서정', '스토리'] },
+  { id: 'emotional_03', path: '/sfx/bgm/emotional/emotional_03.mp3', name: '스트링스감성', mood: 'emotional', duration: 60, tags: ['스트링스', '감성', '영화'] },
+  { id: 'emotional_04', path: '/sfx/bgm/emotional/emotional_04.mp3', name: '기타잔잔한', mood: 'emotional', duration: 60, tags: ['기타', '잔잔', '추억'] },
+  { id: 'emotional_05', path: '/sfx/bgm/emotional/emotional_05.mp3', name: '첼로따뜻한', mood: 'emotional', duration: 60, tags: ['첼로', '따뜻', '깊은'] },
+
+  // ── trendy — 트렌디/힙한 ──
+  { id: 'trendy_01', path: '/sfx/bgm/trendy/trendy_01.mp3', name: '로파이힙합', mood: 'trendy', duration: 60, tags: ['로파이', '힙합', '트렌디'] },
+  { id: 'trendy_02', path: '/sfx/bgm/trendy/trendy_02.mp3', name: '일렉트로닉팝', mood: 'trendy', duration: 60, tags: ['일렉트로닉', '팝', '에너지'] },
+  { id: 'trendy_03', path: '/sfx/bgm/trendy/trendy_03.mp3', name: '트랩비트가벼운', mood: 'trendy', duration: 60, tags: ['트랩', '비트', '힙한'] },
+  { id: 'trendy_04', path: '/sfx/bgm/trendy/trendy_04.mp3', name: '펑키그루브', mood: 'trendy', duration: 60, tags: ['펑키', '그루브', '신나는'] },
+  { id: 'trendy_05', path: '/sfx/bgm/trendy/trendy_05.mp3', name: '레트로신스웨이브', mood: 'trendy', duration: 60, tags: ['레트로', '신스', '80년대'] },
+
+  // ── corporate — 기업/전문적 (병원 공식 영상용) ──
+  { id: 'corporate_01', path: '/sfx/bgm/corporate/corporate_01.mp3', name: '기업프레젠테이션', mood: 'corporate', duration: 60, tags: ['기업', '발표', '전문'] },
+  { id: 'corporate_02', path: '/sfx/bgm/corporate/corporate_02.mp3', name: '테크모던', mood: 'corporate', duration: 60, tags: ['테크', '모던', '혁신'] },
+  { id: 'corporate_03', path: '/sfx/bgm/corporate/corporate_03.mp3', name: '인스파이어링', mood: 'corporate', duration: 60, tags: ['영감', '동기부여', '성장'] },
+  { id: 'corporate_04', path: '/sfx/bgm/corporate/corporate_04.mp3', name: '깔끔한미니멀', mood: 'corporate', duration: 60, tags: ['미니멀', '깔끔', '심플'] },
+  { id: 'corporate_05', path: '/sfx/bgm/corporate/corporate_05.mp3', name: '신뢰감있는', mood: 'corporate', duration: 60, tags: ['신뢰', '안정', '병원', '전문'] },
+];
+
+// ══════════════════════════════════════════════════
+// 유틸 함수
+// ══════════════════════════════════════════════════
+
+/** 카테고리별 효과음 가져오기 */
+export function getSfxByCategory(category: SfxCategory): SfxFile[] {
+  return SFX_LIBRARY.filter(sfx => sfx.category === category);
+}
+
+/** 태그로 효과음 검색 */
+export function searchSfx(query: string): SfxFile[] {
+  const q = query.toLowerCase();
+  return SFX_LIBRARY.filter(sfx =>
+    sfx.tags.some(tag => tag.includes(q)) || sfx.name.toLowerCase().includes(q)
+  );
+}
+
+/** 분위기별 BGM 가져오기 */
+export function getBgmByMood(mood: BgmMood): BgmFile[] {
+  return BGM_LIBRARY.filter(bgm => bgm.mood === mood);
+}
+
+/** 랜덤 효과음 (같은 카테고리 내에서) */
+export function getRandomSfx(category: SfxCategory): SfxFile | null {
+  const items = getSfxByCategory(category);
+  if (items.length === 0) return null;
+  return items[Math.floor(Math.random() * items.length)];
+}
+
+/** 랜덤 BGM (같은 분위기 내에서) */
+export function getRandomBgm(mood: BgmMood): BgmFile | null {
+  const items = getBgmByMood(mood);
+  if (items.length === 0) return null;
+  return items[Math.floor(Math.random() * items.length)];
+}
