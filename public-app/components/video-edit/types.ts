@@ -318,8 +318,12 @@ export interface AiShortsState {
   styleId: string;
 
   // STEP C: 목소리
-  voiceName: string;
+  voiceId: string;         // ttsVoices의 id
+  voiceName: string;       // API name
+  voiceEngine: string;     // 'gemini' | 'chirp3_hd' | 'legacy'
+  voiceModel?: string;     // Gemini 모델명
   voiceSpeed: number;
+  voiceStylePreset: string; // Gemini 스타일 프리셋 key
   audioUrl?: string;
 
   // STEP D: 이미지
@@ -343,8 +347,12 @@ export const INITIAL_AI_SHORTS_STATE: AiShortsState = {
   tone: 'friendly',
   scenes: [],
   styleId: 'medical_clean',
-  voiceName: 'ko-KR-Wavenet-A',
+  voiceId: 'gemini-leda',
+  voiceName: 'Leda',
+  voiceEngine: 'gemini',
+  voiceModel: 'gemini-2.5-flash-tts',
   voiceSpeed: 1.0,
+  voiceStylePreset: 'professional',
   isProcessing: false,
   progress: '',
 };

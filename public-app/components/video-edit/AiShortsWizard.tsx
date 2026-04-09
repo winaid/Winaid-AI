@@ -7,7 +7,11 @@ import {
 } from './types';
 import { validateMedicalAd } from '../../lib/medicalAdValidation';
 import { getStylesByCategory, VIDEO_STYLES } from '../../lib/videoStyles';
-import { KOREAN_VOICES, type TtsVoice } from '../../lib/ttsVoices';
+import {
+  TTS_VOICES, TTS_STYLE_PRESETS, ENGINE_LABELS,
+  getVoicesByEngine, getRecommendedVoices, getVoiceById,
+  type TtsEngine, type TtsVoice,
+} from '../../lib/ttsVoices';
 
 // ── 메인 위저드 ──
 
@@ -254,19 +258,36 @@ function StepVoice({ state, patch }: { state: AiShortsState; patch: (p: Partial<
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [previewingId, setPreviewingId] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
+  const [engine, setEngine] = useState<TtsEngine>((state.voiceEngine as TtsEngine) || 'gemini');
+  const [genderFilter, setGenderFilter] = useState<'all' | 'female' | 'male' | 'neutral'>('all');
 
-  const previewVoice = async (voice: TtsVoice) => {
-    if (previewingId === voice.name) {
-      audioRef.current?.pause(); audioRef.current = null; setPreviewingId(null); return;
-    }
+  const voices = getVoicesByEngine(engine).filter(v => genderFilter === 'all' || v.gender === genderFilter);
+  const recommended = getRecommendedVoices();
+  const selectedVoice = getVoiceById(state.voiceId);
+  const stylePrompt = TTS_STYLE_PRESETS[state.voiceStylePreset]?.prompt || '';
+
+  const selectVoice = (v: TtsVoice) => {
+    patch({ voiceId: v.id, voiceName: v.name, voiceEngine: v.engine, voiceModel: v.model, audioUrl: undefined });
+    setEngine(v.engine);
+  };
+
+  const previewVoice = async (v: TtsVoice) => {
+    if (previewingId === v.id) { audioRef.current?.pause(); audioRef.current = null; setPreviewingId(null); return; }
     if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
-    setPreviewingId(voice.name);
+    setPreviewingId(v.id);
     try {
       const text = state.scenes[0]?.narration || '안녕하세요, 반갑습니다.';
       const res = await fetch('/api/video/ai-preview-tts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: text.slice(0, 50), voice_name: voice.name, speed: state.voiceSpeed }),
+        body: JSON.stringify({
+          text: text.slice(0, 60),
+          voice_name: v.name,
+          engine: v.engine,
+          model: v.model,
+          speed: state.voiceSpeed,
+          style_prompt: v.engine === 'gemini' ? stylePrompt : undefined,
+        }),
       });
       if (!res.ok) { setPreviewingId(null); return; }
       const blob = await res.blob();
@@ -284,67 +305,112 @@ function StepVoice({ state, patch }: { state: AiShortsState; patch: (p: Partial<
       const res = await fetch('/api/video/ai-generate-tts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ scenes: state.scenes, voice_name: state.voiceName, speed: state.voiceSpeed }),
+        body: JSON.stringify({
+          scenes: state.scenes,
+          voice_id: state.voiceId,
+          voice_name: state.voiceName,
+          engine: state.voiceEngine,
+          model: state.voiceModel,
+          speed: state.voiceSpeed,
+          style_prompt: state.voiceEngine === 'gemini' ? stylePrompt : undefined,
+        }),
       });
-      if (!res.ok) {
-        const d = await res.json().catch(() => ({ error: '실패' }));
-        throw new Error(d.error);
-      }
+      if (!res.ok) { const d = await res.json().catch(() => ({ error: '실패' })); throw new Error(d.error); }
       const blob = await res.blob();
-      const metaHeader = res.headers.get('X-Tts-Metadata');
-      const meta = metaHeader ? JSON.parse(metaHeader) : {};
-      patch({ audioUrl: URL.createObjectURL(blob), currentStep: 3 });
+      patch({ audioUrl: URL.createObjectURL(blob) });
     } catch (err) { console.error(err); }
     finally { setGenerating(false); patch({ isProcessing: false, progress: '' }); }
   };
 
-  const tiers = ['wavenet', 'neural2', 'standard'] as const;
-
   return (
     <div className="space-y-5">
-      {tiers.map(tier => {
-        const voices = KOREAN_VOICES.filter(v => v.tier === tier);
-        if (voices.length === 0) return null;
-        return (
-          <div key={tier} className="space-y-2">
-            <label className="text-xs font-semibold text-slate-500">
-              {tier === 'wavenet' ? '추천' : tier === 'neural2' ? '프리미엄' : '기본'}
-            </label>
-            <div className="space-y-1.5">
-              {voices.map(v => (
-                <div key={v.name} className={`flex items-center gap-2 p-2.5 rounded-xl border-2 transition-all ${state.voiceName === v.name ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200'}`}>
-                  <button type="button" onClick={() => patch({ voiceName: v.name })} className="flex items-center gap-2 flex-1">
-                    <span className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center ${state.voiceName === v.name ? 'border-indigo-500' : 'border-slate-300'}`}>
-                      {state.voiceName === v.name && <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full" />}
-                    </span>
-                    <span className={`text-xs font-bold ${state.voiceName === v.name ? 'text-indigo-700' : 'text-slate-700'}`}>{v.label}</span>
-                    <span className="text-[9px] text-slate-400">{v.gender === 'female' ? '여' : '남'}</span>
-                  </button>
-                  <button type="button" onClick={() => previewVoice(v)}
-                    className={`px-2 py-0.5 text-[10px] font-bold rounded-md ${previewingId === v.name ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500 hover:bg-indigo-50'}`}>
-                    {previewingId === v.name ? '⏹' : '▶️ 듣기'}
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-      })}
-      <div className="space-y-2">
-        <label className="text-xs font-semibold text-slate-500">속도: ×{state.voiceSpeed.toFixed(1)}</label>
-        <div className="flex items-center gap-3">
-          <span className="text-[10px] text-slate-400">느리게</span>
-          <input type="range" min={0.8} max={1.2} step={0.1} value={state.voiceSpeed}
-            onChange={e => patch({ voiceSpeed: parseFloat(e.target.value) })} className="flex-1 accent-indigo-500" />
-          <span className="text-[10px] text-slate-400">빠르게</span>
-        </div>
+      {/* 엔진 탭 */}
+      <div className="flex gap-1 bg-slate-100 rounded-xl p-1">
+        {(['gemini', 'chirp3_hd', 'legacy'] as TtsEngine[]).map(e => (
+          <button key={e} type="button" onClick={() => setEngine(e)}
+            className={`flex-1 py-1.5 text-[10px] font-bold rounded-lg transition-all ${engine === e ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500'}`}>
+            {ENGINE_LABELS[e].label}
+          </button>
+        ))}
       </div>
+
+      {/* 추천 (Gemini만) */}
+      {engine === 'gemini' && recommended.length > 0 && (
+        <div className="space-y-1.5">
+          <label className="text-[10px] font-semibold text-indigo-500">⭐ 병원 영상 추천</label>
+          <div className="grid grid-cols-2 gap-1.5">
+            {recommended.map(v => (
+              <button key={v.id} type="button" onClick={() => selectVoice(v)}
+                className={`p-2 rounded-lg border text-left text-[10px] transition-all ${state.voiceId === v.id ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200 hover:border-indigo-300'}`}>
+                <div className={`font-bold ${state.voiceId === v.id ? 'text-indigo-700' : 'text-slate-700'}`}>{v.name}</div>
+                <div className="text-slate-400">{v.description.split('—')[0]}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 성별 필터 */}
+      <div className="flex gap-1">
+        {([['all', '전체'], ['female', '여성'], ['male', '남성'], ['neutral', '중성']] as const).map(([id, label]) => (
+          <button key={id} type="button" onClick={() => setGenderFilter(id)}
+            className={`px-2 py-1 text-[9px] font-bold rounded-md ${genderFilter === id ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500'}`}>
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {/* 목소리 목록 */}
+      <div className="max-h-[220px] overflow-y-auto space-y-1">
+        {voices.map(v => (
+          <div key={v.id} className={`flex items-center gap-2 px-2.5 py-2 rounded-xl border transition-all ${state.voiceId === v.id ? 'border-indigo-500 bg-indigo-50' : 'border-slate-100 hover:border-slate-200'}`}>
+            <button type="button" onClick={() => selectVoice(v)} className="flex items-center gap-2 flex-1 min-w-0">
+              <span className={`w-3 h-3 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${state.voiceId === v.id ? 'border-indigo-500' : 'border-slate-300'}`}>
+                {state.voiceId === v.id && <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full" />}
+              </span>
+              <span className={`text-[11px] font-bold truncate ${state.voiceId === v.id ? 'text-indigo-700' : 'text-slate-700'}`}>{v.label}</span>
+            </button>
+            <button type="button" onClick={() => previewVoice(v)}
+              className={`px-1.5 py-0.5 text-[9px] font-bold rounded flex-shrink-0 ${previewingId === v.id ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-400 hover:bg-indigo-50'}`}>
+              {previewingId === v.id ? '⏹' : '▶️'}
+            </button>
+          </div>
+        ))}
+      </div>
+
+      {/* 스타일 프롬프트 (Gemini만) */}
+      {engine === 'gemini' && (
+        <div className="space-y-1.5">
+          <label className="text-[10px] font-semibold text-slate-500">말하기 스타일</label>
+          <div className="flex gap-1 flex-wrap">
+            {Object.entries(TTS_STYLE_PRESETS).map(([key, preset]) => (
+              <button key={key} type="button" onClick={() => patch({ voiceStylePreset: key })}
+                className={`px-2 py-1 text-[10px] font-bold rounded-md ${state.voiceStylePreset === key ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600'}`}>
+                {preset.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 속도 (Legacy만) */}
+      {engine === 'legacy' && (
+        <div className="space-y-1.5">
+          <label className="text-[10px] font-semibold text-slate-500">속도: ×{state.voiceSpeed.toFixed(1)}</label>
+          <input type="range" min={0.8} max={1.2} step={0.1} value={state.voiceSpeed}
+            onChange={e => patch({ voiceSpeed: parseFloat(e.target.value) })} className="w-full accent-indigo-500" />
+        </div>
+      )}
+
+      {/* 나레이션 결과 */}
       {state.audioUrl && (
         <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl">
           <div className="text-xs font-bold text-emerald-700 mb-2">✅ 나레이션 생성 완료</div>
           <audio controls src={state.audioUrl} className="w-full" />
         </div>
       )}
+
+      {/* 액션 */}
       <div className="flex gap-3">
         <button type="button" onClick={() => patch({ currentStep: 1 })} className="px-5 py-3 bg-slate-100 text-slate-600 font-bold rounded-xl text-sm">← 이전</button>
         {!state.audioUrl ? (

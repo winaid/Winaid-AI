@@ -23,8 +23,12 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json() as {
       scenes: SceneInput[];
-      voice_name: string;
+      voice_id: string;        // ttsVoices의 id
+      voice_name: string;      // API에 넘길 이름
+      engine: string;          // 'gemini' | 'chirp3_hd' | 'legacy'
+      model?: string;          // Gemini 모델명
       speed: number;
+      style_prompt?: string;   // Gemini TTS 스타일 프롬프트
     };
 
     if (!body.scenes?.length) return NextResponse.json({ error: '장면이 필요합니다.' }, { status: 400 });
@@ -37,24 +41,49 @@ export async function POST(request: NextRequest) {
     const audioBuffers: Buffer[] = [];
     const timestamps: Array<{ scene_number: number; start_time: number; end_time: number }> = [];
 
+    const engine = body.engine || 'legacy';
+    const voiceName = body.voice_name || 'ko-KR-Wavenet-A';
+    const speed = Math.max(0.5, Math.min(2.0, body.speed || 1.0));
+
     // 장면별 TTS 생성
     for (const scene of body.scenes) {
+      // 엔진별 요청 body 구성
+      let ttsBody: Record<string, unknown>;
+
+      if (engine === 'gemini') {
+        // Gemini 2.5 TTS — 모델 지정 + 스타일 프롬프트
+        ttsBody = {
+          input: {
+            text: scene.narration,
+            ...(body.style_prompt ? { prompt: body.style_prompt } : {}),
+          },
+          voice: {
+            languageCode: 'ko-KR',
+            name: voiceName,  // 'Kore', 'Charon' 등
+            ...(body.model ? { modelName: body.model } : {}),
+          },
+          audioConfig: { audioEncoding: 'MP3' },
+        };
+      } else if (engine === 'chirp3_hd') {
+        // Chirp 3 HD
+        ttsBody = {
+          input: { text: scene.narration },
+          voice: { languageCode: 'ko-KR', name: voiceName },
+          audioConfig: { audioEncoding: 'MP3' },
+        };
+      } else {
+        // Legacy (Standard/WaveNet/Neural2)
+        ttsBody = {
+          input: { text: scene.narration },
+          voice: { languageCode: 'ko-KR', name: voiceName },
+          audioConfig: { audioEncoding: 'MP3', speakingRate: speed, pitch: 0, sampleRateHertz: 24000 },
+        };
+      }
+
       const ttsRes = await fetch('https://texttospeech.googleapis.com/v1/text:synthesize', {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          input: { text: scene.narration },
-          voice: { languageCode: 'ko-KR', name: body.voice_name || 'ko-KR-Wavenet-A' },
-          audioConfig: {
-            audioEncoding: 'MP3',
-            speakingRate: Math.max(0.5, Math.min(2.0, body.speed || 1.0)),
-            pitch: 0,
-            sampleRateHertz: 24000,
-          },
-        }),
+        headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(ttsBody),
       });
 
       if (!ttsRes.ok) {

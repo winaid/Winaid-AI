@@ -16,21 +16,41 @@ export async function POST(request: NextRequest) {
   if (!gate.ok) return NextResponse.json({ error: gate.error }, { status: gate.status });
 
   try {
-    const body = await request.json() as { text: string; voice_name: string; speed: number };
+    const body = await request.json() as {
+      text: string;
+      voice_name: string;
+      engine?: string;
+      model?: string;
+      speed?: number;
+      style_prompt?: string;
+    };
 
     if (!body.text?.trim()) return NextResponse.json({ error: '텍스트가 필요합니다.' }, { status: 400 });
 
     const accessToken = await getGcpAccessToken();
     if (!accessToken) return NextResponse.json({ error: 'Google Cloud 인증 실패.' }, { status: 503 });
 
-    const ttsRes = await fetch('https://texttospeech.googleapis.com/v1/text:synthesize', {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+    const engine = body.engine || 'legacy';
+    let ttsBody: Record<string, unknown>;
+
+    if (engine === 'gemini') {
+      ttsBody = {
+        input: { text: body.text.slice(0, 200), ...(body.style_prompt ? { prompt: body.style_prompt } : {}) },
+        voice: { languageCode: 'ko-KR', name: body.voice_name, ...(body.model ? { modelName: body.model } : {}) },
+        audioConfig: { audioEncoding: 'MP3' },
+      };
+    } else {
+      ttsBody = {
         input: { text: body.text.slice(0, 200) },
         voice: { languageCode: 'ko-KR', name: body.voice_name || 'ko-KR-Wavenet-A' },
         audioConfig: { audioEncoding: 'MP3', speakingRate: body.speed || 1.0, sampleRateHertz: 24000 },
-      }),
+      };
+    }
+
+    const ttsRes = await fetch('https://texttospeech.googleapis.com/v1/text:synthesize', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(ttsBody),
     });
 
     if (!ttsRes.ok) {
