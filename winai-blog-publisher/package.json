@@ -1,0 +1,27 @@
+{
+  "name": "winai-blog-publisher",
+  "version": "1.0.0",
+  "description": "WINAI 블로그 자동 발행 로컬 앱 — 네이버 블로그에 서식 포함 자동 입력",
+  "main": "src/main.ts",
+  "scripts": {
+    "start": "ts-node src/main.ts",
+    "dev": "ts-node-dev --respawn src/main.ts",
+    "setup": "npx playwright install chromium"
+  },
+  "dependencies": {
+    "playwright": "^1.45.0",
+    "express": "^4.21.0",
+    "cors": "^2.8.5",
+    "crypto-js": "^4.2.0",
+    "dotenv": "^16.4.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0",
+    "ts-node": "^10.9.0",
+    "ts-node-dev": "^2.0.0",
+    "@types/express": "^4.17.21",
+    "@types/cors": "^2.8.17",
+    "@types/crypto-js": "^4.2.2",
+    "@types/node": "^20.0.0"
+  }
+}

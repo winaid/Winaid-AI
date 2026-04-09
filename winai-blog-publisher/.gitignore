@@ -1,0 +1,5 @@
+node_modules/
+dist/
+credentials/*.enc
+credentials/session_*.json
+.env
