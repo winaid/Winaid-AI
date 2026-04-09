@@ -15,17 +15,11 @@ const inputCls = 'w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-x
 const CRAWLER_URL = process.env.NEXT_PUBLIC_CRAWLER_URL || '';
 
 interface SuggestedTopic { topic: string; title: string; keywords: string; }
-interface KeyMoment { start: number; end: number; description: string; usage: string; }
+// KeyMoment 제거됨 (GIF 기능 삭제)
 
 function extractVideoId(url: string): string {
   const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/);
   return match?.[1] || '';
-}
-
-function formatTime(seconds: number) {
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
-  return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
 export default function YoutubePage() {
@@ -50,13 +44,10 @@ export default function YoutubePage() {
   const [textLength, setTextLength] = useState(2500);
   const [keywords, setKeywords] = useState('');
 
-  // ── GIF 제거됨 — 글 생성만 지원 ──
+  // ── 모드 (글 생성만 지원) ──
   const activeMode = 'article' as const;
 
   const [videoDuration, setVideoDuration] = useState<number>(0);
-  const [keyMoments, setKeyMoments] = useState<KeyMoment[]>([]);
-  const [isDetectingMoments, setIsDetectingMoments] = useState(false);
-  // GIF 관련 상태 제거됨
 
   // ── Step 3: 결과 ──
   const [isGenerating, setIsGenerating] = useState(false);
@@ -83,8 +74,6 @@ export default function YoutubePage() {
     setTranscript('');
     setSummary('');
     setSuggestedTopics([]);
-    setKeyMoments([]);
-    // GIF map 제거됨
     setVideoDuration(0);
     setVideoId(extractVideoId(youtubeUrl));
 
@@ -289,68 +278,6 @@ ${summaryText.slice(0, 2000)}
     }
   };
 
-  // ── GIF: 핵심 구간 감지 (정확히 5개, 전체 영상 커버) ──
-  const handleDetectMoments = async () => {
-    if (!summary) return;
-    setIsDetectingMoments(true);
-
-    const durationInfo = videoDuration > 0
-      ? `이 영상의 총 길이는 약 ${Math.round(videoDuration / 60)}분(${videoDuration}초)입니다.`
-      : '영상의 총 길이는 요약 내용에서 추정하세요.';
-
-    try {
-      const res = await fetch('/api/gemini', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          prompt: `아래는 병원 유튜브 영상의 시간순 분석입니다.
-
-[영상 분석]
-${summary}
-
-[영상 길이]
-${durationInfo}
-
-[요청]
-블로그나 SNS에 GIF로 활용하기 좋은 핵심 장면을 **정확히 5개** 추출해주세요.
-
-[필수 규칙]
-⚠️ 반드시 5개를 추출하세요 — 4개도 6개도 안 됩니다.
-⚠️ 영상의 **처음부터 끝까지 균등하게** 분포시키세요:
-   - 1번째: 영상 초반 (0~20% 지점)
-   - 2번째: 영상 전반부 (20~40% 지점)
-   - 3번째: 영상 중반 (40~60% 지점)
-   - 4번째: 영상 후반부 (60~80% 지점)
-   - 5번째: 영상 종반 (80~100% 지점)
-⚠️ 각 구간은 3~8초가 적당합니다.
-⚠️ start/end는 초 단위 정수입니다.
-⚠️ 위 영상 분석에 나온 시간대를 최대한 활용하세요.
-
-각 장면:
-- start: 시작 시간 (초 단위, 정수)
-- end: 끝 시간 (초 단위, start + 3~8초)
-- description: 이 구간의 장면 설명 (한 줄)
-- usage: 추천 용도 (블로그 삽입 / SNS 공유 / 카드뉴스 배경 / 썸네일 / 인스타그램)
-
-JSON 배열만 출력 (정확히 5개):
-[{ "start": 15, "end": 21, "description": "...", "usage": "..." }, ...]`,
-          model: 'gemini-3.1-flash-lite-preview',
-          temperature: 0.3,
-          maxOutputTokens: 1024,
-          thinkingLevel: 'none',
-        }),
-      });
-
-      const data = await res.json();
-      if (data.text) {
-        const cleaned = data.text.replace(/```json?\s*\n?/gi, '').replace(/\n?```\s*$/g, '').trim();
-        const parsed = JSON.parse(cleaned);
-        if (Array.isArray(parsed)) setKeyMoments(parsed.slice(0, 5));
-      }
-    } catch { /* ignore */ }
-    finally { setIsDetectingMoments(false); }
-  };
-
   // ── 클립보드 복사 (focus 안전 처리) ──
   const safeCopy = async (text: string) => {
     try {
@@ -368,11 +295,6 @@ JSON 배열만 출력 (정확히 5개):
     }
     setCopyToast(true);
     setTimeout(() => setCopyToast(false), 1500);
-  };
-
-  // ── 구간 링크 복사 ──
-  const handleCopyClipLink = (start: number) => {
-    safeCopy(`https://www.youtube.com/watch?v=${videoId}&t=${start}`);
   };
 
   // ── 복사 (출처 제외) ──

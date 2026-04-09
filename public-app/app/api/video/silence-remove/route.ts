@@ -44,10 +44,8 @@ export async function POST(request: NextRequest) {
     const ffmpeg = getFfmpegPath();
     const ffprobe = getFfprobePath();
 
-    let autoEditorCmd = 'auto-editor';
-    try { execSync('auto-editor --help', { stdio: 'pipe', timeout: 5000 }); } catch {
-      return NextResponse.json({ error: 'auto-editor가 서버에 설치되어 있지 않습니다. pip install auto-editor 필요.' }, { status: 503 });
-    }
+    let useAutoEditor = false;
+    try { execSync('auto-editor --help', { stdio: 'pipe', timeout: 5000 }); useAutoEditor = true; } catch { /* fallback to ffmpeg */ }
 
     // 작업 디렉토리
     const ts = Date.now();
@@ -72,15 +70,66 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '10분 이하 파일만 가능합니다.' }, { status: 400 });
     }
 
-    // auto-editor 실행
-    try {
-      execSync(
-        `${autoEditorCmd} "${inputPath}" --no-open --margin ${params.margin} --edit "audio:threshold=${params.threshold}" -o "${outputPath}"`,
-        { timeout: 180000, stdio: 'pipe', cwd: workDir },
-      );
-    } catch (err) {
-      console.error('[silence-remove] auto-editor 에러', err);
-      // auto-editor 실패 시 원본 반환
+    // 무음 제거 실행
+    if (useAutoEditor) {
+      // auto-editor 사용 (최고 품질)
+      try {
+        execSync(
+          `auto-editor "${inputPath}" --no-open --margin ${params.margin} --edit "audio:threshold=${params.threshold}" -o "${outputPath}"`,
+          { timeout: 180000, stdio: 'pipe', cwd: workDir },
+        );
+      } catch (err) {
+        console.error('[silence-remove] auto-editor 에러', err);
+      }
+    }
+
+    if (!fs.existsSync(outputPath)) {
+      // auto-editor 없거나 실패 → FFmpeg silencedetect + 수동 컷으로 fallback
+      try {
+        const thresholdDb = params.threshold === '0.04' ? '-35' : params.threshold === '0.02' ? '-25' : '-30';
+        // FFmpeg로 무음 구간 감지 → 비무음 구간만 추출
+        const detectResult = execSync(
+          `"${ffmpeg}" -i "${inputPath}" -af "silencedetect=noise=${thresholdDb}dB:d=0.5" -f null - 2>&1`,
+          { timeout: 60000 },
+        ).toString();
+
+        // silence_start/silence_end 파싱
+        const silenceRegex = /silence_start: ([\d.]+)[\s\S]*?silence_end: ([\d.]+)/g;
+        const silences: Array<{ start: number; end: number }> = [];
+        let match;
+        while ((match = silenceRegex.exec(detectResult))) {
+          silences.push({ start: parseFloat(match[1]), end: parseFloat(match[2]) });
+        }
+
+        if (silences.length > 0) {
+          // 비무음 구간 계산
+          const segments: Array<{ start: number; end: number }> = [];
+          let cursor = 0;
+          for (const s of silences) {
+            if (s.start > cursor + 0.1) segments.push({ start: cursor, end: s.start });
+            cursor = s.end;
+          }
+          if (cursor < originalDuration - 0.1) segments.push({ start: cursor, end: originalDuration });
+
+          // FFmpeg concat으로 비무음 구간만 합치기
+          const filterParts = segments.map((seg, i) =>
+            `[0:v]trim=start=${seg.start}:end=${seg.end},setpts=PTS-STARTPTS[v${i}];[0:a]atrim=start=${seg.start}:end=${seg.end},asetpts=PTS-STARTPTS[a${i}]`
+          ).join(';');
+          const concatInputs = segments.map((_, i) => `[v${i}][a${i}]`).join('');
+          const filter = `${filterParts};${concatInputs}concat=n=${segments.length}:v=1:a=1[outv][outa]`;
+
+          execSync(
+            `"${ffmpeg}" -y -i "${inputPath}" -filter_complex "${filter}" -map "[outv]" -map "[outa]" -c:v libx264 -preset fast -c:a aac "${outputPath}"`,
+            { timeout: 180000, stdio: 'pipe' },
+          );
+        }
+      } catch (err) {
+        console.error('[silence-remove] FFmpeg fallback 에러', err);
+      }
+    }
+
+    // 여전히 출력 파일 없으면 원본 반환
+    if (!fs.existsSync(outputPath)) {
       const buf = new Uint8Array(fs.readFileSync(inputPath));
       fs.rmSync(workDir, { recursive: true, force: true });
       return new NextResponse(buf, {
@@ -92,7 +141,7 @@ export async function POST(request: NextRequest) {
             result_duration: Math.round(originalDuration * 10) / 10,
             removed_seconds: 0,
             removed_percent: 0,
-            message: 'auto-editor 처리 실패. 원본을 반환합니다.',
+            message: '무음 제거 도구를 사용할 수 없어 원본을 반환합니다.',
           }),
         },
       });
