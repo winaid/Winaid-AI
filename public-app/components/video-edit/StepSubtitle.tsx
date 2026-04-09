@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { validateMedicalAd, countViolations } from '../../lib/medicalAdValidation';
 import { downloadSrt, type SrtSegment } from '../../lib/srtUtils';
 import type { PipelineState, StepSubtitleState, SubtitleStyle, SubtitlePosition, SubtitleSegment } from './types';
@@ -32,6 +32,7 @@ export default function StepSubtitle({ state, onUpdate, onProcess, onNext, onPre
   const { step4_subtitle: sub } = state;
   const hasResult = !!sub.subtitles || sub.style === 'skip' || !sub.enabled;
   const [editingIdx, setEditingIdx] = useState<number | null>(null);
+  const movingRef = useRef(false); // Enter로 이동 중인지 추적
 
   // 자막 텍스트 편집
   const updateSubtitleText = (idx: number, text: string) => {
@@ -116,12 +117,12 @@ export default function StepSubtitle({ state, onUpdate, onProcess, onNext, onPre
                         {isEditing ? (
                           <input type="text" value={seg.text} autoFocus
                             onChange={e => updateSubtitleText(idx, e.target.value)}
-                            onBlur={() => setEditingIdx(null)}
+                            onBlur={() => { if (!movingRef.current) setEditingIdx(null); movingRef.current = false; }}
                             onKeyDown={e => {
                               if (e.key === 'Enter') {
                                 e.preventDefault();
-                                // 다음 자막으로 이동, 마지막이면 편집 종료
                                 if (sub.subtitles && idx < sub.subtitles.length - 1) {
+                                  movingRef.current = true;
                                   setEditingIdx(idx + 1);
                                 } else {
                                   setEditingIdx(null);

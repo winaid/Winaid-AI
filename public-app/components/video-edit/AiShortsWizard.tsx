@@ -73,6 +73,7 @@ export default function AiShortsWizard({ onBack }: Props) {
 
 function StepScript({ state, patch, setError }: { state: AiShortsState; patch: (p: Partial<AiShortsState>) => void; setError: (e: string) => void }) {
   const [editingIdx, setEditingIdx] = useState<number | null>(null);
+  const movingRef = useRef(false);
   const hasScenes = state.scenes.length > 0;
 
   const generateScript = async () => {
@@ -182,12 +183,16 @@ function StepScript({ state, patch, setError }: { state: AiShortsState; patch: (
                 {editingIdx === idx ? (
                   <textarea value={scene.narration} rows={2} autoFocus
                     onChange={e => updateNarration(idx, e.target.value)}
-                    onBlur={() => setEditingIdx(null)}
+                    onBlur={() => { if (!movingRef.current) setEditingIdx(null); movingRef.current = false; }}
                     onKeyDown={e => {
                       if (e.key === 'Enter' && !e.shiftKey) {
                         e.preventDefault();
-                        if (idx < state.scenes.length - 1) setEditingIdx(idx + 1);
-                        else setEditingIdx(null);
+                        if (idx < state.scenes.length - 1) {
+                          movingRef.current = true;
+                          setEditingIdx(idx + 1);
+                        } else {
+                          setEditingIdx(null);
+                        }
                       }
                     }}
                     className="w-full px-2 py-1 text-xs border border-indigo-400 rounded-lg outline-none resize-none" />
