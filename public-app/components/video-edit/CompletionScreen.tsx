@@ -152,7 +152,7 @@ function getFinalResultUrl(state: PipelineState): string | null {
     state.step6_zoom.resultBlobUrl,          // 6
     state.step7_bgm.resultBlobUrl,           // 7
     state.step8_intro.resultBlobUrl,         // 8
-    state.step9_thumbnail.resultBlobUrl,     // 9
+    state.step9_thumbnail.thumbnailUrl,      // 9
   ];
   for (let s = 9; s >= 1; s--) {
     if (urls[s]) return urls[s]!;

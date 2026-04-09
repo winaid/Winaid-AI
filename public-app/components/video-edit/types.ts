@@ -24,6 +24,9 @@ export type SubtitleStyle = 'basic' | 'highlight' | 'single_line' | 'skip';
 export type SubtitlePosition = 'top' | 'center' | 'bottom';
 export type EffectsStyle = 'shorts' | 'vlog' | 'explanation' | 'interview' | 'skip';
 export type BgmMoodOption = 'bright' | 'calm' | 'emotional' | 'trendy' | 'corporate' | 'skip';
+export type ZoomIntensity = 'auto' | 'strong' | 'subtle' | 'skip';
+export type ThumbnailTextColor = 'white' | 'yellow' | 'red';
+export type ThumbnailTextPosition = 'center' | 'top' | 'bottom';
 export type IntroStyle = 'default' | 'simple' | 'none';
 export type OutroStyle = 'default' | 'simple' | 'cta' | 'none';
 
@@ -116,10 +119,21 @@ export interface StepEffectsState {
   effects?: SoundEffect[];
 }
 
-// ── STEP 6: 줌인/줌아웃 (TODO) ──
+// ── 줌 포인트 ──
+export interface ZoomPoint {
+  start_time: number;
+  end_time: number;
+  zoom_level: number;
+  type: 'emphasis' | 'transition' | 'question' | 'conclusion';
+}
+
+// ── STEP 6: 줌인/줌아웃 ──
 export interface StepZoomState {
   enabled: boolean;
   resultBlobUrl?: string;
+  intensity: ZoomIntensity;
+  zoomLevel: number; // 1.0~1.3
+  zoomPoints?: ZoomPoint[];
 }
 
 // ── STEP 7: BGM ──
@@ -141,10 +155,15 @@ export interface StepIntroState {
   saveInfo: boolean;
 }
 
-// ── STEP 9: 썸네일 (TODO) ──
+// ── STEP 9: 썸네일 ──
 export interface StepThumbnailState {
   enabled: boolean;
-  resultBlobUrl?: string;
+  thumbnailUrl?: string;
+  text?: string;
+  textColor: ThumbnailTextColor;
+  textPosition: ThumbnailTextPosition;
+  textSuggestions?: string[];
+  frameTime?: number;
 }
 
 // ── 파이프라인 전체 상태 ──
@@ -177,10 +196,10 @@ export const INITIAL_PIPELINE_STATE: PipelineState = {
   step3_silence: { enabled: true, intensity: 'normal' },
   step4_subtitle: { enabled: true, style: 'highlight', position: 'bottom', dentalTerms: true, medicalCheck: true },
   step5_effects: { enabled: true, style: 'shorts', density: 3 },
-  step6_zoom: { enabled: true },
+  step6_zoom: { enabled: true, intensity: 'auto', zoomLevel: 1.15 },
   step7_bgm: { enabled: true, mood: 'calm', volume: 15 },
   step8_intro: { enabled: true, introStyle: 'default', outroStyle: 'default', hospital: { name: '' }, saveInfo: false },
-  step9_thumbnail: { enabled: true },
+  step9_thumbnail: { enabled: true, textColor: 'white', textPosition: 'center' },
   currentStep: 0,
   mode: 'manual',
   isProcessing: false,
@@ -211,10 +230,10 @@ export function isStepDone(state: PipelineState, step: number): boolean {
     case 3: return !!state.step3_silence.resultBlobUrl || state.step3_silence.intensity === 'skip' || !state.step3_silence.enabled;
     case 4: return !!state.step4_subtitle.subtitles || state.step4_subtitle.style === 'skip' || !state.step4_subtitle.enabled;
     case 5: return !!state.step5_effects.effects || state.step5_effects.style === 'skip' || !state.step5_effects.enabled;
-    case 6: return !!state.step6_zoom.resultBlobUrl || !state.step6_zoom.enabled;
+    case 6: return !!state.step6_zoom.resultBlobUrl || state.step6_zoom.intensity === 'skip' || !state.step6_zoom.enabled;
     case 7: return !!state.step7_bgm.resultBlobUrl || state.step7_bgm.mood === 'skip' || !state.step7_bgm.enabled;
     case 8: return !!state.step8_intro.resultBlobUrl || (state.step8_intro.introStyle === 'none' && state.step8_intro.outroStyle === 'none') || !state.step8_intro.enabled;
-    case 9: return !!state.step9_thumbnail.resultBlobUrl || !state.step9_thumbnail.enabled;
+    case 9: return !!state.step9_thumbnail.thumbnailUrl || !state.step9_thumbnail.enabled;
     default: return false;
   }
 }
@@ -227,7 +246,7 @@ export function isStepSkipped(state: PipelineState, step: number): boolean {
     case 3: return state.step3_silence.intensity === 'skip' || !state.step3_silence.enabled;
     case 4: return state.step4_subtitle.style === 'skip' || !state.step4_subtitle.enabled;
     case 5: return state.step5_effects.style === 'skip' || !state.step5_effects.enabled;
-    case 6: return !state.step6_zoom.enabled;
+    case 6: return state.step6_zoom.intensity === 'skip' || !state.step6_zoom.enabled;
     case 7: return state.step7_bgm.mood === 'skip' || !state.step7_bgm.enabled;
     case 8: return (state.step8_intro.introStyle === 'none' && state.step8_intro.outroStyle === 'none') || !state.step8_intro.enabled;
     case 9: return !state.step9_thumbnail.enabled;
@@ -254,7 +273,7 @@ function getStepResultUrl(state: PipelineState, step: number): string | undefine
     case 6: return state.step6_zoom.resultBlobUrl;
     case 7: return state.step7_bgm.resultBlobUrl;
     case 8: return state.step8_intro.resultBlobUrl;
-    case 9: return state.step9_thumbnail.resultBlobUrl;
+    case 9: return state.step9_thumbnail.thumbnailUrl;
     default: return undefined;
   }
 }

@@ -6,15 +6,17 @@ import StepCrop from '../../../components/video-edit/StepCrop';
 import StepSilence from '../../../components/video-edit/StepSilence';
 import StepSubtitle from '../../../components/video-edit/StepSubtitle';
 import StepEffects from '../../../components/video-edit/StepEffects';
+import StepZoom from '../../../components/video-edit/StepZoom';
 import StepBgm from '../../../components/video-edit/StepBgm';
 import StepIntroOutro from '../../../components/video-edit/StepIntroOutro';
+import StepThumbnail from '../../../components/video-edit/StepThumbnail';
 import CompletionScreen from '../../../components/video-edit/CompletionScreen';
 import PipelineProgress, { type AutoStepStatus } from '../../../components/video-edit/PipelineProgress';
 import StepStyle from '../../../components/video-edit/StepStyle';
 import {
   type PipelineState, type PipelineMode, type FileInfo, type HospitalInfo,
   type StepCropState, type StepStyleState, type StepSilenceState, type StepSubtitleState,
-  type StepEffectsState, type StepBgmState, type StepIntroState,
+  type StepEffectsState, type StepZoomState, type StepBgmState, type StepIntroState, type StepThumbnailState,
   type SubtitleSegment, type SoundEffect,
   INITIAL_PIPELINE_STATE, TOTAL_STEPS, getInputForStep,
 } from '../../../components/video-edit/types';
@@ -74,6 +76,14 @@ export default function VideoEditPage() {
   const patchEffects = (p: Partial<StepEffectsState>) => setState(prev => ({
     ...prev,
     step5_effects: { ...prev.step5_effects, ...p },
+  }));
+  const patchZoom = (p: Partial<StepZoomState>) => setState(prev => ({
+    ...prev,
+    step6_zoom: { ...prev.step6_zoom, ...p },
+  }));
+  const patchThumbnail = (p: Partial<StepThumbnailState>) => setState(prev => ({
+    ...prev,
+    step9_thumbnail: { ...prev.step9_thumbnail, ...p },
   }));
   const patchBgm = (p: Partial<StepBgmState>) => setState(prev => ({
     ...prev,
@@ -368,7 +378,78 @@ export default function VideoEditPage() {
     }
   };
 
-  // ── STEP 5: BGM 삽입 처리 ──
+  // ── STEP 6: 줌 효과 처리 ──
+
+  const processZoom = async () => {
+    const input = getInputForStep(state, 6);
+    if (!input) return;
+    setStepProcessing(true);
+    setStepProgress('줌 효과를 적용하고 있습니다...');
+    setError('');
+    try {
+      let fileToSend: File;
+      if (typeof input === 'string') {
+        const r = await fetch(input); const b = await r.blob();
+        fileToSend = new File([b], state.fileInfo?.name || 'video.mp4', { type: b.type });
+      } else { fileToSend = input as File; }
+
+      const formData = new FormData();
+      formData.append('file', fileToSend);
+      formData.append('intensity', state.step6_zoom.intensity);
+      formData.append('zoom_level', String(state.step6_zoom.zoomLevel));
+      if (state.step4_subtitle.subtitles) {
+        formData.append('subtitles', JSON.stringify(state.step4_subtitle.subtitles));
+      }
+
+      const res = await fetch('/api/video/add-zoom', { method: 'POST', body: formData });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({ error: '서버 오류' }));
+        throw new Error(d.error || `줌 효과 실패 (${res.status})`);
+      }
+
+      const metaHeader = res.headers.get('X-Zoom-Metadata');
+      const meta = metaHeader ? JSON.parse(metaHeader) : {};
+      const blob = await res.blob();
+      patchZoom({ resultBlobUrl: URL.createObjectURL(blob), zoomPoints: meta.zoom_points });
+    } catch (err) { setError(err instanceof Error ? err.message : '줌 효과 실패'); }
+    finally { setStepProcessing(false); setStepProgress(''); }
+  };
+
+  // ── STEP 9: 썸네일 생성 처리 ──
+
+  const processThumbnail = async () => {
+    const input = getInputForStep(state, 9);
+    if (!input) return;
+    setStepProcessing(true);
+    setStepProgress('썸네일을 생성하고 있습니다...');
+    setError('');
+    try {
+      let fileToSend: File;
+      if (typeof input === 'string') {
+        const r = await fetch(input); const b = await r.blob();
+        fileToSend = new File([b], state.fileInfo?.name || 'video.mp4', { type: b.type });
+      } else { fileToSend = input as File; }
+
+      const formData = new FormData();
+      formData.append('file', fileToSend);
+      formData.append('frame_time', String(state.step9_thumbnail.frameTime || 1));
+      formData.append('text', state.step9_thumbnail.text || '');
+      formData.append('text_color', state.step9_thumbnail.textColor);
+      formData.append('text_position', state.step9_thumbnail.textPosition);
+
+      const res = await fetch('/api/video/generate-thumbnail', { method: 'POST', body: formData });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({ error: '서버 오류' }));
+        throw new Error(d.error || `썸네일 실패 (${res.status})`);
+      }
+
+      const blob = await res.blob();
+      patchThumbnail({ thumbnailUrl: URL.createObjectURL(blob) });
+    } catch (err) { setError(err instanceof Error ? err.message : '썸네일 생성 실패'); }
+    finally { setStepProcessing(false); setStepProgress(''); }
+  };
+
+  // ── STEP 7: BGM 삽입 처리 ──
 
   const processBgm = async () => {
     const input = getInputForStep(state, 7);
@@ -485,10 +566,10 @@ export default function VideoEditPage() {
       { step: 3, skip: () => state.step3_silence.intensity === 'skip', run: processSilence, label: '무음 제거' },
       { step: 4, skip: () => state.step4_subtitle.style === 'skip', run: processSubtitle, label: 'AI 자막' },
       { step: 5, skip: () => state.step5_effects.style === 'skip', run: processEffects, label: '효과음' },
-      { step: 6, skip: () => true, run: async () => {}, label: '줌 (준비중)' },
+      { step: 6, skip: () => state.step6_zoom.intensity === 'skip' || !state.step6_zoom.enabled || !!state.fileInfo?.isAudio, run: processZoom, label: '줌 효과' },
       { step: 7, skip: () => state.step7_bgm.mood === 'skip', run: processBgm, label: 'BGM' },
       { step: 8, skip: () => (state.step8_intro.introStyle === 'none' && state.step8_intro.outroStyle === 'none') || !state.step8_intro.hospital.name.trim(), run: processIntroOutro, label: '인트로/아웃로' },
-      { step: 9, skip: () => true, run: async () => {}, label: '썸네일 (준비중)' },
+      { step: 9, skip: () => !state.step9_thumbnail.enabled || !!state.fileInfo?.isAudio, run: processThumbnail, label: '썸네일' },
     ];
 
     for (const s of steps) {
@@ -715,19 +796,10 @@ export default function VideoEditPage() {
           onNext={() => goStep(6)} onPrev={() => goStep(4)} isProcessing={stepProcessing} progress={stepProgress} />
       )}
 
-      {/* ══════ STEP 6: 줌인/줌아웃 (TODO) ══════ */}
+      {/* ══════ STEP 6: 줌인/줌아웃 ══════ */}
       {state.currentStep === 6 && state.mode === 'manual' && (
-        <div className="space-y-6">
-          <div className="p-8 bg-slate-50 border border-slate-200 rounded-2xl text-center">
-            <div className="text-3xl mb-3">🔍</div>
-            <div className="text-sm font-bold text-slate-600">줌인/줌아웃 — 준비 중</div>
-            <div className="text-xs text-slate-400 mt-1">다음 업데이트에서 추가됩니다.</div>
-          </div>
-          <div className="flex gap-3">
-            <button type="button" onClick={() => goStep(5)} className="px-5 py-3 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 text-sm">← 이전</button>
-            <button type="button" onClick={() => goStep(7)} className="flex-1 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 text-sm">다음 단계 →</button>
-          </div>
-        </div>
+        <StepZoom state={state} onUpdate={patchZoom} onProcess={processZoom}
+          onNext={() => goStep(7)} onPrev={() => goStep(5)} isProcessing={stepProcessing} progress={stepProgress} />
       )}
 
       {/* ══════ STEP 7: BGM ══════ */}
@@ -742,19 +814,10 @@ export default function VideoEditPage() {
           onNext={() => goStep(9)} onPrev={() => goStep(7)} isProcessing={stepProcessing} progress={stepProgress} />
       )}
 
-      {/* ══════ STEP 9: 썸네일 (TODO) ══════ */}
+      {/* ══════ STEP 9: 썸네일 ══════ */}
       {state.currentStep === 9 && state.mode === 'manual' && (
-        <div className="space-y-6">
-          <div className="p-8 bg-slate-50 border border-slate-200 rounded-2xl text-center">
-            <div className="text-3xl mb-3">🖼️</div>
-            <div className="text-sm font-bold text-slate-600">썸네일 생성 — 준비 중</div>
-            <div className="text-xs text-slate-400 mt-1">다음 업데이트에서 추가됩니다.</div>
-          </div>
-          <div className="flex gap-3">
-            <button type="button" onClick={() => goStep(8)} className="px-5 py-3 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 text-sm">← 이전</button>
-            <button type="button" onClick={() => goStep(10)} className="flex-1 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black rounded-xl text-sm shadow-lg">🎬 완성 화면</button>
-          </div>
-        </div>
+        <StepThumbnail state={state} onUpdate={patchThumbnail} onProcess={processThumbnail}
+          onNext={() => goStep(10)} onPrev={() => goStep(8)} isProcessing={stepProcessing} progress={stepProgress} />
       )}
 
       {/* ══════ 완성 화면 ══════ */}
