@@ -365,12 +365,104 @@ const medicalIllust: CardNewsDesignTemplate = {
 // =============================================
 // 전체 템플릿 배열 Export
 // =============================================
+// ── 추가 프리셋 10종 (카테고리별) ──
+
+const warmBeige: CardNewsDesignTemplate = {
+  id: 'warm-beige', name: '따뜻한 베이지', description: '친근하고 따뜻한 분위기', icon: '☀️',
+  colors: { background: '#F5EDE3', accent: '#D4A574', text: '#5C4033', subtitle: '#8B6F5C', tagBg: '#EDE0D4', tagText: '#8B6F5C' },
+  stylePrompt: '따뜻한 베이지톤 배경, 브라운 악센트, 부드러운 곡선 요소, 카페 느낌의 편안한 디자인',
+  styleConfig: { backgroundColor: '#F5EDE3', borderColor: '#D4A574', borderWidth: '0', borderRadius: '20px', boxShadow: '0 4px 20px rgba(92,64,51,0.1)', hasWindowButtons: false, mood: '따뜻하고 친근한', keyFeatures: ['베이지 배경', '브라운 악센트'], subtitleStyle: { color: '#8B6F5C', fontSize: '13px', fontWeight: '600' }, mainTitleStyle: { color: '#5C4033', fontSize: '28px', fontWeight: '900' }, highlightStyle: { color: '#D4A574', backgroundColor: 'transparent' }, descStyle: { color: '#6B5B4F', fontSize: '14px' }, tagStyle: { backgroundColor: '#D4A57430', color: '#8B6F5C', borderRadius: '12px' } },
+  previewSvg: `<svg viewBox="0 0 120 120"><rect width="120" height="120" rx="12" fill="#F5EDE3"/><rect x="10" y="15" width="100" height="90" rx="14" fill="white" opacity="0.7"/><rect x="25" y="35" width="70" height="8" rx="3" fill="#D4A574"/><rect x="30" y="50" width="60" height="6" rx="2" fill="#8B6F5C" opacity="0.4"/><circle cx="60" cy="80" r="12" fill="#D4A574" opacity="0.2"/></svg>`,
+};
+
+const darkPremium: CardNewsDesignTemplate = {
+  id: 'dark-premium', name: '다크 프리미엄', description: '고급스러운 다크 톤', icon: '🌙',
+  colors: { background: '#1A1A2E', accent: '#E94560', text: '#EAEAEA', subtitle: '#A0A0B0', tagBg: '#2A2A3E', tagText: '#E94560' },
+  stylePrompt: '다크 네이비 배경, 레드 악센트, 프리미엄 고급 느낌, 골드/실버 포인트',
+  styleConfig: { backgroundColor: '#1A1A2E', borderColor: '#E94560', borderWidth: '0', borderRadius: '20px', boxShadow: '0 8px 32px rgba(0,0,0,0.3)', hasWindowButtons: false, mood: '고급스럽고 세련된', keyFeatures: ['다크 배경', '레드 악센트'], subtitleStyle: { color: '#A0A0B0', fontSize: '13px', fontWeight: '600' }, mainTitleStyle: { color: '#FFFFFF', fontSize: '28px', fontWeight: '900' }, highlightStyle: { color: '#E94560', backgroundColor: 'transparent' }, descStyle: { color: '#C0C0D0', fontSize: '14px' }, tagStyle: { backgroundColor: '#E9456020', color: '#E94560', borderRadius: '12px' } },
+  previewSvg: `<svg viewBox="0 0 120 120"><rect width="120" height="120" rx="12" fill="#1A1A2E"/><rect x="20" y="30" width="80" height="8" rx="3" fill="#EAEAEA"/><rect x="25" y="45" width="70" height="6" rx="2" fill="#A0A0B0" opacity="0.5"/><rect x="35" y="70" width="50" height="20" rx="10" fill="#E94560" opacity="0.8"/><text x="60" y="84" text-anchor="middle" fill="white" font-size="8" font-weight="700">PREMIUM</text></svg>`,
+};
+
+const pastelMint: CardNewsDesignTemplate = {
+  id: 'pastel-mint', name: '파스텔 민트', description: '상쾌하고 깨끗한 느낌', icon: '🍃',
+  colors: { background: '#E8F8F5', accent: '#48C9B0', text: '#1B4332', subtitle: '#5B8A72', tagBg: '#D5F5E3', tagText: '#27AE60' },
+  stylePrompt: '민트/그린 파스텔 배경, 자연 친화적 느낌, 건강하고 상쾌한 디자인',
+  styleConfig: { backgroundColor: '#E8F8F5', borderColor: '#48C9B0', borderWidth: '0', borderRadius: '20px', boxShadow: '0 4px 20px rgba(72,201,176,0.1)', hasWindowButtons: false, mood: '상쾌하고 건강한', keyFeatures: ['민트 배경', '그린 악센트'], subtitleStyle: { color: '#5B8A72', fontSize: '13px', fontWeight: '600' }, mainTitleStyle: { color: '#1B4332', fontSize: '28px', fontWeight: '900' }, highlightStyle: { color: '#48C9B0', backgroundColor: 'transparent' }, descStyle: { color: '#2D6A4F', fontSize: '14px' }, tagStyle: { backgroundColor: '#48C9B020', color: '#27AE60', borderRadius: '12px' } },
+  previewSvg: `<svg viewBox="0 0 120 120"><rect width="120" height="120" rx="12" fill="#E8F8F5"/><rect x="15" y="20" width="90" height="80" rx="14" fill="white" opacity="0.8"/><rect x="30" y="40" width="60" height="8" rx="3" fill="#48C9B0"/><rect x="35" y="55" width="50" height="5" rx="2" fill="#5B8A72" opacity="0.4"/><circle cx="30" cy="90" r="8" fill="#48C9B0" opacity="0.15"/></svg>`,
+};
+
+const coralFriendly: CardNewsDesignTemplate = {
+  id: 'coral-friendly', name: '코럴 프렌들리', description: '밝고 활기찬 분위기', icon: '🌺',
+  colors: { background: '#FFF0EB', accent: '#FF6B6B', text: '#4A2C2A', subtitle: '#D45B5B', tagBg: '#FFE0DB', tagText: '#FF6B6B' },
+  stylePrompt: '코럴/핑크 배경, 활기찬 레드 악센트, 여성 친화적, 밝고 따뜻한 디자인',
+  styleConfig: { backgroundColor: '#FFF0EB', borderColor: '#FF6B6B', borderWidth: '0', borderRadius: '20px', boxShadow: '0 4px 20px rgba(255,107,107,0.1)', hasWindowButtons: false, mood: '밝고 활기찬', keyFeatures: ['코럴 배경', '핑크 악센트'], subtitleStyle: { color: '#D45B5B', fontSize: '13px', fontWeight: '600' }, mainTitleStyle: { color: '#4A2C2A', fontSize: '28px', fontWeight: '900' }, highlightStyle: { color: '#FF6B6B', backgroundColor: 'transparent' }, descStyle: { color: '#6B4444', fontSize: '14px' }, tagStyle: { backgroundColor: '#FF6B6B20', color: '#FF6B6B', borderRadius: '12px' } },
+  previewSvg: `<svg viewBox="0 0 120 120"><rect width="120" height="120" rx="12" fill="#FFF0EB"/><rect x="20" y="30" width="80" height="8" rx="3" fill="#FF6B6B"/><rect x="25" y="45" width="70" height="6" rx="2" fill="#D45B5B" opacity="0.4"/><circle cx="90" cy="85" r="15" fill="#FF6B6B" opacity="0.1"/><circle cx="20" cy="20" r="8" fill="#FF6B6B" opacity="0.1"/></svg>`,
+};
+
+const navyTrust: CardNewsDesignTemplate = {
+  id: 'navy-trust', name: '네이비 신뢰', description: '전문적이고 신뢰감 있는', icon: '⚓',
+  colors: { background: '#1B2A4A', accent: '#3B82F6', text: '#E8ECF1', subtitle: '#94A3B8', tagBg: '#2A3F5F', tagText: '#60A5FA' },
+  stylePrompt: '다크 네이비 배경, 블루 악센트, 전문가적 신뢰감, 깔끔한 라인',
+  styleConfig: { backgroundColor: '#1B2A4A', borderColor: '#3B82F6', borderWidth: '0', borderRadius: '20px', boxShadow: '0 8px 32px rgba(27,42,74,0.3)', hasWindowButtons: false, mood: '전문적이고 신뢰감 있는', keyFeatures: ['네이비 배경', '블루 악센트'], subtitleStyle: { color: '#94A3B8', fontSize: '13px', fontWeight: '600' }, mainTitleStyle: { color: '#FFFFFF', fontSize: '28px', fontWeight: '900' }, highlightStyle: { color: '#3B82F6', backgroundColor: 'transparent' }, descStyle: { color: '#CBD5E1', fontSize: '14px' }, tagStyle: { backgroundColor: '#3B82F620', color: '#60A5FA', borderRadius: '12px' } },
+  previewSvg: `<svg viewBox="0 0 120 120"><rect width="120" height="120" rx="12" fill="#1B2A4A"/><rect x="15" y="25" width="90" height="70" rx="10" fill="#2A3F5F" opacity="0.5"/><rect x="25" y="40" width="70" height="8" rx="3" fill="#E8ECF1"/><rect x="30" y="55" width="60" height="5" rx="2" fill="#94A3B8" opacity="0.5"/><rect x="35" y="75" width="50" height="12" rx="6" fill="#3B82F6"/></svg>`,
+};
+
+const lavenderCalm: CardNewsDesignTemplate = {
+  id: 'lavender-calm', name: '라벤더 차분', description: '차분하고 편안한 느낌', icon: '💜',
+  colors: { background: '#F3E8FF', accent: '#A855F7', text: '#3B1E5C', subtitle: '#7C5AA0', tagBg: '#E9D5FF', tagText: '#9333EA' },
+  stylePrompt: '라벤더/보라 파스텔 배경, 보라 악센트, 차분하고 힐링 분위기',
+  styleConfig: { backgroundColor: '#F3E8FF', borderColor: '#A855F7', borderWidth: '0', borderRadius: '20px', boxShadow: '0 4px 20px rgba(168,85,247,0.1)', hasWindowButtons: false, mood: '차분하고 편안한', keyFeatures: ['라벤더 배경', '보라 악센트'], subtitleStyle: { color: '#7C5AA0', fontSize: '13px', fontWeight: '600' }, mainTitleStyle: { color: '#3B1E5C', fontSize: '28px', fontWeight: '900' }, highlightStyle: { color: '#A855F7', backgroundColor: 'transparent' }, descStyle: { color: '#5B3D7A', fontSize: '14px' }, tagStyle: { backgroundColor: '#A855F720', color: '#9333EA', borderRadius: '12px' } },
+  previewSvg: `<svg viewBox="0 0 120 120"><rect width="120" height="120" rx="12" fill="#F3E8FF"/><rect x="15" y="20" width="90" height="80" rx="14" fill="white" opacity="0.6"/><rect x="30" y="40" width="60" height="8" rx="3" fill="#A855F7"/><rect x="35" y="55" width="50" height="5" rx="2" fill="#7C5AA0" opacity="0.4"/></svg>`,
+};
+
+const forestNatural: CardNewsDesignTemplate = {
+  id: 'forest-natural', name: '포레스트 자연', description: '자연 친화적 건강 이미지', icon: '🌿',
+  colors: { background: '#F0F7F0', accent: '#2D6A4F', text: '#1B3A26', subtitle: '#52796F', tagBg: '#D8E8D8', tagText: '#2D6A4F' },
+  stylePrompt: '연한 그린 배경, 숲/자연 느낌, 건강하고 자연 친화적 디자인',
+  styleConfig: { backgroundColor: '#F0F7F0', borderColor: '#2D6A4F', borderWidth: '0', borderRadius: '20px', boxShadow: '0 4px 20px rgba(45,106,79,0.1)', hasWindowButtons: false, mood: '자연 친화적이고 건강한', keyFeatures: ['그린 배경', '자연 악센트'], subtitleStyle: { color: '#52796F', fontSize: '13px', fontWeight: '600' }, mainTitleStyle: { color: '#1B3A26', fontSize: '28px', fontWeight: '900' }, highlightStyle: { color: '#2D6A4F', backgroundColor: 'transparent' }, descStyle: { color: '#40614F', fontSize: '14px' }, tagStyle: { backgroundColor: '#2D6A4F20', color: '#2D6A4F', borderRadius: '12px' } },
+  previewSvg: `<svg viewBox="0 0 120 120"><rect width="120" height="120" rx="12" fill="#F0F7F0"/><rect x="20" y="30" width="80" height="8" rx="3" fill="#2D6A4F"/><rect x="25" y="45" width="70" height="5" rx="2" fill="#52796F" opacity="0.4"/><circle cx="80" cy="85" r="12" fill="#2D6A4F" opacity="0.1"/></svg>`,
+};
+
+const sunriseEnergy: CardNewsDesignTemplate = {
+  id: 'sunrise-energy', name: '선라이즈 에너지', description: '활력 넘치는 오렌지 톤', icon: '🌅',
+  colors: { background: '#FFF7ED', accent: '#F97316', text: '#431407', subtitle: '#C2410C', tagBg: '#FFEDD5', tagText: '#EA580C' },
+  stylePrompt: '오렌지/옐로우 그라데이션, 에너지 넘치는 활력 디자인, 밝고 긍정적',
+  styleConfig: { backgroundColor: '#FFF7ED', borderColor: '#F97316', borderWidth: '0', borderRadius: '20px', boxShadow: '0 4px 20px rgba(249,115,22,0.1)', hasWindowButtons: false, mood: '활력 넘치고 긍정적인', keyFeatures: ['오렌지 배경', '따뜻한 악센트'], subtitleStyle: { color: '#C2410C', fontSize: '13px', fontWeight: '600' }, mainTitleStyle: { color: '#431407', fontSize: '28px', fontWeight: '900' }, highlightStyle: { color: '#F97316', backgroundColor: 'transparent' }, descStyle: { color: '#7C2D12', fontSize: '14px' }, tagStyle: { backgroundColor: '#F9731620', color: '#EA580C', borderRadius: '12px' } },
+  previewSvg: `<svg viewBox="0 0 120 120"><rect width="120" height="120" rx="12" fill="#FFF7ED"/><rect x="20" y="30" width="80" height="8" rx="3" fill="#F97316"/><rect x="25" y="45" width="70" height="5" rx="2" fill="#C2410C" opacity="0.4"/><circle cx="100" cy="15" r="20" fill="#F97316" opacity="0.08"/></svg>`,
+};
+
+const monoMinimal: CardNewsDesignTemplate = {
+  id: 'mono-minimal', name: '모노 미니멀', description: '흑백 미니멀 디자인', icon: '⬛',
+  colors: { background: '#FAFAFA', accent: '#18181B', text: '#18181B', subtitle: '#71717A', tagBg: '#F4F4F5', tagText: '#3F3F46' },
+  stylePrompt: '흑백 미니멀, 타이포그래피 중심, 깔끔한 여백, 모노톤 디자인',
+  styleConfig: { backgroundColor: '#FAFAFA', borderColor: '#18181B', borderWidth: '0', borderRadius: '4px', boxShadow: 'none', hasWindowButtons: false, mood: '깔끔하고 미니멀한', keyFeatures: ['흑백 톤', '타이포 중심'], subtitleStyle: { color: '#71717A', fontSize: '13px', fontWeight: '600' }, mainTitleStyle: { color: '#18181B', fontSize: '28px', fontWeight: '900' }, highlightStyle: { color: '#18181B', backgroundColor: 'transparent' }, descStyle: { color: '#52525B', fontSize: '14px' }, tagStyle: { backgroundColor: '#18181B10', color: '#3F3F46', borderRadius: '4px' } },
+  previewSvg: `<svg viewBox="0 0 120 120"><rect width="120" height="120" rx="4" fill="#FAFAFA"/><rect x="20" y="35" width="80" height="10" rx="2" fill="#18181B"/><rect x="25" y="55" width="70" height="5" rx="1" fill="#71717A" opacity="0.4"/><rect x="20" y="90" width="80" height="1" fill="#18181B" opacity="0.15"/></svg>`,
+};
+
+const goldLuxury: CardNewsDesignTemplate = {
+  id: 'gold-luxury', name: '골드 럭셔리', description: '프리미엄 골드 톤', icon: '👑',
+  colors: { background: '#1C1917', accent: '#D4A853', text: '#FAFAF9', subtitle: '#A8A29E', tagBg: '#292524', tagText: '#D4A853' },
+  stylePrompt: '다크 배경에 골드 악센트, 럭셔리 프리미엄, 고급 병원/클리닉 느낌',
+  styleConfig: { backgroundColor: '#1C1917', borderColor: '#D4A853', borderWidth: '0', borderRadius: '20px', boxShadow: '0 8px 32px rgba(0,0,0,0.4)', hasWindowButtons: false, mood: '럭셔리하고 프리미엄한', keyFeatures: ['다크 배경', '골드 악센트'], subtitleStyle: { color: '#A8A29E', fontSize: '13px', fontWeight: '600' }, mainTitleStyle: { color: '#FAFAF9', fontSize: '28px', fontWeight: '900' }, highlightStyle: { color: '#D4A853', backgroundColor: 'transparent' }, descStyle: { color: '#D6D3D1', fontSize: '14px' }, tagStyle: { backgroundColor: '#D4A85320', color: '#D4A853', borderRadius: '12px' } },
+  previewSvg: `<svg viewBox="0 0 120 120"><rect width="120" height="120" rx="12" fill="#1C1917"/><rect x="20" y="35" width="80" height="8" rx="3" fill="#FAFAF9"/><rect x="25" y="50" width="70" height="5" rx="2" fill="#A8A29E" opacity="0.5"/><rect x="35" y="75" width="50" height="14" rx="7" fill="#D4A853" opacity="0.8"/><text x="60" y="85" text-anchor="middle" fill="#1C1917" font-size="7" font-weight="700">LUXURY</text></svg>`,
+};
+
 export const CARD_NEWS_DESIGN_TEMPLATES: CardNewsDesignTemplate[] = [
   medicalClean,
   springFloral,
   modernGrid,
   simplePinboard,
   medicalIllust,
+  warmBeige,
+  darkPremium,
+  pastelMint,
+  coralFriendly,
+  navyTrust,
+  lavenderCalm,
+  forestNatural,
+  sunriseEnergy,
+  monoMinimal,
+  goldLuxury,
 ];
 
 // ID로 템플릿 찾기

@@ -3,7 +3,7 @@
  * 마이그레이션 완료 후 통합 예정
  */
 
-export type CardNewsDesignTemplateId = 'medical-clean' | 'spring-floral' | 'modern-grid' | 'simple-pin' | 'medical-illust';
+export type CardNewsDesignTemplateId = 'medical-clean' | 'spring-floral' | 'modern-grid' | 'simple-pin' | 'medical-illust' | 'warm-beige' | 'dark-premium' | 'pastel-mint' | 'coral-friendly' | 'navy-trust' | 'lavender-calm' | 'forest-natural' | 'sunrise-energy' | 'mono-minimal' | 'gold-luxury';
 
 export enum ContentCategory {
   DENTAL = '치과',
