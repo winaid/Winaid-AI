@@ -91,23 +91,54 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Chirp 3 인식 요청 구성
-    const sttRequestBody: Record<string, unknown> = {
-      config: {
-        languageCodes: ['ko-KR'],
-        model: 'chirp_2',
-        features: {
-          enableWordTimeOffsets: true,
-          enableAutomaticPunctuation: true,
-        },
-        ...(dentalTerms ? {
-          adaptation: {
-            phraseSets: [{
-              phrases: DENTAL_PHRASE_HINTS.map(phrase => ({ value: phrase, boost: 10 })),
-            }],
-          },
-        } : {}),
+    // 파일 크기 체크 — 동기 recognize는 인라인 content ~10MB 제한
+    // base64 인코딩하면 33% 커지므로 원본 ~7.5MB가 한계
+    const isLargeFile = audioBytes.length > 7 * 1024 * 1024;
+
+    // STT V2 공통 config
+    const sttConfig: Record<string, unknown> = {
+      languageCodes: ['ko-KR'],
+      model: 'chirp_2',
+      // autoDecodingConfig: MP3, MP4, WAV 등 압축/컨테이너 포맷 자동 디코딩 (필수!)
+      autoDecodingConfig: {},
+      features: {
+        enableWordTimeOffsets: true,
+        enableAutomaticPunctuation: true,
       },
+      ...(dentalTerms ? {
+        adaptation: {
+          phraseSets: [{
+            phrases: DENTAL_PHRASE_HINTS.map(phrase => ({ value: phrase, boost: 10 })),
+          }],
+        },
+      } : {}),
+    };
+
+    let sttData: {
+      results?: Array<{
+        alternatives?: Array<{
+          transcript?: string;
+          words?: Array<{
+            word?: string;
+            startOffset?: string;
+            endOffset?: string;
+          }>;
+        }>;
+      }>;
+    };
+
+    if (isLargeFile) {
+      // ── 큰 파일: GCS 업로드 없이 longRunningRecognize (inline content 한계 있음) ──
+      // 실제로는 GCS에 업로드 후 uri로 참조해야 하지만, 현재는 에러 안내
+      return NextResponse.json(
+        { error: '파일이 너무 큽니다 (7MB 초과). MP3를 더 짧게 잘라서 시도하거나, 비트레이트를 낮춰주세요.' },
+        { status: 400 },
+      );
+    }
+
+    // ── 동기 recognize (작은 파일) ──
+    const sttRequestBody = {
+      config: sttConfig,
       content: audioBytes.toString('base64'),
     };
 
@@ -124,24 +155,19 @@ export async function POST(request: NextRequest) {
     if (!sttRes.ok) {
       const errBody = await sttRes.text();
       console.error('[generate-subtitles] STT 에러', sttRes.status, errBody);
+      // GCP 에러 메시지 파싱해서 사용자에게 보여주기
+      let detail = '';
+      try {
+        const errJson = JSON.parse(errBody);
+        detail = errJson.error?.message || '';
+      } catch { /* ignore */ }
       return NextResponse.json(
-        { error: `음성 인식 실패 (${sttRes.status}). 오디오 형식을 확인해주세요.` },
+        { error: `음성 인식 실패 (${sttRes.status}). ${detail || '오디오 형식이나 길이를 확인해주세요.'}` },
         { status: 502 },
       );
     }
 
-    const sttData = await sttRes.json() as {
-      results?: Array<{
-        alternatives?: Array<{
-          transcript?: string;
-          words?: Array<{
-            word?: string;
-            startOffset?: string;
-            endOffset?: string;
-          }>;
-        }>;
-      }>;
-    };
+    sttData = await sttRes.json();
 
     // ── 결과 파싱 → 자막 세그먼트 생성 ──
     const subtitles: SubtitleSegment[] = [];
