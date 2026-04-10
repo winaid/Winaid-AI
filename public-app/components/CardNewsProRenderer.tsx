@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { SlideData, CardNewsTheme, SlideLayoutType, DesignPresetStyle } from '../lib/cardNewsLayouts';
 import { LAYOUT_LABELS, CARD_FONTS, FONT_CATEGORIES } from '../lib/cardNewsLayouts';
 import { buildLayoutDefaults, fillLayoutContent, generateSlideImage, suggestSlideText, suggestImagePrompt, enrichSlide, suggestComparison } from '../lib/cardAiActions';
@@ -8,6 +8,7 @@ import type { CardTemplate } from '../lib/cardTemplateService';
 import { ensureGoogleFontLoaded, resolveSlideFontFamily } from '../lib/cardStyleUtils';
 import { downloadCardAsPng, downloadAllAsZip, captureAllSlidesAsBlobs } from '../lib/cardDownloadUtils';
 import { saveVideoToStorage, generateVideoFileName } from '../lib/videoStorage';
+import { validateMedicalAd } from '../lib/medicalAdValidation';
 import CardNewsCanvas from './CardNewsCanvas';
 import SlideEditor from './card-news/SlideEditor';
 import InteractivePreview from './card-news/InteractivePreview';
@@ -532,8 +533,45 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
   // UI
   // ═══════════════════════════════════════
 
+  // 전체 슬라이드 의료광고법 위반 요약 (title/subtitle/body만 집계 — SlideEditor 인라인 배지와 일치)
+  const totalViolations = useMemo(() => {
+    let high = 0;
+    let medium = 0;
+    for (const slide of slides) {
+      const text = [slide.title, slide.subtitle, slide.body].filter(Boolean).join(' ');
+      if (!text) continue;
+      const results = validateMedicalAd(text);
+      for (const r of results) {
+        if (r.severity === 'high') high++;
+        else medium++;
+      }
+    }
+    return { high, medium };
+  }, [slides]);
+
   return (
     <div className="space-y-4">
+      {/* 의료광고법 위반 요약 — 한 건이라도 있으면 상단에 고정 노출 */}
+      {(totalViolations.high > 0 || totalViolations.medium > 0) && (
+        <div className="flex items-center gap-3 px-4 py-2.5 bg-red-50 border border-red-200 rounded-xl text-sm">
+          <span className="text-base" aria-hidden="true">🛡</span>
+          <span className="font-bold text-slate-700">의료광고법 검토</span>
+          {totalViolations.high > 0 && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-xs font-bold">
+              ⛔ 위반 {totalViolations.high}건
+            </span>
+          )}
+          {totalViolations.medium > 0 && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-xs font-bold">
+              ⚠️ 주의 {totalViolations.medium}건
+            </span>
+          )}
+          <span className="text-xs text-slate-500 hidden sm:inline">
+            각 카드 편집창에서 [교체] 버튼으로 수정할 수 있어요
+          </span>
+        </div>
+      )}
+
       {/* 상단 컨트롤 */}
       <div className="flex flex-wrap items-center justify-between gap-2 bg-white rounded-xl border border-slate-200 p-3">
         <div className="flex items-center gap-2">

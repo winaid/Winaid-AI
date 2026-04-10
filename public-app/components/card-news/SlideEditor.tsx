@@ -1,9 +1,25 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import type { SlideData, SlideDecoration, SlideImagePosition, SlideImageStyle } from '../../lib/cardNewsLayouts';
 import { CARD_FONTS, FONT_CATEGORIES, SLIDE_IMAGE_STYLES, COVER_TEMPLATES } from '../../lib/cardNewsLayouts';
 import { IconChangerPopover, ElementAccordion, TextElementEditor } from './EditorWidgets';
+import { validateMedicalAd, type ViolationResult } from '../../lib/medicalAdValidation';
+
+/**
+ * suggestion 문자열에서 첫 번째 따옴표 안의 구체 대체어 추출.
+ * ex) "'개선된', '업데이트된'" → "개선된"
+ *      '삭제 권장' → null (치환 불가 → '제거' 버튼으로 처리)
+ */
+function extractReplacement(suggestion: string): string | null {
+  const match = suggestion.match(/['"]([^'"]+)['"]/);
+  return match ? match[1] : null;
+}
+
+/** 정규식 리터럴 이스케이프 */
+function escapeRegex(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
 
 // ═══════════════════════════════════════════════════════════════
 // SlideEditor: 현재 슬라이드 레이아웃에 맞는 폼을 렌더링
@@ -69,6 +85,73 @@ export default function SlideEditor({
 
   // 편집/AI 2탭
   const [editMode, setEditMode] = useState<'edit' | 'ai'>('edit');
+
+  // ── 의료광고법 실시간 검증 ──
+  // 부모가 slide를 갱신할 때마다(직접 편집/AI 채팅/"더 끌리게" 등) 자동 재계산.
+  // validateMedicalAd는 동기·가벼운 문자열 매칭이라 useMemo만으로 충분(디바운스 불필요).
+  const titleViolations = useMemo(
+    () => validateMedicalAd(slide.title || ''),
+    [slide.title],
+  );
+  const subtitleViolations = useMemo(
+    () => validateMedicalAd(slide.subtitle || ''),
+    [slide.subtitle],
+  );
+  const bodyViolations = useMemo(
+    () => validateMedicalAd(slide.body || ''),
+    [slide.body],
+  );
+
+  /** 원클릭 치환/제거. 치환 가능한 대체어가 없으면 키워드만 제거하고 공백 정리. */
+  const replaceViolation = (field: 'title' | 'subtitle' | 'body', v: ViolationResult) => {
+    const current =
+      field === 'title' ? (slide.title || '') :
+      field === 'subtitle' ? (slide.subtitle || '') :
+      (slide.body || '');
+    const replacement = extractReplacement(v.suggestion);
+    const pattern = new RegExp(escapeRegex(v.keyword), 'g');
+    const next = current
+      .replace(pattern, replacement ?? '')
+      .replace(/ {2,}/g, ' ')
+      .trim();
+    onChange({ [field]: next });
+  };
+
+  /** 인라인 위반 배지 렌더러. 배지는 ElementAccordion 바깥에 두어 접혀 있어도 보이게 함. */
+  const renderViolations = (
+    field: 'title' | 'subtitle' | 'body',
+    violations: ViolationResult[],
+  ) => {
+    if (violations.length === 0) return null;
+    return (
+      <div className="mt-1 space-y-0.5" role="alert" aria-label={`${field} 의료광고법 위반`}>
+        {violations.map((v, i) => {
+          const replacement = extractReplacement(v.suggestion);
+          const tone = v.severity === 'high'
+            ? 'bg-red-50 text-red-700 border-red-200'
+            : 'bg-amber-50 text-amber-700 border-amber-200';
+          return (
+            <div
+              key={`${field}-${v.keyword}-${i}`}
+              className={`text-[10px] leading-tight px-2 py-1 rounded-lg border flex items-center gap-1.5 ${tone}`}
+              title={v.suggestion}
+            >
+              <span className="shrink-0">{v.severity === 'high' ? '⛔' : '⚠️'}</span>
+              <span className="font-bold shrink-0">&lsquo;{v.keyword}&rsquo;</span>
+              <span className="truncate opacity-80">{v.suggestion}</span>
+              <button
+                type="button"
+                onClick={() => replaceViolation(field, v)}
+                className="ml-auto shrink-0 px-1.5 py-0.5 rounded bg-white/80 border border-current text-[10px] font-bold hover:bg-white"
+              >
+                {replacement ? '교체' : '제거'}
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
 
   // 탭 전환 시 자동 키워드 채우기
   useEffect(() => {
@@ -667,11 +750,14 @@ ${JSON.stringify(slideForContext, null, 2)}
   const renderLayoutDataEditor = () => {
     if (slide.layout === 'info' || slide.layout === 'closing') {
       return (
-        <ElementAccordion icon="T" label="본문" defaultOpen={false}>
-          <TextElementEditor value={slide.body || ''} onChange={v => onChange({ body: v })} multiline
-            fontSize={slide.bodyFontSize} fontColor={slide.bodyColor} lineHeight={slide.bodyLineHeight}
-            onStyleChange={(key, val) => onChange({ [key]: val })} prefix="body" />
-        </ElementAccordion>
+        <>
+          <ElementAccordion icon="T" label="본문" defaultOpen={false}>
+            <TextElementEditor value={slide.body || ''} onChange={v => onChange({ body: v })} multiline
+              fontSize={slide.bodyFontSize} fontColor={slide.bodyColor} lineHeight={slide.bodyLineHeight}
+              onStyleChange={(key, val) => onChange({ [key]: val })} prefix="body" />
+          </ElementAccordion>
+          {renderViolations('body', bodyViolations)}
+        </>
       );
     }
     if (slide.layout === 'comparison') {
@@ -821,6 +907,7 @@ ${JSON.stringify(slideForContext, null, 2)}
               lineHeight={slide.titleLineHeight}
               onStyleChange={(key, val) => onChange({ [key]: val })} prefix="title" />
           </ElementAccordion>
+          {renderViolations('title', titleViolations)}
 
           {/* 텍스트 정렬 */}
           <div className="flex gap-3">
@@ -883,6 +970,7 @@ ${JSON.stringify(slideForContext, null, 2)}
               lineHeight={slide.subtitleLineHeight}
               onStyleChange={(key, val) => onChange({ [key]: val })} prefix="subtitle" />
           </ElementAccordion>
+          {renderViolations('subtitle', subtitleViolations)}
 
           {/* 레이아웃별 데이터 */}
           {renderLayoutDataEditor()}
