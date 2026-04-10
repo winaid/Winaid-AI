@@ -11,7 +11,35 @@ import SubtitleTimeline, {
   ReadSpeedBadge,
   type ReadSpeedHint,
 } from './SubtitleTimeline';
+import VideoPlayer, { type VideoPlayerHandle } from './VideoPlayer';
 import type { PipelineState, StepSubtitleState, SubtitleStyle, SubtitlePosition, SubtitleSegment } from './types';
+import { getInputForStep } from './types';
+
+/**
+ * 자막 단계의 입력 영상 URL을 안정적으로 만든다.
+ * - getInputForStep이 string(blob URL)을 반환하면 그대로 사용
+ * - File을 반환하면 URL.createObjectURL로 변환하고 cleanup
+ * - 입력 없으면 null
+ */
+function useInputBlobUrl(state: PipelineState, stepNum: number): string | null {
+  const input = useMemo(() => getInputForStep(state, stepNum), [state, stepNum]);
+  const [url, setUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof input === 'string') {
+      setUrl(input);
+      return;
+    }
+    if (input instanceof File) {
+      const u = URL.createObjectURL(input);
+      setUrl(u);
+      return () => URL.revokeObjectURL(u);
+    }
+    setUrl(null);
+  }, [input]);
+
+  return url;
+}
 
 const STYLE_OPTIONS: { id: SubtitleStyle; label: string; desc: string }[] = [
   { id: 'basic', label: '기본', desc: '깔끔한 하단 자막' },
@@ -39,6 +67,9 @@ interface Props {
 export default function StepSubtitle({ state, onUpdate, onProcess, onNext, onPrev, isProcessing, progress }: Props) {
   const { step4_subtitle: sub } = state;
   const hasResult = !!sub.subtitles || sub.style === 'skip' || !sub.enabled;
+
+  // 자막 편집기 안 영상 미리보기용 — 이전 단계 결과(또는 원본)
+  const inputBlobUrl = useInputBlobUrl(state, 4);
 
   // 자막 변경 래퍼 — 훅이 이미 violations까지 채워서 넘겨주므로 여기서는 집계 + 부모 state 반영만
   const handleSubtitlesChange = useCallback((next: SubtitleSegment[]) => {
@@ -104,6 +135,7 @@ export default function StepSubtitle({ state, onUpdate, onProcess, onNext, onPre
             medicalCheck={sub.medicalCheck}
             onDownloadSrt={handleDownloadSrt}
             videoDuration={state.fileInfo?.duration}
+            videoSrc={inputBlobUrl}
           />
         </div>
       )}
@@ -202,9 +234,11 @@ interface SubtitleEditorProps {
   medicalCheck: boolean;
   onDownloadSrt: () => void;
   videoDuration?: number;
+  /** 미리보기 영상 src — 이전 단계 결과 또는 원본 */
+  videoSrc?: string | null;
 }
 
-function SubtitleEditor({ subtitles, onChange, medicalCheck, onDownloadSrt, videoDuration }: SubtitleEditorProps) {
+function SubtitleEditor({ subtitles, onChange, medicalCheck, onDownloadSrt, videoDuration, videoSrc }: SubtitleEditorProps) {
   const editor = useSubtitleEditor(subtitles, onChange, medicalCheck);
   const {
     splitSubtitle,
@@ -223,10 +257,17 @@ function SubtitleEditor({ subtitles, onChange, medicalCheck, onDownloadSrt, vide
   const textareaRefs = useRef<(HTMLTextAreaElement | null)[]>([]);
   const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
+  const listScrollRef = useRef<HTMLDivElement>(null);
 
   // 다중 선택: 여러 인덱스 + 마지막 단일 클릭한 anchor (Shift+클릭 범위 기준)
   const [selectedIndices, setSelectedIndices] = useState<Set<number>>(() => new Set());
   const [anchorIndex, setAnchorIndex] = useState<number | null>(null);
+
+  // 영상 동기화: 재생 시간 + 플레이어 ref + 사용자 스크롤 가드
+  const playerRef = useRef<VideoPlayerHandle>(null);
+  const [playTime, setPlayTime] = useState(0);
+  const [userScrolling, setUserScrolling] = useState(false);
+  const userScrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── 검증 + 읽기속도 (서브타이틀 변경 시마다 재계산) ──
   const warnings = useMemo(() => validateSubtitleTimes(subtitles), [subtitles]);
@@ -323,7 +364,7 @@ function SubtitleEditor({ subtitles, onChange, medicalCheck, onDownloadSrt, vide
     setAnchorIndex(null);
   }, []);
 
-  // 카드/타임라인에서 선택 진입점 — 자동 스크롤 동반
+  // 카드/타임라인에서 선택 진입점 — 자동 스크롤 + (단일 선택일 때만) 영상 점프
   const handleSelect = useCallback(
     (idx: number, modifiers?: { ctrl?: boolean; shift?: boolean }) => {
       if (modifiers?.shift) {
@@ -332,11 +373,50 @@ function SubtitleEditor({ subtitles, onChange, medicalCheck, onDownloadSrt, vide
         toggleSelect(idx);
       } else {
         selectSingle(idx);
+        // 단일 선택 시에만 영상을 해당 자막 시작 시간으로 점프 (다중 선택 시엔 의도 다름)
+        const target = subtitles[idx];
+        if (target && playerRef.current) {
+          playerRef.current.seekTo(target.start_time);
+        }
       }
       scrollToSubtitle(idx);
     },
-    [selectSingle, toggleSelect, rangeSelect, scrollToSubtitle],
+    [selectSingle, toggleSelect, rangeSelect, scrollToSubtitle, subtitles],
   );
+
+  // ── 영상 동기화: 재생 시간 → 활성 자막 인덱스 ──
+  // findIndex는 100개 이하 자막에서 충분히 빠름. 더 커지면 이진 탐색으로 교체.
+  const activeSubtitleIndex = useMemo(() => {
+    if (!videoSrc || subtitles.length === 0) return -1;
+    return subtitles.findIndex(s => playTime >= s.start_time && playTime < s.end_time);
+  }, [playTime, subtitles, videoSrc]);
+
+  const activeSubtitle = activeSubtitleIndex >= 0 ? subtitles[activeSubtitleIndex] : null;
+
+  // 사용자 스크롤(휠/터치) 감지 — 자동 스크롤 일시 중지 (3초)
+  // onScroll은 자동 스크롤도 트리거하므로 wheel/touchmove로만 감지
+  const handleUserScroll = useCallback(() => {
+    setUserScrolling(true);
+    if (userScrollTimerRef.current) clearTimeout(userScrollTimerRef.current);
+    userScrollTimerRef.current = setTimeout(() => setUserScrolling(false), 3000);
+  }, []);
+
+  useEffect(() => () => {
+    if (userScrollTimerRef.current) clearTimeout(userScrollTimerRef.current);
+  }, []);
+
+  // 영상 재생 → 활성 자막 변경 시 자동 스크롤 (사용자가 직접 스크롤 중이면 skip)
+  const prevActiveRef = useRef(-1);
+  useEffect(() => {
+    if (activeSubtitleIndex < 0) {
+      prevActiveRef.current = -1;
+      return;
+    }
+    if (activeSubtitleIndex === prevActiveRef.current) return;
+    prevActiveRef.current = activeSubtitleIndex;
+    if (userScrolling) return;
+    scrollToSubtitle(activeSubtitleIndex);
+  }, [activeSubtitleIndex, userScrolling, scrollToSubtitle]);
 
   // ── 일괄 작업 ──
   const handleDeleteSelected = useCallback(() => {
@@ -492,7 +572,7 @@ function SubtitleEditor({ subtitles, onChange, medicalCheck, onDownloadSrt, vide
 
   return (
     <div ref={containerRef} className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
-      {/* 도구바 */}
+      {/* 도구바 (전체 폭) */}
       <div className="px-4 py-2.5 border-b border-slate-100 flex items-center justify-between gap-2">
         <div className="text-[10px] text-slate-500 min-w-0">
           <span className="font-bold text-slate-700">자막 타임라인</span>
@@ -513,78 +593,114 @@ function SubtitleEditor({ subtitles, onChange, medicalCheck, onDownloadSrt, vide
         </div>
       </div>
 
-      {/* 시각적 타임라인 + 경고 (목록 위) */}
-      <div className="px-3 pt-3">
-        <SubtitleTimeline
-          subtitles={subtitles}
-          totalDuration={totalDuration}
-          selectedIndices={selectedIndices}
-          anchorIndex={anchorIndex}
-          readSpeeds={readSpeeds}
-          onSelect={handleSelect}
-          onTimeChange={updateTime}
-          onBlockMove={moveBlock}
-        />
-        <TimeWarnings warnings={warnings} onAutoFixOverlaps={applyAutoFixOverlaps} />
-      </div>
+      {/* 2컬럼: 영상 플레이어 + 편집 영역 (모바일은 1컬럼) */}
+      <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr]">
+        {/* 왼쪽: 영상 미리보기 (sticky) */}
+        <div className="lg:sticky lg:top-0 lg:self-start p-3 lg:border-r border-b lg:border-b-0 border-slate-100 bg-slate-50/60 space-y-2">
+          <VideoPlayer
+            ref={playerRef}
+            src={videoSrc || null}
+            compact={false}
+            aspectRatio="9/16"
+            onTimeUpdate={setPlayTime}
+          />
 
-      {/* 자막 목록 */}
-      <div className="max-h-[500px] overflow-y-auto bg-slate-50/40">
-        {/* 다중 선택 툴바 (sticky) */}
-        {selectedIndices.size > 1 && (
-          <div className="sticky top-0 z-20 bg-blue-50 border-b border-blue-200 px-3 py-2 flex items-center justify-between gap-2">
-            <span className="text-[11px] text-blue-700 font-bold tabular-nums">
-              {selectedIndices.size}개 선택됨
-            </span>
-            <div className="flex items-center gap-1.5">
-              <button
-                type="button"
-                onClick={handleMergeSelected}
-                disabled={!canMergeSelected}
-                title={canMergeSelected ? '선택된 자막을 하나로 병합' : '연속된 자막만 병합 가능'}
-                className="text-[11px] px-2.5 py-1 bg-blue-600 text-white font-bold rounded hover:bg-blue-700 disabled:opacity-40 disabled:hover:bg-blue-600"
-              >
-                🔗 병합
-              </button>
-              <button
-                type="button"
-                onClick={handleDeleteSelected}
-                disabled={selectedIndices.size >= subtitles.length}
-                title={selectedIndices.size >= subtitles.length ? '전부 삭제는 불가' : '선택된 자막 일괄 삭제 (Delete)'}
-                className="text-[11px] px-2.5 py-1 bg-red-500 text-white font-bold rounded hover:bg-red-600 disabled:opacity-40 disabled:hover:bg-red-500"
-              >
-                🗑 삭제
-              </button>
-              <button
-                type="button"
-                onClick={clearSelection}
-                title="선택 해제 (Esc)"
-                className="text-[11px] px-2.5 py-1 bg-slate-200 text-slate-600 font-bold rounded hover:bg-slate-300"
-              >
-                ✕
-              </button>
+          {/* 현재 재생 자막 (캡션 오버레이) */}
+          {activeSubtitle && (
+            <div className="px-3 py-2 bg-black/85 rounded-lg text-center">
+              <span className="text-white text-xs leading-snug">{activeSubtitle.text}</span>
+            </div>
+          )}
+          {!videoSrc && (
+            <div className="text-[10px] text-slate-400 text-center">
+              이전 단계 결과가 있어야 미리보기 가능
+            </div>
+          )}
+        </div>
+
+        {/* 오른쪽: 타임라인 + 경고 + 자막 목록 */}
+        <div className="min-w-0">
+          {/* 시각적 타임라인 + 경고 */}
+          <div className="px-3 pt-3">
+            <SubtitleTimeline
+              subtitles={subtitles}
+              totalDuration={totalDuration}
+              selectedIndices={selectedIndices}
+              anchorIndex={anchorIndex}
+              readSpeeds={readSpeeds}
+              playTime={playTime}
+              onSelect={handleSelect}
+              onTimeChange={updateTime}
+              onBlockMove={moveBlock}
+            />
+            <TimeWarnings warnings={warnings} onAutoFixOverlaps={applyAutoFixOverlaps} />
+          </div>
+
+          {/* 자막 목록 (사용자 wheel/touchmove 시 자동 스크롤 일시 중지) */}
+          <div
+            ref={listScrollRef}
+            onWheel={handleUserScroll}
+            onTouchMove={handleUserScroll}
+            className="max-h-[500px] overflow-y-auto bg-slate-50/40"
+          >
+            {/* 다중 선택 툴바 (sticky) */}
+            {selectedIndices.size > 1 && (
+              <div className="sticky top-0 z-20 bg-blue-50 border-b border-blue-200 px-3 py-2 flex items-center justify-between gap-2">
+                <span className="text-[11px] text-blue-700 font-bold tabular-nums">
+                  {selectedIndices.size}개 선택됨
+                </span>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={handleMergeSelected}
+                    disabled={!canMergeSelected}
+                    title={canMergeSelected ? '선택된 자막을 하나로 병합' : '연속된 자막만 병합 가능'}
+                    className="text-[11px] px-2.5 py-1 bg-blue-600 text-white font-bold rounded hover:bg-blue-700 disabled:opacity-40 disabled:hover:bg-blue-600"
+                  >
+                    🔗 병합
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDeleteSelected}
+                    disabled={selectedIndices.size >= subtitles.length}
+                    title={selectedIndices.size >= subtitles.length ? '전부 삭제는 불가' : '선택된 자막 일괄 삭제 (Delete)'}
+                    className="text-[11px] px-2.5 py-1 bg-red-500 text-white font-bold rounded hover:bg-red-600 disabled:opacity-40 disabled:hover:bg-red-500"
+                  >
+                    🗑 삭제
+                  </button>
+                  <button
+                    type="button"
+                    onClick={clearSelection}
+                    title="선택 해제 (Esc)"
+                    className="text-[11px] px-2.5 py-1 bg-slate-200 text-slate-600 font-bold rounded hover:bg-slate-300"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <div className="p-3 space-y-2">
+              {subtitles.map((seg, idx) => (
+                <SubtitleItem
+                  key={seg.id ?? `idx_${idx}`}
+                  subtitle={seg}
+                  index={idx}
+                  totalCount={subtitles.length}
+                  isSelected={selectedIndices.has(idx)}
+                  isActive={activeSubtitleIndex === idx}
+                  readSpeed={readSpeeds[idx]}
+                  onSelect={handleSelect}
+                  onUpdateText={updateText}
+                  onUpdateTime={updateTime}
+                  onDelete={handleSingleDelete}
+                  onKeyDown={handleKeyDown}
+                  registerRef={registerRef}
+                  registerItemRef={registerItemRef}
+                />
+              ))}
             </div>
           </div>
-        )}
-
-        <div className="p-3 space-y-2">
-          {subtitles.map((seg, idx) => (
-            <SubtitleItem
-              key={seg.id ?? `idx_${idx}`}
-              subtitle={seg}
-              index={idx}
-              totalCount={subtitles.length}
-              isSelected={selectedIndices.has(idx)}
-              readSpeed={readSpeeds[idx]}
-              onSelect={handleSelect}
-              onUpdateText={updateText}
-              onUpdateTime={updateTime}
-              onDelete={handleSingleDelete}
-              onKeyDown={handleKeyDown}
-              registerRef={registerRef}
-              registerItemRef={registerItemRef}
-            />
-          ))}
         </div>
       </div>
     </div>
@@ -602,6 +718,8 @@ interface SubtitleItemProps {
   index: number;
   totalCount: number;
   isSelected: boolean;
+  /** 영상에서 현재 재생 중인 자막인지 — emerald 강조 */
+  isActive: boolean;
   readSpeed: ReadSpeedHint | undefined;
   onSelect: (idx: number, modifiers?: SelectModifiers) => void;
   onUpdateText: (idx: number, text: string) => void;
@@ -613,7 +731,7 @@ interface SubtitleItemProps {
 }
 
 function SubtitleItem({
-  subtitle, index, totalCount, isSelected, readSpeed,
+  subtitle, index, totalCount, isSelected, isActive, readSpeed,
   onSelect, onUpdateText, onUpdateTime, onDelete,
   onKeyDown, registerRef, registerItemRef,
 }: SubtitleItemProps) {
@@ -621,8 +739,10 @@ function SubtitleItem({
   const hasMed = subtitle.violations?.some(v => v.severity === 'medium');
   const duration = Math.max(0, subtitle.end_time - subtitle.start_time);
 
-  // 선택 시 파란 링 우선, 그 외엔 위반 색
-  const cardClass = isSelected
+  // 우선순위: 영상 재생 중(isActive) > 다중선택(isSelected) > 위반 > 기본
+  const cardClass = isActive
+    ? 'bg-emerald-50/70 border-emerald-400 ring-2 ring-emerald-200'
+    : isSelected
     ? 'bg-blue-50/40 border-blue-400 ring-2 ring-blue-200'
     : hasHigh
     ? 'bg-red-50/70 border-red-200'

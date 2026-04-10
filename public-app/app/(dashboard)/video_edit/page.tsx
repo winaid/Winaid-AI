@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useMemo, useEffect } from 'react';
 import ModeSelector from '../../../components/video-edit/ModeSelector';
 import AiShortsWizard from '../../../components/video-edit/AiShortsWizard';
 import StepIndicator from '../../../components/video-edit/StepIndicator';
@@ -13,6 +13,7 @@ import StepBgm from '../../../components/video-edit/StepBgm';
 import StepIntroOutro from '../../../components/video-edit/StepIntroOutro';
 import StepThumbnail from '../../../components/video-edit/StepThumbnail';
 import CompletionScreen from '../../../components/video-edit/CompletionScreen';
+import VideoPlayer from '../../../components/video-edit/VideoPlayer';
 import PipelineProgress, { type AutoStepStatus } from '../../../components/video-edit/PipelineProgress';
 import StepStyle from '../../../components/video-edit/StepStyle';
 import {
@@ -56,6 +57,19 @@ export default function VideoEditPage() {
   const [stepProgress, setStepProgress] = useState('');
   const [autoStatuses, setAutoStatuses] = useState<AutoStepStatus[]>([]);
   const cancelRef = useRef(false);
+
+  // 업로드 영역 미리보기용 — originalFile이 바뀔 때만 새 blob URL을 만들고 cleanup
+  const [originalPreviewUrl, setOriginalPreviewUrl] = useState<string | null>(null);
+  useEffect(() => {
+    const f = state.originalFile;
+    if (!f) {
+      setOriginalPreviewUrl(null);
+      return;
+    }
+    const url = URL.createObjectURL(f);
+    setOriginalPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [state.originalFile]);
 
   // ── 상태 헬퍼 ──
 
@@ -765,6 +779,21 @@ export default function VideoEditPage() {
                   className="mt-2 text-xs text-red-500 hover:text-red-700 font-semibold">
                   파일 변경
                 </button>
+                {/* 원본 미리보기 — 음성 파일이면 audio, 영상이면 video로 자동 분기 */}
+                {originalPreviewUrl && (
+                  <div
+                    className="mt-3 mx-auto"
+                    style={{ maxWidth: state.fileInfo.isVertical ? '180px' : '320px' }}
+                    onClick={e => e.stopPropagation()}
+                  >
+                    <VideoPlayer
+                      src={originalPreviewUrl}
+                      type={state.fileInfo.isAudio ? 'audio' : 'video'}
+                      compact
+                      aspectRatio={state.fileInfo.isVertical ? '9/16' : undefined}
+                    />
+                  </div>
+                )}
               </div>
             ) : (
               <div className="space-y-3">

@@ -213,6 +213,8 @@ interface SubtitleTimelineProps {
   /** 마지막 단일 클릭한 anchor — 하단 정보 표시 + 단일 선택 강조용 */
   anchorIndex: number | null;
   readSpeeds: ReadSpeedHint[];
+  /** 영상 현재 재생 시간 — 빨간 마커 표시. undefined면 마커 없음 */
+  playTime?: number;
   onSelect: (index: number, modifiers?: { ctrl?: boolean; shift?: boolean }) => void;
   onTimeChange: (index: number, field: 'start_time' | 'end_time', value: number) => void;
   onBlockMove: (index: number, newStart: number) => void;
@@ -233,6 +235,7 @@ export default function SubtitleTimeline({
   selectedIndices,
   anchorIndex,
   readSpeeds,
+  playTime,
   onSelect,
   onTimeChange,
   onBlockMove,
@@ -397,6 +400,16 @@ export default function SubtitleTimeline({
             </div>
           );
         })}
+
+        {/* 영상 재생 위치 마커 (빨간 세로선 + 위쪽 삼각형) */}
+        {typeof playTime === 'number' && playTime > 0 && playTime <= safeDuration && (
+          <div
+            className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-40 pointer-events-none"
+            style={{ left: `${Math.min(100, Math.max(0, (playTime / safeDuration) * 100))}%` }}
+          >
+            <div className="absolute -top-[3px] -left-[3px] w-0 h-0 border-l-[4px] border-r-[4px] border-t-[5px] border-l-transparent border-r-transparent border-t-red-500" />
+          </div>
+        )}
       </div>
 
       {/* 선택 정보: 1개면 단일 자막 정보, 여러 개면 카운트만 */}
