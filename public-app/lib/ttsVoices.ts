@@ -20,9 +20,9 @@ export interface TtsVoice {
 }
 
 export const ENGINE_LABELS: Record<TtsEngine, { label: string; desc: string }> = {
-  gemini: { label: 'Gemini 2.5 TTS', desc: '최신, 자연어 스타일 제어' },
-  chirp3_hd: { label: 'Chirp 3 HD', desc: '고음질' },
-  legacy: { label: 'Legacy', desc: 'Standard/WaveNet/Neural2' },
+  gemini: { label: '최신 AI', desc: '자연어로 톤 지시 가능 · 30종' },
+  chirp3_hd: { label: 'HD 고음질', desc: '고음질 신경망 · 30종' },
+  legacy: { label: '기본 음성', desc: '기본 / 자연스러움 / 사람에 가까움' },
 };
 
 // ── 스타일 프롬프트 프리셋 (Gemini TTS 전용) ──
@@ -86,29 +86,32 @@ const geminiVoices: TtsVoice[] = GEMINI_VOICE_NAMES.map(v => ({
   recommended: v.rec,
 }));
 
-// Chirp 3 HD 목소리 생성
+// HD 고음질 목소리 생성 (구 Chirp3 HD)
 const chirp3Voices: TtsVoice[] = GEMINI_VOICE_NAMES.map(v => ({
   id: `chirp3-${v.name.toLowerCase()}`,
   name: `ko-KR-Chirp3-HD-${v.name}`,
   engine: 'chirp3_hd' as TtsEngine,
-  label: `[Chirp3] ${v.label}`,
+  label: `${v.label} · HD`,
   gender: v.gender,
-  description: `Chirp3 HD — ${v.desc}`,
+  description: `HD 고음질 — ${v.desc}`,
 }));
 
-// Legacy 목소리
+// 기본 음성 (구 Legacy: Standard / WaveNet / Neural2)
+//   - 기본: 로봇 느낌 살짝, 가장 저렴
+//   - 자연스러움: 신경망 기반, 대부분 상황에 추천
+//   - 사람에 가까움: 최신 AI, 가장 사람 같음 (가격 약 4배)
 const legacyVoices: TtsVoice[] = [
-  { id: 'legacy-std-a', name: 'ko-KR-Standard-A', engine: 'legacy', label: '[기본] 여성 A', gender: 'female', description: 'Standard — 기본 여성' },
-  { id: 'legacy-std-b', name: 'ko-KR-Standard-B', engine: 'legacy', label: '[기본] 여성 B', gender: 'female', description: 'Standard — 여성 B' },
-  { id: 'legacy-std-c', name: 'ko-KR-Standard-C', engine: 'legacy', label: '[기본] 남성 C', gender: 'male', description: 'Standard — 기본 남성' },
-  { id: 'legacy-std-d', name: 'ko-KR-Standard-D', engine: 'legacy', label: '[기본] 남성 D', gender: 'male', description: 'Standard — 남성 D' },
-  { id: 'legacy-wn-a', name: 'ko-KR-Wavenet-A', engine: 'legacy', label: '[WaveNet] 여성 A', gender: 'female', description: 'WaveNet — 자연스러운 여성' },
-  { id: 'legacy-wn-b', name: 'ko-KR-Wavenet-B', engine: 'legacy', label: '[WaveNet] 여성 B', gender: 'female', description: 'WaveNet — 여성 B' },
-  { id: 'legacy-wn-c', name: 'ko-KR-Wavenet-C', engine: 'legacy', label: '[WaveNet] 남성 C', gender: 'male', description: 'WaveNet — 자연스러운 남성' },
-  { id: 'legacy-wn-d', name: 'ko-KR-Wavenet-D', engine: 'legacy', label: '[WaveNet] 남성 D', gender: 'male', description: 'WaveNet — 남성 D' },
-  { id: 'legacy-n2-a', name: 'ko-KR-Neural2-A', engine: 'legacy', label: '[Neural2] 여성 A', gender: 'female', description: 'Neural2 — 고품질 여성' },
-  { id: 'legacy-n2-b', name: 'ko-KR-Neural2-B', engine: 'legacy', label: '[Neural2] 남성 B', gender: 'male', description: 'Neural2 — 고품질 남성' },
-  { id: 'legacy-n2-c', name: 'ko-KR-Neural2-C', engine: 'legacy', label: '[Neural2] 남성 C (저음)', gender: 'male', description: 'Neural2 — 저음 남성' },
+  { id: 'legacy-std-a', name: 'ko-KR-Standard-A', engine: 'legacy', label: '여성 A (기본)', gender: 'female', description: '기본 엔진 — 로봇 느낌 살짝' },
+  { id: 'legacy-std-b', name: 'ko-KR-Standard-B', engine: 'legacy', label: '여성 B (기본)', gender: 'female', description: '기본 엔진 — 로봇 느낌 살짝' },
+  { id: 'legacy-std-c', name: 'ko-KR-Standard-C', engine: 'legacy', label: '남성 C (기본)', gender: 'male', description: '기본 엔진 — 로봇 느낌 살짝' },
+  { id: 'legacy-std-d', name: 'ko-KR-Standard-D', engine: 'legacy', label: '남성 D (기본)', gender: 'male', description: '기본 엔진 — 로봇 느낌 살짝' },
+  { id: 'legacy-wn-a', name: 'ko-KR-Wavenet-A', engine: 'legacy', label: '여성 A (자연스러움)', gender: 'female', description: '자연스러운 음성 — 대부분 상황에 추천' },
+  { id: 'legacy-wn-b', name: 'ko-KR-Wavenet-B', engine: 'legacy', label: '여성 B (자연스러움)', gender: 'female', description: '자연스러운 여성 음성' },
+  { id: 'legacy-wn-c', name: 'ko-KR-Wavenet-C', engine: 'legacy', label: '남성 C (자연스러움)', gender: 'male', description: '자연스러운 남성 음성 — 추천' },
+  { id: 'legacy-wn-d', name: 'ko-KR-Wavenet-D', engine: 'legacy', label: '남성 D (자연스러움)', gender: 'male', description: '자연스러운 남성 음성' },
+  { id: 'legacy-n2-a', name: 'ko-KR-Neural2-A', engine: 'legacy', label: '여성 A (사람에 가까움)', gender: 'female', description: '최신 AI — 가장 사람 같음' },
+  { id: 'legacy-n2-b', name: 'ko-KR-Neural2-B', engine: 'legacy', label: '남성 B (사람에 가까움)', gender: 'male', description: '최신 AI — 가장 사람 같음' },
+  { id: 'legacy-n2-c', name: 'ko-KR-Neural2-C', engine: 'legacy', label: '남성 C (사람에 가까움, 저음)', gender: 'male', description: '최신 AI — 저음 남성' },
 ];
 
 export const TTS_VOICES: TtsVoice[] = [...geminiVoices, ...chirp3Voices, ...legacyVoices];
