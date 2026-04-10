@@ -121,6 +121,8 @@ export interface StepEffectsState {
   style: EffectsStyle;
   density: number;
   effects?: SoundEffect[];
+  /** 처리 후 사용자에게 보여줄 안내 (에러는 아닌 정보 메시지) */
+  notice?: string;
 }
 
 // ── 줌 포인트 ──

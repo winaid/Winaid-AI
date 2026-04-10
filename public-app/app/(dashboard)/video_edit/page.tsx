@@ -315,73 +315,94 @@ export default function VideoEditPage() {
     }
   };
 
-  // ── STEP 4: 효과음 배치 처리 ──
+  // ── STEP 5: 효과음 배치 처리 ──
+  // video-processor /api/video/add-sound-effects를 호출해서 실제 합성된 영상을 받음.
+  // 응답 헤더 X-Sfx-Metadata에 { applied, count, source, effects[] } 가 들어있고,
+  // body는 합성된 영상(또는 효과음 라이브러리가 비어있으면 원본 그대로).
 
   const processEffects = async () => {
+    const input = getInputForStep(state, 5);
+    if (!input) return;
     setStepProcessing(true);
     setStepProgress('효과음을 배치하고 있습니다...');
     setError('');
 
     try {
-      // TODO: 실제 AI 효과음 배치 API 연동
-      // 현재는 자막 데이터 기반 시뮬레이션
-      await new Promise(r => setTimeout(r, 1500));
-
-      const { searchSfx, getRandomSfx } = await import('../../../lib/sfxLibrary');
-      const subs = state.step4_subtitle.subtitles || [];
-      const density = state.step5_effects.density;
-      const effects: SoundEffect[] = [];
-
-      // 자막이 있으면 자막 기반 배치, 없으면 시간 기반
-      if (subs.length > 0) {
-        // 매 N번째 자막에 효과음 삽입 (밀도에 따라)
-        const interval = Math.max(1, Math.round(6 - density));
-        for (let i = 0; i < subs.length; i += interval) {
-          const sub = subs[i];
-          // 자막 내용에 따라 카테고리 결정
-          const text = sub.text;
-          let sfx = text.includes('장점') || text.includes('좋') || text.includes('효과')
-            ? getRandomSfx('positive')
-            : text.includes('주의') || text.includes('위험') || text.includes('부작용')
-            ? getRandomSfx('negative')
-            : i === 0
-            ? getRandomSfx('transition')
-            : getRandomSfx('emphasis');
-
-          if (!sfx) sfx = getRandomSfx('emphasis');
-          if (sfx) {
-            effects.push({
-              id: `fx_${i}`,
-              time: sub.start_time,
-              sfxId: sfx.id,
-              sfxName: sfx.name,
-              sfxPath: sfx.path,
-              category: sfx.category,
-              reason: i === 0 ? '도입부 전환' : `자막 "${text.slice(0, 10)}..." 강조`,
-            });
-          }
-        }
+      // 1. 입력 파일 준비 (이전 단계 blob URL 또는 원본 File)
+      let fileToSend: File;
+      if (typeof input === 'string') {
+        const r = await fetch(input);
+        const b = await r.blob();
+        fileToSend = new File([b], state.fileInfo?.name || 'video.mp4', { type: b.type });
       } else {
-        // 자막 없을 때: 균등 간격으로 배치
-        const dur = state.fileInfo?.duration || 60;
-        const count = density * 2;
-        for (let i = 0; i < count; i++) {
-          const sfx = getRandomSfx(i === 0 ? 'transition' : 'emphasis');
-          if (sfx) {
-            effects.push({
-              id: `fx_${i}`,
-              time: Math.round((dur / (count + 1)) * (i + 1) * 10) / 10,
-              sfxId: sfx.id,
-              sfxName: sfx.name,
-              sfxPath: sfx.path,
-              category: sfx.category,
-              reason: i === 0 ? '도입부' : `${Math.round((dur / (count + 1)) * (i + 1))}초 강조`,
-            });
-          }
+        fileToSend = input as File;
+      }
+
+      // 2. FormData 구성 (자막 있으면 함께 전달 → 서버가 AI 배치에 사용)
+      const formData = new FormData();
+      formData.append('file', fileToSend);
+      formData.append('style', state.step5_effects.style);
+      formData.append('density', String(state.step5_effects.density));
+      const subs = state.step4_subtitle.subtitles;
+      if (subs && subs.length > 0) {
+        formData.append('subtitles', JSON.stringify(subs));
+      }
+
+      setStepProgress('효과음을 합성하고 있습니다...');
+      const res = await fetch('/api/video/add-sound-effects', { method: 'POST', body: formData });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({ error: '서버 오류' }));
+        throw new Error(d.error || `효과음 처리 실패 (${res.status})`);
+      }
+
+      // 3. 메타데이터 + blob URL
+      const metaHeader = res.headers.get('X-Sfx-Metadata');
+      type ServerEffect = { time?: number; category?: string; sfx_id?: string; sfx_name?: string };
+      type SfxMeta = {
+        applied?: boolean;
+        count?: number;
+        source?: 'ai' | 'rule';
+        effects?: ServerEffect[];
+        reason?: string;
+      };
+      let meta: SfxMeta = { applied: false, count: 0, effects: [] };
+      try { if (metaHeader) meta = JSON.parse(metaHeader) as SfxMeta; } catch {}
+
+      const blob = await res.blob();
+      const resultBlobUrl = URL.createObjectURL(blob);
+
+      // 4. server effects → 프론트 SoundEffect로 변환
+      //    server: sfx_id = `${category}_${파일명}` (예: 'emphasis_ding_01')
+      //    프론트 lib/sfxLibrary는 id가 카테고리 prefix 없이 'ding_01' 형식 → prefix 제거 후 lookup
+      const { SFX_LIBRARY } = await import('../../../lib/sfxLibrary');
+      const serverEffects: ServerEffect[] = Array.isArray(meta.effects) ? meta.effects : [];
+      const effects: SoundEffect[] = serverEffects.map((e, idx) => {
+        const cat = e.category || 'emphasis';
+        const localId = String(e.sfx_id || '').replace(new RegExp(`^${cat}_`), '');
+        const local = SFX_LIBRARY.find(s => s.id === localId);
+        return {
+          id: `fx_${idx}_${Date.now()}`,
+          time: typeof e.time === 'number' ? e.time : 0,
+          sfxId: local?.id || localId || e.sfx_id || `sfx_${idx}`,
+          sfxName: local?.name || e.sfx_name || localId || '효과음',
+          sfxPath: local?.path || '', // 프론트 라이브러리에 같은 id가 있을 때만 미리듣기 가능
+          category: cat,
+          reason: meta.source === 'ai' ? 'AI 자동 배치' : '키워드 기반 배치',
+        };
+      });
+
+      // 5. 안내 메시지 — 효과음이 0개인 두 가지 케이스 구분
+      let notice: string | undefined;
+      if (effects.length === 0) {
+        if (meta.reason === 'sfx_library_empty') {
+          notice = 'ℹ️ 서버에 효과음 파일이 아직 없어 원본 그대로 다음 단계로 넘어갑니다.';
+        } else if (meta.reason === 'video_processor_failed') {
+          notice = 'ℹ️ 효과음 서버 처리에 실패해 원본 그대로 다음 단계로 넘어갑니다.';
         }
       }
 
-      patchEffects({ effects });
+      // 6. 상태 저장 — resultBlobUrl을 반드시 저장해야 다음 단계가 입력으로 받음
+      patchEffects({ effects, resultBlobUrl, notice });
     } catch (err) {
       setError(err instanceof Error ? err.message : '효과음 배치 실패');
     } finally {

@@ -130,7 +130,9 @@ export default function StepEffects({ state, onUpdate, onProcess, onNext, onPrev
 
       {fx.effects && fx.effects.length === 0 && (
         <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-center">
-          <div className="text-sm text-amber-600">배치할 효과음이 없습니다. 밀도를 높이거나 다른 스타일을 시도해보세요.</div>
+          <div className="text-sm text-amber-600">
+            {fx.notice || '배치할 효과음이 없습니다. 밀도를 높이거나 다른 스타일을 시도해보세요.'}
+          </div>
         </div>
       )}
 
