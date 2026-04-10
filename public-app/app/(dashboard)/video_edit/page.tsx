@@ -58,7 +58,24 @@ export default function VideoEditPage() {
   const [stepProcessing, setStepProcessing] = useState(false);
   const [stepProgress, setStepProgress] = useState('');
   const [autoStatuses, setAutoStatuses] = useState<AutoStepStatus[]>([]);
-  const cancelRef = useRef(false);
+  // 파일 선택 직후 metadata 로드까지 "분석 중" 인디케이터 (UX 개선 Day 4)
+  const [analyzingFile, setAnalyzingFile] = useState(false);
+  // 자동 모드 루프 취소 + 현재 진행 중 step 취소 (Day 4 — AbortController 전환)
+  // 이전: cancelRef 한 개로 루프만 중단했지만 실제로 돌던 fetch는 서버에서 끝까지 실행됨.
+  // 지금: autoAbort는 루프 전체 신호, stepAbort는 현재 fetch 신호. 둘 다 abort 시
+  //       fetch가 즉시 AbortError로 종료되어 백엔드 자원 낭비 차단.
+  const autoAbortRef = useRef<AbortController | null>(null);
+  const stepAbortRef = useRef<AbortController | null>(null);
+
+  /** 새 step 실행 시작 — 이전 step의 in-flight fetch를 중단하고 새 signal 반환 */
+  const beginStep = (): AbortSignal => {
+    stepAbortRef.current?.abort();
+    stepAbortRef.current = new AbortController();
+    return stepAbortRef.current.signal;
+  };
+  /** AbortError 판별 — 사용자 취소 시에는 에러 표시하지 않기 위함 */
+  const isAbortError = (err: unknown): boolean =>
+    err instanceof Error && (err.name === 'AbortError' || /aborted/i.test(err.message));
 
   // 업로드 영역 미리보기용 — originalFile이 바뀔 때만 새 blob URL을 만들고 cleanup
   const [originalPreviewUrl, setOriginalPreviewUrl] = useState<string | null>(null);
@@ -136,7 +153,37 @@ export default function VideoEditPage() {
     ...prev,
     step8_intro: { ...prev.step8_intro, hospital: { ...prev.step8_intro.hospital, ...p } },
   }));
-  const goStep = (step: number) => { setError(''); patch({ currentStep: step }); };
+  /**
+   * step N으로 돌아갈 때 N+1..9의 결과를 invalidate.
+   * 자동 모드 아닌 수동 모드 전용 — 자동 모드는 순차 실행이라 이 문제가 없음.
+   * 이전엔 step 3까지 처리한 뒤 step 1로 돌아가면 step 2~3의 예전 결과가 남아서
+   * "새로 처리한 step 1" + "예전 step 2~3 결과"가 혼합되는 버그가 있었다.
+   */
+  const invalidateDownstream = (fromStep: number) => {
+    setState(prev => {
+      const next = { ...prev };
+      if (fromStep < 1) { revokeIfBlob(next.step1_crop.resultBlobUrl); next.step1_crop = { ...next.step1_crop, resultBlobUrl: undefined }; }
+      if (fromStep < 2) { revokeIfBlob(next.step2_style.resultBlobUrl); next.step2_style = { ...next.step2_style, resultBlobUrl: undefined }; }
+      if (fromStep < 3) { revokeIfBlob(next.step3_silence.resultBlobUrl); next.step3_silence = { ...next.step3_silence, resultBlobUrl: undefined }; }
+      if (fromStep < 4) { revokeIfBlob(next.step4_subtitle.resultBlobUrl); next.step4_subtitle = { ...next.step4_subtitle, resultBlobUrl: undefined }; }
+      if (fromStep < 5) { revokeIfBlob(next.step5_effects.resultBlobUrl); next.step5_effects = { ...next.step5_effects, resultBlobUrl: undefined }; }
+      if (fromStep < 6) { revokeIfBlob(next.step6_zoom.resultBlobUrl); next.step6_zoom = { ...next.step6_zoom, resultBlobUrl: undefined }; }
+      if (fromStep < 7) { revokeIfBlob(next.step7_bgm.resultBlobUrl); next.step7_bgm = { ...next.step7_bgm, resultBlobUrl: undefined }; }
+      if (fromStep < 8) { revokeIfBlob(next.step8_intro.resultBlobUrl); next.step8_intro = { ...next.step8_intro, resultBlobUrl: undefined }; }
+      if (fromStep < 9) { revokeIfBlob(next.step9_thumbnail.thumbnailUrl); next.step9_thumbnail = { ...next.step9_thumbnail, thumbnailUrl: undefined }; }
+      return next;
+    });
+  };
+
+  const goStep = (step: number) => {
+    setError('');
+    // 사용자가 이전 step으로 돌아갈 때: 현재 in-flight fetch 취소 + downstream 결과 무효화
+    if (step < state.currentStep) {
+      stepAbortRef.current?.abort();
+      invalidateDownstream(step);
+    }
+    patch({ currentStep: step });
+  };
 
   // ── 파일 업로드 ──
 
@@ -151,6 +198,9 @@ export default function VideoEditPage() {
       setError(`파일 크기가 ${MAX_SIZE_MB}MB를 초과합니다.`);
       return;
     }
+
+    // metadata 로드 전까지 사용자에게 "분석 중" 피드백
+    setAnalyzingFile(true);
 
     const isAudio = isAudioFile(f);
     const url = URL.createObjectURL(f);
@@ -167,6 +217,7 @@ export default function VideoEditPage() {
         isAudio,
       };
       URL.revokeObjectURL(url);
+      setAnalyzingFile(false);
 
       if (el.duration > MAX_DURATION_SEC) {
         setError(`영상 길이가 ${Math.round(MAX_DURATION_SEC / 60)}분을 초과합니다.`);
@@ -181,7 +232,11 @@ export default function VideoEditPage() {
         step1_crop: { ...prev.step1_crop, enabled: !info.isAudio && !info.isVertical },
       }));
     };
-    el.onerror = () => { URL.revokeObjectURL(url); setError('파일을 읽을 수 없습니다.'); };
+    el.onerror = () => {
+      URL.revokeObjectURL(url);
+      setAnalyzingFile(false);
+      setError('파일을 읽을 수 없습니다.');
+    };
     el.src = url;
   }, []);
 
@@ -196,6 +251,7 @@ export default function VideoEditPage() {
     const file = state.originalFile;
     if (!file) return;
 
+    const signal = beginStep();
     setStepProcessing(true);
     setStepProgress('영상을 분석하고 있습니다...');
     setError('');
@@ -208,7 +264,7 @@ export default function VideoEditPage() {
       formData.append('output_resolution', '1080x1920');
 
       setStepProgress('영상을 변환하고 있습니다...');
-      const res = await fetch('/api/video/crop-vertical', { method: 'POST', body: formData });
+      const res = await fetch('/api/video/crop-vertical', { method: 'POST', body: formData, signal });
 
       if (!res.ok) {
         const errData = await res.json().catch(() => ({ error: '서버 오류' }));
@@ -222,6 +278,7 @@ export default function VideoEditPage() {
 
       patchCrop({ resultBlobUrl: blobUrl, facesDetected: meta.faces_detected });
     } catch (err) {
+      if (isAbortError(err)) return;
       setError(err instanceof Error ? err.message : '크롭 실패');
     } finally {
       setStepProcessing(false);
@@ -234,26 +291,30 @@ export default function VideoEditPage() {
   const processStyle = async () => {
     const input = getInputForStep(state, 2);
     if (!input) return;
+    const signal = beginStep();
     setStepProcessing(true);
     setStepProgress('스타일을 변환하고 있습니다...');
     setError('');
     try {
       let fileToSend: File;
       if (typeof input === 'string') {
-        const r = await fetch(input); const b = await r.blob();
+        const r = await fetch(input, { signal }); const b = await r.blob();
         fileToSend = new File([b], state.fileInfo?.name || 'video.mp4', { type: b.type });
       } else { fileToSend = input as File; }
       const formData = new FormData();
       formData.append('file', fileToSend);
       formData.append('style_id', state.step2_style.styleId);
-      const res = await fetch('/api/video/apply-style', { method: 'POST', body: formData });
+      const res = await fetch('/api/video/apply-style', { method: 'POST', body: formData, signal });
       if (!res.ok) {
         const d = await res.json().catch(() => ({ error: '서버 오류' }));
         throw new Error(d.error || `스타일 변환 실패 (${res.status})`);
       }
       const blob = await res.blob();
       patchStyle({ resultBlobUrl: URL.createObjectURL(blob) });
-    } catch (err) { setError(err instanceof Error ? err.message : '스타일 변환 실패'); }
+    } catch (err) {
+      if (isAbortError(err)) return;
+      setError(err instanceof Error ? err.message : '스타일 변환 실패');
+    }
     finally { setStepProcessing(false); setStepProgress(''); }
   };
 
@@ -263,6 +324,7 @@ export default function VideoEditPage() {
     const input = getInputForStep(state, 3);
     if (!input) return;
 
+    const signal = beginStep();
     setStepProcessing(true);
     setStepProgress('무음 구간 분석 중...');
     setError('');
@@ -270,7 +332,7 @@ export default function VideoEditPage() {
     try {
       let fileToSend: File;
       if (typeof input === 'string') {
-        const r = await fetch(input); const b = await r.blob();
+        const r = await fetch(input, { signal }); const b = await r.blob();
         fileToSend = new File([b], state.fileInfo?.name || 'video.mp4', { type: b.type });
       } else { fileToSend = input as File; }
 
@@ -279,7 +341,7 @@ export default function VideoEditPage() {
       formData.append('intensity', state.step3_silence.intensity);
 
       setStepProgress('무음 구간 제거 중...');
-      const res = await fetch('/api/video/silence-remove', { method: 'POST', body: formData });
+      const res = await fetch('/api/video/silence-remove', { method: 'POST', body: formData, signal });
 
       if (!res.ok) {
         const d = await res.json().catch(() => ({ error: '서버 오류' }));
@@ -297,6 +359,7 @@ export default function VideoEditPage() {
         removedPercent: meta.removed_percent || 0,
       });
     } catch (err) {
+      if (isAbortError(err)) return;
       setError(err instanceof Error ? err.message : '무음 제거 실패');
     } finally {
       setStepProcessing(false);
@@ -310,6 +373,7 @@ export default function VideoEditPage() {
     const input = getInputForStep(state, 4);
     if (!input && !state.originalFile) return;
 
+    const signal = beginStep();
     setStepProcessing(true);
     setStepProgress('음성을 분석하고 있습니다...');
     setError('');
@@ -319,7 +383,7 @@ export default function VideoEditPage() {
       let fileToSend: File;
       if (typeof input === 'string') {
         // blob URL → File로 변환
-        const res = await fetch(input);
+        const res = await fetch(input, { signal });
         const blob = await res.blob();
         fileToSend = new File([blob], state.fileInfo?.name || 'audio.mp4', { type: blob.type });
       } else {
@@ -333,7 +397,7 @@ export default function VideoEditPage() {
       formData.append('dental_terms', String(state.step4_subtitle.dentalTerms));
 
       setStepProgress('자막을 생성하고 있습니다...');
-      const res = await fetch('/api/video/generate-subtitles', { method: 'POST', body: formData });
+      const res = await fetch('/api/video/generate-subtitles', { method: 'POST', body: formData, signal });
       const data = await res.json();
 
       if (!res.ok) throw new Error(data.error || '자막 생성 실패');
@@ -344,6 +408,7 @@ export default function VideoEditPage() {
         mediumViolations: data.medium_violation_count || 0,
       });
     } catch (err) {
+      if (isAbortError(err)) return;
       setError(err instanceof Error ? err.message : '자막 생성 실패');
     } finally {
       setStepProcessing(false);
@@ -359,6 +424,7 @@ export default function VideoEditPage() {
   const processEffects = async () => {
     const input = getInputForStep(state, 5);
     if (!input) return;
+    const signal = beginStep();
     setStepProcessing(true);
     setStepProgress('효과음을 배치하고 있습니다...');
     setError('');
@@ -367,7 +433,7 @@ export default function VideoEditPage() {
       // 1. 입력 파일 준비 (이전 단계 blob URL 또는 원본 File)
       let fileToSend: File;
       if (typeof input === 'string') {
-        const r = await fetch(input);
+        const r = await fetch(input, { signal });
         const b = await r.blob();
         fileToSend = new File([b], state.fileInfo?.name || 'video.mp4', { type: b.type });
       } else {
@@ -385,7 +451,7 @@ export default function VideoEditPage() {
       }
 
       setStepProgress('효과음을 합성하고 있습니다...');
-      const res = await fetch('/api/video/add-sound-effects', { method: 'POST', body: formData });
+      const res = await fetch('/api/video/add-sound-effects', { method: 'POST', body: formData, signal });
       if (!res.ok) {
         const d = await res.json().catch(() => ({ error: '서버 오류' }));
         throw new Error(d.error || `효과음 처리 실패 (${res.status})`);
@@ -440,6 +506,7 @@ export default function VideoEditPage() {
       // 6. 상태 저장 — resultBlobUrl을 반드시 저장해야 다음 단계가 입력으로 받음
       patchEffects({ effects, resultBlobUrl, notice });
     } catch (err) {
+      if (isAbortError(err)) return;
       setError(err instanceof Error ? err.message : '효과음 배치 실패');
     } finally {
       setStepProcessing(false);
@@ -452,13 +519,14 @@ export default function VideoEditPage() {
   const processZoom = async () => {
     const input = getInputForStep(state, 6);
     if (!input) return;
+    const signal = beginStep();
     setStepProcessing(true);
     setStepProgress('줌 효과를 적용하고 있습니다...');
     setError('');
     try {
       let fileToSend: File;
       if (typeof input === 'string') {
-        const r = await fetch(input); const b = await r.blob();
+        const r = await fetch(input, { signal }); const b = await r.blob();
         fileToSend = new File([b], state.fileInfo?.name || 'video.mp4', { type: b.type });
       } else { fileToSend = input as File; }
 
@@ -470,7 +538,7 @@ export default function VideoEditPage() {
         formData.append('subtitles', JSON.stringify(state.step4_subtitle.subtitles));
       }
 
-      const res = await fetch('/api/video/add-zoom', { method: 'POST', body: formData });
+      const res = await fetch('/api/video/add-zoom', { method: 'POST', body: formData, signal });
       if (!res.ok) {
         const d = await res.json().catch(() => ({ error: '서버 오류' }));
         throw new Error(d.error || `줌 효과 실패 (${res.status})`);
@@ -480,7 +548,10 @@ export default function VideoEditPage() {
       const meta = metaHeader ? JSON.parse(metaHeader) : {};
       const blob = await res.blob();
       patchZoom({ resultBlobUrl: URL.createObjectURL(blob), zoomPoints: meta.zoom_points });
-    } catch (err) { setError(err instanceof Error ? err.message : '줌 효과 실패'); }
+    } catch (err) {
+      if (isAbortError(err)) return;
+      setError(err instanceof Error ? err.message : '줌 효과 실패');
+    }
     finally { setStepProcessing(false); setStepProgress(''); }
   };
 
@@ -489,13 +560,14 @@ export default function VideoEditPage() {
   const processThumbnail = async () => {
     const input = getInputForStep(state, 9);
     if (!input) return;
+    const signal = beginStep();
     setStepProcessing(true);
     setStepProgress('썸네일을 생성하고 있습니다...');
     setError('');
     try {
       let fileToSend: File;
       if (typeof input === 'string') {
-        const r = await fetch(input); const b = await r.blob();
+        const r = await fetch(input, { signal }); const b = await r.blob();
         fileToSend = new File([b], state.fileInfo?.name || 'video.mp4', { type: b.type });
       } else { fileToSend = input as File; }
 
@@ -506,7 +578,7 @@ export default function VideoEditPage() {
       formData.append('text_color', state.step9_thumbnail.textColor);
       formData.append('text_position', state.step9_thumbnail.textPosition);
 
-      const res = await fetch('/api/video/generate-thumbnail', { method: 'POST', body: formData });
+      const res = await fetch('/api/video/generate-thumbnail', { method: 'POST', body: formData, signal });
       if (!res.ok) {
         const d = await res.json().catch(() => ({ error: '서버 오류' }));
         throw new Error(d.error || `썸네일 실패 (${res.status})`);
@@ -514,7 +586,10 @@ export default function VideoEditPage() {
 
       const blob = await res.blob();
       patchThumbnail({ thumbnailUrl: URL.createObjectURL(blob) });
-    } catch (err) { setError(err instanceof Error ? err.message : '썸네일 생성 실패'); }
+    } catch (err) {
+      if (isAbortError(err)) return;
+      setError(err instanceof Error ? err.message : '썸네일 생성 실패');
+    }
     finally { setStepProcessing(false); setStepProgress(''); }
   };
 
@@ -524,6 +599,7 @@ export default function VideoEditPage() {
     const input = getInputForStep(state, 7);
     if (!input) return;
 
+    const signal = beginStep();
     setStepProcessing(true);
     setStepProgress('BGM을 합성하고 있습니다...');
     setError('');
@@ -531,7 +607,7 @@ export default function VideoEditPage() {
     try {
       let fileToSend: File;
       if (typeof input === 'string') {
-        const res = await fetch(input);
+        const res = await fetch(input, { signal });
         const blob = await res.blob();
         fileToSend = new File([blob], state.fileInfo?.name || 'video.mp4', { type: blob.type });
       } else {
@@ -543,7 +619,7 @@ export default function VideoEditPage() {
       formData.append('bgm_id', state.step7_bgm.bgmId || 'calm_01');
       formData.append('volume', String(state.step7_bgm.volume));
 
-      const res = await fetch('/api/video/add-bgm', { method: 'POST', body: formData });
+      const res = await fetch('/api/video/add-bgm', { method: 'POST', body: formData, signal });
       if (!res.ok) {
         const errData = await res.json().catch(() => ({ error: '서버 오류' }));
         throw new Error(errData.error || `BGM 합성 실패 (${res.status})`);
@@ -552,6 +628,7 @@ export default function VideoEditPage() {
       const blob = await res.blob();
       patchBgm({ resultBlobUrl: URL.createObjectURL(blob) });
     } catch (err) {
+      if (isAbortError(err)) return;
       setError(err instanceof Error ? err.message : 'BGM 합성 실패');
     } finally {
       setStepProcessing(false);
@@ -565,6 +642,7 @@ export default function VideoEditPage() {
     const input = getInputForStep(state, 8);
     if (!input) return;
 
+    const signal = beginStep();
     setStepProcessing(true);
     setStepProgress('인트로/아웃로를 생성하고 있습니다...');
     setError('');
@@ -572,7 +650,7 @@ export default function VideoEditPage() {
     try {
       let fileToSend: File;
       if (typeof input === 'string') {
-        const res = await fetch(input);
+        const res = await fetch(input, { signal });
         const blob = await res.blob();
         fileToSend = new File([blob], state.fileInfo?.name || 'video.mp4', { type: blob.type });
       } else {
@@ -588,7 +666,7 @@ export default function VideoEditPage() {
       formData.append('intro_style', state.step8_intro.introStyle);
       formData.append('outro_style', state.step8_intro.outroStyle);
 
-      const res = await fetch('/api/video/add-intro-outro', { method: 'POST', body: formData });
+      const res = await fetch('/api/video/add-intro-outro', { method: 'POST', body: formData, signal });
       if (!res.ok) {
         const errData = await res.json().catch(() => ({ error: '서버 오류' }));
         throw new Error(errData.error || `인트로/아웃로 합성 실패 (${res.status})`);
@@ -597,6 +675,7 @@ export default function VideoEditPage() {
       const blob = await res.blob();
       patchIntro({ resultBlobUrl: URL.createObjectURL(blob) });
     } catch (err) {
+      if (isAbortError(err)) return;
       setError(err instanceof Error ? err.message : '인트로/아웃로 합성 실패');
     } finally {
       setStepProcessing(false);
@@ -608,7 +687,8 @@ export default function VideoEditPage() {
 
   const runAutoMode = async () => {
     if (!state.fileInfo) return;
-    cancelRef.current = false;
+    // 루프 전체 abort 신호 생성 — 각 step 내부는 stepAbort로 관리
+    autoAbortRef.current = new AbortController();
     patch({ isProcessing: true });
 
     // 초기 상태
@@ -641,8 +721,11 @@ export default function VideoEditPage() {
       { step: 9, skip: () => !state.step9_thumbnail.enabled || !!state.fileInfo?.isAudio, run: processThumbnail, label: '썸네일' },
     ];
 
+    const autoSignal = autoAbortRef.current.signal;
+    let cancelledEarly = false;
+
     for (const s of steps) {
-      if (cancelRef.current) break;
+      if (autoSignal.aborted) { cancelledEarly = true; break; }
 
       if (s.skip()) {
         updateStatus(s.step, { status: 'skipped' });
@@ -655,20 +738,38 @@ export default function VideoEditPage() {
 
       try {
         await s.run();
+        // process 함수가 AbortError를 흡수하고 조용히 return한 경우에도 감지
+        if (autoSignal.aborted) {
+          updateStatus(s.step, { status: 'error', error: '취소됨' });
+          cancelledEarly = true;
+          break;
+        }
         updateStatus(s.step, { status: 'done' });
       } catch (err) {
+        if (isAbortError(err) || autoSignal.aborted) {
+          updateStatus(s.step, { status: 'error', error: '취소됨' });
+          cancelledEarly = true;
+          break;
+        }
         const msg = err instanceof Error ? err.message : '실패';
         updateStatus(s.step, { status: 'error', error: msg });
       }
     }
 
-    // 완료 — 완성 화면(step 10)으로 이동
-    patch({ isProcessing: false, autoProgress: undefined, currentStep: 10 });
+    autoAbortRef.current = null;
+
+    // 취소되지 않았을 때만 완성 화면으로 이동
+    patch({
+      isProcessing: false,
+      autoProgress: undefined,
+      ...(cancelledEarly ? {} : { currentStep: 10 }),
+    });
   };
 
-  // 자동 모드 취소
+  // 자동 모드 취소 — 루프 플래그 + 현재 in-flight fetch 둘 다 즉시 중단
   const cancelAutoMode = () => {
-    cancelRef.current = true;
+    autoAbortRef.current?.abort();
+    stepAbortRef.current?.abort();
     patch({ isProcessing: false, autoProgress: undefined });
   };
 
@@ -678,6 +779,9 @@ export default function VideoEditPage() {
   useEffect(() => { stateRef.current = state; }, [state]);
   useEffect(() => {
     return () => {
+      // 언마운트 시 in-flight fetch 중단 + 잔여 blob URL 일괄 해제
+      autoAbortRef.current?.abort();
+      stepAbortRef.current?.abort();
       const s = stateRef.current;
       revokeIfBlob(s.step1_crop.resultBlobUrl);
       revokeIfBlob(s.step2_style.resultBlobUrl);
@@ -849,6 +953,12 @@ export default function VideoEditPage() {
                     />
                   </div>
                 )}
+              </div>
+            ) : analyzingFile ? (
+              <div className="space-y-3">
+                <div className="w-10 h-10 border-[3px] border-blue-100 border-t-blue-500 rounded-full animate-spin mx-auto" />
+                <p className="text-sm font-semibold text-slate-600">파일을 분석하고 있습니다...</p>
+                <p className="text-[11px] text-slate-400">길이·해상도를 확인하는 중</p>
               </div>
             ) : (
               <div className="space-y-3">

@@ -11,7 +11,7 @@ import { CardRegenModal, type CardPromptHistoryItem, CARD_PROMPT_HISTORY_KEY, CA
 import CardTemplateManager from '../../../components/CardTemplateManager';
 import CardNewsRenderer from '../../../components/CardNewsRenderer';
 import CardNewsProRenderer from '../../../components/CardNewsProRenderer';
-import { DEFAULT_THEME, COVER_TEMPLATES, CARD_FONTS, FONT_CATEGORIES, type DesignPresetStyle, parseProSlidesJson, type SlideData as ProSlideData, type CardNewsTheme, type SlideLayoutType } from '../../../lib/cardNewsLayouts';
+import { DEFAULT_THEME, COVER_TEMPLATES, CARD_FONTS, FONT_CATEGORIES, type DesignPresetStyle, parseProSlidesJson, ensureSlideIds, generateSlideId, type SlideData as ProSlideData, type CardNewsTheme, type SlideLayoutType } from '../../../lib/cardNewsLayouts';
 import { buildLayoutDefaults } from '../../../lib/cardAiActions';
 import { getSavedTemplates, deleteTemplate, imageToEditableTemplate, type CardTemplate } from '../../../lib/cardTemplateService';
 import { saveDraft, loadDraft, clearDraft, type CardNewsDraft, type CardRatio, type LoadDraftResult } from '../../../lib/cardNewsDraft';
@@ -915,7 +915,8 @@ DECORATIVE: (장식 요소)`,
     const { draft } = result;
     setTopic(draft.topic);
     setHospitalName(draft.hospitalName);
-    setProSlides(draft.proSlides);
+    // 구버전 드래프트에는 slide.id가 없을 수 있으므로 복원 시 일괄 보정
+    setProSlides(ensureSlideIds(draft.proSlides));
     setProTheme(draft.proTheme);
     setProCardRatio(draft.proCardRatio);
     setPageStep(2);
@@ -946,7 +947,8 @@ DECORATIVE: (장식 요소)`,
           setError('이 기록에는 복원할 슬라이드가 없습니다.');
           return;
         }
-        setProSlides(v2.slides);
+        // 과거 저장본에 id가 없을 수 있으므로 일괄 보정
+        setProSlides(ensureSlideIds(v2.slides));
         setProTheme(v2.theme ?? { ...DEFAULT_THEME });
         setProCardRatio(v2.cardRatio ?? '1:1');
       } else if (Array.isArray(parsed)) {
@@ -956,10 +958,13 @@ DECORATIVE: (장식 요소)`,
           setError('이 기록에는 복원할 슬라이드가 없습니다.');
           return;
         }
-        const restored: ProSlideData[] = legacy.map((s, i) => buildLayoutDefaults(
-          { index: i + 1, layout: 'info' as SlideLayoutType, title: s.title || '' },
-          ((s.layout as SlideLayoutType | undefined) ?? 'info'),
-        ));
+        const restored: ProSlideData[] = legacy.map((s, i) => ({
+          ...buildLayoutDefaults(
+            { id: generateSlideId(), index: i + 1, layout: 'info' as SlideLayoutType, title: s.title || '' },
+            ((s.layout as SlideLayoutType | undefined) ?? 'info'),
+          ),
+          id: generateSlideId(),
+        }));
         setProSlides(restored);
         setProTheme({ ...DEFAULT_THEME });
         setProCardRatio('1:1');
@@ -1357,7 +1362,7 @@ DECORATIVE: (장식 요소)`,
                         const result = await imageToEditableTemplate(style.thumbnailDataUrl);
                         setProgress('');
                         if (result) {
-                          const newSlide = { index: 1, ...result.slide, layout: result.slide.layout as any } as ProSlideData;
+                          const newSlide = { id: generateSlideId(), index: 1, ...result.slide, layout: result.slide.layout as any } as ProSlideData;
                           setProTheme(prev => ({ ...prev, ...result.colors }));
                           setProSlides([newSlide]);
                           setPageStep(2);

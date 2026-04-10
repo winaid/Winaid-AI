@@ -77,6 +77,12 @@ export interface SlideDecoration {
 }
 
 export interface SlideData {
+  /**
+   * 카드뉴스 슬라이드의 안정적인 고유 식별자.
+   * 드래그 reorder 후에도 DOM ref 추적/다운로드 정확성을 보장하기 위해 사용.
+   * AI 생성 결과 파싱, 수동 추가, 복제, 드래프트/히스토리 복원 시 생성/유지.
+   */
+  id: string;
   index: number;
   layout: SlideLayoutType;
   title: string;
@@ -593,12 +599,32 @@ export function parseProSlidesJson(rawText: string): ParsedProResult {
   return { slides, fontId };
 }
 
+/**
+ * 슬라이드 고유 id 생성. 드래그 reorder 후에도 안정적인 DOM ref 키로 사용.
+ * crypto.randomUUID 가능하면 그걸, 아니면 시간+난수 폴백.
+ */
+export function generateSlideId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return `slide_${crypto.randomUUID()}`;
+  }
+  return `slide_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
+}
+
+/**
+ * 슬라이드 배열에 id를 채워 넣는다. 이미 id가 있으면 유지, 없으면 생성.
+ * 드래프트/히스토리 복원이나 외부 입력을 받을 때 일괄 적용.
+ */
+export function ensureSlideIds(slides: SlideData[]): SlideData[] {
+  return slides.map(s => (s.id && typeof s.id === 'string' ? s : { ...s, id: generateSlideId() }));
+}
+
 function normalizeSlide(raw: Partial<SlideData>, i: number): SlideData {
   const layout = isValidLayout(raw.layout) ? raw.layout : 'info';
   const position = raw.imagePosition;
   const validPosition: SlideImagePosition | undefined =
     position === 'background' || position === 'top' || position === 'center' || position === 'bottom' ? position : undefined;
   return {
+    id: (raw.id && typeof raw.id === 'string') ? raw.id : generateSlideId(),
     index: raw.index ?? i + 1,
     layout,
     title: raw.title ?? `슬라이드 ${i + 1}`,

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { SlideData, CardNewsTheme, SlideLayoutType, DesignPresetStyle } from '../lib/cardNewsLayouts';
-import { LAYOUT_LABELS, CARD_FONTS, FONT_CATEGORIES } from '../lib/cardNewsLayouts';
+import { LAYOUT_LABELS, CARD_FONTS, FONT_CATEGORIES, generateSlideId } from '../lib/cardNewsLayouts';
 import { buildLayoutDefaults, fillLayoutContent, generateSlideImage, suggestSlideText, suggestImagePrompt, enrichSlide, suggestComparison } from '../lib/cardAiActions';
 import type { CardTemplate } from '../lib/cardTemplateService';
 import { ensureGoogleFontLoaded, resolveSlideFontFamily } from '../lib/cardStyleUtils';
@@ -51,7 +51,13 @@ interface Props {
 export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onThemeChange, learnedTemplate, cardRatio = '1:1', presetStyle }: Props) {
   // shorthand — 학습 템플릿이 있을 때 상세 토큰으로 렌더 오버라이드
   const lt = learnedTemplate || null;
-  const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
+  // slide.id 기반 Map — 드래그 reorder 후에도 정확한 DOM 참조 유지
+  // (이전엔 배열 인덱스 기반이라 reorder 후 잘못된 카드를 캡처하는 버그 있었음)
+  const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+
+  /** slides 순서대로 DOM element 배열을 반환 — 다운로드 lib 함수에 그대로 넘기기 위함 */
+  const getOrderedCardElements = (): (HTMLDivElement | null)[] =>
+    slides.map(s => cardRefs.current.get(s.id) ?? null);
   const boxRefs = useRef<(HTMLDivElement | null)[]>([]);
   const [downloading, setDownloading] = useState(false);
   const [showDownloadMenu, setShowDownloadMenu] = useState(false);
@@ -382,9 +388,10 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
     pushAndChange(slides.map((s, i) => (i === idx ? { ...s, ...patch } : s)));
   };
 
-  /** 슬라이드 복제 */
+  /** 슬라이드 복제 — 복제본은 새 id 부여 (원본과 공유 금지) */
   const duplicateSlide = (idx: number) => {
     const clone: SlideData = JSON.parse(JSON.stringify(slides[idx]));
+    clone.id = generateSlideId();
     const newSlides = [...slides];
     newSlides.splice(idx + 1, 0, clone);
     pushAndChange(newSlides.map((s, i) => ({ ...s, index: i + 1 })));
@@ -393,6 +400,7 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
   /** 빈 슬라이드 추가 */
   const addSlide = (layout: SlideLayoutType) => {
     const newSlide: SlideData = {
+      id: generateSlideId(),
       index: slides.length + 1,
       layout,
       title: '새 슬라이드',
@@ -541,7 +549,8 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
   const downloadCard = async (index: number) => {
     setDownloading(true);
     try {
-      await downloadCardAsPng(cardRefs.current[index], index, cardWidth, cardHeight);
+      const el = cardRefs.current.get(slides[index]?.id) ?? null;
+      await downloadCardAsPng(el, index, cardWidth, cardHeight);
     } finally {
       setDownloading(false);
     }
@@ -551,7 +560,7 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
     setShowDownloadMenu(false);
     setDownloading(true);
     try {
-      await downloadAllAsZip(cardRefs.current, slides.length, cardWidth, cardHeight, slides[0]?.title);
+      await downloadAllAsZip(getOrderedCardElements(), slides.length, cardWidth, cardHeight, slides[0]?.title);
     } finally {
       setDownloading(false);
     }
@@ -561,7 +570,7 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
     setShowDownloadMenu(false);
     setDownloading(true);
     try {
-      await downloadAllAsPdf(cardRefs.current, slides.length, cardWidth, cardHeight, slides[0]?.title);
+      await downloadAllAsPdf(getOrderedCardElements(), slides.length, cardWidth, cardHeight, slides[0]?.title);
     } catch (err) {
       console.warn('[CARD_NEWS_PRO] PDF 변환 실패', err);
     } finally {
@@ -610,9 +619,9 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
     setShortsProgress('슬라이드를 캡처하고 있습니다...');
 
     try {
-      // 1) 슬라이드 → PNG Blob 배열
+      // 1) 슬라이드 → PNG Blob 배열 (slides 순서대로)
       const imageBlobs = await captureAllSlidesAsBlobs(
-        cardRefs.current,
+        getOrderedCardElements(),
         slides.length,
         cardWidth,
         cardHeight,
@@ -1071,7 +1080,7 @@ JSON만 출력:
         {slides.map((slide, idx) => {
           const isEditing = editingIdx === idx;
           return (
-            <div key={`${idx}-${theme.fontId || 'default'}-${slide.fontId || ''}-${fontLoaded}`}
+            <div key={`${slide.id}-${theme.fontId || 'default'}-${slide.fontId || ''}-${fontLoaded}`}
               onDragOver={(e) => handleDragOver(e, idx)}
               onDrop={() => handleDrop(idx)}
               onDragEnd={handleDragEnd}
@@ -1126,7 +1135,7 @@ JSON만 출력:
                     title="PNG 저장 (고화질, 투명도 지원)">
                     💾 PNG
                   </button>
-                  <button type="button" onClick={() => downloadCardAsJpg(cardRefs.current[idx], idx, cardWidth, cardHeight)}
+                  <button type="button" onClick={() => downloadCardAsJpg(cardRefs.current.get(slide.id) ?? null, idx, cardWidth, cardHeight)}
                     className="px-2 py-1 bg-white/90 hover:bg-white rounded-lg text-[10px] font-bold text-slate-700 shadow-sm"
                     title="JPG 저장 (용량 작음 — 카톡/SNS 공유에 유리)">
                     📷 JPG
@@ -1146,8 +1155,12 @@ JSON만 출력:
                 </div>
                 {/* 실제 렌더링 — 컨테이너 폭 / 1080 으로 동적 스케일 */}
                 <div
-                  ref={(el) => { cardRefs.current[idx] = el; }}
-                  key={`card-render-${idx}-${fontLoaded}-${theme.fontId || ''}-${slide.fontId || ''}`}
+                  ref={(el) => {
+                    // slide.id 기반 Map — 드래그 reorder 후에도 정확한 DOM 추적
+                    if (el) cardRefs.current.set(slide.id, el);
+                    else cardRefs.current.delete(slide.id);
+                  }}
+                  key={`card-render-${slide.id}-${fontLoaded}-${theme.fontId || ''}-${slide.fontId || ''}`}
                   style={{
                     position: 'absolute',
                     top: 0,
