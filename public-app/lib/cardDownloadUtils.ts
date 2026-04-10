@@ -66,6 +66,30 @@ export async function downloadCardAsPng(
   a.click();
 }
 
+/**
+ * 모든 카드를 PNG Blob 배열로 캡처 — ZIP 다운로드와 동일한 패턴이지만
+ * 파일 시스템에 떨어뜨리지 않고 메모리에 모음. 카드뉴스 → 쇼츠 변환에서
+ * FormData에 multipart로 올릴 때 사용.
+ */
+export async function captureAllSlidesAsBlobs(
+  cardRefs: (HTMLElement | null)[],
+  slidesCount: number,
+  cardWidth: number,
+  cardHeight: number,
+): Promise<Blob[]> {
+  const blobs: Blob[] = [];
+  for (let i = 0; i < slidesCount; i++) {
+    const sourceEl = cardRefs[i];
+    if (!sourceEl) continue;
+    const canvas = await captureNodeAsCanvas(sourceEl, cardWidth, cardHeight);
+    const blob = await new Promise<Blob | null>((resolve) => {
+      canvas.toBlob((b) => resolve(b), 'image/png');
+    });
+    if (blob) blobs.push(blob);
+  }
+  return blobs;
+}
+
 /** 모든 카드를 ZIP으로 다운로드 */
 export async function downloadAllAsZip(
   cardRefs: (HTMLElement | null)[],

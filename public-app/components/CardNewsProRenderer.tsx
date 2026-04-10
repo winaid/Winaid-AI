@@ -6,11 +6,12 @@ import { LAYOUT_LABELS, CARD_FONTS, FONT_CATEGORIES } from '../lib/cardNewsLayou
 import { buildLayoutDefaults, fillLayoutContent, generateSlideImage, suggestSlideText, suggestImagePrompt, enrichSlide, suggestComparison } from '../lib/cardAiActions';
 import type { CardTemplate } from '../lib/cardTemplateService';
 import { ensureGoogleFontLoaded, resolveSlideFontFamily } from '../lib/cardStyleUtils';
-import { downloadCardAsPng, downloadAllAsZip } from '../lib/cardDownloadUtils';
+import { downloadCardAsPng, downloadAllAsZip, captureAllSlidesAsBlobs } from '../lib/cardDownloadUtils';
 import CardNewsCanvas from './CardNewsCanvas';
 import SlideEditor from './card-news/SlideEditor';
 import InteractivePreview from './card-news/InteractivePreview';
 import { useSlideRenderer } from './card-news/SlideRenderers';
+import VideoPlayer from './video-edit/VideoPlayer';
 
 interface Props {
   slides: SlideData[];
@@ -46,6 +47,43 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
   const [downloading, setDownloading] = useState(false);
   const [editingIdx, setEditingIdx] = useState<number | null>(null);
   const [showAddSlide, setShowAddSlide] = useState(false);
+
+  // ── 카드뉴스 → 쇼츠 변환 ──
+  const [shortsPanelOpen, setShortsPanelOpen] = useState(false);
+  const [shortsConverting, setShortsConverting] = useState(false);
+  const [shortsProgress, setShortsProgress] = useState('');
+  const [shortsError, setShortsError] = useState('');
+  const [shortsResultUrl, setShortsResultUrl] = useState<string | null>(null);
+  const [shortsMeta, setShortsMeta] = useState<{
+    slides: number;
+    duration: number;
+    transition: string;
+    bgm: boolean;
+  } | null>(null);
+  const [shortsOpts, setShortsOpts] = useState<{
+    slideDuration: number;
+    durationMode: 'fixed' | 'auto';
+    transition: 'fade' | 'slide' | 'zoom' | 'none';
+    bgmEnabled: boolean;
+    bgmMood: 'calm' | 'bright' | 'emotional' | 'trendy' | 'corporate';
+    bgmVolume: number;
+  }>({
+    slideDuration: 4,
+    durationMode: 'fixed',
+    transition: 'fade',
+    bgmEnabled: true,
+    bgmMood: 'calm',
+    bgmVolume: 15,
+  });
+
+  // 결과 blob URL은 컴포넌트 unmount 시 정리
+  useEffect(() => {
+    return () => {
+      if (shortsResultUrl) URL.revokeObjectURL(shortsResultUrl);
+    };
+    // shortsResultUrl 변경 시에는 useEffect 안에서 handleConvertToShorts가 직접 정리
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
   const [scales, setScales] = useState<number[]>([]);
@@ -388,6 +426,92 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
     }
   };
 
+  // ── 카드뉴스 → 쇼츠 영상 변환 ──
+
+  /** 글자수 기반 자동 duration: 한국어 초당 4.5자 기준, 3~8초 클램프 */
+  const computeAutoDurations = (): number[] => {
+    return slides.map(s => {
+      const text = [s.title, s.subtitle, s.body].filter(Boolean).join('');
+      const charCount = text.replace(/\s/g, '').length;
+      if (charCount === 0) return 3;
+      const readTime = charCount / 4.5;
+      return Math.max(3, Math.min(8, Math.round(readTime * 10) / 10));
+    });
+  };
+
+  const handleConvertToShorts = async () => {
+    if (slides.length === 0) {
+      setShortsError('변환할 슬라이드가 없습니다.');
+      return;
+    }
+    // 이전 결과 정리
+    if (shortsResultUrl) {
+      URL.revokeObjectURL(shortsResultUrl);
+      setShortsResultUrl(null);
+    }
+    setShortsMeta(null);
+    setShortsError('');
+    setShortsConverting(true);
+    setShortsProgress('슬라이드를 캡처하고 있습니다...');
+
+    try {
+      // 1) 슬라이드 → PNG Blob 배열
+      const imageBlobs = await captureAllSlidesAsBlobs(
+        cardRefs.current,
+        slides.length,
+        cardWidth,
+        cardHeight,
+      );
+      if (imageBlobs.length === 0) throw new Error('슬라이드 캡처 실패');
+
+      // 2) FormData 구성
+      setShortsProgress('영상으로 변환 중... (1~3분 소요)');
+      const formData = new FormData();
+      imageBlobs.forEach((blob, i) => {
+        formData.append('images', blob, `slide_${String(i).padStart(3, '0')}.png`);
+      });
+      formData.append('slide_duration', String(shortsOpts.slideDuration));
+      if (shortsOpts.durationMode === 'auto') {
+        formData.append('slide_durations', JSON.stringify(computeAutoDurations()));
+      }
+      formData.append('transition', shortsOpts.transition);
+      formData.append('bgm_enabled', String(shortsOpts.bgmEnabled));
+      formData.append('bgm_mood', shortsOpts.bgmMood);
+      formData.append('bgm_volume', String(shortsOpts.bgmVolume));
+      formData.append('aspect_ratio', '9:16');
+
+      // 3) API 호출
+      const res = await fetch('/api/video/card-to-shorts', { method: 'POST', body: formData });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({ error: '서버 오류' }));
+        throw new Error(d.error || `변환 실패 (${res.status})`);
+      }
+
+      // 4) 메타 + blob
+      const metaHeader = res.headers.get('X-Shorts-Metadata');
+      let meta: typeof shortsMeta = null;
+      try { if (metaHeader) meta = JSON.parse(metaHeader); } catch {}
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      setShortsResultUrl(url);
+      setShortsMeta(meta);
+      setShortsProgress('');
+    } catch (err) {
+      setShortsError(err instanceof Error ? err.message : '쇼츠 변환 실패');
+    } finally {
+      setShortsConverting(false);
+    }
+  };
+
+  const downloadShorts = () => {
+    if (!shortsResultUrl) return;
+    const a = document.createElement('a');
+    a.href = shortsResultUrl;
+    a.download = `cardnews_shorts_${Date.now()}.mp4`;
+    a.click();
+  };
+
   // ═══════════════════════════════════════
   // UI
   // ═══════════════════════════════════════
@@ -489,8 +613,217 @@ JSON만 출력:
           >
             {downloading ? '⏳ 다운로드 중...' : '📦 전체 다운로드'}
           </button>
+          <button
+            type="button"
+            onClick={() => setShortsPanelOpen(v => !v)}
+            disabled={shortsConverting || slides.length === 0}
+            className="px-3 py-1.5 bg-gradient-to-r from-pink-500 to-rose-500 text-white text-xs font-bold rounded-lg hover:from-pink-600 hover:to-rose-600 transition-colors disabled:opacity-50"
+            title="카드뉴스를 9:16 세로 영상(쇼츠/릴스)으로 변환"
+          >
+            🎬 쇼츠로 변환
+          </button>
         </div>
       </div>
+
+      {/* 쇼츠 변환 — 인라인 옵션 패널 */}
+      {shortsPanelOpen && (
+        <div className="bg-gradient-to-br from-pink-50 to-rose-50 border border-pink-200 rounded-xl p-4 space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-base">🎬</span>
+              <span className="text-sm font-bold text-rose-700">쇼츠 변환 옵션</span>
+              <span className="text-[10px] text-rose-500">9:16 세로 영상</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShortsPanelOpen(false)}
+              className="text-xs text-slate-400 hover:text-slate-600"
+            >
+              ✕
+            </button>
+          </div>
+
+          {/* 슬라이드당 시간 */}
+          <div>
+            <label className="block text-[10px] font-semibold text-slate-500 mb-1.5">슬라이드당 시간</label>
+            <div className="flex gap-1.5 flex-wrap">
+              {[3, 4, 5].map(sec => (
+                <button
+                  key={sec}
+                  type="button"
+                  onClick={() => setShortsOpts(o => ({ ...o, slideDuration: sec, durationMode: 'fixed' }))}
+                  className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-colors ${
+                    shortsOpts.durationMode === 'fixed' && shortsOpts.slideDuration === sec
+                      ? 'bg-rose-600 text-white'
+                      : 'bg-white text-slate-600 border border-slate-200 hover:border-rose-300'
+                  }`}
+                >
+                  {sec}초
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => setShortsOpts(o => ({ ...o, durationMode: 'auto' }))}
+                className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-colors ${
+                  shortsOpts.durationMode === 'auto'
+                    ? 'bg-rose-600 text-white'
+                    : 'bg-white text-slate-600 border border-slate-200 hover:border-rose-300'
+                }`}
+                title="글자수 기반 (한국어 4.5자/초, 3~8초)"
+              >
+                자동
+              </button>
+            </div>
+          </div>
+
+          {/* 전환 효과 */}
+          <div>
+            <label className="block text-[10px] font-semibold text-slate-500 mb-1.5">전환 효과</label>
+            <div className="grid grid-cols-4 gap-1.5">
+              {([
+                { id: 'fade', label: '페이드' },
+                { id: 'slide', label: '슬라이드' },
+                { id: 'zoom', label: '줌' },
+                { id: 'none', label: '없음' },
+              ] as const).map(opt => (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => setShortsOpts(o => ({ ...o, transition: opt.id }))}
+                  className={`px-2 py-1.5 text-[11px] font-bold rounded-lg transition-colors ${
+                    shortsOpts.transition === opt.id
+                      ? 'bg-rose-600 text-white'
+                      : 'bg-white text-slate-600 border border-slate-200 hover:border-rose-300'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* BGM */}
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-[10px] font-semibold text-slate-500">BGM</label>
+              <button
+                type="button"
+                onClick={() => setShortsOpts(o => ({ ...o, bgmEnabled: !o.bgmEnabled }))}
+                className={`relative w-9 h-5 rounded-full transition-colors ${shortsOpts.bgmEnabled ? 'bg-rose-600' : 'bg-slate-300'}`}
+              >
+                <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${shortsOpts.bgmEnabled ? 'translate-x-4' : ''}`} />
+              </button>
+            </div>
+            {shortsOpts.bgmEnabled && (
+              <>
+                <div className="flex gap-1.5 flex-wrap mb-2">
+                  {([
+                    { id: 'calm', label: '차분 (병원 추천)' },
+                    { id: 'bright', label: '밝음' },
+                    { id: 'emotional', label: '감성' },
+                    { id: 'trendy', label: '트렌디' },
+                    { id: 'corporate', label: '전문' },
+                  ] as const).map(opt => (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => setShortsOpts(o => ({ ...o, bgmMood: opt.id }))}
+                      className={`px-2 py-1 text-[10px] font-bold rounded-lg transition-colors ${
+                        shortsOpts.bgmMood === opt.id
+                          ? 'bg-rose-600 text-white'
+                          : 'bg-white text-slate-600 border border-slate-200 hover:border-rose-300'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] text-slate-400">볼륨</span>
+                  <input
+                    type="range"
+                    min={0}
+                    max={50}
+                    step={5}
+                    value={shortsOpts.bgmVolume}
+                    onChange={e => setShortsOpts(o => ({ ...o, bgmVolume: parseInt(e.target.value) }))}
+                    className="flex-1 accent-rose-500"
+                  />
+                  <span className="text-[10px] text-slate-500 tabular-nums w-8 text-right">{shortsOpts.bgmVolume}%</span>
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* 안내: TTS는 미구현 */}
+          <div className="text-[10px] text-slate-400 italic">
+            ※ TTS 나레이션은 다음 업데이트에서 추가 예정 — 지금은 BGM + 전환 효과만 지원
+          </div>
+
+          {/* 변환 시작 버튼 */}
+          <button
+            type="button"
+            onClick={handleConvertToShorts}
+            disabled={shortsConverting || slides.length === 0}
+            className="w-full py-2.5 bg-gradient-to-r from-pink-600 to-rose-600 text-white text-sm font-black rounded-lg hover:from-pink-700 hover:to-rose-700 disabled:opacity-40 transition-colors flex items-center justify-center gap-2"
+          >
+            {shortsConverting ? (
+              <>
+                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                {shortsProgress || '변환 중...'}
+              </>
+            ) : (
+              <>🎬 변환 시작 ({slides.length}장)</>
+            )}
+          </button>
+
+          {shortsError && (
+            <div className="px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-xs text-red-600">
+              {shortsError}
+            </div>
+          )}
+
+          {/* 결과 */}
+          {shortsResultUrl && (
+            <div className="space-y-2 pt-3 border-t border-pink-200">
+              <div className="flex items-center justify-between">
+                <div className="text-xs font-bold text-rose-700">✅ 쇼츠 변환 완료</div>
+                {shortsMeta && (
+                  <div className="text-[10px] text-slate-500 tabular-nums">
+                    {shortsMeta.slides}장 · {shortsMeta.duration}초 · {shortsMeta.transition}
+                    {shortsMeta.bgm && ' · BGM'}
+                  </div>
+                )}
+              </div>
+              <div className="flex gap-3 flex-col sm:flex-row">
+                <div className="mx-auto sm:mx-0" style={{ width: '200px' }}>
+                  <VideoPlayer src={shortsResultUrl} aspectRatio="9/16" />
+                </div>
+                <div className="flex-1 flex flex-col gap-2 justify-center">
+                  <button
+                    type="button"
+                    onClick={downloadShorts}
+                    className="px-4 py-2.5 bg-rose-600 text-white text-sm font-bold rounded-lg hover:bg-rose-700"
+                  >
+                    📥 영상 다운로드
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (shortsResultUrl) URL.revokeObjectURL(shortsResultUrl);
+                      setShortsResultUrl(null);
+                      setShortsMeta(null);
+                    }}
+                    className="px-4 py-2.5 bg-white text-slate-600 text-xs font-bold rounded-lg border border-slate-200 hover:border-rose-300"
+                  >
+                    🔄 다시 만들기
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* 카드 그리드 (축소 미리보기 + 인라인 편집 패널) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

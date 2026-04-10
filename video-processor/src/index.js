@@ -51,6 +51,7 @@ const addZoom = require('./routes/add-zoom');
 const generateThumbnail = require('./routes/generate-thumbnail');
 const applyStyle = require('./routes/apply-style');
 const addSoundEffects = require('./routes/add-sound-effects');
+const cardToShorts = require('./routes/card-to-shorts');
 
 app.use('/api/video/silence-remove', silenceRemove);
 app.use('/api/video/crop-vertical', cropVertical);
@@ -60,6 +61,7 @@ app.use('/api/video/add-zoom', addZoom);
 app.use('/api/video/generate-thumbnail', generateThumbnail);
 app.use('/api/video/apply-style', applyStyle);
 app.use('/api/video/add-sound-effects', addSoundEffects);
+app.use('/api/video/card-to-shorts', cardToShorts);
 
 app.listen(PORT, () => {
   console.log('╔═══════════════════════════════════════════╗');
