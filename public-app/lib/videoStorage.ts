@@ -15,6 +15,43 @@ import { supabase, isSupabaseConfigured, getSessionSafe } from './supabase';
 const BUCKET = 'video-outputs';
 const RETENTION_DAYS = 7;
 
+// 테이블 미생성 / 버킷 미설정 경고는 세션당 한 번만 출력 (콘솔 도배 방지)
+let warnedMissingTable = false;
+let warnedMissingBucket = false;
+
+function isMissingTableError(err: unknown): boolean {
+  if (!err || typeof err !== 'object') return false;
+  const code = (err as { code?: string }).code;
+  const message = (err as { message?: string }).message || '';
+  // PostgREST: PGRST205 (relation not found in schema cache) 또는 42P01 (undefined_table)
+  return code === 'PGRST205' || code === '42P01' || /schema cache|relation .* does not exist/i.test(message);
+}
+
+function isMissingBucketError(err: unknown): boolean {
+  if (!err || typeof err !== 'object') return false;
+  const message = (err as { message?: string }).message || '';
+  return /bucket .* not found|bucket .* does not exist/i.test(message);
+}
+
+function warnOnceMissingTable(err: { message?: string }) {
+  if (warnedMissingTable) return;
+  warnedMissingTable = true;
+  console.info(
+    '[videoStorage] video_outputs 테이블이 없습니다 — ' +
+    'public-app/sql/video_outputs_setup.sql을 Supabase SQL Editor에서 실행하세요. ' +
+    '그전까지는 영상 저장 기능만 비활성화되며 다른 기능은 정상 동작합니다.',
+  );
+}
+
+function warnOnceMissingBucket(err: { message?: string }) {
+  if (warnedMissingBucket) return;
+  warnedMissingBucket = true;
+  console.info(
+    "[videoStorage] 'video-outputs' 버킷이 없습니다 — " +
+    'Supabase 대시보드 → Storage → New bucket (이름: video-outputs, Public: ON) 생성하세요.',
+  );
+}
+
 export type VideoOutputType = 'pipeline' | 'ai_shorts' | 'card_to_shorts';
 
 export interface SavedVideo {
@@ -66,7 +103,8 @@ export async function saveVideoToStorage(
       });
 
     if (uploadError) {
-      console.warn('[videoStorage] 업로드 실패:', uploadError.message);
+      if (isMissingBucketError(uploadError)) warnOnceMissingBucket(uploadError);
+      else console.warn('[videoStorage] 업로드 실패:', uploadError.message);
       return null;
     }
 
@@ -97,7 +135,8 @@ export async function saveVideoToStorage(
       .single();
 
     if (dbError || !data) {
-      console.warn('[videoStorage] DB 저장 실패 (Storage URL은 사용 가능):', dbError?.message);
+      if (isMissingTableError(dbError)) warnOnceMissingTable(dbError || {});
+      else console.warn('[videoStorage] DB 저장 실패 (Storage URL은 사용 가능):', dbError?.message);
       // 임시 ID로 반환 — 호출부는 file_url만 사용하면 됨
       return {
         id: `local_${Date.now()}`,
@@ -138,7 +177,8 @@ export async function listVideoHistory(limit = 10): Promise<SavedVideo[]> {
       .limit(limit);
 
     if (error) {
-      console.warn('[videoStorage] 조회 실패:', error.message);
+      if (isMissingTableError(error)) warnOnceMissingTable(error);
+      else console.warn('[videoStorage] 조회 실패:', error.message);
       return [];
     }
     return (data || []) as SavedVideo[];

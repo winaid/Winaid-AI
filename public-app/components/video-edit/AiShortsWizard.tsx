@@ -352,9 +352,9 @@ function StepVoice({ state, patch }: { state: AiShortsState; patch: (p: Partial<
 
   return (
     <div className="space-y-5">
-      {/* 한국어 목소리 (Legacy — Wavenet/Neural2/Standard) */}
+      {/* 추천 목소리 — 병원 콘텐츠에 가장 잘 맞는 4종 빠른 선택 */}
       <div className="space-y-1.5">
-        <label className="text-[10px] font-semibold text-indigo-500">⭐ 추천 목소리</label>
+        <label className="text-[10px] font-semibold text-indigo-500">⭐ 추천 목소리 (병원 콘텐츠)</label>
         <div className="grid grid-cols-2 gap-1.5">
           {getVoicesByEngine('legacy').filter(v => v.name.includes('Wavenet')).map(v => (
             <button key={v.id} type="button" onClick={() => selectVoice(v)}
@@ -363,6 +363,34 @@ function StepVoice({ state, patch }: { state: AiShortsState; patch: (p: Partial<
               <div className="text-slate-400">{v.description}</div>
             </button>
           ))}
+        </div>
+      </div>
+
+      {/* 전체 목소리 보기 — 엔진 탭 */}
+      <div className="space-y-1.5">
+        <label className="text-[10px] font-semibold text-slate-500">전체 목소리</label>
+        <div className="flex gap-1 bg-slate-100 rounded-lg p-1">
+          {(['gemini', 'chirp3_hd', 'legacy'] as const).map(eng => {
+            const count = getVoicesByEngine(eng).length;
+            const isActive = engine === eng;
+            return (
+              <button
+                key={eng}
+                type="button"
+                onClick={() => setEngine(eng)}
+                className={`flex-1 px-2 py-1.5 rounded-md transition-all text-center ${
+                  isActive ? 'bg-white shadow-sm' : 'hover:bg-white/50'
+                }`}
+              >
+                <div className={`text-[10px] font-bold ${isActive ? 'text-indigo-700' : 'text-slate-600'}`}>
+                  {ENGINE_LABELS[eng].label}
+                </div>
+                <div className={`text-[9px] ${isActive ? 'text-indigo-400' : 'text-slate-400'}`}>
+                  {count}개 · {ENGINE_LABELS[eng].desc}
+                </div>
+              </button>
+            );
+          })}
         </div>
       </div>
 
