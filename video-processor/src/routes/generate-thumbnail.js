@@ -32,8 +32,19 @@ router.post('/', upload.single('file'), async (req, res) => {
 
       const colors = { white: 'fontcolor=white:borderw=5:bordercolor=black', yellow: 'fontcolor=yellow:borderw=5:bordercolor=black', red: 'fontcolor=red:borderw=5:bordercolor=white' };
       const positions = { top: 'y=h*0.12', center: 'y=(h-text_h)/2', bottom: 'y=h*0.78' };
-      const escaped = text.replace(/'/g, "'\\\\\\''").replace(/:/g, '\\:');
-      const vf = `drawtext=text='${escaped}':fontsize=60${fontOpt}:${colors[text_color] || colors.white}:x=(w-text_w)/2:${positions[text_position] || positions.center}`;
+
+      // drawtext textfile 방식 — 사용자 텍스트가 필터 문법에서 완전 분리 (인젝션 방어).
+      // 200자 캡 + 제어문자 strip.
+      // eslint-disable-next-line no-control-regex
+      const cleaned = String(text)
+        .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '')
+        .replace(/\u200B|\u200C|\u200D|\uFEFF/g, '')
+        .slice(0, 200)
+        .trim();
+      const textFile = path.join(workDir, 'thumb-text.txt');
+      fs.writeFileSync(textFile, cleaned, { encoding: 'utf8' });
+
+      const vf = `drawtext=textfile='${textFile}':fontsize=60${fontOpt}:${colors[text_color] || colors.white}:x=(w-text_w)/2:${positions[text_position] || positions.center}`;
       execSync(`ffmpeg -y -i "${framePath}" -vf "${vf}" -q:v 2 "${outputPath}"`, { timeout: 15000, stdio: 'pipe' });
     } else {
       fs.copyFileSync(framePath, outputPath);

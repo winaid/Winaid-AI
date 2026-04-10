@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { gateGuestRequest } from '../../../../lib/guestRateLimit';
 import { validateMedicalAd, countViolations } from '../../../../lib/medicalAdValidation';
+import { sanitizePromptInput } from '../../../../lib/promptSanitize';
 
 export const maxDuration = 120;
 export const dynamic = 'force-dynamic';
@@ -44,6 +45,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '키워드를 입력해주세요.' }, { status: 400 });
     }
 
+    // 프롬프트 인젝션 방어 — 사용자 입력을 sanitize. manual_script는 대본 자체라 상한을 조금 높임.
+    const safeKeyword = sanitizePromptInput(keyword, 200);
+    const safeManual = sanitizePromptInput(body.manual_script, 1000);
+    const safeUrl = sanitizePromptInput(body.url, 300);
+    const safeSubject = safeKeyword || safeManual || safeUrl;
+
     // 장면 수 계산
     const sceneCount = duration === 30 ? 4 : duration === 60 ? 8 : 12;
     const avgSceneDur = duration / sceneCount;
@@ -52,7 +59,7 @@ export async function POST(request: NextRequest) {
 
     const prompt = `당신은 치과/병원 유튜브 쇼츠 영상 대본 작가입니다.
 
-주제: "${keyword || body.manual_script || body.url}"
+주제: ${safeSubject}
 영상 길이: ${duration}초
 톤: ${toneDesc}
 장면 수: ${sceneCount}개

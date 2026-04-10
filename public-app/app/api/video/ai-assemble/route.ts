@@ -6,7 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { gateGuestRequest } from '../../../../lib/guestRateLimit';
-import { isVideoProcessorConfigured, translateVideoError } from '../../../../lib/videoProxy';
+import { isVideoProcessorConfigured, proxyJson, translateVideoError } from '../../../../lib/videoProxy';
 
 export const maxDuration = 300;
 export const dynamic = 'force-dynamic';
@@ -21,18 +21,8 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const url = `${process.env.NEXT_PUBLIC_VIDEO_PROCESSOR_URL}/api/video/ai-assemble`;
-
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 600000);
-
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-      signal: controller.signal,
-    });
-    clearTimeout(timer);
+    // proxyJson이 X-API-Secret 헤더 자동 주입 + 타임아웃 처리
+    const res = await proxyJson('/api/video/ai-assemble', body, 600000);
 
     if (!res.ok) {
       const errData = await res.json().catch(() => ({ error: '조립 실패' }));

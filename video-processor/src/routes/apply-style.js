@@ -209,7 +209,7 @@ router.post('/', upload.single('file'), async (req, res) => {
     fs.writeFileSync(concatList, segments.map(s => `file '${s}'`).join('\n'));
 
     const videoOnly = path.join(workDir, 'video_only.mp4');
-    execSync(`ffmpeg -y -f concat -safe 0 -i "${concatList}" -c copy "${videoOnly}"`, { timeout: 120000, stdio: 'pipe' });
+    execSync(`ffmpeg -y -f concat -safe 0 -protocol_whitelist file,pipe -i "${concatList}" -c copy "${videoOnly}"`, { timeout: 120000, stdio: 'pipe' });
 
     // 6. 오디오 합성
     if (fs.existsSync(audioPath)) {

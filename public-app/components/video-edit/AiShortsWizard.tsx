@@ -62,7 +62,7 @@ export default function AiShortsWizard({ onBack }: Props) {
       {state.currentStep === 4 && <StepAssemble state={state} patch={patch} />}
 
       {/* 완성 */}
-      {state.currentStep === 5 && <StepComplete state={state} onBack={onBack} />}
+      {state.currentStep === 5 && <StepComplete state={state} patch={patch} onBack={onBack} />}
     </div>
   );
 }
@@ -661,7 +661,7 @@ function StepAssemble({ state, patch }: { state: AiShortsState; patch: (p: Parti
 // 완성
 // ══════════════════════════════════════════
 
-function StepComplete({ state, onBack }: { state: AiShortsState; onBack: () => void }) {
+function StepComplete({ state, patch, onBack }: { state: AiShortsState; patch: (p: Partial<AiShortsState>) => void; onBack: () => void }) {
   const handleDownload = () => {
     if (!state.resultUrl) return;
     const a = document.createElement('a');
@@ -709,15 +709,15 @@ function StepComplete({ state, onBack }: { state: AiShortsState; onBack: () => v
         )}
       </div>
 
-      {/* 개별 수정 */}
+      {/* 개별 수정 — 해당 step으로 직접 이동 (이전에는 onBack()만 호출되어 모드 선택으로 빠지는 버그) */}
       <div className="flex flex-wrap gap-2">
         {[
-          { step: 0, label: '대본 수정' },
-          { step: 1, label: '스타일 변경' },
-          { step: 2, label: '목소리 변경' },
-          { step: 3, label: '이미지 재생성' },
+          { step: 0 as const, label: '대본 수정' },
+          { step: 1 as const, label: '스타일 변경' },
+          { step: 2 as const, label: '목소리 변경' },
+          { step: 3 as const, label: '이미지 재생성' },
         ].map(s => (
-          <button key={s.step} type="button" onClick={() => onBack()}
+          <button key={s.step} type="button" onClick={() => patch({ currentStep: s.step })}
             className="px-3 py-1.5 text-[11px] font-bold text-slate-600 bg-slate-100 rounded-lg hover:bg-indigo-50 hover:text-indigo-700">
             {s.label}
           </button>

@@ -214,7 +214,9 @@ export async function POST(request: NextRequest) {
 
       if (!response.ok) {
         const errorText = await response.text();
-        return NextResponse.json({ error: `Gemini API ${response.status}`, details: errorText.substring(0, 300) }, { status: 502 });
+        // 키 노출 방지 — Gemini가 에러에 `key=...`를 embed하는 경우 redact
+        const safeDetails = errorText.substring(0, 300).replace(/key=[A-Za-z0-9_-]+/g, 'key=***');
+        return NextResponse.json({ error: `Gemini API ${response.status}`, details: safeDetails }, { status: 502 });
       }
 
       const stream = new ReadableStream({

@@ -8,6 +8,7 @@
 import type { CardNewsDesignTemplateId } from './types';
 import { CARD_NEWS_DESIGN_TEMPLATES } from './cardNewsDesignTemplates';
 import { getMedicalLawPromptBlock } from './medicalLawRules';
+import { sanitizePromptInput } from './promptSanitize';
 
 export interface CardNewsRequest {
   topic: string;
@@ -132,20 +133,25 @@ export function buildCardNewsPrompt(req: CardNewsRequest): {
     '→ 좋은 이유: 제목 12자, 본문 2문장(각 18자), 50자 이내로 핵심 전달',
   ].join('\n');
 
-  const topicType = classifyCardTopicType(req.topic);
+  // 프롬프트 인젝션 방어 — 사용자 입력을 전부 sanitize한 지역 변수로 사용
+  const safeTopic = sanitizePromptInput(req.topic, 300);
+  const safeKeywords = sanitizePromptInput(req.keywords, 200);
+  const safeHospitalName = sanitizePromptInput(req.hospitalName, 60);
+
+  const topicType = classifyCardTopicType(safeTopic);
   const slideGuide = buildSlideGuide(req.slideCount, topicType);
 
   const promptParts = [
     `## 카드뉴스 원고 작성 요청`,
-    `- 주제: ${req.topic}`,
+    `- 주제: ${safeTopic}`,
   ];
 
-  if (req.keywords) {
-    promptParts.push(`- 키워드: ${req.keywords}`);
+  if (safeKeywords) {
+    promptParts.push(`- 키워드: ${safeKeywords}`);
   }
-  if (req.hospitalName) {
-    promptParts.push(`- 병원명: ${req.hospitalName}`);
-    promptParts.push(`⚠️ 원고에서 병원명이 필요한 경우 반드시 "${req.hospitalName}"만 사용. 다른 병원명 지어내기 절대 금지.`);
+  if (safeHospitalName) {
+    promptParts.push(`- 병원명: ${safeHospitalName}`);
+    promptParts.push(`⚠️ 원고에서 병원명이 필요한 경우 반드시 ${safeHospitalName} 만 사용. 다른 병원명 지어내기 절대 금지.`);
   }
   if (req.designTemplateId) {
     const tmpl = CARD_NEWS_DESIGN_TEMPLATES.find(t => t.id === req.designTemplateId);
@@ -178,7 +184,7 @@ export function buildCardNewsPrompt(req: CardNewsRequest): {
     '',
     `### ${req.slideCount}장: 마무리`,
     '**제목**: (핵심 한 줄 메시지)',
-    `**본문**: (${req.hospitalName ? `"${req.hospitalName}"과 함께` : ''} 맥락에 맞는 행동 유도: 예방→"오늘부터 관리", 시술비교→"나에게 맞는 방법 찾기", 증상→"정기 검진 권유")`,
+    `**본문**: (${safeHospitalName ? `${safeHospitalName} 과 함께` : ''} 맥락에 맞는 행동 유도: 예방→"오늘부터 관리", 시술비교→"나에게 맞는 방법 찾기", 증상→"정기 검진 권유")`,
     '**비주얼**: (배경 이미지 묘사, 30자 이내)',
     '',
     '',
@@ -270,6 +276,12 @@ export function buildCardNewsProPrompt(req: CardNewsRequest): {
   systemInstruction: string;
   prompt: string;
 } {
+  // 프롬프트 인젝션 방어 — 사용자 입력을 전부 sanitize한 지역 변수로 사용
+  const safeTopic = sanitizePromptInput(req.topic, 300);
+  const safeKeywords = sanitizePromptInput(req.keywords, 200);
+  const safeHospitalName = sanitizePromptInput(req.hospitalName, 60);
+  const safeCategory = sanitizePromptInput(req.category, 30);
+
   const isAutoCount = !req.slideCount || req.slideCount === 0;
   const slideCount = isAutoCount ? 0 : req.slideCount;
   const middleCount = isAutoCount ? 0 : Math.max(0, slideCount - 2);
@@ -431,10 +443,10 @@ export function buildCardNewsProPrompt(req: CardNewsRequest): {
 { "layout": "warning", "title": "시술 후 주의사항", "warningItems": ["수술 당일 양치·가글 금지","딱딱한 음식 최소 2주간 피하기","흡연·음주 4주간 금지","이상 출혈 시 즉시 내원"] }`;
 
   const requestBlock = [
-    `주제: ${req.topic}`,
-    req.keywords ? `키워드: ${req.keywords}` : '',
-    req.hospitalName ? `병원명: ${req.hospitalName} (본문에 직접 언급 금지, 마지막 장 아래에만 표시)` : '',
-    `진료과: ${req.category || '치과'}`,
+    `주제: ${safeTopic}`,
+    safeKeywords ? `키워드: ${safeKeywords}` : '',
+    safeHospitalName ? `병원명: ${safeHospitalName} (본문에 직접 언급 금지, 마지막 장 아래에만 표시)` : '',
+    `진료과: ${safeCategory || '치과'}`,
     `슬라이드 수: ${slideCount}장`,
     `톤: ${req.writingStyle === 'expert' ? '전문가형(신뢰/정보)' : '친절형(공감/쉬움)'}`,
   ].filter(Boolean).join('\n');

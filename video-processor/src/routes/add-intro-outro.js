@@ -9,7 +9,27 @@ const { v4: uuidv4 } = require('uuid');
 const router = express.Router();
 const upload = multer({ dest: os.tmpdir(), limits: { fileSize: 500 * 1024 * 1024 } });
 
-function escapeFF(text) { return text.replace(/\\/g, '\\\\').replace(/'/g, "'\\\\\\''").replace(/:/g, '\\:').replace(/%/g, '%%'); }
+/**
+ * 텍스트를 drawtext textfile용으로 안전하게 정리 + 디스크에 저장 후 경로 반환.
+ * - 200자 캡
+ * - 제어문자(0x00-0x1F 중 줄바꿈/탭 제외)·zero-width·특수 이모지 sandwich 제거
+ * - NUL 문자 제거
+ * 반환: { path: 저장된 파일 절대경로 } 또는 null(빈 텍스트)
+ * textfile 방식은 drawtext 파라미터 syntax와 완전 분리되므로 `:`, `'`, `\` 등을 escape할 필요 없음.
+ */
+function writeDrawtextFile(workDir, basename, rawText) {
+  if (!rawText) return null;
+  // eslint-disable-next-line no-control-regex
+  const cleaned = String(rawText)
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '') // 제어문자 strip (줄바꿈/탭은 유지)
+    .replace(/\u200B|\u200C|\u200D|\uFEFF/g, '')  // zero-width chars
+    .slice(0, 200)
+    .trim();
+  if (!cleaned) return null;
+  const filePath = path.join(workDir, basename);
+  fs.writeFileSync(filePath, cleaned, { encoding: 'utf8' });
+  return filePath;
+}
 
 router.post('/', upload.single('file'), async (req, res) => {
   const workDir = path.join(os.tmpdir(), `intro-${uuidv4()}`);
@@ -43,16 +63,24 @@ router.post('/', upload.single('file'), async (req, res) => {
     const parts = [];
 
     // 인트로
+    // drawtext는 text=... 파라미터 문법 대신 textfile=... 로 분리 → 사용자 문자열이
+    // 필터 chain 문법에 영향을 줄 수 없음(인젝션 방어).
     if (intro_style !== 'none' && hospital_name.trim()) {
       const introPath = path.join(workDir, 'intro.mp4');
       const dur = intro_style === 'simple' ? 1.5 : 3;
       const sz = Math.min(60, Math.round(vw / 18));
-      let vf = `drawtext=text='${escapeFF(hospital_name)}':fontsize=${sz}${fontOpt}:fontcolor=0x333333:x=(w-text_w)/2:y=(h-text_h)/2`;
-      if (intro_style === 'default' && hospital_desc) {
-        vf += `,drawtext=text='${escapeFF(hospital_desc)}':fontsize=${Math.round(sz * 0.5)}${fontOpt}:fontcolor=0x888888:x=(w-text_w)/2:y=(h+text_h)/2+${Math.round(sz * 0.8)}`;
+      const nameFile = writeDrawtextFile(workDir, 'intro-name.txt', hospital_name);
+      if (nameFile) {
+        let vf = `drawtext=textfile='${nameFile}':fontsize=${sz}${fontOpt}:fontcolor=0x333333:x=(w-text_w)/2:y=(h-text_h)/2`;
+        if (intro_style === 'default' && hospital_desc) {
+          const descFile = writeDrawtextFile(workDir, 'intro-desc.txt', hospital_desc);
+          if (descFile) {
+            vf += `,drawtext=textfile='${descFile}':fontsize=${Math.round(sz * 0.5)}${fontOpt}:fontcolor=0x888888:x=(w-text_w)/2:y=(h+text_h)/2+${Math.round(sz * 0.8)}`;
+          }
+        }
+        execSync(`ffmpeg -y -f lavfi -i color=c=white:s=${vw}x${vh}:d=${dur} -f lavfi -i anullsrc=r=44100:cl=stereo -vf "${vf}" -t ${dur} -c:v libx264 -preset ultrafast -pix_fmt yuv420p -c:a aac -shortest "${introPath}"`, { timeout: 30000, stdio: 'pipe' });
+        parts.push(introPath);
       }
-      execSync(`ffmpeg -y -f lavfi -i color=c=white:s=${vw}x${vh}:d=${dur} -f lavfi -i anullsrc=r=44100:cl=stereo -vf "${vf}" -t ${dur} -c:v libx264 -preset ultrafast -pix_fmt yuv420p -c:a aac -shortest "${introPath}"`, { timeout: 30000, stdio: 'pipe' });
-      parts.push(introPath);
     }
 
     parts.push(mainPath);
@@ -63,16 +91,24 @@ router.post('/', upload.single('file'), async (req, res) => {
       const dur = outro_style === 'simple' ? 2 : 3;
       const sz = Math.min(48, Math.round(vw / 22));
       const thanks = outro_style === 'cta' ? '지금 전화주세요!' : '감사합니다';
-      let vf = `drawtext=text='${escapeFF(thanks)}':fontsize=${sz}${fontOpt}:fontcolor=0x333333:x=(w-text_w)/2:y=(h-text_h)/2-${Math.round(sz * 1.8)}`;
-      if (hospital_phone) vf += `,drawtext=text='${escapeFF(hospital_phone)}':fontsize=${Math.round(sz * 0.55)}${fontOpt}:fontcolor=0x555555:x=(w-text_w)/2:y=(h-text_h)/2`;
-      execSync(`ffmpeg -y -f lavfi -i color=c=white:s=${vw}x${vh}:d=${dur} -f lavfi -i anullsrc=r=44100:cl=stereo -vf "${vf}" -t ${dur} -c:v libx264 -preset ultrafast -pix_fmt yuv420p -c:a aac -shortest "${outroPath}"`, { timeout: 30000, stdio: 'pipe' });
-      parts.push(outroPath);
+      const thanksFile = writeDrawtextFile(workDir, 'outro-thanks.txt', thanks);
+      if (thanksFile) {
+        let vf = `drawtext=textfile='${thanksFile}':fontsize=${sz}${fontOpt}:fontcolor=0x333333:x=(w-text_w)/2:y=(h-text_h)/2-${Math.round(sz * 1.8)}`;
+        if (hospital_phone) {
+          const phoneFile = writeDrawtextFile(workDir, 'outro-phone.txt', hospital_phone);
+          if (phoneFile) {
+            vf += `,drawtext=textfile='${phoneFile}':fontsize=${Math.round(sz * 0.55)}${fontOpt}:fontcolor=0x555555:x=(w-text_w)/2:y=(h-text_h)/2`;
+          }
+        }
+        execSync(`ffmpeg -y -f lavfi -i color=c=white:s=${vw}x${vh}:d=${dur} -f lavfi -i anullsrc=r=44100:cl=stereo -vf "${vf}" -t ${dur} -c:v libx264 -preset ultrafast -pix_fmt yuv420p -c:a aac -shortest "${outroPath}"`, { timeout: 30000, stdio: 'pipe' });
+        parts.push(outroPath);
+      }
     }
 
     const outputPath = path.join(workDir, 'final.mp4');
     const concatList = path.join(workDir, 'concat.txt');
     fs.writeFileSync(concatList, parts.map(p => `file '${p}'`).join('\n'));
-    execSync(`ffmpeg -y -f concat -safe 0 -i "${concatList}" -c copy "${outputPath}"`, { timeout: 120000, stdio: 'pipe' });
+    execSync(`ffmpeg -y -f concat -safe 0 -protocol_whitelist file,pipe -i "${concatList}" -c copy "${outputPath}"`, { timeout: 120000, stdio: 'pipe' });
 
     res.setHeader('Content-Type', 'video/mp4');
     res.setHeader('X-Intro-Metadata', JSON.stringify({ intro_added: intro_style !== 'none', outro_added: outro_style !== 'none' }));

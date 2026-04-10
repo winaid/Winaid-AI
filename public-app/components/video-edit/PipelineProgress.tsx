@@ -1,6 +1,6 @@
 'use client';
 
-import { type PipelineState, STEP_LABELS, isStepDone, isStepSkipped } from './types';
+import { type PipelineState, STEP_LABELS, TOTAL_STEPS, isStepDone, isStepSkipped } from './types';
 
 interface AutoStepStatus {
   step: number;
@@ -16,7 +16,7 @@ interface Props {
 }
 
 export default function PipelineProgress({ state, stepStatuses, onCancel }: Props) {
-  const totalSteps = 6;
+  const totalSteps = TOTAL_STEPS;
   const doneCount = stepStatuses.filter(s => s.status === 'done' || s.status === 'skipped').length;
   const progressPct = Math.max(3, (doneCount / totalSteps) * 100);
   const currentStep = stepStatuses.find(s => s.status === 'processing');

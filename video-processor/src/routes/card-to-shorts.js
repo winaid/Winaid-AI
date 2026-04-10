@@ -127,7 +127,7 @@ router.post(
         );
         videoPath = path.join(workDir, 'merged.mp4');
         execSync(
-          `ffmpeg -y -f concat -safe 0 -i "${listPath}" -c copy "${videoPath}"`,
+          `ffmpeg -y -f concat -safe 0 -protocol_whitelist file,pipe -i "${listPath}" -c copy "${videoPath}"`,
           { timeout: 60000, stdio: 'pipe' },
         );
       } else {
@@ -163,7 +163,7 @@ router.post(
             );
             const fallbackPath = path.join(workDir, `merged_fb_${i}.mp4`);
             execSync(
-              `ffmpeg -y -f concat -safe 0 -i "${listPath}" -c copy "${fallbackPath}"`,
+              `ffmpeg -y -f concat -safe 0 -protocol_whitelist file,pipe -i "${listPath}" -c copy "${fallbackPath}"`,
               { timeout: 60000, stdio: 'pipe' },
             );
             videoPath = fallbackPath;

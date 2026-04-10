@@ -59,6 +59,8 @@ export async function POST(request: NextRequest) {
           max_new_tokens: 512, // ~10초. 1536=~30초
         },
       }),
+      // HF가 느려지면 Vercel 함수가 60초까지 hang하지 않도록 30초 타임아웃
+      signal: AbortSignal.timeout(30000),
     });
 
     if (!res.ok) {
