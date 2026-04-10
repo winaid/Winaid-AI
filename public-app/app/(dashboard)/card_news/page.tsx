@@ -23,14 +23,16 @@ import { consumeGuestCredit } from '../../../lib/guestCredits';
 import { overlayLogo } from '../../../lib/cardDownloadUtils';
 import { applyContentFilters } from '../../../lib/medicalLawFilter';
 
-function GeneratingTimer({ progress }: { progress: string }) {
-  const ESTIMATE = 90; // 예상 시간 90초
+function GeneratingTimer({ progress, slideCount = 6 }: { progress: string; slideCount?: number }) {
+  // 장수 기반 동적 추정치 — 4장≈50초, 6장≈70초, 8장≈90초, 10장≈110초 (30~120초 클램프)
+  const ESTIMATE = Math.max(30, Math.min(120, slideCount * 10 + 10));
   const [remaining, setRemaining] = useState(ESTIMATE);
   useEffect(() => {
     setRemaining(ESTIMATE);
     const id = setInterval(() => setRemaining(s => Math.max(0, s - 1)), 1000);
     return () => clearInterval(id);
-  }, []);
+    // ESTIMATE가 바뀌면 타이머 재시작
+  }, [ESTIMATE]);
   const min = Math.floor(remaining / 60);
   const sec = remaining % 60;
   const pct = Math.min(100, Math.round(((ESTIMATE - remaining) / ESTIMATE) * 100));
@@ -170,9 +172,14 @@ export default function CardNewsPage() {
   }, [pageStep, proSlides, proTheme, topic, hospitalName, proCardRatio]);
 
   const TOPIC_SUGGESTIONS: Record<string, string[]> = {
-    '치과': ['임플란트 사후관리', '치아미백 전후비교', '스케일링 중요성', '충치 예방 꿀팁', '잇몸 건강 체크리스트', '교정 장치 종류 비교', '사랑니 발치 가이드'],
-    '피부과': ['보톡스 Q&A', '여드름 관리법', '레이저 시술 비교', '자외선 차단 가이드', '피부 타입별 관리', '탈모 예방 습관', '주름 개선 시술'],
-    '정형외과': ['관절 건강 체크', '척추 자세 교정', '운동 부상 예방', '무릎 관절 Q&A', '어깨 통증 원인', '허리디스크 예방', '골다공증 예방법'],
+    '치과': ['임플란트 사후관리', '치아미백 전후비교', '스케일링 중요성', '충치 예방 꿀팁', '잇몸 건강 체크리스트', '교정 장치 종류 비교', '사랑니 발치 가이드', '치아보험 알아보기', '올바른 칫솔질법', '임플란트 vs 브릿지'],
+    '피부과': ['보톡스 Q&A', '여드름 관리법', '레이저 시술 비교', '자외선 차단 가이드', '피부 타입별 관리', '탈모 예방 습관', '주름 개선 시술', '모공 관리법', '기미 치료 가이드', '피부장벽 강화법'],
+    '정형외과': ['관절 건강 체크', '척추 자세 교정', '운동 부상 예방', '무릎 관절 Q&A', '어깨 통증 원인', '허리디스크 예방', '골다공증 예방법', '테니스엘보 관리', '오십견 체크리스트', '발목 염좌 대처법'],
+    '안과': ['노안 수술 종류', '라식 vs 라섹 비교', '드라이아이 관리법', '녹내장 조기 발견', '백내장 수술 Q&A', '눈 건강 습관 5가지', '콘택트렌즈 관리', '어린이 시력 검사 시기'],
+    '성형외과': ['코 성형 종류 비교', '눈 성형 전후 관리', '지방흡입 Q&A', '리프팅 시술 종류', '가슴 성형 체크리스트', '안면윤곽 수술 가이드', '쌍꺼풀 수술 주의사항'],
+    '한의원': ['체질별 건강관리', '침 치료 효과', '한방 다이어트', '산후 보약 가이드', '추나 치료 Q&A', '알레르기 한방 치료', '스트레스 한방 관리법'],
+    '산부인과': ['임신 초기 검사 리스트', '산전 검사 가이드', '자궁근종 Q&A', '갱년기 관리법', '피임 방법 비교', '난임 검사 시기', '출산 준비 체크리스트'],
+    '내과': ['건강검진 항목 가이드', '당뇨 관리 5단계', '고혈압 생활습관', '위내시경 준비사항', '갑상선 검사 Q&A', '간 건강 지키는 법', '예방접종 스케줄'],
   };
   const [topicSuggestions, setTopicSuggestions] = useState<string[]>(TOPIC_SUGGESTIONS['치과'].slice(0, 5));
   const [showDesignModal, setShowDesignModal] = useState(false);
@@ -1254,7 +1261,7 @@ DECORATIVE: (장식 요소)`,
             )}
           </div>
           {(isGenerating || isGeneratingPrompts || isGeneratingImages) && (
-            <GeneratingTimer progress={progress} />
+            <GeneratingTimer progress={progress} slideCount={proSlides.length || slideCount || 6} />
           )}
           {error && <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600 mb-4">{error}</div>}
           <div className="mb-4 bg-slate-50 rounded-xl border border-slate-200 px-4 py-3 flex items-center gap-3">

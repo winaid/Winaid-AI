@@ -117,6 +117,29 @@ export default function SlideEditor({
     onChange({ [field]: next });
   };
 
+  /** 필드 글자수 + 과다 입력 경고 렌더러 (title/subtitle/body 공통) */
+  const renderCharCount = (
+    field: 'title' | 'subtitle' | 'body',
+    value: string,
+  ) => {
+    const len = value.length;
+    const limit = field === 'title' ? 30 : field === 'subtitle' ? 20 : 100;
+    const warning =
+      field === 'body' ? '읽기 어려울 수 있음 — 줄이기 추천'
+      : '카드에서 잘릴 수 있음';
+    const over = len > limit;
+    return (
+      <div className="mt-0.5 px-0.5 flex items-center justify-end gap-1 text-[9px] leading-tight">
+        <span className={over ? 'text-orange-500 font-bold' : 'text-slate-400'}>
+          {len}자{over && ` / 권장 ${limit}자 이내`}
+        </span>
+        {over && (
+          <span className="text-orange-500">· {warning}</span>
+        )}
+      </div>
+    );
+  };
+
   /** 인라인 위반 배지 렌더러. 배지는 ElementAccordion 바깥에 두어 접혀 있어도 보이게 함. */
   const renderViolations = (
     field: 'title' | 'subtitle' | 'body',
@@ -756,6 +779,7 @@ ${JSON.stringify(slideForContext, null, 2)}
               fontSize={slide.bodyFontSize} fontColor={slide.bodyColor} lineHeight={slide.bodyLineHeight}
               onStyleChange={(key, val) => onChange({ [key]: val })} prefix="body" />
           </ElementAccordion>
+          {renderCharCount('body', slide.body || '')}
           {renderViolations('body', bodyViolations)}
         </>
       );
@@ -907,6 +931,7 @@ ${JSON.stringify(slideForContext, null, 2)}
               lineHeight={slide.titleLineHeight}
               onStyleChange={(key, val) => onChange({ [key]: val })} prefix="title" />
           </ElementAccordion>
+          {renderCharCount('title', slide.title || '')}
           {renderViolations('title', titleViolations)}
 
           {/* 텍스트 정렬 */}
@@ -970,6 +995,7 @@ ${JSON.stringify(slideForContext, null, 2)}
               lineHeight={slide.subtitleLineHeight}
               onStyleChange={(key, val) => onChange({ [key]: val })} prefix="subtitle" />
           </ElementAccordion>
+          {renderCharCount('subtitle', slide.subtitle || '')}
           {renderViolations('subtitle', subtitleViolations)}
 
           {/* 레이아웃별 데이터 */}

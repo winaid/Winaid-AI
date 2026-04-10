@@ -300,17 +300,10 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
     else if (editingIdx !== null && editingIdx > idx) setEditingIdx(editingIdx - 1);
   };
 
-  /** 드래그앤드롭 순서 변경 */
-  const handleDragStart = (idx: number) => { setDragIdx(idx); };
-  const handleDragOver = (e: React.DragEvent, idx: number) => {
-    e.preventDefault();
-    if (dragIdx === null || dragIdx === idx) return;
-    setDragOverIdx(idx);
-  };
-  const handleDrop = (idx: number) => {
-    if (dragIdx === null || dragIdx === idx) { setDragIdx(null); setDragOverIdx(null); return; }
-    const from = dragIdx;
-    const to = idx;
+  /** 슬라이드 순서 이동 (드래그앤드롭 + 모바일 ↑↓ 버튼 공통 사용) */
+  const moveSlide = (from: number, to: number) => {
+    if (from === to) return;
+    if (to < 0 || to >= slides.length) return;
     const newSlides = [...slides];
     const [moved] = newSlides.splice(from, 1);
     newSlides.splice(to, 0, moved);
@@ -321,13 +314,23 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
         setEditingIdx(to);
       } else {
         let newIdx = editingIdx;
-        // from이 editingIdx 앞이었으면 제거로 -1
         if (from < editingIdx) newIdx--;
-        // to가 newIdx 이하이면 삽입으로 +1
         if (to <= newIdx) newIdx++;
         setEditingIdx(newIdx);
       }
     }
+  };
+
+  /** 드래그앤드롭 순서 변경 */
+  const handleDragStart = (idx: number) => { setDragIdx(idx); };
+  const handleDragOver = (e: React.DragEvent, idx: number) => {
+    e.preventDefault();
+    if (dragIdx === null || dragIdx === idx) return;
+    setDragOverIdx(idx);
+  };
+  const handleDrop = (idx: number) => {
+    if (dragIdx === null || dragIdx === idx) { setDragIdx(null); setDragOverIdx(null); return; }
+    moveSlide(dragIdx, idx);
     setDragIdx(null); setDragOverIdx(null);
   };
   const handleDragEnd = () => { setDragIdx(null); setDragOverIdx(null); };
@@ -900,15 +903,37 @@ JSON만 출력:
                 className="group relative overflow-hidden rounded-t-xl bg-slate-100"
                 style={{ width: '100%', aspectRatio: cardAspect }}
               >
-                {/* 라벨 (드래그 핸들) */}
-                <div
-                  className="absolute top-2 left-2 z-20 px-2 py-0.5 rounded-full bg-black/60 text-white text-[10px] font-bold backdrop-blur-sm cursor-grab active:cursor-grabbing"
-                  draggable={!isEditing}
-                  onDragStart={(e) => { e.stopPropagation(); handleDragStart(idx); }}
-                  onDragEnd={handleDragEnd}
-                  title="드래그하여 순서 변경"
-                >
-                  ⠿ {idx + 1} · {LAYOUT_LABELS[slide.layout]}
+                {/* 라벨 (드래그 핸들) + 모바일 ↑↓ 순서 변경 */}
+                <div className="absolute top-2 left-2 z-20 flex items-center gap-1">
+                  <div
+                    className="px-2 py-0.5 rounded-full bg-black/60 text-white text-[10px] font-bold backdrop-blur-sm cursor-grab active:cursor-grabbing"
+                    draggable={!isEditing}
+                    onDragStart={(e) => { e.stopPropagation(); handleDragStart(idx); }}
+                    onDragEnd={handleDragEnd}
+                    title="드래그하여 순서 변경"
+                  >
+                    ⠿ {idx + 1} · {LAYOUT_LABELS[slide.layout]}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => moveSlide(idx, idx - 1)}
+                    disabled={idx === 0}
+                    className="w-5 h-5 flex items-center justify-center bg-black/60 text-white rounded-full text-[8px] font-bold disabled:opacity-30 hover:bg-black/80 lg:hidden"
+                    title="위로 이동"
+                    aria-label="위로 이동"
+                  >
+                    ▲
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => moveSlide(idx, idx + 1)}
+                    disabled={idx === slides.length - 1}
+                    className="w-5 h-5 flex items-center justify-center bg-black/60 text-white rounded-full text-[8px] font-bold disabled:opacity-30 hover:bg-black/80 lg:hidden"
+                    title="아래로 이동"
+                    aria-label="아래로 이동"
+                  >
+                    ▼
+                  </button>
                 </div>
                 {/* 버튼 그룹 — PNG + 복제 + 삭제 */}
                 <div className="absolute top-2 right-2 z-20 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -946,6 +971,23 @@ JSON만 출력:
                 >
                   {renderSlide(slide)}
                 </div>
+                {/* 이미지 실패 오버레이 — 이미지가 기대되는 슬라이드(imagePosition 설정됨)인데 URL이 없을 때 */}
+                {!slide.imageUrl && slide.imagePosition && (
+                  <div className="absolute inset-0 border-2 border-dashed border-red-300 rounded-t-xl flex items-center justify-center bg-red-50/70 backdrop-blur-[1px] z-30">
+                    <div className="text-center px-4">
+                      <span className="text-2xl" aria-hidden="true">🖼️</span>
+                      <p className="text-xs text-red-500 font-bold mt-1">이미지 생성 실패</p>
+                      <button
+                        type="button"
+                        onClick={() => handleGenerateSlideImage(idx)}
+                        disabled={generatingImageIdx === idx}
+                        className="mt-2 text-[10px] px-3 py-1 bg-red-500 text-white rounded-full hover:bg-red-600 disabled:opacity-60 font-bold"
+                      >
+                        {generatingImageIdx === idx ? '생성 중...' : '🔄 다시 생성'}
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* 편집 툴바 — 레이아웃 드롭다운 + 편집 토글 */}
