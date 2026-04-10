@@ -14,6 +14,7 @@ import StepIntroOutro from '../../../components/video-edit/StepIntroOutro';
 import StepThumbnail from '../../../components/video-edit/StepThumbnail';
 import CompletionScreen from '../../../components/video-edit/CompletionScreen';
 import VideoPlayer from '../../../components/video-edit/VideoPlayer';
+import RecentVideos from '../../../components/video-edit/RecentVideos';
 import PipelineProgress, { type AutoStepStatus } from '../../../components/video-edit/PipelineProgress';
 import StepStyle from '../../../components/video-edit/StepStyle';
 import {
@@ -676,10 +677,13 @@ export default function VideoEditPage() {
 
       {/* ══════ 진입점 모드 선택 ══════ */}
       {entryMode === 'select' && (
-        <ModeSelector
-          onSelectVideo={() => setEntryMode('video')}
-          onSelectAi={() => setEntryMode('ai')}
-        />
+        <>
+          <ModeSelector
+            onSelectVideo={() => setEntryMode('video')}
+            onSelectAi={() => setEntryMode('ai')}
+          />
+          <RecentVideos />
+        </>
       )}
 
       {/* ══════ AI 쇼츠 생성기 ══════ */}

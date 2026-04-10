@@ -7,6 +7,7 @@ import { buildLayoutDefaults, fillLayoutContent, generateSlideImage, suggestSlid
 import type { CardTemplate } from '../lib/cardTemplateService';
 import { ensureGoogleFontLoaded, resolveSlideFontFamily } from '../lib/cardStyleUtils';
 import { downloadCardAsPng, downloadAllAsZip, captureAllSlidesAsBlobs } from '../lib/cardDownloadUtils';
+import { saveVideoToStorage, generateVideoFileName } from '../lib/videoStorage';
 import CardNewsCanvas from './CardNewsCanvas';
 import SlideEditor from './card-news/SlideEditor';
 import InteractivePreview from './card-news/InteractivePreview';
@@ -497,6 +498,21 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
       setShortsResultUrl(url);
       setShortsMeta(meta);
       setShortsProgress('');
+
+      // 5) 백그라운드로 클라우드 저장 — 실패해도 결과 표시는 그대로
+      // (게스트/Supabase 미설정 시 null 반환, 사용자에겐 영향 없음)
+      saveVideoToStorage(blob, {
+        fileName: generateVideoFileName('card_to_shorts', slides[0]?.title),
+        type: 'card_to_shorts',
+        duration: meta?.duration || 0,
+        metadata: {
+          slides: slides.length,
+          transition: shortsOpts.transition,
+          bgm_mood: shortsOpts.bgmEnabled ? shortsOpts.bgmMood : null,
+          bgm_volume: shortsOpts.bgmEnabled ? shortsOpts.bgmVolume : 0,
+          slide_duration_mode: shortsOpts.durationMode,
+        },
+      }).catch(() => {});
     } catch (err) {
       setShortsError(err instanceof Error ? err.message : '쇼츠 변환 실패');
     } finally {

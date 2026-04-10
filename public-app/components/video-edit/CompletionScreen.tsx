@@ -1,10 +1,12 @@
 'use client';
 
+import { useEffect, useRef, useState } from 'react';
 import {
   type PipelineState, STEP_LABELS,
   isStepDone, isStepSkipped, getInputForStep,
 } from './types';
 import { downloadSrt, type SrtSegment } from '../../lib/srtUtils';
+import { saveVideoToStorage, generateVideoFileName } from '../../lib/videoStorage';
 import VideoPlayer from './VideoPlayer';
 
 interface Props {
@@ -20,6 +22,61 @@ export default function CompletionScreen({ state, onGoStep, onReset }: Props) {
   // 통계 수집
   const stats = buildStats(state);
 
+  // 클라우드 저장 — Supabase에 영구 저장된 URL (없으면 null = blob URL fallback)
+  const [savedUrl, setSavedUrl] = useState<string | null>(null);
+  const [savingStatus, setSavingStatus] = useState<'idle' | 'saving' | 'saved' | 'failed'>('idle');
+  const savedForUrlRef = useRef<string | null>(null); // 같은 URL 중복 저장 방지
+
+  // 마운트 시 자동 저장 (백그라운드, 실패해도 다운로드는 blob URL로 가능)
+  useEffect(() => {
+    if (!finalUrl) return;
+    if (savedForUrlRef.current === finalUrl) return;
+    savedForUrlRef.current = finalUrl;
+
+    let cancelled = false;
+    setSavingStatus('saving');
+    (async () => {
+      try {
+        const blob = await fetch(finalUrl).then(r => r.blob());
+        if (cancelled) return;
+
+        const subCount = state.step4_subtitle.subtitles?.length || 0;
+        const fxCount = state.step5_effects.effects?.length || 0;
+        const finalDuration = state.step3_silence.resultDuration || state.fileInfo?.duration || 0;
+
+        const saved = await saveVideoToStorage(blob, {
+          fileName: generateVideoFileName('pipeline', state.fileInfo?.name?.replace(/\.[^.]+$/, '')),
+          type: 'pipeline',
+          duration: finalDuration,
+          metadata: {
+            subtitle_count: subCount,
+            effects_count: fxCount,
+            bgm_mood: state.step7_bgm.mood,
+            style: state.step2_style.styleId,
+            crop_mode: state.step1_crop.mode,
+            silence_intensity: state.step3_silence.intensity,
+          },
+        });
+        if (cancelled) return;
+
+        if (saved) {
+          setSavedUrl(saved.file_url);
+          setSavingStatus('saved');
+        } else {
+          // 게스트 또는 Supabase 미설정 — 정상 케이스. blob URL fallback.
+          setSavingStatus('idle');
+        }
+      } catch (err) {
+        console.warn('[CompletionScreen] 영상 저장 실패:', err);
+        if (!cancelled) setSavingStatus('failed');
+      }
+    })();
+
+    return () => { cancelled = true; };
+    // state는 통째로 deps하면 patch마다 재실행됨 → finalUrl만 추적
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [finalUrl]);
+
   // SRT 다운로드
   const handleSrtDownload = () => {
     const subs = state.step4_subtitle.subtitles;
@@ -28,12 +85,13 @@ export default function CompletionScreen({ state, onGoStep, onReset }: Props) {
     downloadSrt(segs, state.fileInfo?.name.replace(/\.[^.]+$/, '') || 'subtitles');
   };
 
-  // 영상 다운로드
+  // 영상 다운로드 — 클라우드 URL 우선 (영구), 없으면 blob URL
   const handleDownload = () => {
-    if (!finalUrl) return;
+    const url = savedUrl || finalUrl;
+    if (!url) return;
     const a = document.createElement('a');
-    a.href = finalUrl;
-    a.download = `shorts_${state.fileInfo?.name || 'output.mp4'}`;
+    a.href = url;
+    a.download = generateVideoFileName('pipeline', state.fileInfo?.name?.replace(/\.[^.]+$/, ''));
     a.click();
   };
 
@@ -48,11 +106,11 @@ export default function CompletionScreen({ state, onGoStep, onReset }: Props) {
 
       {/* 메인: 미리보기 + 요약 */}
       <div className="flex gap-5 flex-col sm:flex-row">
-        {/* 좌: 세로 영상 플레이어 */}
-        {finalUrl && (
+        {/* 좌: 세로 영상 플레이어 — 클라우드 URL 있으면 우선 (영구) */}
+        {(savedUrl || finalUrl) && (
           <div className="flex-shrink-0 mx-auto sm:mx-0" style={{ width: '220px' }}>
             <VideoPlayer
-              src={finalUrl}
+              src={savedUrl || finalUrl}
               aspectRatio="9/16"
               className="shadow-xl"
             />
@@ -103,16 +161,29 @@ export default function CompletionScreen({ state, onGoStep, onReset }: Props) {
       </div>
 
       {/* 다운로드 버튼 */}
-      <div className="flex gap-3 flex-wrap">
-        <button type="button" onClick={handleDownload} disabled={!finalUrl}
-          className="flex-1 py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black rounded-xl hover:from-blue-700 hover:to-indigo-700 disabled:opacity-40 transition-all text-sm shadow-lg shadow-blue-200 flex items-center justify-center gap-2">
-          📥 영상 다운로드
-        </button>
-        {state.step4_subtitle.subtitles && state.step4_subtitle.subtitles.length > 0 && (
-          <button type="button" onClick={handleSrtDownload}
-            className="px-5 py-3.5 bg-slate-100 text-slate-700 font-bold rounded-xl hover:bg-slate-200 transition-all text-sm">
-            📥 SRT
+      <div className="space-y-2">
+        <div className="flex gap-3 flex-wrap">
+          <button type="button" onClick={handleDownload} disabled={!finalUrl}
+            className="flex-1 py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black rounded-xl hover:from-blue-700 hover:to-indigo-700 disabled:opacity-40 transition-all text-sm shadow-lg shadow-blue-200 flex items-center justify-center gap-2">
+            📥 영상 다운로드
+            {savedUrl && <span className="text-[10px] font-bold opacity-80">(클라우드)</span>}
           </button>
+          {state.step4_subtitle.subtitles && state.step4_subtitle.subtitles.length > 0 && (
+            <button type="button" onClick={handleSrtDownload}
+              className="px-5 py-3.5 bg-slate-100 text-slate-700 font-bold rounded-xl hover:bg-slate-200 transition-all text-sm">
+              📥 SRT
+            </button>
+          )}
+        </div>
+        {/* 저장 상태 — 작게 안내 */}
+        {savingStatus === 'saving' && (
+          <div className="text-[10px] text-slate-400 text-center">☁️ 클라우드에 저장 중...</div>
+        )}
+        {savingStatus === 'saved' && (
+          <div className="text-[10px] text-emerald-600 text-center">✅ 7일간 보관 — 새로고침해도 다운로드 가능</div>
+        )}
+        {savingStatus === 'failed' && (
+          <div className="text-[10px] text-amber-600 text-center">⚠️ 클라우드 저장 실패 — 지금 다운로드해 두세요 (새로고침하면 사라집니다)</div>
         )}
       </div>
 
