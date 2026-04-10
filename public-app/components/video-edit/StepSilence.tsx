@@ -2,6 +2,16 @@
 
 import type { PipelineState, StepSilenceState, SilenceIntensity } from './types';
 import VideoPlayer from './VideoPlayer';
+import WaveformBar from './WaveformBar';
+import { useInputBlobUrl } from '../../hooks/usePipelineInput';
+
+// 강도별 무음 임계값 — 사용자가 강도를 바꿀 때 파형의 빨간 영역도 미리 변함
+const SILENCE_THRESHOLD_BY_INTENSITY: Record<SilenceIntensity, number> = {
+  soft: 0.04,
+  normal: 0.03,
+  tight: 0.02,
+  skip: 0.03,
+};
 
 const INTENSITY_OPTIONS: { id: SilenceIntensity; label: string; desc: string }[] = [
   { id: 'soft', label: '부드럽게', desc: '자연스러운 호흡 유지' },
@@ -23,6 +33,8 @@ interface Props {
 export default function StepSilence({ state, onUpdate, onProcess, onNext, onPrev, isProcessing, progress }: Props) {
   const { step3_silence: silence } = state;
   const hasResult = !!silence.resultBlobUrl || silence.intensity === 'skip' || !silence.enabled;
+  // 처리 전 원본 파형용 — step3 입력은 step1(crop) → step2(style) 결과 또는 원본
+  const inputBlobUrl = useInputBlobUrl(state, 3);
 
   return (
     <div className="space-y-6">
@@ -37,6 +49,17 @@ export default function StepSilence({ state, onUpdate, onProcess, onNext, onPrev
 
           {/* 미리보기 */}
           <VideoPlayer src={silence.resultBlobUrl} compact />
+
+          {/* 결과 파형 (초록) */}
+          <div>
+            <p className="text-[10px] text-slate-500 mb-1">결과 파형 — 무음이 제거되어 빨간 구간이 거의 없음</p>
+            <WaveformBar
+              src={silence.resultBlobUrl}
+              height={48}
+              color="#10B981"
+              silenceColor="#FCA5A5"
+            />
+          </div>
 
           {/* 통계 */}
           {silence.originalDuration !== undefined && silence.resultDuration !== undefined && (
@@ -70,6 +93,23 @@ export default function StepSilence({ state, onUpdate, onProcess, onNext, onPrev
       {/* 옵션 */}
       {!hasResult && (
         <div className="space-y-3">
+          {/* 원본 파형 — 강도에 따라 빨간 영역(무음 후보) 미리보기 */}
+          {inputBlobUrl && (
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-[10px] text-slate-500">원본 파형</p>
+                <p className="text-[10px] text-red-500">빨간색 = 잘릴 무음 구간</p>
+              </div>
+              <WaveformBar
+                src={inputBlobUrl}
+                silenceThreshold={SILENCE_THRESHOLD_BY_INTENSITY[silence.intensity]}
+                height={56}
+                color="#3B82F6"
+                silenceColor="#FCA5A5"
+              />
+            </div>
+          )}
+
           <label className="block text-xs font-semibold text-slate-500">편집 강도</label>
           <div className="grid grid-cols-2 gap-3">
             {INTENSITY_OPTIONS.map(opt => (

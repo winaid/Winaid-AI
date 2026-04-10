@@ -12,34 +12,9 @@ import SubtitleTimeline, {
   type ReadSpeedHint,
 } from './SubtitleTimeline';
 import VideoPlayer, { type VideoPlayerHandle } from './VideoPlayer';
+import WaveformBar, { type WaveformRegion } from './WaveformBar';
 import type { PipelineState, StepSubtitleState, SubtitleStyle, SubtitlePosition, SubtitleSegment } from './types';
-import { getInputForStep } from './types';
-
-/**
- * 자막 단계의 입력 영상 URL을 안정적으로 만든다.
- * - getInputForStep이 string(blob URL)을 반환하면 그대로 사용
- * - File을 반환하면 URL.createObjectURL로 변환하고 cleanup
- * - 입력 없으면 null
- */
-function useInputBlobUrl(state: PipelineState, stepNum: number): string | null {
-  const input = useMemo(() => getInputForStep(state, stepNum), [state, stepNum]);
-  const [url, setUrl] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (typeof input === 'string') {
-      setUrl(input);
-      return;
-    }
-    if (input instanceof File) {
-      const u = URL.createObjectURL(input);
-      setUrl(u);
-      return () => URL.revokeObjectURL(u);
-    }
-    setUrl(null);
-  }, [input]);
-
-  return url;
-}
+import { useInputBlobUrl } from '../../hooks/usePipelineInput';
 
 const STYLE_OPTIONS: { id: SubtitleStyle; label: string; desc: string }[] = [
   { id: 'basic', label: '기본', desc: '깔끔한 하단 자막' },
@@ -393,6 +368,34 @@ function SubtitleEditor({ subtitles, onChange, medicalCheck, onDownloadSrt, vide
 
   const activeSubtitle = activeSubtitleIndex >= 0 ? subtitles[activeSubtitleIndex] : null;
 
+  // ── 파형 위 자막 구간 오버레이 (위반 색 우선) ──
+  const waveformRegions = useMemo<WaveformRegion[]>(() => {
+    return subtitles.map((sub, i) => {
+      const hasHigh = sub.violations?.some(v => v.severity === 'high');
+      const hasMed = sub.violations?.some(v => v.severity === 'medium');
+      const baseColor = hasHigh
+        ? 'rgba(239, 68, 68, 0.15)'    // red-500/15
+        : hasMed
+        ? 'rgba(234, 179, 8, 0.15)'    // yellow-500/15
+        : 'rgba(59, 130, 246, 0.15)';  // blue-500/15
+      return {
+        start: sub.start_time,
+        end: sub.end_time,
+        color: baseColor,
+        active: i === activeSubtitleIndex,
+        label: `#${i + 1}`,
+      };
+    });
+  }, [subtitles, activeSubtitleIndex]);
+
+  // 파형 클릭 → 영상 점프
+  const handleWaveformSeek = useCallback((time: number) => {
+    if (playerRef.current) {
+      playerRef.current.seekTo(time);
+    }
+    setPlayTime(time);
+  }, []);
+
   // 사용자 스크롤(휠/터치) 감지 — 자동 스크롤 일시 중지 (3초)
   // onScroll은 자동 스크롤도 트리거하므로 wheel/touchmove로만 감지
   const handleUserScroll = useCallback(() => {
@@ -592,6 +595,21 @@ function SubtitleEditor({ subtitles, onChange, medicalCheck, onDownloadSrt, vide
           </button>
         </div>
       </div>
+
+      {/* 파형 — 가로 폭 전체, 자막 구간 오버레이 + 클릭 시 영상 점프 */}
+      {videoSrc && (
+        <div className="px-3 pt-3 border-b border-slate-100 bg-white">
+          <WaveformBar
+            src={videoSrc}
+            duration={totalDuration}
+            playTime={playTime}
+            onSeek={handleWaveformSeek}
+            regions={waveformRegions}
+            height={56}
+            showTimeline={false}
+          />
+        </div>
+      )}
 
       {/* 2컬럼: 영상 플레이어 + 편집 영역 (모바일은 1컬럼) */}
       <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr]">
