@@ -1,8 +1,16 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { validateMedicalAd, countViolations } from '../../lib/medicalAdValidation';
 import { downloadSrt, type SrtSegment } from '../../lib/srtUtils';
+import SubtitleTimeline, {
+  validateSubtitleTimes,
+  checkReadSpeed,
+  autoFixOverlaps,
+  TimeWarnings,
+  ReadSpeedBadge,
+  type ReadSpeedHint,
+} from './SubtitleTimeline';
 import type { PipelineState, StepSubtitleState, SubtitleStyle, SubtitlePosition, SubtitleSegment } from './types';
 
 const STYLE_OPTIONS: { id: SubtitleStyle; label: string; desc: string }[] = [
@@ -95,6 +103,7 @@ export default function StepSubtitle({ state, onUpdate, onProcess, onNext, onPre
             onChange={handleSubtitlesChange}
             medicalCheck={sub.medicalCheck}
             onDownloadSrt={handleDownloadSrt}
+            videoDuration={state.fileInfo?.duration}
           />
         </div>
       )}
@@ -192,13 +201,59 @@ interface SubtitleEditorProps {
   onChange: (next: SubtitleSegment[]) => void;
   medicalCheck: boolean;
   onDownloadSrt: () => void;
+  videoDuration?: number;
 }
 
-function SubtitleEditor({ subtitles, onChange, medicalCheck, onDownloadSrt }: SubtitleEditorProps) {
+function SubtitleEditor({ subtitles, onChange, medicalCheck, onDownloadSrt, videoDuration }: SubtitleEditorProps) {
   const editor = useSubtitleEditor(subtitles, onChange, medicalCheck);
-  const { splitSubtitle, mergeWithPrev, mergeWithNext, deleteSubtitle, updateText, updateTime, undo, canUndo } = editor;
+  const {
+    splitSubtitle,
+    mergeWithPrev,
+    mergeWithNext,
+    deleteSubtitle,
+    updateText,
+    updateTime,
+    moveBlock,
+    applyAutoFixOverlaps,
+    undo,
+    canUndo,
+  } = editor;
   const textareaRefs = useRef<(HTMLTextAreaElement | null)[]>([]);
+  const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+
+  // ── 검증 + 읽기속도 (서브타이틀 변경 시마다 재계산) ──
+  const warnings = useMemo(() => validateSubtitleTimes(subtitles), [subtitles]);
+  const readSpeeds = useMemo(() => checkReadSpeed(subtitles), [subtitles]);
+
+  // ── 타임라인 총 길이: 영상 메타데이터 우선, 없으면 마지막 자막 끝 + 1초 ──
+  const totalDuration = useMemo(() => {
+    if (videoDuration && videoDuration > 0) return videoDuration;
+    if (subtitles.length === 0) return 1;
+    const lastEnd = subtitles[subtitles.length - 1].end_time;
+    return Math.max(lastEnd + 1, 1);
+  }, [videoDuration, subtitles]);
+
+  // 선택된 인덱스가 범위 밖이면 정리 (삭제/병합 후 stale 방지)
+  useEffect(() => {
+    if (selectedIndex !== null && selectedIndex >= subtitles.length) {
+      setSelectedIndex(subtitles.length > 0 ? subtitles.length - 1 : null);
+    }
+  }, [selectedIndex, subtitles.length]);
+
+  // 타임라인에서 블록 클릭 → 해당 자막 카드로 스크롤
+  const handleSelect = useCallback((idx: number) => {
+    setSelectedIndex(idx);
+    const el = itemRefs.current[idx];
+    if (el && typeof el.scrollIntoView === 'function') {
+      el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }, []);
+
+  const registerItemRef = useCallback((idx: number, el: HTMLDivElement | null) => {
+    itemRefs.current[idx] = el;
+  }, []);
 
   const registerRef = useCallback((idx: number, el: HTMLTextAreaElement | null) => {
     textareaRefs.current[idx] = el;
@@ -303,6 +358,20 @@ function SubtitleEditor({ subtitles, onChange, medicalCheck, onDownloadSrt }: Su
         </div>
       </div>
 
+      {/* 시각적 타임라인 + 경고 (목록 위) */}
+      <div className="px-3 pt-3">
+        <SubtitleTimeline
+          subtitles={subtitles}
+          totalDuration={totalDuration}
+          selectedIndex={selectedIndex}
+          readSpeeds={readSpeeds}
+          onSelect={handleSelect}
+          onTimeChange={updateTime}
+          onBlockMove={moveBlock}
+        />
+        <TimeWarnings warnings={warnings} onAutoFixOverlaps={applyAutoFixOverlaps} />
+      </div>
+
       {/* 자막 목록 */}
       <div className="max-h-[500px] overflow-y-auto p-3 space-y-2 bg-slate-50/40">
         {subtitles.map((seg, idx) => (
@@ -311,11 +380,15 @@ function SubtitleEditor({ subtitles, onChange, medicalCheck, onDownloadSrt }: Su
             subtitle={seg}
             index={idx}
             totalCount={subtitles.length}
+            isSelected={selectedIndex === idx}
+            readSpeed={readSpeeds[idx]}
+            onSelect={setSelectedIndex}
             onUpdateText={updateText}
             onUpdateTime={updateTime}
             onDelete={deleteSubtitle}
             onKeyDown={handleKeyDown}
             registerRef={registerRef}
+            registerItemRef={registerItemRef}
           />
         ))}
       </div>
@@ -331,28 +404,41 @@ interface SubtitleItemProps {
   subtitle: SubtitleSegment;
   index: number;
   totalCount: number;
+  isSelected: boolean;
+  readSpeed: ReadSpeedHint | undefined;
+  onSelect: (idx: number) => void;
   onUpdateText: (idx: number, text: string) => void;
   onUpdateTime: (idx: number, field: 'start_time' | 'end_time', value: number) => void;
   onDelete: (idx: number) => void;
   onKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>, idx: number) => void;
   registerRef: (idx: number, el: HTMLTextAreaElement | null) => void;
+  registerItemRef: (idx: number, el: HTMLDivElement | null) => void;
 }
 
 function SubtitleItem({
-  subtitle, index, totalCount,
-  onUpdateText, onUpdateTime, onDelete,
-  onKeyDown, registerRef,
+  subtitle, index, totalCount, isSelected, readSpeed,
+  onSelect, onUpdateText, onUpdateTime, onDelete,
+  onKeyDown, registerRef, registerItemRef,
 }: SubtitleItemProps) {
   const hasHigh = subtitle.violations?.some(v => v.severity === 'high');
   const hasMed = subtitle.violations?.some(v => v.severity === 'medium');
   const duration = Math.max(0, subtitle.end_time - subtitle.start_time);
 
+  // 선택 시 파란 링 우선, 그 외엔 위반 색
+  const cardClass = isSelected
+    ? 'bg-white border-blue-400 ring-2 ring-blue-200'
+    : hasHigh
+    ? 'bg-red-50/70 border-red-200'
+    : hasMed
+    ? 'bg-amber-50/70 border-amber-200'
+    : 'bg-white border-slate-200 hover:border-blue-300';
+
   return (
-    <div className={`rounded-xl p-2.5 border transition-colors ${
-      hasHigh ? 'bg-red-50/70 border-red-200'
-      : hasMed ? 'bg-amber-50/70 border-amber-200'
-      : 'bg-white border-slate-200 hover:border-blue-300'
-    }`}>
+    <div
+      ref={el => registerItemRef(index, el)}
+      onClick={() => onSelect(index)}
+      className={`rounded-xl p-2.5 border transition-colors cursor-pointer ${cardClass}`}
+    >
       {/* 헤더: 번호 + 시간 + 삭제 */}
       <div className="flex items-center justify-between mb-1.5 gap-1.5">
         <div className="flex items-center gap-1.5 text-[10px] text-slate-500 min-w-0 flex-wrap">
@@ -362,7 +448,7 @@ function SubtitleItem({
           <TimeInput value={subtitle.end_time} onChange={v => onUpdateTime(index, 'end_time', v)} />
           <span className="text-slate-400 shrink-0">({duration.toFixed(1)}초)</span>
         </div>
-        <button type="button" onClick={() => onDelete(index)} disabled={totalCount <= 1}
+        <button type="button" onClick={(e) => { e.stopPropagation(); onDelete(index); }} disabled={totalCount <= 1}
           className="text-slate-300 hover:text-red-500 disabled:opacity-30 disabled:hover:text-slate-300 px-1 text-xs shrink-0"
           title="자막 삭제">
           🗑
@@ -375,10 +461,15 @@ function SubtitleItem({
         value={subtitle.text}
         onChange={e => onUpdateText(index, e.target.value)}
         onKeyDown={e => onKeyDown(e, index)}
+        onFocus={() => onSelect(index)}
+        onClick={e => e.stopPropagation()}
         rows={2}
         className="w-full px-2 py-1.5 text-xs text-slate-800 bg-white border border-slate-200 rounded-lg focus:border-blue-400 focus:ring-1 focus:ring-blue-200 outline-none resize-none leading-snug font-sans"
         placeholder="자막 텍스트..."
       />
+
+      {/* 읽기속도 뱃지 (ok가 아닐 때만) */}
+      {readSpeed && <ReadSpeedBadge hint={readSpeed} />}
 
       {/* 의료광고법 위반 뱃지 */}
       {subtitle.violations && subtitle.violations.length > 0 && (
@@ -646,6 +737,45 @@ function useSubtitleEditor(
     onChangeRef.current(next);
   }, [saveHistory]);
 
+  // ── 블록 전체 이동 ── (타임라인 가운데 드래그 시 호출. 인접 자막 자동 밀어내기)
+  const moveBlock = useCallback((idx: number, newStart: number) => {
+    const cur = subtitlesRef.current;
+    if (!cur || !cur[idx]) return;
+    saveHistory();
+    const next = cur.map(s => ({ ...s }));
+    const target = next[idx];
+    const duration = target.end_time - target.start_time;
+    const snap = (t: number) => Math.round(t * 10) / 10;
+
+    target.start_time = snap(Math.max(0, newStart));
+    target.end_time = snap(target.start_time + duration);
+
+    // 이전 자막의 끝이 새 시작보다 크면 끝값을 새 시작으로 클램프
+    if (idx > 0 && next[idx - 1].end_time > target.start_time) {
+      next[idx - 1].end_time = target.start_time;
+      // 그래서 이전 자막이 역전되면 같은 시간대로 만들고 둠 (UI 경고로 사용자에게 알림)
+      if (next[idx - 1].start_time > next[idx - 1].end_time) {
+        next[idx - 1].start_time = next[idx - 1].end_time;
+      }
+    }
+    // 다음 자막의 시작이 새 끝보다 작으면 시작값을 새 끝으로 클램프
+    if (idx < next.length - 1 && next[idx + 1].start_time < target.end_time) {
+      next[idx + 1].start_time = target.end_time;
+      if (next[idx + 1].end_time < next[idx + 1].start_time) {
+        next[idx + 1].end_time = next[idx + 1].start_time;
+      }
+    }
+    onChangeRef.current(next);
+  }, [saveHistory]);
+
+  // ── 겹침 자동 수정 ── (TimeWarnings의 "겹침 자동 수정" 버튼이 호출)
+  const applyAutoFixOverlaps = useCallback(() => {
+    const cur = subtitlesRef.current;
+    if (!cur) return;
+    saveHistory();
+    onChangeRef.current(autoFixOverlaps(cur));
+  }, [saveHistory]);
+
   // ── 되돌리기 ──
   const undo = useCallback(() => {
     setHistory(prev => {
@@ -663,6 +793,8 @@ function useSubtitleEditor(
     deleteSubtitle,
     updateText,
     updateTime,
+    moveBlock,
+    applyAutoFixOverlaps,
     undo,
     canUndo: history.length > 0,
   };
