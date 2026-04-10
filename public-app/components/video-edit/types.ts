@@ -76,6 +76,10 @@ export interface StepSilenceState {
 
 // ── 자막/효과음 공용 타입 ──
 export interface SubtitleSegment {
+  /** React key용 안정 ID — 분할/병합 시 key 충돌 방지 (optional: 기존 데이터 호환) */
+  id?: string;
+  /** 현재 배열 내 순번 — 분할/병합 후 reindex로 갱신 (optional: 기존 데이터 호환) */
+  index?: number;
   start_time: number;
   end_time: number;
   text: string;
