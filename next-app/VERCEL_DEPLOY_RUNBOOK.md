@@ -1,4 +1,9 @@
-# Vercel 배포 런북
+# Vercel 배포 런북 (next-app 내부 도구용)
+
+> ⚠️ **이 런북은 `next-app`(내부 운영 도구) 전용이며 일부 내용은 오래되었습니다.**
+> 고객이 쓰는 외부 앱 배포는 [`public-app/README.md`](../public-app/README.md)와
+> [루트 README의 "배포" 섹션](../README.md#배포)을 참고하세요.
+> 전체 아키텍처 변경사항은 [루트 CHANGELOG.md](../CHANGELOG.md) 참고.
 
 ## 월요일 실행 순서 (요약)
 

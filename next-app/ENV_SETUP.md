@@ -1,4 +1,11 @@
-# 환경변수 세팅 가이드
+# 환경변수 세팅 가이드 (next-app 내부 도구용)
+
+> ⚠️ **이 문서는 `next-app` 전용입니다.**
+> 고객이 쓰는 외부 앱의 환경변수는 [`public-app/README.md`](../public-app/README.md#환경변수)와
+> [루트 README의 "환경변수" 섹션](../README.md#환경변수-public-app)을 참고하세요.
+> `public-app`은 여기에 없는 여러 변수(`PROCESSOR_SHARED_SECRET`, `NEXT_PUBLIC_VIDEO_PROCESSOR_URL`,
+> `PEXELS_API_KEY`, `PIXABAY_API_KEY`, `JAMENDO_CLIENT_ID`, `HUGGINGFACE_API_KEY`,
+> `GOOGLE_CLOUD_*` 등)를 사용합니다.
 
 ## 빠른 시작
 

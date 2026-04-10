@@ -1,5 +1,8 @@
 # Vite → Next.js App Router 마이그레이션 매핑
 
+> ⚠️ **이 문서는 Vite → Next.js 전환 시기(2026-03)의 매핑 기록**입니다. 전환은 완료되어 현재 `next-app/`, `public-app/` 둘 다 Next.js App Router 기반입니다.
+> 현재 아키텍처는 [루트 README](../README.md) 참고.
+
 ## 라우트 매핑
 
 | Vite 경로 | Next.js 파일 | 원본 컴포넌트 | 상태 |

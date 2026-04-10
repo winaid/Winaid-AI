@@ -1,4 +1,12 @@
-# E2E 검증 런북
+# E2E 검증 런북 (next-app 내부 도구용)
+
+> ⚠️ **이 런북은 `next-app`(내부 운영 도구) 전용입니다.**
+> 고객이 쓰는 외부 앱의 E2E 테스트는 Playwright 스모크 38개로 자동화되어 있습니다:
+> ```bash
+> cd public-app
+> npm run test:e2e
+> ```
+> 상세: [`public-app/README.md`](../public-app/README.md#e2e-테스트)
 
 ## 월요일 체크 순서 (요약)
 
