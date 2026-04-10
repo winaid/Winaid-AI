@@ -1,11 +1,10 @@
 'use client';
 
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { CATEGORIES } from '../../../lib/constants';
-import { buildCardNewsPrompt, buildCardNewsProPrompt, type CardNewsRequest } from '../../../lib/cardNewsPrompt';
+import { buildCardNewsProPrompt, type CardNewsRequest } from '../../../lib/cardNewsPrompt';
 import { savePost, listPosts, deletePost, type SavedPost } from '../../../lib/postStorage';
 import { getSessionSafe, supabase, getSupabaseClient, isSupabaseConfigured } from '../../../lib/supabase';
-import { getHospitalStylePrompt } from '../../../lib/styleService';
 import { CARD_NEWS_DESIGN_TEMPLATES } from '../../../lib/cardNewsDesignTemplates';
 import { ErrorPanel } from '../../../components/GenerationResult';
 import { CardRegenModal, type CardPromptHistoryItem, CARD_PROMPT_HISTORY_KEY, CARD_REF_IMAGE_KEY } from '../../../components/CardRegenModal';
@@ -82,8 +81,6 @@ export default function CardNewsPage() {
   const [category, setCategory] = useState<ContentCategory>(ContentCategory.DENTAL);
   const [audienceMode, setAudienceMode] = useState<AudienceMode>('환자용(친절/공감)');
   const [contentMode, setContentMode] = useState<'simple' | 'detailed'>('simple');
-  // 프로 레이아웃이 기본이자 유일한 모드 (AI 이미지 레거시 플로우는 남아있지만 UI에서는 도달 불가)
-  const proMode = true as const;
   const [proSlides, setProSlides] = useState<ProSlideData[]>([]);
   const [proTheme, setProTheme] = useState<CardNewsTheme>({ ...DEFAULT_THEME });
   const [learnedTemplate, setLearnedTemplate] = useState<CardTemplate | null>(null);
@@ -105,9 +102,7 @@ export default function CardNewsPage() {
   const [showStyleUpload, setShowStyleUpload] = useState(false);
   // 저장된 학습 템플릿 목록 (업로드 후 즉시 반영을 위해 trigger state로 재조회 트리거)
   const [savedStylesVersion, setSavedStylesVersion] = useState(0);
-  const savedStyles = (() => { void savedStylesVersion; return getSavedTemplates(); })();
-  // 커스텀 이미지 프롬프트 UI는 상세설정과 함께 제거됨. 레거시 플로우 참조용 고정값.
-  const customImagePrompt = '';
+  const savedStyles = useMemo(() => getSavedTemplates(), [savedStylesVersion]);
   // 트렌드 주제
   const [isLoadingTrends, setIsLoadingTrends] = useState(false);
   const [trendingItems, setTrendingItems] = useState<TrendingItem[]>([]);
@@ -116,6 +111,25 @@ export default function CardNewsPage() {
   const [mainTab, setMainTab] = useState<'create' | 'learn' | 'history'>('create');
   const [historyPosts, setHistoryPosts] = useState<SavedPost[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+  // 히스토리 탭 최초 진입 시 1회만 로드 — 렌더 중 setState 금지 (React 경고 회피)
+  useEffect(() => {
+    if (mainTab !== 'history') return;
+    let cancelled = false;
+    setHistoryLoading(true);
+    getSessionSafe()
+      .then(({ userId }) => listPosts(userId))
+      .then(result => {
+        if (cancelled) return;
+        if ('posts' in result) {
+          setHistoryPosts(result.posts.filter(p => p.post_type === 'card_news'));
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setHistoryLoading(false);
+      });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mainTab]);
   const [pageStep, setPageStep] = useState<1 | 2>(1);
   const TOPIC_SUGGESTIONS: Record<string, string[]> = {
     '치과': ['임플란트 사후관리', '치아미백 전후비교', '스케일링 중요성', '충치 예방 꿀팁', '잇몸 건강 체크리스트', '교정 장치 종류 비교', '사랑니 발치 가이드'],
@@ -136,7 +150,6 @@ export default function CardNewsPage() {
   const [error, setError] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
   const [regeneratingCard, setRegeneratingCard] = useState<number | null>(null);
-  const [rawScriptText, setRawScriptText] = useState('');
   // 카드 재생성 모달 state
   const [cardRegenModalOpen, setCardRegenModalOpen] = useState(false);
   const [cardRegenIndex, setCardRegenIndex] = useState(1);
@@ -161,9 +174,7 @@ export default function CardNewsPage() {
       const tmpl = designTemplateId ? CARD_NEWS_DESIGN_TEMPLATES.find(t => t.id === designTemplateId) : undefined;
       const needsTemplate = tmpl && !prompt.includes('[디자인 템플릿:');
       const templateBlock = needsTemplate ? `\n[디자인 템플릿: ${tmpl.name}]\n${tmpl.stylePrompt}\n배경색: ${tmpl.colors.background}` : '';
-      // imageStyle은 'illustration'로 고정(상세 설정 제거). 커스텀 블록 없음.
-      const customBlock = '';
-      const fullPrompt = `${prompt}${templateBlock}${customBlock}`.trim();
+      const fullPrompt = `${prompt}${templateBlock}`.trim();
 
       const res = await fetch('/api/image', {
         method: 'POST',
@@ -465,124 +476,6 @@ export default function CardNewsPage() {
       setProgress('');
     }
     return;
-  };
-
-  // ═══ [LEGACY] AI 이미지 모드 handleSubmit — UI에서 접근 불가(도달 불능 경로).
-  // 향후 재활용 대비 보존. 함수 자체는 미사용.
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const _legacyAiImageHandleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const derivedWritingStyle: WritingStyle = audienceMode === '전문가용(신뢰/정보)' ? 'expert' : 'empathy';
-    const request: CardNewsRequest = {
-      topic: topic.trim(),
-      keywords: keywords.trim() || undefined,
-      hospitalName: hospitalName || undefined,
-      slideCount,
-      writingStyle: derivedWritingStyle,
-      designTemplateId,
-      category,
-      contentMode,
-    };
-    try {
-      const { systemInstruction, prompt } = buildCardNewsPrompt(request);
-      let finalPrompt = prompt;
-      if (hospitalName) {
-        try {
-          const stylePrompt = await getHospitalStylePrompt(hospitalName);
-          if (stylePrompt) finalPrompt += `\n\n[병원 말투 적용]\n${stylePrompt}`;
-        } catch { /* ignore */ }
-      }
-
-      const res = await fetch('/api/gemini', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          prompt: finalPrompt, systemInstruction,
-          model: 'gemini-3.1-pro-preview', temperature: 0.85, maxOutputTokens: 32768,
-        }),
-      });
-
-      const data = await res.json() as { text?: string; error?: string };
-      if (!res.ok || !data.text) { setError(data.error || `서버 오류 (${res.status})`); return; }
-
-      // 의료광고법 금지어 자동 대체
-      const { filtered: filteredSimpleText, replacedCount: rc, foundTerms: ft } = applyContentFilters(data.text);
-      if (rc > 0) console.info(`[CARD_NEWS_SIMPLE] 의료법 금지어 자동 대체: ${rc}건 — ${ft.join(', ')}`);
-
-      // 파싱: ### N장 구분 → 제목/본문/비주얼 추출 (원고+이미지프롬프트 통합)
-      const parsedCards: CardSlide[] = [];
-      const slideBlocks = filteredSimpleText.split(/###\s*(\d+)장[:\s]*/);
-      const tmpl = designTemplateId ? CARD_NEWS_DESIGN_TEMPLATES.find(t => t.id === designTemplateId) : undefined;
-      const tmplBlock = tmpl ? `\n[디자인 템플릿: ${tmpl.name}]\n${tmpl.stylePrompt}\n배경색: ${tmpl.colors.background}` : '';
-
-      for (let i = 1; i < slideBlocks.length; i += 2) {
-        const num = parseInt(slideBlocks[i], 10);
-        const block = slideBlocks[i + 1] || '';
-        const roleMatch = block.match(/^(.+?)[\n\r]/);
-
-        const titleMatch = block.match(/\*\*제목\*\*[:\s]*(.+)/m)
-          || block.match(/\*\*메인.*?\*\*[:\s]*(.+)/m)
-          || block.match(/\*\*핵심.*?\*\*[:\s]*(.+)/m)
-          || block.match(/\*\*마무리.*?\*\*[:\s]*(.+)/m)
-          || block.match(/\*\*타이틀\*\*[:\s]*(.+)/m)
-          || block.match(/\*\*메시지\*\*[:\s]*(.+)/m);
-
-        const bodyMatch = block.match(/\*\*본문\*\*[:\s]*([\s\S]*?)(?=\*\*비주얼|\*\*이미지|\*\*배경|\*\*|$)/m)
-          || block.match(/\*\*부제\*\*[:\s]*(.+)/m)
-          || block.match(/\*\*설명\*\*[:\s]*([\s\S]*?)(?=\*\*|$)/m)
-          || block.match(/\*\*내용\*\*[:\s]*([\s\S]*?)(?=\*\*|$)/m)
-          || block.match(/\*\*안내\*\*[:\s]*(.+)/m);
-
-        const visualMatch = block.match(/\*\*비주얼\*\*[:\s]*(.+)/m)
-          || block.match(/\*\*이미지\*\*[:\s]*(.+)/m)
-          || block.match(/\*\*배경\*\*[:\s]*(.+)/m);
-
-        const role = roleMatch?.[1]?.replace(/\*\*/g, '').trim() || `${num}장`;
-        let title = titleMatch?.[1]?.trim();
-        let body = bodyMatch?.[1]?.trim() || '';
-        const visual = visualMatch?.[1]?.trim() || `${topic} 관련 의료 일러스트`;
-
-        if (!title) {
-          const lines = block.split('\n').map(l => l.replace(/\*\*/g, '').replace(/^[-*]\s*/, '').trim()).filter(Boolean);
-          title = lines[1] || lines[0] || `슬라이드 ${num}`;
-          body = lines.slice(2).join(' ').substring(0, 100) || body;
-        }
-
-        // 비주얼을 imagePrompt로 바로 조립 (Step 2 불필요!)
-        const imagePrompt = [
-          `subtitle: "${role}"`,
-          `mainTitle: "${title}"`,
-          body ? `description: "${body.substring(0, 50)}"` : '',
-          `비주얼: ${visual}`,
-          tmplBlock,
-        ].filter(Boolean).join('\n');
-
-        parsedCards.push({
-          index: num,
-          role,
-          title: title || `슬라이드 ${num}`,
-          body,
-          imagePrompt,
-          imageUrl: null,
-          imageHistory: [],
-        });
-      }
-
-      if (parsedCards.length === 0) {
-        const fallbackCount = slideCount || 6;
-        for (let i = 0; i < fallbackCount; i++) {
-          const fallbackRole = i === 0 ? '표지' : i === fallbackCount - 1 ? '마���리 표지' : `���문 ${i}`;
-          const fallbackTitle = i === 0 ? topic : i === fallbackCount - 1 ? '상담을 기다립니다' : `슬라이드 ${i + 1}`;
-          parsedCards.push({ index: i + 1, role: fallbackRole, title: fallbackTitle, body: '', imagePrompt: '', imageUrl: null, imageHistory: [] });
-        }
-      }
-
-      setCards(parsedCards);
-      setRawScriptText(data.text);
-      setPipelineStep('scriptReview');
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : '네트워크 오류');
-    } finally { setIsGenerating(false); setProgress(''); }
   };
 
   // ── Step 2: 프롬프트 생성 (원고 승인 후) ──
@@ -922,7 +815,7 @@ DECORATIVE: (장식 요소)`,
       setRegeneratingCard(null);
       setCardRegenProgress('');
     }
-  }, [cardRegenIndex, editSubtitle, editMainTitle, editDescription, editImagePrompt, cardRegenRefImage, imageStyle, customImagePrompt]);
+  }, [cardRegenIndex, editSubtitle, editMainTitle, editDescription, editImagePrompt, cardRegenRefImage, imageStyle]);
 
   // ── 프롬프트 히스토리 저장/불러오기 ──
   const savePromptToHistory = useCallback(() => {
@@ -1306,41 +1199,32 @@ DECORATIVE: (장식 요소)`,
       )}
 
       {/* ══════ 탭 3: 생성기록 ══════ */}
-      {mainTab === 'history' && (() => {
-        // 히스토리 로드 (탭 전환 시)
-        if (!historyLoading && historyPosts.length === 0) {
-          setHistoryLoading(true);
-          getSessionSafe().then(({ userId }) => listPosts(userId)).then(result => {
-            if ('posts' in result) setHistoryPosts(result.posts.filter(p => p.post_type === 'card_news'));
-          }).finally(() => setHistoryLoading(false));
-        }
-        return (
-          <div className="max-w-3xl mx-auto">
-            <h2 className="text-lg font-bold text-slate-800 mb-4">생성기록</h2>
-            {historyLoading && <div className="text-center py-12"><div className="w-8 h-8 border-[3px] border-blue-100 border-t-blue-500 rounded-full animate-spin mx-auto" /></div>}
-            {!historyLoading && historyPosts.length === 0 && (
-              <p className="text-center text-slate-400 py-12">아직 생성한 카드뉴스가 없어요<br /><span className="text-xs">카드뉴스를 생성하면 여기에 기록됩니다</span></p>
-            )}
-            {!historyLoading && historyPosts.length > 0 && (
-              <div className="space-y-2">
-                {historyPosts.map(post => (
-                  <div key={post.id} className="bg-white rounded-xl border border-slate-200 p-4 flex items-center justify-between hover:border-blue-200 transition-all">
-                    <div>
-                      <h3 className="text-sm font-bold text-slate-800">{post.title}</h3>
-                      <div className="flex items-center gap-2 mt-1 text-xs text-slate-400">
-                        {post.hospital_name && <span>{post.hospital_name}</span>}
-                        <span>{new Date(post.created_at).toLocaleDateString('ko-KR')}</span>
-                      </div>
+      {mainTab === 'history' && (
+        <div className="max-w-3xl mx-auto">
+          <h2 className="text-lg font-bold text-slate-800 mb-4">생성기록</h2>
+          {historyLoading && <div className="text-center py-12"><div className="w-8 h-8 border-[3px] border-blue-100 border-t-blue-500 rounded-full animate-spin mx-auto" /></div>}
+          {!historyLoading && historyPosts.length === 0 && (
+            <p className="text-center text-slate-400 py-12">아직 생성한 카드뉴스가 없어요<br /><span className="text-xs">카드뉴스를 생성하면 여기에 기록됩니다</span></p>
+          )}
+          {!historyLoading && historyPosts.length > 0 && (
+            <div className="space-y-2">
+              {historyPosts.map(post => (
+                <div key={post.id} className="bg-white rounded-xl border border-slate-200 p-4 flex items-center justify-between hover:border-blue-200 transition-all">
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-800">{post.title}</h3>
+                    <div className="flex items-center gap-2 mt-1 text-xs text-slate-400">
+                      {post.hospital_name && <span>{post.hospital_name}</span>}
+                      <span>{new Date(post.created_at).toLocaleDateString('ko-KR')}</span>
                     </div>
-                    <button type="button" onClick={async () => { await deletePost(post.id); setHistoryPosts(prev => prev.filter(p => p.id !== post.id)); }}
-                      className="text-red-400 hover:text-red-600 text-xs font-bold px-2 py-1 rounded hover:bg-red-50">🗑</button>
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
-        );
-      })()}
+                  <button type="button" onClick={async () => { await deletePost(post.id); setHistoryPosts(prev => prev.filter(p => p.id !== post.id)); }}
+                    className="text-red-400 hover:text-red-600 text-xs font-bold px-2 py-1 rounded hover:bg-red-50">🗑</button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ── 추천 디자인 모달 ── */}
       {showDesignModal && (
