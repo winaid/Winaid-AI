@@ -17,6 +17,7 @@ import VideoPlayer from '../../../components/video-edit/VideoPlayer';
 import RecentVideos from '../../../components/video-edit/RecentVideos';
 import PipelineProgress, { type AutoStepStatus } from '../../../components/video-edit/PipelineProgress';
 import StepStyle from '../../../components/video-edit/StepStyle';
+import { revokeIfBlob } from '../../../hooks/useBlobUrl';
 import {
   type PipelineState, type PipelineMode, type FileInfo, type HospitalInfo, type EntryMode,
   type StepCropState, type StepStyleState, type StepSilenceState, type StepSubtitleState,
@@ -73,44 +74,64 @@ export default function VideoEditPage() {
   }, [state.originalFile]);
 
   // ── 상태 헬퍼 ──
+  // 각 patch 함수는 resultBlobUrl(또는 step9의 thumbnailUrl)이 새 값으로 교체될 때
+  // 이전 blob: URL을 revokeObjectURL로 해제 — 10여 군데 blob 누수 방지 (Day 2 수정).
 
   const patch = (p: Partial<PipelineState>) => setState(prev => ({ ...prev, ...p }));
-  const patchCrop = (p: Partial<StepCropState>) => setState(prev => ({
-    ...prev,
-    step1_crop: { ...prev.step1_crop, ...p },
-  }));
-  const patchStyle = (p: Partial<StepStyleState>) => setState(prev => ({
-    ...prev,
-    step2_style: { ...prev.step2_style, ...p },
-  }));
-  const patchSilence = (p: Partial<StepSilenceState>) => setState(prev => ({
-    ...prev,
-    step3_silence: { ...prev.step3_silence, ...p },
-  }));
-  const patchSubtitle = (p: Partial<StepSubtitleState>) => setState(prev => ({
-    ...prev,
-    step4_subtitle: { ...prev.step4_subtitle, ...p },
-  }));
-  const patchEffects = (p: Partial<StepEffectsState>) => setState(prev => ({
-    ...prev,
-    step5_effects: { ...prev.step5_effects, ...p },
-  }));
-  const patchZoom = (p: Partial<StepZoomState>) => setState(prev => ({
-    ...prev,
-    step6_zoom: { ...prev.step6_zoom, ...p },
-  }));
-  const patchThumbnail = (p: Partial<StepThumbnailState>) => setState(prev => ({
-    ...prev,
-    step9_thumbnail: { ...prev.step9_thumbnail, ...p },
-  }));
-  const patchBgm = (p: Partial<StepBgmState>) => setState(prev => ({
-    ...prev,
-    step7_bgm: { ...prev.step7_bgm, ...p },
-  }));
-  const patchIntro = (p: Partial<StepIntroState>) => setState(prev => ({
-    ...prev,
-    step8_intro: { ...prev.step8_intro, ...p },
-  }));
+  const patchCrop = (p: Partial<StepCropState>) => setState(prev => {
+    if (p.resultBlobUrl !== undefined && p.resultBlobUrl !== prev.step1_crop.resultBlobUrl) {
+      revokeIfBlob(prev.step1_crop.resultBlobUrl);
+    }
+    return { ...prev, step1_crop: { ...prev.step1_crop, ...p } };
+  });
+  const patchStyle = (p: Partial<StepStyleState>) => setState(prev => {
+    if (p.resultBlobUrl !== undefined && p.resultBlobUrl !== prev.step2_style.resultBlobUrl) {
+      revokeIfBlob(prev.step2_style.resultBlobUrl);
+    }
+    return { ...prev, step2_style: { ...prev.step2_style, ...p } };
+  });
+  const patchSilence = (p: Partial<StepSilenceState>) => setState(prev => {
+    if (p.resultBlobUrl !== undefined && p.resultBlobUrl !== prev.step3_silence.resultBlobUrl) {
+      revokeIfBlob(prev.step3_silence.resultBlobUrl);
+    }
+    return { ...prev, step3_silence: { ...prev.step3_silence, ...p } };
+  });
+  const patchSubtitle = (p: Partial<StepSubtitleState>) => setState(prev => {
+    if (p.resultBlobUrl !== undefined && p.resultBlobUrl !== prev.step4_subtitle.resultBlobUrl) {
+      revokeIfBlob(prev.step4_subtitle.resultBlobUrl);
+    }
+    return { ...prev, step4_subtitle: { ...prev.step4_subtitle, ...p } };
+  });
+  const patchEffects = (p: Partial<StepEffectsState>) => setState(prev => {
+    if (p.resultBlobUrl !== undefined && p.resultBlobUrl !== prev.step5_effects.resultBlobUrl) {
+      revokeIfBlob(prev.step5_effects.resultBlobUrl);
+    }
+    return { ...prev, step5_effects: { ...prev.step5_effects, ...p } };
+  });
+  const patchZoom = (p: Partial<StepZoomState>) => setState(prev => {
+    if (p.resultBlobUrl !== undefined && p.resultBlobUrl !== prev.step6_zoom.resultBlobUrl) {
+      revokeIfBlob(prev.step6_zoom.resultBlobUrl);
+    }
+    return { ...prev, step6_zoom: { ...prev.step6_zoom, ...p } };
+  });
+  const patchThumbnail = (p: Partial<StepThumbnailState>) => setState(prev => {
+    if (p.thumbnailUrl !== undefined && p.thumbnailUrl !== prev.step9_thumbnail.thumbnailUrl) {
+      revokeIfBlob(prev.step9_thumbnail.thumbnailUrl);
+    }
+    return { ...prev, step9_thumbnail: { ...prev.step9_thumbnail, ...p } };
+  });
+  const patchBgm = (p: Partial<StepBgmState>) => setState(prev => {
+    if (p.resultBlobUrl !== undefined && p.resultBlobUrl !== prev.step7_bgm.resultBlobUrl) {
+      revokeIfBlob(prev.step7_bgm.resultBlobUrl);
+    }
+    return { ...prev, step7_bgm: { ...prev.step7_bgm, ...p } };
+  });
+  const patchIntro = (p: Partial<StepIntroState>) => setState(prev => {
+    if (p.resultBlobUrl !== undefined && p.resultBlobUrl !== prev.step8_intro.resultBlobUrl) {
+      revokeIfBlob(prev.step8_intro.resultBlobUrl);
+    }
+    return { ...prev, step8_intro: { ...prev.step8_intro, ...p } };
+  });
   const patchHospital = (p: Partial<HospitalInfo>) => setState(prev => ({
     ...prev,
     step8_intro: { ...prev.step8_intro, hospital: { ...prev.step8_intro.hospital, ...p } },
@@ -651,9 +672,39 @@ export default function VideoEditPage() {
     patch({ isProcessing: false, autoProgress: undefined });
   };
 
-  // 전체 초기화
+  // 언마운트 시 잔여 blob URL 일괄 해제 (페이지 나가면 즉시 GC되게)
+  // stateRef는 state 최신값을 effect cleanup에서 안전하게 접근하기 위함
+  const stateRef = useRef(state);
+  useEffect(() => { stateRef.current = state; }, [state]);
+  useEffect(() => {
+    return () => {
+      const s = stateRef.current;
+      revokeIfBlob(s.step1_crop.resultBlobUrl);
+      revokeIfBlob(s.step2_style.resultBlobUrl);
+      revokeIfBlob(s.step3_silence.resultBlobUrl);
+      revokeIfBlob(s.step4_subtitle.resultBlobUrl);
+      revokeIfBlob(s.step5_effects.resultBlobUrl);
+      revokeIfBlob(s.step6_zoom.resultBlobUrl);
+      revokeIfBlob(s.step7_bgm.resultBlobUrl);
+      revokeIfBlob(s.step8_intro.resultBlobUrl);
+      revokeIfBlob(s.step9_thumbnail.thumbnailUrl);
+    };
+  }, []);
+
+  // 전체 초기화 — 9개 step의 모든 blob URL을 해제한 뒤 초기 상태로 교체
   const resetPipeline = () => {
-    setState(prev => ({ ...INITIAL_PIPELINE_STATE, mode: prev.mode }));
+    setState(prev => {
+      revokeIfBlob(prev.step1_crop.resultBlobUrl);
+      revokeIfBlob(prev.step2_style.resultBlobUrl);
+      revokeIfBlob(prev.step3_silence.resultBlobUrl);
+      revokeIfBlob(prev.step4_subtitle.resultBlobUrl);
+      revokeIfBlob(prev.step5_effects.resultBlobUrl);
+      revokeIfBlob(prev.step6_zoom.resultBlobUrl);
+      revokeIfBlob(prev.step7_bgm.resultBlobUrl);
+      revokeIfBlob(prev.step8_intro.resultBlobUrl);
+      revokeIfBlob(prev.step9_thumbnail.thumbnailUrl);
+      return { ...INITIAL_PIPELINE_STATE, mode: prev.mode };
+    });
     setError('');
     setAutoStatuses([]);
   };

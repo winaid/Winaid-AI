@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   type AiShortsState, type ScriptScene, type AiInputType, type AiTone, type AiDuration,
   AI_STEP_LABELS, INITIAL_AI_SHORTS_STATE,
@@ -12,6 +12,19 @@ import {
   getVoicesByEngine, getRecommendedVoices, getVoiceById,
   type TtsEngine, type TtsVoice,
 } from '../../lib/ttsVoices';
+import { revokeIfBlob } from '../../hooks/useBlobUrl';
+
+/** Audio 객체를 완전히 정리 — pause + src 해제 + 리스너 제거 */
+function disposeAudio(audio: HTMLAudioElement | null) {
+  if (!audio) return;
+  try {
+    audio.pause();
+    audio.onended = null;
+    audio.src = '';
+    audio.removeAttribute('src');
+    audio.load();
+  } catch { /* noop */ }
+}
 
 // ── 메인 위저드 ──
 
@@ -284,6 +297,7 @@ function StepStyleSelect({ state, patch }: { state: AiShortsState; patch: (p: Pa
 
 function StepVoice({ state, patch }: { state: AiShortsState; patch: (p: Partial<AiShortsState>) => void }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const previewBlobUrlRef = useRef<string | null>(null);
   const [previewingId, setPreviewingId] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
   const [engine, setEngine] = useState<TtsEngine>((state.voiceEngine as TtsEngine) || 'gemini');
@@ -295,13 +309,23 @@ function StepVoice({ state, patch }: { state: AiShortsState; patch: (p: Partial<
   const stylePrompt = TTS_STYLE_PRESETS[state.voiceStylePreset]?.prompt || '';
 
   const selectVoice = (v: TtsVoice) => {
+    // audioUrl 교체 전 이전 blob URL 해제
+    revokeIfBlob(state.audioUrl);
     patch({ voiceId: v.id, voiceName: v.name, voiceEngine: v.engine, voiceModel: v.model, audioUrl: undefined });
     setEngine(v.engine);
   };
 
+  /** 프리뷰 관련 리소스 완전 해제 */
+  const clearPreview = () => {
+    disposeAudio(audioRef.current);
+    audioRef.current = null;
+    revokeIfBlob(previewBlobUrlRef.current);
+    previewBlobUrlRef.current = null;
+  };
+
   const previewVoice = async (v: TtsVoice) => {
-    if (previewingId === v.id) { audioRef.current?.pause(); audioRef.current = null; setPreviewingId(null); return; }
-    if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
+    if (previewingId === v.id) { clearPreview(); setPreviewingId(null); return; }
+    clearPreview();
     setPreviewingId(v.id);
     try {
       const text = state.scenes[0]?.narration || '안녕하세요, 반갑습니다.';
@@ -319,12 +343,20 @@ function StepVoice({ state, patch }: { state: AiShortsState; patch: (p: Partial<
       });
       if (!res.ok) { setPreviewingId(null); return; }
       const blob = await res.blob();
-      const audio = new Audio(URL.createObjectURL(blob));
-      audio.onended = () => setPreviewingId(null);
+      const blobUrl = URL.createObjectURL(blob);
+      previewBlobUrlRef.current = blobUrl;
+      const audio = new Audio(blobUrl);
+      audio.onended = () => { clearPreview(); setPreviewingId(null); };
       audio.play();
       audioRef.current = audio;
-    } catch { setPreviewingId(null); }
+    } catch { clearPreview(); setPreviewingId(null); }
   };
+
+  // 언마운트 시 프리뷰 리소스 해제
+  useEffect(() => {
+    return () => { clearPreview(); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const generateTts = async () => {
     setGenerating(true);
@@ -345,6 +377,8 @@ function StepVoice({ state, patch }: { state: AiShortsState; patch: (p: Partial<
       });
       if (!res.ok) { const d = await res.json().catch(() => ({ error: '실패' })); throw new Error(d.error); }
       const blob = await res.blob();
+      // 이전 audioUrl 해제 후 교체
+      revokeIfBlob(state.audioUrl);
       patch({ audioUrl: URL.createObjectURL(blob) });
     } catch (err) { console.error(err); }
     finally { setGenerating(false); patch({ isProcessing: false, progress: '' }); }

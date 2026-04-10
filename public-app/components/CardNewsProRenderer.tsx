@@ -9,6 +9,13 @@ import { ensureGoogleFontLoaded, resolveSlideFontFamily } from '../lib/cardStyle
 import { downloadCardAsPng, downloadCardAsJpg, downloadAllAsZip, downloadAllAsPdf, captureAllSlidesAsBlobs } from '../lib/cardDownloadUtils';
 import { saveVideoToStorage, generateVideoFileName } from '../lib/videoStorage';
 import { validateMedicalAd } from '../lib/medicalAdValidation';
+import {
+  saveFont as saveFontToDb,
+  loadFont as loadFontFromDb,
+  setActiveFontName,
+  getActiveFontName,
+  migrateLegacyLocalStorageFont,
+} from '../lib/fontStorage';
 import CardNewsCanvas from './CardNewsCanvas';
 import SlideEditor from './card-news/SlideEditor';
 import InteractivePreview from './card-news/InteractivePreview';
@@ -169,13 +176,16 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
     bgmVolume: 15,
   });
 
-  // 결과 blob URL은 컴포넌트 unmount 시 정리
+  // 결과 blob URL은 컴포넌트 unmount 시 정리 — ref로 최신값 추적
+  // (이전엔 empty deps 클로저가 초기값 null을 잡아서 unmount 시 실제 URL이 누락됐음)
+  const shortsResultUrlRef = useRef<string | null>(null);
+  useEffect(() => { shortsResultUrlRef.current = shortsResultUrl; }, [shortsResultUrl]);
   useEffect(() => {
     return () => {
-      if (shortsResultUrl) URL.revokeObjectURL(shortsResultUrl);
+      if (shortsResultUrlRef.current) {
+        try { URL.revokeObjectURL(shortsResultUrlRef.current); } catch { /* */ }
+      }
     };
-    // shortsResultUrl 변경 시에는 useEffect 안에서 handleConvertToShorts가 직접 정리
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
@@ -283,25 +293,31 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
   }, [theme.fontId]);
 
   // 저장된 커스텀 폰트 복원 (마운트 시 1회)
+  // 1) 기존 localStorage 기반 폰트가 있으면 IndexedDB로 마이그레이션
+  // 2) IndexedDB에서 활성 폰트 로드
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    try {
-      const saved = localStorage.getItem('winaid_custom_font');
-      if (!saved) return;
-      const parsed = JSON.parse(saved) as { name: string; displayName: string; data: string };
-      fetch(parsed.data)
-        .then(r => r.arrayBuffer())
-        .then(buf => {
-          const fontFace = new FontFace(parsed.name, buf);
-          return fontFace.load().then(face => {
-            (document.fonts as unknown as { add: (f: FontFace) => void }).add(face);
-            setCustomFontName(parsed.name);
-            setCustomFontDisplayName(parsed.displayName);
-            setFontLoaded(v => v + 1);
-          });
-        })
-        .catch(() => { /* 복원 실패 무시 */ });
-    } catch { /* ignore */ }
+    let cancelled = false;
+    (async () => {
+      try {
+        // 레거시 localStorage 폰트를 IndexedDB로 이관 (1회 실행, 성공 시 localStorage 해방)
+        const migrated = await migrateLegacyLocalStorageFont();
+        if (cancelled) return;
+        const activeName = migrated?.name || getActiveFontName();
+        if (!activeName) return;
+        const stored = migrated || await loadFontFromDb(activeName);
+        if (!stored || cancelled) return;
+
+        const fontFace = new FontFace(stored.name, stored.data);
+        const face = await fontFace.load();
+        if (cancelled) return;
+        (document.fonts as unknown as { add: (f: FontFace) => void }).add(face);
+        setCustomFontName(stored.name);
+        setCustomFontDisplayName(stored.displayName);
+        setFontLoaded(v => v + 1);
+      } catch { /* 복원 실패 무시 */ }
+    })();
+    return () => { cancelled = true; };
   }, []);
 
   const handleCustomFontUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -320,20 +336,15 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
       pushThemeChange({ ...theme, fontId: 'custom' });
       setFontLoaded(v => v + 1);
 
-      // localStorage에 base64로 저장 (최대 ~4MB까지)
-      const reader = new FileReader();
-      reader.onload = () => {
-        try {
-          localStorage.setItem('winaid_custom_font', JSON.stringify({
-            name: fontName,
-            displayName: rawName,
-            data: reader.result,
-          }));
-        } catch {
-          // 용량 초과 → 세션에만 유지
-        }
-      };
-      reader.readAsDataURL(file);
+      // IndexedDB에 저장 — localStorage 5MB 쿼터와 분리되어 드래프트와 충돌 없음
+      try {
+        // FontFace가 arrayBuffer를 내부에서 소비할 수 있어서 파일에서 새로 읽음
+        const buf = await file.arrayBuffer();
+        await saveFontToDb(fontName, rawName, buf);
+        setActiveFontName(fontName);
+      } catch (err) {
+        console.warn('[CARD_NEWS_PRO] 커스텀 폰트 영구 저장 실패 (세션에만 유지)', err);
+      }
     } catch (err) {
       console.warn('[CARD_NEWS_PRO] 커스텀 폰트 로드 실패', err);
     }

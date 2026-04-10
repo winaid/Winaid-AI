@@ -51,12 +51,20 @@ type WaveformData = { peaks: number[]; duration: number };
 const waveformCache = new Map<string, WaveformData>();
 const MAX_CACHE = 10;
 
-async function extractWaveformDataCached(src: string, samples: number): Promise<WaveformData> {
+/**
+ * onCtxCreated: 호출부(useEffect)가 in-flight AudioContext를 받아 언마운트/src 변경 시
+ *               즉시 close()할 수 있게 한다. 브라우저 AudioContext 개수 제한(6~8개) 대응.
+ */
+async function extractWaveformDataCached(
+  src: string,
+  samples: number,
+  onCtxCreated?: (ctx: AudioContext) => void,
+): Promise<WaveformData> {
   const key = `${src}__${samples}`;
   const hit = waveformCache.get(key);
   if (hit) return hit;
 
-  const data = await extractWaveformData(src, samples);
+  const data = await extractWaveformData(src, samples, onCtxCreated);
 
   // 캐시 크기 제한 (LRU 비슷하게: 가장 오래된 키 제거)
   if (waveformCache.size >= MAX_CACHE) {
@@ -67,7 +75,11 @@ async function extractWaveformDataCached(src: string, samples: number): Promise<
   return data;
 }
 
-async function extractWaveformData(src: string, samples: number): Promise<WaveformData> {
+async function extractWaveformData(
+  src: string,
+  samples: number,
+  onCtxCreated?: (ctx: AudioContext) => void,
+): Promise<WaveformData> {
   const response = await fetch(src);
   if (!response.ok) throw new Error(`fetch failed: ${response.status}`);
   const arrayBuffer = await response.arrayBuffer();
@@ -82,6 +94,9 @@ async function extractWaveformData(src: string, samples: number): Promise<Wavefo
   if (!Ctx) throw new Error('AudioContext not supported');
 
   const audioCtx = new Ctx();
+  // 호출부가 이 ctx를 참조해서 언마운트 시 즉시 close할 수 있게 함
+  onCtxCreated?.(audioCtx);
+
   try {
     const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
     const channelData = audioBuffer.getChannelData(0); // 모노 또는 왼쪽 채널
@@ -103,7 +118,10 @@ async function extractWaveformData(src: string, samples: number): Promise<Wavefo
 
     return { peaks, duration: audioBuffer.duration };
   } finally {
-    try { audioCtx.close(); } catch {}
+    // 'closed' state에서 close()를 다시 부르면 InvalidStateError 날 수 있어 state 체크
+    if (audioCtx.state !== 'closed') {
+      try { await audioCtx.close(); } catch { /* 이미 닫혔거나 무효 */ }
+    }
   }
 }
 
@@ -148,12 +166,21 @@ export default function WaveformBar({
   useEffect(() => {
     if (!src || containerWidth === 0) return;
     let cancelled = false;
+    // in-flight AudioContext — unmount/src 변경 시 즉시 close하여 브라우저 제한 회피
+    let inFlightCtx: AudioContext | null = null;
     setLoading(true);
     setFailed(false);
 
     const samples = Math.max(120, Math.floor(containerWidth / Math.max(1, barWidth + barGap)));
 
-    extractWaveformDataCached(src, samples)
+    extractWaveformDataCached(src, samples, (ctx) => {
+      // cleanup이 먼저 뛰었으면 즉시 close
+      if (cancelled) {
+        if (ctx.state !== 'closed') { try { ctx.close(); } catch { /* */ } }
+        return;
+      }
+      inFlightCtx = ctx;
+    })
       .then(({ peaks: p, duration: d }) => {
         if (cancelled) return;
         setPeaks(p);
@@ -167,9 +194,17 @@ export default function WaveformBar({
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
+        inFlightCtx = null; // 이미 extract 함수 finally에서 close됨
       });
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+      // 디코딩 중이면 즉시 AudioContext를 닫아서 decodeAudioData promise를 빨리 끝낸다
+      if (inFlightCtx && inFlightCtx.state !== 'closed') {
+        try { inFlightCtx.close(); } catch { /* */ }
+      }
+      inFlightCtx = null;
+    };
   }, [src, containerWidth, barWidth, barGap, durationProp]);
 
   // durationProp 우선

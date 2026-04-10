@@ -1,8 +1,21 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { PipelineState, StepBgmState } from './types';
 import VideoPlayer from './VideoPlayer';
+import { revokeIfBlob } from '../../hooks/useBlobUrl';
+
+/** Audio 객체를 완전히 정리 — pause + src 해제 + 리스너 제거 (디코더 state 해방) */
+function disposeAudio(audio: HTMLAudioElement | null) {
+  if (!audio) return;
+  try {
+    audio.pause();
+    audio.onended = null;
+    audio.src = '';
+    audio.removeAttribute('src');
+    audio.load();
+  } catch { /* noop */ }
+}
 
 interface JamendoTrack {
   id: string;
@@ -61,9 +74,10 @@ export default function StepBgm({ state, onUpdate, onProcess, onNext, onPrev, is
 
   const togglePlay = (url: string, id: string) => {
     if (playingId === id && audioRef.current) {
-      audioRef.current.pause(); audioRef.current = null; setPlayingId(null); return;
+      disposeAudio(audioRef.current); audioRef.current = null; setPlayingId(null); return;
     }
-    if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
+    // 기존 Audio 완전 해제 (pause만 하면 디코더 메모리 누적)
+    disposeAudio(audioRef.current); audioRef.current = null;
     const a = new Audio(url);
     a.volume = 0.5;
     a.play().catch(() => {});
@@ -71,6 +85,14 @@ export default function StepBgm({ state, onUpdate, onProcess, onNext, onPrev, is
     audioRef.current = a;
     setPlayingId(id);
   };
+
+  // 언마운트 시 Audio 객체 정리
+  useEffect(() => {
+    return () => {
+      disposeAudio(audioRef.current);
+      audioRef.current = null;
+    };
+  }, []);
 
   // Jamendo 검색
   const searchBgm = async () => {
@@ -97,14 +119,33 @@ export default function StepBgm({ state, onUpdate, onProcess, onNext, onPrev, is
       if (res.status === 503) { setLoadingRetry(true); return; }
       if (!res.ok) throw new Error('생성 실패');
       const blob = await res.blob();
-      setGeneratedUrl(URL.createObjectURL(blob));
+      // 이전 생성 결과 blob URL 해제
+      setGeneratedUrl(prev => {
+        revokeIfBlob(prev);
+        return URL.createObjectURL(blob);
+      });
     } catch { /* */ }
     finally { setGenerating(false); }
   };
 
+  // generatedUrl/uploadedUrl 언마운트 시 해제
+  useEffect(() => {
+    return () => {
+      revokeIfBlob(generatedUrl);
+      revokeIfBlob(uploadedUrl);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0]; if (!f) return;
-    setUploadedFile(f); setUploadedUrl(URL.createObjectURL(f)); e.target.value = '';
+    // 이전 업로드 blob URL 해제 후 새 URL 생성
+    setUploadedFile(f);
+    setUploadedUrl(prev => {
+      revokeIfBlob(prev);
+      return URL.createObjectURL(f);
+    });
+    e.target.value = '';
   };
 
   // 현재 선택된 BGM URL
