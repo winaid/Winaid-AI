@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import type { SlideData, SlideDecoration, SlideImagePosition, SlideImageStyle } from '../../lib/cardNewsLayouts';
 import { CARD_FONTS, FONT_CATEGORIES, SLIDE_IMAGE_STYLES, COVER_TEMPLATES } from '../../lib/cardNewsLayouts';
 import { IconChangerPopover, ElementAccordion, TextElementEditor } from './EditorWidgets';
-import { validateMedicalAd, type ViolationResult } from '../../lib/medicalAdValidation';
+import { validateSlideMedicalAd, type ViolationResult, type SlideFieldViolation } from '../../lib/medicalAdValidation';
 
 /**
  * suggestion 문자열에서 첫 번째 따옴표 안의 구체 대체어 추출.
@@ -87,34 +87,42 @@ export default function SlideEditor({
   const [editMode, setEditMode] = useState<'edit' | 'ai'>('edit');
 
   // ── 의료광고법 실시간 검증 ──
-  // 부모가 slide를 갱신할 때마다(직접 편집/AI 채팅/"더 끌리게" 등) 자동 재계산.
-  // validateMedicalAd는 동기·가벼운 문자열 매칭이라 useMemo만으로 충분(디바운스 불필요).
-  const titleViolations = useMemo(
-    () => validateMedicalAd(slide.title || ''),
-    [slide.title],
-  );
-  const subtitleViolations = useMemo(
-    () => validateMedicalAd(slide.subtitle || ''),
-    [slide.subtitle],
-  );
-  const bodyViolations = useMemo(
-    () => validateMedicalAd(slide.body || ''),
-    [slide.body],
+  // Day 5: validateSlideMedicalAd로 전체 슬라이드 텍스트 필드 스캔.
+  // (이전엔 title/subtitle/body만 봤음 — imagePrompt/columns/questions 등은 사각지대였음)
+  const slideViolations = useMemo<SlideFieldViolation[]>(
+    () => validateSlideMedicalAd(slide),
+    [slide],
   );
 
-  /** 원클릭 치환/제거. 치환 가능한 대체어가 없으면 키워드만 제거하고 공백 정리. */
-  const replaceViolation = (field: 'title' | 'subtitle' | 'body', v: ViolationResult) => {
-    const current =
-      field === 'title' ? (slide.title || '') :
-      field === 'subtitle' ? (slide.subtitle || '') :
-      (slide.body || '');
+  const getFieldViolations = (field: string): ViolationResult[] =>
+    slideViolations.find(fv => fv.field === field)?.violations ?? [];
+
+  const titleViolations = getFieldViolations('title');
+  const subtitleViolations = getFieldViolations('subtitle');
+  const bodyViolations = getFieldViolations('body');
+  const visualKeywordViolations = getFieldViolations('visualKeyword');
+
+  // title/subtitle/body/visualKeyword 외 필드의 위반 — 별도 요약 표시
+  const nestedFieldViolations = slideViolations.filter(fv =>
+    !['title', 'subtitle', 'body', 'visualKeyword'].includes(fv.field)
+  );
+
+  /** 평탄한 단일 문자열 필드만 원클릭 치환 지원. 나머지는 수동 편집 안내. */
+  type FlatTextField =
+    | 'title' | 'subtitle' | 'body' | 'visualKeyword'
+    | 'quoteText' | 'quoteAuthor' | 'quoteRole'
+    | 'warningTitle' | 'beforeLabel' | 'afterLabel'
+    | 'prosLabel' | 'consLabel' | 'badge';
+
+  const replaceViolation = (field: FlatTextField, v: ViolationResult) => {
+    const current = String((slide as unknown as Record<string, unknown>)[field] || '');
     const replacement = extractReplacement(v.suggestion);
     const pattern = new RegExp(escapeRegex(v.keyword), 'g');
     const next = current
       .replace(pattern, replacement ?? '')
       .replace(/ {2,}/g, ' ')
       .trim();
-    onChange({ [field]: next });
+    onChange({ [field]: next } as Partial<SlideData>);
   };
 
   /** 필드 글자수 + 과다 입력 경고 렌더러 (title/subtitle/body 공통) */
@@ -142,7 +150,7 @@ export default function SlideEditor({
 
   /** 인라인 위반 배지 렌더러. 배지는 ElementAccordion 바깥에 두어 접혀 있어도 보이게 함. */
   const renderViolations = (
-    field: 'title' | 'subtitle' | 'body',
+    field: FlatTextField,
     violations: ViolationResult[],
   ) => {
     if (violations.length === 0) return null;
@@ -173,6 +181,45 @@ export default function SlideEditor({
           );
         })}
       </div>
+    );
+  };
+
+  /**
+   * 중첩 필드(배열/객체) 위반 요약 — 원클릭 치환 불가, 수동 편집 필요.
+   * 어느 필드에 어떤 키워드가 있는지만 알려주고 사용자가 직접 해당 레이아웃 데이터 에디터에서 수정.
+   */
+  const renderNestedFieldSummary = () => {
+    if (nestedFieldViolations.length === 0) return null;
+    const totalCount = nestedFieldViolations.reduce((sum, fv) => sum + fv.violations.length, 0);
+    const hasHigh = nestedFieldViolations.some(fv => fv.violations.some(v => v.severity === 'high'));
+    const tone = hasHigh
+      ? 'bg-red-50 text-red-700 border-red-200'
+      : 'bg-amber-50 text-amber-700 border-amber-200';
+    return (
+      <details className={`mb-3 rounded-lg border ${tone}`}>
+        <summary className="cursor-pointer px-3 py-2 text-[11px] font-bold flex items-center gap-1.5">
+          <span>{hasHigh ? '⛔' : '⚠️'}</span>
+          <span>다른 필드에서 {totalCount}건의 의료광고법 위반</span>
+          <span className="text-[10px] font-normal opacity-70 ml-auto">(클릭해서 펼치기 · 수동 수정 필요)</span>
+        </summary>
+        <div className="px-3 pb-3 pt-1 space-y-1">
+          {nestedFieldViolations.map((fv, fi) => (
+            <div key={`nfv-${fi}-${fv.field}`} className="text-[10px] space-y-0.5">
+              <div className="font-bold opacity-80">{fv.fieldLabel}</div>
+              {fv.violations.map((v, vi) => (
+                <div
+                  key={`nfv-${fi}-${v.keyword}-${vi}`}
+                  className="ml-2 flex items-center gap-1.5"
+                >
+                  <span>{v.severity === 'high' ? '⛔' : '⚠️'}</span>
+                  <span className="font-bold">&lsquo;{v.keyword}&rsquo;</span>
+                  <span className="opacity-70 truncate">{v.suggestion}</span>
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      </details>
     );
   };
 
@@ -918,10 +965,22 @@ ${JSON.stringify(slideForContext, null, 2)}
       {/* ── 편집 탭 ── */}
       {editMode === 'edit' && (
         <div className="space-y-2">
+          {/* 중첩 필드 위반 요약 — title/subtitle/body/visualKeyword 외 필드에 위반이 있으면 상단에 경고 */}
+          {renderNestedFieldSummary()}
+
           {/* 이미지 */}
           <ElementAccordion icon="🖼" label={slide.imageUrl ? '이미지' : '이미지 추가'} defaultOpen={false}>
             {imageSection}
           </ElementAccordion>
+          {/* visualKeyword (이미지 프롬프트) 위반 — 이미지에 그 텍스트가 들어갈 수 있어서 특히 중요 */}
+          {visualKeywordViolations.length > 0 && (
+            <div className="-mt-1 mb-1">
+              <div className="text-[10px] font-bold text-red-700 mb-0.5 px-0.5">
+                ⛔ 이미지 프롬프트 위반 — 이 텍스트가 이미지에 그려질 수 있어요
+              </div>
+              {renderViolations('visualKeyword', visualKeywordViolations)}
+            </div>
+          )}
 
           {/* 제목 */}
           <ElementAccordion icon="T" label={slide.title || '제목'} defaultOpen={true}>

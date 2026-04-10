@@ -8,7 +8,7 @@ import type { CardTemplate } from '../lib/cardTemplateService';
 import { ensureGoogleFontLoaded, resolveSlideFontFamily } from '../lib/cardStyleUtils';
 import { downloadCardAsPng, downloadCardAsJpg, downloadAllAsZip, downloadAllAsPdf, captureAllSlidesAsBlobs } from '../lib/cardDownloadUtils';
 import { saveVideoToStorage, generateVideoFileName } from '../lib/videoStorage';
-import { validateMedicalAd } from '../lib/medicalAdValidation';
+import { validateSlideMedicalAd } from '../lib/medicalAdValidation';
 import {
   saveFont as saveFontToDb,
   loadFont as loadFontFromDb,
@@ -695,17 +695,18 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
   // UI
   // ═══════════════════════════════════════
 
-  // 전체 슬라이드 의료광고법 위반 요약 (title/subtitle/body만 집계 — SlideEditor 인라인 배지와 일치)
+  // 전체 슬라이드 의료광고법 위반 요약 — Day 5: validateSlideMedicalAd로 전 필드 집계
+  // (이전엔 title/subtitle/body만 봐서 imagePrompt/columns/questions 등 사각지대가 있었음)
   const totalViolations = useMemo(() => {
     let high = 0;
     let medium = 0;
     for (const slide of slides) {
-      const text = [slide.title, slide.subtitle, slide.body].filter(Boolean).join(' ');
-      if (!text) continue;
-      const results = validateMedicalAd(text);
-      for (const r of results) {
-        if (r.severity === 'high') high++;
-        else medium++;
+      const fieldResults = validateSlideMedicalAd(slide);
+      for (const fv of fieldResults) {
+        for (const v of fv.violations) {
+          if (v.severity === 'high') high++;
+          else medium++;
+        }
       }
     }
     return { high, medium };
