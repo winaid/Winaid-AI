@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useRef } from 'react';
 import { STEP_LABELS, isStepDone, isStepSkipped, type PipelineState } from './types';
 
 interface Props {
@@ -9,9 +10,23 @@ interface Props {
 
 export default function StepIndicator({ state, onStepClick }: Props) {
   const current = state.currentStep;
+  const containerRef = useRef<HTMLDivElement>(null);
+  const currentRef = useRef<HTMLButtonElement>(null);
+
+  // 현재 step이 가로 스크롤 안에서 중앙에 오도록 자동 스크롤 (주로 모바일에서 유용)
+  useEffect(() => {
+    const el = currentRef.current;
+    const container = containerRef.current;
+    if (!el || !container) return;
+    const elRect = el.getBoundingClientRect();
+    const conRect = container.getBoundingClientRect();
+    if (elRect.left < conRect.left || elRect.right > conRect.right) {
+      el.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    }
+  }, [current]);
 
   return (
-    <div className="flex items-center gap-0.5 overflow-x-auto py-2 px-1 -mx-1 scrollbar-none">
+    <div ref={containerRef} className="flex items-center gap-0.5 overflow-x-auto py-2 px-1 -mx-1 scrollbar-none">
       {STEP_LABELS.map((label, idx) => {
         const isCurrent = current === idx;
         const done = isStepDone(state, idx);
@@ -19,32 +34,14 @@ export default function StepIndicator({ state, onStepClick }: Props) {
         const isFuture = idx > current && !done && !skipped;
         const canClick = onStepClick && (done || skipped || idx <= current);
 
-        // 모바일 축약: 현재 ±2 범위만 보이고, 나머지는 축약 dot
-        const dist = Math.abs(idx - current);
-        const isNearby = dist <= 2 || idx === 0 || idx === STEP_LABELS.length - 1;
-        const isEllipsis = !isNearby && (idx === current - 3 || idx === current + 3);
-
-        // 축약 dot
-        if (!isNearby && !isEllipsis) {
-          return null; // 완전히 숨김
-        }
-
-        if (isEllipsis) {
-          return (
-            <div key={idx} className="flex items-center gap-0.5 flex-shrink-0">
-              <div className="w-3 h-0.5 bg-slate-200" />
-              <span className="text-[9px] text-slate-300 px-0.5">···</span>
-            </div>
-          );
-        }
-
         return (
           <div key={idx} className="flex items-center gap-0.5 flex-shrink-0">
-            {idx > 0 && isNearby && (
+            {idx > 0 && (
               <div className={`w-3 h-0.5 ${done || skipped || isCurrent ? 'bg-blue-300' : 'bg-slate-200'}`} />
             )}
 
             <button
+              ref={isCurrent ? currentRef : undefined}
               type="button"
               disabled={!canClick}
               onClick={() => canClick && onStepClick?.(idx)}
