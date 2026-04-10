@@ -8,6 +8,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { gateGuestRequest } from '../../../../lib/guestRateLimit';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,6 +21,10 @@ const MOOD_MAP: Record<string, string> = {
 };
 
 export async function GET(request: NextRequest) {
+  // 게스트 rate limit — Jamendo 외부 API, 분당 20회
+  const gate = gateGuestRequest(request, 20, '/api/video/search-bgm');
+  if (!gate.ok) return NextResponse.json({ tracks: [], error: gate.error }, { status: gate.status });
+
   const { searchParams } = new URL(request.url);
   const query = searchParams.get('q') || '';
   const mood = searchParams.get('mood') || '';

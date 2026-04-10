@@ -14,7 +14,7 @@ import CardNewsProRenderer from '../../../components/CardNewsProRenderer';
 import { DEFAULT_THEME, COVER_TEMPLATES, CARD_FONTS, FONT_CATEGORIES, type DesignPresetStyle, parseProSlidesJson, type SlideData as ProSlideData, type CardNewsTheme, type SlideLayoutType } from '../../../lib/cardNewsLayouts';
 import { buildLayoutDefaults } from '../../../lib/cardAiActions';
 import { getSavedTemplates, deleteTemplate, imageToEditableTemplate, type CardTemplate } from '../../../lib/cardTemplateService';
-import { saveDraft, loadDraft, clearDraft, type CardNewsDraft, type CardRatio } from '../../../lib/cardNewsDraft';
+import { saveDraft, loadDraft, clearDraft, type CardNewsDraft, type CardRatio, type LoadDraftResult } from '../../../lib/cardNewsDraft';
 import { ContentCategory } from '../../../lib/types';
 import type { WritingStyle, CardNewsDesignTemplateId, TrendingItem, AudienceMode } from '../../../lib/types';
 import { useCreditContext } from '../layout';
@@ -136,19 +136,25 @@ export default function CardNewsPage() {
   }, [mainTab]);
   const [pageStep, setPageStep] = useState<1 | 2>(1);
 
-  // ── 드래프트 자동 저장/복원 ──
-  // 3초 디바운스 저장, 마운트 시 1회 복원 체크, 24시간 만료
-  const [draftModalData, setDraftModalData] = useState<CardNewsDraft | null>(null);
+  // ── 드래프트 자동 저장/복원 (Day 3 강화) ──
+  // userId 바인딩 + 저장 실패 노출 + idle timeout(48h) + 만료 임박 경고
+  const [draftModalData, setDraftModalData] = useState<LoadDraftResult | null>(null);
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
+  const [draftSaveError, setDraftSaveError] = useState<string | null>(null);
+  const [draftExpiringSoon, setDraftExpiringSoon] = useState<number | null>(null); // 남은 ms
   const draftTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // 현재 사용자 id — layout의 CreditContext가 관리 (게스트는 null)
+  const currentUserId = creditCtx.userId;
 
-  // 마운트 시 1회: 유효한 드래프트가 있으면 모달 띄우기
+  // 마운트 시 1회: 유효한 드래프트가 있으면 모달 띄우기 (userId 일치 필요)
+  // currentUserId는 layout에서 비동기로 로드되므로 id 확정 시점에 다시 시도
   useEffect(() => {
-    const draft = loadDraft();
-    if (draft) setDraftModalData(draft);
-    // 의존성 없음 — 진짜 1회만 실행
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    const result = loadDraft(currentUserId);
+    if (result) {
+      setDraftModalData(result);
+      if (result.expiringSoon) setDraftExpiringSoon(result.expiresIn);
+    }
+  }, [currentUserId]);
 
   // pageStep 2(편집 중)이고 슬라이드가 있을 때만 3초 디바운스 자동 저장
   useEffect(() => {
@@ -156,20 +162,26 @@ export default function CardNewsPage() {
     if (draftTimerRef.current) clearTimeout(draftTimerRef.current);
     draftTimerRef.current = setTimeout(() => {
       const now = Date.now();
-      saveDraft({
+      const result = saveDraft({
         topic,
         hospitalName,
         proSlides,
         proTheme,
         proCardRatio,
         savedAt: now,
-      });
-      setLastSavedAt(now);
+      }, currentUserId);
+      if (result.ok) {
+        setLastSavedAt(now);
+        setDraftSaveError(null);
+      } else {
+        // 저장 실패 — UI에 경고 노출 (작업 흐름은 막지 않음)
+        setDraftSaveError(result.error);
+      }
     }, 3000);
     return () => {
       if (draftTimerRef.current) clearTimeout(draftTimerRef.current);
     };
-  }, [pageStep, proSlides, proTheme, topic, hospitalName, proCardRatio]);
+  }, [pageStep, proSlides, proTheme, topic, hospitalName, proCardRatio, currentUserId]);
 
   const TOPIC_SUGGESTIONS: Record<string, string[]> = {
     '치과': ['임플란트 사후관리', '치아미백 전후비교', '스케일링 중요성', '충치 예방 꿀팁', '잇몸 건강 체크리스트', '교정 장치 종류 비교', '사랑니 발치 가이드', '치아보험 알아보기', '올바른 칫솔질법', '임플란트 vs 브릿지'],
@@ -895,11 +907,12 @@ DECORATIVE: (장식 요소)`,
 
   // ── 드래프트 복원/무시 ──
   const restoreDraft = useCallback(() => {
-    const draft = draftModalData ?? loadDraft();
-    if (!draft) {
+    const result = draftModalData ?? loadDraft(currentUserId);
+    if (!result) {
       setDraftModalData(null);
       return;
     }
+    const { draft } = result;
     setTopic(draft.topic);
     setHospitalName(draft.hospitalName);
     setProSlides(draft.proSlides);
@@ -909,11 +922,13 @@ DECORATIVE: (장식 요소)`,
     setMainTab('create');
     setDraftModalData(null);
     setLastSavedAt(draft.savedAt);
-  }, [draftModalData]);
+    if (result.expiringSoon) setDraftExpiringSoon(result.expiresIn);
+  }, [draftModalData, currentUserId]);
 
   const dismissDraft = useCallback(() => {
     clearDraft();
     setDraftModalData(null);
+    setDraftExpiringSoon(null);
   }, []);
 
   // ── 히스토리에서 카드뉴스 복원 ──
@@ -1273,15 +1288,24 @@ DECORATIVE: (장식 요소)`,
         <div>
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
-              <button type="button" onClick={() => { clearDraft(); setLastSavedAt(null); setPageStep(1); }} className="text-sm text-slate-500 hover:text-slate-700">← 새로 만들기</button>
+              <button type="button" onClick={() => { clearDraft(); setLastSavedAt(null); setDraftSaveError(null); setDraftExpiringSoon(null); setPageStep(1); }} className="text-sm text-slate-500 hover:text-slate-700">← 새로 만들기</button>
               <h2 className="text-lg font-bold text-slate-800">{topic}</h2>
               <span className="text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">{proSlides.length}장</span>
             </div>
-            {lastSavedAt && (
+            {/* 자동저장 상태 — 에러 > 임박 경고 > 저장 완료 순 우선순위 */}
+            {draftSaveError ? (
+              <span className="text-[11px] font-semibold text-red-600 hidden sm:inline" title={draftSaveError}>
+                ⚠️ 저장 실패 — {draftSaveError.length > 24 ? '용량 초과' : draftSaveError}
+              </span>
+            ) : draftExpiringSoon !== null ? (
+              <span className="text-[11px] font-semibold text-amber-600 hidden sm:inline" title="편집을 계속하면 수명이 자동 연장됩니다">
+                ⏰ 드래프트 {Math.max(1, Math.floor(draftExpiringSoon / (60 * 60 * 1000)))}시간 후 만료
+              </span>
+            ) : lastSavedAt ? (
               <span className="text-[11px] text-slate-400 hidden sm:inline" title={new Date(lastSavedAt).toLocaleString('ko-KR')}>
                 💾 자동 저장됨 · {new Date(lastSavedAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
               </span>
-            )}
+            ) : null}
           </div>
           {(isGenerating || isGeneratingPrompts || isGeneratingImages) && (
             <GeneratingTimer progress={progress} slideCount={proSlides.length || slideCount || 6} />
@@ -1607,14 +1631,20 @@ DECORATIVE: (장식 요소)`,
           <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl">
             <h3 className="text-lg font-bold text-slate-800 mb-2">이전 작업이 있어요</h3>
             <p className="text-sm text-slate-500 mb-1">
-              주제: <strong className="text-slate-700">{draftModalData.topic || '(제목 없음)'}</strong>
+              주제: <strong className="text-slate-700">{draftModalData.draft.topic || '(제목 없음)'}</strong>
             </p>
-            <p className="text-xs text-slate-400 mb-5">
-              {draftModalData.proSlides.length}장 · 저장 시각{' '}
-              {new Date(draftModalData.savedAt).toLocaleString('ko-KR', {
+            <p className="text-xs text-slate-400 mb-2">
+              {draftModalData.draft.proSlides.length}장 · 저장 시각{' '}
+              {new Date(draftModalData.draft.savedAt).toLocaleString('ko-KR', {
                 month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
               })}
             </p>
+            {draftModalData.expiringSoon && (
+              <p className="text-xs text-amber-600 font-semibold mb-3">
+                ⏰ {Math.max(1, Math.floor(draftModalData.expiresIn / (60 * 60 * 1000)))}시간 후 만료 — 이어서 편집하시면 수명이 자동 연장됩니다.
+              </p>
+            )}
+            <div className="mb-5" />
             <div className="flex gap-2">
               <button
                 type="button"

@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { gateGuestRequest } from '../../../lib/guestRateLimit';
 
 const toBase64 = (buf: ArrayBuffer): string => Buffer.from(buf).toString('base64');
 
 export async function POST(req: NextRequest) {
+  // 게스트 rate limit — remove.bg 유료 API라 분당 10회 제한
+  const gate = gateGuestRequest(req, 10, '/api/remove-bg');
+  if (!gate.ok) return NextResponse.json({ error: gate.error }, { status: gate.status });
+
   try {
     const formData = await req.formData();
     const imageFile = formData.get('image') as File;

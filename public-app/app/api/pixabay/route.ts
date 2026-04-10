@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { gateGuestRequest } from '../../../lib/guestRateLimit';
 
 export async function GET(req: NextRequest) {
+  // 게스트 rate limit — 외부 이미지 검색 API, 분당 20회
+  const gate = gateGuestRequest(req, 20, '/api/pixabay');
+  if (!gate.ok) return NextResponse.json({ photos: [], error: gate.error }, { status: gate.status });
+
   const { searchParams } = new URL(req.url);
   const query = searchParams.get('query') || 'hospital';
   const imageType = searchParams.get('image_type') || 'all';

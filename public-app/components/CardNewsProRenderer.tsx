@@ -71,10 +71,15 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
   const [globalChatMessages, setGlobalChatMessages] = useState<ChatMessage[]>([]);
   const [globalChatInput, setGlobalChatInput] = useState('');
   const [globalChatLoading, setGlobalChatLoading] = useState(false);
+  // 동기 플래그 — globalChatLoading(setState)가 비동기라 Enter 연타 시점
+  // 첫 요청이 async 진입 전 두 번째가 들어올 수 있는 걸 막는다
+  const globalChatSendingRef = useRef(false);
 
   const handleGlobalChatSend = async () => {
     const userMsg = globalChatInput.trim();
     if (!userMsg || globalChatLoading) return;
+    if (globalChatSendingRef.current) return;
+    globalChatSendingRef.current = true;
     setGlobalChatMessages(prev => [...prev, { role: 'user', text: userMsg }]);
     setGlobalChatInput('');
     setGlobalChatLoading(true);
@@ -111,6 +116,7 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
       setGlobalChatMessages(prev => [...prev, { role: 'assistant', text: `⚠️ 네트워크 오류: ${err instanceof Error ? err.message : '알 수 없음'}` }]);
     } finally {
       setGlobalChatLoading(false);
+      globalChatSendingRef.current = false;
     }
   };
 

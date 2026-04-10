@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { gateGuestRequest } from '../../../lib/guestRateLimit';
 
 export async function POST(req: NextRequest) {
+  // 게스트 rate limit — Gemini 호출이라 분당 10회 제한
+  const gate = gateGuestRequest(req, 10, '/api/pexels-query');
+  if (!gate.ok) return NextResponse.json({ error: gate.error }, { status: gate.status });
+
   const { topic, category } = await req.json();
   const geminiKey = process.env.GEMINI_API_KEY;
   if (!geminiKey) return NextResponse.json({ query: 'professional clinic' });
