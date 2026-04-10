@@ -208,9 +208,12 @@ export function ReadSpeedBadge({ hint }: { hint: ReadSpeedHint }) {
 interface SubtitleTimelineProps {
   subtitles: SubtitleSegment[];
   totalDuration: number;
-  selectedIndex: number | null;
+  /** 다중 선택된 자막 인덱스 집합 (모든 블록에 ring 표시) */
+  selectedIndices: Set<number>;
+  /** 마지막 단일 클릭한 anchor — 하단 정보 표시 + 단일 선택 강조용 */
+  anchorIndex: number | null;
   readSpeeds: ReadSpeedHint[];
-  onSelect: (index: number) => void;
+  onSelect: (index: number, modifiers?: { ctrl?: boolean; shift?: boolean }) => void;
   onTimeChange: (index: number, field: 'start_time' | 'end_time', value: number) => void;
   onBlockMove: (index: number, newStart: number) => void;
 }
@@ -227,7 +230,8 @@ interface DragState {
 export default function SubtitleTimeline({
   subtitles,
   totalDuration,
-  selectedIndex,
+  selectedIndices,
+  anchorIndex,
   readSpeeds,
   onSelect,
   onTimeChange,
@@ -337,12 +341,14 @@ export default function SubtitleTimeline({
           const left = Math.max(0, (sub.start_time / safeDuration) * 100);
           const widthPct = ((sub.end_time - sub.start_time) / safeDuration) * 100;
           const width = Math.max(widthPct, 0.6); // 최소 가시폭
-          const isSelected = selectedIndex === i;
+          const isSelected = selectedIndices.has(i);
+          const isAnchor = anchorIndex === i;
           const hasHigh = sub.violations?.some(v => v.severity === 'high');
           const hasMedium = sub.violations?.some(v => v.severity === 'medium');
           const speed = readSpeeds[i]?.level;
 
           // 색상 우선순위: 의료광고법 high > medium > 읽기속도 too_fast/fast > 기본
+          // 선택 시(set 안에 있을 때) 진하게
           let bgColor: string;
           if (hasHigh) {
             bgColor = isSelected ? 'bg-red-500' : 'bg-red-400/80 hover:bg-red-500';
@@ -356,14 +362,17 @@ export default function SubtitleTimeline({
             bgColor = isSelected ? 'bg-blue-600' : 'bg-blue-400/80 hover:bg-blue-500';
           }
 
-          const ringClass = isSelected ? 'ring-2 ring-blue-300 z-20' : 'z-10';
+          // anchor(주 선택)는 외곽 ring 강조, 그 외 다중 선택은 약한 ring
+          let ringClass = 'z-10';
+          if (isAnchor) ringClass = 'ring-2 ring-blue-500 ring-offset-1 ring-offset-slate-100 z-20';
+          else if (isSelected) ringClass = 'ring-1 ring-blue-400 z-10';
 
           return (
             <div
               key={sub.id ?? `tl_${i}`}
               className={`absolute top-0.5 bottom-0.5 ${bgColor} ${ringClass} rounded-md transition-colors duration-100 flex items-center justify-center text-white text-[10px] font-bold overflow-hidden`}
               style={{ left: `${left}%`, width: `${width}%` }}
-              onClick={() => onSelect(i)}
+              onClick={(e) => onSelect(i, { ctrl: e.ctrlKey || e.metaKey, shift: e.shiftKey })}
               title={`#${i + 1} · ${sub.text.slice(0, 40)}${sub.text.length > 40 ? '…' : ''}`}
             >
               {/* 왼쪽 리사이즈 핸들 */}
@@ -390,14 +399,19 @@ export default function SubtitleTimeline({
         })}
       </div>
 
-      {/* 선택된 자막 정보 */}
-      {selectedIndex !== null && subtitles[selectedIndex] && (
+      {/* 선택 정보: 1개면 단일 자막 정보, 여러 개면 카운트만 */}
+      {selectedIndices.size === 1 && anchorIndex !== null && subtitles[anchorIndex] && (
         <div className="mt-1 text-[10px] text-slate-500 tabular-nums">
-          선택: <span className="font-bold text-slate-700">#{selectedIndex + 1}</span>
+          선택: <span className="font-bold text-slate-700">#{anchorIndex + 1}</span>
           <span className="mx-1">·</span>
-          {formatTimeShort(subtitles[selectedIndex].start_time)} ~ {formatTimeShort(subtitles[selectedIndex].end_time)}
+          {formatTimeShort(subtitles[anchorIndex].start_time)} ~ {formatTimeShort(subtitles[anchorIndex].end_time)}
           <span className="mx-1">·</span>
-          {(subtitles[selectedIndex].end_time - subtitles[selectedIndex].start_time).toFixed(1)}초
+          {(subtitles[anchorIndex].end_time - subtitles[anchorIndex].start_time).toFixed(1)}초
+        </div>
+      )}
+      {selectedIndices.size > 1 && (
+        <div className="mt-1 text-[10px] text-blue-600 font-bold tabular-nums">
+          {selectedIndices.size}개 선택됨
         </div>
       )}
     </div>

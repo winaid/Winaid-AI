@@ -215,13 +215,18 @@ function SubtitleEditor({ subtitles, onChange, medicalCheck, onDownloadSrt, vide
     updateTime,
     moveBlock,
     applyAutoFixOverlaps,
+    deleteMany,
+    mergeMany,
     undo,
     canUndo,
   } = editor;
   const textareaRefs = useRef<(HTMLTextAreaElement | null)[]>([]);
   const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
-  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+
+  // 다중 선택: 여러 인덱스 + 마지막 단일 클릭한 anchor (Shift+클릭 범위 기준)
+  const [selectedIndices, setSelectedIndices] = useState<Set<number>>(() => new Set());
+  const [anchorIndex, setAnchorIndex] = useState<number | null>(null);
 
   // ── 검증 + 읽기속도 (서브타이틀 변경 시마다 재계산) ──
   const warnings = useMemo(() => validateSubtitleTimes(subtitles), [subtitles]);
@@ -235,21 +240,19 @@ function SubtitleEditor({ subtitles, onChange, medicalCheck, onDownloadSrt, vide
     return Math.max(lastEnd + 1, 1);
   }, [videoDuration, subtitles]);
 
-  // 선택된 인덱스가 범위 밖이면 정리 (삭제/병합 후 stale 방지)
+  // 자막 길이 변경 시: 범위 밖 인덱스 정리 (삭제/병합 후 stale 방지)
   useEffect(() => {
-    if (selectedIndex !== null && selectedIndex >= subtitles.length) {
-      setSelectedIndex(subtitles.length > 0 ? subtitles.length - 1 : null);
-    }
-  }, [selectedIndex, subtitles.length]);
-
-  // 타임라인에서 블록 클릭 → 해당 자막 카드로 스크롤
-  const handleSelect = useCallback((idx: number) => {
-    setSelectedIndex(idx);
-    const el = itemRefs.current[idx];
-    if (el && typeof el.scrollIntoView === 'function') {
-      el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }
-  }, []);
+    setSelectedIndices(prev => {
+      let changed = false;
+      const next = new Set<number>();
+      for (const i of prev) {
+        if (i < subtitles.length) next.add(i);
+        else changed = true;
+      }
+      return changed ? next : prev;
+    });
+    setAnchorIndex(prev => (prev !== null && prev >= subtitles.length ? null : prev));
+  }, [subtitles.length]);
 
   const registerItemRef = useCallback((idx: number, el: HTMLDivElement | null) => {
     itemRefs.current[idx] = el;
@@ -259,16 +262,119 @@ function SubtitleEditor({ subtitles, onChange, medicalCheck, onDownloadSrt, vide
     textareaRefs.current[idx] = el;
   }, []);
 
-  // 리렌더 후 포커스 + 커서 위치 지정
+  // ── 자동 스크롤 ── (max-h overflow 컨테이너 안에서 가장 가까운 가장자리로만)
+  const scrollToSubtitle = useCallback((idx: number) => {
+    const item = itemRefs.current[idx];
+    if (item && typeof item.scrollIntoView === 'function') {
+      item.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }, []);
+
+  // 리렌더 후 포커스 + 커서 위치 지정 (스크롤 동반)
   const focusSubtitle = useCallback((idx: number, cursorPos: number) => {
     requestAnimationFrame(() => {
+      scrollToSubtitle(idx);
       const ta = textareaRefs.current[idx];
       if (ta) {
         ta.focus();
         ta.setSelectionRange(cursorPos, cursorPos);
       }
     });
+  }, [scrollToSubtitle]);
+
+  // ── 선택 액션 ──
+  const selectSingle = useCallback((idx: number) => {
+    setSelectedIndices(new Set([idx]));
+    setAnchorIndex(idx);
   }, []);
+
+  const toggleSelect = useCallback((idx: number) => {
+    setSelectedIndices(prev => {
+      const next = new Set(prev);
+      if (next.has(idx)) next.delete(idx);
+      else next.add(idx);
+      return next;
+    });
+    setAnchorIndex(idx);
+  }, []);
+
+  const rangeSelect = useCallback((idx: number) => {
+    setSelectedIndices(() => {
+      if (anchorIndex === null) return new Set([idx]);
+      const start = Math.min(anchorIndex, idx);
+      const end = Math.max(anchorIndex, idx);
+      const range = new Set<number>();
+      for (let i = start; i <= end; i++) range.add(i);
+      return range;
+    });
+    // anchor는 그대로 유지 (표준 UX)
+  }, [anchorIndex]);
+
+  const selectAll = useCallback(() => {
+    if (subtitles.length === 0) return;
+    const all = new Set<number>();
+    for (let i = 0; i < subtitles.length; i++) all.add(i);
+    setSelectedIndices(all);
+    setAnchorIndex(0);
+  }, [subtitles.length]);
+
+  const clearSelection = useCallback(() => {
+    setSelectedIndices(new Set());
+    setAnchorIndex(null);
+  }, []);
+
+  // 카드/타임라인에서 선택 진입점 — 자동 스크롤 동반
+  const handleSelect = useCallback(
+    (idx: number, modifiers?: { ctrl?: boolean; shift?: boolean }) => {
+      if (modifiers?.shift) {
+        rangeSelect(idx);
+      } else if (modifiers?.ctrl) {
+        toggleSelect(idx);
+      } else {
+        selectSingle(idx);
+      }
+      scrollToSubtitle(idx);
+    },
+    [selectSingle, toggleSelect, rangeSelect, scrollToSubtitle],
+  );
+
+  // ── 일괄 작업 ──
+  const handleDeleteSelected = useCallback(() => {
+    if (selectedIndices.size === 0) return;
+    if (selectedIndices.size >= subtitles.length) return; // 전부 삭제 방지
+    deleteMany(selectedIndices);
+    clearSelection();
+  }, [selectedIndices, subtitles.length, deleteMany, clearSelection]);
+
+  // 단일 자막 삭제 — 삭제 후 인접 자막으로 포커스/스크롤 (휴지통 아이콘이 호출)
+  const handleSingleDelete = useCallback((idx: number) => {
+    if (subtitles.length <= 1) return;
+    deleteSubtitle(idx);
+    // 삭제 후 새로 인덱스가 어디로 갈지: 같은 idx에 다음 자막이 들어옴, 끝이면 idx-1
+    const newIdx = Math.min(idx, subtitles.length - 2);
+    if (newIdx >= 0) {
+      selectSingle(newIdx);
+      focusSubtitle(newIdx, 0);
+    }
+  }, [subtitles.length, deleteSubtitle, selectSingle, focusSubtitle]);
+
+  const handleMergeSelected = useCallback(() => {
+    if (selectedIndices.size < 2) return;
+    const indices = Array.from(selectedIndices).sort((a, b) => a - b);
+    const firstIdx = indices[0];
+    const result = mergeMany(selectedIndices);
+    if (result === 'noncontiguous') {
+      // 비연속이면 사용자에게 알림 (즉시 차단)
+      if (typeof window !== 'undefined') {
+        window.alert('연속된 자막만 병합할 수 있습니다.');
+      }
+      return;
+    }
+    if (result === 'ok') {
+      setSelectedIndices(new Set([firstIdx]));
+      setAnchorIndex(firstIdx);
+    }
+  }, [selectedIndices, mergeMany]);
 
   // 키보드 이벤트 — 분할/병합/포커스 이동
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>, idx: number) => {
@@ -281,6 +387,8 @@ function SubtitleEditor({ subtitles, onChange, medicalCheck, onDownloadSrt, vide
       e.preventDefault();
       if (cursorPos > 0 && cursorPos < text.length) {
         splitSubtitle(idx, cursorPos, text.length);
+        // 분할 후 새 자막(idx+1)으로 단일 선택 + 포커스 + 자동 스크롤
+        selectSingle(idx + 1);
         focusSubtitle(idx + 1, 0);
       }
       return;
@@ -317,25 +425,70 @@ function SubtitleEditor({ subtitles, onChange, medicalCheck, onDownloadSrt, vide
       focusSubtitle(idx + 1, 0);
       return;
     }
-  }, [splitSubtitle, mergeWithPrev, mergeWithNext, subtitles, focusSubtitle]);
+  }, [splitSubtitle, mergeWithPrev, mergeWithNext, subtitles, focusSubtitle, selectSingle]);
 
-  // Ctrl+Z / Cmd+Z — 편집기 내부에 포커스 있을 때만 (다른 단계 오발 방지)
+  // 전역 키보드 단축키 — 편집기 내부에 포커스 있을 때만 (다른 단계 오발 방지)
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (!(e.ctrlKey || e.metaKey) || e.key !== 'z' || e.shiftKey) return;
-      const active = document.activeElement;
-      if (!containerRef.current || !active || !containerRef.current.contains(active)) return;
-      e.preventDefault();
-      undo();
+      const active = document.activeElement as Element | null;
+      const inEditor = !!containerRef.current && !!active && containerRef.current.contains(active);
+      if (!inEditor) return;
+
+      const isMod = e.ctrlKey || e.metaKey;
+      const tag = active?.tagName;
+      const inTextField = tag === 'TEXTAREA' || tag === 'INPUT';
+
+      // Ctrl+Z — 되돌리기 (텍스트 필드 안에서도 우리 히스토리 우선)
+      if (isMod && (e.key === 'z' || e.key === 'Z') && !e.shiftKey) {
+        e.preventDefault();
+        undo();
+        return;
+      }
+
+      // Ctrl+A — 자막 전체 선택 (텍스트 필드 안에서는 OS 텍스트 전체선택 양보)
+      if (isMod && (e.key === 'a' || e.key === 'A')) {
+        if (!inTextField) {
+          e.preventDefault();
+          selectAll();
+        }
+        return;
+      }
+
+      // Escape — 선택 해제 (필드 안에서는 blur만)
+      if (e.key === 'Escape') {
+        if (inTextField && active instanceof HTMLElement) {
+          active.blur();
+        }
+        if (selectedIndices.size > 0) clearSelection();
+        return;
+      }
+
+      // Delete — 다중 선택일 때만 일괄 삭제 (필드 안에서는 글자 삭제 양보)
+      if (e.key === 'Delete' && !inTextField) {
+        if (selectedIndices.size > 1) {
+          e.preventDefault();
+          handleDeleteSelected();
+        }
+        return;
+      }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [undo]);
+  }, [undo, selectAll, clearSelection, selectedIndices, handleDeleteSelected]);
 
   // 자막 삭제 시 ref 배열 길이 정리 (stale 참조 제거)
   useEffect(() => {
     textareaRefs.current = textareaRefs.current.slice(0, subtitles.length);
   }, [subtitles.length]);
+
+  const canMergeSelected = useMemo(() => {
+    if (selectedIndices.size < 2) return false;
+    const indices = Array.from(selectedIndices).sort((a, b) => a - b);
+    for (let i = 1; i < indices.length; i++) {
+      if (indices[i] !== indices[i - 1] + 1) return false;
+    }
+    return true;
+  }, [selectedIndices]);
 
   return (
     <div ref={containerRef} className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
@@ -343,7 +496,9 @@ function SubtitleEditor({ subtitles, onChange, medicalCheck, onDownloadSrt, vide
       <div className="px-4 py-2.5 border-b border-slate-100 flex items-center justify-between gap-2">
         <div className="text-[10px] text-slate-500 min-w-0">
           <span className="font-bold text-slate-700">자막 타임라인</span>
-          <span className="ml-2 hidden sm:inline text-slate-400">Enter 분할 · Backspace 병합 · ↑↓ 이동 · Ctrl+Z</span>
+          <span className="ml-2 hidden sm:inline text-slate-400">
+            Enter 분할 · Backspace 병합 · ↑↓ 이동 · Ctrl+클릭/Shift+클릭 다중선택 · Ctrl+A 전체 · Esc 해제 · Ctrl+Z
+          </span>
         </div>
         <div className="flex items-center gap-3 shrink-0">
           <button type="button" onClick={undo} disabled={!canUndo}
@@ -363,7 +518,8 @@ function SubtitleEditor({ subtitles, onChange, medicalCheck, onDownloadSrt, vide
         <SubtitleTimeline
           subtitles={subtitles}
           totalDuration={totalDuration}
-          selectedIndex={selectedIndex}
+          selectedIndices={selectedIndices}
+          anchorIndex={anchorIndex}
           readSpeeds={readSpeeds}
           onSelect={handleSelect}
           onTimeChange={updateTime}
@@ -373,24 +529,63 @@ function SubtitleEditor({ subtitles, onChange, medicalCheck, onDownloadSrt, vide
       </div>
 
       {/* 자막 목록 */}
-      <div className="max-h-[500px] overflow-y-auto p-3 space-y-2 bg-slate-50/40">
-        {subtitles.map((seg, idx) => (
-          <SubtitleItem
-            key={seg.id ?? `idx_${idx}`}
-            subtitle={seg}
-            index={idx}
-            totalCount={subtitles.length}
-            isSelected={selectedIndex === idx}
-            readSpeed={readSpeeds[idx]}
-            onSelect={setSelectedIndex}
-            onUpdateText={updateText}
-            onUpdateTime={updateTime}
-            onDelete={deleteSubtitle}
-            onKeyDown={handleKeyDown}
-            registerRef={registerRef}
-            registerItemRef={registerItemRef}
-          />
-        ))}
+      <div className="max-h-[500px] overflow-y-auto bg-slate-50/40">
+        {/* 다중 선택 툴바 (sticky) */}
+        {selectedIndices.size > 1 && (
+          <div className="sticky top-0 z-20 bg-blue-50 border-b border-blue-200 px-3 py-2 flex items-center justify-between gap-2">
+            <span className="text-[11px] text-blue-700 font-bold tabular-nums">
+              {selectedIndices.size}개 선택됨
+            </span>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={handleMergeSelected}
+                disabled={!canMergeSelected}
+                title={canMergeSelected ? '선택된 자막을 하나로 병합' : '연속된 자막만 병합 가능'}
+                className="text-[11px] px-2.5 py-1 bg-blue-600 text-white font-bold rounded hover:bg-blue-700 disabled:opacity-40 disabled:hover:bg-blue-600"
+              >
+                🔗 병합
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteSelected}
+                disabled={selectedIndices.size >= subtitles.length}
+                title={selectedIndices.size >= subtitles.length ? '전부 삭제는 불가' : '선택된 자막 일괄 삭제 (Delete)'}
+                className="text-[11px] px-2.5 py-1 bg-red-500 text-white font-bold rounded hover:bg-red-600 disabled:opacity-40 disabled:hover:bg-red-500"
+              >
+                🗑 삭제
+              </button>
+              <button
+                type="button"
+                onClick={clearSelection}
+                title="선택 해제 (Esc)"
+                className="text-[11px] px-2.5 py-1 bg-slate-200 text-slate-600 font-bold rounded hover:bg-slate-300"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        )}
+
+        <div className="p-3 space-y-2">
+          {subtitles.map((seg, idx) => (
+            <SubtitleItem
+              key={seg.id ?? `idx_${idx}`}
+              subtitle={seg}
+              index={idx}
+              totalCount={subtitles.length}
+              isSelected={selectedIndices.has(idx)}
+              readSpeed={readSpeeds[idx]}
+              onSelect={handleSelect}
+              onUpdateText={updateText}
+              onUpdateTime={updateTime}
+              onDelete={handleSingleDelete}
+              onKeyDown={handleKeyDown}
+              registerRef={registerRef}
+              registerItemRef={registerItemRef}
+            />
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -400,13 +595,15 @@ function SubtitleEditor({ subtitles, onChange, medicalCheck, onDownloadSrt, vide
 // SubtitleItem — 개별 자막 카드
 // ══════════════════════════════════════════════════════════════════
 
+type SelectModifiers = { ctrl?: boolean; shift?: boolean };
+
 interface SubtitleItemProps {
   subtitle: SubtitleSegment;
   index: number;
   totalCount: number;
   isSelected: boolean;
   readSpeed: ReadSpeedHint | undefined;
-  onSelect: (idx: number) => void;
+  onSelect: (idx: number, modifiers?: SelectModifiers) => void;
   onUpdateText: (idx: number, text: string) => void;
   onUpdateTime: (idx: number, field: 'start_time' | 'end_time', value: number) => void;
   onDelete: (idx: number) => void;
@@ -426,17 +623,28 @@ function SubtitleItem({
 
   // 선택 시 파란 링 우선, 그 외엔 위반 색
   const cardClass = isSelected
-    ? 'bg-white border-blue-400 ring-2 ring-blue-200'
+    ? 'bg-blue-50/40 border-blue-400 ring-2 ring-blue-200'
     : hasHigh
     ? 'bg-red-50/70 border-red-200'
     : hasMed
     ? 'bg-amber-50/70 border-amber-200'
     : 'bg-white border-slate-200 hover:border-blue-300';
 
+  // 카드 클릭: modifier에 따라 단일/Ctrl/Shift 선택. 다중 선택 중일 때 텍스트 선택 방지.
+  const handleCardClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    onSelect(index, { ctrl: e.ctrlKey || e.metaKey, shift: e.shiftKey });
+  };
+
+  // Shift+클릭으로 다중 선택할 때 브라우저의 텍스트 셀렉션이 끼어드는 걸 방지
+  const handleCardMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.shiftKey) e.preventDefault();
+  };
+
   return (
     <div
       ref={el => registerItemRef(index, el)}
-      onClick={() => onSelect(index)}
+      onClick={handleCardClick}
+      onMouseDown={handleCardMouseDown}
       className={`rounded-xl p-2.5 border transition-colors cursor-pointer ${cardClass}`}
     >
       {/* 헤더: 번호 + 시간 + 삭제 */}
@@ -776,6 +984,56 @@ function useSubtitleEditor(
     onChangeRef.current(autoFixOverlaps(cur));
   }, [saveHistory]);
 
+  // ── 일괄 삭제 ── (다중 선택된 자막을 한 번에 삭제, 단일 saveHistory)
+  const deleteMany = useCallback((indicesSet: Set<number>) => {
+    const cur = subtitlesRef.current;
+    if (!cur) return;
+    if (indicesSet.size === 0) return;
+    if (indicesSet.size >= cur.length) return; // 전부 삭제 방지
+
+    saveHistory();
+    // 뒤에서부터 삭제 (인덱스 무너지지 않게) + 인접 자막에 시간 흡수
+    const indices = Array.from(indicesSet).sort((a, b) => b - a);
+    const next = cur.map(s => ({ ...s }));
+    for (const idx of indices) {
+      const [deleted] = next.splice(idx, 1);
+      if (idx > 0 && next[idx - 1]) {
+        next[idx - 1].end_time = Math.max(next[idx - 1].end_time, deleted.end_time);
+      } else if (next[idx]) {
+        next[idx].start_time = Math.min(next[idx].start_time, deleted.start_time);
+      }
+    }
+    onChangeRef.current(reindex(next));
+  }, [saveHistory]);
+
+  // ── 일괄 병합 ── (연속된 인덱스만 허용, 비연속이면 'noncontiguous' 반환)
+  const mergeMany = useCallback((indicesSet: Set<number>): 'ok' | 'noncontiguous' | 'noop' => {
+    const cur = subtitlesRef.current;
+    if (!cur) return 'noop';
+    if (indicesSet.size < 2) return 'noop';
+
+    const indices = Array.from(indicesSet).sort((a, b) => a - b);
+    for (let i = 1; i < indices.length; i++) {
+      if (indices[i] !== indices[i - 1] + 1) return 'noncontiguous';
+    }
+
+    saveHistory();
+    const firstIdx = indices[0];
+    const lastIdx = indices[indices.length - 1];
+    const mergedText = indices.map(i => cur[i].text).join(' ').trim();
+    const merged: SubtitleSegment = {
+      ...cur[firstIdx],
+      id: cur[firstIdx].id ?? generateSubId(),
+      end_time: cur[lastIdx].end_time,
+      text: mergedText,
+      violations: runValidate(mergedText),
+    };
+    const next = [...cur];
+    next.splice(firstIdx, indices.length, merged);
+    onChangeRef.current(reindex(next));
+    return 'ok';
+  }, [saveHistory, runValidate]);
+
   // ── 되돌리기 ──
   const undo = useCallback(() => {
     setHistory(prev => {
@@ -795,6 +1053,8 @@ function useSubtitleEditor(
     updateTime,
     moveBlock,
     applyAutoFixOverlaps,
+    deleteMany,
+    mergeMany,
     undo,
     canUndo: history.length > 0,
   };
