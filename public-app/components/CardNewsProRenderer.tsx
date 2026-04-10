@@ -6,7 +6,7 @@ import { LAYOUT_LABELS, CARD_FONTS, FONT_CATEGORIES } from '../lib/cardNewsLayou
 import { buildLayoutDefaults, fillLayoutContent, generateSlideImage, suggestSlideText, suggestImagePrompt, enrichSlide, suggestComparison } from '../lib/cardAiActions';
 import type { CardTemplate } from '../lib/cardTemplateService';
 import { ensureGoogleFontLoaded, resolveSlideFontFamily } from '../lib/cardStyleUtils';
-import { downloadCardAsPng, downloadAllAsZip, captureAllSlidesAsBlobs } from '../lib/cardDownloadUtils';
+import { downloadCardAsPng, downloadCardAsJpg, downloadAllAsZip, downloadAllAsPdf, captureAllSlidesAsBlobs } from '../lib/cardDownloadUtils';
 import { saveVideoToStorage, generateVideoFileName } from '../lib/videoStorage';
 import { validateMedicalAd } from '../lib/medicalAdValidation';
 import CardNewsCanvas from './CardNewsCanvas';
@@ -47,8 +47,99 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
   const boxRefs = useRef<(HTMLDivElement | null)[]>([]);
   const [downloading, setDownloading] = useState(false);
+  const [showDownloadMenu, setShowDownloadMenu] = useState(false);
+  const downloadMenuRef = useRef<HTMLDivElement | null>(null);
   const [editingIdx, setEditingIdx] = useState<number | null>(null);
   const [showAddSlide, setShowAddSlide] = useState(false);
+
+  // ── 슬라이드쇼 ──
+  const [slideshowActive, setSlideshowActive] = useState(false);
+  const [slideshowIdx, setSlideshowIdx] = useState(0);
+  const [slideshowViewport, setSlideshowViewport] = useState({ w: 0, h: 0 });
+  const SLIDESHOW_INTERVAL_MS = 4000;
+
+  // ── 글로벌 AI 채팅 (전체 슬라이드 맥락 공유) ──
+  interface ChatMessage { role: 'user' | 'assistant'; text: string; }
+  const [globalChatOpen, setGlobalChatOpen] = useState(false);
+  const [globalChatMessages, setGlobalChatMessages] = useState<ChatMessage[]>([]);
+  const [globalChatInput, setGlobalChatInput] = useState('');
+  const [globalChatLoading, setGlobalChatLoading] = useState(false);
+
+  const handleGlobalChatSend = async () => {
+    const userMsg = globalChatInput.trim();
+    if (!userMsg || globalChatLoading) return;
+    setGlobalChatMessages(prev => [...prev, { role: 'user', text: userMsg }]);
+    setGlobalChatInput('');
+    setGlobalChatLoading(true);
+    try {
+      // 전체 슬라이드 요약을 시스템 프롬프트에 포함 (이미지 dataUrl은 제외)
+      const slidesContext = slides.map((s, i) =>
+        `[${i + 1}번] layout: ${s.layout} | 제목: "${s.title || ''}" | 부제: "${s.subtitle || ''}"${s.body ? ` | 본문: "${s.body.slice(0, 100)}"` : ''}`
+      ).join('\n');
+      const res = await fetch('/api/gemini', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: userMsg,
+          systemInstruction:
+            `당신은 카드뉴스 편집 어시스턴트입니다. 사용자가 편집 중인 카드뉴스 전체 구성:\n` +
+            `${slidesContext}\n\n` +
+            `사용자 요청에 대한 답변 규칙:\n` +
+            `- 한국어로 간결하게 (3~5문장)\n` +
+            `- 구체적인 수정안이 필요하면 "N번 카드를 XX로 바꾸면 좋아요" 식으로 안내\n` +
+            `- 자동 수정은 하지 않음 (사용자가 직접 개별 카드 편집기에서 적용)\n` +
+            `- 의료광고법 준수: 최상급/단정/행동유도 표현 금지 ("100%", "완벽", "최초", "1위" 등)`,
+          model: 'gemini-3.1-flash-lite-preview',
+          temperature: 0.7,
+          maxOutputTokens: 1024,
+        }),
+      });
+      const data = await res.json() as { text?: string; error?: string };
+      if (!res.ok || !data.text) {
+        setGlobalChatMessages(prev => [...prev, { role: 'assistant', text: `⚠️ ${data.error || '응답을 받지 못했습니다.'}` }]);
+      } else {
+        setGlobalChatMessages(prev => [...prev, { role: 'assistant', text: data.text! }]);
+      }
+    } catch (err) {
+      setGlobalChatMessages(prev => [...prev, { role: 'assistant', text: `⚠️ 네트워크 오류: ${err instanceof Error ? err.message : '알 수 없음'}` }]);
+    } finally {
+      setGlobalChatLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!slideshowActive || slides.length === 0) return;
+    const timer = setInterval(() => {
+      setSlideshowIdx(prev => (prev + 1) % slides.length);
+    }, SLIDESHOW_INTERVAL_MS);
+    return () => clearInterval(timer);
+  }, [slideshowActive, slides.length]);
+
+  useEffect(() => {
+    if (!slideshowActive) return;
+    const update = () => setSlideshowViewport({ w: window.innerWidth, h: window.innerHeight });
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, [slideshowActive]);
+
+  // Escape 키로 슬라이드쇼 종료
+  useEffect(() => {
+    if (!slideshowActive) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setSlideshowActive(false);
+      if (e.key === 'ArrowRight' || e.key === ' ') {
+        e.preventDefault();
+        setSlideshowIdx(prev => (prev + 1) % slides.length);
+      }
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        setSlideshowIdx(prev => (prev - 1 + slides.length) % slides.length);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [slideshowActive, slides.length]);
 
   // ── 카드뉴스 → 쇼츠 변환 ──
   const [shortsPanelOpen, setShortsPanelOpen] = useState(false);
@@ -103,20 +194,37 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
   const [customFontDisplayName, setCustomFontDisplayName] = useState<string | null>(null);
   const customFontInputRef = useRef<HTMLInputElement | null>(null);
 
-  // ── Undo 히스토리 (Ctrl+Z) ──
-  const undoStackRef = useRef<SlideData[][]>([]);
+  // ── Undo 히스토리 (Ctrl+Z) — 슬라이드 + 테마 동시 스냅샷 ──
+  interface UndoEntry { slides: SlideData[]; theme: CardNewsTheme; }
+  const undoStackRef = useRef<UndoEntry[]>([]);
   const MAX_UNDO = 30;
+
+  /** 현재 slides + theme을 히스토리에 스냅샷 후 공급자에게 새 값을 전달 */
+  const snapshot = (): UndoEntry => ({
+    slides: JSON.parse(JSON.stringify(slides)),
+    theme: JSON.parse(JSON.stringify(theme)),
+  });
 
   /** slides 변경 시 히스토리에 현재 상태 저장 후 변경 */
   const pushAndChange = (newSlides: SlideData[]) => {
-    undoStackRef.current.push(JSON.parse(JSON.stringify(slides)));
+    undoStackRef.current.push(snapshot());
     if (undoStackRef.current.length > MAX_UNDO) undoStackRef.current.shift();
     onSlidesChange(newSlides);
   };
 
+  /** 테마 변경 시에도 undo 가능하도록 스냅샷 후 변경 */
+  const pushThemeChange = (newTheme: CardNewsTheme) => {
+    undoStackRef.current.push(snapshot());
+    if (undoStackRef.current.length > MAX_UNDO) undoStackRef.current.shift();
+    onThemeChange(newTheme);
+  };
+
   const undo = () => {
     const prev = undoStackRef.current.pop();
-    if (prev) onSlidesChange(prev);
+    if (!prev) return;
+    // slides/theme 둘 다 복원 (동일 스냅샷에서 나온 한 쌍)
+    onSlidesChange(prev.slides);
+    onThemeChange(prev.theme);
   };
 
   useEffect(() => {
@@ -209,7 +317,7 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
 
       setCustomFontName(fontName);
       setCustomFontDisplayName(rawName);
-      onThemeChange({ ...theme, fontId: 'custom' });
+      pushThemeChange({ ...theme, fontId: 'custom' });
       setFontLoaded(v => v + 1);
 
       // localStorage에 base64로 저장 (최대 ~4MB까지)
@@ -423,6 +531,7 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
   };
 
   const downloadAll = async () => {
+    setShowDownloadMenu(false);
     setDownloading(true);
     try {
       await downloadAllAsZip(cardRefs.current, slides.length, cardWidth, cardHeight, slides[0]?.title);
@@ -430,6 +539,30 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
       setDownloading(false);
     }
   };
+
+  const downloadAllPdf = async () => {
+    setShowDownloadMenu(false);
+    setDownloading(true);
+    try {
+      await downloadAllAsPdf(cardRefs.current, slides.length, cardWidth, cardHeight, slides[0]?.title);
+    } catch (err) {
+      console.warn('[CARD_NEWS_PRO] PDF 변환 실패', err);
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  // 외부 클릭 시 다운로드 드롭다운 닫기
+  useEffect(() => {
+    if (!showDownloadMenu) return;
+    const handler = (e: MouseEvent) => {
+      if (downloadMenuRef.current && !downloadMenuRef.current.contains(e.target as Node)) {
+        setShowDownloadMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showDownloadMenu]);
 
   // ── 카드뉴스 → 쇼츠 영상 변환 ──
 
@@ -553,7 +686,7 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
   }, [slides]);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 pb-24">
       {/* 의료광고법 위반 요약 — 한 건이라도 있으면 상단에 고정 노출 */}
       {(totalViolations.high > 0 || totalViolations.medium > 0) && (
         <div className="flex items-center gap-3 px-4 py-2.5 bg-red-50 border border-red-200 rounded-xl text-sm">
@@ -592,7 +725,7 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
               onChange={(e) => {
                 const newFontId = e.target.value;
                 if (newFontId !== 'custom') ensureGoogleFontLoaded(newFontId);
-                onThemeChange({ ...theme, fontId: newFontId });
+                pushThemeChange({ ...theme, fontId: newFontId });
               }}
               className="px-2 py-1 text-xs bg-slate-50 border border-slate-200 rounded-lg font-medium text-slate-700 focus:outline-none focus:border-blue-400"
             >
@@ -652,7 +785,7 @@ JSON만 출력:
                   const start = cleaned.indexOf('{'); const end = cleaned.lastIndexOf('}');
                   if (start !== -1 && end !== -1) {
                     const colors = JSON.parse(cleaned.slice(start, end + 1));
-                    onThemeChange({ ...theme, ...colors });
+                    pushThemeChange({ ...theme, ...colors });
                   }
                 }
               } catch { /* ignore */ }
@@ -664,12 +797,46 @@ JSON만 출력:
             {aiSuggestingKey === 'redesign' ? '✨ 변경 중...' : '✨ AI 리디자인'}
           </button>
           <button
-            onClick={downloadAll}
-            disabled={downloading}
-            className="px-3 py-1.5 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+            type="button"
+            onClick={() => { setSlideshowIdx(0); setSlideshowActive(true); }}
+            disabled={slides.length === 0}
+            className="px-3 py-1.5 bg-violet-100 text-violet-700 text-xs font-bold rounded-lg hover:bg-violet-200 transition-colors disabled:opacity-50"
+            title="4초 간격 자동 넘김 · ← → 방향키 · Esc 종료"
           >
-            {downloading ? '⏳ 다운로드 중...' : '📦 전체 다운로드'}
+            ▶ 슬라이드쇼
           </button>
+          <div className="relative" ref={downloadMenuRef}>
+            <button
+              type="button"
+              onClick={() => setShowDownloadMenu(v => !v)}
+              disabled={downloading}
+              className="px-3 py-1.5 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 inline-flex items-center gap-1"
+            >
+              {downloading ? '⏳ 다운로드 중...' : '📦 다운로드'}
+              {!downloading && <span className="text-[9px]">▾</span>}
+            </button>
+            {showDownloadMenu && !downloading && (
+              <div className="absolute top-full right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg z-30 py-1 w-52 overflow-hidden">
+                <button
+                  type="button"
+                  onClick={downloadAll}
+                  className="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                >
+                  📦 전체 PNG (ZIP)
+                </button>
+                <button
+                  type="button"
+                  onClick={downloadAllPdf}
+                  className="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                >
+                  📄 전체 PDF
+                </button>
+                <div className="my-1 border-t border-slate-100" />
+                <p className="px-4 py-1 text-[10px] text-slate-400">개별 카드는 각 카드의 💾 아이콘</p>
+                <p className="px-4 pb-1 text-[10px] text-slate-400">(PNG/JPG 선택 가능)</p>
+              </div>
+            )}
+          </div>
           <button
             type="button"
             onClick={() => setShortsPanelOpen(v => !v)}
@@ -935,12 +1102,17 @@ JSON만 출력:
                     ▼
                   </button>
                 </div>
-                {/* 버튼 그룹 — PNG + 복제 + 삭제 */}
+                {/* 버튼 그룹 — PNG/JPG + 복제 + 삭제 */}
                 <div className="absolute top-2 right-2 z-20 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button type="button" onClick={() => downloadCard(idx)}
                     className="px-2 py-1 bg-white/90 hover:bg-white rounded-lg text-[10px] font-bold text-slate-700 shadow-sm"
-                    title="PNG 저장">
-                    💾
+                    title="PNG 저장 (고화질, 투명도 지원)">
+                    💾 PNG
+                  </button>
+                  <button type="button" onClick={() => downloadCardAsJpg(cardRefs.current[idx], idx, cardWidth, cardHeight)}
+                    className="px-2 py-1 bg-white/90 hover:bg-white rounded-lg text-[10px] font-bold text-slate-700 shadow-sm"
+                    title="JPG 저장 (용량 작음 — 카톡/SNS 공유에 유리)">
+                    📷 JPG
                   </button>
                   <button type="button" onClick={() => duplicateSlide(idx)}
                     className="px-2 py-1 bg-white/90 hover:bg-white rounded-lg text-[10px] font-bold text-slate-700 shadow-sm"
@@ -1138,6 +1310,146 @@ JSON만 출력:
           </div>
         );
       })()}
+
+      {/* ── 슬라이드쇼 풀스크린 오버레이 ── */}
+      {slideshowActive && slides.length > 0 && (() => {
+        const current = slides[slideshowIdx] ?? slides[0];
+        const scale = slideshowViewport.w > 0
+          ? Math.min(slideshowViewport.w * 0.85 / cardWidth, slideshowViewport.h * 0.75 / cardHeight)
+          : 0.5;
+        return (
+          <div
+            className="fixed inset-0 z-50 bg-black/95 flex flex-col items-center justify-center"
+            onClick={() => setSlideshowActive(false)}
+          >
+            {/* 닫기 버튼 */}
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setSlideshowActive(false); }}
+              className="absolute top-4 right-4 w-10 h-10 flex items-center justify-center bg-white/10 hover:bg-white/20 text-white rounded-full text-lg font-bold z-10"
+              title="닫기 (Esc)"
+            >
+              ✕
+            </button>
+            {/* 좌우 수동 넘김 */}
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setSlideshowIdx(prev => (prev - 1 + slides.length) % slides.length); }}
+              className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center bg-white/10 hover:bg-white/20 text-white rounded-full text-lg font-bold z-10"
+              title="이전 (←)"
+            >
+              ‹
+            </button>
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setSlideshowIdx(prev => (prev + 1) % slides.length); }}
+              className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center bg-white/10 hover:bg-white/20 text-white rounded-full text-lg font-bold z-10"
+              title="다음 (→, Space)"
+            >
+              ›
+            </button>
+
+            {/* 현재 슬라이드 (중앙, 뷰포트에 맞춰 자동 스케일) */}
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                width: `${cardWidth}px`,
+                height: `${cardHeight}px`,
+                transform: `scale(${scale})`,
+                transformOrigin: 'center center',
+                flexShrink: 0,
+              }}
+            >
+              {renderSlide(current)}
+            </div>
+
+            {/* 하단: 진행 점 + 현재/전체 */}
+            <div
+              className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex gap-2">
+                {slides.map((_, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => setSlideshowIdx(i)}
+                    className={`transition-all rounded-full ${
+                      i === slideshowIdx ? 'w-6 h-2 bg-white' : 'w-2 h-2 bg-white/30 hover:bg-white/50'
+                    }`}
+                    aria-label={`${i + 1}번 슬라이드`}
+                  />
+                ))}
+              </div>
+              <p className="text-white/60 text-[11px]">
+                {slideshowIdx + 1} / {slides.length} · ← → 방향키 · 아무 곳이나 클릭하면 닫힙니다
+              </p>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── 글로벌 AI 채팅 바 (전체 슬라이드 맥락 공유) ── */}
+      {slides.length > 0 && (
+        <div className="fixed bottom-0 left-0 right-0 z-30 bg-white/95 backdrop-blur border-t border-slate-200 shadow-lg">
+          <div className="max-w-5xl mx-auto px-4 py-2">
+            {globalChatOpen && globalChatMessages.length > 0 && (
+              <div className="max-h-48 overflow-y-auto mb-2 space-y-1.5 pr-1">
+                {globalChatMessages.map((m, i) => (
+                  <div
+                    key={i}
+                    className={`text-xs px-3 py-2 rounded-lg whitespace-pre-wrap ${
+                      m.role === 'user'
+                        ? 'bg-blue-50 text-blue-700 ml-12 border border-blue-100'
+                        : 'bg-slate-50 text-slate-700 mr-12 border border-slate-100'
+                    }`}
+                  >
+                    {m.text}
+                  </div>
+                ))}
+                {globalChatLoading && (
+                  <div className="text-xs px-3 py-2 rounded-lg bg-slate-50 text-slate-500 mr-12 border border-slate-100 animate-pulse">
+                    생각 중...
+                  </div>
+                )}
+              </div>
+            )}
+            <div className="flex gap-2 items-center">
+              <button
+                type="button"
+                onClick={() => setGlobalChatOpen(v => !v)}
+                className={`px-3 py-2 text-sm rounded-lg font-bold transition-colors ${
+                  globalChatOpen
+                    ? 'bg-violet-600 text-white hover:bg-violet-700'
+                    : 'bg-violet-100 text-violet-700 hover:bg-violet-200'
+                }`}
+                title={globalChatOpen ? '채팅 접기' : '채팅 열기'}
+                aria-expanded={globalChatOpen}
+              >
+                🤖 {globalChatMessages.length > 0 && `(${globalChatMessages.length})`}
+              </button>
+              <input
+                type="text"
+                value={globalChatInput}
+                onChange={(e) => setGlobalChatInput(e.target.value)}
+                onFocus={() => setGlobalChatOpen(true)}
+                onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleGlobalChatSend(); } }}
+                placeholder="전체 카드뉴스에 대해 질문해 보세요 (예: 3번 톤을 1번이랑 맞춰줘)"
+                className="flex-1 px-4 py-2 text-sm bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+                disabled={globalChatLoading}
+              />
+              <button
+                type="button"
+                onClick={handleGlobalChatSend}
+                disabled={globalChatLoading || !globalChatInput.trim()}
+                className="px-4 py-2 bg-violet-600 text-white rounded-xl text-sm font-bold disabled:opacity-40 hover:bg-violet-700 transition-colors"
+              >
+                {globalChatLoading ? '...' : '전송'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

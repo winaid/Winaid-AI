@@ -118,6 +118,58 @@ export async function downloadAllAsZip(
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
 
+/** 단일 카드를 JPG로 다운로드 (용량 작음, 투명도 없음) */
+export async function downloadCardAsJpg(
+  sourceEl: HTMLElement | null,
+  index: number,
+  cardWidth: number,
+  cardHeight: number,
+  quality: number = 0.9,
+): Promise<void> {
+  if (!sourceEl) return;
+  const canvas = await captureNodeAsCanvas(sourceEl, cardWidth, cardHeight);
+  const a = document.createElement('a');
+  a.href = canvas.toDataURL('image/jpeg', quality);
+  a.download = `card_${index + 1}.jpg`;
+  a.click();
+}
+
+/** 모든 카드를 PDF 한 파일로 다운로드 (JPEG 90% 품질) */
+export async function downloadAllAsPdf(
+  cardRefs: (HTMLElement | null)[],
+  slidesCount: number,
+  cardWidth: number,
+  cardHeight: number,
+  topic?: string,
+): Promise<void> {
+  const { jsPDF } = await import('jspdf');
+
+  // 카드 비율에 맞는 페이지 방향 자동 결정
+  const orientation: 'portrait' | 'landscape' = cardWidth > cardHeight ? 'landscape' : 'portrait';
+  const pdf = new jsPDF({
+    orientation,
+    unit: 'px',
+    format: [cardWidth, cardHeight],
+    compress: true,
+  });
+
+  let firstPage = true;
+  for (let i = 0; i < slidesCount; i++) {
+    const sourceEl = cardRefs[i];
+    if (!sourceEl) continue;
+
+    if (!firstPage) pdf.addPage([cardWidth, cardHeight], orientation);
+    firstPage = false;
+
+    const canvas = await captureNodeAsCanvas(sourceEl, cardWidth, cardHeight);
+    const imgData = canvas.toDataURL('image/jpeg', 0.9);
+    pdf.addImage(imgData, 'JPEG', 0, 0, cardWidth, cardHeight);
+  }
+
+  const safeTopic = topic ? topic.replace(/[^가-힣a-zA-Z0-9]/g, '_').slice(0, 20) : '';
+  pdf.save(safeTopic ? `카드뉴스_${safeTopic}.pdf` : `cardnews_${Date.now()}.pdf`);
+}
+
 /** 이미지 위에 로고를 canvas로 합성 */
 export function overlayLogo(baseImageDataUrl: string, logoSrc: string, opacity: number = 1): Promise<string> {
   return new Promise((resolve) => {

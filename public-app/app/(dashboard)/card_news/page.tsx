@@ -1169,12 +1169,35 @@ DECORATIVE: (장식 요소)`,
 
           {/* 하단 옵션 바 */}
           <div className="flex items-center gap-3 mb-4 flex-wrap">
-            <div className="flex items-center gap-1 text-xs text-slate-500">
+            <div className="flex items-center gap-1.5 text-xs text-slate-500">
               <span>비율</span>
-              {(['1:1', '4:5', '9:16', '16:9', '3:4'] as const).map(r => (
-                <button key={r} type="button" onClick={() => setProCardRatio(r)}
-                  className={`px-2 py-1 rounded-md font-bold ${proCardRatio === r ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>{r}</button>
-              ))}
+              {(['1:1', '4:5', '9:16', '16:9', '3:4'] as const).map(r => {
+                const [w, h] = r.split(':').map(Number);
+                const active = proCardRatio === r;
+                // 시각 아이콘 — 가장 긴 변을 18px로 정규화한 박스
+                const MAX = 18;
+                const boxW = w >= h ? MAX : Math.round((w / h) * MAX);
+                const boxH = h > w ? MAX : Math.round((h / w) * MAX);
+                return (
+                  <button
+                    key={r}
+                    type="button"
+                    onClick={() => setProCardRatio(r)}
+                    className={`px-2 py-1 rounded-md font-bold inline-flex items-center gap-1.5 transition-colors ${
+                      active ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                    }`}
+                    title={`${r} 비율`}
+                    aria-pressed={active}
+                  >
+                    <span
+                      className="inline-block border-[1.5px] border-current rounded-[2px]"
+                      style={{ width: `${boxW}px`, height: `${boxH}px` }}
+                      aria-hidden="true"
+                    />
+                    <span className="text-[10px]">{r}</span>
+                  </button>
+                );
+              })}
             </div>
             <div className="w-px h-5 bg-slate-200" />
             <div className="flex items-center gap-1 text-xs text-slate-500">
