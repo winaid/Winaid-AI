@@ -2,6 +2,7 @@
 
 import type { PipelineState, StepStyleState } from './types';
 import { getStylesByCategory, getStyleById, type VideoStyle } from '../../lib/videoStyles';
+import VideoPlayer from './VideoPlayer';
 
 interface Props {
   state: PipelineState;
@@ -40,10 +41,13 @@ export default function StepStyle({ state, onUpdate, onProcess, onNext, onPrev, 
     <div className="space-y-6">
       {/* 결과 */}
       {style.resultBlobUrl && (
-        <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl">
-          <div className="flex items-center gap-2 text-sm font-bold text-emerald-700">
-            <span>✅</span> 스타일 변환 완료 — {selectedStyle?.name}
+        <div className="space-y-3">
+          <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl">
+            <div className="flex items-center gap-2 text-sm font-bold text-emerald-700">
+              <span>✅</span> 스타일 변환 완료 — {selectedStyle?.name}
+            </div>
           </div>
+          <VideoPlayer src={style.resultBlobUrl} compact />
         </div>
       )}
 

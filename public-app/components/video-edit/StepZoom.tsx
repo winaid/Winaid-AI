@@ -1,6 +1,7 @@
 'use client';
 
 import type { PipelineState, StepZoomState, ZoomIntensity, ZoomPoint } from './types';
+import VideoPlayer from './VideoPlayer';
 
 const INTENSITY_OPTIONS: { id: ZoomIntensity; label: string; desc: string }[] = [
   { id: 'auto', label: '자동', desc: 'AI가 강조 포인트에 줌' },
@@ -56,6 +57,9 @@ export default function StepZoom({ state, onUpdate, onProcess, onNext, onPrev, i
               <span>✅</span> 줌 효과 {zoom.zoomPoints.length}개 배치 완료
             </div>
           </div>
+
+          {/* 미리보기 */}
+          {zoom.resultBlobUrl && <VideoPlayer src={zoom.resultBlobUrl} compact />}
 
           <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
             <div className="px-4 py-2.5 border-b border-slate-100">

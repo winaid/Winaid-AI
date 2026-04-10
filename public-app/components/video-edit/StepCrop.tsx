@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import type { PipelineState, StepCropState, CropMode, CropAspect } from './types';
+import VideoPlayer from './VideoPlayer';
 
 const CROP_MODE_OPTIONS: { id: CropMode; icon: string; label: string; desc: string }[] = [
   { id: 'face_tracking', icon: '👤', label: '얼굴 추적', desc: '화자 얼굴을 자동 추적하며 크롭' },
@@ -72,9 +73,12 @@ export default function StepCrop({ state, onUpdate, onProcess, onNext, onPrev, i
           </div>
 
           <div className="flex justify-center">
-            <div className="rounded-xl overflow-hidden bg-black" style={{ maxWidth: '200px' }}>
-              <video controls src={crop.resultBlobUrl} className="w-full"
-                style={{ aspectRatio: crop.aspect === '9:16' ? '9/16' : crop.aspect === '4:5' ? '4/5' : '1/1' }} />
+            <div style={{ maxWidth: '220px', width: '100%' }}>
+              <VideoPlayer
+                src={crop.resultBlobUrl}
+                compact
+                aspectRatio={crop.aspect === '9:16' ? '9/16' : crop.aspect === '4:5' ? '4/5' : '1/1'}
+              />
             </div>
           </div>
         </div>

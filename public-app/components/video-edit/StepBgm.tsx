@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react';
 import type { PipelineState, StepBgmState } from './types';
+import VideoPlayer from './VideoPlayer';
 
 interface JamendoTrack {
   id: string;
@@ -114,7 +115,12 @@ export default function StepBgm({ state, onUpdate, onProcess, onNext, onPrev, is
   return (
     <div className="space-y-6">
       {bgm.mood === 'skip' && <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl text-center text-sm text-slate-500">BGM 없이 진행합니다.</div>}
-      {bgm.resultBlobUrl && <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-sm font-bold text-emerald-700">✅ BGM 삽입 완료 (볼륨 {bgm.volume}%)</div>}
+      {bgm.resultBlobUrl && (
+        <div className="space-y-3">
+          <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-sm font-bold text-emerald-700">✅ BGM 삽입 완료 (볼륨 {bgm.volume}%)</div>
+          <VideoPlayer src={bgm.resultBlobUrl} compact />
+        </div>
+      )}
 
       {!hasResult && (
         <div className="space-y-5">

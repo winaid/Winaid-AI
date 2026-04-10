@@ -2,6 +2,7 @@
 
 import { useRef } from 'react';
 import type { PipelineState, StepIntroState, IntroStyle, OutroStyle, HospitalInfo } from './types';
+import VideoPlayer from './VideoPlayer';
 
 const INTRO_OPTIONS: { id: IntroStyle; label: string; desc: string }[] = [
   { id: 'default', label: '기본 템플릿', desc: '병원 로고 + 이름 + 3초 페이드인' },
@@ -56,10 +57,13 @@ export default function StepIntroOutro({ state, onUpdate, onUpdateHospital, onPr
 
       {/* 결과 */}
       {intro.resultBlobUrl && (
-        <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl">
-          <div className="flex items-center gap-2 text-sm font-bold text-emerald-700">
-            <span>✅</span> 인트로/아웃로 삽입 완료
+        <div className="space-y-3">
+          <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl">
+            <div className="flex items-center gap-2 text-sm font-bold text-emerald-700">
+              <span>✅</span> 인트로/아웃로 삽입 완료
+            </div>
           </div>
+          <VideoPlayer src={intro.resultBlobUrl} compact />
         </div>
       )}
 

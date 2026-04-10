@@ -3,6 +3,7 @@
 import { useRef, useState } from 'react';
 import type { PipelineState, StepEffectsState, EffectsStyle, SoundEffect } from './types';
 import { SFX_CATEGORY_LABELS, getRandomSfx, type SfxCategory } from '../../lib/sfxLibrary';
+import VideoPlayer from './VideoPlayer';
 
 const STYLE_OPTIONS: { id: EffectsStyle; label: string; desc: string }[] = [
   { id: 'shorts', label: '쇼츠/릴스', desc: '빠른 전환, 강조 효과음' },
@@ -79,6 +80,9 @@ export default function StepEffects({ state, onUpdate, onProcess, onNext, onPrev
               </div>
             </div>
           </div>
+
+          {/* 미리보기 — 합성된 영상이 있을 때만 (효과음 0개 case에서도 resultBlobUrl은 원본일 수 있어 동일) */}
+          {fx.resultBlobUrl && <VideoPlayer src={fx.resultBlobUrl} compact />}
 
           {/* 효과음 리스트 */}
           <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">

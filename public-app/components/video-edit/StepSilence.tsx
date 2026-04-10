@@ -1,6 +1,7 @@
 'use client';
 
 import type { PipelineState, StepSilenceState, SilenceIntensity } from './types';
+import VideoPlayer from './VideoPlayer';
 
 const INTENSITY_OPTIONS: { id: SilenceIntensity; label: string; desc: string }[] = [
   { id: 'soft', label: '부드럽게', desc: '자연스러운 호흡 유지' },
@@ -33,6 +34,9 @@ export default function StepSilence({ state, onUpdate, onProcess, onNext, onPrev
               <span>✅</span> 무음 제거 완료
             </div>
           </div>
+
+          {/* 미리보기 */}
+          <VideoPlayer src={silence.resultBlobUrl} compact />
 
           {/* 통계 */}
           {silence.originalDuration !== undefined && silence.resultDuration !== undefined && (

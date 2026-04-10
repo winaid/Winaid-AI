@@ -5,6 +5,7 @@ import {
   isStepDone, isStepSkipped, getInputForStep,
 } from './types';
 import { downloadSrt, type SrtSegment } from '../../lib/srtUtils';
+import VideoPlayer from './VideoPlayer';
 
 interface Props {
   state: PipelineState;
@@ -49,10 +50,12 @@ export default function CompletionScreen({ state, onGoStep, onReset }: Props) {
       <div className="flex gap-5 flex-col sm:flex-row">
         {/* 좌: 세로 영상 플레이어 */}
         {finalUrl && (
-          <div className="flex-shrink-0 mx-auto sm:mx-0">
-            <div className="rounded-2xl overflow-hidden bg-black shadow-xl" style={{ width: '200px' }}>
-              <video controls src={finalUrl} className="w-full" style={{ aspectRatio: '9/16' }} />
-            </div>
+          <div className="flex-shrink-0 mx-auto sm:mx-0" style={{ width: '220px' }}>
+            <VideoPlayer
+              src={finalUrl}
+              aspectRatio="9/16"
+              className="shadow-xl"
+            />
           </div>
         )}
 
