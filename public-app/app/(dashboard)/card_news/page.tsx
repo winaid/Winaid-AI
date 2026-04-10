@@ -11,8 +11,10 @@ import { CardRegenModal, type CardPromptHistoryItem, CARD_PROMPT_HISTORY_KEY, CA
 import CardTemplateManager from '../../../components/CardTemplateManager';
 import CardNewsRenderer from '../../../components/CardNewsRenderer';
 import CardNewsProRenderer from '../../../components/CardNewsProRenderer';
-import { DEFAULT_THEME, COVER_TEMPLATES, CARD_FONTS, FONT_CATEGORIES, type DesignPresetStyle, parseProSlidesJson, type SlideData as ProSlideData, type CardNewsTheme } from '../../../lib/cardNewsLayouts';
+import { DEFAULT_THEME, COVER_TEMPLATES, CARD_FONTS, FONT_CATEGORIES, type DesignPresetStyle, parseProSlidesJson, type SlideData as ProSlideData, type CardNewsTheme, type SlideLayoutType } from '../../../lib/cardNewsLayouts';
+import { buildLayoutDefaults } from '../../../lib/cardAiActions';
 import { getSavedTemplates, deleteTemplate, imageToEditableTemplate, type CardTemplate } from '../../../lib/cardTemplateService';
+import { saveDraft, loadDraft, clearDraft, type CardNewsDraft, type CardRatio } from '../../../lib/cardNewsDraft';
 import { ContentCategory } from '../../../lib/types';
 import type { WritingStyle, CardNewsDesignTemplateId, TrendingItem, AudienceMode } from '../../../lib/types';
 import { useCreditContext } from '../layout';
@@ -131,6 +133,42 @@ export default function CardNewsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mainTab]);
   const [pageStep, setPageStep] = useState<1 | 2>(1);
+
+  // ── 드래프트 자동 저장/복원 ──
+  // 3초 디바운스 저장, 마운트 시 1회 복원 체크, 24시간 만료
+  const [draftModalData, setDraftModalData] = useState<CardNewsDraft | null>(null);
+  const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
+  const draftTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // 마운트 시 1회: 유효한 드래프트가 있으면 모달 띄우기
+  useEffect(() => {
+    const draft = loadDraft();
+    if (draft) setDraftModalData(draft);
+    // 의존성 없음 — 진짜 1회만 실행
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // pageStep 2(편집 중)이고 슬라이드가 있을 때만 3초 디바운스 자동 저장
+  useEffect(() => {
+    if (pageStep !== 2 || proSlides.length === 0) return;
+    if (draftTimerRef.current) clearTimeout(draftTimerRef.current);
+    draftTimerRef.current = setTimeout(() => {
+      const now = Date.now();
+      saveDraft({
+        topic,
+        hospitalName,
+        proSlides,
+        proTheme,
+        proCardRatio,
+        savedAt: now,
+      });
+      setLastSavedAt(now);
+    }, 3000);
+    return () => {
+      if (draftTimerRef.current) clearTimeout(draftTimerRef.current);
+    };
+  }, [pageStep, proSlides, proTheme, topic, hospitalName, proCardRatio]);
+
   const TOPIC_SUGGESTIONS: Record<string, string[]> = {
     '치과': ['임플란트 사후관리', '치아미백 전후비교', '스케일링 중요성', '충치 예방 꿀팁', '잇몸 건강 체크리스트', '교정 장치 종류 비교', '사랑니 발치 가이드'],
     '피부과': ['보톡스 Q&A', '여드름 관리법', '레이저 시술 비교', '자외선 차단 가이드', '피부 타입별 관리', '탈모 예방 습관', '주름 개선 시술'],
@@ -456,19 +494,28 @@ export default function CardNewsPage() {
         }
       }
 
-      // 생성 기록 저장
+      // 생성 기록 저장 (v2: 전체 슬라이드 + 테마 + 비율)
       try {
         const { userId } = await getSessionSafe();
         await savePost({
           userId: userId || undefined,
           postType: 'card_news',
           title: topic,
-          content: JSON.stringify(withBg.map(s => ({ title: s.title, layout: s.layout }))),
+          content: JSON.stringify({
+            version: 2,
+            slides: withBg,
+            theme: { ...proTheme, hospitalName: hospitalName || undefined, fontId: parsedFontId || proTheme.fontId },
+            cardRatio: proCardRatio,
+          }),
           topic,
           hospitalName: hospitalName || undefined,
           keywords: [],
         });
       } catch { /* 저장 실패 무시 */ }
+
+      // 새 생성 성공 → 이전 드래프트 제거 (복원 혼선 방지)
+      clearDraft();
+      setLastSavedAt(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : '네트워크 오류');
     } finally {
@@ -839,6 +886,76 @@ DECORATIVE: (장식 요소)`,
     setShowHistoryDropdown(false);
   }, []);
 
+  // ── 드래프트 복원/무시 ──
+  const restoreDraft = useCallback(() => {
+    const draft = draftModalData ?? loadDraft();
+    if (!draft) {
+      setDraftModalData(null);
+      return;
+    }
+    setTopic(draft.topic);
+    setHospitalName(draft.hospitalName);
+    setProSlides(draft.proSlides);
+    setProTheme(draft.proTheme);
+    setProCardRatio(draft.proCardRatio);
+    setPageStep(2);
+    setMainTab('create');
+    setDraftModalData(null);
+    setLastSavedAt(draft.savedAt);
+  }, [draftModalData]);
+
+  const dismissDraft = useCallback(() => {
+    clearDraft();
+    setDraftModalData(null);
+  }, []);
+
+  // ── 히스토리에서 카드뉴스 복원 ──
+  const restoreFromHistory = useCallback((post: SavedPost) => {
+    try {
+      const parsed = JSON.parse(post.content) as unknown;
+
+      // v2 형식: { version: 2, slides, theme, cardRatio }
+      if (
+        parsed && typeof parsed === 'object' && !Array.isArray(parsed) &&
+        (parsed as { version?: number }).version === 2
+      ) {
+        const v2 = parsed as { slides: ProSlideData[]; theme?: CardNewsTheme; cardRatio?: CardRatio };
+        if (!Array.isArray(v2.slides) || v2.slides.length === 0) {
+          setError('이 기록에는 복원할 슬라이드가 없습니다.');
+          return;
+        }
+        setProSlides(v2.slides);
+        setProTheme(v2.theme ?? { ...DEFAULT_THEME });
+        setProCardRatio(v2.cardRatio ?? '1:1');
+      } else if (Array.isArray(parsed)) {
+        // v1 형식: [{ title, layout }] — 제목/레이아웃만 있는 기본 복원
+        const legacy = parsed as Array<{ title?: string; layout?: string }>;
+        if (legacy.length === 0) {
+          setError('이 기록에는 복원할 슬라이드가 없습니다.');
+          return;
+        }
+        const restored: ProSlideData[] = legacy.map((s, i) => buildLayoutDefaults(
+          { index: i + 1, layout: 'info' as SlideLayoutType, title: s.title || '' },
+          ((s.layout as SlideLayoutType | undefined) ?? 'info'),
+        ));
+        setProSlides(restored);
+        setProTheme({ ...DEFAULT_THEME });
+        setProCardRatio('1:1');
+      } else {
+        setError('이 기록은 복원할 수 없는 형식입니다.');
+        return;
+      }
+
+      setTopic(post.topic || post.title);
+      setHospitalName(post.hospital_name || '');
+      setPageStep(2);
+      setMainTab('create');
+      setError(null);
+    } catch {
+      setError('이 기록은 복원할 수 없습니다.');
+    }
+  }, []);
+
   // ── 참고 이미지 저장/삭제 ──
   const lockRefImage = useCallback((image: string, mode: 'recolor' | 'copy') => {
     try { localStorage.setItem(CARD_REF_IMAGE_KEY, JSON.stringify({ image, mode })); setIsRefImageLocked(true); } catch { /* too large */ }
@@ -1126,10 +1243,15 @@ DECORATIVE: (장식 요소)`,
         <div>
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
-              <button type="button" onClick={() => setPageStep(1)} className="text-sm text-slate-500 hover:text-slate-700">← 새로 만들기</button>
+              <button type="button" onClick={() => { clearDraft(); setLastSavedAt(null); setPageStep(1); }} className="text-sm text-slate-500 hover:text-slate-700">← 새로 만들기</button>
               <h2 className="text-lg font-bold text-slate-800">{topic}</h2>
               <span className="text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">{proSlides.length}장</span>
             </div>
+            {lastSavedAt && (
+              <span className="text-[11px] text-slate-400 hidden sm:inline" title={new Date(lastSavedAt).toLocaleString('ko-KR')}>
+                💾 자동 저장됨 · {new Date(lastSavedAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
+              </span>
+            )}
           </div>
           {(isGenerating || isGeneratingPrompts || isGeneratingImages) && (
             <GeneratingTimer progress={progress} />
@@ -1209,16 +1331,30 @@ DECORATIVE: (장식 요소)`,
           {!historyLoading && historyPosts.length > 0 && (
             <div className="space-y-2">
               {historyPosts.map(post => (
-                <div key={post.id} className="bg-white rounded-xl border border-slate-200 p-4 flex items-center justify-between hover:border-blue-200 transition-all">
-                  <div>
-                    <h3 className="text-sm font-bold text-slate-800">{post.title}</h3>
+                <div key={post.id} className="bg-white rounded-xl border border-slate-200 p-4 flex items-center justify-between gap-3 hover:border-blue-200 transition-all">
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-sm font-bold text-slate-800 truncate">{post.title}</h3>
                     <div className="flex items-center gap-2 mt-1 text-xs text-slate-400">
-                      {post.hospital_name && <span>{post.hospital_name}</span>}
+                      {post.hospital_name && <span className="truncate">{post.hospital_name}</span>}
                       <span>{new Date(post.created_at).toLocaleDateString('ko-KR')}</span>
                     </div>
                   </div>
-                  <button type="button" onClick={async () => { await deletePost(post.id); setHistoryPosts(prev => prev.filter(p => p.id !== post.id)); }}
-                    className="text-red-400 hover:text-red-600 text-xs font-bold px-2 py-1 rounded hover:bg-red-50">🗑</button>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => restoreFromHistory(post)}
+                      className="text-xs px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 font-bold transition-colors"
+                      title="이 카드뉴스를 편집 화면으로 불러옵니다"
+                    >
+                      다시 열기
+                    </button>
+                    <button
+                      type="button"
+                      onClick={async () => { await deletePost(post.id); setHistoryPosts(prev => prev.filter(p => p.id !== post.id)); }}
+                      className="text-red-400 hover:text-red-600 text-xs font-bold px-2 py-1 rounded hover:bg-red-50"
+                      title="삭제"
+                    >🗑</button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -1434,6 +1570,40 @@ DECORATIVE: (장식 요소)`,
         onLoadFromHistory={loadFromHistory}
         onRegenerate={executeCardRegenerate}
       />
+
+      {/* ── 드래프트 복원 모달 (마운트 시 유효한 드래프트가 있을 때 자동 노출) ── */}
+      {draftModalData && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl">
+            <h3 className="text-lg font-bold text-slate-800 mb-2">이전 작업이 있어요</h3>
+            <p className="text-sm text-slate-500 mb-1">
+              주제: <strong className="text-slate-700">{draftModalData.topic || '(제목 없음)'}</strong>
+            </p>
+            <p className="text-xs text-slate-400 mb-5">
+              {draftModalData.proSlides.length}장 · 저장 시각{' '}
+              {new Date(draftModalData.savedAt).toLocaleString('ko-KR', {
+                month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
+              })}
+            </p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={restoreDraft}
+                className="flex-1 py-2.5 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-colors"
+              >
+                이어서 편집
+              </button>
+              <button
+                type="button"
+                onClick={dismissDraft}
+                className="flex-1 py-2.5 bg-slate-100 text-slate-600 rounded-xl font-bold hover:bg-slate-200 transition-colors"
+              >
+                새로 시작
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
