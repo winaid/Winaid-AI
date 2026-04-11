@@ -403,3 +403,99 @@ JSON만 출력:
   }
   return null;
 }
+
+// ── 영감 이미지 스타일 분석 (카드뉴스 "영감 이미지 → 스타일 매칭" 기능용) ──
+
+/**
+ * 사용자가 업로드한 영감 이미지를 Gemini Vision 으로 분석한 결과.
+ *   - `palette`      : 5개 hex 컬러 (proTheme 에 1:1 매핑 가능)
+ *   - `mood`         : 영문 2~4단어 분위기 (`"calm clinical minimal"` 등)
+ *   - `visualKeyword`: 영문 구문, AI 이미지 프롬프트·이미지 검색 쿼리 prefix 용
+ *   - `description`  : 한국어 설명 (사용자 피드백용)
+ */
+export interface InspirationAnalysis {
+  palette: {
+    primary: string;
+    secondary: string;
+    background: string;
+    text: string;
+    accent: string;
+  };
+  mood: string;
+  visualKeyword: string;
+  description: string;
+}
+
+/**
+ * 영감 이미지 1장을 Gemini Vision 으로 분석해 `InspirationAnalysis` 로 반환.
+ *
+ * - `/api/gemini` 의 기존 `inlineImages` 파라미터를 재사용 (별도 API 불필요)
+ * - `responseType: 'json'` 으로 Gemini 가 JSON 만 반환하도록 강제 + 혹시
+ *   마크다운 코드 블록이 섞이면 제거하는 폴백 파싱
+ * - 실패 시(네트워크·파싱·필드 누락) null 반환 — 호출부가 기본 플로우로 계속
+ *
+ * @param imageDataUrl  `data:image/...;base64,...` 형식. 1024px 이하로
+ *                      리사이즈된 이미지 권장 (Gemini 호출 비용·지연 감소).
+ */
+export async function analyzeInspirationImage(imageDataUrl: string): Promise<InspirationAnalysis | null> {
+  try {
+    const res = await fetch('/api/gemini', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        prompt: `이 이미지의 디자인 스타일을 분석해주세요.
+
+반드시 아래 JSON 형식으로만 응답하세요. 다른 텍스트는 절대 포함하지 마세요.
+
+{
+  "palette": {
+    "primary": "#hex (이미지의 가장 지배적인 색상)",
+    "secondary": "#hex (두 번째 주요 색상)",
+    "background": "#hex (배경 색상)",
+    "text": "#hex (이 배경에 어울리는 텍스트 색상)",
+    "accent": "#hex (강조/포인트 색상)"
+  },
+  "mood": "영문 2~4단어로 분위기 설명",
+  "visualKeyword": "영문으로, AI 이미지 생성 프롬프트에 prefix로 붙일 수 있는 스타일 설명구. 예: soft watercolor illustration with warm earth tones",
+  "description": "한국어로 이 이미지의 분위기와 스타일을 2~3문장으로 설명"
+}`,
+        systemInstruction: '이미지 디자인 분석 전문가. 요청한 JSON 스키마만 그대로 반환. 마크다운·설명·주석 금지.',
+        inlineImages: [imageDataUrl],
+        model: 'gemini-3.1-pro-preview',
+        temperature: 0.3,
+        maxOutputTokens: 1000,
+        responseType: 'json',
+      }),
+    });
+    if (!res.ok) return null;
+    const data = await res.json() as { text?: string };
+    if (!data.text) return null;
+
+    // Gemini 가 가끔 ```json ... ``` 으로 감쌀 수 있으므로 제거 후 파싱.
+    const cleaned = data.text.replace(/```json?\s*\n?/gi, '').replace(/\n?```\s*$/g, '').trim();
+    const start = cleaned.indexOf('{');
+    const end = cleaned.lastIndexOf('}');
+    if (start === -1 || end === -1 || end <= start) return null;
+
+    const parsed = JSON.parse(cleaned.slice(start, end + 1)) as Partial<InspirationAnalysis>;
+    // 필수 필드 방어 — palette 5개 + mood + visualKeyword 중 하나라도 없으면 무효 처리.
+    const p = parsed.palette;
+    if (!p || !p.primary || !p.secondary || !p.background || !p.text || !p.accent) return null;
+    if (!parsed.mood || !parsed.visualKeyword) return null;
+    return {
+      palette: {
+        primary: p.primary,
+        secondary: p.secondary,
+        background: p.background,
+        text: p.text,
+        accent: p.accent,
+      },
+      mood: parsed.mood,
+      visualKeyword: parsed.visualKeyword,
+      description: parsed.description || '',
+    };
+  } catch (err) {
+    console.warn('[CARD_AI] inspiration 분석 실패', err);
+    return null;
+  }
+}

@@ -15,7 +15,7 @@ import { getBrandPreset } from '../../../lib/styleService';
 import CardNewsRenderer from '../../../components/CardNewsRenderer';
 import CardNewsProRenderer from '../../../components/CardNewsProRenderer';
 import { DEFAULT_THEME, COVER_TEMPLATES, CARD_FONTS, FONT_CATEGORIES, type DesignPresetStyle, parseProSlidesJson, ensureSlideIds, generateSlideId, type SlideData as ProSlideData, type CardNewsTheme, type SlideLayoutType } from '../../../lib/cardNewsLayouts';
-import { buildLayoutDefaults } from '../../../lib/cardAiActions';
+import { buildLayoutDefaults, analyzeInspirationImage, type InspirationAnalysis } from '../../../lib/cardAiActions';
 import { getSavedTemplates, deleteTemplate, imageToEditableTemplate, type CardTemplate } from '../../../lib/cardTemplateService';
 import { saveDraft, loadDraft, clearDraft, type CardNewsDraft, type CardRatio, type LoadDraftResult } from '../../../lib/cardNewsDraft';
 import { ContentCategory } from '../../../lib/types';
@@ -121,6 +121,51 @@ function extractNaverLogNo(blogUrl: string): string | null {
   return null;
 }
 
+/**
+ * 영감 이미지 리사이즈 — canvas 기반. 장변을 `maxSize` 로 축소해 JPEG 80% 저장.
+ *
+ * 왜 필요한가:
+ *  - Gemini Vision 호출 비용·지연은 이미지 크기에 비례
+ *  - 네트워크(data URL 전송) + base64 오버헤드도 함께 줄어듦
+ *  - objectURL 은 즉시 revoke (blob 누수 방지)
+ */
+async function resizeInspirationImage(file: File, maxSize = 1024): Promise<string> {
+  if (!file.type.startsWith('image/')) {
+    throw new Error('이미지 파일만 업로드할 수 있습니다.');
+  }
+  if (file.size > 10 * 1024 * 1024) {
+    throw new Error('이미지가 너무 큽니다. 10MB 이하 파일만 업로드해주세요.');
+  }
+  return new Promise((resolve, reject) => {
+    const objectUrl = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        const scale = Math.min(maxSize / img.width, maxSize / img.height, 1);
+        canvas.width = Math.max(1, Math.round(img.width * scale));
+        canvas.height = Math.max(1, Math.round(img.height * scale));
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          reject(new Error('브라우저가 canvas 를 지원하지 않습니다.'));
+          return;
+        }
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL('image/jpeg', 0.8));
+      } catch (err) {
+        reject(err instanceof Error ? err : new Error('이미지 처리 실패'));
+      } finally {
+        URL.revokeObjectURL(objectUrl);
+      }
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error('이미지를 불러올 수 없습니다.'));
+    };
+    img.src = objectUrl;
+  });
+}
+
 export default function CardNewsPage() {
   const creditCtx = useCreditContext();
   // ── 입력 모드 ──
@@ -133,6 +178,15 @@ export default function CardNewsPage() {
   const [urlInput, setUrlInput] = useState('');
   const [urlLoading, setUrlLoading] = useState(false);
   const [urlError, setUrlError] = useState('');
+  // ── 영감 이미지 → 스타일 매칭 ──
+  // 사용자가 업로드한 참고 이미지. Gemini Vision 으로 분석해서 팔레트·분위기·
+  // 비주얼 키워드를 추출하고 proTheme·카드뉴스 프롬프트·배경 이미지 검색에 주입.
+  // 브랜드 프리셋 위에 1회성 오버라이드 — 삭제(✕) 시 브랜드 프리셋으로 복귀.
+  const [referenceImage, setReferenceImage] = useState<string | null>(null);
+  const [referenceAnalysis, setReferenceAnalysis] = useState<InspirationAnalysis | null>(null);
+  const [referenceLoading, setReferenceLoading] = useState(false);
+  const [referenceError, setReferenceError] = useState<string | null>(null);
+  const referenceInputRef = useRef<HTMLInputElement>(null);
   // ── 폼 상태 ──
   const [topic, setTopic] = useState('');
   const [keywords, setKeywords] = useState('');
@@ -504,21 +558,90 @@ export default function CardNewsPage() {
     }
   };
 
+  // ── 영감 이미지 업로드 & 분석 ──
+  //
+  // 동작:
+  //  1) 파일을 1024px 이하로 리사이즈해 dataUrl 생성
+  //  2) 즉시 미리보기 표시 + 분석 로딩 시작
+  //  3) Gemini Vision 으로 팔레트·분위기·비주얼 키워드 추출
+  //  4) 성공 시 proTheme 에 팔레트 오버라이드 (브랜드 프리셋 위에 1회성)
+  //  5) 실패 시 이미지만 보존하고 referenceError 로 사용자에게 알림
+  const handleReferenceImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    // 같은 파일 재선택도 onChange 가 발화하도록 input value 초기화
+    if (e.target) e.target.value = '';
+    if (!file) return;
+
+    setReferenceError(null);
+    setReferenceAnalysis(null);
+    setReferenceLoading(true);
+
+    try {
+      const dataUrl = await resizeInspirationImage(file, 1024);
+      setReferenceImage(dataUrl);
+
+      const analysis = await analyzeInspirationImage(dataUrl);
+      if (!analysis) {
+        setReferenceError('이미지 분석에 실패했습니다. 다른 이미지로 다시 시도해주세요.');
+        return;
+      }
+      setReferenceAnalysis(analysis);
+      // 팔레트 5개를 proTheme 에 머지. 브랜드 프리셋이 이미 적용돼 있더라도
+      // 이 오버라이드가 위에 올라감 (1회성 — 영감 이미지를 지우면 복귀).
+      setProTheme(prev => ({
+        ...prev,
+        backgroundColor: analysis.palette.background,
+        titleColor: analysis.palette.primary,
+        subtitleColor: analysis.palette.secondary,
+        bodyColor: analysis.palette.text,
+        accentColor: analysis.palette.accent,
+      }));
+    } catch (err) {
+      setReferenceError(err instanceof Error ? err.message : '이미지 처리 중 오류가 발생했습니다.');
+    } finally {
+      setReferenceLoading(false);
+    }
+  };
+
+  /**
+   * 영감 이미지 삭제. 분석 결과도 지우고, 브랜드 프리셋이 저장돼 있으면
+   * 그 값으로 proTheme 을 복원 (1회성 오버라이드 해제).
+   */
+  const handleRemoveReferenceImage = async () => {
+    setReferenceImage(null);
+    setReferenceAnalysis(null);
+    setReferenceError(null);
+    const name = hospitalName.trim();
+    if (!name) return;
+    try {
+      const preset = await getBrandPreset(name);
+      if (preset) {
+        setProTheme(prev => ({ ...prev, ...brandPresetToTheme(preset) }));
+      }
+    } catch { /* 복원 실패는 조용히 무시 — 기존 proTheme 유지 */ }
+  };
+
   const autoApplyBackgrounds = async (slides: ProSlideData[]): Promise<ProSlideData[]> => {
     try {
       const baseQ = lastPexelsQuery || await fetchPexelsQuery();
+      // 영감 이미지 분석 결과가 있으면 visualKeyword 를 검색어 prefix 로 주입.
+      // Pexels/Pixabay 가 영어 키워드에 강하므로 영문 스타일 구문을 앞에 붙이면
+      // 결과 이미지가 훨씬 일관된 분위기로 떨어짐.
+      const inspirationPrefix = referenceAnalysis?.visualKeyword
+        ? `${referenceAnalysis.visualKeyword} `
+        : '';
       let photos: { url: string }[];
       if (imageStyle === 'photo') {
         // 실사: Pexels
-        const res = await fetch(`/api/pexels?query=${encodeURIComponent(baseQ)}&orientation=square&per_page=20&page=${Math.floor(Math.random() * 3) + 1}`);
+        const res = await fetch(`/api/pexels?query=${encodeURIComponent(inspirationPrefix + baseQ)}&orientation=square&per_page=20&page=${Math.floor(Math.random() * 3) + 1}`);
         const data = await res.json();
         photos = (data.photos || []) as { url: string }[];
       } else {
         // 일러스트/벡터: Pexels(치과 정확) + Pixabay 합침
         const rndPage = Math.floor(Math.random() * 3) + 1;
         const [pexRes, pixRes] = await Promise.all([
-          fetch(`/api/pexels?query=${encodeURIComponent(baseQ + ' dental')}&orientation=square&per_page=15&page=${rndPage}`),
-          fetch(`/api/pixabay?query=${encodeURIComponent((topic.trim() || baseQ) + ' 치과')}&image_type=${imageStyle === 'infographic' ? 'vector' : 'illustration'}&orientation=horizontal&per_page=10&page=${rndPage}`),
+          fetch(`/api/pexels?query=${encodeURIComponent(inspirationPrefix + baseQ + ' dental')}&orientation=square&per_page=15&page=${rndPage}`),
+          fetch(`/api/pixabay?query=${encodeURIComponent(inspirationPrefix + (topic.trim() || baseQ) + ' 치과')}&image_type=${imageStyle === 'infographic' ? 'vector' : 'illustration'}&orientation=horizontal&per_page=10&page=${rndPage}`),
         ]);
         const [pexData, pixData] = await Promise.all([pexRes.json(), pixRes.json()]);
         photos = [...(pexData.photos || []), ...(pixData.photos || [])] as { url: string }[];
@@ -612,11 +735,19 @@ export default function CardNewsPage() {
         : learnedTemplate?.layoutMatch?.length
         ? `\n\n[학습된 레이아웃 선호]\n가능하면 다음 레이아웃을 우선 사용: ${learnedTemplate.layoutMatch.join(', ')}`
         : '';
+      // 영감 이미지가 분석된 상태면 스타일 힌트를 프롬프트에 주입. 각 슬라이드의
+      // visualKeyword 필드가 이 스타일을 반영하게 유도 — 전체 카드 분위기 통일.
+      const styleHint = referenceAnalysis
+        ? `\n\n[스타일 참조 — 사용자가 업로드한 영감 이미지 분석 결과]
+분위기: ${referenceAnalysis.mood}
+비주얼 키워드: ${referenceAnalysis.visualKeyword}
+모든 슬라이드의 visualKeyword 필드에 "${referenceAnalysis.visualKeyword}" 스타일을 반영하세요. 카드 전체 분위기를 이 이미지와 통일해야 합니다.`
+        : '';
       const res = await fetch('/api/gemini', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          prompt: proPrompt + layoutHint,
+          prompt: proPrompt + layoutHint + styleHint,
           systemInstruction: proSI,
           model: 'gemini-3.1-pro-preview',
           temperature: 0.7,
@@ -1578,6 +1709,90 @@ DECORATIVE: (장식 요소)`,
                   )}
                 </div>
               </div>
+            </div>
+          </details>
+
+          {/* 영감 이미지 (접기) — 분위기/색감을 카드뉴스에 자동 반영 */}
+          <details className="text-sm text-slate-500 bg-slate-50 rounded-xl px-5 py-3 mt-2">
+            <summary className="cursor-pointer hover:text-slate-700 font-semibold">
+              ✨ 영감 이미지 <span className="text-[10px] text-slate-400 font-normal">(선택 — 분위기/색감 참고)</span>
+            </summary>
+            <div className="pt-4 pb-2 space-y-3">
+              <p className="text-xs text-slate-500 leading-relaxed">
+                참고 이미지를 올리면 AI 가 분위기·색감·비주얼 키워드를 분석해서 팔레트를 자동 적용하고 카드뉴스 생성 시 같은 스타일을 반영합니다.
+                <br />
+                <span className="text-slate-400">
+                  ⓘ 브랜드 프리셋이 있다면 그 위에 1회성으로 덮어쓰며, 이미지를 삭제하면 프리셋으로 복귀합니다.
+                </span>
+              </p>
+
+              {!referenceImage ? (
+                <button
+                  type="button"
+                  onClick={() => referenceInputRef.current?.click()}
+                  className="flex items-center justify-center w-full h-24 border-2 border-dashed border-slate-300 rounded-xl text-xs text-slate-400 hover:border-blue-400 hover:text-blue-500 hover:bg-blue-50 transition-all"
+                >
+                  + 클릭하여 영감 이미지 업로드
+                </button>
+              ) : (
+                <div className="flex gap-3">
+                  <div className="relative flex-shrink-0">
+                    <img
+                      src={referenceImage}
+                      alt="영감 이미지"
+                      className="w-32 h-32 object-cover rounded-xl border border-slate-200"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleRemoveReferenceImage}
+                      aria-label="영감 이미지 삭제"
+                      className="absolute -top-1.5 -right-1.5 w-6 h-6 bg-red-500 text-white rounded-full text-[11px] flex items-center justify-center shadow-sm hover:bg-red-600"
+                    >
+                      ✕
+                    </button>
+                    {referenceLoading && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-xl">
+                        <span className="text-white text-[11px] font-semibold">분석 중...</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    {referenceAnalysis && (
+                      <>
+                        <p className="text-xs text-slate-700 leading-relaxed">
+                          {referenceAnalysis.description}
+                        </p>
+                        <div className="mt-2 flex items-center gap-1.5">
+                          {Object.entries(referenceAnalysis.palette).map(([key, color]) => (
+                            <div
+                              key={key}
+                              className="w-6 h-6 rounded-full border border-slate-200 shadow-sm"
+                              style={{ backgroundColor: color }}
+                              title={`${key}: ${color}`}
+                            />
+                          ))}
+                        </div>
+                        <p className="mt-1.5 text-[10px] text-slate-400">
+                          분위기: <span className="text-slate-500 font-mono">{referenceAnalysis.mood}</span>
+                        </p>
+                      </>
+                    )}
+                    {!referenceAnalysis && !referenceLoading && referenceError && (
+                      <p className="text-xs text-red-500">{referenceError}</p>
+                    )}
+                    {!referenceAnalysis && referenceLoading && (
+                      <p className="text-xs text-slate-400">이미지 스타일을 분석하고 있어요…</p>
+                    )}
+                  </div>
+                </div>
+              )}
+              <input
+                ref={referenceInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleReferenceImageUpload}
+              />
             </div>
           </details>
 
