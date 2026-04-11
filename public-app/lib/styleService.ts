@@ -5,6 +5,7 @@
  */
 import { supabase } from './supabase';
 import type { CrawledPostScore, DBCrawledPost } from './types';
+import type { BrandPreset } from './brandPreset';
 
 // ── 타입 ──
 
@@ -62,6 +63,68 @@ export async function getAllStyleProfiles(): Promise<HospitalStyleProfile[]> {
     .order('hospital_name', { ascending: true });
   if (error || !data) return [];
   return data as HospitalStyleProfile[];
+}
+
+// ── 브랜드 프리셋 (brand_preset JSONB 컬럼) ──
+// hospital_style_profiles 에는 두 개의 JSONB 필드가 공존한다:
+//   - style_profile  : 말투 학습 결과 (AnalyzedStyle)
+//   - brand_preset   : 시각 브랜드 프리셋 (BrandPreset, 2026-04-11 마이그레이션)
+// 두 필드는 의도적으로 분리 — 사용처·갱신 빈도·담당 UI 가 서로 다름.
+
+/**
+ * 병원 브랜드 프리셋 조회.
+ * @returns 저장된 프리셋 또는 null (미설정·Supabase 미구성·DB 에러 시 모두 null)
+ */
+export async function getBrandPreset(hospitalName: string): Promise<BrandPreset | null> {
+  if (!supabase) return null;
+  try {
+    const { data, error } = await supabase
+      .from('hospital_style_profiles')
+      .select('brand_preset')
+      .eq('hospital_name', hospitalName)
+      .maybeSingle();
+    if (error || !data) return null;
+    const raw = (data as { brand_preset?: unknown }).brand_preset;
+    // 마이그레이션 기본값 `'{}'` 가 들어와 있을 수 있음 → 빈 객체는 null 로 취급.
+    if (!raw || typeof raw !== 'object') return null;
+    const preset = raw as Partial<BrandPreset>;
+    if (!preset.colors || !preset.typography) return null;
+    return preset as BrandPreset;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 병원 브랜드 프리셋 저장 (upsert).
+ * hospital_style_profiles 의 row 가 없으면 생성, 있으면 brand_preset 컬럼만 갱신.
+ * 다른 필드(style_profile, naver_blog_url 등)는 건드리지 않는다.
+ *
+ * @returns 성공 여부
+ */
+export async function saveBrandPreset(hospitalName: string, preset: BrandPreset): Promise<boolean> {
+  if (!supabase) return false;
+  if (!hospitalName) return false;
+  try {
+    const presetWithTimestamp: BrandPreset = {
+      ...preset,
+      updatedAt: new Date().toISOString(),
+    };
+    // Supabase 의 네이티브 upsert + onConflict 로 atomic 하게 처리.
+    // 공급한 필드만 갱신되므로 기존 style_profile 등은 보존됨.
+    // (.from().upsert 의 타입 제네릭이 DB 스키마와 연결돼 있지 않아 as any 사용 —
+    //  기존 styleService 의 다른 upsert 호출과 동일한 패턴)
+    const { error } = await (supabase.from('hospital_style_profiles') as any).upsert(
+      {
+        hospital_name: hospitalName,
+        brand_preset: presetWithTimestamp,
+      },
+      { onConflict: 'hospital_name' },
+    );
+    return !error;
+  } catch {
+    return false;
+  }
 }
 
 // ── 의료광고법 금지 표현 필터 (말투 분석 결과에서 위험 표현 제거) ──
