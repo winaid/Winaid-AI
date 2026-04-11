@@ -37,14 +37,24 @@ app.use(helmet());
 app.use(compression());
 
 // CORS 설정
-const allowedOrigins = (process.env.ALLOWED_ORIGINS || '').split(',');
+//
+// ALLOWED_ORIGINS 파싱:
+//   - 미설정 시 `''.split(',')` → `['']` 이 되어 빈 문자열이 리스트에 남고,
+//     이후 `origin === ''` 비교가 통과하는 엣지 케이스가 생김 → filter(Boolean)로 차단.
+//
+// 와일드카드 매칭:
+//   - 과거: `allowed.replace(/\*/g, '.*')` 만 하고 `new RegExp(...).test(origin)`.
+//     앵커(`^` / `$`)가 없고 `.` 이스케이프도 없어서 `*.example.com` 이
+//     `evil-example.com.attacker.io` 같은 것도 통과시켰음.
+//   - 수정: `.` 은 `\\.` 로 이스케이프, 양끝에 `^` / `$` 앵커 추가.
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || '').split(',').filter(Boolean);
 app.use(cors({
   origin: (origin, callback) => {
     // origin이 없는 경우(같은 도메인) 또는 허용된 도메인인 경우
     if (!origin || allowedOrigins.some(allowed => {
       if (allowed.includes('*')) {
-        // 와일드카드 패턴 매칭
-        const pattern = allowed.replace(/\*/g, '.*');
+        // 와일드카드 패턴 매칭 — 점 이스케이프 + 앵커 필수 (SSRF/서브도메인 우회 방어)
+        const pattern = '^' + allowed.replace(/\./g, '\\.').replace(/\*/g, '.*') + '$';
         return new RegExp(pattern).test(origin);
       }
       return origin === allowed;
