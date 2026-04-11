@@ -76,6 +76,15 @@ app.use('/api/video/apply-style', applyStyle);
 app.use('/api/video/add-sound-effects', addSoundEffects);
 app.use('/api/video/card-to-shorts', cardToShorts);
 
+// ── 프로덕션 가드 ──
+// 개발 환경은 SHARED_SECRET 없이 부팅 가능(경고만). 프로덕션은 시크릿 누락을
+// 즉시 fail-fast — 실수로 인증 없는 상태로 퍼블릭 Railway 인스턴스가 노출되는
+// 회귀를 원천 차단. `NODE_ENV=production`에서만 적용되므로 로컬 개발은 영향 없음.
+if (process.env.NODE_ENV === 'production' && !SHARED_SECRET) {
+  console.error('FATAL: PROCESSOR_SHARED_SECRET이 설정되지 않았습니다. 프로덕션에서는 반드시 설정해야 합니다.');
+  process.exit(1);
+}
+
 app.listen(PORT, () => {
   console.log('╔═══════════════════════════════════════════╗');
   console.log('║  WINAI Video Processor v1.0.0             ║');

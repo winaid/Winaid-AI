@@ -71,27 +71,15 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Health check
+// Health check — 정보 최소화 (보안)
+// 버전 문자열, uptime, cachedVideos, hasCookies, hasProxy 등 운영 메타데이터는
+// 노출하지 않는다. 버전이 유출되면 특정 취약 버전(yt-dlp CVE 등)을 공격자가
+// 타겟팅할 수 있음. 각 의존성은 boolean `checks`로만 응답.
 app.get('/health', (req, res) => {
-  let ytdlpVersion = 'not installed';
-  let ffmpegVersion = 'not installed';
-  try { ytdlpVersion = execSync('yt-dlp --version').toString().trim(); } catch {}
-  try { ffmpegVersion = execSync('ffmpeg -version 2>&1 | head -1').toString().trim(); } catch {}
-  const cookiePaths = [
-    pathModule.join(__dirname, '..', 'youtube-cookies.txt'),
-    pathModule.join(__dirname, '..', 'cookies.txt'),
-  ];
-  const hasCookies = cookiePaths.some(p => fs.existsSync(p));
-  res.json({
-    status: 'ok',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    ytdlpVersion,
-    ffmpegVersion,
-    hasCookies,
-    hasProxy: !!process.env.PROXY_URL,
-    cachedVideos: youtubeGifRouter.getCacheSize ? youtubeGifRouter.getCacheSize() : 0,
-  });
+  const checks = {};
+  try { execSync('yt-dlp --version', { stdio: 'pipe', timeout: 3000 }); checks.ytdlp = true; } catch { checks.ytdlp = false; }
+  try { execSync('ffmpeg -version', { stdio: 'pipe', timeout: 3000 }); checks.ffmpeg = true; } catch { checks.ffmpeg = false; }
+  res.json({ status: 'ok', checks });
 });
 
 // API 라우트
