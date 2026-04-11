@@ -7,6 +7,35 @@ const requestCounts = new Map();
 const RATE_LIMIT_WINDOW = 60000; // 1분
 const MAX_REQUESTS = parseInt(process.env.MAX_REQUESTS_PER_MINUTE) || 30;
 
+/**
+ * 네이버 블로그 URL을 hostname 기반으로 엄격하게 검증.
+ *
+ * 과거의 `url.includes('blog.naver.com')`은 SSRF 우회 가능:
+ *   - http://evil.com/?blog.naver.com       (쿼리스트링에 포함)
+ *   - http://blog.naver.com.attacker.com    (서브도메인 가장)
+ *   - http://attacker.com/blog.naver.com    (경로에 포함)
+ * 전부 includes 통과 → 크롤러가 공격자 서버로 요청.
+ *
+ * 수정: new URL(...)로 파싱 후 hostname 정확 매칭만 통과.
+ * `extractBlogId` 등 기존 로직이 `blog.naver.com/{id}` 형태를 가정하므로
+ * `m.blog.naver.com` 같은 서브도메인은 지원 대상이 아니라 금지함.
+ */
+function validateNaverBlogUrl(rawUrl) {
+  let parsed;
+  try {
+    parsed = new URL(rawUrl);
+  } catch {
+    return { ok: false, status: 400, error: 'Invalid URL', message: '올바른 URL 형식이 아닙니다.' };
+  }
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    return { ok: false, status: 400, error: 'Invalid URL', message: 'http/https URL만 지원합니다.' };
+  }
+  if (parsed.hostname !== 'blog.naver.com') {
+    return { ok: false, status: 400, error: 'Invalid URL', message: '네이버 블로그 URL만 지원합니다. (blog.naver.com/...)' };
+  }
+  return { ok: true };
+}
+
 function checkRateLimit(ip) {
   const now = Date.now();
   const userRequests = requestCounts.get(ip) || [];
@@ -92,12 +121,10 @@ router.post('/crawl-content', async (req, res) => {
       });
     }
 
-    // 네이버 블로그 URL인지 확인
-    if (!url.includes('blog.naver.com')) {
-      return res.status(400).json({
-        error: 'Invalid URL',
-        message: '네이버 블로그 URL만 지원합니다.'
-      });
+    // hostname 정확 매칭 (SSRF 방어 — includes 매칭 금지)
+    const check = validateNaverBlogUrl(url);
+    if (!check.ok) {
+      return res.status(check.status).json({ error: check.error, message: check.message });
     }
 
     // Rate limiting
@@ -151,8 +178,10 @@ router.post('/crawl-hospital-blog', async (req, res) => {
       return res.status(400).json({ error: 'blogUrl is required', message: '블로그 URL을 입력해주세요.' });
     }
 
-    if (!blogUrl.includes('blog.naver.com')) {
-      return res.status(400).json({ error: 'Invalid URL', message: '네이버 블로그 URL만 지원합니다. (blog.naver.com/...)' });
+    // hostname 정확 매칭 (SSRF 방어 — includes 매칭 금지)
+    const check = validateNaverBlogUrl(blogUrl);
+    if (!check.ok) {
+      return res.status(check.status).json({ error: check.error, message: check.message });
     }
 
     const ip = req.ip || req.connection.remoteAddress;

@@ -51,6 +51,33 @@ type Timer = ReturnType<typeof createTimer>;
 
 // ── 유틸 ──
 
+/**
+ * 네이버 블로그 URL을 hostname 기반으로 엄격하게 검증.
+ *
+ * 과거의 `blogUrl.includes('blog.naver.com')`은 SSRF 우회 가능:
+ *   - http://evil.com/?blog.naver.com       (쿼리스트링 포함)
+ *   - http://blog.naver.com.attacker.com    (서브도메인 가장)
+ *   - http://attacker.com/blog.naver.com    (경로 포함)
+ * 전부 includes 통과 → 서버가 공격자 호스트로 요청.
+ *
+ * 수정: new URL 파싱 + hostname 정확 매칭 + http/https만 허용.
+ */
+function validateNaverBlogUrl(rawUrl: string): { ok: true } | { ok: false; message: string } {
+  let parsed: URL;
+  try {
+    parsed = new URL(rawUrl);
+  } catch {
+    return { ok: false, message: '올바른 URL 형식이 아닙니다.' };
+  }
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    return { ok: false, message: 'http/https URL만 지원합니다.' };
+  }
+  if (parsed.hostname !== 'blog.naver.com') {
+    return { ok: false, message: '네이버 블로그 URL만 지원합니다. (blog.naver.com/...)' };
+  }
+  return { ok: true };
+}
+
 function extractBlogId(blogUrl: string): string | null {
   const m = blogUrl.match(/blog\.naver\.com\/([^/?#]+)/);
   return m ? m[1] : null;
@@ -490,11 +517,17 @@ export async function POST(request: NextRequest) {
     const body = (await request.json()) as { blogUrl: string; maxPosts?: number };
     const { blogUrl, maxPosts = 10 } = body;
 
-    if (!blogUrl || !blogUrl.includes('blog.naver.com')) {
+    if (!blogUrl || typeof blogUrl !== 'string') {
       return NextResponse.json(
-        { error: 'Invalid URL', message: '네이버 블로그 URL을 입력해주세요. (blog.naver.com/...)' },
+        { error: 'Invalid URL', message: '블로그 URL을 입력해주세요.' },
         { status: 400 },
       );
+    }
+
+    // hostname 정확 매칭 (SSRF 방어 — includes 매칭 금지)
+    const check = validateNaverBlogUrl(blogUrl);
+    if (!check.ok) {
+      return NextResponse.json({ error: 'Invalid URL', message: check.message }, { status: 400 });
     }
 
     const blogId = extractBlogId(blogUrl);
