@@ -2,6 +2,7 @@
 
 import { useState, useRef, useCallback } from 'react';
 import { analyzeDesignFromImages, saveTemplate, getSavedTemplates, deleteTemplate, type CardTemplate } from '../lib/cardTemplateService';
+import { sanitizeHtml } from '../lib/sanitize';
 
 /** 선택 가능한 built-in 디자인 템플릿 (card_news/page.tsx에서 주입) */
 export interface BuiltInDesignOption {
@@ -154,7 +155,13 @@ export default function CardTemplateManager({
                 }`}
                 title={tmpl.description || tmpl.name}>
                 {tmpl.previewSvg ? (
-                  <div className="w-full flex-1 overflow-hidden" dangerouslySetInnerHTML={{ __html: tmpl.previewSvg }} />
+                  // XSS 방어: previewSvg는 외부(DB/admin 입력)에서 올 수 있으므로
+                  // DOMPurify 기반 sanitize 필수. ⚠️ `lib/sanitize`의 ALLOWED_TAGS는
+                  // HTML 전용이라 svg/rect/circle 등이 포함돼 있지 않음 — 실제로
+                  // builtInTemplates에 SVG 문자열이 주입되면 태그가 전부 제거되어
+                  // 빈 프리뷰가 렌더될 수 있음. 추후 SVG 지원이 필요하면 sanitize.ts를
+                  // USE_PROFILES.svg 기반으로 확장하거나 전용 svg sanitizer를 추가할 것.
+                  <div className="w-full flex-1 overflow-hidden" dangerouslySetInnerHTML={{ __html: sanitizeHtml(tmpl.previewSvg || '') }} />
                 ) : (
                   <div className="w-full flex-1 flex items-center justify-center text-lg">{tmpl.icon || '🎨'}</div>
                 )}
