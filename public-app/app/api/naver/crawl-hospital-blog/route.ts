@@ -164,7 +164,6 @@ interface PostEntry {
 /** RSS 피드에서 글 목록 추출 */
 async function fetchFromRss(blogId: string, maxPosts: number): Promise<PostEntry[]> {
   const rssUrl = `https://rss.blog.naver.com/${blogId}.xml`;
-  console.log(`[Crawl] RSS 시도: ${rssUrl}`);
 
   try {
     const res = await fetchWithTimeout(rssUrl, {
@@ -172,7 +171,6 @@ async function fetchFromRss(blogId: string, maxPosts: number): Promise<PostEntry
       Accept: 'application/rss+xml, application/xml, text/xml, */*',
     });
     if (!res.ok) {
-      console.log(`[Crawl] RSS 실패: HTTP ${res.status}`);
       return [];
     }
     const xml = await res.text();
@@ -212,10 +210,8 @@ async function fetchFromRss(blogId: string, maxPosts: number): Promise<PostEntry
       items.push({ logNo: logNoMatch[1], title, publishedAt, summary });
     }
 
-    console.log(`[Crawl] RSS에서 ${items.length}개 글 발견`);
     return items;
-  } catch (err) {
-    console.log(`[Crawl] RSS 오류: ${(err as Error).message}`);
+  } catch {
     return [];
   }
 }
@@ -232,13 +228,10 @@ async function fetchLogNos(blogId: string, maxCandidates: number, timer: Timer):
     try {
       const res = await fetchWithTimeout(listUrl, FETCH_HEADERS);
       if (!res.ok) {
-        console.log(`[Crawl] PostList p${page} HTTP ${res.status}`);
         break;
       }
       html = await res.text();
-    } catch (err) {
-      const msg = (err as Error).name === 'AbortError' ? 'timeout' : (err as Error).message;
-      console.log(`[Crawl] PostList p${page} 오류: ${msg}`);
+    } catch {
       break;
     }
 
@@ -263,7 +256,6 @@ async function fetchLogNos(blogId: string, maxCandidates: number, timer: Timer):
       }
     }
 
-    console.log(`[Crawl] PostList p${page}: +${foundNew}개 (누적 ${entries.length})`);
     if (foundNew === 0) break;
     page++;
   }
@@ -295,13 +287,10 @@ async function fetchPostContent(
   try {
     const res = await fetchWithTimeout(url, FETCH_HEADERS);
     if (!res.ok) {
-      console.log(`  [Crawl] PostView ${logNo} HTTP ${res.status}`);
       return null;
     }
     html = await res.text();
-  } catch (err) {
-    const msg = (err as Error).name === 'AbortError' ? 'timeout' : (err as Error).message;
-    console.log(`  [Crawl] PostView ${logNo} 오류: ${msg}`);
+  } catch {
     return null;
   }
 
@@ -433,7 +422,6 @@ async function fetchPostContent(
     if (ogDesc) {
       const desc = cleanHtml(ogDesc[1]);
       if (desc.length > 30) {
-        console.log(`  [Crawl] og:description 폴백: ${logNo} (${desc.length}자)`);
         paragraphs.push(desc);
       }
     }
@@ -441,13 +429,11 @@ async function fetchPostContent(
 
   // RSS에서 이미 가져온 요약이 있고 본문 추출 모두 실패한 경우 → RSS 요약 사용
   if (paragraphs.length === 0 && entry.summary && entry.summary.length > 30) {
-    console.log(`  [Crawl] RSS 요약 폴백: ${logNo} (${entry.summary.length}자)`);
     paragraphs.push(entry.summary);
   }
 
   const content = paragraphs.join('\n\n');
   if (content.length <= 30) {
-    console.log(`  [Crawl] 본문 부족 스킵: ${logNo} (${content.length}자)`);
     return null;
   }
 
@@ -539,7 +525,6 @@ export async function POST(request: NextRequest) {
     }
 
     const limited = Math.min(Number(maxPosts) || 10, 20);
-    console.log(`[Crawl] 시작: ${blogId} (목표 ${limited}개)`);
 
     // ── 1단계: 글 목록 수집 (RSS 우선 → PostList fallback) ──
     let entries: PostEntry[] = [];
@@ -563,7 +548,6 @@ export async function POST(request: NextRequest) {
     if (entries.length === 0) {
       diagnostics.push('글 목록 확보 실패');
       const reason = !timer.hasTimeLeft() ? ' (시간 초과)' : '';
-      console.log(`[Crawl] 글 목록 0건${reason}: ${blogId}`);
       return NextResponse.json({
         success: true,
         blogUrl,
@@ -580,7 +564,6 @@ export async function POST(request: NextRequest) {
     const { posts, skipped, timedOut } = await fetchPostsBatch(blogId, entries, limited, timer);
 
     diagnostics.push(`본문 수집: ${posts.length}개 성공, ${skipped}개 스킵${timedOut ? ', 시간 초과로 조기 종료' : ''}`);
-    console.log(`[Crawl] 본문 수집: ${posts.length}개, 스킵 ${skipped}개 (${timer.elapsed()}ms)`);
 
     // ── 3단계: 날짜순 정렬 ──
     posts.sort((a, b) => {

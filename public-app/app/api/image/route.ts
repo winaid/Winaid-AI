@@ -644,7 +644,7 @@ ABSOLUTE PROHIBITIONS:
     }
 
     if (!stage1Image) {
-      console.log('[card_news] Stage 1 (Flash) failed, falling back to single-stage Pro');
+      // Stage 1 (Flash) failed, falling back to single-stage Pro
     } else if (!hasTextToRender) {
       return NextResponse.json({ imageDataUrl: `data:${stage1Image.mimeType};base64,${stage1Image.data}`, mimeType: stage1Image.mimeType, model: 'flash(illustration)' });
     } else {
@@ -679,7 +679,7 @@ ABSOLUTE PROHIBITIONS:
         }
       }
 
-      console.log('[card_news] Stage 2 (Pro text) failed, returning Stage 1 image without text');
+      // Stage 2 (Pro text) failed, returning Stage 1 image without text
       return NextResponse.json({ imageDataUrl: `data:${stage1Image.mimeType};base64,${stage1Image.data}`, mimeType: stage1Image.mimeType, model: 'flash(illustration-only)' });
     }
   }

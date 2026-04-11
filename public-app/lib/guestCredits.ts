@@ -6,6 +6,10 @@
  *
  * 로그인된 사용자와는 완전히 별개의 카운터이므로 악용을 막기 위해 서버 API route에는
  * 별도의 IP 기반 rate limit(분당 10회)을 두고 있다.
+ *
+ * ⚠️ 보안 한계: localStorage 기반이므로 DevTools에서 값 수정 시 우회 가능.
+ *    서버 API route의 IP rate limit(분당 10회)이 실질적 방어선.
+ *    공개 출시 시 서버 사이드 크레딧 검증(Upstash Redis 등) 도입 필요.
  */
 
 export const GUEST_CREDIT_KEY = 'winaid_guest_credits';
