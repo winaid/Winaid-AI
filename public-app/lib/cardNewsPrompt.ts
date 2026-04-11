@@ -8,7 +8,7 @@
 import type { CardNewsDesignTemplateId } from './types';
 import { CARD_NEWS_DESIGN_TEMPLATES } from './cardNewsDesignTemplates';
 import { getMedicalLawPromptBlock } from './medicalLawRules';
-import { sanitizePromptInput } from './promptSanitize';
+import { sanitizePromptInput, sanitizeSourceContent } from './promptSanitize';
 
 export interface CardNewsRequest {
   topic: string;
@@ -19,6 +19,12 @@ export interface CardNewsRequest {
   designTemplateId?: CardNewsDesignTemplateId;
   category?: string;
   contentMode?: 'simple' | 'detailed';
+  /**
+   * 소스 콘텐츠 (블로그 글·유튜브 스크립트·기사 등).
+   * 제공되면 이 텍스트의 핵심을 추출하여 slideCount장 카드뉴스로 재구성한다.
+   * topic 은 "이 소스의 카드뉴스화" 정도의 의미로만 쓰인다.
+   */
+  sourceContent?: string;
 }
 
 const STYLE_GUIDES: Record<string, string> = {
@@ -281,6 +287,9 @@ export function buildCardNewsProPrompt(req: CardNewsRequest): {
   const safeKeywords = sanitizePromptInput(req.keywords, 200);
   const safeHospitalName = sanitizePromptInput(req.hospitalName, 60);
   const safeCategory = sanitizePromptInput(req.category, 30);
+  // 소스 콘텐츠는 대괄호·따옴표·단락을 보존하는 전용 sanitize 사용 (최대 15000자).
+  const safeSource = sanitizeSourceContent(req.sourceContent, 15000);
+  const hasSource = safeSource.length > 0;
 
   const isAutoCount = !req.slideCount || req.slideCount === 0;
   const slideCount = isAutoCount ? 0 : req.slideCount;
@@ -343,7 +352,16 @@ export function buildCardNewsProPrompt(req: CardNewsRequest): {
     - "top": 이미지가 제목 위 (info/steps/checklist에 권장)
     - "background": 이미지가 배경, 텍스트가 오버레이 (표지·강렬한 수치 강조에 권장)
     - "center": 이미지가 중앙 큰 비중 (data-highlight에도 가능)
-    cover/closing은 visualKeyword/imagePosition 생략 가능.`;
+    cover/closing은 visualKeyword/imagePosition 생략 가능.
+
+[소스 콘텐츠 모드]
+- 요청에 "소스 콘텐츠" 블록이 제공되면, 그 글의 핵심을 추출하여 카드뉴스로 재구성하세요.
+- 이 경우 topic 은 "이 소스를 카드뉴스로 변환" 정도의 의미이므로 소스 내용이 우선합니다.
+- 원문의 사실·수치·고유명사(인물명·시술명·병원명·기관명)는 **정확히 유지**하세요. 지어내거나 바꾸지 마세요.
+- 원문에 없는 수치를 웹 검색으로 보강할 때는, 원문과 충돌하지 않는 범위에서만 추가하세요. 충돌 시 원문 우선.
+- 원문의 핵심 주장·결론·순서를 따르되, 카드뉴스 포맷(짧은 제목·요약 본문·구조화된 레이아웃)에 맞게 재구성하세요.
+- 원문을 그대로 복사하지 마세요. 요약·구조화·시각적 임팩트 있는 표현으로 다시 쓰세요.
+- 원문에 가격·통계 등 구체적 수치가 있으면 반드시 해당 슬라이드에 살려주세요.`;
 
   const example = `예시 스키마:
 {
@@ -451,18 +469,31 @@ export function buildCardNewsProPrompt(req: CardNewsRequest): {
     `톤: ${req.writingStyle === 'expert' ? '전문가형(신뢰/정보)' : '친절형(공감/쉬움)'}`,
   ].filter(Boolean).join('\n');
 
-  const prompt = `${requestBlock}
+  // 소스 콘텐츠가 주어지면 원문 블록을 별도로 명시. 역할: topic 보다 우선.
+  const sourceBlock = hasSource ? `
 
-위 주제에 맞는 카드뉴스 ${slideCount}장을 구조화된 JSON으로 출력하세요.
+---
+[소스 콘텐츠 — 아래 글의 핵심을 추출하여 카드뉴스로 재구성하세요]
+${safeSource}
+---
+` : '';
+
+  const sourceModeNote = hasSource
+    ? '\n\n⚠️ 소스 콘텐츠가 제공됐습니다. 위 topic 은 참고용이고, 소스 내용을 우선으로 재구성하세요. 원문의 사실·수치·고유명사는 정확히 유지.'
+    : '';
+
+  const prompt = `${requestBlock}${sourceBlock}${sourceModeNote}
+
+${hasSource ? '위 소스 콘텐츠' : '위 주제'}에 맞는 카드뉴스 ${slideCount}장을 구조화된 JSON으로 출력하세요.
 - 1장: cover, ${slideCount}장: closing
-- 중간 ${middleCount}장은 comparison / icon-grid / steps / checklist / data-highlight / info 중 주제에 맞는 것을 혼합
+- 중간 ${middleCount}장은 comparison / icon-grid / steps / checklist / data-highlight / info 중 ${hasSource ? '소스 내용' : '주제'}에 맞는 것을 혼합
 - 수치·기간·비용 등 구체적 숫자를 최소 5개 이상 슬라이드 전체에 분포
 - 같은 표현 반복 금지, 매 슬라이드 새로운 정보 제공
 - 마지막 장은 구체적 행동 유도(CTA) 포함
 
 ${example}
 
-이제 실제 주제에 맞춰 JSON만 출력하세요. 설명·주석·마크다운 금지.`;
+이제 실제 ${hasSource ? '소스 콘텐츠' : '주제'}에 맞춰 JSON만 출력하세요. 설명·주석·마크다운 금지.`;
 
   return { systemInstruction, prompt };
 }
