@@ -284,3 +284,23 @@ function getStepResultUrl(state: PipelineState, step: number): string | undefine
   }
 }
 
+/**
+ * 9개 step의 모든 blob URL을 한 번에 revoke.
+ * handleFile(새 파일 업로드), resetPipeline(초기화 버튼), unmount(페이지 이탈)에서 사용.
+ * revoke 함수를 주입받아 순환 의존(hooks/useBlobUrl)을 피한다.
+ */
+export function revokeAllStepBlobs(
+  state: PipelineState,
+  revoke: (url: string | undefined) => void,
+): void {
+  revoke(state.step1_crop.resultBlobUrl);
+  revoke(state.step2_style.resultBlobUrl);
+  revoke(state.step3_silence.resultBlobUrl);
+  revoke(state.step4_subtitle.resultBlobUrl);
+  revoke(state.step5_effects.resultBlobUrl);
+  revoke(state.step6_zoom.resultBlobUrl);
+  revoke(state.step7_bgm.resultBlobUrl);
+  revoke(state.step8_intro.resultBlobUrl);
+  revoke(state.step9_thumbnail.thumbnailUrl);
+}
+

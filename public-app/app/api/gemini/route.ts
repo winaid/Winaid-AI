@@ -150,8 +150,10 @@ interface GeminiCandidate {
 }
 
 export async function POST(request: NextRequest) {
-  // 게스트 허용: 로그인 쿠키 없으면 IP 기반 분당 10회 제한
-  const gate = gateGuestRequest(request);
+  // 게스트 허용: 로그인 쿠키 없으면 IP 기반 분당 10회 제한.
+  // Gemini는 가장 비싼 호출이라 다른 라우트(기본 30)보다 타이트하게.
+  // README Day 3 표와도 일치시킴(10/분). 남용 방지선 + 요금 폭탄 방어.
+  const gate = gateGuestRequest(request, 10);
   if (!gate.ok) {
     return NextResponse.json({ error: gate.error }, { status: gate.status });
   }
@@ -188,7 +190,9 @@ export async function POST(request: NextRequest) {
     };
 
     if (body.systemInstruction) {
-      streamApiBody.system_instruction = { parts: [{ text: body.systemInstruction }] };
+      // 비스트리밍 경로와 동일한 camelCase 키 사용.
+      // Google API는 둘 다 받지만, 스트리밍 경로만 snake_case였던 점을 통일.
+      streamApiBody.systemInstruction = { parts: [{ text: body.systemInstruction }] };
     }
     if (body.googleSearch) {
       streamApiBody.tools = [{ google_search: {} }];
@@ -248,7 +252,10 @@ export async function POST(request: NextRequest) {
       });
     } catch (err: unknown) {
       if ((err as Error).name === 'AbortError') return NextResponse.json({ error: '요청 시간 초과' }, { status: 504 });
-      return NextResponse.json({ error: (err as Error).message || '서버 오류' }, { status: 500 });
+      // 스트리밍 catch 경로도 redact — 일부 fetch 구현은 에러 메시지에 원본 URL(즉 key)을 포함.
+      const rawMsg = (err as Error).message || '서버 오류';
+      const safeMsg = rawMsg.replace(/key=[A-Za-z0-9_-]+/g, 'key=***');
+      return NextResponse.json({ error: safeMsg }, { status: 500 });
     }
   }
 

@@ -21,7 +21,7 @@ import {
   type StepCropState, type StepStyleState, type StepSilenceState, type StepSubtitleState,
   type StepEffectsState, type StepZoomState, type StepBgmState, type StepIntroState, type StepThumbnailState,
   type SubtitleSegment, type SoundEffect,
-  INITIAL_PIPELINE_STATE, TOTAL_STEPS, getInputForStep,
+  INITIAL_PIPELINE_STATE, TOTAL_STEPS, getInputForStep, revokeAllStepBlobs,
 } from '../../../components/video-edit/types';
 
 // ── 상수 ──
@@ -189,7 +189,14 @@ export default function VideoEditPage() {
 
   const handleFile = useCallback((f: File) => {
     setError('');
-    setState(prev => ({ ...INITIAL_PIPELINE_STATE, mode: prev.mode }));
+    // 새 파일 업로드 시 이전 pipeline의 모든 blob URL을 revoke해야 함.
+    // 이전엔 단순히 state만 덮어써서 9개 step의 resultBlobUrl/thumbnailUrl이 누수됐다.
+    stepAbortRef.current?.abort();
+    setState(prev => {
+      revokeAllStepBlobs(prev, revokeIfBlob);
+      return { ...INITIAL_PIPELINE_STATE, mode: prev.mode };
+    });
+    setAutoStatuses([]);
 
     if (f.size > MAX_SIZE_MB * 1024 * 1024) {
       setError(`파일 크기가 ${MAX_SIZE_MB}MB를 초과합니다.`);
@@ -779,31 +786,14 @@ export default function VideoEditPage() {
       // 언마운트 시 in-flight fetch 중단 + 잔여 blob URL 일괄 해제
       autoAbortRef.current?.abort();
       stepAbortRef.current?.abort();
-      const s = stateRef.current;
-      revokeIfBlob(s.step1_crop.resultBlobUrl);
-      revokeIfBlob(s.step2_style.resultBlobUrl);
-      revokeIfBlob(s.step3_silence.resultBlobUrl);
-      revokeIfBlob(s.step4_subtitle.resultBlobUrl);
-      revokeIfBlob(s.step5_effects.resultBlobUrl);
-      revokeIfBlob(s.step6_zoom.resultBlobUrl);
-      revokeIfBlob(s.step7_bgm.resultBlobUrl);
-      revokeIfBlob(s.step8_intro.resultBlobUrl);
-      revokeIfBlob(s.step9_thumbnail.thumbnailUrl);
+      revokeAllStepBlobs(stateRef.current, revokeIfBlob);
     };
   }, []);
 
   // 전체 초기화 — 9개 step의 모든 blob URL을 해제한 뒤 초기 상태로 교체
   const resetPipeline = () => {
     setState(prev => {
-      revokeIfBlob(prev.step1_crop.resultBlobUrl);
-      revokeIfBlob(prev.step2_style.resultBlobUrl);
-      revokeIfBlob(prev.step3_silence.resultBlobUrl);
-      revokeIfBlob(prev.step4_subtitle.resultBlobUrl);
-      revokeIfBlob(prev.step5_effects.resultBlobUrl);
-      revokeIfBlob(prev.step6_zoom.resultBlobUrl);
-      revokeIfBlob(prev.step7_bgm.resultBlobUrl);
-      revokeIfBlob(prev.step8_intro.resultBlobUrl);
-      revokeIfBlob(prev.step9_thumbnail.thumbnailUrl);
+      revokeAllStepBlobs(prev, revokeIfBlob);
       return { ...INITIAL_PIPELINE_STATE, mode: prev.mode };
     });
     setError('');
