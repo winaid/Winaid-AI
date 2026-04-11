@@ -88,8 +88,9 @@ async function generateCardNews(page: Page) {
   await expect(textarea).toBeVisible({ timeout: 15000 });
   await textarea.fill('E2E 테스트 임플란트 사후관리');
 
-  // 생성 버튼 클릭
-  const genBtn = page.locator('button:has-text("카드뉴스 생성")');
+  // 생성 버튼 클릭 — 상단 탭과 CTA 버튼이 동일 텍스트 "✨ 카드뉴스 생성"을
+  // 사용하므로 data-testid로 CTA를 명시적으로 지정 (strict mode violation 방어).
+  const genBtn = page.getByTestId('cta-generate-card-news');
   await expect(genBtn).toBeVisible({ timeout: 5000 });
   await genBtn.click();
 
@@ -124,7 +125,9 @@ async function openCanvasEditor(page: Page, slideIdx: number) {
 
 // ── 편집 모달 닫기 ──
 async function closeEditor(page: Page) {
-  const btn = page.locator('button:has-text("완료")').first();
+  // 슬라이드 카드 내 인라인 "✓ 완료"(수정 토글 버튼)과 구분하려고 testid 사용.
+  // 둘 다 텍스트 "✓ 완료"를 공유하기 때문에 has-text는 click intercepted를 유발.
+  const btn = page.getByTestId('editor-close');
   if (await btn.isVisible({ timeout: 2000 }).catch(() => false)) {
     await btn.click();
     await page.waitForTimeout(500);
@@ -296,14 +299,15 @@ test.describe('카드뉴스 캔버스 드래그앤드롭', () => {
     await expect(page.locator('text=페이지 편집')).toBeVisible();
   });
 
-  test('6. 편집 모달 — 슬라이드 전환(◀▶) 후 Canvas 유지', async ({ page }) => {
+  test('6. 편집 모달 — 슬라이드 전환(‹›) 후 Canvas 유지', async ({ page }) => {
     await mockApis(page);
     await goToCardNews(page);
     await generateCardNews(page);
     await openCanvasEditor(page, 0);
 
-    // 다음 슬라이드
-    const nextBtn = page.locator('button:has-text("▶")');
+    // 다음 슬라이드 — 실제 버튼 라벨은 `‹` / `›` (U+2039/U+203A)이고
+    // `▶`는 다른 곳(쇼츠 버튼 등)에서 쓰이므로 testid로 명시.
+    const nextBtn = page.getByTestId('editor-next-slide');
     if (await nextBtn.isVisible().catch(() => false)) {
       await nextBtn.click();
       await page.waitForTimeout(1000);
@@ -315,7 +319,7 @@ test.describe('카드뉴스 캔버스 드래그앤드롭', () => {
     }
 
     // 이전 슬라이드
-    const prevBtn = page.locator('button:has-text("◀")');
+    const prevBtn = page.getByTestId('editor-prev-slide');
     if (await prevBtn.isVisible().catch(() => false)) {
       await prevBtn.click();
       await page.waitForTimeout(1000);

@@ -1257,9 +1257,11 @@ JSON만 출력:
                 <span className="text-lg font-bold text-slate-800">{editingIdx + 1}페이지 편집</span>
                 <div className="flex items-center gap-2">
                   <button type="button" onClick={() => setEditingIdx(Math.max(0, editingIdx - 1))} disabled={editingIdx === 0}
+                    data-testid="editor-prev-slide"
                     className="w-8 h-8 rounded-lg bg-slate-100 text-slate-500 disabled:opacity-30 flex items-center justify-center text-sm">‹</button>
                   <span className="text-sm text-slate-500">{editingIdx + 1} / {slides.length}</span>
                   <button type="button" onClick={() => setEditingIdx(Math.min(slides.length - 1, editingIdx + 1))} disabled={editingIdx === slides.length - 1}
+                    data-testid="editor-next-slide"
                     className="w-8 h-8 rounded-lg bg-slate-100 text-slate-500 disabled:opacity-30 flex items-center justify-center text-sm">›</button>
                 </div>
               </div>
@@ -1274,7 +1276,9 @@ JSON만 출력:
                     {useCanvas ? 'Canvas' : 'HTML'}
                   </button>
                 )}
-                <button type="button" onClick={() => setEditingIdx(null)} className="px-5 py-2 text-sm font-bold text-white bg-blue-600 rounded-lg hover:bg-blue-700">✓ 완료</button>
+                <button type="button" onClick={() => setEditingIdx(null)}
+                  data-testid="editor-close"
+                  className="px-5 py-2 text-sm font-bold text-white bg-blue-600 rounded-lg hover:bg-blue-700">✓ 완료</button>
               </div>
             </div>
             {/* 좌(프리뷰) + 우(편집) */}

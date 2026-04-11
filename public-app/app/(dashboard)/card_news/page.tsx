@@ -1231,6 +1231,7 @@ DECORATIVE: (장식 요소)`,
             </div>
             <div className="flex-1" />
             <button type="button" onClick={openDesignModal} disabled={!topic.trim() || isGenerating}
+              data-testid="cta-generate-card-news"
               className="px-8 py-3 bg-blue-600 text-white text-sm font-bold rounded-xl hover:bg-blue-700 disabled:opacity-50 shadow-lg shadow-blue-200 transition-all">
               {isGenerating ? '생성 중...' : '✨ 카드뉴스 생성'}
             </button>

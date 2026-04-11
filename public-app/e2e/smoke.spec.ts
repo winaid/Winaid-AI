@@ -117,12 +117,20 @@ test('8. 모바일 — UI 깨지지 않는지', async ({ page }) => {
   await page.goto('/');
   // 랜딩 페이지가 모바일에서도 표시되는지
   await expect(page.locator('text=WINAI').first()).toBeVisible();
-  // 로그인 페이지
+  // 로그인 페이지 — Supabase 설정 여부와 무관하게 통과해야 함.
+  //   * 설정됨: 폼의 "로그인" 탭 버튼 표시
+  //   * 미설정: "로그인 서비스 준비 중" 안내 화면 표시
+  // 양쪽 상태 모두 "로그인" 문자열을 포함하므로 substring 매칭으로 통일.
   await page.goto('/auth');
-  await expect(page.locator('button:has-text("로그인")').first()).toBeVisible();
-  // 대시보드 (게스트)
+  await expect(page.getByText('로그인').first()).toBeVisible();
+  // 대시보드 (게스트) — 모바일 뷰포트에서는:
+  //   * Sidebar는 `hidden lg:flex`로 숨겨짐
+  //   * MobileHeader의 nav tabs는 isAppHome=true일 때 렌더 안 됨
+  // 따라서 "블로그" 같은 nav 항목으로 검증하면 안 됨. 대신 /app 페이지가
+  // 실제로 렌더됐는지 h1 타이틀("WINAI")과 고유 안내 문구로 확인.
   await page.goto('/app?guest=1');
-  await expect(page.locator('text=블로그').first()).toBeVisible({ timeout: 10000 });
+  await expect(page.getByRole('heading', { name: 'WINAI', level: 1 })).toBeVisible({ timeout: 10000 });
+  await expect(page.getByText('병원 마케팅 콘텐츠를 AI로').first()).toBeVisible();
 });
 
 // ── 9. /admin 접근 → 404 ──
