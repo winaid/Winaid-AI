@@ -1,5 +1,17 @@
 import { getSupabaseClient } from './supabase';
 
+/**
+ * 관리자 이메일 화이트리스트.
+ *
+ * ⚠️ 반드시 정확 매칭(Set.has)만 사용할 것.
+ * 과거 `email.includes('winai')` 패턴 매칭이 있었는데, `attacker+winai@gmail.com`
+ * 같은 이메일로 가입만 하면 누구나 999 크레딧 + admin 플랜을 받을 수 있는
+ * 치명 취약점이었음. 절대 substring 매칭으로 되돌리지 말 것.
+ */
+const ADMIN_EMAILS: ReadonlySet<string> = new Set([
+  'glorious.youtub@gmail.com',
+]);
+
 /** 이메일+비밀번호 로그인 */
 export const signInWithEmail = async (email: string, password: string) => {
   const supabase = getSupabaseClient();
@@ -55,9 +67,9 @@ export const signUpWithEmail = async (
         } as Record<string, unknown>);
       }
 
-      // 크레딧 설정 (윈에이아이/관리자 계정은 999 크레딧)
-      const adminEmails = ['glorious.youtub@gmail.com'];
-      const isAdmin = email.includes('winaid') || email.includes('winai') || adminEmails.includes(email.toLowerCase());
+      // 크레딧 설정 — 화이트리스트 정확 매칭만 허용.
+      // 과거의 `email.includes('winai')` substring 매칭은 권한 상승 취약점이라 제거됨.
+      const isAdmin = ADMIN_EMAILS.has(email.toLowerCase());
       const creditAmount = isAdmin ? 999 : 20;
 
       // user_credits 테이블 (get_credits RPC가 읽는 곳)
