@@ -52,6 +52,13 @@ type Timer = ReturnType<typeof createTimer>;
 // ── 유틸 ──
 
 /**
+ * 네이버 블로그 hostname 화이트리스트.
+ * - `blog.naver.com` 데스크톱
+ * - `m.blog.naver.com` 모바일 (사용자가 모바일 공유 링크를 붙여넣는 경우 허용)
+ */
+const NAVER_BLOG_HOSTS = new Set(['blog.naver.com', 'm.blog.naver.com']);
+
+/**
  * 네이버 블로그 URL을 hostname 기반으로 엄격하게 검증.
  *
  * 과거의 `blogUrl.includes('blog.naver.com')`은 SSRF 우회 가능:
@@ -60,7 +67,7 @@ type Timer = ReturnType<typeof createTimer>;
  *   - http://attacker.com/blog.naver.com    (경로 포함)
  * 전부 includes 통과 → 서버가 공격자 호스트로 요청.
  *
- * 수정: new URL 파싱 + hostname 정확 매칭 + http/https만 허용.
+ * 수정: new URL 파싱 + hostname 화이트리스트 정확 매칭 + http/https만 허용.
  */
 function validateNaverBlogUrl(rawUrl: string): { ok: true } | { ok: false; message: string } {
   let parsed: URL;
@@ -72,15 +79,33 @@ function validateNaverBlogUrl(rawUrl: string): { ok: true } | { ok: false; messa
   if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
     return { ok: false, message: 'http/https URL만 지원합니다.' };
   }
-  if (parsed.hostname !== 'blog.naver.com') {
+  if (!NAVER_BLOG_HOSTS.has(parsed.hostname)) {
     return { ok: false, message: '네이버 블로그 URL만 지원합니다. (blog.naver.com/...)' };
   }
   return { ok: true };
 }
 
 function extractBlogId(blogUrl: string): string | null {
-  const m = blogUrl.match(/blog\.naver\.com\/([^/?#]+)/);
+  const m = blogUrl.match(/(?:m\.)?blog\.naver\.com\/([^/?#]+)/);
   return m ? m[1] : null;
+}
+
+/**
+ * 네이버 블로그 URL에서 특정 글의 logNo를 추출.
+ * 지원 포맷:
+ *   - https://blog.naver.com/{blogId}/{logNo}          (경로형, logNo는 10자리 이상 숫자)
+ *   - https://blog.naver.com/PostView.naver?blogId=X&logNo=Y
+ *   - https://m.blog.naver.com/{blogId}/{logNo}
+ * 블로그 홈 URL(`/blogId` 까지만)에는 logNo 가 없으므로 null 반환.
+ */
+function extractLogNo(blogUrl: string): string | null {
+  // 1) path 형식: /{blogId}/{logNo}
+  const pathMatch = blogUrl.match(/(?:m\.)?blog\.naver\.com\/[^/?#]+\/(\d{8,})/);
+  if (pathMatch) return pathMatch[1];
+  // 2) 쿼리 형식: ?logNo=...
+  const qMatch = blogUrl.match(/[?&]logNo=(\d{8,})/);
+  if (qMatch) return qMatch[1];
+  return null;
 }
 
 async function fetchWithTimeout(url: string, headers: Record<string, string>): Promise<Response> {
@@ -500,8 +525,13 @@ export async function POST(request: NextRequest) {
   const diagnostics: string[] = [];
 
   try {
-    const body = (await request.json()) as { blogUrl: string; maxPosts?: number };
-    const { blogUrl, maxPosts = 10 } = body;
+    const body = (await request.json()) as {
+      blogUrl: string;
+      maxPosts?: number;
+      /** 특정 글의 logNo 를 직접 지정해 해당 글만 가져오기 (URL 모드 지원). */
+      targetLogNo?: string;
+    };
+    const { blogUrl, maxPosts = 10, targetLogNo: rawTargetLogNo } = body;
 
     if (!blogUrl || typeof blogUrl !== 'string') {
       return NextResponse.json(
@@ -522,6 +552,47 @@ export async function POST(request: NextRequest) {
         { error: 'Cannot extract blogId', message: 'blog.naver.com/아이디 형태의 URL이어야 합니다.' },
         { status: 400 },
       );
+    }
+
+    // targetLogNo: 클라이언트가 명시했거나, 블로그 URL 자체에 포함돼 있으면 추출.
+    // 숫자만 허용 (인젝션·path traversal 방어).
+    const targetLogNo: string | null = (() => {
+      const candidate = (typeof rawTargetLogNo === 'string' && /^\d{8,}$/.test(rawTargetLogNo))
+        ? rawTargetLogNo
+        : extractLogNo(blogUrl);
+      return candidate;
+    })();
+
+    // ── 특정 글 직접 fetch 경로 ──
+    // logNo 가 명시되면 RSS/PostList 단계를 건너뛰고 해당 글만 가져온다.
+    // 이 경로는 "블로그 홈 URL 이 아닌 특정 포스트 URL" 에 대해 정확한 글을
+    // 반환하기 위함. maxPosts 1 로 요청했더라도 최신 글이 아닌 지정 글을 돌려줌.
+    if (targetLogNo) {
+      diagnostics.push(`targetLogNo=${targetLogNo} — 단일 글 직접 fetch`);
+      const single = await fetchPostContent(blogId, { logNo: targetLogNo });
+      if (!single) {
+        return NextResponse.json(
+          {
+            error: 'Post Not Found',
+            message: '해당 글의 본문을 가져올 수 없습니다. 비공개 글이거나 URL 이 잘못됐을 수 있습니다.',
+            diagnostics,
+          },
+          { status: 404 },
+        );
+      }
+      // 공용 응답 포맷과 일치시키기 위해 logNo 필드는 응답에서 제거.
+      const { logNo: _logNo, ...rest } = single;
+      void _logNo;
+      return NextResponse.json({
+        success: true,
+        blogUrl,
+        blogId,
+        posts: [rest],
+        postsCount: 1,
+        diagnostics,
+        elapsedMs: timer.elapsed(),
+        timestamp: new Date().toISOString(),
+      });
     }
 
     const limited = Math.min(Number(maxPosts) || 10, 20);

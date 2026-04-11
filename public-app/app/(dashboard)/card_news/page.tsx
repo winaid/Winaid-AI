@@ -64,11 +64,72 @@ interface CardSlide {
 
 type ImageStyleType = 'photo' | 'illustration' | 'medical' | 'custom' | 'infographic';
 
+// ── URL 모드: crawl-hospital-blog 응답 타입 + 헬퍼 ──
+
+/**
+ * `/api/naver/crawl-hospital-blog` 응답 형식.
+ * 실제 라우트는 `posts.logNo` 를 응답에서 제거한 상태로 반환 (route.ts 참고).
+ */
+interface CrawlHospitalBlogPost {
+  url: string;
+  content: string;         // 이미 cleanHtml 로 HTML 태그·엔티티 제거된 순수 텍스트
+  title: string;
+  publishedAt: string;
+  summary: string;
+  thumbnail: string;
+}
+interface CrawlHospitalBlogResponse {
+  success: boolean;
+  blogUrl: string;
+  blogId?: string;
+  posts: CrawlHospitalBlogPost[];
+  postsCount: number;
+  diagnostics?: string[];
+  elapsedMs?: number;
+  timestamp?: string;
+  message?: string;
+  error?: string;
+}
+
+/**
+ * 서버 응답에서 첫 글의 본문 텍스트를 추출.
+ * posts[0].content 는 서버에서 이미 HTML 태그·엔티티가 제거된 순수 텍스트라
+ * 추가 파싱 없이 그대로 사용 가능. 단, 제목을 본문 앞에 prepend 해서 원문의
+ * 맥락(제목)을 카드뉴스 생성 시 AI 에게 함께 제공한다.
+ */
+function extractTextFromCrawlResponse(data: CrawlHospitalBlogResponse): string {
+  const first = data.posts?.[0];
+  if (!first || !first.content) return '';
+  const title = (first.title || '').trim();
+  const body = first.content.trim();
+  return title ? `${title}\n\n${body}` : body;
+}
+
+/**
+ * 네이버 블로그 URL 에서 특정 글의 logNo 를 추출 (클라이언트 사이드 사전 파싱).
+ * 서버도 같은 로직을 가지고 있지만, 클라이언트에서 미리 파싱해 targetLogNo 로
+ * 넘기면 서버가 path 파싱을 다시 시도할 필요 없이 바로 경로 분기 가능.
+ */
+function extractNaverLogNo(blogUrl: string): string | null {
+  const pathMatch = blogUrl.match(/(?:m\.)?blog\.naver\.com\/[^/?#]+\/(\d{8,})/);
+  if (pathMatch) return pathMatch[1];
+  const qMatch = blogUrl.match(/[?&]logNo=(\d{8,})/);
+  if (qMatch) return qMatch[1];
+  return null;
+}
+
 export default function CardNewsPage() {
   const creditCtx = useCreditContext();
-  // ── 입력 모드: 주제 한 줄 입력 vs 소스 콘텐츠(블로그/스크립트 등) 붙여넣기 ──
-  const [inputMode, setInputMode] = useState<'topic' | 'source'>('topic');
+  // ── 입력 모드 ──
+  // - topic: 주제 한 줄 입력 (기존 기본값)
+  // - source: 장문 소스 콘텐츠(블로그·스크립트 등) 직접 붙여넣기
+  // - url: 네이버 블로그/일반 웹페이지 URL → 자동 본문 가져오기 → sourceContent 에 주입
+  const [inputMode, setInputMode] = useState<'topic' | 'source' | 'url'>('topic');
   const [sourceContent, setSourceContent] = useState('');
+  // URL 모드 전용 state
+  const [urlInput, setUrlInput] = useState('');
+  const [urlLoading, setUrlLoading] = useState(false);
+  const [urlError, setUrlError] = useState('');
   // ── 폼 상태 ──
   const [topic, setTopic] = useState('');
   const [keywords, setKeywords] = useState('');
@@ -373,6 +434,73 @@ export default function CardNewsPage() {
     await fetchPreviewImages(imageStyle);
   };
 
+  /**
+   * URL 모드: 입력된 URL 에서 본문을 가져와 sourceContent 에 주입한다.
+   *
+   * 현재 지원:
+   *  - 네이버 블로그 (blog.naver.com, m.blog.naver.com) — /api/naver/crawl-hospital-blog 재사용
+   *    * 특정 글 URL (`/{blogId}/{logNo}` 또는 `?logNo=`) → 해당 글만 정확히 가져옴
+   *    * 블로그 홈 URL → 최신 글 1개를 가져옴
+   *  - 그 외 일반 URL — 아직 미지원. 사용자에게 "소스 변환" 탭 붙여넣기 안내.
+   *
+   * 미지원 도메인을 추가할 때는 서버 사이드 프록시 API 가 필요 (CORS 회피 + SSRF 방어).
+   */
+  const handleFetchUrl = async () => {
+    const url = urlInput.trim();
+    if (!url) return;
+
+    setUrlLoading(true);
+    setUrlError('');
+    setSourceContent('');
+
+    try {
+      // 1) URL 형식 검증
+      let parsed: URL;
+      try {
+        parsed = new URL(url);
+      } catch {
+        setUrlError('올바른 URL 형식이 아닙니다.');
+        return;
+      }
+      if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+        setUrlError('http/https URL만 지원합니다.');
+        return;
+      }
+
+      // 2) 네이버 블로그 판별 (모바일·데스크톱 둘 다 허용)
+      const isNaverBlog = parsed.hostname === 'blog.naver.com' || parsed.hostname === 'm.blog.naver.com';
+      if (!isNaverBlog) {
+        setUrlError('네이버 블로그 외 URL은 현재 자동 가져오기를 지원하지 않습니다. 본문을 복사해서 "소스 변환" 탭에 붙여넣어주세요.');
+        return;
+      }
+
+      // 3) 서버 크롤러 호출 — path 또는 ?logNo= 에서 특정 글 logNo 추출해 함께 전달.
+      //    서버가 targetLogNo 를 받으면 RSS/PostList 단계를 건너뛰고 해당 글만 가져옴.
+      const targetLogNo = extractNaverLogNo(url);
+      const res = await fetch('/api/naver/crawl-hospital-blog', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ blogUrl: url, maxPosts: 1, targetLogNo: targetLogNo || undefined }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({})) as { message?: string; error?: string };
+        throw new Error(err.message || err.error || `서버 오류 (${res.status})`);
+      }
+
+      const data = await res.json() as CrawlHospitalBlogResponse;
+      const text = extractTextFromCrawlResponse(data);
+      if (!text || text.length < 50) {
+        throw new Error('가져온 글의 본문이 너무 짧습니다. 다른 글 URL로 시도해주세요.');
+      }
+      setSourceContent(text);
+    } catch (e) {
+      setUrlError(e instanceof Error ? e.message : '본문을 가져오는 중 오류가 발생했습니다.');
+    } finally {
+      setUrlLoading(false);
+    }
+  };
+
   const autoApplyBackgrounds = async (slides: ProSlideData[]): Promise<ProSlideData[]> => {
     try {
       const baseQ = lastPexelsQuery || await fetchPexelsQuery();
@@ -418,9 +546,13 @@ export default function CardNewsPage() {
     // 입력 모드별 유효성 검사
     const trimmedSource = sourceContent.trim();
     const trimmedTopic = topic.trim();
-    if (inputMode === 'source') {
+    // source / url 모드는 sourceContent 를 요구. url 모드는 본문을 가져온 후부터 유효.
+    const isSourceBased = inputMode === 'source' || inputMode === 'url';
+    if (isSourceBased) {
       if (trimmedSource.length < 100) {
-        setError('소스 콘텐츠가 너무 짧습니다. 100자 이상 입력해주세요.');
+        setError(inputMode === 'url'
+          ? 'URL에서 본문을 먼저 가져와주세요. (최소 100자)'
+          : '소스 콘텐츠가 너무 짧습니다. 100자 이상 입력해주세요.');
         return;
       }
     } else {
@@ -433,9 +565,9 @@ export default function CardNewsPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
     const derivedWritingStyle: WritingStyle = audienceMode === '전문가용(신뢰/정보)' ? 'expert' : 'empathy';
-    // 소스 모드에서 topic 이 비었으면 프롬프트용 플레이스홀더를 넣어준다.
+    // source/url 모드에서 topic 이 비었으면 프롬프트용 플레이스홀더를 넣어준다.
     // (buildCardNewsProPrompt 의 topic 필드는 sanitize + 라벨 용이고, 실제 내용은 sourceContent 가 담당.)
-    const effectiveTopic = inputMode === 'source'
+    const effectiveTopic = isSourceBased
       ? (trimmedTopic || '소스 콘텐츠 기반 카드뉴스')
       : trimmedTopic;
     const request: CardNewsRequest = {
@@ -447,7 +579,7 @@ export default function CardNewsPage() {
       designTemplateId,
       category,
       contentMode,
-      sourceContent: inputMode === 'source' ? trimmedSource : undefined,
+      sourceContent: isSourceBased ? trimmedSource : undefined,
     };
 
     // 크레딧 체크 (차감은 생성 성공 후에)
@@ -1156,13 +1288,13 @@ DECORATIVE: (장식 요소)`,
           <div className="text-center mb-8">
             <h2 className="text-2xl font-bold text-slate-800 mb-2">어떤 카드뉴스를 만들까요?</h2>
             <p className="text-sm text-blue-500">
-              {inputMode === 'topic'
-                ? '주제를 입력하거나 추천 주제를 선택하세요'
-                : '블로그 글·기사·유튜브 스크립트를 붙여넣으면 AI가 카드뉴스로 변환합니다'}
+              {inputMode === 'topic' && '주제를 입력하거나 추천 주제를 선택하세요'}
+              {inputMode === 'source' && '블로그 글·기사·유튜브 스크립트를 붙여넣으면 AI가 카드뉴스로 변환합니다'}
+              {inputMode === 'url' && '네이버 블로그 URL을 입력하면 AI가 본문을 가져와 카드뉴스로 변환합니다'}
             </p>
           </div>
 
-          {/* 입력 모드 전환 탭 (주제 vs 소스 변환) */}
+          {/* 입력 모드 전환 탭 (주제 / 소스 변환 / URL 가져오기) */}
           <div className="flex gap-2 mb-4">
             <button type="button" onClick={() => setInputMode('topic')}
               className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-colors ${
@@ -1179,6 +1311,14 @@ DECORATIVE: (장식 요소)`,
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
               }`}>
               소스 변환
+            </button>
+            <button type="button" onClick={() => setInputMode('url')}
+              className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-colors ${
+                inputMode === 'url'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}>
+              URL 가져오기
             </button>
           </div>
 
@@ -1198,15 +1338,17 @@ DECORATIVE: (장식 요소)`,
             </div>
           )}
 
-          {/* 콘텐츠 입력 — 모드별로 다른 textarea */}
-          {inputMode === 'topic' ? (
+          {/* 콘텐츠 입력 — 모드별로 다른 UI */}
+          {inputMode === 'topic' && (
             <div className="border-2 border-dashed border-slate-200 rounded-xl p-4 mb-4 focus-within:border-blue-400 transition-all">
               <textarea value={topic} onChange={e => setTopic(e.target.value)}
                 placeholder="주제를 입력하세요 (예: 임플란트 사후관리 5단계 가이드)"
                 rows={2}
                 className="w-full text-base font-medium text-slate-800 placeholder:text-slate-300 resize-none border-none outline-none bg-transparent" />
             </div>
-          ) : (
+          )}
+
+          {inputMode === 'source' && (
             <div className="mb-4">
               <textarea value={sourceContent} onChange={e => setSourceContent(e.target.value)}
                 placeholder="블로그 글, 유튜브 스크립트, 기사 등을 붙여넣으세요. AI가 핵심을 추출해서 카드뉴스로 변환합니다. (최소 100자, 최대 15,000자)"
@@ -1220,6 +1362,53 @@ DECORATIVE: (장식 요소)`,
                 </span>
                 <span>{sourceContent.length.toLocaleString()} / 15,000</span>
               </div>
+            </div>
+          )}
+
+          {inputMode === 'url' && (
+            <div className="mb-4 space-y-3">
+              <div className="flex gap-2">
+                <input type="url" value={urlInput}
+                  onChange={e => { setUrlInput(e.target.value); if (urlError) setUrlError(''); }}
+                  onKeyDown={e => { if (e.key === 'Enter' && !urlLoading && urlInput.trim()) { e.preventDefault(); handleFetchUrl(); } }}
+                  placeholder="네이버 블로그 글 URL을 붙여넣으세요 (예: https://blog.naver.com/blogid/223456789)"
+                  className="flex-1 px-4 py-3 text-sm text-slate-800 placeholder:text-slate-300 rounded-xl border-2 border-dashed border-slate-200 focus:border-blue-400 focus:outline-none transition-all" />
+                <button type="button" onClick={handleFetchUrl}
+                  disabled={!urlInput.trim() || urlLoading}
+                  className="px-4 py-3 bg-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-blue-700 disabled:opacity-50 whitespace-nowrap">
+                  {urlLoading ? '가져오는 중...' : '본문 가져오기'}
+                </button>
+              </div>
+              {urlError && (
+                <p className="text-xs text-red-500 px-1 whitespace-pre-line">{urlError}</p>
+              )}
+              {sourceContent && !urlError && (
+                <>
+                  <div className="flex items-center justify-between px-1">
+                    <p className="text-xs text-emerald-600">
+                      ✓ 가져온 본문 ({sourceContent.length.toLocaleString()}자) — 필요하면 수정하세요
+                    </p>
+                    <button type="button" onClick={() => setSourceContent('')}
+                      className="text-[11px] text-slate-400 hover:text-red-500">지우기</button>
+                  </div>
+                  <textarea value={sourceContent} onChange={e => setSourceContent(e.target.value)}
+                    maxLength={15000}
+                    className="w-full min-h-[200px] p-4 text-sm text-slate-800 resize-y rounded-xl border-2 border-slate-200 focus:border-blue-400 focus:outline-none transition-all" />
+                  <div className="flex items-center justify-between text-[11px] text-slate-400 px-1">
+                    <span>
+                      {sourceContent.trim().length < 100
+                        ? <span className="text-amber-500">⚠ 최소 100자 필요 · 현재 {sourceContent.trim().length}자</span>
+                        : <span className="text-emerald-500">✓ 변환 준비 완료</span>}
+                    </span>
+                    <span>{sourceContent.length.toLocaleString()} / 15,000</span>
+                  </div>
+                </>
+              )}
+              {!sourceContent && !urlError && (
+                <p className="text-[11px] text-slate-400 px-1">
+                  현재 네이버 블로그만 자동 가져오기를 지원합니다. 일반 웹페이지는 본문을 복사해서 &ldquo;소스 변환&rdquo; 탭에 붙여넣어주세요.
+                </p>
+              )}
             </div>
           )}
 
@@ -1303,7 +1492,12 @@ DECORATIVE: (장식 요소)`,
             </div>
             <div className="flex-1" />
             <button type="button" onClick={openDesignModal}
-              disabled={isGenerating || (inputMode === 'topic' ? !topic.trim() : sourceContent.trim().length < 100)}
+              disabled={
+                isGenerating
+                || (inputMode === 'topic'
+                  ? !topic.trim()
+                  : sourceContent.trim().length < 100)
+              }
               data-testid="cta-generate-card-news"
               className="px-8 py-3 bg-blue-600 text-white text-sm font-bold rounded-xl hover:bg-blue-700 disabled:opacity-50 shadow-lg shadow-blue-200 transition-all">
               {isGenerating ? '생성 중...' : '✨ 카드뉴스 생성'}
