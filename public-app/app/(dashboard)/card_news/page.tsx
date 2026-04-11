@@ -9,6 +9,9 @@ import { CARD_NEWS_DESIGN_TEMPLATES } from '../../../lib/cardNewsDesignTemplates
 import { ErrorPanel } from '../../../components/GenerationResult';
 import { CardRegenModal, type CardPromptHistoryItem, CARD_PROMPT_HISTORY_KEY, CARD_REF_IMAGE_KEY } from '../../../components/CardRegenModal';
 import CardTemplateManager from '../../../components/CardTemplateManager';
+import BrandPresetEditor from '../../../components/card-news/BrandPresetEditor';
+import { brandPresetToTheme } from '../../../lib/brandPreset';
+import { getBrandPreset } from '../../../lib/styleService';
 import CardNewsRenderer from '../../../components/CardNewsRenderer';
 import CardNewsProRenderer from '../../../components/CardNewsProRenderer';
 import { DEFAULT_THEME, COVER_TEMPLATES, CARD_FONTS, FONT_CATEGORIES, type DesignPresetStyle, parseProSlidesJson, ensureSlideIds, generateSlideId, type SlideData as ProSlideData, type CardNewsTheme, type SlideLayoutType } from '../../../lib/cardNewsLayouts';
@@ -964,6 +967,32 @@ DECORATIVE: (장식 요소)`,
     } catch { /* ignore */ }
   }, []);
 
+  // ── 병원 브랜드 프리셋 자동 로드 ──
+  // hospitalName 이 세팅되면 (user_metadata 또는 수동 입력) 서버에서 해당 병원의
+  // brand_preset 을 가져와 proTheme 에 머지한다. create 탭에서 바로 카드뉴스를
+  // 만들 때도 저장된 색상/폰트/로고가 즉시 반영되도록 하기 위함.
+  //
+  // 주의:
+  //   - Supabase 미구성이면 getBrandPreset 이 null 을 반환 → 무시
+  //   - 기존 proTheme 필드를 전체 교체하지 않고 brandPresetToTheme 가 반환한
+  //     Partial 만 머지 (backgroundGradient 등 기존 값 보존)
+  //   - 로고가 있으면 logoDataUrl state 도 함께 동기화 — 기존 localStorage
+  //     기반 로고 로드보다 우선 (DB 값이 진실의 원천)
+  useEffect(() => {
+    const name = hospitalName.trim();
+    if (!name) return;
+    let cancelled = false;
+    getBrandPreset(name).then(preset => {
+      if (cancelled || !preset) return;
+      setProTheme(prev => ({ ...prev, ...brandPresetToTheme(preset) }));
+      if (preset.logo?.dataUrl) {
+        setLogoDataUrl(preset.logo.dataUrl);
+        setLogoEnabled(true);
+      }
+    }).catch(() => { /* 조용히 무시 — 기본값 유지 */ });
+    return () => { cancelled = true; };
+  }, [hospitalName]);
+
   // ── 이미지 프롬프트 자동 연동 (텍스트 변경 시) ──
   useEffect(() => {
     if (editSubtitle || editMainTitle || editDescription) {
@@ -1605,45 +1634,74 @@ DECORATIVE: (장식 요소)`,
 
       {/* ══════ 탭 2: 나만의 디자인 학습 ══════ */}
       {mainTab === 'learn' && (
-        <div className="max-w-2xl mx-auto text-center">
-          <h2 className="text-2xl font-bold text-slate-800 mb-2">나만의 디자인 학습</h2>
-          <p className="text-slate-500 mb-8">마음에 드는 카드뉴스를 올리면 AI가 스타일을 학습해요</p>
-          <div className="mb-6">
-            <CardTemplateManager uploadOnly onSelectTemplate={(tmpl) => { setLearnedTemplate(tmpl); setSavedStylesVersion(v => v + 1); setMainTab('create'); }} selectedTemplateId={learnedTemplate?.id} />
-          </div>
-          {savedStyles.length > 0 && (
-            <div className="text-left">
-              <h3 className="text-sm font-bold text-slate-700 mb-3">학습된 스타일 ({savedStyles.length}개)</h3>
-              <div className="grid grid-cols-4 gap-3">
-                {savedStyles.map(style => (
-                  <div key={style.id} className="relative group">
-                    <button type="button" onClick={() => { setLearnedTemplate(style); setMainTab('create'); }}
-                      className="w-full rounded-xl overflow-hidden border-2 border-slate-200 hover:border-purple-400 aspect-square">
-                      {style.thumbnailDataUrl ? <img src={style.thumbnailDataUrl} alt={style.name} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-slate-100 flex items-center justify-center text-xs text-slate-400">{style.name}</div>}
-                    </button>
-                    <button type="button" onClick={() => { deleteTemplate(style.id); if (learnedTemplate?.id === style.id) setLearnedTemplate(null); setSavedStylesVersion(v => v + 1); }}
-                      className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full text-[10px] opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">✕</button>
-                    <div className="mt-1">
-                      <button type="button" onClick={async () => {
-                        if (!style.thumbnailDataUrl) return;
-                        setProgress('템플릿 변환 중...');
-                        const result = await imageToEditableTemplate(style.thumbnailDataUrl);
-                        setProgress('');
-                        if (result) {
-                          const newSlide = { id: generateSlideId(), index: 1, ...result.slide, layout: result.slide.layout as any } as ProSlideData;
-                          setProTheme(prev => ({ ...prev, ...result.colors }));
-                          setProSlides([newSlide]);
-                          setPageStep(2);
-                          setMainTab('create');
-                        }
-                      }}
-                        className="w-full text-[9px] font-bold text-blue-600 bg-blue-50 rounded py-1.5 hover:bg-blue-100">템플릿으로 편집</button>
+        <div className="max-w-2xl mx-auto">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold text-slate-800 mb-2">나만의 디자인 학습</h2>
+            <p className="text-slate-500 mb-8">마음에 드는 카드뉴스를 올리면 AI가 스타일을 학습해요</p>
+            <div className="mb-6">
+              <CardTemplateManager uploadOnly onSelectTemplate={(tmpl) => { setLearnedTemplate(tmpl); setSavedStylesVersion(v => v + 1); setMainTab('create'); }} selectedTemplateId={learnedTemplate?.id} />
+            </div>
+            {savedStyles.length > 0 && (
+              <div className="text-left">
+                <h3 className="text-sm font-bold text-slate-700 mb-3">학습된 스타일 ({savedStyles.length}개)</h3>
+                <div className="grid grid-cols-4 gap-3">
+                  {savedStyles.map(style => (
+                    <div key={style.id} className="relative group">
+                      <button type="button" onClick={() => { setLearnedTemplate(style); setMainTab('create'); }}
+                        className="w-full rounded-xl overflow-hidden border-2 border-slate-200 hover:border-purple-400 aspect-square">
+                        {style.thumbnailDataUrl ? <img src={style.thumbnailDataUrl} alt={style.name} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-slate-100 flex items-center justify-center text-xs text-slate-400">{style.name}</div>}
+                      </button>
+                      <button type="button" onClick={() => { deleteTemplate(style.id); if (learnedTemplate?.id === style.id) setLearnedTemplate(null); setSavedStylesVersion(v => v + 1); }}
+                        className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full text-[10px] opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">✕</button>
+                      <div className="mt-1">
+                        <button type="button" onClick={async () => {
+                          if (!style.thumbnailDataUrl) return;
+                          setProgress('템플릿 변환 중...');
+                          const result = await imageToEditableTemplate(style.thumbnailDataUrl);
+                          setProgress('');
+                          if (result) {
+                            const newSlide = { id: generateSlideId(), index: 1, ...result.slide, layout: result.slide.layout as any } as ProSlideData;
+                            setProTheme(prev => ({ ...prev, ...result.colors }));
+                            setProSlides([newSlide]);
+                            setPageStep(2);
+                            setMainTab('create');
+                          }
+                        }}
+                          className="w-full text-[9px] font-bold text-blue-600 bg-blue-50 rounded py-1.5 hover:bg-blue-100">템플릿으로 편집</button>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* ── 브랜드 설정 섹션 (컬러·폰트·로고·톤) ── */}
+          <div className="border-t border-slate-200 mt-10 pt-8">
+            <div className="flex items-start justify-between mb-4">
+              <div>
+                <h3 className="text-lg font-bold text-slate-800">브랜드 설정</h3>
+                <p className="text-xs text-slate-500 mt-1">
+                  병원별로 저장됩니다. 카드뉴스 생성 시 자동 적용돼요.
+                </p>
               </div>
             </div>
-          )}
+            {!hospitalName.trim() && (
+              <div className="mb-3 text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-lg p-3">
+                병원명을 먼저 지정해야 합니다. 상단 &ldquo;주제 입력&rdquo; 탭 하단 옵션 바의 병원명 입력란을 사용하세요.
+              </div>
+            )}
+            <BrandPresetEditor
+              hospitalName={hospitalName}
+              onPresetLoaded={(preset) => {
+                setProTheme(prev => ({ ...prev, ...brandPresetToTheme(preset) }));
+                if (preset.logo?.dataUrl) {
+                  setLogoDataUrl(preset.logo.dataUrl);
+                  setLogoEnabled(true);
+                }
+              }}
+            />
+          </div>
         </div>
       )}
 

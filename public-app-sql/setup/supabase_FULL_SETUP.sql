@@ -147,37 +147,46 @@ CREATE TABLE IF NOT EXISTS public.hospital_style_profiles (
   style_profile JSONB DEFAULT '{}',
   raw_sample_text TEXT,
   last_crawled_at TIMESTAMPTZ,
+  -- 시각 브랜드 프리셋 (lib/brandPreset.ts 의 BrandPreset 과 매칭).
+  -- 2026-04-11 마이그레이션으로 추가. 신규 환경은 여기서 바로 생성됨.
+  brand_preset JSONB DEFAULT '{}',
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+-- 기존 DB 에 본 setup 이 재실행되는 경우를 대비한 idempotent 컬럼 추가.
+ALTER TABLE public.hospital_style_profiles
+  ADD COLUMN IF NOT EXISTS brand_preset JSONB DEFAULT '{}';
 
 ALTER TABLE public.hospital_style_profiles ENABLE ROW LEVEL SECURITY;
 
-DO $$ BEGIN
-  -- authenticated 사용자 정책
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='hospital_style_profiles' AND policyname='Authenticated users can view style profiles') THEN
-    CREATE POLICY "Authenticated users can view style profiles" ON public.hospital_style_profiles FOR SELECT USING (auth.role() = 'authenticated');
-  END IF;
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='hospital_style_profiles' AND policyname='Authenticated users can insert style profiles') THEN
-    CREATE POLICY "Authenticated users can insert style profiles" ON public.hospital_style_profiles FOR INSERT WITH CHECK (auth.role() = 'authenticated');
-  END IF;
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='hospital_style_profiles' AND policyname='Authenticated users can update style profiles') THEN
-    CREATE POLICY "Authenticated users can update style profiles" ON public.hospital_style_profiles FOR UPDATE USING (auth.role() = 'authenticated');
-  END IF;
-  -- anon 사용자 정책 (비밀번호만으로 admin 접근 시)
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='hospital_style_profiles' AND policyname='Anon can view style profiles') THEN
-    CREATE POLICY "Anon can view style profiles" ON public.hospital_style_profiles FOR SELECT USING (true);
-  END IF;
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='hospital_style_profiles' AND policyname='Anon can insert style profiles') THEN
-    CREATE POLICY "Anon can insert style profiles" ON public.hospital_style_profiles FOR INSERT WITH CHECK (true);
-  END IF;
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='hospital_style_profiles' AND policyname='Anon can update style profiles') THEN
-    CREATE POLICY "Anon can update style profiles" ON public.hospital_style_profiles FOR UPDATE USING (true);
-  END IF;
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='hospital_style_profiles' AND policyname='Anon can delete style profiles') THEN
-    CREATE POLICY "Anon can delete style profiles" ON public.hospital_style_profiles FOR DELETE USING (true);
-  END IF;
-END $$;
+-- RLS 정책 (2026-04-11 강화):
+--   * 읽기: 모든 사용자(anon + authenticated)
+--   * 쓰기: 로그인한 사용자만 (anon 쓰기 금지)
+--   기존 anon INSERT/UPDATE/DELETE 정책은 권한 누출이라 제거.
+-- 본 블록은 재실행 안전(기존 정책 있으면 먼저 DROP 후 CREATE).
+DROP POLICY IF EXISTS "Anon can view style profiles"                  ON public.hospital_style_profiles;
+DROP POLICY IF EXISTS "Anon can insert style profiles"                ON public.hospital_style_profiles;
+DROP POLICY IF EXISTS "Anon can update style profiles"                ON public.hospital_style_profiles;
+DROP POLICY IF EXISTS "Anon can delete style profiles"                ON public.hospital_style_profiles;
+DROP POLICY IF EXISTS "Authenticated users can view style profiles"   ON public.hospital_style_profiles;
+DROP POLICY IF EXISTS "Authenticated users can insert style profiles" ON public.hospital_style_profiles;
+DROP POLICY IF EXISTS "Authenticated users can update style profiles" ON public.hospital_style_profiles;
+DROP POLICY IF EXISTS "Authenticated users can delete style profiles" ON public.hospital_style_profiles;
+DROP POLICY IF EXISTS "Anyone can read style profiles"                ON public.hospital_style_profiles;
+
+CREATE POLICY "Anyone can read style profiles"
+  ON public.hospital_style_profiles FOR SELECT
+  USING (true);
+CREATE POLICY "Authenticated users can insert style profiles"
+  ON public.hospital_style_profiles FOR INSERT
+  WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "Authenticated users can update style profiles"
+  ON public.hospital_style_profiles FOR UPDATE
+  USING (auth.role() = 'authenticated')
+  WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "Authenticated users can delete style profiles"
+  ON public.hospital_style_profiles FOR DELETE
+  USING (auth.role() = 'authenticated');
 
 CREATE INDEX IF NOT EXISTS idx_hospital_style_hospital_name ON public.hospital_style_profiles(hospital_name);
 CREATE INDEX IF NOT EXISTS idx_hospital_style_team_id ON public.hospital_style_profiles(team_id);
