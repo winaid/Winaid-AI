@@ -59,14 +59,15 @@ export default function EditableSlideWrapper({
   const [editingTarget, setEditingTarget] = useState<HTMLElement | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
-  const customImageInputRef = useRef<HTMLInputElement>(null);
 
   // ── 현재 선택된 요소의 field / style ──
   const field = selectedTarget?.getAttribute('data-editable') || '';
   const isCustom = field.startsWith('custom-');
   const customId = isCustom ? field.replace('custom-', '') : '';
   const isImage = field === 'image';
-  const isText = field === 'title' || field === 'subtitle' || field === 'body' || (isCustom && !isImage);
+  // 커스텀 요소 중 이미지 타입 감지: 내부에 <img>가 있으면 이미지
+  const isCustomImage = isCustom && selectedTarget?.querySelector('img') !== null;
+  const isText = (field === 'title' || field === 'subtitle' || field === 'body' || (isCustom && !isCustomImage)) && !isImage;
   const currentStyle = selectedElementStyle?.[field];
 
   // ── 스냅 대상 요소 수집 ──
@@ -79,18 +80,36 @@ export default function EditableSlideWrapper({
   // ── 스타일 변경 헬퍼 ──
   const changeSize = (delta: number) => {
     const cur = currentStyle?.fontSize || 48;
-    onStyleChange?.(slideIndex, field, 'FontSize', Math.max(12, Math.min(120, cur + delta)));
+    const next = Math.max(12, Math.min(120, cur + delta));
+    if (isCustom) {
+      onCustomElementChange?.(slideIndex, customId, { fontSize: next });
+    } else {
+      onStyleChange?.(slideIndex, field, 'FontSize', next);
+    }
   };
   const toggleBold = () => {
     const cur = currentStyle?.fontWeight || '800';
-    onStyleChange?.(slideIndex, field, 'FontWeight', Number(cur) >= 700 ? '400' : '800');
+    const next = Number(cur) >= 700 ? '400' : '800';
+    if (isCustom) {
+      onCustomElementChange?.(slideIndex, customId, { fontWeight: next });
+    } else {
+      onStyleChange?.(slideIndex, field, 'FontWeight', next);
+    }
   };
   const isBold = Number(currentStyle?.fontWeight || '800') >= 700;
   const changeColor = (color: string) => {
-    onStyleChange?.(slideIndex, field, 'Color', color);
+    if (isCustom) {
+      onCustomElementChange?.(slideIndex, customId, { color });
+    } else {
+      onStyleChange?.(slideIndex, field, 'Color', color);
+    }
   };
   const changeAlign = (align: string) => {
-    onStyleChange?.(slideIndex, field, 'Align', align);
+    if (isCustom) {
+      onCustomElementChange?.(slideIndex, customId, { align });
+    } else {
+      onStyleChange?.(slideIndex, field, 'Align', align);
+    }
   };
 
   // ── contentEditable 편집 종료 → 데이터 커밋 ──
@@ -168,6 +187,9 @@ export default function EditableSlideWrapper({
 
     const f = editable.getAttribute('data-editable') || '';
     if (f === 'image') return;
+
+    // 커스텀 이미지 요소(내부에 <img>가 있으면)는 편집 스킵
+    if (f.startsWith('custom-') && editable.querySelector('img')) return;
 
     // 텍스트 편집 가능한 필드: title, subtitle, body, custom-* (text type)
     const isEditableText = f === 'title' || f === 'subtitle' || f === 'body' || f.startsWith('custom-');
@@ -247,21 +269,6 @@ export default function EditableSlideWrapper({
           e.target.value = '';
         }}
       />
-      {/* 숨겨진 파일 input — 커스텀 이미지 추가용 */}
-      <input ref={customImageInputRef} type="file" accept="image/*"
-        style={{ display: 'none' }}
-        onChange={(e) => {
-          const file = e.target.files?.[0];
-          if (file) {
-            const reader = new FileReader();
-            reader.onload = () => onAddElement?.(slideIndex, 'image');
-            // 이미지 추가는 onAddElement로 빈 요소 생성 후, 파일은 별도 처리 필요
-            // → 간단히: onAddElement가 빈 이미지 요소를 만든 뒤, 사용자가 교체 버튼으로 이미지 설정
-            onAddElement?.(slideIndex, 'image');
-          }
-          e.target.value = '';
-        }}
-      />
 
       {/* ── Moveable — 편집 중이 아닐 때만 표시, 스냅 가이드라인 포함 ── */}
       {selectedTarget && !editingTarget && (
@@ -333,7 +340,7 @@ export default function EditableSlideWrapper({
       )}
 
       {/* ── 4B: 텍스트 컨텍스트 툴바 — 텍스트 선택 시, 편집 중 아닐 때 ── */}
-      {selectedTarget && !editingTarget && isText && !isImage && (
+      {selectedTarget && !editingTarget && isText && (
         <div style={{
           position: 'absolute',
           top: Math.max(0, selectedTarget.offsetTop - 48),
@@ -383,7 +390,7 @@ export default function EditableSlideWrapper({
 
           <div style={separator} />
 
-          {/* 정렬 (title만) */}
+          {/* 정렬 (title + custom) */}
           {(field === 'title' || isCustom) && (
             <>
               {(['left', 'center', 'right'] as const).map(a => (
@@ -416,8 +423,8 @@ export default function EditableSlideWrapper({
         </div>
       )}
 
-      {/* ── 이미지 플로팅 툴바 — 이미지 선택 시 ── */}
-      {selectedTarget && !editingTarget && isImage && (
+      {/* ── 이미지 플로팅 툴바 — 이미지 선택 시 (기존 이미지 + 커스텀 이미지) ── */}
+      {selectedTarget && !editingTarget && (isImage || isCustomImage) && (
         <div style={{
           position: 'absolute',
           top: Math.max(0, selectedTarget.offsetTop - 44),
@@ -438,13 +445,15 @@ export default function EditableSlideWrapper({
               borderRadius: '6px', cursor: 'pointer' }}>
             교체
           </button>
-          <button type="button"
-            onClick={(e) => { e.stopPropagation(); onImageDelete?.(slideIndex); }}
-            style={{ padding: '6px 12px', fontSize: '12px', fontWeight: 700,
-              background: '#EF4444', color: 'white', border: 'none',
-              borderRadius: '6px', cursor: 'pointer' }}>
-            삭제
-          </button>
+          {!isCustom && (
+            <button type="button"
+              onClick={(e) => { e.stopPropagation(); onImageDelete?.(slideIndex); }}
+              style={{ padding: '6px 12px', fontSize: '12px', fontWeight: 700,
+                background: '#EF4444', color: 'white', border: 'none',
+                borderRadius: '6px', cursor: 'pointer' }}>
+              삭제
+            </button>
+          )}
           {isCustom && (
             <button type="button" onClick={(e) => {
               e.stopPropagation();
@@ -452,9 +461,9 @@ export default function EditableSlideWrapper({
               setSelectedTarget(null);
             }}
               style={{ padding: '6px 12px', fontSize: '12px', fontWeight: 700,
-                background: '#6B7280', color: 'white', border: 'none',
+                background: '#EF4444', color: 'white', border: 'none',
                 borderRadius: '6px', cursor: 'pointer' }}>
-              요소 삭제
+              삭제
             </button>
           )}
         </div>

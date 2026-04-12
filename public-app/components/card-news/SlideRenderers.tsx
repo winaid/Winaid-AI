@@ -61,6 +61,7 @@ function calcCardAspect(cardRatio: string): string {
 
 /** 테마가 어두운지 판정 (배경색 luminance 기준) */
 function calcIsDark(bgColor: string): boolean {
+  if (!bgColor) return false;
   const hex = bgColor.replace('#', '');
   if (hex.length !== 6) return true;
   const r = parseInt(hex.slice(0, 2), 16);

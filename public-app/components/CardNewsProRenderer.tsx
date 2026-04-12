@@ -1184,6 +1184,11 @@ JSON만 출력:
                       title: { fontSize: slide.titleFontSize, fontWeight: slide.titleFontWeight, color: slide.titleColor, align: slide.titleAlign },
                       subtitle: { fontSize: slide.subtitleFontSize, fontWeight: slide.subtitleFontWeight, color: slide.subtitleColor },
                       body: { color: slide.bodyColor },
+                      // 커스텀 요소 스타일도 포함
+                      ...(slide.customElements || []).reduce((acc, el) => {
+                        acc[`custom-${el.id}`] = { fontSize: el.fontSize, fontWeight: el.fontWeight, color: el.color, align: el.align };
+                        return acc;
+                      }, {} as Record<string, { fontSize?: number; fontWeight?: string; color?: string; align?: 'left' | 'center' | 'right' }>),
                     }}
                     onElementMove={(i, id, x, y) => {
                       const xPct = Math.round(Math.max(5, Math.min(95, (x / cardWidth) * 100)));
