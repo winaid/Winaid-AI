@@ -432,29 +432,30 @@ export function useSlideRenderer({ theme, learnedTemplate, presetStyle, cardRati
       const base: CSSProperties = {
         position: 'absolute', top: deco.position.top, left: deco.position.left,
         opacity: deco.opacity, transform: `rotate(${deco.rotation}deg)`,
-        zIndex: 3, pointerEvents: 'none' as const,
+        zIndex: 3, cursor: 'grab',
+        ...elementPosOverride(slide, `deco-${deco.id}`),
       };
       switch (deco.type) {
         case 'star':
-          return <div key={deco.id} style={{ ...base, width: `${deco.size}px`, height: `${deco.size}px` }}>
+          return <div key={deco.id} data-editable={`deco-${deco.id}`} style={{ ...base, width: `${deco.size}px`, height: `${deco.size}px` }}>
             <div style={{ width: '100%', height: '100%', clipPath: 'polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)', background: deco.color }} />
           </div>;
         case 'circle':
-          return <div key={deco.id} style={{ ...base, width: `${deco.size}px`, height: `${deco.size}px`, borderRadius: '50%', border: `3px solid ${deco.color}` }} />;
+          return <div key={deco.id} data-editable={`deco-${deco.id}`} style={{ ...base, width: `${deco.size}px`, height: `${deco.size}px`, borderRadius: '50%', border: `3px solid ${deco.color}` }} />;
         case 'line':
-          return <div key={deco.id} style={{ ...base, width: `${deco.size * 3}px`, height: '4px', background: deco.color, borderRadius: '2px' }} />;
+          return <div key={deco.id} data-editable={`deco-${deco.id}`} style={{ ...base, width: `${deco.size * 3}px`, height: '4px', background: deco.color, borderRadius: '2px' }} />;
         case 'arrow':
-          return <div key={deco.id} style={{ ...base, fontSize: `${deco.size}px`, color: deco.color, letterSpacing: '-8px', fontWeight: 900 }}>›››</div>;
+          return <div key={deco.id} data-editable={`deco-${deco.id}`} style={{ ...base, fontSize: `${deco.size}px`, color: deco.color, letterSpacing: '-8px', fontWeight: 900 }}>›››</div>;
         case 'badge':
-          return <div key={deco.id} style={{ ...base, padding: '8px 20px', borderRadius: '999px', background: deco.color, color: '#fff', fontSize: '14px', fontWeight: 800 }}>NEW</div>;
+          return <div key={deco.id} data-editable={`deco-${deco.id}`} style={{ ...base, padding: '8px 20px', borderRadius: '999px', background: deco.color, color: '#fff', fontSize: '14px', fontWeight: 800 }}>NEW</div>;
         case 'corner':
-          return <div key={deco.id} style={{ ...base, width: `${deco.size}px`, height: `${deco.size}px`, borderTop: `4px solid ${deco.color}`, borderLeft: `4px solid ${deco.color}` }} />;
+          return <div key={deco.id} data-editable={`deco-${deco.id}`} style={{ ...base, width: `${deco.size}px`, height: `${deco.size}px`, borderTop: `4px solid ${deco.color}`, borderLeft: `4px solid ${deco.color}` }} />;
         case 'dots':
-          return <div key={deco.id} style={{ ...base, display: 'flex', gap: '8px' }}>
+          return <div key={deco.id} data-editable={`deco-${deco.id}`} style={{ ...base, display: 'flex', gap: '8px' }}>
             {[0,1,2].map(j => <div key={j} style={{ width: `${deco.size/3}px`, height: `${deco.size/3}px`, borderRadius: '50%', background: deco.color }} />)}
           </div>;
         case 'wave':
-          return <div key={deco.id} style={{ ...base, width: `${deco.size*4}px`, height: `${deco.size}px`, borderBottom: `3px solid ${deco.color}`, borderRadius: '0 0 50% 50%' }} />;
+          return <div key={deco.id} data-editable={`deco-${deco.id}`} style={{ ...base, width: `${deco.size*4}px`, height: `${deco.size}px`, borderBottom: `3px solid ${deco.color}`, borderRadius: '0 0 50% 50%' }} />;
         default: return null;
       }
     });
@@ -760,6 +761,7 @@ export function useSlideRenderer({ theme, learnedTemplate, presetStyle, cardRati
             {cols.map((col, ci) => (
               <div
                 key={ci}
+                data-editable={`col-header-${ci}`}
                 style={{
                   background: col.highlight ? theme.accentColor : theme.cardBgColor,
                   color: col.highlight ? '#FFFFFF' : '#1A1A2E',
@@ -768,6 +770,7 @@ export function useSlideRenderer({ theme, learnedTemplate, presetStyle, cardRati
                   fontSize: '22px',
                   fontWeight: 900,
                   letterSpacing: '-0.01em',
+                  ...elementPosOverride(slide, `col-header-${ci}`),
                 }}
               >
                 {col.header}
@@ -1384,7 +1387,7 @@ export function useSlideRenderer({ theme, learnedTemplate, presetStyle, cardRati
           {slide.quoteText || slide.body}
         </p>
         {slide.quoteAuthor && (
-          <div style={{ marginTop: '12px' }}>
+          <div data-editable="quote-author" style={{ marginTop: '12px', ...elementPosOverride(slide, 'quote-author') }}>
             <div style={{ color: theme.accentColor, fontSize: '24px', fontWeight: 900, marginBottom: '6px' }}>
               — {slide.quoteAuthor}
             </div>

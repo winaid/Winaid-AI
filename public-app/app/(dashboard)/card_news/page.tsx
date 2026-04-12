@@ -80,6 +80,17 @@ const CATEGORY_IMAGE_KW: Record<string, { ko: string; en: string }> = {
   '내과': { ko: '내과 건강', en: 'internal medicine health' },
 };
 
+/** 주제 키워드로 진료과 자동 감지 */
+function detectCategory(topic: string): ContentCategory | null {
+  if (/기미|주근깨|여드름|보톡스|필러|리프팅|피부|미백|레이저토닝|색소|잡티|모공|주름|탄력|피부과|더마|울쎄라|써마지|스킨부스터/.test(topic))
+    return ContentCategory.DERMATOLOGY;
+  if (/디스크|허리|척추|관절|무릎|어깨|오십견|물리치료|도수|체외충격파|정형외과|근육|인대|연골|족저근막|거북목|골절|재활/.test(topic))
+    return ContentCategory.ORTHOPEDICS;
+  if (/치아|임플란트|교정|충치|잇몸|스케일링|치과|라미네이트|크라운|사랑니|양치|치주|브릿지|틀니/.test(topic))
+    return ContentCategory.DENTAL;
+  return null;
+}
+
 // ── URL 모드: crawl-hospital-blog 응답 타입 + 헬퍼 ──
 
 /**
@@ -1641,7 +1652,7 @@ DECORATIVE: (장식 요소)`,
           {/* 콘텐츠 입력 — 모드별로 다른 UI */}
           {inputMode === 'topic' && (
             <div className="border-2 border-dashed border-slate-200 rounded-xl p-4 mb-4 focus-within:border-blue-400 transition-all">
-              <textarea value={topic} onChange={e => setTopic(e.target.value)}
+              <textarea value={topic} onChange={e => { setTopic(e.target.value); const d = detectCategory(e.target.value); if (d) setCategory(d); }}
                 placeholder="주제를 입력하세요 (예: 임플란트 사후관리 5단계 가이드)"
                 rows={2}
                 className="w-full text-base font-medium text-slate-800 placeholder:text-slate-300 resize-none border-none outline-none bg-transparent" />

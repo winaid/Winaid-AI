@@ -241,20 +241,26 @@ export default function InteractivePreview({
             }}
             onMouseEnter={e => { if (!isSelected && !isEditing) e.currentTarget.style.borderColor = 'rgba(59,130,246,0.4)'; }}
             onMouseLeave={e => { if (!isSelected && !isEditing) e.currentTarget.style.borderColor = 'transparent'; }}
-            onMouseDown={(e) => startDrag(e, handle)}
-            onDoubleClick={() => startEdit(handle)}
+            onMouseDown={(e) => {
+              if (handle.id === 'hospital') { startDrag(e, handle); return; }
+              e.preventDefault();
+              const sx = e.clientX, sy = e.clientY;
+              let moved = false;
+              const onMove = (ev: MouseEvent) => {
+                if (!moved && (Math.abs(ev.clientX - sx) > 5 || Math.abs(ev.clientY - sy) > 5)) {
+                  moved = true;
+                  startDrag(e, handle);
+                }
+              };
+              const onUp = () => {
+                document.removeEventListener('mousemove', onMove);
+                document.removeEventListener('mouseup', onUp);
+                if (!moved) startEdit(handle);
+              };
+              document.addEventListener('mousemove', onMove);
+              document.addEventListener('mouseup', onUp);
+            }}
           >
-            {isSelected && !isEditing && (
-              <div style={{
-                position: 'absolute', top: '-22px', left: '50%', transform: 'translateX(-50%)',
-                fontSize: '10px', color: '#3B82F6', fontWeight: 800, whiteSpace: 'nowrap',
-                background: 'white', padding: '2px 8px', borderRadius: '6px',
-                boxShadow: '0 2px 6px rgba(0,0,0,0.1)',
-              }}>
-                {handle.label} {handle.id !== 'hospital' ? '— 더블클릭으로 편집' : ''}
-              </div>
-            )}
-
             {isEditing && (
               <textarea
                 ref={editRef}

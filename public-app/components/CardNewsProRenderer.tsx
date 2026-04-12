@@ -474,12 +474,22 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
     if (!curr) return;
     const withDefaults = buildLayoutDefaults(curr, newLayout);
     pushAndChange(slides.map((s, i) => (i === idx ? withDefaults : s)));
-    // 백그라운드에서 AI가 내용 자동 채우기 (플레이스홀더만 있을 때)
-    // 편집 모달이 열려 있으면 AI 자동 채우기 스킵 — 사용자 편집과 충돌해서
-    // 타이밍에 따라 수정 내용이 덮어씌워지는 버그 방지.
     if (editingIdx !== null) return;
     const patch = await fillLayoutContent(withDefaults, slides);
-    if (patch) updateSlide(idx, patch);
+    if (patch) {
+      // 사용자가 직접 수정한 필드 보존
+      const isPlaceholder = (t?: string) =>
+        !t || /^(항목|설명|내용을 입력|질문을 입력|답변|시술|주의사항|텍스트를 입력)/.test(t);
+      if (curr.title && !isPlaceholder(curr.title)) delete (patch as Record<string, unknown>).title;
+      if (curr.subtitle && !isPlaceholder(curr.subtitle)) delete (patch as Record<string, unknown>).subtitle;
+      if (curr.body && !isPlaceholder(curr.body)) delete (patch as Record<string, unknown>).body;
+      // 배치 편집 필드 보존
+      const preserve = ['titlePosition','subtitlePosition','titleSize','subtitleSize',
+        'bodySize','elementPositions','elementSizes','customElements',
+        'titleColor','titleFontSize','titleFontWeight','subtitleColor','subtitleFontSize'];
+      preserve.forEach(k => delete (patch as Record<string, unknown>)[k]);
+      if (Object.keys(patch).length > 0) updateSlide(idx, patch);
+    }
   };
 
   // ── AI 액션 래퍼 (lib/cardAiActions.ts 위임) ──
