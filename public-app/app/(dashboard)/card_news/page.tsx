@@ -123,6 +123,22 @@ function extractNaverLogNo(blogUrl: string): string | null {
 }
 
 /**
+ * URL 기준으로 중복 제거. Pexels + Pixabay 결과를 합칠 때 같은 이미지가 두 번
+ * 나오는 경우는 드물지만, 같은 출처 내에서 페이지 경계에 걸친 중복이 가끔 있음.
+ * 빠른 Set 기반 O(n).
+ */
+function dedupPhotos(photos: { url: string }[]): { url: string }[] {
+  const seen = new Set<string>();
+  const out: { url: string }[] = [];
+  for (const p of photos) {
+    if (!p?.url || seen.has(p.url)) continue;
+    seen.add(p.url);
+    out.push(p);
+  }
+  return out;
+}
+
+/**
  * "커버 디자인을 선택하세요" 모달 썸네일의 배경 CSS 값을 결정한다.
  *
  * 원래 렌더 코드는 `tmpl.background.gradient || tmpl.background.solidColor ||
@@ -660,9 +676,21 @@ export default function CardNewsPage() {
     } catch { /* 복원 실패는 조용히 무시 — 기존 proTheme 유지 */ }
   };
 
-  const autoApplyBackgrounds = async (slides: ProSlideData[]): Promise<ProSlideData[]> => {
+  /**
+   * 슬라이드에 배경 이미지를 자동으로 할당.
+   *
+   * 정책 (fetchPreviewImages 와 정확히 일치):
+   *   - photo         → Pexels + Pixabay(image_type=photo) 병렬
+   *   - illustration  → Pixabay 만, image_type=illustration, 영문+한국어 2쿼리
+   *   - infographic   → Pixabay 만, image_type=vector,        영문+한국어 2쿼리
+   * (Pexels 는 사진 전용 서비스라 illustration/infographic 에서 호출 금지)
+   *
+   * @param prefetchedQuery handleSubmit 에서 미리 fetchPexelsQuery 로 받아둔 영문 쿼리.
+   *   React state 의 closure 이슈 때문에 파라미터로 직접 주입한다. 없으면 함수 내부에서 fetch.
+   */
+  const autoApplyBackgrounds = async (slides: ProSlideData[], prefetchedQuery?: string): Promise<ProSlideData[]> => {
     try {
-      const baseQ = lastPexelsQuery || await fetchPexelsQuery();
+      const baseQ = prefetchedQuery || lastPexelsQuery || await fetchPexelsQuery();
       // 영감 이미지 분석 결과가 있으면 visualKeyword 를 검색어 prefix 로 주입.
       // Pexels/Pixabay 가 영어 키워드에 강하므로 영문 스타일 구문을 앞에 붙이면
       // 결과 이미지가 훨씬 일관된 분위기로 떨어짐.
@@ -671,22 +699,41 @@ export default function CardNewsPage() {
       // 인젝션 방어 (대괄호·인젝션 키워드 제거).
       const safeVisualKeyword = sanitizePromptInput(referenceAnalysis?.visualKeyword, 200);
       const inspirationPrefix = safeVisualKeyword ? `${safeVisualKeyword} ` : '';
+      const rndPage = Math.floor(Math.random() * 3) + 1;
+      const koreanQuery = topic.trim() || baseQ;
+
       let photos: { url: string }[];
       if (imageStyle === 'photo') {
-        // 실사: Pexels
-        const res = await fetch(`/api/pexels?query=${encodeURIComponent(inspirationPrefix + baseQ)}&orientation=square&per_page=20&page=${Math.floor(Math.random() * 3) + 1}`);
-        const data = await res.json();
-        photos = (data.photos || []) as { url: string }[];
-      } else {
-        // 일러스트/벡터: Pexels(치과 정확) + Pixabay 합침
-        const rndPage = Math.floor(Math.random() * 3) + 1;
+        // 실사: Pexels + Pixabay(image_type=photo) 병렬 호출 후 인터리브
         const [pexRes, pixRes] = await Promise.all([
-          fetch(`/api/pexels?query=${encodeURIComponent(inspirationPrefix + baseQ + ' dental')}&orientation=square&per_page=15&page=${rndPage}`),
-          fetch(`/api/pixabay?query=${encodeURIComponent(inspirationPrefix + (topic.trim() || baseQ) + ' 치과')}&image_type=${imageStyle === 'infographic' ? 'vector' : 'illustration'}&orientation=horizontal&per_page=10&page=${rndPage}`),
+          fetch(`/api/pexels?query=${encodeURIComponent(inspirationPrefix + baseQ)}&orientation=square&per_page=20&page=${rndPage}`),
+          fetch(`/api/pixabay?query=${encodeURIComponent(inspirationPrefix + baseQ)}&image_type=photo&orientation=horizontal&per_page=20&page=${rndPage}`),
         ]);
         const [pexData, pixData] = await Promise.all([pexRes.json(), pixRes.json()]);
-        photos = [...(pexData.photos || []), ...(pixData.photos || [])] as { url: string }[];
+        const pex = (pexData.photos || []) as { url: string }[];
+        const pix = (pixData.photos || []) as { url: string }[];
+        // 인터리브 (Pexels 우선) → dedup
+        const merged: { url: string }[] = [];
+        const maxLen = Math.max(pex.length, pix.length);
+        for (let j = 0; j < maxLen; j++) {
+          if (j < pex.length) merged.push(pex[j]);
+          if (j < pix.length) merged.push(pix[j]);
+        }
+        photos = dedupPhotos(merged);
+      } else {
+        // 일러스트/벡터: Pexels 제외 (Pexels 는 사진 전용). Pixabay 만.
+        // image_type 분기: infographic → vector, 그 외 → illustration
+        const pixType = imageStyle === 'infographic' ? 'vector' : 'illustration';
+        const [pixRes1, pixRes2] = await Promise.all([
+          fetch(`/api/pixabay?query=${encodeURIComponent(inspirationPrefix + koreanQuery + ' 치과')}&image_type=${pixType}&orientation=horizontal&per_page=15&page=${rndPage}`),
+          fetch(`/api/pixabay?query=${encodeURIComponent(inspirationPrefix + baseQ + ' dental medical')}&image_type=${pixType}&orientation=horizontal&per_page=15&page=${rndPage + 1}`),
+        ]);
+        const [pixData1, pixData2] = await Promise.all([pixRes1.json(), pixRes2.json()]);
+        const p1 = (pixData1.photos || []) as { url: string }[];
+        const p2 = (pixData2.photos || []) as { url: string }[];
+        photos = dedupPhotos([...p1, ...p2]);
       }
+
       if (photos.length > 0) {
         for (let i = 0; i < slides.length; i++) {
           const s = slides[i];
@@ -702,7 +749,7 @@ export default function CardNewsPage() {
           }
         }
       }
-    } catch { /* Pexels 실패 시 무시 */ }
+    } catch { /* 이미지 API 실패 시 무시 — 색상 배경 유지 */ }
     return slides;
   };
 
@@ -765,6 +812,14 @@ export default function CardNewsPage() {
     setSaveStatus(null);
     setPipelineStep('idle');
     setProgress('프로 레이아웃 구성 중...');
+
+    // Pexels/Pixabay 검색어 prefetch —
+    //   기존: Gemini 원고 생성(5~15초) 끝난 뒤에야 fetchPexelsQuery 호출(2~5초 추가)
+    //   지금: 원고 생성과 병렬로 쿼리 변환 시작 → 대부분 원고 생성 시점에 완료됨
+    //   skipAutoImagesRef 가 true(모달에서 이미지 미리 선택) 면 prefetch 불필요
+    const pexelsQueryPromise: Promise<string> = skipAutoImagesRef.current
+      ? Promise.resolve(lastPexelsQuery || '')
+      : (lastPexelsQuery ? Promise.resolve(lastPexelsQuery) : fetchPexelsQuery());
 
     // ═══ Pro Mode: JSON 레이아웃 출력 → HTML/CSS 렌더링 ═══
     // ═══ Pro Mode: 항상 프로 레이아웃으로 생성 ═══
@@ -833,7 +888,10 @@ export default function CardNewsPage() {
       }));
 
       // 텍스트 원고만 즉시 노출. 커버/마무리에는 Pexels 배경 자동 적용 (모달에서 이미지 선택한 경우 건너뜀).
-      const withBg = skipAutoImagesRef.current ? slides : await autoApplyBackgrounds(slides);
+      // prefetch 된 쿼리를 직접 주입. React state closure 문제로 autoApplyBackgrounds
+      // 내부의 lastPexelsQuery 는 render 시점의 옛 값을 보므로 파라미터로 전달해야 한다.
+      const prefetchedQuery = await pexelsQueryPromise;
+      const withBg = skipAutoImagesRef.current ? slides : await autoApplyBackgrounds(slides, prefetchedQuery);
       skipAutoImagesRef.current = false;
       setProSlides(withBg);
       setPipelineStep('idle');
