@@ -66,8 +66,6 @@ interface CardSlide {
   imageHistory: CardImageHistoryItem[];
 }
 
-type ImageStyleType = 'photo' | 'illustration' | 'ai';
-
 /** 진료과별 이미지 검색 보조 키워드 (하드코딩 치과 편향 제거) */
 const CATEGORY_IMAGE_KW: Record<string, { ko: string; en: string }> = {
   '치과': { ko: '치과', en: 'dental' },
@@ -280,7 +278,7 @@ export default function CardNewsPage() {
   const [slideCount, setSlideCount] = useState(0); // 0 = 자동
   const [proCardRatio, setProCardRatio] = useState<'1:1' | '3:4' | '4:5' | '9:16' | '16:9'>('1:1');
   const [designTemplateId, setDesignTemplateId] = useState<CardNewsDesignTemplateId | undefined>(undefined);
-  const [imageStyle, setImageStyle] = useState<ImageStyleType>('ai');
+  const [imageStyle] = useState<'photo' | 'illustration' | 'ai'>('ai');
   const [category, setCategory] = useState<ContentCategory>(ContentCategory.DENTAL);
   const [audienceMode, setAudienceMode] = useState<AudienceMode>('환자용(친절/공감)');
   const [contentMode, setContentMode] = useState<'simple' | 'detailed'>('simple');
@@ -499,97 +497,39 @@ export default function CardNewsPage() {
   const previewCacheRef = useRef<Map<string, string[]>>(new Map());
   const skipAutoImagesRef = useRef(false);
 
-  const fetchPreviewImages = async (style: ImageStyleType, force = false) => {
-    // 캐시 확인 — 같은 스타일+쿼리면 즉시 반환
-    const cacheKey = `${style}:${lastPexelsQuery || topic}`;
+  const fetchPreviewImages = async (force = false) => {
+    const cacheKey = `ai:${topic}`;
     if (!force && previewCacheRef.current.has(cacheKey)) {
       setPreviewBgImages(previewCacheRef.current.get(cacheKey)!);
       return;
     }
     setLoadingPreviews(true);
     try {
-      const baseQuery = lastPexelsQuery || await fetchPexelsQuery();
+      const catKw = CATEGORY_IMAGE_KW[category] || { ko: '의료', en: 'medical' };
+      const tones = ['어두운 프리미엄 톤', '밝고 깔끔한 톤', '부드러운 파스텔 톤'];
       const count = COVER_TEMPLATES.length;
-      const query = baseQuery;
-      const page = force ? Math.floor(Math.random() * 5) + 1 : 1;
-      let photos: string[];
-      if (style === 'photo') {
-        // 실사: Pexels + Pixabay(photo) 동시 호출
-        const [pexelsRes, pixabayRes] = await Promise.all([
-          fetch(`/api/pexels?query=${encodeURIComponent(query)}&orientation=square&per_page=${count}&page=${page}`),
-          fetch(`/api/pixabay?query=${encodeURIComponent(query)}&image_type=photo&orientation=horizontal&per_page=${count}&page=${page}&category=health`),
-        ]);
-        const [pexelsData, pixabayData] = await Promise.all([pexelsRes.json(), pixabayRes.json()]);
-        const pexels: string[] = (pexelsData.photos || []).map((p: { url: string }) => p.url);
-        const pixabay: string[] = (pixabayData.photos || []).map((p: { url: string }) => p.url);
-        photos = [];
-        const maxLen = Math.max(pexels.length, pixabay.length);
-        for (let j = 0; j < maxLen; j++) {
-          if (j < pexels.length) photos.push(pexels[j]);
-          if (j < pixabay.length) photos.push(pixabay[j]);
-        }
-      } else if (style === 'ai') {
-        // AI 이미지 생성 — 3장 생성 후 5칸에 배분
-        const catKw = CATEGORY_IMAGE_KW[category] || { ko: '의료', en: 'medical' };
-        const tones = ['어두운 프리미엄 톤', '밝고 깔끔한 톤', '부드러운 파스텔 톤'];
-        const promises = tones.map((tone) =>
-          fetch('/api/image', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              prompt: `${topic || '병원 마케팅'} 관련 ${catKw.ko} 카드뉴스 배경 이미지.
+      const promises = tones.map((tone) =>
+        fetch('/api/image', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            prompt: `${topic || '병원 마케팅'} 관련 ${catKw.ko} 카드뉴스 배경 이미지.
 텍스트가 올라갈 공간이 있어야 하므로 중앙은 비워두세요.
 스타일: ${tone}, 의료/헬스케어 프리미엄 일러스트.
 사람 얼굴 없이 사물/장비/환경 위주.`,
-              ratio: proCardRatio === '1:1' ? '1:1' : '4:3',
-            }),
-          }).then(r => r.json()).then(d => (d.imageUrl || d.imageDataUrl || '') as string).catch(() => '')
-        );
-        const generated = (await Promise.all(promises)).filter(Boolean);
-        // 3장 → 5칸 배분
-        photos = generated.length > 0
-          ? [...generated, ...generated].slice(0, count)
-          : [];
-      } else {
-        // 일러스트: Pixabay만 사용 + category=health 필터
-        const catKw = CATEGORY_IMAGE_KW[category] || { ko: '의료 건강', en: 'medical health' };
-        const koreanQuery = topic.trim() || query;
-        // 1차: category=health로 검색
-        const [pixRes1, pixRes2] = await Promise.all([
-          fetch(`/api/pixabay?query=${encodeURIComponent(koreanQuery + ' ' + catKw.ko)}&image_type=illustration&orientation=horizontal&per_page=${count}&page=${page}&category=health`),
-          fetch(`/api/pixabay?query=${encodeURIComponent(query + ' ' + catKw.en)}&image_type=illustration&orientation=horizontal&per_page=${count}&page=${page + 1}&category=health`),
-        ]);
-        const [pixData1, pixData2] = await Promise.all([pixRes1.json(), pixRes2.json()]);
-        let p1: string[] = (pixData1.photos || []).map((p: { url: string }) => p.url);
-        let p2: string[] = (pixData2.photos || []).map((p: { url: string }) => p.url);
-        // 결과 부족 시 category 빼고 재검색
-        if (p1.length + p2.length < 3) {
-          const [fb1, fb2] = await Promise.all([
-            fetch(`/api/pixabay?query=${encodeURIComponent(koreanQuery + ' ' + catKw.ko)}&image_type=illustration&orientation=horizontal&per_page=${count}&page=${page}`),
-            fetch(`/api/pixabay?query=${encodeURIComponent(query + ' ' + catKw.en)}&image_type=illustration&orientation=horizontal&per_page=${count}&page=${page + 1}`),
-          ]);
-          const [fbData1, fbData2] = await Promise.all([fb1.json(), fb2.json()]);
-          p1 = (fbData1.photos || []).map((p: { url: string }) => p.url);
-          p2 = (fbData2.photos || []).map((p: { url: string }) => p.url);
-        }
-        photos = [...new Set([...p1, ...p2])].slice(0, count * 2);
-      }
+            ratio: proCardRatio === '1:1' ? '1:1' : '4:3',
+          }),
+        }).then(r => r.json()).then(d => (d.imageUrl || d.imageDataUrl || '') as string).catch(() => '')
+      );
+      const generated = (await Promise.all(promises)).filter(Boolean);
+      const photos = generated.length > 0
+        ? [...generated, ...generated].slice(0, count)
+        : [];
       previewCacheRef.current.set(cacheKey, photos);
       setPreviewBgImages(photos);
     } catch { /* 실패 시 색상 배경 유지 */ }
     setLoadingPreviews(false);
   };
-
-  // 주제 입력 후 2초 뒤 백그라운드 프리페치 (모달 열기 전 미리 로드)
-  useEffect(() => {
-    if (!topic.trim()) return;
-    if (imageStyle === 'ai') return; // AI 모드는 모달 열 때만 생성
-    const timer = setTimeout(() => {
-      fetchPreviewImages(imageStyle);
-    }, 2000);
-    return () => clearTimeout(timer);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [topic, imageStyle]);
 
   const openDesignModal = async () => {
     setShowDesignModal(true);
@@ -599,7 +539,7 @@ export default function CardNewsPage() {
       imageUrl: '',
       templateId: tmpl.id,
     })));
-    await fetchPreviewImages(imageStyle);
+    await fetchPreviewImages();
   };
 
   /**
@@ -2222,35 +2162,14 @@ DECORATIVE: (장식 요소)`,
               </div>
             </div>
 
-            {/* 이미지 스타일 선택 */}
-            <div className="px-8 py-4 border-t border-slate-100">
-              <p className="text-xs font-semibold text-slate-500 mb-2">배경 이미지 스타일</p>
-              <div className="flex gap-2 flex-wrap">
-                {([
-                  { id: 'ai' as const, label: 'AI 생성', icon: '🤖', desc: '주제 맞춤 AI 이미지' },
-                  { id: 'illustration' as const, label: '일러스트', icon: '🎨', desc: 'Pixabay 일러스트' },
-                  { id: 'photo' as const, label: '실사 사진', icon: '📷', desc: 'Pexels 사진' },
-                ]).map(s => (
-                  <button key={s.id} type="button" onClick={() => { setImageStyle(s.id); fetchPreviewImages(s.id); }}
-                    className={`px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
-                      imageStyle === s.id
-                        ? 'bg-blue-600 text-white shadow-sm'
-                        : 'bg-white border border-slate-200 text-slate-600 hover:border-blue-300'
-                    }`}>
-                    {s.icon} {s.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
             {/* 하단 */}
             <div className="px-8 py-5 border-t border-slate-100 bg-slate-50 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <button type="button" onClick={() => setShowDesignModal(false)} className="px-6 py-2.5 text-sm font-semibold text-slate-500">취소</button>
-                <button type="button" onClick={() => { previewCacheRef.current.clear(); fetchPreviewImages(imageStyle, true); }}
+                <button type="button" onClick={() => { previewCacheRef.current.clear(); fetchPreviewImages(true); }}
                   disabled={loadingPreviews}
                   className="px-4 py-2.5 text-sm font-semibold text-blue-600 bg-blue-50 rounded-xl hover:bg-blue-100 disabled:opacity-50 transition-all">
-                  {loadingPreviews ? (imageStyle === 'ai' ? 'AI 생성 중...' : '로딩...') : '🔄 다른 이미지'}
+                  {loadingPreviews ? 'AI 생성 중...' : '🔄 다른 이미지'}
                 </button>
               </div>
               <button type="button" disabled={isGenerating}
