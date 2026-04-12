@@ -14,7 +14,7 @@ import { brandPresetToTheme } from '../../../lib/brandPreset';
 import { getBrandPreset } from '../../../lib/styleService';
 import CardNewsRenderer from '../../../components/CardNewsRenderer';
 import CardNewsProRenderer from '../../../components/CardNewsProRenderer';
-import { DEFAULT_THEME, COVER_TEMPLATES, CARD_FONTS, FONT_CATEGORIES, type DesignPresetStyle, parseProSlidesJson, ensureSlideIds, generateSlideId, type SlideData as ProSlideData, type CardNewsTheme, type SlideLayoutType } from '../../../lib/cardNewsLayouts';
+import { DEFAULT_THEME, COVER_TEMPLATES, CARD_FONTS, FONT_CATEGORIES, type DesignPresetStyle, parseProSlidesJson, ensureSlideIds, generateSlideId, type SlideData as ProSlideData, type CardNewsTheme, type SlideLayoutType, type CoverTemplate } from '../../../lib/cardNewsLayouts';
 import { buildLayoutDefaults, analyzeInspirationImage, type InspirationAnalysis } from '../../../lib/cardAiActions';
 import { sanitizePromptInput } from '../../../lib/promptSanitize';
 import { getSavedTemplates, deleteTemplate, imageToEditableTemplate, type CardTemplate } from '../../../lib/cardTemplateService';
@@ -120,6 +120,44 @@ function extractNaverLogNo(blogUrl: string): string | null {
   const qMatch = blogUrl.match(/[?&]logNo=(\d{8,})/);
   if (qMatch) return qMatch[1];
   return null;
+}
+
+/**
+ * "커버 디자인을 선택하세요" 모달 썸네일의 배경 CSS 값을 결정한다.
+ *
+ * 원래 렌더 코드는 `tmpl.background.gradient || tmpl.background.solidColor ||
+ * tmpl.thumbnail || '#1a1a2e'` 체인으로 배경을 정했는데, `CoverTemplate.thumbnail`
+ * 필드는 **"배경 이미지 위에 얹을 오버레이 그라데이션"** 용도로 만들어진 값이라
+ * 일부 템플릿에서 이 값이 `linear-gradient(180deg, transparent 40%, rgba(0,0,0,0.7) 100%)`
+ * 같은 **반투명 오버레이**다. 이걸 단독 배경으로 쓰면 부모의 흰색이 드러나
+ * "빈 박스" 처럼 보인다.
+ *
+ * 원래 설계 의도: Pexels/Pixabay 에서 받은 `bgImage` 를 먼저 깔고 그 위에 이
+ * 반투명 오버레이를 얹는 구조. 그러나 `PEXELS_API_KEY` 가 없거나 API 호출이
+ * 실패하면 `previewBgImages` 가 `[]` 로 남고, `<img>` 태그가 아예 렌더되지
+ * 않아서 `image-full` 타입 템플릿들이 빈 박스가 된다.
+ *
+ * 해결: API 키가 있든 없든 "박스 자체에 의미 있는 배경" 을 주되, Pexels 이미지가
+ * 실제로 로드되면 그 위를 덮어쓰도록 한다.
+ *
+ * 배경 결정 우선순위:
+ *  1. `background.gradient`    (명시적 불투명 그라데이션)
+ *  2. `background.solidColor`  (명시적 단색)
+ *  3. `type === 'split'`       → thumbnail 사용 (50/50 분할 그라데이션, 불투명)
+ *  4. `type === 'image-full'`  → title 색 기준으로 placeholder 그라데이션
+ *  5. fallback `#1a1a2e`
+ */
+function getTemplatePlaceholderBg(tmpl: CoverTemplate): string {
+  if (tmpl.background.gradient) return tmpl.background.gradient;
+  if (tmpl.background.solidColor) return tmpl.background.solidColor;
+  if (tmpl.background.type === 'split' && tmpl.thumbnail) return tmpl.thumbnail;
+  if (tmpl.background.type === 'image-full') {
+    // 제목이 흰색이면 어두운 계열(타이포 가독성), 검정이면 밝은 계열로.
+    return tmpl.colors.title === '#FFFFFF'
+      ? 'linear-gradient(180deg, #475569 0%, #1e293b 100%)'
+      : 'linear-gradient(180deg, #f1f5f9 0%, #cbd5e1 100%)';
+  }
+  return tmpl.thumbnail || '#1a1a2e';
 }
 
 /**
@@ -1995,19 +2033,16 @@ DECORATIVE: (장식 요소)`,
                   return (
                   <div key={tmpl.id}>
                     <button type="button" onClick={() => setSelectedPreviewIdx(i)}
-                      className={`relative rounded-2xl overflow-hidden border-3 transition-all ${
+                      className={`relative rounded-2xl overflow-hidden border-[3px] transition-all ${
                         proCardRatio === '3:4' ? 'aspect-[3/4]' : proCardRatio === '4:5' ? 'aspect-[4/5]' : 'aspect-square'
                       } ${selectedPreviewIdx === i
                         ? 'border-blue-500 ring-4 ring-blue-100 scale-[1.02]'
                         : 'border-transparent hover:border-slate-300 hover:shadow-lg'}`}>
 
-                      {/* 배경: Pexels 이미지 + 오버레이, 없으면 그라데이션 */}
-                      <div className="absolute inset-0" style={{
-                        background: tmpl.background.gradient
-                          || tmpl.background.solidColor
-                          || tmpl.thumbnail
-                          || '#1a1a2e',
-                      }} />
+                      {/* 배경: 템플릿 특성 기반 placeholder → Pexels 이미지가 로드되면 위에서 덮어씀.
+                          (이전엔 tmpl.thumbnail 을 단독 배경으로 썼는데 이 필드가
+                          반투명 오버레이라 image-full 타입 템플릿이 빈 박스로 보였음.) */}
+                      <div className="absolute inset-0" style={{ background: getTemplatePlaceholderBg(tmpl) }} />
                       {bgImage && (
                         <>
                           <img src={bgImage} alt="" className="absolute inset-0 w-full h-full object-cover" crossOrigin="anonymous"
