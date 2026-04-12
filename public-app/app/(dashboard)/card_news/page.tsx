@@ -646,6 +646,8 @@ export default function CardNewsPage() {
       setProTheme(prev => ({
         ...prev,
         backgroundColor: analysis.palette.background,
+        // 기존 backgroundGradient 가 남아 있으면 새 backgroundColor 를 덮으므로 클리어.
+        backgroundGradient: undefined,
         titleColor: analysis.palette.primary,
         subtitleColor: analysis.palette.secondary,
         bodyColor: analysis.palette.text,

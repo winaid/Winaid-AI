@@ -94,7 +94,6 @@ export const DEFAULT_BRAND_PRESET: BrandPreset = {
  *   - logo.dataUrl      → hospitalLogo (존재 시에만)
  *
  * 의도적으로 매핑하지 않는 필드:
- *   - backgroundGradient: 프리셋에 없음. 기존 값 유지.
  *   - cardBgColor: 내부 카드 배경은 브랜드 색과 별개로 흰색 유지하는 게 일반적.
  *     사용자가 명시적으로 수정하도록 UI 에서 별도 처리.
  *   - fontId: fontFamily 와 중복. 폰트 선택기에서 직접 설정.
@@ -105,6 +104,9 @@ export const DEFAULT_BRAND_PRESET: BrandPreset = {
 export function brandPresetToTheme(preset: BrandPreset): Partial<CardNewsTheme> {
   const patch: Partial<CardNewsTheme> = {
     backgroundColor: preset.colors.background,
+    // 기존 테마의 backgroundGradient 가 남아 있으면 새 backgroundColor 를
+    // 시각적으로 덮어쓰므로 반드시 클리어한다.
+    backgroundGradient: undefined,
     titleColor: preset.colors.primary,
     subtitleColor: preset.colors.secondary,
     bodyColor: preset.colors.text,

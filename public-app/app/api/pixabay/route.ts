@@ -17,6 +17,10 @@ export async function GET(req: NextRequest) {
   if (!apiKey) return NextResponse.json({ photos: [], error: 'No API key' });
 
   try {
+    // vector(SVG) 결과는 Pixabay 가 래스터 프리뷰만 제공하므로 min_width 를
+    // 높이면 대부분 필터링됨 — 벡터/일러스트 검색 시 min_width 를 낮춘다.
+    // 실사 사진(photo)은 1080px 미달이면 카드뉴스에 흐리므로 1080 유지.
+    const isVectorLike = imageType === 'vector' || imageType === 'illustration';
     const params = new URLSearchParams({
       key: apiKey,
       q: query,
@@ -26,24 +30,21 @@ export async function GET(req: NextRequest) {
       page,
       lang: 'ko',
       safesearch: 'true',
-      // 카드뉴스 출력 해상도(1080~1350px)에 맞춰 1080 이상만 요청.
-      // 이전 800 은 640px webformatURL 에 fallback 될 여지가 있어 흐린 이미지가
-      // 슬라이드에 들어갔음. 1080 으로 올려 사전 차단.
-      min_width: '1080',
+      min_width: isVectorLike ? '400' : '1080',
     });
 
     const res = await fetch(`https://pixabay.com/api/?${params}`);
     const data = await res.json();
 
     return NextResponse.json({
-      // largeImageURL(약 1280px) 만 사용. 이전엔 없으면 webformatURL(640px) 로
-      // fallback 했는데 640px 이미지가 1080px 슬라이드에 들어가면 흐려짐.
-      // largeImageURL 이 없는 결과는 결과에서 완전히 제외.
+      // 실사 사진: largeImageURL(~1280px) 필수, 없으면 제외 (640px 는 흐림).
+      // 벡터/일러스트: largeImageURL 우선, 없으면 webformatURL fallback 허용
+      //   — SVG 원본 기반이라 640px 래스터도 스케일 시 허용 범위.
       photos: (data.hits || [])
-        .filter((h: any) => h.largeImageURL)
+        .filter((h: any) => isVectorLike ? (h.largeImageURL || h.webformatURL) : h.largeImageURL)
         .map((h: any) => ({
           id: h.id,
-          url: h.largeImageURL,
+          url: h.largeImageURL || h.webformatURL,
           thumb: h.previewURL,
           alt: h.tags || '',
           photographer: h.user,
