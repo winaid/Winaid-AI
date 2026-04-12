@@ -138,6 +138,15 @@ export default function CardNewsCanvas({
         height: cardHeight,
         selection: true,
         renderOnAddRemove: false,
+        // Retina 스케일링 끄기: enableRetinaScaling: true (기본값) 이면 canvas
+        // attribute 크기가 논리 크기 × DPR 로 부풀고 context 에 scale(DPR) 이
+        // 적용된다. 이후 setDimensions({cssOnly:true}) 로 CSS 만 650px 로 줄이면
+        // 브라우저가 (논리크기 × DPR) → 650 으로 축소하므로 "이론상" 동일한 시각
+        // 크기지만, fabric 내부의 마우스 좌표 매핑·오브젝트 캐시·필터 등에서
+        // 불일치가 생겨 텍스트가 커 보이거나 클릭 좌표가 어긋나는 문제가 발생.
+        // 이 캔버스는 편집용 프리뷰이고 최종 출력(PNG)은 HTML 렌더 기반이므로
+        // retina 해상도가 불필요하다 — 끄면 좌표계가 1:1 로 단순해진다.
+        enableRetinaScaling: false,
       });
       if (disposed) { canvas.dispose(); return; }
       fabricRef.current = canvas;
@@ -258,11 +267,15 @@ export default function CardNewsCanvas({
               selectable: false, evented: false, name: OBJ.IMAGE,
             });
             canvas.add(fImg);
-            // 반투명 오버레이
+            // 반투명 오버레이 — 이름 필수: selectability pass 가 이름 없는
+            // 오브젝트를 selectable/evented 로 재설정하므로, 이름을 붙여
+            // BG_NAMES 체크에서 제외되도록 한다 (없으면 풀카드 rect 가
+            // 텍스트 이벤트를 가로채 편집 불가 버그 발생).
             const overlay = new F.Rect({
               left: 0, top: 0, width: cardWidth, height: cardHeight,
               fill: theme.backgroundColor + 'CC',
               selectable: false, evented: false,
+              name: '__overlay_image__',
             });
             canvas.add(overlay);
           } else {
@@ -372,21 +385,24 @@ export default function CardNewsCanvas({
       }
 
       // ════════ 모든 객체를 선택/이동 가능하게 (배경만 제외) ════════
-      const BG_NAMES: string[] = [OBJ.BG, OBJ.PATTERN, OBJ.ACCENT_TOP, OBJ.ACCENT_BOT];
+      // 이전엔 BG_NAMES 4종 + '__overlay' prefix 만 제외했으나, 이름 없는
+      // 오브젝트(커버 템플릿 bg rect, 이미지 오버레이 등)가 selectability
+      // pass 에서 재활성화되어 풀카드 rect 가 텍스트 이벤트를 가로채는 버그.
+      // 해결: 명시적으로 selectable:false/evented:false 로 생성된 객체는
+      // 원본 의도를 존중해서 건드리지 않는다.
       canvas.getObjects().forEach((obj: any) => {
-        const name: string = obj.name || '';
-        // 배경/패턴/악센트바만 고정, 나머지 전부 드래그+선택 가능
-        if (!BG_NAMES.includes(name) && !name.startsWith('__overlay')) {
-          obj.set({
-            selectable: true,
-            evented: true,
-            ...SELECTION_STYLE,
-          });
-          // 텍스트 객체: 호버 시 텍스트 커서 표시 → 편집 가능 암시
-          const isTextObj = obj.type === 'textbox' || obj.type === 'i-text' || obj.type === 'text';
-          if (isTextObj) {
-            obj.set({ hoverCursor: 'text' });
-          }
+        // 생성 시 selectable:false 인 객체는 의도적 고정 → 스킵
+        if (obj.selectable === false) return;
+
+        obj.set({
+          selectable: true,
+          evented: true,
+          ...SELECTION_STYLE,
+        });
+        // 텍스트 객체: 호버 시 텍스트 커서 표시 → 편집 가능 암시
+        const isTextObj = obj.type === 'textbox' || obj.type === 'i-text' || obj.type === 'text';
+        if (isTextObj) {
+          obj.set({ hoverCursor: 'text' });
         }
       });
 
@@ -576,7 +592,7 @@ export default function CardNewsCanvas({
         if (!obj) return;
         const isTextObj = obj.type === 'textbox' || obj.type === 'i-text' || obj.type === 'text';
         const objName: string = obj.name || '';
-        if (isTextObj && !BG_NAMES.includes(objName) && !objName.startsWith('__overlay') && !objName.startsWith('__guide')) {
+        if (isTextObj && obj.selectable) {
           hoverTimeoutRef.current = setTimeout(() => {
             const bounds = obj.getBoundingRect();
             const label = objName === OBJ.TITLE ? '제목' : objName === OBJ.SUBTITLE ? '부제' : objName === OBJ.BODY ? '본문' : objName === OBJ.HOSPITAL ? '병원명' : '텍스트';
