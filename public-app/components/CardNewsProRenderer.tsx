@@ -16,7 +16,6 @@ import {
   getActiveFontName,
   migrateLegacyLocalStorageFont,
 } from '../lib/fontStorage';
-import CardNewsCanvas from './CardNewsCanvas';
 import SlideEditor from './card-news/SlideEditor';
 import InteractivePreview from './card-news/InteractivePreview';
 import EditableSlideWrapper from './card-news/EditableSlideWrapper';
@@ -209,9 +208,6 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
   const [aiSuggestingKey, setAiSuggestingKey] = useState<string | null>(null); // `${idx}:${field}`
 
   // 카드별 AI 채팅은 SlideEditor 내부에서 관리 (글로벌 채팅 제거)
-  // fabric.js 캔버스 모드 토글
-  const [useCanvas, setUseCanvas] = useState(true); // 캔버스 에디터 기본 사용
-
   // 폰트 즉시 반영 + 커스텀 폰트 업로드
   const [fontLoaded, setFontLoaded] = useState(0);
   const [customFontName, setCustomFontName] = useState<string | null>(null);
@@ -1191,7 +1187,13 @@ JSON만 출력:
                       if (posKey) updateSlide(i, { [posKey]: { x: xPct, y: yPct } });
                     }}
                     onElementResize={(i, id, w, h) => {
-                      console.log('moveable:resize', i, id, w, h);
+                      const wPct = Math.round((w / cardWidth) * 100);
+                      const hPct = Math.round((h / cardHeight) * 100);
+                      const sizeKey = id === 'title' ? 'titleSize'
+                                    : id === 'subtitle' ? 'subtitleSize'
+                                    : id === 'body' ? 'bodySize'
+                                    : id === 'image' ? 'imageSize' : null;
+                      if (sizeKey) updateSlide(i, { [sizeKey]: { w: wPct, h: hPct } });
                     }}
                     onTextChange={(i, field, value) => {
                       updateSlide(i, { [field]: value });
@@ -1311,16 +1313,6 @@ JSON만 출력:
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                {/* HTML/Canvas 토글 — 개발용. 캔버스 안정화 후 삭제 예정 */}
-                {process.env.NODE_ENV === 'development' && (
-                  <button
-                    type="button"
-                    onClick={() => setUseCanvas(v => !v)}
-                    className={`px-3 py-1.5 text-xs font-bold rounded-lg border transition-colors ${useCanvas ? 'bg-violet-600 text-white border-violet-600' : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'}`}
-                  >
-                    {useCanvas ? 'Canvas' : 'HTML'}
-                  </button>
-                )}
                 <button type="button" onClick={() => setEditingIdx(null)}
                   data-testid="editor-close"
                   className="px-5 py-2 text-sm font-bold text-white bg-blue-600 rounded-lg hover:bg-blue-700">✓ 완료</button>
@@ -1330,17 +1322,6 @@ JSON만 출력:
             <div className="flex-1 flex overflow-hidden">
               {/* 좌: 카드 프리뷰 */}
               <div className="flex-[3] bg-slate-100 flex items-center justify-center p-6 overflow-auto">
-                {useCanvas ? (
-                  <CardNewsCanvas
-                    slide={eSlide}
-                    theme={theme}
-                    cardRatio={cardRatio}
-                    learnedTemplate={learnedTemplate}
-                    presetStyle={presetStyle}
-                    maxWidth={650}
-                    onSlideChange={(patch) => updateSlide(editingIdx, patch)}
-                  />
-                ) : (
                 <InteractivePreview
                   slide={eSlide}
                   hospitalName={theme.hospitalName}
@@ -1353,7 +1334,6 @@ JSON만 출력:
                   fontId={theme.fontId}
                   slideFontId={eSlide.fontId}
                 />
-                )}
               </div>
               {/* 우: 편집 패널 */}
               <div className="flex-[2] min-w-[380px] max-w-[520px] border-l border-slate-200 bg-white overflow-y-auto p-5">

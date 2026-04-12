@@ -1,7 +1,6 @@
 /**
  * 카드뉴스 순수 스타일 계산 유틸리티
  * CardNewsProRenderer.tsx에서 추출 — HTML 렌더링 전용 값.
- * (canvasLayouts.ts의 동명 함수는 fabric.js 캔버스용으로 fontSize 등이 미세하게 다름)
  */
 import type { CSSProperties } from 'react';
 import type { SlideData, CardNewsTheme } from './cardNewsLayouts';

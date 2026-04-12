@@ -187,6 +187,12 @@ export interface SlideData {
   titlePosition?: { x: number; y: number };
   subtitlePosition?: { x: number; y: number };
 
+  // 요소 크기 (리사이즈, % 기준)
+  titleSize?: { w: number; h: number };
+  subtitleSize?: { w: number; h: number };
+  bodySize?: { w: number; h: number };
+  imageSize?: { w: number; h: number };
+
   // 정렬
   titleAlign?: 'left' | 'center' | 'right';
   contentAlignV?: 'top' | 'center' | 'bottom';
