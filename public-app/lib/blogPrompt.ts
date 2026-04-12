@@ -503,7 +503,6 @@ ${range.max}자 초과 시 → 가장 약한 문단을 삭제 후 출력. 패딩
       (arr || []).map(s => sanitizePromptInput(s, 200)).filter(Boolean).join(', ');
     const safeServices = safeJoin(ctx.actualServices);
     const safeSpecialties = safeJoin(ctx.specialties);
-    const safeLocationSignals = safeJoin(ctx.locationSignals);
     const ctxParts: string[] = ['', '[병원 실제 정보 (홈페이지/블로그 분석 결과)]'];
     if (safeServices) {
       ctxParts.push(`- 실제 제공 서비스: ${safeServices}`);
@@ -511,17 +510,15 @@ ${range.max}자 초과 시 → 가장 약한 문단을 삭제 후 출력. 패딩
     if (safeSpecialties) {
       ctxParts.push(`- 특화/차별화 진료: ${safeSpecialties}`);
     }
-    if (safeLocationSignals) {
-      ctxParts.push(`- 주변 지역: ${safeLocationSignals}`);
-    }
     ctxParts.push(`→ 위 정보 중 현재 글의 주제("${safeTopic}")와 관련 있는 정보만 참고하세요.`);
     ctxParts.push('→ 주제와 무관한 시술, 장비, 서비스 정보는 절대 포함하지 마세요.');
     ctxParts.push('→ 없는 서비스를 언급하지 마세요.');
+    ctxParts.push('→ 지역명(동, 시, 역 이름 등)은 글에 삽입하지 마세요.');
     ctxParts.push('');
     ctxParts.push('[차별화 — 이 병원만의 글로 만들기]');
-    ctxParts.push('→ 위 병원 정보(특화 진료, 장비, 지역)를 본문에 자연스럽게 녹여서 이 병원에서만 나올 수 있는 글로 만드세요.');
+    ctxParts.push('→ 위 병원 정보(특화 진료, 장비)를 본문에 자연스럽게 녹여서 이 병원에서만 나올 수 있는 글로 만드세요.');
     ctxParts.push('→ 다른 병원 블로그에 그대로 복사해도 어색하지 않은 범용 글은 실패입니다.');
-    ctxParts.push('→ 최소 2곳 이상에서 이 병원의 고유 정보(지역명, 장비명, 특화 시술)를 언급하세요.');
+    ctxParts.push('→ 최소 2곳 이상에서 이 병원의 고유 정보(장비명, 특화 시술)를 언급하세요.');
     promptParts.push(...ctxParts);
   }
 
@@ -672,14 +669,13 @@ ${range.max}자 초과 시 → 가장 약한 문단을 삭제 후 출력. 패딩
       (arr || []).map(s => sanitizePromptInput(s, 200)).filter(Boolean).join(', ');
     const svc = safeJoin(ctx.actualServices);
     const spec = safeJoin(ctx.specialties);
-    const loc = safeJoin(ctx.locationSignals);
     promptParts.push(
       '',
       '[병원 소개 섹션 - 글 마지막에 삽입]',
       '마무리 섹션 바로 앞에 <h3>병원 소개</h3> 소제목을 추가하고, 아래 정보를 자연스럽게 2~3문단으로 작성하세요.',
       svc ? `- 진료 서비스: ${svc}` : '',
       spec ? `- 특화 진료: ${spec}` : '',
-      loc ? `- 위치: ${loc}` : '',
+      '- 지역명(동, 시, 역 이름 등)은 병원 소개에도 포함하지 마세요.',
       '- 병원 소개는 광고가 아닌 정보 전달 톤으로 작성. 의료법 준수.',
     );
   }

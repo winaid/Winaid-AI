@@ -194,7 +194,7 @@ export default function BlogFormPanel(props: BlogFormPanelProps) {
                   <p className="text-[10px] font-semibold text-emerald-700 mb-1">분석 결과 (신뢰도 {Math.round(clinicContext.confidence * 100)}%)</p>
                   {clinicContext.actualServices.length > 0 && <p className="text-[10px] text-slate-600">서비스: {clinicContext.actualServices.join(', ')}</p>}
                   {clinicContext.specialties.length > 0 && <p className="text-[10px] text-slate-600">특화: {clinicContext.specialties.join(', ')}</p>}
-                  {clinicContext.locationSignals.length > 0 && <p className="text-[10px] text-slate-600">지역: {clinicContext.locationSignals.join(', ')}</p>}
+                  {clinicContext.locationSignals.length > 0 && <p className="text-[10px] text-slate-400">지역: {clinicContext.locationSignals.join(', ')} <span className="text-slate-300">(글에 미포함)</span></p>}
                 </div>
               )}
             </div>

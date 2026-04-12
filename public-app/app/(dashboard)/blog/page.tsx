@@ -817,7 +817,7 @@ JSON 형식으로 응답해주세요.`;
       clinicContext: clinicContext ? {
         actualServices: clinicContext.actualServices,
         specialties: clinicContext.specialties,
-        locationSignals: clinicContext.locationSignals,
+        locationSignals: [],  // 지역 정보는 글에 삽입하지 않음
       } : undefined,
     };
 
