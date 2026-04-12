@@ -66,7 +66,6 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
   const [showDownloadMenu, setShowDownloadMenu] = useState(false);
   const downloadMenuRef = useRef<HTMLDivElement | null>(null);
   const [editingIdx, setEditingIdx] = useState<number | null>(null);
-  const [inlineEditIdx, setInlineEditIdx] = useState<number | null>(null);
   const [showAddSlide, setShowAddSlide] = useState(false);
 
   // ── 슬라이드쇼 ──
@@ -432,8 +431,6 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
     pushAndChange(newSlides.map((s, i) => ({ ...s, index: i + 1 })));
     if (editingIdx === idx) setEditingIdx(null);
     else if (editingIdx !== null && editingIdx > idx) setEditingIdx(editingIdx - 1);
-    if (inlineEditIdx === idx) setInlineEditIdx(null);
-    else if (inlineEditIdx !== null && inlineEditIdx > idx) setInlineEditIdx(inlineEditIdx - 1);
   };
 
   /** 슬라이드 순서 이동 (드래그앤드롭 + 모바일 ↑↓ 버튼 공통 사용) */
@@ -1170,101 +1167,28 @@ JSON만 출력:
                     </button>
                   )}
                 </div>
-                {/* 실제 렌더링 — 컨테이너 폭 / 1080 으로 동적 스케일 */}
-                <div
-                  ref={(el) => {
-                    // slide.id 기반 Map — 드래그 reorder 후에도 정확한 DOM 추적
-                    if (el) cardRefs.current.set(slide.id, el);
-                    else cardRefs.current.delete(slide.id);
-                  }}
-                  key={`card-render-${slide.id}-${fontLoaded}-${theme.fontId || ''}-${slide.fontId || ''}`}
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: `${cardWidth}px`,
-                    height: `${cardHeight}px`,
-                    transform: `scale(${scales[idx] ?? 0.25})`,
-                    transformOrigin: 'top left',
-                  }}
-                >
-                  <EditableSlideWrapper
-                    isEditMode={inlineEditIdx === idx}
-                    slideIndex={idx}
-                    cardWidth={cardWidth}
-                    cardHeight={cardHeight}
-                    scale={scales[idx] ?? 0.25}
-                    selectedElementStyle={{
-                      title: { fontSize: slide.titleFontSize, fontWeight: slide.titleFontWeight, color: slide.titleColor, align: slide.titleAlign },
-                      subtitle: { fontSize: slide.subtitleFontSize, fontWeight: slide.subtitleFontWeight, color: slide.subtitleColor },
-                      body: { color: slide.bodyColor },
-                      ...(slide.customElements || []).reduce((acc, el) => {
-                        acc[`custom-${el.id}`] = { fontSize: el.fontSize, fontWeight: el.fontWeight, color: el.color, align: el.align };
-                        return acc;
-                      }, {} as Record<string, { fontSize?: number; fontWeight?: string; color?: string; align?: 'left' | 'center' | 'right' }>),
+                {/* Konva readOnly 프리뷰 */}
+                <KonvaSlideEditor
+                  slide={slide}
+                  theme={theme}
+                  cardWidth={cardWidth}
+                  cardHeight={cardHeight}
+                  maxWidth={boxRefs.current[idx]?.clientWidth || 250}
+                  onSlideChange={(patch) => updateSlide(idx, patch)}
+                  readOnly={true}
+                />
+                {/* 다운로드 캡처용 (화면에 안 보임) */}
+                <div style={{ position: 'absolute', left: '-9999px', top: 0 }}>
+                  <div
+                    ref={(el) => {
+                      if (el) cardRefs.current.set(slide.id, el);
+                      else cardRefs.current.delete(slide.id);
                     }}
-                    onElementMove={(i, id, x, y) => {
-                      const xPct = Math.round(Math.max(0, Math.min(100, (x / cardWidth) * 100)));
-                      const yPct = Math.round(Math.max(0, Math.min(100, (y / cardHeight) * 100)));
-                      const posKey = id === 'title' ? 'titlePosition'
-                                   : id === 'subtitle' ? 'subtitlePosition'
-                                   : id === 'hospital' ? 'hospitalNamePosition' : null;
-                      if (posKey) {
-                        updateSlide(i, { [posKey]: { x: xPct, y: yPct } });
-                      } else {
-                        const existing = slides[i].elementPositions || {};
-                        updateSlide(i, { elementPositions: { ...existing, [id]: { x: xPct, y: yPct } } });
-                      }
-                    }}
-                    onElementResize={(i, id, w, h) => {
-                      const wPct = Math.round((w / cardWidth) * 100);
-                      const hPct = Math.round((h / cardHeight) * 100);
-                      const sizeKey = id === 'title' ? 'titleSize'
-                                    : id === 'subtitle' ? 'subtitleSize'
-                                    : id === 'body' ? 'bodySize'
-                                    : id === 'image' ? 'imageSize' : null;
-                      if (sizeKey) {
-                        updateSlide(i, { [sizeKey]: { w: wPct, h: hPct } });
-                      } else {
-                        const existing = slides[i].elementSizes || {};
-                        updateSlide(i, { elementSizes: { ...existing, [id]: { w: wPct, h: hPct } } });
-                      }
-                    }}
-                    onTextChange={(i, f, value) => {
-                      updateSlide(i, { [f]: value });
-                    }}
-                    onImageReplace={(i, file) => {
-                      handleUploadSlideImage(i, file);
-                    }}
-                    onImageDelete={(i) => {
-                      updateSlide(i, { imageUrl: undefined });
-                    }}
-                    onStyleChange={(i, f, styleKey, value) => {
-                      updateSlide(i, { [`${f}${styleKey}`]: value });
-                    }}
-                    onAddElement={(i, type) => {
-                      const existing = slides[i].customElements || [];
-                      const newEl: SlideCustomElement = {
-                        id: crypto.randomUUID(),
-                        type,
-                        x: 50, y: 50,
-                        w: type === 'text' ? 40 : 30,
-                        h: type === 'text' ? 10 : 20,
-                        ...(type === 'text' ? { text: '텍스트를 입력하세요', fontSize: 24, fontWeight: '500', color: '#333333' } : {}),
-                      };
-                      updateSlide(i, { customElements: [...existing, newEl] });
-                    }}
-                    onCustomElementChange={(i, elId, patch) => {
-                      const els = slides[i].customElements || [];
-                      updateSlide(i, { customElements: els.map(el => el.id === elId ? { ...el, ...patch } : el) });
-                    }}
-                    onCustomElementDelete={(i, elId) => {
-                      const els = slides[i].customElements || [];
-                      updateSlide(i, { customElements: els.filter(el => el.id !== elId) });
-                    }}
+                    key={`card-capture-${slide.id}-${fontLoaded}-${theme.fontId || ''}-${slide.fontId || ''}`}
+                    style={{ width: `${cardWidth}px`, height: `${cardHeight}px` }}
                   >
                     {renderSlide(slide)}
-                  </EditableSlideWrapper>
+                  </div>
                 </div>
                 {/* 이미지 실패 오버레이 — 이미지가 기대되는 슬라이드(imagePosition 설정됨)인데 URL이 없을 때 */}
                 {!slide.imageUrl && slide.imagePosition && (
@@ -1297,19 +1221,6 @@ JSON만 출력:
                     <option key={key} value={key}>{label}</option>
                   ))}
                 </select>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const isInline = inlineEditIdx === idx;
-                    setInlineEditIdx(isInline ? null : idx);
-                  }}
-                  className={`px-3 py-1 text-[11px] font-bold rounded-lg transition-colors ${
-                    inlineEditIdx === idx ? 'bg-emerald-600 text-white hover:bg-emerald-700' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
-                  }`}
-                  title="프리뷰에서 직접 요소를 드래그/리사이즈"
-                >
-                  {inlineEditIdx === idx ? '✓ 배치완료' : '↔ 배치'}
-                </button>
                 <button
                   type="button"
                   onClick={() => setEditingIdx(isEditing ? null : idx)}

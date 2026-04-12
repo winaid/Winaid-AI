@@ -18,13 +18,14 @@ interface KonvaSlideEditorProps {
   cardHeight?: number;
   maxWidth?: number;
   onSlideChange: (patch: Partial<SlideData>) => void;
+  readOnly?: boolean;
 }
 
 // ── 메인 컴포넌트 ──
 
 export default function KonvaSlideEditor({
   slide, theme, cardWidth = 1080, cardHeight = 1080,
-  maxWidth = 650, onSlideChange,
+  maxWidth = 650, onSlideChange, readOnly = false,
 }: KonvaSlideEditorProps) {
   const stageRef = useRef<Konva.Stage>(null);
   const transformerRef = useRef<Konva.Transformer>(null);
@@ -59,7 +60,7 @@ export default function KonvaSlideEditor({
   const bgColor = slide.bgColor || theme.backgroundColor || '#1B2A4A';
 
   // 레이아웃 분기
-  const args: LayoutRenderArgs = [slide, theme, cardWidth, cardHeight, selectedId, setSelectedId, onSlideChange];
+  const args: LayoutRenderArgs = [slide, theme, cardWidth, cardHeight, selectedId, setSelectedId, onSlideChange, readOnly];
 
   const renderContent = () => {
     switch (slide.layout) {
@@ -97,29 +98,27 @@ export default function KonvaSlideEditor({
         height={displayHeight}
         scaleX={scale}
         scaleY={scale}
-        onClick={handleStageClick}
-        onTap={handleStageClick}
+        onClick={readOnly ? undefined : handleStageClick}
+        onTap={readOnly ? undefined : handleStageClick}
+        listening={!readOnly}
       >
         <Layer>
-          {/* 배경 */}
           <Rect x={0} y={0} width={cardWidth} height={cardHeight} fill={bgColor} />
           {slide.imageUrl && slide.imagePosition === 'background' && (
             <BackgroundImage src={slide.imageUrl} width={cardWidth} height={cardHeight} />
           )}
-
-          {/* 레이아웃 콘텐츠 */}
           {renderContent()}
-
-          {/* Transformer */}
-          <Transformer
-            ref={transformerRef}
-            boundBoxFunc={(oldBox, newBox) => {
-              if (newBox.width < 50 || newBox.height < 20) return oldBox;
-              return newBox;
-            }}
-            enabledAnchors={selectedId?.startsWith('text-') ? [] : undefined}
-            rotateEnabled={false}
-          />
+          {!readOnly && (
+            <Transformer
+              ref={transformerRef}
+              boundBoxFunc={(oldBox, newBox) => {
+                if (newBox.width < 50 || newBox.height < 20) return oldBox;
+                return newBox;
+              }}
+              enabledAnchors={selectedId?.startsWith('text-') ? [] : undefined}
+              rotateEnabled={false}
+            />
+          )}
         </Layer>
       </Stage>
     </div>

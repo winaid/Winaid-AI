@@ -23,6 +23,7 @@ export interface EditableTextProps {
   onSelect: (id: string | null) => void;
   onDragEnd: (x: number, y: number) => void;
   onTextChange: (text: string) => void;
+  readOnly?: boolean;
 }
 
 export type LayoutRenderArgs = [
@@ -33,6 +34,7 @@ export type LayoutRenderArgs = [
   selectedId: string | null,
   setSelectedId: (id: string | null) => void,
   onChange: (patch: Partial<import('../../../lib/cardNewsLayouts').SlideData>) => void,
+  readOnly?: boolean,
 ];
 
 // ── EditableText ──
@@ -40,6 +42,7 @@ export type LayoutRenderArgs = [
 export function EditableText({
   id, text, x, y, width, fontSize, fontStyle = 'normal', fill, align = 'left',
   offsetX, fontFamily, lineHeight = 1.3, selectedId, onSelect, onDragEnd, onTextChange,
+  readOnly = false,
 }: EditableTextProps) {
   const textRef = useRef<Konva.Text>(null);
 
@@ -109,14 +112,15 @@ export function EditableText({
       offsetX={offsetX}
       lineHeight={lineHeight}
       wrap="word"
-      draggable
-      onClick={() => onSelect(id)}
-      onTap={() => onSelect(id)}
-      onDblClick={handleDblClick}
-      onDblTap={handleDblClick}
-      onDragEnd={(e) => onDragEnd(e.target.x(), e.target.y())}
-      onMouseEnter={(e) => { const c = e.target.getStage()?.container(); if (c) c.style.cursor = 'grab'; }}
-      onMouseLeave={(e) => { const c = e.target.getStage()?.container(); if (c) c.style.cursor = 'default'; }}
+      draggable={!readOnly}
+      listening={!readOnly}
+      onClick={readOnly ? undefined : () => onSelect(id)}
+      onTap={readOnly ? undefined : () => onSelect(id)}
+      onDblClick={readOnly ? undefined : handleDblClick}
+      onDblTap={readOnly ? undefined : handleDblClick}
+      onDragEnd={readOnly ? undefined : (e) => onDragEnd(e.target.x(), e.target.y())}
+      onMouseEnter={readOnly ? undefined : (e) => { const c = e.target.getStage()?.container(); if (c) c.style.cursor = 'grab'; }}
+      onMouseLeave={readOnly ? undefined : (e) => { const c = e.target.getStage()?.container(); if (c) c.style.cursor = 'default'; }}
     />
   );
 }
@@ -189,7 +193,7 @@ export function renderTitleBlock(
   args: LayoutRenderArgs,
   opts: { alignCenter?: boolean; startY?: number } = {},
 ): { element: React.ReactNode; bottomY: number } {
-  const [slide, theme, w, , selectedId, setSelectedId, onChange] = args;
+  const [slide, theme, w, , selectedId, setSelectedId, onChange, ro] = args;
   const { alignCenter = false, startY = 60 } = opts;
   const ax = alignCenter ? w / 2 - 30 : 60;
   const tx = alignCenter ? w / 2 : 60;
@@ -208,6 +212,7 @@ export function renderTitleBlock(
         selectedId={selectedId} onSelect={setSelectedId}
         onDragEnd={(x, y) => onChange({ titlePosition: { x: Math.round(x / w * 100), y: Math.round(y / args[3] * 100) } })}
         onTextChange={t => onChange({ title: t })}
+        readOnly={ro}
       />
       {slide.subtitle && (() => {
         bottomY = startY + titleFs + 60;
@@ -220,6 +225,7 @@ export function renderTitleBlock(
             selectedId={selectedId} onSelect={setSelectedId}
             onDragEnd={(x, y) => onChange({ subtitlePosition: { x: Math.round(x / w * 100), y: Math.round(y / args[3] * 100) } })}
             onTextChange={t => onChange({ subtitle: t })}
+            readOnly={ro}
           />
         );
       })()}
