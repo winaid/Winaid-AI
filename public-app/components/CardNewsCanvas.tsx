@@ -141,6 +141,8 @@ export default function CardNewsCanvas({
       });
       if (disposed) { canvas.dispose(); return; }
       fabricRef.current = canvas;
+      // 개발/테스트용 전역 참조 — e2e 에서 fabric 오브젝트 검사에 사용
+      if (typeof window !== 'undefined') (window as unknown as Record<string, unknown>).__fabricCanvas = canvas;
 
       // CSS 크기만 축소 (내부 좌표계는 1080 유지) — 마우스 좌표 매핑 정확도 보장
       canvas.setDimensions(
@@ -226,14 +228,33 @@ export default function CardNewsCanvas({
 
       // ════════ 4. 슬라이드 이미지 ════════
       if (slide.imageUrl) {
+        // 외부 URL(Pexels/Pixabay)은 CORS 헤더가 없는 경우가 많다.
+        // crossOrigin='anonymous' 로 로드하면 CORS 차단 → fromURL 이 throw →
+        // catch 에서 삼켜져 이미지가 통째로 사라지는 버그. data:/blob: URL 은
+        // CORS 문제가 없으므로 anonymous 사용. 외부 URL 은 crossOrigin 없이
+        // 로드해서 canvas 를 taint 시키되 이미지가 보이도록 한다.
+        // (tainted canvas 는 toDataURL/getImageData 등에서 SecurityError 발생
+        //  하지만 다운로드는 HTML 프리뷰 기반이라 영향 없음)
+        const isExternalUrl = /^https?:\/\//.test(slide.imageUrl);
+        const imgCorsOpt = isExternalUrl ? {} : { crossOrigin: 'anonymous' as const };
+
+        let fImg: InstanceType<typeof F.FabricImage> | null = null;
         try {
-          const fImg = await F.FabricImage.fromURL(slide.imageUrl, { crossOrigin: 'anonymous' });
+          fImg = await F.FabricImage.fromURL(slide.imageUrl, imgCorsOpt);
+        } catch {
+          // 마지막 시도: crossOrigin 반전
+          try {
+            fImg = await F.FabricImage.fromURL(slide.imageUrl, isExternalUrl ? { crossOrigin: 'anonymous' } : {});
+          } catch { /* 이미지 로드 최종 실패 */ }
+        }
+
+        if (fImg && fImg.width && fImg.height) {
           const pos = slide.imagePosition || 'top';
           if (pos === 'background') {
             fImg.set({
               left: 0, top: 0, originX: 'left', originY: 'top',
-              scaleX: cardWidth / (fImg.width || 1),
-              scaleY: cardHeight / (fImg.height || 1),
+              scaleX: cardWidth / fImg.width,
+              scaleY: cardHeight / fImg.height,
               selectable: false, evented: false, name: OBJ.IMAGE,
             });
             canvas.add(fImg);
@@ -248,7 +269,7 @@ export default function CardNewsCanvas({
             // top/center/bottom — 드래그+리사이즈 가능
             const maxImgW = cardWidth * 0.8;
             const maxImgH = cardHeight * 0.35;
-            const imgScale = Math.min(maxImgW / (fImg.width || 1), maxImgH / (fImg.height || 1), 1);
+            const imgScale = Math.min(maxImgW / fImg.width, maxImgH / fImg.height, 1);
             const focal = slide.imageFocalPoint || { x: 50, y: pos === 'top' ? 25 : pos === 'bottom' ? 75 : 50 };
             fImg.set({
               left: (focal.x / 100) * cardWidth,
@@ -260,7 +281,7 @@ export default function CardNewsCanvas({
             });
             canvas.add(fImg);
           }
-        } catch { /* image load fail — skip */ }
+        }
       }
 
       // ════════ 5. 장식 요소 (decorations) ════════
@@ -305,19 +326,23 @@ export default function CardNewsCanvas({
 
       // ════════ 6. 병원 로고 ════════
       if (theme.hospitalLogo) {
+        const logoExternal = /^https?:\/\//.test(theme.hospitalLogo);
+        const logoCors = logoExternal ? {} : { crossOrigin: 'anonymous' as const };
         try {
-          const logo = await F.FabricImage.fromURL(theme.hospitalLogo, { crossOrigin: 'anonymous' });
-          const logoPos = slide.logoPosition || { x: 10, y: 8 };
-          const logoScale = Math.min(80 / (logo.width || 1), 80 / (logo.height || 1), 1);
-          logo.set({
-            left: (logoPos.x / 100) * cardWidth,
-            top: (logoPos.y / 100) * cardHeight,
-            originX: 'center', originY: 'center',
-            scaleX: logoScale, scaleY: logoScale,
-            name: OBJ.LOGO,
-            ...SELECTION_STYLE,
-          });
-          canvas.add(logo);
+          const logo = await F.FabricImage.fromURL(theme.hospitalLogo, logoCors);
+          if (logo && logo.width && logo.height) {
+            const logoPos = slide.logoPosition || { x: 10, y: 8 };
+            const logoScale = Math.min(80 / logo.width, 80 / logo.height, 1);
+            logo.set({
+              left: (logoPos.x / 100) * cardWidth,
+              top: (logoPos.y / 100) * cardHeight,
+              originX: 'center', originY: 'center',
+              scaleX: logoScale, scaleY: logoScale,
+              name: OBJ.LOGO,
+              ...SELECTION_STYLE,
+            });
+            canvas.add(logo);
+          }
         } catch { /* skip */ }
       }
 
@@ -660,7 +685,7 @@ export default function CardNewsCanvas({
                     const FilterCls = (F.filters as any)?.[f.FilterClass];
                     if (FilterCls) obj.filters.push(new FilterCls({ [f.key]: val }));
                   }
-                  obj.applyFilters();
+                  try { obj.applyFilters(); } catch { /* tainted canvas */ }
                   canvas.renderAll();
                 }}
                 className="w-20 accent-blue-500"
@@ -677,7 +702,7 @@ export default function CardNewsCanvas({
               const obj = canvas.getActiveObject();
               if (!obj || obj.type !== 'image') return;
               obj.filters = [];
-              obj.applyFilters();
+              try { obj.applyFilters(); } catch { /* tainted canvas */ }
               canvas.renderAll();
             }}
             className="w-full text-[10px] text-slate-400 hover:text-red-500 transition-colors"

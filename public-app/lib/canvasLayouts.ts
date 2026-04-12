@@ -1488,7 +1488,8 @@ export function renderIconGridToCanvas(ctx: CanvasLayoutContext): void {
 
     // 배경 번호
     canvas.add(new F.Text(String(i + 1).padStart(2, '0'), {
-      left: cx + 12, top: cy - 10, fontSize: 80, fontWeight: '900',
+      left: cx + 12, top: cy - 10, originX: 'left', originY: 'top',
+      fontSize: 80, fontWeight: '900',
       fill: isDarkTheme ? 'rgba(0,0,0,0.04)' : 'rgba(0,0,0,0.03)',
       selectable: false, evented: false,
     }));
@@ -1848,7 +1849,7 @@ export function renderBeforeAfterToCanvas(ctx: CanvasLayoutContext): void {
   }));
   beforeItems.forEach((item, i) => {
     const iy = curY + 64 + i * 40;
-    canvas.add(new F.Text('\u2022', { left: bx + 26, top: iy, fontSize: 20, fill: theme.bodyColor, selectable: false, evented: false }));
+    canvas.add(new F.Text('\u2022', { left: bx + 26, top: iy, originX: 'left', originY: 'top', fontSize: 20, fill: theme.bodyColor, selectable: false, evented: false }));
     canvas.add(new F.Textbox(item, {
       left: bx + 46, top: iy, originX: 'left', originY: 'top', width: colW - 72,
       fontSize: 20, fontWeight: '400', fontFamily: fontName, fill: theme.bodyColor,
@@ -1867,7 +1868,7 @@ export function renderBeforeAfterToCanvas(ctx: CanvasLayoutContext): void {
   }));
   afterItems.forEach((item, i) => {
     const iy = curY + 64 + i * 40;
-    canvas.add(new F.Text('\u2713', { left: ax + 26, top: iy, fontSize: 20, fontWeight: '700', fill: theme.accentColor, selectable: false, evented: false }));
+    canvas.add(new F.Text('\u2713', { left: ax + 26, top: iy, originX: 'left', originY: 'top', fontSize: 20, fontWeight: '700', fill: theme.accentColor, selectable: false, evented: false }));
     canvas.add(new F.Textbox(item, {
       left: ax + 46, top: iy, originX: 'left', originY: 'top', width: colW - 72,
       fontSize: 20, fontWeight: '700', fontFamily: fontName, fill: theme.titleColor,
@@ -1946,7 +1947,7 @@ export function renderProsConsToCanvas(ctx: CanvasLayoutContext): void {
     const marker = keyPrefix === 'pro' ? '\u25CB' : '\u2715';
     items.forEach((item, i) => {
       const iy = itemStartY + i * (layout.fontSize + layout.gap);
-      canvas.add(new F.Text(marker, { left: x + 24, top: iy, fontSize: layout.fontSize, fontWeight: '900', fill: color, selectable: false, evented: false }));
+      canvas.add(new F.Text(marker, { left: x + 24, top: iy, originX: 'left', originY: 'top', fontSize: layout.fontSize, fontWeight: '900', fill: color, selectable: false, evented: false }));
       canvas.add(new F.Textbox(item, {
         left: x + 48, top: iy, originX: 'left', originY: 'top', width: colW - 72,
         fontSize: layout.fontSize, fontWeight: '500', fontFamily: fontName, fill: theme.titleColor,
