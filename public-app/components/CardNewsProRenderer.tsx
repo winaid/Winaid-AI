@@ -1180,23 +1180,28 @@ JSON만 출력:
                     slideIndex={idx}
                     cardWidth={cardWidth}
                     cardHeight={cardHeight}
+                    scale={scales[idx] ?? 0.25}
                     selectedElementStyle={{
                       title: { fontSize: slide.titleFontSize, fontWeight: slide.titleFontWeight, color: slide.titleColor, align: slide.titleAlign },
                       subtitle: { fontSize: slide.subtitleFontSize, fontWeight: slide.subtitleFontWeight, color: slide.subtitleColor },
                       body: { color: slide.bodyColor },
-                      // 커스텀 요소 스타일도 포함
                       ...(slide.customElements || []).reduce((acc, el) => {
                         acc[`custom-${el.id}`] = { fontSize: el.fontSize, fontWeight: el.fontWeight, color: el.color, align: el.align };
                         return acc;
                       }, {} as Record<string, { fontSize?: number; fontWeight?: string; color?: string; align?: 'left' | 'center' | 'right' }>),
                     }}
                     onElementMove={(i, id, x, y) => {
-                      const xPct = Math.round(Math.max(5, Math.min(95, (x / cardWidth) * 100)));
-                      const yPct = Math.round(Math.max(5, Math.min(95, (y / cardHeight) * 100)));
+                      const xPct = Math.round(Math.max(0, Math.min(100, (x / cardWidth) * 100)));
+                      const yPct = Math.round(Math.max(0, Math.min(100, (y / cardHeight) * 100)));
                       const posKey = id === 'title' ? 'titlePosition'
                                    : id === 'subtitle' ? 'subtitlePosition'
                                    : id === 'hospital' ? 'hospitalNamePosition' : null;
-                      if (posKey) updateSlide(i, { [posKey]: { x: xPct, y: yPct } });
+                      if (posKey) {
+                        updateSlide(i, { [posKey]: { x: xPct, y: yPct } });
+                      } else {
+                        const existing = slides[i].elementPositions || {};
+                        updateSlide(i, { elementPositions: { ...existing, [id]: { x: xPct, y: yPct } } });
+                      }
                     }}
                     onElementResize={(i, id, w, h) => {
                       const wPct = Math.round((w / cardWidth) * 100);
@@ -1205,7 +1210,12 @@ JSON만 출력:
                                     : id === 'subtitle' ? 'subtitleSize'
                                     : id === 'body' ? 'bodySize'
                                     : id === 'image' ? 'imageSize' : null;
-                      if (sizeKey) updateSlide(i, { [sizeKey]: { w: wPct, h: hPct } });
+                      if (sizeKey) {
+                        updateSlide(i, { [sizeKey]: { w: wPct, h: hPct } });
+                      } else {
+                        const existing = slides[i].elementSizes || {};
+                        updateSlide(i, { elementSizes: { ...existing, [id]: { w: wPct, h: hPct } } });
+                      }
                     }}
                     onTextChange={(i, f, value) => {
                       updateSlide(i, { [f]: value });

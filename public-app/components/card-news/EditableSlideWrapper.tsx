@@ -27,6 +27,7 @@ interface EditableSlideWrapperProps {
   onAddElement?: (slideIndex: number, type: 'text' | 'image') => void;
   onCustomElementChange?: (slideIndex: number, elementId: string, patch: Record<string, unknown>) => void;
   onCustomElementDelete?: (slideIndex: number, elementId: string) => void;
+  scale?: number;  // 부모 CSS transform scale 값 (축소 미리보기용)
 }
 
 const miniBtn: React.CSSProperties = {
@@ -54,6 +55,7 @@ export default function EditableSlideWrapper({
   onAddElement,
   onCustomElementChange,
   onCustomElementDelete,
+  scale = 1,
 }: EditableSlideWrapperProps) {
   const [selectedTarget, setSelectedTarget] = useState<HTMLElement | null>(null);
   const [editingTarget, setEditingTarget] = useState<HTMLElement | null>(null);
@@ -275,6 +277,8 @@ export default function EditableSlideWrapper({
         <Moveable
           target={selectedTarget}
           container={containerRef.current}
+          dragTarget={selectedTarget}
+          zoom={1 / scale}
           draggable={true}
           resizable={true}
           keepRatio={false}

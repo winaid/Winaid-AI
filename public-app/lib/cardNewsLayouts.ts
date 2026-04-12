@@ -223,6 +223,10 @@ export interface SlideData {
 
   // 커스텀 요소 (사용자 추가 텍스트/이미지)
   customElements?: SlideCustomElement[];
+
+  // 범용 위치/크기 맵 (도형/카드 요소의 배치 편집 결과)
+  elementPositions?: Record<string, { x: number; y: number }>;
+  elementSizes?: Record<string, { w: number; h: number }>;
 }
 
 /** 사용자가 자유롭게 추가한 텍스트/이미지 요소 */
