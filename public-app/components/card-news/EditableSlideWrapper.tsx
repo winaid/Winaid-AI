@@ -3,17 +3,40 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import Moveable from 'react-moveable';
 
+interface ElementStyle {
+  fontSize?: number;
+  fontWeight?: string;
+  color?: string;
+  align?: 'left' | 'center' | 'right';
+}
+
 interface EditableSlideWrapperProps {
   children: React.ReactNode;
   isEditMode: boolean;
   slideIndex: number;
   onElementMove?: (slideIndex: number, elementId: string, x: number, y: number) => void;
   onElementResize?: (slideIndex: number, elementId: string, width: number, height: number) => void;
-  // ── 2단계 ──
   onTextChange?: (slideIndex: number, field: string, value: string) => void;
   onImageReplace?: (slideIndex: number, file: File) => void;
   onImageDelete?: (slideIndex: number) => void;
+  // ── 4단계 ──
+  cardWidth?: number;
+  cardHeight?: number;
+  selectedElementStyle?: Record<string, ElementStyle>;
+  onStyleChange?: (slideIndex: number, field: string, styleKey: string, value: string | number) => void;
+  onAddElement?: (slideIndex: number, type: 'text' | 'image') => void;
+  onCustomElementChange?: (slideIndex: number, elementId: string, patch: Record<string, unknown>) => void;
+  onCustomElementDelete?: (slideIndex: number, elementId: string) => void;
 }
+
+const miniBtn: React.CSSProperties = {
+  padding: '4px 8px', fontSize: '11px', fontWeight: 700,
+  background: '#F1F5F9', color: '#374151', border: 'none',
+  borderRadius: '4px', cursor: 'pointer', lineHeight: 1,
+};
+const separator: React.CSSProperties = {
+  width: '1px', height: '20px', background: '#E2E8F0', margin: '0 2px',
+};
 
 export default function EditableSlideWrapper({
   children,
@@ -24,16 +47,56 @@ export default function EditableSlideWrapper({
   onTextChange,
   onImageReplace,
   onImageDelete,
+  cardWidth = 1080,
+  cardHeight = 1080,
+  selectedElementStyle,
+  onStyleChange,
+  onAddElement,
+  onCustomElementChange,
+  onCustomElementDelete,
 }: EditableSlideWrapperProps) {
   const [selectedTarget, setSelectedTarget] = useState<HTMLElement | null>(null);
   const [editingTarget, setEditingTarget] = useState<HTMLElement | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
+  const customImageInputRef = useRef<HTMLInputElement>(null);
+
+  // ── 현재 선택된 요소의 field / style ──
+  const field = selectedTarget?.getAttribute('data-editable') || '';
+  const isCustom = field.startsWith('custom-');
+  const customId = isCustom ? field.replace('custom-', '') : '';
+  const isImage = field === 'image';
+  const isText = field === 'title' || field === 'subtitle' || field === 'body' || (isCustom && !isImage);
+  const currentStyle = selectedElementStyle?.[field];
+
+  // ── 스냅 대상 요소 수집 ──
+  const getSnapElements = useCallback(() => {
+    if (!containerRef.current) return [];
+    const all = containerRef.current.querySelectorAll('[data-editable]');
+    return Array.from(all).filter(el => el !== selectedTarget) as HTMLElement[];
+  }, [selectedTarget]);
+
+  // ── 스타일 변경 헬퍼 ──
+  const changeSize = (delta: number) => {
+    const cur = currentStyle?.fontSize || 48;
+    onStyleChange?.(slideIndex, field, 'FontSize', Math.max(12, Math.min(120, cur + delta)));
+  };
+  const toggleBold = () => {
+    const cur = currentStyle?.fontWeight || '800';
+    onStyleChange?.(slideIndex, field, 'FontWeight', Number(cur) >= 700 ? '400' : '800');
+  };
+  const isBold = Number(currentStyle?.fontWeight || '800') >= 700;
+  const changeColor = (color: string) => {
+    onStyleChange?.(slideIndex, field, 'Color', color);
+  };
+  const changeAlign = (align: string) => {
+    onStyleChange?.(slideIndex, field, 'Align', align);
+  };
 
   // ── contentEditable 편집 종료 → 데이터 커밋 ──
   const commitEditing = useCallback(() => {
     if (!editingTarget) return;
-    const field = editingTarget.getAttribute('data-editable') || '';
+    const f = editingTarget.getAttribute('data-editable') || '';
     const value = editingTarget.innerText;
 
     editingTarget.contentEditable = 'false';
@@ -43,9 +106,14 @@ export default function EditableSlideWrapper({
     editingTarget.style.cursor = '';
     editingTarget.style.minHeight = '';
 
-    onTextChange?.(slideIndex, field, value);
+    if (f.startsWith('custom-')) {
+      const elId = f.replace('custom-', '');
+      onCustomElementChange?.(slideIndex, elId, { text: value });
+    } else {
+      onTextChange?.(slideIndex, f, value);
+    }
     setEditingTarget(null);
-  }, [editingTarget, slideIndex, onTextChange]);
+  }, [editingTarget, slideIndex, onTextChange, onCustomElementChange]);
 
   // ── 편집 모드 꺼지면 전부 클린업 ──
   useEffect(() => {
@@ -61,7 +129,7 @@ export default function EditableSlideWrapper({
       setEditingTarget(null);
       setSelectedTarget(null);
     }
-  }, [isEditMode]); // editingTarget 의존 제거 — 클린업 시점에만 동작
+  }, [isEditMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── 선택된 요소가 DOM에서 사라지면 선택 해제 ──
   useEffect(() => {
@@ -78,7 +146,6 @@ export default function EditableSlideWrapper({
     const target = e.target as HTMLElement;
     const editable = target.closest('[data-editable]') as HTMLElement | null;
 
-    // 다른 요소 클릭 시 기존 편집 종료
     if (editingTarget && editable !== editingTarget) {
       commitEditing();
     }
@@ -99,50 +166,45 @@ export default function EditableSlideWrapper({
     const editable = target.closest('[data-editable]') as HTMLElement | null;
     if (!editable || !containerRef.current?.contains(editable)) return;
 
-    const field = editable.getAttribute('data-editable');
-    if (field === 'image') return; // 이미지는 더블클릭 편집 안 함
+    const f = editable.getAttribute('data-editable') || '';
+    if (f === 'image') return;
 
-    if (field === 'title' || field === 'subtitle' || field === 'body') {
-      e.stopPropagation();
+    // 텍스트 편집 가능한 필드: title, subtitle, body, custom-* (text type)
+    const isEditableText = f === 'title' || f === 'subtitle' || f === 'body' || f.startsWith('custom-');
+    if (!isEditableText) return;
 
-      // 기존 편집 종료
-      if (editingTarget && editingTarget !== editable) commitEditing();
+    e.stopPropagation();
+    if (editingTarget && editingTarget !== editable) commitEditing();
 
-      editable.contentEditable = 'true';
-      editable.focus();
+    editable.contentEditable = 'true';
+    editable.focus();
 
-      // 커서를 텍스트 끝으로
-      const range = document.createRange();
-      const sel = window.getSelection();
-      range.selectNodeContents(editable);
-      range.collapse(false);
-      sel?.removeAllRanges();
-      sel?.addRange(range);
+    const range = document.createRange();
+    const sel = window.getSelection();
+    range.selectNodeContents(editable);
+    range.collapse(false);
+    sel?.removeAllRanges();
+    sel?.addRange(range);
 
-      // 시각 피드백
-      editable.style.outline = '2px solid #3B82F6';
-      editable.style.outlineOffset = '2px';
-      editable.style.borderRadius = '4px';
-      editable.style.cursor = 'text';
-      editable.style.minHeight = '1em';
+    editable.style.outline = '2px solid #3B82F6';
+    editable.style.outlineOffset = '2px';
+    editable.style.borderRadius = '4px';
+    editable.style.cursor = 'text';
+    editable.style.minHeight = '1em';
 
-      setEditingTarget(editable);
-      setSelectedTarget(editable);
-    }
+    setEditingTarget(editable);
+    setSelectedTarget(editable);
   }, [isEditMode, editingTarget, commitEditing]);
 
-  // ── Escape 2단계: 1st 편집 종료, 2nd 선택 해제 ──
+  // ── Escape 2단계 ──
   useEffect(() => {
     if (!isEditMode) return;
     if (!selectedTarget && !editingTarget) return;
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.stopPropagation();
-        if (editingTarget) {
-          commitEditing();
-        } else if (selectedTarget) {
-          setSelectedTarget(null);
-        }
+        if (editingTarget) commitEditing();
+        else if (selectedTarget) setSelectedTarget(null);
       }
     };
     window.addEventListener('keydown', handler);
@@ -162,7 +224,6 @@ export default function EditableSlideWrapper({
     return () => editingTarget.removeEventListener('keydown', handler);
   }, [editingTarget, commitEditing]);
 
-  // ── 편집 모드가 아니면 그냥 children 렌더 ──
   if (!isEditMode) {
     return <>{children}</>;
   }
@@ -170,17 +231,15 @@ export default function EditableSlideWrapper({
   return (
     <div
       ref={containerRef}
+      className="moveable-container"
       onClick={handleClick}
       onDoubleClick={handleDoubleClick}
       style={{ position: 'relative', cursor: 'default' }}
     >
       {children}
 
-      {/* 숨겨진 파일 input (이미지 교체용) */}
-      <input
-        ref={imageInputRef}
-        type="file"
-        accept="image/*"
+      {/* 숨겨진 파일 input — 기존 이미지 교체용 */}
+      <input ref={imageInputRef} type="file" accept="image/*"
         style={{ display: 'none' }}
         onChange={(e) => {
           const file = e.target.files?.[0];
@@ -188,8 +247,23 @@ export default function EditableSlideWrapper({
           e.target.value = '';
         }}
       />
+      {/* 숨겨진 파일 input — 커스텀 이미지 추가용 */}
+      <input ref={customImageInputRef} type="file" accept="image/*"
+        style={{ display: 'none' }}
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) {
+            const reader = new FileReader();
+            reader.onload = () => onAddElement?.(slideIndex, 'image');
+            // 이미지 추가는 onAddElement로 빈 요소 생성 후, 파일은 별도 처리 필요
+            // → 간단히: onAddElement가 빈 이미지 요소를 만든 뒤, 사용자가 교체 버튼으로 이미지 설정
+            onAddElement?.(slideIndex, 'image');
+          }
+          e.target.value = '';
+        }}
+      />
 
-      {/* Moveable — 편집(contentEditable) 중이 아닐 때만 표시 */}
+      {/* ── Moveable — 편집 중이 아닐 때만 표시, 스냅 가이드라인 포함 ── */}
       {selectedTarget && !editingTarget && (
         <Moveable
           target={selectedTarget}
@@ -201,6 +275,17 @@ export default function EditableSlideWrapper({
           throttleResize={0}
           edge={false}
           origin={false}
+          // ── 4A: 스냅 가이드라인 ──
+          snappable={true}
+          snapDirections={{ top: true, left: true, bottom: true, right: true, center: true, middle: true }}
+          elementSnapDirections={{ top: true, left: true, bottom: true, right: true, center: true, middle: true }}
+          snapThreshold={5}
+          isDisplaySnapDigit={true}
+          snapGap={true}
+          horizontalGuidelines={[cardHeight * 0.5]}
+          verticalGuidelines={[cardWidth * 0.5]}
+          elementGuidelines={getSnapElements()}
+
           onDrag={({ target, left, top }) => {
             target.style.position = 'absolute';
             target.style.left = `${left}px`;
@@ -210,7 +295,14 @@ export default function EditableSlideWrapper({
             const id = target.getAttribute('data-editable') || '';
             const left = parseInt(target.style.left) || 0;
             const top = parseInt(target.style.top) || 0;
-            onElementMove?.(slideIndex, id, left, top);
+            if (id.startsWith('custom-')) {
+              const elId = id.replace('custom-', '');
+              const xPct = Math.round(Math.max(0, Math.min(100, (left / cardWidth) * 100)));
+              const yPct = Math.round(Math.max(0, Math.min(100, (top / cardHeight) * 100)));
+              onCustomElementChange?.(slideIndex, elId, { x: xPct, y: yPct });
+            } else {
+              onElementMove?.(slideIndex, id, left, top);
+            }
           }}
           onResize={({ target, width, height, drag }) => {
             target.style.width = `${width}px`;
@@ -223,14 +315,109 @@ export default function EditableSlideWrapper({
             const id = target.getAttribute('data-editable') || '';
             const width = parseInt(target.style.width) || 0;
             const height = parseInt(target.style.height) || 0;
-            onElementResize?.(slideIndex, id, width, height);
+            if (id.startsWith('custom-')) {
+              const elId = id.replace('custom-', '');
+              const left = parseInt(target.style.left) || 0;
+              const top = parseInt(target.style.top) || 0;
+              onCustomElementChange?.(slideIndex, elId, {
+                x: Math.round((left / cardWidth) * 100),
+                y: Math.round((top / cardHeight) * 100),
+                w: Math.round((width / cardWidth) * 100),
+                h: Math.round((height / cardHeight) * 100),
+              });
+            } else {
+              onElementResize?.(slideIndex, id, width, height);
+            }
           }}
         />
       )}
 
-      {/* 이미지 플로팅 툴바 — 이미지 선택 시, 편집 중 아닐 때 */}
-      {selectedTarget && !editingTarget &&
-       selectedTarget.getAttribute('data-editable') === 'image' && (
+      {/* ── 4B: 텍스트 컨텍스트 툴바 — 텍스트 선택 시, 편집 중 아닐 때 ── */}
+      {selectedTarget && !editingTarget && isText && !isImage && (
+        <div style={{
+          position: 'absolute',
+          top: Math.max(0, selectedTarget.offsetTop - 48),
+          left: selectedTarget.offsetLeft,
+          zIndex: 50,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '2px',
+          background: 'white',
+          borderRadius: '8px',
+          boxShadow: '0 2px 12px rgba(0,0,0,0.15)',
+          padding: '4px',
+        }}>
+          {/* 폰트 크기 -/+ */}
+          <button type="button" onClick={(e) => { e.stopPropagation(); changeSize(-2); }}
+            style={miniBtn}>A-</button>
+          <span style={{ fontSize: '11px', fontWeight: 700, minWidth: '28px', textAlign: 'center', color: '#374151' }}>
+            {currentStyle?.fontSize || 48}
+          </span>
+          <button type="button" onClick={(e) => { e.stopPropagation(); changeSize(+2); }}
+            style={miniBtn}>A+</button>
+
+          <div style={separator} />
+
+          {/* 굵기 토글 */}
+          <button type="button" onClick={(e) => { e.stopPropagation(); toggleBold(); }}
+            style={{ ...miniBtn, fontWeight: 900,
+              background: isBold ? '#1E293B' : '#F1F5F9',
+              color: isBold ? 'white' : '#374151' }}>
+            B
+          </button>
+
+          <div style={separator} />
+
+          {/* 색상 */}
+          <label style={{ ...miniBtn, padding: 0, overflow: 'hidden', cursor: 'pointer', position: 'relative' }}>
+            <div style={{
+              width: '24px', height: '24px', borderRadius: '4px',
+              background: currentStyle?.color || '#000',
+              border: '2px solid #E2E8F0',
+            }} />
+            <input type="color"
+              value={currentStyle?.color || '#000000'}
+              onChange={(e) => { e.stopPropagation(); changeColor(e.target.value); }}
+              style={{ position: 'absolute', opacity: 0, width: 0, height: 0 }} />
+          </label>
+
+          <div style={separator} />
+
+          {/* 정렬 (title만) */}
+          {(field === 'title' || isCustom) && (
+            <>
+              {(['left', 'center', 'right'] as const).map(a => (
+                <button key={a} type="button" onClick={(e) => { e.stopPropagation(); changeAlign(a); }}
+                  style={{ ...miniBtn,
+                    background: currentStyle?.align === a ? '#3B82F6' : '#F1F5F9',
+                    color: currentStyle?.align === a ? 'white' : '#374151',
+                    fontSize: '13px',
+                  }}>
+                  {a === 'left' ? '\u25E7' : a === 'center' ? '\u2261' : '\u25E8'}
+                </button>
+              ))}
+            </>
+          )}
+
+          {/* 커스텀 요소 삭제 */}
+          {isCustom && (
+            <>
+              <div style={separator} />
+              <button type="button" onClick={(e) => {
+                e.stopPropagation();
+                onCustomElementDelete?.(slideIndex, customId);
+                setSelectedTarget(null);
+              }}
+                style={{ ...miniBtn, background: '#EF4444', color: 'white' }}>
+                삭제
+              </button>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* ── 이미지 플로팅 툴바 — 이미지 선택 시 ── */}
+      {selectedTarget && !editingTarget && isImage && (
         <div style={{
           position: 'absolute',
           top: Math.max(0, selectedTarget.offsetTop - 44),
@@ -244,30 +431,78 @@ export default function EditableSlideWrapper({
           boxShadow: '0 2px 12px rgba(0,0,0,0.15)',
           padding: '4px',
         }}>
-          <button
-            type="button"
+          <button type="button"
             onClick={(e) => { e.stopPropagation(); imageInputRef.current?.click(); }}
-            style={{
-              padding: '6px 12px', fontSize: '12px', fontWeight: 700,
+            style={{ padding: '6px 12px', fontSize: '12px', fontWeight: 700,
               background: '#3B82F6', color: 'white', border: 'none',
-              borderRadius: '6px', cursor: 'pointer',
-            }}
-          >
+              borderRadius: '6px', cursor: 'pointer' }}>
             교체
           </button>
-          <button
-            type="button"
+          <button type="button"
             onClick={(e) => { e.stopPropagation(); onImageDelete?.(slideIndex); }}
-            style={{
-              padding: '6px 12px', fontSize: '12px', fontWeight: 700,
+            style={{ padding: '6px 12px', fontSize: '12px', fontWeight: 700,
               background: '#EF4444', color: 'white', border: 'none',
-              borderRadius: '6px', cursor: 'pointer',
-            }}
-          >
+              borderRadius: '6px', cursor: 'pointer' }}>
             삭제
           </button>
+          {isCustom && (
+            <button type="button" onClick={(e) => {
+              e.stopPropagation();
+              onCustomElementDelete?.(slideIndex, customId);
+              setSelectedTarget(null);
+            }}
+              style={{ padding: '6px 12px', fontSize: '12px', fontWeight: 700,
+                background: '#6B7280', color: 'white', border: 'none',
+                borderRadius: '6px', cursor: 'pointer' }}>
+              요소 삭제
+            </button>
+          )}
         </div>
       )}
+
+      {/* ── 4C: 요소 추가 버튼 — 배치 모드일 때 우하단 ── */}
+      <div style={{
+        position: 'absolute',
+        bottom: '12px',
+        right: '12px',
+        zIndex: 50,
+        display: 'flex',
+        gap: '4px',
+      }}>
+        <button type="button"
+          onClick={(e) => { e.stopPropagation(); onAddElement?.(slideIndex, 'text'); }}
+          style={{
+            padding: '6px 12px', fontSize: '11px', fontWeight: 700,
+            background: '#3B82F6', color: 'white', border: 'none',
+            borderRadius: '8px', cursor: 'pointer',
+            boxShadow: '0 2px 8px rgba(59,130,246,0.3)',
+          }}>
+          + 텍스트
+        </button>
+        <button type="button"
+          onClick={(e) => { e.stopPropagation(); onAddElement?.(slideIndex, 'image'); }}
+          style={{
+            padding: '6px 12px', fontSize: '11px', fontWeight: 700,
+            background: '#8B5CF6', color: 'white', border: 'none',
+            borderRadius: '8px', cursor: 'pointer',
+            boxShadow: '0 2px 8px rgba(139,92,246,0.3)',
+          }}>
+          + 이미지
+        </button>
+      </div>
+
+      {/* ── 스냅 가이드라인 CSS ── */}
+      <style>{`
+        .moveable-container .moveable-guideline {
+          background: #3B82F6 !important;
+        }
+        .moveable-container .moveable-dashed {
+          border-color: #3B82F6 !important;
+        }
+        .moveable-container .moveable-gap {
+          background: rgba(59, 130, 246, 0.15) !important;
+        }
+      `}</style>
     </div>
   );
 }

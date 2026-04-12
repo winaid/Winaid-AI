@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { SlideData, CardNewsTheme, SlideLayoutType, DesignPresetStyle } from '../lib/cardNewsLayouts';
+import type { SlideData, CardNewsTheme, SlideLayoutType, DesignPresetStyle, SlideCustomElement } from '../lib/cardNewsLayouts';
 import { LAYOUT_LABELS, CARD_FONTS, FONT_CATEGORIES, generateSlideId } from '../lib/cardNewsLayouts';
 import { buildLayoutDefaults, fillLayoutContent, generateSlideImage, suggestSlideText, suggestImagePrompt, enrichSlide, suggestComparison } from '../lib/cardAiActions';
 import type { CardTemplate } from '../lib/cardTemplateService';
@@ -1178,6 +1178,13 @@ JSON만 출력:
                   <EditableSlideWrapper
                     isEditMode={inlineEditIdx === idx}
                     slideIndex={idx}
+                    cardWidth={cardWidth}
+                    cardHeight={cardHeight}
+                    selectedElementStyle={{
+                      title: { fontSize: slide.titleFontSize, fontWeight: slide.titleFontWeight, color: slide.titleColor, align: slide.titleAlign },
+                      subtitle: { fontSize: slide.subtitleFontSize, fontWeight: slide.subtitleFontWeight, color: slide.subtitleColor },
+                      body: { color: slide.bodyColor },
+                    }}
                     onElementMove={(i, id, x, y) => {
                       const xPct = Math.round(Math.max(5, Math.min(95, (x / cardWidth) * 100)));
                       const yPct = Math.round(Math.max(5, Math.min(95, (y / cardHeight) * 100)));
@@ -1195,14 +1202,37 @@ JSON만 출력:
                                     : id === 'image' ? 'imageSize' : null;
                       if (sizeKey) updateSlide(i, { [sizeKey]: { w: wPct, h: hPct } });
                     }}
-                    onTextChange={(i, field, value) => {
-                      updateSlide(i, { [field]: value });
+                    onTextChange={(i, f, value) => {
+                      updateSlide(i, { [f]: value });
                     }}
                     onImageReplace={(i, file) => {
                       handleUploadSlideImage(i, file);
                     }}
                     onImageDelete={(i) => {
                       updateSlide(i, { imageUrl: undefined });
+                    }}
+                    onStyleChange={(i, f, styleKey, value) => {
+                      updateSlide(i, { [`${f}${styleKey}`]: value });
+                    }}
+                    onAddElement={(i, type) => {
+                      const existing = slides[i].customElements || [];
+                      const newEl: SlideCustomElement = {
+                        id: crypto.randomUUID(),
+                        type,
+                        x: 50, y: 50,
+                        w: type === 'text' ? 40 : 30,
+                        h: type === 'text' ? 10 : 20,
+                        ...(type === 'text' ? { text: '텍스트를 입력하세요', fontSize: 24, fontWeight: '500', color: '#333333' } : {}),
+                      };
+                      updateSlide(i, { customElements: [...existing, newEl] });
+                    }}
+                    onCustomElementChange={(i, elId, patch) => {
+                      const els = slides[i].customElements || [];
+                      updateSlide(i, { customElements: els.map(el => el.id === elId ? { ...el, ...patch } : el) });
+                    }}
+                    onCustomElementDelete={(i, elId) => {
+                      const els = slides[i].customElements || [];
+                      updateSlide(i, { customElements: els.filter(el => el.id !== elId) });
                     }}
                   >
                     {renderSlide(slide)}

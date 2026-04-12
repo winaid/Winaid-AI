@@ -578,7 +578,8 @@ export function useSlideRenderer({ theme, learnedTemplate, presetStyle, cardRati
           </div>
         )}
         {slide.imagePosition === 'bottom' && renderImageLayer(slide)}
-        {renderHospitalFooter(slide)}
+        {renderCustomElements(slide)}
+      {renderHospitalFooter(slide)}
       </div>
     );
   };
@@ -636,6 +637,7 @@ export function useSlideRenderer({ theme, learnedTemplate, presetStyle, cardRati
         )}
       </div>
       {slide.imagePosition === 'bottom' && renderImageLayer(slide)}
+      {renderCustomElements(slide)}
       {renderHospitalFooter(slide)}
     </div>
     );
@@ -709,6 +711,7 @@ export function useSlideRenderer({ theme, learnedTemplate, presetStyle, cardRati
         )}
       </div>
       {slide.imagePosition === 'bottom' && renderImageLayer(slide)}
+      {renderCustomElements(slide)}
       {renderHospitalFooter(slide)}
     </div>
   );
@@ -802,7 +805,8 @@ export function useSlideRenderer({ theme, learnedTemplate, presetStyle, cardRati
           ))}
         </div>
         {slide.imagePosition === 'bottom' && renderImageLayer(slide)}
-        {renderHospitalFooter(slide)}
+        {renderCustomElements(slide)}
+      {renderHospitalFooter(slide)}
       </div>
     );
   };
@@ -869,7 +873,8 @@ export function useSlideRenderer({ theme, learnedTemplate, presetStyle, cardRati
           ))}
         </div>
         {slide.imagePosition === 'bottom' && renderImageLayer(slide)}
-        {renderHospitalFooter(slide)}
+        {renderCustomElements(slide)}
+      {renderHospitalFooter(slide)}
       </div>
     );
   };
@@ -928,7 +933,8 @@ export function useSlideRenderer({ theme, learnedTemplate, presetStyle, cardRati
           ))}
         </div>
         {slide.imagePosition === 'bottom' && renderImageLayer(slide)}
-        {renderHospitalFooter(slide)}
+        {renderCustomElements(slide)}
+      {renderHospitalFooter(slide)}
       </div>
     );
   };
@@ -988,6 +994,7 @@ export function useSlideRenderer({ theme, learnedTemplate, presetStyle, cardRati
         );
       })()}
       {slide.imagePosition === 'bottom' && renderImageLayer(slide)}
+      {renderCustomElements(slide)}
       {renderHospitalFooter(slide)}
     </div>
   );
@@ -1046,7 +1053,8 @@ export function useSlideRenderer({ theme, learnedTemplate, presetStyle, cardRati
           })}
         </div>
         {slide.imagePosition === 'bottom' && renderImageLayer(slide)}
-        {renderHospitalFooter(slide)}
+        {renderCustomElements(slide)}
+      {renderHospitalFooter(slide)}
       </div>
     );
   };
@@ -1180,6 +1188,7 @@ export function useSlideRenderer({ theme, learnedTemplate, presetStyle, cardRati
         </div>
       </div>
       {slide.imagePosition === 'bottom' && renderImageLayer(slide)}
+      {renderCustomElements(slide)}
       {renderHospitalFooter(slide)}
     </div>
   );
@@ -1247,6 +1256,7 @@ export function useSlideRenderer({ theme, learnedTemplate, presetStyle, cardRati
         ))}
       </div>
       {slide.imagePosition === 'bottom' && renderImageLayer(slide)}
+      {renderCustomElements(slide)}
       {renderHospitalFooter(slide)}
     </div>
     );
@@ -1303,6 +1313,7 @@ export function useSlideRenderer({ theme, learnedTemplate, presetStyle, cardRati
         })}
       </div>
       {slide.imagePosition === 'bottom' && renderImageLayer(slide)}
+      {renderCustomElements(slide)}
       {renderHospitalFooter(slide)}
     </div>
   );
@@ -1360,6 +1371,7 @@ export function useSlideRenderer({ theme, learnedTemplate, presetStyle, cardRati
         )}
       </div>
       {slide.imagePosition === 'bottom' && renderImageLayer(slide)}
+      {renderCustomElements(slide)}
       {renderHospitalFooter(slide)}
     </div>
   );
@@ -1428,6 +1440,7 @@ export function useSlideRenderer({ theme, learnedTemplate, presetStyle, cardRati
         ))}
       </div>
       {slide.imagePosition === 'bottom' && renderImageLayer(slide)}
+      {renderCustomElements(slide)}
       {renderHospitalFooter(slide)}
     </div>
     );
@@ -1481,6 +1494,7 @@ export function useSlideRenderer({ theme, learnedTemplate, presetStyle, cardRati
         );
       })()}
       {slide.imagePosition === 'bottom' && renderImageLayer(slide)}
+      {renderCustomElements(slide)}
       {renderHospitalFooter(slide)}
     </div>
   );
@@ -1536,6 +1550,7 @@ export function useSlideRenderer({ theme, learnedTemplate, presetStyle, cardRati
         ))}
       </div>
       {slide.imagePosition === 'bottom' && renderImageLayer(slide)}
+      {renderCustomElements(slide)}
       {renderHospitalFooter(slide)}
     </div>
   );
@@ -1578,9 +1593,51 @@ export function useSlideRenderer({ theme, learnedTemplate, presetStyle, cardRati
         ))}
       </div>
       {slide.imagePosition === 'bottom' && renderImageLayer(slide)}
+      {renderCustomElements(slide)}
       {renderHospitalFooter(slide)}
     </div>
   );
+
+  // ═══════════════════════════════════════
+  // 커스텀 요소 렌더링 (사용자 추가 텍스트/이미지)
+  // ═══════════════════════════════════════
+
+  const renderCustomElements = (slide: SlideData) => {
+    if (!slide.customElements?.length) return null;
+    return (
+      <>
+        {slide.customElements.map(el => (
+          <div
+            key={el.id}
+            data-editable={`custom-${el.id}`}
+            style={{
+              position: 'absolute',
+              left: `${el.x}%`,
+              top: `${el.y}%`,
+              width: `${el.w}%`,
+              height: el.type === 'text' ? 'auto' : `${el.h}%`,
+              zIndex: 15,
+              ...(el.type === 'text' ? {
+                fontSize: `${el.fontSize || 24}px`,
+                fontWeight: el.fontWeight || '500',
+                color: el.color || theme.titleColor,
+                textAlign: (el.align || 'left') as CSSProperties['textAlign'],
+                whiteSpace: 'pre-line' as const,
+                wordBreak: 'keep-all' as const,
+                fontFamily: effectiveFontFamily,
+              } : {}),
+            }}
+          >
+            {el.type === 'text' && (el.text || '텍스트를 입력하세요')}
+            {el.type === 'image' && el.imageUrl && (
+              <img src={el.imageUrl} alt="" crossOrigin="anonymous"
+                style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '8px' }} />
+            )}
+          </div>
+        ))}
+      </>
+    );
+  };
 
   // ═══════════════════════════════════════
   // 레이아웃 분기

@@ -220,6 +220,25 @@ export interface SlideData {
   hospitalFontWeight?: string;
   hospitalFontId?: string;
   hospitalLogoSize?: number;
+
+  // 커스텀 요소 (사용자 추가 텍스트/이미지)
+  customElements?: SlideCustomElement[];
+}
+
+/** 사용자가 자유롭게 추가한 텍스트/이미지 요소 */
+export interface SlideCustomElement {
+  id: string;
+  type: 'text' | 'image';
+  x: number;   // % (0~100)
+  y: number;
+  w: number;
+  h: number;
+  text?: string;
+  fontSize?: number;
+  fontWeight?: string;
+  color?: string;
+  align?: 'left' | 'center' | 'right';
+  imageUrl?: string;
 }
 
 // ── 커버 템플릿 ──
