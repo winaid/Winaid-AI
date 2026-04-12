@@ -9,10 +9,13 @@ export async function GET(req: NextRequest) {
     if (!geminiKey) return NextResponse.json({ photos: [] });
 
     const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent`,
       {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': geminiKey,
+        },
         body: JSON.stringify({
           contents: [{ parts: [{ text: `Google 이미지 검색에서 "${query}" 관련 고품질 이미지 URL 10개를 찾아줘. 실제로 접근 가능한 이미지 URL만. JSON 배열로만 출력: [{"url": "이미지URL", "alt": "설명"}]. 마크다운/코드블록 없이 JSON만.` }] }],
           tools: [{ googleSearch: {} }],

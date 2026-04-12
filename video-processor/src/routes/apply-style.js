@@ -111,10 +111,13 @@ router.post('/', upload.single('file'), async (req, res) => {
             for (const model of models) {
               try {
                 const apiRes = await fetch(
-                  `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`,
+                  `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
                   {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                      'Content-Type': 'application/json',
+                      'x-goog-api-key': geminiKey,
+                    },
                     body: JSON.stringify({
                       contents: [{
                         parts: [

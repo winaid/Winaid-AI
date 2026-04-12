@@ -12,6 +12,31 @@ import { gateGuestRequest } from '../../../lib/guestRateLimit';
 export const maxDuration = 300;
 export const dynamic = 'force-dynamic';
 
+// ── CORS 화이트리스트 ──
+// 이전엔 OPTIONS 와 POST 응답에서 `Access-Control-Allow-Origin: *` 을 반환해
+// 모든 origin 에서 게스트로 Gemini API 를 호출할 수 있었음. 비용·남용 위험.
+// 이제 명시된 도메인 + Vercel preview URL 만 허용.
+const ALLOWED_ORIGINS = new Set([
+  'https://winai.kr',
+  'https://www.winai.kr',
+  'http://localhost:3000',
+  'http://localhost:3001',
+]);
+
+function isAllowedOrigin(origin: string | null): boolean {
+  if (!origin) return false;
+  if (ALLOWED_ORIGINS.has(origin)) return true;
+  // Vercel preview: *.vercel.app (서브도메인은 알파벳/숫자/하이픈만)
+  if (/^https:\/\/[\w-]+\.vercel\.app$/.test(origin)) return true;
+  return false;
+}
+
+/** 요청 origin 이 허용되면 해당 origin, 아니면 빈 문자열(CORS 차단) 반환 */
+function resolveCorsOrigin(request: NextRequest): string {
+  const origin = request.headers.get('origin');
+  return isAllowedOrigin(origin) ? (origin as string) : '';
+}
+
 // ── 멀티키 로테이션 ──
 
 function getKeys(): string[] {
@@ -41,12 +66,17 @@ async function fetchGemini(
     const ki = (keyIndex + attempt) % keys.length;
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), perAttemptTimeout);
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${keys[ki]}`;
+    // API 키는 쿼리스트링 대신 x-goog-api-key 헤더로 전달.
+    // URL 에 키를 붙이면 로그·프록시·리버스 프록시 등에 키가 잔존할 위험.
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
 
     try {
       const response = await fetch(apiUrl, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': keys[ki],
+        },
         body: JSON.stringify(apiBody),
         signal: controller.signal,
       });
@@ -112,14 +142,20 @@ export async function GET() {
 }
 
 // ── OPTIONS: CORS preflight ──
+// origin 이 ALLOWED_ORIGINS 또는 *.vercel.app 일 때만 CORS 허용.
+// 그 외 origin 에는 Access-Control-Allow-Origin 을 반환하지 않음 → 브라우저가
+// 요청을 차단. 이전엔 `*` 를 반환해 어디서든 호출 가능했음.
 
-export async function OPTIONS() {
+export async function OPTIONS(request: NextRequest) {
+  const allowedOrigin = resolveCorsOrigin(request);
   return new NextResponse(null, {
     status: 204,
     headers: {
-      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Origin': allowedOrigin,
       'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      'Access-Control-Max-Age': '86400',
+      'Vary': 'Origin',
     },
   });
 }
@@ -177,7 +213,8 @@ export async function POST(request: NextRequest) {
     const ki = keyIndex % keys.length;
     keyIndex = (ki + 1) % keys.length;
 
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?key=${keys[ki]}&alt=sse`;
+    // 스트리밍 경로도 x-goog-api-key 헤더로 전환. `alt=sse` 는 쿼리로 유지 필요.
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse`;
 
     const streamApiBody: Record<string, unknown> = {
       contents: [{ role: 'user', parts: [{ text: body.prompt || '' }] }],
@@ -210,7 +247,10 @@ export async function POST(request: NextRequest) {
 
       const response = await fetch(apiUrl, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': keys[ki],
+        },
         body: JSON.stringify(streamApiBody),
         signal: controller.signal,
       });

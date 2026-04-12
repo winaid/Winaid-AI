@@ -625,10 +625,14 @@ ABSOLUTE PROHIBITIONS:
         const keyIdx = (keyIndex + ki) % keys.length;
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 60000);
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${keys[keyIdx]}`;
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
         try {
           const response = await fetch(apiUrl, {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-goog-api-key': keys[keyIdx],
+            },
             body: JSON.stringify({ contents: [{ role: 'user', parts: stage1Parts }], generationConfig: { responseModalities: ['IMAGE', 'TEXT'], temperature: 0.6 } }),
             signal: controller.signal,
           });
@@ -660,10 +664,14 @@ ABSOLUTE PROHIBITIONS:
           const keyIdx = (keyIndex + ki) % keys.length;
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), 120000);
-          const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${keys[keyIdx]}`;
+          const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
           try {
             const response = await fetch(apiUrl, {
-              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'x-goog-api-key': keys[keyIdx],
+              },
               body: JSON.stringify({ contents: [{ role: 'user', parts: stage2Parts }], generationConfig: { responseModalities: ['IMAGE', 'TEXT'], temperature: 0.4 } }),
               signal: controller.signal,
             });
@@ -708,12 +716,15 @@ ABSOLUTE PROHIBITIONS:
       const keyIdx = (keyIndex + ki) % keys.length;
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), perAttemptTimeout);
-      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${keys[keyIdx]}`;
+      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
 
       try {
         const response = await fetch(apiUrl, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'x-goog-api-key': keys[keyIdx],
+          },
           body: JSON.stringify(apiBody),
           signal: controller.signal,
         });

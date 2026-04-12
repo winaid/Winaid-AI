@@ -12,10 +12,13 @@ export async function POST(req: NextRequest) {
 
   try {
     const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-preview:generateContent?key=${geminiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-preview:generateContent`,
       {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': geminiKey,
+        },
         body: JSON.stringify({
           contents: [{ parts: [{ text: `다음 병원 마케팅 주제에 어울리는 Pexels 스톡 사진 검색어를 영어 2~3단어로 만들어줘.
 
