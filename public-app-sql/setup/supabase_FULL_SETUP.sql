@@ -214,34 +214,33 @@ CREATE TABLE IF NOT EXISTS public.hospital_crawled_posts (
 
 ALTER TABLE public.hospital_crawled_posts ENABLE ROW LEVEL SECURITY;
 
-DO $$ BEGIN
-  -- authenticated 사용자 정책
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='hospital_crawled_posts' AND policyname='Authenticated users can view crawled posts') THEN
-    CREATE POLICY "Authenticated users can view crawled posts" ON public.hospital_crawled_posts FOR SELECT USING (auth.role() = 'authenticated');
-  END IF;
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='hospital_crawled_posts' AND policyname='Authenticated users can insert crawled posts') THEN
-    CREATE POLICY "Authenticated users can insert crawled posts" ON public.hospital_crawled_posts FOR INSERT WITH CHECK (auth.role() = 'authenticated');
-  END IF;
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='hospital_crawled_posts' AND policyname='Authenticated users can update crawled posts') THEN
-    CREATE POLICY "Authenticated users can update crawled posts" ON public.hospital_crawled_posts FOR UPDATE USING (auth.role() = 'authenticated');
-  END IF;
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='hospital_crawled_posts' AND policyname='Authenticated users can delete crawled posts') THEN
-    CREATE POLICY "Authenticated users can delete crawled posts" ON public.hospital_crawled_posts FOR DELETE USING (auth.role() = 'authenticated');
-  END IF;
-  -- anon 사용자 정책
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='hospital_crawled_posts' AND policyname='Anon can view crawled posts') THEN
-    CREATE POLICY "Anon can view crawled posts" ON public.hospital_crawled_posts FOR SELECT USING (true);
-  END IF;
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='hospital_crawled_posts' AND policyname='Anon can insert crawled posts') THEN
-    CREATE POLICY "Anon can insert crawled posts" ON public.hospital_crawled_posts FOR INSERT WITH CHECK (true);
-  END IF;
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='hospital_crawled_posts' AND policyname='Anon can update crawled posts') THEN
-    CREATE POLICY "Anon can update crawled posts" ON public.hospital_crawled_posts FOR UPDATE USING (true);
-  END IF;
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='hospital_crawled_posts' AND policyname='Anon can delete crawled posts') THEN
-    CREATE POLICY "Anon can delete crawled posts" ON public.hospital_crawled_posts FOR DELETE USING (true);
-  END IF;
-END $$;
+-- RLS 정책 (2026-04-11 강화 · hospital_style_profiles 와 동일 패턴):
+--   * 읽기: 모든 사용자 (anon + authenticated) — 크롤링 글은 공용 참조 데이터
+--   * 쓰기: 로그인 사용자만 (anon INSERT/UPDATE/DELETE 금지)
+-- 기존 anon 쓰기 정책은 권한 누출로 제거.
+DROP POLICY IF EXISTS "Anon can view crawled posts"                  ON public.hospital_crawled_posts;
+DROP POLICY IF EXISTS "Anon can insert crawled posts"                ON public.hospital_crawled_posts;
+DROP POLICY IF EXISTS "Anon can update crawled posts"                ON public.hospital_crawled_posts;
+DROP POLICY IF EXISTS "Anon can delete crawled posts"                ON public.hospital_crawled_posts;
+DROP POLICY IF EXISTS "Authenticated users can view crawled posts"   ON public.hospital_crawled_posts;
+DROP POLICY IF EXISTS "Authenticated users can insert crawled posts" ON public.hospital_crawled_posts;
+DROP POLICY IF EXISTS "Authenticated users can update crawled posts" ON public.hospital_crawled_posts;
+DROP POLICY IF EXISTS "Authenticated users can delete crawled posts" ON public.hospital_crawled_posts;
+DROP POLICY IF EXISTS "Anyone can read crawled posts"                ON public.hospital_crawled_posts;
+
+CREATE POLICY "Anyone can read crawled posts"
+  ON public.hospital_crawled_posts FOR SELECT
+  USING (true);
+CREATE POLICY "Authenticated users can insert crawled posts"
+  ON public.hospital_crawled_posts FOR INSERT
+  WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "Authenticated users can update crawled posts"
+  ON public.hospital_crawled_posts FOR UPDATE
+  USING (auth.role() = 'authenticated')
+  WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "Authenticated users can delete crawled posts"
+  ON public.hospital_crawled_posts FOR DELETE
+  USING (auth.role() = 'authenticated');
 
 CREATE INDEX IF NOT EXISTS idx_crawled_posts_hospital ON public.hospital_crawled_posts(hospital_name);
 CREATE INDEX IF NOT EXISTS idx_crawled_posts_crawled_at ON public.hospital_crawled_posts(crawled_at DESC);

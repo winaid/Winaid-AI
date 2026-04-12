@@ -219,20 +219,34 @@ DO $$ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='hospital_crawled_posts' AND policyname='Authenticated users can delete crawled posts') THEN
     CREATE POLICY "Authenticated users can delete crawled posts" ON public.hospital_crawled_posts FOR DELETE USING (auth.role() = 'authenticated');
   END IF;
-  -- anon 사용자 정책
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='hospital_crawled_posts' AND policyname='Anon can view crawled posts') THEN
-    CREATE POLICY "Anon can view crawled posts" ON public.hospital_crawled_posts FOR SELECT USING (true);
-  END IF;
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='hospital_crawled_posts' AND policyname='Anon can insert crawled posts') THEN
-    CREATE POLICY "Anon can insert crawled posts" ON public.hospital_crawled_posts FOR INSERT WITH CHECK (true);
-  END IF;
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='hospital_crawled_posts' AND policyname='Anon can update crawled posts') THEN
-    CREATE POLICY "Anon can update crawled posts" ON public.hospital_crawled_posts FOR UPDATE USING (true);
-  END IF;
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='hospital_crawled_posts' AND policyname='Anon can delete crawled posts') THEN
-    CREATE POLICY "Anon can delete crawled posts" ON public.hospital_crawled_posts FOR DELETE USING (true);
-  END IF;
 END $$;
+
+-- 2026-04-11 RLS 강화: 기존 anon 쓰기 정책을 모두 제거하고 읽기만 허용.
+-- 하단의 DROP/CREATE 는 재실행 안전하며, 위 DO 블록의 authenticated 정책과
+-- 함께 공존하게 설계됨(같은 authenticated 정책을 DROP→CREATE 로 재적용).
+DROP POLICY IF EXISTS "Anon can view crawled posts"                  ON public.hospital_crawled_posts;
+DROP POLICY IF EXISTS "Anon can insert crawled posts"                ON public.hospital_crawled_posts;
+DROP POLICY IF EXISTS "Anon can update crawled posts"                ON public.hospital_crawled_posts;
+DROP POLICY IF EXISTS "Anon can delete crawled posts"                ON public.hospital_crawled_posts;
+DROP POLICY IF EXISTS "Authenticated users can view crawled posts"   ON public.hospital_crawled_posts;
+DROP POLICY IF EXISTS "Authenticated users can insert crawled posts" ON public.hospital_crawled_posts;
+DROP POLICY IF EXISTS "Authenticated users can update crawled posts" ON public.hospital_crawled_posts;
+DROP POLICY IF EXISTS "Authenticated users can delete crawled posts" ON public.hospital_crawled_posts;
+DROP POLICY IF EXISTS "Anyone can read crawled posts"                ON public.hospital_crawled_posts;
+
+CREATE POLICY "Anyone can read crawled posts"
+  ON public.hospital_crawled_posts FOR SELECT
+  USING (true);
+CREATE POLICY "Authenticated users can insert crawled posts"
+  ON public.hospital_crawled_posts FOR INSERT
+  WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "Authenticated users can update crawled posts"
+  ON public.hospital_crawled_posts FOR UPDATE
+  USING (auth.role() = 'authenticated')
+  WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "Authenticated users can delete crawled posts"
+  ON public.hospital_crawled_posts FOR DELETE
+  USING (auth.role() = 'authenticated');
 
 CREATE INDEX IF NOT EXISTS idx_crawled_posts_hospital ON public.hospital_crawled_posts(hospital_name);
 CREATE INDEX IF NOT EXISTS idx_crawled_posts_crawled_at ON public.hospital_crawled_posts(crawled_at DESC);
