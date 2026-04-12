@@ -9,6 +9,10 @@ interface EditableSlideWrapperProps {
   slideIndex: number;
   onElementMove?: (slideIndex: number, elementId: string, x: number, y: number) => void;
   onElementResize?: (slideIndex: number, elementId: string, width: number, height: number) => void;
+  // ── 2단계 ──
+  onTextChange?: (slideIndex: number, field: string, value: string) => void;
+  onImageReplace?: (slideIndex: number, file: File) => void;
+  onImageDelete?: (slideIndex: number) => void;
 }
 
 export default function EditableSlideWrapper({
@@ -17,16 +21,49 @@ export default function EditableSlideWrapper({
   slideIndex,
   onElementMove,
   onElementResize,
+  onTextChange,
+  onImageReplace,
+  onImageDelete,
 }: EditableSlideWrapperProps) {
   const [selectedTarget, setSelectedTarget] = useState<HTMLElement | null>(null);
+  const [editingTarget, setEditingTarget] = useState<HTMLElement | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
 
-  // 편집 모드가 꺼지면 선택 해제
+  // ── contentEditable 편집 종료 → 데이터 커밋 ──
+  const commitEditing = useCallback(() => {
+    if (!editingTarget) return;
+    const field = editingTarget.getAttribute('data-editable') || '';
+    const value = editingTarget.innerText;
+
+    editingTarget.contentEditable = 'false';
+    editingTarget.style.outline = '';
+    editingTarget.style.outlineOffset = '';
+    editingTarget.style.borderRadius = '';
+    editingTarget.style.cursor = '';
+    editingTarget.style.minHeight = '';
+
+    onTextChange?.(slideIndex, field, value);
+    setEditingTarget(null);
+  }, [editingTarget, slideIndex, onTextChange]);
+
+  // ── 편집 모드 꺼지면 전부 클린업 ──
   useEffect(() => {
-    if (!isEditMode) setSelectedTarget(null);
-  }, [isEditMode]);
+    if (!isEditMode) {
+      if (editingTarget) {
+        editingTarget.contentEditable = 'false';
+        editingTarget.style.outline = '';
+        editingTarget.style.outlineOffset = '';
+        editingTarget.style.borderRadius = '';
+        editingTarget.style.cursor = '';
+        editingTarget.style.minHeight = '';
+      }
+      setEditingTarget(null);
+      setSelectedTarget(null);
+    }
+  }, [isEditMode]); // editingTarget 의존 제거 — 클린업 시점에만 동작
 
-  // 선택된 요소가 DOM에서 사라지면 선택 해제
+  // ── 선택된 요소가 DOM에서 사라지면 선택 해제 ──
   useEffect(() => {
     if (!selectedTarget) return;
     if (!containerRef.current?.contains(selectedTarget)) {
@@ -34,12 +71,17 @@ export default function EditableSlideWrapper({
     }
   });
 
+  // ── 클릭: 요소 선택 (편집 중이면 먼저 커밋) ──
   const handleClick = useCallback((e: React.MouseEvent) => {
     if (!isEditMode) return;
 
     const target = e.target as HTMLElement;
-    // data-editable 속성이 있는 가장 가까운 요소를 찾음
     const editable = target.closest('[data-editable]') as HTMLElement | null;
+
+    // 다른 요소 클릭 시 기존 편집 종료
+    if (editingTarget && editable !== editingTarget) {
+      commitEditing();
+    }
 
     if (editable && containerRef.current?.contains(editable)) {
       e.stopPropagation();
@@ -47,22 +89,80 @@ export default function EditableSlideWrapper({
     } else {
       setSelectedTarget(null);
     }
-  }, [isEditMode]);
+  }, [isEditMode, editingTarget, commitEditing]);
 
-  // Escape로 선택 해제
+  // ── 더블클릭: 텍스트 contentEditable 진입 ──
+  const handleDoubleClick = useCallback((e: React.MouseEvent) => {
+    if (!isEditMode) return;
+
+    const target = e.target as HTMLElement;
+    const editable = target.closest('[data-editable]') as HTMLElement | null;
+    if (!editable || !containerRef.current?.contains(editable)) return;
+
+    const field = editable.getAttribute('data-editable');
+    if (field === 'image') return; // 이미지는 더블클릭 편집 안 함
+
+    if (field === 'title' || field === 'subtitle' || field === 'body') {
+      e.stopPropagation();
+
+      // 기존 편집 종료
+      if (editingTarget && editingTarget !== editable) commitEditing();
+
+      editable.contentEditable = 'true';
+      editable.focus();
+
+      // 커서를 텍스트 끝으로
+      const range = document.createRange();
+      const sel = window.getSelection();
+      range.selectNodeContents(editable);
+      range.collapse(false);
+      sel?.removeAllRanges();
+      sel?.addRange(range);
+
+      // 시각 피드백
+      editable.style.outline = '2px solid #3B82F6';
+      editable.style.outlineOffset = '2px';
+      editable.style.borderRadius = '4px';
+      editable.style.cursor = 'text';
+      editable.style.minHeight = '1em';
+
+      setEditingTarget(editable);
+      setSelectedTarget(editable);
+    }
+  }, [isEditMode, editingTarget, commitEditing]);
+
+  // ── Escape 2단계: 1st 편집 종료, 2nd 선택 해제 ──
   useEffect(() => {
-    if (!isEditMode || !selectedTarget) return;
+    if (!isEditMode) return;
+    if (!selectedTarget && !editingTarget) return;
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.stopPropagation();
-        setSelectedTarget(null);
+        if (editingTarget) {
+          commitEditing();
+        } else if (selectedTarget) {
+          setSelectedTarget(null);
+        }
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [isEditMode, selectedTarget]);
+  }, [isEditMode, selectedTarget, editingTarget, commitEditing]);
 
-  // 편집 모드가 아니면 그냥 children 렌더
+  // ── Enter(Shift 없이)로 편집 종료 ──
+  useEffect(() => {
+    if (!editingTarget) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        commitEditing();
+      }
+    };
+    editingTarget.addEventListener('keydown', handler);
+    return () => editingTarget.removeEventListener('keydown', handler);
+  }, [editingTarget, commitEditing]);
+
+  // ── 편집 모드가 아니면 그냥 children 렌더 ──
   if (!isEditMode) {
     return <>{children}</>;
   }
@@ -71,11 +171,26 @@ export default function EditableSlideWrapper({
     <div
       ref={containerRef}
       onClick={handleClick}
+      onDoubleClick={handleDoubleClick}
       style={{ position: 'relative', cursor: 'default' }}
     >
       {children}
 
-      {selectedTarget && (
+      {/* 숨겨진 파일 input (이미지 교체용) */}
+      <input
+        ref={imageInputRef}
+        type="file"
+        accept="image/*"
+        style={{ display: 'none' }}
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) onImageReplace?.(slideIndex, file);
+          e.target.value = '';
+        }}
+      />
+
+      {/* Moveable — 편집(contentEditable) 중이 아닐 때만 표시 */}
+      {selectedTarget && !editingTarget && (
         <Moveable
           target={selectedTarget}
           container={containerRef.current}
@@ -111,6 +226,47 @@ export default function EditableSlideWrapper({
             onElementResize?.(slideIndex, id, width, height);
           }}
         />
+      )}
+
+      {/* 이미지 플로팅 툴바 — 이미지 선택 시, 편집 중 아닐 때 */}
+      {selectedTarget && !editingTarget &&
+       selectedTarget.getAttribute('data-editable') === 'image' && (
+        <div style={{
+          position: 'absolute',
+          top: Math.max(0, selectedTarget.offsetTop - 44),
+          left: selectedTarget.offsetLeft + selectedTarget.offsetWidth / 2,
+          transform: 'translateX(-50%)',
+          zIndex: 50,
+          display: 'flex',
+          gap: '4px',
+          background: 'white',
+          borderRadius: '8px',
+          boxShadow: '0 2px 12px rgba(0,0,0,0.15)',
+          padding: '4px',
+        }}>
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); imageInputRef.current?.click(); }}
+            style={{
+              padding: '6px 12px', fontSize: '12px', fontWeight: 700,
+              background: '#3B82F6', color: 'white', border: 'none',
+              borderRadius: '6px', cursor: 'pointer',
+            }}
+          >
+            교체
+          </button>
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onImageDelete?.(slideIndex); }}
+            style={{
+              padding: '6px 12px', fontSize: '12px', fontWeight: 700,
+              background: '#EF4444', color: 'white', border: 'none',
+              borderRadius: '6px', cursor: 'pointer',
+            }}
+          >
+            삭제
+          </button>
+        </div>
       )}
     </div>
   );

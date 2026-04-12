@@ -1183,10 +1183,24 @@ JSON만 출력:
                     isEditMode={inlineEditIdx === idx}
                     slideIndex={idx}
                     onElementMove={(i, id, x, y) => {
-                      console.log('moveable:move', i, id, x, y);
+                      const xPct = Math.round(Math.max(5, Math.min(95, (x / cardWidth) * 100)));
+                      const yPct = Math.round(Math.max(5, Math.min(95, (y / cardHeight) * 100)));
+                      const posKey = id === 'title' ? 'titlePosition'
+                                   : id === 'subtitle' ? 'subtitlePosition'
+                                   : id === 'hospital' ? 'hospitalNamePosition' : null;
+                      if (posKey) updateSlide(i, { [posKey]: { x: xPct, y: yPct } });
                     }}
                     onElementResize={(i, id, w, h) => {
                       console.log('moveable:resize', i, id, w, h);
+                    }}
+                    onTextChange={(i, field, value) => {
+                      updateSlide(i, { [field]: value });
+                    }}
+                    onImageReplace={(i, file) => {
+                      handleUploadSlideImage(i, file);
+                    }}
+                    onImageDelete={(i) => {
+                      updateSlide(i, { imageUrl: undefined });
                     }}
                   >
                     {renderSlide(slide)}
