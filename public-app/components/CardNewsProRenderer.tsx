@@ -19,6 +19,7 @@ import {
 import CardNewsCanvas from './CardNewsCanvas';
 import SlideEditor from './card-news/SlideEditor';
 import InteractivePreview from './card-news/InteractivePreview';
+import EditableSlideWrapper from './card-news/EditableSlideWrapper';
 import { useSlideRenderer } from './card-news/SlideRenderers';
 import VideoPlayer from './video-edit/VideoPlayer';
 
@@ -63,6 +64,7 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
   const [showDownloadMenu, setShowDownloadMenu] = useState(false);
   const downloadMenuRef = useRef<HTMLDivElement | null>(null);
   const [editingIdx, setEditingIdx] = useState<number | null>(null);
+  const [inlineEditIdx, setInlineEditIdx] = useState<number | null>(null);
   const [showAddSlide, setShowAddSlide] = useState(false);
 
   // ── 슬라이드쇼 ──
@@ -431,6 +433,8 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
     pushAndChange(newSlides.map((s, i) => ({ ...s, index: i + 1 })));
     if (editingIdx === idx) setEditingIdx(null);
     else if (editingIdx !== null && editingIdx > idx) setEditingIdx(editingIdx - 1);
+    if (inlineEditIdx === idx) setInlineEditIdx(null);
+    else if (inlineEditIdx !== null && inlineEditIdx > idx) setInlineEditIdx(inlineEditIdx - 1);
   };
 
   /** 슬라이드 순서 이동 (드래그앤드롭 + 모바일 ↑↓ 버튼 공통 사용) */
@@ -1175,7 +1179,18 @@ JSON만 출력:
                     transformOrigin: 'top left',
                   }}
                 >
-                  {renderSlide(slide)}
+                  <EditableSlideWrapper
+                    isEditMode={inlineEditIdx === idx}
+                    slideIndex={idx}
+                    onElementMove={(i, id, x, y) => {
+                      console.log('moveable:move', i, id, x, y);
+                    }}
+                    onElementResize={(i, id, w, h) => {
+                      console.log('moveable:resize', i, id, w, h);
+                    }}
+                  >
+                    {renderSlide(slide)}
+                  </EditableSlideWrapper>
                 </div>
                 {/* 이미지 실패 오버레이 — 이미지가 기대되는 슬라이드(imagePosition 설정됨)인데 URL이 없을 때 */}
                 {!slide.imageUrl && slide.imagePosition && (
@@ -1208,6 +1223,19 @@ JSON만 출력:
                     <option key={key} value={key}>{label}</option>
                   ))}
                 </select>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const isInline = inlineEditIdx === idx;
+                    setInlineEditIdx(isInline ? null : idx);
+                  }}
+                  className={`px-3 py-1 text-[11px] font-bold rounded-lg transition-colors ${
+                    inlineEditIdx === idx ? 'bg-emerald-600 text-white hover:bg-emerald-700' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                  }`}
+                  title="프리뷰에서 직접 요소를 드래그/리사이즈"
+                >
+                  {inlineEditIdx === idx ? '✓ 배치완료' : '↔ 배치'}
+                </button>
                 <button
                   type="button"
                   onClick={() => setEditingIdx(isEditing ? null : idx)}

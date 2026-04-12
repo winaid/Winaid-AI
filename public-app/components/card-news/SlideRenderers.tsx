@@ -380,7 +380,7 @@ export function useSlideRenderer({ theme, learnedTemplate, presetStyle, cardRati
 
     // ── 상단/하단: 너비 100%, 높이는 이미지 비율에 맞게 (최대 45%) ──
     return (
-      <div style={{
+      <div data-editable="image" style={{
         width: '100%',
         maxHeight: '45%',
         overflow: 'hidden',
@@ -529,17 +529,17 @@ export function useSlideRenderer({ theme, learnedTemplate, presetStyle, cardRati
         {/* 메인 텍스트 */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 3, gap: '16px', ...posMap[t.layout.titlePosition] }}>
           {t.layout.subtitlePosition === 'above-title' && slide.subtitle && (
-            <p style={{ color: t.colors.subtitle, fontSize: `${t.layout.subtitleSize}px`, fontWeight: 500, letterSpacing: '1px' }}>&ldquo;{slide.subtitle}&rdquo;</p>
+            <p data-editable="subtitle" style={{ color: t.colors.subtitle, fontSize: `${t.layout.subtitleSize}px`, fontWeight: 500, letterSpacing: '1px' }}>&ldquo;{slide.subtitle}&rdquo;</p>
           )}
           {showLine && <div style={{ width: '60px', height: '3px', background: t.colors.accent, borderRadius: '2px', margin: t.layout.titlePosition.includes('center') ? '0 auto' : '0' }} />}
           <div style={slide.titlePosition ? { position: 'absolute', left: `${slide.titlePosition.x}%`, top: `${slide.titlePosition.y}%`, transform: 'translate(-50%, -50%)', zIndex: 10 } : {}}>
-            <h1 style={{ ...getTitleStyle(slide, { fontSize: t.layout.titleSize, textAlign: posMap[t.layout.titlePosition]?.textAlign as string }), color: slide.titleColor || t.colors.title, fontWeight: (slide.titleFontWeight || String(t.layout.titleWeight)) as CSSProperties['fontWeight'], maxWidth: t.layout.titleMaxWidth }}>
+            <h1 data-editable="title" style={{ ...getTitleStyle(slide, { fontSize: t.layout.titleSize, textAlign: posMap[t.layout.titlePosition]?.textAlign as string }), color: slide.titleColor || t.colors.title, fontWeight: (slide.titleFontWeight || String(t.layout.titleWeight)) as CSSProperties['fontWeight'], maxWidth: t.layout.titleMaxWidth }}>
               {slide.title}
             </h1>
           </div>
           {t.layout.subtitlePosition === 'below-title' && slide.subtitle && (
             <div style={slide.subtitlePosition ? { position: 'absolute', left: `${slide.subtitlePosition.x}%`, top: `${slide.subtitlePosition.y}%`, transform: 'translate(-50%, -50%)', zIndex: 10 } : {}}>
-              <p style={{ color: slide.subtitleColor || t.colors.subtitle, fontSize: `${slide.subtitleFontSize || t.layout.subtitleSize}px`, fontWeight: 500, maxWidth: '85%' }}>{slide.subtitle}</p>
+              <p data-editable="subtitle" style={{ color: slide.subtitleColor || t.colors.subtitle, fontSize: `${slide.subtitleFontSize || t.layout.subtitleSize}px`, fontWeight: 500, maxWidth: '85%' }}>{slide.subtitle}</p>
             </div>
           )}
         </div>
@@ -600,7 +600,7 @@ export function useSlideRenderer({ theme, learnedTemplate, presetStyle, cardRati
         }}
       >
         <div style={{ width: '72px', height: '5px', background: theme.accentColor, borderRadius: '3px' }} />
-        <h1 style={{
+        <h1 data-editable="title" style={{
             ...getTitleStyle(slide, { fontSize: calcTitleSize(slide.title, 64, 42), textAlign: 'center' }),
             fontWeight: (slide.titleFontWeight || '900') as CSSProperties['fontWeight'],
             lineHeight: slide.titleLineHeight || 1.2,
@@ -611,6 +611,7 @@ export function useSlideRenderer({ theme, learnedTemplate, presetStyle, cardRati
         </h1>
         {slide.subtitle && (
           <p
+            data-editable="subtitle"
             style={{
               color: theme.subtitleColor,
               fontSize: '22px',
@@ -650,6 +651,7 @@ export function useSlideRenderer({ theme, learnedTemplate, presetStyle, cardRati
       >
         {titleAccent('left')}
         <h2
+          data-editable="title"
           style={{
             color: theme.titleColor,
             fontSize: '48px',
@@ -664,6 +666,7 @@ export function useSlideRenderer({ theme, learnedTemplate, presetStyle, cardRati
         </h2>
         {slide.subtitle && (
           <p
+            data-editable="subtitle"
             style={{
               color: theme.subtitleColor,
               fontSize: '22px',
@@ -677,6 +680,7 @@ export function useSlideRenderer({ theme, learnedTemplate, presetStyle, cardRati
         )}
         {slide.body && (
           <div
+            data-editable="body"
             style={{
               ...getBodyStyle(slide),
               whiteSpace: 'pre-line',
@@ -710,10 +714,10 @@ export function useSlideRenderer({ theme, learnedTemplate, presetStyle, cardRati
       {slide.imagePosition === 'top' && renderImageLayer(slide)}
         <div style={{ position: 'relative', zIndex: 2, marginBottom: '24px' }}>
           {titleAccent('center')}
-          <h2 style={{ ...getTitleStyle(slide, { fontSize: calcTitleSize(slide.title, 52, 36), textAlign: 'center' }), lineHeight: 1.25 }}>
+          <h2 data-editable="title" style={{ ...getTitleStyle(slide, { fontSize: calcTitleSize(slide.title, 52, 36), textAlign: 'center' }), lineHeight: 1.25 }}>
             {slide.title}
           </h2>
-          {slide.subtitle && <p style={{ color: theme.subtitleColor, fontSize: '22px', textAlign: 'center', marginTop: '10px', fontWeight: 600 }}>{slide.subtitle}</p>}
+          {slide.subtitle && <p data-editable="subtitle" style={{ color: theme.subtitleColor, fontSize: '22px', textAlign: 'center', marginTop: '10px', fontWeight: 600 }}>{slide.subtitle}</p>}
         </div>
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '3px', borderRadius: '20px', overflow: 'hidden', position: 'relative', zIndex: 2 }}>
           {/* VS 뱃지 (2열일 때) */}
@@ -801,10 +805,10 @@ export function useSlideRenderer({ theme, learnedTemplate, presetStyle, cardRati
       {slide.imagePosition === 'top' && renderImageLayer(slide)}
         <div style={{ position: 'relative', zIndex: 2, marginBottom: '24px' }}>
           {titleAccent('center')}
-          <h2 style={{ ...getTitleStyle(slide, { fontSize: calcTitleSize(slide.title, 52, 36), textAlign: 'center' }) }}>
+          <h2 data-editable="title" style={{ ...getTitleStyle(slide, { fontSize: calcTitleSize(slide.title, 52, 36), textAlign: 'center' }) }}>
             {slide.title}
           </h2>
-          {slide.subtitle && <p style={{ color: theme.subtitleColor, fontSize: '22px', textAlign: 'center', marginTop: '10px', fontWeight: 600 }}>{slide.subtitle}</p>}
+          {slide.subtitle && <p data-editable="subtitle" style={{ color: theme.subtitleColor, fontSize: '22px', textAlign: 'center', marginTop: '10px', fontWeight: 600 }}>{slide.subtitle}</p>}
         </div>
         <div style={{ flex: 1, display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: '22px', alignContent: 'stretch', position: 'relative', zIndex: 2 }}>
           {items.map((item, i) => (
@@ -869,8 +873,8 @@ export function useSlideRenderer({ theme, learnedTemplate, presetStyle, cardRati
         {slide.imagePosition === 'top' && renderImageLayer(slide)}
         <div style={{ position: 'relative', zIndex: 2, marginBottom: '24px' }}>
           {titleAccent('center')}
-          <h2 style={{ ...getTitleStyle(slide, { fontSize: calcTitleSize(slide.title, 52, 36), textAlign: 'center' }) }}>{slide.title}</h2>
-          {slide.subtitle && <p style={{ color: theme.subtitleColor, fontSize: '22px', textAlign: 'center', marginTop: '10px', fontWeight: 600 }}>{slide.subtitle}</p>}
+          <h2 data-editable="title" style={{ ...getTitleStyle(slide, { fontSize: calcTitleSize(slide.title, 52, 36), textAlign: 'center' }) }}>{slide.title}</h2>
+          {slide.subtitle && <p data-editable="subtitle" style={{ color: theme.subtitleColor, fontSize: '22px', textAlign: 'center', marginTop: '10px', fontWeight: 600 }}>{slide.subtitle}</p>}
         </div>
         <div style={{ flex: 1, display: 'flex', flexDirection: isHorizontal ? 'row' : 'column', justifyContent: getContentAlignV(slide), gap: `${stepsLayout.gap}px`, position: 'relative', zIndex: 2 }}>
           {items.map((step, i) => (
@@ -924,8 +928,8 @@ export function useSlideRenderer({ theme, learnedTemplate, presetStyle, cardRati
       {slide.imagePosition === 'top' && renderImageLayer(slide)}
       <div style={{ position: 'relative', zIndex: 2, marginBottom: '24px' }}>
         {titleAccent('left')}
-        <h2 style={{ ...getTitleStyle(slide, { fontSize: calcTitleSize(slide.title, 52, 36) }) }}>{slide.title}</h2>
-        {slide.subtitle && <p style={{ color: theme.subtitleColor, fontSize: '22px', marginTop: '10px', fontWeight: 600 }}>{slide.subtitle}</p>}
+        <h2 data-editable="title" style={{ ...getTitleStyle(slide, { fontSize: calcTitleSize(slide.title, 52, 36) }) }}>{slide.title}</h2>
+        {slide.subtitle && <p data-editable="subtitle" style={{ color: theme.subtitleColor, fontSize: '22px', marginTop: '10px', fontWeight: 600 }}>{slide.subtitle}</p>}
       </div>
       {(() => {
         const checkLayout = calcItemLayout((slide.checkItems || []).length);
@@ -987,8 +991,8 @@ export function useSlideRenderer({ theme, learnedTemplate, presetStyle, cardRati
         {slide.imagePosition === 'top' && renderImageLayer(slide)}
         <div style={{ position: 'relative', zIndex: 2, marginBottom: '24px' }}>
           {titleAccent('center')}
-          <h2 style={{ ...getTitleStyle(slide, { fontSize: calcTitleSize(slide.title, 52, 36), textAlign: 'center' }) }}>{slide.title}</h2>
-          {slide.subtitle && <p style={{ color: theme.subtitleColor, fontSize: '22px', textAlign: 'center', marginTop: '10px', fontWeight: 600 }}>{slide.subtitle}</p>}
+          <h2 data-editable="title" style={{ ...getTitleStyle(slide, { fontSize: calcTitleSize(slide.title, 52, 36), textAlign: 'center' }) }}>{slide.title}</h2>
+          {slide.subtitle && <p data-editable="subtitle" style={{ color: theme.subtitleColor, fontSize: '22px', textAlign: 'center', marginTop: '10px', fontWeight: 600 }}>{slide.subtitle}</p>}
         </div>
         <div style={{ flex: 1, display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: '24px', alignContent: 'center', position: 'relative', zIndex: 2 }}>
           {points.map((dp, i) => {
@@ -1058,6 +1062,7 @@ export function useSlideRenderer({ theme, learnedTemplate, presetStyle, cardRati
       >
         {slide.subtitle && (
           <div
+            data-editable="subtitle"
             style={{
               display: 'inline-block',
               padding: '10px 24px',
@@ -1072,7 +1077,7 @@ export function useSlideRenderer({ theme, learnedTemplate, presetStyle, cardRati
             {slide.subtitle}
           </div>
         )}
-        <h1 style={{
+        <h1 data-editable="title" style={{
             ...getTitleStyle(slide, { fontSize: calcTitleSize(slide.title, 64, 42), textAlign: 'center' }),
             fontWeight: (slide.titleFontWeight || '900') as CSSProperties['fontWeight'],
             lineHeight: slide.titleLineHeight || 1.25,
@@ -1083,6 +1088,7 @@ export function useSlideRenderer({ theme, learnedTemplate, presetStyle, cardRati
         </h1>
         {slide.body && (
           <p
+            data-editable="body"
             style={{
               color: theme.bodyColor,
               fontSize: '20px',
@@ -1125,7 +1131,7 @@ export function useSlideRenderer({ theme, learnedTemplate, presetStyle, cardRati
       {slide.imagePosition === 'top' && renderImageLayer(slide)}
       <div style={{ position: 'relative', zIndex: 2, marginBottom: '24px' }}>
         {titleAccent('center')}
-        <h2 style={{ ...getTitleStyle(slide, { fontSize: calcTitleSize(slide.title, 52, 36), textAlign: 'center' }) }}>{slide.title}</h2>
+        <h2 data-editable="title" style={{ ...getTitleStyle(slide, { fontSize: calcTitleSize(slide.title, 52, 36), textAlign: 'center' }) }}>{slide.title}</h2>
       </div>
       <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '22px', position: 'relative', zIndex: 2 }}>
         {/* ⇄ 화살표 */}
@@ -1172,7 +1178,7 @@ export function useSlideRenderer({ theme, learnedTemplate, presetStyle, cardRati
       {slide.imagePosition === 'top' && renderImageLayer(slide)}
       <div style={{ position: 'relative', zIndex: 2, marginBottom: '24px' }}>
         {titleAccent('left')}
-        <h2 style={{ ...getTitleStyle(slide, { fontSize: calcTitleSize(slide.title, 52, 36) }) }}>{slide.title}</h2>
+        <h2 data-editable="title" style={{ ...getTitleStyle(slide, { fontSize: calcTitleSize(slide.title, 52, 36) }) }}>{slide.title}</h2>
       </div>
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: `${qaLayout.gap}px`, justifyContent: getContentAlignV(slide), position: 'relative', zIndex: 2 }}>
         {(slide.questions || []).map((qa, i) => (
@@ -1238,7 +1244,7 @@ export function useSlideRenderer({ theme, learnedTemplate, presetStyle, cardRati
       {slide.imagePosition === 'top' && renderImageLayer(slide)}
       <div style={{ position: 'relative', zIndex: 2, marginBottom: '24px' }}>
         {titleAccent('left')}
-        <h2 style={{ ...getTitleStyle(slide, { fontSize: calcTitleSize(slide.title, 52, 36) }) }}>{slide.title}</h2>
+        <h2 data-editable="title" style={{ ...getTitleStyle(slide, { fontSize: calcTitleSize(slide.title, 52, 36) }) }}>{slide.title}</h2>
       </div>
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: getContentAlignV(slide), position: 'relative', paddingLeft: '56px', zIndex: 2 }}>
         <div style={{ position: 'absolute', left: '24px', top: '12px', bottom: '12px', width: '4px', background: `${theme.accentColor}55`, borderRadius: '2px' }} />
@@ -1310,6 +1316,7 @@ export function useSlideRenderer({ theme, learnedTemplate, presetStyle, cardRati
           &ldquo;
         </div>
         <p
+          data-editable="body"
           style={{
             color: theme.titleColor,
             fontSize: `${calcTitleSize(slide.quoteText || slide.body || '', 28, 20)}px`,
@@ -1351,7 +1358,7 @@ export function useSlideRenderer({ theme, learnedTemplate, presetStyle, cardRati
       {slide.imagePosition === 'top' && renderImageLayer(slide)}
       <div style={{ position: 'relative', zIndex: 2, marginBottom: '24px' }}>
         {titleAccent('left')}
-        <h2 style={{ ...getTitleStyle(slide, { fontSize: calcTitleSize(slide.title, 52, 36) }) }}>{slide.title}</h2>
+        <h2 data-editable="title" style={{ ...getTitleStyle(slide, { fontSize: calcTitleSize(slide.title, 52, 36) }) }}>{slide.title}</h2>
       </div>
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: `${nlLayout.gap}px`, justifyContent: getContentAlignV(slide), position: 'relative', zIndex: 2 }}>
         {nlItems.map((item, i) => (
@@ -1417,7 +1424,7 @@ export function useSlideRenderer({ theme, learnedTemplate, presetStyle, cardRati
       {slide.imagePosition === 'top' && renderImageLayer(slide)}
       <div style={{ position: 'relative', zIndex: 2, marginBottom: '24px' }}>
         {titleAccent('center')}
-        <h2 style={{ ...getTitleStyle(slide, { fontSize: calcTitleSize(slide.title, 52, 36), textAlign: 'center' }) }}>{slide.title}</h2>
+        <h2 data-editable="title" style={{ ...getTitleStyle(slide, { fontSize: calcTitleSize(slide.title, 52, 36), textAlign: 'center' }) }}>{slide.title}</h2>
       </div>
       {(() => {
         const pcLayout = calcItemLayout(Math.max((slide.pros || []).length, (slide.cons || []).length));
@@ -1469,7 +1476,7 @@ export function useSlideRenderer({ theme, learnedTemplate, presetStyle, cardRati
       {slide.imagePosition === 'top' && renderImageLayer(slide)}
       <div style={{ position: 'relative', zIndex: 2, marginBottom: '24px' }}>
         {titleAccent('center')}
-        <h2 style={{ ...getTitleStyle(slide, { fontSize: calcTitleSize(slide.title, 52, 36), textAlign: 'center' }) }}>{slide.title}</h2>
+        <h2 data-editable="title" style={{ ...getTitleStyle(slide, { fontSize: calcTitleSize(slide.title, 52, 36), textAlign: 'center' }) }}>{slide.title}</h2>
       </div>
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '3px', borderRadius: '20px', overflow: 'hidden', position: 'relative', zIndex: 2 }}>
         <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '3px' }}>
@@ -1528,7 +1535,7 @@ export function useSlideRenderer({ theme, learnedTemplate, presetStyle, cardRati
         <span style={{ fontSize: '80px', lineHeight: 1 }}>⚠️</span>
       </div>
       <div style={{ position: 'relative', zIndex: 2, marginBottom: '24px' }}>
-        <h2 style={{ ...getTitleStyle(slide, { fontSize: calcTitleSize(slide.warningTitle || slide.title, 52, 36), textAlign: 'center' }), color: theme.accentColor, fontWeight: 900 as CSSProperties['fontWeight'] }}>
+        <h2 data-editable="title" style={{ ...getTitleStyle(slide, { fontSize: calcTitleSize(slide.warningTitle || slide.title, 52, 36), textAlign: 'center' }), color: theme.accentColor, fontWeight: 900 as CSSProperties['fontWeight'] }}>
           {slide.warningTitle || slide.title}
         </h2>
       </div>
