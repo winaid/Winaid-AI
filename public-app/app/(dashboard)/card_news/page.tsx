@@ -280,7 +280,7 @@ export default function CardNewsPage() {
   const [slideCount, setSlideCount] = useState(0); // 0 = 자동
   const [proCardRatio, setProCardRatio] = useState<'1:1' | '3:4' | '4:5' | '9:16' | '16:9'>('1:1');
   const [designTemplateId, setDesignTemplateId] = useState<CardNewsDesignTemplateId | undefined>(undefined);
-  const [imageStyle, setImageStyle] = useState<ImageStyleType>('illustration');
+  const [imageStyle, setImageStyle] = useState<ImageStyleType>('ai');
   const [category, setCategory] = useState<ContentCategory>(ContentCategory.DENTAL);
   const [audienceMode, setAudienceMode] = useState<AudienceMode>('환자용(친절/공감)');
   const [contentMode, setContentMode] = useState<'simple' | 'detailed'>('simple');
@@ -529,9 +529,27 @@ export default function CardNewsPage() {
           if (j < pixabay.length) photos.push(pixabay[j]);
         }
       } else if (style === 'ai') {
-        // AI 생성: 커버 프리뷰에서는 이미지 없이 색상 배경만 사용
-        // 슬라이드 생성 후 개별 "AI 이미지 생성" 버튼으로 생성
-        photos = [];
+        // AI 이미지 생성 — 3장 생성 후 5칸에 배분
+        const catKw = CATEGORY_IMAGE_KW[category] || { ko: '의료', en: 'medical' };
+        const tones = ['어두운 프리미엄 톤', '밝고 깔끔한 톤', '부드러운 파스텔 톤'];
+        const promises = tones.map((tone) =>
+          fetch('/api/image', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              prompt: `${topic || '병원 마케팅'} 관련 ${catKw.ko} 카드뉴스 배경 이미지.
+텍스트가 올라갈 공간이 있어야 하므로 중앙은 비워두세요.
+스타일: ${tone}, 의료/헬스케어 프리미엄 일러스트.
+사람 얼굴 없이 사물/장비/환경 위주.`,
+              ratio: proCardRatio === '1:1' ? '1:1' : '4:3',
+            }),
+          }).then(r => r.json()).then(d => (d.imageUrl || d.imageDataUrl || '') as string).catch(() => '')
+        );
+        const generated = (await Promise.all(promises)).filter(Boolean);
+        // 3장 → 5칸 배분
+        photos = generated.length > 0
+          ? [...generated, ...generated].slice(0, count)
+          : [];
       } else {
         // 일러스트: Pixabay만 사용 + category=health 필터
         const catKw = CATEGORY_IMAGE_KW[category] || { ko: '의료 건강', en: 'medical health' };
@@ -2208,9 +2226,9 @@ DECORATIVE: (장식 요소)`,
               <p className="text-xs font-semibold text-slate-500 mb-2">배경 이미지 스타일</p>
               <div className="flex gap-2 flex-wrap">
                 {([
+                  { id: 'ai' as const, label: 'AI 생성', icon: '🤖', desc: '주제 맞춤 AI 이미지' },
                   { id: 'illustration' as const, label: '일러스트', icon: '🎨', desc: 'Pixabay 일러스트' },
                   { id: 'photo' as const, label: '실사 사진', icon: '📷', desc: 'Pexels 사진' },
-                  { id: 'ai' as const, label: 'AI 생성', icon: '🤖', desc: '슬라이드별 AI 이미지' },
                 ]).map(s => (
                   <button key={s.id} type="button" onClick={() => { setImageStyle(s.id); fetchPreviewImages(s.id); }}
                     className={`px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
@@ -2231,7 +2249,7 @@ DECORATIVE: (장식 요소)`,
                 <button type="button" onClick={() => { previewCacheRef.current.clear(); fetchPreviewImages(imageStyle, true); }}
                   disabled={loadingPreviews}
                   className="px-4 py-2.5 text-sm font-semibold text-blue-600 bg-blue-50 rounded-xl hover:bg-blue-100 disabled:opacity-50 transition-all">
-                  {loadingPreviews ? '로딩...' : '🔄 다른 이미지'}
+                  {loadingPreviews ? (imageStyle === 'ai' ? 'AI 생성 중...' : '로딩...') : '🔄 다른 이미지'}
                 </button>
               </div>
               <button type="button" disabled={isGenerating}
