@@ -19,13 +19,14 @@ interface KonvaSlideEditorProps {
   maxWidth?: number;
   onSlideChange: (patch: Partial<SlideData>) => void;
   readOnly?: boolean;
+  onStageReady?: (stage: Konva.Stage | null) => void;
 }
 
 // ── 메인 컴포넌트 ──
 
 export default function KonvaSlideEditor({
   slide, theme, cardWidth = 1080, cardHeight = 1080,
-  maxWidth = 650, onSlideChange, readOnly = false,
+  maxWidth = 650, onSlideChange, readOnly = false, onStageReady,
 }: KonvaSlideEditorProps) {
   const stageRef = useRef<Konva.Stage>(null);
   const transformerRef = useRef<Konva.Transformer>(null);
@@ -33,6 +34,13 @@ export default function KonvaSlideEditor({
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => setMounted(true), []);
+
+  // 외부에 Stage ref 노출 (다운로드용)
+  useEffect(() => {
+    if (!mounted) return;
+    onStageReady?.(stageRef.current);
+    return () => onStageReady?.(null);
+  }, [mounted, onStageReady]);
 
   const scale = maxWidth / cardWidth;
   const displayWidth = maxWidth;

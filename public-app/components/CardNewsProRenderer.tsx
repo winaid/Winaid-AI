@@ -7,7 +7,8 @@ import { LAYOUT_LABELS, CARD_FONTS, FONT_CATEGORIES, generateSlideId } from '../
 import { buildLayoutDefaults, fillLayoutContent, generateSlideImage, suggestSlideText, suggestImagePrompt, enrichSlide, suggestComparison } from '../lib/cardAiActions';
 import type { CardTemplate } from '../lib/cardTemplateService';
 import { ensureGoogleFontLoaded, resolveSlideFontFamily } from '../lib/cardStyleUtils';
-import { downloadCardAsPng, downloadCardAsJpg, downloadAllAsZip, downloadAllAsPdf, captureAllSlidesAsBlobs } from '../lib/cardDownloadUtils';
+import { captureAllSlidesAsBlobs, downloadKonvaStageAsPng, downloadKonvaStageAsJpg, downloadKonvaStagesAsZip, downloadKonvaStagesAsPdf } from '../lib/cardDownloadUtils';
+import type Konva from 'konva';
 import { saveVideoToStorage, generateVideoFileName } from '../lib/videoStorage';
 import { validateSlideMedicalAd } from '../lib/medicalAdValidation';
 import {
@@ -18,8 +19,6 @@ import {
   migrateLegacyLocalStorageFont,
 } from '../lib/fontStorage';
 import SlideEditor from './card-news/SlideEditor';
-import InteractivePreview from './card-news/InteractivePreview';
-import EditableSlideWrapper from './card-news/EditableSlideWrapper';
 import { useSlideRenderer } from './card-news/SlideRenderers';
 import VideoPlayer from './video-edit/VideoPlayer';
 
@@ -57,6 +56,8 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
   // slide.id 기반 Map — 드래그 reorder 후에도 정확한 DOM 참조 유지
   // (이전엔 배열 인덱스 기반이라 reorder 후 잘못된 카드를 캡처하는 버그 있었음)
   const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  // Konva Stage refs — PNG/JPG/ZIP/PDF 다운로드에 사용
+  const konvaStageRefs = useRef<Map<string, Konva.Stage>>(new Map());
 
   /** slides 순서대로 DOM element 배열을 반환 — 다운로드 lib 함수에 그대로 넘기기 위함 */
   const getOrderedCardElements = (): (HTMLDivElement | null)[] =>
@@ -559,11 +560,15 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
 
   // ── 다운로드 (lib/cardDownloadUtils.ts 위임) ──
 
+  /** 슬라이드 순서대로 Konva Stage 배열 반환 */
+  const getOrderedKonvaStages = (): (Konva.Stage | null)[] =>
+    slides.map(s => konvaStageRefs.current.get(s.id) ?? null);
+
   const downloadCard = async (index: number) => {
     setDownloading(true);
     try {
-      const el = cardRefs.current.get(slides[index]?.id) ?? null;
-      await downloadCardAsPng(el, index, cardWidth, cardHeight);
+      const stage = konvaStageRefs.current.get(slides[index]?.id) ?? null;
+      downloadKonvaStageAsPng(stage, index);
     } finally {
       setDownloading(false);
     }
@@ -573,7 +578,7 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
     setShowDownloadMenu(false);
     setDownloading(true);
     try {
-      await downloadAllAsZip(getOrderedCardElements(), slides.length, cardWidth, cardHeight, slides[0]?.title);
+      await downloadKonvaStagesAsZip(getOrderedKonvaStages(), slides[0]?.title);
     } finally {
       setDownloading(false);
     }
@@ -583,7 +588,7 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
     setShowDownloadMenu(false);
     setDownloading(true);
     try {
-      await downloadAllAsPdf(getOrderedCardElements(), slides.length, cardWidth, cardHeight, slides[0]?.title);
+      await downloadKonvaStagesAsPdf(getOrderedKonvaStages(), cardWidth, cardHeight, slides[0]?.title);
     } catch (err) {
       console.warn('[CARD_NEWS_PRO] PDF 변환 실패', err);
     } finally {
@@ -1149,7 +1154,7 @@ JSON만 출력:
                     title="PNG 저장 (고화질, 투명도 지원)">
                     💾 PNG
                   </button>
-                  <button type="button" onClick={() => downloadCardAsJpg(cardRefs.current.get(slide.id) ?? null, idx, cardWidth, cardHeight)}
+                  <button type="button" onClick={() => downloadKonvaStageAsJpg(konvaStageRefs.current.get(slide.id) ?? null, idx)}
                     className="px-2 py-1 bg-white/90 hover:bg-white rounded-lg text-[10px] font-bold text-slate-700 shadow-sm"
                     title="JPG 저장 (용량 작음 — 카톡/SNS 공유에 유리)">
                     📷 JPG
@@ -1176,6 +1181,10 @@ JSON만 출력:
                   maxWidth={boxRefs.current[idx]?.clientWidth || 250}
                   onSlideChange={(patch) => updateSlide(idx, patch)}
                   readOnly={true}
+                  onStageReady={(stage) => {
+                    if (stage) konvaStageRefs.current.set(slide.id, stage);
+                    else konvaStageRefs.current.delete(slide.id);
+                  }}
                 />
                 {/* 다운로드 캡처용 (화면에 안 보임) */}
                 <div style={{ position: 'absolute', left: '-9999px', top: 0 }}>

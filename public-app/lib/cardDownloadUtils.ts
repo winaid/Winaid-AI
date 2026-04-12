@@ -51,25 +51,9 @@ export async function captureNodeAsCanvas(
   }
 }
 
-/** 단일 카드를 PNG로 다운로드 */
-export async function downloadCardAsPng(
-  sourceEl: HTMLElement | null,
-  index: number,
-  cardWidth: number,
-  cardHeight: number,
-): Promise<void> {
-  if (!sourceEl) return;
-  const canvas = await captureNodeAsCanvas(sourceEl, cardWidth, cardHeight);
-  const a = document.createElement('a');
-  a.href = canvas.toDataURL('image/png');
-  a.download = `card_${index + 1}.png`;
-  a.click();
-}
-
 /**
- * 모든 카드를 PNG Blob 배열로 캡처 — ZIP 다운로드와 동일한 패턴이지만
- * 파일 시스템에 떨어뜨리지 않고 메모리에 모음. 카드뉴스 → 쇼츠 변환에서
- * FormData에 multipart로 올릴 때 사용.
+ * 모든 카드를 PNG Blob 배열로 캡처 — 카드뉴스 → 쇼츠 변환 전용.
+ * 일반 다운로드(PNG/JPG/ZIP/PDF)는 Konva 네이티브 함수 사용.
  */
 export async function captureAllSlidesAsBlobs(
   cardRefs: (HTMLElement | null)[],
@@ -88,86 +72,6 @@ export async function captureAllSlidesAsBlobs(
     if (blob) blobs.push(blob);
   }
   return blobs;
-}
-
-/** 모든 카드를 ZIP으로 다운로드 */
-export async function downloadAllAsZip(
-  cardRefs: (HTMLElement | null)[],
-  slidesCount: number,
-  cardWidth: number,
-  cardHeight: number,
-  topic?: string,
-): Promise<void> {
-  const JSZip = (await import('jszip')).default;
-  const zip = new JSZip();
-  for (let i = 0; i < slidesCount; i++) {
-    const sourceEl = cardRefs[i];
-    if (!sourceEl) continue;
-    const canvas = await captureNodeAsCanvas(sourceEl, cardWidth, cardHeight);
-    const blob = await new Promise<Blob>((resolve) => {
-      canvas.toBlob((b) => resolve(b as Blob), 'image/png');
-    });
-    zip.file(`card_${i + 1}.png`, blob);
-  }
-  const zipBlob = await zip.generateAsync({ type: 'blob' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(zipBlob);
-  const safeTopic = topic ? topic.replace(/[^가-힣a-zA-Z0-9]/g, '_').slice(0, 20) : '';
-  a.download = safeTopic ? `카드뉴스_${safeTopic}.zip` : `cardnews_${Date.now()}.zip`;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-}
-
-/** 단일 카드를 JPG로 다운로드 (용량 작음, 투명도 없음) */
-export async function downloadCardAsJpg(
-  sourceEl: HTMLElement | null,
-  index: number,
-  cardWidth: number,
-  cardHeight: number,
-  quality: number = 0.9,
-): Promise<void> {
-  if (!sourceEl) return;
-  const canvas = await captureNodeAsCanvas(sourceEl, cardWidth, cardHeight);
-  const a = document.createElement('a');
-  a.href = canvas.toDataURL('image/jpeg', quality);
-  a.download = `card_${index + 1}.jpg`;
-  a.click();
-}
-
-/** 모든 카드를 PDF 한 파일로 다운로드 (JPEG 90% 품질) */
-export async function downloadAllAsPdf(
-  cardRefs: (HTMLElement | null)[],
-  slidesCount: number,
-  cardWidth: number,
-  cardHeight: number,
-  topic?: string,
-): Promise<void> {
-  const { jsPDF } = await import('jspdf');
-
-  // 카드 비율에 맞는 페이지 방향 자동 결정
-  const orientation: 'portrait' | 'landscape' = cardWidth > cardHeight ? 'landscape' : 'portrait';
-  const pdf = new jsPDF({
-    orientation,
-    unit: 'px',
-    format: [cardWidth, cardHeight],
-    compress: true,
-  });
-
-  let firstPage = true;
-  for (let i = 0; i < slidesCount; i++) {
-    const sourceEl = cardRefs[i];
-    if (!sourceEl) continue;
-
-    if (!firstPage) pdf.addPage([cardWidth, cardHeight], orientation);
-    firstPage = false;
-
-    const canvas = await captureNodeAsCanvas(sourceEl, cardWidth, cardHeight);
-    const imgData = canvas.toDataURL('image/jpeg', 0.9);
-    pdf.addImage(imgData, 'JPEG', 0, 0, cardWidth, cardHeight);
-  }
-
-  const safeTopic = topic ? topic.replace(/[^가-힣a-zA-Z0-9]/g, '_').slice(0, 20) : '';
-  pdf.save(safeTopic ? `카드뉴스_${safeTopic}.pdf` : `cardnews_${Date.now()}.pdf`);
 }
 
 /** 이미지 위에 로고를 canvas로 합성 */
@@ -206,4 +110,81 @@ export function overlayLogo(baseImageDataUrl: string, logoSrc: string, opacity: 
     baseImg.onerror = () => resolve(baseImageDataUrl);
     baseImg.src = baseImageDataUrl;
   });
+}
+
+// ══════════════════════════════════════════════════════════════
+// Konva 네이티브 다운로드 (stage.toDataURL 기반)
+// ══════════════════════════════════════════════════════════════
+
+import type Konva from 'konva';
+
+/** Konva Stage를 PNG로 다운로드 */
+export function downloadKonvaStageAsPng(
+  stage: Konva.Stage | null,
+  index: number,
+  filename?: string,
+): void {
+  if (!stage) return;
+  const dataUrl = stage.toDataURL({ pixelRatio: 2, mimeType: 'image/png' });
+  const a = document.createElement('a');
+  a.href = dataUrl;
+  a.download = filename || `card-${index + 1}.png`;
+  a.click();
+}
+
+/** Konva Stage를 JPG로 다운로드 */
+export function downloadKonvaStageAsJpg(
+  stage: Konva.Stage | null,
+  index: number,
+  quality: number = 0.92,
+  filename?: string,
+): void {
+  if (!stage) return;
+  const dataUrl = stage.toDataURL({ pixelRatio: 2, mimeType: 'image/jpeg', quality });
+  const a = document.createElement('a');
+  a.href = dataUrl;
+  a.download = filename || `card-${index + 1}.jpg`;
+  a.click();
+}
+
+/** 모든 Konva Stage를 ZIP으로 다운로드 */
+export async function downloadKonvaStagesAsZip(
+  stages: (Konva.Stage | null)[],
+  title?: string,
+): Promise<void> {
+  const JSZip = (await import('jszip')).default;
+  const zip = new JSZip();
+  stages.forEach((stage, i) => {
+    if (!stage) return;
+    const dataUrl = stage.toDataURL({ pixelRatio: 2, mimeType: 'image/png' });
+    const base64 = dataUrl.split(',')[1];
+    zip.file(`${title || 'card'}-${i + 1}.png`, base64, { base64: true });
+  });
+  const blob = await zip.generateAsync({ type: 'blob' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `${title || 'card-news'}.zip`;
+  a.click();
+}
+
+/** 모든 Konva Stage를 PDF로 다운로드 */
+export async function downloadKonvaStagesAsPdf(
+  stages: (Konva.Stage | null)[],
+  cardWidth: number,
+  cardHeight: number,
+  title?: string,
+): Promise<void> {
+  const { jsPDF } = await import('jspdf');
+  const pdf = new jsPDF({
+    orientation: cardWidth > cardHeight ? 'landscape' : 'portrait',
+    unit: 'px',
+    format: [cardWidth, cardHeight],
+  });
+  stages.forEach((stage, i) => {
+    if (!stage) return;
+    if (i > 0) pdf.addPage([cardWidth, cardHeight]);
+    const dataUrl = stage.toDataURL({ pixelRatio: 2, mimeType: 'image/png' });
+    pdf.addImage(dataUrl, 'PNG', 0, 0, cardWidth, cardHeight);
+  });
+  pdf.save(`${title || 'card-news'}.pdf`);
 }
