@@ -2033,7 +2033,7 @@ DECORATIVE: (장식 요소)`,
                   return (
                   <div key={tmpl.id}>
                     <button type="button" onClick={() => setSelectedPreviewIdx(i)}
-                      className={`relative rounded-2xl overflow-hidden border-[3px] transition-all ${
+                      className={`relative block w-full rounded-2xl overflow-hidden border-[3px] transition-all ${
                         proCardRatio === '3:4' ? 'aspect-[3/4]' : proCardRatio === '4:5' ? 'aspect-[4/5]' : 'aspect-square'
                       } ${selectedPreviewIdx === i
                         ? 'border-blue-500 ring-4 ring-blue-100 scale-[1.02]'
