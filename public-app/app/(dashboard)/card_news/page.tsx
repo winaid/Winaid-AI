@@ -506,7 +506,7 @@ export default function CardNewsPage() {
         // 실사: Pexels + Pixabay(photo) 동시 호출
         const [pexelsRes, pixabayRes] = await Promise.all([
           fetch(`/api/pexels?query=${encodeURIComponent(query)}&orientation=square&per_page=${count}&page=${page}`),
-          fetch(`/api/pixabay?query=${encodeURIComponent(query)}&image_type=photo&orientation=horizontal&per_page=${count}&page=${page}`),
+          fetch(`/api/pixabay?query=${encodeURIComponent(query)}&image_type=photo&orientation=horizontal&per_page=${count}&page=${page}&category=health`),
         ]);
         const [pexelsData, pixabayData] = await Promise.all([pexelsRes.json(), pixabayRes.json()]);
         const pexels: string[] = (pexelsData.photos || []).map((p: { url: string }) => p.url);
@@ -517,17 +517,32 @@ export default function CardNewsPage() {
           if (j < pexels.length) photos.push(pexels[j]);
           if (j < pixabay.length) photos.push(pixabay[j]);
         }
+      } else if (style === 'ai') {
+        // AI 생성: 커버 프리뷰에서는 이미지 없이 색상 배경만 사용
+        // 슬라이드 생성 후 개별 "AI 이미지 생성" 버튼으로 생성
+        photos = [];
       } else {
-        // 일러스트: Pixabay만 사용 (Pexels는 실사만 반환하므로 제외)
+        // 일러스트: Pixabay만 사용 + category=health 필터
         const catKw = CATEGORY_IMAGE_KW[category] || { ko: '의료 건강', en: 'medical health' };
         const koreanQuery = topic.trim() || query;
+        // 1차: category=health로 검색
         const [pixRes1, pixRes2] = await Promise.all([
-          fetch(`/api/pixabay?query=${encodeURIComponent(koreanQuery + ' ' + catKw.ko)}&image_type=illustration&orientation=horizontal&per_page=${count}&page=${page}`),
-          fetch(`/api/pixabay?query=${encodeURIComponent(query + ' ' + catKw.en)}&image_type=illustration&orientation=horizontal&per_page=${count}&page=${page + 1}`),
+          fetch(`/api/pixabay?query=${encodeURIComponent(koreanQuery + ' ' + catKw.ko)}&image_type=illustration&orientation=horizontal&per_page=${count}&page=${page}&category=health`),
+          fetch(`/api/pixabay?query=${encodeURIComponent(query + ' ' + catKw.en)}&image_type=illustration&orientation=horizontal&per_page=${count}&page=${page + 1}&category=health`),
         ]);
         const [pixData1, pixData2] = await Promise.all([pixRes1.json(), pixRes2.json()]);
-        const p1: string[] = (pixData1.photos || []).map((p: { url: string }) => p.url);
-        const p2: string[] = (pixData2.photos || []).map((p: { url: string }) => p.url);
+        let p1: string[] = (pixData1.photos || []).map((p: { url: string }) => p.url);
+        let p2: string[] = (pixData2.photos || []).map((p: { url: string }) => p.url);
+        // 결과 부족 시 category 빼고 재검색
+        if (p1.length + p2.length < 3) {
+          const [fb1, fb2] = await Promise.all([
+            fetch(`/api/pixabay?query=${encodeURIComponent(koreanQuery + ' ' + catKw.ko)}&image_type=illustration&orientation=horizontal&per_page=${count}&page=${page}`),
+            fetch(`/api/pixabay?query=${encodeURIComponent(query + ' ' + catKw.en)}&image_type=illustration&orientation=horizontal&per_page=${count}&page=${page + 1}`),
+          ]);
+          const [fbData1, fbData2] = await Promise.all([fb1.json(), fb2.json()]);
+          p1 = (fbData1.photos || []).map((p: { url: string }) => p.url);
+          p2 = (fbData2.photos || []).map((p: { url: string }) => p.url);
+        }
         photos = [...new Set([...p1, ...p2])].slice(0, count * 2);
       }
       previewCacheRef.current.set(cacheKey, photos);
@@ -720,12 +735,11 @@ export default function CardNewsPage() {
         // 실사: Pexels + Pixabay(image_type=photo) 병렬 호출 후 인터리브
         const [pexRes, pixRes] = await Promise.all([
           fetch(`/api/pexels?query=${encodeURIComponent(inspirationPrefix + baseQ)}&orientation=square&per_page=20&page=${rndPage}`),
-          fetch(`/api/pixabay?query=${encodeURIComponent(inspirationPrefix + baseQ)}&image_type=photo&orientation=horizontal&per_page=20&page=${rndPage}`),
+          fetch(`/api/pixabay?query=${encodeURIComponent(inspirationPrefix + baseQ)}&image_type=photo&orientation=horizontal&per_page=20&page=${rndPage}&category=health`),
         ]);
         const [pexData, pixData] = await Promise.all([pexRes.json(), pixRes.json()]);
         const pex = (pexData.photos || []) as { url: string }[];
         const pix = (pixData.photos || []) as { url: string }[];
-        // 인터리브 (Pexels 우선) → dedup
         const merged: { url: string }[] = [];
         const maxLen = Math.max(pex.length, pix.length);
         for (let j = 0; j < maxLen; j++) {
@@ -734,15 +748,25 @@ export default function CardNewsPage() {
         }
         photos = dedupPhotos(merged);
       } else {
-        // 일러스트: Pexels 제외 (Pexels 는 사진 전용). Pixabay 만.
+        // 일러스트 + AI: Pixabay illustration + category=health
         const catKw = CATEGORY_IMAGE_KW[category] || { ko: '의료 건강', en: 'medical health' };
         const [pixRes1, pixRes2] = await Promise.all([
-          fetch(`/api/pixabay?query=${encodeURIComponent(inspirationPrefix + koreanQuery + ' ' + catKw.ko)}&image_type=illustration&orientation=horizontal&per_page=15&page=${rndPage}`),
-          fetch(`/api/pixabay?query=${encodeURIComponent(inspirationPrefix + baseQ + ' ' + catKw.en)}&image_type=illustration&orientation=horizontal&per_page=15&page=${rndPage + 1}`),
+          fetch(`/api/pixabay?query=${encodeURIComponent(inspirationPrefix + koreanQuery + ' ' + catKw.ko)}&image_type=illustration&orientation=horizontal&per_page=15&page=${rndPage}&category=health`),
+          fetch(`/api/pixabay?query=${encodeURIComponent(inspirationPrefix + baseQ + ' ' + catKw.en)}&image_type=illustration&orientation=horizontal&per_page=15&page=${rndPage + 1}&category=health`),
         ]);
         const [pixData1, pixData2] = await Promise.all([pixRes1.json(), pixRes2.json()]);
-        const p1 = (pixData1.photos || []) as { url: string }[];
-        const p2 = (pixData2.photos || []) as { url: string }[];
+        let p1 = (pixData1.photos || []) as { url: string }[];
+        let p2 = (pixData2.photos || []) as { url: string }[];
+        // 결과 부족 시 category 빼고 재검색
+        if (p1.length + p2.length < 3) {
+          const [fb1, fb2] = await Promise.all([
+            fetch(`/api/pixabay?query=${encodeURIComponent(inspirationPrefix + koreanQuery + ' ' + catKw.ko)}&image_type=illustration&orientation=horizontal&per_page=15&page=${rndPage}`),
+            fetch(`/api/pixabay?query=${encodeURIComponent(inspirationPrefix + baseQ + ' ' + catKw.en)}&image_type=illustration&orientation=horizontal&per_page=15&page=${rndPage + 1}`),
+          ]);
+          const [fbData1, fbData2] = await Promise.all([fb1.json(), fb2.json()]);
+          p1 = (fbData1.photos || []) as { url: string }[];
+          p2 = (fbData2.photos || []) as { url: string }[];
+        }
         photos = dedupPhotos([...p1, ...p2]);
       }
 

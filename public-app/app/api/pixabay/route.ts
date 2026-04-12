@@ -12,6 +12,7 @@ export async function GET(req: NextRequest) {
   const orientation = searchParams.get('orientation') || 'all';
   const perPage = searchParams.get('per_page') || '12';
   const page = searchParams.get('page') || '1';
+  const categoryFilter = searchParams.get('category') || '';
   const apiKey = process.env.PIXABAY_API_KEY;
 
   if (!apiKey) return NextResponse.json({ photos: [], error: 'No API key' });
@@ -31,6 +32,7 @@ export async function GET(req: NextRequest) {
       lang: 'ko',
       safesearch: 'true',
       min_width: isVectorLike ? '400' : '1080',
+      ...(categoryFilter ? { category: categoryFilter } : {}),
     });
 
     const res = await fetch(`https://pixabay.com/api/?${params}`);

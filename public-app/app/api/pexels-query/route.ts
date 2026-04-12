@@ -49,6 +49,13 @@ export async function POST(req: NextRequest) {
 반드시: 사물, 장비, 공간, 재료 위주 (tools, equipment, interior, products, ingredients)
 반드시: 진료과에 맞는 검색어를 사용. 치과면 dental, 피부과면 skincare/dermatology, 정형외과면 orthopedic/spine/rehabilitation/physiotherapy
 
+의료 용어 번역 주의:
+- "주름 개선" → "anti-aging skincare serum" (NOT "wrinkle" — 동물 피부도 포함됨)
+- "기미 치료" → "melasma pigmentation treatment" (NOT "spots" — 동물 얼룩도 포함)
+- "브릿지" → "dental bridge prosthetic" (NOT "bridge" — 건축물 다리와 혼동)
+- 반드시 "medical" 또는 "clinic" 또는 "healthcare" 중 하나를 포함해서 의료 분야로 한정
+- 동물, 자연, 풍경이 나올 수 있는 일반 단어 사용 금지
+
 진료과: ${category || '의료'}
 주제: "${topic}"
 영어 검색어만 출력 (따옴표 없이):` }] }],
