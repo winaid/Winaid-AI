@@ -414,7 +414,10 @@ export default function CardNewsCanvas({
 
       // ════════ 이벤트 핸들러 ════════
 
-      // 드래그 이동 완료 시 SlideData 업데이트
+      // 오브젝트 수정 완료 시 SlideData 동기화 — 위치 + 텍스트 내용.
+      // 이전엔 위치(left/top)만 저장했지만, 텍스트 편집 후 drag 없이 바로 닫으면
+      // text:changed 이벤트가 발생하지 않아 내용이 사라지는 버그가 있었음.
+      // object:modified 에서 텍스트 객체의 최신 text 도 함께 저장한다.
       canvas.on('object:modified', (e: any) => {
         if (!onSlideChange || !e.target) return;
         const obj = e.target;
@@ -426,10 +429,16 @@ export default function CardNewsCanvas({
         const xPct = Math.round(((obj.left || 0) / cardWidth) * 100);
         const yPct = Math.round(((obj.top || 0) / cardHeight) * 100);
 
+        // 텍스트 객체면 최신 내용도 함께 저장
+        const isText = obj.type === 'textbox' || obj.type === 'i-text' || obj.type === 'text';
+        const textVal: string | undefined = isText ? (obj.text || '') : undefined;
+
         if (name === OBJ.TITLE) {
-          onSlideChange({ titlePosition: { x: xPct, y: yPct } });
+          onSlideChange({ titlePosition: { x: xPct, y: yPct }, ...(textVal !== undefined ? { title: textVal } : {}) });
         } else if (name === OBJ.SUBTITLE) {
-          onSlideChange({ subtitlePosition: { x: xPct, y: yPct } });
+          onSlideChange({ subtitlePosition: { x: xPct, y: yPct }, ...(textVal !== undefined ? { subtitle: textVal } : {}) });
+        } else if (name === OBJ.BODY) {
+          onSlideChange({ ...(textVal !== undefined ? { body: textVal } : {}) });
         } else if (name === OBJ.HOSPITAL) {
           onSlideChange({ hospitalNamePosition: { x: xPct, y: yPct } });
         } else if (name === OBJ.IMAGE) {

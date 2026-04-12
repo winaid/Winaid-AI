@@ -1293,12 +1293,20 @@ ${JSON.stringify(slideForContext, null, 2)}
               <button type="button" onClick={() => onChange({ body: (slide.body || '') + '\n추가 텍스트' })}
                 className="py-2.5 text-[11px] font-semibold bg-white rounded-xl border border-slate-200 hover:border-blue-300 hover:bg-blue-50 transition-all">T 텍스트</button>
               <button type="button" onClick={() => {
-                // 이미지 탭 열기
-                setImageTab('pexels');
+                // 이미지 파일 업로드 대화상자 — 이전엔 setImageTab('pexels') 만 호출해
+                // 아코디언이 닫힌 상태에서 탭만 바뀌고 시각적 변화가 없었음.
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = 'image/*';
+                input.onchange = (e) => {
+                  const file = (e.target as HTMLInputElement).files?.[0];
+                  if (file) onUploadImage(file);
+                };
+                input.click();
               }}
                 className="py-2.5 text-[11px] font-semibold bg-white rounded-xl border border-slate-200 hover:border-blue-300 hover:bg-blue-50 transition-all">🖼 이미지</button>
               <button type="button" onClick={() => onChange({ showBadge: true, badge: slide.badge || '병원명' })}
-                className="py-2.5 text-[11px] font-semibold bg-white rounded-xl border border-slate-200 hover:border-blue-300 hover:bg-blue-50 transition-all">🏥 로고</button>
+                className="py-2.5 text-[11px] font-semibold bg-white rounded-xl border border-slate-200 hover:border-blue-300 hover:bg-blue-50 transition-all">🏥 배지</button>
             </div>
           </div>
         </div>

@@ -475,6 +475,9 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
     const withDefaults = buildLayoutDefaults(curr, newLayout);
     pushAndChange(slides.map((s, i) => (i === idx ? withDefaults : s)));
     // 백그라운드에서 AI가 내용 자동 채우기 (플레이스홀더만 있을 때)
+    // 편집 모달이 열려 있으면 AI 자동 채우기 스킵 — 사용자 편집과 충돌해서
+    // 타이밍에 따라 수정 내용이 덮어씌워지는 버그 방지.
+    if (editingIdx !== null) return;
     const patch = await fillLayoutContent(withDefaults, slides);
     if (patch) updateSlide(idx, patch);
   };
