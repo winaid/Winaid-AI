@@ -104,6 +104,29 @@ export default function CardNewsCanvas({
       const F = await import('fabric');
       if (disposed || !canvasElRef.current) return;
 
+      // ── 핵심 버그 수정: fabric v6+ 기본 origin 복원 ──
+      // fabric.js v6 부터 FabricObject 의 default origin 이 'left'/'top' 에서
+      // 'center'/'center' 로 바뀌었다. 이 컴포넌트와 canvasLayouts.ts 의 모든
+      // 좌표 계산은 "left/top 이 top-left 코너" 라는 pre-v6 규약을 가정한다.
+      // 예: `new F.Rect({ left: 0, top: 0, width: 1080, height: 1080 })` 은
+      // '(0,0) 을 top-left 로' 로 쓰였는데 v7 기본값(center)을 따르면
+      // '(0,0) 이 중앙' 이라 (-540,-540)~(540,540) 이 그려지고 canvas 영역
+      // (0,0)~(1080,1080) 과 교차해 좌상단 540×540 만 페인트 된다. 그 결과
+      // 에디터 프리뷰가 카드의 좌상단 50% 만 배경으로 채우는 버그가 발생.
+      // BaseFabricObject 가 FabricObject$1 의 진짜 정적 기본값을 들고 있고
+      // 생성자 체인 1단계에서 읽힌다 — 여기에 덮어쓴다.
+      const BaseObj = (F as unknown as { BaseFabricObject?: { ownDefaults: Record<string, unknown> } }).BaseFabricObject;
+      if (BaseObj?.ownDefaults) {
+        BaseObj.ownDefaults.originX = 'left';
+        BaseObj.ownDefaults.originY = 'top';
+      }
+      // 일부 서브클래스(InteractiveFabricObject)는 자체 ownDefaults 를 별도 보관해
+      // 생성자 3단계에서 다시 적용하므로 여기도 덮어쓴다.
+      if ((F.FabricObject as unknown as { ownDefaults?: Record<string, unknown> }).ownDefaults) {
+        (F.FabricObject as unknown as { ownDefaults: Record<string, unknown> }).ownDefaults.originX = 'left';
+        (F.FabricObject as unknown as { ownDefaults: Record<string, unknown> }).ownDefaults.originY = 'top';
+      }
+
       // 이전 캔버스 정리
       if (fabricRef.current) {
         fabricRef.current.dispose();

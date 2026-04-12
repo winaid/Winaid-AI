@@ -156,15 +156,51 @@ export function resolveFontName(theme: CardNewsTheme, fontId?: string): string {
 
 // ── CSS gradient → fabric Gradient ──
 
-/** CSS linear-gradient 문자열 파싱 */
+/**
+ * CSS linear-gradient 문자열 파싱.
+ *
+ * 이전엔 `split(',')` 로 단순 분리했으나 `rgba(r,g,b,a)` 처럼 괄호 내부에
+ * 쉼표가 있는 색상을 만나면 잘려서 `'rgba(0'`, `'0'`, `'0'`, `'0.5)'` 처럼
+ * 부서진 값을 색상 stop 으로 등록했고, 이후 렌더 시 browser `CanvasGradient.addColorStop`
+ * 이 `SyntaxError: ... could not be parsed as a color` 로 throw → unhandledRejection
+ * 이 발생하고 캔버스 렌더가 중간에 멈춤. COVER_TEMPLATES 의 `overlayGradient` 가
+ * rgba 를 쓰기 때문에 해당 템플릿에서 100% 재현됨.
+ *
+ * 아래 구현은 괄호 depth 를 추적해 top-level 쉼표에서만 split 한다.
+ */
 export function parseGradientStops(gradientCSS: string): { color: string; offset: number }[] {
-  const match = gradientCSS.match(/linear-gradient\([^,]+,\s*(.+)\)/);
-  if (!match) return [];
+  const inner = gradientCSS.match(/linear-gradient\((.+)\)\s*$/)?.[1];
+  if (!inner) return [];
+
+  // depth-aware split
+  const parts: string[] = [];
+  let cur = '';
+  let depth = 0;
+  for (const ch of inner) {
+    if (ch === '(') depth++;
+    else if (ch === ')') depth--;
+    if (ch === ',' && depth === 0) {
+      if (cur.trim()) parts.push(cur.trim());
+      cur = '';
+    } else {
+      cur += ch;
+    }
+  }
+  if (cur.trim()) parts.push(cur.trim());
+
+  // 첫 요소는 방향/각도 (예: "180deg", "to bottom right") — 색상 stop 아님.
+  const stopParts = parts.slice(1);
   const stops: { color: string; offset: number }[] = [];
-  match[1].split(',').map(s => s.trim()).forEach(part => {
+  stopParts.forEach((part, idx) => {
+    // "color  50%" 패턴 — 뒤의 명시적 offset 추출
     const m = part.match(/^(.+?)\s+([\d.]+)%$/);
-    if (m) stops.push({ color: m[1], offset: parseFloat(m[2]) / 100 });
-    else stops.push({ color: part, offset: stops.length === 0 ? 0 : 1 });
+    if (m) {
+      stops.push({ color: m[1].trim(), offset: parseFloat(m[2]) / 100 });
+    } else {
+      // offset 미지정 — 균등 분포 (2개면 0/1, 3개면 0/0.5/1 …)
+      const offset = stopParts.length > 1 ? idx / (stopParts.length - 1) : 0;
+      stops.push({ color: part, offset });
+    }
   });
   return stops;
 }
