@@ -66,7 +66,19 @@ interface CardSlide {
   imageHistory: CardImageHistoryItem[];
 }
 
-type ImageStyleType = 'photo' | 'illustration' | 'medical' | 'custom' | 'infographic';
+type ImageStyleType = 'photo' | 'illustration' | 'ai';
+
+/** 진료과별 이미지 검색 보조 키워드 (하드코딩 치과 편향 제거) */
+const CATEGORY_IMAGE_KW: Record<string, { ko: string; en: string }> = {
+  '치과': { ko: '치과', en: 'dental' },
+  '피부과': { ko: '피부 미용', en: 'skincare dermatology' },
+  '정형외과': { ko: '정형외과 재활', en: 'orthopedic rehabilitation' },
+  '안과': { ko: '안과 눈', en: 'ophthalmology eye' },
+  '성형외과': { ko: '성형 미용', en: 'cosmetic surgery' },
+  '한의원': { ko: '한의원 한방', en: 'traditional medicine herbal' },
+  '산부인과': { ko: '산부인과', en: 'obstetrics gynecology' },
+  '내과': { ko: '내과 건강', en: 'internal medicine health' },
+};
 
 // ── URL 모드: crawl-hospital-blog 응답 타입 + 헬퍼 ──
 
@@ -506,13 +518,12 @@ export default function CardNewsPage() {
           if (j < pixabay.length) photos.push(pixabay[j]);
         }
       } else {
-        // 일러스트/벡터: Pixabay만 사용 (Pexels는 실사만 반환하므로 제외)
-        const pixType = style === 'infographic' ? 'vector' : 'illustration';
+        // 일러스트: Pixabay만 사용 (Pexels는 실사만 반환하므로 제외)
+        const catKw = CATEGORY_IMAGE_KW[category] || { ko: '의료 건강', en: 'medical health' };
         const koreanQuery = topic.trim() || query;
-        // 영어+한국어 쿼리 병렬로 더 많은 결과 확보
         const [pixRes1, pixRes2] = await Promise.all([
-          fetch(`/api/pixabay?query=${encodeURIComponent(koreanQuery + ' 치과')}&image_type=${pixType}&orientation=horizontal&per_page=${count}&page=${page}`),
-          fetch(`/api/pixabay?query=${encodeURIComponent(query + ' dental medical')}&image_type=${pixType}&orientation=horizontal&per_page=${count}&page=${page + 1}`),
+          fetch(`/api/pixabay?query=${encodeURIComponent(koreanQuery + ' ' + catKw.ko)}&image_type=illustration&orientation=horizontal&per_page=${count}&page=${page}`),
+          fetch(`/api/pixabay?query=${encodeURIComponent(query + ' ' + catKw.en)}&image_type=illustration&orientation=horizontal&per_page=${count}&page=${page + 1}`),
         ]);
         const [pixData1, pixData2] = await Promise.all([pixRes1.json(), pixRes2.json()]);
         const p1: string[] = (pixData1.photos || []).map((p: { url: string }) => p.url);
@@ -684,8 +695,8 @@ export default function CardNewsPage() {
    * 정책 (fetchPreviewImages 와 정확히 일치):
    *   - photo         → Pexels + Pixabay(image_type=photo) 병렬
    *   - illustration  → Pixabay 만, image_type=illustration, 영문+한국어 2쿼리
-   *   - infographic   → Pixabay 만, image_type=vector,        영문+한국어 2쿼리
-   * (Pexels 는 사진 전용 서비스라 illustration/infographic 에서 호출 금지)
+   *   - ai            → illustration과 동일 프리뷰, 슬라이드 생성 후 개별 AI 이미지 생성
+   * (Pexels 는 사진 전용 서비스라 illustration 에서 호출 금지)
    *
    * @param prefetchedQuery handleSubmit 에서 미리 fetchPexelsQuery 로 받아둔 영문 쿼리.
    *   React state 의 closure 이슈 때문에 파라미터로 직접 주입한다. 없으면 함수 내부에서 fetch.
@@ -723,12 +734,11 @@ export default function CardNewsPage() {
         }
         photos = dedupPhotos(merged);
       } else {
-        // 일러스트/벡터: Pexels 제외 (Pexels 는 사진 전용). Pixabay 만.
-        // image_type 분기: infographic → vector, 그 외 → illustration
-        const pixType = imageStyle === 'infographic' ? 'vector' : 'illustration';
+        // 일러스트: Pexels 제외 (Pexels 는 사진 전용). Pixabay 만.
+        const catKw = CATEGORY_IMAGE_KW[category] || { ko: '의료 건강', en: 'medical health' };
         const [pixRes1, pixRes2] = await Promise.all([
-          fetch(`/api/pixabay?query=${encodeURIComponent(inspirationPrefix + koreanQuery + ' 치과')}&image_type=${pixType}&orientation=horizontal&per_page=15&page=${rndPage}`),
-          fetch(`/api/pixabay?query=${encodeURIComponent(inspirationPrefix + baseQ + ' dental medical')}&image_type=${pixType}&orientation=horizontal&per_page=15&page=${rndPage + 1}`),
+          fetch(`/api/pixabay?query=${encodeURIComponent(inspirationPrefix + koreanQuery + ' ' + catKw.ko)}&image_type=illustration&orientation=horizontal&per_page=15&page=${rndPage}`),
+          fetch(`/api/pixabay?query=${encodeURIComponent(inspirationPrefix + baseQ + ' ' + catKw.en)}&image_type=illustration&orientation=horizontal&per_page=15&page=${rndPage + 1}`),
         ]);
         const [pixData1, pixData2] = await Promise.all([pixRes1.json(), pixRes2.json()]);
         const p1 = (pixData1.photos || []) as { url: string }[];
@@ -2165,7 +2175,7 @@ DECORATIVE: (장식 요소)`,
                 {([
                   { id: 'illustration' as const, label: '일러스트', icon: '🎨', desc: 'Pixabay 일러스트' },
                   { id: 'photo' as const, label: '실사 사진', icon: '📷', desc: 'Pexels 사진' },
-                  { id: 'infographic' as const, label: '아이콘/벡터', icon: '📊', desc: 'Pixabay 벡터' },
+                  { id: 'ai' as const, label: 'AI 생성', icon: '🤖', desc: '슬라이드별 AI 이미지' },
                 ]).map(s => (
                   <button key={s.id} type="button" onClick={() => { setImageStyle(s.id); fetchPreviewImages(s.id); }}
                     className={`px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
