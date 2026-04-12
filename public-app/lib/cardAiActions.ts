@@ -426,6 +426,78 @@ export interface InspirationAnalysis {
   description: string;
 }
 
+// ── 내부 유틸: 간단한 해시 (캐시 키 용도, 암호학적 용도 아님) ──
+
+/**
+ * 문자열 → 짧은 36진수 해시. Java String.hashCode() 변형.
+ * 충돌 가능성이 있으므로 보안 용도로 쓰면 안 됨 — 여기서는 sessionStorage
+ * 캐시 키 길이만 줄이는 용도.
+ */
+function simpleHash(str: string): string {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) - hash + str.charCodeAt(i)) | 0;
+  }
+  return Math.abs(hash).toString(36);
+}
+
+// ── 내부 유틸: WCAG 대비비 계산 + 팔레트 보정 ──
+
+/**
+ * hex (`#rrggbb`) 문자열을 WCAG 2.0 상대 휘도(0~1)로 변환.
+ * 잘못된 입력(짧은 hex, 빈 문자열)에 관대 — 실패 시 0 반환해 호출부가
+ * fallback 로직(어두운 배경으로 취급)으로 자연스럽게 진행되도록.
+ */
+function relativeLuminance(hex: string): number {
+  if (typeof hex !== 'string' || hex.length < 7 || hex[0] !== '#') return 0;
+  const r = parseInt(hex.slice(1, 3), 16) / 255;
+  const g = parseInt(hex.slice(3, 5), 16) / 255;
+  const b = parseInt(hex.slice(5, 7), 16) / 255;
+  if (Number.isNaN(r) || Number.isNaN(g) || Number.isNaN(b)) return 0;
+  const toLinear = (c: number) => (c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
+  return 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b);
+}
+
+/** 두 hex 색상의 WCAG 대비비 (1~21). 높을수록 가독성 좋음. */
+function contrastRatio(hex1: string, hex2: string): number {
+  const l1 = relativeLuminance(hex1);
+  const l2 = relativeLuminance(hex2);
+  const lighter = Math.max(l1, l2);
+  const darker = Math.min(l1, l2);
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
+/**
+ * Gemini Vision 이 뽑은 팔레트의 가독성을 검증해 필요 시 자동 보정.
+ *  - body text ↔ background : WCAG AA 4.5:1 기준. 미달 시 text 를 흑/백으로 교체.
+ *  - title(primary) ↔ background : AA Large Text 3:1 기준. 미달 시 primary 를
+ *    배경 대비가 확보되는 어두운/밝은 색으로 교체.
+ *
+ * 색상을 바꾸는 기준:
+ *   배경이 밝으면(L > 0.5) → 어두운 글자
+ *   배경이 어두우면        → 밝은 글자
+ */
+function ensureContrast(palette: InspirationAnalysis['palette']): InspirationAnalysis['palette'] {
+  const next = { ...palette };
+  const bgLum = relativeLuminance(next.background);
+  const isLightBg = bgLum > 0.5;
+
+  // 1) 본문 텍스트 — AA 기준 4.5:1
+  if (contrastRatio(next.background, next.text) < 4.5) {
+    next.text = isLightBg ? '#1F2937' : '#F9FAFB';
+  }
+  // 2) 제목 (primary) — AA Large Text 기준 3:1 (24pt 이상 또는 굵은 글씨)
+  if (contrastRatio(next.background, next.primary) < 3) {
+    next.primary = isLightBg ? '#1E3A5F' : '#E0F2FE';
+  }
+  // 3) 부제 (secondary) — 마찬가지로 3:1 기준 (제목보다 약한 텍스트지만
+  //    여전히 가독성 필요)
+  if (contrastRatio(next.background, next.secondary) < 3) {
+    next.secondary = isLightBg ? '#475569' : '#CBD5E1';
+  }
+  return next;
+}
+
 /**
  * 영감 이미지 1장을 Gemini Vision 으로 분석해 `InspirationAnalysis` 로 반환.
  *
@@ -434,10 +506,31 @@ export interface InspirationAnalysis {
  *   마크다운 코드 블록이 섞이면 제거하는 폴백 파싱
  * - 실패 시(네트워크·파싱·필드 누락) null 반환 — 호출부가 기본 플로우로 계속
  *
+ * 최적화:
+ *  - sessionStorage 캐시 (동일 이미지 재업로드 시 Vision 재호출 회피)
+ *  - 반환 직전 팔레트를 WCAG 기준으로 자동 보정 (본문 4.5, 제목/부제 3)
+ *
+ *
  * @param imageDataUrl  `data:image/...;base64,...` 형식. 1024px 이하로
  *                      리사이즈된 이미지 권장 (Gemini 호출 비용·지연 감소).
  */
 export async function analyzeInspirationImage(imageDataUrl: string): Promise<InspirationAnalysis | null> {
+  // ── 캐시 조회 ──
+  // 전체 base64 를 키로 쓰면 sessionStorage 용량이 낭비되므로 앞 200자에
+  // simpleHash 를 걸어 짧은 키로 쓴다. 충돌 위험이 있지만 sessionStorage 는
+  // 탭 세션 단위라 false positive 가 발생해도 영향 범위가 작음.
+  const cacheKey = 'winaid_inspiration_' + simpleHash(imageDataUrl.slice(0, 200));
+  if (typeof sessionStorage !== 'undefined') {
+    try {
+      const cached = sessionStorage.getItem(cacheKey);
+      if (cached) {
+        const restored = JSON.parse(cached) as InspirationAnalysis;
+        // 캐시된 값도 한 번 더 대비 보정을 통과시켜 규칙 변경 후 무효화를 가능하게.
+        return { ...restored, palette: ensureContrast(restored.palette) };
+      }
+    } catch { /* 캐시 오염·quota — 조용히 무시 */ }
+  }
+
   try {
     const res = await fetch('/api/gemini', {
       method: 'POST',
@@ -482,18 +575,28 @@ export async function analyzeInspirationImage(imageDataUrl: string): Promise<Ins
     const p = parsed.palette;
     if (!p || !p.primary || !p.secondary || !p.background || !p.text || !p.accent) return null;
     if (!parsed.mood || !parsed.visualKeyword) return null;
-    return {
-      palette: {
-        primary: p.primary,
-        secondary: p.secondary,
-        background: p.background,
-        text: p.text,
-        accent: p.accent,
-      },
+    // 팔레트 WCAG 대비 보정 — Gemini 가 뽑은 색이 너무 낮은 대비로 나오면
+    // 텍스트가 배경에 섞여 안 읽히는 문제 방지.
+    const safePalette = ensureContrast({
+      primary: p.primary,
+      secondary: p.secondary,
+      background: p.background,
+      text: p.text,
+      accent: p.accent,
+    });
+    const result: InspirationAnalysis = {
+      palette: safePalette,
       mood: parsed.mood,
       visualKeyword: parsed.visualKeyword,
       description: parsed.description || '',
     };
+    // 캐시 저장 — 같은 이미지를 다시 업로드하면 Vision 재호출 없이 즉시 반환.
+    if (typeof sessionStorage !== 'undefined') {
+      try {
+        sessionStorage.setItem(cacheKey, JSON.stringify(result));
+      } catch { /* quota 초과 — 조용히 무시, 캐시는 best-effort */ }
+    }
+    return result;
   } catch (err) {
     console.warn('[CARD_AI] inspiration 분석 실패', err);
     return null;

@@ -16,6 +16,7 @@ import CardNewsRenderer from '../../../components/CardNewsRenderer';
 import CardNewsProRenderer from '../../../components/CardNewsProRenderer';
 import { DEFAULT_THEME, COVER_TEMPLATES, CARD_FONTS, FONT_CATEGORIES, type DesignPresetStyle, parseProSlidesJson, ensureSlideIds, generateSlideId, type SlideData as ProSlideData, type CardNewsTheme, type SlideLayoutType } from '../../../lib/cardNewsLayouts';
 import { buildLayoutDefaults, analyzeInspirationImage, type InspirationAnalysis } from '../../../lib/cardAiActions';
+import { sanitizePromptInput } from '../../../lib/promptSanitize';
 import { getSavedTemplates, deleteTemplate, imageToEditableTemplate, type CardTemplate } from '../../../lib/cardTemplateService';
 import { saveDraft, loadDraft, clearDraft, type CardNewsDraft, type CardRatio, type LoadDraftResult } from '../../../lib/cardNewsDraft';
 import { ContentCategory } from '../../../lib/types';
@@ -627,9 +628,11 @@ export default function CardNewsPage() {
       // 영감 이미지 분석 결과가 있으면 visualKeyword 를 검색어 prefix 로 주입.
       // Pexels/Pixabay 가 영어 키워드에 강하므로 영문 스타일 구문을 앞에 붙이면
       // 결과 이미지가 훨씬 일관된 분위기로 떨어짐.
-      const inspirationPrefix = referenceAnalysis?.visualKeyword
-        ? `${referenceAnalysis.visualKeyword} `
-        : '';
+      // 보안: 원본 이미지에 텍스트가 있었다면 Gemini 가 visualKeyword 에 한글/
+      // 특수문자를 섞어 내보낼 수 있음. URL 에 넣기 전에 sanitize 로 프롬프트
+      // 인젝션 방어 (대괄호·인젝션 키워드 제거).
+      const safeVisualKeyword = sanitizePromptInput(referenceAnalysis?.visualKeyword, 200);
+      const inspirationPrefix = safeVisualKeyword ? `${safeVisualKeyword} ` : '';
       let photos: { url: string }[];
       if (imageStyle === 'photo') {
         // 실사: Pexels
@@ -737,11 +740,16 @@ export default function CardNewsPage() {
         : '';
       // 영감 이미지가 분석된 상태면 스타일 힌트를 프롬프트에 주입. 각 슬라이드의
       // visualKeyword 필드가 이 스타일을 반영하게 유도 — 전체 카드 분위기 통일.
-      const styleHint = referenceAnalysis
+      // 보안: mood/visualKeyword 는 Gemini Vision 이 원본 이미지 픽셀에서
+      // 뽑아낸 문자열이므로, 이미지에 텍스트가 있으면 그 내용이 섞일 수 있음.
+      // sanitizePromptInput 으로 대괄호/인젝션 키워드/역할 가장 문자열을 제거.
+      const safeMood = sanitizePromptInput(referenceAnalysis?.mood, 100);
+      const safeVisualKeyword = sanitizePromptInput(referenceAnalysis?.visualKeyword, 200);
+      const styleHint = (referenceAnalysis && (safeMood || safeVisualKeyword))
         ? `\n\n[스타일 참조 — 사용자가 업로드한 영감 이미지 분석 결과]
-분위기: ${referenceAnalysis.mood}
-비주얼 키워드: ${referenceAnalysis.visualKeyword}
-모든 슬라이드의 visualKeyword 필드에 "${referenceAnalysis.visualKeyword}" 스타일을 반영하세요. 카드 전체 분위기를 이 이미지와 통일해야 합니다.`
+분위기: ${safeMood}
+비주얼 키워드: ${safeVisualKeyword}
+모든 슬라이드의 visualKeyword 필드에 "${safeVisualKeyword}" 스타일을 반영하세요. 카드 전체 분위기를 이 이미지와 통일해야 합니다.`
         : '';
       const res = await fetch('/api/gemini', {
         method: 'POST',
