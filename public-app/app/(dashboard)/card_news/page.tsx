@@ -583,12 +583,13 @@ export default function CardNewsPage() {
   // 주제 입력 후 2초 뒤 백그라운드 프리페치 (모달 열기 전 미리 로드)
   useEffect(() => {
     if (!topic.trim()) return;
+    if (imageStyle === 'ai') return; // AI 모드는 모달 열 때만 생성
     const timer = setTimeout(() => {
-      fetchPreviewImages('illustration');
+      fetchPreviewImages(imageStyle);
     }, 2000);
     return () => clearTimeout(timer);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [topic]);
+  }, [topic, imageStyle]);
 
   const openDesignModal = async () => {
     setShowDesignModal(true);

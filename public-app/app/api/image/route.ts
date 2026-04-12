@@ -1,7 +1,7 @@
 /**
  * /api/image — Gemini 이미지 생성 프록시
  *
- * gemini-2.0-flash-exp 모델로 이미지 생성.
+ * 모델 우선순위: gemini-3-pro > gemini-3.1-flash > gemini-2.5-flash.
  * responseModalities: ["IMAGE", "TEXT"] 사용.
  */
 import { NextRequest, NextResponse } from 'next/server';
