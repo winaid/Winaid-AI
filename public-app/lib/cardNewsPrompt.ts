@@ -129,13 +129,13 @@ export function buildCardNewsPrompt(req: CardNewsRequest): {
     '[카드뉴스 ❌/✅ 예시]',
     '',
     '❌ 나쁜 슬라이드 (정보 과다, 글자 많음):',
-    '제목: "임플란트의 정의와 종류 및 시술 과정에 대한 안내"',
-    '본문: "임플란트는 치아를 상실한 부위의 잇몸뼈에 인공 치근을 식립하고 그 위에 보철물을 장착하는 치과 시술로서..."',
+    '제목: "해당 시술의 정의와 종류 및 시술 과정에 대한 상세 안내"',
+    '본문: "해당 시술은 여러 단계로 나뉘어 진행되며 환자의 상태에 따라 다양한 방법이 적용될 수 있으므로..."',
     '→ 문제: 제목 25자 초과, 본문 한 문장이 80자, 텍스트 과다',
     '',
     '✅ 좋은 슬라이드 (임팩트, 짧음):',
-    '제목: "임플란트, 뭐가 다를까?"',
-    '본문: "빠진 치아 자리에 인공 뿌리를 심습니다. 옆 치아를 깎지 않아도 됩니다."',
+    '제목: "이 시술, 뭐가 다를까?"',
+    '본문: "핵심 차이를 3가지로 정리했습니다. 한눈에 비교해보세요."',
     '→ 좋은 이유: 제목 12자, 본문 2문장(각 18자), 50자 이내로 핵심 전달',
   ].join('\n');
 
@@ -370,101 +370,103 @@ export function buildCardNewsProPrompt(req: CardNewsRequest): {
     {
       "index": 1,
       "layout": "cover",
-      "title": "10년 쓸 내 치아, '가격'만 보고 고르시나요?",
-      "subtitle": "3분 만에 끝내는 임플란트 비교 가이드"
+      "title": "주제에 맞는 호기심 유발 제목 (15자 이내)",
+      "subtitle": "진료과와 주제에 맞는 부제 (20자 이내)"
     },
     {
       "index": 2,
       "layout": "comparison",
-      "title": "일반 vs 네비게이션 임플란트",
+      "title": "A 방식 vs B 방식",
       "subtitle": "핵심 차이를 숫자로 확인하세요",
-      "visualKeyword": "dental implant titanium screws comparison, clean white background, 3D render, photo-realistic",
+      "visualKeyword": "주제에 맞는 의료 장비/해부도/시술 장면을 영어로 묘사",
       "imagePosition": "top",
-      "compareLabels": ["수술 방식", "절개 범위", "수술 시간", "회복 기간"],
+      "compareLabels": ["항목1", "항목2", "항목3"],
       "columns": [
-        { "header": "일반", "highlight": false, "items": ["2D 엑스레이", "15mm 이상", "40~60분", "7~10일"] },
-        { "header": "네비게이션", "highlight": true, "items": ["3D CT 모의수술", "3~5mm", "15분 내외", "당일~3일"] }
+        { "header": "기존", "highlight": false, "items": ["값1", "값2", "값3"] },
+        { "header": "개선", "highlight": true, "items": ["값1", "값2", "값3"] }
       ]
     },
     {
       "index": 3,
       "layout": "icon-grid",
-      "title": "네비게이션 임플란트의 4가지 장점",
-      "visualKeyword": "modern dental clinic 3D CT scanner, bright operating room, minimalist illustration",
+      "title": "핵심 장점 4가지",
+      "visualKeyword": "주제에 맞는 의료 장비/시술 환경을 영어로 묘사 (진료과 키워드 포함)",
       "imagePosition": "background",
       "icons": [
-        { "emoji": "🎯", "title": "0.1mm 정밀도", "desc": "3D 모의수술로 오차 최소화" },
-        { "emoji": "💉", "title": "적은 통증", "desc": "최소 절개로 출혈 감소" },
-        { "emoji": "⏱️", "title": "15분 시술", "desc": "1식립당 평균 수술 시간" },
-        { "emoji": "🩺", "title": "당일 귀가", "desc": "바쁜 일상에 부담 없음" }
+        { "emoji": "🎯", "title": "장점 1", "desc": "구체적 설명" },
+        { "emoji": "💡", "title": "장점 2", "desc": "구체적 설명" },
+        { "emoji": "⏱️", "title": "장점 3", "desc": "구체적 설명" },
+        { "emoji": "🩺", "title": "장점 4", "desc": "구체적 설명" }
       ]
     },
     {
       "index": 4,
       "layout": "steps",
-      "title": "네비게이션 임플란트 치료 과정",
-      "visualKeyword": "dental surgery step-by-step infographic, teeth model, clean white background",
+      "title": "치료/관리 과정",
+      "visualKeyword": "주제에 맞는 시술 과정 infographic, clean white background",
       "imagePosition": "top",
       "steps": [
-        { "label": "3D CT 정밀 진단", "desc": "골조직·신경·혈관 위치 파악" },
-        { "label": "컴퓨터 모의수술", "desc": "최적 식립 경로 설계" },
-        { "label": "가이드 제작", "desc": "환자 맞춤형 수술 가이드" },
-        { "label": "정밀 식립", "desc": "가이드 기반 15분 시술" }
+        { "label": "1단계", "desc": "구체적 설명" },
+        { "label": "2단계", "desc": "구체적 설명" },
+        { "label": "3단계", "desc": "구체적 설명" }
       ]
     },
     {
       "index": 5,
       "layout": "data-highlight",
-      "title": "숫자로 보는 네비게이션 임플란트",
-      "visualKeyword": "healthy white teeth close-up, professional dental photography",
+      "title": "숫자로 보는 핵심 정보",
+      "visualKeyword": "주제에 맞는 의료 이미지, 진료과 키워드 포함",
       "imagePosition": "background",
       "dataPoints": [
-        { "value": "0.1mm", "label": "모의수술 오차 범위", "highlight": true },
-        { "value": "30년+", "label": "디지털 임플란트 임상 데이터" },
-        { "value": "80~90%", "label": "자연치아 저작력 회복률" }
+        { "value": "핵심 수치", "label": "설명", "highlight": true },
+        { "value": "수치2", "label": "설명2" },
+        { "value": "수치3", "label": "설명3" }
       ]
     },
     {
       "index": 6,
       "layout": "closing",
-      "title": "내 잇몸뼈 상태, 오늘 확인해보세요",
-      "subtitle": "3가지 조건으로 내게 맞는 방식을 결정합니다",
-      "body": "잇몸뼈 두께, 잔여 치아 개수, 기저질환 여부. 3D CT 정밀 진단으로 1:1 맞춤 치료 계획을 세워보세요."
+      "title": "주제에 맞는 행동 유도 문구",
+      "subtitle": "부드러운 마무리 메시지",
+      "body": "요약 + 상담 안내 (의료법 준수)"
     }
   ]
 }
 
+중요: visualKeyword는 반드시 진료과에 맞는 영어 키워드를 사용하세요.
+치과면 dental/teeth, 피부과면 skincare/dermatology/skin, 정형외과면 spine/orthopedic/rehabilitation/physiotherapy.
+
 [확장 레이아웃 필드 예시] (각 레이아웃을 쓸 때 이 필드들을 채우세요)
 
 // before-after
-{ "layout": "before-after", "title": "수술 전후 차이", "beforeLabel": "기존 방식", "afterLabel": "네비게이션", "beforeItems": ["2D 엑스레이 의존","15mm 절개","회복 7~10일"], "afterItems": ["3D CT 모의수술","3~5mm 최소 절개","당일~3일 회복"] }
+{ "layout": "before-after", "title": "관리 전후 차이", "beforeLabel": "이전", "afterLabel": "이후", "beforeItems": ["문제 1","문제 2","문제 3"], "afterItems": ["개선 1","개선 2","개선 3"] }
 
 // qna
-{ "layout": "qna", "title": "자주 묻는 질문", "questions": [ { "q": "수술 시간은 얼마나 걸리나요?", "a": "1식립 기준 15분 내외, 전체 2시간 전후입니다." }, { "q": "통증이 많이 심한가요?", "a": "최소 절개로 진행해 붓기·통증이 적어 대부분 당일 귀가합니다." } ] }
+{ "layout": "qna", "title": "자주 묻는 질문", "questions": [ { "q": "질문 1?", "a": "답변 1" }, { "q": "질문 2?", "a": "답변 2" } ] }
 
 // timeline
-{ "layout": "timeline", "title": "시술 후 경과", "timelineItems": [ { "time": "당일", "title": "지혈 + 냉찜질", "desc": "4시간 동안 거즈 압박" }, { "time": "1주", "title": "실밥 제거", "desc": "부드러운 식사 유지" }, { "time": "3개월", "title": "보철 장착", "desc": "뼈와 임플란트 결합 완료" } ] }
+{ "layout": "timeline", "title": "시술/치료 경과", "timelineItems": [ { "time": "당일", "title": "제목", "desc": "설명" }, { "time": "1주", "title": "제목", "desc": "설명" }, { "time": "3개월", "title": "제목", "desc": "설명" } ] }
 
 // quote
-{ "layout": "quote", "title": "환자 후기", "quoteText": "당일 시술이라 부담이 적었고, 3개월 뒤부터는 본래 치아처럼 씹을 수 있어요.", "quoteAuthor": "40대 남성 환자", "quoteRole": "임플란트 2개 식립" }
+{ "layout": "quote", "title": "환자 후기", "quoteText": "진료과와 주제에 맞는 자연스러운 후기", "quoteAuthor": "환자 정보", "quoteRole": "시술 내역" }
 
 // numbered-list
-{ "layout": "numbered-list", "title": "임플란트 선택 TOP 5 체크포인트", "numberedItems": [ { "num": "01", "title": "잔여 잇몸뼈 두께", "desc": "최소 10mm 이상 권장" }, { "num": "02", "title": "기저질환 여부", "desc": "당뇨·고혈압 관리 필수" } ] }
+{ "layout": "numbered-list", "title": "체크포인트 TOP 5", "numberedItems": [ { "num": "01", "title": "항목 제목", "desc": "구체적 설명" }, { "num": "02", "title": "항목 제목", "desc": "구체적 설명" } ] }
 
 // pros-cons
-{ "layout": "pros-cons", "title": "네비게이션 임플란트", "prosLabel": "✓ 장점", "consLabel": "⚠ 주의점", "pros": ["0.1mm 정밀 시술","회복 기간 단축","신경 손상 위험↓"], "cons": ["일반 대비 10~20% 비용 증가","모든 치과가 장비 보유 X"] }
+{ "layout": "pros-cons", "title": "장단점 비교", "prosLabel": "✓ 장점", "consLabel": "⚠ 주의점", "pros": ["장점 1","장점 2"], "cons": ["주의점 1","주의점 2"] }
 
-// price-table (웹 검색으로 2024~2025 한국 평균 시세 반영)
-{ "layout": "price-table", "title": "임플란트 비용 안내", "priceItems": [ { "name": "일반 임플란트", "price": "80~120만원", "note": "치아 1개 기준" }, { "name": "네비게이션 임플란트", "price": "120~180만원", "note": "3D CT 포함" }, { "name": "건보 적용 (만 65세↑)", "price": "약 45~65만원", "note": "본인부담 30%" } ] }
+// price-table
+{ "layout": "price-table", "title": "비용 안내", "priceItems": [ { "name": "시술 A", "price": "가격대", "note": "비고" }, { "name": "시술 B", "price": "가격대", "note": "비고" } ] }
 
 // warning
-{ "layout": "warning", "title": "시술 후 주의사항", "warningItems": ["수술 당일 양치·가글 금지","딱딱한 음식 최소 2주간 피하기","흡연·음주 4주간 금지","이상 출혈 시 즉시 내원"] }`;
+{ "layout": "warning", "title": "주의사항", "warningItems": ["주의 1","주의 2","주의 3"] }`;
 
   const requestBlock = [
     `주제: ${safeTopic}`,
     safeKeywords ? `키워드: ${safeKeywords}` : '',
     safeHospitalName ? `병원명: ${safeHospitalName} (본문에 직접 언급 금지, 마지막 장 아래에만 표시)` : '',
-    `진료과: ${safeCategory || '치과'}`,
+    `진료과: ${safeCategory || '일반의료'}`,
     `슬라이드 수: ${slideCount}장`,
     `톤: ${req.writingStyle === 'expert' ? '전문가형(신뢰/정보)' : '친절형(공감/쉬움)'}`,
   ].filter(Boolean).join('\n');

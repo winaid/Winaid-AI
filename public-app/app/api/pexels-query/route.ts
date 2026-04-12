@@ -27,20 +27,31 @@ export async function POST(req: NextRequest) {
 - 병원/의료/건강 관련 분위기
 - 카드뉴스 배경으로 쓸 거라 깔끔하고 밝은 톤
 
-예시:
+진료과별 예시:
+[치과]
 - "임플란트 사후관리" → "dental tools clean"
 - "올바른 양치질" → "toothbrush mint fresh"
+
+[피부과]
 - "피부 보톡스" → "skincare products minimal"
-- "척추 디스크" → "medical clinic bright"
-- "스케일링" → "dental chair equipment"
-- "치아미백" → "dental whitening tools"
+- "여드름 관리" → "dermatology cream serum"
+
+[정형외과]
+- "허리디스크 예방" → "spine model anatomy"
+- "무릎 관절 통증" → "knee joint rehabilitation"
+- "체외충격파 치료" → "physiotherapy equipment clinic"
+
+[일반/기타]
+- "건강검진 안내" → "medical stethoscope bright"
+- "예방접종 안내" → "vaccine syringe clean"
 
 절대 금지: 사람, 얼굴, 인물이 나올 수 있는 검색어 (portrait, person, doctor, patient, woman, man)
 반드시: 사물, 장비, 공간, 재료 위주 (tools, equipment, interior, products, ingredients)
+반드시: 진료과에 맞는 검색어를 사용. 치과면 dental, 피부과면 skincare/dermatology, 정형외과면 orthopedic/spine/rehabilitation/physiotherapy
 
-진료과: ${category || '치과'}
+진료과: ${category || '의료'}
 주제: "${topic}"
-영어 검색어만 출력 (따옴표 없이). 반드시 진료과에 맞는 검색어를 사용 (치과면 dental, 피부과면 skincare/dermatology, 정형외과면 orthopedic):` }] }],
+영어 검색어만 출력 (따옴표 없이):` }] }],
           generationConfig: { temperature: 0.5, maxOutputTokens: 50 },
         }),
       }
