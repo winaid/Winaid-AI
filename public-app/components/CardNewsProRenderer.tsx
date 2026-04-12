@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import dynamic from 'next/dynamic';
 import type { SlideData, CardNewsTheme, SlideLayoutType, DesignPresetStyle, SlideCustomElement } from '../lib/cardNewsLayouts';
 import { LAYOUT_LABELS, CARD_FONTS, FONT_CATEGORIES, generateSlideId } from '../lib/cardNewsLayouts';
 import { buildLayoutDefaults, fillLayoutContent, generateSlideImage, suggestSlideText, suggestImagePrompt, enrichSlide, suggestComparison } from '../lib/cardAiActions';
@@ -21,6 +22,8 @@ import InteractivePreview from './card-news/InteractivePreview';
 import EditableSlideWrapper from './card-news/EditableSlideWrapper';
 import { useSlideRenderer } from './card-news/SlideRenderers';
 import VideoPlayer from './video-edit/VideoPlayer';
+
+const KonvaSlideEditor = dynamic(() => import('./card-news/KonvaSlideEditor'), { ssr: false });
 
 interface Props {
   slides: SlideData[];
@@ -1377,17 +1380,13 @@ JSON만 출력:
             <div className="flex-1 flex overflow-hidden">
               {/* 좌: 카드 프리뷰 */}
               <div className="flex-[3] bg-slate-100 flex items-center justify-center p-6 overflow-auto">
-                <InteractivePreview
+                <KonvaSlideEditor
                   slide={eSlide}
-                  hospitalName={theme.hospitalName}
+                  theme={theme}
                   cardWidth={cardWidth}
                   cardHeight={cardHeight}
-                  cardAspect={cardAspect}
-                  renderSlide={renderSlide}
+                  maxWidth={650}
                   onSlideChange={(patch) => updateSlide(editingIdx, patch)}
-                  fontLoaded={fontLoaded}
-                  fontId={theme.fontId}
-                  slideFontId={eSlide.fontId}
                 />
               </div>
               {/* 우: 편집 패널 */}
