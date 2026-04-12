@@ -280,7 +280,10 @@ export default function EditableSlideWrapper({
           dragTarget={selectedTarget}
           zoom={1 / scale}
           draggable={true}
-          resizable={true}
+          resizable={(() => {
+            const f = selectedTarget?.getAttribute('data-editable') || '';
+            return f !== 'title' && f !== 'subtitle' && f !== 'body';
+          })()}
           keepRatio={false}
           throttleDrag={0}
           throttleResize={0}

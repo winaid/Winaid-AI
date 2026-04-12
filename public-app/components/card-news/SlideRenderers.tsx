@@ -173,9 +173,8 @@ export function useSlideRenderer({ theme, learnedTemplate, presetStyle, cardRati
   const posOverride = (pos?: { x: number; y: number }): CSSProperties =>
     pos ? { position: 'absolute', left: `${pos.x}%`, top: `${pos.y}%`, transform: 'translate(-50%, -50%)', zIndex: 10 } : {};
 
-  /** 텍스트 요소용: 최소 width 보장 + height auto (세로 줄바꿈 방지) */
-  const textSizeOverride = (size?: { w: number; h: number }): CSSProperties =>
-    size ? { width: `${Math.max(20, size.w)}%`, minWidth: '80px' } : {};
+  /** 텍스트 요소용: width 제한 없음 (세로 쌓임 방지) */
+  const textSizeOverride = (_size?: { w: number; h: number }): CSSProperties => ({});
 
   /** 이미지/도형 요소용: 정확한 width + height */
   const imageSizeOverride = (size?: { w: number; h: number }): CSSProperties =>

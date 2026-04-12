@@ -232,7 +232,7 @@ export default function InteractivePreview({
               position: 'absolute', left: `${handle.pos.x}%`, top: `${handle.pos.y}%`,
               transform: 'translate(-50%, -50%)', zIndex: isSelected ? 30 : 22,
               cursor: isEditing ? 'text' : 'grab',
-              minWidth: '80px', minHeight: '28px', padding: '4px 10px',
+              width: '85%', minHeight: '40px', padding: '8px 16px',
               border: isSelected ? '2px solid #3B82F6' : '2px solid transparent',
               borderRadius: '6px',
               background: isEditing ? 'rgba(255,255,255,0.95)' : 'transparent',
