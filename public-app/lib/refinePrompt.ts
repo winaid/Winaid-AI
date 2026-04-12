@@ -6,6 +6,7 @@
  */
 
 import { getMedicalLawPromptBlock } from './medicalLawRules';
+import { sanitizePromptInput, sanitizeSourceContent } from './promptSanitize';
 
 export type RefineMode = 'natural' | 'professional' | 'shorter' | 'longer' | 'medical_law' | 'seo';
 
@@ -264,6 +265,12 @@ export function buildRefinePrompt(req: RefineRequest): {
   systemInstruction: string;
   prompt: string;
 } {
+  // 프롬프트 인젝션 방어 — 사용자 입력은 전부 sanitize 한 지역 변수로 사용.
+  // originalText 는 장문(블로그 전체)이므로 sanitizeSourceContent 로 대괄호/단락 보존.
+  // keywords 는 짧은 키워드 목록이라 sanitizePromptInput 으로 엄격하게.
+  const safeOriginalText = sanitizeSourceContent(req.originalText, 15000);
+  const safeKeywords = sanitizePromptInput(req.keywords, 300);
+
   const systemInstruction = `당신은 한국 병원 블로그 콘텐츠를 다듬는 전문 에디터입니다.
 원본의 핵심 내용과 의도를 유지하면서, 요청된 방향으로 글을 수정합니다.
 
@@ -276,8 +283,8 @@ export function buildRefinePrompt(req: RefineRequest): {
 
 [출력] 순수 HTML(<p>, <h3>, <strong>, <em>)만. 마크다운/코드블록 금지.`;
 
-  const keywordBlock = req.mode === 'seo' && req.keywords
-    ? `\n[핵심 키워드] "${req.keywords}" — 이 키워드를 소제목과 본문에 5~8회 자연스럽게 분산 배치하세요.\n`
+  const keywordBlock = req.mode === 'seo' && safeKeywords
+    ? `\n[핵심 키워드] "${safeKeywords}" — 이 키워드를 소제목과 본문에 5~8회 자연스럽게 분산 배치하세요.\n`
     : '';
 
   const prompt = `${MODE_INSTRUCTIONS[req.mode]}
@@ -286,7 +293,7 @@ ${keywordBlock}${MARK_CHANGES}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 📄 원문
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-${req.originalText}
+${safeOriginalText}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 위 원문을 위 지침에 따라 수정한 결과를 HTML로만 출력해주세요.`;
@@ -340,15 +347,20 @@ export function buildChatRefinePrompt(req: ChatRefineRequest): {
   const isSpecific = !!(targetSection || targetIntro || targetConclusion || targetSpecificText);
 
   // ── 수정 범위 지시 ──
+  // 주의: targetSection/targetSpecificText 는 raw userMessage 의 regex 매치 결과.
+  // 프롬프트에 삽입할 때는 sanitize 필요 — 특히 targetSpecificText[1] 은 사용자가
+  // 따옴표로 감싼 임의 텍스트이므로 인젝션 페이로드가 들어올 수 있음.
   let scopeInstruction = '';
   if (targetSection) {
+    // [1] 은 숫자, [2] 는 '소제목'|'문단'|'섹션' 중 하나 — 안전.
     scopeInstruction = `\n⚠️ 수정 범위: ${targetSection[1]}번째 ${targetSection[2]}만 수정하세요. 나머지는 원본 그대로 유지.`;
   } else if (targetIntro) {
     scopeInstruction = '\n⚠️ 수정 범위: 도입부(첫 번째 <h3> 태그 이전)만 수정하세요. 나머지는 원본 그대로.';
   } else if (targetConclusion) {
     scopeInstruction = '\n⚠️ 수정 범위: 마지막 소제목 섹션만 수정하세요. 나머지는 원본 그대로.';
   } else if (targetSpecificText) {
-    scopeInstruction = `\n⚠️ 수정 범위: "${targetSpecificText[1]}" 부분만 수정하세요. 나머지는 원본 그대로.`;
+    const safeTarget = sanitizePromptInput(targetSpecificText[1], 300);
+    scopeInstruction = `\n⚠️ 수정 범위: "${safeTarget}" 부분만 수정하세요. 나머지는 원본 그대로.`;
   }
 
   // ── 동작별 지침 (복수 동작 지원) ──
@@ -375,6 +387,13 @@ export function buildChatRefinePrompt(req: ChatRefineRequest): {
     ? actions.join('\n')
     : '사용자의 요청이 구체적이지 않습니다. 수정 범위를 최소화하세요. 확실한 부분만 수정하고, 불확실하면 원본을 유지하세요.';
 
+  // 프롬프트 삽입용 sanitized 버전. 의도 탐지(regex)는 위에서 raw userMessage
+  // 로 이미 수행했으므로 여기서부터 안전하게 sanitize 된 값만 프롬프트에 섞는다.
+  const safeUserMessage = sanitizePromptInput(userMessage, 1000);
+  const safeWorkingContent = sanitizeSourceContent(workingContent, 15000);
+  const safeCrawledContent = sanitizeSourceContent(crawledContent, 15000);
+
+  // 글자 수 계산은 원본 HTML 태그 기준 — 사용자에게 보여주는 메타라 raw 유지 OK.
   const textOnly = workingContent.replace(/<[^>]+>/g, '').trim();
   const currentLength = textOnly.length;
 
@@ -404,7 +423,7 @@ ${toneRule}
 ${MEDICAL_LAW_COMMON}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🎯 사용자 요청: ${userMessage}
+🎯 사용자 요청: ${safeUserMessage}
 ${scopeInstruction}
 ${actionInstruction ? `\n[동작 지침] ${actionInstruction}` : ''}
 
@@ -432,12 +451,12 @@ ${[
   ].filter(Boolean).join(', ') || '일반 수정'}
 
 현재 글자 수: ${currentLength}자
-${crawledContent ? `\n[참고 자료 — 출처 표시 없이 내용만 참고]\n${crawledContent}` : ''}
+${safeCrawledContent ? `\n[참고 자료 — 출처 표시 없이 내용만 참고]\n${safeCrawledContent}` : ''}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 📄 현재 콘텐츠
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-${workingContent}
+${safeWorkingContent}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ${MARK_CHANGES}
