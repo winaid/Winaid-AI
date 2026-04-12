@@ -252,6 +252,29 @@ export default function SlideEditor({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [imageTab]);
 
+  // Pixabay 유형(일러스트/벡터/사진/전체) 전환 시 자동 재검색
+  // 이전엔 유형만 바뀌고 결과는 이전 유형 그대로 남아 "일러스트와 벡터가
+  // 같은 결과" 로 보이는 버그가 있었음.
+  const prevPixabayTypeRef = useRef(pixabayType);
+  useEffect(() => {
+    if (imageTab !== 'pixabay') return;
+    if (prevPixabayTypeRef.current === pixabayType) return;
+    prevPixabayTypeRef.current = pixabayType;
+    // 검색어가 있으면 즉시 재검색
+    if (imageSearchQuery.trim()) {
+      // handleImageSearch 를 직접 호출하면 stale closure 문제가 있으므로
+      // 인라인으로 fetch 실행
+      const q = imageSearchQuery.trim();
+      setImageSearchLoading(true);
+      fetch(`/api/pixabay?query=${encodeURIComponent(q)}&image_type=${pixabayType}&orientation=horizontal&per_page=12`)
+        .then(r => r.json())
+        .then(d => setImageSearchResults(d.photos || []))
+        .catch(() => {/* ignore */})
+        .finally(() => setImageSearchLoading(false));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pixabayType, imageTab]);
+
   const handleImageSearch = async () => {
     if (!imageSearchQuery.trim()) return;
     setImageSearchLoading(true);

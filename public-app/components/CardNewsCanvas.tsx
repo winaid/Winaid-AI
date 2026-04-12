@@ -164,8 +164,14 @@ export default function CardNewsCanvas({
         makeFabricGradient(F, css, w, h);
 
       // ════════ 1. 배경 ════════
+      // 슬라이드별 배경색(slide.bgColor)이 있으면 테마보다 우선 — HTML 렌더러
+      // (getCardStyle → slide.bgColor ? bgGradient || bgColor : theme) 와 동일 정책.
+      // 이전엔 theme.backgroundColor 만 사용해서 에디터 사이드바에서 배경색을
+      // 변경해도 canvas 에 반영되지 않는 버그가 있었음.
       const learnedBg = lt?.backgroundStyle?.gradient || lt?.colors?.backgroundGradient;
-      const bgSrc = learnedBg || theme.backgroundGradient || theme.backgroundColor;
+      const bgSrc = slide.bgColor
+        ? (slide.bgGradient || slide.bgColor)
+        : (learnedBg || theme.backgroundGradient || theme.backgroundColor);
       const bgRect = new F.Rect({
         left: 0, top: 0, width: cardWidth, height: cardHeight,
         selectable: false, evented: false, name: OBJ.BG,
@@ -173,7 +179,7 @@ export default function CardNewsCanvas({
       if (bgSrc.includes('linear-gradient')) {
         const grad = mkGrad(bgSrc, cardWidth, cardHeight);
         if (grad) bgRect.set('fill', grad);
-        else bgRect.set('fill', theme.backgroundColor);
+        else bgRect.set('fill', slide.bgColor || theme.backgroundColor);
       } else {
         bgRect.set('fill', bgSrc);
       }
