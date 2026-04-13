@@ -1182,6 +1182,203 @@ ${JSON.stringify(slideForContext, null, 2)}
         </ElementAccordion>
       );
     }
+    if (slide.layout === 'timeline') {
+      const items = slide.timelineItems || [];
+      return (
+        <ElementAccordion icon="T" label={`타임라인 (${items.length}개)`} defaultOpen={true}>
+          <ArrayItemEditor<{ time: string; title: string; desc?: string }>
+            items={items}
+            onChange={(next) => onChange({ timelineItems: next })}
+            fields={[
+              { key: 'time', placeholder: '시점 (예: 1주차)', flex: 1 },
+              { key: 'title', placeholder: '제목', flex: 2 },
+              { key: 'desc', placeholder: '설명 (선택)', flex: 3 },
+            ]}
+            addLabel="+ 타임라인 추가"
+            emptyTemplate={{ time: '', title: '', desc: '' }}
+            min={1} max={8}
+            itemLabelPrefix="항목"
+          />
+        </ElementAccordion>
+      );
+    }
+    if (slide.layout === 'numbered-list') {
+      const items = slide.numberedItems || [];
+      return (
+        <ElementAccordion icon="T" label={`번호 리스트 (${items.length}개)`} defaultOpen={true}>
+          <ArrayItemEditor<{ num?: string; title: string; desc?: string }>
+            items={items}
+            onChange={(next) => onChange({ numberedItems: next })}
+            fields={[
+              { key: 'num', placeholder: '번호 (예: 01)', flex: 1 },
+              { key: 'title', placeholder: '제목', flex: 2 },
+              { key: 'desc', placeholder: '설명 (선택)', flex: 3 },
+            ]}
+            addLabel="+ 항목 추가"
+            emptyTemplate={{ num: '', title: '', desc: '' }}
+            min={1} max={8}
+            itemLabelPrefix="항목"
+          />
+        </ElementAccordion>
+      );
+    }
+    if (slide.layout === 'quote') {
+      return (
+        <ElementAccordion icon="T" label="인용문" defaultOpen={true}>
+          <div className="space-y-3">
+            <div>
+              <p className={labelCls}>인용 본문</p>
+              <textarea className={textareaCls} rows={3}
+                value={slide.quoteText || slide.body || ''}
+                placeholder="따옴표 안에 들어갈 본문"
+                onChange={(e) => onChange({ quoteText: e.target.value })} />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <p className={labelCls}>저자명</p>
+                <input className={inputCls} value={slide.quoteAuthor || ''}
+                  placeholder="예: 김환자"
+                  onChange={(e) => onChange({ quoteAuthor: e.target.value })} />
+              </div>
+              <div>
+                <p className={labelCls}>역할/직책</p>
+                <input className={inputCls} value={slide.quoteRole || ''}
+                  placeholder="예: 30대 직장인"
+                  onChange={(e) => onChange({ quoteRole: e.target.value })} />
+              </div>
+            </div>
+          </div>
+        </ElementAccordion>
+      );
+    }
+    if (slide.layout === 'warning') {
+      const items = slide.warningItems || [];
+      return (
+        <ElementAccordion icon="T" label={`주의사항 (${items.length}개)`} defaultOpen={true}>
+          <div className="space-y-3">
+            <div>
+              <p className={labelCls}>주의사항 제목 (선택, 비우면 제목 필드 사용)</p>
+              <input className={inputCls} value={slide.warningTitle || ''}
+                placeholder="예: 시술 전 꼭 확인하세요"
+                onChange={(e) => onChange({ warningTitle: e.target.value })} />
+            </div>
+            <div>
+              <p className={labelCls}>주의사항 항목</p>
+              <ArrayItemEditor<string>
+                items={items}
+                onChange={(next) => onChange({ warningItems: next })}
+                fields={[{ placeholder: '주의사항 내용' }]}
+                addLabel="+ 주의사항 추가"
+                emptyTemplate={''}
+                min={1} max={6}
+              />
+            </div>
+          </div>
+        </ElementAccordion>
+      );
+    }
+    if (slide.layout === 'before-after') {
+      const before = slide.beforeItems || [];
+      const after = slide.afterItems || [];
+      return (
+        <ElementAccordion icon="T" label={`Before / After (${before.length}+${after.length})`} defaultOpen={true}>
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <p className={labelCls}>Before 라벨</p>
+                <input className={inputCls} value={slide.beforeLabel || ''}
+                  placeholder="BEFORE"
+                  onChange={(e) => onChange({ beforeLabel: e.target.value })} />
+              </div>
+              <div>
+                <p className={labelCls}>After 라벨</p>
+                <input className={inputCls} value={slide.afterLabel || ''}
+                  placeholder="AFTER"
+                  onChange={(e) => onChange({ afterLabel: e.target.value })} />
+              </div>
+            </div>
+            <div>
+              <p className={labelCls}>Before 항목</p>
+              <ArrayItemEditor<string>
+                items={before}
+                onChange={(next) => onChange({ beforeItems: next })}
+                fields={[{ placeholder: '변화 전 내용' }]}
+                addLabel="+ Before 추가"
+                emptyTemplate={''}
+                min={1} max={6}
+              />
+            </div>
+            <div>
+              <p className={labelCls}>After 항목</p>
+              <ArrayItemEditor<string>
+                items={after}
+                onChange={(next) => onChange({ afterItems: next })}
+                fields={[{ placeholder: '변화 후 내용' }]}
+                addLabel="+ After 추가"
+                emptyTemplate={''}
+                min={1} max={6}
+              />
+            </div>
+          </div>
+        </ElementAccordion>
+      );
+    }
+    if (slide.layout === 'cover') {
+      const coverToggles: Array<{ key: 'showBadge' | 'showHashtags' | 'showArrows' | 'showHandle' | 'showLine'; label: string; default: boolean }> = [
+        { key: 'showBadge', label: '배지 표시', default: true },
+        { key: 'showHashtags', label: '해시태그 표시', default: true },
+        { key: 'showArrows', label: '화살표 장식', default: false },
+        { key: 'showHandle', label: '핸들 장식', default: false },
+        { key: 'showLine', label: '라인 장식', default: false },
+      ];
+      return (
+        <ElementAccordion icon="T" label="표지 보조 요소" defaultOpen={true}>
+          <div className="space-y-3">
+            <div>
+              <p className={labelCls}>본문 (선택)</p>
+              <textarea className={textareaCls} rows={2}
+                value={slide.body || ''}
+                placeholder="표지 부연 설명 (사용 안 하면 비워두세요)"
+                onChange={(e) => onChange({ body: e.target.value })} />
+            </div>
+            <div>
+              <p className={labelCls}>배지 문구 (선택)</p>
+              <input className={inputCls} value={slide.badge || ''}
+                placeholder="예: 이번 주 리포트"
+                onChange={(e) => onChange({ badge: e.target.value })} />
+            </div>
+            <div>
+              <p className={labelCls}>해시태그</p>
+              <ArrayItemEditor<string>
+                items={slide.hashtags || []}
+                onChange={(next) => onChange({ hashtags: next })}
+                fields={[{ placeholder: '#태그 (# 포함 또는 제외)' }]}
+                addLabel="+ 해시태그 추가"
+                emptyTemplate={''}
+                min={0} max={6}
+              />
+            </div>
+            <div>
+              <p className={labelCls}>표지 데코레이션</p>
+              <div className="grid grid-cols-2 gap-1.5 text-xs">
+                {coverToggles.map(({ key, label, default: dflt }) => {
+                  const current = (slide as unknown as Record<string, unknown>)[key];
+                  const checked = typeof current === 'boolean' ? current : dflt;
+                  return (
+                    <label key={key} className="flex items-center gap-1.5 px-2 py-1.5 bg-white rounded-md border border-slate-200 cursor-pointer">
+                      <input type="checkbox" checked={checked}
+                        onChange={(e) => onChange({ [key]: e.target.checked } as Partial<SlideData>)}
+                      />
+                      <span className="text-slate-700">{label}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </ElementAccordion>
+      );
+    }
     return null;
   };
 

@@ -337,10 +337,13 @@ export function validateSlideMedicalAd(slide: SlideData | Partial<SlideData>): S
     check(`questions[${i}].a`, `Q&A ${i + 1} 답변`, q.a, false);
   });
   slide.timelineItems?.forEach((t, i) => {
+    check(`timelineItems[${i}].time`, `타임라인 ${i + 1} 시점`, t.time, false);
     check(`timelineItems[${i}].title`, `타임라인 ${i + 1} 제목`, t.title, false);
     check(`timelineItems[${i}].desc`, `타임라인 ${i + 1} 설명`, t.desc, false);
   });
   slide.numberedItems?.forEach((n, i) => {
+    // num 필드 — "최초"/"No.1"/"1위" 등 최상급 금지어가 들어갈 가능성이 가장 높음
+    check(`numberedItems[${i}].num`, `번호 ${i + 1} 라벨`, n.num, false);
     check(`numberedItems[${i}].title`, `번호 ${i + 1} 제목`, n.title, false);
     check(`numberedItems[${i}].desc`, `번호 ${i + 1} 설명`, n.desc, false);
   });
