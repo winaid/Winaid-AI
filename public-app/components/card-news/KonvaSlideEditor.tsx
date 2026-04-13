@@ -154,27 +154,7 @@ export default function KonvaSlideEditor({
       borderRadius: '16px', overflow: 'visible',
       boxShadow: '0 20px 60px rgba(0,0,0,0.15)',
     }}>
-      {/* 정렬 툴바 — 선택 시 상단 오버레이 */}
-      {selectedId && !readOnly && (
-        <div style={{
-          position: 'absolute', top: -48, left: '50%',
-          transform: 'translateX(-50%)', zIndex: 60,
-          display: 'flex', alignItems: 'center', gap: '2px',
-          background: 'white', borderRadius: '8px',
-          boxShadow: '0 2px 12px rgba(0,0,0,0.15)', padding: '4px',
-        }}>
-          <button type="button" onClick={() => alignElement('left')} title="왼쪽" style={alignBtn}>◧</button>
-          <button type="button" onClick={() => alignElement('center')} title="가로 가운데" style={alignBtn}>▤</button>
-          <button type="button" onClick={() => alignElement('right')} title="오른쪽" style={alignBtn}>◨</button>
-          <div style={{ width: 1, height: 20, background: '#E2E8F0', margin: '0 2px' }} />
-          <button type="button" onClick={() => alignElement(undefined, 'top')} title="위쪽" style={alignBtn}>▔</button>
-          <button type="button" onClick={() => alignElement(undefined, 'middle')} title="세로 가운데" style={alignBtn}>━</button>
-          <button type="button" onClick={() => alignElement(undefined, 'bottom')} title="아래쪽" style={alignBtn}>▁</button>
-          <div style={{ width: 1, height: 20, background: '#E2E8F0', margin: '0 2px' }} />
-          <button type="button" onClick={() => alignElement('center', 'middle')} title="정중앙"
-            style={{ ...alignBtn, background: '#EF4444', color: 'white' }}>⊕</button>
-        </div>
-      )}
+      {/* 정렬 툴바 UI는 제거됨 — alignElement 함수는 추후 단축키/다른 UI에서 재사용 가능하도록 유지 */}
       <Stage
         ref={stageRef}
         width={displayWidth}

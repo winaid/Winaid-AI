@@ -51,6 +51,48 @@ interface Props {
  *   transform: scale(컨테이너폭 / 1080)로 축소한다. 다운로드는 별도의
  *   captureNodeAsCanvas 헬퍼가 scale을 제거한 복제본을 풀사이즈로 캡처.
  */
+
+/** 레이아웃에 필요한 콘텐츠 데이터가 이미 있는지 확인 — AI 자동 채우기 스킵용 */
+function checkHasLayoutData(slide: SlideData, layout: SlideLayoutType): boolean {
+  const startsWith = (s: string | undefined, ...prefixes: string[]) =>
+    !!s && prefixes.some(p => s.trim().startsWith(p));
+  switch (layout) {
+    case 'checklist':
+      return !!(slide.checkItems?.length && slide.checkItems.some(i => i && !startsWith(i, '항목')));
+    case 'icon-grid':
+      return !!(slide.icons?.length && slide.icons.some(i => i.title && !startsWith(i.title, '항목')));
+    case 'steps':
+      return !!(slide.steps?.length && slide.steps.some(s => s.label && !startsWith(s.label, '단계') && !s.label.endsWith('단계')));
+    case 'comparison':
+      return !!(slide.columns?.length && slide.columns.some(c => c.items?.some(i => i && i !== '-')));
+    case 'data-highlight':
+      return !!(slide.dataPoints?.length && slide.dataPoints.some(d => d.value && d.value !== '00%' && d.value !== '00'));
+    case 'qna':
+      return !!(slide.questions?.length && slide.questions.some(q => q.q && !startsWith(q.q, '질문')));
+    case 'timeline':
+      return !!(slide.timelineItems?.length && slide.timelineItems.some(t => t.title && !startsWith(t.title, '항목')));
+    case 'quote':
+      return !!(slide.quoteText && !startsWith(slide.quoteText, '여기에 인용문'));
+    case 'before-after':
+      return !!(slide.beforeItems?.length && slide.beforeItems.some(i => i && !startsWith(i, '항목')));
+    case 'pros-cons':
+      return !!(slide.pros?.length && slide.pros.some(i => i && !startsWith(i, '장점')));
+    case 'price-table':
+      return !!(slide.priceItems?.length && slide.priceItems.some(p => p.name && !startsWith(p.name, '시술')));
+    case 'numbered-list':
+      return !!(slide.numberedItems?.length && slide.numberedItems.some(n => n.title && !startsWith(n.title, '항목')));
+    case 'warning':
+      return !!(slide.warningItems?.length && slide.warningItems.some(i => i && !startsWith(i, '주의사항')));
+    case 'info':
+    case 'closing':
+      return !!(slide.body && !startsWith(slide.body, '내용을 입력'));
+    case 'cover':
+      return !!(slide.title && slide.title.trim().length > 0);
+    default:
+      return false;
+  }
+}
+
 export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onThemeChange, learnedTemplate, cardRatio = '1:1', presetStyle }: Props) {
   // shorthand — 학습 템플릿이 있을 때 상세 토큰으로 렌더 오버라이드
   const lt = learnedTemplate || null;
@@ -527,28 +569,62 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
   };
   const handleDragEnd = () => { setDragIdx(null); setDragOverIdx(null); };
 
-  // ── 레이아웃 변경 + AI 자동 채우기 (lib/cardAiActions.ts 위임) ──
+  // ── 레이아웃 변경 + AI 자동 채우기 (선택적) ──
   const handleLayoutChange = async (idx: number, newLayout: SlideLayoutType) => {
     const curr = slides[idx];
     if (!curr) return;
+
+    // 같은 레이아웃이면 아무것도 안 함 (AI 호출 방지)
+    if (curr.layout === newLayout) return;
+
     const withDefaults = buildLayoutDefaults(curr, newLayout);
     pushAndChange(slides.map((s, i) => (i === idx ? withDefaults : s)));
+
     if (editingIdx !== null) return;
+
+    // 레이아웃에 필요한 데이터가 이미 있으면 AI 자동 채우기 스킵
+    if (checkHasLayoutData(withDefaults, newLayout)) return;
+
     const patch = await fillLayoutContent(withDefaults, slides);
-    if (patch) {
-      // 사용자가 직접 수정한 필드 보존
-      const isPlaceholder = (t?: string) =>
-        !t || /^(항목|설명|내용을 입력|질문을 입력|답변|시술|주의사항|텍스트를 입력)/.test(t);
-      if (curr.title && !isPlaceholder(curr.title)) delete (patch as Record<string, unknown>).title;
-      if (curr.subtitle && !isPlaceholder(curr.subtitle)) delete (patch as Record<string, unknown>).subtitle;
-      if (curr.body && !isPlaceholder(curr.body)) delete (patch as Record<string, unknown>).body;
-      // 배치 편집 필드 보존
-      const preserve = ['titlePosition','subtitlePosition','titleSize','subtitleSize',
-        'bodySize','elementPositions','elementSizes','customElements',
-        'titleColor','titleFontSize','titleFontWeight','subtitleColor','subtitleFontSize'];
-      preserve.forEach(k => delete (patch as Record<string, unknown>)[k]);
-      if (Object.keys(patch).length > 0) updateSlide(idx, patch);
-    }
+    if (!patch) return;
+
+    // ── 사용자 편집 필드 전부 보존 ──
+    const isPlaceholder = (t?: string) =>
+      !t || /^(항목|설명|내용을 입력|질문을 입력|답변|시술|주의사항|텍스트를 입력|제목을 입력|부제를 입력|단계)/.test(t.trim());
+
+    if (curr.title && !isPlaceholder(curr.title)) delete (patch as Record<string, unknown>).title;
+    if (curr.subtitle && !isPlaceholder(curr.subtitle)) delete (patch as Record<string, unknown>).subtitle;
+    if (curr.body && !isPlaceholder(curr.body)) delete (patch as Record<string, unknown>).body;
+
+    // 기존 값이 있는 필드는 전부 보존 (위치/크기/스타일/이미지/배경/커스텀 등)
+    const preserve: string[] = [
+      // 위치/크기
+      'titlePosition', 'subtitlePosition', 'hospitalNamePosition',
+      'titleSize', 'subtitleSize', 'bodySize', 'imageSize',
+      'elementPositions', 'elementSizes',
+      // 스타일
+      'titleColor', 'titleFontId', 'titleFontSize', 'titleFontWeight',
+      'titleLetterSpacing', 'titleLineHeight', 'titleAlign',
+      'subtitleColor', 'subtitleFontId', 'subtitleFontSize',
+      'subtitleFontWeight', 'subtitleLetterSpacing', 'subtitleLineHeight',
+      'bodyColor',
+      // 커스텀 요소
+      'customElements',
+      // 이미지
+      'imageUrl', 'imagePosition', 'imageFocalPoint', 'visualKeyword',
+      // 배경/디자인
+      'bgColor', 'bgGradient', 'coverTemplateId',
+      'hashtags', 'decorations', 'badge',
+      // 폰트
+      'fontId',
+    ];
+    preserve.forEach(k => {
+      if ((curr as unknown as Record<string, unknown>)[k] !== undefined) {
+        delete (patch as Record<string, unknown>)[k];
+      }
+    });
+
+    if (Object.keys(patch).length > 0) updateSlide(idx, patch);
   };
 
   // ── AI 액션 래퍼 (lib/cardAiActions.ts 위임) ──
