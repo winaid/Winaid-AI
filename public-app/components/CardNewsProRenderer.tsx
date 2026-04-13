@@ -866,7 +866,8 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
 
   return (
     <div className="space-y-4 pb-24">
-      {/* 히스토리/저장 툴바 — 우측 상단 고정 */}
+      {/* 히스토리/저장 툴바 — 우측 상단 고정 (편집 모달 열려 있을 땐 숨김: 모달 상단에 중복됨) */}
+      {editingIdx === null && (
       <div className="fixed top-4 right-4 z-40 flex items-center gap-1 bg-white rounded-xl shadow-lg border border-slate-200 px-2 py-1.5">
         <button
           type="button"
@@ -902,6 +903,7 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
           </span>
         )}
       </div>
+      )}
       {/* 의료광고법 위반 요약 — 한 건이라도 있으면 상단에 고정 노출 */}
       {(totalViolations.high > 0 || totalViolations.medium > 0) && (
         <div className="flex items-center gap-3 px-4 py-2.5 bg-red-50 border border-red-200 rounded-xl text-sm">
@@ -1461,6 +1463,28 @@ JSON만 출력:
                 </div>
               </div>
               <div className="flex items-center gap-2">
+                <button type="button" onClick={undo} disabled={!canUndo}
+                  title="이전 (Ctrl+Z)"
+                  className="w-9 h-9 flex items-center justify-center rounded-lg text-slate-700 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
+                  <span className="text-lg">↶</span>
+                </button>
+                <button type="button" onClick={redo} disabled={!canRedo}
+                  title="다시 (Ctrl+Shift+Z)"
+                  className="w-9 h-9 flex items-center justify-center rounded-lg text-slate-700 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
+                  <span className="text-lg">↷</span>
+                </button>
+                <div className="w-px h-5 bg-slate-200 mx-1" />
+                <button type="button" onClick={handleSave} disabled={saving}
+                  title="저장 (Ctrl+S)"
+                  className="px-3 h-9 flex items-center gap-1.5 rounded-lg bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-60 text-xs font-bold transition-colors">
+                  <span>{saving ? '저장 중...' : '💾 저장'}</span>
+                </button>
+                {lastSavedAt && !saving && (
+                  <span className="text-[10px] text-slate-400 whitespace-nowrap">
+                    {lastSavedAt.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })} 저장됨
+                  </span>
+                )}
+                <div className="w-px h-5 bg-slate-200 mx-1" />
                 <button type="button" onClick={() => setEditingIdx(null)}
                   data-testid="editor-close"
                   className="px-5 py-2 text-sm font-bold text-white bg-blue-600 rounded-lg hover:bg-blue-700">✓ 완료</button>
