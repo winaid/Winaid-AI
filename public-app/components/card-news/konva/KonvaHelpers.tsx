@@ -4,6 +4,17 @@ import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { Text, Image as KonvaImage, Rect, Circle, RegularPolygon, Line as KonvaLine } from 'react-konva';
 import type Konva from 'konva';
 
+/**
+ * Konva 전용 폰트 패밀리 모듈 전역 — react-konva는 React Context를
+ * renderer 트리로 전달하지 않으므로 모듈 스코프 변수로 주입한다.
+ * KonvaSlideEditor가 렌더 전에 setKonvaFontFamily(...)를 호출한다.
+ */
+let _konvaFontFamily: string | undefined = undefined;
+export function setKonvaFontFamily(family: string | undefined) { _konvaFontFamily = family; }
+export function getKonvaFontFamily(fallback = 'Pretendard Variable, sans-serif'): string {
+  return _konvaFontFamily || fallback;
+}
+
 export type ShapeType = 'rounded' | 'pill' | 'sharp' | 'diamond' | 'hexagon' | 'circle' | 'outlined';
 
 /** 배열 항목이 placeholder(빈 값/기본 텍스트)인지 판단 */
@@ -122,6 +133,7 @@ export type LayoutRenderArgs = [
   onChange: (patch: Partial<import('../../../lib/cardNewsLayouts').SlideData>) => void,
   readOnly?: boolean,
   onSnapGuides?: (guides: { vertical?: number; horizontal?: number }) => void,
+  fontFamily?: string,
 ];
 
 // ── EditableText ──
@@ -132,6 +144,7 @@ export function EditableText({
   readOnly = false, cardWidth = 1080, cardHeight = 1080, onSnapGuides,
 }: EditableTextProps) {
   const textRef = useRef<Konva.Text>(null);
+  const resolvedFontFamily = fontFamily || getKonvaFontFamily();
 
   const handleDblClick = useCallback(() => {
     const textNode = textRef.current;
@@ -153,7 +166,7 @@ export function EditableText({
       width: `${width * stage.scaleX()}px`,
       fontSize: `${fontSize * stage.scaleY()}px`,
       fontWeight: fontStyle === 'bold' ? '700' : '400',
-      fontFamily: fontFamily || 'inherit',
+      fontFamily: resolvedFontFamily,
       color: '#1e293b',
       background: '#ffffff',
       border: '2px solid #3B82F6',
@@ -194,7 +207,7 @@ export function EditableText({
       width={width}
       fontSize={fontSize}
       fontStyle={fontStyle}
-      fontFamily={fontFamily || 'Pretendard Variable, sans-serif'}
+      fontFamily={resolvedFontFamily}
       fill={fill}
       align={align}
       offsetX={offsetX}
@@ -351,7 +364,7 @@ export function renderTitleBlock(
   args: LayoutRenderArgs,
   opts: { alignCenter?: boolean; startY?: number } = {},
 ): { element: React.ReactNode; bottomY: number } {
-  const [slide, theme, w, h, selectedId, setSelectedId, onChange, ro, snapCb] = args;
+  const [slide, theme, w, h, selectedId, setSelectedId, onChange, ro, snapCb, fontFamily] = args;
   const { alignCenter = false, startY = 60 } = opts;
   const ax = alignCenter ? w / 2 - 30 : 60;
   const tx = alignCenter ? w / 2 : 60;
@@ -380,6 +393,7 @@ export function renderTitleBlock(
         id="text-title" text={slide.title || '제목'}
         x={tx} y={startY + 20} width={w * 0.85} fontSize={titleFs}
         fontStyle="bold" fill={theme.titleColor} align={alignCenter ? 'center' : 'left'} offsetX={offsetX}
+        fontFamily={fontFamily}
         selectedId={selectedId} onSelect={setSelectedId}
         onDragEnd={(x, y) => onChange({ titlePosition: { x: Math.round(x / w * 100), y: Math.round(y / h * 100) } })}
         onTextChange={t => onChange({ title: t })}
@@ -394,6 +408,7 @@ export function renderTitleBlock(
             x={tx} y={startY + titleFs + 25} width={w * 0.8} fontSize={22}
             fontStyle="normal" fill={theme.subtitleColor} align={alignCenter ? 'center' : 'left'}
             offsetX={alignCenter ? w * 0.8 / 2 : 0}
+            fontFamily={fontFamily}
             selectedId={selectedId} onSelect={setSelectedId}
             onDragEnd={(x, y) => onChange({ subtitlePosition: { x: Math.round(x / w * 100), y: Math.round(y / h * 100) } })}
             onTextChange={t => onChange({ subtitle: t })}
@@ -453,6 +468,7 @@ export function renderCustomElements(
   setSelectedId: (id: string | null) => void,
   onSlideChange: (patch: Partial<import('../../../lib/cardNewsLayouts').SlideData>) => void,
   readOnly: boolean,
+  fontFamily?: string,
 ): React.ReactNode {
   if (!slide.customElements?.length) return null;
   return slide.customElements.map((el) => {
@@ -488,6 +504,7 @@ export function renderCustomElements(
           fill={el.color || '#333333'}
           align={el.align || 'left'}
           offsetX={elW / 2}
+          fontFamily={fontFamily}
           selectedId={selectedId}
           onSelect={setSelectedId}
           readOnly={readOnly}

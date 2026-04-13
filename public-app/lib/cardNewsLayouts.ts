@@ -262,6 +262,8 @@ export interface SlideCustomElement {
   color?: string;
   align?: 'left' | 'center' | 'right';
   imageUrl?: string;
+  /** 병원 로고 요소 — localStorage에 저장된 로고 재사용 시 true */
+  isLogo?: boolean;
 }
 
 // ── 커버 템플릿 ──
@@ -661,9 +663,29 @@ export function generateSlideId(): string {
 /**
  * 슬라이드 배열에 id를 채워 넣는다. 이미 id가 있으면 유지, 없으면 생성.
  * 드래프트/히스토리 복원이나 외부 입력을 받을 때 일괄 적용.
+ * 또한 구버전 드래프트에 없던 선택 필드(customElements, elementPositions 등)가
+ * 잘못된 타입으로 저장된 경우를 방어적으로 보정한다.
  */
 export function ensureSlideIds(slides: SlideData[]): SlideData[] {
-  return slides.map(s => (s.id && typeof s.id === 'string' ? s : { ...s, id: generateSlideId() }));
+  return slides.map(s => {
+    const withId = s.id && typeof s.id === 'string' ? s : { ...s, id: generateSlideId() };
+    // 새 필드 호환성: 배열/객체 타입이 아니면 undefined로 정리
+    const patch: Partial<SlideData> = {};
+    if (withId.customElements && !Array.isArray(withId.customElements)) {
+      patch.customElements = undefined;
+    } else if (Array.isArray(withId.customElements)) {
+      // 각 요소가 최소 필드를 갖는지 필터 — id/type/x/y/w/h 없는 건 제거
+      patch.customElements = withId.customElements.filter(el =>
+        el && typeof el === 'object' && 'id' in el && 'type' in el &&
+        typeof (el as SlideCustomElement).x === 'number' &&
+        typeof (el as SlideCustomElement).y === 'number'
+      );
+    }
+    if (withId.elementPositions && typeof withId.elementPositions !== 'object') patch.elementPositions = undefined;
+    if (withId.elementSizes && typeof withId.elementSizes !== 'object') patch.elementSizes = undefined;
+    if (withId.elementShapes && typeof withId.elementShapes !== 'object') patch.elementShapes = undefined;
+    return Object.keys(patch).length > 0 ? { ...withId, ...patch } : withId;
+  });
 }
 
 function normalizeSlide(raw: Partial<SlideData>, i: number): SlideData {

@@ -62,7 +62,7 @@ export function renderComparison(...args: LayoutRenderArgs): React.ReactNode {
               <Text x={50 + labelW / 2} y={gridTop + (ri + 1) * rowH + rowH / 2 - 10}
                 text={labels[ri] || ''} fontSize={16} fontStyle="bold" fill={theme.titleColor}
                 width={labelW - 10} align="center" offsetX={(labelW - 10) / 2}
-                fontFamily="Pretendard Variable, sans-serif" />
+                fontFamily={args[9] || "Pretendard Variable, sans-serif"} />
             </>
           )}
           {cols.map((col, ci) => {
@@ -75,7 +75,7 @@ export function renderComparison(...args: LayoutRenderArgs): React.ReactNode {
                   text={col.items[ri] || ''} fontSize={17} fill={col.highlight ? theme.accentColor : theme.titleColor}
                   fontStyle={col.highlight ? 'bold' : 'normal'}
                   width={colW - 10} align="center" offsetX={(colW - 10) / 2}
-                  fontFamily="Pretendard Variable, sans-serif" />
+                  fontFamily={args[9] || "Pretendard Variable, sans-serif"} />
               </React.Fragment>
             );
           })}
@@ -127,7 +127,7 @@ export function renderIconGrid(...args: LayoutRenderArgs): React.ReactNode {
             })()}
             <Text x={cell.x + cell.w / 2 - 28} y={cell.y + cell.h * 0.15}
               text={item.emoji} fontSize={48} width={56} align="center"
-              fontFamily="Pretendard Variable, sans-serif" />
+              fontFamily={args[9] || "Pretendard Variable, sans-serif"} />
             <EditableText
               id={`text-icon-title-${i}`} text={item.title}
               x={cell.x + cell.w / 2} y={cell.y + cell.h * 0.5} width={cell.w - 30} fontSize={tFs}
@@ -207,7 +207,7 @@ export function renderDataHighlight(...args: LayoutRenderArgs): React.ReactNode 
               fontStyle={vWeight && Number(vWeight) < 700 ? 'normal' : 'bold'}
               fill={valueFill}
               width={cell.w - 20} align="center" offsetX={(cell.w - 20) / 2}
-              fontFamily="Pretendard Variable, sans-serif" />
+              fontFamily={args[9] || "Pretendard Variable, sans-serif"} />
             <EditableText
               id={`text-dp-label-${i}`} text={dp.label || '설명을 입력하세요'}
               x={cell.x + cell.w / 2} y={cell.y + cell.h * 0.65} width={cell.w - 30} fontSize={dFs}
@@ -244,7 +244,7 @@ export function renderBeforeAfter(...args: LayoutRenderArgs): React.ReactNode {
       <Text x={50 + colW / 2} y={colTop + 20} text={slide.beforeLabel || 'BEFORE'}
         fontSize={18} fontStyle="bold" fill={theme.bodyColor}
         width={colW} align="center" offsetX={colW / 2} letterSpacing={4}
-        fontFamily="Pretendard Variable, sans-serif" />
+        fontFamily={args[9] || "Pretendard Variable, sans-serif"} />
       {beforeItems.map((item, i) => (
         <EditableText key={`b-${i}`}
           id={`text-before-${i}`} text={`• ${item}`}
@@ -259,7 +259,7 @@ export function renderBeforeAfter(...args: LayoutRenderArgs): React.ReactNode {
       {/* Arrow */}
       <Circle x={w / 2} y={colTop + colH / 2} radius={22} fill={theme.accentColor} />
       <Text x={w / 2 - 10} y={colTop + colH / 2 - 12} text="→" fontSize={20} fill="#fff" fontStyle="bold"
-        fontFamily="Pretendard Variable, sans-serif" />
+        fontFamily={args[9] || "Pretendard Variable, sans-serif"} />
 
       {/* After column */}
       <Rect x={w / 2 + 10} y={colTop} width={colW} height={colH}
@@ -268,7 +268,7 @@ export function renderBeforeAfter(...args: LayoutRenderArgs): React.ReactNode {
       <Text x={w / 2 + 10 + colW / 2} y={colTop + 20} text={slide.afterLabel || 'AFTER'}
         fontSize={18} fontStyle="bold" fill={theme.accentColor}
         width={colW} align="center" offsetX={colW / 2} letterSpacing={4}
-        fontFamily="Pretendard Variable, sans-serif" />
+        fontFamily={args[9] || "Pretendard Variable, sans-serif"} />
       {afterItems.map((item, i) => (
         <EditableText key={`a-${i}`}
           id={`text-after-${i}`} text={`✓ ${item}`}
@@ -315,7 +315,7 @@ export function renderQna(...args: LayoutRenderArgs): React.ReactNode {
             <Rect x={70} y={p.y + 14} width={40} height={40}
               fill={theme.accentColor} cornerRadius={12} />
             <Text x={70} y={p.y + 22} text="Q" fontSize={22} fill="#fff" fontStyle="bold"
-              width={40} align="center" fontFamily="Pretendard Variable, sans-serif" />
+              width={40} align="center" fontFamily={args[9] || "Pretendard Variable, sans-serif"} />
             <EditableText
               id={`text-q-${i}`} text={qa.q}
               x={125} y={p.y + 18} width={w - 220} fontSize={20}
@@ -329,7 +329,7 @@ export function renderQna(...args: LayoutRenderArgs): React.ReactNode {
               fill="rgba(0,0,0,0.08)" cornerRadius={12} />
             <Text x={70} y={p.y + p.height / 2 + 12} text="A" fontSize={22}
               fill={theme.accentColor} fontStyle="bold"
-              width={40} align="center" fontFamily="Pretendard Variable, sans-serif" />
+              width={40} align="center" fontFamily={args[9] || "Pretendard Variable, sans-serif"} />
             <EditableText
               id={`text-a-${i}`} text={qa.a}
               x={125} y={p.y + p.height / 2 + 8} width={w - 220} fontSize={17}
@@ -364,10 +364,10 @@ export function renderProsCons(...args: LayoutRenderArgs): React.ReactNode {
         fill="rgba(52,211,153,0.14)" cornerRadius={20} stroke="rgba(52,211,153,0.45)" strokeWidth={2} />
       <Circle x={50 + colW / 2} y={colTop + 40} radius={28} fill="#34D399" />
       <Text x={50 + colW / 2 - 14} y={colTop + 26} text={slide.prosIcon || 'O'}
-        fontSize={28} fill="#fff" fontStyle="bold" fontFamily="Pretendard Variable, sans-serif" />
+        fontSize={28} fill="#fff" fontStyle="bold" fontFamily={args[9] || "Pretendard Variable, sans-serif"} />
       <Text x={50 + colW / 2} y={colTop + 80} text={slide.prosLabel || '장점'}
         fontSize={18} fontStyle="bold" fill="#34D399" width={colW} align="center" offsetX={colW / 2}
-        fontFamily="Pretendard Variable, sans-serif" />
+        fontFamily={args[9] || "Pretendard Variable, sans-serif"} />
       {pros.map((p, i) => (
         <EditableText key={`p-${i}`}
           id={`text-pro-${i}`} text={`○ ${p}`}
@@ -384,10 +384,10 @@ export function renderProsCons(...args: LayoutRenderArgs): React.ReactNode {
         fill="rgba(239,68,68,0.14)" cornerRadius={20} stroke="rgba(239,68,68,0.45)" strokeWidth={2} />
       <Circle x={w / 2 + 10 + colW / 2} y={colTop + 40} radius={28} fill="#EF4444" />
       <Text x={w / 2 + 10 + colW / 2 - 14} y={colTop + 26} text={slide.consIcon || 'X'}
-        fontSize={28} fill="#fff" fontStyle="bold" fontFamily="Pretendard Variable, sans-serif" />
+        fontSize={28} fill="#fff" fontStyle="bold" fontFamily={args[9] || "Pretendard Variable, sans-serif"} />
       <Text x={w / 2 + 10 + colW / 2} y={colTop + 80} text={slide.consLabel || '주의점'}
         fontSize={18} fontStyle="bold" fill="#F87171" width={colW} align="center" offsetX={colW / 2}
-        fontFamily="Pretendard Variable, sans-serif" />
+        fontFamily={args[9] || "Pretendard Variable, sans-serif"} />
       {cons.map((c, i) => (
         <EditableText key={`c-${i}`}
           id={`text-con-${i}`} text={`✕ ${c}`}
@@ -421,11 +421,11 @@ export function renderPriceTable(...args: LayoutRenderArgs): React.ReactNode {
       <Rect x={50} y={gridTop} width={nameW} height={rowH} fill={theme.accentColor} />
       <Text x={50 + nameW / 2} y={gridTop + rowH / 2 - 12} text="💊 시술 항목"
         fontSize={20} fontStyle="bold" fill="#fff" width={nameW} align="center" offsetX={nameW / 2}
-        fontFamily="Pretendard Variable, sans-serif" />
+        fontFamily={args[9] || "Pretendard Variable, sans-serif"} />
       <Rect x={50 + nameW + 2} y={gridTop} width={priceW} height={rowH} fill={theme.accentColor} />
       <Text x={50 + nameW + 2 + priceW / 2} y={gridTop + rowH / 2 - 12} text="💰 예상 비용"
         fontSize={20} fontStyle="bold" fill="#fff" width={priceW} align="center" offsetX={priceW / 2}
-        fontFamily="Pretendard Variable, sans-serif" />
+        fontFamily={args[9] || "Pretendard Variable, sans-serif"} />
       {/* Rows */}
       {items.map((item, i) => {
         const ry = gridTop + (i + 1) * rowH + 1;
@@ -445,12 +445,12 @@ export function renderPriceTable(...args: LayoutRenderArgs): React.ReactNode {
             <Text x={50 + nameW + 2 + priceW / 2} y={ry + rowH / 2 - 14}
               text={item.price} fontSize={22} fontStyle="bold" fill={theme.accentColor}
               width={priceW - 20} align="center" offsetX={(priceW - 20) / 2}
-              fontFamily="Pretendard Variable, sans-serif" />
+              fontFamily={args[9] || "Pretendard Variable, sans-serif"} />
             {item.note && (
               <Text x={50 + nameW + 2 + priceW / 2} y={ry + rowH / 2 + 10}
                 text={item.note} fontSize={12} fill={theme.bodyColor}
                 width={priceW - 20} align="center" offsetX={(priceW - 20) / 2}
-                fontFamily="Pretendard Variable, sans-serif" />
+                fontFamily={args[9] || "Pretendard Variable, sans-serif"} />
             )}
           </React.Fragment>
         );

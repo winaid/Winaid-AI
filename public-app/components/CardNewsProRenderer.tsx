@@ -1353,6 +1353,8 @@ JSON만 출력:
                   maxWidth={boxRefs.current[idx]?.clientWidth || 250}
                   onSlideChange={(patch) => updateSlide(idx, patch)}
                   readOnly={true}
+                  customFontName={customFontName}
+                  fontLoaded={fontLoaded}
                   onStageReady={(stage) => {
                     if (stage) konvaStageRefs.current.set(slide.id, stage);
                     else konvaStageRefs.current.delete(slide.id);
@@ -1501,6 +1503,8 @@ JSON만 출력:
                   cardHeight={cardHeight}
                   maxWidth={650}
                   onSlideChange={(patch) => updateSlide(editingIdx, patch)}
+                  customFontName={customFontName}
+                  fontLoaded={fontLoaded}
                 />
               </div>
               {/* 우: 편집 패널 */}
@@ -1549,6 +1553,32 @@ JSON만 출력:
                       w: type === 'text' ? 40 : 30,
                       h: type === 'text' ? 10 : 20,
                       ...(type === 'text' ? { text: '텍스트를 입력하세요', fontSize: 24, fontWeight: '500', color: '#333333' } : {}),
+                    };
+                    updateSlide(editingIdx, { customElements: [...existing, newEl] });
+                  }}
+                  onAddLogo={() => {
+                    // 1순위: theme.hospitalLogo, 2순위: localStorage 직접 조회
+                    let logoUrl = theme.hospitalLogo;
+                    if (!logoUrl) {
+                      try { logoUrl = localStorage.getItem('hospital-logo-dataurl') || undefined; } catch {}
+                    }
+                    if (!logoUrl) {
+                      alert('먼저 좌측 브랜드 패널에서 병원 로고를 업로드해 주세요.');
+                      return;
+                    }
+                    const existing = slides[editingIdx].customElements || [];
+                    // 이미 isLogo=true 가 있으면 중복 추가 방지
+                    if (existing.some(el => el.isLogo)) {
+                      alert('이 슬라이드에 이미 로고가 있습니다.');
+                      return;
+                    }
+                    const newEl: SlideCustomElement = {
+                      id: crypto.randomUUID(),
+                      type: 'image',
+                      x: 85, y: 90,  // 우하단
+                      w: 15, h: 10,
+                      imageUrl: logoUrl,
+                      isLogo: true,
                     };
                     updateSlide(editingIdx, { customElements: [...existing, newEl] });
                   }}

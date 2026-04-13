@@ -44,6 +44,7 @@ interface SlideEditorProps {
   onCustomElementChange?: (elementId: string, patch: Record<string, unknown>) => void;
   onCustomElementDelete?: (elementId: string) => void;
   onAddCustomElement?: (type: 'text' | 'image') => void;
+  onAddLogo?: () => void;
 }
 
 /** 배열 항목의 공통 스타일 편집 UI (제목/설명/값) */
@@ -144,6 +145,7 @@ export default function SlideEditor({
   onCustomElementChange,
   onCustomElementDelete,
   onAddCustomElement,
+  onAddLogo,
 }: SlideEditorProps) {
   const inputCls = 'w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-200';
   const labelCls = 'block text-[10px] font-semibold text-slate-500 mb-0.5';
@@ -1408,12 +1410,19 @@ ${JSON.stringify(slideForContext, null, 2)}
             <div className="flex gap-2 mt-3">
               <button type="button"
                 onClick={() => onAddCustomElement('text')}
-                className="flex-1 px-3 py-2 text-xs font-bold bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg"
-              >+ 텍스트 추가</button>
+                className="flex-1 px-2 py-2 text-xs font-bold bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg"
+              >+ 텍스트</button>
               <button type="button"
                 onClick={() => onAddCustomElement('image')}
-                className="flex-1 px-3 py-2 text-xs font-bold bg-purple-50 text-purple-700 hover:bg-purple-100 rounded-lg"
-              >+ 이미지 추가</button>
+                className="flex-1 px-2 py-2 text-xs font-bold bg-purple-50 text-purple-700 hover:bg-purple-100 rounded-lg"
+              >+ 이미지</button>
+              {onAddLogo && (
+                <button type="button"
+                  onClick={onAddLogo}
+                  className="flex-1 px-2 py-2 text-xs font-bold bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-lg"
+                  title="병원 로고 추가 (마지막 사용 로고 재사용)"
+                >🏥 로고</button>
+              )}
             </div>
           )}
 

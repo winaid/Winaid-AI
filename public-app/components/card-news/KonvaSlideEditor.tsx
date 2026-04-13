@@ -4,7 +4,8 @@ import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { Stage, Layer, Rect, Transformer, Line } from 'react-konva';
 import type Konva from 'konva';
 import type { SlideData, CardNewsTheme } from '../../lib/cardNewsLayouts';
-import { BackgroundImage, renderCustomElements, type LayoutRenderArgs } from './konva/KonvaHelpers';
+import { BackgroundImage, renderCustomElements, setKonvaFontFamily, type LayoutRenderArgs } from './konva/KonvaHelpers';
+import { resolveEffectiveFontFamily, resolveSlideFontFamily } from '../../lib/cardStyleUtils';
 import { renderCover, renderInfo, renderQuote } from './konva/KonvaLayoutBasic';
 import { renderChecklist, renderSteps, renderWarning, renderNumberedList, renderTimeline } from './konva/KonvaLayoutList';
 import { renderComparison, renderIconGrid, renderDataHighlight, renderBeforeAfter, renderQna, renderProsCons, renderPriceTable } from './konva/KonvaLayoutGrid';
@@ -20,6 +21,10 @@ interface KonvaSlideEditorProps {
   onSlideChange: (patch: Partial<SlideData>) => void;
   readOnly?: boolean;
   onStageReady?: (stage: Konva.Stage | null) => void;
+  /** 업로드된 커스텀 폰트 name (이미 document.fonts에 등록된 상태) */
+  customFontName?: string | null;
+  /** 폰트 로드 완료 카운터 — 값이 바뀌면 Stage 재마운트로 텍스트 재측정 */
+  fontLoaded?: number;
 }
 
 // ── 메인 컴포넌트 ──
@@ -27,7 +32,13 @@ interface KonvaSlideEditorProps {
 export default function KonvaSlideEditor({
   slide, theme, cardWidth = 1080, cardHeight = 1080,
   maxWidth = 650, onSlideChange, readOnly = false, onStageReady,
+  customFontName = null, fontLoaded = 0,
 }: KonvaSlideEditorProps) {
+  // 슬라이드 폰트 해석 — 테마 + 슬라이드별 override + 커스텀 업로드 폰트
+  const effectiveFontFamily = resolveEffectiveFontFamily(theme, customFontName);
+  const slideFontFamily = resolveSlideFontFamily(slide, effectiveFontFamily, customFontName);
+  // 모듈 전역에 주입 → 모든 EditableText/Text 가 이 폰트로 렌더
+  setKonvaFontFamily(slideFontFamily);
   const stageRef = useRef<Konva.Stage>(null);
   const transformerRef = useRef<Konva.Transformer>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -69,7 +80,7 @@ export default function KonvaSlideEditor({
   const bgColor = slide.bgColor || theme.backgroundColor || '#1B2A4A';
 
   // 레이아웃 분기
-  const args: LayoutRenderArgs = [slide, theme, cardWidth, cardHeight, selectedId, setSelectedId, onSlideChange, readOnly, setSnapGuides];
+  const args: LayoutRenderArgs = [slide, theme, cardWidth, cardHeight, selectedId, setSelectedId, onSlideChange, readOnly, setSnapGuides, slideFontFamily];
 
   const renderContent = () => {
     switch (slide.layout) {
@@ -330,6 +341,7 @@ export default function KonvaSlideEditor({
         </div>
       )}
       <Stage
+        key={`stage-${fontLoaded}-${slideFontFamily}`}
         ref={stageRef}
         width={displayWidth}
         height={displayHeight}
@@ -346,7 +358,7 @@ export default function KonvaSlideEditor({
           )}
           {renderContent()}
           {/* 커스텀 요소 (사용자 추가) — 레이아웃 위에 오버레이 */}
-          {renderCustomElements(slide, cardWidth, cardHeight, selectedId, setSelectedId, onSlideChange, readOnly)}
+          {renderCustomElements(slide, cardWidth, cardHeight, selectedId, setSelectedId, onSlideChange, readOnly, slideFontFamily)}
           {!readOnly && (
             <Transformer
               ref={transformerRef}

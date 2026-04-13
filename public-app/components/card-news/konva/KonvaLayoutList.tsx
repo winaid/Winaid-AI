@@ -48,7 +48,7 @@ export function renderChecklist(...args: LayoutRenderArgs): React.ReactNode {
             })()}
             <Text x={75} y={p.y + p.height / 2 - 14} text={slide.checkIcon || '✓'}
               fontSize={24} fill={theme.accentColor} fontStyle="bold"
-              fontFamily="Pretendard Variable, sans-serif" />
+              fontFamily={args[9] || "Pretendard Variable, sans-serif"} />
             <EditableText
               id={`text-check-${i}`} text={item}
               x={115} y={p.y + p.height / 2 - 12} width={w - 220} fontSize={itemFs}
@@ -94,7 +94,7 @@ export function renderSteps(...args: LayoutRenderArgs): React.ReactNode {
               fill={theme.accentColor} />
             <Text x={100} y={p.y + p.height / 2 - 14} text={String(i + 1)}
               fontSize={24} fill="#fff" fontStyle="bold" width={56} align="center" offsetX={28}
-              fontFamily="Pretendard Variable, sans-serif" />
+              fontFamily={args[9] || "Pretendard Variable, sans-serif"} />
             <EditableText
               id={`text-step-label-${i}`} text={step.label}
               x={150} y={p.y + (step.desc ? p.height * 0.25 : p.height / 2 - 12)} width={w - 250} fontSize={tFs}
@@ -135,7 +135,7 @@ export function renderWarning(...args: LayoutRenderArgs): React.ReactNode {
     <>
       <Rect x={0} y={0} width={w} height={8} fill="#EF4444" />
       <Text x={w / 2} y={40} text="⚠️" fontSize={60} width={80} align="center" offsetX={40}
-        fontFamily="Pretendard Variable, sans-serif" />
+        fontFamily={args[9] || "Pretendard Variable, sans-serif"} />
       <EditableText
         id="text-title" text={warnTitle}
         x={w / 2} y={titleY} width={w * 0.8} fontSize={48}
@@ -160,7 +160,7 @@ export function renderWarning(...args: LayoutRenderArgs): React.ReactNode {
             <Rect x={50} y={p.y} width={6} height={p.height} fill="#F87171"
               cornerRadius={[16, 0, 0, 16]} />
             <Text x={80} y={p.y + p.height / 2 - 12} text="❗" fontSize={24} fill="#F87171"
-              fontFamily="Pretendard Variable, sans-serif" />
+              fontFamily={args[9] || "Pretendard Variable, sans-serif"} />
             <EditableText
               id={`text-warning-${i}`} text={item}
               x={115} y={p.y + p.height / 2 - 12} width={w - 220} fontSize={20}
@@ -200,7 +200,7 @@ export function renderNumberedList(...args: LayoutRenderArgs): React.ReactNode {
               fill={theme.accentColor} cornerRadius={16} />
             <Text x={70} y={p.y + p.height / 2 - 14} text={num}
               fontSize={24} fill="#fff" fontStyle="bold" width={56} align="center"
-              fontFamily="Pretendard Variable, sans-serif" />
+              fontFamily={args[9] || "Pretendard Variable, sans-serif"} />
             <EditableText
               id={`text-numbered-title-${i}`} text={item.title}
               x={145} y={p.y + (item.desc ? p.height * 0.25 : p.height / 2 - 12)} width={w - 250} fontSize={22}
@@ -248,9 +248,9 @@ export function renderTimeline(...args: LayoutRenderArgs): React.ReactNode {
             <Circle x={86} y={p.y + 14} radius={14} fill={theme.accentColor} />
             <Text x={86} y={p.y + 2} text={String(i + 1)} fontSize={13} fill="#fff"
               fontStyle="bold" width={28} align="center" offsetX={14}
-              fontFamily="Pretendard Variable, sans-serif" />
+              fontFamily={args[9] || "Pretendard Variable, sans-serif"} />
             <Text x={110} y={p.y} text={item.time} fontSize={14} fill={theme.accentColor}
-              fontStyle="bold" fontFamily="Pretendard Variable, sans-serif" />
+              fontStyle="bold" fontFamily={args[9] || "Pretendard Variable, sans-serif"} />
             <EditableText
               id={`text-tl-title-${i}`} text={item.title}
               x={110} y={p.y + 22} width={w - 180} fontSize={20}
