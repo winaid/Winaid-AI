@@ -131,7 +131,10 @@ export function renderIconGrid(...args: LayoutRenderArgs): React.ReactNode {
 export function renderDataHighlight(...args: LayoutRenderArgs): React.ReactNode {
   const [slide, theme, w, h, selectedId, setSelectedId, onChange] = args;
   const { element: titleBlock, bottomY } = renderTitleBlock(args, { alignCenter: true });
-  const points = slide.dataPoints || [];
+  const rawPoints = slide.dataPoints || [];
+  // 유효한(값 or 라벨 있는) 항목만 — 없으면 원본 유지(편집 유도)
+  const valid = rawPoints.filter(dp => dp.value?.trim() || dp.label?.trim());
+  const points = valid.length > 0 ? valid : rawPoints;
   const cols = Math.min(Math.max(points.length, 1), 3);
   const grid = layoutGrid(cols, 1, 50, bottomY + 40, w - 100, h - bottomY - 120, 24);
 
@@ -141,25 +144,30 @@ export function renderDataHighlight(...args: LayoutRenderArgs): React.ReactNode 
       {points.map((dp, i) => {
         const cell = grid[0]?.[i];
         if (!cell) return null;
+        const hasValue = !!(dp.value?.trim());
+        const displayValue = hasValue ? dp.value : '00';
+        const isPlaceholder = !hasValue;
         return (
           <React.Fragment key={i}>
             <Rect x={cell.x} y={cell.y} width={cell.w} height={cell.h}
               fill={dp.highlight ? `${theme.accentColor}15` : (theme.cardBgColor || 'rgba(0,0,0,0.04)')}
               cornerRadius={24}
               stroke={dp.highlight ? theme.accentColor : 'rgba(0,0,0,0.08)'}
-              strokeWidth={dp.highlight ? 2 : 1} />
+              strokeWidth={dp.highlight ? 2 : 1}
+              opacity={isPlaceholder ? 0.4 : 1}
+              dash={isPlaceholder ? [8, 6] : undefined} />
             <Text x={cell.x + cell.w / 2} y={cell.y + cell.h * 0.3}
-              text={dp.value} fontSize={42} fontStyle="bold"
-              fill={dp.highlight ? theme.accentColor : theme.titleColor}
+              text={displayValue} fontSize={42} fontStyle="bold"
+              fill={isPlaceholder ? 'rgba(150,150,150,0.6)' : (dp.highlight ? theme.accentColor : theme.titleColor)}
               width={cell.w - 20} align="center" offsetX={(cell.w - 20) / 2}
               fontFamily="Pretendard Variable, sans-serif" />
             <EditableText
-              id={`text-dp-label-${i}`} text={dp.label}
+              id={`text-dp-label-${i}`} text={dp.label || '설명을 입력하세요'}
               x={cell.x + cell.w / 2} y={cell.y + cell.h * 0.65} width={cell.w - 30} fontSize={16}
-              fill={theme.bodyColor} align="center" offsetX={(cell.w - 30) / 2}
+              fill={isPlaceholder ? 'rgba(150,150,150,0.5)' : theme.bodyColor} align="center" offsetX={(cell.w - 30) / 2}
               selectedId={selectedId} onSelect={setSelectedId}
               onDragEnd={() => {}}
-              onTextChange={t => { const a = [...points]; a[i] = { ...a[i], label: t }; onChange({ dataPoints: a }); }}
+              onTextChange={t => { const a = [...(slide.dataPoints || [])]; a[i] = { ...a[i], label: t }; onChange({ dataPoints: a }); }}
             />
           </React.Fragment>
         );

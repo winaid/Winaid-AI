@@ -310,7 +310,7 @@ export default function SlideEditor({
     setCardChatInput('');
     setCardChatLoading(true);
     try {
-      // 이미지 dataUrl은 제외 (토큰 절약)
+      // 이미지 dataUrl은 제외 (토큰 절약), 스타일 필드는 포함
       const slideForContext = {
         index: slide.index,
         layout: slide.layout,
@@ -340,6 +340,19 @@ export default function SlideEditor({
         afterLabel: slide.afterLabel,
         beforeItems: slide.beforeItems,
         afterItems: slide.afterItems,
+        // ── 스타일 필드 (AI가 수정할 수 있도록 현재 값 제공) ──
+        bgColor: slide.bgColor,
+        bgGradient: slide.bgGradient,
+        titleColor: slide.titleColor,
+        titleFontSize: slide.titleFontSize,
+        titleFontWeight: slide.titleFontWeight,
+        titleAlign: slide.titleAlign,
+        titleLetterSpacing: slide.titleLetterSpacing,
+        titleLineHeight: slide.titleLineHeight,
+        subtitleColor: slide.subtitleColor,
+        subtitleFontSize: slide.subtitleFontSize,
+        subtitleFontWeight: slide.subtitleFontWeight,
+        bodyColor: slide.bodyColor,
       };
 
       const res = await fetch('/api/gemini', {
@@ -358,11 +371,27 @@ ${JSON.stringify(slideForContext, null, 2)}
 2. ---SLIDE_JSON--- 구분자
 3. 수정된 슬라이드 1개의 JSON (이 슬라이드만, 배열 아님)
 
-⚠️ 레이아웃 변경이 필요하면 layout 필드도 바꾸고 해당 레이아웃의 필드들(예: qna면 questions, timeline이면 timelineItems)을 채워줘.
+━━━ 수정 가능 필드 ━━━
+• 텍스트: title, subtitle, body, 배열 항목(items/steps/questions 등)
+• 색상: bgColor(#RRGGBB), bgGradient(linear-gradient(...)), titleColor, subtitleColor, bodyColor
+• 폰트 크기: titleFontSize(숫자, 24~80), subtitleFontSize(16~36)
+• 폰트 굵기: titleFontWeight/subtitleFontWeight ('400'~'900')
+• 정렬: titleAlign ('left'|'center'|'right')
+• 자간/행간: titleLetterSpacing, titleLineHeight
+• 레이아웃: layout (필요시만)
+
+━━━ 예시 ━━━
+"화려하게" → bgGradient: "linear-gradient(135deg,#F093FB,#F5576C)", titleColor: "#FFFFFF", titleFontSize: 60, titleFontWeight: "900"
+"차분하게" → bgColor: "#F7FAFC", titleColor: "#2D3748", titleFontWeight: "600"
+"주황 톤" → bgColor: "#FFF5F0", titleColor: "#7B341E"
+"제목 크게" → titleFontSize: 64, titleFontWeight: "900"
+
+⚠️ 레이아웃 변경이 필요하면 layout 필드도 바꾸고 해당 레이아웃의 필드들을 채워줘.
+⚠️ "화려하게/부드럽게/차분하게" 같은 분위기 요청은 반드시 bgColor/bgGradient/titleColor 등 스타일 필드를 함께 수정.
 ⚠️ JSON 객체 하나만. 배열 금지. 설명 안에 JSON 금지.
 ⚠️ 의료광고법 준수: "완치/100%/최첨단/완벽/획기적/유일/국내 최초/1위" 금지.
 ⚠️ 구체적 수치는 범위로("80~120만원", "3~6개월").`,
-          systemInstruction: '병원 마케팅 카드뉴스 전문가. 의료광고법 준수. 구체적 수치 사용. JSON 정확하게 출력.',
+          systemInstruction: '병원 마케팅 카드뉴스 전문가 + 비주얼 디자이너. 텍스트/색상/폰트/배경 모두 수정 가능. 의료광고법 준수. JSON 정확히 출력.',
           model: 'gemini-3.1-flash-lite-preview',
           temperature: 0.7,
           maxOutputTokens: 4096,
