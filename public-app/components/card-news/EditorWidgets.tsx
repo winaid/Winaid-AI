@@ -308,3 +308,155 @@ export function TextElementEditor({ value, onChange, multiline, fontId, fontSize
     </div>
   );
 }
+
+// ═══════════════════════════════════════════════════════════════
+// ArrayItemEditor — 배열 필드(문자열 배열 또는 객체 배열) 편집 헬퍼
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * 배열 편집 UI 필드 정의.
+ * - `key` 없음: primitive 모드 (item 자체가 string)
+ * - `key` 있음: object 모드 (item[key] 를 읽기/쓰기)
+ */
+export interface ArrayItemEditorField {
+  /** 객체 배열일 때 해당 속성 이름. primitive 배열이면 생략. */
+  key?: string;
+  placeholder: string;
+  /** textarea 로 렌더할지. 기본 input. */
+  multiline?: boolean;
+  /** 가로 비율 (flex-grow). 기본 1. */
+  flex?: number;
+}
+
+export interface ArrayItemEditorProps<T> {
+  items: T[];
+  onChange: (next: T[]) => void;
+  fields: ArrayItemEditorField[];
+  /** "+ 추가" 버튼 라벨. */
+  addLabel: string;
+  /** 새 항목 추가 시 초기값 (primitive 는 '', object 는 이 값을 spread 복제). */
+  emptyTemplate?: T;
+  /** 최소 개수 (이하로 삭제 불가). 기본 0. */
+  min?: number;
+  /** 최대 개수 (초과 추가 불가). 기본 20. */
+  max?: number;
+  /** 각 줄 왼쪽에 붙일 라벨 접두사 ("Q&A", "항목" 등). 없으면 생략. */
+  itemLabelPrefix?: string;
+}
+
+// SlideEditor 의 inputCls/labelCls 와 동일 (중복 정의 — import 의존성 회피)
+const AIE_INPUT_CLS = 'w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-200';
+const AIE_TEXTAREA_CLS = `${AIE_INPUT_CLS} resize-none`;
+
+/**
+ * 배열 편집 UI. primitive(string[]) 또는 object 배열 모두 지원.
+ * pros/cons (primitive), questions ({q,a}), priceItems ({name,price,note}) 등 재사용.
+ */
+export function ArrayItemEditor<T extends string | Record<string, unknown>>({
+  items,
+  onChange,
+  fields,
+  addLabel,
+  emptyTemplate,
+  min = 0,
+  max = 20,
+  itemLabelPrefix,
+}: ArrayItemEditorProps<T>) {
+  const isObjectMode = !!fields[0]?.key;
+
+  const updateItem = (idx: number, field: ArrayItemEditorField, value: string) => {
+    if (isObjectMode && field.key) {
+      const next = items.map((it, i) => {
+        if (i !== idx) return it;
+        const obj = (typeof it === 'object' && it !== null ? it : {}) as Record<string, unknown>;
+        return { ...obj, [field.key as string]: value } as T;
+      });
+      onChange(next);
+    } else {
+      const next = items.map((_, i) => (i === idx ? (value as unknown as T) : items[i]));
+      onChange(next);
+    }
+  };
+
+  const deleteItem = (idx: number) => {
+    if (items.length <= min) return;
+    onChange(items.filter((_, i) => i !== idx));
+  };
+
+  const addItem = () => {
+    if (items.length >= max) return;
+    const empty: T = isObjectMode
+      ? (emptyTemplate !== undefined
+          ? ({ ...(emptyTemplate as Record<string, unknown>) } as T)
+          : (Object.fromEntries(fields.filter(f => f.key).map(f => [f.key as string, ''])) as T))
+      : ((emptyTemplate !== undefined ? emptyTemplate : ('' as unknown)) as T);
+    onChange([...items, empty]);
+  };
+
+  return (
+    <div className="space-y-1.5">
+      {items.map((item, idx) => {
+        const canDelete = items.length > min;
+        return (
+          <div key={idx} className="flex items-start gap-1.5">
+            {itemLabelPrefix && (
+              <span className="text-[10px] font-semibold text-slate-400 pt-2 w-10 shrink-0 text-right">
+                {itemLabelPrefix} {idx + 1}
+              </span>
+            )}
+            <div className="flex-1 flex gap-1.5">
+              {fields.map((field, fi) => {
+                const flex = field.flex ?? 1;
+                const val = isObjectMode && field.key
+                  ? String(((item as Record<string, unknown>)[field.key] ?? ''))
+                  : String(item ?? '');
+                if (field.multiline) {
+                  return (
+                    <textarea
+                      key={fi}
+                      value={val}
+                      onChange={(e) => updateItem(idx, field, e.target.value)}
+                      placeholder={field.placeholder}
+                      rows={2}
+                      className={AIE_TEXTAREA_CLS}
+                      style={{ flex }}
+                    />
+                  );
+                }
+                return (
+                  <input
+                    key={fi}
+                    type="text"
+                    value={val}
+                    onChange={(e) => updateItem(idx, field, e.target.value)}
+                    placeholder={field.placeholder}
+                    className={AIE_INPUT_CLS}
+                    style={{ flex }}
+                  />
+                );
+              })}
+            </div>
+            <button
+              type="button"
+              onClick={() => deleteItem(idx)}
+              disabled={!canDelete}
+              aria-label={`${idx + 1}번 항목 삭제`}
+              className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-500 disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
+            >
+              🗑
+            </button>
+          </div>
+        );
+      })}
+      {items.length < max && (
+        <button
+          type="button"
+          onClick={addItem}
+          className="w-full mt-1 px-3 py-1.5 text-[11px] font-semibold bg-slate-50 text-slate-600 hover:bg-slate-100 rounded-lg border border-dashed border-slate-300"
+        >
+          {addLabel}
+        </button>
+      )}
+    </div>
+  );
+}

@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import type { SlideData, SlideDecoration, SlideImagePosition, SlideImageStyle } from '../../lib/cardNewsLayouts';
 import { CARD_FONTS, FONT_CATEGORIES, SLIDE_IMAGE_STYLES, COVER_TEMPLATES } from '../../lib/cardNewsLayouts';
-import { IconChangerPopover, ElementAccordion, TextElementEditor } from './EditorWidgets';
+import { IconChangerPopover, ElementAccordion, TextElementEditor, ArrayItemEditor } from './EditorWidgets';
 import { validateSlideMedicalAd, type ViolationResult, type SlideFieldViolation } from '../../lib/medicalAdValidation';
 
 /**
@@ -1096,6 +1096,89 @@ ${JSON.stringify(slideForContext, null, 2)}
             ))}
           </div>
           <ArrayItemStyleEditor slide={slide} onChange={onChange} hasValue hasTitle={false} hasDesc />
+        </ElementAccordion>
+      );
+    }
+    if (slide.layout === 'pros-cons') {
+      const pros = slide.pros || [];
+      const cons = slide.cons || [];
+      return (
+        <ElementAccordion icon="T" label={`장단점 (${pros.length}+${cons.length})`} defaultOpen={true}>
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <p className={labelCls}>장점 라벨</p>
+                <input className={inputCls} value={slide.prosLabel || ''}
+                  placeholder="장점" onChange={(e) => onChange({ prosLabel: e.target.value })} />
+              </div>
+              <div>
+                <p className={labelCls}>주의점 라벨</p>
+                <input className={inputCls} value={slide.consLabel || ''}
+                  placeholder="주의점" onChange={(e) => onChange({ consLabel: e.target.value })} />
+              </div>
+            </div>
+            <div>
+              <p className={labelCls}>장점 항목</p>
+              <ArrayItemEditor<string>
+                items={pros}
+                onChange={(next) => onChange({ pros: next })}
+                fields={[{ placeholder: '장점을 입력하세요' }]}
+                addLabel="+ 장점 추가"
+                emptyTemplate={''}
+                min={1} max={8}
+              />
+            </div>
+            <div>
+              <p className={labelCls}>주의점 항목</p>
+              <ArrayItemEditor<string>
+                items={cons}
+                onChange={(next) => onChange({ cons: next })}
+                fields={[{ placeholder: '주의점을 입력하세요' }]}
+                addLabel="+ 주의점 추가"
+                emptyTemplate={''}
+                min={1} max={8}
+              />
+            </div>
+          </div>
+        </ElementAccordion>
+      );
+    }
+    if (slide.layout === 'qna') {
+      const questions = slide.questions || [];
+      return (
+        <ElementAccordion icon="T" label={`Q&A (${questions.length}개)`} defaultOpen={true}>
+          <ArrayItemEditor<{ q: string; a: string }>
+            items={questions}
+            onChange={(next) => onChange({ questions: next })}
+            fields={[
+              { key: 'q', placeholder: '질문', flex: 2 },
+              { key: 'a', placeholder: '답변', flex: 3, multiline: true },
+            ]}
+            addLabel="+ Q&A 추가"
+            emptyTemplate={{ q: '', a: '' }}
+            min={1} max={6}
+            itemLabelPrefix="Q&A"
+          />
+        </ElementAccordion>
+      );
+    }
+    if (slide.layout === 'price-table') {
+      const priceItems = slide.priceItems || [];
+      return (
+        <ElementAccordion icon="T" label={`가격 항목 (${priceItems.length}개)`} defaultOpen={true}>
+          <ArrayItemEditor<{ name: string; price: string; note?: string }>
+            items={priceItems}
+            onChange={(next) => onChange({ priceItems: next })}
+            fields={[
+              { key: 'name', placeholder: '시술명', flex: 2 },
+              { key: 'price', placeholder: '가격', flex: 1 },
+              { key: 'note', placeholder: '비고 (선택)', flex: 2 },
+            ]}
+            addLabel="+ 가격 항목 추가"
+            emptyTemplate={{ name: '', price: '', note: '' }}
+            min={1} max={10}
+            itemLabelPrefix="항목"
+          />
         </ElementAccordion>
       );
     }
