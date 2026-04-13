@@ -419,10 +419,35 @@ ${FEW_SHOT[field]}`;
   // 상향: title/subtitle 0.95, body 0.85 — anchoring 완화 + 각도 다양성 확보
   const temperature = field === 'body' ? 0.85 : 0.95;
   const topP = 0.95;
-  const maxOutputTokens = field === 'body' ? 300 : 80;
+  // Day 8-1 에서 80/300 으로 축소했으나 2547f70 이후 프롬프트가 커지며
+  // reasoning 토큰까지 포함해 출력이 짤림. 길이 제한은 prompt "N자 이내"
+  // + sanitizeAiText maxLen 으로 충분하므로 여유를 복구한다.
+  const maxOutputTokens = field === 'body' ? 500 : 220;
+
+  /**
+   * 짤린 출력(조각)인지 휴리스틱 감지.
+   * - 너무 짧음 (<3자)
+   * - 조사/어미로 끝남 (미완결 문장)
+   * - 첫 글자가 단위 접미사(회/개/번/째/주/월/일/년/차) → 숫자가 짤린 잔해
+   */
+  const looksTruncated = (text: string): boolean => {
+    const t = text.trim();
+    if (t.length < 3) return true;
+    const incomplete = /(에|의|을|를|이|가|은|는|도|와|과|로|으로|에서|에게|에는|으로는|보다|처럼|까지|부터|만)$/;
+    if (field === 'body') {
+      // body 는 문장부호로 안 끝나면 + 조사로 끝나면 미완결 확정
+      if (!/[.!?…]\s*$/.test(t) && incomplete.test(t)) return true;
+    } else {
+      // title/subtitle 은 조사로 끝나면 거의 확실히 조각
+      if (incomplete.test(t)) return true;
+    }
+    // "회 건강보험" 같이 단위 잔해가 앞에 붙은 케이스
+    if (/^[회개번째주월일년차]/.test(t)) return true;
+    return false;
+  };
 
   /** 한 번의 Gemini 호출 + 파이프라인 실행. */
-  const runOnce = async (extraPrefix: string): Promise<{ filtered: string; leftovers: string[] } | null> => {
+  const runOnce = async (extraPrefix: string): Promise<{ filtered: string; leftovers: string[]; truncated: boolean } | null> => {
     const promptBody = `${extraPrefix}${context}\n\n${prompts[field]}\n\n${outputFormatRule}`;
     const res = await fetch('/api/gemini', {
       method: 'POST',
@@ -440,32 +465,60 @@ ${FEW_SHOT[field]}`;
     if (!data.text) return null;
     const sanitized = sanitizeAiText(data.text, { maxLen });
     if (!sanitized) return null;
+    const truncated = looksTruncated(sanitized);
     const { filtered } = applyContentFilters(sanitized);
     const found = detectForbiddenWords(filtered);
     if (process.env.NODE_ENV !== 'production') {
       // eslint-disable-next-line no-console
-      console.debug('[CARD_AI] suggestSlideText pipeline', {
-        raw: data.text,
-        sanitized,
+      console.debug('[suggestSlideText] raw Gemini response:', data.text);
+      // eslint-disable-next-line no-console
+      console.debug('[suggestSlideText] after sanitize:', sanitized);
+      // eslint-disable-next-line no-console
+      console.debug('[suggestSlideText] truncation suspected:', truncated);
+      // eslint-disable-next-line no-console
+      console.debug('[suggestSlideText] pipeline', {
         filtered,
         leftovers: found.map(f => f.word),
       });
     }
-    return { filtered, leftovers: found.map(f => f.word) };
+    return { filtered, leftovers: found.map(f => f.word), truncated };
   };
 
-  // 1회차
-  const first = await runOnce('');
-  if (!first) return null;
-  if (first.leftovers.length === 0) return first.filtered;
+  // ── 호출 플로우 ──
+  // 최대 3회: 1차 → truncation retry(있으면) → 의료법 retry(있으면)
+  // 순서상 truncation 이 감지되면 truncation 을 먼저 해결 (그 결과가 금지어 포함이면 의료법 retry)
+  let totalCalls = 0;
+  const MAX_CALLS = 3;
 
-  // 재시도 — 금지어 명시 prepend
-  const retryPrefix = `⚠️ 이전 응답에 금지어 [${first.leftovers.join(', ')}]이 포함됐다. 절대 사용 금지. 완전히 다른 표현으로 다시.\n\n`;
-  const second = await runOnce(retryPrefix);
-  if (!second) return null;
-  if (second.leftovers.length === 0) return second.filtered;
+  // 1차
+  let current = await runOnce('');
+  totalCalls++;
+  if (!current) return null;
 
-  // 2회차도 실패 — 호출부에서 toast 표시
+  // 짤린 경우 truncation retry 1회
+  if (current.truncated && totalCalls < MAX_CALLS) {
+    const truncPrefix = `⚠️ 이전 응답이 문장 중간에 짤렸다. 반드시 완결된 문장/문구로 다시 작성하라.\n\n`;
+    const retried = await runOnce(truncPrefix);
+    totalCalls++;
+    if (retried) current = retried;
+  }
+  // truncation retry 후에도 짤려 있으면 null 반환
+  if (current.truncated) return null;
+
+  // 금지어 없으면 성공
+  if (current.leftovers.length === 0) return current.filtered;
+
+  // 의료법 retry 1회
+  if (totalCalls < MAX_CALLS) {
+    const medPrefix = `⚠️ 이전 응답에 금지어 [${current.leftovers.join(', ')}]이 포함됐다. 절대 사용 금지. 완전히 다른 표현으로 다시.\n\n`;
+    const medRetried = await runOnce(medPrefix);
+    totalCalls++;
+    if (!medRetried) return null;
+    if (medRetried.truncated) return null;
+    if (medRetried.leftovers.length === 0) return medRetried.filtered;
+  }
+
+  // 모든 재시도 실패 — 호출부에서 toast
   return null;
 }
 
