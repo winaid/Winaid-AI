@@ -10,6 +10,7 @@ import { ensureGoogleFontLoaded, resolveSlideFontFamily } from '../lib/cardStyle
 import { captureAllSlidesAsBlobs, downloadKonvaStageAsPng, downloadKonvaStageAsJpg, downloadKonvaStagesAsZip, downloadKonvaStagesAsPdf } from '../lib/cardDownloadUtils';
 import type Konva from 'konva';
 import { saveVideoToStorage, generateVideoFileName } from '../lib/videoStorage';
+import { savePost } from '../lib/postStorage';
 import { validateSlideMedicalAd } from '../lib/medicalAdValidation';
 import {
   saveFont as saveFontToDb,
@@ -217,37 +218,82 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
   const [customFontDisplayName, setCustomFontDisplayName] = useState<string | null>(null);
   const customFontInputRef = useRef<HTMLInputElement | null>(null);
 
-  // ── Undo 히스토리 (Ctrl+Z) — 슬라이드 + 테마 동시 스냅샷 ──
+  // ── Undo/Redo 히스토리 — 슬라이드 + 테마 동시 스냅샷 ──
   interface UndoEntry { slides: SlideData[]; theme: CardNewsTheme; }
   const undoStackRef = useRef<UndoEntry[]>([]);
+  const redoStackRef = useRef<UndoEntry[]>([]);
   const MAX_UNDO = 30;
+  // UI 강제 리렌더용 — 버튼 활성/비활성 반영
+  const [historyVersion, setHistoryVersion] = useState(0);
 
-  /** 현재 slides + theme을 히스토리에 스냅샷 후 공급자에게 새 값을 전달 */
   const snapshot = (): UndoEntry => ({
     slides: JSON.parse(JSON.stringify(slides)),
     theme: JSON.parse(JSON.stringify(theme)),
   });
 
-  /** slides 변경 시 히스토리에 현재 상태 저장 후 변경 */
   const pushAndChange = (newSlides: SlideData[]) => {
     undoStackRef.current.push(snapshot());
     if (undoStackRef.current.length > MAX_UNDO) undoStackRef.current.shift();
+    redoStackRef.current = []; // 새 변경 → redo 스택 무효
+    setHistoryVersion(v => v + 1);
     onSlidesChange(newSlides);
   };
 
-  /** 테마 변경 시에도 undo 가능하도록 스냅샷 후 변경 */
   const pushThemeChange = (newTheme: CardNewsTheme) => {
     undoStackRef.current.push(snapshot());
     if (undoStackRef.current.length > MAX_UNDO) undoStackRef.current.shift();
+    redoStackRef.current = [];
+    setHistoryVersion(v => v + 1);
     onThemeChange(newTheme);
   };
 
   const undo = () => {
     const prev = undoStackRef.current.pop();
     if (!prev) return;
-    // slides/theme 둘 다 복원 (동일 스냅샷에서 나온 한 쌍)
+    redoStackRef.current.push(snapshot());
+    if (redoStackRef.current.length > MAX_UNDO) redoStackRef.current.shift();
     onSlidesChange(prev.slides);
     onThemeChange(prev.theme);
+    setHistoryVersion(v => v + 1);
+  };
+
+  const redo = () => {
+    const next = redoStackRef.current.pop();
+    if (!next) return;
+    undoStackRef.current.push(snapshot());
+    if (undoStackRef.current.length > MAX_UNDO) undoStackRef.current.shift();
+    onSlidesChange(next.slides);
+    onThemeChange(next.theme);
+    setHistoryVersion(v => v + 1);
+  };
+
+  const canUndo = undoStackRef.current.length > 0;
+  const canRedo = redoStackRef.current.length > 0;
+  void historyVersion; // 리렌더 트리거용
+
+  // ── 수동 저장 (DB에 generated_posts로) ──
+  const [saving, setSaving] = useState(false);
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+
+  const handleSave = async () => {
+    if (saving) return;
+    setSaving(true);
+    try {
+      const plainText = slides.map(s => `${s.title || ''}\n${s.subtitle || ''}\n${s.body || ''}`.trim()).join('\n\n');
+      await savePost({
+        postType: 'card_news',
+        title: slides[0]?.title || '카드뉴스',
+        content: JSON.stringify({ slides, theme, cardRatio }),
+        topic: plainText.slice(0, 200),
+        hospitalName: theme.hospitalName || undefined,
+      });
+      setLastSavedAt(new Date());
+    } catch (err) {
+      console.warn('[CARD_NEWS_PRO] 저장 실패', err);
+      alert(`저장 실패: ${err instanceof Error ? err.message : '알 수 없는 오류'}`);
+    } finally {
+      setSaving(false);
+    }
   };
 
   useEffect(() => {
@@ -259,6 +305,18 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
       if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
         e.preventDefault();
         undo();
+        return;
+      }
+      // Ctrl+Shift+Z 또는 Ctrl+Y: Redo
+      if ((e.ctrlKey || e.metaKey) && ((e.key === 'z' && e.shiftKey) || e.key === 'y')) {
+        e.preventDefault();
+        redo();
+        return;
+      }
+      // Ctrl+S: 저장
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        handleSave();
         return;
       }
 
@@ -732,6 +790,42 @@ export default function CardNewsProRenderer({ slides, theme, onSlidesChange, onT
 
   return (
     <div className="space-y-4 pb-24">
+      {/* 히스토리/저장 툴바 — 우측 상단 고정 */}
+      <div className="fixed top-4 right-4 z-40 flex items-center gap-1 bg-white rounded-xl shadow-lg border border-slate-200 px-2 py-1.5">
+        <button
+          type="button"
+          onClick={undo}
+          disabled={!canUndo}
+          title="이전 (Ctrl+Z)"
+          className="w-9 h-9 flex items-center justify-center rounded-lg text-slate-700 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+        >
+          <span className="text-lg">↶</span>
+        </button>
+        <button
+          type="button"
+          onClick={redo}
+          disabled={!canRedo}
+          title="다시 (Ctrl+Shift+Z)"
+          className="w-9 h-9 flex items-center justify-center rounded-lg text-slate-700 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+        >
+          <span className="text-lg">↷</span>
+        </button>
+        <div className="w-px h-5 bg-slate-200 mx-1" />
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={saving}
+          title="저장 (Ctrl+S)"
+          className="px-3 h-9 flex items-center justify-center gap-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60 text-xs font-bold transition-colors"
+        >
+          <span>{saving ? '저장 중...' : '💾 저장'}</span>
+        </button>
+        {lastSavedAt && !saving && (
+          <span className="text-[10px] text-slate-400 ml-2 whitespace-nowrap">
+            {lastSavedAt.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })} 저장됨
+          </span>
+        )}
+      </div>
       {/* 의료광고법 위반 요약 — 한 건이라도 있으면 상단에 고정 노출 */}
       {(totalViolations.high > 0 || totalViolations.medium > 0) && (
         <div className="flex items-center gap-3 px-4 py-2.5 bg-red-50 border border-red-200 rounded-xl text-sm">
