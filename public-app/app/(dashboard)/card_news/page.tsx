@@ -439,6 +439,7 @@ export default function CardNewsPage() {
           mode: 'card_news',
           imageStyle,
           referenceImage: refImage || undefined,
+          quality: 'fast',
         }),
       });
       if (!res.ok) return null;
@@ -518,6 +519,7 @@ export default function CardNewsPage() {
 스타일: ${tone}, 의료/헬스케어 프리미엄 일러스트.
 사람 얼굴 없이 사물/장비/환경 위주.`,
             ratio: proCardRatio === '1:1' ? '1:1' : '4:3',
+            quality: 'fast',
           }),
         }).then(r => r.json()).then(d => (d.imageUrl || d.imageDataUrl || '') as string).catch(() => '')
       );

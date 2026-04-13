@@ -459,6 +459,7 @@ interface ImageRequestBody {
   logoBase64?: string;
   calendarImage?: string;
   referenceImage?: string;   // card_news: 참고 이미지 base64
+  quality?: 'fast' | 'premium';  // 기본 'fast' — 'premium'이면 2-Stage (card_news만 의미)
 }
 
 export async function POST(request: NextRequest) {
@@ -604,8 +605,8 @@ ABSOLUTE PROHIBITIONS:
     }
   }
 
-  // ═══ 카드뉴스 2단계 생성: Flash(밑그림) → Pro(글씨) ═══
-  if (isCardNewsMode) {
+  // ═══ 카드뉴스 2단계 생성: Flash(밑그림) → Pro(글씨) — quality='premium'일 때만 ═══
+  if (isCardNewsMode && body.quality === 'premium') {
     const illustrationPrompt = buildCardNewsIllustrationPrompt(body);
     const textOverlayPrompt = buildCardNewsTextOverlayPrompt(body);
     const hasTextToRender = !!textOverlayPrompt;
@@ -692,11 +693,11 @@ ABSOLUTE PROHIBITIONS:
     }
   }
 
-  // 모델 우선순위: PRO → FLASH → 2.5 fallback
+  // 모델 우선순위: Flash(Nano Banana 2) 먼저 → Pro fallback (속도 우선)
   const MODELS = [
-    'gemini-3-pro-image-preview',       // Nano Banana Pro: 고품질
-    'gemini-3.1-flash-image-preview',   // Nano Banana 2: 속도+안정성
-    'gemini-2.5-flash-image',           // Nano Banana: 안정 GA 모델
+    'gemini-3.1-flash-image-preview',   // Nano Banana 2: 기본 (빠름, 안정)
+    'gemini-2.5-flash-image',           // Nano Banana: fallback
+    'gemini-3-pro-image-preview',       // Pro: 최후 fallback (느리지만 고품질)
   ];
 
   const apiBody = {
